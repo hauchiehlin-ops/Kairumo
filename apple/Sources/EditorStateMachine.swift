@@ -39,6 +39,43 @@ enum EditorCanvasInputPolicy {
     ) -> Bool {
         effectiveMode(mainMode: mainMode, isInlineInkEditing: isInlineInkEditing) == .draw
     }
+
+    // MARK: - 融合輸入規則（工作項 F1）
+    //
+    // 「模式」不是鎖，而是由手上拿的東西推斷出來的情境：
+    // Apple Pencil 在**任何**模式都直接寫；打字模式只決定手指與鍵盤的行為。
+    // 過去打字模式把 PencilKit 的落筆手勢整個關掉，落筆時才切回手繪 ——
+    // 但進行中的觸控不會被中途啟用的手勢接手，於是**第一筆永遠遺失**。
+
+    /// 畫布在這個模式下要不要開著落筆手勢。答案永遠是「要」：
+    /// 打字模式靠 `fingerMayDraw == false` 擋住手指，而不是關掉整個手勢。
+    static func drawingGestureEnabled(effectiveMode: EditorMode) -> Bool { true }
+
+    /// 手指能不能畫。打字模式下手指負責點選、捲動與物件操作，**絕對不畫**；
+    /// 手繪模式交給掌拒協調器決定（`nil` 代表沿用協調器的判斷）。
+    static func fingerMayDraw(effectiveMode: EditorMode) -> Bool? {
+        effectiveMode == .type ? false : nil
+    }
+
+    /// 打字模式下 Pencil 的意圖要不要延後判定。
+    ///
+    /// 打字模式中，Pencil 輕點一下的意思是「放游標／開文字框」，畫下去才是「寫」。
+    /// 落筆當下還分不出來，所以先讓墨水照常收，等筆離開時再決定：
+    /// 是輕點就收回那顆墨點並照打字模式處理；是筆畫就把情境切到手繪。
+    /// 切換一律在**筆畫結束後**才做 —— 筆畫進行中改畫布設定會讓這一筆被取消。
+    static func defersPencilIntent(effectiveMode: EditorMode) -> Bool {
+        effectiveMode == .type
+    }
+
+    enum PencilGesture: Equatable { case tap, stroke }
+
+    /// 輕點的判準：移動距離小於 6pt、且停留不到 0.35 秒。
+    static let pencilTapMaxDistance: CGFloat = 6
+    static let pencilTapMaxDuration: TimeInterval = 0.35
+
+    static func classifyPencil(distance: CGFloat, duration: TimeInterval) -> PencilGesture {
+        (distance < pencilTapMaxDistance && duration < pencilTapMaxDuration) ? .tap : .stroke
+    }
 }
 
 /// 編輯器互動階段（遵循標準單一職責模式設計）

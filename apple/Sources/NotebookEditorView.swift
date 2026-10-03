@@ -281,6 +281,76 @@ final class ProGestureDelegate: NSObject, UIGestureRecognizerDelegate {
     }
 }
 
+/// 打字模式下判定 Pencil 這一下是「輕點」還是「筆畫」（工作項 F1）。
+///
+/// 只觀察、不攔截：永遠停在 `.possible`、`cancelsTouchesInView = false`、
+/// 與所有手勢並存，所以 PencilKit／專業筆刷照常收墨，第一筆不會遺失。
+/// 判定在筆離開時才做 —— 筆畫進行中切換模式會改到畫布設定，那一筆會被取消。
+final class PencilIntentObserver: UIGestureRecognizer, UIGestureRecognizerDelegate {
+    var onStroke: (() -> Void)?
+    /// 座標是畫布（scroll view）自己的座標，尚未除以縮放倍率。
+    var onTap: ((CGPoint) -> Void)?
+
+    private var tracked: UITouch?
+    private var startPoint: CGPoint = .zero
+    private var startTime: TimeInterval = 0
+    private var maxDistance: CGFloat = 0
+
+    init() {
+        super.init(target: nil, action: nil)
+        cancelsTouchesInView = false
+        delaysTouchesBegan = false
+        delaysTouchesEnded = false
+        allowedTouchTypes = [NSNumber(value: UITouch.TouchType.pencil.rawValue)]
+        delegate = self
+    }
+
+    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent) {
+        guard tracked == nil, let touch = touches.first(where: { $0.type == .pencil }) else { return }
+        tracked = touch
+        startPoint = touch.location(in: view)
+        startTime = touch.timestamp
+        maxDistance = 0
+    }
+
+    override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent) {
+        guard let touch = tracked, touches.contains(touch) else { return }
+        let p = touch.location(in: view)
+        maxDistance = max(maxDistance, hypot(p.x - startPoint.x, p.y - startPoint.y))
+    }
+
+    override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent) {
+        guard let touch = tracked, touches.contains(touch) else { return }
+        let p = touch.location(in: view)
+        maxDistance = max(maxDistance, hypot(p.x - startPoint.x, p.y - startPoint.y))
+        let kind = EditorCanvasInputPolicy.classifyPencil(
+            distance: maxDistance, duration: touch.timestamp - startTime)
+        let start = startPoint
+        tracked = nil
+        state = .failed
+        switch kind {
+        case .tap: onTap?(start)
+        case .stroke: onStroke?()
+        }
+    }
+
+    override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent) {
+        guard let touch = tracked, touches.contains(touch) else { return }
+        tracked = nil
+        state = .failed
+    }
+
+    override func reset() {
+        tracked = nil
+        maxDistance = 0
+    }
+
+    func gestureRecognizer(
+        _ gestureRecognizer: UIGestureRecognizer,
+        shouldRecognizeSimultaneouslyWith other: UIGestureRecognizer
+    ) -> Bool { true }
+}
+
 final class AdaptiveCanvasView: PKCanvasView {
     /// 這一頁的高度（由 SwiftUI 端更新）
     /// 觸控觀察。
@@ -378,7 +448,9 @@ final class AdaptiveCanvasView: PKCanvasView {
     ///   捲動改成兩指，單指（或 Apple Pencil）才能畫。
     /// - `.erase`：選了橡皮擦。兩邊同時收：PencilKit 擦它的、我們擦專業筆畫。
     /// - `.off`：其他工具。我們的手勢不收任何東西。
-    func configurePro(mode: ProMode, directory: URL?, notebookId: String, pageIndex: Int) {
+    func configurePro(
+        mode: ProMode, directory: URL?, notebookId: String, pageIndex: Int, pencilOnly: Bool = false
+    ) {
         if mode == .off, proLayer == nil { return }
         let layer = installProLayerIfNeeded()
         if let directory {
@@ -388,19 +460,50 @@ final class AdaptiveCanvasView: PKCanvasView {
         switch mode {
         case .off:
             gesture.isEnabled = false
+            gesture.deferUntilMoved = false
             restorePan()
         case .draw:
             gesture.mode = .draw
             gesture.cancelsTouchesInView = true
+            // 打字模式：只收 Pencil，而且要真的動了才落墨 —— 輕點是「放游標」，不該留墨點。
+            gesture.deferUntilMoved = pencilOnly
             gesture.isEnabled = true
             drawingGestureRecognizer.isEnabled = false
-            overridePan()
+            // 打字模式下單指要能捲動，不能把捲動改成兩指。
+            if pencilOnly { restorePan() } else { overridePan() }
         case .erase:
             gesture.mode = .erase
             gesture.cancelsTouchesInView = false
+            gesture.deferUntilMoved = false
             gesture.isEnabled = true
             restorePan()
         }
+    }
+
+    // MARK: 打字模式的 Pencil 意圖（工作項 F1）
+
+    /// 打字模式時為真：Pencil 落筆不立刻宣告「要寫字」，交給 `pencilIntent` 等筆離開再判定。
+    var deferPencilIntent = false {
+        didSet { pencilIntent.isEnabled = deferPencilIntent }
+    }
+    /// 打字模式中 Pencil 輕點一下。座標是**頁面座標**（已除以縮放倍率）。
+    var onPencilTap: ((CGPoint) -> Void)?
+
+    private lazy var pencilIntent: PencilIntentObserver = {
+        let observer = PencilIntentObserver()
+        observer.onStroke = { [weak self] in self?.onPencilTouchBegan?() }
+        observer.onTap = { [weak self] location in
+            guard let self else { return }
+            let scale = max(self.zoomScale, 0.01)
+            self.onPencilTap?(CGPoint(x: location.x / scale, y: location.y / scale))
+        }
+        return observer
+    }()
+
+    func installPencilIntentIfNeeded() {
+        guard pencilIntent.view == nil else { return }
+        pencilIntent.isEnabled = deferPencilIntent
+        addGestureRecognizer(pencilIntent)
     }
 
     private func overridePan() {
@@ -458,7 +561,7 @@ final class AdaptiveCanvasView: PKCanvasView {
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
         activeTouchesCount += touches.count
         for touch in touches {
-            if touch.type == .pencil {
+            if touch.type == .pencil && !deferPencilIntent {
                 onPencilTouchBegan?()
             }
             onTouchObserved?(touch)
@@ -594,13 +697,17 @@ struct CanvasRepresentable: UIViewRepresentable {
     var onPencilTouchBegan: (() -> Void)? = nil
     var onCanvasDirectTap: ((CGPoint) -> Void)? = nil
     var onCanvasDirectDoubleTap: ((CGPoint) -> Void)? = nil
+    /// 打字模式下 Pencil 輕點一下（頁面座標）。沒接的話就當成手指點擊。
+    var onPencilTapInTypeMode: ((CGPoint) -> Void)? = nil
 
     /// 目前該用哪個輸入政策。
     ///
     /// 打字模式一律設為 `.pencilOnly`：拿 Apple Pencil 的使用者隨時可順暢下筆，手指則負責點選與選取物件。
     /// 手寫模式交給掌拒協調器決定 —— 沒有它時退回原本的 `.anyInput`。
     private func resolvedPolicy(now: Date = Date()) -> PKCanvasViewDrawingPolicy {
-        guard editorMode == .draw else { return .default }
+        if EditorCanvasInputPolicy.fingerMayDraw(effectiveMode: editorMode) == false {
+            return .pencilOnly
+        }
         return palmRejection?.drawingPolicy(now: now) ?? .anyInput
     }
 
@@ -616,8 +723,12 @@ struct CanvasRepresentable: UIViewRepresentable {
         let canvas = AdaptiveCanvasView()
         canvas.drawingPolicy = resolvedPolicy()
         canvas.onPencilTouchBegan = onPencilTouchBegan
-        canvas.onTouchObserved = { [weak canvas] touch in
+        canvas.onTouchObserved = { [weak canvas, weak coordinator = context.coordinator] touch in
             guard let palm = palmRejection else { return }
+            // 掌拒只在手繪模式管事。打字模式下手指本來就不畫，
+            // 讓它去改政策會把畫布改回 `.anyInput`（手指又能畫了），
+            // 收回筆畫則可能把剛用 Pencil 寫的字收掉。
+            guard coordinator?.parent.editorMode == .draw else { return }
             let landed = Date()
             if palm.observe(touch: touch, now: landed) {
                 onRetractStrokes?(landed)
@@ -630,7 +741,11 @@ struct CanvasRepresentable: UIViewRepresentable {
             InkInputDiagnostics.shared.record(touch: touch, event: event, in: canvas)
         }
         canvas.delegate = context.coordinator
-        canvas.drawingGestureRecognizer.isEnabled = (editorMode != .type)
+        canvas.drawingGestureRecognizer.isEnabled =
+            EditorCanvasInputPolicy.drawingGestureEnabled(effectiveMode: editorMode)
+        canvas.installPencilIntentIfNeeded()
+        canvas.deferPencilIntent = EditorCanvasInputPolicy.defersPencilIntent(effectiveMode: editorMode)
+        canvas.onPencilTap = onPencilTapInTypeMode ?? onCanvasDirectTap
         canvas.isUserInteractionEnabled = true
         canvas.backgroundColor = .clear
         canvas.isOpaque = false
@@ -776,21 +891,19 @@ struct CanvasRepresentable: UIViewRepresentable {
             uiView.alwaysBounceVertical = isScrollEnabled
             uiView.showsVerticalScrollIndicator = isScrollEnabled
         }
-        if editorMode == .type {
-            if uiView.drawingGestureRecognizer.isEnabled {
-                uiView.drawingGestureRecognizer.isEnabled = false
-            }
-            if uiView.drawingPolicy != .default {
-                uiView.drawingPolicy = .default
-            }
-        } else {
-            if !uiView.drawingGestureRecognizer.isEnabled {
-                uiView.drawingGestureRecognizer.isEnabled = true
-            }
-            let targetPolicy = resolvedPolicy()
-            if uiView.drawingPolicy != targetPolicy {
-                uiView.drawingPolicy = targetPolicy
-            }
+        // 打字模式不再關掉落筆手勢：靠 `.pencilOnly` 擋手指，Pencil 第一筆就收得到。
+        let gestureOn = EditorCanvasInputPolicy.drawingGestureEnabled(effectiveMode: editorMode)
+        if uiView.drawingGestureRecognizer.isEnabled != gestureOn {
+            uiView.drawingGestureRecognizer.isEnabled = gestureOn
+        }
+        let targetPolicy = resolvedPolicy()
+        if uiView.drawingPolicy != targetPolicy {
+            uiView.drawingPolicy = targetPolicy
+        }
+        if let adaptive = uiView as? AdaptiveCanvasView {
+            let defer_ = EditorCanvasInputPolicy.defersPencilIntent(effectiveMode: editorMode)
+            if adaptive.deferPencilIntent != defer_ { adaptive.deferPencilIntent = defer_ }
+            adaptive.onPencilTap = onPencilTapInTypeMode ?? onCanvasDirectTap
         }
         // 模式切換時縮放範圍也要重設 —— 只在 makeUIView 設的話，
         // SwiftUI 重用同一個 UIView 時會沿用舊值。
@@ -856,25 +969,26 @@ struct CanvasRepresentable: UIViewRepresentable {
     private func applyProInk(to canvas: PKCanvasView) {
         guard let adaptive = canvas as? AdaptiveCanvasView else { return }
         let mode: AdaptiveCanvasView.ProMode
-        if editorMode != .draw {
-            mode = .off
-        } else if selectedTool.proToolKind != nil {
+        if selectedTool.proToolKind != nil {
             mode = .draw
         } else if selectedTool == .eraser {
             mode = .erase
         } else {
             mode = .off
         }
+        let fingerRule = EditorCanvasInputPolicy.fingerMayDraw(effectiveMode: editorMode)
         adaptive.proTool = selectedTool.proToolKind
         adaptive.proColor = InkInterop.rgba(from: UIColor(selectedColor)).map { $0 }
         adaptive.proWidth = Float(max(1.2, strokeWidth * 1.4))
         adaptive.proEraserRadius = eraserMode == .pixel ? max(8, pixelEraserWidth / 2) : 8
         adaptive.proAllowsFinger = { [palmRejection] in
-            (palmRejection?.drawingPolicy(now: Date()) ?? .anyInput) == .anyInput
+            if fingerRule == false { return false }
+            return (palmRejection?.drawingPolicy(now: Date()) ?? .anyInput) == .anyInput
         }
         adaptive.configurePro(
             mode: mode, directory: proInk?.directory,
-            notebookId: proInk?.notebookId ?? "", pageIndex: proInk?.pageIndex ?? 0)
+            notebookId: proInk?.notebookId ?? "", pageIndex: proInk?.pageIndex ?? 0,
+            pencilOnly: fingerRule == false)
     }
 
     /// 測試用讀數：縮放倍率**與筆畫數**。
@@ -1021,14 +1135,20 @@ struct CanvasRepresentable: UIViewRepresentable {
 
         @objc func handleDirectSingleTap(_ sender: UITapGestureRecognizer) {
             guard sender.state == .ended, let canvas = sender.view else { return }
-            let loc = sender.location(in: canvas)
-            parent.onCanvasDirectTap?(loc)
+            parent.onCanvasDirectTap?(Self.pageLocation(of: sender, in: canvas))
         }
 
         @objc func handleDirectDoubleTap(_ sender: UITapGestureRecognizer) {
             guard sender.state == .ended, let canvas = sender.view else { return }
-            let loc = sender.location(in: canvas)
-            parent.onCanvasDirectDoubleTap?(loc)
+            parent.onCanvasDirectDoubleTap?(Self.pageLocation(of: sender, in: canvas))
+        }
+
+        /// 點擊位置換成**頁面座標**。畫布放大時，scroll view 自己的座標是放大後的，
+        /// 物件與文字框用的是未縮放的頁面座標 —— 不換算的話放大時點到的位置會偏掉。
+        static func pageLocation(of gesture: UIGestureRecognizer, in canvas: UIView) -> CGPoint {
+            let loc = gesture.location(in: canvas)
+            let scale = max((canvas as? UIScrollView)?.zoomScale ?? 1, 0.01)
+            return CGPoint(x: loc.x / scale, y: loc.y / scale)
         }
 
         init(_ parent: CanvasRepresentable) {
@@ -4190,20 +4310,13 @@ public struct NotebookEditorView: View {
                 .allowsHitTesting(false)
                 .zIndex(0)
 
-            // 空白頁點擊與既有物件的互動分層。這個視圖和頁面套用完全相同
-            // 的縮放／位移，因此 gesture 回傳的是正確的頁面座標。
-            if editorMode == .type && !isInlineInkEditing {
-                Color.clear
-                    .frame(width: PageGeometry.width, height: currentPageHeight)
-                    .contentShape(Rectangle())
-                    .onTapGesture(coordinateSpace: .local) { location in
-                        handleCanvasTapInTypeMode(at: location, page: currentPageIndex)
-                    }
-                    .accessibilityIdentifier("editor.text.canvas_input")
-                    .scaleEffect(canvasZoomScale, anchor: .topLeading)
-                    .offset(x: -canvasContentOffset.x, y: -canvasContentOffset.y)
-                    .zIndex(2)
-            }
+            // 打字模式的空白處點擊：交給畫布自己的「手指／游標限定」點擊手勢
+            // （`handleDirectSingleTap` → `handleCanvasTapInTypeMode`）。
+            //
+            // 過去這裡疊了一層透明的 SwiftUI 點擊層在畫布上方，它會連 Apple Pencil
+            // 一起吃掉 —— 打字模式下拿筆寫字只會開出文字框，寫不出墨水。
+            // 融合輸入規則（`EditorCanvasInputPolicy`）要求 Pencil 在任何模式都能寫，
+            // 所以空白處必須讓觸控落到畫布：手指交給點擊手勢，Pencil 交給 PencilKit。
 
             objectLayer(forPage: currentPageIndex)
                 .frame(width: PageGeometry.width, height: currentPageHeight, alignment: .topLeading)
@@ -4348,6 +4461,10 @@ public struct NotebookEditorView: View {
                 onCanvasDirectDoubleTap: { location in
                     guard !isInlineInkEditing else { return }
                     handleCanvasDirectDoubleTap(at: location)
+                },
+                onPencilTapInTypeMode: { location in
+                    guard !isInlineInkEditing else { return }
+                    handlePencilTapInTypeMode(at: location)
                 }
             )
             .accessibilityIdentifier("editor.canvas")
@@ -9412,6 +9529,14 @@ public struct NotebookEditorView: View {
         let draft = insertTextBox(at: location, page: targetPage, tapToWrite: true)
         inlineEditingTextId = draft.id
         editingTextId = nil
+    }
+
+    /// 打字模式下 Apple Pencil 輕點：移除可能產生的微小墨點，並轉由文字模式點擊處理（即點即書或聚焦文字/物件）
+    private func handlePencilTapInTypeMode(at location: CGPoint, page: Int? = nil) {
+        let targetPage = page ?? currentPageIndex
+        currentPageIndex = targetPage
+        removeTapDotStroke(near: location)
+        handleCanvasTapInTypeMode(at: location, page: targetPage)
     }
 
 

@@ -471,6 +471,10 @@ final class ProStrokeGestureRecognizer: UIGestureRecognizer {
     private var lastTimestamp: TimeInterval = 0
     private var erasePath: [CGPoint] = []
 
+    /// 為真時（打字模式）：筆要真的移動超過門檻才開始落墨。輕點不留墨點。
+    var deferUntilMoved = false
+    private var pendingBegin: (point: ProPoint, location: CGPoint)?
+
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent) {
         guard let layerView else { state = .failed; return }
         if tracked != nil {
@@ -486,6 +490,11 @@ final class ProStrokeGestureRecognizer: UIGestureRecognizer {
         tracked = touch
         lastTimestamp = touch.timestamp
         let point = makePoint(touch, in: layerView, dt: 0)
+        if deferUntilMoved && mode == .draw {
+            guard tool() != nil else { state = .failed; return }
+            pendingBegin = (point, touch.location(in: layerView))
+            return
+        }
         state = .began
         switch mode {
         case .draw:
@@ -499,6 +508,15 @@ final class ProStrokeGestureRecognizer: UIGestureRecognizer {
 
     override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent) {
         guard let layerView, let touch = tracked, touches.contains(touch) else { return }
+        if let pending = pendingBegin {
+            let here = touch.location(in: layerView)
+            let moved = hypot(here.x - pending.location.x, here.y - pending.location.y)
+            guard moved >= EditorCanvasInputPolicy.pencilTapMaxDistance / 2 else { return }
+            guard let tool = tool() else { pendingBegin = nil; state = .failed; return }
+            layerView.beginStroke(tool: tool, color: color(), width: width(), at: pending.point)
+            pendingBegin = nil
+            state = .began
+        }
         // 合併觸控（coalesced）才有完整的取樣率；預測觸控不收 —— 那是視覺補償，不是真實輸入。
         let samples = event.coalescedTouches(for: touch) ?? [touch]
         var points: [ProPoint] = []
@@ -520,6 +538,13 @@ final class ProStrokeGestureRecognizer: UIGestureRecognizer {
 
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent) {
         guard let touch = tracked, touches.contains(touch) else { return }
+        if pendingBegin != nil {
+            // 沒動過：這是輕點，不是筆畫。
+            pendingBegin = nil
+            tracked = nil
+            state = .failed
+            return
+        }
         if mode == .draw { layerView?.endStroke() }
         tracked = nil
         erasePath = []
@@ -528,6 +553,12 @@ final class ProStrokeGestureRecognizer: UIGestureRecognizer {
 
     override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent) {
         guard let touch = tracked, touches.contains(touch) else { return }
+        if pendingBegin != nil {
+            pendingBegin = nil
+            tracked = nil
+            state = .failed
+            return
+        }
         cancelCurrent()
         state = .cancelled
     }
@@ -535,6 +566,7 @@ final class ProStrokeGestureRecognizer: UIGestureRecognizer {
     override func reset() {
         tracked = nil
         erasePath = []
+        pendingBegin = nil
     }
 
     private func cancelCurrent() {

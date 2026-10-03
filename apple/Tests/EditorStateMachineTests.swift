@@ -53,6 +53,30 @@ final class EditorStateMachineTests: XCTestCase {
         )
     }
 
+    func testFusionInputPolicyInvariants() {
+        // 任何模式下繪圖手勢皆保持啟用，杜絕切換第一筆遺失問題
+        XCTAssertTrue(EditorCanvasInputPolicy.drawingGestureEnabled(effectiveMode: .draw))
+        XCTAssertTrue(EditorCanvasInputPolicy.drawingGestureEnabled(effectiveMode: .type))
+
+        // 打字模式下手指不可繪圖（交由物件選取/捲動）
+        XCTAssertEqual(EditorCanvasInputPolicy.fingerMayDraw(effectiveMode: .type), false)
+        XCTAssertNil(EditorCanvasInputPolicy.fingerMayDraw(effectiveMode: .draw))
+
+        // 打字模式下延遲判定 Apple Pencil 意圖（區分點擊與書寫筆劃）
+        XCTAssertTrue(EditorCanvasInputPolicy.defersPencilIntent(effectiveMode: .type))
+        XCTAssertFalse(EditorCanvasInputPolicy.defersPencilIntent(effectiveMode: .draw))
+
+        // 判定 Pencil 輕點 vs 筆畫
+        let tap = EditorCanvasInputPolicy.classifyPencil(distance: 2, duration: 0.1)
+        XCTAssertEqual(tap, .tap)
+
+        let strokeByDistance = EditorCanvasInputPolicy.classifyPencil(distance: 12, duration: 0.1)
+        XCTAssertEqual(strokeByDistance, .stroke)
+
+        let strokeByDuration = EditorCanvasInputPolicy.classifyPencil(distance: 2, duration: 0.6)
+        XCTAssertEqual(strokeByDuration, .stroke)
+    }
+
     func testPencilTouchGuardInTypeMode() {
         let sm = EditorStateMachine()
         sm.setMode(.type)
