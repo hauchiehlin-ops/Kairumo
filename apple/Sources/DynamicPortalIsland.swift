@@ -127,6 +127,7 @@ public struct DynamicPortalIsland: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel(localizationManager.localized(labelKey))
+        .help(localizationManager.localized("\(labelKey)_desc"))
         .accessibilityAddTraits(isSelected ? [.isSelected] : [])
         .accessibilityIdentifier("portal.\(mode.rawValue)")
     }

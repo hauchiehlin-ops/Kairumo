@@ -374,7 +374,7 @@ public struct WordToolbarView: View {
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel(localizationManager.localized("wd_insert_divider"))
-                    .help(localizationManager.localized("wd_insert_divider"))
+                    .help(localizationManager.localized("wd_insert_divider_desc"))
                 }
 
                 Divider().frame(height: 20)

@@ -630,7 +630,7 @@ struct CanvasRepresentable: UIViewRepresentable {
             InkInputDiagnostics.shared.record(touch: touch, event: event, in: canvas)
         }
         canvas.delegate = context.coordinator
-        canvas.drawingGestureRecognizer.isEnabled = true
+        canvas.drawingGestureRecognizer.isEnabled = (editorMode != .type)
         canvas.isUserInteractionEnabled = true
         canvas.backgroundColor = .clear
         canvas.isOpaque = false
@@ -2473,7 +2473,7 @@ public struct NotebookEditorView: View {
             }
             .buttonStyle(.plain)
             .accessibilityLabel(localizationManager.localized("structure_sidebar"))
-            .help(localizationManager.localized("structure_sidebar"))
+            .help(localizationManager.localized("structure_sidebar_desc"))
 
             Spacer()
 
@@ -2560,7 +2560,7 @@ public struct NotebookEditorView: View {
                         .foregroundColor(.accentColor)
                 }
                 .accessibilityLabel(localizationManager.localized("add_page"))
-                .help(localizationManager.localized("add_page"))
+                .help(localizationManager.localized("add_page_desc"))
             }
 
             Divider()
@@ -2577,7 +2577,7 @@ public struct NotebookEditorView: View {
                     .cornerRadius(6)
             }
             .accessibilityLabel(localizationManager.localized("ruler"))
-            .help(localizationManager.localized("ruler"))
+            .help(localizationManager.localized("ruler_desc"))
 
             // 次世代 UI/UX Phase 5: 立起雙屏模式 (Tabletop Mode)
             Button {
@@ -2592,7 +2592,7 @@ public struct NotebookEditorView: View {
                     .cornerRadius(6)
             }
             .accessibilityLabel(L("posture_tabletop_mode"))
-            .help(L("posture_tabletop_mode"))
+            .help(L("posture_tabletop_mode_desc"))
 
             // 復原與重做 (Undo / Redo)
             HStack(spacing: 3) {
@@ -2607,7 +2607,7 @@ public struct NotebookEditorView: View {
                         .cornerRadius(6)
                 }
                 .accessibilityLabel(localizationManager.localized("undo"))
-                .help(localizationManager.localized("undo"))
+                .help(localizationManager.localized("undo_desc"))
 
                 Button {
                     canvasView?.undoManager?.redo()
@@ -2620,7 +2620,7 @@ public struct NotebookEditorView: View {
                         .cornerRadius(6)
                 }
                 .accessibilityLabel(localizationManager.localized("redo"))
-                .help(localizationManager.localized("redo"))
+                .help(localizationManager.localized("redo_desc"))
             }
 
             // 📦 素材圖庫快捷按鈕（與 iOS 首頁一致）
@@ -2813,7 +2813,7 @@ public struct NotebookEditorView: View {
             }
             .buttonStyle(.plain)
             .accessibilityLabel(localizationManager.localized("comment_pin"))
-            .help(localizationManager.localized("comment_pin"))
+            .help(localizationManager.localized("comment_pin_desc"))
 
             // 👥 線上多人即時協同按鈕
             Button {
@@ -2845,7 +2845,7 @@ public struct NotebookEditorView: View {
             }
             .buttonStyle(.plain)
             .accessibilityLabel(localizationManager.localized("collaborate"))
-            .help(localizationManager.localized("collaborate"))
+            .help(localizationManager.localized("collaborate_desc"))
 
             // 錄音按鈕
             if audioManager.status == .recording || audioManager.status == .paused {
@@ -4381,8 +4381,14 @@ public struct NotebookEditorView: View {
                 pageIndex: currentPageIndex,
                 isActive: selectedTool == .maskingTape,
                 selectedColor: selectedColor,
-                onTapesChanged: { store.updateNotebook(notebook) }
+                onTapesChanged: {
+                    store.updateNotebook(notebook)
+                    PageThumbnailRenderer.invalidateAll()
+                }
             )
+            .frame(width: PageGeometry.width, height: currentPageHeight, alignment: .topLeading)
+            .scaleEffect(canvasZoomScale, anchor: .topLeading)
+            .offset(x: -canvasContentOffset.x, y: -canvasContentOffset.y)
             .allowsHitTesting(selectedTool == .maskingTape || !(notebook.tapeAttachments?.filter { $0.pageIndex == currentPageIndex }.isEmpty ?? true))
             .zIndex(selectedTool == .maskingTape ? 4 : 2.5)
 
@@ -6592,7 +6598,7 @@ public struct NotebookEditorView: View {
                     .background(strokeStabilizer > 0 ? Color.accentColor.opacity(0.15) : Color.clear)
                     .cornerRadius(6)
                 }
-                .help(localizationManager.localized("stab_title"))
+                .help(localizationManager.localized("stab_desc"))
                 .accessibilityLabel(localizationManager.localized("stab_title"))
 
                 // 🌟 鏡像對稱尺規 (Symmetry Guide)
@@ -6608,7 +6614,7 @@ public struct NotebookEditorView: View {
                         .cornerRadius(6)
                 }
                 .buttonStyle(.plain)
-                .help(localizationManager.localized("symmetry_guide"))
+                .help(localizationManager.localized("symmetry_guide_desc"))
                 .accessibilityLabel(localizationManager.localized("symmetry_guide"))
 
                 // 🌟 響應式極簡畫布收折按鈕
@@ -6811,7 +6817,7 @@ public struct NotebookEditorView: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel(localizationManager.localized("add_text_box"))
-        .help(localizationManager.localized("add_text_box"))
+        .help(localizationManager.localized("add_text_box_desc"))
         .accessibilityIdentifier("editor.text.add_box")
 
         // 2. 文字排版 / 樣式面板
@@ -6833,7 +6839,7 @@ public struct NotebookEditorView: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel(localizationManager.localized("word_studio"))
-        .help(localizationManager.localized("word_studio"))
+        .help(localizationManager.localized("word_studio_desc"))
         .accessibilityIdentifier("editor.text.studio")
 
         Divider().frame(height: 20)
@@ -7017,7 +7023,7 @@ public struct NotebookEditorView: View {
             }
             .buttonStyle(.plain)
             .accessibilityLabel(localizationManager.localized("layer_bring_forward"))
-            .help(localizationManager.localized("layer_bring_forward"))
+            .help(localizationManager.localized("layer_bring_forward_desc"))
             .accessibilityIdentifier("editor.text.layer_forward")
 
             Button {
@@ -7029,7 +7035,7 @@ public struct NotebookEditorView: View {
             }
             .buttonStyle(.plain)
             .accessibilityLabel(localizationManager.localized("layer_send_backward"))
-            .help(localizationManager.localized("layer_send_backward"))
+            .help(localizationManager.localized("layer_send_backward_desc"))
             .accessibilityIdentifier("editor.text.layer_backward")
         }
         .padding(2)
@@ -8893,7 +8899,7 @@ public struct NotebookEditorView: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel(localizationManager.localized("page_format"))
-        .help(localizationManager.localized("page_format"))
+        .help(localizationManager.localized("page_format_desc"))
     }
 
     /// 版面配色。
@@ -8936,7 +8942,7 @@ public struct NotebookEditorView: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel(localizationManager.localized("guide_palette"))
-        .help(localizationManager.localized("guide_palette"))
+        .help(localizationManager.localized("guide_palette_desc"))
     }
 
     private func applyGuidePalette(_ id: String) {
@@ -9248,6 +9254,13 @@ public struct NotebookEditorView: View {
         if let items = notebook.model3DAttachments {
             for item in items where item.pageIndex == page {
                 if CGRect(x: item.x, y: item.y, width: item.width, height: item.height).insetBy(dx: -4, dy: -4).contains(location) {
+                    return true
+                }
+            }
+        }
+        if let items = notebook.tapeAttachments {
+            for item in items where item.pageIndex == page {
+                if item.rect.insetBy(dx: -4, dy: -4).contains(location) {
                     return true
                 }
             }

@@ -167,6 +167,14 @@ extension LocalizationManager {
             .ko: "페이지 추가",
             .th: "เพิ่มหน้า"
         ],
+        "add_page_desc": [
+            .zhHant: "在筆記本中新增一頁空白頁面",
+            .en: "Append a new blank page to notebook",
+            .zhHans: "在笔记本中新增一页空白页面",
+            .ja: "ノートブックの末尾に新しいページを追加",
+            .ko: "노트북에 새로운 페이지 추가",
+            .th: "เพิ่มหน้าใหม่ในสมุดบันทึก"
+        ],
         "add_page_large": [
             .zhHant: "＋ 新增頁面",
             .en: "+ Add Page",
@@ -182,6 +190,14 @@ extension LocalizationManager {
             .ja: "テキストボックスを追加",
             .ko: "텍스트 상자 추가",
             .th: "เพิ่มกล่องข้อความ"
+        ],
+        "add_text_box_desc": [
+            .zhHant: "在畫布任意位置插入專業排版文字方塊",
+            .en: "Insert a freeform Word-grade text box on canvas",
+            .zhHans: "在画布任意位置插入专业排版文本框",
+            .ja: "キャンバスにWord形式のテキストボックスを挿入",
+            .ko: "캔버스에 자유로운 텍스트 상자 삽입",
+            .th: "แทรกกล่องข้อความระดับ Word บนผืนผ้าใบ"
         ],
         "advanced_pen_settings": [
             .zhHant: "進階畫筆設定",
@@ -2278,6 +2294,14 @@ extension LocalizationManager {
             .ko: "공동 편집",
             .th: "การทำงานร่วมกัน"
         ],
+        "collaborate_desc": [
+            .zhHant: "查看並管理線上多人即時協同畫布",
+            .en: "Open real-time multiplayer P2P collaboration session",
+            .zhHans: "查看并管理线上多人即时协同画布",
+            .ja: "リアルタイム複数人共同編集セッションを管理",
+            .ko: "실시간 다중 접속 공동 작업 세션 관리",
+            .th: "จัดการเซสชันการทำงานร่วมกันแบบเรียลไทม์"
+        ],
         "collapse": [
             .zhHant: "收合",
             .en: "Collapse",
@@ -2429,6 +2453,14 @@ extension LocalizationManager {
             .ja: "コメントピン",
             .ko: "댓글 핀",
             .th: "หมุดความคิดเห็น"
+        ],
+        "comment_pin_desc": [
+            .zhHant: "在畫布指定位置圖釘打卡，展開多人協同討論串",
+            .en: "Place a threaded collaboration comment pin on canvas",
+            .zhHans: "在画布指定位置图钉打卡，展开多人协同讨论串",
+            .ja: "キャンバス上の特定位置にコメントピンを配置",
+            .ko: "캔버스 특정 위치에 토론 댓글 핀 꽂기",
+            .th: "ปักหมุดข้อคิดเห็นเพื่อการทำงานร่วมกันบนผืนผ้าใบ"
         ],
         "comment_placeholder": [
             .zhHant: "輸入留言或回覆...",
@@ -4412,6 +4444,14 @@ extension LocalizationManager {
             .ko: "안내선 색",
             .th: "สีเส้นนำ"
         ],
+        "guide_palette_desc": [
+            .zhHant: "切換全文件紙張底紋格線與點陣色彩調性",
+            .en: "Select document grid background style and accent palette",
+            .zhHans: "切换全文档纸张底纹格线与点阵配色方案",
+            .ja: "背景のグリッド・罫線カラーパレットを変更",
+            .ko: "페이지 배경 격자 스타일 및 톤 팔레트 선택",
+            .th: "เลือกสไตล์และชุดสีของเส้นตารางพื้นหลัง"
+        ],
         "guide_pm": [
             .zhHant: "下午",
             .en: "PM",
@@ -4619,6 +4659,14 @@ extension LocalizationManager {
             .ja: "手描き",
             .ko: "손글씨",
             .th: "วาดเขียน"
+        ],
+        "handwriting_mode_desc": [
+            .zhHant: "手繪創作模式：畫布接收手寫與繪畫筆刷輸入",
+            .en: "Handwriting & drawing mode: Full canvas ink active for Apple Pencil and stylus",
+            .zhHans: "手绘创作模式：画布接收手写与素描笔刷输入",
+            .ja: "手描きモード：Apple Pencil やスタイラスによるペン描画が有効",
+            .ko: "손글씨/드로잉 모드: 애플 펜슬 필기 및 스케치 활성화",
+            .th: "โหมดวาดเขียน: เปิดใช้งานหมึกวาดภาพเต็มรูปแบบสำหรับ Apple Pencil"
         ],
         "heading_1": [
             .zhHant: "標題 1",
@@ -5883,6 +5931,14 @@ extension LocalizationManager {
             .ko: "앞으로",
             .th: "เลื่อนขึ้น"
         ],
+        "layer_bring_forward_desc": [
+            .zhHant: "將選取的物件向上移動一層",
+            .en: "Bring selected object one layer forward",
+            .zhHans: "将选中的物件向上移动一层",
+            .ja: "選択したオブジェクトを前面へ移動",
+            .ko: "선택한 개체를 한 단계 앞으로 가져오기",
+            .th: "เลื่อนวัตถุที่เลือกขึ้นหนึ่งชั้น"
+        ],
         "layer_bring_front": [
             .zhHant: "移到最上層",
             .en: "Bring to Front",
@@ -5994,6 +6050,14 @@ extension LocalizationManager {
             .ja: "背面へ",
             .ko: "뒤로",
             .th: "เลื่อนลง"
+        ],
+        "layer_send_backward_desc": [
+            .zhHant: "將選取的物件向下移動一層",
+            .en: "Send selected object one layer backward",
+            .zhHans: "将选中的物件向下移动一层",
+            .ja: "選択したオブジェクトを背面へ移動",
+            .ko: "선택한 개체를 한 단계 뒤로 보내기",
+            .th: "เลื่อนวัตถุที่เลือกลงหนึ่งชั้น"
         ],
         "layer_ungroup": [
             .zhHant: "解散群組",
@@ -7683,6 +7747,14 @@ extension LocalizationManager {
             .ko: "용지 크기를 바꾸면 캔버스와 내보내기가 함께 바뀝니다. 새 페이지를 벗어난 내용은 안쪽으로 되돌립니다.",
             .th: "การเปลี่ยนขนาดจะเปลี่ยนทั้งผืนผ้าใบและไฟล์ที่ส่งออก เนื้อหาที่เลยขอบหน้าใหม่จะถูกย้ายกลับเข้ามา"
         ],
+        "page_format_desc": [
+            .zhHant: "變更頁面紙張規格與長寬比例（A4、信紙、16:9 等）",
+            .en: "Change canvas page format and aspect ratio (A4, Letter, 16:9)",
+            .zhHans: "更改页面纸张规格与长宽比例（A4、信纸、16:9 等）",
+            .ja: "ページ用紙サイズと縦横比を変更 (A4, Letter, 16:9)",
+            .ko: "페이지 용지 규격 및 비율 변경 (A4, Letter, 16:9)",
+            .th: "เปลี่ยนรูปแบบขนาดหน้าและอัตราส่วน (A4, Letter, 16:9)"
+        ],
         "page_format_legal": [
             .zhHant: "Legal 直式",
             .en: "Legal",
@@ -8266,6 +8338,14 @@ extension LocalizationManager {
             .ko: "테이블탑 / 플렉스 모드",
             .th: "โหมดตั้งโต๊ะ / เฟล็กซ์"
         ],
+        "posture_tabletop_mode_desc": [
+            .zhHant: "切換上屏瀏覽、下屏書寫的懸停雙屏模式",
+            .en: "Toggle dual-screen tabletop viewing and editing mode",
+            .zhHans: "切换上屏浏览、下屏书写的悬停双屏模式",
+            .ja: "見開き・テーブルトップ表示モードを切り替え",
+            .ko: "상하 듀얼 화면 테이블탑 모드 켜기/끄기",
+            .th: "สลับโหมดโต๊ะทำงานแบบสองหน้าจอ (ดูด้านบน เขียนด้านล่าง)"
+        ],
         "preferences_lang": [
             .zhHant: "偏好設定與介面語言",
             .en: "Preferences & Language",
@@ -8607,6 +8687,14 @@ extension LocalizationManager {
             .ja: "やり直し",
             .ko: "다시 실행",
             .th: "ทำซ้ำ"
+        ],
+        "redo_desc": [
+            .zhHant: "重做上一步被復原的操作",
+            .en: "Redo previously undone action",
+            .zhHans: "重做上一步被撤销的操作",
+            .ja: "取り消した操作をやり直す",
+            .ko: "실행 취소한 작업 다시 실행",
+            .th: "ทำซ้ำการกระทำที่เลิกทำไป"
         ],
         "redo_refine": [
             .zhHant: "重做修飾",
@@ -8991,6 +9079,14 @@ extension LocalizationManager {
             .ja: "定規ガイド",
             .ko: "자 가이드",
             .th: "เส้นบรรทัดนำสายตา"
+        ],
+        "ruler_desc": [
+            .zhHant: "切換顯示精密虛擬尺規輔助線",
+            .en: "Toggle virtual precision ruler guide",
+            .zhHans: "切换显示精密虚拟尺规辅助线",
+            .ja: "仮想ルーラー（定規）ガイドを表示・非表示",
+            .ko: "가상 정밀 눈금자 가이드라인 켜기/끄기",
+            .th: "สลับการแสดงไม้บรรทัดนำทางเสมือนจริง"
         ],
         "ruler_hint": [
             .zhHant: "• 提示：觸控板兩指旋轉，或按住 Option 鍵滑動旋轉",
@@ -10216,6 +10312,14 @@ extension LocalizationManager {
             .ko: "사양 및 재료 권장사항",
             .th: "ข้อมูลจำเพาะและคำแนะนำวัสดุ"
         ],
+        "stab_desc": [
+            .zhHant: "線條即時平滑防抖，消除手寫抖動與毛邊",
+            .en: "Real-time stroke stabilisation smoothing for jitter-free writing and drawing",
+            .zhHans: "线条实时平滑防抖，消除手写抖动与毛刺",
+            .ja: "ストロークの手ブレを抑えて滑らかに補正します",
+            .ko: "손떨림을 보정하여 매끄러운 선을 그립니다",
+            .th: "ลดการสั่นของเส้นแบบเรียลไทม์เพื่อการเขียนและวาดที่ลื่นไหล"
+        ],
         "stab_light": [
             .zhHant: "輕微防抖",
             .en: "Light stabiliser",
@@ -11096,6 +11200,14 @@ extension LocalizationManager {
             .ko: "노트 구조",
             .th: "โครงสร้างสมุด"
         ],
+        "structure_sidebar_desc": [
+            .zhHant: "展開或收起頁面縮圖與目錄結構側邊欄",
+            .en: "Toggle page thumbnails and folder structure outline sidebar",
+            .zhHans: "展开或收起页面缩略图与目录结构侧边栏",
+            .ja: "ページサムネイルとフォルダ階層サイドバーを表示・非表示",
+            .ko: "페이지 썸네일 및 폴더 구조 아웃라인 사이드바 전환",
+            .th: "สลับแถบข้างโครงสร้างหน้าและโฟลเดอร์"
+        ],
         "structure_summary": [
             .zhHant: "%1$@ 個資料夾 · %2$@ 本筆記",
             .en: "%1$@ folders · %2$@ notebooks",
@@ -11127,6 +11239,14 @@ extension LocalizationManager {
             .ja: "左右対称ガイド",
             .ko: "좌우 대칭 안내선",
             .th: "เส้นนำสมมาตรกระจก"
+        ],
+        "symmetry_guide_desc": [
+            .zhHant: "鏡像對稱輔助尺規，即時繪製平衡對稱圖案",
+            .en: "Mirror symmetry guide for perfectly balanced illustrations and graphics",
+            .zhHans: "镜像对称辅助尺规，实时绘制平衡对称图形",
+            .ja: "左右対称の描画ガイドで均整のとれたイラストを作成",
+            .ko: "좌우 대칭 가이드라인으로 완벽한 균형의 드로잉 완성",
+            .th: "เส้นนำสายตาสมมาตรกระจกเพื่อการวาดที่สมดุลสมบูรณ์แบบ"
         ],
         "sync_account": [
             .zhHant: "帳號",
@@ -12984,6 +13104,14 @@ extension LocalizationManager {
             .ko: "타이핑",
             .th: "พิมพ์ข้อความ"
         ],
+        "typing_mode_desc": [
+            .zhHant: "打字排版模式：點按畫布隨點隨打，自由選取、移動與編輯物件",
+            .en: "Type & layout mode: Click canvas to type, select, move, and edit objects",
+            .zhHans: "文字排版模式：点按画布随点随打，自由选中、移动与编辑物件",
+            .ja: "タイピングモード：キャンバスをクリックして文字入力・オブジェクト操作",
+            .ko: "타이핑/편집 모드: 클릭하여 글쓰기 및 개체 선택·이동·편집",
+            .th: "โหมดพิมพ์และจัดหน้า: แตะผืนผ้าใบเพื่อพิมพ์ เลือก และย้ายวัตถุ"
+        ],
         "ui_wireframe_tip": [
             .zhHant: "快速貼上標準 UI 元件線框",
             .en: "Quickly insert standard UI wireframe components",
@@ -12999,6 +13127,14 @@ extension LocalizationManager {
             .ja: "取り消す",
             .ko: "실행 취소",
             .th: "เลิกทำ"
+        ],
+        "undo_desc": [
+            .zhHant: "復原上一步操作或筆跡",
+            .en: "Undo previous drawing or edit action",
+            .zhHans: "撤销上一步操作或笔画",
+            .ja: "直前の操作を取り消す",
+            .ko: "이전 작업 실행 취소",
+            .th: "เลิกทำการกระทำก่อนหน้า"
         ],
         "unfiled_notes": [
             .zhHant: "未分類檔案",
@@ -13200,6 +13336,14 @@ extension LocalizationManager {
             .ko: "구분선 삽입",
             .th: "แทรกเส้นคั่น"
         ],
+        "wd_insert_divider_desc": [
+            .zhHant: "在文件中插入整行水平分隔線",
+            .en: "Insert horizontal divider line in text document",
+            .zhHans: "在文档中插入整行水平分隔线",
+            .ja: "テキストドキュメントに水平区切り線を挿入",
+            .ko: "문서에 수평 구분선 삽입",
+            .th: "แทรกเส้นคั่นแนวนอนในเอกสาร"
+        ],
         "wd_insert_inline_canvas": [
             .zhHant: "插入文件內手繪畫布",
             .en: "Insert a handwriting canvas",
@@ -13287,6 +13431,14 @@ extension LocalizationManager {
             .ja: "文書テキスト編集",
             .ko: "워드 텍스트 편집",
             .th: "การแก้ไขข้อความ Word"
+        ],
+        "word_studio_desc": [
+            .zhHant: "打開字型、字級、段落與版面樣式面板",
+            .en: "Open typography styling and document studio inspector",
+            .zhHans: "打开字体、字号、段落与版式调色面板",
+            .ja: "テキスト書式・タイポグラフィ編集パネルを開く",
+            .ko: "텍스트 서식 및 서체 편집 스튜디오 열기",
+            .th: "เปิดแผงจัดรูปแบบข้อความและการจัดพิมพ์"
         ]
     ]
 }

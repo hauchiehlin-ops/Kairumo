@@ -273,7 +273,8 @@ enum NotebookPackageBridge {
                 }
                 for tape in document.tapeAttachments?.filter({ $0.pageIndex == index }) ?? [] {
                     try writeEnvelope(
-                        kind: "tape", id: tape.id, payload: tape, png: nil,
+                        kind: "tape", id: tape.id, payload: tape,
+                        png: PageThumbnailRenderer.renderObjectImage(tape)?.pngData(),
                         x: tape.rect.minX, y: tape.rect.minY,
                         width: tape.rect.width, height: tape.rect.height)
                 }

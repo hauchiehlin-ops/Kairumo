@@ -45,7 +45,7 @@ public enum PageThumbnailRenderer {
     ) -> NSString {
         // 紙張與配色也要進快取鍵：改的是「這一頁用哪張紙」時，筆跡沒動、
         // 物件沒動，只有版面變了 —— 沒有這兩個欄位的話側欄縮圖不會更新。
-        "\(notebook.id)|\(pageIndex)|\(notebook.lastModifiedDate.timeIntervalSince1970)|\(drawing.strokes.count)|\(Int(canvasWidth))|\(notebook.paperId(forPage: pageIndex))|\(notebook.guidePaletteId ?? "-")" as NSString
+        "\(notebook.id)|\(pageIndex)|\(notebook.lastModifiedDate.timeIntervalSince1970)|\(drawing.strokes.count)|\(notebook.tapeAttachments?.count ?? 0)|\(Int(canvasWidth))|\(notebook.paperId(forPage: pageIndex))|\(notebook.guidePaletteId ?? "-")" as NSString
     }
 
     /// 清空快取（例如切換筆記本時）。
@@ -183,6 +183,9 @@ public enum PageThumbnailRenderer {
             for pin in notebook.commentPins ?? [] where pin.pageIndex == pageIndex {
                 drawPin(pin)
             }
+            for tape in notebook.tapeAttachments ?? [] where tape.pageIndex == pageIndex {
+                drawTape(tape)
+            }
 
             // 有被裁掉的內容時，底部畫一道漸層，讓使用者知道這不是整頁。
             if cropToPreviewRatio, pageHeight > visibleHeight {
@@ -252,6 +255,16 @@ public enum PageThumbnailRenderer {
             local.x = 0
             local.y = 0
             drawLink(local)
+        }
+    }
+
+    /// 遮蔽膠帶的靜態算繪，給匯出 PDF 與套件外觀使用。
+    static func renderObjectImage(_ item: NoteTapeAttachment) -> UIImage? {
+        let size = CGSize(width: max(item.rect.width, 1), height: max(item.rect.height, 1))
+        return UIGraphicsImageRenderer(size: size).image { _ in
+            var local = item
+            local.rect = CGRect(origin: .zero, size: size)
+            drawTape(local)
         }
     }
 
@@ -802,6 +815,24 @@ public enum PageThumbnailRenderer {
         let ring = UIBezierPath(ovalIn: rect)
         ring.lineWidth = 2
         ring.stroke()
+    }
+
+    private static func drawTape(_ tape: NoteTapeAttachment) {
+        let rect = tape.rect
+        guard rect.width > 0, rect.height > 0 else { return }
+        let cornerRadius: CGFloat = 4.0
+        let path = UIBezierPath(roundedRect: rect, cornerRadius: cornerRadius)
+        
+        let tapeColor = UIColor(red: 0.98, green: 0.93, blue: 0.67, alpha: 1.0)
+        let fillAlpha: CGFloat = tape.isRevealed ? 0.20 : 0.95
+        let strokeAlpha: CGFloat = tape.isRevealed ? 0.40 : 0.80
+        
+        tapeColor.withAlphaComponent(fillAlpha).setFill()
+        path.fill()
+        
+        tapeColor.withAlphaComponent(strokeAlpha).setStroke()
+        path.lineWidth = 1.0
+        path.stroke()
     }
 }
 

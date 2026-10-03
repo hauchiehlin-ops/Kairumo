@@ -1,43 +1,43 @@
 {
   "NSLocalNetworkUsageDescription": {
     "en": "Kairumo uses the local network to sync your own devices on the same Wi-Fi within a second, and to edit notes together with people on that network. Everything is end-to-end encrypted and never passes through a server.",
-    "zhHant": "Kairumo 需要區域網路權限，以便在同一個 Wi-Fi 下讓您自己的裝置秒級同步筆記，並與同網路的協同夥伴共同編輯。所有傳輸均經端對端加密且不經外部伺服器。",
-    "zhHans": "Kairumo 需要局域网权限，以便在同一个 Wi-Fi 下让您自己的设备秒级同步笔记，并与同网络的协作伙伴共同编辑。所有传输均经端到端加密且不经外部服务器。",
     "ja": "Kairumo は、同じ Wi-Fi 上のご自身のデバイス間でノートを瞬時に同期し、同じネットワーク上の相手と一緒に編集するためにローカルネットワークを使用します。通信はすべてエンドツーエンドで暗号化され、サーバーを経由しません。",
     "ko": "Kairumo는 같은 Wi-Fi에 있는 내 기기끼리 노트를 즉시 동기화하고, 같은 네트워크의 사람과 함께 편집하기 위해 로컬 네트워크를 사용합니다. 모든 전송은 종단간 암호화되며 서버를 거치지 않습니다.",
-    "th": "Kairumo ใช้เครือข่ายภายในเพื่อซิงค์โน้ตระหว่างอุปกรณ์ของคุณบน Wi-Fi เดียวกันได้ในไม่กี่วินาที และแก้ไขร่วมกับผู้ที่อยู่ในเครือข่ายเดียวกัน ทุกการส่งข้อมูลเข้ารหัสแบบปลายทางถึงปลายทางและไม่ผ่านเซิร์ฟเวอร์"
+    "th": "Kairumo ใช้เครือข่ายภายในเพื่อซิงค์โน้ตระหว่างอุปกรณ์ของคุณบน Wi-Fi เดียวกันได้ในไม่กี่วินาที และแก้ไขร่วมกับผู้ที่อยู่ในเครือข่ายเดียวกัน ทุกการส่งข้อมูลเข้ารหัสแบบปลายทางถึงปลายทางและไม่ผ่านเซิร์ฟเวอร์",
+    "zhHans": "Kairumo 需要局域网权限，以便在同一个 Wi-Fi 下让您自己的设备秒级同步笔记，并与同网络的协作伙伴共同编辑。所有传输均经端到端加密且不经外部服务器。",
+    "zhHant": "Kairumo 需要區域網路權限，以便在同一個 Wi-Fi 下讓您自己的裝置秒級同步筆記，並與同網路的協同夥伴共同編輯。所有傳輸均經端對端加密且不經外部伺服器。"
   },
   "NSMicrophoneUsageDescription": {
     "en": "Kairumo uses the microphone to record voice notes in class or meetings, keeping your handwriting in sync with the recording timeline.",
-    "zhHant": "Kairumo 需要使用麥克風，以便在課堂或會議中錄製語音筆記，並讓手寫筆劃與錄音時間軸即時動態對齊。",
-    "zhHans": "Kairumo 需要使用麦克风，以便在课堂或会议中录制语音笔记，并让手写笔划与录音时间轴实时动态对齐。",
     "ja": "Kairumo は、授業や会議で音声メモを録音し、手書きと録音のタイムラインを同期させるためにマイクを使用します。",
     "ko": "Kairumo는 수업이나 회의에서 음성 메모를 녹음하고 필기와 녹음 타임라인을 맞추기 위해 마이크를 사용합니다.",
-    "th": "Kairumo ใช้ไมโครโฟนเพื่อบันทึกเสียงในชั้นเรียนหรือการประชุม และซิงค์ลายมือกับไทม์ไลน์ของเสียง"
+    "th": "Kairumo ใช้ไมโครโฟนเพื่อบันทึกเสียงในชั้นเรียนหรือการประชุม และซิงค์ลายมือกับไทม์ไลน์ของเสียง",
+    "zhHans": "Kairumo 需要使用麦克风，以便在课堂或会议中录制语音笔记，并让手写笔划与录音时间轴实时动态对齐。",
+    "zhHant": "Kairumo 需要使用麥克風，以便在課堂或會議中錄製語音筆記，並讓手寫筆劃與錄音時間軸即時動態對齊。"
   },
   "NSPhotoLibraryAddUsageDescription": {
     "en": "Kairumo saves pages and drawings you export to your photo library.",
-    "zhHant": "Kairumo 需要儲存圖片權限，以便將您導出的筆記頁面或繪圖成果儲存至相片圖庫。",
-    "zhHans": "Kairumo 需要保存图片权限，以便将您导出的笔记页面或绘图成果保存至相片图库。",
     "ja": "Kairumo は、書き出したページや描画を写真ライブラリに保存します。",
     "ko": "Kairumo는 내보낸 페이지나 그림을 사진 보관함에 저장합니다.",
-    "th": "Kairumo บันทึกหน้าและภาพวาดที่คุณส่งออกไปยังคลังรูปภาพ"
+    "th": "Kairumo บันทึกหน้าและภาพวาดที่คุณส่งออกไปยังคลังรูปภาพ",
+    "zhHans": "Kairumo 需要保存图片权限，以便将您导出的笔记页面或绘图成果保存至相片图库。",
+    "zhHant": "Kairumo 需要儲存圖片權限，以便將您導出的筆記頁面或繪圖成果儲存至相片圖庫。"
   },
   "NSPhotoLibraryUsageDescription": {
     "en": "Kairumo accesses your photo library so you can place pictures into a note and annotate them.",
-    "zhHant": "Kairumo 需要存取您的相片圖庫，以便您挑選圖片插入筆記頁面進行批註與繪製。",
-    "zhHans": "Kairumo 需要访问您的相片图库，以便您挑选图片插入笔记页面进行批注与绘制。",
     "ja": "Kairumo は、写真をノートに挿入して書き込めるようにするために写真ライブラリにアクセスします。",
     "ko": "Kairumo는 사진을 노트에 넣고 주석을 달 수 있도록 사진 보관함에 접근합니다.",
-    "th": "Kairumo เข้าถึงคลังรูปภาพเพื่อให้คุณใส่รูปลงในโน้ตและเขียนกำกับได้"
+    "th": "Kairumo เข้าถึงคลังรูปภาพเพื่อให้คุณใส่รูปลงในโน้ตและเขียนกำกับได้",
+    "zhHans": "Kairumo 需要访问您的相片图库，以便您挑选图片插入笔记页面进行批注与绘制。",
+    "zhHant": "Kairumo 需要存取您的相片圖庫，以便您挑選圖片插入筆記頁面進行批註與繪製。"
   },
   "NSSpeechRecognitionUsageDescription": {
     "en": "Kairumo uses speech recognition to transcribe your recordings into text on your device and place the transcript in your notes.",
-    "zhHant": "Kairumo 需要語音辨識權限，以便在您的裝置端將錄音語音即時轉錄為文字稿，並直接插入筆記畫布。",
-    "zhHans": "Kairumo 需要语音识别权限，以便在您的设备端将录音语音实时转录为文字稿，并直接插入笔记画布。",
     "ja": "Kairumo は、録音した音声を端末内で文字起こしし、ノートに挿入するために音声認識を使用します。",
     "ko": "Kairumo는 녹음을 기기 내에서 텍스트로 변환해 노트에 넣기 위해 음성 인식을 사용합니다.",
-    "th": "Kairumo ใช้การรู้จำเสียงเพื่อถอดเสียงที่บันทึกไว้เป็นข้อความบนเครื่องของคุณ และใส่ลงในโน้ต"
+    "th": "Kairumo ใช้การรู้จำเสียงเพื่อถอดเสียงที่บันทึกไว้เป็นข้อความบนเครื่องของคุณ และใส่ลงในโน้ต",
+    "zhHans": "Kairumo 需要语音识别权限，以便在您的设备端将录音语音实时转录为文字稿，并直接插入笔记画布。",
+    "zhHant": "Kairumo 需要語音辨識權限，以便在您的裝置端將錄音語音即時轉錄為文字稿，並直接插入筆記畫布。"
   },
   "about_app": {
     "en": "About Kairumo",
@@ -151,6 +151,14 @@
     "zhHans": "新建一页",
     "zhHant": "新增一頁"
   },
+  "add_page_desc": {
+    "en": "Append a new blank page to notebook",
+    "ja": "ノートブックの末尾に新しいページを追加",
+    "ko": "노트북에 새로운 페이지 추가",
+    "th": "เพิ่มหน้าใหม่ในสมุดบันทึก",
+    "zhHans": "在笔记本中新增一页空白页面",
+    "zhHant": "在筆記本中新增一頁空白頁面"
+  },
   "add_page_large": {
     "en": "+ Add Page",
     "ja": "＋ ページを追加",
@@ -167,12 +175,20 @@
     "zhHans": "新增文字方块",
     "zhHant": "新增文字方塊"
   },
+  "add_text_box_desc": {
+    "en": "Insert a freeform Word-grade text box on canvas",
+    "ja": "キャンバスにWord形式のテキストボックスを挿入",
+    "ko": "캔버스에 자유로운 텍스트 상자 삽입",
+    "th": "แทรกกล่องข้อความระดับ Word บนผืนผ้าใบ",
+    "zhHans": "在画布任意位置插入专业排版文本框",
+    "zhHant": "在畫布任意位置插入專業排版文字方塊"
+  },
   "advanced_pen_settings": {
     "en": "Advanced Pen Settings",
-    "zhHant": "進階畫筆設定",
-    "zhHans": "高级画笔设置",
     "ja": "詳細なペン設定",
-    "ko": "고급 펜 설정"
+    "ko": "고급 펜 설정",
+    "zhHans": "高级画笔设置",
+    "zhHant": "進階畫筆設定"
   },
   "ai_insert": {
     "en": "Insert into note",
@@ -397,6 +413,46 @@
     "th": "ทุกธีม",
     "zhHans": "全部主题",
     "zhHant": "全部主題"
+  },
+  "anchor_auto": {
+    "en": "Auto",
+    "ja": "自動",
+    "ko": "자동",
+    "th": "อัตโนมัติ",
+    "zhHans": "自动",
+    "zhHant": "自動"
+  },
+  "anchor_bottom": {
+    "en": "Bottom",
+    "ja": "下",
+    "ko": "아래",
+    "th": "ล่าง",
+    "zhHans": "下",
+    "zhHant": "下"
+  },
+  "anchor_left": {
+    "en": "Left",
+    "ja": "左",
+    "ko": "왼쪽",
+    "th": "ซ้าย",
+    "zhHans": "左",
+    "zhHant": "左"
+  },
+  "anchor_right": {
+    "en": "Right",
+    "ja": "右",
+    "ko": "오른쪽",
+    "th": "ขวา",
+    "zhHans": "右",
+    "zhHant": "右"
+  },
+  "anchor_top": {
+    "en": "Top",
+    "ja": "上",
+    "ko": "위",
+    "th": "บน",
+    "zhHans": "上",
+    "zhHant": "上"
   },
   "app_slogan": {
     "en": "Dual Ink & Audio Sync · Offline First · Open Source",
@@ -1134,6 +1190,22 @@
     "zhHans": "声笔动态同步",
     "zhHant": "聲筆動態同步"
   },
+  "audio_pause": {
+    "en": "Pause",
+    "ja": "一時停止",
+    "ko": "일시정지",
+    "th": "หยุดชั่วคราว",
+    "zhHans": "暂停",
+    "zhHant": "暫停"
+  },
+  "audio_play": {
+    "en": "Play",
+    "ja": "再生",
+    "ko": "재생",
+    "th": "เล่น",
+    "zhHans": "播放",
+    "zhHant": "播放"
+  },
   "audio_playback_align": {
     "en": "Real Audio Playback & Alignment",
     "ja": "リアル音声再生と同期",
@@ -1141,6 +1213,14 @@
     "th": "เล่นเสียงจริงและจัดตำแหน่ง",
     "zhHans": "真实音频播放与对齐",
     "zhHant": "真實音訊播放與對齊"
+  },
+  "audio_playback_failed": {
+    "en": "This recording could not be played. Close other apps that use the microphone or speaker and try again.",
+    "ja": "この録音を再生できませんでした。マイクやスピーカーを使用している他のアプリを閉じて、もう一度お試しください。",
+    "ko": "이 녹음을 재생할 수 없습니다. 마이크나 스피커를 사용하는 다른 앱을 닫고 다시 시도하세요.",
+    "th": "ไม่สามารถเล่นการบันทึกเสียงนี้ได้ ปิดแอปอื่นที่ใช้ไมโครโฟนหรือลำโพงแล้วลองอีกครั้ง",
+    "zhHans": "这段录音无法播放。请关闭其他占用麦克风或扬声器的 App 后再试一次。",
+    "zhHant": "這段錄音無法播放。請關閉其他占用麥克風或喇叭的 App 後再試一次。"
   },
   "audio_playing": {
     "en": "Playing Synced Audio",
@@ -1286,6 +1366,30 @@
     "zhHans": "选择要建立快照的笔记",
     "zhHant": "選擇要建立快照的筆記"
   },
+  "bonjour_permission_hint_ios": {
+    "en": "To let nearby devices discover this room automatically, please enable Local Network in Settings > Kairumo.",
+    "ja": "近くの端末がこのルームを自動検出できるようにするには、「設定」>「Kairumo」>「ローカルネットワーク」をオンにしてください。",
+    "ko": "주변 기기가 이 방을 자동으로 찾을 수 있도록 '설정' > 'Kairumo' > '로컬 네트워크'를 켜주세요.",
+    "th": "หากต้องการให้อุปกรณ์ใกล้เคียงค้นพบห้องนี้โดยอัตโนมัติ โปรดเปิด เครือข่ายภายใน ใน การตั้งค่า > Kairumo",
+    "zhHans": "若需同 Wi-Fi 下其他设备自动发现此房间，请前往“设置”>“Kairumo”>开启“本地网络”。",
+    "zhHant": "若需同 Wi-Fi 下其他裝置自動看見此房間，請前往「設定」>「Kairumo」>開啟「區域網路」。"
+  },
+  "bonjour_permission_hint_mac": {
+    "en": "To let nearby devices discover this room automatically, go to System Settings > Privacy & Security > Local Network and allow Kairumo.",
+    "ja": "近くの端末がこのルームを自動検出できるようにするには、「システム設定」>「プライバシーとセキュリティ」>「ローカルネットワーク」で Kairumo を許可してください。",
+    "ko": "주변 기기가 이 방을 자동으로 찾을 수 있도록 '시스템 설정' > '개인정보 보호 및 보안' > '로컬 네트워크'에서 Kairumo를 허용하세요.",
+    "th": "หากต้องการให้อุปกรณ์ใกล้เคียงค้นพบห้องนี้โดยอัตโนมัติ ให้ไปที่ การตั้งค่าระบบ > ความเป็นส่วนตัวและความปลอดภัย > เครือข่ายภายใน แล้วอนุญาต Kairumo",
+    "zhHans": "若需同 Wi-Fi 下其他设备自动发现此房间，请前往“系统设置”>“隐私与安全性”>“本地网络”，允许 Kairumo。",
+    "zhHant": "若需同 Wi-Fi 下其他裝置自動看見此房間，請前往「系統設定」>「隱私權與安全性」>「區域網路」，確認 Kairumo 為開啟狀態。"
+  },
+  "bonjour_permission_title": {
+    "en": "Local Network Discovery Required",
+    "ja": "ローカルネットワーク検出の設定",
+    "ko": "로컬 네트워크 자동 감지 안내",
+    "th": "การค้นหาอุปกรณ์ในเครือข่ายภายใน",
+    "zhHans": "跨设备自动发现提示",
+    "zhHant": "跨裝置自動發現提示"
+  },
   "border_color": {
     "en": "Border color",
     "ja": "枠線の色",
@@ -1318,6 +1422,30 @@
     "zhHans": "方块宽度",
     "zhHant": "方塊寬度"
   },
+  "brush_family_marking": {
+    "en": "Marking",
+    "ja": "マーキング",
+    "ko": "표시",
+    "th": "ไฮไลต์",
+    "zhHans": "标记",
+    "zhHant": "標記"
+  },
+  "brush_family_painting": {
+    "en": "Painting",
+    "ja": "描画",
+    "ko": "그리기",
+    "th": "วาดภาพ",
+    "zhHans": "绘画",
+    "zhHant": "繪畫"
+  },
+  "brush_family_writing": {
+    "en": "Writing",
+    "ja": "筆記",
+    "ko": "필기",
+    "th": "เขียน",
+    "zhHans": "书写",
+    "zhHant": "書寫"
+  },
   "bullet_list": {
     "en": "Bulleted List",
     "ja": "箇条書き",
@@ -1341,6 +1469,46 @@
     "th": "ยกเลิกการเลือกและกลับไปยังเครื่องมือก่อนหน้า",
     "zhHans": "取消框选，回到上一个工具",
     "zhHant": "取消框選，回到上一個工具"
+  },
+  "cap_arrow": {
+    "en": "Arrow",
+    "ja": "矢印",
+    "ko": "화살표",
+    "th": "ลูกศร",
+    "zhHans": "箭头",
+    "zhHant": "箭頭"
+  },
+  "cap_circle": {
+    "en": "Circle",
+    "ja": "丸",
+    "ko": "원",
+    "th": "วงกลม",
+    "zhHans": "圆点",
+    "zhHant": "圓點"
+  },
+  "cap_diamond": {
+    "en": "Diamond",
+    "ja": "ひし形",
+    "ko": "마름모",
+    "th": "ข้าวหลามตัด",
+    "zhHans": "菱形",
+    "zhHant": "菱形"
+  },
+  "cap_hollow": {
+    "en": "Hollow arrow",
+    "ja": "白抜き矢印",
+    "ko": "빈 화살표",
+    "th": "ลูกศรกลวง",
+    "zhHans": "空心箭头",
+    "zhHant": "空心箭頭"
+  },
+  "cap_none": {
+    "en": "None",
+    "ja": "なし",
+    "ko": "없음",
+    "th": "ไม่มี",
+    "zhHans": "无",
+    "zhHant": "無"
   },
   "card_style": {
     "en": "Card Style",
@@ -2110,6 +2278,14 @@
     "zhHans": "线上协同",
     "zhHant": "線上協同"
   },
+  "collaborate_desc": {
+    "en": "Open real-time multiplayer P2P collaboration session",
+    "ja": "リアルタイム複数人共同編集セッションを管理",
+    "ko": "실시간 다중 접속 공동 작업 세션 관리",
+    "th": "จัดการเซสชันการทำงานร่วมกันแบบเรียลไทม์",
+    "zhHans": "查看并管理线上多人即时协同画布",
+    "zhHant": "查看並管理線上多人即時協同畫布"
+  },
   "collapse": {
     "en": "Collapse",
     "ja": "折りたたむ",
@@ -2262,6 +2438,14 @@
     "zhHans": "讨论图钉",
     "zhHant": "討論圖釘"
   },
+  "comment_pin_desc": {
+    "en": "Place a threaded collaboration comment pin on canvas",
+    "ja": "キャンバス上の特定位置にコメントピンを配置",
+    "ko": "캔버스 특정 위치에 토론 댓글 핀 꽂기",
+    "th": "ปักหมุดข้อคิดเห็นเพื่อการทำงานร่วมกันบนผืนผ้าใบ",
+    "zhHans": "在画布指定位置图钉打卡，展开多人协同讨论串",
+    "zhHant": "在畫布指定位置圖釘打卡，展開多人協同討論串"
+  },
   "comment_placeholder": {
     "en": "Type a comment or reply...",
     "ja": "コメントまたは返信を入力...",
@@ -2294,6 +2478,62 @@
     "zhHans": "确认",
     "zhHant": "確認"
   },
+  "connection_edit": {
+    "en": "Edit Connector",
+    "ja": "コネクタを編集",
+    "ko": "커넥터 편집",
+    "th": "แก้ไขเส้นเชื่อม",
+    "zhHans": "编辑连接线",
+    "zhHant": "編修連接線"
+  },
+  "connection_end_cap": {
+    "en": "End end",
+    "ja": "終点",
+    "ko": "끝점",
+    "th": "ปลายสิ้นสุด",
+    "zhHans": "终点端点",
+    "zhHant": "終點端點"
+  },
+  "connection_from_anchor": {
+    "en": "Exit point",
+    "ja": "出発点",
+    "ko": "시작 위치",
+    "th": "จุดออก",
+    "zhHans": "出线位置",
+    "zhHant": "出線位置"
+  },
+  "connection_handle": {
+    "en": "Drag to another shape to connect",
+    "ja": "別の図形へドラッグして接続",
+    "ko": "다른 도형으로 드래그하여 연결",
+    "th": "ลากไปยังรูปร่างอื่นเพื่อเชื่อมต่อ",
+    "zhHans": "拖到另一个形状以连接",
+    "zhHant": "拖曳到另一個形狀以連接"
+  },
+  "connection_reverse": {
+    "en": "Reverse direction",
+    "ja": "向きを反転",
+    "ko": "방향 반전",
+    "th": "กลับทิศทาง",
+    "zhHans": "反转方向",
+    "zhHant": "反轉方向"
+  },
+  "connection_route": {
+    "en": "Routing",
+    "ja": "ルーティング",
+    "ko": "경로 방식",
+    "th": "รูปแบบเส้นทาง",
+    "zhHans": "走线方式",
+    "zhHant": "走線方式"
+  },
+  "connection_start_cap": {
+    "en": "Start end",
+    "ja": "始点",
+    "ko": "시작점",
+    "th": "ปลายเริ่มต้น",
+    "zhHans": "起点端点",
+    "zhHant": "起點端點"
+  },
   "connection_status": {
     "en": "Connection Status",
     "ja": "接続状態",
@@ -2301,6 +2541,14 @@
     "th": "สถานะการเชื่อมต่อ",
     "zhHans": "连接状态",
     "zhHant": "連線狀態"
+  },
+  "connection_to_anchor": {
+    "en": "Entry point",
+    "ja": "到達点",
+    "ko": "도착 위치",
+    "th": "จุดเข้า",
+    "zhHans": "入线位置",
+    "zhHant": "入線位置"
   },
   "continue": {
     "en": "Continue",
@@ -2488,11 +2736,11 @@
   },
   "customize_toolbar": {
     "en": "Customize Toolbar",
-    "zhHant": "自訂工具列",
-    "zhHans": "自定义工具栏",
     "ja": "ツールバーをカスタマイズ",
     "ko": "도구 모음 사용자화",
-    "th": "ปรับแต่งแถบเครื่องมือ"
+    "th": "ปรับแต่งแถบเครื่องมือ",
+    "zhHans": "自定义工具栏",
+    "zhHant": "自訂工具列"
   },
   "cut_selected": {
     "en": "Cut Selection",
@@ -2581,6 +2829,30 @@
     "th": "สามสีเท่ากัน",
     "zhHans": "三等分",
     "zhHant": "三等分"
+  },
+  "dash_dashed": {
+    "en": "Dashed",
+    "ja": "破線",
+    "ko": "파선",
+    "th": "เส้นประ",
+    "zhHans": "虚线",
+    "zhHant": "虛線"
+  },
+  "dash_dotted": {
+    "en": "Dotted",
+    "ja": "点線",
+    "ko": "점선",
+    "th": "เส้นจุด",
+    "zhHans": "点线",
+    "zhHant": "點線"
+  },
+  "dash_solid": {
+    "en": "Solid",
+    "ja": "実線",
+    "ko": "실선",
+    "th": "เส้นทึบ",
+    "zhHans": "实线",
+    "zhHant": "實線"
   },
   "data_and_sync": {
     "en": "Data & Sync",
@@ -3168,11 +3440,11 @@
   },
   "encrypt_not_recordings": {
     "en": "Recordings are not encrypted — on purpose",
-    "zhHant": "錄音不加密 —— 這是刻意的",
-    "zhHans": "录音不加密 —— 这是刻意的",
     "ja": "録音は暗号化されません —— 意図的です",
     "ko": "녹음은 암호화되지 않습니다 —— 의도적입니다",
-    "th": "การบันทึกเสียงไม่ถูกเข้ารหัส —— เป็นความตั้งใจ"
+    "th": "การบันทึกเสียงไม่ถูกเข้ารหัส —— เป็นความตั้งใจ",
+    "zhHans": "录音不加密 —— 这是刻意的",
+    "zhHant": "錄音不加密 —— 這是刻意的"
   },
   "encrypt_notebook": {
     "en": "Encrypt this notebook",
@@ -3224,11 +3496,11 @@
   },
   "encrypt_recordings_why": {
     "en": "Encrypting them would stop VLC and other players from opening your own recordings. Your files stay files you can open yourself.",
-    "zhHant": "加密之後，VLC 之類的播放器就打不開你自己的錄音了。你的檔案要一直是你自己打得開的檔案。",
-    "zhHans": "加密之后，VLC 之类的播放器就打不开你自己的录音了。你的文件要一直是你自己打得开的文件。",
     "ja": "暗号化すると、VLC などのプレーヤーで自分の録音を開けなくなります。あなたのファイルは、あなた自身が開けるファイルのままにします。",
     "ko": "암호화하면 VLC 같은 플레이어로 자기 녹음을 열 수 없게 됩니다. 당신의 파일은 당신이 직접 열 수 있는 파일로 남습니다.",
-    "th": "การเข้ารหัสจะทำให้ VLC และโปรแกรมเล่นอื่นเปิดไฟล์บันทึกเสียงของคุณไม่ได้ ไฟล์ของคุณจะยังคงเป็นไฟล์ที่คุณเปิดเองได้"
+    "th": "การเข้ารหัสจะทำให้ VLC และโปรแกรมเล่นอื่นเปิดไฟล์บันทึกเสียงของคุณไม่ได้ ไฟล์ของคุณจะยังคงเป็นไฟล์ที่คุณเปิดเองได้",
+    "zhHans": "加密之后，VLC 之类的播放器就打不开你自己的录音了。你的文件要一直是你自己打得开的文件。",
+    "zhHant": "加密之後，VLC 之類的播放器就打不開你自己的錄音了。你的檔案要一直是你自己打得開的檔案。"
   },
   "encrypt_scope_title": {
     "en": "What encryption covers",
@@ -3576,11 +3848,11 @@
   },
   "export_save_as": {
     "en": "Save to Files…",
-    "zhHant": "儲存到…",
-    "zhHans": "保存到…",
     "ja": "ファイルに保存…",
     "ko": "파일로 저장…",
-    "th": "บันทึกไปยังไฟล์…"
+    "th": "บันทึกไปยังไฟล์…",
+    "zhHans": "保存到…",
+    "zhHant": "儲存到…"
   },
   "extend_page": {
     "en": "Extend Page",
@@ -3712,17 +3984,17 @@
   },
   "folder_sync_inaccessible": {
     "en": "Folder inaccessible",
-    "zhHant": "無法存取資料夾",
-    "zhHans": "无法访问文件夹",
     "ja": "フォルダにアクセスできません",
-    "ko": "폴더에 접근할 수 없습니다"
+    "ko": "폴더에 접근할 수 없습니다",
+    "zhHans": "无法访问文件夹",
+    "zhHant": "無法存取資料夾"
   },
   "folder_sync_not_set": {
     "en": "Sync folder not set",
-    "zhHant": "未設定同步資料夾",
-    "zhHans": "未设置同步文件夹",
     "ja": "同期フォルダが設定されていません",
-    "ko": "동기화 폴더가 설정되지 않았습니다"
+    "ko": "동기화 폴더가 설정되지 않았습니다",
+    "zhHans": "未设置同步文件夹",
+    "zhHant": "未設定同步資料夾"
   },
   "folder_unlink": {
     "en": "Unlink",
@@ -3739,6 +4011,22 @@
     "th": "โฟลเดอร์",
     "zhHans": "文件夹",
     "zhHant": "資料夾"
+  },
+  "font_bold": {
+    "en": "Bold",
+    "ja": "太字",
+    "ko": "굵게",
+    "th": "ตัวหนา",
+    "zhHans": "粗体",
+    "zhHant": "粗體"
+  },
+  "font_italic": {
+    "en": "Italic",
+    "ja": "斜体",
+    "ko": "기울임",
+    "th": "ตัวเอียง",
+    "zhHans": "斜体",
+    "zhHant": "斜體"
   },
   "font_mono": {
     "en": "Mono",
@@ -4140,6 +4428,14 @@
     "zhHans": "版面色彩",
     "zhHant": "版面色彩"
   },
+  "guide_palette_desc": {
+    "en": "Select document grid background style and accent palette",
+    "ja": "背景のグリッド・罫線カラーパレットを変更",
+    "ko": "페이지 배경 격자 스타일 및 톤 팔레트 선택",
+    "th": "เลือกสไตล์และชุดสีของเส้นตารางพื้นหลัง",
+    "zhHans": "切换全文档纸张底纹格线与点阵配色方案",
+    "zhHant": "切換全文件紙張底紋格線與點陣色彩調性"
+  },
   "guide_pm": {
     "en": "PM",
     "ja": "午後",
@@ -4348,6 +4644,14 @@
     "zhHans": "手绘模式",
     "zhHant": "手繪模式"
   },
+  "handwriting_mode_desc": {
+    "en": "Handwriting & drawing mode: Full canvas ink active for Apple Pencil and stylus",
+    "ja": "手描きモード：Apple Pencil やスタイラスによるペン描画が有効",
+    "ko": "손글씨/드로잉 모드: 애플 펜슬 필기 및 스케치 활성화",
+    "th": "โหมดวาดเขียน: เปิดใช้งานหมึกวาดภาพเต็มรูปแบบสำหรับ Apple Pencil",
+    "zhHans": "手绘创作模式：画布接收手写与素描笔刷输入",
+    "zhHant": "手繪創作模式：畫布接收手寫與繪畫筆刷輸入"
+  },
   "heading_1": {
     "en": "Heading 1",
     "ja": "見出し 1",
@@ -4396,85 +4700,93 @@
     "zhHans": "隐藏此项",
     "zhHant": "隱藏此項目"
   },
+  "highlight_color": {
+    "en": "Highlight color",
+    "ja": "ハイライトの色",
+    "ko": "형광펜 색상",
+    "th": "สีไฮไลต์",
+    "zhHans": "荧光笔颜色",
+    "zhHant": "螢光筆顏色"
+  },
   "hint_comment_pin_body": {
     "en": "Now tap anywhere on the page to drop a pin there. Tap the toolbar icon again to leave placement mode.",
-    "zhHant": "接著**點頁面上任何一處**就會放下圖釘。再按一次工具列上的圖示即可離開放置模式。",
-    "zhHans": "接着**点页面上任何一处**就会放下图钉。再按一次工具栏上的图标即可离开放置模式。",
     "ja": "次に、ページ上の**好きな場所をタップ**するとピンが置かれます。ツールバーのアイコンをもう一度押すと配置モードを終了します。",
     "ko": "이제 페이지의 **아무 곳이나 탭**하면 핀이 놓입니다. 도구 모음 아이콘을 다시 누르면 배치 모드를 벗어납니다.",
-    "th": "จากนั้น**แตะที่ใดก็ได้บนหน้า**เพื่อวางหมุด แตะไอคอนบนแถบเครื่องมืออีกครั้งเพื่อออกจากโหมดวาง"
+    "th": "จากนั้น**แตะที่ใดก็ได้บนหน้า**เพื่อวางหมุด แตะไอคอนบนแถบเครื่องมืออีกครั้งเพื่อออกจากโหมดวาง",
+    "zhHans": "接着**点页面上任何一处**就会放下图钉。再按一次工具栏上的图标即可离开放置模式。",
+    "zhHant": "接著**點頁面上任何一處**就會放下圖釘。再按一次工具列上的圖示即可離開放置模式。"
   },
   "hint_comment_pin_title": {
     "en": "Add Comment Pin",
-    "zhHant": "新增討論圖釘",
-    "zhHans": "新增讨论图钉",
     "ja": "コメントピンを追加",
     "ko": "댓글 핀 추가",
-    "th": "เพิ่มหมุดความคิดเห็น"
+    "th": "เพิ่มหมุดความคิดเห็น",
+    "zhHans": "新增讨论图钉",
+    "zhHant": "新增討論圖釘"
   },
   "hint_dont_show_again": {
     "en": "Don't show this again",
-    "zhHant": "不要再顯示這則提示",
-    "zhHans": "不要再显示这则提示",
     "ja": "今後このヒントを表示しない",
     "ko": "이 안내를 다시 표시하지 않기",
-    "th": "ไม่ต้องแสดงคำแนะนำนี้อีก"
+    "th": "ไม่ต้องแสดงคำแนะนำนี้อีก",
+    "zhHans": "不要再显示这则提示",
+    "zhHant": "不要再顯示這則提示"
   },
   "hint_got_it": {
     "en": "Got it",
-    "zhHant": "知道了",
-    "zhHans": "知道了",
     "ja": "わかりました",
     "ko": "알겠습니다",
-    "th": "เข้าใจแล้ว"
+    "th": "เข้าใจแล้ว",
+    "zhHans": "知道了",
+    "zhHant": "知道了"
   },
   "hint_recognize_body": {
     "en": "This reads the handwriting on the current page and turns it into text. An empty page gives no result — draw or write something first.",
-    "zhHant": "這會讀**目前這一頁**的手寫字並轉成文字。空白頁不會有結果 —— 先寫一點東西。",
-    "zhHans": "这会读**目前这一页**的手写字并转成文字。空白页不会有结果 —— 先写一点东西。",
     "ja": "**現在のページ**の手書きを読み取ってテキストにします。空のページでは結果が出ません —— まず何か書いてください。",
     "ko": "**현재 페이지**의 손글씨를 읽어 텍스트로 바꿉니다. 빈 페이지는 결과가 없습니다 —— 먼저 무언가 쓰세요.",
-    "th": "อ่านลายมือใน**หน้าปัจจุบัน**แล้วแปลงเป็นข้อความ หน้าว่างจะไม่ได้ผลลัพธ์ —— เขียนอะไรสักอย่างก่อน"
+    "th": "อ่านลายมือใน**หน้าปัจจุบัน**แล้วแปลงเป็นข้อความ หน้าว่างจะไม่ได้ผลลัพธ์ —— เขียนอะไรสักอย่างก่อน",
+    "zhHans": "这会读**目前这一页**的手写字并转成文字。空白页不会有结果 —— 先写一点东西。",
+    "zhHant": "這會讀**目前這一頁**的手寫字並轉成文字。空白頁不會有結果 —— 先寫一點東西。"
   },
   "hint_recognize_title": {
     "en": "Recognise Handwriting",
-    "zhHant": "辨識手寫",
-    "zhHans": "识别手写",
     "ja": "手書きを認識",
     "ko": "손글씨 인식",
-    "th": "รู้จำลายมือ"
+    "th": "รู้จำลายมือ",
+    "zhHans": "识别手写",
+    "zhHant": "辨識手寫"
   },
   "hint_refine_sketch_body": {
     "en": "Draw something first, then use the bar at the top of the canvas to straighten lines and regularise shapes. You can dial the strength down or undo it.",
-    "zhHant": "先畫一些東西，再用畫布上方那條控制列把線條拉直、把形狀變規則。強度可以調，也可以還原。",
-    "zhHans": "先画一些东西，再用画布上方那条控制栏把线条拉直、把形状变规则。强度可以调，也可以还原。",
     "ja": "まず何か描いてから、キャンバス上部のバーで線をまっすぐにし、図形を整えます。強度の調整も取り消しもできます。",
     "ko": "먼저 무언가를 그린 다음, 캔버스 위쪽 막대로 선을 곧게 펴고 도형을 정리하세요. 강도 조절과 되돌리기가 가능합니다.",
-    "th": "วาดอะไรสักอย่างก่อน แล้วใช้แถบด้านบนผืนผ้าใบเพื่อจัดเส้นให้ตรงและปรับรูปทรงให้เรียบร้อย ปรับความเข้มหรือเลิกทำได้"
+    "th": "วาดอะไรสักอย่างก่อน แล้วใช้แถบด้านบนผืนผ้าใบเพื่อจัดเส้นให้ตรงและปรับรูปทรงให้เรียบร้อย ปรับความเข้มหรือเลิกทำได้",
+    "zhHans": "先画一些东西，再用画布上方那条控制栏把线条拉直、把形状变规则。强度可以调，也可以还原。",
+    "zhHant": "先畫一些東西，再用畫布上方那條控制列把線條拉直、把形狀變規則。強度可以調，也可以還原。"
   },
   "hint_refine_sketch_title": {
     "en": "Refine Sketch",
-    "zhHant": "草圖修飾",
-    "zhHans": "草图修饰",
     "ja": "スケッチを整える",
     "ko": "스케치 다듬기",
-    "th": "ปรับแต่งภาพร่าง"
+    "th": "ปรับแต่งภาพร่าง",
+    "zhHans": "草图修饰",
+    "zhHant": "草圖修飾"
   },
   "hint_tabletop_body": {
     "en": "Splits the screen: the canvas goes on top, the tools move to the bottom half. Made for a device standing on a desk — look at the top, write on the bottom.",
-    "zhHant": "把畫面分成兩半：畫布在上，工具移到下半部。這是給立在桌上的裝置用的 —— 上面看、下面寫。",
-    "zhHans": "把画面分成两半：画布在上，工具移到下半部。这是给立在桌上的设备用的 —— 上面看、下面写。",
     "ja": "画面を上下に分割します：上がキャンバス、下がツールです。机に立てた端末向け —— 上を見ながら下で書きます。",
     "ko": "화면을 둘로 나눕니다: 위는 캔버스, 아래는 도구입니다. 책상에 세워 둔 기기를 위한 모드 —— 위를 보며 아래에 씁니다.",
-    "th": "แบ่งหน้าจอเป็นสองส่วน: ผืนผ้าใบอยู่บน เครื่องมืออยู่ล่าง ออกแบบมาสำหรับอุปกรณ์ที่ตั้งบนโต๊ะ —— ดูด้านบน เขียนด้านล่าง"
+    "th": "แบ่งหน้าจอเป็นสองส่วน: ผืนผ้าใบอยู่บน เครื่องมืออยู่ล่าง ออกแบบมาสำหรับอุปกรณ์ที่ตั้งบนโต๊ะ —— ดูด้านบน เขียนด้านล่าง",
+    "zhHans": "把画面分成两半：画布在上，工具移到下半部。这是给立在桌上的设备用的 —— 上面看、下面写。",
+    "zhHant": "把畫面分成兩半：畫布在上，工具移到下半部。這是給立在桌上的裝置用的 —— 上面看、下面寫。"
   },
   "hint_tabletop_title": {
     "en": "Tabletop / Flex Mode",
-    "zhHant": "立起懸停模式",
-    "zhHans": "立起悬停模式",
     "ja": "卓上／フレックスモード",
     "ko": "탁상 / 플렉스 모드",
-    "th": "โหมดตั้งโต๊ะ / เฟล็กซ์"
+    "th": "โหมดตั้งโต๊ะ / เฟล็กซ์",
+    "zhHans": "立起悬停模式",
+    "zhHant": "立起懸停模式"
   },
   "home": {
     "en": "Home",
@@ -5166,34 +5478,42 @@
   },
   "import_audio_from_files": {
     "en": "Import an audio file",
-    "zhHant": "匯入音訊檔",
-    "zhHans": "导入音频文件",
     "ja": "音声ファイルを読み込む",
     "ko": "오디오 파일 가져오기",
-    "th": "นำเข้าไฟล์เสียง"
+    "th": "นำเข้าไฟล์เสียง",
+    "zhHans": "导入音频文件",
+    "zhHant": "匯入音訊檔"
   },
   "import_builtin_shapes": {
     "en": "Built-in shapes",
-    "zhHant": "內建形狀",
-    "zhHans": "内置形状",
     "ja": "組み込みの図形",
     "ko": "기본 도형",
-    "th": "รูปทรงในตัว"
+    "th": "รูปทรงในตัว",
+    "zhHans": "内置形状",
+    "zhHant": "內建形狀"
   },
   "import_document": {
-    "zhHant": "匯入文件",
-    "zhHans": "导入文件",
     "en": "Import Document",
     "ja": "ドキュメントをインポート",
-    "ko": "문서 가져오기"
+    "ko": "문서 가져오기",
+    "zhHans": "导入文件",
+    "zhHant": "匯入文件"
+  },
+  "import_document_done": {
+    "en": "Document imported into this note",
+    "ja": "ドキュメントをこのノートに取り込みました",
+    "ko": "문서를 이 노트로 가져왔습니다",
+    "th": "นำเข้าเอกสารลงในโน้ตนี้แล้ว",
+    "zhHans": "已导入文档到这本笔记",
+    "zhHant": "已匯入文件到這本筆記"
   },
   "import_empty_file": {
     "en": "That file is empty — it may still be downloading from your cloud",
-    "zhHant": "這個檔案是空的 —— 它可能還在從雲端下載",
-    "zhHans": "这个文件是空的 —— 它可能还在从云端下载",
     "ja": "このファイルは空です —— クラウドからまだダウンロード中かもしれません",
     "ko": "이 파일은 비어 있습니다 —— 클라우드에서 아직 다운로드 중일 수 있습니다",
-    "th": "ไฟล์นี้ว่างเปล่า —— อาจกำลังดาวน์โหลดจากคลาวด์อยู่"
+    "th": "ไฟล์นี้ว่างเปล่า —— อาจกำลังดาวน์โหลดจากคลาวด์อยู่",
+    "zhHans": "这个文件是空的 —— 它可能还在从云端下载",
+    "zhHant": "這個檔案是空的 —— 它可能還在從雲端下載"
   },
   "import_failed": {
     "en": "Import failed: %@",
@@ -5205,51 +5525,51 @@
   },
   "import_failed_read": {
     "en": "That file could not be read",
-    "zhHant": "這個檔案讀不出來",
-    "zhHans": "这个文件读不出来",
     "ja": "このファイルは読み込めませんでした",
     "ko": "이 파일을 읽을 수 없습니다",
-    "th": "อ่านไฟล์นี้ไม่ได้"
+    "th": "อ่านไฟล์นี้ไม่ได้",
+    "zhHans": "这个文件读不出来",
+    "zhHant": "這個檔案讀不出來"
   },
   "import_from_files": {
     "en": "Choose from Files",
-    "zhHant": "從檔案選擇",
-    "zhHans": "从文件选择",
     "ja": "ファイルから選択",
     "ko": "파일에서 선택",
-    "th": "เลือกจากไฟล์"
+    "th": "เลือกจากไฟล์",
+    "zhHans": "从文件选择",
+    "zhHant": "從檔案選擇"
   },
   "import_from_photos": {
     "en": "Choose from Photos",
-    "zhHant": "從相簿選擇",
-    "zhHans": "从相册选择",
     "ja": "写真から選ぶ",
     "ko": "사진에서 선택",
-    "th": "เลือกจากรูปภาพ"
+    "th": "เลือกจากรูปภาพ",
+    "zhHans": "从相册选择",
+    "zhHant": "從相簿選擇"
   },
   "import_limit_note": {
     "en": "Up to %@ MB — everything you insert syncs with the notebook",
-    "zhHant": "上限 %@ MB —— 插入的東西都會跟著筆記本同步",
-    "zhHans": "上限 %@ MB —— 插入的东西都会跟着笔记本同步",
     "ja": "上限 %@ MB —— 挿入したものはノートと一緒に同期されます",
     "ko": "최대 %@ MB —— 삽입한 것은 노트와 함께 동기화됩니다",
-    "th": "สูงสุด %@ MB —— สิ่งที่แทรกจะซิงก์ไปพร้อมกับสมุดบันทึก"
+    "th": "สูงสุด %@ MB —— สิ่งที่แทรกจะซิงก์ไปพร้อมกับสมุดบันทึก",
+    "zhHans": "上限 %@ MB —— 插入的东西都会跟着笔记本同步",
+    "zhHant": "上限 %@ MB —— 插入的東西都會跟著筆記本同步"
   },
   "import_model_android_note": {
     "en": "Imported models are stored with the notebook and sync, but this device cannot render them yet — it shows the file name instead.",
-    "zhHant": "匯入的模型會跟著筆記本儲存與同步，但這台裝置還畫不出來 —— 目前顯示的是檔名。",
-    "zhHans": "导入的模型会跟着笔记本储存与同步，但这台设备还画不出来 —— 目前显示的是文件名。",
     "ja": "読み込んだモデルはノートと共に保存・同期されますが、この端末ではまだ描画できません —— ファイル名を表示しています。",
     "ko": "가져온 모델은 노트와 함께 저장·동기화되지만 이 기기에서는 아직 그릴 수 없습니다 —— 파일 이름을 표시합니다.",
-    "th": "โมเดลที่นำเข้าจะถูกเก็บและซิงก์ไปกับสมุดบันทึก แต่อุปกรณ์นี้ยังแสดงผลไม่ได้ —— จะแสดงชื่อไฟล์แทน"
+    "th": "โมเดลที่นำเข้าจะถูกเก็บและซิงก์ไปกับสมุดบันทึก แต่อุปกรณ์นี้ยังแสดงผลไม่ได้ —— จะแสดงชื่อไฟล์แทน",
+    "zhHans": "导入的模型会跟着笔记本储存与同步，但这台设备还画不出来 —— 目前显示的是文件名。",
+    "zhHant": "匯入的模型會跟著筆記本儲存與同步，但這台裝置還畫不出來 —— 目前顯示的是檔名。"
   },
   "import_my_files": {
     "en": "My files",
-    "zhHant": "我的檔案",
-    "zhHans": "我的文件",
     "ja": "マイファイル",
     "ko": "내 파일",
-    "th": "ไฟล์ของฉัน"
+    "th": "ไฟล์ของฉัน",
+    "zhHans": "我的文件",
+    "zhHant": "我的檔案"
   },
   "import_note": {
     "en": "Import Note",
@@ -5277,19 +5597,19 @@
   },
   "import_too_large": {
     "en": "That file is too big to sync comfortably",
-    "zhHant": "這個檔案太大，同步會很痛苦",
-    "zhHans": "这个文件太大，同步会很痛苦",
     "ja": "このファイルは大きすぎて同期に支障が出ます",
     "ko": "이 파일은 너무 커서 동기화에 부담이 됩니다",
-    "th": "ไฟล์นี้ใหญ่เกินไปสำหรับการซิงก์"
+    "th": "ไฟล์นี้ใหญ่เกินไปสำหรับการซิงก์",
+    "zhHans": "这个文件太大，同步会很痛苦",
+    "zhHant": "這個檔案太大，同步會很痛苦"
   },
   "import_unsupported_type": {
     "en": "This kind of file can't go here",
-    "zhHant": "這種檔案不能放進這裡",
-    "zhHans": "这种文件不能放进这里",
     "ja": "この種類のファイルはここに入れられません",
     "ko": "이 종류의 파일은 여기에 넣을 수 없습니다",
-    "th": "ไฟล์ชนิดนี้ใส่ตรงนี้ไม่ได้"
+    "th": "ไฟล์ชนิดนี้ใส่ตรงนี้ไม่ได้",
+    "zhHans": "这种文件不能放进这里",
+    "zhHant": "這種檔案不能放進這裡"
   },
   "ink_change_colour": {
     "en": "Change colour",
@@ -5445,11 +5765,11 @@
   },
   "insert_needs_canvas": {
     "en": "Switch to drawing mode first — that is where this goes",
-    "zhHant": "請先切到手寫模式 —— 這個東西是貼在畫布上的",
-    "zhHans": "请先切到手写模式 —— 这个东西是贴在画布上的",
     "ja": "先に手書きモードに切り替えてください —— これはキャンバスに貼られます",
     "ko": "먼저 필기 모드로 전환하세요 —— 이것은 캔버스에 붙습니다",
-    "th": "สลับไปโหมดเขียนก่อน —— สิ่งนี้วางบนผืนผ้าใบ"
+    "th": "สลับไปโหมดเขียนก่อน —— สิ่งนี้วางบนผืนผ้าใบ",
+    "zhHans": "请先切到手写模式 —— 这个东西是贴在画布上的",
+    "zhHant": "請先切到手寫模式 —— 這個東西是貼在畫布上的"
   },
   "insert_object": {
     "en": "Insert",
@@ -5477,11 +5797,11 @@
   },
   "insert_pdf": {
     "en": "Insert PDF Page",
-    "zhHant": "插入 PDF 頁面",
-    "zhHans": "插入 PDF 页面",
     "ja": "PDF ページを挿入",
     "ko": "PDF 페이지 삽입",
-    "th": "แทรกหน้า PDF"
+    "th": "แทรกหน้า PDF",
+    "zhHans": "插入 PDF 页面",
+    "zhHant": "插入 PDF 頁面"
   },
   "insert_swatch": {
     "en": "Insert Color Swatch",
@@ -5595,6 +5915,14 @@
     "zhHans": "上移一层",
     "zhHant": "上移一層"
   },
+  "layer_bring_forward_desc": {
+    "en": "Bring selected object one layer forward",
+    "ja": "選択したオブジェクトを前面へ移動",
+    "ko": "선택한 개체를 한 단계 앞으로 가져오기",
+    "th": "เลื่อนวัตถุที่เลือกขึ้นหนึ่งชั้น",
+    "zhHans": "将选中的物件向上移动一层",
+    "zhHant": "將選取的物件向上移動一層"
+  },
   "layer_bring_front": {
     "en": "Bring to Front",
     "ja": "最前面へ",
@@ -5707,6 +6035,14 @@
     "zhHans": "下移一层",
     "zhHant": "下移一層"
   },
+  "layer_send_backward_desc": {
+    "en": "Send selected object one layer backward",
+    "ja": "選択したオブジェクトを背面へ移動",
+    "ko": "선택한 개체를 한 단계 뒤로 보내기",
+    "th": "เลื่อนวัตถุที่เลือกลงหนึ่งชั้น",
+    "zhHans": "将选中的物件向下移动一层",
+    "zhHant": "將選取的物件向下移動一層"
+  },
   "layer_ungroup": {
     "en": "Ungroup",
     "ja": "グループ解除",
@@ -5746,6 +6082,14 @@
     "th": "เลเยอร์",
     "zhHans": "图层",
     "zhHant": "圖層"
+  },
+  "line_endpoint_handle": {
+    "en": "Drag endpoint",
+    "ja": "端点をドラッグ",
+    "ko": "끝점 드래그",
+    "th": "ลากปลายเส้น",
+    "zhHans": "拖动端点",
+    "zhHant": "拖曳端點"
   },
   "line_spacing": {
     "en": "Line",
@@ -5850,30 +6194,6 @@
     "th": "เมื่อชี้ไปที่ 127.0.0.1 เครื่องนี้จะทำหน้าที่รีเลย์เอง ผู้ร่วมงานในเครือข่ายเดียวกันให้กรอกที่อยู่ในเครือข่ายที่แสดงบนหน้าจอผู้เปิดห้อง",
     "zhHans": "地址指向 127.0.0.1 时，App 会直接在这台设备上开启协作中继；同一网络的队友请改填房主画面显示的局域网地址。",
     "zhHant": "位址指向 127.0.0.1 時，App 會直接在這台裝置上開啟協同中繼；同一網路的隊友請改填房主畫面顯示的區域網路位址。"
-  },
-  "bonjour_permission_hint_ios": {
-    "en": "To let nearby devices discover this room automatically, please enable Local Network in Settings > Kairumo.",
-    "ja": "近くの端末がこのルームを自動検出できるようにするには、「設定」>「Kairumo」>「ローカルネットワーク」をオンにしてください。",
-    "ko": "주변 기기가 이 방을 자동으로 찾을 수 있도록 '설정' > 'Kairumo' > '로컬 네트워크'를 켜주세요.",
-    "th": "หากต้องการให้อุปกรณ์ใกล้เคียงค้นพบห้องนี้โดยอัตโนมัติ โปรดเปิด เครือข่ายภายใน ใน การตั้งค่า > Kairumo",
-    "zhHans": "若需同 Wi-Fi 下其他设备自动发现此房间，请前往“设置”>“Kairumo”>开启“本地网络”。",
-    "zhHant": "若需同 Wi-Fi 下其他裝置自動看見此房間，請前往「設定」>「Kairumo」>開啟「區域網路」。"
-  },
-  "bonjour_permission_hint_mac": {
-    "en": "To let nearby devices discover this room automatically, go to System Settings > Privacy & Security > Local Network and allow Kairumo.",
-    "ja": "近くの端末がこのルームを自動検出できるようにするには、「システム設定」>「プライバシーとセキュリティ」>「ローカルネットワーク」で Kairumo を許可してください。",
-    "ko": "주변 기기가 이 방을 자동으로 찾을 수 있도록 '시스템 설정' > '개인정보 보호 및 보안' > '로컬 네트워크'에서 Kairumo를 허용하세요.",
-    "th": "หากต้องการให้อุปกรณ์ใกล้เคียงค้นพบห้องนี้โดยอัตโนมัติ ให้ไปที่ การตั้งค่าระบบ > ความเป็นส่วนตัวและความปลอดภัย > เครือข่ายภายใน แล้วอนุญาต Kairumo",
-    "zhHans": "若需同 Wi-Fi 下其他设备自动发现此房间，请前往“系统设置”>“隐私与安全性”>“本地网络”，允许 Kairumo。",
-    "zhHant": "若需同 Wi-Fi 下其他裝置自動看見此房間，請前往「系統設定」>「隱私權與安全性」>「區域網路」，確認 Kairumo 為開啟狀態。"
-  },
-  "bonjour_permission_title": {
-    "en": "Local Network Discovery Required",
-    "ja": "ローカルネットワーク検出の設定",
-    "ko": "로컬 네트워크 자동 감지 안내",
-    "th": "การค้นหาอุปกรณ์ในเครือข่ายภายใน",
-    "zhHans": "跨设备自动发现提示",
-    "zhHant": "跨裝置自動發現提示"
   },
   "log_clear": {
     "en": "Clear",
@@ -6195,6 +6515,14 @@
     "zhHans": "奥氏体防蚀",
     "zhHant": "奧氏體防蝕"
   },
+  "math_backspace": {
+    "en": "Delete",
+    "ja": "一文字削除",
+    "ko": "삭제",
+    "th": "ลบ",
+    "zhHans": "退格",
+    "zhHant": "退格"
+  },
   "math_calc": {
     "en": "Math Calculator",
     "ja": "数式計算",
@@ -6218,6 +6546,14 @@
     "th": "เก็บเส้นขอบการ์ด",
     "zhHans": "保留卡片边框",
     "zhHant": "保留卡片邊框"
+  },
+  "math_clear": {
+    "en": "Clear",
+    "ja": "クリア",
+    "ko": "지우기",
+    "th": "ล้าง",
+    "zhHans": "清除",
+    "zhHant": "清除"
   },
   "math_error": {
     "en": "Invalid formula or syntax error",
@@ -6291,6 +6627,22 @@
     "zhHans": "插入可编辑文字",
     "zhHant": "插入可編輯文字"
   },
+  "math_placeholder": {
+    "en": "e.g., 125 * 8 + 45",
+    "ja": "例: 125 * 8 + 45",
+    "ko": "예: 125 * 8 + 45",
+    "th": "เช่น: 125 * 8 + 45",
+    "zhHans": "例如: 125 * 8 + 45",
+    "zhHant": "例如: 125 * 8 + 45"
+  },
+  "math_symbols": {
+    "en": "Math Symbols",
+    "ja": "数学記号",
+    "ko": "수학 기호",
+    "th": "สัญลักษณ์ทางคณิตศาสตร์",
+    "zhHans": "数学代号",
+    "zhHant": "數學代號"
+  },
   "math_tab_calc": {
     "en": "Calculator",
     "ja": "関数電卓",
@@ -6322,38 +6674,6 @@
     "th": "ค่าคงที่และหน่วย",
     "zhHans": "常数与单位",
     "zhHant": "常數與單位"
-  },
-  "math_clear": {
-    "en": "Clear",
-    "ja": "クリア",
-    "ko": "지우기",
-    "th": "ล้าง",
-    "zhHans": "清除",
-    "zhHant": "清除"
-  },
-  "math_backspace": {
-    "en": "Delete",
-    "ja": "一文字削除",
-    "ko": "삭제",
-    "th": "ลบ",
-    "zhHans": "退格",
-    "zhHant": "退格"
-  },
-  "math_placeholder": {
-    "en": "e.g., 125 * 8 + 45",
-    "ja": "例: 125 * 8 + 45",
-    "ko": "예: 125 * 8 + 45",
-    "th": "เช่น: 125 * 8 + 45",
-    "zhHans": "例如: 125 * 8 + 45",
-    "zhHant": "例如: 125 * 8 + 45"
-  },
-  "math_symbols": {
-    "en": "Math Symbols",
-    "ja": "数学記号",
-    "ko": "수학 기호",
-    "th": "สัญลักษณ์ทางคณิตศาสตร์",
-    "zhHans": "数学代号",
-    "zhHant": "數學代號"
   },
   "math_value_prefix": {
     "en": "Value",
@@ -6613,11 +6933,11 @@
   },
   "model3d_rotate_mode": {
     "en": "Rotate",
-    "zhHant": "旋轉",
-    "zhHans": "旋转",
     "ja": "回転",
     "ko": "회전",
-    "th": "หมุน"
+    "th": "หมุน",
+    "zhHans": "旋转",
+    "zhHant": "旋轉"
   },
   "model3d_studio": {
     "en": "3D Model Studio",
@@ -6669,11 +6989,11 @@
   },
   "model_no_geometry": {
     "en": "That model file has no shapes in it",
-    "zhHant": "這個模型檔裡沒有任何形狀",
-    "zhHans": "这个模型文件里没有任何形状",
     "ja": "このモデルファイルには形状が入っていません",
     "ko": "이 모델 파일에는 도형이 없습니다",
-    "th": "ไฟล์โมเดลนี้ไม่มีรูปทรงอยู่เลย"
+    "th": "ไฟล์โมเดลนี้ไม่มีรูปทรงอยู่เลย",
+    "zhHans": "这个模型文件里没有任何形状",
+    "zhHant": "這個模型檔裡沒有任何形狀"
   },
   "model_optional": {
     "en": "Optional",
@@ -6717,11 +7037,11 @@
   },
   "model_too_many_faces": {
     "en": "That model is too detailed to rotate smoothly",
-    "zhHant": "這個模型太細緻，轉起來會卡",
-    "zhHans": "这个模型太细致，转起来会卡",
     "ja": "このモデルは精細すぎて滑らかに回転できません",
     "ko": "이 모델은 너무 정밀해서 부드럽게 회전할 수 없습니다",
-    "th": "โมเดลนี้ละเอียดเกินไป หมุนแล้วจะไม่ลื่น"
+    "th": "โมเดลนี้ละเอียดเกินไป หมุนแล้วจะไม่ลื่น",
+    "zhHans": "这个模型太细致，转起来会卡",
+    "zhHant": "這個模型太細緻，轉起來會卡"
   },
   "model_unavailable": {
     "en": "No download source yet",
@@ -6733,11 +7053,11 @@
   },
   "model_unsupported_format": {
     "en": "Only OBJ and STL models can be drawn here",
-    "zhHant": "這裡只畫得出 OBJ 與 STL 模型",
-    "zhHans": "这里只画得出 OBJ 与 STL 模型",
     "ja": "ここで描けるのは OBJ と STL のモデルだけです",
     "ko": "여기서는 OBJ와 STL 모델만 그릴 수 있습니다",
-    "th": "ที่นี่วาดได้เฉพาะโมเดล OBJ และ STL"
+    "th": "ที่นี่วาดได้เฉพาะโมเดล OBJ และ STL",
+    "zhHans": "这里只画得出 OBJ 与 STL 模型",
+    "zhHant": "這裡只畫得出 OBJ 與 STL 模型"
   },
   "models_desc": {
     "en": "Download models to enable on-device transcription and OCR. Everything stays on this device.",
@@ -7165,11 +7485,11 @@
   },
   "onboarding_continue": {
     "en": "Continue",
-    "zhHant": "繼續",
-    "zhHans": "继续",
     "ja": "続ける",
     "ko": "계속",
-    "th": "ดำเนินการต่อ"
+    "th": "ดำเนินการต่อ",
+    "zhHans": "继续",
+    "zhHant": "繼續"
   },
   "onboarding_microphone_granted": {
     "en": "Microphone allowed",
@@ -7410,6 +7730,14 @@
     "th": "การเปลี่ยนขนาดจะเปลี่ยนทั้งผืนผ้าใบและไฟล์ที่ส่งออก เนื้อหาที่เลยขอบหน้าใหม่จะถูกย้ายกลับเข้ามา",
     "zhHans": "更改规格会同时改变画布与导出档。超出新页面的内容会被移回页内。",
     "zhHant": "更改規格會同時改變畫布與匯出檔。超出新頁面的內容會被移回頁內。"
+  },
+  "page_format_desc": {
+    "en": "Change canvas page format and aspect ratio (A4, Letter, 16:9)",
+    "ja": "ページ用紙サイズと縦横比を変更 (A4, Letter, 16:9)",
+    "ko": "페이지 용지 규격 및 비율 변경 (A4, Letter, 16:9)",
+    "th": "เปลี่ยนรูปแบบขนาดหน้าและอัตราส่วน (A4, Letter, 16:9)",
+    "zhHans": "更改页面纸张规格与长宽比例（A4、信纸、16:9 等）",
+    "zhHant": "變更頁面紙張規格與長寬比例（A4、信紙、16:9 等）"
   },
   "page_format_legal": {
     "en": "Legal",
@@ -7853,11 +8181,11 @@
   },
   "pdf_choose_page": {
     "en": "Which page?",
-    "zhHant": "要插入第幾頁？",
-    "zhHans": "要插入第几页？",
     "ja": "何ページ目を挿入しますか？",
     "ko": "몇 번째 페이지를 넣을까요?",
-    "th": "หน้าไหน?"
+    "th": "หน้าไหน?",
+    "zhHans": "要插入第几页？",
+    "zhHant": "要插入第幾頁？"
   },
   "pdf_not_a_pdf": {
     "en": "This file isn't a PDF, or it's damaged.",
@@ -7877,11 +8205,11 @@
   },
   "pdf_page_range": {
     "en": "This PDF has %@ pages",
-    "zhHant": "這份 PDF 共 %@ 頁",
-    "zhHans": "这份 PDF 共 %@ 页",
     "ja": "この PDF は全 %@ ページです",
     "ko": "이 PDF는 총 %@페이지입니다",
-    "th": "PDF นี้มี %@ หน้า"
+    "th": "PDF นี้มี %@ หน้า",
+    "zhHans": "这份 PDF 共 %@ 页",
+    "zhHant": "這份 PDF 共 %@ 頁"
   },
   "pdf_password_required": {
     "en": "This PDF needs a password.",
@@ -7893,11 +8221,11 @@
   },
   "pdf_render_failed": {
     "en": "That page could not be drawn",
-    "zhHant": "這一頁畫不出來",
-    "zhHans": "这一页画不出来",
     "ja": "このページは描画できませんでした",
     "ko": "이 페이지를 그릴 수 없습니다",
-    "th": "วาดหน้านี้ไม่ได้"
+    "th": "วาดหน้านี้ไม่ได้",
+    "zhHans": "这一页画不出来",
+    "zhHant": "這一頁畫不出來"
   },
   "pen_action_eraser": {
     "en": "Eraser",
@@ -7953,10 +8281,10 @@
   },
   "pen_settings_title": {
     "en": "Advanced Pen Settings",
-    "zhHant": "進階畫筆設定",
-    "zhHans": "高级画笔设置",
     "ja": "詳細なペン設定",
-    "ko": "고급 펜 설정"
+    "ko": "고급 펜 설정",
+    "zhHans": "高级画笔设置",
+    "zhHant": "進階畫筆設定"
   },
   "pen_squeeze": {
     "en": "Squeeze (Pencil Pro)",
@@ -7994,6 +8322,14 @@
     "zhHans": "立起悬停模式 (上观看下创作)",
     "zhHant": "立起懸停模式 (上觀看下創作)"
   },
+  "posture_tabletop_mode_desc": {
+    "en": "Toggle dual-screen tabletop viewing and editing mode",
+    "ja": "見開き・テーブルトップ表示モードを切り替え",
+    "ko": "상하 듀얼 화면 테이블탑 모드 켜기/끄기",
+    "th": "สลับโหมดโต๊ะทำงานแบบสองหน้าจอ (ดูด้านบน เขียนด้านล่าง)",
+    "zhHans": "切换上屏浏览、下屏书写的悬停双屏模式",
+    "zhHant": "切換上屏瀏覽、下屏書寫的懸停雙屏模式"
+  },
   "preferences_lang": {
     "en": "Preferences & Language",
     "ja": "環境設定と表示言語",
@@ -8004,17 +8340,17 @@
   },
   "pressure_floor": {
     "en": "Pressure Floor",
-    "zhHant": "下筆起始壓力",
-    "zhHans": "下笔起始压力",
     "ja": "最小筆圧",
-    "ko": "최소 필압"
+    "ko": "최소 필압",
+    "zhHans": "下笔起始压力",
+    "zhHant": "下筆起始壓力"
   },
   "pressure_gamma": {
     "en": "Pressure Gamma",
-    "zhHant": "壓力敏感度曲線",
-    "zhHans": "压力敏感度曲线",
     "ja": "筆圧感度カーブ",
-    "ko": "필압 감도 곡선"
+    "ko": "필압 감도 곡선",
+    "zhHans": "压力敏感度曲线",
+    "zhHant": "壓力敏感度曲線"
   },
   "preview_chart": {
     "en": "Live Chart Preview",
@@ -8240,21 +8576,13 @@
     "zhHans": "录音质量提示",
     "zhHant": "錄音品質提示"
   },
-  "recording_mic_mode": {
-    "en": "Mic Mode",
-    "ja": "マイクモード",
-    "ko": "마이크 모드",
-    "th": "โหมดไมโครโฟน",
-    "zhHans": "收音模式",
-    "zhHant": "收音模式"
-  },
   "recording_failed": {
     "en": "Recording could not start",
-    "zhHant": "錄音啟動失敗",
-    "zhHans": "录音启动失败",
     "ja": "録音を開始できませんでした",
     "ko": "녹음을 시작할 수 없습니다",
-    "th": "เริ่มบันทึกเสียงไม่ได้"
+    "th": "เริ่มบันทึกเสียงไม่ได้",
+    "zhHans": "录音启动失败",
+    "zhHant": "錄音啟動失敗"
   },
   "recording_inbox": {
     "en": "Recording Inbox",
@@ -8263,6 +8591,14 @@
     "th": "กล่องขาเข้าการบันทึก",
     "zhHans": "录音收件匣",
     "zhHant": "錄音收件匣"
+  },
+  "recording_mic_mode": {
+    "en": "Mic Mode",
+    "ja": "マイクモード",
+    "ko": "마이크 모드",
+    "th": "โหมดไมโครโฟน",
+    "zhHans": "收音模式",
+    "zhHant": "收音模式"
   },
   "recording_paused": {
     "en": "Recording Paused",
@@ -8335,6 +8671,14 @@
     "th": "ทำซ้ำ",
     "zhHans": "重做",
     "zhHant": "重做"
+  },
+  "redo_desc": {
+    "en": "Redo previously undone action",
+    "ja": "取り消した操作をやり直す",
+    "ko": "실행 취소한 작업 다시 실행",
+    "th": "ทำซ้ำการกระทำที่เลิกทำไป",
+    "zhHans": "重做上一步被撤销的操作",
+    "zhHant": "重做上一步被復原的操作"
   },
   "redo_refine": {
     "en": "Redo Refine",
@@ -8680,6 +9024,22 @@
     "zhHans": "拖动把手旋转，靠近 15° 的倍数会自动吸附",
     "zhHant": "拖曳把手旋轉，靠近 15° 的倍數會自動吸附"
   },
+  "route_elbow": {
+    "en": "Elbow",
+    "ja": "直角",
+    "ko": "꺾은선",
+    "th": "เส้นหักมุม",
+    "zhHans": "直角折线",
+    "zhHant": "直角折線"
+  },
+  "route_straight": {
+    "en": "Straight",
+    "ja": "直線",
+    "ko": "직선",
+    "th": "เส้นตรง",
+    "zhHans": "直线",
+    "zhHant": "直線"
+  },
   "rule_of_thirds_desc": {
     "en": "Standard 3x3 grid lines with 4 intersection power points",
     "ja": "標準3分割ラインと4つの交点フォーカス表示",
@@ -8703,6 +9063,14 @@
     "th": "เส้นบรรทัดนำสายตา",
     "zhHans": "标尺辅助线",
     "zhHant": "尺規輔助線"
+  },
+  "ruler_desc": {
+    "en": "Toggle virtual precision ruler guide",
+    "ja": "仮想ルーラー（定規）ガイドを表示・非表示",
+    "ko": "가상 정밀 눈금자 가이드라인 켜기/끄기",
+    "th": "สลับการแสดงไม้บรรทัดนำทางเสมือนจริง",
+    "zhHans": "切换显示精密虚拟尺规辅助线",
+    "zhHant": "切換顯示精密虛擬尺規輔助線"
   },
   "ruler_hint": {
     "en": "• Hint: Rotate with two fingers on trackpad or hold Option while dragging",
@@ -9072,6 +9440,38 @@
     "zhHans": "已选取",
     "zhHant": "已選取"
   },
+  "selfcheck_copy": {
+    "en": "Copy report",
+    "ja": "レポートをコピー",
+    "ko": "보고서 복사",
+    "th": "คัดลอกรายงาน",
+    "zhHans": "复制报告",
+    "zhHant": "複製報告"
+  },
+  "selfcheck_run": {
+    "en": "Run self-check",
+    "ja": "セルフチェックを実行",
+    "ko": "자가 점검 실행",
+    "th": "เริ่มตรวจสอบ",
+    "zhHans": "运行自检",
+    "zhHant": "執行自檢"
+  },
+  "selfcheck_running": {
+    "en": "Checking…",
+    "ja": "確認中…",
+    "ko": "점검 중…",
+    "th": "กำลังตรวจสอบ…",
+    "zhHans": "检查中…",
+    "zhHant": "檢查中…"
+  },
+  "selfcheck_title": {
+    "en": "Device self-check",
+    "ja": "端末セルフチェック",
+    "ko": "기기 자가 점검",
+    "th": "ตรวจสอบอุปกรณ์",
+    "zhHans": "设备自检",
+    "zhHant": "裝置自檢"
+  },
   "settings": {
     "en": "Settings",
     "ja": "設定",
@@ -9079,6 +9479,30 @@
     "th": "การตั้งค่า",
     "zhHans": "设置",
     "zhHant": "設定"
+  },
+  "shape_change_kind": {
+    "en": "Shape type",
+    "ja": "図形の種類",
+    "ko": "도형 종류",
+    "th": "ชนิดรูปร่าง",
+    "zhHans": "形状种类",
+    "zhHant": "形狀種類"
+  },
+  "shape_corner": {
+    "en": "Corner radius",
+    "ja": "角丸",
+    "ko": "모서리 반경",
+    "th": "รัศมีมุม",
+    "zhHans": "圆角",
+    "zhHant": "圓角"
+  },
+  "shape_duplicate": {
+    "en": "Duplicate",
+    "ja": "複製",
+    "ko": "복제",
+    "th": "ทำสำเนา",
+    "zhHans": "复制",
+    "zhHant": "複製"
   },
   "shape_edit": {
     "en": "Edit Shape",
@@ -9095,6 +9519,30 @@
     "th": "สีพื้น",
     "zhHans": "填充颜色",
     "zhHant": "填滿顏色"
+  },
+  "shape_flowchart_hint": {
+    "en": "Select a shape, then drag from a “+” on its edge to another shape to connect them",
+    "ja": "図形を選び、辺の「+」から別の図形へドラッグすると接続できます",
+    "ko": "도형을 선택한 뒤 가장자리의 “+”에서 다른 도형으로 드래그하면 연결됩니다",
+    "th": "เลือกรูปร่าง แล้วลากจาก “+” ที่ขอบไปยังรูปร่างอื่นเพื่อเชื่อมต่อ",
+    "zhHans": "选中形状后，从四边的“+”拖到另一个形状即可连线",
+    "zhHant": "點選形狀後，從四邊的「+」拖到另一個形狀即可連線"
+  },
+  "shape_geometry_section": {
+    "en": "Position & size",
+    "ja": "位置とサイズ",
+    "ko": "위치 및 크기",
+    "th": "ตำแหน่งและขนาด",
+    "zhHans": "位置与大小",
+    "zhHant": "位置與大小"
+  },
+  "shape_height": {
+    "en": "Height",
+    "ja": "高さ",
+    "ko": "높이",
+    "th": "สูง",
+    "zhHans": "高",
+    "zhHant": "高"
   },
   "shape_kind_arrow": {
     "en": "Arrow",
@@ -9544,6 +9992,14 @@
     "zhHans": "标签文字",
     "zhHant": "標籤文字"
   },
+  "shape_line_style": {
+    "en": "Line style",
+    "ja": "線のスタイル",
+    "ko": "선 스타일",
+    "th": "ลักษณะเส้น",
+    "zhHans": "线条样式",
+    "zhHant": "線條樣式"
+  },
   "shape_line_width": {
     "en": "Line Width",
     "ja": "線の太さ",
@@ -9559,6 +10015,14 @@
     "th": "%@ โหนด",
     "zhHans": "%@ 个节点",
     "zhHant": "%@ 個節點"
+  },
+  "shape_rotation": {
+    "en": "Rotation",
+    "ja": "回転角度",
+    "ko": "회전 각도",
+    "th": "มุมหมุน",
+    "zhHans": "旋转角度",
+    "zhHant": "旋轉角度"
   },
   "shape_section_basic": {
     "en": "Basic Shapes",
@@ -9607,6 +10071,22 @@
     "th": "สไตล์รูปทรง",
     "zhHans": "形状样式",
     "zhHant": "形狀樣式"
+  },
+  "shape_text_section": {
+    "en": "Text",
+    "ja": "テキスト",
+    "ko": "텍스트",
+    "th": "ข้อความ",
+    "zhHans": "文字",
+    "zhHant": "文字"
+  },
+  "shape_width": {
+    "en": "Width",
+    "ja": "幅",
+    "ko": "너비",
+    "th": "กว้าง",
+    "zhHans": "宽",
+    "zhHant": "寬"
   },
   "share_invite_link": {
     "en": "Share Invite Link",
@@ -9679,6 +10159,22 @@
     "th": "จัดตำแหน่งข้อความให้ชิดเส้นหรือตารางในหน้ากระดาษโดยอัตโนมัติ",
     "zhHans": "随点随写时自动对齐页面行线或方格",
     "zhHant": "隨點隨寫時自動對齊頁面行線或方格"
+  },
+  "snap_to_grid_off_notice": {
+    "en": "Snap to grid off: text is placed exactly where you tap.",
+    "ja": "グリッド吸着オフ：テキストはタップした位置にそのまま置かれます。",
+    "ko": "격자 맞춤 꺼짐: 텍스트가 탭한 위치에 그대로 놓입니다.",
+    "th": "ปิดจัดชิดเส้นตาราง: ข้อความจะวางตรงตำแหน่งที่แตะ",
+    "zhHans": "吸附格线已关闭：文字会放在你点的位置。",
+    "zhHant": "吸附格線已關閉：文字會放在你點的位置。"
+  },
+  "snap_to_grid_on_notice": {
+    "en": "Snap to grid on: tap-to-write text aligns to the page's lines or grid.",
+    "ja": "グリッド吸着オン：タップで書くテキストがページの罫線や方眼に揃います。",
+    "ko": "격자 맞춤 켜짐: 탭해서 쓰는 텍스트가 페이지의 줄이나 격자에 맞춰집니다.",
+    "th": "เปิดจัดชิดเส้นตาราง: ข้อความที่แตะเพื่อเขียนจะชิดเส้นหรือตารางของหน้า",
+    "zhHans": "吸附格线已开启：随点随写的文字会对齐页面行线或方格。",
+    "zhHant": "吸附格線已開啟：隨點隨寫的文字會對齊頁面行線或方格。"
   },
   "snapshot_created": {
     "en": "Snapshot Created",
@@ -9800,6 +10296,14 @@
     "zhHans": "实体规格与材料建议",
     "zhHant": "實體規格與材料建議"
   },
+  "stab_desc": {
+    "en": "Real-time stroke stabilisation smoothing for jitter-free writing and drawing",
+    "ja": "ストロークの手ブレを抑えて滑らかに補正します",
+    "ko": "손떨림을 보정하여 매끄러운 선을 그립니다",
+    "th": "ลดการสั่นของเส้นแบบเรียลไทม์เพื่อการเขียนและวาดที่ลื่นไหล",
+    "zhHans": "线条实时平滑防抖，消除手写抖动与毛刺",
+    "zhHant": "線條即時平滑防抖，消除手寫抖動與毛邊"
+  },
   "stab_light": {
     "en": "Light stabiliser",
     "ja": "弱い手ブレ補正",
@@ -9906,283 +10410,283 @@
   },
   "sticker_arrow_curve": {
     "en": "Curved arrow",
-    "zhHant": "曲線箭頭",
-    "zhHans": "曲线箭头",
     "ja": "曲線矢印",
     "ko": "곡선 화살표",
-    "th": "ลูกศรโค้ง"
+    "th": "ลูกศรโค้ง",
+    "zhHans": "曲线箭头",
+    "zhHant": "曲線箭頭"
   },
   "sticker_arrow_down": {
     "en": "Arrow down",
-    "zhHant": "向下箭頭",
-    "zhHans": "向下箭头",
     "ja": "下矢印",
     "ko": "아래쪽 화살표",
-    "th": "ลูกศรลง"
+    "th": "ลูกศรลง",
+    "zhHans": "向下箭头",
+    "zhHant": "向下箭頭"
   },
   "sticker_arrow_left": {
     "en": "Arrow left",
-    "zhHant": "向左箭頭",
-    "zhHans": "向左箭头",
     "ja": "左矢印",
     "ko": "왼쪽 화살표",
-    "th": "ลูกศรซ้าย"
+    "th": "ลูกศรซ้าย",
+    "zhHans": "向左箭头",
+    "zhHant": "向左箭頭"
   },
   "sticker_arrow_right": {
     "en": "Arrow right",
-    "zhHant": "向右箭頭",
-    "zhHans": "向右箭头",
     "ja": "右矢印",
     "ko": "오른쪽 화살표",
-    "th": "ลูกศรขวา"
+    "th": "ลูกศรขวา",
+    "zhHans": "向右箭头",
+    "zhHant": "向右箭頭"
   },
   "sticker_arrow_up": {
     "en": "Arrow up",
-    "zhHant": "向上箭頭",
-    "zhHans": "向上箭头",
     "ja": "上矢印",
     "ko": "위쪽 화살표",
-    "th": "ลูกศรขึ้น"
+    "th": "ลูกศรขึ้น",
+    "zhHans": "向上箭头",
+    "zhHant": "向上箭頭"
   },
   "sticker_badge": {
     "en": "Badge",
-    "zhHant": "徽章",
-    "zhHans": "徽章",
     "ja": "バッジ",
     "ko": "배지",
-    "th": "เหรียญตรา"
+    "th": "เหรียญตรา",
+    "zhHans": "徽章",
+    "zhHant": "徽章"
   },
   "sticker_blocked": {
     "en": "Blocked",
-    "zhHant": "卡住",
-    "zhHans": "卡住",
     "ja": "ブロック中",
     "ko": "막힘",
-    "th": "ติดขัด"
+    "th": "ติดขัด",
+    "zhHans": "卡住",
+    "zhHant": "卡住"
   },
   "sticker_book": {
     "en": "Book",
-    "zhHant": "書",
-    "zhHans": "书",
     "ja": "本",
     "ko": "책",
-    "th": "หนังสือ"
+    "th": "หนังสือ",
+    "zhHans": "书",
+    "zhHant": "書"
   },
   "sticker_bookmark": {
     "en": "Bookmark",
-    "zhHant": "書籤",
-    "zhHans": "书签",
     "ja": "ブックマーク",
     "ko": "북마크",
-    "th": "ที่คั่นหนังสือ"
+    "th": "ที่คั่นหนังสือ",
+    "zhHans": "书签",
+    "zhHant": "書籤"
   },
   "sticker_bracket": {
     "en": "Bracket",
-    "zhHant": "方括號",
-    "zhHans": "方括号",
     "ja": "角括弧",
     "ko": "대괄호",
-    "th": "วงเล็บเหลี่ยม"
+    "th": "วงเล็บเหลี่ยม",
+    "zhHans": "方括号",
+    "zhHant": "方括號"
   },
   "sticker_branch": {
     "en": "Branch",
-    "zhHant": "分支",
-    "zhHans": "分支",
     "ja": "分岐",
     "ko": "분기",
-    "th": "แยกสาขา"
+    "th": "แยกสาขา",
+    "zhHans": "分支",
+    "zhHant": "分支"
   },
   "sticker_bubble": {
     "en": "Speech bubble",
-    "zhHant": "對話泡",
-    "zhHans": "对话泡",
     "ja": "吹き出し",
     "ko": "말풍선",
-    "th": "กรอบคำพูด"
+    "th": "กรอบคำพูด",
+    "zhHans": "对话泡",
+    "zhHant": "對話泡"
   },
   "sticker_builtin": {
     "en": "Built-in",
-    "zhHant": "內建",
-    "zhHans": "内置",
     "ja": "組み込み",
     "ko": "기본 제공",
-    "th": "ในตัว"
+    "th": "ในตัว",
+    "zhHans": "内置",
+    "zhHant": "內建"
   },
   "sticker_bullet": {
     "en": "Bullet",
-    "zhHant": "項目點",
-    "zhHans": "项目点",
     "ja": "箇条書き",
     "ko": "글머리 기호",
-    "th": "จุดนำ"
+    "th": "จุดนำ",
+    "zhHans": "项目点",
+    "zhHant": "項目點"
   },
   "sticker_calendar": {
     "en": "Date",
-    "zhHant": "日期",
-    "zhHans": "日期",
     "ja": "日付",
     "ko": "날짜",
-    "th": "วันที่"
+    "th": "วันที่",
+    "zhHans": "日期",
+    "zhHant": "日期"
   },
   "sticker_cat_annotate": {
     "en": "Annotate",
-    "zhHant": "標註",
-    "zhHans": "标注",
     "ja": "注釈",
     "ko": "주석",
-    "th": "ทำเครื่องหมาย"
+    "th": "ทำเครื่องหมาย",
+    "zhHans": "标注",
+    "zhHant": "標註"
   },
   "sticker_cat_flow": {
     "en": "Flow",
-    "zhHant": "流程",
-    "zhHans": "流程",
     "ja": "フロー",
     "ko": "흐름",
-    "th": "ผังงาน"
+    "th": "ผังงาน",
+    "zhHans": "流程",
+    "zhHant": "流程"
   },
   "sticker_cat_label": {
     "en": "Labels",
-    "zhHant": "標籤",
-    "zhHans": "标签",
     "ja": "ラベル",
     "ko": "라벨",
-    "th": "ป้ายกำกับ"
+    "th": "ป้ายกำกับ",
+    "zhHans": "标签",
+    "zhHant": "標籤"
   },
   "sticker_cat_mood": {
     "en": "Reactions",
-    "zhHant": "心情",
-    "zhHans": "心情",
     "ja": "リアクション",
     "ko": "반응",
-    "th": "อารมณ์"
+    "th": "อารมณ์",
+    "zhHans": "心情",
+    "zhHant": "心情"
   },
   "sticker_cat_study": {
     "en": "Study",
-    "zhHant": "學習",
-    "zhHans": "学习",
     "ja": "学習",
     "ko": "학습",
-    "th": "การเรียน"
+    "th": "การเรียน",
+    "zhHans": "学习",
+    "zhHant": "學習"
   },
   "sticker_cat_task": {
     "en": "Tasks",
-    "zhHant": "待辦",
-    "zhHans": "待办",
     "ja": "タスク",
     "ko": "할 일",
-    "th": "งานที่ต้องทำ"
+    "th": "งานที่ต้องทำ",
+    "zhHans": "待办",
+    "zhHant": "待辦"
   },
   "sticker_check": {
     "en": "Check",
-    "zhHant": "勾",
-    "zhHans": "勾",
     "ja": "チェック",
     "ko": "체크",
-    "th": "เครื่องหมายถูก"
+    "th": "เครื่องหมายถูก",
+    "zhHans": "勾",
+    "zhHant": "勾"
   },
   "sticker_checkbox": {
     "en": "To do",
-    "zhHant": "待辦",
-    "zhHans": "待办",
     "ja": "未完了",
     "ko": "할 일",
-    "th": "ยังไม่ทำ"
+    "th": "ยังไม่ทำ",
+    "zhHans": "待办",
+    "zhHant": "待辦"
   },
   "sticker_checkbox_done": {
     "en": "Done",
-    "zhHant": "已完成",
-    "zhHans": "已完成",
     "ja": "完了",
     "ko": "완료",
-    "th": "เสร็จแล้ว"
+    "th": "เสร็จแล้ว",
+    "zhHans": "已完成",
+    "zhHant": "已完成"
   },
   "sticker_circle_mark": {
     "en": "Circle",
-    "zhHant": "圈選",
-    "zhHans": "圈选",
     "ja": "丸で囲む",
     "ko": "동그라미",
-    "th": "วงกลม"
+    "th": "วงกลม",
+    "zhHans": "圈选",
+    "zhHant": "圈選"
   },
   "sticker_clock": {
     "en": "Time",
-    "zhHant": "時間",
-    "zhHans": "时间",
     "ja": "時間",
     "ko": "시간",
-    "th": "เวลา"
+    "th": "เวลา",
+    "zhHans": "时间",
+    "zhHant": "時間"
   },
   "sticker_cross": {
     "en": "Cross",
-    "zhHant": "叉",
-    "zhHans": "叉",
     "ja": "バツ",
     "ko": "가위표",
-    "th": "กากบาท"
+    "th": "กากบาท",
+    "zhHans": "叉",
+    "zhHant": "叉"
   },
   "sticker_exclaim": {
     "en": "Important",
-    "zhHant": "驚嘆號",
-    "zhHans": "惊叹号",
     "ja": "感嘆符",
     "ko": "느낌표",
-    "th": "เครื่องหมายอัศเจรีย์"
+    "th": "เครื่องหมายอัศเจรีย์",
+    "zhHans": "惊叹号",
+    "zhHant": "驚嘆號"
   },
   "sticker_flag": {
     "en": "Flag",
-    "zhHant": "旗標",
-    "zhHans": "旗标",
     "ja": "フラグ",
     "ko": "깃발",
-    "th": "ธง"
+    "th": "ธง",
+    "zhHans": "旗标",
+    "zhHant": "旗標"
   },
   "sticker_formula": {
     "en": "Formula",
-    "zhHant": "公式",
-    "zhHans": "公式",
     "ja": "数式",
     "ko": "수식",
-    "th": "สูตร"
+    "th": "สูตร",
+    "zhHans": "公式",
+    "zhHant": "公式"
   },
   "sticker_frown": {
     "en": "Unhappy",
-    "zhHant": "不滿",
-    "zhHans": "不满",
     "ja": "不満",
     "ko": "아쉬움",
-    "th": "ไม่พอใจ"
+    "th": "ไม่พอใจ",
+    "zhHans": "不满",
+    "zhHant": "不滿"
   },
   "sticker_half_done": {
     "en": "In progress",
-    "zhHant": "進行中",
-    "zhHans": "进行中",
     "ja": "進行中",
     "ko": "진행 중",
-    "th": "กำลังดำเนินการ"
+    "th": "กำลังดำเนินการ",
+    "zhHans": "进行中",
+    "zhHant": "進行中"
   },
   "sticker_heart": {
     "en": "Love",
-    "zhHant": "喜歡",
-    "zhHans": "喜欢",
     "ja": "お気に入り",
     "ko": "좋아요",
-    "th": "ถูกใจ"
+    "th": "ถูกใจ",
+    "zhHans": "喜欢",
+    "zhHant": "喜歡"
   },
   "sticker_hot": {
     "en": "Key point",
-    "zhHant": "重點",
-    "zhHans": "重点",
     "ja": "重要",
     "ko": "핵심",
-    "th": "จุดสำคัญ"
+    "th": "จุดสำคัญ",
+    "zhHans": "重点",
+    "zhHant": "重點"
   },
   "sticker_idea": {
     "en": "Idea",
-    "zhHant": "靈感",
-    "zhHans": "灵感",
     "ja": "アイデア",
     "ko": "아이디어",
-    "th": "ไอเดีย"
+    "th": "ไอเดีย",
+    "zhHans": "灵感",
+    "zhHant": "靈感"
   },
   "sticker_library": {
     "en": "Sticker Library",
@@ -10194,35 +10698,43 @@
   },
   "sticker_loop": {
     "en": "Loop",
-    "zhHant": "循環",
-    "zhHans": "循环",
     "ja": "ループ",
     "ko": "반복",
-    "th": "วนซ้ำ"
+    "th": "วนซ้ำ",
+    "zhHans": "循环",
+    "zhHant": "循環"
   },
   "sticker_mine": {
     "en": "Saved by me",
-    "zhHant": "我存的",
-    "zhHans": "我存的",
     "ja": "保存したもの",
     "ko": "내가 저장한 것",
-    "th": "ที่ฉันบันทึก"
+    "th": "ที่ฉันบันทึก",
+    "zhHans": "我存的",
+    "zhHant": "我存的"
   },
   "sticker_neutral": {
     "en": "Neutral",
-    "zhHant": "普通",
-    "zhHans": "普通",
     "ja": "ふつう",
     "ko": "보통",
-    "th": "เฉย ๆ"
+    "th": "เฉย ๆ",
+    "zhHans": "普通",
+    "zhHant": "普通"
   },
   "sticker_note": {
     "en": "Sticky note",
-    "zhHant": "便利貼",
-    "zhHans": "便利贴",
     "ja": "付箋",
     "ko": "포스트잇",
-    "th": "กระดาษโน้ต"
+    "th": "กระดาษโน้ต",
+    "zhHans": "便利贴",
+    "zhHant": "便利貼"
+  },
+  "sticker_pencil": {
+    "en": "Pencil",
+    "ja": "鉛筆",
+    "ko": "연필",
+    "th": "ดินสอ",
+    "zhHans": "铅笔",
+    "zhHant": "鉛筆"
   },
   "sticker_placed_hint": {
     "en": "Sticker placed. Tap it to move, resize, rotate or delete.",
@@ -10232,77 +10744,69 @@
     "zhHans": "贴纸已放置。点一下即可移动、缩放、旋转或删除。",
     "zhHant": "貼紙已放置。點一下即可移動、縮放、旋轉或刪除。"
   },
-  "sticker_pencil": {
-    "en": "Pencil",
-    "zhHant": "鉛筆",
-    "zhHans": "铅笔",
-    "ja": "鉛筆",
-    "ko": "연필",
-    "th": "ดินสอ"
-  },
   "sticker_qa": {
     "en": "Q & A",
-    "zhHant": "問與答",
-    "zhHans": "问与答",
     "ja": "質疑応答",
     "ko": "질문과 답변",
-    "th": "ถาม-ตอบ"
+    "th": "ถาม-ตอบ",
+    "zhHans": "问与答",
+    "zhHant": "問與答"
   },
   "sticker_question": {
     "en": "Question",
-    "zhHant": "問號",
-    "zhHans": "问号",
     "ja": "疑問符",
     "ko": "물음표",
-    "th": "เครื่องหมายคำถาม"
+    "th": "เครื่องหมายคำถาม",
+    "zhHans": "问号",
+    "zhHant": "問號"
   },
   "sticker_ribbon": {
     "en": "Ribbon",
-    "zhHant": "緞帶",
-    "zhHans": "绶带",
     "ja": "リボン",
     "ko": "리본",
-    "th": "ริบบิ้น"
+    "th": "ริบบิ้น",
+    "zhHans": "绶带",
+    "zhHant": "緞帶"
   },
   "sticker_smile": {
     "en": "Happy",
-    "zhHant": "開心",
-    "zhHans": "开心",
     "ja": "うれしい",
     "ko": "좋음",
-    "th": "ยิ้ม"
+    "th": "ยิ้ม",
+    "zhHans": "开心",
+    "zhHant": "開心"
   },
   "sticker_star": {
     "en": "Star",
-    "zhHant": "星星",
-    "zhHans": "星星",
     "ja": "星",
     "ko": "별",
-    "th": "ดาว"
+    "th": "ดาว",
+    "zhHans": "星星",
+    "zhHant": "星星"
   },
   "sticker_tag": {
     "en": "Tag",
-    "zhHant": "標籤",
-    "zhHans": "标签",
     "ja": "タグ",
     "ko": "태그",
-    "th": "แท็ก"
+    "th": "แท็ก",
+    "zhHans": "标签",
+    "zhHant": "標籤"
   },
   "sticker_thumb_up": {
     "en": "Good",
-    "zhHant": "讚",
-    "zhHans": "赞",
     "ja": "いいね",
     "ko": "좋아요",
-    "th": "ดี"
+    "th": "ดี",
+    "zhHans": "赞",
+    "zhHant": "讚"
   },
   "sticker_underline": {
     "en": "Squiggle",
-    "zhHant": "波浪底線",
-    "zhHans": "波浪下划线",
     "ja": "波線",
     "ko": "물결 밑줄",
-    "th": "ขีดเส้นหยัก"
+    "th": "ขีดเส้นหยัก",
+    "zhHans": "波浪下划线",
+    "zhHant": "波浪底線"
   },
   "sticky_anchor_ink": {
     "en": "Anchor Overlapping Ink",
@@ -10352,13 +10856,13 @@
     "zhHans": "停止录音",
     "zhHant": "停止錄音"
   },
-  "storage_location": {
-    "en": "Data Storage Location",
-    "ja": "データ保存先",
-    "ko": "데이터 저장 위치",
-    "th": "ตำแหน่งจัดเก็บข้อมูล",
-    "zhHans": "数据存储位置",
-    "zhHant": "資料儲存位置"
+  "storage_caches": {
+    "en": "Caches",
+    "ja": "キャッシュ",
+    "ko": "캐시",
+    "th": "แคช",
+    "zhHans": "缓存",
+    "zhHant": "快取"
   },
   "storage_choose_parent": {
     "en": "Choose Document Folder…",
@@ -10368,6 +10872,22 @@
     "zhHans": "选择文件文件夹…",
     "zhHant": "選擇文件資料夾…"
   },
+  "storage_clean_now": {
+    "en": "Clean up now",
+    "ja": "今すぐ整理",
+    "ko": "지금 정리",
+    "th": "ล้างข้อมูลตอนนี้",
+    "zhHans": "立即清理",
+    "zhHant": "立即清理"
+  },
+  "storage_cleaned": {
+    "en": "Freed %@. Your notes and recordings are not touched.",
+    "ja": "%@ を解放しました。ノートと録音には触れていません。",
+    "ko": "%@ 확보했습니다. 노트와 녹음은 그대로입니다.",
+    "th": "คืนพื้นที่ %@ แล้ว โน้ตและการบันทึกเสียงของคุณไม่ถูกแตะต้อง",
+    "zhHans": "已释放 %@。你的笔记与录音不会被动到。",
+    "zhHant": "已釋放 %@。你的筆記與錄音不會被動到。"
+  },
   "storage_current_location": {
     "en": "Current primary library",
     "ja": "現在のメインライブラリ",
@@ -10375,6 +10895,46 @@
     "th": "คลังหลักปัจจุบัน",
     "zhHans": "当前主要资料库",
     "zhHant": "目前主要資料庫"
+  },
+  "storage_icloud_continue": {
+    "en": "Use it anyway",
+    "ja": "このまま使う",
+    "ko": "그래도 사용",
+    "th": "ใช้ต่อไป",
+    "zhHans": "仍要使用",
+    "zhHant": "仍要使用"
+  },
+  "storage_icloud_current": {
+    "en": "This location is synced by iCloud Drive. Deleted files may come back; consider a folder iCloud doesn't sync.",
+    "ja": "この場所は iCloud Drive で同期されます。削除したファイルが復元されることがあります。iCloud で同期されないフォルダをおすすめします。",
+    "ko": "이 위치는 iCloud Drive로 동기화됩니다. 삭제한 파일이 복원될 수 있으니 iCloud가 동기화하지 않는 폴더를 권장합니다.",
+    "th": "ตำแหน่งนี้ซิงก์ผ่าน iCloud Drive ไฟล์ที่ลบอาจกลับมา แนะนำให้ใช้โฟลเดอร์ที่ iCloud ไม่ซิงก์",
+    "zhHans": "这个位置会被 iCloud 云盘同步，已删除的文件可能被恢复；建议改放 iCloud 不会同步的文件夹。",
+    "zhHant": "這個位置會被 iCloud 雲碟同步，已刪除的檔案可能被還原；建議改放 iCloud 不會同步的資料夾。"
+  },
+  "storage_icloud_message": {
+    "en": "Kairumo's library is made of thousands of small files and already syncs through Google Drive or a sync folder. If iCloud Drive syncs it too, deleted files can come back and the two can conflict. Choose a folder that iCloud does not sync, or continue anyway.",
+    "ja": "Kairumo のライブラリは数千の小さなファイルでできており、すでに Google Drive または同期フォルダで同期されます。iCloud Drive でも同期すると、削除したファイルが復元されたり、競合が起きたりすることがあります。iCloud で同期されないフォルダを選ぶか、そのまま続行してください。",
+    "ko": "Kairumo 라이브러리는 수천 개의 작은 파일로 이루어져 있으며 이미 Google Drive 또는 동기화 폴더로 동기화됩니다. iCloud Drive로도 동기화하면 삭제한 파일이 복원되거나 충돌이 생길 수 있습니다. iCloud가 동기화하지 않는 폴더를 선택하거나 그대로 계속하세요.",
+    "th": "คลังของ Kairumo ประกอบด้วยไฟล์เล็กๆ หลายพันไฟล์ และซิงก์ผ่าน Google Drive หรือโฟลเดอร์ซิงก์อยู่แล้ว หาก iCloud Drive ซิงก์ด้วย ไฟล์ที่ลบไปอาจกลับมาและอาจเกิดความขัดแย้งได้ ควรเลือกโฟลเดอร์ที่ iCloud ไม่ซิงก์ หรือดำเนินการต่อ",
+    "zhHans": "Kairumo 的资料库由数千个小文件组成，并且已经通过 Google Drive 或同步文件夹同步。若再让 iCloud 云盘同步它，已删除的文件可能被恢复，两边也可能互相冲突。建议选择 iCloud 不会同步的文件夹，或仍要使用这个位置。",
+    "zhHant": "Kairumo 的資料庫由數千個小檔組成，而且已經透過 Google Drive 或同步資料夾同步。若再讓 iCloud 雲碟同步它，已刪除的檔案可能被還原，兩邊也可能互相衝突。建議選擇 iCloud 不會同步的資料夾，或仍要使用這個位置。"
+  },
+  "storage_icloud_title": {
+    "en": "This folder is synced by iCloud Drive",
+    "ja": "このフォルダは iCloud Drive で同期されます",
+    "ko": "이 폴더는 iCloud Drive로 동기화됩니다",
+    "th": "โฟลเดอร์นี้ซิงก์ผ่าน iCloud Drive",
+    "zhHans": "这个文件夹会被 iCloud 云盘同步",
+    "zhHant": "這個資料夾會被 iCloud 雲碟同步"
+  },
+  "storage_library": {
+    "en": "Notes & recordings",
+    "ja": "ノートと録音",
+    "ko": "노트 및 녹음",
+    "th": "โน้ตและการบันทึกเสียง",
+    "zhHans": "笔记与录音",
+    "zhHant": "筆記與錄音"
   },
   "storage_library_explainer": {
     "en": "Choose a folder you can access in Finder or Files. Kairumo creates “Kairumo Doc” there, moves the current library safely, and continuously saves notebooks, recordings, and attachments to that location.",
@@ -10400,6 +10960,30 @@
     "zhHans": "主要文件资料库",
     "zhHant": "主要文件資料庫"
   },
+  "storage_location": {
+    "en": "Data Storage Location",
+    "ja": "データ保存先",
+    "ko": "데이터 저장 위치",
+    "th": "ตำแหน่งจัดเก็บข้อมูล",
+    "zhHans": "数据存储位置",
+    "zhHant": "資料儲存位置"
+  },
+  "storage_models": {
+    "en": "Downloaded models",
+    "ja": "ダウンロード済みモデル",
+    "ko": "다운로드한 모델",
+    "th": "โมเดลที่ดาวน์โหลด",
+    "zhHans": "已下载的模型",
+    "zhHant": "已下載的模型"
+  },
+  "storage_move_cancelled": {
+    "en": "Move cancelled. Nothing was changed.",
+    "ja": "移動をキャンセルしました。変更はありません。",
+    "ko": "이동을 취소했습니다. 변경된 내용이 없습니다.",
+    "th": "ยกเลิกการย้ายแล้ว ไม่มีการเปลี่ยนแปลง",
+    "zhHans": "已取消搬移，没有任何更改。",
+    "zhHant": "已取消搬移，沒有任何改動。"
+  },
   "storage_move_complete": {
     "en": "The primary library is now continuously saved at the selected location.",
     "ja": "メインライブラリは選択した場所に継続的に保存されます。",
@@ -10408,6 +10992,134 @@
     "zhHans": "主要资料库现已持续保存到所选位置。",
     "zhHant": "主要資料庫現已持續儲存到所選位置。"
   },
+  "storage_progress_cleaning": {
+    "en": "Removing the old copy…",
+    "ja": "古いライブラリを削除しています…",
+    "ko": "이전 라이브러리를 삭제하는 중…",
+    "th": "กำลังลบคลังเดิม…",
+    "zhHans": "移除旧的资料库…",
+    "zhHant": "移除舊的資料庫…"
+  },
+  "storage_progress_copying": {
+    "en": "Copying %1$d of %2$d files…",
+    "ja": "コピー中：%1$d／%2$d ファイル…",
+    "ko": "복사 중: %1$d/%2$d 파일…",
+    "th": "กำลังคัดลอก %1$d จาก %2$d ไฟล์…",
+    "zhHans": "复制中：%1$d／%2$d 个文件…",
+    "zhHant": "複製中：%1$d／%2$d 個檔案…"
+  },
+  "storage_progress_verifying": {
+    "en": "Verifying the copy…",
+    "ja": "コピーを検証しています…",
+    "ko": "복사본을 확인하는 중…",
+    "th": "กำลังตรวจสอบสำเนา…",
+    "zhHans": "验证复制结果…",
+    "zhHant": "驗證複製結果…"
+  },
+  "storage_progress_waiting": {
+    "en": "Waiting for sync to finish…",
+    "ja": "同期の完了を待っています…",
+    "ko": "동기화가 끝나기를 기다리는 중…",
+    "th": "กำลังรอการซิงก์ให้เสร็จ…",
+    "zhHans": "等待同步结束…",
+    "zhHant": "等待同步結束…"
+  },
+  "storage_reset_button": {
+    "en": "Reset local data…",
+    "ja": "ローカルデータをリセット…",
+    "ko": "로컬 데이터 초기화…",
+    "th": "รีเซ็ตข้อมูลในเครื่อง…",
+    "zhHans": "重置本机数据…",
+    "zhHant": "重設本機資料…"
+  },
+  "storage_reset_cloud_failed": {
+    "en": "Could not erase the cloud data, so nothing local was removed. Try again or turn the option off.",
+    "ja": "クラウドのデータを削除できなかったため、ローカルは何も変更していません。もう一度試すか、このオプションをオフにしてください。",
+    "ko": "클라우드 데이터를 지우지 못해 로컬은 아무것도 변경하지 않았습니다. 다시 시도하거나 이 옵션을 끄세요.",
+    "th": "ลบข้อมูลบนคลาวด์ไม่สำเร็จ จึงไม่ได้ลบอะไรในเครื่อง ลองอีกครั้งหรือปิดตัวเลือกนี้",
+    "zhHans": "云端数据没有清成功，所以本机没有动任何东西。请再试一次，或关掉这个选项。",
+    "zhHant": "雲端資料沒有清成功，所以本機沒有動任何東西。請再試一次，或關掉這個選項。"
+  },
+  "storage_reset_cloud_note": {
+    "en": "Clears this app's Google Drive or sync-folder data so other devices cannot bring the files back. Other devices keep their own local copies until you reset them too.",
+    "ja": "このアプリの Google Drive または同期フォルダのデータを消去し、他の端末がファイルを戻せないようにします。他の端末のローカルコピーは、その端末でもリセットするまで残ります。",
+    "ko": "이 앱의 Google Drive 또는 동기화 폴더 데이터를 지워 다른 기기가 파일을 다시 가져오지 못하게 합니다. 다른 기기의 로컬 사본은 그 기기에서도 초기화하기 전까지 남아 있습니다.",
+    "th": "ล้างข้อมูลของแอปนี้ใน Google Drive หรือโฟลเดอร์ซิงก์ เพื่อไม่ให้อุปกรณ์อื่นนำไฟล์กลับมา สำเนาในเครื่องของอุปกรณ์อื่นจะยังอยู่จนกว่าคุณจะรีเซ็ตที่เครื่องนั้นด้วย",
+    "zhHans": "清掉本 App 在 Google Drive 或同步文件夹里的数据，其他设备就不会把文件带回来。其他设备本机的副本要等你在那些设备上也重置才会清掉。",
+    "zhHant": "清掉本 App 在 Google Drive 或同步資料夾裡的資料，其他裝置就不會把檔案帶回來。其他裝置本機的副本要等你在那些裝置上也重設才會清掉。"
+  },
+  "storage_reset_cloud_toggle": {
+    "en": "Also erase the cloud sync data first",
+    "ja": "先にクラウド同期データも削除する",
+    "ko": "먼저 클라우드 동기화 데이터도 삭제",
+    "th": "ลบข้อมูลซิงก์บนคลาวด์ก่อนด้วย",
+    "zhHans": "先清除云端同步数据",
+    "zhHant": "先清除雲端同步資料"
+  },
+  "storage_reset_confirm_action": {
+    "en": "Reset",
+    "ja": "リセット",
+    "ko": "초기화",
+    "th": "รีเซ็ต",
+    "zhHans": "重置",
+    "zhHant": "重設"
+  },
+  "storage_reset_confirm_message": {
+    "en": "This removes all notebooks, recordings and attachments on this device. Once the Trash is emptied it cannot be undone.",
+    "ja": "この端末のノート、録音、添付ファイルをすべて削除します。ゴミ箱を空にすると元に戻せません。",
+    "ko": "이 기기의 모든 노트, 녹음, 첨부 파일이 삭제됩니다. 휴지통을 비우면 되돌릴 수 없습니다.",
+    "th": "การดำเนินการนี้จะลบสมุดบันทึก การบันทึกเสียง และไฟล์แนบทั้งหมดในอุปกรณ์นี้ เมื่อล้างถังขยะแล้วจะกู้คืนไม่ได้",
+    "zhHans": "这会移除这台设备上所有的笔记本、录音与附件。废纸篓清空之后就无法恢复。",
+    "zhHant": "這會移除這台裝置上所有的筆記本、錄音與附件。垃圾桶清空之後就無法復原。"
+  },
+  "storage_reset_confirm_title": {
+    "en": "Reset local data?",
+    "ja": "ローカルデータをリセットしますか？",
+    "ko": "로컬 데이터를 초기화할까요?",
+    "th": "รีเซ็ตข้อมูลในเครื่องหรือไม่?",
+    "zhHans": "要重置本机数据吗？",
+    "zhHant": "要重設本機資料嗎？"
+  },
+  "storage_reset_done": {
+    "en": "Local data was reset.",
+    "ja": "ローカルデータをリセットしました。",
+    "ko": "로컬 데이터를 초기화했습니다.",
+    "th": "รีเซ็ตข้อมูลในเครื่องแล้ว",
+    "zhHans": "已重置本机数据。",
+    "zhHant": "已重設本機資料。"
+  },
+  "storage_reset_explainer": {
+    "en": "Removes every notebook, recording and attachment stored on this device and starts from a clean library. Downloaded speech models are kept. Items go to the Trash where possible.",
+    "ja": "この端末に保存されているノート、録音、添付ファイルをすべて削除し、空のライブラリから始めます。ダウンロード済みの音声モデルは残ります。可能な場合はゴミ箱に移動します。",
+    "ko": "이 기기에 저장된 모든 노트, 녹음, 첨부 파일을 삭제하고 깨끗한 라이브러리로 시작합니다. 다운로드한 음성 모델은 유지됩니다. 가능하면 휴지통으로 이동합니다.",
+    "th": "ลบสมุดบันทึก การบันทึกเสียง และไฟล์แนบทั้งหมดในอุปกรณ์นี้ แล้วเริ่มต้นคลังใหม่ โมเดลเสียงที่ดาวน์โหลดไว้จะยังอยู่ และจะย้ายไปถังขยะเมื่อทำได้",
+    "zhHans": "移除这台设备上所有的笔记本、录音与附件，从干净的资料库重新开始。已下载的语音模型会保留。可以的话会先移到废纸篓。",
+    "zhHant": "移除這台裝置上所有的筆記本、錄音與附件，從乾淨的資料庫重新開始。已下載的語音模型會保留。可以的話會先移到垃圾桶。"
+  },
+  "storage_reset_progress_cloud": {
+    "en": "Erasing cloud sync data…",
+    "ja": "クラウド同期データを削除しています…",
+    "ko": "클라우드 동기화 데이터를 지우는 중…",
+    "th": "กำลังลบข้อมูลซิงก์บนคลาวด์…",
+    "zhHans": "清除云端同步数据…",
+    "zhHant": "清除雲端同步資料…"
+  },
+  "storage_reset_progress_local": {
+    "en": "Removing local data…",
+    "ja": "ローカルデータを削除しています…",
+    "ko": "로컬 데이터를 삭제하는 중…",
+    "th": "กำลังลบข้อมูลในเครื่อง…",
+    "zhHans": "移除本机数据…",
+    "zhHant": "移除本機資料…"
+  },
+  "storage_reset_title": {
+    "en": "Reset local data",
+    "ja": "ローカルデータをリセット",
+    "ko": "로컬 데이터 초기화",
+    "th": "รีเซ็ตข้อมูลในเครื่อง",
+    "zhHans": "重置本机数据",
+    "zhHant": "重設本機資料"
+  },
   "storage_sync_explainer": {
     "en": "This location is local to this device. Cross-device updates use stable notebook IDs and your configured Google Drive or folder sync, so Mac, iPhone, iPad, and Android never depend on another device’s local path.",
     "ja": "この場所はこの端末専用です。端末間の更新には安定したノート ID と、設定済みの Google Drive またはフォルダ同期を使用するため、Mac、iPhone、iPad、Android が別端末のローカルパスに依存することはありません。",
@@ -10415,6 +11127,22 @@
     "th": "ตำแหน่งนี้ใช้เฉพาะอุปกรณ์เครื่องนี้ การอัปเดตข้ามอุปกรณ์ใช้รหัสสมุดบันทึกที่คงที่และ Google Drive หรือการซิงค์โฟลเดอร์ที่คุณตั้งค่าไว้ ดังนั้น Mac, iPhone, iPad และ Android จะไม่พึ่งพาพาธภายในของอุปกรณ์อื่น",
     "zhHans": "此位置仅属于本设备。跨设备更新会使用稳定的笔记本 ID，以及您设置的 Google Drive 或文件夹同步，因此 Mac、iPhone、iPad 和 Android 都不依赖其他设备的本机路径。",
     "zhHant": "此位置僅屬於本裝置。跨設備更新會使用穩定的筆記本 ID，以及您設定的 Google Drive 或資料夾同步，因此 Mac、iPhone、iPad 與 Android 都不依賴其他裝置的本機路徑。"
+  },
+  "storage_temp": {
+    "en": "Temporary files",
+    "ja": "一時ファイル",
+    "ko": "임시 파일",
+    "th": "ไฟล์ชั่วคราว",
+    "zhHans": "临时文件",
+    "zhHant": "暫存檔"
+  },
+  "storage_title": {
+    "en": "Storage",
+    "ja": "ストレージ",
+    "ko": "저장 공간",
+    "th": "พื้นที่จัดเก็บ",
+    "zhHans": "存储空间",
+    "zhHant": "儲存空間"
   },
   "stroke_color": {
     "en": "Stroke color",
@@ -10456,6 +11184,14 @@
     "zhHans": "笔记结构",
     "zhHant": "筆記結構"
   },
+  "structure_sidebar_desc": {
+    "en": "Toggle page thumbnails and folder structure outline sidebar",
+    "ja": "ページサムネイルとフォルダ階層サイドバーを表示・非表示",
+    "ko": "페이지 썸네일 및 폴더 구조 아웃라인 사이드바 전환",
+    "th": "สลับแถบข้างโครงสร้างหน้าและโฟลเดอร์",
+    "zhHans": "展开或收起页面缩略图与目录结构侧边栏",
+    "zhHant": "展開或收起頁面縮圖與目錄結構側邊欄"
+  },
   "structure_summary": {
     "en": "%1$@ folders · %2$@ notebooks",
     "ja": "フォルダ %1$@ · ノート %2$@",
@@ -10487,6 +11223,14 @@
     "th": "เส้นนำสมมาตรกระจก",
     "zhHans": "镜像对称辅助线",
     "zhHant": "鏡像對稱輔助線"
+  },
+  "symmetry_guide_desc": {
+    "en": "Mirror symmetry guide for perfectly balanced illustrations and graphics",
+    "ja": "左右対称の描画ガイドで均整のとれたイラストを作成",
+    "ko": "좌우 대칭 가이드라인으로 완벽한 균형의 드로잉 완성",
+    "th": "เส้นนำสายตาสมมาตรกระจกเพื่อการวาดที่สมดุลสมบูรณ์แบบ",
+    "zhHans": "镜像对称辅助尺规，实时绘制平衡对称图形",
+    "zhHant": "鏡像對稱輔助尺規，即時繪製平衡對稱圖案"
   },
   "sync_account": {
     "en": "Account",
@@ -10592,6 +11336,14 @@
     "zhHans": "同步失败：%@",
     "zhHant": "同步失敗：%@"
   },
+  "sync_folder_cancel_setting": {
+    "en": "Unlink Configured Folder",
+    "ja": "設定済みフォルダの解除",
+    "ko": "설정된 폴더 해제",
+    "th": "ยกเลิกการตั้งค่าโฟลเดอร์",
+    "zhHans": "取消已设置的文件夹",
+    "zhHant": "取消已設定的資料夾"
+  },
   "sync_folder_desc": {
     "en": "Point two devices at the same iCloud Drive or Google Drive folder",
     "ja": "iCloud Drive や Google Drive の同じフォルダを 2 台の端末に指定",
@@ -10615,14 +11367,6 @@
     "th": "การซิงค์อัตโนมัติใช้ Google Drive โฟลเดอร์นี้เป็นสำรองแบบแมนนวล — แตะ ซิงค์ทันที เพื่ออัปเดต",
     "zhHans": "自动同步由 Google Drive 负责。这个文件夹是手动备份 —— 按「立即同步」才会更新。",
     "zhHant": "自動同步由 Google Drive 負責。這個資料夾是手動備份 —— 按「立即同步」才會更新。"
-  },
-  "sync_folder_cancel_setting": {
-    "en": "Unlink Configured Folder",
-    "ja": "設定済みフォルダの解除",
-    "ko": "설정된 폴더 해제",
-    "th": "ยกเลิกการตั้งค่าโฟลเดอร์",
-    "zhHans": "取消已设置的文件夹",
-    "zhHant": "取消已設定的資料夾"
   },
   "sync_folder_path": {
     "en": "Folder",
@@ -11832,6 +12576,14 @@
     "zhHans": "边框开关 (保留/删除)",
     "zhHant": "邊框開關 (保留/刪除)"
   },
+  "tool_airbrush": {
+    "en": "Airbrush",
+    "ja": "エアブラシ",
+    "ko": "에어브러시",
+    "th": "แอร์บรัช",
+    "zhHans": "喷枪",
+    "zhHant": "噴槍"
+  },
   "tool_ballpoint": {
     "en": "Ballpoint",
     "ja": "ボールペン",
@@ -11848,6 +12600,30 @@
     "zhHans": "毛笔",
     "zhHant": "毛筆"
   },
+  "tool_calligraphy": {
+    "en": "Calligraphy Pen",
+    "ja": "カリグラフィーペン",
+    "ko": "캘리그래피 펜",
+    "th": "ปากกาคัดลายมือ",
+    "zhHans": "书法笔",
+    "zhHant": "書法筆"
+  },
+  "tool_charcoal": {
+    "en": "Charcoal",
+    "ja": "木炭",
+    "ko": "목탄",
+    "th": "ถ่าน",
+    "zhHans": "炭笔",
+    "zhHant": "炭筆"
+  },
+  "tool_crayon": {
+    "en": "Crayon",
+    "ja": "クレヨン",
+    "ko": "크레용",
+    "th": "สีเทียน",
+    "zhHans": "蜡笔",
+    "zhHant": "蠟筆"
+  },
   "tool_eraser": {
     "en": "Eraser",
     "ja": "消しゴム",
@@ -11855,6 +12631,14 @@
     "th": "ยางลบ",
     "zhHans": "橡皮擦",
     "zhHant": "橡皮擦"
+  },
+  "tool_fineliner": {
+    "en": "Fineliner",
+    "ja": "ファインライナー",
+    "ko": "파인라이너",
+    "th": "ปากกาหัวเข็ม",
+    "zhHans": "针笔",
+    "zhHant": "針筆"
   },
   "tool_highlighter": {
     "en": "Highlighter",
@@ -11887,6 +12671,14 @@
     "th": "กระดาษกาว",
     "zhHans": "胶带",
     "zhHant": "膠帶"
+  },
+  "tool_oilpaint": {
+    "en": "Oil Brush",
+    "ja": "油彩筆",
+    "ko": "유화 붓",
+    "th": "พู่กันสีน้ำมัน",
+    "zhHans": "油画笔",
+    "zhHant": "油畫筆"
   },
   "tool_pen": {
     "en": "Pen",
@@ -11922,107 +12714,107 @@
   },
   "toolbar_all_hidden": {
     "en": "Every tool is hidden. The canvas keeps the tool you were last using.",
-    "zhHant": "所有工具都已隱藏。畫布仍會沿用你最後選的那一支。",
-    "zhHans": "所有工具都已隐藏。画布仍会沿用你最后选的那一支。",
     "ja": "すべてのツールが非表示です。キャンバスは最後に使ったツールのままです。",
     "ko": "모든 도구가 숨겨졌습니다. 캔버스는 마지막에 쓰던 도구를 그대로 사용합니다.",
-    "th": "เครื่องมือทั้งหมดถูกซ่อนไว้ ผืนผ้าใบจะยังคงใช้เครื่องมือที่คุณใช้ล่าสุด"
+    "th": "เครื่องมือทั้งหมดถูกซ่อนไว้ ผืนผ้าใบจะยังคงใช้เครื่องมือที่คุณใช้ล่าสุด",
+    "zhHans": "所有工具都已隐藏。画布仍会沿用你最后选的那一支。",
+    "zhHant": "所有工具都已隱藏。畫布仍會沿用你最後選的那一支。"
   },
   "toolbar_collapsed_hint": {
     "en": "Collapsed hides the bar entirely — only the floating tool bubble stays.",
-    "zhHant": "收合會把整列藏起來，只留下浮動的工具丸。",
-    "zhHans": "收合会把整列藏起来，只留下浮动的工具丸。",
     "ja": "折りたたむとバー全体が消え、フローティングのツールバブルだけが残ります。",
     "ko": "접으면 막대가 완전히 숨겨지고 떠 있는 도구 버블만 남습니다.",
-    "th": "การย่อเก็บจะซ่อนแถบทั้งหมด เหลือเพียงปุ่มเครื่องมือลอย"
+    "th": "การย่อเก็บจะซ่อนแถบทั้งหมด เหลือเพียงปุ่มเครื่องมือลอย",
+    "zhHans": "收合会把整列藏起来，只留下浮动的工具丸。",
+    "zhHant": "收合會把整列藏起來，只留下浮動的工具丸。"
   },
   "toolbar_customize_hint": {
     "en": "Turn off the tools you don't use. The rest keep their order.",
-    "zhHant": "把用不到的工具關掉，剩下的順序不變。",
-    "zhHans": "把用不到的工具关掉，剩下的顺序不变。",
     "ja": "使わないツールをオフにします。残りの並び順は変わりません。",
     "ko": "사용하지 않는 도구를 끄세요. 나머지 순서는 그대로입니다.",
-    "th": "ปิดเครื่องมือที่ไม่ได้ใช้ ลำดับของที่เหลือจะไม่เปลี่ยน"
+    "th": "ปิดเครื่องมือที่ไม่ได้ใช้ ลำดับของที่เหลือจะไม่เปลี่ยน",
+    "zhHans": "把用不到的工具关掉，剩下的顺序不变。",
+    "zhHant": "把用不到的工具關掉，剩下的順序不變。"
   },
   "toolbar_labels_hint": {
     "en": "Turned off, the toolbar shows icons only and fits more tools.",
-    "zhHant": "關掉之後工具列只顯示圖示，放得下更多工具。",
-    "zhHans": "关掉之后工具栏只显示图标，放得下更多工具。",
     "ja": "オフにするとアイコンのみになり、より多くのツールが収まります。",
     "ko": "끄면 아이콘만 표시되어 더 많은 도구가 들어갑니다.",
-    "th": "ปิดแล้วแถบเครื่องมือจะแสดงเฉพาะไอคอน และใส่เครื่องมือได้มากขึ้น"
+    "th": "ปิดแล้วแถบเครื่องมือจะแสดงเฉพาะไอคอน และใส่เครื่องมือได้มากขึ้น",
+    "zhHans": "关掉之后工具栏只显示图标，放得下更多工具。",
+    "zhHant": "關掉之後工具列只顯示圖示，放得下更多工具。"
   },
   "toolbar_place_bottom": {
     "en": "Bottom",
-    "zhHant": "下方",
-    "zhHans": "下方",
     "ja": "下",
     "ko": "아래",
-    "th": "ด้านล่าง"
+    "th": "ด้านล่าง",
+    "zhHans": "下方",
+    "zhHant": "下方"
   },
   "toolbar_place_collapsed": {
     "en": "Collapsed",
-    "zhHant": "收合",
-    "zhHans": "收合",
     "ja": "折りたたむ",
     "ko": "접기",
-    "th": "ย่อเก็บ"
+    "th": "ย่อเก็บ",
+    "zhHans": "收合",
+    "zhHant": "收合"
   },
   "toolbar_place_left": {
     "en": "Left",
-    "zhHant": "左側",
-    "zhHans": "左侧",
     "ja": "左",
     "ko": "왼쪽",
-    "th": "ด้านซ้าย"
+    "th": "ด้านซ้าย",
+    "zhHans": "左侧",
+    "zhHant": "左側"
   },
   "toolbar_place_right": {
     "en": "Right",
-    "zhHant": "右側",
-    "zhHans": "右侧",
     "ja": "右",
     "ko": "오른쪽",
-    "th": "ด้านขวา"
+    "th": "ด้านขวา",
+    "zhHans": "右侧",
+    "zhHant": "右側"
   },
   "toolbar_place_top": {
     "en": "Top",
-    "zhHant": "上方",
-    "zhHans": "上方",
     "ja": "上",
     "ko": "위",
-    "th": "ด้านบน"
+    "th": "ด้านบน",
+    "zhHans": "上方",
+    "zhHant": "上方"
   },
   "toolbar_placement": {
     "en": "Where the toolbar sits",
-    "zhHant": "工具列的位置",
-    "zhHans": "工具栏的位置",
     "ja": "ツールバーの位置",
     "ko": "도구 모음 위치",
-    "th": "ตำแหน่งแถบเครื่องมือ"
+    "th": "ตำแหน่งแถบเครื่องมือ",
+    "zhHans": "工具栏的位置",
+    "zhHant": "工具列的位置"
   },
   "toolbar_placement_hint": {
     "en": "Left or right keeps the toolbar out of your writing hand's way.",
-    "zhHant": "擺在左側或右側，工具列就不會擋到你寫字的那隻手。",
-    "zhHans": "摆在左侧或右侧，工具栏就不会挡到你写字的那只手。",
     "ja": "左右に置くと、書く手にツールバーが重なりません。",
     "ko": "왼쪽이나 오른쪽에 두면 필기하는 손을 가리지 않습니다.",
-    "th": "วางไว้ซ้ายหรือขวาเพื่อไม่ให้แถบเครื่องมือบังมือที่เขียน"
+    "th": "วางไว้ซ้ายหรือขวาเพื่อไม่ให้แถบเครื่องมือบังมือที่เขียน",
+    "zhHans": "摆在左侧或右侧，工具栏就不会挡到你写字的那只手。",
+    "zhHant": "擺在左側或右側，工具列就不會擋到你寫字的那隻手。"
   },
   "toolbar_reset": {
     "en": "Restore Default Toolbar",
-    "zhHant": "還原預設工具列",
-    "zhHans": "还原默认工具栏",
     "ja": "ツールバーを初期設定に戻す",
     "ko": "기본 도구 모음으로 되돌리기",
-    "th": "คืนค่าแถบเครื่องมือเริ่มต้น"
+    "th": "คืนค่าแถบเครื่องมือเริ่มต้น",
+    "zhHans": "还原默认工具栏",
+    "zhHant": "還原預設工具列"
   },
   "toolbar_show_labels": {
     "en": "Show text labels",
-    "zhHant": "顯示文字標籤",
-    "zhHans": "显示文字标签",
     "ja": "文字ラベルを表示",
     "ko": "텍스트 레이블 표시",
-    "th": "แสดงป้ายข้อความ"
+    "th": "แสดงป้ายข้อความ",
+    "zhHans": "显示文字标签",
+    "zhHant": "顯示文字標籤"
   },
   "transcribe_audio": {
     "en": "Audio to Text",
@@ -12120,6 +12912,158 @@
     "zhHans": "一本笔记至少要留一页",
     "zhHant": "一本筆記至少要留一頁"
   },
+  "trash_clock_pending": {
+    "en": "Countdown starts after the next sync",
+    "ja": "カウントダウンは次回の同期後に始まります",
+    "ko": "다음 동기화 후 카운트다운이 시작됩니다",
+    "th": "การนับถอยหลังจะเริ่มหลังการซิงค์ครั้งถัดไป",
+    "zhHans": "倒计时将在下次同步后开始",
+    "zhHant": "倒數將在下次同步後開始"
+  },
+  "trash_days_left": {
+    "en": "%@ days left",
+    "ja": "残り%@日",
+    "ko": "%@일 남음",
+    "th": "เหลืออีก %@ วัน",
+    "zhHans": "还剩 %@ 天",
+    "zhHant": "還剩 %@ 天"
+  },
+  "trash_delete_forever": {
+    "en": "Delete Permanently",
+    "ja": "完全に削除",
+    "ko": "영구 삭제",
+    "th": "ลบถาวร",
+    "zhHans": "永久删除",
+    "zhHant": "永久刪除"
+  },
+  "trash_delete_forever_confirm_message": {
+    "en": "“%@” will be removed from this device and can’t be recovered.",
+    "ja": "「%@」はこのデバイスから削除され、元に戻せません。",
+    "ko": "“%@”이(가) 이 기기에서 삭제되며 복구할 수 없습니다.",
+    "th": "“%@” จะถูกลบออกจากอุปกรณ์นี้และไม่สามารถกู้คืนได้",
+    "zhHans": "“%@”将从此设备中删除，且无法恢复。",
+    "zhHant": "「%@」將從此裝置刪除，且無法復原。"
+  },
+  "trash_delete_forever_confirm_title": {
+    "en": "Delete permanently?",
+    "ja": "完全に削除しますか？",
+    "ko": "영구 삭제할까요?",
+    "th": "ลบถาวรหรือไม่?",
+    "zhHans": "要永久删除吗？",
+    "zhHant": "要永久刪除嗎？"
+  },
+  "trash_empty": {
+    "en": "The trash is empty",
+    "ja": "ゴミ箱は空です",
+    "ko": "휴지통이 비어 있습니다",
+    "th": "ถังขยะว่างเปล่า",
+    "zhHans": "回收站是空的",
+    "zhHant": "回收桶是空的"
+  },
+  "trash_empty_action": {
+    "en": "Empty Trash",
+    "ja": "ゴミ箱を空にする",
+    "ko": "휴지통 비우기",
+    "th": "ล้างถังขยะ",
+    "zhHans": "清空回收站",
+    "zhHant": "清空回收桶"
+  },
+  "trash_empty_confirm_message": {
+    "en": "Everything in the trash will be permanently deleted from this device. Cloud copies are removed once your other devices have confirmed.",
+    "ja": "ゴミ箱の中身はすべてこのデバイスから完全に削除されます。クラウド上のコピーは、他のデバイスが確認した後に削除されます。",
+    "ko": "휴지통의 모든 항목이 이 기기에서 영구 삭제됩니다. 클라우드 사본은 다른 기기에서 확인한 후 삭제됩니다.",
+    "th": "ทุกอย่างในถังขยะจะถูกลบถาวรจากอุปกรณ์นี้ สำเนาบนคลาวด์จะถูกลบหลังจากอุปกรณ์อื่นของคุณยืนยันแล้ว",
+    "zhHans": "回收站中的所有内容将从此设备永久删除。云端副本会在你的其他设备确认后删除。",
+    "zhHant": "回收桶中的所有內容將從此裝置永久刪除。雲端副本會在你的其他裝置確認後刪除。"
+  },
+  "trash_empty_confirm_title": {
+    "en": "Empty the trash?",
+    "ja": "ゴミ箱を空にしますか？",
+    "ko": "휴지통을 비울까요?",
+    "th": "ล้างถังขยะหรือไม่?",
+    "zhHans": "要清空回收站吗？",
+    "zhHant": "要清空回收桶嗎？"
+  },
+  "trash_expired": {
+    "en": "Expired — will be removed soon",
+    "ja": "期限切れ — まもなく完全に削除されます",
+    "ko": "기간 만료 — 곧 영구 삭제됩니다",
+    "th": "หมดอายุแล้ว — เร็วๆ นี้จะถูกลบถาวร",
+    "zhHans": "已到期 — 即将永久删除",
+    "zhHant": "已到期 — 即將永久刪除"
+  },
+  "trash_keep_forever_row": {
+    "en": "Kept until you remove it",
+    "ja": "手動で削除するまで保持されます",
+    "ko": "직접 삭제할 때까지 보관됩니다",
+    "th": "เก็บไว้จนกว่าคุณจะลบเอง",
+    "zhHans": "保留到你手动删除为止",
+    "zhHant": "保留到你手動刪除為止"
+  },
+  "trash_restore": {
+    "en": "Restore",
+    "ja": "元に戻す",
+    "ko": "복원",
+    "th": "กู้คืน",
+    "zhHans": "还原",
+    "zhHant": "還原"
+  },
+  "trash_restored_notice": {
+    "en": "Restored “%@”",
+    "ja": "「%@」を元に戻しました",
+    "ko": "“%@”을(를) 복원했습니다",
+    "th": "กู้คืน “%@” แล้ว",
+    "zhHans": "已还原“%@”",
+    "zhHant": "已還原「%@」"
+  },
+  "trash_retention_days": {
+    "en": "%@ days",
+    "ja": "%@日",
+    "ko": "%@일",
+    "th": "%@ วัน",
+    "zhHans": "%@ 天",
+    "zhHant": "%@ 天"
+  },
+  "trash_retention_footer": {
+    "en": "After this period, deleted notebooks are permanently removed from this device, and from the cloud once all your devices have confirmed.",
+    "ja": "この期間を過ぎると、削除したノートはこのデバイスから完全に削除され、すべてのデバイスが確認した後にクラウドからも削除されます。",
+    "ko": "이 기간이 지나면 삭제한 노트가 이 기기에서 영구 삭제되며, 모든 기기에서 확인한 후 클라우드에서도 삭제됩니다.",
+    "th": "เมื่อพ้นช่วงเวลานี้ สมุดบันทึกที่ลบจะถูกลบถาวรจากอุปกรณ์นี้ และจากคลาวด์หลังจากอุปกรณ์ทั้งหมดของคุณยืนยันแล้ว",
+    "zhHans": "超过这段时间后，已删除的笔记本会从此设备永久删除，并在你的所有设备确认后从云端删除。",
+    "zhHant": "超過這段時間後，已刪除的筆記本會從此裝置永久刪除，並在你的所有裝置確認後從雲端刪除。"
+  },
+  "trash_retention_forever": {
+    "en": "Until I delete them",
+    "ja": "手動で削除するまで",
+    "ko": "직접 삭제할 때까지",
+    "th": "จนกว่าฉันจะลบเอง",
+    "zhHans": "直到我手动删除",
+    "zhHant": "直到我手動刪除"
+  },
+  "trash_retention_title": {
+    "en": "Keep deleted notebooks for",
+    "ja": "削除したノートを保持する期間",
+    "ko": "삭제한 노트를 보관할 기간",
+    "th": "เก็บสมุดบันทึกที่ลบไว้เป็นเวลา",
+    "zhHans": "已删除的笔记本保留时间",
+    "zhHant": "已刪除的筆記本保留時間"
+  },
+  "trash_title": {
+    "en": "Trash",
+    "ja": "ゴミ箱",
+    "ko": "휴지통",
+    "th": "ถังขยะ",
+    "zhHans": "回收站",
+    "zhHant": "回收桶"
+  },
+  "trash_waiting_devices": {
+    "en": "Waiting for these devices to confirm: %@",
+    "ja": "次のデバイスの確認を待っています: %@",
+    "ko": "다음 기기의 확인을 기다리는 중: %@",
+    "th": "กำลังรออุปกรณ์เหล่านี้ยืนยัน: %@",
+    "zhHans": "正在等待这些设备确认：%@",
+    "zhHant": "正在等待這些裝置確認：%@"
+  },
   "txt_count": {
     "en": "Text",
     "ja": "テキスト",
@@ -12144,6 +13088,14 @@
     "zhHans": "打字模式",
     "zhHant": "打字模式"
   },
+  "typing_mode_desc": {
+    "en": "Type & layout mode: Click canvas to type, select, move, and edit objects",
+    "ja": "タイピングモード：キャンバスをクリックして文字入力・オブジェクト操作",
+    "ko": "타이핑/편집 모드: 클릭하여 글쓰기 및 개체 선택·이동·편집",
+    "th": "โหมดพิมพ์และจัดหน้า: แตะผืนผ้าใบเพื่อพิมพ์ เลือก และย้ายวัตถุ",
+    "zhHans": "文字排版模式：点按画布随点随打，自由选中、移动与编辑物件",
+    "zhHant": "打字排版模式：點按畫布隨點隨打，自由選取、移動與編輯物件"
+  },
   "ui_wireframe_tip": {
     "en": "Quickly insert standard UI wireframe components",
     "ja": "標準UIワイヤーフレームを素早く配置",
@@ -12159,6 +13111,14 @@
     "th": "เลิกทำ",
     "zhHans": "撤销",
     "zhHant": "復原"
+  },
+  "undo_desc": {
+    "en": "Undo previous drawing or edit action",
+    "ja": "直前の操作を取り消す",
+    "ko": "이전 작업 실행 취소",
+    "th": "เลิกทำการกระทำก่อนหน้า",
+    "zhHans": "撤销上一步操作或笔画",
+    "zhHant": "復原上一步操作或筆跡"
   },
   "unfiled_notes": {
     "en": "Unfiled Notes",
@@ -12178,75 +13138,75 @@
   },
   "unlock_desc": {
     "en": "Enter the passphrase you chose when you encrypted it.",
-    "zhHant": "輸入你加密時設定的密碼。",
-    "zhHans": "输入你加密时设置的密码。",
     "ja": "暗号化したときに設定したパスフレーズを入力してください。",
     "ko": "암호화할 때 설정한 암호를 입력하세요.",
-    "th": "ป้อนรหัสผ่านที่คุณตั้งไว้ตอนเข้ารหัส"
+    "th": "ป้อนรหัสผ่านที่คุณตั้งไว้ตอนเข้ารหัส",
+    "zhHans": "输入你加密时设置的密码。",
+    "zhHant": "輸入你加密時設定的密碼。"
   },
   "unlock_recovery_prompt": {
     "en": "Type all 24 words, separated by spaces",
-    "zhHant": "輸入全部 24 個詞，以空白分隔",
-    "zhHans": "输入全部 24 个词，以空格分隔",
     "ja": "24 個の単語をすべてスペース区切りで入力してください",
     "ko": "24개 단어를 모두 공백으로 구분해 입력하세요",
-    "th": "พิมพ์ครบทั้ง 24 คำ คั่นด้วยเว้นวรรค"
+    "th": "พิมพ์ครบทั้ง 24 คำ คั่นด้วยเว้นวรรค",
+    "zhHans": "输入全部 24 个词，以空格分隔",
+    "zhHant": "輸入全部 24 個詞，以空白分隔"
   },
   "unlock_recovery_unavailable": {
     "en": "This notebook was created before recovery codes could unlock anything. Its recovery code was never used to wrap the key — only the passphrase opens it.",
-    "zhHant": "這本筆記是在復原碼還不能解鎖的版本建立的。它的復原碼從來沒有被用來包住金鑰 —— 只有密碼開得了。",
-    "zhHans": "这本笔记是在恢复码还不能解锁的版本建立的。它的恢复码从来没有被用来包住密钥 —— 只有密码开得了。",
     "ja": "このノートは、復元コードでロック解除できない時期に作成されました。復元コードは鍵の保護に使われていません —— パスフレーズでのみ開けます。",
     "ko": "이 노트는 복구 코드로 잠금 해제할 수 없던 버전에서 만들어졌습니다. 복구 코드는 키를 감싸는 데 쓰인 적이 없습니다 —— 암호로만 열 수 있습니다.",
-    "th": "สมุดบันทึกนี้สร้างขึ้นก่อนที่รหัสกู้คืนจะปลดล็อกได้ รหัสกู้คืนไม่เคยถูกใช้ห่อหุ้มกุญแจ —— เปิดได้ด้วยรหัสผ่านเท่านั้น"
+    "th": "สมุดบันทึกนี้สร้างขึ้นก่อนที่รหัสกู้คืนจะปลดล็อกได้ รหัสกู้คืนไม่เคยถูกใช้ห่อหุ้มกุญแจ —— เปิดได้ด้วยรหัสผ่านเท่านั้น",
+    "zhHans": "这本笔记是在恢复码还不能解锁的版本建立的。它的恢复码从来没有被用来包住密钥 —— 只有密码开得了。",
+    "zhHant": "這本筆記是在復原碼還不能解鎖的版本建立的。它的復原碼從來沒有被用來包住金鑰 —— 只有密碼開得了。"
   },
   "unlock_slow_hint": {
     "en": "This takes a few seconds on purpose — it is what makes guessing your passphrase expensive.",
-    "zhHant": "這會花幾秒鐘，是刻意的 —— 正是它讓別人猜你的密碼變得昂貴。",
-    "zhHans": "这会花几秒钟，是刻意的 —— 正是它让别人猜你的密码变得昂贵。",
     "ja": "数秒かかるのは意図的です —— パスフレーズの総当たりを高くつくものにしています。",
     "ko": "몇 초 걸리는 것은 의도적입니다 —— 암호를 추측하는 비용을 크게 만듭니다.",
-    "th": "ใช้เวลาสองสามวินาทีโดยตั้งใจ —— นี่คือสิ่งที่ทำให้การเดารหัสผ่านมีต้นทุนสูง"
+    "th": "ใช้เวลาสองสามวินาทีโดยตั้งใจ —— นี่คือสิ่งที่ทำให้การเดารหัสผ่านมีต้นทุนสูง",
+    "zhHans": "这会花几秒钟，是刻意的 —— 正是它让别人猜你的密码变得昂贵。",
+    "zhHant": "這會花幾秒鐘，是刻意的 —— 正是它讓別人猜你的密碼變得昂貴。"
   },
   "unlock_title": {
     "en": "This notebook is locked",
-    "zhHant": "這本筆記已上鎖",
-    "zhHans": "这本笔记已上锁",
     "ja": "このノートはロックされています",
     "ko": "이 노트는 잠겨 있습니다",
-    "th": "สมุดบันทึกนี้ถูกล็อกอยู่"
+    "th": "สมุดบันทึกนี้ถูกล็อกอยู่",
+    "zhHans": "这本笔记已上锁",
+    "zhHant": "這本筆記已上鎖"
   },
   "unlock_use_passphrase": {
     "en": "Use the passphrase instead",
-    "zhHant": "改用密碼",
-    "zhHans": "改用密码",
     "ja": "パスフレーズを使う",
     "ko": "암호 사용",
-    "th": "ใช้รหัสผ่านแทน"
+    "th": "ใช้รหัสผ่านแทน",
+    "zhHans": "改用密码",
+    "zhHant": "改用密碼"
   },
   "unlock_use_recovery": {
     "en": "Forgot it? Use your recovery code",
-    "zhHant": "忘記了？改用復原碼",
-    "zhHans": "忘记了？改用恢复码",
     "ja": "忘れた場合は復元コードを使う",
     "ko": "잊으셨나요? 복구 코드 사용",
-    "th": "ลืมรหัสผ่าน? ใช้รหัสกู้คืน"
+    "th": "ลืมรหัสผ่าน? ใช้รหัสกู้คืน",
+    "zhHans": "忘记了？改用恢复码",
+    "zhHant": "忘記了？改用復原碼"
   },
   "unlock_working": {
     "en": "Unlocking…",
-    "zhHant": "解鎖中…",
-    "zhHans": "解锁中…",
     "ja": "ロック解除中…",
     "ko": "잠금 해제 중…",
-    "th": "กำลังปลดล็อก…"
+    "th": "กำลังปลดล็อก…",
+    "zhHans": "解锁中…",
+    "zhHant": "解鎖中…"
   },
   "unlock_wrong_recovery": {
     "en": "That recovery code does not open this notebook",
-    "zhHant": "這組復原碼開不了這本筆記",
-    "zhHans": "这组恢复码开不了这本笔记",
     "ja": "この復元コードではこのノートを開けません",
     "ko": "이 복구 코드로는 이 노트를 열 수 없습니다",
-    "th": "รหัสกู้คืนนี้เปิดสมุดบันทึกนี้ไม่ได้"
+    "th": "รหัสกู้คืนนี้เปิดสมุดบันทึกนี้ไม่ได้",
+    "zhHans": "这组恢复码开不了这本笔记",
+    "zhHant": "這組復原碼開不了這本筆記"
   },
   "untitled_note": {
     "en": "Untitled Note",
@@ -12360,6 +13320,14 @@
     "zhHans": "插入分隔线",
     "zhHant": "插入分隔線"
   },
+  "wd_insert_divider_desc": {
+    "en": "Insert horizontal divider line in text document",
+    "ja": "テキストドキュメントに水平区切り線を挿入",
+    "ko": "문서에 수평 구분선 삽입",
+    "th": "แทรกเส้นคั่นแนวนอนในเอกสาร",
+    "zhHans": "在文档中插入整行水平分隔线",
+    "zhHant": "在文件中插入整行水平分隔線"
+  },
   "wd_insert_inline_canvas": {
     "en": "Insert a handwriting canvas",
     "ja": "手書きキャンバスを挿入",
@@ -12448,828 +13416,12 @@
     "zhHans": "Word文字编修",
     "zhHant": "Word文字編修"
   },
-  "trash_title": {
-    "en": "Trash",
-    "ja": "ゴミ箱",
-    "ko": "휴지통",
-    "th": "ถังขยะ",
-    "zhHans": "回收站",
-    "zhHant": "回收桶"
-  },
-  "trash_empty": {
-    "en": "The trash is empty",
-    "ja": "ゴミ箱は空です",
-    "ko": "휴지통이 비어 있습니다",
-    "th": "ถังขยะว่างเปล่า",
-    "zhHans": "回收站是空的",
-    "zhHant": "回收桶是空的"
-  },
-  "trash_days_left": {
-    "en": "%@ days left",
-    "ja": "残り%@日",
-    "ko": "%@일 남음",
-    "th": "เหลืออีก %@ วัน",
-    "zhHans": "还剩 %@ 天",
-    "zhHant": "還剩 %@ 天"
-  },
-  "trash_expired": {
-    "en": "Expired — will be removed soon",
-    "ja": "期限切れ — まもなく完全に削除されます",
-    "ko": "기간 만료 — 곧 영구 삭제됩니다",
-    "th": "หมดอายุแล้ว — เร็วๆ นี้จะถูกลบถาวร",
-    "zhHans": "已到期 — 即将永久删除",
-    "zhHant": "已到期 — 即將永久刪除"
-  },
-  "trash_keep_forever_row": {
-    "en": "Kept until you remove it",
-    "ja": "手動で削除するまで保持されます",
-    "ko": "직접 삭제할 때까지 보관됩니다",
-    "th": "เก็บไว้จนกว่าคุณจะลบเอง",
-    "zhHans": "保留到你手动删除为止",
-    "zhHant": "保留到你手動刪除為止"
-  },
-  "trash_clock_pending": {
-    "en": "Countdown starts after the next sync",
-    "ja": "カウントダウンは次回の同期後に始まります",
-    "ko": "다음 동기화 후 카운트다운이 시작됩니다",
-    "th": "การนับถอยหลังจะเริ่มหลังการซิงค์ครั้งถัดไป",
-    "zhHans": "倒计时将在下次同步后开始",
-    "zhHant": "倒數將在下次同步後開始"
-  },
-  "trash_restore": {
-    "en": "Restore",
-    "ja": "元に戻す",
-    "ko": "복원",
-    "th": "กู้คืน",
-    "zhHans": "还原",
-    "zhHant": "還原"
-  },
-  "trash_delete_forever": {
-    "en": "Delete Permanently",
-    "ja": "完全に削除",
-    "ko": "영구 삭제",
-    "th": "ลบถาวร",
-    "zhHans": "永久删除",
-    "zhHant": "永久刪除"
-  },
-  "trash_delete_forever_confirm_title": {
-    "en": "Delete permanently?",
-    "ja": "完全に削除しますか？",
-    "ko": "영구 삭제할까요?",
-    "th": "ลบถาวรหรือไม่?",
-    "zhHans": "要永久删除吗？",
-    "zhHant": "要永久刪除嗎？"
-  },
-  "trash_delete_forever_confirm_message": {
-    "en": "“%@” will be removed from this device and can’t be recovered.",
-    "ja": "「%@」はこのデバイスから削除され、元に戻せません。",
-    "ko": "“%@”이(가) 이 기기에서 삭제되며 복구할 수 없습니다.",
-    "th": "“%@” จะถูกลบออกจากอุปกรณ์นี้และไม่สามารถกู้คืนได้",
-    "zhHans": "“%@”将从此设备中删除，且无法恢复。",
-    "zhHant": "「%@」將從此裝置刪除，且無法復原。"
-  },
-  "trash_empty_action": {
-    "en": "Empty Trash",
-    "ja": "ゴミ箱を空にする",
-    "ko": "휴지통 비우기",
-    "th": "ล้างถังขยะ",
-    "zhHans": "清空回收站",
-    "zhHant": "清空回收桶"
-  },
-  "trash_empty_confirm_title": {
-    "en": "Empty the trash?",
-    "ja": "ゴミ箱を空にしますか？",
-    "ko": "휴지통을 비울까요?",
-    "th": "ล้างถังขยะหรือไม่?",
-    "zhHans": "要清空回收站吗？",
-    "zhHant": "要清空回收桶嗎？"
-  },
-  "trash_empty_confirm_message": {
-    "en": "Everything in the trash will be permanently deleted from this device. Cloud copies are removed once your other devices have confirmed.",
-    "ja": "ゴミ箱の中身はすべてこのデバイスから完全に削除されます。クラウド上のコピーは、他のデバイスが確認した後に削除されます。",
-    "ko": "휴지통의 모든 항목이 이 기기에서 영구 삭제됩니다. 클라우드 사본은 다른 기기에서 확인한 후 삭제됩니다.",
-    "th": "ทุกอย่างในถังขยะจะถูกลบถาวรจากอุปกรณ์นี้ สำเนาบนคลาวด์จะถูกลบหลังจากอุปกรณ์อื่นของคุณยืนยันแล้ว",
-    "zhHans": "回收站中的所有内容将从此设备永久删除。云端副本会在你的其他设备确认后删除。",
-    "zhHant": "回收桶中的所有內容將從此裝置永久刪除。雲端副本會在你的其他裝置確認後刪除。"
-  },
-  "trash_retention_title": {
-    "en": "Keep deleted notebooks for",
-    "ja": "削除したノートを保持する期間",
-    "ko": "삭제한 노트를 보관할 기간",
-    "th": "เก็บสมุดบันทึกที่ลบไว้เป็นเวลา",
-    "zhHans": "已删除的笔记本保留时间",
-    "zhHant": "已刪除的筆記本保留時間"
-  },
-  "trash_retention_days": {
-    "en": "%@ days",
-    "ja": "%@日",
-    "ko": "%@일",
-    "th": "%@ วัน",
-    "zhHans": "%@ 天",
-    "zhHant": "%@ 天"
-  },
-  "trash_retention_forever": {
-    "en": "Until I delete them",
-    "ja": "手動で削除するまで",
-    "ko": "직접 삭제할 때까지",
-    "th": "จนกว่าฉันจะลบเอง",
-    "zhHans": "直到我手动删除",
-    "zhHant": "直到我手動刪除"
-  },
-  "trash_retention_footer": {
-    "en": "After this period, deleted notebooks are permanently removed from this device, and from the cloud once all your devices have confirmed.",
-    "ja": "この期間を過ぎると、削除したノートはこのデバイスから完全に削除され、すべてのデバイスが確認した後にクラウドからも削除されます。",
-    "ko": "이 기간이 지나면 삭제한 노트가 이 기기에서 영구 삭제되며, 모든 기기에서 확인한 후 클라우드에서도 삭제됩니다.",
-    "th": "เมื่อพ้นช่วงเวลานี้ สมุดบันทึกที่ลบจะถูกลบถาวรจากอุปกรณ์นี้ และจากคลาวด์หลังจากอุปกรณ์ทั้งหมดของคุณยืนยันแล้ว",
-    "zhHans": "超过这段时间后，已删除的笔记本会从此设备永久删除，并在你的所有设备确认后从云端删除。",
-    "zhHant": "超過這段時間後，已刪除的筆記本會從此裝置永久刪除，並在你的所有裝置確認後從雲端刪除。"
-  },
-  "trash_waiting_devices": {
-    "en": "Waiting for these devices to confirm: %@",
-    "ja": "次のデバイスの確認を待っています: %@",
-    "ko": "다음 기기의 확인을 기다리는 중: %@",
-    "th": "กำลังรออุปกรณ์เหล่านี้ยืนยัน: %@",
-    "zhHans": "正在等待这些设备确认：%@",
-    "zhHant": "正在等待這些裝置確認：%@"
-  },
-  "trash_restored_notice": {
-    "en": "Restored “%@”",
-    "ja": "「%@」を元に戻しました",
-    "ko": "“%@”을(를) 복원했습니다",
-    "th": "กู้คืน “%@” แล้ว",
-    "zhHans": "已还原“%@”",
-    "zhHant": "已還原「%@」"
-  },
-  "storage_icloud_title": {
-    "en": "This folder is synced by iCloud Drive",
-    "ja": "このフォルダは iCloud Drive で同期されます",
-    "ko": "이 폴더는 iCloud Drive로 동기화됩니다",
-    "th": "โฟลเดอร์นี้ซิงก์ผ่าน iCloud Drive",
-    "zhHans": "这个文件夹会被 iCloud 云盘同步",
-    "zhHant": "這個資料夾會被 iCloud 雲碟同步"
-  },
-  "storage_icloud_message": {
-    "en": "Kairumo's library is made of thousands of small files and already syncs through Google Drive or a sync folder. If iCloud Drive syncs it too, deleted files can come back and the two can conflict. Choose a folder that iCloud does not sync, or continue anyway.",
-    "ja": "Kairumo のライブラリは数千の小さなファイルでできており、すでに Google Drive または同期フォルダで同期されます。iCloud Drive でも同期すると、削除したファイルが復元されたり、競合が起きたりすることがあります。iCloud で同期されないフォルダを選ぶか、そのまま続行してください。",
-    "ko": "Kairumo 라이브러리는 수천 개의 작은 파일로 이루어져 있으며 이미 Google Drive 또는 동기화 폴더로 동기화됩니다. iCloud Drive로도 동기화하면 삭제한 파일이 복원되거나 충돌이 생길 수 있습니다. iCloud가 동기화하지 않는 폴더를 선택하거나 그대로 계속하세요.",
-    "th": "คลังของ Kairumo ประกอบด้วยไฟล์เล็กๆ หลายพันไฟล์ และซิงก์ผ่าน Google Drive หรือโฟลเดอร์ซิงก์อยู่แล้ว หาก iCloud Drive ซิงก์ด้วย ไฟล์ที่ลบไปอาจกลับมาและอาจเกิดความขัดแย้งได้ ควรเลือกโฟลเดอร์ที่ iCloud ไม่ซิงก์ หรือดำเนินการต่อ",
-    "zhHans": "Kairumo 的资料库由数千个小文件组成，并且已经通过 Google Drive 或同步文件夹同步。若再让 iCloud 云盘同步它，已删除的文件可能被恢复，两边也可能互相冲突。建议选择 iCloud 不会同步的文件夹，或仍要使用这个位置。",
-    "zhHant": "Kairumo 的資料庫由數千個小檔組成，而且已經透過 Google Drive 或同步資料夾同步。若再讓 iCloud 雲碟同步它，已刪除的檔案可能被還原，兩邊也可能互相衝突。建議選擇 iCloud 不會同步的資料夾，或仍要使用這個位置。"
-  },
-  "storage_icloud_continue": {
-    "en": "Use it anyway",
-    "ja": "このまま使う",
-    "ko": "그래도 사용",
-    "th": "ใช้ต่อไป",
-    "zhHans": "仍要使用",
-    "zhHant": "仍要使用"
-  },
-  "storage_icloud_current": {
-    "en": "This location is synced by iCloud Drive. Deleted files may come back; consider a folder iCloud doesn't sync.",
-    "ja": "この場所は iCloud Drive で同期されます。削除したファイルが復元されることがあります。iCloud で同期されないフォルダをおすすめします。",
-    "ko": "이 위치는 iCloud Drive로 동기화됩니다. 삭제한 파일이 복원될 수 있으니 iCloud가 동기화하지 않는 폴더를 권장합니다.",
-    "th": "ตำแหน่งนี้ซิงก์ผ่าน iCloud Drive ไฟล์ที่ลบอาจกลับมา แนะนำให้ใช้โฟลเดอร์ที่ iCloud ไม่ซิงก์",
-    "zhHans": "这个位置会被 iCloud 云盘同步，已删除的文件可能被恢复；建议改放 iCloud 不会同步的文件夹。",
-    "zhHant": "這個位置會被 iCloud 雲碟同步，已刪除的檔案可能被還原；建議改放 iCloud 不會同步的資料夾。"
-  },
-  "storage_progress_waiting": {
-    "en": "Waiting for sync to finish…",
-    "ja": "同期の完了を待っています…",
-    "ko": "동기화가 끝나기를 기다리는 중…",
-    "th": "กำลังรอการซิงก์ให้เสร็จ…",
-    "zhHans": "等待同步结束…",
-    "zhHant": "等待同步結束…"
-  },
-  "storage_progress_copying": {
-    "en": "Copying %1$d of %2$d files…",
-    "ja": "コピー中：%1$d／%2$d ファイル…",
-    "ko": "복사 중: %1$d/%2$d 파일…",
-    "th": "กำลังคัดลอก %1$d จาก %2$d ไฟล์…",
-    "zhHans": "复制中：%1$d／%2$d 个文件…",
-    "zhHant": "複製中：%1$d／%2$d 個檔案…"
-  },
-  "storage_progress_verifying": {
-    "en": "Verifying the copy…",
-    "ja": "コピーを検証しています…",
-    "ko": "복사본을 확인하는 중…",
-    "th": "กำลังตรวจสอบสำเนา…",
-    "zhHans": "验证复制结果…",
-    "zhHant": "驗證複製結果…"
-  },
-  "storage_progress_cleaning": {
-    "en": "Removing the old copy…",
-    "ja": "古いライブラリを削除しています…",
-    "ko": "이전 라이브러리를 삭제하는 중…",
-    "th": "กำลังลบคลังเดิม…",
-    "zhHans": "移除旧的资料库…",
-    "zhHant": "移除舊的資料庫…"
-  },
-  "storage_move_cancelled": {
-    "en": "Move cancelled. Nothing was changed.",
-    "ja": "移動をキャンセルしました。変更はありません。",
-    "ko": "이동을 취소했습니다. 변경된 내용이 없습니다.",
-    "th": "ยกเลิกการย้ายแล้ว ไม่มีการเปลี่ยนแปลง",
-    "zhHans": "已取消搬移，没有任何更改。",
-    "zhHant": "已取消搬移，沒有任何改動。"
-  },
-  "storage_reset_title": {
-    "en": "Reset local data",
-    "ja": "ローカルデータをリセット",
-    "ko": "로컬 데이터 초기화",
-    "th": "รีเซ็ตข้อมูลในเครื่อง",
-    "zhHans": "重置本机数据",
-    "zhHant": "重設本機資料"
-  },
-  "storage_reset_explainer": {
-    "en": "Removes every notebook, recording and attachment stored on this device and starts from a clean library. Downloaded speech models are kept. Items go to the Trash where possible.",
-    "ja": "この端末に保存されているノート、録音、添付ファイルをすべて削除し、空のライブラリから始めます。ダウンロード済みの音声モデルは残ります。可能な場合はゴミ箱に移動します。",
-    "ko": "이 기기에 저장된 모든 노트, 녹음, 첨부 파일을 삭제하고 깨끗한 라이브러리로 시작합니다. 다운로드한 음성 모델은 유지됩니다. 가능하면 휴지통으로 이동합니다.",
-    "th": "ลบสมุดบันทึก การบันทึกเสียง และไฟล์แนบทั้งหมดในอุปกรณ์นี้ แล้วเริ่มต้นคลังใหม่ โมเดลเสียงที่ดาวน์โหลดไว้จะยังอยู่ และจะย้ายไปถังขยะเมื่อทำได้",
-    "zhHans": "移除这台设备上所有的笔记本、录音与附件，从干净的资料库重新开始。已下载的语音模型会保留。可以的话会先移到废纸篓。",
-    "zhHant": "移除這台裝置上所有的筆記本、錄音與附件，從乾淨的資料庫重新開始。已下載的語音模型會保留。可以的話會先移到垃圾桶。"
-  },
-  "storage_reset_button": {
-    "en": "Reset local data…",
-    "ja": "ローカルデータをリセット…",
-    "ko": "로컬 데이터 초기화…",
-    "th": "รีเซ็ตข้อมูลในเครื่อง…",
-    "zhHans": "重置本机数据…",
-    "zhHant": "重設本機資料…"
-  },
-  "storage_reset_cloud_toggle": {
-    "en": "Also erase the cloud sync data first",
-    "ja": "先にクラウド同期データも削除する",
-    "ko": "먼저 클라우드 동기화 데이터도 삭제",
-    "th": "ลบข้อมูลซิงก์บนคลาวด์ก่อนด้วย",
-    "zhHans": "先清除云端同步数据",
-    "zhHant": "先清除雲端同步資料"
-  },
-  "storage_reset_cloud_note": {
-    "en": "Clears this app's Google Drive or sync-folder data so other devices cannot bring the files back. Other devices keep their own local copies until you reset them too.",
-    "ja": "このアプリの Google Drive または同期フォルダのデータを消去し、他の端末がファイルを戻せないようにします。他の端末のローカルコピーは、その端末でもリセットするまで残ります。",
-    "ko": "이 앱의 Google Drive 또는 동기화 폴더 데이터를 지워 다른 기기가 파일을 다시 가져오지 못하게 합니다. 다른 기기의 로컬 사본은 그 기기에서도 초기화하기 전까지 남아 있습니다.",
-    "th": "ล้างข้อมูลของแอปนี้ใน Google Drive หรือโฟลเดอร์ซิงก์ เพื่อไม่ให้อุปกรณ์อื่นนำไฟล์กลับมา สำเนาในเครื่องของอุปกรณ์อื่นจะยังอยู่จนกว่าคุณจะรีเซ็ตที่เครื่องนั้นด้วย",
-    "zhHans": "清掉本 App 在 Google Drive 或同步文件夹里的数据，其他设备就不会把文件带回来。其他设备本机的副本要等你在那些设备上也重置才会清掉。",
-    "zhHant": "清掉本 App 在 Google Drive 或同步資料夾裡的資料，其他裝置就不會把檔案帶回來。其他裝置本機的副本要等你在那些裝置上也重設才會清掉。"
-  },
-  "storage_reset_confirm_title": {
-    "en": "Reset local data?",
-    "ja": "ローカルデータをリセットしますか？",
-    "ko": "로컬 데이터를 초기화할까요?",
-    "th": "รีเซ็ตข้อมูลในเครื่องหรือไม่?",
-    "zhHans": "要重置本机数据吗？",
-    "zhHant": "要重設本機資料嗎？"
-  },
-  "storage_reset_confirm_message": {
-    "en": "This removes all notebooks, recordings and attachments on this device. Once the Trash is emptied it cannot be undone.",
-    "ja": "この端末のノート、録音、添付ファイルをすべて削除します。ゴミ箱を空にすると元に戻せません。",
-    "ko": "이 기기의 모든 노트, 녹음, 첨부 파일이 삭제됩니다. 휴지통을 비우면 되돌릴 수 없습니다.",
-    "th": "การดำเนินการนี้จะลบสมุดบันทึก การบันทึกเสียง และไฟล์แนบทั้งหมดในอุปกรณ์นี้ เมื่อล้างถังขยะแล้วจะกู้คืนไม่ได้",
-    "zhHans": "这会移除这台设备上所有的笔记本、录音与附件。废纸篓清空之后就无法恢复。",
-    "zhHant": "這會移除這台裝置上所有的筆記本、錄音與附件。垃圾桶清空之後就無法復原。"
-  },
-  "storage_reset_confirm_action": {
-    "en": "Reset",
-    "ja": "リセット",
-    "ko": "초기화",
-    "th": "รีเซ็ต",
-    "zhHans": "重置",
-    "zhHant": "重設"
-  },
-  "storage_reset_progress_cloud": {
-    "en": "Erasing cloud sync data…",
-    "ja": "クラウド同期データを削除しています…",
-    "ko": "클라우드 동기화 데이터를 지우는 중…",
-    "th": "กำลังลบข้อมูลซิงก์บนคลาวด์…",
-    "zhHans": "清除云端同步数据…",
-    "zhHant": "清除雲端同步資料…"
-  },
-  "storage_reset_progress_local": {
-    "en": "Removing local data…",
-    "ja": "ローカルデータを削除しています…",
-    "ko": "로컬 데이터를 삭제하는 중…",
-    "th": "กำลังลบข้อมูลในเครื่อง…",
-    "zhHans": "移除本机数据…",
-    "zhHant": "移除本機資料…"
-  },
-  "storage_reset_done": {
-    "en": "Local data was reset.",
-    "ja": "ローカルデータをリセットしました。",
-    "ko": "로컬 데이터를 초기화했습니다.",
-    "th": "รีเซ็ตข้อมูลในเครื่องแล้ว",
-    "zhHans": "已重置本机数据。",
-    "zhHant": "已重設本機資料。"
-  },
-  "storage_reset_cloud_failed": {
-    "en": "Could not erase the cloud data, so nothing local was removed. Try again or turn the option off.",
-    "ja": "クラウドのデータを削除できなかったため、ローカルは何も変更していません。もう一度試すか、このオプションをオフにしてください。",
-    "ko": "클라우드 데이터를 지우지 못해 로컬은 아무것도 변경하지 않았습니다. 다시 시도하거나 이 옵션을 끄세요.",
-    "th": "ลบข้อมูลบนคลาวด์ไม่สำเร็จ จึงไม่ได้ลบอะไรในเครื่อง ลองอีกครั้งหรือปิดตัวเลือกนี้",
-    "zhHans": "云端数据没有清成功，所以本机没有动任何东西。请再试一次，或关掉这个选项。",
-    "zhHant": "雲端資料沒有清成功，所以本機沒有動任何東西。請再試一次，或關掉這個選項。"
-  },
-  "tool_fineliner": {
-    "en": "Fineliner",
-    "ja": "ファインライナー",
-    "ko": "파인라이너",
-    "th": "ปากกาหัวเข็ม",
-    "zhHans": "针笔",
-    "zhHant": "針筆"
-  },
-  "tool_calligraphy": {
-    "en": "Calligraphy Pen",
-    "ja": "カリグラフィーペン",
-    "ko": "캘리그래피 펜",
-    "th": "ปากกาคัดลายมือ",
-    "zhHans": "书法笔",
-    "zhHant": "書法筆"
-  },
-  "tool_charcoal": {
-    "en": "Charcoal",
-    "ja": "木炭",
-    "ko": "목탄",
-    "th": "ถ่าน",
-    "zhHans": "炭笔",
-    "zhHant": "炭筆"
-  },
-  "tool_crayon": {
-    "en": "Crayon",
-    "ja": "クレヨン",
-    "ko": "크레용",
-    "th": "สีเทียน",
-    "zhHans": "蜡笔",
-    "zhHant": "蠟筆"
-  },
-  "tool_airbrush": {
-    "en": "Airbrush",
-    "ja": "エアブラシ",
-    "ko": "에어브러시",
-    "th": "แอร์บรัช",
-    "zhHans": "喷枪",
-    "zhHant": "噴槍"
-  },
-  "tool_oilpaint": {
-    "en": "Oil Brush",
-    "ja": "油彩筆",
-    "ko": "유화 붓",
-    "th": "พู่กันสีน้ำมัน",
-    "zhHans": "油画笔",
-    "zhHant": "油畫筆"
-  },
-  "brush_family_writing": {
-    "en": "Writing",
-    "ja": "筆記",
-    "ko": "필기",
-    "th": "เขียน",
-    "zhHans": "书写",
-    "zhHant": "書寫"
-  },
-  "brush_family_painting": {
-    "en": "Painting",
-    "ja": "描画",
-    "ko": "그리기",
-    "th": "วาดภาพ",
-    "zhHans": "绘画",
-    "zhHant": "繪畫"
-  },
-  "brush_family_marking": {
-    "en": "Marking",
-    "ja": "マーキング",
-    "ko": "표시",
-    "th": "ไฮไลต์",
-    "zhHans": "标记",
-    "zhHant": "標記"
-  },
-  "import_document_done": {
-    "zhHant": "已匯入文件到這本筆記",
-    "en": "Document imported into this note",
-    "zhHans": "已导入文档到这本笔记",
-    "ja": "ドキュメントをこのノートに取り込みました",
-    "ko": "문서를 이 노트로 가져왔습니다",
-    "th": "นำเข้าเอกสารลงในโน้ตนี้แล้ว"
-  },
-  "font_bold": {
-    "zhHant": "粗體",
-    "en": "Bold",
-    "zhHans": "粗体",
-    "ja": "太字",
-    "ko": "굵게",
-    "th": "ตัวหนา"
-  },
-  "font_italic": {
-    "zhHant": "斜體",
-    "en": "Italic",
-    "zhHans": "斜体",
-    "ja": "斜体",
-    "ko": "기울임",
-    "th": "ตัวเอียง"
-  },
-  "shape_rotation": {
-    "zhHant": "旋轉角度",
-    "en": "Rotation",
-    "zhHans": "旋转角度",
-    "ja": "回転角度",
-    "ko": "회전 각도",
-    "th": "มุมหมุน"
-  },
-  "shape_duplicate": {
-    "zhHant": "複製",
-    "en": "Duplicate",
-    "zhHans": "复制",
-    "ja": "複製",
-    "ko": "복제",
-    "th": "ทำสำเนา"
-  },
-  "shape_corner": {
-    "zhHant": "圓角",
-    "en": "Corner radius",
-    "zhHans": "圆角",
-    "ja": "角丸",
-    "ko": "모서리 반경",
-    "th": "รัศมีมุม"
-  },
-  "shape_line_style": {
-    "zhHant": "線條樣式",
-    "en": "Line style",
-    "zhHans": "线条样式",
-    "ja": "線のスタイル",
-    "ko": "선 스타일",
-    "th": "ลักษณะเส้น"
-  },
-  "dash_solid": {
-    "zhHant": "實線",
-    "en": "Solid",
-    "zhHans": "实线",
-    "ja": "実線",
-    "ko": "실선",
-    "th": "เส้นทึบ"
-  },
-  "dash_dashed": {
-    "zhHant": "虛線",
-    "en": "Dashed",
-    "zhHans": "虚线",
-    "ja": "破線",
-    "ko": "파선",
-    "th": "เส้นประ"
-  },
-  "dash_dotted": {
-    "zhHant": "點線",
-    "en": "Dotted",
-    "zhHans": "点线",
-    "ja": "点線",
-    "ko": "점선",
-    "th": "เส้นจุด"
-  },
-  "shape_change_kind": {
-    "zhHant": "形狀種類",
-    "en": "Shape type",
-    "zhHans": "形状种类",
-    "ja": "図形の種類",
-    "ko": "도형 종류",
-    "th": "ชนิดรูปร่าง"
-  },
-  "shape_text_section": {
-    "zhHant": "文字",
-    "en": "Text",
-    "zhHans": "文字",
-    "ja": "テキスト",
-    "ko": "텍스트",
-    "th": "ข้อความ"
-  },
-  "shape_geometry_section": {
-    "zhHant": "位置與大小",
-    "en": "Position & size",
-    "zhHans": "位置与大小",
-    "ja": "位置とサイズ",
-    "ko": "위치 및 크기",
-    "th": "ตำแหน่งและขนาด"
-  },
-  "shape_width": {
-    "zhHant": "寬",
-    "en": "Width",
-    "zhHans": "宽",
-    "ja": "幅",
-    "ko": "너비",
-    "th": "กว้าง"
-  },
-  "shape_height": {
-    "zhHant": "高",
-    "en": "Height",
-    "zhHans": "高",
-    "ja": "高さ",
-    "ko": "높이",
-    "th": "สูง"
-  },
-  "connection_edit": {
-    "zhHant": "編修連接線",
-    "en": "Edit Connector",
-    "zhHans": "编辑连接线",
-    "ja": "コネクタを編集",
-    "ko": "커넥터 편집",
-    "th": "แก้ไขเส้นเชื่อม"
-  },
-  "connection_route": {
-    "zhHant": "走線方式",
-    "en": "Routing",
-    "zhHans": "走线方式",
-    "ja": "ルーティング",
-    "ko": "경로 방식",
-    "th": "รูปแบบเส้นทาง"
-  },
-  "route_straight": {
-    "zhHant": "直線",
-    "en": "Straight",
-    "zhHans": "直线",
-    "ja": "直線",
-    "ko": "직선",
-    "th": "เส้นตรง"
-  },
-  "route_elbow": {
-    "zhHant": "直角折線",
-    "en": "Elbow",
-    "zhHans": "直角折线",
-    "ja": "直角",
-    "ko": "꺾은선",
-    "th": "เส้นหักมุม"
-  },
-  "connection_start_cap": {
-    "zhHant": "起點端點",
-    "en": "Start end",
-    "zhHans": "起点端点",
-    "ja": "始点",
-    "ko": "시작점",
-    "th": "ปลายเริ่มต้น"
-  },
-  "connection_end_cap": {
-    "zhHant": "終點端點",
-    "en": "End end",
-    "zhHans": "终点端点",
-    "ja": "終点",
-    "ko": "끝점",
-    "th": "ปลายสิ้นสุด"
-  },
-  "cap_none": {
-    "zhHant": "無",
-    "en": "None",
-    "zhHans": "无",
-    "ja": "なし",
-    "ko": "없음",
-    "th": "ไม่มี"
-  },
-  "cap_arrow": {
-    "zhHant": "箭頭",
-    "en": "Arrow",
-    "zhHans": "箭头",
-    "ja": "矢印",
-    "ko": "화살표",
-    "th": "ลูกศร"
-  },
-  "cap_hollow": {
-    "zhHant": "空心箭頭",
-    "en": "Hollow arrow",
-    "zhHans": "空心箭头",
-    "ja": "白抜き矢印",
-    "ko": "빈 화살표",
-    "th": "ลูกศรกลวง"
-  },
-  "cap_circle": {
-    "zhHant": "圓點",
-    "en": "Circle",
-    "zhHans": "圆点",
-    "ja": "丸",
-    "ko": "원",
-    "th": "วงกลม"
-  },
-  "cap_diamond": {
-    "zhHant": "菱形",
-    "en": "Diamond",
-    "zhHans": "菱形",
-    "ja": "ひし形",
-    "ko": "마름모",
-    "th": "ข้าวหลามตัด"
-  },
-  "connection_from_anchor": {
-    "zhHant": "出線位置",
-    "en": "Exit point",
-    "zhHans": "出线位置",
-    "ja": "出発点",
-    "ko": "시작 위치",
-    "th": "จุดออก"
-  },
-  "connection_to_anchor": {
-    "zhHant": "入線位置",
-    "en": "Entry point",
-    "zhHans": "入线位置",
-    "ja": "到達点",
-    "ko": "도착 위치",
-    "th": "จุดเข้า"
-  },
-  "anchor_auto": {
-    "zhHant": "自動",
-    "en": "Auto",
-    "zhHans": "自动",
-    "ja": "自動",
-    "ko": "자동",
-    "th": "อัตโนมัติ"
-  },
-  "anchor_top": {
-    "zhHant": "上",
-    "en": "Top",
-    "zhHans": "上",
-    "ja": "上",
-    "ko": "위",
-    "th": "บน"
-  },
-  "anchor_right": {
-    "zhHant": "右",
-    "en": "Right",
-    "zhHans": "右",
-    "ja": "右",
-    "ko": "오른쪽",
-    "th": "ขวา"
-  },
-  "anchor_bottom": {
-    "zhHant": "下",
-    "en": "Bottom",
-    "zhHans": "下",
-    "ja": "下",
-    "ko": "아래",
-    "th": "ล่าง"
-  },
-  "anchor_left": {
-    "zhHant": "左",
-    "en": "Left",
-    "zhHans": "左",
-    "ja": "左",
-    "ko": "왼쪽",
-    "th": "ซ้าย"
-  },
-  "connection_reverse": {
-    "zhHant": "反轉方向",
-    "en": "Reverse direction",
-    "zhHans": "反转方向",
-    "ja": "向きを反転",
-    "ko": "방향 반전",
-    "th": "กลับทิศทาง"
-  },
-  "connection_handle": {
-    "zhHant": "拖曳到另一個形狀以連接",
-    "en": "Drag to another shape to connect",
-    "zhHans": "拖到另一个形状以连接",
-    "ja": "別の図形へドラッグして接続",
-    "ko": "다른 도형으로 드래그하여 연결",
-    "th": "ลากไปยังรูปร่างอื่นเพื่อเชื่อมต่อ"
-  },
-  "line_endpoint_handle": {
-    "zhHant": "拖曳端點",
-    "en": "Drag endpoint",
-    "zhHans": "拖动端点",
-    "ja": "端点をドラッグ",
-    "ko": "끝점 드래그",
-    "th": "ลากปลายเส้น"
-  },
-  "shape_flowchart_hint": {
-    "zhHant": "點選形狀後，從四邊的「+」拖到另一個形狀即可連線",
-    "en": "Select a shape, then drag from a “+” on its edge to another shape to connect them",
-    "zhHans": "选中形状后，从四边的“+”拖到另一个形状即可连线",
-    "ja": "図形を選び、辺の「+」から別の図形へドラッグすると接続できます",
-    "ko": "도형을 선택한 뒤 가장자리의 “+”에서 다른 도형으로 드래그하면 연결됩니다",
-    "th": "เลือกรูปร่าง แล้วลากจาก “+” ที่ขอบไปยังรูปร่างอื่นเพื่อเชื่อมต่อ"
-  },
-  "snap_to_grid_on_notice": {
-    "en": "Snap to grid on: tap-to-write text aligns to the page's lines or grid.",
-    "ja": "グリッド吸着オン：タップで書くテキストがページの罫線や方眼に揃います。",
-    "ko": "격자 맞춤 켜짐: 탭해서 쓰는 텍스트가 페이지의 줄이나 격자에 맞춰집니다.",
-    "th": "เปิดจัดชิดเส้นตาราง: ข้อความที่แตะเพื่อเขียนจะชิดเส้นหรือตารางของหน้า",
-    "zhHans": "吸附格线已开启：随点随写的文字会对齐页面行线或方格。",
-    "zhHant": "吸附格線已開啟：隨點隨寫的文字會對齊頁面行線或方格。"
-  },
-  "snap_to_grid_off_notice": {
-    "en": "Snap to grid off: text is placed exactly where you tap.",
-    "ja": "グリッド吸着オフ：テキストはタップした位置にそのまま置かれます。",
-    "ko": "격자 맞춤 꺼짐: 텍스트가 탭한 위치에 그대로 놓입니다.",
-    "th": "ปิดจัดชิดเส้นตาราง: ข้อความจะวางตรงตำแหน่งที่แตะ",
-    "zhHans": "吸附格线已关闭：文字会放在你点的位置。",
-    "zhHant": "吸附格線已關閉：文字會放在你點的位置。"
-  },
-  "audio_play": {
-    "en": "Play",
-    "ja": "再生",
-    "ko": "재생",
-    "th": "เล่น",
-    "zhHans": "播放",
-    "zhHant": "播放"
-  },
-  "audio_pause": {
-    "en": "Pause",
-    "ja": "一時停止",
-    "ko": "일시정지",
-    "th": "หยุดชั่วคราว",
-    "zhHans": "暂停",
-    "zhHant": "暫停"
-  },
-  "audio_playback_failed": {
-    "en": "This recording could not be played. Close other apps that use the microphone or speaker and try again.",
-    "ja": "この録音を再生できませんでした。マイクやスピーカーを使用している他のアプリを閉じて、もう一度お試しください。",
-    "ko": "이 녹음을 재생할 수 없습니다. 마이크나 스피커를 사용하는 다른 앱을 닫고 다시 시도하세요.",
-    "th": "ไม่สามารถเล่นการบันทึกเสียงนี้ได้ ปิดแอปอื่นที่ใช้ไมโครโฟนหรือลำโพงแล้วลองอีกครั้ง",
-    "zhHans": "这段录音无法播放。请关闭其他占用麦克风或扬声器的 App 后再试一次。",
-    "zhHant": "這段錄音無法播放。請關閉其他占用麥克風或喇叭的 App 後再試一次。"
-  },
-  "selfcheck_title": {
-    "en": "Device self-check",
-    "ja": "端末セルフチェック",
-    "ko": "기기 자가 점검",
-    "th": "ตรวจสอบอุปกรณ์",
-    "zhHans": "设备自检",
-    "zhHant": "裝置自檢"
-  },
-  "selfcheck_run": {
-    "en": "Run self-check",
-    "ja": "セルフチェックを実行",
-    "ko": "자가 점검 실행",
-    "th": "เริ่มตรวจสอบ",
-    "zhHans": "运行自检",
-    "zhHant": "執行自檢"
-  },
-  "selfcheck_running": {
-    "en": "Checking…",
-    "ja": "確認中…",
-    "ko": "점검 중…",
-    "th": "กำลังตรวจสอบ…",
-    "zhHans": "检查中…",
-    "zhHant": "檢查中…"
-  },
-  "selfcheck_copy": {
-    "en": "Copy report",
-    "ja": "レポートをコピー",
-    "ko": "보고서 복사",
-    "th": "คัดลอกรายงาน",
-    "zhHans": "复制报告",
-    "zhHant": "複製報告"
-  },
-  "highlight_color": {
-    "en": "Highlight color",
-    "ja": "ハイライトの色",
-    "ko": "형광펜 색상",
-    "th": "สีไฮไลต์",
-    "zhHans": "荧光笔颜色",
-    "zhHant": "螢光筆顏色"
-  },
-  "storage_title": {
-    "en": "Storage",
-    "ja": "ストレージ",
-    "ko": "저장 공간",
-    "th": "พื้นที่จัดเก็บ",
-    "zhHans": "存储空间",
-    "zhHant": "儲存空間"
-  },
-  "storage_library": {
-    "en": "Notes & recordings",
-    "ja": "ノートと録音",
-    "ko": "노트 및 녹음",
-    "th": "โน้ตและการบันทึกเสียง",
-    "zhHans": "笔记与录音",
-    "zhHant": "筆記與錄音"
-  },
-  "storage_temp": {
-    "en": "Temporary files",
-    "ja": "一時ファイル",
-    "ko": "임시 파일",
-    "th": "ไฟล์ชั่วคราว",
-    "zhHans": "临时文件",
-    "zhHant": "暫存檔"
-  },
-  "storage_caches": {
-    "en": "Caches",
-    "ja": "キャッシュ",
-    "ko": "캐시",
-    "th": "แคช",
-    "zhHans": "缓存",
-    "zhHant": "快取"
-  },
-  "storage_models": {
-    "en": "Downloaded models",
-    "ja": "ダウンロード済みモデル",
-    "ko": "다운로드한 모델",
-    "th": "โมเดลที่ดาวน์โหลด",
-    "zhHans": "已下载的模型",
-    "zhHant": "已下載的模型"
-  },
-  "storage_clean_now": {
-    "en": "Clean up now",
-    "ja": "今すぐ整理",
-    "ko": "지금 정리",
-    "th": "ล้างข้อมูลตอนนี้",
-    "zhHans": "立即清理",
-    "zhHant": "立即清理"
-  },
-  "storage_cleaned": {
-    "en": "Freed %@. Your notes and recordings are not touched.",
-    "ja": "%@ を解放しました。ノートと録音には触れていません。",
-    "ko": "%@ 확보했습니다. 노트와 녹음은 그대로입니다.",
-    "th": "คืนพื้นที่ %@ แล้ว โน้ตและการบันทึกเสียงของคุณไม่ถูกแตะต้อง",
-    "zhHans": "已释放 %@。你的笔记与录音不会被动到。",
-    "zhHant": "已釋放 %@。你的筆記與錄音不會被動到。"
+  "word_studio_desc": {
+    "en": "Open typography styling and document studio inspector",
+    "ja": "テキスト書式・タイポグラフィ編集パネルを開く",
+    "ko": "텍스트 서식 및 서체 편집 스튜디오 열기",
+    "th": "เปิดแผงจัดรูปแบบข้อความและการจัดพิมพ์",
+    "zhHans": "打开字体、字号、段落与版式调色面板",
+    "zhHant": "打開字型、字級、段落與版面樣式面板"
   }
 }
