@@ -66,11 +66,110 @@ pub fn localize_transcript_script(text: String, ui_language: String) -> String {
     ChineseConverter::new(script).convert(&text)
 }
 
+/// 事後轉錄的前處理選項。
+///
+/// 預設（[`default_transcribe_options`]）：高通、AGC、VAD 切段開，**降噪關**。
+/// 降噪常讓辨識變差（見 `padnote-denoise`），只給「重新轉錄」時使用者自己選；
+/// 要改成預設開，必須先有 `padnote-bench asr-ab` 的真實教室 A/B 結果。
+#[derive(uniffi::Record, Clone, Copy, Debug, PartialEq, Eq)]
+pub struct FfiTranscribeOptions {
+    /// 80 Hz 高通（冷氣、桌面震動的隆隆聲）。
+    pub high_pass: bool,
+    /// 慢速自動增益（遠處講者）。
+    pub agc: bool,
+    /// 先用 VAD 切出有人聲的段落，只送那些進 Whisper（抑制幻聽與重複迴圈）。
+    pub vad_segment: bool,
+    /// RNNoise 降噪。**預設關**。
+    pub denoise: bool,
+}
+
+impl Default for FfiTranscribeOptions {
+    fn default() -> Self {
+        let p = padnote_asr::PrepOptions::default();
+        Self {
+            high_pass: p.high_pass,
+            agc: p.agc,
+            vad_segment: p.vad_segment,
+            denoise: false,
+        }
+    }
+}
+
+impl FfiTranscribeOptions {
+    fn prep(self) -> padnote_asr::PrepOptions {
+        padnote_asr::PrepOptions {
+            high_pass: self.high_pass,
+            agc: self.agc,
+            vad_segment: self.vad_segment,
+        }
+    }
+}
+
+/// 平台取預設值用（兩個平台都從核心拿，不各自寫死）。
+#[uniffi::export]
+pub fn default_transcribe_options() -> FfiTranscribeOptions {
+    FfiTranscribeOptions::default()
+}
+
+/// 與引擎無關的轉錄流程：（可選）降噪 → 高通 → VAD 切段 → AGC → 逐段送進引擎。
+///
+/// 拆出來是為了能用假引擎測 —— Whisper 模型 574 MB，CI 與本機都沒有。
+#[cfg_attr(not(feature = "asr-whisper"), allow(dead_code))]
+pub(crate) fn transcribe_with_engine<E: padnote_asr::AsrEngine + ?Sized>(
+    engine: &mut E,
+    pcm_16k_mono: &[f32],
+    options: FfiTranscribeOptions,
+) -> Result<Vec<FfiTranscribeSegment>, FfiAsrError> {
+    let denoised;
+    let input: &[f32] = if options.denoise {
+        denoised = padnote_denoise::rnnoise_16k(pcm_16k_mono);
+        &denoised
+    } else {
+        pcm_16k_mono
+    };
+    let segments = padnote_asr::transcribe_segmented(engine, input, options.prep())
+        .map_err(|e| FfiAsrError::Backend(e.to_string()))?;
+    Ok(segments
+        .into_iter()
+        .map(|s| FfiTranscribeSegment {
+            text: s.text,
+            start_ms: s.start_us / 1000,
+            end_ms: s.end_us / 1000,
+            confidence: s.confidence,
+        })
+        .collect())
+}
+
+#[cfg_attr(not(feature = "asr-whisper"), allow(dead_code))]
+fn join_text(segs: &[FfiTranscribeSegment]) -> String {
+    segs.iter()
+        .map(|s| s.text.as_str())
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
+/// 用預設前處理轉錄（高通 + VAD 切段 + AGC，不降噪）。
 #[uniffi::export]
 pub fn whisper_transcribe_pcm(
     model_path: String,
     pcm_16k_mono: Vec<f32>,
     language: Option<String>,
+) -> Result<FfiTranscribeResult, FfiAsrError> {
+    whisper_transcribe_pcm_with(
+        model_path,
+        pcm_16k_mono,
+        language,
+        FfiTranscribeOptions::default(),
+    )
+}
+
+/// 指定前處理的轉錄。「重新轉錄（降噪後再辨識）」走這裡，`options.denoise = true`。
+#[uniffi::export]
+pub fn whisper_transcribe_pcm_with(
+    model_path: String,
+    pcm_16k_mono: Vec<f32>,
+    language: Option<String>,
+    options: FfiTranscribeOptions,
 ) -> Result<FfiTranscribeResult, FfiAsrError> {
     if pcm_16k_mono.is_empty() {
         return Err(FfiAsrError::InvalidAudio("音訊資料長度為零".to_string()));
@@ -78,7 +177,6 @@ pub fn whisper_transcribe_pcm(
 
     #[cfg(feature = "asr-whisper")]
     {
-        use padnote_asr::AsrEngine;
         // Whisper 只認 ISO 639-1（`zh`），不認 BCP-47（`zh-Hant`）。平台端傳的是
         // 介面語言標籤，取主語言子標籤；字體由 `localize_transcript_script` 另外處理。
         let lang = language
@@ -90,35 +188,13 @@ pub fn whisper_transcribe_pcm(
 
         let mut engine = padnote_asr_whisper::WhisperEngine::load(&model_path, &lang)
             .map_err(|e| FfiAsrError::ModelNotLoaded(e.to_string()))?;
+        // 切段後每段 ≤ 28 秒；區塊設成 30 秒，一段就是一次完整的辨識，
+        // 不會再被引擎自己的 3 秒區塊從句子中間切開。
+        engine.set_chunk_seconds(30.0);
 
-        // 饋入完整的 16kHz PCM 資料
-        let mut segments = engine
-            .feed(&pcm_16k_mono)
-            .map_err(|e| FfiAsrError::Backend(e.to_string()))?;
-
-        let finish_segments = engine
-            .finish()
-            .map_err(|e| FfiAsrError::Backend(e.to_string()))?;
-        segments.extend(finish_segments);
-
-        let ffi_segs: Vec<FfiTranscribeSegment> = segments
-            .into_iter()
-            .map(|s| FfiTranscribeSegment {
-                text: s.text,
-                start_ms: s.start_us / 1000,
-                end_ms: s.end_us / 1000,
-                confidence: s.confidence,
-            })
-            .collect();
-
-        let full_text = ffi_segs
-            .iter()
-            .map(|s| s.text.as_str())
-            .collect::<Vec<_>>()
-            .join(" ");
-
+        let ffi_segs = transcribe_with_engine(&mut engine, &pcm_16k_mono, options)?;
         Ok(FfiTranscribeResult {
-            text: full_text,
+            text: join_text(&ffi_segs),
             language: lang,
             segments: ffi_segs,
         })
@@ -128,9 +204,117 @@ pub fn whisper_transcribe_pcm(
     {
         let _ = model_path;
         let _ = language;
+        let _ = options;
         Err(FfiAsrError::Backend(
             "此平台版本未啟用 Whisper 語音引擎".to_string(),
         ))
+    }
+}
+
+#[cfg(test)]
+mod prep_tests {
+    use super::*;
+    use padnote_asr::{AsrEngine, AsrError, AsrSegment};
+
+    /// 假引擎：每次 `finish` 回一段「seg<N>」，時間戳相對所有已餵入取樣。
+    #[derive(Debug, Default)]
+    struct Fake {
+        pending: usize,
+        total: usize,
+        calls: Vec<usize>,
+    }
+
+    impl AsrEngine for Fake {
+        fn feed(&mut self, pcm: &[f32]) -> Result<Vec<AsrSegment>, AsrError> {
+            self.pending += pcm.len();
+            Ok(Vec::new())
+        }
+        fn finish(&mut self) -> Result<Vec<AsrSegment>, AsrError> {
+            if self.pending == 0 {
+                return Ok(Vec::new());
+            }
+            let start = self.total as u64 * 1_000_000 / 16_000;
+            self.total += self.pending;
+            self.calls.push(self.pending);
+            self.pending = 0;
+            Ok(vec![AsrSegment {
+                text: format!("seg{}", self.calls.len()),
+                start_us: start,
+                end_us: self.total as u64 * 1_000_000 / 16_000,
+                confidence: 0.9,
+                is_final: true,
+            }])
+        }
+        fn languages(&self) -> &[&str] {
+            &["zh"]
+        }
+    }
+
+    fn tone(secs: f32, amp: f32) -> Vec<f32> {
+        (0..(16_000.0 * secs) as usize)
+            .map(|i| {
+                let t = i as f32 / 16_000.0;
+                let env = 0.2 + 0.8 * (t * 4.0 * std::f32::consts::PI).sin().abs();
+                (t * 200.0 * 2.0 * std::f32::consts::PI).sin() * amp * env
+            })
+            .collect()
+    }
+
+    #[test]
+    fn defaults_are_hpf_agc_vad_without_denoise() {
+        let o = default_transcribe_options();
+        assert!(o.high_pass && o.agc && o.vad_segment);
+        assert!(!o.denoise, "降噪未經 A/B 驗證，不可預設開啟");
+    }
+
+    #[test]
+    fn silence_produces_no_text_instead_of_a_hallucination() {
+        let pcm = vec![0.0_f32; 16_000 * 30];
+        let mut engine = Fake::default();
+        let segs =
+            transcribe_with_engine(&mut engine, &pcm, FfiTranscribeOptions::default()).unwrap();
+        assert!(segs.is_empty());
+        assert!(engine.calls.is_empty(), "靜音被送進了 Whisper");
+    }
+
+    #[test]
+    fn speech_is_sent_per_span_with_millisecond_timestamps_on_the_full_timeline() {
+        let mut pcm = vec![0.0_f32; 16_000 * 10];
+        pcm.extend(tone(3.0, 0.3)); // 10–13 s
+        pcm.extend(vec![0.0_f32; 16_000 * 10]);
+        let mut engine = Fake::default();
+        let segs =
+            transcribe_with_engine(&mut engine, &pcm, FfiTranscribeOptions::default()).unwrap();
+        assert_eq!(segs.len(), 1);
+        assert!(
+            (9_600..=10_100).contains(&segs[0].start_ms),
+            "{:?}",
+            segs[0]
+        );
+        assert!((12_900..=13_400).contains(&segs[0].end_ms), "{:?}", segs[0]);
+        assert_eq!(join_text(&segs), "seg1");
+    }
+
+    #[test]
+    fn denoise_branch_runs_only_when_asked() {
+        let mut pcm = vec![0.0_f32; 16_000 * 2];
+        pcm.extend(tone(2.0, 0.3));
+        pcm.extend(vec![0.0_f32; 16_000 * 2]);
+        let mut a = Fake::default();
+        let mut b = Fake::default();
+        let off = transcribe_with_engine(&mut a, &pcm, FfiTranscribeOptions::default()).unwrap();
+        let on = transcribe_with_engine(
+            &mut b,
+            &pcm,
+            FfiTranscribeOptions {
+                denoise: true,
+                ..FfiTranscribeOptions::default()
+            },
+        )
+        .unwrap();
+        // 兩條路都要能產出結果（降噪不應把整段人聲吃掉）。
+        assert_eq!(off.len(), 1);
+        assert_eq!(on.len(), 1);
     }
 }
 

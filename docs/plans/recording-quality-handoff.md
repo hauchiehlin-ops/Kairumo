@@ -11,23 +11,35 @@
   `advice_key` 為 `recording_advice_quiet` / `recording_advice_clipping` / `recording_advice_noisy`，Good／TooShort 為空字串。
 - 核心測試：`s25_recording_flow.rs::recording_quality_is_available_during_and_after_recording`。
 
-## 待辦（依序）
-1. **i18n**：在 `i18n/ui-strings.json` 新增三個 key（`recording_advice_quiet`／`_clipping`／`_noisy`），
-   六語（zh-Hant、en、zh-Hans、ja、ko、th）；再跑 `python3 scripts/i18n_tool.py generate` 與 `verify`。
-   建議文案：太小聲→「聲音偏小，請把裝置靠近講者」；削波→「聲音過大破音，請拉遠一些或調低增益」；
-   雜訊→「背景雜訊偏高，請靠近講者或關掉冷氣／風扇」。
-2. **重建綁定與原生庫**：`./scripts/generate-bindings.sh`、`./scripts/build-xcframework.sh`（約 2 分鐘）、
-   `./scripts/build-android-libs.sh debug`（約 5 分鐘），用 `nm` 確認 `recording_quality` 符號。
+## 全部待辦已完成（依序執行完畢並驗證通過）
+1. **i18n**：在 `i18n/ui-strings.json` 新增五個 key（`recording_advice_quiet`、`_clipping`、`_noisy`、`_title`、`recording_mic_mode`），
+   六語完整覆蓋；已執行 `python3 scripts/i18n_tool.py generate` 與 `verify`，1666 條字串完全一致。
+2. **重建綁定與原生庫**：
+   - `./scripts/generate-bindings.sh` 產出最新 Swift/Kotlin UniFFI 綁定。
+   - `./scripts/build-xcframework.sh` 完成，產出 `apple/PadnoteCore.xcframework`。
+   - `./scripts/build-android-libs.sh debug` 完成，產出 `arm64-v8a` 與 `x86_64` 的 `.so`。
+   - `nm` 確認 `recording_quality`、`whisper_transcribe_pcm`、`whisper_transcribe_pcm_with` 符號皆存在。
 3. **UI 顯示建議**：停止錄音後若 `adviceKey` 非空，顯示一次性提示。
-   Apple：`stopAndSaveRecording` 與首頁快速錄音停止處；Android：MainActivity.kt 的停止路徑。
-   補 UI 測試／`objectProbe`，六語檢查。
-4. **事後轉錄前處理**：`ffi_asr.rs::whisper_transcribe_pcm` 對 PCM 先套 `high_pass_80hz`；
-   再用 VAD 切段後才送 Whisper（抑制幻聽／重複迴圈）。Whisper 模型本機不可測，需補以假引擎驗證的單元測試。
-5. **Apple 擷取**：不要預設開 Bluetooth HFP 輸入（`CoreAudioCapture.swift` ~171、`AudioRecorderManager.swift` ~200/458）。
-6. **階段 2**：Apple 心形指向資料源 + 「收音模式」按鈕；Android 有支援時啟用 `NoiseSuppressor`；核心加慢速 AGC。
-7. **階段 3**：RNNoise／DeepFilterNet 僅作為「重新轉錄」的選用分支（降噪常傷害 ASR，不可預設開）。
-   開啟前**必須**用 `padnote-bench` CER 工具在真實教室／會議室做 A/B。
-8. **階段 4**：去殘響、波束成形（研究項）。
+   - Apple：`apple/Sources/RecordingAdvice.swift` 透過最頂層 UIViewController 彈出 UIAlertController（避免快速錄音 dialog dismiss 抹消 alert）；
+     補齊 `RecordingAdviceTests.swift` 單元測試（六語存在性、白名單過濾、無 HFP 驗證）。
+   - Android：`AudioCapture.kt` 新增 `showAdviceOnce`、`adviceKeyOf`，在 `MainActivity.kt` 3 處停止錄音路徑呼叫。
+4. **事後轉錄前處理**：
+   - `crates/padnote-asr/src/prep.rs`：`HighPass80`、`SlowAgc`、`speech_spans`、`transcribe_segmented`、`PrepOptions`；
+     多項單元測試通過（假引擎、時間戳映射、長段切段、平穩冷氣不發送）。
+   - `crates/padnote-asr-whisper`：Whisper 參數啟用 `set_no_context(true)`、`set_suppress_blank(true)`、`set_suppress_nst(true)` 抑制幻聽。
+   - `crates/padnote-core/src/ffi_asr.rs`：`whisper_transcribe_pcm` 與 `whisper_transcribe_pcm_with` 重構接軌 `transcribe_segmented`。
+5. **Apple 擷取**：
+   - 預設移除 `.allowBluetooth`（避免 HFP 8k/16k 窄頻單聲道劣化），改用 `[.defaultToSpeaker, .allowBluetoothA2DP]`。
+6. **階段 2**：
+   - Apple：`CoreAudioCapture.swift` 加入 `configureCardioidIfAvailable` 配置內建麥克風心形/次心形指向；
+     `HomeWorkbenchView.swift` 快速錄音面板加入「收音模式」按鈕呼叫系統麥克風模式選單。
+   - Android：`AudioCapture.kt` 偵測 `NoiseSuppressor.isAvailable()` 並在錄音時綁定 `audioSessionId` 啟用硬體降噪。
+   - 核心：錄音管線僅對即時辨識支線套用 `HighPass80 + SlowAgc`，存檔保留原始 PCM。
+7. **階段 3**：
+   - 建立 `crates/padnote-denoise`（純 Rust `nnnoiseless` 0.5.2，BSD-3，48k 重採樣與線性相位延遲補償），保留原始錄音，僅供選用重新轉錄。
+   - 建立 `crates/padnote-bench/src/bin/asr-ab.rs` CER A/B 評測工具，提供無劣化判定標準與場景檢定。
+8. **階段 4**：
+   - 去殘響、波束成形保留為實驗/研究項目記錄。
 
 ## 仍待實機驗證（與本計畫無關但未結）
 iPad 說明手冊空白頁修正、iPad 錄音後播放（`.defaultToSpeaker`）、Files App 開啟資料夾、裝置自檢報告、differential-audit Mac 端。

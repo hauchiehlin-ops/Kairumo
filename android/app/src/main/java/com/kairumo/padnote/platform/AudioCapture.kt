@@ -7,6 +7,8 @@ import android.content.pm.PackageManager
 import android.media.AudioFormat
 import android.media.AudioRecord
 import android.media.MediaRecorder
+import android.media.audiofx.NoiseSuppressor
+import android.widget.Toast
 import androidx.core.content.ContextCompat
 import com.kairumo.padnote.LocalizationStrings
 import kotlinx.coroutines.CoroutineScope
@@ -39,9 +41,19 @@ class AudioCapture(private val context: Context) {
         fun hasPermission(context: Context): Boolean =
             ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) ==
                 PackageManager.PERMISSION_GRANTED
+
+        /** 核心可能給的建議 key；與 Apple 的 `RecordingAdvice.knownKeys` 一致。 */
+        val KNOWN_ADVICE_KEYS = setOf(
+            "recording_advice_quiet", "recording_advice_clipping", "recording_advice_noisy"
+        )
+
+        /** 空字串（Good／TooShort）與不認得的 key 一律不提示 —— 顯示原始 key 比不顯示更糟。 */
+        fun adviceKeyOf(raw: String?): String? = raw?.takeIf { it in KNOWN_ADVICE_KEYS }
     }
 
     private var record: AudioRecord? = null
+    /** 系統的降噪效果（有支援的裝置才有）。見 [attachNoiseSuppressor]。 */
+    private var noiseSuppressor: NoiseSuppressor? = null
     private var job: Job? = null
     private var transcriber: StreamingTranscriber? = null
     private val scope = CoroutineScope(Dispatchers.IO)
@@ -93,6 +105,16 @@ class AudioCapture(private val context: Context) {
         }
 
         record = recorder
+        // 階段 2：若裝置硬體／廠商有支援，在 AudioRecord 啟用 NoiseSuppressor
+        noiseSuppressor = if (NoiseSuppressor.isAvailable()) {
+            runCatching {
+                NoiseSuppressor.create(recorder.audioSessionId)?.apply {
+                    enabled = true
+                }
+            }.getOrNull()
+        } else {
+            null
+        }
         recorder.startRecording()
         
         transcriber = StreamingTranscriber(context, session)
@@ -146,7 +168,31 @@ class AudioCapture(private val context: Context) {
             r.release()
         }
         record = null
+        noiseSuppressor?.let { runCatching { it.release() } }
+        noiseSuppressor = null
         runCatching { session.stopRecording() }
+        lastAdviceKey = adviceKeyOf(runCatching { session.recordingQuality()?.adviceKey }.getOrNull())
         return runCatching { session.recordedAudioUs() }.getOrDefault(0uL)
+    }
+
+    /**
+     * 最近一次 [stop] 時核心給的錄音品質建議 key；不需要提示時為 `null`。
+     * 判斷在核心的 `QualityMeter`，與 Apple 同一份。
+     */
+    var lastAdviceKey: String? = null
+        private set
+
+    /**
+     * 使用者按下停止之後呼叫：有建議就顯示**一次**提示，並清掉，同一次錄音不會再跳。
+     *
+     * 用 Toast 而不是畫面上的對話框：首頁快速錄音的對話框在按下停止的同時就關掉，
+     * 掛在它上面的任何 Compose 狀態都會跟著消失。
+     */
+    fun showAdviceOnce(languageTag: String) {
+        val key = lastAdviceKey ?: return
+        lastAdviceKey = null
+        val text = LocalizationStrings.localized("recording_advice_title", languageTag) +
+            "\n" + LocalizationStrings.localized(key, languageTag)
+        Toast.makeText(context, text, Toast.LENGTH_LONG).show()
     }
 }

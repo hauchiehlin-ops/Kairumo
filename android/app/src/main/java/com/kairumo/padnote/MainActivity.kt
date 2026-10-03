@@ -923,6 +923,7 @@ private fun NotebookHome(
                                     activeSession?.let { s ->
                                         val us = homeAudio.stop(s)
                                         message = l("recorded_duration").replace("%@", "${us / 1_000_000uL}")
+                                        homeAudio.showAdviceOnce(deviceLanguageTag())
                                     }
                                     isRec = false
                                     isPaused = false
@@ -2793,6 +2794,7 @@ private fun InkScreen(
                             recordingPaused = false
                             message = l10n("recorded_duration")
                                 .replace("%@", "${us / 1_000_000uL}")
+                            audio.showAdviceOnce(deviceLanguageTag())
                         } else if (AudioCapture.hasPermission(activity)) {
                             recordSeconds = 0
                             recordingPaused = false
@@ -3726,6 +3728,7 @@ private fun InkScreen(
                                 recording = false
                                 recordingPaused = false
                                 message = l10n("recorded_duration").replace("%@", "${us / 1_000_000uL}")
+                                audio.showAdviceOnce(deviceLanguageTag())
                             }
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFDC2626))

@@ -90,6 +90,13 @@ impl WhisperEngine {
         params.set_print_progress(false);
         params.set_print_realtime(false);
         params.set_print_timestamps(false);
+        // 抑制幻聽（docs/plans/recording-quality.md §E）：
+        // - 不拿前一個窗的文字當提示（等同 condition_on_previous_text=false），
+        //   一次幻聽才不會一路污染後面的句子、形成重複迴圈；
+        // - 不在開頭輸出空白；不輸出「[音樂]」「♪」這類非語音記號。
+        params.set_no_context(true);
+        params.set_suppress_blank(true);
+        params.set_suppress_nst(true);
 
         state
             .full(params, audio)

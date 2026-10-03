@@ -10,7 +10,10 @@ pub mod pipeline;
 pub mod prep;
 pub mod punct;
 
-pub use prep::{AdaptiveVad, QualityMeter, QualityReport, QualityVerdict, high_pass_80hz};
+pub use prep::{
+    AdaptiveVad, HighPass80, PrepOptions, QualityMeter, QualityReport, QualityVerdict, SlowAgc,
+    condition, high_pass_80hz, speech_spans, transcribe_segmented,
+};
 pub use punct::{PunctError, PunctuationEngine};
 
 pub use pipeline::{

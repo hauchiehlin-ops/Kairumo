@@ -8540,6 +8540,38 @@ object LocalizationStrings {
             "ko" to "%@초 녹음됨",
             "th" to "บันทึกแล้ว %@ วินาที"
         ),
+        "recording_advice_clipping" to mapOf(
+            "zh-Hant" to "聲音過大並出現破音，請把裝置移遠一些或調低輸入增益。",
+            "en" to "The sound was too loud and distorted. Move the device farther away or lower the input gain.",
+            "zh-Hans" to "声音过大并出现破音，请把设备移远一些或调低输入增益。",
+            "ja" to "音が大きすぎて歪んでいます。端末を少し離すか、入力ゲインを下げてください。",
+            "ko" to "소리가 너무 커서 왜곡되었습니다. 기기를 조금 더 멀리 두거나 입력 게인을 낮추세요.",
+            "th" to "เสียงดังเกินไปจนแตก โปรดวางอุปกรณ์ให้ไกลขึ้นหรือลดเกนขาเข้า"
+        ),
+        "recording_advice_noisy" to mapOf(
+            "zh-Hant" to "背景雜訊偏高，請把裝置靠近講者，或關閉附近的冷氣或風扇。",
+            "en" to "Background noise was high. Move closer to the speaker or turn off nearby air conditioning or fans.",
+            "zh-Hans" to "背景噪声偏高，请把设备靠近说话者，或关闭附近的空调或风扇。",
+            "ja" to "周囲の雑音が大きめです。話者に近づけるか、近くの空調や扇風機を止めてください。",
+            "ko" to "배경 소음이 높습니다. 발표자에게 더 가까이 두거나 주변의 에어컨 또는 선풍기를 끄세요.",
+            "th" to "เสียงรบกวนพื้นหลังค่อนข้างดัง โปรดวางอุปกรณ์ใกล้ผู้พูดขึ้น หรือปิดเครื่องปรับอากาศหรือพัดลมที่อยู่ใกล้ ๆ"
+        ),
+        "recording_advice_quiet" to mapOf(
+            "zh-Hant" to "聲音偏小，請把裝置靠近講者。",
+            "en" to "The sound was quiet. Move the device closer to the speaker.",
+            "zh-Hans" to "声音偏小，请把设备靠近说话者。",
+            "ja" to "音が小さめです。端末を話者に近づけてください。",
+            "ko" to "소리가 작습니다. 기기를 발표자에게 더 가까이 두세요.",
+            "th" to "เสียงค่อนข้างเบา โปรดวางอุปกรณ์ให้ใกล้ผู้พูดขึ้น"
+        ),
+        "recording_advice_title" to mapOf(
+            "zh-Hant" to "錄音品質提示",
+            "en" to "Recording quality tip",
+            "zh-Hans" to "录音质量提示",
+            "ja" to "録音品質のヒント",
+            "ko" to "녹음 품질 안내",
+            "th" to "คำแนะนำคุณภาพการบันทึก"
+        ),
         "recording_failed" to mapOf(
             "zh-Hant" to "錄音啟動失敗",
             "en" to "Recording could not start",
@@ -8555,6 +8587,14 @@ object LocalizationStrings {
             "ja" to "録音インボックス",
             "ko" to "녹음 받은함",
             "th" to "กล่องขาเข้าการบันทึก"
+        ),
+        "recording_mic_mode" to mapOf(
+            "zh-Hant" to "收音模式",
+            "en" to "Mic Mode",
+            "zh-Hans" to "收音模式",
+            "ja" to "マイクモード",
+            "ko" to "마이크 모드",
+            "th" to "โหมดไมโครโฟน"
         ),
         "recording_paused" to mapOf(
             "zh-Hant" to "錄音已暫停",
@@ -8939,7 +8979,10 @@ object LocalizationStrings {
             "ja" to "ルートフォルダ",
             "ko" to "최상위 폴더",
             "th" to "โฟลเดอร์ระดับบนสุด"
-        ),
+        )
+    )
+
+    private fun part14(): Map<String, Map<String, String>> = mapOf(
         "rotate_handle" to mapOf(
             "zh-Hant" to "旋轉把手",
             "en" to "Rotate handle",
@@ -8979,10 +9022,7 @@ object LocalizationStrings {
             "ja" to "直角",
             "ko" to "꺾은선",
             "th" to "เส้นหักมุม"
-        )
-    )
-
-    private fun part14(): Map<String, Map<String, String>> = mapOf(
+        ),
         "route_straight" to mapOf(
             "zh-Hant" to "直線",
             "en" to "Straight",
@@ -9582,7 +9622,10 @@ object LocalizationStrings {
             "ja" to "十字",
             "ko" to "십자",
             "th" to "กากบาท"
-        ),
+        )
+    )
+
+    private fun part15(): Map<String, Map<String, String>> = mapOf(
         "shape_kind_data" to mapOf(
             "zh-Hant" to "資料",
             "en" to "Data",
@@ -9622,10 +9665,7 @@ object LocalizationStrings {
             "ja" to "ひし形",
             "ko" to "마름모",
             "th" to "ข้าวหลามตัด"
-        )
-    )
-
-    private fun part15(): Map<String, Map<String, String>> = mapOf(
+        ),
         "shape_kind_display" to mapOf(
             "zh-Hant" to "顯示",
             "en" to "Display",
@@ -10225,7 +10265,10 @@ object LocalizationStrings {
             "ja" to "主要仕様：",
             "ko" to "주요 사양: ",
             "th" to "สเปกหลัก: "
-        ),
+        )
+    )
+
+    private fun part16(): Map<String, Map<String, String>> = mapOf(
         "special_symbols" to mapOf(
             "zh-Hant" to "特殊符號",
             "en" to "Special Symbols",
@@ -10265,10 +10308,7 @@ object LocalizationStrings {
             "ja" to "手ブレ補正オフ",
             "ko" to "손떨림 보정 끔",
             "th" to "ปิดการกันสั่น"
-        )
-    )
-
-    private fun part16(): Map<String, Map<String, String>> = mapOf(
+        ),
         "stab_strong" to mapOf(
             "zh-Hant" to "強力防抖",
             "en" to "Strong stabiliser",
@@ -10868,7 +10908,10 @@ object LocalizationStrings {
             "ja" to "このフォルダは iCloud Drive で同期されます",
             "ko" to "이 폴더는 iCloud Drive로 동기화됩니다",
             "th" to "โฟลเดอร์นี้ซิงก์ผ่าน iCloud Drive"
-        ),
+        )
+    )
+
+    private fun part17(): Map<String, Map<String, String>> = mapOf(
         "storage_library" to mapOf(
             "zh-Hant" to "筆記與錄音",
             "en" to "Notes & recordings",
@@ -10908,10 +10951,7 @@ object LocalizationStrings {
             "ja" to "データ保存先",
             "ko" to "데이터 저장 위치",
             "th" to "ตำแหน่งจัดเก็บข้อมูล"
-        )
-    )
-
-    private fun part17(): Map<String, Map<String, String>> = mapOf(
+        ),
         "storage_models" to mapOf(
             "zh-Hant" to "已下載的模型",
             "en" to "Downloaded models",
@@ -11511,7 +11551,10 @@ object LocalizationStrings {
             "ja" to "クラウド同期をリセットしますか？",
             "ko" to "클라우드 동기화를 초기화할까요?",
             "th" to "รีเซ็ตการซิงค์คลาวด์?"
-        ),
+        )
+    )
+
+    private fun part18(): Map<String, Map<String, String>> = mapOf(
         "sync_reset_cloud_done" to mapOf(
             "zh-Hant" to "雲端已清空（%1@ 個檔案）。下一輪同步會把本機的筆記當成新的基準傳上去。",
             "en" to "Cloud cleared (%1@ files). The next sync uploads this device's notes as the new baseline.",
@@ -11551,10 +11594,7 @@ object LocalizationStrings {
             "ja" to "クラウド同期",
             "ko" to "클라우드 동기화",
             "th" to "ซิงก์คลาวด์"
-        )
-    )
-
-    private fun part18(): Map<String, Map<String, String>> = mapOf(
+        ),
         "sync_status" to mapOf(
             "zh-Hant" to "狀態",
             "en" to "Status",
@@ -12154,7 +12194,10 @@ object LocalizationStrings {
             "ja" to "黄金比螺旋と三分割構図ガイドライン",
             "ko" to "황금비 나선 및 3분할 가이드라인",
             "th" to "เส้นนำเกลียวทองคำและกฎสามส่วน"
-        ),
+        )
+    )
+
+    private fun part19(): Map<String, Map<String, String>> = mapOf(
         "tmpl_grid" to mapOf(
             "zh-Hant" to "方格點陣",
             "en" to "Grid & Dots",
@@ -12194,10 +12237,7 @@ object LocalizationStrings {
             "ja" to "30° 等角投影立体グリッド",
             "ko" to "30° 등각 투영 그리드",
             "th" to "กริดไอโซเมตริก 30°"
-        )
-    )
-
-    private fun part19(): Map<String, Map<String, String>> = mapOf(
+        ),
         "tmpl_isometric_desc" to mapOf(
             "zh-Hant" to "機械構件、三維產品外觀與爆炸透視專用",
             "en" to "Dedicated for mechanism components, 3D products & exploded views",
@@ -12797,7 +12837,10 @@ object LocalizationStrings {
             "ja" to "明瞭な音声が検出されませんでした",
             "ko" to "선명한 음성이 감지되지 않았습니다",
             "th" to "ตรวจไม่พบเสียงพูดที่ชัดเจน"
-        ),
+        )
+    )
+
+    private fun part20(): Map<String, Map<String, String>> = mapOf(
         "transcribe_success" to mapOf(
             "zh-Hant" to "轉錄完成，已插入文字方塊",
             "en" to "Transcription complete, text box added",
@@ -12837,10 +12880,7 @@ object LocalizationStrings {
             "ja" to "同じノート内での並べ替えは「ページを上へ／下へ」",
             "ko" to "같은 노트 안에서는 ‘페이지 위로/아래로’를 쓰세요",
             "th" to "จัดลำดับในสมุดเดียวกันให้ใช้เลื่อนหน้าขึ้น/ลง"
-        )
-    )
-
-    private fun part20(): Map<String, Map<String, String>> = mapOf(
+        ),
         "transfer_would_empty_source" to mapOf(
             "zh-Hant" to "一本筆記至少要留一頁",
             "en" to "A notebook must keep at least one page",

@@ -1,0 +1,16 @@
+[package]
+name = "padnote-denoise"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+# 內部 crate，不發佈到 crates.io（workspace 內以 path 互相引用）。
+publish = false
+
+[dependencies]
+# RNNoise 的純 Rust 移植（BSD-3-Clause，通過 deny.toml 白名單）。
+# 關掉預設 feature：預設會拉進命令列工具（clap、hound…），App 用不到。
+nnnoiseless = { version = "0.5", default-features = false }
+
+[lints]
+workspace = true

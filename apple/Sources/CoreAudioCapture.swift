@@ -139,6 +139,49 @@ final class CoreAudioCapture {
     /// 核心要的格式。
     private static let targetSampleRate: Double = 16_000
 
+    #if os(iOS) || targetEnvironment(macCatalyst)
+    /// 錄音時 `AVAudioSession` 的選項（非 Mac）。三個開始錄音的地方共用這一份。
+    ///
+    /// # 為什麼不用 `.allowBluetooth`
+    ///
+    /// `.allowBluetooth` 開的是 **HFP**：只要戴著藍牙耳機，輸入就被切到耳機的
+    /// 麥克風，取樣率掉到 8／16 kHz 窄頻、還經過耳機自己的通話降噪 —— 對「把
+    /// 裝置放在桌上錄整堂課」是最差的來源，講者的聲音幾乎收不到。
+    /// `.allowBluetoothA2DP` 只讓**輸出**走藍牙（高品質播放），輸入留在內建麥克風。
+    nonisolated static let recordingCategoryOptions: AVAudioSession.CategoryOptions = [
+        .defaultToSpeaker, .allowBluetoothA2DP,
+    ]
+
+    #if !targetEnvironment(macCatalyst)
+    /// 階段 2：若硬體支援心形或次心形指向收音，優先設定（物理降噪，抑制後方與側邊雜音）。
+    nonisolated static func configureCardioidIfAvailable(_ session: AVAudioSession) {
+        guard let inputs = session.availableInputs,
+              let builtIn = inputs.first(where: { $0.portType == .builtInMic }) else { return }
+        do {
+            try session.setPreferredInput(builtIn)
+            if let dataSources = builtIn.dataSources {
+                let selectedSource = dataSources.first { ds in
+                    ds.supportedPolarPatterns?.contains(.cardioid) == true ||
+                    ds.supportedPolarPatterns?.contains(.subcardioid) == true
+                } ?? dataSources.first
+                if let ds = selectedSource {
+                    if let patterns = ds.supportedPolarPatterns {
+                        if patterns.contains(.cardioid) {
+                            try ds.setPreferredPolarPattern(.cardioid)
+                        } else if patterns.contains(.subcardioid) {
+                            try ds.setPreferredPolarPattern(.subcardioid)
+                        }
+                    }
+                    try builtIn.setPreferredDataSource(ds)
+                }
+            }
+        } catch {
+            StartupLogger.log("[CoreAudioCapture] 心形指向資料源設定提示: \(error)")
+        }
+    }
+    #endif
+    #endif
+
     private var engine: AVAudioEngine?
     private let pipeline = CoreAudioPipeline()
     private var tapInstalled = false
@@ -168,9 +211,14 @@ final class CoreAudioCapture {
             if ProcessInfo.processInfo.isiOSAppOnMac {
                 try audioSession.setCategory(.playAndRecord, mode: .default)
             } else {
-                try audioSession.setCategory(.playAndRecord, mode: .default, options: [.defaultToSpeaker, .allowBluetooth])
+                try audioSession.setCategory(.playAndRecord, mode: .default, options: CoreAudioCapture.recordingCategoryOptions)
             }
             try audioSession.setActive(true, options: .notifyOthersOnDeactivation)
+            #if os(iOS) && !targetEnvironment(macCatalyst)
+            if !ProcessInfo.processInfo.isiOSAppOnMac {
+                Self.configureCardioidIfAvailable(audioSession)
+            }
+            #endif
         } catch {
             StartupLogger.log("[CoreAudioCapture] AVAudioSession 設定警告: \(error)")
         }

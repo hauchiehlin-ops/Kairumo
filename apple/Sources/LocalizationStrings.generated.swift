@@ -8480,6 +8480,38 @@ extension LocalizationManager {
             .ko: "%@초 녹음됨",
             .th: "บันทึกแล้ว %@ วินาที"
         ],
+        "recording_advice_clipping": [
+            .zhHant: "聲音過大並出現破音，請把裝置移遠一些或調低輸入增益。",
+            .en: "The sound was too loud and distorted. Move the device farther away or lower the input gain.",
+            .zhHans: "声音过大并出现破音，请把设备移远一些或调低输入增益。",
+            .ja: "音が大きすぎて歪んでいます。端末を少し離すか、入力ゲインを下げてください。",
+            .ko: "소리가 너무 커서 왜곡되었습니다. 기기를 조금 더 멀리 두거나 입력 게인을 낮추세요.",
+            .th: "เสียงดังเกินไปจนแตก โปรดวางอุปกรณ์ให้ไกลขึ้นหรือลดเกนขาเข้า"
+        ],
+        "recording_advice_noisy": [
+            .zhHant: "背景雜訊偏高，請把裝置靠近講者，或關閉附近的冷氣或風扇。",
+            .en: "Background noise was high. Move closer to the speaker or turn off nearby air conditioning or fans.",
+            .zhHans: "背景噪声偏高，请把设备靠近说话者，或关闭附近的空调或风扇。",
+            .ja: "周囲の雑音が大きめです。話者に近づけるか、近くの空調や扇風機を止めてください。",
+            .ko: "배경 소음이 높습니다. 발표자에게 더 가까이 두거나 주변의 에어컨 또는 선풍기를 끄세요.",
+            .th: "เสียงรบกวนพื้นหลังค่อนข้างดัง โปรดวางอุปกรณ์ใกล้ผู้พูดขึ้น หรือปิดเครื่องปรับอากาศหรือพัดลมที่อยู่ใกล้ ๆ"
+        ],
+        "recording_advice_quiet": [
+            .zhHant: "聲音偏小，請把裝置靠近講者。",
+            .en: "The sound was quiet. Move the device closer to the speaker.",
+            .zhHans: "声音偏小，请把设备靠近说话者。",
+            .ja: "音が小さめです。端末を話者に近づけてください。",
+            .ko: "소리가 작습니다. 기기를 발표자에게 더 가까이 두세요.",
+            .th: "เสียงค่อนข้างเบา โปรดวางอุปกรณ์ให้ใกล้ผู้พูดขึ้น"
+        ],
+        "recording_advice_title": [
+            .zhHant: "錄音品質提示",
+            .en: "Recording quality tip",
+            .zhHans: "录音质量提示",
+            .ja: "録音品質のヒント",
+            .ko: "녹음 품질 안내",
+            .th: "คำแนะนำคุณภาพการบันทึก"
+        ],
         "recording_failed": [
             .zhHant: "錄音啟動失敗",
             .en: "Recording could not start",
@@ -8495,6 +8527,14 @@ extension LocalizationManager {
             .ja: "録音インボックス",
             .ko: "녹음 받은함",
             .th: "กล่องขาเข้าการบันทึก"
+        ],
+        "recording_mic_mode": [
+            .zhHant: "收音模式",
+            .en: "Mic Mode",
+            .zhHans: "收音模式",
+            .ja: "マイクモード",
+            .ko: "마이크 모드",
+            .th: "โหมดไมโครโฟน"
         ],
         "recording_paused": [
             .zhHant: "錄音已暫停",

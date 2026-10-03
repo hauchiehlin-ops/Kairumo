@@ -73,6 +73,8 @@ padnote-pdf = { path = "../padnote-pdf" }
 padnote-pdf-pdfium = { path = "../padnote-pdf-pdfium", optional = true }
 padnote-recorder = { path = "../padnote-recorder" }
 padnote-audio = { path = "../padnote-audio" }
+# RNNoise 降噪（純 Rust、BSD-3）。只用在「重新轉錄」時使用者選的降噪分支，預設不走。
+padnote-denoise = { path = "../padnote-denoise" }
 padnote-vad-silero = { path = "../padnote-vad-silero", optional = true }
 padnote-asr-whisper = { path = "../padnote-asr-whisper", optional = true }
 padnote-text = { path = "../padnote-text" }

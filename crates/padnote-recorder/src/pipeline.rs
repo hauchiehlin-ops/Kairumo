@@ -84,6 +84,23 @@ pub struct RecordingPipeline<W: Write> {
     finished: bool,
     /// 錄音當下累計的電平／削波／噪音底線（見 `padnote_asr::prep`）。
     quality: padnote_asr::QualityMeter,
+    /// 送去辨識前的前處理（高通 + 慢速 AGC）。`None` 代表關閉。
+    asr_prep: Option<AsrPrep>,
+}
+
+/// 辨識支線的串流前處理。兩者都帶狀態，整段錄音共用一份 —— AGC 的增益
+/// 要能跨越一段段的語音慢慢追上講者的距離，每段重來就失去「慢」的意義。
+#[derive(Debug, Default)]
+struct AsrPrep {
+    high_pass: padnote_asr::HighPass80,
+    agc: padnote_asr::SlowAgc,
+}
+
+impl AsrPrep {
+    fn process(&mut self, pcm: &mut [f32]) {
+        self.high_pass.process(pcm);
+        self.agc.process(pcm);
+    }
 }
 
 impl<W: Write> std::fmt::Debug for RecordingPipeline<W> {
@@ -120,7 +137,23 @@ impl<W: Write> RecordingPipeline<W> {
             session_start,
             finished: false,
             quality: padnote_asr::QualityMeter::new(),
+            asr_prep: Some(AsrPrep::default()),
         })
+    }
+
+    /// 開關辨識支線的前處理（高通 + 慢速 AGC）。預設開。
+    ///
+    /// 存檔的音訊不受影響 —— 這個開關只改變送去辨識的那一份。
+    pub fn set_asr_preprocessing(&mut self, enabled: bool) {
+        match (enabled, self.asr_prep.is_some()) {
+            (true, false) => self.asr_prep = Some(AsrPrep::default()),
+            (false, true) => self.asr_prep = None,
+            _ => {}
+        }
+    }
+
+    pub fn asr_preprocessing(&self) -> bool {
+        self.asr_prep.is_some()
     }
 
     pub fn session_id(&self) -> Uuid {
@@ -150,6 +183,8 @@ impl<W: Write> RecordingPipeline<W> {
         // 品質量測在最前面、不會失敗，也不影響後面兩步。
         self.quality.feed(pcm);
         // (1) 音檔優先落地 —— 這一步失敗才算真正的錄音失敗。
+        //     存檔的永遠是**原始訊號**：前處理只給辨識用，日後換更好的
+        //     演算法時還能從原始錄音重新轉錄。
         let packets = self.encoder.encode(pcm)?;
         let frames_written = packets.len() as u64;
         for p in packets {
@@ -157,7 +192,15 @@ impl<W: Write> RecordingPipeline<W> {
         }
 
         // (2) 分段只入列，不辨識。辨識由背景 worker 負責。
-        let segments = self.segmenter.feed(pcm);
+        //     辨識那一支先過高通與慢速 AGC（可關，見 `set_asr_preprocessing`）。
+        let segments = match self.asr_prep.as_mut() {
+            Some(prep) => {
+                let mut conditioned = pcm.to_vec();
+                prep.process(&mut conditioned);
+                self.segmenter.feed(&conditioned)
+            }
+            None => self.segmenter.feed(pcm),
+        };
         let segments_queued = segments.len();
         for s in segments {
             self.queue.push(s);
@@ -393,5 +436,49 @@ mod tests {
             p.recorded_duration_us() > 10_000_000,
             "音檔必須完整，不受佇列溢位影響"
         );
+    }
+
+    fn rumble(samples: usize) -> Vec<f32> {
+        (0..samples)
+            .map(|i| (i as f32 / 16_000.0 * 30.0 * 2.0 * std::f32::consts::PI).sin() * 0.3)
+            .collect()
+    }
+
+    #[test]
+    fn low_rumble_does_not_reach_the_recognizer_when_preprocessing_is_on() {
+        // 30 Hz 的桌面震動／冷氣隆隆聲：能量比 VAD 門檻大，但不是人聲。
+        let mut on = pipeline();
+        assert!(on.asr_preprocessing(), "預設應開啟");
+        on.feed(&rumble(16_000 * 2)).unwrap();
+        on.finish().unwrap();
+        assert!(on.take_segments().is_empty(), "隆隆聲被當成語音送去辨識了");
+
+        let mut off = pipeline();
+        off.set_asr_preprocessing(false);
+        off.feed(&rumble(16_000 * 2)).unwrap();
+        off.finish().unwrap();
+        assert!(
+            !off.take_segments().is_empty(),
+            "前提：沒有高通時會被當成語音"
+        );
+    }
+
+    #[test]
+    fn preprocessing_never_changes_the_saved_audio() {
+        let make = |prep: bool| {
+            let mut p = RecordingPipeline::new(
+                Vec::new(),
+                Uuid::from_bytes([0x11; 16]),
+                NotebookTime::ZERO,
+                vad(),
+            )
+            .unwrap();
+            p.set_asr_preprocessing(prep);
+            p.feed(&rumble(8_000)).unwrap();
+            p.feed(&speech(16_000)).unwrap();
+            p.finish().unwrap();
+            p.ogg_bytes_for_test().to_vec()
+        };
+        assert_eq!(make(true), make(false), "存檔的音訊必須是原始訊號");
     }
 }

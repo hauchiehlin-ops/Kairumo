@@ -31,6 +31,8 @@ public final class AudioRecorderManager: NSObject, ObservableObject, AVAudioReco
     @Published public var playingRecordingId: String? = nil
     @Published public var playbackProgress: Double = 0.0
     @Published public var currentPlaybackTime: TimeInterval = 0.0
+    /// 最近一次停止錄音時核心給的品質建議 key（不需要提示時為 nil）。見 `RecordingAdvice`。
+    @Published public private(set) var lastRecordingAdviceKey: String?
 
     private var audioRecorder: AVAudioRecorder?
     private var audioPlayer: AVAudioPlayer?
@@ -151,6 +153,25 @@ public final class AudioRecorderManager: NSObject, ObservableObject, AVAudioReco
         }
     }
 
+    /// 系統是否支援開啟「收音模式（人聲突顯／寬頻譜）」選單（iOS 15+）
+    public var canShowMicrophoneModes: Bool {
+        #if os(iOS) && !targetEnvironment(macCatalyst)
+        if #available(iOS 15.0, *) {
+            return !ProcessInfo.processInfo.isiOSAppOnMac
+        }
+        #endif
+        return false
+    }
+
+    /// 開啟系統麥克風收音模式選單（人聲突顯／寬頻譜）
+    public func showMicrophoneModes() {
+        #if os(iOS) && !targetEnvironment(macCatalyst)
+        if #available(iOS 15.0, *) {
+            AVCaptureDevice.showSystemUserInterface(.microphoneModes)
+        }
+        #endif
+    }
+
     // MARK: - 錄音控制
 
     /// 請求麥克風權限並啟動錄音
@@ -197,7 +218,7 @@ public final class AudioRecorderManager: NSObject, ObservableObject, AVAudioReco
             if isRunningOnMac {
                 try session.setCategory(.playAndRecord, mode: .default)
             } else {
-                try session.setCategory(.playAndRecord, mode: .default, options: [.defaultToSpeaker, .allowBluetooth])
+                try session.setCategory(.playAndRecord, mode: .default, options: CoreAudioCapture.recordingCategoryOptions)
             }
             try session.setActive(true)
         } catch {
@@ -401,6 +422,12 @@ public final class AudioRecorderManager: NSObject, ObservableObject, AVAudioReco
             StartupLogger.log("[AudioRecorderManager] 核心停止錄音警告: \(error)")
         }
         let durationUs = session.recordedAudioUs()
+        // 錄音品質提示（一次性）。編輯器與首頁快速錄音都走這裡，所以只需接一處。
+        let adviceKey = RecordingAdvice.adviceKey(from: session.recordingQuality())
+        lastRecordingAdviceKey = adviceKey
+        if let adviceKey {
+            RecordingAdvice.present(key: adviceKey)
+        }
 
         timer?.invalidate()
         timer = nil
@@ -455,7 +482,7 @@ public final class AudioRecorderManager: NSObject, ObservableObject, AVAudioReco
                 try session.setCategory(.playAndRecord, mode: .default)
             } else {
                 try session.setCategory(
-                    .playAndRecord, mode: .default, options: [.defaultToSpeaker, .allowBluetooth])
+                    .playAndRecord, mode: .default, options: CoreAudioCapture.recordingCategoryOptions)
             }
             try session.setActive(true)
         } catch {

@@ -8208,6 +8208,46 @@
     "zhHans": "已录 %@ 秒",
     "zhHant": "已錄 %@ 秒"
   },
+  "recording_advice_clipping": {
+    "en": "The sound was too loud and distorted. Move the device farther away or lower the input gain.",
+    "ja": "音が大きすぎて歪んでいます。端末を少し離すか、入力ゲインを下げてください。",
+    "ko": "소리가 너무 커서 왜곡되었습니다. 기기를 조금 더 멀리 두거나 입력 게인을 낮추세요.",
+    "th": "เสียงดังเกินไปจนแตก โปรดวางอุปกรณ์ให้ไกลขึ้นหรือลดเกนขาเข้า",
+    "zhHans": "声音过大并出现破音，请把设备移远一些或调低输入增益。",
+    "zhHant": "聲音過大並出現破音，請把裝置移遠一些或調低輸入增益。"
+  },
+  "recording_advice_noisy": {
+    "en": "Background noise was high. Move closer to the speaker or turn off nearby air conditioning or fans.",
+    "ja": "周囲の雑音が大きめです。話者に近づけるか、近くの空調や扇風機を止めてください。",
+    "ko": "배경 소음이 높습니다. 발표자에게 더 가까이 두거나 주변의 에어컨 또는 선풍기를 끄세요.",
+    "th": "เสียงรบกวนพื้นหลังค่อนข้างดัง โปรดวางอุปกรณ์ใกล้ผู้พูดขึ้น หรือปิดเครื่องปรับอากาศหรือพัดลมที่อยู่ใกล้ ๆ",
+    "zhHans": "背景噪声偏高，请把设备靠近说话者，或关闭附近的空调或风扇。",
+    "zhHant": "背景雜訊偏高，請把裝置靠近講者，或關閉附近的冷氣或風扇。"
+  },
+  "recording_advice_quiet": {
+    "en": "The sound was quiet. Move the device closer to the speaker.",
+    "ja": "音が小さめです。端末を話者に近づけてください。",
+    "ko": "소리가 작습니다. 기기를 발표자에게 더 가까이 두세요.",
+    "th": "เสียงค่อนข้างเบา โปรดวางอุปกรณ์ให้ใกล้ผู้พูดขึ้น",
+    "zhHans": "声音偏小，请把设备靠近说话者。",
+    "zhHant": "聲音偏小，請把裝置靠近講者。"
+  },
+  "recording_advice_title": {
+    "en": "Recording quality tip",
+    "ja": "録音品質のヒント",
+    "ko": "녹음 품질 안내",
+    "th": "คำแนะนำคุณภาพการบันทึก",
+    "zhHans": "录音质量提示",
+    "zhHant": "錄音品質提示"
+  },
+  "recording_mic_mode": {
+    "en": "Mic Mode",
+    "ja": "マイクモード",
+    "ko": "마이크 모드",
+    "th": "โหมดไมโครโฟน",
+    "zhHans": "收音模式",
+    "zhHant": "收音模式"
+  },
   "recording_failed": {
     "en": "Recording could not start",
     "zhHant": "錄音啟動失敗",

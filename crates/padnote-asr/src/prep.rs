@@ -225,30 +225,353 @@ impl QualityMeter {
 
 // ───────────────────────── 高通 ─────────────────────────
 
-/// 80 Hz 二階 Butterworth 高通（16 kHz）。原地處理。
-pub fn high_pass_80hz(pcm: &mut [f32]) {
-    // 係數由雙線性轉換算出（fc = 80 Hz, fs = 16 kHz, Q = 1/√2）。
-    let fs = 16_000.0_f32;
-    let fc = 80.0_f32;
-    let w0 = 2.0 * std::f32::consts::PI * fc / fs;
-    let alpha = w0.sin() / (2.0 * std::f32::consts::FRAC_1_SQRT_2);
-    let cosw = w0.cos();
-    let a0 = 1.0 + alpha;
-    let b0 = (1.0 + cosw) / 2.0 / a0;
-    let b1 = -(1.0 + cosw) / a0;
-    let b2 = b0;
-    let a1 = -2.0 * cosw / a0;
-    let a2 = (1.0 - alpha) / a0;
-    let (mut x1, mut x2, mut y1, mut y2) = (0.0_f32, 0.0_f32, 0.0_f32, 0.0_f32);
-    for s in pcm.iter_mut() {
-        let x0 = *s;
-        let y0 = b0 * x0 + b1 * x1 + b2 * x2 - a1 * y1 - a2 * y2;
-        x2 = x1;
-        x1 = x0;
-        y2 = y1;
-        y1 = y0;
-        *s = y0;
+/// 80 Hz 二階 Butterworth 高通（16 kHz），**帶狀態**：串流處理時跨呼叫不會在
+/// 區塊邊界產生喀聲。一次性處理整段可用 [`high_pass_80hz`]。
+#[derive(Clone, Debug)]
+pub struct HighPass80 {
+    b0: f32,
+    b1: f32,
+    b2: f32,
+    a1: f32,
+    a2: f32,
+    x1: f32,
+    x2: f32,
+    y1: f32,
+    y2: f32,
+}
+
+impl Default for HighPass80 {
+    fn default() -> Self {
+        Self::new()
     }
+}
+
+impl HighPass80 {
+    pub fn new() -> Self {
+        // 係數由雙線性轉換算出（fc = 80 Hz, fs = 16 kHz, Q = 1/√2）。
+        let fs = 16_000.0_f32;
+        let fc = 80.0_f32;
+        let w0 = 2.0 * std::f32::consts::PI * fc / fs;
+        let alpha = w0.sin() / (2.0 * std::f32::consts::FRAC_1_SQRT_2);
+        let cosw = w0.cos();
+        let a0 = 1.0 + alpha;
+        let b0 = (1.0 + cosw) / 2.0 / a0;
+        Self {
+            b0,
+            b1: -(1.0 + cosw) / a0,
+            b2: b0,
+            a1: -2.0 * cosw / a0,
+            a2: (1.0 - alpha) / a0,
+            x1: 0.0,
+            x2: 0.0,
+            y1: 0.0,
+            y2: 0.0,
+        }
+    }
+
+    /// 原地處理。
+    pub fn process(&mut self, pcm: &mut [f32]) {
+        for s in pcm.iter_mut() {
+            let x0 = *s;
+            let y0 = self.b0 * x0 + self.b1 * self.x1 + self.b2 * self.x2
+                - self.a1 * self.y1
+                - self.a2 * self.y2;
+            self.x2 = self.x1;
+            self.x1 = x0;
+            self.y2 = self.y1;
+            self.y1 = y0;
+            *s = y0;
+        }
+    }
+}
+
+/// 80 Hz 二階 Butterworth 高通（16 kHz）。原地處理一整段。
+pub fn high_pass_80hz(pcm: &mut [f32]) {
+    HighPass80::new().process(pcm);
+}
+
+// ───────────────────────── 慢速 AGC ─────────────────────────
+
+/// 說話時的目標電平（RMS ≈ -26 dBFS）。
+const AGC_TARGET_RMS: f32 = 0.05;
+/// 最多放大 +18 dB：遠處講者拉得起來，但不會把安靜房間的嘶聲拉成主角。
+const AGC_MAX_GAIN: f32 = 7.94;
+/// 最多衰減 -6 dB。
+const AGC_MIN_GAIN: f32 = 0.5;
+/// 每個 20 ms 音框往目標靠近的比例。增益**上升**慢（約 3 秒），
+/// **下降**快（約 0.5 秒）—— 突然變大聲時要先避免削波。
+const AGC_RISE: f32 = 0.0067;
+const AGC_FALL: f32 = 0.04;
+const AGC_FRAME: usize = 320;
+
+/// 慢速自動增益（只給**辨識**用，不改寫存檔的音訊）。
+///
+/// # 為什麼要慢、為什麼只在說話時調
+///
+/// 快速 AGC 會在每個停頓把增益拉滿，背景噪音跟著被放大 —— 辨識模型聽到的
+/// 是「一陣一陣變大聲的冷氣」。這裡只有在 [`AdaptiveVad`] 判定為語音的音框
+/// 才更新增益，靜音時維持原值；而且上升時間是秒級，只追「講者整體離得遠」
+/// 這種慢變化，不追字與字之間的起伏。
+#[derive(Debug)]
+pub struct SlowAgc {
+    gain: f32,
+    vad: AdaptiveVad,
+    frame: Vec<f32>,
+}
+
+impl Default for SlowAgc {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl SlowAgc {
+    pub fn new() -> Self {
+        Self {
+            gain: 1.0,
+            vad: AdaptiveVad::new(),
+            frame: Vec::with_capacity(AGC_FRAME),
+        }
+    }
+
+    /// 目前的增益（線性）。測試與診斷用。
+    pub fn gain(&self) -> f32 {
+        self.gain
+    }
+
+    /// 原地處理。增益在每個 20 ms 音框結束時更新，套用到下一段取樣。
+    pub fn process(&mut self, pcm: &mut [f32]) {
+        for s in pcm.iter_mut() {
+            self.frame.push(*s);
+            if self.frame.len() == AGC_FRAME {
+                self.update_gain();
+                self.frame.clear();
+            }
+            // 套用增益後硬限幅：增益只會慢慢變，所以這裡幾乎不會真的動到。
+            *s = (*s * self.gain).clamp(-0.99, 0.99);
+        }
+    }
+
+    fn update_gain(&mut self) {
+        if !self.vad.is_speech(&self.frame) {
+            return;
+        }
+        let rms = (self.frame.iter().map(|x| x * x).sum::<f32>() / AGC_FRAME as f32).sqrt();
+        if rms <= 1e-6 {
+            return;
+        }
+        let desired = (AGC_TARGET_RMS / rms).clamp(AGC_MIN_GAIN, AGC_MAX_GAIN);
+        let rate = if desired < self.gain {
+            AGC_FALL
+        } else {
+            AGC_RISE
+        };
+        // 在對數域移動，放大與衰減對稱。
+        let next = self.gain.ln() + (desired.ln() - self.gain.ln()) * rate;
+        self.gain = next.exp().clamp(AGC_MIN_GAIN, AGC_MAX_GAIN);
+        // 削波保護：套用新增益後這個音框的峰值會超過上限，就立刻降下來。
+        let peak = self.frame.iter().fold(0.0_f32, |m, x| m.max(x.abs()));
+        if peak * self.gain > 0.95 {
+            self.gain = (0.95 / peak).max(AGC_MIN_GAIN);
+        }
+    }
+}
+
+// ───────────────────────── 事後轉錄：VAD 切段 ─────────────────────────
+
+/// 切段用的音框（20 ms）。
+const SEG_FRAME: usize = 320;
+/// 每段前後各多留的音框數（240 ms）：避免第一個字的子音、最後一個字的尾音被切掉。
+const SEG_PAD_FRAMES: usize = 12;
+/// 兩段之間的靜音短於這個（800 ms）就合併 —— 同一句話裡的換氣不該被切開。
+const SEG_MERGE_GAP_FRAMES: usize = 40;
+/// 真正有聲的音框少於這個（200 ms）的段落丟掉：多半是敲桌、咳嗽。
+const SEG_MIN_VOICED_FRAMES: usize = 10;
+/// 一段的長度上限（28 秒）。Whisper 的注意力窗是 30 秒，超過就會在中間被硬切。
+const SEG_MAX_FRAMES: usize = 1_400;
+/// 太長要切時，在最後這麼多音框（6 秒）裡找最安靜的地方下刀。
+const SEG_SPLIT_SEARCH_FRAMES: usize = 300;
+/// 絕對下限（≈ -56 dBFS）：低於這個的一律當成靜音。
+const SEG_ABS_MIN_RMS: f32 = 0.0015;
+
+/// 找出一段（已錄完的）音訊裡有人聲的區間，以取樣索引表示。
+///
+/// # 為什麼不直接用串流的 [`AdaptiveVad`]
+///
+/// 事後轉錄手上已經有整段音訊，可以先看完再決定門檻：噪音底線取整段音框
+/// 響度的**第 3 百分位**（排除數位靜音），門檻定在底線之上約 +9.5 dB。串流版本
+/// 開頭要花幾秒學習底線，短片段（即時轉錄送來的 5 秒段落）會吃虧。
+///
+/// 取這麼低的百分位是因為即時轉錄送來的段落**幾乎整段都是說話**：取第 10
+/// 百分位的話底線會落在語音上，整段被判成「沒有人聲」（測試實際踩到過）。
+/// 連續講話裡字與字的間隙通常仍超過 3%；平穩的冷氣聲則每個音框都差不多大，
+/// 第 3 百分位就是它自己，門檻自然在它之上。
+///
+/// 回傳空陣列代表**整段沒有人聲** —— 呼叫端不該把它送進 Whisper，那正是
+/// 「謝謝收看」這類幻聽的來源。
+pub fn speech_spans(pcm: &[f32]) -> Vec<std::ops::Range<usize>> {
+    let rms: Vec<f32> = pcm
+        .chunks(SEG_FRAME)
+        .map(|f| (f.iter().map(|s| s * s).sum::<f32>() / f.len().max(1) as f32).sqrt())
+        .collect();
+    if rms.is_empty() {
+        return Vec::new();
+    }
+    let mut sorted: Vec<f32> = rms.iter().copied().filter(|&r| r > 1e-5).collect();
+    if sorted.is_empty() {
+        return Vec::new(); // 整段都是數位靜音
+    }
+    sorted.sort_by(|a, b| a.total_cmp(b));
+    let floor = sorted[(sorted.len() - 1) * 3 / 100];
+    let threshold = (floor * MARGIN).max(SEG_ABS_MIN_RMS);
+    let voiced: Vec<bool> = rms.iter().map(|&r| r > threshold).collect();
+
+    // 1. 連續有聲的音框 → 區間（音框索引），間隔短的合併。
+    let mut runs: Vec<(usize, usize, usize)> = Vec::new(); // (start, end, voiced_count)
+    let mut i = 0;
+    while i < voiced.len() {
+        if !voiced[i] {
+            i += 1;
+            continue;
+        }
+        let start = i;
+        while i < voiced.len() && voiced[i] {
+            i += 1;
+        }
+        let count = i - start;
+        match runs.last_mut() {
+            Some(last) if start - last.1 <= SEG_MERGE_GAP_FRAMES => {
+                last.1 = i;
+                last.2 += count;
+            }
+            _ => runs.push((start, i, count)),
+        }
+    }
+
+    // 2. 去掉太短的、前後加邊、太長的在安靜處切開。
+    let total = rms.len();
+    let mut out: Vec<std::ops::Range<usize>> = Vec::new();
+    for (start, end, count) in runs {
+        if count < SEG_MIN_VOICED_FRAMES {
+            continue;
+        }
+        let mut s = start.saturating_sub(SEG_PAD_FRAMES);
+        let e = (end + SEG_PAD_FRAMES).min(total);
+        // 加邊之後可能與前一段重疊：直接併進去。
+        if let Some(last) = out.last_mut()
+            && s <= last.end
+        {
+            s = last.start;
+            out.pop();
+        }
+        while e - s > SEG_MAX_FRAMES {
+            let lo = s + SEG_MAX_FRAMES - SEG_SPLIT_SEARCH_FRAMES;
+            let hi = s + SEG_MAX_FRAMES;
+            let cut = (lo..hi)
+                .min_by(|&a, &b| rms[a].total_cmp(&rms[b]))
+                .unwrap_or(hi);
+            out.push(s..cut);
+            s = cut;
+        }
+        out.push(s..e);
+    }
+
+    out.into_iter()
+        .map(|r| (r.start * SEG_FRAME)..(r.end * SEG_FRAME).min(pcm.len()))
+        .filter(|r| !r.is_empty())
+        .collect()
+}
+
+/// 事後轉錄前要做哪些前處理。
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct PrepOptions {
+    /// 80 Hz 高通（去冷氣、桌面震動的隆隆聲）。
+    pub high_pass: bool,
+    /// 慢速 AGC（遠處講者）。
+    pub agc: bool,
+    /// 用 VAD 切出有人聲的段落，只把那些送進引擎。
+    pub vad_segment: bool,
+}
+
+impl Default for PrepOptions {
+    /// 預設：高通、AGC、VAD 切段全開。三者都是純 DSP、不會產生「模型幻覺」。
+    /// 降噪（RNNoise）**不在這裡**：它可能讓辨識變差，只作為重新轉錄的選項。
+    fn default() -> Self {
+        Self {
+            high_pass: true,
+            agc: true,
+            vad_segment: true,
+        }
+    }
+}
+
+impl PrepOptions {
+    /// 全關 —— 與舊行為相同（整段原樣送進去），A/B 的對照組。
+    pub fn raw() -> Self {
+        Self {
+            high_pass: false,
+            agc: false,
+            vad_segment: false,
+        }
+    }
+}
+
+/// 套用 [`PrepOptions`] 的訊號處理部分（高通、AGC），回傳處理後的副本。
+pub fn condition(pcm: &[f32], opts: PrepOptions) -> Vec<f32> {
+    let mut out = pcm.to_vec();
+    if opts.high_pass {
+        high_pass_80hz(&mut out);
+    }
+    if opts.agc {
+        SlowAgc::new().process(&mut out);
+    }
+    out
+}
+
+/// 事後轉錄：前處理 → VAD 切段 → 逐段送進引擎 → 時間戳換回整段的時間軸。
+///
+/// 每一段都是 `feed` 之後立刻 `finish`，所以引擎看到的永遠是一句完整的話，
+/// 不會被它自己的區塊長度從中間切開；整段沒有人聲時**一個字也不送**。
+///
+/// `pcm` 必須是 16 kHz 單聲道。
+#[allow(clippy::single_range_in_vec_init)]
+pub fn transcribe_segmented<E: crate::AsrEngine + ?Sized>(
+    engine: &mut E,
+    pcm: &[f32],
+    opts: PrepOptions,
+) -> Result<Vec<crate::AsrSegment>, crate::AsrError> {
+    let mut audio = pcm.to_vec();
+    if opts.high_pass {
+        high_pass_80hz(&mut audio);
+    }
+    // 在高通之後、AGC 之前判斷：AGC 會改變相對電平，門檻該看原本的訊噪比。
+    let spans = if opts.vad_segment {
+        speech_spans(&audio)
+    } else {
+        vec![0..audio.len()]
+    };
+    if opts.agc {
+        SlowAgc::new().process(&mut audio);
+    }
+
+    let us = |samples: usize| samples as u64 * 1_000_000 / 16_000;
+    let mut out = Vec::new();
+    // 引擎回傳的時間戳是「相對它被餵過的所有取樣」，記下每段開始前已經餵了多少。
+    let mut fed = 0usize;
+    for span in spans {
+        let slice = &audio[span.clone()];
+        let mut segs = engine.feed(slice)?;
+        segs.extend(engine.finish()?);
+        let fed_us = us(fed);
+        let span_us = us(span.start);
+        for mut s in segs {
+            s.start_us = s.start_us.saturating_sub(fed_us) + span_us;
+            s.end_us = s.end_us.saturating_sub(fed_us) + span_us;
+            out.push(s);
+        }
+        fed += slice.len();
+    }
+    Ok(out)
 }
 
 #[cfg(test)]
@@ -429,5 +752,188 @@ mod tests {
         high_pass_80hz(&mut mid);
         assert!(rms(&low) < 0.2, "30 Hz 隆隆聲沒有被壓掉：{}", rms(&low));
         assert!(rms(&mid) > 0.69, "1 kHz 人聲頻段被削弱了：{}", rms(&mid));
+    }
+
+    #[test]
+    fn streaming_high_pass_matches_one_shot() {
+        let mut rng = Lcg(6);
+        let pcm = voice(&mut rng, 16_000, 0.3);
+        let mut whole = pcm.clone();
+        high_pass_80hz(&mut whole);
+        let mut hp = HighPass80::new();
+        let mut chunked = pcm.clone();
+        for c in chunked.chunks_mut(777) {
+            hp.process(c);
+        }
+        assert_eq!(whole, chunked, "分塊處理在邊界產生了差異");
+    }
+
+    #[test]
+    fn slow_agc_lifts_distant_speech_but_not_silence() {
+        let mut rng = Lcg(7);
+        // 遠處講者：RMS ≈ 0.007（-43 dBFS）
+        let mut far = Vec::new();
+        for _ in 0..10 {
+            far.extend(noise(&mut rng, 8_000, 0.001));
+            far.extend(voice(&mut rng, 24_000, 0.01));
+        }
+        let mut agc = SlowAgc::new();
+        agc.process(&mut far);
+        assert!(agc.gain() > 3.0, "遠處講者沒有被拉起來：{}", agc.gain());
+        assert!(agc.gain() <= AGC_MAX_GAIN);
+
+        // 只有安靜的底噪：增益不動（不會把嘶聲拉成主角）。
+        let mut hiss = noise(&mut rng, 16_000 * 10, 0.001);
+        let mut agc = SlowAgc::new();
+        agc.process(&mut hiss);
+        assert!(
+            (agc.gain() - 1.0).abs() < 1e-3,
+            "靜音時增益被改了：{}",
+            agc.gain()
+        );
+    }
+
+    #[test]
+    fn slow_agc_never_clips_loud_speech() {
+        let mut rng = Lcg(8);
+        let mut pcm = Vec::new();
+        for _ in 0..5 {
+            pcm.extend(voice(&mut rng, 32_000, 0.01));
+            pcm.extend(voice(&mut rng, 16_000, 0.9)); // 突然很大聲
+        }
+        let mut agc = SlowAgc::new();
+        agc.process(&mut pcm);
+        let peak = pcm.iter().fold(0.0_f32, |m, x| m.max(x.abs()));
+        assert!(peak <= 0.99);
+    }
+
+    /// 假引擎：記下被餵了什麼；每次 `finish` 回傳一段涵蓋這次餵入的文字，
+    /// 時間戳依 `AsrEngine` 的約定是「相對所有已餵入的取樣」。
+    #[derive(Debug, Default)]
+    struct FakeEngine {
+        pending: usize,
+        total: usize,
+        calls: Vec<usize>,
+    }
+
+    impl crate::AsrEngine for FakeEngine {
+        fn feed(&mut self, pcm: &[f32]) -> Result<Vec<crate::AsrSegment>, crate::AsrError> {
+            self.pending += pcm.len();
+            Ok(Vec::new())
+        }
+        fn finish(&mut self) -> Result<Vec<crate::AsrSegment>, crate::AsrError> {
+            if self.pending == 0 {
+                return Ok(Vec::new());
+            }
+            let start = self.total;
+            self.total += self.pending;
+            self.calls.push(self.pending);
+            self.pending = 0;
+            let us = |s: usize| s as u64 * 1_000_000 / 16_000;
+            Ok(vec![crate::AsrSegment {
+                text: format!("seg{}", self.calls.len()),
+                start_us: us(start),
+                end_us: us(self.total),
+                confidence: 1.0,
+                is_final: true,
+            }])
+        }
+        fn languages(&self) -> &[&str] {
+            &["zh"]
+        }
+    }
+
+    #[test]
+    fn silence_or_steady_hum_is_never_sent_to_the_engine() {
+        let mut rng = Lcg(9);
+        for pcm in [
+            vec![0.0_f32; 16_000 * 20],
+            noise(&mut rng, 16_000 * 20, 0.0005),
+            noise(&mut rng, 16_000 * 20, 0.1), // 很大聲但平穩的冷氣
+        ] {
+            let mut engine = FakeEngine::default();
+            let out = transcribe_segmented(&mut engine, &pcm, PrepOptions::default()).unwrap();
+            assert!(out.is_empty(), "沒有人聲卻產生了文字：{out:?}");
+            assert!(
+                engine.calls.is_empty(),
+                "沒有人聲卻送進了引擎：{:?}",
+                engine.calls
+            );
+        }
+    }
+
+    #[test]
+    fn speech_islands_are_sent_separately_with_original_timestamps() {
+        let mut rng = Lcg(10);
+        let mut pcm = Vec::new();
+        pcm.extend(noise(&mut rng, 16_000 * 5, 0.003)); // 0–5 s 靜音
+        pcm.extend(voice(&mut rng, 16_000 * 3, 0.3)); //   5–8 s 說話
+        pcm.extend(noise(&mut rng, 16_000 * 10, 0.003)); // 8–18 s 靜音
+        pcm.extend(voice(&mut rng, 16_000 * 2, 0.3)); //   18–20 s 說話
+        pcm.extend(noise(&mut rng, 16_000 * 4, 0.003));
+
+        let mut engine = FakeEngine::default();
+        let out = transcribe_segmented(&mut engine, &pcm, PrepOptions::default()).unwrap();
+        assert_eq!(out.len(), 2, "{out:?}");
+        // 送進引擎的總長遠小於整段（靜音沒有送）。
+        let sent: usize = engine.calls.iter().sum();
+        assert!(sent < 16_000 * 7, "送了太多靜音：{sent}");
+        // 時間戳換回整段的時間軸（容許前後加邊 240 ms 與音框對齊）。
+        let near = |us: u64, s: f32| (us as f32 / 1e6 - s).abs() < 0.35;
+        assert!(near(out[0].start_us, 5.0), "{:?}", out[0]);
+        assert!(near(out[0].end_us, 8.0), "{:?}", out[0]);
+        assert!(near(out[1].start_us, 18.0), "{:?}", out[1]);
+        assert!(near(out[1].end_us, 20.0), "{:?}", out[1]);
+    }
+
+    #[test]
+    fn long_speech_is_split_below_the_whisper_window() {
+        let mut rng = Lcg(11);
+        let mut pcm = Vec::new();
+        // 70 秒連續講話，每 4 秒有 300 ms 換氣（比合併門檻短，不會自然斷開）。
+        for _ in 0..17 {
+            pcm.extend(voice(&mut rng, 16_000 * 4 - 4_800, 0.3));
+            pcm.extend(noise(&mut rng, 4_800, 0.003));
+        }
+        let spans = speech_spans(&pcm);
+        assert!(spans.len() >= 3, "{spans:?}");
+        for s in &spans {
+            assert!(s.len() <= SEG_MAX_FRAMES * SEG_FRAME, "超過 28 秒：{s:?}");
+        }
+        let covered: usize = spans.iter().map(|s| s.len()).sum();
+        assert!(covered as f32 > pcm.len() as f32 * 0.95, "切段漏掉了說話");
+    }
+
+    #[test]
+    fn a_live_segment_that_is_all_speech_is_kept() {
+        // 即時轉錄送來的 5 秒段落常常整段都在講話、沒有任何停頓。
+        // 真實語音有音節起伏（約 4 Hz）；用包絡模擬。
+        let mut rng = Lcg(13);
+        let pcm: Vec<f32> = (0..16_000 * 5)
+            .map(|i| {
+                let t = i as f32 / 16_000.0;
+                let env = 0.15 + 0.85 * (t * 4.0 * std::f32::consts::PI).sin().abs();
+                ((t * 220.0 * 2.0 * std::f32::consts::PI).sin() * 0.9 + rng.next() * 0.1)
+                    * 0.3
+                    * env
+            })
+            .collect();
+        let spans = speech_spans(&pcm);
+        let covered: usize = spans.iter().map(|s| s.len()).sum();
+        assert!(
+            covered as f32 > pcm.len() as f32 * 0.9,
+            "整段說話被丟掉了：{spans:?}"
+        );
+    }
+
+    #[test]
+    fn raw_options_send_the_whole_clip_once() {
+        let mut rng = Lcg(12);
+        let pcm = noise(&mut rng, 16_000 * 3, 0.0005);
+        let mut engine = FakeEngine::default();
+        let out = transcribe_segmented(&mut engine, &pcm, PrepOptions::raw()).unwrap();
+        assert_eq!(engine.calls, vec![pcm.len()]);
+        assert_eq!(out.len(), 1);
+        assert_eq!(out[0].start_us, 0);
     }
 }

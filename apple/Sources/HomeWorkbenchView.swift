@@ -3201,6 +3201,20 @@ struct QuickAudioRecorderModal: View {
                         }
                     }
                     .padding(.horizontal, 32)
+
+                    if audioManager.canShowMicrophoneModes {
+                        Button {
+                            audioManager.showMicrophoneModes()
+                        } label: {
+                            HStack(spacing: 6) {
+                                Image(systemName: "waveform.and.mic")
+                                Text(localizationManager.localized("recording_mic_mode"))
+                                    .font(.footnote)
+                            }
+                            .foregroundColor(.secondary)
+                        }
+                        .padding(.top, 4)
+                    }
                 } else {
                     Button {
                         Task { await startQuickRecording() }
