@@ -1200,6 +1200,91 @@ impl NotebookSession {
         Ok(materialize(&self.package.read_ink(page)?))
     }
 
+    /// 在指定頁面的垂直座標 `at_y` 插入空白（Insert Space Tool / Push Space）。
+    ///
+    /// 所有落在 `at_y` 及其下方的筆畫與文字/圖片區塊將整體向下平移 `amount_y`。
+    /// 若推擠後內容超越目前頁面高度，會自動調大該頁的高度以容納新增的垂直留白。
+    pub fn insert_vertical_space(
+        &mut self,
+        page: Uuid,
+        at_y: f32,
+        amount_y: f32,
+    ) -> Result<u32, AppError> {
+        if self.notebook.page(page).is_none() {
+            return Err(AppError::PageNotFound(page));
+        }
+        if amount_y.abs() <= 1e-4 {
+            return Ok(0);
+        }
+
+        let mut shifted_count = 0u32;
+
+        // 1. 處理手寫筆畫（Strokes）
+        let strokes = self.visible_strokes(page)?;
+        let mut new_records = Vec::with_capacity(strokes.len());
+        for mut stroke in strokes {
+            // 判斷筆畫是否有任一點或中心落在 at_y 之下
+            let min_y = stroke
+                .points
+                .iter()
+                .map(|p| p.y)
+                .fold(f32::INFINITY, f32::min);
+            if min_y >= at_y {
+                for pt in &mut stroke.points {
+                    pt.y += amount_y;
+                }
+                shifted_count += 1;
+            }
+            new_records.push(InkRecord::Add(stroke));
+        }
+        self.package.rewrite_ink_page(page, &new_records)?;
+
+        // 2. 處理頁面上定位區塊（文字方塊、圖片等）
+        let blocks_to_shift: Vec<(Uuid, f32, f32)> = self
+            .notebook
+            .page(page)
+            .map(|p| {
+                p.blocks()
+                    .iter()
+                    .filter_map(|b| {
+                        b.position
+                            .filter(|&(_, y)| y >= at_y)
+                            .map(|(x, y)| (b.id, x, y))
+                    })
+                    .collect()
+            })
+            .unwrap_or_default();
+
+        let mut ops = Vec::new();
+        for (id, x, y) in blocks_to_shift {
+            ops.push(DocOp::SetBlockPosition {
+                id,
+                x,
+                y: y + amount_y,
+            });
+            shifted_count += 1;
+        }
+
+        // 3. 檢查頁面高度是否需要自動擴展
+        if let Some(p) = self.notebook.page(page) {
+            let (pw, ph) = p.size;
+            let needed_height = at_y + amount_y + 100.0;
+            if needed_height > ph {
+                ops.push(DocOp::SetPageSize {
+                    id: page,
+                    width: pw,
+                    height: needed_height.max(ph + amount_y),
+                });
+            }
+        }
+
+        if !ops.is_empty() {
+            self.record(ops)?;
+        }
+
+        Ok(shifted_count)
+    }
+
     // ---- 文字 ----
 
     /// 建立文字區塊。內容透過 CRDT 操作寫入，因此一開始就是可協同編輯的。

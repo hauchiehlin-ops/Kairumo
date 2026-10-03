@@ -532,6 +532,43 @@ impl NotebookPackage {
         Ok(())
     }
 
+    /// 重寫某一頁的完整筆畫（用於整體垂直空白推開、幾何形狀變換或頁面筆跡整理）。
+    ///
+    /// 透過先寫入暫存檔再原子替換本裝置筆畫檔，並安全清理該頁其餘舊檔案。
+    pub fn rewrite_ink_page(&self, page: Uuid, records: &[InkRecord]) -> Result<(), StorageError> {
+        let dir = self.root.join("ink");
+        fs::create_dir_all(&dir)?;
+
+        let mut writer = StrokeWriter::new(page);
+        for r in records {
+            writer.push(r);
+        }
+        let bytes = writer.into_bytes();
+
+        let target_path = self.ink_write_path(page);
+        crate::atomic::write_atomic(&target_path, &bytes)?;
+
+        // 移除其他舊有的該頁 strokes 檔（避免重疊），但保留剛寫入的 target_path
+        let prefix = format!("{page}");
+        if let Ok(entries) = fs::read_dir(&dir) {
+            for entry in entries.flatten() {
+                let p = entry.path();
+                if p == target_path {
+                    continue;
+                }
+                let name = entry.file_name().to_string_lossy().into_owned();
+                if (name == format!("{prefix}.strokes")
+                    || (name.starts_with(&prefix) && name.ends_with(".strokes")))
+                    && !crate::atomic::is_temp_name(&name)
+                {
+                    let _ = fs::remove_file(&p);
+                }
+            }
+        }
+
+        Ok(())
+    }
+
     /// 這一頁的全部筆畫記錄 —— **所有裝置的檔案串起來**。
     ///
     /// 串接的順序不影響結果：`materialize` 會先收齊墓碑再過濾，

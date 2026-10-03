@@ -246,6 +246,67 @@ pub fn apply_taper(points: &mut [InkPoint], taper_ratio: f32) {
     }
 }
 
+/// 墨水表面張力調製（Ink Tension Modulation）：
+///
+/// 根據行進速度（速度快收縮、速度慢飽滿）與局部曲率（急轉折蓄墨膨脹），
+/// 對每個取樣點的壓感進行平滑調製，重現頂級鋼筆／書法筆自然優美的水墨張力手感。
+///
+/// `amount`: 0.0 ~ 1.0 調製深度（建議 0.25~0.50）。
+pub fn apply_ink_tension(points: &mut [InkPoint], amount: f32) {
+    let n = points.len();
+    if n < 3 || amount <= 1e-4 {
+        return;
+    }
+
+    let amt = amount.clamp(0.0, 1.0);
+
+    // 計算每段局部速度 (px/ms)
+    let mut speeds = vec![1.0f32; n];
+    for i in 1..n {
+        let dx = points[i].x - points[i - 1].x;
+        let dy = points[i].y - points[i - 1].y;
+        let dist = (dx * dx + dy * dy).sqrt();
+        let dt_ms = (points[i].dt_us as f32 / 1000.0).max(1.0);
+        speeds[i] = (dist / dt_ms).clamp(0.05, 5.0);
+    }
+    speeds[0] = speeds[1];
+
+    // 計算相鄰線段夾角的曲率 (0.0 直線 ~ 1.0 銳角急轉)
+    let mut curvatures = vec![0.0f32; n];
+    for i in 1..n - 1 {
+        let v1x = points[i].x - points[i - 1].x;
+        let v1y = points[i].y - points[i - 1].y;
+        let v2x = points[i + 1].x - points[i].x;
+        let v2y = points[i + 1].y - points[i].y;
+        let len1 = (v1x * v1x + v1y * v1y).sqrt();
+        let len2 = (v2x * v2x + v2y * v2y).sqrt();
+        if len1 > 0.1 && len2 > 0.1 {
+            let dot = (v1x * v2x + v1y * v2y) / (len1 * len2);
+            // dot 在 -1.0(反向) 到 1.0(同向) 之間；曲率由 0.0(同向) 到 1.0(轉向)
+            let cos_clamped = dot.clamp(-1.0, 1.0);
+            curvatures[i] = ((1.0 - cos_clamped) * 0.5).clamp(0.0, 1.0);
+        }
+    }
+
+    for i in 0..n {
+        let spd = speeds[i];
+        let curv = curvatures[i];
+
+        // 速度因子：慢速 +15%，快速 -20%
+        let spd_factor = if spd < 0.8 {
+            1.0 + (0.8 - spd) * 0.18
+        } else {
+            (1.0 - (spd - 0.8) * 0.08).max(0.75)
+        };
+
+        // 曲率因子：轉角蓄墨 +20%
+        let curv_factor = 1.0 + curv * 0.20;
+
+        let combined_factor = 1.0 + (spd_factor * curv_factor - 1.0) * amt;
+        points[i].pressure = (points[i].pressure * combined_factor).clamp(0.01, 1.0);
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -322,5 +383,31 @@ mod tests {
         assert!(last.pressure < 0.2, "Tail pressure was: {}", last.pressure);
         // 前部壓感不受影響
         assert_eq!(pts[0].pressure, 0.8);
+    }
+
+    #[test]
+    fn apply_ink_tension_modulates_velocity_and_curvature() {
+        let mut pts = vec![
+            InkPoint::new(0.0, 0.0, 0.5, 0),
+            // 快速直線區間 (dt=2ms, dist=20 -> speed=10px/ms)
+            InkPoint::new(20.0, 0.0, 0.5, 2_000),
+            // 慢速且 90 度轉折區間 (dt=40ms, dist=5 -> speed=0.125px/ms, 轉向 (20, 5))
+            InkPoint::new(20.0, 5.0, 0.5, 42_000),
+        ];
+
+        apply_ink_tension(&mut pts, 0.5);
+
+        // 快速直線點應收縮（小於 0.5）
+        assert!(
+            pts[1].pressure < 0.5,
+            "Fast segment should thin down: {}",
+            pts[1].pressure
+        );
+        // 慢速轉折點應蓄墨加粗（大於 0.5）
+        assert!(
+            pts[2].pressure > 0.5,
+            "Slow turn segment should bloom: {}",
+            pts[2].pressure
+        );
     }
 }

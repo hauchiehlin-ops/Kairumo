@@ -89,6 +89,43 @@ pub fn half_width(tool: Tool, base_width: f32, pressure: f32) -> f32 {
     base_width * 0.5 * scale
 }
 
+/// 依筆刷、壓感、行進速度與曲率計算動態半寬（Ink Tension Model / 速度曲率動態筆寬調製）。
+///
+/// 頂級數位筆記（Goodnotes / Notability 鋼筆）與傳統書法墨水張力特性：
+/// - 行進加速時（快寫）：墨水表面張力拉伸，筆畫收斂微細（約 0.70x ~ 0.90x）。
+/// - 減速或急轉折時（頓筆、轉折）：墨水在轉折處蓄積，筆畫圓潤飽滿（約 1.05x ~ 1.25x）。
+///
+/// `speed_px_per_ms`: 頁面座標距離 / 毫秒。
+/// `curvature`: 轉角曲率（0.0 ~ 1.0，1.0 代表 90° 以上劇烈急轉）。
+pub fn half_width_dynamic(
+    tool: Tool,
+    base_width: f32,
+    pressure: f32,
+    speed_px_per_ms: f32,
+    curvature: f32,
+) -> f32 {
+    let base_hw = half_width(tool, base_width, pressure);
+    if !tool.is_pressure_sensitive() {
+        return base_hw;
+    }
+
+    // 速度調製因子：基準速度約 0.8~1.2 px/ms。
+    // 快速飛白時收縮至 0.75x；慢速停頓時微擴至 1.10x。
+    let speed_clamped = speed_px_per_ms.clamp(0.05, 5.0);
+    let speed_factor = if speed_clamped < 0.8 {
+        // 慢速：1.0 -> 1.10
+        1.0 + (0.8 - speed_clamped) * 0.125
+    } else {
+        // 快速：1.0 -> 0.75
+        (1.0 - (speed_clamped - 0.8) * 0.06).max(0.75)
+    };
+
+    // 曲率調製因子：急轉折（頓筆蓄墨）加粗至 1.15x。
+    let curv_factor = 1.0 + curvature.clamp(0.0, 1.0) * 0.15;
+
+    base_hw * speed_factor * curv_factor
+}
+
 /// Catmull-Rom 樣條插值。`t` 在 0..=1 之間，回傳 `p1` 與 `p2` 之間的點。
 pub fn catmull_rom(
     p0: (f32, f32),
@@ -465,6 +502,26 @@ mod tests {
             half_width(Tool::FountainPen, 4.0, -3.0),
             half_width(Tool::FountainPen, 4.0, 0.0)
         );
+    }
+
+    #[test]
+    fn dynamic_half_width_modulates_by_speed_and_curvature() {
+        // 固定筆刷如原子筆不調製
+        let bp_base = half_width(Tool::BallPoint, 4.0, 0.5);
+        assert_eq!(
+            half_width_dynamic(Tool::BallPoint, 4.0, 0.5, 4.0, 0.9),
+            bp_base
+        );
+
+        // 鋼筆在慢速（蓄墨）且轉折處應明顯粗於快寫
+        let fp_slow_turn = half_width_dynamic(Tool::FountainPen, 4.0, 0.5, 0.2, 0.8);
+        let fp_fast_straight = half_width_dynamic(Tool::FountainPen, 4.0, 0.5, 3.5, 0.0);
+        assert!(
+            fp_slow_turn > fp_fast_straight,
+            "慢速轉彎應粗於快速直寫：slow={fp_slow_turn}, fast={fp_fast_straight}"
+        );
+        assert!(fp_slow_turn > half_width(Tool::FountainPen, 4.0, 0.5));
+        assert!(fp_fast_straight < half_width(Tool::FountainPen, 4.0, 0.5));
     }
 
     // ---- 平滑 ----

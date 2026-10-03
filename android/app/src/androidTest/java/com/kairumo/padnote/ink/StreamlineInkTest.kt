@@ -18,7 +18,7 @@ class StreamlineInkTest {
             StrokePoint(x = 40f, y = 0f, pressure = 0.8f, tilt = 0f, azimuth = 0f, dtUs = 40u)
         )
 
-        val smoothed = streamlineSmoothPoints(input, amount = 0.4f, gamma = 1.0f, taper = 0.25f)
+        val smoothed = streamlineSmoothPoints(input, amount = 0.4f, gamma = 1.0f, taper = 0.25f, tension = 0.35f)
         assertEquals(input.size, smoothed.size)
         assertEquals(0f, smoothed.first().x, 0.001f)
         assertEquals(40f, smoothed.last().x, 0.001f)
@@ -29,7 +29,7 @@ class StreamlineInkTest {
 
     @Test
     fun testStreamlineEmptyInputIsSafe() {
-        val empty = streamlineSmoothPoints(emptyList(), amount = 0.5f, gamma = 1.0f, taper = 0.2f)
+        val empty = streamlineSmoothPoints(emptyList(), amount = 0.5f, gamma = 1.0f, taper = 0.2f, tension = 0.3f)
         assertTrue(empty.isEmpty())
     }
 }

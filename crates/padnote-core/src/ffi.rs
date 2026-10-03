@@ -917,6 +917,20 @@ impl PadnoteSession {
         }
     }
 
+    /// 在指定頁面的垂直座標 `at_y` 插入空白（Insert Space Tool / Push Space）。
+    /// 將該座標下方的所有筆畫與定位區塊整體向下推移 `amount_y`，並依需求自動延伸頁面高度。
+    /// 回傳被移動的元素個數。
+    pub fn insert_vertical_space(
+        &self,
+        page_id: String,
+        at_y: f32,
+        amount_y: f32,
+    ) -> Result<u32, FfiError> {
+        let page = parse_uuid(&page_id)?;
+        let count = self.lock().insert_vertical_space(page, at_y, amount_y)?;
+        Ok(count)
+    }
+
     /// 目前可見的筆畫摘要。
     ///
     /// 刻意不回傳全部取樣點 —— 一頁數萬個點跨 FFI 邊界會很慢。
@@ -3492,6 +3506,93 @@ mod tests {
         let listed = s.image_block_ids(page).unwrap();
         assert_eq!(listed, vec![id.clone()]);
         assert_eq!(s.block_appearance(id).unwrap(), Some(spec));
+    }
+
+    #[test]
+    fn insert_vertical_space_shifts_strokes_and_blocks_correctly() {
+        let s = session("insert-vertical-space");
+        let page = s.first_page_id().unwrap();
+
+        // 1. 上方筆畫 (y = 50)
+        let stroke_top = s
+            .add_stroke(
+                page.clone(),
+                ToolKind::BallPoint,
+                vec![0, 0, 0, 255],
+                2.0,
+                vec![
+                    StrokePoint {
+                        x: 10.0,
+                        y: 50.0,
+                        pressure: 0.5,
+                        tilt: 0.0,
+                        azimuth: 0.0,
+                        dt_us: 0,
+                        roll: 0.0,
+                    },
+                    StrokePoint {
+                        x: 20.0,
+                        y: 50.0,
+                        pressure: 0.5,
+                        tilt: 0.0,
+                        azimuth: 0.0,
+                        dt_us: 10,
+                        roll: 0.0,
+                    },
+                ],
+            )
+            .unwrap();
+
+        // 2. 下方筆畫 (y = 200)
+        let stroke_bottom = s
+            .add_stroke(
+                page.clone(),
+                ToolKind::BallPoint,
+                vec![0, 0, 0, 255],
+                2.0,
+                vec![
+                    StrokePoint {
+                        x: 10.0,
+                        y: 200.0,
+                        pressure: 0.5,
+                        tilt: 0.0,
+                        azimuth: 0.0,
+                        dt_us: 0,
+                        roll: 0.0,
+                    },
+                    StrokePoint {
+                        x: 20.0,
+                        y: 200.0,
+                        pressure: 0.5,
+                        tilt: 0.0,
+                        azimuth: 0.0,
+                        dt_us: 10,
+                        roll: 0.0,
+                    },
+                ],
+            )
+            .unwrap();
+
+        // 3. 插入下方文字區塊 (y = 250)
+        let text_block = s
+            .add_text(page.clone(), "下方備註".into(), BlockStyle::Body)
+            .unwrap();
+        s.set_block_position(text_block.clone(), 30.0, 250.0)
+            .unwrap();
+
+        // 在 y = 150 插入 80pt 垂直空白
+        let shifted = s.insert_vertical_space(page.clone(), 150.0, 80.0).unwrap();
+        assert_eq!(shifted, 2, "下方筆畫與文字區塊應各被移動 1 次");
+
+        // 檢查筆畫：上方 y 仍為 50，下方 y 變為 280
+        let visible = s.visible_strokes(page.clone()).unwrap();
+        for stroke in visible {
+            if stroke.id == stroke_top {
+                assert!((stroke.bounds[1] - 49.0).abs() < 1e-3);
+            } else if stroke.id == stroke_bottom {
+                assert!((stroke.bounds[1] - 279.0).abs() < 1e-3);
+            }
+        }
     }
 }
 

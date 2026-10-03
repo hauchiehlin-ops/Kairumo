@@ -68,13 +68,14 @@ fn from_ink(p: InkPoint) -> StrokePoint {
     }
 }
 
-/// 套用即時流線防抖（Streamline）、壓感伽瑪曲線（Gamma）與筆尾動態出鋒（Taper）。
+/// 套用即時流線防抖（Streamline）、壓感伽瑪曲線（Gamma）、筆尾動態出鋒（Taper）與墨水張力（Tension）。
 #[uniffi::export]
 pub fn streamline_smooth_points(
     points: Vec<StrokePoint>,
     amount: f32,
     gamma: f32,
     taper: f32,
+    tension: f32,
 ) -> Vec<StrokePoint> {
     if points.is_empty() {
         return Vec::new();
@@ -86,6 +87,9 @@ pub fn streamline_smooth_points(
         gamma: if gamma > 0.01 { gamma } else { 1.0 },
     };
     let mut smoothed = padnote_ink::apply_streamline(&pts, amount, curve);
+    if tension > 1e-4 {
+        padnote_ink::apply_ink_tension(&mut smoothed, tension);
+    }
     if taper > 1e-4 {
         padnote_ink::apply_taper(&mut smoothed, taper);
     }
@@ -964,7 +968,7 @@ mod tests {
                 roll: 0.0,
             },
         ];
-        let smoothed = streamline_smooth_points(pts.clone(), 0.5, 1.0, 0.25);
+        let smoothed = streamline_smooth_points(pts.clone(), 0.5, 1.0, 0.25, 0.35);
         assert_eq!(smoothed.len(), pts.len());
         // 尾部出鋒使得末點壓感顯著下降
         assert!(smoothed.last().unwrap().pressure < 0.3);

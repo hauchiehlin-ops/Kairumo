@@ -41,6 +41,8 @@ struct ProStroke: Codable, Identifiable, Hashable, Sendable {
     var tool: String
     var colorRGBA: [UInt8]
     var baseWidth: Float
+    /// 混合模式：normal / multiply / screen
+    var blendMode: String = "normal"
     var points: [ProPoint]
 
     /// 內容指紋：同步時分辨「這是不是同一筆」。
@@ -197,12 +199,28 @@ enum ProInkRenderer {
             ctx.saveGState()
             ctx.translateBy(x: CGFloat(dab.x), y: CGFloat(dab.y))
             ctx.rotate(by: CGFloat(dab.angle))
-            if dab.softness > 0.5 {
-                // 柔邊：由外向內疊四層漸縮的橢圓，每層只補一點不透明度。
-                for step in 0 ..< 4 {
-                    let f = 1.0 - CGFloat(step) * 0.22
-                    ctx.setFillColor(red: r, green: g, blue: b, alpha: alpha * 0.34)
-                    ctx.fillEllipse(in: CGRect(x: -rx * f, y: -ry * f, width: rx * f * 2, height: ry * f * 2))
+            if dab.softness > 0.3 {
+                // Stamp 筆刷紋理引擎：高斯漸層柔邊印章（Gaussian Stamp）
+                let colors = [
+                    UIColor(red: r, green: g, blue: b, alpha: alpha).cgColor,
+                    UIColor(red: r, green: g, blue: b, alpha: alpha * 0.55).cgColor,
+                    UIColor(red: r, green: g, blue: b, alpha: 0.0).cgColor,
+                ] as CFArray
+                let locations: [CGFloat] = [0.0, 0.45, 1.0]
+                if let space = CGColorSpace(name: CGColorSpace.sRGB),
+                   let gradient = CGGradient(colorsSpace: space, colors: colors, locations: locations) {
+                    ctx.scaleBy(x: 1.0, y: ry / max(rx, 0.001))
+                    ctx.drawRadialGradient(
+                        gradient,
+                        startCenter: .zero,
+                        startRadius: 0,
+                        endCenter: .zero,
+                        endRadius: rx,
+                        options: .drawsAfterEndLocation
+                    )
+                } else {
+                    ctx.setFillColor(red: r, green: g, blue: b, alpha: alpha)
+                    ctx.fillEllipse(in: CGRect(x: -rx, y: -ry, width: rx * 2, height: ry * 2))
                 }
             } else {
                 ctx.setFillColor(red: r, green: g, blue: b, alpha: alpha)
@@ -289,10 +307,28 @@ final class ProInkLayerView: UIView {
         guard let ctx = UIGraphicsGetCurrentContext() else { return }
         for stroke in allStrokes where stroke.bounds.intersects(rect) {
             guard let cached = cachedDabs(for: stroke) else { continue }
+            ctx.saveGState()
+            if stroke.blendMode == "multiply" {
+                ctx.setBlendMode(.multiply)
+            } else if stroke.blendMode == "screen" {
+                ctx.setBlendMode(.screen)
+            } else {
+                ctx.setBlendMode(.normal)
+            }
             ProInkRenderer.draw(cached, color: stroke.colorRGBA, in: ctx, clip: rect)
+            ctx.restoreGState()
         }
         if let live, let liveCache {
+            ctx.saveGState()
+            if live.blendMode == "multiply" {
+                ctx.setBlendMode(.multiply)
+            } else if live.blendMode == "screen" {
+                ctx.setBlendMode(.screen)
+            } else {
+                ctx.setBlendMode(.normal)
+            }
             ProInkRenderer.draw(liveCache, color: live.colorRGBA, in: ctx, clip: rect)
+            ctx.restoreGState()
         }
     }
 
@@ -326,7 +362,7 @@ final class ProInkLayerView: UIView {
             let pts = stroke.points.map {
                 StrokePoint(x: $0.x, y: $0.y, pressure: $0.pressure, tilt: $0.tilt, azimuth: $0.azimuth, dtUs: $0.dtUs, roll: $0.roll)
             }
-            let smoothed = streamlineSmoothPoints(points: pts, amount: 0.35, gamma: 1.0, taper: 0.20)
+            let smoothed = streamlineSmoothPoints(points: pts, amount: 0.35, gamma: 1.0, taper: 0.20, tension: 0.30)
             stroke.points = smoothed.map {
                 ProPoint(x: $0.x, y: $0.y, pressure: $0.pressure, tilt: $0.tilt, azimuth: $0.azimuth, dtUs: $0.dtUs, roll: $0.roll)
             }

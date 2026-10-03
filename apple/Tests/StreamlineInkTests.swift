@@ -15,7 +15,7 @@ final class StreamlineInkTests: XCTestCase {
             StrokePoint(x: 40, y: 0, pressure: 0.8, tilt: 0, azimuth: 0, dtUs: 40, roll: 0),
         ]
 
-        let smoothed = streamlineSmoothPoints(points: input, amount: 0.4, gamma: 1.0, taper: 0.25)
+        let smoothed = streamlineSmoothPoints(points: input, amount: 0.4, gamma: 1.0, taper: 0.25, tension: 0.35)
         XCTAssertEqual(smoothed.count, input.count, "輸出點數必須與輸入點數嚴格一致")
 
         // 驗證首點與末點座標貼合
@@ -28,11 +28,11 @@ final class StreamlineInkTests: XCTestCase {
     }
 
     func testEmptyOrSinglePointHandledSafely() {
-        let empty = streamlineSmoothPoints(points: [], amount: 0.5, gamma: 1.0, taper: 0.2)
+        let empty = streamlineSmoothPoints(points: [], amount: 0.5, gamma: 1.0, taper: 0.2, tension: 0.3)
         XCTAssertTrue(empty.isEmpty)
 
         let single = [StrokePoint(x: 5, y: 5, pressure: 0.5, tilt: 0, azimuth: 0, dtUs: 0, roll: 0)]
-        let smoothedSingle = streamlineSmoothPoints(points: single, amount: 0.5, gamma: 1.0, taper: 0.2)
+        let smoothedSingle = streamlineSmoothPoints(points: single, amount: 0.5, gamma: 1.0, taper: 0.2, tension: 0.3)
         XCTAssertEqual(smoothedSingle.count, 1)
     }
 

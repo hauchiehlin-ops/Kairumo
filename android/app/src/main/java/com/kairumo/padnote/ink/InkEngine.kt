@@ -343,7 +343,7 @@ class InkEngine(
         }
 
         if (finalPoints.size >= 3) {
-            finalPoints = uniffi.padnote_core.streamlineSmoothPoints(finalPoints, 0.35f, 1.0f, 0.20f)
+            finalPoints = uniffi.padnote_core.streamlineSmoothPoints(finalPoints, 0.35f, 1.0f, 0.20f, 0.30f)
         }
 
         val target = session
