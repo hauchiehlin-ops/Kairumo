@@ -48,6 +48,9 @@ import androidx.compose.ui.unit.sp
 import com.kairumo.padnote.platform.PlatformSelfCheck
 import com.kairumo.padnote.platform.SelfCheckResult
 import com.kairumo.padnote.platform.StartupLogger
+import com.kairumo.padnote.platform.StorageSweeper
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -65,6 +68,12 @@ fun AppDiagnosticsDialog(
     val scope = rememberCoroutineScope()
     var selfCheck by remember { mutableStateOf<List<SelfCheckResult>>(emptyList()) }
     var selfCheckRunning by remember { mutableStateOf(false) }
+    var usage by remember { mutableStateOf<StorageSweeper.Usage?>(null) }
+    var cleaning by remember { mutableStateOf(false) }
+    var cleanedMessage by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(selectedTab) {
+        if (selectedTab == 3) usage = withContext(Dispatchers.IO) { StorageSweeper.usage(context) }
+    }
 
     LaunchedEffect(copiedStartupLogs) {
         if (copiedStartupLogs) {
@@ -107,11 +116,57 @@ fun AppDiagnosticsDialog(
                         modifier = Modifier.testTag("diagnostics.selfcheck.tab"),
                         text = { Text(l("selfcheck_title"), maxLines = 1, fontSize = 12.sp) }
                     )
+                    Tab(
+                        selected = selectedTab == 3,
+                        onClick = { selectedTab = 3 },
+                        modifier = Modifier.testTag("diagnostics.storage.tab"),
+                        text = { Text(l("storage_title"), maxLines = 1, fontSize = 12.sp) }
+                    )
                 }
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                if (selectedTab == 2) {
+                if (selectedTab == 3) {
+                    // 分頁 4：儲存空間（與 Apple 同一組項目與清理規則）
+                    Column(
+                        modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        fun fmt(bytes: Long) = android.text.format.Formatter.formatFileSize(context, bytes)
+                        usage?.let { u ->
+                            listOf(
+                                "storage_library" to u.library, "storage_caches" to u.cache,
+                                "storage_models" to u.models
+                            ).forEach { (key, bytes) ->
+                                Row(modifier = Modifier.fillMaxWidth().testTag("diagnostics.$key")) {
+                                    Text(l(key), style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+                                    Text(fmt(bytes), style = MaterialTheme.typography.bodyMedium, fontFamily = FontFamily.Monospace)
+                                }
+                            }
+                        }
+                        TextButton(
+                            enabled = !cleaning,
+                            modifier = Modifier.testTag("diagnostics.storage.clean"),
+                            onClick = {
+                                cleaning = true
+                                scope.launch {
+                                    val before = usage?.total ?: 0L
+                                    val after = withContext(Dispatchers.IO) {
+                                        StorageSweeper.sweepAtLaunch(context)
+                                        StorageSweeper.usage(context)
+                                    }
+                                    usage = after
+                                    cleanedMessage = l("storage_cleaned")
+                                        .replace("%@", fmt((before - after.total).coerceAtLeast(0)))
+                                    cleaning = false
+                                }
+                            }
+                        ) { Text(l("storage_clean_now")) }
+                        cleanedMessage?.let {
+                            Text(it, style = MaterialTheme.typography.bodySmall, modifier = Modifier.testTag("diagnostics.storage.result"))
+                        }
+                    }
+                } else if (selectedTab == 2) {
                     // 分頁 3：裝置自檢（與 Apple 同一組檢查與報告格式）
                     Column(
                         modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()),

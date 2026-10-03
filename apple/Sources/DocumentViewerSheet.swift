@@ -67,14 +67,17 @@ public enum BundledDocument: String, Identifiable {
 ///    之後放大也不一定會重畫。給一個非零的起始 frame，並在視圖真的有尺寸之後才載入。
 /// 2. **網頁內容行程被系統收掉**（記憶體壓力、App 在背景時），畫面就停在空白。
 ///    `webViewWebContentProcessDidTerminate` 時重新載入。
-/// 3. **載入完了但頁面是空的**（腳本沒跑起來）。載入完成後量一下內文長度，太短就當成失敗：
-///    重試一次，仍然空白就改載公開網頁版，而不是讓使用者看一片白。
+/// 3. **載入完了但頁面是空的**（腳本沒跑起來）。載入完成後量一下內文長度，太短就重載一次。
+///
+/// # 最可能的真因：外部字型
+///
+/// 這兩份 HTML 原本在 `<head>` 裡有一條 `fonts.googleapis.com` 的樣式表連結。樣式表會**擋住畫面的第一次繪製**：
+/// 實機在離線、VPN、或對方網域連不上時，頁面就停在空白直到逾時 —— 模擬器（網路暢通）完全看不出來。
+/// 那條連結已經拿掉（系統字型接手），文件現在完全離線顯示。**不做網路備援**：
+/// 隱私權政策若為了顯示自己而連到第三方，就違反了它自己寫的承諾。
 struct DocumentWebView: UIViewRepresentable {
     let url: URL
-    /// 本機載入失敗時的備援（公開網頁版）。
-    var fallbackURL: URL? = nil
-
-    func makeCoordinator() -> Coordinator { Coordinator(url: url, fallbackURL: fallbackURL) }
+    func makeCoordinator() -> Coordinator { Coordinator(url: url) }
 
     func makeUIView(context: Context) -> WKWebView {
         let config = WKWebViewConfiguration()
@@ -105,15 +108,12 @@ struct DocumentWebView: UIViewRepresentable {
 
     final class Coordinator: NSObject, WKNavigationDelegate {
         let url: URL
-        let fallbackURL: URL?
         weak var webView: WKWebView?
         private(set) var hasStartedLoading = false
         private var retried = false
-        private var usedFallback = false
 
-        init(url: URL, fallbackURL: URL?) {
+        init(url: URL) {
             self.url = url
-            self.fallbackURL = fallbackURL
         }
 
         func loadIfReady(_ webView: WKWebView) {
@@ -162,15 +162,11 @@ struct DocumentWebView: UIViewRepresentable {
             recover(webView)
         }
 
-        /// 先重載一次本機；還是不行就換公開網頁版。
+        /// 重載本機檔案一次（不連網）。
         private func recover(_ webView: WKWebView) {
-            if !retried {
-                retried = true
-                webView.loadFileURL(url, allowingReadAccessTo: url.deletingLastPathComponent())
-            } else if !usedFallback, let fallbackURL {
-                usedFallback = true
-                webView.load(URLRequest(url: fallbackURL))
-            }
+            guard !retried else { return }
+            retried = true
+            webView.loadFileURL(url, allowingReadAccessTo: url.deletingLastPathComponent())
         }
     }
 }
@@ -208,7 +204,7 @@ public struct DocumentWindowContent: View {
     public var body: some View {
         Group {
             if let document, let url = document.url {
-                DocumentWebView(url: url, fallbackURL: document.onlineURL)
+                DocumentWebView(url: url)
             } else {
                 DocumentMissingView()
             }
@@ -250,7 +246,7 @@ public struct DocumentViewerSheet: View {
         NavigationStack {
             Group {
                 if let url = document.url {
-                    DocumentWebView(url: url, fallbackURL: document.onlineURL)
+                    DocumentWebView(url: url)
                 } else {
                     DocumentMissingView()
                 }

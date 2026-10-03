@@ -70,6 +70,17 @@ object StorageSweeper {
         return old + extra
     }
 
+    data class Usage(val library: Long, val cache: Long, val models: Long) {
+        val total get() = library + cache + models
+    }
+
+    /** 用量：筆記與錄音（filesDir 扣掉模型）、快取、已下載的模型。背景執行緒呼叫。 */
+    fun usage(context: Context): Usage {
+        val models = sizeOf(File(context.filesDir, "models"))
+        val files = sizeOf(context.filesDir)
+        return Usage(library = (files - models).coerceAtLeast(0), cache = sizeOf(context.cacheDir), models = models)
+    }
+
     /** 清可丟棄的東西（背景執行緒呼叫）。 */
     fun sweepDisposables(context: Context, now: Long = System.currentTimeMillis()): Report {
         val report = Report()
