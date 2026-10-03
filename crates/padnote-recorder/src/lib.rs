@@ -27,11 +27,10 @@ pub use pipeline::PendingSegment;
 pub use pipeline::{FeedOutcome, RecorderError, RecordingPipeline};
 pub use worker::{TranscriptionWorker, WorkerOutcome};
 
-/// 預設的語音活動偵測器。
+/// 預設的語音活動偵測器：會追蹤背景噪音底線的自適應能量法（見 `padnote_asr::prep`）。
 ///
-/// ⚠️ 目前是能量門檻法，**在有背景噪音時會把冷氣聲當成語音**。
-/// 正式版應換成 Silero VAD（模型已在 `models/manifest.json`，見 TODO S-26）。
-pub fn default_vad() -> padnote_asr::EnergyVad {
-    padnote_asr::EnergyVad { threshold: 0.02 }
+/// 沒有 Silero 模型可用時（Android 沒有 ort 預編譯二進位、或模型還沒下載）用它。
+/// 原本是固定門檻 0.02 的能量法，在教室裡冷氣聲比門檻大時整場都被當成語音。
+pub fn default_vad() -> padnote_asr::AdaptiveVad {
+    padnote_asr::AdaptiveVad::new()
 }
-pub mod mic;

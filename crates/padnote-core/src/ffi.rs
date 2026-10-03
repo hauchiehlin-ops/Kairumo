@@ -1431,6 +1431,15 @@ impl PadnoteSession {
         self.lock().uses_neural_vad()
     }
 
+    /// 這段錄音的收音品質判斷（錄音中為目前累計、停止後為最終結果）。
+    ///
+    /// UI 在錄音結束時據 `advice_key` 顯示一句人話（太小聲／爆音／背景太吵）；`Good` 與 `TooShort` 不必提示。
+    pub fn recording_quality(&self) -> Option<FfiRecordingQuality> {
+        self.lock()
+            .recording_quality()
+            .map(FfiRecordingQuality::from)
+    }
+
     /// 已寫入音檔的時長（微秒）。停止錄音後仍可查。
     pub fn recorded_audio_us(&self) -> u64 {
         self.lock().recorded_audio_us()
@@ -3435,5 +3444,49 @@ fn ffi_milestone(m: padnote_doc::milestone::Milestone) -> FfiMilestone {
         creator: m.creator,
         created_unix_ms: m.created_unix_ms,
         automatic: m.automatic,
+    }
+}
+
+/// 收音品質判斷。
+#[derive(Clone, Copy, Debug, PartialEq, Eq, uniffi::Enum)]
+pub enum FfiQualityVerdict {
+    Good,
+    TooShort,
+    TooQuiet,
+    Clipping,
+    Noisy,
+}
+
+#[derive(Clone, Debug, uniffi::Record)]
+pub struct FfiRecordingQuality {
+    pub duration_s: f32,
+    pub speech_dbfs: f32,
+    pub noise_floor_dbfs: f32,
+    pub snr_db: f32,
+    pub clipped_fraction: f32,
+    pub verdict: FfiQualityVerdict,
+    /// 給使用者看的建議，語系鍵。`Good`／`TooShort` 為空字串（不必提示）。
+    pub advice_key: String,
+}
+
+impl From<padnote_asr::QualityReport> for FfiRecordingQuality {
+    fn from(r: padnote_asr::QualityReport) -> Self {
+        use padnote_asr::QualityVerdict as V;
+        let (verdict, advice) = match r.verdict {
+            V::Good => (FfiQualityVerdict::Good, ""),
+            V::TooShort => (FfiQualityVerdict::TooShort, ""),
+            V::TooQuiet => (FfiQualityVerdict::TooQuiet, "recording_advice_quiet"),
+            V::Clipping => (FfiQualityVerdict::Clipping, "recording_advice_clipping"),
+            V::Noisy => (FfiQualityVerdict::Noisy, "recording_advice_noisy"),
+        };
+        Self {
+            duration_s: r.duration_s,
+            speech_dbfs: r.speech_dbfs,
+            noise_floor_dbfs: r.noise_floor_dbfs,
+            snr_db: r.snr_db,
+            clipped_fraction: r.clipped_fraction,
+            verdict,
+            advice_key: advice.to_string(),
+        }
     }
 }

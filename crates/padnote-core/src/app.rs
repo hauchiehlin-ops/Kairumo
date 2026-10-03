@@ -104,6 +104,8 @@ pub struct NotebookSession {
     /// 獨立於 `pipeline` 保存 —— 停止錄音後 pipeline 會被取走，
     /// 但 UI 仍需要知道剛剛錄了多久。
     recorded_audio_us: u64,
+    /// 最近一次錄音結束時的品質判斷（停止後管線就丟掉了，所以要留一份）。
+    last_quality: Option<padnote_asr::QualityReport>,
     /// Silero VAD 模型路徑。未設定時退回能量門檻法。
     vad_model: Option<std::path::PathBuf>,
     /// 每一頁的物件樹（ADR-0010）。群組與變換住在這裡，
@@ -164,6 +166,7 @@ impl NotebookSession {
             editor: TextEditor::new(device),
             pipeline: None,
             recorded_audio_us: 0,
+            last_quality: None,
             vad_model: None,
             objects: Default::default(),
             pending_blocks: Default::default(),
@@ -190,6 +193,7 @@ impl NotebookSession {
             editor: TextEditor::new(device),
             pipeline: None,
             recorded_audio_us: 0,
+            last_quality: None,
             vad_model: None,
             objects: Default::default(),
             pending_blocks: Default::default(),
@@ -1478,6 +1482,14 @@ impl NotebookSession {
                 .map_or(0, RecordingPipeline::recorded_duration_us)
     }
 
+    /// 這段錄音的品質判斷：錄音中是目前累計的，停止後是最後一次的結果。
+    pub fn recording_quality(&self) -> Option<padnote_asr::QualityReport> {
+        self.pipeline
+            .as_ref()
+            .map(RecordingPipeline::quality_report)
+            .or(self.last_quality)
+    }
+
     pub fn stop_recording(&mut self) -> Result<Uuid, AppError> {
         let RecordingState::Recording { session, .. } = self.recording else {
             return Err(AppError::NotRecording);
@@ -1486,6 +1498,7 @@ impl NotebookSession {
         if let Some(mut p) = self.pipeline.take() {
             p.finish()?;
             self.recorded_audio_us += p.recorded_duration_us();
+            self.last_quality = Some(p.quality_report());
         }
         self.record(vec![DocOp::EndAudio {
             id: session,

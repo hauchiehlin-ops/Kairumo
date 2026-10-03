@@ -306,7 +306,7 @@ fn s26_silero_rejects_steady_noise_that_fools_the_energy_vad() {
     use padnote_core::asr::VoiceActivityDetector;
     use padnote_core::vad::SileroVad;
 
-    let mut energy = padnote_core::recorder::default_vad();
+    let mut energy = padnote_core::asr::EnergyVad { threshold: 0.02 };
     let mut silero = SileroVad::load(&model).unwrap();
 
     let energy_says_speech = noise.chunks(320).filter(|f| energy.is_speech(f)).count();
@@ -374,4 +374,28 @@ fn chinese_pipeline_produces_punctuated_traditional_chinese() {
     assert_eq!(out.len(), words.len());
     assert_eq!(out[0].start, words[0].start);
     assert_eq!(out.last().unwrap().end, words.last().unwrap().end);
+}
+
+/// 錄音結束後，收音品質判斷還查得到（管線已經丟掉了，所以核心要留一份）。
+#[test]
+fn recording_quality_is_available_during_and_after_recording() {
+    use padnote_core::asr::QualityVerdict;
+    let mut s = session("quality");
+    assert!(s.recording_quality().is_none(), "還沒錄音就不該有判斷");
+    s.start_recording().unwrap();
+    // 8 秒削波的大聲訊號。
+    let clipped: Vec<f32> = (0..16_000 * 8)
+        .map(|i| ((i as f32 * 0.05).sin() * 2.0).clamp(-1.0, 1.0))
+        .collect();
+    s.feed_audio(&clipped).unwrap();
+    assert_eq!(
+        s.recording_quality().unwrap().verdict,
+        QualityVerdict::Clipping
+    );
+    s.stop_recording().unwrap();
+    assert_eq!(
+        s.recording_quality().unwrap().verdict,
+        QualityVerdict::Clipping,
+        "停止之後判斷不見了"
+    );
 }

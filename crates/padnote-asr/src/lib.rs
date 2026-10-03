@@ -7,8 +7,10 @@
 //! 3. ASR 執行緒優先權必須低於 UI/墨跡執行緒 —— 寧可轉錄慢，不可寫字卡。
 
 pub mod pipeline;
+pub mod prep;
 pub mod punct;
 
+pub use prep::{AdaptiveVad, QualityMeter, QualityReport, QualityVerdict, high_pass_80hz};
 pub use punct::{PunctError, PunctuationEngine};
 
 pub use pipeline::{

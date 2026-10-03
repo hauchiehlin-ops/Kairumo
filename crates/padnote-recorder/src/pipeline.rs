@@ -82,6 +82,8 @@ pub struct RecordingPipeline<W: Write> {
     /// 錄音在筆記本時間軸上的起點（format-spec §4）。
     session_start: NotebookTime,
     finished: bool,
+    /// 錄音當下累計的電平／削波／噪音底線（見 `padnote_asr::prep`）。
+    quality: padnote_asr::QualityMeter,
 }
 
 impl<W: Write> std::fmt::Debug for RecordingPipeline<W> {
@@ -117,6 +119,7 @@ impl<W: Write> RecordingPipeline<W> {
             session_id,
             session_start,
             finished: false,
+            quality: padnote_asr::QualityMeter::new(),
         })
     }
 
@@ -144,6 +147,8 @@ impl<W: Write> RecordingPipeline<W> {
     /// **順序不可調換**：先把音訊寫進檔案，再做 VAD 分段。
     /// 如果 VAD 或分段出錯，音訊已經安全了。
     pub fn feed(&mut self, pcm: &[f32]) -> Result<FeedOutcome, RecorderError> {
+        // 品質量測在最前面、不會失敗，也不影響後面兩步。
+        self.quality.feed(pcm);
         // (1) 音檔優先落地 —— 這一步失敗才算真正的錄音失敗。
         let packets = self.encoder.encode(pcm)?;
         let frames_written = packets.len() as u64;
@@ -163,6 +168,11 @@ impl<W: Write> RecordingPipeline<W> {
             segments_queued,
             segments_dropped: self.queue.dropped(),
         })
+    }
+
+    /// 目前為止這段錄音的品質判斷。
+    pub fn quality_report(&self) -> padnote_asr::QualityReport {
+        self.quality.report()
     }
 
     /// 結束錄音：沖出編碼器殘餘與分段器殘餘，並寫出 Ogg 結尾頁。
