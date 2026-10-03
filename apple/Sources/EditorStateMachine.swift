@@ -49,6 +49,7 @@ enum EditorCanvasInputPolicy {
 
     /// 畫布在這個模式下要不要開著落筆手勢。答案永遠是「要」：
     /// 打字模式靠 `fingerMayDraw == false` 擋住手指，而不是關掉整個手勢。
+    // unused-param-ok: 融合輸入規格規定任何模式皆啟用落筆手勢，保留 effectiveMode 參數供簽名對齊與調試
     static func drawingGestureEnabled(effectiveMode: EditorMode) -> Bool { true }
 
     /// 手指能不能畫。打字模式下手指負責點選、捲動與物件操作，**絕對不畫**；

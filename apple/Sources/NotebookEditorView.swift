@@ -4509,7 +4509,6 @@ public struct NotebookEditorView: View {
                         }
                 }
             )
-            .allowsHitTesting(isCanvasInkActive)
             .zIndex(isCanvasInkActive ? 2 : 1)
 
             modeBadge

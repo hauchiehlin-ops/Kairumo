@@ -796,7 +796,6 @@ pub fn brush_paper_grain_texture(width: u32, height: u32, scale: f32) -> Vec<u8>
 }
 
 #[cfg(test)]
-
 mod tests {
     use super::*;
     use padnote_toolbar::tools::all_tools;
