@@ -11760,27 +11760,27 @@ struct TextAttachmentItemView: View {
                     .overlay(alignment: .topLeading) {
                         if showSlashMenu {
                             VStack(alignment: .leading, spacing: 4) {
-                                slashMenuItem(title: "H1 標題", icon: "textformat.size.larger") {
+                                slashMenuItem(title: localizationManager.localized("text_slash_h1"), icon: "textformat.size.larger") {
                                     textItem.text = ""
                                     textItem.fontSize = 28
                                     textItem.isBold = true
                                     showSlashMenu = false
                                 }
-                                slashMenuItem(title: "H2 次標題", icon: "textformat.size") {
+                                slashMenuItem(title: localizationManager.localized("text_slash_h2"), icon: "textformat.size") {
                                     textItem.text = ""
                                     textItem.fontSize = 22
                                     textItem.isBold = true
                                     showSlashMenu = false
                                 }
-                                slashMenuItem(title: "項目清單 (•)", icon: "list.bullet") {
+                                slashMenuItem(title: localizationManager.localized("text_slash_bullet"), icon: "list.bullet") {
                                     textItem.text = "• "
                                     showSlashMenu = false
                                 }
-                                slashMenuItem(title: "待辦核取方塊 (☐)", icon: "checklist") {
+                                slashMenuItem(title: localizationManager.localized("text_slash_todo"), icon: "checklist") {
                                     textItem.text = "☐ "
                                     showSlashMenu = false
                                 }
-                                slashMenuItem(title: "引言區塊 (│)", icon: "text.quote") {
+                                slashMenuItem(title: localizationManager.localized("text_slash_quote"), icon: "text.quote") {
                                     textItem.text = "│ "
                                     showSlashMenu = false
                                 }

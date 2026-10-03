@@ -11888,6 +11888,46 @@ extension LocalizationManager {
             .ko: "여기에 텍스트를 입력…",
             .th: "พิมพ์ข้อความที่นี่…"
         ],
+        "text_slash_bullet": [
+            .zhHant: "項目清單 (•)",
+            .en: "Bulleted List (•)",
+            .zhHans: "项目清单 (•)",
+            .ja: "箇条書きリスト (•)",
+            .ko: "글머리 기호 목록 (•)",
+            .th: "รายการสัญลักษณ์แสดงหัวข้อย่อย (•)"
+        ],
+        "text_slash_h1": [
+            .zhHant: "H1 標題",
+            .en: "Heading 1",
+            .zhHans: "H1 标题",
+            .ja: "見出し 1",
+            .ko: "제목 1",
+            .th: "หัวข้อ 1"
+        ],
+        "text_slash_h2": [
+            .zhHant: "H2 次標題",
+            .en: "Heading 2",
+            .zhHans: "H2 次标题",
+            .ja: "見出し 2",
+            .ko: "제목 2",
+            .th: "หัวข้อ 2"
+        ],
+        "text_slash_quote": [
+            .zhHant: "引言區塊 (│)",
+            .en: "Blockquote (│)",
+            .zhHans: "引言区块 (│)",
+            .ja: "引用ブロック (│)",
+            .ko: "인용 블록 (│)",
+            .th: "บล็อกคำพูด (│)"
+        ],
+        "text_slash_todo": [
+            .zhHant: "待辦核取方塊 (☐)",
+            .en: "To-do Checkbox (☐)",
+            .zhHans: "待办复选框 (☐)",
+            .ja: "チェックボックス (☐)",
+            .ko: "체크박스 (☐)",
+            .th: "กล่องกาเครื่องหมาย (☐)"
+        ],
         "text_strikethrough": [
             .zhHant: "刪除線",
             .en: "Strikethrough",

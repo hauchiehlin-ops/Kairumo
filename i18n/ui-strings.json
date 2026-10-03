@@ -11928,6 +11928,46 @@
     "zhHans": "下划线",
     "zhHant": "底線"
   },
+  "text_slash_h1": {
+    "en": "Heading 1",
+    "ja": "見出し 1",
+    "ko": "제목 1",
+    "th": "หัวข้อ 1",
+    "zhHans": "H1 标题",
+    "zhHant": "H1 標題"
+  },
+  "text_slash_h2": {
+    "en": "Heading 2",
+    "ja": "見出し 2",
+    "ko": "제목 2",
+    "th": "หัวข้อ 2",
+    "zhHans": "H2 次标题",
+    "zhHant": "H2 次標題"
+  },
+  "text_slash_bullet": {
+    "en": "Bulleted List (•)",
+    "ja": "箇条書きリスト (•)",
+    "ko": "글머리 기호 목록 (•)",
+    "th": "รายการสัญลักษณ์แสดงหัวข้อย่อย (•)",
+    "zhHans": "项目清单 (•)",
+    "zhHant": "項目清單 (•)"
+  },
+  "text_slash_todo": {
+    "en": "To-do Checkbox (☐)",
+    "ja": "チェックボックス (☐)",
+    "ko": "체크박스 (☐)",
+    "th": "กล่องกาเครื่องหมาย (☐)",
+    "zhHans": "待办复选框 (☐)",
+    "zhHant": "待辦核取方塊 (☐)"
+  },
+  "text_slash_quote": {
+    "en": "Blockquote (│)",
+    "ja": "引用ブロック (│)",
+    "ko": "인용 블록 (│)",
+    "th": "บล็อกคำพูด (│)",
+    "zhHans": "引言区块 (│)",
+    "zhHant": "引言區塊 (│)"
+  },
   "theme_aesthetic": {
     "en": "Aesthetic & Visual",
     "ja": "美的・視覚デザイン",

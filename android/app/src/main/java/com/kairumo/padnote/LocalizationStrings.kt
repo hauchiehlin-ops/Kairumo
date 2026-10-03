@@ -11964,6 +11964,46 @@ object LocalizationStrings {
             "ko" to "여기에 텍스트를 입력…",
             "th" to "พิมพ์ข้อความที่นี่…"
         ),
+        "text_slash_bullet" to mapOf(
+            "zh-Hant" to "項目清單 (•)",
+            "en" to "Bulleted List (•)",
+            "zh-Hans" to "项目清单 (•)",
+            "ja" to "箇条書きリスト (•)",
+            "ko" to "글머리 기호 목록 (•)",
+            "th" to "รายการสัญลักษณ์แสดงหัวข้อย่อย (•)"
+        ),
+        "text_slash_h1" to mapOf(
+            "zh-Hant" to "H1 標題",
+            "en" to "Heading 1",
+            "zh-Hans" to "H1 标题",
+            "ja" to "見出し 1",
+            "ko" to "제목 1",
+            "th" to "หัวข้อ 1"
+        ),
+        "text_slash_h2" to mapOf(
+            "zh-Hant" to "H2 次標題",
+            "en" to "Heading 2",
+            "zh-Hans" to "H2 次标题",
+            "ja" to "見出し 2",
+            "ko" to "제목 2",
+            "th" to "หัวข้อ 2"
+        ),
+        "text_slash_quote" to mapOf(
+            "zh-Hant" to "引言區塊 (│)",
+            "en" to "Blockquote (│)",
+            "zh-Hans" to "引言区块 (│)",
+            "ja" to "引用ブロック (│)",
+            "ko" to "인용 블록 (│)",
+            "th" to "บล็อกคำพูด (│)"
+        ),
+        "text_slash_todo" to mapOf(
+            "zh-Hant" to "待辦核取方塊 (☐)",
+            "en" to "To-do Checkbox (☐)",
+            "zh-Hans" to "待办复选框 (☐)",
+            "ja" to "チェックボックス (☐)",
+            "ko" to "체크박스 (☐)",
+            "th" to "กล่องกาเครื่องหมาย (☐)"
+        ),
         "text_strikethrough" to mapOf(
             "zh-Hant" to "刪除線",
             "en" to "Strikethrough",
@@ -12155,7 +12195,10 @@ object LocalizationStrings {
             "ja" to "課題トラッカー",
             "ko" to "과제 추적",
             "th" to "ติดตามงานที่ได้รับ"
-        ),
+        )
+    )
+
+    private fun part19(): Map<String, Map<String, String>> = mapOf(
         "tmpl_assignment_tracker_desc" to mapOf(
             "zh-Hant" to "科目、任務、期限與勾選框",
             "en" to "Subject, task, due date and a box to tick",
@@ -12195,10 +12238,7 @@ object LocalizationStrings {
             "ja" to "シアン系ミリ方眼と標準図面表題欄",
             "ko" to "시안 밀리미터 방안 및 표준 표제란",
             "th" to "กริดมิลลิเมตรสีฟ้าครามพร้อมบล็อกชื่อมาตรฐาน"
-        )
-    )
-
-    private fun part19(): Map<String, Map<String, String>> = mapOf(
+        ),
         "tmpl_challenge_21" to mapOf(
             "zh-Hant" to "21 天挑戰",
             "en" to "21-Day Challenge",
@@ -12798,7 +12838,10 @@ object LocalizationStrings {
             "ja" to "鉛筆",
             "ko" to "연필",
             "th" to "ดินสอ"
-        ),
+        )
+    )
+
+    private fun part20(): Map<String, Map<String, String>> = mapOf(
         "tool_text" to mapOf(
             "zh-Hant" to "文字排版",
             "en" to "Text Studio",
@@ -12838,10 +12881,7 @@ object LocalizationStrings {
             "ja" to "使わないツールをオフにします。残りの並び順は変わりません。",
             "ko" to "사용하지 않는 도구를 끄세요. 나머지 순서는 그대로입니다.",
             "th" to "ปิดเครื่องมือที่ไม่ได้ใช้ ลำดับของที่เหลือจะไม่เปลี่ยน"
-        )
-    )
-
-    private fun part20(): Map<String, Map<String, String>> = mapOf(
+        ),
         "toolbar_labels_hint" to mapOf(
             "zh-Hant" to "關掉之後工具列只顯示圖示，放得下更多工具。",
             "en" to "Turned off, the toolbar shows icons only and fits more tools.",
@@ -13441,7 +13481,10 @@ object LocalizationStrings {
             "ja" to "手書きキャンバスを挿入",
             "ko" to "필기 캔버스 삽입",
             "th" to "แทรกผืนผ้าใบลายมือ"
-        ),
+        )
+    )
+
+    private fun part21(): Map<String, Map<String, String>> = mapOf(
         "wd_placeholder" to mapOf(
             "zh-Hant" to "在這裡輸入文件內容…",
             "en" to "Type the document here…",
@@ -13481,10 +13524,7 @@ object LocalizationStrings {
             "ja" to "検索入力フィールド",
             "ko" to "검색 입력 필드",
             "th" to "ช่องค้นหา"
-        )
-    )
-
-    private fun part21(): Map<String, Map<String, String>> = mapOf(
+        ),
         "wireframe_kit" to mapOf(
             "zh-Hant" to "UI 原型線框",
             "en" to "UI Wireframes",
