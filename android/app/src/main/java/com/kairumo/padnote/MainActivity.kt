@@ -1520,8 +1520,29 @@ private fun InkScreen(
     /** 拖曳連接點拉線時的預覽。 */
     var connectionDraft by remember { mutableStateOf<ConnectionDraft?>(null) }
     var insertingTable by remember { mutableStateOf(false) }
-    LaunchedEffect(notebook, pageId) { tableStore.load(); tableRevision++ }
     val maskingTapes = remember { mutableStateListOf<com.kairumo.padnote.canvas.NoteTape>() }
+    LaunchedEffect(notebook, pageId) {
+        tableStore.load(); tableRevision++
+        val session = notebook?.first
+        if (session != null) {
+            val meta = com.kairumo.padnote.library.NotebookMeta.load(session)
+            val legacyTapes = meta.tapes().filter { it.pageIndex == pageIndex }
+            val envelopeTapes = mutableListOf<com.kairumo.padnote.canvas.NoteTape>()
+            if (pageId != null) {
+                val blockIds = runCatching { session.imageBlockIds(pageId) }.getOrDefault(emptyList())
+                for (bId in blockIds) {
+                    val json = runCatching { session.blockAppearance(bId) }.getOrNull() ?: continue
+                    com.kairumo.padnote.canvas.NoteTapeCodec.parseEnvelope(json, pageIndex)?.let {
+                        envelopeTapes.add(it)
+                    }
+                }
+            }
+            val knownEnvelopeIds = envelopeTapes.map { it.id.lowercase() }.toSet()
+            val combined = envelopeTapes + legacyTapes.filter { it.id.lowercase() !in knownEnvelopeIds }
+            maskingTapes.clear()
+            maskingTapes.addAll(combined)
+        }
+    }
 
     // 形狀與流程圖。幾何全部來自核心，與 Apple 端是同一組頂點；
     // 形狀本身也是核心的原生物件，所以關掉 App 再打開它們還在。
@@ -4279,7 +4300,15 @@ private fun InkScreen(
                 tapeColor = runCatching { Color(android.graphics.Color.parseColor(inkColorHex)) }.getOrDefault(Color(0xFFFCEEAC)),
                 currentInkHex = inkColorHex,
                 tapes = maskingTapes,
-                onTapesChanged = { revision++ },
+                onTapesChanged = {
+                    val session = notebook?.first
+                    if (session != null) {
+                        val meta = com.kairumo.padnote.library.NotebookMeta.load(session)
+                        val otherPages = meta.tapes().filter { it.pageIndex != pageIndex }
+                        meta.setTapes(session, otherPages + maskingTapes)
+                    }
+                    revision++
+                },
                 modifier = Modifier.fillMaxSize()
             )
 

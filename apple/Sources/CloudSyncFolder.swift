@@ -237,40 +237,42 @@ enum CloudSyncFolder {
             }
         }
     }
-    // MARK: - 清空雲端
-    @MainActor public static func wipeCloud() -> FfiWipeResult? {
-        guard let folder = resolveFolder() else {
-            return FfiWipeResult(ok: false, deleted: 0, failed: 0, error: LocalizationManager.shared.localizedUnsafe("folder_sync_not_set"), needsReauth: false)
-        }
-        let scoped = folder.startAccessingSecurityScopedResource()
-        defer { if scoped { folder.stopAccessingSecurityScopedResource() } }
-
-        let fm = FileManager.default
-        let items = (try? fm.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil, options: [])) ?? []
-
-        var deleted = 0
-        var failed = 0
-        var firstError = ""
-        
-        for item in items {
-            let actualName: String
-            if ICloudSyncFolder.isPlaceholder(item) {
-                actualName = ICloudSyncFolder.logicalURL(of: item).lastPathComponent
-            } else {
-                actualName = item.lastPathComponent
+    // MARK: - 清空雲端（移出主執行緒，防止 0x8BADF00D 看門狗強制終止）
+    public static func wipeCloud() async -> FfiWipeResult? {
+        await Task.detached(priority: .utility) {
+            guard let folder = resolveFolder() else {
+                return FfiWipeResult(ok: false, deleted: 0, failed: 0, error: LocalizationManager.shared.localizedUnsafe("folder_sync_not_set"), needsReauth: false)
             }
-            guard actualName.hasSuffix(".padnote") else { continue }
+            let scoped = folder.startAccessingSecurityScopedResource()
+            defer { if scoped { folder.stopAccessingSecurityScopedResource() } }
+
+            let fm = FileManager.default
+            let items = (try? fm.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil, options: [])) ?? []
+
+            var deleted = 0
+            var failed = 0
+            var firstError = ""
             
-            do {
-                try fm.removeItem(at: item)
-                deleted += 1
-            } catch {
-                failed += 1
-                if firstError.isEmpty { firstError = error.localizedDescription }
+            for item in items {
+                let actualName: String
+                if ICloudSyncFolder.isPlaceholder(item) {
+                    actualName = ICloudSyncFolder.logicalURL(of: item).lastPathComponent
+                } else {
+                    actualName = item.lastPathComponent
+                }
+                guard actualName.hasSuffix(".padnote") else { continue }
+                
+                do {
+                    try fm.removeItem(at: item)
+                    deleted += 1
+                } catch {
+                    failed += 1
+                    if firstError.isEmpty { firstError = error.localizedDescription }
+                }
             }
-        }
-        
-        return FfiWipeResult(ok: failed == 0, deleted: UInt32(deleted), failed: UInt32(failed), error: firstError, needsReauth: false)
+            
+            return FfiWipeResult(ok: failed == 0, deleted: UInt32(deleted), failed: UInt32(failed), error: firstError, needsReauth: false)
+        }.value
     }
 }
 

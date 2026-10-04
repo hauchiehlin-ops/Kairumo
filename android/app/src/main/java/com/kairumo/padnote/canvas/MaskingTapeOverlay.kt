@@ -50,14 +50,121 @@ import kotlin.math.min
  */
 data class NoteTape(
     val id: String = UUID.randomUUID().toString(),
-    val pageIndex: Int,
-    val x: Float,
-    val y: Float,
-    val width: Float,
-    val height: Float,
-    val isRevealed: Boolean = false,
-    val colorHex: String = "#FCEEAC"
+    var pageIndex: Int,
+    var x: Float,
+    var y: Float,
+    var width: Float,
+    var height: Float,
+    var isRevealed: Boolean = false,
+    var colorHex: String = "#FCEEAC",
+    val unknown: org.json.JSONObject = org.json.JSONObject()
 )
+
+object NoteTapeCodec {
+    private val KNOWN = setOf("id", "pageIndex", "rect", "x", "y", "width", "height", "isRevealed", "colorHex")
+
+    fun decode(obj: org.json.JSONObject): NoteTape? {
+        val id = obj.optString("id").takeIf { it.isNotEmpty() } ?: return null
+        val pageIndex = obj.optInt("pageIndex", 0)
+        val isRevealed = obj.optBoolean("isRevealed", false)
+        val colorHex = obj.optString("colorHex").takeIf { it.isNotEmpty() } ?: "#FCEEAC"
+
+        var x = 0f
+        var y = 0f
+        var w = 120f
+        var h = 32f
+
+        val rect = obj.optJSONObject("rect")
+        if (rect != null) {
+            val origin = rect.optJSONObject("origin")
+            val size = rect.optJSONObject("size")
+            if (origin != null && size != null) {
+                x = origin.optDouble("x", 0.0).toFloat()
+                y = origin.optDouble("y", 0.0).toFloat()
+                w = size.optDouble("width", 120.0).toFloat()
+                h = size.optDouble("height", 32.0).toFloat()
+            } else {
+                x = rect.optDouble("x", 0.0).toFloat()
+                y = rect.optDouble("y", 0.0).toFloat()
+                w = rect.optDouble("width", 120.0).toFloat()
+                h = rect.optDouble("height", 32.0).toFloat()
+            }
+        } else {
+            x = obj.optDouble("x", 0.0).toFloat()
+            y = obj.optDouble("y", 0.0).toFloat()
+            w = obj.optDouble("width", 120.0).toFloat()
+            h = obj.optDouble("height", 32.0).toFloat()
+        }
+
+        val unknown = org.json.JSONObject()
+        for (key in obj.keys()) {
+            if (key !in KNOWN) unknown.put(key, obj.get(key))
+        }
+
+        return NoteTape(
+            id = id,
+            pageIndex = pageIndex,
+            x = x,
+            y = y,
+            width = maxOf(w, 20f),
+            height = maxOf(h, 16f),
+            isRevealed = isRevealed,
+            colorHex = colorHex,
+            unknown = unknown
+        )
+    }
+
+    fun decodeAll(array: org.json.JSONArray?): MutableList<NoteTape> {
+        val out = mutableListOf<NoteTape>()
+        val source = array ?: return out
+        for (i in 0 until source.length()) {
+            val obj = source.optJSONObject(i) ?: continue
+            decode(obj)?.let { out.add(it) }
+        }
+        return out
+    }
+
+    /** 解一個 `tape` 信封。不是這種區塊、或內容不完整就回 null。 */
+    fun parseEnvelope(json: String, pageIndex: Int): NoteTape? {
+        val root = runCatching { org.json.JSONObject(json) }.getOrNull() ?: return null
+        if (root.optString("object") != "tape") return null
+        val payload = root.optJSONObject("payload") ?: return null
+        val tape = decode(payload) ?: return null
+        tape.pageIndex = pageIndex
+        return tape
+    }
+
+    fun encode(tape: NoteTape): org.json.JSONObject {
+        val obj = org.json.JSONObject(tape.unknown.toString())
+        obj.put("id", tape.id)
+        obj.put("pageIndex", tape.pageIndex)
+        obj.put("isRevealed", tape.isRevealed)
+        obj.put("colorHex", tape.colorHex)
+
+        // Apple 端 Codable 預設格式 rect: { origin: {x, y}, size: {width, height} }
+        val rect = org.json.JSONObject()
+        val origin = org.json.JSONObject().put("x", tape.x.toDouble()).put("y", tape.y.toDouble())
+        val size = org.json.JSONObject().put("width", tape.width.toDouble()).put("height", tape.height.toDouble())
+        rect.put("origin", origin)
+        rect.put("size", size)
+        obj.put("rect", rect)
+
+        // 扁平座標後備，供純 JSON 客戶端讀取
+        obj.put("x", tape.x.toDouble())
+        obj.put("y", tape.y.toDouble())
+        obj.put("width", tape.width.toDouble())
+        obj.put("height", tape.height.toDouble())
+        return obj
+    }
+
+    fun encodeAll(items: List<NoteTape>): org.json.JSONArray {
+        val array = org.json.JSONArray()
+        for (item in items) {
+            array.put(encode(item))
+        }
+        return array
+    }
+}
 
 private val tapePresetHexes = listOf(
     "#FCEEAC", // 暖黃

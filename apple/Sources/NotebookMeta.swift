@@ -76,6 +76,7 @@ struct NotebookMeta: Codable, Hashable {
     /// 真身放在中繼資料，套件裡另外放一張算繪好的 PNG 當後備。
     var audioAttachments: [NoteAudioAttachment]?
     var commentPins: [NoteCommentPin]?
+    var tapeAttachments: [NoteTapeAttachment]?
     /// 手寫與文字動態流式錨定 (Fluid Sticky Annotations)
     var stickyAnchors: [StickyAnnotationAnchor]?
     /// 手寫辨識出來的文字（`NotebookDocument.recognizedText`）。搜尋用 —— 沒有同步的話，
@@ -144,6 +145,7 @@ struct NotebookMeta: Codable, Hashable {
         model3DAttachments = document.model3DAttachments
         audioAttachments = document.audioAttachments
         commentPins = document.commentPins
+        tapeAttachments = document.tapeAttachments
         objectOrderByPage = document.objectOrderByPage
         stickyAnchors = document.stickyAnchors
         recognizedText = document.recognizedText
@@ -202,6 +204,9 @@ struct NotebookMeta: Codable, Hashable {
         }
         if let commentPins {
             document.commentPins = commentPins
+        }
+        if let tapeAttachments {
+            document.tapeAttachments = tapeAttachments
         }
         if let objectOrderByPage {
             document.objectOrderByPage = objectOrderByPage

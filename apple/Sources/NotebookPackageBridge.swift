@@ -1357,7 +1357,8 @@ enum NotebookPackageBridge {
             envelopes: envelopes.pins, legacy: envelopeAuthoritative ? nil : document.commentPins)
         document.stickyAnchors = ObjectEnvelope.merged(
             envelopes: envelopes.stickies, legacy: envelopeAuthoritative ? nil : document.stickyAnchors)
-        document.tapeAttachments = envelopes.tapes.isEmpty ? nil : envelopes.tapes
+        document.tapeAttachments = ObjectEnvelope.merged(
+            envelopes: envelopes.tapes, legacy: envelopeAuthoritative ? nil : document.tapeAttachments)
 
         // 確保來自同步索引庫的權威標題不會被舊中繼資料沖掉；
         // 若標題仍為預設空白/未命名，且匯入檔名並非 UUID 亦非預設 notebook，則沿用檔名

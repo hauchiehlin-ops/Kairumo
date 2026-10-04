@@ -117,6 +117,12 @@ class NotebookMeta private constructor(private var root: JSONObject) {
         private const val KEY_STICKY_ANCHORS = "stickyAnchors"
 
         /**
+         * 遮蔽膠帶（Masking Tape）。
+         * 鍵名與 Apple 的 `NotebookMeta.tapeAttachments` 一致。
+         */
+        private const val KEY_TAPES = "tapeAttachments"
+
+        /**
          * 形狀與連接線的樣式，以物件 id 為鍵。**鍵名與 Apple 的
          * `NotebookMeta.shapeStyles`／`connectionStyles` 一致。**
          *
@@ -367,6 +373,16 @@ class NotebookMeta private constructor(private var root: JSONObject) {
         anchors.forEach { arr.put(it.toJsonObject()) }
         root.remove(KEY_OBJECT_ENVELOPES)
         root.put(KEY_STICKY_ANCHORS, arr)
+        flush(session)
+    }
+
+    /** 遮蔽膠帶清單 (Masking Tape Attachments) */
+    fun tapes(): MutableList<com.kairumo.padnote.canvas.NoteTape> =
+        com.kairumo.padnote.canvas.NoteTapeCodec.decodeAll(root.optJSONArray(KEY_TAPES))
+
+    fun setTapes(session: PadnoteSession?, items: List<com.kairumo.padnote.canvas.NoteTape>) {
+        root.remove(KEY_OBJECT_ENVELOPES)
+        root.put(KEY_TAPES, com.kairumo.padnote.canvas.NoteTapeCodec.encodeAll(items))
         flush(session)
     }
 

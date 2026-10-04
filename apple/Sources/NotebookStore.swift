@@ -1661,7 +1661,7 @@ public final class NotebookStore: ObservableObject {
                 result = await CloudSync.wipeCloud()
             } else if CloudSyncFolder.resolveFolder() != nil {
                 attempted = true
-                result = CloudSyncFolder.wipeCloud()
+                result = await CloudSyncFolder.wipeCloud()
             }
             // 有同步可清卻沒有結果（忙碌、連不上）或清失敗：整個中止，本機不動。
             // 沒設定任何同步就沒有雲端可清，那不是失敗。

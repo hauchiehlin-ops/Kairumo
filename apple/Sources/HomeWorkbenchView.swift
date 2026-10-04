@@ -5429,7 +5429,7 @@ public struct CloudSyncDetailSheet: View {
 
         let result: FfiWipeResult?
         if selectedProvider == .folderOrICloud {
-            result = CloudSyncFolder.wipeCloud()
+            result = await CloudSyncFolder.wipeCloud()
         } else {
             result = await CloudSync.wipeCloud()
         }
