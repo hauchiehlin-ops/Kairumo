@@ -39,8 +39,8 @@ object SeedNotebooks {
     private const val CONTENT_WIDTH = PAGE_WIDTH - MARGIN * 2
 
     /**
-     * 筆記庫空的時候建立兩本範例筆記。已經有東西就什麼也不做 ——
-     * 每次啟動都塞兩本進去的話，使用者刪掉之後它們會自己長回來。
+     * 筆記庫空的時候建立範例筆記。已經有東西就什麼也不做 ——
+     * 每次啟動都塞進去的話，使用者刪掉之後它們會自己長回來。
      *
      * @return 建立的筆記本數（0 表示本來就有東西）。
      */
@@ -53,6 +53,7 @@ object SeedNotebooks {
         var created = 0
         if (buildWelcome(context, deviceId, ::l)) created++
         if (buildMeeting(context, deviceId, ::l)) created++
+        if (buildFeaturedBiology(context, deviceId, ::l)) created++
         return created
     }
 
@@ -117,6 +118,226 @@ object SeedNotebooks {
     private const val KEY_BACKFILLED = "samples_backfilled"
     private const val WELCOME_ID = "seed-welcome-notebook-v1"
     private const val MEETING_ID = "seed-meeting-notebook-v1"
+    private const val FEATURED_ID = "seed-featured-biology-v1"
+
+    // MARK: - 精選範例筆記：《Kairumo（精選實例）》
+
+    private fun buildFeaturedBiology(context: Context, deviceId: UInt, l: (String) -> String): Boolean {
+        val id = NotebookLibrary.create(
+            context, l("seed_featured_biology_title"), deviceId, id = FEATURED_ID
+        ) ?: return false
+        val opened = NotebookLibrary.open(context, id, deviceId) ?: return false
+        val (session, firstPage) = opened
+        val pages = ensurePages(session, firstPage, 2)
+
+        // 設定為方格點陣 (grid) 樣板
+        val meta = NotebookMeta.load(session)
+        meta.setPaperId(session, "grid")
+
+        // =========================================================================
+        // 【第一頁：循環系統與氣體運輸】
+        // =========================================================================
+
+        // 1. 大標題
+        title(session, pages[0], "生物學重點筆記：人體循環系統與氣體運輸機制", 40f)
+
+        // 2. 門脈循環區塊
+        val shapes0 = ShapeStore(session, pages[0])
+        val portalShape = NoteShape(
+            kindName = "rectangle", x = MARGIN, y = 85f, width = 250f, height = 140f,
+            cornerRadius = 6f, label = "【肝門靜脈循環】\n消化道微血管 → 肝門靜脈\n→ 肝臟微血管竇 → 肝靜脈",
+            strokeColorHex = "#D98880", fillColorHex = "#FDEDEC", lineWidth = 1.5f
+        )
+        shapes0.create(portalShape)
+
+        val textStore0 = TextBoxStore(session, pages[0])
+        val portalText = textStore0.create(MARGIN + 265f, 85f)
+        portalText.width = CONTENT_WIDTH - 265f
+        portalText.height = 140f
+        portalText.text = "腸靜脈 → 肝門靜脈\n  ↓ (養分儲存 / 肝臟解毒)\n肝微血管 → 肝靜脈 → 下腔靜脈 → 右心房"
+        portalText.fontSize = 13f
+        portalText.textColorHex = "#2C3E50"
+        portalText.backgroundColorHex = "#FADBD8"
+        portalText.hasBorder = true
+        portalText.borderColorHex = "#E6B0AA"
+        portalText.borderWidth = 1.0f
+        portalText.cornerRadius = 6f
+        portalText.lineSpacing = 4f
+        textStore0.persist(portalText)
+
+        // 3. 淋巴循環區塊
+        val lymphShape = NoteShape(
+            kindName = "rectangle", x = MARGIN, y = 240f, width = CONTENT_WIDTH, height = 180f,
+            cornerRadius = 8f, label = "",
+            strokeColorHex = "#52BE80", fillColorHex = "#EAFAF1", lineWidth = 1.5f
+        )
+        shapes0.create(lymphShape)
+
+        val lymphHeader = textStore0.create(MARGIN + 15f, 250f)
+        lymphHeader.width = CONTENT_WIDTH - 30f
+        lymphHeader.height = 60f
+        lymphHeader.text = "【淋巴循環路徑 (Lymphatic Circulation)】\n組織微淋巴管 → 小淋巴管 → 大淋巴管 → 胸導管 / 右淋巴總管\n→ 左右鎖骨下靜脈 → 上腔靜脈 → 右心房注入血液循環"
+        lymphHeader.fontSize = 14f
+        lymphHeader.textColorHex = "#1E8449"
+        lymphHeader.backgroundColorHex = "clear"
+        lymphHeader.hasBorder = false
+        lymphHeader.lineSpacing = 4f
+        textStore0.persist(lymphHeader)
+
+        val lymphBody = textStore0.create(MARGIN + 15f, 315f)
+        lymphBody.width = 440f
+        lymphBody.height = 95f
+        lymphBody.text = "★ 淋巴系統生理功能：\n1. 體液回收：回收組織液多餘水分，維持恆定血容量\n2. 運送養分：乳糜管吸收脂溶性養分 (維生素 A, D, E, K)\n3. 免疫防禦：運送病原體進入淋巴結，活化 B/T 淋巴球進行濾清"
+        lymphBody.fontSize = 13f
+        lymphBody.textColorHex = "#273746"
+        lymphBody.backgroundColorHex = "#D5F5E3"
+        lymphBody.hasBorder = true
+        lymphBody.borderColorHex = "#A9DFBF"
+        lymphBody.borderWidth = 1.0f
+        lymphBody.cornerRadius = 6f
+        lymphBody.lineSpacing = 3f
+        textStore0.persist(lymphBody)
+
+        val catBox = textStore0.create(MARGIN + 465f, 315f)
+        catBox.width = CONTENT_WIDTH - 480f
+        catBox.height = 95f
+        catBox.text = "  /\\_/\\\n ( o.o )\n  > ^ <\n(吸收好脂肪~)"
+        catBox.fontSize = 12f
+        catBox.textColorHex = "#2C3E50"
+        catBox.backgroundColorHex = "#FCF3CF"
+        catBox.hasBorder = true
+        catBox.borderColorHex = "#F9E79F"
+        catBox.borderWidth = 1.0f
+        catBox.cornerRadius = 8f
+        catBox.alignment = "center"
+        textStore0.persist(catBox)
+
+        // 4. 氣體運輸機制
+        val gasShape = NoteShape(
+            kindName = "rectangle", x = MARGIN, y = 435f, width = CONTENT_WIDTH, height = 250f,
+            cornerRadius = 8f, label = "",
+            strokeColorHex = "#85929E", fillColorHex = "#F2F4F4", lineWidth = 1.5f
+        )
+        shapes0.create(gasShape)
+
+        val o2Box = textStore0.create(MARGIN + 15f, 478f)
+        o2Box.width = CONTENT_WIDTH - 30f
+        o2Box.height = 75f
+        o2Box.text = "1. 氧氣 (O₂) 運輸：\n   • 98% 與血紅素結合： Hb + O₂ ⇄ HbO₂ (氧合血紅素)\n     [肺泡氧分壓高，向右反應；組織氧分壓低，向左釋放]\n   • 2% 物理溶解於血漿中"
+        o2Box.fontSize = 13f
+        o2Box.textColorHex = "#1B4F72"
+        o2Box.backgroundColorHex = "#EBF5FB"
+        o2Box.hasBorder = true
+        o2Box.borderColorHex = "#AED6F1"
+        o2Box.borderWidth = 1.0f
+        o2Box.cornerRadius = 6f
+        o2Box.lineSpacing = 3f
+        textStore0.persist(o2Box)
+
+        val co2Box = textStore0.create(MARGIN + 15f, 560f)
+        co2Box.width = CONTENT_WIDTH - 30f
+        co2Box.height = 85f
+        co2Box.text = "2. 二氧化碳 (CO₂) 運輸：\n   • 70% 碳酸氫根 (HCO₃⁻)： CO₂ + H₂O ⇄ H₂CO₃ ⇄ HCO₃⁻ + H⁺ (紅血球碳酸酐酶催化)\n   • 23% 與血紅素結合： Hb + CO₂ ⇄ HbCO₂ (氨基甲酸血紅素)\n   • 7%  物理溶解於血漿中"
+        co2Box.fontSize = 13f
+        co2Box.textColorHex = "#641E16"
+        co2Box.backgroundColorHex = "#FADBD8"
+        co2Box.hasBorder = true
+        co2Box.borderColorHex = "#F5B7B1"
+        co2Box.borderWidth = 1.0f
+        co2Box.cornerRadius = 6f
+        co2Box.lineSpacing = 3f
+        textStore0.persist(co2Box)
+
+        // 5. 第一頁背誦考點膠帶
+        val page0Tapes = listOf(
+            com.kairumo.padnote.canvas.NoteTape(
+                pageIndex = 0, x = MARGIN + 275f, y = 190f, width = 200f, height = 28f,
+                isRevealed = false, colorHex = "#FFD1DC"
+            ),
+            com.kairumo.padnote.canvas.NoteTape(
+                pageIndex = 0, x = MARGIN + 35f, y = 580f, width = 140f, height = 24f,
+                isRevealed = false, colorHex = "#FCEEAC"
+            ),
+            com.kairumo.padnote.canvas.NoteTape(
+                pageIndex = 0, x = MARGIN + 35f, y = 605f, width = 140f, height = 24f,
+                isRevealed = false, colorHex = "#C8E6C9"
+            )
+        )
+
+        // =========================================================================
+        // 【第二頁：泌尿系統與腎臟解剖】
+        // =========================================================================
+
+        title(session, pages[1], "泌尿生理學：腎單元構造與尿液形成機制", 40f)
+
+        val shapes1 = ShapeStore(session, pages[1])
+        val nephronShape = NoteShape(
+            kindName = "rectangle", x = MARGIN, y = 85f, width = 320f, height = 250f,
+            cornerRadius = 8f, label = "",
+            strokeColorHex = "#B7950B", fillColorHex = "#FEF9E7", lineWidth = 1.5f
+        )
+        shapes1.create(nephronShape)
+
+        val textStore1 = TextBoxStore(session, pages[1])
+        val nephronText = textStore1.create(MARGIN + 12f, 95f)
+        nephronText.width = 300f
+        nephronText.height = 230f
+        nephronText.text = "【腎單元解剖層次 (The Nephron)】\n• 腎臟巨觀：皮質 (Cortex) + 髓質 (Medulla) + 腎盂\n• 腎小體 (Renal Corpuscle)：\n   - 入球小動脈 (管徑大) → 腎絲球 (微血管團)\n   - 鮑氏囊 (雙層杯狀構造，承接濾液)\n   - 出球小動脈 (管徑小，形成高壓過濾)\n• 腎小管 (Renal Tubule)：\n   - 近曲小管 → 亨利氏環 (U型) → 遠曲小管\n   - 匯入集尿管 (Collecting Duct) → 腎乳頭"
+        nephronText.fontSize = 13f
+        nephronText.textColorHex = "#4D5656"
+        nephronText.backgroundColorHex = "clear"
+        nephronText.hasBorder = false
+        nephronText.lineSpacing = 4f
+        textStore1.persist(nephronText)
+
+        val funcShape = NoteShape(
+            kindName = "rectangle", x = MARGIN + 335f, y = 85f, width = CONTENT_WIDTH - 335f, height = 250f,
+            cornerRadius = 8f, label = "",
+            strokeColorHex = "#2E86C1", fillColorHex = "#EBF5FB", lineWidth = 1.5f
+        )
+        shapes1.create(funcShape)
+
+        val funcText = textStore1.create(MARGIN + 347f, 95f)
+        funcText.width = CONTENT_WIDTH - 360f
+        funcText.height = 230f
+        funcText.text = "【腎臟生理功能清單】\n1. 形成尿液，排出含氮廢物 (尿素、尿酸、肌酸酐)\n2. 調控體液滲透壓與水分恆定 (受抗利尿激素 ADH 調控)\n3. 酸鹼平衡調節 (保留 HCO₃⁻，主動分泌 H⁺/NH₄⁺)\n4. 維持血壓恆定 (分泌腎素 Renin 啟動 RAAS 系統)\n5. 分泌紅血球生成素 (EPO，刺激骨髓造血)"
+        funcText.fontSize = 13f
+        funcText.textColorHex = "#1B4F72"
+        funcText.backgroundColorHex = "clear"
+        funcText.hasBorder = false
+        funcText.lineSpacing = 6f
+        textStore1.persist(funcText)
+
+        // 原生表格：生理作用比較
+        val table1 = table(l("sample_bio_tools_table"), 385f)
+        TableStore(session, pages[1]).create(table1)
+
+        val summaryText = textStore1.create(MARGIN, 560f)
+        summaryText.width = CONTENT_WIDTH
+        summaryText.height = 55f
+        summaryText.text = "★ 考題速記口訣：\n『過濾不選大（無血球、大蛋白），再吸收要主動（葡萄糖全收，水跟著走），分泌作用排廢物（氫離子藥物走）』"
+        summaryText.fontSize = 13f
+        summaryText.textColorHex = "#922B21"
+        summaryText.backgroundColorHex = "#FADBD8"
+        summaryText.hasBorder = true
+        summaryText.borderColorHex = "#E6B0AA"
+        summaryText.borderWidth = 1.0f
+        summaryText.cornerRadius = 6f
+        summaryText.lineSpacing = 4f
+        textStore1.persist(summaryText)
+
+        // 第二頁考點膠帶
+        val page1Tapes = listOf(
+            com.kairumo.padnote.canvas.NoteTape(
+                pageIndex = 1, x = MARGIN + 347f, y = 145f, width = 180f, height = 26f,
+                isRevealed = false, colorHex = "#BBDEFB"
+            )
+        )
+
+        // 寫入膠帶至中繼資料與持久化
+        meta.setTapes(session, page0Tapes + page1Tapes)
+        return true
+    }
 
     // MARK: - 歡迎使用 Kairumo
 

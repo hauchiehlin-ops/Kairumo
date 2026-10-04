@@ -9176,6 +9176,14 @@ object LocalizationStrings {
             "ko" to "자 및 측정 모드",
             "th" to "โหมดไม้บรรทัดและการวัด"
         ),
+        "sample_bio_tools_table" to mapOf(
+            "zh-Hant" to "作用名稱|發生部位|驅動力 / 生理機制\n過濾作用|腎絲球 → 鮑氏囊|有效過濾壓（血壓推動、物理過濾）\n再吸收作用|腎小管 → 周圍微血管|主動/被動運輸（葡萄糖、水99%回收）\n分泌作用|周圍微血管 → 腎小管|主動運輸（排出過多H+、K+與藥物代謝物）",
+            "en" to "Process|Site|Driving Force / Mechanism\nFiltration|Glomerulus → Bowman Capsule|Net Filtration Pressure (Blood Pressure)\nReabsorption|Tubule → Capillaries|Active/Passive (Glucose & 99% Water reclaimed)\nSecretion|Capillaries → Tubule|Active Transport (Excretes Excess H+, K+, Drugs)",
+            "zh-Hans" to "作用名称|发生部位|驱动力 / 生理机制\n过滤作用|肾小球 → 鲍氏囊|有效过滤压（血压推动、物理过滤）\n再吸收作用|肾小管 → 周围微血管|主动/被动运输（葡萄糖、水99%回收）\n分泌作用|周围微血管 → 肾小管|主动运输（排出过多H+、K+与药物代谢物）",
+            "ja" to "作用名称|部位|駆動力 / 生理機構\nろ過作用|糸球体 → ボーマン嚢|有効ろ過圧（血圧駆動・物理的ろ過）\n再吸収作用|尿細管 → 毛細血管|能動/受動輸送（ブドウ糖・水99%回収）\n分泌作用|毛細血管 → 尿細管|能動輸送（余剰H+、K+、薬物排出）",
+            "ko" to "작용 명칭|부위|추진력 / 생리 기전\n여과 작용|사구체 → 보먼주머니|유효 여과압 (혈압 추진, 물리적 여과)\n재흡수 작용|세뇨관 → 주위 모세혈관|능동/수동 수송 (포도당, 수분 99% 회수)\n분비 작용|주위 모세혈관 → 세뇨관|능동 수송 (잉여 H+, K+, 약물 배출)",
+            "th" to "กระบวนการ|ตำแหน่ง|กลไกขับเคลื่อน\nการกรอง|โกลเมอรูลัส → โบว์แมนส์แคปซูล|แรงดันการกรองสุทธิ\nการดูดกลับ|ท่อหน่วยไต → หลอดเลือดฝอย|การลำเลียงแบบใช้พลังงานและแพร่\nการหลั่ง|หลอดเลือดฝอย → ท่อหน่วยไต|การลำเลียงแบบใช้พลังงาน"
+        ),
         "sample_data" to mapOf(
             "zh-Hant" to "載入範例數據",
             "en" to "Load Sample Data",
@@ -9448,6 +9456,22 @@ object LocalizationStrings {
             "ko" to "계정 및 보안",
             "th" to "บัญชีและความปลอดภัย"
         ),
+        "seed_featured_biology_snippet" to mapOf(
+            "zh-Hant" to "人體循環、氣體運輸與腎臟泌尿生理手繪手寫整合精選筆記",
+            "en" to "Hand-drawn biological notes on human circulation, gas transport and renal physiology",
+            "zh-Hans" to "人体循环、气体运输与肾脏泌尿生理手绘手写整合精选笔记",
+            "ja" to "人体循環・気体輸送・腎臓泌尿生理の手描き統合精選ノート",
+            "ko" to "인체 순환, 기체 운반 및 신장 비뇨 생리 손글씨 통합 정선 노트",
+            "th" to "บันทึกสรุปชีววิทยา: การไหลเวียนโลหิต การขนส่งก๊าซ และระบบไต"
+        ),
+        "seed_featured_biology_title" to mapOf(
+            "zh-Hant" to "Kairumo（精選實例）",
+            "en" to "Kairumo (Featured Samples)",
+            "zh-Hans" to "Kairumo（精选实例）",
+            "ja" to "Kairumo（厳選事例）",
+            "ko" to "Kairumo (선정 예시)",
+            "th" to "Kairumo (ตัวอย่างเด่น)"
+        ),
         "seed_meeting_snippet" to mapOf(
             "zh-Hant" to "支援麥克風即時收音，聲音與筆跡精確對齊",
             "en" to "Live microphone capture with audio precisely aligned to your ink",
@@ -9599,7 +9623,10 @@ object LocalizationStrings {
             "ja" to "図形を編集",
             "ko" to "도형 편집",
             "th" to "แก้ไขรูปร่าง"
-        ),
+        )
+    )
+
+    private fun part15(): Map<String, Map<String, String>> = mapOf(
         "shape_fill" to mapOf(
             "zh-Hant" to "填滿顏色",
             "en" to "Fill",
@@ -9623,10 +9650,7 @@ object LocalizationStrings {
             "ja" to "位置とサイズ",
             "ko" to "위치 및 크기",
             "th" to "ตำแหน่งและขนาด"
-        )
-    )
-
-    private fun part15(): Map<String, Map<String, String>> = mapOf(
+        ),
         "shape_height" to mapOf(
             "zh-Hant" to "高",
             "en" to "Height",
@@ -10242,7 +10266,10 @@ object LocalizationStrings {
             "ja" to "グリッドに吸着",
             "ko" to "격자에 맞춤",
             "th" to "จัดชิดเส้นตาราง"
-        ),
+        )
+    )
+
+    private fun part16(): Map<String, Map<String, String>> = mapOf(
         "snap_to_grid_desc" to mapOf(
             "zh-Hant" to "隨點隨寫時自動對齊頁面行線或方格",
             "en" to "Snap click-to-type text to page grid or lines",
@@ -10266,10 +10293,7 @@ object LocalizationStrings {
             "ja" to "グリッド吸着オン：タップで書くテキストがページの罫線や方眼に揃います。",
             "ko" to "격자 맞춤 켜짐: 탭해서 쓰는 텍스트가 페이지의 줄이나 격자에 맞춰집니다.",
             "th" to "เปิดจัดชิดเส้นตาราง: ข้อความที่แตะเพื่อเขียนจะชิดเส้นหรือตารางของหน้า"
-        )
-    )
-
-    private fun part16(): Map<String, Map<String, String>> = mapOf(
+        ),
         "snapshot_created" to mapOf(
             "zh-Hant" to "快照已成功建立",
             "en" to "Snapshot Created",
@@ -10885,7 +10909,10 @@ object LocalizationStrings {
             "ja" to "タグ",
             "ko" to "태그",
             "th" to "แท็ก"
-        ),
+        )
+    )
+
+    private fun part17(): Map<String, Map<String, String>> = mapOf(
         "sticker_thumb_up" to mapOf(
             "zh-Hant" to "讚",
             "en" to "Good",
@@ -10909,10 +10936,7 @@ object LocalizationStrings {
             "ja" to "重なる手書きを固定",
             "ko" to "겹치는 필기 고정",
             "th" to "ตรึงลายมือที่ซ้อนทับ"
-        )
-    )
-
-    private fun part17(): Map<String, Map<String, String>> = mapOf(
+        ),
         "sticky_anchor_text" to mapOf(
             "zh-Hant" to "錨定至文字",
             "en" to "Anchor to Text",
@@ -11528,7 +11552,10 @@ object LocalizationStrings {
             "ja" to "%@ は両方の端末で変更されています。クラウド側を残しました。ご確認ください",
             "ko" to "%@ 이(가) 양쪽 기기에서 모두 변경되었습니다. 클라우드 사본을 유지했습니다. 확인해 주세요",
             "th" to "%@ ถูกแก้ไขบนทั้งสองอุปกรณ์ ระบบเก็บสำเนาบนคลาวด์ไว้ โปรดตรวจสอบ"
-        ),
+        )
+    )
+
+    private fun part18(): Map<String, Map<String, String>> = mapOf(
         "sync_needs_reauth" to mapOf(
             "zh-Hant" to "登入狀態已過期，請重新登入",
             "en" to "Session expired — please sign in again",
@@ -11552,10 +11579,7 @@ object LocalizationStrings {
             "ja" to "フォルダ未選択",
             "ko" to "폴더를 아직 선택하지 않음",
             "th" to "ยังไม่ได้เลือกโฟลเดอร์"
-        )
-    )
-
-    private fun part18(): Map<String, Map<String, String>> = mapOf(
+        ),
         "sync_not_set_up" to mapOf(
             "zh-Hant" to "尚未設定同步（點一下設定）",
             "en" to "Sync not set up yet (tap to set it up)",
@@ -12171,7 +12195,10 @@ object LocalizationStrings {
             "ja" to "このスレッドは解決済みです",
             "ko" to "이 스레드는 해결됨으로 표시되었습니다",
             "th" to "การสนทนานี้ถูกทำเครื่องหมายว่าแก้ไขแล้ว"
-        ),
+        )
+    )
+
+    private fun part19(): Map<String, Map<String, String>> = mapOf(
         "thumbnail_larger" to mapOf(
             "zh-Hant" to "放大預覽",
             "en" to "Larger Previews",
@@ -12195,10 +12222,7 @@ object LocalizationStrings {
             "ja" to "課題トラッカー",
             "ko" to "과제 추적",
             "th" to "ติดตามงานที่ได้รับ"
-        )
-    )
-
-    private fun part19(): Map<String, Map<String, String>> = mapOf(
+        ),
         "tmpl_assignment_tracker_desc" to mapOf(
             "zh-Hant" to "科目、任務、期限與勾選框",
             "en" to "Subject, task, due date and a box to tick",
@@ -12814,7 +12838,10 @@ object LocalizationStrings {
             "ja" to "マスキングテープ",
             "ko" to "마스킹 테이프",
             "th" to "กระดาษกาว"
-        ),
+        )
+    )
+
+    private fun part20(): Map<String, Map<String, String>> = mapOf(
         "tool_oilpaint" to mapOf(
             "zh-Hant" to "油畫筆",
             "en" to "Oil Brush",
@@ -12838,10 +12865,7 @@ object LocalizationStrings {
             "ja" to "鉛筆",
             "ko" to "연필",
             "th" to "ดินสอ"
-        )
-    )
-
-    private fun part20(): Map<String, Map<String, String>> = mapOf(
+        ),
         "tool_text" to mapOf(
             "zh-Hant" to "文字排版",
             "en" to "Text Studio",
@@ -13457,7 +13481,10 @@ object LocalizationStrings {
             "ja" to "書類内の手書きキャンバス",
             "ko" to "문서 안의 필기 캔버스",
             "th" to "ผืนผ้าใบลายมือในเอกสาร"
-        ),
+        )
+    )
+
+    private fun part21(): Map<String, Map<String, String>> = mapOf(
         "wd_insert_divider" to mapOf(
             "zh-Hant" to "插入分隔線",
             "en" to "Insert divider",
@@ -13481,10 +13508,7 @@ object LocalizationStrings {
             "ja" to "手書きキャンバスを挿入",
             "ko" to "필기 캔버스 삽입",
             "th" to "แทรกผืนผ้าใบลายมือ"
-        )
-    )
-
-    private fun part21(): Map<String, Map<String, String>> = mapOf(
+        ),
         "wd_placeholder" to mapOf(
             "zh-Hant" to "在這裡輸入文件內容…",
             "en" to "Type the document here…",

@@ -512,6 +512,13 @@ public struct HomeWorkbenchView: View {
                 MacWindowTitle.apply()
                 autoSync.start(store: notebookStore, deviceId: NotebookMigration.deviceId)
                 autoSync.request(.foreground)
+
+                if let autoOpenId = ProcessInfo.processInfo.environment["KAIRUMO_AUTO_OPEN_NOTEBOOK"],
+                   let target = notebookStore.notebooks.first(where: { $0.id == autoOpenId }) {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                        self.selectedNotebookForEditing = target
+                    }
+                }
             }
         }
     }

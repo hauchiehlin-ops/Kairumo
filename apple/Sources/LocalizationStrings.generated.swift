@@ -9112,6 +9112,14 @@ extension LocalizationManager {
             .ko: "자 및 측정 모드",
             .th: "โหมดไม้บรรทัดและการวัด"
         ],
+        "sample_bio_tools_table": [
+            .zhHant: "作用名稱|發生部位|驅動力 / 生理機制\n過濾作用|腎絲球 → 鮑氏囊|有效過濾壓（血壓推動、物理過濾）\n再吸收作用|腎小管 → 周圍微血管|主動/被動運輸（葡萄糖、水99%回收）\n分泌作用|周圍微血管 → 腎小管|主動運輸（排出過多H+、K+與藥物代謝物）",
+            .en: "Process|Site|Driving Force / Mechanism\nFiltration|Glomerulus → Bowman Capsule|Net Filtration Pressure (Blood Pressure)\nReabsorption|Tubule → Capillaries|Active/Passive (Glucose & 99% Water reclaimed)\nSecretion|Capillaries → Tubule|Active Transport (Excretes Excess H+, K+, Drugs)",
+            .zhHans: "作用名称|发生部位|驱动力 / 生理机制\n过滤作用|肾小球 → 鲍氏囊|有效过滤压（血压推动、物理过滤）\n再吸收作用|肾小管 → 周围微血管|主动/被动运输（葡萄糖、水99%回收）\n分泌作用|周围微血管 → 肾小管|主动运输（排出过多H+、K+与药物代谢物）",
+            .ja: "作用名称|部位|駆動力 / 生理機構\nろ過作用|糸球体 → ボーマン嚢|有効ろ過圧（血圧駆動・物理的ろ過）\n再吸収作用|尿細管 → 毛細血管|能動/受動輸送（ブドウ糖・水99%回収）\n分泌作用|毛細血管 → 尿細管|能動輸送（余剰H+、K+、薬物排出）",
+            .ko: "작용 명칭|부위|추진력 / 생리 기전\n여과 작용|사구체 → 보먼주머니|유효 여과압 (혈압 추진, 물리적 여과)\n재흡수 작용|세뇨관 → 주위 모세혈관|능동/수동 수송 (포도당, 수분 99% 회수)\n분비 작용|주위 모세혈관 → 세뇨관|능동 수송 (잉여 H+, K+, 약물 배출)",
+            .th: "กระบวนการ|ตำแหน่ง|กลไกขับเคลื่อน\nการกรอง|โกลเมอรูลัส → โบว์แมนส์แคปซูล|แรงดันการกรองสุทธิ\nการดูดกลับ|ท่อหน่วยไต → หลอดเลือดฝอย|การลำเลียงแบบใช้พลังงานและแพร่\nการหลั่ง|หลอดเลือดฝอย → ท่อหน่วยไต|การลำเลียงแบบใช้พลังงาน"
+        ],
         "sample_data": [
             .zhHant: "載入範例數據",
             .en: "Load Sample Data",
@@ -9383,6 +9391,22 @@ extension LocalizationManager {
             .ja: "アカウントとセキュリティ",
             .ko: "계정 및 보안",
             .th: "บัญชีและความปลอดภัย"
+        ],
+        "seed_featured_biology_snippet": [
+            .zhHant: "人體循環、氣體運輸與腎臟泌尿生理手繪手寫整合精選筆記",
+            .en: "Hand-drawn biological notes on human circulation, gas transport and renal physiology",
+            .zhHans: "人体循环、气体运输与肾脏泌尿生理手绘手写整合精选笔记",
+            .ja: "人体循環・気体輸送・腎臓泌尿生理の手描き統合精選ノート",
+            .ko: "인체 순환, 기체 운반 및 신장 비뇨 생리 손글씨 통합 정선 노트",
+            .th: "บันทึกสรุปชีววิทยา: การไหลเวียนโลหิต การขนส่งก๊าซ และระบบไต"
+        ],
+        "seed_featured_biology_title": [
+            .zhHant: "Kairumo（精選實例）",
+            .en: "Kairumo (Featured Samples)",
+            .zhHans: "Kairumo（精选实例）",
+            .ja: "Kairumo（厳選事例）",
+            .ko: "Kairumo (선정 예시)",
+            .th: "Kairumo (ตัวอย่างเด่น)"
         ],
         "seed_meeting_snippet": [
             .zhHant: "支援麥克風即時收音，聲音與筆跡精確對齊",

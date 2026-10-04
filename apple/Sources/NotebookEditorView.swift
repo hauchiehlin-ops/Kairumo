@@ -2146,8 +2146,11 @@ public struct NotebookEditorView: View {
             }
             store.activeNotebookId = notebook.id
             // 開著的這一本走焦點通道（秒同步）與區網直連。
-            FocusSyncController.shared.setFocus(notebook.id)
             sanitizeTextAttachments()
+            if let targetPageStr = ProcessInfo.processInfo.environment["KAIRUMO_AUTO_OPEN_PAGE"],
+               let targetPage = Int(targetPageStr), targetPage >= 0 && targetPage < notebook.pageCount {
+                currentPageIndex = targetPage
+            }
             loadCurrentPage()
             MacWindowTitle.apply()
             // 進到編輯器時也亮一次：第一次開的人要知道自己在哪個模式。

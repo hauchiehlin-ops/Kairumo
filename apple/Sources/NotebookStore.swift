@@ -1478,7 +1478,7 @@ public final class NotebookStore: ObservableObject {
         var changed = false
         for index in notebooks.indices {
             guard let key = notebooks[index].titleKey,
-                  key == "seed_welcome_title" || key == "seed_meeting_title",
+                  key == "seed_welcome_title" || key == "seed_meeting_title" || key == "seed_featured_biology_title",
                   Self.isBlank(notebooks[index])
             else { continue }
 
@@ -1492,11 +1492,36 @@ public final class NotebookStore: ObservableObject {
 
             if key == "seed_welcome_title" {
                 SeedContent.fillWelcome(&notebooks[index])
-            } else {
+            } else if key == "seed_meeting_title" {
                 SeedContent.fillMeeting(&notebooks[index], store: self)
+            } else if key == "seed_featured_biology_title" {
+                SeedContent.fillFeaturedBiologySample(&notebooks[index])
             }
             changed = true
         }
+
+        // 若現有使用者庫中尚未有精選生物範例筆記，自動補入精選範例
+        let hasBio = notebooks.contains {
+            $0.id == "seed-featured-biology-v1" || $0.titleKey == "seed_featured_biology_title"
+        }
+        if !hasBio {
+            var n3 = NotebookDocument(
+                id: "seed-featured-biology-v1",
+                title: LocalizationManager.shared.localized("seed_featured_biology_title"),
+                createdAt: Date().addingTimeInterval(-43200),
+                lastModifiedDate: Date().addingTimeInterval(-1800),
+                pageCount: 2,
+                hasRecording: false,
+                previewSnippet: "人體循環、氣體運輸與腎臟泌尿生理手繪手寫整合精選筆記",
+                template: .grid
+            )
+            n3.titleKey = "seed_featured_biology_title"
+            n3.snippetKey = "seed_featured_biology_snippet"
+            SeedContent.fillFeaturedBiologySample(&n3)
+            notebooks.append(n3)
+            changed = true
+        }
+
         if changed { persistData() }
     }
 
@@ -1871,18 +1896,30 @@ public final class NotebookStore: ObservableObject {
             template: .cornell
         )
 
+        var n3 = NotebookDocument(
+            id: "seed-featured-biology-v1",
+            title: LocalizationManager.shared.localized("seed_featured_biology_title"),
+            createdAt: Date().addingTimeInterval(-43200),
+            lastModifiedDate: Date().addingTimeInterval(-1800),
+            pageCount: 2,
+            hasRecording: false,
+            previewSnippet: "人體循環、氣體運輸與腎臟泌尿生理手繪手寫整合精選筆記",
+            template: .grid
+        )
+
         n1.titleKey = "seed_welcome_title"
         n1.snippetKey = "seed_welcome_snippet"
         n2.titleKey = "seed_meeting_title"
         n2.snippetKey = "seed_meeting_snippet"
+        n3.titleKey = "seed_featured_biology_title"
+        n3.snippetKey = "seed_featured_biology_snippet"
 
-        // 兩本範例筆記原本都只有空白頁。「示範」什麼都不示範的話，
-        // 使用者第一次打開看到的是一片白 —— 那比沒有範例還糟，
-        // 因為他會以為這個 App 只能手寫。
+        // 範例筆記：示範手寫、幾何形狀、原生表格與考點遮蔽膠帶
         SeedContent.fillWelcome(&n1)
         SeedContent.fillMeeting(&n2, store: self)
+        SeedContent.fillFeaturedBiologySample(&n3)
 
-        self.notebooks = [n1, n2]
+        self.notebooks = [n1, n2, n3]
         persistData()
     }
 
