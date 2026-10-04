@@ -8952,6 +8952,30 @@ extension LocalizationManager {
             .ko: "녹음 재개",
             .th: "บันทึกต่อ"
         ],
+        "revert_confirm_action": [
+            .zhHant: "捨棄並恢復",
+            .en: "Discard & Revert",
+            .zhHans: "舍弃并恢复",
+            .ja: "破棄して復元",
+            .ko: "버리고 복원",
+            .th: "ละทิ้งและย้อนกลับ"
+        ],
+        "revert_to_initial_state": [
+            .zhHant: "一鍵恢復初始狀態",
+            .en: "Revert to Initial State",
+            .zhHans: "一键恢复初始状态",
+            .ja: "開いた時の状態に戻す",
+            .ko: "열었을 때 상태로 복원",
+            .th: "ย้อนกลับเป็นสถานะเริ่มต้น"
+        ],
+        "revert_to_initial_state_confirm": [
+            .zhHant: "確定要捨棄打開筆記本以來的所有編輯內容，恢復到打開前的初始狀態嗎？",
+            .en: "Are you sure you want to discard all edits made since opening this notebook and revert to its initial state?",
+            .zhHans: "确定要舍弃打开笔记本以来的所有编辑内容，恢复到打开前的初始状态吗？",
+            .ja: "このノートを開いてからのすべての編集を破棄し、開いた直後の初期状態に戻しますか？",
+            .ko: "이 노트를 연 이후의 모든 편집 내용을 버리고 초기 상태로 되돌리시겠습니까?",
+            .th: "คุณแน่ใจหรือไม่ว่าต้องการละทิ้งการแก้ไขทั้งหมดนับตั้งแต่เปิดสมุดบันทึกนี้และย้อนกลับเป็นสถานะเริ่มต้น?"
+        ],
         "role_editor": [
             .zhHant: "編輯者",
             .en: "Editor",

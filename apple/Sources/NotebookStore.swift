@@ -1367,10 +1367,26 @@ public final class NotebookStore: ObservableObject {
     /// 的範例，使用者自行改過名的筆記不會被碰。
     public func repairSyncedSeedDuplicates() {
         let migrated = notebooks.map(migrateSeedTitles)
-        let deduped = Self.deduplicateById(migrated)
+        var deduped = Self.deduplicateById(migrated)
+
+        // 同步索引庫具備最新 Lamport 時戳權威：若遠端或其他裝置已改名，讓工作副本的標題同步跟進
+        let liveIndex = syncLiveNotebooks(indexJson: AccountSyncStore.shared.indexJSON)
+        let liveTitles = Dictionary(liveIndex.compactMap { item -> (String, String)? in
+            let clean = item.title.trimmingCharacters(in: .whitespacesAndNewlines)
+            return clean.isEmpty ? nil : (item.id.lowercased(), clean)
+        }, uniquingKeysWith: { first, _ in first })
+
+        for i in deduped.indices {
+            let nid = deduped[i].id.lowercased()
+            if let indexTitle = liveTitles[nid], !indexTitle.isEmpty, deduped[i].title != indexTitle {
+                deduped[i].title = indexTitle
+                deduped[i].titleKey = nil
+            }
+        }
+
         let retainedIds = Set(deduped.map { $0.id.lowercased() })
         let removed = migrated.filter { !retainedIds.contains($0.id.lowercased()) }
-        guard !removed.isEmpty || migrated != notebooks else { return }
+        guard !removed.isEmpty || deduped != notebooks else { return }
 
         notebooks = deduped
         for document in removed {
@@ -1380,7 +1396,7 @@ public final class NotebookStore: ObservableObject {
             try? FileManager.default.removeItem(at: original)
             if canonical != original { try? FileManager.default.removeItem(at: canonical) }
         }
-        markDirtyAndPersist()
+        markDirtyAndPersist(signalsLocalEdit: false)
     }
 
 
@@ -1587,7 +1603,7 @@ public final class NotebookStore: ObservableObject {
                 // 寫檔期間若又有變更，補寫最後一版，否則會漏掉結尾的編輯。
                 if self.needsAnotherWrite {
                     self.needsAnotherWrite = false
-                    self.persistData(signalsLocalEdit: false)
+                    self.persistData(signalsLocalEdit: self.signalAfterWrite)
                     return
                 }
                 // 落盤完成才通知同步。**順序不能顛倒**：先通知的話，
@@ -2287,7 +2303,14 @@ public final class NotebookStore: ObservableObject {
                 parentId: notebooks[idx].folderId,
                 isFolder: false
             )
-            persistData()
+            // 同步更新磁碟上的 .padnote 套件標題，並觸摸修改時間促使 workingCopyNeedsExport 判定為新
+            let packagePath = corePackagesDirectory.appending(path: "\(notebooks[idx].id.lowercased()).padnote")
+            if FileManager.default.fileExists(atPath: packagePath.path),
+               let session = try? PadnoteSession.openExisting(path: packagePath.path, deviceId: NotebookMigration.deviceId) {
+                try? session.setTitle(title: clean)
+                try? FileManager.default.setAttributes([.modificationDate: Date()], ofItemAtPath: packagePath.path)
+            }
+            markDirtyAndPersist(signalsLocalEdit: true)
         }
     }
 
@@ -2304,7 +2327,7 @@ public final class NotebookStore: ObservableObject {
             parentId: parentId,
             isFolder: true
         )
-        persistData()
+        markDirtyAndPersist(signalsLocalEdit: true)
         return folder
     }
 
@@ -2319,7 +2342,7 @@ public final class NotebookStore: ObservableObject {
                 parentId: folders[idx].parentId,
                 isFolder: true
             )
-            persistData()
+            markDirtyAndPersist(signalsLocalEdit: true)
         }
     }
 
@@ -2355,7 +2378,7 @@ public final class NotebookStore: ObservableObject {
         }
         folders.removeAll { $0.id == id }
         AccountSyncStore.shared.recordDeletion(id: id)
-        persistData()
+        markDirtyAndPersist(signalsLocalEdit: true)
     }
 
     public func renameRootFolder(newName: String) {
@@ -3343,7 +3366,15 @@ public final class NotebookStore: ObservableObject {
             if changed {
                 notebooks[notebookIndex].audioAttachments = cards
                 notebooks[notebookIndex].lastModifiedDate = Date()
+                let targetPkg = corePackagesDirectory.appending(path: "\(notebooks[notebookIndex].id.lowercased()).padnote")
+                if FileManager.default.fileExists(atPath: targetPkg.path) {
+                    try? FileManager.default.setAttributes([.modificationDate: Date()], ofItemAtPath: targetPkg.path)
+                }
             }
+        }
+        let linkedPkg = corePackagesDirectory.appending(path: "\(targetNotebookId.lowercased()).padnote")
+        if FileManager.default.fileExists(atPath: linkedPkg.path) {
+            try? FileManager.default.setAttributes([.modificationDate: Date()], ofItemAtPath: linkedPkg.path)
         }
         markDirtyAndPersist(signalsLocalEdit: true)
     }

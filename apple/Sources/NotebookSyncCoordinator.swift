@@ -1511,7 +1511,14 @@ enum NotebookSyncCoordinator {
     static func preservingLocalChanges(
         _ imported: NotebookDocument, local: NotebookDocument?, exported: [String: Int]?
     ) -> (NotebookDocument, Bool) {
-        guard let local, let exported else { return (imported, false) }
+        guard let local else { return (imported, false) }
+        guard let exported else {
+            // 這一輪**沒有匯出**就匯入（例如套件時間較新）。沒有名單分不出新增／刪除，
+            // 所以不補、不刪；但兩邊都有的物件若工作副本比較新，**保留工作副本的版本** ——
+            // 否則第二次移動／旋轉後一同步，物件會跳回第一次移動的位置（使用者回報 iPad 定位失效）。
+            guard local.lastModifiedDate > imported.lastModifiedDate else { return (imported, false) }
+            return keepNewerLocalObjects(imported, local: local)
+        }
         var merged = imported
         var preserved = false
         let current = ExportedObjectIds.fingerprints(of: local)
@@ -1567,6 +1574,35 @@ enum NotebookSyncCoordinator {
             }
             merged.connectionAttachments = links
         }
+        return (merged, preserved)
+    }
+
+    /// 沒有匯出名單時的保守合併：只替換「兩邊都有、而且內容不同」的物件為工作副本版本。
+    static func keepNewerLocalObjects(
+        _ imported: NotebookDocument, local: NotebookDocument
+    ) -> (NotebookDocument, Bool) {
+        var merged = imported
+        var preserved = false
+        let mine = ExportedObjectIds.fingerprints(of: local)
+        let theirs = ExportedObjectIds.fingerprints(of: imported)
+        func keep<T: Identifiable>(_ keyPath: WritableKeyPath<NotebookDocument, [T]?>) where T.ID == String {
+            guard var items = merged[keyPath: keyPath] else { return }
+            let localItems = Dictionary(
+                (local[keyPath: keyPath] ?? []).map { ($0.id.lowercased(), $0) },
+                uniquingKeysWith: { first, _ in first })
+            for i in items.indices {
+                let id = items[i].id.lowercased()
+                if let m = localItems[id], mine[id] != theirs[id] {
+                    items[i] = m
+                    preserved = true
+                }
+            }
+            merged[keyPath: keyPath] = items
+        }
+        keep(\.attachments); keep(\.textAttachments); keep(\.tableAttachments)
+        keep(\.shapeAttachments); keep(\.connectionAttachments); keep(\.linkAttachments)
+        keep(\.model3DAttachments); keep(\.audioAttachments); keep(\.commentPins)
+        keep(\.tapeAttachments); keep(\.stickyAnchors)
         return (merged, preserved)
     }
 

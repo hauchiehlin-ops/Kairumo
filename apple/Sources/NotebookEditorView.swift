@@ -724,6 +724,8 @@ struct CanvasRepresentable: UIViewRepresentable {
 
     func makeUIView(context: Context) -> PKCanvasView {
         let canvas = AdaptiveCanvasView()
+        // 無限制復原/重做次數（0 代表 levelsOfUndo 無上限，直到記憶體或棧頂耗盡為止）
+        canvas.undoManager?.levelsOfUndo = 0
         canvas.drawingPolicy = resolvedPolicy()
         canvas.onPencilTouchBegan = onPencilTouchBegan
         canvas.onTouchObserved = { [weak canvas, weak coordinator = context.coordinator] touch in
@@ -1672,6 +1674,12 @@ public struct NotebookEditorView: View {
     @State private var showTableStudio: Bool = false
     @State private var showShapeStudio: Bool = false
     @State private var showLayerPanel: Bool = false
+    /// 畫布中單一選取物件的唯一識別碼（互斥單選：同一時間最多只有一個物件處於編輯/選取狀態）
+    @State private var activeSelectedObjectId: String? = nil
+    /// 一鍵恢復初始狀態（捨棄進入編輯器後的所有修改）
+    @State private var initialNotebookSnapshot: NotebookDocument? = nil
+    @State private var initialPageDrawings: [Int: PKDrawing] = [:]
+    @State private var showRevertConfirmAlert: Bool = false
     /// 圖層面板裡選取的形狀。多選才群組得起來。
     @State private var selectedShapeIds: Set<String> = []
     /// 被選取的連接線（連接線不在 `selectedShapeIds` 裡 —— 它不是形狀，沒有群組與對齊）。
@@ -2125,6 +2133,9 @@ public struct NotebookEditorView: View {
             coreInkWork?.cancel()
             coreInkWork = nil
             loadCurrentPage()
+            initialNotebookSnapshot = notebook
+            initialPageDrawings.removeAll()
+            initialPageDrawings[0] = currentDrawing
             PageThumbnailRenderer.invalidateAll()
         }
         .background(
@@ -2153,6 +2164,11 @@ public struct NotebookEditorView: View {
             }
             loadCurrentPage()
             MacWindowTitle.apply()
+            // 擷取剛打開筆記本時的初始狀態（提供一鍵恢復初始狀態功能）
+            if initialNotebookSnapshot == nil {
+                initialNotebookSnapshot = notebook
+                initialPageDrawings[currentPageIndex] = currentDrawing
+            }
             // 進到編輯器時也亮一次：第一次開的人要知道自己在哪個模式。
             flashModeBadge()
         }
@@ -2518,6 +2534,31 @@ public struct NotebookEditorView: View {
                 }
             }
         }
+        .alert(localizationManager.localized("revert_to_initial_state"), isPresented: $showRevertConfirmAlert) {
+            Button(localizationManager.localized("cancel"), role: .cancel) {}
+            Button(localizationManager.localized("revert_confirm_action"), role: .destructive) {
+                if let snapshot = initialNotebookSnapshot {
+                    notebook = snapshot
+                    for (pageIdx, savedDrawing) in initialPageDrawings {
+                        store.saveDrawing(notebookId: notebook.id, pageIndex: pageIdx, drawing: savedDrawing)
+                    }
+                    currentDrawing = initialPageDrawings[currentPageIndex] ?? store.loadDrawing(notebookId: notebook.id, pageIndex: currentPageIndex)
+                    if let canvas = canvasView {
+                        canvas.drawing = currentDrawing
+                    }
+                    store.updateNotebook(notebook)
+                    activeSelectedObjectId = nil
+                    inlineEditingTextId = nil
+                    editingTextId = nil
+                    selectedShapeIds = []
+                    selectedConnectionId = nil
+                    selectedObjectIds = []
+                    PageThumbnailRenderer.invalidateAll()
+                }
+            }
+        } message: {
+            Text(localizationManager.localized("revert_to_initial_state_confirm"))
+        }
         .background(Color.clear.alert(localizationManager.localized("clear_page"), isPresented: $showClearConfirmAlert) {
             Button(localizationManager.localized("cancel"), role: .cancel) {}
             Button(localizationManager.localized("clear_confirm"), role: .destructive) {
@@ -2814,6 +2855,19 @@ public struct NotebookEditorView: View {
                 }
                 .accessibilityLabel(localizationManager.localized("redo"))
                 .help(localizationManager.localized("redo_desc"))
+
+                Button {
+                    showRevertConfirmAlert = true
+                } label: {
+                    Image(systemName: "arrow.counterclockwise")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundColor(.primary)
+                        .padding(5)
+                        .background(Color(uiColor: .tertiarySystemGroupedBackground))
+                        .cornerRadius(6)
+                }
+                .accessibilityLabel(localizationManager.localized("revert_to_initial_state"))
+                .help(localizationManager.localized("revert_to_initial_state"))
             }
 
             // 📦 素材圖庫快捷按鈕（與 iOS 首頁一致）
@@ -3217,6 +3271,51 @@ public struct NotebookEditorView: View {
         .buttonStyle(.plain)
         .accessibilityIdentifier("editor.title")
 
+        // 復原、重做與恢復初始狀態（緊湊模式工具列，支援連續無限制復原）
+        HStack(spacing: 3) {
+            Button {
+                performUndo()
+            } label: {
+                Image(systemName: "arrow.uturn.backward")
+                    .font(.system(size: EditorToolbarMetrics.icon - 2, weight: .medium))
+                    .foregroundColor(.primary)
+                    .padding(4)
+                    .background(Color(uiColor: .tertiarySystemGroupedBackground))
+                    .cornerRadius(EditorToolbarMetrics.corner)
+            }
+            .accessibilityLabel(localizationManager.localized("undo"))
+            .help(localizationManager.localized("undo_desc"))
+            .accessibilityIdentifier("editor.compact.undo")
+
+            Button {
+                canvasView?.undoManager?.redo()
+            } label: {
+                Image(systemName: "arrow.uturn.forward")
+                    .font(.system(size: EditorToolbarMetrics.icon - 2, weight: .medium))
+                    .foregroundColor(.primary)
+                    .padding(4)
+                    .background(Color(uiColor: .tertiarySystemGroupedBackground))
+                    .cornerRadius(EditorToolbarMetrics.corner)
+            }
+            .accessibilityLabel(localizationManager.localized("redo"))
+            .help(localizationManager.localized("redo_desc"))
+            .accessibilityIdentifier("editor.compact.redo")
+
+            Button {
+                showRevertConfirmAlert = true
+            } label: {
+                Image(systemName: "arrow.counterclockwise")
+                    .font(.system(size: EditorToolbarMetrics.icon - 2, weight: .medium))
+                    .foregroundColor(.primary)
+                    .padding(4)
+                    .background(Color(uiColor: .tertiarySystemGroupedBackground))
+                    .cornerRadius(EditorToolbarMetrics.corner)
+            }
+            .accessibilityLabel(localizationManager.localized("revert_to_initial_state"))
+            .help(localizationManager.localized("revert_to_initial_state"))
+            .accessibilityIdentifier("editor.compact.revert")
+        }
+
         Spacer(minLength: 2)
 
         // 頁碼切換
@@ -3421,6 +3520,13 @@ public struct NotebookEditorView: View {
                     Label(L("posture_tabletop_mode"), systemImage: "laptopcomputer.and.ipad")
                 }
                 .accessibilityIdentifier("editor.tabletop_mode")
+
+                Button(role: .destructive) {
+                    showRevertConfirmAlert = true
+                } label: {
+                    Label(localizationManager.localized("revert_to_initial_state"), systemImage: "arrow.counterclockwise")
+                }
+                .accessibilityIdentifier("editor.revert_initial_state")
             }
         } label: {
             Image(systemName: "ellipsis.circle.fill")
@@ -4174,6 +4280,8 @@ public struct NotebookEditorView: View {
                     if item.pageIndex == page {
                         AttachmentItemView(
                             attachment: binding(for: item.id),
+                            isSelected: activeSelectedObjectId == item.id,
+                            onSelect: { selectSingleObject(item.id) },
                             onEdit: {
                                 if let formula = item.mathFormula {
                                     self.editingMathAttachmentId = MathEditTarget(id: item.id, formula: formula)
@@ -4288,6 +4396,8 @@ public struct NotebookEditorView: View {
                     if item.pageIndex == page {
                         TableAttachmentItemView(
                             table: tableBinding(for: item.id),
+                            isSelected: activeSelectedObjectId == item.id,
+                            onSelect: { selectSingleObject(item.id) },
                             onEdit: { editingTable = item },
                             onDelete: {
                                 let id = item.id
@@ -4316,6 +4426,8 @@ public struct NotebookEditorView: View {
                                     }
                                 }
                             ),
+                            isSelected: activeSelectedObjectId == item.id,
+                            onSelect: { selectSingleObject(item.id) },
                             isTypeMode: editorMode == .type,
                             snapToGrid: snapToGrid,
                             snapY: { y in snapYToGuideLine(at: y) },
@@ -4347,6 +4459,8 @@ public struct NotebookEditorView: View {
                     if item.pageIndex == page {
                         LinkAttachmentItemView(
                             linkItem: binding(forLinkId: item.id),
+                            isSelected: activeSelectedObjectId == item.id,
+                            onSelect: { selectSingleObject(item.id) },
                             onDelete: {
                                 notebook.linkAttachments?.removeAll { $0.id == item.id }
                                 store.updateNotebook(notebook)
@@ -4361,6 +4475,8 @@ public struct NotebookEditorView: View {
                     if item.pageIndex == page {
                         AudioAttachmentItemView(
                             item: binding(forAudioId: item.id),
+                            isSelected: activeSelectedObjectId == item.id,
+                            onSelect: { selectSingleObject(item.id) },
                             notebookId: notebook.id,
                             onDelete: {
                                 notebook.audioAttachments?.removeAll { $0.id == item.id }
@@ -4379,6 +4495,8 @@ public struct NotebookEditorView: View {
                     if item.pageIndex == page {
                         Model3DCanvasItemView(
                             item: binding(forModel3DId: item.id),
+                            isSelected: activeSelectedObjectId == item.id,
+                            onSelect: { selectSingleObject(item.id) },
                             onDelete: {
                                 deletedAttachmentBackup = (type: "3d", data: item)
                                 collaborationManager.broadcastAttachmentDelete(id: item.id, type: "3d")
@@ -4403,6 +4521,11 @@ public struct NotebookEditorView: View {
                                         selectedCommentPinId = nil
                                         collaborationManager.broadcastSelection(selectedId: nil)
                                     } else {
+                                        activeSelectedObjectId = nil
+                                        selectedShapeIds = []
+                                        selectedConnectionId = nil
+                                        selectedObjectIds = []
+                                        if inlineEditingTextId != nil { inlineEditingTextId = nil }
                                         selectedCommentPinId = pin.id
                                         collaborationManager.broadcastSelection(selectedId: pin.id)
                                     }
@@ -9767,7 +9890,13 @@ public struct NotebookEditorView: View {
                 return
             }
 
-            // 手寫模式下單擊畫布空白處：若先前有焦點中的文字方塊，收回文字編輯狀態
+            // 手寫模式下單擊畫布空白處：清空所有選取狀態
+            activeSelectedObjectId = nil
+            selectedShapeIds = []
+            selectedConnectionId = nil
+            selectedObjectIds = []
+            collaborationManager.broadcastSelection(selectedId: nil)
+
             if let activeId = inlineEditingTextId {
                 if let activeItem = notebook.textAttachments?.first(where: { $0.id == activeId }),
                    activeItem.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
@@ -9796,8 +9925,12 @@ public struct NotebookEditorView: View {
         let draft = insertTextBox(at: location, page: targetPage, tapToWrite: true)
         withAnimation(.easeInOut(duration: 0.18)) {
             editorMode = .type
+            activeSelectedObjectId = draft.id
             inlineEditingTextId = draft.id
             editingTextId = nil
+            selectedShapeIds = []
+            selectedConnectionId = nil
+            selectedObjectIds = []
         }
     }
 
@@ -9819,9 +9952,14 @@ public struct NotebookEditorView: View {
             item.pageIndex == targetPage &&
             CGRect(x: item.x, y: item.y, width: item.width, height: item.height).insetBy(dx: -12, dy: -12).contains(location)
         }) {
-            // 直接就地聚焦編輯既有文字，絕不彈出浮動面板
+            // 直接就地聚焦編輯既有文字，退出其他物件選取
+            activeSelectedObjectId = existing.id
             inlineEditingTextId = existing.id
             editingTextId = nil
+            selectedShapeIds = []
+            selectedConnectionId = nil
+            selectedObjectIds = []
+            collaborationManager.broadcastSelection(selectedId: existing.id)
             return
         }
 
@@ -9831,8 +9969,15 @@ public struct NotebookEditorView: View {
             return
         }
 
-        // 4. 點擊空白處：隨點隨打，像 Word 即點即書，建立自然排版文字
+        // 4. 點擊空白處：隨點隨打，像 Word 即點即書，建立自然排版文字，並清理其他選取狀態
+        activeSelectedObjectId = nil
+        selectedShapeIds = []
+        selectedConnectionId = nil
+        selectedObjectIds = []
+        collaborationManager.broadcastSelection(selectedId: nil)
+
         let draft = insertTextBox(at: location, page: targetPage, tapToWrite: true)
+        activeSelectedObjectId = draft.id
         inlineEditingTextId = draft.id
         editingTextId = nil
     }
@@ -11276,12 +11421,28 @@ public struct NotebookEditorView: View {
 
     private func toggleShapeSelection(_ id: String) {
         // 選到群組裡的一個就整組選起來 —— 那正是群組的意義。
+        // 形狀被選取時，其他種類的物件一律退出編輯狀態（畫布上同時最多一個待編輯物件）。
+        activeSelectedObjectId = nil
+        if inlineEditingTextId != nil { inlineEditingTextId = nil }
         let mates = ObjectLayerOps.groupMates(of: id, in: pageShapes)
         if mates.isSubset(of: selectedShapeIds) {
             selectedShapeIds.subtract(mates)
         } else {
-            selectedShapeIds.formUnion(mates)
+            selectedShapeIds = mates
         }
+    }
+
+    /// 選取單一物件（圖片、文字、表格、連結、錄音、3D）。
+    /// 先前被選取的物件（包括形狀、連接線、就地編輯中的文字）自動退出編輯狀態。
+    private func selectSingleObject(_ id: String, keepInlineText: Bool = false) {
+        activeSelectedObjectId = id
+        selectedShapeIds = []
+        selectedConnectionId = nil
+        selectedObjectIds = []
+        if !keepInlineText, inlineEditingTextId != nil, inlineEditingTextId != id {
+            inlineEditingTextId = nil
+        }
+        collaborationManager.broadcastSelection(selectedId: id)
     }
 
     /// 拖曳一個形狀時，同一組的其他成員要跟著走。
@@ -11475,6 +11636,8 @@ enum CanvasCoordinateSpace {
 /// 支援手勢拖曳平移、角落手柄縮放、即時濾鏡美化、邊框、立體陰影與旋轉
 struct AttachmentItemView: View {
     @Binding var attachment: NoteImageAttachment
+    var isSelected: Bool = false
+    var onSelect: (() -> Void)? = nil
     let onEdit: () -> Void
     let onDelete: () -> Void
 
@@ -11482,7 +11645,6 @@ struct AttachmentItemView: View {
     @ObservedObject var localizationManager = LocalizationManager.shared
     @ObservedObject var collaborationManager = CollaborationManager.shared
     @State private var dragOffset: CGSize = .zero
-    @State private var isSelected: Bool = false
     @State private var isDragging: Bool = false
     /// 縮放期間的本地預覽尺寸。
     ///
@@ -11559,8 +11721,7 @@ struct AttachmentItemView: View {
             .contentShape(Rectangle())
             .onTapGesture {
                 guard lockedByPeer == nil else { return }
-                isSelected.toggle()
-                collaborationManager.broadcastSelection(selectedId: isSelected ? attachment.id : nil)
+                onSelect?()
             }
             .gesture(
                 DragGesture(minimumDistance: 5, coordinateSpace: .named(CanvasCoordinateSpace.name))
@@ -11576,8 +11737,7 @@ struct AttachmentItemView: View {
                     .onEnded { value in
                         guard lockedByPeer == nil else { return }
                         if hypot(value.translation.width, value.translation.height) < 4 {
-                            isSelected.toggle()
-                            collaborationManager.broadcastSelection(selectedId: isSelected ? attachment.id : nil)
+                            onSelect?()
                         } else {
                             var transaction = Transaction()
                             transaction.animation = nil
@@ -11592,6 +11752,7 @@ struct AttachmentItemView: View {
                                 dragOffset = .zero
                                 isDragging = false
                             }
+                            onSelect?()
                             if let data = try? JSONEncoder().encode(attachment),
                                let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
                                 collaborationManager.broadcastAttachmentUpsert(type: "image", itemDict: dict)
@@ -11748,6 +11909,8 @@ struct ImageFilterModifier: ViewModifier {
 struct TextAttachmentItemView: View {
     @Binding var textItem: NoteTextAttachment
     @Binding var isEditingInline: Bool
+    var isSelected: Bool = false
+    var onSelect: (() -> Void)? = nil
     var isTypeMode: Bool = false
     var snapToGrid: Bool = false
     var snapY: ((CGFloat) -> CGFloat)? = nil
@@ -11762,7 +11925,6 @@ struct TextAttachmentItemView: View {
     /// 縮放期間的本地預覽寬度（理由同 `AttachmentItemView.liveSize`）。
     @State private var liveWidth: CGFloat? = nil
     @State private var resizeBaseWidth: CGFloat? = nil
-    @State private var isSelected: Bool = false
     @State private var isDragging: Bool = false
     @State private var hasBeenFocused: Bool = false
     @FocusState private var inlineFocused: Bool
@@ -11803,7 +11965,7 @@ struct TextAttachmentItemView: View {
     /// first responder，避免 UIKit 在 dismiss 過程中立刻把新鍵盤焦點收走。
     private func beginInlineEditing(afterContextMenu: Bool = false) {
         let activate = {
-            isSelected = true
+            onSelect?()
             hasBeenFocused = false
             isEditingInline = true
             collaborationManager.broadcastSelection(selectedId: textItem.id)
@@ -12097,6 +12259,7 @@ struct TextAttachmentItemView: View {
                             if deltaX != 0 || deltaY != 0 {
                                 onMoved?(CGSize(width: deltaX, height: deltaY))
                             }
+                            onSelect?()
                             if let data = try? JSONEncoder().encode(textItem),
                                let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
                                 collaborationManager.broadcastAttachmentUpsert(type: "text", itemDict: dict)
@@ -12277,10 +12440,11 @@ struct TextAttachmentItemView: View {
 struct LinkAttachmentItemView: View {
     @ObservedObject var localizationManager = LocalizationManager.shared
     @Binding var linkItem: NoteLinkAttachment
+    var isSelected: Bool = false
+    var onSelect: (() -> Void)? = nil
     let onDelete: () -> Void
 
     @State private var dragOffset: CGSize = .zero
-    @State private var isSelected: Bool = false
     /// 縮放拖曳中的即時尺寸。直接改 linkItem.width 會每一幀都寫回筆記。
     @State private var liveSize: CGSize? = nil
     @State private var resizeBase: CGSize? = nil
@@ -12354,7 +12518,7 @@ struct LinkAttachmentItemView: View {
                     }
                     .onEnded { value in
                         if hypot(value.translation.width, value.translation.height) < 4 {
-                            isSelected.toggle()
+                            onSelect?()
                         } else {
                             // 拖出可列印範圍的物件推回邊界（S-85）。
                             let landed = PrintableArea.clampOrigin(
@@ -12363,11 +12527,12 @@ struct LinkAttachmentItemView: View {
                                 width: linkItem.width, height: linkItem.height)
                             linkItem.x = landed.x
                             linkItem.y = landed.y
+                            onSelect?()
                         }
                         dragOffset = .zero
                     }
             )
-            .onTapGesture { isSelected.toggle() }
+            .onTapGesture { onSelect?() }
             .objectProbe("link")
             .padding(20)
         .position(x: currentX + displayWidth / 2, y: currentY + displayHeight / 2)
@@ -12567,6 +12732,8 @@ struct Model3DCanvasItemView: View {
     @ObservedObject var localizationManager = LocalizationManager.shared
     @ObservedObject var collaborationManager = CollaborationManager.shared
     @Binding var item: Note3DAttachment
+    var isSelected: Bool = false
+    var onSelect: (() -> Void)? = nil
     let onDelete: () -> Void
 
     @State private var dragOffset: CGSize = .zero
@@ -12627,6 +12794,7 @@ struct Model3DCanvasItemView: View {
                         item.x = landed.x
                         item.y = landed.y
                         dragOffset = .zero
+                        onSelect?()
                         if let data = try? JSONEncoder().encode(item),
                            let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
                             collaborationManager.broadcastAttachmentUpsert(type: "3d", itemDict: dict)
@@ -12651,6 +12819,7 @@ struct Model3DCanvasItemView: View {
                     item.x = landed.x
                     item.y = landed.y
                     dragOffset = .zero
+                    onSelect?()
                     if let data = try? JSONEncoder().encode(item),
                        let dict = try? JSONSerialization.jsonObject(with: data)
                         as? [String: Any] {
@@ -12658,6 +12827,9 @@ struct Model3DCanvasItemView: View {
                     }
                 }
             )
+            .onTapGesture {
+                onSelect?()
+            }
             // 底色與邊框吃使用者的設定。原本是寫死的 —— 那表示「所有插入的
             // 東西都能調外框」這件事在 3D 模型上是假的。
             .background(
@@ -12667,8 +12839,8 @@ struct Model3DCanvasItemView: View {
             .overlay(
                 RoundedRectangle(cornerRadius: item.cornerRadius)
                     .stroke(
-                        ObjectFrameStyleResolver.borderColor(item, .model3D),
-                        lineWidth: ObjectFrameStyleResolver.borderWidth(item, .model3D)
+                        isSelected ? Color.accentColor : ObjectFrameStyleResolver.borderColor(item, .model3D),
+                        lineWidth: isSelected ? 1.5 : ObjectFrameStyleResolver.borderWidth(item, .model3D)
                     )
             )
             .overlay(
@@ -13323,7 +13495,8 @@ public struct MaskingTapeOverlayView: View {
                                     notebook.tapeAttachments = []
                                 }
                                 notebook.tapeAttachments?.append(dragTape)
-                                selectedTapeId = dragTape.id
+                                // 連續畫膠帶：畫完一條後保持未選取狀態，讓使用者可以一條接著一條順暢繪製，而不必每次手動解除選取
+                                selectedTapeId = nil
                                 currentDragTape = nil
                                 onTapesChanged()
                             }

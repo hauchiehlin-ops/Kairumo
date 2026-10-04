@@ -448,12 +448,14 @@ public struct TableStudioView: View {
 /// 哪裡怪，只覺得「這個東西怪怪的」。
 struct TableAttachmentItemView: View {
     @Binding var table: NoteTableAttachment
+    /// 選取狀態由編輯器統一管理（畫布上同時最多一個待編輯物件）。
+    var isSelected: Bool = false
+    var onSelect: (() -> Void)? = nil
     let onEdit: () -> Void
     let onDelete: () -> Void
 
     @ObservedObject private var localizationManager = LocalizationManager.shared
     @State private var dragOffset: CGSize = .zero
-    @State private var isSelected: Bool = false
     @State private var isDragging: Bool = false
     @State private var editingCell: TableCellCoordinate? = nil
 
@@ -464,27 +466,34 @@ struct TableAttachmentItemView: View {
 
         NoteTableView(
             table: $table,
-            isSelected: isSelected || editingCell != nil,
+            isSelected: isSelected,
             onEdit: onEdit,
-            isInlineEditable: isSelected || editingCell != nil,
-            editingCell: $editingCell
+            isInlineEditable: isSelected,
+            editingCell: Binding(
+                get: { editingCell },
+                set: { newValue in
+                    if newValue != nil { onSelect?() }
+                    editingCell = newValue
+                })
         )
+            .onChange(of: isSelected) { selected in
+                // 失去焦點就退出儲存格編輯。
+                if !selected { editingCell = nil }
+            }
             .shadow(color: isDragging ? .clear : Color.black.opacity(0.08), radius: 6, y: 3)
             .gesture(
                 DragGesture(minimumDistance: 5, coordinateSpace: .named(CanvasCoordinateSpace.name))
                     .onChanged { value in
                         isDragging = true
-                        isSelected = true
                         editingCell = nil
                         dragOffset = value.translation
                     }
                     .onEnded { value in
-                        if hypot(value.translation.width, value.translation.height) < 4 {
-                            isSelected = true
-                        } else {
+                        if hypot(value.translation.width, value.translation.height) >= 4 {
                             table.x += dragOffset.width
                             table.y += dragOffset.height
                         }
+                        onSelect?()
                         dragOffset = .zero
                         isDragging = false
                     }

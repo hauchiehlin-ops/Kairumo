@@ -36,12 +36,13 @@ struct AudioAttachmentItemView: View {
     @Binding var item: NoteAudioAttachment
     /// 這張卡片所屬的筆記本。錄音住在**那一本的套件裡**，
     /// 沒有它就只能猜路徑，而猜錯的症狀是「按了播放沒有反應」。
+    var isSelected: Bool = false
+    var onSelect: (() -> Void)? = nil
     var notebookId: String? = nil
     let onDelete: () -> Void
     var onTranscribe: ((String) -> Void)? = nil
 
     @State private var dragOffset: CGSize = .zero
-    @State private var isSelected: Bool = false
     /// 縮放拖曳中的即時尺寸。直接改 item.width 會每一幀都寫回筆記。
     @State private var liveSize: CGSize? = nil
     @State private var resizeBase: CGSize? = nil
@@ -84,6 +85,7 @@ struct AudioAttachmentItemView: View {
                         item.x += value.translation.width
                         item.y += value.translation.height
                         dragOffset = .zero
+                        onSelect?()
                     }
             )
             // 卡片本體跟著轉；把手掛在旋轉**外面**的 overlay ——
@@ -320,7 +322,7 @@ struct AudioAttachmentItemView: View {
             }
             .contentShape(Rectangle())
             .onTapGesture {
-                isSelected.toggle()
+                onSelect?()
             }
         }
         .padding(.horizontal, 12)
