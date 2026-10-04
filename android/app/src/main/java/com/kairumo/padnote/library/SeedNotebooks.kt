@@ -53,7 +53,7 @@ object SeedNotebooks {
         var created = 0
         if (buildWelcome(context, deviceId, ::l)) created++
         if (buildMeeting(context, deviceId, ::l)) created++
-        if (buildFeaturedBiology(context, deviceId, ::l)) created++
+        if (buildFeatureShowcase(context, deviceId, ::l)) created++
         return created
     }
 
@@ -82,7 +82,16 @@ object SeedNotebooks {
         existing: List<NotebookLibrary.Entry>,
         l: (String) -> String
     ): Int {
+        // 主動清理廢除的舊版《Kairumo（精選實例）》
+        NotebookLibrary.delete(context, LEGACY_FEATURED_ID)
+
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        val showcaseTitle = l("seed_feature_showcase_title")
+        val hasShowcase = existing.any { it.title == showcaseTitle || it.id == SHOWCASE_ID }
+        if (!hasShowcase) {
+            buildFeatureShowcase(context, deviceId, l)
+        }
+
         if (prefs.getBoolean(KEY_BACKFILLED, false)) return 0
 
         val welcomeTitle = l("seed_welcome_title")
@@ -118,13 +127,17 @@ object SeedNotebooks {
     private const val KEY_BACKFILLED = "samples_backfilled"
     private const val WELCOME_ID = "seed-welcome-notebook-v1"
     private const val MEETING_ID = "seed-meeting-notebook-v1"
-    private const val FEATURED_ID = "seed-featured-biology-v1"
+    private const val SHOWCASE_ID = "seed-feature-showcase-v1"
+    private const val LEGACY_FEATURED_ID = "seed-featured-biology-v1"
 
-    // MARK: - 精選範例筆記：《Kairumo（精選實例）》
+    // MARK: - 功能實戰範例筆記：《Kairumo(功能範例)》
 
-    private fun buildFeaturedBiology(context: Context, deviceId: UInt, l: (String) -> String): Boolean {
+    private fun buildFeatureShowcase(context: Context, deviceId: UInt, l: (String) -> String): Boolean {
+        // 主動清理舊版《Kairumo（精選實例）》
+        NotebookLibrary.delete(context, LEGACY_FEATURED_ID)
+
         val id = NotebookLibrary.create(
-            context, l("seed_featured_biology_title"), deviceId, id = FEATURED_ID
+            context, l("seed_feature_showcase_title"), deviceId, id = SHOWCASE_ID
         ) ?: return false
         val opened = NotebookLibrary.open(context, id, deviceId) ?: return false
         val (session, firstPage) = opened
@@ -135,207 +148,308 @@ object SeedNotebooks {
         meta.setPaperId(session, "grid")
 
         // =========================================================================
-        // 【第一頁：循環系統與氣體運輸】
+        // 【第一頁：手繪（鉛筆／鋼筆／毛筆）＋ 打字（主流應用優缺點比較表）】
         // =========================================================================
 
-        // 1. 大標題
-        title(session, pages[0], l("sample_bio_p1_title"), 40f)
-
-        // 2. 門脈循環區塊
-        val shapes0 = ShapeStore(session, pages[0])
-        val portalShape = NoteShape(
-            kindName = "rectangle", x = MARGIN, y = 85f, width = 250f, height = 140f,
-            cornerRadius = 6f, label = l("sample_bio_portal_shape"),
-            strokeColorHex = "#D98880", fillColorHex = "#FDEDEC", lineWidth = 1.5f
-        )
-        shapes0.create(portalShape)
+        // 1. 頁面大標題與副標（打字）
+        title(session, pages[0], l("sample_showcase_p1_title"), 38f)
 
         val textStore0 = TextBoxStore(session, pages[0])
-        val portalText = textStore0.create(MARGIN + 265f, 85f)
-        portalText.width = CONTENT_WIDTH - 265f
-        portalText.height = 140f
-        portalText.text = l("sample_bio_portal_text")
-        portalText.fontSize = 13f
-        portalText.textColorHex = "#2C3E50"
-        portalText.backgroundColorHex = "#FADBD8"
-        portalText.hasBorder = true
-        portalText.borderColorHex = "#E6B0AA"
-        portalText.borderWidth = 1.0f
-        portalText.cornerRadius = 6f
-        portalText.lineSpacing = 4f
-        textStore0.persist(portalText)
+        val subBox = textStore0.create(MARGIN, 84f)
+        subBox.width = CONTENT_WIDTH
+        subBox.height = 32f
+        subBox.text = l("sample_showcase_p1_subtitle")
+        subBox.fontSize = 13f
+        subBox.bold = true
+        subBox.textColorHex = "#2B6CB0"
+        subBox.backgroundColorHex = "#EBF8FF"
+        subBox.hasBorder = true
+        subBox.borderColorHex = "#BEE3F8"
+        subBox.borderWidth = 1.0f
+        subBox.cornerRadius = 6f
+        textStore0.persist(subBox)
 
-        // 3. 淋巴循環區塊
-        val lymphShape = NoteShape(
-            kindName = "rectangle", x = MARGIN, y = 240f, width = CONTENT_WIDTH, height = 180f,
-            cornerRadius = 8f, label = "",
-            strokeColorHex = "#52BE80", fillColorHex = "#EAFAF1", lineWidth = 1.5f
+        val noteBox = textStore0.create(MARGIN, 124f)
+        noteBox.width = CONTENT_WIDTH
+        noteBox.height = 52f
+        noteBox.text = l("sample_showcase_handwriting_note")
+        noteBox.fontSize = 12f
+        noteBox.textColorHex = "#2D3748"
+        noteBox.backgroundColorHex = "#F7FAFC"
+        noteBox.hasBorder = true
+        noteBox.borderColorHex = "#E2E8F0"
+        noteBox.borderWidth = 1.0f
+        noteBox.cornerRadius = 8f
+        noteBox.lineSpacing = 3f
+        textStore0.persist(noteBox)
+
+        // 2. 「手繪」：分別用鉛筆、鋼筆、毛筆表列真實手寫筆劃 (addStroke)
+        // 鉛筆 (Pencil)：灰色系顆粒感
+        val pencilColor = byteArrayOf(70, 80, 95, -1) // #46505F
+        val pPoints1 = (0..20).map { i ->
+            uniffi.padnote_core.StrokePoint(
+                x = MARGIN + 20f + i * 14f,
+                y = 205f + kotlin.math.sin(i * 0.5f) * 2f,
+                pressure = 0.5f, tilt = 0.2f, azimuth = 0f, dtUs = (i * 10_000).toUInt()
+            )
+        }
+        session.addStroke(pages[0], uniffi.padnote_core.ToolKind.PENCIL, pencilColor, 2.2f, pPoints1)
+
+        val pPoints2 = (0..35).map { i ->
+            uniffi.padnote_core.StrokePoint(
+                x = MARGIN + 30f + i * 12f,
+                y = 235f + kotlin.math.sin(i * 0.7f) * 1.5f,
+                pressure = 0.55f, tilt = 0.2f, azimuth = 0f, dtUs = (i * 8_000).toUInt()
+            )
+        }
+        session.addStroke(pages[0], uniffi.padnote_core.ToolKind.PENCIL, pencilColor, 1.9f, pPoints2)
+
+        // 鋼筆 (Fountain Pen)：藍色流暢壓感
+        val penColor = byteArrayOf(30, 80, 215.toByte(), -1) // #1E50D7
+        val penPoints1 = (0..22).map { i ->
+            val press = 0.4f + kotlin.math.sin(i * 0.3f) * 0.5f
+            uniffi.padnote_core.StrokePoint(
+                x = MARGIN + 20f + i * 15f,
+                y = 280f + kotlin.math.cos(i * 0.4f) * 2.5f,
+                pressure = press, tilt = 0.1f, azimuth = 0f, dtUs = (i * 9_000).toUInt()
+            )
+        }
+        session.addStroke(pages[0], uniffi.padnote_core.ToolKind.FOUNTAIN_PEN, penColor, 3.2f, penPoints1)
+
+        val penPoints2 = (0..38).map { i ->
+            val press = 0.5f + kotlin.math.sin(i * 0.5f) * 0.4f
+            uniffi.padnote_core.StrokePoint(
+                x = MARGIN + 30f + i * 12f,
+                y = 310f + kotlin.math.sin(i * 0.6f) * 2f,
+                pressure = press, tilt = 0.1f, azimuth = 0f, dtUs = (i * 7_000).toUInt()
+            )
+        }
+        session.addStroke(pages[0], uniffi.padnote_core.ToolKind.FOUNTAIN_PEN, penColor, 2.6f, penPoints2)
+
+        // 毛筆 (Calligraphy / Brush)：深紅濃墨大幅提按起伏
+        val brushColor = byteArrayOf(140.toByte(), 30, 30, -1) // #8C1E1E
+        val brushPoints1 = (0..24).map { i ->
+            val press = 0.3f + kotlin.math.sin(i * 0.25f) * 0.7f
+            uniffi.padnote_core.StrokePoint(
+                x = MARGIN + 20f + i * 16f,
+                y = 355f + kotlin.math.sin(i * 0.3f) * 4f,
+                pressure = press, tilt = 0.3f, azimuth = 0f, dtUs = (i * 12_000).toUInt()
+            )
+        }
+        session.addStroke(pages[0], uniffi.padnote_core.ToolKind.CALLIGRAPHY, brushColor, 5.5f, brushPoints1)
+
+        val brushPoints2 = (0..36).map { i ->
+            val press = 0.35f + kotlin.math.sin(i * 0.35f) * 0.65f
+            uniffi.padnote_core.StrokePoint(
+                x = MARGIN + 30f + i * 13f,
+                y = 385f + kotlin.math.cos(i * 0.4f) * 3f,
+                pressure = press, tilt = 0.3f, azimuth = 0f, dtUs = (i * 10_000).toUInt()
+            )
+        }
+        session.addStroke(pages[0], uniffi.padnote_core.ToolKind.CALLIGRAPHY, brushColor, 4.2f, brushPoints2)
+
+        // 3. 「打字」：市面前 3 大主流應用對比表格
+        val tblTitle = textStore0.create(MARGIN, 405f)
+        tblTitle.width = CONTENT_WIDTH
+        tblTitle.height = 28f
+        tblTitle.text = l("sample_showcase_table_title")
+        tblTitle.fontSize = 15f
+        tblTitle.bold = true
+        tblTitle.textColorHex = "#1A365D"
+        tblTitle.backgroundColorHex = "clear"
+        tblTitle.hasBorder = false
+        textStore0.persist(tblTitle)
+
+        val tableStore0 = TableStore(session, pages[0])
+        val parsedMatrix = parseTable(l("sample_showcase_comparison_table"))
+        val matrixTable = NoteTable(
+            x = MARGIN, y = 438f, width = CONTENT_WIDTH,
+            rows = parsedMatrix.rows, cols = parsedMatrix.cols,
+            cells = parsedMatrix.cells.toMutableList(),
+            headerRow = true, fontSize = 11f, headerBackgroundHex = "#EBF8FF"
         )
-        shapes0.create(lymphShape)
+        tableStore0.create(matrixTable)
 
-        val lymphHeader = textStore0.create(MARGIN + 15f, 250f)
-        lymphHeader.width = CONTENT_WIDTH - 30f
-        lymphHeader.height = 60f
-        lymphHeader.text = l("sample_bio_lymph_path")
-        lymphHeader.fontSize = 14f
-        lymphHeader.textColorHex = "#1E8449"
-        lymphHeader.backgroundColorHex = "clear"
-        lymphHeader.hasBorder = false
-        lymphHeader.lineSpacing = 4f
-        textStore0.persist(lymphHeader)
+        // 底部亮點膠囊
+        val shapes0 = ShapeStore(session, pages[0])
+        shapes0.create(pill("100% 開源無廣告", MARGIN, 825f, "#EBF8FF"))
+        shapes0.create(pill("超低延遲向量筆跡", MARGIN + 175f, 825f, "#F0FFF4"))
+        shapes0.create(pill("微積分公式深度融合", MARGIN + 350f, 825f, "#FAF5FF"))
+        shapes0.create(pill("數字製圖＋討論圖釘", MARGIN + 525f, 825f, "#FFFAF0"))
 
-        val lymphBody = textStore0.create(MARGIN + 15f, 315f)
-        lymphBody.width = 440f
-        lymphBody.height = 95f
-        lymphBody.text = l("sample_bio_lymph_funcs")
-        lymphBody.fontSize = 13f
-        lymphBody.textColorHex = "#273746"
-        lymphBody.backgroundColorHex = "#D5F5E3"
-        lymphBody.hasBorder = true
-        lymphBody.borderColorHex = "#A9DFBF"
-        lymphBody.borderWidth = 1.0f
-        lymphBody.cornerRadius = 6f
-        lymphBody.lineSpacing = 3f
-        textStore0.persist(lymphBody)
+        // =========================================================================
+        // 【第二頁：手繪＋打字融合微積分方程 ＆ 數字製圖＋討論圖釘用法】
+        // =========================================================================
 
-        val catBox = textStore0.create(MARGIN + 465f, 315f)
-        catBox.width = CONTENT_WIDTH - 480f
-        catBox.height = 95f
-        catBox.text = l("sample_bio_cat_memo")
-        catBox.fontSize = 12f
-        catBox.textColorHex = "#2C3E50"
-        catBox.backgroundColorHex = "#FCF3CF"
-        catBox.hasBorder = true
-        catBox.borderColorHex = "#F9E79F"
-        catBox.borderWidth = 1.0f
-        catBox.cornerRadius = 8f
-        catBox.alignment = "center"
-        textStore0.persist(catBox)
+        title(session, pages[1], l("sample_showcase_p2_title"), 38f)
 
-        // 4. 氣體運輸機制
-        val gasShape = NoteShape(
-            kindName = "rectangle", x = MARGIN, y = 435f, width = CONTENT_WIDTH, height = 250f,
-            cornerRadius = 8f, label = "",
-            strokeColorHex = "#85929E", fillColorHex = "#F2F4F4", lineWidth = 1.5f
-        )
-        shapes0.create(gasShape)
-
-        val o2Box = textStore0.create(MARGIN + 15f, 478f)
-        o2Box.width = CONTENT_WIDTH - 30f
-        o2Box.height = 75f
-        o2Box.text = l("sample_bio_o2_text")
-        o2Box.fontSize = 13f
-        o2Box.textColorHex = "#1B4F72"
-        o2Box.backgroundColorHex = "#EBF5FB"
-        o2Box.hasBorder = true
-        o2Box.borderColorHex = "#AED6F1"
-        o2Box.borderWidth = 1.0f
-        o2Box.cornerRadius = 6f
-        o2Box.lineSpacing = 3f
-        textStore0.persist(o2Box)
-
-        val co2Box = textStore0.create(MARGIN + 15f, 560f)
-        co2Box.width = CONTENT_WIDTH - 30f
-        co2Box.height = 85f
-        co2Box.text = l("sample_bio_co2_text")
-        co2Box.fontSize = 13f
-        co2Box.textColorHex = "#641E16"
-        co2Box.backgroundColorHex = "#FADBD8"
-        co2Box.hasBorder = true
-        co2Box.borderColorHex = "#F5B7B1"
-        co2Box.borderWidth = 1.0f
-        co2Box.cornerRadius = 6f
-        co2Box.lineSpacing = 3f
-        textStore0.persist(co2Box)
-
-        // 5. 第一頁背誦考點膠帶
-        val page0Tapes = listOf(
-            com.kairumo.padnote.canvas.NoteTape(
-                pageIndex = 0, x = MARGIN + 275f, y = 190f, width = 200f, height = 28f,
-                isRevealed = false, colorHex = "#FFD1DC"
-            ),
-            com.kairumo.padnote.canvas.NoteTape(
-                pageIndex = 0, x = MARGIN + 35f, y = 580f, width = 140f, height = 24f,
-                isRevealed = false, colorHex = "#FCEEAC"
-            ),
-            com.kairumo.padnote.canvas.NoteTape(
-                pageIndex = 0, x = MARGIN + 35f, y = 605f, width = 140f, height = 24f,
-                isRevealed = false, colorHex = "#C8E6C9"
+        // 1. 微積分方程融合：打字解析卡片
+        val shapes1 = ShapeStore(session, pages[1])
+        shapes1.create(
+            NoteShape(
+                kindName = "rectangle", x = MARGIN, y = 84f, width = CONTENT_WIDTH, height = 250f,
+                cornerRadius = 10f, label = "",
+                strokeColorHex = "#9F7AEA", fillColorHex = "#FAF5FF", lineWidth = 1.5f
             )
         )
-
-        // =========================================================================
-        // 【第二頁：泌尿系統與腎臟解剖】
-        // =========================================================================
-
-        title(session, pages[1], l("sample_bio_p2_title"), 40f)
-
-        val shapes1 = ShapeStore(session, pages[1])
-        val nephronShape = NoteShape(
-            kindName = "rectangle", x = MARGIN, y = 85f, width = 320f, height = 250f,
-            cornerRadius = 8f, label = "",
-            strokeColorHex = "#B7950B", fillColorHex = "#FEF9E7", lineWidth = 1.5f
-        )
-        shapes1.create(nephronShape)
 
         val textStore1 = TextBoxStore(session, pages[1])
-        val nephronText = textStore1.create(MARGIN + 12f, 95f)
-        nephronText.width = 300f
-        nephronText.height = 230f
-        nephronText.text = l("sample_bio_nephron_text")
-        nephronText.fontSize = 13f
-        nephronText.textColorHex = "#4D5656"
-        nephronText.backgroundColorHex = "clear"
-        nephronText.hasBorder = false
-        nephronText.lineSpacing = 4f
-        textStore1.persist(nephronText)
+        val calcTitle = textStore1.create(MARGIN + 16f, 94f)
+        calcTitle.width = CONTENT_WIDTH - 32f
+        calcTitle.height = 24f
+        calcTitle.text = l("sample_showcase_calc_typed_title")
+        calcTitle.fontSize = 14f
+        calcTitle.bold = true
+        calcTitle.textColorHex = "#553C9A"
+        calcTitle.backgroundColorHex = "clear"
+        calcTitle.hasBorder = false
+        textStore1.persist(calcTitle)
 
-        val funcShape = NoteShape(
-            kindName = "rectangle", x = MARGIN + 335f, y = 85f, width = CONTENT_WIDTH - 335f, height = 250f,
-            cornerRadius = 8f, label = "",
-            strokeColorHex = "#2E86C1", fillColorHex = "#EBF5FB", lineWidth = 1.5f
-        )
-        shapes1.create(funcShape)
+        val calcDesc = textStore1.create(MARGIN + 16f, 122f)
+        calcDesc.width = 320f
+        calcDesc.height = 195f
+        calcDesc.text = l("sample_showcase_calc_typed_desc")
+        calcDesc.fontSize = 11f
+        calcDesc.textColorHex = "#4A5568"
+        calcDesc.backgroundColorHex = "#FFFFFF"
+        calcDesc.hasBorder = true
+        calcDesc.borderColorHex = "#E9D8FD"
+        calcDesc.borderWidth = 1.0f
+        calcDesc.cornerRadius = 6f
+        calcDesc.lineSpacing = 3f
+        textStore1.persist(calcDesc)
 
-        val funcText = textStore1.create(MARGIN + 347f, 95f)
-        funcText.width = CONTENT_WIDTH - 360f
-        funcText.height = 230f
-        funcText.text = l("sample_bio_renal_funcs")
-        funcText.fontSize = 13f
-        funcText.textColorHex = "#1B4F72"
-        funcText.backgroundColorHex = "clear"
-        funcText.hasBorder = false
-        funcText.lineSpacing = 6f
-        textStore1.persist(funcText)
+        // 微積分手繪算式筆劃 (∫ x sin(x) dx = π, 分部積分推導與圈選)
+        val mathInkColor = byteArrayOf(38, 50, 90, -1)
+        val mathPoints1 = (0..20).map { i ->
+            uniffi.padnote_core.StrokePoint(
+                x = MARGIN + 360f + i * 16f,
+                y = 145f + kotlin.math.sin(i * 0.4f) * 3f,
+                pressure = 0.6f, tilt = 0.2f, azimuth = 0f, dtUs = (i * 10_000).toUInt()
+            )
+        }
+        session.addStroke(pages[1], uniffi.padnote_core.ToolKind.FOUNTAIN_PEN, mathInkColor, 3.0f, mathPoints1)
 
-        // 原生表格：生理作用比較
-        val table1 = table(l("sample_bio_tools_table"), 385f)
-        TableStore(session, pages[1]).create(table1)
+        val mathPoints2 = (0..24).map { i ->
+            uniffi.padnote_core.StrokePoint(
+                x = MARGIN + 360f + i * 14f,
+                y = 195f + kotlin.math.cos(i * 0.4f) * 2f,
+                pressure = 0.65f, tilt = 0.2f, azimuth = 0f, dtUs = (i * 9_000).toUInt()
+            )
+        }
+        session.addStroke(pages[1], uniffi.padnote_core.ToolKind.FOUNTAIN_PEN, mathInkColor, 2.5f, mathPoints2)
 
-        val summaryText = textStore1.create(MARGIN, 560f)
-        summaryText.width = CONTENT_WIDTH
-        summaryText.height = 55f
-        summaryText.text = l("sample_bio_summary_memo")
-        summaryText.fontSize = 13f
-        summaryText.textColorHex = "#922B21"
-        summaryText.backgroundColorHex = "#FADBD8"
-        summaryText.hasBorder = true
-        summaryText.borderColorHex = "#E6B0AA"
-        summaryText.borderWidth = 1.0f
-        summaryText.cornerRadius = 6f
-        summaryText.lineSpacing = 4f
-        textStore1.persist(summaryText)
+        // 紅色圓圈重點圈選
+        val redCircleColor = byteArrayOf(215.toByte(), 45, 45, -1)
+        val circlePoints = (0..24).map { i ->
+            val angle = (i / 24f) * kotlin.math.PI.toFloat() * 2f
+            uniffi.padnote_core.StrokePoint(
+                x = MARGIN + 520f + kotlin.math.cos(angle) * 22f,
+                y = 265f + kotlin.math.sin(angle) * 22f,
+                pressure = 0.7f, tilt = 0.2f, azimuth = 0f, dtUs = (i * 8_000).toUInt()
+            )
+        }
+        session.addStroke(pages[1], uniffi.padnote_core.ToolKind.FOUNTAIN_PEN, redCircleColor, 3.2f, circlePoints)
 
-        // 第二頁考點膠帶
-        val page1Tapes = listOf(
-            com.kairumo.padnote.canvas.NoteTape(
-                pageIndex = 1, x = MARGIN + 347f, y = 145f, width = 180f, height = 26f,
-                isRevealed = false, colorHex = "#BBDEFB"
+        // 2. 數字製圖（Chart Studio）與討論圖釘（Comment Pins）
+        shapes1.create(
+            NoteShape(
+                kindName = "rectangle", x = MARGIN, y = 350f, width = CONTENT_WIDTH, height = 485f,
+                cornerRadius = 10f, label = "",
+                strokeColorHex = "#3182CE", fillColorHex = "#F7FAFC", lineWidth = 1.5f
             )
         )
 
-        // 寫入膠帶至中繼資料與持久化
-        meta.setTapes(session, page0Tapes + page1Tapes)
+        val chartTitle = textStore1.create(MARGIN + 16f, 360f)
+        chartTitle.width = CONTENT_WIDTH - 32f
+        chartTitle.height = 24f
+        chartTitle.text = l("sample_showcase_chart_typed_title")
+        chartTitle.fontSize = 14f
+        chartTitle.bold = true
+        chartTitle.textColorHex = "#2B6CB0"
+        chartTitle.backgroundColorHex = "clear"
+        chartTitle.hasBorder = false
+        textStore1.persist(chartTitle)
+
+        val chartDesc = textStore1.create(MARGIN + 16f, 390f)
+        chartDesc.width = CONTENT_WIDTH - 32f
+        chartDesc.height = 80f
+        chartDesc.text = l("sample_showcase_chart_typed_desc")
+        chartDesc.fontSize = 11f
+        chartDesc.textColorHex = "#2D3748"
+        chartDesc.backgroundColorHex = "#EDF2F7"
+        chartDesc.hasBorder = true
+        chartDesc.borderColorHex = "#CBD5E0"
+        chartDesc.borderWidth = 1.0f
+        chartDesc.cornerRadius = 6f
+        chartDesc.lineSpacing = 3f
+        textStore1.persist(chartDesc)
+
+        // 插入動態可編輯長條圖
+        val chartSpec = ChartSpec(
+            title = "2026 手寫繪圖效能與自由度指標對比 (滿分 100)",
+            categories = mutableListOf("向量書寫延遲", "圖表動態可編修", "空間圖釘協作", "開源與無訂閱限制"),
+            series = mutableListOf(
+                ChartSeries(
+                    name = "Kairumo (Padnote)",
+                    values = mutableListOf(98.0, 95.0, 96.0, 100.0),
+                    colorHex = "#3182CE"
+                ),
+                ChartSeries(
+                    name = "商業付費競品平均",
+                    values = mutableListOf(74.0, 52.0, 45.0, 38.0),
+                    colorHex = "#CBD5E0"
+                )
+            )
+        )
+        ChartStore(session, pages[1]).create(chartSpec, x = MARGIN + 20f, y = 480f)
+
+        // 插入討論圖釘（CommentPin）
+        val pin1 = com.kairumo.padnote.comment.CommentPin(
+            id = "seed-pin-showcase-chart-q3",
+            pageIndex = 1,
+            x = MARGIN + 415f,
+            y = 535f,
+            authorId = "kairumo-reviewer",
+            authorName = "Kairumo Architect",
+            authorColor = "#3182CE",
+            createdAt = java.util.Date(System.currentTimeMillis() - 7200_000L),
+            isResolved = false,
+            messages = mutableListOf(
+                com.kairumo.padnote.comment.CommentMessage(
+                    id = "msg-q3-surge",
+                    authorId = "kairumo-reviewer",
+                    authorName = "Kairumo Architect",
+                    authorColor = "#3182CE",
+                    text = l("sample_showcase_pin1_msg"),
+                    createdAt = java.util.Date(System.currentTimeMillis() - 7200_000L)
+                )
+            )
+        )
+
+        val pin2 = com.kairumo.padnote.comment.CommentPin(
+            id = "seed-pin-showcase-math-bound",
+            pageIndex = 1,
+            x = MARGIN + 630f,
+            y = 205f,
+            authorId = "math-evaluator",
+            authorName = "Prof. Euler",
+            authorColor = "#805AD5",
+            createdAt = java.util.Date(System.currentTimeMillis() - 3600_000L),
+            isResolved = false,
+            messages = mutableListOf(
+                com.kairumo.padnote.comment.CommentMessage(
+                    id = "msg-euler-bound",
+                    authorId = "math-evaluator",
+                    authorName = "Prof. Euler",
+                    authorColor = "#805AD5",
+                    text = l("sample_showcase_pin2_msg"),
+                    createdAt = java.util.Date(System.currentTimeMillis() - 3600_000L)
+                )
+            )
+        )
+        meta.setCommentPins(session, listOf(pin1, pin2))
+
         return true
     }
 

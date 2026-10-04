@@ -1494,7 +1494,7 @@ public final class NotebookStore: ObservableObject {
         var changed = false
         for index in notebooks.indices {
             guard let key = notebooks[index].titleKey,
-                  key == "seed_welcome_title" || key == "seed_meeting_title" || key == "seed_featured_biology_title",
+                  key == "seed_welcome_title" || key == "seed_meeting_title" || key == "seed_feature_showcase_title",
                   Self.isBlank(notebooks[index])
             else { continue }
 
@@ -1510,30 +1510,47 @@ public final class NotebookStore: ObservableObject {
                 SeedContent.fillWelcome(&notebooks[index])
             } else if key == "seed_meeting_title" {
                 SeedContent.fillMeeting(&notebooks[index], store: self)
-            } else if key == "seed_featured_biology_title" {
-                SeedContent.fillFeaturedBiologySample(&notebooks[index])
+            } else if key == "seed_feature_showcase_title" {
+                SeedContent.fillFeatureShowcase(&notebooks[index], store: self)
             }
             changed = true
         }
 
-        // 若現有使用者庫中尚未有精選生物範例筆記，自動補入精選範例
-        let hasBio = notebooks.contains {
-            $0.id == "seed-featured-biology-v1" || $0.titleKey == "seed_featured_biology_title"
+        // 徹底廢除舊版《Kairumo（精選實例）》：若存在則從列表與套件中主動清理
+        let legacyBioIds = ["seed-featured-biology-v1"]
+        let hadBio = notebooks.contains { doc in
+            legacyBioIds.contains(doc.id.lowercased()) || doc.titleKey == "seed_featured_biology_title"
         }
-        if !hasBio {
+        if hadBio {
+            notebooks.removeAll { doc in
+                legacyBioIds.contains(doc.id.lowercased()) || doc.titleKey == "seed_featured_biology_title"
+            }
+            for bioId in legacyBioIds {
+                AccountSyncStore.shared.recordDeletion(id: bioId)
+                let original = corePackagesDirectory.appending(path: "\(bioId).padnote")
+                try? FileManager.default.removeItem(at: original)
+            }
+            changed = true
+        }
+
+        // 若現有使用者庫中尚未有功能實戰範例筆記，自動補入
+        let hasShowcase = notebooks.contains {
+            $0.id == "seed-feature-showcase-v1" || $0.titleKey == "seed_feature_showcase_title"
+        }
+        if !hasShowcase {
             var n3 = NotebookDocument(
-                id: "seed-featured-biology-v1",
-                title: LocalizationManager.shared.localized("seed_featured_biology_title"),
+                id: "seed-feature-showcase-v1",
+                title: LocalizationManager.shared.localized("seed_feature_showcase_title"),
                 createdAt: Date().addingTimeInterval(-43200),
                 lastModifiedDate: Date().addingTimeInterval(-1800),
                 pageCount: 2,
                 hasRecording: false,
-                previewSnippet: "人體循環、氣體運輸與腎臟泌尿生理手繪手寫整合精選筆記",
+                previewSnippet: LocalizationManager.shared.localized("seed_feature_showcase_snippet"),
                 template: .grid
             )
-            n3.titleKey = "seed_featured_biology_title"
-            n3.snippetKey = "seed_featured_biology_snippet"
-            SeedContent.fillFeaturedBiologySample(&n3)
+            n3.titleKey = "seed_feature_showcase_title"
+            n3.snippetKey = "seed_feature_showcase_snippet"
+            SeedContent.fillFeatureShowcase(&n3, store: self)
             notebooks.append(n3)
             changed = true
         }
@@ -1913,13 +1930,13 @@ public final class NotebookStore: ObservableObject {
         )
 
         var n3 = NotebookDocument(
-            id: "seed-featured-biology-v1",
-            title: LocalizationManager.shared.localized("seed_featured_biology_title"),
+            id: "seed-feature-showcase-v1",
+            title: LocalizationManager.shared.localized("seed_feature_showcase_title"),
             createdAt: Date().addingTimeInterval(-43200),
             lastModifiedDate: Date().addingTimeInterval(-1800),
             pageCount: 2,
             hasRecording: false,
-            previewSnippet: "人體循環、氣體運輸與腎臟泌尿生理手繪手寫整合精選筆記",
+            previewSnippet: LocalizationManager.shared.localized("seed_feature_showcase_snippet"),
             template: .grid
         )
 
@@ -1927,13 +1944,13 @@ public final class NotebookStore: ObservableObject {
         n1.snippetKey = "seed_welcome_snippet"
         n2.titleKey = "seed_meeting_title"
         n2.snippetKey = "seed_meeting_snippet"
-        n3.titleKey = "seed_featured_biology_title"
-        n3.snippetKey = "seed_featured_biology_snippet"
+        n3.titleKey = "seed_feature_showcase_title"
+        n3.snippetKey = "seed_feature_showcase_snippet"
 
         // 範例筆記：示範手寫、幾何形狀、原生表格與考點遮蔽膠帶
         SeedContent.fillWelcome(&n1)
         SeedContent.fillMeeting(&n2, store: self)
-        SeedContent.fillFeaturedBiologySample(&n3)
+        SeedContent.fillFeatureShowcase(&n3, store: self)
 
         self.notebooks = [n1, n2, n3]
         persistData()

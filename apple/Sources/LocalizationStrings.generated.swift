@@ -9136,126 +9136,6 @@ extension LocalizationManager {
             .ko: "자 및 측정 모드",
             .th: "โหมดไม้บรรทัดและการวัด"
         ],
-        "sample_bio_cat_memo": [
-            .zhHant: "  /\\_/\\\n ( o.o )\n  > ^ <\n(吸收好脂肪~)",
-            .en: "  /\\_/\\\n ( o.o )\n  > ^ <\n(Absorbing lipids~)",
-            .zhHans: "  /\\_/\\\n ( o.o )\n  > ^ <\n(吸收好脂肪~)",
-            .ja: "  /\\_/\\\n ( o.o )\n  > ^ <\n(脂質を吸収中~)",
-            .ko: "  /\\_/\\\n ( o.o )\n  > ^ <\n(지방 흡수 중~)",
-            .th: "  /\\_/\\\n ( o.o )\n  > ^ <\n(ดูดซึมไขมันดี~)"
-        ],
-        "sample_bio_co2_text": [
-            .zhHant: "2. 二氧化碳 (CO₂) 運輸：\n   • 70% 碳酸氫根 (HCO₃⁻)： CO₂ + H₂O ⇄ H₂CO₃ ⇄ HCO₃⁻ + H⁺ (紅血球碳酸酐酶催化)\n   • 23% 與血紅素結合： Hb + CO₂ ⇄ HbCO₂ (氨基甲酸血紅素)\n   • 7%  物理溶解於血漿中",
-            .en: "2. Carbon Dioxide (CO₂) Transport:\n   • 70% as Bicarbonate (HCO₃⁻): CO₂ + H₂O ⇄ H₂CO₃ ⇄ HCO₃⁻ + H⁺ (via Carbonic Anhydrase)\n   • 23% Bound to Hb: Hb + CO₂ ⇄ HbCO₂ (Carbaminohemoglobin)\n   • 7%  Dissolved in Plasma",
-            .zhHans: "2. 二氧化碳 (CO₂) 运输：\n   • 70% 碳酸氢根 (HCO₃⁻)： CO₂ + H₂O ⇄ H₂CO₃ ⇄ HCO₃⁻ + H⁺ (红血球碳酸酐酶催化)\n   • 23% 与血红素结合： Hb + CO₂ ⇄ HbCO₂ (氨基甲酸血红素)\n   • 7%  物理溶解于血浆中",
-            .ja: "2. 二酸化炭素 (CO₂) の輸送：\n   • 70% 重炭酸イオン (HCO₃⁻)： CO₂ + H₂O ⇄ H₂CO₃ ⇄ HCO₃⁻ + H⁺（炭酸脱水酵素）\n   • 23% ヘモグロビン結合： Hb + CO₂ ⇄ HbCO₂（カルバミノヘモグロビン）\n   • 7%  血漿中に溶解",
-            .ko: "2. 이산화탄소 (CO₂) 운반:\n   • 70% 탄산수소이온 (HCO₃⁻): CO₂ + H₂O ⇄ H₂CO₃ ⇄ HCO₃⁻ + H⁺ (탄산무수화효소)\n   • 23% 헤모글로빈 결합: Hb + CO₂ ⇄ HbCO₂ (카르바미노헤모글로빈)\n   • 7%  혈장에 물리적 용해",
-            .th: "2. การขนส่งคาร์บอนไดออกไซด์ (CO₂):\n   • 70% ในรูปไบคาร์บอเนต (HCO₃⁻): CO₂ + H₂O ⇄ H₂CO₃ ⇄ HCO₃⁻ + H⁺\n   • 23% จับกับฮีโมโกลบิน: Hb + CO₂ ⇄ HbCO₂\n   • 7%  ละลายในพลาสมา"
-        ],
-        "sample_bio_gas_title": [
-            .zhHant: "【氣體運輸機制 (Gas Transport)】",
-            .en: "【Gas Transport Mechanisms】",
-            .zhHans: "【气体运输机制 (Gas Transport)】",
-            .ja: "【気体輸送メカニズム (Gas Transport)】",
-            .ko: "【기체 운반 기전 (Gas Transport)】",
-            .th: "【กลไกการขนส่งก๊าซ (Gas Transport)】"
-        ],
-        "sample_bio_lymph_funcs": [
-            .zhHant: "★ 淋巴系統生理功能：\n1. 體液回收：回收組織液多餘水分，維持恆定血容量\n2. 運送養分：乳糜管吸收脂溶性養分 (維生素 A, D, E, K)\n3. 免疫防禦：運送病原體進入淋巴結，活化 B/T 淋巴球進行濾清",
-            .en: "★ Key Lymphatic Functions:\n1. Fluid Recovery: Returns interstitial fluid, maintains blood volume\n2. Fat Absorption: Lacteals absorb fat-soluble nutrients (Vitamins A, D, E, K)\n3. Immunity: Transports pathogens to lymph nodes for immune clearance",
-            .zhHans: "★ 淋巴系统生理功能：\n1. 体液回收：回收组织液多余水分，维持恒定血容量\n2. 运送养分：乳糜管吸收脂溶性养分 (维生素 A, D, E, K)\n3. 免疫防御：运送病原体进入淋巴结，活化 B/T 淋巴球进行滤清",
-            .ja: "★ リンパ系の生理機能：\n1. 体液回収：組織液の余剰水分を回収し、循環血液量を維持\n2. 養分輸送：乳び管が脂溶性栄養素（ビタミンA, D, E, K）を吸収\n3. 免疫防御：病原体をリンパ節へ運び、免疫細胞を活性化",
-            .ko: "★ 림프계의 주요 생리 기능:\n1. 체액 회수: 조직액의 잉여 수분을 회수하여 순환 혈액량 유지\n2. 영양소 운반: 암죽관을 통해 지용성 영양소(비타민 A, D, E, K) 흡수\n3. 면역 방어: 병원체를 림프절로 운반하여 림프구 면역 반응 촉진",
-            .th: "★ หน้าที่ทางสรีรวิทยาของระบบน้ำเหลือง:\n1. กักเก็บของเหลว: นำของเหลวระหว่างเซลล์ส่วนเกินกลับเข้าสู่กระแสเลือด\n2. ดูดซึมไขมัน: ท่อน้ำเหลืองแล็กเทียลดูดซึมสารอาหารที่ละลายในไขมัน (วิตามิน A, D, E, K)\n3. ระบบภูมิคุ้มกัน: ลำเลียงเชื้อโรคไปยังต่อมน้ำเหลืองเพื่อกำจัด"
-        ],
-        "sample_bio_lymph_path": [
-            .zhHant: "【淋巴循環路徑 (Lymphatic Circulation)】\n組織微淋巴管 → 小淋巴管 → 大淋巴管 → 胸導管 / 右淋巴總管\n→ 左右鎖骨下靜脈 → 上腔靜脈 → 右心房注入血液循環",
-            .en: "【Lymphatic Circulation Route】\nLymphatic Capillaries → Vessels → Trunks → Thoracic / Right Lymph Duct\n→ Subclavian Veins → SVC → Right Atrium into Bloodstream",
-            .zhHans: "【淋巴循环路径 (Lymphatic Circulation)】\n组织微淋巴管 → 小淋巴管 → 大淋巴管 → 胸导管 / 右淋巴总管\n→ 左右锁骨下静脉 → 上腔静脉 → 右心房注入血液循环",
-            .ja: "【リンパ循環経路 (Lymphatic Circulation)】\n毛細リンパ管 → リンパ管 → リンパ本幹 → 胸管・右リンパ本幹\n→ 鎖骨下静脈 → 上大静脈 → 右心房へ流入",
-            .ko: "【림프 순환 경로 (Lymphatic Circulation)】\n모세림프관 → 림프관 → 림프간 → 가슴관 / 우림프관\n→ 쇄골하정맥 → 상대정맥 → 우심방으로 유입",
-            .th: "【เส้นทางการไหลเวียนน้ำเหลือง】\nหลอดน้ำเหลืองฝอย → หลอดน้ำเหลือง → ท่อน้ำเหลืองทรวงอก\n→ หลอดเลือดดำใต้ไหปลาร้า → SVC → หัวใจห้องบนขวา"
-        ],
-        "sample_bio_nephron_text": [
-            .zhHant: "【腎單元解剖層次 (The Nephron)】\n• 腎臟巨觀：皮質 (Cortex) + 髓質 (Medulla) + 腎盂\n• 腎小體 (Renal Corpuscle)：\n   - 入球小動脈 (管徑大) → 腎絲球 (微血管團)\n   - 鮑氏囊 (雙層杯狀構造，承接濾液)\n   - 出球小動脈 (管徑小，形成高壓過濾)\n• 腎小管 (Renal Tubule)：\n   - 近曲小管 → 亨利氏環 (U型) → 遠曲小管\n   - 匯入集尿管 (Collecting Duct) → 腎乳頭",
-            .en: "【Nephron Anatomy & Hierarchy】\n• Gross Kidney: Cortex + Medulla + Renal Pelvis\n• Renal Corpuscle:\n   - Afferent Arteriole (wider) → Glomerulus (capillary bed)\n   - Bowman Capsule (cups filtrate)\n   - Efferent Arteriole (narrower, high hydrostatic pressure)\n• Renal Tubule:\n   - Proximal Convoluted Tubule → Loop of Henle → Distal Tubule\n   - Drains into Collecting Duct → Renal Papilla",
-            .zhHans: "【肾单元解剖层次 (The Nephron)】\n• 肾脏巨观：皮质 (Cortex) + 髓质 (Medulla) + 肾盂\n• 肾小体 (Renal Corpuscle)：\n   - 入球小动脉 (管径大) → 肾丝球 (微血管团)\n   - 鲍氏囊 (双层杯状构造，承接滤液)\n   - 出球小动脉 (管径小，形成高压过滤)\n• 肾小管 (Renal Tubule)：\n   - 近曲小管 → 亨利氏环 (U型) → 远曲小管\n   - 汇入集尿管 (Collecting Duct) → 肾乳头",
-            .ja: "【ネフロンの解剖学的構造】\n• 腎臓肉眼構造：皮質＋髄質＋腎盂\n• 腎小体：\n   - 輸入細動脈 → 糸球体（毛細血管網）\n   - ボーマン嚢（受容器）\n   - 輸出細動脈（高圧ろ過を形成）\n• 尿細管：\n   - 近位尿細管 → ヘンレ係梯 → 遠位尿細管\n   - 集合管へ流入 → 腎乳頭",
-            .ko: "【네프론의 해부학적 구조】\n• 신장 육안 구조: 겉질(Cortex) + 속질(Medulla) + 신우\n• 신소체(Renal Corpuscle):\n   - 들세동맥 → 사구체 모세혈관망\n   - 보먼주머니 (여과액 수용)\n   - 날세동맥 (혈관 직경 감소, 고압 여과 형성)\n• 세뇨관(Renal Tubule):\n   - 근위세뇨관 → 헨레고리 → 원위세뇨관\n   - 집합관으로 유입 → 신유두",
-            .th: "【กายวิภาคของหน่วยไต (Nephron)】\n• ไตโดยรวม: คอร์เทกซ์ + เมดัลลา + กรวยไต\n• คอร์พัสเซิลของไต:\n   - แอฟเฟอเรนต์อาร์เทอริโอล → โกลเมอรูลัส\n   - โบว์แมนส์แคปซูล\n   - เอฟเฟอเรนต์อาร์เทอริโอล (แรงดันสูง)\n• ท่อหน่วยไต:\n   - ท่อขดส่วนต้น → ห่วงเฮนเล → ท่อขดส่วนปลาย\n   - ไหลรวมสู่ท่อรวมปัสสาวะ → พาพิลลาของไต"
-        ],
-        "sample_bio_o2_text": [
-            .zhHant: "1. 氧氣 (O₂) 運輸：\n   • 98% 與血紅素結合： Hb + O₂ ⇄ HbO₂ (氧合血紅素)\n     [肺泡氧分壓高，向右反應；組織氧分壓低，向左釋放]\n   • 2% 物理溶解於血漿中",
-            .en: "1. Oxygen (O₂) Transport:\n   • 98% Bound to Hemoglobin: Hb + O₂ ⇄ HbO₂ (Oxyhemoglobin)\n     [High pO₂ in lungs drives right; low pO₂ in tissues unloads O₂]\n   • 2% Dissolved in Plasma",
-            .zhHans: "1. 氧气 (O₂) 运输：\n   • 98% 与血红素结合： Hb + O₂ ⇄ HbO₂ (氧合血红素)\n     [肺泡氧分压高，向右反应；组织氧分压低，向左释放]\n   • 2% 物理溶解于血浆中",
-            .ja: "1. 酸素 (O₂) の輸送：\n   • 98% ヘモグロビン結合： Hb + O₂ ⇄ HbO₂（酸素ヘモグロビン）\n     [肺胞で高pO₂のため結合、組織で低pO₂のため解離]\n   • 2% 血漿中に物理的溶解",
-            .ko: "1. 산소 (O₂) 운반:\n   • 98% 헤모글로빈 결합: Hb + O₂ ⇄ HbO₂ (산소헤모글로빈)\n     [폐포의 높은 pO₂에서 결합, 조직의 낮은 pO₂에서 해리]\n   • 2% 혈장에 물리적 용해",
-            .th: "1. การขนส่งออกซิเจน (O₂):\n   • 98% จับกับฮีโมโกลบิน: Hb + O₂ ⇄ HbO₂\n     [pO₂ สูงในปอดเกิดปฏิกิริยาไปข้างหน้า; pO₂ ต่ำในเนื้อเยื่อปล่อย O₂]\n   • 2% ละลายในพลาสมา"
-        ],
-        "sample_bio_p1_title": [
-            .zhHant: "生物學重點筆記：人體循環系統與氣體運輸機制",
-            .en: "Biology Study Notes: Human Circulation and Gas Transport",
-            .zhHans: "生物学重点笔记：人体循环系统与气体运输机制",
-            .ja: "生物学重点ノート：人体循環系と気体輸送メカニズム",
-            .ko: "생물학 핵심 노트: 인체 순환계 및 기체 운반 기전",
-            .th: "บันทึกสรุปชีววิทยา: ระบบการไหลเวียนโลหิตและการขนส่งก๊าซในมนุษย์"
-        ],
-        "sample_bio_p2_title": [
-            .zhHant: "泌尿生理學：腎單元構造與尿液形成機制",
-            .en: "Renal Physiology: Nephron Anatomy and Urine Formation",
-            .zhHans: "泌尿生理学：肾单元构造与尿液形成机制",
-            .ja: "泌尿生理学：ネフロン構造と尿生成メカニズム",
-            .ko: "비뇨 생리학: 네프론 구조와 요 형성 기전",
-            .th: "สรีรวิทยาระบบทางเดินปัสสาวะ: โครงสร้างของหน่วยไตและกลไกการสร้างปัสสาวะ"
-        ],
-        "sample_bio_portal_shape": [
-            .zhHant: "【肝門靜脈循環】\n消化道微血管 → 肝門靜脈\n→ 肝臟微血管竇 → 肝靜脈",
-            .en: "【Hepatic Portal System】\nGut Capillaries → Portal Vein\n→ Liver Sinusoids → Hepatic Vein",
-            .zhHans: "【肝门静脉循环】\n消化道微血管 → 肝门静脉\n→ 肝脏微血管窦 → 肝静脉",
-            .ja: "【肝門脈循環】\n消化管毛細血管 → 肝門脈\n→ 肝類洞 → 肝静脈",
-            .ko: "【간문맥 순환】\n소화관 모세혈관 → 간문맥\n→ 간 모세혈관동 → 간정맥",
-            .th: "【ระบบพอร์ทัลตับ】\nหลอดเลือดฝอยทางเดินอาหาร → หลอดเลือดดำพอร์ทัล\n→ ไซนูซอยด์ในตับ → หลอดเลือดดำตับ"
-        ],
-        "sample_bio_portal_text": [
-            .zhHant: "腸靜脈 → 肝門靜脈\n  ↓ (養分儲存 / 肝臟解毒)\n肝微血管 → 肝靜脈 → 下腔靜脈 → 右心房",
-            .en: "Mesenteric Vein → Hepatic Portal Vein\n  ↓ (Nutrient Storage / Detoxification)\nLiver Capillaries → Hepatic Vein → IVC → Right Atrium",
-            .zhHans: "肠静脉 → 肝门静脉\n  ↓ (养分储存 / 肝脏解毒)\n肝微血管 → 肝静脉 → 下腔静脉 → 右心房",
-            .ja: "腸静脈 → 肝門脈\n  ↓（栄養貯蔵・肝臓解毒）\n肝毛細血管 → 肝静脈 → 下大静脈 → 右心房",
-            .ko: "장정맥 → 간문맥\n  ↓ (영양분 저장 / 간 해독)\n간 모세혈관 → 간정맥 → 하대정맥 → 우심방",
-            .th: "หลอดเลือดดำลำไส้ → หลอดเลือดดำพอร์ทัลตับ\n  ↓ (สะสมสารอาหาร / ขจัดสารพิษ)\nหลอดเลือดฝอยตับ → หลอดเลือดดำตับ → IVC → หัวใจห้องบนขวา"
-        ],
-        "sample_bio_renal_funcs": [
-            .zhHant: "【腎臟生理功能清單】\n1. 形成尿液，排出含氮廢物 (尿素、尿酸、肌酸酐)\n2. 調控體液滲透壓與水分恆定 (受抗利尿激素 ADH 調控)\n3. 酸鹼平衡調節 (保留 HCO₃⁻，主動分泌 H⁺/NH₄⁺)\n4. 維持血壓恆定 (分泌腎素 Renin 啟動 RAAS 系統)\n5. 分泌紅血球生成素 (EPO，刺激骨髓造血)",
-            .en: "【Renal Physiological Functions】\n1. Urine Formation: Excretes nitrogenous waste (urea, creatinine)\n2. Osmoregulation: Maintains fluid balance (regulated via ADH)\n3. Acid-Base Balance: Reclaims HCO₃⁻, secretes H⁺/NH₄⁺\n4. Blood Pressure Regulation: Secretes Renin to activate RAAS\n5. Endocrine: Secretes Erythropoietin (EPO) to stimulate RBCs",
-            .zhHans: "【肾脏生理功能清单】\n1. 形成尿液，排出含氮废物 (尿素、尿酸、肌酸酐)\n2. 调控体液渗透压与水分恒定 (受抗利尿激素 ADH 调控)\n3. 酸碱平衡调节 (保留 HCO₃⁻，主动分泌 H⁺/NH₄⁺)\n4. 维持血压恒定 (分泌肾素 Renin 启动 RAAS 系统)\n5. 分泌红血球生成素 (EPO，刺激骨髓造血)",
-            .ja: "【腎臓の生理機能】\n1. 尿生成と窒素代謝産物（尿素・クレアチニン）の排泄\n2. 体液浸透圧と水分恒常性の維持（ADH調節）\n3. 酸塩基平衡の調節（HCO₃⁻回収、H⁺分泌）\n4. 血圧の恒常性維持（レニン分泌によるRAAS活性化）\n5. エリスロポエチン（EPO）分泌による造血促進",
-            .ko: "【신장의 주요 생리 기능】\n1. 요 형성 및 질소 노폐물(요소, 요산, 크레아티닌) 배설\n2. 체액 삼투압 및 수분 항상성 조절 (ADH 조절)\n3. 산-염기 평형 조절 (HCO₃⁻ 재흡수, H⁺ 능동 분비)\n4. 혈압 항상성 유지 (레닌 분비를 통한 RAAS 활성화)\n5. 조혈 호르몬(EPO) 분비로 적혈구 생성 촉진",
-            .th: "【หน้าที่ทางสรีรวิทยาของไต】\n1. สร้างปัสสาวะ ขับของเสียที่มีไนโตรเจน (ยูเรีย ครีเอทินีน)\n2. ควบคุมแรงดันออสโมติกและสมดุลน้ำ (ควบคุมโดย ADH)\n3. ปรับสมดุลกรด-ด่าง (เก็บ HCO₃⁻, ขับ H⁺)\n4. ควบคุมความดันโลหิต (หลั่งเรนินกระตุ้นระบบ RAAS)\n5. หลั่งอีริโทรโพอิติน (EPO) กระตุ้นการสร้างเม็ดเลือดแดง"
-        ],
-        "sample_bio_summary_memo": [
-            .zhHant: "★ 考題速記口訣：\n『過濾不選大（無血球、大蛋白），再吸收要主動（葡萄糖全收，水跟著走），分泌作用排廢物（氫離子藥物走）』",
-            .en: "★ Exam Memory Cue:\nFiltration stops cells & proteins; Reabsorption actively recovers glucose & water; Secretion dumps excess ions & drugs.",
-            .zhHans: "★ 考题速记口诀：\n『过滤不选大（无血球、大蛋白），再吸收要主动（葡萄糖全收，水跟着走），分泌作用排废物（氢离子药物走）』",
-            .ja: "★ 試験暗記のコツ：\n「ろ過は大分子を通さず、再吸収は能動輸送で糖と水を回収、分泌は余剰イオンと薬物を排泄」",
-            .ko: "★ 시험 암기 비법:\n『여과는 큰 물질(혈구, 단백질) 차단, 재흡수는 능동적으로 포도당·수분 회수, 분비는 노폐물·약물 배출』",
-            .th: "★ เทคนิคการจำสอบ:\nการกรองไม่ผ่านเม็ดเลือดและโปรตีนใหญ่, การดูดกลับดึงกลูโคสและน้ำกลับอย่างกระตือรือร้น, การหลั่งขับของเสียและยาออก"
-        ],
-        "sample_bio_table_title": [
-            .zhHant: "【尿液形成三大生理作用比較表】",
-            .en: "【Three Steps of Urine Formation】",
-            .zhHans: "【尿液形成三大生理作用比较表】",
-            .ja: "【尿生成の3大作用比較表】",
-            .ko: "【요 형성 3대 작용 비교표】",
-            .th: "【ตารางเปรียบเทียบ 3 กระบวนการสร้างปัสสาวะ】"
-        ],
-        "sample_bio_tools_table": [
-            .zhHant: "作用名稱|發生部位|驅動力 / 生理機制\n過濾作用|腎絲球 → 鮑氏囊|有效過濾壓（血壓推動、物理過濾）\n再吸收作用|腎小管 → 周圍微血管|主動/被動運輸（葡萄糖、水99%回收）\n分泌作用|周圍微血管 → 腎小管|主動運輸（排出過多H+、K+與藥物代謝物）",
-            .en: "Process|Site|Driving Force / Mechanism\nFiltration|Glomerulus → Bowman Capsule|Net Filtration Pressure (Blood Pressure)\nReabsorption|Tubule → Capillaries|Active/Passive (Glucose & 99% Water reclaimed)\nSecretion|Capillaries → Tubule|Active Transport (Excretes Excess H+, K+, Drugs)",
-            .zhHans: "作用名称|发生部位|驱动力 / 生理机制\n过滤作用|肾小球 → 鲍氏囊|有效过滤压（血压推动、物理过滤）\n再吸收作用|肾小管 → 周围微血管|主动/被动运输（葡萄糖、水99%回收）\n分泌作用|周围微血管 → 肾小管|主动运输（排出过多H+、K+与药物代谢物）",
-            .ja: "作用名称|部位|駆動力 / 生理機構\nろ過作用|糸球体 → ボーマン嚢|有効ろ過圧（血圧駆動・物理的ろ過）\n再吸収作用|尿細管 → 毛細血管|能動/受動輸送（ブドウ糖・水99%回収）\n分泌作用|毛細血管 → 尿細管|能動輸送（余剰H+、K+、薬物排出）",
-            .ko: "작용 명칭|부위|추진력 / 생리 기전\n여과 작용|사구체 → 보먼주머니|유효 여과압 (혈압 추진, 물리적 여과)\n재흡수 작용|세뇨관 → 주위 모세혈관|능동/수동 수송 (포도당, 수분 99% 회수)\n분비 작용|주위 모세혈관 → 세뇨관|능동 수송 (잉여 H+, K+, 약물 배출)",
-            .th: "กระบวนการ|ตำแหน่ง|กลไกขับเคลื่อน\nการกรอง|โกลเมอรูลัส → โบว์แมนส์แคปซูล|แรงดันการกรองสุทธิ\nการดูดกลับ|ท่อหน่วยไต → หลอดเลือดฝอย|การลำเลียงแบบใช้พลังงานและแพร่\nการหลั่ง|หลอดเลือดฝอย → ท่อหน่วยไต|การลำเลียงแบบใช้พลังงาน"
-        ],
         "sample_data": [
             .zhHant: "載入範例數據",
             .en: "Load Sample Data",
@@ -9383,6 +9263,102 @@ extension LocalizationManager {
             .ja: "タスク|担当|期限\nミドルレンジ Android の遅延計測|チェン|9/22\nマニュアルに「録音の挿入」章を追加|ウェン|9/20\n本番署名鍵の申請|ペイ|9/19",
             .ko: "할 일|담당|기한\n중급 안드로이드 지연 측정|치엔|9/22\n설명서 “녹음 삽입” 장 추가|원|9/20\n정식 서명 키 신청|페이|9/19",
             .th: "สิ่งที่ต้องทำ|ผู้รับผิดชอบ|กำหนด\nวัดความหน่วงบน Android รุ่นกลาง|เชียน|22 ก.ย.\nเขียนบท “แทรกเสียงบันทึก” ในคู่มือ|เหวิน|20 ก.ย.\nขอคีย์เซ็นชื่อจริง|เผย|19 ก.ย."
+        ],
+        "sample_showcase_calc_typed_desc": [
+            .zhHant: "使用方式：\n1. 自由手繪：直接用手寫筆書寫微積分算式（包括積分號、分式、上標、三角函數）。\n2. 公式識別：套索選中後點擊【識別為公式】，瞬間轉換為標準化 LaTeX 排版。\n3. 分步解析：融合打字解析卡，手寫推導步驟與打字說明無縫並列呈現。",
+            .en: "How to use:\n1. Handwrite formulas using Apple Pencil (integral signs, limits, radicals).\n2. Lasso or tap Math OCR to convert into formatted LaTeX text.\n3. The built-in solver renders the step-by-step derivation card below.",
+            .zhHans: "使用方式：\n1. 自由手绘：直接用手写笔书写微积分算式（包括积分号、分式、上标、三角函数）。\n2. 公式识别：套索选中后点击【识别为公式】，瞬间转换为标准化 LaTeX 排版。\n3. 分步解析：融合打字解析卡，手写推导步骤与打字说明无缝并列呈现。",
+            .ja: "使用方法：\n1. Apple Pencilで数式（積分記号、極限、根号など）を手描きします。\n2. なわぞうツールまたは数式OCRで整形されたLaTeXテキストへ瞬時に変換。\n3. 内蔵ソルバーが連携し、ステップごとの解説カードを自動生成します。",
+            .ko: "사용 방법:\n1. Apple Pencil로 적분 기호, 극한, 제곱근 등의 수식을 자연스럽게 손글씨로 작성합니다.\n2. 올가미 도구 또는 수식 OCR을 탭하여 단정한 LaTeX 텍스트로 즉시 변환합니다.\n3. 내장 솔버가 수식을 해석하여 단계별 유도 과정 카드를 캔버스에 생성합니다.",
+            .th: "วิธีใช้งาน:\n1. เขียนสูตรคณิตศาสตร์ด้วย Apple Pencil (อินทิกรัล, ลิมิต, สแควร์รูท)\n2. ใช้บ่วงบาศหรือแตะ Math OCR เพื่อแปลงเป็นข้อความ LaTeX ที่สวยงาม\n3. กลไกในตัวจะประมวลผลและสร้างการ์ดวิธีทำเป็นขั้นตอนลงบนผืนผ้าใบ"
+        ],
+        "sample_showcase_calc_typed_title": [
+            .zhHant: "★ 數學引擎：手繪筆跡與 LaTeX 打字方程的深度融合解析",
+            .en: "★ Math Engine: Hybrid Handwriting & LaTeX Equation Solver",
+            .zhHans: "★ 数学引擎：手绘笔迹与 LaTeX 打字方程的深度融合解析",
+            .ja: "★ 数式エンジン：手描きとLaTeXの融合によるステップ解析",
+            .ko: "★ 수학 엔진: 손글씨 및 LaTeX 수식 하이브리드 단계별 풀이",
+            .th: "★ กลไกคณิตศาสตร์: ผสานลายมือและ LaTeX พร้อมแสดงวิธีทำเป็นขั้นตอน"
+        ],
+        "sample_showcase_chart_typed_desc": [
+            .zhHant: "功能用法：\n• 數字製圖：點擊工具欄【＋】->【數字製圖】，輸入分類與數值即可生成向量圖表，雙擊隨時重新修改數據與配色。\n• 討論圖釘：在圖表特定柱狀或推導難點處釘入圖釘，建立上下文關聯的討論串，手繪箭頭配合圖釘批注，團隊協作一目了然。",
+            .en: "Feature Guide:\n• Digital Charting: Insert vector charts via the toolbar (+) -> Chart. Double-tap to customize series data, colors, and layout anytime.\n• Discussion Pins: Drop a pin on any chart bar or formula step to leave contextual review comments and collaborate with peers.",
+            .zhHans: "功能用法：\n• 数字制图：点击工具栏【＋】->【数字制图】，输入分类与数值即可生成矢量图表，双击随时重新修改数据与配色。\n• 讨论图钉：在图表特定柱状或推导难点处钉入图钉，建立上下文关联的讨论串，手绘箭头配合图钉批注，团队协作一目了然。",
+            .ja: "機能の利用方法：\n• デジタル作図：ツールバーの (+) -> [グラフ] から挿入。ダブルタップで系列データや色、凡例をいつでも再編集可能。\n• 議論ピン：グラフの特定要素や計算ステップ上にピンを配置し、文脈に沿ったコメントを残して共同推敲を行えます。",
+            .ko: "기능 활용 안내:\n• 디지털 차트: 툴바의 (+) -> [차트]에서 벡터 차트를 삽입합니다. 언제든 더블 탭하여 데이터, 색상, 범례를 재편집할 수 있습니다.\n• 토론 핀: 차트의 특정 막대나 수식 단계 위에 핀을 꽂아 맥락에 맞는 피드백을 기록하고 협업할 수 있습니다.",
+            .th: "คำแนะนำการใช้งาน:\n• แผนภูมิข้อมูล: แทรกแผนภูมิเวกเตอร์ผ่านแถบเครื่องมือ (+) -> แผนภูมิ แตะสองครั้งเพื่อปรับแต่งชุดข้อมูล สี และรูปแบบได้ตลอดเวลา\n• หมุดอภิปราย: ปักหมุดลงบนแท่งกราฟหรือขั้นตอนการคำนวณ เพื่อแสดงความคิดเห็นและทำงานร่วมกันได้อย่างแม่นยำ"
+        ],
+        "sample_showcase_chart_typed_title": [
+            .zhHant: "★ 數字製圖（Chart Studio）與討論圖釘（Comment Pins）用法介紹",
+            .en: "★ Digital Charting & Spatial Discussion Pins",
+            .zhHans: "★ 数字制图（Chart Studio）与讨论图钉（Comment Pins）用法介绍",
+            .ja: "★ デジタル作図 ＆ 空間座標ピン議論機能",
+            .ko: "★ 디지털 차트 제작 & 공간 토론 핀 기능",
+            .th: "★ การสร้างแผนภูมิข้อมูลตัวเลข & หมุดอภิปรายเชิงพื้นที่"
+        ],
+        "sample_showcase_comparison_table": [
+            .zhHant: "核心比較維度|Kairumo (Padnote)|GoodNotes 6|Notability|Microsoft OneNote\n向量手繪手寫|超低延遲，真實鉛筆/鋼筆/毛筆動態壓感提按|向量墨水，缺乏真實毛筆書法起伏|平滑墨水，筆刷可定制參數較少|跨平台墨跡，筆畫偶有卡頓延遲\n打字與原生表格|原生 Markdown 高級樣式表格，自由拉伸對齊|僅基礎文字框，表格調整能力有限|文字輸入平順，表格樣式較簡陋|自由浮動文字塊，排版易散亂\n微積分方程融合|手繪筆跡 + OCR LaTeX 識別 + 步進推導融合|手寫公式轉換（需訂閱高級版）|基礎公式轉換插件（識別率普通）|內建公式編輯器，更偏向桌面鍵入\n數字製圖圖表|內建可隨時重新編輯向量圖表（柱狀/折線/餅圖）|依賴外部第三方截圖導入|僅支援靜態貼圖，無法再改數據|可關聯 Excel，但行動端體驗沈重\n圖釘與協作討論|空間定位圖釘（NoteCommentPin）與留言蓋樓|連結分享批註，僅支援簡易標註|錄音軌跡對齊，無精準空間圖釘|多人協同畫布，缺乏精細錨點圖釘\n收費模式與自由度|100% 完全開源、無廣告、終身永久免費|訂閱制 / 買斷功能限制多|強制年費訂閱制|基本免費但深度綁定 365 訂閱",
+            .en: "Core Dimension|Kairumo (Padnote)|GoodNotes 6|Notability|Microsoft OneNote\nVector Handwriting|Ultra-low latency, Pencil/Pen/Brush pressure|Vector stroke, lack of true calligraphic lift|Smooth ink, limited brush customization|Cross-platform ink, noticeable latency\nTyping & Tables|Native resizable Markdown & styled data tables|Basic text boxes, tables lack fluid styling|Basic text, simple table formatting|Freeform text frames, flexible canvas\nEquations & Math|Hybrid Handwriting + OCR LaTeX + Step solver|Math handwriting conversion (paid tier)|Basic math conversion addon|Built-in Equation editor, desktop-focused\nData Charting|Editable built-in charts (Bar/Line/Pie/Scatter)|Requires third-party image imports|Image-only diagrams, static|Excel chart link, slow mobile interaction\nPins & Collaboration|Embedded Comment Pins & discussion threads|Shared links with basic comments|Audio note sync, no spatial pins|Multi-user co-authoring, complex layout\nPricing & Freedom|100% Open Source, Ad-Free, Lifetime Free|Subscription / In-App purchase tier|Yearly subscription required|Freemium with Office 365 upsell",
+            .zhHans: "核心比较维度|Kairumo (Padnote)|GoodNotes 6|Notability|Microsoft OneNote\n向量手绘手写|超低延迟，真实铅笔/钢笔/毛笔动态压感提按|矢量墨水，缺乏真实毛笔书法起伏|平滑墨水，笔刷可定制参数较少|跨平台墨迹，笔画偶有卡顿延迟\n打字与原生表格|原生 Markdown 高级样式表格，自由拉伸对齐|仅基础文本框，表格调整能力有限|文本输入平顺，表格样式较简陋|自由浮动文本块，排版易散乱\n微积分方程融合|手绘笔迹 + OCR LaTeX 识别 + 步进推导融合|手写公式转换（需订阅高级版）|基础公式转换插件（识别率普通）|内置公式编辑器，更偏向桌面键入\n数字制图图表|内置可随时重新编辑矢量图表（柱状/折线/饼图）|依赖外部第三方截图导入|仅支持静态贴图，无法再改数据|可关联 Excel，但移动端体验沉重\n图钉与协作讨论|空间定位图钉（NoteCommentPin）与留言盖楼|链接分享批注，仅支持简易标注|录音轨迹对齐，无精准空间图钉|多人协同画布，缺乏精细锚点图钉\n收费模式与自由度|100% 完全开源、无广告、终身永久免费|订阅制 / 买断功能限制多|强制年费订阅制|基本免费但深度绑定 365 订阅",
+            .ja: "評価軸|Kairumo (Padnote)|GoodNotes 6|Notability|Microsoft OneNote\nベクター手描き|超低遅延、鉛筆・万年筆・毛筆の筆圧再現|ベクター描画対応、毛筆の緩急表現は限定的|滑らかな筆跡、ブラシカスタマイズは少なめ|クロスプラットフォーム対応、遅延やや高め\nタイピングと表|Markdown対応・スタイル自在なネイティブ表|基本テキスト枠、表の柔軟性は限定的|テキスト中心、シンプルな表作成|自由配置テキスト枠、キャンバス無限\n数式と計算|手描き＋OCR LaTeX＋ステップ解説の融合|手描き数式変換（上位プラン対応）|手描き数式変換アドオン|数式エディタ搭載、デスクトップ重視\nデータ作図|編集可能な内蔵グラフ（棒・折線・円・散布）|外部画像インポート頼り|静止画のみ、動的編集不可|Excel連携対応、モバイルでの操作は重い\nピンと協働議論|座標連動の議論ピン・スレッド内蔵|共有リンクと基本コメント|音声録音同期、空間ピンなし|共同編集対応、レイアウトが崩れやすい\n料金とオープン性|完全オープンソース・広告なし・完全無料|サブスクリプション／買い切り課金|年額サブスクリプション制|基本無料だがOffice 365推奨",
+            .ko: "핵심 평가축|Kairumo (Padnote)|GoodNotes 6|Notability|Microsoft OneNote\n벡터 손글씨|초저지연, 연필·만년필·붓 완벽 필압|벡터 필기 지원, 붓글씨 동적 표현 제한적|부드러운 필기감, 브러시 커스텀 한계|크로스플랫폼 지원, 지연시간 다소 체감\n타이핑 및 표|Markdown 및 서식 지원 네이티브 데이터 표|기본 텍스트 상자, 표 편집 유연성 부족|기본 텍스트 위주, 단순 표 생성|자유 배치 텍스트 프레임, 무한 캔버스\n수식 및 수학|손글씨 + LaTeX 수식 + 단계별 풀이 융합|손글씨 수식 변환 (유료 등급)|수식 변환 애드온 지원|수식 편집기 지원, 데스크톱 중심\n데이터 차트|재편집 가능한 내장 차트(막대/선/파이/분산)|외부 이미지 삽입에 의존|정적 이미지만 지원, 편집 불가|Excel 차트 연동, 모바일 편집 무거움\n핀 토론 협업|좌표 기반 토론 핀 및 댓글 스레드|공유 링크 및 기본 댓글 기능|음성 녹음 싱크, 공간 핀 미지원|다중 사용자 협업, 레이아웃 깨짐 잦음\n가격 및 개방성|100% 오픈소스, 광고 없음, 완전 무료|구독형 및 인앱 결제 유도|연간 정기 구독 필수|무료 제공이나 Office 365 유도",
+            .th: "มิติเปรียบเทียบ|Kairumo (Padnote)|GoodNotes 6|Notability|Microsoft OneNote\nลายมือเวกเตอร์|หน่วงต่ำมาก, แรงกดดินสอ/ปากกา/พู่กันสมจริง|ลายเส้นเวกเตอร์, ขาดน้ำหนักพู่กันแท้|ลายเส้นลื่นไหล, ปรับแต่งพู่กันจำกัด|รองรับหลายระบบ, ความหน่วงสัมผัสได้\nการพิมพ์และตาราง|ตารางข้อมูลพร้อมสไตล์ จัดขนาดได้สมบูรณ์|กล่องข้อความพื้นฐาน, ตารางปรับแต่งจำกัด|เน้นพิมพ์ข้อความ, รูปแบบตารางเรียบง่าย|กรอบข้อความอิสระ, ผืนผ้าใบกว้าง\nสมการคณิตศาสตร์|ผสานลายมือ + OCR LaTeX + เฉลยเป็นขั้นตอน|แปลงลายมือคณิตศาสตร์ (ต้องจ่ายเพิ่ม)|ส่วนเสริมแปลงคณิตศาสตร์|มีตัวแก้ไขสมการ, เน้นใช้งานบนเดสก์ท็อป\nแผนภูมิข้อมูล|กราฟในตัวแก้ไขได้ (แท่ง/เส้น/วงกลม/กระจาย)|ต้องนำเข้ารูปภาพจากภายนอก|ภาพนิ่งเท่านั้น ไม่สามารถแก้ไขข้อมูลได้|เชื่อมโยง Excel, ทำงานบนมือถือช้า\nหมุดอภิปราย|หมุดความคิดเห็นแบบฝังพิกัดและเธรดสนทนา|แชร์ลิงก์พร้อมความคิดเห็นพื้นฐาน|ซิงค์เสียงบันทึก, ไม่มีหมุดเชิงพื้นที่|ทำงานร่วมกันหลายคน, เลย์เอาต์มักเลื่อน\nราคาและความอิสระ|โอเพนซอร์ส 100%, ไม่มีโฆษณา, ฟรีตลอดชีพ|สมัครสมาชิก / จ่ายครั้งเดียวแบบมีเงื่อนไข|ระบบสมัครสมาชิกรายปี|ใช้งานฟรีเบื้องต้น เน้นขาย Office 365"
+        ],
+        "sample_showcase_handwriting_note": [
+            .zhHant: "★ 真實手繪筆跡呈現：\n下方列出的段落文字與裝飾皆以真實向量筆劃繪製（鉛筆質感顆粒、鋼筆動態壓感、毛筆提按書法起伏）。",
+            .en: "★ Authentic Ink Strokes:\nThe lists and calligraphic flourishes below are rendered with authentic vector strokes (Pencil texture, Fountain Pen dynamic pressure, Brush calligraphic variation).",
+            .zhHans: "★ 真实手绘笔迹呈现：\n下方列出的段落文字与装饰皆以真实矢量笔画绘制（铅笔质感颗粒、钢笔动态压感、毛笔提按书法起伏）。",
+            .ja: "★ 本物の手描き筆跡：\n以下のリストと装飾文字は、本物のベクター筆跡（鉛筆の質感、万年筆の筆圧応答、毛筆の緩急）で描かれています。",
+            .ko: "★ 진정한 벡터 손글씨:\n아래의 목록 및 캘리그래피는 연필의 질감, 만년필의 필압, 붓의 강약 조절이 적용된 실제 벡터 획으로 생성되었습니다.",
+            .th: "★ ลายมือหมึกเวกเตอร์แท้:\nรายการและลายเส้นด้านล่างถูกวาดด้วยเส้นเวกเตอร์จริง (ดินสอ, ปากกาหมึกซึมปรับแรงกด, พู่กันตัวเขียน)"
+        ],
+        "sample_showcase_p1_subtitle": [
+            .zhHant: "第一部分：真實多筆觸手繪（鉛筆／鋼筆／毛筆）與主流應用全方位打字評測",
+            .en: "Part 1: Real Multi-Stroke Vector Handwriting & Comparative Matrix",
+            .zhHans: "第一部分：真实多笔触手绘（铅笔／钢笔／毛笔）与主流应用全方位打字评测",
+            .ja: "第1部：本格マルチストローク手描き筆跡と主流アプリ比較表",
+            .ko: "제1부: 다채로운 벡터 손글씨 필적 및 주요 앱 비교표",
+            .th: "ส่วนที่ 1: ลายมือเวกเตอร์หลายหัวปากกาและตารางเปรียบเทียบแอปหลัก"
+        ],
+        "sample_showcase_p1_title": [
+            .zhHant: "Kairumo 功能介紹與實戰利用：手繪、打字與動態工具全解析",
+            .en: "Kairumo Feature Showcase: Handwriting, Typing & Dynamic Tooling",
+            .zhHans: "Kairumo 功能介绍与实战利用：手绘、打字与动态工具全解析",
+            .ja: "Kairumo機能紹介活用：手描き・タイピング・動的ツール",
+            .ko: "Kairumo 기능 소개 및 활용: 손글씨, 타이핑 및 동적 도구",
+            .th: "แนะนำการใช้งาน Kairumo: ลายมือ พิมพ์ดีด และเครื่องมือไดนามิก"
+        ],
+        "sample_showcase_p2_title": [
+            .zhHant: "第二部分：手繪＋打字微積分方程融合解析 ＆ 數字製圖與討論圖釘用法",
+            .en: "Part 2: Calculus Equation Hybrid & Digital Charting with Discussion Pins",
+            .zhHans: "第二部分：手绘＋打字微积分方程融合解析 ＆ 数字制图与讨论图钉用法",
+            .ja: "第2部：微積分方程式の融合解析 ＆ デジタル作図とピン議論",
+            .ko: "제2부: 미적분 방정식 하이브리드 해석 & 디지털 차트 및 토론 핀",
+            .th: "ส่วนที่ 2: การผสานสมการแคลคูลัส & แผนภูมิข้อมูลตัวเลขพร้อมหมุดอภิปราย"
+        ],
+        "sample_showcase_pin1_msg": [
+            .zhHant: "重點關注第三季度的爆發增長：Kairumo 原生向量核心帶來的書寫流暢度獲得了壓倒性的好評！",
+            .en: "Notice the Q3 growth surge: Kairumo's native vector engine provides significantly higher user satisfaction than traditional raster apps.",
+            .zhHans: "重点关注第三季度的爆发增长：Kairumo 原生矢量内核带来的书写流畅度获得了压倒性的好评！",
+            .ja: "第3四半期の急伸に注目：Kairumoのネイティブベクターエンジンは、従来のラスター系アプリを上回る満足度を記録しています。",
+            .ko: "3분기 급성장 주목: Kairumo의 네이티브 벡터 엔진은 기존 래스터 앱 대비 월등한 사용자 만족도를 제공합니다.",
+            .th: "สังเกตการเติบโตในไตรมาสที่ 3: เอนจินเวกเตอร์ของ Kairumo มอบความพึงพอใจที่สูงกว่าแอปแบบเดิมอย่างเห็นได้ชัด"
+        ],
+        "sample_showcase_pin2_msg": [
+            .zhHant: "分部積分第一步的邊界代入驗證：[ -x cos(x) ] 從 0 代入至 π，精確得到 +π，沒有漏掉負號。",
+            .en: "Verify the boundary term when applying integration by parts: [ -x cos(x) ] evaluated from 0 to pi cleanly evaluates to +pi.",
+            .zhHans: "分部积分第一步的边界代入验证：[ -x cos(x) ] 从 0 代入至 π，精确得到 +π，没有漏掉负号。",
+            .ja: "部分積分の境界値を再確認：[ -x cos(x) ] を 0 から π まで代入すると、正確に +π が導出されます。",
+            .ko: "부분적분 경계값 대입 검증: [ -x cos(x) ]에 0부터 π까지 대입하면 정확히 +π가 깔끔하게 도출됩니다.",
+            .th: "ตรวจสอบค่าขอบเขตเมื่อใช้อินทิเกรตทีละส่วน: [ -x cos(x) ] จาก 0 ถึง pi ให้ค่าเท่ากับ +pi อย่างลงตัว"
+        ],
+        "sample_showcase_table_title": [
+            .zhHant: "Kairumo 與市面主流前三大筆記應用核心功能優缺點全景對比",
+            .en: "Kairumo vs. Top 3 Mainstream Note Apps Comparison",
+            .zhHans: "Kairumo 与市面主流前三大笔记应用核心功能优缺点全景对比",
+            .ja: "Kairumo vs 市販トップ3ノートアプリ 総合比較表",
+            .ko: "Kairumo vs 시장 3대 주요 노트 앱 종합 비교표",
+            .th: "ตารางเปรียบเทียบ Kairumo กับ 3 แอปจดบันทึกชั้นนำในตลาด"
         ],
         "sample_welcome": [
             .zhHant: "歡迎使用 Kairumo",
@@ -9528,21 +9504,21 @@ extension LocalizationManager {
             .ko: "계정 및 보안",
             .th: "บัญชีและความปลอดภัย"
         ],
-        "seed_featured_biology_snippet": [
-            .zhHant: "人體循環、氣體運輸與腎臟泌尿生理手繪手寫整合精選筆記",
-            .en: "Hand-drawn biological notes on human circulation, gas transport and renal physiology",
-            .zhHans: "人体循环、气体运输与肾脏泌尿生理手绘手写整合精选笔记",
-            .ja: "人体循環・気体輸送・腎臓泌尿生理の手描き統合精選ノート",
-            .ko: "인체 순환, 기체 운반 및 신장 비뇨 생리 손글씨 통합 정선 노트",
-            .th: "บันทึกสรุปชีววิทยา: การไหลเวียนโลหิต การขนส่งก๊าซ และระบบไต"
+        "seed_feature_showcase_snippet": [
+            .zhHant: "手繪（鉛筆/鋼筆/毛筆）、表格打字、微積分方程與數字製圖圖釘討論功能全方位實戰範例",
+            .en: "Deep integration showcase: pencil, fountain pen & brush handwriting, comparison table, calculus solver, digital chart & discussion pins",
+            .zhHans: "手绘（铅笔/钢笔/毛笔）、表格打字、微积分方程与数字制图图钉讨论功能全方位实战范例",
+            .ja: "鉛筆・万年筆・毛筆の手描き、比較表、微積分方程式、デジタル作図とピン議論を網羅した機能活用サンプル",
+            .ko: "연필·만년필·붓 손글씨, 비교 표, 미적분 방정식, 디지털 차트 및 토론 핀이 통합된 기능 활용 예제",
+            .th: "ตัวอย่างการใช้งานฟีเจอร์: ลายมือดินสอ/ปากกา/พู่กัน, ตารางเปรียบเทียบ, สมการแคลคูลัส, กราฟตัวเลข และหมุดอภิปราย"
         ],
-        "seed_featured_biology_title": [
-            .zhHant: "Kairumo（精選實例）",
-            .en: "Kairumo (Featured Samples)",
-            .zhHans: "Kairumo（精选实例）",
-            .ja: "Kairumo（厳選事例）",
-            .ko: "Kairumo (선정 예시)",
-            .th: "Kairumo (ตัวอย่างเด่น)"
+        "seed_feature_showcase_title": [
+            .zhHant: "Kairumo(功能範例)",
+            .en: "Kairumo (Feature Showcase)",
+            .zhHans: "Kairumo(功能范例)",
+            .ja: "Kairumo(機能の例)",
+            .ko: "Kairumo (기능 예시)",
+            .th: "Kairumo (ตัวอย่างฟังก์ชัน)"
         ],
         "seed_meeting_snippet": [
             .zhHant: "支援麥克風即時收音，聲音與筆跡精確對齊",
