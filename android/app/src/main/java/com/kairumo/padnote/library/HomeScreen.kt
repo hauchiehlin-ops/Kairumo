@@ -1366,7 +1366,7 @@ private fun RecordingRow(
                 )
             }
             Column(Modifier.weight(1f)) {
-                Text(recording.notebookTitle, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
+                Text(recording.displayTitle, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
                 Text(
                     "${formatDate(recording.recordedAt)} · ${recording.bytes / 1024} KB",
                     style = MaterialTheme.typography.bodySmall,
