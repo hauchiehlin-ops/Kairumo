@@ -274,4 +274,38 @@ final class RecordingTitleInPackageTests: XCTestCase {
         XCTAssertGreaterThan(store.notebooks[0].lastModifiedDate, Date(timeIntervalSince1970: 1),
                              "沒有卡片的錄音改名不動筆記，同步就以為沒有東西要匯出")
     }
+
+    func testRenamingUnlinkedRecordingMarksInboxModified() {
+        let store = isolatedNotebookStore()
+        let rec = AudioRecordingRecord(
+            id: "unlinked-1", title: "快速錄音", durationSeconds: 1, fileName: "quick.opus", linkedNotebookId: nil)
+        store.recordings = [rec]
+        store.renameRecording(id: "unlinked-1", newTitle: "自訂快速錄音")
+        XCTAssertEqual(store.recordings[0].title, "自訂快速錄音")
+        let inboxId = recordingInboxNotebookId()
+        let inbox = store.notebooks.first { $0.id.caseInsensitiveCompare(inboxId) == .orderedSame }
+        XCTAssertNotNil(inbox, "未關聯筆記本的錄音改名應自動歸入收件匣")
+        XCTAssertGreaterThan(inbox?.lastModifiedDate ?? Date.distantPast, Date(timeIntervalSince1970: 1))
+    }
+
+    func testApplyRecordingTitlesUpdatesBothRecordingsAndCanvasCards() {
+        let store = isolatedNotebookStore()
+        store.recordings = [
+            AudioRecordingRecord(title: "舊標題", durationSeconds: 5, fileName: "card.opus")
+        ]
+        var book = NotebookDocument(title: "測試本", pageCount: 1)
+        book.audioAttachments = [
+            NoteAudioAttachment(
+                id: "card-1", pageIndex: 0, recordingId: "some-id",
+                fileName: "card.opus", title: "舊標題", durationSeconds: 5,
+                x: 0, y: 0, width: 100, height: 50, hasBorder: false, cornerRadius: 8
+            )
+        ]
+        store.notebooks = [book]
+
+        store.applyRecordingTitles(["card.opus": "遠端新標題"], exported: nil)
+        XCTAssertEqual(store.recordings.first?.title, "遠端新標題")
+        XCTAssertEqual(store.notebooks.first?.audioAttachments?.first?.title, "遠端新標題", "套用遠端錄音名稱時，畫布上的卡片也必須同步更新，防止後續覆蓋")
+    }
 }
+

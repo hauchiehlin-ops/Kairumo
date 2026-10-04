@@ -823,7 +823,8 @@ public enum PageThumbnailRenderer {
         let cornerRadius: CGFloat = 4.0
         let path = UIBezierPath(roundedRect: rect, cornerRadius: cornerRadius)
         
-        let tapeColor = UIColor(red: 0.98, green: 0.93, blue: 0.67, alpha: 1.0)
+        let tapeColor = tape.colorHex.flatMap { UIColor(hexString: $0) }
+            ?? UIColor(red: 0.98, green: 0.93, blue: 0.67, alpha: 1.0)
         let fillAlpha: CGFloat = tape.isRevealed ? 0.20 : 0.95
         let strokeAlpha: CGFloat = tape.isRevealed ? 0.40 : 0.80
         

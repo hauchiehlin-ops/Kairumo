@@ -792,10 +792,23 @@ enum NotebookSyncCoordinator {
         }
 
         // 只碰真的有差異的那幾本。**這一行是整個改善的重點。**
+        //
+        // **必須在背景執行緒問。** `notebookNeedsSync` 會鎖住核心 `FfiSyncSession` 的 mutex，
+        // 而焦點通道（`runFocusRound`）拿著同一個 session 在背景做 `focusRound` 時，整段網路
+        // 下載期間都握著那把鎖。原本這裡在 MainActor 上同步呼叫 —— 主執行緒就卡在
+        // `pthread_mutex_lock` 直到那次下載結束，iPad 實機被看門狗以 0x8BADF00D 殺掉
+        // （2026-10-04 TestFlight 4.19.0 (79) 當機報告，主執行緒停在 notebook_needs_sync）。
         let activeId = store.activeNotebookId
-        let pending = packages.filter {
-            session.notebookNeedsSync(packagePath: $0.path, notebookId: packageId(for: $0))
-        }
+        let candidates = packages.map { (url: $0, id: packageId(for: $0)) }
+        let pendingIds = await Task.detached(priority: .utility) { () -> Set<String> in
+            var out = Set<String>()
+            for candidate in candidates
+            where session.notebookNeedsSync(packagePath: candidate.url.path, notebookId: candidate.id) {
+                out.insert(candidate.url.path)
+            }
+            return out
+        }.value
+        let pending = packages.filter { pendingIds.contains($0.path) }
         SyncLogger.logAsync(
             "📊【同步前核實】本機 \(activeLocalIds.count) 本，清理 \(cleanedCount) 本，"
                 + "有差異待同步 \(pending.count) 本（跳過 \(packages.count - pending.count) 本）",
@@ -930,7 +943,10 @@ enum NotebookSyncCoordinator {
         let retentionDays = TrashRetention.days
 
         // 先發布「這台已經合併到哪裡」。順序在回收之前：別台要靠它判斷能不能刪。
-        let ack = session.publishAck(deviceId: syncDeviceId, libraryIndexJson: library, nowUnixS: now)
+        // 背景執行緒：它會上傳到 Drive，而且握著 session 的鎖（見上面 notebookNeedsSync 的說明）。
+        let ack = await Task.detached(priority: .utility) {
+            session.publishAck(deviceId: syncDeviceId, libraryIndexJson: library, nowUnixS: now)
+        }.value
         if !ack.ok {
             SyncLogger.logAsync("【回收桶】確認檔沒發布成功：\(ack.error)", source: .googleDrive)
         }
@@ -1275,15 +1291,22 @@ enum NotebookSyncCoordinator {
         )
     }
 
-    /// 這本筆記的套件裡的錄音（`linkedNotebookId` 是它）：檔名（小寫）→ 名字。
+    /// 這本筆記的套件裡的錄音（`linkedNotebookId` 是它，或者未歸檔但匯出收件匣時）：檔名（小寫）→ 名字。
     @MainActor
     private static func recordingTitles(
         of document: NotebookDocument, in store: SyncableNotebookStore
     ) -> [String: String] {
         var out: [String: String] = [:]
-        for record in store.syncRecordings
-        where record.linkedNotebookId?.caseInsensitiveCompare(document.id) == .orderedSame {
-            out[record.fileName.lowercased()] = record.title
+        let isInbox = document.id.caseInsensitiveCompare(recordingInboxNotebookId()) == .orderedSame
+        for record in store.syncRecordings {
+            if let linked = record.linkedNotebookId {
+                if linked.caseInsensitiveCompare(document.id) == .orderedSame {
+                    out[record.fileName.lowercased()] = record.title
+                }
+            } else if isInbox {
+                // 未指定筆記本的錄音屬於收件匣，匯出收件匣時必須帶上其標題
+                out[record.fileName.lowercased()] = record.title
+            }
         }
         return out
     }

@@ -178,7 +178,14 @@ struct AudioAttachmentItemView: View {
                 TextField(localizationManager.localized("recording_title"), text: $renameText)
                 Button(localizationManager.localized("done")) {
                     let trimmed = renameText.trimmingCharacters(in: .whitespacesAndNewlines)
-                    if !trimmed.isEmpty { item.title = trimmed }
+                    if !trimmed.isEmpty {
+                        item.title = trimmed
+                        NotebookStore.shared.renameRecording(
+                            id: item.recordingId,
+                            fileName: item.fileName,
+                            newTitle: trimmed
+                        )
+                    }
                 }
                 Button(localizationManager.localized("cancel"), role: .cancel) {}
             }

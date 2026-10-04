@@ -71,6 +71,13 @@ struct ContinuousPageView<ObjectLayer: View>: View {
     var onPenControl: ((FfiPenControl, Bool) -> Void)? = nil
     /// 有圖片拖到這一頁上（工作項 S-68）。落點是**這一頁的**座標。
     var onImageDropped: ((Int, [NSItemProvider], CGPoint) -> Bool)? = nil
+    @Binding var notebook: NotebookDocument
+    var onNotebookChanged: (() -> Void)? = nil
+    var onLassoBegan: ((CGPoint) -> Void)? = nil
+    var onLassoMoved: ((CGPoint) -> Void)? = nil
+    var onLassoEnded: (() -> Void)? = nil
+    var lassoPath: [CGPoint] = []
+    var isLassoCommitted: Bool = true
 
     @State private var drawing = PKDrawing()
     @State private var loaded = false
@@ -82,7 +89,6 @@ struct ContinuousPageView<ObjectLayer: View>: View {
                 .frame(width: PageGeometry.width, height: PageGeometry.height, alignment: .topLeading)
                 .allowsHitTesting(false)
                 .zIndex(0)
-
 
             objectLayer()
                 .frame(width: PageGeometry.width, height: PageGeometry.height, alignment: .topLeading)
@@ -115,6 +121,9 @@ struct ContinuousPageView<ObjectLayer: View>: View {
                 onSelectionChanged: { hasSelection in
                     if isFocused { onSelectionChanged(hasSelection) }
                 },
+                onLassoBegan: { pt in if isFocused { onLassoBegan?(pt) } },
+                onLassoMoved: { pt in if isFocused { onLassoMoved?(pt) } },
+                onLassoEnded: { if isFocused { onLassoEnded?() } },
                 canvasRef: { canvas in if isFocused { canvasRef(canvas) } },
                 palmRejection: palmRejection,
                 onPenControl: { control, pressed in
@@ -136,6 +145,28 @@ struct ContinuousPageView<ObjectLayer: View>: View {
             .frame(width: PageGeometry.width, height: PageGeometry.height, alignment: .topLeading)
             .allowsHitTesting(true)
             .zIndex(editorMode == .draw ? 2 : 1)
+            .overlay(alignment: .topLeading) {
+                if selectedTool == .lasso && isFocused && !lassoPath.isEmpty {
+                    LassoPathOverlay(
+                        path: lassoPath,
+                        isCommitted: isLassoCommitted
+                    )
+                    .allowsHitTesting(false)
+                }
+            }
+
+            MaskingTapeOverlayView(
+                notebook: $notebook,
+                pageIndex: pageIndex,
+                isActive: isFocused && selectedTool == .maskingTape,
+                selectedColor: selectedColor,
+                onTapesChanged: {
+                    onNotebookChanged?()
+                }
+            )
+            .frame(width: PageGeometry.width, height: PageGeometry.height, alignment: .topLeading)
+            .allowsHitTesting((isFocused && selectedTool == .maskingTape) || !(notebook.tapeAttachments?.filter { $0.pageIndex == pageIndex }.isEmpty ?? true))
+            .zIndex((isFocused && selectedTool == .maskingTape) ? 4 : 2.5)
         }
         .coordinateSpace(name: CanvasCoordinateSpace.name)
         .contentShape(Rectangle())

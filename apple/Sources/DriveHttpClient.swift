@@ -530,7 +530,8 @@ public enum CloudSync {
     /// 又要全量重建一次。
     public static func persist(_ session: FfiSyncSession) async {
         let account = await GoogleAuth.shared.accountEmail ?? ""
-        let json = session.indexJson()
+        // 會鎖 session 的 mutex；焦點通道下載時可能握著它好幾秒，不能讓呼叫端的執行緒（可能是主執行緒）乾等。
+        let json = await Task.detached(priority: .utility) { session.indexJson() }.value
         await AccountSyncStore.shared.saveRemoteIndexJSON(json, account: account)
     }
 

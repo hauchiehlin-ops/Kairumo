@@ -98,6 +98,7 @@
 		879124F0C755B79F15C42FE5 /* ProColorWheelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74F41D2B41DD153EEA524BBC /* ProColorWheelView.swift */; };
 		880DCFF8C76BF936EADB63DF /* NotebookEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E0D4938AD7ED09F531105A2 /* NotebookEditorView.swift */; };
 		891B35800C7FEFD3421B7293 /* ProColorPickerSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 824AF14643DF914996543B0B /* ProColorPickerSheet.swift */; };
+		LS1A2B3C4D5E6F7080910111 /* LassoSelection.swift in Sources */ = {isa = PBXBuildFile; fileRef = LS2B3C4D5E6F708091011121 /* LassoSelection.swift */; };
 		8B7009124FD56264BEA6268D /* PageRepaginationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D2A6B1E41A4693B543BEDCB /* PageRepaginationTests.swift */; };
 		8C664C6515AEE123F5150344 /* PageOrderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C0468278DE21C442DB88E1F /* PageOrderTests.swift */; };
 		8CBE67FB1F6A87103F12949F /* NoteTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1C81A31EBC2D3D1F020B0BF /* NoteTable.swift */; };
@@ -352,6 +353,7 @@
 		7FEAFED79F025B8AAAFEF289 /* NotebookTrashTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotebookTrashTests.swift; sourceTree = "<group>"; };
 		81D6BC45FA5C5688B6009B92 /* ShapeEditing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShapeEditing.swift; sourceTree = "<group>"; };
 		824AF14643DF914996543B0B /* ProColorPickerSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProColorPickerSheet.swift; sourceTree = "<group>"; };
+		LS2B3C4D5E6F708091011121 /* LassoSelection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LassoSelection.swift; sourceTree = "<group>"; };
 		831C71226B45B48B268CE8F6 /* InsertToolsAudit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InsertToolsAudit.swift; sourceTree = "<group>"; };
 		83E9E9B615E14B72409346C7 /* RecordingAdviceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingAdviceTests.swift; sourceTree = "<group>"; };
 		843458EEF60FCF8BD686B73F /* NotebookSearchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotebookSearchTests.swift; sourceTree = "<group>"; };
@@ -661,6 +663,7 @@
 				893FBBAA69ABDE7B5D03BDA9 /* InkInterop.swift */,
 				00CDBBB784601FDFB342136D /* InkLatencyMeter.swift */,
 				0B829DBCA4D5374715A49087 /* LinkPreviewEngine.swift */,
+				LS2B3C4D5E6F708091011121 /* LassoSelection.swift */,
 				7617B23BC996C4B427F52EB4 /* LocalizationManager.swift */,
 				F65D4DD5D5DF9A56132D032E /* LocalizationStrings.generated.swift */,
 				0FFA100928CD3224E43D7382 /* LocalRelayServer.swift */,
@@ -1010,6 +1013,7 @@
 				04A2C2BA6EE78D99402F87AD /* InkInterop.swift in Sources */,
 				AC68B6EC6A6BA0BF03560351 /* InkLatencyMeter.swift in Sources */,
 				723A25DA76A24DB5650DCDAA /* LinkPreviewEngine.swift in Sources */,
+				LS1A2B3C4D5E6F7080910111 /* LassoSelection.swift in Sources */,
 				9F604F0E1403CBF029FDB93A /* LocalRelayServer.swift in Sources */,
 				1E1747CEA9F8FB95CC222C4A /* LocalizationManager.swift in Sources */,
 				B09B7D4D3FA9CB33C0E89FE0 /* LocalizationStrings.generated.swift in Sources */,

@@ -672,6 +672,9 @@ struct CanvasRepresentable: UIViewRepresentable {
     /// 無從對齊紙張。現在頁面高度固定，到底了就準備下一頁。
     var onReachedPageBottom: (() -> Void)?
     var onSelectionChanged: ((Bool) -> Void)?
+    var onLassoBegan: ((CGPoint) -> Void)? = nil
+    var onLassoMoved: ((CGPoint) -> Void)? = nil
+    var onLassoEnded: (() -> Void)? = nil
     var canvasRef: ((PKCanvasView) -> Void)?
     /// 回報捲動狀態（可見比例、捲動比例），給自訂捲軸用
     var onScrollMetrics: ((_ visibleFraction: CGFloat, _ scrollFraction: CGFloat) -> Void)?
@@ -872,6 +875,12 @@ struct CanvasRepresentable: UIViewRepresentable {
         canvas.addGestureRecognizer(directDoubleTap)
         canvas.addGestureRecognizer(directSingleTap)
 
+        let lassoPan = UIPanGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.handleLassoPan(_:)))
+        lassoPan.maximumNumberOfTouches = 1
+        lassoPan.isEnabled = (selectedTool == .lasso)
+        canvas.addGestureRecognizer(lassoPan)
+        context.coordinator.lassoPan = lassoPan
+
         context.coordinator.parent = self
         context.coordinator.applyTool(to: canvas)
         // 套用儲存的壓感曲線（與 Android AdvancedPenSettingsDialog 對等）
@@ -884,6 +893,7 @@ struct CanvasRepresentable: UIViewRepresentable {
 
     func updateUIView(_ uiView: PKCanvasView, context: Context) {
         context.coordinator.parent = self
+        context.coordinator.lassoPan?.isEnabled = (selectedTool == .lasso)
         // 模式切換時要跟著改 —— 只在 makeUIView 設的話，從連續切回整頁
         // 會得到一個捲不動的畫布（SwiftUI 會重用同一個 UIView）。
         if uiView.isScrollEnabled != isScrollEnabled {
@@ -892,7 +902,8 @@ struct CanvasRepresentable: UIViewRepresentable {
             uiView.showsVerticalScrollIndicator = isScrollEnabled
         }
         // 打字模式不再關掉落筆手勢：靠 `.pencilOnly` 擋手指，Pencil 第一筆就收得到。
-        let gestureOn = EditorCanvasInputPolicy.drawingGestureEnabled(effectiveMode: editorMode)
+        // 套索模式下關閉繪圖手勢，確保所有碰觸皆由自定義 lassoPan 處理。
+        let gestureOn = EditorCanvasInputPolicy.drawingGestureEnabled(effectiveMode: editorMode) && (selectedTool != .lasso)
         if uiView.drawingGestureRecognizer.isEnabled != gestureOn {
             uiView.drawingGestureRecognizer.isEnabled = gestureOn
         }
@@ -1032,6 +1043,23 @@ struct CanvasRepresentable: UIViewRepresentable {
         ) -> Bool {
             gestureRecognizer.name == Self.directTapName
                 || other.name == Self.directTapName
+        }
+
+        weak var lassoPan: UIPanGestureRecognizer?
+
+        @objc func handleLassoPan(_ gesture: UIPanGestureRecognizer) {
+            guard let canvas = gesture.view as? PKCanvasView else { return }
+            let point = gesture.location(in: canvas)
+            switch gesture.state {
+            case .began:
+                parent.onLassoBegan?(point)
+            case .changed:
+                parent.onLassoMoved?(point)
+            case .ended, .cancelled, .failed:
+                parent.onLassoEnded?()
+            default:
+                break
+            }
         }
 
         /// 把捲動狀態回報給 SwiftUI（自訂捲軸需要）
@@ -1344,7 +1372,8 @@ struct CanvasRepresentable: UIViewRepresentable {
                 }
 
             case .lasso:
-                canvas.tool = PKLassoTool()
+                // 套索選取由自定義 LassoSelection 與手勢全權接管，不依賴 PKLassoTool 私有介面
+                canvas.tool = PKInkingTool(.pen, color: .clear, width: 1)
 
             case .maskingTape:
                 // 遮蔽膠帶（Masking Tape）：自定義覆蓋層物件，不應指派為 PKLassoTool，
@@ -1564,7 +1593,10 @@ public struct NotebookEditorView: View {
     @State private var showAdvancedPenSettingsSheet = false
     @State private var showExportPreview = false
     @State private var wantsShareAfterPreview = false
-    @State private var hasLassoSelection: Bool = false
+    @StateObject private var lasso = LassoSelection()
+    private var hasLassoSelection: Bool {
+        lasso.hasSelection
+    }
     @State private var showExtendedBanner: Bool = false
 
     @State private var canvasZoomScale: CGFloat = 1.0
@@ -2104,6 +2136,14 @@ public struct NotebookEditorView: View {
             }
         )
         .onAppear {
+            lasso.onDragSelection = { [self] delta in
+                if let updated = lasso.moveSelected(in: currentDrawing, by: delta) {
+                    currentDrawing = updated
+                    if let canvas = canvasView {
+                        canvas.drawing = updated
+                    }
+                }
+            }
             store.activeNotebookId = notebook.id
             // 開著的這一本走焦點通道（秒同步）與區網直連。
             FocusSyncController.shared.setFocus(notebook.id)
@@ -3581,6 +3621,22 @@ public struct NotebookEditorView: View {
                 }
             }
             .overlay { objectEditPanels }
+            .overlay(alignment: .top) {
+                // 🌟 草圖智慧修飾浮動控制面板（兩種頁面模式共用）
+                if showSketchRefineBar {
+                    sketchRefineFloatingBar
+                        .padding(.top, 12)
+                        .transition(.opacity.combined(with: .move(edge: .top)))
+                }
+            }
+            .overlay(alignment: .top) {
+                // 🌟 套索選取浮動控制面板（兩種頁面模式共用）
+                if editorMode == .draw && selectedTool == .lasso {
+                    lassoFloatingActionBar
+                        .padding(.top, 12)
+                        .transition(.opacity.combined(with: .move(edge: .top)))
+                }
+            }
             .onAppear { if knownObjectIds == nil { knownObjectIds = Set(allObjectIds) } }
             .onChange(of: allObjectIds.count) { _ in placeNewObjectsOnTop() }
         )
@@ -3977,7 +4033,7 @@ public struct NotebookEditorView: View {
                                 recordDrawingEdit(page: page, drawing: updated)
                                 broadcastDrawingChange(page: page, drawing: updated)
                             },
-                            onSelectionChanged: { hasLassoSelection = $0 },
+                            onSelectionChanged: { if !$0 { lasso.clear() } },
                             onReachedPageBottom: { ensureNextPageExists() },
                             // LazyVStack 會建立多頁畫布；不能讓最後建立的頁面覆蓋
                             // `canvasView`，否則貼紙可能蓋到別頁且存檔頁碼也錯。
@@ -4004,7 +4060,23 @@ public struct NotebookEditorView: View {
                             onPenControl: applyPenControl,
                             onImageDropped: { page, providers, location in
                                 acceptImageDrop(providers, at: location, page: page)
-                            }
+                            },
+                            notebook: $notebook,
+                            onNotebookChanged: {
+                                store.updateNotebook(notebook)
+                                PageThumbnailRenderer.invalidateAll()
+                            },
+                            onLassoBegan: { pt in
+                                lasso.begin(at: pt)
+                            },
+                            onLassoMoved: { pt in
+                                lasso.extend(to: pt)
+                            },
+                            onLassoEnded: {
+                                lasso.finish(in: currentDrawing)
+                            },
+                            lassoPath: lasso.path.isEmpty ? lasso.committed : lasso.path,
+                            isLassoCommitted: lasso.path.isEmpty
                         )
                         .scaleEffect(scale, anchor: .top)
                         // 縮放後的實際高度要讓出來，否則每一頁之間會留下
@@ -4441,7 +4513,16 @@ public struct NotebookEditorView: View {
                     ensureNextPageExists()
                 },
                 onSelectionChanged: { hasSel in
-                    self.hasLassoSelection = hasSel
+                    if !hasSel { lasso.clear() }
+                },
+                onLassoBegan: { pt in
+                    lasso.begin(at: pt)
+                },
+                onLassoMoved: { pt in
+                    lasso.extend(to: pt)
+                },
+                onLassoEnded: {
+                    lasso.finish(in: currentDrawing)
                 },
                 canvasRef: { ref in
                     // `updateUIView` 每次更新都會叫到這裡；直接寫 @State 就是在畫面更新途中改狀態
@@ -4517,6 +4598,15 @@ public struct NotebookEditorView: View {
                 }
             )
             .accessibilityIdentifier("editor.canvas")
+            .overlay(alignment: .topLeading) {
+                if selectedTool == .lasso && (!lasso.path.isEmpty || !lasso.committed.isEmpty) {
+                    LassoPathOverlay(
+                        path: lasso.path.isEmpty ? lasso.committed : lasso.path,
+                        isCommitted: lasso.path.isEmpty
+                    )
+                    .allowsHitTesting(false)
+                }
+            }
             // 從別的 App 把圖拖進來（工作項 S-68）。
             //
             // 掛在畫布上而不是整個編輯器：落點要能換算成頁面座標，
@@ -4756,28 +4846,6 @@ public struct NotebookEditorView: View {
                     .frame(height: currentPageHeight)
             }
 
-            // 🌟 草圖智慧修飾浮動控制面板（支援一鍵修飾、恢復原草圖、重做與強度調整）
-            if showSketchRefineBar {
-                VStack {
-                    sketchRefineFloatingBar
-                        .padding(.top, 12)
-                    Spacer()
-                }
-                .frame(maxWidth: .infinity, alignment: .top)
-                .transition(.opacity.combined(with: .move(edge: .top)))
-            }
-
-            // 🌟 套索選取浮動控制面板（僅在手繪模式且套索工具啟動時浮現：支援剪下、複製、刪除選取筆劃）
-            if editorMode == .draw && selectedTool == .lasso {
-                VStack {
-                    lassoFloatingActionBar
-                        .padding(.top, 12)
-                    Spacer()
-                }
-                .frame(maxWidth: .infinity, alignment: .top)
-                .transition(.opacity.combined(with: .move(edge: .top)))
-            }
-
             // 🌟 即時浮動錄音圖示徽章（筆記錄音完成後立即在已開啟筆記中呈現！）
             if notebook.hasRecording, let audioPath = notebook.recordingAudioPath {
                 floatingAudioBadge(fileName: audioPath)
@@ -4901,7 +4969,7 @@ public struct NotebookEditorView: View {
                             selectedTool = .lasso
                         },
                         RadialMenuItem(id: "undo", icon: "arrow.uturn.backward", labelKey: "undo", color: .blue) {
-                            canvasView?.undoManager?.undo()
+                            performUndo()
                         },
                         RadialMenuItem(id: "redo", icon: "arrow.uturn.forward", labelKey: "redo", color: .blue) {
                             canvasView?.undoManager?.redo()
@@ -6442,6 +6510,7 @@ public struct NotebookEditorView: View {
     }
 
     private func exitLassoMode() {
+        lasso.clear()
         selectedTool = previousTool ?? lastBrushTool
         previousTool = nil
     }
@@ -6541,52 +6610,20 @@ public struct NotebookEditorView: View {
         }
     }
 
-    /// 將 PKLassoTool 圈選的筆劃換色。
-    ///
-    /// PencilKit 不開放「哪些筆劃被選取」的 API，但選取狀態下刪除
-    /// 只會移除被選的筆劃。利用「刪除前後的差集」辨識被選取的筆劃索引，
-    /// 再將它們換色並復原。
+    /// 將套索選取的筆劃換色。
     private func recolorSelectedStrokes(to newColor: Color) {
-        guard let canvas = canvasView else { return }
-        let before = canvas.drawing.strokes
-        // 1. 記錄原始筆劃 ID 集
-        let beforeIds = Set(before.map { $0.path.creationDate })
-
-        // 2. 送出 cut（剪下選取的筆劃）
-        for sv in canvas.subviews where String(describing: type(of: sv)).contains("PKTiledView") {
-            if sv.responds(to: #selector(UIResponderStandardEditActions.cut(_:))) {
-                sv.perform(#selector(UIResponderStandardEditActions.cut(_:)), with: nil)
-            }
+        guard lasso.hasSelection else {
+            showCanvasNotice(localizationManager.localized("lasso_active_hint"))
+            return
         }
-        UIApplication.shared.sendAction(#selector(UIResponderStandardEditActions.cut(_:)), to: nil, from: nil, for: nil)
-
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak canvas] in
-            guard let canvas = canvas else { return }
-            let after = canvas.drawing.strokes
-            let afterIds = Set(after.map { $0.path.creationDate })
-            // 3. 差集 = 被 cut 掉的（即被選取的）
-            let removedIds = beforeIds.subtracting(afterIds)
-            guard !removedIds.isEmpty else { return }
-
-            // 4. 以新顏色重建被剪的筆劃並加回
-            let uiColor = UIColor(newColor)
-            var restored = after
-            for original in before where removedIds.contains(original.path.creationDate) {
-                let newInk = PKInk(original.ink.inkType, color: uiColor)
-                let recolored = PKStroke(ink: newInk, path: original.path, transform: original.transform, mask: original.mask)
-                restored.append(recolored)
-            }
-            canvas.drawing = PKDrawing(strokes: restored)
-            self.currentDrawing = canvas.drawing
-            self.saveCurrentPageDrawing()
-            self.hasLassoSelection = false
-        }
+        guard let updated = lasso.recolorSelected(in: currentDrawing, to: UIColor(newColor)) else { return }
+        applyLassoResult(updated)
     }
 
     /// 在指定 Y 軸座標插入或調整垂直空間（GoodNotes 風格插入空間工具）
     /// 將落在 splitY 以下的所有手寫筆畫與附件往下推移 deltaY，並相應增加頁面高度。
     private func applyVerticalSpaceInsertion(splitY: CGFloat, deltaY: CGFloat) {
-        guard abs(deltaY) > 1.0 else { return }
+        guard abs(deltaY) > 0.5 else { return }
 
         // 1. 移動 PKDrawing 中落在 splitY 以下的筆畫
         if let canvas = canvasView {
@@ -6993,7 +7030,7 @@ public struct NotebookEditorView: View {
                         lassoActionButton("doc.on.doc", "copy_selected", "copy_selected_hint") { copySelectedStrokes() }
                         lassoActionButton("plus.square.on.square", "duplicate_selected", "duplicate_selected_hint") { duplicateSelectedStrokes() }
                         lassoActionButton("doc.on.clipboard", "paste_strokes", "paste_strokes_hint") { pasteStrokes() }
-                        lassoActionButton("photo.on.rectangle", "save_as_sticker", "save_as_sticker_hint") { saveSelectedAsSticker() }
+                        lassoActionButton("photo.on.rectangle", "save_as_sticker", "save_as_sticker") { saveSelectedAsSticker() }
 
                         // 🌟 套索轉化傳送門：手寫直接轉為文字方塊
                         lassoActionButton("text.viewfinder", "recognize_handwriting", "recognize_handwriting") {
@@ -8004,7 +8041,7 @@ public struct NotebookEditorView: View {
         self.currentDrawing = loaded
         self.lastStrokeCount = loaded.strokes.count
         self.currentPageHeight = notebook.height(forPage: currentPageIndex)
-        self.hasLassoSelection = false
+        self.lasso.clear()
         self.originalSketchBackup = nil
         self.refinedSketchCache = nil
     }
@@ -8576,52 +8613,51 @@ public struct NotebookEditorView: View {
         }
     }
 
+    private func applyLassoResult(_ newDrawing: PKDrawing) {
+        currentDrawing = newDrawing
+        if let canvas = canvasView {
+            canvas.drawing = newDrawing
+        }
+        recordDrawingEdit(page: currentPageIndex, drawing: newDrawing)
+        broadcastDrawingChange(page: currentPageIndex, drawing: newDrawing)
+        saveCurrentPageDrawing()
+        #if os(iOS)
+        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+        #endif
+    }
+
     private func deleteSelectedStrokes() {
-        guard let canvas = canvasView else { return }
-        guard !canvas.drawing.strokes.isEmpty else {
+        guard lasso.hasSelection else {
             showCanvasNotice(localizationManager.localized("lasso_active_hint"))
             return
         }
-        for sv in canvas.subviews where String(describing: type(of: sv)).contains("PKTiledView") {
-            if sv.responds(to: #selector(UIResponderStandardEditActions.delete(_:))) {
-                sv.perform(#selector(UIResponderStandardEditActions.delete(_:)), with: nil)
-            }
-        }
-        UIApplication.shared.sendAction(#selector(UIResponderStandardEditActions.delete(_:)), to: nil, from: nil, for: nil)
-        self.currentDrawing = canvas.drawing
-        self.saveCurrentPageDrawing()
-        hasLassoSelection = false
+        guard let updated = lasso.deleteSelected(from: currentDrawing) else { return }
+        applyLassoResult(updated)
     }
 
     private func cutSelectedStrokes() {
-        guard let canvas = canvasView else { return }
-        guard !canvas.drawing.strokes.isEmpty else {
+        guard lasso.hasSelection else {
             showCanvasNotice(localizationManager.localized("lasso_active_hint"))
             return
         }
-        for sv in canvas.subviews where String(describing: type(of: sv)).contains("PKTiledView") {
-            if sv.responds(to: #selector(UIResponderStandardEditActions.cut(_:))) {
-                sv.perform(#selector(UIResponderStandardEditActions.cut(_:)), with: nil)
-            }
-        }
-        UIApplication.shared.sendAction(#selector(UIResponderStandardEditActions.cut(_:)), to: nil, from: nil, for: nil)
-        self.currentDrawing = canvas.drawing
-        self.saveCurrentPageDrawing()
-        hasLassoSelection = false
+        guard let updated = lasso.cutSelected(from: currentDrawing) else { return }
+        applyLassoResult(updated)
     }
 
     // MARK: - 🌟 次世代專業筆刷與手寫轉換 (CSP 防抖、對稱尺規、套索 OCR 轉文字)
     private func recognizeHandwritingToTextBox() {
-        let drawing = currentDrawing
-        guard !drawing.strokes.isEmpty else {
+        let fullDrawing = currentDrawing
+        let selectedStrokes = lasso.hasSelection ? lasso.extractSelectedStrokes(from: fullDrawing) : fullDrawing.strokes
+        guard !selectedStrokes.isEmpty else {
             showCanvasNotice(localizationManager.localized("lasso_active_hint"))
             return
         }
+        let targetDrawing = PKDrawing(strokes: selectedStrokes)
         
         // 計算筆跡包圍盒與平均色彩（原地轉化：沿用位置、寬度、筆色）
         var strokeBounds: CGRect = .null
         var strokeColorHex: String = "#000000"
-        for stroke in drawing.strokes {
+        for stroke in selectedStrokes {
             strokeBounds = strokeBounds.union(stroke.renderBounds)
             var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
             if stroke.ink.color.getRed(&r, green: &g, blue: &b, alpha: &a) {
@@ -8633,8 +8669,9 @@ public struct NotebookEditorView: View {
         }
         
         let language = localizationManager.currentLanguage.rawValue
+        let hasSelection = lasso.hasSelection
         Task { @MainActor in
-            switch await HandwritingRecognizer.recognize(drawing: drawing, languageTag: language) {
+            switch await HandwritingRecognizer.recognize(drawing: targetDrawing, languageTag: language) {
             case .success(let groups):
                 let recognizedText = groups.map(\.text).joined(separator: "\n")
                 guard !recognizedText.isEmpty else { return }
@@ -8658,10 +8695,14 @@ public struct NotebookEditorView: View {
                 if notebook.textAttachments == nil { notebook.textAttachments = [] }
                 notebook.textAttachments?.append(draft)
                 
-                // 清空原筆畫（完成原地「墨水轉文字」）
-                self.currentDrawing = PKDrawing()
-                self.canvasView?.drawing = PKDrawing()
-                self.saveCurrentPageDrawing()
+                // 清除選中的筆劃（若有套索選取則只刪被選筆劃，否則清空整頁）
+                if hasSelection, let updated = lasso.deleteSelected(from: currentDrawing) {
+                    applyLassoResult(updated)
+                } else {
+                    currentDrawing = PKDrawing()
+                    canvasView?.drawing = PKDrawing()
+                    saveCurrentPageDrawing()
+                }
                 
                 withAnimation(.easeInOut(duration: 0.2)) {
                     editorMode = .type
@@ -8722,10 +8763,12 @@ public struct NotebookEditorView: View {
         let pageTexts = (notebook.textAttachments ?? []).filter { $0.pageIndex == currentPageIndex }
         guard !pageTexts.isEmpty else { return }
 
+        let candidateIndices = lasso.hasSelection ? Array(lasso.selected) : Array(drawing.strokes.indices)
         for target in pageTexts {
             let textRect = CGRect(x: target.x, y: target.y, width: target.width, height: target.height)
             var matchedIndices: [Int] = []
-            for (idx, stroke) in drawing.strokes.enumerated() {
+            for idx in candidateIndices where drawing.strokes.indices.contains(idx) {
+                let stroke = drawing.strokes[idx]
                 if textRect.intersects(stroke.renderBounds) {
                     matchedIndices.append(idx)
                 }
@@ -8742,7 +8785,7 @@ public struct NotebookEditorView: View {
                 notebook.stickyAnchors?.removeAll { $0.targetId == target.id }
                 notebook.stickyAnchors?.append(anchor)
                 store.updateNotebook(notebook)
-                hasLassoSelection = false
+                lasso.clear()
                 #if os(iOS)
                 UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                 #endif
@@ -8890,83 +8933,50 @@ public struct NotebookEditorView: View {
     }
 
     /// 貼上剪貼簿中的筆劃。
-    ///
-    /// 為什麼需要自己做一顆：PencilKit 的內建選單（Cut / Copy / Duplicate…）只在
-    /// **有選取時**才出現，複製完取消選取後就沒有入口可以貼上了。
     private func pasteStrokes() {
-        guard let canvas = canvasView else { return }
-        for sv in canvas.subviews where String(describing: type(of: sv)).contains("PKTiledView") {
-            if sv.responds(to: #selector(UIResponderStandardEditActions.paste(_:))) {
-                sv.perform(#selector(UIResponderStandardEditActions.paste(_:)), with: nil)
-            }
+        guard lasso.canPaste else {
+            showCanvasNotice(localizationManager.localized("lasso_active_hint"))
+            return
         }
-        UIApplication.shared.sendAction(#selector(UIResponderStandardEditActions.paste(_:)), to: nil, from: nil, for: nil)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
-            self.currentDrawing = canvas.drawing
-            self.saveCurrentPageDrawing()
-        }
+        guard let updated = lasso.paste(into: currentDrawing) else { return }
+        applyLassoResult(updated)
     }
 
     /// 就地複製選取的筆劃並稍微偏移（不經過剪貼簿）—— 這就是「再製」與「複製」的差別：
     /// 「複製」把東西放進剪貼簿等你貼上，「再製」直接在旁邊多一份。
     private func duplicateSelectedStrokes() {
-        guard let canvas = canvasView else { return }
-        guard !canvas.drawing.strokes.isEmpty else {
+        guard lasso.hasSelection else {
             showCanvasNotice(localizationManager.localized("lasso_active_hint"))
             return
         }
-        for sv in canvas.subviews where String(describing: type(of: sv)).contains("PKTiledView") {
-            if sv.responds(to: #selector(UIResponderStandardEditActions.duplicate(_:))) {
-                sv.perform(#selector(UIResponderStandardEditActions.duplicate(_:)), with: nil)
-            }
-        }
-        UIApplication.shared.sendAction(#selector(UIResponderStandardEditActions.duplicate(_:)), to: nil, from: nil, for: nil)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
-            self.currentDrawing = canvas.drawing
-            self.saveCurrentPageDrawing()
-        }
+        guard let updated = lasso.duplicateSelected(in: currentDrawing) else { return }
+        applyLassoResult(updated)
     }
 
-
     private func saveSelectedAsSticker() {
-        guard let canvas = canvasView, hasLassoSelection else { return }
-        let originalStrokes = canvas.drawing.strokes
-        for sv in canvas.subviews where String(describing: type(of: sv)).contains("PKTiledView") {
-            if sv.responds(to: #selector(UIResponderStandardEditActions.cut(_:))) {
-                sv.perform(#selector(UIResponderStandardEditActions.cut(_:)), with: nil)
-            }
+        guard lasso.hasSelection else {
+            showCanvasNotice(localizationManager.localized("lasso_active_hint"))
+            return
         }
-        UIApplication.shared.sendAction(#selector(UIResponderStandardEditActions.cut(_:)), to: nil, from: nil, for: nil)
+        let extractedStrokes = lasso.extractSelectedStrokes(from: currentDrawing)
+        guard !extractedStrokes.isEmpty else { return }
         
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-            let cutDrawing = canvas.drawing
-            let originalDict = Dictionary(uniqueKeysWithValues: originalStrokes.map { ($0.path.creationDate, $0) })
-            let cutDict = Dictionary(uniqueKeysWithValues: cutDrawing.strokes.map { ($0.path.creationDate, $0) })
-            
-            var extractedStrokes: [PKStroke] = []
-            for (date, stroke) in originalDict {
-                if cutDict[date] == nil {
-                    extractedStrokes.append(stroke)
-                }
-            }
-            guard !extractedStrokes.isEmpty else {
-                canvas.drawing = PKDrawing(strokes: originalStrokes)
-                return
-            }
-            let tempDrawing = PKDrawing(strokes: extractedStrokes)
-            let bounds = tempDrawing.bounds
-            let center = CGPoint(x: bounds.midX, y: bounds.midY)
-            let transform = CGAffineTransform(translationX: -center.x, y: -center.y)
-            let centeredStrokes = extractedStrokes.map {
-                PKStroke(ink: $0.ink, path: $0.path, transform: $0.transform.concatenating(transform), mask: $0.mask)
-            }
-            let stickerDrawing = PKDrawing(strokes: centeredStrokes)
-            StickerManager.shared.saveSticker(stickerDrawing)
-            
-            canvas.drawing = PKDrawing(strokes: originalStrokes)
-            self.hasLassoSelection = false
-            self.selectedTool = .pen
+        let tempDrawing = PKDrawing(strokes: extractedStrokes)
+        let bounds = tempDrawing.bounds
+        let center = CGPoint(x: bounds.midX, y: bounds.midY)
+        let transform = CGAffineTransform(translationX: -center.x, y: -center.y)
+        let centeredStrokes = extractedStrokes.map {
+            PKStroke(ink: $0.ink, path: $0.path, transform: $0.transform.concatenating(transform), mask: $0.mask)
         }
+        let stickerDrawing = PKDrawing(strokes: centeredStrokes)
+        StickerManager.shared.saveSticker(stickerDrawing)
+        
+        lasso.clear()
+        selectedTool = previousTool ?? lastBrushTool
+        showCanvasNotice(localizationManager.localized("save_as_sticker"))
+        #if os(iOS)
+        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+        #endif
     }
 
     /// 把確認放置的貼紙變成**頁面上的物件**，不是烘進筆跡。
@@ -9020,17 +9030,15 @@ public struct NotebookEditorView: View {
     }
 
     private func copySelectedStrokes() {
-        guard let canvas = canvasView else { return }
-        guard !canvas.drawing.strokes.isEmpty else {
+        guard lasso.hasSelection else {
             showCanvasNotice(localizationManager.localized("lasso_active_hint"))
             return
         }
-        for sv in canvas.subviews where String(describing: type(of: sv)).contains("PKTiledView") {
-            if sv.responds(to: #selector(UIResponderStandardEditActions.copy(_:))) {
-                sv.perform(#selector(UIResponderStandardEditActions.copy(_:)), with: nil)
-            }
-        }
-        UIApplication.shared.sendAction(#selector(UIResponderStandardEditActions.copy(_:)), to: nil, from: nil, for: nil)
+        lasso.copySelected(from: currentDrawing)
+        showCanvasNotice(localizationManager.localized("copy_selected_hint"))
+        #if os(iOS)
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        #endif
     }
 
     private func stopAndSaveRecording() {
@@ -13265,18 +13273,36 @@ public struct MaskingTapeOverlayView: View {
     let selectedColor: Color
     let onTapesChanged: () -> Void
     
+    @State private var selectedTapeId: String? = nil
     @State private var currentDragTape: NoteTapeAttachment? = nil
     @State private var dragStartPoint: CGPoint = .zero
     
+    // 預設遮蔽膠帶色票（莫蘭迪粉彩質感），支援快速換色
+    private let tapePresetHexes = [
+        "#FCEEAC", // 暖黃
+        "#FFD1DC", // 柔粉
+        "#C8E6C9", // 薄荷綠
+        "#BBDEFB", // 晴空藍
+        "#FFE0B2", // 淺杏橙
+        "#E1BEE7", // 薰衣草紫
+        "#CFD8DC"  // 莫蘭迪灰
+    ]
+    
     public var body: some View {
         ZStack {
-            // 背景手勢接收層：僅在目前選取遮蔽膠帶工具時吃手勢，不影響其他畫筆與物件操作
+            // 背景點擊與繪製層：未點中既有膠帶時，點擊空白處可取消選取；拖曳可立即繪製新的一筆膠帶（支援連續多筆繪製）
             if isActive {
                 Color.clear
                     .contentShape(Rectangle())
+                    .onTapGesture {
+                        selectedTapeId = nil
+                    }
                     .gesture(
                         DragGesture(minimumDistance: 4)
                             .onChanged { value in
+                                if selectedTapeId != nil {
+                                    selectedTapeId = nil
+                                }
                                 if currentDragTape == nil {
                                     dragStartPoint = value.startLocation
                                 }
@@ -13285,7 +13311,8 @@ public struct MaskingTapeOverlayView: View {
                                 let height: CGFloat = 32.0
                                 let rect = CGRect(x: x, y: dragStartPoint.y - height / 2, width: width, height: height)
                                 
-                                currentDragTape = NoteTapeAttachment(pageIndex: pageIndex, rect: rect)
+                                let hex = selectedColor.toHex() ?? "#FCEEAC"
+                                currentDragTape = NoteTapeAttachment(pageIndex: pageIndex, rect: rect, colorHex: hex)
                             }
                             .onEnded { value in
                                 guard let dragTape = currentDragTape else { return }
@@ -13293,6 +13320,7 @@ public struct MaskingTapeOverlayView: View {
                                     notebook.tapeAttachments = []
                                 }
                                 notebook.tapeAttachments?.append(dragTape)
+                                selectedTapeId = dragTape.id
                                 currentDragTape = nil
                                 onTapesChanged()
                             }
@@ -13304,20 +13332,41 @@ public struct MaskingTapeOverlayView: View {
                 TapeView(
                     tape: tape,
                     isActive: isActive,
-                    tapeColor: selectedColor,
+                    isSelected: selectedTapeId == tape.id,
+                    presetColors: tapePresetHexes,
+                    fallbackColor: selectedColor,
+                    onSelect: {
+                        selectedTapeId = tape.id
+                    },
                     onToggleReveal: {
                         if let idx = notebook.tapeAttachments?.firstIndex(where: { $0.id == tape.id }) {
                             notebook.tapeAttachments?[idx].isRevealed.toggle()
                             onTapesChanged()
                         }
                     },
+                    onColorChanged: { hex in
+                        if let idx = notebook.tapeAttachments?.firstIndex(where: { $0.id == tape.id }) {
+                            notebook.tapeAttachments?[idx].colorHex = hex
+                            onTapesChanged()
+                        }
+                    },
+                    onRectChanged: { newRect in
+                        if let idx = notebook.tapeAttachments?.firstIndex(where: { $0.id == tape.id }) {
+                            notebook.tapeAttachments?[idx].rect = newRect
+                            onTapesChanged()
+                        }
+                    },
                     onRemove: {
+                        if selectedTapeId == tape.id {
+                            selectedTapeId = nil
+                        }
                         notebook.tapeAttachments?.removeAll { $0.id == tape.id }
                         onTapesChanged()
                     }
                 )
             }
             
+            // 繪製中的預覽
             if let dragTape = currentDragTape {
                 RoundedRectangle(cornerRadius: 4)
                     .fill(selectedColor.opacity(0.85))
@@ -13336,36 +13385,205 @@ public struct MaskingTapeOverlayView: View {
 private struct TapeView: View {
     let tape: NoteTapeAttachment
     let isActive: Bool
-    var tapeColor: Color = Color(red: 0.98, green: 0.93, blue: 0.67)
+    let isSelected: Bool
+    let presetColors: [String]
+    let fallbackColor: Color
+    let onSelect: () -> Void
     let onToggleReveal: () -> Void
+    let onColorChanged: (String) -> Void
+    let onRectChanged: (CGRect) -> Void
     let onRemove: () -> Void
     
+    @State private var dragOffset: CGSize = .zero
+    @State private var resizeBaseRect: CGRect? = nil
+    @State private var liveRect: CGRect? = nil
+    
+    private var currentRect: CGRect {
+        if let live = liveRect { return live }
+        return CGRect(
+            x: tape.rect.minX + dragOffset.width,
+            y: tape.rect.minY + dragOffset.height,
+            width: tape.rect.width,
+            height: tape.rect.height
+        )
+    }
+    
+    private var baseColor: Color {
+        if let hex = tape.colorHex, let c = Color(hex: hex) {
+            return c
+        }
+        return fallbackColor
+    }
+    
     var body: some View {
-        ZStack(alignment: .trailing) {
+        let rect = currentRect
+        
+        ZStack {
+            // 膠帶本體
             RoundedRectangle(cornerRadius: 4)
-                .fill(tape.isRevealed ? tapeColor.opacity(0.20) : tapeColor.opacity(0.95))
+                .fill(tape.isRevealed ? baseColor.opacity(0.20) : baseColor.opacity(0.95))
                 .overlay(
                     RoundedRectangle(cornerRadius: 4)
-                        .stroke(tapeColor.opacity(tape.isRevealed ? 0.4 : 0.8), lineWidth: 1)
+                        .stroke(baseColor.opacity(tape.isRevealed ? 0.4 : 0.8), lineWidth: 1)
                 )
                 .shadow(color: Color.black.opacity(tape.isRevealed ? 0.02 : 0.08), radius: 2, y: 1)
             
-            // 翻開提示小圖示或刪除按鈕
-            if isActive {
-                Button(action: onRemove) {
-                    Image(systemName: "xmark.circle.fill")
-                        .font(.system(size: 14))
-                        .foregroundColor(.secondary)
-                        .padding(4)
+            // 選取外框與編輯把手（當工具啟動且該膠帶被選中時）
+            if isActive && isSelected {
+                RoundedRectangle(cornerRadius: 4)
+                    .stroke(Color.accentColor, style: StrokeStyle(lineWidth: 1.5, dash: [4, 4]))
+                
+                // 左縮放把手
+                Circle()
+                    .fill(Color.white)
+                    .overlay(Circle().stroke(Color.accentColor, lineWidth: 2))
+                    .frame(width: 14, height: 14)
+                    .frame(width: 36, height: 36)
+                    .contentShape(Rectangle())
+                    .position(x: 0, y: rect.height / 2)
+                    .gesture(
+                        DragGesture(minimumDistance: 1)
+                            .onChanged { value in
+                                if resizeBaseRect == nil {
+                                    resizeBaseRect = tape.rect
+                                }
+                                guard let base = resizeBaseRect else { return }
+                                let newMinX = min(base.minX + value.translation.width, base.maxX - 20)
+                                let newW = base.maxX - newMinX
+                                liveRect = CGRect(x: newMinX, y: base.minY, width: newW, height: base.height)
+                            }
+                            .onEnded { _ in
+                                if let finalRect = liveRect {
+                                    onRectChanged(finalRect)
+                                }
+                                resizeBaseRect = nil
+                                liveRect = nil
+                            }
+                    )
+                
+                // 右縮放把手
+                Circle()
+                    .fill(Color.white)
+                    .overlay(Circle().stroke(Color.accentColor, lineWidth: 2))
+                    .frame(width: 14, height: 14)
+                    .frame(width: 36, height: 36)
+                    .contentShape(Rectangle())
+                    .position(x: rect.width, y: rect.height / 2)
+                    .gesture(
+                        DragGesture(minimumDistance: 1)
+                            .onChanged { value in
+                                if resizeBaseRect == nil {
+                                    resizeBaseRect = tape.rect
+                                }
+                                guard let base = resizeBaseRect else { return }
+                                let newW = max(20, base.width + value.translation.width)
+                                liveRect = CGRect(x: base.minX, y: base.minY, width: newW, height: base.height)
+                            }
+                            .onEnded { _ in
+                                if let finalRect = liveRect {
+                                    onRectChanged(finalRect)
+                                }
+                                resizeBaseRect = nil
+                                liveRect = nil
+                            }
+                    )
+            }
+            
+            // 翻開與刪除按鈕（未選中時只在右側顯示輕便移除鈕）
+            if isActive && !isSelected {
+                HStack {
+                    Spacer()
+                    Button(action: onRemove) {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.system(size: 14))
+                            .foregroundColor(.secondary)
+                            .padding(4)
+                    }
+                    .buttonStyle(.plain)
                 }
-                .buttonStyle(.plain)
             }
         }
-        .frame(width: tape.rect.width, height: tape.rect.height)
-        .position(x: tape.rect.midX, y: tape.rect.midY)
+        .frame(width: rect.width, height: rect.height)
+        .position(x: rect.midX, y: rect.midY)
         .contentShape(Rectangle())
         .onTapGesture {
-            onToggleReveal()
+            if isActive {
+                if isSelected {
+                    onToggleReveal()
+                } else {
+                    onSelect()
+                }
+            } else {
+                onToggleReveal()
+            }
+        }
+        .gesture(
+            DragGesture(minimumDistance: 2)
+                .onChanged { value in
+                    guard isActive && isSelected else { return }
+                    dragOffset = value.translation
+                }
+                .onEnded { value in
+                    guard isActive && isSelected else { return }
+                    let movedRect = CGRect(
+                        x: tape.rect.minX + value.translation.width,
+                        y: tape.rect.minY + value.translation.height,
+                        width: tape.rect.width,
+                        height: tape.rect.height
+                    )
+                    dragOffset = .zero
+                    onRectChanged(movedRect)
+                }
+        )
+        // 選中時在膠帶上方浮現快捷操作工具條：切換顏色、翻開/遮蔽、刪除
+        .overlay(alignment: .top) {
+            if isActive && isSelected {
+                HStack(spacing: 8) {
+                    // 色票選擇
+                    ForEach(presetColors, id: \.self) { hex in
+                        Button {
+                            onColorChanged(hex)
+                        } label: {
+                            Circle()
+                                .fill(Color(hex: hex) ?? .yellow)
+                                .frame(width: 18, height: 18)
+                                .overlay(
+                                    Circle()
+                                        .stroke(Color.primary.opacity(tape.colorHex?.uppercased() == hex.uppercased() ? 0.8 : 0.2), lineWidth: tape.colorHex?.uppercased() == hex.uppercased() ? 2 : 1)
+                                )
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    
+                    Divider().frame(height: 14)
+                    
+                    // 翻開 / 遮回切換
+                    Button(action: onToggleReveal) {
+                        Image(systemName: tape.isRevealed ? "eye.fill" : "eye.slash.fill")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundColor(.accentColor)
+                    }
+                    .buttonStyle(.plain)
+                    
+                    Divider().frame(height: 14)
+                    
+                    // 刪除
+                    Button(action: onRemove) {
+                        Image(systemName: "trash.fill")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundColor(.red)
+                    }
+                    .buttonStyle(.plain)
+                }
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background(
+                    RoundedRectangle(cornerRadius: 20)
+                        .fill(Color(uiColor: .systemBackground))
+                        .shadow(color: Color.black.opacity(0.18), radius: 6, y: 3)
+                )
+                .offset(y: -44)
+            }
         }
     }
 }

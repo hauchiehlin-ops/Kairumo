@@ -4277,6 +4277,7 @@ private fun InkScreen(
                 pageIndex = pageIndex,
                 isActive = inkTool.isMaskingTape,
                 tapeColor = runCatching { Color(android.graphics.Color.parseColor(inkColorHex)) }.getOrDefault(Color(0xFFFCEEAC)),
+                currentInkHex = inkColorHex,
                 tapes = maskingTapes,
                 onTapesChanged = { revision++ },
                 modifier = Modifier.fillMaxSize()

@@ -3073,6 +3073,30 @@ public final class NotebookStore: ObservableObject {
             recordings[index].title = incoming
             changed = true
         }
+
+        // 同步把新名字更新至畫布上的卡片，避免隨後 adoptingCardTitles 時被舊卡片名稱反向覆蓋
+        for (key, incoming) in titles {
+            let clean = incoming.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !clean.isEmpty else { continue }
+            if let exported, let was = exported[key], let currentRec = recordings.first(where: { $0.fileName.lowercased() == key }), currentRec.title != was && currentRec.title != clean {
+                continue
+            }
+            for notebookIndex in notebooks.indices {
+                guard var cards = notebooks[notebookIndex].audioAttachments else { continue }
+                var cardChanged = false
+                for cardIndex in cards.indices where cards[cardIndex].fileName.lowercased() == key {
+                    if cards[cardIndex].title != clean {
+                        cards[cardIndex].title = clean
+                        cardChanged = true
+                    }
+                }
+                if cardChanged {
+                    notebooks[notebookIndex].audioAttachments = cards
+                    changed = true
+                }
+            }
+        }
+
         if changed { persistData(signalsLocalEdit: false) }
     }
 
@@ -3235,19 +3259,39 @@ public final class NotebookStore: ObservableObject {
     /// 音檔本身以 UUID 命名，不能跟著改檔名，否則同步路徑與媒體墓碑都會
     /// 斷掉。這裡更新首頁索引，並同步更新已插入各頁的錄音卡片；因此從首頁
     /// 或筆記頁看到的是同一個名稱，下一輪套件匯出也會把卡片名稱帶到別台。
-    public func renameRecording(id: String, newTitle: String) {
+    public func renameRecording(id: String? = nil, fileName targetFileName: String? = nil, newTitle: String) {
         let clean = newTitle.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !clean.isEmpty,
-              let recordingIndex = recordings.firstIndex(where: { $0.id == id })
-        else { return }
+        guard !clean.isEmpty else { return }
+
+        let targetId = id?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let targetFile = targetFileName?.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
+
+        let recordingIndex = recordings.firstIndex { rec in
+            if let targetId, !targetId.isEmpty, rec.id == targetId { return true }
+            if let targetFile, !targetFile.isEmpty, rec.fileName.lowercased() == targetFile { return true }
+            return false
+        }
+        guard let recordingIndex else { return }
 
         recordings[recordingIndex].title = clean
         // 名字存在錄音所在的套件裡。沒有卡片的錄音，改名不會動到任何筆記，同步就以為沒有東西要匯出 ——
         // 把那本筆記標成有修改，下一輪才會把新名字寫進套件。
-        if let linked = recordings[recordingIndex].linkedNotebookId,
-           let idx = notebooks.firstIndex(where: { $0.id.caseInsensitiveCompare(linked) == .orderedSame }) {
-            notebooks[idx].lastModifiedDate = Date()
+        let targetNotebookId = recordings[recordingIndex].linkedNotebookId ?? recordingInbox().id
+        if recordings[recordingIndex].linkedNotebookId == nil {
+            recordings[recordingIndex].linkedNotebookId = targetNotebookId
         }
+
+        // 確保對應的筆記本存在於清單中（若是收件匣則自動建立/讀入），並更新修改時間
+        if let idx = notebooks.firstIndex(where: { $0.id.caseInsensitiveCompare(targetNotebookId) == .orderedSame }) {
+            notebooks[idx].lastModifiedDate = Date()
+        } else if targetNotebookId.caseInsensitiveCompare(recordingInboxNotebookId()) == .orderedSame {
+            var inbox = recordingInbox()
+            inbox.lastModifiedDate = Date()
+            if let idx = notebooks.firstIndex(where: { $0.id.caseInsensitiveCompare(inbox.id) == .orderedSame }) {
+                notebooks[idx] = inbox
+            }
+        }
+
         let fileName = recordings[recordingIndex].fileName.lowercased()
         for notebookIndex in notebooks.indices {
             guard var cards = notebooks[notebookIndex].audioAttachments else { continue }
@@ -3264,7 +3308,7 @@ public final class NotebookStore: ObservableObject {
                 notebooks[notebookIndex].lastModifiedDate = Date()
             }
         }
-        persistData()
+        markDirtyAndPersist(signalsLocalEdit: true)
     }
 
     public func deleteRecording(id: String) {
@@ -3553,11 +3597,13 @@ public struct NoteTapeAttachment: Identifiable, Codable, Hashable {
     public var pageIndex: Int
     public var rect: CGRect
     public var isRevealed: Bool
+    public var colorHex: String?
     
-    public init(id: String = UUID().uuidString, pageIndex: Int, rect: CGRect, isRevealed: Bool = false) {
+    public init(id: String = UUID().uuidString, pageIndex: Int, rect: CGRect, isRevealed: Bool = false, colorHex: String? = nil) {
         self.id = id
         self.pageIndex = pageIndex
         self.rect = rect
         self.isRevealed = isRevealed
+        self.colorHex = colorHex
     }
 }
