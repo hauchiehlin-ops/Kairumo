@@ -1543,7 +1543,7 @@ public final class NotebookStore: ObservableObject {
                 title: LocalizationManager.shared.localized("seed_feature_showcase_title"),
                 createdAt: Date().addingTimeInterval(-43200),
                 lastModifiedDate: Date().addingTimeInterval(-1800),
-                pageCount: 2,
+                pageCount: 4,
                 hasRecording: false,
                 previewSnippet: LocalizationManager.shared.localized("seed_feature_showcase_snippet"),
                 template: .grid
@@ -1934,7 +1934,7 @@ public final class NotebookStore: ObservableObject {
             title: LocalizationManager.shared.localized("seed_feature_showcase_title"),
             createdAt: Date().addingTimeInterval(-43200),
             lastModifiedDate: Date().addingTimeInterval(-1800),
-            pageCount: 2,
+            pageCount: 4,
             hasRecording: false,
             previewSnippet: LocalizationManager.shared.localized("seed_feature_showcase_snippet"),
             template: .grid

@@ -9376,29 +9376,336 @@ object LocalizationStrings {
             "ko" to "★ 진정한 벡터 손글씨:\n아래의 목록 및 캘리그래피는 연필의 질감, 만년필의 필압, 붓의 강약 조절이 적용된 실제 벡터 획으로 생성되었습니다.",
             "th" to "★ ลายมือหมึกเวกเตอร์แท้:\nรายการและลายเส้นด้านล่างถูกวาดด้วยเส้นเวกเตอร์จริง (ดินสอ, ปากกาหมึกซึมปรับแรงกด, พู่กันตัวเขียน)"
         ),
+        "sample_showcase_p1_mission_body" to mapOf(
+            "zh-Hant" to "市面上絕大多數商業筆記應用將思考鎖在昂貴的訂閱制、私有雲儲存和僵化的排版模式中。Kairumo 重新發明數位紙張：超低延遲的數學級向量筆跡、專業桌面級打字排版、動態可編修圖表、多維空間討論圖釘，以及 100% 開放透明的隱私主權。",
+            "en" to "Mainstream digital note apps lock creative thoughts into rigid formats, heavy subscriptions, and proprietary cloud silos. Kairumo reimagines digital paper from the ground up: zero latency vector inking, native desktop-grade typography, dynamic interactive charts, spatial discussion pins, and true open-format privacy.",
+            "zh-Hans" to "市面上绝大多数商业笔记应用将思考锁在昂贵的订阅制、私有云存储和僵化的排版模式中。Kairumo 重新发明数字纸张：超低延迟的数学级矢量笔迹、专业桌面级打字排版、动态可编修图表、多维空间讨论图钉，以及 100% 开放透明的隐私主权。",
+            "ja" to "市販のノートアプリは定期購読や独自クラウドによる囲い込み、固定された枠組みで自由な思考を制限してきました。Kairumoはデジタルペーパーを一から再定義します。超低遅延ベクター筆記、高度なタイピング組版、動的グラフ、空間議論ピン、そして完全オープンなデータ主権を統合しました。",
+            "ko" to "기존 상용 필기 앱들은 강제 구독료, 폐쇄적인 클라우드 종속, 경직된 서식으로 자유로운 발상을 가두어 왔습니다. Kairumo는 디지털 노트를 근본부터 다시 설계했습니다. 초저지연 벡터 잉크, 데스크톱급 타이핑 조판, 동적 인터랙티브 차트, 공간 토론 핀, 완전한 오픈 포맷 데이터 주권을 제공합니다.",
+            "th" to "แอปจดบันทึกทั่วไปมักผูกมัดผู้ใช้ด้วยค่าบริการรายเดือนและระบบคลาวด์แบบปิด Kairumo กำหนดนิยามใหม่ของกระดาษดิจิทัล: หมึกเวกเตอร์ความหน่วงต่ำเป็นศูนย์, การจัดวางข้อความระดับมืออาชีพ, แผนภูมิข้อมูลแบบโต้ตอบได้, หมุดอภิปรายเชิงพื้นที่ และความเป็นส่วนตัวอย่างแท้จริง"
+        ),
+        "sample_showcase_p1_mission_title" to mapOf(
+            "zh-Hant" to "為什麼打造 Kairumo：打破傳統筆記桎梏",
+            "en" to "Why Kairumo was Created",
+            "zh-Hans" to "为什么打造 Kairumo：打破传统笔记桎梏",
+            "ja" to "Kairumo が誕生した理由と設計思想",
+            "ko" to "Kairumo의 탄생 배경과 설계 철학",
+            "th" to "ทำไม Kairumo จึงถูกสร้างขึ้น"
+        ),
+        "sample_showcase_p1_pillar1_body" to mapOf(
+            "zh-Hant" to "零廣告、零訂閱、零廠商鎖定。所有筆記以標準 JSON 與 SQLite 開放包儲存於本機，數據永遠屬於你。",
+            "en" to "No ads, no subscriptions, no vendor lock-in. Your notebook data is stored locally in pure open JSON packages with SQLite indexing.",
+            "zh-Hans" to "零广告、零订阅、零厂商锁定。所有笔记以标准 JSON 与 SQLite 开放包存储于本地，数据永远属于你。",
+            "ja" to "広告なし、課金なし、ベンダーロックインなし。ノートデータは純粋なオープンJSONとSQLiteで端末内に安全に保存されます。",
+            "ko" to "광고 없음, 구독료 없음, 종속 없음. 모든 데이터는 순수 오픈 JSON 패키지와 SQLite로 로컬에 안전하게 보관됩니다.",
+            "th" to "ไม่มีโฆษณา ไม่มีการเก็บค่าบริการ ข้อมูลจัดเก็บในเครื่องด้วยรูปแบบเปิด JSON และ SQLite อย่างปลอดภัย"
+        ),
+        "sample_showcase_p1_pillar1_title" to mapOf(
+            "zh-Hant" to "1. 完全開源・終身免費",
+            "en" to "1. 100% Open & Free",
+            "zh-Hans" to "1. 完全开源・终身免费",
+            "ja" to "1. 完全オープン・永年無料",
+            "ko" to "1. 100% 오픈소스 & 무료",
+            "th" to "1. โอเพนซอร์ส 100% ฟรีตลอดชีพ"
+        ),
+        "sample_showcase_p1_pillar2_body" to mapOf(
+            "zh-Hant" to "16 種物理級手繪筆刷、桌面級豐富文字樣式、動態公式 OCR 識別及可連接流程圖在同一畫卷自由共存。",
+            "en" to "Seamless coexistence of 16 natural handwriting brush types, Word-grade rich text blocks, dynamic math OCR, and interactive shapes.",
+            "zh-Hans" to "16 种物理级手绘笔刷、桌面级丰富文字样式、动态公式 OCR 识别及可连接流程图在同一画卷自由共存。",
+            "ja" to "16種類のアナログ質感ブラシ、Word級のリッチテキスト枠、数式OCRソルバー、自由な幾何図形が同一キャンバスで共存。",
+            "ko" to "16가지의 섬세한 자연 브러시, 고품격 리치 텍스트 블록, 동적 수학 OCR 및 인터랙티브 도형이 한 화면에 공존합니다.",
+            "th" to "ผสานพู่กันธรรมชาติ 16 แบบ, บล็อกข้อความจัดรูปแบบระดับสูง, OCR แปลงสูตรคณิต และรูปทรงไดนามิกไว้ในหน้าเดียว"
+        ),
+        "sample_showcase_p1_pillar2_title" to mapOf(
+            "zh-Hant" to "2. 手繪與排版無縫融合",
+            "en" to "2. High-Fidelity Hybrid",
+            "zh-Hans" to "2. 手绘与排版无缝融合",
+            "ja" to "2. ハイブリッド描画統合",
+            "ko" to "2. 하이브리드 엔진 통합",
+            "th" to "2. ไฮบริดลายมือและข้อความสมบูรณ์แบบ"
+        ),
+        "sample_showcase_p1_pillar3_body" to mapOf(
+            "zh-Hant" to "內建原生向量圖表工坊。拒絕靜態截圖拼貼，隨時輕點即可重新輸入系列數值、修改配色與切換圖表類型。",
+            "en" to "Built-in vector charting engine. Never paste static screenshots again—double tap to change numbers, colors, and series instantly.",
+            "zh-Hans" to "内置原生矢量图表工坊。拒绝静态截图拼贴，随时轻点即可重新输入系列数值、修改配色与切换图表类型。",
+            "ja" to "ネイティブベクターグラフ機能を内蔵。静止画の貼り付けは不要、タップひとつで数値や配色をその場で即座に再編集。",
+            "ko" to "네이티브 벡터 차트 엔진 내장. 멈춰있는 캡처 이미지는 이제 그만, 더블 탭으로 수치와 색상을 언제든 즉시 수정하세요.",
+            "th" to "เอนจินแผนภูมิเวกเตอร์ในตัว ไม่ต้องแปะภาพหน้าจออีกต่อไป แตะสองครั้งเพื่อแก้ไขตัวเลข สี และชุดข้อมูลได้ทันที"
+        ),
+        "sample_showcase_p1_pillar3_title" to mapOf(
+            "zh-Hant" to "3. 可隨時重新編輯的圖表",
+            "en" to "3. Live Data Studio",
+            "zh-Hans" to "3. 可随时重新编辑的图表",
+            "ja" to "3. ライブデータ作図スタジオ",
+            "ko" to "3. 라이브 데이터 스튜디오",
+            "th" to "3. สตูดิโอแผนภูมิข้อมูลสด"
+        ),
+        "sample_showcase_p1_pillar4_body" to mapOf(
+            "zh-Hant" to "將多人討論圖釘精確釘在公式難點、表格儲存格或圖表柱狀上，更能將麥克風錄音軌跡與手繪筆跡時間軸精確定位。",
+            "en" to "Anchor multi-user review pins directly onto formulas, table cells, or chart bars. Synchronize live audio with pen stroke timelines.",
+            "zh-Hans" to "将多人讨论图钉精确钉在公式难点、表格单元格或图表柱状上，更能将麦克风录音轨迹与手绘笔迹时间轴精确定位。",
+            "ja" to "数式、表のセル、グラフのバー上に直接ピンを固定してレビュー。音声録音と手描きストロークの時間同期も完備。",
+            "ko" to "수식, 표의 셀, 차트 막대 위에 직접 토론 핀을 꽂아 피드백을 기록하세요. 실시간 음성 녹음과 펜 궤적이 완벽 동기화됩니다.",
+            "th" to "ปักหมุดข้อคิดเห็นลงบนสูตร ช่องตาราง หรือแท่งกราฟได้โดยตรง พร้อมซิงค์เสียงบันทึกเข้ากับไทม์ไลน์ลายเส้นปากกา"
+        ),
+        "sample_showcase_p1_pillar4_title" to mapOf(
+            "zh-Hant" to "4. 空間圖釘與時間軸協同",
+            "en" to "4. Spatial Collaboration",
+            "zh-Hans" to "4. 空间图钉与时间轴协同",
+            "ja" to "4. 空間座標ピン協働",
+            "ko" to "4. 공간 좌표 핀 협업",
+            "th" to "4. การทำงานร่วมกันด้วยหมุดเชิงพื้นที่"
+        ),
+        "sample_showcase_p1_pillars_title" to mapOf(
+            "zh-Hant" to "Kairumo 四大核心支柱與技術優勢",
+            "en" to "Four Foundational Pillars of Kairumo",
+            "zh-Hans" to "Kairumo 四大核心支柱与技术优势",
+            "ja" to "Kairumoを支える4大コア基盤",
+            "ko" to "Kairumo를 정의하는 4대 핵심 가치",
+            "th" to "4 เสาหลักพื้นฐานของ Kairumo"
+        ),
         "sample_showcase_p1_subtitle" to mapOf(
-            "zh-Hant" to "第一部分：真實多筆觸手繪（鉛筆／鋼筆／毛筆）與主流應用全方位打字評測",
-            "en" to "Part 1: Real Multi-Stroke Vector Handwriting & Comparative Matrix",
-            "zh-Hans" to "第一部分：真实多笔触手绘（铅笔／钢笔／毛笔）与主流应用全方位打字评测",
-            "ja" to "第1部：本格マルチストローク手描き筆跡と主流アプリ比較表",
-            "ko" to "제1부: 다채로운 벡터 손글씨 필적 및 주요 앱 비교표",
-            "th" to "ส่วนที่ 1: ลายมือเวกเตอร์หลายหัวปากกาและตารางเปรียบเทียบแอปหลัก"
+            "zh-Hant" to "第一章：應用定位、核心使命與市面主流筆記軟體全景深度評測",
+            "en" to "Chapter 1: Purpose & Comprehensive Market Benchmark",
+            "zh-Hans" to "第一章：应用定位、核心使命与市面主流笔记软件全景深度评测",
+            "ja" to "第1章：アプリケーションの使命と主要アプリ総合比較",
+            "ko" to "제1장: 앱의 핵심 사명 및 주요 필기 앱 종합 벤치마크",
+            "th" to "บทที่ 1: วัตถุประสงค์และการเปรียบเทียบเชิงลึกกับแอปชั้นนำ"
+        ),
+        "sample_showcase_p1_table_title" to mapOf(
+            "zh-Hant" to "全景對比：Kairumo 與市面主流前三大商業筆記應用（GoodNotes、Notability、OneNote）",
+            "en" to "Comprehensive Comparison: Kairumo vs. Industry Giants",
+            "zh-Hans" to "全景对比：Kairumo 与市面主流前三大商业笔记应用（GoodNotes、Notability、OneNote）",
+            "ja" to "市販主要3大ノートアプリ vs Kairumo 総合性能マトリクス",
+            "ko" to "시판 주요 3대 필기 앱 vs Kairumo 종합 벤치마크 매트릭스",
+            "th" to "ตารางเปรียบเทียบ Kairumo กับ 3 แอปจดบันทึกชั้นนำในอุตสาหกรรม"
         ),
         "sample_showcase_p1_title" to mapOf(
-            "zh-Hant" to "Kairumo 功能介紹與實戰利用：手繪、打字與動態工具全解析",
-            "en" to "Kairumo Feature Showcase: Handwriting, Typing & Dynamic Tooling",
-            "zh-Hans" to "Kairumo 功能介绍与实战利用：手绘、打字与动态工具全解析",
-            "ja" to "Kairumo機能紹介活用：手描き・タイピング・動的ツール",
-            "ko" to "Kairumo 기능 소개 및 활용: 손글씨, 타이핑 및 동적 도구",
-            "th" to "แนะนำการใช้งาน Kairumo: ลายมือ พิมพ์ดีด และเครื่องมือไดนามิก"
+            "zh-Hant" to "Kairumo — 新一代高自由度向量手寫與思考中樞",
+            "en" to "Kairumo — The Next-Gen Vector Note & Thinking Studio",
+            "zh-Hans" to "Kairumo — 新一代高自由度矢量手写与思考中枢",
+            "ja" to "Kairumo — 次世代ベクター思考・ノート統合スタジオ",
+            "ko" to "Kairumo — 차세대 벡터 노트 & 싱킹 스튜디오",
+            "th" to "Kairumo — สตูดิโอจดบันทึกและระบบคิดเวกเตอร์ยุคใหม่"
+        ),
+        "sample_showcase_p2_family_mark" to mapOf(
+            "zh-Hant" to "第三家族：標注與版面輔助（記號筆、螢光筆、橡皮擦、套索、遮蔽膠帶、直尺）",
+            "en" to "Family III: Marking & Geometry (Marker, Highlighter, Eraser, Lasso, Masking Tape, Ruler)",
+            "zh-Hans" to "第三家族：标注与版面辅助（记号笔、荧光笔、橡皮擦、套索、遮蔽胶带、直尺）",
+            "ja" to "第3グループ：標識・ユーティリティ（マーカー、蛍光ペン、消しゴム、投げ縄、マスキングテープ、定規）",
+            "ko" to "제3계열: 마킹 및 유틸리티 (마커, 형광펜, 지우개, 올가미, 마스킹 테이프, 눈금자)",
+            "th" to "กลุ่มที่ 3: การเน้นข้อความและเครื่องมือเสริม (มาร์กเกอร์, ไฮไลท์, ยางลบ, บ่วงบาศ, เทปกาว, ไม้บรรทัด)"
+        ),
+        "sample_showcase_p2_family_paint" to mapOf(
+            "zh-Hant" to "第二家族：藝術彩繪族（炭筆、蠟筆、噴槍、油畫、水彩）",
+            "en" to "Family II: Expressive Art Tools (Charcoal, Crayon, Airbrush, Oil Paint, Watercolor)",
+            "zh-Hans" to "第二家族：艺术彩绘族（炭笔、蜡笔、喷枪、油画、水彩）",
+            "ja" to "第2グループ：芸術表現ツール（木炭、クレヨン、エアブラシ、油絵、水彩）",
+            "ko" to "제2계열: 예술 표현 도구 (목탄, 크레용, 에어브러시, 유채, 수채화)",
+            "th" to "กลุ่มที่ 2: เครื่องมือระบายศิลปะ (ชาร์โคล, เครยอน, แอร์บรัช, สีน้ำมัน, สีน้ำ)"
+        ),
+        "sample_showcase_p2_family_write" to mapOf(
+            "zh-Hant" to "第一家族：精密書寫族（鋼筆、針筆、原子筆、毛筆、書法筆、鉛筆）",
+            "en" to "Family I: Precision Writing Tools (Pen, Fineliner, Ballpoint, Brush, Calligraphy, Pencil)",
+            "zh-Hans" to "第一家族：精密书写族（钢笔、针笔、原子笔、毛笔、书法笔、铅笔）",
+            "ja" to "第1グループ：精密筆記ツール（万年筆、ミリペン、ボールペン、筆、カリグラフィ、鉛筆）",
+            "ko" to "제1계열: 정밀 필기 도구 (만년筆, 세밀펜, 볼펜, 붓, 캘리그래피, 연필)",
+            "th" to "กลุ่มที่ 1: เครื่องมือเขียนความแม่นยำสูง (ปากกาหมึกซึม, หัวเข็ม, ลูกลื่น, พู่กัน, ตัวเขียน, ดินสอ)"
+        ),
+        "sample_showcase_p2_subtitle" to mapOf(
+            "zh-Hant" to "第二章：超低延遲壓感物理引擎與全套筆刷實戰筆跡全景陳列",
+            "en" to "Chapter 2: Authentic Pressure-Sensitive Physics & Live Stroke Showcase",
+            "zh-Hans" to "第二章：超低延迟压感物理引擎与全套笔刷实战笔迹全景陈列",
+            "ja" to "第2章：物理筆圧シミュレーションと全ツールの生きた筆跡ギャラリー",
+            "ko" to "제2장: 물리적 필압 반응 및 16종 도구의 생생한 필적 갤러리",
+            "th" to "บทที่ 2: การตอบสนองแรงกดจริงและแกลเลอรีเส้นสายครบทุกเครื่องมือ"
+        ),
+        "sample_showcase_p2_tape_desc" to mapOf(
+            "zh-Hant" to "可互動遮蔽膠帶：輕點下方黃色膠帶即可瞬間顯示或隱藏關鍵背誦答案！考研與背單字背公式的神器。",
+            "en" to "Interactive Masking Tape: Tap the colored tape strip below to reveal hidden study answers! Perfect for memorization and exam review.",
+            "zh-Hans" to "可交互遮蔽胶带：轻点下方黄色胶带即可瞬间显示或隐藏关键背诵答案！考研与背单字背公式的神器。",
+            "ja" to "インタラクティブ・マスキングテープ：下のテープをタップすると隠された答えが表示されます！暗記や試験対策に最適。",
+            "ko" to "인터랙티브 마스킹 테이프: 아래의 테이프를 탭하면 가려진 정답이 드러납니다! 암기 학습과 시험 대비에 탁월합니다.",
+            "th" to "เทปปิดบังแบบโต้ตอบ: แตะแถบเทปด้านล่างเพื่อเปิดคำตอบที่ซ่อนอยู่! เหมาะสำหรับการท่องจำและทบทวนบทเรียน"
         ),
         "sample_showcase_p2_title" to mapOf(
-            "zh-Hant" to "第二部分：手繪＋打字微積分方程融合解析 ＆ 數字製圖與討論圖釘用法",
-            "en" to "Part 2: Calculus Equation Hybrid & Digital Charting with Discussion Pins",
-            "zh-Hans" to "第二部分：手绘＋打字微积分方程融合解析 ＆ 数字制图与讨论图钉用法",
-            "ja" to "第2部：微積分方程式の融合解析 ＆ デジタル作図とピン議論",
-            "ko" to "제2부: 미적분 방정식 하이브리드 해석 & 디지털 차트 및 토론 핀",
-            "th" to "ส่วนที่ 2: การผสานสมการแคลคูลัส & แผนภูมิข้อมูลตัวเลขพร้อมหมุดอภิปราย"
+            "zh-Hant" to "手繪模式：十六大專業繪畫與標注工具全景實作實測",
+            "en" to "Handwriting Studio: All 16 Inking Tools in Action",
+            "zh-Hans" to "手绘模式：十六大专业绘画与标注工具全景实作实测",
+            "ja" to "手描きスタジオ：全16種描画ツールの完全実演",
+            "ko" to "손글씨 스튜디오: 16종 전 툴 실습 및 필적 쇼케이스",
+            "th" to "สตูดิโอลายมือ: สาธิตการใช้งานเครื่องมือวาดเขียนครบทั้ง 16 ชนิด"
+        ),
+        "sample_showcase_p3_flow_decision" to mapOf(
+            "zh-Hant" to "結構化驗證？",
+            "en" to "Structured?",
+            "zh-Hans" to "结构化验证？",
+            "ja" to "構造化完了？",
+            "ko" to "구조화 완료?",
+            "th" to "จัดโครงสร้างแล้ว?"
+        ),
+        "sample_showcase_p3_flow_end" to mapOf(
+            "zh-Hant" to "精緻成稿輸出",
+            "en" to "Published Note",
+            "zh-Hans" to "精致成稿输出",
+            "ja" to "ノート完成",
+            "ko" to "노트 발행 완료",
+            "th" to "บันทึกเสร็จสมบูรณ์"
+        ),
+        "sample_showcase_p3_flow_process" to mapOf(
+            "zh-Hant" to "核心向量解算",
+            "en" to "Vector Engine",
+            "zh-Hans" to "核心矢量解算",
+            "ja" to "ベクター処理",
+            "ko" to "벡터 엔진 처리",
+            "th" to "ประมวลผลเวกเตอร์"
+        ),
+        "sample_showcase_p3_flow_start" to mapOf(
+            "zh-Hant" to "靈感鍵入",
+            "en" to "Input Thought",
+            "zh-Hans" to "灵感键入",
+            "ja" to "発想の入力",
+            "ko" to "아이디어 입력",
+            "th" to "เริ่มป้อนความคิด"
+        ),
+        "sample_showcase_p3_flow_title" to mapOf(
+            "zh-Hant" to "3. 幾何圖形庫與自適應拓撲連接線",
+            "en" to "3. Geometry Shapes & Dynamic Smart Connectors",
+            "zh-Hans" to "3. 几何图形库与自适应拓扑连接线",
+            "ja" to "3. 幾何図形とスマート接続コネクタ",
+            "ko" to "3. 기하 도형 및 스마트 자동 연결선",
+            "th" to "3. รูปทรงเรขาคณิตและเส้นเชื่อมโยงอัจฉริยะ"
+        ),
+        "sample_showcase_p3_media_title" to mapOf(
+            "zh-Hant" to "4. 智慧網頁預覽卡片、錄音時間軸卡片與 3D 空間立體模型",
+            "en" to "4. Interactive Web Links, Audio Cards & 3D Spatial Models",
+            "zh-Hans" to "4. 智能网页预览卡片、录音时间轴卡片与 3D 空间立体模型",
+            "ja" to "4. Webリンクカード・音声録音・3D空間オブジェクト",
+            "ko" to "4. 웹 링크 카드, 오디오 녹음 카드 & 3D 공간 모델",
+            "th" to "4. การ์ดลิงก์เว็บ, การ์ดบันทึกเสียง และโมเดล 3D เชิงพื้นที่"
+        ),
+        "sample_showcase_p3_richtext_body" to mapOf(
+            "zh-Hant" to "每一個文字框均具備完整的獨立版面參數：支援字型、字號、粗體、斜體、底線、刪除線、行距、段落間距、背景填色、邊框寬度與自適應圓角，輕鬆搭建雜誌級排版。",
+            "en" to "Each text frame supports individual typography parameters: font family, point sizes, bold, italic, underline, strikethrough, paragraph spacing, line height, background fills, border styles, and rounded corners.",
+            "zh-Hans" to "每一个文本框均具备完整的独立版面参数：支持字型、字号、粗体、斜体、底线、删除线、行距、段落间距、背景填色、边框宽度与自适应圆角，轻松搭建杂志级排版。",
+            "ja" to "各テキスト枠は独立したスタイル設定を完全サポート：フォント種類、文字サイズ、太字、斜体、下線、打消し線、段落余白、行送り、背景塗りつぶし、枠線、角丸調整。",
+            "ko" to "각 텍스트 프레임은 독립적인 조판 파라미터를 완벽히 지원합니다: 글꼴 패밀리, 폰트 크기, 굵게, 기울임, 밑줄, 취소선, 단락 여백, 행간, 배경색 채우기, 테두리 및 둥근 모서리.",
+            "th" to "แต่ละกล่องข้อความรองรับการตั้งค่าการพิมพ์อย่างอิสระ: รูปแบบอักษร, ขนาด, ตัวหนา, ตัวเอียง, ขีดเส้นใต้, ขีดฆ่า, ระยะห่างย่อหน้า, สีพื้นหลัง, เส้นขอบ และมุมมน"
+        ),
+        "sample_showcase_p3_richtext_title" to mapOf(
+            "zh-Hant" to "1. 桌面級富文字文字排版引擎",
+            "en" to "Word-Grade Rich Text Formatting",
+            "zh-Hans" to "1. 桌面级富文本文字排版引擎",
+            "ja" to "Wordクラスの高度なリッチテキスト組版",
+            "ko" to "워드급 정밀 리치 텍스트 조판 시스템",
+            "th" to "การจัดรูปแบบข้อความระดับโปรแกรมประมวลผลคำ"
+        ),
+        "sample_showcase_p3_subtitle" to mapOf(
+            "zh-Hant" to "第三章：桌面級排版、高階樣式表格、自適應流程圖、3D模型與多媒體錄音卡片",
+            "en" to "Chapter 3: Rich Text Formatting, Data Tables, Connectors, 3D Models & Audio Cards",
+            "zh-Hans" to "第三章：桌面级排版、高阶样式表格、自适应流程图、3D模型与多媒体录音卡片",
+            "ja" to "第3章：リッチテキスト装飾、データ表、コネクタ付き図形、3Dモデル、音声カードの実装",
+            "ko" to "제3장: 리치 텍스트 서식, 데이터 표, 연결선 도형, 3D 모델, 오디오 카드 완벽 구현",
+            "th" to "บทที่ 3: การจัดรูปแบบข้อความ, ตารางข้อมูล, รูปทรงเชื่อมโยง, โมเดล 3D และการ์ดเสียง"
+        ),
+        "sample_showcase_p3_table_data" to mapOf(
+            "zh-Hant" to "核心模組|類型|渲染幀率|架構特性說明\n排版引擎|原生核心|60 FPS 無卡頓|次像素抗鋸齒字型渲染，極速鍵入響應\n數據表格|柵格矩陣|O(1) 瞬時查詢|儲存格寬高自適應，支援表頭自訂色帶\n流程連接線|智慧向量|即時重繪|節點移動時自動重算正交正弦拓撲連接",
+            "en" to "Module|Type|Performance|Description\nText Engine|Native Core|60 FPS|Sub-pixel font rendering with zero stutter\nVector Table|Grid Matrix|O(1) Access|Adaptive cell resizing with custom borders\nFlow Connect|Smart Vector|Instant|Dynamic orthogonal routing between nodes",
+            "zh-Hans" to "核心模块|类型|渲染帧率|架构特性说明\n排版引擎|原生核心|60 FPS 无卡顿|亚像素抗锯齿字体渲染，极速键入响应\n数据表格|栅格矩阵|O(1) 瞬时查询|单元格宽高自适应，支持表头自定义色带\n流程连接线|智能矢量|实时重绘|节点移动时自动重算正交正弦拓扑连接",
+            "ja" to "モジュール|種類|パフォーマンス|機能詳細\nテキストエンジン|ネイティブコア|60 FPS|サブピクセル描画による滑らかなタイピング\nベクター表|グリッド配列|O(1) アクセス|セルの自動リサイズとカスタム罫線対応\nフロー接続線|スマートベクター|瞬時応答|ノード間を自動ルーティングする接続線",
+            "ko" to "모듈|종류|성능|기능 상세\n텍스트 엔진|네이티브 코어|60 FPS|서브픽셀 렌더링으로 렉 없는 타이핑 지원\n벡터 표|그리드 매트릭스|O(1) 접근|셀 크기 자동 조절 및 맞춤형 테두리\n흐름 연결선|스마트 벡터|즉시 반응|도형 노드 간 자동 직교 라우팅 연결",
+            "th" to "โมดูล|ชนิด|ประสิทธิภาพ|รายละเอียด\nเอนจินข้อความ|แกนเนทีฟ|60 FPS|เรนเดอร์ตัวอักษรคมชัด ลื่นไหลไม่กระตุก\nตารางเวกเตอร์|เมทริกซ์กริด|เข้าถึง O(1)|ปรับขนาดช่องตารางอัตโนมัติพร้อมเส้นขอบ\nเส้นเชื่อมผังงาน|เวกเตอร์อัจฉริยะ|ทันที|ค้นหาเส้นทางเชื่อมโยงระหว่างโหนดอัตโนมัติ"
+        ),
+        "sample_showcase_p3_table_title" to mapOf(
+            "zh-Hant" to "2. 原生高性能數據表格（支援表頭填色與儲存格自適應）",
+            "en" to "2. High-Performance Data Table with Styled Columns",
+            "zh-Hans" to "2. 原生高性能数据表格（支持表头填色与单元格自适应）",
+            "ja" to "2. 高性能データ表（ヘッダー背景＆罫線スタイル）",
+            "ko" to "2. 고성능 데이터 표 (헤더 배경색 & 맞춤형 격자선)",
+            "th" to "2. ตารางข้อมูลประสิทธิภาพสูงพร้อมสไตล์คอลัมน์"
+        )
+    )
+
+    private fun part15(): Map<String, Map<String, String>> = mapOf(
+        "sample_showcase_p3_title" to mapOf(
+            "zh-Hant" to "文字與版面模式：專業排版、原生表格、流程圖與多媒體物件全實作",
+            "en" to "Typography & Structure Studio: Desktop-Grade Object Engine",
+            "zh-Hans" to "文字与版面模式：专业排版、原生表格、流程图与多媒体物件全实作",
+            "ja" to "タイポグラフィ＆構造化スタジオ：高度オブジェクト機能",
+            "ko" to "타이포그래피 & 구조화 스튜디오: 데스크톱급 객체 엔진",
+            "th" to "สตูดิโอการจัดพิมพ์และโครงสร้าง: เอนจินออบเจกต์ระดับเดสก์ท็อป"
+        ),
+        "sample_showcase_p4_chart_card_desc" to mapOf(
+            "zh-Hant" to "下方長條圖絕非死板圖片，而是原生活動的向量圖表組件。雙擊即可重新錄入數據或修改調色盤。圖表上的討論圖釘更實現了數據維度的空間上下文協作，徹底顛覆傳統筆記體驗。",
+            "en" to "The chart below is a live vector component. Double-tap to open the data inspector, modify series figures, or switch palettes. Notice the discussion pin dropped on the leading metric—true context-first teamwork.",
+            "zh-Hans" to "下方长条图绝非死板图片，而是原生活动的矢量图表组件。双击即可重新录入数据或修改调色盘。图表上的讨论图钉更实现了数据维度的空间上下文协作，彻底颠覆传统笔记体验。",
+            "ja" to "下のグラフは生きたベクター要素です。ダブルタップでデータ編集画面が開き、数値や配色をその場で修正可能。最上位指標に配置された議論ピンによる、文脈重視のコラボレーションを体感してください。",
+            "ko" to "아래 차트는 정적 이미지가 아닌 라이브 벡터 컴포넌트입니다. 더블 탭하여 수치를 수정하거나 테마를 변경할 수 있습니다. 1위 지표 위에 꽂힌 토론 핀을 통해 맥락 중심의 협업을 경험해 보세요.",
+            "th" to "แผนภูมิด้านล่างเป็นเวกเตอร์สด แตะสองครั้งเพื่อเปิดตัวแก้ไขข้อมูล เปลี่ยนตัวเลข หรือเปลี่ยนชุดสี สังเกตหมุดอภิปรายที่ปักไว้บนข้อมูลสำคัญเพื่อการทำงานร่วมกันที่ตรงจุด"
+        ),
+        "sample_showcase_p4_chart_card_title" to mapOf(
+            "zh-Hant" to "動態圖表工坊：拒絕死板貼圖，隨時雙擊重調數據與色彩",
+            "en" to "Editable Chart Studio: Live Vector Data Integration",
+            "zh-Hans" to "动态图表工坊：拒绝死板贴图，随时双击重调数据与色彩",
+            "ja" to "編集可能なグラフ工房：生きたベクターデータの可視化",
+            "ko" to "재편집 가능한 차트 스튜디오: 실시간 벡터 데이터 통합",
+            "th" to "สตูดิโอแผนภูมิที่แก้ไขได้: รวมข้อมูลเวกเตอร์แบบโต้ตอบ"
+        ),
+        "sample_showcase_p4_conclusion_body" to mapOf(
+            "zh-Hant" to "因為 Kairumo 拒絕妥協！當你渴望傳統紙張的靈性觸感，16 種物理級筆刷提供無與倫比的細膩回饋；當你需要構建嚴密的工程與學術知識庫，原生表格、LaTeX 微積分引擎、動編圖表與空間圖釘賦予你超凡生產力——更關鍵的是，這一切永遠屬於你，100% 免費開源，永無拘束。",
+            "en" to "Because it refuses to compromise. When you need the fluidity of analog paper, our 16 brushes deliver perfection. When you need the structure of desktop documents, our tables, LaTeX formulas, editable charts, and spatial pins give you superpowers—all wrapped in 100% open source freedom.",
+            "zh-Hans" to "因为 Kairumo 拒绝妥协！当你渴望传统纸张的灵性触感，16 种物理级笔刷提供无与伦比的细腻回馈；当你需要构建严密的工程与学术知识库，原生表格、LaTeX 微积分引擎、动编图表与空间图钉赋予你超凡生产力——更关键的是，这一切永远属于你，100% 免费开源，永无拘束。",
+            "ja" to "一切の妥協を排したからです。紙のような直感的な筆記が必要な時は16種のブラシが完璧に応え、ドキュメントの厳密な構造化が必要な時は表、数式、動的グラフ、空間ピンが圧倒的な生産性をもたらします。すべてが完全オープンソースの自由の中に。",
+            "ko" to "타협하지 않는 완벽함을 추구하기 때문입니다. 아날로그 종이의 자연스러움이 필요할 땐 16종 브러시가 완벽한 필기감을 선사하고, 문서의 체계적 구조화가 필요할 땐 표, LaTeX 수식, 동적 차트, 공간 핀이 독보적인 생산성을 발휘합니다. 이 모든 것이 100% 오픈소스의 자유 속에 담겨 있습니다.",
+            "th" to "เพราะ Kairumo ไม่ยอมประนีประนอมกับข้อจำกัดใดๆ เมื่อคุณต้องการความลื่นไหลของกระดาษจริง พู่กันทั้ง 16 ชนิดพร้อมมอบประสบการณ์ที่ดีที่สุด และเมื่อคุณต้องการโครงสร้างเอกสาร ตาราง สูตร LaTeX กราฟสด และหมุดอภิปรายจะมอบพลังการสร้างสรรค์อันไร้ขีดจำกัด ทั้งหมดนี้ฟรีและเปิดเผยซอร์สโค้ด 100%"
+        ),
+        "sample_showcase_p4_conclusion_title" to mapOf(
+            "zh-Hant" to "為什麼創作者、工程師與學者一致讚嘆 Kairumo？",
+            "en" to "Why Creators, Engineers & Scholars Choose Kairumo",
+            "zh-Hans" to "为什么创作者、工程师与学者一致赞叹 Kairumo？",
+            "ja" to "世界中の創作者・技術者・研究者が Kairumo を選ぶ理由",
+            "ko" to "전 세계의 창작자, 엔지니어, 연구자들이 Kairumo를 선택하는 이유",
+            "th" to "เหตุผลที่นักสร้างสรรค์ วิศวกร และนักวิชาการเลือก Kairumo"
+        ),
+        "sample_showcase_p4_hero_badge" to mapOf(
+            "zh-Hant" to "★ Kairumo 殺手級體驗：手寫自由與打字秩序的無界融合",
+            "en" to "★ Kairumo Superpower: Zero Friction Synthesis of Hand & Type",
+            "zh-Hans" to "★ Kairumo 杀手级体验：手写自由与打字秩序的无界融合",
+            "ja" to "★ Kairumoの真骨頂：手描きとタイピングの完全融合",
+            "ko" to "★ Kairumo의 독보적 강점: 손글씨와 타이핑의 완벽한 융합",
+            "th" to "★ พลังพิเศษของ Kairumo: การผสานลายมือและการพิมพ์อย่างไร้รอยต่อ"
+        ),
+        "sample_showcase_p4_math_card_desc" to mapOf(
+            "zh-Hant" to "左側為手寫筆真實書寫的微積分積分題，右側為系統排版的解析步驟。教師用筆手寫推導、套索一鍵轉為標準 LaTeX，助教與學生直接在公式易錯點釘入討論圖釘，打造前所未有的思考閉環。",
+            "en" to "Watch how effortlessly handwritten strokes (left) pair with structured typed derivations (right). An instructor writes equations with Apple Pencil, lasso-converts them to LaTeX, while colleagues drop review pins directly onto critical steps.",
+            "zh-Hans" to "左侧为手写笔真实书写的微积分积分题，右侧为系统排版的解析步骤。教师用笔手写推导、套索一键转为标准 LaTeX，助教与学生直接在公式易错点钉入讨论图钉，打造前所未有的思考闭环。",
+            "ja" to "左手の手描き筆跡と右側の整然としたタイピング解説の調和をご覧ください。教員が手描きで公式を展開し、投げ縄でLaTeXへ変換。共同研究者はステップ上に直接ピンを配置して議論できます。",
+            "ko" to "왼편의 자연스러운 손글씨 필적과 우측의 정돈된 타이핑 해설의 조화를 확인하세요. 펜으로 수식을 유도하고, 올가미로 LaTeX로 변환하며, 동료는 유도 단계 위에 직접 토론 핀을 꽂아 피드백을 남깁니다.",
+            "th" to "ชมการผสานกันอย่างลงตัวระหว่างลายมือ (ซ้าย) และขั้นตอนการคำนวณที่พิมพ์อย่างเป็นระเบียบ (ขวา) ผู้สอนเขียนสูตรด้วยปากกา แปลงเป็น LaTeX และผู้ร่วมงานปักหมุดข้อคิดเห็นลงบนขั้นตอนสำคัญได้ทันที"
+        ),
+        "sample_showcase_p4_math_card_title" to mapOf(
+            "zh-Hant" to "深度實戰示範：從手寫微積分筆跡到 LaTeX 轉化與步驟解算",
+            "en" to "Real-Time Calculus Derivation: From Pen Strokes to LaTeX & Step Solver",
+            "zh-Hans" to "深度实战示范：从手写微积分笔迹到 LaTeX 转化与步骤解算",
+            "ja" to "リアルタイム微積分推導：手描き筆跡からLaTeX整形とステップ解説へ",
+            "ko" to "실시간 미적분 풀이: 펜 필적에서 LaTeX 변환 및 단계별 솔버까지",
+            "th" to "การแก้โจทย์แคลคูลัสแบบเรียลไทม์: จากลายมือสู่ LaTeX และเฉลยเป็นขั้นตอน"
+        ),
+        "sample_showcase_p4_subtitle" to mapOf(
+            "zh-Hant" to "第四章：微積分公式推導、動態圖表工坊與空間討論圖釘的終極融合範例",
+            "en" to "Chapter 4: Ultimate Synergy of STEM Math, Dynamic Charting & Collaborative Pins",
+            "zh-Hans" to "第四章：微积分公式推导、动态图表工坊与空间讨论图钉的终极融合范例",
+            "ja" to "第4章：STEM微積分・動的グラフ・空間ピン協働の究極の相乗効果",
+            "ko" to "제4장: STEM 미적분·동적 차트·공간 핀 협업의 궁극적 시너지",
+            "th" to "บทที่ 4: พลังการผสานคณิตศาสตร์ STEM แผนภูมิไดนามิก และหมุดอภิปราย"
+        ),
+        "sample_showcase_p4_title" to mapOf(
+            "zh-Hant" to "終極交響樂：手繪＋打字合奏，展現 Kairumo 無與倫比的顛覆優勢",
+            "en" to "The Grand Symphony: Why Kairumo Outshines the Rest",
+            "zh-Hans" to "终极交响乐：手绘＋打字合奏，展现 Kairumo 无与伦比的颠覆优势",
+            "ja" to "グランドシンフォニー：Kairumoが選ばれる真の理由",
+            "ko" to "그랜드 심포니: Kairumo가 모든 앱을 압도하는 이유",
+            "th" to "สุดยอดการผสานพลัง: ทำไม Kairumo จึงโดดเด่นเหนือใคร"
         ),
         "sample_showcase_pin1_msg" to mapOf(
             "zh-Hant" to "重點關注第三季度的爆發增長：Kairumo 原生向量核心帶來的書寫流暢度獲得了壓倒性的好評！",
@@ -9623,10 +9930,7 @@ object LocalizationStrings {
             "ja" to "すべて選択",
             "ko" to "전체 선택",
             "th" to "เลือกทั้งหมด"
-        )
-    )
-
-    private fun part15(): Map<String, Map<String, String>> = mapOf(
+        ),
         "select_destination_folder" to mapOf(
             "zh-Hant" to "選擇目標資料夾",
             "en" to "Select Target Folder",
@@ -9962,7 +10266,10 @@ object LocalizationStrings {
             "ja" to "七角形",
             "ko" to "칠각형",
             "th" to "เจ็ดเหลี่ยม"
-        ),
+        )
+    )
+
+    private fun part16(): Map<String, Map<String, String>> = mapOf(
         "shape_kind_hexagon" to mapOf(
             "zh-Hant" to "六邊形",
             "en" to "Hexagon",
@@ -10266,10 +10573,7 @@ object LocalizationStrings {
             "ja" to "フローチャート記号（ISO 5807）",
             "ko" to "순서도 기호(ISO 5807)",
             "th" to "สัญลักษณ์ผังงาน (ISO 5807)"
-        )
-    )
-
-    private fun part16(): Map<String, Map<String, String>> = mapOf(
+        ),
         "shape_section_templates" to mapOf(
             "zh-Hant" to "範本",
             "en" to "Templates",
@@ -10605,7 +10909,10 @@ object LocalizationStrings {
             "ja" to "音声書き起こしと筆跡の同期",
             "ko" to "음성 필사 및 필기 동기화",
             "th" to "การถอดเสียงและการจัดตำแหน่งการเขียน"
-        ),
+        )
+    )
+
+    private fun part17(): Map<String, Map<String, String>> = mapOf(
         "startup_logs_title" to mapOf(
             "zh-Hant" to "啟動與效能日誌 (工程除錯)",
             "en" to "Startup & Performance Logs (Engineering)",
@@ -10909,10 +11216,7 @@ object LocalizationStrings {
             "ja" to "重要",
             "ko" to "핵심",
             "th" to "จุดสำคัญ"
-        )
-    )
-
-    private fun part17(): Map<String, Map<String, String>> = mapOf(
+        ),
         "sticker_idea" to mapOf(
             "zh-Hant" to "靈感",
             "en" to "Idea",
@@ -11248,7 +11552,10 @@ object LocalizationStrings {
             "ja" to "コピーを検証しています…",
             "ko" to "복사본을 확인하는 중…",
             "th" to "กำลังตรวจสอบสำเนา…"
-        ),
+        )
+    )
+
+    private fun part18(): Map<String, Map<String, String>> = mapOf(
         "storage_progress_waiting" to mapOf(
             "zh-Hant" to "等待同步結束…",
             "en" to "Waiting for sync to finish…",
@@ -11552,10 +11859,7 @@ object LocalizationStrings {
             "ja" to "指定した iCloud またはローカルのフォルダを介してノートと手書きを双方向に同期します。当方を経由することはありません。",
             "ko" to "선택한 iCloud 또는 로컬 폴더를 통해 노트와 필기를 양방향으로 동기화합니다. 내용은 당사를 거치지 않습니다.",
             "th" to "ซิงก์โน้ตและลายมือสองทางผ่านโฟลเดอร์ iCloud หรือโฟลเดอร์ในเครื่องที่คุณเลือก โดยไม่ผ่านเรา"
-        )
-    )
-
-    private fun part18(): Map<String, Map<String, String>> = mapOf(
+        ),
         "sync_explainer_none" to mapOf(
             "zh-Hant" to "支援 Google Drive 跨平台同步，或 iCloud Drive 資料夾免帳號同步。",
             "en" to "Sync across platforms with Google Drive, or use an iCloud Drive folder with no account at all.",
@@ -11891,7 +12195,10 @@ object LocalizationStrings {
             "ja" to "同期中…",
             "ko" to "동기화 중…",
             "th" to "กำลังซิงค์…"
-        ),
+        )
+    )
+
+    private fun part19(): Map<String, Map<String, String>> = mapOf(
         "system_diagnostics" to mapOf(
             "zh-Hant" to "系統診斷與版本資訊",
             "en" to "Diagnostics & Version Info",
@@ -12195,10 +12502,7 @@ object LocalizationStrings {
             "ja" to "下線",
             "ko" to "밑줄",
             "th" to "ขีดเส้นใต้"
-        )
-    )
-
-    private fun part19(): Map<String, Map<String, String>> = mapOf(
+        ),
         "theme_aesthetic" to mapOf(
             "zh-Hant" to "美學視覺",
             "en" to "Aesthetic & Visual",
@@ -12534,7 +12838,10 @@ object LocalizationStrings {
             "ja" to "31日×14習慣の格子と振り返り欄",
             "ko" to "31일 × 14습관 격자와 회고 칸",
             "th" to "31 วัน × 14 นิสัย"
-        ),
+        )
+    )
+
+    private fun part20(): Map<String, Map<String, String>> = mapOf(
         "tmpl_isometric" to mapOf(
             "zh-Hant" to "30° 等角立體軸測網格",
             "en" to "30° Isometric 3D Grid",
@@ -12838,10 +13145,7 @@ object LocalizationStrings {
             "ja" to "月曜から日曜までの7列と罫線",
             "ko" to "월~일 7열과 괘선",
             "th" to "เจ็ดคอลัมน์วันพร้อมเส้นบรรทัด"
-        )
-    )
-
-    private fun part20(): Map<String, Map<String, String>> = mapOf(
+        ),
         "todo_list" to mapOf(
             "zh-Hant" to "待辦事項清單",
             "en" to "To-do list",
@@ -13177,7 +13481,10 @@ object LocalizationStrings {
             "ja" to "ページを1つ以上選んでください",
             "ko" to "페이지를 하나 이상 선택하세요",
             "th" to "เลือกอย่างน้อยหนึ่งหน้า"
-        ),
+        )
+    )
+
+    private fun part21(): Map<String, Map<String, String>> = mapOf(
         "transfer_same_notebook" to mapOf(
             "zh-Hant" to "同一本筆記內換順序請用「上移／下移一頁」",
             "en" to "Use Move Page Up/Down to reorder within a notebook",
@@ -13481,10 +13788,7 @@ object LocalizationStrings {
             "ja" to "ロック解除中…",
             "ko" to "잠금 해제 중…",
             "th" to "กำลังปลดล็อก…"
-        )
-    )
-
-    private fun part21(): Map<String, Map<String, String>> = mapOf(
+        ),
         "unlock_wrong_recovery" to mapOf(
             "zh-Hant" to "這組復原碼開不了這本筆記",
             "en" to "That recovery code does not open this notebook",

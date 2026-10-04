@@ -9121,20 +9121,20 @@
     "zhHant": "尺規量測模式"
   },
   "sample_showcase_p1_title": {
-    "en": "Kairumo Feature Showcase: Handwriting, Typing & Dynamic Tooling",
-    "ja": "Kairumo機能紹介活用：手描き・タイピング・動的ツール",
-    "ko": "Kairumo 기능 소개 및 활용: 손글씨, 타이핑 및 동적 도구",
-    "th": "แนะนำการใช้งาน Kairumo: ลายมือ พิมพ์ดีด และเครื่องมือไดนามิก",
-    "zhHans": "Kairumo 功能介绍与实战利用：手绘、打字与动态工具全解析",
-    "zhHant": "Kairumo 功能介紹與實戰利用：手繪、打字與動態工具全解析"
+    "en": "Kairumo — The Next-Gen Vector Note & Thinking Studio",
+    "ja": "Kairumo — 次世代ベクター思考・ノート統合スタジオ",
+    "ko": "Kairumo — 차세대 벡터 노트 & 싱킹 스튜디오",
+    "th": "Kairumo — สตูดิโอจดบันทึกและระบบคิดเวกเตอร์ยุคใหม่",
+    "zhHans": "Kairumo — 新一代高自由度矢量手写与思考中枢",
+    "zhHant": "Kairumo — 新一代高自由度向量手寫與思考中樞"
   },
   "sample_showcase_p1_subtitle": {
-    "en": "Part 1: Real Multi-Stroke Vector Handwriting & Comparative Matrix",
-    "ja": "第1部：本格マルチストローク手描き筆跡と主流アプリ比較表",
-    "ko": "제1부: 다채로운 벡터 손글씨 필적 및 주요 앱 비교표",
-    "th": "ส่วนที่ 1: ลายมือเวกเตอร์หลายหัวปากกาและตารางเปรียบเทียบแอปหลัก",
-    "zhHans": "第一部分：真实多笔触手绘（铅笔／钢笔／毛笔）与主流应用全方位打字评测",
-    "zhHant": "第一部分：真實多筆觸手繪（鉛筆／鋼筆／毛筆）與主流應用全方位打字評測"
+    "en": "Chapter 1: Purpose & Comprehensive Market Benchmark",
+    "ja": "第1章：アプリケーションの使命と主要アプリ総合比較",
+    "ko": "제1장: 앱의 핵심 사명 및 주요 필기 앱 종합 벤치마크",
+    "th": "บทที่ 1: วัตถุประสงค์และการเปรียบเทียบเชิงลึกกับแอปชั้นนำ",
+    "zhHans": "第一章：应用定位、核心使命与市面主流笔记软件全景深度评测",
+    "zhHant": "第一章：應用定位、核心使命與市面主流筆記軟體全景深度評測"
   },
   "sample_showcase_handwriting_note": {
     "en": "★ Authentic Ink Strokes:\nThe lists and calligraphic flourishes below are rendered with authentic vector strokes (Pencil texture, Fountain Pen dynamic pressure, Brush calligraphic variation).",
@@ -9161,12 +9161,12 @@
     "zhHant": "核心比較維度|Kairumo (Padnote)|GoodNotes 6|Notability|Microsoft OneNote\n向量手繪手寫|超低延遲，真實鉛筆/鋼筆/毛筆動態壓感提按|向量墨水，缺乏真實毛筆書法起伏|平滑墨水，筆刷可定制參數較少|跨平台墨跡，筆畫偶有卡頓延遲\n打字與原生表格|原生 Markdown 高級樣式表格，自由拉伸對齊|僅基礎文字框，表格調整能力有限|文字輸入平順，表格樣式較簡陋|自由浮動文字塊，排版易散亂\n微積分方程融合|手繪筆跡 + OCR LaTeX 識別 + 步進推導融合|手寫公式轉換（需訂閱高級版）|基礎公式轉換插件（識別率普通）|內建公式編輯器，更偏向桌面鍵入\n數字製圖圖表|內建可隨時重新編輯向量圖表（柱狀/折線/餅圖）|依賴外部第三方截圖導入|僅支援靜態貼圖，無法再改數據|可關聯 Excel，但行動端體驗沈重\n圖釘與協作討論|空間定位圖釘（NoteCommentPin）與留言蓋樓|連結分享批註，僅支援簡易標註|錄音軌跡對齊，無精準空間圖釘|多人協同畫布，缺乏精細錨點圖釘\n收費模式與自由度|100% 完全開源、無廣告、終身永久免費|訂閱制 / 買斷功能限制多|強制年費訂閱制|基本免費但深度綁定 365 訂閱"
   },
   "sample_showcase_p2_title": {
-    "en": "Part 2: Calculus Equation Hybrid & Digital Charting with Discussion Pins",
-    "ja": "第2部：微積分方程式の融合解析 ＆ デジタル作図とピン議論",
-    "ko": "제2부: 미적분 방정식 하이브리드 해석 & 디지털 차트 및 토론 핀",
-    "th": "ส่วนที่ 2: การผสานสมการแคลคูลัส & แผนภูมิข้อมูลตัวเลขพร้อมหมุดอภิปราย",
-    "zhHans": "第二部分：手绘＋打字微积分方程融合解析 ＆ 数字制图与讨论图钉用法",
-    "zhHant": "第二部分：手繪＋打字微積分方程融合解析 ＆ 數字製圖與討論圖釘用法"
+    "en": "Handwriting Studio: All 16 Inking Tools in Action",
+    "ja": "手描きスタジオ：全16種描画ツールの完全実演",
+    "ko": "손글씨 스튜디오: 16종 전 툴 실습 및 필적 쇼케이스",
+    "th": "สตูดิโอลายมือ: สาธิตการใช้งานเครื่องมือวาดเขียนครบทั้ง 16 ชนิด",
+    "zhHans": "手绘模式：十六大专业绘画与标注工具全景实作实测",
+    "zhHant": "手繪模式：十六大專業繪畫與標注工具全景實作實測"
   },
   "sample_showcase_calc_typed_title": {
     "en": "★ Math Engine: Hybrid Handwriting & LaTeX Equation Solver",
@@ -13607,5 +13607,309 @@
     "th": "เปิดแผงจัดรูปแบบข้อความและการจัดพิมพ์",
     "zhHans": "打开字体、字号、段落与版式调色面板",
     "zhHant": "打開字型、字級、段落與版面樣式面板"
+  },
+  "sample_showcase_p1_mission_title": {
+    "en": "Why Kairumo was Created",
+    "ja": "Kairumo が誕生した理由と設計思想",
+    "ko": "Kairumo의 탄생 배경과 설계 철학",
+    "th": "ทำไม Kairumo จึงถูกสร้างขึ้น",
+    "zhHans": "为什么打造 Kairumo：打破传统笔记桎梏",
+    "zhHant": "為什麼打造 Kairumo：打破傳統筆記桎梏"
+  },
+  "sample_showcase_p1_mission_body": {
+    "en": "Mainstream digital note apps lock creative thoughts into rigid formats, heavy subscriptions, and proprietary cloud silos. Kairumo reimagines digital paper from the ground up: zero latency vector inking, native desktop-grade typography, dynamic interactive charts, spatial discussion pins, and true open-format privacy.",
+    "ja": "市販のノートアプリは定期購読や独自クラウドによる囲い込み、固定された枠組みで自由な思考を制限してきました。Kairumoはデジタルペーパーを一から再定義します。超低遅延ベクター筆記、高度なタイピング組版、動的グラフ、空間議論ピン、そして完全オープンなデータ主権を統合しました。",
+    "ko": "기존 상용 필기 앱들은 강제 구독료, 폐쇄적인 클라우드 종속, 경직된 서식으로 자유로운 발상을 가두어 왔습니다. Kairumo는 디지털 노트를 근본부터 다시 설계했습니다. 초저지연 벡터 잉크, 데스크톱급 타이핑 조판, 동적 인터랙티브 차트, 공간 토론 핀, 완전한 오픈 포맷 데이터 주권을 제공합니다.",
+    "th": "แอปจดบันทึกทั่วไปมักผูกมัดผู้ใช้ด้วยค่าบริการรายเดือนและระบบคลาวด์แบบปิด Kairumo กำหนดนิยามใหม่ของกระดาษดิจิทัล: หมึกเวกเตอร์ความหน่วงต่ำเป็นศูนย์, การจัดวางข้อความระดับมืออาชีพ, แผนภูมิข้อมูลแบบโต้ตอบได้, หมุดอภิปรายเชิงพื้นที่ และความเป็นส่วนตัวอย่างแท้จริง",
+    "zhHans": "市面上绝大多数商业笔记应用将思考锁在昂贵的订阅制、私有云存储和僵化的排版模式中。Kairumo 重新发明数字纸张：超低延迟的数学级矢量笔迹、专业桌面级打字排版、动态可编修图表、多维空间讨论图钉，以及 100% 开放透明的隐私主权。",
+    "zhHant": "市面上絕大多數商業筆記應用將思考鎖在昂貴的訂閱制、私有雲儲存和僵化的排版模式中。Kairumo 重新發明數位紙張：超低延遲的數學級向量筆跡、專業桌面級打字排版、動態可編修圖表、多維空間討論圖釘，以及 100% 開放透明的隱私主權。"
+  },
+  "sample_showcase_p1_pillars_title": {
+    "en": "Four Foundational Pillars of Kairumo",
+    "ja": "Kairumoを支える4大コア基盤",
+    "ko": "Kairumo를 정의하는 4대 핵심 가치",
+    "th": "4 เสาหลักพื้นฐานของ Kairumo",
+    "zhHans": "Kairumo 四大核心支柱与技术优势",
+    "zhHant": "Kairumo 四大核心支柱與技術優勢"
+  },
+  "sample_showcase_p1_pillar1_title": {
+    "en": "1. 100% Open & Free",
+    "ja": "1. 完全オープン・永年無料",
+    "ko": "1. 100% 오픈소스 & 무료",
+    "th": "1. โอเพนซอร์ส 100% ฟรีตลอดชีพ",
+    "zhHans": "1. 完全开源・终身免费",
+    "zhHant": "1. 完全開源・終身免費"
+  },
+  "sample_showcase_p1_pillar1_body": {
+    "en": "No ads, no subscriptions, no vendor lock-in. Your notebook data is stored locally in pure open JSON packages with SQLite indexing.",
+    "ja": "広告なし、課金なし、ベンダーロックインなし。ノートデータは純粋なオープンJSONとSQLiteで端末内に安全に保存されます。",
+    "ko": "광고 없음, 구독료 없음, 종속 없음. 모든 데이터는 순수 오픈 JSON 패키지와 SQLite로 로컬에 안전하게 보관됩니다.",
+    "th": "ไม่มีโฆษณา ไม่มีการเก็บค่าบริการ ข้อมูลจัดเก็บในเครื่องด้วยรูปแบบเปิด JSON และ SQLite อย่างปลอดภัย",
+    "zhHans": "零广告、零订阅、零厂商锁定。所有笔记以标准 JSON 与 SQLite 开放包存储于本地，数据永远属于你。",
+    "zhHant": "零廣告、零訂閱、零廠商鎖定。所有筆記以標準 JSON 與 SQLite 開放包儲存於本機，數據永遠屬於你。"
+  },
+  "sample_showcase_p1_pillar2_title": {
+    "en": "2. High-Fidelity Hybrid",
+    "ja": "2. ハイブリッド描画統合",
+    "ko": "2. 하이브리드 엔진 통합",
+    "th": "2. ไฮบริดลายมือและข้อความสมบูรณ์แบบ",
+    "zhHans": "2. 手绘与排版无缝融合",
+    "zhHant": "2. 手繪與排版無縫融合"
+  },
+  "sample_showcase_p1_pillar2_body": {
+    "en": "Seamless coexistence of 16 natural handwriting brush types, Word-grade rich text blocks, dynamic math OCR, and interactive shapes.",
+    "ja": "16種類のアナログ質感ブラシ、Word級のリッチテキスト枠、数式OCRソルバー、自由な幾何図形が同一キャンバスで共存。",
+    "ko": "16가지의 섬세한 자연 브러시, 고품격 리치 텍스트 블록, 동적 수학 OCR 및 인터랙티브 도형이 한 화면에 공존합니다.",
+    "th": "ผสานพู่กันธรรมชาติ 16 แบบ, บล็อกข้อความจัดรูปแบบระดับสูง, OCR แปลงสูตรคณิต และรูปทรงไดนามิกไว้ในหน้าเดียว",
+    "zhHans": "16 种物理级手绘笔刷、桌面级丰富文字样式、动态公式 OCR 识别及可连接流程图在同一画卷自由共存。",
+    "zhHant": "16 種物理級手繪筆刷、桌面級豐富文字樣式、動態公式 OCR 識別及可連接流程圖在同一畫卷自由共存。"
+  },
+  "sample_showcase_p1_pillar3_title": {
+    "en": "3. Live Data Studio",
+    "ja": "3. ライブデータ作図スタジオ",
+    "ko": "3. 라이브 데이터 스튜디오",
+    "th": "3. สตูดิโอแผนภูมิข้อมูลสด",
+    "zhHans": "3. 可随时重新编辑的图表",
+    "zhHant": "3. 可隨時重新編輯的圖表"
+  },
+  "sample_showcase_p1_pillar3_body": {
+    "en": "Built-in vector charting engine. Never paste static screenshots again—double tap to change numbers, colors, and series instantly.",
+    "ja": "ネイティブベクターグラフ機能を内蔵。静止画の貼り付けは不要、タップひとつで数値や配色をその場で即座に再編集。",
+    "ko": "네이티브 벡터 차트 엔진 내장. 멈춰있는 캡처 이미지는 이제 그만, 더블 탭으로 수치와 색상을 언제든 즉시 수정하세요.",
+    "th": "เอนจินแผนภูมิเวกเตอร์ในตัว ไม่ต้องแปะภาพหน้าจออีกต่อไป แตะสองครั้งเพื่อแก้ไขตัวเลข สี และชุดข้อมูลได้ทันที",
+    "zhHans": "内置原生矢量图表工坊。拒绝静态截图拼贴，随时轻点即可重新输入系列数值、修改配色与切换图表类型。",
+    "zhHant": "內建原生向量圖表工坊。拒絕靜態截圖拼貼，隨時輕點即可重新輸入系列數值、修改配色與切換圖表類型。"
+  },
+  "sample_showcase_p1_pillar4_title": {
+    "en": "4. Spatial Collaboration",
+    "ja": "4. 空間座標ピン協働",
+    "ko": "4. 공간 좌표 핀 협업",
+    "th": "4. การทำงานร่วมกันด้วยหมุดเชิงพื้นที่",
+    "zhHans": "4. 空间图钉与时间轴协同",
+    "zhHant": "4. 空間圖釘與時間軸協同"
+  },
+  "sample_showcase_p1_pillar4_body": {
+    "en": "Anchor multi-user review pins directly onto formulas, table cells, or chart bars. Synchronize live audio with pen stroke timelines.",
+    "ja": "数式、表のセル、グラフのバー上に直接ピンを固定してレビュー。音声録音と手描きストロークの時間同期も完備。",
+    "ko": "수식, 표의 셀, 차트 막대 위에 직접 토론 핀을 꽂아 피드백을 기록하세요. 실시간 음성 녹음과 펜 궤적이 완벽 동기화됩니다.",
+    "th": "ปักหมุดข้อคิดเห็นลงบนสูตร ช่องตาราง หรือแท่งกราฟได้โดยตรง พร้อมซิงค์เสียงบันทึกเข้ากับไทม์ไลน์ลายเส้นปากกา",
+    "zhHans": "将多人讨论图钉精确钉在公式难点、表格单元格或图表柱状上，更能将麦克风录音轨迹与手绘笔迹时间轴精确定位。",
+    "zhHant": "將多人討論圖釘精確釘在公式難點、表格儲存格或圖表柱狀上，更能將麥克風錄音軌跡與手繪筆跡時間軸精確定位。"
+  },
+  "sample_showcase_p1_table_title": {
+    "en": "Comprehensive Comparison: Kairumo vs. Industry Giants",
+    "ja": "市販主要3大ノートアプリ vs Kairumo 総合性能マトリクス",
+    "ko": "시판 주요 3대 필기 앱 vs Kairumo 종합 벤치마크 매트릭스",
+    "th": "ตารางเปรียบเทียบ Kairumo กับ 3 แอปจดบันทึกชั้นนำในอุตสาหกรรม",
+    "zhHans": "全景对比：Kairumo 与市面主流前三大商业笔记应用（GoodNotes、Notability、OneNote）",
+    "zhHant": "全景對比：Kairumo 與市面主流前三大商業筆記應用（GoodNotes、Notability、OneNote）"
+  },
+  "sample_showcase_p2_subtitle": {
+    "en": "Chapter 2: Authentic Pressure-Sensitive Physics & Live Stroke Showcase",
+    "ja": "第2章：物理筆圧シミュレーションと全ツールの生きた筆跡ギャラリー",
+    "ko": "제2장: 물리적 필압 반응 및 16종 도구의 생생한 필적 갤러리",
+    "th": "บทที่ 2: การตอบสนองแรงกดจริงและแกลเลอรีเส้นสายครบทุกเครื่องมือ",
+    "zhHans": "第二章：超低延迟压感物理引擎与全套笔刷实战笔迹全景陈列",
+    "zhHant": "第二章：超低延遲壓感物理引擎與全套筆刷實戰筆跡全景陳列"
+  },
+  "sample_showcase_p2_family_write": {
+    "en": "Family I: Precision Writing Tools (Pen, Fineliner, Ballpoint, Brush, Calligraphy, Pencil)",
+    "ja": "第1グループ：精密筆記ツール（万年筆、ミリペン、ボールペン、筆、カリグラフィ、鉛筆）",
+    "ko": "제1계열: 정밀 필기 도구 (만년筆, 세밀펜, 볼펜, 붓, 캘리그래피, 연필)",
+    "th": "กลุ่มที่ 1: เครื่องมือเขียนความแม่นยำสูง (ปากกาหมึกซึม, หัวเข็ม, ลูกลื่น, พู่กัน, ตัวเขียน, ดินสอ)",
+    "zhHans": "第一家族：精密书写族（钢笔、针笔、原子笔、毛笔、书法笔、铅笔）",
+    "zhHant": "第一家族：精密書寫族（鋼筆、針筆、原子筆、毛筆、書法筆、鉛筆）"
+  },
+  "sample_showcase_p2_family_paint": {
+    "en": "Family II: Expressive Art Tools (Charcoal, Crayon, Airbrush, Oil Paint, Watercolor)",
+    "ja": "第2グループ：芸術表現ツール（木炭、クレヨン、エアブラシ、油絵、水彩）",
+    "ko": "제2계열: 예술 표현 도구 (목탄, 크레용, 에어브러시, 유채, 수채화)",
+    "th": "กลุ่มที่ 2: เครื่องมือระบายศิลปะ (ชาร์โคล, เครยอน, แอร์บรัช, สีน้ำมัน, สีน้ำ)",
+    "zhHans": "第二家族：艺术彩绘族（炭笔、蜡笔、喷枪、油画、水彩）",
+    "zhHant": "第二家族：藝術彩繪族（炭筆、蠟筆、噴槍、油畫、水彩）"
+  },
+  "sample_showcase_p2_family_mark": {
+    "en": "Family III: Marking & Geometry (Marker, Highlighter, Eraser, Lasso, Masking Tape, Ruler)",
+    "ja": "第3グループ：標識・ユーティリティ（マーカー、蛍光ペン、消しゴム、投げ縄、マスキングテープ、定規）",
+    "ko": "제3계열: 마킹 및 유틸리티 (마커, 형광펜, 지우개, 올가미, 마스킹 테이프, 눈금자)",
+    "th": "กลุ่มที่ 3: การเน้นข้อความและเครื่องมือเสริม (มาร์กเกอร์, ไฮไลท์, ยางลบ, บ่วงบาศ, เทปกาว, ไม้บรรทัด)",
+    "zhHans": "第三家族：标注与版面辅助（记号笔、荧光笔、橡皮擦、套索、遮蔽胶带、直尺）",
+    "zhHant": "第三家族：標注與版面輔助（記號筆、螢光筆、橡皮擦、套索、遮蔽膠帶、直尺）"
+  },
+  "sample_showcase_p2_tape_desc": {
+    "en": "Interactive Masking Tape: Tap the colored tape strip below to reveal hidden study answers! Perfect for memorization and exam review.",
+    "ja": "インタラクティブ・マスキングテープ：下のテープをタップすると隠された答えが表示されます！暗記や試験対策に最適。",
+    "ko": "인터랙티브 마스킹 테이프: 아래의 테이프를 탭하면 가려진 정답이 드러납니다! 암기 학습과 시험 대비에 탁월합니다.",
+    "th": "เทปปิดบังแบบโต้ตอบ: แตะแถบเทปด้านล่างเพื่อเปิดคำตอบที่ซ่อนอยู่! เหมาะสำหรับการท่องจำและทบทวนบทเรียน",
+    "zhHans": "可交互遮蔽胶带：轻点下方黄色胶带即可瞬间显示或隐藏关键背诵答案！考研与背单字背公式的神器。",
+    "zhHant": "可互動遮蔽膠帶：輕點下方黃色膠帶即可瞬間顯示或隱藏關鍵背誦答案！考研與背單字背公式的神器。"
+  },
+  "sample_showcase_p3_title": {
+    "en": "Typography & Structure Studio: Desktop-Grade Object Engine",
+    "ja": "タイポグラフィ＆構造化スタジオ：高度オブジェクト機能",
+    "ko": "타이포그래피 & 구조화 스튜디오: 데스크톱급 객체 엔진",
+    "th": "สตูดิโอการจัดพิมพ์และโครงสร้าง: เอนจินออบเจกต์ระดับเดสก์ท็อป",
+    "zhHans": "文字与版面模式：专业排版、原生表格、流程图与多媒体物件全实作",
+    "zhHant": "文字與版面模式：專業排版、原生表格、流程圖與多媒體物件全實作"
+  },
+  "sample_showcase_p3_subtitle": {
+    "en": "Chapter 3: Rich Text Formatting, Data Tables, Connectors, 3D Models & Audio Cards",
+    "ja": "第3章：リッチテキスト装飾、データ表、コネクタ付き図形、3Dモデル、音声カードの実装",
+    "ko": "제3장: 리치 텍스트 서식, 데이터 표, 연결선 도형, 3D 모델, 오디오 카드 완벽 구현",
+    "th": "บทที่ 3: การจัดรูปแบบข้อความ, ตารางข้อมูล, รูปทรงเชื่อมโยง, โมเดล 3D และการ์ดเสียง",
+    "zhHans": "第三章：桌面级排版、高阶样式表格、自适应流程图、3D模型与多媒体录音卡片",
+    "zhHant": "第三章：桌面級排版、高階樣式表格、自適應流程圖、3D模型與多媒體錄音卡片"
+  },
+  "sample_showcase_p3_richtext_title": {
+    "en": "Word-Grade Rich Text Formatting",
+    "ja": "Wordクラスの高度なリッチテキスト組版",
+    "ko": "워드급 정밀 리치 텍스트 조판 시스템",
+    "th": "การจัดรูปแบบข้อความระดับโปรแกรมประมวลผลคำ",
+    "zhHans": "1. 桌面级富文本文字排版引擎",
+    "zhHant": "1. 桌面級富文字文字排版引擎"
+  },
+  "sample_showcase_p3_richtext_body": {
+    "en": "Each text frame supports individual typography parameters: font family, point sizes, bold, italic, underline, strikethrough, paragraph spacing, line height, background fills, border styles, and rounded corners.",
+    "ja": "各テキスト枠は独立したスタイル設定を完全サポート：フォント種類、文字サイズ、太字、斜体、下線、打消し線、段落余白、行送り、背景塗りつぶし、枠線、角丸調整。",
+    "ko": "각 텍스트 프레임은 독립적인 조판 파라미터를 완벽히 지원합니다: 글꼴 패밀리, 폰트 크기, 굵게, 기울임, 밑줄, 취소선, 단락 여백, 행간, 배경색 채우기, 테두리 및 둥근 모서리.",
+    "th": "แต่ละกล่องข้อความรองรับการตั้งค่าการพิมพ์อย่างอิสระ: รูปแบบอักษร, ขนาด, ตัวหนา, ตัวเอียง, ขีดเส้นใต้, ขีดฆ่า, ระยะห่างย่อหน้า, สีพื้นหลัง, เส้นขอบ และมุมมน",
+    "zhHans": "每一个文本框均具备完整的独立版面参数：支持字型、字号、粗体、斜体、底线、删除线、行距、段落间距、背景填色、边框宽度与自适应圆角，轻松搭建杂志级排版。",
+    "zhHant": "每一個文字框均具備完整的獨立版面參數：支援字型、字號、粗體、斜體、底線、刪除線、行距、段落間距、背景填色、邊框寬度與自適應圓角，輕鬆搭建雜誌級排版。"
+  },
+  "sample_showcase_p3_table_title": {
+    "en": "2. High-Performance Data Table with Styled Columns",
+    "ja": "2. 高性能データ表（ヘッダー背景＆罫線スタイル）",
+    "ko": "2. 고성능 데이터 표 (헤더 배경색 & 맞춤형 격자선)",
+    "th": "2. ตารางข้อมูลประสิทธิภาพสูงพร้อมสไตล์คอลัมน์",
+    "zhHans": "2. 原生高性能数据表格（支持表头填色与单元格自适应）",
+    "zhHant": "2. 原生高性能數據表格（支援表頭填色與儲存格自適應）"
+  },
+  "sample_showcase_p3_table_data": {
+    "en": "Module|Type|Performance|Description\nText Engine|Native Core|60 FPS|Sub-pixel font rendering with zero stutter\nVector Table|Grid Matrix|O(1) Access|Adaptive cell resizing with custom borders\nFlow Connect|Smart Vector|Instant|Dynamic orthogonal routing between nodes",
+    "ja": "モジュール|種類|パフォーマンス|機能詳細\nテキストエンジン|ネイティブコア|60 FPS|サブピクセル描画による滑らかなタイピング\nベクター表|グリッド配列|O(1) アクセス|セルの自動リサイズとカスタム罫線対応\nフロー接続線|スマートベクター|瞬時応答|ノード間を自動ルーティングする接続線",
+    "ko": "모듈|종류|성능|기능 상세\n텍스트 엔진|네이티브 코어|60 FPS|서브픽셀 렌더링으로 렉 없는 타이핑 지원\n벡터 표|그리드 매트릭스|O(1) 접근|셀 크기 자동 조절 및 맞춤형 테두리\n흐름 연결선|스마트 벡터|즉시 반응|도형 노드 간 자동 직교 라우팅 연결",
+    "th": "โมดูล|ชนิด|ประสิทธิภาพ|รายละเอียด\nเอนจินข้อความ|แกนเนทีฟ|60 FPS|เรนเดอร์ตัวอักษรคมชัด ลื่นไหลไม่กระตุก\nตารางเวกเตอร์|เมทริกซ์กริด|เข้าถึง O(1)|ปรับขนาดช่องตารางอัตโนมัติพร้อมเส้นขอบ\nเส้นเชื่อมผังงาน|เวกเตอร์อัจฉริยะ|ทันที|ค้นหาเส้นทางเชื่อมโยงระหว่างโหนดอัตโนมัติ",
+    "zhHans": "核心模块|类型|渲染帧率|架构特性说明\n排版引擎|原生核心|60 FPS 无卡顿|亚像素抗锯齿字体渲染，极速键入响应\n数据表格|栅格矩阵|O(1) 瞬时查询|单元格宽高自适应，支持表头自定义色带\n流程连接线|智能矢量|实时重绘|节点移动时自动重算正交正弦拓扑连接",
+    "zhHant": "核心模組|類型|渲染幀率|架構特性說明\n排版引擎|原生核心|60 FPS 無卡頓|次像素抗鋸齒字型渲染，極速鍵入響應\n數據表格|柵格矩陣|O(1) 瞬時查詢|儲存格寬高自適應，支援表頭自訂色帶\n流程連接線|智慧向量|即時重繪|節點移動時自動重算正交正弦拓撲連接"
+  },
+  "sample_showcase_p3_flow_title": {
+    "en": "3. Geometry Shapes & Dynamic Smart Connectors",
+    "ja": "3. 幾何図形とスマート接続コネクタ",
+    "ko": "3. 기하 도형 및 스마트 자동 연결선",
+    "th": "3. รูปทรงเรขาคณิตและเส้นเชื่อมโยงอัจฉริยะ",
+    "zhHans": "3. 几何图形库与自适应拓扑连接线",
+    "zhHant": "3. 幾何圖形庫與自適應拓撲連接線"
+  },
+  "sample_showcase_p3_flow_start": {
+    "en": "Input Thought",
+    "ja": "発想の入力",
+    "ko": "아이디어 입력",
+    "th": "เริ่มป้อนความคิด",
+    "zhHans": "灵感键入",
+    "zhHant": "靈感鍵入"
+  },
+  "sample_showcase_p3_flow_process": {
+    "en": "Vector Engine",
+    "ja": "ベクター処理",
+    "ko": "벡터 엔진 처리",
+    "th": "ประมวลผลเวกเตอร์",
+    "zhHans": "核心矢量解算",
+    "zhHant": "核心向量解算"
+  },
+  "sample_showcase_p3_flow_decision": {
+    "en": "Structured?",
+    "ja": "構造化完了？",
+    "ko": "구조화 완료?",
+    "th": "จัดโครงสร้างแล้ว?",
+    "zhHans": "结构化验证？",
+    "zhHant": "結構化驗證？"
+  },
+  "sample_showcase_p3_flow_end": {
+    "en": "Published Note",
+    "ja": "ノート完成",
+    "ko": "노트 발행 완료",
+    "th": "บันทึกเสร็จสมบูรณ์",
+    "zhHans": "精致成稿输出",
+    "zhHant": "精緻成稿輸出"
+  },
+  "sample_showcase_p3_media_title": {
+    "en": "4. Interactive Web Links, Audio Cards & 3D Spatial Models",
+    "ja": "4. Webリンクカード・音声録音・3D空間オブジェクト",
+    "ko": "4. 웹 링크 카드, 오디오 녹음 카드 & 3D 공간 모델",
+    "th": "4. การ์ดลิงก์เว็บ, การ์ดบันทึกเสียง และโมเดล 3D เชิงพื้นที่",
+    "zhHans": "4. 智能网页预览卡片、录音时间轴卡片与 3D 空间立体模型",
+    "zhHant": "4. 智慧網頁預覽卡片、錄音時間軸卡片與 3D 空間立體模型"
+  },
+  "sample_showcase_p4_title": {
+    "en": "The Grand Symphony: Why Kairumo Outshines the Rest",
+    "ja": "グランドシンフォニー：Kairumoが選ばれる真の理由",
+    "ko": "그랜드 심포니: Kairumo가 모든 앱을 압도하는 이유",
+    "th": "สุดยอดการผสานพลัง: ทำไม Kairumo จึงโดดเด่นเหนือใคร",
+    "zhHans": "终极交响乐：手绘＋打字合奏，展现 Kairumo 无与伦比的颠覆优势",
+    "zhHant": "終極交響樂：手繪＋打字合奏，展現 Kairumo 無與倫比的顛覆優勢"
+  },
+  "sample_showcase_p4_subtitle": {
+    "en": "Chapter 4: Ultimate Synergy of STEM Math, Dynamic Charting & Collaborative Pins",
+    "ja": "第4章：STEM微積分・動的グラフ・空間ピン協働の究極の相乗効果",
+    "ko": "제4장: STEM 미적분·동적 차트·공간 핀 협업의 궁극적 시너지",
+    "th": "บทที่ 4: พลังการผสานคณิตศาสตร์ STEM แผนภูมิไดนามิก และหมุดอภิปราย",
+    "zhHans": "第四章：微积分公式推导、动态图表工坊与空间讨论图钉的终极融合范例",
+    "zhHant": "第四章：微積分公式推導、動態圖表工坊與空間討論圖釘的終極融合範例"
+  },
+  "sample_showcase_p4_hero_badge": {
+    "en": "★ Kairumo Superpower: Zero Friction Synthesis of Hand & Type",
+    "ja": "★ Kairumoの真骨頂：手描きとタイピングの完全融合",
+    "ko": "★ Kairumo의 독보적 강점: 손글씨와 타이핑의 완벽한 융합",
+    "th": "★ พลังพิเศษของ Kairumo: การผสานลายมือและการพิมพ์อย่างไร้รอยต่อ",
+    "zhHans": "★ Kairumo 杀手级体验：手写自由与打字秩序的无界融合",
+    "zhHant": "★ Kairumo 殺手級體驗：手寫自由與打字秩序的無界融合"
+  },
+  "sample_showcase_p4_math_card_title": {
+    "en": "Real-Time Calculus Derivation: From Pen Strokes to LaTeX & Step Solver",
+    "ja": "リアルタイム微積分推導：手描き筆跡からLaTeX整形とステップ解説へ",
+    "ko": "실시간 미적분 풀이: 펜 필적에서 LaTeX 변환 및 단계별 솔버까지",
+    "th": "การแก้โจทย์แคลคูลัสแบบเรียลไทม์: จากลายมือสู่ LaTeX และเฉลยเป็นขั้นตอน",
+    "zhHans": "深度实战示范：从手写微积分笔迹到 LaTeX 转化与步骤解算",
+    "zhHant": "深度實戰示範：從手寫微積分筆跡到 LaTeX 轉化與步驟解算"
+  },
+  "sample_showcase_p4_math_card_desc": {
+    "en": "Watch how effortlessly handwritten strokes (left) pair with structured typed derivations (right). An instructor writes equations with Apple Pencil, lasso-converts them to LaTeX, while colleagues drop review pins directly onto critical steps.",
+    "ja": "左手の手描き筆跡と右側の整然としたタイピング解説の調和をご覧ください。教員が手描きで公式を展開し、投げ縄でLaTeXへ変換。共同研究者はステップ上に直接ピンを配置して議論できます。",
+    "ko": "왼편의 자연스러운 손글씨 필적과 우측의 정돈된 타이핑 해설의 조화를 확인하세요. 펜으로 수식을 유도하고, 올가미로 LaTeX로 변환하며, 동료는 유도 단계 위에 직접 토론 핀을 꽂아 피드백을 남깁니다.",
+    "th": "ชมการผสานกันอย่างลงตัวระหว่างลายมือ (ซ้าย) และขั้นตอนการคำนวณที่พิมพ์อย่างเป็นระเบียบ (ขวา) ผู้สอนเขียนสูตรด้วยปากกา แปลงเป็น LaTeX และผู้ร่วมงานปักหมุดข้อคิดเห็นลงบนขั้นตอนสำคัญได้ทันที",
+    "zhHans": "左侧为手写笔真实书写的微积分积分题，右侧为系统排版的解析步骤。教师用笔手写推导、套索一键转为标准 LaTeX，助教与学生直接在公式易错点钉入讨论图钉，打造前所未有的思考闭环。",
+    "zhHant": "左側為手寫筆真實書寫的微積分積分題，右側為系統排版的解析步驟。教師用筆手寫推導、套索一鍵轉為標準 LaTeX，助教與學生直接在公式易錯點釘入討論圖釘，打造前所未有的思考閉環。"
+  },
+  "sample_showcase_p4_chart_card_title": {
+    "en": "Editable Chart Studio: Live Vector Data Integration",
+    "ja": "編集可能なグラフ工房：生きたベクターデータの可視化",
+    "ko": "재편집 가능한 차트 스튜디오: 실시간 벡터 데이터 통합",
+    "th": "สตูดิโอแผนภูมิที่แก้ไขได้: รวมข้อมูลเวกเตอร์แบบโต้ตอบ",
+    "zhHans": "动态图表工坊：拒绝死板贴图，随时双击重调数据与色彩",
+    "zhHant": "動態圖表工坊：拒絕死板貼圖，隨時雙擊重調數據與色彩"
+  },
+  "sample_showcase_p4_chart_card_desc": {
+    "en": "The chart below is a live vector component. Double-tap to open the data inspector, modify series figures, or switch palettes. Notice the discussion pin dropped on the leading metric—true context-first teamwork.",
+    "ja": "下のグラフは生きたベクター要素です。ダブルタップでデータ編集画面が開き、数値や配色をその場で修正可能。最上位指標に配置された議論ピンによる、文脈重視のコラボレーションを体感してください。",
+    "ko": "아래 차트는 정적 이미지가 아닌 라이브 벡터 컴포넌트입니다. 더블 탭하여 수치를 수정하거나 테마를 변경할 수 있습니다. 1위 지표 위에 꽂힌 토론 핀을 통해 맥락 중심의 협업을 경험해 보세요.",
+    "th": "แผนภูมิด้านล่างเป็นเวกเตอร์สด แตะสองครั้งเพื่อเปิดตัวแก้ไขข้อมูล เปลี่ยนตัวเลข หรือเปลี่ยนชุดสี สังเกตหมุดอภิปรายที่ปักไว้บนข้อมูลสำคัญเพื่อการทำงานร่วมกันที่ตรงจุด",
+    "zhHans": "下方长条图绝非死板图片，而是原生活动的矢量图表组件。双击即可重新录入数据或修改调色盘。图表上的讨论图钉更实现了数据维度的空间上下文协作，彻底颠覆传统笔记体验。",
+    "zhHant": "下方長條圖絕非死板圖片，而是原生活動的向量圖表組件。雙擊即可重新錄入數據或修改調色盤。圖表上的討論圖釘更實現了數據維度的空間上下文協作，徹底顛覆傳統筆記體驗。"
+  },
+  "sample_showcase_p4_conclusion_title": {
+    "en": "Why Creators, Engineers & Scholars Choose Kairumo",
+    "ja": "世界中の創作者・技術者・研究者が Kairumo を選ぶ理由",
+    "ko": "전 세계의 창작자, 엔지니어, 연구자들이 Kairumo를 선택하는 이유",
+    "th": "เหตุผลที่นักสร้างสรรค์ วิศวกร และนักวิชาการเลือก Kairumo",
+    "zhHans": "为什么创作者、工程师与学者一致赞叹 Kairumo？",
+    "zhHant": "為什麼創作者、工程師與學者一致讚嘆 Kairumo？"
+  },
+  "sample_showcase_p4_conclusion_body": {
+    "en": "Because it refuses to compromise. When you need the fluidity of analog paper, our 16 brushes deliver perfection. When you need the structure of desktop documents, our tables, LaTeX formulas, editable charts, and spatial pins give you superpowers—all wrapped in 100% open source freedom.",
+    "ja": "一切の妥協を排したからです。紙のような直感的な筆記が必要な時は16種のブラシが完璧に応え、ドキュメントの厳密な構造化が必要な時は表、数式、動的グラフ、空間ピンが圧倒的な生産性をもたらします。すべてが完全オープンソースの自由の中に。",
+    "ko": "타협하지 않는 완벽함을 추구하기 때문입니다. 아날로그 종이의 자연스러움이 필요할 땐 16종 브러시가 완벽한 필기감을 선사하고, 문서의 체계적 구조화가 필요할 땐 표, LaTeX 수식, 동적 차트, 공간 핀이 독보적인 생산성을 발휘합니다. 이 모든 것이 100% 오픈소스의 자유 속에 담겨 있습니다.",
+    "th": "เพราะ Kairumo ไม่ยอมประนีประนอมกับข้อจำกัดใดๆ เมื่อคุณต้องการความลื่นไหลของกระดาษจริง พู่กันทั้ง 16 ชนิดพร้อมมอบประสบการณ์ที่ดีที่สุด และเมื่อคุณต้องการโครงสร้างเอกสาร ตาราง สูตร LaTeX กราฟสด และหมุดอภิปรายจะมอบพลังการสร้างสรรค์อันไร้ขีดจำกัด ทั้งหมดนี้ฟรีและเปิดเผยซอร์สโค้ด 100%",
+    "zhHans": "因为 Kairumo 拒绝妥协！当你渴望传统纸张的灵性触感，16 种物理级笔刷提供无与伦比的细腻回馈；当你需要构建严密的工程与学术知识库，原生表格、LaTeX 微积分引擎、动编图表与空间图钉赋予你超凡生产力——更关键的是，这一切永远属于你，100% 免费开源，永无拘束。",
+    "zhHant": "因為 Kairumo 拒絕妥協！當你渴望傳統紙張的靈性觸感，16 種物理級筆刷提供無與倫比的細膩回饋；當你需要構建嚴密的工程與學術知識庫，原生表格、LaTeX 微積分引擎、動編圖表與空間圖釘賦予你超凡生產力——更關鍵的是，這一切永遠屬於你，100% 免費開源，永無拘束。"
   }
 }
