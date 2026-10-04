@@ -139,13 +139,13 @@ object SeedNotebooks {
         // =========================================================================
 
         // 1. 大標題
-        title(session, pages[0], "生物學重點筆記：人體循環系統與氣體運輸機制", 40f)
+        title(session, pages[0], l("sample_bio_p1_title"), 40f)
 
         // 2. 門脈循環區塊
         val shapes0 = ShapeStore(session, pages[0])
         val portalShape = NoteShape(
             kindName = "rectangle", x = MARGIN, y = 85f, width = 250f, height = 140f,
-            cornerRadius = 6f, label = "【肝門靜脈循環】\n消化道微血管 → 肝門靜脈\n→ 肝臟微血管竇 → 肝靜脈",
+            cornerRadius = 6f, label = l("sample_bio_portal_shape"),
             strokeColorHex = "#D98880", fillColorHex = "#FDEDEC", lineWidth = 1.5f
         )
         shapes0.create(portalShape)
@@ -154,7 +154,7 @@ object SeedNotebooks {
         val portalText = textStore0.create(MARGIN + 265f, 85f)
         portalText.width = CONTENT_WIDTH - 265f
         portalText.height = 140f
-        portalText.text = "腸靜脈 → 肝門靜脈\n  ↓ (養分儲存 / 肝臟解毒)\n肝微血管 → 肝靜脈 → 下腔靜脈 → 右心房"
+        portalText.text = l("sample_bio_portal_text")
         portalText.fontSize = 13f
         portalText.textColorHex = "#2C3E50"
         portalText.backgroundColorHex = "#FADBD8"
@@ -176,7 +176,7 @@ object SeedNotebooks {
         val lymphHeader = textStore0.create(MARGIN + 15f, 250f)
         lymphHeader.width = CONTENT_WIDTH - 30f
         lymphHeader.height = 60f
-        lymphHeader.text = "【淋巴循環路徑 (Lymphatic Circulation)】\n組織微淋巴管 → 小淋巴管 → 大淋巴管 → 胸導管 / 右淋巴總管\n→ 左右鎖骨下靜脈 → 上腔靜脈 → 右心房注入血液循環"
+        lymphHeader.text = l("sample_bio_lymph_path")
         lymphHeader.fontSize = 14f
         lymphHeader.textColorHex = "#1E8449"
         lymphHeader.backgroundColorHex = "clear"
@@ -187,7 +187,7 @@ object SeedNotebooks {
         val lymphBody = textStore0.create(MARGIN + 15f, 315f)
         lymphBody.width = 440f
         lymphBody.height = 95f
-        lymphBody.text = "★ 淋巴系統生理功能：\n1. 體液回收：回收組織液多餘水分，維持恆定血容量\n2. 運送養分：乳糜管吸收脂溶性養分 (維生素 A, D, E, K)\n3. 免疫防禦：運送病原體進入淋巴結，活化 B/T 淋巴球進行濾清"
+        lymphBody.text = l("sample_bio_lymph_funcs")
         lymphBody.fontSize = 13f
         lymphBody.textColorHex = "#273746"
         lymphBody.backgroundColorHex = "#D5F5E3"
@@ -201,7 +201,7 @@ object SeedNotebooks {
         val catBox = textStore0.create(MARGIN + 465f, 315f)
         catBox.width = CONTENT_WIDTH - 480f
         catBox.height = 95f
-        catBox.text = "  /\\_/\\\n ( o.o )\n  > ^ <\n(吸收好脂肪~)"
+        catBox.text = l("sample_bio_cat_memo")
         catBox.fontSize = 12f
         catBox.textColorHex = "#2C3E50"
         catBox.backgroundColorHex = "#FCF3CF"
@@ -223,7 +223,7 @@ object SeedNotebooks {
         val o2Box = textStore0.create(MARGIN + 15f, 478f)
         o2Box.width = CONTENT_WIDTH - 30f
         o2Box.height = 75f
-        o2Box.text = "1. 氧氣 (O₂) 運輸：\n   • 98% 與血紅素結合： Hb + O₂ ⇄ HbO₂ (氧合血紅素)\n     [肺泡氧分壓高，向右反應；組織氧分壓低，向左釋放]\n   • 2% 物理溶解於血漿中"
+        o2Box.text = l("sample_bio_o2_text")
         o2Box.fontSize = 13f
         o2Box.textColorHex = "#1B4F72"
         o2Box.backgroundColorHex = "#EBF5FB"
@@ -237,7 +237,7 @@ object SeedNotebooks {
         val co2Box = textStore0.create(MARGIN + 15f, 560f)
         co2Box.width = CONTENT_WIDTH - 30f
         co2Box.height = 85f
-        co2Box.text = "2. 二氧化碳 (CO₂) 運輸：\n   • 70% 碳酸氫根 (HCO₃⁻)： CO₂ + H₂O ⇄ H₂CO₃ ⇄ HCO₃⁻ + H⁺ (紅血球碳酸酐酶催化)\n   • 23% 與血紅素結合： Hb + CO₂ ⇄ HbCO₂ (氨基甲酸血紅素)\n   • 7%  物理溶解於血漿中"
+        co2Box.text = l("sample_bio_co2_text")
         co2Box.fontSize = 13f
         co2Box.textColorHex = "#641E16"
         co2Box.backgroundColorHex = "#FADBD8"
@@ -268,7 +268,7 @@ object SeedNotebooks {
         // 【第二頁：泌尿系統與腎臟解剖】
         // =========================================================================
 
-        title(session, pages[1], "泌尿生理學：腎單元構造與尿液形成機制", 40f)
+        title(session, pages[1], l("sample_bio_p2_title"), 40f)
 
         val shapes1 = ShapeStore(session, pages[1])
         val nephronShape = NoteShape(
@@ -282,7 +282,7 @@ object SeedNotebooks {
         val nephronText = textStore1.create(MARGIN + 12f, 95f)
         nephronText.width = 300f
         nephronText.height = 230f
-        nephronText.text = "【腎單元解剖層次 (The Nephron)】\n• 腎臟巨觀：皮質 (Cortex) + 髓質 (Medulla) + 腎盂\n• 腎小體 (Renal Corpuscle)：\n   - 入球小動脈 (管徑大) → 腎絲球 (微血管團)\n   - 鮑氏囊 (雙層杯狀構造，承接濾液)\n   - 出球小動脈 (管徑小，形成高壓過濾)\n• 腎小管 (Renal Tubule)：\n   - 近曲小管 → 亨利氏環 (U型) → 遠曲小管\n   - 匯入集尿管 (Collecting Duct) → 腎乳頭"
+        nephronText.text = l("sample_bio_nephron_text")
         nephronText.fontSize = 13f
         nephronText.textColorHex = "#4D5656"
         nephronText.backgroundColorHex = "clear"
@@ -300,7 +300,7 @@ object SeedNotebooks {
         val funcText = textStore1.create(MARGIN + 347f, 95f)
         funcText.width = CONTENT_WIDTH - 360f
         funcText.height = 230f
-        funcText.text = "【腎臟生理功能清單】\n1. 形成尿液，排出含氮廢物 (尿素、尿酸、肌酸酐)\n2. 調控體液滲透壓與水分恆定 (受抗利尿激素 ADH 調控)\n3. 酸鹼平衡調節 (保留 HCO₃⁻，主動分泌 H⁺/NH₄⁺)\n4. 維持血壓恆定 (分泌腎素 Renin 啟動 RAAS 系統)\n5. 分泌紅血球生成素 (EPO，刺激骨髓造血)"
+        funcText.text = l("sample_bio_renal_funcs")
         funcText.fontSize = 13f
         funcText.textColorHex = "#1B4F72"
         funcText.backgroundColorHex = "clear"
@@ -315,7 +315,7 @@ object SeedNotebooks {
         val summaryText = textStore1.create(MARGIN, 560f)
         summaryText.width = CONTENT_WIDTH
         summaryText.height = 55f
-        summaryText.text = "★ 考題速記口訣：\n『過濾不選大（無血球、大蛋白），再吸收要主動（葡萄糖全收，水跟著走），分泌作用排廢物（氫離子藥物走）』"
+        summaryText.text = l("sample_bio_summary_memo")
         summaryText.fontSize = 13f
         summaryText.textColorHex = "#922B21"
         summaryText.backgroundColorHex = "#FADBD8"

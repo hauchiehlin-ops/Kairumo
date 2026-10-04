@@ -300,7 +300,7 @@ enum SeedContent {
         // 1. 頁面大標題
         texts.append(NoteTextAttachment(
             pageIndex: 0,
-            text: "生物學重點筆記：人體循環系統與氣體運輸機制",
+            text: l("sample_bio_p1_title"),
             fontSize: 22,
             isBold: true,
             alignmentRaw: "left",
@@ -323,7 +323,7 @@ enum SeedContent {
             width: 250,
             height: 140,
             cornerRadius: 6,
-            label: "【肝門靜脈循環】\n消化道微血管 → 肝門靜脈\n→ 肝臟微血管竇 → 肝靜脈",
+            label: l("sample_bio_portal_shape"),
             strokeColorHex: "#D98880",
             fillColorHex: "#FDEDEC",
             lineWidth: 1.5
@@ -332,7 +332,7 @@ enum SeedContent {
 
         texts.append(NoteTextAttachment(
             pageIndex: 0,
-            text: "腸靜脈 → 肝門靜脈\n  ↓ (養分儲存 / 肝臟解毒)\n肝微血管 → 肝靜脈 → 下腔靜脈 → 右心房",
+            text: l("sample_bio_portal_text"),
             fontSize: 13,
             isBold: false,
             alignmentRaw: "left",
@@ -375,7 +375,7 @@ enum SeedContent {
 
         texts.append(NoteTextAttachment(
             pageIndex: 0,
-            text: "【淋巴循環路徑 (Lymphatic Circulation)】\n組織微淋巴管 → 小淋巴管 → 大淋巴管 → 胸導管 / 右淋巴總管\n→ 左右鎖骨下靜脈 → 上腔靜脈 → 右心房注入血液循環",
+            text: l("sample_bio_lymph_path"),
             fontSize: 14,
             isBold: true,
             alignmentRaw: "left",
@@ -391,7 +391,7 @@ enum SeedContent {
 
         texts.append(NoteTextAttachment(
             pageIndex: 0,
-            text: "★ 淋巴系統生理功能：\n1. 體液回收：回收組織液多餘水分，維持恆定血容量\n2. 運送養分：乳糜管吸收脂溶性養分 (維生素 A, D, E, K)\n3. 免疫防禦：運送病原體進入淋巴結，活化 B/T 淋巴球進行濾清",
+            text: l("sample_bio_lymph_funcs"),
             fontSize: 13,
             isBold: false,
             alignmentRaw: "left",
@@ -411,7 +411,7 @@ enum SeedContent {
         // 塗鴉小貓咪文字框
         texts.append(NoteTextAttachment(
             pageIndex: 0,
-            text: "  /\\_/\\\n ( o.o )\n  > ^ <\n(吸收好脂肪~)",
+            text: l("sample_bio_cat_memo"),
             fontSize: 12,
             isBold: true,
             alignmentRaw: "center",
@@ -445,7 +445,7 @@ enum SeedContent {
 
         texts.append(NoteTextAttachment(
             pageIndex: 0,
-            text: "【氣體運輸機制 (Gas Transport)】",
+            text: l("sample_bio_gas_title"),
             fontSize: 15,
             isBold: true,
             alignmentRaw: "left",
@@ -461,7 +461,7 @@ enum SeedContent {
         // 氧氣運輸反應式
         texts.append(NoteTextAttachment(
             pageIndex: 0,
-            text: "1. 氧氣 (O₂) 運輸：\n   • 98% 與血紅素結合： Hb + O₂ ⇄ HbO₂ (氧合血紅素)\n     [肺泡氧分壓高，向右反應；組織氧分壓低，向左釋放]\n   • 2% 物理溶解於血漿中",
+            text: l("sample_bio_o2_text"),
             fontSize: 13,
             isBold: false,
             alignmentRaw: "left",
@@ -481,7 +481,7 @@ enum SeedContent {
         // 二氧化碳運輸反應式
         texts.append(NoteTextAttachment(
             pageIndex: 0,
-            text: "2. 二氧化碳 (CO₂) 運輸：\n   • 70% 碳酸氫根 (HCO₃⁻)： CO₂ + H₂O ⇄ H₂CO₃ ⇄ HCO₃⁻ + H⁺ (紅血球碳酸酐酶催化)\n   • 23% 與血紅素結合： Hb + CO₂ ⇄ HbCO₂ (氨基甲酸血紅素)\n   • 7%  物理溶解於血漿中",
+            text: l("sample_bio_co2_text"),
             fontSize: 13,
             isBold: false,
             alignmentRaw: "left",
@@ -519,7 +519,7 @@ enum SeedContent {
         // 1. 第二頁大標題
         texts.append(NoteTextAttachment(
             pageIndex: 1,
-            text: "泌尿生理學：腎單元構造與尿液形成機制",
+            text: l("sample_bio_p2_title"),
             fontSize: 22,
             isBold: true,
             alignmentRaw: "left",
@@ -551,7 +551,7 @@ enum SeedContent {
 
         texts.append(NoteTextAttachment(
             pageIndex: 1,
-            text: "【腎單元解剖層次 (The Nephron)】\n• 腎臟巨觀：皮質 (Cortex) + 髓質 (Medulla) + 腎盂\n• 腎小體 (Renal Corpuscle)：\n   - 入球小動脈 (管徑大) → 腎絲球 (微血管團)\n   - 鮑氏囊 (雙層杯狀構造，承接濾液)\n   - 出球小動脈 (管徑小，形成高壓過濾)\n• 腎小管 (Renal Tubule)：\n   - 近曲小管 → 亨利氏環 (U型) → 遠曲小管\n   - 匯入集尿管 (Collecting Duct) → 腎乳頭",
+            text: l("sample_bio_nephron_text"),
             fontSize: 13,
             isBold: false,
             alignmentRaw: "left",
@@ -583,7 +583,7 @@ enum SeedContent {
 
         texts.append(NoteTextAttachment(
             pageIndex: 1,
-            text: "【腎臟生理功能清單】\n1. 形成尿液，排出含氮廢物 (尿素、尿酸、肌酸酐)\n2. 調控體液滲透壓與水分恆定 (受抗利尿激素 ADH 調控)\n3. 酸鹼平衡調節 (保留 HCO₃⁻，主動分泌 H⁺/NH₄⁺)\n4. 維持血壓恆定 (分泌腎素 Renin 啟動 RAAS 系統)\n5. 分泌紅血球生成素 (EPO，刺激骨髓造血)",
+            text: l("sample_bio_renal_funcs"),
             fontSize: 13,
             isBold: false,
             alignmentRaw: "left",
@@ -608,7 +608,7 @@ enum SeedContent {
         // 4. 生理作用比較表（原生表格）
         texts.append(NoteTextAttachment(
             pageIndex: 1,
-            text: "【尿液形成三大生理作用比較表】",
+            text: l("sample_bio_table_title"),
             fontSize: 15,
             isBold: true,
             alignmentRaw: "left",
@@ -638,7 +638,7 @@ enum SeedContent {
         // 5. 底部總結便簽
         texts.append(NoteTextAttachment(
             pageIndex: 1,
-            text: "★ 考題速記口訣：\n『過濾不選大（無血球、大蛋白），再吸收要主動（葡萄糖全收，水跟著走），分泌作用排廢物（氫離子藥物走）』",
+            text: l("sample_bio_summary_memo"),
             fontSize: 13,
             isBold: true,
             alignmentRaw: "left",

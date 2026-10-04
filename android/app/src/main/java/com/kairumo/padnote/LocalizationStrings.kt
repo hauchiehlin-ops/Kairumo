@@ -9176,6 +9176,118 @@ object LocalizationStrings {
             "ko" to "자 및 측정 모드",
             "th" to "โหมดไม้บรรทัดและการวัด"
         ),
+        "sample_bio_cat_memo" to mapOf(
+            "zh-Hant" to "  /\\_/\\\n ( o.o )\n  > ^ <\n(吸收好脂肪~)",
+            "en" to "  /\\_/\\\n ( o.o )\n  > ^ <\n(Absorbing lipids~)",
+            "zh-Hans" to "  /\\_/\\\n ( o.o )\n  > ^ <\n(吸收好脂肪~)",
+            "ja" to "  /\\_/\\\n ( o.o )\n  > ^ <\n(脂質を吸収中~)",
+            "ko" to "  /\\_/\\\n ( o.o )\n  > ^ <\n(지방 흡수 중~)",
+            "th" to "  /\\_/\\\n ( o.o )\n  > ^ <\n(ดูดซึมไขมันดี~)"
+        ),
+        "sample_bio_co2_text" to mapOf(
+            "zh-Hant" to "2. 二氧化碳 (CO₂) 運輸：\n   • 70% 碳酸氫根 (HCO₃⁻)： CO₂ + H₂O ⇄ H₂CO₃ ⇄ HCO₃⁻ + H⁺ (紅血球碳酸酐酶催化)\n   • 23% 與血紅素結合： Hb + CO₂ ⇄ HbCO₂ (氨基甲酸血紅素)\n   • 7%  物理溶解於血漿中",
+            "en" to "2. Carbon Dioxide (CO₂) Transport:\n   • 70% as Bicarbonate (HCO₃⁻): CO₂ + H₂O ⇄ H₂CO₃ ⇄ HCO₃⁻ + H⁺ (via Carbonic Anhydrase)\n   • 23% Bound to Hb: Hb + CO₂ ⇄ HbCO₂ (Carbaminohemoglobin)\n   • 7%  Dissolved in Plasma",
+            "zh-Hans" to "2. 二氧化碳 (CO₂) 运输：\n   • 70% 碳酸氢根 (HCO₃⁻)： CO₂ + H₂O ⇄ H₂CO₃ ⇄ HCO₃⁻ + H⁺ (红血球碳酸酐酶催化)\n   • 23% 与血红素结合： Hb + CO₂ ⇄ HbCO₂ (氨基甲酸血红素)\n   • 7%  物理溶解于血浆中",
+            "ja" to "2. 二酸化炭素 (CO₂) の輸送：\n   • 70% 重炭酸イオン (HCO₃⁻)： CO₂ + H₂O ⇄ H₂CO₃ ⇄ HCO₃⁻ + H⁺（炭酸脱水酵素）\n   • 23% ヘモグロビン結合： Hb + CO₂ ⇄ HbCO₂（カルバミノヘモグロビン）\n   • 7%  血漿中に溶解",
+            "ko" to "2. 이산화탄소 (CO₂) 운반:\n   • 70% 탄산수소이온 (HCO₃⁻): CO₂ + H₂O ⇄ H₂CO₃ ⇄ HCO₃⁻ + H⁺ (탄산무수화효소)\n   • 23% 헤모글로빈 결합: Hb + CO₂ ⇄ HbCO₂ (카르바미노헤모글로빈)\n   • 7%  혈장에 물리적 용해",
+            "th" to "2. การขนส่งคาร์บอนไดออกไซด์ (CO₂):\n   • 70% ในรูปไบคาร์บอเนต (HCO₃⁻): CO₂ + H₂O ⇄ H₂CO₃ ⇄ HCO₃⁻ + H⁺\n   • 23% จับกับฮีโมโกลบิน: Hb + CO₂ ⇄ HbCO₂\n   • 7%  ละลายในพลาสมา"
+        ),
+        "sample_bio_gas_title" to mapOf(
+            "zh-Hant" to "【氣體運輸機制 (Gas Transport)】",
+            "en" to "【Gas Transport Mechanisms】",
+            "zh-Hans" to "【气体运输机制 (Gas Transport)】",
+            "ja" to "【気体輸送メカニズム (Gas Transport)】",
+            "ko" to "【기체 운반 기전 (Gas Transport)】",
+            "th" to "【กลไกการขนส่งก๊าซ (Gas Transport)】"
+        ),
+        "sample_bio_lymph_funcs" to mapOf(
+            "zh-Hant" to "★ 淋巴系統生理功能：\n1. 體液回收：回收組織液多餘水分，維持恆定血容量\n2. 運送養分：乳糜管吸收脂溶性養分 (維生素 A, D, E, K)\n3. 免疫防禦：運送病原體進入淋巴結，活化 B/T 淋巴球進行濾清",
+            "en" to "★ Key Lymphatic Functions:\n1. Fluid Recovery: Returns interstitial fluid, maintains blood volume\n2. Fat Absorption: Lacteals absorb fat-soluble nutrients (Vitamins A, D, E, K)\n3. Immunity: Transports pathogens to lymph nodes for immune clearance",
+            "zh-Hans" to "★ 淋巴系统生理功能：\n1. 体液回收：回收组织液多余水分，维持恒定血容量\n2. 运送养分：乳糜管吸收脂溶性养分 (维生素 A, D, E, K)\n3. 免疫防御：运送病原体进入淋巴结，活化 B/T 淋巴球进行滤清",
+            "ja" to "★ リンパ系の生理機能：\n1. 体液回収：組織液の余剰水分を回収し、循環血液量を維持\n2. 養分輸送：乳び管が脂溶性栄養素（ビタミンA, D, E, K）を吸収\n3. 免疫防御：病原体をリンパ節へ運び、免疫細胞を活性化",
+            "ko" to "★ 림프계의 주요 생리 기능:\n1. 체액 회수: 조직액의 잉여 수분을 회수하여 순환 혈액량 유지\n2. 영양소 운반: 암죽관을 통해 지용성 영양소(비타민 A, D, E, K) 흡수\n3. 면역 방어: 병원체를 림프절로 운반하여 림프구 면역 반응 촉진",
+            "th" to "★ หน้าที่ทางสรีรวิทยาของระบบน้ำเหลือง:\n1. กักเก็บของเหลว: นำของเหลวระหว่างเซลล์ส่วนเกินกลับเข้าสู่กระแสเลือด\n2. ดูดซึมไขมัน: ท่อน้ำเหลืองแล็กเทียลดูดซึมสารอาหารที่ละลายในไขมัน (วิตามิน A, D, E, K)\n3. ระบบภูมิคุ้มกัน: ลำเลียงเชื้อโรคไปยังต่อมน้ำเหลืองเพื่อกำจัด"
+        ),
+        "sample_bio_lymph_path" to mapOf(
+            "zh-Hant" to "【淋巴循環路徑 (Lymphatic Circulation)】\n組織微淋巴管 → 小淋巴管 → 大淋巴管 → 胸導管 / 右淋巴總管\n→ 左右鎖骨下靜脈 → 上腔靜脈 → 右心房注入血液循環",
+            "en" to "【Lymphatic Circulation Route】\nLymphatic Capillaries → Vessels → Trunks → Thoracic / Right Lymph Duct\n→ Subclavian Veins → SVC → Right Atrium into Bloodstream",
+            "zh-Hans" to "【淋巴循环路径 (Lymphatic Circulation)】\n组织微淋巴管 → 小淋巴管 → 大淋巴管 → 胸导管 / 右淋巴总管\n→ 左右锁骨下静脉 → 上腔静脉 → 右心房注入血液循环",
+            "ja" to "【リンパ循環経路 (Lymphatic Circulation)】\n毛細リンパ管 → リンパ管 → リンパ本幹 → 胸管・右リンパ本幹\n→ 鎖骨下静脈 → 上大静脈 → 右心房へ流入",
+            "ko" to "【림프 순환 경로 (Lymphatic Circulation)】\n모세림프관 → 림프관 → 림프간 → 가슴관 / 우림프관\n→ 쇄골하정맥 → 상대정맥 → 우심방으로 유입",
+            "th" to "【เส้นทางการไหลเวียนน้ำเหลือง】\nหลอดน้ำเหลืองฝอย → หลอดน้ำเหลือง → ท่อน้ำเหลืองทรวงอก\n→ หลอดเลือดดำใต้ไหปลาร้า → SVC → หัวใจห้องบนขวา"
+        ),
+        "sample_bio_nephron_text" to mapOf(
+            "zh-Hant" to "【腎單元解剖層次 (The Nephron)】\n• 腎臟巨觀：皮質 (Cortex) + 髓質 (Medulla) + 腎盂\n• 腎小體 (Renal Corpuscle)：\n   - 入球小動脈 (管徑大) → 腎絲球 (微血管團)\n   - 鮑氏囊 (雙層杯狀構造，承接濾液)\n   - 出球小動脈 (管徑小，形成高壓過濾)\n• 腎小管 (Renal Tubule)：\n   - 近曲小管 → 亨利氏環 (U型) → 遠曲小管\n   - 匯入集尿管 (Collecting Duct) → 腎乳頭",
+            "en" to "【Nephron Anatomy & Hierarchy】\n• Gross Kidney: Cortex + Medulla + Renal Pelvis\n• Renal Corpuscle:\n   - Afferent Arteriole (wider) → Glomerulus (capillary bed)\n   - Bowman Capsule (cups filtrate)\n   - Efferent Arteriole (narrower, high hydrostatic pressure)\n• Renal Tubule:\n   - Proximal Convoluted Tubule → Loop of Henle → Distal Tubule\n   - Drains into Collecting Duct → Renal Papilla",
+            "zh-Hans" to "【肾单元解剖层次 (The Nephron)】\n• 肾脏巨观：皮质 (Cortex) + 髓质 (Medulla) + 肾盂\n• 肾小体 (Renal Corpuscle)：\n   - 入球小动脉 (管径大) → 肾丝球 (微血管团)\n   - 鲍氏囊 (双层杯状构造，承接滤液)\n   - 出球小动脉 (管径小，形成高压过滤)\n• 肾小管 (Renal Tubule)：\n   - 近曲小管 → 亨利氏环 (U型) → 远曲小管\n   - 汇入集尿管 (Collecting Duct) → 肾乳头",
+            "ja" to "【ネフロンの解剖学的構造】\n• 腎臓肉眼構造：皮質＋髄質＋腎盂\n• 腎小体：\n   - 輸入細動脈 → 糸球体（毛細血管網）\n   - ボーマン嚢（受容器）\n   - 輸出細動脈（高圧ろ過を形成）\n• 尿細管：\n   - 近位尿細管 → ヘンレ係梯 → 遠位尿細管\n   - 集合管へ流入 → 腎乳頭",
+            "ko" to "【네프론의 해부학적 구조】\n• 신장 육안 구조: 겉질(Cortex) + 속질(Medulla) + 신우\n• 신소체(Renal Corpuscle):\n   - 들세동맥 → 사구체 모세혈관망\n   - 보먼주머니 (여과액 수용)\n   - 날세동맥 (혈관 직경 감소, 고압 여과 형성)\n• 세뇨관(Renal Tubule):\n   - 근위세뇨관 → 헨레고리 → 원위세뇨관\n   - 집합관으로 유입 → 신유두",
+            "th" to "【กายวิภาคของหน่วยไต (Nephron)】\n• ไตโดยรวม: คอร์เทกซ์ + เมดัลลา + กรวยไต\n• คอร์พัสเซิลของไต:\n   - แอฟเฟอเรนต์อาร์เทอริโอล → โกลเมอรูลัส\n   - โบว์แมนส์แคปซูล\n   - เอฟเฟอเรนต์อาร์เทอริโอล (แรงดันสูง)\n• ท่อหน่วยไต:\n   - ท่อขดส่วนต้น → ห่วงเฮนเล → ท่อขดส่วนปลาย\n   - ไหลรวมสู่ท่อรวมปัสสาวะ → พาพิลลาของไต"
+        ),
+        "sample_bio_o2_text" to mapOf(
+            "zh-Hant" to "1. 氧氣 (O₂) 運輸：\n   • 98% 與血紅素結合： Hb + O₂ ⇄ HbO₂ (氧合血紅素)\n     [肺泡氧分壓高，向右反應；組織氧分壓低，向左釋放]\n   • 2% 物理溶解於血漿中",
+            "en" to "1. Oxygen (O₂) Transport:\n   • 98% Bound to Hemoglobin: Hb + O₂ ⇄ HbO₂ (Oxyhemoglobin)\n     [High pO₂ in lungs drives right; low pO₂ in tissues unloads O₂]\n   • 2% Dissolved in Plasma",
+            "zh-Hans" to "1. 氧气 (O₂) 运输：\n   • 98% 与血红素结合： Hb + O₂ ⇄ HbO₂ (氧合血红素)\n     [肺泡氧分压高，向右反应；组织氧分压低，向左释放]\n   • 2% 物理溶解于血浆中",
+            "ja" to "1. 酸素 (O₂) の輸送：\n   • 98% ヘモグロビン結合： Hb + O₂ ⇄ HbO₂（酸素ヘモグロビン）\n     [肺胞で高pO₂のため結合、組織で低pO₂のため解離]\n   • 2% 血漿中に物理的溶解",
+            "ko" to "1. 산소 (O₂) 운반:\n   • 98% 헤모글로빈 결합: Hb + O₂ ⇄ HbO₂ (산소헤모글로빈)\n     [폐포의 높은 pO₂에서 결합, 조직의 낮은 pO₂에서 해리]\n   • 2% 혈장에 물리적 용해",
+            "th" to "1. การขนส่งออกซิเจน (O₂):\n   • 98% จับกับฮีโมโกลบิน: Hb + O₂ ⇄ HbO₂\n     [pO₂ สูงในปอดเกิดปฏิกิริยาไปข้างหน้า; pO₂ ต่ำในเนื้อเยื่อปล่อย O₂]\n   • 2% ละลายในพลาสมา"
+        ),
+        "sample_bio_p1_title" to mapOf(
+            "zh-Hant" to "生物學重點筆記：人體循環系統與氣體運輸機制",
+            "en" to "Biology Study Notes: Human Circulation and Gas Transport",
+            "zh-Hans" to "生物学重点笔记：人体循环系统与气体运输机制",
+            "ja" to "生物学重点ノート：人体循環系と気体輸送メカニズム",
+            "ko" to "생물학 핵심 노트: 인체 순환계 및 기체 운반 기전",
+            "th" to "บันทึกสรุปชีววิทยา: ระบบการไหลเวียนโลหิตและการขนส่งก๊าซในมนุษย์"
+        ),
+        "sample_bio_p2_title" to mapOf(
+            "zh-Hant" to "泌尿生理學：腎單元構造與尿液形成機制",
+            "en" to "Renal Physiology: Nephron Anatomy and Urine Formation",
+            "zh-Hans" to "泌尿生理学：肾单元构造与尿液形成机制",
+            "ja" to "泌尿生理学：ネフロン構造と尿生成メカニズム",
+            "ko" to "비뇨 생리학: 네프론 구조와 요 형성 기전",
+            "th" to "สรีรวิทยาระบบทางเดินปัสสาวะ: โครงสร้างของหน่วยไตและกลไกการสร้างปัสสาวะ"
+        ),
+        "sample_bio_portal_shape" to mapOf(
+            "zh-Hant" to "【肝門靜脈循環】\n消化道微血管 → 肝門靜脈\n→ 肝臟微血管竇 → 肝靜脈",
+            "en" to "【Hepatic Portal System】\nGut Capillaries → Portal Vein\n→ Liver Sinusoids → Hepatic Vein",
+            "zh-Hans" to "【肝门静脉循环】\n消化道微血管 → 肝门静脉\n→ 肝脏微血管窦 → 肝静脉",
+            "ja" to "【肝門脈循環】\n消化管毛細血管 → 肝門脈\n→ 肝類洞 → 肝静脈",
+            "ko" to "【간문맥 순환】\n소화관 모세혈관 → 간문맥\n→ 간 모세혈관동 → 간정맥",
+            "th" to "【ระบบพอร์ทัลตับ】\nหลอดเลือดฝอยทางเดินอาหาร → หลอดเลือดดำพอร์ทัล\n→ ไซนูซอยด์ในตับ → หลอดเลือดดำตับ"
+        ),
+        "sample_bio_portal_text" to mapOf(
+            "zh-Hant" to "腸靜脈 → 肝門靜脈\n  ↓ (養分儲存 / 肝臟解毒)\n肝微血管 → 肝靜脈 → 下腔靜脈 → 右心房",
+            "en" to "Mesenteric Vein → Hepatic Portal Vein\n  ↓ (Nutrient Storage / Detoxification)\nLiver Capillaries → Hepatic Vein → IVC → Right Atrium",
+            "zh-Hans" to "肠静脉 → 肝门静脉\n  ↓ (养分储存 / 肝脏解毒)\n肝微血管 → 肝静脉 → 下腔静脉 → 右心房",
+            "ja" to "腸静脈 → 肝門脈\n  ↓（栄養貯蔵・肝臓解毒）\n肝毛細血管 → 肝静脈 → 下大静脈 → 右心房",
+            "ko" to "장정맥 → 간문맥\n  ↓ (영양분 저장 / 간 해독)\n간 모세혈관 → 간정맥 → 하대정맥 → 우심방",
+            "th" to "หลอดเลือดดำลำไส้ → หลอดเลือดดำพอร์ทัลตับ\n  ↓ (สะสมสารอาหาร / ขจัดสารพิษ)\nหลอดเลือดฝอยตับ → หลอดเลือดดำตับ → IVC → หัวใจห้องบนขวา"
+        ),
+        "sample_bio_renal_funcs" to mapOf(
+            "zh-Hant" to "【腎臟生理功能清單】\n1. 形成尿液，排出含氮廢物 (尿素、尿酸、肌酸酐)\n2. 調控體液滲透壓與水分恆定 (受抗利尿激素 ADH 調控)\n3. 酸鹼平衡調節 (保留 HCO₃⁻，主動分泌 H⁺/NH₄⁺)\n4. 維持血壓恆定 (分泌腎素 Renin 啟動 RAAS 系統)\n5. 分泌紅血球生成素 (EPO，刺激骨髓造血)",
+            "en" to "【Renal Physiological Functions】\n1. Urine Formation: Excretes nitrogenous waste (urea, creatinine)\n2. Osmoregulation: Maintains fluid balance (regulated via ADH)\n3. Acid-Base Balance: Reclaims HCO₃⁻, secretes H⁺/NH₄⁺\n4. Blood Pressure Regulation: Secretes Renin to activate RAAS\n5. Endocrine: Secretes Erythropoietin (EPO) to stimulate RBCs",
+            "zh-Hans" to "【肾脏生理功能清单】\n1. 形成尿液，排出含氮废物 (尿素、尿酸、肌酸酐)\n2. 调控体液渗透压与水分恒定 (受抗利尿激素 ADH 调控)\n3. 酸碱平衡调节 (保留 HCO₃⁻，主动分泌 H⁺/NH₄⁺)\n4. 维持血压恒定 (分泌肾素 Renin 启动 RAAS 系统)\n5. 分泌红血球生成素 (EPO，刺激骨髓造血)",
+            "ja" to "【腎臓の生理機能】\n1. 尿生成と窒素代謝産物（尿素・クレアチニン）の排泄\n2. 体液浸透圧と水分恒常性の維持（ADH調節）\n3. 酸塩基平衡の調節（HCO₃⁻回収、H⁺分泌）\n4. 血圧の恒常性維持（レニン分泌によるRAAS活性化）\n5. エリスロポエチン（EPO）分泌による造血促進",
+            "ko" to "【신장의 주요 생리 기능】\n1. 요 형성 및 질소 노폐물(요소, 요산, 크레아티닌) 배설\n2. 체액 삼투압 및 수분 항상성 조절 (ADH 조절)\n3. 산-염기 평형 조절 (HCO₃⁻ 재흡수, H⁺ 능동 분비)\n4. 혈압 항상성 유지 (레닌 분비를 통한 RAAS 활성화)\n5. 조혈 호르몬(EPO) 분비로 적혈구 생성 촉진",
+            "th" to "【หน้าที่ทางสรีรวิทยาของไต】\n1. สร้างปัสสาวะ ขับของเสียที่มีไนโตรเจน (ยูเรีย ครีเอทินีน)\n2. ควบคุมแรงดันออสโมติกและสมดุลน้ำ (ควบคุมโดย ADH)\n3. ปรับสมดุลกรด-ด่าง (เก็บ HCO₃⁻, ขับ H⁺)\n4. ควบคุมความดันโลหิต (หลั่งเรนินกระตุ้นระบบ RAAS)\n5. หลั่งอีริโทรโพอิติน (EPO) กระตุ้นการสร้างเม็ดเลือดแดง"
+        ),
+        "sample_bio_summary_memo" to mapOf(
+            "zh-Hant" to "★ 考題速記口訣：\n『過濾不選大（無血球、大蛋白），再吸收要主動（葡萄糖全收，水跟著走），分泌作用排廢物（氫離子藥物走）』",
+            "en" to "★ Exam Memory Cue:\nFiltration stops cells & proteins; Reabsorption actively recovers glucose & water; Secretion dumps excess ions & drugs.",
+            "zh-Hans" to "★ 考题速记口诀：\n『过滤不选大（无血球、大蛋白），再吸收要主动（葡萄糖全收，水跟着走），分泌作用排废物（氢离子药物走）』",
+            "ja" to "★ 試験暗記のコツ：\n「ろ過は大分子を通さず、再吸収は能動輸送で糖と水を回収、分泌は余剰イオンと薬物を排泄」",
+            "ko" to "★ 시험 암기 비법:\n『여과는 큰 물질(혈구, 단백질) 차단, 재흡수는 능동적으로 포도당·수분 회수, 분비는 노폐물·약물 배출』",
+            "th" to "★ เทคนิคการจำสอบ:\nการกรองไม่ผ่านเม็ดเลือดและโปรตีนใหญ่, การดูดกลับดึงกลูโคสและน้ำกลับอย่างกระตือรือร้น, การหลั่งขับของเสียและยาออก"
+        ),
+        "sample_bio_table_title" to mapOf(
+            "zh-Hant" to "【尿液形成三大生理作用比較表】",
+            "en" to "【Three Steps of Urine Formation】",
+            "zh-Hans" to "【尿液形成三大生理作用比较表】",
+            "ja" to "【尿生成の3大作用比較表】",
+            "ko" to "【요 형성 3대 작용 비교표】",
+            "th" to "【ตารางเปรียบเทียบ 3 กระบวนการสร้างปัสสาวะ】"
+        ),
         "sample_bio_tools_table" to mapOf(
             "zh-Hant" to "作用名稱|發生部位|驅動力 / 生理機制\n過濾作用|腎絲球 → 鮑氏囊|有效過濾壓（血壓推動、物理過濾）\n再吸收作用|腎小管 → 周圍微血管|主動/被動運輸（葡萄糖、水99%回收）\n分泌作用|周圍微血管 → 腎小管|主動運輸（排出過多H+、K+與藥物代謝物）",
             "en" to "Process|Site|Driving Force / Mechanism\nFiltration|Glomerulus → Bowman Capsule|Net Filtration Pressure (Blood Pressure)\nReabsorption|Tubule → Capillaries|Active/Passive (Glucose & 99% Water reclaimed)\nSecretion|Capillaries → Tubule|Active Transport (Excretes Excess H+, K+, Drugs)",
@@ -9511,7 +9623,10 @@ object LocalizationStrings {
             "ja" to "すべて選択",
             "ko" to "전체 선택",
             "th" to "เลือกทั้งหมด"
-        ),
+        )
+    )
+
+    private fun part15(): Map<String, Map<String, String>> = mapOf(
         "select_destination_folder" to mapOf(
             "zh-Hant" to "選擇目標資料夾",
             "en" to "Select Target Folder",
@@ -9623,10 +9738,7 @@ object LocalizationStrings {
             "ja" to "図形を編集",
             "ko" to "도형 편집",
             "th" to "แก้ไขรูปร่าง"
-        )
-    )
-
-    private fun part15(): Map<String, Map<String, String>> = mapOf(
+        ),
         "shape_fill" to mapOf(
             "zh-Hant" to "填滿顏色",
             "en" to "Fill",
@@ -10154,7 +10266,10 @@ object LocalizationStrings {
             "ja" to "フローチャート記号（ISO 5807）",
             "ko" to "순서도 기호(ISO 5807)",
             "th" to "สัญลักษณ์ผังงาน (ISO 5807)"
-        ),
+        )
+    )
+
+    private fun part16(): Map<String, Map<String, String>> = mapOf(
         "shape_section_templates" to mapOf(
             "zh-Hant" to "範本",
             "en" to "Templates",
@@ -10266,10 +10381,7 @@ object LocalizationStrings {
             "ja" to "グリッドに吸着",
             "ko" to "격자에 맞춤",
             "th" to "จัดชิดเส้นตาราง"
-        )
-    )
-
-    private fun part16(): Map<String, Map<String, String>> = mapOf(
+        ),
         "snap_to_grid_desc" to mapOf(
             "zh-Hant" to "隨點隨寫時自動對齊頁面行線或方格",
             "en" to "Snap click-to-type text to page grid or lines",
@@ -10797,7 +10909,10 @@ object LocalizationStrings {
             "ja" to "重要",
             "ko" to "핵심",
             "th" to "จุดสำคัญ"
-        ),
+        )
+    )
+
+    private fun part17(): Map<String, Map<String, String>> = mapOf(
         "sticker_idea" to mapOf(
             "zh-Hant" to "靈感",
             "en" to "Idea",
@@ -10909,10 +11024,7 @@ object LocalizationStrings {
             "ja" to "タグ",
             "ko" to "태그",
             "th" to "แท็ก"
-        )
-    )
-
-    private fun part17(): Map<String, Map<String, String>> = mapOf(
+        ),
         "sticker_thumb_up" to mapOf(
             "zh-Hant" to "讚",
             "en" to "Good",
@@ -11440,7 +11552,10 @@ object LocalizationStrings {
             "ja" to "指定した iCloud またはローカルのフォルダを介してノートと手書きを双方向に同期します。当方を経由することはありません。",
             "ko" to "선택한 iCloud 또는 로컬 폴더를 통해 노트와 필기를 양방향으로 동기화합니다. 내용은 당사를 거치지 않습니다.",
             "th" to "ซิงก์โน้ตและลายมือสองทางผ่านโฟลเดอร์ iCloud หรือโฟลเดอร์ในเครื่องที่คุณเลือก โดยไม่ผ่านเรา"
-        ),
+        )
+    )
+
+    private fun part18(): Map<String, Map<String, String>> = mapOf(
         "sync_explainer_none" to mapOf(
             "zh-Hant" to "支援 Google Drive 跨平台同步，或 iCloud Drive 資料夾免帳號同步。",
             "en" to "Sync across platforms with Google Drive, or use an iCloud Drive folder with no account at all.",
@@ -11552,10 +11667,7 @@ object LocalizationStrings {
             "ja" to "%@ は両方の端末で変更されています。クラウド側を残しました。ご確認ください",
             "ko" to "%@ 이(가) 양쪽 기기에서 모두 변경되었습니다. 클라우드 사본을 유지했습니다. 확인해 주세요",
             "th" to "%@ ถูกแก้ไขบนทั้งสองอุปกรณ์ ระบบเก็บสำเนาบนคลาวด์ไว้ โปรดตรวจสอบ"
-        )
-    )
-
-    private fun part18(): Map<String, Map<String, String>> = mapOf(
+        ),
         "sync_needs_reauth" to mapOf(
             "zh-Hant" to "登入狀態已過期，請重新登入",
             "en" to "Session expired — please sign in again",
@@ -12083,7 +12195,10 @@ object LocalizationStrings {
             "ja" to "下線",
             "ko" to "밑줄",
             "th" to "ขีดเส้นใต้"
-        ),
+        )
+    )
+
+    private fun part19(): Map<String, Map<String, String>> = mapOf(
         "theme_aesthetic" to mapOf(
             "zh-Hant" to "美學視覺",
             "en" to "Aesthetic & Visual",
@@ -12195,10 +12310,7 @@ object LocalizationStrings {
             "ja" to "このスレッドは解決済みです",
             "ko" to "이 스레드는 해결됨으로 표시되었습니다",
             "th" to "การสนทนานี้ถูกทำเครื่องหมายว่าแก้ไขแล้ว"
-        )
-    )
-
-    private fun part19(): Map<String, Map<String, String>> = mapOf(
+        ),
         "thumbnail_larger" to mapOf(
             "zh-Hant" to "放大預覽",
             "en" to "Larger Previews",
@@ -12726,7 +12838,10 @@ object LocalizationStrings {
             "ja" to "月曜から日曜までの7列と罫線",
             "ko" to "월~일 7열과 괘선",
             "th" to "เจ็ดคอลัมน์วันพร้อมเส้นบรรทัด"
-        ),
+        )
+    )
+
+    private fun part20(): Map<String, Map<String, String>> = mapOf(
         "todo_list" to mapOf(
             "zh-Hant" to "待辦事項清單",
             "en" to "To-do list",
@@ -12838,10 +12953,7 @@ object LocalizationStrings {
             "ja" to "マスキングテープ",
             "ko" to "마스킹 테이프",
             "th" to "กระดาษกาว"
-        )
-    )
-
-    private fun part20(): Map<String, Map<String, String>> = mapOf(
+        ),
         "tool_oilpaint" to mapOf(
             "zh-Hant" to "油畫筆",
             "en" to "Oil Brush",
@@ -13369,7 +13481,10 @@ object LocalizationStrings {
             "ja" to "ロック解除中…",
             "ko" to "잠금 해제 중…",
             "th" to "กำลังปลดล็อก…"
-        ),
+        )
+    )
+
+    private fun part21(): Map<String, Map<String, String>> = mapOf(
         "unlock_wrong_recovery" to mapOf(
             "zh-Hant" to "這組復原碼開不了這本筆記",
             "en" to "That recovery code does not open this notebook",
@@ -13481,10 +13596,7 @@ object LocalizationStrings {
             "ja" to "書類内の手書きキャンバス",
             "ko" to "문서 안의 필기 캔버스",
             "th" to "ผืนผ้าใบลายมือในเอกสาร"
-        )
-    )
-
-    private fun part21(): Map<String, Map<String, String>> = mapOf(
+        ),
         "wd_insert_divider" to mapOf(
             "zh-Hant" to "插入分隔線",
             "en" to "Insert divider",
