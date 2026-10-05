@@ -1,7 +1,7 @@
 """筆畫的基本運算：平滑、文字排版、預覽。全部只用標準函式庫 + PIL（預覽用）。"""
 import math
 
-from glyphs import GLYPHS, LATIN
+from glyphs import LATIN
 
 
 def catmull(points, step=3.0):
@@ -55,52 +55,6 @@ class Page:
     def add_all(self, strokes, color, width, smooth=False):
         for s in strokes:
             self.add(s, color, width, smooth)
-
-
-def glyph_strokes(ch, x, y, size):
-    """把一個字的筆畫放到 (x, y) 左上角、邊長 `size` 的方塊裡。回傳 [(points, smooth)]。"""
-    out = []
-    spec = GLYPHS[ch]
-    k = size / 100.0
-    for item in spec:
-        if item[0] == "raw":
-            for s in item[1]:
-                out.append([(x + px * k, y + py * k) for px, py in s])
-        else:
-            _, comp, x0, y0, x1, y1 = item
-            for s in comp:
-                out.append([(x + (x0 + px * (x1 - x0)) * k, y + (y0 + py * (y1 - y0)) * k) for px, py in s])
-    return out
-
-
-def draw_cjk(page, text, x, y, size, color, width, gap=0.04):
-    """一行中文標題。逐字手寫，字距 = 字寬 × (1 + gap)。"""
-    cx = x
-    for ch in text:
-        if ch == " ":
-            cx += size * 0.4
-            continue
-        for s in glyph_strokes(ch, cx, y, size):
-            page.add(s, color, width, smooth=_is_curvy(s))
-        cx += size * (1 + gap)
-    return cx
-
-
-def _is_curvy(stroke):
-    """有三個點以上、而且轉彎不是太硬的才平滑，避免橫豎折變成圓角。"""
-    if len(stroke) < 3:
-        return False
-    sharp = 0
-    for a, b, c in zip(stroke, stroke[1:], stroke[2:]):
-        v1 = (b[0] - a[0], b[1] - a[1])
-        v2 = (c[0] - b[0], c[1] - b[1])
-        n1, n2 = math.hypot(*v1), math.hypot(*v2)
-        if n1 == 0 or n2 == 0:
-            continue
-        cos = (v1[0] * v2[0] + v1[1] * v2[1]) / (n1 * n2)
-        if cos < 0.2:  # 轉角超過約 78°：當成折角
-            sharp += 1
-    return sharp == 0
 
 
 def draw_latin(page, text, x, y, size, color, width, gap=10):

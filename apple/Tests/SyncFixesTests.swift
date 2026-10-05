@@ -395,18 +395,18 @@ final class RecordingTitleInPackageTests: XCTestCase {
 @MainActor
 final class KairumoManualSeedTests: XCTestCase {
 
-    func testTheInkResourceIsBundledAndHasTwoPagesOfStrokes() {
+    func testTheInkResourceIsBundledAndHasFourPagesOfStrokes() {
         let drawings = SeedContent.kairumoManualDrawings()
-        XCTAssertEqual(drawings.count, 2, "手冊資源沒有進 bundle 或解不開")
+        XCTAssertEqual(drawings.count, 4, "手冊資源沒有進 bundle 或解不開")
         for (index, drawing) in drawings.enumerated() {
             XCTAssertGreaterThan(drawing.strokes.count, 100, "第 \(index + 1) 頁的筆畫太少")
         }
     }
 
     func testTheManualIsInkOnlyAndUsesDifferentColoursPerSection() {
-        var doc = NotebookDocument(id: SeedContent.kairumoManualId, title: SeedContent.kairumoManualTitle, pageCount: 2)
+        var doc = NotebookDocument(id: SeedContent.kairumoManualId, title: SeedContent.kairumoManualTitle, pageCount: 4)
         SeedContent.fillKairumoManual(&doc)
-        XCTAssertEqual(doc.pageCount, 2)
+        XCTAssertEqual(doc.pageCount, 4)
         XCTAssertTrue((doc.textAttachments ?? []).isEmpty)
         XCTAssertTrue((doc.shapeAttachments ?? []).isEmpty)
         XCTAssertTrue((doc.attachments ?? []).isEmpty)
@@ -417,6 +417,16 @@ final class KairumoManualSeedTests: XCTestCase {
             return String(format: "%02x%02x%02x", Int(r * 255), Int(g * 255), Int(b * 255))
         })
         XCTAssertGreaterThanOrEqual(colours.count, 5, "每個段落要有自己的顏色")
+    }
+
+    func testTheStrokeDataLicenceTravelsWithTheApp() {
+        // 筆順資料來自 Arphic 字型（Arphic Public License）：授權全文要隨 App 一起散布。
+        for name in ["ARPHICPL", "NOTICE"] {
+            let ext = name == "ARPHICPL" ? "TXT" : "txt"
+            let url = Bundle.main.url(forResource: name, withExtension: ext, subdirectory: "Templates")
+                ?? Bundle.main.url(forResource: name, withExtension: ext)
+            XCTAssertNotNil(url, "\(name).\(ext) 沒有進 bundle")
+        }
     }
 
     func testTheNameIsFixed() {

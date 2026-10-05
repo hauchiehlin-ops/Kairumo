@@ -35,8 +35,8 @@ class KairumoManualSeedTest {
         SeedNotebooks.seedIfEmpty(context, device, "zh-Hant")
         val entry = assertNotNull(manual()).let { manual()!! }
         val (session, _) = NotebookLibrary.open(context, entry.id, device)!!
-        assertEquals(2, session.pageCount().toInt())
-        for (index in 0 until 2) {
+        assertEquals(4, session.pageCount().toInt())
+        for (index in 0 until 4) {
             val page = session.pageIdAt(index.toUInt())!!
             assertTrue("第 ${index + 1} 頁的筆畫太少", session.visibleStrokes(page).size > 100)
             // 只有筆畫：不能有文字、表格、圖片區塊。
@@ -44,6 +44,17 @@ class KairumoManualSeedTest {
             assertTrue(session.tableBlockIds(page).isEmpty())
             assertTrue(session.imageBlockIds(page).isEmpty())
         }
+    }
+
+    @Test
+    fun theStrokeDataLicenceTravelsWithTheApp() {
+        // 筆順資料來自 Arphic 字型（Arphic Public License）：授權全文要隨 App 一起散布。
+        for (name in listOf("seed/ARPHICPL.TXT", "seed/NOTICE.txt")) {
+            val text = context.assets.open(name).bufferedReader().use { it.readText() }
+            assertTrue("$name 是空的", text.isNotBlank())
+        }
+        val licence = context.assets.open("seed/ARPHICPL.TXT").bufferedReader().use { it.readText() }
+        assertTrue(licence.contains("ARPHIC PUBLIC LICENSE"))
     }
 
     @Test

@@ -476,6 +476,16 @@ Markdown / SVG 匯出 · 手寫辨識 fallback 鏈 · 引擎與權限中心狀�
   VoiceOver 沒跑過（模擬器不支援）；TalkBack 已在 Android 模擬器上開過，但朗讀文字不會寫進 logcat，改以無障礙節點樹（uiautomator）逐一檢查製圖面板每個控制項的名稱
   （標籤與 contentDescription 已補、`AccessibilityLabelTests` 通過）；多語系文案未經母語者審閱。
 
+## 預載筆記本《Kairumo手冊》（手繪）
+
+四頁（封面＋一、二、三、總結）全部是筆畫，沒有文字方塊。標題與內文用 **Make Me a Hanzi** 的標準筆順中線逐字手寫
+（`scripts/manual_ink/hanzi.py`），插圖是一筆一筆畫的。產物 `assets/seed/kairumo-manual-ink.json`，兩平台讀同一份。
+- 內文在 `scripts/manual_ink/manual_text.py`（對照 `docs/manual/manual.js` 實際有的功能，不寫做不到的事）。改了文字要先跑
+  `build_hanzi_subset.py`（把新字放進子集）再跑 `manual.py`。
+- 筆順資料授權 **Arphic Public License**（`third_party/makemeahanzi/`：README 有評估、`ARPHICPL.TXT` 全文逐位元組未改、
+  `NOTICE.txt` 修改聲明）。授權全文與聲明**隨 App 打包**（Android `assets/seed/`、Apple `Templates/`），兩平台各有測試守著。
+  不取用 `dictionary.txt`（LGPL-3.0）。
+
 ## 已實作但**尚未驗證**（不要當成完成）
 
 - whisper.cpp ASR：編譯與錯誤路徑已測，**轉錄品質未實測**（需模型 + 中文測試集）

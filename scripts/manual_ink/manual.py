@@ -1,19 +1,25 @@
 """《Kairumo手冊》的版面與插圖。
 
-全部內容都是筆畫（手繪）：標題是逐字手寫、插圖是一筆一筆畫的。這支腳本只輸出筆畫，
+全部內容都是筆畫（手繪）：標題與內文是用 makemeahanzi 的標準筆順中線逐字手寫
+（`hanzi.py`；資料與授權見 `third_party/makemeahanzi/`），插圖是一筆一筆畫的。這支腳本只輸出筆畫，
 沒有任何文字方塊或形狀物件 —— 產物是 `assets/seed/kairumo-manual-ink.json`，
 Apple 與 Android 各自讀它、用自己的筆刷畫進筆記本。
+
+四頁：封面＋一、二、三、總結（每頁一個主題：標題、導語、三個要點、插圖、頁尾）。
 
 用法：python3 scripts/manual_ink/manual.py   # 產生 JSON 與預覽圖
 """
 import json
 import math
 import random
+import shutil
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from ink import Page, draw_cjk, draw_latin, preview  # noqa: E402
+import hanzi  # noqa: E402
+import manual_text as T  # noqa: E402
+from ink import Page, draw_latin, preview  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[2]
 W, H = 800, 1132
@@ -132,24 +138,89 @@ class Pen:
 # ---- 版面 ----------------------------------------------------------------
 
 
-def heading(page, text, x, y, size, color, width=4.0):
-    draw_cjk(page, text, x, y, size - 2, color, width, gap=0.09)
+
+INK = "#2D3748"          # 內文墨色
+INK_W = 2.3
+SOFT = "#718096"
 
 
-def page1():
-    p = Page(W, H)
-    # 標題：Kairumo 優勢
-    end = draw_latin(p, "Kairumo", 44, 52, 92, NAVY, 5.2, gap=9)
-    draw_cjk(p, "優勢", end + 22, 56, 88, RED, 5.0, gap=0.04)
-    pen = Pen(p, GOLD, 4)
-    pen.wavy(48, 172, 740, amp=4, period=34)
-    pen.star(760, 70, 20, w=3.2)
-    pen.star(716, 138, 11, w=3, color=S2)
-    pen.star(60, 30, 10, w=3, color=S1)
-    pen.ellipse(700, 40, 6, 6, w=3, color=S3)
+def new_page():
+    return Page(W, H)
 
-    # ---- 一、結構化的資訊呈現 ----
-    heading(p, "一、結構化的資訊呈現", 44, 214, 54, S1)
+
+def merge(dst, src, dx=0.0, dy=0.0, s=1.0):
+    """把 src 的筆畫平移＋縮放後併進 dst。插圖用原本的座標畫，再搬到這一頁要放的位置。"""
+    for st in src.strokes:
+        dst.strokes.append({
+            "color": st["color"], "width": round(st["width"] * (0.5 + 0.5 * s), 2),
+            "points": [(round(x * s + dx, 1), round(y * s + dy, 1)) for x, y in st["points"]],
+        })
+
+
+# ---- 版面元件 ------------------------------------------------------------
+
+
+def heading(page, text, x, y, size, color, width=3.5):
+    """段落標題：標準筆順手寫，字距略寬。"""
+    hanzi.write_line(page, text, x, y, size, color, width, gap=0.10, hand=0.7)
+
+
+def double_rule(page, y, color, x0=56, x1=744):
+    """經典的雙線：一條粗短的重點線壓在一條細長線上。"""
+    pen = Pen(page, color, 2.0)
+    pen.line((x0, y), (x1, y), w=1.6, color=color)
+    pen.line((x0, y + 7), (x0 + 150, y + 7), w=4.2, color=GOLD)
+    pen.line((x0 + 158, y + 7), (x0 + 176, y + 7), w=4.2, color=GOLD)
+
+
+def diamond(page, cx, cy, r, color):
+    pen = Pen(page, color, 2.4)
+    pen.poly([(cx, cy - r), (cx + r, cy), (cx, cy + r), (cx - r, cy)], close=True, w=2.4)
+    pen.dot(cx, cy, 1.4, w=1.6)
+
+
+def section_text(page, key, color, y, lead_size=31, size=25, pitch=39, gap_after=16, with_marks=True):
+    """導語＋三個要點。回傳下一個可用的 y。"""
+    sec = T.SECTIONS[key]
+    x_text = 90
+    hanzi.write_line(page, sec["lead"], 56, y, lead_size, color, 2.9, gap=0.10, hand=0.8)
+    y += lead_size + 22
+    max_chars = int((744 - x_text) / (size * 1.10))
+    for point in sec["points"]:
+        lines = hanzi.wrap(point, max_chars)
+        if with_marks:
+            diamond(page, 68, y + size * 0.55, 6, color)
+        for ln in lines:
+            hanzi.write_line(page, ln, x_text, y, size, INK, INK_W, gap=0.10, hand=1.0)
+            y += pitch
+        y += gap_after
+    return y
+
+
+def footer(page, index):
+    pen = Pen(page, SOFT, 1.6)
+    pen.line((56, 1070), (744, 1070), w=1.4, color=SOFT)
+    draw_latin(page, "Kairumo", 56, 1084, 20, SOFT, 1.8, gap=6)
+    label = T.FOOTER_PAGE[index]
+    w = hanzi.line_width(label, 20, 0.2)
+    hanzi.write_line(page, label, 744 - w, 1084, 20, SOFT, 1.8, gap=0.2, hand=0.5)
+
+
+def seal(page, cx, cy, text, size=74):
+    """朱紅印章：方框＋上下兩個字，微微歪一點。"""
+    pen = Pen(page, RED, 3.0)
+    half = size / 2
+    pen.rect(cx - half, cy - half, cx + half, cy + half, r=5, w=3.4)
+    pen.rect(cx - half + 5, cy - half + 5, cx + half - 5, cy + half - 5, r=3, w=1.4)
+    cs = size * 0.40
+    for i, ch in enumerate(text[:2]):
+        hanzi.write_char(page, ch, cx - cs / 2, cy - half + 8 + i * (cs + 2), cs, RED, 2.8, hand=0.6)
+
+
+# ---- 插圖（用原本的座標畫在暫存頁，再搬到各頁） ---------------------------
+
+
+def art1(p):
     s = Pen(p, S1, 3.0)
     # 左：文件頁（標題層級、段落、有序步驟）
     s.rect(70, 318, 380, 640, r=12)
@@ -193,8 +264,8 @@ def page1():
     s.line((394, 558), (424, 556), w=3.2)
     s.line((392, 572), (422, 570), w=3.2)
 
-    # ---- 二、視覺化的直觀設計 ----
-    heading(p, "二、視覺化的直觀設計", 44, 690, 54, S2)
+
+def art2(p):
     o = Pen(p, S2, 3.0)
     # 眼睛
     o.stroke([(70, 830), (150, 770), (250, 770), (330, 830), (250, 890), (150, 890), (70, 830)], w=3.4)
@@ -231,13 +302,9 @@ def page1():
     for a in (-90, -50, -130):
         r = math.radians(a)
         o.line((344 + 38 * math.cos(r), 982 + 38 * math.sin(r)), (344 + 52 * math.cos(r), 982 + 52 * math.sin(r)), w=2.6, color=S2L)
-    return p
 
 
-def page2():
-    p = Page(W, H)
-    # ---- 三、多語言的友善支援 ----
-    heading(p, "三、多語言的友善支援", 44, 56, 54, S3)
+def art3(p):
     g = Pen(p, S3, 3.0)
     cx, cy = 250, 340
     g.ellipse(cx, cy, 120, 120, w=3.4)
@@ -289,8 +356,10 @@ def page2():
     g.stroke([(560, 750), (680, 750)], w=3.0, color=S3L)
     g.ellipse(620, 750, 60, 12, w=2.6, color=S3L)
 
-    # ---- 總結 ----
-    heading(p, "總結", 44, 836, 56, S4)
+
+
+def art4(p):
+    """獎盃與彩紙（原座標：獎盃中心 x=520）。"""
     t = Pen(p, S4, 3.2)
     # 獎盃
     tx = 520
@@ -302,11 +371,6 @@ def page2():
     t.rect(tx - 50, 1096, tx + 50, 1116, r=5, w=3.4)
     t.hatch(tx - 56, 936, tx + 56, 1000, gap=11, w=1.8, color=S4L)
     t.star(tx, 985, 30, w=3.4)
-    # 三個勾（結構、視覺、語言）
-    for i, yy in enumerate((950, 1010, 1070)):
-        t.rect(80, yy - 24, 300, yy + 24, r=22, w=3, color=S4L)
-        t.check(100, yy - 12, 26, w=4)
-        t.wavy(144, yy, 144 + 120 - i * 12, amp=1.6, w=2.6)
     # 彩帶與彩紙
     for (x, y, k) in ((640, 910, 0), (700, 960, 1), (730, 1030, 2), (410, 920, 3), (690, 1090, 0), (420, 1060, 1), (350, 1000, 2)):
         if k == 0:
@@ -317,12 +381,91 @@ def page2():
             t.poly([(x, y), (x + 12, y + 4), (x + 4, y + 14)], close=True, w=2.8, color=S4L)
         else:
             t.star(x, y, 9, w=2.8, color=GOLD)
-    t.wavy(60, 1118, 330, amp=3, period=30, w=3.2, color=S4L)
+
+
+# ---- 四頁 ----------------------------------------------------------------
+
+
+def cover():
+    p = new_page()
+    # 標題：Kairumo 優勢
+    end = draw_latin(p, "Kairumo", 44, 52, 92, NAVY, 5.2, gap=9)
+    hanzi.write_line(p, T.TITLE_CJK, end + 22, 56, 88, RED, 5.6, gap=0.04, hand=0.5)
+    pen = Pen(p, GOLD, 4)
+    pen.wavy(48, 172, 740, amp=4, period=34)
+    pen.star(760, 70, 20, w=3.2)
+    pen.star(716, 138, 11, w=3, color=S2)
+    pen.star(60, 30, 10, w=3, color=S1)
+    pen.ellipse(700, 40, 6, 6, w=3, color=S3)
+    hanzi.write_line(p, T.SUBTITLE, 56, 190, 26, SOFT, 2.4, gap=0.12, hand=0.8)
+    # 一、
+    heading(p, T.HEADINGS["s1"], 56, 262, 46, S1)
+    double_rule(p, 322, S1L)
+    y = section_text(p, "s1", S1, 346)
+    q = new_page()
+    art1(q)
+    merge(p, q, dx=0, dy=max(y + 20, 690) - 318)
+    footer(p, 0)
+    return p
+
+
+def page_s2():
+    p = new_page()
+    heading(p, T.HEADINGS["s2"], 56, 56, 46, S2)
+    double_rule(p, 116, S2L)
+    y = section_text(p, "s2", S2, 140)
+    q = new_page()
+    art2(q)
+    # 插圖放大一點，並置中在「要點下緣」到「頁尾線」之間（原圖 x 70..730、y 760..1076）。
+    sc = 1.08
+    top, bottom = y + 20, 1050
+    merge(p, q, dx=(W - 660 * sc) / 2 - 70 * sc, dy=(top + bottom) / 2 - 318 * sc / 2 - 760 * sc, s=sc)
+    footer(p, 1)
+    return p
+
+
+def page_s3():
+    p = new_page()
+    heading(p, T.HEADINGS["s3"], 56, 56, 46, S3)
+    double_rule(p, 116, S3L)
+    y = section_text(p, "s3", S3, 140)
+    q = new_page()
+    art3(q)
+    s = min(0.85, (1060 - (y + 10)) / 640)
+    merge(p, q, dx=(W - 640 * s) / 2 - 80 * s, dy=y + 10 - 150 * s, s=s)
+    footer(p, 2)
+    return p
+
+
+def page_summary():
+    p = new_page()
+    heading(p, T.HEADINGS["s4"], 56, 56, 52, S4)
+    double_rule(p, 120, S4L)
+    sec = T.SECTIONS["s4"]
+    hanzi.write_line(p, sec["lead"], 56, 146, 31, S4, 2.9, gap=0.10, hand=0.8)
+    # 三個勾：每列一個圓角框＋勾＋手寫的一句
+    pen = Pen(p, S4L, 3)
+    y = 232
+    for line in sec["points"]:
+        pen.rect(56, y - 14, 744, y + 58, r=24, w=3, color=S4L)
+        pen.check(84, y + 8, 30, w=4.4, color=S4)
+        hanzi.write_line(p, line, 134, y + 4, 28, INK, 2.5, gap=0.10, hand=1.0)
+        y += 100
+    # 獎盃
+    q = new_page()
+    art4(q)
+    merge(p, q, dx=-120, dy=-300)
+    # 結語與印章
+    cx = hanzi.write_line(p, "讓每個人，都能輕鬆上手", 56, 872, 32, NAVY, 2.8, gap=0.10, hand=0.8)
+    cx = draw_latin(p, "Kairumo", cx + 10, 876, 34, RED, 3.0, gap=6)
+    hanzi.write_line(p, "。", cx - 2, 872, 32, NAVY, 2.8, hand=0.8)
+    seal(p, 676, 975, sec["seal"])
+    footer(p, 3)
     return p
 
 
 def build():
-    pages = [page1(), page2()]
+    pages = [cover(), page_s2(), page_s3(), page_summary()]
     data = {
         "version": 1,
         "title": "Kairumo手冊",
@@ -338,9 +481,15 @@ def build():
     # Android 由 gradle 從 assets/seed 複製。**只改 assets/seed 那份，其餘由這支腳本寫。**
     apple = ROOT / "apple/Resources/Templates/kairumo-manual-ink.json"
     apple.write_text(out.read_text())
+    # 筆順資料的授權（Arphic Public License）要隨成品一起散布：全文未改動 + 修改聲明。
+    # 兩個平台的 App 都把它們一起打包（Android 由 gradle 複製 assets/seed，Apple 讀 Templates）。
+    src = ROOT / "third_party/makemeahanzi"
+    for name in ("ARPHICPL.TXT", "NOTICE.txt"):
+        for dest in (out.parent, apple.parent):
+            shutil.copyfile(src / name, dest / name)   # 逐位元組複製：授權全文不能被改動（連換行都不行）
     total = sum(len(pg.strokes) for pg in pages)
     pts = sum(len(s["points"]) for pg in pages for s in pg.strokes)
-    print(f"{out.relative_to(ROOT)}  {total} 筆 / {pts} 點 / {out.stat().st_size // 1024} KB")
+    print(f"{out.relative_to(ROOT)}  {len(pages)} 頁 / {total} 筆 / {pts} 點 / {out.stat().st_size // 1024} KB")
     preview(pages, "/private/tmp/claude-501/manual{0}.png", scale=0.9)
     return pages
 

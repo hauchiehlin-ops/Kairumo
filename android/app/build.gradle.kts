@@ -121,6 +121,9 @@ val copyUserDocs by tasks.registering(Copy::class) {
     from("$rootDir/../templates/document-templates.json") { into("templates") }
     // 《Kairumo手冊》的手繪筆畫（由 scripts/manual_ink/manual.py 產生；Apple 讀同一份）。
     from("$rootDir/../assets/seed/kairumo-manual-ink.json") { into("seed") }
+    // 手冊筆順資料的授權（Arphic Public License 全文未改動 + 修改聲明），隨 App 一起散布。
+    from("$rootDir/../assets/seed/ARPHICPL.TXT") { into("seed") }
+    from("$rootDir/../assets/seed/NOTICE.txt") { into("seed") }
     into(layout.buildDirectory.dir("generated/docsAssets"))
 }
 
