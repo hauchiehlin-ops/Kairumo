@@ -172,6 +172,10 @@ public enum NoteTemplate: String, Codable, CaseIterable, Identifiable {
     case english3Line = "english_3line"
     case errorBook = "error_book"
 
+    // ---- 圖學 ----
+    case draftingSteps = "drafting_steps"
+    case draftingTrap = "drafting_trap"
+
     public var id: String { rawValue }
 
     /// 舊的十三個：中文 rawValue → 核心的英文 id。
