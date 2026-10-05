@@ -169,6 +169,18 @@ final class DraftingState: ObservableObject {
             .map(\.element)
     }
 
+    /// 顯示狀態的指紋（縮圖快取用：隱藏／顯示圖層之後縮圖要跟著變）。
+    func hiddenStamp(notebookId nb: String) -> String {
+        load(nb)
+        return (hidden[nb.lowercased()] ?? []).sorted().map(String.init).joined(separator: ",")
+    }
+
+    /// 這本筆記目前隱藏的圖層（匯出時略過）。
+    func hiddenLayers(notebookId nb: String) -> [UInt8] {
+        load(nb)
+        return (hidden[nb.lowercased()] ?? []).sorted()
+    }
+
     private func changed() {
         objectWillChange.send()
         NotificationCenter.default.post(name: .kairumoDraftingChanged, object: nil)

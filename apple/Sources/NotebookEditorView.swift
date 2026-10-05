@@ -2264,7 +2264,12 @@ public struct NotebookEditorView: View {
                         //
                         // 文書排版的工具（`WordToolbarView`）仍在工具列上，操作的是
                         // 這塊畫布上的文字方塊。
+                        //
+                        // 寬度要**釘在剩下的空間**：A3 橫式這類大頁面的畫布理想寬度比螢幕大，
+                        // 不釘的話整塊工作區（連同工具列）被撐寬、右邊的工具被切到螢幕外。
                         canvasWorkArea
+                            .frame(minWidth: 0, maxWidth: .infinity)
+                            .clipped()
                     }
                     .onAppear { editorAvailableWidth = geo.size.width }
                     .onChange(of: geo.size.width) { newValue in
@@ -7117,10 +7122,12 @@ public struct NotebookEditorView: View {
             // 泰文與日文的字串比英文長 30–50%，那些語言核心預設只給圖示，
             // 而使用者也該有權在任何語言下關掉它。
             ViewThatFits(in: .horizontal) {
+                // fixedSize：量的是**理想寬度**。不加的話裡面的橫向捲動區（套索按鈕列）
+                // 什麼寬度都「塞得下」，這一排就永遠被選中，然後被切掉一截而不是換行。
                 if toolbarSettings.showLabels {
-                    drawingToolbarRow(showToolLabels: true)
+                    drawingToolbarRow(showToolLabels: true).fixedSize(horizontal: true, vertical: false)
                 }
-                drawingToolbarRow(showToolLabels: false)
+                drawingToolbarRow(showToolLabels: false).fixedSize(horizontal: true, vertical: false)
                 WrapLayout(spacing: 12, lineSpacing: 8) {
                     drawingToolbarItems(showToolLabels: false)
                 }
@@ -7458,7 +7465,8 @@ public struct NotebookEditorView: View {
                         .help(localizationManager.localized("delete_selected"))
                     }
                     }
-                    .frame(maxWidth: 560)
+                    // 窄畫面（側邊欄開著的直向 iPad 只剩約 550pt）塞不下 560，會把整排撐出畫面。
+                    .frame(maxWidth: 400)
                 }
 
 
@@ -9496,9 +9504,13 @@ public struct NotebookEditorView: View {
             }
         }
 
+        // 專業筆刷（含全部製圖線）不在 PKDrawing 裡：另外讀進來，隱藏的圖層略過。
+        let pro = (0..<max(notebook.pageCount, 1)).map {
+            PageThumbnailRenderer.proStrokes(notebook: notebook, pageIndex: $0, store: store)
+        }
         if let data = try? NotebookPackageBridge.exportPdf(
             document: notebook, drawings: drawings, imageData: images,
-            deviceId: NotebookMigration.deviceId
+            deviceId: NotebookMigration.deviceId, proStrokes: pro
         ), !data.isEmpty {
             return data
         }

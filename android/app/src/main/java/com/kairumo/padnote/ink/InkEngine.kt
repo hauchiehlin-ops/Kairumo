@@ -168,7 +168,18 @@ class InkEngine(
 
     /** 收回最後一筆（或最後一次插入的一整組）。回傳是否真的收回了東西。 */
     fun undo(): Boolean {
+        val act = acts.lastOrNull()
+        if (act is ReassignAct) {
+            acts.removeLast()
+            if (setLayerOf(act.key, act.from)) {
+                redoActs += act
+                return true
+            }
+        } else if (act != null) {
+            acts.removeLast()
+        }
         val last = _strokes.lastOrNull() ?: return false
+        redoActs += AddAct
         val removed = if (last.group != 0) _strokes.filter { it.group == last.group } else listOf(last)
         val target = session
         val page = pageId
@@ -184,7 +195,18 @@ class InkEngine(
 
     /** 把最後一次收回的筆畫（或整組）放回去。 */
     fun redo(): Boolean {
+        val next = redoActs.lastOrNull()
+        if (next is ReassignAct) {
+            redoActs.removeLast()
+            if (setLayerOf(next.key, next.to)) {
+                acts += next
+                return true
+            }
+        } else if (next != null) {
+            redoActs.removeLast()
+        }
         val first = redoStack.removeLastOrNull() ?: return false
+        acts += AddAct
         val batch = mutableListOf(first)
         if (first.group != 0) {
             while (redoStack.lastOrNull()?.group == first.group) batch += redoStack.removeLast()
@@ -248,6 +270,8 @@ class InkEngine(
         }
         if (count > 0) {
             redoStack.clear()
+            redoActs.clear()
+            acts += AddAct
             onContentCommitted?.invoke()
         }
         return count
@@ -307,6 +331,18 @@ class InkEngine(
         }
         val old = best ?: return false
         if (old.layer == targetLayer) return true
+        setLayerOf(old.pointerId, targetLayer)
+        // 可復原：改圖層也進動作紀錄，與落筆、整組插入照時間順序一起復原／重做。
+        acts += ReassignAct(old.pointerId, old.layer, targetLayer)
+        redoActs.clear()
+        return true
+    }
+
+    /** 把筆畫（以 pointerId 認）改到某一層。核心是 append-only：擦掉舊的、用新圖層寫一筆新的。 */
+    private fun setLayerOf(key: ULong, layer: Int): Boolean {
+        val index = _strokes.indexOfFirst { it.pointerId == key }
+        if (index < 0) return false
+        val old = _strokes[index]
         val target = session
         val page = pageId
         var newId: String? = null
@@ -315,15 +351,21 @@ class InkEngine(
             newId = runCatching {
                 target.addStrokeDrafted(
                     page, old.tool, old.colorRgba, old.baseWidth, old.points,
-                    targetLayer.toUByte(), old.lineType.toUByte()
+                    layer.toUByte(), old.lineType.toUByte()
                 )
             }.getOrNull()
         }
-        val index = _strokes.indexOf(old)
-        _strokes[index] = old.copy(coreStrokeId = newId, layer = targetLayer)
+        _strokes[index] = old.copy(coreStrokeId = newId, layer = layer)
         if (newId != null) onContentCommitted?.invoke()
         return true
     }
+
+    // ── 動作紀錄：筆畫的落筆／插入，與「改圖層」要照時間順序復原 ──
+    private sealed interface Act
+    private data object AddAct : Act
+    private data class ReassignAct(val key: ULong, val from: Int, val to: Int) : Act
+    private val acts = mutableListOf<Act>()
+    private val redoActs = mutableListOf<Act>()
 
     /**
      * 最後一個事件的原始資訊，給畫面上的診斷列用。
@@ -563,6 +605,8 @@ class InkEngine(
         // 畫了新的東西就沒有「重做」可言了 —— 留著的話，按下重做會把
         // 一筆與現在的畫面毫無關係的筆畫放回來。
         redoStack.clear()
+        redoActs.clear()
+        acts += AddAct
         if (coreId != null) committed[id] = coreId
         return stroke
     }
@@ -651,6 +695,8 @@ class InkEngine(
         val loaded = runCatching { target.visibleStrokeDetails(page) }.getOrNull() ?: return
 
         _strokes.clear()
+        acts.clear()
+        redoActs.clear()
         committed.clear()
         var syntheticId = ULong.MAX_VALUE
         for (stroke in loaded) {
@@ -782,6 +828,8 @@ class InkEngine(
 
     /** 切換頁面或視圖時呼叫。 */
     fun reset() {
+        acts.clear()
+        redoActs.clear()
         inFlight.clear()
         committed.clear()
         _strokes.clear()

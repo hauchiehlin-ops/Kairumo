@@ -304,4 +304,13 @@ final class ProInkTests: XCTestCase {
         XCTAssertTrue(sheet.strokes.contains { $0.layer == 3 && $0.lineType == 1 }, "等角圖背面三條隱藏線")
         XCTAssertTrue(sheet.strokes.contains { $0.layer == 2 }, "投射線在中層")
     }
+
+    func testPdfExportCarriesProStrokesAndDashedLineTypes() throws {
+        let doc = NotebookDocument(title: "P", pageCount: 1)
+        let plain = try NotebookPackageBridge.exportPdf(document: doc, drawings: [PKDrawing()], deviceId: deviceA)
+        let hidden = drafted(layer: 3, lineType: 1, x: 20)
+        let withInk = try NotebookPackageBridge.exportPdf(
+            document: doc, drawings: [PKDrawing()], deviceId: deviceA, proStrokes: [[hidden]])
+        XCTAssertGreaterThan(withInk.count, plain.count, "匯出的 PDF 要含專業筆畫（製圖線）")
+    }
 }

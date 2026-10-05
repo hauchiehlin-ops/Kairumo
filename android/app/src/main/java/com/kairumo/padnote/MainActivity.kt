@@ -2483,6 +2483,10 @@ private fun InkScreen(
         DraftingState.attach(activity)
         DraftingState.use(notebookId ?: "")
     }
+    // 匯出／列印時略過這本筆記隱藏的圖層：PDF 與圖片要跟畫面上看到的一致。
+    LaunchedEffect(notebook, DraftingState.version) {
+        notebook?.first?.setExportHiddenLayers(DraftingState.hiddenLayers())
+    }
     // 立體輔助與步驟編號。
     var showSolidStudio by remember { mutableStateOf(false) }
     LaunchedEffect(inkTool, DraftingState.markerMode) {

@@ -2053,6 +2053,11 @@ impl PadnoteSession {
         Ok(self.lock().export_markdown()?)
     }
 
+    /// 設定匯出／列印時要略過的製圖圖層（使用者在這台裝置上隱藏的那幾層）。
+    pub fn set_export_hidden_layers(&self, layers: Vec<u8>) {
+        self.lock().set_export_hidden_layers(layers);
+    }
+
     /// 匯出整份筆記本為 PDF 位元組流（工作項 S-18 / S-43）。
     pub fn export_pdf(&self) -> Result<Vec<u8>, FfiError> {
         Ok(self

@@ -130,6 +130,9 @@ object DraftingState {
         prefs?.edit()?.putInt("angle", deg)?.apply()
     }
 
+    /** 隱藏中的圖層（匯出時略過）。 */
+    fun hiddenLayers(): ByteArray = hidden.sorted().map { it.toByte() }.toByteArray()
+
     fun isHidden(layer: Int) = layer != 0 && layer in hidden
     fun isLocked(layer: Int) = layer != 0 && layer in locked
 

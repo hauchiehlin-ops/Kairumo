@@ -435,7 +435,8 @@ enum NotebookPackageBridge {
         document: NotebookDocument,
         drawings: [PKDrawing],
         imageData: [String: Data] = [:],
-        deviceId: UInt32
+        deviceId: UInt32,
+        proStrokes: [[ProStroke]] = []
     ) throws -> Data {
         // 用一個暫存套件當中繼。它在匯出完就沒有用了。
         let staging = FileManager.default.temporaryDirectory
@@ -444,7 +445,7 @@ enum NotebookPackageBridge {
 
         try export(
             document: document, drawings: drawings, imageData: imageData,
-            to: staging, deviceId: deviceId
+            to: staging, deviceId: deviceId, proStrokes: proStrokes
         )
 
         let session = try PadnoteSession.openExisting(path: staging.path, deviceId: deviceId)

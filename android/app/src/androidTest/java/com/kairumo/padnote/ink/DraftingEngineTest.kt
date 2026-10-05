@@ -118,6 +118,54 @@ class DraftingEngineTest {
     }
 
     @Test
+    fun hiddenLayersAreLeftOutOfThePdfExportAndLayersSurviveReopen() {
+        val dir = java.io.File(
+            InstrumentationRegistry.getInstrumentation().targetContext.cacheDir, "draft-export-${System.nanoTime()}"
+        ).apply { mkdirs() }
+        val path = java.io.File(dir, "d.padnote").absolutePath
+        val session = uniffi.padnote_core.PadnoteSession.create(path, "圖學", 1_757_635_200_000uL, 0xA7u)
+        val page = session.firstPageId()!!
+        val engine = InkEngine(session, page)
+        for ((i, layer) in listOf(2, 3).withIndex()) {
+            engine.layer = layer
+            engine.lineType = if (layer == 3) 1 else 0
+            stroke(engine, 20f to 100f + i * 60, 220f to 100f + i * 60, t0 = 1_000L + i * 5_000)
+        }
+        assertEquals(2, engine.strokes.size)
+        val both = session.exportPagePdf(page).size
+        session.setExportHiddenLayers(byteArrayOf(2))
+        val topOnly = session.exportPagePdf(page).size
+        assertTrue("隱藏中層之後 PDF 少一筆（$both → $topOnly）", topOnly < both)
+        session.setExportHiddenLayers(byteArrayOf())
+        // 圖層與線型寫進檔案，重開還在。
+        val reopened = uniffi.padnote_core.PadnoteSession.openExisting(path, 0xB7u)
+        val details = reopened.visibleStrokeDetails(page)
+        assertEquals(setOf(2 to 0, 3 to 1), details.map { it.layer.toInt() to it.lineType.toInt() }.toSet())
+    }
+
+    @Test
+    fun reassigningALayerUndoesAndRedoesInOrder() {
+        val engine = InkEngine().apply { layer = 3 }
+        stroke(engine, 20f to 100f, 220f to 100f)
+        engine.layer = 0
+        engine.reassignTarget = 2
+        engine.onMotionEvent(touch(MotionEvent.ACTION_DOWN, 100f, 100f, 5_000), 1f)
+        engine.onMotionEvent(touch(MotionEvent.ACTION_UP, 100f, 100f, 5_010), 1f)
+        assertEquals(2, engine.strokes[0].layer)
+        assertTrue(engine.undo())
+        assertEquals("先復原改圖層，不是整筆", 1, engine.strokes.size)
+        assertEquals(3, engine.strokes[0].layer)
+        assertTrue(engine.redo())
+        assertEquals(2, engine.strokes[0].layer)
+        assertTrue(engine.undo())
+        assertTrue("再復原才是那一筆", engine.undo())
+        assertEquals(0, engine.strokes.size)
+        assertTrue(engine.redo())
+        assertEquals(1, engine.strokes.size)
+        assertEquals(3, engine.strokes[0].layer)
+    }
+
+    @Test
     fun reassignAndErasingLeaveLockedLayersAlone() {
         val engine = InkEngine().apply { layer = 3 }
         stroke(engine, 20f to 100f, 220f to 100f)

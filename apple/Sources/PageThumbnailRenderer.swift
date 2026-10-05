@@ -48,6 +48,15 @@ public enum PageThumbnailRenderer {
         "\(notebook.id)|\(pageIndex)|\(notebook.lastModifiedDate.timeIntervalSince1970)|\(drawing.strokes.count)|\(notebook.tapeAttachments?.count ?? 0)|\(Int(canvasWidth))|\(notebook.paperId(forPage: pageIndex))|\(notebook.guidePaletteId ?? "-")" as NSString
     }
 
+    /// 這一頁要畫的專業筆畫（自己的＋別台同步來的），已依圖層排好、隱藏的圖層已濾掉。
+    @MainActor
+    static func proStrokes(notebook: NotebookDocument, pageIndex: Int, store: NotebookStore) -> [ProStroke] {
+        let dir = store.drawingsDirectory
+        let all = ProInkStore.load(in: dir, notebookId: notebook.id, page: pageIndex, foreign: true)
+            + ProInkStore.load(in: dir, notebookId: notebook.id, page: pageIndex)
+        return DraftingState.shared.drawOrder(all, notebookId: notebook.id)
+    }
+
     /// 清空快取（例如切換筆記本時）。
     public static func invalidateAll() {
         cache.removeAllObjects()
@@ -102,6 +111,7 @@ public enum PageThumbnailRenderer {
         case export
     }
 
+    @MainActor
     private static func compose(
         notebook: NotebookDocument,
         pageIndex: Int,
@@ -118,7 +128,13 @@ public enum PageThumbnailRenderer {
         // 那正是「匯出與畫布對不起來」的根本原因。
         _ = canvasWidth
         let width = PageGeometry.width
-        let key = cacheKey(notebook: notebook, pageIndex: pageIndex, drawing: drawing, canvasWidth: width)
+        // 專業筆刷（含全部製圖線）存在自己的檔案裡，不在 PKDrawing：匯出、縮圖都要另外畫。
+        // 檔案時間進快取鍵，畫了新的線縮圖才會更新。
+        let pro = proStrokes(notebook: notebook, pageIndex: pageIndex, store: store)
+        let proStamp = ProInkStore.modified(in: store.drawingsDirectory, notebookId: notebook.id, page: pageIndex)?
+            .timeIntervalSince1970 ?? 0
+        let key = (cacheKey(notebook: notebook, pageIndex: pageIndex, drawing: drawing, canvasWidth: width) as String
+            + "|\(pro.count)|\(proStamp)|\(DraftingState.shared.hiddenStamp(notebookId: notebook.id))") as NSString
         if useCache, let cached = cache.object(forKey: key) { return cached }
 
         let pageHeight = PageGeometry.height
@@ -148,6 +164,15 @@ public enum PageThumbnailRenderer {
             // 疊放順序刻意對齊畫布：手繪在最底，圖釘在最上。
             drawing.image(from: fullPageRect, scale: scale)
                 .draw(in: fullPageRect)
+
+            // 專業筆刷與製圖線：依圖層由下往上，隱藏的圖層不畫（匯出的 PDF 與畫面一致）。
+            for stroke in pro {
+                guard let cached = ProInkRenderer.cache(for: stroke) else { continue }
+                ctx.cgContext.saveGState()
+                ProInkRenderer.draw(cached, toolName: stroke.tool, color: stroke.colorRGBA,
+                                    in: ctx.cgContext, clip: fullPageRect)
+                ctx.cgContext.restoreGState()
+            }
 
             for item in notebook.attachments ?? [] where item.pageIndex == pageIndex {
                 drawImage(item, store: store, ctx: ctx)
