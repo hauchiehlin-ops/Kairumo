@@ -169,7 +169,8 @@ public enum PageThumbnailRenderer {
             for stroke in pro {
                 guard let cached = ProInkRenderer.cache(for: stroke) else { continue }
                 ctx.cgContext.saveGState()
-                ProInkRenderer.draw(cached, toolName: stroke.tool, color: stroke.colorRGBA,
+                ProInkRenderer.draw(cached, toolName: stroke.tool,
+                    color: ProInkRenderer.displayColor(stroke.colorRGBA, dark: UITraitCollection.current.userInterfaceStyle == .dark),
                                     in: ctx.cgContext, clip: fullPageRect)
                 ctx.cgContext.restoreGState()
             }

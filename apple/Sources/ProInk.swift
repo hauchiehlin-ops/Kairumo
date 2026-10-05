@@ -243,6 +243,14 @@ enum ProInkRenderer {
         )
     }()
 
+    /// 深色底上把近黑的墨水提亮（反相）。
+    static func displayColor(_ rgba: [UInt8], dark: Bool) -> [UInt8] {
+        guard dark, rgba.count == 4 else { return rgba }
+        let lum = (0.299 * Double(rgba[0]) + 0.587 * Double(rgba[1]) + 0.114 * Double(rgba[2])) / 255
+        guard lum < 0.35 else { return rgba }
+        return [255 - rgba[0], 255 - rgba[1], 255 - rgba[2], rgba[3]]
+    }
+
     /// 把一筆畫的筆點畫進 `ctx`，只畫碰得到 `clip` 的那些。
     static func draw(_ cached: Cached, toolName: String = "", color rgba: [UInt8], in ctx: CGContext, clip: CGRect) {
         guard rgba.count == 4 else { return }
@@ -386,12 +394,9 @@ final class ProInkLayerView: UIView {
 
     /// 深色模式下頁面是深色的：近黑的墨水（製圖的「頂」「底」層）會看不見，
     /// 就像 PencilKit 會把深色墨水在深色模式反相，這裡也把近黑的色提亮。
-    /// 只影響畫面；存檔與匯出仍是原色（匯出的紙是白的）。
+    /// 只影響畫面與縮圖；存檔與匯出仍是原色（匯出的紙是白的）。
     private func displayColor(_ rgba: [UInt8]) -> [UInt8] {
-        guard traitCollection.userInterfaceStyle == .dark, rgba.count == 4 else { return rgba }
-        let lum = (0.299 * Double(rgba[0]) + 0.587 * Double(rgba[1]) + 0.114 * Double(rgba[2])) / 255
-        guard lum < 0.35 else { return rgba }
-        return [255 - rgba[0], 255 - rgba[1], 255 - rgba[2], rgba[3]]
+        ProInkRenderer.displayColor(rgba, dark: traitCollection.userInterfaceStyle == .dark)
     }
 
     override func draw(_ rect: CGRect) {
