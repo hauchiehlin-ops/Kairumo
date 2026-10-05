@@ -10,8 +10,42 @@ env:
   RUSTFLAGS: -D warnings
 
 jobs:
+  changes:
+    name: Detect changes
+    runs-on: ubuntu-latest
+    outputs:
+      core: ${{ steps.filter.outputs.core }}
+      android: ${{ steps.filter.outputs.android }}
+      apple: ${{ steps.filter.outputs.apple }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            core:
+              - 'crates/**'
+              - 'Cargo.*'
+              - 'deny.toml'
+              - 'i18n/**'
+              - 'templates/**'
+              - 'docs/**'
+              - '.github/workflows/ci.yml'
+            android:
+              - 'android/**'
+              - 'scripts/*android*'
+              - 'scripts/fetch-pdfium.sh'
+              - '.github/workflows/ci.yml'
+            apple:
+              - 'apple/**'
+              - 'scripts/*apple*'
+              - 'scripts/*xcframework*'
+              - 'scripts/*simulator*'
+              - '.github/workflows/ci.yml'
+
   test:
     name: Test (${{ matrix.os }})
+    needs: changes
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -58,13 +92,13 @@ jobs:
       # Xcode 27，runner 上舊得多，有些運算式只有新版的型別檢查器兜得起來。
       # 不印版本的話，下一次遇到同一類失敗只能靠猜。
       - name: Xcode 版本
-        if: runner.os == 'macOS'
+        if: runner.os == 'macOS' && (needs.changes.outputs.apple == 'true' || needs.changes.outputs.core == 'true')
         run: xcodebuild -version
       - name: 核心的 xcframework（Apple 測試要連它）
-        if: runner.os == 'macOS'
+        if: runner.os == 'macOS' && (needs.changes.outputs.apple == 'true' || needs.changes.outputs.core == 'true')
         run: ./scripts/build-xcframework.sh
       - name: Apple 單元測試
-        if: runner.os == 'macOS'
+        if: runner.os == 'macOS' && (needs.changes.outputs.apple == 'true' || needs.changes.outputs.core == 'true')
         # 模擬器由腳本挑（見它的說明：寫死名字會在 Xcode 升版時無故變紅）。
         run: |
           # shell 是 `bash -e`：`cmd; rc=$?` 會在 cmd 失敗的當下就整個中止，
@@ -107,7 +141,7 @@ jobs:
       # 都碰不到它們 —— 使用者回報「不知道怎麼操作」時，我們連
       # 「它打不打得開」都答不出來。
       - name: 畫面稽核（控制項點得到）
-        if: runner.os == 'macOS'
+        if: runner.os == 'macOS' && (needs.changes.outputs.apple == 'true' || needs.changes.outputs.core == 'true')
         run: |
           # shell 是 `bash -e`：`cmd; rc=$?` 會在 cmd 失敗的當下就整個中止，
           # rc 根本來不及指派，下面的診斷區塊也就永遠不會跑（我第一版就是
@@ -145,6 +179,8 @@ jobs:
   # 悄悄弄壞跨平台建置（例如把新的 ONNX 相依加進核心）。
   android:
     name: Android build
+    needs: changes
+    if: needs.changes.outputs.core == 'true' || needs.changes.outputs.android == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -177,6 +213,13 @@ jobs:
         run: cargo test -p padnote-core --features relay --test relay_ffi
       - name: 核心能為 Android 編譯（第一版不含語音，關掉 asr/pdf，開啟 relay）
         run: ./scripts/build-android-libs.sh
+      - name: 留存 Android 核心原生函式庫與綁定
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-core-libs
+          path: |
+            android/app/src/main/jniLibs
+            android/app/src/main/java/uniffi
       - name: 組 APK
         working-directory: android
         run: ./gradlew assembleDebug --no-daemon
@@ -198,13 +241,11 @@ jobs:
   # 所以要一台模擬器。它比其他工作慢得多，因此獨立成一個 job。
   android-instrumented:
     name: Android instrumented tests
+    needs: [changes, android]
+    if: needs.changes.outputs.core == 'true' || needs.changes.outputs.android == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: aarch64-linux-android,x86_64-linux-android
-      - uses: Swatinem/rust-cache@v2
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -214,19 +255,12 @@ jobs:
           # 不要讓它安裝預設的 `tools`。Google 已經把那個舊套件從 SDK 倉庫移除，
           # action 仍照裝，sdkmanager 找不到就以 exit 1 收場
           # （日誌只有一行 "Failed to find package 'tools'"，很容易被當成網路問題）。
-          # NDK 與其他套件由下一步自己裝，這裡不需要它先裝任何東西。
           packages: ''
-      - name: 系統相依（cpal → ALSA、audiopus → Opus）
-        # libopus-dev 是必要的：下一步的 relay 測試是**在 host 上**編譯的，
-        # 而 padnote-audio 會連 -lopus。android/prebuilt/opus 只有 Android 的
-        # 版本，host 用不到它 —— 少了這個就是 `unable to find library -lopus`。
-        run: sudo apt-get update && sudo apt-get install -y libasound2-dev libopus-dev pkg-config
-      - name: 安裝 NDK 與 cargo-ndk
-        run: |
-          sdkmanager --install "ndk;28.2.13676358"
-          echo "ANDROID_NDK_HOME=$ANDROID_SDK_ROOT/ndk/28.2.13676358" >> "$GITHUB_ENV"
-          cargo install cargo-ndk --locked
-      - run: ./scripts/build-android-libs.sh
+      # 復用 android 工作已編譯的原生函式庫與 UniFFI 綁定，避免重複編譯 Rust 核心（可省約 4~5 分鐘）
+      - name: 下載 Android 核心原生函式庫與綁定
+        uses: actions/download-artifact@v4
+        with:
+          name: android-core-libs
       # KVM 是模擬器跑得動的前提；GitHub 的 ubuntu runner 需要手動放行。
       - name: 開啟 KVM
         run: |
