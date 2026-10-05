@@ -2483,6 +2483,35 @@ private fun InkScreen(
         DraftingState.attach(activity)
         DraftingState.use(notebookId ?: "")
     }
+    // 立體輔助與步驟編號。
+    var showSolidStudio by remember { mutableStateOf(false) }
+    LaunchedEffect(inkTool, DraftingState.markerMode) {
+        engine.onMarkerTap = if (inkTool.isDrafting && DraftingState.markerMode) { x, y ->
+            // 一次放一個「圈＋數字」，一次復原；放完編號加一。
+            val n = DraftingState.stepNumber
+            engine.insertDrafted(uniffi.padnote_core.draftStepMarker(n.toUInt(), x, y, 15f), 0f, 0f)
+            DraftingState.stepNumber = (n + 1).coerceAtMost(99)
+            revision++
+        } else null
+    }
+    if (showSolidStudio) {
+        com.kairumo.padnote.ink.SolidStudioDialog(
+            languageTag = deviceLanguageTag(),
+            pageWidth = PageGeometry.width,
+            pageHeight = PageGeometry.height,
+            sketchPolylines = { engine.sketchPolylines() },
+            onInsert = { sheet ->
+                // 水平置中、靠上。整組一次復原。
+                val ox = ((PageGeometry.width - sheet.width) / 2f).coerceAtLeast(0f)
+                val oy = maxOf(PageGeometry.PRINTABLE_INSET, PageGeometry.height * 0.08f)
+                engine.insertDrafted(sheet.strokes, ox, oy)
+                showSolidStudio = false
+                revision++
+                message = l10n("solid_inserted")
+            },
+            onDismiss = { showSolidStudio = false }
+        )
+    }
     // 製圖用的紙（三視圖、等角、作圖步驟…）一打開就選好「圖學」筆組。
     LaunchedEffect(notebook) {
         val session = notebook?.first ?: return@LaunchedEffect
@@ -4448,6 +4477,7 @@ private fun InkScreen(
             if (inkTool.isDrafting && editorMode == EditorMode.DRAW) {
                 com.kairumo.padnote.ink.DraftingBar(
                     languageTag = deviceLanguageTag(),
+                    onOpenSolidStudio = { showSolidStudio = true },
                     modifier = Modifier.align(Alignment.TopCenter).padding(top = 12.dp, start = 8.dp, end = 8.dp)
                 )
             }

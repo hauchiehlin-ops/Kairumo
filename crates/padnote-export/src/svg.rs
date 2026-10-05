@@ -23,6 +23,21 @@ pub fn stroke_to_svg_path(stroke: &Stroke, subdivisions: usize) -> String {
         return String::new();
     }
 
+    // 製圖線型（隱藏線、中心線、假想線）：依圖樣切成一段一段，每一段各自一個外框，
+    // 全部放在同一個 `d` 裡（多個子路徑）。製圖線等寬，壓力取平均。
+    let pattern = padnote_ink::LineType::from_id(stroke.line_type).pattern();
+    if !pattern.is_empty() {
+        let mean =
+            stroke.points.iter().map(|p| p.pressure).sum::<f32>() / stroke.points.len() as f32;
+        let hw = half_width(stroke.tool, stroke.base_width, mean);
+        return padnote_ink::dash_runs(&path, pattern)
+            .iter()
+            .filter(|run| run.len() >= 2)
+            .map(|run| outline_d(run, |_| hw))
+            .collect::<Vec<_>>()
+            .join(" ");
+    }
+
     // 壓感取樣點數與插值後的路徑點數不同，用比例對應回原始取樣。
     let pressure_at = |i: usize| -> f32 {
         let ratio = i as f32 / (path.len().max(2) - 1) as f32;
@@ -30,7 +45,13 @@ pub fn stroke_to_svg_path(stroke: &Stroke, subdivisions: usize) -> String {
             .min(stroke.points.len() - 1);
         stroke.points[idx].pressure
     };
+    outline_d(&path, |i| {
+        half_width(stroke.tool, stroke.base_width, pressure_at(i))
+    })
+}
 
+/// 沿折線的左右兩側偏移 `hw(i)`，圍成一個封閉外框。
+fn outline_d(path: &[(f32, f32)], hw: impl Fn(usize) -> f32) -> String {
     let mut left = Vec::with_capacity(path.len());
     let mut right = Vec::with_capacity(path.len());
 
@@ -44,10 +65,10 @@ pub fn stroke_to_svg_path(stroke: &Stroke, subdivisions: usize) -> String {
         } else {
             (0.0, 1.0)
         };
-        let hw = half_width(stroke.tool, stroke.base_width, pressure_at(i));
+        let w = hw(i);
         let (x, y) = path[i];
-        left.push((x + nx * hw, y + ny * hw));
-        right.push((x - nx * hw, y - ny * hw));
+        left.push((x + nx * w, y + ny * w));
+        right.push((x - nx * w, y - ny * w));
     }
 
     let mut d = String::new();

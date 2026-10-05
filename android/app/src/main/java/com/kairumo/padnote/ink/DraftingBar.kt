@@ -50,7 +50,11 @@ import uniffi.padnote_core.draftLinePattern
  * 對應 Apple 的 `DraftingBar`；狀態在 [DraftingState]，畫布那邊讀同一份落筆。
  */
 @Composable
-fun DraftingBar(languageTag: String, modifier: Modifier = Modifier) {
+fun DraftingBar(
+    languageTag: String,
+    modifier: Modifier = Modifier,
+    onOpenSolidStudio: () -> Unit = {}
+) {
     fun l10n(key: String) = LocalizationStrings.localized(key, languageTag)
     // 讀 version：顯示／鎖定改了就重組。
     @Suppress("UNUSED_EXPRESSION") DraftingState.version
@@ -198,6 +202,40 @@ fun DraftingBar(languageTag: String, modifier: Modifier = Modifier) {
                     onClick = { DraftingState.reassignMode = !DraftingState.reassignMode },
                     label = { Text(l10n("draft_reassign"), fontSize = 12.sp) },
                     modifier = Modifier.testTag("draft.reassign")
+                )
+                // 步驟編號：開著時點頁面就放一個 ①②③…（中層，跟輔助線一起隱藏）。
+                FilterChip(
+                    selected = DraftingState.markerMode,
+                    onClick = { DraftingState.markerMode = !DraftingState.markerMode },
+                    label = { Text(l10n("draft_step_marker") + " " + DraftingState.stepNumber, fontSize = 12.sp) },
+                    modifier = Modifier.testTag("draft.marker")
+                )
+                if (DraftingState.markerMode) {
+                    FilterChip(
+                        selected = false,
+                        onClick = { DraftingState.stepNumber = (DraftingState.stepNumber - 1).coerceAtLeast(1) },
+                        label = { Text("−", fontSize = 14.sp) },
+                        modifier = Modifier.testTag("draft.marker.minus")
+                    )
+                    FilterChip(
+                        selected = false,
+                        onClick = { DraftingState.stepNumber = (DraftingState.stepNumber + 1).coerceAtMost(99) },
+                        label = { Text("+", fontSize = 14.sp) },
+                        modifier = Modifier.testTag("draft.marker.plus")
+                    )
+                    FilterChip(
+                        selected = false,
+                        onClick = { DraftingState.stepNumber = 1 },
+                        label = { Text(l10n("draft_step_reset"), fontSize = 12.sp) },
+                        modifier = Modifier.testTag("draft.marker.reset")
+                    )
+                }
+                // 立體輔助：草圖拉伸、三視圖、等角圖、剖面。
+                FilterChip(
+                    selected = false,
+                    onClick = onOpenSolidStudio,
+                    label = { Text("📦 " + l10n("solid_studio"), fontSize = 12.sp) },
+                    modifier = Modifier.testTag("draft.solidStudio")
                 )
             }
         }

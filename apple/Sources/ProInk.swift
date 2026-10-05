@@ -97,6 +97,34 @@ extension ProStroke {
     }
 }
 
+extension ProStroke {
+    /// 從核心排好的製圖線（三視圖、步驟編號、範例筆記）建一筆。兩點以上才算線。
+    ///
+    /// 補點到每 4 個頁面單位一點：虛線與點畫線的間隔由筆點陣挖出來，點太稀的話間隔會跟著失準。
+    init?(drafted item: FfiSheetStroke, origin: CGPoint = .zero) {
+        guard item.points.count >= 2 else { return nil }
+        var pts: [ProPoint] = []
+        func add(_ x: Float, _ y: Float) {
+            pts.append(ProPoint(x: x + Float(origin.x), y: y + Float(origin.y), pressure: 0.6, tilt: 0,
+                                azimuth: 0, dtUs: 2000, roll: 0))
+        }
+        add(item.points[0].x, item.points[0].y)
+        for (a, b) in zip(item.points, item.points.dropFirst()) {
+            let len = hypot(b.x - a.x, b.y - a.y)
+            let n = max(1, Int((len / 4).rounded(.up)))
+            for k in 1...n {
+                let t = Float(k) / Float(n)
+                add(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t)
+            }
+        }
+        self.init(
+            tool: "fineliner", colorRGBA: DraftingState.rgba(fromHex: item.colorHex),
+            baseWidth: item.width, points: pts,
+            layer: item.layer == 0 ? nil : item.layer,
+            lineType: item.lineType == 0 ? nil : item.lineType)
+    }
+}
+
 extension Notification.Name {
     /// 同步把別台裝置的專業筆畫寫進了磁碟。畫著那一頁的層要重讀。
     /// `userInfo["notebookId"]` 是筆記本 id。
@@ -545,6 +573,52 @@ final class ProInkLayerView: UIView {
         return false
     }
 
+    // MARK: 一次插入一組筆畫（立體輔助的三視圖、步驟編號標記）
+
+    /// 把核心排好的製圖線插進這一頁，原點偏移 `origin`。整組是**一次復原**。
+    ///
+    /// 線都是兩點的直線時補點到每 4 個頁面單位一點：虛線與點畫線的間隔由筆點陣挖出來，
+    /// 點太稀的話間隔會跟著失準。
+    @discardableResult
+    func insertDrafted(_ items: [FfiSheetStroke], origin: CGPoint) -> [ProStroke] {
+        let made = items.compactMap { ProStroke(drafted: $0, origin: origin) }
+        guard !made.isEmpty else { return [] }
+        ownStrokes.append(contentsOf: made)
+        for s in made { setNeedsDisplay(s.bounds) }
+        persist()
+        registerGroupUndo(inserting: made)
+        return made
+    }
+
+    private func registerGroupUndo(inserting strokes: [ProStroke]) {
+        guard let manager = undoManagerProvider?() else { return }
+        let ids = Set(strokes.map(\.id))
+        manager.registerUndo(withTarget: self) { layer in
+            layer.ownStrokes.removeAll { ids.contains($0.id) }
+            for s in strokes { layer.setNeedsDisplay(s.bounds) }
+            layer.persist()
+            layer.registerGroupRedo(restoring: strokes)
+        }
+    }
+
+    private func registerGroupRedo(restoring strokes: [ProStroke]) {
+        guard let manager = undoManagerProvider?() else { return }
+        manager.registerUndo(withTarget: self) { layer in
+            layer.ownStrokes.append(contentsOf: strokes)
+            for s in strokes { layer.setNeedsDisplay(s.bounds) }
+            layer.persist()
+            layer.registerGroupUndo(inserting: strokes)
+        }
+    }
+
+    /// 頁面上所有筆畫的點（立體輔助從裡面找封閉輪廓）。
+    ///
+    /// 中層（輔助線與步驟編號）不算：步驟編號是一個個小圓圈，會被當成最小的封閉圖形。
+    var sketchPolylines: [[CGPoint]] {
+        allStrokes.filter { $0.layerId != 2 }
+            .map { $0.points.map { CGPoint(x: CGFloat($0.x), y: CGFloat($0.y)) } }
+    }
+
     // MARK: 改圖層
 
     /// 把離 `point` 最近的一筆（鎖定／隱藏的圖層除外）改到 `layer`，線型與顏色不動。
@@ -636,7 +710,7 @@ private extension CGRect {
 ///
 /// 兩指以上一律放手給捲動與縮放 —— 看到第二根手指就取消目前這一筆。
 final class ProStrokeGestureRecognizer: UIGestureRecognizer {
-    enum Mode { case draw, erase, reassign }
+    enum Mode { case draw, erase, reassign, marker }
 
     var mode: Mode = .draw
     /// 手指是否能畫。政策是 `.pencilOnly` 時只收 Apple Pencil。
@@ -653,6 +727,8 @@ final class ProStrokeGestureRecognizer: UIGestureRecognizer {
     var snapStep: () -> Float? = { nil }
     /// 改圖層模式要改到哪一層。
     var reassignTarget: () -> UInt8 = { 0 }
+    /// 步驟編號模式：點哪裡，通知哪裡（頁面座標）。
+    var onMarker: ((CGPoint) -> Void)?
     /// 吸附成功時通知（給觸覺回饋與提示）。
     var onSnapped: ((FfiDraftSnapKind) -> Void)?
 
@@ -699,6 +775,8 @@ final class ProStrokeGestureRecognizer: UIGestureRecognizer {
             layerView.erase(along: erasePath, radius: eraserRadius())
         case .reassign:
             layerView.reassignLayer(near: CGPoint(x: CGFloat(point.x), y: CGFloat(point.y)), to: reassignTarget())
+        case .marker:
+            onMarker?(CGPoint(x: CGFloat(point.x), y: CGFloat(point.y)))
         }
     }
 
@@ -729,7 +807,7 @@ final class ProStrokeGestureRecognizer: UIGestureRecognizer {
             let path = points.map { CGPoint(x: CGFloat($0.x), y: CGFloat($0.y)) }
             erasePath.append(contentsOf: path)
             layerView.erase(along: path, radius: eraserRadius())
-        case .reassign:
+        case .reassign, .marker:
             break
         }
         state = .changed

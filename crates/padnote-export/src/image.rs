@@ -278,10 +278,31 @@ fn draw_stroke(pixels: &mut [u8], width: u32, height: u32, stroke: &Stroke, scal
     if stroke.points.is_empty() {
         return;
     }
+    let path = stroke.render_path(2);
+    if path.is_empty() {
+        return;
+    }
+    // 製圖線型（隱藏線、中心線、假想線）：依圖樣切成一段一段各畫各的。
+    let pattern = padnote_ink::LineType::from_id(stroke.line_type).pattern();
+    if !pattern.is_empty() && path.len() >= 2 {
+        for run in padnote_ink::dash_runs(&path, pattern) {
+            draw_polyline(pixels, width, height, stroke, &run, scale);
+        }
+        return;
+    }
+    draw_polyline(pixels, width, height, stroke, &path, scale);
+}
 
+fn draw_polyline(
+    pixels: &mut [u8],
+    width: u32,
+    height: u32,
+    stroke: &Stroke,
+    path: &[(f32, f32)],
+    scale: f32,
+) {
     let color = stroke.color_rgba8;
     let radius = (stroke.base_width * 0.5 * scale).max(0.5);
-    let path = stroke.render_path(2);
     if path.is_empty() {
         return;
     }

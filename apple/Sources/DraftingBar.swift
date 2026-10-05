@@ -5,6 +5,7 @@ import SwiftUI
 /// 浮在畫布上方，只在選了「圖學」工具時出現。所有狀態在 `DraftingState`，
 /// 這裡只是畫面；畫布那邊（`CanvasRepresentable.applyProInk`）讀同一份狀態落筆。
 struct DraftingBar: View {
+    var onOpenSolidStudio: () -> Void = {}
     @ObservedObject var state = DraftingState.shared
     @ObservedObject private var localizationManager = LocalizationManager.shared
 
@@ -117,8 +118,8 @@ struct DraftingBar: View {
     // MARK: 吸附、角度、改圖層
 
     private var optionRow: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 10) {
+        WrapLayout(spacing: 10, lineSpacing: 6) {
+            Group {
                 Toggle(isOn: $state.snapEnabled) {
                     Label(localizationManager.localized("draft_snap"), systemImage: "scope")
                         .font(.system(size: 12))
@@ -147,6 +148,33 @@ struct DraftingBar: View {
                 }
                 .toggleStyle(.button)
                 .accessibilityIdentifier("draft.reassign")
+
+                // 步驟編號：開著時點頁面就放一個 ①②③…（中層，跟輔助線一起隱藏）。
+                Toggle(isOn: $state.markerMode) {
+                    Label("\(localizationManager.localized("draft_step_marker")) \(state.stepNumber)",
+                          systemImage: "number.circle")
+                        .font(.system(size: 12))
+                }
+                .toggleStyle(.button)
+                .accessibilityIdentifier("draft.marker")
+                if state.markerMode {
+                    Button { state.stepNumber = max(1, state.stepNumber - 1) } label: { Image(systemName: "minus.circle") }
+                        .accessibilityLabel(localizationManager.localized("draft_step_next"))
+                        .accessibilityIdentifier("draft.marker.minus")
+                    Button { state.stepNumber = min(99, state.stepNumber + 1) } label: { Image(systemName: "plus.circle") }
+                        .accessibilityIdentifier("draft.marker.plus")
+                    Button(localizationManager.localized("draft_step_reset")) { state.stepNumber = 1 }
+                        .font(.system(size: 12))
+                        .accessibilityIdentifier("draft.marker.reset")
+                }
+
+                // 立體輔助：草圖拉伸、三視圖、等角圖、剖面。
+                Button(action: onOpenSolidStudio) {
+                    Label(localizationManager.localized("solid_studio"), systemImage: "cube.transparent")
+                        .font(.system(size: 12))
+                }
+                .buttonStyle(.bordered)
+                .accessibilityIdentifier("draft.solidStudio")
             }
         }
     }

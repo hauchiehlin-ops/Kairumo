@@ -56,6 +56,7 @@
       "editor.ink.eraser",
       "editor.ink.lasso",
       "editor.ink.maskingTape",
+      "editor.ink.drafting",
       "editor.ink.width",
       "editor.ink.palette",
       "editor.ink.undo",
@@ -139,6 +140,7 @@
       "editor.ink.eraser",
       "editor.ink.lasso",
       "editor.ink.maskingTape",
+      "editor.ink.drafting",
       "editor.ink.width",
       "editor.ink.palette",
       "editor.ink.undo",
@@ -496,6 +498,12 @@
         "id": "editor.ink.maskingTape",
         "label_en": "Masking Tape",
         "label_key": "tool_masking_tape",
+        "reveal": "always"
+      },
+      {
+        "id": "editor.ink.drafting",
+        "label_en": "Drafting",
+        "label_key": "tool_drafting",
         "reveal": "always"
       },
       {
@@ -1035,6 +1043,7 @@
       "toolbar.tool.eraser",
       "toolbar.tool.lasso",
       "toolbar.tool.maskingTape",
+      "toolbar.tool.drafting",
       "toolbar.tool.undo",
       "toolbar.tool.redo",
       "toolbar.tool.clear"
@@ -1058,6 +1067,7 @@
       "toolbar.tool.eraser",
       "toolbar.tool.lasso",
       "toolbar.tool.maskingTape",
+      "toolbar.tool.drafting",
       "toolbar.tool.undo",
       "toolbar.tool.redo",
       "toolbar.tool.clear"
@@ -1169,6 +1179,12 @@
         "id": "toolbar.tool.maskingTape",
         "label_en": "Masking Tape",
         "label_key": "tool_masking_tape",
+        "reveal": "always"
+      },
+      {
+        "id": "toolbar.tool.drafting",
+        "label_en": "Drafting",
+        "label_key": "tool_drafting",
         "reveal": "always"
       },
       {

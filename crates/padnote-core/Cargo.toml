@@ -83,6 +83,7 @@ padnote-punct-ct = { path = "../padnote-punct-ct", optional = true }
 padnote-embed = { path = "../padnote-embed" }
 padnote-input = { path = "../padnote-input" }
 padnote-shapes = { path = "../padnote-shapes" }
+padnote-solid = { path = "../padnote-solid" }
 padnote-i18n = { path = "../padnote-i18n" }
 padnote-toolbar = { path = "../padnote-toolbar" }
 padnote-relay = { path = "../padnote-relay", optional = true }

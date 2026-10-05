@@ -158,7 +158,9 @@ pub fn line_inside_intervals(p: P2, dir: P2, rings: &[&[P2]]) -> Vec<(f32, f32)>
         .flat_map(|r| line_ring_hits(p, dir, r))
         .collect();
     hits.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
-    hits.chunks_exact(2)
+    hits.as_chunks::<2>()
+        .0
+        .iter()
         .filter(|c| c[1] - c[0] > EPS)
         .map(|c| (c[0], c[1]))
         .collect()

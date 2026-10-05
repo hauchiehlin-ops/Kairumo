@@ -1,4 +1,5 @@
 import Combine
+import PencilKit
 import Foundation
 import SwiftUI
 
@@ -40,8 +41,20 @@ final class DraftingState: ObservableObject {
     }
     /// 點筆畫就把它改到目前圖層。
     @Published var reassignMode = false {
-        didSet { changed() }
+        didSet {
+            if reassignMode { markerMode = false }
+            changed()
+        }
     }
+    /// 點一下就放一個步驟編號（①②③…，畫在中層）。
+    @Published var markerMode = false {
+        didSet {
+            if markerMode { reassignMode = false }
+            changed()
+        }
+    }
+    /// 下一個要放的編號。
+    @Published var stepNumber = 1
 
     static let angleChoices = [0, 15, 30, 45, 90]
 
@@ -239,5 +252,55 @@ struct CustomPageSizeSheet: View {
             }
         }
         .presentationDetents([.medium])
+    }
+}
+
+// MARK: - 範例筆記《圖學範例》
+
+extension NotebookStore {
+    static let draftingExampleId = "seed-drafting-example-v1"
+    static let draftingExampleSeededKey = "seed.draftingExample.added"
+
+    /// 《圖學範例》：三視圖輔助線求交點。內容（每頁的線與字）由核心的 `draftingExample()` 算好，
+    /// Android 讀同一份，所以兩邊是同一本。製圖線一筆一筆落在**真正的圖層**上
+    /// （底層原題、中層輔助線與步驟編號、頂層答案），最後一頁教人把中層隱藏。
+    func makeDraftingExample() -> NotebookDocument {
+        let ex = draftingExample()
+        let l = LocalizationManager.shared
+        let pages = ex.pages.count
+        var doc = NotebookDocument(
+            id: Self.draftingExampleId,
+            title: l.localized(ex.titleKey),
+            createdAt: Date().addingTimeInterval(-300),
+            lastModifiedDate: Date().addingTimeInterval(-300),
+            pageCount: pages,
+            hasRecording: false,
+            previewSnippet: l.localized("drafting_example_p1_sub"),
+            template: NoteTemplate(paperId: ex.paperId) ?? .blank)
+        doc.titleKey = ex.titleKey
+        doc.snippetKey = "drafting_example_p1_sub"
+        doc.pageFormatId = ex.pageFormatId
+        doc.pagePaperIds = Array(repeating: ex.paperId, count: pages)
+        let empty = PKDrawing().dataRepresentation()
+        doc.pagesData = Array(repeating: empty, count: pages)
+
+        var texts: [NoteTextAttachment] = []
+        for (index, page) in ex.pages.enumerated() {
+            ProInkStore.save(page.strokes.compactMap { ProStroke(drafted: $0) },
+                             in: drawingsDirectory, notebookId: doc.id, page: index)
+            for t in page.texts {
+                let body = l.localized(t.key)
+                let perLine = max(8, Int(CGFloat(t.width) / (CGFloat(t.fontSize) * 0.95)))
+                let lines = body.split(separator: "\n", omittingEmptySubsequences: false)
+                    .reduce(0) { $0 + max(1, Int((Double($1.count) / Double(perLine)).rounded(.up))) }
+                texts.append(NoteTextAttachment(
+                    pageIndex: index, text: body, fontSize: CGFloat(t.fontSize), isBold: t.bold,
+                    alignmentRaw: "left", textColorHex: t.colorHex, backgroundColorHex: "clear",
+                    hasBorder: false, x: CGFloat(t.x), y: CGFloat(t.y), width: CGFloat(t.width),
+                    height: CGFloat(lines) * CGFloat(t.fontSize) * 1.6 + 12))
+            }
+        }
+        doc.textAttachments = texts
+        return doc
     }
 }

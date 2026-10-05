@@ -1569,6 +1569,15 @@ public final class NotebookStore: ObservableObject {
             }
         }
 
+        // 《圖學範例》：舊使用者只補一次（旗標），之後刪掉就不再長回來。
+        if !UserDefaults.standard.bool(forKey: Self.draftingExampleSeededKey) {
+            UserDefaults.standard.set(true, forKey: Self.draftingExampleSeededKey)
+            if !notebooks.contains(where: { $0.id == Self.draftingExampleId }) {
+                notebooks.append(makeDraftingExample())
+                changed = true
+            }
+        }
+
         if changed { persistData() }
     }
 
@@ -1970,7 +1979,10 @@ public final class NotebookStore: ObservableObject {
         SeedContent.fillKairumoManual(&n4, store: self)
         UserDefaults.standard.set(true, forKey: Self.manualSeededKey)
 
-        self.notebooks = [n1, n2, n3, n4]
+        let n5 = makeDraftingExample()
+        UserDefaults.standard.set(true, forKey: Self.draftingExampleSeededKey)
+
+        self.notebooks = [n1, n2, n3, n4, n5]
         persistData()
     }
 

@@ -75,7 +75,12 @@ class InkEngine(
         /** 製圖圖層（1 底／2 中／3 頂）。0 = 一般筆跡。 */
         val layer: Int = 0,
         /** 工程線型（0 實線、1 隱藏線、2 中心線、3 假想線）。 */
-        val lineType: Int = 0
+        val lineType: Int = 0,
+        /**
+         * 一次插入的一組筆畫（三視圖、步驟編號）共用的編號；0 = 單獨一筆。
+         * 復原／重做把同一組當成**一個動作**。
+         */
+        val group: Int = 0
     )
 
     /** 一次事件處理的結果，供 UI 決定要不要重繪。 */
@@ -102,6 +107,9 @@ class InkEngine(
     var snapStepDeg: Float? = null
     /** 非 null = 改圖層模式：點筆畫把它改到這一層。 */
     var reassignTarget: Int? = null
+
+    /** 非 null = 步驟編號模式：點哪裡就通知哪裡（頁面座標），不落筆。 */
+    var onMarkerTap: ((Float, Float) -> Unit)? = null
 
     /** 吸附成功時通知 UI（觸覺回饋）。 */
     var onSnapped: ((uniffi.padnote_core.FfiDraftSnapKind) -> Unit)? = null
@@ -158,36 +166,97 @@ class InkEngine(
     val canUndo: Boolean get() = _strokes.isNotEmpty()
     val canRedo: Boolean get() = redoStack.isNotEmpty()
 
-    /** 收回最後一筆。回傳是否真的收回了東西。 */
+    /** 收回最後一筆（或最後一次插入的一整組）。回傳是否真的收回了東西。 */
     fun undo(): Boolean {
-        val last = _strokes.removeLastOrNull() ?: return false
-        last.coreStrokeId?.let { id ->
-            val target = session
-            val page = pageId
-            if (target != null && page != null) runCatching { target.eraseStroke(page, id) }
+        val last = _strokes.lastOrNull() ?: return false
+        val removed = if (last.group != 0) _strokes.filter { it.group == last.group } else listOf(last)
+        val target = session
+        val page = pageId
+        for (stroke in removed) {
+            _strokes.remove(stroke)
+            stroke.coreStrokeId?.let { id ->
+                if (target != null && page != null) runCatching { target.eraseStroke(page, id) }
+            }
         }
-        redoStack += last
+        redoStack += removed.asReversed()
         return true
     }
 
-    /** 把最後一次收回的筆畫放回去。 */
+    /** 把最後一次收回的筆畫（或整組）放回去。 */
     fun redo(): Boolean {
-        val stroke = redoStack.removeLastOrNull() ?: return false
+        val first = redoStack.removeLastOrNull() ?: return false
+        val batch = mutableListOf(first)
+        if (first.group != 0) {
+            while (redoStack.lastOrNull()?.group == first.group) batch += redoStack.removeLast()
+        }
         val target = session
         val page = pageId
-        val newId = if (target != null && page != null) {
-            runCatching {
-                target.addStrokeDrafted(
-                    page, stroke.tool, stroke.colorRgba, stroke.baseWidth, stroke.points,
-                    stroke.layer.toUByte(), stroke.lineType.toUByte()
-                )
-            }.getOrNull()
-        } else {
-            null
+        for (stroke in batch) {
+            val newId = if (target != null && page != null) {
+                runCatching {
+                    target.addStrokeDrafted(
+                        page, stroke.tool, stroke.colorRgba, stroke.baseWidth, stroke.points,
+                        stroke.layer.toUByte(), stroke.lineType.toUByte()
+                    )
+                }.getOrNull()
+            } else {
+                null
+            }
+            _strokes += stroke.copy(coreStrokeId = newId)
         }
-        _strokes += stroke.copy(coreStrokeId = newId)
         return true
     }
+
+    private var nextGroup = 1
+
+    /**
+     * 把核心排好的製圖線整組插進這一頁（三視圖、步驟編號），原點偏移 `(ox, oy)`。
+     * 整組是**一次復原**。回傳插入的筆畫數。
+     *
+     * 兩點的直線補點到每 4 個頁面單位一點：虛線與點畫線的間隔由筆點陣挖出來，點太稀會失準。
+     */
+    fun insertDrafted(items: List<uniffi.padnote_core.FfiSheetStroke>, ox: Float, oy: Float): Int {
+        val target = session
+        val page = pageId
+        val group = nextGroup++
+        var count = 0
+        for (item in items) {
+            if (item.points.size < 2) continue
+            val pts = DraftingState.points(item, ox, oy)
+            val rgba = DraftingState.rgba(item.colorHex)
+            val coreId = if (target != null && page != null) {
+                runCatching {
+                    target.addStrokeDrafted(
+                        page, ToolKind.FINELINER, rgba, item.width, pts,
+                        item.layer, item.lineType
+                    )
+                }.getOrNull()
+            } else null
+            _strokes += CompletedStroke(
+                pointerId = ULong.MAX_VALUE - 1_000_000uL - _strokes.size.toULong(),
+                coreStrokeId = coreId,
+                points = pts,
+                tool = ToolKind.FINELINER,
+                startedAtMs = System.currentTimeMillis(),
+                colorRgba = rgba,
+                baseWidth = item.width,
+                layer = item.layer.toInt(),
+                lineType = item.lineType.toInt(),
+                group = group
+            )
+            count++
+        }
+        if (count > 0) {
+            redoStack.clear()
+            onContentCommitted?.invoke()
+        }
+        return count
+    }
+
+    /** 頁面上所有筆畫的點（立體輔助從裡面找封閉輪廓）。 */
+    fun sketchPolylines(): List<List<uniffi.padnote_core.FfiPoint>> =
+        // 中層（輔助線與步驟編號）不算：步驟編號是一個個小圓圈，會被當成最小的封閉圖形。
+        _strokes.filter { it.layer != 2 }.map { s -> s.points.map { uniffi.padnote_core.FfiPoint(it.x, it.y) } }
 
     /**
      * 擦掉碰到的筆畫。
@@ -294,6 +363,14 @@ class InkEngine(
         for (sample in InkInput.samples(event, density, zoom, offsetX, offsetY)) {
             // 改圖層模式：點一下就把最近的一筆改到目標圖層，不落筆。
             // 繞過仲裁器 —— 它要看到移動才肯判定，一個點擊永遠等不到判定。
+            val marker = onMarkerTap
+            if (marker != null) {
+                if (sample.event.phase == FfiPhase.BEGAN) {
+                    marker(sample.event.x, sample.event.y)
+                    drawn++
+                }
+                continue
+            }
             val reassign = reassignTarget
             if (reassign != null) {
                 if (sample.event.phase == FfiPhase.BEGAN) {

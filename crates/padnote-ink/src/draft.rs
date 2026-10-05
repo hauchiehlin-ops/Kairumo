@@ -203,6 +203,52 @@ pub fn snap_stroke(points: &[(f32, f32)], angle_step_deg: f32) -> Snapped {
     }
 }
 
+/// 把折線依線型圖樣切成「畫」的那些段（匯出用：PNG 與 SVG 不能像 PDF 那樣直接設虛線）。
+///
+/// `pattern` 是「畫、空、畫、空…」的長度（頁面單位），從筆畫起點重新開始，與螢幕上
+/// 的筆點陣（`apply_line_type`）同一個規則。空圖樣（實線）回傳整條折線。
+pub fn dash_runs(path: &[(f32, f32)], pattern: &[f32]) -> Vec<Vec<(f32, f32)>> {
+    if path.len() < 2 || pattern.len() < 2 || pattern.iter().any(|v| *v <= 0.0) {
+        return vec![path.to_vec()];
+    }
+    let mut runs: Vec<Vec<(f32, f32)>> = Vec::new();
+    let mut current: Vec<(f32, f32)> = Vec::new();
+    let (mut idx, mut left) = (0usize, pattern[0]);
+    let drawing = |i: usize| i.is_multiple_of(2);
+    if drawing(idx) {
+        current.push(path[0]);
+    }
+    for w in path.windows(2) {
+        let (a, b) = (w[0], w[1]);
+        let seg = dist(a, b);
+        if seg < 1e-6 {
+            continue;
+        }
+        let mut walked = 0.0;
+        while seg - walked > left {
+            walked += left;
+            let t = walked / seg;
+            let p = (a.0 + (b.0 - a.0) * t, a.1 + (b.1 - a.1) * t);
+            if drawing(idx) {
+                current.push(p);
+                runs.push(std::mem::take(&mut current));
+            } else {
+                current.push(p);
+            }
+            idx += 1;
+            left = pattern[idx % pattern.len()];
+        }
+        left -= seg - walked;
+        if drawing(idx) {
+            current.push(b);
+        }
+    }
+    if drawing(idx) && current.len() >= 2 {
+        runs.push(current);
+    }
+    runs
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -214,6 +260,29 @@ mod tests {
                 (x0 + (x1 - x0) * t, y0 + (y1 - y0) * t)
             })
             .collect()
+    }
+
+    #[test]
+    fn dash_runs_follow_the_pattern_from_the_start() {
+        let path = vec![(0.0, 0.0), (100.0, 0.0)];
+        let runs = dash_runs(&path, &[12.0, 4.0]);
+        // 100 / 16 = 6 組完整 + 4 餘下：第 7 段畫 4。
+        assert_eq!(runs.len(), 7);
+        assert!((runs[0][0].0).abs() < 1e-3 && (runs[0].last().unwrap().0 - 12.0).abs() < 1e-3);
+        assert!((runs[1][0].0 - 16.0).abs() < 1e-3);
+        assert!(
+            (runs[6][0].0 - 96.0).abs() < 1e-3 && (runs[6].last().unwrap().0 - 100.0).abs() < 1e-3
+        );
+    }
+
+    #[test]
+    fn dash_runs_carry_over_corners_and_solid_lines_stay_whole() {
+        let l = vec![(0.0, 0.0), (10.0, 0.0), (10.0, 20.0)];
+        let runs = dash_runs(&l, &[12.0, 4.0]);
+        // 第一段畫 12：走 10 到轉角、再往上 2。
+        assert_eq!(runs[0].len(), 3);
+        assert!((runs[0][2].1 - 2.0).abs() < 1e-3);
+        assert_eq!(dash_runs(&l, &[]).len(), 1);
     }
 
     #[test]

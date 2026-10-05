@@ -237,9 +237,85 @@ fn resample_closed(ring: &[P2], n: usize) -> Vec<P2> {
     out
 }
 
-/// 一組手繪線 → 輪廓：最大的封閉線是外環，落在它裡面的封閉線是洞，其餘忽略。
+/// 把首尾相接的開放線串成一條。端點相距不超過 `tol` 就接起來（必要時把線反過來）。
+///
+/// 手繪輪廓常常是**幾條直線**圍成的（四條邊畫四筆），不是一筆闔起來的圈。
+fn chain_open_strokes(strokes: &[Vec<P2>], tol: f32) -> Vec<(Vec<P2>, usize)> {
+    let mut pool: Vec<Vec<P2>> = strokes.iter().filter(|s| s.len() >= 2).cloned().collect();
+    let mut chains: Vec<(Vec<P2>, usize)> = Vec::new();
+    while let Some(mut chain) = pool.pop() {
+        let mut parts = 1usize;
+        loop {
+            // 找一條端點接得上這條鏈首或尾的線。
+            let head = chain[0];
+            let tail = *chain.last().unwrap();
+            if geom::dist(head, tail) <= tol {
+                break; // 已經闔起來。
+            }
+            let mut joined = false;
+            for i in 0..pool.len() {
+                let (a, b) = (pool[i][0], *pool[i].last().unwrap());
+                let attach = if geom::dist(tail, a) <= tol {
+                    Some((true, false)) // 接在尾巴後面，原方向
+                } else if geom::dist(tail, b) <= tol {
+                    Some((true, true)) // 接在尾巴後面，反方向
+                } else if geom::dist(head, b) <= tol {
+                    Some((false, false)) // 接在頭前面，原方向
+                } else if geom::dist(head, a) <= tol {
+                    Some((false, true)) // 接在頭前面，反方向
+                } else {
+                    None
+                };
+                if let Some((at_tail, reversed)) = attach {
+                    let mut piece = pool.swap_remove(i);
+                    if reversed {
+                        piece.reverse();
+                    }
+                    if at_tail {
+                        chain.extend(piece.into_iter().skip(1));
+                    } else {
+                        piece.pop();
+                        piece.extend(chain);
+                        chain = piece;
+                    }
+                    parts += 1;
+                    joined = true;
+                    break;
+                }
+            }
+            if !joined {
+                break;
+            }
+        }
+        chains.push((chain, parts));
+    }
+    chains
+}
+
+/// 一組手繪線 → 輪廓：最大的封閉圖形是外環，落在它裡面的封閉圖形是洞，其餘忽略。
+///
+/// 「封閉圖形」有兩種：一筆闔起來的線（先吸附成圓／矩形／三角形），或幾條首尾相接、
+/// 圍成封閉的線（四條邊畫四筆的矩形）。
 pub fn profile_from_strokes(strokes: &[Vec<P2>]) -> Option<Profile> {
     let mut rings: Vec<Vec<P2>> = strokes.iter().filter_map(|s| ring_from_stroke(s)).collect();
+
+    // 沒有一筆闔起來的線，或還有別的線：把開放的線串起來看看能不能闔成圖形。
+    let all: Vec<P2> = strokes.iter().flatten().copied().collect();
+    if let Some((lo, hi)) = geom::bounds(&all) {
+        let tol = (geom::dist(lo, hi) * 0.015).max(8.0);
+        for (chain, parts) in chain_open_strokes(strokes, tol) {
+            // 單獨一筆的線上面已經處理過了（闔起來的吸附成圖形，沒闔起來的不是輪廓）。
+            if parts < 2 || chain.len() < 3 || geom::dist(chain[0], *chain.last().unwrap()) > tol {
+                continue;
+            }
+            let b = geom::bounds(&chain).unwrap_or((lo, hi));
+            let simplified = geom::simplify_ring(&chain, (geom::dist(b.0, b.1) * 0.01).max(0.8));
+            if simplified.len() >= 3 && geom::signed_area(&simplified).abs() > 1.0 {
+                rings.push(simplified);
+            }
+        }
+    }
+
     rings.sort_by(|a, b| {
         geom::signed_area(b)
             .abs()
@@ -287,6 +363,8 @@ pub struct Edge {
     pub a: P3,
     pub b: P3,
     pub faces: [usize; 2],
+    /// 不管夾角多平，這條邊一律要畫（剖面的切口邊界）。
+    pub always: bool,
 }
 
 #[derive(Clone, Debug)]
@@ -317,84 +395,109 @@ impl Solid {
     }
 
     pub fn mesh(&self) -> Mesh {
-        let d = self.depth;
-        let mut faces: Vec<Face> = Vec::new();
-        let mut edges: Vec<Edge> = Vec::new();
+        let rings: Vec<Vec<P2>> = self
+            .profile
+            .rings()
+            .into_iter()
+            .map(|r| r.to_vec())
+            .collect();
+        mesh_from_rings(&rings, self.depth, &|_, _| false)
+    }
+}
 
-        // 前後蓋面。前面外環逆時針（從 +Z 看），後面反過來。
-        let ring3 = |ring: &[P2], z: f32, rev: bool| -> Vec<P3> {
-            let mut v: Vec<P3> = ring.iter().map(|p| [p.0, p.1, z]).collect();
-            if rev {
-                v.reverse();
-            }
-            v
-        };
-        let mut front = vec![ring3(&self.profile.outer, 0.0, false)];
-        let mut back = vec![ring3(&self.profile.outer, -d, true)];
-        for h in &self.profile.holes {
-            front.push(ring3(h, 0.0, false));
-            back.push(ring3(h, -d, true));
+/// 由環（外環逆時針、洞順時針）拉伸出網格。
+///
+/// `skip(p, q)` 回傳真的時，環上 `p→q` 這條邊不產生側壁（剖面的切口由呼叫端另外補上）。
+/// 第一個環是外環；其餘是洞。沒有任何環就是空網格。
+pub fn mesh_from_rings(rings: &[Vec<P2>], depth: f32, skip: &dyn Fn(P2, P2) -> bool) -> Mesh {
+    let d = depth;
+    let mut faces: Vec<Face> = Vec::new();
+    let mut edges: Vec<Edge> = Vec::new();
+    if rings.is_empty() {
+        return Mesh { faces, edges };
+    }
+    let ring3 = |ring: &[P2], z: f32, rev: bool| -> Vec<P3> {
+        let mut v: Vec<P3> = ring.iter().map(|p| [p.0, p.1, z]).collect();
+        if rev {
+            v.reverse();
         }
-        faces.push(Face {
-            rings: front,
-            normal: [0.0, 0.0, 1.0],
-            plane_d: 0.0,
-            kind: FaceKind::Front,
-        });
-        faces.push(Face {
-            rings: back,
-            normal: [0.0, 0.0, -1.0],
-            plane_d: d,
-            kind: FaceKind::Back,
-        });
+        v
+    };
+    faces.push(Face {
+        rings: rings.iter().map(|r| ring3(r, 0.0, false)).collect(),
+        normal: [0.0, 0.0, 1.0],
+        plane_d: 0.0,
+        kind: FaceKind::Front,
+    });
+    faces.push(Face {
+        rings: rings.iter().map(|r| ring3(r, -d, true)).collect(),
+        normal: [0.0, 0.0, -1.0],
+        plane_d: d,
+        kind: FaceKind::Back,
+    });
 
-        // 每個環的每條邊一個側壁。外環逆時針、洞順時針，所以
-        // 「行進方向的右手邊」永遠是實體外側：法向量 = (dy, −dx)。
-        for ring in self.profile.rings() {
-            let n = ring.len();
-            let first_side = faces.len();
-            for i in 0..n {
-                let (p, q) = (ring[i], ring[(i + 1) % n]);
-                let (dx, dy) = (q.0 - p.0, q.1 - p.1);
-                let len = (dx * dx + dy * dy).sqrt().max(1e-9);
-                let normal = [dy / len, -dx / len, 0.0];
-                let plane_d = normal[0] * p.0 + normal[1] * p.1;
-                faces.push(Face {
-                    rings: vec![vec![
-                        [p.0, p.1, 0.0],
-                        [q.0, q.1, 0.0],
-                        [q.0, q.1, -d],
-                        [p.0, p.1, -d],
-                    ]],
-                    normal,
-                    plane_d,
-                    kind: FaceKind::Side,
-                });
+    for ring in rings {
+        let n = ring.len();
+        // 每條邊對應的側壁編號；被略過的邊沒有。
+        let mut wall: Vec<Option<usize>> = vec![None; n];
+        for i in 0..n {
+            let (p, q) = (ring[i], ring[(i + 1) % n]);
+            if skip(p, q) {
+                continue;
             }
-            for i in 0..n {
-                let (p, q) = (ring[i], ring[(i + 1) % n]);
-                let side = first_side + i;
-                let prev_side = first_side + (i + n - 1) % n;
-                // 前面蓋面的邊、後面蓋面的邊、頂點處的垂直邊。
+            let (dx, dy) = (q.0 - p.0, q.1 - p.1);
+            let len = (dx * dx + dy * dy).sqrt().max(1e-9);
+            // 行進方向的右手邊是實體外側：法向量 = (dy, −dx)。
+            let normal = [dy / len, -dx / len, 0.0];
+            wall[i] = Some(faces.len());
+            faces.push(Face {
+                rings: vec![vec![
+                    [p.0, p.1, 0.0],
+                    [q.0, q.1, 0.0],
+                    [q.0, q.1, -d],
+                    [p.0, p.1, -d],
+                ]],
+                normal,
+                plane_d: normal[0] * p.0 + normal[1] * p.1,
+                kind: FaceKind::Side,
+            });
+        }
+        for i in 0..n {
+            let (p, q) = (ring[i], ring[(i + 1) % n]);
+            let prev = wall[(i + n - 1) % n];
+            if let Some(w) = wall[i] {
                 edges.push(Edge {
                     a: [p.0, p.1, 0.0],
                     b: [q.0, q.1, 0.0],
-                    faces: [0, side],
+                    faces: [0, w],
+                    always: false,
                 });
                 edges.push(Edge {
                     a: [p.0, p.1, -d],
                     b: [q.0, q.1, -d],
-                    faces: [1, side],
-                });
-                edges.push(Edge {
-                    a: [p.0, p.1, 0.0],
-                    b: [p.0, p.1, -d],
-                    faces: [prev_side, side],
+                    faces: [1, w],
+                    always: false,
                 });
             }
+            // 頂點處的垂直邊：兩側壁都在才有「夾角」可言；只剩一邊（另一邊是切口）就一律畫。
+            match (prev, wall[i]) {
+                (Some(a), Some(b)) => edges.push(Edge {
+                    a: [p.0, p.1, 0.0],
+                    b: [p.0, p.1, -d],
+                    faces: [a, b],
+                    always: false,
+                }),
+                (Some(w), None) | (None, Some(w)) => edges.push(Edge {
+                    a: [p.0, p.1, 0.0],
+                    b: [p.0, p.1, -d],
+                    faces: [w, w],
+                    always: true,
+                }),
+                (None, None) => {}
+            }
         }
-        Mesh { faces, edges }
     }
+    Mesh { faces, edges }
 }
 
 #[cfg(test)]
@@ -539,6 +642,56 @@ mod tests {
         let ring = ring_from_stroke(&circle).unwrap();
         assert_eq!(ring.len(), 48);
         assert!(geom::ring_as_circle(&ring).is_some());
+    }
+
+    #[test]
+    fn four_separate_lines_that_meet_make_a_rectangle() {
+        // 四條邊畫四筆，方向不一致、端點略有誤差。
+        let top: Vec<P2> = (0..=10).map(|i| (i as f32 * 10.0, 0.0)).collect();
+        let right: Vec<P2> = (0..=8).map(|i| (101.0, i as f32 * 10.0)).collect();
+        let bottom: Vec<P2> = (0..=10).map(|i| (100.0 - i as f32 * 10.0, 79.0)).collect();
+        let left: Vec<P2> = (0..=8).map(|i| (0.5, 80.0 - i as f32 * 10.0)).collect();
+        // 故意打亂順序、反轉其中一條。
+        let reversed_left: Vec<P2> = left.iter().rev().copied().collect();
+        let p = profile_from_strokes(&[bottom, reversed_left, top, right]).expect("四條線圍成封閉");
+        let (w, h) = p.size();
+        assert!((w - 101.0).abs() < 3.0 && (h - 80.0).abs() < 3.0, "{w}×{h}");
+        assert!(p.outer.len() <= 6, "{:?}", p.outer);
+    }
+
+    #[test]
+    fn lines_with_a_gap_do_not_close() {
+        let a: Vec<P2> = (0..=10).map(|i| (i as f32 * 10.0, 0.0)).collect();
+        let b: Vec<P2> = (0..=8).map(|i| (100.0, i as f32 * 10.0)).collect();
+        // 第三條離起點很遠：圍不成封閉。
+        let c: Vec<P2> = (0..=10).map(|i| (100.0 - i as f32 * 10.0, 80.0)).collect();
+        assert!(profile_from_strokes(&[a, b, c]).is_none());
+    }
+
+    #[test]
+    fn a_u_shape_drawn_as_separate_lines_is_recovered() {
+        // U 形外框：六筆線，其中兩條很短。
+        let seg = |a: P2, b: P2| -> Vec<P2> {
+            (0..=10)
+                .map(|i| {
+                    let t = i as f32 / 10.0;
+                    (a.0 + (b.0 - a.0) * t, a.1 + (b.1 - a.1) * t)
+                })
+                .collect()
+        };
+        let strokes = vec![
+            seg((0.0, 0.0), (120.0, 0.0)),
+            seg((120.0, 0.0), (120.0, 100.0)),
+            seg((120.0, 100.0), (84.0, 100.0)),
+            seg((84.0, 100.0), (84.0, 35.0)),
+            seg((84.0, 35.0), (36.0, 35.0)),
+            seg((36.0, 35.0), (36.0, 100.0)),
+            seg((36.0, 100.0), (0.0, 100.0)),
+            seg((0.0, 100.0), (0.0, 0.0)),
+        ];
+        let p = profile_from_strokes(&strokes).expect("U 形");
+        assert_eq!(p.outer.len(), 8, "{:?}", p.outer);
+        assert!((p.area() - (120.0 * 100.0 - 48.0 * 65.0)).abs() < 50.0);
     }
 
     #[test]

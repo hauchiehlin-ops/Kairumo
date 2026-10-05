@@ -1030,6 +1030,12 @@ impl PdfWriter {
                 "q {r:.3} {g:.3} {b:.3} RG {w:.2} w 1 J 1 j",
                 w = stroke.base_width
             );
+            // 製圖線型（隱藏線、中心線、假想線）：PDF 原生支援虛線，與螢幕上同一個圖樣。
+            let pattern = padnote_ink::LineType::from_id(stroke.line_type).pattern();
+            if !pattern.is_empty() {
+                let nums: Vec<String> = pattern.iter().map(|v| format!("{v:.1}")).collect();
+                let _ = writeln!(content, "[{}] 0 d", nums.join(" "));
+            }
 
             if stroke.tool == padnote_ink::Tool::Highlighter || alpha < 0.99 {
                 let _ = writeln!(content, "{alpha:.2} CA");

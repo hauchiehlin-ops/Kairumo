@@ -55,8 +55,9 @@ object SeedNotebooks {
         if (buildMeeting(context, deviceId, ::l)) created++
         if (buildFeatureShowcase(context, deviceId, ::l)) created++
         if (buildKairumoManual(context, deviceId)) created++
+        if (buildDraftingExample(context, deviceId, ::l)) created++
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-            .edit().putBoolean(KEY_MANUAL, true).apply()
+            .edit().putBoolean(KEY_MANUAL, true).putBoolean(KEY_DRAFT_EXAMPLE, true).apply()
         return created
     }
 
@@ -103,6 +104,14 @@ object SeedNotebooks {
             }
         }
 
+        // 《圖學範例》：舊使用者只補一次（旗標），之後刪掉就不再長回來。
+        if (!prefs.getBoolean(KEY_DRAFT_EXAMPLE, false)) {
+            prefs.edit().putBoolean(KEY_DRAFT_EXAMPLE, true).apply()
+            if (existing.none { it.id == DRAFT_EXAMPLE_ID }) {
+                buildDraftingExample(context, deviceId, l)
+            }
+        }
+
         if (prefs.getBoolean(KEY_BACKFILLED, false)) return 0
 
         val welcomeTitle = l("seed_welcome_title")
@@ -136,6 +145,8 @@ object SeedNotebooks {
 
     private const val PREFS = "kairumo.seed"
     private const val KEY_MANUAL = "kairumo_manual_added"
+    private const val KEY_DRAFT_EXAMPLE = "drafting_example_added"
+    private const val DRAFT_EXAMPLE_ID = "seed-drafting-example-v1"
     private const val MANUAL_ID = "seed-kairumo-manual-v1"
     /** 名稱是固定的，不走語系表。 */
     private const val MANUAL_TITLE = "Kairumo手冊"
@@ -1023,6 +1034,66 @@ private fun buildFeatureShowcase(context: Context, deviceId: UInt, l: (String) -
             }
         }
         return true
+    }
+
+    // MARK: - 《圖學範例》：三視圖輔助線求交點
+    //
+    // 每頁的線與字由核心的 `draftingExample()` 算好（Apple 讀同一份），製圖線一筆一筆落在
+    // 真正的圖層上：底層原題、中層輔助線與步驟編號、頂層答案。最後一頁教人把中層隱藏。
+
+    private fun buildDraftingExample(context: Context, deviceId: UInt, l: (String) -> String): Boolean {
+        val ex = uniffi.padnote_core.draftingExample()
+        val title = l(ex.titleKey)
+        val style = DocumentTemplateCatalog.paperStyle(ex.paperId)
+        val id = NotebookLibrary.create(
+            context, title, deviceId, style = style, paperId = ex.paperId, id = DRAFT_EXAMPLE_ID
+        ) ?: return false
+        val (session, firstPage) = NotebookLibrary.open(context, id, deviceId, title) ?: return false
+        NotebookMeta.load(session).setPageFormatId(session, ex.pageFormatId)
+        val pages = ensurePagesStyled(session, firstPage, ex.pages.size, style)
+
+        for ((index, page) in ex.pages.withIndex()) {
+            if (index >= pages.size) break
+            for (s in page.strokes) {
+                if (s.points.size < 2) continue
+                runCatching {
+                    session.addStrokeDrafted(
+                        pages[index], uniffi.padnote_core.ToolKind.FINELINER,
+                        com.kairumo.padnote.ink.DraftingState.rgba(s.colorHex), s.width,
+                        com.kairumo.padnote.ink.DraftingState.points(s, 0f, 0f), s.layer, s.lineType
+                    )
+                }.onFailure { android.util.Log.w("DraftingExample", "stroke $index: $it") }
+            }
+            val store = TextBoxStore(session, pages[index])
+            for (t in page.texts) {
+                val body = l(t.key)
+                val perLine = maxOf(8, (t.width / (t.fontSize * 0.95f)).toInt())
+                val lines = body.split("\n").sumOf { maxOf(1, kotlin.math.ceil(it.length.toDouble() / perLine).toInt()) }
+                val box = store.create(t.x, t.y)
+                box.text = body
+                box.fontSize = t.fontSize
+                box.bold = t.bold
+                box.width = t.width
+                box.height = lines * t.fontSize * 1.6f + 12f
+                box.textColorHex = t.colorHex
+                box.backgroundColorHex = "clear"
+                box.hasBorder = false
+                box.cornerRadius = 0f
+                store.persist(box)
+            }
+        }
+        return true
+    }
+
+    private fun ensurePagesStyled(
+        session: PadnoteSession, firstPage: String, count: Int, style: PageStyle
+    ): List<String> {
+        val ids = mutableListOf(firstPage)
+        while (ids.size < count) {
+            val next = runCatching { session.addPage(style) }.getOrNull() ?: break
+            ids += next
+        }
+        return ids
     }
 
     private fun ensurePages(session: PadnoteSession, firstPage: String, count: Int): List<String> {

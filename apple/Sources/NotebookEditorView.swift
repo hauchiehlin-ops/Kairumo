@@ -450,8 +450,10 @@ final class AdaptiveCanvasView: PKCanvasView {
     var proSnapStep: Float?
     var proReassignTarget: UInt8 = 0
     var onProSnapped: ((FfiDraftSnapKind) -> Void)?
+    /// 步驟編號模式下點的位置（頁面座標）。
+    var onProMarker: ((CGPoint) -> Void)?
 
-    enum ProMode { case off, draw, erase, reassign }
+    enum ProMode { case off, draw, erase, reassign, marker }
 
     /// 依目前的工具設定專業筆畫層與輸入手勢。
     ///
@@ -488,9 +490,9 @@ final class AdaptiveCanvasView: PKCanvasView {
             gesture.deferUntilMoved = false
             gesture.isEnabled = true
             restorePan()
-        case .reassign:
-            // 點一下筆畫改圖層：PencilKit 的筆畫不管，單指拿來點。
-            gesture.mode = .reassign
+        case .reassign, .marker:
+            // 點一下筆畫改圖層／點一下放步驟編號：PencilKit 的筆畫不管，單指拿來點。
+            gesture.mode = mode == .marker ? .marker : .reassign
             gesture.cancelsTouchesInView = true
             gesture.deferUntilMoved = false
             gesture.isEnabled = true
@@ -576,6 +578,7 @@ final class AdaptiveCanvasView: PKCanvasView {
         gesture.snapStep = { [weak self] in self?.proSnapStep }
         gesture.reassignTarget = { [weak self] in self?.proReassignTarget ?? 0 }
         gesture.onSnapped = { [weak self] kind in self?.onProSnapped?(kind) }
+        gesture.onMarker = { [weak self] point in self?.onProMarker?(point) }
         gesture.allowsFingerDrawing = { [weak self] in self?.proAllowsFinger() ?? true }
         gesture.delegate = proGestureDelegate
         gesture.isEnabled = false
@@ -1119,7 +1122,7 @@ struct CanvasRepresentable: UIViewRepresentable {
         let mode: AdaptiveCanvasView.ProMode
         let isDrafting = selectedTool == .drafting
         if isDrafting {
-            mode = drafting.reassignMode ? .reassign : .draw
+            mode = drafting.markerMode ? .marker : (drafting.reassignMode ? .reassign : .draw)
         } else if selectedTool.proToolKind != nil {
             mode = .draw
         } else if selectedTool == .eraser {
@@ -1137,6 +1140,14 @@ struct CanvasRepresentable: UIViewRepresentable {
             adaptive.proLineType = drafting.activeLineType
             adaptive.proSnapStep = drafting.snapEnabled ? Float(drafting.angleStep) : nil
             adaptive.proReassignTarget = drafting.activeLayerId
+            adaptive.onProMarker = { [weak adaptive] point in
+                // 一次放一個「圈＋數字」，一次復原；放完編號加一。
+                let state = DraftingState.shared
+                let strokes = draftStepMarker(number: UInt32(state.stepNumber), cx: Float(point.x),
+                                              cy: Float(point.y), radius: 15)
+                adaptive?.proLayer?.insertDrafted(strokes, origin: .zero)
+                state.stepNumber += 1
+            }
             if let id = proInk?.notebookId { drafting.use(notebook: id) }
         } else {
             adaptive.proTool = selectedTool.proToolKind
@@ -1828,6 +1839,8 @@ public struct NotebookEditorView: View {
     @State private var selectedTool: EditorToolType = .pen
     /// 自訂頁面尺寸的輸入畫面。
     @State private var showCustomPageSize = false
+    /// 立體輔助（草圖拉伸、三視圖、剖面）。
+    @State private var showSolidStudio = false
     @State private var previousTool: EditorToolType?
     @State private var lastObservedTool: EditorToolType = .pen
 
@@ -3982,10 +3995,16 @@ public struct NotebookEditorView: View {
                         .transition(.opacity.combined(with: .move(edge: .top)))
                 }
             }
+            .sheet(isPresented: $showSolidStudio) {
+                SolidStudioSheet(
+                    pageSize: PageGeometry.size,
+                    sketchPolylines: { solidSketchPolylines() },
+                    onInsert: { insertSolidSheet($0) })
+            }
             .overlay(alignment: .top) {
                 // 圖學：製圖筆組、圖層、吸附（見 DraftingBar.swift）。
                 if editorMode == .draw && selectedTool == .drafting {
-                    DraftingBar()
+                    DraftingBar(onOpenSolidStudio: { showSolidStudio = true })
                         .padding(.top, 12)
                         .transition(.opacity.combined(with: .move(edge: .top)))
                 }
@@ -9710,6 +9729,28 @@ public struct NotebookEditorView: View {
         .sheet(isPresented: $showCustomPageSize) {
             CustomPageSizeSheet(initial: PageGeometry.size) { applyPageFormat($0) }
         }
+    }
+
+    /// 這一頁上所有手繪線的點：專業筆刷（含製圖線）加上 PencilKit 的筆畫。
+    private func solidSketchPolylines() -> [[CGPoint]] {
+        var all = (canvasView as? AdaptiveCanvasView)?.proLayer?.sketchPolylines ?? []
+        if let drawing = canvasView?.drawing {
+            for stroke in drawing.strokes {
+                all.append(stroke.path.interpolatedPoints(by: .distance(3)).map(\.location))
+            }
+        }
+        return all
+    }
+
+    /// 把立體輔助排好的圖紙插進目前這一頁，水平置中、靠上。整組一次復原。
+    private func insertSolidSheet(_ sheet: FfiSolidSheet) {
+        guard let layer = (canvasView as? AdaptiveCanvasView)?.proLayer else { return }
+        let page = PageGeometry.size
+        let origin = CGPoint(
+            x: max(0, (page.width - CGFloat(sheet.width)) / 2),
+            y: max(PageGeometry.printableInset, page.height * 0.08))
+        layer.insertDrafted(sheet.strokes, origin: origin)
+        showCanvasNotice(localizationManager.localized("solid_inserted"))
     }
 
     /// 工具列上顯示的規格名稱。自訂的直接顯示尺寸（「2000×1500」）。

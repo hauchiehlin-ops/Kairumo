@@ -3438,6 +3438,38 @@ extension LocalizationManager {
             .ko: "도형 스냅",
             .th: "จัดรูปทรงอัตโนมัติ"
         ],
+        "draft_step_hint": [
+            .zhHant: "點頁面放上編號",
+            .en: "Tap the page to place the number",
+            .zhHans: "点页面放上编号",
+            .ja: "ページをタップして番号を配置",
+            .ko: "페이지를 눌러 번호 배치",
+            .th: "แตะหน้าเพื่อวางเลข"
+        ],
+        "draft_step_marker": [
+            .zhHant: "步驟編號",
+            .en: "Step numbers",
+            .zhHans: "步骤编号",
+            .ja: "手順番号",
+            .ko: "단계 번호",
+            .th: "เลขขั้นตอน"
+        ],
+        "draft_step_next": [
+            .zhHant: "下一個編號",
+            .en: "Next number",
+            .zhHans: "下一个编号",
+            .ja: "次の番号",
+            .ko: "다음 번호",
+            .th: "เลขถัดไป"
+        ],
+        "draft_step_reset": [
+            .zhHant: "從 ① 重來",
+            .en: "Start from ①",
+            .zhHans: "从 ① 重来",
+            .ja: "① からやり直す",
+            .ko: "①부터 다시",
+            .th: "เริ่มจาก ①"
+        ],
         "draft_unlock_layer": [
             .zhHant: "解除鎖定",
             .en: "Unlock layer",
@@ -3445,6 +3477,134 @@ extension LocalizationManager {
             .ja: "ロック解除",
             .ko: "잠금 해제",
             .th: "ปลดล็อก"
+        ],
+        "drafting_example_notebook": [
+            .zhHant: "圖學範例",
+            .en: "Drafting Example",
+            .zhHans: "图学范例",
+            .ja: "製図の例",
+            .ko: "도면 예제",
+            .th: "ตัวอย่างงานเขียนแบบ"
+        ],
+        "drafting_example_p1_hint": [
+            .zhHant: "用圖層面板可以顯示／隱藏每一層：底層是原題、中層是輔助線、頂層是答案。接下來的步驟都畫在中層。",
+            .en: "Use the layer panel to show or hide each layer: base (given), middle (construction lines), top (answer). The steps below are drawn on the middle layer.",
+            .zhHans: "用图层面板可以显示／隐藏每一层：底层是原题、中层是辅助线、顶层是答案。接下来的步骤都画在中层。",
+            .ja: "レイヤーパネルで各レイヤーの表示／非表示を切り替えられます。下層＝与件、中層＝補助線、上層＝解答。以降の手順は中層に描きます。",
+            .ko: "레이어 패널에서 각 레이어를 표시/숨길 수 있습니다. 하층=원문제, 중층=보조선, 상층=정답. 이후 단계는 중층에 그립니다.",
+            .th: "ใช้แผงเลเยอร์เพื่อแสดง/ซ่อนแต่ละชั้น: ชั้นล่าง=โจทย์ ชั้นกลาง=เส้นช่วย ชั้นบน=คำตอบ ขั้นตอนต่อไปวาดบนชั้นกลาง"
+        ],
+        "drafting_example_p1_sub": [
+            .zhHant: "已知：正視圖與俯視圖（底層・原題）。求：右側視圖。",
+            .en: "Given: front view and top view (base layer). Find: the right side view.",
+            .zhHans: "已知：正视图与俯视图（底层·原题）。求：右侧视图。",
+            .ja: "与件：正面図と平面図（下層）。求めるもの：右側面図。",
+            .ko: "주어진 것: 정면도와 평면도(하층). 구할 것: 우측면도.",
+            .th: "กำหนด: ภาพด้านหน้าและด้านบน (ชั้นล่าง) หา: ภาพด้านขวา"
+        ],
+        "drafting_example_p2_sub": [
+            .zhHant: "步驟 ①②：45° 轉向線與水平投射線",
+            .en: "Steps ①②: the 45° line and the horizontal projection lines",
+            .zhHans: "步骤 ①②：45° 转向线与水平投射线",
+            .ja: "手順 ①②：45°線と水平投影線",
+            .ko: "단계 ①②: 45° 선과 수평 투사선",
+            .th: "ขั้นตอน ①②: เส้น 45° และเส้นโครงแนวนอน"
+        ],
+        "drafting_example_p3_sub": [
+            .zhHant: "步驟 ③④：向下的垂直線與向右的水平線",
+            .en: "Steps ③④: vertical lines down, horizontal lines across",
+            .zhHans: "步骤 ③④：向下的垂直线与向右的水平线",
+            .ja: "手順 ③④：下への垂直線と右への水平線",
+            .ko: "단계 ③④: 아래로 수직선, 오른쪽으로 수평선",
+            .th: "ขั้นตอน ③④: เส้นดิ่งลงและเส้นนอนไปทางขวา"
+        ],
+        "drafting_example_p4_sub": [
+            .zhHant: "步驟 ⑤：頂層的答案",
+            .en: "Step ⑤: the answer on the top layer",
+            .zhHans: "步骤 ⑤：顶层的答案",
+            .ja: "手順 ⑤：上層の解答",
+            .ko: "단계 ⑤: 상층의 정답",
+            .th: "ขั้นตอน ⑤: คำตอบบนชั้นบน"
+        ],
+        "drafting_example_p5_body": [
+            .zhHant: "開啟圖層面板（圖學筆組），點中層旁邊的眼睛。輔助線與步驟編號就收起來，只剩原題與你的答案；想複習步驟時再點一次。",
+            .en: "Open the layer panel (the Drafting tool) and tap the eye next to the middle layer. The construction lines and step numbers disappear; only the given views and your answer remain. Tap it again whenever you want to review the steps.",
+            .zhHans: "打开图层面板（图学笔组），点中层旁边的眼睛。辅助线与步骤编号就收起来，只剩原题与你的答案；想复习步骤时再点一次。",
+            .ja: "レイヤーパネル（製図ツール）を開き、中層の目のアイコンをタップ。補助線と手順番号が隠れ、与件と解答だけが残ります。復習したいときはもう一度タップ。",
+            .ko: "레이어 패널(도면 도구)을 열고 중층의 눈 아이콘을 누르세요. 보조선과 단계 번호가 사라지고 원문제와 정답만 남습니다. 복습할 때 다시 누르세요.",
+            .th: "เปิดแผงเลเยอร์ (ชุดปากกาเขียนแบบ) แล้วแตะรูปตาของชั้นกลาง เส้นช่วยและเลขขั้นตอนจะหายไป เหลือเพียงโจทย์และคำตอบ แตะอีกครั้งเมื่อต้องการทบทวน"
+        ],
+        "drafting_example_p5_sub": [
+            .zhHant: "完成 — 把輔助線收起來",
+            .en: "Done — now hide the construction lines",
+            .zhHans: "完成 — 把辅助线收起来",
+            .ja: "完成 — 補助線を隠す",
+            .ko: "완료 — 보조선 숨기기",
+            .th: "เสร็จแล้ว — ซ่อนเส้นช่วย"
+        ],
+        "drafting_example_right": [
+            .zhHant: "✓ 對：畫成虛線，因為它在右臂後面",
+            .en: "✓ Right: dashed, because it is behind the arm",
+            .zhHans: "✓ 对：画成虚线，因为它在右臂后面",
+            .ja: "✓ 正：腕の後ろなので破線",
+            .ko: "✓ 정답: 팔 뒤에 있으므로 점선",
+            .th: "✓ ถูก: เส้นประ เพราะอยู่หลังแขน"
+        ],
+        "drafting_example_s12": [
+            .zhHant: "① 在俯視圖右上角畫 45° 轉向線。\n② 從俯視圖的前緣與後緣向右畫水平投射線，碰到 45° 線為止。",
+            .en: "① Draw the 45° line at the top-right corner of the top view.\n② From the front and back edges of the top view, draw horizontal lines to the right until they meet the 45° line.",
+            .zhHans: "① 在俯视图右上角画 45° 转向线。\n② 从俯视图的前缘与后缘向右画水平投射线，碰到 45° 线为止。",
+            .ja: "① 平面図の右上に45°線を引く。\n② 平面図の前縁・後縁から右へ水平線を引き、45°線に当てる。",
+            .ko: "① 평면도 오른쪽 위에 45° 선을 긋습니다.\n② 평면도의 앞·뒤 가장자리에서 오른쪽으로 수평선을 45° 선까지 긋습니다.",
+            .th: "① ลากเส้น 45° ที่มุมขวาบนของภาพด้านบน\n② จากขอบหน้า/หลังของภาพด้านบน ลากเส้นแนวนอนไปทางขวาจนชนเส้น 45°"
+        ],
+        "drafting_example_s34": [
+            .zhHant: "③ 從水平線碰到 45° 線的地方向下畫垂直線，決定右側視圖的深度。\n④ 從正視圖的每個高度向右畫水平線，決定右側視圖的高度。",
+            .en: "③ From where the horizontal lines meet the 45° line, draw vertical lines downward. They fix the depth of the right view.\n④ From each height on the front view, draw horizontal lines to the right. They fix the height of the right view.",
+            .zhHans: "③ 从水平线碰到 45° 线的地方向下画垂直线，决定右侧视图的深度。\n④ 从正视图的每个高度向右画水平线，决定右侧视图的高度。",
+            .ja: "③ 水平線が45°線に当たる点から下へ垂直線を引く。右側面図の奥行きが決まる。\n④ 正面図の各高さから右へ水平線を引く。右側面図の高さが決まる。",
+            .ko: "③ 수평선이 45° 선에 닿는 곳에서 아래로 수직선을 긋습니다. 우측면도의 깊이가 정해집니다.\n④ 정면도의 각 높이에서 오른쪽으로 수평선을 긋습니다. 우측면도의 높이가 정해집니다.",
+            .th: "③ จากจุดที่เส้นนอนชนเส้น 45° ลากเส้นดิ่งลง กำหนดความลึกของภาพด้านขวา\n④ จากทุกระดับความสูงของภาพด้านหน้า ลากเส้นนอนไปทางขวา กำหนดความสูงของภาพด้านขวา"
+        ],
+        "drafting_example_s5": [
+            .zhHant: "⑤ 垂直線與水平線的交點就是右側視圖的頂點。依序連線：看得見的邊畫粗實線，被擋住的邊畫虛線。",
+            .en: "⑤ The intersections of the vertical and horizontal lines are the vertices of the right view. Connect them: thick solid lines for edges you can see, dashed lines for edges hidden behind other material.",
+            .zhHans: "⑤ 垂直线与水平线的交点就是右侧视图的顶点。依序连线：看得见的边画粗实线，被挡住的边画虚线。",
+            .ja: "⑤ 垂直線と水平線の交点が右側面図の頂点。順に結ぶ：見える辺は太い実線、隠れた辺は破線。",
+            .ko: "⑤ 수직선과 수평선의 교점이 우측면도의 꼭짓점입니다. 이어서 그립니다: 보이는 모서리는 굵은 실선, 가려진 모서리는 점선.",
+            .th: "⑤ จุดตัดของเส้นดิ่งและเส้นนอนคือจุดยอดของภาพด้านขวา ลากเชื่อม: ขอบที่เห็นใช้เส้นหนาทึบ ขอบที่ถูกบังใช้เส้นประ"
+        ],
+        "drafting_example_title": [
+            .zhHant: "三視圖輔助線求交點",
+            .en: "Three views: finding points with construction lines",
+            .zhHans: "三视图辅助线求交点",
+            .ja: "三面図：補助線で交点を求める",
+            .ko: "3면도: 보조선으로 교점 찾기",
+            .th: "สามมุมมอง: หาจุดตัดด้วยเส้นช่วย"
+        ],
+        "drafting_example_trap_rule": [
+            .zhHant: "口訣：從這個方向看過去，邊的前面還有零件的別的面擋著，它就是隱藏線 — 畫虛線。",
+            .en: "Rule of thumb: if another surface of the part is in front of an edge when you look from that side, the edge is hidden — draw it dashed.",
+            .zhHans: "口诀：从这个方向看过去，边的前面还有零件的别的面挡着，它就是隐藏线 — 画虚线。",
+            .ja: "コツ：その方向から見て、辺の手前に部品の別の面があれば隠れ線 — 破線で描く。",
+            .ko: "요령: 그 방향에서 볼 때 모서리 앞을 부품의 다른 면이 가리면 숨은선입니다 — 점선으로 그립니다.",
+            .th: "เคล็ดลับ: มองจากทิศนั้นแล้วมีผิวอื่นของชิ้นงานบังอยู่หน้าขอบ ขอบนั้นคือเส้นประ — วาดเป็นเส้นประ"
+        ],
+        "drafting_example_trap_sub": [
+            .zhHant: "常見陷阱：忘了畫隱藏線",
+            .en: "Common trap: forgetting hidden lines",
+            .zhHans: "常见陷阱：忘了画隐藏线",
+            .ja: "よくある落とし穴：隠れ線を忘れる",
+            .ko: "흔한 함정: 숨은선을 빼먹기",
+            .th: "กับดักที่พบบ่อย: ลืมเส้นประ"
+        ],
+        "drafting_example_wrong": [
+            .zhHant: "✗ 錯：被擋住的邊畫成實線",
+            .en: "✗ Wrong: the hidden edge drawn as a solid line",
+            .zhHans: "✗ 错：被挡住的边画成实线",
+            .ja: "✗ 誤：隠れた辺を実線で描いた",
+            .ko: "✗ 오답: 가려진 모서리를 실선으로 그림",
+            .th: "✗ ผิด: วาดขอบที่ถูกบังเป็นเส้นทึบ"
         ],
         "drag_card_hint": [
             .zhHant: "拖曳移動卡片",
@@ -11639,6 +11799,326 @@ extension LocalizationManager {
             .ja: "スナップショット名",
             .ko: "스냅샷 이름",
             .th: "ชื่อสแนปช็อต"
+        ],
+        "solid_angle": [
+            .zhHant: "切線方向",
+            .en: "Cut direction",
+            .zhHans: "切线方向",
+            .ja: "切断線の向き",
+            .ko: "절단선 방향",
+            .th: "ทิศทางเส้นตัด"
+        ],
+        "solid_centerlines": [
+            .zhHant: "中心線",
+            .en: "Centre lines",
+            .zhHans: "中心线",
+            .ja: "中心線",
+            .ko: "중심선",
+            .th: "เส้นศูนย์กลาง"
+        ],
+        "solid_delta": [
+            .zhHant: "第二段角度",
+            .en: "Second leg angle",
+            .zhHans: "第二段角度",
+            .ja: "2段目の角度",
+            .ko: "두 번째 각도",
+            .th: "มุมช่วงที่สอง"
+        ],
+        "solid_depth": [
+            .zhHant: "深",
+            .en: "Depth",
+            .zhHans: "深",
+            .ja: "奥行き",
+            .ko: "깊이",
+            .th: "ลึก"
+        ],
+        "solid_depth_pos": [
+            .zhHant: "切入深度",
+            .en: "Cut depth",
+            .zhHans: "切入深度",
+            .ja: "切断の深さ",
+            .ko: "절단 깊이",
+            .th: "ความลึกที่ตัด"
+        ],
+        "solid_first_angle": [
+            .zhHant: "第一角法",
+            .en: "First-angle projection",
+            .zhHans: "第一角法",
+            .ja: "第一角法",
+            .ko: "제1각법",
+            .th: "การฉายมุมที่หนึ่ง"
+        ],
+        "solid_flip": [
+            .zhHant: "從另一側看",
+            .en: "Look from the other side",
+            .zhHans: "从另一侧看",
+            .ja: "反対側から見る",
+            .ko: "반대쪽에서 보기",
+            .th: "มองจากอีกด้าน"
+        ],
+        "solid_from_sketch": [
+            .zhHant: "使用這一頁上的封閉圖形",
+            .en: "Use the closed shapes on this page",
+            .zhHans: "使用这一页上的封闭图形",
+            .ja: "このページの閉じた図形を使う",
+            .ko: "이 페이지의 닫힌 도형 사용",
+            .th: "ใช้รูปปิดบนหน้านี้"
+        ],
+        "solid_height": [
+            .zhHant: "高",
+            .en: "Height",
+            .zhHans: "高",
+            .ja: "高さ",
+            .ko: "높이",
+            .th: "สูง"
+        ],
+        "solid_insert": [
+            .zhHant: "插入頁面",
+            .en: "Insert into page",
+            .zhHans: "插入页面",
+            .ja: "ページに挿入",
+            .ko: "페이지에 삽입",
+            .th: "แทรกลงหน้า"
+        ],
+        "solid_inserted": [
+            .zhHant: "已插入：輪廓在頂層，投射線在中層",
+            .en: "Views inserted on the Top layer; construction lines are on the Middle layer",
+            .zhHans: "已插入：轮廓在顶层，投射线在中层",
+            .ja: "挿入しました：輪郭は上層、投影線は中層",
+            .ko: "삽입됨: 윤곽은 상층, 투사선은 중층",
+            .th: "แทรกแล้ว: เส้นขอบอยู่ชั้นบน เส้นโครงอยู่ชั้นกลาง"
+        ],
+        "solid_iso": [
+            .zhHant: "等角圖",
+            .en: "Isometric view",
+            .zhHans: "等角图",
+            .ja: "等角図",
+            .ko: "등각도",
+            .th: "ภาพไอโซเมตริก"
+        ],
+        "solid_offset": [
+            .zhHant: "切線位置",
+            .en: "Cut position",
+            .zhHans: "切线位置",
+            .ja: "切断位置",
+            .ko: "절단 위치",
+            .th: "ตำแหน่งตัด"
+        ],
+        "solid_offset2": [
+            .zhHant: "第二段位置",
+            .en: "Second cut position",
+            .zhHans: "第二段位置",
+            .ja: "2段目の位置",
+            .ko: "두 번째 위치",
+            .th: "ตำแหน่งที่สอง"
+        ],
+        "solid_pitch": [
+            .zhHant: "垂直傾斜",
+            .en: "Tilt",
+            .zhHans: "垂直倾斜",
+            .ja: "垂直傾斜",
+            .ko: "상하 기울기",
+            .th: "เอียงขึ้นลง"
+        ],
+        "solid_preset_circle": [
+            .zhHant: "圓形",
+            .en: "Circle",
+            .zhHans: "圆形",
+            .ja: "円",
+            .ko: "원",
+            .th: "วงกลม"
+        ],
+        "solid_preset_hexagon": [
+            .zhHant: "六邊形",
+            .en: "Hexagon",
+            .zhHans: "六边形",
+            .ja: "六角形",
+            .ko: "육각형",
+            .th: "หกเหลี่ยม"
+        ],
+        "solid_preset_l_shape": [
+            .zhHant: "L 形",
+            .en: "L shape",
+            .zhHans: "L 形",
+            .ja: "L字形",
+            .ko: "L자형",
+            .th: "รูปตัว L"
+        ],
+        "solid_preset_plate_holes": [
+            .zhHant: "四孔板",
+            .en: "Plate with holes",
+            .zhHans: "四孔板",
+            .ja: "4穴プレート",
+            .ko: "4구멍 판",
+            .th: "แผ่นสี่รู"
+        ],
+        "solid_preset_rect": [
+            .zhHant: "矩形",
+            .en: "Rectangle",
+            .zhHans: "矩形",
+            .ja: "長方形",
+            .ko: "직사각형",
+            .th: "สี่เหลี่ยม"
+        ],
+        "solid_preset_ring": [
+            .zhHant: "墊圈（有孔）",
+            .en: "Washer (hole)",
+            .zhHans: "垫圈（有孔）",
+            .ja: "ワッシャー（穴あり）",
+            .ko: "와셔(구멍)",
+            .th: "แหวน (มีรู)"
+        ],
+        "solid_preset_t_shape": [
+            .zhHant: "T 形",
+            .en: "T shape",
+            .zhHans: "T 形",
+            .ja: "T字形",
+            .ko: "T자형",
+            .th: "รูปตัว T"
+        ],
+        "solid_preset_u_shape": [
+            .zhHant: "U 形槽",
+            .en: "U channel",
+            .zhHans: "U 形槽",
+            .ja: "U字溝",
+            .ko: "U자 홈",
+            .th: "รางตัว U"
+        ],
+        "solid_profile": [
+            .zhHant: "輪廓",
+            .en: "Profile",
+            .zhHans: "轮廓",
+            .ja: "断面形状",
+            .ko: "단면 형상",
+            .th: "โครงร่าง"
+        ],
+        "solid_projection": [
+            .zhHant: "投射線",
+            .en: "Projection lines",
+            .zhHans: "投射线",
+            .ja: "投影線",
+            .ko: "투사선",
+            .th: "เส้นโครง"
+        ],
+        "solid_section": [
+            .zhHant: "剖面",
+            .en: "Section",
+            .zhHans: "剖面",
+            .ja: "断面",
+            .ko: "단면",
+            .th: "ภาพตัด"
+        ],
+        "solid_section_full": [
+            .zhHant: "全剖面",
+            .en: "Full section",
+            .zhHans: "全剖面",
+            .ja: "全断面",
+            .ko: "온단면",
+            .th: "ตัดเต็ม"
+        ],
+        "solid_section_none": [
+            .zhHant: "不剖",
+            .en: "No section",
+            .zhHans: "不剖",
+            .ja: "断面なし",
+            .ko: "단면 없음",
+            .th: "ไม่ตัด"
+        ],
+        "solid_section_parallel": [
+            .zhHant: "平行正面的剖面",
+            .en: "Section parallel to the front",
+            .zhHans: "平行正面的剖面",
+            .ja: "正面に平行な断面",
+            .ko: "정면에 평행한 단면",
+            .th: "ตัดขนานด้านหน้า"
+        ],
+        "solid_section_rotated": [
+            .zhHant: "旋轉剖面",
+            .en: "Rotated section",
+            .zhHans: "旋转剖面",
+            .ja: "回転断面",
+            .ko: "회전 단면",
+            .th: "ตัดแบบหมุน"
+        ],
+        "solid_section_stepped": [
+            .zhHant: "階梯剖面",
+            .en: "Stepped section",
+            .zhHans: "阶梯剖面",
+            .ja: "階段断面",
+            .ko: "계단 단면",
+            .th: "ตัดแบบขั้นบันได"
+        ],
+        "solid_sketch_none": [
+            .zhHant: "找不到封閉的圖形。請畫一個頭尾相接的輪廓（長按吸附的矩形或圓都可以）再試一次。",
+            .en: "No closed shape found. Draw an outline whose end meets its start (a hold-to-snap rectangle or circle works well), then try again.",
+            .zhHans: "找不到封闭的图形。请画一个头尾相接的轮廓（长按吸附的矩形或圆都可以）再试一次。",
+            .ja: "閉じた図形が見つかりません。始点と終点がつながる輪郭（長押しスナップの長方形や円など）を描いて再度お試しください。",
+            .ko: "닫힌 도형을 찾지 못했습니다. 시작점과 끝점이 만나는 윤곽(길게 눌러 스냅한 사각형이나 원)을 그린 뒤 다시 시도하세요.",
+            .th: "ไม่พบรูปปิด กรุณาวาดโครงร่างที่ปลายชนต้น (สี่เหลี่ยมหรือวงกลมที่กดค้างจัดรูป) แล้วลองใหม่"
+        ],
+        "solid_sketch_used": [
+            .zhHant: "已用你的草圖拉伸",
+            .en: "Extruded from your sketch",
+            .zhHans: "已用你的草图拉伸",
+            .ja: "スケッチから押し出しました",
+            .ko: "스케치에서 돌출했습니다",
+            .th: "ดึงจากสเก็ตช์ของคุณแล้ว"
+        ],
+        "solid_step": [
+            .zhHant: "轉折位置",
+            .en: "Step at",
+            .zhHans: "转折位置",
+            .ja: "段差の位置",
+            .ko: "꺾임 위치",
+            .th: "ตำแหน่งขั้น"
+        ],
+        "solid_studio": [
+            .zhHant: "立體輔助",
+            .en: "Solid helper",
+            .zhHans: "立体辅助",
+            .ja: "立体ヘルパー",
+            .ko: "입체 도우미",
+            .th: "ตัวช่วยงานสามมิติ"
+        ],
+        "solid_studio_desc": [
+            .zhHant: "把草圖拉伸成立體，畫出三視圖、等角圖與剖面",
+            .en: "Extrude a sketch, then draw its three views, isometric view and sections",
+            .zhHans: "把草图拉伸成立体，画出三视图、等角图与剖面",
+            .ja: "スケッチを押し出し、三面図・等角図・断面図を作成",
+            .ko: "스케치를 돌출시켜 3면도, 등각도, 단면도 만들기",
+            .th: "ดึงสเก็ตช์เป็นชิ้นงาน แล้ววาดสามมุมมอง ภาพไอโซเมตริก และภาพตัด"
+        ],
+        "solid_tab_rotate": [
+            .zhHant: "旋轉對照",
+            .en: "Rotate",
+            .zhHans: "旋转对照",
+            .ja: "回転",
+            .ko: "회전",
+            .th: "หมุน"
+        ],
+        "solid_tab_sheet": [
+            .zhHant: "視圖",
+            .en: "Views",
+            .zhHans: "视图",
+            .ja: "図面",
+            .ko: "도면",
+            .th: "ภาพ"
+        ],
+        "solid_width": [
+            .zhHant: "寬",
+            .en: "Width",
+            .zhHans: "宽",
+            .ja: "幅",
+            .ko: "너비",
+            .th: "กว้าง"
+        ],
+        "solid_yaw": [
+            .zhHant: "水平旋轉",
+            .en: "Turn",
+            .zhHans: "水平旋转",
+            .ja: "水平回転",
+            .ko: "좌우 회전",
+            .th: "หมุนซ้ายขวา"
         ],
         "sort_by_date": [
             .zhHant: "依修改時間排序",

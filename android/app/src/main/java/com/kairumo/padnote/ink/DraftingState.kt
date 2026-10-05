@@ -42,8 +42,27 @@ object DraftingState {
     var angleStep by mutableIntStateOf(15)
         private set
 
+    private var reassignFlag by mutableStateOf(false)
+    private var markerFlag by mutableStateOf(false)
+
     /** 點筆畫就把它改到目前圖層。 */
-    var reassignMode by mutableStateOf(false)
+    var reassignMode: Boolean
+        get() = reassignFlag
+        set(value) {
+            reassignFlag = value
+            if (value) markerFlag = false
+        }
+
+    /** 點一下就放一個步驟編號（①②③…，畫在中層）。 */
+    var markerMode: Boolean
+        get() = markerFlag
+        set(value) {
+            markerFlag = value
+            if (value) reassignFlag = false
+        }
+
+    /** 下一個要放的編號。 */
+    var stepNumber by mutableIntStateOf(1)
 
     /** 每次顯示／鎖定改動就 +1，畫布讀它來重畫。 */
     var version by mutableIntStateOf(0)
@@ -143,4 +162,38 @@ object DraftingState {
 
     fun parseHex(hex: String): Color =
         runCatching { Color(android.graphics.Color.parseColor(hex)) }.getOrDefault(Color.Black)
+
+    /**
+     * 核心排好的一條製圖線 → 筆點。兩點的直線補點到每 4 個頁面單位一點：
+     * 虛線與點畫線的間隔由筆點陣挖出來，點太稀會失準。
+     */
+    fun points(item: uniffi.padnote_core.FfiSheetStroke, ox: Float, oy: Float): List<uniffi.padnote_core.StrokePoint> {
+        val pts = ArrayList<uniffi.padnote_core.StrokePoint>()
+        fun add(x: Float, y: Float) {
+            pts += uniffi.padnote_core.StrokePoint(
+                x = x + ox, y = y + oy, pressure = 0.6f, tilt = 0f, azimuth = 0f, dtUs = 2000u, roll = 0f
+            )
+        }
+        if (item.points.isEmpty()) return pts
+        add(item.points[0].x, item.points[0].y)
+        for (k in 1 until item.points.size) {
+            val a = item.points[k - 1]
+            val b = item.points[k]
+            val n = kotlin.math.max(1, kotlin.math.ceil(kotlin.math.hypot(b.x - a.x, b.y - a.y) / 4f).toInt())
+            for (s in 1..n) {
+                val t = s.toFloat() / n
+                add(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t)
+            }
+        }
+        return pts
+    }
+
+    /** `#RRGGBB` → 筆畫用的 RGBA（不透明）。 */
+    fun rgba(hex: String): ByteArray {
+        val c = parseHex(hex)
+        return byteArrayOf(
+            (c.red * 255).toInt().toByte(), (c.green * 255).toInt().toByte(),
+            (c.blue * 255).toInt().toByte(), -1
+        )
+    }
 }

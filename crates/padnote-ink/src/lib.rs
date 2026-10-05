@@ -17,7 +17,7 @@ pub mod streamline;
 pub use align::{Alignment, SnapResult, align, distribute, snap};
 pub use brush::{Dab, apply_line_type, dabs, dabs_styled};
 pub use codec::{StrokeReader, StrokeWriter};
-pub use draft::{SnapKind, Snapped, snap_direction, snap_stroke};
+pub use draft::{SnapKind, Snapped, dash_runs, snap_direction, snap_stroke};
 pub use fill::{FillOptions, FillResult, smart_fill};
 pub use geometry::{
     Rect, distance_to_segment, half_width, half_width_dynamic, simplify, smooth_path,

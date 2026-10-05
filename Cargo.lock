@@ -2354,6 +2354,7 @@ dependencies = [
  "padnote-render",
  "padnote-search",
  "padnote-shapes",
+ "padnote-solid",
  "padnote-storage",
  "padnote-sync",
  "padnote-table",
