@@ -88,6 +88,8 @@ fun SolidStudioDialog(
     var includeIso by remember { mutableStateOf(true) }
     var projection by remember { mutableStateOf(true) }
     var centerLines by remember { mutableStateOf(true) }
+    var dimensions by remember { mutableStateOf(false) }
+    var sectionLabel by remember { mutableStateOf(false) }
 
     var yaw by remember { mutableFloatStateOf(35f) }
     var pitch by remember { mutableFloatStateOf(25f) }
@@ -108,7 +110,9 @@ fun SolidStudioDialog(
         ),
         fitWidth = fitW,
         fitHeight = fitH,
-        hatchSpacing = 6f * ratio
+        hatchSpacing = 6f * ratio,
+        dimensions = dimensions,
+        sectionLabel = sectionLabel
     )
 
     @Composable
@@ -282,6 +286,10 @@ fun SolidStudioDialog(
                     Toggle(t("solid_iso"), includeIso, "solid.iso") { includeIso = it }
                     Toggle(t("solid_projection"), projection, "solid.projection") { projection = it }
                     Toggle(t("solid_centerlines"), centerLines, "solid.centerlines") { centerLines = it }
+                    Toggle(t("solid_dimensions"), dimensions, "solid.dimensions") { dimensions = it }
+                    if (kind != FfiSectionKind.NONE) {
+                        Toggle(t("solid_section_label"), sectionLabel, "solid.sectionLabel") { sectionLabel = it }
+                    }
                 } else {
                     val deg = { v: Float -> "%.0f°".format(v) }
                     LabeledSlider(t("solid_yaw"), yaw, -180f..180f, "solid.yaw", deg) { yaw = it }

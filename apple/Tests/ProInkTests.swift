@@ -299,8 +299,12 @@ final class ProInkTests: XCTestCase {
             firstAngle: false, includeIso: true, projectionLines: true, centerLines: true,
             section: FfiSolidSection(kind: .none, angleDeg: 90, offset: 0.5, offset2: 0.7, step: 0.5, pivotX: 0.5,
                                      pivotY: 0.5, deltaDeg: 30, flip: true, depthFrac: 0.5),
-            fitWidth: 600, fitHeight: 400, hatchSpacing: 6)
+            fitWidth: 600, fitHeight: 400, hatchSpacing: 6, dimensions: false, sectionLabel: false)
         let sheet = try XCTUnwrap(solidComposeSheet(profile: profile, depth: 60, options: options))
+        var dimensioned = options
+        dimensioned.dimensions = true
+        let withDims = try XCTUnwrap(solidComposeSheet(profile: profile, depth: 60, options: dimensioned))
+        XCTAssertGreaterThan(withDims.strokes.count, sheet.strokes.count, "標註尺寸要多出尺寸線與數字筆畫")
         XCTAssertTrue(sheet.strokes.contains { $0.layer == 3 && $0.lineType == 1 }, "等角圖背面三條隱藏線")
         XCTAssertTrue(sheet.strokes.contains { $0.layer == 2 }, "投射線在中層")
     }

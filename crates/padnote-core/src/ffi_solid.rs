@@ -112,6 +112,10 @@ pub struct FfiSolidSheetOptions {
     pub fit_height: f32,
     /// 剖面線間距（頁面單位）。
     pub hatch_spacing: f32,
+    /// 標註總長、總高、總深。
+    pub dimensions: bool,
+    /// 剖面位置線兩端與剖視圖標上「A」「A-A」。
+    pub section_label: bool,
 }
 
 /// 圖紙上的一條線，已換成製圖筆組的設定。
@@ -165,7 +169,7 @@ fn pen_for(role: Role) -> &'static str {
         Role::Hidden => "hidden",
         Role::Center | Role::CutLine => "center",
         Role::Projection => "aux",
-        Role::Hatch => "thin",
+        Role::Hatch | Role::Dimension | Role::Text => "thin",
     }
 }
 
@@ -193,6 +197,8 @@ pub fn solid_compose_sheet(
         section: cut_from(&solid, &options.section),
         fit: (options.fit_width, options.fit_height),
         hatch_spacing: options.hatch_spacing.max(1.0),
+        dimensions: options.dimensions,
+        section_label: options.section_label.then_some('A'),
     };
     let sheet = compose(&solid, &opts);
     let pens = draft_pens();
@@ -454,6 +460,8 @@ mod tests {
             fit_width: 600.0,
             fit_height: 500.0,
             hatch_spacing: 6.0,
+            dimensions: false,
+            section_label: false,
         }
     }
 

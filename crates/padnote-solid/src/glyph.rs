@@ -177,7 +177,10 @@ mod tests {
         for c in "0123456789ABCD-".chars() {
             for s in glyph(c) {
                 for (u, v) in s {
-                    assert!((0.0..=1.0).contains(&u) && (0.0..=1.0).contains(&v), "{c}: {u},{v}");
+                    assert!(
+                        (0.0..=1.0).contains(&u) && (0.0..=1.0).contains(&v),
+                        "{c}: {u},{v}"
+                    );
                 }
             }
         }
@@ -189,6 +192,11 @@ mod tests {
         let (_, w3) = text_strokes("120", 0.0, 0.0, 10.0);
         assert!((w3 / w1 - 3.0).abs() < 1e-3);
         let (strokes, _) = text_strokes("A-A", 10.0, 20.0, 8.0);
-        assert!(strokes.iter().flatten().all(|p| p.0 >= 10.0 && p.1 >= 20.0 && p.1 <= 28.0));
+        assert!(
+            strokes
+                .iter()
+                .flatten()
+                .all(|p| p.0 >= 10.0 && p.1 >= 20.0 && p.1 <= 28.0)
+        );
     }
 }

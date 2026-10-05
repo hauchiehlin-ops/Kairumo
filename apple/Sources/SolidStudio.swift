@@ -40,6 +40,8 @@ struct SolidStudioSheet: View {
     @State private var includeIso = true
     @State private var projection = true
     @State private var centerLines = true
+    @State private var dimensions = false
+    @State private var sectionLabel = false
 
     // 旋轉對照
     @State private var yaw: Double = 35
@@ -65,7 +67,7 @@ struct SolidStudioSheet: View {
                 step: Float(step), pivotX: 0.5, pivotY: 0.5, deltaDeg: Float(delta), flip: flip,
                 depthFrac: Float(depthFrac)),
             fitWidth: Float(fit.width), fitHeight: Float(fit.height),
-            hatchSpacing: Float(6 * ratio))
+            hatchSpacing: Float(6 * ratio), dimensions: dimensions, sectionLabel: sectionLabel)
     }
 
     var body: some View {
@@ -246,6 +248,10 @@ struct SolidStudioSheet: View {
             Toggle(t("solid_iso"), isOn: $includeIso)
             Toggle(t("solid_projection"), isOn: $projection)
             Toggle(t("solid_centerlines"), isOn: $centerLines)
+            Toggle(t("solid_dimensions"), isOn: $dimensions).accessibilityIdentifier("solid.dimensions")
+            if kind != .none {
+                Toggle(t("solid_section_label"), isOn: $sectionLabel).accessibilityIdentifier("solid.sectionLabel")
+            }
         }
     }
 

@@ -11,6 +11,7 @@
 //! 輸出是**頁面座標**（原點在左上、y 向下），已經縮放到 `fit` 的範圍內；呼叫端加上位置偏移即可。
 
 use crate::geom::{self, P2};
+use crate::glyph;
 use crate::section::{Cut, SectionView, section_view};
 use crate::solid::Solid;
 use crate::view::{Camera, Line2, StandardView, View, project};
@@ -32,6 +33,10 @@ pub enum Role {
     CutLine,
     /// 剖面位置線兩端的粗短線（箭頭方向 = 觀看方向）。
     CutEnd,
+    /// 尺寸線、尺寸界線與箭頭：細實線。
+    Dimension,
+    /// 尺寸數字與剖面字母（筆畫字形，不是文字方塊）：細實線。
+    Text,
 }
 
 #[derive(Clone, Debug)]
@@ -58,6 +63,10 @@ pub struct SheetOptions {
     pub fit: P2,
     /// 剖面線間距（頁面單位，縮放之後的）。
     pub hatch_spacing: f32,
+    /// 標註總長、總高、總深（尺寸線＋數字）。
+    pub dimensions: bool,
+    /// 剖面位置線兩端與剖視圖上方標註這個字母（「A」→ 兩端 A、剖視圖「A-A」）。
+    pub section_label: Option<char>,
 }
 
 impl Default for SheetOptions {
@@ -70,6 +79,8 @@ impl Default for SheetOptions {
             section: None,
             fit: (600.0, 600.0),
             hatch_spacing: 6.0,
+            dimensions: false,
+            section_label: None,
         }
     }
 }
@@ -180,6 +191,37 @@ fn key_coords(solid: &Solid) -> (Vec<f32>, Vec<f32>) {
         v
     };
     (dedupe(xs), dedupe(ys))
+}
+
+/// 一行字的筆畫，放在單位座標（y 向上）：`(x, y)` 是左下角。回傳 (筆畫, 寬度)。
+fn text_at(text: &str, x: f32, y: f32, height: f32) -> (Vec<Vec<P2>>, f32) {
+    let (strokes, w) = glyph::text_strokes(text, 0.0, 0.0, height);
+    let flipped = strokes
+        .into_iter()
+        .map(|st| {
+            st.into_iter()
+                .map(|(u, v)| (x + u, y + height - v))
+                .collect()
+        })
+        .collect();
+    (flipped, w)
+}
+
+/// 尺寸線兩端的箭頭（箭尖在 `tip`，朝 `dir` 反方向收）。
+fn arrow(tip: P2, dir: P2, len: f32, out: &mut Vec<(Role, Vec<P2>)>) {
+    let half = len * 0.28;
+    let back = (tip.0 - dir.0 * len, tip.1 - dir.1 * len);
+    let n = (-dir.1, dir.0);
+    for sgn in [1.0, -1.0] {
+        out.push((
+            Role::Dimension,
+            vec![tip, (back.0 + n.0 * half * sgn, back.1 + n.1 * half * sgn)],
+        ));
+    }
+}
+
+fn fmt_len(v: f32) -> String {
+    format!("{}", v.round() as i64)
 }
 
 /// 組一張圖紙。
@@ -329,6 +371,99 @@ pub fn compose(solid: &Solid, opts: &SheetOptions) -> Sheet {
                     Role::CutEnd,
                     vec![p, (p.0 + viewer.0 * tick, p.1 + viewer.1 * tick)],
                 ));
+            }
+        }
+    }
+
+    // 尺寸標註：總長（正視圖下方）、總高（正視圖左方）、總深（俯視圖左方）。
+    if opts.dimensions {
+        let th = ext * 1.3; // 數字高度
+        let off = ext * 2.4; // 尺寸線離視圖多遠
+        let alen = ext * 0.9;
+        let dim =
+            |a: P2, b: P2, horizontal: bool, value: f32, strokes: &mut Vec<(Role, Vec<P2>)>| {
+                // a→b 是被標註的兩個點（同一個座標軸上）；尺寸線平移 off。
+                let (da, db, dir) = if horizontal {
+                    ((a.0, a.1 - off), (b.0, b.1 - off), (1.0, 0.0))
+                } else {
+                    ((a.0 - off, a.1), (b.0 - off, b.1), (0.0, 1.0))
+                };
+                // 尺寸界線：從視圖邊緣（留一點縫）延伸到尺寸線外一點。
+                for (p, q) in [(a, da), (b, db)] {
+                    let v = (q.0 - p.0, q.1 - p.1);
+                    let l = (v.0 * v.0 + v.1 * v.1).sqrt().max(1e-6);
+                    let u = (v.0 / l, v.1 / l);
+                    strokes.push((
+                        Role::Dimension,
+                        vec![
+                            (p.0 + u.0 * ext * 0.3, p.1 + u.1 * ext * 0.3),
+                            (q.0 + u.0 * ext * 0.5, q.1 + u.1 * ext * 0.5),
+                        ],
+                    ));
+                }
+                strokes.push((Role::Dimension, vec![da, db]));
+                arrow(da, (-dir.0, -dir.1), alen, strokes);
+                arrow(db, dir, alen, strokes);
+                let label = fmt_len(value);
+                let (_, tw) = text_at(&label, 0.0, 0.0, th);
+                let (tx, ty) = if horizontal {
+                    ((da.0 + db.0) / 2.0 - tw / 2.0, da.1 - th * 1.35)
+                } else {
+                    (da.0 - tw - th * 0.5, (da.1 + db.1) / 2.0 - th / 2.0)
+                };
+                for st in text_at(&label, tx, ty, th).0 {
+                    strokes.push((Role::Text, st));
+                }
+            };
+        dim((0.0, 0.0), (w, 0.0), true, w, &mut strokes);
+        dim((0.0, 0.0), (0.0, h), false, h, &mut strokes);
+        dim(
+            (0.0, top.origin.1),
+            (0.0, top.origin.1 + top.size.1),
+            false,
+            d,
+            &mut strokes,
+        );
+    }
+
+    // 剖面字母：位置線兩端各一個，剖視圖上方「A-A」。
+    if let (Some(letter), Some(cut)) = (opts.section_label, &opts.section) {
+        let th = ext * 1.5;
+        let ch = letter.to_string();
+        if let Cut::Path { viewer, .. } = cut {
+            let tick = ext * 1.2;
+            let (cw, _) = (text_at(&ch, 0.0, 0.0, th).1, 0);
+            let lines: Vec<(P2, P2)> = cut
+                .plan_lines()
+                .iter()
+                .filter_map(|(a, b)| clip_to_rect(*a, *b, (-ext, -ext), (w + ext, h + ext)))
+                .collect();
+            if let (Some(first), Some(last)) = (lines.first(), lines.last()) {
+                for p in [first.0, last.1] {
+                    let tipx = p.0 + viewer.0 * (tick + th * 0.7);
+                    let tipy = p.1 + viewer.1 * (tick + th * 0.7);
+                    for st in text_at(&ch, tipx - cw / 2.0, tipy - th / 2.0, th).0 {
+                        strokes.push((Role::Text, st));
+                    }
+                }
+            }
+        }
+        let target = if top_is_section {
+            Some(&top)
+        } else if right_is_section {
+            Some(&right)
+        } else if parallel_cut {
+            Some(&front)
+        } else {
+            None
+        };
+        if let Some(pv) = target {
+            let caption = format!("{letter}-{letter}");
+            let (_, tw) = text_at(&caption, 0.0, 0.0, th);
+            let x = pv.origin.0 + pv.size.0 / 2.0 - tw / 2.0;
+            let y = pv.origin.1 + pv.size.1 + ext * 0.8;
+            for st in text_at(&caption, x, y, th).0 {
+                strokes.push((Role::Text, st));
             }
         }
     }
@@ -515,5 +650,44 @@ mod tests {
         let r = clip_to_rect((-100.0, 5.0), (100.0, 5.0), (0.0, 0.0), (10.0, 10.0)).unwrap();
         assert!((r.0.0).abs() < 1e-3 && (r.1.0 - 10.0).abs() < 1e-3);
         assert!(clip_to_rect((-100.0, 50.0), (100.0, 50.0), (0.0, 0.0), (10.0, 10.0)).is_none());
+    }
+
+    #[test]
+    fn dimensions_add_lines_and_text_and_label_the_overall_size() {
+        let plain = compose(&cube(), &SheetOptions::default());
+        let dimmed = compose(
+            &cube(),
+            &SheetOptions {
+                dimensions: true,
+                ..SheetOptions::default()
+            },
+        );
+        assert_eq!(count(&plain, Role::Dimension), 0);
+        // 三個標註：各 2 條尺寸界線＋1 條尺寸線＋2 個箭頭（各 2 條）。
+        assert_eq!(count(&dimmed, Role::Dimension), 3 * (2 + 1 + 4));
+        assert!(count(&dimmed, Role::Text) >= 6, "數字 40 各兩位 ×3");
+        // 其它線沒有被動到。
+        assert_eq!(count(&dimmed, Role::Visible), count(&plain, Role::Visible));
+    }
+
+    #[test]
+    fn a_section_label_marks_both_ends_and_captions_the_section_view() {
+        let solid = cube();
+        let cut = Cut::full(&solid, 90.0, 0.0, false);
+        let base = SheetOptions {
+            section: Some(cut.clone()),
+            ..SheetOptions::default()
+        };
+        let without = compose(&solid, &base);
+        let with = compose(
+            &solid,
+            &SheetOptions {
+                section_label: Some('A'),
+                ..base
+            },
+        );
+        assert_eq!(count(&without, Role::Text), 0);
+        // 兩端各一個 A（2 條筆畫）＋「A-A」（A 兩條 ×2 ＋ 橫線 1）。
+        assert_eq!(count(&with, Role::Text), 2 * 2 + (2 + 1 + 2));
     }
 }

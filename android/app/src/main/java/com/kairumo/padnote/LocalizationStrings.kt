@@ -11961,7 +11961,7 @@ object LocalizationStrings {
         ),
         "solid_centerlines" to mapOf(
             "zh-Hant" to "中心線",
-            "en" to "Centre lines",
+            "en" to "Center lines",
             "zh-Hans" to "中心线",
             "ja" to "中心線",
             "ko" to "중심선",

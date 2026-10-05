@@ -11882,7 +11882,7 @@ extension LocalizationManager {
         ],
         "solid_centerlines": [
             .zhHant: "中心線",
-            .en: "Centre lines",
+            .en: "Center lines",
             .zhHans: "中心线",
             .ja: "中心線",
             .ko: "중심선",
