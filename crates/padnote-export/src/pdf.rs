@@ -1404,6 +1404,20 @@ mod tests {
     }
 
     #[test]
+    fn drafting_line_types_become_pdf_dash_arrays() {
+        let (nb, mut strokes) = sample_notebook();
+        for list in strokes.values_mut() {
+            list[0].line_type = 1;
+        }
+        let opt = PdfExportOptions {
+            compress_streams: false,
+            ..Default::default()
+        };
+        let pdf = String::from_utf8_lossy(&to_pdf(&nb, &strokes, None, &opt).unwrap()).to_string();
+        assert!(pdf.contains("[12.0 4.0] 0 d"), "隱藏線要有 PDF 虛線設定");
+    }
+
+    #[test]
     fn to_pdf_generates_valid_pdf_structure() {
         let (nb, strokes) = sample_notebook();
         let opt = PdfExportOptions {

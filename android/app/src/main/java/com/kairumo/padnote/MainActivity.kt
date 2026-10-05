@@ -4478,7 +4478,8 @@ private fun InkScreen(
                 com.kairumo.padnote.ink.DraftingBar(
                     languageTag = deviceLanguageTag(),
                     onOpenSolidStudio = { showSolidStudio = true },
-                    modifier = Modifier.align(Alignment.TopCenter).padding(top = 12.dp, start = 8.dp, end = 8.dp)
+                    // zIndex：頁面上的文字方塊等物件畫在後面，不加的話它們會蓋住工具列、吃掉點擊。
+                    modifier = Modifier.zIndex(10f).align(Alignment.TopCenter).padding(top = 12.dp, start = 8.dp, end = 8.dp)
                 )
             }
 

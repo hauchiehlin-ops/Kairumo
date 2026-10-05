@@ -105,6 +105,29 @@ mod tests {
     }
 
     #[test]
+    fn a_hidden_line_exports_as_separate_dashes_and_a_solid_one_as_one_outline() {
+        let pts: Vec<InkPoint> = (0..=50)
+            .map(|i| InkPoint {
+                x: i as f32 * 2.0,
+                y: 10.0,
+                pressure: 0.6,
+                tilt: 0.0,
+                azimuth: 0.0,
+                dt_us: 1000,
+                roll: 0.0,
+            })
+            .collect();
+        let solid = stroke(pts.clone());
+        let mut hidden = stroke(pts);
+        hidden.line_type = 1;
+        let one = stroke_to_svg_path(&solid, 2);
+        let dashed = stroke_to_svg_path(&hidden, 2);
+        assert_eq!(one.matches('Z').count(), 1);
+        // 100 單位、圖樣 12+4：7 段。
+        assert_eq!(dashed.matches('Z').count(), 7, "{dashed}");
+    }
+
+    #[test]
     fn produces_a_closed_outline() {
         let d = stroke_to_svg_path(
             &stroke(vec![
