@@ -313,4 +313,21 @@ final class ProInkTests: XCTestCase {
             document: doc, drawings: [PKDrawing()], deviceId: deviceA, proStrokes: [[hidden]])
         XCTAssertGreaterThan(withInk.count, plain.count, "匯出的 PDF 要含專業筆畫（製圖線）")
     }
+
+    @MainActor
+    func testHiddenLayerIsExcludedFromTheExportedPdf() throws {
+        let state = DraftingState.shared
+        let nb = "pdf-hidden-\(UUID().uuidString)"
+        state.use(notebook: nb)
+        let all = [drafted(layer: 3, lineType: 1, x: 20), drafted(layer: 2, lineType: 0, x: 90), stroke("fineliner", x: 160)]
+        let doc = NotebookDocument(id: nb, title: "P", pageCount: 1)
+        func pdf(_ strokes: [ProStroke]) throws -> Data {
+            try NotebookPackageBridge.exportPdf(document: doc, drawings: [PKDrawing()], deviceId: deviceA, proStrokes: [strokes])
+        }
+        let full = try pdf(state.drawOrder(all, notebookId: nb))
+        state.setHidden(true, layer: 2)
+        defer { state.setHidden(false, layer: 2) }
+        let hiddenAux = try pdf(state.drawOrder(all, notebookId: nb))
+        XCTAssertLessThan(hiddenAux.count, full.count, "隱藏中層之後匯出的 PDF 要少一筆")
+    }
 }
