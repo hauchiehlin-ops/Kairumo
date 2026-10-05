@@ -261,6 +261,15 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: android-core-libs
+          # upload-artifact 會以兩個上傳路徑的共同根目錄
+          # android/app/src/main 當作 artifact 根目錄。下載到 repo 根目錄
+          # 會變成 ./jniLibs 與 ./java/uniffi，Android source set 根本看不到。
+          path: android/app/src/main
+      - name: 驗證 Android 核心 artifact 還原位置
+        run: |
+          test -s android/app/src/main/java/uniffi/padnote_core/padnote_core.kt
+          test -s android/app/src/main/jniLibs/x86_64/libpadnote_core.so
+          test -s android/app/src/main/jniLibs/arm64-v8a/libpadnote_core.so
       # KVM 是模擬器跑得動的前提；GitHub 的 ubuntu runner 需要手動放行。
       - name: 開啟 KVM
         run: |
