@@ -36,6 +36,8 @@ public enum EditorToolType: String, CaseIterable, Identifiable {
     case eraser = "eraser"
     case lasso = "lasso"
     case maskingTape = "masking_tape"
+    /// 圖學：製圖筆組、圖層、線型與吸附（見 Drafting.swift）。
+    case drafting = "drafting"
 
     public var id: String { rawValue }
 
@@ -46,7 +48,7 @@ public enum EditorToolType: String, CaseIterable, Identifiable {
     /// 記圖案來分辨 —— 分組之後，形狀就說明了用途（工作項 S-62）。
     public var isBrush: Bool {
         switch self {
-        case .eraser, .lasso, .maskingTape: return false
+        case .eraser, .lasso, .maskingTape, .drafting: return false
         default: return true
         }
     }
@@ -65,7 +67,7 @@ public enum EditorToolType: String, CaseIterable, Identifiable {
         case .pen, .ballpoint, .fineliner, .brush, .calligraphy, .pencil: return .writing
         case .charcoal, .crayon, .airbrush, .oilpaint, .watercolor: return .painting
         case .marker, .highlighter: return .marking
-        case .eraser, .lasso, .maskingTape: return nil
+        case .eraser, .lasso, .maskingTape, .drafting: return nil
         }
     }
 
@@ -100,6 +102,7 @@ public enum EditorToolType: String, CaseIterable, Identifiable {
         case .eraser: return "eraser"
         case .lasso: return "lasso"
         case .maskingTape: return "bandage.fill"
+        case .drafting: return "ruler"
         }
     }
 
@@ -125,6 +128,7 @@ public enum EditorToolType: String, CaseIterable, Identifiable {
         case .eraser: return "editor.ink.eraser"
         case .lasso: return "editor.ink.lasso"
         case .maskingTape: return "editor.ink.maskingTape"
+        case .drafting: return "editor.ink.drafting"
         }
     }
 
@@ -146,6 +150,7 @@ public enum EditorToolType: String, CaseIterable, Identifiable {
         case .eraser: return "tool_eraser"
         case .lasso: return "tool_lasso"
         case .maskingTape: return "tool_masking_tape"
+        case .drafting: return "tool_drafting"
         }
     }
 }
@@ -439,8 +444,14 @@ final class AdaptiveCanvasView: PKCanvasView {
     var proWidth: Float = 4
     var proEraserRadius: CGFloat = 10
     var proAllowsFinger: () -> Bool = { true }
+    /// 圖學：這一筆的圖層、線型，吸附的角度鎖定（`nil` = 沒開吸附），改圖層的目標。
+    var proLayerId: UInt8 = 0
+    var proLineType: UInt8 = 0
+    var proSnapStep: Float?
+    var proReassignTarget: UInt8 = 0
+    var onProSnapped: ((FfiDraftSnapKind) -> Void)?
 
-    enum ProMode { case off, draw, erase }
+    enum ProMode { case off, draw, erase, reassign }
 
     /// 依目前的工具設定專業筆畫層與輸入手勢。
     ///
@@ -477,6 +488,14 @@ final class AdaptiveCanvasView: PKCanvasView {
             gesture.deferUntilMoved = false
             gesture.isEnabled = true
             restorePan()
+        case .reassign:
+            // 點一下筆畫改圖層：PencilKit 的筆畫不管，單指拿來點。
+            gesture.mode = .reassign
+            gesture.cancelsTouchesInView = true
+            gesture.deferUntilMoved = false
+            gesture.isEnabled = true
+            drawingGestureRecognizer.isEnabled = false
+            overridePan()
         }
     }
 
@@ -552,6 +571,11 @@ final class AdaptiveCanvasView: PKCanvasView {
         gesture.color = { [weak self] in self?.proColor ?? [0, 0, 0, 255] }
         gesture.width = { [weak self] in self?.proWidth ?? 4 }
         gesture.eraserRadius = { [weak self] in self?.proEraserRadius ?? 10 }
+        gesture.drawLayer = { [weak self] in self?.proLayerId ?? 0 }
+        gesture.drawLineType = { [weak self] in self?.proLineType ?? 0 }
+        gesture.snapStep = { [weak self] in self?.proSnapStep }
+        gesture.reassignTarget = { [weak self] in self?.proReassignTarget ?? 0 }
+        gesture.onSnapped = { [weak self] kind in self?.onProSnapped?(kind) }
         gesture.allowsFingerDrawing = { [weak self] in self?.proAllowsFinger() ?? true }
         gesture.delegate = proGestureDelegate
         gesture.isEnabled = false
@@ -736,6 +760,8 @@ struct CanvasRepresentable: UIViewRepresentable {
     @Binding var drawing: PKDrawing
     /// 專業筆刷（自繪引擎）這一頁存哪裡。`nil` 表示這個畫布不支援專業筆刷。
     var proInk: ProInkBinding? = nil
+    /// 圖學狀態：換筆、換圖層、改角度鎖定都要讓畫布重新套用工具設定。
+    @ObservedObject var drafting = DraftingState.shared
     var selectedTool: EditorToolType
     var selectedColor: Color
     var strokeWidth: CGFloat
@@ -1091,7 +1117,10 @@ struct CanvasRepresentable: UIViewRepresentable {
     private func applyProInk(to canvas: PKCanvasView) {
         guard let adaptive = canvas as? AdaptiveCanvasView else { return }
         let mode: AdaptiveCanvasView.ProMode
-        if selectedTool.proToolKind != nil {
+        let isDrafting = selectedTool == .drafting
+        if isDrafting {
+            mode = drafting.reassignMode ? .reassign : .draw
+        } else if selectedTool.proToolKind != nil {
             mode = .draw
         } else if selectedTool == .eraser {
             mode = .erase
@@ -1099,9 +1128,24 @@ struct CanvasRepresentable: UIViewRepresentable {
             mode = .off
         }
         let fingerRule = EditorCanvasInputPolicy.fingerMayDraw(effectiveMode: editorMode)
-        adaptive.proTool = selectedTool.proToolKind
-        adaptive.proColor = InkInterop.rgba(from: UIColor(selectedColor)).map { $0 }
-        adaptive.proWidth = Float(max(1.2, strokeWidth * 1.4))
+        if isDrafting {
+            // 製圖筆一律走針筆（等寬、硬邊）；顏色、粗細、線型、圖層由製圖筆組決定。
+            adaptive.proTool = .fineliner
+            adaptive.proColor = drafting.activeColorRGBA
+            adaptive.proWidth = drafting.activePen.width
+            adaptive.proLayerId = drafting.activeLayerId
+            adaptive.proLineType = drafting.activeLineType
+            adaptive.proSnapStep = drafting.snapEnabled ? Float(drafting.angleStep) : nil
+            adaptive.proReassignTarget = drafting.activeLayerId
+            if let id = proInk?.notebookId { drafting.use(notebook: id) }
+        } else {
+            adaptive.proTool = selectedTool.proToolKind
+            adaptive.proColor = InkInterop.rgba(from: UIColor(selectedColor)).map { $0 }
+            adaptive.proWidth = Float(max(1.2, strokeWidth * 1.4))
+            adaptive.proLayerId = 0
+            adaptive.proLineType = 0
+            adaptive.proSnapStep = nil
+        }
         adaptive.proEraserRadius = eraserMode == .pixel ? max(8, pixelEraserWidth / 2) : 8
         adaptive.proAllowsFinger = { [palmRejection] in
             if fingerRule == false { return false }
@@ -1547,6 +1591,10 @@ struct CanvasRepresentable: UIViewRepresentable {
 
             case .lasso:
                 // 套索選取由自定義 LassoSelection 與手勢全權接管，不依賴 PKLassoTool 私有介面
+                canvas.tool = PKInkingTool(.pen, color: .clear, width: 1)
+
+            case .drafting:
+                // 圖學筆畫走自繪引擎（ProInk），PencilKit 不收筆。
                 canvas.tool = PKInkingTool(.pen, color: .clear, width: 1)
 
             case .maskingTape:
@@ -3924,6 +3972,14 @@ public struct NotebookEditorView: View {
                             .padding(.horizontal, 12)
                     }
                     .fixedSize(horizontal: false, vertical: true)
+                        .padding(.top, 12)
+                        .transition(.opacity.combined(with: .move(edge: .top)))
+                }
+            }
+            .overlay(alignment: .top) {
+                // 圖學：製圖筆組、圖層、吸附（見 DraftingBar.swift）。
+                if editorMode == .draw && selectedTool == .drafting {
+                    DraftingBar()
                         .padding(.top, 12)
                         .transition(.opacity.combined(with: .move(edge: .top)))
                 }

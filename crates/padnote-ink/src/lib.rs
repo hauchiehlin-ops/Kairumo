@@ -8,14 +8,16 @@
 pub mod align;
 pub mod brush;
 pub mod codec;
+pub mod draft;
 pub mod fill;
 pub mod geometry;
 pub mod refine;
 pub mod streamline;
 
 pub use align::{Alignment, SnapResult, align, distribute, snap};
-pub use brush::{Dab, dabs};
+pub use brush::{Dab, apply_line_type, dabs, dabs_styled};
 pub use codec::{StrokeReader, StrokeWriter};
+pub use draft::{SnapKind, Snapped, snap_direction, snap_stroke};
 pub use fill::{FillOptions, FillResult, smart_fill};
 pub use geometry::{
     Rect, distance_to_segment, half_width, half_width_dynamic, simplify, smooth_path,
@@ -164,6 +166,50 @@ pub struct Stroke {
     pub color_rgba8: [u8; 4],
     pub base_width: f32,
     pub points: Vec<InkPoint>,
+    /// 製圖圖層（0 = 沒有圖層，一般筆畫）。1 底層（原題）、2 中層（輔助線）、3 頂層（答案）。
+    /// 存在延伸區塊（`codec.rs` 的 `EXT_DRAFT`）：舊裝置讀得開、只是看不到圖層。
+    pub layer: u8,
+    /// 工程線型（見 [`LineType`]）。0 = 實線。
+    pub line_type: u8,
+}
+
+/// 工程製圖的線型。筆點陣在展開時依線型挖掉「間隔」，兩端算繪同一份。
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[repr(u8)]
+pub enum LineType {
+    /// 實線（粗實線、細實線都是它，差別在筆寬）。
+    Solid = 0,
+    /// 隱藏線：細虛線。
+    Hidden = 1,
+    /// 中心線：細的長短交替的點劃線。
+    Center = 2,
+    /// 假想線：雙點劃線。
+    Phantom = 3,
+}
+
+impl LineType {
+    pub fn from_id(id: u8) -> Self {
+        match id {
+            1 => Self::Hidden,
+            2 => Self::Center,
+            3 => Self::Phantom,
+            _ => Self::Solid,
+        }
+    }
+
+    /// 圖樣：「畫、空、畫、空…」交替的長度（頁面單位；800 單位約 A4 的 210 mm，
+    /// 1 單位 ≈ 0.26 mm）。實線回空陣列。
+    pub fn pattern(self) -> &'static [f32] {
+        match self {
+            Self::Solid => &[],
+            // 虛線：畫 3 mm、空 1 mm。
+            Self::Hidden => &[12.0, 4.0],
+            // 點劃線：長畫 12 mm、空 1.5 mm、短畫 1.5 mm、空 1.5 mm。
+            Self::Center => &[46.0, 6.0, 5.0, 6.0],
+            // 雙點劃線：長畫、空、短畫、空、短畫、空。
+            Self::Phantom => &[46.0, 6.0, 5.0, 6.0, 5.0, 6.0],
+        }
+    }
 }
 
 impl Stroke {
@@ -231,6 +277,8 @@ mod tests {
                 InkPoint::new(10.0, 5.0, 0.8, 8_000),
                 InkPoint::new(-3.0, 20.0, 0.6, 8_000),
             ],
+            layer: 0,
+            line_type: 0,
         }
     }
 

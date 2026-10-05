@@ -78,7 +78,13 @@ enum class InkTool(val kind: ToolKind?, val labelKey: String) {
     /**
      * 遮蔽膠帶。對齊 Apple 端的 `maskingTape`。
      */
-    MASKING_TAPE(null, "tool_masking_tape");
+    MASKING_TAPE(null, "tool_masking_tape"),
+
+    /**
+     * 圖學：製圖筆組、圖層、線型與吸附（對齊 Apple 的 `drafting`）。
+     * 走針筆（`FINELINER`）落筆，圖層與線型由 [DraftingState] 決定。
+     */
+    DRAFTING(ToolKind.FINELINER, "tool_drafting");
 
     /**
      * 跨平台對照閘門用的識別字（核心 `ffi_screens` 的 `editor.inktools`）。
@@ -103,6 +109,7 @@ enum class InkTool(val kind: ToolKind?, val labelKey: String) {
             ERASER -> "editor.ink.eraser"
             LASSO -> "editor.ink.lasso"
             MASKING_TAPE -> "editor.ink.maskingTape"
+            DRAFTING -> "editor.ink.drafting"
         }
 
     /**
@@ -114,7 +121,7 @@ enum class InkTool(val kind: ToolKind?, val labelKey: String) {
             FOUNTAIN_PEN, BALLPOINT, FINELINER, BRUSH, CALLIGRAPHY, PENCIL -> BrushFamily.WRITING
             CHARCOAL, CRAYON, AIRBRUSH, OIL_PAINT, WATERCOLOR -> BrushFamily.PAINTING
             MARKER, HIGHLIGHTER -> BrushFamily.MARKING
-            ERASER, LASSO, MASKING_TAPE -> null
+            ERASER, LASSO, MASKING_TAPE, DRAFTING -> null
         }
 
     /** 擦除模式。**套索與遮蔽膠帶不算** —— 行為完全不同。 */
@@ -123,6 +130,8 @@ enum class InkTool(val kind: ToolKind?, val labelKey: String) {
     val isLasso: Boolean get() = this == LASSO
 
     val isMaskingTape: Boolean get() = this == MASKING_TAPE
+
+    val isDrafting: Boolean get() = this == DRAFTING
 }
 
 /** 筆刷的族。與核心的 `BrushFamily` 一一對應。 */
@@ -219,7 +228,7 @@ fun InkToolbar(
 
         // 擦除與套索都不需要顏色 —— 留著只會讓使用者以為可以擦成某個顏色，
         // 或是以為選取會被染色。
-        if (!tool.isEraser && !tool.isLasso) {
+        if (!tool.isEraser && !tool.isLasso && !tool.isDrafting) {
             // 六顆色票包成**一個** FlowRow 子項（工作項 S-64）。
             //
             // 原本它們是與筆刷晶片並列的獨立子項，於是 FlowRow 會把前幾顆
@@ -289,33 +298,36 @@ fun InkToolbar(
             }
         }
 
-        Slider(
-            value = width,
-            onValueChange = onWidthChange,
-            valueRange = inkWidthRange,
-            modifier = Modifier.size(width = 120.dp, height = 32.dp).testTag("editor.ink.width")
-        )
-        // 預覽點：數字不會告訴使用者「8pt 有多粗」。
-        Box(
-            modifier = Modifier
-                .size(22.dp),
-            contentAlignment = Alignment.Center
-        ) {
+        // 製圖筆的粗細由筆組決定（粗實線約為細線的 2 倍），不開放滑桿。
+        if (!tool.isDrafting) {
+            Slider(
+                value = width,
+                onValueChange = onWidthChange,
+                valueRange = inkWidthRange,
+                modifier = Modifier.size(width = 120.dp, height = 32.dp).testTag("editor.ink.width")
+            )
+            // 預覽點：數字不會告訴使用者「8pt 有多粗」。
             Box(
                 modifier = Modifier
-                    .size(previewDiameter(tool, width).dp)
-                    .clip(CircleShape)
-                    .then(
-                        if (tool.isEraser) {
-                            Modifier.border(1.5.dp, MaterialTheme.colorScheme.outline, CircleShape)
-                        } else {
-                            Modifier.background(
-                                inkPalette.firstOrNull { it.first == colorHex }?.second
-                                    ?: Color.Black
-                            )
-                        }
-                    )
-            )
+                    .size(22.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(previewDiameter(tool, width).dp)
+                        .clip(CircleShape)
+                        .then(
+                            if (tool.isEraser) {
+                                Modifier.border(1.5.dp, MaterialTheme.colorScheme.outline, CircleShape)
+                            } else {
+                                Modifier.background(
+                                    inkPalette.firstOrNull { it.first == colorHex }?.second
+                                        ?: Color.Black
+                                )
+                            }
+                        )
+                )
+            }
         }
     }
 }
@@ -343,6 +355,7 @@ internal fun previewDiameter(tool: InkTool, width: Float): Float {
         // 套索不畫東西，預覽點沒有意義；給 1.0 讓它顯示成一個中性的點。
         InkTool.LASSO -> 1.0f
         InkTool.MASKING_TAPE -> 3.5f
+        InkTool.DRAFTING -> 1.0f
     }
     return (width * scale).coerceIn(6f, 22f)
 }

@@ -155,7 +155,9 @@ fun InkCanvas(
 
         drawPageBoundary(density)
 
-        for (stroke in engine.strokes) {
+        @Suppress("UNUSED_EXPRESSION") DraftingState.version
+        // 未分層 → 底 → 中 → 頂；隱藏的圖層不畫。
+        for (stroke in DraftingState.drawOrder(engine.strokes) { it.layer }) {
             val strokeColor = if (stroke.colorRgba.size >= 4) {
                 Color(
                     (stroke.colorRgba[0].toInt() and 0xFF) / 255f,
@@ -164,12 +166,13 @@ fun InkCanvas(
                     (stroke.colorRgba[3].toInt() and 0xFF) / 255f
                 )
             } else inkColor
-            drawInkStroke(stroke.points, stroke.tool, stroke.baseWidth, strokeColor, density)
+            drawInkStroke(stroke.points, stroke.tool, stroke.baseWidth, strokeColor, density, stroke.lineType)
         }
         // 尚未抬筆的那一段也要即時畫出來，否則寫字時要等抬筆才看得到。
         for (live in engine.liveSamples()) {
             drawInkStroke(
-                InkInput.strokePoints(live), engine.tool, engine.baseWidth, inkColor, density)
+                InkInput.strokePoints(live), engine.tool, engine.baseWidth, inkColor, density,
+                engine.lineType)
         }
 
         // 懸停預覽畫在最上層：被墨跡蓋住就失去意義了。
@@ -253,9 +256,10 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawInkStroke(
     tool: ToolKind,
     baseWidth: Float,
     color: Color,
-    density: Float
+    density: Float,
+    lineType: Int = 0
 ) {
-    InkBrushRenderer.drawStrokeOnDrawScope(this, points, tool, baseWidth, color, density)
+    InkBrushRenderer.drawStrokeOnDrawScope(this, points, tool, baseWidth, color, density, lineType)
 }
 
 /**

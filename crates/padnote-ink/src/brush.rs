@@ -12,7 +12,7 @@
 //! 顆粒與鬃毛的亂數取自筆畫本身（第一點座標與點數），沒有全域狀態、沒有時間。
 //! 同一筆畫算幾次、在哪台裝置算，結果逐位元相同；筆畫同步到另一台之後不會「重新抖一次」。
 
-use crate::{InkPoint, Tool};
+use crate::{InkPoint, LineType, Tool};
 
 /// 一個筆點。座標為頁面座標。
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -237,6 +237,44 @@ pub fn dabs(tool: Tool, points: &[InkPoint], base_width: f32) -> Vec<Dab> {
         Tool::OilPaint => oil_paint(points, base_width, &mut rng),
         _ => Vec::new(),
     }
+}
+
+/// 依工程線型挖掉間隔：沿筆畫的**累積長度**走圖樣，「空」的那段不畫。
+///
+/// 實線原樣回傳。圖樣從筆畫起點重新開始 —— 手繪的線每一條都從「畫」開始，
+/// 與製圖規範一致（線的端點是畫的，不是空的）。
+pub fn apply_line_type(dabs: Vec<Dab>, line_type: LineType) -> Vec<Dab> {
+    let pattern = line_type.pattern();
+    if pattern.is_empty() || dabs.is_empty() {
+        return dabs;
+    }
+    let mut out = Vec::with_capacity(dabs.len());
+    let (mut step, mut left) = (0usize, pattern[0]);
+    let mut prev = (dabs[0].x, dabs[0].y);
+    for dab in dabs {
+        let mut travel = ((dab.x - prev.0).powi(2) + (dab.y - prev.1).powi(2)).sqrt();
+        prev = (dab.x, dab.y);
+        while travel > left {
+            travel -= left;
+            step = (step + 1) % pattern.len();
+            left = pattern[step];
+        }
+        left -= travel;
+        if step % 2 == 0 {
+            out.push(dab);
+        }
+    }
+    out
+}
+
+/// 與 [`dabs`] 相同，再套上工程線型。
+pub fn dabs_styled(
+    tool: Tool,
+    points: &[InkPoint],
+    base_width: f32,
+    line_type: LineType,
+) -> Vec<Dab> {
+    apply_line_type(dabs(tool, points, base_width), line_type)
 }
 
 /// 針筆：等寬、硬邊、不受壓感影響。**起筆時墨水會積一下**，那一點比線略粗。
@@ -797,5 +835,88 @@ mod tests {
                 "{tool:?} 起筆沒有積墨"
             );
         }
+    }
+}
+
+#[cfg(test)]
+mod line_type_tests {
+    use super::*;
+
+    fn line(len: f32) -> Vec<InkPoint> {
+        vec![
+            InkPoint::new(0.0, 0.0, 0.5, 0),
+            InkPoint::new(len, 0.0, 0.5, 8_000),
+        ]
+    }
+
+    fn extent(d: &[Dab]) -> Vec<f32> {
+        d.iter().map(|d| d.x).collect()
+    }
+
+    #[test]
+    fn a_solid_line_keeps_every_dab() {
+        let all = dabs(Tool::Fineliner, &line(200.0), 1.4);
+        let styled = dabs_styled(Tool::Fineliner, &line(200.0), 1.4, LineType::Solid);
+        assert_eq!(all.len(), styled.len());
+    }
+
+    #[test]
+    fn a_hidden_line_has_gaps_the_size_of_the_pattern() {
+        let d = dabs_styled(Tool::Fineliner, &line(200.0), 1.4, LineType::Hidden);
+        let xs = extent(&d);
+        let mut gaps = Vec::new();
+        for pair in xs.windows(2) {
+            if pair[1] - pair[0] > 2.0 {
+                gaps.push(pair[1] - pair[0]);
+            }
+        }
+        assert!(gaps.len() >= 8, "200 單位的虛線要有很多段：{}", gaps.len());
+        for g in gaps {
+            assert!((3.0..=5.5).contains(&g), "空隙約 4 單位：{g}");
+        }
+        assert!(
+            xs.first().copied().unwrap() < 1.0,
+            "線的起點是畫的，不是空的"
+        );
+    }
+
+    #[test]
+    fn a_centre_line_alternates_long_and_short_dashes() {
+        let d = dabs_styled(Tool::Fineliner, &line(300.0), 1.0, LineType::Center);
+        let xs = extent(&d);
+        let mut runs = Vec::new();
+        let mut start = xs[0];
+        for pair in xs.windows(2) {
+            if pair[1] - pair[0] > 2.0 {
+                runs.push(pair[0] - start);
+                start = pair[1];
+            }
+        }
+        // 長畫約 46、短畫約 5：第一段明顯比第二段長。
+        assert!(runs.len() >= 3);
+        assert!(runs[0] > runs[1] * 4.0, "長畫與短畫要交替：{runs:?}");
+    }
+
+    #[test]
+    fn a_phantom_line_has_two_short_dashes_between_long_ones() {
+        let d = dabs_styled(Tool::Fineliner, &line(400.0), 1.0, LineType::Phantom);
+        let xs = extent(&d);
+        let mut segments = 0;
+        for pair in xs.windows(2) {
+            if pair[1] - pair[0] > 2.0 {
+                segments += 1;
+            }
+        }
+        let centre = dabs_styled(Tool::Fineliner, &line(400.0), 1.0, LineType::Center);
+        let centre_gaps = extent(&centre)
+            .windows(2)
+            .filter(|p| p[1] - p[0] > 2.0)
+            .count();
+        assert!(segments > centre_gaps, "雙點劃線的間隔比單點劃線多");
+    }
+
+    #[test]
+    fn unknown_ids_fall_back_to_solid() {
+        assert_eq!(LineType::from_id(77), LineType::Solid);
     }
 }

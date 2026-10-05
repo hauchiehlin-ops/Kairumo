@@ -235,6 +235,7 @@ import com.kairumo.padnote.model3d.Model3DStudio
 import com.kairumo.padnote.theme.CompositionOverlay
 import com.kairumo.padnote.theme.ThemeToolsSheet
 import com.kairumo.padnote.ink.InkTool
+import com.kairumo.padnote.ink.DraftingState
 import com.kairumo.padnote.ink.inkToolShortcutOrder
 import com.kairumo.padnote.ink.InkToolbar
 import com.kairumo.padnote.ink.InkLatencyMeter
@@ -2451,6 +2452,38 @@ private fun InkScreen(
     }
     var inkColorHex by remember { mutableStateOf("#000000") }
     var inkWidth by remember { mutableStateOf(3f) }
+
+    // 圖學：圖層顯示／鎖定逐本記；筆組、吸附與角度鎖定換了就同步到引擎。
+    // 離開圖學工具時要把引擎還原成一般筆刷（圖層 0、實線、顏色與筆寬回到使用者選的）。
+    LaunchedEffect(notebookId) {
+        DraftingState.attach(activity)
+        DraftingState.use(notebookId ?: "")
+    }
+    LaunchedEffect(
+        inkTool, DraftingState.activePenId, DraftingState.layerOverride,
+        DraftingState.snapEnabled, DraftingState.angleStep, DraftingState.reassignMode
+    ) {
+        if (inkTool.isDrafting) {
+            engine.layer = DraftingState.activeLayerId
+            engine.lineType = DraftingState.activeLineType
+            engine.colorRgba = hexToRgba(DraftingState.activeColorHex)
+            engine.baseWidth = DraftingState.activePen.width
+            engine.snapStepDeg = if (DraftingState.snapEnabled) DraftingState.angleStep.toFloat() else null
+            engine.reassignTarget = if (DraftingState.reassignMode) DraftingState.activeLayerId else null
+        } else {
+            engine.layer = 0
+            engine.lineType = 0
+            engine.colorRgba = hexToRgba(inkColorHex)
+            engine.baseWidth = inkWidth
+            engine.snapStepDeg = null
+            engine.reassignTarget = null
+        }
+    }
+    DisposableEffect(engine) {
+        engine.onSnapped = { view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK) }
+        onDispose { engine.onSnapped = null }
+    }
+
     var showStatus by remember { mutableStateOf(false) }
     /// 畫布上方那行輸入診斷（tool=/r=/p=/draw=/rej=/ges=）要不要顯示。
     ///
@@ -4226,7 +4259,11 @@ private fun InkScreen(
             // `LowLatencyInkCanvas` 畫在 `SurfaceView` 上，而 SurfaceView 是
             // 另一層合成的表面 —— `graphicsLayer` 的縮放**對它無效**，
             // 結果是底下的頁面縮小了、筆跡還是原本大小，兩層對不起來。
-            if (lowLatency && !lowLatencyUnavailable && canvasScale == 1f) {
+            //
+            // 圖學筆畫也不能走低延遲路徑：它要依線型挖虛線、依圖層疊放與隱藏，
+            // 前緩衝的簡化繪製做不到。
+            val draftingInk = inkTool.isDrafting || engine.strokes.any { it.layer != 0 || it.lineType != 0 }
+            if (lowLatency && !lowLatencyUnavailable && canvasScale == 1f && !draftingInk) {
                 LowLatencyInkCanvas(
                     engine = engine,
                     latency = latency,
@@ -4252,7 +4289,9 @@ private fun InkScreen(
                 InkCanvas(
                     engine = engine,
                     modifier = Modifier.fillMaxSize().testTag("editor.canvas"),
-                    inkColor = runCatching {
+                    inkColor = if (inkTool.isDrafting) {
+                        DraftingState.parseHex(DraftingState.activeColorHex)
+                    } else runCatching {
                         Color(android.graphics.Color.parseColor(inkColorHex))
                     }.getOrDefault(Color.Black),
                     onInkChanged = {
@@ -4313,6 +4352,14 @@ private fun InkScreen(
                         )
                     }
                 }
+            }
+
+            // 圖學：製圖筆組、圖層、吸附（見 DraftingBar.kt）。
+            if (inkTool.isDrafting && editorMode == EditorMode.DRAW) {
+                com.kairumo.padnote.ink.DraftingBar(
+                    languageTag = deviceLanguageTag(),
+                    modifier = Modifier.align(Alignment.TopCenter).padding(top = 12.dp, start = 8.dp, end = 8.dp)
+                )
             }
 
             // 套索層疊在畫布上面。套索模式下它吃掉所有觸控，畫布完全收不到 ——

@@ -3238,6 +3238,214 @@ extension LocalizationManager {
             .ko: "다운로드 중...",
             .th: "กำลังดาวน์โหลด..."
         ],
+        "draft_angle_free": [
+            .zhHant: "自由",
+            .en: "Free",
+            .zhHans: "自由",
+            .ja: "自由",
+            .ko: "자유",
+            .th: "อิสระ"
+        ],
+        "draft_angle_lock": [
+            .zhHant: "角度鎖定",
+            .en: "Angle lock",
+            .zhHans: "角度锁定",
+            .ja: "角度ロック",
+            .ko: "각도 잠금",
+            .th: "ล็อกมุม"
+        ],
+        "draft_draw_on_layer": [
+            .zhHant: "畫在此圖層",
+            .en: "Draw on this layer",
+            .zhHans: "画在此图层",
+            .ja: "このレイヤーに描く",
+            .ko: "이 레이어에 그리기",
+            .th: "วาดบนเลเยอร์นี้"
+        ],
+        "draft_hide_layer": [
+            .zhHant: "隱藏圖層",
+            .en: "Hide layer",
+            .zhHans: "隐藏图层",
+            .ja: "レイヤーを隠す",
+            .ko: "레이어 숨기기",
+            .th: "ซ่อนเลเยอร์"
+        ],
+        "draft_layer_aux": [
+            .zhHant: "中層・輔助",
+            .en: "Aux (construction)",
+            .zhHans: "中层·辅助",
+            .ja: "中層・補助",
+            .ko: "중층·보조",
+            .th: "ชั้นกลาง·เส้นช่วย"
+        ],
+        "draft_layer_base": [
+            .zhHant: "底層・原題",
+            .en: "Base (given)",
+            .zhHans: "底层·原题",
+            .ja: "下層・与件",
+            .ko: "하층·원문제",
+            .th: "ชั้นล่าง·โจทย์"
+        ],
+        "draft_layer_plain": [
+            .zhHant: "一般筆跡",
+            .en: "Plain ink",
+            .zhHans: "普通笔迹",
+            .ja: "通常の筆跡",
+            .ko: "일반 필기",
+            .th: "ลายมือทั่วไป"
+        ],
+        "draft_layer_top": [
+            .zhHant: "頂層・答案",
+            .en: "Top (answer)",
+            .zhHans: "顶层·答案",
+            .ja: "上層・解答",
+            .ko: "상층·정답",
+            .th: "ชั้นบน·คำตอบ"
+        ],
+        "draft_layers": [
+            .zhHant: "圖層",
+            .en: "Layers",
+            .zhHans: "图层",
+            .ja: "レイヤー",
+            .ko: "레이어",
+            .th: "เลเยอร์"
+        ],
+        "draft_line_center": [
+            .zhHant: "中心線",
+            .en: "Center",
+            .zhHans: "中心线",
+            .ja: "中心線",
+            .ko: "중심선",
+            .th: "เส้นศูนย์กลาง"
+        ],
+        "draft_line_hidden": [
+            .zhHant: "隱藏線",
+            .en: "Hidden",
+            .zhHans: "隐藏线",
+            .ja: "かくれ線",
+            .ko: "숨은선",
+            .th: "เส้นประซ่อน"
+        ],
+        "draft_line_phantom": [
+            .zhHant: "假想線",
+            .en: "Phantom",
+            .zhHans: "假想线",
+            .ja: "想像線",
+            .ko: "가상선",
+            .th: "เส้นสมมติ"
+        ],
+        "draft_line_solid": [
+            .zhHant: "實線",
+            .en: "Solid",
+            .zhHans: "实线",
+            .ja: "実線",
+            .ko: "실선",
+            .th: "เส้นทึบ"
+        ],
+        "draft_lock_layer": [
+            .zhHant: "鎖定圖層",
+            .en: "Lock layer",
+            .zhHans: "锁定图层",
+            .ja: "レイヤーをロック",
+            .ko: "레이어 잠금",
+            .th: "ล็อกเลเยอร์"
+        ],
+        "draft_pen_aux": [
+            .zhHant: "輔助線",
+            .en: "Auxiliary",
+            .zhHans: "辅助线",
+            .ja: "補助線",
+            .ko: "보조선",
+            .th: "เส้นช่วย"
+        ],
+        "draft_pen_center": [
+            .zhHant: "中心線",
+            .en: "Center line",
+            .zhHans: "中心线",
+            .ja: "中心線",
+            .ko: "중심선",
+            .th: "เส้นศูนย์กลาง"
+        ],
+        "draft_pen_given": [
+            .zhHant: "原題線",
+            .en: "Given outline",
+            .zhHans: "原题线",
+            .ja: "与件線",
+            .ko: "원문제선",
+            .th: "เส้นโจทย์"
+        ],
+        "draft_pen_hidden": [
+            .zhHant: "隱藏線",
+            .en: "Hidden line",
+            .zhHans: "隐藏线",
+            .ja: "かくれ線",
+            .ko: "숨은선",
+            .th: "เส้นซ่อน"
+        ],
+        "draft_pen_phantom": [
+            .zhHant: "假想線",
+            .en: "Phantom line",
+            .zhHans: "假想线",
+            .ja: "想像線",
+            .ko: "가상선",
+            .th: "เส้นสมมติ"
+        ],
+        "draft_pen_thick": [
+            .zhHant: "粗實線",
+            .en: "Thick solid",
+            .zhHans: "粗实线",
+            .ja: "太実線",
+            .ko: "굵은 실선",
+            .th: "เส้นหนา"
+        ],
+        "draft_pen_thin": [
+            .zhHant: "細實線",
+            .en: "Thin solid",
+            .zhHans: "细实线",
+            .ja: "細実線",
+            .ko: "가는 실선",
+            .th: "เส้นบาง"
+        ],
+        "draft_pens": [
+            .zhHant: "製圖筆",
+            .en: "Drafting pens",
+            .zhHans: "制图笔",
+            .ja: "製図ペン",
+            .ko: "제도 펜",
+            .th: "ปากกาเขียนแบบ"
+        ],
+        "draft_reassign": [
+            .zhHant: "移到圖層",
+            .en: "Move to layer",
+            .zhHans: "移到图层",
+            .ja: "レイヤーへ移動",
+            .ko: "레이어로 이동",
+            .th: "ย้ายไปเลเยอร์"
+        ],
+        "draft_show_layer": [
+            .zhHant: "顯示圖層",
+            .en: "Show layer",
+            .zhHans: "显示图层",
+            .ja: "レイヤーを表示",
+            .ko: "레이어 표시",
+            .th: "แสดงเลเยอร์"
+        ],
+        "draft_snap": [
+            .zhHant: "形狀吸附",
+            .en: "Shape snap",
+            .zhHans: "形状吸附",
+            .ja: "図形スナップ",
+            .ko: "도형 스냅",
+            .th: "จัดรูปทรงอัตโนมัติ"
+        ],
+        "draft_unlock_layer": [
+            .zhHant: "解除鎖定",
+            .en: "Unlock layer",
+            .zhHans: "解除锁定",
+            .ja: "ロック解除",
+            .ko: "잠금 해제",
+            .th: "ปลดล็อก"
+        ],
         "drag_card_hint": [
             .zhHant: "拖曳移動卡片",
             .en: "Drag to move card",
@@ -13655,6 +13863,14 @@ extension LocalizationManager {
             .ja: "クレヨン",
             .ko: "크레용",
             .th: "สีเทียน"
+        ],
+        "tool_drafting": [
+            .zhHant: "圖學筆組",
+            .en: "Drafting",
+            .zhHans: "图学笔组",
+            .ja: "製図",
+            .ko: "제도",
+            .th: "งานเขียนแบบ"
         ],
         "tool_eraser": [
             .zhHant: "橡皮擦",

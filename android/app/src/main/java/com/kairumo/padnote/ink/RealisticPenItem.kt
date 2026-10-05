@@ -138,6 +138,7 @@ val InkTool.ffiTool: FfiTool
         InkTool.ERASER -> FfiTool.ERASER
         InkTool.LASSO -> FfiTool.LASSO
         InkTool.MASKING_TAPE -> FfiTool.MASKING_TAPE
+        InkTool.DRAFTING -> FfiTool.DRAFTING
     }
 
 private const val ICON_VIEWBOX = 48f

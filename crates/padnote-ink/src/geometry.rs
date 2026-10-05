@@ -367,6 +367,8 @@ mod tests {
             color_rgba8: [0, 0, 0, 255],
             base_width,
             points,
+            layer: 0,
+            line_type: 0,
         }
     }
 

@@ -219,6 +219,8 @@ pub fn annotation_to_strokes(
                     InkPoint::new(px, py, 0.5, 0)
                 })
                 .collect(),
+            layer: 0,
+            line_type: 0,
         })
         .collect()
 }
@@ -255,6 +257,8 @@ mod tests {
                 InkPoint::new(100.0, 50.0, 0.5, 0),
                 InkPoint::new(200.0, 150.0, 0.8, 8_000),
             ],
+            layer: 0,
+            line_type: 0,
         }
     }
 

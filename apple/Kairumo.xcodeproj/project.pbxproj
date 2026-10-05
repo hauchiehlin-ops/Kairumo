@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		D4A0000000000000000000B2 /* DraftingBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4A0000000000000000000A2 /* DraftingBar.swift */; };
+		D4A0000000000000000000B1 /* Drafting.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4A0000000000000000000A1 /* Drafting.swift */; };
 		023C029A763DC77377F7804E /* HomeWorkbenchUsage.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB04C4FA3426304F705E5046 /* HomeWorkbenchUsage.swift */; };
 		039E98A3BC24169C1031EC94 /* SeedContent.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE084F883D6D8A652CD86063 /* SeedContent.swift */; };
 		04A2C2BA6EE78D99402F87AD /* InkInterop.swift in Sources */ = {isa = PBXBuildFile; fileRef = 893FBBAA69ABDE7B5D03BDA9 /* InkInterop.swift */; };
@@ -233,6 +235,8 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		D4A0000000000000000000A2 /* DraftingBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DraftingBar.swift; sourceTree = "<group>"; };
+		D4A0000000000000000000A1 /* Drafting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Drafting.swift; sourceTree = "<group>"; };
 		0013D28CD49B4181F40017F3 /* PenHoverPreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PenHoverPreview.swift; sourceTree = "<group>"; };
 		00CDBBB784601FDFB342136D /* InkLatencyMeter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InkLatencyMeter.swift; sourceTree = "<group>"; };
 		02895D54063C3AA4B5D30463 /* PageThumbnailRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PageThumbnailRenderer.swift; sourceTree = "<group>"; };
@@ -710,6 +714,8 @@
 				824AF14643DF914996543B0B /* ProColorPickerSheet.swift */,
 				74F41D2B41DD153EEA524BBC /* ProColorWheelView.swift */,
 				42E10D0FA1C1F6E77B180793 /* ProInk.swift */,
+				D4A0000000000000000000A2 /* DraftingBar.swift */,
+				D4A0000000000000000000A1 /* Drafting.swift */,
 				2E8568739E3C10539C54B9DC /* RadialMarkMenuView.swift */,
 				B2929D89A7985F84100FDB68 /* RecentTemplates.swift */,
 				98D192D1E00B3A02703716E3 /* RecordingAdvice.swift */,
@@ -1060,6 +1066,8 @@
 				891B35800C7FEFD3421B7293 /* ProColorPickerSheet.swift in Sources */,
 				879124F0C755B79F15C42FE5 /* ProColorWheelView.swift in Sources */,
 				9FC52B4A61D5DD6DF4954B6D /* ProInk.swift in Sources */,
+				D4A0000000000000000000B2 /* DraftingBar.swift in Sources */,
+				D4A0000000000000000000B1 /* Drafting.swift in Sources */,
 				115AA723F107721EC68777AA /* RadialMarkMenuView.swift in Sources */,
 				E26B4411597679C8486D535D /* RecentTemplates.swift in Sources */,
 				EB681C3CBEB152B531200F27 /* RecordingAdvice.swift in Sources */,

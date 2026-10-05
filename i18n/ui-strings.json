@@ -3222,6 +3222,214 @@
     "zhHans": "下载中...",
     "zhHant": "下載中..."
   },
+  "draft_angle_free": {
+    "en": "Free",
+    "ja": "自由",
+    "ko": "자유",
+    "th": "อิสระ",
+    "zhHans": "自由",
+    "zhHant": "自由"
+  },
+  "draft_angle_lock": {
+    "en": "Angle lock",
+    "ja": "角度ロック",
+    "ko": "각도 잠금",
+    "th": "ล็อกมุม",
+    "zhHans": "角度锁定",
+    "zhHant": "角度鎖定"
+  },
+  "draft_draw_on_layer": {
+    "en": "Draw on this layer",
+    "ja": "このレイヤーに描く",
+    "ko": "이 레이어에 그리기",
+    "th": "วาดบนเลเยอร์นี้",
+    "zhHans": "画在此图层",
+    "zhHant": "畫在此圖層"
+  },
+  "draft_hide_layer": {
+    "en": "Hide layer",
+    "ja": "レイヤーを隠す",
+    "ko": "레이어 숨기기",
+    "th": "ซ่อนเลเยอร์",
+    "zhHans": "隐藏图层",
+    "zhHant": "隱藏圖層"
+  },
+  "draft_layer_aux": {
+    "en": "Aux (construction)",
+    "ja": "中層・補助",
+    "ko": "중층·보조",
+    "th": "ชั้นกลาง·เส้นช่วย",
+    "zhHans": "中层·辅助",
+    "zhHant": "中層・輔助"
+  },
+  "draft_layer_base": {
+    "en": "Base (given)",
+    "ja": "下層・与件",
+    "ko": "하층·원문제",
+    "th": "ชั้นล่าง·โจทย์",
+    "zhHans": "底层·原题",
+    "zhHant": "底層・原題"
+  },
+  "draft_layer_plain": {
+    "en": "Plain ink",
+    "ja": "通常の筆跡",
+    "ko": "일반 필기",
+    "th": "ลายมือทั่วไป",
+    "zhHans": "普通笔迹",
+    "zhHant": "一般筆跡"
+  },
+  "draft_layer_top": {
+    "en": "Top (answer)",
+    "ja": "上層・解答",
+    "ko": "상층·정답",
+    "th": "ชั้นบน·คำตอบ",
+    "zhHans": "顶层·答案",
+    "zhHant": "頂層・答案"
+  },
+  "draft_layers": {
+    "en": "Layers",
+    "ja": "レイヤー",
+    "ko": "레이어",
+    "th": "เลเยอร์",
+    "zhHans": "图层",
+    "zhHant": "圖層"
+  },
+  "draft_line_center": {
+    "en": "Center",
+    "ja": "中心線",
+    "ko": "중심선",
+    "th": "เส้นศูนย์กลาง",
+    "zhHans": "中心线",
+    "zhHant": "中心線"
+  },
+  "draft_line_hidden": {
+    "en": "Hidden",
+    "ja": "かくれ線",
+    "ko": "숨은선",
+    "th": "เส้นประซ่อน",
+    "zhHans": "隐藏线",
+    "zhHant": "隱藏線"
+  },
+  "draft_line_phantom": {
+    "en": "Phantom",
+    "ja": "想像線",
+    "ko": "가상선",
+    "th": "เส้นสมมติ",
+    "zhHans": "假想线",
+    "zhHant": "假想線"
+  },
+  "draft_line_solid": {
+    "en": "Solid",
+    "ja": "実線",
+    "ko": "실선",
+    "th": "เส้นทึบ",
+    "zhHans": "实线",
+    "zhHant": "實線"
+  },
+  "draft_lock_layer": {
+    "en": "Lock layer",
+    "ja": "レイヤーをロック",
+    "ko": "레이어 잠금",
+    "th": "ล็อกเลเยอร์",
+    "zhHans": "锁定图层",
+    "zhHant": "鎖定圖層"
+  },
+  "draft_pen_aux": {
+    "en": "Auxiliary",
+    "ja": "補助線",
+    "ko": "보조선",
+    "th": "เส้นช่วย",
+    "zhHans": "辅助线",
+    "zhHant": "輔助線"
+  },
+  "draft_pen_center": {
+    "en": "Center line",
+    "ja": "中心線",
+    "ko": "중심선",
+    "th": "เส้นศูนย์กลาง",
+    "zhHans": "中心线",
+    "zhHant": "中心線"
+  },
+  "draft_pen_given": {
+    "en": "Given outline",
+    "ja": "与件線",
+    "ko": "원문제선",
+    "th": "เส้นโจทย์",
+    "zhHans": "原题线",
+    "zhHant": "原題線"
+  },
+  "draft_pen_hidden": {
+    "en": "Hidden line",
+    "ja": "かくれ線",
+    "ko": "숨은선",
+    "th": "เส้นซ่อน",
+    "zhHans": "隐藏线",
+    "zhHant": "隱藏線"
+  },
+  "draft_pen_phantom": {
+    "en": "Phantom line",
+    "ja": "想像線",
+    "ko": "가상선",
+    "th": "เส้นสมมติ",
+    "zhHans": "假想线",
+    "zhHant": "假想線"
+  },
+  "draft_pen_thick": {
+    "en": "Thick solid",
+    "ja": "太実線",
+    "ko": "굵은 실선",
+    "th": "เส้นหนา",
+    "zhHans": "粗实线",
+    "zhHant": "粗實線"
+  },
+  "draft_pen_thin": {
+    "en": "Thin solid",
+    "ja": "細実線",
+    "ko": "가는 실선",
+    "th": "เส้นบาง",
+    "zhHans": "细实线",
+    "zhHant": "細實線"
+  },
+  "draft_pens": {
+    "en": "Drafting pens",
+    "ja": "製図ペン",
+    "ko": "제도 펜",
+    "th": "ปากกาเขียนแบบ",
+    "zhHans": "制图笔",
+    "zhHant": "製圖筆"
+  },
+  "draft_reassign": {
+    "en": "Move to layer",
+    "ja": "レイヤーへ移動",
+    "ko": "레이어로 이동",
+    "th": "ย้ายไปเลเยอร์",
+    "zhHans": "移到图层",
+    "zhHant": "移到圖層"
+  },
+  "draft_show_layer": {
+    "en": "Show layer",
+    "ja": "レイヤーを表示",
+    "ko": "레이어 표시",
+    "th": "แสดงเลเยอร์",
+    "zhHans": "显示图层",
+    "zhHant": "顯示圖層"
+  },
+  "draft_snap": {
+    "en": "Shape snap",
+    "ja": "図形スナップ",
+    "ko": "도형 스냅",
+    "th": "จัดรูปทรงอัตโนมัติ",
+    "zhHans": "形状吸附",
+    "zhHant": "形狀吸附"
+  },
+  "draft_unlock_layer": {
+    "en": "Unlock layer",
+    "ja": "ロック解除",
+    "ko": "잠금 해제",
+    "th": "ปลดล็อก",
+    "zhHans": "解除锁定",
+    "zhHant": "解除鎖定"
+  },
   "drag_card_hint": {
     "en": "Drag to move card",
     "ja": "ドラッグして移動",
@@ -13639,6 +13847,14 @@
     "th": "สีเทียน",
     "zhHans": "蜡笔",
     "zhHant": "蠟筆"
+  },
+  "tool_drafting": {
+    "en": "Drafting",
+    "ja": "製図",
+    "ko": "제도",
+    "th": "งานเขียนแบบ",
+    "zhHans": "图学笔组",
+    "zhHant": "圖學筆組"
   },
   "tool_eraser": {
     "en": "Eraser",

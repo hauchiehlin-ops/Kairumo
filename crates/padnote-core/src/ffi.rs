@@ -365,6 +365,12 @@ pub struct FullStroke {
     pub color_rgba: Vec<u8>,
     pub base_width: f32,
     pub points: Vec<StrokePoint>,
+    /// 製圖圖層（0 = 沒有）。1 底、2 中、3 頂。
+    #[uniffi(default = 0)]
+    pub layer: u8,
+    /// 工程線型：0 實線、1 隱藏線、2 中心線、3 假想線。
+    #[uniffi(default = 0)]
+    pub line_type: u8,
 }
 
 #[derive(Clone, Debug, uniffi::Record)]
@@ -872,6 +878,36 @@ impl PadnoteSession {
             color_rgba8: to_rgba(&color_rgba),
             base_width,
             points: points.into_iter().map(to_ink_point).collect(),
+            layer: 0,
+            line_type: 0,
+        };
+        self.lock().add_stroke(page, stroke)?;
+        Ok(id.to_string())
+    }
+
+    /// 寫入一筆**製圖筆畫**：與 [`Self::add_stroke`] 相同，再帶圖層與工程線型。
+    #[allow(clippy::too_many_arguments)]
+    pub fn add_stroke_drafted(
+        &self,
+        page_id: String,
+        tool: ToolKind,
+        color_rgba: Vec<u8>,
+        base_width: f32,
+        points: Vec<StrokePoint>,
+        layer: u8,
+        line_type: u8,
+    ) -> Result<String, FfiError> {
+        let page = parse_uuid(&page_id)?;
+        let id = Uuid::now_v7();
+        let stroke = Stroke {
+            id,
+            started_at: NotebookTime::ZERO,
+            tool: tool.into(),
+            color_rgba8: to_rgba(&color_rgba),
+            base_width,
+            points: points.into_iter().map(to_ink_point).collect(),
+            layer,
+            line_type,
         };
         self.lock().add_stroke(page, stroke)?;
         Ok(id.to_string())
@@ -1112,6 +1148,8 @@ impl PadnoteSession {
                         point
                     })
                     .collect(),
+                layer: source.layer,
+                line_type: source.line_type,
             };
             self.lock().add_stroke(page, stroke)?;
             created.push(id.to_string());
@@ -2229,6 +2267,8 @@ fn to_full_stroke(s: Stroke) -> FullStroke {
         color_rgba: s.color_rgba8.to_vec(),
         base_width: s.base_width,
         points: s.points.into_iter().map(from_ink_point).collect(),
+        layer: s.layer,
+        line_type: s.line_type,
     }
 }
 
@@ -2287,6 +2327,8 @@ pub fn lasso_encloses(polygon: Vec<f32>, points: Vec<f32>) -> bool {
             .into_iter()
             .map(|(x, y)| InkPoint::new(x, y, 1.0, 0))
             .collect(),
+        layer: 0,
+        line_type: 0,
     };
     stroke.is_enclosed_by_polygon(&poly)
 }

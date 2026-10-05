@@ -797,6 +797,8 @@ mod tests {
                 InkPoint::new(10.0, 10.0, 1.0, 0),
                 InkPoint::new(100.0, 50.0, 1.0, 8000),
             ],
+            layer: 0,
+            line_type: 0,
         };
 
         let png = to_png(

@@ -522,6 +522,8 @@ fn editor_spec() -> FfiScreenSpec {
                     // 兩端都有這一支，規格卻一直沒寫進來 —— 於是對照閘門
                     // 從來沒檢查過它（S-261 稽核到的）。
                     c("editor.ink.maskingTape", Button, "tool_masking_tape"),
+                    // 圖學：製圖筆組＋圖層（見 ffi_draft.rs）。
+                    c("editor.ink.drafting", Button, "tool_drafting"),
                     c("editor.ink.width", Slider, "stroke_width"),
                     c("editor.ink.palette", Picker, "color"),
                     c("editor.ink.undo", Button, "undo"),
@@ -718,6 +720,7 @@ fn ui_label_key(t: padnote_toolbar::Tool) -> &'static str {
         Eraser => "tool_eraser",
         Lasso => "tool_lasso",
         MaskingTape => "tool_masking_tape",
+        Drafting => "tool_drafting",
         Undo => "undo",
         Redo => "redo",
         ClearPage => "clear_page",

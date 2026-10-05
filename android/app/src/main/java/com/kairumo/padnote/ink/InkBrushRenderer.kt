@@ -191,10 +191,17 @@ object InkBrushRenderer {
         tool: ToolKind,
         baseWidth: Float,
         baseColor: Color,
-        density: Float
+        density: Float,
+        lineType: Int = 0
     ) {
         if (brushIsCustom(tool)) {
-            drawDabsOnDrawScope(drawScope, brushDabs(tool, baseWidth, points), baseColor, density)
+            // 虛線／點線：核心依線型把間隔挖掉，兩個平台畫出同樣的線。
+            val dabs = if (lineType != 0) {
+                uniffi.padnote_core.brushDabsStyled(tool, baseWidth, points, lineType.toUByte())
+            } else {
+                brushDabs(tool, baseWidth, points)
+            }
+            drawDabsOnDrawScope(drawScope, dabs, baseColor, density)
             return
         }
         val segments = computeSegments(points, tool, baseWidth, density)

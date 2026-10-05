@@ -127,6 +127,8 @@ fn new_stroke(rng: &mut Rng) -> Stroke {
                 8_000,
             ),
         ],
+        layer: 0,
+        line_type: 0,
     }
 }
 

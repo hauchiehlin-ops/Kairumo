@@ -1387,6 +1387,8 @@ mod tests {
                 InkPoint::new(120.0, 220.0, 0.8, 8000),
                 InkPoint::new(180.0, 210.0, 0.7, 8000),
             ],
+            layer: 0,
+            line_type: 0,
         };
 
         let mut strokes = HashMap::new();
