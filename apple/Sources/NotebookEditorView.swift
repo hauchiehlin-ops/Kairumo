@@ -519,6 +519,25 @@ final class AdaptiveCanvasView: PKCanvasView {
         savedMinimumPanTouches = nil
     }
 
+    /// 套索模式下，一根手指要拿來圈選，捲動改成兩指。
+    ///
+    /// 畫布本身是 UIScrollView，單頁模式下它的捲動手勢（單指）與套索的拖曳手勢互搶，
+    /// 先開始辨識的是捲動 —— 套索的手勢一個事件都收不到，使用者看到的是「套索選不到任何東西」。
+    /// （連續模式裡層畫布不捲，所以那邊本來就能用。）
+    private var savedPanTouchesForLasso: Int?
+
+    func setLassoClaimsSingleTouch(_ on: Bool) {
+        if on {
+            if savedPanTouchesForLasso == nil {
+                savedPanTouchesForLasso = panGestureRecognizer.minimumNumberOfTouches
+            }
+            panGestureRecognizer.minimumNumberOfTouches = 2
+        } else if let saved = savedPanTouchesForLasso {
+            panGestureRecognizer.minimumNumberOfTouches = saved
+            savedPanTouchesForLasso = nil
+        }
+    }
+
     private func installProLayerIfNeeded() -> ProInkLayerView {
         if let proLayer { return proLayer }
         let layer = ProInkLayerView(frame: .zero)
@@ -558,7 +577,29 @@ final class AdaptiveCanvasView: PKCanvasView {
     var pendingRetractDate: Date? = nil
     var onPendingRetractNeeded: ((Date) -> Void)? = nil
 
+    /// 套索圈選：直接收觸控，不靠 `UIPanGestureRecognizer`。
+    ///
+    /// 畫布裡 PencilKit 與捲動視圖自己有一組互相牽制的手勢，額外掛上去的拖曳辨識器
+    /// 即使 `shouldBegin` 回傳了 true 也等不到 `.began`（實測整段拖曳沒有任何一次動作回呼），
+    /// 套索於是「圈不到任何東西」。觸控事件不經過這些辨識器的仲裁，改由這裡轉出去。
+    var lassoTouchHandler: ((UIGestureRecognizer.State, CGPoint) -> Void)?
+    private weak var lassoTouch: UITouch?
+
+    private func forwardLasso(_ touches: Set<UITouch>, _ state: UIGestureRecognizer.State) {
+        guard let handler = lassoTouchHandler else { return }
+        if state == .began {
+            guard lassoTouch == nil, let first = touches.first else { return }
+            lassoTouch = first
+            handler(.began, first.location(in: self))
+            return
+        }
+        guard let tracked = lassoTouch, touches.contains(tracked) else { return }
+        handler(state, tracked.location(in: self))
+        if state != .changed { lassoTouch = nil }
+    }
+
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
+        forwardLasso(touches, .began)
         activeTouchesCount += touches.count
         for touch in touches {
             if touch.type == .pencil && !deferPencilIntent {
@@ -573,6 +614,7 @@ final class AdaptiveCanvasView: PKCanvasView {
     }
 
     override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
+        forwardLasso(touches, .changed)
         if InkInputDiagnostics.isEnabled || ProcessInfo.processInfo.environment["KAIRUMO_UITEST"] == "1" {
             touches.forEach { onTouchDiagnostics?($0, event) }
         }
@@ -580,6 +622,7 @@ final class AdaptiveCanvasView: PKCanvasView {
     }
 
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
+        forwardLasso(touches, .ended)
         activeTouchesCount = max(0, activeTouchesCount - touches.count)
         touches.forEach {
             onTouchObserved?($0)
@@ -592,6 +635,7 @@ final class AdaptiveCanvasView: PKCanvasView {
     }
 
     override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
+        forwardLasso(touches, .cancelled)
         activeTouchesCount = max(0, activeTouchesCount - touches.count)
         super.touchesCancelled(touches, with: event)
         checkPendingRetract()
@@ -931,7 +975,9 @@ struct CanvasRepresentable: UIViewRepresentable {
 
         let lassoPan = UIPanGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.handleLassoPan(_:)))
         lassoPan.maximumNumberOfTouches = 1
-        lassoPan.isEnabled = (selectedTool == .lasso)
+        // 圈選改由 `AdaptiveCanvasView.lassoTouchHandler` 收觸控（見該處說明）；
+        // 這個辨識器留著只是為了相容，不啟用，免得同一次拖曳處理兩遍。
+        lassoPan.isEnabled = false
         canvas.addGestureRecognizer(lassoPan)
         context.coordinator.lassoPan = lassoPan
 
@@ -947,13 +993,22 @@ struct CanvasRepresentable: UIViewRepresentable {
 
     func updateUIView(_ uiView: PKCanvasView, context: Context) {
         context.coordinator.parent = self
-        context.coordinator.lassoPan?.isEnabled = (selectedTool == .lasso)
+        context.coordinator.lassoPan?.isEnabled = false
+        if let adaptive = uiView as? AdaptiveCanvasView {
+            adaptive.setLassoClaimsSingleTouch(selectedTool == .lasso)
+            adaptive.lassoTouchHandler = selectedTool == .lasso
+                ? { [weak coordinator = context.coordinator] state, point in
+                    coordinator?.handleLassoTouch(state, point)
+                } : nil
+        }
         // 模式切換時要跟著改 —— 只在 makeUIView 設的話，從連續切回整頁
         // 會得到一個捲不動的畫布（SwiftUI 會重用同一個 UIView）。
-        if uiView.isScrollEnabled != isScrollEnabled {
-            uiView.isScrollEnabled = isScrollEnabled
-            uiView.alwaysBounceVertical = isScrollEnabled
-            uiView.showsVerticalScrollIndicator = isScrollEnabled
+        // 套索模式下單頁畫布的捲動手勢要讓出來，否則套索的拖曳辨識不起來。
+        let wantsScroll = isScrollEnabled && selectedTool != .lasso
+        if uiView.isScrollEnabled != wantsScroll {
+            uiView.isScrollEnabled = wantsScroll
+            uiView.alwaysBounceVertical = wantsScroll
+            uiView.showsVerticalScrollIndicator = wantsScroll
         }
         // 打字模式不再關掉落筆手勢：靠 `.pencilOnly` 擋手指，Pencil 第一筆就收得到。
         // 套索模式下關閉繪圖手勢，確保所有碰觸皆由自定義 lassoPan 處理。
@@ -1102,6 +1157,15 @@ struct CanvasRepresentable: UIViewRepresentable {
         }
 
         weak var lassoPan: UIPanGestureRecognizer?
+
+        func handleLassoTouch(_ state: UIGestureRecognizer.State, _ point: CGPoint) {
+            switch state {
+            case .began: parent.onLassoBegan?(point)
+            case .changed: parent.onLassoMoved?(point)
+            case .ended, .cancelled, .failed: parent.onLassoEnded?()
+            default: break
+            }
+        }
 
         @objc func handleLassoPan(_ gesture: UIPanGestureRecognizer) {
             guard let canvas = gesture.view as? PKCanvasView else { return }
@@ -3852,7 +3916,14 @@ public struct NotebookEditorView: View {
             .overlay(alignment: .top) {
                 // 🌟 套索選取浮動控制面板（兩種頁面模式共用）
                 if editorMode == .draw && selectedTool == .lasso {
-                    lassoFloatingActionBar
+                    // 這一排按鈕比 iPad 直向的寬度還寬。原本直接畫出來，
+                    // 超出的部分讓整個編輯器的版面被撐寬（畫布整個右移、右側被切掉），
+                    // 套索拖曳也就落在錯的位置。放進橫向捲動，寬度回到螢幕內。
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        lassoFloatingActionBar
+                            .padding(.horizontal, 12)
+                    }
+                    .fixedSize(horizontal: false, vertical: true)
                         .padding(.top, 12)
                         .transition(.opacity.combined(with: .move(edge: .top)))
                 }
@@ -7264,6 +7335,7 @@ public struct NotebookEditorView: View {
                     ToolbarSeparator()
                         .frame(height: 24)
 
+                    ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 6) {
                         lassoActionButton("scissors", "cut_selected", "cut_selected_hint") { cutSelectedStrokes() }
                         lassoActionButton("doc.on.doc", "copy_selected", "copy_selected_hint") { copySelectedStrokes() }
@@ -7303,6 +7375,8 @@ public struct NotebookEditorView: View {
                         .accessibilityLabel(localizationManager.localized("delete_selected"))
                         .help(localizationManager.localized("delete_selected"))
                     }
+                    }
+                    .frame(maxWidth: 560)
                 }
 
 
