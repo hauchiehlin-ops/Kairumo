@@ -1256,6 +1256,30 @@ private fun NotebookHome(
                 creatingNotebook = false
                 creatingEncryptedNotebook = true
             },
+            onCreateKit = { kit ->
+                creatingNotebook = false
+                var first: String? = null
+                for (nb in kit.notebooks) {
+                    val name = l(nb.titleKey)
+                    val style = DocumentTemplateCatalog.paperStyle(nb.paperId)
+                    val id = NotebookLibrary.create(
+                        activity, name, device, folderId, style = style, paperId = nb.paperId
+                    ) ?: continue
+                    NotebookLibrary.open(activity, id, device, name)?.let { (session, _) ->
+                        val meta = com.kairumo.padnote.library.NotebookMeta.load(session)
+                        if (nb.pageFormatId != uniffi.padnote_core.defaultPageFormatId()) {
+                            meta.setPageFormatId(session, nb.pageFormatId)
+                        }
+                        // 核心建立時已經有第一頁，只補其餘的頁數。
+                        repeat((nb.pageCount.toInt() - 1).coerceAtLeast(0)) {
+                            runCatching { session.addPage(style) }
+                        }
+                    }
+                    if (first == null) first = id
+                }
+                revision++
+                first?.let { onOpen(it) }
+            },
             onConfirm = { title, templateId, kind, paperId, paperVariant, paletteId ->
                 creatingNotebook = false
                 // 建在使用者當下看著的那一層 —— 一律建在最上層的話，
@@ -2459,6 +2483,12 @@ private fun InkScreen(
         DraftingState.attach(activity)
         DraftingState.use(notebookId ?: "")
     }
+    // 製圖用的紙（三視圖、等角、作圖步驟…）一打開就選好「圖學」筆組。
+    LaunchedEffect(notebook) {
+        val session = notebook?.first ?: return@LaunchedEffect
+        val paper = com.kairumo.padnote.library.NotebookMeta.load(session).paperId(0)
+        if (uniffi.padnote_core.paperUsesDrafting(paper)) applyInkTool(InkTool.DRAFTING)
+    }
     LaunchedEffect(
         inkTool, DraftingState.activePenId, DraftingState.layerOverride,
         DraftingState.snapEnabled, DraftingState.angleStep, DraftingState.reassignMode
@@ -2772,12 +2802,17 @@ private fun InkScreen(
                 val currentFormat = remember(meta) {
                     meta.pageFormatId().ifEmpty { uniffi.padnote_core.defaultPageFormatId() }
                 }
+                var customPageSize by remember { mutableStateOf(false) }
                 TextButton(
                     onClick = { formatMenu = true },
                     modifier = Modifier.testTag("editor.page_format")
                 ) {
+                    val fmt = uniffi.padnote_core.pageFormat(currentFormat)
                     Text(
-                        l10n(uniffi.padnote_core.pageFormat(currentFormat).titleKey),
+                        // 自訂尺寸直接顯示「寬×高」。
+                        if (uniffi.padnote_core.isCustomPageFormat(currentFormat)) {
+                            "${fmt.width.toInt()}×${fmt.height.toInt()}"
+                        } else l10n(fmt.titleKey),
                         style = MaterialTheme.typography.labelLarge
                     )
                 }
@@ -2794,6 +2829,61 @@ private fun InkScreen(
                             }
                         )
                     }
+                    // 大尺寸頁取代無限畫布：任意寬高（300–6000）。
+                    DropdownMenuItem(
+                        text = { Text(l10n("page_format_custom")) },
+                        trailingIcon = {
+                            if (uniffi.padnote_core.isCustomPageFormat(currentFormat)) Text("✓")
+                        },
+                        onClick = { formatMenu = false; customPageSize = true },
+                        modifier = Modifier.testTag("page_format.custom")
+                    )
+                }
+                if (customPageSize) {
+                    val current = uniffi.padnote_core.pageFormat(currentFormat)
+                    var wText by remember { mutableStateOf(current.width.toInt().toString()) }
+                    var hText by remember { mutableStateOf(current.height.toInt().toString()) }
+                    AlertDialog(
+                        onDismissRequest = { customPageSize = false },
+                        title = { Text(l10n("page_format_custom_title")) },
+                        text = {
+                            Column {
+                                Text(l10n("page_format_custom_hint"), style = MaterialTheme.typography.labelSmall)
+                                OutlinedTextField(
+                                    value = wText, onValueChange = { wText = it.filter(Char::isDigit) },
+                                    label = { Text(l10n("page_format_custom_width")) }, singleLine = true,
+                                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                                        keyboardType = androidx.compose.ui.text.input.KeyboardType.Number),
+                                    modifier = Modifier.testTag("page_format.custom.width")
+                                )
+                                OutlinedTextField(
+                                    value = hText, onValueChange = { hText = it.filter(Char::isDigit) },
+                                    label = { Text(l10n("page_format_custom_height")) }, singleLine = true,
+                                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                                        keyboardType = androidx.compose.ui.text.input.KeyboardType.Number),
+                                    modifier = Modifier.testTag("page_format.custom.height")
+                                )
+                            }
+                        },
+                        confirmButton = {
+                            TextButton(
+                                onClick = {
+                                    customPageSize = false
+                                    val id = uniffi.padnote_core.customPageFormatId(
+                                        (wText.toUIntOrNull() ?: current.width.toUInt()),
+                                        (hText.toUIntOrNull() ?: current.height.toUInt())
+                                    )
+                                    meta.setPageFormatId(notebook?.first, id)
+                                    com.kairumo.padnote.ink.PageGeometry.use(id)
+                                    revision++
+                                },
+                                modifier = Modifier.testTag("page_format.custom.apply")
+                            ) { Text(l10n("page_format_custom_apply")) }
+                        },
+                        dismissButton = {
+                            TextButton(onClick = { customPageSize = false }) { Text(l10n("cancel")) }
+                        }
+                    )
                 }
             }
 

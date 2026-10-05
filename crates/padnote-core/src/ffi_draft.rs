@@ -147,6 +147,63 @@ pub fn brush_dabs_styled(
     .collect()
 }
 
+// MARK: - 圖學套件（一次建出一組筆記本）
+
+/// 套件裡的一本筆記本。
+#[derive(Clone, Debug, PartialEq, uniffi::Record)]
+pub struct FfiKitNotebook {
+    /// 筆記本標題的語系鍵。
+    pub title_key: String,
+    /// 紙張樣板（`paper_templates()` 的 id）。
+    pub paper_id: String,
+    /// 頁面規格（`page_formats()` 的 id）。
+    pub page_format_id: String,
+    pub page_count: u32,
+}
+
+/// 一組一起建立的筆記本，例如「圖學」＝課堂筆記＋作圖練習＋錯誤陷阱本。
+#[derive(Clone, Debug, PartialEq, uniffi::Record)]
+pub struct FfiNotebookKit {
+    pub id: String,
+    pub title_key: String,
+    pub desc_key: String,
+    pub notebooks: Vec<FfiKitNotebook>,
+}
+
+/// 可建立的套件。兩個平台的「新增筆記本」畫面都讀這一份，
+/// 所以同一個套件在兩台裝置上建出來的筆記本一模一樣。
+#[uniffi::export]
+pub fn notebook_kits() -> Vec<FfiNotebookKit> {
+    let nb = |title: &str, paper: &str, format: &str, pages: u32| FfiKitNotebook {
+        title_key: title.into(),
+        paper_id: paper.into(),
+        page_format_id: format.into(),
+        page_count: pages,
+    };
+    vec![FfiNotebookKit {
+        id: "drafting".into(),
+        title_key: "kit_drafting".into(),
+        desc_key: "kit_drafting_desc".into(),
+        notebooks: vec![
+            // 課堂筆記：康乃爾，左邊寫關鍵字、右邊記步驟。
+            nb("kit_drafting_class", "cornell", "a4", 3),
+            // 作圖練習：A3 橫式，左欄步驟 ①②③、右邊整片作圖。
+            nb("kit_drafting_practice", "drafting_steps", "a3_landscape", 3),
+            // 錯誤陷阱本：錯／對畫法並排，底下記口訣。
+            nb("kit_drafting_trap", "drafting_trap", "a4", 2),
+        ],
+    }]
+}
+
+/// 這張紙是不是製圖用的：開啟時編輯器會自動選好「圖學」筆組。
+#[uniffi::export]
+pub fn paper_uses_drafting(paper_id: String) -> bool {
+    matches!(
+        paper_id.as_str(),
+        "blueprint" | "isometric" | "orthographic" | "drafting_steps" | "drafting_trap"
+    )
+}
+
 /// 吸附結果的種類。
 #[derive(Clone, Copy, Debug, PartialEq, Eq, uniffi::Enum)]
 pub enum FfiDraftSnapKind {
@@ -197,6 +254,53 @@ pub fn draft_snap_stroke(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_drafting_kit_only_uses_papers_and_formats_that_exist() {
+        let papers: Vec<String> = crate::ffi_paper::paper_templates()
+            .into_iter()
+            .map(|t| t.id)
+            .collect();
+        let formats: Vec<String> = crate::ffi_paper::page_formats()
+            .into_iter()
+            .map(|f| f.id)
+            .collect();
+        for kit in notebook_kits() {
+            assert!(!kit.notebooks.is_empty());
+            for nb in &kit.notebooks {
+                assert!(
+                    papers.contains(&nb.paper_id),
+                    "{} 的紙張不存在",
+                    nb.title_key
+                );
+                assert!(
+                    formats.contains(&nb.page_format_id),
+                    "{} 的規格不存在",
+                    nb.title_key
+                );
+                assert!(nb.page_count >= 1);
+            }
+        }
+    }
+
+    #[test]
+    fn drafting_papers_are_all_real_templates() {
+        let papers: Vec<String> = crate::ffi_paper::paper_templates()
+            .into_iter()
+            .map(|t| t.id)
+            .collect();
+        for id in [
+            "blueprint",
+            "isometric",
+            "orthographic",
+            "drafting_steps",
+            "drafting_trap",
+        ] {
+            assert!(papers.iter().any(|p| p == id), "{id}");
+            assert!(paper_uses_drafting(id.into()));
+        }
+        assert!(!paper_uses_drafting("cornell".into()));
+    }
 
     #[test]
     fn there_are_three_layers_in_the_order_the_course_uses() {

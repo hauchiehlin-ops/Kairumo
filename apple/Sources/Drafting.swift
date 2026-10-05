@@ -168,3 +168,76 @@ final class DraftingState: ObservableObject {
         return [UInt8((v >> 16) & 0xFF), UInt8((v >> 8) & 0xFF), UInt8(v & 0xFF), 255]
     }
 }
+
+// MARK: - 圖學套件
+
+extension NotebookStore {
+    /// 一次建出套件裡的所有筆記本（課堂筆記、作圖練習、錯誤陷阱本）。
+    ///
+    /// 紙張、頁面規格與頁數都由核心的 `notebookKits()` 決定 —— 兩個平台建出來的一模一樣。
+    @discardableResult
+    func createKit(_ kit: FfiNotebookKit, paletteId: String?) -> [NotebookDocument] {
+        var made: [NotebookDocument] = []
+        for nb in kit.notebooks {
+            let title = LocalizationManager.shared.localized(nb.titleKey)
+            var doc = createNotebook(title: title, template: NoteTemplate(paperId: nb.paperId) ?? .blank)
+            let pages = max(1, Int(nb.pageCount))
+            doc.pageFormatId = nb.pageFormatId == defaultPageFormatId() ? nil : nb.pageFormatId
+            doc.pageCount = pages
+            doc.pagePaperIds = Array(repeating: nb.paperId, count: pages)
+            doc.guidePaletteId = paletteId
+            updateNotebook(doc)
+            made.append(doc)
+        }
+        return made
+    }
+}
+
+/// 自訂頁面尺寸的輸入畫面（大尺寸頁取代無限畫布）。
+struct CustomPageSizeSheet: View {
+    let initial: CGSize
+    let onApply: (String) -> Void
+    @Environment(\.dismiss) private var dismiss
+    @ObservedObject private var localizationManager = LocalizationManager.shared
+    @State private var width: String
+    @State private var height: String
+
+    init(initial: CGSize, onApply: @escaping (String) -> Void) {
+        self.initial = initial
+        self.onApply = onApply
+        _width = State(initialValue: String(Int(initial.width)))
+        _height = State(initialValue: String(Int(initial.height)))
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section(footer: Text(localizationManager.localized("page_format_custom_hint"))) {
+                    TextField(localizationManager.localized("page_format_custom_width"), text: $width)
+                        .keyboardType(.numberPad)
+                        .accessibilityIdentifier("page_format.custom.width")
+                    TextField(localizationManager.localized("page_format_custom_height"), text: $height)
+                        .keyboardType(.numberPad)
+                        .accessibilityIdentifier("page_format.custom.height")
+                }
+            }
+            .navigationTitle(localizationManager.localized("page_format_custom_title"))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(localizationManager.localized("cancel")) { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(localizationManager.localized("page_format_custom_apply")) {
+                        let w = UInt32(width) ?? UInt32(initial.width)
+                        let h = UInt32(height) ?? UInt32(initial.height)
+                        onApply(customPageFormatId(width: w, height: h))
+                        dismiss()
+                    }
+                    .accessibilityIdentifier("page_format.custom.apply")
+                }
+            }
+        }
+        .presentationDetents([.medium])
+    }
+}

@@ -2618,6 +2618,8 @@ public struct HomeWorkbenchView: View {
                         .accessibilityIdentifier("new_notebook.title.field")
                 }
 
+                kitSection
+
                 paperSection
 
                 recentTemplatesSection
@@ -2703,6 +2705,30 @@ public struct HomeWorkbenchView: View {
                     .fontWeight(.bold)
                     .accessibilityIdentifier("new_notebook.confirm")
                 }
+            }
+        }
+    }
+
+    // MARK: - 套件（一次建出一組筆記本）
+
+    /// 圖學套件：課堂筆記＋作圖練習＋錯誤陷阱本，紙張與規格由核心決定。
+    @ViewBuilder
+    private var kitSection: some View {
+        Section(localizationManager.localized("kit_create")) {
+            ForEach(notebookKits(), id: \.id) { kit in
+                Button {
+                    let made = notebookStore.createKit(kit, paletteId: newNotePaletteId)
+                    showNewNotebookSheet = false
+                    if let first = made.first { selectedNotebookForEditing = first }
+                } label: {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Label(localizationManager.localized(kit.titleKey), systemImage: "ruler")
+                        Text(localizationManager.localized(kit.descKey))
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+                .accessibilityIdentifier("new_notebook.kit.\(kit.id)")
             }
         }
     }

@@ -870,6 +870,65 @@ pub fn page_guides(paper_id: String, width: f32, height: f32) -> Vec<FfiGuide> {
             s.label("guide_solution", M, split_y + 0.03, 0.3, 0.026, LEFT);
             s.rows(M, R, split_y + 0.09, BOT, 7, FfiGuideTone::Hairline);
         }
+        "drafting_steps" => {
+            // 作圖步驟紙：左欄是 ①②③… 的步驟說明，右邊整片留給作圖。
+            // 步驟編號對應輔助線旁邊標的數字，複習時能照編號重走一遍。
+            title_row(&mut s, "guide_topic");
+            let split = M + 0.27;
+            let top = TOP + 0.03;
+            s.vline(split, top, BOT, FfiGuideTone::Accent, 1.5);
+            let cell = (BOT - top) / 6.0;
+            for i in 0..6 {
+                let y = top + cell * i as f32;
+                s.hline(M, split, y, FfiGuideTone::Light, 1.0);
+                s.label(
+                    &format!("guide_step_{}", i + 1),
+                    M + 0.012,
+                    y + 0.034,
+                    0.05,
+                    0.032,
+                    LEFT,
+                );
+                // 每格兩行說明。
+                s.hline(
+                    M + 0.065,
+                    split - 0.012,
+                    y + cell * 0.4,
+                    FfiGuideTone::Hairline,
+                    1.0,
+                );
+                s.hline(
+                    M + 0.065,
+                    split - 0.012,
+                    y + cell * 0.7,
+                    FfiGuideTone::Hairline,
+                    1.0,
+                );
+            }
+            s.hline(M, split, BOT, FfiGuideTone::Light, 1.0);
+            s.label(
+                "guide_drawing_area",
+                split + 0.012,
+                top + 0.026,
+                0.3,
+                0.022,
+                LEFT,
+            );
+        }
+        "drafting_trap" => {
+            // 錯誤陷阱頁：題目、並排的錯誤／正確畫法、底下一條「陷阱口訣」。
+            s.header("guide_question", M, TOP, R - M);
+            let mid = 0.5;
+            let top = TOP + 0.075;
+            let rule_top = BOT - 0.15;
+            s.vline(mid, top, rule_top, FfiGuideTone::Accent, 1.2);
+            s.label("guide_wrong_way", M + 0.01, top + 0.026, 0.4, 0.024, LEFT);
+            s.label("guide_right_way", mid + 0.01, top + 0.026, 0.4, 0.024, LEFT);
+            s.hline(M, R, top + 0.04, FfiGuideTone::Light, 1.0);
+            s.rect(M, top, R - M, rule_top - top, FfiGuideTone::Light, 1.0);
+            s.header("guide_trap_rule", M, rule_top + 0.015, R - M);
+            s.rows(M, R, rule_top + 0.075, BOT, 2, FfiGuideTone::Hairline);
+        }
         // blank / grid / lined / dot_grid_fine / isometric：只有底紋，沒有結構。
         _ => {}
     }

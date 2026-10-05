@@ -1826,6 +1826,8 @@ public struct NotebookEditorView: View {
 
     // 實體工具列狀態
     @State private var selectedTool: EditorToolType = .pen
+    /// 自訂頁面尺寸的輸入畫面。
+    @State private var showCustomPageSize = false
     @State private var previousTool: EditorToolType?
     @State private var lastObservedTool: EditorToolType = .pen
 
@@ -2383,6 +2385,10 @@ public struct NotebookEditorView: View {
                 currentPageIndex = targetPage
             }
             loadCurrentPage()
+            // 製圖用的紙（三視圖、等角、作圖步驟…）一打開就選好「圖學」筆組。
+            if paperUsesDrafting(paperId: notebook.paperId(forPage: currentPageIndex)) {
+                selectedTool = .drafting
+            }
             MacWindowTitle.apply()
             // 擷取剛打開筆記本時的初始狀態（提供一鍵恢復初始狀態功能）
             if initialNotebookSnapshot == nil {
@@ -9672,12 +9678,24 @@ public struct NotebookEditorView: View {
                     }
                 }
             }
+            Divider()
+            // 大尺寸頁取代無限畫布：任意寬高（300–6000）。
+            Button {
+                showCustomPageSize = true
+            } label: {
+                HStack {
+                    Text(localizationManager.localized("page_format_custom"))
+                    if isCustomPageFormat(id: notebook.pageFormatId ?? defaultPageFormatId()) {
+                        Image(systemName: "checkmark")
+                    }
+                }
+            }
+            .accessibilityIdentifier("page_format.custom")
         } label: {
             HStack(spacing: 4) {
                 Image(systemName: "doc.on.doc")
                     .font(.system(size: EditorToolbarMetrics.icon))
-                Text(localizationManager.localized(
-                    pageFormat(id: notebook.pageFormatId ?? defaultPageFormatId()).titleKey))
+                Text(pageFormatTitle)
                     .font(.system(size: EditorToolbarMetrics.label))
             }
             .foregroundColor(.accentColor)
@@ -9689,6 +9707,19 @@ public struct NotebookEditorView: View {
         .buttonStyle(.plain)
         .accessibilityLabel(localizationManager.localized("page_format"))
         .help(localizationManager.localized("page_format_desc"))
+        .sheet(isPresented: $showCustomPageSize) {
+            CustomPageSizeSheet(initial: PageGeometry.size) { applyPageFormat($0) }
+        }
+    }
+
+    /// 工具列上顯示的規格名稱。自訂的直接顯示尺寸（「2000×1500」）。
+    private var pageFormatTitle: String {
+        let id = notebook.pageFormatId ?? defaultPageFormatId()
+        let format = pageFormat(id: id)
+        if isCustomPageFormat(id: id) {
+            return "\(Int(format.width))×\(Int(format.height))"
+        }
+        return localizationManager.localized(format.titleKey)
     }
 
     /// 版面配色。

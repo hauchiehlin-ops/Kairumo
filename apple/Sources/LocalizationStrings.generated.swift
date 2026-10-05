@@ -4508,6 +4508,14 @@ extension LocalizationManager {
             .ko: "완료",
             .th: "เสร็จ"
         ],
+        "guide_drawing_area": [
+            .zhHant: "作圖區",
+            .en: "Drawing area",
+            .zhHans: "作图区",
+            .ja: "作図エリア",
+            .ko: "작도 영역",
+            .th: "พื้นที่วาด"
+        ],
         "guide_due": [
             .zhHant: "期限",
             .en: "Due",
@@ -4708,6 +4716,14 @@ extension LocalizationManager {
             .ko: "회고",
             .th: "ทบทวน"
         ],
+        "guide_right_way": [
+            .zhHant: "✓ 正確畫法",
+            .en: "✓ Right way",
+            .zhHans: "✓ 正确画法",
+            .ja: "✓ 正しい描き方",
+            .ko: "✓ 올바른 작도",
+            .th: "✓ วาดถูก"
+        ],
         "guide_sat": [
             .zhHant: "六",
             .en: "Sat",
@@ -4755,6 +4771,54 @@ extension LocalizationManager {
             .ja: "ステージ",
             .ko: "단계",
             .th: "ขั้น"
+        ],
+        "guide_step_1": [
+            .zhHant: "①",
+            .en: "①",
+            .zhHans: "①",
+            .ja: "①",
+            .ko: "①",
+            .th: "①"
+        ],
+        "guide_step_2": [
+            .zhHant: "②",
+            .en: "②",
+            .zhHans: "②",
+            .ja: "②",
+            .ko: "②",
+            .th: "②"
+        ],
+        "guide_step_3": [
+            .zhHant: "③",
+            .en: "③",
+            .zhHans: "③",
+            .ja: "③",
+            .ko: "③",
+            .th: "③"
+        ],
+        "guide_step_4": [
+            .zhHant: "④",
+            .en: "④",
+            .zhHans: "④",
+            .ja: "④",
+            .ko: "④",
+            .th: "④"
+        ],
+        "guide_step_5": [
+            .zhHant: "⑤",
+            .en: "⑤",
+            .zhHans: "⑤",
+            .ja: "⑤",
+            .ko: "⑤",
+            .th: "⑤"
+        ],
+        "guide_step_6": [
+            .zhHant: "⑥",
+            .en: "⑥",
+            .zhHans: "⑥",
+            .ja: "⑥",
+            .ko: "⑥",
+            .th: "⑥"
         ],
         "guide_sub": [
             .zhHant: "次重點",
@@ -4828,6 +4892,14 @@ extension LocalizationManager {
             .ko: "주제",
             .th: "หัวข้อ"
         ],
+        "guide_trap_rule": [
+            .zhHant: "陷阱與口訣",
+            .en: "Trap & rule of thumb",
+            .zhHans: "陷阱与口诀",
+            .ja: "落とし穴とコツ",
+            .ko: "함정과 요령",
+            .th: "กับดักและเคล็ดลับ"
+        ],
         "guide_tue": [
             .zhHant: "二",
             .en: "Tue",
@@ -4859,6 +4931,14 @@ extension LocalizationManager {
             .ja: "週",
             .ko: "주",
             .th: "สัปดาห์"
+        ],
+        "guide_wrong_way": [
+            .zhHant: "✗ 錯誤畫法",
+            .en: "✗ Wrong way",
+            .zhHans: "✗ 错误画法",
+            .ja: "✗ 誤った描き方",
+            .ko: "✗ 잘못된 작도",
+            .th: "✗ วาดผิด"
         ],
         "handwriting_mode": [
             .zhHant: "手繪模式",
@@ -6122,6 +6202,62 @@ extension LocalizationManager {
             .ja: "枠線を維持",
             .ko: "테두리 유지",
             .th: "เก็บเส้นขอบ"
+        ],
+        "kit_create": [
+            .zhHant: "建立套件",
+            .en: "Create kit",
+            .zhHans: "创建套件",
+            .ja: "セットを作成",
+            .ko: "세트 만들기",
+            .th: "สร้างชุด"
+        ],
+        "kit_created": [
+            .zhHant: "套件已建立",
+            .en: "Kit created",
+            .zhHans: "套件已创建",
+            .ja: "セットを作成しました",
+            .ko: "세트를 만들었습니다",
+            .th: "สร้างชุดแล้ว"
+        ],
+        "kit_drafting": [
+            .zhHant: "圖學套件",
+            .en: "Engineering Drawing Kit",
+            .zhHans: "图学套件",
+            .ja: "製図セット",
+            .ko: "공학 도면 세트",
+            .th: "ชุดวิชาเขียนแบบ"
+        ],
+        "kit_drafting_class": [
+            .zhHant: "圖學－課堂筆記",
+            .en: "Drafting – Class Notes",
+            .zhHans: "图学－课堂笔记",
+            .ja: "製図－授業ノート",
+            .ko: "도면 – 수업 노트",
+            .th: "เขียนแบบ – จดบทเรียน"
+        ],
+        "kit_drafting_desc": [
+            .zhHant: "課堂筆記、作圖練習、錯誤陷阱本，並備好圖學筆組",
+            .en: "Class notes, drawing practice and a mistake-trap book, with the drafting pens ready",
+            .zhHans: "课堂笔记、作图练习、错误陷阱本，并备好图学笔组",
+            .ja: "授業ノート・作図練習・ミス集をまとめて作成",
+            .ko: "수업 노트, 작도 연습, 오답 함정 노트를 한 번에",
+            .th: "สมุดจดบทเรียน ฝึกวาด และสมุดกับดัก พร้อมชุดปากกาเขียนแบบ"
+        ],
+        "kit_drafting_practice": [
+            .zhHant: "圖學－作圖練習",
+            .en: "Drafting – Drawing Practice",
+            .zhHans: "图学－作图练习",
+            .ja: "製図－作図練習",
+            .ko: "도면 – 작도 연습",
+            .th: "เขียนแบบ – ฝึกวาด"
+        ],
+        "kit_drafting_trap": [
+            .zhHant: "圖學－錯誤陷阱本",
+            .en: "Drafting – Mistake Traps",
+            .zhHans: "图学－错误陷阱本",
+            .ja: "製図－ミスの落とし穴",
+            .ko: "도면 – 오답 함정",
+            .th: "เขียนแบบ – กับดักข้อผิดพลาด"
         ],
         "language": [
             .zhHant: "介面語系",
@@ -7931,6 +8067,38 @@ extension LocalizationManager {
             .ko: "용지 크기",
             .th: "ขนาดหน้ากระดาษ"
         ],
+        "page_format_a2": [
+            .zhHant: "A2（直式）",
+            .en: "A2 (portrait)",
+            .zhHans: "A2（竖式）",
+            .ja: "A2（縦）",
+            .ko: "A2 (세로)",
+            .th: "A2 (แนวตั้ง)"
+        ],
+        "page_format_a2_landscape": [
+            .zhHant: "A2（橫式）",
+            .en: "A2 (landscape)",
+            .zhHans: "A2（横式）",
+            .ja: "A2（横）",
+            .ko: "A2 (가로)",
+            .th: "A2 (แนวนอน)"
+        ],
+        "page_format_a3": [
+            .zhHant: "A3（直式）",
+            .en: "A3 (portrait)",
+            .zhHans: "A3（竖式）",
+            .ja: "A3（縦）",
+            .ko: "A3 (세로)",
+            .th: "A3 (แนวตั้ง)"
+        ],
+        "page_format_a3_landscape": [
+            .zhHant: "A3（橫式）",
+            .en: "A3 (landscape)",
+            .zhHans: "A3（横式）",
+            .ja: "A3（横）",
+            .ko: "A3 (가로)",
+            .th: "A3 (แนวนอน)"
+        ],
         "page_format_a4": [
             .zhHant: "A4 直式",
             .en: "A4",
@@ -7962,6 +8130,54 @@ extension LocalizationManager {
             .ja: "用紙サイズを変えるとキャンバスと書き出しの両方が変わります。新しい紙からはみ出した内容は内側に戻します。",
             .ko: "용지 크기를 바꾸면 캔버스와 내보내기가 함께 바뀝니다. 새 페이지를 벗어난 내용은 안쪽으로 되돌립니다.",
             .th: "การเปลี่ยนขนาดจะเปลี่ยนทั้งผืนผ้าใบและไฟล์ที่ส่งออก เนื้อหาที่เลยขอบหน้าใหม่จะถูกย้ายกลับเข้ามา"
+        ],
+        "page_format_custom": [
+            .zhHant: "自訂尺寸",
+            .en: "Custom size",
+            .zhHans: "自定义尺寸",
+            .ja: "カスタムサイズ",
+            .ko: "사용자 지정 크기",
+            .th: "ขนาดกำหนดเอง"
+        ],
+        "page_format_custom_apply": [
+            .zhHant: "套用",
+            .en: "Apply",
+            .zhHans: "应用",
+            .ja: "適用",
+            .ko: "적용",
+            .th: "ใช้"
+        ],
+        "page_format_custom_height": [
+            .zhHant: "高",
+            .en: "Height",
+            .zhHans: "高",
+            .ja: "高さ",
+            .ko: "높이",
+            .th: "สูง"
+        ],
+        "page_format_custom_hint": [
+            .zhHant: "寬與高，300–6000",
+            .en: "Width and height, 300–6000",
+            .zhHans: "宽与高，300–6000",
+            .ja: "幅と高さ（300〜6000）",
+            .ko: "너비와 높이, 300–6000",
+            .th: "กว้างและสูง 300–6000"
+        ],
+        "page_format_custom_title": [
+            .zhHant: "自訂頁面尺寸",
+            .en: "Custom page size",
+            .zhHans: "自定义页面尺寸",
+            .ja: "カスタムページサイズ",
+            .ko: "사용자 지정 페이지 크기",
+            .th: "ขนาดหน้ากำหนดเอง"
+        ],
+        "page_format_custom_width": [
+            .zhHant: "寬",
+            .en: "Width",
+            .zhHans: "宽",
+            .ja: "幅",
+            .ko: "너비",
+            .th: "กว้าง"
         ],
         "page_format_desc": [
             .zhHant: "變更頁面紙張規格與長寬比例（A4、信紙、16:9 等）",
@@ -8306,6 +8522,38 @@ extension LocalizationManager {
             .ja: "白紙のまま",
             .ko: "빈 페이지",
             .th: "หน้าว่าง"
+        ],
+        "paper_drafting_steps": [
+            .zhHant: "作圖步驟紙",
+            .en: "Drafting Steps",
+            .zhHans: "作图步骤纸",
+            .ja: "作図ステップ紙",
+            .ko: "작도 단계지",
+            .th: "กระดาษขั้นตอนเขียนแบบ"
+        ],
+        "paper_drafting_steps_desc": [
+            .zhHant: "左欄寫 ①②③ 步驟，右邊整片作圖",
+            .en: "Numbered steps ①②③ on the left, a big drawing area on the right",
+            .zhHans: "左栏写 ①②③ 步骤，右边整片作图",
+            .ja: "左に①②③の手順、右に広い作図スペース",
+            .ko: "왼쪽에 ①②③ 단계, 오른쪽은 넓은 작도 공간",
+            .th: "ขั้นตอน ①②③ ด้านซ้าย พื้นที่วาดด้านขวา"
+        ],
+        "paper_drafting_trap": [
+            .zhHant: "圖學錯誤陷阱頁",
+            .en: "Drafting Trap Page",
+            .zhHans: "图学错误陷阱页",
+            .ja: "製図の落とし穴ページ",
+            .ko: "제도 함정 페이지",
+            .th: "หน้าข้อผิดพลาดงานเขียนแบบ"
+        ],
+        "paper_drafting_trap_desc": [
+            .zhHant: "錯誤與正確畫法並排，底下記口訣",
+            .en: "Wrong vs. right drawings side by side, with a rule of thumb below",
+            .zhHans: "错误与正确画法并排，底下记口诀",
+            .ja: "誤りと正解の描き方を並べ、下にコツを記録",
+            .ko: "틀린 작도와 맞는 작도를 나란히, 아래에 요령 기록",
+            .th: "วาดผิด/ถูกเทียบกัน พร้อมจดเคล็ดลับด้านล่าง"
         ],
         "paper_english_3line": [
             .zhHant: "英文三線格",

@@ -4492,6 +4492,14 @@
     "zhHans": "完成",
     "zhHant": "完成"
   },
+  "guide_drawing_area": {
+    "en": "Drawing area",
+    "ja": "作図エリア",
+    "ko": "작도 영역",
+    "th": "พื้นที่วาด",
+    "zhHans": "作图区",
+    "zhHant": "作圖區"
+  },
   "guide_due": {
     "en": "Due",
     "ja": "期日",
@@ -4692,6 +4700,14 @@
     "zhHans": "回顾",
     "zhHant": "回顧"
   },
+  "guide_right_way": {
+    "en": "✓ Right way",
+    "ja": "✓ 正しい描き方",
+    "ko": "✓ 올바른 작도",
+    "th": "✓ วาดถูก",
+    "zhHans": "✓ 正确画法",
+    "zhHant": "✓ 正確畫法"
+  },
   "guide_sat": {
     "en": "Sat",
     "ja": "土",
@@ -4739,6 +4755,54 @@
     "th": "ขั้น",
     "zhHans": "阶段",
     "zhHant": "階段"
+  },
+  "guide_step_1": {
+    "en": "①",
+    "ja": "①",
+    "ko": "①",
+    "th": "①",
+    "zhHans": "①",
+    "zhHant": "①"
+  },
+  "guide_step_2": {
+    "en": "②",
+    "ja": "②",
+    "ko": "②",
+    "th": "②",
+    "zhHans": "②",
+    "zhHant": "②"
+  },
+  "guide_step_3": {
+    "en": "③",
+    "ja": "③",
+    "ko": "③",
+    "th": "③",
+    "zhHans": "③",
+    "zhHant": "③"
+  },
+  "guide_step_4": {
+    "en": "④",
+    "ja": "④",
+    "ko": "④",
+    "th": "④",
+    "zhHans": "④",
+    "zhHant": "④"
+  },
+  "guide_step_5": {
+    "en": "⑤",
+    "ja": "⑤",
+    "ko": "⑤",
+    "th": "⑤",
+    "zhHans": "⑤",
+    "zhHant": "⑤"
+  },
+  "guide_step_6": {
+    "en": "⑥",
+    "ja": "⑥",
+    "ko": "⑥",
+    "th": "⑥",
+    "zhHans": "⑥",
+    "zhHant": "⑥"
   },
   "guide_sub": {
     "en": "Sub",
@@ -4812,6 +4876,14 @@
     "zhHans": "主题",
     "zhHant": "主題"
   },
+  "guide_trap_rule": {
+    "en": "Trap & rule of thumb",
+    "ja": "落とし穴とコツ",
+    "ko": "함정과 요령",
+    "th": "กับดักและเคล็ดลับ",
+    "zhHans": "陷阱与口诀",
+    "zhHant": "陷阱與口訣"
+  },
   "guide_tue": {
     "en": "Tue",
     "ja": "火",
@@ -4843,6 +4915,14 @@
     "th": "สัปดาห์",
     "zhHans": "週次",
     "zhHant": "週次"
+  },
+  "guide_wrong_way": {
+    "en": "✗ Wrong way",
+    "ja": "✗ 誤った描き方",
+    "ko": "✗ 잘못된 작도",
+    "th": "✗ วาดผิด",
+    "zhHans": "✗ 错误画法",
+    "zhHant": "✗ 錯誤畫法"
   },
   "handwriting_mode": {
     "en": "Handwriting",
@@ -6106,6 +6186,62 @@
     "th": "เก็บเส้นขอบ",
     "zhHans": "保留边框",
     "zhHant": "保留邊框"
+  },
+  "kit_create": {
+    "en": "Create kit",
+    "ja": "セットを作成",
+    "ko": "세트 만들기",
+    "th": "สร้างชุด",
+    "zhHans": "创建套件",
+    "zhHant": "建立套件"
+  },
+  "kit_created": {
+    "en": "Kit created",
+    "ja": "セットを作成しました",
+    "ko": "세트를 만들었습니다",
+    "th": "สร้างชุดแล้ว",
+    "zhHans": "套件已创建",
+    "zhHant": "套件已建立"
+  },
+  "kit_drafting": {
+    "en": "Engineering Drawing Kit",
+    "ja": "製図セット",
+    "ko": "공학 도면 세트",
+    "th": "ชุดวิชาเขียนแบบ",
+    "zhHans": "图学套件",
+    "zhHant": "圖學套件"
+  },
+  "kit_drafting_class": {
+    "en": "Drafting – Class Notes",
+    "ja": "製図－授業ノート",
+    "ko": "도면 – 수업 노트",
+    "th": "เขียนแบบ – จดบทเรียน",
+    "zhHans": "图学－课堂笔记",
+    "zhHant": "圖學－課堂筆記"
+  },
+  "kit_drafting_desc": {
+    "en": "Class notes, drawing practice and a mistake-trap book, with the drafting pens ready",
+    "ja": "授業ノート・作図練習・ミス集をまとめて作成",
+    "ko": "수업 노트, 작도 연습, 오답 함정 노트를 한 번에",
+    "th": "สมุดจดบทเรียน ฝึกวาด และสมุดกับดัก พร้อมชุดปากกาเขียนแบบ",
+    "zhHans": "课堂笔记、作图练习、错误陷阱本，并备好图学笔组",
+    "zhHant": "課堂筆記、作圖練習、錯誤陷阱本，並備好圖學筆組"
+  },
+  "kit_drafting_practice": {
+    "en": "Drafting – Drawing Practice",
+    "ja": "製図－作図練習",
+    "ko": "도면 – 작도 연습",
+    "th": "เขียนแบบ – ฝึกวาด",
+    "zhHans": "图学－作图练习",
+    "zhHant": "圖學－作圖練習"
+  },
+  "kit_drafting_trap": {
+    "en": "Drafting – Mistake Traps",
+    "ja": "製図－ミスの落とし穴",
+    "ko": "도면 – 오답 함정",
+    "th": "เขียนแบบ – กับดักข้อผิดพลาด",
+    "zhHans": "图学－错误陷阱本",
+    "zhHant": "圖學－錯誤陷阱本"
   },
   "language": {
     "en": "Language",
@@ -7915,6 +8051,38 @@
     "zhHans": "页面规格",
     "zhHant": "頁面規格"
   },
+  "page_format_a2": {
+    "en": "A2 (portrait)",
+    "ja": "A2（縦）",
+    "ko": "A2 (세로)",
+    "th": "A2 (แนวตั้ง)",
+    "zhHans": "A2（竖式）",
+    "zhHant": "A2（直式）"
+  },
+  "page_format_a2_landscape": {
+    "en": "A2 (landscape)",
+    "ja": "A2（横）",
+    "ko": "A2 (가로)",
+    "th": "A2 (แนวนอน)",
+    "zhHans": "A2（横式）",
+    "zhHant": "A2（橫式）"
+  },
+  "page_format_a3": {
+    "en": "A3 (portrait)",
+    "ja": "A3（縦）",
+    "ko": "A3 (세로)",
+    "th": "A3 (แนวตั้ง)",
+    "zhHans": "A3（竖式）",
+    "zhHant": "A3（直式）"
+  },
+  "page_format_a3_landscape": {
+    "en": "A3 (landscape)",
+    "ja": "A3（横）",
+    "ko": "A3 (가로)",
+    "th": "A3 (แนวนอน)",
+    "zhHans": "A3（横式）",
+    "zhHant": "A3（橫式）"
+  },
   "page_format_a4": {
     "en": "A4",
     "ja": "A4",
@@ -7946,6 +8114,54 @@
     "th": "การเปลี่ยนขนาดจะเปลี่ยนทั้งผืนผ้าใบและไฟล์ที่ส่งออก เนื้อหาที่เลยขอบหน้าใหม่จะถูกย้ายกลับเข้ามา",
     "zhHans": "更改规格会同时改变画布与导出档。超出新页面的内容会被移回页内。",
     "zhHant": "更改規格會同時改變畫布與匯出檔。超出新頁面的內容會被移回頁內。"
+  },
+  "page_format_custom": {
+    "en": "Custom size",
+    "ja": "カスタムサイズ",
+    "ko": "사용자 지정 크기",
+    "th": "ขนาดกำหนดเอง",
+    "zhHans": "自定义尺寸",
+    "zhHant": "自訂尺寸"
+  },
+  "page_format_custom_apply": {
+    "en": "Apply",
+    "ja": "適用",
+    "ko": "적용",
+    "th": "ใช้",
+    "zhHans": "应用",
+    "zhHant": "套用"
+  },
+  "page_format_custom_height": {
+    "en": "Height",
+    "ja": "高さ",
+    "ko": "높이",
+    "th": "สูง",
+    "zhHans": "高",
+    "zhHant": "高"
+  },
+  "page_format_custom_hint": {
+    "en": "Width and height, 300–6000",
+    "ja": "幅と高さ（300〜6000）",
+    "ko": "너비와 높이, 300–6000",
+    "th": "กว้างและสูง 300–6000",
+    "zhHans": "宽与高，300–6000",
+    "zhHant": "寬與高，300–6000"
+  },
+  "page_format_custom_title": {
+    "en": "Custom page size",
+    "ja": "カスタムページサイズ",
+    "ko": "사용자 지정 페이지 크기",
+    "th": "ขนาดหน้ากำหนดเอง",
+    "zhHans": "自定义页面尺寸",
+    "zhHant": "自訂頁面尺寸"
+  },
+  "page_format_custom_width": {
+    "en": "Width",
+    "ja": "幅",
+    "ko": "너비",
+    "th": "กว้าง",
+    "zhHans": "宽",
+    "zhHant": "寬"
   },
   "page_format_desc": {
     "en": "Change canvas page format and aspect ratio (A4, Letter, 16:9)",
@@ -8290,6 +8506,38 @@
     "th": "หน้าว่าง",
     "zhHans": "不套用，只要空白页",
     "zhHant": "不套用，只要空白頁"
+  },
+  "paper_drafting_steps": {
+    "en": "Drafting Steps",
+    "ja": "作図ステップ紙",
+    "ko": "작도 단계지",
+    "th": "กระดาษขั้นตอนเขียนแบบ",
+    "zhHans": "作图步骤纸",
+    "zhHant": "作圖步驟紙"
+  },
+  "paper_drafting_steps_desc": {
+    "en": "Numbered steps ①②③ on the left, a big drawing area on the right",
+    "ja": "左に①②③の手順、右に広い作図スペース",
+    "ko": "왼쪽에 ①②③ 단계, 오른쪽은 넓은 작도 공간",
+    "th": "ขั้นตอน ①②③ ด้านซ้าย พื้นที่วาดด้านขวา",
+    "zhHans": "左栏写 ①②③ 步骤，右边整片作图",
+    "zhHant": "左欄寫 ①②③ 步驟，右邊整片作圖"
+  },
+  "paper_drafting_trap": {
+    "en": "Drafting Trap Page",
+    "ja": "製図の落とし穴ページ",
+    "ko": "제도 함정 페이지",
+    "th": "หน้าข้อผิดพลาดงานเขียนแบบ",
+    "zhHans": "图学错误陷阱页",
+    "zhHant": "圖學錯誤陷阱頁"
+  },
+  "paper_drafting_trap_desc": {
+    "en": "Wrong vs. right drawings side by side, with a rule of thumb below",
+    "ja": "誤りと正解の描き方を並べ、下にコツを記録",
+    "ko": "틀린 작도와 맞는 작도를 나란히, 아래에 요령 기록",
+    "th": "วาดผิด/ถูกเทียบกัน พร้อมจดเคล็ดลับด้านล่าง",
+    "zhHans": "错误与正确画法并排，底下记口诀",
+    "zhHant": "錯誤與正確畫法並排，底下記口訣"
   },
   "paper_english_3line": {
     "en": "English Ruled (3-Line)",
