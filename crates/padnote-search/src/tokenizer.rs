@@ -41,11 +41,39 @@ fn fold_width(c: char) -> char {
     }
 }
 
+/// 漢字統一折成簡體，讓「笔记」與「筆記」查得到彼此。
+///
+/// **逐字**轉換而不是整句：整句轉換會看上下文（「後」在「皇后」與「以後」轉法不同），
+/// 查詢只有兩三個字、文件是整段，兩邊的上下文不同就會轉出不同的字，反而查不到。
+/// 逐字則兩邊永遠一致。代價是少數一對多的字（如「乾」）折到同一個字，查得到的比字面多一些，
+/// 搜尋寧可多找到也不要漏掉。
+fn fold_han(c: char) -> char {
+    use std::cell::RefCell;
+    use std::collections::HashMap;
+    thread_local! {
+        static CACHE: RefCell<HashMap<char, char>> = RefCell::new(HashMap::new());
+    }
+    if !matches!(c as u32, 0x3400..=0x4DBF | 0x4E00..=0x9FFF | 0xF900..=0xFAFF) {
+        return c;
+    }
+    CACHE.with(|cache| {
+        *cache.borrow_mut().entry(c).or_insert_with(|| {
+            let converted = zhconv::zhconv(&c.to_string(), zhconv::Variant::ZhCN);
+            let mut it = converted.chars();
+            match (it.next(), it.next()) {
+                (Some(one), None) => one,
+                _ => c,
+            }
+        })
+    })
+}
+
 /// 切出可索引的 token，全部轉小寫。
 ///
 /// - CJK：相鄰兩字組成 bigram；單獨一個 CJK 字也會產出（否則單字查詢會落空）
 /// - 泰文：以「子音＋附著的母音／聲調符號」為一個字，同樣走 bigram
 /// - 拉丁/數字：以非字母數字為邊界切詞；全形英數先折成半形
+/// - 漢字先折成簡體（簡繁互查）
 /// - 其他（標點、空白）：丟棄
 pub fn tokenize(text: &str) -> Vec<String> {
     let mut out = Vec::new();
@@ -73,7 +101,7 @@ pub fn tokenize(text: &str) -> Vec<String> {
     };
 
     for raw in text.chars() {
-        let c = fold_width(raw);
+        let c = fold_han(fold_width(raw));
         if is_thai_mark(c) {
             // 黏在前一個泰文字上；前面沒有字（孤立的符號）就丟掉。
             if let Some(last) = cjk_run.last_mut() {
@@ -101,7 +129,8 @@ mod tests {
 
     #[test]
     fn chinese_is_split_into_bigrams() {
-        assert_eq!(tokenize("線性代數"), ["線性", "性代", "代數"]);
+        // 漢字先折成簡體，所以 token 是簡體字形（簡繁互查的代價）。
+        assert_eq!(tokenize("線性代數"), ["线性", "性代", "代数"]);
     }
 
     #[test]
@@ -121,7 +150,7 @@ mod tests {
     #[test]
     fn mixed_chinese_english_splits_at_the_boundary() {
         // C9 中英夾雜是核心場景
-        assert_eq!(tokenize("用 Rust 寫程式"), ["用", "rust", "寫程", "程式"]);
+        assert_eq!(tokenize("用 Rust 寫程式"), ["用", "rust", "写程", "程式"]);
     }
 
     #[test]
@@ -129,10 +158,10 @@ mod tests {
         // 標點必須斷開 bigram，否則「開會。明天」會產生跨句的假詞「會明」
         let t = tokenize("開會。明天");
         assert!(
-            !t.contains(&"會明".to_string()),
+            !t.contains(&"会明".to_string()),
             "跨標點不得組成 bigram：{t:?}"
         );
-        assert_eq!(t, ["開會", "明天"]);
+        assert_eq!(t, ["开会", "明天"]);
     }
 
     #[test]
@@ -191,5 +220,31 @@ mod tests {
     #[test]
     fn half_width_katakana_is_cjk() {
         assert_eq!(tokenize("ｶﾀｶﾅ").len(), 3);
+    }
+
+    #[test]
+    fn simplified_and_traditional_find_each_other() {
+        assert_eq!(tokenize("笔记"), tokenize("筆記"));
+        assert_eq!(tokenize("线性代数"), tokenize("線性代數"));
+        assert_eq!(tokenize("会议记录"), tokenize("會議記錄"));
+    }
+
+    #[test]
+    fn folding_is_per_character_so_context_cannot_split_a_query_from_its_document() {
+        // 「後」整句轉換會依上下文變「后」或「後」；逐字折疊讓兩邊一致。
+        let doc = tokenize("以後再說，皇后很美");
+        for q in ["以後", "以后", "皇后", "皇後"] {
+            assert!(
+                tokenize(q).iter().all(|t| doc.contains(t)),
+                "{q} 查不到：{doc:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn folding_leaves_non_han_scripts_alone() {
+        assert_eq!(tokenize("Hello"), ["hello"]);
+        assert_eq!(tokenize("한국어"), tokenize("한국어"));
+        assert_eq!(tokenize("ひらがな"), ["ひら", "らが", "がな"]);
     }
 }

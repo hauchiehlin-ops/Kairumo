@@ -49,7 +49,7 @@ class KairumoManualSeedTest {
     @Test
     fun theStrokeDataLicenceTravelsWithTheApp() {
         // 筆順資料來自 Arphic 字型（Arphic Public License）：授權全文要隨 App 一起散布。
-        for (name in listOf("seed/ARPHICPL.TXT", "seed/NOTICE.txt")) {
+        for (name in listOf("seed/ARPHICPL.TXT", "seed/NOTICE.txt", "seed/OFL-NotoSansThai.txt")) {
             val text = context.assets.open(name).bufferedReader().use { it.readText() }
             assertTrue("$name 是空的", text.isNotBlank())
         }

@@ -18,6 +18,7 @@ use padnote_ink::Stroke;
 use padnote_pdf::{PageMapping, stroke_to_annotation};
 use padnote_storage::{BlobId, BlobStore};
 use std::collections::HashMap;
+use std::fmt::Write as _;
 use std::io::Write;
 
 /// 版面圖元的種類。與核心 `ffi_guides::FfiGuideKind` 一一對應。
@@ -336,6 +337,89 @@ impl PdfWriter {
         }
     }
 
+    /// 嵌入 Noto Sans Thai：Type0（Identity-H）→ CIDFontType2 → FontDescriptor → FontFile2，
+    /// 另附 ToUnicode 讓複製、搜尋與無障礙工具拿得到泰文字碼。
+    fn write_thai_font(&mut self, ids: [usize; 5], compress: bool) {
+        let Some(font) = thai_font() else { return };
+        let [type0, cid, desc, file, tounicode] = ids;
+
+        self.start_object(type0);
+        let _ = writeln!(
+            self.buf,
+            "<< /Type /Font /Subtype /Type0 /BaseFont /NotoSansThai-Regular /Encoding /Identity-H \
+            /DescendantFonts [ {cid} 0 R ] /ToUnicode {tounicode} 0 R >>"
+        );
+        self.end_object();
+
+        self.start_object(cid);
+        let mut w = String::from("[ 0 [");
+        for g in 0..font.num_glyphs {
+            let _ = write!(w, " {}", font.advance(g));
+        }
+        w.push_str(" ] ]");
+        let _ = writeln!(
+            self.buf,
+            "<< /Type /Font /Subtype /CIDFontType2 /BaseFont /NotoSansThai-Regular \
+            /CIDSystemInfo << /Registry (Adobe) /Ordering (Identity) /Supplement 0 >> \
+            /FontDescriptor {desc} 0 R /CIDToGIDMap /Identity /DW 500 /W {w} >>"
+        );
+        self.end_object();
+
+        self.start_object(desc);
+        let b = font.bbox;
+        let _ = writeln!(
+            self.buf,
+            "<< /Type /FontDescriptor /FontName /NotoSansThai-Regular /Flags 4 \
+            /FontBBox [ {} {} {} {} ] /ItalicAngle 0 /Ascent 1061 /Descent -450 \
+            /CapHeight 700 /StemV 80 /FontFile2 {file} 0 R >>",
+            b[0], b[1], b[2], b[3]
+        );
+        self.end_object();
+
+        self.start_object(file);
+        let (stream, filter) = if compress {
+            (
+                miniz_oxide::deflate::compress_to_vec_zlib(THAI_TTF, 6),
+                " /Filter /FlateDecode",
+            )
+        } else {
+            (THAI_TTF.to_vec(), "")
+        };
+        let _ = write!(
+            self.buf,
+            "<< /Length {} /Length1 {}{filter} >>\nstream\n",
+            stream.len(),
+            THAI_TTF.len()
+        );
+        self.buf.extend_from_slice(&stream);
+        self.buf.extend_from_slice(b"\nendstream\n");
+        self.end_object();
+
+        // ToUnicode：字形 → 字碼（替換出來的變體字形沒有對應，略過）。
+        let mut map: Vec<(u16, u32)> = font.reverse_cmap().into_iter().collect();
+        map.sort_unstable();
+        let mut cmap = String::from(
+            "/CIDInit /ProcSet findresource begin 12 dict begin begincmap \
+            /CMapName /Adobe-Identity-UCS def /CMapType 2 def \
+            1 begincodespacerange <0000> <FFFF> endcodespacerange\n",
+        );
+        for chunk in map.chunks(100) {
+            let _ = writeln!(cmap, "{} beginbfchar", chunk.len());
+            for (g, c) in chunk {
+                let _ = writeln!(cmap, "<{g:04X}> <{c:04X}>");
+            }
+            cmap.push_str("endbfchar\n");
+        }
+        cmap.push_str("endcmap CMapName currentdict /CMap defineresource pop end end");
+        self.start_object(tounicode);
+        let _ = write!(
+            self.buf,
+            "<< /Length {} >>\nstream\n{cmap}\nendstream\n",
+            cmap.len()
+        );
+        self.end_object();
+    }
+
     fn next_id(&mut self) -> usize {
         let id = self.offsets.len();
         self.offsets.push(0);
@@ -372,6 +456,22 @@ impl PdfWriter {
         let font_ja_id = self.next_id();
         let font_ko_id = self.next_id();
         self.han = CjkFace::for_locale(options.locale);
+        // 泰文要嵌入字型；文件裡沒有泰文就完全不加（省下幾十 KB）。
+        let thai_ids: Option<[usize; 5]> =
+            if thai_font().is_some() && pages.iter().any(|pg| page_has_thai(pg, options)) {
+                Some([
+                    self.next_id(),
+                    self.next_id(),
+                    self.next_id(),
+                    self.next_id(),
+                    self.next_id(),
+                ])
+            } else {
+                None
+            };
+        let thai_res = thai_ids
+            .map(|ids| format!(" /F_TH {} 0 R", ids[0]))
+            .unwrap_or_default();
 
         // 預留每個頁面及其內容、標註與圖片物件 ID
         struct PageObjs {
@@ -471,6 +571,10 @@ impl PdfWriter {
             self.end_object();
         }
 
+        if let Some(ids) = thai_ids {
+            self.write_thai_font(ids, options.compress_streams);
+        }
+
         // 4. 逐頁寫出
         for (i, page) in pages.iter().enumerate() {
             let po = &page_objs_list[i];
@@ -510,7 +614,7 @@ impl PdfWriter {
                 self.buf,
                 "<< /Type /Page /Parent {pages_tree_id} 0 R /MediaBox [ 0 0 {w:.2} {h:.2} ] \
                 /Contents {content_id} 0 R \
-                /Resources << /Font << /F1 {font_helvetica_id} 0 R /F2 {font_bold_id} 0 R /F3 {font_courier_id} 0 R /F_CJK {font_cjk_id} 0 R /F_TC {font_tc_id} 0 R /F_JA {font_ja_id} 0 R /F_KO {font_ko_id} 0 R >> {xobjs_ref} >>\
+                /Resources << /Font << /F1 {font_helvetica_id} 0 R /F2 {font_bold_id} 0 R /F3 {font_courier_id} 0 R /F_CJK {font_cjk_id} 0 R /F_TC {font_tc_id} 0 R /F_JA {font_ja_id} 0 R /F_KO {font_ko_id} 0 R{thai_res} >> {xobjs_ref} >>\
                 {annots_ref} >>",
                 content_id = po.content_id
             );
@@ -1169,7 +1273,12 @@ fn glyph_width(ch: char, font_size: f32) -> f32 {
     if is_thai_mark_char(ch) {
         // 聲調符號與上下母音疊在前一個字上，不佔寬度。
         0.0
-    } else if winansi_byte(ch).is_some() || is_thai_char(ch) {
+    } else if is_thai_char(ch) {
+        let adv = thai_font()
+            .and_then(|f| f.glyph_for(ch).map(|g| f.advance(g) as f32 / 1000.0))
+            .unwrap_or(0.55);
+        font_size * adv
+    } else if winansi_byte(ch).is_some() {
         font_size * 0.55
     } else {
         font_size
@@ -1245,6 +1354,35 @@ fn wrap_pdf_lines(text: &str, font_size: f32, max_width: f32) -> Vec<String> {
     out
 }
 
+/// 內嵌的泰文字型（Noto Sans Thai，SIL OFL 1.1；來源與授權見 `third_party/notosansthai/`）。
+static THAI_TTF: &[u8] =
+    include_bytes!("../../../third_party/notosansthai/NotoSansThai-Regular.ttf");
+
+fn thai_font() -> Option<&'static crate::otl::Font> {
+    static FONT: std::sync::OnceLock<Option<crate::otl::Font>> = std::sync::OnceLock::new();
+    FONT.get_or_init(|| crate::otl::Font::parse(THAI_TTF))
+        .as_ref()
+}
+
+fn has_thai(s: &str) -> bool {
+    s.chars().any(is_thai_char)
+}
+
+/// 這一頁有沒有泰文（決定要不要把泰文字型嵌進 PDF —— 沒有泰文的文件不必多出幾十 KB）。
+fn page_has_thai(page: &Page, options: &PdfExportOptions) -> bool {
+    let in_blocks = page.blocks().iter().any(|b| match &b.kind {
+        BlockKind::Text { content, .. } => has_thai(content),
+        BlockKind::Table { cells, .. } => cells.iter().any(|c| has_thai(c)),
+        BlockKind::Transcript { text, .. } => has_thai(text),
+        _ => false,
+    });
+    in_blocks
+        || options
+            .page_guides
+            .get(&page.id)
+            .is_some_and(|g| g.iter().any(|i| has_thai(&i.text)))
+}
+
 /// 中日韓的預設 CID 字型。閱讀器用系統字型畫，所以不必嵌入。
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum CjkFace {
@@ -1314,7 +1452,7 @@ fn han_face_for(text: &str, default_han: CjkFace) -> CjkFace {
 enum Face {
     Latin,
     Cjk(CjkFace),
-    /// 泰文。PDF 沒有可以不嵌入的標準泰文字型，目前還沒有嵌入的字型可用（見 `write_thai_placeholder`）。
+    /// 泰文。PDF 沒有可以不嵌入的標準泰文字型，所以內嵌 Noto Sans Thai 並自己排版（見 `otl.rs`）。
     Thai,
 }
 
@@ -1377,10 +1515,13 @@ fn format_pdf_runs_for(
                 runs.push((f.resource().to_string(), hex));
             }
             Face::Thai => {
-                // 沒有泰文字型可用：每個「字」（子音加符號）留一個 `?`，至少看得出這裡有字被省略，
-                // 而不是像之前那樣變成一串不相干的簡中亂碼。
-                let n = buf.chars().filter(|c| !is_thai_mark_char(*c)).count();
-                runs.push((default_font.to_string(), format!("({})", "?".repeat(n))));
+                if thai_font().is_some() {
+                    // 原樣交給 `write_pdf_text`：排版（GSUB／GPOS）要知道字級才能換算位移。
+                    runs.push(("/F_TH".to_string(), buf.clone()));
+                } else {
+                    let n = buf.chars().filter(|c| !is_thai_mark_char(*c)).count();
+                    runs.push((default_font.to_string(), format!("({})", "?".repeat(n))));
+                }
             }
             Face::Latin => runs.push((
                 default_font.to_string(),
@@ -1416,6 +1557,39 @@ fn is_thai_mark_char(c: char) -> bool {
     matches!(c as u32, 0x0E31 | 0x0E34..=0x0E3A | 0x0E47..=0x0E4E)
 }
 
+/// 把一段泰文排好（字型自己的 GSUB／GPOS）並寫成 `TJ`。
+///
+/// 每個字形一個 `TJ`：水平位移用 `TJ` 的數字（千分之一字級，字型單位剛好是 1000/em），
+/// 垂直位移用 `Ts`（text rise）。標記字形的位移相對於它自己的原點，所以先移過去、畫完再移回來，
+/// 讓 PDF 的文字矩陣照字型原本的寬度往前走。
+fn write_thai_run(content: &mut Vec<u8>, text: &str, size: f32) {
+    let Some(font) = thai_font() else { return };
+    let Some(glyphs) = font.shape(text) else {
+        let _ = write!(
+            content,
+            " /F1 {size:.1} Tf ({}) Tj",
+            "?".repeat(text.chars().count())
+        );
+        return;
+    };
+    let _ = write!(content, " /F_TH {size:.1} Tf");
+    let mut rise = 0.0f32;
+    for g in &glyphs {
+        let y = g.y_offset as f32 * size / 1000.0;
+        if (y - rise).abs() > 0.001 {
+            let _ = write!(content, " {y:.3} Ts");
+            rise = y;
+        }
+        let w = font.advance(g.gid);
+        let before = -g.x_offset;
+        let after = g.x_offset - (g.x_advance - w);
+        let _ = write!(content, " [ {before} <{:04X}> {after} ] TJ", g.gid);
+    }
+    if rise != 0.0 {
+        let _ = write!(content, " 0 Ts");
+    }
+}
+
 /// 把 `format_pdf_runs` 的結果寫成一段 `BT … ET`。
 ///
 /// `prelude` 是顏色之類在 `Td` 之前要下的指令。
@@ -1434,7 +1608,11 @@ fn write_pdf_text(
     }
     let _ = write!(content, "BT {prelude} {x:.2} {baseline:.2} Td");
     for (font, literal) in runs {
-        let _ = write!(content, " {font} {size:.1} Tf {literal} Tj");
+        if font == "/F_TH" {
+            write_thai_run(content, &literal, size);
+        } else {
+            let _ = write!(content, " {font} {size:.1} Tf {literal} Tj");
+        }
     }
     let _ = writeln!(content, " ET");
 }
@@ -1823,6 +2001,34 @@ mod transcript_marker_tests {
 
 #[cfg(test)]
 mod language_tests {
+    fn pdf_with_text(text: &str) -> Vec<u8> {
+        let mut nb = Notebook::new(Uuid::now_v7(), "t");
+        let mut page = Page::new(Uuid::now_v7(), PageTemplate::Blank);
+        page.add_block(padnote_doc::Block {
+            id: Uuid::now_v7(),
+            kind: BlockKind::Text {
+                content: text.into(),
+                style: padnote_doc::TextStyle::Body,
+            },
+            position: Some((50.0, 60.0)),
+            appearance: None,
+            created_at: padnote_doc::NotebookTime::ZERO,
+        });
+        nb.add_page(page);
+        to_pdf(&nb, &HashMap::new(), None, &PdfExportOptions::default()).unwrap()
+    }
+
+    #[test]
+    fn thai_text_embeds_the_thai_font_and_other_documents_do_not() {
+        let thai = String::from_utf8_lossy(&pdf_with_text("การประชุม")).into_owned();
+        assert!(
+            thai.contains("/F_TH") && thai.contains("/FontFile2") && thai.contains("/ToUnicode")
+        );
+        let latin = String::from_utf8_lossy(&pdf_with_text("meeting 會議")).into_owned();
+        assert!(!latin.contains("/FontFile2"), "沒有泰文就不該嵌字型");
+        assert!(pdf_with_text("meeting").len() < 4000);
+    }
+
     use super::*;
 
     #[test]
@@ -1861,7 +2067,7 @@ mod language_tests {
     #[test]
     fn thai_never_falls_into_a_chinese_font() {
         let runs = format_pdf_runs_for("การประชุม", "/F1", CjkFace::SimplifiedChinese);
-        assert!(runs.iter().all(|(f, _)| f == "/F1"), "{runs:?}");
+        assert!(runs.iter().all(|(f, _)| f == "/F_TH"), "{runs:?}");
     }
 
     #[test]

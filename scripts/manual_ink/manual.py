@@ -486,7 +486,10 @@ def build():
     src = ROOT / "third_party/makemeahanzi"
     for name in ("ARPHICPL.TXT", "NOTICE.txt"):
         for dest in (out.parent, apple.parent):
-            shutil.copyfile(src / name, dest / name)   # 逐位元組複製：授權全文不能被改動（連換行都不行）
+            shutil.copyfile(src / name, dest / name)
+    # 匯出 PDF 時嵌入的泰文字型（Noto Sans Thai，SIL OFL）：授權全文同樣隨 App 散布。
+    for dest in (out.parent, apple.parent):
+        shutil.copyfile(ROOT / "third_party/notosansthai/OFL.txt", dest / "OFL-NotoSansThai.txt")   # 逐位元組複製：授權全文不能被改動（連換行都不行）
     total = sum(len(pg.strokes) for pg in pages)
     pts = sum(len(s["points"]) for pg in pages for s in pg.strokes)
     print(f"{out.relative_to(ROOT)}  {len(pages)} 頁 / {total} 筆 / {pts} 點 / {out.stat().st_size // 1024} KB")

@@ -124,6 +124,7 @@ val copyUserDocs by tasks.registering(Copy::class) {
     // 手冊筆順資料的授權（Arphic Public License 全文未改動 + 修改聲明），隨 App 一起散布。
     from("$rootDir/../assets/seed/ARPHICPL.TXT") { into("seed") }
     from("$rootDir/../assets/seed/NOTICE.txt") { into("seed") }
+    from("$rootDir/../assets/seed/OFL-NotoSansThai.txt") { into("seed") }
     into(layout.buildDirectory.dir("generated/docsAssets"))
 }
 

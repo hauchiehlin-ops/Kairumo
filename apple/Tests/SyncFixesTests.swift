@@ -421,7 +421,7 @@ final class KairumoManualSeedTests: XCTestCase {
 
     func testTheStrokeDataLicenceTravelsWithTheApp() {
         // 筆順資料來自 Arphic 字型（Arphic Public License）：授權全文要隨 App 一起散布。
-        for name in ["ARPHICPL", "NOTICE"] {
+        for name in ["ARPHICPL", "NOTICE", "OFL-NotoSansThai"] {
             let ext = name == "ARPHICPL" ? "TXT" : "txt"
             let url = Bundle.main.url(forResource: name, withExtension: ext, subdirectory: "Templates")
                 ?? Bundle.main.url(forResource: name, withExtension: ext)

@@ -9,3 +9,8 @@ publish = false
 
 [lints]
 workspace = true
+
+[dependencies]
+# 簡繁互查：把漢字統一折成簡體再建索引／查詢。與 `padnote-text` 同一個轉換表來源
+# （OpenCC，Apache-2.0；zhconv 預設綁的 MediaWiki 表是 GPL，所以關掉 default-features）。
+zhconv = { version = "0.4.2", default-features = false, features = ["opencc", "compress"] }

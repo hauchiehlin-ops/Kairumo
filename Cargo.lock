@@ -2518,6 +2518,9 @@ dependencies = [
 [[package]]
 name = "padnote-search"
 version = "5.1.0"
+dependencies = [
+ "zhconv",
+]
 
 [[package]]
 name = "padnote-shapes"
