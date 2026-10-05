@@ -9264,6 +9264,14 @@ extension LocalizationManager {
             .ko: "할 일|담당|기한\n중급 안드로이드 지연 측정|치엔|9/22\n설명서 “녹음 삽입” 장 추가|원|9/20\n정식 서명 키 신청|페이|9/19",
             .th: "สิ่งที่ต้องทำ|ผู้รับผิดชอบ|กำหนด\nวัดความหน่วงบน Android รุ่นกลาง|เชียน|22 ก.ย.\nเขียนบท “แทรกเสียงบันทึก” ในคู่มือ|เหวิน|20 ก.ย.\nขอคีย์เซ็นชื่อจริง|เผย|19 ก.ย."
         ],
+        "sample_showcase_audio_title": [
+            .zhHant: "語音導覽：Kairumo 設計理念與核心架構",
+            .en: "Audio Guide: Kairumo Design Philosophy and Core Architecture",
+            .zhHans: "语音导览：Kairumo 设计理念与核心架构",
+            .ja: "音声ガイド：Kairumoの設計思想とコアアーキテクチャ",
+            .ko: "음성 가이드: Kairumo 설계 철학과 핵심 아키텍처",
+            .th: "เสียงบรรยาย: ปรัชญาการออกแบบและสถาปัตยกรรมหลักของ Kairumo"
+        ],
         "sample_showcase_calc_typed_desc": [
             .zhHant: "使用方式：\n1. 自由手繪：直接用手寫筆書寫微積分算式（包括積分號、分式、上標、三角函數）。\n2. 公式識別：套索選中後點擊【識別為公式】，瞬間轉換為標準化 LaTeX 排版。\n3. 分步解析：融合打字解析卡，手寫推導步驟與打字說明無縫並列呈現。",
             .en: "How to use:\n1. Handwrite formulas using Apple Pencil (integral signs, limits, radicals).\n2. Lasso or tap Math OCR to convert into formatted LaTeX text.\n3. The built-in solver renders the step-by-step derivation card below.",
@@ -9279,6 +9287,46 @@ extension LocalizationManager {
             .ja: "★ 数式エンジン：手描きとLaTeXの融合によるステップ解析",
             .ko: "★ 수학 엔진: 손글씨 및 LaTeX 수식 하이브리드 단계별 풀이",
             .th: "★ กลไกคณิตศาสตร์: ผสานลายมือและ LaTeX พร้อมแสดงวิธีทำเป็นขั้นตอน"
+        ],
+        "sample_showcase_card_audio_body": [
+            .zhHant: "🎙️ 語音導覽卡片\n長度: 03:04\n筆跡與聲音精準時間軸對齊同步回放",
+            .en: "🎙️ Audio Guide Card\nDuration: 03:04\nSynchronized ink and voice timeline playback",
+            .zhHans: "🎙️ 语音导览卡片\n长度: 03:04\n笔迹与声音精准时间轴对齐同步回放",
+            .ja: "🎙️ 音声ガイドカード\n長さ: 03:04\n筆跡と音声の精密タイムライン同期再生",
+            .ko: "🎙️ 음성 가이드 카드\n길이: 03:04\n필적과 오디오의 정밀 타임라인 동기화 재생",
+            .th: "🎙️ การ์ดบันทึกเสียงบรรยาย\nความยาว: 03:04\nเล่นลายมือและเสียงซิงค์ตามไทม์ไลน์อย่างแม่นยำ"
+        ],
+        "sample_showcase_card_link_body": [
+            .zhHant: "🔗 GitHub 開源庫\nKairumo\n100% 開源無拘束，Rust + UniFFI 高性能內核",
+            .en: "🔗 GitHub Repository\nKairumo\n100% open source & unconstrained, Rust + UniFFI high-perf core",
+            .zhHans: "🔗 GitHub 开源库\nKairumo\n100% 开源无拘束，Rust + UniFFI 高性能内核",
+            .ja: "🔗 GitHub オープンソース\nKairumo\n100%オープンソース、Rust + UniFFI 高性能コア",
+            .ko: "🔗 GitHub 오픈소스 저장소\nKairumo\n100% 오픈소스, Rust + UniFFI 고성능 코어 탑재",
+            .th: "🔗 คลัง GitHub โอเพนซอร์ส\nKairumo\nโอเพนซอร์ส 100% ขับเคลื่อนด้วย Rust + UniFFI ประสิทธิภาพสูง"
+        ],
+        "sample_showcase_card_model_body": [
+            .zhHant: "🧊 3D 空間幾何體\n正十二面體模型\n支援手指 360° 空間自由旋轉視角檢視",
+            .en: "🧊 3D Geometry Model\nDodecahedron shape\nSupports 360° touch rotation in 3D space",
+            .zhHans: "🧊 3D 空间几何体\n正十二面体模型\n支持手指 360° 空间自由旋转视角检视",
+            .ja: "🧊 3D 空間幾何モデル\n正十二面体モデル\n指先で360°自由回転ビューに対応",
+            .ko: "🧊 3D 공간 기하 모델\n정십이면체 모델\n360° 제스처 회전 공간 뷰 완벽 지원",
+            .th: "🧊 โมเดลเรขาคณิตสามมิติ\nรูปทรงสิบสองหน้า\nรองรับการหมุนดูมุมมอง 360° ด้วยนิ้วมือ"
+        ],
+        "sample_showcase_chart_series_top3": [
+            .zhHant: "商業付費競品平均",
+            .en: "Commercial Paid Competitors Average",
+            .zhHans: "商业付费竞品平均",
+            .ja: "有料商用アプリ平均",
+            .ko: "상용 유료 경쟁 제품 평균",
+            .th: "ค่าเฉลี่ยของคู่แข่งเชิงพาณิชย์แบบชำระเงิน"
+        ],
+        "sample_showcase_chart_spec_title": [
+            .zhHant: "2026 手寫繪圖效能與自由度指標對比 (滿分 100)",
+            .en: "2026 Handwriting Performance & Flexibility Score (Max 100)",
+            .zhHans: "2026 手写绘图效能与自由度指标对比 (满分 100)",
+            .ja: "2026年 手書き・描画性能と自由度指標比較 (100点満点)",
+            .ko: "2026 필기 드로잉 성능 및 자유도 지표 비교 (100점 만점)",
+            .th: "การเปรียบเทียบประสิทธิภาพการวาดเขียนและความยืดหยุ่นปี 2026 (เต็ม 100)"
         ],
         "sample_showcase_chart_typed_desc": [
             .zhHant: "功能用法：\n• 數字製圖：點擊工具欄【＋】->【數字製圖】，輸入分類與數值即可生成向量圖表，雙擊隨時重新修改數據與配色。\n• 討論圖釘：在圖表特定柱狀或推導難點處釘入圖釘，建立上下文關聯的討論串，手繪箭頭配合圖釘批注，團隊協作一目了然。",
@@ -9304,6 +9352,14 @@ extension LocalizationManager {
             .ko: "핵심 평가축|Kairumo (Padnote)|GoodNotes 6|Notability|Microsoft OneNote\n벡터 손글씨|초저지연, 연필·만년필·붓 완벽 필압|벡터 필기 지원, 붓글씨 동적 표현 제한적|부드러운 필기감, 브러시 커스텀 한계|크로스플랫폼 지원, 지연시간 다소 체감\n타이핑 및 표|Markdown 및 서식 지원 네이티브 데이터 표|기본 텍스트 상자, 표 편집 유연성 부족|기본 텍스트 위주, 단순 표 생성|자유 배치 텍스트 프레임, 무한 캔버스\n수식 및 수학|손글씨 + LaTeX 수식 + 단계별 풀이 융합|손글씨 수식 변환 (유료 등급)|수식 변환 애드온 지원|수식 편집기 지원, 데스크톱 중심\n데이터 차트|재편집 가능한 내장 차트(막대/선/파이/분산)|외부 이미지 삽입에 의존|정적 이미지만 지원, 편집 불가|Excel 차트 연동, 모바일 편집 무거움\n핀 토론 협업|좌표 기반 토론 핀 및 댓글 스레드|공유 링크 및 기본 댓글 기능|음성 녹음 싱크, 공간 핀 미지원|다중 사용자 협업, 레이아웃 깨짐 잦음\n가격 및 개방성|100% 오픈소스, 광고 없음, 완전 무료|구독형 및 인앱 결제 유도|연간 정기 구독 필수|무료 제공이나 Office 365 유도",
             .th: "มิติเปรียบเทียบ|Kairumo (Padnote)|GoodNotes 6|Notability|Microsoft OneNote\nลายมือเวกเตอร์|หน่วงต่ำมาก, แรงกดดินสอ/ปากกา/พู่กันสมจริง|ลายเส้นเวกเตอร์, ขาดน้ำหนักพู่กันแท้|ลายเส้นลื่นไหล, ปรับแต่งพู่กันจำกัด|รองรับหลายระบบ, ความหน่วงสัมผัสได้\nการพิมพ์และตาราง|ตารางข้อมูลพร้อมสไตล์ จัดขนาดได้สมบูรณ์|กล่องข้อความพื้นฐาน, ตารางปรับแต่งจำกัด|เน้นพิมพ์ข้อความ, รูปแบบตารางเรียบง่าย|กรอบข้อความอิสระ, ผืนผ้าใบกว้าง\nสมการคณิตศาสตร์|ผสานลายมือ + OCR LaTeX + เฉลยเป็นขั้นตอน|แปลงลายมือคณิตศาสตร์ (ต้องจ่ายเพิ่ม)|ส่วนเสริมแปลงคณิตศาสตร์|มีตัวแก้ไขสมการ, เน้นใช้งานบนเดสก์ท็อป\nแผนภูมิข้อมูล|กราฟในตัวแก้ไขได้ (แท่ง/เส้น/วงกลม/กระจาย)|ต้องนำเข้ารูปภาพจากภายนอก|ภาพนิ่งเท่านั้น ไม่สามารถแก้ไขข้อมูลได้|เชื่อมโยง Excel, ทำงานบนมือถือช้า\nหมุดอภิปราย|หมุดความคิดเห็นแบบฝังพิกัดและเธรดสนทนา|แชร์ลิงก์พร้อมความคิดเห็นพื้นฐาน|ซิงค์เสียงบันทึก, ไม่มีหมุดเชิงพื้นที่|ทำงานร่วมกันหลายคน, เลย์เอาต์มักเลื่อน\nราคาและความอิสระ|โอเพนซอร์ส 100%, ไม่มีโฆษณา, ฟรีตลอดชีพ|สมัครสมาชิก / จ่ายครั้งเดียวแบบมีเงื่อนไข|ระบบสมัครสมาชิกรายปี|ใช้งานฟรีเบื้องต้น เน้นขาย Office 365"
         ],
+        "sample_showcase_flow_aligned": [
+            .zhHant: "<- [ 智慧拓撲對齊 ]",
+            .en: "<- [ Smart Topology ]",
+            .zhHans: "<- [ 智能拓扑对齐 ]",
+            .ja: "<- [ スマートトポロジー ]",
+            .ko: "<- [ 스마트 토폴로지 정렬 ]",
+            .th: "<- [ การจัดเรียงโครงสร้างอัจฉริยะ ]"
+        ],
         "sample_showcase_handwriting_note": [
             .zhHant: "★ 真實手繪筆跡呈現：\n下方列出的段落文字與裝飾皆以真實向量筆劃繪製（鉛筆質感顆粒、鋼筆動態壓感、毛筆提按書法起伏）。",
             .en: "★ Authentic Ink Strokes:\nThe lists and calligraphic flourishes below are rendered with authentic vector strokes (Pencil texture, Fountain Pen dynamic pressure, Brush calligraphic variation).",
@@ -9311,6 +9367,22 @@ extension LocalizationManager {
             .ja: "★ 本物の手描き筆跡：\n以下のリストと装飾文字は、本物のベクター筆跡（鉛筆の質感、万年筆の筆圧応答、毛筆の緩急）で描かれています。",
             .ko: "★ 진정한 벡터 손글씨:\n아래의 목록 및 캘리그래피는 연필의 질감, 만년필의 필압, 붓의 강약 조절이 적용된 실제 벡터 획으로 생성되었습니다.",
             .th: "★ ลายมือหมึกเวกเตอร์แท้:\nรายการและลายเส้นด้านล่างถูกวาดด้วยเส้นเวกเตอร์จริง (ดินสอ, ปากกาหมึกซึมปรับแรงกด, พู่กันตัวเขียน)"
+        ],
+        "sample_showcase_math_ink_title": [
+            .zhHant: "【 手繪積分真跡 】",
+            .en: "[ Hand-drawn Integral ]",
+            .zhHans: "【 手绘积分真迹 】",
+            .ja: "【 手描き積分筆跡 】",
+            .ko: "【 손글씨 적분 필적 】",
+            .th: "【 ลายมือการอินทิเกรตจริง 】"
+        ],
+        "sample_showcase_model3d_title": [
+            .zhHant: "3D 正十二面體空間幾何模型",
+            .en: "3D Regular Dodecahedron Spatial Geometry Model",
+            .zhHans: "3D 正十二面体空间几何模型",
+            .ja: "3D 正十二面体 空間幾何モデル",
+            .ko: "3D 정십이면체 공간 기하학 모델",
+            .th: "แบบจำลองเรขาคณิตสามมิติรูปทรงสิบสองหน้าปกติ"
         ],
         "sample_showcase_p1_mission_body": [
             .zhHant: "市面上絕大多數商業筆記應用將思考鎖在昂貴的訂閱制、私有雲儲存和僵化的排版模式中。Kairumo 重新發明數位紙張：超低延遲的數學級向量筆跡、專業桌面級打字排版、動態可編修圖表、多維空間討論圖釘，以及 100% 開放透明的隱私主權。",
@@ -9656,6 +9728,14 @@ extension LocalizationManager {
             .ko: "부분적분 경계값 대입 검증: [ -x cos(x) ]에 0부터 π까지 대입하면 정확히 +π가 깔끔하게 도출됩니다.",
             .th: "ตรวจสอบค่าขอบเขตเมื่อใช้อินทิเกรตทีละส่วน: [ -x cos(x) ] จาก 0 ถึง pi ให้ค่าเท่ากับ +pi อย่างลงตัว"
         ],
+        "sample_showcase_pin_hint": [
+            .zhHant: "<- [ 點擊圖釘看即時討論串 ]",
+            .en: "<- [ Tap pin for thread ]",
+            .zhHans: "<- [ 点击图钉看即时讨论串 ]",
+            .ja: "<- [ ピンをタップしてスレッド確認 ]",
+            .ko: "<- [ 핀 탭하여 실시간 스레드 확인 ]",
+            .th: "<- [ แตะหมุดเพื่อดูเธรดการสนทนา ]"
+        ],
         "sample_showcase_table_title": [
             .zhHant: "Kairumo 與市面主流前三大筆記應用核心功能優缺點全景對比",
             .en: "Kairumo vs. Top 3 Mainstream Note Apps Comparison",
@@ -9663,6 +9743,134 @@ extension LocalizationManager {
             .ja: "Kairumo vs 市販トップ3ノートアプリ 総合比較表",
             .ko: "Kairumo vs 시장 3대 주요 노트 앱 종합 비교표",
             .th: "ตารางเปรียบเทียบ Kairumo กับ 3 แอปจดบันทึกชั้นนำในตลาด"
+        ],
+        "sample_showcase_tape_answer": [
+            .zhHant: "重點背誦答案：[ Kairumo 採用 UniFFI + Rust 核心，達到零延遲 60FPS 極致流暢！ ]",
+            .en: "Key recitation answer: [ Kairumo uses UniFFI + Rust core to achieve zero-latency 60FPS fluid performance! ]",
+            .zhHans: "重点背诵答案：[ Kairumo 采用 UniFFI + Rust 核心，达到零延迟 60FPS 极致流畅！ ]",
+            .ja: "暗記ポイント：[ Kairumo は UniFFI + Rust コアを採用し、遅延ゼロの60FPS描画を実現！ ]",
+            .ko: "핵심 암기 정답: [ Kairumo는 UniFFI + Rust 코어를 채택하여 제로 레이턴시 60FPS의 극강 유연성을 제공합니다! ]",
+            .th: "คำตอบสำคัญ: [ Kairumo ใช้ UniFFI + Rust core เพื่อความลื่นไหลระดับ 60FPS แบบไร้ความหน่วง! ]"
+        ],
+        "sample_showcase_tool_10_oilpaint": [
+            .zhHant: "10. Oil Paint (油畫):",
+            .en: "10. Oil Paint:",
+            .zhHans: "10. Oil Paint (油画):",
+            .ja: "10. Oil Paint (油絵):",
+            .ko: "10. Oil Paint (유화):",
+            .th: "10. Oil Paint (สีน้ำมัน):"
+        ],
+        "sample_showcase_tool_11_watercolor": [
+            .zhHant: "11. Watercolor (水彩):",
+            .en: "11. Watercolor:",
+            .zhHans: "11. Watercolor (水彩):",
+            .ja: "11. Watercolor (水彩):",
+            .ko: "11. Watercolor (수채화):",
+            .th: "11. Watercolor (สีน้ำ):"
+        ],
+        "sample_showcase_tool_12_marker": [
+            .zhHant: "12. Marker (記號筆):",
+            .en: "12. Marker:",
+            .zhHans: "12. Marker (记号笔):",
+            .ja: "12. Marker (マーカー):",
+            .ko: "12. Marker (마커):",
+            .th: "12. Marker (ปากกามาร์กเกอร์):"
+        ],
+        "sample_showcase_tool_13_highlighter": [
+            .zhHant: "13. Highlighter (螢光筆):",
+            .en: "13. Highlighter:",
+            .zhHans: "13. Highlighter (荧光笔):",
+            .ja: "13. Highlighter (蛍光ペン):",
+            .ko: "13. Highlighter (형광펜):",
+            .th: "13. Highlighter (ปากกาเน้นข้อความ):"
+        ],
+        "sample_showcase_tool_14_ruler": [
+            .zhHant: "14. Ruler (尺規引導):",
+            .en: "14. Ruler:",
+            .zhHans: "14. Ruler (尺规引导):",
+            .ja: "14. Ruler (定規ガイド):",
+            .ko: "14. Ruler (자 안내선):",
+            .th: "14. Ruler (ไม้บรรทัด):"
+        ],
+        "sample_showcase_tool_15_lasso": [
+            .zhHant: "15. Lasso (幾何套索圈選):",
+            .en: "15. Lasso:",
+            .zhHans: "15. Lasso (几何套索圈选):",
+            .ja: "15. Lasso (なげなわ選択):",
+            .ko: "15. Lasso (올가미 선택):",
+            .th: "15. Lasso (บ่วงบาศเลือก):"
+        ],
+        "sample_showcase_tool_1_pen": [
+            .zhHant: "1. Pen (鋼筆):",
+            .en: "1. Pen:",
+            .zhHans: "1. Pen (钢笔):",
+            .ja: "1. Pen (万年筆):",
+            .ko: "1. Pen (만년필):",
+            .th: "1. Pen (ปากกาหมึกซึม):"
+        ],
+        "sample_showcase_tool_2_fineliner": [
+            .zhHant: "2. Fineliner (針筆):",
+            .en: "2. Fineliner:",
+            .zhHans: "2. Fineliner (针笔):",
+            .ja: "2. Fineliner (製図ペン):",
+            .ko: "2. Fineliner (파인라이너):",
+            .th: "2. Fineliner (ปากกาหัวเข็ม):"
+        ],
+        "sample_showcase_tool_3_ballpoint": [
+            .zhHant: "3. Ballpoint (原子筆):",
+            .en: "3. Ballpoint:",
+            .zhHans: "3. Ballpoint (原子笔):",
+            .ja: "3. Ballpoint (ボールペン):",
+            .ko: "3. Ballpoint (볼펜):",
+            .th: "3. Ballpoint (ปากกาลูกลื่น):"
+        ],
+        "sample_showcase_tool_4_brush": [
+            .zhHant: "4. Brush (毛筆):",
+            .en: "4. Brush:",
+            .zhHans: "4. Brush (毛笔):",
+            .ja: "4. Brush (筆):",
+            .ko: "4. Brush (붓):",
+            .th: "4. Brush (พู่กัน):"
+        ],
+        "sample_showcase_tool_5_calligraphy": [
+            .zhHant: "5. Calligraphy (書法):",
+            .en: "5. Calligraphy:",
+            .zhHans: "5. Calligraphy (书法):",
+            .ja: "5. Calligraphy (カリグラフィー):",
+            .ko: "5. Calligraphy (캘리그래피):",
+            .th: "5. Calligraphy (ประดิษฐ์อักษร):"
+        ],
+        "sample_showcase_tool_6_pencil": [
+            .zhHant: "6. Pencil (鉛筆):",
+            .en: "6. Pencil:",
+            .zhHans: "6. Pencil (铅笔):",
+            .ja: "6. Pencil (鉛筆):",
+            .ko: "6. Pencil (연필):",
+            .th: "6. Pencil (ดินสอ):"
+        ],
+        "sample_showcase_tool_7_charcoal": [
+            .zhHant: "7. Charcoal (炭筆):",
+            .en: "7. Charcoal:",
+            .zhHans: "7. Charcoal (炭笔):",
+            .ja: "7. Charcoal (木炭):",
+            .ko: "7. Charcoal (목탄):",
+            .th: "7. Charcoal (ถ่านชาร์โคล):"
+        ],
+        "sample_showcase_tool_8_crayon": [
+            .zhHant: "8. Crayon (蠟筆):",
+            .en: "8. Crayon:",
+            .zhHans: "8. Crayon (蜡笔):",
+            .ja: "8. Crayon (クレヨン):",
+            .ko: "8. Crayon (크레용):",
+            .th: "8. Crayon (สีเทียน):"
+        ],
+        "sample_showcase_tool_9_airbrush": [
+            .zhHant: "9. Airbrush (噴槍):",
+            .en: "9. Airbrush:",
+            .zhHans: "9. Airbrush (喷枪):",
+            .ja: "9. Airbrush (エアブラシ):",
+            .ko: "9. Airbrush (에어브러시):",
+            .th: "9. Airbrush (แอร์บรัช):"
         ],
         "sample_welcome": [
             .zhHant: "歡迎使用 Kairumo",

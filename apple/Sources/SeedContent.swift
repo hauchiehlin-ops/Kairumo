@@ -501,7 +501,7 @@ enum SeedContent {
         // 遮蔽膠帶背後要背誦的文字
         texts.append(NoteTextAttachment(
             pageIndex: 1,
-            text: "重點背誦答案：[ Kairumo 採用 UniFFI + Rust 核心，達到零延遲 60FPS 極致流暢！ ]",
+            text: l("sample_showcase_tape_answer"),
             fontSize: 12,
             isBold: true,
             alignmentRaw: "left",
@@ -700,7 +700,7 @@ enum SeedContent {
             pageIndex: 2,
             recordingId: "rec-seed-showcase-01",
             fileName: "showcase-audio-intro.m4a",
-            title: "語音導覽：Kairumo 設計理念與核心架構",
+            title: l("sample_showcase_audio_title"),
             durationSeconds: 184,
             x: margin + cardW + 12,
             y: cardRowY,
@@ -712,7 +712,7 @@ enum SeedContent {
         models3D.append(Note3DAttachment(
             id: "seed-3d-showcase",
             pageIndex: 2,
-            title: "3D 正十二面體空間幾何模型",
+            title: l("sample_showcase_model3d_title"),
             modelTypeRaw: "sphere",
             x: margin + (cardW + 12) * 2,
             y: cardRowY,
@@ -1055,7 +1055,7 @@ enum SeedContent {
     private static func makeShowcaseChart(page: Int, store: NotebookStore) -> NoteImageAttachment? {
         var spec = ChartSpec()
         spec.kind = .bar
-        spec.title = "2026 手寫繪圖效能與自由度指標對比 (滿分 100)"
+        spec.title = l("sample_showcase_chart_spec_title")
         spec.categories = ["向量書寫延遲", "圖表動態可編修", "空間圖釘協作", "開源與無訂閱限制"]
         var seriesKairumo = ChartSeries(
             name: "Kairumo (Padnote)",
@@ -1063,7 +1063,7 @@ enum SeedContent {
             colorHex: "#3182CE"
         )
         var seriesTop3Avg = ChartSeries(
-            name: "商業付費競品平均",
+            name: l("sample_showcase_chart_series_top3"),
             values: [74, 52, 45, 38],
             colorHex: "#CBD5E0"
         )
@@ -1125,12 +1125,12 @@ enum SeedContent {
         let calliInk = PKInk(.pen, color: UIColor(red: 0.40, green: 0.15, blue: 0.50, alpha: 1.0))
         let pencilInk = PKInk(.pencil, color: UIColor(red: 0.28, green: 0.32, blue: 0.38, alpha: 0.95))
 
-        strokes.append(contentsOf: drawBrushSwatch(name: "1. Pen (鋼筆):", y: 148, ink: penInk, width: 3.2, isBrush: false, style: "wavy"))
-        strokes.append(contentsOf: drawBrushSwatch(name: "2. Fineliner (針筆):", y: 176, ink: finelinerInk, width: 1.4, isBrush: false, style: "straight"))
-        strokes.append(contentsOf: drawBrushSwatch(name: "3. Ballpoint (原子筆):", y: 204, ink: ballpointInk, width: 2.0, isBrush: false, style: "wavy"))
-        strokes.append(contentsOf: drawBrushSwatch(name: "4. Brush (毛筆):", y: 232, ink: brushInk, width: 5.5, isBrush: true, style: "calli"))
-        strokes.append(contentsOf: drawBrushSwatch(name: "5. Calligraphy (書法):", y: 264, ink: calliInk, width: 5.0, isBrush: true, style: "calli"))
-        strokes.append(contentsOf: drawBrushSwatch(name: "6. Pencil (鉛筆):", y: 296, ink: pencilInk, width: 2.2, isBrush: false, style: "wavy"))
+        strokes.append(contentsOf: drawBrushSwatch(name: l("sample_showcase_tool_1_pen"), y: 148, ink: penInk, width: 3.2, isBrush: false, style: "wavy"))
+        strokes.append(contentsOf: drawBrushSwatch(name: l("sample_showcase_tool_2_fineliner"), y: 176, ink: finelinerInk, width: 1.4, isBrush: false, style: "straight"))
+        strokes.append(contentsOf: drawBrushSwatch(name: l("sample_showcase_tool_3_ballpoint"), y: 204, ink: ballpointInk, width: 2.0, isBrush: false, style: "wavy"))
+        strokes.append(contentsOf: drawBrushSwatch(name: l("sample_showcase_tool_4_brush"), y: 232, ink: brushInk, width: 5.5, isBrush: true, style: "calli"))
+        strokes.append(contentsOf: drawBrushSwatch(name: l("sample_showcase_tool_5_calligraphy"), y: 264, ink: calliInk, width: 5.0, isBrush: true, style: "calli"))
+        strokes.append(contentsOf: drawBrushSwatch(name: l("sample_showcase_tool_6_pencil"), y: 296, ink: pencilInk, width: 2.2, isBrush: false, style: "wavy"))
 
         // 繪畫家族 5 種筆刷實作
         let charcoalInk = PKInk(.pencil, color: UIColor(red: 0.18, green: 0.18, blue: 0.22, alpha: 0.95))
@@ -1139,11 +1139,11 @@ enum SeedContent {
         let oilpaintInk = PKInk(.pen, color: UIColor(red: 0.75, green: 0.20, blue: 0.20, alpha: 1.0))
         let watercolorInk = PKInk(.marker, color: UIColor(red: 0.15, green: 0.55, blue: 0.75, alpha: 0.55))
 
-        strokes.append(contentsOf: drawBrushSwatch(name: "7. Charcoal (炭筆):", y: 372, ink: charcoalInk, width: 3.8, isBrush: false, style: "wavy"))
-        strokes.append(contentsOf: drawBrushSwatch(name: "8. Crayon (蠟筆):", y: 402, ink: crayonInk, width: 4.2, isBrush: false, style: "wavy"))
-        strokes.append(contentsOf: drawBrushSwatch(name: "9. Airbrush (噴槍):", y: 432, ink: airbrushInk, width: 7.0, isBrush: false, style: "wavy"))
-        strokes.append(contentsOf: drawBrushSwatch(name: "10. Oil Paint (油畫):", y: 464, ink: oilpaintInk, width: 5.2, isBrush: true, style: "calli"))
-        strokes.append(contentsOf: drawBrushSwatch(name: "11. Watercolor (水彩):", y: 496, ink: watercolorInk, width: 6.5, isBrush: false, style: "wavy"))
+        strokes.append(contentsOf: drawBrushSwatch(name: l("sample_showcase_tool_7_charcoal"), y: 372, ink: charcoalInk, width: 3.8, isBrush: false, style: "wavy"))
+        strokes.append(contentsOf: drawBrushSwatch(name: l("sample_showcase_tool_8_crayon"), y: 402, ink: crayonInk, width: 4.2, isBrush: false, style: "wavy"))
+        strokes.append(contentsOf: drawBrushSwatch(name: l("sample_showcase_tool_9_airbrush"), y: 432, ink: airbrushInk, width: 7.0, isBrush: false, style: "wavy"))
+        strokes.append(contentsOf: drawBrushSwatch(name: l("sample_showcase_tool_10_oilpaint"), y: 464, ink: oilpaintInk, width: 5.2, isBrush: true, style: "calli"))
+        strokes.append(contentsOf: drawBrushSwatch(name: l("sample_showcase_tool_11_watercolor"), y: 496, ink: watercolorInk, width: 6.5, isBrush: false, style: "wavy"))
 
         // 標記與輔助家族 4 種工具實作
         let markerInk = PKInk(.marker, color: UIColor(red: 0.15, green: 0.45, blue: 0.85, alpha: 0.85))
@@ -1151,10 +1151,10 @@ enum SeedContent {
         let rulerInk = PKInk(.pen, color: UIColor(red: 0.30, green: 0.50, blue: 0.75, alpha: 1.0))
         let lassoInk = PKInk(.pen, color: UIColor(red: 0.60, green: 0.30, blue: 0.85, alpha: 1.0))
 
-        strokes.append(contentsOf: drawBrushSwatch(name: "12. Marker (記號筆):", y: 576, ink: markerInk, width: 5.5, isBrush: false, style: "straight"))
-        strokes.append(contentsOf: drawBrushSwatch(name: "13. Highlighter (螢光筆):", y: 604, ink: highlightInk, width: 12.0, isBrush: false, style: "straight"))
-        strokes.append(contentsOf: drawBrushSwatch(name: "14. Ruler (尺規引導):", y: 634, ink: rulerInk, width: 2.0, isBrush: false, style: "straight"))
-        strokes.append(contentsOf: drawBrushSwatch(name: "15. Lasso (幾何套索圈選):", y: 662, ink: lassoInk, width: 1.8, isBrush: false, style: "dots"))
+        strokes.append(contentsOf: drawBrushSwatch(name: l("sample_showcase_tool_12_marker"), y: 576, ink: markerInk, width: 5.5, isBrush: false, style: "straight"))
+        strokes.append(contentsOf: drawBrushSwatch(name: l("sample_showcase_tool_13_highlighter"), y: 604, ink: highlightInk, width: 12.0, isBrush: false, style: "straight"))
+        strokes.append(contentsOf: drawBrushSwatch(name: l("sample_showcase_tool_14_ruler"), y: 634, ink: rulerInk, width: 2.0, isBrush: false, style: "straight"))
+        strokes.append(contentsOf: drawBrushSwatch(name: l("sample_showcase_tool_15_lasso"), y: 662, ink: lassoInk, width: 1.8, isBrush: false, style: "dots"))
 
         var drawing = PKDrawing(strokes: strokes)
         drawing = drawing.appending(StickerCatalogue.drawing(code: "star", size: 28, origin: CGPoint(x: margin + contentWidth - 40, y: 120), color: .systemBlue))
@@ -1170,7 +1170,7 @@ enum SeedContent {
         let accentInk = PKInk(.pen, color: UIColor(red: 0.85, green: 0.35, blue: 0.15, alpha: 0.9))
 
         // 在流程圖旁繪製手繪批註箭頭與確認徽章
-        strokes.append(contentsOf: drawHandwrittenText("<- [ 智慧拓撲對齊 ]", origin: CGPoint(x: margin + 375, y: 495), ink: penInk, baseWidth: 2.0, spacing: 9))
+        strokes.append(contentsOf: drawHandwrittenText(l("sample_showcase_flow_aligned"), origin: CGPoint(x: margin + 375, y: 495), ink: penInk, baseWidth: 2.0, spacing: 9))
         strokes.append(contentsOf: drawHandCheckmark(origin: CGPoint(x: margin + contentWidth - 30, y: 490), size: 16, ink: accentInk, width: 2.2))
 
         var drawing = PKDrawing(strokes: strokes)
@@ -1191,7 +1191,7 @@ enum SeedContent {
         let mathX: CGFloat = margin + 14
         let mathY: CGFloat = 196
 
-        strokes.append(contentsOf: drawHandwrittenText("【 手繪積分真跡 】", origin: CGPoint(x: mathX, y: mathY), ink: stepInk, baseWidth: 2.8, spacing: 13))
+        strokes.append(contentsOf: drawHandwrittenText(l("sample_showcase_math_ink_title"), origin: CGPoint(x: mathX, y: mathY), ink: stepInk, baseWidth: 2.8, spacing: 13))
         strokes.append(contentsOf: drawIntegralSign(at: CGPoint(x: mathX + 8, y: mathY + 24), height: 38, ink: mathInk))
         strokes.append(contentsOf: drawHandwrittenText("0", origin: CGPoint(x: mathX + 6, y: mathY + 60), ink: mathInk, baseWidth: 1.8, spacing: 8))
         strokes.append(contentsOf: drawHandwrittenText("pi", origin: CGPoint(x: mathX + 14, y: mathY + 22), ink: mathInk, baseWidth: 1.8, spacing: 8))
@@ -1217,7 +1217,7 @@ enum SeedContent {
 
         // (B) 數字製圖與討論圖釘的手繪指引箭頭
         strokes.append(contentsOf: drawCurvedArrow(from: CGPoint(x: margin + 280, y: 460), to: CGPoint(x: margin + 405, y: 530), ink: pinArrowInk))
-        strokes.append(contentsOf: drawHandwrittenText("<- [ 點擊圖釘看即時討論串 ]", origin: CGPoint(x: margin + 430, y: 530), ink: pinArrowInk, baseWidth: 2.0, spacing: 9))
+        strokes.append(contentsOf: drawHandwrittenText(l("sample_showcase_pin_hint"), origin: CGPoint(x: margin + 430, y: 530), ink: pinArrowInk, baseWidth: 2.0, spacing: 9))
 
         var drawing = PKDrawing(strokes: strokes)
         drawing = drawing.appending(StickerCatalogue.drawing(code: "star", size: 30, origin: CGPoint(x: margin + contentWidth - 45, y: 118), color: .systemOrange))

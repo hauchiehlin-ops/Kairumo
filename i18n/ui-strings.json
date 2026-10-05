@@ -13911,5 +13911,213 @@
     "th": "เพราะ Kairumo ไม่ยอมประนีประนอมกับข้อจำกัดใดๆ เมื่อคุณต้องการความลื่นไหลของกระดาษจริง พู่กันทั้ง 16 ชนิดพร้อมมอบประสบการณ์ที่ดีที่สุด และเมื่อคุณต้องการโครงสร้างเอกสาร ตาราง สูตร LaTeX กราฟสด และหมุดอภิปรายจะมอบพลังการสร้างสรรค์อันไร้ขีดจำกัด ทั้งหมดนี้ฟรีและเปิดเผยซอร์สโค้ด 100%",
     "zhHans": "因为 Kairumo 拒绝妥协！当你渴望传统纸张的灵性触感，16 种物理级笔刷提供无与伦比的细腻回馈；当你需要构建严密的工程与学术知识库，原生表格、LaTeX 微积分引擎、动编图表与空间图钉赋予你超凡生产力——更关键的是，这一切永远属于你，100% 免费开源，永无拘束。",
     "zhHant": "因為 Kairumo 拒絕妥協！當你渴望傳統紙張的靈性觸感，16 種物理級筆刷提供無與倫比的細膩回饋；當你需要構建嚴密的工程與學術知識庫，原生表格、LaTeX 微積分引擎、動編圖表與空間圖釘賦予你超凡生產力——更關鍵的是，這一切永遠屬於你，100% 免費開源，永無拘束。"
+  },
+  "sample_showcase_tape_answer": {
+    "en": "Key recitation answer: [ Kairumo uses UniFFI + Rust core to achieve zero-latency 60FPS fluid performance! ]",
+    "zhHant": "重點背誦答案：[ Kairumo 採用 UniFFI + Rust 核心，達到零延遲 60FPS 極致流暢！ ]",
+    "zhHans": "重点背诵答案：[ Kairumo 采用 UniFFI + Rust 核心，达到零延迟 60FPS 极致流畅！ ]",
+    "ja": "暗記ポイント：[ Kairumo は UniFFI + Rust コアを採用し、遅延ゼロの60FPS描画を実現！ ]",
+    "ko": "핵심 암기 정답: [ Kairumo는 UniFFI + Rust 코어를 채택하여 제로 레이턴시 60FPS의 극강 유연성을 제공합니다! ]",
+    "th": "คำตอบสำคัญ: [ Kairumo ใช้ UniFFI + Rust core เพื่อความลื่นไหลระดับ 60FPS แบบไร้ความหน่วง! ]"
+  },
+  "sample_showcase_audio_title": {
+    "en": "Audio Guide: Kairumo Design Philosophy and Core Architecture",
+    "zhHant": "語音導覽：Kairumo 設計理念與核心架構",
+    "zhHans": "语音导览：Kairumo 设计理念与核心架构",
+    "ja": "音声ガイド：Kairumoの設計思想とコアアーキテクチャ",
+    "ko": "음성 가이드: Kairumo 설계 철학과 핵심 아키텍처",
+    "th": "เสียงบรรยาย: ปรัชญาการออกแบบและสถาปัตยกรรมหลักของ Kairumo"
+  },
+  "sample_showcase_model3d_title": {
+    "en": "3D Regular Dodecahedron Spatial Geometry Model",
+    "zhHant": "3D 正十二面體空間幾何模型",
+    "zhHans": "3D 正十二面体空间几何模型",
+    "ja": "3D 正十二面体 空間幾何モデル",
+    "ko": "3D 정십이면체 공간 기하학 모델",
+    "th": "แบบจำลองเรขาคณิตสามมิติรูปทรงสิบสองหน้าปกติ"
+  },
+  "sample_showcase_chart_spec_title": {
+    "en": "2026 Handwriting Performance & Flexibility Score (Max 100)",
+    "zhHant": "2026 手寫繪圖效能與自由度指標對比 (滿分 100)",
+    "zhHans": "2026 手写绘图效能与自由度指标对比 (满分 100)",
+    "ja": "2026年 手書き・描画性能と自由度指標比較 (100点満点)",
+    "ko": "2026 필기 드로잉 성능 및 자유도 지표 비교 (100점 만점)",
+    "th": "การเปรียบเทียบประสิทธิภาพการวาดเขียนและความยืดหยุ่นปี 2026 (เต็ม 100)"
+  },
+  "sample_showcase_chart_series_top3": {
+    "en": "Commercial Paid Competitors Average",
+    "zhHant": "商業付費競品平均",
+    "zhHans": "商业付费竞品平均",
+    "ja": "有料商用アプリ平均",
+    "ko": "상용 유료 경쟁 제품 평균",
+    "th": "ค่าเฉลี่ยของคู่แข่งเชิงพาณิชย์แบบชำระเงิน"
+  },
+  "sample_showcase_card_link_body": {
+    "en": "🔗 GitHub Repository\nKairumo\n100% open source & unconstrained, Rust + UniFFI high-perf core",
+    "zhHant": "🔗 GitHub 開源庫\nKairumo\n100% 開源無拘束，Rust + UniFFI 高性能內核",
+    "zhHans": "🔗 GitHub 开源库\nKairumo\n100% 开源无拘束，Rust + UniFFI 高性能内核",
+    "ja": "🔗 GitHub オープンソース\nKairumo\n100%オープンソース、Rust + UniFFI 高性能コア",
+    "ko": "🔗 GitHub 오픈소스 저장소\nKairumo\n100% 오픈소스, Rust + UniFFI 고성능 코어 탑재",
+    "th": "🔗 คลัง GitHub โอเพนซอร์ส\nKairumo\nโอเพนซอร์ส 100% ขับเคลื่อนด้วย Rust + UniFFI ประสิทธิภาพสูง"
+  },
+  "sample_showcase_card_audio_body": {
+    "en": "🎙️ Audio Guide Card\nDuration: 03:04\nSynchronized ink and voice timeline playback",
+    "zhHant": "🎙️ 語音導覽卡片\n長度: 03:04\n筆跡與聲音精準時間軸對齊同步回放",
+    "zhHans": "🎙️ 语音导览卡片\n长度: 03:04\n笔迹与声音精准时间轴对齐同步回放",
+    "ja": "🎙️ 音声ガイドカード\n長さ: 03:04\n筆跡と音声の精密タイムライン同期再生",
+    "ko": "🎙️ 음성 가이드 카드\n길이: 03:04\n필적과 오디오의 정밀 타임라인 동기화 재생",
+    "th": "🎙️ การ์ดบันทึกเสียงบรรยาย\nความยาว: 03:04\nเล่นลายมือและเสียงซิงค์ตามไทม์ไลน์อย่างแม่นยำ"
+  },
+  "sample_showcase_card_model_body": {
+    "en": "🧊 3D Geometry Model\nDodecahedron shape\nSupports 360° touch rotation in 3D space",
+    "zhHant": "🧊 3D 空間幾何體\n正十二面體模型\n支援手指 360° 空間自由旋轉視角檢視",
+    "zhHans": "🧊 3D 空间几何体\n正十二面体模型\n支持手指 360° 空间自由旋转视角检视",
+    "ja": "🧊 3D 空間幾何モデル\n正十二面体モデル\n指先で360°自由回転ビューに対応",
+    "ko": "🧊 3D 공간 기하 모델\n정십이면체 모델\n360° 제스처 회전 공간 뷰 완벽 지원",
+    "th": "🧊 โมเดลเรขาคณิตสามมิติ\nรูปทรงสิบสองหน้า\nรองรับการหมุนดูมุมมอง 360° ด้วยนิ้วมือ"
+  },
+  "sample_showcase_tool_1_pen": {
+    "en": "1. Pen:",
+    "zhHant": "1. Pen (鋼筆):",
+    "zhHans": "1. Pen (钢笔):",
+    "ja": "1. Pen (万年筆):",
+    "ko": "1. Pen (만년필):",
+    "th": "1. Pen (ปากกาหมึกซึม):"
+  },
+  "sample_showcase_tool_2_fineliner": {
+    "en": "2. Fineliner:",
+    "zhHant": "2. Fineliner (針筆):",
+    "zhHans": "2. Fineliner (针笔):",
+    "ja": "2. Fineliner (製図ペン):",
+    "ko": "2. Fineliner (파인라이너):",
+    "th": "2. Fineliner (ปากกาหัวเข็ม):"
+  },
+  "sample_showcase_tool_3_ballpoint": {
+    "en": "3. Ballpoint:",
+    "zhHant": "3. Ballpoint (原子筆):",
+    "zhHans": "3. Ballpoint (原子笔):",
+    "ja": "3. Ballpoint (ボールペン):",
+    "ko": "3. Ballpoint (볼펜):",
+    "th": "3. Ballpoint (ปากกาลูกลื่น):"
+  },
+  "sample_showcase_tool_4_brush": {
+    "en": "4. Brush:",
+    "zhHant": "4. Brush (毛筆):",
+    "zhHans": "4. Brush (毛笔):",
+    "ja": "4. Brush (筆):",
+    "ko": "4. Brush (붓):",
+    "th": "4. Brush (พู่กัน):"
+  },
+  "sample_showcase_tool_5_calligraphy": {
+    "en": "5. Calligraphy:",
+    "zhHant": "5. Calligraphy (書法):",
+    "zhHans": "5. Calligraphy (书法):",
+    "ja": "5. Calligraphy (カリグラフィー):",
+    "ko": "5. Calligraphy (캘리그래피):",
+    "th": "5. Calligraphy (ประดิษฐ์อักษร):"
+  },
+  "sample_showcase_tool_6_pencil": {
+    "en": "6. Pencil:",
+    "zhHant": "6. Pencil (鉛筆):",
+    "zhHans": "6. Pencil (铅笔):",
+    "ja": "6. Pencil (鉛筆):",
+    "ko": "6. Pencil (연필):",
+    "th": "6. Pencil (ดินสอ):"
+  },
+  "sample_showcase_tool_7_charcoal": {
+    "en": "7. Charcoal:",
+    "zhHant": "7. Charcoal (炭筆):",
+    "zhHans": "7. Charcoal (炭笔):",
+    "ja": "7. Charcoal (木炭):",
+    "ko": "7. Charcoal (목탄):",
+    "th": "7. Charcoal (ถ่านชาร์โคล):"
+  },
+  "sample_showcase_tool_8_crayon": {
+    "en": "8. Crayon:",
+    "zhHant": "8. Crayon (蠟筆):",
+    "zhHans": "8. Crayon (蜡笔):",
+    "ja": "8. Crayon (クレヨン):",
+    "ko": "8. Crayon (크레용):",
+    "th": "8. Crayon (สีเทียน):"
+  },
+  "sample_showcase_tool_9_airbrush": {
+    "en": "9. Airbrush:",
+    "zhHant": "9. Airbrush (噴槍):",
+    "zhHans": "9. Airbrush (喷枪):",
+    "ja": "9. Airbrush (エアブラシ):",
+    "ko": "9. Airbrush (에어브러시):",
+    "th": "9. Airbrush (แอร์บรัช):"
+  },
+  "sample_showcase_tool_10_oilpaint": {
+    "en": "10. Oil Paint:",
+    "zhHant": "10. Oil Paint (油畫):",
+    "zhHans": "10. Oil Paint (油画):",
+    "ja": "10. Oil Paint (油絵):",
+    "ko": "10. Oil Paint (유화):",
+    "th": "10. Oil Paint (สีน้ำมัน):"
+  },
+  "sample_showcase_tool_11_watercolor": {
+    "en": "11. Watercolor:",
+    "zhHant": "11. Watercolor (水彩):",
+    "zhHans": "11. Watercolor (水彩):",
+    "ja": "11. Watercolor (水彩):",
+    "ko": "11. Watercolor (수채화):",
+    "th": "11. Watercolor (สีน้ำ):"
+  },
+  "sample_showcase_tool_12_marker": {
+    "en": "12. Marker:",
+    "zhHant": "12. Marker (記號筆):",
+    "zhHans": "12. Marker (记号笔):",
+    "ja": "12. Marker (マーカー):",
+    "ko": "12. Marker (마커):",
+    "th": "12. Marker (ปากกามาร์กเกอร์):"
+  },
+  "sample_showcase_tool_13_highlighter": {
+    "en": "13. Highlighter:",
+    "zhHant": "13. Highlighter (螢光筆):",
+    "zhHans": "13. Highlighter (荧光笔):",
+    "ja": "13. Highlighter (蛍光ペン):",
+    "ko": "13. Highlighter (형광펜):",
+    "th": "13. Highlighter (ปากกาเน้นข้อความ):"
+  },
+  "sample_showcase_tool_14_ruler": {
+    "en": "14. Ruler:",
+    "zhHant": "14. Ruler (尺規引導):",
+    "zhHans": "14. Ruler (尺规引导):",
+    "ja": "14. Ruler (定規ガイド):",
+    "ko": "14. Ruler (자 안내선):",
+    "th": "14. Ruler (ไม้บรรทัด):"
+  },
+  "sample_showcase_tool_15_lasso": {
+    "en": "15. Lasso:",
+    "zhHant": "15. Lasso (幾何套索圈選):",
+    "zhHans": "15. Lasso (几何套索圈选):",
+    "ja": "15. Lasso (なげなわ選択):",
+    "ko": "15. Lasso (올가미 선택):",
+    "th": "15. Lasso (บ่วงบาศเลือก):"
+  },
+  "sample_showcase_flow_aligned": {
+    "en": "<- [ Smart Topology ]",
+    "zhHant": "<- [ 智慧拓撲對齊 ]",
+    "zhHans": "<- [ 智能拓扑对齐 ]",
+    "ja": "<- [ スマートトポロジー ]",
+    "ko": "<- [ 스마트 토폴로지 정렬 ]",
+    "th": "<- [ การจัดเรียงโครงสร้างอัจฉริยะ ]"
+  },
+  "sample_showcase_math_ink_title": {
+    "en": "[ Hand-drawn Integral ]",
+    "zhHant": "【 手繪積分真跡 】",
+    "zhHans": "【 手绘积分真迹 】",
+    "ja": "【 手描き積分筆跡 】",
+    "ko": "【 손글씨 적분 필적 】",
+    "th": "【 ลายมือการอินทิเกรตจริง 】"
+  },
+  "sample_showcase_pin_hint": {
+    "en": "<- [ Tap pin for thread ]",
+    "zhHant": "<- [ 點擊圖釘看即時討論串 ]",
+    "zhHans": "<- [ 点击图钉看即时讨论串 ]",
+    "ja": "<- [ ピンをタップしてスレッド確認 ]",
+    "ko": "<- [ 핀 탭하여 실시간 스레드 확인 ]",
+    "th": "<- [ แตะหมุดเพื่อดูเธรดการสนทนา ]"
   }
 }

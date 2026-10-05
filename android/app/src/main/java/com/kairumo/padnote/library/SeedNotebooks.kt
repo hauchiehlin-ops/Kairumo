@@ -323,7 +323,7 @@ private fun buildFeatureShowcase(context: Context, deviceId: UInt, l: (String) -
         val tapeAnsBox = textStore1.create(MARGIN + 20f, 738f)
         tapeAnsBox.width = CONTENT_WIDTH - 40f
         tapeAnsBox.height = 32f
-        tapeAnsBox.text = "重點背誦答案：[ Kairumo 採用 UniFFI + Rust 核心，達到零延遲 60FPS 極致流暢！ ]"
+        tapeAnsBox.text = l("sample_showcase_tape_answer")
         tapeAnsBox.fontSize = 12f
         tapeAnsBox.bold = true
         tapeAnsBox.textColorHex = "#2D3748"
@@ -479,7 +479,7 @@ private fun buildFeatureShowcase(context: Context, deviceId: UInt, l: (String) -
         val linkText = textStore2.create(MARGIN + 10f, cardRowY + 12f)
         linkText.width = cardW - 20f
         linkText.height = cardH - 24f
-        linkText.text = "🔗 GitHub 開源庫\nKairumo\n100% 開源無拘束，Rust + UniFFI 高性能內核"
+        linkText.text = l("sample_showcase_card_link_body")
         linkText.fontSize = 11f
         linkText.textColorHex = "#2B6CB0"
         linkText.backgroundColorHex = "clear"
@@ -491,7 +491,7 @@ private fun buildFeatureShowcase(context: Context, deviceId: UInt, l: (String) -
         val audioText = textStore2.create(MARGIN + cardW + 22f, cardRowY + 12f)
         audioText.width = cardW - 20f
         audioText.height = cardH - 24f
-        audioText.text = "🎙️ 語音導覽卡片\n長度: 03:04\n筆跡與聲音精準時間軸對齊同步回放"
+        audioText.text = l("sample_showcase_card_audio_body")
         audioText.fontSize = 11f
         audioText.textColorHex = "#6B46C1"
         audioText.backgroundColorHex = "clear"
@@ -503,7 +503,7 @@ private fun buildFeatureShowcase(context: Context, deviceId: UInt, l: (String) -
         val modelText = textStore2.create(MARGIN + (cardW + 12f) * 2f + 10f, cardRowY + 12f)
         modelText.width = cardW - 20f
         modelText.height = cardH - 24f
-        modelText.text = "🧊 3D 空間幾何體\n正十二面體模型\n支援手指 360° 空間自由旋轉視角檢視"
+        modelText.text = l("sample_showcase_card_model_body")
         modelText.fontSize = 11f
         modelText.textColorHex = "#C05621"
         modelText.backgroundColorHex = "clear"
@@ -640,7 +640,7 @@ private fun buildFeatureShowcase(context: Context, deviceId: UInt, l: (String) -
 
         // 插入動態可編輯長條圖
         val chartSpec = ChartSpec(
-            title = "2026 手寫繪圖效能與自由度指標對比 (滿分 100)",
+            title = l("sample_showcase_chart_spec_title"),
             categories = mutableListOf("向量書寫延遲", "圖表動態可編修", "空間圖釘協作", "開源與無訂閱限制"),
             series = mutableListOf(
                 ChartSeries(
@@ -649,7 +649,7 @@ private fun buildFeatureShowcase(context: Context, deviceId: UInt, l: (String) -
                     colorHex = "#3182CE"
                 ),
                 ChartSeries(
-                    name = "商業付費競品平均",
+                    name = l("sample_showcase_chart_series_top3"),
                     values = mutableListOf(74.0, 52.0, 45.0, 38.0),
                     colorHex = "#CBD5E0"
                 )

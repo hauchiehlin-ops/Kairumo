@@ -3573,16 +3573,19 @@ public struct NotebookEditorView: View {
                     // （筆跡那一條就是這樣活了很久）。
                     let forcedFailure = ProcessInfo.processInfo
                         .environment["KAIRUMO_UITEST_FAIL_RECORDING"] == "1"
-                    let started = forcedFailure
-                        ? false
-                        : await audioManager.startRecording(
+                    if forcedFailure {
+                        audioManager.showPermissionAlert = false
+                        showCanvasNotice(localizationManager.localized("recording_failed"))
+                    } else {
+                        let started = await audioManager.startRecording(
                             notebookId: notebook.id,
                             notebookTitle: notebook.displayTitle(),
                             title: NotebookStore.defaultRecordingTitle(),
                             pageIndex: currentPageIndex,
                             languageTag: LocalizationManager.shared.currentLanguage.rawValue)
-                    if !started && !audioManager.showPermissionAlert {
-                        showCanvasNotice(localizationManager.localized("recording_failed"))
+                        if !started && !audioManager.showPermissionAlert {
+                            showCanvasNotice(localizationManager.localized("recording_failed"))
+                        }
                     }
                 }
             } label: {

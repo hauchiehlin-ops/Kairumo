@@ -33,6 +33,7 @@ object LocalizationStrings {
             putAll(part19())
             putAll(part20())
             putAll(part21())
+            putAll(part22())
         }
     }
 
@@ -9328,6 +9329,14 @@ object LocalizationStrings {
             "ko" to "할 일|담당|기한\n중급 안드로이드 지연 측정|치엔|9/22\n설명서 “녹음 삽입” 장 추가|원|9/20\n정식 서명 키 신청|페이|9/19",
             "th" to "สิ่งที่ต้องทำ|ผู้รับผิดชอบ|กำหนด\nวัดความหน่วงบน Android รุ่นกลาง|เชียน|22 ก.ย.\nเขียนบท “แทรกเสียงบันทึก” ในคู่มือ|เหวิน|20 ก.ย.\nขอคีย์เซ็นชื่อจริง|เผย|19 ก.ย."
         ),
+        "sample_showcase_audio_title" to mapOf(
+            "zh-Hant" to "語音導覽：Kairumo 設計理念與核心架構",
+            "en" to "Audio Guide: Kairumo Design Philosophy and Core Architecture",
+            "zh-Hans" to "语音导览：Kairumo 设计理念与核心架构",
+            "ja" to "音声ガイド：Kairumoの設計思想とコアアーキテクチャ",
+            "ko" to "음성 가이드: Kairumo 설계 철학과 핵심 아키텍처",
+            "th" to "เสียงบรรยาย: ปรัชญาการออกแบบและสถาปัตยกรรมหลักของ Kairumo"
+        ),
         "sample_showcase_calc_typed_desc" to mapOf(
             "zh-Hant" to "使用方式：\n1. 自由手繪：直接用手寫筆書寫微積分算式（包括積分號、分式、上標、三角函數）。\n2. 公式識別：套索選中後點擊【識別為公式】，瞬間轉換為標準化 LaTeX 排版。\n3. 分步解析：融合打字解析卡，手寫推導步驟與打字說明無縫並列呈現。",
             "en" to "How to use:\n1. Handwrite formulas using Apple Pencil (integral signs, limits, radicals).\n2. Lasso or tap Math OCR to convert into formatted LaTeX text.\n3. The built-in solver renders the step-by-step derivation card below.",
@@ -9343,6 +9352,46 @@ object LocalizationStrings {
             "ja" to "★ 数式エンジン：手描きとLaTeXの融合によるステップ解析",
             "ko" to "★ 수학 엔진: 손글씨 및 LaTeX 수식 하이브리드 단계별 풀이",
             "th" to "★ กลไกคณิตศาสตร์: ผสานลายมือและ LaTeX พร้อมแสดงวิธีทำเป็นขั้นตอน"
+        ),
+        "sample_showcase_card_audio_body" to mapOf(
+            "zh-Hant" to "🎙️ 語音導覽卡片\n長度: 03:04\n筆跡與聲音精準時間軸對齊同步回放",
+            "en" to "🎙️ Audio Guide Card\nDuration: 03:04\nSynchronized ink and voice timeline playback",
+            "zh-Hans" to "🎙️ 语音导览卡片\n长度: 03:04\n笔迹与声音精准时间轴对齐同步回放",
+            "ja" to "🎙️ 音声ガイドカード\n長さ: 03:04\n筆跡と音声の精密タイムライン同期再生",
+            "ko" to "🎙️ 음성 가이드 카드\n길이: 03:04\n필적과 오디오의 정밀 타임라인 동기화 재생",
+            "th" to "🎙️ การ์ดบันทึกเสียงบรรยาย\nความยาว: 03:04\nเล่นลายมือและเสียงซิงค์ตามไทม์ไลน์อย่างแม่นยำ"
+        ),
+        "sample_showcase_card_link_body" to mapOf(
+            "zh-Hant" to "🔗 GitHub 開源庫\nKairumo\n100% 開源無拘束，Rust + UniFFI 高性能內核",
+            "en" to "🔗 GitHub Repository\nKairumo\n100% open source & unconstrained, Rust + UniFFI high-perf core",
+            "zh-Hans" to "🔗 GitHub 开源库\nKairumo\n100% 开源无拘束，Rust + UniFFI 高性能内核",
+            "ja" to "🔗 GitHub オープンソース\nKairumo\n100%オープンソース、Rust + UniFFI 高性能コア",
+            "ko" to "🔗 GitHub 오픈소스 저장소\nKairumo\n100% 오픈소스, Rust + UniFFI 고성능 코어 탑재",
+            "th" to "🔗 คลัง GitHub โอเพนซอร์ส\nKairumo\nโอเพนซอร์ส 100% ขับเคลื่อนด้วย Rust + UniFFI ประสิทธิภาพสูง"
+        ),
+        "sample_showcase_card_model_body" to mapOf(
+            "zh-Hant" to "🧊 3D 空間幾何體\n正十二面體模型\n支援手指 360° 空間自由旋轉視角檢視",
+            "en" to "🧊 3D Geometry Model\nDodecahedron shape\nSupports 360° touch rotation in 3D space",
+            "zh-Hans" to "🧊 3D 空间几何体\n正十二面体模型\n支持手指 360° 空间自由旋转视角检视",
+            "ja" to "🧊 3D 空間幾何モデル\n正十二面体モデル\n指先で360°自由回転ビューに対応",
+            "ko" to "🧊 3D 공간 기하 모델\n정십이면체 모델\n360° 제스처 회전 공간 뷰 완벽 지원",
+            "th" to "🧊 โมเดลเรขาคณิตสามมิติ\nรูปทรงสิบสองหน้า\nรองรับการหมุนดูมุมมอง 360° ด้วยนิ้วมือ"
+        ),
+        "sample_showcase_chart_series_top3" to mapOf(
+            "zh-Hant" to "商業付費競品平均",
+            "en" to "Commercial Paid Competitors Average",
+            "zh-Hans" to "商业付费竞品平均",
+            "ja" to "有料商用アプリ平均",
+            "ko" to "상용 유료 경쟁 제품 평균",
+            "th" to "ค่าเฉลี่ยของคู่แข่งเชิงพาณิชย์แบบชำระเงิน"
+        ),
+        "sample_showcase_chart_spec_title" to mapOf(
+            "zh-Hant" to "2026 手寫繪圖效能與自由度指標對比 (滿分 100)",
+            "en" to "2026 Handwriting Performance & Flexibility Score (Max 100)",
+            "zh-Hans" to "2026 手写绘图效能与自由度指标对比 (满分 100)",
+            "ja" to "2026年 手書き・描画性能と自由度指標比較 (100点満点)",
+            "ko" to "2026 필기 드로잉 성능 및 자유도 지표 비교 (100점 만점)",
+            "th" to "การเปรียบเทียบประสิทธิภาพการวาดเขียนและความยืดหยุ่นปี 2026 (เต็ม 100)"
         ),
         "sample_showcase_chart_typed_desc" to mapOf(
             "zh-Hant" to "功能用法：\n• 數字製圖：點擊工具欄【＋】->【數字製圖】，輸入分類與數值即可生成向量圖表，雙擊隨時重新修改數據與配色。\n• 討論圖釘：在圖表特定柱狀或推導難點處釘入圖釘，建立上下文關聯的討論串，手繪箭頭配合圖釘批注，團隊協作一目了然。",
@@ -9368,6 +9417,14 @@ object LocalizationStrings {
             "ko" to "핵심 평가축|Kairumo (Padnote)|GoodNotes 6|Notability|Microsoft OneNote\n벡터 손글씨|초저지연, 연필·만년필·붓 완벽 필압|벡터 필기 지원, 붓글씨 동적 표현 제한적|부드러운 필기감, 브러시 커스텀 한계|크로스플랫폼 지원, 지연시간 다소 체감\n타이핑 및 표|Markdown 및 서식 지원 네이티브 데이터 표|기본 텍스트 상자, 표 편집 유연성 부족|기본 텍스트 위주, 단순 표 생성|자유 배치 텍스트 프레임, 무한 캔버스\n수식 및 수학|손글씨 + LaTeX 수식 + 단계별 풀이 융합|손글씨 수식 변환 (유료 등급)|수식 변환 애드온 지원|수식 편집기 지원, 데스크톱 중심\n데이터 차트|재편집 가능한 내장 차트(막대/선/파이/분산)|외부 이미지 삽입에 의존|정적 이미지만 지원, 편집 불가|Excel 차트 연동, 모바일 편집 무거움\n핀 토론 협업|좌표 기반 토론 핀 및 댓글 스레드|공유 링크 및 기본 댓글 기능|음성 녹음 싱크, 공간 핀 미지원|다중 사용자 협업, 레이아웃 깨짐 잦음\n가격 및 개방성|100% 오픈소스, 광고 없음, 완전 무료|구독형 및 인앱 결제 유도|연간 정기 구독 필수|무료 제공이나 Office 365 유도",
             "th" to "มิติเปรียบเทียบ|Kairumo (Padnote)|GoodNotes 6|Notability|Microsoft OneNote\nลายมือเวกเตอร์|หน่วงต่ำมาก, แรงกดดินสอ/ปากกา/พู่กันสมจริง|ลายเส้นเวกเตอร์, ขาดน้ำหนักพู่กันแท้|ลายเส้นลื่นไหล, ปรับแต่งพู่กันจำกัด|รองรับหลายระบบ, ความหน่วงสัมผัสได้\nการพิมพ์และตาราง|ตารางข้อมูลพร้อมสไตล์ จัดขนาดได้สมบูรณ์|กล่องข้อความพื้นฐาน, ตารางปรับแต่งจำกัด|เน้นพิมพ์ข้อความ, รูปแบบตารางเรียบง่าย|กรอบข้อความอิสระ, ผืนผ้าใบกว้าง\nสมการคณิตศาสตร์|ผสานลายมือ + OCR LaTeX + เฉลยเป็นขั้นตอน|แปลงลายมือคณิตศาสตร์ (ต้องจ่ายเพิ่ม)|ส่วนเสริมแปลงคณิตศาสตร์|มีตัวแก้ไขสมการ, เน้นใช้งานบนเดสก์ท็อป\nแผนภูมิข้อมูล|กราฟในตัวแก้ไขได้ (แท่ง/เส้น/วงกลม/กระจาย)|ต้องนำเข้ารูปภาพจากภายนอก|ภาพนิ่งเท่านั้น ไม่สามารถแก้ไขข้อมูลได้|เชื่อมโยง Excel, ทำงานบนมือถือช้า\nหมุดอภิปราย|หมุดความคิดเห็นแบบฝังพิกัดและเธรดสนทนา|แชร์ลิงก์พร้อมความคิดเห็นพื้นฐาน|ซิงค์เสียงบันทึก, ไม่มีหมุดเชิงพื้นที่|ทำงานร่วมกันหลายคน, เลย์เอาต์มักเลื่อน\nราคาและความอิสระ|โอเพนซอร์ส 100%, ไม่มีโฆษณา, ฟรีตลอดชีพ|สมัครสมาชิก / จ่ายครั้งเดียวแบบมีเงื่อนไข|ระบบสมัครสมาชิกรายปี|ใช้งานฟรีเบื้องต้น เน้นขาย Office 365"
         ),
+        "sample_showcase_flow_aligned" to mapOf(
+            "zh-Hant" to "<- [ 智慧拓撲對齊 ]",
+            "en" to "<- [ Smart Topology ]",
+            "zh-Hans" to "<- [ 智能拓扑对齐 ]",
+            "ja" to "<- [ スマートトポロジー ]",
+            "ko" to "<- [ 스마트 토폴로지 정렬 ]",
+            "th" to "<- [ การจัดเรียงโครงสร้างอัจฉริยะ ]"
+        ),
         "sample_showcase_handwriting_note" to mapOf(
             "zh-Hant" to "★ 真實手繪筆跡呈現：\n下方列出的段落文字與裝飾皆以真實向量筆劃繪製（鉛筆質感顆粒、鋼筆動態壓感、毛筆提按書法起伏）。",
             "en" to "★ Authentic Ink Strokes:\nThe lists and calligraphic flourishes below are rendered with authentic vector strokes (Pencil texture, Fountain Pen dynamic pressure, Brush calligraphic variation).",
@@ -9375,6 +9432,22 @@ object LocalizationStrings {
             "ja" to "★ 本物の手描き筆跡：\n以下のリストと装飾文字は、本物のベクター筆跡（鉛筆の質感、万年筆の筆圧応答、毛筆の緩急）で描かれています。",
             "ko" to "★ 진정한 벡터 손글씨:\n아래의 목록 및 캘리그래피는 연필의 질감, 만년필의 필압, 붓의 강약 조절이 적용된 실제 벡터 획으로 생성되었습니다.",
             "th" to "★ ลายมือหมึกเวกเตอร์แท้:\nรายการและลายเส้นด้านล่างถูกวาดด้วยเส้นเวกเตอร์จริง (ดินสอ, ปากกาหมึกซึมปรับแรงกด, พู่กันตัวเขียน)"
+        ),
+        "sample_showcase_math_ink_title" to mapOf(
+            "zh-Hant" to "【 手繪積分真跡 】",
+            "en" to "[ Hand-drawn Integral ]",
+            "zh-Hans" to "【 手绘积分真迹 】",
+            "ja" to "【 手描き積分筆跡 】",
+            "ko" to "【 손글씨 적분 필적 】",
+            "th" to "【 ลายมือการอินทิเกรตจริง 】"
+        ),
+        "sample_showcase_model3d_title" to mapOf(
+            "zh-Hant" to "3D 正十二面體空間幾何模型",
+            "en" to "3D Regular Dodecahedron Spatial Geometry Model",
+            "zh-Hans" to "3D 正十二面体空间几何模型",
+            "ja" to "3D 正十二面体 空間幾何モデル",
+            "ko" to "3D 정십이면체 공간 기하학 모델",
+            "th" to "แบบจำลองเรขาคณิตสามมิติรูปทรงสิบสองหน้าปกติ"
         ),
         "sample_showcase_p1_mission_body" to mapOf(
             "zh-Hant" to "市面上絕大多數商業筆記應用將思考鎖在昂貴的訂閱制、私有雲儲存和僵化的排版模式中。Kairumo 重新發明數位紙張：超低延遲的數學級向量筆跡、專業桌面級打字排版、動態可編修圖表、多維空間討論圖釘，以及 100% 開放透明的隱私主權。",
@@ -9551,7 +9624,10 @@ object LocalizationStrings {
             "ja" to "ノート完成",
             "ko" to "노트 발행 완료",
             "th" to "บันทึกเสร็จสมบูรณ์"
-        ),
+        )
+    )
+
+    private fun part15(): Map<String, Map<String, String>> = mapOf(
         "sample_showcase_p3_flow_process" to mapOf(
             "zh-Hant" to "核心向量解算",
             "en" to "Vector Engine",
@@ -9623,10 +9699,7 @@ object LocalizationStrings {
             "ja" to "2. 高性能データ表（ヘッダー背景＆罫線スタイル）",
             "ko" to "2. 고성능 데이터 표 (헤더 배경색 & 맞춤형 격자선)",
             "th" to "2. ตารางข้อมูลประสิทธิภาพสูงพร้อมสไตล์คอลัมน์"
-        )
-    )
-
-    private fun part15(): Map<String, Map<String, String>> = mapOf(
+        ),
         "sample_showcase_p3_title" to mapOf(
             "zh-Hant" to "文字與版面模式：專業排版、原生表格、流程圖與多媒體物件全實作",
             "en" to "Typography & Structure Studio: Desktop-Grade Object Engine",
@@ -9723,6 +9796,14 @@ object LocalizationStrings {
             "ko" to "부분적분 경계값 대입 검증: [ -x cos(x) ]에 0부터 π까지 대입하면 정확히 +π가 깔끔하게 도출됩니다.",
             "th" to "ตรวจสอบค่าขอบเขตเมื่อใช้อินทิเกรตทีละส่วน: [ -x cos(x) ] จาก 0 ถึง pi ให้ค่าเท่ากับ +pi อย่างลงตัว"
         ),
+        "sample_showcase_pin_hint" to mapOf(
+            "zh-Hant" to "<- [ 點擊圖釘看即時討論串 ]",
+            "en" to "<- [ Tap pin for thread ]",
+            "zh-Hans" to "<- [ 点击图钉看即时讨论串 ]",
+            "ja" to "<- [ ピンをタップしてスレッド確認 ]",
+            "ko" to "<- [ 핀 탭하여 실시간 스레드 확인 ]",
+            "th" to "<- [ แตะหมุดเพื่อดูเธรดการสนทนา ]"
+        ),
         "sample_showcase_table_title" to mapOf(
             "zh-Hant" to "Kairumo 與市面主流前三大筆記應用核心功能優缺點全景對比",
             "en" to "Kairumo vs. Top 3 Mainstream Note Apps Comparison",
@@ -9730,6 +9811,134 @@ object LocalizationStrings {
             "ja" to "Kairumo vs 市販トップ3ノートアプリ 総合比較表",
             "ko" to "Kairumo vs 시장 3대 주요 노트 앱 종합 비교표",
             "th" to "ตารางเปรียบเทียบ Kairumo กับ 3 แอปจดบันทึกชั้นนำในตลาด"
+        ),
+        "sample_showcase_tape_answer" to mapOf(
+            "zh-Hant" to "重點背誦答案：[ Kairumo 採用 UniFFI + Rust 核心，達到零延遲 60FPS 極致流暢！ ]",
+            "en" to "Key recitation answer: [ Kairumo uses UniFFI + Rust core to achieve zero-latency 60FPS fluid performance! ]",
+            "zh-Hans" to "重点背诵答案：[ Kairumo 采用 UniFFI + Rust 核心，达到零延迟 60FPS 极致流畅！ ]",
+            "ja" to "暗記ポイント：[ Kairumo は UniFFI + Rust コアを採用し、遅延ゼロの60FPS描画を実現！ ]",
+            "ko" to "핵심 암기 정답: [ Kairumo는 UniFFI + Rust 코어를 채택하여 제로 레이턴시 60FPS의 극강 유연성을 제공합니다! ]",
+            "th" to "คำตอบสำคัญ: [ Kairumo ใช้ UniFFI + Rust core เพื่อความลื่นไหลระดับ 60FPS แบบไร้ความหน่วง! ]"
+        ),
+        "sample_showcase_tool_10_oilpaint" to mapOf(
+            "zh-Hant" to "10. Oil Paint (油畫):",
+            "en" to "10. Oil Paint:",
+            "zh-Hans" to "10. Oil Paint (油画):",
+            "ja" to "10. Oil Paint (油絵):",
+            "ko" to "10. Oil Paint (유화):",
+            "th" to "10. Oil Paint (สีน้ำมัน):"
+        ),
+        "sample_showcase_tool_11_watercolor" to mapOf(
+            "zh-Hant" to "11. Watercolor (水彩):",
+            "en" to "11. Watercolor:",
+            "zh-Hans" to "11. Watercolor (水彩):",
+            "ja" to "11. Watercolor (水彩):",
+            "ko" to "11. Watercolor (수채화):",
+            "th" to "11. Watercolor (สีน้ำ):"
+        ),
+        "sample_showcase_tool_12_marker" to mapOf(
+            "zh-Hant" to "12. Marker (記號筆):",
+            "en" to "12. Marker:",
+            "zh-Hans" to "12. Marker (记号笔):",
+            "ja" to "12. Marker (マーカー):",
+            "ko" to "12. Marker (마커):",
+            "th" to "12. Marker (ปากกามาร์กเกอร์):"
+        ),
+        "sample_showcase_tool_13_highlighter" to mapOf(
+            "zh-Hant" to "13. Highlighter (螢光筆):",
+            "en" to "13. Highlighter:",
+            "zh-Hans" to "13. Highlighter (荧光笔):",
+            "ja" to "13. Highlighter (蛍光ペン):",
+            "ko" to "13. Highlighter (형광펜):",
+            "th" to "13. Highlighter (ปากกาเน้นข้อความ):"
+        ),
+        "sample_showcase_tool_14_ruler" to mapOf(
+            "zh-Hant" to "14. Ruler (尺規引導):",
+            "en" to "14. Ruler:",
+            "zh-Hans" to "14. Ruler (尺规引导):",
+            "ja" to "14. Ruler (定規ガイド):",
+            "ko" to "14. Ruler (자 안내선):",
+            "th" to "14. Ruler (ไม้บรรทัด):"
+        ),
+        "sample_showcase_tool_15_lasso" to mapOf(
+            "zh-Hant" to "15. Lasso (幾何套索圈選):",
+            "en" to "15. Lasso:",
+            "zh-Hans" to "15. Lasso (几何套索圈选):",
+            "ja" to "15. Lasso (なげなわ選択):",
+            "ko" to "15. Lasso (올가미 선택):",
+            "th" to "15. Lasso (บ่วงบาศเลือก):"
+        ),
+        "sample_showcase_tool_1_pen" to mapOf(
+            "zh-Hant" to "1. Pen (鋼筆):",
+            "en" to "1. Pen:",
+            "zh-Hans" to "1. Pen (钢笔):",
+            "ja" to "1. Pen (万年筆):",
+            "ko" to "1. Pen (만년필):",
+            "th" to "1. Pen (ปากกาหมึกซึม):"
+        ),
+        "sample_showcase_tool_2_fineliner" to mapOf(
+            "zh-Hant" to "2. Fineliner (針筆):",
+            "en" to "2. Fineliner:",
+            "zh-Hans" to "2. Fineliner (针笔):",
+            "ja" to "2. Fineliner (製図ペン):",
+            "ko" to "2. Fineliner (파인라이너):",
+            "th" to "2. Fineliner (ปากกาหัวเข็ม):"
+        ),
+        "sample_showcase_tool_3_ballpoint" to mapOf(
+            "zh-Hant" to "3. Ballpoint (原子筆):",
+            "en" to "3. Ballpoint:",
+            "zh-Hans" to "3. Ballpoint (原子笔):",
+            "ja" to "3. Ballpoint (ボールペン):",
+            "ko" to "3. Ballpoint (볼펜):",
+            "th" to "3. Ballpoint (ปากกาลูกลื่น):"
+        ),
+        "sample_showcase_tool_4_brush" to mapOf(
+            "zh-Hant" to "4. Brush (毛筆):",
+            "en" to "4. Brush:",
+            "zh-Hans" to "4. Brush (毛笔):",
+            "ja" to "4. Brush (筆):",
+            "ko" to "4. Brush (붓):",
+            "th" to "4. Brush (พู่กัน):"
+        ),
+        "sample_showcase_tool_5_calligraphy" to mapOf(
+            "zh-Hant" to "5. Calligraphy (書法):",
+            "en" to "5. Calligraphy:",
+            "zh-Hans" to "5. Calligraphy (书法):",
+            "ja" to "5. Calligraphy (カリグラフィー):",
+            "ko" to "5. Calligraphy (캘리그래피):",
+            "th" to "5. Calligraphy (ประดิษฐ์อักษร):"
+        ),
+        "sample_showcase_tool_6_pencil" to mapOf(
+            "zh-Hant" to "6. Pencil (鉛筆):",
+            "en" to "6. Pencil:",
+            "zh-Hans" to "6. Pencil (铅笔):",
+            "ja" to "6. Pencil (鉛筆):",
+            "ko" to "6. Pencil (연필):",
+            "th" to "6. Pencil (ดินสอ):"
+        ),
+        "sample_showcase_tool_7_charcoal" to mapOf(
+            "zh-Hant" to "7. Charcoal (炭筆):",
+            "en" to "7. Charcoal:",
+            "zh-Hans" to "7. Charcoal (炭笔):",
+            "ja" to "7. Charcoal (木炭):",
+            "ko" to "7. Charcoal (목탄):",
+            "th" to "7. Charcoal (ถ่านชาร์โคล):"
+        ),
+        "sample_showcase_tool_8_crayon" to mapOf(
+            "zh-Hant" to "8. Crayon (蠟筆):",
+            "en" to "8. Crayon:",
+            "zh-Hans" to "8. Crayon (蜡笔):",
+            "ja" to "8. Crayon (クレヨン):",
+            "ko" to "8. Crayon (크레용):",
+            "th" to "8. Crayon (สีเทียน):"
+        ),
+        "sample_showcase_tool_9_airbrush" to mapOf(
+            "zh-Hant" to "9. Airbrush (噴槍):",
+            "en" to "9. Airbrush:",
+            "zh-Hans" to "9. Airbrush (喷枪):",
+            "ja" to "9. Airbrush (エアブラシ):",
+            "ko" to "9. Airbrush (에어브러시):",
+            "th" to "9. Airbrush (แอร์บรัช):"
         ),
         "sample_welcome" to mapOf(
             "zh-Hant" to "歡迎使用 Kairumo",
@@ -10058,7 +10267,10 @@ object LocalizationStrings {
             "ja" to "図形を選び、辺の「+」から別の図形へドラッグすると接続できます",
             "ko" to "도형을 선택한 뒤 가장자리의 “+”에서 다른 도형으로 드래그하면 연결됩니다",
             "th" to "เลือกรูปร่าง แล้วลากจาก “+” ที่ขอบไปยังรูปร่างอื่นเพื่อเชื่อมต่อ"
-        ),
+        )
+    )
+
+    private fun part16(): Map<String, Map<String, String>> = mapOf(
         "shape_geometry_section" to mapOf(
             "zh-Hant" to "位置與大小",
             "en" to "Position & size",
@@ -10266,10 +10478,7 @@ object LocalizationStrings {
             "ja" to "七角形",
             "ko" to "칠각형",
             "th" to "เจ็ดเหลี่ยม"
-        )
-    )
-
-    private fun part16(): Map<String, Map<String, String>> = mapOf(
+        ),
         "shape_kind_hexagon" to mapOf(
             "zh-Hant" to "六邊形",
             "en" to "Hexagon",
@@ -10701,7 +10910,10 @@ object LocalizationStrings {
             "ja" to "グリッド吸着オフ：テキストはタップした位置にそのまま置かれます。",
             "ko" to "격자 맞춤 꺼짐: 텍스트가 탭한 위치에 그대로 놓입니다.",
             "th" to "ปิดจัดชิดเส้นตาราง: ข้อความจะวางตรงตำแหน่งที่แตะ"
-        ),
+        )
+    )
+
+    private fun part17(): Map<String, Map<String, String>> = mapOf(
         "snap_to_grid_on_notice" to mapOf(
             "zh-Hant" to "吸附格線已開啟：隨點隨寫的文字會對齊頁面行線或方格。",
             "en" to "Snap to grid on: tap-to-write text aligns to the page's lines or grid.",
@@ -10909,10 +11121,7 @@ object LocalizationStrings {
             "ja" to "音声書き起こしと筆跡の同期",
             "ko" to "음성 필사 및 필기 동기화",
             "th" to "การถอดเสียงและการจัดตำแหน่งการเขียน"
-        )
-    )
-
-    private fun part17(): Map<String, Map<String, String>> = mapOf(
+        ),
         "startup_logs_title" to mapOf(
             "zh-Hant" to "啟動與效能日誌 (工程除錯)",
             "en" to "Startup & Performance Logs (Engineering)",
@@ -11344,7 +11553,10 @@ object LocalizationStrings {
             "ja" to "波線",
             "ko" to "물결 밑줄",
             "th" to "ขีดเส้นหยัก"
-        ),
+        )
+    )
+
+    private fun part18(): Map<String, Map<String, String>> = mapOf(
         "sticky_anchor_ink" to mapOf(
             "zh-Hant" to "錨定重疊筆跡",
             "en" to "Anchor Overlapping Ink",
@@ -11552,10 +11764,7 @@ object LocalizationStrings {
             "ja" to "コピーを検証しています…",
             "ko" to "복사본을 확인하는 중…",
             "th" to "กำลังตรวจสอบสำเนา…"
-        )
-    )
-
-    private fun part18(): Map<String, Map<String, String>> = mapOf(
+        ),
         "storage_progress_waiting" to mapOf(
             "zh-Hant" to "等待同步結束…",
             "en" to "Waiting for sync to finish…",
@@ -11987,7 +12196,10 @@ object LocalizationStrings {
             "ja" to "まだありません",
             "ko" to "아직 없음",
             "th" to "ยังไม่เคย"
-        ),
+        )
+    )
+
+    private fun part19(): Map<String, Map<String, String>> = mapOf(
         "sync_not_configured" to mapOf(
             "zh-Hant" to "尚未選擇資料夾",
             "en" to "No folder chosen yet",
@@ -12195,10 +12407,7 @@ object LocalizationStrings {
             "ja" to "同期中…",
             "ko" to "동기화 중…",
             "th" to "กำลังซิงค์…"
-        )
-    )
-
-    private fun part19(): Map<String, Map<String, String>> = mapOf(
+        ),
         "system_diagnostics" to mapOf(
             "zh-Hant" to "系統診斷與版本資訊",
             "en" to "Diagnostics & Version Info",
@@ -12630,7 +12839,10 @@ object LocalizationStrings {
             "ja" to "プレビューを小さく",
             "ko" to "미리보기 축소",
             "th" to "ย่อภาพตัวอย่าง"
-        ),
+        )
+    )
+
+    private fun part20(): Map<String, Map<String, String>> = mapOf(
         "tmpl_assignment_tracker" to mapOf(
             "zh-Hant" to "作業追蹤表",
             "en" to "Assignment Tracker",
@@ -12838,10 +13050,7 @@ object LocalizationStrings {
             "ja" to "31日×14習慣の格子と振り返り欄",
             "ko" to "31일 × 14습관 격자와 회고 칸",
             "th" to "31 วัน × 14 นิสัย"
-        )
-    )
-
-    private fun part20(): Map<String, Map<String, String>> = mapOf(
+        ),
         "tmpl_isometric" to mapOf(
             "zh-Hant" to "30° 等角立體軸測網格",
             "en" to "30° Isometric 3D Grid",
@@ -13273,7 +13482,10 @@ object LocalizationStrings {
             "ja" to "ペン",
             "ko" to "만년필",
             "th" to "ปากกาหมึกซึม"
-        ),
+        )
+    )
+
+    private fun part21(): Map<String, Map<String, String>> = mapOf(
         "tool_pencil" to mapOf(
             "zh-Hant" to "鉛筆",
             "en" to "Pencil",
@@ -13481,10 +13693,7 @@ object LocalizationStrings {
             "ja" to "ページを1つ以上選んでください",
             "ko" to "페이지를 하나 이상 선택하세요",
             "th" to "เลือกอย่างน้อยหนึ่งหน้า"
-        )
-    )
-
-    private fun part21(): Map<String, Map<String, String>> = mapOf(
+        ),
         "transfer_same_notebook" to mapOf(
             "zh-Hant" to "同一本筆記內換順序請用「上移／下移一頁」",
             "en" to "Use Move Page Up/Down to reorder within a notebook",
@@ -13916,7 +14125,10 @@ object LocalizationStrings {
             "ja" to "テキストドキュメントに水平区切り線を挿入",
             "ko" to "문서에 수평 구분선 삽입",
             "th" to "แทรกเส้นคั่นแนวนอนในเอกสาร"
-        ),
+        )
+    )
+
+    private fun part22(): Map<String, Map<String, String>> = mapOf(
         "wd_insert_inline_canvas" to mapOf(
             "zh-Hant" to "插入文件內手繪畫布",
             "en" to "Insert a handwriting canvas",
