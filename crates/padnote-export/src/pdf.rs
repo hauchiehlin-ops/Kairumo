@@ -316,13 +316,23 @@ fn process_image_data(obj_id: usize, blob_key: String, data: &[u8]) -> Processed
 struct PdfWriter {
     buf: Vec<u8>,
     offsets: Vec<usize>,
+    /// 沒有假名／諺文可判斷時，漢字用哪一套字型（由文件語言決定）。
+    han: CjkFace,
 }
 
 impl PdfWriter {
+    fn font<'a>(&self, latin: &'a str) -> PdfFont<'a> {
+        PdfFont {
+            latin,
+            han: self.han,
+        }
+    }
+
     fn new() -> Self {
         Self {
             buf: Vec::with_capacity(32 * 1024),
             offsets: vec![0], // 0 號物件保留
+            han: CjkFace::SimplifiedChinese,
         }
     }
 
@@ -355,7 +365,13 @@ impl PdfWriter {
         let font_helvetica_id = self.next_id();
         let font_bold_id = self.next_id();
         let font_courier_id = self.next_id();
-        let font_cjk_id = self.next_id();
+        // 中日韓各一套預設 CID 字型：漢字在各語言的字形不同，而且 Adobe-GB1 裡**沒有**
+        // 諺文與日文專用字，把日文、韓文塞進簡中字型的結果是亂碼（實測韓文整句變成別的字）。
+        let font_cjk_id = self.next_id(); // 簡中 /F_CJK
+        let font_tc_id = self.next_id();
+        let font_ja_id = self.next_id();
+        let font_ko_id = self.next_id();
+        self.han = CjkFace::for_locale(options.locale);
 
         // 預留每個頁面及其內容、標註與圖片物件 ID
         struct PageObjs {
@@ -437,14 +453,23 @@ impl PdfWriter {
         );
         self.end_object();
 
-        // CJK Type 0 (相容 Adobe Acrobat / OS 系統 CJK CMap)
-        self.start_object(font_cjk_id);
-        self.buf.extend_from_slice(
-            b"<< /Type /Font /Subtype /Type0 /BaseFont /STSong-Light /Encoding /UniGB-UTF16-H \
-            /DescendantFonts [ << /Type /Font /Subtype /CIDFontType0 /BaseFont /STSong-Light \
-            /CIDSystemInfo << /Registry (Adobe) /Ordering (GB1) /Supplement 4 >> >> ] >>\n",
-        );
-        self.end_object();
+        // CJK Type 0（相容 Adobe Acrobat / OS 系統的 CJK CMap；不嵌入字型，由閱讀器用系統字型畫）
+        for (id, face) in [
+            (font_cjk_id, CjkFace::SimplifiedChinese),
+            (font_tc_id, CjkFace::TraditionalChinese),
+            (font_ja_id, CjkFace::Japanese),
+            (font_ko_id, CjkFace::Korean),
+        ] {
+            self.start_object(id);
+            let (base, cmap, ordering, supplement) = face.cid_spec();
+            let _ = writeln!(
+                self.buf,
+                "<< /Type /Font /Subtype /Type0 /BaseFont /{base} /Encoding /{cmap} \
+                /DescendantFonts [ << /Type /Font /Subtype /CIDFontType0 /BaseFont /{base} \
+                /CIDSystemInfo << /Registry (Adobe) /Ordering ({ordering}) /Supplement {supplement} >> >> ] >>"
+            );
+            self.end_object();
+        }
 
         // 4. 逐頁寫出
         for (i, page) in pages.iter().enumerate() {
@@ -485,7 +510,7 @@ impl PdfWriter {
                 self.buf,
                 "<< /Type /Page /Parent {pages_tree_id} 0 R /MediaBox [ 0 0 {w:.2} {h:.2} ] \
                 /Contents {content_id} 0 R \
-                /Resources << /Font << /F1 {font_helvetica_id} 0 R /F2 {font_bold_id} 0 R /F3 {font_courier_id} 0 R /F_CJK {font_cjk_id} 0 R >> {xobjs_ref} >>\
+                /Resources << /Font << /F1 {font_helvetica_id} 0 R /F2 {font_bold_id} 0 R /F3 {font_courier_id} 0 R /F_CJK {font_cjk_id} 0 R /F_TC {font_tc_id} 0 R /F_JA {font_ja_id} 0 R /F_KO {font_ko_id} 0 R >> {xobjs_ref} >>\
                 {annots_ref} >>",
                 content_id = po.content_id
             );
@@ -708,7 +733,7 @@ impl PdfWriter {
                     write_pdf_text(
                         content,
                         &g.text,
-                        "/F1",
+                        self.font("/F1"),
                         g.size.max(1.0),
                         &format!("{r:.3} {gc:.3} {b:.3} rg"),
                         x,
@@ -856,7 +881,7 @@ impl PdfWriter {
                         write_pdf_text(
                             content,
                             line,
-                            default_font,
+                            self.font(default_font),
                             size,
                             &format!("{r:.2} {g:.2} {b:.2} rg"),
                             bx,
@@ -940,7 +965,7 @@ impl PdfWriter {
                                     write_pdf_text(
                                         content,
                                         line,
-                                        def_font,
+                                        self.font(def_font),
                                         10.0,
                                         "0.1 0.1 0.1 rg",
                                         cell_x,
@@ -993,7 +1018,7 @@ impl PdfWriter {
                     write_pdf_text(
                         content,
                         &format!("[{marker}] {text}"),
-                        "/F1",
+                        self.font("/F1"),
                         10.0,
                         "0.3 0.3 0.4 rg",
                         bx,
@@ -1141,7 +1166,10 @@ fn is_wide_char(ch: char) -> bool {
 /// 「今天 2026-09-22 要交」的數字被高估、純英文卻被整段高估，換行位置
 /// 兩邊都不對。逐字判斷之後與 `format_pdf_runs` 的切法完全一致。
 fn glyph_width(ch: char, font_size: f32) -> f32 {
-    if winansi_byte(ch).is_some() {
+    if is_thai_mark_char(ch) {
+        // 聲調符號與上下母音疊在前一個字上，不佔寬度。
+        0.0
+    } else if winansi_byte(ch).is_some() || is_thai_char(ch) {
         font_size * 0.55
     } else {
         font_size
@@ -1167,10 +1195,17 @@ fn wrap_pdf_lines(text: &str, font_size: f32, max_width: f32) -> Vec<String> {
         let mut line_w = 0.0f32;
         let mut pending = String::new();
         let mut pending_w = 0.0f32;
+        let mut prev: Option<char> = None;
 
         for ch in paragraph.chars() {
             let w = glyph_width(ch, font_size);
-            let breakable = ch.is_whitespace() || is_wide_char(ch);
+            // 泰文詞與詞之間沒有空白，每個字之間都可以斷；但符號要黏在前一個字上，
+            // 前置母音（เ แ โ ใ ไ）也要和後面的子音在一起。
+            let thai_break = is_thai_char(ch)
+                && !is_thai_mark_char(ch)
+                && !prev.is_some_and(|p| matches!(p as u32, 0x0E40..=0x0E44));
+            let breakable = ch.is_whitespace() || is_wide_char(ch) || thai_break;
+            prev = Some(ch);
 
             if breakable {
                 line.push_str(&pending);
@@ -1210,57 +1245,175 @@ fn wrap_pdf_lines(text: &str, font_size: f32, max_width: f32) -> Vec<String> {
     out
 }
 
+/// 中日韓的預設 CID 字型。閱讀器用系統字型畫，所以不必嵌入。
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum CjkFace {
+    SimplifiedChinese,
+    TraditionalChinese,
+    Japanese,
+    Korean,
+}
+
+impl CjkFace {
+    /// 文件語言決定「沒有假名也沒有諺文的漢字」用哪一套。英文與泰文沿用原本的簡中字型。
+    fn for_locale(locale: Locale) -> Self {
+        match locale {
+            Locale::TraditionalChinese => Self::TraditionalChinese,
+            Locale::Japanese => Self::Japanese,
+            Locale::Korean => Self::Korean,
+            Locale::SimplifiedChinese | Locale::English | Locale::Thai => Self::SimplifiedChinese,
+        }
+    }
+
+    /// 字型資源名。
+    fn resource(self) -> &'static str {
+        match self {
+            Self::SimplifiedChinese => "/F_CJK",
+            Self::TraditionalChinese => "/F_TC",
+            Self::Japanese => "/F_JA",
+            Self::Korean => "/F_KO",
+        }
+    }
+
+    /// (BaseFont, CMap, Ordering, Supplement) —— Adobe 的標準亞洲字型組合。
+    fn cid_spec(self) -> (&'static str, &'static str, &'static str, u8) {
+        match self {
+            Self::SimplifiedChinese => ("STSong-Light", "UniGB-UTF16-H", "GB1", 4),
+            Self::TraditionalChinese => ("MSung-Light", "UniCNS-UTF16-H", "CNS1", 4),
+            Self::Japanese => ("HeiseiMin-W3", "UniJIS-UTF16-H", "Japan1", 6),
+            Self::Korean => ("HYSMyeongJo-Medium", "UniKS-UTF16-H", "Korea1", 2),
+        }
+    }
+}
+
+fn is_kana(ch: char) -> bool {
+    matches!(ch as u32, 0x3040..=0x30FF | 0x31F0..=0x31FF | 0xFF66..=0xFF9F)
+}
+
+fn is_hangul(ch: char) -> bool {
+    matches!(ch as u32, 0x1100..=0x11FF | 0x3130..=0x318F | 0xAC00..=0xD7AF)
+}
+
+fn is_thai_char(ch: char) -> bool {
+    matches!(ch as u32, 0x0E00..=0x0E7F)
+}
+
+/// 這一行裡的漢字該用哪一套字型：有假名就是日文，有諺文就是韓文，否則照文件語言。
+fn han_face_for(text: &str, default_han: CjkFace) -> CjkFace {
+    if text.chars().any(is_kana) {
+        CjkFace::Japanese
+    } else if text.chars().any(is_hangul) {
+        CjkFace::Korean
+    } else {
+        default_han
+    }
+}
+
+/// 一個字落在哪個字型。
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Face {
+    Latin,
+    Cjk(CjkFace),
+    /// 泰文。PDF 沒有可以不嵌入的標準泰文字型，目前還沒有嵌入的字型可用（見 `write_thai_placeholder`）。
+    Thai,
+}
+
+fn face_of(ch: char, han: CjkFace) -> Face {
+    if winansi_byte(ch).is_some() {
+        Face::Latin
+    } else if is_thai_char(ch) {
+        Face::Thai
+    } else if is_kana(ch) {
+        Face::Cjk(CjkFace::Japanese)
+    } else if is_hangul(ch) {
+        Face::Cjk(CjkFace::Korean)
+    } else {
+        Face::Cjk(han)
+    }
+}
+
+/// 一段文字用的字型：西文走哪一個資源，以及沒有假名／諺文可判斷時漢字走哪一套。
+#[derive(Clone, Copy)]
+struct PdfFont<'a> {
+    latin: &'a str,
+    han: CjkFace,
+}
+
+/// 把一行文字切成「字型 → 字面值」的連續段落（漢字預設用簡中，給不需要語言資訊的呼叫端）。
+#[cfg(test)]
+fn format_pdf_runs(text: &str, default_font: &str) -> Vec<(String, String)> {
+    format_pdf_runs_for(text, default_font, CjkFace::SimplifiedChinese)
+}
+
 /// 把一行文字切成「字型 → 字面值」的連續段落。
 ///
 /// 一行裡可以同時有西文與中日韓字，兩者的字型不同，所以不能整行只挑一個
 /// 字型：挑錯的那一半會變成別的字或全形。切成段之後，呼叫端在同一個
 /// `BT`／`Td` 裡依序 `Tf` + `Tj`，PDF 的文字矩陣會自己往前推進，
 /// 不必自己算 x 座標。
-fn format_pdf_runs(text: &str, default_font: &str) -> Vec<(String, String)> {
+///
+/// 中日韓也不能只用一套：每個語言的 CID 字型涵蓋不同，簡中字型畫不出諺文與日文專用字。
+fn format_pdf_runs_for(
+    text: &str,
+    default_font: &str,
+    default_han: CjkFace,
+) -> Vec<(String, String)> {
+    let han = han_face_for(text, default_han);
     let mut runs: Vec<(String, String)> = Vec::new();
     let mut buf = String::new();
-    let mut buf_is_cjk: Option<bool> = None;
+    let mut buf_face: Option<Face> = None;
 
-    fn flush(runs: &mut Vec<(String, String)>, buf: &mut String, is_cjk: bool, default_font: &str) {
+    fn flush(runs: &mut Vec<(String, String)>, buf: &mut String, face: Face, default_font: &str) {
         if buf.is_empty() {
             return;
         }
-        if is_cjk {
-            let mut hex = String::from("<FEFF");
-            for u16_val in buf.encode_utf16() {
-                hex.push_str(&format!("{u16_val:04X}"));
+        match face {
+            Face::Cjk(f) => {
+                let mut hex = String::from("<FEFF");
+                for u16_val in buf.encode_utf16() {
+                    hex.push_str(&format!("{u16_val:04X}"));
+                }
+                hex.push('>');
+                runs.push((f.resource().to_string(), hex));
             }
-            hex.push('>');
-            runs.push(("/F_CJK".to_string(), hex));
-        } else {
-            runs.push((
+            Face::Thai => {
+                // 沒有泰文字型可用：每個「字」（子音加符號）留一個 `?`，至少看得出這裡有字被省略，
+                // 而不是像之前那樣變成一串不相干的簡中亂碼。
+                let n = buf.chars().filter(|c| !is_thai_mark_char(*c)).count();
+                runs.push((default_font.to_string(), format!("({})", "?".repeat(n))));
+            }
+            Face::Latin => runs.push((
                 default_font.to_string(),
                 format!("({})", escape_pdf_string(buf)),
-            ));
+            )),
         }
         buf.clear();
     }
 
     for ch in text.chars() {
-        let is_cjk = winansi_byte(ch).is_none();
-        if buf_is_cjk != Some(is_cjk) {
+        let face = face_of(ch, han);
+        if buf_face != Some(face) {
             flush(
                 &mut runs,
                 &mut buf,
-                buf_is_cjk.unwrap_or(false),
+                buf_face.unwrap_or(Face::Latin),
                 default_font,
             );
-            buf_is_cjk = Some(is_cjk);
+            buf_face = Some(face);
         }
         buf.push(ch);
     }
     flush(
         &mut runs,
         &mut buf,
-        buf_is_cjk.unwrap_or(false),
+        buf_face.unwrap_or(Face::Latin),
         default_font,
     );
     runs
+}
+
+fn is_thai_mark_char(c: char) -> bool {
+    matches!(c as u32, 0x0E31 | 0x0E34..=0x0E3A | 0x0E47..=0x0E4E)
 }
 
 /// 把 `format_pdf_runs` 的結果寫成一段 `BT … ET`。
@@ -1269,13 +1422,13 @@ fn format_pdf_runs(text: &str, default_font: &str) -> Vec<(String, String)> {
 fn write_pdf_text(
     content: &mut Vec<u8>,
     text: &str,
-    default_font: &str,
+    font: PdfFont<'_>,
     size: f32,
     prelude: &str,
     x: f32,
     baseline: f32,
 ) {
-    let runs = format_pdf_runs(text, default_font);
+    let runs = format_pdf_runs_for(text, font.latin, font.han);
     if runs.is_empty() {
         return;
     }
@@ -1665,5 +1818,140 @@ mod transcript_marker_tests {
     #[test]
     fn the_default_is_english_not_a_guess() {
         assert_eq!(PdfExportOptions::default().locale, Locale::English);
+    }
+}
+
+#[cfg(test)]
+mod language_tests {
+    use super::*;
+
+    #[test]
+    fn korean_uses_the_korean_font_not_the_chinese_one() {
+        let runs = format_pdf_runs_for("회의록 작성", "/F1", CjkFace::SimplifiedChinese);
+        assert!(runs.iter().any(|(f, _)| f == "/F_KO"), "{runs:?}");
+        assert!(
+            runs.iter().all(|(f, _)| f != "/F_CJK"),
+            "諺文不能走簡中字型：{runs:?}"
+        );
+    }
+
+    #[test]
+    fn japanese_kana_pulls_its_kanji_into_the_japanese_font() {
+        let runs = format_pdf_runs_for("会議のメモ", "/F1", CjkFace::TraditionalChinese);
+        assert_eq!(runs.len(), 1, "{runs:?}");
+        assert_eq!(runs[0].0, "/F_JA");
+    }
+
+    #[test]
+    fn han_only_text_follows_the_document_language() {
+        let tc = format_pdf_runs_for(
+            "線性代數",
+            "/F1",
+            CjkFace::for_locale(Locale::TraditionalChinese),
+        );
+        let sc = format_pdf_runs_for(
+            "线性代数",
+            "/F1",
+            CjkFace::for_locale(Locale::SimplifiedChinese),
+        );
+        assert_eq!(tc[0].0, "/F_TC");
+        assert_eq!(sc[0].0, "/F_CJK");
+    }
+
+    #[test]
+    fn thai_never_falls_into_a_chinese_font() {
+        let runs = format_pdf_runs_for("การประชุม", "/F1", CjkFace::SimplifiedChinese);
+        assert!(runs.iter().all(|(f, _)| f == "/F1"), "{runs:?}");
+    }
+
+    #[test]
+    fn thai_wraps_between_characters_but_keeps_marks_attached() {
+        let text = "ภาษาไทยไม่มีช่องว่างระหว่างคำ การประชุมและบันทึกการเรียน".repeat(3);
+        let lines = wrap_pdf_lines(&text, 12.0, 120.0);
+        assert!(lines.len() > 2, "應該要換行：{lines:?}");
+        for line in &lines {
+            let first = line.chars().next().unwrap();
+            assert!(!is_thai_mark_char(first), "行首不能是結合符號：{line:?}");
+            let last = line.chars().last().unwrap();
+            assert!(
+                !matches!(last as u32, 0x0E40..=0x0E44),
+                "行尾不能是前置母音：{line:?}"
+            );
+        }
+        // 重新接起來要還原原文（沒有掉字）。
+        assert_eq!(lines.concat().replace(' ', ""), text.replace(' ', ""));
+    }
+
+    #[test]
+    fn all_four_cjk_fonts_are_declared_in_every_page() {
+        let mut nb = Notebook::new(Uuid::now_v7(), "x");
+        nb.add_page(Page::new(Uuid::now_v7(), PageTemplate::Blank));
+        let pdf = to_pdf(&nb, &HashMap::new(), None, &PdfExportOptions::default()).unwrap();
+        let s = String::from_utf8_lossy(&pdf);
+        for name in [
+            "/F_CJK",
+            "/F_TC",
+            "/F_JA",
+            "/F_KO",
+            "UniKS-UTF16-H",
+            "UniJIS-UTF16-H",
+            "UniCNS-UTF16-H",
+        ] {
+            assert!(s.contains(name), "{name}");
+        }
+    }
+}
+
+#[cfg(test)]
+mod language_dump {
+    use super::*;
+    use padnote_doc::{Page, TextStyle};
+
+    #[test]
+    fn dump_multilingual_pdf() {
+        let Ok(dir) = std::env::var("PDF_DUMP_DIR") else {
+            return;
+        };
+        let mut nb = Notebook::new(Uuid::now_v7(), "Languages");
+        let page_id = Uuid::now_v7();
+        let mut page = Page::new(page_id, PageTemplate::Blank);
+        let lines = [
+            (
+                "English",
+                "The quick brown fox jumps over the lazy dog 2026.",
+            ),
+            (
+                "繁體中文",
+                "線性代數：特徵值與特徵向量，開會記錄與課堂筆記。",
+            ),
+            (
+                "简体中文",
+                "线性代数：特征值与特征向量，会议记录与课堂笔记。",
+            ),
+            (
+                "日本語",
+                "ひらがなとカタカナ、漢字の混ざった文章です。会議のメモ。",
+            ),
+            (
+                "한국어",
+                "한글 문장입니다. 회의록과 강의 노트를 작성합니다.",
+            ),
+            ("ไทย", "ภาษาไทยไม่มีช่องว่างระหว่างคำ การประชุมและบันทึกการเรียน"),
+        ];
+        for (i, (_, text)) in lines.iter().enumerate() {
+            page.add_block(padnote_doc::Block {
+                id: Uuid::now_v7(),
+                kind: BlockKind::Text {
+                    content: (*text).into(),
+                    style: TextStyle::Body,
+                },
+                position: Some((50.0, 60.0 + i as f32 * 90.0)),
+                appearance: None,
+                created_at: padnote_doc::NotebookTime::ZERO,
+            });
+        }
+        nb.add_page(page);
+        let pdf = to_pdf(&nb, &HashMap::new(), None, &PdfExportOptions::default()).unwrap();
+        std::fs::write(format!("{dir}/lang.pdf"), pdf).unwrap();
     }
 }

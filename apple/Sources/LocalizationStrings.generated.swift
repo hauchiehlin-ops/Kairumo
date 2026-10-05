@@ -204,7 +204,8 @@ extension LocalizationManager {
             .en: "Advanced Pen Settings",
             .zhHans: "高级画笔设置",
             .ja: "詳細なペン設定",
-            .ko: "고급 펜 설정"
+            .ko: "고급 펜 설정",
+            .th: "การตั้งค่าปากกาขั้นสูง"
         ],
         "ai_insert": [
             .zhHant: "插入筆記",
@@ -4451,14 +4452,16 @@ extension LocalizationManager {
             .en: "Folder inaccessible",
             .zhHans: "无法访问文件夹",
             .ja: "フォルダにアクセスできません",
-            .ko: "폴더에 접근할 수 없습니다"
+            .ko: "폴더에 접근할 수 없습니다",
+            .th: "เข้าถึงโฟลเดอร์ไม่ได้"
         ],
         "folder_sync_not_set": [
             .zhHant: "未設定同步資料夾",
             .en: "Sync folder not set",
             .zhHans: "未设置同步文件夹",
             .ja: "同期フォルダが設定されていません",
-            .ko: "동기화 폴더가 설정되지 않았습니다"
+            .ko: "동기화 폴더가 설정되지 않았습니다",
+            .th: "ยังไม่ได้ตั้งค่าโฟลเดอร์ซิงก์"
         ],
         "folder_unlink": [
             .zhHant: "解除連結",
@@ -6041,7 +6044,8 @@ extension LocalizationManager {
             .en: "Import Document",
             .zhHans: "导入文件",
             .ja: "ドキュメントをインポート",
-            .ko: "문서 가져오기"
+            .ko: "문서 가져오기",
+            .th: "นำเข้าเอกสาร"
         ],
         "import_document_done": [
             .zhHant: "已匯入文件到這本筆記",
@@ -8949,43 +8953,83 @@ extension LocalizationManager {
         ],
         "pen_action_eraser": [
             .zhHant: "橡皮擦",
-            .en: "Eraser"
+            .en: "Eraser",
+            .zhHans: "橡皮擦",
+            .ja: "消しゴム",
+            .ko: "지우개",
+            .th: "ยางลบ"
         ],
         "pen_action_inkAttributes": [
             .zhHant: "顯示調色盤",
-            .en: "Show Ink Palette"
+            .en: "Show Ink Palette",
+            .zhHans: "显示调色盘",
+            .ja: "カラーパレットを表示",
+            .ko: "색상 팔레트 표시",
+            .th: "แสดงจานสี"
         ],
         "pen_action_lasso": [
             .zhHant: "套索工具",
-            .en: "Lasso Tool"
+            .en: "Lasso Tool",
+            .zhHans: "套索工具",
+            .ja: "なげなわツール",
+            .ko: "올가미 도구",
+            .th: "เครื่องมือบ่วงบาศ"
         ],
         "pen_action_lastBrush": [
             .zhHant: "上一個使用的筆刷",
-            .en: "Last Used Brush"
+            .en: "Last Used Brush",
+            .zhHans: "上一个使用的笔刷",
+            .ja: "前回使用したブラシ",
+            .ko: "마지막으로 사용한 브러시",
+            .th: "แปรงที่ใช้ล่าสุด"
         ],
         "pen_action_none": [
             .zhHant: "無",
-            .en: "None"
+            .en: "None",
+            .zhHans: "无",
+            .ja: "なし",
+            .ko: "없음",
+            .th: "ไม่มี"
         ],
         "pen_action_redo": [
             .zhHant: "重做",
-            .en: "Redo"
+            .en: "Redo",
+            .zhHans: "重做",
+            .ja: "やり直す",
+            .ko: "다시 실행",
+            .th: "ทำซ้ำ"
         ],
         "pen_action_ruler": [
             .zhHant: "顯示尺規",
-            .en: "Show Ruler"
+            .en: "Show Ruler",
+            .zhHans: "显示尺规",
+            .ja: "定規を表示",
+            .ko: "눈금자 표시",
+            .th: "แสดงไม้บรรทัด"
         ],
         "pen_action_undo": [
             .zhHant: "復原",
-            .en: "Undo"
+            .en: "Undo",
+            .zhHans: "撤销",
+            .ja: "取り消す",
+            .ko: "실행 취소",
+            .th: "เลิกทำ"
         ],
         "pen_controls_title": [
             .zhHant: "側鍵與手勢",
-            .en: "Side Buttons & Gestures"
+            .en: "Side Buttons & Gestures",
+            .zhHans: "侧键与手势",
+            .ja: "サイドボタンとジェスチャー",
+            .ko: "측면 버튼 및 제스처",
+            .th: "ปุ่มด้านข้างและท่าทาง"
         ],
         "pen_double_tap": [
             .zhHant: "雙擊",
-            .en: "Double Tap"
+            .en: "Double Tap",
+            .zhHans: "双击",
+            .ja: "ダブルタップ",
+            .ko: "두 번 탭하기",
+            .th: "แตะสองครั้ง"
         ],
         "pen_only_toast": [
             .zhHant: "已開啟「僅限觸控筆」，手指觸控會被忽略。要用手指寫字請把它關掉。",
@@ -8997,18 +9041,27 @@ extension LocalizationManager {
         ],
         "pen_pressure_apple_note": [
             .zhHant: "Apple Pencil 的壓感曲線由系統原生最佳化接管，不支援手動覆寫。",
-            .en: "Apple Pencil pressure curves are optimized natively by the system and cannot be manually overridden."
+            .en: "Apple Pencil pressure curves are optimized natively by the system and cannot be manually overridden.",
+            .zhHans: "Apple Pencil 的压感曲线由系统原生优化接管，不支持手动覆盖。",
+            .ja: "Apple Pencil の筆圧カーブはシステムが最適化しており、手動で上書きすることはできません。",
+            .ko: "Apple Pencil의 필압 곡선은 시스템이 기본적으로 최적화하며 수동으로 바꿀 수 없습니다.",
+            .th: "เส้นโค้งแรงกดของ Apple Pencil ถูกระบบปรับให้เหมาะสมอยู่แล้ว ไม่สามารถกำหนดเองได้"
         ],
         "pen_settings_title": [
             .zhHant: "進階畫筆設定",
             .en: "Advanced Pen Settings",
             .zhHans: "高级画笔设置",
             .ja: "詳細なペン設定",
-            .ko: "고급 펜 설정"
+            .ko: "고급 펜 설정",
+            .th: "การตั้งค่าปากกาขั้นสูง"
         ],
         "pen_squeeze": [
             .zhHant: "擠壓 (Pencil Pro)",
-            .en: "Squeeze (Pencil Pro)"
+            .en: "Squeeze (Pencil Pro)",
+            .zhHans: "挤压 (Pencil Pro)",
+            .ja: "スクイーズ (Pencil Pro)",
+            .ko: "쥐기 (Pencil Pro)",
+            .th: "บีบ (Pencil Pro)"
         ],
         "permission_open_settings": [
             .zhHant: "開啟設定",
@@ -9063,14 +9116,16 @@ extension LocalizationManager {
             .en: "Pressure Floor",
             .zhHans: "下笔起始压力",
             .ja: "最小筆圧",
-            .ko: "최소 필압"
+            .ko: "최소 필압",
+            .th: "แรงกดเริ่มต้น"
         ],
         "pressure_gamma": [
             .zhHant: "壓力敏感度曲線",
             .en: "Pressure Gamma",
             .zhHans: "压力敏感度曲线",
             .ja: "筆圧感度カーブ",
-            .ko: "필압 감도 곡선"
+            .ko: "필압 감도 곡선",
+            .th: "เส้นโค้งความไวต่อแรงกด"
         ],
         "preview_chart": [
             .zhHant: "圖表即時預覽",

@@ -229,7 +229,8 @@ object LocalizationStrings {
             "en" to "Advanced Pen Settings",
             "zh-Hans" to "高级画笔设置",
             "ja" to "詳細なペン設定",
-            "ko" to "고급 펜 설정"
+            "ko" to "고급 펜 설정",
+            "th" to "การตั้งค่าปากกาขั้นสูง"
         ),
         "ai_insert" to mapOf(
             "zh-Hant" to "插入筆記",
@@ -4494,14 +4495,16 @@ object LocalizationStrings {
             "en" to "Folder inaccessible",
             "zh-Hans" to "无法访问文件夹",
             "ja" to "フォルダにアクセスできません",
-            "ko" to "폴더에 접근할 수 없습니다"
+            "ko" to "폴더에 접근할 수 없습니다",
+            "th" to "เข้าถึงโฟลเดอร์ไม่ได้"
         ),
         "folder_sync_not_set" to mapOf(
             "zh-Hant" to "未設定同步資料夾",
             "en" to "Sync folder not set",
             "zh-Hans" to "未设置同步文件夹",
             "ja" to "同期フォルダが設定されていません",
-            "ko" to "동기화 폴더가 설정되지 않았습니다"
+            "ko" to "동기화 폴더가 설정되지 않았습니다",
+            "th" to "ยังไม่ได้ตั้งค่าโฟลเดอร์ซิงก์"
         ),
         "folder_unlink" to mapOf(
             "zh-Hant" to "解除連結",
@@ -6093,7 +6096,8 @@ object LocalizationStrings {
             "en" to "Import Document",
             "zh-Hans" to "导入文件",
             "ja" to "ドキュメントをインポート",
-            "ko" to "문서 가져오기"
+            "ko" to "문서 가져오기",
+            "th" to "นำเข้าเอกสาร"
         ),
         "import_document_done" to mapOf(
             "zh-Hant" to "已匯入文件到這本筆記",
@@ -9013,46 +9017,86 @@ object LocalizationStrings {
         ),
         "pen_action_eraser" to mapOf(
             "zh-Hant" to "橡皮擦",
-            "en" to "Eraser"
+            "en" to "Eraser",
+            "zh-Hans" to "橡皮擦",
+            "ja" to "消しゴム",
+            "ko" to "지우개",
+            "th" to "ยางลบ"
         ),
         "pen_action_inkAttributes" to mapOf(
             "zh-Hant" to "顯示調色盤",
-            "en" to "Show Ink Palette"
+            "en" to "Show Ink Palette",
+            "zh-Hans" to "显示调色盘",
+            "ja" to "カラーパレットを表示",
+            "ko" to "색상 팔레트 표시",
+            "th" to "แสดงจานสี"
         ),
         "pen_action_lasso" to mapOf(
             "zh-Hant" to "套索工具",
-            "en" to "Lasso Tool"
+            "en" to "Lasso Tool",
+            "zh-Hans" to "套索工具",
+            "ja" to "なげなわツール",
+            "ko" to "올가미 도구",
+            "th" to "เครื่องมือบ่วงบาศ"
         )
     )
 
     private fun part14(): Map<String, Map<String, String>> = mapOf(
         "pen_action_lastBrush" to mapOf(
             "zh-Hant" to "上一個使用的筆刷",
-            "en" to "Last Used Brush"
+            "en" to "Last Used Brush",
+            "zh-Hans" to "上一个使用的笔刷",
+            "ja" to "前回使用したブラシ",
+            "ko" to "마지막으로 사용한 브러시",
+            "th" to "แปรงที่ใช้ล่าสุด"
         ),
         "pen_action_none" to mapOf(
             "zh-Hant" to "無",
-            "en" to "None"
+            "en" to "None",
+            "zh-Hans" to "无",
+            "ja" to "なし",
+            "ko" to "없음",
+            "th" to "ไม่มี"
         ),
         "pen_action_redo" to mapOf(
             "zh-Hant" to "重做",
-            "en" to "Redo"
+            "en" to "Redo",
+            "zh-Hans" to "重做",
+            "ja" to "やり直す",
+            "ko" to "다시 실행",
+            "th" to "ทำซ้ำ"
         ),
         "pen_action_ruler" to mapOf(
             "zh-Hant" to "顯示尺規",
-            "en" to "Show Ruler"
+            "en" to "Show Ruler",
+            "zh-Hans" to "显示尺规",
+            "ja" to "定規を表示",
+            "ko" to "눈금자 표시",
+            "th" to "แสดงไม้บรรทัด"
         ),
         "pen_action_undo" to mapOf(
             "zh-Hant" to "復原",
-            "en" to "Undo"
+            "en" to "Undo",
+            "zh-Hans" to "撤销",
+            "ja" to "取り消す",
+            "ko" to "실행 취소",
+            "th" to "เลิกทำ"
         ),
         "pen_controls_title" to mapOf(
             "zh-Hant" to "側鍵與手勢",
-            "en" to "Side Buttons & Gestures"
+            "en" to "Side Buttons & Gestures",
+            "zh-Hans" to "侧键与手势",
+            "ja" to "サイドボタンとジェスチャー",
+            "ko" to "측면 버튼 및 제스처",
+            "th" to "ปุ่มด้านข้างและท่าทาง"
         ),
         "pen_double_tap" to mapOf(
             "zh-Hant" to "雙擊",
-            "en" to "Double Tap"
+            "en" to "Double Tap",
+            "zh-Hans" to "双击",
+            "ja" to "ダブルタップ",
+            "ko" to "두 번 탭하기",
+            "th" to "แตะสองครั้ง"
         ),
         "pen_only_toast" to mapOf(
             "zh-Hant" to "已開啟「僅限觸控筆」，手指觸控會被忽略。要用手指寫字請把它關掉。",
@@ -9064,18 +9108,27 @@ object LocalizationStrings {
         ),
         "pen_pressure_apple_note" to mapOf(
             "zh-Hant" to "Apple Pencil 的壓感曲線由系統原生最佳化接管，不支援手動覆寫。",
-            "en" to "Apple Pencil pressure curves are optimized natively by the system and cannot be manually overridden."
+            "en" to "Apple Pencil pressure curves are optimized natively by the system and cannot be manually overridden.",
+            "zh-Hans" to "Apple Pencil 的压感曲线由系统原生优化接管，不支持手动覆盖。",
+            "ja" to "Apple Pencil の筆圧カーブはシステムが最適化しており、手動で上書きすることはできません。",
+            "ko" to "Apple Pencil의 필압 곡선은 시스템이 기본적으로 최적화하며 수동으로 바꿀 수 없습니다.",
+            "th" to "เส้นโค้งแรงกดของ Apple Pencil ถูกระบบปรับให้เหมาะสมอยู่แล้ว ไม่สามารถกำหนดเองได้"
         ),
         "pen_settings_title" to mapOf(
             "zh-Hant" to "進階畫筆設定",
             "en" to "Advanced Pen Settings",
             "zh-Hans" to "高级画笔设置",
             "ja" to "詳細なペン設定",
-            "ko" to "고급 펜 설정"
+            "ko" to "고급 펜 설정",
+            "th" to "การตั้งค่าปากกาขั้นสูง"
         ),
         "pen_squeeze" to mapOf(
             "zh-Hant" to "擠壓 (Pencil Pro)",
-            "en" to "Squeeze (Pencil Pro)"
+            "en" to "Squeeze (Pencil Pro)",
+            "zh-Hans" to "挤压 (Pencil Pro)",
+            "ja" to "スクイーズ (Pencil Pro)",
+            "ko" to "쥐기 (Pencil Pro)",
+            "th" to "บีบ (Pencil Pro)"
         ),
         "permission_open_settings" to mapOf(
             "zh-Hant" to "開啟設定",
@@ -9130,14 +9183,16 @@ object LocalizationStrings {
             "en" to "Pressure Floor",
             "zh-Hans" to "下笔起始压力",
             "ja" to "最小筆圧",
-            "ko" to "최소 필압"
+            "ko" to "최소 필압",
+            "th" to "แรงกดเริ่มต้น"
         ),
         "pressure_gamma" to mapOf(
             "zh-Hant" to "壓力敏感度曲線",
             "en" to "Pressure Gamma",
             "zh-Hans" to "压力敏感度曲线",
             "ja" to "筆圧感度カーブ",
-            "ko" to "필압 감도 곡선"
+            "ko" to "필압 감도 곡선",
+            "th" to "เส้นโค้งความไวต่อแรงกด"
         ),
         "preview_chart" to mapOf(
             "zh-Hant" to "圖表即時預覽",

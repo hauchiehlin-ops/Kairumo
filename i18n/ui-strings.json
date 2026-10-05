@@ -187,6 +187,7 @@
     "en": "Advanced Pen Settings",
     "ja": "詳細なペン設定",
     "ko": "고급 펜 설정",
+    "th": "การตั้งค่าปากกาขั้นสูง",
     "zhHans": "高级画笔设置",
     "zhHant": "進階畫筆設定"
   },
@@ -4434,6 +4435,7 @@
     "en": "Folder inaccessible",
     "ja": "フォルダにアクセスできません",
     "ko": "폴더에 접근할 수 없습니다",
+    "th": "เข้าถึงโฟลเดอร์ไม่ได้",
     "zhHans": "无法访问文件夹",
     "zhHant": "無法存取資料夾"
   },
@@ -4441,6 +4443,7 @@
     "en": "Sync folder not set",
     "ja": "同期フォルダが設定されていません",
     "ko": "동기화 폴더가 설정되지 않았습니다",
+    "th": "ยังไม่ได้ตั้งค่าโฟลเดอร์ซิงก์",
     "zhHans": "未设置同步文件夹",
     "zhHant": "未設定同步資料夾"
   },
@@ -6024,6 +6027,7 @@
     "en": "Import Document",
     "ja": "ドキュメントをインポート",
     "ko": "문서 가져오기",
+    "th": "นำเข้าเอกสาร",
     "zhHans": "导入文件",
     "zhHant": "匯入文件"
   },
@@ -8933,42 +8937,82 @@
   },
   "pen_action_eraser": {
     "en": "Eraser",
+    "ja": "消しゴム",
+    "ko": "지우개",
+    "th": "ยางลบ",
+    "zhHans": "橡皮擦",
     "zhHant": "橡皮擦"
   },
   "pen_action_inkAttributes": {
     "en": "Show Ink Palette",
+    "ja": "カラーパレットを表示",
+    "ko": "색상 팔레트 표시",
+    "th": "แสดงจานสี",
+    "zhHans": "显示调色盘",
     "zhHant": "顯示調色盤"
   },
   "pen_action_lasso": {
     "en": "Lasso Tool",
+    "ja": "なげなわツール",
+    "ko": "올가미 도구",
+    "th": "เครื่องมือบ่วงบาศ",
+    "zhHans": "套索工具",
     "zhHant": "套索工具"
   },
   "pen_action_lastBrush": {
     "en": "Last Used Brush",
+    "ja": "前回使用したブラシ",
+    "ko": "마지막으로 사용한 브러시",
+    "th": "แปรงที่ใช้ล่าสุด",
+    "zhHans": "上一个使用的笔刷",
     "zhHant": "上一個使用的筆刷"
   },
   "pen_action_none": {
     "en": "None",
+    "ja": "なし",
+    "ko": "없음",
+    "th": "ไม่มี",
+    "zhHans": "无",
     "zhHant": "無"
   },
   "pen_action_redo": {
     "en": "Redo",
+    "ja": "やり直す",
+    "ko": "다시 실행",
+    "th": "ทำซ้ำ",
+    "zhHans": "重做",
     "zhHant": "重做"
   },
   "pen_action_ruler": {
     "en": "Show Ruler",
+    "ja": "定規を表示",
+    "ko": "눈금자 표시",
+    "th": "แสดงไม้บรรทัด",
+    "zhHans": "显示尺规",
     "zhHant": "顯示尺規"
   },
   "pen_action_undo": {
     "en": "Undo",
+    "ja": "取り消す",
+    "ko": "실행 취소",
+    "th": "เลิกทำ",
+    "zhHans": "撤销",
     "zhHant": "復原"
   },
   "pen_controls_title": {
     "en": "Side Buttons & Gestures",
+    "ja": "サイドボタンとジェスチャー",
+    "ko": "측면 버튼 및 제스처",
+    "th": "ปุ่มด้านข้างและท่าทาง",
+    "zhHans": "侧键与手势",
     "zhHant": "側鍵與手勢"
   },
   "pen_double_tap": {
     "en": "Double Tap",
+    "ja": "ダブルタップ",
+    "ko": "두 번 탭하기",
+    "th": "แตะสองครั้ง",
+    "zhHans": "双击",
     "zhHant": "雙擊"
   },
   "pen_only_toast": {
@@ -8981,17 +9025,26 @@
   },
   "pen_pressure_apple_note": {
     "en": "Apple Pencil pressure curves are optimized natively by the system and cannot be manually overridden.",
+    "ja": "Apple Pencil の筆圧カーブはシステムが最適化しており、手動で上書きすることはできません。",
+    "ko": "Apple Pencil의 필압 곡선은 시스템이 기본적으로 최적화하며 수동으로 바꿀 수 없습니다.",
+    "th": "เส้นโค้งแรงกดของ Apple Pencil ถูกระบบปรับให้เหมาะสมอยู่แล้ว ไม่สามารถกำหนดเองได้",
+    "zhHans": "Apple Pencil 的压感曲线由系统原生优化接管，不支持手动覆盖。",
     "zhHant": "Apple Pencil 的壓感曲線由系統原生最佳化接管，不支援手動覆寫。"
   },
   "pen_settings_title": {
     "en": "Advanced Pen Settings",
     "ja": "詳細なペン設定",
     "ko": "고급 펜 설정",
+    "th": "การตั้งค่าปากกาขั้นสูง",
     "zhHans": "高级画笔设置",
     "zhHant": "進階畫筆設定"
   },
   "pen_squeeze": {
     "en": "Squeeze (Pencil Pro)",
+    "ja": "スクイーズ (Pencil Pro)",
+    "ko": "쥐기 (Pencil Pro)",
+    "th": "บีบ (Pencil Pro)",
+    "zhHans": "挤压 (Pencil Pro)",
     "zhHant": "擠壓 (Pencil Pro)"
   },
   "permission_open_settings": {
@@ -9046,6 +9099,7 @@
     "en": "Pressure Floor",
     "ja": "最小筆圧",
     "ko": "최소 필압",
+    "th": "แรงกดเริ่มต้น",
     "zhHans": "下笔起始压力",
     "zhHant": "下筆起始壓力"
   },
@@ -9053,6 +9107,7 @@
     "en": "Pressure Gamma",
     "ja": "筆圧感度カーブ",
     "ko": "필압 감도 곡선",
+    "th": "เส้นโค้งความไวต่อแรงกด",
     "zhHans": "压力敏感度曲线",
     "zhHant": "壓力敏感度曲線"
   },
