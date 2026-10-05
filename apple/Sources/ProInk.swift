@@ -619,6 +619,90 @@ final class ProInkLayerView: UIView {
             .map { $0.points.map { CGPoint(x: CGFloat($0.x), y: CGFloat($0.y)) } }
     }
 
+    // MARK: 套索（製圖線都是專業筆畫，套索要能選、搬、刪、複製）
+
+    /// 完全被多邊形圈住、而且圖層動得了（沒隱藏沒鎖定）的自己的筆畫。
+    func strokeIds(enclosedBy polygon: [Float]) -> Set<String> {
+        let drafting = DraftingState.shared
+        var ids = Set<String>()
+        for s in ownStrokes where drafting.canEdit(layer: s.layerId, notebookId: notebookId) {
+            let flat = s.points.flatMap { [$0.x, $0.y] }
+            if lassoEncloses(polygon: polygon, points: flat) { ids.insert(s.id) }
+        }
+        return ids
+    }
+
+    private var moveIds: Set<String> = []
+    private var moveTotal = CGSize.zero
+
+    /// 拖曳搬移：過程中只改記憶體與畫面，放手（`endMove`）才存檔、登記一次復原。
+    func move(ids: Set<String>, by delta: CGSize) {
+        moveIds = ids
+        moveTotal.width += delta.width
+        moveTotal.height += delta.height
+        for i in ownStrokes.indices where ids.contains(ownStrokes[i].id) {
+            setNeedsDisplay(ownStrokes[i].bounds)
+            for k in ownStrokes[i].points.indices {
+                ownStrokes[i].points[k].x += Float(delta.width)
+                ownStrokes[i].points[k].y += Float(delta.height)
+            }
+            cache[ownStrokes[i].id] = nil
+            setNeedsDisplay(ownStrokes[i].bounds)
+        }
+    }
+
+    func endMove() {
+        guard !moveIds.isEmpty else { return }
+        let ids = moveIds, total = moveTotal
+        moveIds = []
+        moveTotal = .zero
+        persist()
+        setNeedsDisplay()   // 拖曳途中的局部重畫可能殘留舊位置的像素，放手時整層重畫一次
+        registerMoveUndo(ids: ids, delta: total)
+    }
+
+    private func registerMoveUndo(ids: Set<String>, delta: CGSize) {
+        guard let manager = undoManagerProvider?() else { return }
+        manager.registerUndo(withTarget: self) { layer in
+            layer.move(ids: ids, by: CGSize(width: -delta.width, height: -delta.height))
+            layer.moveIds = []
+            layer.moveTotal = .zero
+            layer.persist()
+            layer.registerMoveUndo(ids: ids, delta: CGSize(width: -delta.width, height: -delta.height))
+        }
+    }
+
+    func delete(ids: Set<String>) {
+        let hit = ownStrokes.filter { ids.contains($0.id) }
+        guard !hit.isEmpty else { return }
+        ownStrokes.removeAll { ids.contains($0.id) }
+        for s in hit { setNeedsDisplay(s.bounds) }
+        persist()
+        registerUndo(restoring: hit)
+    }
+
+    func strokes(ids: Set<String>) -> [ProStroke] { ownStrokes.filter { ids.contains($0.id) } }
+
+    /// 把一組筆畫（新 id）偏移後加進這一頁，一次復原。回傳新筆畫的 id。
+    @discardableResult
+    func add(copies: [ProStroke], offset: CGSize) -> Set<String> {
+        let made: [ProStroke] = copies.map {
+            var c = $0
+            c.id = UUID().uuidString
+            for k in c.points.indices {
+                c.points[k].x += Float(offset.width)
+                c.points[k].y += Float(offset.height)
+            }
+            return c
+        }
+        guard !made.isEmpty else { return [] }
+        ownStrokes.append(contentsOf: made)
+        for s in made { setNeedsDisplay(s.bounds) }
+        persist()
+        registerGroupUndo(inserting: made)
+        return Set(made.map(\.id))
+    }
+
     // MARK: 改圖層
 
     /// 把離 `point` 最近的一筆（鎖定／隱藏的圖層除外）改到 `layer`，線型與顏色不動。

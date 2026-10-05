@@ -2390,6 +2390,7 @@ public struct NotebookEditorView: View {
                     }
                 }
             }
+            lasso.proHost = { [self] in (canvasView as? AdaptiveCanvasView)?.proLayer }
             store.activeNotebookId = notebook.id
             // 開著的這一本走焦點通道（秒同步）與區網直連。
             sanitizeTextAttachments()

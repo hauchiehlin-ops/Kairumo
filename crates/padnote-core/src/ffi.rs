@@ -2943,6 +2943,38 @@ mod tests {
     }
 
     #[test]
+    fn moving_and_copying_keep_the_drafting_layer_and_line_type() {
+        // 製圖線搬動或複製之後還在原本的圖層、還是同一種線型 —— 否則隱藏中層時搬過的輔助線會跑出來。
+        let s = session("lasso-layer");
+        let page = s.first_page_id().unwrap();
+        let id = s
+            .add_stroke_drafted(
+                page.clone(),
+                ToolKind::Fineliner,
+                vec![0, 0, 0, 255],
+                1.4,
+                points(),
+                3,
+                1,
+            )
+            .unwrap();
+        let moved = s
+            .lasso_translate(page.clone(), vec![id], 50.0, 0.0)
+            .unwrap();
+        let copied = s.lasso_copy(page.clone(), moved.clone()).unwrap();
+        s.lasso_paste(page.clone(), copied, 10.0, 10.0).unwrap();
+        let all = s.visible_stroke_details(page).unwrap();
+        assert_eq!(all.len(), 2);
+        assert!(
+            all.iter().all(|st| st.layer == 3 && st.line_type == 1),
+            "{:?}",
+            all.iter()
+                .map(|x| (x.layer, x.line_type))
+                .collect::<Vec<_>>()
+        );
+    }
+
+    #[test]
     fn malformed_id_returns_error_instead_of_panicking() {
         // FFI 輸入來自另一個語言，不可信。
         let s = session("badid");
