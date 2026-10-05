@@ -82,69 +82,204 @@ fn node(kind: ShapeKind, label: &str, x: f32, y: f32, w: f32, h: f32) -> Templat
     }
 }
 
-/// 內建範本。
+/// 內建範本：十份，涵蓋最常被問到的流程圖形態。
 ///
-/// 刻意只放**少量、真的會用到**的範本。競品的範本庫動輒上百個，
-/// 但使用者找不到要的那一個，反而比沒有更慢。
+/// 還是刻意不放上百份 —— 使用者找不到要的那一個，反而比沒有更慢。
+/// 十份各有不同的用途與不同的符號組合（輸入輸出、判斷、迴圈、簽核、登入、重試、資料管線、平行、
+/// 文件處理），插入後每個元素都能自由編輯。節點文字是起點，使用者直接改。
 pub fn builtin_templates() -> Vec<Template> {
+    use ShapeKind::*;
     vec![
-        // ---- 基本流程 ----
+        // ---- 1. 基本流程：輸入 → 處理 → 輸出報告 ----
         Template {
             id: "flow.basic",
             nodes: vec![
-                node(ShapeKind::Terminator, "開始", 60.0, 0.0, 120.0, 50.0),
-                node(ShapeKind::Process, "步驟一", 60.0, 100.0, 120.0, 60.0),
-                node(ShapeKind::Process, "步驟二", 60.0, 210.0, 120.0, 60.0),
-                node(ShapeKind::Terminator, "結束", 60.0, 320.0, 120.0, 50.0),
+                node(Terminator, "開始", 60.0, 0.0, 120.0, 50.0),
+                node(Data, "輸入資料", 40.0, 100.0, 160.0, 60.0),
+                node(Process, "處理資料", 60.0, 210.0, 120.0, 60.0),
+                node(Document, "輸出報告", 60.0, 320.0, 120.0, 70.0),
+                node(Terminator, "結束", 60.0, 440.0, 120.0, 50.0),
             ],
-            edges: vec![(0, 1, ""), (1, 2, ""), (2, 3, "")],
+            edges: vec![(0, 1, ""), (1, 2, ""), (2, 3, ""), (3, 4, "")],
         },
-        // ---- 判斷分支 ----
+        // ---- 2. 判斷分支 ----
         Template {
             id: "flow.decision",
             nodes: vec![
-                node(ShapeKind::Terminator, "開始", 120.0, 0.0, 120.0, 50.0),
-                node(ShapeKind::Decision, "條件成立？", 100.0, 100.0, 160.0, 90.0),
-                node(ShapeKind::Process, "是", 0.0, 240.0, 120.0, 60.0),
-                node(ShapeKind::Process, "否", 240.0, 240.0, 120.0, 60.0),
-                node(ShapeKind::Terminator, "結束", 120.0, 350.0, 120.0, 50.0),
+                node(Terminator, "開始", 120.0, 0.0, 120.0, 50.0),
+                node(Data, "輸入資料", 100.0, 95.0, 160.0, 60.0),
+                node(Decision, "條件成立？", 100.0, 205.0, 160.0, 90.0),
+                node(Process, "執行 A", 0.0, 345.0, 120.0, 60.0),
+                node(Process, "執行 B", 240.0, 345.0, 120.0, 60.0),
+                node(Terminator, "結束", 120.0, 455.0, 120.0, 50.0),
             ],
             edges: vec![
                 (0, 1, ""),
-                (1, 2, "是"),
-                (1, 3, "否"),
-                (2, 4, ""),
-                (3, 4, ""),
+                (1, 2, ""),
+                (2, 3, "是"),
+                (2, 4, "否"),
+                (3, 5, ""),
+                (4, 5, ""),
             ],
         },
-        // ---- 輸入處理輸出 ----
+        // ---- 3. 輸入處理輸出（含儲存與顯示）----
         Template {
             id: "flow.io",
             nodes: vec![
-                node(ShapeKind::Data, "輸入資料", 40.0, 0.0, 160.0, 60.0),
-                node(ShapeKind::Process, "處理", 40.0, 110.0, 160.0, 60.0),
-                node(ShapeKind::Database, "儲存", 40.0, 220.0, 160.0, 80.0),
-                node(ShapeKind::Data, "輸出結果", 40.0, 350.0, 160.0, 60.0),
+                node(Data, "輸入資料", 40.0, 0.0, 160.0, 60.0),
+                node(Process, "處理", 40.0, 110.0, 160.0, 60.0),
+                node(Database, "儲存", 40.0, 220.0, 160.0, 80.0),
+                node(Display, "顯示結果", 40.0, 350.0, 160.0, 60.0),
+                node(Document, "列印報表", 40.0, 460.0, 160.0, 70.0),
             ],
-            edges: vec![(0, 1, ""), (1, 2, ""), (2, 3, "")],
+            edges: vec![(0, 1, ""), (1, 2, ""), (2, 3, ""), (3, 4, "")],
         },
-        // ---- 迴圈 ----
+        // ---- 4. 迴圈（用 ISO 5807 的迴圈開始／結束符號）----
         Template {
             id: "flow.loop",
             nodes: vec![
-                node(ShapeKind::Terminator, "開始", 80.0, 0.0, 120.0, 50.0),
-                node(ShapeKind::Preparation, "初始化", 60.0, 100.0, 160.0, 60.0),
-                node(ShapeKind::Process, "執行", 80.0, 210.0, 120.0, 60.0),
-                node(ShapeKind::Decision, "繼續？", 60.0, 310.0, 160.0, 90.0),
-                node(ShapeKind::Terminator, "結束", 80.0, 450.0, 120.0, 50.0),
+                node(Terminator, "開始", 80.0, 0.0, 120.0, 50.0),
+                node(Preparation, "初始化", 60.0, 95.0, 160.0, 60.0),
+                node(LoopLimitStart, "迴圈開始", 60.0, 200.0, 160.0, 50.0),
+                node(Process, "執行", 80.0, 295.0, 120.0, 60.0),
+                node(LoopLimitEnd, "迴圈結束", 60.0, 400.0, 160.0, 50.0),
+                node(Decision, "繼續？", 60.0, 495.0, 160.0, 90.0),
+                node(Terminator, "結束", 80.0, 630.0, 120.0, 50.0),
             ],
             edges: vec![
                 (0, 1, ""),
                 (1, 2, ""),
                 (2, 3, ""),
-                (3, 2, "是"),
-                (3, 4, "否"),
+                (3, 4, ""),
+                (4, 5, ""),
+                (5, 2, "是"),
+                (5, 6, "否"),
             ],
+        },
+        // ---- 5. 簽核審核 ----
+        Template {
+            id: "flow.approval",
+            nodes: vec![
+                node(Terminator, "提出申請", 200.0, 0.0, 140.0, 50.0),
+                node(ManualInput, "填寫申請單", 180.0, 95.0, 180.0, 60.0),
+                node(Decision, "主管核准？", 180.0, 205.0, 180.0, 90.0),
+                node(Process, "退回修改", 0.0, 235.0, 140.0, 60.0),
+                node(Process, "通知執行", 400.0, 235.0, 140.0, 60.0),
+                node(Terminator, "結束", 410.0, 350.0, 120.0, 50.0),
+            ],
+            edges: vec![
+                (0, 1, ""),
+                (1, 2, ""),
+                (2, 4, "是"),
+                (2, 3, "否"),
+                (3, 1, ""),
+                (4, 5, ""),
+            ],
+        },
+        // ---- 6. 登入驗證 ----
+        Template {
+            id: "flow.login",
+            nodes: vec![
+                node(Terminator, "開始登入", 170.0, 0.0, 140.0, 50.0),
+                node(ManualInput, "輸入帳號密碼", 150.0, 95.0, 180.0, 60.0),
+                node(PredefinedProcess, "驗證身分", 170.0, 200.0, 140.0, 60.0),
+                node(Decision, "驗證成功？", 150.0, 305.0, 180.0, 90.0),
+                node(Terminator, "進入首頁", 150.0, 440.0, 180.0, 50.0),
+                node(Decision, "錯誤超過 3 次？", 380.0, 305.0, 180.0, 90.0),
+                node(Process, "鎖定帳號", 380.0, 440.0, 180.0, 60.0),
+                node(Terminator, "結束", 380.0, 545.0, 180.0, 50.0),
+            ],
+            edges: vec![
+                (0, 1, ""),
+                (1, 2, ""),
+                (2, 3, ""),
+                (3, 4, "是"),
+                (3, 5, "否"),
+                (5, 6, "是"),
+                (5, 1, "否"),
+                (6, 7, ""),
+            ],
+        },
+        // ---- 7. 錯誤處理與重試 ----
+        Template {
+            id: "flow.retry",
+            nodes: vec![
+                node(Terminator, "開始", 150.0, 0.0, 120.0, 50.0),
+                node(Process, "呼叫服務", 140.0, 95.0, 140.0, 60.0),
+                node(Decision, "成功？", 130.0, 205.0, 160.0, 90.0),
+                node(Terminator, "完成", 150.0, 345.0, 120.0, 50.0),
+                node(Decision, "重試未滿 3 次？", 340.0, 205.0, 180.0, 90.0),
+                node(Delay, "等待後重試", 350.0, 95.0, 160.0, 60.0),
+                node(Document, "記錄錯誤", 360.0, 345.0, 140.0, 70.0),
+                node(Terminator, "結束", 370.0, 455.0, 120.0, 50.0),
+            ],
+            edges: vec![
+                (0, 1, ""),
+                (1, 2, ""),
+                (2, 3, "是"),
+                (2, 4, "否"),
+                (4, 5, "是"),
+                (5, 1, ""),
+                (4, 6, "否"),
+                (6, 7, ""),
+            ],
+        },
+        // ---- 8. 資料處理管線（擷取、轉換、載入）----
+        Template {
+            id: "flow.pipeline",
+            nodes: vec![
+                node(Database, "資料來源", 0.0, 0.0, 140.0, 80.0),
+                node(Process, "擷取", 190.0, 10.0, 120.0, 60.0),
+                node(Process, "轉換", 360.0, 10.0, 120.0, 60.0),
+                node(Decision, "驗證通過？", 520.0, 0.0, 170.0, 90.0),
+                node(Database, "資料倉儲", 740.0, 0.0, 140.0, 80.0),
+                node(Document, "錯誤報告", 540.0, 150.0, 130.0, 70.0),
+            ],
+            edges: vec![
+                (0, 1, ""),
+                (1, 2, ""),
+                (2, 3, ""),
+                (3, 4, "是"),
+                (3, 5, "否"),
+            ],
+        },
+        // ---- 9. 平行處理（ISO 5807 平行模式）----
+        Template {
+            id: "flow.parallel",
+            nodes: vec![
+                node(Terminator, "開始", 170.0, 0.0, 120.0, 50.0),
+                node(Process, "準備資料", 160.0, 95.0, 140.0, 60.0),
+                node(ParallelMode, "平行開始", 80.0, 200.0, 300.0, 40.0),
+                node(Process, "任務 A", 80.0, 285.0, 120.0, 60.0),
+                node(Process, "任務 B", 260.0, 285.0, 120.0, 60.0),
+                node(ParallelMode, "平行結束", 80.0, 390.0, 300.0, 40.0),
+                node(Process, "彙整結果", 160.0, 475.0, 140.0, 60.0),
+                node(Terminator, "結束", 170.0, 580.0, 120.0, 50.0),
+            ],
+            edges: vec![
+                (0, 1, ""),
+                (1, 2, ""),
+                (2, 3, ""),
+                (2, 4, ""),
+                (3, 5, ""),
+                (4, 5, ""),
+                (5, 6, ""),
+                (6, 7, ""),
+            ],
+        },
+        // ---- 10. 文件處理（多份文件、排序、預先定義作業、離線儲存、註解）----
+        Template {
+            id: "flow.documents",
+            nodes: vec![
+                node(Terminator, "開始", 150.0, 0.0, 120.0, 50.0),
+                node(MultiDocument, "收件文件", 130.0, 95.0, 160.0, 80.0),
+                node(Sort, "排序", 150.0, 225.0, 120.0, 90.0),
+                node(PredefinedProcess, "歸檔作業", 140.0, 365.0, 140.0, 60.0),
+                node(OfflineStorage, "離線保存", 160.0, 470.0, 100.0, 80.0),
+                node(Annotation, "註解：保存 7 年", 310.0, 480.0, 170.0, 60.0),
+                node(Terminator, "結束", 150.0, 595.0, 120.0, 50.0),
+            ],
+            edges: vec![(0, 1, ""), (1, 2, ""), (2, 3, ""), (3, 4, ""), (4, 6, "")],
         },
     ]
 }
@@ -254,6 +389,55 @@ mod tests {
         for c in basic.connections() {
             assert_eq!(c.from_anchor, Anchor::Bottom);
             assert_eq!(c.to_anchor, Anchor::Top);
+        }
+    }
+
+    #[test]
+    fn there_are_ten_templates_with_distinct_symbol_sets() {
+        let all = builtin_templates();
+        assert_eq!(all.len(), 10);
+        let mut kinds = std::collections::HashSet::new();
+        for t in &all {
+            for n in &t.nodes {
+                kinds.insert(format!("{:?}", n.kind));
+            }
+        }
+        // 十份合起來要用到夠多種符號，不只是同一組方塊換名字。
+        assert!(kinds.len() >= 14, "只用了 {} 種符號", kinds.len());
+    }
+
+    #[test]
+    fn every_decision_branch_is_labelled() {
+        for t in builtin_templates() {
+            for (i, n) in t.nodes.iter().enumerate() {
+                if n.kind != ShapeKind::Decision {
+                    continue;
+                }
+                let out: Vec<_> = t.edges.iter().filter(|(f, _, _)| *f == i).collect();
+                if out.len() >= 2 {
+                    assert!(
+                        out.iter().all(|(_, _, l)| !l.is_empty()),
+                        "{} 的判斷分支缺標籤",
+                        t.id
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn template_nodes_do_not_overlap() {
+        // 節點疊在一起，使用者插入後得先一個一個拖開。
+        for t in builtin_templates() {
+            for (i, a) in t.nodes.iter().enumerate() {
+                for b in t.nodes.iter().skip(i + 1) {
+                    let overlap = a.x < b.x + b.width
+                        && b.x < a.x + a.width
+                        && a.y < b.y + b.height
+                        && b.y < a.y + a.height;
+                    assert!(!overlap, "{} 的「{}」與「{}」重疊", t.id, a.label, b.label);
+                }
+            }
         }
     }
 }

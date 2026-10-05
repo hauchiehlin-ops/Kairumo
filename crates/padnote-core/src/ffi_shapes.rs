@@ -6,7 +6,9 @@
 
 use padnote_ink::Rect;
 use padnote_shapes::align::{AlignMode, AlignRect};
-use padnote_shapes::{Anchor, Connection, EndCap, RouteStyle, Shape, ShapeKind, arrow_head};
+use padnote_shapes::{
+    Anchor, Connection, EndCap, RouteStyle, Shape, ShapeCategory, ShapeKind, arrow_head,
+};
 
 use crate::ffi_geometry::FfiRect;
 
@@ -65,6 +67,30 @@ pub enum FfiShapeKind {
     SpeechBubble,
     Plaque,
     Pie,
+    PredefinedProcess,
+    AlternateProcess,
+    InternalStorage,
+    MultiDocument,
+    SequentialAccessStorage,
+    DirectAccessStorage,
+    Sort,
+    SummingJunction,
+    OrJunction,
+    LoopLimitStart,
+    LoopLimitEnd,
+    ParallelMode,
+    CommunicationLink,
+    Annotation,
+    OfflineStorage,
+    Cube,
+    Cylinder,
+    Cone,
+    Pyramid,
+    TriangularPrism,
+    Sphere,
+    Hemisphere,
+    Torus,
+    Tetrahedron,
     Line,
     Arrow,
     DoubleArrow,
@@ -125,6 +151,30 @@ impl From<FfiShapeKind> for ShapeKind {
             FfiShapeKind::SpeechBubble => Self::SpeechBubble,
             FfiShapeKind::Plaque => Self::Plaque,
             FfiShapeKind::Pie => Self::Pie,
+            FfiShapeKind::PredefinedProcess => Self::PredefinedProcess,
+            FfiShapeKind::AlternateProcess => Self::AlternateProcess,
+            FfiShapeKind::InternalStorage => Self::InternalStorage,
+            FfiShapeKind::MultiDocument => Self::MultiDocument,
+            FfiShapeKind::SequentialAccessStorage => Self::SequentialAccessStorage,
+            FfiShapeKind::DirectAccessStorage => Self::DirectAccessStorage,
+            FfiShapeKind::Sort => Self::Sort,
+            FfiShapeKind::SummingJunction => Self::SummingJunction,
+            FfiShapeKind::OrJunction => Self::OrJunction,
+            FfiShapeKind::LoopLimitStart => Self::LoopLimitStart,
+            FfiShapeKind::LoopLimitEnd => Self::LoopLimitEnd,
+            FfiShapeKind::ParallelMode => Self::ParallelMode,
+            FfiShapeKind::CommunicationLink => Self::CommunicationLink,
+            FfiShapeKind::Annotation => Self::Annotation,
+            FfiShapeKind::OfflineStorage => Self::OfflineStorage,
+            FfiShapeKind::Cube => Self::Cube,
+            FfiShapeKind::Cylinder => Self::Cylinder,
+            FfiShapeKind::Cone => Self::Cone,
+            FfiShapeKind::Pyramid => Self::Pyramid,
+            FfiShapeKind::TriangularPrism => Self::TriangularPrism,
+            FfiShapeKind::Sphere => Self::Sphere,
+            FfiShapeKind::Hemisphere => Self::Hemisphere,
+            FfiShapeKind::Torus => Self::Torus,
+            FfiShapeKind::Tetrahedron => Self::Tetrahedron,
             FfiShapeKind::Line => Self::Line,
             FfiShapeKind::Arrow => Self::Arrow,
             FfiShapeKind::DoubleArrow => Self::DoubleArrow,
@@ -187,6 +237,30 @@ impl From<ShapeKind> for FfiShapeKind {
             ShapeKind::SpeechBubble => Self::SpeechBubble,
             ShapeKind::Plaque => Self::Plaque,
             ShapeKind::Pie => Self::Pie,
+            ShapeKind::PredefinedProcess => Self::PredefinedProcess,
+            ShapeKind::AlternateProcess => Self::AlternateProcess,
+            ShapeKind::InternalStorage => Self::InternalStorage,
+            ShapeKind::MultiDocument => Self::MultiDocument,
+            ShapeKind::SequentialAccessStorage => Self::SequentialAccessStorage,
+            ShapeKind::DirectAccessStorage => Self::DirectAccessStorage,
+            ShapeKind::Sort => Self::Sort,
+            ShapeKind::SummingJunction => Self::SummingJunction,
+            ShapeKind::OrJunction => Self::OrJunction,
+            ShapeKind::LoopLimitStart => Self::LoopLimitStart,
+            ShapeKind::LoopLimitEnd => Self::LoopLimitEnd,
+            ShapeKind::ParallelMode => Self::ParallelMode,
+            ShapeKind::CommunicationLink => Self::CommunicationLink,
+            ShapeKind::Annotation => Self::Annotation,
+            ShapeKind::OfflineStorage => Self::OfflineStorage,
+            ShapeKind::Cube => Self::Cube,
+            ShapeKind::Cylinder => Self::Cylinder,
+            ShapeKind::Cone => Self::Cone,
+            ShapeKind::Pyramid => Self::Pyramid,
+            ShapeKind::TriangularPrism => Self::TriangularPrism,
+            ShapeKind::Sphere => Self::Sphere,
+            ShapeKind::Hemisphere => Self::Hemisphere,
+            ShapeKind::Torus => Self::Torus,
+            ShapeKind::Tetrahedron => Self::Tetrahedron,
             ShapeKind::Line => Self::Line,
             ShapeKind::Arrow => Self::Arrow,
             ShapeKind::DoubleArrow => Self::DoubleArrow,
@@ -320,6 +394,92 @@ pub fn shape_outline(shape: FfiShape, segments: u32) -> Vec<FfiPoint> {
         .into_iter()
         .map(Into::into)
         .collect()
+}
+
+/// 輪廓之外的一筆細節：立體圖的面與稜線、流程圖符號裡的線。
+#[derive(Clone, Debug, uniffi::Record)]
+pub struct FfiShapeDetail {
+    pub points: Vec<FfiPoint>,
+    /// 封閉的面；否則是一條折線。
+    pub closed: bool,
+    /// 面的明暗：> 0 疊白、< 0 疊黑（絕對值是不透明度）；0 只描線。
+    pub tone: f32,
+    /// 虛線（被擋住的背面稜線）。
+    pub dashed: bool,
+}
+
+/// 形狀的細節（與 [`shape_outline`] 同一個座標系、**不套用旋轉**）。
+#[uniffi::export]
+pub fn shape_details(shape: FfiShape, segments: u32) -> Vec<FfiShapeDetail> {
+    Shape::from(shape)
+        .details(segments as usize)
+        .into_iter()
+        .map(|d| FfiShapeDetail {
+            points: d.points.into_iter().map(Into::into).collect(),
+            closed: d.closed,
+            tone: d.tone,
+            dashed: d.dashed,
+        })
+        .collect()
+}
+
+/// 輪廓本身要不要畫（平行模式與註解只有內部的線）。
+#[uniffi::export]
+pub fn shape_draws_outline(kind: FfiShapeKind) -> bool {
+    ShapeKind::from(kind).draws_outline()
+}
+
+/// 選單分組。
+#[derive(Clone, Copy, PartialEq, Eq, Debug, uniffi::Enum)]
+pub enum FfiShapeCategory {
+    Basic,
+    Solid,
+    FlowProcess,
+    FlowData,
+    FlowControl,
+    FlowSpecial,
+}
+
+impl From<ShapeCategory> for FfiShapeCategory {
+    fn from(c: ShapeCategory) -> Self {
+        match c {
+            ShapeCategory::Basic => Self::Basic,
+            ShapeCategory::Solid => Self::Solid,
+            ShapeCategory::FlowProcess => Self::FlowProcess,
+            ShapeCategory::FlowData => Self::FlowData,
+            ShapeCategory::FlowControl => Self::FlowControl,
+            ShapeCategory::FlowSpecial => Self::FlowSpecial,
+        }
+    }
+}
+
+/// 分組的顯示順序。
+#[uniffi::export]
+pub fn shape_categories() -> Vec<FfiShapeCategory> {
+    ShapeCategory::ALL.iter().copied().map(Into::into).collect()
+}
+
+/// 某一組裡的全部形狀種類（依選單順序）。
+#[uniffi::export]
+pub fn shape_kinds_in(category: FfiShapeCategory) -> Vec<FfiShapeKind> {
+    ALL_KINDS
+        .iter()
+        .filter(|k| FfiShapeCategory::from(k.category()) == category)
+        .copied()
+        .map(Into::into)
+        .collect()
+}
+
+/// 立體圖（深度可調）。
+#[uniffi::export]
+pub fn shape_is_solid(kind: FfiShapeKind) -> bool {
+    ShapeKind::from(kind).is_solid()
+}
+
+/// 新插入一個形狀時 `corner_radius` 該放多少（立體圖要有看得出來的深度）。
+#[uniffi::export]
+pub fn shape_default_corner_radius(kind: FfiShapeKind, width: f32, height: f32) -> f32 {
+    Shape::default_corner_radius(kind.into(), width, height)
 }
 
 /// 連接點的座標。
@@ -475,7 +635,7 @@ pub fn flowchart_shape_kinds() -> Vec<FfiShapeKind> {
         .collect()
 }
 
-const ALL_KINDS: [ShapeKind; 55] = [
+const ALL_KINDS: [ShapeKind; 79] = [
     ShapeKind::Rectangle,
     ShapeKind::RoundedRectangle,
     ShapeKind::Ellipse,
@@ -528,6 +688,30 @@ const ALL_KINDS: [ShapeKind; 55] = [
     ShapeKind::SpeechBubble,
     ShapeKind::Plaque,
     ShapeKind::Pie,
+    ShapeKind::PredefinedProcess,
+    ShapeKind::AlternateProcess,
+    ShapeKind::InternalStorage,
+    ShapeKind::MultiDocument,
+    ShapeKind::SequentialAccessStorage,
+    ShapeKind::DirectAccessStorage,
+    ShapeKind::Sort,
+    ShapeKind::SummingJunction,
+    ShapeKind::OrJunction,
+    ShapeKind::LoopLimitStart,
+    ShapeKind::LoopLimitEnd,
+    ShapeKind::ParallelMode,
+    ShapeKind::CommunicationLink,
+    ShapeKind::Annotation,
+    ShapeKind::OfflineStorage,
+    ShapeKind::Cube,
+    ShapeKind::Cylinder,
+    ShapeKind::Cone,
+    ShapeKind::Pyramid,
+    ShapeKind::TriangularPrism,
+    ShapeKind::Sphere,
+    ShapeKind::Hemisphere,
+    ShapeKind::Torus,
+    ShapeKind::Tetrahedron,
     ShapeKind::Line,
     ShapeKind::Arrow,
     ShapeKind::DoubleArrow,

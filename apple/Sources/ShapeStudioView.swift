@@ -28,14 +28,14 @@ public struct ShapeStudioView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
-                    section(
-                        title: localizationManager.localized("shape_section_basic"),
-                        kinds: allShapeKinds().filter { !flowchartShapeKinds().contains($0) }
-                    )
-                    section(
-                        title: localizationManager.localized("shape_section_flowchart"),
-                        kinds: flowchartShapeKinds()
-                    )
+                    // 一般形狀、立體圖、流程圖四組（ISO 5807 的分類）：分組與順序都來自核心，
+                    // 與 Android 同一份。
+                    ForEach(shapeCategories(), id: \.self) { category in
+                        section(
+                            title: localizationManager.localized(Self.sectionKey(category)),
+                            kinds: shapeKindsIn(category: category)
+                        )
+                    }
                     templates
                 }
                 .padding(16)
@@ -51,6 +51,24 @@ public struct ShapeStudioView: View {
                 }
             }
         }
+    }
+
+    private static func sectionKey(_ category: FfiShapeCategory) -> String {
+        switch category {
+        case .basic: return "shape_section_basic"
+        case .solid: return "shape_section_solid"
+        case .flowProcess: return "shape_section_flow_process"
+        case .flowData: return "shape_section_flow_data"
+        case .flowControl: return "shape_section_flow_control"
+        case .flowSpecial: return "shape_section_flow_special"
+        }
+    }
+
+    /// 範本的顯示名稱。語系表沒有的退回識別碼，不顯示空白。
+    private func templateName(_ id: String) -> String {
+        let key = "shape_template_" + id.replacingOccurrences(of: ".", with: "_")
+        let text = localizationManager.localized(key)
+        return text == key ? id : text
     }
 
     /// 一格的邊長。
@@ -114,7 +132,7 @@ public struct ShapeStudioView: View {
                     HStack {
                         Image(systemName: "square.on.square.dashed")
                         VStack(alignment: .leading) {
-                            Text(template.id).font(.callout)
+                            Text(templateName(template.id)).font(.callout)
                             Text(localizationManager.localized("shape_node_count")
                                 .replacingOccurrences(
                                     of: "%@", with: "\(template.nodes.count)"))
@@ -135,10 +153,7 @@ public struct ShapeStudioView: View {
     }
 
     private func insert(_ kind: FfiShapeKind) {
-        onCommit(
-            [NoteShapeAttachment(kindName: NoteShapeAttachment.name(of: kind))],
-            []
-        )
+        onCommit([NoteShapeAttachment.inserting(kind)], [])
         dismiss()
     }
 
@@ -192,7 +207,8 @@ struct ShapeThumbnail: View {
                         minX: 2, minY: 2,
                         maxX: Float(size.width) - 2, maxY: Float(size.height) - 2
                     ),
-                    cornerRadius: 4,
+                    cornerRadius: shapeDefaultCornerRadius(
+                        kind: kind, width: Float(size.width), height: Float(size.height)),
                     // 選單裡的預覽一律正放，才比較得出形狀本身的差別。
                     rotationDegrees: 0
                 ),
@@ -209,7 +225,32 @@ struct ShapeThumbnail: View {
             }
             // 線狀形狀不能收尾：折回去就成了零面積的圖形。
             if !isLinear { path.closeSubpath() }
-            context.stroke(path, with: .color(.primary), lineWidth: 1.5)
+            if shapeDrawsOutline(kind: kind) {
+                context.stroke(path, with: .color(.primary), lineWidth: 1.5)
+            }
+            // 立體圖的面與稜線、流程圖符號裡的線。
+            let thumbShape = FfiShape(
+                kind: kind,
+                bounds: FfiRect(minX: 2, minY: 2,
+                                maxX: Float(size.width) - 2, maxY: Float(size.height) - 2),
+                cornerRadius: shapeDefaultCornerRadius(
+                    kind: kind, width: Float(size.width), height: Float(size.height)),
+                rotationDegrees: 0
+            )
+            for detail in shapeDetails(shape: thumbShape, segments: 40) where detail.points.count >= 2 {
+                var d = Path()
+                d.move(to: CGPoint(x: CGFloat(detail.points[0].x), y: CGFloat(detail.points[0].y)))
+                for p in detail.points.dropFirst() {
+                    d.addLine(to: CGPoint(x: CGFloat(p.x), y: CGFloat(p.y)))
+                }
+                if detail.closed {
+                    d.closeSubpath()
+                    if detail.tone < 0 { context.fill(d, with: .color(.primary.opacity(0.18))) }
+                }
+                context.stroke(
+                    d, with: .color(.primary),
+                    style: StrokeStyle(lineWidth: 1, dash: detail.dashed ? [3, 2] : []))
+            }
 
             if isLinear {
                 let heads = shapeArrowHeads(

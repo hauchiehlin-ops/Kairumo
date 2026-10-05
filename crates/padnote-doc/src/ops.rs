@@ -504,6 +504,30 @@ impl Writer {
             ShapeKind::SpeechBubble => 52,
             ShapeKind::Plaque => 53,
             ShapeKind::Pie => 54,
+            ShapeKind::PredefinedProcess => 55,
+            ShapeKind::AlternateProcess => 56,
+            ShapeKind::InternalStorage => 57,
+            ShapeKind::MultiDocument => 58,
+            ShapeKind::SequentialAccessStorage => 59,
+            ShapeKind::DirectAccessStorage => 60,
+            ShapeKind::Sort => 61,
+            ShapeKind::SummingJunction => 62,
+            ShapeKind::OrJunction => 63,
+            ShapeKind::LoopLimitStart => 64,
+            ShapeKind::LoopLimitEnd => 65,
+            ShapeKind::ParallelMode => 66,
+            ShapeKind::CommunicationLink => 67,
+            ShapeKind::Annotation => 68,
+            ShapeKind::OfflineStorage => 69,
+            ShapeKind::Cube => 70,
+            ShapeKind::Cylinder => 71,
+            ShapeKind::Cone => 72,
+            ShapeKind::Pyramid => 73,
+            ShapeKind::TriangularPrism => 74,
+            ShapeKind::Sphere => 75,
+            ShapeKind::Hemisphere => 76,
+            ShapeKind::Torus => 77,
+            ShapeKind::Tetrahedron => 78,
         })
     }
     fn anchor(&mut self, a: Anchor) -> &mut Self {
@@ -731,6 +755,30 @@ impl<'a> Reader<'a> {
             52 => ShapeKind::SpeechBubble,
             53 => ShapeKind::Plaque,
             54 => ShapeKind::Pie,
+            55 => ShapeKind::PredefinedProcess,
+            56 => ShapeKind::AlternateProcess,
+            57 => ShapeKind::InternalStorage,
+            58 => ShapeKind::MultiDocument,
+            59 => ShapeKind::SequentialAccessStorage,
+            60 => ShapeKind::DirectAccessStorage,
+            61 => ShapeKind::Sort,
+            62 => ShapeKind::SummingJunction,
+            63 => ShapeKind::OrJunction,
+            64 => ShapeKind::LoopLimitStart,
+            65 => ShapeKind::LoopLimitEnd,
+            66 => ShapeKind::ParallelMode,
+            67 => ShapeKind::CommunicationLink,
+            68 => ShapeKind::Annotation,
+            69 => ShapeKind::OfflineStorage,
+            70 => ShapeKind::Cube,
+            71 => ShapeKind::Cylinder,
+            72 => ShapeKind::Cone,
+            73 => ShapeKind::Pyramid,
+            74 => ShapeKind::TriangularPrism,
+            75 => ShapeKind::Sphere,
+            76 => ShapeKind::Hemisphere,
+            77 => ShapeKind::Torus,
+            78 => ShapeKind::Tetrahedron,
             k => return Err(DocCodecError::UnknownShapeKind(k)),
         })
     }
@@ -1670,6 +1718,46 @@ mod tests {
                 op,
                 "{kind:?}"
             );
+        }
+    }
+
+    /// 每一種形狀都要能寫進 .padnote 再讀回來，而且 0–54 的編號一個都不能動
+    /// （那些號碼已經在使用者的檔案裡）。新增的從 55 起。
+    #[test]
+    fn every_shape_kind_roundtrips_and_old_codes_are_frozen() {
+        for code in 0u8..=78 {
+            let bytes = [code];
+            let mut reader = Reader {
+                data: &bytes,
+                pos: 0,
+            };
+            let kind = reader
+                .shape_kind()
+                .unwrap_or_else(|e| panic!("{code}: {e:?}"));
+            let mut writer = Writer(Vec::new());
+            writer.shape_kind(kind);
+            assert_eq!(writer.0, vec![code], "{kind:?} 的編號變了");
+        }
+        let bytes = [79u8];
+        assert!(
+            Reader {
+                data: &bytes,
+                pos: 0
+            }
+            .shape_kind()
+            .is_err(),
+            "79 還沒有對應的形狀"
+        );
+        for (code, kind) in [
+            (0u8, ShapeKind::Rectangle),
+            (20, ShapeKind::ManualOperation),
+            (54, ShapeKind::Pie),
+            (55, ShapeKind::PredefinedProcess),
+            (70, ShapeKind::Cube),
+        ] {
+            let mut writer = Writer(Vec::new());
+            writer.shape_kind(kind);
+            assert_eq!(writer.0, vec![code]);
         }
     }
 

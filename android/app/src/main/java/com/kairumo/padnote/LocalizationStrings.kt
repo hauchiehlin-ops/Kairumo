@@ -10236,6 +10236,14 @@ object LocalizationStrings {
             "ko" to "모서리 반경",
             "th" to "รัศมีมุม"
         ),
+        "shape_depth" to mapOf(
+            "zh-Hant" to "深度",
+            "en" to "Depth",
+            "zh-Hans" to "深度",
+            "ja" to "奥行き",
+            "ko" to "깊이",
+            "th" to "ความลึก"
+        ),
         "shape_duplicate" to mapOf(
             "zh-Hant" to "複製",
             "en" to "Duplicate",
@@ -10259,7 +10267,10 @@ object LocalizationStrings {
             "ja" to "塗りつぶし",
             "ko" to "채우기",
             "th" to "สีพื้น"
-        ),
+        )
+    )
+
+    private fun part16(): Map<String, Map<String, String>> = mapOf(
         "shape_flowchart_hint" to mapOf(
             "zh-Hant" to "點選形狀後，從四邊的「+」拖到另一個形狀即可連線",
             "en" to "Select a shape, then drag from a “+” on its edge to another shape to connect them",
@@ -10267,10 +10278,7 @@ object LocalizationStrings {
             "ja" to "図形を選び、辺の「+」から別の図形へドラッグすると接続できます",
             "ko" to "도형을 선택한 뒤 가장자리의 “+”에서 다른 도형으로 드래그하면 연결됩니다",
             "th" to "เลือกรูปร่าง แล้วลากจาก “+” ที่ขอบไปยังรูปร่างอื่นเพื่อเชื่อมต่อ"
-        )
-    )
-
-    private fun part16(): Map<String, Map<String, String>> = mapOf(
+        ),
         "shape_geometry_section" to mapOf(
             "zh-Hant" to "位置與大小",
             "en" to "Position & size",
@@ -10286,6 +10294,22 @@ object LocalizationStrings {
             "ja" to "高さ",
             "ko" to "높이",
             "th" to "สูง"
+        ),
+        "shape_kind_alternateprocess" to mapOf(
+            "zh-Hant" to "替代處理",
+            "en" to "Alternate process",
+            "zh-Hans" to "替代处理",
+            "ja" to "代替処理",
+            "ko" to "대체 처리",
+            "th" to "กระบวนการทางเลือก"
+        ),
+        "shape_kind_annotation" to mapOf(
+            "zh-Hant" to "註解",
+            "en" to "Annotation",
+            "zh-Hans" to "注释",
+            "ja" to "注釈",
+            "ko" to "주석",
+            "th" to "หมายเหตุ"
         ),
         "shape_kind_arrow" to mapOf(
             "zh-Hant" to "箭頭",
@@ -10367,6 +10391,22 @@ object LocalizationStrings {
             "ko" to "대조",
             "th" to "เรียงเทียบ"
         ),
+        "shape_kind_communicationlink" to mapOf(
+            "zh-Hant" to "通訊連結",
+            "en" to "Communication link",
+            "zh-Hans" to "通信链路",
+            "ja" to "通信リンク",
+            "ko" to "통신 링크",
+            "th" to "การเชื่อมต่อสื่อสาร"
+        ),
+        "shape_kind_cone" to mapOf(
+            "zh-Hant" to "圓錐體",
+            "en" to "Cone",
+            "zh-Hans" to "圆锥体",
+            "ja" to "円錐",
+            "ko" to "원뿔",
+            "th" to "กรวย"
+        ),
         "shape_kind_connector" to mapOf(
             "zh-Hant" to "連接點",
             "en" to "Connector",
@@ -10382,6 +10422,22 @@ object LocalizationStrings {
             "ja" to "十字",
             "ko" to "십자",
             "th" to "กากบาท"
+        ),
+        "shape_kind_cube" to mapOf(
+            "zh-Hant" to "立方體",
+            "en" to "Cube",
+            "zh-Hans" to "立方体",
+            "ja" to "立方体",
+            "ko" to "정육면체",
+            "th" to "ลูกบาศก์"
+        ),
+        "shape_kind_cylinder" to mapOf(
+            "zh-Hant" to "圓柱體",
+            "en" to "Cylinder",
+            "zh-Hans" to "圆柱体",
+            "ja" to "円柱",
+            "ko" to "원기둥",
+            "th" to "ทรงกระบอก"
         ),
         "shape_kind_data" to mapOf(
             "zh-Hant" to "資料",
@@ -10422,6 +10478,14 @@ object LocalizationStrings {
             "ja" to "ひし形",
             "ko" to "마름모",
             "th" to "ข้าวหลามตัด"
+        ),
+        "shape_kind_directaccessstorage" to mapOf(
+            "zh-Hant" to "直接存取儲存",
+            "en" to "Direct access storage",
+            "zh-Hans" to "直接存取存储",
+            "ja" to "直接アクセス記憶",
+            "ko" to "직접 접근 저장소",
+            "th" to "ที่เก็บแบบเข้าถึงโดยตรง"
         ),
         "shape_kind_display" to mapOf(
             "zh-Hant" to "顯示",
@@ -10471,6 +10535,14 @@ object LocalizationStrings {
             "ko" to "하트",
             "th" to "หัวใจ"
         ),
+        "shape_kind_hemisphere" to mapOf(
+            "zh-Hant" to "半球",
+            "en" to "Hemisphere",
+            "zh-Hans" to "半球",
+            "ja" to "半球",
+            "ko" to "반구",
+            "th" to "ซีกโลก"
+        ),
         "shape_kind_heptagon" to mapOf(
             "zh-Hant" to "七邊形",
             "en" to "Heptagon",
@@ -10487,6 +10559,14 @@ object LocalizationStrings {
             "ko" to "육각형",
             "th" to "หกเหลี่ยม"
         ),
+        "shape_kind_internalstorage" to mapOf(
+            "zh-Hant" to "內部儲存",
+            "en" to "Internal storage",
+            "zh-Hans" to "内部存储",
+            "ja" to "内部記憶",
+            "ko" to "내부 저장소",
+            "th" to "ที่เก็บภายใน"
+        ),
         "shape_kind_line" to mapOf(
             "zh-Hant" to "直線",
             "en" to "Line",
@@ -10494,6 +10574,22 @@ object LocalizationStrings {
             "ja" to "直線",
             "ko" to "직선",
             "th" to "เส้นตรง"
+        ),
+        "shape_kind_looplimitend" to mapOf(
+            "zh-Hant" to "迴圈結束",
+            "en" to "Loop limit (end)",
+            "zh-Hans" to "循环结束",
+            "ja" to "ループ終了",
+            "ko" to "반복 종료",
+            "th" to "สิ้นสุดลูป"
+        ),
+        "shape_kind_looplimitstart" to mapOf(
+            "zh-Hant" to "迴圈開始",
+            "en" to "Loop limit (start)",
+            "zh-Hans" to "循环开始",
+            "ja" to "ループ開始",
+            "ko" to "반복 시작",
+            "th" to "เริ่มลูป"
         ),
         "shape_kind_lshape" to mapOf(
             "zh-Hant" to "L 形",
@@ -10535,6 +10631,14 @@ object LocalizationStrings {
             "ko" to "달",
             "th" to "พระจันทร์เสี้ยว"
         ),
+        "shape_kind_multidocument" to mapOf(
+            "zh-Hant" to "多份文件",
+            "en" to "Multiple documents",
+            "zh-Hans" to "多份文档",
+            "ja" to "複数書類",
+            "ko" to "다중 문서",
+            "th" to "เอกสารหลายฉบับ"
+        ),
         "shape_kind_octagon" to mapOf(
             "zh-Hant" to "八邊形",
             "en" to "Octagon",
@@ -10543,6 +10647,14 @@ object LocalizationStrings {
             "ko" to "팔각형",
             "th" to "แปดเหลี่ยม"
         ),
+        "shape_kind_offlinestorage" to mapOf(
+            "zh-Hant" to "離線儲存",
+            "en" to "Offline storage",
+            "zh-Hans" to "离线存储",
+            "ja" to "オフライン記憶",
+            "ko" to "오프라인 저장소",
+            "th" to "ที่เก็บออฟไลน์"
+        ),
         "shape_kind_offpageconnector" to mapOf(
             "zh-Hant" to "跨頁連接",
             "en" to "Off-page connector",
@@ -10550,6 +10662,22 @@ object LocalizationStrings {
             "ja" to "他ページ結合子",
             "ko" to "페이지 간 연결",
             "th" to "เชื่อมข้ามหน้า"
+        ),
+        "shape_kind_orjunction" to mapOf(
+            "zh-Hant" to "或（OR）接點",
+            "en" to "OR junction",
+            "zh-Hans" to "或（OR）接点",
+            "ja" to "OR接合",
+            "ko" to "OR 접합",
+            "th" to "จุดเชื่อม OR"
+        ),
+        "shape_kind_parallelmode" to mapOf(
+            "zh-Hant" to "平行模式",
+            "en" to "Parallel mode",
+            "zh-Hans" to "并行模式",
+            "ja" to "並列モード",
+            "ko" to "병렬 모드",
+            "th" to "โหมดขนาน"
         ),
         "shape_kind_parallelogram" to mapOf(
             "zh-Hant" to "平行四邊形",
@@ -10583,6 +10711,14 @@ object LocalizationStrings {
             "ko" to "명판",
             "th" to "แผ่นป้าย"
         ),
+        "shape_kind_predefinedprocess" to mapOf(
+            "zh-Hant" to "預先定義的處理",
+            "en" to "Predefined process",
+            "zh-Hans" to "预定义处理",
+            "ja" to "定義済み処理",
+            "ko" to "정의된 처리",
+            "th" to "กระบวนการที่กำหนดไว้ล่วงหน้า"
+        ),
         "shape_kind_preparation" to mapOf(
             "zh-Hant" to "預備",
             "en" to "Preparation",
@@ -10615,6 +10751,14 @@ object LocalizationStrings {
             "ko" to "천공 테이프",
             "th" to "เทปเจาะรู"
         ),
+        "shape_kind_pyramid" to mapOf(
+            "zh-Hant" to "角錐",
+            "en" to "Pyramid",
+            "zh-Hans" to "棱锥",
+            "ja" to "角錐",
+            "ko" to "각뿔",
+            "th" to "พีระมิด"
+        ),
         "shape_kind_rectangle" to mapOf(
             "zh-Hant" to "矩形",
             "en" to "Rectangle",
@@ -10639,6 +10783,22 @@ object LocalizationStrings {
             "ko" to "둥근 직사각형",
             "th" to "สี่เหลี่ยมมุมมน"
         ),
+        "shape_kind_sequentialaccessstorage" to mapOf(
+            "zh-Hant" to "循序存取儲存",
+            "en" to "Sequential access storage",
+            "zh-Hans" to "顺序存取存储",
+            "ja" to "順次アクセス記憶",
+            "ko" to "순차 접근 저장소",
+            "th" to "ที่เก็บแบบเข้าถึงตามลำดับ"
+        ),
+        "shape_kind_sort" to mapOf(
+            "zh-Hant" to "排序",
+            "en" to "Sort",
+            "zh-Hans" to "排序",
+            "ja" to "並べ替え",
+            "ko" to "정렬",
+            "th" to "เรียงลำดับ"
+        ),
         "shape_kind_speechbubble" to mapOf(
             "zh-Hant" to "對話框",
             "en" to "Speech bubble",
@@ -10646,6 +10806,14 @@ object LocalizationStrings {
             "ja" to "吹き出し",
             "ko" to "말풍선",
             "th" to "กรอบคำพูด"
+        ),
+        "shape_kind_sphere" to mapOf(
+            "zh-Hant" to "球體",
+            "en" to "Sphere",
+            "zh-Hans" to "球体",
+            "ja" to "球",
+            "ko" to "구",
+            "th" to "ทรงกลม"
         ),
         "shape_kind_star" to mapOf(
             "zh-Hant" to "五角星",
@@ -10687,6 +10855,14 @@ object LocalizationStrings {
             "ko" to "저장된 데이터",
             "th" to "ข้อมูลที่เก็บไว้"
         ),
+        "shape_kind_summingjunction" to mapOf(
+            "zh-Hant" to "加總接點",
+            "en" to "Summing junction",
+            "zh-Hans" to "汇总接点",
+            "ja" to "和接合",
+            "ko" to "합산 접합",
+            "th" to "จุดรวมผลรวม"
+        ),
         "shape_kind_sun" to mapOf(
             "zh-Hant" to "太陽",
             "en" to "Sun",
@@ -10711,6 +10887,22 @@ object LocalizationStrings {
             "ko" to "시작·종료",
             "th" to "จุดเริ่ม/จบ"
         ),
+        "shape_kind_tetrahedron" to mapOf(
+            "zh-Hant" to "四面體",
+            "en" to "Tetrahedron",
+            "zh-Hans" to "四面体",
+            "ja" to "正四面体",
+            "ko" to "사면체",
+            "th" to "จัตุรมุข"
+        ),
+        "shape_kind_torus" to mapOf(
+            "zh-Hant" to "圓環體",
+            "en" to "Torus",
+            "zh-Hans" to "圆环体",
+            "ja" to "トーラス",
+            "ko" to "토러스",
+            "th" to "ทอรัส"
+        ),
         "shape_kind_trapezoid" to mapOf(
             "zh-Hant" to "梯形",
             "en" to "Trapezoid",
@@ -10718,7 +10910,10 @@ object LocalizationStrings {
             "ja" to "台形",
             "ko" to "사다리꼴",
             "th" to "สี่เหลี่ยมคางหมู"
-        ),
+        )
+    )
+
+    private fun part17(): Map<String, Map<String, String>> = mapOf(
         "shape_kind_triangle" to mapOf(
             "zh-Hant" to "三角形",
             "en" to "Triangle",
@@ -10726,6 +10921,14 @@ object LocalizationStrings {
             "ja" to "三角形",
             "ko" to "삼각형",
             "th" to "สามเหลี่ยม"
+        ),
+        "shape_kind_triangularprism" to mapOf(
+            "zh-Hant" to "三角柱",
+            "en" to "Triangular prism",
+            "zh-Hans" to "三棱柱",
+            "ja" to "三角柱",
+            "ko" to "삼각기둥",
+            "th" to "ปริซึมสามเหลี่ยม"
         ),
         "shape_label" to mapOf(
             "zh-Hant" to "標籤文字",
@@ -10775,6 +10978,38 @@ object LocalizationStrings {
             "ko" to "기본 도형",
             "th" to "รูปร่างพื้นฐาน"
         ),
+        "shape_section_flow_control" to mapOf(
+            "zh-Hant" to "流程圖：流程控制（ISO 5807）",
+            "en" to "Flowchart: Flow control (ISO 5807)",
+            "zh-Hans" to "流程图：流程控制（ISO 5807）",
+            "ja" to "フローチャート：フロー制御（ISO 5807）",
+            "ko" to "순서도: 흐름 제어(ISO 5807)",
+            "th" to "ผังงาน: การควบคุมการไหล (ISO 5807)"
+        ),
+        "shape_section_flow_data" to mapOf(
+            "zh-Hant" to "流程圖：資料與儲存（ISO 5807）",
+            "en" to "Flowchart: Data & storage (ISO 5807)",
+            "zh-Hans" to "流程图：数据与存储（ISO 5807）",
+            "ja" to "フローチャート：データと記憶（ISO 5807）",
+            "ko" to "순서도: 데이터와 저장소(ISO 5807)",
+            "th" to "ผังงาน: ข้อมูลและที่เก็บ (ISO 5807)"
+        ),
+        "shape_section_flow_process" to mapOf(
+            "zh-Hant" to "流程圖：處理（ISO 5807）",
+            "en" to "Flowchart: Process (ISO 5807)",
+            "zh-Hans" to "流程图：处理（ISO 5807）",
+            "ja" to "フローチャート：処理（ISO 5807）",
+            "ko" to "순서도: 처리(ISO 5807)",
+            "th" to "ผังงาน: การประมวลผล (ISO 5807)"
+        ),
+        "shape_section_flow_special" to mapOf(
+            "zh-Hant" to "流程圖：特殊符號（ISO 5807）",
+            "en" to "Flowchart: Special symbols (ISO 5807)",
+            "zh-Hans" to "流程图：特殊符号（ISO 5807）",
+            "ja" to "フローチャート：特殊記号（ISO 5807）",
+            "ko" to "순서도: 특수 기호(ISO 5807)",
+            "th" to "ผังงาน: สัญลักษณ์พิเศษ (ISO 5807)"
+        ),
         "shape_section_flowchart" to mapOf(
             "zh-Hant" to "流程圖符號（ISO 5807）",
             "en" to "Flowchart Symbols (ISO 5807)",
@@ -10782,6 +11017,14 @@ object LocalizationStrings {
             "ja" to "フローチャート記号（ISO 5807）",
             "ko" to "순서도 기호(ISO 5807)",
             "th" to "สัญลักษณ์ผังงาน (ISO 5807)"
+        ),
+        "shape_section_solid" to mapOf(
+            "zh-Hant" to "立體圖（可調深度）",
+            "en" to "Solids (3D, adjustable depth)",
+            "zh-Hans" to "立体图（可调深度）",
+            "ja" to "立体図形（奥行き調整可）",
+            "ko" to "입체 도형(깊이 조절)",
+            "th" to "รูปทรง 3 มิติ (ปรับความลึกได้)"
         ),
         "shape_section_templates" to mapOf(
             "zh-Hant" to "範本",
@@ -10814,6 +11057,86 @@ object LocalizationStrings {
             "ja" to "図形スタイル",
             "ko" to "도형 스타일",
             "th" to "สไตล์รูปทรง"
+        ),
+        "shape_template_flow_approval" to mapOf(
+            "zh-Hant" to "簽核審核",
+            "en" to "Approval",
+            "zh-Hans" to "签核审核",
+            "ja" to "承認フロー",
+            "ko" to "결재 승인",
+            "th" to "การอนุมัติ"
+        ),
+        "shape_template_flow_basic" to mapOf(
+            "zh-Hant" to "基本流程",
+            "en" to "Basic flow",
+            "zh-Hans" to "基本流程",
+            "ja" to "基本フロー",
+            "ko" to "기본 흐름",
+            "th" to "ผังงานพื้นฐาน"
+        ),
+        "shape_template_flow_decision" to mapOf(
+            "zh-Hant" to "判斷分支",
+            "en" to "Decision branch",
+            "zh-Hans" to "判断分支",
+            "ja" to "判断分岐",
+            "ko" to "판단 분기",
+            "th" to "การตัดสินใจแตกแขนง"
+        ),
+        "shape_template_flow_documents" to mapOf(
+            "zh-Hant" to "文件處理",
+            "en" to "Document handling",
+            "zh-Hans" to "文档处理",
+            "ja" to "書類処理",
+            "ko" to "문서 처리",
+            "th" to "การจัดการเอกสาร"
+        ),
+        "shape_template_flow_io" to mapOf(
+            "zh-Hant" to "輸入處理輸出",
+            "en" to "Input, process, output",
+            "zh-Hans" to "输入处理输出",
+            "ja" to "入力・処理・出力",
+            "ko" to "입력·처리·출력",
+            "th" to "รับเข้า ประมวลผล แสดงผล"
+        ),
+        "shape_template_flow_login" to mapOf(
+            "zh-Hant" to "登入驗證",
+            "en" to "Login & authentication",
+            "zh-Hans" to "登录验证",
+            "ja" to "ログイン認証",
+            "ko" to "로그인 인증",
+            "th" to "การเข้าสู่ระบบและยืนยันตัวตน"
+        ),
+        "shape_template_flow_loop" to mapOf(
+            "zh-Hant" to "迴圈",
+            "en" to "Loop",
+            "zh-Hans" to "循环",
+            "ja" to "ループ",
+            "ko" to "반복",
+            "th" to "ลูป"
+        ),
+        "shape_template_flow_parallel" to mapOf(
+            "zh-Hant" to "平行處理",
+            "en" to "Parallel processing",
+            "zh-Hans" to "并行处理",
+            "ja" to "並列処理",
+            "ko" to "병렬 처리",
+            "th" to "การประมวลผลแบบขนาน"
+        ),
+        "shape_template_flow_pipeline" to mapOf(
+            "zh-Hant" to "資料處理管線",
+            "en" to "Data pipeline (ETL)",
+            "zh-Hans" to "数据处理管线",
+            "ja" to "データパイプライン",
+            "ko" to "데이터 파이프라인",
+            "th" to "ไปป์ไลน์ข้อมูล"
+        ),
+        "shape_template_flow_retry" to mapOf(
+            "zh-Hant" to "錯誤處理與重試",
+            "en" to "Error handling & retry",
+            "zh-Hans" to "错误处理与重试",
+            "ja" to "エラー処理と再試行",
+            "ko" to "오류 처리와 재시도",
+            "th" to "จัดการข้อผิดพลาดและลองใหม่"
         ),
         "shape_text_section" to mapOf(
             "zh-Hant" to "文字",
@@ -10910,10 +11233,7 @@ object LocalizationStrings {
             "ja" to "グリッド吸着オフ：テキストはタップした位置にそのまま置かれます。",
             "ko" to "격자 맞춤 꺼짐: 텍스트가 탭한 위치에 그대로 놓입니다.",
             "th" to "ปิดจัดชิดเส้นตาราง: ข้อความจะวางตรงตำแหน่งที่แตะ"
-        )
-    )
-
-    private fun part17(): Map<String, Map<String, String>> = mapOf(
+        ),
         "snap_to_grid_on_notice" to mapOf(
             "zh-Hant" to "吸附格線已開啟：隨點隨寫的文字會對齊頁面行線或方格。",
             "en" to "Snap to grid on: tap-to-write text aligns to the page's lines or grid.",
@@ -11233,7 +11553,10 @@ object LocalizationStrings {
             "ja" to "角括弧",
             "ko" to "대괄호",
             "th" to "วงเล็บเหลี่ยม"
-        ),
+        )
+    )
+
+    private fun part18(): Map<String, Map<String, String>> = mapOf(
         "sticker_branch" to mapOf(
             "zh-Hant" to "分支",
             "en" to "Branch",
@@ -11553,10 +11876,7 @@ object LocalizationStrings {
             "ja" to "波線",
             "ko" to "물결 밑줄",
             "th" to "ขีดเส้นหยัก"
-        )
-    )
-
-    private fun part18(): Map<String, Map<String, String>> = mapOf(
+        ),
         "sticky_anchor_ink" to mapOf(
             "zh-Hant" to "錨定重疊筆跡",
             "en" to "Anchor Overlapping Ink",
@@ -11876,7 +12196,10 @@ object LocalizationStrings {
             "ja" to "この場所はこの端末専用です。端末間の更新には安定したノート ID と、設定済みの Google Drive またはフォルダ同期を使用するため、Mac、iPhone、iPad、Android が別端末のローカルパスに依存することはありません。",
             "ko" to "이 위치는 이 기기에만 적용됩니다. 기기 간 업데이트는 안정적인 노트 ID와 설정된 Google Drive 또는 폴더 동기화를 사용하므로 Mac, iPhone, iPad 및 Android는 다른 기기의 로컬 경로에 의존하지 않습니다.",
             "th" to "ตำแหน่งนี้ใช้เฉพาะอุปกรณ์เครื่องนี้ การอัปเดตข้ามอุปกรณ์ใช้รหัสสมุดบันทึกที่คงที่และ Google Drive หรือการซิงค์โฟลเดอร์ที่คุณตั้งค่าไว้ ดังนั้น Mac, iPhone, iPad และ Android จะไม่พึ่งพาพาธภายในของอุปกรณ์อื่น"
-        ),
+        )
+    )
+
+    private fun part19(): Map<String, Map<String, String>> = mapOf(
         "storage_temp" to mapOf(
             "zh-Hant" to "暫存檔",
             "en" to "Temporary files",
@@ -12196,10 +12519,7 @@ object LocalizationStrings {
             "ja" to "まだありません",
             "ko" to "아직 없음",
             "th" to "ยังไม่เคย"
-        )
-    )
-
-    private fun part19(): Map<String, Map<String, String>> = mapOf(
+        ),
         "sync_not_configured" to mapOf(
             "zh-Hant" to "尚未選擇資料夾",
             "en" to "No folder chosen yet",
@@ -12519,7 +12839,10 @@ object LocalizationStrings {
             "ja" to "%@ 行 × %@ 列",
             "ko" to "%@행 × %@열",
             "th" to "%@ แถว × %@ คอลัมน์"
-        ),
+        )
+    )
+
+    private fun part20(): Map<String, Map<String, String>> = mapOf(
         "table_studio" to mapOf(
             "zh-Hant" to "表格",
             "en" to "Table",
@@ -12839,10 +13162,7 @@ object LocalizationStrings {
             "ja" to "プレビューを小さく",
             "ko" to "미리보기 축소",
             "th" to "ย่อภาพตัวอย่าง"
-        )
-    )
-
-    private fun part20(): Map<String, Map<String, String>> = mapOf(
+        ),
         "tmpl_assignment_tracker" to mapOf(
             "zh-Hant" to "作業追蹤表",
             "en" to "Assignment Tracker",
@@ -13162,7 +13482,10 @@ object LocalizationStrings {
             "ja" to "上部に5色のカラースウォッチ、中央にインスピレーション空間",
             "ko" to "상단 5색 스와치 및 중앙 영감 캔버스",
             "th" to "แถบสี 5 สีด้านบนพร้อมผืนผ้าใบสร้างแรงบันดาลใจ"
-        ),
+        )
+    )
+
+    private fun part21(): Map<String, Map<String, String>> = mapOf(
         "tmpl_orthographic" to mapOf(
             "zh-Hant" to "三視圖與剖面範本",
             "en" to "Orthographic Multi-View",
@@ -13482,10 +13805,7 @@ object LocalizationStrings {
             "ja" to "ペン",
             "ko" to "만년필",
             "th" to "ปากกาหมึกซึม"
-        )
-    )
-
-    private fun part21(): Map<String, Map<String, String>> = mapOf(
+        ),
         "tool_pencil" to mapOf(
             "zh-Hant" to "鉛筆",
             "en" to "Pencil",
@@ -13805,7 +14125,10 @@ object LocalizationStrings {
             "ja" to "元に戻す",
             "ko" to "복원",
             "th" to "กู้คืน"
-        ),
+        )
+    )
+
+    private fun part22(): Map<String, Map<String, String>> = mapOf(
         "trash_restored_notice" to mapOf(
             "zh-Hant" to "已還原「%@」",
             "en" to "Restored “%@”",
@@ -14125,10 +14448,7 @@ object LocalizationStrings {
             "ja" to "テキストドキュメントに水平区切り線を挿入",
             "ko" to "문서에 수평 구분선 삽입",
             "th" to "แทรกเส้นคั่นแนวนอนในเอกสาร"
-        )
-    )
-
-    private fun part22(): Map<String, Map<String, String>> = mapOf(
+        ),
         "wd_insert_inline_canvas" to mapOf(
             "zh-Hant" to "插入文件內手繪畫布",
             "en" to "Insert a handwriting canvas",

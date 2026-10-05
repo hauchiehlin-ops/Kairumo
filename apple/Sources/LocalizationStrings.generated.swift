@@ -10168,6 +10168,14 @@ extension LocalizationManager {
             .ko: "모서리 반경",
             .th: "รัศมีมุม"
         ],
+        "shape_depth": [
+            .zhHant: "深度",
+            .en: "Depth",
+            .zhHans: "深度",
+            .ja: "奥行き",
+            .ko: "깊이",
+            .th: "ความลึก"
+        ],
         "shape_duplicate": [
             .zhHant: "複製",
             .en: "Duplicate",
@@ -10215,6 +10223,22 @@ extension LocalizationManager {
             .ja: "高さ",
             .ko: "높이",
             .th: "สูง"
+        ],
+        "shape_kind_alternateprocess": [
+            .zhHant: "替代處理",
+            .en: "Alternate process",
+            .zhHans: "替代处理",
+            .ja: "代替処理",
+            .ko: "대체 처리",
+            .th: "กระบวนการทางเลือก"
+        ],
+        "shape_kind_annotation": [
+            .zhHant: "註解",
+            .en: "Annotation",
+            .zhHans: "注释",
+            .ja: "注釈",
+            .ko: "주석",
+            .th: "หมายเหตุ"
         ],
         "shape_kind_arrow": [
             .zhHant: "箭頭",
@@ -10296,6 +10320,22 @@ extension LocalizationManager {
             .ko: "대조",
             .th: "เรียงเทียบ"
         ],
+        "shape_kind_communicationlink": [
+            .zhHant: "通訊連結",
+            .en: "Communication link",
+            .zhHans: "通信链路",
+            .ja: "通信リンク",
+            .ko: "통신 링크",
+            .th: "การเชื่อมต่อสื่อสาร"
+        ],
+        "shape_kind_cone": [
+            .zhHant: "圓錐體",
+            .en: "Cone",
+            .zhHans: "圆锥体",
+            .ja: "円錐",
+            .ko: "원뿔",
+            .th: "กรวย"
+        ],
         "shape_kind_connector": [
             .zhHant: "連接點",
             .en: "Connector",
@@ -10311,6 +10351,22 @@ extension LocalizationManager {
             .ja: "十字",
             .ko: "십자",
             .th: "กากบาท"
+        ],
+        "shape_kind_cube": [
+            .zhHant: "立方體",
+            .en: "Cube",
+            .zhHans: "立方体",
+            .ja: "立方体",
+            .ko: "정육면체",
+            .th: "ลูกบาศก์"
+        ],
+        "shape_kind_cylinder": [
+            .zhHant: "圓柱體",
+            .en: "Cylinder",
+            .zhHans: "圆柱体",
+            .ja: "円柱",
+            .ko: "원기둥",
+            .th: "ทรงกระบอก"
         ],
         "shape_kind_data": [
             .zhHant: "資料",
@@ -10351,6 +10407,14 @@ extension LocalizationManager {
             .ja: "ひし形",
             .ko: "마름모",
             .th: "ข้าวหลามตัด"
+        ],
+        "shape_kind_directaccessstorage": [
+            .zhHant: "直接存取儲存",
+            .en: "Direct access storage",
+            .zhHans: "直接存取存储",
+            .ja: "直接アクセス記憶",
+            .ko: "직접 접근 저장소",
+            .th: "ที่เก็บแบบเข้าถึงโดยตรง"
         ],
         "shape_kind_display": [
             .zhHant: "顯示",
@@ -10400,6 +10464,14 @@ extension LocalizationManager {
             .ko: "하트",
             .th: "หัวใจ"
         ],
+        "shape_kind_hemisphere": [
+            .zhHant: "半球",
+            .en: "Hemisphere",
+            .zhHans: "半球",
+            .ja: "半球",
+            .ko: "반구",
+            .th: "ซีกโลก"
+        ],
         "shape_kind_heptagon": [
             .zhHant: "七邊形",
             .en: "Heptagon",
@@ -10416,6 +10488,14 @@ extension LocalizationManager {
             .ko: "육각형",
             .th: "หกเหลี่ยม"
         ],
+        "shape_kind_internalstorage": [
+            .zhHant: "內部儲存",
+            .en: "Internal storage",
+            .zhHans: "内部存储",
+            .ja: "内部記憶",
+            .ko: "내부 저장소",
+            .th: "ที่เก็บภายใน"
+        ],
         "shape_kind_line": [
             .zhHant: "直線",
             .en: "Line",
@@ -10423,6 +10503,22 @@ extension LocalizationManager {
             .ja: "直線",
             .ko: "직선",
             .th: "เส้นตรง"
+        ],
+        "shape_kind_looplimitend": [
+            .zhHant: "迴圈結束",
+            .en: "Loop limit (end)",
+            .zhHans: "循环结束",
+            .ja: "ループ終了",
+            .ko: "반복 종료",
+            .th: "สิ้นสุดลูป"
+        ],
+        "shape_kind_looplimitstart": [
+            .zhHant: "迴圈開始",
+            .en: "Loop limit (start)",
+            .zhHans: "循环开始",
+            .ja: "ループ開始",
+            .ko: "반복 시작",
+            .th: "เริ่มลูป"
         ],
         "shape_kind_lshape": [
             .zhHant: "L 形",
@@ -10464,6 +10560,14 @@ extension LocalizationManager {
             .ko: "달",
             .th: "พระจันทร์เสี้ยว"
         ],
+        "shape_kind_multidocument": [
+            .zhHant: "多份文件",
+            .en: "Multiple documents",
+            .zhHans: "多份文档",
+            .ja: "複数書類",
+            .ko: "다중 문서",
+            .th: "เอกสารหลายฉบับ"
+        ],
         "shape_kind_octagon": [
             .zhHant: "八邊形",
             .en: "Octagon",
@@ -10472,6 +10576,14 @@ extension LocalizationManager {
             .ko: "팔각형",
             .th: "แปดเหลี่ยม"
         ],
+        "shape_kind_offlinestorage": [
+            .zhHant: "離線儲存",
+            .en: "Offline storage",
+            .zhHans: "离线存储",
+            .ja: "オフライン記憶",
+            .ko: "오프라인 저장소",
+            .th: "ที่เก็บออฟไลน์"
+        ],
         "shape_kind_offpageconnector": [
             .zhHant: "跨頁連接",
             .en: "Off-page connector",
@@ -10479,6 +10591,22 @@ extension LocalizationManager {
             .ja: "他ページ結合子",
             .ko: "페이지 간 연결",
             .th: "เชื่อมข้ามหน้า"
+        ],
+        "shape_kind_orjunction": [
+            .zhHant: "或（OR）接點",
+            .en: "OR junction",
+            .zhHans: "或（OR）接点",
+            .ja: "OR接合",
+            .ko: "OR 접합",
+            .th: "จุดเชื่อม OR"
+        ],
+        "shape_kind_parallelmode": [
+            .zhHant: "平行模式",
+            .en: "Parallel mode",
+            .zhHans: "并行模式",
+            .ja: "並列モード",
+            .ko: "병렬 모드",
+            .th: "โหมดขนาน"
         ],
         "shape_kind_parallelogram": [
             .zhHant: "平行四邊形",
@@ -10512,6 +10640,14 @@ extension LocalizationManager {
             .ko: "명판",
             .th: "แผ่นป้าย"
         ],
+        "shape_kind_predefinedprocess": [
+            .zhHant: "預先定義的處理",
+            .en: "Predefined process",
+            .zhHans: "预定义处理",
+            .ja: "定義済み処理",
+            .ko: "정의된 처리",
+            .th: "กระบวนการที่กำหนดไว้ล่วงหน้า"
+        ],
         "shape_kind_preparation": [
             .zhHant: "預備",
             .en: "Preparation",
@@ -10544,6 +10680,14 @@ extension LocalizationManager {
             .ko: "천공 테이프",
             .th: "เทปเจาะรู"
         ],
+        "shape_kind_pyramid": [
+            .zhHant: "角錐",
+            .en: "Pyramid",
+            .zhHans: "棱锥",
+            .ja: "角錐",
+            .ko: "각뿔",
+            .th: "พีระมิด"
+        ],
         "shape_kind_rectangle": [
             .zhHant: "矩形",
             .en: "Rectangle",
@@ -10568,6 +10712,22 @@ extension LocalizationManager {
             .ko: "둥근 직사각형",
             .th: "สี่เหลี่ยมมุมมน"
         ],
+        "shape_kind_sequentialaccessstorage": [
+            .zhHant: "循序存取儲存",
+            .en: "Sequential access storage",
+            .zhHans: "顺序存取存储",
+            .ja: "順次アクセス記憶",
+            .ko: "순차 접근 저장소",
+            .th: "ที่เก็บแบบเข้าถึงตามลำดับ"
+        ],
+        "shape_kind_sort": [
+            .zhHant: "排序",
+            .en: "Sort",
+            .zhHans: "排序",
+            .ja: "並べ替え",
+            .ko: "정렬",
+            .th: "เรียงลำดับ"
+        ],
         "shape_kind_speechbubble": [
             .zhHant: "對話框",
             .en: "Speech bubble",
@@ -10575,6 +10735,14 @@ extension LocalizationManager {
             .ja: "吹き出し",
             .ko: "말풍선",
             .th: "กรอบคำพูด"
+        ],
+        "shape_kind_sphere": [
+            .zhHant: "球體",
+            .en: "Sphere",
+            .zhHans: "球体",
+            .ja: "球",
+            .ko: "구",
+            .th: "ทรงกลม"
         ],
         "shape_kind_star": [
             .zhHant: "五角星",
@@ -10616,6 +10784,14 @@ extension LocalizationManager {
             .ko: "저장된 데이터",
             .th: "ข้อมูลที่เก็บไว้"
         ],
+        "shape_kind_summingjunction": [
+            .zhHant: "加總接點",
+            .en: "Summing junction",
+            .zhHans: "汇总接点",
+            .ja: "和接合",
+            .ko: "합산 접합",
+            .th: "จุดรวมผลรวม"
+        ],
         "shape_kind_sun": [
             .zhHant: "太陽",
             .en: "Sun",
@@ -10640,6 +10816,22 @@ extension LocalizationManager {
             .ko: "시작·종료",
             .th: "จุดเริ่ม/จบ"
         ],
+        "shape_kind_tetrahedron": [
+            .zhHant: "四面體",
+            .en: "Tetrahedron",
+            .zhHans: "四面体",
+            .ja: "正四面体",
+            .ko: "사면체",
+            .th: "จัตุรมุข"
+        ],
+        "shape_kind_torus": [
+            .zhHant: "圓環體",
+            .en: "Torus",
+            .zhHans: "圆环体",
+            .ja: "トーラス",
+            .ko: "토러스",
+            .th: "ทอรัส"
+        ],
         "shape_kind_trapezoid": [
             .zhHant: "梯形",
             .en: "Trapezoid",
@@ -10655,6 +10847,14 @@ extension LocalizationManager {
             .ja: "三角形",
             .ko: "삼각형",
             .th: "สามเหลี่ยม"
+        ],
+        "shape_kind_triangularprism": [
+            .zhHant: "三角柱",
+            .en: "Triangular prism",
+            .zhHans: "三棱柱",
+            .ja: "三角柱",
+            .ko: "삼각기둥",
+            .th: "ปริซึมสามเหลี่ยม"
         ],
         "shape_label": [
             .zhHant: "標籤文字",
@@ -10704,6 +10904,38 @@ extension LocalizationManager {
             .ko: "기본 도형",
             .th: "รูปร่างพื้นฐาน"
         ],
+        "shape_section_flow_control": [
+            .zhHant: "流程圖：流程控制（ISO 5807）",
+            .en: "Flowchart: Flow control (ISO 5807)",
+            .zhHans: "流程图：流程控制（ISO 5807）",
+            .ja: "フローチャート：フロー制御（ISO 5807）",
+            .ko: "순서도: 흐름 제어(ISO 5807)",
+            .th: "ผังงาน: การควบคุมการไหล (ISO 5807)"
+        ],
+        "shape_section_flow_data": [
+            .zhHant: "流程圖：資料與儲存（ISO 5807）",
+            .en: "Flowchart: Data & storage (ISO 5807)",
+            .zhHans: "流程图：数据与存储（ISO 5807）",
+            .ja: "フローチャート：データと記憶（ISO 5807）",
+            .ko: "순서도: 데이터와 저장소(ISO 5807)",
+            .th: "ผังงาน: ข้อมูลและที่เก็บ (ISO 5807)"
+        ],
+        "shape_section_flow_process": [
+            .zhHant: "流程圖：處理（ISO 5807）",
+            .en: "Flowchart: Process (ISO 5807)",
+            .zhHans: "流程图：处理（ISO 5807）",
+            .ja: "フローチャート：処理（ISO 5807）",
+            .ko: "순서도: 처리(ISO 5807)",
+            .th: "ผังงาน: การประมวลผล (ISO 5807)"
+        ],
+        "shape_section_flow_special": [
+            .zhHant: "流程圖：特殊符號（ISO 5807）",
+            .en: "Flowchart: Special symbols (ISO 5807)",
+            .zhHans: "流程图：特殊符号（ISO 5807）",
+            .ja: "フローチャート：特殊記号（ISO 5807）",
+            .ko: "순서도: 특수 기호(ISO 5807)",
+            .th: "ผังงาน: สัญลักษณ์พิเศษ (ISO 5807)"
+        ],
         "shape_section_flowchart": [
             .zhHant: "流程圖符號（ISO 5807）",
             .en: "Flowchart Symbols (ISO 5807)",
@@ -10711,6 +10943,14 @@ extension LocalizationManager {
             .ja: "フローチャート記号（ISO 5807）",
             .ko: "순서도 기호(ISO 5807)",
             .th: "สัญลักษณ์ผังงาน (ISO 5807)"
+        ],
+        "shape_section_solid": [
+            .zhHant: "立體圖（可調深度）",
+            .en: "Solids (3D, adjustable depth)",
+            .zhHans: "立体图（可调深度）",
+            .ja: "立体図形（奥行き調整可）",
+            .ko: "입체 도형(깊이 조절)",
+            .th: "รูปทรง 3 มิติ (ปรับความลึกได้)"
         ],
         "shape_section_templates": [
             .zhHant: "範本",
@@ -10743,6 +10983,86 @@ extension LocalizationManager {
             .ja: "図形スタイル",
             .ko: "도형 스타일",
             .th: "สไตล์รูปทรง"
+        ],
+        "shape_template_flow_approval": [
+            .zhHant: "簽核審核",
+            .en: "Approval",
+            .zhHans: "签核审核",
+            .ja: "承認フロー",
+            .ko: "결재 승인",
+            .th: "การอนุมัติ"
+        ],
+        "shape_template_flow_basic": [
+            .zhHant: "基本流程",
+            .en: "Basic flow",
+            .zhHans: "基本流程",
+            .ja: "基本フロー",
+            .ko: "기본 흐름",
+            .th: "ผังงานพื้นฐาน"
+        ],
+        "shape_template_flow_decision": [
+            .zhHant: "判斷分支",
+            .en: "Decision branch",
+            .zhHans: "判断分支",
+            .ja: "判断分岐",
+            .ko: "판단 분기",
+            .th: "การตัดสินใจแตกแขนง"
+        ],
+        "shape_template_flow_documents": [
+            .zhHant: "文件處理",
+            .en: "Document handling",
+            .zhHans: "文档处理",
+            .ja: "書類処理",
+            .ko: "문서 처리",
+            .th: "การจัดการเอกสาร"
+        ],
+        "shape_template_flow_io": [
+            .zhHant: "輸入處理輸出",
+            .en: "Input, process, output",
+            .zhHans: "输入处理输出",
+            .ja: "入力・処理・出力",
+            .ko: "입력·처리·출력",
+            .th: "รับเข้า ประมวลผล แสดงผล"
+        ],
+        "shape_template_flow_login": [
+            .zhHant: "登入驗證",
+            .en: "Login & authentication",
+            .zhHans: "登录验证",
+            .ja: "ログイン認証",
+            .ko: "로그인 인증",
+            .th: "การเข้าสู่ระบบและยืนยันตัวตน"
+        ],
+        "shape_template_flow_loop": [
+            .zhHant: "迴圈",
+            .en: "Loop",
+            .zhHans: "循环",
+            .ja: "ループ",
+            .ko: "반복",
+            .th: "ลูป"
+        ],
+        "shape_template_flow_parallel": [
+            .zhHant: "平行處理",
+            .en: "Parallel processing",
+            .zhHans: "并行处理",
+            .ja: "並列処理",
+            .ko: "병렬 처리",
+            .th: "การประมวลผลแบบขนาน"
+        ],
+        "shape_template_flow_pipeline": [
+            .zhHant: "資料處理管線",
+            .en: "Data pipeline (ETL)",
+            .zhHans: "数据处理管线",
+            .ja: "データパイプライン",
+            .ko: "데이터 파이프라인",
+            .th: "ไปป์ไลน์ข้อมูล"
+        ],
+        "shape_template_flow_retry": [
+            .zhHant: "錯誤處理與重試",
+            .en: "Error handling & retry",
+            .zhHans: "错误处理与重试",
+            .ja: "エラー処理と再試行",
+            .ko: "오류 처리와 재시도",
+            .th: "จัดการข้อผิดพลาดและลองใหม่"
         ],
         "shape_text_section": [
             .zhHant: "文字",

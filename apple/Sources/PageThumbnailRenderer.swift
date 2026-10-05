@@ -583,7 +583,7 @@ public enum PageThumbnailRenderer {
         if item.dash == .dotted { path.lineCapStyle = .round }
         if let opacity = item.opacity { cg.setAlpha(CGFloat(opacity)) }
 
-        if !item.isLinear {
+        if !item.isLinear, item.drawsOutline {
             let fill: UIColor = {
                 guard let hex = item.fillColorHex else { return .clear }
                 return hex == "clear" ? .clear : (UIColor(hexString: hex) ?? .clear)
@@ -593,8 +593,34 @@ public enum PageThumbnailRenderer {
                 path.fill()
             }
         }
-        (item.strokeColorHex.flatMap { UIColor(hexString: $0) } ?? UIColor.label).setStroke()
-        path.stroke()
+        let strokeColor = item.strokeColorHex.flatMap { UIColor(hexString: $0) } ?? UIColor.label
+        strokeColor.setStroke()
+        if item.drawsOutline { path.stroke() }
+
+        // 立體圖的面與稜線、流程圖符號裡的線。
+        for detail in item.details() where detail.points.count >= 2 {
+            let d = UIBezierPath()
+            d.move(to: CGPoint(x: CGFloat(detail.points[0].x), y: CGFloat(detail.points[0].y)))
+            for p in detail.points.dropFirst() {
+                d.addLine(to: CGPoint(x: CGFloat(p.x), y: CGFloat(p.y)))
+            }
+            if detail.closed {
+                d.close()
+                if detail.tone != 0 {
+                    UIColor(white: detail.tone > 0 ? 1 : 0, alpha: CGFloat(abs(detail.tone))).setFill()
+                    d.fill()
+                }
+            }
+            d.lineWidth = item.lineWidth
+            if detail.dashed {
+                let dash = [item.lineWidth * 3, item.lineWidth * 2.5]
+                d.setLineDash(dash, count: dash.count, phase: 0)
+            } else if !pattern.isEmpty {
+                d.setLineDash(pattern, count: pattern.count, phase: 0)
+            }
+            strokeColor.setStroke()
+            d.stroke()
+        }
 
         // 箭頭頭部要填實，不然箭頭看起來只是一條線。
         for head in item.arrowHeads() where head.count >= 3 {

@@ -113,20 +113,54 @@ public struct NoteShapeAttachment: Identifiable, Codable, Hashable {
         String(describing: kind).lowercased()
     }
 
+    private var ffiShape: FfiShape {
+        FfiShape(
+            kind: kind,
+            bounds: FfiRect(
+                minX: Float(x), minY: Float(y),
+                maxX: Float(x + width), maxY: Float(y + height)
+            ),
+            cornerRadius: Float(cornerRadius),
+            rotationDegrees: 0
+        )
+    }
+
     /// 核心算出來的外框頂點（畫布座標）。
     public func outline(segments: UInt32 = 48) -> [CGPoint] {
-        shapeOutline(
-            shape: FfiShape(
-                kind: kind,
-                bounds: FfiRect(
-                    minX: Float(x), minY: Float(y),
-                    maxX: Float(x + width), maxY: Float(y + height)
-                ),
-                cornerRadius: Float(cornerRadius),
-                rotationDegrees: 0
-            ),
-            segments: segments
-        ).map { CGPoint(x: CGFloat($0.x), y: CGFloat($0.y)) }
+        shapeOutline(shape: ffiShape, segments: segments)
+            .map { CGPoint(x: CGFloat($0.x), y: CGFloat($0.y)) }
+    }
+
+    /// 輪廓之外的細節（立體圖的面與稜線、流程圖符號裡的線），畫布座標、不套旋轉。
+    public func details(segments: UInt32 = 48) -> [FfiShapeDetail] {
+        shapeDetails(shape: ffiShape, segments: segments)
+    }
+
+    /// 輪廓本身要不要畫（平行模式與註解只有內部的線）。
+    public var drawsOutline: Bool { shapeDrawsOutline(kind: kind) }
+
+    /// 立體圖：`cornerRadius` 就是深度。
+    public var isSolid: Bool { shapeIsSolid(kind: kind) }
+
+    /// 換成另一種形狀時，`cornerRadius` 要跟著換成那一種的預設值（立體圖要有看得出來的深度）。
+    public mutating func apply(kind newKind: FfiShapeKind) {
+        kindName = NoteShapeAttachment.name(of: newKind)
+        if shapeIsSolid(kind: newKind) {
+            cornerRadius = CGFloat(shapeDefaultCornerRadius(
+                kind: newKind, width: Float(width), height: Float(height)))
+        }
+    }
+
+    /// 要插進畫布的新形狀。立體圖給一個方正的尺寸與看得出來的預設深度。
+    public static func inserting(_ newKind: FfiShapeKind) -> NoteShapeAttachment {
+        var item = NoteShapeAttachment(kindName: name(of: newKind))
+        if shapeIsSolid(kind: newKind) {
+            item.width = 120
+            item.height = 110
+            item.cornerRadius = CGFloat(shapeDefaultCornerRadius(
+                kind: newKind, width: 120, height: 110))
+        }
+        return item
     }
 
     /// 這個形狀在 ISO 5807 裡代表什麼（流程圖符號才有）。

@@ -89,7 +89,8 @@ fun ShapeEditDialog(
     val swappable = remember(draft.isLinear) {
         allShapeKinds().filter { shapeIsLinear(it) == draft.isLinear }
     }
-    val hasCorner = draft.kindName.lowercase() in setOf("roundedrectangle", "terminator")
+    val hasCorner = draft.kindName.lowercase().replace("_", "") in
+        setOf("roundedrectangle", "terminator", "alternateprocess")
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -111,7 +112,7 @@ fun ShapeEditDialog(
 
                     SectionLabel(l("shape_change_kind"))
                     KindMenu(draft.kind, swappable, languageTag) { kind ->
-                        commit { kindName = NoteShape.nameOf(kind) }
+                        commit { applyKind(kind) }
                     }
 
                     if (draft.acceptsText) {
@@ -174,6 +175,18 @@ fun ShapeEditDialog(
                             l("shape_corner"),
                             value = draft.cornerRadius,
                             range = 0f..max(1f, min(draft.width, draft.height) / 2f),
+                            onChange = { v -> preview { cornerRadius = v } },
+                            onFinished = { onApply(draft) }
+                        )
+                    }
+
+                    if (draft.isSolid) {
+                        // 立體圖的深度：`cornerRadius` 就是核心用的深度，核心會夾在短邊的 10%–50%。
+                        val m = max(1f, min(draft.width, draft.height))
+                        LabeledSlider(
+                            l("shape_depth"),
+                            value = draft.cornerRadius.coerceIn(m * 0.1f, m * 0.5f),
+                            range = (m * 0.1f)..(m * 0.5f),
                             onChange = { v -> preview { cornerRadius = v } },
                             onFinished = { onApply(draft) }
                         )

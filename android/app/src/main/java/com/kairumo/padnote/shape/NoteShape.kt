@@ -14,7 +14,12 @@ import uniffi.padnote_core.connectionArrowHead
 import uniffi.padnote_core.connectionBetween
 import uniffi.padnote_core.connectionPath
 import uniffi.padnote_core.shapeAcceptsText
+import uniffi.padnote_core.FfiShapeDetail
 import uniffi.padnote_core.shapeAnchorPoint
+import uniffi.padnote_core.shapeDefaultCornerRadius
+import uniffi.padnote_core.shapeDetails
+import uniffi.padnote_core.shapeDrawsOutline
+import uniffi.padnote_core.shapeIsSolid
 import uniffi.padnote_core.shapeArrowHeads
 import uniffi.padnote_core.shapeIsLinear
 import uniffi.padnote_core.shapeOutline
@@ -92,6 +97,21 @@ data class NoteShape(
     /** 核心算出來的外框頂點（畫布座標）。 */
     fun outline(segments: UInt = 48u): List<FfiPoint> = shapeOutline(ffiShape(), segments)
 
+    /** 輪廓之外的細節（立體圖的面與稜線、流程圖符號裡的線），畫布座標、不套旋轉。 */
+    fun details(segments: UInt = 48u): List<FfiShapeDetail> = shapeDetails(ffiShape(), segments)
+
+    /** 輪廓本身要不要畫（平行模式與註解只有內部的線）。 */
+    val drawsOutline: Boolean get() = shapeDrawsOutline(kind)
+
+    /** 立體圖：`cornerRadius` 就是深度。 */
+    val isSolid: Boolean get() = shapeIsSolid(kind)
+
+    /** 換成另一種形狀。立體圖的深度換成那一種的預設值，才看得出立體。 */
+    fun applyKind(newKind: FfiShapeKind) {
+        kindName = nameOf(newKind)
+        if (shapeIsSolid(newKind)) cornerRadius = shapeDefaultCornerRadius(newKind, width, height)
+    }
+
     /** 這個形狀在 ISO 5807 裡代表什麼。 */
     val semantic: String? get() = shapeSemantic(kind)
 
@@ -160,10 +180,31 @@ data class NoteShape(
     }.toString()
 
     companion object {
-        fun nameOf(kind: FfiShapeKind): String = kind.name.lowercase()
+        /**
+         * 持久化用的識別字：小寫、**不含底線**，與 Apple 的 `NoteShapeAttachment.name(of:)` 一致。
+         * Kotlin 的列舉名是 `ARROW_BLOCK_RIGHT`，原本直接小寫成 `arrow_block_right` ——
+         * 語系表的鍵（`shape_kind_arrowblockright`）找不到，多個單字的形狀名稱在畫面上顯示成識別字。
+         */
+        fun nameOf(kind: FfiShapeKind): String = normalized(kind.name)
 
-        fun kindOf(name: String): FfiShapeKind? =
-            allShapeKinds().firstOrNull { it.name.equals(name, ignoreCase = true) }
+        private fun normalized(raw: String): String = raw.lowercase().replace("_", "")
+
+        /** 兩種寫法都認：新的（無底線）與舊版 Android 寫過的（有底線）。 */
+        fun kindOf(name: String): FfiShapeKind? {
+            val key = normalized(name)
+            return allShapeKinds().firstOrNull { normalized(it.name) == key }
+        }
+
+        /** 要插進畫布的新形狀。立體圖給方正的尺寸與看得出來的預設深度（與 Apple 一致）。 */
+        fun inserting(kind: FfiShapeKind): NoteShape {
+            val item = NoteShape(kindName = nameOf(kind))
+            if (shapeIsSolid(kind)) {
+                item.width = 120f
+                item.height = 110f
+                item.cornerRadius = shapeDefaultCornerRadius(kind, 120f, 110f)
+            }
+            return item
+        }
 
         fun decode(json: String): NoteShape? {
             val obj = runCatching { JSONObject(json) }.getOrNull() ?: return null

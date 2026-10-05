@@ -640,14 +640,33 @@ fn draw_shape(canvas: &mut Canvas, shape: &ShapeObject, world: &Affine2) {
         return;
     }
     let mapped: Vec<(f32, f32)> = points.iter().map(|&(x, y)| world.apply(x, y)).collect();
-    for pair in mapped.windows(2) {
-        canvas.line(pair[0].0, pair[0].1, pair[1].0, pair[1].1, INK);
+    // 平行模式與註解的輪廓只是點擊範圍，不畫。
+    if kind.draws_outline() {
+        for pair in mapped.windows(2) {
+            canvas.line(pair[0].0, pair[0].1, pair[1].0, pair[1].1, INK);
+        }
+        // 線狀形狀不收尾 —— 收了會多出一條回到起點的邊。
+        if !kind.is_linear()
+            && let (Some(first), Some(last)) = (mapped.first(), mapped.last())
+        {
+            canvas.line(last.0, last.1, first.0, first.1, INK);
+        }
     }
-    // 線狀形狀不收尾 —— 收了會多出一條回到起點的邊。
-    if !kind.is_linear()
-        && let (Some(first), Some(last)) = (mapped.first(), mapped.last())
-    {
-        canvas.line(last.0, last.1, first.0, first.1, INK);
+    // 立體圖的稜線與流程圖符號裡的線。縮圖只描線，不上色、不分虛實。
+    for detail in geom.details(48) {
+        let pts: Vec<(f32, f32)> = detail
+            .points
+            .iter()
+            .map(|&(x, y)| world.apply(x, y))
+            .collect();
+        for pair in pts.windows(2) {
+            canvas.line(pair[0].0, pair[0].1, pair[1].0, pair[1].1, INK);
+        }
+        if detail.closed
+            && let (Some(first), Some(last)) = (pts.first(), pts.last())
+        {
+            canvas.line(last.0, last.1, first.0, first.1, INK);
+        }
     }
 }
 
@@ -710,6 +729,30 @@ fn geom_kind(kind: DocShapeKind) -> GeomShapeKind {
         DocShapeKind::SpeechBubble => GeomShapeKind::SpeechBubble,
         DocShapeKind::Plaque => GeomShapeKind::Plaque,
         DocShapeKind::Pie => GeomShapeKind::Pie,
+        DocShapeKind::PredefinedProcess => GeomShapeKind::PredefinedProcess,
+        DocShapeKind::AlternateProcess => GeomShapeKind::AlternateProcess,
+        DocShapeKind::InternalStorage => GeomShapeKind::InternalStorage,
+        DocShapeKind::MultiDocument => GeomShapeKind::MultiDocument,
+        DocShapeKind::SequentialAccessStorage => GeomShapeKind::SequentialAccessStorage,
+        DocShapeKind::DirectAccessStorage => GeomShapeKind::DirectAccessStorage,
+        DocShapeKind::Sort => GeomShapeKind::Sort,
+        DocShapeKind::SummingJunction => GeomShapeKind::SummingJunction,
+        DocShapeKind::OrJunction => GeomShapeKind::OrJunction,
+        DocShapeKind::LoopLimitStart => GeomShapeKind::LoopLimitStart,
+        DocShapeKind::LoopLimitEnd => GeomShapeKind::LoopLimitEnd,
+        DocShapeKind::ParallelMode => GeomShapeKind::ParallelMode,
+        DocShapeKind::CommunicationLink => GeomShapeKind::CommunicationLink,
+        DocShapeKind::Annotation => GeomShapeKind::Annotation,
+        DocShapeKind::OfflineStorage => GeomShapeKind::OfflineStorage,
+        DocShapeKind::Cube => GeomShapeKind::Cube,
+        DocShapeKind::Cylinder => GeomShapeKind::Cylinder,
+        DocShapeKind::Cone => GeomShapeKind::Cone,
+        DocShapeKind::Pyramid => GeomShapeKind::Pyramid,
+        DocShapeKind::TriangularPrism => GeomShapeKind::TriangularPrism,
+        DocShapeKind::Sphere => GeomShapeKind::Sphere,
+        DocShapeKind::Hemisphere => GeomShapeKind::Hemisphere,
+        DocShapeKind::Torus => GeomShapeKind::Torus,
+        DocShapeKind::Tetrahedron => GeomShapeKind::Tetrahedron,
         DocShapeKind::Line => GeomShapeKind::Line,
         DocShapeKind::Arrow => GeomShapeKind::Arrow,
         DocShapeKind::DoubleArrow => GeomShapeKind::DoubleArrow,

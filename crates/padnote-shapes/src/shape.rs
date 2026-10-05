@@ -88,6 +88,32 @@ pub enum ShapeKind {
     SpeechBubble,
     Plaque,
     Pie,
+    // ---- 流程圖（ISO 5807 補齊）----
+    PredefinedProcess,
+    AlternateProcess,
+    InternalStorage,
+    MultiDocument,
+    SequentialAccessStorage,
+    DirectAccessStorage,
+    Sort,
+    SummingJunction,
+    OrJunction,
+    LoopLimitStart,
+    LoopLimitEnd,
+    ParallelMode,
+    CommunicationLink,
+    Annotation,
+    OfflineStorage,
+    // ---- 立體圖（可調深度；`corner_radius` 當深度用）----
+    Cube,
+    Cylinder,
+    Cone,
+    Pyramid,
+    TriangularPrism,
+    Sphere,
+    Hemisphere,
+    Torus,
+    Tetrahedron,
     // ---- 線與箭頭 ----
     Line,
     Arrow,
@@ -123,7 +149,85 @@ impl ShapeKind {
                 | Self::PunchedTape
                 | Self::PunchedCard
                 | Self::Collate
+                | Self::PredefinedProcess
+                | Self::AlternateProcess
+                | Self::InternalStorage
+                | Self::MultiDocument
+                | Self::SequentialAccessStorage
+                | Self::DirectAccessStorage
+                | Self::Sort
+                | Self::SummingJunction
+                | Self::OrJunction
+                | Self::LoopLimitStart
+                | Self::LoopLimitEnd
+                | Self::ParallelMode
+                | Self::CommunicationLink
+                | Self::Annotation
+                | Self::OfflineStorage
         )
+    }
+
+    /// 立體圖。深度由 `Shape::corner_radius` 調整。
+    pub fn is_solid(self) -> bool {
+        matches!(
+            self,
+            Self::Cube
+                | Self::Cylinder
+                | Self::Cone
+                | Self::Pyramid
+                | Self::TriangularPrism
+                | Self::Sphere
+                | Self::Hemisphere
+                | Self::Torus
+                | Self::Tetrahedron
+        )
+    }
+
+    /// 選單裡的分組。流程圖依 ISO 5807 的分類：處理、資料、流程控制、特殊。
+    pub fn category(self) -> ShapeCategory {
+        match self {
+            Self::Process
+            | Self::PredefinedProcess
+            | Self::AlternateProcess
+            | Self::ManualOperation
+            | Self::Preparation
+            | Self::Merge
+            | Self::Extract
+            | Self::Collate
+            | Self::Sort
+            | Self::LoopLimitStart
+            | Self::LoopLimitEnd => ShapeCategory::FlowProcess,
+            Self::Data
+            | Self::StoredData
+            | Self::InternalStorage
+            | Self::Document
+            | Self::MultiDocument
+            | Self::Display
+            | Self::ManualInput
+            | Self::PunchedCard
+            | Self::PunchedTape
+            | Self::Database
+            | Self::SequentialAccessStorage
+            | Self::DirectAccessStorage
+            | Self::OfflineStorage => ShapeCategory::FlowData,
+            Self::Terminator
+            | Self::Decision
+            | Self::Connector
+            | Self::OffPageConnector
+            | Self::Delay
+            | Self::SummingJunction
+            | Self::OrJunction => ShapeCategory::FlowControl,
+            Self::ParallelMode | Self::CommunicationLink | Self::Annotation => {
+                ShapeCategory::FlowSpecial
+            }
+            k if k.is_solid() => ShapeCategory::Solid,
+            _ => ShapeCategory::Basic,
+        }
+    }
+
+    /// 輪廓本身要不要畫。平行模式與註解只有內部的線（輪廓只是點擊範圍）。
+    pub fn draws_outline(self) -> bool {
+        !matches!(self, Self::ParallelMode | Self::Annotation)
     }
 
     /// 標準語意說明。流程圖符號的意義是固定的，UI 應該顯示出來 ——
@@ -149,6 +253,21 @@ impl ShapeKind {
             Self::PunchedTape => "打孔紙帶",
             Self::PunchedCard => "打孔卡",
             Self::Collate => "對照",
+            Self::PredefinedProcess => "預先定義的處理（副程式）",
+            Self::AlternateProcess => "替代處理",
+            Self::InternalStorage => "內部儲存",
+            Self::MultiDocument => "多份文件",
+            Self::SequentialAccessStorage => "循序存取儲存（磁帶）",
+            Self::DirectAccessStorage => "直接存取儲存（磁碟）",
+            Self::Sort => "排序",
+            Self::SummingJunction => "加總接點",
+            Self::OrJunction => "或（OR）接點",
+            Self::LoopLimitStart => "迴圈開始",
+            Self::LoopLimitEnd => "迴圈結束",
+            Self::ParallelMode => "平行模式",
+            Self::CommunicationLink => "通訊連結",
+            Self::Annotation => "註解",
+            Self::OfflineStorage => "離線儲存",
             _ => return None,
         })
     }
@@ -156,6 +275,73 @@ impl ShapeKind {
     /// 是否能在內部放文字。線狀形狀不行。
     pub fn accepts_text(self) -> bool {
         !self.is_linear()
+    }
+}
+
+/// 選單分組。
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum ShapeCategory {
+    /// 一般形狀（含線與箭頭）。
+    Basic,
+    /// 立體圖。
+    Solid,
+    /// 流程圖：處理類符號。
+    FlowProcess,
+    /// 流程圖：資料與儲存類符號。
+    FlowData,
+    /// 流程圖：流程控制（起訖、判斷、連接點…）。
+    FlowControl,
+    /// 流程圖：特殊符號（平行模式、通訊連結、註解）。
+    FlowSpecial,
+}
+
+impl ShapeCategory {
+    pub const ALL: [Self; 6] = [
+        Self::Basic,
+        Self::Solid,
+        Self::FlowProcess,
+        Self::FlowData,
+        Self::FlowControl,
+        Self::FlowSpecial,
+    ];
+}
+
+/// 輪廓之外的細節：立體圖的各個面與稜線、流程圖符號裡的線。
+#[derive(Clone, Debug, PartialEq)]
+pub struct ShapeDetail {
+    pub points: Vec<(f32, f32)>,
+    /// 封閉的面（可以上色）；否則是一條折線。
+    pub closed: bool,
+    /// 面的明暗：> 0 疊白、< 0 疊黑，絕對值是不透明度；0 只描線不填。
+    pub tone: f32,
+    /// 虛線（看不見的背面稜線）。
+    pub dashed: bool,
+}
+
+impl ShapeDetail {
+    fn line(points: Vec<(f32, f32)>) -> Self {
+        Self {
+            points,
+            closed: false,
+            tone: 0.0,
+            dashed: false,
+        }
+    }
+    fn dashed(points: Vec<(f32, f32)>) -> Self {
+        Self {
+            points,
+            closed: false,
+            tone: 0.0,
+            dashed: true,
+        }
+    }
+    fn face(points: Vec<(f32, f32)>, tone: f32) -> Self {
+        Self {
+            points,
+            closed: true,
+            tone,
+            dashed: false,
+        }
     }
 }
 
@@ -781,11 +967,485 @@ impl Shape {
                 (cx, cy),
             ],
 
+            // ---- 流程圖（ISO 5807 補齊）----
+            ShapeKind::PredefinedProcess
+            | ShapeKind::InternalStorage
+            | ShapeKind::ParallelMode
+            | ShapeKind::Annotation => rect_points(b),
+
+            ShapeKind::AlternateProcess => {
+                rounded_rect(b, self.corner_radius.min(w / 2.0).min(h / 2.0), n)
+            }
+
+            // 多份文件：前面一份加上右上方錯開的兩份。
+            ShapeKind::MultiDocument => {
+                let off = w.min(h) / 10.0;
+                let wave = h / 10.0;
+                let y1 = b.max_y - wave - off;
+                let y2 = b.max_y - wave - off * 2.0;
+                let mut p = vec![
+                    (b.min_x, b.min_y + 2.0 * off),
+                    (b.min_x + off, b.min_y + 2.0 * off),
+                    (b.min_x + off, b.min_y + off),
+                    (b.min_x + 2.0 * off, b.min_y + off),
+                    (b.min_x + 2.0 * off, b.min_y),
+                    (b.max_x, b.min_y),
+                    (b.max_x, y2),
+                    (b.max_x - off, y2),
+                    (b.max_x - off, y1),
+                    (b.max_x - 2.0 * off, y1),
+                    (b.max_x - 2.0 * off, b.max_y - wave),
+                ];
+                let fw = w - 2.0 * off;
+                for i in 0..=n {
+                    let t = i as f32 / n as f32;
+                    p.push((
+                        b.max_x - 2.0 * off - fw * t,
+                        b.max_y - wave + wave * (t * std::f32::consts::TAU).sin(),
+                    ));
+                }
+                p
+            }
+
+            // 循序存取儲存（磁帶）：圓，尾巴是細節線。
+            ShapeKind::SequentialAccessStorage
+            | ShapeKind::SummingJunction
+            | ShapeKind::OrJunction => (0..n)
+                .map(|i| {
+                    let t = i as f32 / n as f32 * std::f32::consts::TAU;
+                    (cx + w / 2.0 * t.cos(), cy + h / 2.0 * t.sin())
+                })
+                .collect(),
+
+            // 直接存取儲存（磁碟）：橫躺的圓柱。
+            ShapeKind::DirectAccessStorage => {
+                let rx = (w / 8.0).min(h / 2.0);
+                let mut p = vec![(b.min_x + rx, b.min_y), (b.max_x - rx, b.min_y)];
+                for i in 0..=n {
+                    let t =
+                        -std::f32::consts::FRAC_PI_2 + std::f32::consts::PI * i as f32 / n as f32;
+                    p.push((b.max_x - rx + rx * t.cos(), cy + h / 2.0 * t.sin()));
+                }
+                p.push((b.min_x + rx, b.max_y));
+                for i in 0..=n {
+                    let t =
+                        std::f32::consts::FRAC_PI_2 + std::f32::consts::PI * i as f32 / n as f32;
+                    p.push((b.min_x + rx + rx * t.cos(), cy + h / 2.0 * t.sin()));
+                }
+                p
+            }
+
+            ShapeKind::Sort => {
+                vec![(cx, b.min_y), (b.max_x, cy), (cx, b.max_y), (b.min_x, cy)]
+            }
+
+            // 迴圈開始：上方兩角削掉；迴圈結束：下方兩角削掉。
+            ShapeKind::LoopLimitStart => {
+                let c = w.min(h) * 0.25;
+                vec![
+                    (b.min_x + c, b.min_y),
+                    (b.max_x - c, b.min_y),
+                    (b.max_x, b.min_y + c),
+                    (b.max_x, b.max_y),
+                    (b.min_x, b.max_y),
+                    (b.min_x, b.min_y + c),
+                ]
+            }
+            ShapeKind::LoopLimitEnd => {
+                let c = w.min(h) * 0.25;
+                vec![
+                    (b.min_x, b.min_y),
+                    (b.max_x, b.min_y),
+                    (b.max_x, b.max_y - c),
+                    (b.max_x - c, b.max_y),
+                    (b.min_x + c, b.max_y),
+                    (b.min_x, b.max_y - c),
+                ]
+            }
+
+            // 通訊連結：橫向的閃電。
+            ShapeKind::CommunicationLink => [
+                (0.40, 0.0),
+                (0.85, 0.0),
+                (0.52, 0.45),
+                (0.75, 0.45),
+                (0.20, 1.0),
+                (0.48, 0.60),
+                (0.22, 0.60),
+            ]
+            .iter()
+            .map(|&(u, v)| (b.min_x + v * w, b.min_y + u * h))
+            .collect(),
+
+            ShapeKind::OfflineStorage => {
+                vec![(b.min_x, b.min_y), (b.max_x, b.min_y), (cx, b.max_y)]
+            }
+
+            // ---- 立體圖：輪廓是外緣，面與稜線在 `details` ----
+            ShapeKind::Cube => {
+                let d = self.depth();
+                vec![
+                    (b.min_x, b.min_y + d),
+                    (b.min_x + d, b.min_y),
+                    (b.max_x, b.min_y),
+                    (b.max_x, b.max_y - d),
+                    (b.max_x - d, b.max_y),
+                    (b.min_x, b.max_y),
+                ]
+            }
+
+            ShapeKind::Cylinder => {
+                let ry = (self.depth() / 2.0).min(h / 4.0);
+                let (top, bottom) = (b.min_y + ry, b.max_y - ry);
+                let mut p = Vec::with_capacity(n * 2 + 4);
+                for i in 0..=n {
+                    let t = std::f32::consts::PI + std::f32::consts::PI * i as f32 / n as f32;
+                    p.push((cx + w / 2.0 * t.cos(), top + ry * t.sin()));
+                }
+                for i in 0..=n {
+                    let t = std::f32::consts::PI * i as f32 / n as f32;
+                    p.push((cx + w / 2.0 * t.cos(), bottom + ry * t.sin()));
+                }
+                p
+            }
+
+            ShapeKind::Cone => {
+                let ry = (self.depth() / 2.0).min(h / 4.0);
+                let base = b.max_y - ry;
+                let mut p = vec![(cx, b.min_y), (b.max_x, base)];
+                for i in 0..=n {
+                    let t = std::f32::consts::PI * i as f32 / n as f32;
+                    p.push((cx + w / 2.0 * t.cos(), base + ry * t.sin()));
+                }
+                p.push((b.min_x, base));
+                p
+            }
+
+            ShapeKind::Pyramid => {
+                let d = self.depth();
+                vec![
+                    (b.min_x, b.max_y),
+                    (cx, b.min_y),
+                    (b.max_x, b.max_y - d),
+                    (b.max_x - d, b.max_y),
+                ]
+            }
+
+            ShapeKind::TriangularPrism => {
+                let d = self.depth();
+                let ax = (b.min_x + b.max_x - d) / 2.0;
+                vec![
+                    (b.min_x, b.max_y),
+                    (ax, b.min_y + d),
+                    (ax + d, b.min_y),
+                    (b.max_x, b.max_y - d),
+                    (b.max_x - d, b.max_y),
+                ]
+            }
+
+            ShapeKind::Sphere => (0..n)
+                .map(|i| {
+                    let t = i as f32 / n as f32 * std::f32::consts::TAU;
+                    (cx + w / 2.0 * t.cos(), cy + h / 2.0 * t.sin())
+                })
+                .collect(),
+
+            ShapeKind::Hemisphere => {
+                let ry = (self.depth() / 2.0).min(h / 3.0);
+                let base = b.max_y - ry;
+                let dome = base - b.min_y;
+                let mut p = Vec::with_capacity(n * 2 + 2);
+                for i in 0..=n {
+                    let t = std::f32::consts::PI + std::f32::consts::PI * i as f32 / n as f32;
+                    p.push((cx + w / 2.0 * t.cos(), base + dome * t.sin()));
+                }
+                for i in 0..=n {
+                    let t = std::f32::consts::PI * i as f32 / n as f32;
+                    p.push((cx + w / 2.0 * t.cos(), base + ry * t.sin()));
+                }
+                p
+            }
+
+            ShapeKind::Torus => (0..n)
+                .map(|i| {
+                    let t = i as f32 / n as f32 * std::f32::consts::TAU;
+                    (cx + w / 2.0 * t.cos(), cy + h / 2.0 * t.sin())
+                })
+                .collect(),
+
+            ShapeKind::Tetrahedron => {
+                let d = self.depth();
+                vec![
+                    (cx, b.min_y),
+                    (b.min_x, b.max_y - 0.35 * d),
+                    (b.min_x + 0.55 * w, b.max_y),
+                    (b.max_x, b.max_y - 0.55 * d),
+                ]
+            }
+
             // 線狀：從左上到右下
             ShapeKind::Line | ShapeKind::Arrow | ShapeKind::DoubleArrow => {
                 vec![(b.min_x, b.min_y), (b.max_x, b.max_y)]
             }
         }
+    }
+
+    /// 立體圖的深度（像素）。取 `corner_radius`，夾在短邊的 10%–50% 之間：
+    /// 太淺看不出立體、太深就吃掉正面。**這就是使用者可調整的那一個參數。**
+    pub fn depth(&self) -> f32 {
+        let m = self.bounds.width().min(self.bounds.height());
+        self.corner_radius.clamp(m * 0.10, (m * 0.50).max(m * 0.10))
+    }
+
+    /// 輪廓之外的細節（立體圖的面與稜線、流程圖符號裡的線）。其他形狀回傳空的。
+    ///
+    /// 與 [`Shape::outline`] 一樣**不套用旋轉**，由平台一起轉。
+    pub fn details(&self, segments: usize) -> Vec<ShapeDetail> {
+        let b = self.bounds;
+        let (w, h) = (b.width(), b.height());
+        let (cx, cy) = self.center();
+        let n = segments.max(8);
+        let tau = std::f32::consts::TAU;
+        let pi = std::f32::consts::PI;
+        // 橢圓上的一段弧。
+        let arc = |ecx: f32, ecy: f32, rx: f32, ry: f32, a0: f32, a1: f32| -> Vec<(f32, f32)> {
+            (0..=n)
+                .map(|i| {
+                    let t = a0 + (a1 - a0) * i as f32 / n as f32;
+                    (ecx + rx * t.cos(), ecy + ry * t.sin())
+                })
+                .collect()
+        };
+
+        match self.kind {
+            ShapeKind::PredefinedProcess => vec![
+                ShapeDetail::line(vec![
+                    (b.min_x + w / 8.0, b.min_y),
+                    (b.min_x + w / 8.0, b.max_y),
+                ]),
+                ShapeDetail::line(vec![
+                    (b.max_x - w / 8.0, b.min_y),
+                    (b.max_x - w / 8.0, b.max_y),
+                ]),
+            ],
+            ShapeKind::InternalStorage => vec![
+                ShapeDetail::line(vec![
+                    (b.min_x + w / 6.0, b.min_y),
+                    (b.min_x + w / 6.0, b.max_y),
+                ]),
+                ShapeDetail::line(vec![
+                    (b.min_x, b.min_y + h / 6.0),
+                    (b.max_x, b.min_y + h / 6.0),
+                ]),
+            ],
+            ShapeKind::MultiDocument => {
+                let off = w.min(h) / 10.0;
+                let wave = h / 10.0;
+                let y1 = b.max_y - wave - off;
+                let y2 = b.max_y - wave - off * 2.0;
+                vec![
+                    ShapeDetail::line(vec![
+                        (b.min_x + off, b.min_y + 2.0 * off),
+                        (b.max_x - 2.0 * off, b.min_y + 2.0 * off),
+                        (b.max_x - 2.0 * off, b.max_y - wave),
+                    ]),
+                    ShapeDetail::line(vec![
+                        (b.min_x + 2.0 * off, b.min_y + off),
+                        (b.max_x - off, b.min_y + off),
+                        (b.max_x - off, y1),
+                    ]),
+                    ShapeDetail::line(vec![(b.max_x - off, y2), (b.max_x, y2)]),
+                ]
+            }
+            ShapeKind::SequentialAccessStorage => {
+                vec![ShapeDetail::line(vec![(cx, b.max_y), (b.max_x, b.max_y)])]
+            }
+            ShapeKind::DirectAccessStorage => {
+                let rx = (w / 8.0).min(h / 2.0);
+                vec![ShapeDetail::line(arc(
+                    b.max_x - rx,
+                    cy,
+                    rx,
+                    h / 2.0,
+                    pi / 2.0,
+                    pi * 1.5,
+                ))]
+            }
+            ShapeKind::Sort => vec![ShapeDetail::line(vec![(b.min_x, cy), (b.max_x, cy)])],
+            ShapeKind::SummingJunction => {
+                let k = std::f32::consts::FRAC_1_SQRT_2;
+                let (a, c) = (w / 2.0 * k, h / 2.0 * k);
+                vec![
+                    ShapeDetail::line(vec![(cx - a, cy - c), (cx + a, cy + c)]),
+                    ShapeDetail::line(vec![(cx - a, cy + c), (cx + a, cy - c)]),
+                ]
+            }
+            ShapeKind::OrJunction => vec![
+                ShapeDetail::line(vec![(cx, b.min_y), (cx, b.max_y)]),
+                ShapeDetail::line(vec![(b.min_x, cy), (b.max_x, cy)]),
+            ],
+            ShapeKind::ParallelMode => vec![
+                ShapeDetail::line(vec![(b.min_x, cy - h * 0.12), (b.max_x, cy - h * 0.12)]),
+                ShapeDetail::line(vec![(b.min_x, cy + h * 0.12), (b.max_x, cy + h * 0.12)]),
+            ],
+            ShapeKind::Annotation => {
+                let br = (w * 0.15).min(16.0);
+                vec![
+                    ShapeDetail::line(vec![
+                        (b.min_x + br, b.min_y),
+                        (b.min_x, b.min_y),
+                        (b.min_x, b.max_y),
+                        (b.min_x + br, b.max_y),
+                    ]),
+                    ShapeDetail::dashed(vec![(b.min_x, cy), (b.max_x, cy)]),
+                ]
+            }
+            ShapeKind::OfflineStorage => vec![
+                ShapeDetail::line(vec![
+                    (cx - w * 0.12, b.min_y + h * 0.22),
+                    (cx + w * 0.12, b.min_y + h * 0.22),
+                ]),
+                ShapeDetail::line(vec![(cx, b.min_y + h * 0.22), (cx, b.min_y + h * 0.5)]),
+            ],
+
+            // ---- 立體圖 ----
+            ShapeKind::Cube => {
+                let d = self.depth();
+                vec![
+                    ShapeDetail::face(
+                        vec![
+                            (b.min_x, b.min_y + d),
+                            (b.min_x + d, b.min_y),
+                            (b.max_x, b.min_y),
+                            (b.max_x - d, b.min_y + d),
+                        ],
+                        0.28,
+                    ),
+                    ShapeDetail::face(
+                        vec![
+                            (b.max_x - d, b.min_y + d),
+                            (b.max_x, b.min_y),
+                            (b.max_x, b.max_y - d),
+                            (b.max_x - d, b.max_y),
+                        ],
+                        -0.22,
+                    ),
+                    ShapeDetail::face(
+                        vec![
+                            (b.min_x, b.min_y + d),
+                            (b.max_x - d, b.min_y + d),
+                            (b.max_x - d, b.max_y),
+                            (b.min_x, b.max_y),
+                        ],
+                        0.0,
+                    ),
+                ]
+            }
+            ShapeKind::Cylinder => {
+                let ry = (self.depth() / 2.0).min(h / 4.0);
+                vec![ShapeDetail::face(
+                    arc(cx, b.min_y + ry, w / 2.0, ry, 0.0, tau),
+                    0.28,
+                )]
+            }
+            ShapeKind::Cone => {
+                let ry = (self.depth() / 2.0).min(h / 4.0);
+                let base = b.max_y - ry;
+                let mut shade = vec![(cx, b.min_y), (b.max_x, base)];
+                shade.extend(arc(cx, base, w / 2.0, ry, 0.0, pi / 2.0));
+                vec![
+                    ShapeDetail::face(shade, -0.2),
+                    ShapeDetail::dashed(arc(cx, base, w / 2.0, ry, pi, tau)),
+                ]
+            }
+            ShapeKind::Pyramid => {
+                let d = self.depth();
+                let apex = (cx, b.min_y);
+                let (fl, fr) = ((b.min_x, b.max_y), (b.max_x - d, b.max_y));
+                let (br, bl) = ((b.max_x, b.max_y - d), (b.min_x + d, b.max_y - d));
+                vec![
+                    ShapeDetail::face(vec![fr, apex, br], -0.22),
+                    ShapeDetail::face(vec![fl, apex, fr], 0.0),
+                    ShapeDetail::dashed(vec![fl, bl, br]),
+                    ShapeDetail::dashed(vec![bl, apex]),
+                ]
+            }
+            ShapeKind::TriangularPrism => {
+                let d = self.depth();
+                let ax = (b.min_x + b.max_x - d) / 2.0;
+                let (l1, a1, r1) = (
+                    (b.min_x, b.max_y),
+                    (ax, b.min_y + d),
+                    (b.max_x - d, b.max_y),
+                );
+                let (a2, r2) = ((ax + d, b.min_y), (b.max_x, b.max_y - d));
+                let l2 = (b.min_x + d, b.max_y - d);
+                vec![
+                    ShapeDetail::face(vec![a1, a2, r2, r1], -0.2),
+                    ShapeDetail::face(vec![l1, a1, r1], 0.0),
+                    ShapeDetail::dashed(vec![l1, l2, a2]),
+                    ShapeDetail::dashed(vec![l2, r2]),
+                ]
+            }
+            ShapeKind::Sphere => {
+                let ry = (self.depth() / 2.0).min(h / 2.0);
+                vec![
+                    ShapeDetail::line(arc(cx, cy, w / 2.0, ry, 0.0, pi)),
+                    ShapeDetail::dashed(arc(cx, cy, w / 2.0, ry, pi, tau)),
+                    ShapeDetail::face(
+                        arc(cx - w * 0.17, cy - h * 0.2, w * 0.12, h * 0.08, 0.0, tau),
+                        0.35,
+                    ),
+                ]
+            }
+            ShapeKind::Hemisphere => {
+                let ry = (self.depth() / 2.0).min(h / 3.0);
+                let base = b.max_y - ry;
+                vec![
+                    ShapeDetail::dashed(arc(cx, base, w / 2.0, ry, pi, tau)),
+                    ShapeDetail::face(
+                        arc(
+                            cx - w * 0.17,
+                            base - (base - b.min_y) * 0.5,
+                            w * 0.12,
+                            h * 0.07,
+                            0.0,
+                            tau,
+                        ),
+                        0.35,
+                    ),
+                ]
+            }
+            ShapeKind::Torus => {
+                let m = w.min(h);
+                let t = self.depth() / m;
+                let s = (0.85 - t).clamp(0.3, 0.8);
+                vec![ShapeDetail::face(
+                    arc(cx, cy, w / 2.0 * s, h / 2.0 * s, 0.0, tau),
+                    -0.3,
+                )]
+            }
+            ShapeKind::Tetrahedron => {
+                let d = self.depth();
+                let a = (cx, b.min_y);
+                let l = (b.min_x, b.max_y - 0.35 * d);
+                let f = (b.min_x + 0.55 * w, b.max_y);
+                let r = (b.max_x, b.max_y - 0.55 * d);
+                vec![
+                    ShapeDetail::face(vec![a, f, r], -0.22),
+                    ShapeDetail::face(vec![a, l, f], 0.0),
+                    ShapeDetail::dashed(vec![l, r]),
+                ]
+            }
+            _ => Vec::new(),
+        }
+    }
+
+    /// 新插入一個形狀時，`corner_radius` 該放多少。立體圖要有看得出來的深度，
+    /// 其餘沿用短邊的 1/6。
+    pub fn default_corner_radius(kind: ShapeKind, width: f32, height: f32) -> f32 {
+        let m = width.min(height);
+        if kind.is_solid() { m * 0.25 } else { m / 6.0 }
     }
 
     /// 點是否在形狀內（射線法）。線狀形狀改用距離判定。
@@ -1020,6 +1680,166 @@ mod tests {
         ] {
             let outline = Shape::new(kind, flat).outline(16);
             assert!(outline.iter().all(|(x, y)| x.is_finite() && y.is_finite()));
+        }
+    }
+}
+
+#[cfg(test)]
+mod catalog_tests {
+    use super::*;
+
+    const NEW_FLOW: [ShapeKind; 15] = [
+        ShapeKind::PredefinedProcess,
+        ShapeKind::AlternateProcess,
+        ShapeKind::InternalStorage,
+        ShapeKind::MultiDocument,
+        ShapeKind::SequentialAccessStorage,
+        ShapeKind::DirectAccessStorage,
+        ShapeKind::Sort,
+        ShapeKind::SummingJunction,
+        ShapeKind::OrJunction,
+        ShapeKind::LoopLimitStart,
+        ShapeKind::LoopLimitEnd,
+        ShapeKind::ParallelMode,
+        ShapeKind::CommunicationLink,
+        ShapeKind::Annotation,
+        ShapeKind::OfflineStorage,
+    ];
+    const SOLIDS: [ShapeKind; 9] = [
+        ShapeKind::Cube,
+        ShapeKind::Cylinder,
+        ShapeKind::Cone,
+        ShapeKind::Pyramid,
+        ShapeKind::TriangularPrism,
+        ShapeKind::Sphere,
+        ShapeKind::Hemisphere,
+        ShapeKind::Torus,
+        ShapeKind::Tetrahedron,
+    ];
+
+    fn bounds() -> Rect {
+        Rect::new(10.0, 20.0, 130.0, 100.0)
+    }
+
+    #[test]
+    fn new_symbols_have_outline_details_inside_the_bounds() {
+        let b = bounds();
+        for kind in NEW_FLOW.iter().chain(SOLIDS.iter()).copied() {
+            let shape = Shape::new(kind, b);
+            let outline = shape.outline(32);
+            assert!(outline.len() >= 3, "{kind:?} 輪廓點太少");
+            let mut all = outline.clone();
+            for d in shape.details(32) {
+                assert!(d.points.len() >= 2, "{kind:?} 有空的細節");
+                all.extend(d.points);
+            }
+            for (x, y) in all {
+                assert!(x.is_finite() && y.is_finite(), "{kind:?} 含非法座標");
+                assert!(
+                    x >= b.min_x - 0.01
+                        && x <= b.max_x + 0.01
+                        && y >= b.min_y - 0.01
+                        && y <= b.max_y + 0.01,
+                    "{kind:?} 的點 ({x},{y}) 超出外框"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn every_kind_belongs_to_exactly_one_category() {
+        for kind in NEW_FLOW.iter().chain(SOLIDS.iter()).copied() {
+            let c = kind.category();
+            assert_ne!(c, ShapeCategory::Basic, "{kind:?} 不該落在一般形狀");
+            assert_eq!(
+                kind.is_flowchart(),
+                c != ShapeCategory::Solid,
+                "{kind:?} 分組與流程圖旗標不一致"
+            );
+        }
+        // 原本的流程圖符號全部在流程圖四組之內。
+        for kind in [
+            ShapeKind::Process,
+            ShapeKind::Decision,
+            ShapeKind::Data,
+            ShapeKind::Delay,
+        ] {
+            assert!(kind.is_flowchart());
+            assert!(matches!(
+                kind.category(),
+                ShapeCategory::FlowProcess | ShapeCategory::FlowData | ShapeCategory::FlowControl
+            ));
+        }
+    }
+
+    #[test]
+    fn solids_are_adjustable_through_depth() {
+        for kind in SOLIDS {
+            assert!(kind.is_solid());
+        }
+        let b = bounds();
+        let mut shallow = Shape::new(ShapeKind::Cube, b);
+        shallow.corner_radius = 0.0; // 夾到下限
+        let mut deep = Shape::new(ShapeKind::Cube, b);
+        deep.corner_radius = 1000.0; // 夾到上限
+        assert!(deep.depth() > shallow.depth());
+        assert_ne!(shallow.outline(16), deep.outline(16), "調深度要改變輪廓");
+        // 極端值仍在外框內。
+        for (x, y) in deep.outline(16).into_iter().chain(shallow.outline(16)) {
+            assert!(
+                x >= b.min_x - 0.01
+                    && x <= b.max_x + 0.01
+                    && y >= b.min_y - 0.01
+                    && y <= b.max_y + 0.01
+            );
+        }
+    }
+
+    #[test]
+    fn solids_get_a_visible_default_depth() {
+        let d = Shape::default_corner_radius(ShapeKind::Cube, 100.0, 80.0);
+        assert!(d >= 80.0 * 0.2, "立體圖預設深度要看得出來");
+        assert!(
+            (Shape::default_corner_radius(ShapeKind::Process, 100.0, 60.0) - 10.0).abs() < 0.01,
+            "其餘維持短邊的 1/6"
+        );
+    }
+
+    #[test]
+    fn open_symbols_do_not_draw_an_outline() {
+        assert!(!ShapeKind::ParallelMode.draws_outline());
+        assert!(!ShapeKind::Annotation.draws_outline());
+        assert!(ShapeKind::Process.draws_outline());
+        assert!(
+            !Shape::new(ShapeKind::ParallelMode, bounds())
+                .details(16)
+                .is_empty()
+        );
+    }
+
+    #[test]
+    fn every_new_flowchart_symbol_has_a_standard_meaning() {
+        for kind in NEW_FLOW {
+            assert!(kind.semantic().is_some(), "{kind:?} 缺少 ISO 5807 語意說明");
+        }
+    }
+
+    #[test]
+    fn solids_render_with_faces_where_the_form_has_them() {
+        let b = bounds();
+        for kind in [
+            ShapeKind::Cube,
+            ShapeKind::Pyramid,
+            ShapeKind::TriangularPrism,
+            ShapeKind::Tetrahedron,
+        ] {
+            assert!(
+                Shape::new(kind, b)
+                    .details(16)
+                    .iter()
+                    .any(|d| d.closed && d.tone < 0.0),
+                "{kind:?} 要有一個背光面才看得出立體"
+            );
         }
     }
 }
