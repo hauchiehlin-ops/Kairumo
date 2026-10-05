@@ -9755,15 +9755,24 @@ public struct NotebookEditorView: View {
         return all
     }
 
-    /// 把立體輔助排好的圖紙插進目前這一頁，水平置中、靠上。整組一次復原。
+    /// 把立體輔助排好的圖紙插進目前這一頁：放在**目前看得到的範圍正中央**（不是固定貼頂，
+    /// 那樣會壓在既有的圖上），整組一次復原。插入後直接用套索選住它，使用者拖一下就能搬。
     private func insertSolidSheet(_ sheet: FfiSolidSheet) {
-        guard let layer = (canvasView as? AdaptiveCanvasView)?.proLayer else { return }
+        guard let canvas = canvasView as? AdaptiveCanvasView, let layer = canvas.proLayer else { return }
         let page = PageGeometry.size
+        let w = CGFloat(sheet.width), h = CGFloat(sheet.height)
+        let center = layer.convert(CGPoint(x: canvas.bounds.midX, y: canvas.bounds.midY), from: canvas)
         let origin = CGPoint(
-            x: max(0, (page.width - CGFloat(sheet.width)) / 2),
-            y: max(PageGeometry.printableInset, page.height * 0.08))
-        layer.insertDrafted(sheet.strokes, origin: origin)
-        showCanvasNotice(localizationManager.localized("solid_inserted"))
+            x: min(max(0, center.x - w / 2), max(0, page.width - w)),
+            y: min(max(0, center.y - h / 2), max(0, page.height - h)))
+        let made = layer.insertDrafted(sheet.strokes, origin: origin)
+        showCanvasNotice(localizationManager.localized("solid_place_hint"))
+        guard !made.isEmpty else { return }
+        selectedTool = .lasso
+        // 換工具會清掉舊的選取；等下一個 runloop 再選，選取框才不會被清掉。
+        let ids = Set(made.map(\.id))
+        let box = made.map(\.bounds).reduce(CGRect.null) { $0.union($1) }
+        DispatchQueue.main.async { lasso.select(proStrokeIds: ids, around: box) }
     }
 
     /// 工具列上顯示的規格名稱。自訂的直接顯示尺寸（「2000×1500」）。

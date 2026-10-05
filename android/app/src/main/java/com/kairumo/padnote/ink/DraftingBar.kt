@@ -8,11 +8,13 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.DropdownMenu
@@ -65,7 +67,60 @@ fun DraftingBar(
         tonalElevation = 6.dp,
         shadowElevation = 8.dp
     ) {
+        val compact = DraftingState.compactChoice.let {
+            if (it >= 0) it == 1 else androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp < 600
+        }
+        var showTips by remember { mutableStateOf(!DraftingState.tipsSeen) }
+        if (showTips) {
+            androidx.compose.material3.AlertDialog(
+                onDismissRequest = { DraftingState.markTipsSeen(); showTips = false },
+                title = { Text(l10n("draft_tip_title")) },
+                text = {
+                    Column(
+                        modifier = Modifier.testTag("draft.tips").verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) { for (i in 1..4) Text("$i. " + l10n("draft_tip_$i")) }
+                },
+                confirmButton = {
+                    androidx.compose.material3.TextButton(
+                        onClick = { DraftingState.markTipsSeen(); showTips = false },
+                        modifier = Modifier.testTag("draft.tips.dismiss")
+                    ) { Text(l10n("draft_tip_dismiss")) }
+                }
+            )
+        }
         Column(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            val buttons: @Composable () -> Unit = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    androidx.compose.material3.TextButton(
+                        onClick = { showTips = !showTips },
+                        modifier = Modifier.testTag("draft.help").semantics { contentDescription = l10n("draft_help") }
+                    ) { Text("?", fontSize = 16.sp, fontWeight = FontWeight.Bold) }
+                    androidx.compose.material3.TextButton(
+                        onClick = { DraftingState.setCompact(!compact) },
+                        modifier = Modifier.testTag("draft.collapse").semantics {
+                            contentDescription = l10n(if (compact) "draft_bar_expand" else "draft_bar_collapse")
+                        }
+                    ) { Text(if (compact) "▾" else "▴", fontSize = 16.sp) }
+                }
+            }
+            if (compact) {
+                val pen = DraftingState.activePen
+                val layer = DraftingState.layers.firstOrNull { it.id.toInt() == DraftingState.activeLayerId }
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    DraftLinePreview(pen, Modifier.width(54.dp).height(14.dp))
+                    Text(l10n(pen.nameKey), fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
+                    if (layer != null) {
+                        androidx.compose.foundation.layout.Box(
+                            Modifier.size(10.dp).clip(CircleShape).background(DraftingState.layerColor(layer.id.toInt()))
+                        )
+                        Text(l10n(layer.nameKey), fontSize = 12.sp, maxLines = 1)
+                    }
+                    androidx.compose.foundation.layout.Spacer(Modifier.weight(1f))
+                    buttons()
+                }
+            } else Row(verticalAlignment = Alignment.Top) {
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             // ── 製圖筆 ──
             Row(
                 modifier = Modifier.horizontalScroll(rememberScrollState()),
@@ -237,6 +292,9 @@ fun DraftingBar(
                     label = { Text("📦 " + l10n("solid_studio"), fontSize = 12.sp) },
                     modifier = Modifier.testTag("draft.solidStudio")
                 )
+            }
+            }
+            buttons()
             }
         }
     }

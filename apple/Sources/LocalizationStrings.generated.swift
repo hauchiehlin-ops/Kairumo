@@ -3254,6 +3254,22 @@ extension LocalizationManager {
             .ko: "각도 잠금",
             .th: "ล็อกมุม"
         ],
+        "draft_bar_collapse": [
+            .zhHant: "收合面板",
+            .en: "Collapse panel",
+            .zhHans: "收合面板",
+            .ja: "パネルを閉じる",
+            .ko: "패널 접기",
+            .th: "ย่อแผง"
+        ],
+        "draft_bar_expand": [
+            .zhHant: "展開圖學面板",
+            .en: "Show drafting panel",
+            .zhHans: "展开图学面板",
+            .ja: "製図パネルを開く",
+            .ko: "도면 패널 펼치기",
+            .th: "แสดงแผงเขียนแบบ"
+        ],
         "draft_draw_on_layer": [
             .zhHant: "畫在此圖層",
             .en: "Draw on this layer",
@@ -3261,6 +3277,14 @@ extension LocalizationManager {
             .ja: "このレイヤーに描く",
             .ko: "이 레이어에 그리기",
             .th: "วาดบนเลเยอร์นี้"
+        ],
+        "draft_help": [
+            .zhHant: "使用提示",
+            .en: "Tips",
+            .zhHans: "使用提示",
+            .ja: "ヒント",
+            .ko: "도움말",
+            .th: "เคล็ดลับ"
         ],
         "draft_hide_layer": [
             .zhHant: "隱藏圖層",
@@ -3469,6 +3493,54 @@ extension LocalizationManager {
             .ja: "① からやり直す",
             .ko: "①부터 다시",
             .th: "เริ่มจาก ①"
+        ],
+        "draft_tip_1": [
+            .zhHant: "選一支筆：線型與圖層跟著它走（隱藏線＝虛線、輔助線＝淺藍）。",
+            .en: "Pick a pen: its line type and layer come with it (hidden line = dashed, aux = light blue).",
+            .zhHans: "选一支笔：线型与图层跟着它走（隐藏线＝虚线、辅助线＝浅蓝）。",
+            .ja: "ペンを選ぶと線種とレイヤーも決まります（かくれ線＝破線、補助線＝水色）。",
+            .ko: "펜을 고르면 선 종류와 레이어가 함께 정해집니다(숨은선=점선, 보조선=연한 파랑).",
+            .th: "เลือกปากกา: ชนิดเส้นและเลเยอร์มาพร้อมกัน (เส้นซ่อน=เส้นประ, เส้นช่วย=ฟ้าอ่อน)"
+        ],
+        "draft_tip_2": [
+            .zhHant: "畫一條線，在終點停住半秒：會自動變直線、圓或矩形。",
+            .en: "Draw a line and hold still for half a second at the end: it snaps straight, to a circle or a rectangle.",
+            .zhHans: "画一条线，在终点停住半秒：会自动变直线、圆或矩形。",
+            .ja: "線を描き、終点で0.5秒止めると直線・円・長方形にそろいます。",
+            .ko: "선을 긋고 끝에서 0.5초 멈추면 직선·원·사각형으로 정리됩니다.",
+            .th: "วาดเส้นแล้วหยุดค้างครึ่งวินาทีที่ปลาย: จะกลายเป็นเส้นตรง วงกลม หรือสี่เหลี่ยม"
+        ],
+        "draft_tip_3": [
+            .zhHant: "點眼睛可隱藏圖層（例如輔助線）、點鎖頭保護圖層。",
+            .en: "Tap the eye to hide a layer (for example the construction lines) and the lock to protect it.",
+            .zhHans: "点眼睛可隐藏图层（例如辅助线）、点锁头保护图层。",
+            .ja: "目のアイコンでレイヤー（補助線など）を隠し、鍵で保護します。",
+            .ko: "눈 아이콘으로 레이어(보조선 등)를 숨기고 자물쇠로 보호합니다.",
+            .th: "แตะรูปตาเพื่อซ่อนเลเยอร์ (เช่นเส้นช่วย) แตะกุญแจเพื่อป้องกัน"
+        ],
+        "draft_tip_4": [
+            .zhHant: "立體輔助：畫一個封閉輪廓，就能拉伸成三視圖、等角圖與剖面。",
+            .en: "Solid helper: draw a closed outline, then extrude it into three views, an isometric view and sections.",
+            .zhHans: "立体辅助：画一个封闭轮廓，就能拉伸成三视图、等角图与剖面。",
+            .ja: "立体ヘルパー：閉じた輪郭を描くと、三面図・等角図・断面図に押し出せます。",
+            .ko: "입체 도우미: 닫힌 윤곽을 그리면 3면도·등각도·단면도로 돌출시킵니다.",
+            .th: "ตัวช่วยสามมิติ: วาดโครงร่างปิด แล้วดึงเป็นสามมุมมอง ภาพไอโซเมตริก และภาพตัด"
+        ],
+        "draft_tip_dismiss": [
+            .zhHant: "知道了",
+            .en: "Got it",
+            .zhHans: "知道了",
+            .ja: "わかりました",
+            .ko: "확인",
+            .th: "เข้าใจแล้ว"
+        ],
+        "draft_tip_title": [
+            .zhHant: "圖學使用提示",
+            .en: "Drafting tips",
+            .zhHans: "图学使用提示",
+            .ja: "製図のヒント",
+            .ko: "도면 도움말",
+            .th: "เคล็ดลับงานเขียนแบบ"
         ],
         "draft_unlock_layer": [
             .zhHant: "解除鎖定",
@@ -11840,6 +11912,14 @@ extension LocalizationManager {
             .ko: "절단 깊이",
             .th: "ความลึกที่ตัด"
         ],
+        "solid_dimensions": [
+            .zhHant: "標註尺寸",
+            .en: "Dimensions",
+            .zhHans: "标注尺寸",
+            .ja: "寸法を記入",
+            .ko: "치수 기입",
+            .th: "ใส่ขนาด"
+        ],
         "solid_first_angle": [
             .zhHant: "第一角法",
             .en: "First-angle projection",
@@ -11919,6 +11999,14 @@ extension LocalizationManager {
             .ja: "垂直傾斜",
             .ko: "상하 기울기",
             .th: "เอียงขึ้นลง"
+        ],
+        "solid_place_hint": [
+            .zhHant: "已插入——拖曳可移動位置，點空白處完成。",
+            .en: "Inserted — drag to move it, tap empty space when done.",
+            .zhHans: "已插入——拖曳可移动位置，点空白处完成。",
+            .ja: "挿入しました。ドラッグで移動、空白をタップで完了。",
+            .ko: "삽입됨 — 끌어서 이동하고 빈 곳을 눌러 완료합니다.",
+            .th: "แทรกแล้ว — ลากเพื่อย้าย แตะที่ว่างเมื่อเสร็จ"
         ],
         "solid_preset_circle": [
             .zhHant: "圓形",
@@ -12015,6 +12103,14 @@ extension LocalizationManager {
             .ja: "全断面",
             .ko: "온단면",
             .th: "ตัดเต็ม"
+        ],
+        "solid_section_label": [
+            .zhHant: "標示剖面（A–A）",
+            .en: "Label the section (A–A)",
+            .zhHans: "标示剖面（A–A）",
+            .ja: "断面を表示（A–A）",
+            .ko: "단면 표시(A–A)",
+            .th: "ระบุภาพตัด (A–A)"
         ],
         "solid_section_none": [
             .zhHant: "不剖",

@@ -55,6 +55,17 @@ final class DraftingState: ObservableObject {
     }
     /// 下一個要放的編號。
     @Published var stepNumber = 1
+    /// 收合成一列的精簡面板。`nil` = 還沒選過，由畫面寬度決定（手機預設收合）。
+    @Published var compactChoice: Bool? {
+        didSet {
+            if let v = compactChoice { UserDefaults.standard.set(v, forKey: Keys.compact) }
+            else { UserDefaults.standard.removeObject(forKey: Keys.compact) }
+        }
+    }
+    /// 第一次使用的提示卡看過了沒。
+    @Published var tipsSeen: Bool {
+        didSet { UserDefaults.standard.set(tipsSeen, forKey: Keys.tipsSeen) }
+    }
 
     static let angleChoices = [0, 15, 30, 45, 90]
 
@@ -70,6 +81,8 @@ final class DraftingState: ObservableObject {
         static let layerOverride = "kairumo.draft.layer"
         static let snap = "kairumo.draft.snap"
         static let angle = "kairumo.draft.angle"
+        static let compact = "kairumo.draft.compact"
+        static let tipsSeen = "kairumo.draft.tipsSeen"
         static func hidden(_ nb: String) -> String { "kairumo.draft.hidden.\(nb.lowercased())" }
         static func locked(_ nb: String) -> String { "kairumo.draft.locked.\(nb.lowercased())" }
     }
@@ -81,6 +94,8 @@ final class DraftingState: ObservableObject {
         layerOverride = o == 0 ? nil : UInt8(clamping: o)
         snapEnabled = d.object(forKey: Keys.snap) as? Bool ?? true
         angleStep = d.object(forKey: Keys.angle) as? Int ?? 15
+        compactChoice = d.object(forKey: Keys.compact) as? Bool
+        tipsSeen = d.bool(forKey: Keys.tipsSeen)
     }
 
     // MARK: 目前的筆

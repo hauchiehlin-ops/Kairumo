@@ -64,6 +64,24 @@ object DraftingState {
     /** 下一個要放的編號。 */
     var stepNumber by mutableIntStateOf(1)
 
+    /** 面板收合：-1 = 還沒選過（由螢幕寬度決定，手機預設收合）、0 = 展開、1 = 收合。 */
+    var compactChoice by mutableIntStateOf(-1)
+        private set
+
+    /** 第一次使用的提示卡看過了沒。 */
+    var tipsSeen by mutableStateOf(false)
+        private set
+
+    fun setCompact(compact: Boolean) {
+        compactChoice = if (compact) 1 else 0
+        prefs?.edit()?.putInt("compact", compactChoice)?.apply()
+    }
+
+    fun markTipsSeen() {
+        tipsSeen = true
+        prefs?.edit()?.putBoolean("tipsSeen", true)?.apply()
+    }
+
     /** 每次顯示／鎖定改動就 +1，畫布讀它來重畫。 */
     var version by mutableIntStateOf(0)
         private set
@@ -80,6 +98,8 @@ object DraftingState {
         layerOverride = p.getInt("layer", 0)
         snapEnabled = p.getBoolean("snap", true)
         angleStep = p.getInt("angle", 15)
+        compactChoice = p.getInt("compact", -1)
+        tipsSeen = p.getBoolean("tipsSeen", false)
     }
 
     /** 換筆記本：讀它自己的顯示／鎖定。 */

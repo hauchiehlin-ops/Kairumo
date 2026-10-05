@@ -110,6 +110,20 @@ final class LassoSelection: ObservableObject {
         committed = (picked.isEmpty && proIds.isEmpty) ? [] : path
     }
 
+    /// 程式直接選定一批專業筆畫（例如剛插入的立體圖紙），並畫出選取框，
+    /// 讓使用者馬上能拖著搬到想放的位置。
+    func select(proStrokeIds ids: Set<String>, around bounds: CGRect) {
+        guard !ids.isEmpty else { return }
+        path = []
+        selected = []
+        proIds = ids
+        let r = bounds.insetBy(dx: -8, dy: -8)
+        committed = [
+            CGPoint(x: r.minX, y: r.minY), CGPoint(x: r.maxX, y: r.minY),
+            CGPoint(x: r.maxX, y: r.maxY), CGPoint(x: r.minX, y: r.maxY),
+        ]
+    }
+
     func clear() {
         path = []
         selected = []

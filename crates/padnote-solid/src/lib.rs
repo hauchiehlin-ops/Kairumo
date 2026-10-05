@@ -4,6 +4,7 @@
 //! 同一個立體在 Apple 與 Android 上畫出完全相同的線。
 
 pub mod geom;
+pub mod glyph;
 pub mod section;
 pub mod sheet;
 pub mod solid;

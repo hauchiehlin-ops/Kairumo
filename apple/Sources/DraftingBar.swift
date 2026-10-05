@@ -8,14 +8,28 @@ struct DraftingBar: View {
     var onOpenSolidStudio: () -> Void = {}
     @ObservedObject var state = DraftingState.shared
     @ObservedObject private var localizationManager = LocalizationManager.shared
+    @Environment(\.horizontalSizeClass) private var sizeClass
+    @State private var showTips = false
+
+    /// 手機寬度預設收合；使用者按過收合／展開之後就以他的選擇為準。
+    private var compact: Bool { state.compactChoice ?? (sizeClass == .compact) }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            penRow
-            Divider()
-            layerRow
-            Divider()
-            optionRow
+            if compact {
+                compactRow
+            } else {
+                HStack(alignment: .top, spacing: 6) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        penRow
+                        Divider()
+                        layerRow
+                        Divider()
+                        optionRow
+                    }
+                    barButtons
+                }
+            }
         }
         .padding(10)
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
@@ -24,6 +38,59 @@ struct DraftingBar: View {
         .padding(.horizontal, 12)
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("draft.bar")
+        // 第一次使用自動跳出，按「知道了」之後不再自動出現；之後由 ? 叫回。
+        .onAppear { if !state.tipsSeen { showTips = true } }
+        .alert(localizationManager.localized("draft_tip_title"), isPresented: $showTips) {
+            Button(localizationManager.localized("draft_tip_dismiss")) { state.tipsSeen = true }
+        } message: {
+            Text(tipsMessage)
+        }
+    }
+
+    // MARK: 精簡列與提示
+
+    /// 收合時只剩：目前的筆、目前的目標圖層、說明、展開。
+    private var compactRow: some View {
+        let pen = state.activePen
+        let layer = state.layers.first { $0.id == state.activeLayerId }
+        return HStack(spacing: 10) {
+            DraftLinePreview(pen: pen, selected: true).frame(width: 54, height: 14)
+            Text(localizationManager.localized(pen.nameKey))
+                .font(.caption.weight(.semibold)).lineLimit(1)
+            if let layer {
+                HStack(spacing: 4) {
+                    Circle().fill(state.layerColor(layer.id)).frame(width: 10, height: 10)
+                    Text(localizationManager.localized(layer.nameKey)).font(.caption).lineLimit(1)
+                }
+            }
+            Spacer(minLength: 0)
+            barButtons
+        }
+        .accessibilityElement(children: .contain)
+    }
+
+    /// 說明＋收合／展開。
+    private var barButtons: some View {
+        HStack(spacing: 2) {
+            Button { showTips.toggle() } label: {
+                Image(systemName: "questionmark.circle").font(.body).frame(width: 32, height: 32)
+            }
+            .accessibilityLabel(localizationManager.localized("draft_help"))
+            .accessibilityIdentifier("draft.help")
+            Button { state.compactChoice = !compact } label: {
+                Image(systemName: compact ? "chevron.down.circle" : "chevron.up.circle")
+                    .font(.body).frame(width: 32, height: 32)
+            }
+            .accessibilityLabel(localizationManager.localized(compact ? "draft_bar_expand" : "draft_bar_collapse"))
+            .accessibilityIdentifier("draft.collapse")
+        }
+        .buttonStyle(.plain)
+        .foregroundColor(.accentColor)
+    }
+
+    /// 四則提示的內文。
+    private var tipsMessage: String {
+        (1...4).map { "\($0). " + localizationManager.localized("draft_tip_\($0)") }.joined(separator: "\n\n")
     }
 
     // MARK: 製圖筆
@@ -42,7 +109,7 @@ struct DraftingBar: View {
                             DraftLinePreview(pen: pen, selected: selected)
                                 .frame(width: 54, height: 14)
                             Text(localizationManager.localized(pen.nameKey))
-                                .font(.system(size: 10, weight: selected ? .semibold : .regular))
+                                .font(.caption2.weight(selected ? .semibold : .regular))
                                 .foregroundColor(selected ? .primary : .secondary)
                                 .lineLimit(1)
                         }
@@ -82,7 +149,7 @@ struct DraftingBar: View {
                     Circle().fill(state.layerColor(layer.id)).frame(width: 12, height: 12)
                         .overlay(Circle().stroke(Color.primary.opacity(target ? 0.9 : 0), lineWidth: 2).padding(-3))
                     Text(localizationManager.localized(layer.nameKey))
-                        .font(.system(size: 12, weight: target ? .semibold : .regular))
+                        .font(.caption.weight(target ? .semibold : .regular))
                         .foregroundColor(hidden ? .secondary : .primary)
                         .strikethrough(hidden)
                 }
@@ -93,7 +160,7 @@ struct DraftingBar: View {
             .accessibilityAddTraits(target ? .isSelected : [])
 
             Button { state.setHidden(!hidden, layer: layer.id) } label: {
-                Image(systemName: hidden ? "eye.slash" : "eye").font(.system(size: 13))
+                Image(systemName: hidden ? "eye.slash" : "eye").font(.footnote)
                     .foregroundColor(hidden ? .secondary : .accentColor)
                     .frame(width: 26, height: 26)
             }
@@ -102,7 +169,7 @@ struct DraftingBar: View {
             .accessibilityIdentifier("draft.layer.\(layer.id).visible")
 
             Button { state.setLocked(!locked, layer: layer.id) } label: {
-                Image(systemName: locked ? "lock.fill" : "lock.open").font(.system(size: 13))
+                Image(systemName: locked ? "lock.fill" : "lock.open").font(.footnote)
                     .foregroundColor(locked ? .orange : .secondary)
                     .frame(width: 26, height: 26)
             }
@@ -122,7 +189,7 @@ struct DraftingBar: View {
             Group {
                 Toggle(isOn: $state.snapEnabled) {
                     Label(localizationManager.localized("draft_snap"), systemImage: "scope")
-                        .font(.system(size: 12))
+                        .font(.caption)
                 }
                 .toggleStyle(.button)
                 .accessibilityIdentifier("draft.snap")
@@ -138,13 +205,13 @@ struct DraftingBar: View {
                 } label: {
                     Label("\(localizationManager.localized("draft_angle_lock")) \(angleTitle(state.angleStep))",
                           systemImage: "angle")
-                        .font(.system(size: 12))
+                        .font(.caption)
                 }
                 .accessibilityIdentifier("draft.angle")
 
                 Toggle(isOn: $state.reassignMode) {
                     Label(localizationManager.localized("draft_reassign"), systemImage: "square.3.layers.3d.down.right")
-                        .font(.system(size: 12))
+                        .font(.caption)
                 }
                 .toggleStyle(.button)
                 .accessibilityIdentifier("draft.reassign")
@@ -153,7 +220,7 @@ struct DraftingBar: View {
                 Toggle(isOn: $state.markerMode) {
                     Label("\(localizationManager.localized("draft_step_marker")) \(state.stepNumber)",
                           systemImage: "number.circle")
-                        .font(.system(size: 12))
+                        .font(.caption)
                 }
                 .toggleStyle(.button)
                 .accessibilityIdentifier("draft.marker")
@@ -164,14 +231,14 @@ struct DraftingBar: View {
                     Button { state.stepNumber = min(99, state.stepNumber + 1) } label: { Image(systemName: "plus.circle") }
                         .accessibilityIdentifier("draft.marker.plus")
                     Button(localizationManager.localized("draft_step_reset")) { state.stepNumber = 1 }
-                        .font(.system(size: 12))
+                        .font(.caption)
                         .accessibilityIdentifier("draft.marker.reset")
                 }
 
                 // 立體輔助：草圖拉伸、三視圖、等角圖、剖面。
                 Button(action: onOpenSolidStudio) {
                     Label(localizationManager.localized("solid_studio"), systemImage: "cube.transparent")
-                        .font(.system(size: 12))
+                        .font(.caption)
                 }
                 .buttonStyle(.bordered)
                 .accessibilityIdentifier("draft.solidStudio")
