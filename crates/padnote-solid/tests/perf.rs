@@ -1,5 +1,5 @@
 //! 隱藏線演算法的效能：離譜大的輪廓（兩百邊外框＋二十個三十二邊的孔）也要在手感可接受的時間內出圖。
-//! 預算寬鬆（debug 組建下）；真正的數字用 `cargo test --release -p padnote-solid --test perf -- --nocapture` 看。
+//! 時間預算只在 release 組建檢查；真正的數字用 `cargo test --release -p padnote-solid --test perf -- --nocapture` 看。
 
 use padnote_solid::sheet::{SheetOptions, compose};
 use padnote_solid::solid::{Profile, Solid};
@@ -37,7 +37,10 @@ fn composing_a_very_busy_solid_stays_interactive() {
     let ms = t.elapsed().as_millis();
     println!("busy solid: {} strokes in {ms} ms", sheet.strokes.len());
     assert!(!sheet.strokes.is_empty());
-    assert!(ms < 8000, "compose took {ms} ms");
+    // 只在 release 檢查時間：debug 組建（CI 預設）沒有最佳化，慢十倍以上，牆上時鐘的斷言只會製造假紅燈。
+    if !cfg!(debug_assertions) {
+        assert!(ms < 5000, "compose took {ms} ms");
+    }
 }
 
 #[test]
