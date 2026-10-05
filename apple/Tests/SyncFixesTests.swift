@@ -288,6 +288,55 @@ final class RecordingTitleInPackageTests: XCTestCase {
         XCTAssertGreaterThan(inbox?.lastModifiedDate ?? Date.distantPast, Date(timeIntervalSince1970: 1))
     }
 
+    private func exportInputs(titles: [String: String], document: NotebookDocument) throws
+        -> NotebookSyncCoordinator.ExportInputs
+    {
+        let baseline = workDir.appendingPathComponent("baseline", isDirectory: true)
+        try FileManager.default.createDirectory(at: baseline, withIntermediateDirectories: true)
+        return NotebookSyncCoordinator.ExportInputs(
+            document: document,
+            package: workDir.appendingPathComponent("sync.padnote"),
+            baselineDirectory: baseline,
+            attachmentsDirectory: workDir,
+            drawingsDirectory: workDir,
+            deviceId: deviceA,
+            loadDrawing: { _, _ in PKDrawing() },
+            recordingTitles: titles)
+    }
+
+    /// 實際同步走的是 `exportOne`，不是直接呼叫橋接層：它漏傳名字的時候，
+    /// 橋接層的測試全綠，而別台永遠只看得到預設名稱。
+    func testTheSyncExportWritesRecordingTitlesIntoThePackage() throws {
+        let inputs = try exportInputs(titles: ["a.opus": "週會紀錄"], document: doc())
+        _ = try NotebookSyncCoordinator.exportOne(inputs)
+        let imported = try NotebookPackageBridge.importDocument(
+            fromPackageAt: inputs.package, deviceId: deviceB)
+        XCTAssertEqual(imported.recordingTitles["a.opus"], "週會紀錄")
+    }
+
+    func testANewOrRenamedTitleForcesAnExportEvenWhenThePackageLooksNewer() throws {
+        let first = try exportInputs(titles: ["a.opus": "T0"], document: doc())
+        _ = try NotebookSyncCoordinator.exportOne(first)
+        XCTAssertFalse(NotebookSyncCoordinator.workingCopyNeedsExport(first),
+                       "名字都已經在套件裡，不該白匯出")
+        let renamed = try exportInputs(titles: ["a.opus": "T1"], document: doc())
+        XCTAssertTrue(NotebookSyncCoordinator.workingCopyNeedsExport(renamed),
+                      "改名之後套件的檔案時間較新，仍然要匯出")
+        let added = try exportInputs(titles: ["a.opus": "T0", "b.opus": "新錄的"], document: doc())
+        XCTAssertTrue(NotebookSyncCoordinator.workingCopyNeedsExport(added))
+    }
+
+    func testAddingARecordingMarksItsNotebookModified() {
+        let store = isolatedNotebookStore()
+        var book = NotebookDocument(title: "N", pageCount: 1)
+        book.lastModifiedDate = Date(timeIntervalSince1970: 0)
+        store.notebooks = [book]
+        store.addRecording(
+            title: "新錄音", durationSeconds: 3, fileName: "n.opus",
+            linkedNotebookId: book.id.uppercased())
+        XCTAssertGreaterThan(store.notebooks[0].lastModifiedDate, Date(timeIntervalSince1970: 1))
+    }
+
     func testApplyRecordingTitlesUpdatesBothRecordingsAndCanvasCards() {
         let store = isolatedNotebookStore()
         store.recordings = [

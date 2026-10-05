@@ -3001,9 +3001,12 @@ public final class NotebookStore: ObservableObject {
         )
         recordings.insert(rec, at: 0)
 
-        if let nId = linkedNotebookId, let idx = notebooks.firstIndex(where: { $0.id == nId }) {
+        if let nId = linkedNotebookId,
+           let idx = notebooks.firstIndex(where: { $0.id.caseInsensitiveCompare(nId) == .orderedSame }) {
             notebooks[idx].hasRecording = true
             notebooks[idx].recordingAudioPath = fileName
+            // 名字要跟著這本筆記本的套件同步出去 —— 算作這本有修改。
+            notebooks[idx].lastModifiedDate = Date()
         }
         persistData()
         return rec

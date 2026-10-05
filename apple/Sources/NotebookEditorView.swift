@@ -613,6 +613,56 @@ final class AdaptiveCanvasView: PKCanvasView {
     override func layoutSubviews() {
         super.layoutSubviews()
         syncContentSize()
+        refreshInitialRenderIfNeeded()
+    }
+
+    /// 重開舊筆記本時，載入的筆跡要使用者點一下畫布才會出現。
+    ///
+    /// `makeUIView` 在畫布進入視窗、有尺寸**之前**就指派了 `drawing`，PencilKit 在那個時間點
+    /// 畫出來的是空的貼圖，之後內容沒變就不會重畫（縮圖用另一條路畫，所以縮圖是對的）。
+    /// 畫布第一次有了視窗與尺寸之後，把同一份 `drawing` 再指派一次，強迫它重畫。
+    /// 要包在 `isProgrammaticUpdate` 裡：不然 delegate 會把這份當成使用者的編輯存回去。
+    private var didInitialRefresh = false
+
+    /// 程式替換／收回筆畫之後，把 PencilKit 登記的「已經失效」的復原項消耗掉。
+    ///
+    /// 直接指派 `drawing` 之後，原本登記的「加入筆畫」指向不存在的筆畫：按復原沒有反應，還吃掉一次點擊。
+    /// 這裡讓 PencilKit 自己復原一次 —— 畫面沒變就是失效項，算消耗掉了；畫面變了代表那是有效項
+    /// （堆疊頂端是別的動作），立刻重做回來並停手。回傳消耗了幾個。
+    @discardableResult
+    func dropDeadUndoEntries(max: Int) -> Int {
+        guard max > 0, let manager = undoManager, !manager.isUndoing, !manager.isRedoing else { return 0 }
+        let coordinator = delegate as? CanvasRepresentable.Coordinator
+        var dropped = 0
+        while dropped < max, manager.canUndo {
+            let before = drawing
+            coordinator?.isProgrammaticUpdate = true
+            manager.undo()
+            if drawing != before {
+                manager.redo()
+                coordinator?.isProgrammaticUpdate = false
+                break
+            }
+            coordinator?.isProgrammaticUpdate = false
+            dropped += 1
+        }
+        return dropped
+    }
+
+    private func refreshInitialRenderIfNeeded() {
+        guard !didInitialRefresh, window != nil, bounds.width > 1, bounds.height > 1 else { return }
+        didInitialRefresh = true
+        for delay in [0.0, 0.4] {
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
+                guard let self, self.window != nil, !self.drawing.strokes.isEmpty else { return }
+                let coordinator = self.delegate as? CanvasRepresentable.Coordinator
+                let current = self.drawing
+                coordinator?.isProgrammaticUpdate = true
+                self.drawing = current
+                coordinator?.isProgrammaticUpdate = false
+                self.setNeedsDisplay()
+            }
+        }
     }
 
     func syncContentSize() {
@@ -846,9 +896,11 @@ struct CanvasRepresentable: UIViewRepresentable {
             guard palmRejection?.drawingPolicy(now: landedAt) != .pencilOnly else { return }
             let cleaned = PalmRejectionCoordinator.retracting(canvas.drawing, landedAt: landedAt)
             guard cleaned.strokes.count != canvas.drawing.strokes.count else { return }
+            let removed = canvas.drawing.strokes.count - cleaned.strokes.count
             context.coordinator.isProgrammaticUpdate = true
             canvas.drawing = cleaned
             context.coordinator.isProgrammaticUpdate = false
+            canvas.dropDeadUndoEntries(max: removed)
             _ = onDrawingChanged?(cleaned)
         }
 
@@ -966,9 +1018,11 @@ struct CanvasRepresentable: UIViewRepresentable {
                 guard palmRejection?.drawingPolicy(now: landedAt) != .pencilOnly else { return }
                 let cleaned = PalmRejectionCoordinator.retracting(uiView.drawing, landedAt: landedAt)
                 guard cleaned.strokes.count != uiView.drawing.strokes.count else { return }
+                let removed = uiView.drawing.strokes.count - cleaned.strokes.count
                 context.coordinator.isProgrammaticUpdate = true
                 uiView.drawing = cleaned
                 context.coordinator.isProgrammaticUpdate = false
+                (uiView as? AdaptiveCanvasView)?.dropDeadUndoEntries(max: removed)
                 _ = onDrawingChanged?(cleaned)
             }
         }
@@ -1189,6 +1243,50 @@ struct CanvasRepresentable: UIViewRepresentable {
             }
         }
 
+        /// 把剛畫完的那一筆換成美化後的版本，**同時讓復原／重做對得上**。
+        ///
+        /// PencilKit 在一筆畫完時登記「加入筆畫」。事後直接指派 `drawing` 把那一筆換掉，
+        /// 登記的復原就指向一個已經不存在的筆畫 —— 按復原**沒有任何反應，還吃掉一次按鍵**
+        /// （使用者回報：一開始畫的幾筆復原／重做沒作用，後面畫的才可以；實測是被辨識成直線／
+        /// 圓形的筆畫，復原前後筆畫數都不變）。
+        ///
+        /// 做法：先讓 PencilKit 自己把那一筆復原掉（堆疊裡失效的那一項就此消耗掉），
+        /// 再套上美化結果，並登記一個「來回切換」的復原項，這樣復原會拿掉美化後的那一筆、
+        /// 重做會放回來。復原到的若不是剛畫的那一筆（堆疊頂端是別的東西）就還原，退回直接指派。
+        func replaceLastStroke(in canvas: PKCanvasView, resulting: PKDrawing) {
+            isProgrammaticUpdate = true
+            defer { isProgrammaticUpdate = false }
+            let before = canvas.drawing
+            if let manager = canvas.undoManager, manager.canUndo,
+               !manager.isUndoing, !manager.isRedoing {
+                manager.undo()
+                if canvas.drawing.strokes.count == before.strokes.count - 1 {
+                    canvas.drawing = resulting
+                    registerDrawingSwap(
+                        on: canvas, to: PKDrawing(strokes: Array(resulting.strokes.dropLast())),
+                        back: resulting)
+                    return
+                }
+                manager.redo()
+            }
+            canvas.drawing = resulting
+        }
+
+        /// 復原項：把畫布換成 `target`，並登記反方向的項目（重做）。
+        private func registerDrawingSwap(
+            on canvas: PKCanvasView, to target: PKDrawing, back: PKDrawing
+        ) {
+            canvas.undoManager?.registerUndo(withTarget: self) { [weak canvas] coordinator in
+                guard let canvas else { return }
+                coordinator.isProgrammaticUpdate = true
+                canvas.drawing = target
+                coordinator.isProgrammaticUpdate = false
+                coordinator.parent.drawing = target
+                _ = coordinator.parent.onDrawingChanged?(target)
+                coordinator.registerDrawingSwap(on: canvas, to: back, back: target)
+            }
+        }
+
         func canvasViewDrawingDidChange(_ canvasView: PKCanvasView) {
             guard !isProgrammaticUpdate else { return }
             var effective = canvasView.drawing
@@ -1200,6 +1298,16 @@ struct CanvasRepresentable: UIViewRepresentable {
                 isProgrammaticUpdate = true
                 canvasView.drawing = snapped.drawing
                 isProgrammaticUpdate = false
+                // 原本登記的「加入筆畫」已經失效；等這一輪事件結束再處理（現在還在 PencilKit 的回呼裡）。
+                DispatchQueue.main.async { [weak self, weak canvasView] in
+                    guard let self, let canvas = canvasView as? AdaptiveCanvasView else { return }
+                    let current = canvas.drawing
+                    if canvas.dropDeadUndoEntries(max: 1) == 1 {
+                        self.registerDrawingSwap(
+                            on: canvas, to: PKDrawing(strokes: Array(current.strokes.dropLast())),
+                            back: current)
+                    }
+                }
                 effective = snapped.drawing
                 magneticGuide = (snapped.start, snapped.end)
             }
@@ -1242,10 +1350,10 @@ struct CanvasRepresentable: UIViewRepresentable {
                     strokes[strokes.count - 1] = refined
                     
                     DispatchQueue.main.async {
-                        self?.isProgrammaticUpdate = true
-                        canvas.drawing = PKDrawing(strokes: strokes)
-                        self?.isProgrammaticUpdate = false
-                        self?.parent.drawing = canvas.drawing
+                        guard let self else { return }
+                        self.replaceLastStroke(in: canvas, resulting: PKDrawing(strokes: strokes))
+                        self.parent.drawing = canvas.drawing
+                        _ = self.parent.onDrawingChanged?(canvas.drawing)
                         // Haptic 回饋
                         let generator = UIImpactFeedbackGenerator(style: .medium)
                         generator.impactOccurred()
@@ -4679,8 +4787,10 @@ public struct NotebookEditorView: View {
                     let cleaned = PalmRejectionCoordinator.retracting(
                         currentDrawing, landedAt: landedAt)
                     guard cleaned.strokes.count != currentDrawing.strokes.count else { return }
+                    let removed = currentDrawing.strokes.count - cleaned.strokes.count
                     currentDrawing = cleaned
                     canvasView?.drawing = cleaned
+                    (canvasView as? AdaptiveCanvasView)?.dropDeadUndoEntries(max: removed)
                     saveCurrentPageDrawing()
                 },
                 onPenControl: applyPenControl,

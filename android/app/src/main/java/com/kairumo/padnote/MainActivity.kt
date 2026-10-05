@@ -163,6 +163,8 @@ import com.kairumo.padnote.library.RenameNotebookDialog
 import com.kairumo.padnote.library.DeleteNotebookDialog
 import com.kairumo.padnote.library.NotebookLibrary
 import com.kairumo.padnote.library.FolderTree
+import com.kairumo.padnote.library.RecordingTitles
+import com.kairumo.padnote.sync.AutoSync
 import com.kairumo.padnote.library.RecordingIndex
 import com.kairumo.padnote.library.InsertRecordingDialog
 import com.kairumo.padnote.library.SeedNotebooks
@@ -429,6 +431,7 @@ private fun NotebookHome(
     var homeAssets by remember { mutableStateOf(false) }
     var homeDocs by remember { mutableStateOf<String?>(null) }
     var insertingRecording by remember { mutableStateOf<RecordingIndex.Recording?>(null) }
+    var renamingRecording by remember { mutableStateOf<RecordingIndex.Recording?>(null) }
     val syncFolderPicker = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocumentTree()
     ) { uri ->
@@ -697,6 +700,7 @@ private fun NotebookHome(
             onOpenManual = { homeDocs = "manual/index.html" },
             onOpenPrivacy = { homeDocs = "legal/privacy.html" },
             onInsertRecording = { insertingRecording = it },
+            onRenameRecording = { renamingRecording = it },
             onRenameRootFolder = {
                 // 人在某個資料夾裡就是改那一個；在最上層就是改最上層的顯示名稱。
                 val here = breadcrumb.lastOrNull()
@@ -762,6 +766,25 @@ private fun NotebookHome(
                 }
             }
         }
+    }
+
+    renamingRecording?.let { rec ->
+        FolderNameDialog(
+            title = l("rename_audio_card"),
+            initial = rec.displayTitle,
+            l = ::l,
+            onDismiss = { renamingRecording = null },
+            onConfirm = { title ->
+                renamingRecording = null
+                if (title.isNotBlank() &&
+                    RecordingTitles.write(activity, rec.notebookId, device, rec.file.name, title)
+                ) {
+                    // 名字寫進套件了，叫同步去推（與別的本機編輯同一條路）。
+                    AutoSync.noteLocalEdit(activity)
+                    revision++
+                }
+            }
+        )
     }
 
     insertingRecording?.let { rec ->
@@ -922,6 +945,17 @@ private fun NotebookHome(
                                 onClick = {
                                     activeSession?.let { s ->
                                         val us = homeAudio.stop(s)
+                                        // 使用者取的名字寫進套件，別台才看得到（原本輸入框的內容被丟掉了）。
+                                        val named = recTitle.trim()
+                                        val book = targetNoteId ?: NotebookLibrary.recordingInbox(
+                                            activity, device, l("recording_inbox"))
+                                        if (named.isNotEmpty() && book != null) {
+                                            RecordingTitles.newestAudio(activity, book)?.let {
+                                                if (RecordingTitles.write(s, it.name, named)) {
+                                                    AutoSync.noteLocalEdit(activity)
+                                                }
+                                            }
+                                        }
                                         message = l("recorded_duration").replace("%@", "${us / 1_000_000uL}")
                                         homeAudio.showAdviceOnce(deviceLanguageTag())
                                     }
@@ -5282,6 +5316,7 @@ private fun InkScreen(
                         audioCards = audioCards.map { if (it.id == target.id) target else it }
                             .toMutableList()
                         meta.setAudioCards(notebook?.first, audioCards)
+                        notebook?.first?.let { RecordingTitles.write(it, target.fileName, trimmed) }
                         audioRevision++
                     }
                     renamingAudio = null

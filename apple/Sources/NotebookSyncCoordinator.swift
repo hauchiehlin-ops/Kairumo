@@ -233,6 +233,51 @@ extension NotebookStore: SyncableNotebookStore {
 ///
 /// 匯入要拿它判斷「匯出之後、匯入之前，使用者又動了什麼」——
 /// 新增的、移動過的、改過內容的，見 `NotebookSyncCoordinator.preservingLocalChanges`。
+/// 每本筆記本「套件裡已經有的錄音名字」：檔名（小寫）→ 名字。
+///
+/// 名字不在 `NotebookDocument` 裡，`workingCopyNeedsExport` 只看檔案時間就看不出名字有沒有變。
+/// 這份帳本記下最後一次匯出（或匯入採用）的名字，之後只要這台現在的名字跟它不一樣，
+/// 就一定要匯出 —— 檔案時間再怎麼排都不會漏。
+enum RecordingTitleLedger {
+    private static func url(in directory: URL, notebookId: String) -> URL {
+        directory.appending(path: "\(notebookId.lowercased())_rectitles.json")
+    }
+
+    static func load(in directory: URL, notebookId: String) -> [String: String] {
+        guard let data = try? Data(contentsOf: url(in: directory, notebookId: notebookId)),
+              let map = try? JSONDecoder().decode([String: String].self, from: data)
+        else { return [:] }
+        return map
+    }
+
+    /// 這台現在的名字裡，有沒有哪一個跟帳本不一樣（含帳本沒有的）。
+    static func hasUnsynced(
+        _ titles: [String: String], in directory: URL, notebookId: String
+    ) -> Bool {
+        guard !titles.isEmpty else { return false }
+        let known = load(in: directory, notebookId: notebookId)
+        return titles.contains { known[$0.key] != $0.value }
+    }
+
+    /// 整份換成這一輪匯出的名字。
+    static func save(_ titles: [String: String], in directory: URL, notebookId: String) {
+        write(titles, in: directory, notebookId: notebookId)
+    }
+
+    /// 併入匯入時採用的名字，其餘不動。
+    static func merge(_ titles: [String: String], in directory: URL, notebookId: String) {
+        guard !titles.isEmpty else { return }
+        var known = load(in: directory, notebookId: notebookId)
+        known.merge(titles) { _, new in new }
+        write(known, in: directory, notebookId: notebookId)
+    }
+
+    private static func write(_ titles: [String: String], in directory: URL, notebookId: String) {
+        guard let data = try? JSONEncoder().encode(titles) else { return }
+        try? data.write(to: url(in: directory, notebookId: notebookId), options: .atomic)
+    }
+}
+
 final class ExportedObjectIds: @unchecked Sendable {
     static let shared = ExportedObjectIds()
     private let lock = NSLock()
@@ -304,7 +349,7 @@ enum NotebookSyncCoordinator {
     ///
     /// 匯出時算出來，匯入後要用它反推「別台裝置的部分」——
     /// `別人的 = 合併後的 − 自己的`。
-    private typealias OwnStrokes = [String: PKDrawing]
+    typealias OwnStrokes = [String: PKDrawing]
 
     nonisolated static var isCancelled: Bool {
         DriveHttpClient.isCancellationRequested
@@ -1318,7 +1363,7 @@ enum NotebookSyncCoordinator {
     /// 主執行緒就被連續佔住十秒以上 —— iOS 的 scene-update 看門狗會直接
     /// SIGKILL（0x8BADF00D），實機上就是「按下同步之後整個 App 消失」。
     @discardableResult
-    private nonisolated static func exportOne(_ inputs: ExportInputs) throws -> OwnStrokes {
+    nonisolated static func exportOne(_ inputs: ExportInputs) throws -> OwnStrokes {
         let document = inputs.document
         let pageCount = max(document.pageCount, 1)
         ExportedObjectIds.shared.record(document)
@@ -1353,10 +1398,15 @@ enum NotebookSyncCoordinator {
         let pro = (0 ..< pageCount).map {
             ProInkStore.load(in: inputs.drawingsDirectory, notebookId: document.id, page: $0)
         }
+        // 錄音的名字要**一起**交給匯出：漏傳的話套件裡永遠沒有 `rectitle` 區塊，
+        // 別台只看得到掃描時取的預設名稱（單元測試直接呼叫橋接層、有帶這個參數，所以測不出來）。
         try NotebookPackageBridge.exportPreservingOtherDevices(
             document: document, drawings: drawings, imageData: images,
-            to: inputs.package, deviceId: inputs.deviceId, proStrokes: pro
+            to: inputs.package, deviceId: inputs.deviceId, proStrokes: pro,
+            recordingTitles: inputs.recordingTitles
         )
+        RecordingTitleLedger.save(
+            inputs.recordingTitles, in: inputs.baselineDirectory, notebookId: document.id)
         return own
     }
 
@@ -1390,9 +1440,15 @@ enum NotebookSyncCoordinator {
     /// 所以取套件內所有檔案的最大值；工作副本則看文件時間、各頁 drawing
     /// 與它引用的附件。任何資訊讀不到都保守地回 true，寧可多匯出一次，
     /// 不冒漏資料的風險。
-    private nonisolated static func workingCopyNeedsExport(_ inputs: ExportInputs) -> Bool {
+    nonisolated static func workingCopyNeedsExport(_ inputs: ExportInputs) -> Bool {
         let fm = FileManager.default
         guard fm.fileExists(atPath: inputs.package.path) else { return true }
+        // 錄音的名字不在文件裡，檔案時間看不出它變了：新錄的音檔（比筆記本新）、改名之後又落筆
+        // （增量寫入讓套件比較新）都會被判成「不必匯出」，名字就沒帶出去。
+        if RecordingTitleLedger.hasUnsynced(
+            inputs.recordingTitles, in: inputs.baselineDirectory, notebookId: inputs.document.id) {
+            return true
+        }
 
         guard let enumerator = fm.enumerator(
             at: inputs.package,
@@ -1491,6 +1547,16 @@ enum NotebookSyncCoordinator {
         SyncKnownObjects.recordVisible(merged)
         store.syncApplyRecordingTitles(
             imported.recordingTitles, exported: ExportedObjectIds.shared.takeTitles(documentId))
+        // 套件裡已經是這個名字、這台也採用了的，記進帳本：不然下一輪會以為「名字沒同步」而白匯出一次。
+        if !imported.recordingTitles.isEmpty,
+           let doc = store.allNotebooks.first(where: {
+               $0.id.caseInsensitiveCompare(documentId) == .orderedSame
+           }) {
+            let local = recordingTitles(of: doc, in: store)
+            let adopted = imported.recordingTitles.filter { local[$0.key] == $0.value }
+            RecordingTitleLedger.merge(
+                adopted, in: store.syncBaselineDirectory, notebookId: documentId)
+        }
         // 有保住使用者剛新增的東西就**不要**標成「已同步」：那些東西還沒進套件，下一輪要匯出。
         if !preserved {
             markWorkingCopyInSync(documentId: documentId, store: store)
