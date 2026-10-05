@@ -5,6 +5,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import com.kairumo.padnote.canvas.drawPageBackground
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -81,6 +82,10 @@ fun InkCanvas(
     // 把整份筆畫複製進 Compose state，一筆一次複製整個清單會很慢。
     var revision by remember { mutableIntStateOf(0) }
     var liveVersion by remember { mutableStateOf(0L) }
+    DisposableEffect(engine) {
+        engine.onSnapPreviewChanged = { liveVersion = System.nanoTime() }
+        onDispose { engine.onSnapPreviewChanged = null }
+    }
 
     // 懸停預覽（工作項 S-69）：筆尖靠近但還沒碰到時，先畫出會落在哪裡。
     //
@@ -169,9 +174,11 @@ fun InkCanvas(
             drawInkStroke(stroke.points, stroke.tool, stroke.baseWidth, strokeColor, density, stroke.lineType)
         }
         // 尚未抬筆的那一段也要即時畫出來，否則寫字時要等抬筆才看得到。
+        val snapped = engine.snapPreview
         for (live in engine.liveSamples()) {
+            // 長按吸附的預覽：按住不動時直接畫出吸附後的圖形。
             drawInkStroke(
-                InkInput.strokePoints(live), engine.tool, engine.baseWidth, inkColor, density,
+                snapped ?: InkInput.strokePoints(live), engine.tool, engine.baseWidth, inkColor, density,
                 engine.lineType)
         }
 

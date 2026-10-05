@@ -484,19 +484,32 @@ class InkEngine(
         when (sample.event.phase) {
             FfiPhase.BEGAN -> {
                 inFlight[id] = mutableListOf(sample)
+                resetHold(sample.event.x, sample.event.y)
             }
             FfiPhase.MOVED -> {
                 // 沒有 BEGAN 就收到 MOVED（例如前一筆被收回後又有事件進來）
                 // 不該無中生有一筆畫。
                 inFlight[id]?.add(sample)
+                if (kotlin.math.hypot(sample.event.x - holdAnchorX, sample.event.y - holdAnchorY) > SNAP_SLOP) {
+                    resetHold(sample.event.x, sample.event.y)
+                }
                 if (sample.event.y + 200f > PageGeometry.height) onReachedPageBottom?.invoke()
             }
             FfiPhase.ENDED -> {
                 val collected = inFlight.remove(id) ?: return null
                 collected.add(sample)
-                return commit(id, collected)
+                // 預覽已經亮著就一定要吸附（所見即所得），不再另外用時間戳判斷。
+                val previewed = snapPreview != null
+                endHold()
+                forceSnap = previewed
+                try {
+                    return commit(id, collected)
+                } finally {
+                    forceSnap = false
+                }
             }
             FfiPhase.CANCELLED -> {
+                endHold()
                 inFlight.remove(id)
             }
             FfiPhase.HOVER, FfiPhase.HOVER_ENDED -> Unit
@@ -520,6 +533,8 @@ class InkEngine(
         // 整筆都沒離開起點：是點，不是筆畫。
         return false
     }
+
+    private var forceSnap = false
 
     private fun commit(id: ULong, samples: List<InkInput.Sample>): CompletedStroke? {
         if (layer != 0) {
@@ -567,7 +582,7 @@ class InkEngine(
         // 長按吸附：筆畫抬起前在終點停住一下，就釘成幾何圖形（見 `draftSnapStroke`）。
         var snappedKind: uniffi.padnote_core.FfiDraftSnapKind? = null
         val step = snapStepDeg
-        if (step != null && dwelledAtEnd(samples)) {
+        if (step != null && (forceSnap || dwelledAtEnd(samples))) {
             val snap = uniffi.padnote_core.draftSnapStroke(
                 finalPoints.map { uniffi.padnote_core.FfiPoint(it.x, it.y) }, step
             )
@@ -852,6 +867,57 @@ class InkEngine(
      * 必須先問過仲裁結果，否則手掌的軌跡會先閃一下才被擦掉。
      */
     fun isDrawing(pointerId: ULong): Boolean = inFlight.containsKey(pointerId)
+
+    // ── 長按吸附的即時預覽（對齊 Apple：按住時就看到會變成什麼，不是抬筆才變）──
+    //
+    // 筆停著不動時 Android 不會再送事件，所以不能靠事件的時間戳判斷「停了多久」，
+    // 要靠牆上時鐘的計時器：每次移動超過 [SNAP_SLOP] 就重設錨點與計時，計時到了還在原地就算一次吸附結果。
+    private val snapHandler = android.os.Handler(android.os.Looper.getMainLooper())
+    private var holdAnchorX = 0f
+    private var holdAnchorY = 0f
+    private var holdToken = 0
+
+    /** 吸附預覽的點（頁面座標）。非空時畫這個，不畫原本的即時筆畫。 */
+    var snapPreview: List<StrokePoint>? = null
+        private set
+
+    /** 預覽有變動時通知畫布重繪。 */
+    var onSnapPreviewChanged: (() -> Unit)? = null
+
+    private fun resetHold(x: Float, y: Float) {
+        holdAnchorX = x
+        holdAnchorY = y
+        val token = ++holdToken
+        if (snapPreview != null) {
+            snapPreview = null
+            onSnapPreviewChanged?.invoke()
+        }
+        snapHandler.removeCallbacksAndMessages(null)
+        if (snapStepDeg == null) return
+        snapHandler.postDelayed({ if (token == holdToken) showSnapPreview(token) }, SNAP_DWELL_MS)
+    }
+
+    private fun showSnapPreview(token: Int) {
+        val step = snapStepDeg ?: return
+        val live = inFlight.values.firstOrNull() ?: return
+        val pts = InkInput.strokePoints(live.toList())
+        if (pts.size < 3 || token != holdToken) return
+        val snap = uniffi.padnote_core.draftSnapStroke(
+            pts.map { uniffi.padnote_core.FfiPoint(it.x, it.y) }, step
+        )
+        if (snap.kind == uniffi.padnote_core.FfiDraftSnapKind.NONE || snap.points.size != pts.size) return
+        snapPreview = pts.mapIndexed { i, p -> p.copy(x = snap.points[i].x, y = snap.points[i].y) }
+        onSnapPreviewChanged?.invoke()
+    }
+
+    private fun endHold() {
+        holdToken++
+        snapHandler.removeCallbacksAndMessages(null)
+        if (snapPreview != null) {
+            snapPreview = null
+            onSnapPreviewChanged?.invoke()
+        }
+    }
 
     /** 目前正在畫、尚未結束的取樣點（供即時預覽）。 */
     fun liveSamples(): List<List<InkInput.Sample>> = inFlight.values.map { it.toList() }
