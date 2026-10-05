@@ -224,7 +224,9 @@ class ScreenAuditTest {
             "首頁一本筆記都沒有 —— 捲過之後仍然找不到 home.notebooks.card.*。" +
                 "現場的 tag：" + presentTags().take(20).joinToString(", "),
             nodes.isNotEmpty())
-        cards[0].performClick()
+        // 最後一張，不是第一張：第一張（最近改過的）是種子的「圖學範例」，開啟時會自動選「圖學」筆組，
+        // 而製圖筆的粗細由筆組決定、刻意不顯示粗細滑桿（`editor.ink.width`），稽核會誤判成少了控制項。
+        cards[nodes.lastIndex].performClick()
     }
 
     private fun audit(
