@@ -54,6 +54,9 @@ object SeedNotebooks {
         if (buildWelcome(context, deviceId, ::l)) created++
         if (buildMeeting(context, deviceId, ::l)) created++
         if (buildFeatureShowcase(context, deviceId, ::l)) created++
+        if (buildKairumoManual(context, deviceId)) created++
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .edit().putBoolean(KEY_MANUAL, true).apply()
         return created
     }
 
@@ -92,6 +95,14 @@ object SeedNotebooks {
             buildFeatureShowcase(context, deviceId, l)
         }
 
+        // 《Kairumo手冊》：舊使用者只補一次（旗標），之後刪掉就不再長回來。
+        if (!prefs.getBoolean(KEY_MANUAL, false)) {
+            prefs.edit().putBoolean(KEY_MANUAL, true).apply()
+            if (existing.none { it.id == MANUAL_ID || it.title == MANUAL_TITLE }) {
+                buildKairumoManual(context, deviceId)
+            }
+        }
+
         if (prefs.getBoolean(KEY_BACKFILLED, false)) return 0
 
         val welcomeTitle = l("seed_welcome_title")
@@ -124,6 +135,10 @@ object SeedNotebooks {
     }
 
     private const val PREFS = "kairumo.seed"
+    private const val KEY_MANUAL = "kairumo_manual_added"
+    private const val MANUAL_ID = "seed-kairumo-manual-v1"
+    /** 名稱是固定的，不走語系表。 */
+    private const val MANUAL_TITLE = "Kairumo手冊"
     private const val KEY_BACKFILLED = "samples_backfilled"
     private const val WELCOME_ID = "seed-welcome-notebook-v1"
     private const val MEETING_ID = "seed-meeting-notebook-v1"
@@ -962,6 +977,54 @@ private fun buildFeatureShowcase(context: Context, deviceId: UInt, l: (String) -
         raw.split("|").filter { it.isNotEmpty() }
 
     /** 補足空白頁，回傳前 [count] 頁的 id。 */
+    // MARK: - 《Kairumo手冊》：全部用手繪筆畫完成
+    //
+    // 沒有任何文字方塊或形狀物件：標題是逐字手寫、插圖是一筆一筆畫的。筆畫來自
+    // `assets/seed/kairumo-manual-ink.json`（Apple 讀同一份），所以兩個平台畫出來是同一本。
+
+    private fun buildKairumoManual(context: Context, deviceId: UInt): Boolean {
+        val root = runCatching {
+            org.json.JSONObject(context.assets.open("seed/kairumo-manual-ink.json").bufferedReader().use { it.readText() })
+        }.getOrNull() ?: return false
+        val pagesJson = root.optJSONArray("pages") ?: return false
+
+        val id = NotebookLibrary.create(context, MANUAL_TITLE, deviceId, id = MANUAL_ID) ?: return false
+        val (session, firstPage) = NotebookLibrary.open(context, id, deviceId) ?: return false
+        val pages = ensurePages(session, firstPage, maxOf(2, pagesJson.length()))
+
+        for (index in 0 until pagesJson.length()) {
+            val strokes = pagesJson.getJSONObject(index).optJSONArray("strokes") ?: continue
+            for (k in 0 until strokes.length()) {
+                val s = strokes.getJSONObject(k)
+                val pts = s.getJSONArray("points")
+                if (pts.length() < 2) continue
+                val hex = s.getString("color").removePrefix("#")
+                val rgba = byteArrayOf(
+                    hex.substring(0, 2).toInt(16).toByte(), hex.substring(2, 4).toInt(16).toByte(),
+                    hex.substring(4, 6).toInt(16).toByte(), -1
+                )
+                val n = pts.length()
+                val points = (0 until n).map { i ->
+                    val xy = pts.getJSONArray(i)
+                    // 起筆與收筆輕、中段重 —— 手寫的筆壓，不是等粗的線。
+                    val edge = minOf(i, n - 1 - i).coerceAtMost(7) / 4f
+                    uniffi.padnote_core.StrokePoint(
+                        x = xy.getDouble(0).toFloat(), y = xy.getDouble(1).toFloat(),
+                        pressure = 0.55f + 0.3f * minOf(1f, edge), tilt = 0.2f, azimuth = 0f,
+                        dtUs = (i * 12_000).toUInt()
+                    )
+                }
+                runCatching {
+                    session.addStroke(
+                        pages[index], uniffi.padnote_core.ToolKind.FOUNTAIN_PEN, rgba,
+                        s.getDouble("width").toFloat(), points
+                    )
+                }.onFailure { android.util.Log.w("KairumoManual", "stroke $index/$k: $it") }
+            }
+        }
+        return true
+    }
+
     private fun ensurePages(session: PadnoteSession, firstPage: String, count: Int): List<String> {
         val ids = mutableListOf(firstPage)
         while (ids.size < count) {

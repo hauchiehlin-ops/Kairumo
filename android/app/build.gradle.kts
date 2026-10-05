@@ -119,6 +119,8 @@ val copyUserDocs by tasks.registering(Copy::class) {
     // 文件範本目錄（工作項 S-61）。與手冊走同一條路：repo 裡只有一份，
     // 建置時複製進 assets，兩個平台載入的是同一個檔案。
     from("$rootDir/../templates/document-templates.json") { into("templates") }
+    // 《Kairumo手冊》的手繪筆畫（由 scripts/manual_ink/manual.py 產生；Apple 讀同一份）。
+    from("$rootDir/../assets/seed/kairumo-manual-ink.json") { into("seed") }
     into(layout.buildDirectory.dir("generated/docsAssets"))
 }
 

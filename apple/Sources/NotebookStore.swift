@@ -1555,6 +1555,20 @@ public final class NotebookStore: ObservableObject {
             changed = true
         }
 
+        // 《Kairumo手冊》：舊使用者只補一次（旗標），之後刪掉就不再長回來。
+        if !UserDefaults.standard.bool(forKey: Self.manualSeededKey) {
+            UserDefaults.standard.set(true, forKey: Self.manualSeededKey)
+            let hasManual = notebooks.contains {
+                $0.id == SeedContent.kairumoManualId || $0.title == SeedContent.kairumoManualTitle
+            }
+            if !hasManual {
+                var manual = Self.makeKairumoManual()
+                SeedContent.fillKairumoManual(&manual, store: self)
+                notebooks.append(manual)
+                changed = true
+            }
+        }
+
         if changed { persistData() }
     }
 
@@ -1952,8 +1966,28 @@ public final class NotebookStore: ObservableObject {
         SeedContent.fillMeeting(&n2, store: self)
         SeedContent.fillFeatureShowcase(&n3, store: self)
 
-        self.notebooks = [n1, n2, n3]
+        var n4 = Self.makeKairumoManual()
+        SeedContent.fillKairumoManual(&n4, store: self)
+        UserDefaults.standard.set(true, forKey: Self.manualSeededKey)
+
+        self.notebooks = [n1, n2, n3, n4]
         persistData()
+    }
+
+    /// 《Kairumo手冊》：全手繪的預載筆記本。名稱是固定的，不走語系表。
+    private static let manualSeededKey = "seed.kairumoManual.added"
+
+    private static func makeKairumoManual() -> NotebookDocument {
+        NotebookDocument(
+            id: SeedContent.kairumoManualId,
+            title: SeedContent.kairumoManualTitle,
+            createdAt: Date().addingTimeInterval(-600),
+            lastModifiedDate: Date().addingTimeInterval(-600),
+            pageCount: 2,
+            hasRecording: false,
+            previewSnippet: "Kairumo 優勢：結構化、視覺化、多語言 —— 全部手繪",
+            template: .blank
+        )
     }
 
     // MARK: - 筆記操作 CRUD

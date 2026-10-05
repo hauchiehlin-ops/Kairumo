@@ -390,3 +390,36 @@ final class RecordingTitleInPackageTests: XCTestCase {
     }
 }
 
+/// 預載的《Kairumo手冊》：全部是手繪筆畫。資源（與 Android 同一份）要真的在 bundle 裡、
+/// 解得出來，每一頁都有夠多的筆畫，而且填進筆記本之後沒有任何文字、形狀、圖片物件。
+@MainActor
+final class KairumoManualSeedTests: XCTestCase {
+
+    func testTheInkResourceIsBundledAndHasTwoPagesOfStrokes() {
+        let drawings = SeedContent.kairumoManualDrawings()
+        XCTAssertEqual(drawings.count, 2, "手冊資源沒有進 bundle 或解不開")
+        for (index, drawing) in drawings.enumerated() {
+            XCTAssertGreaterThan(drawing.strokes.count, 100, "第 \(index + 1) 頁的筆畫太少")
+        }
+    }
+
+    func testTheManualIsInkOnlyAndUsesDifferentColoursPerSection() {
+        var doc = NotebookDocument(id: SeedContent.kairumoManualId, title: SeedContent.kairumoManualTitle, pageCount: 2)
+        SeedContent.fillKairumoManual(&doc)
+        XCTAssertEqual(doc.pageCount, 2)
+        XCTAssertTrue((doc.textAttachments ?? []).isEmpty)
+        XCTAssertTrue((doc.shapeAttachments ?? []).isEmpty)
+        XCTAssertTrue((doc.attachments ?? []).isEmpty)
+        XCTAssertTrue((doc.tableAttachments ?? []).isEmpty)
+        let colours = Set(SeedContent.kairumoManualDrawings().flatMap { $0.strokes }.map { stroke -> String in
+            var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+            stroke.ink.color.getRed(&r, green: &g, blue: &b, alpha: &a)
+            return String(format: "%02x%02x%02x", Int(r * 255), Int(g * 255), Int(b * 255))
+        })
+        XCTAssertGreaterThanOrEqual(colours.count, 5, "每個段落要有自己的顏色")
+    }
+
+    func testTheNameIsFixed() {
+        XCTAssertEqual(SeedContent.kairumoManualTitle, "Kairumo手冊")
+    }
+}
