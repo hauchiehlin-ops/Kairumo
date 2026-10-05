@@ -74,8 +74,20 @@ object NoteTapeCodec {
         var w = 120f
         var h = 32f
 
+        // Apple 的 `CGRect` 預設編碼是 `[[x, y], [w, h]]`。原本只認物件寫法，
+        // 於是 Apple 建立的膠帶在這裡全部落在 (0,0)、120×32。
+        val rectArray = obj.optJSONArray("rect")
         val rect = obj.optJSONObject("rect")
-        if (rect != null) {
+        if (rectArray != null && rectArray.length() >= 2) {
+            val o = rectArray.optJSONArray(0)
+            val sz = rectArray.optJSONArray(1)
+            if (o != null && sz != null) {
+                x = o.optDouble(0, 0.0).toFloat()
+                y = o.optDouble(1, 0.0).toFloat()
+                w = sz.optDouble(0, 120.0).toFloat()
+                h = sz.optDouble(1, 32.0).toFloat()
+            }
+        } else if (rect != null) {
             val origin = rect.optJSONObject("origin")
             val size = rect.optJSONObject("size")
             if (origin != null && size != null) {
@@ -141,13 +153,13 @@ object NoteTapeCodec {
         obj.put("isRevealed", tape.isRevealed)
         obj.put("colorHex", tape.colorHex)
 
-        // Apple 端 Codable 預設格式 rect: { origin: {x, y}, size: {width, height} }
-        val rect = org.json.JSONObject()
-        val origin = org.json.JSONObject().put("x", tape.x.toDouble()).put("y", tape.y.toDouble())
-        val size = org.json.JSONObject().put("width", tape.width.toDouble()).put("height", tape.height.toDouble())
-        rect.put("origin", origin)
-        rect.put("size", size)
-        obj.put("rect", rect)
+        // Apple 端 `CGRect` 的 Codable 格式：[[x, y], [w, h]]（寫成物件的話 Apple 解不開）。
+        obj.put(
+            "rect",
+            org.json.JSONArray()
+                .put(org.json.JSONArray().put(tape.x.toDouble()).put(tape.y.toDouble()))
+                .put(org.json.JSONArray().put(tape.width.toDouble()).put(tape.height.toDouble()))
+        )
 
         // 扁平座標後備，供純 JSON 客戶端讀取
         obj.put("x", tape.x.toDouble())
@@ -155,6 +167,65 @@ object NoteTapeCodec {
         obj.put("width", tape.width.toDouble())
         obj.put("height", tape.height.toDouble())
         return obj
+    }
+
+    private val TRANSPARENT_PNG: ByteArray by lazy {
+        android.util.Base64.decode(
+            "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==",
+            android.util.Base64.DEFAULT)
+    }
+
+    /** 物件 id → 核心的區塊 id。與 Apple 的 `stableBlockId` 逐步一致（見 `ShapeStore`）。 */
+    private fun stableBlockId(raw: String): String {
+        runCatching { java.util.UUID.fromString(raw) }.getOrNull()?.let {
+            if (it.toString().equals(raw, ignoreCase = true)) return it.toString().lowercase()
+        }
+        val b = java.security.MessageDigest.getInstance("SHA-256")
+            .digest(raw.toByteArray(Charsets.UTF_8)).copyOf(16)
+        b[6] = ((b[6].toInt() and 0x0F) or 0x50).toByte()
+        b[8] = ((b[8].toInt() and 0x3F) or 0x80).toByte()
+        val hex = b.joinToString("") { "%02x".format(it) }
+        return "${hex.substring(0, 8)}-${hex.substring(8, 12)}-${hex.substring(12, 16)}-" +
+            "${hex.substring(16, 20)}-${hex.substring(20)}"
+    }
+
+    /**
+     * 把這一頁的膠帶寫成逐物件的信封區塊（kind = `tape`），與 Apple 同一格式。
+     *
+     * 讀取時**信封為準**、中繼資料清單只補信封沒有的。原本 Android 只更新清單：
+     * 在 Android 移動／縮放一條 Apple 建立的膠帶，下次載入信封還是舊的位置與大小 ——
+     * 「移動並調整大小之後，自己又回到原來的位置與大小」。
+     */
+    fun writeEnvelopes(session: uniffi.padnote_core.PadnoteSession, pageId: String, pageTapes: List<NoteTape>) {
+        runCatching {
+            val existing = HashMap<String, String>() // 物件 id（小寫）→ 區塊 id
+            for (blockId in session.imageBlockIds(pageId)) {
+                val json = session.blockAppearance(blockId) ?: continue
+                val root = runCatching { org.json.JSONObject(json) }.getOrNull() ?: continue
+                if (root.optString("object") != "tape") continue
+                val id = root.optJSONObject("payload")?.optString("id")?.lowercase() ?: continue
+                existing[id] = blockId
+            }
+            val keep = HashSet<String>()
+            for (tape in pageTapes) {
+                val id = tape.id.lowercase()
+                keep += id
+                val blockId = existing[id] ?: stableBlockId(tape.id).also { fresh ->
+                    val blob = session.putBlob(TRANSPARENT_PNG)
+                    session.addImageWithId(pageId, fresh, blob, 1f, 1f)
+                }
+                session.setBlockPosition(blockId, tape.x, tape.y)
+                val appearance = org.json.JSONObject()
+                    .put("object", "tape")
+                    .put("image", org.json.JSONObject().put("fileName", "${tape.id}.png"))
+                    .put("payload", encode(tape))
+                    .toString()
+                session.setBlockAppearance(blockId, appearance)
+            }
+            for ((id, blockId) in existing) {
+                if (id !in keep) session.removeBlock(blockId)
+            }
+        }
     }
 
     fun encodeAll(items: List<NoteTape>): org.json.JSONArray {
@@ -293,7 +364,7 @@ fun MaskingTapeOverlay(
                     .then(
                         if (isSelected) {
                             Modifier.pointerInput(tape.id) {
-                                detectDragGestures { change, dragAmount ->
+                                detectDragGestures(onDragEnd = { onTapesChanged() }) { change, dragAmount ->
                                     change.consume()
                                     val idx = tapes.indexOfFirst { it.id == tape.id }
                                     if (idx >= 0) {
@@ -302,7 +373,6 @@ fun MaskingTapeOverlay(
                                             x = cur.x + dragAmount.x / density,
                                             y = cur.y + dragAmount.y / density
                                         )
-                                        onTapesChanged()
                                     }
                                 }
                             }
@@ -317,7 +387,7 @@ fun MaskingTapeOverlay(
                             .offset((-10).dp, 0.dp)
                             .size(24.dp)
                             .pointerInput(tape.id) {
-                                detectDragGestures { change, dragAmount ->
+                                detectDragGestures(onDragEnd = { onTapesChanged() }) { change, dragAmount ->
                                     change.consume()
                                     val idx = tapes.indexOfFirst { it.id == tape.id }
                                     if (idx >= 0) {
@@ -329,7 +399,6 @@ fun MaskingTapeOverlay(
                                             x = cur.x + actualDelta,
                                             width = newW
                                         )
-                                        onTapesChanged()
                                     }
                                 }
                             },
@@ -350,7 +419,7 @@ fun MaskingTapeOverlay(
                             .offset(10.dp, 0.dp)
                             .size(24.dp)
                             .pointerInput(tape.id) {
-                                detectDragGestures { change, dragAmount ->
+                                detectDragGestures(onDragEnd = { onTapesChanged() }) { change, dragAmount ->
                                     change.consume()
                                     val idx = tapes.indexOfFirst { it.id == tape.id }
                                     if (idx >= 0) {
@@ -358,7 +427,6 @@ fun MaskingTapeOverlay(
                                         val deltaX = dragAmount.x / density
                                         val newW = max(20f, cur.width + deltaX)
                                         tapes[idx] = cur.copy(width = newW)
-                                        onTapesChanged()
                                     }
                                 }
                             },

@@ -344,6 +344,20 @@ final class RecordingTitleInPackageTests: XCTestCase {
         XCTAssertTrue(NotebookSyncCoordinator.workingCopyNeedsExport(after))
     }
 
+    /// Android 寫過物件寫法的 `rect`，Apple 原本整筆解不開；兩種寫法都要讀得出真正的位置與大小。
+    func testTapeRectDecodesFromAppleArrayAndFromObjectForms() throws {
+        let decoder = JSONDecoder()
+        let apple = Data(##"{"id":"a","pageIndex":1,"rect":[[10,20],[100,30]],"isRevealed":true,"colorHex":"#FFD1DC"}"##.utf8)
+        let a = try decoder.decode(NoteTapeAttachment.self, from: apple)
+        XCTAssertEqual(a.rect, CGRect(x: 10, y: 20, width: 100, height: 30))
+        let object = Data(#"{"id":"b","pageIndex":0,"rect":{"origin":{"x":5,"y":6},"size":{"width":70,"height":32}}}"#.utf8)
+        let b = try decoder.decode(NoteTapeAttachment.self, from: object)
+        XCTAssertEqual(b.rect, CGRect(x: 5, y: 6, width: 70, height: 32))
+        // 來回編碼仍是 Apple 的寫法。
+        let again = try decoder.decode(NoteTapeAttachment.self, from: try JSONEncoder().encode(a))
+        XCTAssertEqual(again, a)
+    }
+
     func testAddingARecordingMarksItsNotebookModified() {
         let store = isolatedNotebookStore()
         var book = NotebookDocument(title: "N", pageCount: 1)

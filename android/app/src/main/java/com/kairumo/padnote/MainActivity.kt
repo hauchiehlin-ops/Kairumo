@@ -4340,6 +4340,11 @@ private fun InkScreen(
                         val meta = com.kairumo.padnote.library.NotebookMeta.load(session)
                         val otherPages = meta.tapes().filter { it.pageIndex != pageIndex }
                         meta.setTapes(session, otherPages + maskingTapes)
+                        pageId?.let {
+                            com.kairumo.padnote.canvas.NoteTapeCodec.writeEnvelopes(
+                                session, it, maskingTapes.filter { t -> t.pageIndex == pageIndex })
+                        }
+                        AutoSync.noteLocalEdit(activity)
                     }
                     revision++
                 },

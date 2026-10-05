@@ -3694,4 +3694,46 @@ public struct NoteTapeAttachment: Identifiable, Codable, Hashable {
         self.isRevealed = isRevealed
         self.colorHex = colorHex
     }
+
+    private enum CodingKeys: String, CodingKey {
+        case id, pageIndex, rect, isRevealed, colorHex, x, y, width, height
+    }
+
+    private struct KeyedRect: Decodable {
+        struct Point: Decodable { var x: CGFloat; var y: CGFloat }
+        struct Size: Decodable { var width: CGFloat; var height: CGFloat }
+        var origin: Point
+        var size: Size
+    }
+
+    /// `rect` 讀得懂三種寫法：Apple 的 `CGRect` 預設格式 `[[x,y],[w,h]]`、
+    /// `{origin:{x,y}, size:{width,height}}`（舊版 Android 寫的）與扁平的 x／y／width／height。
+    /// 原本只認第一種：Android 寫的膠帶在這裡整筆解不開，位置與大小跟著跳掉。
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(String.self, forKey: .id)
+        pageIndex = try c.decodeIfPresent(Int.self, forKey: .pageIndex) ?? 0
+        isRevealed = try c.decodeIfPresent(Bool.self, forKey: .isRevealed) ?? false
+        colorHex = try c.decodeIfPresent(String.self, forKey: .colorHex)
+        if let r = try? c.decode(CGRect.self, forKey: .rect) {
+            rect = r
+        } else if let k = try? c.decode(KeyedRect.self, forKey: .rect) {
+            rect = CGRect(x: k.origin.x, y: k.origin.y, width: k.size.width, height: k.size.height)
+        } else {
+            rect = CGRect(
+                x: try c.decodeIfPresent(CGFloat.self, forKey: .x) ?? 0,
+                y: try c.decodeIfPresent(CGFloat.self, forKey: .y) ?? 0,
+                width: try c.decodeIfPresent(CGFloat.self, forKey: .width) ?? 120,
+                height: try c.decodeIfPresent(CGFloat.self, forKey: .height) ?? 32)
+        }
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(id, forKey: .id)
+        try c.encode(pageIndex, forKey: .pageIndex)
+        try c.encode(rect, forKey: .rect)
+        try c.encode(isRevealed, forKey: .isRevealed)
+        try c.encodeIfPresent(colorHex, forKey: .colorHex)
+    }
 }
