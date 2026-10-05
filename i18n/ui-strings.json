@@ -3470,6 +3470,14 @@
     "zhHans": "下一个编号",
     "zhHant": "下一個編號"
   },
+  "draft_step_prev": {
+    "en": "Previous number",
+    "ja": "前の番号",
+    "ko": "이전 번호",
+    "th": "เลขก่อนหน้า",
+    "zhHans": "上一个编号",
+    "zhHant": "上一個編號"
+  },
   "draft_step_reset": {
     "en": "Start from ①",
     "ja": "① からやり直す",

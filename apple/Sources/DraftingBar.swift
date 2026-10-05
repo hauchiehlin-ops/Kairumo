@@ -167,7 +167,7 @@ struct DraftingBar: View {
                     .frame(width: 26, height: 26)
             }
             .buttonStyle(.plain)
-            .accessibilityLabel(localizationManager.localized(hidden ? "draft_show_layer" : "draft_hide_layer"))
+            .accessibilityLabel("\(localizationManager.localized(hidden ? "draft_show_layer" : "draft_hide_layer")) \(localizationManager.localized(layer.nameKey))")
             .accessibilityIdentifier("draft.layer.\(layer.id).visible")
 
             Button { state.setLocked(!locked, layer: layer.id) } label: {
@@ -176,7 +176,7 @@ struct DraftingBar: View {
                     .frame(width: 26, height: 26)
             }
             .buttonStyle(.plain)
-            .accessibilityLabel(localizationManager.localized(locked ? "draft_unlock_layer" : "draft_lock_layer"))
+            .accessibilityLabel("\(localizationManager.localized(locked ? "draft_unlock_layer" : "draft_lock_layer")) \(localizationManager.localized(layer.nameKey))")
             .accessibilityIdentifier("draft.layer.\(layer.id).lock")
         }
         .padding(.horizontal, 8).padding(.vertical, 3)
@@ -228,9 +228,10 @@ struct DraftingBar: View {
                 .accessibilityIdentifier("draft.marker")
                 if state.markerMode {
                     Button { state.stepNumber = max(1, state.stepNumber - 1) } label: { Image(systemName: "minus.circle") }
-                        .accessibilityLabel(localizationManager.localized("draft_step_next"))
+                        .accessibilityLabel(localizationManager.localized("draft_step_prev"))
                         .accessibilityIdentifier("draft.marker.minus")
                     Button { state.stepNumber = min(99, state.stepNumber + 1) } label: { Image(systemName: "plus.circle") }
+                        .accessibilityLabel(localizationManager.localized("draft_step_next"))
                         .accessibilityIdentifier("draft.marker.plus")
                     Button(localizationManager.localized("draft_step_reset")) { state.stepNumber = 1 }
                         .font(.caption)

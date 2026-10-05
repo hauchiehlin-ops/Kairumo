@@ -473,7 +473,7 @@ Markdown / SVG 匯出 · 手寫辨識 fallback 鏈 · 引擎與權限中心狀�
   debug 組建（Android 開發版 .so）慢很多，不代表正式版。
 - 已知限制：階梯／旋轉剖面只畫切口外框與剖面線（不畫切口後面的形狀）；斜切面（同時斜向深度與輪廓）不支援；
   Android 的「改圖層」不可復原（Apple 可）；Android 手機寬度下編輯器標題列會換成多排、畫布偏矮（既有行為，非圖學專屬）；
-  VoiceOver／TalkBack 朗讀未跑過（iPhone SE 模擬器上的緊湊面板與首次提示已驗）
+  VoiceOver 沒跑過（模擬器不支援）；TalkBack 已在 Android 模擬器上開過，但朗讀文字不會寫進 logcat，改以無障礙節點樹（uiautomator）逐一檢查製圖面板每個控制項的名稱
   （標籤與 contentDescription 已補、`AccessibilityLabelTests` 通過）；多語系文案未經母語者審閱。
 
 ## 已實作但**尚未驗證**（不要當成完成）

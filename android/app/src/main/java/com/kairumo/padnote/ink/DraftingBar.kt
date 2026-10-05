@@ -139,7 +139,7 @@ fun DraftingBar(
                             .testTag("draft.pen.${pen.id}")
                             .semantics {
                                 contentDescription = l10n(pen.nameKey)
-                                stateDescription = if (selected) "selected" else "unselected"
+                                if (selected) stateDescription = l10n("selected")
                             }
                     ) {
                         DraftLinePreview(pen, Modifier.width(54.dp).height(14.dp))
@@ -181,7 +181,7 @@ fun DraftingBar(
                                 .testTag("draft.layer.$id.target")
                                 .semantics {
                                     contentDescription = l10n("draft_draw_on_layer") + " " + l10n(layer.nameKey)
-                                    stateDescription = if (target) "selected" else "unselected"
+                                    if (target) stateDescription = l10n("selected")
                                 }
                         ) {
                             androidx.compose.foundation.layout.Box(
@@ -202,7 +202,7 @@ fun DraftingBar(
                                 .padding(4.dp)
                                 .testTag("draft.layer.$id.visible")
                                 .semantics {
-                                    contentDescription = l10n(if (hidden) "draft_show_layer" else "draft_hide_layer")
+                                    contentDescription = l10n(if (hidden) "draft_show_layer" else "draft_hide_layer") + " " + l10n(layer.nameKey)
                                 }
                         )
                         Text(
@@ -212,7 +212,7 @@ fun DraftingBar(
                                 .padding(4.dp)
                                 .testTag("draft.layer.$id.lock")
                                 .semantics {
-                                    contentDescription = l10n(if (locked) "draft_unlock_layer" else "draft_lock_layer")
+                                    contentDescription = l10n(if (locked) "draft_unlock_layer" else "draft_lock_layer") + " " + l10n(layer.nameKey)
                                 }
                         )
                     }
@@ -273,12 +273,14 @@ fun DraftingBar(
                         onClick = { DraftingState.stepNumber = (DraftingState.stepNumber - 1).coerceAtLeast(1) },
                         label = { Text("−", fontSize = 14.sp) },
                         modifier = Modifier.testTag("draft.marker.minus")
+                            .semantics { contentDescription = l10n("draft_step_prev") }
                     )
                     FilterChip(
                         selected = false,
                         onClick = { DraftingState.stepNumber = (DraftingState.stepNumber + 1).coerceAtMost(99) },
                         label = { Text("+", fontSize = 14.sp) },
                         modifier = Modifier.testTag("draft.marker.plus")
+                            .semantics { contentDescription = l10n("draft_step_next") }
                     )
                     FilterChip(
                         selected = false,

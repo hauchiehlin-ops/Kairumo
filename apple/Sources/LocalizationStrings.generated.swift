@@ -3486,6 +3486,14 @@ extension LocalizationManager {
             .ko: "다음 번호",
             .th: "เลขถัดไป"
         ],
+        "draft_step_prev": [
+            .zhHant: "上一個編號",
+            .en: "Previous number",
+            .zhHans: "上一个编号",
+            .ja: "前の番号",
+            .ko: "이전 번호",
+            .th: "เลขก่อนหน้า"
+        ],
         "draft_step_reset": [
             .zhHant: "從 ① 重來",
             .en: "Start from ①",
