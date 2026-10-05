@@ -326,6 +326,24 @@ final class RecordingTitleInPackageTests: XCTestCase {
         XCTAssertTrue(NotebookSyncCoordinator.workingCopyNeedsExport(added))
     }
 
+    /// 移動／縮放膠帶只改物件：套件的檔案時間比文件新時，原本會被判成不必匯出，
+    /// 下一次匯入就把舊位置蓋回來。
+    func testMovingATapeForcesAnExportEvenWhenThePackageLooksNewer() throws {
+        var book = doc()
+        book.tapeAttachments = [NoteTapeAttachment(
+            id: "11111111-1111-1111-1111-111111111111", pageIndex: 0,
+            rect: CGRect(x: 10, y: 10, width: 100, height: 32))]
+        let first = try exportInputs(titles: [:], document: book)
+        _ = try NotebookSyncCoordinator.exportOne(first)
+        XCTAssertFalse(NotebookSyncCoordinator.workingCopyNeedsExport(first), "沒改就不該白匯出")
+
+        var moved = book
+        moved.tapeAttachments?[0].rect = CGRect(x: 80, y: 200, width: 160, height: 32)
+        moved.lastModifiedDate = Date(timeIntervalSince1970: 0)  // 比套件舊：只看檔案時間會判成不必匯出
+        let after = try exportInputs(titles: [:], document: moved)
+        XCTAssertTrue(NotebookSyncCoordinator.workingCopyNeedsExport(after))
+    }
+
     func testAddingARecordingMarksItsNotebookModified() {
         let store = isolatedNotebookStore()
         var book = NotebookDocument(title: "N", pageCount: 1)

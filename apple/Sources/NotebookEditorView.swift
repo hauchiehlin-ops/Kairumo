@@ -13792,8 +13792,13 @@ private struct TapeView: View {
                 }
             }
         }
+        // **`.position` 一定要放在 `contentShape` 與手勢「之後」。**
+        //
+        // `.position` 會讓視圖撐滿整個父層（整頁）。原本它排在 `.contentShape(Rectangle())`、
+        // `.onTapGesture`、`.gesture` 前面，於是**每一條膠帶的點擊範圍都是整頁**：
+        // 畫完第一條，它就蓋住背景的繪製層（第二條畫不出來）、也蓋住底下的畫布
+        // （換成別的工具後筆也寫不了、點不到任何東西）。範圍要先收在膠帶自己的矩形裡再定位。
         .frame(width: rect.width, height: rect.height)
-        .position(x: rect.midX, y: rect.midY)
         .contentShape(Rectangle())
         .onTapGesture {
             if isActive {
@@ -13874,6 +13879,7 @@ private struct TapeView: View {
                 .offset(y: -44)
             }
         }
+        .position(x: rect.midX, y: rect.midY)
     }
 }
 

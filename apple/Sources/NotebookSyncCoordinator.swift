@@ -23,6 +23,7 @@
 //  用一般的匯出會把剛下載下來的對方編輯整個刪掉，而且不會有任何錯誤訊息。
 //
 
+import CryptoKit
 import Foundation
 import PencilKit
 
@@ -233,6 +234,50 @@ extension NotebookStore: SyncableNotebookStore {
 ///
 /// 匯入要拿它判斷「匯出之後、匯入之前，使用者又動了什麼」——
 /// 新增的、移動過的、改過內容的，見 `NotebookSyncCoordinator.preservingLocalChanges`。
+/// 每本筆記本「最後一次匯出（或匯入採用）時，各物件的內容指紋」（跨行程穩定，SHA-256）。
+///
+/// `workingCopyNeedsExport` 只看檔案時間：移動／縮放膠帶這類**只改物件**的編輯，
+/// 碰上「套件的檔案時間比文件新」（匯入剛碰過 manifest、筆跡增量剛寫進套件）就被判成不必匯出 ——
+/// 於是沒有匯出名單，下一次匯入就把套件裡的舊版本整份蓋回來：使用者看到的是
+/// 「移到別處、調整大小之後，自己又跳回原來的位置與大小」。
+/// 有了這份帳本，物件跟上次匯出的不一樣就一定匯出，不受檔案時間先後影響。
+enum ObjectLedger {
+    private static func url(in directory: URL, notebookId: String) -> URL {
+        directory.appending(path: "\(notebookId.lowercased())_objects.json")
+    }
+
+    static func stableFingerprints(of d: NotebookDocument) -> [String: String] {
+        var out: [String: String] = [:]
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        func add<T: Identifiable & Encodable>(_ items: [T]?) where T.ID == String {
+            for item in items ?? [] {
+                let data = (try? encoder.encode(item)) ?? Data()
+                out[item.id.lowercased()] = SHA256.hash(data: data).prefix(8)
+                    .map { String(format: "%02x", $0) }.joined()
+            }
+        }
+        add(d.attachments); add(d.textAttachments); add(d.tableAttachments); add(d.shapeAttachments)
+        add(d.connectionAttachments); add(d.linkAttachments); add(d.model3DAttachments)
+        add(d.audioAttachments); add(d.commentPins); add(d.tapeAttachments); add(d.stickyAnchors)
+        return out
+    }
+
+    static func save(_ document: NotebookDocument, in directory: URL) {
+        let prints = stableFingerprints(of: document)
+        guard let data = try? JSONEncoder().encode(prints) else { return }
+        try? data.write(to: url(in: directory, notebookId: document.id), options: .atomic)
+    }
+
+    /// 有帳本、而且現在的物件與帳本不同（改過、新增或刪掉）才算有變動；沒有帳本不強制（維持原本行為）。
+    static func hasUnsynced(_ document: NotebookDocument, in directory: URL) -> Bool {
+        guard let data = try? Data(contentsOf: url(in: directory, notebookId: document.id)),
+              let known = try? JSONDecoder().decode([String: String].self, from: data)
+        else { return false }
+        return stableFingerprints(of: document) != known
+    }
+}
+
 /// 每本筆記本「套件裡已經有的錄音名字」：檔名（小寫）→ 名字。
 ///
 /// 名字不在 `NotebookDocument` 裡，`workingCopyNeedsExport` 只看檔案時間就看不出名字有沒有變。
@@ -1407,6 +1452,7 @@ enum NotebookSyncCoordinator {
         )
         RecordingTitleLedger.save(
             inputs.recordingTitles, in: inputs.baselineDirectory, notebookId: document.id)
+        ObjectLedger.save(document, in: inputs.baselineDirectory)
         return own
     }
 
@@ -1449,6 +1495,8 @@ enum NotebookSyncCoordinator {
             inputs.recordingTitles, in: inputs.baselineDirectory, notebookId: inputs.document.id) {
             return true
         }
+
+        if ObjectLedger.hasUnsynced(inputs.document, in: inputs.baselineDirectory) { return true }
 
         guard let enumerator = fm.enumerator(
             at: inputs.package,
@@ -1557,6 +1605,8 @@ enum NotebookSyncCoordinator {
             RecordingTitleLedger.merge(
                 adopted, in: store.syncBaselineDirectory, notebookId: documentId)
         }
+        // 採用了匯入結果（沒有保住本機的剛改動）→ 帳本跟著更新，不然下一輪白匯出一次。
+        if !preserved { ObjectLedger.save(merged, in: store.syncBaselineDirectory) }
         // 有保住使用者剛新增的東西就**不要**標成「已同步」：那些東西還沒進套件，下一輪要匯出。
         if !preserved {
             markWorkingCopyInSync(documentId: documentId, store: store)
