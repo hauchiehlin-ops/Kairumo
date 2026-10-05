@@ -5115,11 +5115,6 @@ private fun InkScreen(
             ) { inkBar() }
         }
         }
-        if (effectiveToolbarMode == EditorMode.DRAW &&
-            toolbarPlacement == uniffi.padnote_core.FfiPlacement.BOTTOM
-        ) {
-            inkBar()
-        }
 
         // 四個「按下去之後還要再做一個動作」的功能，第一次用時給一則提示
         // （使用者回報：不知道該怎麼操作）。內容與 id 都來自核心，
@@ -5133,6 +5128,15 @@ private fun InkScreen(
             activity, "hint.tabletop", isTabletopManual, deviceLanguageTag())
         com.kairumo.padnote.ui.FeatureHintHost(
             activity, "hint.recognize", isRecognisingHandwriting, deviceLanguageTag())
+        }
+
+        // 工具列在「下」：要放在 `EditorWorkArea` **外面**（Column 的下一個子項）。
+        // 原本它在畫布的 RowScope 裡，成了畫布的**橫向**兄弟，`fillMaxWidth` 把畫布擠成
+        // 寬度 0 —— 預設就是「下」，所以新安裝的 Android 一打開畫布整個不見。
+        if (effectiveToolbarMode == EditorMode.DRAW &&
+            toolbarPlacement == uniffi.padnote_core.FfiPlacement.BOTTOM
+        ) {
+            inkBar()
         }
 
         // 次世代 UI/UX Phase 5: 折疊立起雙屏創作工作盤 (Tabletop Studio Control Deck)
