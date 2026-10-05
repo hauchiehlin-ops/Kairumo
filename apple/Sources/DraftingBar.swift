@@ -9,10 +9,11 @@ struct DraftingBar: View {
     @ObservedObject var state = DraftingState.shared
     @ObservedObject private var localizationManager = LocalizationManager.shared
     @Environment(\.horizontalSizeClass) private var sizeClass
+    @Environment(\.dynamicTypeSize) private var typeSize
     @State private var showTips = false
 
     /// 手機寬度預設收合；使用者按過收合／展開之後就以他的選擇為準。
-    private var compact: Bool { state.compactChoice ?? (sizeClass == .compact) }
+    private var compact: Bool { state.compactChoice ?? (sizeClass == .compact || typeSize.isAccessibilitySize) }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -147,6 +148,7 @@ struct DraftingBar: View {
             } label: {
                 HStack(spacing: 5) {
                     Circle().fill(state.layerColor(layer.id)).frame(width: 12, height: 12)
+                        .overlay(Circle().stroke(Color.primary.opacity(0.35), lineWidth: 1))
                         .overlay(Circle().stroke(Color.primary.opacity(target ? 0.9 : 0), lineWidth: 2).padding(-3))
                     Text(localizationManager.localized(layer.nameKey))
                         .font(.caption.weight(target ? .semibold : .regular))
@@ -255,6 +257,7 @@ struct DraftingBar: View {
 struct DraftLinePreview: View {
     let pen: FfiDraftPen
     let selected: Bool
+    @Environment(\.colorScheme) private var scheme
 
     var body: some View {
         Canvas { ctx, size in
@@ -262,7 +265,11 @@ struct DraftLinePreview: View {
             path.move(to: CGPoint(x: 2, y: size.height / 2))
             path.addLine(to: CGPoint(x: size.width - 2, y: size.height / 2))
             let pattern = draftLinePattern(lineType: pen.lineType).map { CGFloat($0) * 0.9 }
-            let color = DraftingState.rgba(fromHex: pen.colorHex)
+            var color = DraftingState.rgba(fromHex: pen.colorHex)
+            // 深色模式：近黑的線（頂／底層）在深色底上看不見，提亮。
+            if scheme == .dark, 0.299 * Double(color[0]) + 0.587 * Double(color[1]) + 0.114 * Double(color[2]) < 90 {
+                color = [255 - color[0], 255 - color[1], 255 - color[2], color[3]]
+            }
             ctx.stroke(
                 path,
                 with: .color(Color(red: Double(color[0]) / 255, green: Double(color[1]) / 255, blue: Double(color[2]) / 255)),

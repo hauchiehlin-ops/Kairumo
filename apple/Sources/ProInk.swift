@@ -384,6 +384,16 @@ final class ProInkLayerView: UIView {
 
     // MARK: 繪製
 
+    /// 深色模式下頁面是深色的：近黑的墨水（製圖的「頂」「底」層）會看不見，
+    /// 就像 PencilKit 會把深色墨水在深色模式反相，這裡也把近黑的色提亮。
+    /// 只影響畫面；存檔與匯出仍是原色（匯出的紙是白的）。
+    private func displayColor(_ rgba: [UInt8]) -> [UInt8] {
+        guard traitCollection.userInterfaceStyle == .dark, rgba.count == 4 else { return rgba }
+        let lum = (0.299 * Double(rgba[0]) + 0.587 * Double(rgba[1]) + 0.114 * Double(rgba[2])) / 255
+        guard lum < 0.35 else { return rgba }
+        return [255 - rgba[0], 255 - rgba[1], 255 - rgba[2], rgba[3]]
+    }
+
     override func draw(_ rect: CGRect) {
         guard let ctx = UIGraphicsGetCurrentContext() else { return }
         let drafting = DraftingState.shared
@@ -398,7 +408,7 @@ final class ProInkLayerView: UIView {
             } else {
                 ctx.setBlendMode(.normal)
             }
-            ProInkRenderer.draw(cached, toolName: stroke.tool, color: stroke.colorRGBA, in: ctx, clip: rect)
+            ProInkRenderer.draw(cached, toolName: stroke.tool, color: displayColor(stroke.colorRGBA), in: ctx, clip: rect)
             ctx.restoreGState()
         }
         if let live, let liveCache {
@@ -410,7 +420,7 @@ final class ProInkLayerView: UIView {
             } else {
                 ctx.setBlendMode(.normal)
             }
-            ProInkRenderer.draw(liveCache, toolName: live.tool, color: live.colorRGBA, in: ctx, clip: rect)
+            ProInkRenderer.draw(liveCache, toolName: live.tool, color: displayColor(live.colorRGBA), in: ctx, clip: rect)
             ctx.restoreGState()
         }
     }

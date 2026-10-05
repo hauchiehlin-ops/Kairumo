@@ -3,6 +3,7 @@ package com.kairumo.padnote.ink
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -185,6 +186,7 @@ fun DraftingBar(
                         ) {
                             androidx.compose.foundation.layout.Box(
                                 Modifier.size(12.dp).clip(CircleShape).background(DraftingState.layerColor(id))
+                                    .border(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f), CircleShape)
                             )
                             Text(
                                 l10n(layer.nameKey), fontSize = 12.sp,
@@ -307,7 +309,13 @@ private fun angleTitle(deg: Int, l10n: (String) -> String) =
 @Composable
 fun DraftLinePreview(pen: FfiDraftPen, modifier: Modifier = Modifier) {
     val pattern = remember(pen.lineType) { draftLinePattern(pen.lineType) }
-    val color = remember(pen.colorHex) { DraftingState.parseHex(pen.colorHex) }
+    val dark = androidx.compose.foundation.isSystemInDarkTheme()
+    val color = remember(pen.colorHex, dark) {
+        val c = DraftingState.parseHex(pen.colorHex)
+        // 深色模式：近黑的線（頂／底層）在深色底上看不見，提亮。
+        if (dark && (0.299f * c.red + 0.587f * c.green + 0.114f * c.blue) < 0.35f)
+            Color(1f - c.red, 1f - c.green, 1f - c.blue, c.alpha) else c
+    }
     Canvas(modifier = modifier) {
         val y = size.height / 2
         val on = pattern.map { it * 0.9f * density }.toFloatArray()
