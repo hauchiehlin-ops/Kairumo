@@ -1279,17 +1279,6 @@ enum SeedContent {
         return strokes
     }
 
-    private static func drawHandwrittenBulletItem(
-        _ text: String,
-        origin: CGPoint,
-        ink: PKInk,
-        baseWidth: CGFloat,
-        isBrush: Bool = false,
-        spacing: CGFloat = 11
-    ) -> [PKStroke] {
-        drawHandwrittenText(text, origin: origin, ink: ink, baseWidth: baseWidth, isBrush: isBrush, spacing: spacing)
-    }
-
     /// 單一字元筆劃產生器（包含基本中英文與符號筆劃骨架）
     private static func glyphStrokes(
         for ch: Character,
@@ -1512,23 +1501,6 @@ enum SeedContent {
             pts.append(CGPoint(x: x, y: y))
         }
         return [strokeFromPoints(pts, ink: ink, width: width, isBrush: false)]
-    }
-
-    /// 繪製直線
-    private static func drawStraightLine(from start: CGPoint, to end: CGPoint, ink: PKInk, width: CGFloat) -> [PKStroke] {
-        [strokeFromPoints([start, end], ink: ink, width: width, isBrush: false)]
-    }
-
-    /// 繪製毛筆書法氣勢波浪飾線
-    private static func drawCalligraphicFlourish(origin: CGPoint, ink: PKInk) -> [PKStroke] {
-        var pts: [CGPoint] = []
-        for i in 0...20 {
-            let t = CGFloat(i) / 20.0
-            let x = origin.x + t * 90.0
-            let y = origin.y + sin(t * .pi * 2) * 8.0 - (t * 5.0)
-            pts.append(CGPoint(x: x, y: y))
-        }
-        return [strokeFromPoints(pts, ink: ink, width: 6.0, isBrush: true)]
     }
 
     /// 繪製鋼筆筆尖插畫
