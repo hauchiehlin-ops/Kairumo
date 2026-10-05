@@ -237,7 +237,12 @@ class InkEngine(
      *
      * 兩點的直線補點到每 4 個頁面單位一點：虛線與點畫線的間隔由筆點陣挖出來，點太稀會失準。
      */
+    /** 最近一次 [insertDrafted] 寫進核心的筆畫 id（插入後用套索選住它）。 */
+    var lastInsertedCoreIds: List<String> = emptyList()
+        private set
+
     fun insertDrafted(items: List<uniffi.padnote_core.FfiSheetStroke>, ox: Float, oy: Float): Int {
+        val inserted = mutableListOf<String>()
         val target = session
         val page = pageId
         val group = nextGroup++
@@ -254,6 +259,7 @@ class InkEngine(
                     )
                 }.getOrNull()
             } else null
+            coreId?.let { inserted += it }
             _strokes += CompletedStroke(
                 pointerId = ULong.MAX_VALUE - 1_000_000uL - _strokes.size.toULong(),
                 coreStrokeId = coreId,
@@ -268,6 +274,7 @@ class InkEngine(
             )
             count++
         }
+        lastInsertedCoreIds = inserted
         if (count > 0) {
             redoStack.clear()
             redoActs.clear()

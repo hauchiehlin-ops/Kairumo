@@ -2498,20 +2498,23 @@ private fun InkScreen(
             revision++
         } else null
     }
+    // 畫布的縮放平移在後面才宣告；用一個普通物件帶過來（巨大的 InkScreen 裡跨宣告捕捉狀態會讓編譯器產出壞位元碼）。
+    val canvasInfo = remember { CanvasViewInfo() }
     if (showSolidStudio) {
+        val density = LocalDensity.current.density
         com.kairumo.padnote.ink.SolidStudioDialog(
             languageTag = deviceLanguageTag(),
             pageWidth = PageGeometry.width,
             pageHeight = PageGeometry.height,
             sketchPolylines = { engine.sketchPolylines() },
             onInsert = { sheet ->
-                // 水平置中、靠上。整組一次復原。
-                val ox = ((PageGeometry.width - sheet.width) / 2f).coerceAtLeast(0f)
-                val oy = maxOf(PageGeometry.PRINTABLE_INSET, PageGeometry.height * 0.08f)
-                engine.insertDrafted(sheet.strokes, ox, oy)
+                val placed = placeSolidSheet(engine, sheet, canvasInfo.viewport, canvasInfo.scale, canvasInfo.offset, density)
                 showSolidStudio = false
                 revision++
-                message = l10n("solid_inserted")
+                message = l10n("solid_place_hint")
+                // 插入後直接用套索選住它，使用者拖一下就能搬（與 Apple 一致）。
+                applyInkTool(InkTool.LASSO)
+                lasso.select(placed.first, placed.second)
             },
             onDismiss = { showSolidStudio = false }
         )
@@ -2611,6 +2614,9 @@ private fun InkScreen(
     var canvasScale by remember(pageId) { mutableFloatStateOf(1f) }
     var canvasOffset by remember(pageId) { mutableStateOf(Offset.Zero) }
     var canvasViewport by remember { mutableStateOf(Size.Zero) }
+    canvasInfo.viewport = canvasViewport
+    canvasInfo.scale = canvasScale
+    canvasInfo.offset = canvasOffset
     // 這一格畫面有多寬，決定側欄要並排還是覆蓋。**用實際寬度算**，
     // 不是查尺寸級別的表：摺疊機與分割視窗的寬度是連續變化的。
     val configuration = LocalConfiguration.current
@@ -7338,4 +7344,41 @@ private fun DialogGuideStep(step: String, title: String, desc: String) {
             )
         }
     }
+}
+
+/**
+ * 把立體輔助排好的圖紙放在「目前看得到的範圍正中央」（不是固定貼頂，那會壓在既有的圖上），
+ * 回傳插入的核心筆畫 id 與選取框（像素）。
+ *
+ * 獨立成頂層函式：寫在 `InkScreen` 的 lambda 裡會讓 Compose 編譯器對這個巨大的函式
+ * 產出驗證不過的位元碼（啟動即 `VerifyError`）。
+ *
+ * 畫布的 graphicsLayer 以中心為軸縮放，所以畫面中心對應的頁面點是
+ * 中心 − 平移 / 縮放，再除以 density 換成頁面單位。
+ */
+private fun placeSolidSheet(
+    engine: com.kairumo.padnote.ink.InkEngine,
+    sheet: uniffi.padnote_core.FfiSolidSheet,
+    viewport: Size,
+    scale: Float,
+    offset: Offset,
+    density: Float
+): Pair<List<String>, List<Offset>> {
+    val cx = (viewport.width / 2f - offset.x / scale) / density
+    val cy = (viewport.height / 2f - offset.y / scale) / density
+    val ox = (cx - sheet.width / 2f).coerceIn(0f, maxOf(0f, PageGeometry.width - sheet.width))
+    val oy = (cy - sheet.height / 2f).coerceIn(0f, maxOf(0f, PageGeometry.height - sheet.height))
+    engine.insertDrafted(sheet.strokes, ox, oy)
+    val l = (ox - 8f) * density
+    val t = (oy - 8f) * density
+    val r = (ox + sheet.width + 8f) * density
+    val b = (oy + sheet.height + 8f) * density
+    return engine.lastInsertedCoreIds to listOf(Offset(l, t), Offset(r, t), Offset(r, b), Offset(l, b))
+}
+
+/** 畫布目前的視窗大小、縮放與平移（給「放在畫面正中央」用）。 */
+private class CanvasViewInfo {
+    var viewport: Size = Size.Zero
+    var scale: Float = 1f
+    var offset: Offset = Offset.Zero
 }
