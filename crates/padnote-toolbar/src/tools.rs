@@ -46,6 +46,8 @@ pub enum Tool {
     Eraser,
     Lasso,
     MaskingTape,
+    // 圖學：製圖筆組、圖層與線型。
+    Drafting,
     // 歷程。
     Undo,
     Redo,
@@ -72,6 +74,7 @@ impl Tool {
             Self::Eraser => Key::ToolEraser,
             Self::Lasso => Key::ToolLasso,
             Self::MaskingTape => Key::ToolMaskingTape,
+            Self::Drafting => Key::ToolDrafting,
             Self::Undo => Key::ToolUndo,
             Self::Redo => Key::ToolRedo,
             Self::ClearPage => Key::ToolClearPage,
@@ -101,6 +104,7 @@ impl Tool {
             Self::Eraser => "editor.ink.eraser",
             Self::Lasso => "editor.ink.lasso",
             Self::MaskingTape => "editor.ink.maskingTape",
+            Self::Drafting => "editor.ink.drafting",
             Self::Undo => "editor.ink.undo",
             Self::Redo => "editor.ink.redo",
             Self::ClearPage => "editor.ink.clear",
@@ -164,7 +168,7 @@ impl Tool {
             return ToolGroup::Pens;
         }
         match self {
-            Self::Eraser | Self::Lasso | Self::MaskingTape => ToolGroup::Edit,
+            Self::Eraser | Self::Lasso | Self::MaskingTape | Self::Drafting => ToolGroup::Edit,
             _ => ToolGroup::History,
         }
     }
@@ -252,6 +256,7 @@ pub fn all_tools() -> Vec<Tool> {
         Tool::Eraser,
         Tool::Lasso,
         Tool::MaskingTape,
+        Tool::Drafting,
         Tool::Undo,
         Tool::Redo,
         Tool::ClearPage,
@@ -324,6 +329,7 @@ mod tests {
                 "editor.ink.eraser",
                 "editor.ink.lasso",
                 "editor.ink.maskingTape",
+                "editor.ink.drafting",
                 "editor.ink.undo",
                 "editor.ink.redo",
                 "editor.ink.clear",
@@ -394,7 +400,7 @@ mod tests {
     fn tool_order_is_stable() {
         // 順序改變會讓使用者的肌肉記憶失效。
         assert_eq!(all_tools()[0], Tool::Pen);
-        assert_eq!(all_tools().len(), 19);
+        assert_eq!(all_tools().len(), 20);
     }
 
     #[test]

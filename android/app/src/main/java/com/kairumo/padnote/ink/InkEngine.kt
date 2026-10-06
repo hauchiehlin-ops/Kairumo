@@ -71,7 +71,16 @@ class InkEngine(
         /** 落筆時刻（毫秒）。手寫辨識靠它把筆畫依書寫停頓分組。 */
         val startedAtMs: Long,
         val colorRgba: ByteArray = byteArrayOf(0, 0, 0, -1),
-        val baseWidth: Float = 3f
+        val baseWidth: Float = 3f,
+        /** 製圖圖層（1 底／2 中／3 頂）。0 = 一般筆跡。 */
+        val layer: Int = 0,
+        /** 工程線型（0 實線、1 隱藏線、2 中心線、3 假想線）。 */
+        val lineType: Int = 0,
+        /**
+         * 一次插入的一組筆畫（三視圖、步驟編號）共用的編號；0 = 單獨一筆。
+         * 復原／重做把同一組當成**一個動作**。
+         */
+        val group: Int = 0
     )
 
     /** 一次事件處理的結果，供 UI 決定要不要重繪。 */
@@ -86,6 +95,24 @@ class InkEngine(
     var tool: ToolKind = ToolKind.FOUNTAIN_PEN
     var colorRgba: ByteArray = byteArrayOf(0, 0, 0, -1) // 不透明黑
     var baseWidth: Float = 3f
+
+    /** 製圖：之後落下的筆畫寫進哪一層、用什麼線型。一般筆刷維持 0。 */
+    var layer: Int = 0
+    var lineType: Int = 0
+
+    /**
+     * 長按吸附的角度鎖定（度）。`null` = 沒開吸附。
+     * 筆畫抬起前在終點停留超過 [SNAP_DWELL_MS]，就把這一筆釘成直線／圓／矩形／鎖角度的折線。
+     */
+    var snapStepDeg: Float? = null
+    /** 非 null = 改圖層模式：點筆畫把它改到這一層。 */
+    var reassignTarget: Int? = null
+
+    /** 非 null = 步驟編號模式：點哪裡就通知哪裡（頁面座標），不落筆。 */
+    var onMarkerTap: ((Float, Float) -> Unit)? = null
+
+    /** 吸附成功時通知 UI（觸覺回饋）。 */
+    var onSnapped: ((uniffi.padnote_core.FfiDraftSnapKind) -> Unit)? = null
 
     /**
      * 擦除模式。
@@ -139,33 +166,128 @@ class InkEngine(
     val canUndo: Boolean get() = _strokes.isNotEmpty()
     val canRedo: Boolean get() = redoStack.isNotEmpty()
 
-    /** 收回最後一筆。回傳是否真的收回了東西。 */
+    /** 收回最後一筆（或最後一次插入的一整組）。回傳是否真的收回了東西。 */
     fun undo(): Boolean {
-        val last = _strokes.removeLastOrNull() ?: return false
-        last.coreStrokeId?.let { id ->
-            val target = session
-            val page = pageId
-            if (target != null && page != null) runCatching { target.eraseStroke(page, id) }
+        val act = acts.lastOrNull()
+        if (act is ReassignAct) {
+            acts.removeLast()
+            if (setLayerOf(act.key, act.from)) {
+                redoActs += act
+                return true
+            }
+        } else if (act != null) {
+            acts.removeLast()
         }
-        redoStack += last
+        val last = _strokes.lastOrNull() ?: return false
+        redoActs += AddAct
+        val removed = if (last.group != 0) _strokes.filter { it.group == last.group } else listOf(last)
+        val target = session
+        val page = pageId
+        for (stroke in removed) {
+            _strokes.remove(stroke)
+            stroke.coreStrokeId?.let { id ->
+                if (target != null && page != null) runCatching { target.eraseStroke(page, id) }
+            }
+        }
+        redoStack += removed.asReversed()
         return true
     }
 
-    /** 把最後一次收回的筆畫放回去。 */
+    /** 把最後一次收回的筆畫（或整組）放回去。 */
     fun redo(): Boolean {
-        val stroke = redoStack.removeLastOrNull() ?: return false
+        val next = redoActs.lastOrNull()
+        if (next is ReassignAct) {
+            redoActs.removeLast()
+            if (setLayerOf(next.key, next.to)) {
+                acts += next
+                return true
+            }
+        } else if (next != null) {
+            redoActs.removeLast()
+        }
+        val first = redoStack.removeLastOrNull() ?: return false
+        acts += AddAct
+        val batch = mutableListOf(first)
+        if (first.group != 0) {
+            while (redoStack.lastOrNull()?.group == first.group) batch += redoStack.removeLast()
+        }
         val target = session
         val page = pageId
-        val newId = if (target != null && page != null) {
-            runCatching {
-                target.addStroke(page, stroke.tool, stroke.colorRgba, stroke.baseWidth, stroke.points)
-            }.getOrNull()
-        } else {
-            null
+        for (stroke in batch) {
+            val newId = if (target != null && page != null) {
+                runCatching {
+                    target.addStrokeDrafted(
+                        page, stroke.tool, stroke.colorRgba, stroke.baseWidth, stroke.points,
+                        stroke.layer.toUByte(), stroke.lineType.toUByte()
+                    )
+                }.getOrNull()
+            } else {
+                null
+            }
+            _strokes += stroke.copy(coreStrokeId = newId)
         }
-        _strokes += stroke.copy(coreStrokeId = newId)
         return true
     }
+
+    private var nextGroup = 1
+
+    /**
+     * 把核心排好的製圖線整組插進這一頁（三視圖、步驟編號），原點偏移 `(ox, oy)`。
+     * 整組是**一次復原**。回傳插入的筆畫數。
+     *
+     * 兩點的直線補點到每 4 個頁面單位一點：虛線與點畫線的間隔由筆點陣挖出來，點太稀會失準。
+     */
+    /** 最近一次 [insertDrafted] 寫進核心的筆畫 id（插入後用套索選住它）。 */
+    var lastInsertedCoreIds: List<String> = emptyList()
+        private set
+
+    fun insertDrafted(items: List<uniffi.padnote_core.FfiSheetStroke>, ox: Float, oy: Float): Int {
+        val inserted = mutableListOf<String>()
+        val target = session
+        val page = pageId
+        val group = nextGroup++
+        var count = 0
+        for (item in items) {
+            if (item.points.size < 2) continue
+            val pts = DraftingState.points(item, ox, oy)
+            val rgba = DraftingState.rgba(item.colorHex)
+            val coreId = if (target != null && page != null) {
+                runCatching {
+                    target.addStrokeDrafted(
+                        page, ToolKind.FINELINER, rgba, item.width, pts,
+                        item.layer, item.lineType
+                    )
+                }.getOrNull()
+            } else null
+            coreId?.let { inserted += it }
+            _strokes += CompletedStroke(
+                pointerId = ULong.MAX_VALUE - 1_000_000uL - _strokes.size.toULong(),
+                coreStrokeId = coreId,
+                points = pts,
+                tool = ToolKind.FINELINER,
+                startedAtMs = System.currentTimeMillis(),
+                colorRgba = rgba,
+                baseWidth = item.width,
+                layer = item.layer.toInt(),
+                lineType = item.lineType.toInt(),
+                group = group
+            )
+            count++
+        }
+        lastInsertedCoreIds = inserted
+        if (count > 0) {
+            redoStack.clear()
+            redoActs.clear()
+            acts += AddAct
+            onContentCommitted?.invoke()
+        }
+        return count
+    }
+
+    /** 頁面上所有筆畫的點（立體輔助從裡面找封閉輪廓）。 */
+    fun sketchPolylines(): List<List<uniffi.padnote_core.FfiPoint>> =
+        // 中層（輔助線與步驟編號）不算：步驟編號是一個個小圓圈，會被當成最小的封閉圖形。
+        _strokes.filter { it.layer != 2 }.map { s -> s.points.map { uniffi.padnote_core.FfiPoint(it.x, it.y) } }
 
     /**
      * 擦掉碰到的筆畫。
@@ -176,7 +298,8 @@ class InkEngine(
      */
     private fun eraseAt(x: Float, y: Float, radius: Float): List<CompletedStroke> {
         val hit = _strokes.filter { stroke ->
-            stroke.points.any { p ->
+            // 隱藏或鎖定的圖層擦不到：看不見的線被擦掉會讓人找不到它去了哪。
+            DraftingState.canEdit(stroke.layer) && stroke.points.any { p ->
                 val dx = p.x - x
                 val dy = p.y - y
                 dx * dx + dy * dy <= radius * radius
@@ -192,6 +315,64 @@ class InkEngine(
         }
         return hit
     }
+
+    /**
+     * 把離 (x, y) 最近的一筆（鎖定／隱藏的圖層除外）改到 [target] 圖層。
+     *
+     * 核心是 append-only，所以「改一筆」是擦掉舊的、用新圖層寫一筆新的（顏色、線型、點都不變）。
+     * 回傳有沒有改到。
+     */
+    fun reassignLayerAt(x: Float, y: Float, targetLayer: Int, radius: Float = 14f): Boolean {
+        var best: CompletedStroke? = null
+        var bestDist = Float.MAX_VALUE
+        for (stroke in _strokes) {
+            if (!DraftingState.canEdit(stroke.layer)) continue
+            val reach = radius + stroke.baseWidth * 0.5f
+            // 點到**線段**的距離，不是點到取樣點：直線只有兩三個取樣點，
+            // 點在兩點中間會離任何一個取樣點都很遠。
+            var d = Float.MAX_VALUE
+            val pts = stroke.points
+            for (i in 0 until pts.size - 1) d = minOf(d, distToSegment(x, y, pts[i], pts[i + 1]))
+            if (pts.size == 1) d = kotlin.math.hypot(pts[0].x - x, pts[0].y - y)
+            if (d <= reach && d < bestDist) { best = stroke; bestDist = d }
+        }
+        val old = best ?: return false
+        if (old.layer == targetLayer) return true
+        setLayerOf(old.pointerId, targetLayer)
+        // 可復原：改圖層也進動作紀錄，與落筆、整組插入照時間順序一起復原／重做。
+        acts += ReassignAct(old.pointerId, old.layer, targetLayer)
+        redoActs.clear()
+        return true
+    }
+
+    /** 把筆畫（以 pointerId 認）改到某一層。核心是 append-only：擦掉舊的、用新圖層寫一筆新的。 */
+    private fun setLayerOf(key: ULong, layer: Int): Boolean {
+        val index = _strokes.indexOfFirst { it.pointerId == key }
+        if (index < 0) return false
+        val old = _strokes[index]
+        val target = session
+        val page = pageId
+        var newId: String? = null
+        if (target != null && page != null) {
+            old.coreStrokeId?.let { runCatching { target.eraseStroke(page, it) } }
+            newId = runCatching {
+                target.addStrokeDrafted(
+                    page, old.tool, old.colorRgba, old.baseWidth, old.points,
+                    layer.toUByte(), old.lineType.toUByte()
+                )
+            }.getOrNull()
+        }
+        _strokes[index] = old.copy(coreStrokeId = newId, layer = layer)
+        if (newId != null) onContentCommitted?.invoke()
+        return true
+    }
+
+    // ── 動作紀錄：筆畫的落筆／插入，與「改圖層」要照時間順序復原 ──
+    private sealed interface Act
+    private data object AddAct : Act
+    private data class ReassignAct(val key: ULong, val from: Int, val to: Int) : Act
+    private val acts = mutableListOf<Act>()
+    private val redoActs = mutableListOf<Act>()
 
     /**
      * 最後一個事件的原始資訊，給畫面上的診斷列用。
@@ -229,6 +410,24 @@ class InkEngine(
         val completedNow = mutableListOf<CompletedStroke>()
 
         for (sample in InkInput.samples(event, density, zoom, offsetX, offsetY)) {
+            // 改圖層模式：點一下就把最近的一筆改到目標圖層，不落筆。
+            // 繞過仲裁器 —— 它要看到移動才肯判定，一個點擊永遠等不到判定。
+            val marker = onMarkerTap
+            if (marker != null) {
+                if (sample.event.phase == FfiPhase.BEGAN) {
+                    marker(sample.event.x, sample.event.y)
+                    drawn++
+                }
+                continue
+            }
+            val reassign = reassignTarget
+            if (reassign != null) {
+                if (sample.event.phase == FfiPhase.BEGAN) {
+                    reassignLayerAt(sample.event.x, sample.event.y, reassign)
+                    drawn++
+                }
+                continue
+            }
             val decision = arbiter.handle(sample.event)
 
             // 先處理收回：被收回的筆畫不該再因為後續事件而復活。
@@ -285,19 +484,32 @@ class InkEngine(
         when (sample.event.phase) {
             FfiPhase.BEGAN -> {
                 inFlight[id] = mutableListOf(sample)
+                resetHold(sample.event.x, sample.event.y)
             }
             FfiPhase.MOVED -> {
                 // 沒有 BEGAN 就收到 MOVED（例如前一筆被收回後又有事件進來）
                 // 不該無中生有一筆畫。
                 inFlight[id]?.add(sample)
+                if (kotlin.math.hypot(sample.event.x - holdAnchorX, sample.event.y - holdAnchorY) > SNAP_SLOP) {
+                    resetHold(sample.event.x, sample.event.y)
+                }
                 if (sample.event.y + 200f > PageGeometry.height) onReachedPageBottom?.invoke()
             }
             FfiPhase.ENDED -> {
                 val collected = inFlight.remove(id) ?: return null
                 collected.add(sample)
-                return commit(id, collected)
+                // 預覽已經亮著就一定要吸附（所見即所得），不再另外用時間戳判斷。
+                val previewed = snapPreview != null
+                endHold()
+                forceSnap = previewed
+                try {
+                    return commit(id, collected)
+                } finally {
+                    forceSnap = false
+                }
             }
             FfiPhase.CANCELLED -> {
+                endHold()
                 inFlight.remove(id)
             }
             FfiPhase.HOVER, FfiPhase.HOVER_ENDED -> Unit
@@ -305,7 +517,31 @@ class InkEngine(
         return null
     }
 
+    /** 抬筆前，筆有沒有在終點停了至少 [SNAP_DWELL_MS]（位移不超過 [SNAP_SLOP]）。 */
+    private fun dwelledAtEnd(samples: List<InkInput.Sample>): Boolean {
+        if (samples.size < 3) return false
+        val last = samples.last().event
+        var i = samples.size - 2
+        while (i >= 0) {
+            val e = samples[i].event
+            if (kotlin.math.hypot(e.x - last.x, e.y - last.y) > SNAP_SLOP) {
+                val dwellMs = (last.timestampUs - samples[i + 1].event.timestampUs).toLong() / 1000
+                return dwellMs >= SNAP_DWELL_MS
+            }
+            i--
+        }
+        // 整筆都沒離開起點：是點，不是筆畫。
+        return false
+    }
+
+    private var forceSnap = false
+
     private fun commit(id: ULong, samples: List<InkInput.Sample>): CompletedStroke? {
+        if (layer != 0) {
+            // 鎖住的圖層不收筆畫；畫在隱藏的圖層上就把它顯示出來，不然畫了卻什麼都沒有。
+            if (DraftingState.isLocked(layer)) return null
+            DraftingState.ensureVisible(layer)
+        }
         val points = InkInput.strokePoints(samples)
         // 單點「筆畫」是點一下，不是書寫。留著只會在畫面上產生看不見的雜點。
         if (points.size < 2) return null
@@ -342,15 +578,34 @@ class InkEngine(
             }
         }
 
-        if (finalPoints.size >= 3) {
+        val drafting = layer != 0 || lineType != 0
+        // 長按吸附：筆畫抬起前在終點停住一下，就釘成幾何圖形（見 `draftSnapStroke`）。
+        var snappedKind: uniffi.padnote_core.FfiDraftSnapKind? = null
+        val step = snapStepDeg
+        if (step != null && (forceSnap || dwelledAtEnd(samples))) {
+            val snap = uniffi.padnote_core.draftSnapStroke(
+                finalPoints.map { uniffi.padnote_core.FfiPoint(it.x, it.y) }, step
+            )
+            if (snap.kind != uniffi.padnote_core.FfiDraftSnapKind.NONE && snap.points.size == finalPoints.size) {
+                finalPoints = finalPoints.mapIndexed { i, p ->
+                    p.copy(x = snap.points[i].x, y = snap.points[i].y)
+                }
+                snappedKind = snap.kind
+            }
+        }
+        // 製圖線要的是等寬、不收尖、不圓角：不做平滑。
+        if (finalPoints.size >= 3 && !drafting) {
             finalPoints = uniffi.padnote_core.streamlineSmoothPoints(finalPoints, 0.35f, 1.0f, 0.20f, 0.30f)
         }
+        snappedKind?.let { onSnapped?.invoke(it) }
 
         val target = session
         val page = pageId
         val coreId = if (target != null && page != null) {
             runCatching {
-                target.addStroke(page, tool, colorRgba, baseWidth, finalPoints)
+                target.addStrokeDrafted(
+                    page, tool, colorRgba, baseWidth, finalPoints, layer.toUByte(), lineType.toUByte()
+                )
             }.getOrNull()
         } else {
             null
@@ -364,12 +619,16 @@ class InkEngine(
             tool = tool,
             startedAtMs = (samples.first().event.timestampUs / 1_000uL).toLong(),
             colorRgba = colorRgba.copyOf(),
-            baseWidth = baseWidth
+            baseWidth = baseWidth,
+            layer = layer,
+            lineType = lineType
         )
         _strokes += stroke
         // 畫了新的東西就沒有「重做」可言了 —— 留著的話，按下重做會把
         // 一筆與現在的畫面毫無關係的筆畫放回來。
         redoStack.clear()
+        redoActs.clear()
+        acts += AddAct
         if (coreId != null) committed[id] = coreId
         return stroke
     }
@@ -458,6 +717,8 @@ class InkEngine(
         val loaded = runCatching { target.visibleStrokeDetails(page) }.getOrNull() ?: return
 
         _strokes.clear()
+        acts.clear()
+        redoActs.clear()
         committed.clear()
         var syntheticId = ULong.MAX_VALUE
         for (stroke in loaded) {
@@ -468,7 +729,9 @@ class InkEngine(
                 tool = stroke.tool,
                 startedAtMs = (stroke.startedAtUs / 1_000uL).toLong(),
                 colorRgba = stroke.colorRgba.copyOf(),
-                baseWidth = stroke.baseWidth
+                baseWidth = stroke.baseWidth,
+                layer = stroke.layer.toInt(),
+                lineType = stroke.lineType.toInt()
             )
             syntheticId -= 1uL
         }
@@ -568,7 +831,10 @@ class InkEngine(
         val written = next.map { stroke ->
             val coreId = if (target != null && page != null) {
                 runCatching {
-                    target.addStroke(page, stroke.tool, colorRgba, baseWidth, stroke.points)
+                    target.addStrokeDrafted(
+                        page, stroke.tool, stroke.colorRgba, stroke.baseWidth, stroke.points,
+                        stroke.layer.toUByte(), stroke.lineType.toUByte()
+                    )
                 }.getOrNull()
             } else {
                 null
@@ -584,6 +850,8 @@ class InkEngine(
 
     /** 切換頁面或視圖時呼叫。 */
     fun reset() {
+        acts.clear()
+        redoActs.clear()
         inFlight.clear()
         committed.clear()
         _strokes.clear()
@@ -599,6 +867,57 @@ class InkEngine(
      * 必須先問過仲裁結果，否則手掌的軌跡會先閃一下才被擦掉。
      */
     fun isDrawing(pointerId: ULong): Boolean = inFlight.containsKey(pointerId)
+
+    // ── 長按吸附的即時預覽（對齊 Apple：按住時就看到會變成什麼，不是抬筆才變）──
+    //
+    // 筆停著不動時 Android 不會再送事件，所以不能靠事件的時間戳判斷「停了多久」，
+    // 要靠牆上時鐘的計時器：每次移動超過 [SNAP_SLOP] 就重設錨點與計時，計時到了還在原地就算一次吸附結果。
+    private val snapHandler = android.os.Handler(android.os.Looper.getMainLooper())
+    private var holdAnchorX = 0f
+    private var holdAnchorY = 0f
+    private var holdToken = 0
+
+    /** 吸附預覽的點（頁面座標）。非空時畫這個，不畫原本的即時筆畫。 */
+    var snapPreview: List<StrokePoint>? = null
+        private set
+
+    /** 預覽有變動時通知畫布重繪。 */
+    var onSnapPreviewChanged: (() -> Unit)? = null
+
+    private fun resetHold(x: Float, y: Float) {
+        holdAnchorX = x
+        holdAnchorY = y
+        val token = ++holdToken
+        if (snapPreview != null) {
+            snapPreview = null
+            onSnapPreviewChanged?.invoke()
+        }
+        snapHandler.removeCallbacksAndMessages(null)
+        if (snapStepDeg == null) return
+        snapHandler.postDelayed({ if (token == holdToken) showSnapPreview(token) }, SNAP_DWELL_MS)
+    }
+
+    private fun showSnapPreview(token: Int) {
+        val step = snapStepDeg ?: return
+        val live = inFlight.values.firstOrNull() ?: return
+        val pts = InkInput.strokePoints(live.toList())
+        if (pts.size < 3 || token != holdToken) return
+        val snap = uniffi.padnote_core.draftSnapStroke(
+            pts.map { uniffi.padnote_core.FfiPoint(it.x, it.y) }, step
+        )
+        if (snap.kind == uniffi.padnote_core.FfiDraftSnapKind.NONE || snap.points.size != pts.size) return
+        snapPreview = pts.mapIndexed { i, p -> p.copy(x = snap.points[i].x, y = snap.points[i].y) }
+        onSnapPreviewChanged?.invoke()
+    }
+
+    private fun endHold() {
+        holdToken++
+        snapHandler.removeCallbacksAndMessages(null)
+        if (snapPreview != null) {
+            snapPreview = null
+            onSnapPreviewChanged?.invoke()
+        }
+    }
 
     /** 目前正在畫、尚未結束的取樣點（供即時預覽）。 */
     fun liveSamples(): List<List<InkInput.Sample>> = inFlight.values.map { it.toList() }
@@ -633,5 +952,20 @@ class InkEngine(
     
     fun setPressureCurve(floor: Float, gamma: Float) {
         arbiter.setPressureCurve(floor, gamma)
+    }
+
+    private fun distToSegment(px: Float, py: Float, a: StrokePoint, b: StrokePoint): Float {
+        val dx = b.x - a.x
+        val dy = b.y - a.y
+        val len2 = dx * dx + dy * dy
+        val t = if (len2 < 1e-6f) 0f else (((px - a.x) * dx + (py - a.y) * dy) / len2).coerceIn(0f, 1f)
+        return kotlin.math.hypot(px - (a.x + dx * t), py - (a.y + dy * t))
+    }
+
+    private companion object {
+        /** 抬筆前在終點停多久才算「長按吸附」。與 Apple 的 0.55 秒一致。 */
+        const val SNAP_DWELL_MS = 550L
+        /** 停留期間允許的抖動（頁面單位）。 */
+        const val SNAP_SLOP = 4f
     }
 }

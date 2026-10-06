@@ -149,6 +149,7 @@ fun HomeScreen(
     onOpenPrivacy: () -> Unit,
     /** 把一段錄音插進某一本筆記的某一頁（工作項 S-41）。 */
     onInsertRecording: (RecordingIndex.Recording) -> Unit,
+    onRenameRecording: (RecordingIndex.Recording) -> Unit,
     /** 重新命名目前所在的資料夾（最上層也算）。與 Apple 的 `edit_root_folder` 對應。 */
     onRenameRootFolder: () -> Unit,
     /** 系統診斷頁。Apple 在首頁頁尾的版本號上，Android 原本只在編輯器選單裡。 */
@@ -473,7 +474,7 @@ fun HomeScreen(
             val shownRecordings = if (showAllRecordings) recordings else recordings.take(5)
             items(shownRecordings, key = { "rec-${it.file.absolutePath}" }) { recording ->
                 Box(Modifier.testTag("home.recordings.list")) {
-                    RecordingRow(recording, l, onOpen, onInsertRecording)
+                    RecordingRow(recording, l, onOpen, onInsertRecording, onRenameRecording)
                 }
             }
         }
@@ -1328,7 +1329,8 @@ private fun RecordingRow(
     recording: RecordingIndex.Recording,
     l: (String) -> String,
     onOpen: (String) -> Unit,
-    onInsert: (RecordingIndex.Recording) -> Unit
+    onInsert: (RecordingIndex.Recording) -> Unit,
+    onRename: (RecordingIndex.Recording) -> Unit
 ) {
     var menu by remember(recording.file.absolutePath) { mutableStateOf(false) }
     val playing = AudioPlayback.playingId == recording.file.absolutePath
@@ -1379,6 +1381,10 @@ private fun RecordingRow(
                     DropdownMenuItem(
                         text = { Text(l("insert_to_notebook")) },
                         onClick = { menu = false; onInsert(recording) }
+                    )
+                    DropdownMenuItem(
+                        text = { Text(l("rename_audio_card")) },
+                        onClick = { menu = false; onRename(recording) }
                     )
                     DropdownMenuItem(
                         text = { Text(l("open_note")) },

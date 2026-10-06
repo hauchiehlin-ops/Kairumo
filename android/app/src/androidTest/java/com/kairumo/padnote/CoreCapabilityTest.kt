@@ -142,4 +142,43 @@ class CoreCapabilityTest {
         val hits = s.search("交付", 10u)
         assertTrue("全文搜尋應該找得到剛寫的字", hits.isNotEmpty())
     }
+
+    @Test
+    fun searchFindsSimplifiedAndTraditionalInEitherDirection() {
+        val (s, page) = session("hanconv")
+        s.addText(page, "會議重點：下週交付筆記", uniffi.padnote_core.BlockStyle.BODY)
+        for (q in listOf("会议", "笔记", "筆記", "交付")) {
+            assertTrue("「$q」應該找得到繁體寫的字", s.search(q, 10u).isNotEmpty())
+        }
+        val (s2, page2) = session("hanconv2")
+        s2.addText(page2, "会议重点：下周交付笔记", uniffi.padnote_core.BlockStyle.BODY)
+        for (q in listOf("會議", "筆記")) {
+            assertTrue("「$q」應該找得到簡體寫的字", s2.search(q, 10u).isNotEmpty())
+        }
+    }
+
+    @Test
+    fun searchWorksInThaiKoreanAndJapanese() {
+        val (s, page) = session("langs")
+        s.addText(page, "การประชุมและบันทึกการเรียน", uniffi.padnote_core.BlockStyle.BODY)
+        s.addText(page, "회의록과 강의 노트 작성", uniffi.padnote_core.BlockStyle.BODY)
+        s.addText(page, "会議のメモとひらがな", uniffi.padnote_core.BlockStyle.BODY)
+        assertTrue("泰文詞間沒有空白也要搜得到", s.search("ประชุม", 10u).isNotEmpty())
+        assertTrue(s.search("บันทึก", 10u).isNotEmpty())
+        assertTrue(s.search("강의", 10u).isNotEmpty())
+        assertTrue(s.search("ひらがな", 10u).isNotEmpty())
+    }
+
+    @Test
+    fun pdfExportEmbedsAThaiFontOnlyWhenTheNotebookHasThai() {
+        val (s, page) = session("pdfthai")
+        s.addText(page, "การประชุม", uniffi.padnote_core.BlockStyle.BODY)
+        val withThai = String(s.exportPdf(), Charsets.ISO_8859_1)
+        assertTrue("泰文要嵌入字型", withThai.contains("/FontFile2") && withThai.contains("/F_TH"))
+        val (s2, page2) = session("pdfnothai")
+        s2.addText(page2, "meeting 한국어", uniffi.padnote_core.BlockStyle.BODY)
+        val without = String(s2.exportPdf(), Charsets.ISO_8859_1)
+        assertTrue("沒有泰文就不嵌", !without.contains("/FontFile2"))
+        assertTrue("韓文要走韓文字型", without.contains("UniKS-UTF16-H"))
+    }
 }

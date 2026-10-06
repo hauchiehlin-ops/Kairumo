@@ -451,6 +451,29 @@ final class PackageShapeRoundTripTests: XCTestCase {
         XCTAssertEqual(Set(shapes.map(\.label)), ["開始", "要繼續嗎？", "處理"])
     }
 
+    /// 新增的立體圖與 ISO 5807 符號要能存進套件讀回來，立體圖的深度也不能掉。
+    func testNewSolidAndFlowchartKindsKeepKindAndDepthThroughThePackage() throws {
+        var document = NotebookDocument(title: "立體", pageCount: 1)
+        var cube = NoteShapeAttachment.inserting(.cube)
+        cube.x = 30; cube.y = 40
+        cube.cornerRadius = 33
+        let link = NoteShapeAttachment(
+            kindName: NoteShapeAttachment.name(of: .communicationLink), x: 200, y: 40, width: 120, height: 60)
+        let multi = NoteShapeAttachment(
+            kindName: NoteShapeAttachment.name(of: .multiDocument), x: 30, y: 200, width: 120, height: 80)
+        document.shapeAttachments = [cube, link, multi]
+        let path = workDir.appendingPathComponent("newkinds.padnote")
+        try NotebookPackageBridge.export(
+            document: document, drawings: [PKDrawing()], to: path, deviceId: 0x61)
+        let imported = try NotebookPackageBridge.importDocument(fromPackageAt: path, deviceId: 0x62)
+        let shapes = try XCTUnwrap(imported.document.shapeAttachments)
+        XCTAssertEqual(Set(shapes.map(\.kindName)), ["cube", "communicationlink", "multidocument"])
+        let back = try XCTUnwrap(shapes.first { $0.kindName == "cube" })
+        XCTAssertEqual(back.cornerRadius, 33, accuracy: 0.01, "立體圖的深度（cornerRadius）沒有跟著存")
+        XCTAssertTrue(back.isSolid)
+        XCTAssertFalse(back.details().isEmpty, "立體圖要有面與稜線")
+    }
+
     func testEachShapeKeepsItsKind() throws {
         // 全部變成方框的話，流程圖就失去意義了。
         let imported = try roundTrip("kinds")

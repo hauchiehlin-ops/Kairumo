@@ -36,8 +36,12 @@ import com.kairumo.padnote.LocalizationStrings
 import uniffi.padnote_core.FfiRect
 import uniffi.padnote_core.FfiShape
 import uniffi.padnote_core.FfiShapeKind
-import uniffi.padnote_core.allShapeKinds
-import uniffi.padnote_core.flowchartShapeKinds
+import uniffi.padnote_core.FfiShapeCategory
+import uniffi.padnote_core.shapeCategories
+import uniffi.padnote_core.shapeDefaultCornerRadius
+import uniffi.padnote_core.shapeDetails
+import uniffi.padnote_core.shapeDrawsOutline
+import uniffi.padnote_core.shapeKindsIn
 import uniffi.padnote_core.flowchartTemplates
 import uniffi.padnote_core.shapeArrowHeads
 import uniffi.padnote_core.shapeIsLinear
@@ -73,18 +77,14 @@ fun ShapePicker(
                     Modifier.height(height.value).verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    Text(l("shape_section_basic"), style = MaterialTheme.typography.titleSmall)
-                    KindGrid(
-                        allShapeKinds().filter { it !in flowchartShapeKinds() },
-                        languageTag
-                    ) { kind ->
-                        onCommit(listOf(NoteShape(kindName = NoteShape.nameOf(kind))), emptyList())
-                    }
-
-                    HorizontalDivider()
-                    Text(l("shape_section_flowchart"), style = MaterialTheme.typography.titleSmall)
-                    KindGrid(flowchartShapeKinds(), languageTag) { kind ->
-                        onCommit(listOf(NoteShape(kindName = NoteShape.nameOf(kind))), emptyList())
+                    // 一般形狀、立體圖、流程圖四組（ISO 5807 的分類）：分組與順序都來自核心，
+                    // 與 Apple 同一份。
+                    for ((index, category) in shapeCategories().withIndex()) {
+                        if (index > 0) HorizontalDivider()
+                        Text(l(sectionKey(category)), style = MaterialTheme.typography.titleSmall)
+                        KindGrid(shapeKindsIn(category), languageTag) { kind ->
+                            onCommit(listOf(NoteShape.inserting(kind)), emptyList())
+                        }
                     }
 
                     HorizontalDivider()
@@ -95,7 +95,7 @@ fun ShapePicker(
                             onCommit(shapes, connections)
                         }) {
                             Column(Modifier.fillMaxWidth()) {
-                                Text(template.id)
+                                Text(templateName(template.id, languageTag))
                                 Text(
                                     l("shape_node_count").replace("%@", "${template.nodes.size}"),
                                     fontSize = 10.sp,
@@ -111,6 +111,22 @@ fun ShapePicker(
             }
         }
     )
+}
+
+private fun sectionKey(category: FfiShapeCategory): String = when (category) {
+    FfiShapeCategory.BASIC -> "shape_section_basic"
+    FfiShapeCategory.SOLID -> "shape_section_solid"
+    FfiShapeCategory.FLOW_PROCESS -> "shape_section_flow_process"
+    FfiShapeCategory.FLOW_DATA -> "shape_section_flow_data"
+    FfiShapeCategory.FLOW_CONTROL -> "shape_section_flow_control"
+    FfiShapeCategory.FLOW_SPECIAL -> "shape_section_flow_special"
+}
+
+/** 範本的顯示名稱。語系表沒有的退回識別碼，不顯示空白。 */
+private fun templateName(id: String, languageTag: String): String {
+    val key = "shape_template_" + id.replace('.', '_')
+    val text = LocalizationStrings.localized(key, languageTag)
+    return if (text == key) id else text
 }
 
 /**
@@ -195,16 +211,14 @@ private fun ShapeThumbnail(kind: FfiShapeKind) {
     val color = MaterialTheme.colorScheme.onSurface
     Box(Modifier.size(40.dp, 28.dp)) {
         Canvas(Modifier.size(40.dp, 28.dp)) {
-            val points = shapeOutline(
-                FfiShape(
-                    kind = kind,
-                    bounds = FfiRect(2f, 2f, size.width - 2f, size.height - 2f),
-                    cornerRadius = 4f,
-                    // 選單裡的預覽一律正放，才比較得出形狀本身的差別。
-                    rotationDegrees = 0f
-                ),
-                40u
+            val thumb = FfiShape(
+                kind = kind,
+                bounds = FfiRect(2f, 2f, size.width - 2f, size.height - 2f),
+                cornerRadius = shapeDefaultCornerRadius(kind, size.width, size.height),
+                // 選單裡的預覽一律正放，才比較得出形狀本身的差別。
+                rotationDegrees = 0f
             )
+            val points = shapeOutline(thumb, 40u)
             // 線、箭頭、雙箭頭的輪廓只有兩個點。用 `< 3` 擋掉的話它們整格
             // 都是空白 —— 選單裡那三格看起來像壞掉（實際發生過）。
             if (points.size < 2) return@Canvas
@@ -215,7 +229,26 @@ private fun ShapeThumbnail(kind: FfiShapeKind) {
                 // 線狀形狀不能收尾：折回去就成了零面積的圖形。
                 if (!linear) close()
             }
-            drawPath(path, color, style = Stroke(width = 1.5f))
+            if (shapeDrawsOutline(kind)) drawPath(path, color, style = Stroke(width = 1.5f))
+            // 立體圖的面與稜線、流程圖符號裡的線。
+            for (detail in shapeDetails(thumb, 40u)) {
+                if (detail.points.size < 2) continue
+                val dp = Path().apply {
+                    moveTo(detail.points[0].x, detail.points[0].y)
+                    detail.points.drop(1).forEach { lineTo(it.x, it.y) }
+                    if (detail.closed) close()
+                }
+                if (detail.closed && detail.tone < 0f) drawPath(dp, color.copy(alpha = 0.18f))
+                drawPath(
+                    dp, color,
+                    style = Stroke(
+                        width = 1f,
+                        pathEffect = if (detail.dashed)
+                            androidx.compose.ui.graphics.PathEffect.dashPathEffect(floatArrayOf(3f, 2f))
+                        else null
+                    )
+                )
+            }
 
             if (linear) {
                 val heads = shapeArrowHeads(

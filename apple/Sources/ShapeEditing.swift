@@ -96,10 +96,14 @@ struct NoteShapeView: View {
         // 線狀形狀（線／箭頭／雙箭頭）只有兩個點，不能收尾也不能填色。
         if !shape.isLinear {
             path.closeSubpath()
-            if let fill = fillColor { context.fill(path, with: .color(fill)) }
+            if shape.drawsOutline, let fill = fillColor { context.fill(path, with: .color(fill)) }
         }
-        context.stroke(path, with: .color(strokeColor),
-                       style: shape.dash.strokeStyle(lineWidth: shape.lineWidth))
+        // 平行模式與註解：輪廓只是點擊範圍，畫出來的是內部的線。
+        if shape.drawsOutline {
+            context.stroke(path, with: .color(strokeColor),
+                           style: shape.dash.strokeStyle(lineWidth: shape.lineWidth))
+        }
+        drawDetails(into: &context, local: local)
 
         for head in shape.arrowHeads() where head.count >= 3 {
             var tri = Path()
@@ -107,6 +111,32 @@ struct NoteShapeView: View {
             for point in head.dropFirst() { tri.addLine(to: local(point)) }
             tri.closeSubpath()
             context.fill(tri, with: .color(strokeColor))
+        }
+    }
+
+    /// 立體圖的面（明暗）與稜線、流程圖符號裡的線。幾何來自核心，與 Android 同一份。
+    private func drawDetails(into context: inout GraphicsContext, local: (CGPoint) -> CGPoint) {
+        for detail in shape.details() where detail.points.count >= 2 {
+            var path = Path()
+            path.move(to: local(CGPoint(x: CGFloat(detail.points[0].x), y: CGFloat(detail.points[0].y))))
+            for p in detail.points.dropFirst() {
+                path.addLine(to: local(CGPoint(x: CGFloat(p.x), y: CGFloat(p.y))))
+            }
+            if detail.closed {
+                path.closeSubpath()
+                if detail.tone != 0 {
+                    // 面的明暗疊在形狀自己的填色上：亮面疊白、暗面疊黑。
+                    let overlay: Color = detail.tone > 0
+                        ? Color.white.opacity(Double(detail.tone))
+                        : Color.black.opacity(Double(-detail.tone))
+                    context.fill(path, with: .color(overlay))
+                }
+            }
+            let style = detail.dashed
+                ? StrokeStyle(lineWidth: max(1, shape.lineWidth * 0.8), lineCap: .butt, lineJoin: .round,
+                              dash: [shape.lineWidth * 3, shape.lineWidth * 2.5])
+                : shape.dash.strokeStyle(lineWidth: shape.lineWidth)
+            context.stroke(path, with: .color(strokeColor), style: style)
         }
     }
 
@@ -684,7 +714,7 @@ struct ShapeEditPanel: View {
     }
 
     private var hasCornerRadius: Bool {
-        ["roundedrectangle", "terminator"].contains(shape.kindName.lowercased())
+        ["roundedrectangle", "terminator", "alternateprocess"].contains(shape.kindName.lowercased())
     }
 
     var body: some View {
@@ -695,7 +725,7 @@ struct ShapeEditPanel: View {
                 Menu {
                     ForEach(swappableKinds, id: \.self) { kind in
                         Button(ShapeKindLabel.text(for: kind)) {
-                            shape.kindName = NoteShapeAttachment.name(of: kind)
+                            shape.apply(kind: kind)
                         }
                     }
                 } label: {
@@ -748,6 +778,17 @@ struct ShapeEditPanel: View {
                         get: { Double(shape.cornerRadius) },
                         set: { shape.cornerRadius = CGFloat($0) }),
                            in: 0...Double(max(1, min(shape.width, shape.height) / 2)))
+                }
+            }
+
+            if shape.isSolid {
+                // 立體圖的深度：`cornerRadius` 就是核心用的深度，核心會夾在短邊的 10%–50%。
+                PanelSection(title: t("shape_depth")) {
+                    let m = max(1, min(shape.width, shape.height))
+                    Slider(value: Binding(
+                        get: { Double(min(max(shape.cornerRadius, m * 0.1), m * 0.5)) },
+                        set: { shape.cornerRadius = CGFloat($0) }),
+                           in: Double(m * 0.1)...Double(m * 0.5))
                 }
             }
 

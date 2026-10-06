@@ -216,9 +216,14 @@ private fun TextBoxView(
                 textDecoration = decoration(box),
                 color = parseColor(box.textColorHex) ?: Color.Black,
                 textAlign = alignment(box.alignment),
-                // 行距在 Compose 是 lineHeight（字級 + 行距），
-                // 不是 Apple 的「額外間距」—— 換算錯的話行數會不一樣。
-                lineHeight = (box.fontSize + (box.lineSpacing ?: 0f)).sp
+                // 行距在 Compose 是 lineHeight（行高），Apple 的是「額外間距」。
+                //
+                // 沒設額外間距時**不指定行高**，讓字型自己的行高生效：之前一律 = 字級（1.0 倍），
+                // 西文勉強夠用，泰文的上下母音與聲調符號會疊到上一行、韓文與日文的行也擠在一起。
+                // 設了額外間距就是「字型自然行高 + 額外間距」，與 Apple 同義（自然行高以 1.2 倍估）。
+                lineHeight = box.lineSpacing
+                    ?.let { (box.fontSize * 1.2f + it).sp }
+                    ?: androidx.compose.ui.unit.TextUnit.Unspecified
             ),
             modifier = Modifier.padding(start = (box.paragraphIndent ?: 0f).dp)
         )

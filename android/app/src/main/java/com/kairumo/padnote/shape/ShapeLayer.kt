@@ -445,8 +445,33 @@ private fun ShapeObjectView(
                     // 線狀形狀（線／箭頭／雙箭頭）只有兩個點，不能收尾也不能填色。
                     if (!linear) close()
                 }
-                if (!linear) fill?.let { drawPath(path, it) }
-                drawPath(path, stroke, style = dashedStroke(shape.lineWidth, shape.dash, scale))
+                if (!linear && shape.drawsOutline) fill?.let { drawPath(path, it) }
+                // 平行模式與註解：輪廓只是點擊範圍，畫出來的是內部的線。
+                if (shape.drawsOutline) {
+                    drawPath(path, stroke, style = dashedStroke(shape.lineWidth, shape.dash, scale))
+                }
+                // 立體圖的面（明暗）與稜線、流程圖符號裡的線。幾何來自核心，與 Apple 同一份。
+                for (detail in shape.details()) {
+                    if (detail.points.size < 2) continue
+                    val dp = Path().apply {
+                        moveTo(px(detail.points[0]), py(detail.points[0]))
+                        detail.points.drop(1).forEach { lineTo(px(it), py(it)) }
+                        if (detail.closed) close()
+                    }
+                    if (detail.closed && detail.tone != 0f) {
+                        val overlay = if (detail.tone > 0f) Color.White.copy(alpha = detail.tone)
+                        else Color.Black.copy(alpha = -detail.tone)
+                        drawPath(dp, overlay)
+                    }
+                    val detailStyle = if (detail.dashed) {
+                        Stroke(
+                            width = maxOf(1f, shape.lineWidth * 0.8f) * scale,
+                            pathEffect = androidx.compose.ui.graphics.PathEffect.dashPathEffect(
+                                floatArrayOf(shape.lineWidth * 3f * scale, shape.lineWidth * 2.5f * scale))
+                        )
+                    } else dashedStroke(shape.lineWidth, shape.dash, scale)
+                    drawPath(dp, stroke, style = detailStyle)
+                }
 
                 for (head in shape.arrowHeads()) {
                     val tri = Path().apply {

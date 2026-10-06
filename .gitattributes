@@ -40,3 +40,6 @@
 *.otf binary
 *.onnx binary
 *.bin binary
+
+# Arphic Public License 全文必須逐位元組未改動（連換行都不能換）。
+ARPHICPL.TXT -text

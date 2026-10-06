@@ -36,6 +36,8 @@ public enum EditorToolType: String, CaseIterable, Identifiable {
     case eraser = "eraser"
     case lasso = "lasso"
     case maskingTape = "masking_tape"
+    /// 圖學：製圖筆組、圖層、線型與吸附（見 Drafting.swift）。
+    case drafting = "drafting"
 
     public var id: String { rawValue }
 
@@ -46,7 +48,7 @@ public enum EditorToolType: String, CaseIterable, Identifiable {
     /// 記圖案來分辨 —— 分組之後，形狀就說明了用途（工作項 S-62）。
     public var isBrush: Bool {
         switch self {
-        case .eraser, .lasso, .maskingTape: return false
+        case .eraser, .lasso, .maskingTape, .drafting: return false
         default: return true
         }
     }
@@ -65,7 +67,7 @@ public enum EditorToolType: String, CaseIterable, Identifiable {
         case .pen, .ballpoint, .fineliner, .brush, .calligraphy, .pencil: return .writing
         case .charcoal, .crayon, .airbrush, .oilpaint, .watercolor: return .painting
         case .marker, .highlighter: return .marking
-        case .eraser, .lasso, .maskingTape: return nil
+        case .eraser, .lasso, .maskingTape, .drafting: return nil
         }
     }
 
@@ -100,6 +102,7 @@ public enum EditorToolType: String, CaseIterable, Identifiable {
         case .eraser: return "eraser"
         case .lasso: return "lasso"
         case .maskingTape: return "bandage.fill"
+        case .drafting: return "ruler"
         }
     }
 
@@ -125,6 +128,7 @@ public enum EditorToolType: String, CaseIterable, Identifiable {
         case .eraser: return "editor.ink.eraser"
         case .lasso: return "editor.ink.lasso"
         case .maskingTape: return "editor.ink.maskingTape"
+        case .drafting: return "editor.ink.drafting"
         }
     }
 
@@ -146,6 +150,7 @@ public enum EditorToolType: String, CaseIterable, Identifiable {
         case .eraser: return "tool_eraser"
         case .lasso: return "tool_lasso"
         case .maskingTape: return "tool_masking_tape"
+        case .drafting: return "tool_drafting"
         }
     }
 }
@@ -439,8 +444,16 @@ final class AdaptiveCanvasView: PKCanvasView {
     var proWidth: Float = 4
     var proEraserRadius: CGFloat = 10
     var proAllowsFinger: () -> Bool = { true }
+    /// 圖學：這一筆的圖層、線型，吸附的角度鎖定（`nil` = 沒開吸附），改圖層的目標。
+    var proLayerId: UInt8 = 0
+    var proLineType: UInt8 = 0
+    var proSnapStep: Float?
+    var proReassignTarget: UInt8 = 0
+    var onProSnapped: ((FfiDraftSnapKind) -> Void)?
+    /// 步驟編號模式下點的位置（頁面座標）。
+    var onProMarker: ((CGPoint) -> Void)?
 
-    enum ProMode { case off, draw, erase }
+    enum ProMode { case off, draw, erase, reassign, marker }
 
     /// 依目前的工具設定專業筆畫層與輸入手勢。
     ///
@@ -477,6 +490,14 @@ final class AdaptiveCanvasView: PKCanvasView {
             gesture.deferUntilMoved = false
             gesture.isEnabled = true
             restorePan()
+        case .reassign, .marker:
+            // 點一下筆畫改圖層／點一下放步驟編號：PencilKit 的筆畫不管，單指拿來點。
+            gesture.mode = mode == .marker ? .marker : .reassign
+            gesture.cancelsTouchesInView = true
+            gesture.deferUntilMoved = false
+            gesture.isEnabled = true
+            drawingGestureRecognizer.isEnabled = false
+            overridePan()
         }
     }
 
@@ -519,6 +540,25 @@ final class AdaptiveCanvasView: PKCanvasView {
         savedMinimumPanTouches = nil
     }
 
+    /// 套索模式下，一根手指要拿來圈選，捲動改成兩指。
+    ///
+    /// 畫布本身是 UIScrollView，單頁模式下它的捲動手勢（單指）與套索的拖曳手勢互搶，
+    /// 先開始辨識的是捲動 —— 套索的手勢一個事件都收不到，使用者看到的是「套索選不到任何東西」。
+    /// （連續模式裡層畫布不捲，所以那邊本來就能用。）
+    private var savedPanTouchesForLasso: Int?
+
+    func setLassoClaimsSingleTouch(_ on: Bool) {
+        if on {
+            if savedPanTouchesForLasso == nil {
+                savedPanTouchesForLasso = panGestureRecognizer.minimumNumberOfTouches
+            }
+            panGestureRecognizer.minimumNumberOfTouches = 2
+        } else if let saved = savedPanTouchesForLasso {
+            panGestureRecognizer.minimumNumberOfTouches = saved
+            savedPanTouchesForLasso = nil
+        }
+    }
+
     private func installProLayerIfNeeded() -> ProInkLayerView {
         if let proLayer { return proLayer }
         let layer = ProInkLayerView(frame: .zero)
@@ -533,6 +573,12 @@ final class AdaptiveCanvasView: PKCanvasView {
         gesture.color = { [weak self] in self?.proColor ?? [0, 0, 0, 255] }
         gesture.width = { [weak self] in self?.proWidth ?? 4 }
         gesture.eraserRadius = { [weak self] in self?.proEraserRadius ?? 10 }
+        gesture.drawLayer = { [weak self] in self?.proLayerId ?? 0 }
+        gesture.drawLineType = { [weak self] in self?.proLineType ?? 0 }
+        gesture.snapStep = { [weak self] in self?.proSnapStep }
+        gesture.reassignTarget = { [weak self] in self?.proReassignTarget ?? 0 }
+        gesture.onSnapped = { [weak self] kind in self?.onProSnapped?(kind) }
+        gesture.onMarker = { [weak self] point in self?.onProMarker?(point) }
         gesture.allowsFingerDrawing = { [weak self] in self?.proAllowsFinger() ?? true }
         gesture.delegate = proGestureDelegate
         gesture.isEnabled = false
@@ -558,7 +604,29 @@ final class AdaptiveCanvasView: PKCanvasView {
     var pendingRetractDate: Date? = nil
     var onPendingRetractNeeded: ((Date) -> Void)? = nil
 
+    /// 套索圈選：直接收觸控，不靠 `UIPanGestureRecognizer`。
+    ///
+    /// 畫布裡 PencilKit 與捲動視圖自己有一組互相牽制的手勢，額外掛上去的拖曳辨識器
+    /// 即使 `shouldBegin` 回傳了 true 也等不到 `.began`（實測整段拖曳沒有任何一次動作回呼），
+    /// 套索於是「圈不到任何東西」。觸控事件不經過這些辨識器的仲裁，改由這裡轉出去。
+    var lassoTouchHandler: ((UIGestureRecognizer.State, CGPoint) -> Void)?
+    private weak var lassoTouch: UITouch?
+
+    private func forwardLasso(_ touches: Set<UITouch>, _ state: UIGestureRecognizer.State) {
+        guard let handler = lassoTouchHandler else { return }
+        if state == .began {
+            guard lassoTouch == nil, let first = touches.first else { return }
+            lassoTouch = first
+            handler(.began, first.location(in: self))
+            return
+        }
+        guard let tracked = lassoTouch, touches.contains(tracked) else { return }
+        handler(state, tracked.location(in: self))
+        if state != .changed { lassoTouch = nil }
+    }
+
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
+        forwardLasso(touches, .began)
         activeTouchesCount += touches.count
         for touch in touches {
             if touch.type == .pencil && !deferPencilIntent {
@@ -573,6 +641,7 @@ final class AdaptiveCanvasView: PKCanvasView {
     }
 
     override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
+        forwardLasso(touches, .changed)
         if InkInputDiagnostics.isEnabled || ProcessInfo.processInfo.environment["KAIRUMO_UITEST"] == "1" {
             touches.forEach { onTouchDiagnostics?($0, event) }
         }
@@ -580,6 +649,7 @@ final class AdaptiveCanvasView: PKCanvasView {
     }
 
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
+        forwardLasso(touches, .ended)
         activeTouchesCount = max(0, activeTouchesCount - touches.count)
         touches.forEach {
             onTouchObserved?($0)
@@ -592,6 +662,7 @@ final class AdaptiveCanvasView: PKCanvasView {
     }
 
     override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
+        forwardLasso(touches, .cancelled)
         activeTouchesCount = max(0, activeTouchesCount - touches.count)
         super.touchesCancelled(touches, with: event)
         checkPendingRetract()
@@ -613,6 +684,56 @@ final class AdaptiveCanvasView: PKCanvasView {
     override func layoutSubviews() {
         super.layoutSubviews()
         syncContentSize()
+        refreshInitialRenderIfNeeded()
+    }
+
+    /// 重開舊筆記本時，載入的筆跡要使用者點一下畫布才會出現。
+    ///
+    /// `makeUIView` 在畫布進入視窗、有尺寸**之前**就指派了 `drawing`，PencilKit 在那個時間點
+    /// 畫出來的是空的貼圖，之後內容沒變就不會重畫（縮圖用另一條路畫，所以縮圖是對的）。
+    /// 畫布第一次有了視窗與尺寸之後，把同一份 `drawing` 再指派一次，強迫它重畫。
+    /// 要包在 `isProgrammaticUpdate` 裡：不然 delegate 會把這份當成使用者的編輯存回去。
+    private var didInitialRefresh = false
+
+    /// 程式替換／收回筆畫之後，把 PencilKit 登記的「已經失效」的復原項消耗掉。
+    ///
+    /// 直接指派 `drawing` 之後，原本登記的「加入筆畫」指向不存在的筆畫：按復原沒有反應，還吃掉一次點擊。
+    /// 這裡讓 PencilKit 自己復原一次 —— 畫面沒變就是失效項，算消耗掉了；畫面變了代表那是有效項
+    /// （堆疊頂端是別的動作），立刻重做回來並停手。回傳消耗了幾個。
+    @discardableResult
+    func dropDeadUndoEntries(max: Int) -> Int {
+        guard max > 0, let manager = undoManager, !manager.isUndoing, !manager.isRedoing else { return 0 }
+        let coordinator = delegate as? CanvasRepresentable.Coordinator
+        var dropped = 0
+        while dropped < max, manager.canUndo {
+            let before = drawing
+            coordinator?.isProgrammaticUpdate = true
+            manager.undo()
+            if drawing != before {
+                manager.redo()
+                coordinator?.isProgrammaticUpdate = false
+                break
+            }
+            coordinator?.isProgrammaticUpdate = false
+            dropped += 1
+        }
+        return dropped
+    }
+
+    private func refreshInitialRenderIfNeeded() {
+        guard !didInitialRefresh, window != nil, bounds.width > 1, bounds.height > 1 else { return }
+        didInitialRefresh = true
+        for delay in [0.0, 0.4] {
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
+                guard let self, self.window != nil, !self.drawing.strokes.isEmpty else { return }
+                let coordinator = self.delegate as? CanvasRepresentable.Coordinator
+                let current = self.drawing
+                coordinator?.isProgrammaticUpdate = true
+                self.drawing = current
+                coordinator?.isProgrammaticUpdate = false
+                self.setNeedsDisplay()
+            }
+        }
     }
 
     func syncContentSize() {
@@ -642,6 +763,8 @@ struct CanvasRepresentable: UIViewRepresentable {
     @Binding var drawing: PKDrawing
     /// 專業筆刷（自繪引擎）這一頁存哪裡。`nil` 表示這個畫布不支援專業筆刷。
     var proInk: ProInkBinding? = nil
+    /// 圖學狀態：換筆、換圖層、改角度鎖定都要讓畫布重新套用工具設定。
+    @ObservedObject var drafting = DraftingState.shared
     var selectedTool: EditorToolType
     var selectedColor: Color
     var strokeWidth: CGFloat
@@ -846,9 +969,11 @@ struct CanvasRepresentable: UIViewRepresentable {
             guard palmRejection?.drawingPolicy(now: landedAt) != .pencilOnly else { return }
             let cleaned = PalmRejectionCoordinator.retracting(canvas.drawing, landedAt: landedAt)
             guard cleaned.strokes.count != canvas.drawing.strokes.count else { return }
+            let removed = canvas.drawing.strokes.count - cleaned.strokes.count
             context.coordinator.isProgrammaticUpdate = true
             canvas.drawing = cleaned
             context.coordinator.isProgrammaticUpdate = false
+            canvas.dropDeadUndoEntries(max: removed)
             _ = onDrawingChanged?(cleaned)
         }
 
@@ -879,7 +1004,9 @@ struct CanvasRepresentable: UIViewRepresentable {
 
         let lassoPan = UIPanGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.handleLassoPan(_:)))
         lassoPan.maximumNumberOfTouches = 1
-        lassoPan.isEnabled = (selectedTool == .lasso)
+        // 圈選改由 `AdaptiveCanvasView.lassoTouchHandler` 收觸控（見該處說明）；
+        // 這個辨識器留著只是為了相容，不啟用，免得同一次拖曳處理兩遍。
+        lassoPan.isEnabled = false
         canvas.addGestureRecognizer(lassoPan)
         context.coordinator.lassoPan = lassoPan
 
@@ -895,13 +1022,22 @@ struct CanvasRepresentable: UIViewRepresentable {
 
     func updateUIView(_ uiView: PKCanvasView, context: Context) {
         context.coordinator.parent = self
-        context.coordinator.lassoPan?.isEnabled = (selectedTool == .lasso)
+        context.coordinator.lassoPan?.isEnabled = false
+        if let adaptive = uiView as? AdaptiveCanvasView {
+            adaptive.setLassoClaimsSingleTouch(selectedTool == .lasso)
+            adaptive.lassoTouchHandler = selectedTool == .lasso
+                ? { [weak coordinator = context.coordinator] state, point in
+                    coordinator?.handleLassoTouch(state, point)
+                } : nil
+        }
         // 模式切換時要跟著改 —— 只在 makeUIView 設的話，從連續切回整頁
         // 會得到一個捲不動的畫布（SwiftUI 會重用同一個 UIView）。
-        if uiView.isScrollEnabled != isScrollEnabled {
-            uiView.isScrollEnabled = isScrollEnabled
-            uiView.alwaysBounceVertical = isScrollEnabled
-            uiView.showsVerticalScrollIndicator = isScrollEnabled
+        // 套索模式下單頁畫布的捲動手勢要讓出來，否則套索的拖曳辨識不起來。
+        let wantsScroll = isScrollEnabled && selectedTool != .lasso
+        if uiView.isScrollEnabled != wantsScroll {
+            uiView.isScrollEnabled = wantsScroll
+            uiView.alwaysBounceVertical = wantsScroll
+            uiView.showsVerticalScrollIndicator = wantsScroll
         }
         // 打字模式不再關掉落筆手勢：靠 `.pencilOnly` 擋手指，Pencil 第一筆就收得到。
         // 套索模式下關閉繪圖手勢，確保所有碰觸皆由自定義 lassoPan 處理。
@@ -966,9 +1102,11 @@ struct CanvasRepresentable: UIViewRepresentable {
                 guard palmRejection?.drawingPolicy(now: landedAt) != .pencilOnly else { return }
                 let cleaned = PalmRejectionCoordinator.retracting(uiView.drawing, landedAt: landedAt)
                 guard cleaned.strokes.count != uiView.drawing.strokes.count else { return }
+                let removed = uiView.drawing.strokes.count - cleaned.strokes.count
                 context.coordinator.isProgrammaticUpdate = true
                 uiView.drawing = cleaned
                 context.coordinator.isProgrammaticUpdate = false
+                (uiView as? AdaptiveCanvasView)?.dropDeadUndoEntries(max: removed)
                 _ = onDrawingChanged?(cleaned)
             }
         }
@@ -982,7 +1120,10 @@ struct CanvasRepresentable: UIViewRepresentable {
     private func applyProInk(to canvas: PKCanvasView) {
         guard let adaptive = canvas as? AdaptiveCanvasView else { return }
         let mode: AdaptiveCanvasView.ProMode
-        if selectedTool.proToolKind != nil {
+        let isDrafting = selectedTool == .drafting
+        if isDrafting {
+            mode = drafting.markerMode ? .marker : (drafting.reassignMode ? .reassign : .draw)
+        } else if selectedTool.proToolKind != nil {
             mode = .draw
         } else if selectedTool == .eraser {
             mode = .erase
@@ -990,9 +1131,32 @@ struct CanvasRepresentable: UIViewRepresentable {
             mode = .off
         }
         let fingerRule = EditorCanvasInputPolicy.fingerMayDraw(effectiveMode: editorMode)
-        adaptive.proTool = selectedTool.proToolKind
-        adaptive.proColor = InkInterop.rgba(from: UIColor(selectedColor)).map { $0 }
-        adaptive.proWidth = Float(max(1.2, strokeWidth * 1.4))
+        if isDrafting {
+            // 製圖筆一律走針筆（等寬、硬邊）；顏色、粗細、線型、圖層由製圖筆組決定。
+            adaptive.proTool = .fineliner
+            adaptive.proColor = drafting.activeColorRGBA
+            adaptive.proWidth = drafting.activePen.width
+            adaptive.proLayerId = drafting.activeLayerId
+            adaptive.proLineType = drafting.activeLineType
+            adaptive.proSnapStep = drafting.snapEnabled ? Float(drafting.angleStep) : nil
+            adaptive.proReassignTarget = drafting.activeLayerId
+            adaptive.onProMarker = { [weak adaptive] point in
+                // 一次放一個「圈＋數字」，一次復原；放完編號加一。
+                let state = DraftingState.shared
+                let strokes = draftStepMarker(number: UInt32(state.stepNumber), cx: Float(point.x),
+                                              cy: Float(point.y), radius: 15)
+                adaptive?.proLayer?.insertDrafted(strokes, origin: .zero)
+                state.stepNumber += 1
+            }
+            if let id = proInk?.notebookId { drafting.use(notebook: id) }
+        } else {
+            adaptive.proTool = selectedTool.proToolKind
+            adaptive.proColor = InkInterop.rgba(from: UIColor(selectedColor)).map { $0 }
+            adaptive.proWidth = Float(max(1.2, strokeWidth * 1.4))
+            adaptive.proLayerId = 0
+            adaptive.proLineType = 0
+            adaptive.proSnapStep = nil
+        }
         adaptive.proEraserRadius = eraserMode == .pixel ? max(8, pixelEraserWidth / 2) : 8
         adaptive.proAllowsFinger = { [palmRejection] in
             if fingerRule == false { return false }
@@ -1048,6 +1212,15 @@ struct CanvasRepresentable: UIViewRepresentable {
         }
 
         weak var lassoPan: UIPanGestureRecognizer?
+
+        func handleLassoTouch(_ state: UIGestureRecognizer.State, _ point: CGPoint) {
+            switch state {
+            case .began: parent.onLassoBegan?(point)
+            case .changed: parent.onLassoMoved?(point)
+            case .ended, .cancelled, .failed: parent.onLassoEnded?()
+            default: break
+            }
+        }
 
         @objc func handleLassoPan(_ gesture: UIPanGestureRecognizer) {
             guard let canvas = gesture.view as? PKCanvasView else { return }
@@ -1189,6 +1362,50 @@ struct CanvasRepresentable: UIViewRepresentable {
             }
         }
 
+        /// 把剛畫完的那一筆換成美化後的版本，**同時讓復原／重做對得上**。
+        ///
+        /// PencilKit 在一筆畫完時登記「加入筆畫」。事後直接指派 `drawing` 把那一筆換掉，
+        /// 登記的復原就指向一個已經不存在的筆畫 —— 按復原**沒有任何反應，還吃掉一次按鍵**
+        /// （使用者回報：一開始畫的幾筆復原／重做沒作用，後面畫的才可以；實測是被辨識成直線／
+        /// 圓形的筆畫，復原前後筆畫數都不變）。
+        ///
+        /// 做法：先讓 PencilKit 自己把那一筆復原掉（堆疊裡失效的那一項就此消耗掉），
+        /// 再套上美化結果，並登記一個「來回切換」的復原項，這樣復原會拿掉美化後的那一筆、
+        /// 重做會放回來。復原到的若不是剛畫的那一筆（堆疊頂端是別的東西）就還原，退回直接指派。
+        func replaceLastStroke(in canvas: PKCanvasView, resulting: PKDrawing) {
+            isProgrammaticUpdate = true
+            defer { isProgrammaticUpdate = false }
+            let before = canvas.drawing
+            if let manager = canvas.undoManager, manager.canUndo,
+               !manager.isUndoing, !manager.isRedoing {
+                manager.undo()
+                if canvas.drawing.strokes.count == before.strokes.count - 1 {
+                    canvas.drawing = resulting
+                    registerDrawingSwap(
+                        on: canvas, to: PKDrawing(strokes: Array(resulting.strokes.dropLast())),
+                        back: resulting)
+                    return
+                }
+                manager.redo()
+            }
+            canvas.drawing = resulting
+        }
+
+        /// 復原項：把畫布換成 `target`，並登記反方向的項目（重做）。
+        private func registerDrawingSwap(
+            on canvas: PKCanvasView, to target: PKDrawing, back: PKDrawing
+        ) {
+            canvas.undoManager?.registerUndo(withTarget: self) { [weak canvas] coordinator in
+                guard let canvas else { return }
+                coordinator.isProgrammaticUpdate = true
+                canvas.drawing = target
+                coordinator.isProgrammaticUpdate = false
+                coordinator.parent.drawing = target
+                _ = coordinator.parent.onDrawingChanged?(target)
+                coordinator.registerDrawingSwap(on: canvas, to: back, back: target)
+            }
+        }
+
         func canvasViewDrawingDidChange(_ canvasView: PKCanvasView) {
             guard !isProgrammaticUpdate else { return }
             var effective = canvasView.drawing
@@ -1200,6 +1417,16 @@ struct CanvasRepresentable: UIViewRepresentable {
                 isProgrammaticUpdate = true
                 canvasView.drawing = snapped.drawing
                 isProgrammaticUpdate = false
+                // 原本登記的「加入筆畫」已經失效；等這一輪事件結束再處理（現在還在 PencilKit 的回呼裡）。
+                DispatchQueue.main.async { [weak self, weak canvasView] in
+                    guard let self, let canvas = canvasView as? AdaptiveCanvasView else { return }
+                    let current = canvas.drawing
+                    if canvas.dropDeadUndoEntries(max: 1) == 1 {
+                        self.registerDrawingSwap(
+                            on: canvas, to: PKDrawing(strokes: Array(current.strokes.dropLast())),
+                            back: current)
+                    }
+                }
                 effective = snapped.drawing
                 magneticGuide = (snapped.start, snapped.end)
             }
@@ -1242,10 +1469,10 @@ struct CanvasRepresentable: UIViewRepresentable {
                     strokes[strokes.count - 1] = refined
                     
                     DispatchQueue.main.async {
-                        self?.isProgrammaticUpdate = true
-                        canvas.drawing = PKDrawing(strokes: strokes)
-                        self?.isProgrammaticUpdate = false
-                        self?.parent.drawing = canvas.drawing
+                        guard let self else { return }
+                        self.replaceLastStroke(in: canvas, resulting: PKDrawing(strokes: strokes))
+                        self.parent.drawing = canvas.drawing
+                        _ = self.parent.onDrawingChanged?(canvas.drawing)
                         // Haptic 回饋
                         let generator = UIImpactFeedbackGenerator(style: .medium)
                         generator.impactOccurred()
@@ -1375,6 +1602,10 @@ struct CanvasRepresentable: UIViewRepresentable {
 
             case .lasso:
                 // 套索選取由自定義 LassoSelection 與手勢全權接管，不依賴 PKLassoTool 私有介面
+                canvas.tool = PKInkingTool(.pen, color: .clear, width: 1)
+
+            case .drafting:
+                // 圖學筆畫走自繪引擎（ProInk），PencilKit 不收筆。
                 canvas.tool = PKInkingTool(.pen, color: .clear, width: 1)
 
             case .maskingTape:
@@ -1606,6 +1837,10 @@ public struct NotebookEditorView: View {
 
     // 實體工具列狀態
     @State private var selectedTool: EditorToolType = .pen
+    /// 自訂頁面尺寸的輸入畫面。
+    @State private var showCustomPageSize = false
+    /// 立體輔助（草圖拉伸、三視圖、剖面）。
+    @State private var showSolidStudio = false
     @State private var previousTool: EditorToolType?
     @State private var lastObservedTool: EditorToolType = .pen
 
@@ -2029,7 +2264,12 @@ public struct NotebookEditorView: View {
                         //
                         // 文書排版的工具（`WordToolbarView`）仍在工具列上，操作的是
                         // 這塊畫布上的文字方塊。
+                        //
+                        // 寬度要**釘在剩下的空間**：A3 橫式這類大頁面的畫布理想寬度比螢幕大，
+                        // 不釘的話整塊工作區（連同工具列）被撐寬、右邊的工具被切到螢幕外。
                         canvasWorkArea
+                            .frame(minWidth: 0, maxWidth: .infinity)
+                            .clipped()
                     }
                     .onAppear { editorAvailableWidth = geo.size.width }
                     .onChange(of: geo.size.width) { newValue in
@@ -2155,6 +2395,7 @@ public struct NotebookEditorView: View {
                     }
                 }
             }
+            lasso.proHost = { [self] in (canvasView as? AdaptiveCanvasView)?.proLayer }
             store.activeNotebookId = notebook.id
             // 開著的這一本走焦點通道（秒同步）與區網直連。
             sanitizeTextAttachments()
@@ -2163,6 +2404,10 @@ public struct NotebookEditorView: View {
                 currentPageIndex = targetPage
             }
             loadCurrentPage()
+            // 製圖用的紙（三視圖、等角、作圖步驟…）一打開就選好「圖學」筆組。
+            if paperUsesDrafting(paperId: notebook.paperId(forPage: currentPageIndex)) {
+                selectedTool = .drafting
+            }
             MacWindowTitle.apply()
             // 擷取剛打開筆記本時的初始狀態（提供一鍵恢復初始狀態功能）
             if initialNotebookSnapshot == nil {
@@ -3744,7 +3989,28 @@ public struct NotebookEditorView: View {
             .overlay(alignment: .top) {
                 // 🌟 套索選取浮動控制面板（兩種頁面模式共用）
                 if editorMode == .draw && selectedTool == .lasso {
-                    lassoFloatingActionBar
+                    // 這一排按鈕比 iPad 直向的寬度還寬。原本直接畫出來，
+                    // 超出的部分讓整個編輯器的版面被撐寬（畫布整個右移、右側被切掉），
+                    // 套索拖曳也就落在錯的位置。放進橫向捲動，寬度回到螢幕內。
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        lassoFloatingActionBar
+                            .padding(.horizontal, 12)
+                    }
+                    .fixedSize(horizontal: false, vertical: true)
+                        .padding(.top, 12)
+                        .transition(.opacity.combined(with: .move(edge: .top)))
+                }
+            }
+            .sheet(isPresented: $showSolidStudio) {
+                SolidStudioSheet(
+                    pageSize: PageGeometry.size,
+                    sketchPolylines: { solidSketchPolylines() },
+                    onInsert: { insertSolidSheet($0) })
+            }
+            .overlay(alignment: .top) {
+                // 圖學：製圖筆組、圖層、吸附（見 DraftingBar.swift）。
+                if editorMode == .draw && selectedTool == .drafting {
+                    DraftingBar(onOpenSolidStudio: { showSolidStudio = true })
                         .padding(.top, 12)
                         .transition(.opacity.combined(with: .move(edge: .top)))
                 }
@@ -4679,8 +4945,10 @@ public struct NotebookEditorView: View {
                     let cleaned = PalmRejectionCoordinator.retracting(
                         currentDrawing, landedAt: landedAt)
                     guard cleaned.strokes.count != currentDrawing.strokes.count else { return }
+                    let removed = currentDrawing.strokes.count - cleaned.strokes.count
                     currentDrawing = cleaned
                     canvasView?.drawing = cleaned
+                    (canvasView as? AdaptiveCanvasView)?.dropDeadUndoEntries(max: removed)
                     saveCurrentPageDrawing()
                 },
                 onPenControl: applyPenControl,
@@ -6854,10 +7122,12 @@ public struct NotebookEditorView: View {
             // 泰文與日文的字串比英文長 30–50%，那些語言核心預設只給圖示，
             // 而使用者也該有權在任何語言下關掉它。
             ViewThatFits(in: .horizontal) {
+                // fixedSize：量的是**理想寬度**。不加的話裡面的橫向捲動區（套索按鈕列）
+                // 什麼寬度都「塞得下」，這一排就永遠被選中，然後被切掉一截而不是換行。
                 if toolbarSettings.showLabels {
-                    drawingToolbarRow(showToolLabels: true)
+                    drawingToolbarRow(showToolLabels: true).fixedSize(horizontal: true, vertical: false)
                 }
-                drawingToolbarRow(showToolLabels: false)
+                drawingToolbarRow(showToolLabels: false).fixedSize(horizontal: true, vertical: false)
                 WrapLayout(spacing: 12, lineSpacing: 8) {
                     drawingToolbarItems(showToolLabels: false)
                 }
@@ -7154,6 +7424,7 @@ public struct NotebookEditorView: View {
                     ToolbarSeparator()
                         .frame(height: 24)
 
+                    ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 6) {
                         lassoActionButton("scissors", "cut_selected", "cut_selected_hint") { cutSelectedStrokes() }
                         lassoActionButton("doc.on.doc", "copy_selected", "copy_selected_hint") { copySelectedStrokes() }
@@ -7193,6 +7464,9 @@ public struct NotebookEditorView: View {
                         .accessibilityLabel(localizationManager.localized("delete_selected"))
                         .help(localizationManager.localized("delete_selected"))
                     }
+                    }
+                    // 窄畫面（側邊欄開著的直向 iPad 只剩約 550pt）塞不下 560，會把整排撐出畫面。
+                    .frame(maxWidth: 400)
                 }
 
 
@@ -9230,9 +9504,13 @@ public struct NotebookEditorView: View {
             }
         }
 
+        // 專業筆刷（含全部製圖線）不在 PKDrawing 裡：另外讀進來，隱藏的圖層略過。
+        let pro = (0..<max(notebook.pageCount, 1)).map {
+            PageThumbnailRenderer.proStrokes(notebook: notebook, pageIndex: $0, store: store)
+        }
         if let data = try? NotebookPackageBridge.exportPdf(
             document: notebook, drawings: drawings, imageData: images,
-            deviceId: NotebookMigration.deviceId
+            deviceId: NotebookMigration.deviceId, proStrokes: pro
         ), !data.isEmpty {
             return data
         }
@@ -9432,12 +9710,24 @@ public struct NotebookEditorView: View {
                     }
                 }
             }
+            Divider()
+            // 大尺寸頁取代無限畫布：任意寬高（300–6000）。
+            Button {
+                showCustomPageSize = true
+            } label: {
+                HStack {
+                    Text(localizationManager.localized("page_format_custom"))
+                    if isCustomPageFormat(id: notebook.pageFormatId ?? defaultPageFormatId()) {
+                        Image(systemName: "checkmark")
+                    }
+                }
+            }
+            .accessibilityIdentifier("page_format.custom")
         } label: {
             HStack(spacing: 4) {
                 Image(systemName: "doc.on.doc")
                     .font(.system(size: EditorToolbarMetrics.icon))
-                Text(localizationManager.localized(
-                    pageFormat(id: notebook.pageFormatId ?? defaultPageFormatId()).titleKey))
+                Text(pageFormatTitle)
                     .font(.system(size: EditorToolbarMetrics.label))
             }
             .foregroundColor(.accentColor)
@@ -9449,6 +9739,50 @@ public struct NotebookEditorView: View {
         .buttonStyle(.plain)
         .accessibilityLabel(localizationManager.localized("page_format"))
         .help(localizationManager.localized("page_format_desc"))
+        .sheet(isPresented: $showCustomPageSize) {
+            CustomPageSizeSheet(initial: PageGeometry.size) { applyPageFormat($0) }
+        }
+    }
+
+    /// 這一頁上所有手繪線的點：專業筆刷（含製圖線）加上 PencilKit 的筆畫。
+    private func solidSketchPolylines() -> [[CGPoint]] {
+        var all = (canvasView as? AdaptiveCanvasView)?.proLayer?.sketchPolylines ?? []
+        if let drawing = canvasView?.drawing {
+            for stroke in drawing.strokes {
+                all.append(stroke.path.interpolatedPoints(by: .distance(3)).map(\.location))
+            }
+        }
+        return all
+    }
+
+    /// 把立體輔助排好的圖紙插進目前這一頁：放在**目前看得到的範圍正中央**（不是固定貼頂，
+    /// 那樣會壓在既有的圖上），整組一次復原。插入後直接用套索選住它，使用者拖一下就能搬。
+    private func insertSolidSheet(_ sheet: FfiSolidSheet) {
+        guard let canvas = canvasView as? AdaptiveCanvasView, let layer = canvas.proLayer else { return }
+        let page = PageGeometry.size
+        let w = CGFloat(sheet.width), h = CGFloat(sheet.height)
+        let center = layer.convert(CGPoint(x: canvas.bounds.midX, y: canvas.bounds.midY), from: canvas)
+        let origin = CGPoint(
+            x: min(max(0, center.x - w / 2), max(0, page.width - w)),
+            y: min(max(0, center.y - h / 2), max(0, page.height - h)))
+        let made = layer.insertDrafted(sheet.strokes, origin: origin)
+        showCanvasNotice(localizationManager.localized("solid_place_hint"))
+        guard !made.isEmpty else { return }
+        selectedTool = .lasso
+        // 換工具會清掉舊的選取；等下一個 runloop 再選，選取框才不會被清掉。
+        let ids = Set(made.map(\.id))
+        let box = made.map(\.bounds).reduce(CGRect.null) { $0.union($1) }
+        DispatchQueue.main.async { lasso.select(proStrokeIds: ids, around: box) }
+    }
+
+    /// 工具列上顯示的規格名稱。自訂的直接顯示尺寸（「2000×1500」）。
+    private var pageFormatTitle: String {
+        let id = notebook.pageFormatId ?? defaultPageFormatId()
+        let format = pageFormat(id: id)
+        if isCustomPageFormat(id: id) {
+            return "\(Int(format.width))×\(Int(format.height))"
+        }
+        return localizationManager.localized(format.titleKey)
     }
 
     /// 版面配色。
@@ -13682,8 +14016,13 @@ private struct TapeView: View {
                 }
             }
         }
+        // **`.position` 一定要放在 `contentShape` 與手勢「之後」。**
+        //
+        // `.position` 會讓視圖撐滿整個父層（整頁）。原本它排在 `.contentShape(Rectangle())`、
+        // `.onTapGesture`、`.gesture` 前面，於是**每一條膠帶的點擊範圍都是整頁**：
+        // 畫完第一條，它就蓋住背景的繪製層（第二條畫不出來）、也蓋住底下的畫布
+        // （換成別的工具後筆也寫不了、點不到任何東西）。範圍要先收在膠帶自己的矩形裡再定位。
         .frame(width: rect.width, height: rect.height)
-        .position(x: rect.midX, y: rect.midY)
         .contentShape(Rectangle())
         .onTapGesture {
             if isActive {
@@ -13764,6 +14103,7 @@ private struct TapeView: View {
                 .offset(y: -44)
             }
         }
+        .position(x: rect.midX, y: rect.midY)
     }
 }
 

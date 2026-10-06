@@ -30,6 +30,10 @@ const KIND_REMOVE: u8 = 2;
 /// 區塊格式：`[u8 kind][u32 len][payload]`，可重複。
 const EXT_ROLL: u8 = 1;
 
+/// 製圖屬性：`[layer u8][line_type u8]`。**沒有就不寫**（絕大多數筆畫不是製圖筆畫）。
+/// 舊裝置照規則跳過這個區塊，只是看不到圖層與線型。
+const EXT_DRAFT: u8 = 2;
+
 /// 延伸區塊的表頭長度：1 byte 類型 + 4 bytes 長度。
 const EXT_HEADER_LEN: usize = 5;
 
@@ -125,6 +129,13 @@ impl StrokeWriter {
                     body.push(EXT_ROLL);
                     body.extend_from_slice(&(payload.len() as u32).to_le_bytes());
                     body.extend_from_slice(&payload);
+                }
+
+                if s.layer != 0 || s.line_type != 0 {
+                    body.push(EXT_DRAFT);
+                    body.extend_from_slice(&2u32.to_le_bytes());
+                    body.push(s.layer);
+                    body.push(s.line_type);
                 }
             }
             InkRecord::Remove(id) => {
@@ -251,6 +262,7 @@ impl<'a> StrokeReader<'a> {
                 // 點之後可能還有延伸區塊。不認得的**跳過**而不是報錯 ——
                 // 這裡的寬容正是舊裝置能打開新檔案的原因。
                 let mut points = points;
+                let (mut layer, mut line_type) = (0u8, 0u8);
                 let mut tail = &pts[count * POINT_LEN..];
                 while tail.len() >= EXT_HEADER_LEN {
                     let ext_kind = tail[0];
@@ -263,6 +275,10 @@ impl<'a> StrokeReader<'a> {
                             p.roll = dec_angle(u16::from_le_bytes(*c), TAU);
                         }
                     }
+                    if ext_kind == EXT_DRAFT && payload.len() >= 2 {
+                        layer = payload[0];
+                        line_type = payload[1];
+                    }
                     tail = &tail[EXT_HEADER_LEN + ext_len..];
                 }
 
@@ -273,6 +289,8 @@ impl<'a> StrokeReader<'a> {
                     color_rgba8: color,
                     base_width,
                     points,
+                    layer,
+                    line_type,
                 }))
             }
             k => Err(CodecError::UnknownRecordKind(k)),
@@ -311,6 +329,8 @@ mod tests {
                     roll: 0.0,
                 },
             ],
+            layer: 0,
+            line_type: 0,
         }
     }
 
@@ -446,6 +466,8 @@ mod roll_tests {
                     roll,
                 })
                 .collect(),
+            layer: 0,
+            line_type: 0,
         }
     }
 
@@ -553,5 +575,99 @@ mod roll_tests {
             InkRecord::Add(s) => assert_eq!(s.points.len(), 2),
             other => panic!("不認得的延伸區塊把記錄弄壞了：{other:?}"),
         }
+    }
+}
+
+#[cfg(test)]
+mod draft_tests {
+    use super::*;
+
+    fn drafted(layer: u8, line_type: u8) -> Stroke {
+        Stroke {
+            id: Uuid::from_bytes([7; 16]),
+            started_at: NotebookTime::from_micros(5),
+            tool: Tool::Fineliner,
+            color_rgba8: [10, 20, 30, 255],
+            base_width: 1.4,
+            points: vec![
+                InkPoint::new(0.0, 0.0, 0.5, 0),
+                InkPoint::new(40.0, 0.0, 0.5, 8_000),
+            ],
+            layer,
+            line_type,
+        }
+    }
+
+    fn roundtrip(s: Stroke) -> Stroke {
+        let mut w = StrokeWriter::new(Uuid::from_bytes([1; 16]));
+        w.push(&InkRecord::Add(s));
+        match StrokeReader::new(w.as_bytes())
+            .unwrap()
+            .read_all()
+            .unwrap()
+            .remove(0)
+        {
+            InkRecord::Add(s) => s,
+            other => panic!("讀回來的不是 Add：{other:?}"),
+        }
+    }
+
+    #[test]
+    fn layer_and_line_type_survive_the_file() {
+        let back = roundtrip(drafted(3, 1));
+        assert_eq!((back.layer, back.line_type), (3, 1));
+    }
+
+    #[test]
+    fn an_ordinary_stroke_costs_no_extra_bytes() {
+        let plain = {
+            let mut w = StrokeWriter::new(Uuid::from_bytes([1; 16]));
+            w.push(&InkRecord::Add(drafted(0, 0)));
+            w.as_bytes().len()
+        };
+        let with = {
+            let mut w = StrokeWriter::new(Uuid::from_bytes([1; 16]));
+            w.push(&InkRecord::Add(drafted(2, 0)));
+            w.as_bytes().len()
+        };
+        assert_eq!(
+            with - plain,
+            1 + 4 + 2,
+            "只有製圖筆畫才多一個 7 bytes 的延伸區塊"
+        );
+        let back = roundtrip(drafted(0, 0));
+        assert_eq!((back.layer, back.line_type), (0, 0));
+    }
+
+    #[test]
+    fn a_reader_that_does_not_know_the_block_still_reads_the_points() {
+        // 舊裝置的行為：不認得的延伸區塊跳過。這裡用一個未知的 kind 99 模擬。
+        let mut w = StrokeWriter::new(Uuid::from_bytes([1; 16]));
+        w.push(&InkRecord::Add(drafted(2, 2)));
+        let mut bytes = w.into_bytes();
+        // 把 EXT_DRAFT(2) 的 kind 改成 99：等於舊讀取器看到的未知區塊。
+        let at = bytes.len() - 7;
+        assert_eq!(bytes[at], EXT_DRAFT);
+        bytes[at] = 99;
+        let back = match StrokeReader::new(&bytes)
+            .unwrap()
+            .read_all()
+            .unwrap()
+            .remove(0)
+        {
+            InkRecord::Add(s) => s,
+            _ => unreachable!(),
+        };
+        assert_eq!(back.points.len(), 2, "筆點照樣讀得出來");
+        assert_eq!((back.layer, back.line_type), (0, 0));
+    }
+
+    #[test]
+    fn it_coexists_with_the_roll_block() {
+        let mut s = drafted(1, 3);
+        s.points[1].roll = 1.0;
+        let back = roundtrip(s);
+        assert_eq!((back.layer, back.line_type), (1, 3));
+        assert!(back.points[1].roll > 0.9);
     }
 }

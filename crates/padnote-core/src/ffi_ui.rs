@@ -132,6 +132,7 @@ pub enum FfiTool {
     Eraser,
     Lasso,
     MaskingTape,
+    Drafting,
     Undo,
     Redo,
     ClearPage,
@@ -156,6 +157,7 @@ impl From<FfiTool> for Tool {
             FfiTool::Eraser => Self::Eraser,
             FfiTool::Lasso => Self::Lasso,
             FfiTool::MaskingTape => Self::MaskingTape,
+            FfiTool::Drafting => Self::Drafting,
             FfiTool::Undo => Self::Undo,
             FfiTool::Redo => Self::Redo,
             FfiTool::ClearPage => Self::ClearPage,
@@ -182,6 +184,7 @@ impl From<Tool> for FfiTool {
             Tool::Eraser => Self::Eraser,
             Tool::Lasso => Self::Lasso,
             Tool::MaskingTape => Self::MaskingTape,
+            Tool::Drafting => Self::Drafting,
             Tool::Undo => Self::Undo,
             Tool::Redo => Self::Redo,
             Tool::ClearPage => Self::ClearPage,
@@ -477,7 +480,8 @@ mod tests {
             .flat_map(|g| g.tools)
             .map(|t| t.identifier)
             .collect();
-        assert_eq!(ids.len(), 19);
+        assert_eq!(ids.len(), 20);
+        assert!(ids.contains(&"editor.ink.drafting".to_string()));
         assert!(ids.contains(&"editor.ink.pen".to_string()));
         assert!(ids.contains(&"editor.ink.maskingTape".to_string()));
         assert!(ids.iter().all(|s| s.starts_with("editor.ink.")), "{ids:?}");

@@ -89,6 +89,8 @@ pub struct NotebookSession {
     recording: RecordingState,
     /// 單調遞增的筆記本時間。由平台層以 monotonic clock 餵入。
     now: NotebookTime,
+    /// 匯出時略過的製圖圖層（使用者在這台裝置上隱藏的）。只影響匯出／列印，不落盤。
+    export_hidden_layers: Vec<u8>,
     /// 本裝置識別碼。進 oplog 檔名，保證兩台裝置永不寫同一個檔。
     device: u32,
     /// Lamport 時戳，決定 oplog 檔名的因果序。
@@ -154,6 +156,7 @@ impl NotebookSession {
         let package = NotebookPackage::create(root, title, now_unix_ms)?.with_device(device);
         let id = Uuid::now_v7();
         let session = Self {
+            export_hidden_layers: Vec::new(),
             package,
             notebook: Notebook::new(id, title),
             timeline: Timeline::new(),
@@ -181,6 +184,7 @@ impl NotebookSession {
         let package = NotebookPackage::open(root)?.with_device(device);
         let title = package.manifest().title.clone();
         let mut session = Self {
+            export_hidden_layers: Vec::new(),
             package,
             notebook: Notebook::new(Uuid::now_v7(), title),
             timeline: Timeline::new(),
@@ -2321,6 +2325,23 @@ impl NotebookSession {
             .collect()
     }
 
+    /// 設定匯出／列印時要略過的製圖圖層。
+    ///
+    /// 圖層的顯示狀態是這台裝置、這本筆記的檢視狀態（不同步），所以由平台在匯出前告訴核心。
+    /// 隱藏中層輔助線之後匯出，PDF／圖片裡就沒有輔助線 —— 與畫面上看到的一致。
+    pub fn set_export_hidden_layers(&mut self, layers: Vec<u8>) {
+        self.export_hidden_layers = layers;
+    }
+
+    /// 匯出用的筆畫：可見筆畫扣掉被隱藏圖層上的（圖層 0 的一般筆跡永遠保留）。
+    fn export_strokes(&self, page_id: Uuid) -> Result<Vec<padnote_ink::Stroke>, AppError> {
+        let mut strokes = self.visible_strokes(page_id)?;
+        if !self.export_hidden_layers.is_empty() {
+            strokes.retain(|s| s.layer == 0 || !self.export_hidden_layers.contains(&s.layer));
+        }
+        Ok(strokes)
+    }
+
     /// 匯出整份筆記本為 PDF 位元組流（工作項 S-18 / S-43）。
     pub fn export_pdf(
         &self,
@@ -2328,7 +2349,7 @@ impl NotebookSession {
     ) -> Result<Vec<u8>, AppError> {
         let mut strokes_map = std::collections::HashMap::new();
         for page in self.notebook.pages() {
-            if let Ok(strokes) = self.visible_strokes(page.id) {
+            if let Ok(strokes) = self.export_strokes(page.id) {
                 strokes_map.insert(page.id, strokes);
             }
         }
@@ -2343,7 +2364,7 @@ impl NotebookSession {
 
     /// 匯出指定頁面為單頁 PDF 位元組流。
     pub fn export_page_pdf(&self, page_id: Uuid) -> Result<Vec<u8>, AppError> {
-        let strokes = self.visible_strokes(page_id)?;
+        let strokes = self.export_strokes(page_id)?;
         let blobs = self.package.blobs();
         Ok(padnote_export::page_to_pdf(
             &self.notebook,
@@ -2360,7 +2381,7 @@ impl NotebookSession {
             .notebook
             .page(page_id)
             .ok_or(AppError::PageNotFound(page_id))?;
-        let strokes = self.visible_strokes(page_id)?;
+        let strokes = self.export_strokes(page_id)?;
         let blobs = self.package.blobs();
 
         // 第一軌：嘗試使用 PDFium 渲染全頁向量（包含文字排版、表格、圖片與向量筆畫抗鋸齒）
@@ -2431,6 +2452,44 @@ mod tests {
 
     fn session(name: &str) -> NotebookSession {
         NotebookSession::create(tmp(name), "線性代數", 1_757_635_200_000, 0xA1).unwrap()
+    }
+
+    #[test]
+    fn hidden_drafting_layers_are_left_out_of_exports_but_plain_ink_stays() {
+        let mut s = session("hidden-layers");
+        let page = s.notebook().pages()[0].id;
+        let mut add = |layer: u8| {
+            let mut st = padnote_ink::Stroke {
+                id: Uuid::now_v7(),
+                started_at: NotebookTime::ZERO,
+                tool: Tool::Fineliner,
+                color_rgba8: [0, 0, 0, 255],
+                base_width: 2.0,
+                points: vec![
+                    InkPoint::new(10.0, 10.0, 0.6, 0),
+                    InkPoint::new(90.0, 10.0, 0.6, 8_000),
+                ],
+                layer,
+                line_type: 0,
+            };
+            st.layer = layer;
+            s.add_stroke(page, st).unwrap();
+        };
+        add(0);
+        add(2);
+        add(3);
+        assert_eq!(s.export_strokes(page).unwrap().len(), 3);
+        s.set_export_hidden_layers(vec![2]);
+        let kept: Vec<u8> = s
+            .export_strokes(page)
+            .unwrap()
+            .iter()
+            .map(|x| x.layer)
+            .collect();
+        assert_eq!(kept.len(), 2);
+        assert!(!kept.contains(&2) && kept.contains(&0) && kept.contains(&3));
+        // 隱藏不影響畫面上的可見筆畫（只影響匯出）。
+        assert_eq!(s.visible_strokes(page).unwrap().len(), 3);
     }
 
     /// **重開之後改的東西不可以被舊值蓋回去。**
@@ -2839,6 +2898,8 @@ mod tests {
                 InkPoint::new(0.0, 0.0, 0.5, 0),
                 InkPoint::new(10.0, 10.0, 0.8, 8_000),
             ],
+            layer: 0,
+            line_type: 0,
         }
     }
 

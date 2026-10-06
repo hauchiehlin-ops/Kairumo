@@ -172,6 +172,10 @@ public enum NoteTemplate: String, Codable, CaseIterable, Identifiable {
     case english3Line = "english_3line"
     case errorBook = "error_book"
 
+    // ---- 圖學 ----
+    case draftingSteps = "drafting_steps"
+    case draftingTrap = "drafting_trap"
+
     public var id: String { rawValue }
 
     /// 舊的十三個：中文 rawValue → 核心的英文 id。
@@ -1555,6 +1559,29 @@ public final class NotebookStore: ObservableObject {
             changed = true
         }
 
+        // 《Kairumo手冊》：舊使用者只補一次（旗標），之後刪掉就不再長回來。
+        if !UserDefaults.standard.bool(forKey: Self.manualSeededKey) {
+            UserDefaults.standard.set(true, forKey: Self.manualSeededKey)
+            let hasManual = notebooks.contains {
+                $0.id == SeedContent.kairumoManualId || $0.title == SeedContent.kairumoManualTitle
+            }
+            if !hasManual {
+                var manual = Self.makeKairumoManual()
+                SeedContent.fillKairumoManual(&manual, store: self)
+                notebooks.append(manual)
+                changed = true
+            }
+        }
+
+        // 《圖學範例》：舊使用者只補一次（旗標），之後刪掉就不再長回來。
+        if !UserDefaults.standard.bool(forKey: Self.draftingExampleSeededKey) {
+            UserDefaults.standard.set(true, forKey: Self.draftingExampleSeededKey)
+            if !notebooks.contains(where: { $0.id == Self.draftingExampleId }) {
+                notebooks.append(makeDraftingExample())
+                changed = true
+            }
+        }
+
         if changed { persistData() }
     }
 
@@ -1952,8 +1979,31 @@ public final class NotebookStore: ObservableObject {
         SeedContent.fillMeeting(&n2, store: self)
         SeedContent.fillFeatureShowcase(&n3, store: self)
 
-        self.notebooks = [n1, n2, n3]
+        var n4 = Self.makeKairumoManual()
+        SeedContent.fillKairumoManual(&n4, store: self)
+        UserDefaults.standard.set(true, forKey: Self.manualSeededKey)
+
+        let n5 = makeDraftingExample()
+        UserDefaults.standard.set(true, forKey: Self.draftingExampleSeededKey)
+
+        self.notebooks = [n1, n2, n3, n4, n5]
         persistData()
+    }
+
+    /// 《Kairumo手冊》：全手繪的預載筆記本。名稱是固定的，不走語系表。
+    private static let manualSeededKey = "seed.kairumoManual.added"
+
+    private static func makeKairumoManual() -> NotebookDocument {
+        NotebookDocument(
+            id: SeedContent.kairumoManualId,
+            title: SeedContent.kairumoManualTitle,
+            createdAt: Date().addingTimeInterval(-600),
+            lastModifiedDate: Date().addingTimeInterval(-600),
+            pageCount: 2,
+            hasRecording: false,
+            previewSnippet: "Kairumo 優勢：結構化、視覺化、多語言 —— 全部手繪",
+            template: .blank
+        )
     }
 
     // MARK: - 筆記操作 CRUD
@@ -3001,9 +3051,12 @@ public final class NotebookStore: ObservableObject {
         )
         recordings.insert(rec, at: 0)
 
-        if let nId = linkedNotebookId, let idx = notebooks.firstIndex(where: { $0.id == nId }) {
+        if let nId = linkedNotebookId,
+           let idx = notebooks.firstIndex(where: { $0.id.caseInsensitiveCompare(nId) == .orderedSame }) {
             notebooks[idx].hasRecording = true
             notebooks[idx].recordingAudioPath = fileName
+            // 名字要跟著這本筆記本的套件同步出去 —— 算作這本有修改。
+            notebooks[idx].lastModifiedDate = Date()
         }
         persistData()
         return rec
@@ -3690,5 +3743,47 @@ public struct NoteTapeAttachment: Identifiable, Codable, Hashable {
         self.rect = rect
         self.isRevealed = isRevealed
         self.colorHex = colorHex
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id, pageIndex, rect, isRevealed, colorHex, x, y, width, height
+    }
+
+    private struct KeyedRect: Decodable {
+        struct Point: Decodable { var x: CGFloat; var y: CGFloat }
+        struct Size: Decodable { var width: CGFloat; var height: CGFloat }
+        var origin: Point
+        var size: Size
+    }
+
+    /// `rect` 讀得懂三種寫法：Apple 的 `CGRect` 預設格式 `[[x,y],[w,h]]`、
+    /// `{origin:{x,y}, size:{width,height}}`（舊版 Android 寫的）與扁平的 x／y／width／height。
+    /// 原本只認第一種：Android 寫的膠帶在這裡整筆解不開，位置與大小跟著跳掉。
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(String.self, forKey: .id)
+        pageIndex = try c.decodeIfPresent(Int.self, forKey: .pageIndex) ?? 0
+        isRevealed = try c.decodeIfPresent(Bool.self, forKey: .isRevealed) ?? false
+        colorHex = try c.decodeIfPresent(String.self, forKey: .colorHex)
+        if let r = try? c.decode(CGRect.self, forKey: .rect) {
+            rect = r
+        } else if let k = try? c.decode(KeyedRect.self, forKey: .rect) {
+            rect = CGRect(x: k.origin.x, y: k.origin.y, width: k.size.width, height: k.size.height)
+        } else {
+            rect = CGRect(
+                x: try c.decodeIfPresent(CGFloat.self, forKey: .x) ?? 0,
+                y: try c.decodeIfPresent(CGFloat.self, forKey: .y) ?? 0,
+                width: try c.decodeIfPresent(CGFloat.self, forKey: .width) ?? 120,
+                height: try c.decodeIfPresent(CGFloat.self, forKey: .height) ?? 32)
+        }
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(id, forKey: .id)
+        try c.encode(pageIndex, forKey: .pageIndex)
+        try c.encode(rect, forKey: .rect)
+        try c.encode(isRevealed, forKey: .isRevealed)
+        try c.encodeIfPresent(colorHex, forKey: .colorHex)
     }
 }

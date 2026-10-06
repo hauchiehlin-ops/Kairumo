@@ -225,6 +225,15 @@ class ScreenAuditTest {
                 "現場的 tag：" + presentTags().take(20).joinToString(", "),
             nodes.isNotEmpty())
         cards[0].performClick()
+        compose.waitForIdle()
+        // 第一張（最近改過的）是種子的「圖學範例」，開啟時會自動選「圖學」筆組；製圖筆的粗細由筆組決定，
+        // 刻意不顯示粗細滑桿（`editor.ink.width`）。稽核要的是一般筆的控制項，所以改選一般的筆。
+        if (compose.onAllNodesWithTag("editor.ink.width").fetchSemanticsNodes().isEmpty() &&
+            compose.onAllNodesWithTag("editor.ink.pen").fetchSemanticsNodes().isNotEmpty()
+        ) {
+            compose.onNodeWithTag("editor.ink.pen").performClick()
+            compose.waitForIdle()
+        }
     }
 
     private fun audit(

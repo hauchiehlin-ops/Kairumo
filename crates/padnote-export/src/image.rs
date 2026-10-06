@@ -278,10 +278,31 @@ fn draw_stroke(pixels: &mut [u8], width: u32, height: u32, stroke: &Stroke, scal
     if stroke.points.is_empty() {
         return;
     }
+    let path = stroke.render_path(2);
+    if path.is_empty() {
+        return;
+    }
+    // 製圖線型（隱藏線、中心線、假想線）：依圖樣切成一段一段各畫各的。
+    let pattern = padnote_ink::LineType::from_id(stroke.line_type).pattern();
+    if !pattern.is_empty() && path.len() >= 2 {
+        for run in padnote_ink::dash_runs(&path, pattern) {
+            draw_polyline(pixels, width, height, stroke, &run, scale);
+        }
+        return;
+    }
+    draw_polyline(pixels, width, height, stroke, &path, scale);
+}
 
+fn draw_polyline(
+    pixels: &mut [u8],
+    width: u32,
+    height: u32,
+    stroke: &Stroke,
+    path: &[(f32, f32)],
+    scale: f32,
+) {
     let color = stroke.color_rgba8;
     let radius = (stroke.base_width * 0.5 * scale).max(0.5);
-    let path = stroke.render_path(2);
     if path.is_empty() {
         return;
     }
@@ -640,14 +661,33 @@ fn draw_shape(canvas: &mut Canvas, shape: &ShapeObject, world: &Affine2) {
         return;
     }
     let mapped: Vec<(f32, f32)> = points.iter().map(|&(x, y)| world.apply(x, y)).collect();
-    for pair in mapped.windows(2) {
-        canvas.line(pair[0].0, pair[0].1, pair[1].0, pair[1].1, INK);
+    // 平行模式與註解的輪廓只是點擊範圍，不畫。
+    if kind.draws_outline() {
+        for pair in mapped.windows(2) {
+            canvas.line(pair[0].0, pair[0].1, pair[1].0, pair[1].1, INK);
+        }
+        // 線狀形狀不收尾 —— 收了會多出一條回到起點的邊。
+        if !kind.is_linear()
+            && let (Some(first), Some(last)) = (mapped.first(), mapped.last())
+        {
+            canvas.line(last.0, last.1, first.0, first.1, INK);
+        }
     }
-    // 線狀形狀不收尾 —— 收了會多出一條回到起點的邊。
-    if !kind.is_linear()
-        && let (Some(first), Some(last)) = (mapped.first(), mapped.last())
-    {
-        canvas.line(last.0, last.1, first.0, first.1, INK);
+    // 立體圖的稜線與流程圖符號裡的線。縮圖只描線，不上色、不分虛實。
+    for detail in geom.details(48) {
+        let pts: Vec<(f32, f32)> = detail
+            .points
+            .iter()
+            .map(|&(x, y)| world.apply(x, y))
+            .collect();
+        for pair in pts.windows(2) {
+            canvas.line(pair[0].0, pair[0].1, pair[1].0, pair[1].1, INK);
+        }
+        if detail.closed
+            && let (Some(first), Some(last)) = (pts.first(), pts.last())
+        {
+            canvas.line(last.0, last.1, first.0, first.1, INK);
+        }
     }
 }
 
@@ -710,6 +750,30 @@ fn geom_kind(kind: DocShapeKind) -> GeomShapeKind {
         DocShapeKind::SpeechBubble => GeomShapeKind::SpeechBubble,
         DocShapeKind::Plaque => GeomShapeKind::Plaque,
         DocShapeKind::Pie => GeomShapeKind::Pie,
+        DocShapeKind::PredefinedProcess => GeomShapeKind::PredefinedProcess,
+        DocShapeKind::AlternateProcess => GeomShapeKind::AlternateProcess,
+        DocShapeKind::InternalStorage => GeomShapeKind::InternalStorage,
+        DocShapeKind::MultiDocument => GeomShapeKind::MultiDocument,
+        DocShapeKind::SequentialAccessStorage => GeomShapeKind::SequentialAccessStorage,
+        DocShapeKind::DirectAccessStorage => GeomShapeKind::DirectAccessStorage,
+        DocShapeKind::Sort => GeomShapeKind::Sort,
+        DocShapeKind::SummingJunction => GeomShapeKind::SummingJunction,
+        DocShapeKind::OrJunction => GeomShapeKind::OrJunction,
+        DocShapeKind::LoopLimitStart => GeomShapeKind::LoopLimitStart,
+        DocShapeKind::LoopLimitEnd => GeomShapeKind::LoopLimitEnd,
+        DocShapeKind::ParallelMode => GeomShapeKind::ParallelMode,
+        DocShapeKind::CommunicationLink => GeomShapeKind::CommunicationLink,
+        DocShapeKind::Annotation => GeomShapeKind::Annotation,
+        DocShapeKind::OfflineStorage => GeomShapeKind::OfflineStorage,
+        DocShapeKind::Cube => GeomShapeKind::Cube,
+        DocShapeKind::Cylinder => GeomShapeKind::Cylinder,
+        DocShapeKind::Cone => GeomShapeKind::Cone,
+        DocShapeKind::Pyramid => GeomShapeKind::Pyramid,
+        DocShapeKind::TriangularPrism => GeomShapeKind::TriangularPrism,
+        DocShapeKind::Sphere => GeomShapeKind::Sphere,
+        DocShapeKind::Hemisphere => GeomShapeKind::Hemisphere,
+        DocShapeKind::Torus => GeomShapeKind::Torus,
+        DocShapeKind::Tetrahedron => GeomShapeKind::Tetrahedron,
         DocShapeKind::Line => GeomShapeKind::Line,
         DocShapeKind::Arrow => GeomShapeKind::Arrow,
         DocShapeKind::DoubleArrow => GeomShapeKind::DoubleArrow,
@@ -754,6 +818,8 @@ mod tests {
                 InkPoint::new(10.0, 10.0, 1.0, 0),
                 InkPoint::new(100.0, 50.0, 1.0, 8000),
             ],
+            layer: 0,
+            line_type: 0,
         };
 
         let png = to_png(

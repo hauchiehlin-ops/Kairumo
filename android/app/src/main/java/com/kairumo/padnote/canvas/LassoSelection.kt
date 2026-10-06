@@ -100,6 +100,14 @@ class LassoSelection {
         committed = if (picked.isEmpty()) emptyList() else drawn
     }
 
+    /** 程式直接選定一批核心筆畫（例如剛插入的立體圖紙），框為像素座標。 */
+    fun select(ids: List<String>, boxPx: List<Offset>) {
+        if (ids.isEmpty()) return
+        path = emptyList()
+        selected = ids
+        committed = boxPx
+    }
+
     fun clear() {
         path = emptyList()
         selected = emptyList()

@@ -155,6 +155,8 @@ fn stroke() -> Stroke {
             InkPoint::new(0.0, 0.0, 0.5, 0),
             InkPoint::new(10.0, 10.0, 0.8, 8_000),
         ],
+        layer: 0,
+        line_type: 0,
     }
 }
 

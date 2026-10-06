@@ -163,12 +163,15 @@ enum NotebookPackageBridge {
                 if index < proStrokes.count {
                     for pro in proStrokes[index] {
                         guard let kind = ProInk.kind(named: pro.tool) else { continue }
-                        _ = try session.addStroke(
+                        // 圖層與線型跟著筆畫走（核心的 ink 擴充區塊），別台裝置才畫得出同樣的圖。
+                        _ = try session.addStrokeDrafted(
                             pageId: pageId,
                             tool: kind,
                             colorRgba: Data(pro.colorRGBA),
                             baseWidth: pro.baseWidth,
-                            points: ProInk.strokePoints(pro.points)
+                            points: ProInk.strokePoints(pro.points),
+                            layer: pro.layerId,
+                            lineType: pro.lineTypeId
                         )
                         summary.strokeCount += 1
                     }
@@ -432,7 +435,8 @@ enum NotebookPackageBridge {
         document: NotebookDocument,
         drawings: [PKDrawing],
         imageData: [String: Data] = [:],
-        deviceId: UInt32
+        deviceId: UInt32,
+        proStrokes: [[ProStroke]] = []
     ) throws -> Data {
         // 用一個暫存套件當中繼。它在匯出完就沒有用了。
         let staging = FileManager.default.temporaryDirectory
@@ -441,7 +445,7 @@ enum NotebookPackageBridge {
 
         try export(
             document: document, drawings: drawings, imageData: imageData,
-            to: staging, deviceId: deviceId
+            to: staging, deviceId: deviceId, proStrokes: proStrokes
         )
 
         let session = try PadnoteSession.openExisting(path: staging.path, deviceId: deviceId)

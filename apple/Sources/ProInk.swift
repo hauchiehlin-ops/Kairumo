@@ -44,6 +44,14 @@ struct ProStroke: Codable, Identifiable, Hashable, Sendable {
     /// 混合模式：normal / multiply / screen
     var blendMode: String = "normal"
     var points: [ProPoint]
+    /// 製圖圖層（1 底／2 中／3 頂）。`nil` 與 0 都是「一般筆跡」。
+    /// 存成可省略的欄位：舊筆記的 JSON 沒有這兩個鍵，照樣讀得進來。
+    var layer: UInt8? = nil
+    /// 工程線型（0 實線、1 隱藏線、2 中心線、3 假想線）。
+    var lineType: UInt8? = nil
+
+    var layerId: UInt8 { layer ?? 0 }
+    var lineTypeId: UInt8 { lineType ?? 0 }
 
     /// 內容指紋：同步時分辨「這是不是同一筆」。
     ///
@@ -52,7 +60,9 @@ struct ProStroke: Codable, Identifiable, Hashable, Sendable {
     var contentKey: String {
         guard let first = points.first, let last = points.last else { return "\(tool)|empty" }
         func q(_ v: Float) -> Int { Int((v * 10).rounded()) }
-        return "\(tool)|\(colorRGBA.map(String.init).joined(separator: ","))|\(points.count)|\(q(first.x)),\(q(first.y))|\(q(last.x)),\(q(last.y))"
+        // 圖層與線型只在有值時才進指紋：舊筆畫的指紋不變，已同步過的內容不會被當成新的一筆。
+        let draft = (layerId != 0 || lineTypeId != 0) ? "|L\(layerId)T\(lineTypeId)" : ""
+        return "\(tool)|\(colorRGBA.map(String.init).joined(separator: ","))|\(points.count)|\(q(first.x)),\(q(first.y))|\(q(last.x)),\(q(last.y))\(draft)"
     }
 
     var bounds: CGRect {
@@ -81,7 +91,37 @@ extension ProStroke {
             points: full.points.map {
                 ProPoint(x: $0.x, y: $0.y, pressure: $0.pressure, tilt: $0.tilt,
                          azimuth: $0.azimuth, dtUs: $0.dtUs, roll: $0.roll)
-            })
+            },
+            layer: full.layer == 0 ? nil : full.layer,
+            lineType: full.lineType == 0 ? nil : full.lineType)
+    }
+}
+
+extension ProStroke {
+    /// 從核心排好的製圖線（三視圖、步驟編號、範例筆記）建一筆。兩點以上才算線。
+    ///
+    /// 補點到每 4 個頁面單位一點：虛線與點畫線的間隔由筆點陣挖出來，點太稀的話間隔會跟著失準。
+    init?(drafted item: FfiSheetStroke, origin: CGPoint = .zero) {
+        guard item.points.count >= 2 else { return nil }
+        var pts: [ProPoint] = []
+        func add(_ x: Float, _ y: Float) {
+            pts.append(ProPoint(x: x + Float(origin.x), y: y + Float(origin.y), pressure: 0.6, tilt: 0,
+                                azimuth: 0, dtUs: 2000, roll: 0))
+        }
+        add(item.points[0].x, item.points[0].y)
+        for (a, b) in zip(item.points, item.points.dropFirst()) {
+            let len = hypot(b.x - a.x, b.y - a.y)
+            let n = max(1, Int((len / 4).rounded(.up)))
+            for k in 1...n {
+                let t = Float(k) / Float(n)
+                add(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t)
+            }
+        }
+        self.init(
+            tool: "fineliner", colorRGBA: DraftingState.rgba(fromHex: item.colorHex),
+            baseWidth: item.width, points: pts,
+            layer: item.layer == 0 ? nil : item.layer,
+            lineType: item.lineType == 0 ? nil : item.lineType)
     }
 }
 
@@ -171,7 +211,14 @@ enum ProInkRenderer {
 
     static func cache(for stroke: ProStroke) -> Cached? {
         guard let kind = ProInk.kind(named: stroke.tool) else { return nil }
-        let dabs = brushDabs(tool: kind, baseWidth: stroke.baseWidth, points: ProInk.strokePoints(stroke.points))
+        let dabs: [FfiDab]
+        if stroke.lineTypeId != 0 {
+            // 虛線／點線：核心依線型把間隔挖掉，兩個平台畫出同樣的線。
+            dabs = brushDabsStyled(tool: kind, baseWidth: stroke.baseWidth,
+                                   points: ProInk.strokePoints(stroke.points), lineType: stroke.lineTypeId)
+        } else {
+            dabs = brushDabs(tool: kind, baseWidth: stroke.baseWidth, points: ProInk.strokePoints(stroke.points))
+        }
         return Cached(dabs: dabs, bounds: stroke.bounds)
     }
 
@@ -195,6 +242,14 @@ enum ProInkRenderer {
             intent: .defaultIntent
         )
     }()
+
+    /// 深色底上把近黑的墨水提亮（反相）。
+    static func displayColor(_ rgba: [UInt8], dark: Bool) -> [UInt8] {
+        guard dark, rgba.count == 4 else { return rgba }
+        let lum = (0.299 * Double(rgba[0]) + 0.587 * Double(rgba[1]) + 0.114 * Double(rgba[2])) / 255
+        guard lum < 0.35 else { return rgba }
+        return [255 - rgba[0], 255 - rgba[1], 255 - rgba[2], rgba[3]]
+    }
 
     /// 把一筆畫的筆點畫進 `ctx`，只畫碰得到 `clip` 的那些。
     static func draw(_ cached: Cached, toolName: String = "", color rgba: [UInt8], in ctx: CGContext, clip: CGRect) {
@@ -293,7 +348,12 @@ final class ProInkLayerView: UIView {
         NotificationCenter.default.addObserver(
             self, selector: #selector(diskChanged(_:)),
             name: .kairumoProInkChangedOnDisk, object: nil)
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(draftingChanged), name: .kairumoDraftingChanged, object: nil)
     }
+
+    /// 圖層顯示／鎖定改了：整層重畫（只是不畫某些筆畫，筆點快取不必清）。
+    @objc private func draftingChanged() { setNeedsDisplay() }
 
     @objc private func diskChanged(_ note: Notification) {
         guard let id = note.userInfo?["notebookId"] as? String,
@@ -332,9 +392,18 @@ final class ProInkLayerView: UIView {
 
     // MARK: 繪製
 
+    /// 深色模式下頁面是深色的：近黑的墨水（製圖的「頂」「底」層）會看不見，
+    /// 就像 PencilKit 會把深色墨水在深色模式反相，這裡也把近黑的色提亮。
+    /// 只影響畫面與縮圖；存檔與匯出仍是原色（匯出的紙是白的）。
+    private func displayColor(_ rgba: [UInt8]) -> [UInt8] {
+        ProInkRenderer.displayColor(rgba, dark: traitCollection.userInterfaceStyle == .dark)
+    }
+
     override func draw(_ rect: CGRect) {
         guard let ctx = UIGraphicsGetCurrentContext() else { return }
-        for stroke in allStrokes where stroke.bounds.intersects(rect) {
+        let drafting = DraftingState.shared
+        let ordered = drafting.drawOrder(allStrokes, notebookId: notebookId)
+        for stroke in ordered where stroke.bounds.intersects(rect) {
             guard let cached = cachedDabs(for: stroke) else { continue }
             ctx.saveGState()
             if stroke.blendMode == "multiply" {
@@ -344,7 +413,7 @@ final class ProInkLayerView: UIView {
             } else {
                 ctx.setBlendMode(.normal)
             }
-            ProInkRenderer.draw(cached, toolName: stroke.tool, color: stroke.colorRGBA, in: ctx, clip: rect)
+            ProInkRenderer.draw(cached, toolName: stroke.tool, color: displayColor(stroke.colorRGBA), in: ctx, clip: rect)
             ctx.restoreGState()
         }
         if let live, let liveCache {
@@ -356,7 +425,7 @@ final class ProInkLayerView: UIView {
             } else {
                 ctx.setBlendMode(.normal)
             }
-            ProInkRenderer.draw(liveCache, toolName: live.tool, color: live.colorRGBA, in: ctx, clip: rect)
+            ProInkRenderer.draw(liveCache, toolName: live.tool, color: displayColor(live.colorRGBA), in: ctx, clip: rect)
             ctx.restoreGState()
         }
     }
@@ -370,24 +439,91 @@ final class ProInkLayerView: UIView {
 
     // MARK: 畫一筆
 
-    func beginStroke(tool: ToolKind, color: [UInt8], width: Float, at point: ProPoint) {
+    func beginStroke(tool: ToolKind, color: [UInt8], width: Float, at point: ProPoint,
+                     layer: UInt8 = 0, lineType: UInt8 = 0) {
         guard let name = ProInk.name(of: tool) else { return }
-        live = ProStroke(tool: name, colorRGBA: color, baseWidth: width, points: [point])
+        live = ProStroke(tool: name, colorRGBA: color, baseWidth: width, points: [point],
+                         layer: layer == 0 ? nil : layer, lineType: lineType == 0 ? nil : lineType)
+        snapState = nil
         refreshLive(dirtyAround: [point])
     }
 
     func extendStroke(with points: [ProPoint]) {
         guard var stroke = live, !points.isEmpty else { return }
+        // 吸附之後：直線跟著手指的終點走（角度鎖定照樣生效）；其他圖形定型，不再變。
+        if let snap = snapState {
+            guard snap.kind == .line, let end = points.last else { return }
+            let area = stroke.bounds
+            let (dx, dy) = Self.snapped(dx: end.x - snap.origin.x, dy: end.y - snap.origin.y, step: snap.angleStep)
+            stroke.points = Self.lineSamples(from: snap.origin, toX: snap.origin.x + dx, y: snap.origin.y + dy, count: snap.count)
+            live = stroke
+            setNeedsDisplay(area.union(stroke.bounds))
+            liveCache = ProInkRenderer.cache(for: stroke)
+            return
+        }
         stroke.points.append(contentsOf: points)
         live = stroke
         refreshLive(dirtyAround: points)
+    }
+
+    // MARK: 長按吸附
+
+    private struct SnapState {
+        var kind: FfiDraftSnapKind
+        var origin: ProPoint
+        var angleStep: Float
+        var count: Int
+    }
+    private var snapState: SnapState?
+    var isSnapped: Bool { snapState != nil }
+
+    /// 把正在畫的這一筆釘成直線／圓／矩形／三角形／鎖角度的折線。回傳有沒有吸附成功。
+    @discardableResult
+    func snapLiveStroke(angleStep: Float) -> FfiDraftSnapKind? {
+        guard var stroke = live, snapState == nil, stroke.points.count >= 3 else { return nil }
+        let input = stroke.points.map { FfiPoint(x: $0.x, y: $0.y) }
+        let result = draftSnapStroke(points: input, angleStepDeg: angleStep)
+        guard result.kind != .none, result.points.count == stroke.points.count else { return nil }
+        let area = stroke.bounds
+        for (i, p) in result.points.enumerated() {
+            stroke.points[i].x = p.x
+            stroke.points[i].y = p.y
+        }
+        live = stroke
+        snapState = SnapState(kind: result.kind, origin: stroke.points[0], angleStep: angleStep,
+                              count: stroke.points.count)
+        liveCache = ProInkRenderer.cache(for: stroke)
+        setNeedsDisplay(area.union(stroke.bounds))
+        return result.kind
+    }
+
+    private static func snapped(dx: Float, dy: Float, step: Float) -> (Float, Float) {
+        guard step > 0 else { return (dx, dy) }
+        let len = hypot(dx, dy)
+        guard len > 0.0001 else { return (dx, dy) }
+        let unit = step * .pi / 180
+        let a = (atan2(dy, dx) / unit).rounded() * unit
+        let c = cos(a), s = sin(a)
+        return (abs(c) < 1e-6 ? 0 : c * len, abs(s) < 1e-6 ? 0 : s * len)
+    }
+
+    private static func lineSamples(from o: ProPoint, toX x: Float, y: Float, count: Int) -> [ProPoint] {
+        let n = max(count, 2)
+        return (0..<n).map { i in
+            let t = Float(i) / Float(n - 1)
+            var p = o
+            p.x = o.x + (x - o.x) * t
+            p.y = o.y + (y - o.y) * t
+            return p
+        }
     }
 
     func endStroke() {
         guard var stroke = live else { return }
         live = nil
         liveCache = nil
-        if stroke.points.count >= 3 {
+        // 製圖線要的是等寬、不收尖、不圓角：不做平滑。
+        if stroke.points.count >= 3, stroke.layerId == 0, stroke.lineTypeId == 0 {
             let pts = stroke.points.map {
                 StrokePoint(x: $0.x, y: $0.y, pressure: $0.pressure, tilt: $0.tilt, azimuth: $0.azimuth, dtUs: $0.dtUs, roll: $0.roll)
             }
@@ -396,6 +532,7 @@ final class ProInkLayerView: UIView {
                 ProPoint(x: $0.x, y: $0.y, pressure: $0.pressure, tilt: $0.tilt, azimuth: $0.azimuth, dtUs: $0.dtUs, roll: $0.roll)
             }
         }
+        snapState = nil
         ownStrokes.append(stroke)
         setNeedsDisplay(stroke.bounds)
         persist()
@@ -404,6 +541,7 @@ final class ProInkLayerView: UIView {
 
     func cancelStroke() {
         let area = live?.bounds
+        snapState = nil
         live = nil
         liveCache = nil
         if let area { setNeedsDisplay(area) }
@@ -427,7 +565,9 @@ final class ProInkLayerView: UIView {
     func erase(along path: [CGPoint], radius: CGFloat) -> Int {
         guard !path.isEmpty else { return 0 }
         var hit: [ProStroke] = []
-        for stroke in ownStrokes where touches(stroke, path: path, radius: radius) {
+        let drafting = DraftingState.shared
+        for stroke in ownStrokes
+        where drafting.canEdit(layer: stroke.layerId, notebookId: notebookId) && touches(stroke, path: path, radius: radius) {
             hit.append(stroke)
         }
         guard !hit.isEmpty else { return 0 }
@@ -446,6 +586,190 @@ final class ProInkLayerView: UIView {
             for q in path where hypot(CGFloat(p.x) - q.x, CGFloat(p.y) - q.y) <= reach { return true }
         }
         return false
+    }
+
+    // MARK: 一次插入一組筆畫（立體輔助的三視圖、步驟編號標記）
+
+    /// 把核心排好的製圖線插進這一頁，原點偏移 `origin`。整組是**一次復原**。
+    ///
+    /// 線都是兩點的直線時補點到每 4 個頁面單位一點：虛線與點畫線的間隔由筆點陣挖出來，
+    /// 點太稀的話間隔會跟著失準。
+    @discardableResult
+    func insertDrafted(_ items: [FfiSheetStroke], origin: CGPoint) -> [ProStroke] {
+        let made = items.compactMap { ProStroke(drafted: $0, origin: origin) }
+        guard !made.isEmpty else { return [] }
+        ownStrokes.append(contentsOf: made)
+        for s in made { setNeedsDisplay(s.bounds) }
+        persist()
+        registerGroupUndo(inserting: made)
+        return made
+    }
+
+    private func registerGroupUndo(inserting strokes: [ProStroke]) {
+        guard let manager = undoManagerProvider?() else { return }
+        let ids = Set(strokes.map(\.id))
+        manager.registerUndo(withTarget: self) { layer in
+            layer.ownStrokes.removeAll { ids.contains($0.id) }
+            for s in strokes { layer.setNeedsDisplay(s.bounds) }
+            layer.persist()
+            layer.registerGroupRedo(restoring: strokes)
+        }
+    }
+
+    private func registerGroupRedo(restoring strokes: [ProStroke]) {
+        guard let manager = undoManagerProvider?() else { return }
+        manager.registerUndo(withTarget: self) { layer in
+            layer.ownStrokes.append(contentsOf: strokes)
+            for s in strokes { layer.setNeedsDisplay(s.bounds) }
+            layer.persist()
+            layer.registerGroupUndo(inserting: strokes)
+        }
+    }
+
+    /// 頁面上所有筆畫的點（立體輔助從裡面找封閉輪廓）。
+    ///
+    /// 中層（輔助線與步驟編號）不算：步驟編號是一個個小圓圈，會被當成最小的封閉圖形。
+    var sketchPolylines: [[CGPoint]] {
+        allStrokes.filter { $0.layerId != 2 }
+            .map { $0.points.map { CGPoint(x: CGFloat($0.x), y: CGFloat($0.y)) } }
+    }
+
+    // MARK: 套索（製圖線都是專業筆畫，套索要能選、搬、刪、複製）
+
+    /// 完全被多邊形圈住、而且圖層動得了（沒隱藏沒鎖定）的自己的筆畫。
+    func strokeIds(enclosedBy polygon: [Float]) -> Set<String> {
+        let drafting = DraftingState.shared
+        var ids = Set<String>()
+        for s in ownStrokes where drafting.canEdit(layer: s.layerId, notebookId: notebookId) {
+            let flat = s.points.flatMap { [$0.x, $0.y] }
+            if lassoEncloses(polygon: polygon, points: flat) { ids.insert(s.id) }
+        }
+        return ids
+    }
+
+    private var moveIds: Set<String> = []
+    private var moveTotal = CGSize.zero
+
+    /// 拖曳搬移：過程中只改記憶體與畫面，放手（`endMove`）才存檔、登記一次復原。
+    func move(ids: Set<String>, by delta: CGSize) {
+        moveIds = ids
+        moveTotal.width += delta.width
+        moveTotal.height += delta.height
+        for i in ownStrokes.indices where ids.contains(ownStrokes[i].id) {
+            setNeedsDisplay(ownStrokes[i].bounds)
+            for k in ownStrokes[i].points.indices {
+                ownStrokes[i].points[k].x += Float(delta.width)
+                ownStrokes[i].points[k].y += Float(delta.height)
+            }
+            cache[ownStrokes[i].id] = nil
+            setNeedsDisplay(ownStrokes[i].bounds)
+        }
+    }
+
+    func endMove() {
+        guard !moveIds.isEmpty else { return }
+        let ids = moveIds, total = moveTotal
+        moveIds = []
+        moveTotal = .zero
+        persist()
+        setNeedsDisplay()   // 拖曳途中的局部重畫可能殘留舊位置的像素，放手時整層重畫一次
+        registerMoveUndo(ids: ids, delta: total)
+    }
+
+    private func registerMoveUndo(ids: Set<String>, delta: CGSize) {
+        guard let manager = undoManagerProvider?() else { return }
+        manager.registerUndo(withTarget: self) { layer in
+            layer.move(ids: ids, by: CGSize(width: -delta.width, height: -delta.height))
+            layer.moveIds = []
+            layer.moveTotal = .zero
+            layer.persist()
+            layer.registerMoveUndo(ids: ids, delta: CGSize(width: -delta.width, height: -delta.height))
+        }
+    }
+
+    func delete(ids: Set<String>) {
+        let hit = ownStrokes.filter { ids.contains($0.id) }
+        guard !hit.isEmpty else { return }
+        ownStrokes.removeAll { ids.contains($0.id) }
+        for s in hit { setNeedsDisplay(s.bounds) }
+        persist()
+        registerUndo(restoring: hit)
+    }
+
+    func strokes(ids: Set<String>) -> [ProStroke] { ownStrokes.filter { ids.contains($0.id) } }
+
+    /// 把一組筆畫（新 id）偏移後加進這一頁，一次復原。回傳新筆畫的 id。
+    @discardableResult
+    func add(copies: [ProStroke], offset: CGSize) -> Set<String> {
+        let made: [ProStroke] = copies.map {
+            var c = $0
+            c.id = UUID().uuidString
+            for k in c.points.indices {
+                c.points[k].x += Float(offset.width)
+                c.points[k].y += Float(offset.height)
+            }
+            return c
+        }
+        guard !made.isEmpty else { return [] }
+        ownStrokes.append(contentsOf: made)
+        for s in made { setNeedsDisplay(s.bounds) }
+        persist()
+        registerGroupUndo(inserting: made)
+        return Set(made.map(\.id))
+    }
+
+    // MARK: 改圖層
+
+    /// 把離 `point` 最近的一筆（鎖定／隱藏的圖層除外）改到 `layer`，線型與顏色不動。
+    /// 回傳有沒有改到。可復原。
+    @discardableResult
+    func reassignLayer(near point: CGPoint, to layer: UInt8, radius: CGFloat = 14) -> Bool {
+        let drafting = DraftingState.shared
+        var best: (index: Int, distance: CGFloat)?
+        for (i, stroke) in ownStrokes.enumerated()
+        where drafting.canEdit(layer: stroke.layerId, notebookId: notebookId) {
+            guard stroke.bounds.insetBy(dx: -radius, dy: -radius).contains(point) else { continue }
+            let reach = radius + CGFloat(stroke.baseWidth) * 0.5
+            // 點到線段的距離（不是取樣點）：吸附出來的直線取樣點很少。
+            var nearest = CGFloat.greatestFiniteMagnitude
+            let pts = stroke.points
+            if pts.count == 1 {
+                nearest = hypot(CGFloat(pts[0].x) - point.x, CGFloat(pts[0].y) - point.y)
+            }
+            for i in 0..<max(0, pts.count - 1) {
+                nearest = min(nearest, Self.distance(from: point, toSegment: pts[i], pts[i + 1]))
+            }
+            if nearest <= reach, nearest < (best?.distance ?? .greatestFiniteMagnitude) { best = (i, nearest) }
+        }
+        guard let best else { return false }
+        let before = ownStrokes[best.index]
+        guard before.layerId != layer else { return true }
+        setLayer(layer, ofStroke: before.id)
+        registerLayerUndo(strokeId: before.id, previous: before.layerId)
+        return true
+    }
+
+    private static func distance(from p: CGPoint, toSegment a: ProPoint, _ b: ProPoint) -> CGFloat {
+        let ax = CGFloat(a.x), ay = CGFloat(a.y), dx = CGFloat(b.x) - ax, dy = CGFloat(b.y) - ay
+        let len2 = dx * dx + dy * dy
+        let t = len2 < 1e-6 ? 0 : max(0, min(1, ((p.x - ax) * dx + (p.y - ay) * dy) / len2))
+        return hypot(p.x - (ax + dx * t), p.y - (ay + dy * t))
+    }
+
+    private func setLayer(_ layer: UInt8, ofStroke id: String) {
+        guard let i = ownStrokes.firstIndex(where: { $0.id == id }) else { return }
+        ownStrokes[i].layer = layer == 0 ? nil : layer
+        setNeedsDisplay(ownStrokes[i].bounds)
+        persist()
+    }
+
+    private func registerLayerUndo(strokeId: String, previous: UInt8) {
+        guard let manager = undoManagerProvider?() else { return }
+        manager.registerUndo(withTarget: self) { view in
+            let current = view.ownStrokes.first(where: { $0.id == strokeId })?.layerId ?? 0
+            view.setLayer(previous, ofStroke: strokeId)
+            view.registerLayerUndo(strokeId: strokeId, previous: current)
+        }
     }
 
     // MARK: 復原／重做
@@ -485,7 +809,7 @@ private extension CGRect {
 ///
 /// 兩指以上一律放手給捲動與縮放 —— 看到第二根手指就取消目前這一筆。
 final class ProStrokeGestureRecognizer: UIGestureRecognizer {
-    enum Mode { case draw, erase }
+    enum Mode { case draw, erase, reassign, marker }
 
     var mode: Mode = .draw
     /// 手指是否能畫。政策是 `.pencilOnly` 時只收 Apple Pencil。
@@ -495,6 +819,22 @@ final class ProStrokeGestureRecognizer: UIGestureRecognizer {
     var color: () -> [UInt8] = { [0, 0, 0, 255] }
     var width: () -> Float = { 4 }
     var eraserRadius: () -> CGFloat = { 10 }
+    /// 製圖：這一筆要寫進的圖層與線型。一般筆刷都是 0。
+    var drawLayer: () -> UInt8 = { 0 }
+    var drawLineType: () -> UInt8 = { 0 }
+    /// 長按吸附：回傳角度鎖定（度，0 = 不鎖）；`nil` = 沒開吸附。
+    var snapStep: () -> Float? = { nil }
+    /// 改圖層模式要改到哪一層。
+    var reassignTarget: () -> UInt8 = { 0 }
+    /// 步驟編號模式：點哪裡，通知哪裡（頁面座標）。
+    var onMarker: ((CGPoint) -> Void)?
+    /// 吸附成功時通知（給觸覺回饋與提示）。
+    var onSnapped: ((FfiDraftSnapKind) -> Void)?
+
+    private var holdTimer: Timer?
+    private var holdAnchor: CGPoint = .zero
+    private static let holdDelay: TimeInterval = 0.55
+    private static let holdSlop: CGFloat = 4
 
     private var tracked: UITouch?
     private var lastTimestamp: TimeInterval = 0
@@ -528,10 +868,14 @@ final class ProStrokeGestureRecognizer: UIGestureRecognizer {
         switch mode {
         case .draw:
             guard let tool = tool() else { state = .failed; return }
-            layerView.beginStroke(tool: tool, color: color(), width: width(), at: point)
+            beginDrawing(tool: tool, at: point, in: layerView)
         case .erase:
             erasePath = [CGPoint(x: CGFloat(point.x), y: CGFloat(point.y))]
             layerView.erase(along: erasePath, radius: eraserRadius())
+        case .reassign:
+            layerView.reassignLayer(near: CGPoint(x: CGFloat(point.x), y: CGFloat(point.y)), to: reassignTarget())
+        case .marker:
+            onMarker?(CGPoint(x: CGFloat(point.x), y: CGFloat(point.y)))
         }
     }
 
@@ -542,7 +886,7 @@ final class ProStrokeGestureRecognizer: UIGestureRecognizer {
             let moved = hypot(here.x - pending.location.x, here.y - pending.location.y)
             guard moved >= EditorCanvasInputPolicy.pencilTapMaxDistance / 2 else { return }
             guard let tool = tool() else { pendingBegin = nil; state = .failed; return }
-            layerView.beginStroke(tool: tool, color: color(), width: width(), at: pending.point)
+            beginDrawing(tool: tool, at: pending.point, in: layerView)
             pendingBegin = nil
             state = .began
         }
@@ -557,10 +901,13 @@ final class ProStrokeGestureRecognizer: UIGestureRecognizer {
         switch mode {
         case .draw:
             layerView.extendStroke(with: points)
+            if let last = points.last { rearmHold(at: CGPoint(x: CGFloat(last.x), y: CGFloat(last.y))) }
         case .erase:
             let path = points.map { CGPoint(x: CGFloat($0.x), y: CGFloat($0.y)) }
             erasePath.append(contentsOf: path)
             layerView.erase(along: path, radius: eraserRadius())
+        case .reassign, .marker:
+            break
         }
         state = .changed
     }
@@ -574,6 +921,7 @@ final class ProStrokeGestureRecognizer: UIGestureRecognizer {
             state = .failed
             return
         }
+        holdTimer?.invalidate()
         if mode == .draw { layerView?.endStroke() }
         tracked = nil
         erasePath = []
@@ -593,15 +941,49 @@ final class ProStrokeGestureRecognizer: UIGestureRecognizer {
     }
 
     override func reset() {
+        holdTimer?.invalidate()
         tracked = nil
         erasePath = []
         pendingBegin = nil
     }
 
     private func cancelCurrent() {
+        holdTimer?.invalidate()
         if mode == .draw { layerView?.cancelStroke() }
         tracked = nil
         erasePath = []
+    }
+
+    /// 開始一筆：帶上目前的圖層與線型；圖層被鎖住就不畫（畫了也看不到）。
+    private func beginDrawing(tool: ToolKind, at point: ProPoint, in layerView: ProInkLayerView) {
+        let layer = drawLayer()
+        let drafting = DraftingState.shared
+        if layer != 0 {
+            if drafting.isLocked(layer: layer, notebookId: layerView.notebookId) {
+                UINotificationFeedbackGenerator().notificationOccurred(.warning)
+                return
+            }
+            // 畫在隱藏的圖層上：自動把它顯示出來，不然使用者畫了卻什麼都沒有。
+            drafting.ensureVisible(layer: layer, notebookId: layerView.notebookId)
+        }
+        layerView.beginStroke(tool: tool, color: color(), width: width(), at: point,
+                              layer: layer, lineType: drawLineType())
+        rearmHold(at: CGPoint(x: CGFloat(point.x), y: CGFloat(point.y)))
+    }
+
+    /// 手停住不動 0.55 秒就吸附；一動就重新計時。
+    private func rearmHold(at location: CGPoint) {
+        guard snapStep() != nil, layerView?.isSnapped == false else { return }
+        if hypot(location.x - holdAnchor.x, location.y - holdAnchor.y) < Self.holdSlop, holdTimer?.isValid == true { return }
+        holdAnchor = location
+        holdTimer?.invalidate()
+        holdTimer = Timer.scheduledTimer(withTimeInterval: Self.holdDelay, repeats: false) { [weak self] _ in
+            guard let self, let step = self.snapStep(), let view = self.layerView else { return }
+            if let kind = view.snapLiveStroke(angleStep: step) {
+                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                self.onSnapped?(kind)
+            }
+        }
     }
 
     private func makePoint(_ touch: UITouch, in view: UIView, dt: UInt32) -> ProPoint {

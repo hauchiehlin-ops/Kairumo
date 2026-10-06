@@ -307,6 +307,7 @@ pub struct FfiIconShape {
 }
 
 /// 圖示的座標系邊長（`viewBox="0 0 48 48"`）。
+#[cfg(test)]
 pub const ICON_VIEWBOX: f32 = 48.0;
 
 /// 圖示的 SVG 原始碼。沒有對應圖示的工具回空字串。
@@ -340,6 +341,7 @@ fn icon_source(tool: FfiTool) -> Option<&'static str> {
         FfiTool::Eraser => svg!("eraser"),
         FfiTool::Lasso => svg!("lasso"),
         FfiTool::MaskingTape => svg!("maskingtape"),
+        FfiTool::Drafting => svg!("drafting"),
         _ => return None,
     })
 }

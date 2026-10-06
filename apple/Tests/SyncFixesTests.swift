@@ -288,6 +288,87 @@ final class RecordingTitleInPackageTests: XCTestCase {
         XCTAssertGreaterThan(inbox?.lastModifiedDate ?? Date.distantPast, Date(timeIntervalSince1970: 1))
     }
 
+    private func exportInputs(titles: [String: String], document: NotebookDocument) throws
+        -> NotebookSyncCoordinator.ExportInputs
+    {
+        let baseline = workDir.appendingPathComponent("baseline", isDirectory: true)
+        try FileManager.default.createDirectory(at: baseline, withIntermediateDirectories: true)
+        return NotebookSyncCoordinator.ExportInputs(
+            document: document,
+            package: workDir.appendingPathComponent("sync.padnote"),
+            baselineDirectory: baseline,
+            attachmentsDirectory: workDir,
+            drawingsDirectory: workDir,
+            deviceId: deviceA,
+            loadDrawing: { _, _ in PKDrawing() },
+            recordingTitles: titles)
+    }
+
+    /// 實際同步走的是 `exportOne`，不是直接呼叫橋接層：它漏傳名字的時候，
+    /// 橋接層的測試全綠，而別台永遠只看得到預設名稱。
+    func testTheSyncExportWritesRecordingTitlesIntoThePackage() throws {
+        let inputs = try exportInputs(titles: ["a.opus": "週會紀錄"], document: doc())
+        _ = try NotebookSyncCoordinator.exportOne(inputs)
+        let imported = try NotebookPackageBridge.importDocument(
+            fromPackageAt: inputs.package, deviceId: deviceB)
+        XCTAssertEqual(imported.recordingTitles["a.opus"], "週會紀錄")
+    }
+
+    func testANewOrRenamedTitleForcesAnExportEvenWhenThePackageLooksNewer() throws {
+        let first = try exportInputs(titles: ["a.opus": "T0"], document: doc())
+        _ = try NotebookSyncCoordinator.exportOne(first)
+        XCTAssertFalse(NotebookSyncCoordinator.workingCopyNeedsExport(first),
+                       "名字都已經在套件裡，不該白匯出")
+        let renamed = try exportInputs(titles: ["a.opus": "T1"], document: doc())
+        XCTAssertTrue(NotebookSyncCoordinator.workingCopyNeedsExport(renamed),
+                      "改名之後套件的檔案時間較新，仍然要匯出")
+        let added = try exportInputs(titles: ["a.opus": "T0", "b.opus": "新錄的"], document: doc())
+        XCTAssertTrue(NotebookSyncCoordinator.workingCopyNeedsExport(added))
+    }
+
+    /// 移動／縮放膠帶只改物件：套件的檔案時間比文件新時，原本會被判成不必匯出，
+    /// 下一次匯入就把舊位置蓋回來。
+    func testMovingATapeForcesAnExportEvenWhenThePackageLooksNewer() throws {
+        var book = doc()
+        book.tapeAttachments = [NoteTapeAttachment(
+            id: "11111111-1111-1111-1111-111111111111", pageIndex: 0,
+            rect: CGRect(x: 10, y: 10, width: 100, height: 32))]
+        let first = try exportInputs(titles: [:], document: book)
+        _ = try NotebookSyncCoordinator.exportOne(first)
+        XCTAssertFalse(NotebookSyncCoordinator.workingCopyNeedsExport(first), "沒改就不該白匯出")
+
+        var moved = book
+        moved.tapeAttachments?[0].rect = CGRect(x: 80, y: 200, width: 160, height: 32)
+        moved.lastModifiedDate = Date(timeIntervalSince1970: 0)  // 比套件舊：只看檔案時間會判成不必匯出
+        let after = try exportInputs(titles: [:], document: moved)
+        XCTAssertTrue(NotebookSyncCoordinator.workingCopyNeedsExport(after))
+    }
+
+    /// Android 寫過物件寫法的 `rect`，Apple 原本整筆解不開；兩種寫法都要讀得出真正的位置與大小。
+    func testTapeRectDecodesFromAppleArrayAndFromObjectForms() throws {
+        let decoder = JSONDecoder()
+        let apple = Data(##"{"id":"a","pageIndex":1,"rect":[[10,20],[100,30]],"isRevealed":true,"colorHex":"#FFD1DC"}"##.utf8)
+        let a = try decoder.decode(NoteTapeAttachment.self, from: apple)
+        XCTAssertEqual(a.rect, CGRect(x: 10, y: 20, width: 100, height: 30))
+        let object = Data(#"{"id":"b","pageIndex":0,"rect":{"origin":{"x":5,"y":6},"size":{"width":70,"height":32}}}"#.utf8)
+        let b = try decoder.decode(NoteTapeAttachment.self, from: object)
+        XCTAssertEqual(b.rect, CGRect(x: 5, y: 6, width: 70, height: 32))
+        // 來回編碼仍是 Apple 的寫法。
+        let again = try decoder.decode(NoteTapeAttachment.self, from: try JSONEncoder().encode(a))
+        XCTAssertEqual(again, a)
+    }
+
+    func testAddingARecordingMarksItsNotebookModified() {
+        let store = isolatedNotebookStore()
+        var book = NotebookDocument(title: "N", pageCount: 1)
+        book.lastModifiedDate = Date(timeIntervalSince1970: 0)
+        store.notebooks = [book]
+        store.addRecording(
+            title: "新錄音", durationSeconds: 3, fileName: "n.opus",
+            linkedNotebookId: book.id.uppercased())
+        XCTAssertGreaterThan(store.notebooks[0].lastModifiedDate, Date(timeIntervalSince1970: 1))
+    }
+
     func testApplyRecordingTitlesUpdatesBothRecordingsAndCanvasCards() {
         let store = isolatedNotebookStore()
         store.recordings = [
@@ -309,3 +390,46 @@ final class RecordingTitleInPackageTests: XCTestCase {
     }
 }
 
+/// 預載的《Kairumo手冊》：全部是手繪筆畫。資源（與 Android 同一份）要真的在 bundle 裡、
+/// 解得出來，每一頁都有夠多的筆畫，而且填進筆記本之後沒有任何文字、形狀、圖片物件。
+@MainActor
+final class KairumoManualSeedTests: XCTestCase {
+
+    func testTheInkResourceIsBundledAndHasFourPagesOfStrokes() {
+        let drawings = SeedContent.kairumoManualDrawings()
+        XCTAssertEqual(drawings.count, 4, "手冊資源沒有進 bundle 或解不開")
+        for (index, drawing) in drawings.enumerated() {
+            XCTAssertGreaterThan(drawing.strokes.count, 100, "第 \(index + 1) 頁的筆畫太少")
+        }
+    }
+
+    func testTheManualIsInkOnlyAndUsesDifferentColoursPerSection() {
+        var doc = NotebookDocument(id: SeedContent.kairumoManualId, title: SeedContent.kairumoManualTitle, pageCount: 4)
+        SeedContent.fillKairumoManual(&doc)
+        XCTAssertEqual(doc.pageCount, 4)
+        XCTAssertTrue((doc.textAttachments ?? []).isEmpty)
+        XCTAssertTrue((doc.shapeAttachments ?? []).isEmpty)
+        XCTAssertTrue((doc.attachments ?? []).isEmpty)
+        XCTAssertTrue((doc.tableAttachments ?? []).isEmpty)
+        let colours = Set(SeedContent.kairumoManualDrawings().flatMap { $0.strokes }.map { stroke -> String in
+            var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+            stroke.ink.color.getRed(&r, green: &g, blue: &b, alpha: &a)
+            return String(format: "%02x%02x%02x", Int(r * 255), Int(g * 255), Int(b * 255))
+        })
+        XCTAssertGreaterThanOrEqual(colours.count, 5, "每個段落要有自己的顏色")
+    }
+
+    func testTheStrokeDataLicenceTravelsWithTheApp() {
+        // 筆順資料來自 Arphic 字型（Arphic Public License）：授權全文要隨 App 一起散布。
+        for name in ["ARPHICPL", "NOTICE", "OFL-NotoSansThai"] {
+            let ext = name == "ARPHICPL" ? "TXT" : "txt"
+            let url = Bundle.main.url(forResource: name, withExtension: ext, subdirectory: "Templates")
+                ?? Bundle.main.url(forResource: name, withExtension: ext)
+            XCTAssertNotNil(url, "\(name).\(ext) 沒有進 bundle")
+        }
+    }
+
+    func testTheNameIsFixed() {
+        XCTAssertEqual(SeedContent.kairumoManualTitle, "Kairumo手冊")
+    }
+}

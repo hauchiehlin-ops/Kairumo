@@ -163,6 +163,8 @@ import com.kairumo.padnote.library.RenameNotebookDialog
 import com.kairumo.padnote.library.DeleteNotebookDialog
 import com.kairumo.padnote.library.NotebookLibrary
 import com.kairumo.padnote.library.FolderTree
+import com.kairumo.padnote.library.RecordingTitles
+import com.kairumo.padnote.sync.AutoSync
 import com.kairumo.padnote.library.RecordingIndex
 import com.kairumo.padnote.library.InsertRecordingDialog
 import com.kairumo.padnote.library.SeedNotebooks
@@ -233,6 +235,7 @@ import com.kairumo.padnote.model3d.Model3DStudio
 import com.kairumo.padnote.theme.CompositionOverlay
 import com.kairumo.padnote.theme.ThemeToolsSheet
 import com.kairumo.padnote.ink.InkTool
+import com.kairumo.padnote.ink.DraftingState
 import com.kairumo.padnote.ink.inkToolShortcutOrder
 import com.kairumo.padnote.ink.InkToolbar
 import com.kairumo.padnote.ink.InkLatencyMeter
@@ -429,6 +432,7 @@ private fun NotebookHome(
     var homeAssets by remember { mutableStateOf(false) }
     var homeDocs by remember { mutableStateOf<String?>(null) }
     var insertingRecording by remember { mutableStateOf<RecordingIndex.Recording?>(null) }
+    var renamingRecording by remember { mutableStateOf<RecordingIndex.Recording?>(null) }
     val syncFolderPicker = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocumentTree()
     ) { uri ->
@@ -697,6 +701,7 @@ private fun NotebookHome(
             onOpenManual = { homeDocs = "manual/index.html" },
             onOpenPrivacy = { homeDocs = "legal/privacy.html" },
             onInsertRecording = { insertingRecording = it },
+            onRenameRecording = { renamingRecording = it },
             onRenameRootFolder = {
                 // 人在某個資料夾裡就是改那一個；在最上層就是改最上層的顯示名稱。
                 val here = breadcrumb.lastOrNull()
@@ -762,6 +767,25 @@ private fun NotebookHome(
                 }
             }
         }
+    }
+
+    renamingRecording?.let { rec ->
+        FolderNameDialog(
+            title = l("rename_audio_card"),
+            initial = rec.displayTitle,
+            l = ::l,
+            onDismiss = { renamingRecording = null },
+            onConfirm = { title ->
+                renamingRecording = null
+                if (title.isNotBlank() &&
+                    RecordingTitles.write(activity, rec.notebookId, device, rec.file.name, title)
+                ) {
+                    // 名字寫進套件了，叫同步去推（與別的本機編輯同一條路）。
+                    AutoSync.noteLocalEdit(activity)
+                    revision++
+                }
+            }
+        )
     }
 
     insertingRecording?.let { rec ->
@@ -922,6 +946,17 @@ private fun NotebookHome(
                                 onClick = {
                                     activeSession?.let { s ->
                                         val us = homeAudio.stop(s)
+                                        // 使用者取的名字寫進套件，別台才看得到（原本輸入框的內容被丟掉了）。
+                                        val named = recTitle.trim()
+                                        val book = targetNoteId ?: NotebookLibrary.recordingInbox(
+                                            activity, device, l("recording_inbox"))
+                                        if (named.isNotEmpty() && book != null) {
+                                            RecordingTitles.newestAudio(activity, book)?.let {
+                                                if (RecordingTitles.write(s, it.name, named)) {
+                                                    AutoSync.noteLocalEdit(activity)
+                                                }
+                                            }
+                                        }
                                         message = l("recorded_duration").replace("%@", "${us / 1_000_000uL}")
                                         homeAudio.showAdviceOnce(deviceLanguageTag())
                                     }
@@ -1220,6 +1255,30 @@ private fun NotebookHome(
             onCreateEncrypted = {
                 creatingNotebook = false
                 creatingEncryptedNotebook = true
+            },
+            onCreateKit = { kit ->
+                creatingNotebook = false
+                var first: String? = null
+                for (nb in kit.notebooks) {
+                    val name = l(nb.titleKey)
+                    val style = DocumentTemplateCatalog.paperStyle(nb.paperId)
+                    val id = NotebookLibrary.create(
+                        activity, name, device, folderId, style = style, paperId = nb.paperId
+                    ) ?: continue
+                    NotebookLibrary.open(activity, id, device, name)?.let { (session, _) ->
+                        val meta = com.kairumo.padnote.library.NotebookMeta.load(session)
+                        if (nb.pageFormatId != uniffi.padnote_core.defaultPageFormatId()) {
+                            meta.setPageFormatId(session, nb.pageFormatId)
+                        }
+                        // 核心建立時已經有第一頁，只補其餘的頁數。
+                        repeat((nb.pageCount.toInt() - 1).coerceAtLeast(0)) {
+                            runCatching { session.addPage(style) }
+                        }
+                    }
+                    if (first == null) first = id
+                }
+                revision++
+                first?.let { onOpen(it) }
             },
             onConfirm = { title, templateId, kind, paperId, paperVariant, paletteId ->
                 creatingNotebook = false
@@ -2417,6 +2476,80 @@ private fun InkScreen(
     }
     var inkColorHex by remember { mutableStateOf("#000000") }
     var inkWidth by remember { mutableStateOf(3f) }
+
+    // 圖學：圖層顯示／鎖定逐本記；筆組、吸附與角度鎖定換了就同步到引擎。
+    // 離開圖學工具時要把引擎還原成一般筆刷（圖層 0、實線、顏色與筆寬回到使用者選的）。
+    LaunchedEffect(notebookId) {
+        DraftingState.attach(activity)
+        DraftingState.use(notebookId ?: "")
+    }
+    // 匯出／列印時略過這本筆記隱藏的圖層：PDF 與圖片要跟畫面上看到的一致。
+    LaunchedEffect(notebook, DraftingState.version) {
+        notebook?.first?.setExportHiddenLayers(DraftingState.hiddenLayers())
+    }
+    // 立體輔助與步驟編號。
+    var showSolidStudio by remember { mutableStateOf(false) }
+    LaunchedEffect(inkTool, DraftingState.markerMode) {
+        engine.onMarkerTap = if (inkTool.isDrafting && DraftingState.markerMode) { x, y ->
+            // 一次放一個「圈＋數字」，一次復原；放完編號加一。
+            val n = DraftingState.stepNumber
+            engine.insertDrafted(uniffi.padnote_core.draftStepMarker(n.toUInt(), x, y, 15f), 0f, 0f)
+            DraftingState.stepNumber = (n + 1).coerceAtMost(99)
+            revision++
+        } else null
+    }
+    // 畫布的縮放平移在後面才宣告；用一個普通物件帶過來（巨大的 InkScreen 裡跨宣告捕捉狀態會讓編譯器產出壞位元碼）。
+    val canvasInfo = remember { CanvasViewInfo() }
+    if (showSolidStudio) {
+        val density = LocalDensity.current.density
+        com.kairumo.padnote.ink.SolidStudioDialog(
+            languageTag = deviceLanguageTag(),
+            pageWidth = PageGeometry.width,
+            pageHeight = PageGeometry.height,
+            sketchPolylines = { engine.sketchPolylines() },
+            onInsert = { sheet ->
+                val placed = placeSolidSheet(engine, sheet, canvasInfo.viewport, canvasInfo.scale, canvasInfo.offset, density)
+                showSolidStudio = false
+                revision++
+                message = l10n("solid_place_hint")
+                // 插入後直接用套索選住它，使用者拖一下就能搬（與 Apple 一致）。
+                applyInkTool(InkTool.LASSO)
+                lasso.select(placed.first, placed.second)
+            },
+            onDismiss = { showSolidStudio = false }
+        )
+    }
+    // 製圖用的紙（三視圖、等角、作圖步驟…）一打開就選好「圖學」筆組。
+    LaunchedEffect(notebook) {
+        val session = notebook?.first ?: return@LaunchedEffect
+        val paper = com.kairumo.padnote.library.NotebookMeta.load(session).paperId(0)
+        if (uniffi.padnote_core.paperUsesDrafting(paper)) applyInkTool(InkTool.DRAFTING)
+    }
+    LaunchedEffect(
+        inkTool, DraftingState.activePenId, DraftingState.layerOverride,
+        DraftingState.snapEnabled, DraftingState.angleStep, DraftingState.reassignMode
+    ) {
+        if (inkTool.isDrafting) {
+            engine.layer = DraftingState.activeLayerId
+            engine.lineType = DraftingState.activeLineType
+            engine.colorRgba = hexToRgba(DraftingState.activeColorHex)
+            engine.baseWidth = DraftingState.activePen.width
+            engine.snapStepDeg = if (DraftingState.snapEnabled) DraftingState.angleStep.toFloat() else null
+            engine.reassignTarget = if (DraftingState.reassignMode) DraftingState.activeLayerId else null
+        } else {
+            engine.layer = 0
+            engine.lineType = 0
+            engine.colorRgba = hexToRgba(inkColorHex)
+            engine.baseWidth = inkWidth
+            engine.snapStepDeg = null
+            engine.reassignTarget = null
+        }
+    }
+    DisposableEffect(engine) {
+        engine.onSnapped = { view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK) }
+        onDispose { engine.onSnapped = null }
+    }
+
     var showStatus by remember { mutableStateOf(false) }
     /// 畫布上方那行輸入診斷（tool=/r=/p=/draw=/rej=/ges=）要不要顯示。
     ///
@@ -2481,6 +2614,9 @@ private fun InkScreen(
     var canvasScale by remember(pageId) { mutableFloatStateOf(1f) }
     var canvasOffset by remember(pageId) { mutableStateOf(Offset.Zero) }
     var canvasViewport by remember { mutableStateOf(Size.Zero) }
+    canvasInfo.viewport = canvasViewport
+    canvasInfo.scale = canvasScale
+    canvasInfo.offset = canvasOffset
     // 這一格畫面有多寬，決定側欄要並排還是覆蓋。**用實際寬度算**，
     // 不是查尺寸級別的表：摺疊機與分割視窗的寬度是連續變化的。
     val configuration = LocalConfiguration.current
@@ -2705,12 +2841,17 @@ private fun InkScreen(
                 val currentFormat = remember(meta) {
                     meta.pageFormatId().ifEmpty { uniffi.padnote_core.defaultPageFormatId() }
                 }
+                var customPageSize by remember { mutableStateOf(false) }
                 TextButton(
                     onClick = { formatMenu = true },
                     modifier = Modifier.testTag("editor.page_format")
                 ) {
+                    val fmt = uniffi.padnote_core.pageFormat(currentFormat)
                     Text(
-                        l10n(uniffi.padnote_core.pageFormat(currentFormat).titleKey),
+                        // 自訂尺寸直接顯示「寬×高」。
+                        if (uniffi.padnote_core.isCustomPageFormat(currentFormat)) {
+                            "${fmt.width.toInt()}×${fmt.height.toInt()}"
+                        } else l10n(fmt.titleKey),
                         style = MaterialTheme.typography.labelLarge
                     )
                 }
@@ -2727,6 +2868,61 @@ private fun InkScreen(
                             }
                         )
                     }
+                    // 大尺寸頁取代無限畫布：任意寬高（300–6000）。
+                    DropdownMenuItem(
+                        text = { Text(l10n("page_format_custom")) },
+                        trailingIcon = {
+                            if (uniffi.padnote_core.isCustomPageFormat(currentFormat)) Text("✓")
+                        },
+                        onClick = { formatMenu = false; customPageSize = true },
+                        modifier = Modifier.testTag("page_format.custom")
+                    )
+                }
+                if (customPageSize) {
+                    val current = uniffi.padnote_core.pageFormat(currentFormat)
+                    var wText by remember { mutableStateOf(current.width.toInt().toString()) }
+                    var hText by remember { mutableStateOf(current.height.toInt().toString()) }
+                    AlertDialog(
+                        onDismissRequest = { customPageSize = false },
+                        title = { Text(l10n("page_format_custom_title")) },
+                        text = {
+                            Column {
+                                Text(l10n("page_format_custom_hint"), style = MaterialTheme.typography.labelSmall)
+                                OutlinedTextField(
+                                    value = wText, onValueChange = { wText = it.filter(Char::isDigit) },
+                                    label = { Text(l10n("page_format_custom_width")) }, singleLine = true,
+                                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                                        keyboardType = androidx.compose.ui.text.input.KeyboardType.Number),
+                                    modifier = Modifier.testTag("page_format.custom.width")
+                                )
+                                OutlinedTextField(
+                                    value = hText, onValueChange = { hText = it.filter(Char::isDigit) },
+                                    label = { Text(l10n("page_format_custom_height")) }, singleLine = true,
+                                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                                        keyboardType = androidx.compose.ui.text.input.KeyboardType.Number),
+                                    modifier = Modifier.testTag("page_format.custom.height")
+                                )
+                            }
+                        },
+                        confirmButton = {
+                            TextButton(
+                                onClick = {
+                                    customPageSize = false
+                                    val id = uniffi.padnote_core.customPageFormatId(
+                                        (wText.toUIntOrNull() ?: current.width.toUInt()),
+                                        (hText.toUIntOrNull() ?: current.height.toUInt())
+                                    )
+                                    meta.setPageFormatId(notebook?.first, id)
+                                    com.kairumo.padnote.ink.PageGeometry.use(id)
+                                    revision++
+                                },
+                                modifier = Modifier.testTag("page_format.custom.apply")
+                            ) { Text(l10n("page_format_custom_apply")) }
+                        },
+                        dismissButton = {
+                            TextButton(onClick = { customPageSize = false }) { Text(l10n("cancel")) }
+                        }
+                    )
                 }
             }
 
@@ -4192,7 +4388,11 @@ private fun InkScreen(
             // `LowLatencyInkCanvas` 畫在 `SurfaceView` 上，而 SurfaceView 是
             // 另一層合成的表面 —— `graphicsLayer` 的縮放**對它無效**，
             // 結果是底下的頁面縮小了、筆跡還是原本大小，兩層對不起來。
-            if (lowLatency && !lowLatencyUnavailable && canvasScale == 1f) {
+            //
+            // 圖學筆畫也不能走低延遲路徑：它要依線型挖虛線、依圖層疊放與隱藏，
+            // 前緩衝的簡化繪製做不到。
+            val draftingInk = inkTool.isDrafting || engine.strokes.any { it.layer != 0 || it.lineType != 0 }
+            if (lowLatency && !lowLatencyUnavailable && canvasScale == 1f && !draftingInk) {
                 LowLatencyInkCanvas(
                     engine = engine,
                     latency = latency,
@@ -4218,7 +4418,9 @@ private fun InkScreen(
                 InkCanvas(
                     engine = engine,
                     modifier = Modifier.fillMaxSize().testTag("editor.canvas"),
-                    inkColor = runCatching {
+                    inkColor = if (inkTool.isDrafting) {
+                        DraftingState.parseHex(DraftingState.activeColorHex)
+                    } else runCatching {
                         Color(android.graphics.Color.parseColor(inkColorHex))
                     }.getOrDefault(Color.Black),
                     onInkChanged = {
@@ -4281,6 +4483,16 @@ private fun InkScreen(
                 }
             }
 
+            // 圖學：製圖筆組、圖層、吸附（見 DraftingBar.kt）。
+            if (inkTool.isDrafting && editorMode == EditorMode.DRAW) {
+                com.kairumo.padnote.ink.DraftingBar(
+                    languageTag = deviceLanguageTag(),
+                    onOpenSolidStudio = { showSolidStudio = true },
+                    // zIndex：頁面上的文字方塊等物件畫在後面，不加的話它們會蓋住工具列、吃掉點擊。
+                    modifier = Modifier.zIndex(10f).align(Alignment.TopCenter).padding(top = 12.dp, start = 8.dp, end = 8.dp)
+                )
+            }
+
             // 套索層疊在畫布上面。套索模式下它吃掉所有觸控，畫布完全收不到 ——
             // 不必在 InkEngine 裡加「現在是不是套索模式」的分支，而那種分支
             // 正是墨跡路徑最不該有的東西。
@@ -4306,6 +4518,11 @@ private fun InkScreen(
                         val meta = com.kairumo.padnote.library.NotebookMeta.load(session)
                         val otherPages = meta.tapes().filter { it.pageIndex != pageIndex }
                         meta.setTapes(session, otherPages + maskingTapes)
+                        pageId?.let {
+                            com.kairumo.padnote.canvas.NoteTapeCodec.writeEnvelopes(
+                                session, it, maskingTapes.filter { t -> t.pageIndex == pageIndex })
+                        }
+                        AutoSync.noteLocalEdit(activity)
                     }
                     revision++
                 },
@@ -4904,11 +5121,6 @@ private fun InkScreen(
             ) { inkBar() }
         }
         }
-        if (effectiveToolbarMode == EditorMode.DRAW &&
-            toolbarPlacement == uniffi.padnote_core.FfiPlacement.BOTTOM
-        ) {
-            inkBar()
-        }
 
         // 四個「按下去之後還要再做一個動作」的功能，第一次用時給一則提示
         // （使用者回報：不知道該怎麼操作）。內容與 id 都來自核心，
@@ -4922,6 +5134,15 @@ private fun InkScreen(
             activity, "hint.tabletop", isTabletopManual, deviceLanguageTag())
         com.kairumo.padnote.ui.FeatureHintHost(
             activity, "hint.recognize", isRecognisingHandwriting, deviceLanguageTag())
+        }
+
+        // 工具列在「下」：要放在 `EditorWorkArea` **外面**（Column 的下一個子項）。
+        // 原本它在畫布的 RowScope 裡，成了畫布的**橫向**兄弟，`fillMaxWidth` 把畫布擠成
+        // 寬度 0 —— 預設就是「下」，所以新安裝的 Android 一打開畫布整個不見。
+        if (effectiveToolbarMode == EditorMode.DRAW &&
+            toolbarPlacement == uniffi.padnote_core.FfiPlacement.BOTTOM
+        ) {
+            inkBar()
         }
 
         // 次世代 UI/UX Phase 5: 折疊立起雙屏創作工作盤 (Tabletop Studio Control Deck)
@@ -5282,6 +5503,7 @@ private fun InkScreen(
                         audioCards = audioCards.map { if (it.id == target.id) target else it }
                             .toMutableList()
                         meta.setAudioCards(notebook?.first, audioCards)
+                        notebook?.first?.let { RecordingTitles.write(it, target.fileName, trimmed) }
                         audioRevision++
                     }
                     renamingAudio = null
@@ -7122,4 +7344,41 @@ private fun DialogGuideStep(step: String, title: String, desc: String) {
             )
         }
     }
+}
+
+/**
+ * 把立體輔助排好的圖紙放在「目前看得到的範圍正中央」（不是固定貼頂，那會壓在既有的圖上），
+ * 回傳插入的核心筆畫 id 與選取框（像素）。
+ *
+ * 獨立成頂層函式：寫在 `InkScreen` 的 lambda 裡會讓 Compose 編譯器對這個巨大的函式
+ * 產出驗證不過的位元碼（啟動即 `VerifyError`）。
+ *
+ * 畫布的 graphicsLayer 以中心為軸縮放，所以畫面中心對應的頁面點是
+ * 中心 − 平移 / 縮放，再除以 density 換成頁面單位。
+ */
+private fun placeSolidSheet(
+    engine: com.kairumo.padnote.ink.InkEngine,
+    sheet: uniffi.padnote_core.FfiSolidSheet,
+    viewport: Size,
+    scale: Float,
+    offset: Offset,
+    density: Float
+): Pair<List<String>, List<Offset>> {
+    val cx = (viewport.width / 2f - offset.x / scale) / density
+    val cy = (viewport.height / 2f - offset.y / scale) / density
+    val ox = (cx - sheet.width / 2f).coerceIn(0f, maxOf(0f, PageGeometry.width - sheet.width))
+    val oy = (cy - sheet.height / 2f).coerceIn(0f, maxOf(0f, PageGeometry.height - sheet.height))
+    engine.insertDrafted(sheet.strokes, ox, oy)
+    val l = (ox - 8f) * density
+    val t = (oy - 8f) * density
+    val r = (ox + sheet.width + 8f) * density
+    val b = (oy + sheet.height + 8f) * density
+    return engine.lastInsertedCoreIds to listOf(Offset(l, t), Offset(r, t), Offset(r, b), Offset(l, b))
+}
+
+/** 畫布目前的視窗大小、縮放與平移（給「放在畫面正中央」用）。 */
+private class CanvasViewInfo {
+    var viewport: Size = Size.Zero
+    var scale: Float = 1f
+    var offset: Offset = Offset.Zero
 }

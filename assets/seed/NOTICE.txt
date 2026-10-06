@@ -1,0 +1,20 @@
+Stroke-order data in the preloaded "Kairumo手冊" notebook
+==========================================================
+
+The hand-written Chinese text in the preloaded notebook "Kairumo手冊" is drawn from the stroke
+centre lines of the Make Me a Hanzi project (https://github.com/skishore/makemeahanzi,
+graphics.txt), which is derived from the fonts Arphic PL KaitiM GB and Arphic PL UKai.
+
+Those data are licensed under the Arphic Public License, copyright (C) 1999 Arphic Technology
+Co., Ltd. The unaltered licence text is in ARPHICPL.TXT next to this file.
+
+Modification notice (Arphic Public License, section 2a):
+  2026-10-06  Kairumo project. From graphics.txt (commit bddc96d41bef78427ed0e034e9f7e31d71fd1b92,
+  SHA-256 a28c478b5178e98f67f510b2d52fde08a69dc664654ef43498253b9b764d46ee) only the "medians"
+  (stroke centre lines) of the 170 characters used in the notebook were kept; glyph outlines were
+  dropped. The notebook's strokes (kairumo-manual-ink.json) are those centre lines, scaled,
+  slightly perturbed to look hand-written, and drawn as pen strokes. The reduced data are
+  available at third_party/makemeahanzi/strokes-subset.json in the Kairumo source tree, and
+  remain freely available under the Arphic Public License.
+
+There is NO WARRANTY; see sections 7 and 8 of the licence.

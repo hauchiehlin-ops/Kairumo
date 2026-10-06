@@ -30,6 +30,7 @@ extension EditorToolType {
         case .eraser: return .eraser
         case .lasso: return .lasso
         case .maskingTape: return .maskingTape
+        case .drafting: return .drafting
         }
     }
 }

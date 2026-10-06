@@ -17,8 +17,8 @@ android {
         minSdk = 29
         targetSdk = 35
         // 版本號由 scripts/bump-version.sh 與 Apple 端一起更新，不要手改
-        versionCode = 81
-        versionName = "5.0.0"
+        versionCode = 82
+        versionName = "5.1.0"
         // 筆跡引擎的正確性只有在真的 Android runtime 上才驗得出來
         // （MotionEvent、密度換算、JNA 載入 .so 都不是純 JVM 模擬得了的）。
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -119,6 +119,12 @@ val copyUserDocs by tasks.registering(Copy::class) {
     // 文件範本目錄（工作項 S-61）。與手冊走同一條路：repo 裡只有一份，
     // 建置時複製進 assets，兩個平台載入的是同一個檔案。
     from("$rootDir/../templates/document-templates.json") { into("templates") }
+    // 《Kairumo手冊》的手繪筆畫（由 scripts/manual_ink/manual.py 產生；Apple 讀同一份）。
+    from("$rootDir/../assets/seed/kairumo-manual-ink.json") { into("seed") }
+    // 手冊筆順資料的授權（Arphic Public License 全文未改動 + 修改聲明），隨 App 一起散布。
+    from("$rootDir/../assets/seed/ARPHICPL.TXT") { into("seed") }
+    from("$rootDir/../assets/seed/NOTICE.txt") { into("seed") }
+    from("$rootDir/../assets/seed/OFL-NotoSansThai.txt") { into("seed") }
     into(layout.buildDirectory.dir("generated/docsAssets"))
 }
 

@@ -41,8 +41,14 @@ final class LassoSelection: ObservableObject {
     /// 選取拖曳回呼
     var onDragSelection: ((CGSize) -> Void)?
 
-    var hasSelection: Bool { !selected.isEmpty }
-    var canPaste: Bool { !clipboard.isEmpty }
+    /// 專業筆畫（製圖線）的選取。PencilKit 的筆畫用索引，它們用 id。
+    @Published private(set) var proIds: Set<String> = []
+    private var proClipboard: [ProStroke] = []
+    /// 目前這一頁的專業筆畫層。
+    var proHost: () -> ProInkLayerView? = { nil }
+
+    var hasSelection: Bool { !selected.isEmpty || !proIds.isEmpty }
+    var canPaste: Bool { !clipboard.isEmpty || !proClipboard.isEmpty }
 
     // MARK: - 圈選生命週期
 
@@ -56,6 +62,7 @@ final class LassoSelection: ObservableObject {
         dragLastPoint = nil
         path = [point]
         selected = []
+        proIds = []
         committed = []
     }
 
@@ -80,11 +87,13 @@ final class LassoSelection: ObservableObject {
         if isDraggingSelection {
             isDraggingSelection = false
             dragLastPoint = nil
+            proHost()?.endMove()
             return
         }
         defer { path = [] }
         guard path.count >= 3 else {
             selected = []
+            proIds = []
             committed = []
             return
         }
@@ -97,12 +106,28 @@ final class LassoSelection: ObservableObject {
             }
         }
         selected = picked
-        committed = picked.isEmpty ? [] : path
+        proIds = proHost()?.strokeIds(enclosedBy: polygon) ?? []
+        committed = (picked.isEmpty && proIds.isEmpty) ? [] : path
+    }
+
+    /// 程式直接選定一批專業筆畫（例如剛插入的立體圖紙），並畫出選取框，
+    /// 讓使用者馬上能拖著搬到想放的位置。
+    func select(proStrokeIds ids: Set<String>, around bounds: CGRect) {
+        guard !ids.isEmpty else { return }
+        path = []
+        selected = []
+        proIds = ids
+        let r = bounds.insetBy(dx: -8, dy: -8)
+        committed = [
+            CGPoint(x: r.minX, y: r.minY), CGPoint(x: r.maxX, y: r.minY),
+            CGPoint(x: r.maxX, y: r.maxY), CGPoint(x: r.minX, y: r.maxY),
+        ]
     }
 
     func clear() {
         path = []
         selected = []
+        proIds = []
         committed = []
         isDraggingSelection = false
         dragLastPoint = nil
@@ -143,10 +168,12 @@ final class LassoSelection: ObservableObject {
         clipboard = selected.compactMap { index in
             drawing.strokes.indices.contains(index) ? drawing.strokes[index] : nil
         }
+        proClipboard = proHost()?.strokes(ids: proIds) ?? []
     }
 
     func deleteSelected(from drawing: PKDrawing) -> PKDrawing? {
         guard hasSelection else { return nil }
+        if !proIds.isEmpty { proHost()?.delete(ids: proIds) }
         var strokes = drawing.strokes
         for index in selected.sorted(by: >) where strokes.indices.contains(index) {
             strokes.remove(at: index)
@@ -166,13 +193,17 @@ final class LassoSelection: ObservableObject {
             guard drawing.strokes.indices.contains(index) else { return nil }
             return Self.offset(drawing.strokes[index], by: Self.duplicateOffset)
         }
-        guard !copies.isEmpty else { return nil }
+        if !proIds.isEmpty, let host = proHost() {
+            host.add(copies: host.strokes(ids: proIds), offset: Self.duplicateOffset)
+        }
+        guard !copies.isEmpty || !proIds.isEmpty else { return nil }
         clear()
         return PKDrawing(strokes: drawing.strokes + copies)
     }
 
     func paste(into drawing: PKDrawing) -> PKDrawing? {
         guard canPaste else { return nil }
+        if !proClipboard.isEmpty { proHost()?.add(copies: proClipboard, offset: Self.duplicateOffset) }
         let pasted = clipboard.map { Self.offset($0, by: Self.duplicateOffset) }
         clear()
         return PKDrawing(strokes: drawing.strokes + pasted)
@@ -184,6 +215,7 @@ final class LassoSelection: ObservableObject {
         for index in selected where strokes.indices.contains(index) {
             strokes[index] = Self.offset(strokes[index], by: delta)
         }
+        if !proIds.isEmpty { proHost()?.move(ids: proIds, by: delta) }
         committed = committed.map { CGPoint(x: $0.x + delta.width, y: $0.y + delta.height) }
         return PKDrawing(strokes: strokes)
     }

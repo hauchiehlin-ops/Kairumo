@@ -47,7 +47,7 @@ final class ProInkTests: XCTestCase {
     func testBrushFamiliesMatchTheCore() {
         let groups = FfiToolbar(locale: .english).allGroups()
         let infos = groups.flatMap(\.tools)
-        XCTAssertEqual(infos.count, 19, "核心的工具清單數量變了，兩端要一起改")
+        XCTAssertEqual(infos.count, 20, "核心的工具清單數量變了，兩端要一起改")
         for info in infos {
             guard let tool = EditorToolType.allCases.first(where: { $0.parityIdentifier == info.identifier }) else {
                 continue // 復原、重做、清除不是編輯器工具
@@ -200,5 +200,138 @@ final class ProInkTests: XCTestCase {
                 deviceId: device, pageIds: imported.pageIds, proStrokes: [own])
             if device == deviceA { aOwn = own }
         }
+    }
+
+    // MARK: 圖學：圖層、線型、吸附
+
+    private func drafted(layer: UInt8, lineType: UInt8, x: Float = 20) -> ProStroke {
+        var s = stroke("fineliner", x: x)
+        s.layer = layer == 0 ? nil : layer
+        s.lineType = lineType == 0 ? nil : lineType
+        return s
+    }
+
+    func testOldStrokesWithoutLayerFieldsStillDecodeAndKeepTheirFingerprint() throws {
+        // 舊版存的 JSON 沒有 layer／lineType 兩個鍵。
+        let plain = stroke("fineliner")
+        let json = try JSONEncoder().encode(plain)
+        var dict = try XCTUnwrap(JSONSerialization.jsonObject(with: json) as? [String: Any])
+        dict.removeValue(forKey: "layer")
+        dict.removeValue(forKey: "lineType")
+        let old = try JSONSerialization.data(withJSONObject: dict)
+        let back = try JSONDecoder().decode(ProStroke.self, from: old)
+        XCTAssertEqual(back.layerId, 0)
+        XCTAssertEqual(back.lineTypeId, 0)
+        // 沒有圖層的筆畫指紋不變：已同步過的內容不會被當成新的一筆。
+        XCTAssertFalse(plain.contentKey.contains("|L"))
+        XCTAssertNotEqual(plain.contentKey, drafted(layer: 3, lineType: 1).contentKey)
+    }
+
+    func testLayerAndLineTypeSurviveTheCorePackage() throws {
+        let package = workDir.appendingPathComponent("draft.padnote")
+        let doc = NotebookDocument(title: "D", pageCount: 1)
+        let strokes = [drafted(layer: 3, lineType: 1, x: 20), drafted(layer: 2, lineType: 0, x: 90), stroke("fineliner", x: 160)]
+        try NotebookPackageBridge.export(
+            document: doc, drawings: [PKDrawing()], to: package, deviceId: deviceA, proStrokes: [strokes])
+        let imported = try NotebookPackageBridge.importDocument(fromPackageAt: package, deviceId: deviceB)
+        let back = try XCTUnwrap(imported.proStrokes.first)
+        XCTAssertEqual(back.count, 3)
+        let pairs = Set(back.map { "\($0.layerId)/\($0.lineTypeId)" })
+        XCTAssertEqual(pairs, ["3/1", "2/0", "0/0"], "圖層與線型要原樣經過核心格式")
+    }
+
+    func testDraftedInsertResamplesLinesAndKeepsTheirAttributes() throws {
+        let item = FfiSheetStroke(
+            points: [FfiPoint(x: 0, y: 0), FfiPoint(x: 100, y: 0)], layer: 3, lineType: 1, width: 1.4, colorHex: "#111827")
+        let s = try XCTUnwrap(ProStroke(drafted: item, origin: CGPoint(x: 10, y: 20)))
+        XCTAssertGreaterThanOrEqual(s.points.count, 25, "每 4 個單位一點，虛線間隔才準")
+        XCTAssertEqual(s.points.first?.x, 10)
+        XCTAssertEqual(s.points.first?.y, 20)
+        XCTAssertEqual(s.layerId, 3)
+        XCTAssertEqual(s.lineTypeId, 1)
+        XCTAssertNil(ProStroke(drafted: FfiSheetStroke(points: [FfiPoint(x: 0, y: 0)], layer: 3, lineType: 0, width: 1, colorHex: "#000000")))
+    }
+
+    @MainActor
+    func testLayersDrawBottomUpAndHiddenOnesAreSkipped() {
+        let state = DraftingState.shared
+        let nb = "draft-test-\(UUID().uuidString)"
+        state.use(notebook: nb)
+        let strokes = [drafted(layer: 3, lineType: 0, x: 1), drafted(layer: 1, lineType: 0, x: 2),
+                       drafted(layer: 2, lineType: 0, x: 3), stroke("fineliner", x: 4)]
+        XCTAssertEqual(state.drawOrder(strokes, notebookId: nb).map(\.layerId), [0, 1, 2, 3])
+        state.setHidden(true, layer: 2)
+        XCTAssertEqual(state.drawOrder(strokes, notebookId: nb).map(\.layerId), [0, 1, 3])
+        XCTAssertFalse(state.canEdit(layer: 2, notebookId: nb), "隱藏的圖層擦不到")
+        state.setHidden(false, layer: 2)
+        state.setLocked(true, layer: 1)
+        XCTAssertFalse(state.canEdit(layer: 1, notebookId: nb), "鎖定的圖層擦不到")
+        XCTAssertTrue(state.canEdit(layer: 0, notebookId: nb), "一般筆跡永遠可以動")
+        state.setLocked(false, layer: 1)
+    }
+
+    func testHoldToSnapStraightensAndLocksTheAngle() {
+        let crooked = (0 ... 30).map { FfiPoint(x: Float($0) * 5, y: 40 + Float($0) * 0.9 + (Float($0 % 3) - 1)) }
+        let snapped = draftSnapStroke(points: crooked, angleStepDeg: 90)
+        XCTAssertEqual(snapped.kind, .line)
+        XCTAssertEqual(snapped.points.count, crooked.count, "等長，壓感與時間戳才抄得回去")
+        let ys = Set(snapped.points.map { Int(($0.y * 10).rounded()) })
+        XCTAssertEqual(ys.count, 1, "鎖 90° 之後是水平線")
+    }
+
+    func testDraftingPensComeFromTheCore() {
+        let pens = draftPens()
+        XCTAssertEqual(Set(pens.map(\.id)), ["thick", "thin", "hidden", "center", "phantom", "aux", "given"])
+        XCTAssertEqual(draftLayers().map(\.id), [1, 2, 3])
+        XCTAssertEqual(DraftingState.rgba(fromHex: "#3B82F6"), [0x3B, 0x82, 0xF6, 255])
+    }
+
+    func testSolidSheetUsesDraftingPensAndSketchesExtrude() throws {
+        // 草圖拉伸：四條各自一筆的邊圍成矩形。
+        func line(_ a: (Float, Float), _ b: (Float, Float)) -> [FfiPoint] {
+            (0 ... 10).map { FfiPoint(x: a.0 + (b.0 - a.0) * Float($0) / 10, y: a.1 + (b.1 - a.1) * Float($0) / 10) }
+        }
+        let profile = try XCTUnwrap(solidProfileFromStrokes(strokes: [
+            line((0, 0), (120, 0)), line((120, 0), (120, 80)), line((120, 80), (0, 80)), line((0, 80), (0, 0)),
+        ]))
+        XCTAssertEqual(profile.width, 120, accuracy: 3)
+        let options = FfiSolidSheetOptions(
+            firstAngle: false, includeIso: true, projectionLines: true, centerLines: true,
+            section: FfiSolidSection(kind: .none, angleDeg: 90, offset: 0.5, offset2: 0.7, step: 0.5, pivotX: 0.5,
+                                     pivotY: 0.5, deltaDeg: 30, flip: true, depthFrac: 0.5),
+            fitWidth: 600, fitHeight: 400, hatchSpacing: 6, dimensions: false, sectionLabel: false)
+        let sheet = try XCTUnwrap(solidComposeSheet(profile: profile, depth: 60, options: options))
+        var dimensioned = options
+        dimensioned.dimensions = true
+        let withDims = try XCTUnwrap(solidComposeSheet(profile: profile, depth: 60, options: dimensioned))
+        XCTAssertGreaterThan(withDims.strokes.count, sheet.strokes.count, "標註尺寸要多出尺寸線與數字筆畫")
+        XCTAssertTrue(sheet.strokes.contains { $0.layer == 3 && $0.lineType == 1 }, "等角圖背面三條隱藏線")
+        XCTAssertTrue(sheet.strokes.contains { $0.layer == 2 }, "投射線在中層")
+    }
+
+    func testPdfExportCarriesProStrokesAndDashedLineTypes() throws {
+        let doc = NotebookDocument(title: "P", pageCount: 1)
+        let plain = try NotebookPackageBridge.exportPdf(document: doc, drawings: [PKDrawing()], deviceId: deviceA)
+        let hidden = drafted(layer: 3, lineType: 1, x: 20)
+        let withInk = try NotebookPackageBridge.exportPdf(
+            document: doc, drawings: [PKDrawing()], deviceId: deviceA, proStrokes: [[hidden]])
+        XCTAssertGreaterThan(withInk.count, plain.count, "匯出的 PDF 要含專業筆畫（製圖線）")
+    }
+
+    @MainActor
+    func testHiddenLayerIsExcludedFromTheExportedPdf() throws {
+        let state = DraftingState.shared
+        let nb = "pdf-hidden-\(UUID().uuidString)"
+        state.use(notebook: nb)
+        let all = [drafted(layer: 3, lineType: 1, x: 20), drafted(layer: 2, lineType: 0, x: 90), stroke("fineliner", x: 160)]
+        let doc = NotebookDocument(id: nb, title: "P", pageCount: 1)
+        func pdf(_ strokes: [ProStroke]) throws -> Data {
+            try NotebookPackageBridge.exportPdf(document: doc, drawings: [PKDrawing()], deviceId: deviceA, proStrokes: [strokes])
+        }
+        let full = try pdf(state.drawOrder(all, notebookId: nb))
+        state.setHidden(true, layer: 2)
+        defer { state.setHidden(false, layer: 2) }
+        let hiddenAux = try pdf(state.drawOrder(all, notebookId: nb))
+        XCTAssertLessThan(hiddenAux.count, full.count, "隱藏中層之後匯出的 PDF 要少一筆")
     }
 }

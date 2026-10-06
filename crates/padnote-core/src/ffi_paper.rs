@@ -411,6 +411,23 @@ pub fn paper_templates() -> Vec<FfiPaperTemplate> {
             PageStyle::Blank,
             Method,
         ),
+        // 圖學：作圖步驟紙（左欄 ①②③… 對應輔助線的步驟編號）與錯誤陷阱頁。
+        entry(
+            "drafting_steps",
+            "paper_drafting_steps",
+            "list.number",
+            "FormatListNumbered",
+            PageStyle::Blank,
+            Engineering,
+        ),
+        entry(
+            "drafting_trap",
+            "paper_drafting_trap",
+            "exclamationmark.triangle.fill",
+            "Warning",
+            PageStyle::Blank,
+            Engineering,
+        ),
     ]
 }
 
@@ -682,6 +699,13 @@ pub fn page_formats() -> Vec<FfiPageFormat> {
         // 已經寫進所有現存筆記裡，所以 A4 直式必須**原封不動**沿用它。
         format("a4", "page_format_a4", 800.0, 1132.0),
         format("a4_landscape", "page_format_a4_landscape", 1132.0, 800.0),
+        // A3 297 × 420 mm：製圖課的標準圖紙。座標與 A4 同比例（×√2），
+        // 所以畫在 A4 上的內容換成 A3 只是整體放大，不會變形。
+        format("a3", "page_format_a3", 1132.0, 1600.0),
+        format("a3_landscape", "page_format_a3_landscape", 1600.0, 1132.0),
+        // A2 420 × 594 mm：大型作圖與拼圖。
+        format("a2", "page_format_a2", 1600.0, 2264.0),
+        format("a2_landscape", "page_format_a2_landscape", 2264.0, 1600.0),
         // A5 148 × 210 mm，等比縮到與 A4 同一個比例。
         format("a5", "page_format_a5", 566.0, 800.0),
         // US Letter 8.5 × 11 吋。
@@ -705,10 +729,42 @@ pub fn page_formats() -> Vec<FfiPageFormat> {
 /// 而它們全部都是用 A4 的尺寸寫的。
 #[uniffi::export]
 pub fn page_format(id: String) -> FfiPageFormat {
+    if let Some((w, h)) = parse_custom_format(&id) {
+        return format(&id, "page_format_custom", w, h);
+    }
     page_formats()
         .into_iter()
         .find(|f| f.id == id)
         .unwrap_or_else(|| page_formats().remove(0))
+}
+
+/// 自訂頁面的邊長範圍（頁面單位）。下限讓頁面至少放得下一個工具列，
+/// 上限是「大尺寸頁」的務實天花板：再大畫布的記憶體就撐不住了。
+pub const CUSTOM_PAGE_MIN: u32 = 300;
+pub const CUSTOM_PAGE_MAX: u32 = 6000;
+
+fn parse_custom_format(id: &str) -> Option<(f32, f32)> {
+    let rest = id.strip_prefix("custom_")?;
+    let (w, h) = rest.split_once('x')?;
+    let (w, h): (u32, u32) = (w.parse().ok()?, h.parse().ok()?);
+    let ok = |v: u32| (CUSTOM_PAGE_MIN..=CUSTOM_PAGE_MAX).contains(&v);
+    (ok(w) && ok(h)).then_some((w as f32, h as f32))
+}
+
+/// 自訂尺寸 → 規格識別字（`custom_<寬>x<高>`）。超出範圍會被夾住。
+///
+/// 識別字本身帶著尺寸，所以不必另外存一份：筆記只記一個規格 id，
+/// 兩個平台、舊版本讀到都能還原同一個頁面。
+#[uniffi::export]
+pub fn custom_page_format_id(width: u32, height: u32) -> String {
+    let c = |v: u32| v.clamp(CUSTOM_PAGE_MIN, CUSTOM_PAGE_MAX);
+    format!("custom_{}x{}", c(width), c(height))
+}
+
+/// 這個規格是不是自訂的。
+#[uniffi::export]
+pub fn is_custom_page_format(id: String) -> bool {
+    parse_custom_format(&id).is_some()
 }
 
 /// 預設規格的識別字。
@@ -720,6 +776,31 @@ pub fn default_page_format_id() -> String {
 #[cfg(test)]
 mod format_tests {
     use super::*;
+
+    #[test]
+    fn custom_sizes_round_trip_and_clamp() {
+        let id = custom_page_format_id(2000, 1500);
+        assert_eq!(id, "custom_2000x1500");
+        let f = page_format(id.clone());
+        assert_eq!((f.width, f.height), (2000.0, 1500.0));
+        assert!(is_custom_page_format(id));
+        // 超出範圍被夾住，而不是回出一個畫不出來的頁面。
+        assert_eq!(custom_page_format_id(10, 99999), "custom_300x6000");
+        // 手改的壞 id 回 A4，不會是零尺寸。
+        let bad = page_format("custom_5x5".into());
+        assert_eq!((bad.width, bad.height), (800.0, 1132.0));
+        assert!(!is_custom_page_format("a4".into()));
+    }
+
+    #[test]
+    fn a3_is_a4_scaled_by_root_two() {
+        let a4 = page_format("a4".into());
+        let a3 = page_format("a3".into());
+        assert!((a3.width / a4.width - 1.415).abs() < 0.01);
+        assert!((a3.height / a4.height - 1.413).abs() < 0.01);
+        let l = page_format("a3_landscape".into());
+        assert_eq!((l.width, l.height), (a3.height, a3.width));
+    }
 
     #[test]
     fn a4_is_first_and_matches_the_existing_page_size() {

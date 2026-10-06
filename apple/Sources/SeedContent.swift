@@ -283,6 +283,67 @@ enum SeedContent {
         doc.pageCount = max(doc.pageCount, count)
     }
 
+    // MARK: - 《Kairumo手冊》：全部用手繪筆畫完成
+    //
+    // 沒有任何文字方塊或形狀物件：標題是逐字手寫、插圖是一筆一筆畫的。
+    // 筆畫來自 `assets/seed/kairumo-manual-ink.json`（由 `scripts/manual_ink/manual.py` 產生，
+    // Android 讀同一份），所以兩個平台畫出來是同一本。
+
+    static let kairumoManualId = "seed-kairumo-manual-v1"
+    static let kairumoManualTitle = "Kairumo手冊"
+
+    /// 手冊每一頁的筆畫。讀不到資源就回空陣列（筆記本仍然建立，只是空白）。
+    static func kairumoManualDrawings() -> [PKDrawing] {
+        guard let url = Bundle.main.url(forResource: "kairumo-manual-ink", withExtension: "json", subdirectory: "Templates")
+            ?? Bundle.main.url(forResource: "kairumo-manual-ink", withExtension: "json"),
+              let data = try? Data(contentsOf: url),
+              let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let pages = root["pages"] as? [[String: Any]]
+        else { return [] }
+        return pages.map { page in
+            var strokes: [PKStroke] = []
+            for raw in (page["strokes"] as? [[String: Any]]) ?? [] {
+                guard let hex = raw["color"] as? String,
+                      let width = (raw["width"] as? NSNumber).map({ CGFloat($0.doubleValue) }),
+                      let rawPoints = raw["points"] as? [[NSNumber]], rawPoints.count >= 2
+                else { continue }
+                let color = UIColor(hexString: hex) ?? .label
+                let points = rawPoints.compactMap { p -> CGPoint? in
+                    p.count == 2 ? CGPoint(x: p[0].doubleValue, y: p[1].doubleValue) : nil
+                }
+                strokes.append(manualStroke(points, color: color, width: width))
+            }
+            return PKDrawing(strokes: strokes)
+        }
+    }
+
+    /// 起筆與收筆輕、中段重 —— 手寫的筆壓，不是等粗的線。
+    private static func manualStroke(_ points: [CGPoint], color: UIColor, width: CGFloat) -> PKStroke {
+        let count = points.count
+        let controls = points.enumerated().map { index, point -> PKStrokePoint in
+            let t = CGFloat(index) / CGFloat(max(1, count - 1))
+            let edge = min(t, 1 - t) * min(CGFloat(count), 14)   // 前後各約 7 個點漸變
+            let scale = 0.62 + 0.38 * min(1, edge / 4)
+            let size = max(0.9, width * 1.2 * scale)
+            return PKStrokePoint(
+                location: point, timeOffset: TimeInterval(index) * 0.012,
+                size: CGSize(width: size, height: size), opacity: 1,
+                force: 0.6 + 0.3 * min(1, edge / 4), azimuth: 0, altitude: .pi / 2)
+        }
+        let path = PKStrokePath(controlPoints: controls, creationDate: Date())
+        return PKStroke(ink: PKInk(.pen, color: color), path: path)
+    }
+
+    /// 填進《Kairumo手冊》。
+    static func fillKairumoManual(_ doc: inout NotebookDocument, store: NotebookStore? = nil) {
+        let drawings = kairumoManualDrawings()
+        ensurePages(&doc, count: max(2, drawings.count))
+        for (index, drawing) in drawings.enumerated() where index < doc.pagesData.count {
+            doc.pagesData[index] = drawing.dataRepresentation()
+            store?.saveDrawing(notebookId: doc.id, pageIndex: index, drawing: drawing)
+        }
+    }
+
     // MARK: - 功能實戰範例筆記：《Kairumo(功能範例)》
     //
     // 全書共四頁頂級巨作：

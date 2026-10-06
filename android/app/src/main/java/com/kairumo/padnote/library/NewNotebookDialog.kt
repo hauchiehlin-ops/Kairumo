@@ -84,6 +84,11 @@ fun NewNotebookDialog(
      * 那是可以之後再說的選項，而復原碼沒有「之後再說」。
      */
     onCreateEncrypted: () -> Unit = {},
+    /**
+     * 建立一整組筆記本（圖學套件：課堂筆記＋作圖練習＋錯誤陷阱本）。
+     * 紙張、規格、頁數都在核心的 `notebookKits()`，Apple 讀同一份。
+     */
+    onCreateKit: (uniffi.padnote_core.FfiNotebookKit) -> Unit = {},
     onConfirm: (
         title: String,
         templateId: String?,
@@ -158,6 +163,31 @@ fun NewNotebookDialog(
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth().testTag("new_notebook.title.field")
                         )
+                    }
+
+                    // ── 套件：一次建出一組筆記本 ─────────────────────────
+                    item {
+                        Text(
+                            l("kit_create"),
+                            style = MaterialTheme.typography.labelLarge,
+                            modifier = Modifier.padding(top = 8.dp)
+                        )
+                    }
+                    items(uniffi.padnote_core.notebookKits(), key = { "kit-" + it.id }) { kit ->
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { onCreateKit(kit) }
+                                .padding(vertical = 6.dp)
+                                .testTag("new_notebook.kit." + kit.id)
+                        ) {
+                            Text("📐 " + l(kit.titleKey), style = MaterialTheme.typography.bodyMedium)
+                            Text(
+                                l(kit.descKey),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
 
                     // ── 常用樣板 ──────────────────────────────────────

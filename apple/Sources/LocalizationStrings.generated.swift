@@ -204,7 +204,8 @@ extension LocalizationManager {
             .en: "Advanced Pen Settings",
             .zhHans: "高级画笔设置",
             .ja: "詳細なペン設定",
-            .ko: "고급 펜 설정"
+            .ko: "고급 펜 설정",
+            .th: "การตั้งค่าปากกาขั้นสูง"
         ],
         "ai_insert": [
             .zhHant: "插入筆記",
@@ -3238,6 +3239,454 @@ extension LocalizationManager {
             .ko: "다운로드 중...",
             .th: "กำลังดาวน์โหลด..."
         ],
+        "draft_angle_free": [
+            .zhHant: "自由",
+            .en: "Free",
+            .zhHans: "自由",
+            .ja: "自由",
+            .ko: "자유",
+            .th: "อิสระ"
+        ],
+        "draft_angle_lock": [
+            .zhHant: "角度鎖定",
+            .en: "Angle lock",
+            .zhHans: "角度锁定",
+            .ja: "角度ロック",
+            .ko: "각도 잠금",
+            .th: "ล็อกมุม"
+        ],
+        "draft_bar_collapse": [
+            .zhHant: "收合面板",
+            .en: "Collapse panel",
+            .zhHans: "收合面板",
+            .ja: "パネルを閉じる",
+            .ko: "패널 접기",
+            .th: "ย่อแผง"
+        ],
+        "draft_bar_expand": [
+            .zhHant: "展開圖學面板",
+            .en: "Show drafting panel",
+            .zhHans: "展开图学面板",
+            .ja: "製図パネルを開く",
+            .ko: "도면 패널 펼치기",
+            .th: "แสดงแผงเขียนแบบ"
+        ],
+        "draft_draw_on_layer": [
+            .zhHant: "畫在此圖層",
+            .en: "Draw on this layer",
+            .zhHans: "画在此图层",
+            .ja: "このレイヤーに描く",
+            .ko: "이 레이어에 그리기",
+            .th: "วาดบนเลเยอร์นี้"
+        ],
+        "draft_help": [
+            .zhHant: "使用提示",
+            .en: "Tips",
+            .zhHans: "使用提示",
+            .ja: "ヒント",
+            .ko: "도움말",
+            .th: "เคล็ดลับ"
+        ],
+        "draft_hide_layer": [
+            .zhHant: "隱藏圖層",
+            .en: "Hide layer",
+            .zhHans: "隐藏图层",
+            .ja: "レイヤーを隠す",
+            .ko: "레이어 숨기기",
+            .th: "ซ่อนเลเยอร์"
+        ],
+        "draft_layer_aux": [
+            .zhHant: "中層・輔助",
+            .en: "Aux (construction)",
+            .zhHans: "中层·辅助",
+            .ja: "中層・補助",
+            .ko: "중층·보조",
+            .th: "ชั้นกลาง·เส้นช่วย"
+        ],
+        "draft_layer_base": [
+            .zhHant: "底層・原題",
+            .en: "Base (given)",
+            .zhHans: "底层·原题",
+            .ja: "下層・与件",
+            .ko: "하층·원문제",
+            .th: "ชั้นล่าง·โจทย์"
+        ],
+        "draft_layer_plain": [
+            .zhHant: "一般筆跡",
+            .en: "Plain ink",
+            .zhHans: "普通笔迹",
+            .ja: "通常の筆跡",
+            .ko: "일반 필기",
+            .th: "ลายมือทั่วไป"
+        ],
+        "draft_layer_top": [
+            .zhHant: "頂層・答案",
+            .en: "Top (answer)",
+            .zhHans: "顶层·答案",
+            .ja: "上層・解答",
+            .ko: "상층·정답",
+            .th: "ชั้นบน·คำตอบ"
+        ],
+        "draft_layers": [
+            .zhHant: "圖層",
+            .en: "Layers",
+            .zhHans: "图层",
+            .ja: "レイヤー",
+            .ko: "레이어",
+            .th: "เลเยอร์"
+        ],
+        "draft_line_center": [
+            .zhHant: "中心線",
+            .en: "Center",
+            .zhHans: "中心线",
+            .ja: "中心線",
+            .ko: "중심선",
+            .th: "เส้นศูนย์กลาง"
+        ],
+        "draft_line_hidden": [
+            .zhHant: "隱藏線",
+            .en: "Hidden",
+            .zhHans: "隐藏线",
+            .ja: "かくれ線",
+            .ko: "숨은선",
+            .th: "เส้นประซ่อน"
+        ],
+        "draft_line_phantom": [
+            .zhHant: "假想線",
+            .en: "Phantom",
+            .zhHans: "假想线",
+            .ja: "想像線",
+            .ko: "가상선",
+            .th: "เส้นสมมติ"
+        ],
+        "draft_line_solid": [
+            .zhHant: "實線",
+            .en: "Solid",
+            .zhHans: "实线",
+            .ja: "実線",
+            .ko: "실선",
+            .th: "เส้นทึบ"
+        ],
+        "draft_lock_layer": [
+            .zhHant: "鎖定圖層",
+            .en: "Lock layer",
+            .zhHans: "锁定图层",
+            .ja: "レイヤーをロック",
+            .ko: "레이어 잠금",
+            .th: "ล็อกเลเยอร์"
+        ],
+        "draft_pen_aux": [
+            .zhHant: "輔助線",
+            .en: "Auxiliary",
+            .zhHans: "辅助线",
+            .ja: "補助線",
+            .ko: "보조선",
+            .th: "เส้นช่วย"
+        ],
+        "draft_pen_center": [
+            .zhHant: "中心線",
+            .en: "Center line",
+            .zhHans: "中心线",
+            .ja: "中心線",
+            .ko: "중심선",
+            .th: "เส้นศูนย์กลาง"
+        ],
+        "draft_pen_given": [
+            .zhHant: "原題線",
+            .en: "Given outline",
+            .zhHans: "原题线",
+            .ja: "与件線",
+            .ko: "원문제선",
+            .th: "เส้นโจทย์"
+        ],
+        "draft_pen_hidden": [
+            .zhHant: "隱藏線",
+            .en: "Hidden line",
+            .zhHans: "隐藏线",
+            .ja: "かくれ線",
+            .ko: "숨은선",
+            .th: "เส้นซ่อน"
+        ],
+        "draft_pen_phantom": [
+            .zhHant: "假想線",
+            .en: "Phantom line",
+            .zhHans: "假想线",
+            .ja: "想像線",
+            .ko: "가상선",
+            .th: "เส้นสมมติ"
+        ],
+        "draft_pen_thick": [
+            .zhHant: "粗實線",
+            .en: "Thick solid",
+            .zhHans: "粗实线",
+            .ja: "太実線",
+            .ko: "굵은 실선",
+            .th: "เส้นหนา"
+        ],
+        "draft_pen_thin": [
+            .zhHant: "細實線",
+            .en: "Thin solid",
+            .zhHans: "细实线",
+            .ja: "細実線",
+            .ko: "가는 실선",
+            .th: "เส้นบาง"
+        ],
+        "draft_pens": [
+            .zhHant: "製圖筆",
+            .en: "Drafting pens",
+            .zhHans: "制图笔",
+            .ja: "製図ペン",
+            .ko: "제도 펜",
+            .th: "ปากกาเขียนแบบ"
+        ],
+        "draft_reassign": [
+            .zhHant: "移到圖層",
+            .en: "Move to layer",
+            .zhHans: "移到图层",
+            .ja: "レイヤーへ移動",
+            .ko: "레이어로 이동",
+            .th: "ย้ายไปเลเยอร์"
+        ],
+        "draft_show_layer": [
+            .zhHant: "顯示圖層",
+            .en: "Show layer",
+            .zhHans: "显示图层",
+            .ja: "レイヤーを表示",
+            .ko: "레이어 표시",
+            .th: "แสดงเลเยอร์"
+        ],
+        "draft_snap": [
+            .zhHant: "形狀吸附",
+            .en: "Shape snap",
+            .zhHans: "形状吸附",
+            .ja: "図形スナップ",
+            .ko: "도형 스냅",
+            .th: "จัดรูปทรงอัตโนมัติ"
+        ],
+        "draft_step_hint": [
+            .zhHant: "點頁面放上編號",
+            .en: "Tap the page to place the number",
+            .zhHans: "点页面放上编号",
+            .ja: "ページをタップして番号を配置",
+            .ko: "페이지를 눌러 번호 배치",
+            .th: "แตะหน้าเพื่อวางเลข"
+        ],
+        "draft_step_marker": [
+            .zhHant: "步驟編號",
+            .en: "Step numbers",
+            .zhHans: "步骤编号",
+            .ja: "手順番号",
+            .ko: "단계 번호",
+            .th: "เลขขั้นตอน"
+        ],
+        "draft_step_next": [
+            .zhHant: "下一個編號",
+            .en: "Next number",
+            .zhHans: "下一个编号",
+            .ja: "次の番号",
+            .ko: "다음 번호",
+            .th: "เลขถัดไป"
+        ],
+        "draft_step_prev": [
+            .zhHant: "上一個編號",
+            .en: "Previous number",
+            .zhHans: "上一个编号",
+            .ja: "前の番号",
+            .ko: "이전 번호",
+            .th: "เลขก่อนหน้า"
+        ],
+        "draft_step_reset": [
+            .zhHant: "從 ① 重來",
+            .en: "Start from ①",
+            .zhHans: "从 ① 重来",
+            .ja: "① からやり直す",
+            .ko: "①부터 다시",
+            .th: "เริ่มจาก ①"
+        ],
+        "draft_tip_1": [
+            .zhHant: "選一支筆：線型與圖層跟著它走（隱藏線＝虛線、輔助線＝淺藍）。",
+            .en: "Pick a pen: its line type and layer come with it (hidden line = dashed, aux = light blue).",
+            .zhHans: "选一支笔：线型与图层跟着它走（隐藏线＝虚线、辅助线＝浅蓝）。",
+            .ja: "ペンを選ぶと線種とレイヤーも決まります（かくれ線＝破線、補助線＝水色）。",
+            .ko: "펜을 고르면 선 종류와 레이어가 함께 정해집니다(숨은선=점선, 보조선=연한 파랑).",
+            .th: "เลือกปากกา: ชนิดเส้นและเลเยอร์มาพร้อมกัน (เส้นซ่อน=เส้นประ, เส้นช่วย=ฟ้าอ่อน)"
+        ],
+        "draft_tip_2": [
+            .zhHant: "畫一條線，在終點停住半秒：會自動變直線、圓或矩形。",
+            .en: "Draw a line and hold still for half a second at the end: it snaps straight, to a circle or a rectangle.",
+            .zhHans: "画一条线，在终点停住半秒：会自动变直线、圆或矩形。",
+            .ja: "線を描き、終点で0.5秒止めると直線・円・長方形にそろいます。",
+            .ko: "선을 긋고 끝에서 0.5초 멈추면 직선·원·사각형으로 정리됩니다.",
+            .th: "วาดเส้นแล้วหยุดค้างครึ่งวินาทีที่ปลาย: จะกลายเป็นเส้นตรง วงกลม หรือสี่เหลี่ยม"
+        ],
+        "draft_tip_3": [
+            .zhHant: "點眼睛可隱藏圖層（例如輔助線）、點鎖頭保護圖層。",
+            .en: "Tap the eye to hide a layer (for example the construction lines) and the lock to protect it.",
+            .zhHans: "点眼睛可隐藏图层（例如辅助线）、点锁头保护图层。",
+            .ja: "目のアイコンでレイヤー（補助線など）を隠し、鍵で保護します。",
+            .ko: "눈 아이콘으로 레이어(보조선 등)를 숨기고 자물쇠로 보호합니다.",
+            .th: "แตะรูปตาเพื่อซ่อนเลเยอร์ (เช่นเส้นช่วย) แตะกุญแจเพื่อป้องกัน"
+        ],
+        "draft_tip_4": [
+            .zhHant: "立體輔助：畫一個封閉輪廓，就能拉伸成三視圖、等角圖與剖面。",
+            .en: "Solid helper: draw a closed outline, then extrude it into three views, an isometric view and sections.",
+            .zhHans: "立体辅助：画一个封闭轮廓，就能拉伸成三视图、等角图与剖面。",
+            .ja: "立体ヘルパー：閉じた輪郭を描くと、三面図・等角図・断面図に押し出せます。",
+            .ko: "입체 도우미: 닫힌 윤곽을 그리면 3면도·등각도·단면도로 돌출시킵니다.",
+            .th: "ตัวช่วยสามมิติ: วาดโครงร่างปิด แล้วดึงเป็นสามมุมมอง ภาพไอโซเมตริก และภาพตัด"
+        ],
+        "draft_tip_dismiss": [
+            .zhHant: "知道了",
+            .en: "Got it",
+            .zhHans: "知道了",
+            .ja: "わかりました",
+            .ko: "확인",
+            .th: "เข้าใจแล้ว"
+        ],
+        "draft_tip_title": [
+            .zhHant: "圖學使用提示",
+            .en: "Drafting tips",
+            .zhHans: "图学使用提示",
+            .ja: "製図のヒント",
+            .ko: "도면 도움말",
+            .th: "เคล็ดลับงานเขียนแบบ"
+        ],
+        "draft_unlock_layer": [
+            .zhHant: "解除鎖定",
+            .en: "Unlock layer",
+            .zhHans: "解除锁定",
+            .ja: "ロック解除",
+            .ko: "잠금 해제",
+            .th: "ปลดล็อก"
+        ],
+        "drafting_example_notebook": [
+            .zhHant: "圖學範例",
+            .en: "Drafting Example",
+            .zhHans: "图学范例",
+            .ja: "製図の例",
+            .ko: "도면 예제",
+            .th: "ตัวอย่างงานเขียนแบบ"
+        ],
+        "drafting_example_p1_hint": [
+            .zhHant: "用圖層面板可以顯示／隱藏每一層：底層是原題、中層是輔助線、頂層是答案。接下來的步驟都畫在中層。",
+            .en: "Use the layer panel to show or hide each layer: base (given), middle (construction lines), top (answer). The steps below are drawn on the middle layer.",
+            .zhHans: "用图层面板可以显示／隐藏每一层：底层是原题、中层是辅助线、顶层是答案。接下来的步骤都画在中层。",
+            .ja: "レイヤーパネルで各レイヤーの表示／非表示を切り替えられます。下層＝与件、中層＝補助線、上層＝解答。以降の手順は中層に描きます。",
+            .ko: "레이어 패널에서 각 레이어를 표시/숨길 수 있습니다. 하층=원문제, 중층=보조선, 상층=정답. 이후 단계는 중층에 그립니다.",
+            .th: "ใช้แผงเลเยอร์เพื่อแสดง/ซ่อนแต่ละชั้น: ชั้นล่าง=โจทย์ ชั้นกลาง=เส้นช่วย ชั้นบน=คำตอบ ขั้นตอนต่อไปวาดบนชั้นกลาง"
+        ],
+        "drafting_example_p1_sub": [
+            .zhHant: "已知：正視圖與俯視圖（底層・原題）。求：右側視圖。",
+            .en: "Given: front view and top view (base layer). Find: the right side view.",
+            .zhHans: "已知：正视图与俯视图（底层·原题）。求：右侧视图。",
+            .ja: "与件：正面図と平面図（下層）。求めるもの：右側面図。",
+            .ko: "주어진 것: 정면도와 평면도(하층). 구할 것: 우측면도.",
+            .th: "กำหนด: ภาพด้านหน้าและด้านบน (ชั้นล่าง) หา: ภาพด้านขวา"
+        ],
+        "drafting_example_p2_sub": [
+            .zhHant: "步驟 ①②：45° 轉向線與水平投射線",
+            .en: "Steps ①②: the 45° line and the horizontal projection lines",
+            .zhHans: "步骤 ①②：45° 转向线与水平投射线",
+            .ja: "手順 ①②：45°線と水平投影線",
+            .ko: "단계 ①②: 45° 선과 수평 투사선",
+            .th: "ขั้นตอน ①②: เส้น 45° และเส้นโครงแนวนอน"
+        ],
+        "drafting_example_p3_sub": [
+            .zhHant: "步驟 ③④：向下的垂直線與向右的水平線",
+            .en: "Steps ③④: vertical lines down, horizontal lines across",
+            .zhHans: "步骤 ③④：向下的垂直线与向右的水平线",
+            .ja: "手順 ③④：下への垂直線と右への水平線",
+            .ko: "단계 ③④: 아래로 수직선, 오른쪽으로 수평선",
+            .th: "ขั้นตอน ③④: เส้นดิ่งลงและเส้นนอนไปทางขวา"
+        ],
+        "drafting_example_p4_sub": [
+            .zhHant: "步驟 ⑤：頂層的答案",
+            .en: "Step ⑤: the answer on the top layer",
+            .zhHans: "步骤 ⑤：顶层的答案",
+            .ja: "手順 ⑤：上層の解答",
+            .ko: "단계 ⑤: 상층의 정답",
+            .th: "ขั้นตอน ⑤: คำตอบบนชั้นบน"
+        ],
+        "drafting_example_p5_body": [
+            .zhHant: "開啟圖層面板（圖學筆組），點中層旁邊的眼睛。輔助線與步驟編號就收起來，只剩原題與你的答案；想複習步驟時再點一次。",
+            .en: "Open the layer panel (the Drafting tool) and tap the eye next to the middle layer. The construction lines and step numbers disappear; only the given views and your answer remain. Tap it again whenever you want to review the steps.",
+            .zhHans: "打开图层面板（图学笔组），点中层旁边的眼睛。辅助线与步骤编号就收起来，只剩原题与你的答案；想复习步骤时再点一次。",
+            .ja: "レイヤーパネル（製図ツール）を開き、中層の目のアイコンをタップ。補助線と手順番号が隠れ、与件と解答だけが残ります。復習したいときはもう一度タップ。",
+            .ko: "레이어 패널(도면 도구)을 열고 중층의 눈 아이콘을 누르세요. 보조선과 단계 번호가 사라지고 원문제와 정답만 남습니다. 복습할 때 다시 누르세요.",
+            .th: "เปิดแผงเลเยอร์ (ชุดปากกาเขียนแบบ) แล้วแตะรูปตาของชั้นกลาง เส้นช่วยและเลขขั้นตอนจะหายไป เหลือเพียงโจทย์และคำตอบ แตะอีกครั้งเมื่อต้องการทบทวน"
+        ],
+        "drafting_example_p5_sub": [
+            .zhHant: "完成 — 把輔助線收起來",
+            .en: "Done — now hide the construction lines",
+            .zhHans: "完成 — 把辅助线收起来",
+            .ja: "完成 — 補助線を隠す",
+            .ko: "완료 — 보조선 숨기기",
+            .th: "เสร็จแล้ว — ซ่อนเส้นช่วย"
+        ],
+        "drafting_example_right": [
+            .zhHant: "✓ 對：畫成虛線，因為它在右臂後面",
+            .en: "✓ Right: dashed, because it is behind the arm",
+            .zhHans: "✓ 对：画成虚线，因为它在右臂后面",
+            .ja: "✓ 正：腕の後ろなので破線",
+            .ko: "✓ 정답: 팔 뒤에 있으므로 점선",
+            .th: "✓ ถูก: เส้นประ เพราะอยู่หลังแขน"
+        ],
+        "drafting_example_s12": [
+            .zhHant: "① 在俯視圖右上角畫 45° 轉向線。\n② 從俯視圖的前緣與後緣向右畫水平投射線，碰到 45° 線為止。",
+            .en: "① Draw the 45° line at the top-right corner of the top view.\n② From the front and back edges of the top view, draw horizontal lines to the right until they meet the 45° line.",
+            .zhHans: "① 在俯视图右上角画 45° 转向线。\n② 从俯视图的前缘与后缘向右画水平投射线，碰到 45° 线为止。",
+            .ja: "① 平面図の右上に45°線を引く。\n② 平面図の前縁・後縁から右へ水平線を引き、45°線に当てる。",
+            .ko: "① 평면도 오른쪽 위에 45° 선을 긋습니다.\n② 평면도의 앞·뒤 가장자리에서 오른쪽으로 수평선을 45° 선까지 긋습니다.",
+            .th: "① ลากเส้น 45° ที่มุมขวาบนของภาพด้านบน\n② จากขอบหน้า/หลังของภาพด้านบน ลากเส้นแนวนอนไปทางขวาจนชนเส้น 45°"
+        ],
+        "drafting_example_s34": [
+            .zhHant: "③ 從水平線碰到 45° 線的地方向下畫垂直線，決定右側視圖的深度。\n④ 從正視圖的每個高度向右畫水平線，決定右側視圖的高度。",
+            .en: "③ From where the horizontal lines meet the 45° line, draw vertical lines downward. They fix the depth of the right view.\n④ From each height on the front view, draw horizontal lines to the right. They fix the height of the right view.",
+            .zhHans: "③ 从水平线碰到 45° 线的地方向下画垂直线，决定右侧视图的深度。\n④ 从正视图的每个高度向右画水平线，决定右侧视图的高度。",
+            .ja: "③ 水平線が45°線に当たる点から下へ垂直線を引く。右側面図の奥行きが決まる。\n④ 正面図の各高さから右へ水平線を引く。右側面図の高さが決まる。",
+            .ko: "③ 수평선이 45° 선에 닿는 곳에서 아래로 수직선을 긋습니다. 우측면도의 깊이가 정해집니다.\n④ 정면도의 각 높이에서 오른쪽으로 수평선을 긋습니다. 우측면도의 높이가 정해집니다.",
+            .th: "③ จากจุดที่เส้นนอนชนเส้น 45° ลากเส้นดิ่งลง กำหนดความลึกของภาพด้านขวา\n④ จากทุกระดับความสูงของภาพด้านหน้า ลากเส้นนอนไปทางขวา กำหนดความสูงของภาพด้านขวา"
+        ],
+        "drafting_example_s5": [
+            .zhHant: "⑤ 垂直線與水平線的交點就是右側視圖的頂點。依序連線：看得見的邊畫粗實線，被擋住的邊畫虛線。",
+            .en: "⑤ The intersections of the vertical and horizontal lines are the vertices of the right view. Connect them: thick solid lines for edges you can see, dashed lines for edges hidden behind other material.",
+            .zhHans: "⑤ 垂直线与水平线的交点就是右侧视图的顶点。依序连线：看得见的边画粗实线，被挡住的边画虚线。",
+            .ja: "⑤ 垂直線と水平線の交点が右側面図の頂点。順に結ぶ：見える辺は太い実線、隠れた辺は破線。",
+            .ko: "⑤ 수직선과 수평선의 교점이 우측면도의 꼭짓점입니다. 이어서 그립니다: 보이는 모서리는 굵은 실선, 가려진 모서리는 점선.",
+            .th: "⑤ จุดตัดของเส้นดิ่งและเส้นนอนคือจุดยอดของภาพด้านขวา ลากเชื่อม: ขอบที่เห็นใช้เส้นหนาทึบ ขอบที่ถูกบังใช้เส้นประ"
+        ],
+        "drafting_example_title": [
+            .zhHant: "三視圖輔助線求交點",
+            .en: "Three views: finding points with construction lines",
+            .zhHans: "三视图辅助线求交点",
+            .ja: "三面図：補助線で交点を求める",
+            .ko: "3면도: 보조선으로 교점 찾기",
+            .th: "สามมุมมอง: หาจุดตัดด้วยเส้นช่วย"
+        ],
+        "drafting_example_trap_rule": [
+            .zhHant: "口訣：從這個方向看過去，邊的前面還有零件的別的面擋著，它就是隱藏線 — 畫虛線。",
+            .en: "Rule of thumb: if another surface of the part is in front of an edge when you look from that side, the edge is hidden — draw it dashed.",
+            .zhHans: "口诀：从这个方向看过去，边的前面还有零件的别的面挡着，它就是隐藏线 — 画虚线。",
+            .ja: "コツ：その方向から見て、辺の手前に部品の別の面があれば隠れ線 — 破線で描く。",
+            .ko: "요령: 그 방향에서 볼 때 모서리 앞을 부품의 다른 면이 가리면 숨은선입니다 — 점선으로 그립니다.",
+            .th: "เคล็ดลับ: มองจากทิศนั้นแล้วมีผิวอื่นของชิ้นงานบังอยู่หน้าขอบ ขอบนั้นคือเส้นประ — วาดเป็นเส้นประ"
+        ],
+        "drafting_example_trap_sub": [
+            .zhHant: "常見陷阱：忘了畫隱藏線",
+            .en: "Common trap: forgetting hidden lines",
+            .zhHans: "常见陷阱：忘了画隐藏线",
+            .ja: "よくある落とし穴：隠れ線を忘れる",
+            .ko: "흔한 함정: 숨은선을 빼먹기",
+            .th: "กับดักที่พบบ่อย: ลืมเส้นประ"
+        ],
+        "drafting_example_wrong": [
+            .zhHant: "✗ 錯：被擋住的邊畫成實線",
+            .en: "✗ Wrong: the hidden edge drawn as a solid line",
+            .zhHans: "✗ 错：被挡住的边画成实线",
+            .ja: "✗ 誤：隠れた辺を実線で描いた",
+            .ko: "✗ 오답: 가려진 모서리를 실선으로 그림",
+            .th: "✗ ผิด: วาดขอบที่ถูกบังเป็นเส้นทึบ"
+        ],
         "drag_card_hint": [
             .zhHant: "拖曳移動卡片",
             .en: "Drag to move card",
@@ -4003,14 +4452,16 @@ extension LocalizationManager {
             .en: "Folder inaccessible",
             .zhHans: "无法访问文件夹",
             .ja: "フォルダにアクセスできません",
-            .ko: "폴더에 접근할 수 없습니다"
+            .ko: "폴더에 접근할 수 없습니다",
+            .th: "เข้าถึงโฟลเดอร์ไม่ได้"
         ],
         "folder_sync_not_set": [
             .zhHant: "未設定同步資料夾",
             .en: "Sync folder not set",
             .zhHans: "未设置同步文件夹",
             .ja: "同期フォルダが設定されていません",
-            .ko: "동기화 폴더가 설정되지 않았습니다"
+            .ko: "동기화 폴더가 설정되지 않았습니다",
+            .th: "ยังไม่ได้ตั้งค่าโฟลเดอร์ซิงก์"
         ],
         "folder_unlink": [
             .zhHant: "解除連結",
@@ -4300,6 +4751,14 @@ extension LocalizationManager {
             .ko: "완료",
             .th: "เสร็จ"
         ],
+        "guide_drawing_area": [
+            .zhHant: "作圖區",
+            .en: "Drawing area",
+            .zhHans: "作图区",
+            .ja: "作図エリア",
+            .ko: "작도 영역",
+            .th: "พื้นที่วาด"
+        ],
         "guide_due": [
             .zhHant: "期限",
             .en: "Due",
@@ -4500,6 +4959,14 @@ extension LocalizationManager {
             .ko: "회고",
             .th: "ทบทวน"
         ],
+        "guide_right_way": [
+            .zhHant: "✓ 正確畫法",
+            .en: "✓ Right way",
+            .zhHans: "✓ 正确画法",
+            .ja: "✓ 正しい描き方",
+            .ko: "✓ 올바른 작도",
+            .th: "✓ วาดถูก"
+        ],
         "guide_sat": [
             .zhHant: "六",
             .en: "Sat",
@@ -4547,6 +5014,54 @@ extension LocalizationManager {
             .ja: "ステージ",
             .ko: "단계",
             .th: "ขั้น"
+        ],
+        "guide_step_1": [
+            .zhHant: "①",
+            .en: "①",
+            .zhHans: "①",
+            .ja: "①",
+            .ko: "①",
+            .th: "①"
+        ],
+        "guide_step_2": [
+            .zhHant: "②",
+            .en: "②",
+            .zhHans: "②",
+            .ja: "②",
+            .ko: "②",
+            .th: "②"
+        ],
+        "guide_step_3": [
+            .zhHant: "③",
+            .en: "③",
+            .zhHans: "③",
+            .ja: "③",
+            .ko: "③",
+            .th: "③"
+        ],
+        "guide_step_4": [
+            .zhHant: "④",
+            .en: "④",
+            .zhHans: "④",
+            .ja: "④",
+            .ko: "④",
+            .th: "④"
+        ],
+        "guide_step_5": [
+            .zhHant: "⑤",
+            .en: "⑤",
+            .zhHans: "⑤",
+            .ja: "⑤",
+            .ko: "⑤",
+            .th: "⑤"
+        ],
+        "guide_step_6": [
+            .zhHant: "⑥",
+            .en: "⑥",
+            .zhHans: "⑥",
+            .ja: "⑥",
+            .ko: "⑥",
+            .th: "⑥"
         ],
         "guide_sub": [
             .zhHant: "次重點",
@@ -4620,6 +5135,14 @@ extension LocalizationManager {
             .ko: "주제",
             .th: "หัวข้อ"
         ],
+        "guide_trap_rule": [
+            .zhHant: "陷阱與口訣",
+            .en: "Trap & rule of thumb",
+            .zhHans: "陷阱与口诀",
+            .ja: "落とし穴とコツ",
+            .ko: "함정과 요령",
+            .th: "กับดักและเคล็ดลับ"
+        ],
         "guide_tue": [
             .zhHant: "二",
             .en: "Tue",
@@ -4651,6 +5174,14 @@ extension LocalizationManager {
             .ja: "週",
             .ko: "주",
             .th: "สัปดาห์"
+        ],
+        "guide_wrong_way": [
+            .zhHant: "✗ 錯誤畫法",
+            .en: "✗ Wrong way",
+            .zhHans: "✗ 错误画法",
+            .ja: "✗ 誤った描き方",
+            .ko: "✗ 잘못된 작도",
+            .th: "✗ วาดผิด"
         ],
         "handwriting_mode": [
             .zhHant: "手繪模式",
@@ -5513,7 +6044,8 @@ extension LocalizationManager {
             .en: "Import Document",
             .zhHans: "导入文件",
             .ja: "ドキュメントをインポート",
-            .ko: "문서 가져오기"
+            .ko: "문서 가져오기",
+            .th: "นำเข้าเอกสาร"
         ],
         "import_document_done": [
             .zhHant: "已匯入文件到這本筆記",
@@ -5914,6 +6446,62 @@ extension LocalizationManager {
             .ja: "枠線を維持",
             .ko: "테두리 유지",
             .th: "เก็บเส้นขอบ"
+        ],
+        "kit_create": [
+            .zhHant: "建立套件",
+            .en: "Create kit",
+            .zhHans: "创建套件",
+            .ja: "セットを作成",
+            .ko: "세트 만들기",
+            .th: "สร้างชุด"
+        ],
+        "kit_created": [
+            .zhHant: "套件已建立",
+            .en: "Kit created",
+            .zhHans: "套件已创建",
+            .ja: "セットを作成しました",
+            .ko: "세트를 만들었습니다",
+            .th: "สร้างชุดแล้ว"
+        ],
+        "kit_drafting": [
+            .zhHant: "圖學套件",
+            .en: "Engineering Drawing Kit",
+            .zhHans: "图学套件",
+            .ja: "製図セット",
+            .ko: "공학 도면 세트",
+            .th: "ชุดวิชาเขียนแบบ"
+        ],
+        "kit_drafting_class": [
+            .zhHant: "圖學－課堂筆記",
+            .en: "Drafting – Class Notes",
+            .zhHans: "图学－课堂笔记",
+            .ja: "製図－授業ノート",
+            .ko: "도면 – 수업 노트",
+            .th: "เขียนแบบ – จดบทเรียน"
+        ],
+        "kit_drafting_desc": [
+            .zhHant: "課堂筆記、作圖練習、錯誤陷阱本，並備好圖學筆組",
+            .en: "Class notes, drawing practice and a mistake-trap book, with the drafting pens ready",
+            .zhHans: "课堂笔记、作图练习、错误陷阱本，并备好图学笔组",
+            .ja: "授業ノート・作図練習・ミス集をまとめて作成",
+            .ko: "수업 노트, 작도 연습, 오답 함정 노트를 한 번에",
+            .th: "สมุดจดบทเรียน ฝึกวาด และสมุดกับดัก พร้อมชุดปากกาเขียนแบบ"
+        ],
+        "kit_drafting_practice": [
+            .zhHant: "圖學－作圖練習",
+            .en: "Drafting – Drawing Practice",
+            .zhHans: "图学－作图练习",
+            .ja: "製図－作図練習",
+            .ko: "도면 – 작도 연습",
+            .th: "เขียนแบบ – ฝึกวาด"
+        ],
+        "kit_drafting_trap": [
+            .zhHant: "圖學－錯誤陷阱本",
+            .en: "Drafting – Mistake Traps",
+            .zhHans: "图学－错误陷阱本",
+            .ja: "製図－ミスの落とし穴",
+            .ko: "도면 – 오답 함정",
+            .th: "เขียนแบบ – กับดักข้อผิดพลาด"
         ],
         "language": [
             .zhHant: "介面語系",
@@ -7723,6 +8311,38 @@ extension LocalizationManager {
             .ko: "용지 크기",
             .th: "ขนาดหน้ากระดาษ"
         ],
+        "page_format_a2": [
+            .zhHant: "A2（直式）",
+            .en: "A2 (portrait)",
+            .zhHans: "A2（竖式）",
+            .ja: "A2（縦）",
+            .ko: "A2 (세로)",
+            .th: "A2 (แนวตั้ง)"
+        ],
+        "page_format_a2_landscape": [
+            .zhHant: "A2（橫式）",
+            .en: "A2 (landscape)",
+            .zhHans: "A2（横式）",
+            .ja: "A2（横）",
+            .ko: "A2 (가로)",
+            .th: "A2 (แนวนอน)"
+        ],
+        "page_format_a3": [
+            .zhHant: "A3（直式）",
+            .en: "A3 (portrait)",
+            .zhHans: "A3（竖式）",
+            .ja: "A3（縦）",
+            .ko: "A3 (세로)",
+            .th: "A3 (แนวตั้ง)"
+        ],
+        "page_format_a3_landscape": [
+            .zhHant: "A3（橫式）",
+            .en: "A3 (landscape)",
+            .zhHans: "A3（横式）",
+            .ja: "A3（横）",
+            .ko: "A3 (가로)",
+            .th: "A3 (แนวนอน)"
+        ],
         "page_format_a4": [
             .zhHant: "A4 直式",
             .en: "A4",
@@ -7754,6 +8374,54 @@ extension LocalizationManager {
             .ja: "用紙サイズを変えるとキャンバスと書き出しの両方が変わります。新しい紙からはみ出した内容は内側に戻します。",
             .ko: "용지 크기를 바꾸면 캔버스와 내보내기가 함께 바뀝니다. 새 페이지를 벗어난 내용은 안쪽으로 되돌립니다.",
             .th: "การเปลี่ยนขนาดจะเปลี่ยนทั้งผืนผ้าใบและไฟล์ที่ส่งออก เนื้อหาที่เลยขอบหน้าใหม่จะถูกย้ายกลับเข้ามา"
+        ],
+        "page_format_custom": [
+            .zhHant: "自訂尺寸",
+            .en: "Custom size",
+            .zhHans: "自定义尺寸",
+            .ja: "カスタムサイズ",
+            .ko: "사용자 지정 크기",
+            .th: "ขนาดกำหนดเอง"
+        ],
+        "page_format_custom_apply": [
+            .zhHant: "套用",
+            .en: "Apply",
+            .zhHans: "应用",
+            .ja: "適用",
+            .ko: "적용",
+            .th: "ใช้"
+        ],
+        "page_format_custom_height": [
+            .zhHant: "高",
+            .en: "Height",
+            .zhHans: "高",
+            .ja: "高さ",
+            .ko: "높이",
+            .th: "สูง"
+        ],
+        "page_format_custom_hint": [
+            .zhHant: "寬與高，300–6000",
+            .en: "Width and height, 300–6000",
+            .zhHans: "宽与高，300–6000",
+            .ja: "幅と高さ（300〜6000）",
+            .ko: "너비와 높이, 300–6000",
+            .th: "กว้างและสูง 300–6000"
+        ],
+        "page_format_custom_title": [
+            .zhHant: "自訂頁面尺寸",
+            .en: "Custom page size",
+            .zhHans: "自定义页面尺寸",
+            .ja: "カスタムページサイズ",
+            .ko: "사용자 지정 페이지 크기",
+            .th: "ขนาดหน้ากำหนดเอง"
+        ],
+        "page_format_custom_width": [
+            .zhHant: "寬",
+            .en: "Width",
+            .zhHans: "宽",
+            .ja: "幅",
+            .ko: "너비",
+            .th: "กว้าง"
         ],
         "page_format_desc": [
             .zhHant: "變更頁面紙張規格與長寬比例（A4、信紙、16:9 等）",
@@ -8099,6 +8767,38 @@ extension LocalizationManager {
             .ko: "빈 페이지",
             .th: "หน้าว่าง"
         ],
+        "paper_drafting_steps": [
+            .zhHant: "作圖步驟紙",
+            .en: "Drafting Steps",
+            .zhHans: "作图步骤纸",
+            .ja: "作図ステップ紙",
+            .ko: "작도 단계지",
+            .th: "กระดาษขั้นตอนเขียนแบบ"
+        ],
+        "paper_drafting_steps_desc": [
+            .zhHant: "左欄寫 ①②③ 步驟，右邊整片作圖",
+            .en: "Numbered steps ①②③ on the left, a big drawing area on the right",
+            .zhHans: "左栏写 ①②③ 步骤，右边整片作图",
+            .ja: "左に①②③の手順、右に広い作図スペース",
+            .ko: "왼쪽에 ①②③ 단계, 오른쪽은 넓은 작도 공간",
+            .th: "ขั้นตอน ①②③ ด้านซ้าย พื้นที่วาดด้านขวา"
+        ],
+        "paper_drafting_trap": [
+            .zhHant: "圖學錯誤陷阱頁",
+            .en: "Drafting Trap Page",
+            .zhHans: "图学错误陷阱页",
+            .ja: "製図の落とし穴ページ",
+            .ko: "제도 함정 페이지",
+            .th: "หน้าข้อผิดพลาดงานเขียนแบบ"
+        ],
+        "paper_drafting_trap_desc": [
+            .zhHant: "錯誤與正確畫法並排，底下記口訣",
+            .en: "Wrong vs. right drawings side by side, with a rule of thumb below",
+            .zhHans: "错误与正确画法并排，底下记口诀",
+            .ja: "誤りと正解の描き方を並べ、下にコツを記録",
+            .ko: "틀린 작도와 맞는 작도를 나란히, 아래에 요령 기록",
+            .th: "วาดผิด/ถูกเทียบกัน พร้อมจดเคล็ดลับด้านล่าง"
+        ],
         "paper_english_3line": [
             .zhHant: "英文三線格",
             .en: "English Ruled (3-Line)",
@@ -8253,43 +8953,83 @@ extension LocalizationManager {
         ],
         "pen_action_eraser": [
             .zhHant: "橡皮擦",
-            .en: "Eraser"
+            .en: "Eraser",
+            .zhHans: "橡皮擦",
+            .ja: "消しゴム",
+            .ko: "지우개",
+            .th: "ยางลบ"
         ],
         "pen_action_inkAttributes": [
             .zhHant: "顯示調色盤",
-            .en: "Show Ink Palette"
+            .en: "Show Ink Palette",
+            .zhHans: "显示调色盘",
+            .ja: "カラーパレットを表示",
+            .ko: "색상 팔레트 표시",
+            .th: "แสดงจานสี"
         ],
         "pen_action_lasso": [
             .zhHant: "套索工具",
-            .en: "Lasso Tool"
+            .en: "Lasso Tool",
+            .zhHans: "套索工具",
+            .ja: "なげなわツール",
+            .ko: "올가미 도구",
+            .th: "เครื่องมือบ่วงบาศ"
         ],
         "pen_action_lastBrush": [
             .zhHant: "上一個使用的筆刷",
-            .en: "Last Used Brush"
+            .en: "Last Used Brush",
+            .zhHans: "上一个使用的笔刷",
+            .ja: "前回使用したブラシ",
+            .ko: "마지막으로 사용한 브러시",
+            .th: "แปรงที่ใช้ล่าสุด"
         ],
         "pen_action_none": [
             .zhHant: "無",
-            .en: "None"
+            .en: "None",
+            .zhHans: "无",
+            .ja: "なし",
+            .ko: "없음",
+            .th: "ไม่มี"
         ],
         "pen_action_redo": [
             .zhHant: "重做",
-            .en: "Redo"
+            .en: "Redo",
+            .zhHans: "重做",
+            .ja: "やり直す",
+            .ko: "다시 실행",
+            .th: "ทำซ้ำ"
         ],
         "pen_action_ruler": [
             .zhHant: "顯示尺規",
-            .en: "Show Ruler"
+            .en: "Show Ruler",
+            .zhHans: "显示尺规",
+            .ja: "定規を表示",
+            .ko: "눈금자 표시",
+            .th: "แสดงไม้บรรทัด"
         ],
         "pen_action_undo": [
             .zhHant: "復原",
-            .en: "Undo"
+            .en: "Undo",
+            .zhHans: "撤销",
+            .ja: "取り消す",
+            .ko: "실행 취소",
+            .th: "เลิกทำ"
         ],
         "pen_controls_title": [
             .zhHant: "側鍵與手勢",
-            .en: "Side Buttons & Gestures"
+            .en: "Side Buttons & Gestures",
+            .zhHans: "侧键与手势",
+            .ja: "サイドボタンとジェスチャー",
+            .ko: "측면 버튼 및 제스처",
+            .th: "ปุ่มด้านข้างและท่าทาง"
         ],
         "pen_double_tap": [
             .zhHant: "雙擊",
-            .en: "Double Tap"
+            .en: "Double Tap",
+            .zhHans: "双击",
+            .ja: "ダブルタップ",
+            .ko: "두 번 탭하기",
+            .th: "แตะสองครั้ง"
         ],
         "pen_only_toast": [
             .zhHant: "已開啟「僅限觸控筆」，手指觸控會被忽略。要用手指寫字請把它關掉。",
@@ -8301,18 +9041,27 @@ extension LocalizationManager {
         ],
         "pen_pressure_apple_note": [
             .zhHant: "Apple Pencil 的壓感曲線由系統原生最佳化接管，不支援手動覆寫。",
-            .en: "Apple Pencil pressure curves are optimized natively by the system and cannot be manually overridden."
+            .en: "Apple Pencil pressure curves are optimized natively by the system and cannot be manually overridden.",
+            .zhHans: "Apple Pencil 的压感曲线由系统原生优化接管，不支持手动覆盖。",
+            .ja: "Apple Pencil の筆圧カーブはシステムが最適化しており、手動で上書きすることはできません。",
+            .ko: "Apple Pencil의 필압 곡선은 시스템이 기본적으로 최적화하며 수동으로 바꿀 수 없습니다.",
+            .th: "เส้นโค้งแรงกดของ Apple Pencil ถูกระบบปรับให้เหมาะสมอยู่แล้ว ไม่สามารถกำหนดเองได้"
         ],
         "pen_settings_title": [
             .zhHant: "進階畫筆設定",
             .en: "Advanced Pen Settings",
             .zhHans: "高级画笔设置",
             .ja: "詳細なペン設定",
-            .ko: "고급 펜 설정"
+            .ko: "고급 펜 설정",
+            .th: "การตั้งค่าปากกาขั้นสูง"
         ],
         "pen_squeeze": [
             .zhHant: "擠壓 (Pencil Pro)",
-            .en: "Squeeze (Pencil Pro)"
+            .en: "Squeeze (Pencil Pro)",
+            .zhHans: "挤压 (Pencil Pro)",
+            .ja: "スクイーズ (Pencil Pro)",
+            .ko: "쥐기 (Pencil Pro)",
+            .th: "บีบ (Pencil Pro)"
         ],
         "permission_open_settings": [
             .zhHant: "開啟設定",
@@ -8367,14 +9116,16 @@ extension LocalizationManager {
             .en: "Pressure Floor",
             .zhHans: "下笔起始压力",
             .ja: "最小筆圧",
-            .ko: "최소 필압"
+            .ko: "최소 필압",
+            .th: "แรงกดเริ่มต้น"
         ],
         "pressure_gamma": [
             .zhHant: "壓力敏感度曲線",
             .en: "Pressure Gamma",
             .zhHans: "压力敏感度曲线",
             .ja: "筆圧感度カーブ",
-            .ko: "필압 감도 곡선"
+            .ko: "필압 감도 곡선",
+            .th: "เส้นโค้งความไวต่อแรงกด"
         ],
         "preview_chart": [
             .zhHant: "圖表即時預覽",
@@ -10168,6 +10919,14 @@ extension LocalizationManager {
             .ko: "모서리 반경",
             .th: "รัศมีมุม"
         ],
+        "shape_depth": [
+            .zhHant: "深度",
+            .en: "Depth",
+            .zhHans: "深度",
+            .ja: "奥行き",
+            .ko: "깊이",
+            .th: "ความลึก"
+        ],
         "shape_duplicate": [
             .zhHant: "複製",
             .en: "Duplicate",
@@ -10215,6 +10974,22 @@ extension LocalizationManager {
             .ja: "高さ",
             .ko: "높이",
             .th: "สูง"
+        ],
+        "shape_kind_alternateprocess": [
+            .zhHant: "替代處理",
+            .en: "Alternate process",
+            .zhHans: "替代处理",
+            .ja: "代替処理",
+            .ko: "대체 처리",
+            .th: "กระบวนการทางเลือก"
+        ],
+        "shape_kind_annotation": [
+            .zhHant: "註解",
+            .en: "Annotation",
+            .zhHans: "注释",
+            .ja: "注釈",
+            .ko: "주석",
+            .th: "หมายเหตุ"
         ],
         "shape_kind_arrow": [
             .zhHant: "箭頭",
@@ -10296,6 +11071,22 @@ extension LocalizationManager {
             .ko: "대조",
             .th: "เรียงเทียบ"
         ],
+        "shape_kind_communicationlink": [
+            .zhHant: "通訊連結",
+            .en: "Communication link",
+            .zhHans: "通信链路",
+            .ja: "通信リンク",
+            .ko: "통신 링크",
+            .th: "การเชื่อมต่อสื่อสาร"
+        ],
+        "shape_kind_cone": [
+            .zhHant: "圓錐體",
+            .en: "Cone",
+            .zhHans: "圆锥体",
+            .ja: "円錐",
+            .ko: "원뿔",
+            .th: "กรวย"
+        ],
         "shape_kind_connector": [
             .zhHant: "連接點",
             .en: "Connector",
@@ -10311,6 +11102,22 @@ extension LocalizationManager {
             .ja: "十字",
             .ko: "십자",
             .th: "กากบาท"
+        ],
+        "shape_kind_cube": [
+            .zhHant: "立方體",
+            .en: "Cube",
+            .zhHans: "立方体",
+            .ja: "立方体",
+            .ko: "정육면체",
+            .th: "ลูกบาศก์"
+        ],
+        "shape_kind_cylinder": [
+            .zhHant: "圓柱體",
+            .en: "Cylinder",
+            .zhHans: "圆柱体",
+            .ja: "円柱",
+            .ko: "원기둥",
+            .th: "ทรงกระบอก"
         ],
         "shape_kind_data": [
             .zhHant: "資料",
@@ -10351,6 +11158,14 @@ extension LocalizationManager {
             .ja: "ひし形",
             .ko: "마름모",
             .th: "ข้าวหลามตัด"
+        ],
+        "shape_kind_directaccessstorage": [
+            .zhHant: "直接存取儲存",
+            .en: "Direct access storage",
+            .zhHans: "直接存取存储",
+            .ja: "直接アクセス記憶",
+            .ko: "직접 접근 저장소",
+            .th: "ที่เก็บแบบเข้าถึงโดยตรง"
         ],
         "shape_kind_display": [
             .zhHant: "顯示",
@@ -10400,6 +11215,14 @@ extension LocalizationManager {
             .ko: "하트",
             .th: "หัวใจ"
         ],
+        "shape_kind_hemisphere": [
+            .zhHant: "半球",
+            .en: "Hemisphere",
+            .zhHans: "半球",
+            .ja: "半球",
+            .ko: "반구",
+            .th: "ซีกโลก"
+        ],
         "shape_kind_heptagon": [
             .zhHant: "七邊形",
             .en: "Heptagon",
@@ -10416,6 +11239,14 @@ extension LocalizationManager {
             .ko: "육각형",
             .th: "หกเหลี่ยม"
         ],
+        "shape_kind_internalstorage": [
+            .zhHant: "內部儲存",
+            .en: "Internal storage",
+            .zhHans: "内部存储",
+            .ja: "内部記憶",
+            .ko: "내부 저장소",
+            .th: "ที่เก็บภายใน"
+        ],
         "shape_kind_line": [
             .zhHant: "直線",
             .en: "Line",
@@ -10423,6 +11254,22 @@ extension LocalizationManager {
             .ja: "直線",
             .ko: "직선",
             .th: "เส้นตรง"
+        ],
+        "shape_kind_looplimitend": [
+            .zhHant: "迴圈結束",
+            .en: "Loop limit (end)",
+            .zhHans: "循环结束",
+            .ja: "ループ終了",
+            .ko: "반복 종료",
+            .th: "สิ้นสุดลูป"
+        ],
+        "shape_kind_looplimitstart": [
+            .zhHant: "迴圈開始",
+            .en: "Loop limit (start)",
+            .zhHans: "循环开始",
+            .ja: "ループ開始",
+            .ko: "반복 시작",
+            .th: "เริ่มลูป"
         ],
         "shape_kind_lshape": [
             .zhHant: "L 形",
@@ -10464,6 +11311,14 @@ extension LocalizationManager {
             .ko: "달",
             .th: "พระจันทร์เสี้ยว"
         ],
+        "shape_kind_multidocument": [
+            .zhHant: "多份文件",
+            .en: "Multiple documents",
+            .zhHans: "多份文档",
+            .ja: "複数書類",
+            .ko: "다중 문서",
+            .th: "เอกสารหลายฉบับ"
+        ],
         "shape_kind_octagon": [
             .zhHant: "八邊形",
             .en: "Octagon",
@@ -10472,6 +11327,14 @@ extension LocalizationManager {
             .ko: "팔각형",
             .th: "แปดเหลี่ยม"
         ],
+        "shape_kind_offlinestorage": [
+            .zhHant: "離線儲存",
+            .en: "Offline storage",
+            .zhHans: "离线存储",
+            .ja: "オフライン記憶",
+            .ko: "오프라인 저장소",
+            .th: "ที่เก็บออฟไลน์"
+        ],
         "shape_kind_offpageconnector": [
             .zhHant: "跨頁連接",
             .en: "Off-page connector",
@@ -10479,6 +11342,22 @@ extension LocalizationManager {
             .ja: "他ページ結合子",
             .ko: "페이지 간 연결",
             .th: "เชื่อมข้ามหน้า"
+        ],
+        "shape_kind_orjunction": [
+            .zhHant: "或（OR）接點",
+            .en: "OR junction",
+            .zhHans: "或（OR）接点",
+            .ja: "OR接合",
+            .ko: "OR 접합",
+            .th: "จุดเชื่อม OR"
+        ],
+        "shape_kind_parallelmode": [
+            .zhHant: "平行模式",
+            .en: "Parallel mode",
+            .zhHans: "并行模式",
+            .ja: "並列モード",
+            .ko: "병렬 모드",
+            .th: "โหมดขนาน"
         ],
         "shape_kind_parallelogram": [
             .zhHant: "平行四邊形",
@@ -10512,6 +11391,14 @@ extension LocalizationManager {
             .ko: "명판",
             .th: "แผ่นป้าย"
         ],
+        "shape_kind_predefinedprocess": [
+            .zhHant: "預先定義的處理",
+            .en: "Predefined process",
+            .zhHans: "预定义处理",
+            .ja: "定義済み処理",
+            .ko: "정의된 처리",
+            .th: "กระบวนการที่กำหนดไว้ล่วงหน้า"
+        ],
         "shape_kind_preparation": [
             .zhHant: "預備",
             .en: "Preparation",
@@ -10544,6 +11431,14 @@ extension LocalizationManager {
             .ko: "천공 테이프",
             .th: "เทปเจาะรู"
         ],
+        "shape_kind_pyramid": [
+            .zhHant: "角錐",
+            .en: "Pyramid",
+            .zhHans: "棱锥",
+            .ja: "角錐",
+            .ko: "각뿔",
+            .th: "พีระมิด"
+        ],
         "shape_kind_rectangle": [
             .zhHant: "矩形",
             .en: "Rectangle",
@@ -10568,6 +11463,22 @@ extension LocalizationManager {
             .ko: "둥근 직사각형",
             .th: "สี่เหลี่ยมมุมมน"
         ],
+        "shape_kind_sequentialaccessstorage": [
+            .zhHant: "循序存取儲存",
+            .en: "Sequential access storage",
+            .zhHans: "顺序存取存储",
+            .ja: "順次アクセス記憶",
+            .ko: "순차 접근 저장소",
+            .th: "ที่เก็บแบบเข้าถึงตามลำดับ"
+        ],
+        "shape_kind_sort": [
+            .zhHant: "排序",
+            .en: "Sort",
+            .zhHans: "排序",
+            .ja: "並べ替え",
+            .ko: "정렬",
+            .th: "เรียงลำดับ"
+        ],
         "shape_kind_speechbubble": [
             .zhHant: "對話框",
             .en: "Speech bubble",
@@ -10575,6 +11486,14 @@ extension LocalizationManager {
             .ja: "吹き出し",
             .ko: "말풍선",
             .th: "กรอบคำพูด"
+        ],
+        "shape_kind_sphere": [
+            .zhHant: "球體",
+            .en: "Sphere",
+            .zhHans: "球体",
+            .ja: "球",
+            .ko: "구",
+            .th: "ทรงกลม"
         ],
         "shape_kind_star": [
             .zhHant: "五角星",
@@ -10616,6 +11535,14 @@ extension LocalizationManager {
             .ko: "저장된 데이터",
             .th: "ข้อมูลที่เก็บไว้"
         ],
+        "shape_kind_summingjunction": [
+            .zhHant: "加總接點",
+            .en: "Summing junction",
+            .zhHans: "汇总接点",
+            .ja: "和接合",
+            .ko: "합산 접합",
+            .th: "จุดรวมผลรวม"
+        ],
         "shape_kind_sun": [
             .zhHant: "太陽",
             .en: "Sun",
@@ -10640,6 +11567,22 @@ extension LocalizationManager {
             .ko: "시작·종료",
             .th: "จุดเริ่ม/จบ"
         ],
+        "shape_kind_tetrahedron": [
+            .zhHant: "四面體",
+            .en: "Tetrahedron",
+            .zhHans: "四面体",
+            .ja: "正四面体",
+            .ko: "사면체",
+            .th: "จัตุรมุข"
+        ],
+        "shape_kind_torus": [
+            .zhHant: "圓環體",
+            .en: "Torus",
+            .zhHans: "圆环体",
+            .ja: "トーラス",
+            .ko: "토러스",
+            .th: "ทอรัส"
+        ],
         "shape_kind_trapezoid": [
             .zhHant: "梯形",
             .en: "Trapezoid",
@@ -10655,6 +11598,14 @@ extension LocalizationManager {
             .ja: "三角形",
             .ko: "삼각형",
             .th: "สามเหลี่ยม"
+        ],
+        "shape_kind_triangularprism": [
+            .zhHant: "三角柱",
+            .en: "Triangular prism",
+            .zhHans: "三棱柱",
+            .ja: "三角柱",
+            .ko: "삼각기둥",
+            .th: "ปริซึมสามเหลี่ยม"
         ],
         "shape_label": [
             .zhHant: "標籤文字",
@@ -10704,6 +11655,38 @@ extension LocalizationManager {
             .ko: "기본 도형",
             .th: "รูปร่างพื้นฐาน"
         ],
+        "shape_section_flow_control": [
+            .zhHant: "流程圖：流程控制（ISO 5807）",
+            .en: "Flowchart: Flow control (ISO 5807)",
+            .zhHans: "流程图：流程控制（ISO 5807）",
+            .ja: "フローチャート：フロー制御（ISO 5807）",
+            .ko: "순서도: 흐름 제어(ISO 5807)",
+            .th: "ผังงาน: การควบคุมการไหล (ISO 5807)"
+        ],
+        "shape_section_flow_data": [
+            .zhHant: "流程圖：資料與儲存（ISO 5807）",
+            .en: "Flowchart: Data & storage (ISO 5807)",
+            .zhHans: "流程图：数据与存储（ISO 5807）",
+            .ja: "フローチャート：データと記憶（ISO 5807）",
+            .ko: "순서도: 데이터와 저장소(ISO 5807)",
+            .th: "ผังงาน: ข้อมูลและที่เก็บ (ISO 5807)"
+        ],
+        "shape_section_flow_process": [
+            .zhHant: "流程圖：處理（ISO 5807）",
+            .en: "Flowchart: Process (ISO 5807)",
+            .zhHans: "流程图：处理（ISO 5807）",
+            .ja: "フローチャート：処理（ISO 5807）",
+            .ko: "순서도: 처리(ISO 5807)",
+            .th: "ผังงาน: การประมวลผล (ISO 5807)"
+        ],
+        "shape_section_flow_special": [
+            .zhHant: "流程圖：特殊符號（ISO 5807）",
+            .en: "Flowchart: Special symbols (ISO 5807)",
+            .zhHans: "流程图：特殊符号（ISO 5807）",
+            .ja: "フローチャート：特殊記号（ISO 5807）",
+            .ko: "순서도: 특수 기호(ISO 5807)",
+            .th: "ผังงาน: สัญลักษณ์พิเศษ (ISO 5807)"
+        ],
         "shape_section_flowchart": [
             .zhHant: "流程圖符號（ISO 5807）",
             .en: "Flowchart Symbols (ISO 5807)",
@@ -10711,6 +11694,14 @@ extension LocalizationManager {
             .ja: "フローチャート記号（ISO 5807）",
             .ko: "순서도 기호(ISO 5807)",
             .th: "สัญลักษณ์ผังงาน (ISO 5807)"
+        ],
+        "shape_section_solid": [
+            .zhHant: "立體圖（可調深度）",
+            .en: "Solids (3D, adjustable depth)",
+            .zhHans: "立体图（可调深度）",
+            .ja: "立体図形（奥行き調整可）",
+            .ko: "입체 도형(깊이 조절)",
+            .th: "รูปทรง 3 มิติ (ปรับความลึกได้)"
         ],
         "shape_section_templates": [
             .zhHant: "範本",
@@ -10743,6 +11734,86 @@ extension LocalizationManager {
             .ja: "図形スタイル",
             .ko: "도형 스타일",
             .th: "สไตล์รูปทรง"
+        ],
+        "shape_template_flow_approval": [
+            .zhHant: "簽核審核",
+            .en: "Approval",
+            .zhHans: "签核审核",
+            .ja: "承認フロー",
+            .ko: "결재 승인",
+            .th: "การอนุมัติ"
+        ],
+        "shape_template_flow_basic": [
+            .zhHant: "基本流程",
+            .en: "Basic flow",
+            .zhHans: "基本流程",
+            .ja: "基本フロー",
+            .ko: "기본 흐름",
+            .th: "ผังงานพื้นฐาน"
+        ],
+        "shape_template_flow_decision": [
+            .zhHant: "判斷分支",
+            .en: "Decision branch",
+            .zhHans: "判断分支",
+            .ja: "判断分岐",
+            .ko: "판단 분기",
+            .th: "การตัดสินใจแตกแขนง"
+        ],
+        "shape_template_flow_documents": [
+            .zhHant: "文件處理",
+            .en: "Document handling",
+            .zhHans: "文档处理",
+            .ja: "書類処理",
+            .ko: "문서 처리",
+            .th: "การจัดการเอกสาร"
+        ],
+        "shape_template_flow_io": [
+            .zhHant: "輸入處理輸出",
+            .en: "Input, process, output",
+            .zhHans: "输入处理输出",
+            .ja: "入力・処理・出力",
+            .ko: "입력·처리·출력",
+            .th: "รับเข้า ประมวลผล แสดงผล"
+        ],
+        "shape_template_flow_login": [
+            .zhHant: "登入驗證",
+            .en: "Login & authentication",
+            .zhHans: "登录验证",
+            .ja: "ログイン認証",
+            .ko: "로그인 인증",
+            .th: "การเข้าสู่ระบบและยืนยันตัวตน"
+        ],
+        "shape_template_flow_loop": [
+            .zhHant: "迴圈",
+            .en: "Loop",
+            .zhHans: "循环",
+            .ja: "ループ",
+            .ko: "반복",
+            .th: "ลูป"
+        ],
+        "shape_template_flow_parallel": [
+            .zhHant: "平行處理",
+            .en: "Parallel processing",
+            .zhHans: "并行处理",
+            .ja: "並列処理",
+            .ko: "병렬 처리",
+            .th: "การประมวลผลแบบขนาน"
+        ],
+        "shape_template_flow_pipeline": [
+            .zhHant: "資料處理管線",
+            .en: "Data pipeline (ETL)",
+            .zhHans: "数据处理管线",
+            .ja: "データパイプライン",
+            .ko: "데이터 파이프라인",
+            .th: "ไปป์ไลน์ข้อมูล"
+        ],
+        "shape_template_flow_retry": [
+            .zhHant: "錯誤處理與重試",
+            .en: "Error handling & retry",
+            .zhHans: "错误处理与重试",
+            .ja: "エラー処理と再試行",
+            .ko: "오류 처리와 재시도",
+            .th: "จัดการข้อผิดพลาดและลองใหม่"
         ],
         "shape_text_section": [
             .zhHant: "文字",
@@ -10863,6 +11934,350 @@ extension LocalizationManager {
             .ja: "スナップショット名",
             .ko: "스냅샷 이름",
             .th: "ชื่อสแนปช็อต"
+        ],
+        "solid_angle": [
+            .zhHant: "切線方向",
+            .en: "Cut direction",
+            .zhHans: "切线方向",
+            .ja: "切断線の向き",
+            .ko: "절단선 방향",
+            .th: "ทิศทางเส้นตัด"
+        ],
+        "solid_centerlines": [
+            .zhHant: "中心線",
+            .en: "Center lines",
+            .zhHans: "中心线",
+            .ja: "中心線",
+            .ko: "중심선",
+            .th: "เส้นศูนย์กลาง"
+        ],
+        "solid_delta": [
+            .zhHant: "第二段角度",
+            .en: "Second leg angle",
+            .zhHans: "第二段角度",
+            .ja: "2段目の角度",
+            .ko: "두 번째 각도",
+            .th: "มุมช่วงที่สอง"
+        ],
+        "solid_depth": [
+            .zhHant: "深",
+            .en: "Depth",
+            .zhHans: "深",
+            .ja: "奥行き",
+            .ko: "깊이",
+            .th: "ลึก"
+        ],
+        "solid_depth_pos": [
+            .zhHant: "切入深度",
+            .en: "Cut depth",
+            .zhHans: "切入深度",
+            .ja: "切断の深さ",
+            .ko: "절단 깊이",
+            .th: "ความลึกที่ตัด"
+        ],
+        "solid_dimensions": [
+            .zhHant: "標註尺寸",
+            .en: "Dimensions",
+            .zhHans: "标注尺寸",
+            .ja: "寸法を記入",
+            .ko: "치수 기입",
+            .th: "ใส่ขนาด"
+        ],
+        "solid_first_angle": [
+            .zhHant: "第一角法",
+            .en: "First-angle projection",
+            .zhHans: "第一角法",
+            .ja: "第一角法",
+            .ko: "제1각법",
+            .th: "การฉายมุมที่หนึ่ง"
+        ],
+        "solid_flip": [
+            .zhHant: "從另一側看",
+            .en: "Look from the other side",
+            .zhHans: "从另一侧看",
+            .ja: "反対側から見る",
+            .ko: "반대쪽에서 보기",
+            .th: "มองจากอีกด้าน"
+        ],
+        "solid_from_sketch": [
+            .zhHant: "使用這一頁上的封閉圖形",
+            .en: "Use the closed shapes on this page",
+            .zhHans: "使用这一页上的封闭图形",
+            .ja: "このページの閉じた図形を使う",
+            .ko: "이 페이지의 닫힌 도형 사용",
+            .th: "ใช้รูปปิดบนหน้านี้"
+        ],
+        "solid_height": [
+            .zhHant: "高",
+            .en: "Height",
+            .zhHans: "高",
+            .ja: "高さ",
+            .ko: "높이",
+            .th: "สูง"
+        ],
+        "solid_insert": [
+            .zhHant: "插入頁面",
+            .en: "Insert into page",
+            .zhHans: "插入页面",
+            .ja: "ページに挿入",
+            .ko: "페이지에 삽입",
+            .th: "แทรกลงหน้า"
+        ],
+        "solid_inserted": [
+            .zhHant: "已插入：輪廓在頂層，投射線在中層",
+            .en: "Views inserted on the Top layer; construction lines are on the Middle layer",
+            .zhHans: "已插入：轮廓在顶层，投射线在中层",
+            .ja: "挿入しました：輪郭は上層、投影線は中層",
+            .ko: "삽입됨: 윤곽은 상층, 투사선은 중층",
+            .th: "แทรกแล้ว: เส้นขอบอยู่ชั้นบน เส้นโครงอยู่ชั้นกลาง"
+        ],
+        "solid_iso": [
+            .zhHant: "等角圖",
+            .en: "Isometric view",
+            .zhHans: "等角图",
+            .ja: "等角図",
+            .ko: "등각도",
+            .th: "ภาพไอโซเมตริก"
+        ],
+        "solid_offset": [
+            .zhHant: "切線位置",
+            .en: "Cut position",
+            .zhHans: "切线位置",
+            .ja: "切断位置",
+            .ko: "절단 위치",
+            .th: "ตำแหน่งตัด"
+        ],
+        "solid_offset2": [
+            .zhHant: "第二段位置",
+            .en: "Second cut position",
+            .zhHans: "第二段位置",
+            .ja: "2段目の位置",
+            .ko: "두 번째 위치",
+            .th: "ตำแหน่งที่สอง"
+        ],
+        "solid_pitch": [
+            .zhHant: "垂直傾斜",
+            .en: "Tilt",
+            .zhHans: "垂直倾斜",
+            .ja: "垂直傾斜",
+            .ko: "상하 기울기",
+            .th: "เอียงขึ้นลง"
+        ],
+        "solid_place_hint": [
+            .zhHant: "已插入——拖曳可移動位置，點空白處完成。",
+            .en: "Inserted — drag to move it, tap empty space when done.",
+            .zhHans: "已插入——拖曳可移动位置，点空白处完成。",
+            .ja: "挿入しました。ドラッグで移動、空白をタップで完了。",
+            .ko: "삽입됨 — 끌어서 이동하고 빈 곳을 눌러 완료합니다.",
+            .th: "แทรกแล้ว — ลากเพื่อย้าย แตะที่ว่างเมื่อเสร็จ"
+        ],
+        "solid_preset_circle": [
+            .zhHant: "圓形",
+            .en: "Circle",
+            .zhHans: "圆形",
+            .ja: "円",
+            .ko: "원",
+            .th: "วงกลม"
+        ],
+        "solid_preset_hexagon": [
+            .zhHant: "六邊形",
+            .en: "Hexagon",
+            .zhHans: "六边形",
+            .ja: "六角形",
+            .ko: "육각형",
+            .th: "หกเหลี่ยม"
+        ],
+        "solid_preset_l_shape": [
+            .zhHant: "L 形",
+            .en: "L shape",
+            .zhHans: "L 形",
+            .ja: "L字形",
+            .ko: "L자형",
+            .th: "รูปตัว L"
+        ],
+        "solid_preset_plate_holes": [
+            .zhHant: "四孔板",
+            .en: "Plate with holes",
+            .zhHans: "四孔板",
+            .ja: "4穴プレート",
+            .ko: "4구멍 판",
+            .th: "แผ่นสี่รู"
+        ],
+        "solid_preset_rect": [
+            .zhHant: "矩形",
+            .en: "Rectangle",
+            .zhHans: "矩形",
+            .ja: "長方形",
+            .ko: "직사각형",
+            .th: "สี่เหลี่ยม"
+        ],
+        "solid_preset_ring": [
+            .zhHant: "墊圈（有孔）",
+            .en: "Washer (hole)",
+            .zhHans: "垫圈（有孔）",
+            .ja: "ワッシャー（穴あり）",
+            .ko: "와셔(구멍)",
+            .th: "แหวน (มีรู)"
+        ],
+        "solid_preset_t_shape": [
+            .zhHant: "T 形",
+            .en: "T shape",
+            .zhHans: "T 形",
+            .ja: "T字形",
+            .ko: "T자형",
+            .th: "รูปตัว T"
+        ],
+        "solid_preset_u_shape": [
+            .zhHant: "U 形槽",
+            .en: "U channel",
+            .zhHans: "U 形槽",
+            .ja: "U字溝",
+            .ko: "U자 홈",
+            .th: "รางตัว U"
+        ],
+        "solid_profile": [
+            .zhHant: "輪廓",
+            .en: "Profile",
+            .zhHans: "轮廓",
+            .ja: "断面形状",
+            .ko: "단면 형상",
+            .th: "โครงร่าง"
+        ],
+        "solid_projection": [
+            .zhHant: "投射線",
+            .en: "Projection lines",
+            .zhHans: "投射线",
+            .ja: "投影線",
+            .ko: "투사선",
+            .th: "เส้นโครง"
+        ],
+        "solid_section": [
+            .zhHant: "剖面",
+            .en: "Section",
+            .zhHans: "剖面",
+            .ja: "断面",
+            .ko: "단면",
+            .th: "ภาพตัด"
+        ],
+        "solid_section_full": [
+            .zhHant: "全剖面",
+            .en: "Full section",
+            .zhHans: "全剖面",
+            .ja: "全断面",
+            .ko: "온단면",
+            .th: "ตัดเต็ม"
+        ],
+        "solid_section_label": [
+            .zhHant: "標示剖面（A–A）",
+            .en: "Label the section (A–A)",
+            .zhHans: "标示剖面（A–A）",
+            .ja: "断面を表示（A–A）",
+            .ko: "단면 표시(A–A)",
+            .th: "ระบุภาพตัด (A–A)"
+        ],
+        "solid_section_none": [
+            .zhHant: "不剖",
+            .en: "No section",
+            .zhHans: "不剖",
+            .ja: "断面なし",
+            .ko: "단면 없음",
+            .th: "ไม่ตัด"
+        ],
+        "solid_section_parallel": [
+            .zhHant: "平行正面的剖面",
+            .en: "Section parallel to the front",
+            .zhHans: "平行正面的剖面",
+            .ja: "正面に平行な断面",
+            .ko: "정면에 평행한 단면",
+            .th: "ตัดขนานด้านหน้า"
+        ],
+        "solid_section_rotated": [
+            .zhHant: "旋轉剖面",
+            .en: "Rotated section",
+            .zhHans: "旋转剖面",
+            .ja: "回転断面",
+            .ko: "회전 단면",
+            .th: "ตัดแบบหมุน"
+        ],
+        "solid_section_stepped": [
+            .zhHant: "階梯剖面",
+            .en: "Stepped section",
+            .zhHans: "阶梯剖面",
+            .ja: "階段断面",
+            .ko: "계단 단면",
+            .th: "ตัดแบบขั้นบันได"
+        ],
+        "solid_sketch_none": [
+            .zhHant: "找不到封閉的圖形。請畫一個頭尾相接的輪廓（長按吸附的矩形或圓都可以）再試一次。",
+            .en: "No closed shape found. Draw an outline whose end meets its start (a hold-to-snap rectangle or circle works well), then try again.",
+            .zhHans: "找不到封闭的图形。请画一个头尾相接的轮廓（长按吸附的矩形或圆都可以）再试一次。",
+            .ja: "閉じた図形が見つかりません。始点と終点がつながる輪郭（長押しスナップの長方形や円など）を描いて再度お試しください。",
+            .ko: "닫힌 도형을 찾지 못했습니다. 시작점과 끝점이 만나는 윤곽(길게 눌러 스냅한 사각형이나 원)을 그린 뒤 다시 시도하세요.",
+            .th: "ไม่พบรูปปิด กรุณาวาดโครงร่างที่ปลายชนต้น (สี่เหลี่ยมหรือวงกลมที่กดค้างจัดรูป) แล้วลองใหม่"
+        ],
+        "solid_sketch_used": [
+            .zhHant: "已用你的草圖拉伸",
+            .en: "Extruded from your sketch",
+            .zhHans: "已用你的草图拉伸",
+            .ja: "スケッチから押し出しました",
+            .ko: "스케치에서 돌출했습니다",
+            .th: "ดึงจากสเก็ตช์ของคุณแล้ว"
+        ],
+        "solid_step": [
+            .zhHant: "轉折位置",
+            .en: "Step at",
+            .zhHans: "转折位置",
+            .ja: "段差の位置",
+            .ko: "꺾임 위치",
+            .th: "ตำแหน่งขั้น"
+        ],
+        "solid_studio": [
+            .zhHant: "立體輔助",
+            .en: "Solid helper",
+            .zhHans: "立体辅助",
+            .ja: "立体ヘルパー",
+            .ko: "입체 도우미",
+            .th: "ตัวช่วยงานสามมิติ"
+        ],
+        "solid_studio_desc": [
+            .zhHant: "把草圖拉伸成立體，畫出三視圖、等角圖與剖面",
+            .en: "Extrude a sketch, then draw its three views, isometric view and sections",
+            .zhHans: "把草图拉伸成立体，画出三视图、等角图与剖面",
+            .ja: "スケッチを押し出し、三面図・等角図・断面図を作成",
+            .ko: "스케치를 돌출시켜 3면도, 등각도, 단면도 만들기",
+            .th: "ดึงสเก็ตช์เป็นชิ้นงาน แล้ววาดสามมุมมอง ภาพไอโซเมตริก และภาพตัด"
+        ],
+        "solid_tab_rotate": [
+            .zhHant: "旋轉對照",
+            .en: "Rotate",
+            .zhHans: "旋转对照",
+            .ja: "回転",
+            .ko: "회전",
+            .th: "หมุน"
+        ],
+        "solid_tab_sheet": [
+            .zhHant: "視圖",
+            .en: "Views",
+            .zhHans: "视图",
+            .ja: "図面",
+            .ko: "도면",
+            .th: "ภาพ"
+        ],
+        "solid_width": [
+            .zhHant: "寬",
+            .en: "Width",
+            .zhHans: "宽",
+            .ja: "幅",
+            .ko: "너비",
+            .th: "กว้าง"
+        ],
+        "solid_yaw": [
+            .zhHant: "水平旋轉",
+            .en: "Turn",
+            .zhHans: "水平旋转",
+            .ja: "水平回転",
+            .ko: "좌우 회전",
+            .th: "หมุนซ้ายขวา"
         ],
         "sort_by_date": [
             .zhHant: "依修改時間排序",
@@ -13335,6 +14750,14 @@ extension LocalizationManager {
             .ja: "クレヨン",
             .ko: "크레용",
             .th: "สีเทียน"
+        ],
+        "tool_drafting": [
+            .zhHant: "圖學筆組",
+            .en: "Drafting",
+            .zhHans: "图学笔组",
+            .ja: "製図",
+            .ko: "제도",
+            .th: "งานเขียนแบบ"
         ],
         "tool_eraser": [
             .zhHant: "橡皮擦",

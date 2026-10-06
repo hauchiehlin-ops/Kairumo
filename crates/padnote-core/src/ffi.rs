@@ -365,6 +365,12 @@ pub struct FullStroke {
     pub color_rgba: Vec<u8>,
     pub base_width: f32,
     pub points: Vec<StrokePoint>,
+    /// 製圖圖層（0 = 沒有）。1 底、2 中、3 頂。
+    #[uniffi(default = 0)]
+    pub layer: u8,
+    /// 工程線型：0 實線、1 隱藏線、2 中心線、3 假想線。
+    #[uniffi(default = 0)]
+    pub line_type: u8,
 }
 
 #[derive(Clone, Debug, uniffi::Record)]
@@ -872,6 +878,36 @@ impl PadnoteSession {
             color_rgba8: to_rgba(&color_rgba),
             base_width,
             points: points.into_iter().map(to_ink_point).collect(),
+            layer: 0,
+            line_type: 0,
+        };
+        self.lock().add_stroke(page, stroke)?;
+        Ok(id.to_string())
+    }
+
+    /// 寫入一筆**製圖筆畫**：與 [`Self::add_stroke`] 相同，再帶圖層與工程線型。
+    #[allow(clippy::too_many_arguments)]
+    pub fn add_stroke_drafted(
+        &self,
+        page_id: String,
+        tool: ToolKind,
+        color_rgba: Vec<u8>,
+        base_width: f32,
+        points: Vec<StrokePoint>,
+        layer: u8,
+        line_type: u8,
+    ) -> Result<String, FfiError> {
+        let page = parse_uuid(&page_id)?;
+        let id = Uuid::now_v7();
+        let stroke = Stroke {
+            id,
+            started_at: NotebookTime::ZERO,
+            tool: tool.into(),
+            color_rgba8: to_rgba(&color_rgba),
+            base_width,
+            points: points.into_iter().map(to_ink_point).collect(),
+            layer,
+            line_type,
         };
         self.lock().add_stroke(page, stroke)?;
         Ok(id.to_string())
@@ -1112,6 +1148,8 @@ impl PadnoteSession {
                         point
                     })
                     .collect(),
+                layer: source.layer,
+                line_type: source.line_type,
             };
             self.lock().add_stroke(page, stroke)?;
             created.push(id.to_string());
@@ -2015,6 +2053,11 @@ impl PadnoteSession {
         Ok(self.lock().export_markdown()?)
     }
 
+    /// 設定匯出／列印時要略過的製圖圖層（使用者在這台裝置上隱藏的那幾層）。
+    pub fn set_export_hidden_layers(&self, layers: Vec<u8>) {
+        self.lock().set_export_hidden_layers(layers);
+    }
+
     /// 匯出整份筆記本為 PDF 位元組流（工作項 S-18 / S-43）。
     pub fn export_pdf(&self) -> Result<Vec<u8>, FfiError> {
         Ok(self
@@ -2229,6 +2272,8 @@ fn to_full_stroke(s: Stroke) -> FullStroke {
         color_rgba: s.color_rgba8.to_vec(),
         base_width: s.base_width,
         points: s.points.into_iter().map(from_ink_point).collect(),
+        layer: s.layer,
+        line_type: s.line_type,
     }
 }
 
@@ -2287,6 +2332,8 @@ pub fn lasso_encloses(polygon: Vec<f32>, points: Vec<f32>) -> bool {
             .into_iter()
             .map(|(x, y)| InkPoint::new(x, y, 1.0, 0))
             .collect(),
+        layer: 0,
+        line_type: 0,
     };
     stroke.is_enclosed_by_polygon(&poly)
 }
@@ -2368,6 +2415,30 @@ pub(crate) fn from_doc_shape_kind(k: ShapeKind) -> FfiShapeKind {
         ShapeKind::SpeechBubble => FfiShapeKind::SpeechBubble,
         ShapeKind::Plaque => FfiShapeKind::Plaque,
         ShapeKind::Pie => FfiShapeKind::Pie,
+        ShapeKind::PredefinedProcess => FfiShapeKind::PredefinedProcess,
+        ShapeKind::AlternateProcess => FfiShapeKind::AlternateProcess,
+        ShapeKind::InternalStorage => FfiShapeKind::InternalStorage,
+        ShapeKind::MultiDocument => FfiShapeKind::MultiDocument,
+        ShapeKind::SequentialAccessStorage => FfiShapeKind::SequentialAccessStorage,
+        ShapeKind::DirectAccessStorage => FfiShapeKind::DirectAccessStorage,
+        ShapeKind::Sort => FfiShapeKind::Sort,
+        ShapeKind::SummingJunction => FfiShapeKind::SummingJunction,
+        ShapeKind::OrJunction => FfiShapeKind::OrJunction,
+        ShapeKind::LoopLimitStart => FfiShapeKind::LoopLimitStart,
+        ShapeKind::LoopLimitEnd => FfiShapeKind::LoopLimitEnd,
+        ShapeKind::ParallelMode => FfiShapeKind::ParallelMode,
+        ShapeKind::CommunicationLink => FfiShapeKind::CommunicationLink,
+        ShapeKind::Annotation => FfiShapeKind::Annotation,
+        ShapeKind::OfflineStorage => FfiShapeKind::OfflineStorage,
+        ShapeKind::Cube => FfiShapeKind::Cube,
+        ShapeKind::Cylinder => FfiShapeKind::Cylinder,
+        ShapeKind::Cone => FfiShapeKind::Cone,
+        ShapeKind::Pyramid => FfiShapeKind::Pyramid,
+        ShapeKind::TriangularPrism => FfiShapeKind::TriangularPrism,
+        ShapeKind::Sphere => FfiShapeKind::Sphere,
+        ShapeKind::Hemisphere => FfiShapeKind::Hemisphere,
+        ShapeKind::Torus => FfiShapeKind::Torus,
+        ShapeKind::Tetrahedron => FfiShapeKind::Tetrahedron,
         ShapeKind::Line => FfiShapeKind::Line,
         ShapeKind::Arrow => FfiShapeKind::Arrow,
         ShapeKind::DoubleArrow => FfiShapeKind::DoubleArrow,
@@ -2428,6 +2499,30 @@ fn to_doc_shape_kind(k: FfiShapeKind) -> ShapeKind {
         FfiShapeKind::SpeechBubble => ShapeKind::SpeechBubble,
         FfiShapeKind::Plaque => ShapeKind::Plaque,
         FfiShapeKind::Pie => ShapeKind::Pie,
+        FfiShapeKind::PredefinedProcess => ShapeKind::PredefinedProcess,
+        FfiShapeKind::AlternateProcess => ShapeKind::AlternateProcess,
+        FfiShapeKind::InternalStorage => ShapeKind::InternalStorage,
+        FfiShapeKind::MultiDocument => ShapeKind::MultiDocument,
+        FfiShapeKind::SequentialAccessStorage => ShapeKind::SequentialAccessStorage,
+        FfiShapeKind::DirectAccessStorage => ShapeKind::DirectAccessStorage,
+        FfiShapeKind::Sort => ShapeKind::Sort,
+        FfiShapeKind::SummingJunction => ShapeKind::SummingJunction,
+        FfiShapeKind::OrJunction => ShapeKind::OrJunction,
+        FfiShapeKind::LoopLimitStart => ShapeKind::LoopLimitStart,
+        FfiShapeKind::LoopLimitEnd => ShapeKind::LoopLimitEnd,
+        FfiShapeKind::ParallelMode => ShapeKind::ParallelMode,
+        FfiShapeKind::CommunicationLink => ShapeKind::CommunicationLink,
+        FfiShapeKind::Annotation => ShapeKind::Annotation,
+        FfiShapeKind::OfflineStorage => ShapeKind::OfflineStorage,
+        FfiShapeKind::Cube => ShapeKind::Cube,
+        FfiShapeKind::Cylinder => ShapeKind::Cylinder,
+        FfiShapeKind::Cone => ShapeKind::Cone,
+        FfiShapeKind::Pyramid => ShapeKind::Pyramid,
+        FfiShapeKind::TriangularPrism => ShapeKind::TriangularPrism,
+        FfiShapeKind::Sphere => ShapeKind::Sphere,
+        FfiShapeKind::Hemisphere => ShapeKind::Hemisphere,
+        FfiShapeKind::Torus => ShapeKind::Torus,
+        FfiShapeKind::Tetrahedron => ShapeKind::Tetrahedron,
         FfiShapeKind::Line => ShapeKind::Line,
         FfiShapeKind::Arrow => ShapeKind::Arrow,
         FfiShapeKind::DoubleArrow => ShapeKind::DoubleArrow,
@@ -2850,6 +2945,38 @@ mod tests {
         let all = s.visible_stroke_details(page).unwrap();
         assert_eq!(all.len(), 1, "拖曳不該多出一份");
         assert_eq!(all[0].points[0].x, 120.0);
+    }
+
+    #[test]
+    fn moving_and_copying_keep_the_drafting_layer_and_line_type() {
+        // 製圖線搬動或複製之後還在原本的圖層、還是同一種線型 —— 否則隱藏中層時搬過的輔助線會跑出來。
+        let s = session("lasso-layer");
+        let page = s.first_page_id().unwrap();
+        let id = s
+            .add_stroke_drafted(
+                page.clone(),
+                ToolKind::Fineliner,
+                vec![0, 0, 0, 255],
+                1.4,
+                points(),
+                3,
+                1,
+            )
+            .unwrap();
+        let moved = s
+            .lasso_translate(page.clone(), vec![id], 50.0, 0.0)
+            .unwrap();
+        let copied = s.lasso_copy(page.clone(), moved.clone()).unwrap();
+        s.lasso_paste(page.clone(), copied, 10.0, 10.0).unwrap();
+        let all = s.visible_stroke_details(page).unwrap();
+        assert_eq!(all.len(), 2);
+        assert!(
+            all.iter().all(|st| st.layer == 3 && st.line_type == 1),
+            "{:?}",
+            all.iter()
+                .map(|x| (x.layer, x.line_type))
+                .collect::<Vec<_>>()
+        );
     }
 
     #[test]
