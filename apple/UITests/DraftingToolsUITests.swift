@@ -90,6 +90,21 @@ final class DraftingToolsUITests: XCTestCase {
         app.coordinate(withNormalizedOffset: CGVector(dx: 0, dy: 0)).withOffset(CGVector(dx: x, dy: y))
     }
 
+    /// 點一下復原鈕（工具列的 id 依版面不同）。找不到就算失敗 —— 找不到時悄悄跳過會讓復原的斷言形同虛設。
+    @discardableResult
+    private func undoOnce() -> Bool {
+        for id in ["editor.ink.undo", "editor.compact.undo"] {
+            let button = element(id)
+            if button.waitForExistence(timeout: 2) {
+                button.tap()
+                sleep(1)
+                return true
+            }
+        }
+        XCTFail("找不到復原鈕")
+        return false
+    }
+
     /// 畫布範圍內的點（0…1）換成視窗座標。
     private func inCanvas(_ fx: Double, _ fy: Double) -> (Double, Double) {
         let f = canvas().frame
@@ -154,10 +169,7 @@ final class DraftingToolsUITests: XCTestCase {
         XCTAssertGreaterThanOrEqual(after - before, 6, "標註的筆畫太少：\(after - before)")
 
         // 復原：整個標註一次收回。
-        let undo = element("editor.undo")
-        if undo.waitForExistence(timeout: 3) {
-            undo.tap()
-            sleep(1)
+        if undoOnce() {
             XCTAssertEqual(readout("pro"), before, "復原一次應該收回整個標註")
         }
     }
@@ -219,10 +231,7 @@ final class DraftingToolsUITests: XCTestCase {
         point(c, 0.7, 0.5).press(forDuration: 0.2, thenDragTo: point(c, 0.5, 0.75))
         sleep(1)
         XCTAssertEqual(readout("pro"), before + 1, "圓規應該多出一條圓弧")
-        let undo = element("editor.undo")
-        if undo.waitForExistence(timeout: 3) {
-            undo.tap()
-            sleep(1)
+        if undoOnce() {
             XCTAssertEqual(readout("pro"), before)
         }
     }
@@ -292,7 +301,7 @@ final class DraftingToolsUITests: XCTestCase {
         strokeDrag(a0, to: a1)
         guard let first = numbers("last"), first.count == 4 else { XCTFail("讀數裡沒有第一筆：\(canvasValue())"); return }
         // 第二條：終點的 x 差 3 點 —— 對齊開著就要被吸到第一條的 x。
-        let b0 = inCanvas(0.70, 0.70), b1 = (a1.0 + 3, inCanvas(0, 0.70).1)
+        let b0 = inCanvas(0.70, 0.60), b1 = (a1.0 + 3, inCanvas(0, 0.60).1)
         strokeDrag(b0, to: b1)
         guard let second = numbers("last"), second.count == 4 else { XCTFail("讀數裡沒有第二筆"); return }
         XCTAssertEqual(second[2], first[2], accuracy: 0.01, "終點沒有對齊既有線的端點")
@@ -300,11 +309,15 @@ final class DraftingToolsUITests: XCTestCase {
         openToolbox()
         // 開關在列的右端：點列的正中央點到的是文字，不會切換。
         let toggle = reveal("draft.align")
-        toggle.coordinate(withNormalizedOffset: CGVector(dx: 0.96, dy: 0.5)).tap()
+        sleep(1)   // 捲動的慣性停下來，列才不會在點的當下還在動
+        for _ in 0..<3 where (toggle.value as? String) != "0" {
+            toggle.coordinate(withNormalizedOffset: CGVector(dx: 0.96, dy: 0.5)).tap()
+            sleep(1)
+        }
         XCTAssertEqual(toggle.value as? String, "0", "投影對齊的開關沒有關掉")
         element("draft.toolbox.close").tap()
         XCTAssertTrue(element("draft.bar").waitForExistence(timeout: 5))
-        let c0 = inCanvas(0.70, 0.80), c1 = (a1.0 + 3, inCanvas(0, 0.80).1)
+        let c0 = inCanvas(0.70, 0.66), c1 = (a1.0 + 3, inCanvas(0, 0.66).1)
         strokeDrag(c0, to: c1)
         guard let third = numbers("last"), third.count == 4 else { XCTFail("讀數裡沒有第三筆"); return }
         XCTAssertGreaterThan(abs(third[2] - first[2]), 0.4, "對齊關掉之後還是被吸了：first=\(first) second=\(second) third=\(third) a1=\(a1) c1=\(c1) \(canvasValue())")
@@ -334,10 +347,7 @@ final class DraftingToolsUITests: XCTestCase {
         element("draft.inst.markAngle").tap()
         sleep(1)
         XCTAssertEqual(readout("pro"), before + 1, "畫出讀數線應該多一筆")
-        let undo = element("editor.undo")
-        if undo.waitForExistence(timeout: 3) {
-            undo.tap()
-            sleep(1)
+        if undoOnce() {
             XCTAssertEqual(readout("pro"), before)
         }
         // 按內圈是搬量角器，不是改讀數。
@@ -345,5 +355,31 @@ final class DraftingToolsUITests: XCTestCase {
         drag(inner, to: (inner.0 + 50, inner.1 + 30))
         XCTAssertTrue(element("draft.inst.reading").exists, "搬尺之後讀數不見了（讀數應該跟著尺走）")
         XCTAssertTrue(reading.label.contains("60.") || reading.label.contains("59."), "搬尺不該改變讀數：\(reading.label)")
+    }
+
+    func testTrimWorksFromTheToolboxWithRealGesturesAndUndoes() {
+        guard openDrafting() else { XCTFail("進不了圖學模式"); return }
+        // 一條水平線、一條垂直線（交在水平線的中間）。
+        strokeDrag(inCanvas(0.25, 0.5), to: inCanvas(0.75, 0.5))
+        guard let h = numbers("last"), h.count == 4 else { XCTFail("讀數裡沒有水平線：\(canvasValue())"); return }
+        strokeDrag(inCanvas(0.5, 0.35), to: inCanvas(0.5, 0.65))
+        guard let v = numbers("last"), v.count == 4 else { XCTFail("讀數裡沒有垂直線"); return }
+        XCTAssertEqual(readout("pro"), 2)
+
+        openToolbox()
+        reveal("draft.tool.trim").tap()
+        XCTAssertTrue(element("draft.tool.hint").waitForExistence(timeout: 5), "選了修剪卻沒有提示")
+        // 點在垂直線右邊的那一段：右半截被剪掉。
+        let tapAt = inCanvas(0.65, 0.5)
+        window(tapAt.0, tapAt.1).tap()
+        sleep(1)
+        XCTAssertEqual(readout("pro"), 2, "水平線換成修短的一段，筆畫數不變")
+        guard let cut = numbers("last"), cut.count == 4 else { XCTFail("修剪後讀不到最後一筆"); return }
+        XCTAssertEqual(cut[2], v[0], accuracy: 1.5, "水平線應該在垂直線的位置收掉")
+        XCTAssertEqual(cut[0], h[0], accuracy: 1.5, "左邊那一端不動")
+
+        undoOnce()
+        guard let back = numbers("last"), back.count == 4 else { XCTFail("復原後讀不到最後一筆"); return }
+        XCTAssertEqual(back[2], h[2], accuracy: 1.5, "復原之後水平線又長回原來的長度")
     }
 }

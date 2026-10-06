@@ -17,6 +17,7 @@
 
 pub mod align;
 pub mod dim;
+pub mod edit;
 pub mod fastener;
 pub mod frame;
 pub mod gdt;

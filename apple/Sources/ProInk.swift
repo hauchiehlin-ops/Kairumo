@@ -953,6 +953,105 @@ final class ProInkLayerView: UIView {
         return Set(made.map(\.id))
     }
 
+    // MARK: 編輯工具（修剪、延伸、鏡射、陣列、圓角、偏移）
+
+    /// 離 `point` 最近的一筆（`radius` 之內，圖層看得見才算；`editable` 時鎖住的圖層也排除）。
+    /// 疊在一起時取最上面（畫得最晚）的那一筆。
+    func strokeNear(_ point: CGPoint, radius: CGFloat, editable: Bool = true) -> ProStroke? {
+        let drafting = DraftingState.shared
+        var best: (ProStroke, CGFloat)?
+        for stroke in ownStrokes {
+            if stroke.layerId != 0 {
+                if drafting.isHidden(layer: stroke.layerId, notebookId: notebookId) { continue }
+                if editable && drafting.isLocked(layer: stroke.layerId, notebookId: notebookId) { continue }
+            }
+            guard stroke.bounds.insetBy(dx: -radius, dy: -radius).contains(point) else { continue }
+            var d = CGFloat.greatestFiniteMagnitude
+            if stroke.points.count == 1, let only = stroke.points.first {
+                d = hypot(CGFloat(only.x) - point.x, CGFloat(only.y) - point.y)
+            }
+            for (a, b) in zip(stroke.points, stroke.points.dropFirst()) {
+                d = min(d, Self.distance(from: point, toSegment: a, b))
+            }
+            // 較晚的筆畫（同距離）優先：`<=` 讓後面的蓋過前面的。
+            if d <= radius + CGFloat(stroke.baseWidth) * 0.5, d <= (best?.1 ?? .greatestFiniteMagnitude) {
+                best = (stroke, d)
+            }
+        }
+        return best?.0
+    }
+
+    /// 其他看得見的筆畫（修剪、延伸要對著它們找交點）。
+    func polylines(excluding ids: Set<String>) -> [[CGPoint]] {
+        let drafting = DraftingState.shared
+        return allStrokes.filter {
+            !ids.contains($0.id) && ($0.layerId == 0 || !drafting.isHidden(layer: $0.layerId, notebookId: notebookId))
+        }.map { $0.points.map { CGPoint(x: CGFloat($0.x), y: CGFloat($0.y)) } }
+    }
+
+    /// 核心給的折線（頁面座標）→ 筆點。直線段補點到每 4 個頁面單位一點（虛線與點畫線的間隔靠它）。
+    static func densify(_ items: [FfiPoint], pressure: Float = 0.6) -> [ProPoint] {
+        guard let first = items.first else { return [] }
+        var pts: [ProPoint] = []
+        func add(_ x: Float, _ y: Float) {
+            pts.append(ProPoint(x: x, y: y, pressure: pressure, tilt: 0, azimuth: 0, dtUs: 2000, roll: 0))
+        }
+        add(first.x, first.y)
+        for (a, b) in zip(items, items.dropFirst()) {
+            let n = max(1, Int((hypot(b.x - a.x, b.y - a.y) / 4).rounded(.up)))
+            for k in 1...n {
+                let t = Float(k) / Float(n)
+                add(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t)
+            }
+        }
+        return pts
+    }
+
+    /// 以 `base` 的筆、顏色、圖層、線型做一筆新的，點換成 `points`（新 id）。
+    func derive(from base: ProStroke, points: [FfiPoint]) -> ProStroke {
+        var copy = base
+        copy.id = UUID().uuidString
+        copy.points = Self.densify(points, pressure: base.points.first?.pressure ?? 0.6)
+        return copy
+    }
+
+    /// 原來的筆畫換成新的一組，**一次復原**。`ids` 找不到的略過；回傳新筆畫的 id。
+    @discardableResult
+    func replace(ids: Set<String>, with made: [ProStroke]) -> Set<String> {
+        let old = ownStrokes.filter { ids.contains($0.id) }
+        guard !old.isEmpty || !made.isEmpty else { return [] }
+        swapStrokes(remove: old, add: made)
+        registerReplaceUndo(old: old, new: made)
+        return Set(made.map(\.id))
+    }
+
+    /// 加一組已經做好的筆畫（鏡射、陣列的複本），一次復原。
+    @discardableResult
+    func insert(copies made: [ProStroke]) -> Set<String> {
+        guard !made.isEmpty else { return [] }
+        ownStrokes.append(contentsOf: made)
+        for s in made { setNeedsDisplay(s.bounds) }
+        persist()
+        registerGroupUndo(inserting: made)
+        return Set(made.map(\.id))
+    }
+
+    private func swapStrokes(remove old: [ProStroke], add made: [ProStroke]) {
+        let gone = Set(old.map(\.id))
+        ownStrokes.removeAll { gone.contains($0.id) }
+        ownStrokes.append(contentsOf: made)
+        for s in old + made { setNeedsDisplay(s.bounds) }
+        persist()
+    }
+
+    private func registerReplaceUndo(old: [ProStroke], new: [ProStroke]) {
+        guard let manager = undoManagerProvider?() else { return }
+        manager.registerUndo(withTarget: self) { layer in
+            layer.swapStrokes(remove: new, add: old)
+            layer.registerReplaceUndo(old: new, new: old)
+        }
+    }
+
     // MARK: 改圖層
 
     /// 把離 `point` 最近的一筆（鎖定／隱藏的圖層除外）改到 `layer`，線型與顏色不動。

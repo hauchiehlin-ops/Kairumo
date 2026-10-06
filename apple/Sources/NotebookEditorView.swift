@@ -4048,6 +4048,14 @@ public struct NotebookEditorView: View {
                     notebookId: notebook.id,
                     frameSupported: frameSupportedForCurrentPage,
                     onPickTool: { tool in
+                        // 鏡射、陣列要處理套索選的那批線：在離開套索之前把它帶過來。
+                        if tool.needsSelection {
+                            guard !lasso.proIds.isEmpty else {
+                                showCanvasNotice(localizationManager.localized("draft_edit_need_selection"))
+                                return
+                            }
+                            DraftingState.shared.editSelection = lasso.proIds
+                        }
                         selectedTool = .drafting
                         DraftingState.shared.tool = tool
                         DraftToolController.shared.reset(layer: (canvasView as? AdaptiveCanvasView)?.proLayer)
@@ -4059,7 +4067,8 @@ public struct NotebookEditorView: View {
                         selectedTool = .drafting
                         let center = draftViewportCenter()
                         DraftingState.shared.placeInstrument(kind: kind, center: center, pageWidth: PageGeometry.size.width)
-                    })
+                    },
+                    onRectArray: { rows, cols, dx, dy in applyRectArray(rows: rows, cols: cols, dxMm: dx, dyMm: dy) })
             }
             .sheet(isPresented: $showSolidStudio) {
                 SolidStudioSheet(
@@ -9857,6 +9866,17 @@ public struct NotebookEditorView: View {
         let ids = Set(made.map(\.id))
         let box = made.map(\.bounds).reduce(CGRect.null) { $0.union($1) }
         DispatchQueue.main.async { lasso.select(proStrokeIds: ids, around: box) }
+    }
+
+    /// 矩形陣列：套用在套索選的那批線上（一次復原）。
+    private func applyRectArray(rows: Int, cols: Int, dxMm: Double, dyMm: Double) {
+        guard let canvas = canvasView as? AdaptiveCanvasView, let layer = canvas.proLayer else { return }
+        DraftingState.shared.editSelection = lasso.proIds
+        guard !lasso.proIds.isEmpty else {
+            showCanvasNotice(localizationManager.localized("draft_edit_need_selection"))
+            return
+        }
+        DraftEditController.shared.applyRectArray(rows: rows, cols: cols, dxMm: dxMm, dyMm: dyMm, layer: layer)
     }
 
     /// 把量角器讀到的角度畫成一條線（從圓心到外緣），一次復原。

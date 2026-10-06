@@ -30,6 +30,7 @@ final class DraftToolController {
         case .dimAngle: key = ["draft_hint_angle_vertex", "draft_hint_angle_ray1", "draft_hint_angle_ray2", "draft_hint_angle_arc"][min(n, 3)]
         case .compass: key = n == 0 ? "draft_hint_compass_center" : "draft_hint_compass_arc"
         case .setPivot: key = "draft_hint_pivot"
+        case .trim, .extend, .fillet, .offset, .mirror, .arrayPolar: key = DraftEditController.shared.hintKey(for: tool)
         }
         drafting.toolHint = key.map(l)
     }
@@ -41,6 +42,7 @@ final class DraftToolController {
         picks = []
         fitted = nil
         dragging = false
+        DraftEditController.shared.reset(layer: layer)
         layer?.clearOverlay()
         updateHint()
     }
@@ -57,6 +59,11 @@ final class DraftToolController {
             preview(layer: layer, strokes: [])
             return
         }
+        if tool.isEdit {
+            DraftEditController.shared.handle(phase, raw, tool: tool, layer: layer)
+            if !DraftEditController.shared.consumeNotice() { updateHint() }
+            return
+        }
         let scale = max(layer.transform.a, 0.25)
         let radius = 14 / scale
         let snapped = layer.snapAnchor(near: raw, radius: radius) ?? raw
@@ -66,7 +73,7 @@ final class DraftToolController {
         case .dimAngle: angular(phase, raw, snapped, layer)
         case .compass: compass(phase, raw, snapped, layer)
         case .setPivot: pivot(phase, snapped, layer)
-        case .none: break
+        case .none, .trim, .extend, .fillet, .offset, .mirror, .arrayPolar: break
         }
     }
 
@@ -281,11 +288,13 @@ struct DraftingToolbox: View {
     var onInsertSymbol: (FfiDraftKit) -> Void
     var onInsertFrame: (_ thirdAngle: Bool) -> Void
     var onPlaceInstrument: (String) -> Void
+    var onRectArray: (_ rows: Int, _ cols: Int, _ dxMm: Double, _ dyMm: Double) -> Void = { _, _, _, _ in }
 
     @ObservedObject private var state = DraftingState.shared
     @ObservedObject private var localizationManager = LocalizationManager.shared
     @Environment(\.dismiss) private var dismiss
     @State private var thirdAngle = true
+    @State private var showArray = false
 
     private func t(_ key: String) -> String { localizationManager.localized(key) }
 
@@ -367,6 +376,30 @@ struct DraftingToolbox: View {
                     Text(t("draft_align_footer")).font(.footnote).foregroundColor(.secondary)
                     Text(t("draft_inst_footer")).font(.footnote).foregroundColor(.secondary)
                 }
+                Section(t("draft_toolbox_edit")) {
+                    ForEach([DraftTool.trim, .extend, .fillet, .offset, .mirror], id: \.self) { tool in
+                        Button {
+                            onPickTool(tool)
+                            dismiss()
+                        } label: {
+                            Label(t(tool.nameKey), systemImage: tool.symbol)
+                        }
+                        .accessibilityIdentifier("draft.tool.\(tool.rawValue)")
+                    }
+                    Button {
+                        showArray = true
+                    } label: {
+                        Label(t("draft_array_title"), systemImage: "square.grid.3x3")
+                    }
+                    .accessibilityIdentifier("draft.edit.array")
+                    Stepper("\(t("draft_edit_fillet_radius")): \(Int(state.filletRadiusMm))",
+                            value: $state.filletRadiusMm, in: 1...100, step: 1)
+                        .accessibilityIdentifier("draft.edit.filletRadius")
+                    Stepper("\(t("draft_edit_offset_distance")): \(Int(state.offsetDistanceMm))",
+                            value: $state.offsetDistanceMm, in: 1...200, step: 1)
+                        .accessibilityIdentifier("draft.edit.offsetDistance")
+                    Text(t("draft_edit_footer")).font(.footnote).foregroundColor(.secondary)
+                }
             }
             .navigationTitle(t("draft_tools"))
             .navigationBarTitleDisplayMode(.inline)
@@ -378,6 +411,19 @@ struct DraftingToolbox: View {
             }
         }
         .presentationDetents([.medium, .large])
+        .sheet(isPresented: $showArray) {
+            DraftArraySheet(
+                onApply: { rows, cols, dx, dy in
+                    onRectArray(rows, cols, dx, dy)
+                    dismiss()
+                },
+                onPolar: { count, total in
+                    state.polarCount = count
+                    state.polarTotalDeg = total
+                    onPickTool(.arrayPolar)
+                    dismiss()
+                })
+        }
     }
 }
 

@@ -6,6 +6,7 @@
 
 use padnote_drafting::align;
 use padnote_drafting::dim::{self, DimStyle, LinearAxis};
+use padnote_drafting::edit;
 use padnote_drafting::frame::{self, FrameOptions};
 use padnote_drafting::instruments::{self, InstrumentKind};
 use padnote_drafting::symbols::{self, SymbolParams};
@@ -486,6 +487,130 @@ pub fn draft_arc(center: FfiPoint, radius: f32, start: f32, sweep: f32) -> Vec<F
         .collect()
 }
 
+// MARK: - 編輯運算
+
+fn poly(points: &[FfiPoint]) -> Vec<(f32, f32)> {
+    points.iter().map(|q| (q.x, q.y)).collect()
+}
+
+fn ffi_poly(points: Vec<(f32, f32)>) -> Vec<FfiPoint> {
+    points.into_iter().map(fp).collect()
+}
+
+/// 一條折線（FFI 的 `Vec<FfiPoint>` 不能直接套進 `Vec<Vec<..>>` 的 Record，所以包一層）。
+#[derive(Clone, Debug, uniffi::Record)]
+pub struct FfiPolyline {
+    pub points: Vec<FfiPoint>,
+}
+
+#[derive(Clone, Debug, uniffi::Record)]
+pub struct FfiFillet {
+    /// 修短（或延伸）之後的第一條線。
+    pub a: Vec<FfiPoint>,
+    /// 修短（或延伸）之後的第二條線。
+    pub b: Vec<FfiPoint>,
+    /// 連接兩條線的圓弧。
+    pub arc: Vec<FfiPoint>,
+}
+
+/// 修剪：`click` 附近那一段，從前後最近的交點之間剪掉。回剩下的線（0、1 或 2 段）；
+/// 沒有交點可剪回 `None`。
+#[uniffi::export]
+pub fn draft_trim(
+    target: Vec<FfiPoint>,
+    cutters: Vec<FfiPolyline>,
+    click: FfiPoint,
+) -> Option<Vec<FfiPolyline>> {
+    let cutters: Vec<Vec<(f32, f32)>> = cutters.iter().map(|c| poly(&c.points)).collect();
+    edit::trim(&poly(&target), &cutters, p(click)).map(|pieces| {
+        pieces
+            .into_iter()
+            .map(|pts| FfiPolyline {
+                points: ffi_poly(pts),
+            })
+            .collect()
+    })
+}
+
+/// 延伸：把 `near` 附近的那一端延伸到最近的邊界。碰不到邊界回 `None`。
+#[uniffi::export]
+pub fn draft_extend(
+    target: Vec<FfiPoint>,
+    near: FfiPoint,
+    boundaries: Vec<FfiPolyline>,
+) -> Option<Vec<FfiPoint>> {
+    let boundaries: Vec<Vec<(f32, f32)>> = boundaries.iter().map(|c| poly(&c.points)).collect();
+    edit::extend(&poly(&target), p(near), &boundaries).map(ffi_poly)
+}
+
+/// 對稱軸 `a`→`b` 的鏡射。
+#[uniffi::export]
+pub fn draft_mirror(points: Vec<FfiPoint>, a: FfiPoint, b: FfiPoint) -> Vec<FfiPoint> {
+    ffi_poly(edit::mirror(&poly(&points), p(a), p(b)))
+}
+
+/// 矩形陣列：`rows × cols` 份（列距 `dy`、欄距 `dx`），回傳除了原件以外的複本。
+#[uniffi::export]
+pub fn draft_array_rect(
+    points: Vec<FfiPoint>,
+    rows: u32,
+    cols: u32,
+    dx: f32,
+    dy: f32,
+) -> Vec<FfiPolyline> {
+    edit::array_rect(&poly(&points), rows.min(50), cols.min(50), dx, dy)
+        .into_iter()
+        .map(|pts| FfiPolyline {
+            points: ffi_poly(pts),
+        })
+        .collect()
+}
+
+/// 環形陣列：共 `count` 份、繞 `center` 均分 `total_deg`（360 = 一整圈），回傳除了原件以外的複本。
+#[uniffi::export]
+pub fn draft_array_polar(
+    points: Vec<FfiPoint>,
+    center: FfiPoint,
+    count: u32,
+    total_deg: f32,
+) -> Vec<FfiPolyline> {
+    edit::array_polar(&poly(&points), p(center), count.min(200), total_deg)
+        .into_iter()
+        .map(|pts| FfiPolyline {
+            points: ffi_poly(pts),
+        })
+        .collect()
+}
+
+/// 圓角：兩條直線在點擊的那一側用半徑 `radius` 的圓弧接起來。平行、不是直線、半徑太大回 `None`。
+#[uniffi::export]
+pub fn draft_fillet(
+    first: Vec<FfiPoint>,
+    second: Vec<FfiPoint>,
+    radius: f32,
+    click_first: FfiPoint,
+    click_second: FfiPoint,
+) -> Option<FfiFillet> {
+    edit::fillet(
+        &poly(&first),
+        &poly(&second),
+        radius,
+        p(click_first),
+        p(click_second),
+    )
+    .map(|f| FfiFillet {
+        a: ffi_poly(f.a),
+        b: ffi_poly(f.b),
+        arc: ffi_poly(f.arc),
+    })
+}
+
+/// 偏移：折線往 `side` 那一側平移 `distance` 頁面單位。
+#[uniffi::export]
+pub fn draft_offset(points: Vec<FfiPoint>, distance: f32, side: FfiPoint) -> Option<Vec<FfiPoint>> {
+    edit::offset(&poly(&points), distance, p(side)).map(ffi_poly)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -684,5 +809,49 @@ mod tests {
         let arc = draft_arc(pt(300.0, 300.0), 50.0, 0.0, std::f32::consts::PI);
         assert!(arc.len() > 80);
         assert!(draft_arc(pt(0.0, 0.0), 0.0, 0.0, 1.0).is_empty());
+    }
+
+    #[test]
+    fn edit_operations_work_through_the_ffi() {
+        let line = vec![pt(0.0, 0.0), pt(100.0, 0.0)];
+        let cutter = FfiPolyline {
+            points: vec![pt(40.0, -10.0), pt(40.0, 10.0)],
+        };
+        let pieces = draft_trim(line.clone(), vec![cutter.clone()], pt(80.0, 0.0)).unwrap();
+        assert_eq!(pieces.len(), 1);
+        assert_eq!(pieces[0].points.last().unwrap().x, 40.0);
+        assert!(draft_trim(line.clone(), vec![], pt(80.0, 0.0)).is_none());
+
+        let ext = draft_extend(
+            vec![pt(0.0, 0.0), pt(30.0, 0.0)],
+            pt(29.0, 0.0),
+            vec![FfiPolyline {
+                points: vec![pt(70.0, -5.0), pt(70.0, 5.0)],
+            }],
+        )
+        .unwrap();
+        assert_eq!(ext.last().unwrap().x, 70.0);
+
+        let m = draft_mirror(vec![pt(1.0, 2.0)], pt(10.0, 0.0), pt(10.0, 9.0));
+        assert_eq!((m[0].x, m[0].y), (19.0, 2.0));
+        assert_eq!(draft_array_rect(line.clone(), 2, 2, 10.0, 10.0).len(), 3);
+        assert_eq!(
+            draft_array_polar(vec![pt(5.0, 0.0)], pt(0.0, 0.0), 4, 360.0).len(),
+            3
+        );
+        // 巨大的份數被夾住，不會要記憶體。
+        assert!(draft_array_rect(line.clone(), 100_000, 100_000, 1.0, 1.0).len() <= 50 * 50);
+
+        let f = draft_fillet(
+            vec![pt(0.0, 100.0), pt(100.0, 100.0)],
+            vec![pt(100.0, 100.0), pt(100.0, 0.0)],
+            20.0,
+            pt(30.0, 100.0),
+            pt(100.0, 30.0),
+        )
+        .unwrap();
+        assert!(f.arc.len() > 4);
+        let o = draft_offset(line, 10.0, pt(50.0, 20.0)).unwrap();
+        assert_eq!(o[0].y, 10.0);
     }
 }

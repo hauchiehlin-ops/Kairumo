@@ -5607,6 +5607,94 @@
     "zhHans": "角度锁定",
     "zhHant": "角度鎖定"
   },
+  "draft_array_angle": {
+    "en": "Total angle (°)",
+    "ja": "総角度（°）",
+    "ko": "전체 각도(°)",
+    "th": "มุมรวม (°)",
+    "zhHans": "总角度（°）",
+    "zhHant": "總角度（°）"
+  },
+  "draft_array_apply": {
+    "en": "Make the array",
+    "ja": "配列を作成",
+    "ko": "배열 만들기",
+    "th": "สร้างการเรียง",
+    "zhHans": "做出阵列",
+    "zhHant": "做出陣列"
+  },
+  "draft_array_cols": {
+    "en": "Columns",
+    "ja": "列数",
+    "ko": "열 수",
+    "th": "จำนวนคอลัมน์",
+    "zhHans": "栏数",
+    "zhHant": "欄數"
+  },
+  "draft_array_count": {
+    "en": "Copies in total",
+    "ja": "総数",
+    "ko": "총 개수",
+    "th": "จำนวนทั้งหมด",
+    "zhHans": "份数",
+    "zhHant": "份數"
+  },
+  "draft_array_dx": {
+    "en": "Column spacing (mm)",
+    "ja": "列間隔（mm）",
+    "ko": "열 간격(mm)",
+    "th": "ระยะห่างคอลัมน์ (มม.)",
+    "zhHans": "栏距（mm）",
+    "zhHant": "欄距（mm）"
+  },
+  "draft_array_dy": {
+    "en": "Row spacing (mm)",
+    "ja": "行間隔（mm）",
+    "ko": "행 간격(mm)",
+    "th": "ระยะห่างแถว (มม.)",
+    "zhHans": "列距（mm）",
+    "zhHant": "列距（mm）"
+  },
+  "draft_array_mode_polar": {
+    "en": "Polar",
+    "ja": "円形",
+    "ko": "원형",
+    "th": "วงกลม",
+    "zhHans": "环形",
+    "zhHant": "環形"
+  },
+  "draft_array_mode_rect": {
+    "en": "Rectangular",
+    "ja": "矩形",
+    "ko": "직사각형",
+    "th": "ตาราง",
+    "zhHans": "矩形",
+    "zhHant": "矩形"
+  },
+  "draft_array_polar_go": {
+    "en": "Next: tap the centre",
+    "ja": "次へ：中心をタップ",
+    "ko": "다음: 중심 누르기",
+    "th": "ถัดไป: แตะจุดศูนย์กลาง",
+    "zhHans": "下一步：点圆心",
+    "zhHant": "下一步：點圓心"
+  },
+  "draft_array_rows": {
+    "en": "Rows",
+    "ja": "行数",
+    "ko": "행 수",
+    "th": "จำนวนแถว",
+    "zhHans": "列数",
+    "zhHant": "列數"
+  },
+  "draft_array_title": {
+    "en": "Array",
+    "ja": "配列",
+    "ko": "배열",
+    "th": "การเรียง",
+    "zhHans": "阵列",
+    "zhHant": "陣列"
+  },
   "draft_bar_collapse": {
     "en": "Collapse panel",
     "ja": "パネルを閉じる",
@@ -5646,6 +5734,86 @@
     "th": "วาดบนเลเยอร์นี้",
     "zhHans": "画在此图层",
     "zhHant": "畫在此圖層"
+  },
+  "draft_edit_array_rect": {
+    "en": "Rectangular array…",
+    "ja": "矩形状配列…",
+    "ko": "직사각형 배열…",
+    "th": "เรียงเป็นตาราง…",
+    "zhHans": "矩形阵列…",
+    "zhHant": "矩形陣列…"
+  },
+  "draft_edit_fillet_fail": {
+    "en": "Cannot fillet: it needs two straight lines that are not parallel, and the radius must fit",
+    "ja": "フィレットできません：平行でない直線が2本必要で、半径が線の長さに収まる必要があります",
+    "ko": "모깎기를 할 수 없습니다: 평행하지 않은 직선 두 개가 필요하고 반지름이 선 길이에 맞아야 합니다",
+    "th": "ทำมุมโค้งไม่ได้: ต้องเป็นเส้นตรงสองเส้นที่ไม่ขนานกัน และรัศมีต้องไม่ยาวกว่าเส้น",
+    "zhHans": "圆角做不出来：要两条不平行的直线，而且半径不能比线还长",
+    "zhHant": "圓角做不出來：要兩條不平行的直線，而且半徑不能比線還長"
+  },
+  "draft_edit_fillet_radius": {
+    "en": "Fillet radius (mm)",
+    "ja": "フィレット半径（mm）",
+    "ko": "모깎기 반지름(mm)",
+    "th": "รัศมีมุมโค้ง (มม.)",
+    "zhHans": "圆角半径（mm）",
+    "zhHant": "圓角半徑（mm）"
+  },
+  "draft_edit_footer": {
+    "en": "Trim and extend: tap a line; they work against the other lines. Fillet: tap two straight lines in turn. Offset: tap a line, then the side to move it to. Mirror and array: select the lines with the lasso first. Every action undoes in one step.",
+    "ja": "トリム・延長：線をタップすると、ほかの線との交点を使います。フィレット：直線を順に2本タップ。オフセット：線をタップし、寄せたい側をタップ。鏡像・配列：先に投げ縄で線を選びます。どの操作も1回で元に戻せます。",
+    "ko": "자르기·연장: 선을 누르면 다른 선과의 교점을 사용합니다. 모깎기: 직선 두 개를 차례로 누르세요. 간격 띄우기: 선을 누른 뒤 옮길 쪽을 누르세요. 대칭·배열: 먼저 올가미로 선을 고르세요. 모든 동작은 한 번에 되돌릴 수 있습니다.",
+    "th": "ตัดและต่อเส้น: แตะที่เส้น จะใช้จุดตัดกับเส้นอื่น มุมโค้ง: แตะเส้นตรงสองเส้นตามลำดับ เส้นขนาน: แตะเส้น แล้วแตะด้านที่จะย้ายไป สะท้อนและเรียง: เลือกเส้นด้วยบ่วงก่อน ทุกการกระทำย้อนกลับได้ในครั้งเดียว",
+    "zhHans": "修剪与延伸：点一下线，会对著其他线找交点。圆角：依序点两条直线。偏移：点线，再点要偏向的那一侧。镜射与阵列：先用套索选好要处理的线。每一个动作都可以一次复原。",
+    "zhHant": "修剪與延伸：點一下線，會對著其他線找交點。圓角：依序點兩條直線。偏移：點線，再點要偏向的那一側。鏡射與陣列：先用套索選好要處理的線。每一個動作都可以一次復原。"
+  },
+  "draft_edit_need_selection": {
+    "en": "Select the lines with the lasso first",
+    "ja": "先に投げ縄で線を選んでください",
+    "ko": "먼저 올가미로 선을 선택하세요",
+    "th": "เลือกเส้นด้วยบ่วงก่อน",
+    "zhHans": "先用套索选取要处理的线",
+    "zhHant": "先用套索選取要處理的線"
+  },
+  "draft_edit_no_boundary": {
+    "en": "Nothing in line with this end to extend to",
+    "ja": "この端の延長線上に線がありません",
+    "ko": "이 끝의 연장선에 다른 선이 없습니다",
+    "th": "ไม่มีเส้นอยู่ในแนวปลายนี้",
+    "zhHans": "这一端的延长线上没有别的线",
+    "zhHant": "這一端的延長線上沒有別的線"
+  },
+  "draft_edit_no_crossing": {
+    "en": "This line does not cross any other line",
+    "ja": "この線はほかの線と交わっていません",
+    "ko": "이 선은 다른 선과 만나지 않습니다",
+    "th": "เส้นนี้ไม่ตัดกับเส้นอื่น",
+    "zhHans": "这条线没有和别的线相交",
+    "zhHant": "這條線沒有和別的線相交"
+  },
+  "draft_edit_nothing": {
+    "en": "Nothing to work on here",
+    "ja": "ここには処理できる線がありません",
+    "ko": "여기에는 처리할 선이 없습니다",
+    "th": "ไม่มีเส้นให้จัดการตรงนี้",
+    "zhHans": "这里没有可以处理的线",
+    "zhHant": "這裡沒有可以處理的線"
+  },
+  "draft_edit_offset_distance": {
+    "en": "Offset distance (mm)",
+    "ja": "オフセット距離（mm）",
+    "ko": "간격(mm)",
+    "th": "ระยะเส้นขนาน (มม.)",
+    "zhHans": "偏移距离（mm）",
+    "zhHant": "偏移距離（mm）"
+  },
+  "draft_edit_offset_fail": {
+    "en": "Cannot offset this line",
+    "ja": "この線はオフセットできません",
+    "ko": "이 선은 간격 띄우기를 할 수 없습니다",
+    "th": "ทำเส้นขนานไม่ได้",
+    "zhHans": "偏移做不出来",
+    "zhHant": "偏移做不出來"
   },
   "draft_frame_footer": {
     "en": "Draws the frame and title block for this page’s paper size (A4/A3/A2); the scale cell uses the current scale.",
@@ -5791,6 +5959,62 @@
     "zhHans": "点第二个点",
     "zhHant": "點第二個點"
   },
+  "draft_hint_extend": {
+    "en": "Tap near the end to extend (it runs to the nearest line)",
+    "ja": "延長したい端の近くをタップ（最も近い線まで伸びます）",
+    "ko": "연장할 끝 근처를 누르세요(가장 가까운 선까지 늘어납니다)",
+    "th": "แตะใกล้ปลายที่จะต่อ (ต่อไปถึงเส้นที่ใกล้ที่สุด)",
+    "zhHans": "点要延伸的那一端附近（会延到最近的线）",
+    "zhHant": "點要延伸的那一端附近（會延到最近的線）"
+  },
+  "draft_hint_fillet_first": {
+    "en": "Tap the first straight line (on the side that gets the fillet)",
+    "ja": "1本目の直線をタップ（フィレットを付ける側）",
+    "ko": "첫 번째 직선을 누르세요(모깎기할 쪽)",
+    "th": "แตะเส้นตรงเส้นแรก (ด้านที่จะทำมุมโค้ง)",
+    "zhHans": "点第一条直线（靠近要接圆角的那一侧）",
+    "zhHant": "點第一條直線（靠近要接圓角的那一側）"
+  },
+  "draft_hint_fillet_second": {
+    "en": "Now tap the second straight line",
+    "ja": "続けて2本目の直線をタップ",
+    "ko": "이제 두 번째 직선을 누르세요",
+    "th": "แตะเส้นตรงเส้นที่สอง",
+    "zhHans": "再点第二条直线",
+    "zhHant": "再點第二條直線"
+  },
+  "draft_hint_mirror_first": {
+    "en": "Tap the first point of the mirror line",
+    "ja": "対称軸の1点目をタップ",
+    "ko": "대칭축의 첫 번째 점을 누르세요",
+    "th": "แตะจุดแรกของเส้นแกนสะท้อน",
+    "zhHans": "点对称轴的第一个点",
+    "zhHant": "點對稱軸的第一個點"
+  },
+  "draft_hint_mirror_second": {
+    "en": "Press and drag to the second point of the mirror line, release to mirror",
+    "ja": "対称軸の2点目までドラッグして離すと鏡像になります",
+    "ko": "대칭축의 두 번째 점까지 끌고 놓으면 대칭됩니다",
+    "th": "กดลากไปยังจุดที่สองของแกนสะท้อน ปล่อยเพื่อสะท้อน",
+    "zhHans": "按住拖到对称轴的第二个点，放开就镜射",
+    "zhHant": "按住拖到對稱軸的第二個點，放開就鏡射"
+  },
+  "draft_hint_offset_first": {
+    "en": "Tap the line to offset",
+    "ja": "オフセットする線をタップ",
+    "ko": "간격을 띄울 선을 누르세요",
+    "th": "แตะเส้นที่จะทำเส้นขนาน",
+    "zhHans": "点要偏移的线",
+    "zhHant": "點要偏移的線"
+  },
+  "draft_hint_offset_side": {
+    "en": "Tap the side to offset towards",
+    "ja": "寄せたい側をタップ",
+    "ko": "옮길 쪽을 누르세요",
+    "th": "แตะด้านที่จะย้ายไป",
+    "zhHans": "点要偏向的那一侧",
+    "zhHant": "點要偏向的那一側"
+  },
   "draft_hint_pivot": {
     "en": "Tap the corner between the top view and the side view (where the 45° line passes)",
     "ja": "平面図と側面図の間の角（45° の線が通る点）をタップ",
@@ -5798,6 +6022,22 @@
     "th": "แตะมุมระหว่างภาพด้านบนกับภาพด้านข้าง (จุดที่เส้น 45° ผ่าน)",
     "zhHans": "点俯视图与右视图之间的那个角（45° 线通过的点）",
     "zhHant": "點俯視圖與右視圖之間的那個角（45° 線通過的點）"
+  },
+  "draft_hint_polar_center": {
+    "en": "Tap the centre of the polar array",
+    "ja": "円形状配列の中心をタップ",
+    "ko": "원형 배열의 중심을 누르세요",
+    "th": "แตะจุดศูนย์กลางของการเรียงเป็นวงกลม",
+    "zhHans": "点环形阵列的圆心",
+    "zhHant": "點環形陣列的圓心"
+  },
+  "draft_hint_trim": {
+    "en": "Tap the part to cut away (it trims to the nearest crossings)",
+    "ja": "削除したい部分をタップ（最も近い交点まで切り取ります）",
+    "ko": "잘라낼 부분을 누르세요(가장 가까운 교점까지 잘립니다)",
+    "th": "แตะส่วนที่จะตัดทิ้ง (ตัดถึงจุดตัดที่ใกล้ที่สุด)",
+    "zhHans": "点要剪掉的那一段（会剪到最近的交点）",
+    "zhHant": "點要剪掉的那一段（會剪到最近的交點）"
   },
   "draft_inst_footer": {
     "en": "Drag the middle of an instrument to move it; start a stroke near its edge and the line follows the edge as a straight line. Use the rotate buttons to turn it (the T-square only slides up and down). The scale is real millimetres.",
@@ -6687,6 +6927,14 @@
     "zhHans": "图学使用提示",
     "zhHant": "圖學使用提示"
   },
+  "draft_tool_array_polar": {
+    "en": "Polar array",
+    "ja": "円形状配列",
+    "ko": "원형 배열",
+    "th": "เรียงเป็นวงกลม",
+    "zhHans": "环形阵列",
+    "zhHant": "環形陣列"
+  },
   "draft_tool_close": {
     "en": "Finish the current tool",
     "ja": "ツールを終了",
@@ -6735,6 +6983,30 @@
     "zhHans": "半径标注",
     "zhHant": "半徑標註"
   },
+  "draft_tool_extend": {
+    "en": "Extend",
+    "ja": "延長",
+    "ko": "연장",
+    "th": "ต่อเส้น",
+    "zhHans": "延伸",
+    "zhHant": "延伸"
+  },
+  "draft_tool_fillet": {
+    "en": "Fillet",
+    "ja": "フィレット",
+    "ko": "모깎기",
+    "th": "มุมโค้ง",
+    "zhHans": "圆角",
+    "zhHant": "圓角"
+  },
+  "draft_tool_mirror": {
+    "en": "Mirror",
+    "ja": "鏡像",
+    "ko": "대칭",
+    "th": "สะท้อน",
+    "zhHans": "镜射",
+    "zhHant": "鏡射"
+  },
   "draft_tool_none": {
     "en": "No tool",
     "ja": "ツールなし",
@@ -6743,6 +7015,14 @@
     "zhHans": "没有工具",
     "zhHant": "沒有工具"
   },
+  "draft_tool_offset": {
+    "en": "Offset",
+    "ja": "オフセット",
+    "ko": "간격 띄우기",
+    "th": "เส้นขนาน",
+    "zhHans": "偏移",
+    "zhHant": "偏移"
+  },
   "draft_tool_set_pivot": {
     "en": "Set the 45° turning point",
     "ja": "45° の転換点を設定",
@@ -6750,6 +7030,14 @@
     "th": "ตั้งจุดหักมุม 45°",
     "zhHans": "设置 45° 转折点",
     "zhHant": "設定 45° 轉折點"
+  },
+  "draft_tool_trim": {
+    "en": "Trim",
+    "ja": "トリム",
+    "ko": "자르기",
+    "th": "ตัด",
+    "zhHans": "修剪",
+    "zhHant": "修剪"
   },
   "draft_toolbox_aids": {
     "en": "Alignment and instruments",
@@ -6766,6 +7054,14 @@
     "th": "การกำหนดขนาด",
     "zhHans": "尺寸标注",
     "zhHant": "尺寸標註"
+  },
+  "draft_toolbox_edit": {
+    "en": "Edit",
+    "ja": "編集",
+    "ko": "편집",
+    "th": "แก้ไข",
+    "zhHans": "编辑",
+    "zhHant": "編輯"
   },
   "draft_toolbox_frame": {
     "en": "Frame and title block",

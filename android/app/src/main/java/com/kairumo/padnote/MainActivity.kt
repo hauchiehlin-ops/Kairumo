@@ -2496,6 +2496,7 @@ private fun InkScreen(
     var showDraftingToolbox by remember { mutableStateOf(false) }
     LaunchedEffect(inkTool, DraftingState.tool) {
         DraftToolController.onChanged = { revision++ }
+        com.kairumo.padnote.ink.DraftEditController.onChanged = { revision++ }
         engine.onToolTouch = if (inkTool.isDrafting && DraftingState.tool != DraftTool.NONE) { phase, x, y ->
             DraftToolController.handle(phase, x, y, engine)
         } else null
@@ -2537,9 +2538,21 @@ private fun InkScreen(
             languageTag = deviceLanguageTag(),
             frameSupported = currentPaperId()?.let { uniffi.padnote_core.draftSheetFrame(it, "", true, false) != null } == true,
             onPickTool = { tool ->
-                DraftingState.selectTool(tool)
-                DraftToolController.reset(engine)
+                // 鏡射、陣列要處理套索選的那批線：在離開套索之前把它帶過來。
+                if (tool.needsSelection && !captureEditSelection(lasso)) {
+                    message = l10n("draft_edit_need_selection")
+                    showDraftingToolbox = false
+                } else {
+                    DraftingState.selectTool(tool)
+                    DraftToolController.reset(engine)
+                    showDraftingToolbox = false
+                }
+            },
+            onRectArray = { rows, cols, dx, dy ->
                 showDraftingToolbox = false
+                applyRectArrayToSelection(engine, lasso, rows, cols, dx, dy)
+                revision++
+                message = if (lasso.hasSelection) null else l10n("draft_edit_need_selection")
             },
             onInsertSymbol = { kit ->
                 showDraftingToolbox = false
@@ -7479,6 +7492,20 @@ private fun placeDraftKit(
     val r = (pts.maxOf { it.x } + box[0] + 8f) * density
     val b = (pts.maxOf { it.y } + box[1] + 8f) * density
     return engine.lastInsertedCoreIds to listOf(Offset(l, t), Offset(r, t), Offset(r, b), Offset(l, b))
+}
+
+/** 把套索選的那批線帶進編輯工具；沒選到回 false（頂層函式：避免在巨大的 InkScreen 裡放大 lambda）。 */
+private fun captureEditSelection(lasso: com.kairumo.padnote.canvas.LassoSelection): Boolean {
+    DraftingState.editSelection = lasso.selected
+    return lasso.selected.isNotEmpty()
+}
+
+private fun applyRectArrayToSelection(
+    engine: com.kairumo.padnote.ink.InkEngine, lasso: com.kairumo.padnote.canvas.LassoSelection,
+    rows: Int, cols: Int, dxMm: Double, dyMm: Double
+) {
+    DraftingState.editSelection = lasso.selected
+    com.kairumo.padnote.ink.DraftEditController.applyRectArray(rows, cols, dxMm, dyMm, engine)
 }
 
 /** 把量角器讀到的角度畫成一條線（從圓心到外緣），一次復原（頂層函式：避免在巨大的 InkScreen 裡放大 lambda）。 */

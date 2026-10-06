@@ -5623,6 +5623,94 @@ extension LocalizationManager {
             .ko: "각도 잠금",
             .th: "ล็อกมุม"
         ],
+        "draft_array_angle": [
+            .zhHant: "總角度（°）",
+            .en: "Total angle (°)",
+            .zhHans: "总角度（°）",
+            .ja: "総角度（°）",
+            .ko: "전체 각도(°)",
+            .th: "มุมรวม (°)"
+        ],
+        "draft_array_apply": [
+            .zhHant: "做出陣列",
+            .en: "Make the array",
+            .zhHans: "做出阵列",
+            .ja: "配列を作成",
+            .ko: "배열 만들기",
+            .th: "สร้างการเรียง"
+        ],
+        "draft_array_cols": [
+            .zhHant: "欄數",
+            .en: "Columns",
+            .zhHans: "栏数",
+            .ja: "列数",
+            .ko: "열 수",
+            .th: "จำนวนคอลัมน์"
+        ],
+        "draft_array_count": [
+            .zhHant: "份數",
+            .en: "Copies in total",
+            .zhHans: "份数",
+            .ja: "総数",
+            .ko: "총 개수",
+            .th: "จำนวนทั้งหมด"
+        ],
+        "draft_array_dx": [
+            .zhHant: "欄距（mm）",
+            .en: "Column spacing (mm)",
+            .zhHans: "栏距（mm）",
+            .ja: "列間隔（mm）",
+            .ko: "열 간격(mm)",
+            .th: "ระยะห่างคอลัมน์ (มม.)"
+        ],
+        "draft_array_dy": [
+            .zhHant: "列距（mm）",
+            .en: "Row spacing (mm)",
+            .zhHans: "列距（mm）",
+            .ja: "行間隔（mm）",
+            .ko: "행 간격(mm)",
+            .th: "ระยะห่างแถว (มม.)"
+        ],
+        "draft_array_mode_polar": [
+            .zhHant: "環形",
+            .en: "Polar",
+            .zhHans: "环形",
+            .ja: "円形",
+            .ko: "원형",
+            .th: "วงกลม"
+        ],
+        "draft_array_mode_rect": [
+            .zhHant: "矩形",
+            .en: "Rectangular",
+            .zhHans: "矩形",
+            .ja: "矩形",
+            .ko: "직사각형",
+            .th: "ตาราง"
+        ],
+        "draft_array_polar_go": [
+            .zhHant: "下一步：點圓心",
+            .en: "Next: tap the centre",
+            .zhHans: "下一步：点圆心",
+            .ja: "次へ：中心をタップ",
+            .ko: "다음: 중심 누르기",
+            .th: "ถัดไป: แตะจุดศูนย์กลาง"
+        ],
+        "draft_array_rows": [
+            .zhHant: "列數",
+            .en: "Rows",
+            .zhHans: "列数",
+            .ja: "行数",
+            .ko: "행 수",
+            .th: "จำนวนแถว"
+        ],
+        "draft_array_title": [
+            .zhHant: "陣列",
+            .en: "Array",
+            .zhHans: "阵列",
+            .ja: "配列",
+            .ko: "배열",
+            .th: "การเรียง"
+        ],
         "draft_bar_collapse": [
             .zhHant: "收合面板",
             .en: "Collapse panel",
@@ -5662,6 +5750,86 @@ extension LocalizationManager {
             .ja: "このレイヤーに描く",
             .ko: "이 레이어에 그리기",
             .th: "วาดบนเลเยอร์นี้"
+        ],
+        "draft_edit_array_rect": [
+            .zhHant: "矩形陣列…",
+            .en: "Rectangular array…",
+            .zhHans: "矩形阵列…",
+            .ja: "矩形状配列…",
+            .ko: "직사각형 배열…",
+            .th: "เรียงเป็นตาราง…"
+        ],
+        "draft_edit_fillet_fail": [
+            .zhHant: "圓角做不出來：要兩條不平行的直線，而且半徑不能比線還長",
+            .en: "Cannot fillet: it needs two straight lines that are not parallel, and the radius must fit",
+            .zhHans: "圆角做不出来：要两条不平行的直线，而且半径不能比线还长",
+            .ja: "フィレットできません：平行でない直線が2本必要で、半径が線の長さに収まる必要があります",
+            .ko: "모깎기를 할 수 없습니다: 평행하지 않은 직선 두 개가 필요하고 반지름이 선 길이에 맞아야 합니다",
+            .th: "ทำมุมโค้งไม่ได้: ต้องเป็นเส้นตรงสองเส้นที่ไม่ขนานกัน และรัศมีต้องไม่ยาวกว่าเส้น"
+        ],
+        "draft_edit_fillet_radius": [
+            .zhHant: "圓角半徑（mm）",
+            .en: "Fillet radius (mm)",
+            .zhHans: "圆角半径（mm）",
+            .ja: "フィレット半径（mm）",
+            .ko: "모깎기 반지름(mm)",
+            .th: "รัศมีมุมโค้ง (มม.)"
+        ],
+        "draft_edit_footer": [
+            .zhHant: "修剪與延伸：點一下線，會對著其他線找交點。圓角：依序點兩條直線。偏移：點線，再點要偏向的那一側。鏡射與陣列：先用套索選好要處理的線。每一個動作都可以一次復原。",
+            .en: "Trim and extend: tap a line; they work against the other lines. Fillet: tap two straight lines in turn. Offset: tap a line, then the side to move it to. Mirror and array: select the lines with the lasso first. Every action undoes in one step.",
+            .zhHans: "修剪与延伸：点一下线，会对著其他线找交点。圆角：依序点两条直线。偏移：点线，再点要偏向的那一侧。镜射与阵列：先用套索选好要处理的线。每一个动作都可以一次复原。",
+            .ja: "トリム・延長：線をタップすると、ほかの線との交点を使います。フィレット：直線を順に2本タップ。オフセット：線をタップし、寄せたい側をタップ。鏡像・配列：先に投げ縄で線を選びます。どの操作も1回で元に戻せます。",
+            .ko: "자르기·연장: 선을 누르면 다른 선과의 교점을 사용합니다. 모깎기: 직선 두 개를 차례로 누르세요. 간격 띄우기: 선을 누른 뒤 옮길 쪽을 누르세요. 대칭·배열: 먼저 올가미로 선을 고르세요. 모든 동작은 한 번에 되돌릴 수 있습니다.",
+            .th: "ตัดและต่อเส้น: แตะที่เส้น จะใช้จุดตัดกับเส้นอื่น มุมโค้ง: แตะเส้นตรงสองเส้นตามลำดับ เส้นขนาน: แตะเส้น แล้วแตะด้านที่จะย้ายไป สะท้อนและเรียง: เลือกเส้นด้วยบ่วงก่อน ทุกการกระทำย้อนกลับได้ในครั้งเดียว"
+        ],
+        "draft_edit_need_selection": [
+            .zhHant: "先用套索選取要處理的線",
+            .en: "Select the lines with the lasso first",
+            .zhHans: "先用套索选取要处理的线",
+            .ja: "先に投げ縄で線を選んでください",
+            .ko: "먼저 올가미로 선을 선택하세요",
+            .th: "เลือกเส้นด้วยบ่วงก่อน"
+        ],
+        "draft_edit_no_boundary": [
+            .zhHant: "這一端的延長線上沒有別的線",
+            .en: "Nothing in line with this end to extend to",
+            .zhHans: "这一端的延长线上没有别的线",
+            .ja: "この端の延長線上に線がありません",
+            .ko: "이 끝의 연장선에 다른 선이 없습니다",
+            .th: "ไม่มีเส้นอยู่ในแนวปลายนี้"
+        ],
+        "draft_edit_no_crossing": [
+            .zhHant: "這條線沒有和別的線相交",
+            .en: "This line does not cross any other line",
+            .zhHans: "这条线没有和别的线相交",
+            .ja: "この線はほかの線と交わっていません",
+            .ko: "이 선은 다른 선과 만나지 않습니다",
+            .th: "เส้นนี้ไม่ตัดกับเส้นอื่น"
+        ],
+        "draft_edit_nothing": [
+            .zhHant: "這裡沒有可以處理的線",
+            .en: "Nothing to work on here",
+            .zhHans: "这里没有可以处理的线",
+            .ja: "ここには処理できる線がありません",
+            .ko: "여기에는 처리할 선이 없습니다",
+            .th: "ไม่มีเส้นให้จัดการตรงนี้"
+        ],
+        "draft_edit_offset_distance": [
+            .zhHant: "偏移距離（mm）",
+            .en: "Offset distance (mm)",
+            .zhHans: "偏移距离（mm）",
+            .ja: "オフセット距離（mm）",
+            .ko: "간격(mm)",
+            .th: "ระยะเส้นขนาน (มม.)"
+        ],
+        "draft_edit_offset_fail": [
+            .zhHant: "偏移做不出來",
+            .en: "Cannot offset this line",
+            .zhHans: "偏移做不出来",
+            .ja: "この線はオフセットできません",
+            .ko: "이 선은 간격 띄우기를 할 수 없습니다",
+            .th: "ทำเส้นขนานไม่ได้"
         ],
         "draft_frame_footer": [
             .zhHant: "依這一頁的紙張規格（A4／A3／A2）畫出圖框與標題欄；比例欄會帶入目前的比例尺。",
@@ -5807,6 +5975,62 @@ extension LocalizationManager {
             .ko: "두 번째 점을 누르세요",
             .th: "แตะจุดที่สอง"
         ],
+        "draft_hint_extend": [
+            .zhHant: "點要延伸的那一端附近（會延到最近的線）",
+            .en: "Tap near the end to extend (it runs to the nearest line)",
+            .zhHans: "点要延伸的那一端附近（会延到最近的线）",
+            .ja: "延長したい端の近くをタップ（最も近い線まで伸びます）",
+            .ko: "연장할 끝 근처를 누르세요(가장 가까운 선까지 늘어납니다)",
+            .th: "แตะใกล้ปลายที่จะต่อ (ต่อไปถึงเส้นที่ใกล้ที่สุด)"
+        ],
+        "draft_hint_fillet_first": [
+            .zhHant: "點第一條直線（靠近要接圓角的那一側）",
+            .en: "Tap the first straight line (on the side that gets the fillet)",
+            .zhHans: "点第一条直线（靠近要接圆角的那一侧）",
+            .ja: "1本目の直線をタップ（フィレットを付ける側）",
+            .ko: "첫 번째 직선을 누르세요(모깎기할 쪽)",
+            .th: "แตะเส้นตรงเส้นแรก (ด้านที่จะทำมุมโค้ง)"
+        ],
+        "draft_hint_fillet_second": [
+            .zhHant: "再點第二條直線",
+            .en: "Now tap the second straight line",
+            .zhHans: "再点第二条直线",
+            .ja: "続けて2本目の直線をタップ",
+            .ko: "이제 두 번째 직선을 누르세요",
+            .th: "แตะเส้นตรงเส้นที่สอง"
+        ],
+        "draft_hint_mirror_first": [
+            .zhHant: "點對稱軸的第一個點",
+            .en: "Tap the first point of the mirror line",
+            .zhHans: "点对称轴的第一个点",
+            .ja: "対称軸の1点目をタップ",
+            .ko: "대칭축의 첫 번째 점을 누르세요",
+            .th: "แตะจุดแรกของเส้นแกนสะท้อน"
+        ],
+        "draft_hint_mirror_second": [
+            .zhHant: "按住拖到對稱軸的第二個點，放開就鏡射",
+            .en: "Press and drag to the second point of the mirror line, release to mirror",
+            .zhHans: "按住拖到对称轴的第二个点，放开就镜射",
+            .ja: "対称軸の2点目までドラッグして離すと鏡像になります",
+            .ko: "대칭축의 두 번째 점까지 끌고 놓으면 대칭됩니다",
+            .th: "กดลากไปยังจุดที่สองของแกนสะท้อน ปล่อยเพื่อสะท้อน"
+        ],
+        "draft_hint_offset_first": [
+            .zhHant: "點要偏移的線",
+            .en: "Tap the line to offset",
+            .zhHans: "点要偏移的线",
+            .ja: "オフセットする線をタップ",
+            .ko: "간격을 띄울 선을 누르세요",
+            .th: "แตะเส้นที่จะทำเส้นขนาน"
+        ],
+        "draft_hint_offset_side": [
+            .zhHant: "點要偏向的那一側",
+            .en: "Tap the side to offset towards",
+            .zhHans: "点要偏向的那一侧",
+            .ja: "寄せたい側をタップ",
+            .ko: "옮길 쪽을 누르세요",
+            .th: "แตะด้านที่จะย้ายไป"
+        ],
         "draft_hint_pivot": [
             .zhHant: "點俯視圖與右視圖之間的那個角（45° 線通過的點）",
             .en: "Tap the corner between the top view and the side view (where the 45° line passes)",
@@ -5814,6 +6038,22 @@ extension LocalizationManager {
             .ja: "平面図と側面図の間の角（45° の線が通る点）をタップ",
             .ko: "평면도와 측면도 사이의 모서리(45° 선이 지나는 점)를 누르세요",
             .th: "แตะมุมระหว่างภาพด้านบนกับภาพด้านข้าง (จุดที่เส้น 45° ผ่าน)"
+        ],
+        "draft_hint_polar_center": [
+            .zhHant: "點環形陣列的圓心",
+            .en: "Tap the centre of the polar array",
+            .zhHans: "点环形阵列的圆心",
+            .ja: "円形状配列の中心をタップ",
+            .ko: "원형 배열의 중심을 누르세요",
+            .th: "แตะจุดศูนย์กลางของการเรียงเป็นวงกลม"
+        ],
+        "draft_hint_trim": [
+            .zhHant: "點要剪掉的那一段（會剪到最近的交點）",
+            .en: "Tap the part to cut away (it trims to the nearest crossings)",
+            .zhHans: "点要剪掉的那一段（会剪到最近的交点）",
+            .ja: "削除したい部分をタップ（最も近い交点まで切り取ります）",
+            .ko: "잘라낼 부분을 누르세요(가장 가까운 교점까지 잘립니다)",
+            .th: "แตะส่วนที่จะตัดทิ้ง (ตัดถึงจุดตัดที่ใกล้ที่สุด)"
         ],
         "draft_inst_footer": [
             .zhHant: "拖尺的中間可以移動它；從尺邊附近起筆，線就會貼著尺邊畫成直線。用旋轉鈕轉角度（丁字尺只能上下移動）。尺上的刻度是真實毫米。",
@@ -6703,6 +6943,14 @@ extension LocalizationManager {
             .ko: "도면 도움말",
             .th: "เคล็ดลับงานเขียนแบบ"
         ],
+        "draft_tool_array_polar": [
+            .zhHant: "環形陣列",
+            .en: "Polar array",
+            .zhHans: "环形阵列",
+            .ja: "円形状配列",
+            .ko: "원형 배열",
+            .th: "เรียงเป็นวงกลม"
+        ],
         "draft_tool_close": [
             .zhHant: "結束目前工具",
             .en: "Finish the current tool",
@@ -6751,6 +6999,30 @@ extension LocalizationManager {
             .ko: "반지름 치수",
             .th: "ขนาดรัศมี"
         ],
+        "draft_tool_extend": [
+            .zhHant: "延伸",
+            .en: "Extend",
+            .zhHans: "延伸",
+            .ja: "延長",
+            .ko: "연장",
+            .th: "ต่อเส้น"
+        ],
+        "draft_tool_fillet": [
+            .zhHant: "圓角",
+            .en: "Fillet",
+            .zhHans: "圆角",
+            .ja: "フィレット",
+            .ko: "모깎기",
+            .th: "มุมโค้ง"
+        ],
+        "draft_tool_mirror": [
+            .zhHant: "鏡射",
+            .en: "Mirror",
+            .zhHans: "镜射",
+            .ja: "鏡像",
+            .ko: "대칭",
+            .th: "สะท้อน"
+        ],
         "draft_tool_none": [
             .zhHant: "沒有工具",
             .en: "No tool",
@@ -6759,6 +7031,14 @@ extension LocalizationManager {
             .ko: "도구 없음",
             .th: "ไม่มีเครื่องมือ"
         ],
+        "draft_tool_offset": [
+            .zhHant: "偏移",
+            .en: "Offset",
+            .zhHans: "偏移",
+            .ja: "オフセット",
+            .ko: "간격 띄우기",
+            .th: "เส้นขนาน"
+        ],
         "draft_tool_set_pivot": [
             .zhHant: "設定 45° 轉折點",
             .en: "Set the 45° turning point",
@@ -6766,6 +7046,14 @@ extension LocalizationManager {
             .ja: "45° の転換点を設定",
             .ko: "45° 전환점 설정",
             .th: "ตั้งจุดหักมุม 45°"
+        ],
+        "draft_tool_trim": [
+            .zhHant: "修剪",
+            .en: "Trim",
+            .zhHans: "修剪",
+            .ja: "トリム",
+            .ko: "자르기",
+            .th: "ตัด"
         ],
         "draft_toolbox_aids": [
             .zhHant: "對齊與尺規",
@@ -6782,6 +7070,14 @@ extension LocalizationManager {
             .ja: "寸法記入",
             .ko: "치수 기입",
             .th: "การกำหนดขนาด"
+        ],
+        "draft_toolbox_edit": [
+            .zhHant: "編輯",
+            .en: "Edit",
+            .zhHans: "编辑",
+            .ja: "編集",
+            .ko: "편집",
+            .th: "แก้ไข"
         ],
         "draft_toolbox_frame": [
             .zhHant: "圖框與標題欄",

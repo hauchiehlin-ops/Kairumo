@@ -73,6 +73,18 @@ final class DraftingState: ObservableObject {
     @Published var thirdAngle: Bool {
         didSet { UserDefaults.standard.set(thirdAngle, forKey: Keys.thirdAngle); changed() }
     }
+    /// 圓角半徑與偏移距離（紙上毫米）。
+    @Published var filletRadiusMm: Double {
+        didSet { UserDefaults.standard.set(filletRadiusMm, forKey: Keys.filletRadius) }
+    }
+    @Published var offsetDistanceMm: Double {
+        didSet { UserDefaults.standard.set(offsetDistanceMm, forKey: Keys.offsetDistance) }
+    }
+    /// 環形陣列的份數與總角度（做完陣列的工具從這裡讀）。
+    var polarCount: Int = 6
+    var polarTotalDeg: Double = 360
+    /// 鏡射、陣列要處理的那批筆畫（選工具當下由套索帶進來）。
+    var editSelection: Set<String> = []
     /// 頁面上目前的尺規（直尺、丁字尺、三角板、量角器）。沒有就是 `nil`。
     private(set) var instrument: InstrumentModel?
     /// 目前的比例尺：實物 / 圖上（1:2 → 2、2:1 → 0.5）。尺寸標註的數字依它換算。
@@ -110,6 +122,8 @@ final class DraftingState: ObservableObject {
         static func locked(_ nb: String) -> String { "kairumo.draft.locked.\(nb.lowercased())" }
         static func scale(_ nb: String) -> String { "kairumo.draft.scale.\(nb.lowercased())" }
         static let align = "kairumo.draft.align"
+        static let filletRadius = "kairumo.draft.filletRadius"
+        static let offsetDistance = "kairumo.draft.offsetDistance"
         static let thirdAngle = "kairumo.draft.thirdAngle"
         static func pivot(_ nb: String, _ page: Int) -> String { "kairumo.draft.pivot.\(nb.lowercased()).\(page)" }
     }
@@ -123,6 +137,8 @@ final class DraftingState: ObservableObject {
         angleStep = d.object(forKey: Keys.angle) as? Int ?? 15
         compactChoice = d.object(forKey: Keys.compact) as? Bool
         tipsSeen = d.bool(forKey: Keys.tipsSeen)
+        filletRadiusMm = d.object(forKey: Keys.filletRadius) as? Double ?? 5
+        offsetDistanceMm = d.object(forKey: Keys.offsetDistance) as? Double ?? 5
         // UI 測試每次從「對齊開著」起步：上一輪測試關掉的設定不能帶到下一輪（重試時尤其會中招）。
         alignEnabled = ProcessInfo.processInfo.environment["KAIRUMO_UITEST"] == "1"
             ? true : (d.object(forKey: Keys.align) as? Bool ?? true)
@@ -321,11 +337,24 @@ enum DraftTool: String, CaseIterable {
     case compass
     /// 設定 45° 轉折點（投影對齊的寬度傳遞用）。
     case setPivot
+    /// 編輯：修剪、延伸、圓角、偏移、鏡射、環形陣列（見 `DraftEditController`）。
+    case trim, extend, fillet, offset, mirror, arrayPolar
+
+    /// 編輯工具：操作的是已經畫好的線，不是新畫線。
+    var isEdit: Bool {
+        switch self {
+        case .trim, .extend, .fillet, .offset, .mirror, .arrayPolar: return true
+        default: return false
+        }
+    }
+
+    /// 需要先用套索選好要處理的線。
+    var needsSelection: Bool { self == .mirror || self == .arrayPolar }
 
     var isDimension: Bool {
         switch self {
         case .dimLinear, .dimDiameter, .dimRadius, .dimAngle: return true
-        case .none, .compass, .setPivot: return false
+        default: return false
         }
     }
 
@@ -339,6 +368,12 @@ enum DraftTool: String, CaseIterable {
         case .dimAngle: return "draft_tool_dim_angle"
         case .compass: return "draft_tool_compass"
         case .setPivot: return "draft_tool_set_pivot"
+        case .trim: return "draft_tool_trim"
+        case .extend: return "draft_tool_extend"
+        case .fillet: return "draft_tool_fillet"
+        case .offset: return "draft_tool_offset"
+        case .mirror: return "draft_tool_mirror"
+        case .arrayPolar: return "draft_tool_array_polar"
         }
     }
 
@@ -351,6 +386,12 @@ enum DraftTool: String, CaseIterable {
         case .dimAngle: return "angle"
         case .compass: return "pencil.and.ruler"
         case .setPivot: return "scope"
+        case .trim: return "scissors"
+        case .extend: return "arrow.right.to.line"
+        case .fillet: return "arrow.turn.up.right"
+        case .offset: return "square.on.square.dashed"
+        case .mirror: return "arrow.left.and.right.righttriangle.left.righttriangle.right"
+        case .arrayPolar: return "circle.grid.cross"
         }
     }
 }

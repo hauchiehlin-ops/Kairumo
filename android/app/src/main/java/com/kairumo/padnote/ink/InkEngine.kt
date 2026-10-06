@@ -363,6 +363,12 @@ class InkEngine(
     /** 收回最後一筆（或最後一次插入的一整組）。回傳是否真的收回了東西。 */
     fun undo(): Boolean {
         val act = acts.lastOrNull()
+        if (act is ReplaceAct) {
+            acts.removeLast()
+            act.removed = swapStrokes(remove = act.added, add = act.removed)
+            redoActs += act
+            return true
+        }
         if (act is ReassignAct) {
             acts.removeLast()
             if (setLayerOf(act.key, act.from)) {
@@ -390,6 +396,12 @@ class InkEngine(
     /** 把最後一次收回的筆畫（或整組）放回去。 */
     fun redo(): Boolean {
         val next = redoActs.lastOrNull()
+        if (next is ReplaceAct) {
+            redoActs.removeLast()
+            next.added = swapStrokes(remove = next.removed, add = next.added)
+            acts += next
+            return true
+        }
         if (next is ReassignAct) {
             redoActs.removeLast()
             if (setLayerOf(next.key, next.to)) {
@@ -476,6 +488,128 @@ class InkEngine(
             onContentCommitted?.invoke()
         }
         return count
+    }
+
+    // ── 編輯工具（修剪、延伸、圓角、偏移、鏡射、陣列）──
+
+    private var syntheticId = 0uL
+
+    /** 編輯工具做出來的筆畫沒有硬體指標：用一段不會與真指標撞號的編號（改圖層靠 pointerId 認筆畫）。 */
+    private fun nextSyntheticId(): ULong = ULong.MAX_VALUE - 2_000_000uL - syntheticId++
+
+    private fun coreAdd(s: CompletedStroke): CompletedStroke {
+        val target = session
+        val page = pageId
+        val id = if (target != null && page != null) {
+            runCatching {
+                target.addStrokeDrafted(
+                    page, s.tool, s.colorRgba, s.baseWidth, s.points, s.layer.toUByte(), s.lineType.toUByte())
+            }.getOrNull()
+        } else null
+        return s.copy(coreStrokeId = id)
+    }
+
+    private fun coreErase(s: CompletedStroke) {
+        val target = session
+        val page = pageId
+        val id = s.coreStrokeId
+        if (target != null && page != null && id != null) runCatching { target.eraseStroke(page, id) }
+    }
+
+    /** 把 [remove]（以實例認）換成 [add]。回傳真正放進去的實例（核心重新發了 id）。 */
+    private fun swapStrokes(remove: List<CompletedStroke>, add: List<CompletedStroke>): List<CompletedStroke> {
+        for (s in remove) {
+            _strokes.removeAll { it === s }
+            coreErase(s)
+        }
+        val added = add.map { coreAdd(it) }
+        _strokes += added
+        onContentCommitted?.invoke()
+        return added
+    }
+
+    /** 離 (x, y) 最近的一筆（[radius] 之內）；隱藏的圖層不算，[editable] 時鎖住的也不算。疊在一起取最晚畫的。 */
+    fun strokeNear(x: Float, y: Float, radius: Float, editable: Boolean = true): CompletedStroke? {
+        var best: CompletedStroke? = null
+        var bestD = Float.MAX_VALUE
+        for (stroke in _strokes) {
+            if (stroke.layer != 0) {
+                if (DraftingState.isHidden(stroke.layer)) continue
+                if (editable && DraftingState.isLocked(stroke.layer)) continue
+            }
+            var d = Float.MAX_VALUE
+            val pts = stroke.points
+            if (pts.size == 1) d = kotlin.math.hypot(pts[0].x - x, pts[0].y - y)
+            for (k in 1 until pts.size) d = minOf(d, distToSegment(x, y, pts[k - 1], pts[k]))
+            if (d <= radius + stroke.baseWidth * 0.5f && d <= bestD) { best = stroke; bestD = d }
+        }
+        return best
+    }
+
+    /** 其他看得見的筆畫（修剪、延伸要對著它們找交點）。 */
+    fun polylinesExcluding(exclude: Collection<CompletedStroke>): List<uniffi.padnote_core.FfiPolyline> =
+        _strokes.filter { s -> exclude.none { it === s } && (s.layer == 0 || !DraftingState.isHidden(s.layer)) }
+            .map { s -> uniffi.padnote_core.FfiPolyline(s.points.map { uniffi.padnote_core.FfiPoint(it.x, it.y) }) }
+
+    /** 套索選到的那批筆畫（以核心 id 認）。 */
+    fun strokesByCoreIds(ids: Collection<String>): List<CompletedStroke> =
+        _strokes.filter { it.coreStrokeId != null && it.coreStrokeId in ids }
+
+    /** 核心給的折線 → 筆點；直線段補點到每 4 個頁面單位一點（虛線與點畫線靠它）。 */
+    private fun densify(items: List<uniffi.padnote_core.FfiPoint>, pressure: Float): List<StrokePoint> {
+        val out = ArrayList<StrokePoint>()
+        fun add(x: Float, y: Float) {
+            out += StrokePoint(x = x, y = y, pressure = pressure, tilt = 0f, azimuth = 0f, dtUs = 2000u, roll = 0f)
+        }
+        if (items.isEmpty()) return out
+        add(items[0].x, items[0].y)
+        for (k in 1 until items.size) {
+            val a = items[k - 1]
+            val b = items[k]
+            val n = maxOf(1, kotlin.math.ceil(kotlin.math.hypot(b.x - a.x, b.y - a.y) / 4f).toInt())
+            for (i in 1..n) {
+                val t = i.toFloat() / n
+                add(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t)
+            }
+        }
+        return out
+    }
+
+    /** 以 [base] 的筆、顏色、圖層、線型做一筆新的，點換成 [points]。 */
+    fun derive(base: CompletedStroke, points: List<uniffi.padnote_core.FfiPoint>): CompletedStroke =
+        base.copy(
+            pointerId = nextSyntheticId(), coreStrokeId = null, group = 0,
+            points = densify(points, base.points.firstOrNull()?.pressure ?: 0.6f))
+
+    /** 同一筆、點數不變、位置換掉（鏡射、陣列的複本）。 */
+    fun moved(base: CompletedStroke, points: List<uniffi.padnote_core.FfiPoint>): CompletedStroke =
+        base.copy(
+            pointerId = nextSyntheticId(), coreStrokeId = null, group = 0,
+            points = base.points.mapIndexed { i, p ->
+                val q = points.getOrNull(i) ?: return@mapIndexed p
+                p.copy(x = q.x, y = q.y)
+            })
+
+    /** 原來的筆畫換成新的一組，**一次復原**。 */
+    fun replaceStrokes(old: List<CompletedStroke>, new: List<CompletedStroke>): Boolean {
+        if (old.isEmpty() && new.isEmpty()) return false
+        val added = swapStrokes(remove = old, add = new)
+        redoStack.clear()
+        redoActs.clear()
+        acts += ReplaceAct(old, added)
+        return true
+    }
+
+    /** 加一組做好的複本（偏移、鏡射、陣列），一次復原。回傳數量。 */
+    fun insertCopies(copies: List<CompletedStroke>): Int {
+        if (copies.isEmpty()) return 0
+        val group = nextGroup++
+        for (c in copies) _strokes += coreAdd(c.copy(group = group))
+        redoStack.clear()
+        redoActs.clear()
+        acts += AddAct
+        onContentCommitted?.invoke()
+        return copies.size
     }
 
     /** 頁面上所有筆畫的點（立體輔助從裡面找封閉輪廓）。 */
@@ -565,6 +699,8 @@ class InkEngine(
     private sealed interface Act
     private data object AddAct : Act
     private data class ReassignAct(val key: ULong, val from: Int, val to: Int) : Act
+    /** 編輯工具：一批筆畫換成另一批（修剪、延伸、圓角）。復原與重做互換兩邊。 */
+    private class ReplaceAct(var removed: List<CompletedStroke>, var added: List<CompletedStroke>) : Act
     private val acts = mutableListOf<Act>()
     private val redoActs = mutableListOf<Act>()
 
