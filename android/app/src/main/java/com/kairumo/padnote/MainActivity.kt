@@ -2548,6 +2548,12 @@ private fun InkScreen(
                     showDraftingToolbox = false
                 }
             },
+            onStartPractice = { kind ->
+                showDraftingToolbox = false
+                startPractice(engine, kind)
+                applyInkTool(InkTool.DRAFTING)
+                revision++
+            },
             onRectArray = { rows, cols, dx, dy ->
                 showDraftingToolbox = false
                 applyRectArrayToSelection(engine, lasso, rows, cols, dx, dy)
@@ -4563,6 +4569,15 @@ private fun InkScreen(
                 }
             }
 
+            // 練習題進行中：題目、選項、批改結果（見 DraftingPractice.kt）。
+            if (inkTool.isDrafting && editorMode == EditorMode.DRAW && com.kairumo.padnote.ink.PracticeSession.isActive) {
+                @Suppress("UNUSED_EXPRESSION") revision
+                com.kairumo.padnote.ink.PracticeCard(
+                    engine = engine,
+                    onNew = { PracticeSession_next(engine); revision++ },
+                    modifier = Modifier.zIndex(10f).align(Alignment.BottomStart).padding(12.dp)
+                )
+            }
             // 圖學：製圖筆組、圖層、吸附（見 DraftingBar.kt）。
             if (inkTool.isDrafting && editorMode == EditorMode.DRAW) {
                 com.kairumo.padnote.ink.DraftingBar(
@@ -7492,6 +7507,17 @@ private fun placeDraftKit(
     val r = (pts.maxOf { it.x } + box[0] + 8f) * density
     val b = (pts.maxOf { it.y } + box[1] + 8f) * density
     return engine.lastInsertedCoreIds to listOf(Offset(l, t), Offset(r, t), Offset(r, b), Offset(l, b))
+}
+
+/** 再出同一題型的一題。 */
+private fun PracticeSession_next(engine: com.kairumo.padnote.ink.InkEngine) {
+    val kind = com.kairumo.padnote.ink.PracticeSession.problem?.kind ?: return
+    startPractice(engine, kind)
+}
+
+/** 開始一題練習：把題目線放進目前這一頁（頂層函式：避免在巨大的 InkScreen 裡放大 lambda）。 */
+private fun startPractice(engine: com.kairumo.padnote.ink.InkEngine, kind: String) {
+    com.kairumo.padnote.ink.PracticeSession.start(kind, null, engine, PageGeometry.width, PageGeometry.height)
 }
 
 /** 把套索選的那批線帶進編輯工具；沒選到回 false（頂層函式：避免在巨大的 InkScreen 裡放大 lambda）。 */

@@ -6319,6 +6319,302 @@ extension LocalizationManager {
             .ko: "전환점 지우기",
             .th: "ล้างจุดหักมุม"
         ],
+        "draft_prob_answer_shown": [
+            .zhHant: "綠色的線是標準答案",
+            .en: "The green lines are the model answer",
+            .zhHans: "绿色的线是标准答案",
+            .ja: "緑の線が模範解答です",
+            .ko: "초록 선이 모범 답안입니다",
+            .th: "เส้นสีเขียวคือเฉลย"
+        ],
+        "draft_prob_choice_right": [
+            .zhHant: "答對了！",
+            .en: "Correct!",
+            .zhHans: "答对了！",
+            .ja: "正解です！",
+            .ko: "정답입니다!",
+            .th: "ถูกต้อง!"
+        ],
+        "draft_prob_choice_wrong": [
+            .zhHant: "不是這個，再想想。",
+            .en: "Not that one — think again.",
+            .zhHans: "不是这个，再想想。",
+            .ja: "違います。もう一度考えてみましょう。",
+            .ko: "아니에요. 다시 생각해 보세요.",
+            .th: "ไม่ใช่ ลองคิดอีกครั้ง"
+        ],
+        "draft_prob_clear": [
+            .zhHant: "清除標記",
+            .en: "Clear the marks",
+            .zhHans: "清除标记",
+            .ja: "印を消す",
+            .ko: "표시 지우기",
+            .th: "ล้างเครื่องหมาย"
+        ],
+        "draft_prob_close": [
+            .zhHant: "結束練習",
+            .en: "End practice",
+            .zhHans: "结束练习",
+            .ja: "練習を終える",
+            .ko: "연습 끝내기",
+            .th: "จบการฝึก"
+        ],
+        "draft_prob_err_align": [
+            .zhHant: "沒對齊",
+            .en: "Views out of line",
+            .zhHans: "没对齐",
+            .ja: "位置が揃っていない",
+            .ko: "위치가 맞지 않음",
+            .th: "ไม่ตรงแนว"
+        ],
+        "draft_prob_err_extra": [
+            .zhHant: "多一條線",
+            .en: "An extra line",
+            .zhHans: "多一条线",
+            .ja: "余分な線",
+            .ko: "선이 하나 많음",
+            .th: "เส้นเกิน"
+        ],
+        "draft_prob_err_missing": [
+            .zhHant: "缺線",
+            .en: "A missing line",
+            .zhHans: "缺线",
+            .ja: "線が足りない",
+            .ko: "선이 빠짐",
+            .th: "เส้นขาด"
+        ],
+        "draft_prob_err_type": [
+            .zhHant: "線型錯",
+            .en: "Wrong line type",
+            .zhHans: "线型错",
+            .ja: "線種の誤り",
+            .ko: "선 종류 오류",
+            .th: "ชนิดเส้นผิด"
+        ],
+        "draft_prob_first_angle": [
+            .zhHant: "第一角法",
+            .en: "First angle",
+            .zhHans: "第一角法",
+            .ja: "第一角法",
+            .ko: "제1각법",
+            .th: "มุมที่หนึ่ง"
+        ],
+        "draft_prob_footer": [
+            .zhHant: "題目的線畫在底層；你的答案請用「頂層」的製圖筆畫（粗實線、隱藏線、剖面線用細線）。按「批改」會標出缺線、多線、線型錯與沒對齊。",
+            .en: "The problem lines are on the bottom layer; draw your answer with the top-layer drafting pens (thick line for outlines, hidden line, thin line for hatching). \"Check my drawing\" marks missing, extra, wrong-type and misaligned lines.",
+            .zhHans: "题目的线画在底层；你的答案请用「顶层」的制图笔画（粗实线、隐藏线、剖面线用细线）。按「批改」会标出缺线、多线、线型错与没对齐。",
+            .ja: "問題の線は下層にあります。答えは最上層の製図ペンで描いてください（外形は太線、隠れ線、ハッチングは細線）。「採点」で足りない線・余分な線・線種の誤り・位置ずれを示します。",
+            .ko: "문제 선은 맨 아래 레이어에 있습니다. 답은 맨 위 레이어의 제도 펜으로 그리세요(외형은 굵은 선, 은선, 해칭은 가는 선). \"채점\"은 빠진 선·불필요한 선·선 종류 오류·위치 어긋남을 표시합니다.",
+            .th: "เส้นของโจทย์อยู่ชั้นล่างสุด ให้วาดคำตอบด้วยปากกาเขียนแบบชั้นบนสุด (เส้นหนาสำหรับรูปร่าง เส้นประ และเส้นบางสำหรับลาย) ปุ่ม \"ตรวจ\" จะทำเครื่องหมายเส้นที่ขาด เกิน ชนิดผิด และไม่ตรงแนว"
+        ],
+        "draft_prob_grade": [
+            .zhHant: "批改",
+            .en: "Check my drawing",
+            .zhHans: "批改",
+            .ja: "採点",
+            .ko: "채점",
+            .th: "ตรวจ"
+        ],
+        "draft_prob_hint_dims": [
+            .zhHant: "尺寸：寬 %1@ × 高 %2@ × 深 %3@ mm",
+            .en: "Size: %1@ wide × %2@ high × %3@ deep mm",
+            .zhHans: "尺寸：宽 %1@ × 高 %2@ × 深 %3@ mm",
+            .ja: "寸法：幅 %1@ × 高さ %2@ × 奥行 %3@ mm",
+            .ko: "치수: 너비 %1@ × 높이 %2@ × 깊이 %3@ mm",
+            .th: "ขนาด: กว้าง %1@ × สูง %2@ × ลึก %3@ มม."
+        ],
+        "draft_prob_issue_align": [
+            .zhHant: "沒對齊 %1@ 條（藍色虛線是正確的位置）",
+            .en: "%1@ line(s) out of line (the dashed blue line is the right place)",
+            .zhHans: "没对齐 %1@ 条（蓝色虚线是正确的位置）",
+            .ja: "位置ずれ %1@ 本（青い破線が正しい位置）",
+            .ko: "위치 어긋남 %1@개(파란 점선이 올바른 위치)",
+            .th: "เส้นไม่ตรงแนว %1@ เส้น (เส้นประสีน้ำเงินคือตำแหน่งที่ถูก)"
+        ],
+        "draft_prob_issue_extra": [
+            .zhHant: "多畫 %1@ 條（紅色的線）",
+            .en: "%1@ extra line(s) (in red)",
+            .zhHans: "多画 %1@ 条（红色的线）",
+            .ja: "余分な線 %1@ 本（赤い線）",
+            .ko: "불필요한 선 %1@개(빨간 선)",
+            .th: "เส้นเกิน %1@ เส้น (สีแดง)"
+        ],
+        "draft_prob_issue_hatch_angle": [
+            .zhHant: "剖面線角度不對（要 45°）",
+            .en: "The hatching angle is wrong (it should be 45°)",
+            .zhHans: "剖面线角度不对（要 45°）",
+            .ja: "ハッチングの角度が違います（45° にします）",
+            .ko: "해칭 각도가 틀렸습니다(45°여야 함)",
+            .th: "มุมเส้นลายผิด (ต้องเป็น 45°)"
+        ],
+        "draft_prob_issue_hatch_missing": [
+            .zhHant: "剖面線畫得太少",
+            .en: "The hatching is missing or too sparse",
+            .zhHans: "剖面线画得太少",
+            .ja: "ハッチングが足りません",
+            .ko: "해칭이 부족합니다",
+            .th: "เส้นลายน้อยเกินไป"
+        ],
+        "draft_prob_issue_missing": [
+            .zhHant: "缺線 %1@ 條（橘色虛線是該畫的位置）",
+            .en: "%1@ missing line(s) (the dashed orange line shows where)",
+            .zhHans: "缺线 %1@ 条（橘色虚线是该画的位置）",
+            .ja: "足りない線 %1@ 本（オレンジの破線が描く位置）",
+            .ko: "빠진 선 %1@개(주황 점선이 그릴 위치)",
+            .th: "เส้นขาด %1@ เส้น (เส้นประสีส้มคือตำแหน่งที่ต้องวาด)"
+        ],
+        "draft_prob_issue_type": [
+            .zhHant: "線型錯 %1@ 條（黃色的線）",
+            .en: "%1@ line(s) of the wrong type (in yellow)",
+            .zhHans: "线型错 %1@ 条（黄色的线）",
+            .ja: "線種の誤り %1@ 本（黄色の線）",
+            .ko: "선 종류 오류 %1@개(노란 선)",
+            .th: "ชนิดเส้นผิด %1@ เส้น (สีเหลือง)"
+        ],
+        "draft_prob_kind_angle_judgement": [
+            .zhHant: "判斷第一角或第三角法",
+            .en: "First or third angle?",
+            .zhHans: "判断第一角或第三角法",
+            .ja: "第一角法か第三角法か",
+            .ko: "제1각법인가 제3각법인가",
+            .th: "มุมที่หนึ่งหรือมุมที่สาม"
+        ],
+        "draft_prob_kind_complete_view": [
+            .zhHant: "補第三視圖",
+            .en: "Complete the third view",
+            .zhHans: "补第三视图",
+            .ja: "3 つ目の図を描く",
+            .ko: "세 번째 도면 완성",
+            .th: "เติมภาพที่สาม"
+        ],
+        "draft_prob_kind_iso_to_views": [
+            .zhHant: "等角圖畫三視圖",
+            .en: "Draw the three views from the isometric",
+            .zhHans: "等角图画三视图",
+            .ja: "等角図から 3 面図",
+            .ko: "등각도에서 3면도",
+            .th: "วาดสามมุมมองจากภาพไอโซเมตริก"
+        ],
+        "draft_prob_kind_section": [
+            .zhHant: "畫剖視圖",
+            .en: "Draw the section view",
+            .zhHans: "画剖视图",
+            .ja: "断面図を描く",
+            .ko: "단면도 그리기",
+            .th: "วาดภาพตัด"
+        ],
+        "draft_prob_kind_spot_error": [
+            .zhHant: "找出圖上的錯",
+            .en: "Spot the error",
+            .zhHans: "找出图上的错",
+            .ja: "誤りを見つける",
+            .ko: "틀린 곳 찾기",
+            .th: "หาจุดผิด"
+        ],
+        "draft_prob_new": [
+            .zhHant: "再出一題",
+            .en: "Another problem",
+            .zhHans: "再出一题",
+            .ja: "次の問題",
+            .ko: "다음 문제",
+            .th: "โจทย์ใหม่"
+        ],
+        "draft_prob_perfect": [
+            .zhHant: "全對！每一條線都對。",
+            .en: "Perfect! Every line is right.",
+            .zhHans: "全对！每一条线都对。",
+            .ja: "全問正解！すべての線が正しいです。",
+            .ko: "완벽해요! 모든 선이 맞습니다.",
+            .th: "ถูกหมด! ทุกเส้นถูกต้อง"
+        ],
+        "draft_prob_prompt_angle_judgement": [
+            .zhHant: "這是第一角法還是第三角法的三視圖？",
+            .en: "Is this a first-angle or third-angle drawing?",
+            .zhHans: "这是第一角法还是第三角法的三视图？",
+            .ja: "これは第一角法ですか、第三角法ですか。",
+            .ko: "제1각법입니까, 제3각법입니까?",
+            .th: "นี่คือการฉายภาพมุมที่หนึ่งหรือมุมที่สาม"
+        ],
+        "draft_prob_prompt_complete_view": [
+            .zhHant: "已經給了正視圖與俯視圖，請在右邊補畫右視圖（實線、隱藏線都要畫）。",
+            .en: "The front and top views are given. Draw the right view on the right (visible and hidden lines).",
+            .zhHans: "已经给了正视图与俯视图，请在右边补画右视图（实线、隐藏线都要画）。",
+            .ja: "正面図と平面図が与えられています。右側に右側面図を描いてください（実線と隠れ線）。",
+            .ko: "정면도와 평면도가 주어졌습니다. 오른쪽에 우측면도를 그리세요(실선과 은선).",
+            .th: "มีภาพด้านหน้าและด้านบนให้แล้ว วาดภาพด้านขวาทางขวา (เส้นทึบและเส้นประ)"
+        ],
+        "draft_prob_prompt_iso_to_views": [
+            .zhHant: "看右上角的等角圖，在左邊畫出它的三視圖（第三角法）。",
+            .en: "Look at the isometric view and draw its three views on the left (third angle).",
+            .zhHans: "看右上角的等角图，在左边画出它的三视图（第三角法）。",
+            .ja: "右上の等角図を見て、左側に 3 面図を描いてください（第三角法）。",
+            .ko: "오른쪽 위의 등각도를 보고 왼쪽에 3면도를 그리세요(제3각법).",
+            .th: "ดูภาพไอโซเมตริกด้านขวาบน แล้ววาดสามมุมมองทางซ้าย (มุมที่สาม)"
+        ],
+        "draft_prob_prompt_section": [
+            .zhHant: "正視圖上有剖切線。請在右邊畫出剖視圖，並畫上 45° 剖面線。",
+            .en: "The cutting line is on the front view. Draw the section view on the right with 45° hatching.",
+            .zhHans: "正视图上有剖切线。请在右边画出剖视图，并画上 45° 剖面线。",
+            .ja: "正面図に切断線があります。右側に断面図を描き、45° のハッチングを入れてください。",
+            .ko: "정면도에 절단선이 있습니다. 오른쪽에 단면도를 그리고 45° 해칭을 넣으세요.",
+            .th: "มีเส้นตัดบนภาพด้านหน้า วาดภาพตัดทางขวา และใส่เส้นลาย 45°"
+        ],
+        "draft_prob_prompt_spot_error": [
+            .zhHant: "這張三視圖有一處錯。先選錯的種類，再點圖上錯的位置。",
+            .en: "This three-view drawing has one error. Pick the kind of error, then tap where it is.",
+            .zhHans: "这张三视图有一处错。先选错的种类，再点图上错的位置。",
+            .ja: "この 3 面図には誤りが 1 つあります。誤りの種類を選び、その位置をタップしてください。",
+            .ko: "이 3면도에는 틀린 곳이 하나 있습니다. 오류 종류를 고른 뒤 틀린 위치를 누르세요.",
+            .th: "ภาพสามมุมมองนี้มีจุดผิดหนึ่งจุด เลือกชนิดของข้อผิดพลาด แล้วแตะตำแหน่งที่ผิด"
+        ],
+        "draft_prob_score": [
+            .zhHant: "得分 %1@ / 100",
+            .en: "Score %1@ / 100",
+            .zhHans: "得分 %1@ / 100",
+            .ja: "得点 %1@ / 100",
+            .ko: "점수 %1@ / 100",
+            .th: "คะแนน %1@ / 100"
+        ],
+        "draft_prob_show_answer": [
+            .zhHant: "看答案",
+            .en: "Show the answer",
+            .zhHans: "看答案",
+            .ja: "答えを見る",
+            .ko: "정답 보기",
+            .th: "ดูเฉลย"
+        ],
+        "draft_prob_spot_right": [
+            .zhHant: "找到了！種類與位置都對。",
+            .en: "Found it! Both the kind and the spot are right.",
+            .zhHans: "找到了！种类与位置都对。",
+            .ja: "見つけました！種類も位置も正解です。",
+            .ko: "찾았어요! 종류와 위치 모두 맞습니다.",
+            .th: "เจอแล้ว! ทั้งชนิดและตำแหน่งถูกต้อง"
+        ],
+        "draft_prob_spot_tap": [
+            .zhHant: "現在點圖上錯的位置",
+            .en: "Now tap the spot on the drawing",
+            .zhHans: "现在点图上错的位置",
+            .ja: "次に、図の誤りの位置をタップ",
+            .ko: "이제 도면에서 틀린 위치를 누르세요",
+            .th: "ตอนนี้แตะตำแหน่งที่ผิดบนภาพ"
+        ],
+        "draft_prob_spot_wrong": [
+            .zhHant: "位置不對（紅圈是錯的地方）",
+            .en: "Not there (the red circle is the error)",
+            .zhHans: "位置不对（红圈是错的地方）",
+            .ja: "そこではありません（赤い丸が誤りの位置）",
+            .ko: "거기가 아닙니다(빨간 원이 틀린 곳)",
+            .th: "ไม่ใช่ตรงนั้น (วงกลมสีแดงคือจุดผิด)"
+        ],
+        "draft_prob_third_angle": [
+            .zhHant: "第三角法",
+            .en: "Third angle",
+            .zhHans: "第三角法",
+            .ja: "第三角法",
+            .ko: "제3각법",
+            .th: "มุมที่สาม"
+        ],
         "draft_reassign": [
             .zhHant: "移到圖層",
             .en: "Move to layer",
@@ -7086,6 +7382,14 @@ extension LocalizationManager {
             .ja: "図枠と表題欄",
             .ko: "도곽과 표제란",
             .th: "กรอบแบบและช่องชื่อแบบ"
+        ],
+        "draft_toolbox_practice": [
+            .zhHant: "練習題",
+            .en: "Practice problems",
+            .zhHans: "练习题",
+            .ja: "練習問題",
+            .ko: "연습 문제",
+            .th: "โจทย์ฝึกหัด"
         ],
         "draft_toolbox_symbols": [
             .zhHant: "符號",

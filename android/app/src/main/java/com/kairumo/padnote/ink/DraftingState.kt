@@ -29,7 +29,9 @@ enum class DraftTool(val nameKey: String) {
     FILLET("draft_tool_fillet"),
     OFFSET("draft_tool_offset"),
     MIRROR("draft_tool_mirror"),
-    ARRAY_POLAR("draft_tool_array_polar");
+    ARRAY_POLAR("draft_tool_array_polar"),
+    /** 練習題（挑錯）：點圖上錯的位置。 */
+    PROBLEM_SPOT("draft_prob_kind_spot_error");
 
     val isEdit: Boolean get() = this == TRIM || this == EXTEND || this == FILLET || this == OFFSET || this == MIRROR || this == ARRAY_POLAR
 

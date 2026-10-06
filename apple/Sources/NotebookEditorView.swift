@@ -4068,13 +4068,25 @@ public struct NotebookEditorView: View {
                         let center = draftViewportCenter()
                         DraftingState.shared.placeInstrument(kind: kind, center: center, pageWidth: PageGeometry.size.width)
                     },
-                    onRectArray: { rows, cols, dx, dy in applyRectArray(rows: rows, cols: cols, dxMm: dx, dyMm: dy) })
+                    onRectArray: { rows, cols, dx, dy in applyRectArray(rows: rows, cols: cols, dxMm: dx, dyMm: dy) },
+                    onStartPractice: { startPractice(kind: $0) })
             }
             .sheet(isPresented: $showSolidStudio) {
                 SolidStudioSheet(
                     pageSize: PageGeometry.size,
                     sketchPolylines: { solidSketchPolylines() },
                     onInsert: { insertSolidSheet($0) })
+            }
+            .overlay(alignment: .bottomLeading) {
+                // 練習題進行中：題目、選項、批改結果（見 DraftingPractice.swift）。
+                if editorMode == .draw && selectedTool == .drafting {
+                    PracticeCard(
+                        layer: { (canvasView as? AdaptiveCanvasView)?.proLayer },
+                        onNew: {
+                            if let kind = PracticeSession.shared.problem?.kind { startPractice(kind: kind) }
+                        })
+                        .padding(12)
+                }
             }
             .overlay(alignment: .top) {
                 // 圖學：製圖筆組、圖層、吸附（見 DraftingBar.swift）。
@@ -9866,6 +9878,13 @@ public struct NotebookEditorView: View {
         let ids = Set(made.map(\.id))
         let box = made.map(\.bounds).reduce(CGRect.null) { $0.union($1) }
         DispatchQueue.main.async { lasso.select(proStrokeIds: ids, around: box) }
+    }
+
+    /// 開始一題練習：把題目線放進目前這一頁（頁面大小由核心依它排版）。
+    private func startPractice(kind: String) {
+        guard let canvas = canvasView as? AdaptiveCanvasView, let layer = canvas.proLayer else { return }
+        selectedTool = .drafting
+        PracticeSession.shared.start(kind: kind, layer: layer, pageSize: PageGeometry.size)
     }
 
     /// 矩形陣列：套用在套索選的那批線上（一次復原）。

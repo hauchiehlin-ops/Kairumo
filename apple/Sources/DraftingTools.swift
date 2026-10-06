@@ -31,6 +31,7 @@ final class DraftToolController {
         case .compass: key = n == 0 ? "draft_hint_compass_center" : "draft_hint_compass_arc"
         case .setPivot: key = "draft_hint_pivot"
         case .trim, .extend, .fillet, .offset, .mirror, .arrayPolar: key = DraftEditController.shared.hintKey(for: tool)
+        case .problemSpot: key = "draft_prob_spot_tap"
         }
         drafting.toolHint = key.map(l)
     }
@@ -59,6 +60,10 @@ final class DraftToolController {
             preview(layer: layer, strokes: [])
             return
         }
+        if tool == .problemSpot {
+            if phase == .ended { PracticeSession.shared.spot(at: raw, layer: layer) }
+            return
+        }
         if tool.isEdit {
             DraftEditController.shared.handle(phase, raw, tool: tool, layer: layer)
             if !DraftEditController.shared.consumeNotice() { updateHint() }
@@ -73,7 +78,7 @@ final class DraftToolController {
         case .dimAngle: angular(phase, raw, snapped, layer)
         case .compass: compass(phase, raw, snapped, layer)
         case .setPivot: pivot(phase, snapped, layer)
-        case .none, .trim, .extend, .fillet, .offset, .mirror, .arrayPolar: break
+        case .none, .trim, .extend, .fillet, .offset, .mirror, .arrayPolar, .problemSpot: break
         }
     }
 
@@ -289,6 +294,8 @@ struct DraftingToolbox: View {
     var onInsertFrame: (_ thirdAngle: Bool) -> Void
     var onPlaceInstrument: (String) -> Void
     var onRectArray: (_ rows: Int, _ cols: Int, _ dxMm: Double, _ dyMm: Double) -> Void = { _, _, _, _ in }
+    /// 開始一題練習（題型編號）。
+    var onStartPractice: (String) -> Void = { _ in }
 
     @ObservedObject private var state = DraftingState.shared
     @ObservedObject private var localizationManager = LocalizationManager.shared
@@ -399,6 +406,18 @@ struct DraftingToolbox: View {
                             value: $state.offsetDistanceMm, in: 1...200, step: 1)
                         .accessibilityIdentifier("draft.edit.offsetDistance")
                     Text(t("draft_edit_footer")).font(.footnote).foregroundColor(.secondary)
+                }
+                Section(t("draft_toolbox_practice")) {
+                    ForEach(draftProblemKinds(), id: \.self) { kind in
+                        Button {
+                            onStartPractice(kind)
+                            dismiss()
+                        } label: {
+                            Label(t("draft_prob_kind_\(kind)"), systemImage: "pencil.and.list.clipboard")
+                        }
+                        .accessibilityIdentifier("draft.practice.start.\(kind)")
+                    }
+                    Text(t("draft_prob_footer")).font(.footnote).foregroundColor(.secondary)
                 }
             }
             .navigationTitle(t("draft_tools"))

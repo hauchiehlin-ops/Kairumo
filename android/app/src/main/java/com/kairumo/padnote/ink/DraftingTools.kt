@@ -94,6 +94,7 @@ object DraftToolController {
             DraftTool.SET_PIVOT -> "draft_hint_pivot"
             DraftTool.TRIM, DraftTool.EXTEND, DraftTool.FILLET, DraftTool.OFFSET, DraftTool.MIRROR, DraftTool.ARRAY_POLAR ->
                 DraftEditController.hintKey(DraftingState.tool)
+            DraftTool.PROBLEM_SPOT -> "draft_prob_spot_tap"
         }
         DraftingState.toolHint = key?.let { L10n.t(it) }
     }
@@ -117,6 +118,10 @@ object DraftToolController {
             engine.setOverlay(emptyList(), picks.toList())
             return
         }
+        if (tool == DraftTool.PROBLEM_SPOT) {
+            if (phase == FfiPhase.ENDED) PracticeSession.spot(x, y, engine)
+            return
+        }
         if (tool.isEdit) {
             DraftEditController.handle(phase, x, y, tool, engine)
             return
@@ -131,7 +136,7 @@ object DraftToolController {
             DraftTool.COMPASS -> compass(phase, raw, snapped, engine)
             DraftTool.SET_PIVOT -> setPivot(phase, snapped, engine)
             DraftTool.NONE, DraftTool.TRIM, DraftTool.EXTEND, DraftTool.FILLET, DraftTool.OFFSET,
-            DraftTool.MIRROR, DraftTool.ARRAY_POLAR -> Unit
+            DraftTool.MIRROR, DraftTool.ARRAY_POLAR, DraftTool.PROBLEM_SPOT -> Unit
         }
     }
 
@@ -332,6 +337,7 @@ fun DraftingToolboxDialog(
     onInsertFrame: (thirdAngle: Boolean) -> Unit,
     onPlaceInstrument: (String) -> Unit,
     onRectArray: (Int, Int, Double, Double) -> Unit,
+    onStartPractice: (String) -> Unit,
     onDismiss: () -> Unit
 ) {
     fun t(key: String) = LocalizationStrings.localized(key, languageTag)
@@ -463,6 +469,19 @@ fun DraftingToolboxDialog(
                     DraftingState.changeOffsetDistance(it)
                 }
                 Text(t("draft_edit_footer"), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                HorizontalDivider()
+                Text(t("draft_toolbox_practice"), style = MaterialTheme.typography.labelLarge)
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    for (kind in uniffi.padnote_core.draftProblemKinds()) {
+                        FilterChip(
+                            selected = false,
+                            onClick = { onStartPractice(kind) },
+                            label = { Text(t("draft_prob_kind_$kind"), fontSize = 12.sp) },
+                            modifier = Modifier.testTag("draft.practice.start.$kind")
+                        )
+                    }
+                }
+                Text(t("draft_prob_footer"), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 HorizontalDivider()
                 FilterChip(
                     selected = false,

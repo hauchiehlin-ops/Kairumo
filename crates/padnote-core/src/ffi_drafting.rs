@@ -5,10 +5,12 @@
 //! 一次復原。幾何與數字都在核心算，兩個平台畫出來完全相同。
 
 use padnote_drafting::align;
+use padnote_drafting::check::{self, Issue, LineKind, Seg, Tolerance};
 use padnote_drafting::dim::{self, DimStyle, LinearAxis};
 use padnote_drafting::edit;
 use padnote_drafting::frame::{self, FrameOptions};
 use padnote_drafting::instruments::{self, InstrumentKind};
+use padnote_drafting::problems::{self, ErrorKind};
 use padnote_drafting::symbols::{self, SymbolParams};
 use padnote_drafting::{Drawing, UNITS_PER_MM};
 
@@ -611,6 +613,294 @@ pub fn draft_offset(points: Vec<FfiPoint>, distance: f32, side: FfiPoint) -> Opt
     edit::offset(&poly(&points), distance, p(side)).map(ffi_poly)
 }
 
+// MARK: - 題庫與批改
+
+/// 題目或答案裡的一條線（頁面座標）。`line_type`：0 實線、1 隱藏線、2 中心線；`thin` = 細實線（剖面線）。
+#[derive(Clone, Debug, uniffi::Record)]
+pub struct FfiProblemLine {
+    pub a: FfiPoint,
+    pub b: FfiPoint,
+    pub line_type: u8,
+    pub thin: bool,
+}
+
+#[derive(Clone, Copy, Debug, uniffi::Record)]
+pub struct FfiProblemRect {
+    pub x: f32,
+    pub y: f32,
+    pub w: f32,
+    pub h: f32,
+}
+
+#[derive(Clone, Debug, uniffi::Record)]
+pub struct FfiProblem {
+    /// 題型編號（`draft_problem_kinds` 給的）。
+    pub kind: String,
+    pub seed: u64,
+    pub third_angle: bool,
+    /// 題目給的線，畫在底層。
+    pub given: Vec<FfiProblemLine>,
+    /// 標準答案（畫題才有）。
+    pub answer: Vec<FfiProblemLine>,
+    /// 學生作答的範圍（畫題才有）；只批改這裡面的線。
+    pub answer_area: Option<FfiProblemRect>,
+    /// 選擇題的選項（語系鍵）。
+    pub choices: Vec<String>,
+    pub correct: Option<u32>,
+    /// 挑錯題：錯的位置。
+    pub error_at: Option<FfiPoint>,
+    pub width_mm: f32,
+    pub height_mm: f32,
+    pub depth_mm: f32,
+    /// 輪廓種類（語系鍵 `solid_profile_<name>` 的名稱部分）。
+    pub profile: String,
+}
+
+fn to_ffi_line(s: &Seg) -> FfiProblemLine {
+    FfiProblemLine {
+        a: fp(s.a),
+        b: fp(s.b),
+        line_type: match s.kind {
+            LineKind::Hidden => 1,
+            LineKind::Center => 2,
+            _ => 0,
+        },
+        thin: s.kind == LineKind::Thin,
+    }
+}
+
+/// 題型編號，依顯示順序。語系鍵是 `draft_prob_kind_<id>`。
+#[uniffi::export]
+pub fn draft_problem_kinds() -> Vec<String> {
+    problems::KINDS.iter().map(|k| k.id().to_string()).collect()
+}
+
+/// 這個題型是要在頁面上畫（會批改），還是選答案。
+#[uniffi::export]
+pub fn draft_problem_is_drawing(kind: String) -> bool {
+    problems::Kind::from_id(&kind).is_some_and(|k| k.is_drawing())
+}
+
+/// 以種子產生一題。`page_width`、`page_height` 是頁面大小（頁面單位）。認不得題型回 `None`。
+#[uniffi::export]
+pub fn draft_problem(
+    kind: String,
+    seed: u64,
+    page_width: f32,
+    page_height: f32,
+) -> Option<FfiProblem> {
+    let kind = problems::Kind::from_id(&kind)?;
+    let page = (page_width.max(400.0), page_height.max(300.0));
+    let p = problems::generate(kind, seed, page);
+    Some(FfiProblem {
+        kind: kind.id().to_string(),
+        seed,
+        third_angle: p.convention == problems::Convention::ThirdAngle,
+        given: p.given.iter().map(to_ffi_line).collect(),
+        answer: p.answer.iter().map(to_ffi_line).collect(),
+        answer_area: p.answer_area.map(|r| FfiProblemRect {
+            x: r.x,
+            y: r.y,
+            w: r.w,
+            h: r.h,
+        }),
+        choices: p.choices.iter().map(|c| c.to_string()).collect(),
+        correct: p.correct.map(|c| c as u32),
+        error_at: p.error.map(|(_, at)| fp(at)),
+        width_mm: p.dims_mm.0,
+        height_mm: p.dims_mm.1,
+        depth_mm: p.dims_mm.2,
+        profile: p.profile.to_string(),
+    })
+}
+
+/// 選擇題的批改。
+#[uniffi::export]
+pub fn draft_check_choice(
+    kind: String,
+    seed: u64,
+    page_width: f32,
+    page_height: f32,
+    picked: u32,
+) -> bool {
+    problems::Kind::from_id(&kind)
+        .map(|k| problems::generate(k, seed, (page_width.max(400.0), page_height.max(300.0))))
+        .is_some_and(|p| problems::check_choice(&p, picked as usize))
+}
+
+/// 挑錯題的批改：選的種類要對，指的位置離錯的地方不超過 `radius`。
+#[uniffi::export]
+pub fn draft_check_error(
+    seed: u64,
+    page_width: f32,
+    page_height: f32,
+    picked: u32,
+    at: Option<FfiPoint>,
+    radius: f32,
+) -> bool {
+    let p = problems::generate(
+        problems::Kind::SpotError,
+        seed,
+        (page_width.max(400.0), page_height.max(300.0)),
+    );
+    problems::check_error_answer(&p, picked as usize, at.map(p_), radius.max(1.0))
+}
+
+fn p_(q: FfiPoint) -> (f32, f32) {
+    (q.x, q.y)
+}
+
+/// 學生畫的一筆（由平台的筆畫換成：圖層、線型、筆寬、點）。
+#[derive(Clone, Debug, uniffi::Record)]
+pub struct FfiDrawnStroke {
+    pub layer: u8,
+    pub line_type: u8,
+    pub width: f32,
+    pub points: Vec<FfiPoint>,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, uniffi::Enum)]
+pub enum FfiIssueKind {
+    Missing,
+    Extra,
+    WrongType,
+    Misaligned,
+    HatchMissing,
+    HatchAngle,
+}
+
+/// 批改出來的一個問題：種類與要標在畫面上的線（標準答案的那條，或學生多畫的那條）。
+#[derive(Clone, Debug, uniffi::Record)]
+pub struct FfiIssue {
+    pub kind: FfiIssueKind,
+    /// 要標出來的線（剖面線的問題沒有）。
+    pub line: Option<FfiProblemLine>,
+    /// 沒對齊：學生的線相對標準的偏移。
+    pub dx: f32,
+    pub dy: f32,
+    /// 線型錯：該是什麼（0 實線、1 隱藏線、2 中心線）。
+    pub expected_line_type: u8,
+    /// 剖面線角度（度）。
+    pub expected_deg: f32,
+    pub drawn_deg: f32,
+}
+
+#[derive(Clone, Debug, uniffi::Record)]
+pub struct FfiGrade {
+    pub issues: Vec<FfiIssue>,
+    pub matched: u32,
+    pub expected: u32,
+    pub score: u32,
+}
+
+fn kind_to_type(k: LineKind) -> u8 {
+    match k {
+        LineKind::Hidden => 1,
+        LineKind::Center => 2,
+        _ => 0,
+    }
+}
+
+/// 批改畫題：只收落在作答範圍裡的頂層筆畫。
+#[uniffi::export]
+pub fn draft_grade(
+    kind: String,
+    seed: u64,
+    page_width: f32,
+    page_height: f32,
+    strokes: Vec<FfiDrawnStroke>,
+) -> Option<FfiGrade> {
+    let kind = problems::Kind::from_id(&kind)?;
+    let problem = problems::generate(kind, seed, (page_width.max(400.0), page_height.max(300.0)));
+    let area = problem.answer_area?;
+    let mut drawn: Vec<Seg> = Vec::new();
+    for s in &strokes {
+        let Some(lk) = check::classify(s.layer, s.line_type, s.width) else {
+            continue;
+        };
+        let pts: Vec<(f32, f32)> = s.points.iter().map(|q| (q.x, q.y)).collect();
+        // 只算作答範圍裡的線段（整段在範圍內才算）。
+        for seg in check::segments(&pts, lk) {
+            if area.contains(seg.a) && area.contains(seg.b) {
+                drawn.push(seg);
+            }
+        }
+    }
+    let report = check::grade(&problem.answer, &drawn, Tolerance::default());
+    let blank = FfiIssue {
+        kind: FfiIssueKind::Missing,
+        line: None,
+        dx: 0.0,
+        dy: 0.0,
+        expected_line_type: 0,
+        expected_deg: 0.0,
+        drawn_deg: 0.0,
+    };
+    let issues = report
+        .issues
+        .iter()
+        .map(|i| match i {
+            Issue::Missing(s) => FfiIssue {
+                kind: FfiIssueKind::Missing,
+                line: Some(to_ffi_line(s)),
+                expected_line_type: kind_to_type(s.kind),
+                ..blank.clone()
+            },
+            Issue::Extra(s) => FfiIssue {
+                kind: FfiIssueKind::Extra,
+                line: Some(to_ffi_line(s)),
+                ..blank.clone()
+            },
+            Issue::WrongType { drawn, expected } => FfiIssue {
+                kind: FfiIssueKind::WrongType,
+                line: Some(to_ffi_line(drawn)),
+                expected_line_type: kind_to_type(*expected),
+                ..blank.clone()
+            },
+            Issue::Misaligned { expected, dx, dy } => FfiIssue {
+                kind: FfiIssueKind::Misaligned,
+                line: Some(to_ffi_line(expected)),
+                dx: *dx,
+                dy: *dy,
+                ..blank.clone()
+            },
+            Issue::HatchMissing => FfiIssue {
+                kind: FfiIssueKind::HatchMissing,
+                ..blank.clone()
+            },
+            Issue::HatchAngle {
+                expected_deg,
+                drawn_deg,
+            } => FfiIssue {
+                kind: FfiIssueKind::HatchAngle,
+                expected_deg: *expected_deg,
+                drawn_deg: *drawn_deg,
+                ..blank.clone()
+            },
+        })
+        .collect();
+    Some(FfiGrade {
+        issues,
+        matched: report.matched as u32,
+        expected: report.expected as u32,
+        score: report.score(),
+    })
+}
+
+/// 挑錯題的錯誤種類選項（語系鍵），與 `draft_problem` 給的 `choices` 一致。
+#[uniffi::export]
+pub fn draft_error_kinds() -> Vec<String> {
+    [
+        ErrorKind::Missing,
+        ErrorKind::Extra,
+        ErrorKind::WrongType,
+        ErrorKind::Misaligned,
+    ]
+    .iter()
+    .map(|e| e.choice_key().to_string())
+    .collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -853,5 +1143,92 @@ mod tests {
         assert!(f.arc.len() > 4);
         let o = draft_offset(line, 10.0, pt(50.0, 20.0)).unwrap();
         assert_eq!(o[0].y, 10.0);
+    }
+
+    #[test]
+    fn problems_and_grading_work_through_the_ffi() {
+        let kinds = draft_problem_kinds();
+        assert_eq!(kinds.len(), 5);
+        for k in &kinds {
+            let p = draft_problem(k.clone(), 11, 1600.0, 1132.0).unwrap();
+            assert!(!p.given.is_empty(), "{k}");
+            if draft_problem_is_drawing(k.clone()) {
+                // 把標準答案當成學生畫的（頂層、粗實線／隱藏線／細線）→ 滿分。
+                let strokes: Vec<FfiDrawnStroke> = p
+                    .answer
+                    .iter()
+                    .map(|l| FfiDrawnStroke {
+                        layer: 3,
+                        line_type: l.line_type,
+                        width: if l.thin { 1.2 } else { 2.6 },
+                        points: vec![l.a, l.b],
+                    })
+                    .collect();
+                let g = draft_grade(k.clone(), 11, 1600.0, 1132.0, strokes).unwrap();
+                assert!(g.issues.is_empty(), "{k}: {:?}", g.issues.len());
+                assert_eq!(g.score, 100);
+                // 什麼都沒畫 → 一堆缺線。
+                let blank = draft_grade(k.clone(), 11, 1600.0, 1132.0, vec![]).unwrap();
+                assert!(!blank.issues.is_empty() && blank.score < 100);
+            } else {
+                assert!(p.correct.is_some());
+            }
+        }
+        // 判斷題：選對／選錯。
+        let p = draft_problem("angle_judgement".into(), 5, 1600.0, 1132.0).unwrap();
+        let right = p.correct.unwrap();
+        assert!(draft_check_choice(
+            "angle_judgement".into(),
+            5,
+            1600.0,
+            1132.0,
+            right
+        ));
+        assert!(!draft_check_choice(
+            "angle_judgement".into(),
+            5,
+            1600.0,
+            1132.0,
+            1 - right
+        ));
+        // 挑錯題。
+        let e = draft_problem("spot_error".into(), 9, 1600.0, 1132.0).unwrap();
+        let at = e.error_at.unwrap();
+        assert!(draft_check_error(
+            9,
+            1600.0,
+            1132.0,
+            e.correct.unwrap(),
+            Some(at),
+            30.0
+        ));
+        assert!(!draft_check_error(
+            9,
+            1600.0,
+            1132.0,
+            e.correct.unwrap(),
+            None,
+            30.0
+        ));
+        assert!(draft_problem("nope".into(), 1, 1600.0, 1132.0).is_none());
+        assert_eq!(draft_error_kinds().len(), 4);
+        // 作答範圍之外的線不算：把答案平移到頁面另一邊，批改看不到。
+        let far: Vec<FfiDrawnStroke> = draft_problem("complete_view".into(), 11, 1600.0, 1132.0)
+            .unwrap()
+            .answer
+            .iter()
+            .map(|l| FfiDrawnStroke {
+                layer: 3,
+                line_type: l.line_type,
+                width: 2.6,
+                points: vec![pt(l.a.x - 900.0, l.a.y), pt(l.b.x - 900.0, l.b.y)],
+            })
+            .collect();
+        assert!(
+            draft_grade("complete_view".into(), 11, 1600.0, 1132.0, far)
+                .unwrap()
+                .score
+                < 100
+        );
     }
 }

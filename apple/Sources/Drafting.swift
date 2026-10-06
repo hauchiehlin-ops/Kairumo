@@ -339,6 +339,8 @@ enum DraftTool: String, CaseIterable {
     case setPivot
     /// 編輯：修剪、延伸、圓角、偏移、鏡射、環形陣列（見 `DraftEditController`）。
     case trim, extend, fillet, offset, mirror, arrayPolar
+    /// 練習題（挑錯）：點圖上錯的位置。
+    case problemSpot
 
     /// 編輯工具：操作的是已經畫好的線，不是新畫線。
     var isEdit: Bool {
@@ -374,6 +376,7 @@ enum DraftTool: String, CaseIterable {
         case .offset: return "draft_tool_offset"
         case .mirror: return "draft_tool_mirror"
         case .arrayPolar: return "draft_tool_array_polar"
+        case .problemSpot: return "draft_prob_kind_spot_error"
         }
     }
 
@@ -392,6 +395,7 @@ enum DraftTool: String, CaseIterable {
         case .offset: return "square.on.square.dashed"
         case .mirror: return "arrow.left.and.right.righttriangle.left.righttriangle.right"
         case .arrayPolar: return "circle.grid.cross"
+        case .problemSpot: return "hand.point.up.left"
         }
     }
 }

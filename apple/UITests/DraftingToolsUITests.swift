@@ -382,4 +382,26 @@ final class DraftingToolsUITests: XCTestCase {
         guard let back = numbers("last"), back.count == 4 else { XCTFail("復原後讀不到最後一筆"); return }
         XCTAssertEqual(back[2], h[2], accuracy: 1.5, "復原之後水平線又長回原來的長度")
     }
+
+    func testPracticeStartsFromTheToolboxPutsTheProblemOnThePageAndGradesIt() {
+        guard openDrafting() else { XCTFail("進不了圖學模式"); return }
+        let before = readout("pro")
+        openToolbox()
+        reveal("draft.practice.start.complete_view").tap()
+        XCTAssertTrue(element("draft.practice.card").waitForExistence(timeout: 8), "出題之後沒有練習卡")
+        sleep(1)
+        XCTAssertGreaterThan(readout("pro"), before, "題目線沒有放進頁面")
+        // 什麼都沒畫就批改：分數很低、標出缺線。
+        element("draft.practice.grade").tap()
+        XCTAssertTrue(element("draft.practice.score").waitForExistence(timeout: 5), "批改之後沒有分數")
+        // 看答案、清除、再出一題。
+        element("draft.practice.answer").tap()
+        element("draft.practice.clear").tap()
+        let count = readout("pro")
+        element("draft.practice.new").tap()
+        sleep(1)
+        XCTAssertGreaterThan(readout("pro"), count, "再出一題應該又放進一組題目線")
+        element("draft.practice.close").tap()
+        XCTAssertFalse(element("draft.practice.card").waitForExistence(timeout: 3), "結束練習後卡片還在")
+    }
 }
