@@ -335,6 +335,10 @@ final class ProInkLayerView: UIView {
     private var live: ProStroke?
     private var liveCache: ProInkRenderer.Cached?
 
+    /// 工具的預覽（標註畫到一半的樣子）與已選的點。不存檔、不進復原；每次更新整組換掉。
+    private var overlayStrokes: [ProStroke] = []
+    private var overlayMarks: [CGPoint] = []
+
     /// 畫完一筆、擦掉、復原時通知外面（存檔之外的事，例如更新「有未同步的修改」）。
     var onChanged: (() -> Void)?
     var undoManagerProvider: (() -> UndoManager?)?
@@ -416,6 +420,20 @@ final class ProInkLayerView: UIView {
             ProInkRenderer.draw(cached, toolName: stroke.tool, color: displayColor(stroke.colorRGBA), in: ctx, clip: rect)
             ctx.restoreGState()
         }
+        for stroke in overlayStrokes where stroke.bounds.intersects(rect) {
+            guard let cached = ProInkRenderer.cache(for: stroke) else { continue }
+            ProInkRenderer.draw(cached, toolName: stroke.tool, color: displayColor(stroke.colorRGBA), in: ctx, clip: rect)
+        }
+        for mark in overlayMarks {
+            let r: CGFloat = 5
+            let dot = CGRect(x: mark.x - r, y: mark.y - r, width: r * 2, height: r * 2)
+            guard dot.intersects(rect) else { continue }
+            ctx.setStrokeColor(UIColor.systemOrange.cgColor)
+            ctx.setLineWidth(1.6)
+            ctx.strokeEllipse(in: dot.insetBy(dx: 1, dy: 1))
+            ctx.setFillColor(UIColor.systemOrange.withAlphaComponent(0.35).cgColor)
+            ctx.fillEllipse(in: dot.insetBy(dx: 1, dy: 1))
+        }
         if let live, let liveCache {
             ctx.saveGState()
             if live.blendMode == "multiply" {
@@ -428,6 +446,105 @@ final class ProInkLayerView: UIView {
             ProInkRenderer.draw(liveCache, toolName: live.tool, color: displayColor(live.colorRGBA), in: ctx, clip: rect)
             ctx.restoreGState()
         }
+    }
+
+    // MARK: 工具覆蓋層（預覽與已選的點）
+
+    /// 換掉整組預覽。傳空陣列就是清掉。
+    func setOverlay(strokes: [FfiSheetStroke], marks: [CGPoint]) {
+        let old = overlayBounds()
+        overlayStrokes = strokes.compactMap { ProStroke(drafted: $0) }
+        overlayMarks = marks
+        setNeedsDisplay(old.union(overlayBounds()).insetBy(dx: -12, dy: -12))
+    }
+
+    func clearOverlay() { setOverlay(strokes: [], marks: []) }
+
+    private func overlayBounds() -> CGRect {
+        var box = overlayStrokes.map(\.bounds).reduce(CGRect.null) { $0.union($1) }
+        for m in overlayMarks { box = box.union(CGRect(x: m.x - 8, y: m.y - 8, width: 16, height: 16)) }
+        return box
+    }
+
+    // MARK: 吸附點
+
+    /// 離 `point` 最近的**吸附點**（半徑 `radius` 之內）：筆畫的端點、轉折點，以及圓形筆畫的圓心。
+    /// 標註要量準，就得釘在線的端點與圓心上，而不是手指落下的那個點。
+    func snapAnchor(near point: CGPoint, radius: CGFloat) -> CGPoint? {
+        let drafting = DraftingState.shared
+        var best: (CGPoint, CGFloat)?
+        func consider(_ p: CGPoint) {
+            let d = hypot(p.x - point.x, p.y - point.y)
+            if d <= radius, d < (best?.1 ?? .greatestFiniteMagnitude) { best = (p, d) }
+        }
+        for stroke in allStrokes where stroke.layerId == 0 || !drafting.isHidden(layer: stroke.layerId, notebookId: notebookId) {
+            let pts = stroke.points
+            guard let first = pts.first, let last = pts.last else { continue }
+            guard stroke.bounds.insetBy(dx: -radius, dy: -radius).contains(point) else { continue }
+            consider(CGPoint(x: CGFloat(first.x), y: CGFloat(first.y)))
+            consider(CGPoint(x: CGFloat(last.x), y: CGFloat(last.y)))
+            // 吸附出來的線／多邊形只有幾個點，每個點都是轉折；手繪的長線不是。
+            if pts.count <= 12 { for p in pts { consider(CGPoint(x: CGFloat(p.x), y: CGFloat(p.y))) } }
+            if let circle = Self.fitCircle(pts.map { CGPoint(x: CGFloat($0.x), y: CGFloat($0.y)) }) {
+                consider(circle.center)
+            }
+        }
+        return best?.0
+    }
+
+    /// `point` 附近的圓形筆畫（首尾相接、擬合殘差小）：回傳圓心與半徑。
+    func circle(near point: CGPoint, radius: CGFloat) -> (center: CGPoint, radius: CGFloat)? {
+        var best: ((CGPoint, CGFloat), CGFloat)?
+        for stroke in allStrokes {
+            let pts = stroke.points.map { CGPoint(x: CGFloat($0.x), y: CGFloat($0.y)) }
+            guard stroke.bounds.insetBy(dx: -radius, dy: -radius).contains(point),
+                  let fit = Self.fitCircle(pts) else { continue }
+            // 點到圓周的距離。
+            let d = abs(hypot(point.x - fit.center.x, point.y - fit.center.y) - fit.radius)
+            if d <= radius + CGFloat(stroke.baseWidth), d < (best?.1 ?? .greatestFiniteMagnitude) {
+                best = ((fit.center, fit.radius), d)
+            }
+        }
+        return best.map { (center: $0.0.0, radius: $0.0.1) }
+    }
+
+    /// 閉合的點列擬合成圓（Kåsa 代數法）。不閉合、太小、殘差超過半徑 6% 都回 `nil`。
+    static func fitCircle(_ pts: [CGPoint]) -> (center: CGPoint, radius: CGFloat)? {
+        guard pts.count >= 8, let first = pts.first, let last = pts.last else { return nil }
+        var perimeter: CGFloat = 0
+        for i in 1..<pts.count { perimeter += hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y) }
+        guard perimeter > 30, hypot(first.x - last.x, first.y - last.y) < perimeter * 0.08 else { return nil }
+        // 解 [Σx² Σxy Σx; Σxy Σy² Σy; Σx Σy n] · [A B C] = [Σ(x²+y²)x, Σ(x²+y²)y, Σ(x²+y²)]
+        var sx = 0.0, sy = 0.0, sxx = 0.0, syy = 0.0, sxy = 0.0, sz = 0.0, szx = 0.0, szy = 0.0
+        let n = Double(pts.count)
+        for p in pts {
+            let x = Double(p.x), y = Double(p.y), z = x * x + y * y
+            sx += x; sy += y; sxx += x * x; syy += y * y; sxy += x * y; sz += z; szx += z * x; szy += z * y
+        }
+        let m = [[sxx, sxy, sx], [sxy, syy, sy], [sx, sy, n]]
+        let b = [szx, szy, sz]
+        let det = { (a: [[Double]]) -> Double in
+            a[0][0] * (a[1][1] * a[2][2] - a[1][2] * a[2][1])
+                - a[0][1] * (a[1][0] * a[2][2] - a[1][2] * a[2][0])
+                + a[0][2] * (a[1][0] * a[2][1] - a[1][1] * a[2][0])
+        }
+        let d = det(m)
+        guard abs(d) > 1e-9 else { return nil }
+        var sol = [0.0, 0.0, 0.0]
+        for k in 0..<3 {
+            var mk = m
+            for r in 0..<3 { mk[r][k] = b[r] }
+            sol[k] = det(mk) / d
+        }
+        let cx = sol[0] / 2, cy = sol[1] / 2
+        let r2 = sol[2] + cx * cx + cy * cy
+        guard r2 > 0 else { return nil }
+        let r = sqrt(r2)
+        // 殘差：每個點到圓周的距離的平均。
+        var err = 0.0
+        for p in pts { err += abs(hypot(Double(p.x) - cx, Double(p.y) - cy) - r) }
+        guard err / n < r * 0.06, r > 4 else { return nil }
+        return (CGPoint(x: cx, y: cy), CGFloat(r))
     }
 
     private func cachedDabs(for stroke: ProStroke) -> ProInkRenderer.Cached? {
@@ -809,7 +926,8 @@ private extension CGRect {
 ///
 /// 兩指以上一律放手給捲動與縮放 —— 看到第二根手指就取消目前這一筆。
 final class ProStrokeGestureRecognizer: UIGestureRecognizer {
-    enum Mode { case draw, erase, reassign, marker }
+    enum Mode { case draw, erase, reassign, marker, tool }
+    enum ToolPhase { case began, moved, ended, cancelled }
 
     var mode: Mode = .draw
     /// 手指是否能畫。政策是 `.pencilOnly` 時只收 Apple Pencil。
@@ -830,6 +948,9 @@ final class ProStrokeGestureRecognizer: UIGestureRecognizer {
     var onMarker: ((CGPoint) -> Void)?
     /// 吸附成功時通知（給觸覺回饋與提示）。
     var onSnapped: ((FfiDraftSnapKind) -> Void)?
+    /// 圖學工具模式：觸控的每個階段與位置（頁面座標）。
+    var onToolTouch: ((ToolPhase, CGPoint) -> Void)?
+    private var lastToolPoint = CGPoint.zero
 
     private var holdTimer: Timer?
     private var holdAnchor: CGPoint = .zero
@@ -852,8 +973,10 @@ final class ProStrokeGestureRecognizer: UIGestureRecognizer {
             state = .cancelled
             return
         }
+        // 圖學工具（標註…）是刻意的點選與拖曳，不是書寫：不受「手指能不能畫」的掌拒政策限制 ——
+        // 政策擋的是手掌誤觸留下墨跡，而工具每一步都要使用者明確點下去。
         guard touches.count == 1, let touch = touches.first,
-              touch.type == .pencil || allowsFingerDrawing()
+              touch.type == .pencil || allowsFingerDrawing() || mode == .tool
         else { state = .failed; return }
 
         tracked = touch
@@ -876,6 +999,9 @@ final class ProStrokeGestureRecognizer: UIGestureRecognizer {
             layerView.reassignLayer(near: CGPoint(x: CGFloat(point.x), y: CGFloat(point.y)), to: reassignTarget())
         case .marker:
             onMarker?(CGPoint(x: CGFloat(point.x), y: CGFloat(point.y)))
+        case .tool:
+            lastToolPoint = CGPoint(x: CGFloat(point.x), y: CGFloat(point.y))
+            onToolTouch?(.began, lastToolPoint)
         }
     }
 
@@ -908,6 +1034,11 @@ final class ProStrokeGestureRecognizer: UIGestureRecognizer {
             layerView.erase(along: path, radius: eraserRadius())
         case .reassign, .marker:
             break
+        case .tool:
+            if let last = points.last {
+                lastToolPoint = CGPoint(x: CGFloat(last.x), y: CGFloat(last.y))
+                onToolTouch?(.moved, lastToolPoint)
+            }
         }
         state = .changed
     }
@@ -923,6 +1054,7 @@ final class ProStrokeGestureRecognizer: UIGestureRecognizer {
         }
         holdTimer?.invalidate()
         if mode == .draw { layerView?.endStroke() }
+        if mode == .tool { onToolTouch?(.ended, lastToolPoint) }
         tracked = nil
         erasePath = []
         state = .ended
@@ -949,6 +1081,7 @@ final class ProStrokeGestureRecognizer: UIGestureRecognizer {
 
     private func cancelCurrent() {
         holdTimer?.invalidate()
+        if mode == .tool { onToolTouch?(.cancelled, lastToolPoint) }
         if mode == .draw { layerView?.cancelStroke() }
         tracked = nil
         erasePath = []

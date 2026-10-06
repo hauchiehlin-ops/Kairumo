@@ -55,6 +55,19 @@ final class DraftingState: ObservableObject {
     }
     /// 下一個要放的編號。
     @Published var stepNumber = 1
+    /// 目前啟用的圖學工具（標註…）。啟用時單指拿來點選／拖曳，不再畫線。
+    @Published var tool: DraftTool = .none {
+        didSet {
+            if tool != .none { markerMode = false; reassignMode = false }
+            toolHint = nil
+            changed()
+        }
+    }
+    /// 工具現在在等什麼（已翻成使用者語言）。工具列顯示它，使用者才知道下一步點哪裡。
+    @Published var toolHint: String?
+    /// 目前的比例尺：實物 / 圖上（1:2 → 2、2:1 → 0.5）。尺寸標註的數字依它換算。
+    /// 逐本記（同一台裝置上不同的筆記本可以是不同的比例），不同步 —— 數字在標註當下就畫成筆畫了。
+    @Published private(set) var scaleRatios: [String: Double] = [:]
     /// 收合成一列的精簡面板。`nil` = 還沒選過，由畫面寬度決定（手機預設收合）。
     @Published var compactChoice: Bool? {
         didSet {
@@ -85,6 +98,7 @@ final class DraftingState: ObservableObject {
         static let tipsSeen = "kairumo.draft.tipsSeen"
         static func hidden(_ nb: String) -> String { "kairumo.draft.hidden.\(nb.lowercased())" }
         static func locked(_ nb: String) -> String { "kairumo.draft.locked.\(nb.lowercased())" }
+        static func scale(_ nb: String) -> String { "kairumo.draft.scale.\(nb.lowercased())" }
     }
 
     private init() {
@@ -133,6 +147,30 @@ final class DraftingState: ObservableObject {
         let d = UserDefaults.standard
         hidden[key] = Set((d.array(forKey: Keys.hidden(id)) as? [Int] ?? []).map { UInt8(clamping: $0) })
         locked[key] = Set((d.array(forKey: Keys.locked(id)) as? [Int] ?? []).map { UInt8(clamping: $0) })
+    }
+
+    // MARK: 比例尺
+
+    /// 這一本的比例尺（預設 1:1）。
+    func scaleRatio(notebookId nb: String) -> Double {
+        let key = nb.lowercased()
+        if let v = scaleRatios[key] { return v }
+        let stored = UserDefaults.standard.double(forKey: Keys.scale(nb))
+        let v = stored > 0 ? stored : 1
+        scaleRatios[key] = v
+        return v
+    }
+
+    func setScaleRatio(_ ratio: Double, notebookId nb: String) {
+        scaleRatios[nb.lowercased()] = ratio
+        UserDefaults.standard.set(ratio, forKey: Keys.scale(nb))
+        changed()
+    }
+
+    /// 比例尺的顯示字（「1:2」）。找不到對應的預設值就直接寫數字。
+    func scaleLabel(notebookId nb: String) -> String {
+        let ratio = scaleRatio(notebookId: nb)
+        return draftScales().first { abs(Double($0.ratio) - ratio) < 1e-4 }?.label ?? "1:\(ratio)"
     }
 
     func isHidden(layer: UInt8, notebookId nb: String) -> Bool {
@@ -206,6 +244,41 @@ final class DraftingState: ObservableObject {
         if h.hasPrefix("#") { h.removeFirst() }
         guard h.count == 6, let v = UInt32(h, radix: 16) else { return [0, 0, 0, 255] }
         return [UInt8((v >> 16) & 0xFF), UInt8((v >> 8) & 0xFF), UInt8(v & 0xFF), 255]
+    }
+}
+
+/// 圖學工具。啟用時單指拿來點選與拖曳（由 `DraftToolController` 處理）。
+enum DraftTool: String, CaseIterable {
+    case none
+    /// 尺寸標註。
+    case dimLinear, dimDiameter, dimRadius, dimAngle
+
+    var isDimension: Bool {
+        switch self {
+        case .dimLinear, .dimDiameter, .dimRadius, .dimAngle: return true
+        case .none: return false
+        }
+    }
+
+    /// 語系鍵。
+    var nameKey: String {
+        switch self {
+        case .none: return "draft_tool_none"
+        case .dimLinear: return "draft_tool_dim_linear"
+        case .dimDiameter: return "draft_tool_dim_diameter"
+        case .dimRadius: return "draft_tool_dim_radius"
+        case .dimAngle: return "draft_tool_dim_angle"
+        }
+    }
+
+    var symbol: String {
+        switch self {
+        case .none: return "xmark"
+        case .dimLinear: return "arrow.left.and.right"
+        case .dimDiameter: return "circle.dashed"
+        case .dimRadius: return "circle.lefthalf.filled"
+        case .dimAngle: return "angle"
+        }
     }
 }
 

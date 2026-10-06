@@ -6,6 +6,7 @@ import SwiftUI
 /// 這裡只是畫面；畫布那邊（`CanvasRepresentable.applyProInk`）讀同一份狀態落筆。
 struct DraftingBar: View {
     var onOpenSolidStudio: () -> Void = {}
+    var onOpenToolbox: () -> Void = {}
     @ObservedObject var state = DraftingState.shared
     @ObservedObject private var localizationManager = LocalizationManager.shared
     @Environment(\.horizontalSizeClass) private var sizeClass
@@ -33,6 +34,7 @@ struct DraftingBar: View {
             }
         }
         .padding(10)
+        .overlay(alignment: .bottom) { toolHint }
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
         .shadow(color: .black.opacity(0.18), radius: 8, y: 3)
         .frame(maxWidth: 560)
@@ -45,6 +47,20 @@ struct DraftingBar: View {
             Button(localizationManager.localized("draft_tip_dismiss")) { state.tipsSeen = true }
         } message: {
             Text(tipsMessage)
+        }
+    }
+
+    /// 圖學工具在等什麼（浮在製圖列下緣，不撐開列的高度）。
+    @ViewBuilder private var toolHint: some View {
+        if let hint = state.toolHint, state.tool != .none {
+            Text(hint)
+                .font(.caption.weight(.medium))
+                .padding(.horizontal, 10).padding(.vertical, 5)
+                .background(Color.accentColor, in: Capsule())
+                .foregroundColor(.white)
+                .offset(y: 30)
+                .accessibilityIdentifier("draft.tool.hint")
+                .allowsHitTesting(false)
         }
     }
 
@@ -236,6 +252,27 @@ struct DraftingBar: View {
                     Button(localizationManager.localized("draft_step_reset")) { state.stepNumber = 1 }
                         .font(.caption)
                         .accessibilityIdentifier("draft.marker.reset")
+                }
+
+                // 圖學工具：尺寸標註、符號、圖框（見 DraftingTools.swift）。
+                Button(action: onOpenToolbox) {
+                    Label(localizationManager.localized("draft_tools"), systemImage: "wrench.and.screwdriver")
+                        .font(.caption)
+                }
+                .buttonStyle(.bordered)
+                .accessibilityIdentifier("draft.tools")
+                if state.tool != .none {
+                    // 目前的工具：點一下結束；下面一行寫它在等什麼。
+                    Button {
+                        state.tool = .none
+                        DraftToolController.shared.reset(layer: nil)
+                    } label: {
+                        Label(localizationManager.localized(state.tool.nameKey), systemImage: "xmark.circle.fill")
+                            .font(.caption)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .accessibilityLabel(localizationManager.localized("draft_tool_close"))
+                    .accessibilityIdentifier("draft.tool.close")
                 }
 
                 // 立體輔助：草圖拉伸、三視圖、等角圖、剖面。

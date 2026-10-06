@@ -5631,6 +5631,46 @@ extension LocalizationManager {
             .ko: "이 레이어에 그리기",
             .th: "วาดบนเลเยอร์นี้"
         ],
+        "draft_frame_footer": [
+            .zhHant: "依這一頁的紙張規格（A4／A3／A2）畫出圖框與標題欄；比例欄會帶入目前的比例尺。",
+            .en: "Draws the frame and title block for this page’s paper size (A4/A3/A2); the scale cell uses the current scale.",
+            .zhHans: "依这一页的纸张规格（A4／A3／A2）画出图框与标题栏；比例栏会带入目前的比例尺。",
+            .ja: "このページの用紙サイズ（A4/A3/A2）に合わせて図枠と表題欄を描きます。尺度欄には現在の尺度が入ります。",
+            .ko: "이 페이지의 용지 규격(A4/A3/A2)에 맞춰 도곽과 표제란을 그립니다. 축척 칸에는 현재 축척이 들어갑니다.",
+            .th: "วาดกรอบแบบและช่องชื่อแบบตามขนาดกระดาษของหน้านี้ (A4/A3/A2) ช่องมาตราส่วนจะใช้ค่าปัจจุบัน"
+        ],
+        "draft_frame_insert": [
+            .zhHant: "插入圖框與標題欄",
+            .en: "Insert frame and title block",
+            .zhHans: "插入图框与标题栏",
+            .ja: "図枠と表題欄を挿入",
+            .ko: "도곽과 표제란 삽입",
+            .th: "แทรกกรอบแบบและช่องชื่อแบบ"
+        ],
+        "draft_frame_inserted": [
+            .zhHant: "已插入圖框與標題欄",
+            .en: "Frame and title block inserted",
+            .zhHans: "已插入图框与标题栏",
+            .ja: "図枠と表題欄を挿入しました",
+            .ko: "도곽과 표제란을 삽입했습니다",
+            .th: "แทรกกรอบแบบและช่องชื่อแบบแล้ว"
+        ],
+        "draft_frame_third_angle": [
+            .zhHant: "第三角法（台灣、美國）",
+            .en: "Third-angle projection (Taiwan, USA)",
+            .zhHans: "第三角法（台湾、美国）",
+            .ja: "第三角法（台湾・米国）",
+            .ko: "제3각법(대만·미국)",
+            .th: "การฉายภาพมุมที่สาม (ไต้หวัน สหรัฐฯ)"
+        ],
+        "draft_frame_unsupported": [
+            .zhHant: "這個頁面規格沒有標準圖框，請改用 A4、A3 或 A2",
+            .en: "This page size has no standard frame; use A4, A3 or A2",
+            .zhHans: "这个页面规格没有标准图框，请改用 A4、A3 或 A2",
+            .ja: "このページサイズには標準の図枠がありません。A4、A3、A2 を使ってください",
+            .ko: "이 페이지 규격에는 표준 도곽이 없습니다. A4, A3 또는 A2를 사용하세요",
+            .th: "ขนาดหน้านี้ไม่มีกรอบมาตรฐาน โปรดใช้ A4, A3 หรือ A2"
+        ],
         "draft_help": [
             .zhHant: "使用提示",
             .en: "Tips",
@@ -5646,6 +5686,78 @@ extension LocalizationManager {
             .ja: "レイヤーを隠す",
             .ko: "레이어 숨기기",
             .th: "ซ่อนเลเยอร์"
+        ],
+        "draft_hint_angle_arc": [
+            .zhHant: "拖出尺寸弧的大小，放開就標註",
+            .en: "Drag to size the dimension arc, then let go",
+            .zhHans: "拖出尺寸弧的大小，放开就标注",
+            .ja: "寸法補助円弧の大きさまでドラッグして離すと記入されます",
+            .ko: "치수 호의 크기까지 끌었다 놓으면 기입됩니다",
+            .th: "ลากเพื่อกำหนดขนาดส่วนโค้ง แล้วปล่อยเพื่อกำหนดขนาด"
+        ],
+        "draft_hint_angle_ray1": [
+            .zhHant: "點第一邊上的一點",
+            .en: "Tap a point on the first side",
+            .zhHans: "点第一边上的一点",
+            .ja: "1 つ目の辺上の点をタップ",
+            .ko: "첫 번째 변 위의 점을 누르세요",
+            .th: "แตะจุดบนด้านแรก"
+        ],
+        "draft_hint_angle_ray2": [
+            .zhHant: "點第二邊上的一點",
+            .en: "Tap a point on the second side",
+            .zhHans: "点第二边上的一点",
+            .ja: "2 つ目の辺上の点をタップ",
+            .ko: "두 번째 변 위의 점을 누르세요",
+            .th: "แตะจุดบนด้านที่สอง"
+        ],
+        "draft_hint_angle_vertex": [
+            .zhHant: "點角的頂點",
+            .en: "Tap the vertex of the angle",
+            .zhHans: "点角的顶点",
+            .ja: "角の頂点をタップ",
+            .ko: "각의 꼭짓점을 누르세요",
+            .th: "แตะจุดยอดของมุม"
+        ],
+        "draft_hint_dim_center": [
+            .zhHant: "點一個畫好的圓（或點圓心）",
+            .en: "Tap a drawn circle (or tap its centre)",
+            .zhHans: "点一个画好的圆（或点圆心）",
+            .ja: "描いた円をタップ（または中心をタップ）",
+            .ko: "그려 둔 원을 누르세요(또는 중심을 누르세요)",
+            .th: "แตะวงกลมที่วาดไว้ (หรือแตะจุดศูนย์กลาง)"
+        ],
+        "draft_hint_dim_edge": [
+            .zhHant: "拖向要引出的方向，放開就標註（沒點到圓時，拖到圓周上）",
+            .en: "Drag towards where the leader should go, then let go (if you did not tap a circle, drag to a point on its edge)",
+            .zhHans: "拖向要引出的方向，放开就标注（没点到圆时，拖到圆周上）",
+            .ja: "引出線を出す方向へドラッグして離すと記入されます（円をタップしていない場合は円周上までドラッグ）",
+            .ko: "지시선을 낼 방향으로 끌었다 놓으면 기입됩니다(원을 누르지 않았다면 원주 위까지 끄세요)",
+            .th: "ลากไปทางที่จะดึงเส้นบอกขนาดออก แล้วปล่อยเพื่อกำหนดขนาด (ถ้าไม่ได้แตะวงกลม ให้ลากไปที่ขอบวงกลม)"
+        ],
+        "draft_hint_dim_first": [
+            .zhHant: "點第一個點（會吸附線的端點與圓心）",
+            .en: "Tap the first point (it snaps to line ends and circle centres)",
+            .zhHans: "点第一个点（会吸附线的端点与圆心）",
+            .ja: "最初の点をタップ（線の端点や円の中心に吸着します）",
+            .ko: "첫 번째 점을 누르세요(선의 끝점과 원의 중심에 붙습니다)",
+            .th: "แตะจุดแรก (จะดูดติดปลายเส้นและจุดศูนย์กลางวงกลม)"
+        ],
+        "draft_hint_dim_place": [
+            .zhHant: "拖出尺寸線的位置，放開就標註",
+            .en: "Drag to place the dimension line, then let go",
+            .zhHans: "拖出尺寸线的位置，放开就标注",
+            .ja: "寸法線の位置までドラッグして、指を離すと記入されます",
+            .ko: "치수선 위치까지 끌었다가 놓으면 기입됩니다",
+            .th: "ลากไปตำแหน่งเส้นขนาด แล้วปล่อยเพื่อกำหนดขนาด"
+        ],
+        "draft_hint_dim_second": [
+            .zhHant: "點第二個點",
+            .en: "Tap the second point",
+            .zhHans: "点第二个点",
+            .ja: "2 点目をタップ",
+            .ko: "두 번째 점을 누르세요",
+            .th: "แตะจุดที่สอง"
         ],
         "draft_layer_aux": [
             .zhHant: "中層・輔助",
@@ -5799,6 +5911,22 @@ extension LocalizationManager {
             .ko: "레이어로 이동",
             .th: "ย้ายไปเลเยอร์"
         ],
+        "draft_scale": [
+            .zhHant: "比例尺",
+            .en: "Scale",
+            .zhHans: "比例尺",
+            .ja: "尺度",
+            .ko: "축척",
+            .th: "มาตราส่วน"
+        ],
+        "draft_scale_footer": [
+            .zhHant: "標註的數字 = 紙上毫米 × 比例尺。例如 1:2 的圖，紙上量 50 mm 就標 100。",
+            .en: "The number on a dimension = millimetres on paper × the scale. On a 1:2 drawing, 50 mm on paper is marked 100.",
+            .zhHans: "标注的数字 = 纸上毫米 × 比例尺。例如 1:2 的图，纸上量 50 mm 就标 100。",
+            .ja: "寸法の数値 = 紙上のミリメートル × 尺度です。たとえば 1:2 の図では、紙上で 50 mm のところに 100 と記入します。",
+            .ko: "치수 숫자 = 종이 위의 밀리미터 × 축척입니다. 예를 들어 1:2 도면에서 종이 위 50 mm는 100으로 표시합니다.",
+            .th: "ตัวเลขขนาด = มิลลิเมตรบนกระดาษ × มาตราส่วน เช่น แบบ 1:2 วัดบนกระดาษได้ 50 มม. จะระบุ 100"
+        ],
         "draft_show_layer": [
             .zhHant: "顯示圖層",
             .en: "Show layer",
@@ -5855,6 +5983,502 @@ extension LocalizationManager {
             .ko: "①부터 다시",
             .th: "เริ่มจาก ①"
         ],
+        "draft_sym_all_around": [
+            .zhHant: "環繞焊接",
+            .en: "All around",
+            .zhHans: "环绕焊接",
+            .ja: "全周溶接",
+            .ko: "전둘레 용접",
+            .th: "เชื่อมรอบ"
+        ],
+        "draft_sym_balloon": [
+            .zhHant: "零件編號",
+            .en: "Part balloon",
+            .zhHans: "零件编号",
+            .ja: "部品番号",
+            .ko: "부품 번호",
+            .th: "หมายเลขชิ้นส่วน"
+        ],
+        "draft_sym_bolt_hex": [
+            .zhHant: "六角螺栓",
+            .en: "Hex bolt",
+            .zhHans: "六角螺栓",
+            .ja: "六角ボルト",
+            .ko: "육각 볼트",
+            .th: "สลักเกลียวหกเหลี่ยม"
+        ],
+        "draft_sym_center_mark": [
+            .zhHant: "中心記號",
+            .en: "Centre mark",
+            .zhHans: "中心记号",
+            .ja: "中心記号",
+            .ko: "중심 표시",
+            .th: "เครื่องหมายจุดศูนย์กลาง"
+        ],
+        "draft_sym_datum_feature": [
+            .zhHant: "基準",
+            .en: "Datum feature",
+            .zhHans: "基准",
+            .ja: "データム",
+            .ko: "데이텀",
+            .th: "ดาตัม"
+        ],
+        "draft_sym_datums": [
+            .zhHant: "基準字母（最多三個）",
+            .en: "Datum letters (up to three)",
+            .zhHans: "基准字母（最多三个）",
+            .ja: "データム文字（最大 3 つ）",
+            .ko: "데이텀 문자(최대 3개)",
+            .th: "ตัวอักษรดาตัม (สูงสุดสามตัว)"
+        ],
+        "draft_sym_diameter_zone": [
+            .zhHant: "公差帶加 ⌀",
+            .en: "Diameter zone (⌀)",
+            .zhHans: "公差带加 ⌀",
+            .ja: "公差域に ⌀ を付ける",
+            .ko: "공차역에 ⌀ 붙이기",
+            .th: "เพิ่ม ⌀ หน้าค่าพิกัดความเผื่อ"
+        ],
+        "draft_sym_field": [
+            .zhHant: "現場焊接",
+            .en: "Field weld",
+            .zhHans: "现场焊接",
+            .ja: "現場溶接",
+            .ko: "현장 용접",
+            .th: "เชื่อมหน้างาน"
+        ],
+        "draft_sym_gdt_angularity": [
+            .zhHant: "傾斜度",
+            .en: "Angularity",
+            .zhHans: "倾斜度",
+            .ja: "傾斜度",
+            .ko: "경사도",
+            .th: "ความเอียง"
+        ],
+        "draft_sym_gdt_circularity": [
+            .zhHant: "真圓度",
+            .en: "Circularity",
+            .zhHans: "圆度",
+            .ja: "真円度",
+            .ko: "진원도",
+            .th: "ความกลม"
+        ],
+        "draft_sym_gdt_concentricity": [
+            .zhHant: "同心度",
+            .en: "Concentricity",
+            .zhHans: "同心度",
+            .ja: "同心度",
+            .ko: "동심도",
+            .th: "ความร่วมศูนย์"
+        ],
+        "draft_sym_gdt_cylindricity": [
+            .zhHant: "圓柱度",
+            .en: "Cylindricity",
+            .zhHans: "圆柱度",
+            .ja: "円筒度",
+            .ko: "원통도",
+            .th: "ความเป็นทรงกระบอก"
+        ],
+        "draft_sym_gdt_flatness": [
+            .zhHant: "平面度",
+            .en: "Flatness",
+            .zhHans: "平面度",
+            .ja: "平面度",
+            .ko: "평면도",
+            .th: "ความเรียบ"
+        ],
+        "draft_sym_gdt_parallelism": [
+            .zhHant: "平行度",
+            .en: "Parallelism",
+            .zhHans: "平行度",
+            .ja: "平行度",
+            .ko: "평행도",
+            .th: "ความขนาน"
+        ],
+        "draft_sym_gdt_perpendicularity": [
+            .zhHant: "垂直度",
+            .en: "Perpendicularity",
+            .zhHans: "垂直度",
+            .ja: "直角度",
+            .ko: "직각도",
+            .th: "ความตั้งฉาก"
+        ],
+        "draft_sym_gdt_position": [
+            .zhHant: "位置度",
+            .en: "Position",
+            .zhHans: "位置度",
+            .ja: "位置度",
+            .ko: "위치도",
+            .th: "ตำแหน่ง"
+        ],
+        "draft_sym_gdt_profile_line": [
+            .zhHant: "線輪廓度",
+            .en: "Profile of a line",
+            .zhHans: "线轮廓度",
+            .ja: "線の輪郭度",
+            .ko: "선의 윤곽도",
+            .th: "รูปร่างของเส้น"
+        ],
+        "draft_sym_gdt_profile_surface": [
+            .zhHant: "面輪廓度",
+            .en: "Profile of a surface",
+            .zhHans: "面轮廓度",
+            .ja: "面の輪郭度",
+            .ko: "면의 윤곽도",
+            .th: "รูปร่างของพื้นผิว"
+        ],
+        "draft_sym_gdt_runout": [
+            .zhHant: "圓偏轉",
+            .en: "Circular runout",
+            .zhHans: "圆跳动",
+            .ja: "円周振れ",
+            .ko: "원주 흔들림",
+            .th: "การแกว่งแบบวงกลม"
+        ],
+        "draft_sym_gdt_straightness": [
+            .zhHant: "真直度",
+            .en: "Straightness",
+            .zhHans: "直线度",
+            .ja: "真直度",
+            .ko: "진직도",
+            .th: "ความตรง"
+        ],
+        "draft_sym_gdt_symmetry": [
+            .zhHant: "對稱度",
+            .en: "Symmetry",
+            .zhHans: "对称度",
+            .ja: "対称度",
+            .ko: "대칭도",
+            .th: "ความสมมาตร"
+        ],
+        "draft_sym_gdt_total_runout": [
+            .zhHant: "全偏轉",
+            .en: "Total runout",
+            .zhHans: "全跳动",
+            .ja: "全振れ",
+            .ko: "온 흔들림",
+            .th: "การแกว่งรวม"
+        ],
+        "draft_sym_group_fastener": [
+            .zhHant: "標準件",
+            .en: "Fasteners",
+            .zhHans: "标准件",
+            .ja: "締結部品",
+            .ko: "체결 부품",
+            .th: "ตัวยึด"
+        ],
+        "draft_sym_group_gdt": [
+            .zhHant: "幾何公差",
+            .en: "Geometric tolerance",
+            .zhHans: "几何公差",
+            .ja: "幾何公差",
+            .ko: "기하 공차",
+            .th: "พิกัดความเผื่อทางเรขาคณิต"
+        ],
+        "draft_sym_group_mark": [
+            .zhHant: "標記",
+            .en: "Marks",
+            .zhHans: "标记",
+            .ja: "記号",
+            .ko: "표시",
+            .th: "เครื่องหมาย"
+        ],
+        "draft_sym_group_surface": [
+            .zhHant: "表面粗度",
+            .en: "Surface texture",
+            .zhHans: "表面粗糙度",
+            .ja: "表面性状",
+            .ko: "표면 거칠기",
+            .th: "ความหยาบผิว"
+        ],
+        "draft_sym_group_thread": [
+            .zhHant: "螺紋",
+            .en: "Threads",
+            .zhHans: "螺纹",
+            .ja: "ねじ",
+            .ko: "나사",
+            .th: "เกลียว"
+        ],
+        "draft_sym_group_weld": [
+            .zhHant: "焊接",
+            .en: "Welding",
+            .zhHans: "焊接",
+            .ja: "溶接",
+            .ko: "용접",
+            .th: "การเชื่อม"
+        ],
+        "draft_sym_length": [
+            .zhHant: "長度（mm）",
+            .en: "Length (mm)",
+            .zhHans: "长度（mm）",
+            .ja: "長さ（mm）",
+            .ko: "길이(mm)",
+            .th: "ความยาว (มม.)"
+        ],
+        "draft_sym_m_size": [
+            .zhHant: "規格 M",
+            .en: "Size M",
+            .zhHans: "规格 M",
+            .ja: "呼び径 M",
+            .ko: "규격 M",
+            .th: "ขนาด M"
+        ],
+        "draft_sym_nut_hex": [
+            .zhHant: "六角螺帽",
+            .en: "Hex nut",
+            .zhHans: "六角螺母",
+            .ja: "六角ナット",
+            .ko: "육각 너트",
+            .th: "น็อตหกเหลี่ยม"
+        ],
+        "draft_sym_other_side": [
+            .zhHant: "畫在另一側",
+            .en: "Other side",
+            .zhHans: "画在另一侧",
+            .ja: "反対側",
+            .ko: "반대쪽",
+            .th: "อีกด้านหนึ่ง"
+        ],
+        "draft_sym_place": [
+            .zhHant: "放進頁面",
+            .en: "Place on page",
+            .zhHans: "放进页面",
+            .ja: "ページに配置",
+            .ko: "페이지에 넣기",
+            .th: "วางลงในหน้า"
+        ],
+        "draft_sym_rotation": [
+            .zhHant: "旋轉",
+            .en: "Rotation",
+            .zhHans: "旋转",
+            .ja: "回転",
+            .ko: "회전",
+            .th: "การหมุน"
+        ],
+        "draft_sym_size": [
+            .zhHant: "大小（mm）",
+            .en: "Size (mm)",
+            .zhHans: "大小（mm）",
+            .ja: "大きさ（mm）",
+            .ko: "크기(mm)",
+            .th: "ขนาด (มม.)"
+        ],
+        "draft_sym_surface_basic": [
+            .zhHant: "基本符號",
+            .en: "Basic symbol",
+            .zhHans: "基本符号",
+            .ja: "基本記号",
+            .ko: "기본 기호",
+            .th: "สัญลักษณ์พื้นฐาน"
+        ],
+        "draft_sym_surface_machined": [
+            .zhHant: "去除材料",
+            .en: "Material removal required",
+            .zhHans: "去除材料",
+            .ja: "除去加工あり",
+            .ko: "제거 가공",
+            .th: "ต้องกลึงเอาเนื้อออก"
+        ],
+        "draft_sym_surface_no_machining": [
+            .zhHant: "不去除材料",
+            .en: "Material removal prohibited",
+            .zhHans: "不去除材料",
+            .ja: "除去加工なし",
+            .ko: "제거 가공 금지",
+            .th: "ห้ามกลึงเอาเนื้อออก"
+        ],
+        "draft_sym_text": [
+            .zhHant: "文字",
+            .en: "Text",
+            .zhHans: "文字",
+            .ja: "文字",
+            .ko: "텍스트",
+            .th: "ข้อความ"
+        ],
+        "draft_sym_text_hint": [
+            .zhHant: "例如 Ra 3.2、M8、0.05、A",
+            .en: "e.g. Ra 3.2, M8, 0.05, A",
+            .zhHans: "例如 Ra 3.2、M8、0.05、A",
+            .ja: "例: Ra 3.2、M8、0.05、A",
+            .ko: "예: Ra 3.2, M8, 0.05, A",
+            .th: "เช่น Ra 3.2, M8, 0.05, A"
+        ],
+        "draft_sym_thread_external_end": [
+            .zhHant: "外螺紋（端視）",
+            .en: "External thread (end view)",
+            .zhHans: "外螺纹（端视）",
+            .ja: "おねじ（端面図）",
+            .ko: "수나사(정면도)",
+            .th: "เกลียวนอก (ด้านปลาย)"
+        ],
+        "draft_sym_thread_external_side": [
+            .zhHant: "外螺紋（側視）",
+            .en: "External thread (side view)",
+            .zhHans: "外螺纹（侧视）",
+            .ja: "おねじ（側面図）",
+            .ko: "수나사(측면도)",
+            .th: "เกลียวนอก (ด้านข้าง)"
+        ],
+        "draft_sym_thread_internal_end": [
+            .zhHant: "內螺紋（端視）",
+            .en: "Internal thread (end view)",
+            .zhHans: "内螺纹（端视）",
+            .ja: "めねじ（端面図）",
+            .ko: "암나사(정면도)",
+            .th: "เกลียวใน (ด้านปลาย)"
+        ],
+        "draft_sym_thread_internal_side": [
+            .zhHant: "內螺紋（側視）",
+            .en: "Internal thread (side view)",
+            .zhHans: "内螺纹（侧视）",
+            .ja: "めねじ（側面図）",
+            .ko: "암나사(측면도)",
+            .th: "เกลียวใน (ด้านข้าง)"
+        ],
+        "draft_sym_washer": [
+            .zhHant: "平墊圈",
+            .en: "Plain washer",
+            .zhHans: "平垫圈",
+            .ja: "平座金",
+            .ko: "평와셔",
+            .th: "แหวนรอง"
+        ],
+        "draft_sym_weld_bevel": [
+            .zhHant: "單斜開槽焊",
+            .en: "Bevel-groove weld",
+            .zhHans: "单边 V 形坡口焊",
+            .ja: "レ形開先溶接",
+            .ko: "베벨 용접",
+            .th: "รอยเชื่อมร่องบากเฉียง"
+        ],
+        "draft_sym_weld_fillet": [
+            .zhHant: "填角焊",
+            .en: "Fillet weld",
+            .zhHans: "角焊",
+            .ja: "すみ肉溶接",
+            .ko: "필릿 용접",
+            .th: "รอยเชื่อมฟิลเลต"
+        ],
+        "draft_sym_weld_plug": [
+            .zhHant: "塞焊",
+            .en: "Plug weld",
+            .zhHans: "塞焊",
+            .ja: "プラグ溶接",
+            .ko: "플러그 용접",
+            .th: "รอยเชื่อมแบบปลั๊ก"
+        ],
+        "draft_sym_weld_square": [
+            .zhHant: "I 形開槽焊",
+            .en: "Square-groove weld",
+            .zhHans: "I 形坡口焊",
+            .ja: "I形開先溶接",
+            .ko: "I 홈 용접",
+            .th: "รอยเชื่อมร่องตรง"
+        ],
+        "draft_sym_weld_vee": [
+            .zhHant: "V 形開槽焊",
+            .en: "V-groove weld",
+            .zhHans: "V 形坡口焊",
+            .ja: "V形開先溶接",
+            .ko: "V 홈 용접",
+            .th: "รอยเชื่อมร่องวี"
+        ],
+        "draft_symbol_placed": [
+            .zhHant: "符號已放在畫面中央，拖一下就能搬",
+            .en: "The symbol is in the middle of the view; drag to move it",
+            .zhHans: "符号已放在画面中央，拖一下就能搬",
+            .ja: "記号を画面の中央に置きました。ドラッグで動かせます",
+            .ko: "기호를 화면 가운데에 놓았습니다. 끌어서 옮길 수 있습니다",
+            .th: "วางสัญลักษณ์ไว้กลางหน้าจอแล้ว ลากเพื่อย้ายได้"
+        ],
+        "draft_symbols": [
+            .zhHant: "製圖符號",
+            .en: "Drafting symbols",
+            .zhHans: "制图符号",
+            .ja: "製図記号",
+            .ko: "제도 기호",
+            .th: "สัญลักษณ์เขียนแบบ"
+        ],
+        "draft_tb_class": [
+            .zhHant: "班級",
+            .en: "Class",
+            .zhHans: "班级",
+            .ja: "クラス",
+            .ko: "반",
+            .th: "ชั้นเรียน"
+        ],
+        "draft_tb_course": [
+            .zhHant: "課程",
+            .en: "Course",
+            .zhHans: "课程",
+            .ja: "科目",
+            .ko: "과목",
+            .th: "รายวิชา"
+        ],
+        "draft_tb_date": [
+            .zhHant: "日期",
+            .en: "Date",
+            .zhHans: "日期",
+            .ja: "日付",
+            .ko: "날짜",
+            .th: "วันที่"
+        ],
+        "draft_tb_id": [
+            .zhHant: "學號",
+            .en: "Student ID",
+            .zhHans: "学号",
+            .ja: "学籍番号",
+            .ko: "학번",
+            .th: "รหัสนักศึกษา"
+        ],
+        "draft_tb_name": [
+            .zhHant: "姓名",
+            .en: "Name",
+            .zhHans: "姓名",
+            .ja: "氏名",
+            .ko: "이름",
+            .th: "ชื่อ"
+        ],
+        "draft_tb_projection": [
+            .zhHant: "投影法",
+            .en: "Projection",
+            .zhHans: "投影法",
+            .ja: "投影法",
+            .ko: "투상법",
+            .th: "การฉายภาพ"
+        ],
+        "draft_tb_scale": [
+            .zhHant: "比例",
+            .en: "Scale",
+            .zhHans: "比例",
+            .ja: "尺度",
+            .ko: "축척",
+            .th: "มาตราส่วน"
+        ],
+        "draft_tb_score": [
+            .zhHant: "評分",
+            .en: "Score",
+            .zhHans: "评分",
+            .ja: "評価",
+            .ko: "평가",
+            .th: "คะแนน"
+        ],
+        "draft_tb_title": [
+            .zhHant: "圖名",
+            .en: "Title",
+            .zhHans: "图名",
+            .ja: "図名",
+            .ko: "도면명",
+            .th: "ชื่อแบบ"
+        ],
+        "draft_tb_unit": [
+            .zhHant: "單位",
+            .en: "Unit",
+            .zhHans: "单位",
+            .ja: "単位",
+            .ko: "단위",
+            .th: "หน่วย"
+        ],
         "draft_tip_1": [
             .zhHant: "選一支筆：線型與圖層跟著它走（隱藏線＝虛線、輔助線＝淺藍）。",
             .en: "Pick a pen: its line type and layer come with it (hidden line = dashed, aux = light blue).",
@@ -5902,6 +6526,86 @@ extension LocalizationManager {
             .ja: "製図のヒント",
             .ko: "도면 도움말",
             .th: "เคล็ดลับงานเขียนแบบ"
+        ],
+        "draft_tool_close": [
+            .zhHant: "結束目前工具",
+            .en: "Finish the current tool",
+            .zhHans: "结束目前工具",
+            .ja: "ツールを終了",
+            .ko: "현재 도구 끝내기",
+            .th: "เลิกใช้เครื่องมือนี้"
+        ],
+        "draft_tool_dim_angle": [
+            .zhHant: "角度標註",
+            .en: "Angular dimension",
+            .zhHans: "角度标注",
+            .ja: "角度寸法",
+            .ko: "각도 치수",
+            .th: "ขนาดมุม"
+        ],
+        "draft_tool_dim_diameter": [
+            .zhHant: "直徑標註",
+            .en: "Diameter dimension",
+            .zhHans: "直径标注",
+            .ja: "直径寸法",
+            .ko: "지름 치수",
+            .th: "ขนาดเส้นผ่านศูนย์กลาง"
+        ],
+        "draft_tool_dim_linear": [
+            .zhHant: "線性標註",
+            .en: "Linear dimension",
+            .zhHans: "线性标注",
+            .ja: "長さ寸法",
+            .ko: "선형 치수",
+            .th: "ขนาดเชิงเส้น"
+        ],
+        "draft_tool_dim_radius": [
+            .zhHant: "半徑標註",
+            .en: "Radius dimension",
+            .zhHans: "半径标注",
+            .ja: "半径寸法",
+            .ko: "반지름 치수",
+            .th: "ขนาดรัศมี"
+        ],
+        "draft_tool_none": [
+            .zhHant: "沒有工具",
+            .en: "No tool",
+            .zhHans: "没有工具",
+            .ja: "ツールなし",
+            .ko: "도구 없음",
+            .th: "ไม่มีเครื่องมือ"
+        ],
+        "draft_toolbox_dimension": [
+            .zhHant: "尺寸標註",
+            .en: "Dimensioning",
+            .zhHans: "尺寸标注",
+            .ja: "寸法記入",
+            .ko: "치수 기입",
+            .th: "การกำหนดขนาด"
+        ],
+        "draft_toolbox_frame": [
+            .zhHant: "圖框與標題欄",
+            .en: "Frame and title block",
+            .zhHans: "图框与标题栏",
+            .ja: "図枠と表題欄",
+            .ko: "도곽과 표제란",
+            .th: "กรอบแบบและช่องชื่อแบบ"
+        ],
+        "draft_toolbox_symbols": [
+            .zhHant: "符號",
+            .en: "Symbols",
+            .zhHans: "符号",
+            .ja: "記号",
+            .ko: "기호",
+            .th: "สัญลักษณ์"
+        ],
+        "draft_tools": [
+            .zhHant: "圖學工具",
+            .en: "Drafting tools",
+            .zhHans: "图学工具",
+            .ja: "製図ツール",
+            .ko: "제도 도구",
+            .th: "เครื่องมือเขียนแบบ"
         ],
         "draft_unlock_layer": [
             .zhHant: "解除鎖定",
@@ -15895,6 +16599,14 @@ extension LocalizationManager {
             .ko: "단면 없음",
             .th: "ไม่ตัด"
         ],
+        "solid_section_oblique": [
+            .zhHant: "斜切",
+            .en: "Oblique",
+            .zhHans: "斜切",
+            .ja: "斜め切断",
+            .ko: "경사 절단",
+            .th: "ตัดเฉียง"
+        ],
         "solid_section_parallel": [
             .zhHant: "平行正面的剖面",
             .en: "Section parallel to the front",
@@ -15974,6 +16686,14 @@ extension LocalizationManager {
             .ja: "図面",
             .ko: "도면",
             .th: "ภาพ"
+        ],
+        "solid_tilt": [
+            .zhHant: "傾斜角",
+            .en: "Tilt",
+            .zhHans: "倾斜角",
+            .ja: "傾斜角",
+            .ko: "경사각",
+            .th: "มุมเอียง"
         ],
         "solid_width": [
             .zhHant: "寬",

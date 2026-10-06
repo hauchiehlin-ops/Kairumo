@@ -239,6 +239,9 @@ import com.kairumo.padnote.ink.DraftingState
 import com.kairumo.padnote.ink.inkToolShortcutOrder
 import com.kairumo.padnote.ink.InkToolbar
 import com.kairumo.padnote.ink.InkLatencyMeter
+import com.kairumo.padnote.ink.DraftTool
+import com.kairumo.padnote.ink.DraftToolController
+import com.kairumo.padnote.ink.DraftingToolboxDialog
 import com.kairumo.padnote.ink.LowLatencyInkCanvas
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -2489,6 +2492,15 @@ private fun InkScreen(
     }
     // 立體輔助與步驟編號。
     var showSolidStudio by remember { mutableStateOf(false) }
+    // 圖學工具（標註、符號、圖框）。
+    var showDraftingToolbox by remember { mutableStateOf(false) }
+    LaunchedEffect(inkTool, DraftingState.tool) {
+        DraftToolController.onChanged = { revision++ }
+        engine.onToolTouch = if (inkTool.isDrafting && DraftingState.tool != DraftTool.NONE) { phase, x, y ->
+            DraftToolController.handle(phase, x, y, engine)
+        } else null
+        if (engine.onToolTouch == null) DraftToolController.reset(engine) else DraftToolController.refreshHint()
+    }
     LaunchedEffect(inkTool, DraftingState.markerMode) {
         engine.onMarkerTap = if (inkTool.isDrafting && DraftingState.markerMode) { x, y ->
             // 一次放一個「圈＋數字」，一次復原；放完編號加一。
@@ -2517,6 +2529,55 @@ private fun InkScreen(
                 lasso.select(placed.first, placed.second)
             },
             onDismiss = { showSolidStudio = false }
+        )
+    }
+    if (showDraftingToolbox) {
+        val density = LocalDensity.current.density
+        DraftingToolboxDialog(
+            languageTag = deviceLanguageTag(),
+            frameSupported = currentPaperId()?.let { uniffi.padnote_core.draftSheetFrame(it, "", true, false) != null } == true,
+            onPickTool = { tool ->
+                DraftingState.selectTool(tool)
+                DraftToolController.reset(engine)
+                showDraftingToolbox = false
+            },
+            onInsertSymbol = { kit ->
+                showDraftingToolbox = false
+                val placed = placeDraftKit(engine, kit, canvasInfo.viewport, canvasInfo.scale, canvasInfo.offset, density)
+                revision++
+                message = l10n("draft_symbol_placed")
+                if (placed != null) {
+                    applyInkTool(InkTool.LASSO)
+                    lasso.select(placed.first, placed.second)
+                }
+            },
+            onInsertFrame = { thirdAngle ->
+                showDraftingToolbox = false
+                val kit = currentPaperId()?.let {
+                    uniffi.padnote_core.draftSheetFrame(it, DraftingState.scaleLabel(), thirdAngle, true)
+                }
+                if (kit == null) {
+                    message = l10n("draft_frame_unsupported")
+                } else {
+                    engine.insertDrafted(kit.strokes, 0f, 0f)
+                    for (label in kit.texts) {
+                        val box = textStore.create(label.x, label.y)
+                        box.width = label.width
+                        box.height = label.fontSize * 1.6f + 6f
+                        box.text = l10n(label.key)
+                        box.fontSize = label.fontSize
+                        box.bold = label.bold
+                        box.textColorHex = label.colorHex
+                        box.backgroundColorHex = "clear"
+                        box.hasBorder = false
+                        textStore.persist(box)
+                    }
+                    textRevision++
+                    revision++
+                    message = l10n("draft_frame_inserted")
+                }
+            },
+            onDismiss = { showDraftingToolbox = false }
         )
     }
     // 製圖用的紙（三視圖、等角、作圖步驟…）一打開就選好「圖學」筆組。
@@ -4488,6 +4549,11 @@ private fun InkScreen(
                 com.kairumo.padnote.ink.DraftingBar(
                     languageTag = deviceLanguageTag(),
                     onOpenSolidStudio = { showSolidStudio = true },
+                    onOpenToolbox = { showDraftingToolbox = true },
+                    onCloseTool = {
+                        DraftingState.selectTool(DraftTool.NONE)
+                        DraftToolController.reset(engine)
+                    },
                     // zIndex：頁面上的文字方塊等物件畫在後面，不加的話它們會蓋住工具列、吃掉點擊。
                     modifier = Modifier.zIndex(10f).align(Alignment.TopCenter).padding(top = 12.dp, start = 8.dp, end = 8.dp)
                 )
@@ -7382,6 +7448,37 @@ private fun placeSolidSheet(
     val b = (oy + sheet.height + 8f) * density
     return engine.lastInsertedCoreIds to listOf(Offset(l, t), Offset(r, t), Offset(r, b), Offset(l, b))
 }
+
+/**
+ * 把一組製圖符號放在「目前看得到的範圍正中央」（同 [placeSolidSheet]：整組一次復原），
+ * 回傳插入的核心筆畫 id 與選取框（像素）。沒有任何筆畫回 null。
+ */
+private fun placeDraftKit(
+    engine: com.kairumo.padnote.ink.InkEngine,
+    kit: uniffi.padnote_core.FfiDraftKit,
+    viewport: Size,
+    scale: Float,
+    offset: Offset,
+    density: Float
+): Pair<List<String>, List<Offset>>? {
+    val cx = (viewport.width / 2f - offset.x / scale) / density
+    val cy = (viewport.height / 2f - offset.y / scale) / density
+    val box = com.kairumo.padnote.ink.draftKitPlacement(kit, cx, cy, PageGeometry.width, PageGeometry.height) ?: return null
+    engine.insertDrafted(kit.strokes, box[0], box[1])
+    // 選取框：符號的包圍盒（頁面單位）→ 像素。
+    val pts = kit.strokes.flatMap { it.points }
+    val l = (pts.minOf { it.x } + box[0] - 8f) * density
+    val t = (pts.minOf { it.y } + box[1] - 8f) * density
+    val r = (pts.maxOf { it.x } + box[0] + 8f) * density
+    val b = (pts.maxOf { it.y } + box[1] + 8f) * density
+    return engine.lastInsertedCoreIds to listOf(Offset(l, t), Offset(r, t), Offset(r, b), Offset(l, b))
+}
+
+/** 目前頁面的紙張規格識別字（A4／A3…）；自訂尺寸或認不得的回 null。 */
+private fun currentPaperId(): String? =
+    uniffi.padnote_core.pageFormats().firstOrNull {
+        kotlin.math.abs(it.width - PageGeometry.width) < 0.5f && kotlin.math.abs(it.height - PageGeometry.height) < 0.5f
+    }?.id
 
 /** 畫布目前的視窗大小、縮放與平移（給「放在畫面正中央」用）。 */
 private class CanvasViewInfo {

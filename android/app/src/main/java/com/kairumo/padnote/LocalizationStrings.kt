@@ -42,6 +42,7 @@ object LocalizationStrings {
             putAll(part28())
             putAll(part29())
             putAll(part30())
+            putAll(part31())
         }
     }
 
@@ -5686,6 +5687,46 @@ object LocalizationStrings {
             "ko" to "이 레이어에 그리기",
             "th" to "วาดบนเลเยอร์นี้"
         ),
+        "draft_frame_footer" to mapOf(
+            "zh-Hant" to "依這一頁的紙張規格（A4／A3／A2）畫出圖框與標題欄；比例欄會帶入目前的比例尺。",
+            "en" to "Draws the frame and title block for this page’s paper size (A4/A3/A2); the scale cell uses the current scale.",
+            "zh-Hans" to "依这一页的纸张规格（A4／A3／A2）画出图框与标题栏；比例栏会带入目前的比例尺。",
+            "ja" to "このページの用紙サイズ（A4/A3/A2）に合わせて図枠と表題欄を描きます。尺度欄には現在の尺度が入ります。",
+            "ko" to "이 페이지의 용지 규격(A4/A3/A2)에 맞춰 도곽과 표제란을 그립니다. 축척 칸에는 현재 축척이 들어갑니다.",
+            "th" to "วาดกรอบแบบและช่องชื่อแบบตามขนาดกระดาษของหน้านี้ (A4/A3/A2) ช่องมาตราส่วนจะใช้ค่าปัจจุบัน"
+        ),
+        "draft_frame_insert" to mapOf(
+            "zh-Hant" to "插入圖框與標題欄",
+            "en" to "Insert frame and title block",
+            "zh-Hans" to "插入图框与标题栏",
+            "ja" to "図枠と表題欄を挿入",
+            "ko" to "도곽과 표제란 삽입",
+            "th" to "แทรกกรอบแบบและช่องชื่อแบบ"
+        ),
+        "draft_frame_inserted" to mapOf(
+            "zh-Hant" to "已插入圖框與標題欄",
+            "en" to "Frame and title block inserted",
+            "zh-Hans" to "已插入图框与标题栏",
+            "ja" to "図枠と表題欄を挿入しました",
+            "ko" to "도곽과 표제란을 삽입했습니다",
+            "th" to "แทรกกรอบแบบและช่องชื่อแบบแล้ว"
+        ),
+        "draft_frame_third_angle" to mapOf(
+            "zh-Hant" to "第三角法（台灣、美國）",
+            "en" to "Third-angle projection (Taiwan, USA)",
+            "zh-Hans" to "第三角法（台湾、美国）",
+            "ja" to "第三角法（台湾・米国）",
+            "ko" to "제3각법(대만·미국)",
+            "th" to "การฉายภาพมุมที่สาม (ไต้หวัน สหรัฐฯ)"
+        ),
+        "draft_frame_unsupported" to mapOf(
+            "zh-Hant" to "這個頁面規格沒有標準圖框，請改用 A4、A3 或 A2",
+            "en" to "This page size has no standard frame; use A4, A3 or A2",
+            "zh-Hans" to "这个页面规格没有标准图框，请改用 A4、A3 或 A2",
+            "ja" to "このページサイズには標準の図枠がありません。A4、A3、A2 を使ってください",
+            "ko" to "이 페이지 규격에는 표준 도곽이 없습니다. A4, A3 또는 A2를 사용하세요",
+            "th" to "ขนาดหน้านี้ไม่มีกรอบมาตรฐาน โปรดใช้ A4, A3 หรือ A2"
+        ),
         "draft_help" to mapOf(
             "zh-Hant" to "使用提示",
             "en" to "Tips",
@@ -5702,6 +5743,78 @@ object LocalizationStrings {
             "ko" to "레이어 숨기기",
             "th" to "ซ่อนเลเยอร์"
         ),
+        "draft_hint_angle_arc" to mapOf(
+            "zh-Hant" to "拖出尺寸弧的大小，放開就標註",
+            "en" to "Drag to size the dimension arc, then let go",
+            "zh-Hans" to "拖出尺寸弧的大小，放开就标注",
+            "ja" to "寸法補助円弧の大きさまでドラッグして離すと記入されます",
+            "ko" to "치수 호의 크기까지 끌었다 놓으면 기입됩니다",
+            "th" to "ลากเพื่อกำหนดขนาดส่วนโค้ง แล้วปล่อยเพื่อกำหนดขนาด"
+        ),
+        "draft_hint_angle_ray1" to mapOf(
+            "zh-Hant" to "點第一邊上的一點",
+            "en" to "Tap a point on the first side",
+            "zh-Hans" to "点第一边上的一点",
+            "ja" to "1 つ目の辺上の点をタップ",
+            "ko" to "첫 번째 변 위의 점을 누르세요",
+            "th" to "แตะจุดบนด้านแรก"
+        ),
+        "draft_hint_angle_ray2" to mapOf(
+            "zh-Hant" to "點第二邊上的一點",
+            "en" to "Tap a point on the second side",
+            "zh-Hans" to "点第二边上的一点",
+            "ja" to "2 つ目の辺上の点をタップ",
+            "ko" to "두 번째 변 위의 점을 누르세요",
+            "th" to "แตะจุดบนด้านที่สอง"
+        ),
+        "draft_hint_angle_vertex" to mapOf(
+            "zh-Hant" to "點角的頂點",
+            "en" to "Tap the vertex of the angle",
+            "zh-Hans" to "点角的顶点",
+            "ja" to "角の頂点をタップ",
+            "ko" to "각의 꼭짓점을 누르세요",
+            "th" to "แตะจุดยอดของมุม"
+        ),
+        "draft_hint_dim_center" to mapOf(
+            "zh-Hant" to "點一個畫好的圓（或點圓心）",
+            "en" to "Tap a drawn circle (or tap its centre)",
+            "zh-Hans" to "点一个画好的圆（或点圆心）",
+            "ja" to "描いた円をタップ（または中心をタップ）",
+            "ko" to "그려 둔 원을 누르세요(또는 중심을 누르세요)",
+            "th" to "แตะวงกลมที่วาดไว้ (หรือแตะจุดศูนย์กลาง)"
+        ),
+        "draft_hint_dim_edge" to mapOf(
+            "zh-Hant" to "拖向要引出的方向，放開就標註（沒點到圓時，拖到圓周上）",
+            "en" to "Drag towards where the leader should go, then let go (if you did not tap a circle, drag to a point on its edge)",
+            "zh-Hans" to "拖向要引出的方向，放开就标注（没点到圆时，拖到圆周上）",
+            "ja" to "引出線を出す方向へドラッグして離すと記入されます（円をタップしていない場合は円周上までドラッグ）",
+            "ko" to "지시선을 낼 방향으로 끌었다 놓으면 기입됩니다(원을 누르지 않았다면 원주 위까지 끄세요)",
+            "th" to "ลากไปทางที่จะดึงเส้นบอกขนาดออก แล้วปล่อยเพื่อกำหนดขนาด (ถ้าไม่ได้แตะวงกลม ให้ลากไปที่ขอบวงกลม)"
+        ),
+        "draft_hint_dim_first" to mapOf(
+            "zh-Hant" to "點第一個點（會吸附線的端點與圓心）",
+            "en" to "Tap the first point (it snaps to line ends and circle centres)",
+            "zh-Hans" to "点第一个点（会吸附线的端点与圆心）",
+            "ja" to "最初の点をタップ（線の端点や円の中心に吸着します）",
+            "ko" to "첫 번째 점을 누르세요(선의 끝점과 원의 중심에 붙습니다)",
+            "th" to "แตะจุดแรก (จะดูดติดปลายเส้นและจุดศูนย์กลางวงกลม)"
+        ),
+        "draft_hint_dim_place" to mapOf(
+            "zh-Hant" to "拖出尺寸線的位置，放開就標註",
+            "en" to "Drag to place the dimension line, then let go",
+            "zh-Hans" to "拖出尺寸线的位置，放开就标注",
+            "ja" to "寸法線の位置までドラッグして、指を離すと記入されます",
+            "ko" to "치수선 위치까지 끌었다가 놓으면 기입됩니다",
+            "th" to "ลากไปตำแหน่งเส้นขนาด แล้วปล่อยเพื่อกำหนดขนาด"
+        ),
+        "draft_hint_dim_second" to mapOf(
+            "zh-Hant" to "點第二個點",
+            "en" to "Tap the second point",
+            "zh-Hans" to "点第二个点",
+            "ja" to "2 点目をタップ",
+            "ko" to "두 번째 점을 누르세요",
+            "th" to "แตะจุดที่สอง"
+        ),
         "draft_layer_aux" to mapOf(
             "zh-Hant" to "中層・輔助",
             "en" to "Aux (construction)",
@@ -5717,7 +5830,10 @@ object LocalizationStrings {
             "ja" to "下層・与件",
             "ko" to "하층·원문제",
             "th" to "ชั้นล่าง·โจทย์"
-        ),
+        )
+    )
+
+    private fun part9(): Map<String, Map<String, String>> = mapOf(
         "draft_layer_plain" to mapOf(
             "zh-Hant" to "一般筆跡",
             "en" to "Plain ink",
@@ -5829,10 +5945,7 @@ object LocalizationStrings {
             "ja" to "太実線",
             "ko" to "굵은 실선",
             "th" to "เส้นหนา"
-        )
-    )
-
-    private fun part9(): Map<String, Map<String, String>> = mapOf(
+        ),
         "draft_pen_thin" to mapOf(
             "zh-Hant" to "細實線",
             "en" to "Thin solid",
@@ -5856,6 +5969,22 @@ object LocalizationStrings {
             "ja" to "レイヤーへ移動",
             "ko" to "레이어로 이동",
             "th" to "ย้ายไปเลเยอร์"
+        ),
+        "draft_scale" to mapOf(
+            "zh-Hant" to "比例尺",
+            "en" to "Scale",
+            "zh-Hans" to "比例尺",
+            "ja" to "尺度",
+            "ko" to "축척",
+            "th" to "มาตราส่วน"
+        ),
+        "draft_scale_footer" to mapOf(
+            "zh-Hant" to "標註的數字 = 紙上毫米 × 比例尺。例如 1:2 的圖，紙上量 50 mm 就標 100。",
+            "en" to "The number on a dimension = millimetres on paper × the scale. On a 1:2 drawing, 50 mm on paper is marked 100.",
+            "zh-Hans" to "标注的数字 = 纸上毫米 × 比例尺。例如 1:2 的图，纸上量 50 mm 就标 100。",
+            "ja" to "寸法の数値 = 紙上のミリメートル × 尺度です。たとえば 1:2 の図では、紙上で 50 mm のところに 100 と記入します。",
+            "ko" to "치수 숫자 = 종이 위의 밀리미터 × 축척입니다. 예를 들어 1:2 도면에서 종이 위 50 mm는 100으로 표시합니다.",
+            "th" to "ตัวเลขขนาด = มิลลิเมตรบนกระดาษ × มาตราส่วน เช่น แบบ 1:2 วัดบนกระดาษได้ 50 มม. จะระบุ 100"
         ),
         "draft_show_layer" to mapOf(
             "zh-Hant" to "顯示圖層",
@@ -5913,6 +6042,505 @@ object LocalizationStrings {
             "ko" to "①부터 다시",
             "th" to "เริ่มจาก ①"
         ),
+        "draft_sym_all_around" to mapOf(
+            "zh-Hant" to "環繞焊接",
+            "en" to "All around",
+            "zh-Hans" to "环绕焊接",
+            "ja" to "全周溶接",
+            "ko" to "전둘레 용접",
+            "th" to "เชื่อมรอบ"
+        ),
+        "draft_sym_balloon" to mapOf(
+            "zh-Hant" to "零件編號",
+            "en" to "Part balloon",
+            "zh-Hans" to "零件编号",
+            "ja" to "部品番号",
+            "ko" to "부품 번호",
+            "th" to "หมายเลขชิ้นส่วน"
+        ),
+        "draft_sym_bolt_hex" to mapOf(
+            "zh-Hant" to "六角螺栓",
+            "en" to "Hex bolt",
+            "zh-Hans" to "六角螺栓",
+            "ja" to "六角ボルト",
+            "ko" to "육각 볼트",
+            "th" to "สลักเกลียวหกเหลี่ยม"
+        ),
+        "draft_sym_center_mark" to mapOf(
+            "zh-Hant" to "中心記號",
+            "en" to "Centre mark",
+            "zh-Hans" to "中心记号",
+            "ja" to "中心記号",
+            "ko" to "중심 표시",
+            "th" to "เครื่องหมายจุดศูนย์กลาง"
+        ),
+        "draft_sym_datum_feature" to mapOf(
+            "zh-Hant" to "基準",
+            "en" to "Datum feature",
+            "zh-Hans" to "基准",
+            "ja" to "データム",
+            "ko" to "데이텀",
+            "th" to "ดาตัม"
+        ),
+        "draft_sym_datums" to mapOf(
+            "zh-Hant" to "基準字母（最多三個）",
+            "en" to "Datum letters (up to three)",
+            "zh-Hans" to "基准字母（最多三个）",
+            "ja" to "データム文字（最大 3 つ）",
+            "ko" to "데이텀 문자(최대 3개)",
+            "th" to "ตัวอักษรดาตัม (สูงสุดสามตัว)"
+        ),
+        "draft_sym_diameter_zone" to mapOf(
+            "zh-Hant" to "公差帶加 ⌀",
+            "en" to "Diameter zone (⌀)",
+            "zh-Hans" to "公差带加 ⌀",
+            "ja" to "公差域に ⌀ を付ける",
+            "ko" to "공차역에 ⌀ 붙이기",
+            "th" to "เพิ่ม ⌀ หน้าค่าพิกัดความเผื่อ"
+        ),
+        "draft_sym_field" to mapOf(
+            "zh-Hant" to "現場焊接",
+            "en" to "Field weld",
+            "zh-Hans" to "现场焊接",
+            "ja" to "現場溶接",
+            "ko" to "현장 용접",
+            "th" to "เชื่อมหน้างาน"
+        ),
+        "draft_sym_gdt_angularity" to mapOf(
+            "zh-Hant" to "傾斜度",
+            "en" to "Angularity",
+            "zh-Hans" to "倾斜度",
+            "ja" to "傾斜度",
+            "ko" to "경사도",
+            "th" to "ความเอียง"
+        ),
+        "draft_sym_gdt_circularity" to mapOf(
+            "zh-Hant" to "真圓度",
+            "en" to "Circularity",
+            "zh-Hans" to "圆度",
+            "ja" to "真円度",
+            "ko" to "진원도",
+            "th" to "ความกลม"
+        ),
+        "draft_sym_gdt_concentricity" to mapOf(
+            "zh-Hant" to "同心度",
+            "en" to "Concentricity",
+            "zh-Hans" to "同心度",
+            "ja" to "同心度",
+            "ko" to "동심도",
+            "th" to "ความร่วมศูนย์"
+        ),
+        "draft_sym_gdt_cylindricity" to mapOf(
+            "zh-Hant" to "圓柱度",
+            "en" to "Cylindricity",
+            "zh-Hans" to "圆柱度",
+            "ja" to "円筒度",
+            "ko" to "원통도",
+            "th" to "ความเป็นทรงกระบอก"
+        ),
+        "draft_sym_gdt_flatness" to mapOf(
+            "zh-Hant" to "平面度",
+            "en" to "Flatness",
+            "zh-Hans" to "平面度",
+            "ja" to "平面度",
+            "ko" to "평면도",
+            "th" to "ความเรียบ"
+        ),
+        "draft_sym_gdt_parallelism" to mapOf(
+            "zh-Hant" to "平行度",
+            "en" to "Parallelism",
+            "zh-Hans" to "平行度",
+            "ja" to "平行度",
+            "ko" to "평행도",
+            "th" to "ความขนาน"
+        ),
+        "draft_sym_gdt_perpendicularity" to mapOf(
+            "zh-Hant" to "垂直度",
+            "en" to "Perpendicularity",
+            "zh-Hans" to "垂直度",
+            "ja" to "直角度",
+            "ko" to "직각도",
+            "th" to "ความตั้งฉาก"
+        ),
+        "draft_sym_gdt_position" to mapOf(
+            "zh-Hant" to "位置度",
+            "en" to "Position",
+            "zh-Hans" to "位置度",
+            "ja" to "位置度",
+            "ko" to "위치도",
+            "th" to "ตำแหน่ง"
+        ),
+        "draft_sym_gdt_profile_line" to mapOf(
+            "zh-Hant" to "線輪廓度",
+            "en" to "Profile of a line",
+            "zh-Hans" to "线轮廓度",
+            "ja" to "線の輪郭度",
+            "ko" to "선의 윤곽도",
+            "th" to "รูปร่างของเส้น"
+        ),
+        "draft_sym_gdt_profile_surface" to mapOf(
+            "zh-Hant" to "面輪廓度",
+            "en" to "Profile of a surface",
+            "zh-Hans" to "面轮廓度",
+            "ja" to "面の輪郭度",
+            "ko" to "면의 윤곽도",
+            "th" to "รูปร่างของพื้นผิว"
+        ),
+        "draft_sym_gdt_runout" to mapOf(
+            "zh-Hant" to "圓偏轉",
+            "en" to "Circular runout",
+            "zh-Hans" to "圆跳动",
+            "ja" to "円周振れ",
+            "ko" to "원주 흔들림",
+            "th" to "การแกว่งแบบวงกลม"
+        ),
+        "draft_sym_gdt_straightness" to mapOf(
+            "zh-Hant" to "真直度",
+            "en" to "Straightness",
+            "zh-Hans" to "直线度",
+            "ja" to "真直度",
+            "ko" to "진직도",
+            "th" to "ความตรง"
+        ),
+        "draft_sym_gdt_symmetry" to mapOf(
+            "zh-Hant" to "對稱度",
+            "en" to "Symmetry",
+            "zh-Hans" to "对称度",
+            "ja" to "対称度",
+            "ko" to "대칭도",
+            "th" to "ความสมมาตร"
+        ),
+        "draft_sym_gdt_total_runout" to mapOf(
+            "zh-Hant" to "全偏轉",
+            "en" to "Total runout",
+            "zh-Hans" to "全跳动",
+            "ja" to "全振れ",
+            "ko" to "온 흔들림",
+            "th" to "การแกว่งรวม"
+        ),
+        "draft_sym_group_fastener" to mapOf(
+            "zh-Hant" to "標準件",
+            "en" to "Fasteners",
+            "zh-Hans" to "标准件",
+            "ja" to "締結部品",
+            "ko" to "체결 부품",
+            "th" to "ตัวยึด"
+        ),
+        "draft_sym_group_gdt" to mapOf(
+            "zh-Hant" to "幾何公差",
+            "en" to "Geometric tolerance",
+            "zh-Hans" to "几何公差",
+            "ja" to "幾何公差",
+            "ko" to "기하 공차",
+            "th" to "พิกัดความเผื่อทางเรขาคณิต"
+        ),
+        "draft_sym_group_mark" to mapOf(
+            "zh-Hant" to "標記",
+            "en" to "Marks",
+            "zh-Hans" to "标记",
+            "ja" to "記号",
+            "ko" to "표시",
+            "th" to "เครื่องหมาย"
+        ),
+        "draft_sym_group_surface" to mapOf(
+            "zh-Hant" to "表面粗度",
+            "en" to "Surface texture",
+            "zh-Hans" to "表面粗糙度",
+            "ja" to "表面性状",
+            "ko" to "표면 거칠기",
+            "th" to "ความหยาบผิว"
+        ),
+        "draft_sym_group_thread" to mapOf(
+            "zh-Hant" to "螺紋",
+            "en" to "Threads",
+            "zh-Hans" to "螺纹",
+            "ja" to "ねじ",
+            "ko" to "나사",
+            "th" to "เกลียว"
+        ),
+        "draft_sym_group_weld" to mapOf(
+            "zh-Hant" to "焊接",
+            "en" to "Welding",
+            "zh-Hans" to "焊接",
+            "ja" to "溶接",
+            "ko" to "용접",
+            "th" to "การเชื่อม"
+        ),
+        "draft_sym_length" to mapOf(
+            "zh-Hant" to "長度（mm）",
+            "en" to "Length (mm)",
+            "zh-Hans" to "长度（mm）",
+            "ja" to "長さ（mm）",
+            "ko" to "길이(mm)",
+            "th" to "ความยาว (มม.)"
+        ),
+        "draft_sym_m_size" to mapOf(
+            "zh-Hant" to "規格 M",
+            "en" to "Size M",
+            "zh-Hans" to "规格 M",
+            "ja" to "呼び径 M",
+            "ko" to "규격 M",
+            "th" to "ขนาด M"
+        ),
+        "draft_sym_nut_hex" to mapOf(
+            "zh-Hant" to "六角螺帽",
+            "en" to "Hex nut",
+            "zh-Hans" to "六角螺母",
+            "ja" to "六角ナット",
+            "ko" to "육각 너트",
+            "th" to "น็อตหกเหลี่ยม"
+        ),
+        "draft_sym_other_side" to mapOf(
+            "zh-Hant" to "畫在另一側",
+            "en" to "Other side",
+            "zh-Hans" to "画在另一侧",
+            "ja" to "反対側",
+            "ko" to "반대쪽",
+            "th" to "อีกด้านหนึ่ง"
+        ),
+        "draft_sym_place" to mapOf(
+            "zh-Hant" to "放進頁面",
+            "en" to "Place on page",
+            "zh-Hans" to "放进页面",
+            "ja" to "ページに配置",
+            "ko" to "페이지에 넣기",
+            "th" to "วางลงในหน้า"
+        ),
+        "draft_sym_rotation" to mapOf(
+            "zh-Hant" to "旋轉",
+            "en" to "Rotation",
+            "zh-Hans" to "旋转",
+            "ja" to "回転",
+            "ko" to "회전",
+            "th" to "การหมุน"
+        ),
+        "draft_sym_size" to mapOf(
+            "zh-Hant" to "大小（mm）",
+            "en" to "Size (mm)",
+            "zh-Hans" to "大小（mm）",
+            "ja" to "大きさ（mm）",
+            "ko" to "크기(mm)",
+            "th" to "ขนาด (มม.)"
+        ),
+        "draft_sym_surface_basic" to mapOf(
+            "zh-Hant" to "基本符號",
+            "en" to "Basic symbol",
+            "zh-Hans" to "基本符号",
+            "ja" to "基本記号",
+            "ko" to "기본 기호",
+            "th" to "สัญลักษณ์พื้นฐาน"
+        ),
+        "draft_sym_surface_machined" to mapOf(
+            "zh-Hant" to "去除材料",
+            "en" to "Material removal required",
+            "zh-Hans" to "去除材料",
+            "ja" to "除去加工あり",
+            "ko" to "제거 가공",
+            "th" to "ต้องกลึงเอาเนื้อออก"
+        ),
+        "draft_sym_surface_no_machining" to mapOf(
+            "zh-Hant" to "不去除材料",
+            "en" to "Material removal prohibited",
+            "zh-Hans" to "不去除材料",
+            "ja" to "除去加工なし",
+            "ko" to "제거 가공 금지",
+            "th" to "ห้ามกลึงเอาเนื้อออก"
+        ),
+        "draft_sym_text" to mapOf(
+            "zh-Hant" to "文字",
+            "en" to "Text",
+            "zh-Hans" to "文字",
+            "ja" to "文字",
+            "ko" to "텍스트",
+            "th" to "ข้อความ"
+        ),
+        "draft_sym_text_hint" to mapOf(
+            "zh-Hant" to "例如 Ra 3.2、M8、0.05、A",
+            "en" to "e.g. Ra 3.2, M8, 0.05, A",
+            "zh-Hans" to "例如 Ra 3.2、M8、0.05、A",
+            "ja" to "例: Ra 3.2、M8、0.05、A",
+            "ko" to "예: Ra 3.2, M8, 0.05, A",
+            "th" to "เช่น Ra 3.2, M8, 0.05, A"
+        ),
+        "draft_sym_thread_external_end" to mapOf(
+            "zh-Hant" to "外螺紋（端視）",
+            "en" to "External thread (end view)",
+            "zh-Hans" to "外螺纹（端视）",
+            "ja" to "おねじ（端面図）",
+            "ko" to "수나사(정면도)",
+            "th" to "เกลียวนอก (ด้านปลาย)"
+        ),
+        "draft_sym_thread_external_side" to mapOf(
+            "zh-Hant" to "外螺紋（側視）",
+            "en" to "External thread (side view)",
+            "zh-Hans" to "外螺纹（侧视）",
+            "ja" to "おねじ（側面図）",
+            "ko" to "수나사(측면도)",
+            "th" to "เกลียวนอก (ด้านข้าง)"
+        ),
+        "draft_sym_thread_internal_end" to mapOf(
+            "zh-Hant" to "內螺紋（端視）",
+            "en" to "Internal thread (end view)",
+            "zh-Hans" to "内螺纹（端视）",
+            "ja" to "めねじ（端面図）",
+            "ko" to "암나사(정면도)",
+            "th" to "เกลียวใน (ด้านปลาย)"
+        ),
+        "draft_sym_thread_internal_side" to mapOf(
+            "zh-Hant" to "內螺紋（側視）",
+            "en" to "Internal thread (side view)",
+            "zh-Hans" to "内螺纹（侧视）",
+            "ja" to "めねじ（側面図）",
+            "ko" to "암나사(측면도)",
+            "th" to "เกลียวใน (ด้านข้าง)"
+        ),
+        "draft_sym_washer" to mapOf(
+            "zh-Hant" to "平墊圈",
+            "en" to "Plain washer",
+            "zh-Hans" to "平垫圈",
+            "ja" to "平座金",
+            "ko" to "평와셔",
+            "th" to "แหวนรอง"
+        ),
+        "draft_sym_weld_bevel" to mapOf(
+            "zh-Hant" to "單斜開槽焊",
+            "en" to "Bevel-groove weld",
+            "zh-Hans" to "单边 V 形坡口焊",
+            "ja" to "レ形開先溶接",
+            "ko" to "베벨 용접",
+            "th" to "รอยเชื่อมร่องบากเฉียง"
+        ),
+        "draft_sym_weld_fillet" to mapOf(
+            "zh-Hant" to "填角焊",
+            "en" to "Fillet weld",
+            "zh-Hans" to "角焊",
+            "ja" to "すみ肉溶接",
+            "ko" to "필릿 용접",
+            "th" to "รอยเชื่อมฟิลเลต"
+        ),
+        "draft_sym_weld_plug" to mapOf(
+            "zh-Hant" to "塞焊",
+            "en" to "Plug weld",
+            "zh-Hans" to "塞焊",
+            "ja" to "プラグ溶接",
+            "ko" to "플러그 용접",
+            "th" to "รอยเชื่อมแบบปลั๊ก"
+        ),
+        "draft_sym_weld_square" to mapOf(
+            "zh-Hant" to "I 形開槽焊",
+            "en" to "Square-groove weld",
+            "zh-Hans" to "I 形坡口焊",
+            "ja" to "I形開先溶接",
+            "ko" to "I 홈 용접",
+            "th" to "รอยเชื่อมร่องตรง"
+        ),
+        "draft_sym_weld_vee" to mapOf(
+            "zh-Hant" to "V 形開槽焊",
+            "en" to "V-groove weld",
+            "zh-Hans" to "V 形坡口焊",
+            "ja" to "V形開先溶接",
+            "ko" to "V 홈 용접",
+            "th" to "รอยเชื่อมร่องวี"
+        ),
+        "draft_symbol_placed" to mapOf(
+            "zh-Hant" to "符號已放在畫面中央，拖一下就能搬",
+            "en" to "The symbol is in the middle of the view; drag to move it",
+            "zh-Hans" to "符号已放在画面中央，拖一下就能搬",
+            "ja" to "記号を画面の中央に置きました。ドラッグで動かせます",
+            "ko" to "기호를 화면 가운데에 놓았습니다. 끌어서 옮길 수 있습니다",
+            "th" to "วางสัญลักษณ์ไว้กลางหน้าจอแล้ว ลากเพื่อย้ายได้"
+        ),
+        "draft_symbols" to mapOf(
+            "zh-Hant" to "製圖符號",
+            "en" to "Drafting symbols",
+            "zh-Hans" to "制图符号",
+            "ja" to "製図記号",
+            "ko" to "제도 기호",
+            "th" to "สัญลักษณ์เขียนแบบ"
+        ),
+        "draft_tb_class" to mapOf(
+            "zh-Hant" to "班級",
+            "en" to "Class",
+            "zh-Hans" to "班级",
+            "ja" to "クラス",
+            "ko" to "반",
+            "th" to "ชั้นเรียน"
+        ),
+        "draft_tb_course" to mapOf(
+            "zh-Hant" to "課程",
+            "en" to "Course",
+            "zh-Hans" to "课程",
+            "ja" to "科目",
+            "ko" to "과목",
+            "th" to "รายวิชา"
+        )
+    )
+
+    private fun part10(): Map<String, Map<String, String>> = mapOf(
+        "draft_tb_date" to mapOf(
+            "zh-Hant" to "日期",
+            "en" to "Date",
+            "zh-Hans" to "日期",
+            "ja" to "日付",
+            "ko" to "날짜",
+            "th" to "วันที่"
+        ),
+        "draft_tb_id" to mapOf(
+            "zh-Hant" to "學號",
+            "en" to "Student ID",
+            "zh-Hans" to "学号",
+            "ja" to "学籍番号",
+            "ko" to "학번",
+            "th" to "รหัสนักศึกษา"
+        ),
+        "draft_tb_name" to mapOf(
+            "zh-Hant" to "姓名",
+            "en" to "Name",
+            "zh-Hans" to "姓名",
+            "ja" to "氏名",
+            "ko" to "이름",
+            "th" to "ชื่อ"
+        ),
+        "draft_tb_projection" to mapOf(
+            "zh-Hant" to "投影法",
+            "en" to "Projection",
+            "zh-Hans" to "投影法",
+            "ja" to "投影法",
+            "ko" to "투상법",
+            "th" to "การฉายภาพ"
+        ),
+        "draft_tb_scale" to mapOf(
+            "zh-Hant" to "比例",
+            "en" to "Scale",
+            "zh-Hans" to "比例",
+            "ja" to "尺度",
+            "ko" to "축척",
+            "th" to "มาตราส่วน"
+        ),
+        "draft_tb_score" to mapOf(
+            "zh-Hant" to "評分",
+            "en" to "Score",
+            "zh-Hans" to "评分",
+            "ja" to "評価",
+            "ko" to "평가",
+            "th" to "คะแนน"
+        ),
+        "draft_tb_title" to mapOf(
+            "zh-Hant" to "圖名",
+            "en" to "Title",
+            "zh-Hans" to "图名",
+            "ja" to "図名",
+            "ko" to "도면명",
+            "th" to "ชื่อแบบ"
+        ),
+        "draft_tb_unit" to mapOf(
+            "zh-Hant" to "單位",
+            "en" to "Unit",
+            "zh-Hans" to "单位",
+            "ja" to "単位",
+            "ko" to "단위",
+            "th" to "หน่วย"
+        ),
         "draft_tip_1" to mapOf(
             "zh-Hant" to "選一支筆：線型與圖層跟著它走（隱藏線＝虛線、輔助線＝淺藍）。",
             "en" to "Pick a pen: its line type and layer come with it (hidden line = dashed, aux = light blue).",
@@ -5960,6 +6588,86 @@ object LocalizationStrings {
             "ja" to "製図のヒント",
             "ko" to "도면 도움말",
             "th" to "เคล็ดลับงานเขียนแบบ"
+        ),
+        "draft_tool_close" to mapOf(
+            "zh-Hant" to "結束目前工具",
+            "en" to "Finish the current tool",
+            "zh-Hans" to "结束目前工具",
+            "ja" to "ツールを終了",
+            "ko" to "현재 도구 끝내기",
+            "th" to "เลิกใช้เครื่องมือนี้"
+        ),
+        "draft_tool_dim_angle" to mapOf(
+            "zh-Hant" to "角度標註",
+            "en" to "Angular dimension",
+            "zh-Hans" to "角度标注",
+            "ja" to "角度寸法",
+            "ko" to "각도 치수",
+            "th" to "ขนาดมุม"
+        ),
+        "draft_tool_dim_diameter" to mapOf(
+            "zh-Hant" to "直徑標註",
+            "en" to "Diameter dimension",
+            "zh-Hans" to "直径标注",
+            "ja" to "直径寸法",
+            "ko" to "지름 치수",
+            "th" to "ขนาดเส้นผ่านศูนย์กลาง"
+        ),
+        "draft_tool_dim_linear" to mapOf(
+            "zh-Hant" to "線性標註",
+            "en" to "Linear dimension",
+            "zh-Hans" to "线性标注",
+            "ja" to "長さ寸法",
+            "ko" to "선형 치수",
+            "th" to "ขนาดเชิงเส้น"
+        ),
+        "draft_tool_dim_radius" to mapOf(
+            "zh-Hant" to "半徑標註",
+            "en" to "Radius dimension",
+            "zh-Hans" to "半径标注",
+            "ja" to "半径寸法",
+            "ko" to "반지름 치수",
+            "th" to "ขนาดรัศมี"
+        ),
+        "draft_tool_none" to mapOf(
+            "zh-Hant" to "沒有工具",
+            "en" to "No tool",
+            "zh-Hans" to "没有工具",
+            "ja" to "ツールなし",
+            "ko" to "도구 없음",
+            "th" to "ไม่มีเครื่องมือ"
+        ),
+        "draft_toolbox_dimension" to mapOf(
+            "zh-Hant" to "尺寸標註",
+            "en" to "Dimensioning",
+            "zh-Hans" to "尺寸标注",
+            "ja" to "寸法記入",
+            "ko" to "치수 기입",
+            "th" to "การกำหนดขนาด"
+        ),
+        "draft_toolbox_frame" to mapOf(
+            "zh-Hant" to "圖框與標題欄",
+            "en" to "Frame and title block",
+            "zh-Hans" to "图框与标题栏",
+            "ja" to "図枠と表題欄",
+            "ko" to "도곽과 표제란",
+            "th" to "กรอบแบบและช่องชื่อแบบ"
+        ),
+        "draft_toolbox_symbols" to mapOf(
+            "zh-Hant" to "符號",
+            "en" to "Symbols",
+            "zh-Hans" to "符号",
+            "ja" to "記号",
+            "ko" to "기호",
+            "th" to "สัญลักษณ์"
+        ),
+        "draft_tools" to mapOf(
+            "zh-Hant" to "圖學工具",
+            "en" to "Drafting tools",
+            "zh-Hans" to "图学工具",
+            "ja" to "製図ツール",
+            "ko" to "제도 도구",
+            "th" to "เครื่องมือเขียนแบบ"
         ),
         "draft_unlock_layer" to mapOf(
             "zh-Hant" to "解除鎖定",
@@ -6408,7 +7116,10 @@ object LocalizationStrings {
             "ja" to "入力が一致しません",
             "ko" to "입력이 일치하지 않습니다",
             "th" to "สองรายการไม่ตรงกัน"
-        ),
+        )
+    )
+
+    private fun part11(): Map<String, Map<String, String>> = mapOf(
         "encrypt_passphrase_too_short" to mapOf(
             "zh-Hant" to "至少 8 個字元",
             "en" to "Use at least 8 characters",
@@ -6472,10 +7183,7 @@ object LocalizationStrings {
             "ja" to "共同編集を終了",
             "ko" to "공동 편집 종료",
             "th" to "สิ้นสุดการทำงานร่วมกัน"
-        )
-    )
-
-    private fun part10(): Map<String, Map<String, String>> = mapOf(
+        ),
         "end_session_confirm" to mapOf(
             "zh-Hant" to "確認結束多人協同會議？所有在線成員將被中斷連線。",
             "en" to "End collaborative session? All online participants will be disconnected.",
@@ -7051,7 +7759,10 @@ object LocalizationStrings {
             "ja" to "3D プレビュー",
             "ko" to "3D 미리보기",
             "th" to "ดูตัวอย่าง 3D"
-        ),
+        )
+    )
+
+    private fun part12(): Map<String, Map<String, String>> = mapOf(
         "geom_shape" to mapOf(
             "zh-Hant" to "幾何形狀",
             "en" to "Geometric Shape",
@@ -7115,10 +7826,7 @@ object LocalizationStrings {
             "ja" to "1:1.618のフィボナッチ螺旋で視線を自然に誘導",
             "ko" to "1:1.618 피보나치 나선 오버레이로 시선 유도",
             "th" to "ซ้อนทับเกลียวฟีโบนัชชี 1:1.618 เพื่อนำสายตา"
-        )
-    )
-
-    private fun part11(): Map<String, Map<String, String>> = mapOf(
+        ),
         "golden_spiral_ref" to mapOf(
             "zh-Hant" to "黃金螺旋參考線 (Golden Spiral)",
             "en" to "Golden Spiral Guide",
@@ -7694,7 +8402,10 @@ object LocalizationStrings {
             "ja" to "手描きモード：Apple Pencil やスタイラスによるペン描画が有効",
             "ko" to "손글씨/드로잉 모드: 애플 펜슬 필기 및 스케치 활성화",
             "th" to "โหมดวาดเขียน: เปิดใช้งานหมึกวาดภาพเต็มรูปแบบสำหรับ Apple Pencil"
-        ),
+        )
+    )
+
+    private fun part13(): Map<String, Map<String, String>> = mapOf(
         "heading_1" to mapOf(
             "zh-Hant" to "標題 1",
             "en" to "Heading 1",
@@ -7758,10 +8469,7 @@ object LocalizationStrings {
             "ja" to "次に、ページ上の**好きな場所をタップ**するとピンが置かれます。ツールバーのアイコンをもう一度押すと配置モードを終了します。",
             "ko" to "이제 페이지의 **아무 곳이나 탭**하면 핀이 놓입니다. 도구 모음 아이콘을 다시 누르면 배치 모드를 벗어납니다.",
             "th" to "จากนั้น**แตะที่ใดก็ได้บนหน้า**เพื่อวางหมุด แตะไอคอนบนแถบเครื่องมืออีกครั้งเพื่อออกจากโหมดวาง"
-        )
-    )
-
-    private fun part12(): Map<String, Map<String, String>> = mapOf(
+        ),
         "hint_comment_pin_title" to mapOf(
             "zh-Hant" to "新增討論圖釘",
             "en" to "Add Comment Pin",
@@ -8337,7 +9045,10 @@ object LocalizationStrings {
             "ja" to "同期を解除",
             "ko" to "동기화 해제",
             "th" to "ยกเลิกการซิงก์"
-        ),
+        )
+    )
+
+    private fun part14(): Map<String, Map<String, String>> = mapOf(
         "hw_sync_gdrive_option" to mapOf(
             "zh-Hant" to "Google Drive（跨平台）",
             "en" to "Google Drive (cross-platform)",
@@ -8401,10 +9112,7 @@ object LocalizationStrings {
             "ja" to "手書き認識は「%@」に対応していません",
             "ko" to "필기 인식이 “%@”를 지원하지 않습니다",
             "th" to "การรู้จำลายมือไม่รองรับ “%@”"
-        )
-    )
-
-    private fun part13(): Map<String, Map<String, String>> = mapOf(
+        ),
         "identity_color" to mapOf(
             "zh-Hant" to "身分顏色",
             "en" to "Identity Colour",
@@ -8980,7 +9688,10 @@ object LocalizationStrings {
             "ja" to "製図－授業ノート",
             "ko" to "도면 – 수업 노트",
             "th" to "เขียนแบบ – จดบทเรียน"
-        ),
+        )
+    )
+
+    private fun part15(): Map<String, Map<String, String>> = mapOf(
         "kit_drafting_desc" to mapOf(
             "zh-Hant" to "課堂筆記、作圖練習、錯誤陷阱本，並備好圖學筆組",
             "en" to "Class notes, drawing practice and a mistake-trap book, with the drafting pens ready",
@@ -9044,10 +9755,7 @@ object LocalizationStrings {
             "ja" to "最前面へ",
             "ko" to "맨 앞으로",
             "th" to "ไปหน้าสุด"
-        )
-    )
-
-    private fun part14(): Map<String, Map<String, String>> = mapOf(
+        ),
         "layer_group" to mapOf(
             "zh-Hant" to "群組",
             "en" to "Group",
@@ -9623,7 +10331,10 @@ object LocalizationStrings {
             "ja" to "📊【同期前の確認】ローカルのノート: %1@ 冊、同期待ちのアクティブなノート: %2@ 冊",
             "ko" to "📊 [동기화 전 확인] 로컬 노트: %1@개, 동기화 대기 중인 활성 노트: %2@개",
             "th" to "📊 [ตรวจสอบก่อนซิงก์] สมุดบันทึกในเครื่อง: %1@ เล่ม สมุดที่ใช้งานรอซิงก์: %2@ เล่ม"
-        ),
+        )
+    )
+
+    private fun part16(): Map<String, Map<String, String>> = mapOf(
         "log_msg_031" to mapOf(
             "zh-Hant" to "📊【同步前核實】本機 %1@ 本，清理 %2@ 本，有差異待同步 %3@ 本（跳過 %4@ 本）",
             "en" to "📊 [Pre-sync check] Local: %1@, cleaned up: %2@, with differences to sync: %3@ (skipped %4@)",
@@ -9687,10 +10398,7 @@ object LocalizationStrings {
             "ja" to "Google Drive のセッションを取得できません！",
             "ko" to "Google Drive 세션을 가져올 수 없습니다!",
             "th" to "เปิดเซสชัน Google Drive ไม่ได้!"
-        )
-    )
-
-    private fun part15(): Map<String, Map<String, String>> = mapOf(
+        ),
         "log_msg_039" to mapOf(
             "zh-Hant" to "無法取得 Google Drive 索引！",
             "en" to "Cannot get the Google Drive index!",
@@ -10266,7 +10974,10 @@ object LocalizationStrings {
             "ja" to "高反射率の純銀。輝くクロームの仕上げ。",
             "ko" to "반사율이 높은 순은, 빛나는 크롬 마감.",
             "th" to "เงินแท้สะท้อนแสงสูง ผิวโครเมียมแวววาว"
-        ),
+        )
+    )
+
+    private fun part17(): Map<String, Map<String, String>> = mapOf(
         "material_desc_wood" to mapOf(
             "zh-Hant" to "天然有機紋理，柔和漫反射。",
             "en" to "Natural organic grain with warm diffuse scattering.",
@@ -10330,10 +11041,7 @@ object LocalizationStrings {
             "ja" to "材料仕様カード",
             "ko" to "재료 사양 카드",
             "th" to "การ์ดสเปกวัสดุ"
-        )
-    )
-
-    private fun part16(): Map<String, Map<String, String>> = mapOf(
+        ),
         "material_specs_tip" to mapOf(
             "zh-Hant" to "插入工程材質與表面工藝標籤",
             "en" to "Insert Engineering Material & Specs Label",
@@ -10909,7 +11617,10 @@ object LocalizationStrings {
             "ja" to "マイルストーンはまだありません。「スナップショットを作成」で今を記録できます。",
             "ko" to "아직 마일스톤이 없습니다. “스냅샷 생성”을 선택해 지금을 기록하세요.",
             "th" to "ยังไม่มีเหตุการณ์สำคัญ เลือก “สร้างสแนปช็อต” เพื่อบันทึกช่วงเวลานี้"
-        ),
+        )
+    )
+
+    private fun part18(): Map<String, Map<String, String>> = mapOf(
         "milestone_legacy" to mapOf(
             "zh-Hant" to "舊版",
             "en" to "Legacy",
@@ -10973,10 +11684,7 @@ object LocalizationStrings {
             "ja" to "手書き",
             "ko" to "필기",
             "th" to "เขียน"
-        )
-    )
-
-    private fun part17(): Map<String, Map<String, String>> = mapOf(
+        ),
         "mode_draw_badge" to mapOf(
             "zh-Hant" to "手寫模式",
             "en" to "Handwriting",
@@ -11552,7 +12260,10 @@ object LocalizationStrings {
             "ja" to "角の丸み",
             "ko" to "모서리 둥글기",
             "th" to "ความมนของมุม"
-        ),
+        )
+    )
+
+    private fun part19(): Map<String, Map<String, String>> = mapOf(
         "object_corner_square" to mapOf(
             "zh-Hant" to "直角",
             "en" to "Square",
@@ -11616,10 +12327,7 @@ object LocalizationStrings {
             "ja" to "マイクを許可しました",
             "ko" to "마이크가 허용되었습니다",
             "th" to "อนุญาตไมโครโฟนแล้ว"
-        )
-    )
-
-    private fun part18(): Map<String, Map<String, String>> = mapOf(
+        ),
         "onboarding_next" to mapOf(
             "zh-Hant" to "下一步",
             "en" to "Next",
@@ -12195,7 +12903,10 @@ object LocalizationStrings {
             "ja" to "配色パレット",
             "ko" to "색상 팔레트",
             "th" to "จานสีคลาสสิก"
-        ),
+        )
+    )
+
+    private fun part20(): Map<String, Map<String, String>> = mapOf(
         "palette_teal" to mapOf(
             "zh-Hant" to "青綠",
             "en" to "Teal",
@@ -12259,10 +12970,7 @@ object LocalizationStrings {
             "ja" to "ペンが触れたときの取り消し時間",
             "ko" to "펜이 닿을 때 되돌릴 시간",
             "th" to "ช่วงเวลาย้อนกลับเมื่อปากกาแตะ"
-        )
-    )
-
-    private fun part19(): Map<String, Map<String, String>> = mapOf(
+        ),
         "palm_threshold_retract_hint" to mapOf(
             "zh-Hant" to "手掌常常比筆先碰到螢幕。這段時間內畫出來的手掌筆畫會在筆落下時收回。",
             "en" to "Your palm usually lands before the pen. Palm marks drawn within this window are taken back when the pen touches down.",
@@ -12838,7 +13546,10 @@ object LocalizationStrings {
             "ja" to "最近開いた",
             "ko" to "최근 열림",
             "th" to "เปิดล่าสุด"
-        ),
+        )
+    )
+
+    private fun part21(): Map<String, Map<String, String>> = mapOf(
         "recent_recordings" to mapOf(
             "zh-Hant" to "最近錄音與轉錄",
             "en" to "Recent Recordings & Transcripts",
@@ -12902,10 +13613,7 @@ object LocalizationStrings {
             "ja" to "接続が切断されました。再接続中 (%d/%d)...",
             "ko" to "연결이 끊어졌습니다. 다시 연결하는 중 (%d/%d)...",
             "th" to "การเชื่อมต่อขาดหาย กำลังเชื่อมต่อใหม่ (%d/%d)..."
-        )
-    )
-
-    private fun part20(): Map<String, Map<String, String>> = mapOf(
+        ),
         "record" to mapOf(
             "zh-Hant" to "錄音",
             "en" to "Record",
@@ -13481,7 +14189,10 @@ object LocalizationStrings {
             "ja" to "三分割構図ガイド",
             "ko" to "3등분 법칙 격자",
             "th" to "ตารางกฎสามส่วน"
-        ),
+        )
+    )
+
+    private fun part22(): Map<String, Map<String, String>> = mapOf(
         "ruler" to mapOf(
             "zh-Hant" to "尺規輔助線",
             "en" to "Ruler Guide",
@@ -13545,10 +14256,7 @@ object LocalizationStrings {
             "ja" to "第35週|第36週|第37週|第38週",
             "ko" to "35주|36주|37주|38주",
             "th" to "สัปดาห์ 35|สัปดาห์ 36|สัปดาห์ 37|สัปดาห์ 38"
-        )
-    )
-
-    private fun part21(): Map<String, Map<String, String>> = mapOf(
+        ),
         "sample_meeting_chart_series" to mapOf(
             "zh-Hant" to "已完成",
             "en" to "Completed",
@@ -14124,7 +14832,10 @@ object LocalizationStrings {
             "ja" to "Kairumo vs 市販トップ3ノートアプリ 総合比較表",
             "ko" to "Kairumo vs 시장 3대 주요 노트 앱 종합 비교표",
             "th" to "ตารางเปรียบเทียบ Kairumo กับ 3 แอปจดบันทึกชั้นนำในตลาด"
-        ),
+        )
+    )
+
+    private fun part23(): Map<String, Map<String, String>> = mapOf(
         "sample_showcase_tape_answer" to mapOf(
             "zh-Hant" to "重點背誦答案：[ Kairumo 採用 UniFFI + Rust 核心，達到零延遲 60FPS 極致流暢！ ]",
             "en" to "Key recitation answer: [ Kairumo uses UniFFI + Rust core to achieve zero-latency 60FPS fluid performance! ]",
@@ -14188,10 +14899,7 @@ object LocalizationStrings {
             "ja" to "1. Pen (万年筆):",
             "ko" to "1. Pen (만년필):",
             "th" to "1. Pen (ปากกาหมึกซึม):"
-        )
-    )
-
-    private fun part22(): Map<String, Map<String, String>> = mapOf(
+        ),
         "sample_showcase_tool_2_fineliner" to mapOf(
             "zh-Hant" to "2. Fineliner (針筆):",
             "en" to "2. Fineliner:",
@@ -14767,7 +15475,10 @@ object LocalizationStrings {
             "ja" to "図形を選び、辺の「+」から別の図形へドラッグすると接続できます",
             "ko" to "도형을 선택한 뒤 가장자리의 “+”에서 다른 도형으로 드래그하면 연결됩니다",
             "th" to "เลือกรูปร่าง แล้วลากจาก “+” ที่ขอบไปยังรูปร่างอื่นเพื่อเชื่อมต่อ"
-        ),
+        )
+    )
+
+    private fun part24(): Map<String, Map<String, String>> = mapOf(
         "shape_geometry_section" to mapOf(
             "zh-Hant" to "位置與大小",
             "en" to "Position & size",
@@ -14831,10 +15542,7 @@ object LocalizationStrings {
             "ja" to "右矢印",
             "ko" to "오른쪽 화살표",
             "th" to "ลูกศรขวา"
-        )
-    )
-
-    private fun part23(): Map<String, Map<String, String>> = mapOf(
+        ),
         "shape_kind_arrowblockup" to mapOf(
             "zh-Hant" to "上箭頭",
             "en" to "Up arrow",
@@ -15410,7 +16118,10 @@ object LocalizationStrings {
             "ja" to "三角形",
             "ko" to "삼각형",
             "th" to "สามเหลี่ยม"
-        ),
+        )
+    )
+
+    private fun part25(): Map<String, Map<String, String>> = mapOf(
         "shape_kind_triangularprism" to mapOf(
             "zh-Hant" to "三角柱",
             "en" to "Triangular prism",
@@ -15474,10 +16185,7 @@ object LocalizationStrings {
             "ja" to "フローチャート：フロー制御（ISO 5807）",
             "ko" to "순서도: 흐름 제어(ISO 5807)",
             "th" to "ผังงาน: การควบคุมการไหล (ISO 5807)"
-        )
-    )
-
-    private fun part24(): Map<String, Map<String, String>> = mapOf(
+        ),
         "shape_section_flow_data" to mapOf(
             "zh-Hant" to "流程圖：資料與儲存（ISO 5807）",
             "en" to "Flowchart: Data & storage (ISO 5807)",
@@ -15998,6 +16706,14 @@ object LocalizationStrings {
             "ko" to "단면 없음",
             "th" to "ไม่ตัด"
         ),
+        "solid_section_oblique" to mapOf(
+            "zh-Hant" to "斜切",
+            "en" to "Oblique",
+            "zh-Hans" to "斜切",
+            "ja" to "斜め切断",
+            "ko" to "경사 절단",
+            "th" to "ตัดเฉียง"
+        ),
         "solid_section_parallel" to mapOf(
             "zh-Hant" to "平行正面的剖面",
             "en" to "Section parallel to the front",
@@ -16045,7 +16761,10 @@ object LocalizationStrings {
             "ja" to "段差の位置",
             "ko" to "꺾임 위치",
             "th" to "ตำแหน่งขั้น"
-        ),
+        )
+    )
+
+    private fun part26(): Map<String, Map<String, String>> = mapOf(
         "solid_studio" to mapOf(
             "zh-Hant" to "立體輔助",
             "en" to "Solid helper",
@@ -16077,6 +16796,14 @@ object LocalizationStrings {
             "ja" to "図面",
             "ko" to "도면",
             "th" to "ภาพ"
+        ),
+        "solid_tilt" to mapOf(
+            "zh-Hant" to "傾斜角",
+            "en" to "Tilt",
+            "zh-Hans" to "倾斜角",
+            "ja" to "傾斜角",
+            "ko" to "경사각",
+            "th" to "มุมเอียง"
         ),
         "solid_width" to mapOf(
             "zh-Hant" to "寬",
@@ -16117,10 +16844,7 @@ object LocalizationStrings {
             "ja" to "名前順",
             "ko" to "이름순",
             "th" to "เรียงตามชื่อ"
-        )
-    )
-
-    private fun part25(): Map<String, Map<String, String>> = mapOf(
+        ),
         "sort_date" to mapOf(
             "zh-Hant" to "依修改時間排序",
             "en" to "Sort by Date Modified",
@@ -16680,7 +17404,10 @@ object LocalizationStrings {
             "ja" to "うれしい",
             "ko" to "좋음",
             "th" to "ยิ้ม"
-        ),
+        )
+    )
+
+    private fun part27(): Map<String, Map<String, String>> = mapOf(
         "sticker_star" to mapOf(
             "zh-Hant" to "星星",
             "en" to "Star",
@@ -16760,10 +17487,7 @@ object LocalizationStrings {
             "ja" to "録音停止",
             "ko" to "녹음 중지",
             "th" to "หยุดบันทึก"
-        )
-    )
-
-    private fun part26(): Map<String, Map<String, String>> = mapOf(
+        ),
         "storage_caches" to mapOf(
             "zh-Hant" to "快取",
             "en" to "Caches",
@@ -17323,7 +18047,10 @@ object LocalizationStrings {
             "ja" to "同期はお使いのクラウドドライブ（iCloud Drive、Google Drive、Dropbox など）が行います。アカウントも当方のサーバーもありません。2 台の端末を同じフォルダに向けるだけで同期されます。",
             "ko" to "동기화는 사용자의 클라우드 드라이브(iCloud Drive, Google Drive, Dropbox 등)가 담당합니다. 계정도, 저희 서버도 없습니다. 두 기기를 같은 폴더로 지정하면 서로 동기화됩니다.",
             "th" to "การซิงก์ทำโดยคลาวด์ไดรฟ์ของคุณเอง (iCloud Drive, Google Drive, Dropbox ฯลฯ) ไม่มีบัญชีและไม่มีเซิร์ฟเวอร์ของเรา ตั้งให้สองอุปกรณ์ชี้ไปยังโฟลเดอร์เดียวกันก็ซิงก์กันได้"
-        ),
+        )
+    )
+
+    private fun part28(): Map<String, Map<String, String>> = mapOf(
         "sync_explainer_folder" to mapOf(
             "zh-Hant" to "透過你指定的 iCloud 或本機資料夾雙向同步筆記與手寫，內容不經過我們。",
             "en" to "Two-way sync of notes and handwriting through the iCloud or local folder you chose — nothing passes through us.",
@@ -17403,10 +18130,7 @@ object LocalizationStrings {
             "ja" to "パッケージを展開できませんでした：%@",
             "ko" to "패키지를 풀지 못했습니다: %@",
             "th" to "แตกแพ็กเกจไม่สำเร็จ: %@"
-        )
-    )
-
-    private fun part27(): Map<String, Map<String, String>> = mapOf(
+        ),
         "sync_fail_unpack_cloud" to mapOf(
             "zh-Hant" to "解開雲端 .padnote 失敗：%@",
             "en" to "Could not unpack the cloud .padnote: %@",
@@ -17966,7 +18690,10 @@ object LocalizationStrings {
             "ja" to "表を更新",
             "ko" to "표 업데이트",
             "th" to "อัปเดตตาราง"
-        ),
+        )
+    )
+
+    private fun part29(): Map<String, Map<String, String>> = mapOf(
         "table_width" to mapOf(
             "zh-Hant" to "表格寬度",
             "en" to "Table Width",
@@ -18046,10 +18773,7 @@ object LocalizationStrings {
             "ja" to "ここに入力…",
             "ko" to "여기에 입력…",
             "th" to "พิมพ์ที่นี่…"
-        )
-    )
-
-    private fun part28(): Map<String, Map<String, String>> = mapOf(
+        ),
         "text_italic" to mapOf(
             "zh-Hant" to "斜體",
             "en" to "Italic",
@@ -18609,7 +19333,10 @@ object LocalizationStrings {
             "ja" to "上部に5色のカラースウォッチ、中央にインスピレーション空間",
             "ko" to "상단 5색 스와치 및 중앙 영감 캔버스",
             "th" to "แถบสี 5 สีด้านบนพร้อมผืนผ้าใบสร้างแรงบันดาลใจ"
-        ),
+        )
+    )
+
+    private fun part30(): Map<String, Map<String, String>> = mapOf(
         "tmpl_orthographic" to mapOf(
             "zh-Hant" to "三視圖與剖面範本",
             "en" to "Orthographic Multi-View",
@@ -18689,10 +19416,7 @@ object LocalizationStrings {
             "ja" to "要点・疑問・決定・行動。次の一手で終わる議事録",
             "ko" to "요점·질문·결정·실행. 다음 할 일로 끝나는 회의록",
             "th" to "ประเด็น คำถาม ข้อสรุป การกระทำ"
-        )
-    )
-
-    private fun part29(): Map<String, Map<String, String>> = mapOf(
+        ),
         "tmpl_study_planner" to mapOf(
             "zh-Hant" to "學習計畫",
             "en" to "Study Planner",
@@ -19252,7 +19976,10 @@ object LocalizationStrings {
             "ja" to "ゴミ箱を空にする",
             "ko" to "휴지통 비우기",
             "th" to "ล้างถังขยะ"
-        ),
+        )
+    )
+
+    private fun part31(): Map<String, Map<String, String>> = mapOf(
         "trash_empty_confirm_message" to mapOf(
             "zh-Hant" to "回收桶中的所有內容將從此裝置永久刪除。雲端副本會在你的其他裝置確認後刪除。",
             "en" to "Everything in the trash will be permanently deleted from this device. Cloud copies are removed once your other devices have confirmed.",
@@ -19332,10 +20059,7 @@ object LocalizationStrings {
             "ja" to "削除したノートを保持する期間",
             "ko" to "삭제한 노트를 보관할 기간",
             "th" to "เก็บสมุดบันทึกที่ลบไว้เป็นเวลา"
-        )
-    )
-
-    private fun part30(): Map<String, Map<String, String>> = mapOf(
+        ),
         "trash_title" to mapOf(
             "zh-Hant" to "回收桶",
             "en" to "Trash",

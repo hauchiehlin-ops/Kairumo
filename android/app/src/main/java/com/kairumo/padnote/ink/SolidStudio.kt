@@ -83,6 +83,7 @@ fun SolidStudioDialog(
     var delta by remember { mutableFloatStateOf(30f) }
     var flip by remember { mutableStateOf(true) }
     var depthFrac by remember { mutableFloatStateOf(0.5f) }
+    var tilt by remember { mutableFloatStateOf(40f) }
 
     var firstAngle by remember { mutableStateOf(false) }
     var includeIso by remember { mutableStateOf(true) }
@@ -106,7 +107,8 @@ fun SolidStudioDialog(
         centerLines = centerLines,
         section = FfiSolidSection(
             kind = kind, angleDeg = angle, offset = offset, offset2 = offset2, step = step,
-            pivotX = 0.5f, pivotY = 0.5f, deltaDeg = delta, flip = flip, depthFrac = depthFrac
+            pivotX = 0.5f, pivotY = 0.5f, deltaDeg = delta, flip = flip, depthFrac = depthFrac,
+            tiltDeg = tilt
         ),
         fitWidth = fitW,
         fitHeight = fitH,
@@ -249,7 +251,8 @@ fun SolidStudioDialog(
                             FfiSectionKind.FULL to "solid_section_full",
                             FfiSectionKind.STEPPED to "solid_section_stepped",
                             FfiSectionKind.ROTATED to "solid_section_rotated",
-                            FfiSectionKind.PARALLEL to "solid_section_parallel"
+                            FfiSectionKind.PARALLEL to "solid_section_parallel",
+                            FfiSectionKind.OBLIQUE to "solid_section_oblique"
                         )) {
                             FilterChip(
                                 selected = kind == k, onClick = { kind = k },
@@ -281,6 +284,12 @@ fun SolidStudioDialog(
                         }
                         FfiSectionKind.PARALLEL ->
                             LabeledSlider(t("solid_depth_pos"), depthFrac, 0f..1f, "solid.depthFrac", two) { depthFrac = it }
+                        FfiSectionKind.OBLIQUE -> {
+                            LabeledSlider(t("solid_angle"), angle, 0f..180f, "solid.angle", deg) { angle = it }
+                            LabeledSlider(t("solid_offset"), offset, 0f..1f, "solid.offset", two) { offset = it }
+                            LabeledSlider(t("solid_tilt"), tilt, 5f..85f, "solid.tilt", deg) { tilt = it }
+                            Toggle(t("solid_flip"), flip, "solid.flip") { flip = it }
+                        }
                     }
                     Toggle(t("solid_first_angle"), firstAngle, "solid.firstAngle") { firstAngle = it }
                     Toggle(t("solid_iso"), includeIso, "solid.iso") { includeIso = it }

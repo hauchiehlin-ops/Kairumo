@@ -85,6 +85,7 @@
 		67CF9DE54436AC7DD3FF5065 /* NotebookMigration.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C19329463E6F6E313A0F1DB /* NotebookMigration.swift */; };
 		6849D8D81A0F512DCC4FC8E8 /* InsertToolsAudit.swift in Sources */ = {isa = PBXBuildFile; fileRef = 831C71226B45B48B268CE8F6 /* InsertToolsAudit.swift */; };
 		68C1811CB88877353FF14D31 /* CStubs.c in Sources */ = {isa = PBXBuildFile; fileRef = 26F09C378F9F1B6835D9ECB2 /* CStubs.c */; };
+		6BDE3F2A5024AEB583155A74 /* DraftingToolsUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8017652429ACEAA19596C471 /* DraftingToolsUITests.swift */; };
 		6EB543F097562AD8E0751343 /* StrokeWidthSlider.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3111941E411F546450CCE85 /* StrokeWidthSlider.swift */; };
 		6F06E6527CA4B83E42449AE8 /* OpusAudioPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3CEDDA81C7A0784D31A451C /* OpusAudioPlayer.swift */; };
 		708160431AB7514FC43ECF76 /* NotebookUnlockSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E3EF3928D3630E321C01133 /* NotebookUnlockSheet.swift */; };
@@ -214,6 +215,7 @@
 		F91E0C4A0E48E4695D0337C6 /* PdfAnnotationInteropTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A1525CF56EBBE47CE94BDBD /* PdfAnnotationInteropTests.swift */; };
 		F94293BCC5D971D49F94BE8C /* ResizableSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 16799A63AE107AAA8CCA34B4 /* ResizableSheet.swift */; };
 		FA976687FEFDD2EA21B626A4 /* StorageJanitorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74EC0F8E33F17C8282C745BE /* StorageJanitorTests.swift */; };
+		FB2B4A98DE6E5CCFF3FF16ED /* DraftingTools.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1A6427DEAFB401E418FE2B8 /* DraftingTools.swift */; };
 		FB8410FC89F4FDB4429963C6 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22CA9AD55E8EDA76ABA92C78 /* OnboardingView.swift */; };
 		FC1A97633808D861B89FE967 /* MathEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E642D648CC5479DA382CE35 /* MathEngine.swift */; };
 		FDBFCB97F11915C9DA8EA7A9 /* FloatingPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A94975999121E1FFF8139B6A /* FloatingPanel.swift */; };
@@ -363,6 +365,7 @@
 		7A2F8130E223B0B02F303F80 /* BrushCursor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrushCursor.swift; sourceTree = "<group>"; };
 		7D2A6B1E41A4693B543BEDCB /* PageRepaginationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PageRepaginationTests.swift; sourceTree = "<group>"; };
 		7FEAFED79F025B8AAAFEF289 /* NotebookTrashTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotebookTrashTests.swift; sourceTree = "<group>"; };
+		8017652429ACEAA19596C471 /* DraftingToolsUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DraftingToolsUITests.swift; sourceTree = "<group>"; };
 		81D6BC45FA5C5688B6009B92 /* ShapeEditing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShapeEditing.swift; sourceTree = "<group>"; };
 		824AF14643DF914996543B0B /* ProColorPickerSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProColorPickerSheet.swift; sourceTree = "<group>"; };
 		831C71226B45B48B268CE8F6 /* InsertToolsAudit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InsertToolsAudit.swift; sourceTree = "<group>"; };
@@ -404,6 +407,7 @@
 		ADF7A49AC27362737BFEF526 /* PdfPageInsertSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PdfPageInsertSheet.swift; sourceTree = "<group>"; };
 		AE6C32E890E64541CCDA9929 /* BrushIconView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrushIconView.swift; sourceTree = "<group>"; };
 		B05DE382C8B7C4EE39BD076B /* NotebookPackageBridgeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotebookPackageBridgeTests.swift; sourceTree = "<group>"; };
+		B1A6427DEAFB401E418FE2B8 /* DraftingTools.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DraftingTools.swift; sourceTree = "<group>"; };
 		B2929D89A7985F84100FDB68 /* RecentTemplates.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecentTemplates.swift; sourceTree = "<group>"; };
 		B36AD7F19677B4F27E94262B /* BrushCursorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrushCursorTests.swift; sourceTree = "<group>"; };
 		B3CEDDA81C7A0784D31A451C /* OpusAudioPlayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpusAudioPlayer.swift; sourceTree = "<group>"; };
@@ -560,6 +564,7 @@
 			children = (
 				0345B65C7AA3708D3D2EC807 /* CanvasGestureTests.swift */,
 				D2E4B63FC00CBE41E1C67031 /* DeadControlSurvey.swift */,
+				8017652429ACEAA19596C471 /* DraftingToolsUITests.swift */,
 				831C71226B45B48B268CE8F6 /* InsertToolsAudit.swift */,
 				15AC78A0794D4E7FFDE676EC /* InteractionMatrixAudit.swift */,
 				A968389DD95F97ED562C256F /* MultiDeviceUITests.swift */,
@@ -659,6 +664,7 @@
 				59E46CD750DA486212251DC0 /* DocumentViewerSheet.swift */,
 				F646239F772A80D0EE6368D6 /* Drafting.swift */,
 				E2053B49C63EE5DCAE804DAA /* DraftingBar.swift */,
+				B1A6427DEAFB401E418FE2B8 /* DraftingTools.swift */,
 				5B73641F0EA64C1F1B559616 /* DriveHttpClient.swift */,
 				5A7C268EF0A001760D3A7C02 /* DynamicPortalIsland.swift */,
 				EA02348946BB281EFAFD082E /* EditorStateMachine.swift */,
@@ -968,6 +974,7 @@
 			files = (
 				1E31AD89CA8BEB732ADA8899 /* CanvasGestureTests.swift in Sources */,
 				3CFD6D8CF0C7C32DF12770A2 /* DeadControlSurvey.swift in Sources */,
+				6BDE3F2A5024AEB583155A74 /* DraftingToolsUITests.swift in Sources */,
 				6849D8D81A0F512DCC4FC8E8 /* InsertToolsAudit.swift in Sources */,
 				2EC3508567E4087DDC7F2B43 /* InteractionMatrixAudit.swift in Sources */,
 				B0B6E675497689B5CF200607 /* MultiDeviceUITests.swift in Sources */,
@@ -1015,6 +1022,7 @@
 				7B6B71CF69CE9F1C2CB2E953 /* DocumentViewerSheet.swift in Sources */,
 				3140AB52CEC3E3C01E27BECF /* Drafting.swift in Sources */,
 				01DDAB29AAE77C3F0EBD6D17 /* DraftingBar.swift in Sources */,
+				FB2B4A98DE6E5CCFF3FF16ED /* DraftingTools.swift in Sources */,
 				1DDFAAA370E83E55EEE5AF28 /* DriveHttpClient.swift in Sources */,
 				D6CF28F060E9D4456754E70D /* DynamicPortalIsland.swift in Sources */,
 				F2D819B6D4518C51C8235CCB /* EditorStateMachine.swift in Sources */,

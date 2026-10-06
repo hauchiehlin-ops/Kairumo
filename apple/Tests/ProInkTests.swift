@@ -298,7 +298,7 @@ final class ProInkTests: XCTestCase {
         let options = FfiSolidSheetOptions(
             firstAngle: false, includeIso: true, projectionLines: true, centerLines: true,
             section: FfiSolidSection(kind: .none, angleDeg: 90, offset: 0.5, offset2: 0.7, step: 0.5, pivotX: 0.5,
-                                     pivotY: 0.5, deltaDeg: 30, flip: true, depthFrac: 0.5),
+                                     pivotY: 0.5, deltaDeg: 30, flip: true, depthFrac: 0.5, tiltDeg: 40),
             fitWidth: 600, fitHeight: 400, hatchSpacing: 6, dimensions: false, sectionLabel: false)
         let sheet = try XCTUnwrap(solidComposeSheet(profile: profile, depth: 60, options: options))
         var dimensioned = options

@@ -182,6 +182,22 @@ fun InkCanvas(
                 engine.lineType)
         }
 
+        // 工具覆蓋層（標註預覽與已選的點）。
+        @Suppress("UNUSED_EXPRESSION") engine.overlayStrokes
+        for (item in engine.overlayStrokes) {
+            val color = DraftingState.parseHex(item.colorHex)
+            drawInkStroke(
+                DraftingState.points(item, 0f, 0f), uniffi.padnote_core.ToolKind.FINELINER,
+                item.width, color, density, item.lineType.toInt())
+        }
+        for (mark in engine.overlayMarks) {
+            drawCircle(
+                Color(0x59FF9500), radius = 5f * density, center = androidx.compose.ui.geometry.Offset(mark.x * density, mark.y * density))
+            drawCircle(
+                Color(0xFFFF9500), radius = 5f * density, center = androidx.compose.ui.geometry.Offset(mark.x * density, mark.y * density),
+                style = androidx.compose.ui.graphics.drawscope.Stroke(width = 1.6f * density))
+        }
+
         // 懸停預覽畫在最上層：被墨跡蓋住就失去意義了。
         hoverPoint?.let { point ->
             drawHoverPreview(point, engine.baseWidth, engine.isErasing, inkColor, density)

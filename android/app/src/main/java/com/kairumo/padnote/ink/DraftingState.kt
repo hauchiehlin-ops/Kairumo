@@ -2,6 +2,7 @@ package com.kairumo.padnote.ink
 
 import android.content.Context
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableDoubleStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -10,6 +11,17 @@ import uniffi.padnote_core.FfiDraftLayer
 import uniffi.padnote_core.FfiDraftPen
 import uniffi.padnote_core.draftLayers
 import uniffi.padnote_core.draftPens
+
+/** 圖學工具。啟用時單指拿來點選與拖曳（由 [DraftToolController] 處理）。 */
+enum class DraftTool(val nameKey: String) {
+    NONE("draft_tool_none"),
+    DIM_LINEAR("draft_tool_dim_linear"),
+    DIM_DIAMETER("draft_tool_dim_diameter"),
+    DIM_RADIUS("draft_tool_dim_radius"),
+    DIM_ANGLE("draft_tool_dim_angle");
+
+    val isDimension: Boolean get() = this != NONE
+}
 
 /**
  * 圖學的編輯狀態（對應 Apple 的 `DraftingState`）：目前的製圖筆、要畫在哪一層、
@@ -64,6 +76,40 @@ object DraftingState {
     /** 下一個要放的編號。 */
     var stepNumber by mutableIntStateOf(1)
 
+    /** 目前啟用的圖學工具（標註…）。啟用時單指拿來點選與拖曳，不再畫線（對應 Apple 的 `DraftTool`）。 */
+    var tool by mutableStateOf(DraftTool.NONE)
+        private set
+
+    /** 工具現在在等什麼（已翻成使用者語言）。工具列顯示它，使用者才知道下一步點哪裡。 */
+    var toolHint by mutableStateOf<String?>(null)
+
+    fun selectTool(next: DraftTool) {
+        tool = next
+        if (next != DraftTool.NONE) {
+            markerFlag = false
+            reassignFlag = false
+        }
+        toolHint = null
+    }
+
+    /**
+     * 目前這本的比例尺：實物 / 圖上（1:2 → 2、2:1 → 0.5）。尺寸標註的數字依它換算。
+     * 逐本記、不同步 —— 數字在標註當下就畫成筆畫了。
+     */
+    var scaleRatio by mutableDoubleStateOf(1.0)
+        private set
+
+    fun changeScaleRatio(ratio: Double) {
+        scaleRatio = ratio
+        prefs?.edit()?.putFloat("scale.$notebookKey", ratio.toFloat())?.apply()
+        version++
+    }
+
+    /** 比例尺的顯示字（「1:2」）。 */
+    fun scaleLabel(): String =
+        uniffi.padnote_core.draftScales().firstOrNull { kotlin.math.abs(it.ratio.toDouble() - scaleRatio) < 1e-4 }?.label
+            ?: "1:$scaleRatio"
+
     /** 面板收合：-1 = 還沒選過（由螢幕寬度決定，手機預設收合）、0 = 展開、1 = 收合。 */
     var compactChoice by mutableIntStateOf(-1)
         private set
@@ -110,6 +156,7 @@ object DraftingState {
         val p = prefs
         hidden = p?.getStringSet("hidden.$key", emptySet())?.mapNotNull { it.toIntOrNull() }?.toSet() ?: emptySet()
         locked = p?.getStringSet("locked.$key", emptySet())?.mapNotNull { it.toIntOrNull() }?.toSet() ?: emptySet()
+        scaleRatio = (p?.getFloat("scale.$key", 1f) ?: 1f).toDouble().takeIf { it > 0 } ?: 1.0
         version++
     }
 

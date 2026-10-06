@@ -278,6 +278,19 @@ pub fn compose(solid: &Solid, opts: &SheetOptions) -> Sheet {
             right_origin,
         ),
     };
+    // 斜切面：三個標準視圖保持完整，實形剖視圖另外放在右視圖旁邊（第三角在右、第一角在左）。
+    let aux = match (&section, matches!(opts.section, Some(Cut::Oblique { .. }))) {
+        (Some(sv), true) => {
+            let size_x = Placed::from_section(sv, (0.0, 0.0)).size.0;
+            let x = if third {
+                right.origin.0 + right.size.0 + gap
+            } else {
+                right.origin.0 - gap - size_x
+            };
+            Some(Placed::from_section(sv, (x, 0.0)))
+        }
+        _ => None,
+    };
     let iso = opts.include_iso.then(|| {
         let v = project(solid, &Camera::standard(StandardView::Iso));
         Placed::from_view(&v, (w + gap, h + gap))
@@ -286,6 +299,9 @@ pub fn compose(solid: &Solid, opts: &SheetOptions) -> Sheet {
     let mut placed: Vec<&Placed> = vec![&front, &top, &right];
     if let Some(i) = &iso {
         placed.push(i);
+    }
+    if let Some(a) = &aux {
+        placed.push(a);
     }
 
     // 單位座標下的所有線（連同投射線、中心線、剖面位置線）。
@@ -362,8 +378,8 @@ pub fn compose(solid: &Solid, opts: &SheetOptions) -> Sheet {
             strokes.push((Role::CutLine, vec![*a, *b]));
         }
         // 兩端的粗短線，朝觀看方向。
-        if let (Some(first), Some(last), Cut::Path { viewer, .. }) =
-            (clipped.first(), clipped.last(), cut)
+        if let (Some(first), Some(last), Some(viewer)) =
+            (clipped.first(), clipped.last(), cut.trace_viewer())
         {
             let tick = ext * 1.2;
             for p in [first.0, last.1] {
@@ -430,7 +446,7 @@ pub fn compose(solid: &Solid, opts: &SheetOptions) -> Sheet {
     if let (Some(letter), Some(cut)) = (opts.section_label, &opts.section) {
         let th = ext * 1.5;
         let ch = letter.to_string();
-        if let Cut::Path { viewer, .. } = cut {
+        if let Some(viewer) = cut.trace_viewer() {
             let tick = ext * 1.2;
             let (cw, _) = (text_at(&ch, 0.0, 0.0, th).1, 0);
             let lines: Vec<(P2, P2)> = cut
@@ -448,7 +464,9 @@ pub fn compose(solid: &Solid, opts: &SheetOptions) -> Sheet {
                 }
             }
         }
-        let target = if top_is_section {
+        let target = if aux.is_some() {
+            aux.as_ref()
+        } else if top_is_section {
             Some(&top)
         } else if right_is_section {
             Some(&right)
@@ -689,5 +707,31 @@ mod tests {
         assert_eq!(count(&without, Role::Text), 0);
         // 兩端各一個 A（2 條筆畫）＋「A-A」（A 兩條 ×2 ＋ 橫線 1）。
         assert_eq!(count(&with, Role::Text), 2 * 2 + (2 + 1 + 2));
+    }
+
+    #[test]
+    fn an_oblique_section_adds_a_true_shape_view_with_its_label() {
+        let solid = Solid::new(preset("plate_holes", 80.0, 60.0).unwrap(), 20.0);
+        let plain = compose(&solid, &SheetOptions::default());
+        let opts = SheetOptions {
+            section: Some(Cut::oblique(&solid, 0.0, 0.5, 40.0, false)),
+            section_label: Some('A'),
+            ..SheetOptions::default()
+        };
+        let sheet = compose(&solid, &opts);
+        // 三個標準視圖都還在，另外多了一個實形剖視圖：剖面線、剖面位置線與兩端的粗短線都出現。
+        assert!(count(&sheet, Role::Hatch) > 0);
+        assert_eq!(count(&sheet, Role::CutLine), 1);
+        assert_eq!(count(&sheet, Role::CutEnd), 2);
+        assert!(count(&sheet, Role::Visible) > count(&plain, Role::Visible));
+        // 字母 A 兩端各一個 + 剖視圖上方的「A-A」：文字筆畫比沒標字母時多。
+        let unlabeled = compose(
+            &solid,
+            &SheetOptions {
+                section_label: None,
+                ..opts.clone()
+            },
+        );
+        assert!(count(&sheet, Role::Text) > count(&unlabeled, Role::Text));
     }
 }
