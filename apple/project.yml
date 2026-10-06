@@ -11,6 +11,10 @@ targets:
     deploymentTarget: "16.0"
     sources:
       - path: Sources
+        # 舊的擬真筆工具列元件：已被向量圖示取代、沒有任何地方引用，而且少了後來新增的筆（switch 不完整，編譯不過）。
+        # 目前提交的 pbxproj 本來就沒有它；重跑 xcodegen 時明確排除，免得它突然被編進來。
+        excludes:
+          - RealisticPenView.swift
       - path: Examples/HomeWorkbenchUsage.swift
       - path: Generated/padnote_core.swift
       - path: Assets.xcassets
