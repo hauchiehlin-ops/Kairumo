@@ -478,6 +478,14 @@ jobs:
       # 一樣跑得動，只是別的語言看不懂。2026-09-22 盤點時 Apple 端有 59 處。
       - name: 介面上沒有硬寫死的文字
         run: python3 scripts/check-hardcoded-strings.py
+      # 核心（Rust）的診斷訊息與同步日誌是繁體中文；兩個平台在介面邊界依樣式表翻成使用者的語言。
+      # 新增一條 Rust 錯誤訊息或日誌行卻沒補樣式與六語譯文，非繁中使用者看到的就是一句通用錯誤。
+      - name: 字串表產生檔與來源一致
+        run: python3 scripts/i18n_tool.py verify
+      - name: 核心訊息與同步日誌都有六語譯文
+        run: python3 scripts/core_messages.py check
+      - name: 譯文沒有佔位符不一致或混入別種文字
+        run: python3 scripts/i18n_review.py lint
 
       # 主執行緒上的 lstat。
       #

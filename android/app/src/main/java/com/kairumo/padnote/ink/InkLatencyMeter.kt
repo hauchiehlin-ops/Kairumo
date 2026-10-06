@@ -45,6 +45,6 @@ class InkLatencyMeter(private val capacity: Int = 512) {
     fun summaryMs(): String {
         if (samplesUs.isEmpty()) return "—"
         fun ms(us: Long) = String.format("%.1f", us / 1000.0)
-        return "p50 ${ms(percentileUs(50))}ms · p95 ${ms(percentileUs(95))}ms · ${samplesUs.size} 樣本"
+        return com.kairumo.padnote.L10n.f("diag_samples", ms(percentileUs(50)), ms(percentileUs(95)), samplesUs.size)
     }
 }

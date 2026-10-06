@@ -725,7 +725,7 @@ public struct Note3DAttachment: Identifiable, Codable, Hashable, ObjectFrameStyl
     public init(
         id: String = UUID().uuidString,
         pageIndex: Int = 0,
-        title: String = "3D 幾何模型",
+        title: String = L10n.t("model3d_default_title"),
         modelTypeRaw: String = "sphere",
         materialType: MaterialType = .gold,
         rotationX: Float = 0.4,
@@ -817,7 +817,7 @@ public struct NoteTextAttachment: Identifiable, Codable, Hashable, ObjectFrameSt
     public init(
         id: String = UUID().uuidString,
         pageIndex: Int = 0,
-        text: String = "請在此輸入文字...",
+        text: String = L10n.t("text_default_content"),
         fontSize: CGFloat = 16,
         isBold: Bool = false,
         isItalic: Bool = false,
@@ -1468,7 +1468,8 @@ public final class NotebookStore: ObservableObject {
     private static let legacySeedTitles: [String: (title: String, snippet: String)] = [
         LocalizationManager.shared.localized("sample_welcome"): ("seed_welcome_title", "seed_welcome_snippet"),
         "课堂与会议记录": ("seed_meeting_title", "seed_meeting_snippet"),
-        LocalizationManager.shared.localized("sample_lectures"): ("seed_meeting_title", "seed_meeting_snippet")
+        LocalizationManager.shared.localized("sample_lectures"): ("seed_meeting_title", "seed_meeting_snippet"),
+        SeedContent.kairumoManualTitle: ("seed_manual_title", "seed_manual_snippet")
     ]
 
     private func migrateSeedTitles(_ doc: NotebookDocument) -> NotebookDocument {
@@ -1703,7 +1704,7 @@ public final class NotebookStore: ObservableObject {
         guard let grant = await SyncGateQueue.enter(label: "storage-location") else {
             throw NSError(
                 domain: "Kairumo.StorageLocation", code: 1,
-                userInfo: [NSLocalizedDescriptionKey: "A sync operation is still running. Please try again after it finishes."])
+                userInfo: [NSLocalizedDescriptionKey: L10n.t("storage_sync_running")])
         }
         defer { _ = syncGateLeave(ticket: grant.ticket) }
 
@@ -1768,7 +1769,7 @@ public final class NotebookStore: ObservableObject {
         guard let grant = await SyncGateQueue.enter(label: "reset-local-data") else {
             throw NSError(
                 domain: "Kairumo.ResetLocalData", code: 2,
-                userInfo: [NSLocalizedDescriptionKey: "A sync operation is still running. Please try again after it finishes."])
+                userInfo: [NSLocalizedDescriptionKey: L10n.t("storage_sync_running")])
         }
         defer { _ = syncGateLeave(ticket: grant.ticket) }
 
@@ -1994,7 +1995,7 @@ public final class NotebookStore: ObservableObject {
     private static let manualSeededKey = "seed.kairumoManual.added"
 
     private static func makeKairumoManual() -> NotebookDocument {
-        NotebookDocument(
+        var manual = NotebookDocument(
             id: SeedContent.kairumoManualId,
             title: SeedContent.kairumoManualTitle,
             createdAt: Date().addingTimeInterval(-600),
@@ -2004,6 +2005,10 @@ public final class NotebookStore: ObservableObject {
             previewSnippet: "Kairumo 優勢：結構化、視覺化、多語言 —— 全部手繪",
             template: .blank
         )
+        // 標題與摘要跟著介面語言走（使用者改名後這個標記就會清掉）。
+        manual.titleKey = "seed_manual_title"
+        manual.snippetKey = "seed_manual_snippet"
+        return manual
     }
 
     // MARK: - 筆記操作 CRUD
@@ -2385,7 +2390,7 @@ public final class NotebookStore: ObservableObject {
 
     @discardableResult
     public func createFolder(name: String, parentId: String? = nil, colorHex: String? = nil) -> FolderItem {
-        let cleanName = name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "新增資料夾" : name
+        let cleanName = name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? L10n.t("folder_new_default") : name
         let folder = FolderItem(name: cleanName, parentId: parentId, colorHex: colorHex)
         folders.append(folder)
         AccountSyncStore.shared.record(
@@ -3039,7 +3044,7 @@ public final class NotebookStore: ObservableObject {
 
     @discardableResult
     public func addRecording(title: String, durationSeconds: Int, fileName: String, linkedNotebookId: String? = nil) -> AudioRecordingRecord {
-        let safeTitle = title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "語音錄音" : title
+        let safeTitle = title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? L10n.t("recording_default_title") : title
         let rec = AudioRecordingRecord(
             title: safeTitle,
             durationSeconds: durationSeconds,

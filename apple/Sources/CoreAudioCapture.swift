@@ -118,7 +118,7 @@ private final class CoreAudioPipeline: @unchecked Sendable {
             return buffer
         }
         if let error = error {
-            onError?("音訊轉換失敗：\(error.localizedDescription)")
+            onError?(L10n.f("rec_err_convert", L10n.errorText(error)))
             return
         }
         guard out.frameLength > 0, let channel = out.floatChannelData?[0] else { return }
@@ -127,7 +127,7 @@ private final class CoreAudioPipeline: @unchecked Sendable {
             _ = try session.feedAudio(pcm16kMono: samples)
             session.advanceTime(notebookTimeUs: session.recordedAudioUs())
         } catch {
-            onError?("餵音訊失敗：\(error)")
+            onError?(L10n.f("rec_err_feed", "\(error)"))
         }
     }
 }
@@ -230,7 +230,7 @@ final class CoreAudioCapture {
 
         #if os(iOS) || targetEnvironment(macCatalyst)
         if !AVAudioSession.sharedInstance().isInputAvailable || AVAudioSession.sharedInstance().inputNumberOfChannels == 0 {
-            onError?("裝置未連接麥克風或無可用音訊輸入設備")
+            onError?(L10n.t("rec_err_no_mic"))
             stop()
             return nil
         }
@@ -239,7 +239,7 @@ final class CoreAudioCapture {
         let hwFormat = input.inputFormat(forBus: 0)
         let outFormat = input.outputFormat(forBus: 0)
         if hwFormat.channelCount == 0 && outFormat.channelCount == 0 {
-            onError?("音訊輸入節點無可用聲道，請確認麥克風連線與系統權限")
+            onError?(L10n.t("rec_err_no_channels"))
             stop()
             return nil
         }
@@ -251,7 +251,7 @@ final class CoreAudioCapture {
 
         // 取樣率或聲道為 0 表示麥克風硬體不可用（權限沒過、無輸入設備、或被別的 App 佔用）。
         guard chosenFormat.sampleRate > 0 && chosenFormat.channelCount > 0 else {
-            onError?("麥克風尚未就緒（取樣率: \(chosenFormat.sampleRate), 聲道: \(chosenFormat.channelCount)）")
+            onError?(L10n.f("rec_err_not_ready", chosenFormat.sampleRate, chosenFormat.channelCount))
             stop()
             return nil
         }
@@ -260,7 +260,7 @@ final class CoreAudioCapture {
         do {
             recordingId = try session.startRecording()
         } catch {
-            onError?("核心無法開始錄音：\(error)")
+            onError?(L10n.f("rec_err_core_start", "\(error)"))
             stop()
             return nil
         }
@@ -277,7 +277,7 @@ final class CoreAudioCapture {
             newEngine.prepare()
             try newEngine.start()
         } catch {
-            onError?("音訊引擎啟動失敗：\(error)")
+            onError?(L10n.f("rec_err_engine_start", "\(error)"))
             stop()
             return nil
         }

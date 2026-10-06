@@ -202,7 +202,7 @@ final class DriveHttpClient: FfiDriveHttp {
         guard let location = headers["Location"] as? String
             ?? headers["location"] as? String
         else {
-            throw FfiDriveError.Backend(detail: "可續傳上傳沒有回傳 Location")
+            throw FfiDriveError.Backend(detail: L10n.t("drive_resume_no_location"))
         }
         return location
     }
@@ -242,7 +242,7 @@ final class DriveHttpClient: FfiDriveHttp {
         timeout: TimeInterval = DriveHttpClient.requestTimeout
     ) throws -> (Data, HTTPURLResponse) {
         if Self.isCancellationRequested {
-            throw FfiDriveError.Backend(detail: "使用者中斷同步")
+            throw FfiDriveError.Backend(detail: L10n.t("drive_user_cancelled"))
         }
         let semaphore = DispatchSemaphore(value: 0)
         var payload = Data()
@@ -259,13 +259,13 @@ final class DriveHttpClient: FfiDriveHttp {
         if semaphore.wait(timeout: .now() + timeout) == .timedOut {
             task.cancel()
             if Self.isCancellationRequested {
-                throw FfiDriveError.Backend(detail: "使用者中斷同步")
+                throw FfiDriveError.Backend(detail: L10n.t("drive_user_cancelled"))
             }
             throw FfiDriveError.Backend(detail: "request_timeout")
         }
         if let err = transportError {
             if Self.isCancellationRequested || (err as NSError).code == NSURLErrorCancelled {
-                throw FfiDriveError.Backend(detail: "使用者中斷同步")
+                throw FfiDriveError.Backend(detail: L10n.t("drive_user_cancelled"))
             }
             throw FfiDriveError.Backend(detail: err.localizedDescription)
         }
@@ -324,9 +324,9 @@ final class DriveHttpClient: FfiDriveHttp {
             guard let newToken = outcome.token else {
                 if outcome.fatal {
                     GoogleAuth.shared.markNeedsReauthSync()
-                    throw FfiDriveError.PermissionDenied(detail: "Google 帳號憑證已失效或過期，請重新登入 (HTTP 401)")
+                    throw FfiDriveError.PermissionDenied(detail: L10n.t("drive_auth_expired"))
                 }
-                throw FfiDriveError.Backend(detail: "暫時無法更新 Google 憑證（網路不通？），稍後重試")
+                throw FfiDriveError.Backend(detail: L10n.t("drive_cred_refresh_failed"))
             }
             self.accessToken = newToken
             var retryRequest = base
@@ -370,10 +370,10 @@ final class DriveHttpClient: FfiDriveHttp {
 
     static func classify(status: Int, path: String, detail: String) -> FfiDriveError {
         switch status {
-        case 401: return .PermissionDenied(detail: "Google 帳號憑證已失效或過期，請重新登入 (HTTP 401)")
+        case 401: return .PermissionDenied(detail: L10n.t("drive_auth_expired"))
         case 403 where rateLimitReasons.contains(where: detail.contains):
-            return .Backend(detail: "Drive 速率限制（HTTP 403），稍後重試")
-        case 403: return .PermissionDenied(detail: "Google 帳號權限不足 (HTTP 403)")
+            return .Backend(detail: L10n.t("drive_rate_limited"))
+        case 403: return .PermissionDenied(detail: L10n.t("drive_permission_denied"))
         case 404: return .NotFound(path: path)
         default: return .Backend(detail: "HTTP \(status) \(detail)")
         }

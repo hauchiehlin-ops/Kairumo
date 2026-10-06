@@ -181,7 +181,7 @@ enum CloudSyncFolder {
         do {
             try fm.createDirectory(at: remotePackage, withIntermediateDirectories: true)
         } catch {
-            result.failures["<資料夾>"] = error.localizedDescription
+            result.failures[L10n.t("sync_folder_placeholder")] = L10n.errorText(error)
             return result
         }
 
@@ -231,9 +231,9 @@ enum CloudSyncFolder {
             if uploading { result.uploaded.append(relative) } else { result.downloaded.append(relative) }
         } catch {
             if fm.fileExists(atPath: placeholder.path) {
-                result.failures[relative] = "檔案正在從 iCloud 雲端下載中，請稍候重試"
+                result.failures[relative] = L10n.t("sync_fail_file_downloading")
             } else {
-                result.failures[relative] = error.localizedDescription
+                result.failures[relative] = L10n.errorText(error)
             }
         }
     }
@@ -267,7 +267,7 @@ enum CloudSyncFolder {
                     deleted += 1
                 } catch {
                     failed += 1
-                    if firstError.isEmpty { firstError = error.localizedDescription }
+                    if firstError.isEmpty { firstError = L10n.errorText(error) }
                 }
             }
             

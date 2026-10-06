@@ -380,7 +380,7 @@ public final class LocalRelayServer {
 
         public var errorDescription: String? {
             switch self {
-            case .invalidPort(let p): return "無效的埠號 \(p)"
+            case .invalidPort(let p): return L10n.f("relay_invalid_port", p)
             }
         }
     }

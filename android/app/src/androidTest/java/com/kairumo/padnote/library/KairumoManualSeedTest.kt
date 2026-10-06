@@ -46,6 +46,44 @@ class KairumoManualSeedTest {
         }
     }
 
+    /**
+     * 英／日／韓／泰：同一套手繪插圖＋該語言排版的文字方塊。手寫只有中文（筆順資料只有漢字）。
+     * 這裡守兩件事：每一頁都有文字方塊、而且手冊名稱是該語言的（不再是固定的中文）。
+     */
+    @Test
+    fun simplifiedChineseGetsAHandwrittenManualToo() {
+        SeedNotebooks.seedIfEmpty(context, device, "zh-Hans")
+        val entry = NotebookLibrary.all(context, device).firstOrNull { it.title == "Kairumo手册" }
+        assertNotNull(entry)
+        val (session, _) = NotebookLibrary.open(context, entry!!.id, device)!!
+        assertEquals(4, session.pageCount().toInt())
+        for (index in 0 until 4) {
+            val page = session.pageIdAt(index.toUInt())!!
+            assertTrue("第 ${index + 1} 頁的筆畫太少", session.visibleStrokes(page).size > 100)
+            assertTrue("簡中版是全手寫，不該有文字方塊", session.textBlockIds(page).isEmpty())
+        }
+    }
+
+    @Test
+    fun otherLanguagesGetTheSameIllustrationsWithTypedText() {
+        for ((tag, title) in listOf(
+            "en" to "Kairumo Manual", "ja" to "Kairumo マニュアル",
+            "ko" to "Kairumo 매뉴얼", "th" to "คู่มือ Kairumo",
+        )) {
+            clean()
+            SeedNotebooks.seedIfEmpty(context, device, tag)
+            val entry = NotebookLibrary.all(context, device).firstOrNull { it.title == title }
+            assertNotNull("$tag：找不到名為「$title」的手冊", entry)
+            val (session, _) = NotebookLibrary.open(context, entry!!.id, device)!!
+            assertEquals(4, session.pageCount().toInt())
+            for (index in 0 until 4) {
+                val page = session.pageIdAt(index.toUInt())!!
+                assertTrue("$tag 第 ${index + 1} 頁的插圖筆畫太少", session.visibleStrokes(page).size > 50)
+                assertTrue("$tag 第 ${index + 1} 頁沒有文字方塊", session.textBlockIds(page).isNotEmpty())
+            }
+        }
+    }
+
     @Test
     fun theStrokeDataLicenceTravelsWithTheApp() {
         // 筆順資料來自 Arphic 字型（Arphic Public License）：授權全文要隨 App 一起散布。

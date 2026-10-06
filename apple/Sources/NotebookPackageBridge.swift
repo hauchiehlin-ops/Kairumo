@@ -574,7 +574,7 @@ enum NotebookPackageBridge {
         // 就是別台寫的 —— 匯出時不重寫（重寫會讓文字內容變兩份、物件數量依費氏數列增生）。
         // 讀不到就中止這次匯出：照舊寫的話會把別台的內容再複製一份，比這本筆記這一輪不同步更糟。
         guard let foreign = foreignBlocks(in: destination, deviceId: deviceId) else {
-            throw BridgeError.coreRejected("無法讀取其他裝置寫的內容")
+            throw BridgeError.coreRejected(L10n.t("bridge_err_read_other"))
         }
 
         let summary = try export(
@@ -590,7 +590,7 @@ enum NotebookPackageBridge {
             _ = try carryOverRecordingOps(
                 oldPackagePath: destination.path, newPackagePath: fresh.path, deviceId: deviceId)
         } catch {
-            throw BridgeError.coreRejected("無法保留錄音與轉錄內容：\(error)")
+            throw BridgeError.coreRejected(L10n.f("bridge_err_keep_audio", "\(error)"))
         }
 
         let suffix = deviceSuffix(deviceId)

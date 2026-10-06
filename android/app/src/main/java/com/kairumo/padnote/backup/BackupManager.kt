@@ -106,7 +106,7 @@ object BackupManager {
     fun stage(context: Context, uri: Uri): File {
         val staged = File(backupsDir(context), "incoming-${System.nanoTime()}.$FILE_EXTENSION")
         context.contentResolver.openInputStream(uri).use { input ->
-            requireNotNull(input) { "無法讀取選取的檔案" }
+            requireNotNull(input) { com.kairumo.padnote.L10n.t("backup_err_read_file") }
             staged.outputStream().use { input.copyTo(it) }
         }
         return staged

@@ -103,7 +103,7 @@ final class SystemLanguageBackend: FfiLlm, @unchecked Sendable {
             case .failure(let error):
                 throw FfiLlmError.Backend(detail: error.localizedDescription)
             case .none:
-                throw FfiLlmError.Backend(detail: "沒有回應")
+                throw FfiLlmError.Backend(detail: L10n.t("llm_no_response"))
             }
         }
         throw FfiLlmError.ModelNotLoaded

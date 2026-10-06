@@ -274,8 +274,8 @@ public struct DocumentViewerSheet: View {
                         Link(destination: onlineURL) {
                             Image(systemName: "safari")
                         }
-                        .help("Open in Browser")
-                        .accessibilityLabel("Open in Browser")
+                        .help(localizationManager.localized("open_in_browser"))
+                        .accessibilityLabel(localizationManager.localized("open_in_browser"))
                     }
                 }
                 ToolbarItem(placement: .confirmationAction) {

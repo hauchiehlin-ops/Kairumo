@@ -2,6 +2,7 @@ package com.kairumo.padnote.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import com.kairumo.padnote.L10n
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -157,7 +158,11 @@ fun SyncLogCard(
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Text(
-                                text = entry.source.rawValue,
+                                text = when (entry.source) {
+                                    SyncSource.GOOGLE_DRIVE -> "Google Drive"
+                                    SyncSource.FOLDER -> L10n.t("folder_name")
+                                    SyncSource.GENERAL -> L10n.t("hw_system")
+                                },
                                 fontSize = 8.sp,
                                 fontFamily = FontFamily.Monospace,
                                 fontWeight = FontWeight.Bold,
@@ -169,7 +174,7 @@ fun SyncLogCard(
                             )
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
-                                text = entry.message,
+                                text = L10n.logText(entry.message),
                                 fontSize = 10.sp,
                                 fontFamily = FontFamily.Monospace,
                                 color = MaterialTheme.colorScheme.onSurface,

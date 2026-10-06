@@ -166,7 +166,7 @@ public enum HandwritingRecognizer {
         languageTag: String
     ) async -> Result<String, Failure> {
         guard let cgImage = image.cgImage else {
-            return .failure(.recognitionFailed("無法取得點陣圖"))
+            return .failure(.recognitionFailed(L10n.t("handwriting_err_bitmap")))
         }
 
         return await withCheckedContinuation { continuation in

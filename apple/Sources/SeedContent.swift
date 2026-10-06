@@ -292,14 +292,19 @@ enum SeedContent {
     static let kairumoManualId = "seed-kairumo-manual-v1"
     static let kairumoManualTitle = "Kairumo手冊"
 
-    /// 手冊每一頁的筆畫。讀不到資源就回空陣列（筆記本仍然建立，只是空白）。
-    static func kairumoManualDrawings() -> [PKDrawing] {
-        guard let url = Bundle.main.url(forResource: "kairumo-manual-ink", withExtension: "json", subdirectory: "Templates")
-            ?? Bundle.main.url(forResource: "kairumo-manual-ink", withExtension: "json"),
+    /// 讀手冊的 JSON 資源（`Resources/Templates` 或 bundle 根目錄）。
+    private static func manualJSON(_ name: String) -> [String: Any]? {
+        guard let url = Bundle.main.url(forResource: name, withExtension: "json", subdirectory: "Templates")
+            ?? Bundle.main.url(forResource: name, withExtension: "json"),
               let data = try? Data(contentsOf: url),
-              let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let pages = root["pages"] as? [[String: Any]]
-        else { return [] }
+              let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+        else { return nil }
+        return root
+    }
+
+    /// 把 JSON 的每一頁筆畫變成 `PKDrawing`。
+    private static func manualDrawings(from root: [String: Any]) -> [PKDrawing] {
+        guard let pages = root["pages"] as? [[String: Any]] else { return [] }
         return pages.map { page in
             var strokes: [PKStroke] = []
             for raw in (page["strokes"] as? [[String: Any]]) ?? [] {
@@ -315,6 +320,44 @@ enum SeedContent {
             }
             return PKDrawing(strokes: strokes)
         }
+    }
+
+    /// 手冊每一頁的筆畫（繁體中文版：標題與內文都是手寫）。讀不到資源就回空陣列
+    /// （筆記本仍然建立，只是空白）。
+    static func kairumoManualDrawings(language: AppLanguage = .zhHant) -> [PKDrawing] {
+        manualDrawings(from: manualJSON(language == .zhHans ? "kairumo-manual-ink-zhHans" : "kairumo-manual-ink") ?? [:])
+    }
+
+    /// 英／日／韓／泰的手冊：同一套手繪插圖＋該語言排版的文字方塊（`kairumo-manual-typed.json`）。
+    ///
+    /// 手寫只有繁體與簡體中文：筆順資料只有漢字，沒有假名、諺文、泰文。位置與繁中版的手寫字一一對應。
+    static func kairumoManualTyped(language: AppLanguage) -> (drawings: [PKDrawing], texts: [NoteTextAttachment])? {
+        guard let root = manualJSON("kairumo-manual-typed"),
+              let all = root["texts"] as? [String: Any],
+              let perPage = all[language.rawValue] as? [[[String: Any]]]
+        else { return nil }
+        var texts: [NoteTextAttachment] = []
+        for (pageIndex, boxes) in perPage.enumerated() {
+            for b in boxes {
+                guard let text = b["text"] as? String,
+                      let x = (b["x"] as? NSNumber)?.doubleValue, let y = (b["y"] as? NSNumber)?.doubleValue,
+                      let w = (b["w"] as? NSNumber)?.doubleValue, let h = (b["h"] as? NSNumber)?.doubleValue,
+                      let size = (b["size"] as? NSNumber)?.doubleValue
+                else { continue }
+                texts.append(NoteTextAttachment(
+                    pageIndex: pageIndex,
+                    text: text,
+                    fontSize: CGFloat(size),
+                    isBold: (b["bold"] as? Bool) ?? false,
+                    alignmentRaw: (b["align"] as? String) ?? "left",
+                    textColorHex: (b["color"] as? String) ?? "#2D3748",
+                    backgroundColorHex: "clear",
+                    hasBorder: false,
+                    x: CGFloat(x), y: CGFloat(y), width: CGFloat(w), height: CGFloat(h)
+                ))
+            }
+        }
+        return (manualDrawings(from: root), texts)
     }
 
     /// 起筆與收筆輕、中段重 —— 手寫的筆壓，不是等粗的線。
@@ -335,8 +378,15 @@ enum SeedContent {
     }
 
     /// 填進《Kairumo手冊》。
+    ///
+    /// 繁體與簡體中文是手寫版；其他語言是同一套插圖＋排版文字（見 `kairumoManualTyped`）。
     static func fillKairumoManual(_ doc: inout NotebookDocument, store: NotebookStore? = nil) {
-        let drawings = kairumoManualDrawings()
+        let language = LocalizationManager.snapshotLanguage
+        var drawings = kairumoManualDrawings(language: language)
+        if language != .zhHant, language != .zhHans, let typed = kairumoManualTyped(language: language) {
+            drawings = typed.drawings
+            doc.textAttachments = typed.texts
+        }
         ensurePages(&doc, count: max(2, drawings.count))
         for (index, drawing) in drawings.enumerated() where index < doc.pagesData.count {
             doc.pagesData[index] = drawing.dataRepresentation()
@@ -471,10 +521,10 @@ enum SeedContent {
 
         // 底部品質徽章
         let pillY0: CGFloat = 825
-        shapes.append(pillShape("100% 完全開源免費", page: 0, x: margin, y: pillY0, fill: "#EBF8FF", stroke: "#3182CE"))
-        shapes.append(pillShape("零廣告無廠商鎖定", page: 0, x: margin + 175, y: pillY0, fill: "#F0FFF4", stroke: "#38A169"))
-        shapes.append(pillShape("次世代多維思考架構", page: 0, x: margin + 350, y: pillY0, fill: "#FAF5FF", stroke: "#805AD5"))
-        shapes.append(pillShape("原生高效向量核心", page: 0, x: margin + 525, y: pillY0, fill: "#FFFAF0", stroke: "#DD6B20"))
+        shapes.append(pillShape(L10n.t("seed_pill_01"), page: 0, x: margin, y: pillY0, fill: "#EBF8FF", stroke: "#3182CE"))
+        shapes.append(pillShape(L10n.t("seed_pill_02"), page: 0, x: margin + 175, y: pillY0, fill: "#F0FFF4", stroke: "#38A169"))
+        shapes.append(pillShape(L10n.t("seed_pill_03"), page: 0, x: margin + 350, y: pillY0, fill: "#FAF5FF", stroke: "#805AD5"))
+        shapes.append(pillShape(L10n.t("seed_pill_04"), page: 0, x: margin + 525, y: pillY0, fill: "#FFFAF0", stroke: "#DD6B20"))
 
 
         // =========================================================================
@@ -589,10 +639,10 @@ enum SeedContent {
 
         // 底部手繪筆刷徽章
         let pillY1: CGFloat = 825
-        shapes.append(pillShape("16 種物理級筆刷", page: 1, x: margin, y: pillY1, fill: "#EBF8FF", stroke: "#3182CE"))
-        shapes.append(pillShape("真實壓感與毛筆提按", page: 1, x: margin + 175, y: pillY1, fill: "#F0FFF4", stroke: "#38A169"))
-        shapes.append(pillShape("互動考點遮蔽膠帶", page: 1, x: margin + 350, y: pillY1, fill: "#FFFFF0", stroke: "#D69E2E"))
-        shapes.append(pillShape("尺規與套索精準幾何", page: 1, x: margin + 525, y: pillY1, fill: "#FAF5FF", stroke: "#805AD5"))
+        shapes.append(pillShape(L10n.t("seed_pill_05"), page: 1, x: margin, y: pillY1, fill: "#EBF8FF", stroke: "#3182CE"))
+        shapes.append(pillShape(L10n.t("seed_pill_06"), page: 1, x: margin + 175, y: pillY1, fill: "#F0FFF4", stroke: "#38A169"))
+        shapes.append(pillShape(L10n.t("seed_pill_07"), page: 1, x: margin + 350, y: pillY1, fill: "#FFFFF0", stroke: "#D69E2E"))
+        shapes.append(pillShape(L10n.t("seed_pill_08"), page: 1, x: margin + 525, y: pillY1, fill: "#FAF5FF", stroke: "#805AD5"))
 
 
         // =========================================================================
@@ -786,10 +836,10 @@ enum SeedContent {
 
         // 底部排版模式徽章
         let pillY2: CGFloat = 825
-        shapes.append(pillShape("桌面級專業排版", page: 2, x: margin, y: pillY2, fill: "#EBF8FF", stroke: "#3182CE"))
-        shapes.append(pillShape("原生高格自適應表", page: 2, x: margin + 175, y: pillY2, fill: "#F0FFF4", stroke: "#38A169"))
-        shapes.append(pillShape("智慧拓撲流程圖", page: 2, x: margin + 350, y: pillY2, fill: "#FAF5FF", stroke: "#805AD5"))
-        shapes.append(pillShape("3D 與音訊多媒體", page: 2, x: margin + 525, y: pillY2, fill: "#FFFAF0", stroke: "#DD6B20"))
+        shapes.append(pillShape(L10n.t("seed_pill_09"), page: 2, x: margin, y: pillY2, fill: "#EBF8FF", stroke: "#3182CE"))
+        shapes.append(pillShape(L10n.t("seed_pill_10"), page: 2, x: margin + 175, y: pillY2, fill: "#F0FFF4", stroke: "#38A169"))
+        shapes.append(pillShape(L10n.t("seed_pill_11"), page: 2, x: margin + 350, y: pillY2, fill: "#FAF5FF", stroke: "#805AD5"))
+        shapes.append(pillShape(L10n.t("seed_pill_12"), page: 2, x: margin + 525, y: pillY2, fill: "#FFFAF0", stroke: "#DD6B20"))
 
 
         // =========================================================================
@@ -980,10 +1030,10 @@ enum SeedContent {
 
         // 底部亮點膠囊
         let pillY3: CGFloat = 825
-        shapes.append(pillShape("STEM 微積分深度解析", page: 3, x: margin, y: pillY3, fill: "#FAF5FF", stroke: "#805AD5"))
-        shapes.append(pillShape("動態可編修圖表工坊", page: 3, x: margin + 175, y: pillY3, fill: "#EBF8FF", stroke: "#3182CE"))
-        shapes.append(pillShape("空間討論圖釘協作", page: 3, x: margin + 350, y: pillY3, fill: "#F0FFF4", stroke: "#38A169"))
-        shapes.append(pillShape("終極無界數位紙張", page: 3, x: margin + 525, y: pillY3, fill: "#FFFAF0", stroke: "#DD6B20"))
+        shapes.append(pillShape(L10n.t("seed_pill_13"), page: 3, x: margin, y: pillY3, fill: "#FAF5FF", stroke: "#805AD5"))
+        shapes.append(pillShape(L10n.t("seed_pill_14"), page: 3, x: margin + 175, y: pillY3, fill: "#EBF8FF", stroke: "#3182CE"))
+        shapes.append(pillShape(L10n.t("seed_pill_15"), page: 3, x: margin + 350, y: pillY3, fill: "#F0FFF4", stroke: "#38A169"))
+        shapes.append(pillShape(L10n.t("seed_pill_16"), page: 3, x: margin + 525, y: pillY3, fill: "#FFFAF0", stroke: "#DD6B20"))
 
         // 組裝進 document
         doc.textAttachments = texts
@@ -1117,7 +1167,7 @@ enum SeedContent {
         var spec = ChartSpec()
         spec.kind = .bar
         spec.title = l("sample_showcase_chart_spec_title")
-        spec.categories = ["向量書寫延遲", "圖表動態可編修", "空間圖釘協作", "開源與無訂閱限制"]
+        spec.categories = (1...4).map { L10n.t("seed_chart_cat_\($0)") }
         var seriesKairumo = ChartSeries(
             name: "Kairumo (Padnote)",
             values: [98, 95, 96, 100],

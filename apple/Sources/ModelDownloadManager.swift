@@ -52,7 +52,7 @@ final class ModelRangeFetcher: FfiModelFetcher {
     /// 轉成同步。絕對不要從主執行緒進來。
     func fetch(url: String, from: UInt64) throws -> Data {
         guard let target = URL(string: url) else {
-            throw FfiModelError.Network(detail: "網址無效：\(url)")
+            throw FfiModelError.Network(detail: L10n.f("model_dl_bad_url", "\(url)"))
         }
         var request = URLRequest(url: target)
         let upper = from + UInt64(Self.chunkBytes) - 1
@@ -68,7 +68,7 @@ final class ModelRangeFetcher: FfiModelFetcher {
                 return
             }
             guard let http = response as? HTTPURLResponse else {
-                failure = FfiModelError.Network(detail: "沒有 HTTP 回應")
+                failure = FfiModelError.Network(detail: L10n.t("model_dl_no_response"))
                 return
             }
             // 206 是我們要的（部分內容）；200 表示伺服器忽略了 Range，

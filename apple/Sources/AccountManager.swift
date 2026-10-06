@@ -187,7 +187,7 @@ public struct AccountProfileSheet: View {
                     HStack {
                         Text(localizationManager.localized("storage_location"))
                         Spacer()
-                        Text("Documents / Kairumo Record")
+                        Text("Documents / Kairumo Record") // i18n-ok: 檔案系統路徑，不是文字
                             .foregroundColor(.secondary)
                             .font(.caption)
                     }

@@ -63,6 +63,22 @@ extension LocalizationManager {
             .ko: "Kairumo 정보",
             .th: "เกี่ยวกับ Kairumo"
         ],
+        "about_license": [
+            .zhHant: "授權",
+            .en: "License",
+            .zhHans: "授权",
+            .ja: "ライセンス",
+            .ko: "라이선스",
+            .th: "สัญญาอนุญาต"
+        ],
+        "about_stack": [
+            .zhHant: "技術架構",
+            .en: "Stack",
+            .zhHans: "技术架构",
+            .ja: "技術スタック",
+            .ko: "기술 스택",
+            .th: "สแตกเทคโนโลยี"
+        ],
         "account_settings": [
             .zhHant: "使用者帳號與設定",
             .en: "Account & Settings",
@@ -542,6 +558,118 @@ extension LocalizationManager {
             .ja: "オフライン Whisper モデルをダウンロード（574 MB）",
             .ko: "오프라인 Whisper 모델 다운로드(574 MB)",
             .th: "ดาวน์โหลดโมเดล Whisper ออฟไลน์ (574 MB)"
+        ],
+        "asr_err_buffer": [
+            .zhHant: "無法配置音訊緩衝區",
+            .en: "Could not allocate the audio buffer",
+            .zhHans: "无法分配音频缓冲区",
+            .ja: "音声バッファを確保できませんでした",
+            .ko: "오디오 버퍼를 할당할 수 없습니다",
+            .th: "จัดสรรบัฟเฟอร์เสียงไม่ได้"
+        ],
+        "asr_err_converter": [
+            .zhHant: "無法建立音訊格式轉換器",
+            .en: "Could not create the audio converter",
+            .zhHans: "无法创建音频格式转换器",
+            .ja: "音声フォーマット変換器を作成できませんでした",
+            .ko: "오디오 형식 변환기를 만들 수 없습니다",
+            .th: "สร้างตัวแปลงรูปแบบเสียงไม่ได้"
+        ],
+        "asr_err_decoder": [
+            .zhHant: "無法啟動音訊解碼器",
+            .en: "Could not start the audio decoder",
+            .zhHans: "无法启动音频解码器",
+            .ja: "音声デコーダを起動できませんでした",
+            .ko: "오디오 디코더를 시작할 수 없습니다",
+            .th: "เริ่มตัวถอดรหัสเสียงไม่ได้"
+        ],
+        "asr_err_file_missing": [
+            .zhHant: "音訊檔案不存在：%@",
+            .en: "The audio file does not exist: %@",
+            .zhHans: "音频文件不存在：%@",
+            .ja: "音声ファイルが存在しません：%@",
+            .ko: "오디오 파일이 없습니다: %@",
+            .th: "ไม่พบไฟล์เสียง: %@"
+        ],
+        "asr_err_format_init": [
+            .zhHant: "無法初始化 16kHz 目標格式",
+            .en: "Could not set up the 16 kHz target format",
+            .zhHans: "无法初始化 16kHz 目标格式",
+            .ja: "16kHz の出力形式を初期化できませんでした",
+            .ko: "16kHz 대상 형식을 초기화할 수 없습니다",
+            .th: "ตั้งค่ารูปแบบเป้าหมาย 16kHz ไม่ได้"
+        ],
+        "asr_err_locale_unavailable": [
+            .zhHant: "目前語系不支援語音辨識",
+            .en: "Speech recognition isn't available for the current language",
+            .zhHans: "当前语言不支持语音识别",
+            .ja: "現在の言語では音声認識を利用できません",
+            .ko: "현재 언어에서는 음성 인식을 사용할 수 없습니다",
+            .th: "ไม่รองรับการรู้จำเสียงสำหรับภาษาปัจจุบัน"
+        ],
+        "asr_err_model_size": [
+            .zhHant: "模型檔案大小異常（僅 %@ MB），請確認選取的是完整的 Whisper ggml 權重檔",
+            .en: "The model file is unexpectedly small (only %@ MB). Make sure you selected the complete Whisper ggml weights file.",
+            .zhHans: "模型文件大小异常（仅 %@ MB），请确认选取的是完整的 Whisper ggml 权重文件",
+            .ja: "モデルファイルのサイズが異常です（%@ MB のみ）。完全な Whisper ggml 重みファイルを選択してください。",
+            .ko: "모델 파일 크기가 비정상적입니다 (%@ MB뿐). 완전한 Whisper ggml 가중치 파일을 선택했는지 확인하세요.",
+            .th: "ขนาดไฟล์โมเดลผิดปกติ (เพียง %@ MB) โปรดตรวจสอบว่าเลือกไฟล์น้ำหนัก Whisper ggml ที่สมบูรณ์"
+        ],
+        "asr_err_no_result": [
+            .zhHant: "轉錄無結果",
+            .en: "The transcription returned no result",
+            .zhHans: "转录无结果",
+            .ja: "文字起こしの結果がありません",
+            .ko: "받아쓰기 결과가 없습니다",
+            .th: "การถอดเสียงไม่มีผลลัพธ์"
+        ],
+        "asr_err_no_track": [
+            .zhHant: "找不到音訊軌道",
+            .en: "No audio track found",
+            .zhHans: "找不到音频轨道",
+            .ja: "音声トラックが見つかりません",
+            .ko: "오디오 트랙을 찾을 수 없습니다",
+            .th: "ไม่พบแทร็กเสียง"
+        ],
+        "asr_err_output_buffer": [
+            .zhHant: "無法配置輸出音訊緩衝區",
+            .en: "Could not allocate the output audio buffer",
+            .zhHans: "无法分配输出音频缓冲区",
+            .ja: "出力用の音声バッファを確保できませんでした",
+            .ko: "출력 오디오 버퍼를 할당할 수 없습니다",
+            .th: "จัดสรรบัฟเฟอร์เสียงขาออกไม่ได้"
+        ],
+        "asr_err_permission": [
+            .zhHant: "語音辨識權限被拒絕",
+            .en: "Speech recognition permission was denied",
+            .zhHans: "语音识别权限被拒绝",
+            .ja: "音声認識の権限が拒否されました",
+            .ko: "음성 인식 권한이 거부되었습니다",
+            .th: "สิทธิ์การรู้จำเสียงถูกปฏิเสธ"
+        ],
+        "asr_err_timeout": [
+            .zhHant: "語音辨識超時（15 秒）。請檢查網路連線或系統聽寫模型。",
+            .en: "Speech recognition timed out (15 s). Check your connection or the system dictation model.",
+            .zhHans: "语音识别超时（15 秒）。请检查网络连接或系统听写模型。",
+            .ja: "音声認識がタイムアウトしました（15 秒）。ネットワーク接続またはシステムの音声入力モデルを確認してください。",
+            .ko: "음성 인식 시간이 초과되었습니다 (15초). 네트워크 연결 또는 시스템 받아쓰기 모델을 확인하세요.",
+            .th: "การรู้จำเสียงหมดเวลา (15 วินาที) โปรดตรวจสอบการเชื่อมต่อหรือโมเดลการสั่งงานด้วยเสียงของระบบ"
+        ],
+        "asr_err_unavailable": [
+            .zhHant: "語音辨識目前無法使用",
+            .en: "Speech recognition is currently unavailable",
+            .zhHans: "语音识别目前无法使用",
+            .ja: "音声認識は現在利用できません",
+            .ko: "음성 인식을 현재 사용할 수 없습니다",
+            .th: "ขณะนี้ใช้การรู้จำเสียงไม่ได้"
+        ],
+        "asr_err_wav_init": [
+            .zhHant: "無法初始化 WAV 格式",
+            .en: "Could not set up the WAV format",
+            .zhHans: "无法初始化 WAV 格式",
+            .ja: "WAV 形式を初期化できませんでした",
+            .ko: "WAV 형식을 초기화할 수 없습니다",
+            .th: "ตั้งค่ารูปแบบ WAV ไม่ได้"
         ],
         "asr_model_not_listed": [
             .zhHant: "清單裡沒有 %@",
@@ -1263,6 +1391,30 @@ extension LocalizationManager {
             .ko: "필기를 탭하여 오디오 탐색",
             .th: "แตะลายมือเพื่อไปยังเวลาเสียง"
         ],
+        "auth_busy": [
+            .zhHant: "登入處理中，請勿重複點擊",
+            .en: "Sign-in is in progress. Please don't tap again.",
+            .zhHans: "登录处理中，请勿重复点击",
+            .ja: "サインイン処理中です。もう一度タップしないでください。",
+            .ko: "로그인 처리 중입니다. 다시 누르지 마세요.",
+            .th: "กำลังลงชื่อเข้าใช้ โปรดอย่าแตะซ้ำ"
+        ],
+        "auth_cannot_present": [
+            .zhHant: "無法啟動系統登入視窗，請重試",
+            .en: "Could not open the system sign-in window. Please try again.",
+            .zhHans: "无法启动系统登录窗口，请重试",
+            .ja: "システムのサインインウィンドウを開けませんでした。もう一度お試しください。",
+            .ko: "시스템 로그인 창을 열 수 없습니다. 다시 시도하세요.",
+            .th: "เปิดหน้าต่างลงชื่อเข้าใช้ของระบบไม่ได้ โปรดลองอีกครั้ง"
+        ],
+        "auth_timeout": [
+            .zhHant: "登入逾時，請重新嘗試",
+            .en: "Sign-in timed out. Please try again.",
+            .zhHans: "登录超时，请重新尝试",
+            .ja: "サインインがタイムアウトしました。もう一度お試しください。",
+            .ko: "로그인 시간이 초과되었습니다. 다시 시도하세요.",
+            .th: "การลงชื่อเข้าใช้หมดเวลา โปรดลองอีกครั้ง"
+        ],
         "back_to_home": [
             .zhHant: "回到首頁",
             .en: "Back to home",
@@ -1302,6 +1454,14 @@ extension LocalizationManager {
             .ja: "バックアップを作成しました：%1@ 件、%2@",
             .ko: "백업을 만들었습니다: %1@개 파일, %2@",
             .th: "สร้างไฟล์สำรองแล้ว: %1@ ไฟล์ %2@"
+        ],
+        "backup_err_read_file": [
+            .zhHant: "無法讀取選取的檔案",
+            .en: "Could not read the selected file",
+            .zhHans: "无法读取选取的文件",
+            .ja: "選択したファイルを読み取れませんでした",
+            .ko: "선택한 파일을 읽을 수 없습니다",
+            .th: "อ่านไฟล์ที่เลือกไม่ได้"
         ],
         "backup_explainer": [
             .zhHant: "備份檔包含筆記本、筆記頁、手繪、圖片、錄音、資料夾結構與 App 設定。把它存到雲端或電腦，App 毀損時可一鍵復原。",
@@ -1438,6 +1598,22 @@ extension LocalizationManager {
             .ja: "ボックス幅",
             .ko: "상자 너비",
             .th: "ความกว้างกล่อง"
+        ],
+        "bridge_err_keep_audio": [
+            .zhHant: "無法保留錄音與轉錄內容：%@",
+            .en: "Could not keep the recordings and transcripts: %@",
+            .zhHans: "无法保留录音与转录内容：%@",
+            .ja: "録音と文字起こしを保持できませんでした：%@",
+            .ko: "녹음과 받아쓰기 내용을 보존할 수 없습니다: %@",
+            .th: "เก็บการบันทึกเสียงและข้อความถอดเสียงไม่ได้: %@"
+        ],
+        "bridge_err_read_other": [
+            .zhHant: "無法讀取其他裝置寫的內容",
+            .en: "Could not read content written by another device",
+            .zhHans: "无法读取其他设备写入的内容",
+            .ja: "他の端末で書かれた内容を読み取れませんでした",
+            .ko: "다른 기기에서 작성한 내용을 읽을 수 없습니다",
+            .th: "อ่านเนื้อหาที่เขียนจากอุปกรณ์อื่นไม่ได้"
         ],
         "brush_family_marking": [
             .zhHant: "標記",
@@ -2215,6 +2391,22 @@ extension LocalizationManager {
             .ko: "고급 협업 패널",
             .th: "แผงการทำงานร่วมกันขั้นสูง"
         ],
+        "collab_err_bad_address": [
+            .zhHant: "無效的協同伺服器位址：%@",
+            .en: "Invalid collaboration server address: %@",
+            .zhHans: "无效的协同服务器地址：%@",
+            .ja: "共同編集サーバーのアドレスが無効です：%@",
+            .ko: "잘못된 협업 서버 주소: %@",
+            .th: "ที่อยู่เซิร์ฟเวอร์การทำงานร่วมกันไม่ถูกต้อง: %@"
+        ],
+        "collab_err_unreachable": [
+            .zhHant: "無法連上協同伺服器 %@，已停止重試。",
+            .en: "Could not reach the collaboration server %@. Retrying has stopped.",
+            .zhHans: "无法连接协同服务器 %@，已停止重试。",
+            .ja: "共同編集サーバー %@ に接続できません。再試行を停止しました。",
+            .ko: "협업 서버 %@에 연결할 수 없습니다. 재시도를 중단했습니다.",
+            .th: "เชื่อมต่อเซิร์ฟเวอร์การทำงานร่วมกัน %@ ไม่ได้ หยุดลองใหม่แล้ว"
+        ],
         "collab_history_playback": [
             .zhHant: "歷史回溯",
             .en: "History Playback",
@@ -2479,6 +2671,14 @@ extension LocalizationManager {
             .ko: "보내기",
             .th: "ส่ง"
         ],
+        "composition_golden_spiral": [
+            .zhHant: "黃金螺旋 (Φ 1.618)",
+            .en: "GOLDEN SPIRAL (Φ 1.618)",
+            .zhHans: "黄金螺旋 (Φ 1.618)",
+            .ja: "黄金螺旋 (Φ 1.618)",
+            .ko: "황금 나선 (Φ 1.618)",
+            .th: "เกลียวทองคำ (Φ 1.618)"
+        ],
         "composition_overlay": [
             .zhHant: "構圖輔助線",
             .en: "Composition HUD",
@@ -2486,6 +2686,14 @@ extension LocalizationManager {
             .ja: "構図補助線",
             .ko: "구도 가이드",
             .th: "เส้นไกด์การจัดองค์ประกอบ"
+        ],
+        "composition_rule_of_thirds": [
+            .zhHant: "三分構圖 (3×3)",
+            .en: "RULE OF THIRDS (3×3)",
+            .zhHans: "三分构图 (3×3)",
+            .ja: "三分割構図 (3×3)",
+            .ko: "삼분할 구도 (3×3)",
+            .th: "กฎสามส่วน (3×3)"
         ],
         "confirm": [
             .zhHant: "確認",
@@ -2654,6 +2862,1782 @@ extension LocalizationManager {
             .ja: "Rust Core エンジン",
             .ko: "Rust Core 엔진",
             .th: "เอนจิน Rust Core"
+        ],
+        "core_msg_001": [
+            .zhHant: "模型尚未下載或載入",
+            .en: "The model has not been downloaded or loaded yet",
+            .zhHans: "模型尚未下载或加载",
+            .ja: "モデルがまだダウンロードまたは読み込まれていません",
+            .ko: "모델이 아직 다운로드되거나 로드되지 않았습니다",
+            .th: "ยังไม่ได้ดาวน์โหลดหรือโหลดโมเดล"
+        ],
+        "core_msg_002": [
+            .zhHant: "不支援的語言：%1@",
+            .en: "Unsupported language: %1@",
+            .zhHans: "不支持的语言：%1@",
+            .ja: "サポートされていない言語: %1@",
+            .ko: "지원하지 않는 언어: %1@",
+            .th: "ไม่รองรับภาษา: %1@"
+        ],
+        "core_msg_003": [
+            .zhHant: "後端錯誤：%1@",
+            .en: "Backend error: %1@",
+            .zhHans: "后端错误：%1@",
+            .ja: "バックエンドのエラー: %1@",
+            .ko: "백엔드 오류: %1@",
+            .th: "ข้อผิดพลาดของส่วนหลังบ้าน: %1@"
+        ],
+        "core_msg_004": [
+            .zhHant: "標點模型尚未下載或載入",
+            .en: "The punctuation model has not been downloaded or loaded yet",
+            .zhHans: "标点模型尚未下载或加载",
+            .ja: "句読点モデルがまだダウンロードまたは読み込まれていません",
+            .ko: "문장 부호 모델이 아직 다운로드되거나 로드되지 않았습니다",
+            .th: "ยังไม่ได้ดาวน์โหลดหรือโหลดโมเดลเครื่องหมายวรรคตอน"
+        ],
+        "core_msg_005": [
+            .zhHant: "標點還原失敗：%1@",
+            .en: "Punctuation restoration failed: %1@",
+            .zhHans: "标点还原失败：%1@",
+            .ja: "句読点の復元に失敗しました: %1@",
+            .ko: "문장 부호 복원에 실패했습니다: %1@",
+            .th: "คืนค่าเครื่องหมายวรรคตอนไม่สำเร็จ: %1@"
+        ],
+        "core_msg_006": [
+            .zhHant: "找不到模型檔：%1@",
+            .en: "Model file not found: %1@",
+            .zhHans: "找不到模型文件：%1@",
+            .ja: "モデルファイルが見つかりません: %1@",
+            .ko: "모델 파일을 찾을 수 없습니다: %1@",
+            .th: "ไม่พบไฟล์โมเดล: %1@"
+        ],
+        "core_msg_007": [
+            .zhHant: "模型資源格式錯誤：%1@",
+            .en: "Invalid model resource format: %1@",
+            .zhHans: "模型资源格式错误：%1@",
+            .ja: "モデルリソースの形式が正しくありません: %1@",
+            .ko: "모델 리소스 형식이 올바르지 않습니다: %1@",
+            .th: "รูปแบบทรัพยากรโมเดลไม่ถูกต้อง: %1@"
+        ],
+        "core_msg_008": [
+            .zhHant: "ONNX Runtime 錯誤：%1@",
+            .en: "ONNX Runtime error: %1@",
+            .zhHans: "ONNX Runtime 错误：%1@",
+            .ja: "ONNX Runtime のエラー: %1@",
+            .ko: "ONNX Runtime 오류: %1@",
+            .th: "ข้อผิดพลาดของ ONNX Runtime: %1@"
+        ],
+        "core_msg_009": [
+            .zhHant: "am.mvn 解析失敗",
+            .en: "Failed to parse am.mvn",
+            .zhHans: "am.mvn 解析失败",
+            .ja: "am.mvn の解析に失敗しました",
+            .ko: "am.mvn 파싱에 실패했습니다",
+            .th: "แยกวิเคราะห์ am.mvn ไม่สำเร็จ"
+        ],
+        "core_msg_010": [
+            .zhHant: "Opus 編碼失敗：%1@",
+            .en: "Opus encoding failed: %1@",
+            .zhHans: "Opus 编码失败：%1@",
+            .ja: "Opus のエンコードに失敗しました: %1@",
+            .ko: "Opus 인코딩에 실패했습니다: %1@",
+            .th: "เข้ารหัส Opus ไม่สำเร็จ: %1@"
+        ],
+        "core_msg_011": [
+            .zhHant: "音框長度錯誤：得到 %1@ 個樣本，應為 %2@",
+            .en: "Wrong audio frame length: got %1@ samples, expected %2@",
+            .zhHans: "音频帧长度错误：得到 %1@ 个样本，应为 %2@",
+            .ja: "オーディオフレームの長さが正しくありません: %1@ サンプル（期待値 %2@）",
+            .ko: "오디오 프레임 길이가 올바르지 않습니다: %1@개 샘플(필요: %2@개)",
+            .th: "ความยาวเฟรมเสียงไม่ถูกต้อง: ได้ %1@ ตัวอย่าง ควรเป็น %2@"
+        ],
+        "core_msg_012": [
+            .zhHant: "IO 錯誤：%1@",
+            .en: "I/O error: %1@",
+            .zhHans: "IO 错误：%1@",
+            .ja: "入出力エラー: %1@",
+            .ko: "입출력 오류: %1@",
+            .th: "ข้อผิดพลาดการอ่าน/เขียน: %1@"
+        ],
+        "core_msg_013": [
+            .zhHant: "圖表設定格式錯誤：%1@",
+            .en: "Invalid chart settings: %1@",
+            .zhHans: "图表设置格式错误：%1@",
+            .ja: "グラフの設定形式が正しくありません: %1@",
+            .ko: "차트 설정 형식이 올바르지 않습니다: %1@",
+            .th: "รูปแบบการตั้งค่าแผนภูมิไม่ถูกต้อง: %1@"
+        ],
+        "core_msg_014": [
+            .zhHant: "圖表沒有任何資料數列",
+            .en: "The chart has no data series",
+            .zhHans: "图表没有任何数据数列",
+            .ja: "グラフにデータ系列がありません",
+            .ko: "차트에 데이터 계열이 없습니다",
+            .th: "แผนภูมิไม่มีชุดข้อมูล"
+        ],
+        "core_msg_015": [
+            .zhHant: "圖表的資料數列都是空的",
+            .en: "All data series in the chart are empty",
+            .zhHans: "图表的数据数列都是空的",
+            .ja: "グラフのデータ系列がすべて空です",
+            .ko: "차트의 데이터 계열이 모두 비어 있습니다",
+            .th: "ชุดข้อมูลในแผนภูมิว่างเปล่าทั้งหมด"
+        ],
+        "core_msg_016": [
+            .zhHant: "已經在錄音中",
+            .en: "Already recording",
+            .zhHans: "已经在录音中",
+            .ja: "すでに録音中です",
+            .ko: "이미 녹음 중입니다",
+            .th: "กำลังบันทึกเสียงอยู่แล้ว"
+        ],
+        "core_msg_017": [
+            .zhHant: "目前沒有錄音",
+            .en: "Not recording",
+            .zhHans: "目前没有录音",
+            .ja: "録音していません",
+            .ko: "녹음 중이 아닙니다",
+            .th: "ไม่ได้บันทึกเสียงอยู่"
+        ],
+        "core_msg_018": [
+            .zhHant: "找不到頁面：%1@",
+            .en: "Page not found: %1@",
+            .zhHans: "找不到页面：%1@",
+            .ja: "ページが見つかりません: %1@",
+            .ko: "페이지를 찾을 수 없습니다: %1@",
+            .th: "ไม่พบหน้า: %1@"
+        ],
+        "core_msg_019": [
+            .zhHant: "找不到區塊：%1@",
+            .en: "Block not found: %1@",
+            .zhHans: "找不到区块：%1@",
+            .ja: "ブロックが見つかりません: %1@",
+            .ko: "블록을 찾을 수 없습니다: %1@",
+            .th: "ไม่พบบล็อก: %1@"
+        ],
+        "core_msg_020": [
+            .zhHant: "找不到里程碑：%1@",
+            .en: "Milestone not found: %1@",
+            .zhHans: "找不到里程碑：%1@",
+            .ja: "マイルストーンが見つかりません: %1@",
+            .ko: "마일스톤을 찾을 수 없습니다: %1@",
+            .th: "ไม่พบจุดสำคัญ: %1@"
+        ],
+        "core_msg_021": [
+            .zhHant: "不支援的格式：%1@",
+            .en: "Unsupported format: %1@",
+            .zhHans: "不支持的格式：%1@",
+            .ja: "サポートされていない形式: %1@",
+            .ko: "지원하지 않는 형식: %1@",
+            .th: "ไม่รองรับรูปแบบ: %1@"
+        ],
+        "core_msg_022": [
+            .zhHant: "簡報（%1@ 張投影片）",
+            .en: "Presentation (%1@ slides)",
+            .zhHans: "演示文稿（%1@ 张投视频）",
+            .ja: "プレゼンテーション（%1@ 枚のスライド）",
+            .ko: "프레젠테이션(슬라이드 %1@장)",
+            .th: "งานนำเสนอ (%1@ สไลด์)"
+        ],
+        "core_msg_023": [
+            .zhHant: "簡報（無法讀取：%1@）",
+            .en: "Presentation (cannot be read: %1@)",
+            .zhHans: "演示文稿（无法读取：%1@）",
+            .ja: "プレゼンテーション（読み取れません: %1@）",
+            .ko: "프레젠테이션(읽을 수 없음: %1@)",
+            .th: "งานนำเสนอ (อ่านไม่ได้: %1@)"
+        ],
+        "core_msg_024": [
+            .zhHant: "blob id 無法解析：%1@",
+            .en: "Cannot parse blob id: %1@",
+            .zhHans: "blob id 无法解析：%1@",
+            .ja: "blob id を解析できません: %1@",
+            .ko: "blob id를 해석할 수 없습니다: %1@",
+            .th: "แยกวิเคราะห์ blob id ไม่ได้: %1@"
+        ],
+        "core_msg_025": [
+            .zhHant: "變換矩陣必須是 6 個數字",
+            .en: "The transform matrix must have 6 numbers",
+            .zhHans: "变换矩阵必须是 6 个数字",
+            .ja: "変換行列は 6 つの数値である必要があります",
+            .ko: "변환 행렬은 숫자 6개여야 합니다",
+            .th: "เมทริกซ์การแปลงต้องมีตัวเลข 6 ตัว"
+        ],
+        "core_msg_026": [
+            .zhHant: "變換矩陣無效",
+            .en: "Invalid transform matrix",
+            .zhHans: "变换矩阵无效",
+            .ja: "変換行列が無効です",
+            .ko: "변환 행렬이 올바르지 않습니다",
+            .th: "เมทริกซ์การแปลงไม่ถูกต้อง"
+        ],
+        "core_msg_027": [
+            .zhHant: "找不到指定頁面：%1@",
+            .en: "The specified page was not found: %1@",
+            .zhHans: "找不到指定页面：%1@",
+            .ja: "指定されたページが見つかりません: %1@",
+            .ko: "지정한 페이지를 찾을 수 없습니다: %1@",
+            .th: "ไม่พบหน้าที่ระบุ: %1@"
+        ],
+        "core_msg_028": [
+            .zhHant: "不是合法的 id：%1@",
+            .en: "Not a valid id: %1@",
+            .zhHans: "不是合法的 id：%1@",
+            .ja: "有効な id ではありません: %1@",
+            .ko: "올바른 id가 아닙니다: %1@",
+            .th: "ไม่ใช่ id ที่ถูกต้อง: %1@"
+        ],
+        "core_msg_029": [
+            .zhHant: "模型檔案不存在或無法載入: %1@",
+            .en: "The model file does not exist or cannot be loaded: %1@",
+            .zhHans: "模型文件不存在或无法加载: %1@",
+            .ja: "モデルファイルが存在しないか読み込めません: %1@",
+            .ko: "모델 파일이 없거나 로드할 수 없습니다: %1@",
+            .th: "ไม่มีไฟล์โมเดลหรือโหลดไม่ได้: %1@"
+        ],
+        "core_msg_030": [
+            .zhHant: "轉錄處理失敗: %1@",
+            .en: "Transcription failed: %1@",
+            .zhHans: "转录处理失败: %1@",
+            .ja: "文字起こしの処理に失敗しました: %1@",
+            .ko: "받아쓰기 처리에 실패했습니다: %1@",
+            .th: "ถอดเสียงไม่สำเร็จ: %1@"
+        ],
+        "core_msg_031": [
+            .zhHant: "音訊資料無效: %1@",
+            .en: "Invalid audio data: %1@",
+            .zhHans: "音频数据无效: %1@",
+            .ja: "オーディオデータが無効です: %1@",
+            .ko: "오디오 데이터가 올바르지 않습니다: %1@",
+            .th: "ข้อมูลเสียงไม่ถูกต้อง: %1@"
+        ],
+        "core_msg_032": [
+            .zhHant: "音訊資料長度為零",
+            .en: "The audio data is empty",
+            .zhHans: "音频数据长度为零",
+            .ja: "オーディオデータの長さが 0 です",
+            .ko: "오디오 데이터 길이가 0입니다",
+            .th: "ข้อมูลเสียงมีความยาวเป็นศูนย์"
+        ],
+        "core_msg_033": [
+            .zhHant: "此平台版本未啟用 Whisper 語音引擎",
+            .en: "The Whisper speech engine is not enabled in this build",
+            .zhHans: "此平台版本未启用 Whisper 语音引擎",
+            .ja: "このビルドでは Whisper 音声エンジンが有効になっていません",
+            .ko: "이 버전에서는 Whisper 음성 엔진을 사용할 수 없습니다",
+            .th: "เวอร์ชันนี้ไม่ได้เปิดใช้เอนจินเสียง Whisper"
+        ],
+        "core_msg_034": [
+            .zhHant: "不是 Kairumo 備份檔",
+            .en: "This is not a Kairumo backup file",
+            .zhHans: "不是 Kairumo 备份文件",
+            .ja: "Kairumo のバックアップファイルではありません",
+            .ko: "Kairumo 백업 파일이 아닙니다",
+            .th: "ไม่ใช่ไฟล์สำรองข้อมูลของ Kairumo"
+        ],
+        "core_msg_035": [
+            .zhHant: "備份檔版本 %1@ 比這個版本的 App 新（支援到 %2@），請先更新 App",
+            .en: "This backup (version %1@) is newer than this app supports (up to %2@). Please update the app first",
+            .zhHans: "备份文件版本 %1@ 比这个版本的 App 新（支持到 %2@），请先更新 App",
+            .ja: "このバックアップ（バージョン %1@）はこのアプリより新しい形式です（対応: %2@ まで）。先にアプリを更新してください",
+            .ko: "이 백업(버전 %1@)은 이 앱보다 최신입니다(지원: %2@까지). 먼저 앱을 업데이트하세요",
+            .th: "ไฟล์สำรองนี้ (เวอร์ชัน %1@) ใหม่กว่าที่แอปนี้รองรับ (สูงสุด %2@) โปรดอัปเดตแอปก่อน"
+        ],
+        "core_msg_036": [
+            .zhHant: "備份檔已損毀：%1@",
+            .en: "The backup file is corrupted: %1@",
+            .zhHans: "备份文件已损毁：%1@",
+            .ja: "バックアップファイルが壊れています: %1@",
+            .ko: "백업 파일이 손상되었습니다: %1@",
+            .th: "ไฟล์สำรองข้อมูลเสียหาย: %1@"
+        ],
+        "core_msg_037": [
+            .zhHant: "讀寫失敗：%1@",
+            .en: "Read/write failed: %1@",
+            .zhHans: "读写失败：%1@",
+            .ja: "読み書きに失敗しました: %1@",
+            .ko: "읽기/쓰기에 실패했습니다: %1@",
+            .th: "อ่าน/เขียนไม่สำเร็จ: %1@"
+        ],
+        "core_msg_038": [
+            .zhHant: "索引長度超出檔案",
+            .en: "The index length exceeds the file",
+            .zhHans: "索引长度超出文件",
+            .ja: "インデックスの長さがファイルを超えています",
+            .ko: "인덱스 길이가 파일 크기를 초과합니다",
+            .th: "ความยาวดัชนีเกินขนาดไฟล์"
+        ],
+        "core_msg_039": [
+            .zhHant: "索引解析失敗：%1@",
+            .en: "Failed to parse the index: %1@",
+            .zhHans: "索引解析失败：%1@",
+            .ja: "インデックスの解析に失敗しました: %1@",
+            .ko: "인덱스 해석에 실패했습니다: %1@",
+            .th: "แยกวิเคราะห์ดัชนีไม่สำเร็จ: %1@"
+        ],
+        "core_msg_040": [
+            .zhHant: "開不了舊套件：%1@",
+            .en: "Cannot open the old package: %1@",
+            .zhHans: "开不了旧套件：%1@",
+            .ja: "旧パッケージを開けません: %1@",
+            .ko: "이전 패키지를 열 수 없습니다: %1@",
+            .th: "เปิดแพ็กเกจเก่าไม่ได้: %1@"
+        ],
+        "core_msg_041": [
+            .zhHant: "讀不到舊套件的操作：%1@",
+            .en: "Cannot read the old package's operations: %1@",
+            .zhHans: "读不到旧套件的操作：%1@",
+            .ja: "旧パッケージの操作を読み取れません: %1@",
+            .ko: "이전 패키지의 작업을 읽을 수 없습니다: %1@",
+            .th: "อ่านการดำเนินการของแพ็กเกจเก่าไม่ได้: %1@"
+        ],
+        "core_msg_042": [
+            .zhHant: "開不了新套件：%1@",
+            .en: "Cannot open the new package: %1@",
+            .zhHans: "开不了新套件：%1@",
+            .ja: "新しいパッケージを開けません: %1@",
+            .ko: "새 패키지를 열 수 없습니다: %1@",
+            .th: "เปิดแพ็กเกจใหม่ไม่ได้: %1@"
+        ],
+        "core_msg_043": [
+            .zhHant: "寫不進新套件：%1@",
+            .en: "Cannot write to the new package: %1@",
+            .zhHans: "写不进新套件：%1@",
+            .ja: "新しいパッケージに書き込めません: %1@",
+            .ko: "새 패키지에 쓸 수 없습니다: %1@",
+            .th: "เขียนลงแพ็กเกจใหม่ไม่ได้: %1@"
+        ],
+        "core_msg_044": [
+            .zhHant: "密碼錯誤或資料已被竄改",
+            .en: "Wrong password, or the data has been tampered with",
+            .zhHans: "密码错误或数据已被窜改",
+            .ja: "パスワードが違うか、データが改ざんされています",
+            .ko: "비밀번호가 틀렸거나 데이터가 변조되었습니다",
+            .th: "รหัสผ่านไม่ถูกต้องหรือข้อมูลถูกแก้ไข"
+        ],
+        "core_msg_045": [
+            .zhHant: "復原碼不正確：%1@",
+            .en: "Incorrect recovery phrase: %1@",
+            .zhHans: "恢复码不正确：%1@",
+            .ja: "復元フレーズが正しくありません: %1@",
+            .ko: "복구 문구가 올바르지 않습니다: %1@",
+            .th: "วลีกู้คืนไม่ถูกต้อง: %1@"
+        ],
+        "core_msg_046": [
+            .zhHant: "金鑰長度不對（要 32 位元組）",
+            .en: "Wrong key length (32 bytes required)",
+            .zhHans: "密钥长度不对（要 32 字节）",
+            .ja: "鍵の長さが正しくありません（32 バイト必要）",
+            .ko: "키 길이가 올바르지 않습니다(32바이트 필요)",
+            .th: "ความยาวคีย์ไม่ถูกต้อง (ต้องเป็น 32 ไบต์)"
+        ],
+        "core_msg_047": [
+            .zhHant: "起不了區網節點：%1@",
+            .en: "Cannot start the local network node: %1@",
+            .zhHans: "起不了局域网节点：%1@",
+            .ja: "ローカルネットワークのノードを起動できません: %1@",
+            .ko: "로컬 네트워크 노드를 시작할 수 없습니다: %1@",
+            .th: "เริ่มโหนดเครือข่ายภายในไม่ได้: %1@"
+        ],
+        "core_msg_048": [
+            .zhHant: "找不到：%1@",
+            .en: "Not found: %1@",
+            .zhHans: "找不到：%1@",
+            .ja: "見つかりません: %1@",
+            .ko: "찾을 수 없습니다: %1@",
+            .th: "ไม่พบ: %1@"
+        ],
+        "core_msg_049": [
+            .zhHant: "權限不足：%1@",
+            .en: "Permission denied: %1@",
+            .zhHans: "权限不足：%1@",
+            .ja: "権限がありません: %1@",
+            .ko: "권한이 없습니다: %1@",
+            .th: "ไม่มีสิทธิ์: %1@"
+        ],
+        "core_msg_050": [
+            .zhHant: "網路或伺服器錯誤：%1@",
+            .en: "Network or server error: %1@",
+            .zhHans: "网络或服务器错误：%1@",
+            .ja: "ネットワークまたはサーバーのエラー: %1@",
+            .ko: "네트워크 또는 서버 오류: %1@",
+            .th: "ข้อผิดพลาดของเครือข่ายหรือเซิร์ฟเวอร์: %1@"
+        ],
+        "core_msg_051": [
+            .zhHant: "Drive 回應不是合法 JSON：%1@",
+            .en: "The Drive response is not valid JSON: %1@",
+            .zhHans: "Drive 回应不是合法 JSON：%1@",
+            .ja: "Drive の応答が正しい JSON ではありません: %1@",
+            .ko: "Drive 응답이 올바른 JSON이 아닙니다: %1@",
+            .th: "คำตอบจาก Drive ไม่ใช่ JSON ที่ถูกต้อง: %1@"
+        ],
+        "core_msg_052": [
+            .zhHant: "開不了套件：%1@",
+            .en: "Cannot open the package: %1@",
+            .zhHans: "开不了套件：%1@",
+            .ja: "パッケージを開けません: %1@",
+            .ko: "패키지를 열 수 없습니다: %1@",
+            .th: "เปิดแพ็กเกจไม่ได้: %1@"
+        ],
+        "core_msg_053": [
+            .zhHant: "讀不到本機 oplog：%1@",
+            .en: "Cannot read the local oplog: %1@",
+            .zhHans: "读不到本机 oplog：%1@",
+            .ja: "ローカルの oplog を読み取れません: %1@",
+            .ko: "로컬 oplog를 읽을 수 없습니다: %1@",
+            .th: "อ่าน oplog ในเครื่องไม่ได้: %1@"
+        ],
+        "core_msg_054": [
+            .zhHant: "讀不到 %1@：%2@",
+            .en: "Cannot read %1@: %2@",
+            .zhHans: "读不到 %1@：%2@",
+            .ja: "%1@ を読み取れません: %2@",
+            .ko: "%1@을(를) 읽을 수 없습니다: %2@",
+            .th: "อ่าน %1@ ไม่ได้: %2@"
+        ],
+        "core_msg_055": [
+            .zhHant: "寫不進 %1@：%2@",
+            .en: "Cannot write %1@: %2@",
+            .zhHans: "写不进 %1@：%2@",
+            .ja: "%1@ に書き込めません: %2@",
+            .ko: "%1@에 쓸 수 없습니다: %2@",
+            .th: "เขียน %1@ ไม่ได้: %2@"
+        ],
+        "core_msg_056": [
+            .zhHant: "讀不到本機筆跡：%1@",
+            .en: "Cannot read the local ink data: %1@",
+            .zhHans: "读不到本机笔迹：%1@",
+            .ja: "ローカルの手書きデータを読み取れません: %1@",
+            .ko: "로컬 필기 데이터를 읽을 수 없습니다: %1@",
+            .th: "อ่านลายเส้นในเครื่องไม่ได้: %1@"
+        ],
+        "core_msg_057": [
+            .zhHant: "讀不到筆跡 %1@：%2@",
+            .en: "Cannot read ink data %1@: %2@",
+            .zhHans: "读不到笔迹 %1@：%2@",
+            .ja: "手書きデータ %1@ を読み取れません: %2@",
+            .ko: "필기 데이터 %1@을(를) 읽을 수 없습니다: %2@",
+            .th: "อ่านลายเส้น %1@ ไม่ได้: %2@"
+        ],
+        "core_msg_058": [
+            .zhHant: "寫不進筆跡 %1@：%2@",
+            .en: "Cannot write ink data %1@: %2@",
+            .zhHans: "写不进笔迹 %1@：%2@",
+            .ja: "手書きデータ %1@ に書き込めません: %2@",
+            .ko: "필기 데이터 %1@에 쓸 수 없습니다: %2@",
+            .th: "เขียนลายเส้น %1@ ไม่ได้: %2@"
+        ],
+        "core_msg_059": [
+            .zhHant: "網路錯誤：%1@",
+            .en: "Network error: %1@",
+            .zhHans: "网络错误：%1@",
+            .ja: "ネットワークエラー: %1@",
+            .ko: "네트워크 오류: %1@",
+            .th: "ข้อผิดพลาดของเครือข่าย: %1@"
+        ],
+        "core_msg_060": [
+            .zhHant: "清單裡沒有這個模型：%1@",
+            .en: "This model is not in the list: %1@",
+            .zhHans: "清单里没有这个模型：%1@",
+            .ja: "このモデルは一覧にありません: %1@",
+            .ko: "목록에 이 모델이 없습니다: %1@",
+            .th: "ไม่มีโมเดลนี้ในรายการ: %1@"
+        ],
+        "core_msg_061": [
+            .zhHant: "空白紙張",
+            .en: "Blank paper",
+            .zhHans: "空白纸张",
+            .ja: "白紙",
+            .ko: "백지",
+            .th: "กระดาษเปล่า"
+        ],
+        "core_msg_062": [
+            .zhHant: "方格點陣",
+            .en: "Dot grid",
+            .zhHans: "方格点阵",
+            .ja: "ドット方眼",
+            .ko: "점 격자",
+            .th: "ตารางจุด"
+        ],
+        "core_msg_063": [
+            .zhHant: "橫線筆記",
+            .en: "Lined notes",
+            .zhHans: "横线笔记",
+            .ja: "罫線ノート",
+            .ko: "줄 노트",
+            .th: "สมุดบรรทัด"
+        ],
+        "core_msg_064": [
+            .zhHant: "康乃爾",
+            .en: "Cornell",
+            .zhHans: "康乃尔",
+            .ja: "コーネル式",
+            .ko: "코넬식",
+            .th: "แบบคอร์เนลล์"
+        ],
+        "core_msg_065": [
+            .zhHant: "極細點陣 (5mm)",
+            .en: "Fine dot grid (5 mm)",
+            .zhHans: "极细点阵 (5mm)",
+            .ja: "極細ドット（5 mm）",
+            .ko: "초미세 점 격자(5mm)",
+            .th: "ตารางจุดละเอียด (5 มม.)"
+        ],
+        "core_msg_066": [
+            .zhHant: "黃金比例與三分構圖",
+            .en: "Golden ratio and rule of thirds",
+            .zhHans: "黄金比例与三分构图",
+            .ja: "黄金比と三分割構図",
+            .ko: "황금비와 삼분할 구도",
+            .th: "สัดส่วนทองคำและกฎสามส่วน"
+        ],
+        "core_msg_067": [
+            .zhHant: "情緒板與色卡矩陣",
+            .en: "Mood board and color swatch matrix",
+            .zhHans: "情绪板与色卡矩阵",
+            .ja: "ムードボードとカラーチップ",
+            .ko: "무드보드와 색상 견본 매트릭스",
+            .th: "มูดบอร์ดและตารางตัวอย่างสี"
+        ],
+        "core_msg_068": [
+            .zhHant: "工程藍圖坐標紙",
+            .en: "Engineering blueprint grid paper",
+            .zhHans: "工程蓝图坐标纸",
+            .ja: "設計図用の方眼紙",
+            .ko: "공학 청사진 좌표지",
+            .th: "กระดาษกราฟพิมพ์เขียววิศวกรรม"
+        ],
+        "core_msg_069": [
+            .zhHant: "30° 等角立體軸測網格",
+            .en: "30° isometric grid",
+            .zhHans: "30° 等角立体轴测网格",
+            .ja: "30° アイソメトリックグリッド",
+            .ko: "30° 등각 격자",
+            .th: "ตารางไอโซเมตริก 30°"
+        ],
+        "core_msg_070": [
+            .zhHant: "三視圖與剖面範本",
+            .en: "Three-view and section templates",
+            .zhHans: "三视图与剖面模板",
+            .ja: "三面図と断面図のテンプレート",
+            .ko: "삼면도 및 단면 템플릿",
+            .th: "แม่แบบภาพสามมุมมองและภาพตัด"
+        ],
+        "core_msg_071": [
+            .zhHant: "行動端線框 (8pt Grid)",
+            .en: "Mobile wireframe (8 pt grid)",
+            .zhHans: "行动端线框 (8pt Grid)",
+            .ja: "モバイル ワイヤーフレーム（8pt グリッド）",
+            .ko: "모바일 와이어프레임(8pt 그리드)",
+            .th: "ไวร์เฟรมมือถือ (กริด 8pt)"
+        ],
+        "core_msg_072": [
+            .zhHant: "響應式 Web 12 欄網格",
+            .en: "Responsive web 12-column grid",
+            .zhHans: "响应式 Web 12 栏网格",
+            .ja: "レスポンシブ Web 12 カラムグリッド",
+            .ko: "반응형 웹 12열 그리드",
+            .th: "กริด 12 คอลัมน์สำหรับเว็บตอบสนอง"
+        ],
+        "core_msg_073": [
+            .zhHant: "使用者旅程與流程圖",
+            .en: "User journey and flowchart",
+            .zhHans: "使用者旅程与流程图",
+            .ja: "ユーザージャーニーとフローチャート",
+            .ko: "사용자 여정과 순서도",
+            .th: "เส้นทางผู้ใช้และผังงาน"
+        ],
+        "core_msg_074": [
+            .zhHant: "無法建立執行緒池：%1@",
+            .en: "Cannot create the thread pool: %1@",
+            .zhHans: "无法建立线程池：%1@",
+            .ja: "スレッドプールを作成できません: %1@",
+            .ko: "스레드 풀을 만들 수 없습니다: %1@",
+            .th: "สร้างเธรดพูลไม่ได้: %1@"
+        ],
+        "core_msg_075": [
+            .zhHant: "無效的埠號 %1@",
+            .en: "Invalid port number %1@",
+            .zhHans: "无效的埠号 %1@",
+            .ja: "無効なポート番号 %1@",
+            .ko: "잘못된 포트 번호 %1@",
+            .th: "หมายเลขพอร์ตไม่ถูกต้อง %1@"
+        ],
+        "core_msg_076": [
+            .zhHant: "無法綁定 %1@：%2@",
+            .en: "Cannot bind %1@: %2@",
+            .zhHans: "无法绑定 %1@：%2@",
+            .ja: "%1@ にバインドできません: %2@",
+            .ko: "%1@에 바인딩할 수 없습니다: %2@",
+            .th: "ผูกกับ %1@ ไม่ได้: %2@"
+        ],
+        "core_msg_077": [
+            .zhHant: "取不到綁定的埠：%1@",
+            .en: "Cannot get the bound port: %1@",
+            .zhHans: "取不到绑定的埠：%1@",
+            .ja: "バインドしたポートを取得できません: %1@",
+            .ko: "바인딩된 포트를 가져올 수 없습니다: %1@",
+            .th: "อ่านพอร์ตที่ผูกไว้ไม่ได้: %1@"
+        ],
+        "core_msg_078": [
+            .zhHant: "設定非阻塞失敗：%1@",
+            .en: "Failed to set non-blocking mode: %1@",
+            .zhHans: "设置非阻塞失败：%1@",
+            .ja: "ノンブロッキングの設定に失敗しました: %1@",
+            .ko: "논블로킹 설정에 실패했습니다: %1@",
+            .th: "ตั้งค่าโหมดไม่บล็อกไม่สำเร็จ: %1@"
+        ],
+        "core_msg_079": [
+            .zhHant: "中繼狀態鎖已毀損",
+            .en: "The relay state is corrupted",
+            .zhHans: "中继状态锁已毁损",
+            .ja: "中継の状態が壊れています",
+            .ko: "릴레이 상태가 손상되었습니다",
+            .th: "สถานะของรีเลย์เสียหาย"
+        ],
+        "core_msg_080": [
+            .zhHant: "麥克風",
+            .en: "Microphone",
+            .zhHans: "麦克风",
+            .ja: "マイク",
+            .ko: "마이크",
+            .th: "ไมโครโฟน"
+        ],
+        "core_msg_081": [
+            .zhHant: "語音辨識權限",
+            .en: "Speech recognition permission",
+            .zhHans: "语音辨识权限",
+            .ja: "音声認識の権限",
+            .ko: "음성 인식 권한",
+            .th: "สิทธิ์การรู้จำเสียงพูด"
+        ],
+        "core_msg_082": [
+            .zhHant: "手寫辨識",
+            .en: "Handwriting recognition",
+            .zhHans: "手写辨识",
+            .ja: "手書き認識",
+            .ko: "필기 인식",
+            .th: "การรู้จำลายมือ"
+        ],
+        "core_msg_083": [
+            .zhHant: "語音模型（%1@）",
+            .en: "Speech model (%1@)",
+            .zhHans: "语音模型（%1@）",
+            .ja: "音声モデル（%1@）",
+            .ko: "음성 모델(%1@)",
+            .th: "โมเดลเสียง (%1@)"
+        ],
+        "core_msg_084": [
+            .zhHant: "AI 模型（%1@）",
+            .en: "AI model (%1@)",
+            .zhHans: "AI 模型（%1@）",
+            .ja: "AI モデル（%1@）",
+            .ko: "AI 모델(%1@)",
+            .th: "โมเดล AI (%1@)"
+        ],
+        "core_msg_085": [
+            .zhHant: "本機同步資料夾",
+            .en: "Local sync folder",
+            .zhHans: "本机同步数据夹",
+            .ja: "ローカル同期フォルダ",
+            .ko: "로컬 동기화 폴더",
+            .th: "โฟลเดอร์ซิงก์ในเครื่อง"
+        ],
+        "core_msg_086": [
+            .zhHant: "可以使用",
+            .en: "Ready to use",
+            .zhHans: "可以使用",
+            .ja: "利用できます",
+            .ko: "사용할 수 있습니다",
+            .th: "พร้อมใช้งาน"
+        ],
+        "core_msg_087": [
+            .zhHant: "需要：%1@",
+            .en: "Needs: %1@",
+            .zhHans: "需要：%1@",
+            .ja: "必要なもの: %1@",
+            .ko: "필요: %1@",
+            .th: "ต้องมี: %1@"
+        ],
+        "core_msg_088": [
+            .zhHant: "解密失敗：密語錯誤或資料已被竄改",
+            .en: "Decryption failed: wrong passphrase, or the data has been tampered with",
+            .zhHans: "解密失败：密码短语错误或数据已被窜改",
+            .ja: "復号に失敗しました: パスフレーズが違うか、データが改ざんされています",
+            .ko: "복호화에 실패했습니다: 암호가 틀렸거나 데이터가 변조되었습니다",
+            .th: "ถอดรหัสไม่สำเร็จ: รหัสผ่านไม่ถูกต้องหรือข้อมูลถูกแก้ไข"
+        ],
+        "core_msg_089": [
+            .zhHant: "金鑰匯出失敗：%1@",
+            .en: "Key derivation failed: %1@",
+            .zhHans: "密钥汇出失败：%1@",
+            .ja: "鍵の導出に失敗しました: %1@",
+            .ko: "키 파생에 실패했습니다: %1@",
+            .th: "สร้างคีย์ไม่สำเร็จ: %1@"
+        ],
+        "core_msg_090": [
+            .zhHant: "亂數來源失敗：%1@",
+            .en: "Random number source failed: %1@",
+            .zhHans: "随机数来源失败：%1@",
+            .ja: "乱数源でエラーが発生しました: %1@",
+            .ko: "난수 생성기 오류: %1@",
+            .th: "แหล่งตัวเลขสุ่มล้มเหลว: %1@"
+        ],
+        "core_msg_091": [
+            .zhHant: "資料格式錯誤：%1@",
+            .en: "Invalid data format: %1@",
+            .zhHans: "数据格式错误：%1@",
+            .ja: "データ形式が正しくありません: %1@",
+            .ko: "데이터 형식이 올바르지 않습니다: %1@",
+            .th: "รูปแบบข้อมูลไม่ถูกต้อง: %1@"
+        ],
+        "core_msg_092": [
+            .zhHant: "DEK 長度錯誤",
+            .en: "Wrong DEK length",
+            .zhHans: "DEK 长度错误",
+            .ja: "DEK の長さが正しくありません",
+            .ko: "DEK 길이가 올바르지 않습니다",
+            .th: "ความยาว DEK ไม่ถูกต้อง"
+        ],
+        "core_msg_093": [
+            .zhHant: "資料過短",
+            .en: "The data is too short",
+            .zhHans: "数据过短",
+            .ja: "データが短すぎます",
+            .ko: "데이터가 너무 짧습니다",
+            .th: "ข้อมูลสั้นเกินไป"
+        ],
+        "core_msg_094": [
+            .zhHant: "chunk 過短",
+            .en: "The chunk is too short",
+            .zhHans: "chunk 过短",
+            .ja: "チャンクが短すぎます",
+            .ko: "청크가 너무 짧습니다",
+            .th: "ชังก์สั้นเกินไป"
+        ],
+        "core_msg_095": [
+            .zhHant: "詞表必須是 %1@ 個詞，實得 %2@",
+            .en: "The word list must have %1@ words, got %2@",
+            .zhHans: "词表必须是 %1@ 个词，实得 %2@",
+            .ja: "単語リストは %1@ 語である必要があります（実際: %2@）",
+            .ko: "단어 목록은 %1@개여야 합니다(실제: %2@개)",
+            .th: "รายการคำต้องมี %1@ คำ แต่ได้ %2@"
+        ],
+        "core_msg_096": [
+            .zhHant: "熵長度須為 16 或 32 bytes，實得 %1@",
+            .en: "Entropy length must be 16 or 32 bytes, got %1@",
+            .zhHans: "熵长度须为 16 或 32 bytes，实得 %1@",
+            .ja: "エントロピーの長さは 16 または 32 バイトである必要があります（実際: %1@）",
+            .ko: "엔트로피 길이는 16 또는 32바이트여야 합니다(실제: %1@)",
+            .th: "ความยาวเอนโทรปีต้องเป็น 16 หรือ 32 ไบต์ แต่ได้ %1@"
+        ],
+        "core_msg_097": [
+            .zhHant: "無法辨識的詞：%1@",
+            .en: "Unrecognized word: %1@",
+            .zhHans: "无法辨识的词：%1@",
+            .ja: "認識できない単語: %1@",
+            .ko: "인식할 수 없는 단어: %1@",
+            .th: "ไม่รู้จักคำ: %1@"
+        ],
+        "core_msg_098": [
+            .zhHant: "詞數須為 12 或 24，實得 %1@",
+            .en: "The phrase must have 12 or 24 words, got %1@",
+            .zhHans: "词数须为 12 或 24，实得 %1@",
+            .ja: "フレーズは 12 語または 24 語である必要があります（実際: %1@）",
+            .ko: "문구는 12개 또는 24개 단어여야 합니다(실제: %1@개)",
+            .th: "วลีต้องมี 12 หรือ 24 คำ แต่ได้ %1@"
+        ],
+        "core_msg_099": [
+            .zhHant: "復原碼校驗失敗，請檢查是否抄錯字或順序有誤",
+            .en: "The recovery phrase checksum failed. Check for a typo or a wrong word order",
+            .zhHans: "恢复码校验失败，请检查是否抄错字或顺序有误",
+            .ja: "復元フレーズのチェックに失敗しました。誤字や語順の間違いがないか確認してください",
+            .ko: "복구 문구 검증에 실패했습니다. 오타나 단어 순서가 틀리지 않았는지 확인하세요",
+            .th: "ตรวจสอบวลีกู้คืนไม่ผ่าน โปรดตรวจดูว่าพิมพ์ผิดหรือเรียงคำผิดลำดับหรือไม่"
+        ],
+        "core_msg_100": [
+            .zhHant: "房間金鑰格式錯誤（需要 base64 的 32 位元組）",
+            .en: "Invalid room key format (a base64-encoded 32-byte key is required)",
+            .zhHans: "房间密钥格式错误（需要 base64 的 32 字节）",
+            .ja: "ルームキーの形式が正しくありません（base64 の 32 バイトが必要）",
+            .ko: "방 키 형식이 올바르지 않습니다(base64로 인코딩된 32바이트 필요)",
+            .th: "รูปแบบคีย์ห้องไม่ถูกต้อง (ต้องเป็น base64 ขนาด 32 ไบต์)"
+        ],
+        "core_msg_101": [
+            .zhHant: "密文長度不足，不可能是有效的訊息",
+            .en: "The ciphertext is too short to be a valid message",
+            .zhHans: "密文长度不足，不可能是有效的消息",
+            .ja: "暗号文が短すぎて、有効なメッセージではありません",
+            .ko: "암호문이 너무 짧아 올바른 메시지일 수 없습니다",
+            .th: "ข้อความเข้ารหัสสั้นเกินกว่าจะเป็นข้อความที่ถูกต้อง"
+        ],
+        "core_msg_102": [
+            .zhHant: "加密失敗",
+            .en: "Encryption failed",
+            .zhHans: "加密失败",
+            .ja: "暗号化に失敗しました",
+            .ko: "암호화에 실패했습니다",
+            .th: "เข้ารหัสไม่สำเร็จ"
+        ],
+        "core_msg_103": [
+            .zhHant: "解密失敗（金鑰不符或內容被竄改）",
+            .en: "Decryption failed (wrong key, or the content has been tampered with)",
+            .zhHans: "解密失败（密钥不符或内容被窜改）",
+            .ja: "復号に失敗しました（鍵が一致しないか、内容が改ざんされています）",
+            .ko: "복호화에 실패했습니다(키가 맞지 않거나 내용이 변조되었습니다)",
+            .th: "ถอดรหัสไม่สำเร็จ (คีย์ไม่ตรงหรือเนื้อหาถูกแก้ไข)"
+        ],
+        "core_msg_104": [
+            .zhHant: "取不到亂數",
+            .en: "Cannot get random numbers",
+            .zhHans: "取不到随机数",
+            .ja: "乱数を取得できません",
+            .ko: "난수를 가져올 수 없습니다",
+            .th: "สร้างตัวเลขสุ่มไม่ได้"
+        ],
+        "core_msg_105": [
+            .zhHant: "找不到物件：%1@",
+            .en: "Object not found: %1@",
+            .zhHans: "找不到对象：%1@",
+            .ja: "オブジェクトが見つかりません: %1@",
+            .ko: "개체를 찾을 수 없습니다: %1@",
+            .th: "ไม่พบวัตถุ: %1@"
+        ],
+        "core_msg_106": [
+            .zhHant: "群組會形成迴圈",
+            .en: "This grouping would create a loop",
+            .zhHans: "群组会形成回圈",
+            .ja: "このグループ化はループになります",
+            .ko: "이 그룹은 순환을 만듭니다",
+            .th: "การจัดกลุ่มนี้จะวนเป็นลูป"
+        ],
+        "core_msg_107": [
+            .zhHant: "物件已屬於其他群組：%1@",
+            .en: "The object already belongs to another group: %1@",
+            .zhHans: "对象已属於其他群组：%1@",
+            .ja: "オブジェクトはすでに別のグループに属しています: %1@",
+            .ko: "개체가 이미 다른 그룹에 속해 있습니다: %1@",
+            .th: "วัตถุอยู่ในกลุ่มอื่นแล้ว: %1@"
+        ],
+        "core_msg_108": [
+            .zhHant: "文件操作資料被截斷",
+            .en: "The document operation data is truncated",
+            .zhHans: "文件操作数据被截断",
+            .ja: "ドキュメント操作のデータが途中で切れています",
+            .ko: "문서 작업 데이터가 잘렸습니다",
+            .th: "ข้อมูลการดำเนินการของเอกสารถูกตัดทอน"
+        ],
+        "core_msg_109": [
+            .zhHant: "未知的操作類型：%1@",
+            .en: "Unknown operation type: %1@",
+            .zhHans: "未知的操作类型：%1@",
+            .ja: "不明な操作の種類: %1@",
+            .ko: "알 수 없는 작업 유형: %1@",
+            .th: "ไม่รู้จักประเภทการดำเนินการ: %1@"
+        ],
+        "core_msg_110": [
+            .zhHant: "未知的頁面模板：%1@",
+            .en: "Unknown page template: %1@",
+            .zhHans: "未知的页面模板：%1@",
+            .ja: "不明なページテンプレート: %1@",
+            .ko: "알 수 없는 페이지 템플릿: %1@",
+            .th: "ไม่รู้จักแม่แบบหน้า: %1@"
+        ],
+        "core_msg_111": [
+            .zhHant: "未知的文字樣式：%1@",
+            .en: "Unknown text style: %1@",
+            .zhHans: "未知的文字样式：%1@",
+            .ja: "不明な文字スタイル: %1@",
+            .ko: "알 수 없는 텍스트 스타일: %1@",
+            .th: "ไม่รู้จักรูปแบบข้อความ: %1@"
+        ],
+        "core_msg_112": [
+            .zhHant: "未知的物件類型：%1@",
+            .en: "Unknown object type: %1@",
+            .zhHans: "未知的对象类型：%1@",
+            .ja: "不明なオブジェクトの種類: %1@",
+            .ko: "알 수 없는 개체 유형: %1@",
+            .th: "ไม่รู้จักประเภทวัตถุ: %1@"
+        ],
+        "core_msg_113": [
+            .zhHant: "未知的形狀類型：%1@",
+            .en: "Unknown shape type: %1@",
+            .zhHans: "未知的形状类型：%1@",
+            .ja: "不明な図形の種類: %1@",
+            .ko: "알 수 없는 도형 유형: %1@",
+            .th: "ไม่รู้จักประเภทรูปทรง: %1@"
+        ],
+        "core_msg_114": [
+            .zhHant: "未知的連接點：%1@",
+            .en: "Unknown connection point: %1@",
+            .zhHans: "未知的连接点：%1@",
+            .ja: "不明な接続点: %1@",
+            .ko: "알 수 없는 연결점: %1@",
+            .th: "ไม่รู้จักจุดเชื่อมต่อ: %1@"
+        ],
+        "core_msg_115": [
+            .zhHant: "未知的連接線路由：%1@",
+            .en: "Unknown connector routing: %1@",
+            .zhHans: "未知的连接线路由：%1@",
+            .ja: "不明なコネクタの経路: %1@",
+            .ko: "알 수 없는 연결선 경로: %1@",
+            .th: "ไม่รู้จักการเดินเส้นเชื่อม: %1@"
+        ],
+        "core_msg_116": [
+            .zhHant: "未知的線端樣式：%1@",
+            .en: "Unknown line-end style: %1@",
+            .zhHans: "未知的线端样式：%1@",
+            .ja: "不明な線端のスタイル: %1@",
+            .ko: "알 수 없는 선 끝 스타일: %1@",
+            .th: "ไม่รู้จักรูปแบบปลายเส้น: %1@"
+        ],
+        "core_msg_117": [
+            .zhHant: "字串不是合法的 UTF-8",
+            .en: "The string is not valid UTF-8",
+            .zhHans: "字符串不是合法的 UTF-8",
+            .ja: "文字列が正しい UTF-8 ではありません",
+            .ko: "문자열이 올바른 UTF-8이 아닙니다",
+            .th: "สตริงไม่ใช่ UTF-8 ที่ถูกต้อง"
+        ],
+        "core_msg_118": [
+            .zhHant: "非法的 Unicode 碼位：%1@",
+            .en: "Invalid Unicode code point: %1@",
+            .zhHans: "非法的 Unicode 码位：%1@",
+            .ja: "無効な Unicode コードポイント: %1@",
+            .ko: "잘못된 유니코드 코드 포인트: %1@",
+            .th: "โค้ดพอยต์ยูนิโคดไม่ถูกต้อง: %1@"
+        ],
+        "core_msg_119": [
+            .zhHant: "分欄",
+            .en: "Columns",
+            .zhHans: "分栏",
+            .ja: "段組み",
+            .ko: "단 나누기",
+            .th: "คอลัมน์"
+        ],
+        "core_msg_120": [
+            .zhHant: "浮動圖文",
+            .en: "Floating text and images",
+            .zhHans: "浮动图文",
+            .ja: "フローティングの図と文章",
+            .ko: "떠 있는 그림과 텍스트",
+            .th: "รูปภาพและข้อความลอย"
+        ],
+        "core_msg_121": [
+            .zhHant: "追蹤修訂",
+            .en: "Track changes",
+            .zhHans: "修订",
+            .ja: "変更履歴",
+            .ko: "변경 내용 추적",
+            .th: "ติดตามการเปลี่ยนแปลง"
+        ],
+        "core_msg_122": [
+            .zhHant: "頁首頁尾",
+            .en: "Headers and footers",
+            .zhHans: "页眉页脚",
+            .ja: "ヘッダーとフッター",
+            .ko: "머리글과 바닥글",
+            .th: "ส่วนหัวและส่วนท้าย"
+        ],
+        "core_msg_123": [
+            .zhHant: "註腳",
+            .en: "Footnotes",
+            .zhHans: "脚注",
+            .ja: "脚注",
+            .ko: "각주",
+            .th: "เชิงอรรถ"
+        ],
+        "core_msg_124": [
+            .zhHant: "巨集",
+            .en: "Macros",
+            .zhHans: "宏",
+            .ja: "マクロ",
+            .ko: "매크로",
+            .th: "มาโคร"
+        ],
+        "core_msg_125": [
+            .zhHant: "樞紐分析",
+            .en: "Pivot tables",
+            .zhHans: "数据透视表",
+            .ja: "ピボットテーブル",
+            .ko: "피벗 테이블",
+            .th: "พิวอตเทเบิล"
+        ],
+        "core_msg_126": [
+            .zhHant: "圖表",
+            .en: "Charts",
+            .zhHans: "图表",
+            .ja: "グラフ",
+            .ko: "차트",
+            .th: "แผนภูมิ"
+        ],
+        "core_msg_127": [
+            .zhHant: "條件式格式",
+            .en: "Conditional formatting",
+            .zhHans: "条件格式",
+            .ja: "条件付き書式",
+            .ko: "조건부 서식",
+            .th: "การจัดรูปแบบตามเงื่อนไข"
+        ],
+        "core_msg_128": [
+            .zhHant: "資料驗證",
+            .en: "Data validation",
+            .zhHans: "数据验证",
+            .ja: "データの入力規則",
+            .ko: "데이터 유효성 검사",
+            .th: "การตรวจสอบข้อมูล"
+        ],
+        "core_msg_129": [
+            .zhHant: "編輯（僅預覽）",
+            .en: "Editing (preview only)",
+            .zhHans: "编辑（仅预览）",
+            .ja: "編集（プレビューのみ）",
+            .ko: "편집(미리보기 전용)",
+            .th: "การแก้ไข (ดูตัวอย่างเท่านั้น)"
+        ],
+        "core_msg_130": [
+            .zhHant: "動畫",
+            .en: "Animations",
+            .zhHans: "动画",
+            .ja: "アニメーション",
+            .ko: "애니메이션",
+            .th: "แอนิเมชัน"
+        ],
+        "core_msg_131": [
+            .zhHant: "轉場",
+            .en: "Transitions",
+            .zhHans: "切换",
+            .ja: "画面切り替え",
+            .ko: "전환",
+            .th: "การเปลี่ยนสไลด์"
+        ],
+        "core_msg_132": [
+            .zhHant: "備忘稿",
+            .en: "Speaker notes",
+            .zhHans: "备注",
+            .ja: "スピーカーノート",
+            .ko: "발표자 노트",
+            .th: "บันทึกผู้บรรยาย"
+        ],
+        "core_msg_133": [
+            .zhHant: "表單欄位",
+            .en: "Form fields",
+            .zhHans: "表单字段",
+            .ja: "フォームフィールド",
+            .ko: "양식 필드",
+            .th: "ช่องแบบฟอร์ม"
+        ],
+        "core_msg_134": [
+            .zhHant: "數位簽章",
+            .en: "Digital signatures",
+            .zhHans: "数字签名",
+            .ja: "電子署名",
+            .ko: "디지털 서명",
+            .th: "ลายเซ็นดิจิทัล"
+        ],
+        "core_msg_135": [
+            .zhHant: "找不到檔案：%1@",
+            .en: "File not found: %1@",
+            .zhHans: "找不到文件：%1@",
+            .ja: "ファイルが見つかりません: %1@",
+            .ko: "파일을 찾을 수 없습니다: %1@",
+            .th: "ไม่พบไฟล์: %1@"
+        ],
+        "core_msg_136": [
+            .zhHant: "%1@ 目前不支援：%2@",
+            .en: "%1@ is not supported yet: %2@",
+            .zhHans: "%1@ 目前不支持：%2@",
+            .ja: "%1@ はまだサポートされていません: %2@",
+            .ko: "%1@은(는) 아직 지원하지 않습니다: %2@",
+            .th: "ยังไม่รองรับ %1@: %2@"
+        ],
+        "core_msg_137": [
+            .zhHant: "檔案格式錯誤：%1@",
+            .en: "Invalid file format: %1@",
+            .zhHans: "文件格式错误：%1@",
+            .ja: "ファイル形式が正しくありません: %1@",
+            .ko: "파일 형식이 올바르지 않습니다: %1@",
+            .th: "รูปแบบไฟล์ไม่ถูกต้อง: %1@"
+        ],
+        "core_msg_138": [
+            .zhHant: "不是 ZIP 容器，無法作為 pptx",
+            .en: "Not a ZIP container, so it cannot be a pptx",
+            .zhHans: "不是 ZIP 容器，无法作为 pptx",
+            .ja: "ZIP コンテナではないため pptx として扱えません",
+            .ko: "ZIP 컨테이너가 아니므로 pptx로 처리할 수 없습니다",
+            .th: "ไม่ใช่คอนเทนเนอร์ ZIP จึงใช้เป็น pptx ไม่ได้"
+        ],
+        "core_msg_139": [
+            .zhHant: "找不到投影片；可能不是 pptx 或已加密",
+            .en: "No slides found; the file may not be a pptx, or it may be encrypted",
+            .zhHans: "找不到投视频；可能不是 pptx 或已加密",
+            .ja: "スライドが見つかりません。pptx ではないか、暗号化されている可能性があります",
+            .ko: "슬라이드를 찾을 수 없습니다. pptx가 아니거나 암호화되었을 수 있습니다",
+            .th: "ไม่พบสไลด์ ไฟล์อาจไม่ใช่ pptx หรืออาจถูกเข้ารหัส"
+        ],
+        "core_msg_140": [
+            .zhHant: "第 %1@ 個區塊缺少 source",
+            .en: "Block %1@ is missing source",
+            .zhHans: "第 %1@ 个区块缺少 source",
+            .ja: "%1@ 番目のブロックに source がありません",
+            .ko: "%1@번째 블록에 source가 없습니다",
+            .th: "บล็อกที่ %1@ ไม่มี source"
+        ],
+        "core_msg_141": [
+            .zhHant: "第 %1@ 個區塊缺少 content",
+            .en: "Block %1@ is missing content",
+            .zhHans: "第 %1@ 个区块缺少 content",
+            .ja: "%1@ 番目のブロックに content がありません",
+            .ko: "%1@번째 블록에 content가 없습니다",
+            .th: "บล็อกที่ %1@ ไม่มี content"
+        ],
+        "core_msg_142": [
+            .zhHant: "第 %1@ 個區塊的類型未知：%2@",
+            .en: "Block %1@ has an unknown type: %2@",
+            .zhHans: "第 %1@ 个区块的类型未知：%2@",
+            .ja: "%1@ 番目のブロックの種類が不明です: %2@",
+            .ko: "%1@번째 블록의 유형을 알 수 없습니다: %2@",
+            .th: "บล็อกที่ %1@ มีประเภทที่ไม่รู้จัก: %2@"
+        ],
+        "core_msg_143": [
+            .zhHant: "筆記本內無任何頁面可匯出",
+            .en: "The notebook has no pages to export",
+            .zhHans: "笔记本内无任何页面可汇出",
+            .ja: "書き出せるページがノートにありません",
+            .ko: "내보낼 페이지가 노트에 없습니다",
+            .th: "สมุดบันทึกไม่มีหน้าให้ส่งออก"
+        ],
+        "core_msg_144": [
+            .zhHant: "儲存讀取錯誤：%1@",
+            .en: "Storage read error: %1@",
+            .zhHans: "保存读取错误：%1@",
+            .ja: "ストレージの読み取りエラー: %1@",
+            .ko: "저장소 읽기 오류: %1@",
+            .th: "ข้อผิดพลาดในการอ่านที่เก็บข้อมูล: %1@"
+        ],
+        "core_msg_145": [
+            .zhHant: "圖片編碼錯誤：%1@",
+            .en: "Image encoding error: %1@",
+            .zhHans: "图片编码错误：%1@",
+            .ja: "画像のエンコードエラー: %1@",
+            .ko: "이미지 인코딩 오류: %1@",
+            .th: "ข้อผิดพลาดในการเข้ารหัสรูปภาพ: %1@"
+        ],
+        "core_msg_146": [
+            .zhHant: "資料無效：%1@",
+            .en: "Invalid data: %1@",
+            .zhHans: "数据无效：%1@",
+            .ja: "データが無効です: %1@",
+            .ko: "데이터가 올바르지 않습니다: %1@",
+            .th: "ข้อมูลไม่ถูกต้อง: %1@"
+        ],
+        "core_msg_147": [
+            .zhHant: "不是 PADNINK 筆畫檔",
+            .en: "Not a PADNINK ink file",
+            .zhHans: "不是 PADNINK 笔画文件",
+            .ja: "PADNINK の手書きファイルではありません",
+            .ko: "PADNINK 필기 파일이 아닙니다",
+            .th: "ไม่ใช่ไฟล์ลายเส้น PADNINK"
+        ],
+        "core_msg_148": [
+            .zhHant: "不支援的格式版本：%1@",
+            .en: "Unsupported format version: %1@",
+            .zhHans: "不支持的格式版本：%1@",
+            .ja: "サポートされていない形式のバージョン: %1@",
+            .ko: "지원하지 않는 형식 버전: %1@",
+            .th: "ไม่รองรับรูปแบบเวอร์ชัน: %1@"
+        ],
+        "core_msg_149": [
+            .zhHant: "檔案被截斷",
+            .en: "The file is truncated",
+            .zhHans: "文件被截断",
+            .ja: "ファイルが途中で切れています",
+            .ko: "파일이 잘렸습니다",
+            .th: "ไฟล์ถูกตัดทอน"
+        ],
+        "core_msg_150": [
+            .zhHant: "未知的 tool_id：%1@",
+            .en: "Unknown tool_id: %1@",
+            .zhHans: "未知的 tool_id：%1@",
+            .ja: "不明な tool_id: %1@",
+            .ko: "알 수 없는 tool_id: %1@",
+            .th: "ไม่รู้จัก tool_id: %1@"
+        ],
+        "core_msg_151": [
+            .zhHant: "未知的記錄類型：%1@",
+            .en: "Unknown record type: %1@",
+            .zhHans: "未知的记录类型：%1@",
+            .ja: "不明なレコードの種類: %1@",
+            .ko: "알 수 없는 레코드 유형: %1@",
+            .th: "ไม่รู้จักประเภทระเบียน: %1@"
+        ],
+        "core_msg_152": [
+            .zhHant: "沒有可以處理的文字",
+            .en: "There is no text to process",
+            .zhHans: "没有可以处理的文字",
+            .ja: "処理できるテキストがありません",
+            .ko: "처리할 텍스트가 없습니다",
+            .th: "ไม่มีข้อความให้ประมวลผล"
+        ],
+        "core_msg_153": [
+            .zhHant: "載入模型失敗：%1@",
+            .en: "Failed to load the model: %1@",
+            .zhHans: "加载模型失败：%1@",
+            .ja: "モデルの読み込みに失敗しました: %1@",
+            .ko: "모델 로드에 실패했습니다: %1@",
+            .th: "โหลดโมเดลไม่สำเร็จ: %1@"
+        ],
+        "core_msg_154": [
+            .zhHant: "模型狀態已損毀",
+            .en: "The model state is corrupted",
+            .zhHans: "模型状态已损毁",
+            .ja: "モデルの状態が壊れています",
+            .ko: "모델 상태가 손상되었습니다",
+            .th: "สถานะของโมเดลเสียหาย"
+        ],
+        "core_msg_155": [
+            .zhHant: "提示詞轉 token 失敗：%1@",
+            .en: "Failed to tokenize the prompt: %1@",
+            .zhHans: "提示词转 token 失败：%1@",
+            .ja: "プロンプトのトークン化に失敗しました: %1@",
+            .ko: "프롬프트 토큰화에 실패했습니다: %1@",
+            .th: "แปลงพรอมต์เป็นโทเค็นไม่สำเร็จ: %1@"
+        ],
+        "core_msg_156": [
+            .zhHant: "建立 context 失敗：%1@",
+            .en: "Failed to create the context: %1@",
+            .zhHans: "建立 context 失败：%1@",
+            .ja: "コンテキストの作成に失敗しました: %1@",
+            .ko: "컨텍스트 생성에 실패했습니다: %1@",
+            .th: "สร้างคอนเท็กซ์ไม่สำเร็จ: %1@"
+        ],
+        "core_msg_157": [
+            .zhHant: "decode 失敗：%1@",
+            .en: "Decode failed: %1@",
+            .zhHans: "decode 失败：%1@",
+            .ja: "デコードに失敗しました: %1@",
+            .ko: "디코딩에 실패했습니다: %1@",
+            .th: "ถอดรหัสไม่สำเร็จ: %1@"
+        ],
+        "core_msg_158": [
+            .zhHant: "模型校驗失敗：期望 %1@…，實得 %2@…（檔案已刪除）",
+            .en: "Model verification failed: expected %1@…, got %2@… (the file was deleted)",
+            .zhHans: "模型校验失败：期望 %1@…，实得 %2@…（文件已删除）",
+            .ja: "モデルの検証に失敗しました: 期待値 %1@…、実際 %2@…（ファイルは削除されました）",
+            .ko: "모델 검증에 실패했습니다: 기대값 %1@…, 실제 %2@…(파일이 삭제되었습니다)",
+            .th: "ตรวจสอบโมเดลไม่ผ่าน: คาดว่า %1@… แต่ได้ %2@… (ลบไฟล์แล้ว)"
+        ],
+        "core_msg_159": [
+            .zhHant: "大小不符：期望 %1@ bytes，實得 %2@",
+            .en: "Size mismatch: expected %1@ bytes, got %2@",
+            .zhHans: "大小不符：期望 %1@ bytes，实得 %2@",
+            .ja: "サイズが一致しません: 期待値 %1@ バイト、実際 %2@",
+            .ko: "크기가 맞지 않습니다: 기대값 %1@바이트, 실제 %2@",
+            .th: "ขนาดไม่ตรงกัน: คาดว่า %1@ ไบต์ แต่ได้ %2@"
+        ],
+        "core_msg_160": [
+            .zhHant: "模型清單格式錯誤：%1@",
+            .en: "Invalid model list format: %1@",
+            .zhHans: "模型清单格式错误：%1@",
+            .ja: "モデル一覧の形式が正しくありません: %1@",
+            .ko: "모델 목록 형식이 올바르지 않습니다: %1@",
+            .th: "รูปแบบรายการโมเดลไม่ถูกต้อง: %1@"
+        ],
+        "core_msg_161": [
+            .zhHant: "revision 必須是實際的 commit sha，不能是浮動參照：%1@",
+            .en: "revision must be an actual commit sha, not a floating reference: %1@",
+            .zhHans: "revision 必须是实际的 commit sha，不能是浮动参照：%1@",
+            .ja: "revision は実際の commit sha である必要があり、可変の参照は使えません: %1@",
+            .ko: "revision은 실제 commit sha여야 하며 유동 참조는 안 됩니다: %1@",
+            .th: "revision ต้องเป็น commit sha จริง ไม่ใช่การอ้างอิงที่เปลี่ยนได้: %1@"
+        ],
+        "core_msg_162": [
+            .zhHant: "授權檔雜湊格式錯誤：%1@",
+            .en: "Invalid licence file hash format: %1@",
+            .zhHans: "授权文件杂凑格式错误：%1@",
+            .ja: "ライセンスファイルのハッシュ形式が正しくありません: %1@",
+            .ko: "라이선스 파일 해시 형식이 올바르지 않습니다: %1@",
+            .th: "รูปแบบแฮชของไฟล์สัญญาอนุญาตไม่ถูกต้อง: %1@"
+        ],
+        "core_msg_163": [
+            .zhHant: "授權檔只有 %1@ bytes，多半不是授權文本而是錯誤頁",
+            .en: "The licence file is only %1@ bytes; it is probably an error page, not licence text",
+            .zhHans: "授权文件只有 %1@ bytes，多半不是授权文本而是错误页",
+            .ja: "ライセンスファイルは %1@ バイトしかありません。ライセンス本文ではなくエラーページの可能性があります",
+            .ko: "라이선스 파일이 %1@바이트뿐입니다. 라이선스 본문이 아니라 오류 페이지일 가능성이 큽니다",
+            .th: "ไฟล์สัญญาอนุญาตมีเพียง %1@ ไบต์ น่าจะเป็นหน้าแสดงข้อผิดพลาดไม่ใช่ข้อความสัญญาอนุญาต"
+        ],
+        "core_msg_164": [
+            .zhHant: "model card 未宣告授權名稱",
+            .en: "The model card does not declare a licence name",
+            .zhHans: "model card 未宣告授权名称",
+            .ja: "モデルカードにライセンス名が記載されていません",
+            .ko: "모델 카드에 라이선스 이름이 명시되어 있지 않습니다",
+            .th: "โมเดลการ์ดไม่ได้ระบุชื่อสัญญาอนุญาต"
+        ],
+        "core_msg_165": [
+            .zhHant: "沒有任何產出檔案",
+            .en: "There are no output files",
+            .zhHans: "没有任何产出文件",
+            .ja: "出力ファイルがありません",
+            .ko: "출력 파일이 없습니다",
+            .th: "ไม่มีไฟล์ผลลัพธ์"
+        ],
+        "core_msg_166": [
+            .zhHant: "產出檔案雜湊格式錯誤：%1@",
+            .en: "Invalid output file hash format: %1@",
+            .zhHans: "产出文件杂凑格式错误：%1@",
+            .ja: "出力ファイルのハッシュ形式が正しくありません: %1@",
+            .ko: "출력 파일 해시 형식이 올바르지 않습니다: %1@",
+            .th: "รูปแบบแฮชของไฟล์ผลลัพธ์ไม่ถูกต้อง: %1@"
+        ],
+        "core_msg_167": [
+            .zhHant: "缺少工具版本紀錄：%1@",
+            .en: "Missing tool version record: %1@",
+            .zhHans: "缺少工具版本纪录：%1@",
+            .ja: "ツールのバージョン記録がありません: %1@",
+            .ko: "도구 버전 기록이 없습니다: %1@",
+            .th: "ไม่มีบันทึกเวอร์ชันของเครื่องมือ: %1@"
+        ],
+        "core_msg_168": [
+            .zhHant: "不是有效的 PDF 檔",
+            .en: "Not a valid PDF file",
+            .zhHans: "不是有效的 PDF 文件",
+            .ja: "有効な PDF ファイルではありません",
+            .ko: "올바른 PDF 파일이 아닙니다",
+            .th: "ไม่ใช่ไฟล์ PDF ที่ถูกต้อง"
+        ],
+        "core_msg_169": [
+            .zhHant: "這份 PDF 需要密碼",
+            .en: "This PDF requires a password",
+            .zhHans: "这份 PDF 需要密码",
+            .ja: "この PDF にはパスワードが必要です",
+            .ko: "이 PDF에는 비밀번호가 필요합니다",
+            .th: "PDF นี้ต้องใช้รหัสผ่าน"
+        ],
+        "core_msg_170": [
+            .zhHant: "頁碼 %1@ 超出範圍（共 %2@ 頁）",
+            .en: "Page number %1@ is out of range (%2@ pages in total)",
+            .zhHans: "页码 %1@ 超出范围（共 %2@ 页）",
+            .ja: "ページ番号 %1@ が範囲外です（全 %2@ ページ）",
+            .ko: "페이지 번호 %1@이(가) 범위를 벗어났습니다(총 %2@페이지)",
+            .th: "หมายเลขหน้า %1@ เกินช่วง (ทั้งหมด %2@ หน้า)"
+        ],
+        "core_msg_171": [
+            .zhHant: "PDF 引擎錯誤：%1@",
+            .en: "PDF engine error: %1@",
+            .zhHans: "PDF 引擎错误：%1@",
+            .ja: "PDF エンジンのエラー: %1@",
+            .ko: "PDF 엔진 오류: %1@",
+            .th: "ข้อผิดพลาดของเอนจิน PDF: %1@"
+        ],
+        "core_msg_172": [
+            .zhHant: "找不到 libpdfium：%1@",
+            .en: "libpdfium not found: %1@",
+            .zhHans: "找不到 libpdfium：%1@",
+            .ja: "libpdfium が見つかりません: %1@",
+            .ko: "libpdfium을 찾을 수 없습니다: %1@",
+            .th: "ไม่พบ libpdfium: %1@"
+        ],
+        "core_msg_173": [
+            .zhHant: "找不到標點模型：%1@",
+            .en: "Punctuation model not found: %1@",
+            .zhHans: "找不到标点模型：%1@",
+            .ja: "句読点モデルが見つかりません: %1@",
+            .ko: "문장 부호 모델을 찾을 수 없습니다: %1@",
+            .th: "ไม่พบโมเดลเครื่องหมายวรรคตอน: %1@"
+        ],
+        "core_msg_174": [
+            .zhHant: "找不到詞表：%1@",
+            .en: "Vocabulary not found: %1@",
+            .zhHans: "找不到词表：%1@",
+            .ja: "語彙リストが見つかりません: %1@",
+            .ko: "어휘 목록을 찾을 수 없습니다: %1@",
+            .th: "ไม่พบรายการคำศัพท์: %1@"
+        ],
+        "core_msg_175": [
+            .zhHant: "詞表格式錯誤：%1@",
+            .en: "Invalid vocabulary format: %1@",
+            .zhHans: "词表格式错误：%1@",
+            .ja: "語彙リストの形式が正しくありません: %1@",
+            .ko: "어휘 목록 형식이 올바르지 않습니다: %1@",
+            .th: "รูปแบบรายการคำศัพท์ไม่ถูกต้อง: %1@"
+        ],
+        "core_msg_176": [
+            .zhHant: "詞表缺少 <unk>",
+            .en: "The vocabulary is missing <unk>",
+            .zhHans: "词表缺少 <unk>",
+            .ja: "語彙リストに <unk> がありません",
+            .ko: "어휘 목록에 <unk>가 없습니다",
+            .th: "รายการคำศัพท์ไม่มี <unk>"
+        ],
+        "core_msg_177": [
+            .zhHant: "logits 維度為 0",
+            .en: "The logits dimension is 0",
+            .zhHans: "logits 维度为 0",
+            .ja: "logits の次元が 0 です",
+            .ko: "logits 차원이 0입니다",
+            .th: "มิติของ logits เป็น 0"
+        ],
+        "core_msg_178": [
+            .zhHant: "辨識後端不可用：%1@",
+            .en: "Recognition backend unavailable: %1@",
+            .zhHans: "辨识后端不可用：%1@",
+            .ja: "認識バックエンドを利用できません: %1@",
+            .ko: "인식 백엔드를 사용할 수 없습니다: %1@",
+            .th: "ส่วนหลังบ้านการรู้จำใช้ไม่ได้: %1@"
+        ],
+        "core_msg_179": [
+            .zhHant: "無候選結果",
+            .en: "No candidate results",
+            .zhHans: "无候选结果",
+            .ja: "候補がありません",
+            .ko: "후보 결과가 없습니다",
+            .th: "ไม่มีผลลัพธ์ตัวเลือก"
+        ],
+        "core_msg_180": [
+            .zhHant: "密碼錯誤，無法加入房間",
+            .en: "Wrong password; cannot join the room",
+            .zhHans: "密码错误，无法加入房间",
+            .ja: "パスワードが違うため、ルームに参加できません",
+            .ko: "비밀번호가 틀려 방에 참가할 수 없습니다",
+            .th: "รหัสผ่านไม่ถูกต้อง เข้าร่วมห้องไม่ได้"
+        ],
+        "core_msg_181": [
+            .zhHant: "僅房主有權關閉此房間",
+            .en: "Only the host can close this room",
+            .zhHans: "仅房主有权关闭此房间",
+            .ja: "このルームを閉じられるのはホストだけです",
+            .ko: "방장만 이 방을 닫을 수 있습니다",
+            .th: "เฉพาะเจ้าของห้องเท่านั้นที่ปิดห้องนี้ได้"
+        ],
+        "core_msg_182": [
+            .zhHant: "房主已結束本次線上協同會議",
+            .en: "The host has ended this collaboration session",
+            .zhHans: "房主已结束本次线上协同会议",
+            .ja: "ホストがこの共同編集セッションを終了しました",
+            .ko: "방장이 이번 공동 편집 세션을 종료했습니다",
+            .th: "เจ้าของห้องได้จบการแก้ไขร่วมกันครั้งนี้แล้ว"
+        ],
+        "core_msg_183": [
+            .zhHant: "房間不存在",
+            .en: "The room does not exist",
+            .zhHans: "房间不存在",
+            .ja: "ルームが存在しません",
+            .ko: "방이 없습니다",
+            .th: "ไม่มีห้องนี้"
+        ],
+        "core_msg_184": [
+            .zhHant: "無法解析之訊息格式",
+            .en: "The message format could not be parsed",
+            .zhHans: "无法解析之消息格式",
+            .ja: "メッセージの形式を解析できませんでした",
+            .ko: "메시지 형식을 해석할 수 없습니다",
+            .th: "แยกวิเคราะห์รูปแบบข้อความไม่ได้"
+        ],
+        "core_msg_185": [
+            .zhHant: "找不到 blob：%1@",
+            .en: "Blob not found: %1@",
+            .zhHans: "找不到 blob：%1@",
+            .ja: "blob が見つかりません: %1@",
+            .ko: "blob을 찾을 수 없습니다: %1@",
+            .th: "ไม่พบ blob: %1@"
+        ],
+        "core_msg_186": [
+            .zhHant: "blob 損毀：期望 %1@，實得 %2@",
+            .en: "Blob is corrupted: expected %1@, got %2@",
+            .zhHans: "blob 损毁：期望 %1@，实得 %2@",
+            .ja: "blob が壊れています: 期待値 %1@、実際 %2@",
+            .ko: "blob이 손상되었습니다: 기대값 %1@, 실제 %2@",
+            .th: "blob เสียหาย: คาดว่า %1@ แต่ได้ %2@"
+        ],
+        "core_msg_187": [
+            .zhHant: "不是 .padnote 套件：%1@",
+            .en: "Not a .padnote package: %1@",
+            .zhHans: "不是 .padnote 套件：%1@",
+            .ja: ".padnote パッケージではありません: %1@",
+            .ko: ".padnote 패키지가 아닙니다: %1@",
+            .th: "ไม่ใช่แพ็กเกจ .padnote: %1@"
+        ],
+        "core_msg_188": [
+            .zhHant: "此筆記本需要版本 %1@ 的讀取器，本程式為 %2@，請升級",
+            .en: "This notebook needs a reader of version %1@; this app is %2@. Please update",
+            .zhHans: "此笔记本需要版本 %1@ 的读取器，本程序为 %2@，请升级",
+            .ja: "このノートにはバージョン %1@ のリーダーが必要です（このアプリは %2@）。アップデートしてください",
+            .ko: "이 노트는 버전 %1@ 리더가 필요합니다(이 앱은 %2@). 업데이트하세요",
+            .th: "สมุดบันทึกนี้ต้องใช้ตัวอ่านเวอร์ชัน %1@ แต่แอปนี้เป็น %2@ โปรดอัปเดต"
+        ],
+        "core_msg_189": [
+            .zhHant: "manifest 解析失敗：%1@",
+            .en: "Failed to parse the manifest: %1@",
+            .zhHans: "manifest 解析失败：%1@",
+            .ja: "manifest の解析に失敗しました: %1@",
+            .ko: "manifest 해석에 실패했습니다: %1@",
+            .th: "แยกวิเคราะห์ manifest ไม่สำเร็จ: %1@"
+        ],
+        "core_msg_190": [
+            .zhHant: "文件操作日誌損毀：%1@",
+            .en: "The document operation log is corrupted: %1@",
+            .zhHans: "文件操作日志损毁：%1@",
+            .ja: "ドキュメント操作ログが壊れています: %1@",
+            .ko: "문서 작업 로그가 손상되었습니다: %1@",
+            .th: "บันทึกการดำเนินการของเอกสารเสียหาย: %1@"
+        ],
+        "core_msg_191": [
+            .zhHant: "筆畫檔錯誤：%1@",
+            .en: "Ink file error: %1@",
+            .zhHans: "笔画文件错误：%1@",
+            .ja: "手書きファイルのエラー: %1@",
+            .ko: "필기 파일 오류: %1@",
+            .th: "ข้อผิดพลาดของไฟล์ลายเส้น: %1@"
+        ],
+        "core_msg_192": [
+            .zhHant: "封裝壓縮錯誤：%1@",
+            .en: "Package compression error: %1@",
+            .zhHans: "封装压缩错误：%1@",
+            .ja: "パッケージの圧縮エラー: %1@",
+            .ko: "패키지 압축 오류: %1@",
+            .th: "ข้อผิดพลาดในการบีบอัดแพ็กเกจ: %1@"
+        ],
+        "core_msg_193": [
+            .zhHant: "這個套件沒有加密",
+            .en: "This package is not encrypted",
+            .zhHans: "这个套件没有加密",
+            .ja: "このパッケージは暗号化されていません",
+            .ko: "이 패키지는 암호화되어 있지 않습니다",
+            .th: "แพ็กเกจนี้ไม่ได้เข้ารหัส"
+        ],
+        "core_msg_194": [
+            .zhHant: "salt 不是合法 base64：%1@",
+            .en: "salt is not valid base64: %1@",
+            .zhHans: "salt 不是合法 base64：%1@",
+            .ja: "salt が正しい base64 ではありません: %1@",
+            .ko: "salt가 올바른 base64가 아닙니다: %1@",
+            .th: "salt ไม่ใช่ base64 ที่ถูกต้อง: %1@"
+        ],
+        "core_msg_195": [
+            .zhHant: "這本筆記是在復原碼還不能解鎖的版本建立的 —— 它的復原碼從來沒有被用來包住金鑰，只有密碼開得了",
+            .en: "This notebook was created by a version that could not yet unlock with a recovery phrase — its recovery phrase was never used to wrap the key, so only the password opens it",
+            .zhHans: "这本笔记是在恢复码还不能解锁的版本建立的 —— 它的恢复码从来没有被用来包住密钥，只有密码开得了",
+            .ja: "このノートは、復元フレーズでロック解除できない旧バージョンで作成されました。復元フレーズで鍵を包んだことがないため、パスワードでのみ開けます",
+            .ko: "이 노트는 복구 문구로 잠금을 풀 수 없던 버전에서 만들어졌습니다. 복구 문구로 키를 감싼 적이 없어 비밀번호로만 열 수 있습니다",
+            .th: "สมุดบันทึกนี้สร้างจากเวอร์ชันที่ยังปลดล็อกด้วยวลีกู้คืนไม่ได้ วลีกู้คืนไม่เคยถูกใช้ห่อหุ้มคีย์ จึงเปิดได้ด้วยรหัสผ่านเท่านั้น"
+        ],
+        "core_msg_196": [
+            .zhHant: "不合法的裝置 id：%1@",
+            .en: "Invalid device id: %1@",
+            .zhHans: "不合法的装置 id：%1@",
+            .ja: "無効なデバイス id: %1@",
+            .ko: "잘못된 기기 id: %1@",
+            .th: "id อุปกรณ์ไม่ถูกต้อง: %1@"
+        ],
+        "core_msg_197": [
+            .zhHant: "不合法的錄音檔名：%1@",
+            .en: "Invalid recording file name: %1@",
+            .zhHans: "不合法的录音文件名：%1@",
+            .ja: "無効な録音ファイル名: %1@",
+            .ko: "잘못된 녹음 파일 이름: %1@",
+            .th: "ชื่อไฟล์บันทึกเสียงไม่ถูกต้อง: %1@"
+        ],
+        "core_msg_198": [
+            .zhHant: "不合法的 oplog 檔名：%1@",
+            .en: "Invalid oplog file name: %1@",
+            .zhHans: "不合法的 oplog 文件名：%1@",
+            .ja: "無効な oplog ファイル名: %1@",
+            .ko: "잘못된 oplog 파일 이름: %1@",
+            .th: "ชื่อไฟล์ oplog ไม่ถูกต้อง: %1@"
+        ],
+        "core_msg_199": [
+            .zhHant: "這個套件已加密，需要先解鎖才讀得出內容",
+            .en: "This package is encrypted; unlock it first to read its contents",
+            .zhHans: "这个套件已加密，需要先解锁才读得出内容",
+            .ja: "このパッケージは暗号化されています。内容を読むには先にロックを解除してください",
+            .ko: "이 패키지는 암호화되어 있습니다. 내용을 읽으려면 먼저 잠금을 해제하세요",
+            .th: "แพ็กเกจนี้เข้ารหัสอยู่ ต้องปลดล็อกก่อนจึงจะอ่านเนื้อหาได้"
+        ],
+        "core_msg_200": [
+            .zhHant: "oplog 操作筆數超過上限，已終止載入以防止記憶體溢出",
+            .en: "The number of oplog operations exceeds the limit; loading was stopped to prevent running out of memory",
+            .zhHans: "oplog 操作笔数超过上限，已终止加载以防止内存溢出",
+            .ja: "oplog の操作数が上限を超えました。メモリ不足を防ぐため読み込みを中止しました",
+            .ko: "oplog 작업 수가 한도를 초과하여 메모리 부족을 막기 위해 로드를 중단했습니다",
+            .th: "จำนวนการดำเนินการใน oplog เกินขีดจำกัด จึงหยุดโหลดเพื่อป้องกันหน่วยความจำไม่พอ"
+        ],
+        "core_msg_201": [
+            .zhHant: "路徑包含非法穿越",
+            .en: "The path contains an illegal traversal",
+            .zhHans: "路径包含非法穿越",
+            .ja: "パスに不正な階層移動が含まれています",
+            .ko: "경로에 허용되지 않는 상위 이동이 포함되어 있습니다",
+            .th: "เส้นทางมีการย้อนขึ้นที่ไม่อนุญาต"
+        ],
+        "core_msg_202": [
+            .zhHant: "Drive 沒有回傳 startPageToken",
+            .en: "Drive did not return a startPageToken",
+            .zhHans: "Drive 没有回传 startPageToken",
+            .ja: "Drive が startPageToken を返しませんでした",
+            .ko: "Drive가 startPageToken을 반환하지 않았습니다",
+            .th: "Drive ไม่ส่ง startPageToken กลับมา"
+        ],
+        "core_msg_203": [
+            .zhHant: "建立 %1@ 之後 Drive 沒有回傳 id",
+            .en: "Drive did not return an id after creating %1@",
+            .zhHans: "建立 %1@ 之后 Drive 没有回传 id",
+            .ja: "%1@ の作成後に Drive が id を返しませんでした",
+            .ko: "%1@을(를) 만든 뒤 Drive가 id를 반환하지 않았습니다",
+            .th: "หลังสร้าง %1@ Drive ไม่ส่ง id กลับมา"
+        ],
+        "core_msg_204": [
+            .zhHant: "Google Drive 不支援 append（%1@）；請改用分塊檔策略",
+            .en: "Google Drive does not support append (%1@); use the chunked-file strategy instead",
+            .zhHans: "Google Drive 不支持 append（%1@）；请改用分块文件策略",
+            .ja: "Google Drive は追記（%1@）をサポートしていません。分割ファイル方式に切り替えてください",
+            .ko: "Google Drive는 이어쓰기(%1@)를 지원하지 않습니다. 분할 파일 방식을 사용하세요",
+            .th: "Google Drive ไม่รองรับการต่อท้าย (%1@) โปรดใช้วิธีแบ่งไฟล์แทน"
+        ],
+        "core_msg_205": [
+            .zhHant: "Drive API 速率限制（HTTP 403），稍後重試：%1@",
+            .en: "Drive API rate limit (HTTP 403); try again later: %1@",
+            .zhHans: "Drive API 速率限制（HTTP 403），稍后重试：%1@",
+            .ja: "Drive API のレート制限（HTTP 403）です。しばらくしてからやり直してください: %1@",
+            .ko: "Drive API 속도 제한(HTTP 403)입니다. 잠시 후 다시 시도하세요: %1@",
+            .th: "ถึงขีดจำกัดอัตราของ Drive API (HTTP 403) โปรดลองใหม่ภายหลัง: %1@"
+        ],
+        "core_msg_206": [
+            .zhHant: "可續傳上傳沒有回傳 Location",
+            .en: "The resumable upload did not return a Location",
+            .zhHans: "可续传上传没有回传 Location",
+            .ja: "再開可能なアップロードが Location を返しませんでした",
+            .ko: "이어서 올리기가 Location을 반환하지 않았습니다",
+            .th: "การอัปโหลดแบบต่อได้ไม่ส่ง Location กลับมา"
+        ],
+        "core_msg_207": [
+            .zhHant: "訊框太大",
+            .en: "The frame is too large",
+            .zhHans: "帧太大",
+            .ja: "フレームが大きすぎます",
+            .ko: "프레임이 너무 큽니다",
+            .th: "เฟรมใหญ่เกินไป"
+        ],
+        "core_msg_208": [
+            .zhHant: "訊框超過上限",
+            .en: "The frame exceeds the limit",
+            .zhHans: "帧超过上限",
+            .ja: "フレームが上限を超えています",
+            .ko: "프레임이 한도를 초과했습니다",
+            .th: "เฟรมเกินขีดจำกัด"
+        ],
+        "core_msg_209": [
+            .zhHant: "訊框太短",
+            .en: "The frame is too short",
+            .zhHans: "帧太短",
+            .ja: "フレームが短すぎます",
+            .ko: "프레임이 너무 짧습니다",
+            .th: "เฟรมสั้นเกินไป"
+        ],
+        "core_msg_210": [
+            .zhHant: "方向不符（疑似反射）",
+            .en: "Wrong direction (possible reflection)",
+            .zhHans: "方向不符（疑似反射）",
+            .ja: "方向が一致しません（反射の疑い）",
+            .ko: "방향이 맞지 않습니다(반사 의심)",
+            .th: "ทิศทางไม่ตรง (สงสัยว่าเป็นการสะท้อนกลับ)"
+        ],
+        "core_msg_211": [
+            .zhHant: "標頭超出訊框",
+            .en: "The header extends beyond the frame",
+            .zhHans: "标头超出帧",
+            .ja: "ヘッダーがフレームをはみ出しています",
+            .ko: "헤더가 프레임을 벗어났습니다",
+            .th: "ส่วนหัวเกินขอบเฟรม"
+        ],
+        "core_msg_212": [
+            .zhHant: "標頭不是合法訊息",
+            .en: "The header is not a valid message",
+            .zhHans: "标头不是合法消息",
+            .ja: "ヘッダーが有効なメッセージではありません",
+            .ko: "헤더가 올바른 메시지가 아닙니다",
+            .th: "ส่วนหัวไม่ใช่ข้อความที่ถูกต้อง"
+        ],
+        "core_msg_213": [
+            .zhHant: "解析不到位址",
+            .en: "Cannot resolve the address",
+            .zhHans: "解析不到位址",
+            .ja: "アドレスを解決できません",
+            .ko: "주소를 확인할 수 없습니다",
+            .th: "แปลงที่อยู่ไม่ได้"
+        ],
+        "core_msg_214": [
+            .zhHant: "魔數不符",
+            .en: "Magic number mismatch",
+            .zhHans: "魔数不符",
+            .ja: "マジックナンバーが一致しません",
+            .ko: "매직 넘버가 일치하지 않습니다",
+            .th: "เลขมายากลไม่ตรงกัน"
+        ],
+        "core_msg_215": [
+            .zhHant: "對端裝置 id 不符",
+            .en: "The peer device id does not match",
+            .zhHans: "对端装置 id 不符",
+            .ja: "相手デバイスの id が一致しません",
+            .ko: "상대 기기 id가 일치하지 않습니다",
+            .th: "id ของอุปกรณ์ปลายทางไม่ตรงกัน"
+        ],
+        "core_msg_216": [
+            .zhHant: "金鑰不符",
+            .en: "Key mismatch",
+            .zhHans: "密钥不符",
+            .ja: "鍵が一致しません",
+            .ko: "키가 일치하지 않습니다",
+            .th: "คีย์ไม่ตรงกัน"
+        ],
+        "core_msg_217": [
+            .zhHant: "第一個訊框不是 Ready",
+            .en: "The first frame is not Ready",
+            .zhHans: "第一个帧不是 Ready",
+            .ja: "最初のフレームが Ready ではありません",
+            .ko: "첫 프레임이 Ready가 아닙니다",
+            .th: "เฟรมแรกไม่ใช่ Ready"
+        ],
+        "core_msg_218": [
+            .zhHant: "標籤不符",
+            .en: "Tag mismatch",
+            .zhHans: "标签不符",
+            .ja: "タグが一致しません",
+            .ko: "태그가 일치하지 않습니다",
+            .th: "แท็กไม่ตรงกัน"
+        ],
+        "core_msg_219": [
+            .zhHant: "不該由這一方連過來",
+            .en: "This side should not have been the one to connect",
+            .zhHans: "不该由这一方连过来",
+            .ja: "この側から接続すべきではありません",
+            .ko: "이쪽에서 연결하면 안 됩니다",
+            .th: "ฝั่งนี้ไม่ควรเป็นฝ่ายเชื่อมต่อ"
+        ],
+        "core_msg_220": [
+            .zhHant: "檔案尚未從雲端下載：%1@",
+            .en: "The file has not been downloaded from the cloud yet: %1@",
+            .zhHans: "文件尚未从云端下载：%1@",
+            .ja: "ファイルはまだクラウドからダウンロードされていません: %1@",
+            .ko: "파일이 아직 클라우드에서 다운로드되지 않았습니다: %1@",
+            .th: "ยังไม่ได้ดาวน์โหลดไฟล์จากคลาวด์: %1@"
+        ],
+        "core_msg_221": [
+            .zhHant: "停止門檻必須低於開始門檻，否則遲滯失效",
+            .en: "The stop threshold must be lower than the start threshold, otherwise hysteresis does not work",
+            .zhHans: "停止门槛必须低於开始门槛，否则迟滞失效",
+            .ja: "停止のしきい値は開始のしきい値より低くする必要があります。そうでないとヒステリシスが機能しません",
+            .ko: "중지 임계값은 시작 임계값보다 낮아야 합니다. 그렇지 않으면 히스테리시스가 작동하지 않습니다",
+            .th: "เกณฑ์หยุดต้องต่ำกว่าเกณฑ์เริ่ม ไม่เช่นนั้นฮิสเทอรีซิสจะไม่ทำงาน"
+        ],
+        "core_msg_222": [
+            .zhHant: "找不到 VAD 模型：%1@",
+            .en: "VAD model not found: %1@",
+            .zhHans: "找不到 VAD 模型：%1@",
+            .ja: "VAD モデルが見つかりません: %1@",
+            .ko: "VAD 모델을 찾을 수 없습니다: %1@",
+            .th: "ไม่พบโมเดล VAD: %1@"
         ],
         "corner_style": [
             .zhHant: "圓角",
@@ -3015,6 +4999,278 @@ extension LocalizationManager {
             .ko: "디자이너 팔레트",
             .th: "จานสีนักออกแบบ"
         ],
+        "diag_azimuth": [
+            .zhHant: "方位",
+            .en: "Azimuth",
+            .zhHans: "方位",
+            .ja: "方位角",
+            .ko: "방위각",
+            .th: "ทิศทาง"
+        ],
+        "diag_coalesced": [
+            .zhHant: "聯合取樣點",
+            .en: "Coalesced samples",
+            .zhHans: "合并取样点",
+            .ja: "結合サンプル",
+            .ko: "병합 샘플",
+            .th: "ตัวอย่างที่รวมกัน"
+        ],
+        "diag_collab_crypto": [
+            .zhHant: "協同加密",
+            .en: "Collaboration encryption",
+            .zhHans: "协同加密",
+            .ja: "共同編集の暗号化",
+            .ko: "공동 편집 암호화",
+            .th: "การเข้ารหัสการแก้ไขร่วมกัน"
+        ],
+        "diag_collab_relay": [
+            .zhHant: "協同中繼",
+            .en: "Collaboration relay",
+            .zhHans: "协同中继",
+            .ja: "共同編集の中継",
+            .ko: "공동 편집 릴레이",
+            .th: "รีเลย์การแก้ไขร่วมกัน"
+        ],
+        "diag_core_load_failed": [
+            .zhHant: "核心載入失敗",
+            .en: "Core failed to load",
+            .zhHans: "核心载入失败",
+            .ja: "コアの読み込みに失敗",
+            .ko: "코어 로드 실패",
+            .th: "โหลดแกนหลักไม่สำเร็จ"
+        ],
+        "diag_core_version": [
+            .zhHant: "核心版本",
+            .en: "Core version",
+            .zhHans: "核心版本",
+            .ja: "コアのバージョン",
+            .ko: "코어 버전",
+            .th: "เวอร์ชันแกนหลัก"
+        ],
+        "diag_crypto_empty": [
+            .zhHant: "加密回傳空字串",
+            .en: "Encryption returned an empty string",
+            .zhHans: "加密回传空字串",
+            .ja: "暗号化の結果が空の文字列でした",
+            .ko: "암호화 결과가 빈 문자열입니다",
+            .th: "การเข้ารหัสส่งสตริงว่างกลับมา"
+        ],
+        "diag_crypto_mismatch": [
+            .zhHant: "內容不符",
+            .en: "Content mismatch",
+            .zhHans: "内容不符",
+            .ja: "内容が一致しません",
+            .ko: "내용이 일치하지 않습니다",
+            .th: "เนื้อหาไม่ตรงกัน"
+        ],
+        "diag_crypto_ok": [
+            .zhHant: "AES-256-GCM round-trip 通過",
+            .en: "AES-256-GCM round trip passed",
+            .zhHans: "AES-256-GCM round-trip 通过",
+            .ja: "AES-256-GCM の往復テストに合格",
+            .ko: "AES-256-GCM 왕복 테스트 통과",
+            .th: "การทดสอบ AES-256-GCM ไป-กลับผ่าน"
+        ],
+        "diag_failed": [
+            .zhHant: "失敗：%1@",
+            .en: "Failed: %1@",
+            .zhHans: "失败：%1@",
+            .ja: "失敗: %1@",
+            .ko: "실패: %1@",
+            .th: "ล้มเหลว: %1@"
+        ],
+        "diag_first_stroke": [
+            .zhHant: "　首筆",
+            .en: "  First stroke",
+            .zhHans: "　首笔",
+            .ja: "　最初のストローク",
+            .ko: "  첫 획",
+            .th: "  เส้นแรก"
+        ],
+        "diag_first_stroke_value": [
+            .zhHant: "RGBA(%1@)、起點(%2@, %3@)、%4@ 點",
+            .en: "RGBA(%1@), start (%2@, %3@), %4@ points",
+            .zhHans: "RGBA(%1@)、起点(%2@, %3@)、%4@ 点",
+            .ja: "RGBA(%1@)、始点(%2@, %3@)、%4@ 点",
+            .ko: "RGBA(%1@), 시작점(%2@, %3@), %4@개 점",
+            .th: "RGBA(%1@) จุดเริ่ม (%2@, %3@) %4@ จุด"
+        ],
+        "diag_handoff_note": [
+            .zhHant: "跨平台筆記",
+            .en: "Cross-platform note",
+            .zhHans: "跨平台笔记",
+            .ja: "クロスプラットフォームのノート",
+            .ko: "크로스 플랫폼 노트",
+            .th: "สมุดบันทึกข้ามแพลตฟอร์ม"
+        ],
+        "diag_input_device": [
+            .zhHant: "輸入裝置",
+            .en: "Input device",
+            .zhHans: "输入装置",
+            .ja: "入力デバイス",
+            .ko: "입력 장치",
+            .th: "อุปกรณ์อินพุต"
+        ],
+        "diag_not_supported": [
+            .zhHant: "不支援",
+            .en: "Not supported",
+            .zhHans: "不支援",
+            .ja: "非対応",
+            .ko: "지원 안 함",
+            .th: "ไม่รองรับ"
+        ],
+        "diag_open_failed": [
+            .zhHant: "開啟失敗：%1@",
+            .en: "Failed to open: %1@",
+            .zhHans: "开启失败：%1@",
+            .ja: "開けませんでした: %1@",
+            .ko: "열기 실패: %1@",
+            .th: "เปิดไม่สำเร็จ: %1@"
+        ],
+        "diag_page_n": [
+            .zhHant: "第 %1@ 頁",
+            .en: "Page %1@",
+            .zhHans: "第 %1@ 页",
+            .ja: "%1@ ページ目",
+            .ko: "%1@페이지",
+            .th: "หน้า %1@"
+        ],
+        "diag_page_value": [
+            .zhHant: "筆畫 %1@、高 %2@pt",
+            .en: "%1@ strokes, %2@ pt tall",
+            .zhHans: "笔画 %1@、高 %2@pt",
+            .ja: "ストローク %1@、高さ %2@pt",
+            .ko: "획 %1@개, 높이 %2@pt",
+            .th: "%1@ เส้น สูง %2@pt"
+        ],
+        "diag_pages": [
+            .zhHant: "頁數",
+            .en: "Pages",
+            .zhHans: "页数",
+            .ja: "ページ数",
+            .ko: "페이지 수",
+            .th: "จำนวนหน้า"
+        ],
+        "diag_predicted": [
+            .zhHant: "預測取樣點",
+            .en: "Predicted samples",
+            .zhHans: "预测取样点",
+            .ja: "予測サンプル",
+            .ko: "예측 샘플",
+            .th: "ตัวอย่างที่คาดการณ์"
+        ],
+        "diag_pressure": [
+            .zhHant: "壓力",
+            .en: "Pressure",
+            .zhHans: "压力",
+            .ja: "筆圧",
+            .ko: "압력",
+            .th: "แรงกด"
+        ],
+        "diag_relay_start_failed": [
+            .zhHant: "啟動失敗",
+            .en: "Failed to start",
+            .zhHans: "启动失败",
+            .ja: "起動に失敗",
+            .ko: "시작 실패",
+            .th: "เริ่มไม่สำเร็จ"
+        ],
+        "diag_relay_started": [
+            .zhHant: "已啟動於埠 %1@（已停止）",
+            .en: "Started on port %1@ (now stopped)",
+            .zhHans: "已启动於埠 %1@（已停止）",
+            .ja: "ポート %1@ で起動しました（現在は停止済み）",
+            .ko: "포트 %1@에서 시작됨(현재 중지됨)",
+            .th: "เริ่มที่พอร์ต %1@ แล้ว (ตอนนี้หยุดแล้ว)"
+        ],
+        "diag_roll": [
+            .zhHant: "滾動",
+            .en: "Roll",
+            .zhHans: "滚动",
+            .ja: "ロール",
+            .ko: "롤",
+            .th: "การกลิ้ง"
+        ],
+        "diag_sample_string": [
+            .zhHant: "示例字串",
+            .en: "Sample string",
+            .zhHans: "示例字符串",
+            .ja: "サンプル文字列",
+            .ko: "예시 문자열",
+            .th: "สตริงตัวอย่าง"
+        ],
+        "diag_samples": [
+            .zhHant: "p50 %1@ms · p95 %2@ms · %3@ 樣本",
+            .en: "p50 %1@ms · p95 %2@ms · %3@ samples",
+            .zhHans: "p50 %1@ms · p95 %2@ms · %3@ 样本",
+            .ja: "p50 %1@ms · p95 %2@ms · %3@ サンプル",
+            .ko: "p50 %1@ms · p95 %2@ms · 샘플 %3@개",
+            .th: "p50 %1@ms · p95 %2@ms · %3@ ตัวอย่าง"
+        ],
+        "diag_string_table": [
+            .zhHant: "字串表",
+            .en: "String table",
+            .zhHans: "字符串表",
+            .ja: "文字列テーブル",
+            .ko: "문자열 표",
+            .th: "ตารางสตริง"
+        ],
+        "diag_string_table_value": [
+            .zhHant: "%1@ 條（與 Apple 版同源）",
+            .en: "%1@ entries (shared with the Apple app)",
+            .zhHans: "%1@ 条（与 Apple 版同源）",
+            .ja: "%1@ 件（Apple 版と共通）",
+            .ko: "%1@개(Apple 앱과 동일 출처)",
+            .th: "%1@ รายการ (ใช้ร่วมกับแอป Apple)"
+        ],
+        "diag_target_platform": [
+            .zhHant: "目標平台",
+            .en: "Target platform",
+            .zhHans: "目标平台",
+            .ja: "ターゲットプラットフォーム",
+            .ko: "대상 플랫폼",
+            .th: "แพลตฟอร์มเป้าหมาย"
+        ],
+        "diag_tilt": [
+            .zhHant: "傾角",
+            .en: "Tilt",
+            .zhHans: "倾角",
+            .ja: "傾き",
+            .ko: "기울기",
+            .th: "มุมเอียง"
+        ],
+        "diag_tip_latency": [
+            .zhHant: "筆尖延遲",
+            .en: "Pen-tip latency",
+            .zhHans: "笔尖延迟",
+            .ja: "ペン先の遅延",
+            .ko: "펜촉 지연",
+            .th: "ความหน่วงปลายปากกา"
+        ],
+        "diag_touches": [
+            .zhHant: "同時觸控",
+            .en: "Simultaneous touches",
+            .zhHans: "同时触控",
+            .ja: "同時タッチ数",
+            .ko: "동시 터치",
+            .th: "การแตะพร้อมกัน"
+        ],
+        "diag_ui_language": [
+            .zhHant: "介面語系",
+            .en: "Interface language",
+            .zhHans: "界面语言",
+            .ja: "表示言語",
+            .ko: "인터페이스 언어",
+            .th: "ภาษาของอินเทอร์เฟซ"
+        ],
+        "diag_ui_version": [
+            .zhHant: "介面版本",
+            .en: "App version",
+            .zhHans: "界面版本",
+            .ja: "アプリのバージョン",
+            .ko: "앱 버전",
+            .th: "เวอร์ชันแอป"
+        ],
         "diagnostics": [
             .zhHant: "診斷",
             .en: "Diagnostics",
@@ -3150,6 +5406,102 @@ extension LocalizationManager {
             .ja: "記入例",
             .ko: "작성 예시",
             .th: "ตัวอย่างที่กรอกแล้ว"
+        ],
+        "doctor_auto_sync": [
+            .zhHant: "自動同步",
+            .en: "Auto sync",
+            .zhHans: "自动同步",
+            .ja: "自動同期",
+            .ko: "자동 동기화",
+            .th: "ซิงก์อัตโนมัติ"
+        ],
+        "doctor_cloud_snapshot": [
+            .zhHant: "雲端快照",
+            .en: "Cloud snapshot",
+            .zhHans: "云端快照",
+            .ja: "クラウドスナップショット",
+            .ko: "클라우드 스냅샷",
+            .th: "สแนปช็อตบนคลาวด์"
+        ],
+        "doctor_idle": [
+            .zhHant: "待命",
+            .en: "Idle",
+            .zhHans: "待命",
+            .ja: "待機中",
+            .ko: "대기 중",
+            .th: "พร้อมทำงาน"
+        ],
+        "doctor_last_result": [
+            .zhHant: "最後結果",
+            .en: "Last result",
+            .zhHans: "最后结果",
+            .ja: "直近の結果",
+            .ko: "마지막 결과",
+            .th: "ผลล่าสุด"
+        ],
+        "doctor_paused_sign_in": [
+            .zhHant: "已暫停，請重新登入",
+            .en: "Paused — please sign in again",
+            .zhHans: "已暂停，请重新登录",
+            .ja: "一時停止中です。再度サインインしてください",
+            .ko: "일시 중지됨 — 다시 로그인하세요",
+            .th: "หยุดชั่วคราว โปรดลงชื่อเข้าใช้อีกครั้ง"
+        ],
+        "doctor_pending_count": [
+            .zhHant: "%1@ / %2@ 本",
+            .en: "%1@ of %2@",
+            .zhHans: "%1@ / %2@ 本",
+            .ja: "%1@ / %2@ 冊",
+            .ko: "%1@ / %2@권",
+            .th: "%1@ / %2@ เล่ม"
+        ],
+        "doctor_pending_none": [
+            .zhHant: "無（已檢查 %@ 本）",
+            .en: "None (%@ checked)",
+            .zhHans: "无（已检查 %@ 本）",
+            .ja: "なし（%@ 冊を確認）",
+            .ko: "없음 (%@권 확인함)",
+            .th: "ไม่มี (ตรวจแล้ว %@ เล่ม)"
+        ],
+        "doctor_pending_notes": [
+            .zhHant: "待同步筆記",
+            .en: "Notes waiting to sync",
+            .zhHans: "待同步笔记",
+            .ja: "同期待ちのノート",
+            .ko: "동기화 대기 중인 노트",
+            .th: "โน้ตที่รอซิงก์"
+        ],
+        "doctor_reset": [
+            .zhHant: "重置",
+            .en: "Reset",
+            .zhHans: "重置",
+            .ja: "リセット",
+            .ko: "초기화",
+            .th: "รีเซ็ต"
+        ],
+        "doctor_running": [
+            .zhHant: "進行中",
+            .en: "Running",
+            .zhHans: "进行中",
+            .ja: "実行中",
+            .ko: "진행 중",
+            .th: "กำลังทำงาน"
+        ],
+        "doctor_snapshot_built": [
+            .zhHant: "已建立（追蹤 %@ 個檔案）",
+            .en: "Built (tracking %@ files)",
+            .zhHans: "已建立（追踪 %@ 个文件）",
+            .ja: "作成済み（%@ 件のファイルを追跡）",
+            .ko: "생성됨 (파일 %@개 추적 중)",
+            .th: "สร้างแล้ว (ติดตาม %@ ไฟล์)"
+        ],
+        "doctor_snapshot_missing": [
+            .zhHant: "尚未建立，下次同步會重新盤點一次",
+            .en: "Not built yet; the next sync will take inventory again",
+            .zhHans: "尚未建立，下次同步会重新盘点一次",
+            .ja: "未作成です。次回の同期で再度確認します",
+            .ko: "아직 생성되지 않았습니다. 다음 동기화 때 다시 점검합니다",
+            .th: "ยังไม่ได้สร้าง การซิงก์ครั้งถัดไปจะตรวจสอบใหม่"
         ],
         "document_missing": [
             .zhHant: "找不到打包的文件檔案，請回報這個問題。",
@@ -3695,6 +6047,46 @@ extension LocalizationManager {
             .ko: "드래그하여 이동",
             .th: "ลากเพื่อย้ายการ์ด"
         ],
+        "drive_auth_expired": [
+            .zhHant: "Google 帳號憑證已失效或過期，請重新登入 (HTTP 401)",
+            .en: "Your Google sign-in has expired. Please sign in again (HTTP 401).",
+            .zhHans: "Google 帐号凭证已失效或过期，请重新登录 (HTTP 401)",
+            .ja: "Google のサインインの有効期限が切れました。再度サインインしてください（HTTP 401）",
+            .ko: "Google 로그인이 만료되었습니다. 다시 로그인하세요 (HTTP 401).",
+            .th: "การลงชื่อเข้าใช้ Google หมดอายุ โปรดลงชื่อเข้าใช้อีกครั้ง (HTTP 401)"
+        ],
+        "drive_cred_refresh_failed": [
+            .zhHant: "暫時無法更新 Google 憑證（網路不通？），稍後重試",
+            .en: "Could not refresh your Google sign-in right now (offline?). Try again later.",
+            .zhHans: "暂时无法更新 Google 凭证（网络不通？），稍后重试",
+            .ja: "Google のサインインを更新できませんでした（オフライン？）。後でもう一度お試しください。",
+            .ko: "지금은 Google 로그인을 갱신할 수 없습니다 (오프라인?). 나중에 다시 시도하세요.",
+            .th: "ไม่สามารถต่ออายุการลงชื่อเข้าใช้ Google ได้ในขณะนี้ (ออฟไลน์?) โปรดลองใหม่ภายหลัง"
+        ],
+        "drive_permission_denied": [
+            .zhHant: "Google 帳號權限不足 (HTTP 403)",
+            .en: "Your Google account does not have permission (HTTP 403).",
+            .zhHans: "Google 帐号权限不足 (HTTP 403)",
+            .ja: "Google アカウントに権限がありません（HTTP 403）",
+            .ko: "Google 계정에 권한이 없습니다 (HTTP 403).",
+            .th: "บัญชี Google ไม่มีสิทธิ์เพียงพอ (HTTP 403)"
+        ],
+        "drive_rate_limited": [
+            .zhHant: "Drive 速率限制（HTTP 403），稍後重試",
+            .en: "Drive rate limit reached (HTTP 403). Try again later.",
+            .zhHans: "Drive 速率限制（HTTP 403），稍后重试",
+            .ja: "Drive のレート制限に達しました（HTTP 403）。後でもう一度お試しください。",
+            .ko: "Drive 속도 제한에 도달했습니다 (HTTP 403). 나중에 다시 시도하세요.",
+            .th: "ถึงขีดจำกัดอัตราของ Drive (HTTP 403) โปรดลองใหม่ภายหลัง"
+        ],
+        "drive_resume_no_location": [
+            .zhHant: "可續傳上傳沒有回傳 Location",
+            .en: "The resumable upload returned no Location header",
+            .zhHans: "可续传上传没有返回 Location",
+            .ja: "再開可能なアップロードが Location を返しませんでした",
+            .ko: "이어 올리기 업로드가 Location을 반환하지 않았습니다",
+            .th: "การอัปโหลดแบบต่อได้ไม่ส่ง Location กลับมา"
+        ],
         "drive_timeout_download": [
             .zhHant: "下載逾時（超過 300 秒）",
             .en: "Download timed out (over 300 s)",
@@ -3726,6 +6118,14 @@ extension LocalizationManager {
             .ja: "同期がタイムアウトしました（120 秒超過）。接続を確認して再試行してください。",
             .ko: "동기화 시간 초과(120초 초과). 연결을 확인한 뒤 다시 시도하세요.",
             .th: "การซิงก์หมดเวลา (เกิน 120 วินาที) โปรดตรวจสอบการเชื่อมต่อแล้วลองใหม่"
+        ],
+        "drive_user_cancelled": [
+            .zhHant: "使用者中斷同步",
+            .en: "Sync was stopped by the user",
+            .zhHans: "用户中断同步",
+            .ja: "ユーザーが同期を中断しました",
+            .ko: "사용자가 동기화를 중단했습니다",
+            .th: "ผู้ใช้หยุดการซิงก์"
         ],
         "drop_here_to_unfile": [
             .zhHant: "把筆記拖到這裡即可移出資料夾",
@@ -4199,6 +6599,14 @@ extension LocalizationManager {
             .ko: "동기화 폴더에 %@을(를) 만들 수 없습니다",
             .th: "สร้าง %@ ในโฟลเดอร์ซิงก์ไม่ได้"
         ],
+        "error_generic": [
+            .zhHant: "發生錯誤，請稍後再試。詳細資訊在同步日誌裡。",
+            .en: "Something went wrong. Please try again; details are in the sync log.",
+            .zhHans: "发生错误，请稍后再试。详细信息在同步日志里。",
+            .ja: "エラーが発生しました。もう一度お試しください。詳細は同期ログにあります。",
+            .ko: "오류가 발생했습니다. 다시 시도하세요. 자세한 내용은 동기화 로그에 있습니다.",
+            .th: "เกิดข้อผิดพลาด โปรดลองอีกครั้ง รายละเอียดอยู่ในบันทึกการซิงก์"
+        ],
         "exit_canvas_minimal_mode": [
             .zhHant: "退出畫布極簡模式",
             .en: "Exit minimal canvas mode",
@@ -4230,6 +6638,14 @@ extension LocalizationManager {
             .ja: "書き出しました：%@",
             .ko: "내보냈습니다: %@",
             .th: "ส่งออกแล้ว: %@"
+        ],
+        "export_err_no_pages": [
+            .zhHant: "這本筆記沒有任何頁面",
+            .en: "This notebook has no pages",
+            .zhHans: "这本笔记没有任何页面",
+            .ja: "このノートにはページがありません",
+            .ko: "이 노트에는 페이지가 없습니다",
+            .th: "สมุดบันทึกเล่มนี้ไม่มีหน้า"
         ],
         "export_failed": [
             .zhHant: "匯出失敗：%@",
@@ -4446,6 +6862,14 @@ extension LocalizationManager {
             .ja: "フォルダ名",
             .ko: "폴더 이름",
             .th: "ชื่อโฟลเดอร์"
+        ],
+        "folder_new_default": [
+            .zhHant: "新增資料夾",
+            .en: "New folder",
+            .zhHans: "新建文件夹",
+            .ja: "新しいフォルダ",
+            .ko: "새 폴더",
+            .th: "โฟลเดอร์ใหม่"
         ],
         "folder_sync_inaccessible": [
             .zhHant: "無法存取資料夾",
@@ -5182,6 +7606,14 @@ extension LocalizationManager {
             .ja: "✗ 誤った描き方",
             .ko: "✗ 잘못된 작도",
             .th: "✗ วาดผิด"
+        ],
+        "handwriting_err_bitmap": [
+            .zhHant: "無法取得點陣圖",
+            .en: "Could not get the bitmap",
+            .zhHans: "无法获取位图",
+            .ja: "ビットマップを取得できませんでした",
+            .ko: "비트맵을 가져올 수 없습니다",
+            .th: "รับบิตแมปไม่ได้"
         ],
         "handwriting_mode": [
             .zhHant: "手繪模式",
@@ -6791,6 +9223,14 @@ extension LocalizationManager {
             .ko: "링크 붙여넣기",
             .th: "วางลิงก์"
         ],
+        "llm_no_response": [
+            .zhHant: "沒有回應",
+            .en: "No response",
+            .zhHans: "没有回应",
+            .ja: "応答がありません",
+            .ko: "응답이 없습니다",
+            .th: "ไม่มีการตอบกลับ"
+        ],
         "local_relay_failed": [
             .zhHant: "這台裝置開不成房間：%@。請改用別台裝置發起，或填入一個中繼位址。",
             .en: "This device could not host the room: %@. Start the session from another device, or enter a relay address.",
@@ -6870,6 +9310,654 @@ extension LocalizationManager {
             .ja: "現在のタブ",
             .ko: "현재 탭",
             .th: "แท็บปัจจุบัน"
+        ],
+        "log_msg_001": [
+            .zhHant: "Google 帳號授權成功！已儲存憑證。",
+            .en: "Google account authorized. Credentials saved.",
+            .zhHans: "Google 账号授权成功！已储存凭据。",
+            .ja: "Google アカウントの認証に成功しました。認証情報を保存しました。",
+            .ko: "Google 계정 인증에 성공했습니다. 자격 증명을 저장했습니다.",
+            .th: "อนุญาตบัญชี Google สำเร็จ บันทึกข้อมูลรับรองแล้ว"
+        ],
+        "log_msg_002": [
+            .zhHant: "Google 授權取消或失敗：%1@",
+            .en: "Google authorization was cancelled or failed: %1@",
+            .zhHans: "Google 授权取消或失败：%1@",
+            .ja: "Google の認証がキャンセルされたか失敗しました: %1@",
+            .ko: "Google 인증이 취소되었거나 실패했습니다: %1@",
+            .th: "การอนุญาต Google ถูกยกเลิกหรือล้มเหลว: %1@"
+        ],
+        "log_msg_003": [
+            .zhHant: "Google 授權失敗：缺少 Code 或 Verifier",
+            .en: "Google authorization failed: missing Code or Verifier",
+            .zhHans: "Google 授权失败：缺少 Code 或 Verifier",
+            .ja: "Google の認証に失敗しました: Code または Verifier がありません",
+            .ko: "Google 인증 실패: Code 또는 Verifier가 없습니다",
+            .th: "การอนุญาต Google ล้มเหลว: ไม่มี Code หรือ Verifier"
+        ],
+        "log_msg_004": [
+            .zhHant: "Google 授權驗證失敗：State 不符合",
+            .en: "Google authorization check failed: State mismatch",
+            .zhHans: "Google 授权验证失败：State 不符合",
+            .ja: "Google の認証の検証に失敗しました: State が一致しません",
+            .ko: "Google 인증 검증 실패: State가 일치하지 않습니다",
+            .th: "ตรวจสอบการอนุญาต Google ล้มเหลว: State ไม่ตรงกัน"
+        ],
+        "log_msg_005": [
+            .zhHant: "授權失敗：未收到重導向資料",
+            .en: "Authorization failed: no redirect data received",
+            .zhHans: "授权失败：未收到重导向数据",
+            .ja: "認証に失敗しました: リダイレクトのデータを受け取っていません",
+            .ko: "인증 실패: 리디렉션 데이터를 받지 못했습니다",
+            .th: "การอนุญาตล้มเหลว: ไม่ได้รับข้อมูลการเปลี่ยนเส้นทาง"
+        ],
+        "log_msg_006": [
+            .zhHant: "正在向 Google 交換授權憑證...",
+            .en: "Exchanging the authorization code with Google…",
+            .zhHans: "正在向 Google 交换授权凭据...",
+            .ja: "Google と認証情報を交換しています…",
+            .ko: "Google과 인증 정보를 교환하는 중…",
+            .th: "กำลังแลกเปลี่ยนข้อมูลรับรองกับ Google…"
+        ],
+        "log_msg_007": [
+            .zhHant: "交換權杖失敗：%1@",
+            .en: "Token exchange failed: %1@",
+            .zhHans: "交换令牌失败：%1@",
+            .ja: "トークンの交換に失敗しました: %1@",
+            .ko: "토큰 교환에 실패했습니다: %1@",
+            .th: "แลกเปลี่ยนโทเค็นไม่สำเร็จ: %1@"
+        ],
+        "log_msg_008": [
+            .zhHant: "無法取得有效權杖，Google Drive 同步中止",
+            .en: "Cannot get a valid token; Google Drive sync stopped",
+            .zhHans: "无法取得有效令牌，Google Drive 同步中止",
+            .ja: "有効なトークンを取得できないため、Google Drive の同期を中止しました",
+            .ko: "유효한 토큰을 가져올 수 없어 Google Drive 동기화를 중단했습니다",
+            .th: "ขอโทเค็นที่ใช้ได้ไม่ได้ จึงหยุดซิงก์ Google Drive"
+        ],
+        "log_msg_009": [
+            .zhHant: "【同步中斷】已送出中斷要求，正在終止進行中的任務...",
+            .en: "[Sync stopped] Stop requested; ending the running tasks…",
+            .zhHans: "【同步中断】已送出中断要求，正在终止进行中的任务...",
+            .ja: "【同期の中断】中断を要求しました。実行中のタスクを終了しています…",
+            .ko: "[동기화 중단] 중단을 요청했습니다. 진행 중인 작업을 끝내는 중…",
+            .th: "[หยุดซิงก์] ส่งคำขอหยุดแล้ว กำลังยุติงานที่ทำอยู่…"
+        ],
+        "log_msg_010": [
+            .zhHant: "【資料夾同步】等待上一輪結束逾時，已保留待同步狀態",
+            .en: "[Folder sync] Timed out waiting for the previous round to finish; the pending state is kept",
+            .zhHans: "【文件夹同步】等待上一轮结束逾时，已保留待同步状态",
+            .ja: "【フォルダ同期】前回の同期の終了待ちがタイムアウトしました。同期待ちの状態は保持しています",
+            .ko: "[폴더 동기화] 이전 회차가 끝나기를 기다리다 시간이 초과되었습니다. 대기 상태는 유지됩니다",
+            .th: "[ซิงก์โฟลเดอร์] รอรอบก่อนหน้าเสร็จหมดเวลา เก็บสถานะที่รอซิงก์ไว้แล้ว"
+        ],
+        "log_msg_011": [
+            .zhHant: "【資料夾同步】上一輪（%1@）卡了 %2@ 秒沒收尾，接手",
+            .en: "[Folder sync] The previous round (%1@) was stuck for %2@ s; taking over",
+            .zhHans: "【文件夹同步】上一轮（%1@）卡了 %2@ 秒没收尾，接手",
+            .ja: "【フォルダ同期】前回（%1@）が %2@ 秒間終了しなかったため、引き継ぎました",
+            .ko: "[폴더 동기화] 이전 회차(%1@)가 %2@초 동안 끝나지 않아 이어받습니다",
+            .th: "[ซิงก์โฟลเดอร์] รอบก่อนหน้า (%1@) ค้างอยู่ %2@ วินาที จึงเข้ารับช่วงต่อ"
+        ],
+        "log_msg_012": [
+            .zhHant: "【資料夾同步】開始執行，目標：%1@",
+            .en: "[Folder sync] Started; target: %1@",
+            .zhHans: "【文件夹同步】开始执行，目标：%1@",
+            .ja: "【フォルダ同期】開始しました。対象: %1@",
+            .ko: "[폴더 동기화] 시작했습니다. 대상: %1@",
+            .th: "[ซิงก์โฟลเดอร์] เริ่มทำงาน เป้าหมาย: %1@"
+        ],
+        "log_msg_013": [
+            .zhHant: "【資料夾同步】已手動中斷。",
+            .en: "[Folder sync] Stopped manually.",
+            .zhHans: "【文件夹同步】已手动中断。",
+            .ja: "【フォルダ同期】手動で中断しました。",
+            .ko: "[폴더 동기화] 수동으로 중단했습니다.",
+            .th: "[ซิงก์โฟลเดอร์] หยุดด้วยตนเองแล้ว"
+        ],
+        "log_msg_014": [
+            .zhHant: "【資料夾同步】全部完成。",
+            .en: "[Folder sync] All done.",
+            .zhHans: "【文件夹同步】全部完成。",
+            .ja: "【フォルダ同期】すべて完了しました。",
+            .ko: "[폴더 동기화] 모두 완료했습니다.",
+            .th: "[ซิงก์โฟลเดอร์] เสร็จสมบูรณ์"
+        ],
+        "log_msg_015": [
+            .zhHant: "【資料夾同步】失敗：無法在遠端建立套件目錄 %1@",
+            .en: "[Folder sync] Failed: cannot create the package folder %1@ at the destination",
+            .zhHans: "【文件夹同步】失败：无法在远端建立套件目录 %1@",
+            .ja: "【フォルダ同期】失敗: 同期先にパッケージのフォルダ %1@ を作成できません",
+            .ko: "[폴더 동기화] 실패: 대상에 패키지 폴더 %1@을(를) 만들 수 없습니다",
+            .th: "[ซิงก์โฟลเดอร์] ล้มเหลว: สร้างโฟลเดอร์แพ็กเกจ %1@ ที่ปลายทางไม่ได้"
+        ],
+        "log_msg_016": [
+            .zhHant: "【資料夾同步】%1@ 完成。上傳: %2@, 下載: %3@, 失敗: %4@",
+            .en: "[Folder sync] %1@ finished. Uploaded: %2@, downloaded: %3@, failed: %4@",
+            .zhHans: "【文件夹同步】%1@ 完成。上传: %2@, 下载: %3@, 失败: %4@",
+            .ja: "【フォルダ同期】%1@ が完了しました。アップロード: %2@、ダウンロード: %3@、失敗: %4@",
+            .ko: "[폴더 동기화] %1@ 완료. 업로드: %2@, 다운로드: %3@, 실패: %4@",
+            .th: "[ซิงก์โฟลเดอร์] %1@ เสร็จแล้ว อัปโหลด: %2@ ดาวน์โหลด: %3@ ล้มเหลว: %4@"
+        ],
+        "log_msg_017": [
+            .zhHant: "【Google Drive 同步】等待上一輪結束逾時，已保留待同步狀態",
+            .en: "[Google Drive sync] Timed out waiting for the previous round to finish; the pending state is kept",
+            .zhHans: "【Google Drive 同步】等待上一轮结束逾时，已保留待同步状态",
+            .ja: "【Google Drive 同期】前回の同期の終了待ちがタイムアウトしました。同期待ちの状態は保持しています",
+            .ko: "[Google Drive 동기화] 이전 회차가 끝나기를 기다리다 시간이 초과되었습니다. 대기 상태는 유지됩니다",
+            .th: "[ซิงก์ Google Drive] รอรอบก่อนหน้าเสร็จหมดเวลา เก็บสถานะที่รอซิงก์ไว้แล้ว"
+        ],
+        "log_msg_018": [
+            .zhHant: "【Google Drive 同步】上一輪（%1@）卡了 %2@ 秒沒收尾，接手",
+            .en: "[Google Drive sync] The previous round (%1@) was stuck for %2@ s; taking over",
+            .zhHans: "【Google Drive 同步】上一轮（%1@）卡了 %2@ 秒没收尾，接手",
+            .ja: "【Google Drive 同期】前回（%1@）が %2@ 秒間終了しなかったため、引き継ぎました",
+            .ko: "[Google Drive 동기화] 이전 회차(%1@)가 %2@초 동안 끝나지 않아 이어받습니다",
+            .th: "[ซิงก์ Google Drive] รอบก่อนหน้า (%1@) ค้างอยู่ %2@ วินาที จึงเข้ารับช่วงต่อ"
+        ],
+        "log_msg_019": [
+            .zhHant: "【Google Drive 同步】開始執行",
+            .en: "[Google Drive sync] Started",
+            .zhHans: "【Google Drive 同步】开始执行",
+            .ja: "【Google Drive 同期】開始しました",
+            .ko: "[Google Drive 동기화] 시작했습니다",
+            .th: "[ซิงก์ Google Drive] เริ่มทำงาน"
+        ],
+        "log_msg_020": [
+            .zhHant: "【Google Drive 同步】已手動中斷。",
+            .en: "[Google Drive sync] Stopped manually.",
+            .zhHans: "【Google Drive 同步】已手动中断。",
+            .ja: "【Google Drive 同期】手動で中断しました。",
+            .ko: "[Google Drive 동기화] 수동으로 중단했습니다.",
+            .th: "[ซิงก์ Google Drive] หยุดด้วยตนเองแล้ว"
+        ],
+        "log_msg_021": [
+            .zhHant: "【Google Drive 同步】全部完成。",
+            .en: "[Google Drive sync] All done.",
+            .zhHans: "【Google Drive 同步】全部完成。",
+            .ja: "【Google Drive 同期】すべて完了しました。",
+            .ko: "[Google Drive 동기화] 모두 완료했습니다.",
+            .th: "[ซิงก์ Google Drive] เสร็จสมบูรณ์"
+        ],
+        "log_msg_022": [
+            .zhHant: "步驟 1：匯出本機筆記 (%1@ 本)...",
+            .en: "Step 1: exporting local notebooks (%1@)…",
+            .zhHans: "步骤 1：导出本机笔记 (%1@ 本)...",
+            .ja: "手順 1: ローカルのノートを書き出しています（%1@ 冊）…",
+            .ko: "1단계: 로컬 노트 내보내는 중(%1@개)…",
+            .th: "ขั้นตอนที่ 1: กำลังส่งออกสมุดบันทึกในเครื่อง (%1@ เล่ม)…"
+        ],
+        "log_msg_023": [
+            .zhHant: "步驟 1 完成，成功匯出 %1@ 本",
+            .en: "Step 1 done: %1@ notebooks exported",
+            .zhHans: "步骤 1 完成，成功导出 %1@ 本",
+            .ja: "手順 1 完了: %1@ 冊を書き出しました",
+            .ko: "1단계 완료: %1@개 내보냈습니다",
+            .th: "ขั้นตอนที่ 1 เสร็จ: ส่งออกสำเร็จ %1@ เล่ม"
+        ],
+        "log_msg_024": [
+            .zhHant: "步驟 1：同步中繼資料與索引 (連線中)...",
+            .en: "Step 1: syncing metadata and the index (connecting)…",
+            .zhHans: "步骤 1：同步元数据与索引 (连线中)...",
+            .ja: "手順 1: メタデータとインデックスを同期しています（接続中）…",
+            .ko: "1단계: 메타데이터와 색인을 동기화하는 중(연결 중)…",
+            .th: "ขั้นตอนที่ 1: กำลังซิงก์เมทาดาทาและดัชนี (กำลังเชื่อมต่อ)…"
+        ],
+        "log_msg_025": [
+            .zhHant: "步驟 2：搬移雲端檔案 (雙軌並行排程)...",
+            .en: "Step 2: moving cloud files (two lanes in parallel)…",
+            .zhHans: "步骤 2：搬移云端文件 (双轨并行排程)...",
+            .ja: "手順 2: クラウドのファイルを移動しています（2 系統を並行処理）…",
+            .ko: "2단계: 클라우드 파일 이동 중(두 경로 병렬 처리)…",
+            .th: "ขั้นตอนที่ 2: กำลังย้ายไฟล์บนคลาวด์ (สองเลนพร้อมกัน)…"
+        ],
+        "log_msg_026": [
+            .zhHant: "步驟 2：更新雲端快照（changes.list）...",
+            .en: "Step 2: updating the cloud snapshot (changes.list)…",
+            .zhHans: "步骤 2：更新云端快照（changes.list）...",
+            .ja: "手順 2: クラウドのスナップショットを更新しています（changes.list）…",
+            .ko: "2단계: 클라우드 스냅샷 업데이트 중(changes.list)…",
+            .th: "ขั้นตอนที่ 2: กำลังอัปเดตสแนปช็อตคลาวด์ (changes.list)…"
+        ],
+        "log_msg_027": [
+            .zhHant: "步驟 2 完成。上傳: %1@, 下載: %2@, 新增: %3@, 失敗: %4@",
+            .en: "Step 2 done. Uploaded: %1@, downloaded: %2@, new: %3@, failed: %4@",
+            .zhHans: "步骤 2 完成。上传: %1@, 下载: %2@, 新增: %3@, 失败: %4@",
+            .ja: "手順 2 完了。アップロード: %1@、ダウンロード: %2@、新規: %3@、失敗: %4@",
+            .ko: "2단계 완료. 업로드: %1@, 다운로드: %2@, 신규: %3@, 실패: %4@",
+            .th: "ขั้นตอนที่ 2 เสร็จ อัปโหลด: %1@ ดาวน์โหลด: %2@ ใหม่: %3@ ล้มเหลว: %4@"
+        ],
+        "log_msg_028": [
+            .zhHant: "步驟 2 完成。上傳: %1@, 下載: %2@, 新增: %3@",
+            .en: "Step 2 done. Uploaded: %1@, downloaded: %2@, new: %3@",
+            .zhHans: "步骤 2 完成。上传: %1@, 下载: %2@, 新增: %3@",
+            .ja: "手順 2 完了。アップロード: %1@、ダウンロード: %2@、新規: %3@",
+            .ko: "2단계 완료. 업로드: %1@, 다운로드: %2@, 신규: %3@",
+            .th: "ขั้นตอนที่ 2 เสร็จ อัปโหลด: %1@ ดาวน์โหลด: %2@ ใหม่: %3@"
+        ],
+        "log_msg_029": [
+            .zhHant: "步驟 3：匯入套件回本機筆記...",
+            .en: "Step 3: importing the packages back into local notebooks…",
+            .zhHans: "步骤 3：导入套件回本机笔记...",
+            .ja: "手順 3: パッケージをローカルのノートに取り込んでいます…",
+            .ko: "3단계: 패키지를 로컬 노트로 가져오는 중…",
+            .th: "ขั้นตอนที่ 3: กำลังนำเข้าแพ็กเกจกลับเป็นสมุดบันทึกในเครื่อง…"
+        ],
+        "log_msg_030": [
+            .zhHant: "📊【同步前核實】本機現存: %1@ 本，待同步活躍筆記: %2@ 本",
+            .en: "📊 [Pre-sync check] Local notebooks: %1@; active notebooks waiting to sync: %2@",
+            .zhHans: "📊【同步前核实】本机现存: %1@ 本，待同步活跃笔记: %2@ 本",
+            .ja: "📊【同期前の確認】ローカルのノート: %1@ 冊、同期待ちのアクティブなノート: %2@ 冊",
+            .ko: "📊 [동기화 전 확인] 로컬 노트: %1@개, 동기화 대기 중인 활성 노트: %2@개",
+            .th: "📊 [ตรวจสอบก่อนซิงก์] สมุดบันทึกในเครื่อง: %1@ เล่ม สมุดที่ใช้งานรอซิงก์: %2@ เล่ม"
+        ],
+        "log_msg_031": [
+            .zhHant: "📊【同步前核實】本機 %1@ 本，清理 %2@ 本，有差異待同步 %3@ 本（跳過 %4@ 本）",
+            .en: "📊 [Pre-sync check] Local: %1@, cleaned up: %2@, with differences to sync: %3@ (skipped %4@)",
+            .zhHans: "📊【同步前核实】本机 %1@ 本，清理 %2@ 本，有差异待同步 %3@ 本（跳过 %4@ 本）",
+            .ja: "📊【同期前の確認】ローカル %1@ 冊、整理 %2@ 冊、差分があり同期待ち %3@ 冊（スキップ %4@ 冊）",
+            .ko: "📊 [동기화 전 확인] 로컬 %1@개, 정리 %2@개, 차이가 있어 동기화 대기 %3@개(건너뜀 %4@개)",
+            .th: "📊 [ตรวจสอบก่อนซิงก์] ในเครื่อง %1@ เล่ม ล้างทิ้ง %2@ เล่ม มีความต่างรอซิงก์ %3@ เล่ม (ข้าม %4@ เล่ม)"
+        ],
+        "log_msg_032": [
+            .zhHant: "【前台極速軌】優先同步當前作用中筆記 (%1@...)...",
+            .en: "[Foreground fast lane] Syncing the active notebook first (%1@…)…",
+            .zhHans: "【前台极速轨】优先同步当前活动笔记 (%1@...)...",
+            .ja: "【フォアグラウンド優先】現在開いているノート（%1@…）を優先して同期しています…",
+            .ko: "[전면 우선 처리] 현재 열려 있는 노트(%1@…)를 먼저 동기화하는 중…",
+            .th: "[เลนด่วนด้านหน้า] กำลังซิงก์สมุดที่เปิดอยู่ก่อน (%1@…)…"
+        ],
+        "log_msg_033": [
+            .zhHant: "【前台極速軌】當前筆記 (%1@...) 完成（上傳: %2@, 下載: %3@）",
+            .en: "[Foreground fast lane] Active notebook (%1@…) done (uploaded: %2@, downloaded: %3@)",
+            .zhHans: "【前台极速轨】当前笔记 (%1@...) 完成（上传: %2@, 下载: %3@）",
+            .ja: "【フォアグラウンド優先】現在のノート（%1@…）が完了しました（アップロード: %2@、ダウンロード: %3@）",
+            .ko: "[전면 우선 처리] 현재 노트(%1@…) 완료(업로드: %2@, 다운로드: %3@)",
+            .th: "[เลนด่วนด้านหน้า] สมุดที่เปิดอยู่ (%1@…) เสร็จแล้ว (อัปโหลด: %2@ ดาวน์โหลด: %3@)"
+        ],
+        "log_msg_034": [
+            .zhHant: "【背景佇列】開始同步其餘 %1@ 本非作用中筆記...",
+            .en: "[Background queue] Syncing the other %1@ inactive notebooks…",
+            .zhHans: "【后台队列】开始同步其余 %1@ 本非活动笔记...",
+            .ja: "【バックグラウンド】残りの %1@ 冊の非アクティブなノートを同期しています…",
+            .ko: "[백그라운드 대기열] 나머지 비활성 노트 %1@개를 동기화하는 중…",
+            .th: "[คิวเบื้องหลัง] กำลังซิงก์สมุดที่ไม่ได้ใช้งานที่เหลือ %1@ เล่ม…"
+        ],
+        "log_msg_035": [
+            .zhHant: "【背景佇列】開始同步筆記本 (%1@...)...",
+            .en: "[Background queue] Syncing notebook (%1@…)…",
+            .zhHans: "【后台队列】开始同步笔记本 (%1@...)...",
+            .ja: "【バックグラウンド】ノート（%1@…）の同期を開始しました…",
+            .ko: "[백그라운드 대기열] 노트(%1@…) 동기화 시작…",
+            .th: "[คิวเบื้องหลัง] เริ่มซิงก์สมุดบันทึก (%1@…)…"
+        ],
+        "log_msg_036": [
+            .zhHant: "【背景佇列】筆記本 (%1@...) 完成（上傳: %2@, 下載: %3@）",
+            .en: "[Background queue] Notebook (%1@…) done (uploaded: %2@, downloaded: %3@)",
+            .zhHans: "【后台队列】笔记本 (%1@...) 完成（上传: %2@, 下载: %3@）",
+            .ja: "【バックグラウンド】ノート（%1@…）が完了しました（アップロード: %2@、ダウンロード: %3@）",
+            .ko: "[백그라운드 대기열] 노트(%1@…) 완료(업로드: %2@, 다운로드: %3@)",
+            .th: "[คิวเบื้องหลัง] สมุดบันทึก (%1@…) เสร็จแล้ว (อัปโหลด: %2@ ดาวน์โหลด: %3@)"
+        ],
+        "log_msg_037": [
+            .zhHant: "匯出失敗 (%1@)：%2@",
+            .en: "Export failed (%1@): %2@",
+            .zhHans: "导出失败 (%1@)：%2@",
+            .ja: "書き出しに失敗しました（%1@）: %2@",
+            .ko: "내보내기 실패(%1@): %2@",
+            .th: "ส่งออกไม่สำเร็จ (%1@): %2@"
+        ],
+        "log_msg_038": [
+            .zhHant: "無法取得 Google Drive 工作階段！",
+            .en: "Cannot get a Google Drive session!",
+            .zhHans: "无法取得 Google Drive 会话！",
+            .ja: "Google Drive のセッションを取得できません！",
+            .ko: "Google Drive 세션을 가져올 수 없습니다!",
+            .th: "เปิดเซสชัน Google Drive ไม่ได้!"
+        ],
+        "log_msg_039": [
+            .zhHant: "無法取得 Google Drive 索引！",
+            .en: "Cannot get the Google Drive index!",
+            .zhHans: "无法取得 Google Drive 索引！",
+            .ja: "Google Drive のインデックスを取得できません！",
+            .ko: "Google Drive 색인을 가져올 수 없습니다!",
+            .th: "อ่านดัชนี Google Drive ไม่ได้!"
+        ],
+        "log_msg_040": [
+            .zhHant: "雲端快照更新失敗：%1@",
+            .en: "Cloud snapshot update failed: %1@",
+            .zhHans: "云端快照更新失败：%1@",
+            .ja: "クラウドのスナップショットの更新に失敗しました: %1@",
+            .ko: "클라우드 스냅샷 업데이트 실패: %1@",
+            .th: "อัปเดตสแนปช็อตคลาวด์ไม่สำเร็จ: %1@"
+        ],
+        "log_msg_041": [
+            .zhHant: "雲端快照重建完成（%1@ 個檔案）",
+            .en: "Cloud snapshot rebuilt (%1@ files)",
+            .zhHans: "云端快照重建完成（%1@ 个文件）",
+            .ja: "クラウドのスナップショットを再構築しました（%1@ ファイル）",
+            .ko: "클라우드 스냅샷을 다시 만들었습니다(파일 %1@개)",
+            .th: "สร้างสแนปช็อตคลาวด์ใหม่เสร็จ (%1@ ไฟล์)"
+        ],
+        "log_msg_042": [
+            .zhHant: "雲端變動 %1@ 筆，快照共 %2@ 個檔案",
+            .en: "%1@ cloud changes; the snapshot has %2@ files",
+            .zhHans: "云端变动 %1@ 笔，快照共 %2@ 个文件",
+            .ja: "クラウドの変更 %1@ 件、スナップショットは計 %2@ ファイル",
+            .ko: "클라우드 변경 %1@건, 스냅샷은 총 파일 %2@개",
+            .th: "การเปลี่ยนแปลงบนคลาวด์ %1@ รายการ สแนปช็อตมีทั้งหมด %2@ ไฟล์"
+        ],
+        "log_msg_043": [
+            .zhHant: "元資料同步失敗：%1@",
+            .en: "Metadata sync failed: %1@",
+            .zhHans: "元数据同步失败：%1@",
+            .ja: "メタデータの同期に失敗しました: %1@",
+            .ko: "메타데이터 동기화 실패: %1@",
+            .th: "ซิงก์เมทาดาทาไม่สำเร็จ: %1@"
+        ],
+        "log_msg_044": [
+            .zhHant: "中繼資料同步失敗：%1@",
+            .en: "Metadata sync failed: %1@",
+            .zhHans: "元数据同步失败：%1@",
+            .ja: "メタデータの同期に失敗しました: %1@",
+            .ko: "메타데이터 동기화 실패: %1@",
+            .th: "ซิงก์เมทาดาทาไม่สำเร็จ: %1@"
+        ],
+        "log_msg_045": [
+            .zhHant: "筆記本 %1@… 完成（上傳 %2@、下載 %3@）",
+            .en: "Notebook %1@… done (uploaded %2@, downloaded %3@)",
+            .zhHans: "笔记本 %1@… 完成（上传 %2@、下载 %3@）",
+            .ja: "ノート %1@… が完了しました（アップロード %2@、ダウンロード %3@）",
+            .ko: "노트 %1@… 완료(업로드 %2@, 다운로드 %3@)",
+            .th: "สมุดบันทึก %1@… เสร็จแล้ว (อัปโหลด %2@ ดาวน์โหลด %3@)"
+        ],
+        "log_msg_046": [
+            .zhHant: "筆記本 %1@… 同步失敗：%2@",
+            .en: "Notebook %1@… sync failed: %2@",
+            .zhHans: "笔记本 %1@… 同步失败：%2@",
+            .ja: "ノート %1@… の同期に失敗しました: %2@",
+            .ko: "노트 %1@… 동기화 실패: %2@",
+            .th: "ซิงก์สมุดบันทึก %1@… ไม่สำเร็จ: %2@"
+        ],
+        "log_msg_047": [
+            .zhHant: "筆記本 %1@… 正在被焦點同步佔用，這一輪略過匯入",
+            .en: "Notebook %1@… is in use by Focus sync; skipping its import this round",
+            .zhHans: "笔记本 %1@… 正在被焦点同步占用，这一轮略过导入",
+            .ja: "ノート %1@… はフォーカス同期で使用中のため、今回は取り込みをスキップします",
+            .ko: "노트 %1@…은(는) 집중 동기화에서 사용 중이라 이번 회차 가져오기를 건너뜁니다",
+            .th: "สมุดบันทึก %1@… ถูกซิงก์โฟกัสใช้อยู่ จึงข้ามการนำเข้ารอบนี้"
+        ],
+        "log_msg_048": [
+            .zhHant: "筆記本 %1@… %2@",
+            .en: "Notebook %1@… %2@",
+            .zhHans: "笔记本 %1@… %2@",
+            .ja: "ノート %1@… %2@",
+            .ko: "노트 %1@… %2@",
+            .th: "สมุดบันทึก %1@… %2@"
+        ],
+        "log_msg_049": [
+            .zhHant: "筆記本 %1@ 同步中斷",
+            .en: "Notebook %1@ sync stopped",
+            .zhHans: "笔记本 %1@ 同步中断",
+            .ja: "ノート %1@ の同期を中断しました",
+            .ko: "노트 %1@ 동기화가 중단되었습니다",
+            .th: "หยุดซิงก์สมุดบันทึก %1@"
+        ],
+        "log_msg_050": [
+            .zhHant: "筆記本 %1@ 同步失敗：%2@",
+            .en: "Notebook %1@ sync failed: %2@",
+            .zhHans: "笔记本 %1@ 同步失败：%2@",
+            .ja: "ノート %1@ の同期に失敗しました: %2@",
+            .ko: "노트 %1@ 동기화 실패: %2@",
+            .th: "ซิงก์สมุดบันทึก %1@ ไม่สำเร็จ: %2@"
+        ],
+        "log_msg_051": [
+            .zhHant: "筆記本 %1@ %2@",
+            .en: "Notebook %1@ %2@",
+            .zhHans: "笔记本 %1@ %2@",
+            .ja: "ノート %1@ %2@",
+            .ko: "노트 %1@ %2@",
+            .th: "สมุดบันทึก %1@ %2@"
+        ],
+        "log_msg_052": [
+            .zhHant: "發現新筆記「%1@」(%2@)，開始自雲端下載...",
+            .en: "Found a new notebook “%1@” (%2@); downloading it from the cloud…",
+            .zhHans: "发现新笔记「%1@」(%2@)，开始自云端下载...",
+            .ja: "新しいノート「%1@」（%2@）を見つけました。クラウドからダウンロードしています…",
+            .ko: "새 노트 “%1@”(%2@)을(를) 찾았습니다. 클라우드에서 다운로드하는 중…",
+            .th: "พบสมุดบันทึกใหม่ “%1@” (%2@) กำลังดาวน์โหลดจากคลาวด์…"
+        ],
+        "log_msg_053": [
+            .zhHant: "筆記本「%1@」成功自雲端下載完成",
+            .en: "Notebook “%1@” was downloaded from the cloud",
+            .zhHans: "笔记本「%1@」成功自云端下载完成",
+            .ja: "ノート「%1@」をクラウドからダウンロードしました",
+            .ko: "노트 “%1@”을(를) 클라우드에서 다운로드했습니다",
+            .th: "ดาวน์โหลดสมุดบันทึก “%1@” จากคลาวด์สำเร็จ"
+        ],
+        "log_msg_054": [
+            .zhHant: "筆記本「%1@」自雲端下載失敗：%2@",
+            .en: "Downloading notebook “%1@” from the cloud failed: %2@",
+            .zhHans: "笔记本「%1@」自云端下载失败：%2@",
+            .ja: "ノート「%1@」のクラウドからのダウンロードに失敗しました: %2@",
+            .ko: "노트 “%1@”을(를) 클라우드에서 다운로드하지 못했습니다: %2@",
+            .th: "ดาวน์โหลดสมุดบันทึก “%1@” จากคลาวด์ไม่สำเร็จ: %2@"
+        ],
+        "log_msg_055": [
+            .zhHant: "已清理已刪除筆記本殘留套件：%1@",
+            .en: "Cleaned up the leftover package of a deleted notebook: %1@",
+            .zhHans: "已清理已删除笔记本残留套件：%1@",
+            .ja: "削除済みノートの残ったパッケージを整理しました: %1@",
+            .ko: "삭제된 노트의 남은 패키지를 정리했습니다: %1@",
+            .th: "ล้างแพ็กเกจที่ตกค้างของสมุดบันทึกที่ลบแล้ว: %1@"
+        ],
+        "log_msg_056": [
+            .zhHant: "【回收桶】確認檔沒發布成功：%1@",
+            .en: "[Trash] The confirmation file was not published: %1@",
+            .zhHans: "【回收站】确认档没发布成功：%1@",
+            .ja: "【ゴミ箱】確認ファイルを公開できませんでした: %1@",
+            .ko: "[휴지통] 확인 파일을 게시하지 못했습니다: %1@",
+            .th: "[ถังขยะ] เผยแพร่ไฟล์ยืนยันไม่สำเร็จ: %1@"
+        ],
+        "log_msg_057": [
+            .zhHant: "【回收桶】已永久清理雲端 %1@ 個過期檔案",
+            .en: "[Trash] Permanently removed %1@ expired files from the cloud",
+            .zhHans: "【回收站】已永久清理云端 %1@ 个过期文件",
+            .ja: "【ゴミ箱】期限切れのクラウドのファイル %1@ 件を完全に削除しました",
+            .ko: "[휴지통] 만료된 클라우드 파일 %1@개를 영구 삭제했습니다",
+            .th: "[ถังขยะ] ลบไฟล์หมดอายุบนคลาวด์ %1@ ไฟล์ถาวรแล้ว"
+        ],
+        "log_msg_058": [
+            .zhHant: "【回收桶】已永久清理本機 %1@ 本過期筆記本",
+            .en: "[Trash] Permanently removed %1@ expired notebooks from this device",
+            .zhHans: "【回收站】已永久清理本机 %1@ 本过期笔记本",
+            .ja: "【ゴミ箱】期限切れのノート %1@ 冊をこのデバイスから完全に削除しました",
+            .ko: "[휴지통] 만료된 노트 %1@개를 이 기기에서 영구 삭제했습니다",
+            .th: "[ถังขยะ] ลบสมุดบันทึกหมดอายุ %1@ เล่มออกจากอุปกรณ์นี้ถาวรแล้ว"
+        ],
+        "log_msg_059": [
+            .zhHant: "【回收桶】%1@ 本已期滿，等待這些裝置確認：%2@",
+            .en: "[Trash] %1@ notebooks have expired and are waiting for these devices to confirm: %2@",
+            .zhHans: "【回收站】%1@ 本已期满，等待这些设备确认：%2@",
+            .ja: "【ゴミ箱】期限切れのノート %1@ 冊が、次のデバイスの確認を待っています: %2@",
+            .ko: "[휴지통] 만료된 노트 %1@개가 다음 기기의 확인을 기다리고 있습니다: %2@",
+            .th: "[ถังขยะ] สมุดบันทึกหมดอายุ %1@ เล่มกำลังรออุปกรณ์เหล่านี้ยืนยัน: %2@"
+        ],
+        "log_msg_060": [
+            .zhHant: "【回收桶】%1@ 本已期滿，等待這些裝置確認：",
+            .en: "[Trash] %1@ notebooks have expired and are waiting for these devices to confirm:",
+            .zhHans: "【回收站】%1@ 本已期满，等待这些设备确认：",
+            .ja: "【ゴミ箱】期限切れのノート %1@ 冊が、次のデバイスの確認を待っています:",
+            .ko: "[휴지통] 만료된 노트 %1@개가 다음 기기의 확인을 기다리고 있습니다:",
+            .th: "[ถังขยะ] สมุดบันทึกหมดอายุ %1@ เล่มกำลังรออุปกรณ์เหล่านี้ยืนยัน:"
+        ],
+        "log_msg_061": [
+            .zhHant: "【回收】等待上一輪結束逾時，請稍後重試",
+            .en: "[Cleanup] Timed out waiting for the previous round to finish; please try again later",
+            .zhHans: "【回收】等待上一轮结束逾时，请稍后重试",
+            .ja: "【整理】前回の処理の終了待ちがタイムアウトしました。しばらくしてからやり直してください",
+            .ko: "[정리] 이전 회차가 끝나기를 기다리다 시간이 초과되었습니다. 잠시 후 다시 시도하세요",
+            .th: "[ล้างข้อมูล] รอรอบก่อนหน้าเสร็จหมดเวลา โปรดลองใหม่ภายหลัง"
+        ],
+        "log_msg_062": [
+            .zhHant: "【回收】完成，刪除 %1@ 個檔案",
+            .en: "[Cleanup] Done; deleted %1@ files",
+            .zhHans: "【回收】完成，删除 %1@ 个文件",
+            .ja: "【整理】完了しました。%1@ ファイルを削除しました",
+            .ko: "[정리] 완료. 파일 %1@개를 삭제했습니다",
+            .th: "[ล้างข้อมูล] เสร็จแล้ว ลบ %1@ ไฟล์"
+        ],
+        "log_msg_063": [
+            .zhHant: "【回收】完成，刪除 %1@ 個檔案；%2@ 本在等這些裝置確認：%3@",
+            .en: "[Cleanup] Done; deleted %1@ files; %2@ notebooks are waiting for these devices to confirm: %3@",
+            .zhHans: "【回收】完成，删除 %1@ 个文件；%2@ 本在等这些设备确认：%3@",
+            .ja: "【整理】完了しました。%1@ ファイルを削除しました。%2@ 冊が次のデバイスの確認を待っています: %3@",
+            .ko: "[정리] 완료. 파일 %1@개를 삭제했습니다. 노트 %2@개가 다음 기기의 확인을 기다립니다: %3@",
+            .th: "[ล้างข้อมูล] เสร็จแล้ว ลบ %1@ ไฟล์ สมุดบันทึก %2@ เล่มรออุปกรณ์เหล่านี้ยืนยัน: %3@"
+        ],
+        "log_msg_064": [
+            .zhHant: "【回收】刪除 %1@ 個，失敗 %2@ 個：%3@",
+            .en: "[Cleanup] Deleted %1@, failed %2@: %3@",
+            .zhHans: "【回收】删除 %1@ 个，失败 %2@ 个：%3@",
+            .ja: "【整理】%1@ 件を削除、%2@ 件が失敗しました: %3@",
+            .ko: "[정리] %1@개 삭제, %2@개 실패: %3@",
+            .th: "[ล้างข้อมูล] ลบ %1@ รายการ ล้มเหลว %2@ รายการ: %3@"
+        ],
+        "log_msg_065": [
+            .zhHant: "【回收】刪除 %1@ 個，失敗 %2@ 個：%3@；%4@ 本在等這些裝置確認：%5@",
+            .en: "[Cleanup] Deleted %1@, failed %2@: %3@; %4@ notebooks are waiting for these devices to confirm: %5@",
+            .zhHans: "【回收】删除 %1@ 个，失败 %2@ 个：%3@；%4@ 本在等这些设备确认：%5@",
+            .ja: "【整理】%1@ 件を削除、%2@ 件が失敗しました: %3@。%4@ 冊が次のデバイスの確認を待っています: %5@",
+            .ko: "[정리] %1@개 삭제, %2@개 실패: %3@. 노트 %4@개가 다음 기기의 확인을 기다립니다: %5@",
+            .th: "[ล้างข้อมูล] ลบ %1@ รายการ ล้มเหลว %2@ รายการ: %3@ สมุดบันทึก %4@ เล่มรออุปกรณ์เหล่านี้ยืนยัน: %5@"
+        ],
+        "log_msg_066": [
+            .zhHant: "【重置雲端】開始刪除雲端資料…",
+            .en: "[Reset cloud] Deleting the cloud data…",
+            .zhHans: "【重置云端】开始删除云端数据…",
+            .ja: "【クラウドのリセット】クラウドのデータを削除しています…",
+            .ko: "[클라우드 초기화] 클라우드 데이터를 삭제하는 중…",
+            .th: "[รีเซ็ตคลาวด์] กำลังลบข้อมูลบนคลาวด์…"
+        ],
+        "log_msg_067": [
+            .zhHant: "【重置雲端】等待上一輪結束逾時，請稍後重試",
+            .en: "[Reset cloud] Timed out waiting for the previous round to finish; please try again later",
+            .zhHans: "【重置云端】等待上一轮结束逾时，请稍后重试",
+            .ja: "【クラウドのリセット】前回の処理の終了待ちがタイムアウトしました。しばらくしてからやり直してください",
+            .ko: "[클라우드 초기화] 이전 회차가 끝나기를 기다리다 시간이 초과되었습니다. 잠시 후 다시 시도하세요",
+            .th: "[รีเซ็ตคลาวด์] รอรอบก่อนหน้าเสร็จหมดเวลา โปรดลองใหม่ภายหลัง"
+        ],
+        "log_msg_068": [
+            .zhHant: "【重置雲端】完成，刪除 %1@ 個檔案",
+            .en: "[Reset cloud] Done; deleted %1@ files",
+            .zhHans: "【重置云端】完成，删除 %1@ 个文件",
+            .ja: "【クラウドのリセット】完了しました。%1@ ファイルを削除しました",
+            .ko: "[클라우드 초기화] 완료. 파일 %1@개를 삭제했습니다",
+            .th: "[รีเซ็ตคลาวด์] เสร็จแล้ว ลบ %1@ ไฟล์"
+        ],
+        "log_msg_069": [
+            .zhHant: "【重置雲端】刪除 %1@ 個，失敗 %2@ 個：%3@",
+            .en: "[Reset cloud] Deleted %1@, failed %2@: %3@",
+            .zhHans: "【重置云端】删除 %1@ 个，失败 %2@ 个：%3@",
+            .ja: "【クラウドのリセット】%1@ 件を削除、%2@ 件が失敗しました: %3@",
+            .ko: "[클라우드 초기화] %1@개 삭제, %2@개 실패: %3@",
+            .th: "[รีเซ็ตคลาวด์] ลบ %1@ รายการ ล้มเหลว %2@ รายการ: %3@"
+        ],
+        "log_msg_070": [
+            .zhHant: "【焦點同步】%1@… 失敗：%2@",
+            .en: "[Focus sync] %1@… failed: %2@",
+            .zhHans: "【焦点同步】%1@… 失败：%2@",
+            .ja: "【フォーカス同期】%1@… が失敗しました: %2@",
+            .ko: "[집중 동기화] %1@… 실패: %2@",
+            .th: "[ซิงก์โฟกัส] %1@… ล้มเหลว: %2@"
+        ],
+        "log_msg_071": [
+            .zhHant: "【焦點同步】%1@… 上傳 %2@、下載 %3@",
+            .en: "[Focus sync] %1@… uploaded %2@, downloaded %3@",
+            .zhHans: "【焦点同步】%1@… 上传 %2@、下载 %3@",
+            .ja: "【フォーカス同期】%1@… アップロード %2@、ダウンロード %3@",
+            .ko: "[집중 동기화] %1@… 업로드 %2@, 다운로드 %3@",
+            .th: "[ซิงก์โฟกัส] %1@… อัปโหลด %2@ ดาวน์โหลด %3@"
+        ],
+        "log_msg_072": [
+            .zhHant: "【焦點同步】%1@… 上傳 %2@、下載 %3@（匯出 %4@ms、雲端 %5@ms、匯入 %6@ms）",
+            .en: "[Focus sync] %1@… uploaded %2@, downloaded %3@ (export %4@ ms, cloud %5@ ms, import %6@ ms)",
+            .zhHans: "【焦点同步】%1@… 上传 %2@、下载 %3@（导出 %4@ms、云端 %5@ms、导入 %6@ms）",
+            .ja: "【フォーカス同期】%1@… アップロード %2@、ダウンロード %3@（書き出し %4@ms、クラウド %5@ms、取り込み %6@ms）",
+            .ko: "[집중 동기화] %1@… 업로드 %2@, 다운로드 %3@(내보내기 %4@ms, 클라우드 %5@ms, 가져오기 %6@ms)",
+            .th: "[ซิงก์โฟกัส] %1@… อัปโหลด %2@ ดาวน์โหลด %3@ (ส่งออก %4@ ms คลาวด์ %5@ ms นำเข้า %6@ ms)"
+        ],
+        "log_msg_073": [
+            .zhHant: "【焦點同步】%1@… 上傳 %2@、下載 %3@（雲端 %4@ms）",
+            .en: "[Focus sync] %1@… uploaded %2@, downloaded %3@ (cloud %4@ ms)",
+            .zhHans: "【焦点同步】%1@… 上传 %2@、下载 %3@（云端 %4@ms）",
+            .ja: "【フォーカス同期】%1@… アップロード %2@、ダウンロード %3@（クラウド %4@ms）",
+            .ko: "[집중 동기화] %1@… 업로드 %2@, 다운로드 %3@(클라우드 %4@ms)",
+            .th: "[ซิงก์โฟกัส] %1@… อัปโหลด %2@ ดาวน์โหลด %3@ (คลาวด์ %4@ ms)"
+        ],
+        "log_msg_074": [
+            .zhHant: "【焦點同步】%1@… %2@",
+            .en: "[Focus sync] %1@… %2@",
+            .zhHans: "【焦点同步】%1@… %2@",
+            .ja: "【フォーカス同期】%1@… %2@",
+            .ko: "[집중 동기화] %1@… %2@",
+            .th: "[ซิงก์โฟกัส] %1@… %2@"
+        ],
+        "log_msg_075": [
+            .zhHant: "【區網直連】%1@… 忙碌中，稍後再匯入",
+            .en: "[Local link] %1@… is busy; will import it later",
+            .zhHans: "【局域网直连】%1@… 忙碌中，稍后再导入",
+            .ja: "【ローカル直接接続】%1@… は処理中のため、後で取り込みます",
+            .ko: "[로컬 직접 연결] %1@…은(는) 사용 중이라 나중에 가져옵니다",
+            .th: "[เชื่อมต่อตรงในเครือข่ายภายใน] %1@… กำลังไม่ว่าง จะนำเข้าภายหลัง"
+        ],
+        "log_msg_076": [
+            .zhHant: "【區網直連】%1@… 收到並匯入（%2@ms）",
+            .en: "[Local link] %1@… received and imported (%2@ ms)",
+            .zhHans: "【局域网直连】%1@… 收到并导入（%2@ms）",
+            .ja: "【ローカル直接接続】%1@… を受信して取り込みました（%2@ms）",
+            .ko: "[로컬 직접 연결] %1@… 수신 및 가져오기 완료(%2@ms)",
+            .th: "[เชื่อมต่อตรงในเครือข่ายภายใน] %1@… รับและนำเข้าแล้ว (%2@ ms)"
+        ],
+        "log_msg_077": [
+            .zhHant: "【區網直連】%1@… 收到對端的更新",
+            .en: "[Local link] %1@… received an update from the peer",
+            .zhHans: "【局域网直连】%1@… 收到对端的更新",
+            .ja: "【ローカル直接接続】%1@… で相手からの更新を受信しました",
+            .ko: "[로컬 직접 연결] %1@… 상대방의 업데이트를 받았습니다",
+            .th: "[เชื่อมต่อตรงในเครือข่ายภายใน] %1@… ได้รับการอัปเดตจากปลายทาง"
+        ],
+        "log_msg_078": [
+            .zhHant: "【區網直連】啟動失敗：%1@",
+            .en: "[Local link] Failed to start: %1@",
+            .zhHans: "【局域网直连】启动失败：%1@",
+            .ja: "【ローカル直接接続】起動に失敗しました: %1@",
+            .ko: "[로컬 직접 연결] 시작 실패: %1@",
+            .th: "[เชื่อมต่อตรงในเครือข่ายภายใน] เริ่มไม่สำเร็จ: %1@"
+        ],
+        "log_msg_079": [
+            .zhHant: "【區網直連】已連上 %1@ 台裝置",
+            .en: "[Local link] Connected to %1@ devices",
+            .zhHans: "【局域网直连】已连上 %1@ 台设备",
+            .ja: "【ローカル直接接続】%1@ 台のデバイスに接続しました",
+            .ko: "[로컬 직접 연결] 기기 %1@대에 연결되었습니다",
+            .th: "[เชื่อมต่อตรงในเครือข่ายภายใน] เชื่อมต่ออุปกรณ์แล้ว %1@ เครื่อง"
+        ],
+        "log_msg_080": [
+            .zhHant: "自動清理：%1@ 項（%2@ MB），回收桶期滿 %3@ 本",
+            .en: "Auto cleanup: %1@ items (%2@ MB); %3@ expired notebooks removed from the trash",
+            .zhHans: "自动清理：%1@ 项（%2@ MB），回收站期满 %3@ 本",
+            .ja: "自動整理: %1@ 件（%2@ MB）、ゴミ箱の期限切れ %3@ 冊",
+            .ko: "자동 정리: %1@개 항목(%2@MB), 휴지통 만료 노트 %3@개",
+            .th: "ล้างอัตโนมัติ: %1@ รายการ (%2@ MB) สมุดบันทึกในถังขยะหมดอายุ %3@ เล่ม"
+        ],
+        "log_msg_081": [
+            .zhHant: "自動清理：暫存 %1@ 項、模型殘檔 %2@ 項（共 %3@ MB），回收桶期滿 %4@ 本",
+            .en: "Auto cleanup: %1@ temp items, %2@ leftover model files (%3@ MB in total); %4@ expired notebooks removed from the trash",
+            .zhHans: "自动清理：临时 %1@ 项、模型残留文件 %2@ 项（共 %3@ MB），回收站期满 %4@ 本",
+            .ja: "自動整理: 一時ファイル %1@ 件、モデルの残りファイル %2@ 件（合計 %3@ MB）、ゴミ箱の期限切れ %4@ 冊",
+            .ko: "자동 정리: 임시 항목 %1@개, 모델 잔여 파일 %2@개(총 %3@MB), 휴지통 만료 노트 %4@개",
+            .th: "ล้างอัตโนมัติ: ไฟล์ชั่วคราว %1@ รายการ ไฟล์โมเดลที่เหลือ %2@ รายการ (รวม %3@ MB) สมุดบันทึกในถังขยะหมดอายุ %4@ เล่ม"
         ],
         "magnetic_snap_active": [
             .zhHant: "幾何角度與格線磁吸對齊中",
@@ -7039,6 +10127,78 @@ extension LocalizationManager {
             .ko: "특성",
             .th: "คุณสมบัติ"
         ],
+        "material_desc_copper": [
+            .zhHant: "偏紅的金屬光澤，高光柔和。",
+            .en: "Warm reddish metallic sheen with soft specular tone.",
+            .zhHans: "偏红的金属光泽，高光柔和。",
+            .ja: "赤みのある金属光沢。やわらかなハイライト。",
+            .ko: "붉은빛 금속 광택, 부드러운 하이라이트.",
+            .th: "ประกายโลหะอมแดง ไฮไลต์นุ่มนวล"
+        ],
+        "material_desc_gold": [
+            .zhHant: "100% 純金屬金，帶暖調鏡面反射。",
+            .en: "100% metallic gold with warm mirror specular reflection.",
+            .zhHans: "100% 纯金属金，带暖调镜面反射。",
+            .ja: "100% 金属の金。温かみのある鏡面反射。",
+            .ko: "100% 금속 금, 따뜻한 거울 반사.",
+            .th: "ทองคำโลหะ 100% สะท้อนเงาแบบกระจกโทนอุ่น"
+        ],
+        "material_desc_granite": [
+            .zhHant: "有顆粒質感的礦石，自然漫反射。",
+            .en: "Textured mineral rock with natural granular diffusion.",
+            .zhHans: "有颗粒质感的矿石，自然漫反射。",
+            .ja: "粒状の質感を持つ鉱石。自然な拡散反射。",
+            .ko: "알갱이 질감의 광물 암석, 자연스러운 확산.",
+            .th: "หินแร่ผิวหยาบเป็นเม็ด สะท้อนแสงกระจายตามธรรมชาติ"
+        ],
+        "material_desc_iron": [
+            .zhHant: "深色霧面工業鋼，質感厚重。",
+            .en: "Dark matte industrial steel with robust weight appearance.",
+            .zhHans: "深色哑光工业钢，质感厚重。",
+            .ja: "ダークなマット仕上げの工業用鋼。重厚な見た目。",
+            .ko: "어두운 무광 산업용 강철, 묵직한 느낌.",
+            .th: "เหล็กอุตสาหกรรมสีเข้มผิวด้าน ดูหนักแน่น"
+        ],
+        "material_desc_marble": [
+            .zhHant: "拋光石材，微透光並帶細緻紋路。",
+            .en: "Polished stone with subtle translucency and delicate veins.",
+            .zhHans: "抛光石材，微透光并带细致纹路。",
+            .ja: "磨かれた石材。わずかな透明感と繊細な模様。",
+            .ko: "광택 처리된 석재, 은은한 투명감과 섬세한 결.",
+            .th: "หินขัดมัน โปร่งแสงเล็กน้อย มีลายเส้นละเอียด"
+        ],
+        "material_desc_obsidian": [
+            .zhHant: "火山玻璃，對比強烈、光澤明亮。",
+            .en: "Volcanic glass with deep contrast and glossy sheen.",
+            .zhHans: "火山玻璃，对比强烈、光泽明亮。",
+            .ja: "火山ガラス。深いコントラストと艶やかな光沢。",
+            .ko: "화산 유리, 깊은 대비와 윤기 나는 광택.",
+            .th: "แก้วภูเขาไฟ คอนทราสต์เข้มและเงางาม"
+        ],
+        "material_desc_plastic": [
+            .zhHant: "表面平滑的合成高分子，高光均衡。",
+            .en: "Smooth synthetic polymer with balanced specular highlights.",
+            .zhHans: "表面平滑的合成高分子，高光均衡。",
+            .ja: "なめらかな合成樹脂。ハイライトのバランスが良い質感。",
+            .ko: "매끄러운 합성 고분자, 균형 잡힌 하이라이트.",
+            .th: "พอลิเมอร์สังเคราะห์ผิวเรียบ ไฮไลต์สมดุล"
+        ],
+        "material_desc_silver": [
+            .zhHant: "高反射率純銀，帶光亮鉻質感。",
+            .en: "High-reflectance pure silver with radiant chrome finish.",
+            .zhHans: "高反射率纯银，带光亮铬质感。",
+            .ja: "高反射率の純銀。輝くクロームの仕上げ。",
+            .ko: "반사율이 높은 순은, 빛나는 크롬 마감.",
+            .th: "เงินแท้สะท้อนแสงสูง ผิวโครเมียมแวววาว"
+        ],
+        "material_desc_wood": [
+            .zhHant: "天然有機紋理，柔和漫反射。",
+            .en: "Natural organic grain with warm diffuse scattering.",
+            .zhHans: "天然有机纹理，柔和漫反射。",
+            .ja: "自然な木目。やわらかな拡散反射。",
+            .ko: "자연스러운 나뭇결, 따뜻한 확산 반사.",
+            .th: "ลายไม้ธรรมชาติ สะท้อนแสงกระจายนุ่มนวล"
+        ],
         "material_pcabs_spec": [
             .zhHant: "UL94 V0 耐燃 / 模具咬花皮紋表面",
             .en: "UL94 V-0 / textured mould finish",
@@ -7167,6 +10327,70 @@ extension LocalizationManager {
             .ko: "지우기",
             .th: "ล้าง"
         ],
+        "math_const_01": [
+            .zhHant: "圓周率 π",
+            .en: "Pi π",
+            .zhHans: "圆周率 π",
+            .ja: "円周率 π",
+            .ko: "원주율 π",
+            .th: "ค่าพาย π"
+        ],
+        "math_const_02": [
+            .zhHant: "自然常數 e",
+            .en: "Euler's number e",
+            .zhHans: "自然常数 e",
+            .ja: "自然対数の底 e",
+            .ko: "자연상수 e",
+            .th: "ค่าคงที่ธรรมชาติ e"
+        ],
+        "math_const_03": [
+            .zhHant: "黃金比例 φ",
+            .en: "Golden ratio φ",
+            .zhHans: "黄金比例 φ",
+            .ja: "黄金比 φ",
+            .ko: "황금비 φ",
+            .th: "อัตราส่วนทองคำ φ"
+        ],
+        "math_const_04": [
+            .zhHant: "光速 c",
+            .en: "Speed of light c",
+            .zhHans: "光速 c",
+            .ja: "光速 c",
+            .ko: "광속 c",
+            .th: "ความเร็วแสง c"
+        ],
+        "math_const_05": [
+            .zhHant: "重力加速度 g",
+            .en: "Gravitational acceleration g",
+            .zhHans: "重力加速度 g",
+            .ja: "重力加速度 g",
+            .ko: "중력 가속도 g",
+            .th: "ความเร่งโน้มถ่วง g"
+        ],
+        "math_const_06": [
+            .zhHant: "普朗克常數 h",
+            .en: "Planck constant h",
+            .zhHans: "普朗克常数 h",
+            .ja: "プランク定数 h",
+            .ko: "플랑크 상수 h",
+            .th: "ค่าคงที่ของพลังค์ h"
+        ],
+        "math_const_07": [
+            .zhHant: "波茲曼常數 k",
+            .en: "Boltzmann constant k",
+            .zhHans: "玻尔兹曼常数 k",
+            .ja: "ボルツマン定数 k",
+            .ko: "볼츠만 상수 k",
+            .th: "ค่าคงที่โบลต์ซมันน์ k"
+        ],
+        "math_const_08": [
+            .zhHant: "亞佛加厥常數 Na",
+            .en: "Avogadro constant Nₐ",
+            .zhHans: "阿伏伽德罗常数 Nₐ",
+            .ja: "アボガドロ定数 Nₐ",
+            .ko: "아보가드로 상수 Nₐ",
+            .th: "ค่าคงที่อาโวกาโดร Nₐ"
+        ],
         "math_error": [
             .zhHant: "算式格式無效或無法計算",
             .en: "Invalid formula or syntax error",
@@ -7247,6 +10471,62 @@ extension LocalizationManager {
             .ko: "예: 125 * 8 + 45",
             .th: "เช่น: 125 * 8 + 45"
         ],
+        "math_sec_01": [
+            .zhHant: "微積分與微分方程",
+            .en: "Calculus & differential equations",
+            .zhHans: "微积分与微分方程",
+            .ja: "微積分と微分方程式",
+            .ko: "미적분과 미분방정식",
+            .th: "แคลคูลัสและสมการเชิงอนุพันธ์"
+        ],
+        "math_sec_02": [
+            .zhHant: "工數、向量與場論",
+            .en: "Engineering math, vectors & fields",
+            .zhHans: "工数、向量与场论",
+            .ja: "工業数学・ベクトル・場の理論",
+            .ko: "공업수학·벡터·장론",
+            .th: "คณิตศาสตร์วิศวกรรม เวกเตอร์ และสนาม"
+        ],
+        "math_sec_03": [
+            .zhHant: "運算子與關係",
+            .en: "Operators & relations",
+            .zhHans: "运算符与关系",
+            .ja: "演算子と関係",
+            .ko: "연산자와 관계",
+            .th: "ตัวดำเนินการและความสัมพันธ์"
+        ],
+        "math_sec_04": [
+            .zhHant: "集合與邏輯",
+            .en: "Sets & logic",
+            .zhHans: "集合与逻辑",
+            .ja: "集合と論理",
+            .ko: "집합과 논리",
+            .th: "เซตและตรรกศาสตร์"
+        ],
+        "math_sec_05": [
+            .zhHant: "希臘字母 (小寫)",
+            .en: "Greek letters (lowercase)",
+            .zhHans: "希腊字母（小写）",
+            .ja: "ギリシャ文字（小文字）",
+            .ko: "그리스 문자 (소문자)",
+            .th: "ตัวอักษรกรีก (ตัวพิมพ์เล็ก)"
+        ],
+        "math_sec_06": [
+            .zhHant: "希臘字母 (大寫)",
+            .en: "Greek letters (uppercase)",
+            .zhHans: "希腊字母（大写）",
+            .ja: "ギリシャ文字（大文字）",
+            .ko: "그리스 문자 (대문자)",
+            .th: "ตัวอักษรกรีก (ตัวพิมพ์ใหญ่)"
+        ],
+        "math_sec_07": [
+            .zhHant: "括號與矩陣符號",
+            .en: "Brackets & matrix symbols",
+            .zhHans: "括号与矩阵符号",
+            .ja: "括弧と行列の記号",
+            .ko: "괄호와 행렬 기호",
+            .th: "วงเล็บและสัญลักษณ์เมทริกซ์"
+        ],
         "math_symbols": [
             .zhHant: "數學代號",
             .en: "Math Symbols",
@@ -7286,6 +10566,126 @@ extension LocalizationManager {
             .ja: "定数・単位",
             .ko: "상수 및 단위",
             .th: "ค่าคงที่และหน่วย"
+        ],
+        "math_tpl_01": [
+            .zhHant: "微積分 - 多項式導數表列",
+            .en: "Calculus – derivative of a polynomial",
+            .zhHans: "微积分 - 多项式导数列表",
+            .ja: "微積分 – 多項式の導関数",
+            .ko: "미적분 – 다항식의 도함수",
+            .th: "แคลคูลัส – อนุพันธ์ของพหุนาม"
+        ],
+        "math_tpl_02": [
+            .zhHant: "微積分 - 定積分求值",
+            .en: "Calculus – definite integral",
+            .zhHans: "微积分 - 定积分求值",
+            .ja: "微積分 – 定積分の値",
+            .ko: "미적분 – 정적분 계산",
+            .th: "แคลคูลัส – ปริพันธ์จำกัดเขต"
+        ],
+        "math_tpl_03": [
+            .zhHant: "微積分 - 瑕積分",
+            .en: "Calculus – improper integral",
+            .zhHans: "微积分 - 瑕积分",
+            .ja: "微積分 – 広義積分",
+            .ko: "미적분 – 이상적분",
+            .th: "แคลคูลัส – ปริพันธ์ไม่ตรงแบบ"
+        ],
+        "math_tpl_04": [
+            .zhHant: "工數 - 傅立葉級數表列",
+            .en: "Engineering math – Fourier series",
+            .zhHans: "工数 - 傅立叶级数",
+            .ja: "工業数学 – フーリエ級数",
+            .ko: "공업수학 – 푸리에 급수",
+            .th: "คณิตศาสตร์วิศวกรรม – อนุกรมฟูริเยร์"
+        ],
+        "math_tpl_05": [
+            .zhHant: "工數 - 拉普拉斯轉換",
+            .en: "Engineering math – Laplace transform",
+            .zhHans: "工数 - 拉普拉斯变换",
+            .ja: "工業数学 – ラプラス変換",
+            .ko: "공업수학 – 라플라스 변환",
+            .th: "คณิตศาสตร์วิศวกรรม – การแปลงลาปลาซ"
+        ],
+        "math_tpl_06": [
+            .zhHant: "工數 - 二階常微分ODE",
+            .en: "Engineering math – 2nd-order ODE",
+            .zhHans: "工数 - 二阶常微分方程",
+            .ja: "工業数学 – 2 階常微分方程式",
+            .ko: "공업수학 – 2계 상미분방정식",
+            .th: "คณิตศาสตร์วิศวกรรม – ODE อันดับสอง"
+        ],
+        "math_tpl_07": [
+            .zhHant: "向量分析 - 梯度運算",
+            .en: "Vector calculus – gradient",
+            .zhHans: "向量分析 - 梯度运算",
+            .ja: "ベクトル解析 – 勾配",
+            .ko: "벡터 해석 – 기울기",
+            .th: "แคลคูลัสเวกเตอร์ – เกรเดียนต์"
+        ],
+        "math_tpl_08": [
+            .zhHant: "向量分析 - 散度運算",
+            .en: "Vector calculus – divergence",
+            .zhHans: "向量分析 - 散度运算",
+            .ja: "ベクトル解析 – 発散",
+            .ko: "벡터 해석 – 발산",
+            .th: "แคลคูลัสเวกเตอร์ – ไดเวอร์เจนซ์"
+        ],
+        "math_tpl_09": [
+            .zhHant: "向量分析 - 旋度運算",
+            .en: "Vector calculus – curl",
+            .zhHans: "向量分析 - 旋度运算",
+            .ja: "ベクトル解析 – 回転",
+            .ko: "벡터 해석 – 회전",
+            .th: "แคลคูลัสเวกเตอร์ – เคิร์ล"
+        ],
+        "math_tpl_10": [
+            .zhHant: "線性代數 - 特徵方程式",
+            .en: "Linear algebra – characteristic equation",
+            .zhHans: "线性代数 - 特征方程",
+            .ja: "線形代数 – 特性方程式",
+            .ko: "선형대수 – 특성방정식",
+            .th: "พีชคณิตเชิงเส้น – สมการลักษณะเฉพาะ"
+        ],
+        "math_tpl_11": [
+            .zhHant: "複變數 - 歐拉公式",
+            .en: "Complex analysis – Euler's formula",
+            .zhHans: "复变函数 - 欧拉公式",
+            .ja: "複素解析 – オイラーの公式",
+            .ko: "복소해석 – 오일러 공식",
+            .th: "การวิเคราะห์เชิงซ้อน – สูตรของออยเลอร์"
+        ],
+        "math_tpl_12": [
+            .zhHant: "高斯積分",
+            .en: "Gaussian integral",
+            .zhHans: "高斯积分",
+            .ja: "ガウス積分",
+            .ko: "가우스 적분",
+            .th: "ปริพันธ์เกาส์เซียน"
+        ],
+        "math_tpl_13": [
+            .zhHant: "泰勒展開式",
+            .en: "Taylor expansion",
+            .zhHans: "泰勒展开式",
+            .ja: "テイラー展開",
+            .ko: "테일러 전개",
+            .th: "การกระจายเทย์เลอร์"
+        ],
+        "math_tpl_14": [
+            .zhHant: "工數 - 熱傳導方程式",
+            .en: "Engineering math – heat equation",
+            .zhHans: "工数 - 热传导方程",
+            .ja: "工業数学 – 熱伝導方程式",
+            .ko: "공업수학 – 열전도 방정식",
+            .th: "คณิตศาสตร์วิศวกรรม – สมการความร้อน"
+        ],
+        "math_tpl_15": [
+            .zhHant: "工數 - 波動方程式",
+            .en: "Engineering math – wave equation",
+            .zhHans: "工数 - 波动方程",
+            .ja: "工業数学 – 波動方程式",
+            .ko: "공업수학 – 파동방정식",
+            .th: "คณิตศาสตร์วิศวกรรม – สมการคลื่น"
         ],
         "math_value_prefix": [
             .zhHant: "數值",
@@ -7543,6 +10943,14 @@ extension LocalizationManager {
             .ko: "3D",
             .th: "3D"
         ],
+        "model3d_default_title": [
+            .zhHant: "3D 幾何模型",
+            .en: "3D geometric model",
+            .zhHans: "3D 几何模型",
+            .ja: "3D 幾何モデル",
+            .ko: "3D 기하 모델",
+            .th: "โมเดลเรขาคณิต 3 มิติ"
+        ],
         "model3d_rotate_mode": [
             .zhHant: "旋轉",
             .en: "Rotate",
@@ -7574,6 +10982,22 @@ extension LocalizationManager {
             .ja: "3Dモデル",
             .ko: "3D 모델",
             .th: "โมเดล 3 มิติ"
+        ],
+        "model_dl_bad_url": [
+            .zhHant: "網址無效：%@",
+            .en: "Invalid address: %@",
+            .zhHans: "网址无效：%@",
+            .ja: "無効なアドレス：%@",
+            .ko: "잘못된 주소: %@",
+            .th: "ที่อยู่ไม่ถูกต้อง: %@"
+        ],
+        "model_dl_no_response": [
+            .zhHant: "沒有 HTTP 回應",
+            .en: "No HTTP response",
+            .zhHans: "没有 HTTP 响应",
+            .ja: "HTTP 応答がありません",
+            .ko: "HTTP 응답이 없습니다",
+            .th: "ไม่มีการตอบกลับ HTTP"
         ],
         "model_download": [
             .zhHant: "下載",
@@ -8230,6 +11654,14 @@ extension LocalizationManager {
             .ja: "Kairumo Record フォルダを開く",
             .ko: "Kairumo Record 폴더 열기",
             .th: "เปิดโฟลเดอร์ Kairumo Record"
+        ],
+        "open_in_browser": [
+            .zhHant: "在瀏覽器中開啟",
+            .en: "Open in Browser",
+            .zhHans: "在浏览器中打开",
+            .ja: "ブラウザで開く",
+            .ko: "브라우저에서 열기",
+            .th: "เปิดในเบราว์เซอร์"
         ],
         "open_link": [
             .zhHant: "開啟連結",
@@ -9143,6 +12575,30 @@ extension LocalizationManager {
             .ko: "이전 페이지",
             .th: "หน้าก่อน"
         ],
+        "print_err_create": [
+            .zhHant: "建立列印操作失敗",
+            .en: "Could not start the print job",
+            .zhHans: "创建打印任务失败",
+            .ja: "印刷ジョブを作成できませんでした",
+            .ko: "인쇄 작업을 만들지 못했습니다",
+            .th: "สร้างงานพิมพ์ไม่สำเร็จ"
+        ],
+        "print_err_parse": [
+            .zhHant: "無法解析 PDF 資料",
+            .en: "Could not read the PDF data",
+            .zhHans: "无法解析 PDF 数据",
+            .ja: "PDF データを読み取れませんでした",
+            .ko: "PDF 데이터를 읽을 수 없습니다",
+            .th: "อ่านข้อมูล PDF ไม่ได้"
+        ],
+        "print_job_title": [
+            .zhHant: "Kairumo 文件",
+            .en: "Kairumo Document",
+            .zhHans: "Kairumo 文档",
+            .ja: "Kairumo ドキュメント",
+            .ko: "Kairumo 문서",
+            .th: "เอกสาร Kairumo"
+        ],
         "print_note": [
             .zhHant: "列印筆記",
             .en: "Print Notebook",
@@ -9214,6 +12670,62 @@ extension LocalizationManager {
             .ja: "放射状ツールメニュー",
             .ko: "방사형 도구 메뉴",
             .th: "เมนูเครื่องมือแบบวงกลม"
+        ],
+        "rec_err_convert": [
+            .zhHant: "音訊轉換失敗：%@",
+            .en: "Audio conversion failed: %@",
+            .zhHans: "音频转换失败：%@",
+            .ja: "音声の変換に失敗しました：%@",
+            .ko: "오디오 변환 실패: %@",
+            .th: "แปลงเสียงไม่สำเร็จ: %@"
+        ],
+        "rec_err_core_start": [
+            .zhHant: "無法開始錄音：%@",
+            .en: "Could not start recording: %@",
+            .zhHans: "无法开始录音：%@",
+            .ja: "録音を開始できませんでした：%@",
+            .ko: "녹음을 시작할 수 없습니다: %@",
+            .th: "เริ่มบันทึกเสียงไม่ได้: %@"
+        ],
+        "rec_err_engine_start": [
+            .zhHant: "音訊引擎啟動失敗：%@",
+            .en: "The audio engine failed to start: %@",
+            .zhHans: "音频引擎启动失败：%@",
+            .ja: "オーディオエンジンを起動できませんでした：%@",
+            .ko: "오디오 엔진을 시작하지 못했습니다: %@",
+            .th: "เริ่มเครื่องมือเสียงไม่สำเร็จ: %@"
+        ],
+        "rec_err_feed": [
+            .zhHant: "餵音訊失敗：%@",
+            .en: "Could not pass audio to the recorder: %@",
+            .zhHans: "向录音引擎送入音频失败：%@",
+            .ja: "録音エンジンに音声を渡せませんでした：%@",
+            .ko: "녹음 엔진에 오디오를 전달하지 못했습니다: %@",
+            .th: "ส่งเสียงให้ตัวบันทึกไม่สำเร็จ: %@"
+        ],
+        "rec_err_no_channels": [
+            .zhHant: "音訊輸入節點無可用聲道，請確認麥克風連線與系統權限",
+            .en: "The audio input has no usable channel. Check the microphone connection and system permission.",
+            .zhHans: "音频输入没有可用声道，请确认麦克风连接与系统权限",
+            .ja: "音声入力に使えるチャンネルがありません。マイクの接続とシステムの権限を確認してください。",
+            .ko: "오디오 입력에 사용할 수 있는 채널이 없습니다. 마이크 연결과 시스템 권한을 확인하세요.",
+            .th: "อินพุตเสียงไม่มีช่องสัญญาณที่ใช้ได้ โปรดตรวจสอบการเชื่อมต่อไมโครโฟนและสิทธิ์ของระบบ"
+        ],
+        "rec_err_no_mic": [
+            .zhHant: "裝置未連接麥克風或無可用音訊輸入設備",
+            .en: "No microphone is connected, or no audio input is available",
+            .zhHans: "设备未连接麦克风或没有可用的音频输入设备",
+            .ja: "マイクが接続されていないか、使用できる音声入力がありません",
+            .ko: "마이크가 연결되어 있지 않거나 사용할 수 있는 오디오 입력이 없습니다",
+            .th: "ไม่ได้เชื่อมต่อไมโครโฟน หรือไม่มีอุปกรณ์รับเสียงที่ใช้ได้"
+        ],
+        "rec_err_not_ready": [
+            .zhHant: "麥克風尚未就緒（取樣率：%1@、聲道：%2@）",
+            .en: "The microphone isn't ready (sample rate: %1@, channels: %2@)",
+            .zhHans: "麦克风尚未就绪（采样率：%1@，声道：%2@）",
+            .ja: "マイクの準備ができていません（サンプルレート：%1@、チャンネル：%2@）",
+            .ko: "마이크가 아직 준비되지 않았습니다 (샘플 레이트: %1@, 채널: %2@)",
+            .th: "ไมโครโฟนยังไม่พร้อม (อัตราสุ่มตัวอย่าง: %1@, ช่องสัญญาณ: %2@)"
         ],
         "rec_title_input": [
             .zhHant: "錄音標題",
@@ -9351,6 +12863,14 @@ extension LocalizationManager {
             .ko: "녹음 품질 안내",
             .th: "คำแนะนำคุณภาพการบันทึก"
         ],
+        "recording_default_title": [
+            .zhHant: "語音錄音",
+            .en: "Voice recording",
+            .zhHans: "语音录音",
+            .ja: "音声録音",
+            .ko: "음성 녹음",
+            .th: "บันทึกเสียง"
+        ],
         "recording_failed": [
             .zhHant: "錄音啟動失敗",
             .en: "Recording could not start",
@@ -9479,6 +12999,14 @@ extension LocalizationManager {
             .ko: "보정 강도",
             .th: "ความเข้มข้น"
         ],
+        "relay_invalid_port": [
+            .zhHant: "無效的埠號 %@",
+            .en: "Invalid port number %@",
+            .zhHans: "无效的端口号 %@",
+            .ja: "ポート番号 %@ は無効です",
+            .ko: "잘못된 포트 번호 %@",
+            .th: "หมายเลขพอร์ต %@ ไม่ถูกต้อง"
+        ],
         "relay_needs_tls": [
             .zhHant: "這個中繼在公開網路上，必須用 wss://（加密）。ws:// 只允許用在你自己的區域網路裡。",
             .en: "This relay is on the public internet, so it must use wss:// (encrypted). Plain ws:// is only allowed on your own local network.",
@@ -9574,6 +13102,14 @@ extension LocalizationManager {
             .ja: "再オープン",
             .ko: "다시 열기",
             .th: "เปิดใหม่"
+        ],
+        "repagination_mismatch": [
+            .zhHant: "重新分頁前後內容不符：筆畫 %1@→%2@、物件 %3@→%4@",
+            .en: "Content changed during repagination: strokes %1@→%2@, objects %3@→%4@",
+            .zhHans: "重新分页前后内容不符：笔画 %1@→%2@、对象 %3@→%4@",
+            .ja: "ページ再分割の前後で内容が一致しません：筆跡 %1@→%2@、オブジェクト %3@→%4@",
+            .ko: "페이지 다시 나누기 전후의 내용이 다릅니다: 획 %1@→%2@, 개체 %3@→%4@",
+            .th: "เนื้อหาไม่ตรงกันก่อนและหลังแบ่งหน้าใหม่: ลายเส้น %1@→%2@ วัตถุ %3@→%4@"
         ],
         "reply": [
             .zhHant: "回覆",
@@ -10268,7 +13804,7 @@ extension LocalizationManager {
             .en: "Family I: Precision Writing Tools (Pen, Fineliner, Ballpoint, Brush, Calligraphy, Pencil)",
             .zhHans: "第一家族：精密书写族（钢笔、针笔、原子笔、毛笔、书法笔、铅笔）",
             .ja: "第1グループ：精密筆記ツール（万年筆、ミリペン、ボールペン、筆、カリグラフィ、鉛筆）",
-            .ko: "제1계열: 정밀 필기 도구 (만년筆, 세밀펜, 볼펜, 붓, 캘리그래피, 연필)",
+            .ko: "제1계열: 정밀 필기 도구 (만년필, 세밀펜, 볼펜, 붓, 캘리그래피, 연필)",
             .th: "กลุ่มที่ 1: เครื่องมือเขียนความแม่นยำสูง (ปากกาหมึกซึม, หัวเข็ม, ลูกลื่น, พู่กัน, ตัวเขียน, ดินสอ)"
         ],
         "sample_showcase_p2_subtitle": [
@@ -10767,6 +14303,38 @@ extension LocalizationManager {
             .ko: "계정 및 보안",
             .th: "บัญชีและความปลอดภัย"
         ],
+        "seed_chart_cat_1": [
+            .zhHant: "向量書寫延遲",
+            .en: "Ink latency",
+            .zhHans: "矢量书写延迟",
+            .ja: "筆記の遅延",
+            .ko: "필기 지연",
+            .th: "ความหน่วงของการเขียน"
+        ],
+        "seed_chart_cat_2": [
+            .zhHant: "圖表動態可編修",
+            .en: "Editable charts",
+            .zhHans: "图表动态可编辑",
+            .ja: "編集できるグラフ",
+            .ko: "편집 가능한 차트",
+            .th: "แผนภูมิแก้ไขได้"
+        ],
+        "seed_chart_cat_3": [
+            .zhHant: "空間圖釘協作",
+            .en: "Pin collaboration",
+            .zhHans: "空间图钉协作",
+            .ja: "ピンで共同作業",
+            .ko: "핀 협업",
+            .th: "ทำงานร่วมกันด้วยหมุด"
+        ],
+        "seed_chart_cat_4": [
+            .zhHant: "開源與無訂閱限制",
+            .en: "Open source, no subscription",
+            .zhHans: "开源与无订阅限制",
+            .ja: "オープンソース・サブスクなし",
+            .ko: "오픈소스, 구독 없음",
+            .th: "โอเพนซอร์ส ไม่ต้องสมัครสมาชิก"
+        ],
         "seed_feature_showcase_snippet": [
             .zhHant: "手繪（鉛筆/鋼筆/毛筆）、表格打字、微積分方程與數字製圖圖釘討論功能全方位實戰範例",
             .en: "Deep integration showcase: pencil, fountain pen & brush handwriting, comparison table, calculus solver, digital chart & discussion pins",
@@ -10783,6 +14351,22 @@ extension LocalizationManager {
             .ko: "Kairumo (기능 예시)",
             .th: "Kairumo (ตัวอย่างฟังก์ชัน)"
         ],
+        "seed_manual_snippet": [
+            .zhHant: "Kairumo 優勢：結構化、視覺化、多語言 —— 全部手繪",
+            .en: "Kairumo’s advantages: structured, visual and multilingual",
+            .zhHans: "Kairumo 优势：结构化、视觉化、多语言 —— 全部手绘",
+            .ja: "Kairumo の強み: 構造化・視覚化・多言語",
+            .ko: "Kairumo의 강점: 체계적 구성, 시각화, 다국어",
+            .th: "จุดเด่นของ Kairumo: เป็นระบบ เห็นภาพ หลายภาษา"
+        ],
+        "seed_manual_title": [
+            .zhHant: "Kairumo手冊",
+            .en: "Kairumo Manual",
+            .zhHans: "Kairumo手册",
+            .ja: "Kairumo マニュアル",
+            .ko: "Kairumo 매뉴얼",
+            .th: "คู่มือ Kairumo"
+        ],
         "seed_meeting_snippet": [
             .zhHant: "支援麥克風即時收音，聲音與筆跡精確對齊",
             .en: "Live microphone capture with audio precisely aligned to your ink",
@@ -10798,6 +14382,134 @@ extension LocalizationManager {
             .ja: "授業と会議の記録",
             .ko: "강의 및 회의 기록",
             .th: "บันทึกการเรียนและการประชุม"
+        ],
+        "seed_pill_01": [
+            .zhHant: "100% 完全開源免費",
+            .en: "100% free & open source",
+            .zhHans: "100% 完全开源免费",
+            .ja: "100% 無料・オープンソース",
+            .ko: "100% 무료 오픈소스",
+            .th: "ฟรีและโอเพนซอร์ส 100%"
+        ],
+        "seed_pill_02": [
+            .zhHant: "零廣告無廠商鎖定",
+            .en: "No ads, no lock-in",
+            .zhHans: "零广告无厂商锁定",
+            .ja: "広告なし・ロックインなし",
+            .ko: "광고 없음, 종속 없음",
+            .th: "ไม่มีโฆษณา ไม่ผูกมัด"
+        ],
+        "seed_pill_03": [
+            .zhHant: "次世代多維思考架構",
+            .en: "Next-gen way to think",
+            .zhHans: "次世代多维思考架构",
+            .ja: "次世代の思考スタイル",
+            .ko: "차세대 사고 구조",
+            .th: "แนวคิดยุคใหม่หลายมิติ"
+        ],
+        "seed_pill_04": [
+            .zhHant: "原生高效向量核心",
+            .en: "Fast native vector core",
+            .zhHans: "原生高效矢量核心",
+            .ja: "高速ネイティブ描画",
+            .ko: "빠른 네이티브 벡터 코어",
+            .th: "แกนเวกเตอร์เนทีฟเร็วแรง"
+        ],
+        "seed_pill_05": [
+            .zhHant: "16 種物理級筆刷",
+            .en: "16 realistic brushes",
+            .zhHans: "16 种物理级笔刷",
+            .ja: "リアルなブラシ 16 種",
+            .ko: "사실적인 브러시 16종",
+            .th: "แปรงสมจริง 16 แบบ"
+        ],
+        "seed_pill_06": [
+            .zhHant: "真實壓感與毛筆提按",
+            .en: "True pressure & brush feel",
+            .zhHans: "真实压感与毛笔提按",
+            .ja: "本物の筆圧と筆の運び",
+            .ko: "실제 필압과 붓 터치",
+            .th: "แรงกดจริงและสัมผัสพู่กัน"
+        ],
+        "seed_pill_07": [
+            .zhHant: "互動考點遮蔽膠帶",
+            .en: "Study masking tape",
+            .zhHans: "互动考点遮蔽胶带",
+            .ja: "暗記用マスキングテープ",
+            .ko: "암기용 마스킹 테이프",
+            .th: "เทปปิดคำตอบสำหรับท่องจำ"
+        ],
+        "seed_pill_08": [
+            .zhHant: "尺規與套索精準幾何",
+            .en: "Precise ruler & lasso",
+            .zhHans: "尺规与套索精准几何",
+            .ja: "定規と投げ縄で正確に",
+            .ko: "자와 올가미로 정밀하게",
+            .th: "ไม้บรรทัดและบ่วงบาศแม่นยำ"
+        ],
+        "seed_pill_09": [
+            .zhHant: "桌面級專業排版",
+            .en: "Desktop-grade layout",
+            .zhHans: "桌面级专业排版",
+            .ja: "デスクトップ級のレイアウト",
+            .ko: "데스크톱급 편집",
+            .th: "จัดหน้าระดับมืออาชีพ"
+        ],
+        "seed_pill_10": [
+            .zhHant: "原生高格自適應表",
+            .en: "Adaptive native tables",
+            .zhHans: "原生高格自适应表",
+            .ja: "自動調整できる表",
+            .ko: "자동 조정되는 표",
+            .th: "ตารางที่ปรับอัตโนมัติ"
+        ],
+        "seed_pill_11": [
+            .zhHant: "智慧拓撲流程圖",
+            .en: "Smart flowcharts",
+            .zhHans: "智能拓扑流程图",
+            .ja: "スマートなフローチャート",
+            .ko: "스마트 순서도",
+            .th: "ผังงานอัจฉริยะ"
+        ],
+        "seed_pill_12": [
+            .zhHant: "3D 與音訊多媒體",
+            .en: "3D & audio media",
+            .zhHans: "3D 与音频多媒体",
+            .ja: "3D とオーディオ",
+            .ko: "3D와 오디오",
+            .th: "3 มิติและเสียง"
+        ],
+        "seed_pill_13": [
+            .zhHant: "STEM 微積分深度解析",
+            .en: "In-depth STEM calculus",
+            .zhHans: "STEM 微积分深度解析",
+            .ja: "STEM 微積分を深く解説",
+            .ko: "STEM 미적분 심층 해설",
+            .th: "แคลคูลัส STEM เชิงลึก"
+        ],
+        "seed_pill_14": [
+            .zhHant: "動態可編修圖表工坊",
+            .en: "Live editable charts",
+            .zhHans: "动态可编辑图表工坊",
+            .ja: "編集できるライブチャート",
+            .ko: "편집 가능한 실시간 차트",
+            .th: "แผนภูมิแก้ไขได้สด"
+        ],
+        "seed_pill_15": [
+            .zhHant: "空間討論圖釘協作",
+            .en: "Pin-based discussion",
+            .zhHans: "空间讨论图钉协作",
+            .ja: "ピンで議論・共同作業",
+            .ko: "핀으로 토론·협업",
+            .th: "พูดคุยด้วยหมุด"
+        ],
+        "seed_pill_16": [
+            .zhHant: "終極無界數位紙張",
+            .en: "Boundless digital paper",
+            .zhHans: "终极无界数字纸张",
+            .ja: "無限に広がるデジタル紙",
+            .ko: "끝없는 디지털 종이",
+            .th: "กระดาษดิจิทัลไร้ขอบเขต"
         ],
         "seed_welcome_snippet": [
             .zhHant: "點擊進入畫布即可隨心手寫、繪製圖形、插入錄音並導出 PDF",
@@ -12951,6 +16663,30 @@ extension LocalizationManager {
             .ko: "캐시",
             .th: "แคช"
         ],
+        "storage_cannot_create": [
+            .zhHant: "無法在 %@ 建立 Kairumo 文件資料夾。",
+            .en: "Cannot create the Kairumo document folder at %@.",
+            .zhHans: "无法在 %@ 创建 Kairumo 文档文件夹。",
+            .ja: "%@ に Kairumo のドキュメントフォルダを作成できません。",
+            .ko: "%@에 Kairumo 문서 폴더를 만들 수 없습니다.",
+            .th: "สร้างโฟลเดอร์เอกสาร Kairumo ที่ %@ ไม่ได้"
+        ],
+        "storage_cannot_move": [
+            .zhHant: "Kairumo 無法移動文件庫：%@",
+            .en: "Kairumo could not move the document library: %@",
+            .zhHans: "Kairumo 无法移动文档库：%@",
+            .ja: "Kairumo はドキュメントライブラリを移動できませんでした：%@",
+            .ko: "Kairumo가 문서 라이브러리를 이동하지 못했습니다: %@",
+            .th: "Kairumo ย้ายคลังเอกสารไม่ได้: %@"
+        ],
+        "storage_cannot_remember": [
+            .zhHant: "Kairumo 無法保留所選資料夾的存取權，請重新選擇。",
+            .en: "Kairumo could not retain access to the selected folder. Please choose it again.",
+            .zhHans: "Kairumo 无法保留所选文件夹的访问权限，请重新选择。",
+            .ja: "Kairumo は選択したフォルダへのアクセスを保持できませんでした。もう一度選択してください。",
+            .ko: "Kairumo가 선택한 폴더에 대한 접근 권한을 유지하지 못했습니다. 다시 선택하세요.",
+            .th: "Kairumo เก็บสิทธิ์เข้าถึงโฟลเดอร์ที่เลือกไว้ไม่ได้ โปรดเลือกอีกครั้ง"
+        ],
         "storage_choose_parent": [
             .zhHant: "選擇文件資料夾…",
             .en: "Choose Document Folder…",
@@ -12982,6 +16718,14 @@ extension LocalizationManager {
             .ja: "現在のメインライブラリ",
             .ko: "현재 기본 라이브러리",
             .th: "คลังหลักปัจจุบัน"
+        ],
+        "storage_has_library": [
+            .zhHant: "%@ 已經有另一個 Kairumo 文件庫。請選擇空的資料夾，以免覆蓋既有文件。",
+            .en: "%@ already contains another Kairumo library. Choose an empty folder so existing documents are not overwritten.",
+            .zhHans: "%@ 已有另一个 Kairumo 文档库。请选择空文件夹，以免覆盖现有文档。",
+            .ja: "%@ にはすでに別の Kairumo ライブラリがあります。既存のドキュメントが上書きされないよう、空のフォルダを選んでください。",
+            .ko: "%@에 이미 다른 Kairumo 라이브러리가 있습니다. 기존 문서를 덮어쓰지 않도록 빈 폴더를 선택하세요.",
+            .th: "%@ มีคลัง Kairumo อื่นอยู่แล้ว โปรดเลือกโฟลเดอร์ว่างเพื่อไม่ให้เอกสารเดิมถูกเขียนทับ"
         ],
         "storage_icloud_continue": [
             .zhHant: "仍要使用",
@@ -13078,6 +16822,14 @@ extension LocalizationManager {
             .ja: "メインライブラリは選択した場所に継続的に保存されます。",
             .ko: "이제 기본 라이브러리가 선택한 위치에 계속 저장됩니다.",
             .th: "ขณะนี้คลังหลักจะถูกบันทึกอย่างต่อเนื่องในตำแหน่งที่เลือก"
+        ],
+        "storage_nested": [
+            .zhHant: "請選擇目前 Kairumo 文件資料夾以外的資料夾。",
+            .en: "Choose a folder outside the current Kairumo Doc folder.",
+            .zhHans: "请选择当前 Kairumo 文档文件夹以外的文件夹。",
+            .ja: "現在の Kairumo ドキュメントフォルダの外にあるフォルダを選んでください。",
+            .ko: "현재 Kairumo 문서 폴더 밖의 폴더를 선택하세요.",
+            .th: "เลือกโฟลเดอร์ที่อยู่นอกโฟลเดอร์เอกสาร Kairumo ปัจจุบัน"
         ],
         "storage_progress_cleaning": [
             .zhHant: "移除舊的資料庫…",
@@ -13215,6 +16967,14 @@ extension LocalizationManager {
             .ko: "이 위치는 이 기기에만 적용됩니다. 기기 간 업데이트는 안정적인 노트 ID와 설정된 Google Drive 또는 폴더 동기화를 사용하므로 Mac, iPhone, iPad 및 Android는 다른 기기의 로컬 경로에 의존하지 않습니다.",
             .th: "ตำแหน่งนี้ใช้เฉพาะอุปกรณ์เครื่องนี้ การอัปเดตข้ามอุปกรณ์ใช้รหัสสมุดบันทึกที่คงที่และ Google Drive หรือการซิงค์โฟลเดอร์ที่คุณตั้งค่าไว้ ดังนั้น Mac, iPhone, iPad และ Android จะไม่พึ่งพาพาธภายในของอุปกรณ์อื่น"
         ],
+        "storage_sync_running": [
+            .zhHant: "同步仍在進行中，請等它結束後再試一次。",
+            .en: "A sync operation is still running. Please try again after it finishes.",
+            .zhHans: "同步仍在进行中，请等它结束后再试一次。",
+            .ja: "同期がまだ実行中です。終了してからもう一度お試しください。",
+            .ko: "동기화가 아직 진행 중입니다. 끝난 후 다시 시도하세요.",
+            .th: "การซิงก์ยังทำงานอยู่ โปรดลองอีกครั้งหลังจากเสร็จสิ้น"
+        ],
         "storage_temp": [
             .zhHant: "暫存檔",
             .en: "Temporary files",
@@ -13230,6 +16990,14 @@ extension LocalizationManager {
             .ja: "ストレージ",
             .ko: "저장 공간",
             .th: "พื้นที่จัดเก็บ"
+        ],
+        "storage_verify_failed": [
+            .zhHant: "複製後驗證失敗：%@",
+            .en: "Verification after copying failed: %@",
+            .zhHans: "复制后验证失败：%@",
+            .ja: "コピー後の検証に失敗しました：%@",
+            .ko: "복사 후 검증에 실패했습니다: %@",
+            .th: "การตรวจสอบหลังคัดลอกล้มเหลว: %@"
         ],
         "stroke_color": [
             .zhHant: "線條顏色",
@@ -13319,6 +17087,38 @@ extension LocalizationManager {
             .ko: "좌우 대칭 가이드라인으로 완벽한 균형의 드로잉 완성",
             .th: "เส้นนำสายตาสมมาตรกระจกเพื่อการวาดที่สมดุลสมบูรณ์แบบ"
         ],
+        "sync_a_how": [
+            .zhHant: "在您的其他 iPad 或 Mac 上，只要在「雲端同步」指定「同一個上層根目錄」（不要點進個別的 .padnote），App 即會自動掃描所有筆記並進行雙向合併更新。",
+            .en: "On your other iPad or Mac, just point “Cloud sync” at the same top-level root folder (not an individual .padnote). The app scans every notebook and merges changes in both directions.",
+            .zhHans: "在您的其他 iPad 或 Mac 上，只要在“云端同步”中指定“同一个上层根目录”（不要点进单个 .padnote），App 就会自动扫描所有笔记并进行双向合并更新。",
+            .ja: "ほかの iPad や Mac では、「クラウド同期」で同じ最上位のルートフォルダを指定するだけです（個別の .padnote は選ばないでください）。アプリがすべてのノートを自動で調べ、双方向にマージします。",
+            .ko: "다른 iPad나 Mac에서 '클라우드 동기화'에 같은 최상위 루트 폴더를 지정하기만 하면 됩니다(개별 .padnote는 선택하지 마세요). 앱이 모든 노트를 자동으로 검사하고 양방향으로 병합합니다.",
+            .th: "บน iPad หรือ Mac เครื่องอื่นของคุณ เพียงชี้ “ซิงก์คลาวด์” ไปที่โฟลเดอร์รากระดับบนสุดเดียวกัน (อย่าเลือก .padnote ทีละเล่ม) แอปจะสแกนโน้ตทั้งหมดและผสานการเปลี่ยนแปลงสองทางให้อัตโนมัติ"
+        ],
+        "sync_a_platform": [
+            .zhHant: "支援 Android、iPadOS 與 macOS 雙向增量筆跡與圖表合併，各平台均可無縫協同編輯。",
+            .en: "Android, iPadOS and macOS merge ink and charts incrementally in both directions, so you can keep editing seamlessly on any of them.",
+            .zhHans: "支持 Android、iPadOS 与 macOS 双向增量笔迹与图表合并，各平台均可无缝协同编辑。",
+            .ja: "Android・iPadOS・macOS の間で、筆跡とグラフを双方向に差分マージします。どのプラットフォームでもシームレスに編集を続けられます。",
+            .ko: "Android, iPadOS, macOS 간에 필기와 차트를 양방향으로 증분 병합하여 어느 플랫폼에서든 끊김 없이 편집할 수 있습니다.",
+            .th: "Android, iPadOS และ macOS ผสานลายเส้นและแผนภูมิแบบเพิ่มทีละส่วนสองทาง คุณจึงแก้ไขต่อได้อย่างราบรื่นบนทุกแพลตฟอร์ม"
+        ],
+        "sync_a_privacy": [
+            .zhHant: "沒有第三方伺服器儲存您的手繪或筆記，同步直接由 Apple 系統的 iCloud 傳輸，確保 100% 隱私與資料主權。",
+            .en: "No third-party server stores your drawings or notes. Sync travels directly through Apple's iCloud, keeping your data private and in your own hands.",
+            .zhHans: "没有第三方服务器存储您的手绘或笔记，同步直接通过 Apple 系统的 iCloud 传输，确保 100% 隐私与数据主权。",
+            .ja: "手描きやノートをサードパーティのサーバーに保存することはありません。同期は Apple の iCloud を直接経由するので、プライバシーとデータの主権が守られます。",
+            .ko: "손글씨나 노트를 저장하는 외부 서버는 없습니다. 동기화는 Apple iCloud를 통해 직접 전달되므로 개인정보와 데이터 주권이 보장됩니다.",
+            .th: "ไม่มีเซิร์ฟเวอร์ของบุคคลที่สามเก็บลายเส้นหรือโน้ตของคุณ การซิงก์ส่งผ่าน iCloud ของ Apple โดยตรง ข้อมูลของคุณจึงเป็นส่วนตัวและอยู่ในมือคุณเอง"
+        ],
+        "sync_a_what": [
+            .zhHant: "本功能採用去中心化的架構。設定 iCloud Drive 或自選資料夾後，每一本筆記都會自動產生對應的 `.padnote` 專屬資料夾（內含手寫向量筆畫與錄音檔等）。這些多出來的 `.padnote` 是維持同步的正常結構，請勿隨意刪除。",
+            .en: "Sync is decentralized. Once you set up iCloud Drive or a folder of your choice, every notebook gets its own `.padnote` folder (holding vector ink, recordings and more). These extra `.padnote` folders are how sync works — please don't delete them.",
+            .zhHans: "本功能采用去中心化的架构。设置 iCloud Drive 或自选文件夹后，每一本笔记都会自动生成对应的 `.padnote` 专属文件夹（内含手写矢量笔画与录音文件等）。这些多出来的 `.padnote` 是维持同步的正常结构，请勿随意删除。",
+            .ja: "同期は分散型の仕組みです。iCloud Drive または任意のフォルダを設定すると、ノートごとに専用の `.padnote` フォルダ（ベクター筆跡や録音などを格納）が自動で作られます。この `.padnote` は同期に必要な正常な構成なので、むやみに削除しないでください。",
+            .ko: "동기화는 분산형 구조입니다. iCloud Drive 또는 원하는 폴더를 설정하면 노트마다 전용 `.padnote` 폴더(벡터 필기와 녹음 파일 등 포함)가 자동으로 만들어집니다. 이 `.padnote` 폴더는 동기화를 유지하는 정상적인 구조이므로 함부로 삭제하지 마세요.",
+            .th: "การซิงก์ใช้สถาปัตยกรรมแบบกระจายศูนย์ เมื่อตั้งค่า iCloud Drive หรือโฟลเดอร์ที่คุณเลือก โน้ตแต่ละเล่มจะสร้างโฟลเดอร์ `.padnote` ของตัวเองโดยอัตโนมัติ (เก็บลายเส้นเวกเตอร์ ไฟล์เสียง ฯลฯ) โฟลเดอร์ `.padnote` เหล่านี้เป็นโครงสร้างปกติที่ใช้ซิงก์ โปรดอย่าลบทิ้ง"
+        ],
         "sync_account": [
             .zhHant: "帳號",
             .en: "Account",
@@ -13359,6 +17159,14 @@ extension LocalizationManager {
             .ko: "미식별은 보통 다른 기기가 만든 것을 이 기기가 아직 받지 못한 상태입니다. 자동으로 삭제되지 않습니다.",
             .th: "ยังระบุไม่ได้ มักหมายถึงอุปกรณ์อื่นสร้างไว้และเครื่องนี้ยังไม่ได้ดึงดัชนีมา ระบบจะไม่ลบอัตโนมัติ"
         ],
+        "sync_cancelled": [
+            .zhHant: "已中斷同步",
+            .en: "Sync stopped",
+            .zhHans: "已中断同步",
+            .ja: "同期を中断しました",
+            .ko: "동기화를 중단했습니다",
+            .th: "หยุดการซิงก์แล้ว"
+        ],
         "sync_choose_folder": [
             .zhHant: "iCloud 或本機資料夾同步",
             .en: "Choose Sync Folder",
@@ -13366,6 +17174,14 @@ extension LocalizationManager {
             .ja: "同期フォルダを選択",
             .ko: "동기화 폴더 선택",
             .th: "เลือกโฟลเดอร์ซิงก์"
+        ],
+        "sync_configured_pending": [
+            .zhHant: "已設定（待同步）",
+            .en: "Set up (waiting to sync)",
+            .zhHans: "已设置（待同步）",
+            .ja: "設定済み（同期待ち）",
+            .ko: "설정됨 (동기화 대기)",
+            .th: "ตั้งค่าแล้ว (รอซิงก์)"
         ],
         "sync_destination": [
             .zhHant: "同步目的地",
@@ -13415,6 +17231,78 @@ extension LocalizationManager {
             .ko: "Google Drive로 플랫폼 간 동기화하거나, 계정 없이 iCloud Drive 폴더를 사용할 수 있습니다.",
             .th: "ซิงก์ข้ามแพลตฟอร์มด้วย Google Drive หรือใช้โฟลเดอร์ iCloud Drive โดยไม่ต้องมีบัญชี"
         ],
+        "sync_fail_cannot_read": [
+            .zhHant: "無法讀取 %@",
+            .en: "Cannot read %@",
+            .zhHans: "无法读取 %@",
+            .ja: "%@ を読み込めません",
+            .ko: "%@을(를) 읽을 수 없습니다",
+            .th: "อ่าน %@ ไม่ได้"
+        ],
+        "sync_fail_cannot_write": [
+            .zhHant: "無法寫入 %@",
+            .en: "Cannot write %@",
+            .zhHans: "无法写入 %@",
+            .ja: "%@ に書き込めません",
+            .ko: "%@에 쓸 수 없습니다",
+            .th: "เขียน %@ ไม่ได้"
+        ],
+        "sync_fail_delete": [
+            .zhHant: "刪除失敗：%@",
+            .en: "Delete failed: %@",
+            .zhHans: "删除失败：%@",
+            .ja: "削除に失敗しました：%@",
+            .ko: "삭제 실패: %@",
+            .th: "ลบไม่สำเร็จ: %@"
+        ],
+        "sync_fail_export": [
+            .zhHant: "匯出失敗（%1@）：%2@",
+            .en: "Export failed (%1@): %2@",
+            .zhHans: "导出失败（%1@）：%2@",
+            .ja: "書き出しに失敗しました（%1@）：%2@",
+            .ko: "내보내기 실패 (%1@): %2@",
+            .th: "ส่งออกไม่สำเร็จ (%1@): %2@"
+        ],
+        "sync_fail_file_downloading": [
+            .zhHant: "檔案正在從 iCloud 雲端下載中，請稍候重試",
+            .en: "The file is being downloaded from iCloud. Try again in a moment.",
+            .zhHans: "文件正在从 iCloud 云端下载中，请稍候重试",
+            .ja: "ファイルを iCloud からダウンロード中です。しばらくしてからもう一度お試しください。",
+            .ko: "파일을 iCloud에서 다운로드하는 중입니다. 잠시 후 다시 시도하세요.",
+            .th: "กำลังดาวน์โหลดไฟล์จาก iCloud โปรดลองอีกครั้งในอีกสักครู่"
+        ],
+        "sync_fail_icloud_downloading": [
+            .zhHant: "iCloud 雲端檔案下載中，請稍候重試",
+            .en: "The iCloud file is still downloading. Try again in a moment.",
+            .zhHans: "iCloud 云端文件下载中，请稍候重试",
+            .ja: "iCloud のファイルをダウンロード中です。しばらくしてからもう一度お試しください。",
+            .ko: "iCloud 파일을 다운로드하는 중입니다. 잠시 후 다시 시도하세요.",
+            .th: "กำลังดาวน์โหลดไฟล์จาก iCloud โปรดลองอีกครั้งในอีกสักครู่"
+        ],
+        "sync_fail_no_manifest": [
+            .zhHant: "套件缺少 manifest.json，已清理無效殘留目錄",
+            .en: "The package has no manifest.json; the invalid leftover folder was removed",
+            .zhHans: "套件缺少 manifest.json，已清理无效残留目录",
+            .ja: "パッケージに manifest.json がないため、不要なフォルダを削除しました",
+            .ko: "패키지에 manifest.json이 없어 남은 잘못된 폴더를 정리했습니다",
+            .th: "แพ็กเกจไม่มี manifest.json จึงลบโฟลเดอร์ที่ไม่ถูกต้องที่เหลืออยู่แล้ว"
+        ],
+        "sync_fail_unpack": [
+            .zhHant: "解開套件失敗：%@",
+            .en: "Could not unpack the package: %@",
+            .zhHans: "解开套件失败：%@",
+            .ja: "パッケージを展開できませんでした：%@",
+            .ko: "패키지를 풀지 못했습니다: %@",
+            .th: "แตกแพ็กเกจไม่สำเร็จ: %@"
+        ],
+        "sync_fail_unpack_cloud": [
+            .zhHant: "解開雲端 .padnote 失敗：%@",
+            .en: "Could not unpack the cloud .padnote: %@",
+            .zhHans: "解开云端 .padnote 失败：%@",
+            .ja: "クラウド上の .padnote を展開できませんでした：%@",
+            .ko: "클라우드 .padnote를 풀지 못했습니다: %@",
+            .th: "แตก .padnote บนคลาวด์ไม่สำเร็จ: %@"
+        ],
         "sync_failed": [
             .zhHant: "同步失敗：%@",
             .en: "Sync failed: %@",
@@ -13463,6 +17351,30 @@ extension LocalizationManager {
             .ko: "폴더",
             .th: "โฟลเดอร์"
         ],
+        "sync_folder_pending": [
+            .zhHant: "已設定資料夾（待同步）",
+            .en: "Folder set (waiting to sync)",
+            .zhHans: "已设置文件夹（待同步）",
+            .ja: "フォルダ設定済み（同期待ち）",
+            .ko: "폴더 설정됨 (동기화 대기)",
+            .th: "ตั้งค่าโฟลเดอร์แล้ว (รอซิงก์)"
+        ],
+        "sync_folder_placeholder": [
+            .zhHant: "<資料夾>",
+            .en: "<folder>",
+            .zhHans: "<文件夹>",
+            .ja: "<フォルダ>",
+            .ko: "<폴더>",
+            .th: "<โฟลเดอร์>"
+        ],
+        "sync_folder_syncing": [
+            .zhHant: "iCloud / 資料夾同步中...",
+            .en: "Syncing iCloud / folder…",
+            .zhHans: "iCloud / 文件夹同步中…",
+            .ja: "iCloud / フォルダを同期中…",
+            .ko: "iCloud / 폴더 동기화 중…",
+            .th: "กำลังซิงก์ iCloud / โฟลเดอร์…"
+        ],
         "sync_folder_unlink_confirm_desc": [
             .zhHant: "這只會取消與該資料夾的同步連結，不會刪除您本機或該資料夾內的任何筆記檔案。",
             .en: "This will only unlink the folder from syncing. It will not delete any notes on your device or in the folder.",
@@ -13486,6 +17398,14 @@ extension LocalizationManager {
             .ja: "Google ドライブを同期中…",
             .ko: "Google 드라이브 동기화 중…",
             .th: "กำลังซิงก์ Google Drive…"
+        ],
+        "sync_google_authorized": [
+            .zhHant: "Google 帳號授權成功，正在同步...",
+            .en: "Google account authorized. Syncing…",
+            .zhHans: "Google 帐号授权成功，正在同步…",
+            .ja: "Google アカウントを承認しました。同期中…",
+            .ko: "Google 계정 인증 완료. 동기화 중…",
+            .th: "อนุญาตบัญชี Google แล้ว กำลังซิงก์…"
         ],
         "sync_interrupted": [
             .zhHant: "已中斷同步",
@@ -13711,6 +17631,22 @@ extension LocalizationManager {
             .ko: "클라우드 동기화",
             .th: "ซิงก์คลาวด์"
         ],
+        "sync_signed_in_busy": [
+            .zhHant: "已登入成功（目前正有其他同步執行中）",
+            .en: "Signed in (another sync is already running)",
+            .zhHans: "已登录成功（目前有其他同步正在执行）",
+            .ja: "サインインしました（別の同期が実行中です）",
+            .ko: "로그인했습니다 (다른 동기화가 실행 중입니다)",
+            .th: "ลงชื่อเข้าใช้แล้ว (มีการซิงก์อื่นกำลังทำงานอยู่)"
+        ],
+        "sync_snapshot_timeout": [
+            .zhHant: "雲端快照更新逾時",
+            .en: "Timed out refreshing the cloud snapshot",
+            .zhHans: "云端快照更新超时",
+            .ja: "クラウドスナップショットの更新がタイムアウトしました",
+            .ko: "클라우드 스냅샷 갱신 시간이 초과되었습니다",
+            .th: "การอัปเดตสแนปช็อตบนคลาวด์หมดเวลา"
+        ],
         "sync_status": [
             .zhHant: "狀態",
             .en: "Status",
@@ -13718,6 +17654,46 @@ extension LocalizationManager {
             .ja: "状態",
             .ko: "상태",
             .th: "สถานะ"
+        ],
+        "sync_status_error": [
+            .zhHant: "同步發生錯誤",
+            .en: "Sync error",
+            .zhHans: "同步发生错误",
+            .ja: "同期エラーが発生しました",
+            .ko: "동기화 오류가 발생했습니다",
+            .th: "เกิดข้อผิดพลาดในการซิงก์"
+        ],
+        "sync_status_failed": [
+            .zhHant: "同步失敗",
+            .en: "Sync failed",
+            .zhHans: "同步失败",
+            .ja: "同期に失敗しました",
+            .ko: "동기화 실패",
+            .th: "ซิงก์ล้มเหลว"
+        ],
+        "sync_timeout_folder": [
+            .zhHant: "同步逾時，請確認網路連線或 iCloud 狀態後重試",
+            .en: "Sync timed out. Check your connection or iCloud status and try again.",
+            .zhHans: "同步超时，请确认网络连接或 iCloud 状态后重试",
+            .ja: "同期がタイムアウトしました。ネットワーク接続または iCloud の状態を確認して、もう一度お試しください。",
+            .ko: "동기화 시간이 초과되었습니다. 네트워크 연결 또는 iCloud 상태를 확인한 후 다시 시도하세요.",
+            .th: "การซิงก์หมดเวลา โปรดตรวจสอบการเชื่อมต่อหรือสถานะ iCloud แล้วลองอีกครั้ง"
+        ],
+        "sync_timeout_network": [
+            .zhHant: "同步逾時，請確認網路連線後重試",
+            .en: "Sync timed out. Check your connection and try again.",
+            .zhHans: "同步超时，请确认网络连接后重试",
+            .ja: "同期がタイムアウトしました。ネットワーク接続を確認して、もう一度お試しください。",
+            .ko: "동기화 시간이 초과되었습니다. 네트워크 연결을 확인한 후 다시 시도하세요.",
+            .th: "การซิงก์หมดเวลา โปรดตรวจสอบการเชื่อมต่ออินเทอร์เน็ตแล้วลองอีกครั้ง"
+        ],
+        "sync_transcript_lag": [
+            .zhHant: "轉錄落後 %@ 秒",
+            .en: "transcript %@ s behind",
+            .zhHans: "转录落后 %@ 秒",
+            .ja: "文字起こしが %@ 秒遅れ",
+            .ko: "받아쓰기 %@초 지연",
+            .th: "การถอดเสียงช้ากว่า %@ วินาที"
         ],
         "sync_up_to_date": [
             .zhHant: "已是最新",
@@ -13919,6 +17895,22 @@ extension LocalizationManager {
             .ko: "캔버스를 탭하여 텍스트 입력",
             .th: "แตะที่ใดก็ได้บนผืนผ้าใบเพื่อพิมพ์"
         ],
+        "tape_delete": [
+            .zhHant: "刪除膠帶",
+            .en: "Delete tape",
+            .zhHans: "删除胶带",
+            .ja: "テープを削除",
+            .ko: "테이프 삭제",
+            .th: "ลบเทป"
+        ],
+        "tape_toggle": [
+            .zhHant: "翻開或遮回",
+            .en: "Reveal or cover",
+            .zhHans: "翻开或遮回",
+            .ja: "めくる／隠す",
+            .ko: "열기/가리기",
+            .th: "เปิดหรือปิดคลุม"
+        ],
         "text_bold": [
             .zhHant: "粗體",
             .en: "Bold",
@@ -13934,6 +17926,14 @@ extension LocalizationManager {
             .ja: "文字色",
             .ko: "글자 색",
             .th: "สีข้อความ"
+        ],
+        "text_default_content": [
+            .zhHant: "請在此輸入文字...",
+            .en: "Type here…",
+            .zhHans: "请在此输入文字…",
+            .ja: "ここに入力…",
+            .ko: "여기에 입력…",
+            .th: "พิมพ์ที่นี่…"
         ],
         "text_italic": [
             .zhHant: "斜體",
@@ -14711,6 +18711,14 @@ extension LocalizationManager {
             .ko: "에어브러시",
             .th: "แอร์บรัช"
         ],
+        "tool_anchor_short": [
+            .zhHant: "錨定",
+            .en: "Anchor",
+            .zhHans: "锚定",
+            .ja: "アンカー",
+            .ko: "앵커",
+            .th: "ยึดตำแหน่ง"
+        ],
         "tool_ballpoint": [
             .zhHant: "原子筆",
             .en: "Ballpoint",
@@ -14830,6 +18838,14 @@ extension LocalizationManager {
             .ja: "鉛筆",
             .ko: "연필",
             .th: "ดินสอ"
+        ],
+        "tool_radial_short": [
+            .zhHant: "放射狀",
+            .en: "Radial",
+            .zhHans: "放射状",
+            .ja: "放射状",
+            .ko: "방사형",
+            .th: "รัศมี"
         ],
         "tool_text": [
             .zhHant: "文字排版",
@@ -15014,6 +19030,22 @@ extension LocalizationManager {
             .ja: "文字起こし中…",
             .ko: "텍스트 변환 중…",
             .th: "กำลังแปลงเสียง…"
+        ],
+        "transcription_done": [
+            .zhHant: "已完成",
+            .en: "Done",
+            .zhHans: "已完成",
+            .ja: "完了",
+            .ko: "완료",
+            .th: "เสร็จสิ้น"
+        ],
+        "transcription_ready": [
+            .zhHant: "轉錄就緒",
+            .en: "Transcript ready",
+            .zhHans: "转录就绪",
+            .ja: "文字起こし完了",
+            .ko: "받아쓰기 준비됨",
+            .th: "ถอดเสียงพร้อมแล้ว"
         ],
         "transfer_failed": [
             .zhHant: "沒有任何頁面被轉移",
@@ -15383,6 +19415,22 @@ extension LocalizationManager {
             .ko: "버전",
             .th: "เวอร์ชัน"
         ],
+        "voice_connected": [
+            .zhHant: "連線中",
+            .en: "Connected",
+            .zhHans: "连线中",
+            .ja: "接続中",
+            .ko: "연결됨",
+            .th: "เชื่อมต่ออยู่"
+        ],
+        "voice_disconnected": [
+            .zhHant: "已中斷",
+            .en: "Disconnected",
+            .zhHans: "已中断",
+            .ja: "切断されました",
+            .ko: "연결 끊김",
+            .th: "ตัดการเชื่อมต่อแล้ว"
+        ],
         "wd_a4_layout": [
             .zhHant: "A4 標準版面 · 100%",
             .en: "A4 layout · 100%",
@@ -15487,6 +19535,46 @@ extension LocalizationManager {
             .ko: "여기를 탭하거나 스타일러스로 문서 안에 바로 필기하세요",
             .th: "แตะที่นี่หรือใช้ปากกาสไตลัสเพื่อเขียนในเอกสารได้ทันที"
         ],
+        "whisper_downloading": [
+            .zhHant: "下載中...",
+            .en: "Downloading…",
+            .zhHans: "下载中…",
+            .ja: "ダウンロード中…",
+            .ko: "다운로드 중…",
+            .th: "กำลังดาวน์โหลด…"
+        ],
+        "whisper_downloading_status": [
+            .zhHant: "Whisper 模型下載中：%@",
+            .en: "Downloading Whisper model: %@",
+            .zhHans: "Whisper 模型下载中：%@",
+            .ja: "Whisper モデルをダウンロード中：%@",
+            .ko: "Whisper 모델 다운로드 중: %@",
+            .th: "กำลังดาวน์โหลดโมเดล Whisper: %@"
+        ],
+        "whisper_import_failed": [
+            .zhHant: "匯入失敗：%@",
+            .en: "Import failed: %@",
+            .zhHans: "导入失败：%@",
+            .ja: "読み込みに失敗しました：%@",
+            .ko: "가져오기 실패: %@",
+            .th: "นำเข้าไม่สำเร็จ: %@"
+        ],
+        "whisper_import_ok": [
+            .zhHant: "成功匯入 Whisper 離線模型！",
+            .en: "Whisper offline model imported.",
+            .zhHans: "成功导入 Whisper 离线模型！",
+            .ja: "Whisper オフラインモデルを読み込みました。",
+            .ko: "Whisper 오프라인 모델을 가져왔습니다.",
+            .th: "นำเข้าโมเดล Whisper แบบออฟไลน์สำเร็จ"
+        ],
+        "whisper_pick_failed": [
+            .zhHant: "選取檔案失敗：%@",
+            .en: "Could not select the file: %@",
+            .zhHans: "选取文件失败：%@",
+            .ja: "ファイルを選択できませんでした：%@",
+            .ko: "파일을 선택하지 못했습니다: %@",
+            .th: "เลือกไฟล์ไม่สำเร็จ: %@"
+        ],
         "wireframe_button": [
             .zhHant: "主要行動按鈕 (CTA)",
             .en: "Primary action button (CTA)",
@@ -15558,6 +19646,22 @@ extension LocalizationManager {
             .ja: "テキスト書式・タイポグラフィ編集パネルを開く",
             .ko: "텍스트 서식 및 서체 편집 스튜디오 열기",
             .th: "เปิดแผงจัดรูปแบบข้อความและการจัดพิมพ์"
+        ],
+        "word_style_body": [
+            .zhHant: "本文",
+            .en: "Body",
+            .zhHans: "正文",
+            .ja: "本文",
+            .ko: "본문",
+            .th: "เนื้อหา"
+        ],
+        "word_table_label": [
+            .zhHant: "表格（%1@ × %2@）",
+            .en: "Table (%1@ × %2@)",
+            .zhHans: "表格（%1@ × %2@）",
+            .ja: "表（%1@ × %2@）",
+            .ko: "표 (%1@ × %2@)",
+            .th: "ตาราง (%1@ × %2@)"
         ]
     ]
 }

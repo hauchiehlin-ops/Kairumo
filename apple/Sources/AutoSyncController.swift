@@ -230,7 +230,7 @@ public final class AutoSyncController: ObservableObject {
                 store: store, deviceId: deviceId
             )
             else {
-                lastMessage = "尚未登入"
+                lastMessage = L10n.t("not_signed_in")
                 return .needsReauth
             }
             return finishMessage(report: report)
@@ -262,14 +262,14 @@ public final class AutoSyncController: ObservableObject {
         }
         roundChanged = !report.isNoOp || report.newNotebooks > 0
         if let failure = report.failures.first {
-            lastMessage = "\(failure.key)：\(failure.value)"
+            lastMessage = SyncText.error("\(failure.key)：\(failure.value)")
             // 權杖問題由 runDrive 內部處理成登出；這裡一律當成可重試，
             // 排程器會自己退避。
             return .transient
         }
         lastMessage = report.isNoOp
-            ? "已是最新"
-            : "上傳 \(report.uploaded)、下載 \(report.downloaded)"
+            ? L10n.t("sync_up_to_date")
+            : L10n.f("sync_result", report.uploaded, report.downloaded)
         // 同步可能把別台裝置的錄音寫進套件。不重掃的話，「最近錄音」
         // 那份清單看不到它們 —— 而那正是它最該顯示的東西。
         if report.downloaded > 0 || report.newNotebooks > 0 {

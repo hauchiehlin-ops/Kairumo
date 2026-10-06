@@ -442,7 +442,7 @@ struct AudioAttachmentItemView: View {
             } catch {
                 await MainActor.run {
                     self.isTranscribing = false
-                    self.transcribeAlertMessage = "\(localizationManager.localized("transcribe_failed")): \(error.localizedDescription)"
+                    self.transcribeAlertMessage = "\(localizationManager.localized("transcribe_failed")): \(L10n.errorText(error))"
                 }
             }
         }

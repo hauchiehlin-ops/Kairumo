@@ -498,7 +498,7 @@ Markdown / SVG 匯出 · 手寫辨識 fallback 鏈 · 引擎與權限中心狀�
 - 打字輸入法（注音、拼音、日文、韓文組字）：兩平台的文字輸入都用框架內建的 TextField／BasicTextField 且狀態同步更新，沒有自己改寫輸入中的文字。
 - **PDF 裡的泰文**：PDF 沒有可以不嵌入的標準泰文字型，所以內嵌 Noto Sans Thai（SIL OFL，`third_party/notosansthai/`），
   **只有文件裡有泰文時才嵌**（約 +45 KB）。聲調符號疊在子音／上母音之上、ำ 拆開等排版由字型自己的 GSUB／GPOS 決定，
-  `crates/padnote-export/src/otl.rs` 是照表執行的最小排版引擎（沒有泰文規則寫死在程式裡）；附 ToUnicode，複製與搜尋拿得到字碼。
+  `crates/padnote-export/src/otl.rs` 是 OpenType 排版引擎：GSUB 1–8（含擴充型別）、GPOS 1–9、GDEF（lookup 旗標、markFilteringSet、markAttachmentType），字型內的規則照表執行；泰文只有字碼序列的前處理（ำ 拆成 ํ＋า 並排在聲調之前、結合符號依結合類別排序）寫在程式裡，因為那是 Unicode 規則、不在字型裡；附 ToUnicode，複製與搜尋拿得到字碼。
   用 macOS 預覽實際看過：ไม่、มี、ช่อง、ระหว่าง、ประชุม、บันทึก 全部正確。
 - **簡繁互查**：搜尋前把漢字**逐字**折成簡體（OpenCC 表，Apache-2.0；不用 GPL 的 MediaWiki 表），所以搜「笔记」找得到「筆記」，反之亦然。
   逐字而不是整句，是因為整句轉換看上下文，查詢（兩三個字）與文件（整段）的上下文不同會轉出不同的字而查不到。
@@ -512,3 +512,60 @@ Markdown / SVG 匯出 · 手寫辨識 fallback 鏈 · 引擎與權限中心狀�
 - 墨跡 Swift 層：語法檢查通過，**延遲未量測**
 - VAD：已換成 Silero（白噪音誤判 0/100，EnergyVad 為 100/100）
 - ASR 串流粒度：**段級**（VAD 段，上限 5 秒），非幀級。幀級需重新匯出計算圖（S-32）
+
+## 介面多語系稽核（2026-10-06）
+
+範圍：程式介面、工具快顯提示（tooltip／無障礙標籤）、警告與錯誤、通知、診斷畫面、同步日誌、預載手冊。
+- **做法**：所有使用者看得到的文字走 `i18n/ui-strings.json`（六語，約 2450 條），Swift 用 `L10n.t/f`（`apple/Sources/LocalizedMessages.swift`），
+  Kotlin 用 `L10n`（`LocalizedMessages.kt`）；同步訊息走 `SyncText`。錯誤訊息以「⚠️ 」前綴標記，不再用中文子字串判斷是否為錯誤。
+- **閘門**：`check-hardcoded-strings.py`（訊息接收端、log、持久化 id、英文呼叫；刻意不翻的用 `i18n-ok`）、
+  `i18n_tool.py verify`、`core_messages.py check`、`i18n_review.py lint`，都在 CI。
+
+### 核心（Rust）的診斷訊息 —— 已解決
+核心的錯誤訊息仍是繁體中文（開發語言），但**不再退成通用錯誤**：`i18n/core-patterns.json` 登記了 222 條樣式（`{}` = 動態片段），
+譯文在 `ui-strings.json`（鍵 `core_msg_NNN`，六語）。兩端在介面邊界（`L10n.coreText`／`errorText`）依樣式比對、換成使用者語言：
+動態片段（檔名、數字）原樣帶入，內層若又是核心訊息就遞迴翻譯，「、」連起來的清單逐項翻。
+`scripts/core_messages.py check` 掃 Rust 原始碼，**新增一條中文訊息沒登記就紅**；整句比不到而且含漢字（只會是系統或第三方函式庫的字串）才退成通用訊息。
+簡體中文也走這套（原本直接顯示繁體）。
+
+### 同步日誌 —— 已解決
+日誌行仍以中文寫進 `SyncLogger`，**顯示時**才依樣式翻（`L10n.logText`；81 條，另含授權流程訊息），比不到就原樣（不像錯誤訊息退成通用句）。
+`core_messages.py check` 也掃日誌來源檔（`LOG_SOURCES`）：每一條中文字面值都必須是某個樣式的一段。匯出日誌檔（給開發者）保留原文。
+
+### 區網／中繼協定訊息 —— 使用者看不到
+中繼伺服器（Rust `padnote-relay`、Apple 的 `LocalRelayServer`）回的 `error`／`reason` 文字是中文，但兩端客戶端**從來不顯示它**
+（`CollaborationManager` 收到 `error` 型別直接忽略；`room_closed` 只斷線），行為由 `code`／`type` 決定。所以這些中文只存在於協定與服務端日誌，不是使用者介面。
+若日後要把伺服器訊息顯示出來，必須走 `L10n.coreText`（樣式已收錄）。
+
+### 診斷畫面 —— 已解決
+Android 核心狀態畫面與兩端的筆輸入診斷（壓力、傾角、延遲）改用 `diag_*` 鍵（34 條）。
+
+### 《Kairumo手冊》—— 部分解決
+- **繁體中文、簡體中文**：手寫版（筆順來自 makemeahanzi；簡體字資料集同一份，2026-10-06 經使用者同意再下載一次，SHA-256 與先前記錄相同）。
+  `kairumo-manual-ink.json`（繁）與 `kairumo-manual-ink-zhHans.json`（簡）；繁中版逐位元組沒變。子集 229 字（`strokes-subset.json`）。
+- **英／日／韓／泰**：同一套手繪插圖 + 該語言排版的文字方塊（`assets/seed/kairumo-manual-typed.json`，由 `manual.py` 的 `build_typed` 產生；
+  文字在 `manual_text.py` 的 `TYPED`）。插圖逐點相同（腳本斷言），文字位置與繁中版的手寫字一一對應、放不下會自動縮字級。
+- **名稱與摘要跟著語言**（`seed_manual_title`／`seed_manual_snippet`），舊使用者的「Kairumo手冊」也會認出來補上語系鍵。
+- **做不到的部分**：英／日／韓／泰**不是手寫**。手寫需要筆順中線資料，makemeahanzi 只有漢字、沒有假名／諺文／泰文。
+  已經植入過的手冊內容不會隨語言切換重做（那是使用者的筆記）；只有名稱會變。
+
+### 母語者審閱 —— **尚未發生**
+所有非繁中譯文都是開發者撰寫、機器輔助，**沒有任何母語者審閱過**（`python3 scripts/i18n_review.py status` 全部 0%）。
+能由機器做的檢查已經做了：`i18n_review.py lint`（佔位符與原文一致、沒有混入別種文字、沒有缺譯文；抓到並修了一處韓文裡混入的「筆」）。
+審閱流程已備好：`export <語言>` 產生 `docs/i18n-review/<語言>.tsv` 給審閱者填，`apply` 把修改寫回並登記審閱者與日期；繁中原文改了，舊審閱自動視為過期。
+
+### 仍然是中文／未翻的地方（刻意或無法）
+- Rust 微服務 `padnote-relay` 的 stdout 日誌、核心的 `expect`／`panic` 訊息（給開發者）。
+- 匯出 Markdown 裡的標記（「[手寫內容 — 見 PDF 匯出]」等）：App 目前沒有任何地方呼叫 Markdown 匯出。
+- 系統或第三方函式庫丟出來的錯誤字串（作業系統本身的語言）。
+
+### PDF 排版引擎與 CoreText 比對
+PDF 排版引擎只用 Noto Sans Thai 在正式輸出路徑上；其他字型（含 CFF／OTTO）引擎讀得動，但 PDF 寫出端還只會嵌 TrueType 外框，要嵌其他字型須再做 FontFile3。
+`scripts/verify-otl-coretext.py`（僅 macOS，不在 CI）把引擎輸出與 CoreText 逐字形比對：28 組全部一致；可變字型只比字形編號、希伯來文（從右到左）只比字形，引擎沒有雙向排版。
+
+### UI 測試的已知不穩（不是程式碼問題）
+- 整批跑 `xcodebuild test` 時，`KairumoUITests` 會因 **XCTAutomationSupport 在日誌被系統隔離時崩潰**（堆疊：`runtime_issue_os_log_fault_callback` → `_platform_strcmp`）而掉一批測試
+  （Smoke／Responsive／InteractionMatrix／InsertTools 的個別項目）；單獨跑通常通過。原因是 XCUITest 取整棵無障礙樹，單頁有數萬個元素，日誌量爆掉。
+  純 HEAD 也一樣有（Sidebar／Toolbar／Trash／Ink 本來就紅），不是這次改動造成的。
+- `testTextModeSharesThePaperAndItsTextBoxesStayEditableInDrawMode` 單獨跑會失敗（純 HEAD 也是），整批跑時靠前面測試留下的狀態才過。
+- `MultiDeviceUITests` 需要 Android 同時配合，單獨跑必紅；跑整批時要 `-skip-testing:KairumoUITests/MultiDeviceUITests`。

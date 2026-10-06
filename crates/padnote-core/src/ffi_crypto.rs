@@ -304,13 +304,18 @@ mod tests {
     fn a_typo_in_the_recovery_phrase_is_caught() {
         let phrase = crypto_generate_recovery_phrase().unwrap();
         assert!(crypto_check_recovery_phrase(phrase.clone()));
+        // 換掉一個字，校驗碼只有 1/16（12 字）的機率碰巧仍然成立；
+        // 單一替換字會讓這個測試偶爾變紅，所以多試幾個，至少要有一個被抓到。
         let mut words: Vec<&str> = phrase.split_whitespace().collect();
-        words[0] = if words[0] == "abandon" {
-            "ability"
-        } else {
-            "abandon"
-        };
-        assert!(!crypto_check_recovery_phrase(words.join(" ")));
+        let original = words[0];
+        let caught = ["abandon", "ability", "able", "about", "above", "absent"]
+            .iter()
+            .filter(|w| **w != original)
+            .any(|w| {
+                words[0] = w;
+                !crypto_check_recovery_phrase(words.join(" "))
+            });
+        assert!(caught);
     }
 
     #[test]

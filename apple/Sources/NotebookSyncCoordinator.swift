@@ -483,7 +483,7 @@ enum NotebookSyncCoordinator {
                         "匯出失敗 (\(input.document.title))：\(error.localizedDescription)",
                         source: .folder
                     )
-                    failures[input.document.title] = error.localizedDescription
+                    failures[input.document.title] = L10n.errorText(error)
                 }
             }
             return (own, exported, failures, false)
@@ -746,7 +746,7 @@ enum NotebookSyncCoordinator {
                     } catch is CancellationError {
                         return (own, exported, failures, true)
                     } catch {
-                        failures[input.document.title] = error.localizedDescription
+                        failures[input.document.title] = L10n.errorText(error)
                     }
                     continue
                 }
@@ -761,7 +761,7 @@ enum NotebookSyncCoordinator {
                         "匯出失敗 (\(input.document.title))：\(error.localizedDescription)",
                         source: .googleDrive
                     )
-                    failures[input.document.title] = error.localizedDescription
+                    failures[input.document.title] = L10n.errorText(error)
                 }
             }
             return (own, exported, failures, false)
@@ -797,9 +797,9 @@ enum NotebookSyncCoordinator {
 
         let refreshed = await CloudSync.refresh(session)
         guard let refreshed, refreshed.ok else {
-            let message = refreshed?.error ?? "雲端快照更新逾時"
+            let message = refreshed?.error ?? L10n.t("sync_snapshot_timeout")
             SyncLogger.logAsync("雲端快照更新失敗：\(message)", source: .googleDrive)
-            report.failures["cloud"] = message
+            report.failures["cloud"] = L10n.coreText(message)
             if refreshed?.needsReauth == true {
                 await GoogleAuth.shared.signOut()
             }
@@ -824,7 +824,7 @@ enum NotebookSyncCoordinator {
                 return report
             }
             SyncLogger.logAsync("元資料同步失敗：\(meta.error)", source: .googleDrive)
-            report.failures["cloud"] = meta.error
+            report.failures["cloud"] = L10n.coreText(meta.error)
             if meta.needsReauth {
                 await GoogleAuth.shared.signOut()
             }
@@ -960,7 +960,7 @@ enum NotebookSyncCoordinator {
                 }
             } else {
                 SyncLogger.logAsync("筆記本 \(id.prefix(8))… 同步失敗：\(result.error)", source: .googleDrive)
-                report.failures[id] = result.error
+                report.failures[id] = L10n.coreText(result.error)
                 if result.needsReauth {
                     await GoogleAuth.shared.signOut()
                     break
@@ -1113,7 +1113,7 @@ enum NotebookSyncCoordinator {
                 // 抓失敗時把空殼刪掉。留著的話，下一輪 `fileExists` 為真，
                 // 這本就再也不會被重抓 —— 使用者會看到一本永遠打不開的空筆記。
                 try? fm.removeItem(at: targetPackage)
-                report.failures[item.title] = result.error
+                report.failures[item.title] = L10n.coreText(result.error)
                 if result.needsReauth {
                     break
                 }
@@ -1263,7 +1263,7 @@ enum NotebookSyncCoordinator {
         report.exportMs = Self.millis(since: exportStart, clock: clock)
         guard let own = exported.own else {
             report.ok = false
-            report.error = String(format: LocalizationManager.shared.localized("export_failed"), exported.error)
+            report.error = String(format: LocalizationManager.shared.localized("export_failed"), L10n.coreText(exported.error))
             return report
         }
         // 有寫入就通知區網對端（不論是這裡匯出的、還是編輯器已經追加進套件的）。
@@ -1284,7 +1284,7 @@ enum NotebookSyncCoordinator {
         report.warnings = round.warnings
         guard round.ok else {
             report.ok = false
-            report.error = round.error
+            report.error = L10n.coreText(round.error)
             report.needsReauth = round.needsReauth
             return report
         }
@@ -1301,7 +1301,7 @@ enum NotebookSyncCoordinator {
                 )
             } catch {
                 report.ok = false
-                report.error = String(format: LocalizationManager.shared.localized("import_failed"), error.localizedDescription)
+                report.error = String(format: LocalizationManager.shared.localized("import_failed"), L10n.errorText(error))
             }
         }
         return report
@@ -1808,7 +1808,7 @@ enum NotebookSyncCoordinator {
                     try fm.moveItem(at: tempDir, to: package)
                 } catch {
                     try? fm.removeItem(at: tempDir)
-                    report.failures[package.lastPathComponent] = "解開套件失敗：\(error.localizedDescription)"
+                    report.failures[package.lastPathComponent] = L10n.f("sync_fail_unpack", error.localizedDescription)
                     continue
                 }
             }
@@ -1819,12 +1819,12 @@ enum NotebookSyncCoordinator {
                 let manifestPlaceholder = package.appending(path: ".manifest.json.icloud")
                 if fm.fileExists(atPath: manifestPlaceholder.path) {
                     try? fm.startDownloadingUbiquitousItem(at: manifest)
-                    report.failures[package.lastPathComponent] = "iCloud 雲端檔案下載中，請稍候重試"
+                    report.failures[package.lastPathComponent] = L10n.t("sync_fail_icloud_downloading")
                     continue
                 }
                 // 損毀的空目錄或非套件檔案，清理避免日後每次同步都重複報「不是 .padnote 套件」
                 try? fm.removeItem(at: package)
-                report.failures[package.lastPathComponent] = "套件缺少 manifest.json，已清理無效殘留目錄"
+                report.failures[package.lastPathComponent] = L10n.t("sync_fail_no_manifest")
                 continue
             }
 
@@ -1844,7 +1844,7 @@ enum NotebookSyncCoordinator {
                 try await importOne(package, into: store, deviceId: deviceId, ownStrokes: ownStrokes)
                 report.imported += 1
             } catch {
-                report.failures[package.lastPathComponent] = error.localizedDescription
+                report.failures[package.lastPathComponent] = L10n.errorText(error)
                 // 匯入失敗（無論是沒有頁面、非套件、或是壞檔）：
                 // 若這本筆記本尚未成功載入本機 store，必須把磁碟上的破損/空套件刪除。
                 // 否則下次 pullNewNotebooks 會因為 fileExists(atPath:) 為真而跳過，
@@ -1895,7 +1895,7 @@ enum NotebookSyncCoordinator {
                     try fm.moveItem(at: tempDir, to: package)
                 } catch {
                     try? fm.removeItem(at: tempDir)
-                    report.failures[package.lastPathComponent] = "解開套件失敗：\(error.localizedDescription)"
+                    report.failures[package.lastPathComponent] = L10n.f("sync_fail_unpack", error.localizedDescription)
                     continue
                 }
             }
@@ -1906,12 +1906,12 @@ enum NotebookSyncCoordinator {
                 let manifestPlaceholder = package.appending(path: ".manifest.json.icloud")
                 if fm.fileExists(atPath: manifestPlaceholder.path) {
                     try? fm.startDownloadingUbiquitousItem(at: manifest)
-                    report.failures[package.lastPathComponent] = "iCloud 雲端檔案下載中，請稍候重試"
+                    report.failures[package.lastPathComponent] = L10n.t("sync_fail_icloud_downloading")
                     continue
                 }
                 // 損毀的空目錄或非套件檔案，清理避免日後每次同步都重複報錯
                 try? fm.removeItem(at: package)
-                report.failures[package.lastPathComponent] = "套件缺少 manifest.json，已清理無效殘留目錄"
+                report.failures[package.lastPathComponent] = L10n.t("sync_fail_no_manifest")
                 continue
             }
 
@@ -1919,7 +1919,7 @@ enum NotebookSyncCoordinator {
                 try await importOne(package, into: store, deviceId: deviceId, ownStrokes: ownStrokes)
                 report.imported += 1
             } catch {
-                report.failures[package.lastPathComponent] = error.localizedDescription
+                report.failures[package.lastPathComponent] = L10n.errorText(error)
                 if !activeLocalIds.contains(normId) {
                     try? fm.removeItem(at: package)
                 }
@@ -1981,7 +1981,7 @@ enum NotebookSyncCoordinator {
                     report.downloaded += 1
                 } catch {
                     try? fm.removeItem(at: tempDir)
-                    report.failures[actualName] = "解開雲端 .padnote 失敗：\(error.localizedDescription)"
+                    report.failures[actualName] = L10n.f("sync_fail_unpack_cloud", error.localizedDescription)
                 }
                 continue
             }

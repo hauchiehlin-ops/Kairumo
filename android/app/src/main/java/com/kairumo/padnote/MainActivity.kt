@@ -507,7 +507,7 @@ private fun NotebookHome(
             cloudMessage = when {
                 meta == null -> l("not_signed_in")
                 meta.needsReauth -> l("sync_needs_reauth")
-                !meta.ok -> l("sync_failed").replace("%@", meta.error)
+                !meta.ok -> l("sync_failed").replace("%@", L10n.coreText(meta.error))
                 // 講出上傳與下載的數量，與 Apple 一致。只說「完成」的話，
                 // 使用者分不出「真的傳了東西」與「其實什麼也沒做」。
                 else -> l("sync_result")
@@ -520,7 +520,7 @@ private fun NotebookHome(
 
     LaunchedEffect(authRevision) {
         if (authRevision > 0 && com.kairumo.padnote.oauth.GoogleAuth.isSignedIn(activity)) {
-            cloudMessage = "Google 帳號授權成功，正在同步..."
+            cloudMessage = l("sync_google_authorized")
             com.kairumo.padnote.sync.AutoSync.request(
                 activity, uniffi.padnote_core.FfiSyncTrigger.SIGNED_IN)
             runCloudSync()
@@ -3071,7 +3071,7 @@ private fun InkScreen(
                         showShareMenu = false
                         val session = notebook?.first ?: return@DropdownMenuItem
                         runCatching { Exporter.print(activity, session) }
-                            .onFailure { message = it.message }
+                            .onFailure { message = L10n.errorText(it) }
                     }
                 )
                 Divider()
@@ -3172,7 +3172,7 @@ private fun InkScreen(
                         showMenu = false
                         val session = notebook?.first ?: return@DropdownMenuItem
                         runCatching { Exporter.print(activity, session) }
-                            .onFailure { message = it.message }
+                            .onFailure { message = L10n.errorText(it) }
                     }
                 )
                 DropdownMenuItem(
@@ -3910,7 +3910,7 @@ private fun InkScreen(
                     Spacer(Modifier.width(8.dp))
                     Text(
                         if (recordingPaused) "${l10n("recording_paused")}: $timeStr"
-                        else if (backlogUs > 5_000_000L) "${l10n("sync_recording_in_progress")}: $timeStr (轉錄落後 ${backlogUs / 1_000_000L}s)"
+                        else if (backlogUs > 5_000_000L) "${l10n("sync_recording_in_progress")}: $timeStr (${l10n("sync_transcript_lag").replace("%@", "${backlogUs / 1_000_000L}")})"
                         else "${l10n("sync_recording_in_progress")}: $timeStr",
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.SemiBold,
@@ -6151,7 +6151,7 @@ private fun TabletopControlDeck(
                     modifier = Modifier.weight(1f),
                     contentPadding = PaddingValues(horizontal = 4.dp, vertical = 2.dp)
                 ) {
-                    Text("◎ Radial", fontSize = 11.sp, maxLines = 1)
+                    Text("◎ ${l10n("tool_radial_short")}", fontSize = 11.sp, maxLines = 1)
                 }
 
                 OutlinedButton(
@@ -6172,7 +6172,7 @@ private fun TabletopControlDeck(
                     modifier = Modifier.weight(1f),
                     contentPadding = PaddingValues(horizontal = 4.dp, vertical = 2.dp)
                 ) {
-                    Text("🔗 Anchor", fontSize = 11.sp, maxLines = 1)
+                    Text("🔗 ${l10n("tool_anchor_short")}", fontSize = 11.sp, maxLines = 1)
                 }
             }
 
@@ -6221,13 +6221,13 @@ private fun CoreStatusScreen() {
     ) {
         Text("Kairumo", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
         Text(
-            "Android 外殼 · WP2 骨架",
+            "Android · Kairumo",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         status.forEach { (label, value) ->
             Text(
-                "$label：$value",
+                "$label: $value",
                 style = MaterialTheme.typography.bodyMedium,
                 fontFamily = FontFamily.Monospace
             )
@@ -6238,18 +6238,18 @@ private fun CoreStatusScreen() {
 private fun readCoreStatus(activity: ComponentActivity): List<Pair<String, String>> = try {
     val info = appInfo()
     listOf(
-        "核心版本" to coreVersion(),
-        "目標平台" to "${info.targetOs}/${info.targetArch}",
-        "介面版本" to "${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})",
-        "協同加密" to checkSessionCrypto(),
-        "協同中繼" to checkRelay(),
-        "介面語系" to deviceLanguageTag(),
-        "字串表" to "${LocalizationStrings.table.size} 條（與 Apple 版同源）",
-        "示例字串" to uiString("about_app")
+        L10n.t("diag_core_version") to coreVersion(),
+        L10n.t("diag_target_platform") to "${info.targetOs}/${info.targetArch}",
+        L10n.t("diag_ui_version") to "${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})",
+        L10n.t("diag_collab_crypto") to checkSessionCrypto(),
+        L10n.t("diag_collab_relay") to checkRelay(),
+        L10n.t("diag_ui_language") to deviceLanguageTag(),
+        L10n.t("diag_string_table") to L10n.f("diag_string_table_value", LocalizationStrings.table.size),
+        L10n.t("diag_sample_string") to uiString("about_app")
     ) + activity.readHandoffPackage()
 } catch (t: Throwable) {
     // 綁定或 .so 載入失敗時要講清楚，不要給一個空白畫面
-    listOf("核心載入失敗" to (t.message ?: t.toString()))
+    listOf(L10n.t("diag_core_load_failed") to (t.message ?: t.toString()))
 }
 
 /**
@@ -6269,9 +6269,9 @@ private fun checkRelay(): String = try {
     val port = relay.start(0u)
     val running = relay.isRunning()
     relay.stop()
-    if (running && port > 0u) "已啟動於埠 $port（已停止）" else "啟動失敗"
+    if (running && port > 0u) L10n.f("diag_relay_started", port) else L10n.t("diag_relay_start_failed")
 } catch (t: Throwable) {
-    "失敗：${t.message}"
+    L10n.f("diag_failed", t.message)
 }
 
 /**
@@ -6293,24 +6293,24 @@ private fun ComponentActivity.readHandoffPackage(): List<Pair<String, String>> {
     return try {
         val session = PadnoteSession.openExisting(pkg.absolutePath, 0xB0u)
         val rows = mutableListOf<Pair<String, String>>()
-        rows += "跨平台筆記" to session.title()
+        rows += L10n.t("diag_handoff_note") to session.title()
         val pageCount = session.pageCount().toInt()
-        rows += "頁數" to pageCount.toString()
+        rows += L10n.t("diag_pages") to pageCount.toString()
 
         for (i in 0 until pageCount) {
             val pageId = session.pageIdAt(i.toUInt()) ?: continue
             val strokes = session.visibleStrokeDetails(pageId)
             val height = session.pageSize(pageId)?.getOrNull(1) ?: 0f
-            rows += "第 ${i + 1} 頁" to "筆畫 ${strokes.size}、高 ${height.toInt()}pt"
+            rows += L10n.f("diag_page_n", i + 1) to L10n.f("diag_page_value", strokes.size, height.toInt())
             strokes.firstOrNull()?.let { s ->
                 val rgba = s.colorRgba.joinToString(",") { (it.toInt() and 0xFF).toString() }
                 val p0 = s.points.first()
-                rows += "　首筆" to "RGBA($rgba)、起點(${p0.x}, ${p0.y})、${s.points.size} 點"
+                rows += L10n.t("diag_first_stroke") to L10n.f("diag_first_stroke_value", rgba, p0.x, p0.y, s.points.size)
             }
         }
         rows
     } catch (t: Throwable) {
-        listOf("跨平台筆記" to "開啟失敗：${t.message}")
+        listOf(L10n.t("diag_handoff_note") to L10n.f("diag_open_failed", t.message))
     }
 }
 
@@ -6362,6 +6362,13 @@ private fun catalogLang(tag: String): String = when (tag) {
     else -> "zhHant"
 }
 
+internal fun currentLanguageTag(): String = deviceLanguageTag()
+
+/** 測試用：只改這個 process 的語言，不寫進跨裝置設定。傳 null 還原。 */
+internal fun overrideLanguageForTest(tag: String?) {
+    syncedLanguageOverride = tag
+}
+
 private fun deviceLanguageTag(): String {
     // 跨裝置設定優先於系統語系：使用者在 iPad 上把語言改成日文之後，
     // 這台也要跟著變（ADR-0011）。反過來的話，同步過來的設定永遠不生效，
@@ -6391,12 +6398,12 @@ private fun checkSessionCrypto(): String = try {
     val sealed = collabEncrypt(key, message)
     val opened = collabDecrypt(key, sealed)
     when {
-        sealed.isEmpty() -> "加密回傳空字串"
-        opened == message -> "AES-256-GCM round-trip 通過"
-        else -> "內容不符"
+        sealed.isEmpty() -> L10n.t("diag_crypto_empty")
+        opened == message -> L10n.t("diag_crypto_ok")
+        else -> L10n.t("diag_crypto_mismatch")
     }
 } catch (t: Throwable) {
-    "失敗：${t.message}"
+    L10n.f("diag_failed", t.message)
 }
 
 /**

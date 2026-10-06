@@ -82,7 +82,7 @@ public final class ExportPrintManager {
     public func printNotebook(
         session: PadnoteSession,
         pageId: String? = nil,
-        jobTitle: String = "Kairumo Document",
+        jobTitle: String = L10n.t("print_job_title"),
         from viewController: UIViewController,
         sourceView: UIView? = nil,
         completion: ((UIPrintInteractionController, Bool, Error?) -> Void)? = nil
@@ -130,14 +130,14 @@ public final class ExportPrintManager {
     public func printNotebook(
         session: PadnoteSession,
         pageId: String? = nil,
-        jobTitle: String = "Kairumo Document"
+        jobTitle: String = L10n.t("print_job_title")
     ) throws {
         let printPdfData = try session.printData(pageId: pageId)
         guard let pdfDoc = PDFDocument(data: printPdfData) else {
-            throw NSError(domain: "ExportPrintManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "無法解析 PDF 資料"])
+            throw NSError(domain: "ExportPrintManager", code: -1, userInfo: [NSLocalizedDescriptionKey: L10n.t("print_err_parse")])
         }
         guard let printOperation = pdfDoc.printOperation(for: NSPrintInfo.shared, scalingMode: .pageScaleToFit, autoRotate: true) else {
-            throw NSError(domain: "ExportPrintManager", code: -2, userInfo: [NSLocalizedDescriptionKey: "建立列印操作失敗"])
+            throw NSError(domain: "ExportPrintManager", code: -2, userInfo: [NSLocalizedDescriptionKey: L10n.t("print_err_create")])
         }
         printOperation.jobTitle = jobTitle
         printOperation.run()

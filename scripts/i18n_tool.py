@@ -184,8 +184,45 @@ def cmd_generate():
     KOTLIN_OUT.parent.mkdir(parents=True, exist_ok=True)
     KOTLIN_OUT.write_text("\n".join(kotlin))
     write_info_plist_strings(table)
+    swift_p, kotlin_p = render_core_patterns()
+    SWIFT_PATTERNS_OUT.write_text(swift_p)
+    KOTLIN_PATTERNS_OUT.write_text(kotlin_p)
     print(f"產生 {len(keys)} 條 → {SWIFT_OUT.relative_to(ROOT)}")
     print(f"產生 {len(keys)} 條 → {KOTLIN_OUT.relative_to(ROOT)}")
+
+
+PATTERNS = ROOT / "i18n/core-patterns.json"
+SWIFT_PATTERNS_OUT = ROOT / "apple/Sources/CoreMessagePatterns.generated.swift"
+KOTLIN_PATTERNS_OUT = ROOT / "android/app/src/main/java/com/kairumo/padnote/CoreMessagePatterns.kt"
+
+
+def render_core_patterns():
+    """核心（Rust）診斷訊息的樣式表（見 scripts/core_messages.py）。
+
+    `{}` 把樣式切成固定片段；越具體（固定字越多）的排越前面，比對時先試。
+    """
+    patterns = json.loads(PATTERNS.read_text())
+    items = sorted(patterns.items(),
+                   key=lambda kv: (-len(kv[1].replace("{}", "")), kv[0]))
+    header = ("⚠️ 這是產生檔，不要手改。來源：i18n/core-patterns.json（樣式）與 i18n/ui-strings.json（譯文），"
+              "改完跑 python3 scripts/i18n_tool.py generate。")
+    swift = ["//", "//  CoreMessagePatterns.generated.swift", "//", f"//  {header}", "//", "",
+             "enum CoreMessagePatterns {",
+             "    /// (譯文鍵, 以動態片段切開的固定文字)。依固定字多寡由多到少排列。",
+             "    static let all: [(key: String, parts: [String])] = ["]
+    for key, tmpl in items:
+        parts = ", ".join(f'"{swift_escape(x)}"' for x in tmpl.split("{}"))
+        swift.append(f'        ("{key}", [{parts}]),')
+    swift += ["    ]", "}", ""]
+    kotlin = ["package com.kairumo.padnote", "", "/** " + header + " */",
+              "object CoreMessagePatterns {",
+              "    /** (譯文鍵, 以動態片段切開的固定文字)。依固定字多寡由多到少排列。 */",
+              "    val all: List<Pair<String, List<String>>> = listOf("]
+    for key, tmpl in items:
+        parts = ", ".join(f'"{kotlin_escape(x)}"' for x in tmpl.split("{}"))
+        kotlin.append(f'        "{key}" to listOf({parts}),')
+    kotlin += ["    )", "}", ""]
+    return "\n".join(swift), "\n".join(kotlin)
 
 
 def write_info_plist_strings(table):
@@ -274,6 +311,11 @@ def cmd_verify():
         SWIFT_OUT.read_text().replace("static let generatedStrings",
                                       "private let stringDictionary"))
     kotlin = parse_kotlin_table(KOTLIN_OUT.read_text())
+    swift_p, kotlin_p = render_core_patterns()
+    if (not SWIFT_PATTERNS_OUT.exists() or SWIFT_PATTERNS_OUT.read_text() != swift_p
+            or not KOTLIN_PATTERNS_OUT.exists() or KOTLIN_PATTERNS_OUT.read_text() != kotlin_p):
+        print("❌ 核心訊息樣式表的產生檔過期，跑 python3 scripts/i18n_tool.py generate")
+        return 1
     if catalog == generated and catalog == kotlin:
         print(f"✅ Swift 與 Kotlin 產生表都與 catalog 完全一致（{len(catalog)} 條）")
         return 0

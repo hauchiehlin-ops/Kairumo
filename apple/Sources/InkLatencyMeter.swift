@@ -75,7 +75,7 @@ public final class InkLatencyMeter {
     public func summaryMs() -> String {
         guard !samplesUs.isEmpty else { return "—" }
         func ms(_ us: Int64) -> String { String(format: "%.1f", Double(us) / 1000.0) }
-        return "p50 \(ms(percentileUs(50)))ms · p95 \(ms(percentileUs(95)))ms · \(samplesUs.count) 樣本"
+        return L10n.f("diag_samples", ms(percentileUs(50)), ms(percentileUs(95)), samplesUs.count)
     }
 }
 
@@ -153,15 +153,15 @@ public final class InkInputDiagnostics {
     /// 給診斷頁看的幾行摘要。
     public func lines() -> [(String, String)] {
         [
-            ("輸入裝置", snapshot.lastTouchType),
-            ("壓力", snapshot.hasForce ? String(format: "%.2f", snapshot.force) : "不支援"),
-            ("傾角", String(format: "%.2f", snapshot.altitude)),
-            ("方位", String(format: "%.2f", snapshot.azimuth)),
-            ("滾動", String(format: "%.2f", snapshot.roll)),
-            ("聯合取樣點", "\(snapshot.coalescedCount)"),
-            ("預測取樣點", "\(snapshot.predictedCount)"),
-            ("同時觸控", "\(snapshot.activeTouches)"),
-            ("筆尖延遲", latency.summaryMs())
+            (L10n.t("diag_input_device"), snapshot.lastTouchType),
+            (L10n.t("diag_pressure"), snapshot.hasForce ? String(format: "%.2f", snapshot.force) : L10n.t("diag_not_supported")),
+            (L10n.t("diag_tilt"), String(format: "%.2f", snapshot.altitude)),
+            (L10n.t("diag_azimuth"), String(format: "%.2f", snapshot.azimuth)),
+            (L10n.t("diag_roll"), String(format: "%.2f", snapshot.roll)),
+            (L10n.t("diag_coalesced"), "\(snapshot.coalescedCount)"),
+            (L10n.t("diag_predicted"), "\(snapshot.predictedCount)"),
+            (L10n.t("diag_touches"), "\(snapshot.activeTouches)"),
+            (L10n.t("diag_tip_latency"), latency.summaryMs())
         ]
     }
 }

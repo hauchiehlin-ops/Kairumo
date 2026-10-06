@@ -18,7 +18,7 @@ public enum AudioPCMDecoder {
     /// 將本地音訊檔（.m4a, .wav, .caf, .opus 等）解碼並重採樣為 16,000 Hz 單聲道 Float32 PCM
     public static func decodeTo16kMono(url: URL) throws -> [Float] {
         guard FileManager.default.fileExists(atPath: url.path) else {
-            throw NSError(domain: "AudioPCMDecoder", code: 404, userInfo: [NSLocalizedDescriptionKey: "音訊檔案不存在: \(url.lastPathComponent)"])
+            throw NSError(domain: "AudioPCMDecoder", code: 404, userInfo: [NSLocalizedDescriptionKey: L10n.f("asr_err_file_missing", url.lastPathComponent)])
         }
 
         // .opus 走核心 Ogg-Opus 解碼器（AVAudioFile 無法解析 Ogg 容器）
@@ -47,18 +47,18 @@ public enum AudioPCMDecoder {
                 channels: 1,
                 interleaved: false
             ) else {
-                throw NSError(domain: "AudioPCMDecoder", code: 1, userInfo: [NSLocalizedDescriptionKey: "無法初始化 16kHz 目標格式"])
+                throw NSError(domain: "AudioPCMDecoder", code: 1, userInfo: [NSLocalizedDescriptionKey: L10n.t("asr_err_format_init")])
             }
 
             let sourceFormat = file.processingFormat
             guard let converter = AVAudioConverter(from: sourceFormat, to: targetFormat) else {
-                throw NSError(domain: "AudioPCMDecoder", code: 2, userInfo: [NSLocalizedDescriptionKey: "無法建立音訊格式轉換器"])
+                throw NSError(domain: "AudioPCMDecoder", code: 2, userInfo: [NSLocalizedDescriptionKey: L10n.t("asr_err_converter")])
             }
 
             let ratio = 16000.0 / sourceFormat.sampleRate
             let targetFrameCapacity = AVAudioFrameCount(Double(file.length) * ratio + 4096)
             guard let outputBuffer = AVAudioPCMBuffer(pcmFormat: targetFormat, frameCapacity: targetFrameCapacity) else {
-                throw NSError(domain: "AudioPCMDecoder", code: 3, userInfo: [NSLocalizedDescriptionKey: "無法配置輸出音訊緩衝區"])
+                throw NSError(domain: "AudioPCMDecoder", code: 3, userInfo: [NSLocalizedDescriptionKey: L10n.t("asr_err_output_buffer")])
             }
 
             var error: NSError? = nil
@@ -111,7 +111,7 @@ public enum AudioPCMDecoder {
         let asset = AVURLAsset(url: url)
         let tracks = asset.tracks(withMediaType: .audio)
         guard let track = tracks.first else {
-            throw NSError(domain: "AudioPCMDecoder", code: 12, userInfo: [NSLocalizedDescriptionKey: "找不到音訊軌道"])
+            throw NSError(domain: "AudioPCMDecoder", code: 12, userInfo: [NSLocalizedDescriptionKey: L10n.t("asr_err_no_track")])
         }
         let reader = try AVAssetReader(asset: asset)
         let outputSettings: [String: Any] = [
@@ -125,7 +125,7 @@ public enum AudioPCMDecoder {
         let readerOutput = AVAssetReaderTrackOutput(track: track, outputSettings: outputSettings)
         reader.add(readerOutput)
         guard reader.startReading() else {
-            throw reader.error ?? NSError(domain: "AudioPCMDecoder", code: 13, userInfo: [NSLocalizedDescriptionKey: "無法啟動音訊解碼器"])
+            throw reader.error ?? NSError(domain: "AudioPCMDecoder", code: 13, userInfo: [NSLocalizedDescriptionKey: L10n.t("asr_err_decoder")])
         }
         var sampleData = [Float]()
         while let sampleBuffer = readerOutput.copyNextSampleBuffer() {
@@ -161,12 +161,12 @@ public enum AudioPCMDecoder {
             channels: 1,
             interleaved: false
         ) else {
-            throw NSError(domain: "AudioPCMDecoder", code: 10, userInfo: [NSLocalizedDescriptionKey: "無法初始化 WAV 格式"])
+            throw NSError(domain: "AudioPCMDecoder", code: 10, userInfo: [NSLocalizedDescriptionKey: L10n.t("asr_err_wav_init")])
         }
         let file = try AVAudioFile(forWriting: tempUrl, settings: format.settings, commonFormat: .pcmFormatFloat32, interleaved: false)
         let frameCount = AVAudioFrameCount(max(1, samples.count))
         guard let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: frameCount) else {
-            throw NSError(domain: "AudioPCMDecoder", code: 11, userInfo: [NSLocalizedDescriptionKey: "無法配置音訊緩衝區"])
+            throw NSError(domain: "AudioPCMDecoder", code: 11, userInfo: [NSLocalizedDescriptionKey: L10n.t("asr_err_buffer")])
         }
         buffer.frameLength = AVAudioFrameCount(samples.count)
         if let channelData = buffer.floatChannelData?[0], !samples.isEmpty {
@@ -395,7 +395,7 @@ public final class AudioTranscriber: ObservableObject {
             throw NSError(
                 domain: "WhisperImport",
                 code: 1002,
-                userInfo: [NSLocalizedDescriptionKey: "模型檔案大小異常（僅 \(size / 1_000_000) MB），請確認選取的是完整的 Whisper ggml 權重檔"]
+                userInfo: [NSLocalizedDescriptionKey: L10n.f("asr_err_model_size", size / 1_000_000)]
             )
         }
 
@@ -508,7 +508,7 @@ public final class AudioTranscriber: ObservableObject {
             throw NSError(
                 domain: "AudioTranscriber",
                 code: 1,
-                userInfo: [NSLocalizedDescriptionKey: "Speech recognition permission denied"]
+                userInfo: [NSLocalizedDescriptionKey: L10n.t("asr_err_permission")]
             )
         }
 
@@ -530,7 +530,7 @@ public final class AudioTranscriber: ObservableObject {
             throw NSError(
                 domain: "AudioTranscriber",
                 code: 2,
-                userInfo: [NSLocalizedDescriptionKey: "Speech recognizer unavailable for current locale"]
+                userInfo: [NSLocalizedDescriptionKey: L10n.t("asr_err_locale_unavailable")]
             )
         }
 
@@ -538,7 +538,7 @@ public final class AudioTranscriber: ObservableObject {
             throw NSError(
                 domain: "AudioTranscriber",
                 code: 3,
-                userInfo: [NSLocalizedDescriptionKey: "Speech recognizer is currently unavailable"]
+                userInfo: [NSLocalizedDescriptionKey: L10n.t("asr_err_unavailable")]
             )
         }
 
@@ -599,12 +599,12 @@ public final class AudioTranscriber: ObservableObject {
                 throw NSError(
                     domain: "AudioTranscriber",
                     code: 4,
-                    userInfo: [NSLocalizedDescriptionKey: "語音辨識超時（15秒）。請檢查網路連線或系統聽寫模型。"]
+                    userInfo: [NSLocalizedDescriptionKey: L10n.t("asr_err_timeout")]
                 )
             }
 
             guard let result = try await group.next() else {
-                throw NSError(domain: "AudioTranscriber", code: 5, userInfo: [NSLocalizedDescriptionKey: "轉錄無結果"])
+                throw NSError(domain: "AudioTranscriber", code: 5, userInfo: [NSLocalizedDescriptionKey: L10n.t("asr_err_no_result")])
             }
             group.cancelAll()
             return result

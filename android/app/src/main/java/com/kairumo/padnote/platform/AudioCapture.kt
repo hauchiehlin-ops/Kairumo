@@ -134,7 +134,7 @@ class AudioCapture(private val context: Context) {
                 runCatching {
                     session.feedAudio(slice.toList())
                     session.advanceTime(session.recordedAudioUs())
-                }.onFailure { onError("餵音訊失敗：${it.message}"); return@launch }
+                }.onFailure { onError(com.kairumo.padnote.L10n.f("rec_err_feed", it.message)); return@launch }
             }
         }
         return null

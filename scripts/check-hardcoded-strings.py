@@ -60,6 +60,34 @@ CALL = re.compile(
 UI_FIELD = r"(?:title|subtitle|label|message|snippet|caption|placeholder|description|hint|text|name|summary|tip|note|prompt|error|status)"
 ASSIGN = re.compile(rf'\b{UI_FIELD}\w*\s*[:=]\s*"((?:[^"\\]|\\.)*)"', re.I)
 
+# 第三條規則（2026-10-06 補上）：CJK 字面值被**傳給會顯示給使用者的地方**，而不是直接寫在 Text 裡 ——
+# 錯誤訊息（NSError、throw、onError、failures、lastMessage…）、狀態字串、無障礙描述。
+#
+# 為什麼要再補：前兩條抓得到 `Text("診斷")`，抓不到 `homeGoogleMessage = "同步逾時…"`、
+# `throw NSError(…"音訊檔案不存在")`、`onError?("裝置未連接麥克風")` —— 這些字一樣會出現在畫面上
+# （狀態卡、警示對話框、錄音錯誤），而且整批都是中文，切到英文就看到。實際查出約 140 處。
+#
+# 不擋的：寫進同步日誌／啟動日誌／NSLog 的字（開發者看的）、`case x = "中文"` 這種已落盤的識別字，
+# 以及行尾帶 `i18n-ok` 的（要寫明為什麼）。
+MESSAGE_SINKS = re.compile(
+    r"(?:NSLocalizedDescriptionKey\s*:|\bdetail\s*:|\bonError\??\(|\.server\(|\.coreRejected\(|LocationError\.\w+\("
+    r"|\.recognitionFailed\(|\breason\s*:|\bdesc\s*:|\bfailures\[[^\]]*\]\s*=|\blastMessage\s*=|\b\w*(?:Message|Status|Error)Text?\w*\s*=(?!=)"
+    r"|\bthrow\s+\w+(?:\.\w+)?\(|\berror\(|requireNotNull\([^)]*\)\s*\{|contentDescription\s*=|\.failure\(\.?\w+\()"
+    r'\s*"((?:[^"\\]|\\.)*)"'
+)
+LOGGING = re.compile(
+    r"SyncLogger|StartupLogger|NSLog|print\(|os_log|Logger\.|\.logAsync|\.log\(|Log\.[dwiev]\(|println|fatalError|assert|precondition"
+)
+PERSISTED_ID = re.compile(r'^\s*case\s+\w+\s*=\s*"')
+
+# 第四條：英文句子寫死在會顯示的地方（`.help("Open in Browser")`、`Text("Stack")`）。
+# 只擋「看起來是句子或標籤」的：含空白的多個單字，或首字母大寫的單一英文詞。品牌與技術縮寫放行。
+ENGLISH_CALL = re.compile(
+    r'(?:Text|Label|Button|Toggle|Section|Menu|\.help|\.accessibilityLabel|\.accessibilityHint|\.navigationTitle|contentDescription\s*=)'
+    r'\(?\s*"([A-Z][A-Za-z]+(?: [A-Za-z0-9&/.\-]+)*)"'
+)
+ENGLISH_OK = {"Kairumo", "Google Drive", "iCloud", "Apache-2.0", "RGB", "HSB", "HEX", "OK", "Drive", "PDF", "PNG", "SVG", "JSON"}
+
 TARGETS = [
     (ROOT / "apple/Sources", "*.swift", {"LocalizationStrings.generated.swift", "padnote_core.swift"}),
     (ROOT / "android/app/src/main/java/com/kairumo/padnote", "*.kt", {"LocalizationStrings.kt"}),
@@ -80,6 +108,18 @@ def main() -> int:
                         if CJK.search(m.group(1)):
                             rel = path.relative_to(ROOT)
                             hits.append(f"{rel}:{n}  {m.group(1)[:60]}")
+                if "i18n-ok" in line or LOGGING.search(line) or PERSISTED_ID.match(line):
+                    continue
+                for m in MESSAGE_SINKS.finditer(line):
+                    if CJK.search(m.group(1)):
+                        hits.append(f"{path.relative_to(ROOT)}:{n}  {m.group(1)[:60]}")
+                for m in ENGLISH_CALL.finditer(line):
+                    text = m.group(1)
+                    if text not in ENGLISH_OK and not re.fullmatch(r"[A-Z][a-z]*", text) is None and len(text) < 3:
+                        continue
+                    if text in ENGLISH_OK or text.split(" ")[0] in ENGLISH_OK and len(text.split(" ")) == 1:
+                        continue
+                    hits.append(f"{path.relative_to(ROOT)}:{n}  {text[:60]}  (英文)")
 
     if hits:
         print(f"❌ 介面上有 {len(hits)} 處硬寫死的文字：", file=sys.stderr)

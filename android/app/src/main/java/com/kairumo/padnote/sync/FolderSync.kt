@@ -139,7 +139,7 @@ object FolderSync {
             ?: remoteRoot.createDirectory(packageName)
             ?: return Result(
                 failures = mapOf(
-                    "<資料夾>" to com.kairumo.padnote.LocalizationStrings
+                    com.kairumo.padnote.L10n.t("sync_folder_placeholder") to com.kairumo.padnote.LocalizationStrings
                         .localized("err_sync_folder_failed", languageTag)
                         .replace("%@", packageName)
                 )
@@ -156,12 +156,12 @@ object FolderSync {
         for (path in plan.upload) {
             runCatching { upload(context, localPackage, remotePackage, path) }
                 .onSuccess { uploaded += path }
-                .onFailure { failures[path] = it.message ?: it.toString() }
+                .onFailure { failures[path] = com.kairumo.padnote.L10n.errorText(it) }
         }
         for (path in plan.download) {
             runCatching { download(context, remotePackage, localPackage, path) }
                 .onSuccess { downloaded += path }
-                .onFailure { failures[path] = it.message ?: it.toString() }
+                .onFailure { failures[path] = com.kairumo.padnote.L10n.errorText(it) }
         }
         SyncLogger.log("【資料夾同步】$packageName 完成。上傳: ${uploaded.size}, 下載: ${downloaded.size}, 失敗: ${failures.size}", SyncSource.FOLDER)
         return Result(uploaded, downloaded, plan.needsAttention, failures)
@@ -170,24 +170,24 @@ object FolderSync {
     private fun upload(context: Context, localRoot: File, remoteRoot: DocumentFile, path: String) {
         val source = File(localRoot, path)
         val target = ensureRemoteFile(remoteRoot, path)
-            ?: error("無法在同步資料夾建立 $path")
+            ?: error(com.kairumo.padnote.L10n.f("sync_fail_cannot_write", path))
         // 用 "wt"（truncate）而不是 "w"：目的檔可能是較短的舊版本，
         // 不截斷的話尾端會殘留上一版的位元組，檔案就壞了。
         context.contentResolver.openOutputStream(target.uri, "wt").use { out ->
-            requireNotNull(out) { "無法寫入 $path" }
+            requireNotNull(out) { com.kairumo.padnote.L10n.f("sync_fail_cannot_write", path) }
             source.inputStream().use { it.copyTo(out) }
         }
     }
 
     private fun download(context: Context, remoteRoot: DocumentFile, localRoot: File, path: String) {
-        val source = findRemoteFile(remoteRoot, path) ?: error("同步資料夾裡找不到 $path")
+        val source = findRemoteFile(remoteRoot, path) ?: error(com.kairumo.padnote.L10n.f("sync_fail_cannot_read", path))
         val target = File(localRoot, path)
         val parent = target.parentFile ?: localRoot
         parent.mkdirs()
         val tempFile = File.createTempFile("sync_", ".tmp", parent)
         try {
             context.contentResolver.openInputStream(source.uri).use { input ->
-                requireNotNull(input) { "無法讀取 $path" }
+                requireNotNull(input) { com.kairumo.padnote.L10n.f("sync_fail_cannot_read", path) }
                 tempFile.outputStream().use { out ->
                     input.copyTo(out)
                     out.fd.sync()
@@ -264,7 +264,7 @@ object FolderSync {
                         deleted++
                     } else {
                         failed++
-                        if (firstError.isEmpty()) firstError = "刪除失敗：$name"
+                        if (firstError.isEmpty()) firstError = com.kairumo.padnote.L10n.f("sync_fail_delete", name)
                     }
                 } catch (e: Exception) {
                     failed++

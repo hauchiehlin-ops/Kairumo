@@ -115,7 +115,7 @@ public final class GoogleAuth: NSObject, ObservableObject {
 
     public func signIn(loginHint: String = "") async -> Result<Void, Failure> {
         guard !isSigningIn else {
-            return .failure(.server("登入處理中，請勿重複點擊"))
+            return .failure(.server(L10n.t("auth_busy")))
         }
         isSigningIn = true
         defer {
@@ -216,7 +216,7 @@ public final class GoogleAuth: NSObject, ObservableObject {
             self.session = session
             let started = session.start()
             if !started {
-                safeResume(.failure(Failure.server("無法啟動系統登入視窗，請重試")))
+                safeResume(.failure(Failure.server(L10n.t("auth_cannot_present"))))
             }
 
             // 180 秒超時保護，避免因系統彈窗未點擊或背景卡死無窮等待
@@ -226,7 +226,7 @@ public final class GoogleAuth: NSObject, ObservableObject {
                 lock.unlock()
                 if !alreadyDone {
                     self?.session?.cancel()
-                    safeResume(.failure(Failure.server("登入逾時，請重新嘗試")))
+                    safeResume(.failure(Failure.server(L10n.t("auth_timeout"))))
                 }
             }
         }
@@ -391,7 +391,7 @@ public final class GoogleAuth: NSObject, ObservableObject {
             // 「網路壞了」。
             return .success(String(data: data, encoding: .utf8) ?? "")
         } catch {
-            return .failure(.server(error.localizedDescription))
+            return .failure(.server(L10n.errorText(error)))
         }
     }
 
