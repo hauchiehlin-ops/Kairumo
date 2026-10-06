@@ -410,6 +410,19 @@ impl Solid {
 /// `skip(p, q)` 回傳真的時，環上 `p→q` 這條邊不產生側壁（剖面的切口由呼叫端另外補上）。
 /// 第一個環是外環；其餘是洞。沒有任何環就是空網格。
 pub fn mesh_from_rings(rings: &[Vec<P2>], depth: f32, skip: &dyn Fn(P2, P2) -> bool) -> Mesh {
+    mesh_from_rings_ex(rings, depth, skip, &|_| false)
+}
+
+/// 同 [`mesh_from_rings`]，另外 `quiet(p)` 回傳真的時，頂點 `p` 在「只剩一邊側壁」的情況下**不畫**垂直邊。
+///
+/// 切口邊界上的頂點要畫（那是切口牆的邊）；但剖面被分成幾塊時，分界線上的頂點只是人為切出來的，
+/// 隔壁那塊的牆與這塊的牆其實是同一面，畫了就多出一條不存在的線。
+pub fn mesh_from_rings_ex(
+    rings: &[Vec<P2>],
+    depth: f32,
+    skip: &dyn Fn(P2, P2) -> bool,
+    quiet: &dyn Fn(P2) -> bool,
+) -> Mesh {
     let d = depth;
     let mut faces: Vec<Face> = Vec::new();
     let mut edges: Vec<Edge> = Vec::new();
@@ -487,12 +500,16 @@ pub fn mesh_from_rings(rings: &[Vec<P2>], depth: f32, skip: &dyn Fn(P2, P2) -> b
                     faces: [a, b],
                     always: false,
                 }),
-                (Some(w), None) | (None, Some(w)) => edges.push(Edge {
-                    a: [p.0, p.1, 0.0],
-                    b: [p.0, p.1, -d],
-                    faces: [w, w],
-                    always: true,
-                }),
+                (Some(w), None) | (None, Some(w)) => {
+                    if !quiet(p) {
+                        edges.push(Edge {
+                            a: [p.0, p.1, 0.0],
+                            b: [p.0, p.1, -d],
+                            faces: [w, w],
+                            always: true,
+                        })
+                    }
+                }
                 (None, None) => {}
             }
         }

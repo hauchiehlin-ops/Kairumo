@@ -1,6 +1,8 @@
 package com.kairumo.padnote.ink
 
 import android.view.MotionEvent
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import uniffi.padnote_core.FfiPhase
 import uniffi.padnote_core.FfiPoint
 import uniffi.padnote_core.FfiVerdict
@@ -110,6 +112,185 @@ class InkEngine(
 
     /** 非 null = 步驟編號模式：點哪裡就通知哪裡（頁面座標），不落筆。 */
     var onMarkerTap: ((Float, Float) -> Unit)? = null
+
+    /**
+     * 非 null = 圖學工具模式（標註…）：觸控的每個階段與位置（頁面座標），不落筆。
+     * 對應 Apple 的 `ProStrokeGestureRecognizer.onToolTouch`。
+     */
+    var onToolTouch: ((FfiPhase, Float, Float) -> Unit)? = null
+
+    /** 目前的畫布縮放：工具要把「手指大小」的吸附半徑換成頁面單位。 */
+    var toolZoom: Float = 1f
+        private set
+
+    /** 工具的預覽（標註畫到一半的樣子）與已選的點。不存檔、不進復原；每次更新整組換掉。 */
+    var overlayStrokes by androidx.compose.runtime.mutableStateOf<List<uniffi.padnote_core.FfiSheetStroke>>(emptyList())
+        private set
+    var overlayMarks by androidx.compose.runtime.mutableStateOf<List<Offset2>>(emptyList())
+        private set
+
+    /** 這一頁的識別字（逐頁設定，例如 45° 轉折點，用它當鍵）。 */
+    val pageKey: String get() = pageId ?: ""
+
+    /** 製圖：正在畫的線對齊了哪些既有點（虛線導引），與調整後的即時預覽（靠著尺的邊、對齊吸附）。 */
+    var alignGuides by androidx.compose.runtime.mutableStateOf<List<List<Offset2>>>(emptyList())
+        private set
+    var draftPreview by androidx.compose.runtime.mutableStateOf<List<StrokePoint>?>(null)
+        private set
+
+    /** 一個頁面座標的點（避免引擎依賴 Compose 的 `Offset`）。 */
+    data class Offset2(val x: Float, val y: Float)
+
+    fun setOverlay(strokes: List<uniffi.padnote_core.FfiSheetStroke>, marks: List<Offset2>) {
+        overlayStrokes = strokes
+        overlayMarks = marks
+    }
+
+    fun clearOverlay() = setOverlay(emptyList(), emptyList())
+
+    /**
+     * 離 (x, y) 最近的吸附點（半徑 [radius] 之內）：筆畫的端點、轉折點，以及圓形筆畫的圓心。
+     * 標註要量準，就得釘在線的端點與圓心上，而不是手指落下的那個點。
+     */
+    fun snapAnchor(x: Float, y: Float, radius: Float): Offset2? {
+        var best: Offset2? = null
+        var bestDist = Float.MAX_VALUE
+        fun consider(px: Float, py: Float) {
+            val d = kotlin.math.hypot(px - x, py - y)
+            if (d <= radius && d < bestDist) { best = Offset2(px, py); bestDist = d }
+        }
+        for (stroke in _strokes) {
+            if (stroke.layer != 0 && DraftingState.isHidden(stroke.layer)) continue
+            val pts = stroke.points
+            if (pts.isEmpty()) continue
+            consider(pts.first().x, pts.first().y)
+            consider(pts.last().x, pts.last().y)
+            // 吸附出來的線／多邊形只有幾個點，每個點都是轉折；手繪的長線不是。
+            if (pts.size <= 12) for (p in pts) consider(p.x, p.y)
+            fitCircle(pts.map { Offset2(it.x, it.y) })?.let { consider(it.first.x, it.first.y) }
+        }
+        return best
+    }
+
+    // ── 投影對齊與尺規靠邊 ──
+
+    /** 對齊用的點：看得見的筆畫的端點與短折線的轉折點（上限 600 個，免得大頁面拖慢）。 */
+    private fun alignAnchors(): List<uniffi.padnote_core.FfiPoint> {
+        val out = ArrayList<uniffi.padnote_core.FfiPoint>()
+        for (stroke in _strokes) {
+            if (stroke.layer != 0 && DraftingState.isHidden(stroke.layer)) continue
+            val pts = stroke.points
+            if (pts.isEmpty()) continue
+            out += uniffi.padnote_core.FfiPoint(pts.first().x, pts.first().y)
+            out += uniffi.padnote_core.FfiPoint(pts.last().x, pts.last().y)
+            if (pts.size <= 12) for (q in pts.drop(1).dropLast(1)) out += uniffi.padnote_core.FfiPoint(q.x, q.y)
+            if (out.size > 600) break
+        }
+        return out
+    }
+
+    private fun alignedPoint(x: Float, y: Float, anchors: List<uniffi.padnote_core.FfiPoint>, guides: MutableList<List<Offset2>>): Offset2 {
+        if (!DraftingState.alignEnabled) return Offset2(x, y)
+        val pivot = DraftingState.pivot(pageKey)?.let { uniffi.padnote_core.FfiPoint(it.first, it.second) }
+        val r = uniffi.padnote_core.draftAlign(
+            uniffi.padnote_core.FfiPoint(x, y), anchors, pivot, DraftingState.thirdAngle,
+            8f / toolZoom.coerceAtLeast(0.25f))
+        for (g in r.guides) guides += g.points.map { Offset2(it.x, it.y) }
+        return Offset2(r.point.x, r.point.y)
+    }
+
+    /**
+     * 製圖線的調整：起點靠著尺的邊就整筆沿著邊走（直線）；否則起點與終點對齊既有點。
+     * 與 Apple 的 `ProInkLayerView` 同一套規則。回傳調整後的筆點與要畫的導引線。
+     */
+    private fun draftAdjust(pts: List<StrokePoint>): Pair<List<StrokePoint>, List<List<Offset2>>> {
+        if (layer == 0 || pts.isEmpty()) return pts to emptyList()
+        val guides = mutableListOf<List<Offset2>>()
+        val first = pts.first()
+        val last = pts.last()
+        val band = 14f / toolZoom.coerceAtLeast(0.25f)
+        val inst = DraftingState.instrument
+        val edge = inst?.nearestEdge(first.x, first.y, band)
+        if (edge != null) {
+            val foot = InstrumentModel.footOnLine(last.x, last.y, edge.a, edge.b)
+            val n = 24
+            val out = (0 until n).map { i ->
+                val t = i.toFloat() / (n - 1)
+                first.copy(x = edge.foot.x + (foot.x - edge.foot.x) * t, y = edge.foot.y + (foot.y - edge.foot.y) * t)
+            }
+            return out to emptyList()
+        }
+        if (!DraftingState.alignEnabled) return pts to emptyList()
+        val anchors = alignAnchors()
+        val a = alignedPoint(first.x, first.y, anchors, guides)
+        val b = if (pts.size > 1) alignedPoint(last.x, last.y, anchors, guides) else a
+        val out = pts.toMutableList()
+        out[0] = first.copy(x = a.x, y = a.y)
+        if (pts.size > 1) out[out.lastIndex] = last.copy(x = b.x, y = b.y)
+        return out to guides
+    }
+
+    private fun updateDraftPreview() {
+        if (layer == 0 || (DraftingState.instrument == null && !DraftingState.alignEnabled)) return
+        val live = inFlight.values.firstOrNull() ?: return
+        val raw = InkInput.strokePoints(live.toList())
+        if (raw.size < 2) return
+        val (adjusted, guides) = draftAdjust(raw)
+        draftPreview = adjusted
+        alignGuides = guides
+    }
+
+    private fun clearDraftPreview() {
+        if (draftPreview != null) draftPreview = null
+        if (alignGuides.isNotEmpty()) alignGuides = emptyList()
+    }
+
+    /** 手指落在尺的身體上（不是靠邊的地方）：這個指標是在搬尺，不是在畫。 */
+    private var instrumentPointer: ULong? = null
+    private var instrumentLastX = 0f
+    private var instrumentLastY = 0f
+
+    /** 拖尺：回傳這個取樣是不是被拿來搬尺了。 */
+    private fun handleInstrumentDrag(sample: InkInput.Sample): Boolean {
+        val inst = DraftingState.instrument ?: return false
+        if (layer == 0 || isErasing) return false
+        val e = sample.event
+        val band = 14f / zoom.coerceAtLeast(0.25f)
+        when (e.phase) {
+            FfiPhase.BEGAN -> {
+                if (inst.containsBody(e.x, e.y) && inst.nearestEdge(e.x, e.y, band) == null) {
+                    instrumentPointer = e.id
+                    instrumentLastX = e.x
+                    instrumentLastY = e.y
+                    return true
+                }
+            }
+            FfiPhase.MOVED -> if (instrumentPointer == e.id) {
+                DraftingState.moveInstrument(e.x - instrumentLastX, e.y - instrumentLastY)
+                instrumentLastX = e.x
+                instrumentLastY = e.y
+                return true
+            }
+            FfiPhase.ENDED, FfiPhase.CANCELLED -> if (instrumentPointer == e.id) {
+                instrumentPointer = null
+                return true
+            }
+            else -> Unit
+        }
+        return false
+    }
+
+    /** (x, y) 附近的圓形筆畫（首尾相接、擬合殘差小）：回傳圓心與半徑。 */
+    fun circleNear(x: Float, y: Float, radius: Float): Pair<Offset2, Float>? {
+        var best: Pair<Offset2, Float>? = null
+        var bestDist = Float.MAX_VALUE
+        for (stroke in _strokes) {
+            val fit = fitCircle(stroke.points.map { Offset2(it.x, it.y) }) ?: continue
+            val d = kotlin.math.abs(kotlin.math.hypot(x - fit.first.x, y - fit.first.y) - fit.second)
+            if (d <= radius + stroke.baseWidth && d < bestDist) { best = fit; bestDist = d }
+        }
+        return best
+    }
 
     /** 吸附成功時通知 UI（觸覺回饋）。 */
     var onSnapped: ((uniffi.padnote_core.FfiDraftSnapKind) -> Unit)? = null
@@ -412,6 +593,16 @@ class InkEngine(
         for (sample in InkInput.samples(event, density, zoom, offsetX, offsetY)) {
             // 改圖層模式：點一下就把最近的一筆改到目標圖層，不落筆。
             // 繞過仲裁器 —— 它要看到移動才肯判定，一個點擊永遠等不到判定。
+            val toolTouch = onToolTouch
+            if (toolTouch != null) {
+                toolZoom = zoom
+                val phase = sample.event.phase
+                if (phase != FfiPhase.HOVER && phase != FfiPhase.HOVER_ENDED) {
+                    toolTouch(phase, sample.event.x, sample.event.y)
+                    drawn++
+                }
+                continue
+            }
             val marker = onMarkerTap
             if (marker != null) {
                 if (sample.event.phase == FfiPhase.BEGAN) {
@@ -426,6 +617,10 @@ class InkEngine(
                     reassignLayerAt(sample.event.x, sample.event.y, reassign)
                     drawn++
                 }
+                continue
+            }
+            if (handleInstrumentDrag(sample)) {
+                drawn++
                 continue
             }
             val decision = arbiter.handle(sample.event)
@@ -485,6 +680,7 @@ class InkEngine(
             FfiPhase.BEGAN -> {
                 inFlight[id] = mutableListOf(sample)
                 resetHold(sample.event.x, sample.event.y)
+                updateDraftPreview()
             }
             FfiPhase.MOVED -> {
                 // 沒有 BEGAN 就收到 MOVED（例如前一筆被收回後又有事件進來）
@@ -494,10 +690,12 @@ class InkEngine(
                     resetHold(sample.event.x, sample.event.y)
                 }
                 if (sample.event.y + 200f > PageGeometry.height) onReachedPageBottom?.invoke()
+                updateDraftPreview()
             }
             FfiPhase.ENDED -> {
                 val collected = inFlight.remove(id) ?: return null
                 collected.add(sample)
+                clearDraftPreview()
                 // 預覽已經亮著就一定要吸附（所見即所得），不再另外用時間戳判斷。
                 val previewed = snapPreview != null
                 endHold()
@@ -511,6 +709,7 @@ class InkEngine(
             FfiPhase.CANCELLED -> {
                 endHold()
                 inFlight.remove(id)
+                clearDraftPreview()
             }
             FfiPhase.HOVER, FfiPhase.HOVER_ENDED -> Unit
         }
@@ -579,6 +778,7 @@ class InkEngine(
         }
 
         val drafting = layer != 0 || lineType != 0
+        if (layer != 0 && !forceSnap) finalPoints = draftAdjust(finalPoints).first
         // 長按吸附：筆畫抬起前在終點停住一下，就釘成幾何圖形（見 `draftSnapStroke`）。
         var snappedKind: uniffi.padnote_core.FfiDraftSnapKind? = null
         val step = snapStepDeg
@@ -968,4 +1168,47 @@ class InkEngine(
         /** 停留期間允許的抖動（頁面單位）。 */
         const val SNAP_SLOP = 4f
     }
+}
+
+
+/**
+ * 閉合的點列擬合成圓（Kåsa 代數法，與 Apple 的 `ProInkLayerView.fitCircle` 同一個算法）。
+ * 不閉合、太小、殘差超過半徑 6% 都回 `null`。
+ */
+internal fun fitCircle(pts: List<InkEngine.Offset2>): Pair<InkEngine.Offset2, Float>? {
+    if (pts.size < 8) return null
+    var perimeter = 0.0
+    for (i in 1 until pts.size) perimeter += kotlin.math.hypot((pts[i].x - pts[i - 1].x).toDouble(), (pts[i].y - pts[i - 1].y).toDouble())
+    val first = pts.first()
+    val last = pts.last()
+    if (perimeter <= 30 || kotlin.math.hypot((first.x - last.x).toDouble(), (first.y - last.y).toDouble()) >= perimeter * 0.08) return null
+    var sx = 0.0; var sy = 0.0; var sxx = 0.0; var syy = 0.0; var sxy = 0.0; var sz = 0.0; var szx = 0.0; var szy = 0.0
+    val n = pts.size.toDouble()
+    for (p in pts) {
+        val x = p.x.toDouble(); val y = p.y.toDouble(); val z = x * x + y * y
+        sx += x; sy += y; sxx += x * x; syy += y * y; sxy += x * y; sz += z; szx += z * x; szy += z * y
+    }
+    val m = arrayOf(doubleArrayOf(sxx, sxy, sx), doubleArrayOf(sxy, syy, sy), doubleArrayOf(sx, sy, n))
+    val b = doubleArrayOf(szx, szy, sz)
+    fun det(a: Array<DoubleArray>) =
+        a[0][0] * (a[1][1] * a[2][2] - a[1][2] * a[2][1]) -
+            a[0][1] * (a[1][0] * a[2][2] - a[1][2] * a[2][0]) +
+            a[0][2] * (a[1][0] * a[2][1] - a[1][1] * a[2][0])
+    val d = det(m)
+    if (kotlin.math.abs(d) <= 1e-9) return null
+    val sol = DoubleArray(3)
+    for (k in 0 until 3) {
+        val mk = Array(3) { r -> m[r].copyOf() }
+        for (r in 0 until 3) mk[r][k] = b[r]
+        sol[k] = det(mk) / d
+    }
+    val cx = sol[0] / 2
+    val cy = sol[1] / 2
+    val r2 = sol[2] + cx * cx + cy * cy
+    if (r2 <= 0) return null
+    val r = kotlin.math.sqrt(r2)
+    var err = 0.0
+    for (p in pts) err += kotlin.math.abs(kotlin.math.hypot(p.x - cx, p.y - cy) - r)
+    if (err / n >= r * 0.06 || r <= 4) return null
+    return InkEngine.Offset2(cx.toFloat(), cy.toFloat()) to r.toFloat()
 }

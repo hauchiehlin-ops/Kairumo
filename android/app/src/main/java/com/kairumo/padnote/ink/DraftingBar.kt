@@ -56,7 +56,9 @@ import uniffi.padnote_core.draftLinePattern
 fun DraftingBar(
     languageTag: String,
     modifier: Modifier = Modifier,
-    onOpenSolidStudio: () -> Unit = {}
+    onOpenSolidStudio: () -> Unit = {},
+    onOpenToolbox: () -> Unit = {},
+    onCloseTool: () -> Unit = {}
 ) {
     fun l10n(key: String) = LocalizationStrings.localized(key, languageTag)
     // 讀 version：顯示／鎖定改了就重組。
@@ -289,6 +291,54 @@ fun DraftingBar(
                         modifier = Modifier.testTag("draft.marker.reset")
                     )
                 }
+                // 圖學工具：尺寸標註、符號、圖框（見 DraftingTools.kt）。
+                FilterChip(
+                    selected = false,
+                    onClick = onOpenToolbox,
+                    label = { Text("🛠 " + l10n("draft_tools"), fontSize = 12.sp) },
+                    modifier = Modifier.testTag("draft.tools")
+                )
+                if (DraftingState.tool != DraftTool.NONE) {
+                    // 目前的工具：點一下結束；下面一行寫它在等什麼。
+                    FilterChip(
+                        selected = true,
+                        onClick = onCloseTool,
+                        label = { Text(l10n(DraftingState.tool.nameKey) + " ✕", fontSize = 12.sp) },
+                        modifier = Modifier.testTag("draft.tool.close")
+                            .semantics { contentDescription = l10n("draft_tool_close") }
+                    )
+                }
+                // 尺規在頁面上時：轉角與收起。丁字尺不能轉。
+                @Suppress("UNUSED_EXPRESSION") DraftingState.version
+                val inst = DraftingState.instrument
+                if (inst != null) {
+                    if (!inst.verticalOnly) {
+                        for ((tag, label, deg) in listOf(
+                            Triple("draft.inst.rotl", "↺", -15.0), Triple("draft.inst.rotl1", "−", -1.0),
+                            Triple("draft.inst.rotr1", "+", 1.0), Triple("draft.inst.rotr", "↻", 15.0)
+                        )) {
+                            FilterChip(
+                                selected = false,
+                                onClick = { DraftingState.rotateInstrument(deg) },
+                                label = { Text(label, fontSize = 13.sp) },
+                                modifier = Modifier.testTag(tag).semantics {
+                                    contentDescription = l10n(when (tag) {
+                                        "draft.inst.rotl" -> "draft_inst_rotate_left"
+                                        "draft.inst.rotl1" -> "draft_inst_rotate_left_fine"
+                                        "draft.inst.rotr1" -> "draft_inst_rotate_right_fine"
+                                        else -> "draft_inst_rotate_right"
+                                    })
+                                }
+                            )
+                        }
+                    }
+                    FilterChip(
+                        selected = false,
+                        onClick = { DraftingState.removeInstrument() },
+                        label = { Text("✕ " + l10n("draft_inst_remove"), fontSize = 12.sp) },
+                        modifier = Modifier.testTag("draft.inst.remove")
+                    )
+                }
                 // 立體輔助：草圖拉伸、三視圖、等角圖、剖面。
                 FilterChip(
                     selected = false,
@@ -299,6 +349,19 @@ fun DraftingBar(
             }
             }
             buttons()
+            }
+            // 圖學工具在等什麼。
+            val hint = DraftingState.toolHint
+            if (hint != null && DraftingState.tool != DraftTool.NONE) {
+                Text(
+                    hint, fontSize = 12.sp, fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onPrimary,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(50))
+                        .background(MaterialTheme.colorScheme.primary)
+                        .padding(horizontal = 10.dp, vertical = 4.dp)
+                        .testTag("draft.tool.hint")
+                )
             }
         }
     }

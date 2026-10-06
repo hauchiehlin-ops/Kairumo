@@ -34,6 +34,7 @@ struct SolidStudioSheet: View {
     @State private var delta: Double = 30
     @State private var flip = true
     @State private var depthFrac: Double = 0.5
+    @State private var tilt: Double = 40
 
     // 排版
     @State private var firstAngle = false
@@ -65,7 +66,7 @@ struct SolidStudioSheet: View {
             section: FfiSolidSection(
                 kind: kind, angleDeg: Float(angle), offset: Float(offset), offset2: Float(offset2),
                 step: Float(step), pivotX: 0.5, pivotY: 0.5, deltaDeg: Float(delta), flip: flip,
-                depthFrac: Float(depthFrac)),
+                depthFrac: Float(depthFrac), tiltDeg: Float(tilt)),
             fitWidth: Float(fit.width), fitHeight: Float(fit.height),
             hatchSpacing: Float(6 * ratio), dimensions: dimensions, sectionLabel: sectionLabel)
     }
@@ -216,6 +217,7 @@ struct SolidStudioSheet: View {
                 Text(t("solid_section_stepped")).tag(FfiSectionKind.stepped)
                 Text(t("solid_section_rotated")).tag(FfiSectionKind.rotated)
                 Text(t("solid_section_parallel")).tag(FfiSectionKind.parallel)
+                Text(t("solid_section_oblique")).tag(FfiSectionKind.oblique)
             }
             .accessibilityIdentifier("solid.sectionKind")
 
@@ -238,6 +240,11 @@ struct SolidStudioSheet: View {
                 Toggle(t("solid_flip"), isOn: $flip)
             case .parallel:
                 slider(t("solid_depth_pos"), $depthFrac, 0...1, id: "solid.depthFrac", format: "%.2f")
+            case .oblique:
+                slider(t("solid_angle"), $angle, 0...180, id: "solid.angle", format: "%.0f°")
+                slider(t("solid_offset"), $offset, 0...1, id: "solid.offset", format: "%.2f")
+                slider(t("solid_tilt"), $tilt, 5...85, id: "solid.tilt", format: "%.0f°")
+                Toggle(t("solid_flip"), isOn: $flip)
             }
         }
     }

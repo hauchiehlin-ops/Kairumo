@@ -74,6 +74,8 @@ pub enum FfiSectionKind {
     Rotated,
     /// 平行於輪廓的剖面（取代正視圖）。
     Parallel,
+    /// 斜切面：切面含有 XY 平面上的一個方向並繞它傾斜（同時斜向深度與輪廓），剖視圖是切口的實形。
+    Oblique,
 }
 
 /// 剖面參數。用到哪些欄位依 `kind`；其餘忽略。
@@ -97,6 +99,8 @@ pub struct FfiSolidSection {
     pub flip: bool,
     /// 平行剖面的深度位置（0 在前面、1 在後面）。
     pub depth_frac: f32,
+    /// 斜切面繞切線傾斜的角度（度）：0 = 垂直於輪廓、90 = 平行於輪廓。
+    pub tilt_deg: f32,
 }
 
 #[derive(Clone, Debug, uniffi::Record)]
@@ -159,11 +163,18 @@ fn cut_from(solid: &Solid, s: &FfiSolidSection) -> Option<Cut> {
             s.flip,
         )),
         FfiSectionKind::Parallel => Some(Cut::parallel(solid, s.depth_frac)),
+        FfiSectionKind::Oblique => Some(Cut::oblique(
+            solid,
+            s.angle_deg,
+            s.offset,
+            s.tilt_deg,
+            s.flip,
+        )),
     }
 }
 
 /// 角色 → 製圖筆。
-fn pen_for(role: Role) -> &'static str {
+pub(crate) fn pen_for(role: Role) -> &'static str {
     match role {
         Role::Visible | Role::CutEnd => "thick",
         Role::Hidden => "hidden",
@@ -456,6 +467,7 @@ mod tests {
                 delta_deg: 30.0,
                 flip: true,
                 depth_frac: 0.5,
+                tilt_deg: 40.0,
             },
             fit_width: 600.0,
             fit_height: 500.0,
@@ -507,6 +519,7 @@ mod tests {
             FfiSectionKind::Stepped,
             FfiSectionKind::Rotated,
             FfiSectionKind::Parallel,
+            FfiSectionKind::Oblique,
         ] {
             let plain =
                 solid_compose_sheet(p.clone(), 20.0, options(FfiSectionKind::None)).unwrap();

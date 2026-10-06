@@ -2338,6 +2338,7 @@ dependencies = [
  "padnote-crypto",
  "padnote-denoise",
  "padnote-doc",
+ "padnote-drafting",
  "padnote-embed",
  "padnote-export",
  "padnote-i18n",
@@ -2392,6 +2393,14 @@ dependencies = [
 [[package]]
 name = "padnote-doc"
 version = "5.1.0"
+
+[[package]]
+name = "padnote-drafting"
+version = "5.1.0"
+dependencies = [
+ "padnote-ink",
+ "padnote-solid",
+]
 
 [[package]]
 name = "padnote-embed"

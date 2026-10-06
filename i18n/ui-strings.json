@@ -5575,6 +5575,22 @@
     "zhHans": "下载中...",
     "zhHant": "下載中..."
   },
+  "draft_align": {
+    "en": "Projection alignment",
+    "ja": "投影の位置合わせ",
+    "ko": "투상 정렬",
+    "th": "จัดแนวการฉายภาพ",
+    "zhHans": "投影对齐",
+    "zhHant": "投影對齊"
+  },
+  "draft_align_footer": {
+    "en": "The start and end of a line align with the ends of existing lines: top and front views line up, front and side heights match; once a 45° turning point is set, widths line up too. A light blue dashed guide shows what it aligned to.",
+    "ja": "線の始点と終点は既存の線の端点に揃います（正面図と平面図の左右、正面図と側面図の高さ）。45° の転換点を設定すると奥行きも揃います。揃ったときは薄い青の破線が表示されます。",
+    "ko": "선의 시작점과 끝점이 기존 선의 끝점에 맞춰집니다(정면도와 평면도의 가로, 정면도와 측면도의 높이). 45° 전환점을 설정하면 폭도 맞춰집니다. 맞춰지면 연한 파란 점선이 나타납니다.",
+    "th": "จุดเริ่มและจุดสิ้นสุดของเส้นจะจัดแนวกับปลายเส้นที่มีอยู่ (ภาพด้านหน้ากับภาพด้านบนตรงกัน ความสูงของภาพด้านหน้ากับภาพด้านข้างเท่ากัน) ถ้าตั้งจุดหักมุม 45° ความกว้างก็จะตรงกันด้วย จะมีเส้นประสีฟ้าอ่อนแสดงว่าจัดแนวกับอะไร",
+    "zhHans": "画线的起点与终点会对齐既有线的端点：长对正、高平齐；设了 45° 转折点之后，宽度也会对齐（宽相等）。对齐时会出现淡蓝色的虚线。",
+    "zhHant": "畫線的起點與終點會對齊既有線的端點：長對正、高平齊；設了 45° 轉折點之後，寬度也會對齊（寬相等）。對齊時會出現淡藍色的虛線。"
+  },
   "draft_angle_free": {
     "en": "Free",
     "ja": "自由",
@@ -5607,6 +5623,22 @@
     "zhHans": "展开图学面板",
     "zhHant": "展開圖學面板"
   },
+  "draft_compass_radius": {
+    "en": "Radius R %1@ mm — let go to draw the arc",
+    "ja": "半径 R %1@ mm　指を離すと円弧を描きます",
+    "ko": "반지름 R %1@ mm — 놓으면 호가 그려집니다",
+    "th": "รัศมี R %1@ มม. — ปล่อยเพื่อวาดส่วนโค้ง",
+    "zhHans": "半径 R %1@ mm　放开就画出圆弧",
+    "zhHant": "半徑 R %1@ mm　放開就畫出圓弧"
+  },
+  "draft_convention_footer": {
+    "en": "The projection method sets the symbol in the frame and the direction of the 45° transfer.",
+    "ja": "投影法は図枠の記号と、45° の転送の向きに影響します。",
+    "ko": "투상법은 도곽 안의 기호와 45° 전달 방향을 정합니다.",
+    "th": "วิธีการฉายภาพมีผลต่อสัญลักษณ์ในกรอบและทิศทางการส่งผ่าน 45°",
+    "zhHans": "投影法会影响图框里的符号，也决定 45° 传递的方向。",
+    "zhHant": "投影法會影響圖框裡的符號，也決定 45° 傳遞的方向。"
+  },
   "draft_draw_on_layer": {
     "en": "Draw on this layer",
     "ja": "このレイヤーに描く",
@@ -5614,6 +5646,46 @@
     "th": "วาดบนเลเยอร์นี้",
     "zhHans": "画在此图层",
     "zhHant": "畫在此圖層"
+  },
+  "draft_frame_footer": {
+    "en": "Draws the frame and title block for this page’s paper size (A4/A3/A2); the scale cell uses the current scale.",
+    "ja": "このページの用紙サイズ（A4/A3/A2）に合わせて図枠と表題欄を描きます。尺度欄には現在の尺度が入ります。",
+    "ko": "이 페이지의 용지 규격(A4/A3/A2)에 맞춰 도곽과 표제란을 그립니다. 축척 칸에는 현재 축척이 들어갑니다.",
+    "th": "วาดกรอบแบบและช่องชื่อแบบตามขนาดกระดาษของหน้านี้ (A4/A3/A2) ช่องมาตราส่วนจะใช้ค่าปัจจุบัน",
+    "zhHans": "依这一页的纸张规格（A4／A3／A2）画出图框与标题栏；比例栏会带入目前的比例尺。",
+    "zhHant": "依這一頁的紙張規格（A4／A3／A2）畫出圖框與標題欄；比例欄會帶入目前的比例尺。"
+  },
+  "draft_frame_insert": {
+    "en": "Insert frame and title block",
+    "ja": "図枠と表題欄を挿入",
+    "ko": "도곽과 표제란 삽입",
+    "th": "แทรกกรอบแบบและช่องชื่อแบบ",
+    "zhHans": "插入图框与标题栏",
+    "zhHant": "插入圖框與標題欄"
+  },
+  "draft_frame_inserted": {
+    "en": "Frame and title block inserted",
+    "ja": "図枠と表題欄を挿入しました",
+    "ko": "도곽과 표제란을 삽입했습니다",
+    "th": "แทรกกรอบแบบและช่องชื่อแบบแล้ว",
+    "zhHans": "已插入图框与标题栏",
+    "zhHant": "已插入圖框與標題欄"
+  },
+  "draft_frame_third_angle": {
+    "en": "Third-angle projection (Taiwan, USA)",
+    "ja": "第三角法（台湾・米国）",
+    "ko": "제3각법(대만·미국)",
+    "th": "การฉายภาพมุมที่สาม (ไต้หวัน สหรัฐฯ)",
+    "zhHans": "第三角法（台湾、美国）",
+    "zhHant": "第三角法（台灣、美國）"
+  },
+  "draft_frame_unsupported": {
+    "en": "This page size has no standard frame; use A4, A3 or A2",
+    "ja": "このページサイズには標準の図枠がありません。A4、A3、A2 を使ってください",
+    "ko": "이 페이지 규격에는 표준 도곽이 없습니다. A4, A3 또는 A2를 사용하세요",
+    "th": "ขนาดหน้านี้ไม่มีกรอบมาตรฐาน โปรดใช้ A4, A3 หรือ A2",
+    "zhHans": "这个页面规格没有标准图框，请改用 A4、A3 或 A2",
+    "zhHant": "這個頁面規格沒有標準圖框，請改用 A4、A3 或 A2"
   },
   "draft_help": {
     "en": "Tips",
@@ -5630,6 +5702,190 @@
     "th": "ซ่อนเลเยอร์",
     "zhHans": "隐藏图层",
     "zhHant": "隱藏圖層"
+  },
+  "draft_hint_angle_arc": {
+    "en": "Drag to size the dimension arc, then let go",
+    "ja": "寸法補助円弧の大きさまでドラッグして離すと記入されます",
+    "ko": "치수 호의 크기까지 끌었다 놓으면 기입됩니다",
+    "th": "ลากเพื่อกำหนดขนาดส่วนโค้ง แล้วปล่อยเพื่อกำหนดขนาด",
+    "zhHans": "拖出尺寸弧的大小，放开就标注",
+    "zhHant": "拖出尺寸弧的大小，放開就標註"
+  },
+  "draft_hint_angle_ray1": {
+    "en": "Tap a point on the first side",
+    "ja": "1 つ目の辺上の点をタップ",
+    "ko": "첫 번째 변 위의 점을 누르세요",
+    "th": "แตะจุดบนด้านแรก",
+    "zhHans": "点第一边上的一点",
+    "zhHant": "點第一邊上的一點"
+  },
+  "draft_hint_angle_ray2": {
+    "en": "Tap a point on the second side",
+    "ja": "2 つ目の辺上の点をタップ",
+    "ko": "두 번째 변 위의 점을 누르세요",
+    "th": "แตะจุดบนด้านที่สอง",
+    "zhHans": "点第二边上的一点",
+    "zhHant": "點第二邊上的一點"
+  },
+  "draft_hint_angle_vertex": {
+    "en": "Tap the vertex of the angle",
+    "ja": "角の頂点をタップ",
+    "ko": "각의 꼭짓점을 누르세요",
+    "th": "แตะจุดยอดของมุม",
+    "zhHans": "点角的顶点",
+    "zhHant": "點角的頂點"
+  },
+  "draft_hint_compass_arc": {
+    "en": "Press a point on the circle and drag round to draw the arc",
+    "ja": "円周上の点を押さえて、円に沿ってドラッグすると円弧が描けます",
+    "ko": "원주 위의 한 점을 누르고 원을 따라 끌면 호가 그려집니다",
+    "th": "กดที่จุดบนวงกลมแล้วลากไปตามวงเพื่อวาดส่วนโค้ง",
+    "zhHans": "按住圆周上的一点，沿著圆拖出圆弧",
+    "zhHant": "按住圓周上的一點，沿著圓拖出圓弧"
+  },
+  "draft_hint_compass_center": {
+    "en": "Tap the centre",
+    "ja": "中心をタップ",
+    "ko": "중심을 누르세요",
+    "th": "แตะจุดศูนย์กลาง",
+    "zhHans": "点圆心",
+    "zhHant": "點圓心"
+  },
+  "draft_hint_dim_center": {
+    "en": "Tap a drawn circle (or tap its centre)",
+    "ja": "描いた円をタップ（または中心をタップ）",
+    "ko": "그려 둔 원을 누르세요(또는 중심을 누르세요)",
+    "th": "แตะวงกลมที่วาดไว้ (หรือแตะจุดศูนย์กลาง)",
+    "zhHans": "点一个画好的圆（或点圆心）",
+    "zhHant": "點一個畫好的圓（或點圓心）"
+  },
+  "draft_hint_dim_edge": {
+    "en": "Drag towards where the leader should go, then let go (if you did not tap a circle, drag to a point on its edge)",
+    "ja": "引出線を出す方向へドラッグして離すと記入されます（円をタップしていない場合は円周上までドラッグ）",
+    "ko": "지시선을 낼 방향으로 끌었다 놓으면 기입됩니다(원을 누르지 않았다면 원주 위까지 끄세요)",
+    "th": "ลากไปทางที่จะดึงเส้นบอกขนาดออก แล้วปล่อยเพื่อกำหนดขนาด (ถ้าไม่ได้แตะวงกลม ให้ลากไปที่ขอบวงกลม)",
+    "zhHans": "拖向要引出的方向，放开就标注（没点到圆时，拖到圆周上）",
+    "zhHant": "拖向要引出的方向，放開就標註（沒點到圓時，拖到圓周上）"
+  },
+  "draft_hint_dim_first": {
+    "en": "Tap the first point (it snaps to line ends and circle centres)",
+    "ja": "最初の点をタップ（線の端点や円の中心に吸着します）",
+    "ko": "첫 번째 점을 누르세요(선의 끝점과 원의 중심에 붙습니다)",
+    "th": "แตะจุดแรก (จะดูดติดปลายเส้นและจุดศูนย์กลางวงกลม)",
+    "zhHans": "点第一个点（会吸附线的端点与圆心）",
+    "zhHant": "點第一個點（會吸附線的端點與圓心）"
+  },
+  "draft_hint_dim_place": {
+    "en": "Drag to place the dimension line, then let go",
+    "ja": "寸法線の位置までドラッグして、指を離すと記入されます",
+    "ko": "치수선 위치까지 끌었다가 놓으면 기입됩니다",
+    "th": "ลากไปตำแหน่งเส้นขนาด แล้วปล่อยเพื่อกำหนดขนาด",
+    "zhHans": "拖出尺寸线的位置，放开就标注",
+    "zhHant": "拖出尺寸線的位置，放開就標註"
+  },
+  "draft_hint_dim_second": {
+    "en": "Tap the second point",
+    "ja": "2 点目をタップ",
+    "ko": "두 번째 점을 누르세요",
+    "th": "แตะจุดที่สอง",
+    "zhHans": "点第二个点",
+    "zhHant": "點第二個點"
+  },
+  "draft_hint_pivot": {
+    "en": "Tap the corner between the top view and the side view (where the 45° line passes)",
+    "ja": "平面図と側面図の間の角（45° の線が通る点）をタップ",
+    "ko": "평면도와 측면도 사이의 모서리(45° 선이 지나는 점)를 누르세요",
+    "th": "แตะมุมระหว่างภาพด้านบนกับภาพด้านข้าง (จุดที่เส้น 45° ผ่าน)",
+    "zhHans": "点俯视图与右视图之间的那个角（45° 线通过的点）",
+    "zhHant": "點俯視圖與右視圖之間的那個角（45° 線通過的點）"
+  },
+  "draft_inst_footer": {
+    "en": "Drag the middle of an instrument to move it; start a stroke near its edge and the line follows the edge as a straight line. Use the rotate buttons to turn it (the T-square only slides up and down). The scale is real millimetres.",
+    "ja": "器具の中央をドラッグして動かします。縁の近くから線を描き始めると、縁に沿った直線になります。回転ボタンで角度を変えます（T 定規は上下にしか動きません）。目盛りは実寸のミリメートルです。",
+    "ko": "도구 가운데를 끌어 옮깁니다. 가장자리 근처에서 선을 시작하면 가장자리를 따라 직선이 그려집니다. 회전 버튼으로 각도를 바꿉니다(T자는 위아래로만 움직입니다). 눈금은 실제 밀리미터입니다.",
+    "th": "ลากกลางเครื่องมือเพื่อย้าย เริ่มเส้นใกล้ขอบเครื่องมือ เส้นจะเป็นเส้นตรงตามขอบ ใช้ปุ่มหมุนเพื่อเปลี่ยนมุม (ไม้ทีเลื่อนได้เฉพาะขึ้นลง) สเกลเป็นมิลลิเมตรจริง",
+    "zhHans": "拖尺的中间可以移动它；从尺边附近起笔，线就会贴著尺边画成直线。用旋转钮转角度（丁字尺只能上下移动）。尺上的刻度是真实毫米。",
+    "zhHant": "拖尺的中間可以移動它；從尺邊附近起筆，線就會貼著尺邊畫成直線。用旋轉鈕轉角度（丁字尺只能上下移動）。尺上的刻度是真實毫米。"
+  },
+  "draft_inst_protractor": {
+    "en": "Protractor",
+    "ja": "分度器",
+    "ko": "각도기",
+    "th": "ไม้โปรแทรกเตอร์",
+    "zhHans": "量角器",
+    "zhHant": "量角器"
+  },
+  "draft_inst_remove": {
+    "en": "Put the instrument away",
+    "ja": "器具をしまう",
+    "ko": "도구 치우기",
+    "th": "เก็บเครื่องมือ",
+    "zhHans": "收起尺规",
+    "zhHant": "收起尺規"
+  },
+  "draft_inst_rotate_left": {
+    "en": "Rotate 15° anticlockwise",
+    "ja": "反時計回りに 15° 回転",
+    "ko": "시계 반대 방향으로 15° 회전",
+    "th": "หมุนทวนเข็มนาฬิกา 15°",
+    "zhHans": "逆时针转 15°",
+    "zhHant": "逆時針轉 15°"
+  },
+  "draft_inst_rotate_left_fine": {
+    "en": "Rotate 1° anticlockwise",
+    "ja": "反時計回りに 1° 回転",
+    "ko": "시계 반대 방향으로 1° 회전",
+    "th": "หมุนทวนเข็มนาฬิกา 1°",
+    "zhHans": "逆时针转 1°",
+    "zhHant": "逆時針轉 1°"
+  },
+  "draft_inst_rotate_right": {
+    "en": "Rotate 15° clockwise",
+    "ja": "時計回りに 15° 回転",
+    "ko": "시계 방향으로 15° 회전",
+    "th": "หมุนตามเข็มนาฬิกา 15°",
+    "zhHans": "顺时针转 15°",
+    "zhHant": "順時針轉 15°"
+  },
+  "draft_inst_rotate_right_fine": {
+    "en": "Rotate 1° clockwise",
+    "ja": "時計回りに 1° 回転",
+    "ko": "시계 방향으로 1° 회전",
+    "th": "หมุนตามเข็มนาฬิกา 1°",
+    "zhHans": "顺时针转 1°",
+    "zhHant": "順時針轉 1°"
+  },
+  "draft_inst_ruler": {
+    "en": "Ruler",
+    "ja": "定規",
+    "ko": "자",
+    "th": "ไม้บรรทัด",
+    "zhHans": "直尺",
+    "zhHant": "直尺"
+  },
+  "draft_inst_set_square_30": {
+    "en": "30°-60° set square",
+    "ja": "30°-60° 三角定規",
+    "ko": "30°-60° 삼각자",
+    "th": "ฉาก 30°-60°",
+    "zhHans": "30°-60° 三角板",
+    "zhHant": "30°-60° 三角板"
+  },
+  "draft_inst_set_square_45": {
+    "en": "45° set square",
+    "ja": "45° 三角定規",
+    "ko": "45° 삼각자",
+    "th": "ฉาก 45°",
+    "zhHans": "45° 三角板",
+    "zhHant": "45° 三角板"
+  },
+  "draft_inst_t_square": {
+    "en": "T-square",
+    "ja": "T 定規",
+    "ko": "T자",
+    "th": "ไม้ที",
+    "zhHans": "丁字尺",
+    "zhHant": "丁字尺"
   },
   "draft_layer_aux": {
     "en": "Aux (construction)",
@@ -5775,6 +6031,14 @@
     "zhHans": "制图笔",
     "zhHant": "製圖筆"
   },
+  "draft_pivot_clear": {
+    "en": "Clear the turning point",
+    "ja": "転換点を消去",
+    "ko": "전환점 지우기",
+    "th": "ล้างจุดหักมุม",
+    "zhHans": "清除转折点",
+    "zhHant": "清除轉折點"
+  },
   "draft_reassign": {
     "en": "Move to layer",
     "ja": "レイヤーへ移動",
@@ -5782,6 +6046,22 @@
     "th": "ย้ายไปเลเยอร์",
     "zhHans": "移到图层",
     "zhHant": "移到圖層"
+  },
+  "draft_scale": {
+    "en": "Scale",
+    "ja": "尺度",
+    "ko": "축척",
+    "th": "มาตราส่วน",
+    "zhHans": "比例尺",
+    "zhHant": "比例尺"
+  },
+  "draft_scale_footer": {
+    "en": "The number on a dimension = millimetres on paper × the scale. On a 1:2 drawing, 50 mm on paper is marked 100.",
+    "ja": "寸法の数値 = 紙上のミリメートル × 尺度です。たとえば 1:2 の図では、紙上で 50 mm のところに 100 と記入します。",
+    "ko": "치수 숫자 = 종이 위의 밀리미터 × 축척입니다. 예를 들어 1:2 도면에서 종이 위 50 mm는 100으로 표시합니다.",
+    "th": "ตัวเลขขนาด = มิลลิเมตรบนกระดาษ × มาตราส่วน เช่น แบบ 1:2 วัดบนกระดาษได้ 50 มม. จะระบุ 100",
+    "zhHans": "标注的数字 = 纸上毫米 × 比例尺。例如 1:2 的图，纸上量 50 mm 就标 100。",
+    "zhHant": "標註的數字 = 紙上毫米 × 比例尺。例如 1:2 的圖，紙上量 50 mm 就標 100。"
   },
   "draft_show_layer": {
     "en": "Show layer",
@@ -5839,6 +6119,502 @@
     "zhHans": "从 ① 重来",
     "zhHant": "從 ① 重來"
   },
+  "draft_sym_all_around": {
+    "en": "All around",
+    "ja": "全周溶接",
+    "ko": "전둘레 용접",
+    "th": "เชื่อมรอบ",
+    "zhHans": "环绕焊接",
+    "zhHant": "環繞焊接"
+  },
+  "draft_sym_balloon": {
+    "en": "Part balloon",
+    "ja": "部品番号",
+    "ko": "부품 번호",
+    "th": "หมายเลขชิ้นส่วน",
+    "zhHans": "零件编号",
+    "zhHant": "零件編號"
+  },
+  "draft_sym_bolt_hex": {
+    "en": "Hex bolt",
+    "ja": "六角ボルト",
+    "ko": "육각 볼트",
+    "th": "สลักเกลียวหกเหลี่ยม",
+    "zhHans": "六角螺栓",
+    "zhHant": "六角螺栓"
+  },
+  "draft_sym_center_mark": {
+    "en": "Centre mark",
+    "ja": "中心記号",
+    "ko": "중심 표시",
+    "th": "เครื่องหมายจุดศูนย์กลาง",
+    "zhHans": "中心记号",
+    "zhHant": "中心記號"
+  },
+  "draft_sym_datum_feature": {
+    "en": "Datum feature",
+    "ja": "データム",
+    "ko": "데이텀",
+    "th": "ดาตัม",
+    "zhHans": "基准",
+    "zhHant": "基準"
+  },
+  "draft_sym_datums": {
+    "en": "Datum letters (up to three)",
+    "ja": "データム文字（最大 3 つ）",
+    "ko": "데이텀 문자(최대 3개)",
+    "th": "ตัวอักษรดาตัม (สูงสุดสามตัว)",
+    "zhHans": "基准字母（最多三个）",
+    "zhHant": "基準字母（最多三個）"
+  },
+  "draft_sym_diameter_zone": {
+    "en": "Diameter zone (⌀)",
+    "ja": "公差域に ⌀ を付ける",
+    "ko": "공차역에 ⌀ 붙이기",
+    "th": "เพิ่ม ⌀ หน้าค่าพิกัดความเผื่อ",
+    "zhHans": "公差带加 ⌀",
+    "zhHant": "公差帶加 ⌀"
+  },
+  "draft_sym_field": {
+    "en": "Field weld",
+    "ja": "現場溶接",
+    "ko": "현장 용접",
+    "th": "เชื่อมหน้างาน",
+    "zhHans": "现场焊接",
+    "zhHant": "現場焊接"
+  },
+  "draft_sym_gdt_angularity": {
+    "en": "Angularity",
+    "ja": "傾斜度",
+    "ko": "경사도",
+    "th": "ความเอียง",
+    "zhHans": "倾斜度",
+    "zhHant": "傾斜度"
+  },
+  "draft_sym_gdt_circularity": {
+    "en": "Circularity",
+    "ja": "真円度",
+    "ko": "진원도",
+    "th": "ความกลม",
+    "zhHans": "圆度",
+    "zhHant": "真圓度"
+  },
+  "draft_sym_gdt_concentricity": {
+    "en": "Concentricity",
+    "ja": "同心度",
+    "ko": "동심도",
+    "th": "ความร่วมศูนย์",
+    "zhHans": "同心度",
+    "zhHant": "同心度"
+  },
+  "draft_sym_gdt_cylindricity": {
+    "en": "Cylindricity",
+    "ja": "円筒度",
+    "ko": "원통도",
+    "th": "ความเป็นทรงกระบอก",
+    "zhHans": "圆柱度",
+    "zhHant": "圓柱度"
+  },
+  "draft_sym_gdt_flatness": {
+    "en": "Flatness",
+    "ja": "平面度",
+    "ko": "평면도",
+    "th": "ความเรียบ",
+    "zhHans": "平面度",
+    "zhHant": "平面度"
+  },
+  "draft_sym_gdt_parallelism": {
+    "en": "Parallelism",
+    "ja": "平行度",
+    "ko": "평행도",
+    "th": "ความขนาน",
+    "zhHans": "平行度",
+    "zhHant": "平行度"
+  },
+  "draft_sym_gdt_perpendicularity": {
+    "en": "Perpendicularity",
+    "ja": "直角度",
+    "ko": "직각도",
+    "th": "ความตั้งฉาก",
+    "zhHans": "垂直度",
+    "zhHant": "垂直度"
+  },
+  "draft_sym_gdt_position": {
+    "en": "Position",
+    "ja": "位置度",
+    "ko": "위치도",
+    "th": "ตำแหน่ง",
+    "zhHans": "位置度",
+    "zhHant": "位置度"
+  },
+  "draft_sym_gdt_profile_line": {
+    "en": "Profile of a line",
+    "ja": "線の輪郭度",
+    "ko": "선의 윤곽도",
+    "th": "รูปร่างของเส้น",
+    "zhHans": "线轮廓度",
+    "zhHant": "線輪廓度"
+  },
+  "draft_sym_gdt_profile_surface": {
+    "en": "Profile of a surface",
+    "ja": "面の輪郭度",
+    "ko": "면의 윤곽도",
+    "th": "รูปร่างของพื้นผิว",
+    "zhHans": "面轮廓度",
+    "zhHant": "面輪廓度"
+  },
+  "draft_sym_gdt_runout": {
+    "en": "Circular runout",
+    "ja": "円周振れ",
+    "ko": "원주 흔들림",
+    "th": "การแกว่งแบบวงกลม",
+    "zhHans": "圆跳动",
+    "zhHant": "圓偏轉"
+  },
+  "draft_sym_gdt_straightness": {
+    "en": "Straightness",
+    "ja": "真直度",
+    "ko": "진직도",
+    "th": "ความตรง",
+    "zhHans": "直线度",
+    "zhHant": "真直度"
+  },
+  "draft_sym_gdt_symmetry": {
+    "en": "Symmetry",
+    "ja": "対称度",
+    "ko": "대칭도",
+    "th": "ความสมมาตร",
+    "zhHans": "对称度",
+    "zhHant": "對稱度"
+  },
+  "draft_sym_gdt_total_runout": {
+    "en": "Total runout",
+    "ja": "全振れ",
+    "ko": "온 흔들림",
+    "th": "การแกว่งรวม",
+    "zhHans": "全跳动",
+    "zhHant": "全偏轉"
+  },
+  "draft_sym_group_fastener": {
+    "en": "Fasteners",
+    "ja": "締結部品",
+    "ko": "체결 부품",
+    "th": "ตัวยึด",
+    "zhHans": "标准件",
+    "zhHant": "標準件"
+  },
+  "draft_sym_group_gdt": {
+    "en": "Geometric tolerance",
+    "ja": "幾何公差",
+    "ko": "기하 공차",
+    "th": "พิกัดความเผื่อทางเรขาคณิต",
+    "zhHans": "几何公差",
+    "zhHant": "幾何公差"
+  },
+  "draft_sym_group_mark": {
+    "en": "Marks",
+    "ja": "記号",
+    "ko": "표시",
+    "th": "เครื่องหมาย",
+    "zhHans": "标记",
+    "zhHant": "標記"
+  },
+  "draft_sym_group_surface": {
+    "en": "Surface texture",
+    "ja": "表面性状",
+    "ko": "표면 거칠기",
+    "th": "ความหยาบผิว",
+    "zhHans": "表面粗糙度",
+    "zhHant": "表面粗度"
+  },
+  "draft_sym_group_thread": {
+    "en": "Threads",
+    "ja": "ねじ",
+    "ko": "나사",
+    "th": "เกลียว",
+    "zhHans": "螺纹",
+    "zhHant": "螺紋"
+  },
+  "draft_sym_group_weld": {
+    "en": "Welding",
+    "ja": "溶接",
+    "ko": "용접",
+    "th": "การเชื่อม",
+    "zhHans": "焊接",
+    "zhHant": "焊接"
+  },
+  "draft_sym_length": {
+    "en": "Length (mm)",
+    "ja": "長さ（mm）",
+    "ko": "길이(mm)",
+    "th": "ความยาว (มม.)",
+    "zhHans": "长度（mm）",
+    "zhHant": "長度（mm）"
+  },
+  "draft_sym_m_size": {
+    "en": "Size M",
+    "ja": "呼び径 M",
+    "ko": "규격 M",
+    "th": "ขนาด M",
+    "zhHans": "规格 M",
+    "zhHant": "規格 M"
+  },
+  "draft_sym_nut_hex": {
+    "en": "Hex nut",
+    "ja": "六角ナット",
+    "ko": "육각 너트",
+    "th": "น็อตหกเหลี่ยม",
+    "zhHans": "六角螺母",
+    "zhHant": "六角螺帽"
+  },
+  "draft_sym_other_side": {
+    "en": "Other side",
+    "ja": "反対側",
+    "ko": "반대쪽",
+    "th": "อีกด้านหนึ่ง",
+    "zhHans": "画在另一侧",
+    "zhHant": "畫在另一側"
+  },
+  "draft_sym_place": {
+    "en": "Place on page",
+    "ja": "ページに配置",
+    "ko": "페이지에 넣기",
+    "th": "วางลงในหน้า",
+    "zhHans": "放进页面",
+    "zhHant": "放進頁面"
+  },
+  "draft_sym_rotation": {
+    "en": "Rotation",
+    "ja": "回転",
+    "ko": "회전",
+    "th": "การหมุน",
+    "zhHans": "旋转",
+    "zhHant": "旋轉"
+  },
+  "draft_sym_size": {
+    "en": "Size (mm)",
+    "ja": "大きさ（mm）",
+    "ko": "크기(mm)",
+    "th": "ขนาด (มม.)",
+    "zhHans": "大小（mm）",
+    "zhHant": "大小（mm）"
+  },
+  "draft_sym_surface_basic": {
+    "en": "Basic symbol",
+    "ja": "基本記号",
+    "ko": "기본 기호",
+    "th": "สัญลักษณ์พื้นฐาน",
+    "zhHans": "基本符号",
+    "zhHant": "基本符號"
+  },
+  "draft_sym_surface_machined": {
+    "en": "Material removal required",
+    "ja": "除去加工あり",
+    "ko": "제거 가공",
+    "th": "ต้องกลึงเอาเนื้อออก",
+    "zhHans": "去除材料",
+    "zhHant": "去除材料"
+  },
+  "draft_sym_surface_no_machining": {
+    "en": "Material removal prohibited",
+    "ja": "除去加工なし",
+    "ko": "제거 가공 금지",
+    "th": "ห้ามกลึงเอาเนื้อออก",
+    "zhHans": "不去除材料",
+    "zhHant": "不去除材料"
+  },
+  "draft_sym_text": {
+    "en": "Text",
+    "ja": "文字",
+    "ko": "텍스트",
+    "th": "ข้อความ",
+    "zhHans": "文字",
+    "zhHant": "文字"
+  },
+  "draft_sym_text_hint": {
+    "en": "e.g. Ra 3.2, M8, 0.05, A",
+    "ja": "例: Ra 3.2、M8、0.05、A",
+    "ko": "예: Ra 3.2, M8, 0.05, A",
+    "th": "เช่น Ra 3.2, M8, 0.05, A",
+    "zhHans": "例如 Ra 3.2、M8、0.05、A",
+    "zhHant": "例如 Ra 3.2、M8、0.05、A"
+  },
+  "draft_sym_thread_external_end": {
+    "en": "External thread (end view)",
+    "ja": "おねじ（端面図）",
+    "ko": "수나사(정면도)",
+    "th": "เกลียวนอก (ด้านปลาย)",
+    "zhHans": "外螺纹（端视）",
+    "zhHant": "外螺紋（端視）"
+  },
+  "draft_sym_thread_external_side": {
+    "en": "External thread (side view)",
+    "ja": "おねじ（側面図）",
+    "ko": "수나사(측면도)",
+    "th": "เกลียวนอก (ด้านข้าง)",
+    "zhHans": "外螺纹（侧视）",
+    "zhHant": "外螺紋（側視）"
+  },
+  "draft_sym_thread_internal_end": {
+    "en": "Internal thread (end view)",
+    "ja": "めねじ（端面図）",
+    "ko": "암나사(정면도)",
+    "th": "เกลียวใน (ด้านปลาย)",
+    "zhHans": "内螺纹（端视）",
+    "zhHant": "內螺紋（端視）"
+  },
+  "draft_sym_thread_internal_side": {
+    "en": "Internal thread (side view)",
+    "ja": "めねじ（側面図）",
+    "ko": "암나사(측면도)",
+    "th": "เกลียวใน (ด้านข้าง)",
+    "zhHans": "内螺纹（侧视）",
+    "zhHant": "內螺紋（側視）"
+  },
+  "draft_sym_washer": {
+    "en": "Plain washer",
+    "ja": "平座金",
+    "ko": "평와셔",
+    "th": "แหวนรอง",
+    "zhHans": "平垫圈",
+    "zhHant": "平墊圈"
+  },
+  "draft_sym_weld_bevel": {
+    "en": "Bevel-groove weld",
+    "ja": "レ形開先溶接",
+    "ko": "베벨 용접",
+    "th": "รอยเชื่อมร่องบากเฉียง",
+    "zhHans": "单边 V 形坡口焊",
+    "zhHant": "單斜開槽焊"
+  },
+  "draft_sym_weld_fillet": {
+    "en": "Fillet weld",
+    "ja": "すみ肉溶接",
+    "ko": "필릿 용접",
+    "th": "รอยเชื่อมฟิลเลต",
+    "zhHans": "角焊",
+    "zhHant": "填角焊"
+  },
+  "draft_sym_weld_plug": {
+    "en": "Plug weld",
+    "ja": "プラグ溶接",
+    "ko": "플러그 용접",
+    "th": "รอยเชื่อมแบบปลั๊ก",
+    "zhHans": "塞焊",
+    "zhHant": "塞焊"
+  },
+  "draft_sym_weld_square": {
+    "en": "Square-groove weld",
+    "ja": "I形開先溶接",
+    "ko": "I 홈 용접",
+    "th": "รอยเชื่อมร่องตรง",
+    "zhHans": "I 形坡口焊",
+    "zhHant": "I 形開槽焊"
+  },
+  "draft_sym_weld_vee": {
+    "en": "V-groove weld",
+    "ja": "V形開先溶接",
+    "ko": "V 홈 용접",
+    "th": "รอยเชื่อมร่องวี",
+    "zhHans": "V 形坡口焊",
+    "zhHant": "V 形開槽焊"
+  },
+  "draft_symbol_placed": {
+    "en": "The symbol is in the middle of the view; drag to move it",
+    "ja": "記号を画面の中央に置きました。ドラッグで動かせます",
+    "ko": "기호를 화면 가운데에 놓았습니다. 끌어서 옮길 수 있습니다",
+    "th": "วางสัญลักษณ์ไว้กลางหน้าจอแล้ว ลากเพื่อย้ายได้",
+    "zhHans": "符号已放在画面中央，拖一下就能搬",
+    "zhHant": "符號已放在畫面中央，拖一下就能搬"
+  },
+  "draft_symbols": {
+    "en": "Drafting symbols",
+    "ja": "製図記号",
+    "ko": "제도 기호",
+    "th": "สัญลักษณ์เขียนแบบ",
+    "zhHans": "制图符号",
+    "zhHant": "製圖符號"
+  },
+  "draft_tb_class": {
+    "en": "Class",
+    "ja": "クラス",
+    "ko": "반",
+    "th": "ชั้นเรียน",
+    "zhHans": "班级",
+    "zhHant": "班級"
+  },
+  "draft_tb_course": {
+    "en": "Course",
+    "ja": "科目",
+    "ko": "과목",
+    "th": "รายวิชา",
+    "zhHans": "课程",
+    "zhHant": "課程"
+  },
+  "draft_tb_date": {
+    "en": "Date",
+    "ja": "日付",
+    "ko": "날짜",
+    "th": "วันที่",
+    "zhHans": "日期",
+    "zhHant": "日期"
+  },
+  "draft_tb_id": {
+    "en": "Student ID",
+    "ja": "学籍番号",
+    "ko": "학번",
+    "th": "รหัสนักศึกษา",
+    "zhHans": "学号",
+    "zhHant": "學號"
+  },
+  "draft_tb_name": {
+    "en": "Name",
+    "ja": "氏名",
+    "ko": "이름",
+    "th": "ชื่อ",
+    "zhHans": "姓名",
+    "zhHant": "姓名"
+  },
+  "draft_tb_projection": {
+    "en": "Projection",
+    "ja": "投影法",
+    "ko": "투상법",
+    "th": "การฉายภาพ",
+    "zhHans": "投影法",
+    "zhHant": "投影法"
+  },
+  "draft_tb_scale": {
+    "en": "Scale",
+    "ja": "尺度",
+    "ko": "축척",
+    "th": "มาตราส่วน",
+    "zhHans": "比例",
+    "zhHant": "比例"
+  },
+  "draft_tb_score": {
+    "en": "Score",
+    "ja": "評価",
+    "ko": "평가",
+    "th": "คะแนน",
+    "zhHans": "评分",
+    "zhHant": "評分"
+  },
+  "draft_tb_title": {
+    "en": "Title",
+    "ja": "図名",
+    "ko": "도면명",
+    "th": "ชื่อแบบ",
+    "zhHans": "图名",
+    "zhHant": "圖名"
+  },
+  "draft_tb_unit": {
+    "en": "Unit",
+    "ja": "単位",
+    "ko": "단위",
+    "th": "หน่วย",
+    "zhHans": "单位",
+    "zhHant": "單位"
+  },
   "draft_tip_1": {
     "en": "Pick a pen: its line type and layer come with it (hidden line = dashed, aux = light blue).",
     "ja": "ペンを選ぶと線種とレイヤーも決まります（かくれ線＝破線、補助線＝水色）。",
@@ -5886,6 +6662,110 @@
     "th": "เคล็ดลับงานเขียนแบบ",
     "zhHans": "图学使用提示",
     "zhHant": "圖學使用提示"
+  },
+  "draft_tool_close": {
+    "en": "Finish the current tool",
+    "ja": "ツールを終了",
+    "ko": "현재 도구 끝내기",
+    "th": "เลิกใช้เครื่องมือนี้",
+    "zhHans": "结束目前工具",
+    "zhHant": "結束目前工具"
+  },
+  "draft_tool_compass": {
+    "en": "Compass",
+    "ja": "コンパス",
+    "ko": "컴퍼스",
+    "th": "วงเวียน",
+    "zhHans": "圆规",
+    "zhHant": "圓規"
+  },
+  "draft_tool_dim_angle": {
+    "en": "Angular dimension",
+    "ja": "角度寸法",
+    "ko": "각도 치수",
+    "th": "ขนาดมุม",
+    "zhHans": "角度标注",
+    "zhHant": "角度標註"
+  },
+  "draft_tool_dim_diameter": {
+    "en": "Diameter dimension",
+    "ja": "直径寸法",
+    "ko": "지름 치수",
+    "th": "ขนาดเส้นผ่านศูนย์กลาง",
+    "zhHans": "直径标注",
+    "zhHant": "直徑標註"
+  },
+  "draft_tool_dim_linear": {
+    "en": "Linear dimension",
+    "ja": "長さ寸法",
+    "ko": "선형 치수",
+    "th": "ขนาดเชิงเส้น",
+    "zhHans": "线性标注",
+    "zhHant": "線性標註"
+  },
+  "draft_tool_dim_radius": {
+    "en": "Radius dimension",
+    "ja": "半径寸法",
+    "ko": "반지름 치수",
+    "th": "ขนาดรัศมี",
+    "zhHans": "半径标注",
+    "zhHant": "半徑標註"
+  },
+  "draft_tool_none": {
+    "en": "No tool",
+    "ja": "ツールなし",
+    "ko": "도구 없음",
+    "th": "ไม่มีเครื่องมือ",
+    "zhHans": "没有工具",
+    "zhHant": "沒有工具"
+  },
+  "draft_tool_set_pivot": {
+    "en": "Set the 45° turning point",
+    "ja": "45° の転換点を設定",
+    "ko": "45° 전환점 설정",
+    "th": "ตั้งจุดหักมุม 45°",
+    "zhHans": "设置 45° 转折点",
+    "zhHant": "設定 45° 轉折點"
+  },
+  "draft_toolbox_aids": {
+    "en": "Alignment and instruments",
+    "ja": "位置合わせと製図器具",
+    "ko": "정렬과 제도 도구",
+    "th": "การจัดแนวและเครื่องมือวัด",
+    "zhHans": "对齐与尺规",
+    "zhHant": "對齊與尺規"
+  },
+  "draft_toolbox_dimension": {
+    "en": "Dimensioning",
+    "ja": "寸法記入",
+    "ko": "치수 기입",
+    "th": "การกำหนดขนาด",
+    "zhHans": "尺寸标注",
+    "zhHant": "尺寸標註"
+  },
+  "draft_toolbox_frame": {
+    "en": "Frame and title block",
+    "ja": "図枠と表題欄",
+    "ko": "도곽과 표제란",
+    "th": "กรอบแบบและช่องชื่อแบบ",
+    "zhHans": "图框与标题栏",
+    "zhHant": "圖框與標題欄"
+  },
+  "draft_toolbox_symbols": {
+    "en": "Symbols",
+    "ja": "記号",
+    "ko": "기호",
+    "th": "สัญลักษณ์",
+    "zhHans": "符号",
+    "zhHant": "符號"
+  },
+  "draft_tools": {
+    "en": "Drafting tools",
+    "ja": "製図ツール",
+    "ko": "제도 도구",
+    "th": "เครื่องมือเขียนแบบ",
+    "zhHans": "图学工具",
+    "zhHant": "圖學工具"
   },
   "draft_unlock_layer": {
     "en": "Unlock layer",
@@ -15879,6 +16759,14 @@
     "zhHans": "不剖",
     "zhHant": "不剖"
   },
+  "solid_section_oblique": {
+    "en": "Oblique",
+    "ja": "斜め切断",
+    "ko": "경사 절단",
+    "th": "ตัดเฉียง",
+    "zhHans": "斜切",
+    "zhHant": "斜切"
+  },
   "solid_section_parallel": {
     "en": "Section parallel to the front",
     "ja": "正面に平行な断面",
@@ -15958,6 +16846,14 @@
     "th": "ภาพ",
     "zhHans": "视图",
     "zhHant": "視圖"
+  },
+  "solid_tilt": {
+    "en": "Tilt",
+    "ja": "傾斜角",
+    "ko": "경사각",
+    "th": "มุมเอียง",
+    "zhHans": "倾斜角",
+    "zhHant": "傾斜角"
   },
   "solid_width": {
     "en": "Width",

@@ -452,8 +452,10 @@ final class AdaptiveCanvasView: PKCanvasView {
     var onProSnapped: ((FfiDraftSnapKind) -> Void)?
     /// 步驟編號模式下點的位置（頁面座標）。
     var onProMarker: ((CGPoint) -> Void)?
+    /// 圖學工具模式（標註…）：觸控的每個階段與位置（頁面座標）。
+    var onProTool: ((ProStrokeGestureRecognizer.ToolPhase, CGPoint) -> Void)?
 
-    enum ProMode { case off, draw, erase, reassign, marker }
+    enum ProMode { case off, draw, erase, reassign, marker, tool }
 
     /// 依目前的工具設定專業筆畫層與輸入手勢。
     ///
@@ -490,9 +492,9 @@ final class AdaptiveCanvasView: PKCanvasView {
             gesture.deferUntilMoved = false
             gesture.isEnabled = true
             restorePan()
-        case .reassign, .marker:
-            // 點一下筆畫改圖層／點一下放步驟編號：PencilKit 的筆畫不管，單指拿來點。
-            gesture.mode = mode == .marker ? .marker : .reassign
+        case .reassign, .marker, .tool:
+            // 點一下筆畫改圖層／點一下放步驟編號／圖學工具（標註…）：PencilKit 的筆畫不管，單指拿來點。
+            gesture.mode = mode == .marker ? .marker : (mode == .tool ? .tool : .reassign)
             gesture.cancelsTouchesInView = true
             gesture.deferUntilMoved = false
             gesture.isEnabled = true
@@ -564,6 +566,13 @@ final class AdaptiveCanvasView: PKCanvasView {
         let layer = ProInkLayerView(frame: .zero)
         layer.layer.anchorPoint = .zero
         layer.undoManagerProvider = { [weak self] in self?.undoManager }
+        // 測試讀數要跟著專業筆畫的增減更新（畫一條標註、復原、擦除之後，筆畫數才讀得到）。
+        if ProcessInfo.processInfo.environment["KAIRUMO_UITEST"] == "1" {
+            layer.onChanged = { [weak self] in
+                guard let self else { return }
+                self.accessibilityValue = CanvasRepresentable.testReadout(self)
+            }
+        }
         addSubview(layer)
         proLayer = layer
 
@@ -579,6 +588,7 @@ final class AdaptiveCanvasView: PKCanvasView {
         gesture.reassignTarget = { [weak self] in self?.proReassignTarget ?? 0 }
         gesture.onSnapped = { [weak self] kind in self?.onProSnapped?(kind) }
         gesture.onMarker = { [weak self] point in self?.onProMarker?(point) }
+        gesture.onToolTouch = { [weak self] phase, point in self?.onProTool?(phase, point) }
         gesture.allowsFingerDrawing = { [weak self] in self?.proAllowsFinger() ?? true }
         gesture.delegate = proGestureDelegate
         gesture.isEnabled = false
@@ -1122,7 +1132,8 @@ struct CanvasRepresentable: UIViewRepresentable {
         let mode: AdaptiveCanvasView.ProMode
         let isDrafting = selectedTool == .drafting
         if isDrafting {
-            mode = drafting.markerMode ? .marker : (drafting.reassignMode ? .reassign : .draw)
+            mode = drafting.tool != .none ? .tool
+                : (drafting.markerMode ? .marker : (drafting.reassignMode ? .reassign : .draw))
         } else if selectedTool.proToolKind != nil {
             mode = .draw
         } else if selectedTool == .eraser {
@@ -1147,6 +1158,10 @@ struct CanvasRepresentable: UIViewRepresentable {
                                               cy: Float(point.y), radius: 15)
                 adaptive?.proLayer?.insertDrafted(strokes, origin: .zero)
                 state.stepNumber += 1
+            }
+            adaptive.onProTool = { [weak adaptive] phase, point in
+                guard let layer = adaptive?.proLayer else { return }
+                DraftToolController.shared.handle(phase, point, layer: layer)
             }
             if let id = proInk?.notebookId { drafting.use(notebook: id) }
         } else {
@@ -1184,7 +1199,9 @@ struct CanvasRepresentable: UIViewRepresentable {
     /// 生產環境不掛：`accessibilityValue` 是給 VoiceOver 念的，
     /// 念一串「zoom:1.000 strokes:3」沒有任何意義。
     static func testReadout(_ canvas: PKCanvasView) -> String {
-        String(format: "zoom:%.3f strokes:%d", canvas.zoomScale, canvas.drawing.strokes.count)
+        // `pro:` 是專業筆畫（含製圖線、標註）的數量：它們不在 PencilKit 的 drawing 裡。
+        let pro = (canvas as? AdaptiveCanvasView)?.proLayer?.ownStrokes.count ?? 0
+        return String(format: "zoom:%.3f strokes:%d pro:%d", canvas.zoomScale, canvas.drawing.strokes.count, pro)
     }
     func makeCoordinator() -> Coordinator {
         Coordinator(self)
@@ -1841,6 +1858,7 @@ public struct NotebookEditorView: View {
     @State private var showCustomPageSize = false
     /// 立體輔助（草圖拉伸、三視圖、剖面）。
     @State private var showSolidStudio = false
+    @State private var showDraftingToolbox = false
     @State private var previousTool: EditorToolType?
     @State private var lastObservedTool: EditorToolType = .pen
 
@@ -4001,6 +4019,24 @@ public struct NotebookEditorView: View {
                         .transition(.opacity.combined(with: .move(edge: .top)))
                 }
             }
+            .sheet(isPresented: $showDraftingToolbox) {
+                DraftingToolbox(
+                    notebookId: notebook.id,
+                    frameSupported: frameSupportedForCurrentPage,
+                    onPickTool: { tool in
+                        selectedTool = .drafting
+                        DraftingState.shared.tool = tool
+                        DraftToolController.shared.reset(layer: (canvasView as? AdaptiveCanvasView)?.proLayer)
+                        DraftToolController.shared.refreshHint()
+                    },
+                    onInsertSymbol: { insertDraftKit($0) },
+                    onInsertFrame: { insertDraftFrame(thirdAngle: $0) },
+                    onPlaceInstrument: { kind in
+                        selectedTool = .drafting
+                        let center = draftViewportCenter()
+                        DraftingState.shared.placeInstrument(kind: kind, center: center, pageWidth: PageGeometry.size.width)
+                    })
+            }
             .sheet(isPresented: $showSolidStudio) {
                 SolidStudioSheet(
                     pageSize: PageGeometry.size,
@@ -4010,7 +4046,8 @@ public struct NotebookEditorView: View {
             .overlay(alignment: .top) {
                 // 圖學：製圖筆組、圖層、吸附（見 DraftingBar.swift）。
                 if editorMode == .draw && selectedTool == .drafting {
-                    DraftingBar(onOpenSolidStudio: { showSolidStudio = true })
+                    DraftingBar(onOpenSolidStudio: { showSolidStudio = true },
+                                onOpenToolbox: { showDraftingToolbox = true })
                         .padding(.top, 12)
                         .transition(.opacity.combined(with: .move(edge: .top)))
                 }
@@ -9773,6 +9810,67 @@ public struct NotebookEditorView: View {
         let ids = Set(made.map(\.id))
         let box = made.map(\.bounds).reduce(CGRect.null) { $0.union($1) }
         DispatchQueue.main.async { lasso.select(proStrokeIds: ids, around: box) }
+    }
+
+    /// 把一組製圖符號放在目前看得到的範圍正中央（同 `insertSolidSheet`：整組一次復原、插入後套索選住）。
+    private func insertDraftKit(_ kit: FfiDraftKit) {
+        guard let canvas = canvasView as? AdaptiveCanvasView, let layer = canvas.proLayer else { return }
+        let pts = kit.strokes.flatMap(\.points)
+        guard let minX = pts.map(\.x).min(), let maxX = pts.map(\.x).max(),
+              let minY = pts.map(\.y).min(), let maxY = pts.map(\.y).max() else { return }
+        let page = PageGeometry.size
+        let w = CGFloat(maxX - minX), h = CGFloat(maxY - minY)
+        let center = layer.convert(CGPoint(x: canvas.bounds.midX, y: canvas.bounds.midY), from: canvas)
+        // 讓符號的包圍盒中心落在視野中央，再夾回頁面裡。
+        let left = min(max(0, center.x - w / 2), max(0, page.width - w))
+        let top = min(max(0, center.y - h / 2), max(0, page.height - h))
+        let origin = CGPoint(x: left - CGFloat(minX), y: top - CGFloat(minY))
+        let made = layer.insertDrafted(kit.strokes, origin: origin)
+        showCanvasNotice(localizationManager.localized("draft_symbol_placed"))
+        guard !made.isEmpty else { return }
+        selectedTool = .lasso
+        let ids = Set(made.map(\.id))
+        let box = made.map(\.bounds).reduce(CGRect.null) { $0.union($1) }
+        DispatchQueue.main.async { lasso.select(proStrokeIds: ids, around: box) }
+    }
+
+    /// 目前視野的正中央（頁面座標）。
+    private func draftViewportCenter() -> CGPoint {
+        guard let canvas = canvasView as? AdaptiveCanvasView, let layer = canvas.proLayer else {
+            return CGPoint(x: PageGeometry.size.width / 2, y: PageGeometry.size.height / 2)
+        }
+        return layer.convert(CGPoint(x: canvas.bounds.midX, y: canvas.bounds.midY), from: canvas)
+    }
+
+    /// 這一頁的紙張規格有沒有標準圖框（A4／A3／A2，直式或橫式）。
+    private var frameSupportedForCurrentPage: Bool {
+        draftSheetFrame(paperId: notebook.pageFormatId ?? defaultPageFormatId(), scaleText: "", thirdAngle: true, titleBlock: false) != nil
+    }
+
+    /// 插入圖框與標題欄：框線是製圖筆畫（粗框、細格），欄位名稱是文字方塊（跟著介面語言）。
+    private func insertDraftFrame(thirdAngle: Bool) {
+        guard let canvas = canvasView as? AdaptiveCanvasView, let layer = canvas.proLayer else { return }
+        let drafting = DraftingState.shared
+        guard let kit = draftSheetFrame(
+            paperId: notebook.pageFormatId ?? defaultPageFormatId(),
+            scaleText: drafting.scaleLabel(notebookId: notebook.id),
+            thirdAngle: thirdAngle, titleBlock: true)
+        else {
+            showCanvasNotice(localizationManager.localized("draft_frame_unsupported"))
+            return
+        }
+        layer.insertDrafted(kit.strokes, origin: .zero)
+        var added = notebook.textAttachments ?? []
+        for label in kit.texts {
+            added.append(NoteTextAttachment(
+                pageIndex: currentPageIndex, text: localizationManager.localized(label.key),
+                fontSize: CGFloat(label.fontSize), isBold: label.bold, alignmentRaw: "left",
+                textColorHex: label.colorHex, backgroundColorHex: "clear", hasBorder: false,
+                x: CGFloat(label.x), y: CGFloat(label.y), width: CGFloat(label.width),
+                height: CGFloat(label.fontSize) * 1.6 + 6))
+        }
+        notebook.textAttachments = added
+        showCanvasNotice(localizationManager.localized("draft_frame_inserted"))
     }
 
     /// 工具列上顯示的規格名稱。自訂的直接顯示尺寸（「2000×1500」）。

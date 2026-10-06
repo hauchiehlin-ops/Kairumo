@@ -23,6 +23,7 @@ pub mod ffi_collab;
 pub mod ffi_crypto;
 mod ffi_draft;
 mod ffi_draft_example;
+mod ffi_drafting;
 pub mod ffi_focus;
 pub mod ffi_folder_sync;
 pub mod ffi_gdrive;
