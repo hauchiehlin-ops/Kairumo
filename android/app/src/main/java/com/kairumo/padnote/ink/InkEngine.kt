@@ -247,6 +247,8 @@ class InkEngine(
 
     /** 手指落在尺的身體上（不是靠邊的地方）：這個指標是在搬尺，不是在畫。 */
     private var instrumentPointer: ULong? = null
+    /** 這個指標是在量角器刻度帶上讀角度（不是搬尺）。 */
+    private var instrumentReads = false
     private var instrumentLastX = 0f
     private var instrumentLastY = 0f
 
@@ -258,14 +260,25 @@ class InkEngine(
         val band = 14f / zoom.coerceAtLeast(0.25f)
         when (e.phase) {
             FfiPhase.BEGAN -> {
+                if (inst.isReadingZone(e.x, e.y) && inst.nearestEdge(e.x, e.y, band) == null) {
+                    instrumentPointer = e.id
+                    instrumentReads = true
+                    DraftingState.readInstrument(e.x, e.y)
+                    return true
+                }
                 if (inst.containsBody(e.x, e.y) && inst.nearestEdge(e.x, e.y, band) == null) {
                     instrumentPointer = e.id
+                    instrumentReads = false
                     instrumentLastX = e.x
                     instrumentLastY = e.y
                     return true
                 }
             }
             FfiPhase.MOVED -> if (instrumentPointer == e.id) {
+                if (instrumentReads) {
+                    DraftingState.readInstrument(e.x, e.y)
+                    return true
+                }
                 DraftingState.moveInstrument(e.x - instrumentLastX, e.y - instrumentLastY)
                 instrumentLastX = e.x
                 instrumentLastY = e.y

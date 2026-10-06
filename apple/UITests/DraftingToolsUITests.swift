@@ -68,12 +68,62 @@ final class DraftingToolsUITests: XCTestCase {
         XCTAssertTrue(element("draft.symbols").waitForExistence(timeout: 10), "工具箱沒有打開")
     }
 
+    /// 讀數裡 `key:` 後面的一串數字（逗號分隔）。讀不到回 nil。
+    private func canvasValue() -> String {
+        let matches = app.descendants(matching: .any).matching(identifier: "editor.canvas")
+        return matches.allElementsBoundByIndex.compactMap { $0.value as? String }.joined(separator: " | ")
+    }
+
+    private func numbers(_ key: String) -> [Double]? {
+        let matches = app.descendants(matching: .any).matching(identifier: "editor.canvas")
+        for el in matches.allElementsBoundByIndex {
+            guard let value = el.value as? String else { continue }
+            for part in value.split(separator: " ") where part.hasPrefix("\(key):") {
+                return part.dropFirst(key.count + 1).split(separator: ",").compactMap { Double($0) }
+            }
+        }
+        return nil
+    }
+
+    /// 視窗座標（點）。畫布讀數裡的 `edgeW`、`instW` 就是這一套。
+    private func window(_ x: Double, _ y: Double) -> XCUICoordinate {
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0, dy: 0)).withOffset(CGVector(dx: x, dy: y))
+    }
+
+    /// 畫布範圍內的點（0…1）換成視窗座標。
+    private func inCanvas(_ fx: Double, _ fy: Double) -> (Double, Double) {
+        let f = canvas().frame
+        return (Double(f.minX) + Double(f.width) * fx, Double(f.minY) + Double(f.height) * fy)
+    }
+
+    /// 合成觸控要壓住、慢慢拖、再停一下才會收到完整的移動事件（比長按吸附的 0.55 秒短）。
+    private func drag(_ from: (Double, Double), to: (Double, Double)) {
+        window(from.0, from.1).press(
+            forDuration: 0.2, thenDragTo: window(to.0, to.1), withVelocity: .slow, thenHoldForDuration: 0.15)
+        sleep(1)
+    }
+
+    /// 畫一筆並確認真的多了一筆：合成觸控偶爾整段被系統吞掉（讀數沒變），那就再拖一次。
+    private func strokeDrag(_ from: (Double, Double), to: (Double, Double)) {
+        let before = readout("pro")
+        for _ in 0..<3 {
+            drag(from, to: to)
+            if readout("pro") > before { return }
+        }
+    }
+
     /// 表單是惰性的：還沒捲到的列不存在。往上推到出現為止。
     private func reveal(_ id: String) -> XCUIElement {
         let el = element(id)
         var tries = 0
         while !el.exists && tries < 6 {
             app.swipeUp()
+            tries += 1
+        }
+        // 惰性表單：捲過頭的列會被回收，要找的在上面就往回捲。
+        tries = 0
+        while !el.exists && tries < 8 {
+            app.swipeDown()
             tries += 1
         }
         return el
@@ -134,13 +184,28 @@ final class DraftingToolsUITests: XCTestCase {
         XCTAssertGreaterThan(readout("pro"), before, "放了符號卻沒有多出筆畫")
     }
 
-    func testTheToolboxOffersAlignmentCompassPivotAndEveryInstrument() {
+    func testThePivotToolStoresTheTappedPointAndReturnsToDrawing() {
         guard openDrafting() else { XCTFail("進不了圖學模式"); return }
         openToolbox()
-        for id in ["draft.align", "draft.projection", "draft.tool.compass", "draft.tool.setPivot",
-                   "draft.inst.ruler", "draft.inst.t_square", "draft.inst.protractor"] {
-            XCTAssertTrue(reveal(id).exists, "工具箱缺少 \(id)")
+        reveal("draft.tool.setPivot").tap()
+        XCTAssertTrue(element("draft.tool.hint").waitForExistence(timeout: 5), "選了轉折點工具卻沒有提示")
+        let target = inCanvas(0.5, 0.5)
+        window(target.0, target.1).tap()
+        sleep(1)
+        guard let pivot = numbers("pivot"), pivot.count == 2 else {
+            XCTFail("點了之後讀數裡沒有轉折點：\(canvasValue())"); return
         }
+        XCTAssertGreaterThan(pivot[0], 0)
+        XCTAssertGreaterThan(pivot[1], 0)
+        XCTAssertFalse(element("draft.tool.close").waitForExistence(timeout: 2), "設完轉折點應該回到畫線")
+    }
+
+    func testTheTSquareOffersNoRotationBecauseItOnlySlides() {
+        guard openDrafting() else { XCTFail("進不了圖學模式"); return }
+        openToolbox()
+        reveal("draft.inst.t_square").tap()
+        XCTAssertTrue(element("draft.inst.remove").waitForExistence(timeout: 5), "放了丁字尺卻沒有收起鈕")
+        XCTAssertFalse(element("draft.inst.rotl").exists, "丁字尺不能轉，不該有旋轉鈕")
     }
 
     func testCompassDrawsAnArcAndUndoes() {
@@ -173,5 +238,112 @@ final class DraftingToolsUITests: XCTestCase {
         // 尺轉回水平後，在尺身以外隨手畫一條斜線不會被尺吃掉（身體區才是搬尺）。
         element("draft.inst.remove").tap()
         XCTAssertFalse(element("draft.inst.remove").waitForExistence(timeout: 2), "收起後控制還在")
+    }
+
+    func testALineStartedAgainstTheRulerEdgeStaysOnTheEdge() {
+        guard openDrafting() else { XCTFail("進不了圖學模式"); return }
+        openToolbox()
+        reveal("draft.inst.ruler").tap()
+        XCTAssertTrue(element("draft.inst.remove").waitForExistence(timeout: 5))
+        sleep(1)
+        guard let edgeW = numbers("edgeW"), edgeW.count == 4, let edge = numbers("edge"), edge.count == 4 else {
+            XCTFail("讀數裡沒有尺邊的位置：\(canvasValue())"); return
+        }
+        let before = readout("pro")
+        // 從尺邊中點往外 3 點起筆，沿著邊的方向拖，終點偏離邊 20 點：整筆要被拉回邊上。
+        let mx = (edgeW[0] + edgeW[2]) / 2, my = (edgeW[1] + edgeW[3]) / 2
+        let dx = edgeW[2] - edgeW[0], dy = edgeW[3] - edgeW[1]
+        let len = (dx * dx + dy * dy).squareRoot()
+        let ux = dx / len, uy = dy / len
+        let nx = -uy, ny = ux
+        let start = (mx + nx * 3, my + ny * 3)
+        let end = (start.0 + ux * 90 + nx * 20, start.1 + uy * 90 + ny * 20)
+        strokeDrag(start, to: end)
+        XCTAssertEqual(readout("pro"), before + 1, "沿尺邊畫一條線應該多一筆")
+        guard let last = numbers("last"), last.count == 4 else { XCTFail("讀數裡沒有最後一筆"); return }
+        // 頁面座標：兩端都在尺邊所在的直線上。
+        let ex = edge[2] - edge[0], ey = edge[3] - edge[1]
+        let el = (ex * ex + ey * ey).squareRoot()
+        func off(_ x: Double, _ y: Double) -> Double { abs((x - edge[0]) * -ey / el + (y - edge[1]) * ex / el) }
+        XCTAssertLessThan(off(last[0], last[1]), 0.5, "起點沒有釘在尺邊上")
+        XCTAssertLessThan(off(last[2], last[3]), 0.5, "終點沒有被拉回尺邊上（偏了 \(off(last[2], last[3]))）")
+        XCTAssertGreaterThan(((last[2] - last[0]) * (last[2] - last[0]) + (last[3] - last[1]) * (last[3] - last[1])).squareRoot(), 20, "線太短")
+    }
+
+    func testDraggingTheRulerBodyMovesItAndDrawsNothing() {
+        guard openDrafting() else { XCTFail("進不了圖學模式"); return }
+        openToolbox()
+        reveal("draft.inst.ruler").tap()
+        XCTAssertTrue(element("draft.inst.remove").waitForExistence(timeout: 5))
+        sleep(1)
+        guard let box = numbers("instW"), box.count == 4 else { XCTFail("讀數裡沒有尺的位置"); return }
+        let before = readout("pro")
+        drag((box[0] + box[2] / 2, box[1] + box[3] / 2), to: (box[0] + box[2] / 2 + 60, box[1] + box[3] / 2 + 40))
+        guard let after = numbers("instW") else { XCTFail("搬完讀不到尺的位置"); return }
+        XCTAssertEqual(after[0] - box[0], 60, accuracy: 3, "尺沒有跟著手指橫向移動")
+        XCTAssertEqual(after[1] - box[1], 40, accuracy: 3, "尺沒有跟著手指縱向移動")
+        XCTAssertEqual(readout("pro"), before, "搬尺不該留筆畫")
+    }
+
+    func testTheEndOfALineAlignsWithAnExistingPointAndCanBeSwitchedOff() {
+        guard openDrafting() else { XCTFail("進不了圖學模式"); return }
+        // 第一條：垂直線。
+        let a0 = inCanvas(0.30, 0.35), a1 = inCanvas(0.30, 0.50)
+        strokeDrag(a0, to: a1)
+        guard let first = numbers("last"), first.count == 4 else { XCTFail("讀數裡沒有第一筆：\(canvasValue())"); return }
+        // 第二條：終點的 x 差 3 點 —— 對齊開著就要被吸到第一條的 x。
+        let b0 = inCanvas(0.70, 0.70), b1 = (a1.0 + 3, inCanvas(0, 0.70).1)
+        strokeDrag(b0, to: b1)
+        guard let second = numbers("last"), second.count == 4 else { XCTFail("讀數裡沒有第二筆"); return }
+        XCTAssertEqual(second[2], first[2], accuracy: 0.01, "終點沒有對齊既有線的端點")
+        // 關掉對齊，同樣的畫法就不該被吸。
+        openToolbox()
+        // 開關在列的右端：點列的正中央點到的是文字，不會切換。
+        let toggle = reveal("draft.align")
+        toggle.coordinate(withNormalizedOffset: CGVector(dx: 0.96, dy: 0.5)).tap()
+        XCTAssertEqual(toggle.value as? String, "0", "投影對齊的開關沒有關掉")
+        element("draft.toolbox.close").tap()
+        XCTAssertTrue(element("draft.bar").waitForExistence(timeout: 5))
+        let c0 = inCanvas(0.70, 0.80), c1 = (a1.0 + 3, inCanvas(0, 0.80).1)
+        strokeDrag(c0, to: c1)
+        guard let third = numbers("last"), third.count == 4 else { XCTFail("讀數裡沒有第三筆"); return }
+        XCTAssertGreaterThan(abs(third[2] - first[2]), 0.4, "對齊關掉之後還是被吸了：first=\(first) second=\(second) third=\(third) a1=\(a1) c1=\(c1) \(canvasValue())")
+    }
+
+    func testTheProtractorReadsAnAngleAndCanDrawTheReadingLine() {
+        guard openDrafting() else { XCTFail("進不了圖學模式"); return }
+        openToolbox()
+        reveal("draft.inst.protractor").tap()
+        XCTAssertTrue(element("draft.inst.remove").waitForExistence(timeout: 5))
+        sleep(1)
+        guard let box = numbers("instW"), box.count == 4 else { XCTFail("讀數裡沒有量角器的位置：\(canvasValue())"); return }
+        // 量角器的圓心在外框底邊中點，半徑 = 外框寬的一半。按住 60° 方向、85% 半徑處（外圈刻度帶）。
+        let cx = box[0] + box[2] / 2, cy = box[1] + box[3]
+        let r = box[2] / 2 * 0.85
+        let a = 60.0 * Double.pi / 180
+        let pt = (cx + r * cos(a), cy - r * sin(a))
+        window(pt.0, pt.1).press(forDuration: 0.3)
+        sleep(1)
+        let reading = element("draft.inst.reading")
+        XCTAssertTrue(reading.waitForExistence(timeout: 5), "按住刻度帶之後製圖列沒有讀數")
+        let label = reading.label
+        XCTAssertTrue(label.contains("60.0") || label.contains("59.") || label.contains("60."), "讀數不是約 60°：\(label)")
+        XCTAssertTrue(label.contains("120") || label.contains("119.") || label.contains("120."), "另一邊的刻度不是約 120°：\(label)")
+        // 畫出讀數線：多一筆，復原一次收回。
+        let before = readout("pro")
+        element("draft.inst.markAngle").tap()
+        sleep(1)
+        XCTAssertEqual(readout("pro"), before + 1, "畫出讀數線應該多一筆")
+        let undo = element("editor.undo")
+        if undo.waitForExistence(timeout: 3) {
+            undo.tap()
+            sleep(1)
+            XCTAssertEqual(readout("pro"), before)
+        }
+        // 按內圈是搬量角器，不是改讀數。
+        let inner = (cx, cy - box[2] / 2 * 0.25)
+        drag(inner, to: (inner.0 + 50, inner.1 + 30))
+        XCTAssertTrue(element("draft.inst.reading").exists, "搬尺之後讀數不見了（讀數應該跟著尺走）")
+        XCTAssertTrue(reading.label.contains("60.") || reading.label.contains("59."), "搬尺不該改變讀數：\(reading.label)")
     }
 }

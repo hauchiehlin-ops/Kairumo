@@ -170,6 +170,12 @@ object DraftingState {
         version++
     }
 
+    /** 量角器：把讀數點設在頁面上的 (x, y)（null 清掉）。 */
+    fun readInstrument(x: Float, y: Float) {
+        instrument?.setReading(x to y)
+        version++
+    }
+
     fun moveInstrument(dx: Float, dy: Float) {
         instrument?.move(dx, dy)
         version++

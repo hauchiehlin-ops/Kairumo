@@ -7,6 +7,8 @@ import SwiftUI
 struct DraftingBar: View {
     var onOpenSolidStudio: () -> Void = {}
     var onOpenToolbox: () -> Void = {}
+    /// 把量角器目前讀到的角度畫成一條線。
+    var onMarkAngle: () -> Void = {}
     @ObservedObject var state = DraftingState.shared
     @ObservedObject private var localizationManager = LocalizationManager.shared
     @Environment(\.horizontalSizeClass) private var sizeClass
@@ -64,6 +66,15 @@ struct DraftingBar: View {
                     .accessibilityLabel(l("draft_inst_rotate_right_fine")).accessibilityIdentifier("draft.inst.rotr1")
                 Button { state.rotateInstrument(degrees: 15) } label: { Image(systemName: "rotate.right") }
                     .accessibilityLabel(l("draft_inst_rotate_right")).accessibilityIdentifier("draft.inst.rotr")
+            }
+            if let text = state.instrument?.readingText {
+                Text("∠ " + text)
+                    .font(.caption.monospacedDigit())
+                    .accessibilityLabel(l("draft_inst_reading").replacingFirst("%1@", with: text))
+                    .accessibilityIdentifier("draft.inst.reading")
+                Button(action: onMarkAngle) { Image(systemName: "pencil.line") }
+                    .accessibilityLabel(l("draft_inst_mark_angle"))
+                    .accessibilityIdentifier("draft.inst.markAngle")
             }
             Button { state.removeInstrument() } label: { Image(systemName: "xmark.circle") }
                 .accessibilityLabel(l("draft_inst_remove")).accessibilityIdentifier("draft.inst.remove")

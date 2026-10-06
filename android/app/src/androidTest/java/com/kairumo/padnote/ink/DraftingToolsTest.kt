@@ -6,6 +6,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.kairumo.padnote.L10n
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -441,6 +442,111 @@ class DraftingToolsTest {
             assertEquals("寬度經 45° 傳遞到 x=520", 520f, engine.strokes.last().points.last().x, 0.01f)
         } finally {
             DraftingState.setPivot(engine.pageKey, null)
+        }
+    }
+
+    // ── 量角器：讀角度、畫讀數線、半圓身體 ──
+
+    /** 量角器圓心與半徑（頁面座標）。 */
+    private fun protractorCenter(inst: InstrumentModel): Triple<Float, Float, Float> {
+        val c = inst.toPage(inst.geometry.readingCenter!!)
+        return Triple(c.x, c.y, inst.geometry.width / 2f)
+    }
+
+    @Test
+    fun theProtractorBodyIsASemicircleAboveItsBaseline() {
+        DraftingState.placeInstrument("protractor", 300f, 300f, 800f)
+        try {
+            val inst = DraftingState.instrument!!
+            val (cx, cy, r) = protractorCenter(inst)
+            assertTrue("圓心上方是身體", inst.containsBody(cx, cy - r * 0.5f))
+            assertFalse("底邊以下不是身體", inst.containsBody(cx, cy + 10f))
+            assertFalse("半徑之外不是身體", inst.containsBody(cx + r * 1.1f, cy - 1f))
+            // 外框的包圍盒左上角就是原點（與其他尺一致）。
+            assertEquals(inst.originX, cx - r, 0.5f)
+            assertEquals(inst.originY, cy - r, 0.5f)
+        } finally {
+            DraftingState.removeInstrument()
+        }
+    }
+
+    @Test
+    fun pressingTheScaleRingReadsTheAngleAndDoesNotMoveTheProtractor() {
+        DraftingState.placeInstrument("protractor", 300f, 300f, 800f)
+        try {
+            val inst = DraftingState.instrument!!
+            val (cx, cy, r) = protractorCenter(inst)
+            val engine = InkEngine()
+            engine.layer = 3
+            val ox = inst.originX
+            val a = Math.toRadians(60.0)
+            val px = cx + (r * 0.85f * Math.cos(a)).toFloat()
+            val py = cy - (r * 0.85f * Math.sin(a)).toFloat()
+            engine.onMotionEvent(touch(MotionEvent.ACTION_DOWN, px, py, clock), 1f)
+            clock += 20
+            engine.onMotionEvent(touch(MotionEvent.ACTION_UP, px, py, clock), 1f)
+            clock += 30
+            assertEquals(60f, inst.readingDegrees!!, 0.5f)
+            assertEquals("兩邊刻度加起來是 180", 120f, 180f - inst.readingDegrees!!, 0.5f)
+            assertEquals("按刻度帶不是搬尺", ox, inst.originX, 0.001f)
+            assertEquals("讀數不留筆畫", 0, engine.strokes.size)
+            assertNotNull(inst.readingText)
+            // 拖著手指，讀數跟著連續變。
+            drag(engine, px to py, (cx - (r * 0.85f * Math.cos(a)).toFloat()) to py)
+            assertEquals(120f, inst.readingDegrees!!, 0.5f)
+        } finally {
+            DraftingState.removeInstrument()
+        }
+    }
+
+    @Test
+    fun theReadingFollowsTheProtractorWhenItIsMovedOrRotated() {
+        DraftingState.placeInstrument("protractor", 300f, 300f, 800f)
+        try {
+            val inst = DraftingState.instrument!!
+            val (cx, cy, r) = protractorCenter(inst)
+            DraftingState.readInstrument(cx + r * 0.8f, cy - 1f)     // 約 0°
+            assertEquals(0f, inst.readingDegrees!!, 1f)
+            // 搬動：讀數不變。
+            DraftingState.moveInstrument(40f, 25f)
+            assertEquals(0f, inst.readingDegrees!!, 1f)
+            // 內圈拖曳是搬尺，不改讀數。
+            val engine = InkEngine()
+            engine.layer = 3
+            val (cx2, cy2, r2) = protractorCenter(inst)
+            val before = inst.originX
+            drag(engine, cx2 to (cy2 - r2 * 0.25f), (cx2 + 30f) to (cy2 - r2 * 0.25f + 10f))
+            assertEquals(before + 30f, inst.originX, 1f)
+            assertEquals(0f, inst.readingDegrees!!, 1f)
+            // 轉 90°：讀數隨尺轉，相對尺的角度不變。
+            DraftingState.rotateInstrument(90.0)
+            assertEquals(0f, inst.readingDegrees!!, 1f)
+        } finally {
+            DraftingState.removeInstrument()
+        }
+    }
+
+    @Test
+    fun theReadingRayRunsFromTheCenterToTheRimAlongTheReadAngle() {
+        DraftingState.placeInstrument("protractor", 300f, 300f, 800f)
+        try {
+            val inst = DraftingState.instrument!!
+            assertNull("沒讀過就沒有讀數線", inst.readingRay)
+            val (cx, cy, r) = protractorCenter(inst)
+            val a = Math.toRadians(45.0)
+            DraftingState.readInstrument(cx + (r * 0.7f * Math.cos(a)).toFloat(), cy - (r * 0.7f * Math.sin(a)).toFloat())
+            val (p0, p1) = inst.readingRay!!
+            assertEquals(cx, p0.x, 0.01f)
+            assertEquals(cy, p0.y, 0.01f)
+            assertEquals("到外緣：長度 = 半徑", r, kotlin.math.hypot(p1.x - p0.x, p1.y - p0.y), 0.01f)
+            val deg = Math.toDegrees(Math.atan2((p0.y - p1.y).toDouble(), (p1.x - p0.x).toDouble()))
+            assertEquals(45.0, deg, 0.1)
+            // 底邊以下讀不到：沒有讀數線。
+            DraftingState.readInstrument(cx, cy + 20f)
+            assertNull(inst.readingDegrees)
+            assertNull(inst.readingRay)
+        } finally {
+            DraftingState.removeInstrument()
         }
     }
 }

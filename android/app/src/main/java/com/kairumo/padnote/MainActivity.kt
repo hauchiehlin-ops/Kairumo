@@ -4556,6 +4556,7 @@ private fun InkScreen(
                     languageTag = deviceLanguageTag(),
                     onOpenSolidStudio = { showSolidStudio = true },
                     onOpenToolbox = { showDraftingToolbox = true },
+                    onMarkAngle = { markProtractorReading(engine); revision++ },
                     onCloseTool = {
                         DraftingState.selectTool(DraftTool.NONE)
                         DraftToolController.reset(engine)
@@ -7478,6 +7479,20 @@ private fun placeDraftKit(
     val r = (pts.maxOf { it.x } + box[0] + 8f) * density
     val b = (pts.maxOf { it.y } + box[1] + 8f) * density
     return engine.lastInsertedCoreIds to listOf(Offset(l, t), Offset(r, t), Offset(r, b), Offset(l, b))
+}
+
+/** 把量角器讀到的角度畫成一條線（從圓心到外緣），一次復原（頂層函式：避免在巨大的 InkScreen 裡放大 lambda）。 */
+private fun markProtractorReading(engine: com.kairumo.padnote.ink.InkEngine) {
+    val (a, b) = DraftingState.instrument?.readingRay ?: return
+    val pen = DraftingState.activePen
+    val layer = DraftingState.activeLayerId
+    if (DraftingState.isLocked(layer)) return
+    DraftingState.ensureVisible(layer)
+    engine.insertDrafted(
+        listOf(uniffi.padnote_core.FfiSheetStroke(
+            listOf(uniffi.padnote_core.FfiPoint(a.x, a.y), uniffi.padnote_core.FfiPoint(b.x, b.y)),
+            layer.toUByte(), DraftingState.activeLineType.toUByte(), pen.width, pen.colorHex)),
+        0f, 0f)
 }
 
 /** 把尺規放在目前看得到的範圍正中央（頂層函式：避免在巨大的 InkScreen 裡放大 lambda）。 */

@@ -123,7 +123,9 @@ final class DraftingState: ObservableObject {
         angleStep = d.object(forKey: Keys.angle) as? Int ?? 15
         compactChoice = d.object(forKey: Keys.compact) as? Bool
         tipsSeen = d.bool(forKey: Keys.tipsSeen)
-        alignEnabled = d.object(forKey: Keys.align) as? Bool ?? true
+        // UI 測試每次從「對齊開著」起步：上一輪測試關掉的設定不能帶到下一輪（重試時尤其會中招）。
+        alignEnabled = ProcessInfo.processInfo.environment["KAIRUMO_UITEST"] == "1"
+            ? true : (d.object(forKey: Keys.align) as? Bool ?? true)
         thirdAngle = d.object(forKey: Keys.thirdAngle) as? Bool ?? true
     }
 
@@ -161,6 +163,12 @@ final class DraftingState: ObservableObject {
 
     func rotateInstrument(degrees: Double) {
         instrument?.rotate(by: degrees)
+        changed()
+    }
+
+    /// 量角器：把讀數點設在頁面上的 `point`（`nil` 清掉）。
+    func readInstrument(at point: CGPoint?) {
+        instrument?.setReading(at: point)
         changed()
     }
 

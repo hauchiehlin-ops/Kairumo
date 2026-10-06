@@ -58,6 +58,8 @@ fun DraftingBar(
     modifier: Modifier = Modifier,
     onOpenSolidStudio: () -> Unit = {},
     onOpenToolbox: () -> Unit = {},
+    /** 把量角器目前讀到的角度畫成一條線。 */
+    onMarkAngle: () -> Unit = {},
     onCloseTool: () -> Unit = {}
 ) {
     fun l10n(key: String) = LocalizationStrings.localized(key, languageTag)
@@ -331,6 +333,19 @@ fun DraftingBar(
                                 }
                             )
                         }
+                    }
+                    inst.readingText?.let { text ->
+                        androidx.compose.material3.Text(
+                            "∠ $text", fontSize = 12.sp,
+                            modifier = Modifier.testTag("draft.inst.reading").semantics {
+                                contentDescription = l10n("draft_inst_reading").replace("%1@", text)
+                            })
+                        FilterChip(
+                            selected = false,
+                            onClick = onMarkAngle,
+                            label = { Text("✏️ " + l10n("draft_inst_mark_angle"), fontSize = 12.sp) },
+                            modifier = Modifier.testTag("draft.inst.markAngle")
+                        )
                     }
                     FilterChip(
                         selected = false,

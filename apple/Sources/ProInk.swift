@@ -362,7 +362,13 @@ final class ProInkLayerView: UIView {
     }
 
     /// 圖層顯示／鎖定改了：整層重畫（只是不畫某些筆畫，筆點快取不必清）。
-    @objc private func draftingChanged() { setNeedsDisplay() }
+    @objc private func draftingChanged() {
+        setNeedsDisplay()
+        onDraftingChanged?()
+    }
+
+    /// 製圖設定或尺規變了（測試讀數要跟著更新；不算內容修改）。
+    var onDraftingChanged: (() -> Void)?
 
     @objc private func diskChanged(_ note: Notification) {
         guard let id = note.userInfo?["notebookId"] as? String,
@@ -1065,6 +1071,8 @@ final class ProStrokeGestureRecognizer: UIGestureRecognizer {
     private var lastToolPoint = CGPoint.zero
     /// 手指落在尺的身體上（不是靠邊的地方）：這一次拖曳是在搬尺，不是在畫。
     private var draggingInstrument = false
+    /// 手指落在量角器的刻度帶：這一次拖曳是在讀角度。
+    private var readingInstrument = false
     private var lastInstrumentPoint = CGPoint.zero
 
     private var holdTimer: Timer?
@@ -1100,6 +1108,12 @@ final class ProStrokeGestureRecognizer: UIGestureRecognizer {
         if mode == .draw, let model = DraftingState.shared.instrument {
             let here = CGPoint(x: CGFloat(point.x), y: CGFloat(point.y))
             let band = 14 / max(layerView.transform.a, 0.25)
+            if model.isReadingZone(here), model.nearestEdge(to: here, band: band) == nil {
+                readingInstrument = true
+                DraftingState.shared.readInstrument(at: here)
+                state = .began
+                return
+            }
             if model.containsBody(here), model.nearestEdge(to: here, band: band) == nil {
                 draggingInstrument = true
                 lastInstrumentPoint = here
@@ -1132,6 +1146,11 @@ final class ProStrokeGestureRecognizer: UIGestureRecognizer {
 
     override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent) {
         guard let layerView, let touch = tracked, touches.contains(touch) else { return }
+        if readingInstrument {
+            DraftingState.shared.readInstrument(at: touch.preciseLocation(in: layerView))
+            state = .changed
+            return
+        }
         if draggingInstrument {
             let here = touch.preciseLocation(in: layerView)
             DraftingState.shared.moveInstrument(by: CGSize(width: here.x - lastInstrumentPoint.x, height: here.y - lastInstrumentPoint.y))
@@ -1177,8 +1196,9 @@ final class ProStrokeGestureRecognizer: UIGestureRecognizer {
 
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent) {
         guard let touch = tracked, touches.contains(touch) else { return }
-        if draggingInstrument {
+        if draggingInstrument || readingInstrument {
             draggingInstrument = false
+            readingInstrument = false
             tracked = nil
             state = .ended
             return
@@ -1212,6 +1232,7 @@ final class ProStrokeGestureRecognizer: UIGestureRecognizer {
 
     override func reset() {
         draggingInstrument = false
+        readingInstrument = false
         holdTimer?.invalidate()
         tracked = nil
         erasePath = []
@@ -1220,6 +1241,7 @@ final class ProStrokeGestureRecognizer: UIGestureRecognizer {
 
     private func cancelCurrent() {
         draggingInstrument = false
+        readingInstrument = false
         holdTimer?.invalidate()
         if mode == .tool { onToolTouch?(.cancelled, lastToolPoint) }
         if mode == .draw { layerView?.cancelStroke() }

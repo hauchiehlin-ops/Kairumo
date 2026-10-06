@@ -572,6 +572,10 @@ final class AdaptiveCanvasView: PKCanvasView {
                 guard let self else { return }
                 self.accessibilityValue = CanvasRepresentable.testReadout(self)
             }
+            layer.onDraftingChanged = { [weak self] in
+                guard let self else { return }
+                self.accessibilityValue = CanvasRepresentable.testReadout(self)
+            }
         }
         addSubview(layer)
         proLayer = layer
@@ -1201,7 +1205,27 @@ struct CanvasRepresentable: UIViewRepresentable {
     static func testReadout(_ canvas: PKCanvasView) -> String {
         // `pro:` 是專業筆畫（含製圖線、標註）的數量：它們不在 PencilKit 的 drawing 裡。
         let pro = (canvas as? AdaptiveCanvasView)?.proLayer?.ownStrokes.count ?? 0
-        return String(format: "zoom:%.3f strokes:%d pro:%d", canvas.zoomScale, canvas.drawing.strokes.count, pro)
+        var text = String(format: "zoom:%.3f strokes:%d pro:%d", canvas.zoomScale, canvas.drawing.strokes.count, pro)
+        // 測試要知道尺在哪裡、最後一筆畫到哪裡（頁面座標與視窗座標兩套）。
+        if let layer = (canvas as? AdaptiveCanvasView)?.proLayer {
+            if let last = layer.ownStrokes.last, let f = last.points.first, let l = last.points.last {
+                text += String(format: " last:%.2f,%.2f,%.2f,%.2f", f.x, f.y, l.x, l.y)
+            }
+            if let pivot = DraftingState.shared.pivot(notebookId: layer.notebookId, page: layer.pageIndex) {
+                text += String(format: " pivot:%.2f,%.2f", pivot.x, pivot.y)
+            }
+            if let inst = DraftingState.shared.instrument {
+                func win(_ p: CGPoint) -> CGPoint { layer.convert(p, to: nil) }
+                if let (a, b) = inst.pageEdges.first {
+                    text += String(format: " edge:%.2f,%.2f,%.2f,%.2f", a.x, a.y, b.x, b.y)
+                    let wa = win(a), wb = win(b)
+                    text += String(format: " edgeW:%.2f,%.2f,%.2f,%.2f", wa.x, wa.y, wb.x, wb.y)
+                }
+                let box = inst.pageOutline.flatMap { $0 }.reduce(CGRect.null) { $0.union(CGRect(origin: win($1), size: .zero)) }
+                text += String(format: " instW:%.2f,%.2f,%.2f,%.2f", box.minX, box.minY, box.width, box.height)
+            }
+        }
+        return text
     }
     func makeCoordinator() -> Coordinator {
         Coordinator(self)
@@ -4047,7 +4071,8 @@ public struct NotebookEditorView: View {
                 // 圖學：製圖筆組、圖層、吸附（見 DraftingBar.swift）。
                 if editorMode == .draw && selectedTool == .drafting {
                     DraftingBar(onOpenSolidStudio: { showSolidStudio = true },
-                                onOpenToolbox: { showDraftingToolbox = true })
+                                onOpenToolbox: { showDraftingToolbox = true },
+                                onMarkAngle: { markProtractorReading() })
                         .padding(.top, 12)
                         .transition(.opacity.combined(with: .move(edge: .top)))
                 }
@@ -9832,6 +9857,24 @@ public struct NotebookEditorView: View {
         let ids = Set(made.map(\.id))
         let box = made.map(\.bounds).reduce(CGRect.null) { $0.union($1) }
         DispatchQueue.main.async { lasso.select(proStrokeIds: ids, around: box) }
+    }
+
+    /// 把量角器讀到的角度畫成一條線（從圓心到外緣），一次復原。
+    private func markProtractorReading() {
+        guard let canvas = canvasView as? AdaptiveCanvasView, let layer = canvas.proLayer else { return }
+        let drafting = DraftingState.shared
+        guard let (a, b) = drafting.instrument?.readingRay else { return }
+        let pen = drafting.activePen
+        let stroke = FfiSheetStroke(
+            points: [FfiPoint(x: Float(a.x), y: Float(a.y)), FfiPoint(x: Float(b.x), y: Float(b.y))],
+            layer: drafting.activeLayerId, lineType: drafting.activeLineType, width: pen.width, colorHex: pen.colorHex)
+        guard !drafting.isLocked(layer: stroke.layer, notebookId: layer.notebookId) else {
+            UINotificationFeedbackGenerator().notificationOccurred(.warning)
+            return
+        }
+        drafting.ensureVisible(layer: stroke.layer, notebookId: layer.notebookId)
+        layer.insertDrafted([stroke], origin: .zero)
+        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
     }
 
     /// 目前視野的正中央（頁面座標）。

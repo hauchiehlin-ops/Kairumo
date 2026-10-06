@@ -383,6 +383,8 @@ pub struct FfiInstrumentGeometry {
     pub vertical_only: bool,
     pub width: f32,
     pub height: f32,
+    /// 讀數的圓心（量角器；尺自己的座標）。其他尺是 `None`。
+    pub reading_center: Option<FfiPoint>,
 }
 
 #[derive(Clone, Copy, Debug, uniffi::Record)]
@@ -440,7 +442,15 @@ pub fn draft_instrument_geometry(
         vertical_only: g.vertical_only,
         width: g.width,
         height: g.height,
+        reading_center: g.reading_center.map(fp),
     })
+}
+
+/// 量角器的讀數：從圓心看 `point` 的角度（度；0° 在右端、逆時針到 180° 在左端）。
+/// 兩個點都用尺自己的座標。在底邊以下讀不到回 `None`。
+#[uniffi::export]
+pub fn draft_protractor_angle(center: FfiPoint, point: FfiPoint) -> Option<f32> {
+    instruments::protractor_angle(p(center), p(point))
 }
 
 /// 點離哪一條邊最近（`band` 之內）：回邊的索引與投影點。
@@ -650,6 +660,13 @@ mod tests {
         // 直尺的刻度有數字。
         let r = draft_instrument_geometry("ruler".into(), 100.0, 800.0).unwrap();
         assert!(r.ticks.iter().any(|t| t.label.as_deref() == Some("10")));
+        // 量角器有讀數圓心，直尺沒有。
+        let pr = draft_instrument_geometry("protractor".into(), 70.0, 800.0).unwrap();
+        let c = pr.reading_center.expect("量角器的圓心");
+        assert_eq!(draft_protractor_angle(c, pt(c.x + 50.0, c.y)), Some(0.0));
+        let up = draft_protractor_angle(c, pt(c.x, c.y - 50.0)).unwrap();
+        assert!((up - 90.0).abs() < 1e-3);
+        assert!(r.reading_center.is_none());
     }
 
     #[test]

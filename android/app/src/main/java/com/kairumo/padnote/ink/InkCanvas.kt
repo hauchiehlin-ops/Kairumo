@@ -370,6 +370,19 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawDraftingAids(
                     })
             }
         }
+        val ray = inst.readingRay
+        val text = inst.readingText
+        if (ray != null && text != null) {
+            val orange = Color(0xFFFF9500)
+            drawLine(orange, o(ray.first), o(ray.second), strokeWidth = 1.6f * density)
+            val at = o(ray.second)
+            drawContext.canvas.nativeCanvas.drawText(
+                text, at.x + 4f * density, at.y - 4f * density,
+                android.graphics.Paint().apply {
+                    color = orange.toArgb(); textSize = 11f * density; isAntiAlias = true
+                    typeface = android.graphics.Typeface.create(android.graphics.Typeface.MONOSPACE, android.graphics.Typeface.BOLD)
+                })
+        }
         for ((a, b) in inst.pageEdges) drawLine(teal, o(a), o(b), strokeWidth = 2f * density)
     }
     for (line in engine.alignGuides) {
