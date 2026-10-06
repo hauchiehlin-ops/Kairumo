@@ -90,6 +90,8 @@ object DraftToolController {
                 if (fitted != null || n >= 1) "draft_hint_dim_edge" else "draft_hint_dim_center"
             DraftTool.DIM_ANGLE ->
                 listOf("draft_hint_angle_vertex", "draft_hint_angle_ray1", "draft_hint_angle_ray2", "draft_hint_angle_arc")[minOf(n, 3)]
+            DraftTool.COMPASS -> if (n == 0) "draft_hint_compass_center" else "draft_hint_compass_arc"
+            DraftTool.SET_PIVOT -> "draft_hint_pivot"
         }
         DraftingState.toolHint = key?.let { L10n.t(it) }
     }
@@ -103,7 +105,7 @@ object DraftToolController {
 
     fun handle(phase: FfiPhase, x: Float, y: Float, engine: InkEngine) {
         val tool = DraftingState.tool
-        if (!tool.isDimension) return
+        if (tool == DraftTool.NONE) return
         if (lastTool != tool) {
             lastTool = tool
             reset(engine)
@@ -119,7 +121,92 @@ object DraftToolController {
             DraftTool.DIM_LINEAR -> linear(phase, raw, snapped, engine)
             DraftTool.DIM_DIAMETER, DraftTool.DIM_RADIUS -> circular(tool, phase, raw, radius, engine)
             DraftTool.DIM_ANGLE -> angular(phase, raw, snapped, engine)
+            DraftTool.COMPASS -> compass(phase, raw, snapped, engine)
+            DraftTool.SET_PIVOT -> setPivot(phase, snapped, engine)
             DraftTool.NONE -> Unit
+        }
+    }
+
+    // 45° 轉折點
+
+    private fun setPivot(phase: FfiPhase, snapped: InkEngine.Offset2, engine: InkEngine) {
+        if (phase != FfiPhase.ENDED) return
+        DraftingState.setPivot(engine.pageKey, snapped.x to snapped.y)
+        DraftingState.selectTool(DraftTool.NONE)
+        onChanged()
+    }
+
+    // 圓規
+
+    private var compassStart = 0f
+    private var compassSweep = 0f
+    private var compassLast = 0f
+    private var compassRadius = 0f
+    private var compassDragging = false
+
+    private fun compass(phase: FfiPhase, raw: InkEngine.Offset2, snapped: InkEngine.Offset2, engine: InkEngine) {
+        if (picks.isEmpty()) {
+            if (phase != FfiPhase.ENDED) return
+            picks += snapped
+            engine.setOverlay(emptyList(), picks.toList())
+            refreshHint()
+            return
+        }
+        val c = picks[0]
+        val angle = kotlin.math.atan2(raw.y - c.y, raw.x - c.x)
+        when (phase) {
+            FfiPhase.BEGAN -> {
+                compassRadius = kotlin.math.hypot(raw.x - c.x, raw.y - c.y)
+                compassStart = angle
+                compassLast = angle
+                compassSweep = 0f
+                compassDragging = true
+                previewArc(engine)
+            }
+            FfiPhase.MOVED -> {
+                if (!compassDragging) return
+                // 逐步累計角度變化（跨過 ±π 要接回去），才能轉超過半圈、也能反方向。
+                var d = angle - compassLast
+                if (d > Math.PI) d -= (2 * Math.PI).toFloat() else if (d < -Math.PI) d += (2 * Math.PI).toFloat()
+                compassSweep = (compassSweep + d).coerceIn(-(2 * Math.PI).toFloat(), (2 * Math.PI).toFloat())
+                compassLast = angle
+                previewArc(engine)
+            }
+            FfiPhase.ENDED -> {
+                val ok = compassDragging && compassRadius > 2f && kotlin.math.abs(compassSweep) > 0.02f
+                compassDragging = false
+                if (ok) commitArc(engine) else reset(engine)
+            }
+            else -> Unit
+        }
+    }
+
+    private fun arcStroke(): uniffi.padnote_core.FfiSheetStroke {
+        val pts = uniffi.padnote_core.draftArc(pt(picks[0]), compassRadius, compassStart, compassSweep)
+        val pen = DraftingState.activePen
+        return uniffi.padnote_core.FfiSheetStroke(
+            pts, DraftingState.activeLayerId.toUByte(), DraftingState.activeLineType.toUByte(), pen.width, pen.colorHex)
+    }
+
+    private fun previewArc(engine: InkEngine) {
+        val end = FfiPoint(
+            picks[0].x + kotlin.math.cos(compassStart + compassSweep) * compassRadius,
+            picks[0].y + kotlin.math.sin(compassStart + compassSweep) * compassRadius)
+        val radial = uniffi.padnote_core.FfiSheetStroke(
+            listOf(pt(picks[0]), end), 2u, 4u, 0.6f, "#1E78FF")
+        engine.setOverlay(listOf(arcStroke(), radial), picks.toList())
+    }
+
+    private fun commitArc(engine: InkEngine) {
+        try {
+            val stroke = arcStroke()
+            val layer = stroke.layer.toInt()
+            if (DraftingState.isLocked(layer)) return
+            DraftingState.ensureVisible(layer)
+            engine.insertDrafted(listOf(stroke), 0f, 0f)
+            onChanged()
+        } finally {
+            reset(engine)
         }
     }
 
@@ -235,6 +322,7 @@ fun DraftingToolboxDialog(
     onPickTool: (DraftTool) -> Unit,
     onInsertSymbol: (FfiDraftKit) -> Unit,
     onInsertFrame: (thirdAngle: Boolean) -> Unit,
+    onPlaceInstrument: (String) -> Unit,
     onDismiss: () -> Unit
 ) {
     fun t(key: String) = LocalizationStrings.localized(key, languageTag)
@@ -285,6 +373,46 @@ fun DraftingToolboxDialog(
                     }
                 }
                 Text(t("draft_scale_footer"), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                HorizontalDivider()
+                Text(t("draft_toolbox_aids"), style = MaterialTheme.typography.labelLarge)
+                Row(
+                    Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(t("draft_align"), fontSize = 13.sp, modifier = Modifier.weight(1f))
+                    Switch(
+                        checked = DraftingState.alignEnabled, onCheckedChange = { DraftingState.changeAlign(it) },
+                        modifier = Modifier.testTag("draft.align"))
+                }
+                Row(
+                    Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(t("draft_frame_third_angle"), fontSize = 13.sp, modifier = Modifier.weight(1f))
+                    Switch(
+                        checked = DraftingState.thirdAngle, onCheckedChange = { DraftingState.changeThirdAngle(it) },
+                        modifier = Modifier.testTag("draft.projection"))
+                }
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    for (tool in listOf(DraftTool.SET_PIVOT, DraftTool.COMPASS)) {
+                        FilterChip(
+                            selected = DraftingState.tool == tool,
+                            onClick = { onPickTool(tool) },
+                            label = { Text(t(tool.nameKey), fontSize = 12.sp) },
+                            modifier = Modifier.testTag("draft.tool.${tool.name}")
+                        )
+                    }
+                    for (kind in uniffi.padnote_core.draftInstrumentKinds()) {
+                        FilterChip(
+                            selected = DraftingState.instrument?.kind == kind,
+                            onClick = { onPlaceInstrument(kind) },
+                            label = { Text("📏 " + t("draft_inst_$kind"), fontSize = 12.sp) },
+                            modifier = Modifier.testTag("draft.inst.$kind")
+                        )
+                    }
+                }
+                Text(t("draft_align_footer"), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(t("draft_inst_footer"), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 HorizontalDivider()
                 FilterChip(
                     selected = false,

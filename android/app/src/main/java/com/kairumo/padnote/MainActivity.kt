@@ -2577,6 +2577,12 @@ private fun InkScreen(
                     message = l10n("draft_frame_inserted")
                 }
             },
+            onPlaceInstrument = { kind ->
+                showDraftingToolbox = false
+                placeDraftInstrument(kind, canvasInfo.viewport, canvasInfo.scale, canvasInfo.offset, density)
+                applyInkTool(InkTool.DRAFTING)
+                revision++
+            },
             onDismiss = { showDraftingToolbox = false }
         )
     }
@@ -7472,6 +7478,13 @@ private fun placeDraftKit(
     val r = (pts.maxOf { it.x } + box[0] + 8f) * density
     val b = (pts.maxOf { it.y } + box[1] + 8f) * density
     return engine.lastInsertedCoreIds to listOf(Offset(l, t), Offset(r, t), Offset(r, b), Offset(l, b))
+}
+
+/** 把尺規放在目前看得到的範圍正中央（頂層函式：避免在巨大的 InkScreen 裡放大 lambda）。 */
+private fun placeDraftInstrument(kind: String, viewport: Size, scale: Float, offset: Offset, density: Float) {
+    val cx = (viewport.width / 2f - offset.x / scale) / density
+    val cy = (viewport.height / 2f - offset.y / scale) / density
+    DraftingState.placeInstrument(kind, cx, cy, PageGeometry.width)
 }
 
 /** 目前頁面的紙張規格識別字（A4／A3…）；自訂尺寸或認不得的回 null。 */

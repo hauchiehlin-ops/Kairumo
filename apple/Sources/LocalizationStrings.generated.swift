@@ -5591,6 +5591,22 @@ extension LocalizationManager {
             .ko: "다운로드 중...",
             .th: "กำลังดาวน์โหลด..."
         ],
+        "draft_align": [
+            .zhHant: "投影對齊",
+            .en: "Projection alignment",
+            .zhHans: "投影对齐",
+            .ja: "投影の位置合わせ",
+            .ko: "투상 정렬",
+            .th: "จัดแนวการฉายภาพ"
+        ],
+        "draft_align_footer": [
+            .zhHant: "畫線的起點與終點會對齊既有線的端點：長對正、高平齊；設了 45° 轉折點之後，寬度也會對齊（寬相等）。對齊時會出現淡藍色的虛線。",
+            .en: "The start and end of a line align with the ends of existing lines: top and front views line up, front and side heights match; once a 45° turning point is set, widths line up too. A light blue dashed guide shows what it aligned to.",
+            .zhHans: "画线的起点与终点会对齐既有线的端点：长对正、高平齐；设了 45° 转折点之后，宽度也会对齐（宽相等）。对齐时会出现淡蓝色的虚线。",
+            .ja: "線の始点と終点は既存の線の端点に揃います（正面図と平面図の左右、正面図と側面図の高さ）。45° の転換点を設定すると奥行きも揃います。揃ったときは薄い青の破線が表示されます。",
+            .ko: "선의 시작점과 끝점이 기존 선의 끝점에 맞춰집니다(정면도와 평면도의 가로, 정면도와 측면도의 높이). 45° 전환점을 설정하면 폭도 맞춰집니다. 맞춰지면 연한 파란 점선이 나타납니다.",
+            .th: "จุดเริ่มและจุดสิ้นสุดของเส้นจะจัดแนวกับปลายเส้นที่มีอยู่ (ภาพด้านหน้ากับภาพด้านบนตรงกัน ความสูงของภาพด้านหน้ากับภาพด้านข้างเท่ากัน) ถ้าตั้งจุดหักมุม 45° ความกว้างก็จะตรงกันด้วย จะมีเส้นประสีฟ้าอ่อนแสดงว่าจัดแนวกับอะไร"
+        ],
         "draft_angle_free": [
             .zhHant: "自由",
             .en: "Free",
@@ -5622,6 +5638,22 @@ extension LocalizationManager {
             .ja: "製図パネルを開く",
             .ko: "도면 패널 펼치기",
             .th: "แสดงแผงเขียนแบบ"
+        ],
+        "draft_compass_radius": [
+            .zhHant: "半徑 R %1@ mm　放開就畫出圓弧",
+            .en: "Radius R %1@ mm — let go to draw the arc",
+            .zhHans: "半径 R %1@ mm　放开就画出圆弧",
+            .ja: "半径 R %1@ mm　指を離すと円弧を描きます",
+            .ko: "반지름 R %1@ mm — 놓으면 호가 그려집니다",
+            .th: "รัศมี R %1@ มม. — ปล่อยเพื่อวาดส่วนโค้ง"
+        ],
+        "draft_convention_footer": [
+            .zhHant: "投影法會影響圖框裡的符號，也決定 45° 傳遞的方向。",
+            .en: "The projection method sets the symbol in the frame and the direction of the 45° transfer.",
+            .zhHans: "投影法会影响图框里的符号，也决定 45° 传递的方向。",
+            .ja: "投影法は図枠の記号と、45° の転送の向きに影響します。",
+            .ko: "투상법은 도곽 안의 기호와 45° 전달 방향을 정합니다.",
+            .th: "วิธีการฉายภาพมีผลต่อสัญลักษณ์ในกรอบและทิศทางการส่งผ่าน 45°"
         ],
         "draft_draw_on_layer": [
             .zhHant: "畫在此圖層",
@@ -5719,6 +5751,22 @@ extension LocalizationManager {
             .ko: "각의 꼭짓점을 누르세요",
             .th: "แตะจุดยอดของมุม"
         ],
+        "draft_hint_compass_arc": [
+            .zhHant: "按住圓周上的一點，沿著圓拖出圓弧",
+            .en: "Press a point on the circle and drag round to draw the arc",
+            .zhHans: "按住圆周上的一点，沿著圆拖出圆弧",
+            .ja: "円周上の点を押さえて、円に沿ってドラッグすると円弧が描けます",
+            .ko: "원주 위의 한 점을 누르고 원을 따라 끌면 호가 그려집니다",
+            .th: "กดที่จุดบนวงกลมแล้วลากไปตามวงเพื่อวาดส่วนโค้ง"
+        ],
+        "draft_hint_compass_center": [
+            .zhHant: "點圓心",
+            .en: "Tap the centre",
+            .zhHans: "点圆心",
+            .ja: "中心をタップ",
+            .ko: "중심을 누르세요",
+            .th: "แตะจุดศูนย์กลาง"
+        ],
         "draft_hint_dim_center": [
             .zhHant: "點一個畫好的圓（或點圓心）",
             .en: "Tap a drawn circle (or tap its centre)",
@@ -5758,6 +5806,102 @@ extension LocalizationManager {
             .ja: "2 点目をタップ",
             .ko: "두 번째 점을 누르세요",
             .th: "แตะจุดที่สอง"
+        ],
+        "draft_hint_pivot": [
+            .zhHant: "點俯視圖與右視圖之間的那個角（45° 線通過的點）",
+            .en: "Tap the corner between the top view and the side view (where the 45° line passes)",
+            .zhHans: "点俯视图与右视图之间的那个角（45° 线通过的点）",
+            .ja: "平面図と側面図の間の角（45° の線が通る点）をタップ",
+            .ko: "평면도와 측면도 사이의 모서리(45° 선이 지나는 점)를 누르세요",
+            .th: "แตะมุมระหว่างภาพด้านบนกับภาพด้านข้าง (จุดที่เส้น 45° ผ่าน)"
+        ],
+        "draft_inst_footer": [
+            .zhHant: "拖尺的中間可以移動它；從尺邊附近起筆，線就會貼著尺邊畫成直線。用旋轉鈕轉角度（丁字尺只能上下移動）。尺上的刻度是真實毫米。",
+            .en: "Drag the middle of an instrument to move it; start a stroke near its edge and the line follows the edge as a straight line. Use the rotate buttons to turn it (the T-square only slides up and down). The scale is real millimetres.",
+            .zhHans: "拖尺的中间可以移动它；从尺边附近起笔，线就会贴著尺边画成直线。用旋转钮转角度（丁字尺只能上下移动）。尺上的刻度是真实毫米。",
+            .ja: "器具の中央をドラッグして動かします。縁の近くから線を描き始めると、縁に沿った直線になります。回転ボタンで角度を変えます（T 定規は上下にしか動きません）。目盛りは実寸のミリメートルです。",
+            .ko: "도구 가운데를 끌어 옮깁니다. 가장자리 근처에서 선을 시작하면 가장자리를 따라 직선이 그려집니다. 회전 버튼으로 각도를 바꿉니다(T자는 위아래로만 움직입니다). 눈금은 실제 밀리미터입니다.",
+            .th: "ลากกลางเครื่องมือเพื่อย้าย เริ่มเส้นใกล้ขอบเครื่องมือ เส้นจะเป็นเส้นตรงตามขอบ ใช้ปุ่มหมุนเพื่อเปลี่ยนมุม (ไม้ทีเลื่อนได้เฉพาะขึ้นลง) สเกลเป็นมิลลิเมตรจริง"
+        ],
+        "draft_inst_protractor": [
+            .zhHant: "量角器",
+            .en: "Protractor",
+            .zhHans: "量角器",
+            .ja: "分度器",
+            .ko: "각도기",
+            .th: "ไม้โปรแทรกเตอร์"
+        ],
+        "draft_inst_remove": [
+            .zhHant: "收起尺規",
+            .en: "Put the instrument away",
+            .zhHans: "收起尺规",
+            .ja: "器具をしまう",
+            .ko: "도구 치우기",
+            .th: "เก็บเครื่องมือ"
+        ],
+        "draft_inst_rotate_left": [
+            .zhHant: "逆時針轉 15°",
+            .en: "Rotate 15° anticlockwise",
+            .zhHans: "逆时针转 15°",
+            .ja: "反時計回りに 15° 回転",
+            .ko: "시계 반대 방향으로 15° 회전",
+            .th: "หมุนทวนเข็มนาฬิกา 15°"
+        ],
+        "draft_inst_rotate_left_fine": [
+            .zhHant: "逆時針轉 1°",
+            .en: "Rotate 1° anticlockwise",
+            .zhHans: "逆时针转 1°",
+            .ja: "反時計回りに 1° 回転",
+            .ko: "시계 반대 방향으로 1° 회전",
+            .th: "หมุนทวนเข็มนาฬิกา 1°"
+        ],
+        "draft_inst_rotate_right": [
+            .zhHant: "順時針轉 15°",
+            .en: "Rotate 15° clockwise",
+            .zhHans: "顺时针转 15°",
+            .ja: "時計回りに 15° 回転",
+            .ko: "시계 방향으로 15° 회전",
+            .th: "หมุนตามเข็มนาฬิกา 15°"
+        ],
+        "draft_inst_rotate_right_fine": [
+            .zhHant: "順時針轉 1°",
+            .en: "Rotate 1° clockwise",
+            .zhHans: "顺时针转 1°",
+            .ja: "時計回りに 1° 回転",
+            .ko: "시계 방향으로 1° 회전",
+            .th: "หมุนตามเข็มนาฬิกา 1°"
+        ],
+        "draft_inst_ruler": [
+            .zhHant: "直尺",
+            .en: "Ruler",
+            .zhHans: "直尺",
+            .ja: "定規",
+            .ko: "자",
+            .th: "ไม้บรรทัด"
+        ],
+        "draft_inst_set_square_30": [
+            .zhHant: "30°-60° 三角板",
+            .en: "30°-60° set square",
+            .zhHans: "30°-60° 三角板",
+            .ja: "30°-60° 三角定規",
+            .ko: "30°-60° 삼각자",
+            .th: "ฉาก 30°-60°"
+        ],
+        "draft_inst_set_square_45": [
+            .zhHant: "45° 三角板",
+            .en: "45° set square",
+            .zhHans: "45° 三角板",
+            .ja: "45° 三角定規",
+            .ko: "45° 삼각자",
+            .th: "ฉาก 45°"
+        ],
+        "draft_inst_t_square": [
+            .zhHant: "丁字尺",
+            .en: "T-square",
+            .zhHans: "丁字尺",
+            .ja: "T 定規",
+            .ko: "T자",
+            .th: "ไม้ที"
         ],
         "draft_layer_aux": [
             .zhHant: "中層・輔助",
@@ -5902,6 +6046,14 @@ extension LocalizationManager {
             .ja: "製図ペン",
             .ko: "제도 펜",
             .th: "ปากกาเขียนแบบ"
+        ],
+        "draft_pivot_clear": [
+            .zhHant: "清除轉折點",
+            .en: "Clear the turning point",
+            .zhHans: "清除转折点",
+            .ja: "転換点を消去",
+            .ko: "전환점 지우기",
+            .th: "ล้างจุดหักมุม"
         ],
         "draft_reassign": [
             .zhHant: "移到圖層",
@@ -6535,6 +6687,14 @@ extension LocalizationManager {
             .ko: "현재 도구 끝내기",
             .th: "เลิกใช้เครื่องมือนี้"
         ],
+        "draft_tool_compass": [
+            .zhHant: "圓規",
+            .en: "Compass",
+            .zhHans: "圆规",
+            .ja: "コンパス",
+            .ko: "컴퍼스",
+            .th: "วงเวียน"
+        ],
         "draft_tool_dim_angle": [
             .zhHant: "角度標註",
             .en: "Angular dimension",
@@ -6574,6 +6734,22 @@ extension LocalizationManager {
             .ja: "ツールなし",
             .ko: "도구 없음",
             .th: "ไม่มีเครื่องมือ"
+        ],
+        "draft_tool_set_pivot": [
+            .zhHant: "設定 45° 轉折點",
+            .en: "Set the 45° turning point",
+            .zhHans: "设置 45° 转折点",
+            .ja: "45° の転換点を設定",
+            .ko: "45° 전환점 설정",
+            .th: "ตั้งจุดหักมุม 45°"
+        ],
+        "draft_toolbox_aids": [
+            .zhHant: "對齊與尺規",
+            .en: "Alignment and instruments",
+            .zhHans: "对齐与尺规",
+            .ja: "位置合わせと製図器具",
+            .ko: "정렬과 제도 도구",
+            .th: "การจัดแนวและเครื่องมือวัด"
         ],
         "draft_toolbox_dimension": [
             .zhHant: "尺寸標註",

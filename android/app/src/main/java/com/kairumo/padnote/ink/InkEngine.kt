@@ -129,6 +129,15 @@ class InkEngine(
     var overlayMarks by androidx.compose.runtime.mutableStateOf<List<Offset2>>(emptyList())
         private set
 
+    /** 這一頁的識別字（逐頁設定，例如 45° 轉折點，用它當鍵）。 */
+    val pageKey: String get() = pageId ?: ""
+
+    /** 製圖：正在畫的線對齊了哪些既有點（虛線導引），與調整後的即時預覽（靠著尺的邊、對齊吸附）。 */
+    var alignGuides by androidx.compose.runtime.mutableStateOf<List<List<Offset2>>>(emptyList())
+        private set
+    var draftPreview by androidx.compose.runtime.mutableStateOf<List<StrokePoint>?>(null)
+        private set
+
     /** 一個頁面座標的點（避免引擎依賴 Compose 的 `Offset`）。 */
     data class Offset2(val x: Float, val y: Float)
 
@@ -161,6 +170,114 @@ class InkEngine(
             fitCircle(pts.map { Offset2(it.x, it.y) })?.let { consider(it.first.x, it.first.y) }
         }
         return best
+    }
+
+    // ── 投影對齊與尺規靠邊 ──
+
+    /** 對齊用的點：看得見的筆畫的端點與短折線的轉折點（上限 600 個，免得大頁面拖慢）。 */
+    private fun alignAnchors(): List<uniffi.padnote_core.FfiPoint> {
+        val out = ArrayList<uniffi.padnote_core.FfiPoint>()
+        for (stroke in _strokes) {
+            if (stroke.layer != 0 && DraftingState.isHidden(stroke.layer)) continue
+            val pts = stroke.points
+            if (pts.isEmpty()) continue
+            out += uniffi.padnote_core.FfiPoint(pts.first().x, pts.first().y)
+            out += uniffi.padnote_core.FfiPoint(pts.last().x, pts.last().y)
+            if (pts.size <= 12) for (q in pts.drop(1).dropLast(1)) out += uniffi.padnote_core.FfiPoint(q.x, q.y)
+            if (out.size > 600) break
+        }
+        return out
+    }
+
+    private fun alignedPoint(x: Float, y: Float, anchors: List<uniffi.padnote_core.FfiPoint>, guides: MutableList<List<Offset2>>): Offset2 {
+        if (!DraftingState.alignEnabled) return Offset2(x, y)
+        val pivot = DraftingState.pivot(pageKey)?.let { uniffi.padnote_core.FfiPoint(it.first, it.second) }
+        val r = uniffi.padnote_core.draftAlign(
+            uniffi.padnote_core.FfiPoint(x, y), anchors, pivot, DraftingState.thirdAngle,
+            8f / toolZoom.coerceAtLeast(0.25f))
+        for (g in r.guides) guides += g.points.map { Offset2(it.x, it.y) }
+        return Offset2(r.point.x, r.point.y)
+    }
+
+    /**
+     * 製圖線的調整：起點靠著尺的邊就整筆沿著邊走（直線）；否則起點與終點對齊既有點。
+     * 與 Apple 的 `ProInkLayerView` 同一套規則。回傳調整後的筆點與要畫的導引線。
+     */
+    private fun draftAdjust(pts: List<StrokePoint>): Pair<List<StrokePoint>, List<List<Offset2>>> {
+        if (layer == 0 || pts.isEmpty()) return pts to emptyList()
+        val guides = mutableListOf<List<Offset2>>()
+        val first = pts.first()
+        val last = pts.last()
+        val band = 14f / toolZoom.coerceAtLeast(0.25f)
+        val inst = DraftingState.instrument
+        val edge = inst?.nearestEdge(first.x, first.y, band)
+        if (edge != null) {
+            val foot = InstrumentModel.footOnLine(last.x, last.y, edge.a, edge.b)
+            val n = 24
+            val out = (0 until n).map { i ->
+                val t = i.toFloat() / (n - 1)
+                first.copy(x = edge.foot.x + (foot.x - edge.foot.x) * t, y = edge.foot.y + (foot.y - edge.foot.y) * t)
+            }
+            return out to emptyList()
+        }
+        if (!DraftingState.alignEnabled) return pts to emptyList()
+        val anchors = alignAnchors()
+        val a = alignedPoint(first.x, first.y, anchors, guides)
+        val b = if (pts.size > 1) alignedPoint(last.x, last.y, anchors, guides) else a
+        val out = pts.toMutableList()
+        out[0] = first.copy(x = a.x, y = a.y)
+        if (pts.size > 1) out[out.lastIndex] = last.copy(x = b.x, y = b.y)
+        return out to guides
+    }
+
+    private fun updateDraftPreview() {
+        if (layer == 0 || (DraftingState.instrument == null && !DraftingState.alignEnabled)) return
+        val live = inFlight.values.firstOrNull() ?: return
+        val raw = InkInput.strokePoints(live.toList())
+        if (raw.size < 2) return
+        val (adjusted, guides) = draftAdjust(raw)
+        draftPreview = adjusted
+        alignGuides = guides
+    }
+
+    private fun clearDraftPreview() {
+        if (draftPreview != null) draftPreview = null
+        if (alignGuides.isNotEmpty()) alignGuides = emptyList()
+    }
+
+    /** 手指落在尺的身體上（不是靠邊的地方）：這個指標是在搬尺，不是在畫。 */
+    private var instrumentPointer: ULong? = null
+    private var instrumentLastX = 0f
+    private var instrumentLastY = 0f
+
+    /** 拖尺：回傳這個取樣是不是被拿來搬尺了。 */
+    private fun handleInstrumentDrag(sample: InkInput.Sample): Boolean {
+        val inst = DraftingState.instrument ?: return false
+        if (layer == 0 || isErasing) return false
+        val e = sample.event
+        val band = 14f / zoom.coerceAtLeast(0.25f)
+        when (e.phase) {
+            FfiPhase.BEGAN -> {
+                if (inst.containsBody(e.x, e.y) && inst.nearestEdge(e.x, e.y, band) == null) {
+                    instrumentPointer = e.id
+                    instrumentLastX = e.x
+                    instrumentLastY = e.y
+                    return true
+                }
+            }
+            FfiPhase.MOVED -> if (instrumentPointer == e.id) {
+                DraftingState.moveInstrument(e.x - instrumentLastX, e.y - instrumentLastY)
+                instrumentLastX = e.x
+                instrumentLastY = e.y
+                return true
+            }
+            FfiPhase.ENDED, FfiPhase.CANCELLED -> if (instrumentPointer == e.id) {
+                instrumentPointer = null
+                return true
+            }
+            else -> Unit
+        }
+        return false
     }
 
     /** (x, y) 附近的圓形筆畫（首尾相接、擬合殘差小）：回傳圓心與半徑。 */
@@ -502,6 +619,10 @@ class InkEngine(
                 }
                 continue
             }
+            if (handleInstrumentDrag(sample)) {
+                drawn++
+                continue
+            }
             val decision = arbiter.handle(sample.event)
 
             // 先處理收回：被收回的筆畫不該再因為後續事件而復活。
@@ -559,6 +680,7 @@ class InkEngine(
             FfiPhase.BEGAN -> {
                 inFlight[id] = mutableListOf(sample)
                 resetHold(sample.event.x, sample.event.y)
+                updateDraftPreview()
             }
             FfiPhase.MOVED -> {
                 // 沒有 BEGAN 就收到 MOVED（例如前一筆被收回後又有事件進來）
@@ -568,10 +690,12 @@ class InkEngine(
                     resetHold(sample.event.x, sample.event.y)
                 }
                 if (sample.event.y + 200f > PageGeometry.height) onReachedPageBottom?.invoke()
+                updateDraftPreview()
             }
             FfiPhase.ENDED -> {
                 val collected = inFlight.remove(id) ?: return null
                 collected.add(sample)
+                clearDraftPreview()
                 // 預覽已經亮著就一定要吸附（所見即所得），不再另外用時間戳判斷。
                 val previewed = snapPreview != null
                 endHold()
@@ -585,6 +709,7 @@ class InkEngine(
             FfiPhase.CANCELLED -> {
                 endHold()
                 inFlight.remove(id)
+                clearDraftPreview()
             }
             FfiPhase.HOVER, FfiPhase.HOVER_ENDED -> Unit
         }
@@ -653,6 +778,7 @@ class InkEngine(
         }
 
         val drafting = layer != 0 || lineType != 0
+        if (layer != 0 && !forceSnap) finalPoints = draftAdjust(finalPoints).first
         // 長按吸附：筆畫抬起前在終點停住一下，就釘成幾何圖形（見 `draftSnapStroke`）。
         var snappedKind: uniffi.padnote_core.FfiDraftSnapKind? = null
         val step = snapStepDeg

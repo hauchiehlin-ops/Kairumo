@@ -19,6 +19,9 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.input.pointer.pointerInteropFilter
@@ -174,13 +177,14 @@ fun InkCanvas(
             drawInkStroke(stroke.points, stroke.tool, stroke.baseWidth, strokeColor, density, stroke.lineType)
         }
         // 尚未抬筆的那一段也要即時畫出來，否則寫字時要等抬筆才看得到。
-        val snapped = engine.snapPreview
+        val snapped = engine.snapPreview ?: engine.draftPreview
         for (live in engine.liveSamples()) {
-            // 長按吸附的預覽：按住不動時直接畫出吸附後的圖形。
+            // 長按吸附的預覽：按住不動時直接畫出吸附後的圖形；製圖線則畫出靠邊／對齊之後的樣子。
             drawInkStroke(
                 snapped ?: InkInput.strokePoints(live), engine.tool, engine.baseWidth, inkColor, density,
                 engine.lineType)
         }
+        drawDraftingAids(engine, density, false)
 
         // 工具覆蓋層（標註預覽與已選的點）。
         @Suppress("UNUSED_EXPRESSION") engine.overlayStrokes
@@ -324,4 +328,59 @@ fun LowLatencyInkCanvas(
         },
         onRelease = { it.stop() }
     )
+}
+
+
+/** 45° 轉折點、尺規與對齊導引（與 Apple `ProInkLayerView.draw` 同一組圖）。 */
+private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawDraftingAids(
+    engine: InkEngine, density: Float, dark: Boolean
+) {
+    DraftingState.pivot(engine.pageKey)?.let { (px, py) ->
+        val c = Offset(px * density, py * density)
+        val blue = Color(0xFF007AFF)
+        drawLine(blue, Offset(c.x - 9f * density, c.y), Offset(c.x + 9f * density, c.y), strokeWidth = 1.2f * density)
+        drawLine(blue, Offset(c.x, c.y - 9f * density), Offset(c.x, c.y + 9f * density), strokeWidth = 1.2f * density)
+        drawCircle(blue, radius = 5f * density, center = c, style = androidx.compose.ui.graphics.drawscope.Stroke(1.2f * density))
+    }
+    DraftingState.instrument?.let { inst ->
+        val teal = Color(0xFF30B0C7)
+        val ink = if (dark) Color(0xEBFFFFFF) else Color(0xFF1F1F1F)
+        fun o(p: InkEngine.Offset2) = Offset(p.x * density, p.y * density)
+        for (ring in inst.pageOutline) {
+            if (ring.size < 3) continue
+            val path = androidx.compose.ui.graphics.Path().apply {
+                moveTo(o(ring[0]).x, o(ring[0]).y)
+                for (q in ring.drop(1)) lineTo(o(q).x, o(q).y)
+                close()
+            }
+            drawPath(path, teal.copy(alpha = 0.16f))
+            drawPath(path, teal.copy(alpha = 0.85f), style = androidx.compose.ui.graphics.drawscope.Stroke(1.4f * density))
+        }
+        for (tick in inst.geometry.ticks) {
+            drawLine(
+                ink.copy(alpha = 0.8f), o(inst.toPage(tick.a)), o(inst.toPage(tick.b)),
+                strokeWidth = (if (tick.weight.toInt() == 2) 1.1f else 0.7f) * density)
+            tick.label?.let { label ->
+                val at = o(inst.toPage(tick.labelAt))
+                drawContext.canvas.nativeCanvas.drawText(
+                    label, at.x, at.y + 3f * density,
+                    android.graphics.Paint().apply {
+                        color = ink.toArgb(); textSize = 9f * density; textAlign = android.graphics.Paint.Align.CENTER
+                        isAntiAlias = true
+                    })
+            }
+        }
+        for ((a, b) in inst.pageEdges) drawLine(teal, o(a), o(b), strokeWidth = 2f * density)
+    }
+    for (line in engine.alignGuides) {
+        if (line.size < 2) continue
+        val path = androidx.compose.ui.graphics.Path().apply {
+            moveTo(line[0].x * density, line[0].y * density)
+            for (q in line.drop(1)) lineTo(q.x * density, q.y * density)
+        }
+        drawPath(
+            path, Color(0xD9007AFF),
+            style = androidx.compose.ui.graphics.drawscope.Stroke(
+                1f * density, pathEffect = PathEffect.dashPathEffect(floatArrayOf(6f * density, 4f * density), 0f)))
+    }
 }

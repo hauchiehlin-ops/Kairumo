@@ -65,6 +65,16 @@ final class DraftingState: ObservableObject {
     }
     /// 工具現在在等什麼（已翻成使用者語言）。工具列顯示它，使用者才知道下一步點哪裡。
     @Published var toolHint: String?
+    /// 投影對齊：畫線的起點與終點對齊既有線的端點（長對正、高平齊），設了 45° 轉折點還會對齊寬度。
+    @Published var alignEnabled: Bool {
+        didSet { UserDefaults.standard.set(alignEnabled, forKey: Keys.align); changed() }
+    }
+    /// 第三角法（台灣、美國）。影響圖框裡的投影法符號與 45° 傳遞的方向。
+    @Published var thirdAngle: Bool {
+        didSet { UserDefaults.standard.set(thirdAngle, forKey: Keys.thirdAngle); changed() }
+    }
+    /// 頁面上目前的尺規（直尺、丁字尺、三角板、量角器）。沒有就是 `nil`。
+    private(set) var instrument: InstrumentModel?
     /// 目前的比例尺：實物 / 圖上（1:2 → 2、2:1 → 0.5）。尺寸標註的數字依它換算。
     /// 逐本記（同一台裝置上不同的筆記本可以是不同的比例），不同步 —— 數字在標註當下就畫成筆畫了。
     @Published private(set) var scaleRatios: [String: Double] = [:]
@@ -99,6 +109,9 @@ final class DraftingState: ObservableObject {
         static func hidden(_ nb: String) -> String { "kairumo.draft.hidden.\(nb.lowercased())" }
         static func locked(_ nb: String) -> String { "kairumo.draft.locked.\(nb.lowercased())" }
         static func scale(_ nb: String) -> String { "kairumo.draft.scale.\(nb.lowercased())" }
+        static let align = "kairumo.draft.align"
+        static let thirdAngle = "kairumo.draft.thirdAngle"
+        static func pivot(_ nb: String, _ page: Int) -> String { "kairumo.draft.pivot.\(nb.lowercased()).\(page)" }
     }
 
     private init() {
@@ -110,6 +123,50 @@ final class DraftingState: ObservableObject {
         angleStep = d.object(forKey: Keys.angle) as? Int ?? 15
         compactChoice = d.object(forKey: Keys.compact) as? Bool
         tipsSeen = d.bool(forKey: Keys.tipsSeen)
+        alignEnabled = d.object(forKey: Keys.align) as? Bool ?? true
+        thirdAngle = d.object(forKey: Keys.thirdAngle) as? Bool ?? true
+    }
+
+    // MARK: 45° 轉折點（逐頁，存本機）
+
+    /// 這一頁的 45° 轉折點。
+    func pivot(notebookId nb: String, page: Int) -> CGPoint? {
+        guard let text = UserDefaults.standard.string(forKey: Keys.pivot(nb, page)) else { return nil }
+        let parts = text.split(separator: ",").compactMap { Double($0) }
+        return parts.count == 2 ? CGPoint(x: parts[0], y: parts[1]) : nil
+    }
+
+    func setPivot(_ point: CGPoint?, notebookId nb: String, page: Int) {
+        if let point {
+            UserDefaults.standard.set("\(point.x),\(point.y)", forKey: Keys.pivot(nb, page))
+        } else {
+            UserDefaults.standard.removeObject(forKey: Keys.pivot(nb, page))
+        }
+        changed()
+    }
+
+    // MARK: 尺規
+
+    /// 把尺規放在 `center`（頁面座標）。同一種再放一次就是換位置。
+    func placeInstrument(kind: String, center: CGPoint, pageWidth: CGFloat) {
+        let size: Double = kind == "protractor" ? 70 : (kind.hasPrefix("set_square") ? 120 : 150)
+        instrument = InstrumentModel(kind: kind, sizeMm: size, pageWidth: pageWidth, center: center)
+        changed()
+    }
+
+    func removeInstrument() {
+        instrument = nil
+        changed()
+    }
+
+    func rotateInstrument(degrees: Double) {
+        instrument?.rotate(by: degrees)
+        changed()
+    }
+
+    func moveInstrument(by delta: CGSize) {
+        instrument?.move(by: delta)
+        changed()
     }
 
     // MARK: 目前的筆
@@ -252,11 +309,15 @@ enum DraftTool: String, CaseIterable {
     case none
     /// 尺寸標註。
     case dimLinear, dimDiameter, dimRadius, dimAngle
+    /// 圓規：點圓心，再在圓周上按住沿著圓拖出圓弧。
+    case compass
+    /// 設定 45° 轉折點（投影對齊的寬度傳遞用）。
+    case setPivot
 
     var isDimension: Bool {
         switch self {
         case .dimLinear, .dimDiameter, .dimRadius, .dimAngle: return true
-        case .none: return false
+        case .none, .compass, .setPivot: return false
         }
     }
 
@@ -268,6 +329,8 @@ enum DraftTool: String, CaseIterable {
         case .dimDiameter: return "draft_tool_dim_diameter"
         case .dimRadius: return "draft_tool_dim_radius"
         case .dimAngle: return "draft_tool_dim_angle"
+        case .compass: return "draft_tool_compass"
+        case .setPivot: return "draft_tool_set_pivot"
         }
     }
 
@@ -278,6 +341,8 @@ enum DraftTool: String, CaseIterable {
         case .dimDiameter: return "circle.dashed"
         case .dimRadius: return "circle.lefthalf.filled"
         case .dimAngle: return "angle"
+        case .compass: return "pencil.and.ruler"
+        case .setPivot: return "scope"
         }
     }
 }

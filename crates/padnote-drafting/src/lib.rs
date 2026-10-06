@@ -15,10 +15,12 @@
 //! 加上要放文字方塊的標籤（語系鍵，由平台翻成使用者的語言）。數字與符號都是筆畫字形，
 //! 不是文字方塊 —— 這樣它們會跟著圖層、橡皮擦與匯出一起走。
 
+pub mod align;
 pub mod dim;
 pub mod fastener;
 pub mod frame;
 pub mod gdt;
+pub mod instruments;
 pub mod symbols;
 
 pub use padnote_solid::geom::P2;

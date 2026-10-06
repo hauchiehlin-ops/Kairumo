@@ -4030,7 +4030,12 @@ public struct NotebookEditorView: View {
                         DraftToolController.shared.refreshHint()
                     },
                     onInsertSymbol: { insertDraftKit($0) },
-                    onInsertFrame: { insertDraftFrame(thirdAngle: $0) })
+                    onInsertFrame: { insertDraftFrame(thirdAngle: $0) },
+                    onPlaceInstrument: { kind in
+                        selectedTool = .drafting
+                        let center = draftViewportCenter()
+                        DraftingState.shared.placeInstrument(kind: kind, center: center, pageWidth: PageGeometry.size.width)
+                    })
             }
             .sheet(isPresented: $showSolidStudio) {
                 SolidStudioSheet(
@@ -9827,6 +9832,14 @@ public struct NotebookEditorView: View {
         let ids = Set(made.map(\.id))
         let box = made.map(\.bounds).reduce(CGRect.null) { $0.union($1) }
         DispatchQueue.main.async { lasso.select(proStrokeIds: ids, around: box) }
+    }
+
+    /// 目前視野的正中央（頁面座標）。
+    private func draftViewportCenter() -> CGPoint {
+        guard let canvas = canvasView as? AdaptiveCanvasView, let layer = canvas.proLayer else {
+            return CGPoint(x: PageGeometry.size.width / 2, y: PageGeometry.size.height / 2)
+        }
+        return layer.convert(CGPoint(x: canvas.bounds.midX, y: canvas.bounds.midY), from: canvas)
     }
 
     /// 這一頁的紙張規格有沒有標準圖框（A4／A3／A2，直式或橫式）。

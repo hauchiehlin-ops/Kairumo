@@ -18,9 +18,13 @@ enum class DraftTool(val nameKey: String) {
     DIM_LINEAR("draft_tool_dim_linear"),
     DIM_DIAMETER("draft_tool_dim_diameter"),
     DIM_RADIUS("draft_tool_dim_radius"),
-    DIM_ANGLE("draft_tool_dim_angle");
+    DIM_ANGLE("draft_tool_dim_angle"),
+    /** 圓規：點圓心，再在圓周上按住沿著圓拖出圓弧。 */
+    COMPASS("draft_tool_compass"),
+    /** 設定 45° 轉折點（投影對齊的寬度傳遞用）。 */
+    SET_PIVOT("draft_tool_set_pivot");
 
-    val isDimension: Boolean get() = this != NONE
+    val isDimension: Boolean get() = this == DIM_LINEAR || this == DIM_DIAMETER || this == DIM_RADIUS || this == DIM_ANGLE
 }
 
 /**
@@ -110,6 +114,67 @@ object DraftingState {
         uniffi.padnote_core.draftScales().firstOrNull { kotlin.math.abs(it.ratio.toDouble() - scaleRatio) < 1e-4 }?.label
             ?: "1:$scaleRatio"
 
+    /** 投影對齊：畫線的起點與終點對齊既有線的端點（長對正、高平齊），設了 45° 轉折點還會對齊寬度。 */
+    var alignEnabled by mutableStateOf(true)
+        private set
+
+    /** 第三角法（台灣、美國）。影響圖框裡的投影法符號與 45° 傳遞的方向。 */
+    var thirdAngle by mutableStateOf(true)
+        private set
+
+    fun changeAlign(on: Boolean) {
+        alignEnabled = on
+        prefs?.edit()?.putBoolean("align", on)?.apply()
+        version++
+    }
+
+    fun changeThirdAngle(on: Boolean) {
+        thirdAngle = on
+        prefs?.edit()?.putBoolean("thirdAngle", on)?.apply()
+        version++
+    }
+
+    /** 這一頁的 45° 轉折點（逐頁，存本機）。 */
+    fun pivot(pageKey: String): Pair<Float, Float>? {
+        val text = prefs?.getString("pivot.$notebookKey.$pageKey", null) ?: return null
+        val parts = text.split(",").mapNotNull { it.toFloatOrNull() }
+        return if (parts.size == 2) parts[0] to parts[1] else null
+    }
+
+    fun setPivot(pageKey: String, point: Pair<Float, Float>?) {
+        prefs?.edit()?.apply {
+            if (point != null) putString("pivot.$notebookKey.$pageKey", "${point.first},${point.second}")
+            else remove("pivot.$notebookKey.$pageKey")
+        }?.apply()
+        version++
+    }
+
+    /** 頁面上目前的尺規。沒有就是 null。 */
+    var instrument: InstrumentModel? = null
+        private set
+
+    /** 把尺規放在 (cx, cy)（頁面座標）。 */
+    fun placeInstrument(kind: String, cx: Float, cy: Float, pageWidth: Float) {
+        val size = if (kind == "protractor") 70.0 else if (kind.startsWith("set_square")) 120.0 else 150.0
+        instrument = InstrumentModel.create(kind, size, pageWidth, cx, cy)
+        version++
+    }
+
+    fun removeInstrument() {
+        instrument = null
+        version++
+    }
+
+    fun rotateInstrument(degrees: Double) {
+        instrument?.rotate(degrees)
+        version++
+    }
+
+    fun moveInstrument(dx: Float, dy: Float) {
+        instrument?.move(dx, dy)
+        version++
+    }
+
     /** 面板收合：-1 = 還沒選過（由螢幕寬度決定，手機預設收合）、0 = 展開、1 = 收合。 */
     var compactChoice by mutableIntStateOf(-1)
         private set
@@ -146,6 +211,8 @@ object DraftingState {
         angleStep = p.getInt("angle", 15)
         compactChoice = p.getInt("compact", -1)
         tipsSeen = p.getBoolean("tipsSeen", false)
+        alignEnabled = p.getBoolean("align", true)
+        thirdAngle = p.getBoolean("thirdAngle", true)
     }
 
     /** 換筆記本：讀它自己的顯示／鎖定。 */

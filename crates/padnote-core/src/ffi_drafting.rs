@@ -4,8 +4,10 @@
 //! 標籤（`FfiExampleText`，語系鍵）。平台用現有的「插入圖紙」流程落地 —— 放在視野中央、自動套索選住、
 //! 一次復原。幾何與數字都在核心算，兩個平台畫出來完全相同。
 
+use padnote_drafting::align;
 use padnote_drafting::dim::{self, DimStyle, LinearAxis};
 use padnote_drafting::frame::{self, FrameOptions};
+use padnote_drafting::instruments::{self, InstrumentKind};
 use padnote_drafting::symbols::{self, SymbolParams};
 use padnote_drafting::{Drawing, UNITS_PER_MM};
 
@@ -286,6 +288,194 @@ pub fn draft_sheet_frame(
     (!d.strokes.is_empty()).then(|| kit_from(&d))
 }
 
+// MARK: - 投影對齊
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, uniffi::Enum)]
+pub enum FfiAlignGuideKind {
+    /// 長對正（垂直線）。
+    Vertical,
+    /// 高平齊（水平線）。
+    Horizontal,
+    /// 寬相等：經 45° 轉折線傳遞。
+    Transfer,
+}
+
+#[derive(Clone, Debug, uniffi::Record)]
+pub struct FfiAlignGuide {
+    pub kind: FfiAlignGuideKind,
+    pub points: Vec<FfiPoint>,
+}
+
+#[derive(Clone, Debug, uniffi::Record)]
+pub struct FfiAlignResult {
+    /// 吸附之後的位置（沒吸到就是原來的游標）。
+    pub point: FfiPoint,
+    pub guides: Vec<FfiAlignGuide>,
+}
+
+/// 投影對齊：游標附近有沒有哪個既有點讓 x 或 y 對齊（含經 45° 轉折點傳遞）。
+/// 找到就回吸附位置與要畫的對齊線。
+#[uniffi::export]
+pub fn draft_align(
+    cursor: FfiPoint,
+    anchors: Vec<FfiPoint>,
+    pivot: Option<FfiPoint>,
+    third_angle: bool,
+    tolerance: f32,
+) -> FfiAlignResult {
+    let pts: Vec<(f32, f32)> = anchors.iter().map(|a| (a.x, a.y)).collect();
+    let r = align::align(
+        p(cursor),
+        &pts,
+        pivot.map(p),
+        third_angle,
+        tolerance.max(0.0),
+    );
+    FfiAlignResult {
+        point: FfiPoint {
+            x: r.point.0,
+            y: r.point.1,
+        },
+        guides: r
+            .guides
+            .into_iter()
+            .map(|g| FfiAlignGuide {
+                kind: match g.kind {
+                    align::GuideKind::Vertical => FfiAlignGuideKind::Vertical,
+                    align::GuideKind::Horizontal => FfiAlignGuideKind::Horizontal,
+                    align::GuideKind::Transfer => FfiAlignGuideKind::Transfer,
+                },
+                points: g
+                    .points
+                    .into_iter()
+                    .map(|q| FfiPoint { x: q.0, y: q.1 })
+                    .collect(),
+            })
+            .collect(),
+    }
+}
+
+// MARK: - 虛擬尺規
+
+#[derive(Clone, Copy, Debug, uniffi::Record)]
+pub struct FfiSegment {
+    pub a: FfiPoint,
+    pub b: FfiPoint,
+}
+
+#[derive(Clone, Debug, uniffi::Record)]
+pub struct FfiTick {
+    pub a: FfiPoint,
+    pub b: FfiPoint,
+    /// 0 = 一般、1 = 中、2 = 長（附數字）。
+    pub weight: u8,
+    pub label: Option<String>,
+    pub label_at: FfiPoint,
+}
+
+#[derive(Clone, Debug, uniffi::Record)]
+pub struct FfiInstrumentGeometry {
+    pub outline: Vec<Vec<FfiPoint>>,
+    pub ticks: Vec<FfiTick>,
+    /// 靠著畫線的邊。
+    pub edges: Vec<FfiSegment>,
+    /// 只能沿垂直方向移動（丁字尺）。
+    pub vertical_only: bool,
+    pub width: f32,
+    pub height: f32,
+}
+
+#[derive(Clone, Copy, Debug, uniffi::Record)]
+pub struct FfiEdgeSnap {
+    pub edge_index: u32,
+    pub point: FfiPoint,
+}
+
+fn fp(q: (f32, f32)) -> FfiPoint {
+    FfiPoint { x: q.0, y: q.1 }
+}
+
+/// 尺規的識別字（直尺、丁字尺、兩種三角板、量角器）。語系鍵是 `draft_inst_<id>`。
+#[uniffi::export]
+pub fn draft_instrument_kinds() -> Vec<String> {
+    instruments::KINDS
+        .iter()
+        .map(|k| k.id().to_string())
+        .collect()
+}
+
+/// 尺規的幾何（真實毫米換成頁面單位）。`page_width` 給丁字尺貼滿頁寬用。認不得回 `None`。
+#[uniffi::export]
+pub fn draft_instrument_geometry(
+    kind: String,
+    size_mm: f32,
+    page_width: f32,
+) -> Option<FfiInstrumentGeometry> {
+    let g = instruments::geometry(InstrumentKind::from_id(&kind)?, size_mm, page_width);
+    Some(FfiInstrumentGeometry {
+        outline: g
+            .outline
+            .iter()
+            .map(|ring| ring.iter().map(|q| fp(*q)).collect())
+            .collect(),
+        ticks: g
+            .ticks
+            .iter()
+            .map(|t| FfiTick {
+                a: fp(t.a),
+                b: fp(t.b),
+                weight: t.weight,
+                label: t.label.clone(),
+                label_at: fp(t.label_at),
+            })
+            .collect(),
+        edges: g
+            .edges
+            .iter()
+            .map(|(a, b)| FfiSegment {
+                a: fp(*a),
+                b: fp(*b),
+            })
+            .collect(),
+        vertical_only: g.vertical_only,
+        width: g.width,
+        height: g.height,
+    })
+}
+
+/// 點離哪一條邊最近（`band` 之內）：回邊的索引與投影點。
+#[uniffi::export]
+pub fn draft_snap_to_edges(
+    point: FfiPoint,
+    edges: Vec<FfiSegment>,
+    band: f32,
+) -> Option<FfiEdgeSnap> {
+    let segs: Vec<((f32, f32), (f32, f32))> = edges.iter().map(|e| (p(e.a), p(e.b))).collect();
+    instruments::snap_to_edges(p(point), &segs, band).map(|(i, q)| FfiEdgeSnap {
+        edge_index: i as u32,
+        point: fp(q),
+    })
+}
+
+/// 把點投影到線段上（夾在兩端之內）。
+#[uniffi::export]
+pub fn draft_project_to_segment(point: FfiPoint, segment: FfiSegment) -> FfiPoint {
+    fp(instruments::project_to_segment(
+        p(point),
+        p(segment.a),
+        p(segment.b),
+    ))
+}
+
+/// 圓規的圓弧：圓心、半徑，從 `start` 弧度掃過 `sweep` 弧度（可為負）。
+#[uniffi::export]
+pub fn draft_arc(center: FfiPoint, radius: f32, start: f32, sweep: f32) -> Vec<FfiPoint> {
+    instruments::arc_points(p(center), radius, start, sweep)
+        .into_iter()
+        .map(fp)
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -422,5 +612,60 @@ mod tests {
         assert!(s.iter().any(|x| x.ratio > 1.0));
         assert!(s.iter().any(|x| x.ratio < 1.0));
         assert!(s.iter().all(|x| x.ratio > 0.0));
+    }
+
+    #[test]
+    fn alignment_comes_back_through_the_ffi() {
+        let r = draft_align(pt(203.0, 400.0), vec![pt(200.0, 100.0)], None, true, 8.0);
+        assert_eq!((r.point.x, r.point.y), (200.0, 400.0));
+        assert_eq!(r.guides.len(), 1);
+        assert_eq!(r.guides[0].kind, FfiAlignGuideKind::Vertical);
+        // 傳遞：轉折點 (400,500)，來源在上方 120 → x = 520。
+        let t = draft_align(
+            pt(518.0, 700.0),
+            vec![pt(300.0, 380.0)],
+            Some(pt(400.0, 500.0)),
+            true,
+            8.0,
+        );
+        assert_eq!(t.point.x, 520.0);
+        assert!(
+            t.guides
+                .iter()
+                .any(|g| g.kind == FfiAlignGuideKind::Transfer)
+        );
+    }
+
+    #[test]
+    fn every_instrument_has_geometry_and_edges_to_draw_against() {
+        for id in draft_instrument_kinds() {
+            let g = draft_instrument_geometry(id.clone(), 150.0, 800.0)
+                .unwrap_or_else(|| panic!("{id}"));
+            assert!(!g.outline.is_empty() && !g.edges.is_empty(), "{id}");
+            assert!(g.width > 0.0 && g.height > 0.0, "{id}");
+        }
+        assert!(draft_instrument_geometry("nope".into(), 100.0, 800.0).is_none());
+        let t = draft_instrument_geometry("t_square".into(), 100.0, 800.0).unwrap();
+        assert!(t.vertical_only);
+        // 直尺的刻度有數字。
+        let r = draft_instrument_geometry("ruler".into(), 100.0, 800.0).unwrap();
+        assert!(r.ticks.iter().any(|t| t.label.as_deref() == Some("10")));
+    }
+
+    #[test]
+    fn edge_snapping_and_the_compass_arc_work_through_the_ffi() {
+        let seg = FfiSegment {
+            a: pt(0.0, 100.0),
+            b: pt(200.0, 100.0),
+        };
+        let hit = draft_snap_to_edges(pt(80.0, 104.0), vec![seg], 10.0).unwrap();
+        assert_eq!(hit.edge_index, 0);
+        assert_eq!((hit.point.x, hit.point.y), (80.0, 100.0));
+        assert!(draft_snap_to_edges(pt(80.0, 140.0), vec![seg], 10.0).is_none());
+        let q = draft_project_to_segment(pt(260.0, 90.0), seg);
+        assert_eq!((q.x, q.y), (200.0, 100.0));
+        let arc = draft_arc(pt(300.0, 300.0), 50.0, 0.0, std::f32::consts::PI);
+        assert!(arc.len() > 80);
+        assert!(draft_arc(pt(0.0, 0.0), 0.0, 0.0, 1.0).is_empty());
     }
 }

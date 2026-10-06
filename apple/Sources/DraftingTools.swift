@@ -28,6 +28,8 @@ final class DraftToolController {
         case .dimLinear: key = ["draft_hint_dim_first", "draft_hint_dim_second", "draft_hint_dim_place"][min(n, 2)]
         case .dimDiameter, .dimRadius: key = fitted != nil || n >= 1 ? "draft_hint_dim_edge" : "draft_hint_dim_center"
         case .dimAngle: key = ["draft_hint_angle_vertex", "draft_hint_angle_ray1", "draft_hint_angle_ray2", "draft_hint_angle_arc"][min(n, 3)]
+        case .compass: key = n == 0 ? "draft_hint_compass_center" : "draft_hint_compass_arc"
+        case .setPivot: key = "draft_hint_pivot"
         }
         drafting.toolHint = key.map(l)
     }
@@ -45,7 +47,7 @@ final class DraftToolController {
 
     func handle(_ phase: ProStrokeGestureRecognizer.ToolPhase, _ raw: CGPoint, layer: ProInkLayerView) {
         let tool = drafting.tool
-        guard tool.isDimension else { return }
+        guard tool != .none else { return }
         if lastTool != tool {
             lastTool = tool
             reset(layer: layer)
@@ -62,6 +64,8 @@ final class DraftToolController {
         case .dimLinear: linear(phase, raw, snapped, layer)
         case .dimDiameter, .dimRadius: circular(tool, phase, raw, radius, layer)
         case .dimAngle: angular(phase, raw, snapped, layer)
+        case .compass: compass(phase, raw, snapped, layer)
+        case .setPivot: pivot(phase, snapped, layer)
         case .none: break
         }
     }
@@ -158,6 +162,84 @@ final class DraftToolController {
         }
     }
 
+    // MARK: 45° 轉折點
+
+    private func pivot(_ phase: ProStrokeGestureRecognizer.ToolPhase, _ snapped: CGPoint, _ layer: ProInkLayerView) {
+        guard phase == .ended else { return }
+        drafting.setPivot(snapped, notebookId: layer.notebookId, page: layer.pageIndex)
+        drafting.tool = .none
+        drafting.toolHint = nil
+        tick()
+    }
+
+    // MARK: 圓規
+
+    private var compassStart: CGFloat = 0
+    private var compassSweep: CGFloat = 0
+    private var compassLast: CGFloat = 0
+    private var compassRadius: CGFloat = 0
+
+    private func compass(_ phase: ProStrokeGestureRecognizer.ToolPhase, _ raw: CGPoint, _ snapped: CGPoint, _ layer: ProInkLayerView) {
+        if picks.isEmpty {
+            guard phase == .ended else { return }
+            picks = [snapped]
+            layer.setOverlay(strokes: [], marks: picks)
+            tick()
+            updateHint()
+            return
+        }
+        let c = picks[0]
+        let angle = atan2(raw.y - c.y, raw.x - c.x)
+        switch phase {
+        case .began:
+            compassRadius = hypot(raw.x - c.x, raw.y - c.y)
+            compassStart = angle
+            compassLast = angle
+            compassSweep = 0
+            dragging = true
+            previewArc(layer)
+        case .moved:
+            guard dragging else { return }
+            // 逐步累計角度變化（跨過 ±π 要接回去），才能轉超過半圈、也能反方向。
+            var d = angle - compassLast
+            if d > .pi { d -= 2 * .pi } else if d < -.pi { d += 2 * .pi }
+            compassSweep = max(-2 * .pi, min(2 * .pi, compassSweep + d))
+            compassLast = angle
+            previewArc(layer)
+        case .ended:
+            guard dragging, compassRadius > 2, abs(compassSweep) > 0.02 else { reset(layer: layer); return }
+            commitArc(layer)
+        case .cancelled:
+            break
+        }
+    }
+
+    private func arcStroke() -> FfiSheetStroke {
+        let pts = draftArc(center: ffi(picks[0]), radius: Float(compassRadius), start: Float(compassStart), sweep: Float(compassSweep))
+        return FfiSheetStroke(points: pts, layer: drafting.activeLayerId, lineType: drafting.activeLineType,
+                              width: drafting.activePen.width, colorHex: drafting.activePen.colorHex)
+    }
+
+    private func previewArc(_ layer: ProInkLayerView) {
+        let radial = FfiSheetStroke(
+            points: [ffi(picks[0]), FfiPoint(x: Float(picks[0].x + cos(compassStart + compassSweep) * compassRadius),
+                                             y: Float(picks[0].y + sin(compassStart + compassSweep) * compassRadius))],
+            layer: 2, lineType: 4, width: 0.6, colorHex: "#1E78FF")
+        layer.setOverlay(strokes: [arcStroke(), radial], marks: picks)
+    }
+
+    private func commitArc(_ layer: ProInkLayerView) {
+        defer { reset(layer: layer) }
+        let stroke = arcStroke()
+        if drafting.isLocked(layer: stroke.layer, notebookId: layer.notebookId) {
+            UINotificationFeedbackGenerator().notificationOccurred(.warning)
+            return
+        }
+        drafting.ensureVisible(layer: stroke.layer, notebookId: layer.notebookId)
+        layer.insertDrafted([stroke], origin: .zero)
+        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+    }
+
     // MARK: 共用
 
     private func ratio(_ layer: ProInkLayerView) -> Double {
@@ -198,6 +280,7 @@ struct DraftingToolbox: View {
     var onPickTool: (DraftTool) -> Void
     var onInsertSymbol: (FfiDraftKit) -> Void
     var onInsertFrame: (_ thirdAngle: Bool) -> Void
+    var onPlaceInstrument: (String) -> Void
 
     @ObservedObject private var state = DraftingState.shared
     @ObservedObject private var localizationManager = LocalizationManager.shared
@@ -257,6 +340,32 @@ struct DraftingToolbox: View {
                     .accessibilityIdentifier("draft.frame.insert")
                     Text(t(frameSupported ? "draft_frame_footer" : "draft_frame_unsupported"))
                         .font(.footnote).foregroundColor(.secondary)
+                }
+                Section(t("draft_toolbox_aids")) {
+                    Toggle(t("draft_align"), isOn: $state.alignEnabled)
+                        .accessibilityIdentifier("draft.align")
+                    Toggle(t("draft_frame_third_angle"), isOn: $state.thirdAngle)
+                        .accessibilityIdentifier("draft.projection")
+                    ForEach([DraftTool.setPivot, .compass], id: \.self) { tool in
+                        Button {
+                            onPickTool(tool)
+                            dismiss()
+                        } label: {
+                            Label(t(tool.nameKey), systemImage: tool.symbol)
+                        }
+                        .accessibilityIdentifier("draft.tool.\(tool.rawValue)")
+                    }
+                    ForEach(draftInstrumentKinds(), id: \.self) { kind in
+                        Button {
+                            onPlaceInstrument(kind)
+                            dismiss()
+                        } label: {
+                            Label(t("draft_inst_\(kind)"), systemImage: "ruler")
+                        }
+                        .accessibilityIdentifier("draft.inst.\(kind)")
+                    }
+                    Text(t("draft_align_footer")).font(.footnote).foregroundColor(.secondary)
+                    Text(t("draft_inst_footer")).font(.footnote).foregroundColor(.secondary)
                 }
             }
             .navigationTitle(t("draft_tools"))

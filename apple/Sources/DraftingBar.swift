@@ -51,6 +51,27 @@ struct DraftingBar: View {
     }
 
     /// 圖學工具在等什麼（浮在製圖列下緣，不撐開列的高度）。
+    /// 尺規的控制：左右轉 15°／1°、收起。丁字尺不能轉。
+    @ViewBuilder private var instrumentControls: some View {
+        let l = localizationManager.localized
+        HStack(spacing: 4) {
+            if state.instrument?.verticalOnly == false {
+                Button { state.rotateInstrument(degrees: -15) } label: { Image(systemName: "rotate.left") }
+                    .accessibilityLabel(l("draft_inst_rotate_left")).accessibilityIdentifier("draft.inst.rotl")
+                Button { state.rotateInstrument(degrees: -1) } label: { Image(systemName: "minus") }
+                    .accessibilityLabel(l("draft_inst_rotate_left_fine")).accessibilityIdentifier("draft.inst.rotl1")
+                Button { state.rotateInstrument(degrees: 1) } label: { Image(systemName: "plus") }
+                    .accessibilityLabel(l("draft_inst_rotate_right_fine")).accessibilityIdentifier("draft.inst.rotr1")
+                Button { state.rotateInstrument(degrees: 15) } label: { Image(systemName: "rotate.right") }
+                    .accessibilityLabel(l("draft_inst_rotate_right")).accessibilityIdentifier("draft.inst.rotr")
+            }
+            Button { state.removeInstrument() } label: { Image(systemName: "xmark.circle") }
+                .accessibilityLabel(l("draft_inst_remove")).accessibilityIdentifier("draft.inst.remove")
+        }
+        .buttonStyle(.bordered)
+        .controlSize(.small)
+    }
+
     @ViewBuilder private var toolHint: some View {
         if let hint = state.toolHint, state.tool != .none {
             Text(hint)
@@ -273,6 +294,11 @@ struct DraftingBar: View {
                     .buttonStyle(.borderedProminent)
                     .accessibilityLabel(localizationManager.localized("draft_tool_close"))
                     .accessibilityIdentifier("draft.tool.close")
+                }
+
+                // 尺規在頁面上時：轉角與收起。
+                if state.instrument != nil {
+                    instrumentControls
                 }
 
                 // 立體輔助：草圖拉伸、三視圖、等角圖、剖面。

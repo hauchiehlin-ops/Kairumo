@@ -245,4 +245,202 @@ class DraftingToolsTest {
         val bottom = pts.maxOf { it.y } + corner[1]
         assertTrue(left >= -0.01f && bottom <= 1132.01f)
     }
+
+    // ── 第三階段：對齊、尺規、圓規、轉折點 ──
+
+    /** 在 (x0,y0) 落筆、拖到 (x1,y1) 的一筆製圖線（頂層）。回傳畫完之後的最後一筆。 */
+    private fun drawLine(engine: InkEngine, x0: Float, y0: Float, x1: Float, y1: Float) {
+        engine.layer = 3
+        drag(engine, x0 to y0, x1 to y1)
+    }
+
+    @Test
+    fun theEndOfALineAlignsWithAnExistingPointAndShowsAGuide() {
+        DraftingState.changeAlign(true)
+        val engine = InkEngine()
+        drawLine(engine, 200f, 100f, 200f, 150f)       // 既有的線：端點 (200,100)
+        val before = engine.strokes.size
+        // 新的一筆終點 x 偏了 3，應該被吸到 x = 200，且放手之前有虛線導引。
+        engine.layer = 3
+        engine.onMotionEvent(touch(MotionEvent.ACTION_DOWN, 100f, 400f, clock), 1f)
+        clock += 15
+        engine.onMotionEvent(touch(MotionEvent.ACTION_MOVE, 150f, 400f, clock), 1f)
+        clock += 15
+        engine.onMotionEvent(touch(MotionEvent.ACTION_MOVE, 203f, 400f, clock), 1f)
+        assertTrue("對齊時要有導引線", engine.alignGuides.isNotEmpty())
+        clock += 15
+        engine.onMotionEvent(touch(MotionEvent.ACTION_UP, 203f, 400f, clock), 1f)
+        assertEquals(before + 1, engine.strokes.size)
+        assertEquals(200f, engine.strokes.last().points.last().x, 0.01f)
+        assertTrue("放手後導引線清掉", engine.alignGuides.isEmpty())
+    }
+
+    @Test
+    fun alignmentCanBeTurnedOff() {
+        DraftingState.changeAlign(false)
+        try {
+            val engine = InkEngine()
+            drawLine(engine, 200f, 100f, 200f, 150f)
+            drawLine(engine, 100f, 400f, 203f, 400f)
+            assertEquals(203f, engine.strokes.last().points.last().x, 0.01f)
+        } finally {
+            DraftingState.changeAlign(true)
+        }
+    }
+
+    @Test
+    fun aLineStartedAgainstTheRulerFollowsItsEdge() {
+        DraftingState.changeAlign(false)
+        try {
+            DraftingState.placeInstrument("ruler", 300f, 300f, 800f)
+            val inst = DraftingState.instrument!!
+            val (a, b) = inst.pageEdges.first()
+            val engine = InkEngine()
+            // 沿著邊起筆、終點偏離邊 20：整筆被拉回邊上。
+            val sx = (a.x + b.x) / 2
+            val sy = (a.y + b.y) / 2
+            val nx = -(b.y - a.y)
+            val ny = b.x - a.x
+            val nl = kotlin.math.hypot(nx, ny)
+            drawLine(engine, sx, sy + 2f, sx + 60f, sy + 20f)
+            val pts = engine.strokes.last().points
+            // 所有點都在邊所在的直線上（距離 < 0.5）。
+            for (p in pts) {
+                val d = kotlin.math.abs((p.x - a.x) * nx / nl + (p.y - a.y) * ny / nl)
+                assertTrue("點離尺邊 $d", d < 0.5f)
+            }
+        } finally {
+            DraftingState.removeInstrument()
+            DraftingState.changeAlign(true)
+        }
+    }
+
+    @Test
+    fun draggingTheRulerBodyMovesItInsteadOfDrawing() {
+        DraftingState.placeInstrument("ruler", 300f, 300f, 800f)
+        try {
+            val inst = DraftingState.instrument!!
+            val engine = InkEngine()
+            engine.layer = 3
+            val startX = inst.originX
+            val startY = inst.originY
+            // 尺身正中央（離每條邊都遠）。
+            val cx = inst.originX + inst.geometry.width / 2
+            val cy = inst.originY + inst.geometry.height / 2
+            drag(engine, cx to cy, (cx + 40f) to (cy + 25f))
+            assertEquals("搬尺不留筆畫", 0, engine.strokes.size)
+            assertEquals(startX + 40f, DraftingState.instrument!!.originX, 1f)
+            assertEquals(startY + 25f, DraftingState.instrument!!.originY, 1f)
+        } finally {
+            DraftingState.removeInstrument()
+        }
+    }
+
+    @Test
+    fun theTSquareOnlySlidesVerticallyAndCannotRotate() {
+        DraftingState.placeInstrument("t_square", 400f, 300f, 800f)
+        try {
+            val inst = DraftingState.instrument!!
+            assertTrue(inst.verticalOnly)
+            val x0 = inst.originX
+            DraftingState.moveInstrument(50f, 30f)
+            DraftingState.rotateInstrument(15.0)
+            assertEquals("丁字尺不能橫向移動", x0, DraftingState.instrument!!.originX, 0.001f)
+            assertEquals("丁字尺不能轉", 0.0, DraftingState.instrument!!.angleDegrees, 0.001)
+        } finally {
+            DraftingState.removeInstrument()
+        }
+    }
+
+    @Test
+    fun rotatingTheRulerTurnsItsEdges() {
+        DraftingState.placeInstrument("ruler", 300f, 300f, 800f)
+        try {
+            val before = DraftingState.instrument!!.pageEdges.first()
+            DraftingState.rotateInstrument(90.0)
+            val after = DraftingState.instrument!!.pageEdges.first()
+            val len0 = kotlin.math.hypot(before.second.x - before.first.x, before.second.y - before.first.y)
+            val len1 = kotlin.math.hypot(after.second.x - after.first.x, after.second.y - after.first.y)
+            assertEquals("轉動不改變長度", len0, len1, 0.01f)
+            // 水平邊轉 90° 變垂直邊。
+            assertEquals(0f, after.second.x - after.first.x, 0.05f)
+        } finally {
+            DraftingState.removeInstrument()
+        }
+    }
+
+    @Test
+    fun theCompassDrawsAnArcOfTheDraggedRadiusAndUndoes() {
+        val engine = toolEngine(DraftTool.COMPASS)
+        assertNotNull(DraftingState.toolHint)
+        tap(engine, 300f, 300f)                              // 圓心
+        drag(engine, 400f to 300f, 300f to 400f)             // 半徑 100，掃四分之一圈
+        assertEquals("一條圓弧", 1, engine.strokes.size)
+        val pts = engine.strokes.first().points
+        for (p in pts) {
+            val r = kotlin.math.hypot(p.x - 300f, p.y - 300f)
+            assertEquals("弧上的點離圓心 $r", 100f, r, 1.5f)
+        }
+        assertTrue(engine.overlayStrokes.isEmpty())
+        assertTrue(engine.undo())
+        assertEquals(0, engine.strokes.size)
+    }
+
+    @Test
+    fun theCompassCanGoPastAHalfTurn() {
+        val engine = toolEngine(DraftTool.COMPASS)
+        tap(engine, 300f, 300f)
+        engine.onMotionEvent(touch(MotionEvent.ACTION_DOWN, 400f, 300f, clock), 1f)
+        // 繞一整圈再多一點：逐步累計角度，不是只看起訖。
+        for (i in 1..36) {
+            clock += 10
+            val a = i * Math.toRadians(10.0)
+            engine.onMotionEvent(
+                touch(MotionEvent.ACTION_MOVE, (300 + 100 * Math.cos(a)).toFloat(), (300 + 100 * Math.sin(a)).toFloat(), clock), 1f)
+        }
+        clock += 10
+        engine.onMotionEvent(touch(MotionEvent.ACTION_UP, 400f, 300f, clock), 1f)
+        assertEquals(1, engine.strokes.size)
+        val pts = engine.strokes.first().points
+        val first = pts.first()
+        val last = pts.last()
+        assertTrue("轉滿一圈首尾相接", kotlin.math.hypot(first.x - last.x, first.y - last.y) < 4f)
+        assertTrue("圓周上的點很多：${pts.size}", pts.size > 60)
+    }
+
+    @Test
+    fun thePivotToolStoresAPointPerPageAndReturnsToDrawing() {
+        val engine = toolEngine(DraftTool.SET_PIVOT)
+        tap(engine, 410f, 520f)
+        val p = DraftingState.pivot(engine.pageKey)
+        assertNotNull(p)
+        assertEquals(410f, p!!.first, 0.01f)
+        assertEquals(520f, p.second, 0.01f)
+        assertEquals("設完就回到畫線", DraftTool.NONE, DraftingState.tool)
+        DraftingState.setPivot(engine.pageKey, null)
+        assertNull(DraftingState.pivot(engine.pageKey))
+    }
+
+    @Test
+    fun theThirdAngleTransferAlignsWidthThroughThe45DegreePivot() {
+        // 轉折點 (400,500)；右側視圖要對齊上方視圖的 (300,380)：x = 400 + (500 - 380) = 520。
+        val engine = InkEngine()
+        DraftingState.changeAlign(true)
+        DraftingState.changeThirdAngle(true)
+        DraftingState.setPivot(engine.pageKey, 400f to 500f)
+        try {
+            drawLine(engine, 300f, 380f, 340f, 380f)
+            engine.layer = 3
+            engine.onMotionEvent(touch(MotionEvent.ACTION_DOWN, 480f, 700f, clock), 1f)
+            clock += 15
+            engine.onMotionEvent(touch(MotionEvent.ACTION_MOVE, 500f, 700f, clock), 1f)
+            clock += 15
+            engine.onMotionEvent(touch(MotionEvent.ACTION_MOVE, 518f, 700f, clock), 1f)
+            clock += 15
+            engine.onMotionEvent(touch(MotionEvent.ACTION_UP, 518f, 700f, clock), 1f)
+            assertEquals("寬度經 45° 傳遞到 x=520", 520f, engine.strokes.last().points.last().x, 0.01f)
+        } finally {
+            DraftingState.setPivot(engine.pageKey, null)
+        }
+    }
 }

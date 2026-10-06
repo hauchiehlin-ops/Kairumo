@@ -339,6 +339,11 @@ final class ProInkLayerView: UIView {
     private var overlayStrokes: [ProStroke] = []
     private var overlayMarks: [CGPoint] = []
 
+    /// 製圖：正在畫的線對齊了哪些既有點（虛線導引）、是否靠著尺的邊、尾端是否被對齊吸附過。
+    private var alignGuides: [[CGPoint]] = []
+    private var edgeLock: (a: CGPoint, b: CGPoint)?
+    private var tailSnapped = false
+
     /// 畫完一筆、擦掉、復原時通知外面（存檔之外的事，例如更新「有未同步的修改」）。
     var onChanged: (() -> Void)?
     var undoManagerProvider: (() -> UndoManager?)?
@@ -434,6 +439,32 @@ final class ProInkLayerView: UIView {
             ctx.setFillColor(UIColor.systemOrange.withAlphaComponent(0.35).cgColor)
             ctx.fillEllipse(in: dot.insetBy(dx: 1, dy: 1))
         }
+        let drafting2 = DraftingState.shared
+        if let pivot = drafting2.pivot(notebookId: notebookId, page: pageIndex) {
+            ctx.setStrokeColor(UIColor.systemBlue.cgColor)
+            ctx.setLineWidth(1.2)
+            ctx.beginPath()
+            ctx.move(to: CGPoint(x: pivot.x - 9, y: pivot.y)); ctx.addLine(to: CGPoint(x: pivot.x + 9, y: pivot.y))
+            ctx.move(to: CGPoint(x: pivot.x, y: pivot.y - 9)); ctx.addLine(to: CGPoint(x: pivot.x, y: pivot.y + 9))
+            ctx.strokePath()
+            ctx.strokeEllipse(in: CGRect(x: pivot.x - 5, y: pivot.y - 5, width: 10, height: 10))
+        }
+        if let model = drafting2.instrument, model.bounds.intersects(rect) {
+            model.draw(in: ctx, dark: traitCollection.userInterfaceStyle == .dark)
+        }
+        if !alignGuides.isEmpty {
+            ctx.saveGState()
+            ctx.setStrokeColor(UIColor.systemBlue.withAlphaComponent(0.85).cgColor)
+            ctx.setLineWidth(1)
+            ctx.setLineDash(phase: 0, lengths: [6, 4])
+            for line in alignGuides where line.count >= 2 {
+                ctx.beginPath()
+                ctx.move(to: line[0])
+                for q in line.dropFirst() { ctx.addLine(to: q) }
+                ctx.strokePath()
+            }
+            ctx.restoreGState()
+        }
         if let live, let liveCache {
             ctx.saveGState()
             if live.blendMode == "multiply" {
@@ -490,6 +521,45 @@ final class ProInkLayerView: UIView {
             }
         }
         return best?.0
+    }
+
+    // MARK: 投影對齊與尺規靠邊
+
+    private var pageScale: CGFloat { max(transform.a, 0.25) }
+
+    /// 對齊用的點：看得見的筆畫的端點與短折線的轉折點（上限 600 個，免得大頁面拖慢）。
+    private func alignAnchors() -> [FfiPoint] {
+        let drafting = DraftingState.shared
+        var out: [FfiPoint] = []
+        for stroke in allStrokes where stroke.layerId == 0 || !drafting.isHidden(layer: stroke.layerId, notebookId: notebookId) {
+            let pts = stroke.points
+            guard let first = pts.first, let last = pts.last else { continue }
+            out.append(FfiPoint(x: first.x, y: first.y))
+            out.append(FfiPoint(x: last.x, y: last.y))
+            if pts.count <= 12 { for q in pts.dropFirst().dropLast() { out.append(FfiPoint(x: q.x, y: q.y)) } }
+            if out.count > 600 { break }
+        }
+        return out
+    }
+
+    /// 把 `p` 對齊既有點；有對齊就記下虛線導引。製圖以外（一般手寫）不介入。
+    private func aligned(_ p: CGPoint) -> CGPoint {
+        let drafting = DraftingState.shared
+        guard drafting.alignEnabled else { return p }
+        let result = draftAlign(
+            cursor: FfiPoint(x: Float(p.x), y: Float(p.y)), anchors: alignAnchors(),
+            pivot: drafting.pivot(notebookId: notebookId, page: pageIndex).map { FfiPoint(x: Float($0.x), y: Float($0.y)) },
+            thirdAngle: drafting.thirdAngle, tolerance: Float(8 / pageScale))
+        setGuides(result.guides.map { $0.points.map { CGPoint(x: CGFloat($0.x), y: CGFloat($0.y)) } })
+        return CGPoint(x: CGFloat(result.point.x), y: CGFloat(result.point.y))
+    }
+
+    private func setGuides(_ lines: [[CGPoint]]) {
+        guard !(lines.isEmpty && alignGuides.isEmpty) else { return }
+        var dirty = CGRect.null
+        for line in alignGuides + lines { for q in line { dirty = dirty.union(CGRect(origin: q, size: .zero)) } }
+        alignGuides = lines
+        if !dirty.isNull { setNeedsDisplay(dirty.insetBy(dx: -6, dy: -6)) }
     }
 
     /// `point` 附近的圓形筆畫（首尾相接、擬合殘差小）：回傳圓心與半徑。
@@ -559,6 +629,21 @@ final class ProInkLayerView: UIView {
     func beginStroke(tool: ToolKind, color: [UInt8], width: Float, at point: ProPoint,
                      layer: UInt8 = 0, lineType: UInt8 = 0) {
         guard let name = ProInk.name(of: tool) else { return }
+        var point = point
+        edgeLock = nil
+        tailSnapped = false
+        if layer != 0 {
+            let here = CGPoint(x: CGFloat(point.x), y: CGFloat(point.y))
+            if let model = DraftingState.shared.instrument,
+               let edge = model.nearestEdge(to: here, band: 14 / pageScale) {
+                // 靠著尺的邊起筆：起點釘在邊上，整筆沿著邊走。
+                edgeLock = (edge.a, edge.b)
+                point.x = Float(edge.foot.x); point.y = Float(edge.foot.y)
+            } else {
+                let q = aligned(here)
+                point.x = Float(q.x); point.y = Float(q.y)
+            }
+        }
         live = ProStroke(tool: name, colorRGBA: color, baseWidth: width, points: [point],
                          layer: layer == 0 ? nil : layer, lineType: lineType == 0 ? nil : lineType)
         snapState = nil
@@ -577,6 +662,27 @@ final class ProInkLayerView: UIView {
             setNeedsDisplay(area.union(stroke.bounds))
             liveCache = ProInkRenderer.cache(for: stroke)
             return
+        }
+        if let lock = edgeLock, let first = stroke.points.first, var end = points.last {
+            let foot = InstrumentModel.footOnLine(CGPoint(x: CGFloat(end.x), y: CGFloat(end.y)), lock.a, lock.b)
+            end.x = Float(foot.x); end.y = Float(foot.y)
+            let area = stroke.bounds
+            stroke.points = Self.lineSamples(from: first, toX: end.x, y: end.y, count: 24)
+            live = stroke
+            setNeedsDisplay(area.union(stroke.bounds))
+            liveCache = ProInkRenderer.cache(for: stroke)
+            return
+        }
+        var points = points
+        if tailSnapped, !stroke.points.isEmpty { stroke.points.removeLast() }
+        tailSnapped = false
+        if stroke.layerId != 0, var last = points.last {
+            let q = aligned(CGPoint(x: CGFloat(last.x), y: CGFloat(last.y)))
+            if !alignGuides.isEmpty {
+                last.x = Float(q.x); last.y = Float(q.y)
+                points[points.count - 1] = last
+                tailSnapped = true
+            }
         }
         stroke.points.append(contentsOf: points)
         live = stroke
@@ -650,6 +756,9 @@ final class ProInkLayerView: UIView {
             }
         }
         snapState = nil
+        edgeLock = nil
+        tailSnapped = false
+        setGuides([])
         ownStrokes.append(stroke)
         setNeedsDisplay(stroke.bounds)
         persist()
@@ -659,6 +768,9 @@ final class ProInkLayerView: UIView {
     func cancelStroke() {
         let area = live?.bounds
         snapState = nil
+        edgeLock = nil
+        tailSnapped = false
+        setGuides([])
         live = nil
         liveCache = nil
         if let area { setNeedsDisplay(area) }
@@ -951,6 +1063,9 @@ final class ProStrokeGestureRecognizer: UIGestureRecognizer {
     /// 圖學工具模式：觸控的每個階段與位置（頁面座標）。
     var onToolTouch: ((ToolPhase, CGPoint) -> Void)?
     private var lastToolPoint = CGPoint.zero
+    /// 手指落在尺的身體上（不是靠邊的地方）：這一次拖曳是在搬尺，不是在畫。
+    private var draggingInstrument = false
+    private var lastInstrumentPoint = CGPoint.zero
 
     private var holdTimer: Timer?
     private var holdAnchor: CGPoint = .zero
@@ -982,6 +1097,16 @@ final class ProStrokeGestureRecognizer: UIGestureRecognizer {
         tracked = touch
         lastTimestamp = touch.timestamp
         let point = makePoint(touch, in: layerView, dt: 0)
+        if mode == .draw, let model = DraftingState.shared.instrument {
+            let here = CGPoint(x: CGFloat(point.x), y: CGFloat(point.y))
+            let band = 14 / max(layerView.transform.a, 0.25)
+            if model.containsBody(here), model.nearestEdge(to: here, band: band) == nil {
+                draggingInstrument = true
+                lastInstrumentPoint = here
+                state = .began
+                return
+            }
+        }
         if deferUntilMoved && mode == .draw {
             guard tool() != nil else { state = .failed; return }
             pendingBegin = (point, touch.location(in: layerView))
@@ -1007,6 +1132,13 @@ final class ProStrokeGestureRecognizer: UIGestureRecognizer {
 
     override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent) {
         guard let layerView, let touch = tracked, touches.contains(touch) else { return }
+        if draggingInstrument {
+            let here = touch.preciseLocation(in: layerView)
+            DraftingState.shared.moveInstrument(by: CGSize(width: here.x - lastInstrumentPoint.x, height: here.y - lastInstrumentPoint.y))
+            lastInstrumentPoint = here
+            state = .changed
+            return
+        }
         if let pending = pendingBegin {
             let here = touch.location(in: layerView)
             let moved = hypot(here.x - pending.location.x, here.y - pending.location.y)
@@ -1045,6 +1177,12 @@ final class ProStrokeGestureRecognizer: UIGestureRecognizer {
 
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent) {
         guard let touch = tracked, touches.contains(touch) else { return }
+        if draggingInstrument {
+            draggingInstrument = false
+            tracked = nil
+            state = .ended
+            return
+        }
         if pendingBegin != nil {
             // 沒動過：這是輕點，不是筆畫。
             pendingBegin = nil
@@ -1073,6 +1211,7 @@ final class ProStrokeGestureRecognizer: UIGestureRecognizer {
     }
 
     override func reset() {
+        draggingInstrument = false
         holdTimer?.invalidate()
         tracked = nil
         erasePath = []
@@ -1080,6 +1219,7 @@ final class ProStrokeGestureRecognizer: UIGestureRecognizer {
     }
 
     private func cancelCurrent() {
+        draggingInstrument = false
         holdTimer?.invalidate()
         if mode == .tool { onToolTouch?(.cancelled, lastToolPoint) }
         if mode == .draw { layerView?.cancelStroke() }

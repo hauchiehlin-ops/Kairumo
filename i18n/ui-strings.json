@@ -5575,6 +5575,22 @@
     "zhHans": "下载中...",
     "zhHant": "下載中..."
   },
+  "draft_align": {
+    "en": "Projection alignment",
+    "ja": "投影の位置合わせ",
+    "ko": "투상 정렬",
+    "th": "จัดแนวการฉายภาพ",
+    "zhHans": "投影对齐",
+    "zhHant": "投影對齊"
+  },
+  "draft_align_footer": {
+    "en": "The start and end of a line align with the ends of existing lines: top and front views line up, front and side heights match; once a 45° turning point is set, widths line up too. A light blue dashed guide shows what it aligned to.",
+    "ja": "線の始点と終点は既存の線の端点に揃います（正面図と平面図の左右、正面図と側面図の高さ）。45° の転換点を設定すると奥行きも揃います。揃ったときは薄い青の破線が表示されます。",
+    "ko": "선의 시작점과 끝점이 기존 선의 끝점에 맞춰집니다(정면도와 평면도의 가로, 정면도와 측면도의 높이). 45° 전환점을 설정하면 폭도 맞춰집니다. 맞춰지면 연한 파란 점선이 나타납니다.",
+    "th": "จุดเริ่มและจุดสิ้นสุดของเส้นจะจัดแนวกับปลายเส้นที่มีอยู่ (ภาพด้านหน้ากับภาพด้านบนตรงกัน ความสูงของภาพด้านหน้ากับภาพด้านข้างเท่ากัน) ถ้าตั้งจุดหักมุม 45° ความกว้างก็จะตรงกันด้วย จะมีเส้นประสีฟ้าอ่อนแสดงว่าจัดแนวกับอะไร",
+    "zhHans": "画线的起点与终点会对齐既有线的端点：长对正、高平齐；设了 45° 转折点之后，宽度也会对齐（宽相等）。对齐时会出现淡蓝色的虚线。",
+    "zhHant": "畫線的起點與終點會對齊既有線的端點：長對正、高平齊；設了 45° 轉折點之後，寬度也會對齊（寬相等）。對齊時會出現淡藍色的虛線。"
+  },
   "draft_angle_free": {
     "en": "Free",
     "ja": "自由",
@@ -5606,6 +5622,22 @@
     "th": "แสดงแผงเขียนแบบ",
     "zhHans": "展开图学面板",
     "zhHant": "展開圖學面板"
+  },
+  "draft_compass_radius": {
+    "en": "Radius R %1@ mm — let go to draw the arc",
+    "ja": "半径 R %1@ mm　指を離すと円弧を描きます",
+    "ko": "반지름 R %1@ mm — 놓으면 호가 그려집니다",
+    "th": "รัศมี R %1@ มม. — ปล่อยเพื่อวาดส่วนโค้ง",
+    "zhHans": "半径 R %1@ mm　放开就画出圆弧",
+    "zhHant": "半徑 R %1@ mm　放開就畫出圓弧"
+  },
+  "draft_convention_footer": {
+    "en": "The projection method sets the symbol in the frame and the direction of the 45° transfer.",
+    "ja": "投影法は図枠の記号と、45° の転送の向きに影響します。",
+    "ko": "투상법은 도곽 안의 기호와 45° 전달 방향을 정합니다.",
+    "th": "วิธีการฉายภาพมีผลต่อสัญลักษณ์ในกรอบและทิศทางการส่งผ่าน 45°",
+    "zhHans": "投影法会影响图框里的符号，也决定 45° 传递的方向。",
+    "zhHant": "投影法會影響圖框裡的符號，也決定 45° 傳遞的方向。"
   },
   "draft_draw_on_layer": {
     "en": "Draw on this layer",
@@ -5703,6 +5735,22 @@
     "zhHans": "点角的顶点",
     "zhHant": "點角的頂點"
   },
+  "draft_hint_compass_arc": {
+    "en": "Press a point on the circle and drag round to draw the arc",
+    "ja": "円周上の点を押さえて、円に沿ってドラッグすると円弧が描けます",
+    "ko": "원주 위의 한 점을 누르고 원을 따라 끌면 호가 그려집니다",
+    "th": "กดที่จุดบนวงกลมแล้วลากไปตามวงเพื่อวาดส่วนโค้ง",
+    "zhHans": "按住圆周上的一点，沿著圆拖出圆弧",
+    "zhHant": "按住圓周上的一點，沿著圓拖出圓弧"
+  },
+  "draft_hint_compass_center": {
+    "en": "Tap the centre",
+    "ja": "中心をタップ",
+    "ko": "중심을 누르세요",
+    "th": "แตะจุดศูนย์กลาง",
+    "zhHans": "点圆心",
+    "zhHant": "點圓心"
+  },
   "draft_hint_dim_center": {
     "en": "Tap a drawn circle (or tap its centre)",
     "ja": "描いた円をタップ（または中心をタップ）",
@@ -5742,6 +5790,102 @@
     "th": "แตะจุดที่สอง",
     "zhHans": "点第二个点",
     "zhHant": "點第二個點"
+  },
+  "draft_hint_pivot": {
+    "en": "Tap the corner between the top view and the side view (where the 45° line passes)",
+    "ja": "平面図と側面図の間の角（45° の線が通る点）をタップ",
+    "ko": "평면도와 측면도 사이의 모서리(45° 선이 지나는 점)를 누르세요",
+    "th": "แตะมุมระหว่างภาพด้านบนกับภาพด้านข้าง (จุดที่เส้น 45° ผ่าน)",
+    "zhHans": "点俯视图与右视图之间的那个角（45° 线通过的点）",
+    "zhHant": "點俯視圖與右視圖之間的那個角（45° 線通過的點）"
+  },
+  "draft_inst_footer": {
+    "en": "Drag the middle of an instrument to move it; start a stroke near its edge and the line follows the edge as a straight line. Use the rotate buttons to turn it (the T-square only slides up and down). The scale is real millimetres.",
+    "ja": "器具の中央をドラッグして動かします。縁の近くから線を描き始めると、縁に沿った直線になります。回転ボタンで角度を変えます（T 定規は上下にしか動きません）。目盛りは実寸のミリメートルです。",
+    "ko": "도구 가운데를 끌어 옮깁니다. 가장자리 근처에서 선을 시작하면 가장자리를 따라 직선이 그려집니다. 회전 버튼으로 각도를 바꿉니다(T자는 위아래로만 움직입니다). 눈금은 실제 밀리미터입니다.",
+    "th": "ลากกลางเครื่องมือเพื่อย้าย เริ่มเส้นใกล้ขอบเครื่องมือ เส้นจะเป็นเส้นตรงตามขอบ ใช้ปุ่มหมุนเพื่อเปลี่ยนมุม (ไม้ทีเลื่อนได้เฉพาะขึ้นลง) สเกลเป็นมิลลิเมตรจริง",
+    "zhHans": "拖尺的中间可以移动它；从尺边附近起笔，线就会贴著尺边画成直线。用旋转钮转角度（丁字尺只能上下移动）。尺上的刻度是真实毫米。",
+    "zhHant": "拖尺的中間可以移動它；從尺邊附近起筆，線就會貼著尺邊畫成直線。用旋轉鈕轉角度（丁字尺只能上下移動）。尺上的刻度是真實毫米。"
+  },
+  "draft_inst_protractor": {
+    "en": "Protractor",
+    "ja": "分度器",
+    "ko": "각도기",
+    "th": "ไม้โปรแทรกเตอร์",
+    "zhHans": "量角器",
+    "zhHant": "量角器"
+  },
+  "draft_inst_remove": {
+    "en": "Put the instrument away",
+    "ja": "器具をしまう",
+    "ko": "도구 치우기",
+    "th": "เก็บเครื่องมือ",
+    "zhHans": "收起尺规",
+    "zhHant": "收起尺規"
+  },
+  "draft_inst_rotate_left": {
+    "en": "Rotate 15° anticlockwise",
+    "ja": "反時計回りに 15° 回転",
+    "ko": "시계 반대 방향으로 15° 회전",
+    "th": "หมุนทวนเข็มนาฬิกา 15°",
+    "zhHans": "逆时针转 15°",
+    "zhHant": "逆時針轉 15°"
+  },
+  "draft_inst_rotate_left_fine": {
+    "en": "Rotate 1° anticlockwise",
+    "ja": "反時計回りに 1° 回転",
+    "ko": "시계 반대 방향으로 1° 회전",
+    "th": "หมุนทวนเข็มนาฬิกา 1°",
+    "zhHans": "逆时针转 1°",
+    "zhHant": "逆時針轉 1°"
+  },
+  "draft_inst_rotate_right": {
+    "en": "Rotate 15° clockwise",
+    "ja": "時計回りに 15° 回転",
+    "ko": "시계 방향으로 15° 회전",
+    "th": "หมุนตามเข็มนาฬิกา 15°",
+    "zhHans": "顺时针转 15°",
+    "zhHant": "順時針轉 15°"
+  },
+  "draft_inst_rotate_right_fine": {
+    "en": "Rotate 1° clockwise",
+    "ja": "時計回りに 1° 回転",
+    "ko": "시계 방향으로 1° 회전",
+    "th": "หมุนตามเข็มนาฬิกา 1°",
+    "zhHans": "顺时针转 1°",
+    "zhHant": "順時針轉 1°"
+  },
+  "draft_inst_ruler": {
+    "en": "Ruler",
+    "ja": "定規",
+    "ko": "자",
+    "th": "ไม้บรรทัด",
+    "zhHans": "直尺",
+    "zhHant": "直尺"
+  },
+  "draft_inst_set_square_30": {
+    "en": "30°-60° set square",
+    "ja": "30°-60° 三角定規",
+    "ko": "30°-60° 삼각자",
+    "th": "ฉาก 30°-60°",
+    "zhHans": "30°-60° 三角板",
+    "zhHant": "30°-60° 三角板"
+  },
+  "draft_inst_set_square_45": {
+    "en": "45° set square",
+    "ja": "45° 三角定規",
+    "ko": "45° 삼각자",
+    "th": "ฉาก 45°",
+    "zhHans": "45° 三角板",
+    "zhHant": "45° 三角板"
+  },
+  "draft_inst_t_square": {
+    "en": "T-square",
+    "ja": "T 定規",
+    "ko": "T자",
+    "th": "ไม้ที",
+    "zhHans": "丁字尺",
+    "zhHant": "丁字尺"
   },
   "draft_layer_aux": {
     "en": "Aux (construction)",
@@ -5886,6 +6030,14 @@
     "th": "ปากกาเขียนแบบ",
     "zhHans": "制图笔",
     "zhHant": "製圖筆"
+  },
+  "draft_pivot_clear": {
+    "en": "Clear the turning point",
+    "ja": "転換点を消去",
+    "ko": "전환점 지우기",
+    "th": "ล้างจุดหักมุม",
+    "zhHans": "清除转折点",
+    "zhHant": "清除轉折點"
   },
   "draft_reassign": {
     "en": "Move to layer",
@@ -6519,6 +6671,14 @@
     "zhHans": "结束目前工具",
     "zhHant": "結束目前工具"
   },
+  "draft_tool_compass": {
+    "en": "Compass",
+    "ja": "コンパス",
+    "ko": "컴퍼스",
+    "th": "วงเวียน",
+    "zhHans": "圆规",
+    "zhHant": "圓規"
+  },
   "draft_tool_dim_angle": {
     "en": "Angular dimension",
     "ja": "角度寸法",
@@ -6558,6 +6718,22 @@
     "th": "ไม่มีเครื่องมือ",
     "zhHans": "没有工具",
     "zhHant": "沒有工具"
+  },
+  "draft_tool_set_pivot": {
+    "en": "Set the 45° turning point",
+    "ja": "45° の転換点を設定",
+    "ko": "45° 전환점 설정",
+    "th": "ตั้งจุดหักมุม 45°",
+    "zhHans": "设置 45° 转折点",
+    "zhHant": "設定 45° 轉折點"
+  },
+  "draft_toolbox_aids": {
+    "en": "Alignment and instruments",
+    "ja": "位置合わせと製図器具",
+    "ko": "정렬과 제도 도구",
+    "th": "การจัดแนวและเครื่องมือวัด",
+    "zhHans": "对齐与尺规",
+    "zhHant": "對齊與尺規"
   },
   "draft_toolbox_dimension": {
     "en": "Dimensioning",

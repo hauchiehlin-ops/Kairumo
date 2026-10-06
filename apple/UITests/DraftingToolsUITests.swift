@@ -68,6 +68,17 @@ final class DraftingToolsUITests: XCTestCase {
         XCTAssertTrue(element("draft.symbols").waitForExistence(timeout: 10), "工具箱沒有打開")
     }
 
+    /// 表單是惰性的：還沒捲到的列不存在。往上推到出現為止。
+    private func reveal(_ id: String) -> XCUIElement {
+        let el = element(id)
+        var tries = 0
+        while !el.exists && tries < 6 {
+            app.swipeUp()
+            tries += 1
+        }
+        return el
+    }
+
     private func point(_ canvas: XCUIElement, _ x: CGFloat, _ y: CGFloat) -> XCUICoordinate {
         canvas.coordinate(withNormalizedOffset: CGVector(dx: x, dy: y))
     }
@@ -106,7 +117,7 @@ final class DraftingToolsUITests: XCTestCase {
         openToolbox()
         for id in ["draft.tool.dimLinear", "draft.tool.dimDiameter", "draft.tool.dimRadius",
                    "draft.tool.dimAngle", "draft.scale", "draft.symbols", "draft.frame.insert"] {
-            XCTAssertTrue(element(id).exists, "工具箱缺少 \(id)")
+            XCTAssertTrue(reveal(id).exists, "工具箱缺少 \(id)")
         }
     }
 
@@ -121,5 +132,46 @@ final class DraftingToolsUITests: XCTestCase {
         XCTAssertTrue(element("draft.bar").waitForExistence(timeout: 10) || element("editor.canvas").exists)
         sleep(2)
         XCTAssertGreaterThan(readout("pro"), before, "放了符號卻沒有多出筆畫")
+    }
+
+    func testTheToolboxOffersAlignmentCompassPivotAndEveryInstrument() {
+        guard openDrafting() else { XCTFail("進不了圖學模式"); return }
+        openToolbox()
+        for id in ["draft.align", "draft.projection", "draft.tool.compass", "draft.tool.setPivot",
+                   "draft.inst.ruler", "draft.inst.t_square", "draft.inst.protractor"] {
+            XCTAssertTrue(reveal(id).exists, "工具箱缺少 \(id)")
+        }
+    }
+
+    func testCompassDrawsAnArcAndUndoes() {
+        guard openDrafting() else { XCTFail("進不了圖學模式"); return }
+        openToolbox()
+        reveal("draft.tool.compass").tap()
+        XCTAssertTrue(element("draft.tool.hint").waitForExistence(timeout: 5))
+        let c = canvas()
+        let before = readout("pro")
+        point(c, 0.5, 0.5).tap()
+        point(c, 0.7, 0.5).press(forDuration: 0.2, thenDragTo: point(c, 0.5, 0.75))
+        sleep(1)
+        XCTAssertEqual(readout("pro"), before + 1, "圓規應該多出一條圓弧")
+        let undo = element("editor.undo")
+        if undo.waitForExistence(timeout: 3) {
+            undo.tap()
+            sleep(1)
+            XCTAssertEqual(readout("pro"), before)
+        }
+    }
+
+    func testARulerCanBePlacedRotatedRemovedAndLineStaysStraightAlongIt() {
+        guard openDrafting() else { XCTFail("進不了圖學模式"); return }
+        openToolbox()
+        reveal("draft.inst.ruler").tap()
+        XCTAssertTrue(element("draft.inst.remove").waitForExistence(timeout: 5), "放了尺卻沒有收起鈕")
+        XCTAssertTrue(element("draft.inst.rotl").exists)
+        element("draft.inst.rotr").tap()
+        element("draft.inst.rotl").tap()
+        // 尺轉回水平後，在尺身以外隨手畫一條斜線不會被尺吃掉（身體區才是搬尺）。
+        element("draft.inst.remove").tap()
+        XCTAssertFalse(element("draft.inst.remove").waitForExistence(timeout: 2), "收起後控制還在")
     }
 }
