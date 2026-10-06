@@ -199,7 +199,7 @@ const DOC = {
     name: "繁體中文",
     title: "隱私權政策",
     tagline: "Kairumo 不收集你的資料。沒有帳號、沒有後端伺服器、沒有分析追蹤。這份文件說明為什麼可以這樣宣稱。",
-    effective: "生效日：2026 年 9 月 26 日",
+    effective: "生效日：2026 年 10 月 7 日",
     appver: "適用平台：Android | 適用版本：v5.1.0",
     summary: "一句話：你的筆記、錄音與手寫紀錄留在你自己的裝置上。我們沒有伺服器可以接收它們，也沒有帳號可以連結到你。",
     sections: [
@@ -214,6 +214,7 @@ const DOC = {
       ["沒有第三方追蹤", "App 不含廣告 SDK、分析 SDK、A/B 測試或推播追蹤。原始碼公開，任何人都可以自行檢視這一點。"],
       ["進階協作功能與點對點傳輸", "新版包含多項進階協作功能（游標、語音通話與時光機），同樣遵守本地優先原則：", ["**即時游標與語音房間**：狀態資料為短暫性 (Ephemeral)，透過 WebRTC / mDNS 點對點直接傳輸，關閉後即消失，不會儲存於任何伺服器。", "**時光機回溯**：歷史紀錄僅保存於您裝置本機的 Oplog 中，我們無法亦不會將其上傳。", "**Tailscale 跨網連線與直連同步**：針對跨網段協作與點對點直連同步，應用程式支援使用 Tailscale 建立私有連線，確保 NAT 穿透時的安全與點對點隱私；偵測到已連線時會智慧隱藏下載指引。"]],
       ["兒童隱私", "本 App 不會向任何年齡的使用者收集個人資料，因此也不會收集 13 歲（或當地法律規定年齡）以下兒童的資料。"],
+      ["圖學工具與匯出", "圖學（工程製圖）相關功能完全在裝置上運作：", ["尺規、量角器、對齊吸附、修改工具、立體輔助與玻璃盒展開，都是本機運算，不連網。", "練習題題庫內建於 App；你的作答、批改分數與提示都只存在本機，不會上傳。", "匯出的 DXF、SVG、STL、OBJ、GLB、USDZ 檔案由裝置產生，只會送到你在系統分享選單或檔案位置裡自己選的地方。", "若裝置提供立體模型的擴增實境（AR）預覽，那是系統元件：相機由它使用並向你詢問權限，App 本身收不到相機影像。"]],
       ["你的權利與資料刪除", "因為我們手上沒有你的資料副本，所以刪除完全由你掌握：", ["在 App 內刪除筆記，即從本機移除。", "刪除 App 會一併移除其沙盒內的所有資料。", "若你曾把資料夾放進自己的雲端，請另行到該服務刪除。", "我們無法代為刪除、也無法還原任何資料 —— 因為我們從未持有它。", "<strong>要注意的一件事</strong>：筆記檔的設計是**純追加**的（這是多裝置合併不掉資料的前提），而「里程碑快照」更是刻意保留歷史。所以你在 App 裡刪掉的一段文字或筆跡，畫面上看不到了，但在檔案內部可能仍然留著，直到系統自動壓實為止。**把 .padnote 檔分享給別人之前請記得這件事** —— 對方用 Kairumo 打開時，可以透過里程碑回到你刪除之前的版本。真的要交出去而不想帶著歷史，請改用「匯出 PDF」或「匯出為圖片」。"]],
       ["政策變更", "本政策若有變更，會更新頁首的生效日與適用版本，並隨新版本一同發佈。"],
       ["聯絡方式", "對這份政策有疑問，請來信：<span class=\"addr\">" + "CONTACT_EMAIL" + "</span>"]
@@ -224,7 +225,7 @@ const DOC = {
     name: "English",
     title: "Privacy Policy",
     tagline: "Kairumo does not collect your data. No accounts, no backend servers, no analytics. This page explains how that claim holds up.",
-    effective: "Effective: 26 September 2026",
+    effective: "Effective: 7 October 2026",
     appver: "Platform: Android | Applies to: v5.1.0",
     summary: "In one sentence: your notes, recordings and handwriting stay on your own device. We have no server that could receive them and no account that could be linked to you.",
     sections: [
@@ -239,6 +240,7 @@ const DOC = {
       ["No third-party tracking", "The app contains no advertising SDK, no analytics SDK, no A/B testing and no push tracking. The source code is public, so anyone can verify this."],
       ["Advanced collaboration and P2P transfer", "Recent versions introduce advanced collaboration features (live cursors, voice rooms, and time machine) that strictly follow our local-first principles:", ["**Live cursors & voice rooms**: State data is ephemeral, transferred directly peer-to-peer via WebRTC / mDNS, and vanishes as soon as the session ends. Nothing is stored on any server.", "**Time machine rollback**: Editing history is preserved strictly within your device's local Oplog; we cannot and do not upload it.", "**Tailscale cross-network connection & direct sync**: For cross-network collaboration and peer-to-peer direct sync, the app supports establishing a private network with Tailscale to ensure secure NAT traversal and direct P2P privacy. Download instructions are automatically hidden once an active connection is detected."]],
       ["Children's privacy", "The app collects no personal data from users of any age, and therefore none from children under 13 (or the age set by your local law)."],
+      ["Drafting tools and export", "The drafting (engineering drawing) features run entirely on your device:", ["Rulers, protractor, alignment snapping, edit tools, the solid helper and the glass-box unfolding are computed locally and need no network.", "The practice-problem bank ships inside the app; your answers, scores and hints stay on the device and are never uploaded.", "Exported DXF, SVG, STL, OBJ, GLB and USDZ files are generated on the device and go only where you send them through the system share sheet or a file location you choose.", "Where your device offers an augmented-reality (AR) preview of a 3D model, that is a system component: it uses the camera and asks you for permission, and the app itself never receives camera images."]],
       ["Your rights and deleting data", "Because we hold no copy of your data, deletion is entirely in your hands:", ["Deleting a note in the app removes it from the device.", "Deleting the app removes everything in its sandbox.", "If you kept the folder in your own cloud storage, delete it there as well.", "We cannot delete or restore anything on your behalf — we never had it.", "<strong>One thing to be aware of</strong>: the notebook file is <strong>append-only</strong> by design (that is what stops multi-device merges from losing data), and milestone snapshots deliberately preserve history. So text or strokes you delete in the app disappear from view but may still be inside the file until it is compacted automatically. <strong>Keep this in mind before sharing a .padnote file</strong> — someone opening it in Kairumo can roll back to a milestone taken before your deletion. If you need to hand something over without its history, export it as PDF or as an image instead."]],
       ["Changes to this policy", "If this policy changes, the effective date and applicable version at the top are updated and published with the new release."],
       ["Contact", "Questions about this policy: <span class=\"addr\">" + "CONTACT_EMAIL" + "</span>"]
@@ -249,7 +251,7 @@ const DOC = {
     name: "简体中文",
     title: "隐私政策",
     tagline: "Kairumo 不收集你的数据。没有账号、没有后端服务器、没有分析追踪。本文说明为什么可以这样声明。",
-    effective: "生效日期：2026 年 9 月 26 日",
+    effective: "生效日期：2026 年 10 月 7 日",
     appver: "适用平台：Android | 适用版本：v5.1.0",
     summary: "一句话：你的笔记、录音与手写记录留在你自己的设备上。我们没有服务器可以接收它们，也没有账号可以关联到你。",
     sections: [
@@ -264,6 +266,7 @@ const DOC = {
       ["没有第三方追踪", "App 不含广告 SDK、分析 SDK、A/B 测试或推送追踪。源代码公开，任何人都可以自行核实这一点。"],
       ["进阶协作功能与点对点传输", "新版包含多项进阶协作功能（光标、语音通话与时光机），同样遵守本地优先原则：", ["**实时光标与语音房间**：状态数据为短暂性 (Ephemeral)，透过 WebRTC / mDNS 点对点直接传输，关闭后即消失，不会储存于任何服务器。", "**时光机回溯**：历史纪录仅保存于您设备本地的 Oplog 中，我们无法亦不会将其上传。", "**Tailscale 跨网连线与直连同步**：针对跨网段协作与点对点直连同步，应用程序支持使用 Tailscale 建立私有连线，确保 NAT 穿透时的安全与点对点隐私；检测到已连线时会自动隐藏安装指引。"]],
       ["儿童隐私", "本 App 不会向任何年龄的用户收集个人数据，因此也不会收集 13 周岁（或当地法律规定年龄）以下儿童的数据。"],
+      ["图学工具与导出", "图学（工程制图）相关功能完全在设备上运行：", ["尺规、量角器、对齐吸附、修改工具、立体辅助与玻璃盒展开，都是本机运算，不联网。", "练习题题库内置于 App；你的作答、批改分数与提示都只存在本机，不会上传。", "导出的 DXF、SVG、STL、OBJ、GLB、USDZ 文件由设备生成，只会发送到你在系统分享菜单或文件位置里自己选择的地方。", "若设备提供立体模型的增强现实（AR）预览，那是系统组件：相机由它使用并向你询问权限，App 本身收不到相机影像。"]],
       ["你的权利与数据删除", "因为我们手上没有你的数据副本，所以删除完全由你掌握：", ["在 App 内删除笔记，即从本机移除。", "删除 App 会一并移除其沙盒内的所有数据。", "若你曾把文件夹放进自己的云盘，请另行到该服务删除。", "我们无法代为删除、也无法恢复任何数据 —— 因为我们从未持有它。", "<strong>要注意的一件事</strong>：笔记文件的设计是**纯追加**的（这是多设备合并不丢数据的前提），而「里程碑快照」更是刻意保留历史。所以你在 App 里删掉的一段文字或笔迹，画面上看不到了，但在文件内部可能仍然留着，直到系统自动压实为止。**把 .padnote 文件分享给别人之前请记得这件事** —— 对方用 Kairumo 打开时，可以通过里程碑回到你删除之前的版本。真的要交出去而不想带着历史，请改用「导出 PDF」或「导出为图片」。"]],
       ["政策变更", "本政策若有变更，会更新页首的生效日期与适用版本，并随新版本一同发布。"],
       ["联系方式", "对本政策有疑问，请来信：<span class=\"addr\">" + "CONTACT_EMAIL" + "</span>"]
@@ -274,7 +277,7 @@ const DOC = {
     name: "日本語",
     title: "プライバシーポリシー",
     tagline: "Kairumo はあなたのデータを収集しません。アカウントもバックエンドサーバーも解析もありません。その根拠をこのページで説明します。",
-    effective: "発効日：2026年9月26日",
+    effective: "発効日：2026年10月7日",
     appver: "対象プラットフォーム：Android | 対象バージョン：v5.1.0",
     summary: "ひとことで言えば、ノート・録音・手書きはあなたの端末に留まります。それを受け取るサーバーも、あなたと結び付けられるアカウントも存在しません。",
     sections: [
@@ -289,6 +292,7 @@ const DOC = {
       ["第三者トラッキングなし", "広告 SDK、解析 SDK、A/B テスト、プッシュ追跡はいずれも含まれません。ソースコードは公開されており、誰でも確認できます。"],
       ["高度なコラボレーションとP2P転送", "最新バージョンには、ローカルファーストの原則に従った高度なコラボレーション機能（ライブカーソル、ボイスルーム、タイムマシン）が含まれています：", ["**ライブカーソルとボイスルーム**：データは一時的であり、WebRTC / mDNSを介して直接送信され、セッション終了時に消滅します。保存されることはありません。", "**タイムマシン**：編集履歴はローカルのOplogファイルにのみ保存され、外部へ送信されることはありません。", "**Tailscale による P2P 直結同期**：異なるネットワーク間での同期や共同編集には、Tailscale の使用をサポートし、安全な NAT 越えと P2P プライバシーを確保します。接続が検出された場合、ダウンロードリンクは自動的に非表示になります。"]],
       ["子どものプライバシー", "本アプリは年齢を問わず個人データを収集しないため、13歳（または各地域の法定年齢）未満の子どもからも収集しません。"],
+      ["製図ツールと書き出し", "製図（工学図面）に関する機能は、すべて端末上で動作します：", ["定規、分度器、整列スナップ、編集ツール、立体ヘルパー、ガラスの箱の展開は端末内で計算され、ネットワークを使いません。", "練習問題集はアプリに同梱されています。解答・採点結果・ヒントは端末内にのみ保存され、アップロードされません。", "書き出した DXF・SVG・STL・OBJ・GLB・USDZ ファイルは端末上で生成され、システムの共有メニューやあなたが選んだ保存先にのみ送られます。", "端末が 3D モデルの拡張現実（AR）プレビューを提供する場合、それはシステムのコンポーネントです。カメラはそちらが使用し、許可もそちらが求め、アプリ自体がカメラ映像を受け取ることはありません。"]],
       ["利用者の権利と削除", "当方が控えを持たないため、削除は完全にあなたの手の中にあります：", ["アプリ内でノートを削除すれば端末から消えます。", "アプリを削除すれば、その領域内のデータもすべて消えます。", "ご自身のクラウドにフォルダを置いた場合は、そちらでも削除してください。", "当方が代わりに削除・復元することはできません。保持していないからです。", "<strong>ご注意ください</strong>：ノートのファイルは設計上<strong>追記のみ</strong>です（複数端末の統合でデータを失わないための前提です）。マイルストーンスナップショットは履歴を意図的に保持します。そのため、アプリ内で削除した文字や手書きは画面から消えますが、自動的に圧縮されるまではファイル内部に残っている場合があります。<strong>.padnote ファイルを他者と共有する前にご留意ください</strong> —— 受け取った人が Kairumo で開くと、削除前のマイルストーンに戻せます。履歴を含めずに渡したい場合は、PDF または画像として書き出してください。"]],
       ["ポリシーの変更", "変更する場合は冒頭の発効日と対象バージョンを更新し、新しいリリースとともに公開します。"],
       ["お問い合わせ", "本ポリシーに関するお問い合わせ：<span class=\"addr\">" + "CONTACT_EMAIL" + "</span>"]
@@ -299,7 +303,7 @@ const DOC = {
     name: "한국어",
     title: "개인정보 처리방침",
     tagline: "Kairumo는 사용자의 데이터를 수집하지 않습니다. 계정도, 백엔드 서버도, 분석 도구도 없습니다. 이 문서는 그 근거를 설명합니다.",
-    effective: "시행일: 2026년 9월 26일",
+    effective: "시행일: 2026년 10월 7일",
     appver: "적용 플랫폼: Android | 적용 버전: v5.1.0",
     summary: "한 문장으로: 노트와 녹음, 손글씨는 사용자의 기기에 남습니다. 그것을 받을 서버도, 사용자와 연결할 계정도 존재하지 않습니다.",
     sections: [
@@ -314,6 +318,7 @@ const DOC = {
       ["제3자 추적 없음", "광고 SDK, 분석 SDK, A/B 테스트, 푸시 추적이 모두 없습니다. 소스 코드가 공개되어 있어 누구나 확인할 수 있습니다."],
       ["고급 협업 기능 및 P2P 전송", "최신 버전에는 로컬 우선 원칙을 엄격히 준수하는 고급 협업 기능(실시간 커서, 음성 룸, 타임머신)이 포함되어 있습니다:", ["**실시간 커서 및 음성 룸**: 상태 데이터는 일시적(Ephemeral)이며 WebRTC / mDNS를 통해 P2P로 직접 전송되어 세션 종료 시 즉시 소멸합니다. 어떤 서버에도 저장되지 않습니다.", "**타임머신 롤백**: 편집 기록은 오직 기기 로컬의 Oplog에만 보존되며, 당사가 이를 수집하거나 업로드하지 않습니다.", "**Tailscale 네트워크 연결 및 P2P 직접 동기화**: 네트워크가 다른 환경에서의 협업 및 P2P 직접 동기화를 위해 Tailscale 사설망 연결을 지원하여 안전한 NAT 통과와 P2P 프라이버시를 보장합니다. 연결이 감지되면 다운로드 안내가 자동으로 숨겨집니다."]],
       ["아동 개인정보", "본 앱은 연령과 무관하게 개인정보를 수집하지 않으므로, 만 13세(또는 현지 법령이 정한 연령) 미만 아동의 정보도 수집하지 않습니다."],
+      ["제도 도구와 내보내기", "제도(공학 도면) 관련 기능은 모두 기기 안에서 동작합니다:", ["자, 각도기, 정렬 스냅, 편집 도구, 입체 도우미, 유리 상자 펼침은 모두 기기에서 계산되며 네트워크가 필요 없습니다.", "연습 문제 모음은 앱에 포함되어 있으며, 답안·채점 점수·힌트는 기기에만 저장되고 업로드되지 않습니다.", "내보낸 DXF, SVG, STL, OBJ, GLB, USDZ 파일은 기기에서 만들어지며, 시스템 공유 메뉴나 직접 고른 파일 위치로만 전달됩니다.", "기기가 3D 모델의 증강현실(AR) 미리보기를 제공하는 경우, 그것은 시스템 구성요소입니다. 카메라는 그쪽에서 사용하고 권한도 그쪽에서 묻으며, 앱 자체는 카메라 영상을 받지 않습니다."]],
       ["권리와 데이터 삭제", "당사가 사본을 보유하지 않으므로 삭제는 전적으로 사용자에게 달려 있습니다:", ["앱에서 노트를 삭제하면 기기에서 제거됩니다.", "앱을 삭제하면 샌드박스 안의 모든 데이터가 함께 사라집니다.", "폴더를 본인의 클라우드에 두었다면 그곳에서도 삭제하세요.", "당사가 대신 삭제하거나 복구할 수는 없습니다. 보유한 적이 없기 때문입니다.", "<strong>알아 두실 점</strong>: 노트 파일은 설계상 <strong>추가 전용</strong>입니다(여러 기기 병합에서 데이터를 잃지 않기 위한 전제입니다). 마일스톤 스냅샷은 의도적으로 기록을 보존합니다. 따라서 앱에서 삭제한 글자나 필기는 화면에서는 사라지지만, 자동으로 압축되기 전까지 파일 내부에 남아 있을 수 있습니다. <strong>.padnote 파일을 공유하기 전에 이 점을 기억하세요</strong> — 받은 사람이 Kairumo로 열면 삭제 이전의 마일스톤으로 되돌릴 수 있습니다. 기록 없이 전달하려면 PDF나 이미지로 내보내세요."]],
       ["방침 변경", "방침이 바뀌면 상단의 시행일과 적용 버전을 갱신하여 새 릴리스와 함께 게시합니다."],
       ["문의", "본 방침에 대한 문의: <span class=\"addr\">" + "CONTACT_EMAIL" + "</span>"]
@@ -324,7 +329,7 @@ const DOC = {
     name: "ไทย",
     title: "นโยบายความเป็นส่วนตัว",
     tagline: "Kairumo ไม่เก็บข้อมูลของคุณ ไม่มีบัญชีผู้ใช้ ไม่มีเซิร์ฟเวอร์เบื้องหลัง และไม่มีการเก็บสถิติการใช้งาน หน้านี้อธิบายว่าทำไมจึงกล่าวเช่นนั้นได้",
-    effective: "มีผลวันที่ 26 กันยายน 2026",
+    effective: "มีผลวันที่ 7 ตุลาคม 2026",
     appver: "แพลตฟอร์ม: Android | ใช้กับเวอร์ชัน v5.1.0",
     summary: "สรุปสั้น ๆ: โน้ต ไฟล์เสียง และลายมือของคุณอยู่ในเครื่องของคุณ เราไม่มีเซิร์ฟเวอร์ที่จะรับข้อมูลเหล่านั้น และไม่มีบัญชีที่จะเชื่อมโยงถึงตัวคุณ",
     sections: [
@@ -339,6 +344,7 @@ const DOC = {
       ["ไม่มีการติดตามจากบุคคลที่สาม", "แอปไม่มี SDK โฆษณา ไม่มี SDK วิเคราะห์ ไม่มีการทดสอบ A/B และไม่มีการติดตามการแจ้งเตือน ซอร์สโค้ดเปิดเผย ทุกคนตรวจสอบได้"],
       ["การทำงานร่วมกันขั้นสูงและการถ่ายโอน P2P", "เวอร์ชันล่าสุดได้เปิดตัวฟีเจอร์การทำงานร่วมกันขั้นสูง (Live Cursors, Voice Rooms, Time Machine) โดยยึดหลัก Local-first:", ["**Live Cursors & Voice Rooms**: ข้อมูลเป็นแบบชั่วคราว ส่งตรงผ่าน WebRTC / mDNS และจะหายไปเมื่อปิดการเชื่อมต่อ ไม่มีการจัดเก็บข้อมูล", "**Time Machine**: ประวัติการแก้ไขจะถูกเก็บไว้ในไฟล์ Oplog ในเครื่องเท่านั้น และไม่มีการอัปโหลด", "**การเชื่อมต่อ Tailscale และการซิงก์ P2P โดยตรง**: สำหรับการซิงก์ข้ามเครือข่าย รองรับการใช้ Tailscale เพื่อการทะลุผ่าน NAT ที่ปลอดภัยและรักษาความเป็นส่วนตัวแบบ P2P ลิงก์ดาวน์โหลดจะถูกซ่อนโดยอัตโนมัติเมื่อตรวจพบการเชื่อมต่อ"]],
       ["ความเป็นส่วนตัวของเด็ก", "แอปนี้ไม่เก็บข้อมูลส่วนบุคคลจากผู้ใช้ทุกช่วงอายุ จึงไม่เก็บข้อมูลของเด็กอายุต่ำกว่า 13 ปี (หรือตามอายุที่กฎหมายท้องถิ่นกำหนด) ด้วย"],
+      ["เครื่องมือเขียนแบบและการส่งออก", "ฟีเจอร์การเขียนแบบ (แบบวิศวกรรม) ทำงานบนอุปกรณ์ของคุณทั้งหมด:", ["ไม้บรรทัด ไม้โปรแทรกเตอร์ การจัดแนวอัตโนมัติ เครื่องมือแก้ไข ตัวช่วยทรงตัน และการคลี่กล่องแก้ว คำนวณบนอุปกรณ์และไม่ต้องใช้เครือข่าย", "คลังโจทย์ฝึกหัดมาพร้อมแอป คำตอบ คะแนนที่ตรวจ และคำใบ้ของคุณเก็บไว้ในอุปกรณ์เท่านั้น ไม่ถูกอัปโหลด", "ไฟล์ DXF, SVG, STL, OBJ, GLB และ USDZ ที่ส่งออกถูกสร้างบนอุปกรณ์ และจะไปยังที่ที่คุณเลือกผ่านเมนูแชร์ของระบบหรือตำแหน่งไฟล์ที่คุณกำหนดเท่านั้น", "หากอุปกรณ์มีตัวแสดงตัวอย่างโมเดล 3 มิติแบบความจริงเสริม (AR) นั่นเป็นส่วนประกอบของระบบ ระบบเป็นผู้ใช้กล้องและขออนุญาตเอง แอปเองไม่ได้รับภาพจากกล้อง"]],
       ["สิทธิของคุณและการลบข้อมูล", "เนื่องจากเราไม่มีสำเนาข้อมูลของคุณ การลบจึงอยู่ในมือคุณทั้งหมด:", ["ลบโน้ตในแอป ข้อมูลจะถูกลบออกจากเครื่อง", "ลบแอป ข้อมูลทั้งหมดในพื้นที่ของแอปจะถูกลบไปด้วย", "หากคุณเก็บโฟลเดอร์ไว้ในคลาวด์ของคุณเอง โปรดลบที่นั่นด้วย", "เราไม่สามารถลบหรือกู้คืนข้อมูลแทนคุณได้ เพราะเราไม่เคยมีข้อมูลนั้น", "<strong>สิ่งที่ควรทราบ</strong>: ไฟล์สมุดออกแบบให้<strong>เพิ่มต่อท้ายเท่านั้น</strong> (เป็นเงื่อนไขที่ทำให้การรวมข้อมูลหลายอุปกรณ์ไม่สูญหาย) และสแนปช็อตเหตุการณ์สำคัญจงใจเก็บประวัติไว้ ดังนั้นข้อความหรือลายมือที่คุณลบในแอปจะหายไปจากหน้าจอ แต่ยังอาจอยู่ภายในไฟล์จนกว่าระบบจะบีบอัดอัตโนมัติ <strong>โปรดจำข้อนี้ก่อนแบ่งปันไฟล์ .padnote</strong> — ผู้ที่เปิดด้วย Kairumo สามารถย้อนกลับไปยังเหตุการณ์สำคัญก่อนที่คุณจะลบได้ หากต้องการส่งต่อโดยไม่มีประวัติ ให้ส่งออกเป็น PDF หรือรูปภาพแทน"]],
       ["การเปลี่ยนแปลงนโยบาย", "หากมีการเปลี่ยนแปลง เราจะปรับวันที่มีผลและเวอร์ชันที่ด้านบน แล้วเผยแพร่พร้อมกับรุ่นใหม่"],
       ["ติดต่อ", "หากมีคำถามเกี่ยวกับนโยบายนี้ ติดต่อ: <span class=\"addr\">" + "CONTACT_EMAIL" + "</span>"]

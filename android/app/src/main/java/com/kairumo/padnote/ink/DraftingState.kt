@@ -22,7 +22,21 @@ enum class DraftTool(val nameKey: String) {
     /** 圓規：點圓心，再在圓周上按住沿著圓拖出圓弧。 */
     COMPASS("draft_tool_compass"),
     /** 設定 45° 轉折點（投影對齊的寬度傳遞用）。 */
-    SET_PIVOT("draft_tool_set_pivot");
+    SET_PIVOT("draft_tool_set_pivot"),
+    /** 編輯工具：操作的是已經畫好的線（見 [DraftEditController]）。 */
+    TRIM("draft_tool_trim"),
+    EXTEND("draft_tool_extend"),
+    FILLET("draft_tool_fillet"),
+    OFFSET("draft_tool_offset"),
+    MIRROR("draft_tool_mirror"),
+    ARRAY_POLAR("draft_tool_array_polar"),
+    /** 練習題（挑錯）：點圖上錯的位置。 */
+    PROBLEM_SPOT("draft_prob_kind_spot_error");
+
+    val isEdit: Boolean get() = this == TRIM || this == EXTEND || this == FILLET || this == OFFSET || this == MIRROR || this == ARRAY_POLAR
+
+    /** 需要先用套索選好要處理的線。 */
+    val needsSelection: Boolean get() = this == MIRROR || this == ARRAY_POLAR
 
     val isDimension: Boolean get() = this == DIM_LINEAR || this == DIM_DIAMETER || this == DIM_RADIUS || this == DIM_ANGLE
 }
@@ -149,6 +163,29 @@ object DraftingState {
         version++
     }
 
+    /** 圓角半徑與偏移距離（紙上毫米）。 */
+    var filletRadiusMm by mutableDoubleStateOf(5.0)
+        private set
+    var offsetDistanceMm by mutableDoubleStateOf(5.0)
+        private set
+
+    fun changeFilletRadius(mm: Double) {
+        filletRadiusMm = mm.coerceIn(1.0, 100.0)
+        prefs?.edit()?.putFloat("filletRadius", filletRadiusMm.toFloat())?.apply()
+    }
+
+    fun changeOffsetDistance(mm: Double) {
+        offsetDistanceMm = mm.coerceIn(1.0, 200.0)
+        prefs?.edit()?.putFloat("offsetDistance", offsetDistanceMm.toFloat())?.apply()
+    }
+
+    /** 環形陣列的份數與總角度（工具從這裡讀）。 */
+    var polarCount = 6
+    var polarTotalDeg = 360.0
+
+    /** 鏡射、陣列要處理的那批筆畫（選工具當下由套索帶進來；核心筆畫 id）。 */
+    var editSelection: List<String> = emptyList()
+
     /** 頁面上目前的尺規。沒有就是 null。 */
     var instrument: InstrumentModel? = null
         private set
@@ -167,6 +204,12 @@ object DraftingState {
 
     fun rotateInstrument(degrees: Double) {
         instrument?.rotate(degrees)
+        version++
+    }
+
+    /** 量角器：把讀數點設在頁面上的 (x, y)（null 清掉）。 */
+    fun readInstrument(x: Float, y: Float) {
+        instrument?.setReading(x to y)
         version++
     }
 
@@ -213,6 +256,8 @@ object DraftingState {
         tipsSeen = p.getBoolean("tipsSeen", false)
         alignEnabled = p.getBoolean("align", true)
         thirdAngle = p.getBoolean("thirdAngle", true)
+        filletRadiusMm = p.getFloat("filletRadius", 5f).toDouble()
+        offsetDistanceMm = p.getFloat("offsetDistance", 5f).toDouble()
     }
 
     /** 換筆記本：讀它自己的顯示／鎖定。 */

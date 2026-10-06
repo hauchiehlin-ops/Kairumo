@@ -1,3 +1,4 @@
+import QuickLook
 import SwiftUI
 
 /// 立體輔助：草圖拉伸 → 三視圖／等角圖／剖面，插進頁面；或旋轉立體對照。
@@ -14,7 +15,7 @@ struct SolidStudioSheet: View {
     @Environment(\.dismiss) private var dismiss
     @ObservedObject private var localizationManager = LocalizationManager.shared
 
-    private enum Tab: Hashable { case sheet, rotate }
+    private enum Tab: Hashable { case sheet, rotate, glass }
     @State private var tab: Tab = .sheet
 
     // 輪廓
@@ -48,6 +49,20 @@ struct SolidStudioSheet: View {
     @State private var yaw: Double = 35
     @State private var pitch: Double = 25
 
+    // 玻璃盒展開
+    @State private var glassT: Double = 0
+    @State private var glassPlaying = false
+    @State private var glassThird = true
+    @State private var glassYaw: Double = 30
+    @State private var glassPitch: Double = 25
+    @State private var glassCache = GlassBoundsCache()
+    private static let glassTick = Timer.publish(every: 1.0 / 30.0, on: .main, in: .common).autoconnect()
+
+    // 3D 匯出
+    @State private var shareURL: SharedFile?
+    @State private var arURL: SharedFile?
+    @State private var exportNotice: String?
+
     private func t(_ key: String) -> String { localizationManager.localized(key) }
 
     private var profile: FfiSolidProfile? {
@@ -77,6 +92,7 @@ struct SolidStudioSheet: View {
                 Picker("", selection: $tab) {
                     Text(t("solid_tab_sheet")).tag(Tab.sheet)
                     Text(t("solid_tab_rotate")).tag(Tab.rotate)
+                    Text(t("solid_tab_glass")).tag(Tab.glass)
                 }
                 .pickerStyle(.segmented)
                 .padding(.horizontal)
@@ -91,15 +107,24 @@ struct SolidStudioSheet: View {
                     .accessibilityIdentifier("solid.preview")
 
                 Form {
+                    // 玻璃盒的播放與進度放在最上面：拉滑桿、看動畫要同時看得到預覽與控制。
+                    if tab == .glass { glassSection }
                     profileSection
-                    if tab == .sheet {
+                    switch tab {
+                    case .sheet:
                         sectionSection
                         layoutSection
-                    } else {
+                    case .rotate:
                         rotateSection
+                    case .glass:
+                        EmptyView()
                     }
+                    exportSection
                 }
             }
+            .onReceive(Self.glassTick) { _ in advanceGlass() }
+            .sheet(item: $shareURL) { item in ShareItemsSheet(items: [item.url]) }
+            .fullScreenCover(item: $arURL) { item in QuickLookPreview(url: item.url) }
             .navigationTitle(t("solid_studio"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -135,6 +160,8 @@ struct SolidStudioSheet: View {
                     for s in sheet.strokes.sorted(by: { $0.layer < $1.layer }) {
                         draw(s, in: &ctx, origin: CGPoint(x: ox, y: oy), widthScale: ratio)
                     }
+                case .glass:
+                    drawGlass(&ctx, size: size, pad: pad, profile: profile)
                 case .rotate:
                     guard let view = solidView(
                         profile: profile, depth: Float(depth), yawDeg: Float(yaw), pitchDeg: Float(pitch),
@@ -153,6 +180,25 @@ struct SolidStudioSheet: View {
                 }
             }
             .frame(width: geo.size.width, height: geo.size.height)
+            // 拖曳轉動觀看的角度（旋轉對照與玻璃盒共用）。
+            .gesture(DragGesture(minimumDistance: 2).onChanged { value in
+                guard tab != .sheet else { return }
+                orbit(by: value.translation)
+            }.onEnded { _ in lastDrag = .zero })
+        }
+    }
+
+    @State private var lastDrag: CGSize = .zero
+
+    private func orbit(by translation: CGSize) {
+        let dx = translation.width - lastDrag.width, dy = translation.height - lastDrag.height
+        lastDrag = translation
+        if tab == .glass {
+            glassYaw = max(-180, min(180, glassYaw + Double(dx) * 0.5))
+            glassPitch = max(-90, min(90, glassPitch - Double(dy) * 0.5))
+        } else {
+            yaw = max(-180, min(180, yaw + Double(dx) * 0.5))
+            pitch = max(-90, min(90, pitch - Double(dy) * 0.5))
         }
     }
 
@@ -279,6 +325,136 @@ struct SolidStudioSheet: View {
             }
             Slider(value: value, in: range).accessibilityIdentifier(id)
         }
+    }
+
+    // MARK: 玻璃盒
+
+    /// 整段動畫的畫面範圍只算一次（每換一個輪廓、深度或視角才重算）；每一格都重算會拖慢動畫。
+    final class GlassBoundsCache {
+        var key = ""
+        var rect: [Float] = []
+    }
+
+    private func drawGlass(_ ctx: inout GraphicsContext, size: CGSize, pad: CGFloat, profile: FfiSolidProfile) {
+        let key = "\(profile.outer.count)-\(profile.width)-\(profile.height)-\(depth)-\(glassThird)-\(Int(glassYaw))-\(Int(glassPitch))"
+        if glassCache.key != key {
+            glassCache.rect = solidGlassBounds(
+                profile: profile, depth: Float(depth), thirdAngle: glassThird,
+                yawDeg: Float(glassYaw), pitchDeg: Float(glassPitch)) ?? []
+            glassCache.key = key
+        }
+        guard glassCache.rect.count == 4,
+              let frame = solidGlassFrame(
+                profile: profile, depth: Float(depth), thirdAngle: glassThird, t: Float(glassT),
+                yawDeg: Float(glassYaw), pitchDeg: Float(glassPitch))
+        else { return }
+        let r = glassCache.rect
+        let bw = CGFloat(max(r[2] - r[0], 1)), bh = CGFloat(max(r[3] - r[1], 1))
+        // 範圍再留 6% 的邊：中間幾格可能比取樣的邊界稍微超出一點。
+        let k = min((size.width - pad * 2) / bw, (size.height - pad * 2) / bh) * 0.94
+        let ox = size.width / 2 - (CGFloat(r[0]) + bw / 2) * k
+        let oy = size.height / 2 + (CGFloat(r[1]) + bh / 2) * k
+        func map(_ x: Float, _ y: Float) -> CGPoint { CGPoint(x: ox + CGFloat(x) * k, y: oy - CGFloat(y) * k) }
+        let fade = max(0, 1 - glassT * 3)
+        // 由底到頂：投射線、面框、立體、隱藏線、實線。
+        let order: [FfiGlassKind] = [.projection, .frame, .object, .hidden, .visible]
+        for kind in order {
+            for l in frame.lines where l.kind == kind {
+                if kind == .projection && fade <= 0.01 { continue }
+                var path = Path()
+                path.move(to: map(l.ax, l.ay))
+                path.addLine(to: map(l.bx, l.by))
+                switch kind {
+                case .projection:
+                    ctx.stroke(path, with: .color(.blue.opacity(0.35 * fade)), style: StrokeStyle(lineWidth: 0.8, dash: [3, 3]))
+                case .frame:
+                    ctx.stroke(path, with: .color(.teal.opacity(0.8)), style: StrokeStyle(lineWidth: 1.2))
+                case .object:
+                    ctx.stroke(path, with: .color(.gray.opacity(0.55)), style: StrokeStyle(lineWidth: 1))
+                case .hidden:
+                    ctx.stroke(path, with: .color(.black.opacity(0.7)), style: StrokeStyle(lineWidth: 1, dash: [4, 3]))
+                case .visible:
+                    ctx.stroke(path, with: .color(.black), style: StrokeStyle(lineWidth: 2, lineCap: .round))
+                }
+            }
+        }
+    }
+
+    /// 播放中：每 1/30 秒往前走一格（約 4 秒展開完）；走到 1 就停。
+    private func advanceGlass() {
+        guard glassPlaying, tab == .glass else { return }
+        glassT = min(1, glassT + (1.0 / 30.0) / 4.0)
+        if glassT >= 1 { glassPlaying = false }
+    }
+
+    private var glassSection: some View {
+        Section {
+            Text(t("solid_glass_hint")).font(.footnote).foregroundColor(.secondary)
+            HStack {
+                Button {
+                    if glassT >= 1 { glassT = 0 }
+                    glassPlaying.toggle()
+                } label: {
+                    Label(
+                        glassPlaying ? t("solid_glass_pause") : (glassT >= 1 ? t("solid_glass_replay") : t("solid_glass_play")),
+                        systemImage: glassPlaying ? "pause.fill" : "play.fill")
+                }
+                .buttonStyle(.borderedProminent)
+                .accessibilityIdentifier("solid.glass.play")
+                Spacer()
+                Toggle(t("solid_first_angle"), isOn: Binding(get: { !glassThird }, set: { glassThird = !$0 }))
+                    .fixedSize()
+                    .accessibilityIdentifier("solid.glass.first")
+            }
+            slider(t("solid_glass_progress"), Binding(get: { glassT }, set: { glassT = $0; glassPlaying = false }),
+                   0...1, id: "solid.glass.t", format: "%.2f")
+            slider(t("solid_yaw"), $glassYaw, -180...180, id: "solid.glass.yaw", format: "%.0f°")
+            slider(t("solid_pitch"), $glassPitch, -90...90, id: "solid.glass.pitch", format: "%.0f°")
+        }
+    }
+
+    // MARK: 3D 匯出
+
+    private var exportSection: some View {
+        Section(t("solid_export_title")) {
+            ForEach(solidExportFormats(), id: \.self) { format in
+                Button {
+                    export(format: format, ar: false)
+                } label: {
+                    Label(t("solid_export_\(format)"), systemImage: "square.and.arrow.up")
+                }
+                .disabled(profile == nil)
+                .accessibilityIdentifier("solid.export.\(format)")
+            }
+            Button {
+                export(format: "usdz", ar: true)
+            } label: {
+                Label(t("solid_export_ar"), systemImage: "arkit")
+            }
+            .disabled(profile == nil)
+            .accessibilityIdentifier("solid.export.ar")
+            if let exportNotice { Text(exportNotice).font(.caption).foregroundColor(.red) }
+            Text(t("solid_export_footer")).font(.footnote).foregroundColor(.secondary)
+        }
+    }
+
+    /// 立體 → 檔案（一個頁面單位 = 1/每毫米單位數 毫米），寫進暫存資料夾，再交給分享表或 AR 預覽。
+    private func export(format: String, ar: Bool) {
+        exportNotice = nil
+        guard let profile,
+              let data = solidExport3d(profile: profile, depth: Float(depth), format: format, mmPerUnit: 1 / draftUnitsPerMm())
+        else {
+            exportNotice = t("solid_export_failed")
+            return
+        }
+        let url = FileManager.default.temporaryDirectory.appending(path: "solid-\(UUID().uuidString.prefix(6)).\(format)")
+        do {
+            try Data(data).write(to: url, options: .atomic)
+        } catch {
+            exportNotice = t("solid_export_failed")
+            return
+        }
+        if ar { arURL = SharedFile(url: url) } else { shareURL = SharedFile(url: url) }
     }
 
     // MARK: 動作

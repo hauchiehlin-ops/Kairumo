@@ -2496,6 +2496,7 @@ private fun InkScreen(
     var showDraftingToolbox by remember { mutableStateOf(false) }
     LaunchedEffect(inkTool, DraftingState.tool) {
         DraftToolController.onChanged = { revision++ }
+        com.kairumo.padnote.ink.DraftEditController.onChanged = { revision++ }
         engine.onToolTouch = if (inkTool.isDrafting && DraftingState.tool != DraftTool.NONE) { phase, x, y ->
             DraftToolController.handle(phase, x, y, engine)
         } else null
@@ -2533,13 +2534,36 @@ private fun InkScreen(
     }
     if (showDraftingToolbox) {
         val density = LocalDensity.current.density
+        val ctx = androidx.compose.ui.platform.LocalContext.current
         DraftingToolboxDialog(
             languageTag = deviceLanguageTag(),
             frameSupported = currentPaperId()?.let { uniffi.padnote_core.draftSheetFrame(it, "", true, false) != null } == true,
             onPickTool = { tool ->
-                DraftingState.selectTool(tool)
-                DraftToolController.reset(engine)
+                // 鏡射、陣列要處理套索選的那批線：在離開套索之前把它帶過來。
+                if (tool.needsSelection && !captureEditSelection(lasso)) {
+                    message = l10n("draft_edit_need_selection")
+                    showDraftingToolbox = false
+                } else {
+                    DraftingState.selectTool(tool)
+                    DraftToolController.reset(engine)
+                    showDraftingToolbox = false
+                }
+            },
+            onExport = { format ->
                 showDraftingToolbox = false
+                message = if (exportDraftingPage(ctx, engine, format)) null else l10n("draft_export_empty")
+            },
+            onStartPractice = { kind ->
+                showDraftingToolbox = false
+                startPractice(engine, kind)
+                applyInkTool(InkTool.DRAFTING)
+                revision++
+            },
+            onRectArray = { rows, cols, dx, dy ->
+                showDraftingToolbox = false
+                applyRectArrayToSelection(engine, lasso, rows, cols, dx, dy)
+                revision++
+                message = if (lasso.hasSelection) null else l10n("draft_edit_need_selection")
             },
             onInsertSymbol = { kit ->
                 showDraftingToolbox = false
@@ -4550,12 +4574,22 @@ private fun InkScreen(
                 }
             }
 
+            // 練習題進行中：題目、選項、批改結果（見 DraftingPractice.kt）。
+            if (inkTool.isDrafting && editorMode == EditorMode.DRAW && com.kairumo.padnote.ink.PracticeSession.isActive) {
+                @Suppress("UNUSED_EXPRESSION") revision
+                com.kairumo.padnote.ink.PracticeCard(
+                    engine = engine,
+                    onNew = { PracticeSession_next(engine); revision++ },
+                    modifier = Modifier.zIndex(10f).align(Alignment.BottomStart).padding(12.dp)
+                )
+            }
             // 圖學：製圖筆組、圖層、吸附（見 DraftingBar.kt）。
             if (inkTool.isDrafting && editorMode == EditorMode.DRAW) {
                 com.kairumo.padnote.ink.DraftingBar(
                     languageTag = deviceLanguageTag(),
                     onOpenSolidStudio = { showSolidStudio = true },
                     onOpenToolbox = { showDraftingToolbox = true },
+                    onMarkAngle = { markProtractorReading(engine); revision++ },
                     onCloseTool = {
                         DraftingState.selectTool(DraftTool.NONE)
                         DraftToolController.reset(engine)
@@ -7478,6 +7512,49 @@ private fun placeDraftKit(
     val r = (pts.maxOf { it.x } + box[0] + 8f) * density
     val b = (pts.maxOf { it.y } + box[1] + 8f) * density
     return engine.lastInsertedCoreIds to listOf(Offset(l, t), Offset(r, t), Offset(r, b), Offset(l, b))
+}
+
+/** 匯出本頁的製圖線（SVG／DXF）並開分享表；沒有任何線回 false（頂層函式：避免在巨大的 InkScreen 裡放大 lambda）。 */
+private fun exportDraftingPage(ctx: android.content.Context, engine: com.kairumo.padnote.ink.InkEngine, format: String): Boolean =
+    com.kairumo.padnote.ink.DraftingExport.sharePage(ctx, engine, format, PageGeometry.width, PageGeometry.height)
+
+/** 再出同一題型的一題。 */
+private fun PracticeSession_next(engine: com.kairumo.padnote.ink.InkEngine) {
+    val kind = com.kairumo.padnote.ink.PracticeSession.problem?.kind ?: return
+    startPractice(engine, kind)
+}
+
+/** 開始一題練習：把題目線放進目前這一頁（頂層函式：避免在巨大的 InkScreen 裡放大 lambda）。 */
+private fun startPractice(engine: com.kairumo.padnote.ink.InkEngine, kind: String) {
+    com.kairumo.padnote.ink.PracticeSession.start(kind, null, engine, PageGeometry.width, PageGeometry.height)
+}
+
+/** 把套索選的那批線帶進編輯工具；沒選到回 false（頂層函式：避免在巨大的 InkScreen 裡放大 lambda）。 */
+private fun captureEditSelection(lasso: com.kairumo.padnote.canvas.LassoSelection): Boolean {
+    DraftingState.editSelection = lasso.selected
+    return lasso.selected.isNotEmpty()
+}
+
+private fun applyRectArrayToSelection(
+    engine: com.kairumo.padnote.ink.InkEngine, lasso: com.kairumo.padnote.canvas.LassoSelection,
+    rows: Int, cols: Int, dxMm: Double, dyMm: Double
+) {
+    DraftingState.editSelection = lasso.selected
+    com.kairumo.padnote.ink.DraftEditController.applyRectArray(rows, cols, dxMm, dyMm, engine)
+}
+
+/** 把量角器讀到的角度畫成一條線（從圓心到外緣），一次復原（頂層函式：避免在巨大的 InkScreen 裡放大 lambda）。 */
+private fun markProtractorReading(engine: com.kairumo.padnote.ink.InkEngine) {
+    val (a, b) = DraftingState.instrument?.readingRay ?: return
+    val pen = DraftingState.activePen
+    val layer = DraftingState.activeLayerId
+    if (DraftingState.isLocked(layer)) return
+    DraftingState.ensureVisible(layer)
+    engine.insertDrafted(
+        listOf(uniffi.padnote_core.FfiSheetStroke(
+            listOf(uniffi.padnote_core.FfiPoint(a.x, a.y), uniffi.padnote_core.FfiPoint(b.x, b.y)),
+            layer.toUByte(), DraftingState.activeLineType.toUByte(), pen.width, pen.colorHex)),
+        0f, 0f)
 }
 
 /** 把尺規放在目前看得到的範圍正中央（頂層函式：避免在巨大的 InkScreen 裡放大 lambda）。 */

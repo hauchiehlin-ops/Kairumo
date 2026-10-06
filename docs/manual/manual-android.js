@@ -259,6 +259,235 @@ window.KAIRUMO_MANUAL = {
         "cap2": "素材圖庫：依分類瀏覽，點「下載」後即可插入"
       },
       {
+        "id": "drafting",
+        "title": "圖學（工程製圖）：從零開始的完整教學",
+        "lead": "這一章專門講「圖學」。完全沒學過也沒關係：先照著 12 個步驟做一遍，從建立筆記本、畫第一條線，做到三視圖、標尺寸、放圖框、做練習題被批改、匯出檔案；每一步都附畫面。每一部分最後的「逐項說明」再把每個按鈕講清楚。",
+        "buttons": [
+          "新增筆記",
+          "圖學套件",
+          "圖學筆組",
+          "圖學工具",
+          "立體輔助",
+          "批改"
+        ],
+        "walk": [
+          {
+            "part": "圖學：製圖筆、圖層與頁面"
+          },
+          {
+            "title": "建立「圖學套件」",
+            "text": "在首頁按「新增筆記」。往下看到「建立套件」那一區，點「圖學套件」，再按「確認」。一次建好三本筆記（課堂筆記、作圖練習、錯誤陷阱本），製圖用的紙與筆都幫你選好了。想先隨便練習也可以：選一張空白紙，打開後點編輯畫面上排的「圖學筆組」。",
+            "fig": "guide_kit",
+            "cap": "新增筆記本：選「圖學套件」再按確認"
+          },
+          {
+            "title": "認識製圖列",
+            "text": "打開其中一本。第一次進來會跳出「圖學使用提示」，按「知道了」關掉。頁面上方就是製圖列，由上到下是：「製圖筆」（選線型）、「圖層」（頂層、中層、底層，各有眼睛與鎖頭）、「形狀吸附」與「角度鎖定」、「圖學工具」、「立體輔助」。先別急著按，下面一步一步來。",
+            "fig": "guide_bar",
+            "cap": "製圖列：製圖筆、圖層、形狀吸附與角度鎖定"
+          },
+          {
+            "title": "畫第一條線",
+            "text": "點「粗實線」，用手指或觸控筆在頁面上畫一條大概水平的線。到終點**停住約半秒、先不要放開**，手感輕輕一震，線就自動變成筆直的線。再畫一條垂直的。畫圓、矩形也一樣：畫好、停住，就會吸附成標準圖形。",
+            "fig": "guide_snap",
+            "cap": "停住半秒，歪歪的線變成筆直的線"
+          },
+          {
+            "title": "隱藏線與圖層",
+            "text": "點「隱藏線」再畫一條，它會是虛線 —— 看不見的邊在工程圖裡就用這種線。想暫時藏起某一層（例如輔助線），點那一層旁邊的眼睛；鎖頭可以保護那一層，不會被誤畫。",
+            "fig": "guide_hidden",
+            "cap": "隱藏線是虛線；每一層都能用眼睛隱藏、用鎖頭保護"
+          },
+          {
+            "title": "逐項說明：圖學：製圖筆、圖層與頁面",
+            "text": "工程圖學要的是等寬、硬邊的線，而且要分層。選「圖學筆組」就換成這一套，頁面的 1 mm 就是紙上的 1 mm。",
+            "items": [
+              "點編輯畫面上排的「圖學筆組」，上方出現製圖列。",
+              "「製圖筆」依製圖規範分成粗實線、細實線、隱藏線、中心線、假想線、輔助線與原題線。選一支筆，線型與圖層就跟著它走（隱藏線是虛線、輔助線是淺藍色）。",
+              "「圖層」分成底層（原題）、中層（輔助）、頂層（答案）三層，另外 0 是一般筆跡。每一層都能用眼睛隱藏、用鎖頭保護；顯示與鎖定只存在這台裝置、這一本筆記，不會同步到別的裝置。",
+              "「形狀吸附」：畫一條線，在終點停住約半秒，會自動變成直線、圓、矩形或三角形。「角度鎖定」可以把直線鎖在 15°、30°、45°、90° 的倍數。",
+              "「步驟編號」：點頁面就放上 ①②③。「移到圖層」：點一條線，就把它改到目前選的圖層，而且可以復原。",
+              "頁面規格有 A3、A2 與自訂尺寸（300 到 6000）。新增筆記本時可以一次建立「圖學套件」（課堂筆記、作圖練習、錯誤陷阱本）；內建的《圖學範例》示範怎麼用輔助線求三視圖的交點。",
+              "頁面上的長度就是紙上的毫米（A4 寬 210 mm），所以標註、量角器、尺與匯出的尺寸都是真實的毫米。"
+            ],
+            "fig": "drafting",
+            "cap": "製圖列：製圖筆、圖層、形狀吸附與角度鎖定"
+          },
+          {
+            "part": "立體輔助與玻璃盒"
+          },
+          {
+            "title": "用立體輔助產生三視圖",
+            "text": "點「立體輔助」。在「輪廓」挑一個形狀（例如 U 形槽），再調寬、高、深。預覽畫的就是插入之後的樣子。想看內部，在「剖面」選「全剖面」。",
+            "fig": "solidstudio",
+            "cap": "立體輔助：選輪廓、調尺寸、看預覽"
+          },
+          {
+            "title": "插入頁面",
+            "text": "按右上角的「插入頁面」。三視圖會放在你目前看到的範圍正中央，而且已經選住 —— 拖一下就能搬到喜歡的位置。看看它們怎麼擺：俯視圖在正視圖正上方、右視圖在正右方（第三角法）。",
+            "fig": "guide_inserted",
+            "cap": "三視圖插進頁面：俯視圖在上、右視圖在右"
+          },
+          {
+            "title": "逐項說明：立體輔助與玻璃盒",
+            "text": "畫一個封閉輪廓，拉伸成立體，再看它的三視圖、等角圖、剖面，以及三視圖是怎麼從玻璃盒展開來的。",
+            "items": [
+              "點製圖列的「立體輔助」。挑一個預設輪廓，或按「使用這一頁上的封閉圖形」用你畫的草圖；再調寬、高、深。",
+              "「視圖」分頁：三視圖、等角圖、投影線、中心線、尺寸（總長、總高、總深）、第一角或第三角法，以及剖面（全剖、階梯、旋轉、平行正面、斜切）。階梯與旋轉剖面會畫出切口後面的形狀，斜切會畫出切面的實形。按「插入頁面」把整組線放在目前視野正中央，並自動選住。",
+              "「旋轉對照」分頁：拖曳畫面或用滑桿，從任何角度看這個立體；看不見的邊用虛線。",
+              "「玻璃盒」分頁：立體放在玻璃盒裡，三個視圖畫在盒子的三個面上。按「播放展開」，約 4 秒把頂面與右面（第一角法是底面與左面）掀開、攤平，就是三視圖的版面。",
+              "可以拖進度條停在任何一格、切換第一角法，也能拖曳畫面轉動觀看的角度。",
+              "預覽畫的就是插入時寫進頁面的那組線，預覽長什麼樣，插進去就長什麼樣。"
+            ],
+            "fig": "solidstudio",
+            "cap": "立體輔助：預設輪廓、剖面與排版選項"
+          },
+          {
+            "title": "玻璃盒",
+            "text": "玻璃盒：頂面與右面掀開到一半，拖曳畫面可以轉動觀看的角度",
+            "fig": "glassbox",
+            "cap": "玻璃盒：頂面與右面掀開到一半，拖曳畫面可以轉動觀看的角度"
+          },
+          {
+            "part": "尺寸標註、符號與圖框"
+          },
+          {
+            "title": "標上尺寸",
+            "text": "點「圖學工具」，再點「線性標註」。照畫面上方的提示做：先點第一個點，再點第二個點（它會自動吸附到線的端點），最後按住拖出尺寸線要放的位置，放開就標好了。數字依比例尺換算。",
+            "fig": "guide_dim",
+            "cap": "線性標註：點兩個點，再拖出尺寸線"
+          },
+          {
+            "title": "比例尺、圖框與標題欄",
+            "text": "再打開「圖學工具」：先在「比例尺」選一個（例如 1:2），再按「插入圖框與標題欄」。依這一頁的紙張，圖框、標題欄與投影法符號就畫好了；標題欄裡的文字點兩下可以改成你的名字和圖名。",
+            "fig": "guide_frame",
+            "cap": "插入圖框與標題欄（比例欄帶入目前的比例尺）"
+          },
+          {
+            "title": "逐項說明：尺寸標註、符號與圖框",
+            "text": "用工具箱把尺寸、符號、圖框與標題欄放進圖面。",
+            "items": [
+              "點製圖列的「圖學工具」打開工具箱。",
+              "「尺寸標註」有線性、直徑、半徑、角度四種。選一種之後，畫面上方的提示會告訴你下一步：線性＝點兩個點，再按住拖出尺寸線的位置；直徑與半徑＝點一個畫好的圓，再拖向要引出的方向；角度＝依序點頂點與兩條邊，再拖出弧線。",
+              "點的位置會自動吸附到線的端點與圓心，所以量得準。",
+              "「比例尺」決定標註的數字：數字＝紙上毫米×比例尺。1:2 的圖，紙上量 50 mm 就標 100。比例尺逐本記在這台裝置上。",
+              "「製圖符號」有表面粗度、焊接、螺紋、幾何公差（含基準與公差框）、標記，以及標準件（六角螺栓、螺帽、墊圈，依 M 規格）。調好參數按「放進頁面」，符號會放在目前視野正中央並選住，拖一下就能搬。",
+              "「插入圖框與標題欄」依這一頁的紙張規格（A4、A3、A2）畫出圖框、標題欄與投影法符號；可以選第三角法（台灣、美國）或第一角法。",
+              "尺寸數字與文字是筆畫字形，不是文字方塊，所以會跟著圖層一起隱藏，也會一起匯出。",
+              "標註前先確認比例尺。同一張圖要用不同比例尺時，先標完一種再換。"
+            ],
+            "fig": "drafttools",
+            "cap": "工具箱：尺寸標註、比例尺、符號與圖框（上方頁面是剛標好的線性尺寸）"
+          },
+          {
+            "part": "對齊、尺規與圓規"
+          },
+          {
+            "title": "尺規與對齊",
+            "text": "工具箱的「對齊與尺規」可以放直尺、丁字尺、三角板和量角器。放出量角器，按住外圈的刻度帶就讀得出角度；靠著尺的邊起筆，線會自動畫直；畫線時如果對齊了頁面上已有的端點，會出現淡藍色的虛線導引（長對正、高平齊）。",
+            "fig": "draftaids",
+            "cap": "量角器：按住外圈刻度帶讀出 60°"
+          },
+          {
+            "title": "逐項說明：對齊、尺規與圓規",
+            "text": "投影要對齊、線要畫直：讓畫面幫你對位，再用虛擬的尺規畫。",
+            "items": [
+              "「投影對齊」（預設開啟）：畫線的起點與終點會對齊頁面上既有線的端點，也就是長對正與高平齊；對齊時會出現淡藍色的虛線。不需要時可以在工具箱關掉。",
+              "設了「45° 轉折點」之後，寬度也會對齊（寬相等）：點「設定 45° 轉折點」，再點俯視圖與右視圖之間的那個角，也就是 45° 線通過的點。轉折點每一頁各存一個。",
+              "「對齊與尺規」可以放出「直尺」、「丁字尺」、兩種三角板與「量角器」。尺上的刻度是真實的毫米。",
+              "靠著尺的邊起筆，整條線就會沿著邊畫成直線。按住尺身中間可以拖動它；用旋轉鈕轉 15° 或 1°；丁字尺貼著頁面左緣，只能上下滑動、不能轉。",
+              "量角器：按住外圈的刻度帶讀角度，製圖列會顯示兩邊的刻度（例如 60.0° / 120.0°）；按「畫出讀數線」把它畫成一條線；按內圈則是移動量角器，讀數會跟著尺走。",
+              "「圓規」：先點圓心，再在圓周上按住、沿著圓拖出圓弧。可以轉超過半圈，放開就畫出，一次就能復原。",
+              "「第三角法（台灣、美國）」的開關在工具箱，它決定 45° 傳遞的方向，也決定圖框裡的投影法符號。",
+              "尺是疊在頁面上的工具，不會變成筆畫；用完按「收起尺規」就消失。"
+            ],
+            "fig": "draftaids",
+            "cap": "量角器：按住外圈的刻度帶讀出 60°，製圖列顯示兩邊的刻度"
+          },
+          {
+            "part": "編輯工具：修剪、延伸、圓角、偏移、鏡射、陣列"
+          },
+          {
+            "title": "修改圖形",
+            "text": "畫錯不必擦掉重畫。工具箱最下面的「編輯」區有修剪、延伸、圓角、偏移、鏡射和陣列。例如點「修剪」，再點多出來的那一段，它會剪到最近的交點；每個動作都可以一次復原。",
+            "fig": "draftedit",
+            "cap": "編輯工具：修剪、延伸、圓角、偏移、鏡射、陣列"
+          },
+          {
+            "title": "逐項說明：編輯工具：修剪、延伸、圓角、偏移、鏡射、陣列",
+            "text": "改圖不必擦掉重畫：對已經畫好的線直接修剪、延伸、接圓角、偏移、鏡射或排成陣列。",
+            "items": [
+              "在工具箱最下面的「編輯」區選工具。每個動作都是一次復原。",
+              "「修剪」：點要剪掉的那一段，會剪到前後最近的交點；畫好的圓也能剪成圓弧。沒有交點時會告訴你「這條線沒有和別的線相交」。",
+              "「延伸」：點要延伸的那一端附近，會沿著末端方向延到最近的線。",
+              "「圓角」：依序點兩條直線，用設定的半徑（毫米）接起來，兩條線會自動修短或延伸到切點。只支援直線；兩條線平行、或半徑比線還長時會說明原因。",
+              "「偏移」：點一條線，再點要偏向的那一側，就多出一條平行線（距離用工具箱的「偏移距離（mm）」設定），原來那條留著；封閉的線偏移之後仍然封閉。",
+              "「鏡射」與陣列要先用套索選好線。鏡射：點對稱軸的第一點，再按住拖到第二點，拖的時候會即時預覽，放開就複製一份。",
+              "「矩形陣列」設列數、欄數與間距；「環形陣列」設份數與總角度，再點圓心。",
+              "做出來的線沿用原線的筆、顏色、圖層與線型。",
+              "圓角的半徑與偏移的距離都是紙上毫米，設一次就會記住。"
+            ],
+            "fig": "draftedit",
+            "cap": "工具箱的「編輯」區：修剪、延伸、圓角、偏移、鏡射與陣列"
+          },
+          {
+            "part": "練習題與自動批改"
+          },
+          {
+            "title": "做一題練習",
+            "text": "工具箱的「練習題」選「補第三視圖」。題目的正視圖與俯視圖已經放好了，請用頂層的製圖筆在右邊補畫右視圖：外形用粗實線、看不見的邊用隱藏線。畫完按「批改」，缺線、多線、線型錯、沒對齊都會被標出來；不會的話按「看答案」，綠色的線就是標準答案。",
+            "fig": "draftpractice",
+            "cap": "批改之後標出缺線，綠色是標準答案"
+          },
+          {
+            "title": "逐項說明：練習題與自動批改",
+            "text": "程式幫你出題，畫完按一下就批改，指出缺線、多線、線型錯與沒對齊。",
+            "items": [
+              "工具箱的「練習題」有五種題型：補第三視圖、等角圖畫三視圖、判斷第一角或第三角法、找出圖上的錯、畫剖視圖。",
+              "選一種，題目線會放進目前這一頁的底層，頁面角落出現練習卡，寫著題目與立體的尺寸。",
+              "畫圖題請用頂層的製圖筆作答：外形用粗實線、看不見的邊用隱藏線、剖面線用細實線。",
+              "按「批改」：標出缺線（橘色虛線是該畫的位置）、多畫的線（紅色）、線型錯（黃色）、沒對齊（藍色虛線是正確的位置）；剖面題另外檢查剖面線有沒有畫夠、角度是不是 45°，最後給 0 到 100 分。",
+              "「看答案」把標準答案疊成綠色的線（不會改到你畫的內容）；「再出一題」換同一種題型的另一題。",
+              "判斷題直接選答案；找錯題先選錯誤的種類（缺線、多線、線型錯、沒對齊），再點圖上錯的位置。",
+              "題目由種子產生，同一個種子在手機與平板上出的是同一題。",
+              "批改只看作答範圍裡、頂層的線；題目線在底層，不會算成你畫的。"
+            ],
+            "fig": "draftpractice",
+            "cap": "練習：空白頁批改後標出缺線，綠色的線是標準答案"
+          },
+          {
+            "part": "匯出圖形與 3D 模型"
+          },
+          {
+            "title": "匯出",
+            "text": "完成之後，在工具箱的「匯出本頁圖形」存成 SVG 或 DXF，交給向量軟體或 CAD；在立體輔助最下面的「匯出 3D 模型」存成 STL（3D 列印）、OBJ、GLB 或 USDZ。所有匯出都在你的裝置上完成。",
+            "fig": "draftexport",
+            "cap": "匯出本頁圖形：SVG 或 DXF"
+          },
+          {
+            "title": "逐項說明：匯出圖形與 3D 模型",
+            "text": "把圖交給 CAD、向量軟體、3D 列印或 AR：全部在你的裝置上完成。",
+            "items": [
+              "工具箱的「匯出本頁圖形」：SVG 給向量軟體、DXF 給 AutoCAD、LibreCAD 等 CAD。單位是毫米，A4 寬就是 210 mm；隱藏的圖層不會輸出；DXF 帶有圖層與線型（隱藏線、中心線、假想線）。",
+              "匯出之後交給系統的分享表，可以存成檔案或傳給別的 App。",
+              "立體輔助最下面的「匯出 3D 模型」：STL（3D 列印、毫米）、OBJ（毫米）、GLB（網頁與 Blender，公尺）、USDZ（公尺）。",
+              "有洞的輪廓也能正確匯出，例如環與帶孔的板。",
+              "在 Apple 裝置上，USDZ 旁邊有「用 AR 看」，用系統內建的預覽把模型放到桌上看；那是系統的功能，Kairumo 不會取得相機的畫面。其他裝置可以把 USDZ 檔傳到 Apple 裝置去看。",
+              "所有匯出都在你的裝置上完成；檔案只有在你按分享的時候才會離開 App。"
+            ],
+            "fig": "draftexport",
+            "cap": "工具箱的匯出區：本頁圖形可存成 SVG 或 DXF"
+          },
+          {
+            "title": "立體輔助的匯出區",
+            "text": "立體輔助的匯出區：STL、OBJ、GLB、USDZ 與「用 AR 看」",
+            "fig": "solidexport",
+            "cap": "立體輔助的匯出區：STL、OBJ、GLB、USDZ 與「用 AR 看」"
+          }
+        ],
+        "tip": "整章跟著做大約 30 分鐘。做到一半想休息沒關係：所有圖層、比例尺等設定都記在這台裝置上，下次打開還在。"
+      },
+      {
         "id": "data",
         "title": "資料備份與同步",
         "lead": "不需要帳號，也沒有我們的伺服器。備份是一個檔案，同步是一個你自己的雲端資料夾。",
@@ -792,6 +1021,235 @@ window.KAIRUMO_MANUAL = {
         "cap2": "Asset Library: browse by category, tap Download, then place it"
       },
       {
+        "id": "drafting",
+        "title": "Drafting (engineering drawing): a complete guide from zero",
+        "lead": "This chapter is all about drafting. You do not need to have studied it: first follow the 12 steps from creating a notebook and drawing your first line through three views, dimensions, a frame, a practice problem that gets checked, and exporting — every step has a screenshot. Then the “every control, in detail” card closes each part and explains each button properly.",
+        "buttons": [
+          "New Note",
+          "Engineering Drawing Kit",
+          "Drafting",
+          "Drafting tools",
+          "Solid helper",
+          "Check my drawing"
+        ],
+        "walk": [
+          {
+            "part": "Drafting: pens, layers and pages"
+          },
+          {
+            "title": "Create a drafting kit",
+            "text": "On the home screen tap “New Note”. Under “Create kit”, tap “Engineering Drawing Kit”, then tap “OK”. Three notebooks are made at once (class notes, drawing practice, an error-trap book) with the drafting paper and pens already chosen. To just try things out, you can also pick a blank page and, once it opens, tap “Drafting” in the editor’s top row.",
+            "fig": "guide_kit",
+            "cap": "New Notebook: choose the drafting kit and confirm"
+          },
+          {
+            "title": "Meet the drafting bar",
+            "text": "Open one of the notebooks. The first time, “Drafting tips” appears; tap “Got it”. The drafting bar is at the top of the page. From top to bottom: “Drafting pens” (line types), “Layers” (top, aux and base, each with an eye and a lock), “Shape snap” and “Angle lock”, “Drafting tools” and “Solid helper”. Do not press anything yet — we go one step at a time.",
+            "fig": "guide_bar",
+            "cap": "The drafting bar: pens, layers, shape snap and angle lock"
+          },
+          {
+            "title": "Draw your first line",
+            "text": "Tap “Thick solid” and, with a finger or a pen, draw a roughly horizontal line on the page. At the end **hold still for about half a second without lifting**; you feel a light tap and the line becomes perfectly straight. Draw a vertical one too. Circles and rectangles work the same way: draw, hold, and they snap to the exact shape.",
+            "fig": "guide_snap",
+            "cap": "Hold for half a second and a wobbly line turns straight"
+          },
+          {
+            "title": "Hidden lines and layers",
+            "text": "Tap “Hidden line” and draw another line; it is dashed — in engineering drawings, edges you cannot see use this kind of line. To hide a layer for now (for example the construction lines), tap the eye beside it; the lock protects a layer from stray marks.",
+            "fig": "guide_hidden",
+            "cap": "A hidden line is dashed; every layer can be hidden with the eye or locked"
+          },
+          {
+            "title": "Every control, in detail：Drafting: pens, layers and pages",
+            "text": "Engineering drawing needs even, hard-edged lines in layers. Choose the Drafting pen set to switch to them; 1 mm on the page is 1 mm on paper.",
+            "items": [
+              "Tap “Drafting” in the editor’s top row; the drafting bar appears above the page.",
+              "“Drafting pens” follow drafting standards: thick solid, thin solid, hidden, centre, phantom, auxiliary and given-outline lines. Pick a pen and its line type and layer come with it (hidden lines are dashed, auxiliary lines light blue).",
+              "“Layers” are Base (given), Aux (construction) and Top (answer); 0 is plain ink. Each layer can be hidden with the eye and protected with the lock. Visibility and locks are kept on this device and for this notebook only — they do not sync.",
+              "“Shape snap”: draw a line and hold still for about half a second at the end; it becomes a straight line, circle, rectangle or triangle. “Angle lock” locks straight lines to multiples of 15°, 30°, 45° or 90°.",
+              "“Step numbers”: tap the page to place ①②③. “Move to layer”: tap a line to move it to the layer you have selected — and you can undo it.",
+              "Page sizes include A3, A2 and custom sizes (300 to 6000). A new notebook can be created as a “drafting kit” (class notes, drawing practice, error-trap book); the built-in Drafting Example shows how to find the three-view points with construction lines.",
+              "Lengths on the page are millimetres on paper (A4 is 210 mm wide), so dimensions, the protractor, the rulers and the exports are all in true millimetres."
+            ],
+            "fig": "drafting",
+            "cap": "The drafting bar: drafting pens, layers, shape snap and angle lock"
+          },
+          {
+            "part": "Solid helper and the glass box"
+          },
+          {
+            "title": "Make three views with the solid helper",
+            "text": "Tap “Solid helper”. Under “Profile” pick a shape (for example the U channel), then set the width, height and depth. The preview is exactly what will be inserted. To see inside, choose “Full section” under “Section”.",
+            "fig": "solidstudio",
+            "cap": "The solid helper: pick an outline, set the size, check the preview"
+          },
+          {
+            "title": "Put it on the page",
+            "text": "Tap “Insert into page” at the top right. The three views go in the middle of what you are looking at, already selected — drag once to move them wherever you like. Look at how they are laid out: the top view straight above the front view and the right view straight to its right (third angle).",
+            "fig": "guide_inserted",
+            "cap": "The three views on the page: top view above, right view to the right"
+          },
+          {
+            "title": "Every control, in detail：Solid helper and the glass box",
+            "text": "Draw a closed outline and extrude it, then look at its three views, isometric and sections — and at how the three views unfold from a glass box.",
+            "items": [
+              "Tap “Solid helper” on the drafting bar. Pick a preset outline, or tap “Use the closed shapes on this page” to use your sketch; then set the width, height and depth.",
+              "The “Views” tab: three views, isometric, projection lines, centre lines, dimensions (overall length, height, depth), first or third angle, and sections (full, stepped, rotated, parallel to the front, oblique). Stepped and rotated sections draw the shape behind the cut, and an oblique section draws the true shape of the cut face. “Insert into page” puts the whole set in the middle of your view, already selected.",
+              "The “Rotate” tab: drag the picture or use the sliders to see the solid from any angle; edges you cannot see are dashed.",
+              "The “Glass box” tab: the solid sits in a glass box and the three views are drawn on three of its faces. Tap “Play the unfolding”: in about 4 seconds the top and right faces (bottom and left in first angle) fold flat — that is the three-view layout.",
+              "You can drag the progress bar to any frame, switch to first angle, and drag the picture to change the viewing angle.",
+              "The preview draws the very lines that are written to the page, so the page looks just like the preview."
+            ],
+            "fig": "solidstudio",
+            "cap": "Solid helper: preset outlines, sections and layout options"
+          },
+          {
+            "title": "The glass box",
+            "text": "The glass box: the top and right faces half unfolded; drag the picture to change the viewing angle",
+            "fig": "glassbox",
+            "cap": "The glass box: the top and right faces half unfolded; drag the picture to change the viewing angle"
+          },
+          {
+            "part": "Dimensions, symbols and the drawing frame"
+          },
+          {
+            "title": "Add a dimension",
+            "text": "Tap “Drafting tools”, then “Linear dimension”. Follow the hint at the top of the screen: tap the first point, tap the second (it snaps to line ends), then press and drag to where the dimension line should go and let go. The number follows the scale.",
+            "fig": "guide_dim",
+            "cap": "Linear dimension: two taps, then drag out the dimension line"
+          },
+          {
+            "title": "Scale, frame and title block",
+            "text": "Open “Drafting tools” again: first pick a “Scale” (for example 1:2), then tap “Insert frame and title block”. The frame, title block and projection symbol are drawn for this page’s paper; double-tap the text in the title block to put in your name and the drawing’s title.",
+            "fig": "guide_frame",
+            "cap": "The frame and title block inserted (the scale box takes the current scale)"
+          },
+          {
+            "title": "Every control, in detail：Dimensions, symbols and the drawing frame",
+            "text": "Use the toolbox to put dimensions, symbols, a frame and a title block on the drawing.",
+            "items": [
+              "Tap “Drafting tools” on the drafting bar to open the toolbox.",
+              "“Dimensioning” has four kinds: linear, diameter, radius and angle. After you choose one, the hint at the top tells you the next step: linear = tap two points, then press and drag to place the dimension line; diameter and radius = tap a drawn circle, then drag the way the leader should go; angle = tap the vertex and the two sides, then drag out the arc.",
+              "Taps snap to line ends and circle centres, so the numbers are accurate.",
+              "“Scale” sets the number on a dimension: millimetres on paper × the scale. On a 1:2 drawing, 50 mm on paper is dimensioned as 100. The scale is remembered per notebook on this device.",
+              "“Drafting symbols” include surface texture, welding, threads, geometric tolerances (with datums and frames), marks and fasteners (hex bolts, nuts and washers by M size). Set the parameters and tap “Place on page”; the symbol goes in the middle of what you are looking at, selected, so one drag moves it.",
+              "“Insert frame and title block” draws the frame, title block and projection symbol for this page’s paper size (A4, A3, A2); choose third-angle (Taiwan, USA) or first-angle projection.",
+              "Dimension numbers and text are stroke glyphs, not text boxes, so they hide with their layer and are exported too.",
+              "Check the scale before you dimension. If one drawing needs two scales, finish one kind first, then switch."
+            ],
+            "fig": "drafttools",
+            "cap": "The toolbox: dimensions, scale, symbols and frame (the page above has a linear dimension just placed)"
+          },
+          {
+            "part": "Alignment, instruments and the compass"
+          },
+          {
+            "title": "Instruments and alignment",
+            "text": "The toolbox’s “Alignment and instruments” can put out a ruler, a T-square, set squares and a protractor. With the protractor out, press the scale ring near the rim to read an angle; start a stroke against an instrument’s edge and the line comes out straight; when a line lines up with an end already on the page, a light-blue dashed guide appears (top over front, front level with side).",
+            "fig": "draftaids",
+            "cap": "Protractor: press the scale ring to read 60°"
+          },
+          {
+            "title": "Every control, in detail：Alignment, instruments and the compass",
+            "text": "Projections must line up and lines must be straight: let the page help with alignment, then draw with virtual instruments.",
+            "items": [
+              "“Projection alignment” (on by default): the start and end of a line align with the ends of existing lines — top over front, front level with side — and a light-blue dashed guide shows it. Turn it off in the toolbox when you do not want it.",
+              "Once you set the “45° turning point”, widths line up too: tap “Set the 45° turning point”, then tap the corner between the top view and the side view, where the 45° line passes. One turning point is kept per page.",
+              "“Alignment and instruments” lets you place a “Ruler”, a “T-square”, two set squares and a “Protractor”. The scales are true millimetres.",
+              "Start a stroke against an instrument’s edge and the whole line follows the edge as a straight line. Press the middle of the instrument to drag it; use the rotate buttons for 15° or 1°; the T-square rides the left edge of the page, only slides up and down and cannot turn.",
+              "Protractor: press the scale ring near the rim to read an angle; the drafting bar shows both scales (for example 60.0° / 120.0°). “Draw the reading line” draws it as a line. Pressing the inner part moves the protractor, and the reading goes with it.",
+              "“Compass”: tap the centre, then press on the circle and drag round to draw the arc. You can go past a half turn; let go to draw it, and it undoes in one step.",
+              "The “Third-angle projection (Taiwan, USA)” switch is in the toolbox; it sets the direction of the 45° transfer and the projection symbol in the frame.",
+              "An instrument is a tool laid over the page, not a stroke; “Put the instrument away” makes it disappear."
+            ],
+            "fig": "draftaids",
+            "cap": "Protractor: press the scale ring to read 60°; the drafting bar shows both scales"
+          },
+          {
+            "part": "Edit tools: trim, extend, fillet, offset, mirror, array"
+          },
+          {
+            "title": "Change the drawing",
+            "text": "Drew something wrong? You do not have to erase and redraw. The “Edit” section at the bottom of the toolbox has trim, extend, fillet, offset, mirror and array. For example choose “Trim” and tap the part that sticks out: it cuts to the nearest crossing. Every action undoes in one step.",
+            "fig": "draftedit",
+            "cap": "Edit tools: trim, extend, fillet, offset, mirror, array"
+          },
+          {
+            "title": "Every control, in detail：Edit tools: trim, extend, fillet, offset, mirror, array",
+            "text": "Change a drawing without erasing and redrawing: trim, extend, fillet, offset, mirror or array lines that are already there.",
+            "items": [
+              "Pick a tool in the “Edit” section at the bottom of the toolbox. Every action undoes in one step.",
+              "“Trim”: tap the part to cut away; it trims to the nearest crossings, and a drawn circle can be trimmed into an arc. If nothing crosses it you are told “This line does not cross any other line”.",
+              "“Extend”: tap near the end to extend; it runs along the end’s direction to the nearest line.",
+              "“Fillet”: tap two straight lines in turn; they are joined with the radius you set (millimetres) and both lines are shortened or extended to the tangent points. Only straight lines; parallel lines, or a radius longer than the lines, come with an explanation.",
+              "“Offset”: tap a line, then tap the side to move it to; a parallel line is added (the distance is the toolbox’s “Offset distance (mm)”) and the original stays. A closed line stays closed.",
+              "“Mirror” and the arrays need the lines selected with the lasso first. Mirror: tap the first point of the mirror line, then press and drag to the second; a live preview shows while you drag, and letting go copies.",
+              "“Rectangular array” takes rows, columns and spacing; “Polar array” takes the number of copies and the total angle, then you tap the centre.",
+              "The new lines keep the original’s pen, colour, layer and line type.",
+              "The fillet radius and the offset distance are millimetres on paper; set them once and they are remembered."
+            ],
+            "fig": "draftedit",
+            "cap": "The Edit section of the toolbox: trim, extend, fillet, offset, mirror and array"
+          },
+          {
+            "part": "Practice problems and automatic checking"
+          },
+          {
+            "title": "Try a practice problem",
+            "text": "In the toolbox’s “Practice problems” pick “Complete the third view”. The front and top views are already on the page: draw the right view on the right with the top-layer drafting pens — thick solid for outlines, hidden for edges you cannot see. When you finish tap “Check my drawing”; missing, extra, wrong-type and misaligned lines are marked. If you are stuck, tap “Show the answer”: the green lines are the model answer.",
+            "fig": "draftpractice",
+            "cap": "After checking, the missing lines are marked; green is the model answer"
+          },
+          {
+            "title": "Every control, in detail：Practice problems and automatic checking",
+            "text": "The app sets the problem; when you finish, one tap checks it and points out missing, extra, wrong-type and misaligned lines.",
+            "items": [
+              "The “Practice problems” section of the toolbox has five kinds: complete the third view, draw the three views from the isometric, first or third angle, spot the error, and draw the section view.",
+              "Pick one: the problem’s lines go on the bottom layer of this page, and a practice card appears in the corner with the task and the solid’s size.",
+              "Answer drawing problems with the top-layer drafting pens: thick solid for outlines, hidden for edges you cannot see, thin solid for hatching.",
+              "Tap “Check my drawing”: it marks missing lines (dashed orange where it should be), extra lines (red), lines of the wrong type (yellow) and misaligned lines (dashed blue where it belongs); a section problem also checks that the hatching is there and at 45°, and you get a score from 0 to 100.",
+              "“Show the answer” lays the model answer over the page in green (your drawing is not changed); “Another problem” gives another problem of the same kind.",
+              "For the first/third-angle question just pick the answer; for spot the error, first pick the kind of error (missing, extra, wrong type, out of line), then tap the spot on the drawing.",
+              "Problems are made from a seed, so the same seed gives the same problem on a phone and a tablet.",
+              "Checking only looks at top-layer lines inside the answer area; the problem’s own lines are on the bottom layer and never count as yours."
+            ],
+            "fig": "draftpractice",
+            "cap": "Practice: a blank page checked, the missing lines marked, the model answer in green"
+          },
+          {
+            "part": "Exporting drawings and 3D models"
+          },
+          {
+            "title": "Export",
+            "text": "When you are done, save the page as SVG or DXF with “Export this page” in the toolbox, for vector software or CAD; at the bottom of the solid helper, “Export the 3D model” saves STL (3D printing), OBJ, GLB or USDZ. Every export is made on your device.",
+            "fig": "draftexport",
+            "cap": "Export this page: SVG or DXF"
+          },
+          {
+            "title": "Every control, in detail：Exporting drawings and 3D models",
+            "text": "Hand the drawing to CAD, vector software, a 3D printer or AR — all of it done on your device.",
+            "items": [
+              "“Export this page” in the toolbox: SVG for vector apps, DXF for AutoCAD, LibreCAD and other CAD. Units are millimetres (A4 is 210 mm wide); hidden layers are not written; DXF carries layers and line types (hidden, centre, phantom).",
+              "The file goes to the system share sheet, so you can save it or send it to another app.",
+              "“Export the 3D model” at the bottom of the solid helper: STL (3D printing, millimetres), OBJ (millimetres), GLB (web and Blender, metres) and USDZ (metres).",
+              "Outlines with holes export correctly too, for example a ring or a plate with holes.",
+              "On Apple devices there is “View in AR” next to USDZ, which uses the system’s own preview to put the model on your desk; that is a system feature and Kairumo never receives the camera picture. On other devices you can send the USDZ file to an Apple device to view it.",
+              "Every export is made on your device; a file leaves the app only when you choose to share it."
+            ],
+            "fig": "draftexport",
+            "cap": "The toolbox’s export section: the page’s lines can be saved as SVG or DXF"
+          },
+          {
+            "title": "The solid helper’s export section",
+            "text": "The solid helper’s export section: STL, OBJ, GLB, USDZ and “View in AR”",
+            "fig": "solidexport",
+            "cap": "The solid helper’s export section: STL, OBJ, GLB, USDZ and “View in AR”"
+          }
+        ],
+        "tip": "The whole chapter takes about 30 minutes to follow. If you want to stop halfway, that is fine: layers, scale and the other settings are remembered on this device."
+      },
+      {
         "id": "data",
         "title": "Backup and sync",
         "lead": "No account, and no server of ours. A backup is one file; syncing is a folder in your own cloud drive.",
@@ -1314,6 +1772,235 @@ window.KAIRUMO_MANUAL = {
         "cap": "插入菜单：素材图库、插入图片、算式计算、3D 模型、讨论图钉与在线协作",
         "fig2": "assetlib",
         "cap2": "素材图库：按分类浏览，点“下载”后即可插入"
+      },
+      {
+        "id": "drafting",
+        "title": "图学（工程制图）：从零开始的完整教学",
+        "lead": "这一章专门讲「图学」。完全没学过也没关系：先照着 12 个步骤做一遍，从建立笔记本、画第一条线，做到三视图、标尺寸、放图框、做练习题被批改、汇出文件；每一步都附画面。每一部分最后的「逐项说明」再把每个按钮讲清楚。",
+        "buttons": [
+          "新建笔记",
+          "图学套件",
+          "图学笔组",
+          "图学工具",
+          "立体辅助",
+          "批改"
+        ],
+        "walk": [
+          {
+            "part": "图学：制图笔、图层与页面"
+          },
+          {
+            "title": "建立「图学套件」",
+            "text": "在首页按「新建笔记」。往下看到「建立套件」那一区，点「图学套件」，再按「确认」。一次建好三本笔记（课堂笔记、作图练习、错误陷阱本），制图用的纸与笔都帮你选好了。想先随便练习也可以：选一张空白纸，打开后点编辑画面上排的「图学笔组」。",
+            "fig": "guide_kit",
+            "cap": "新增笔记本：选「图学套件」再按确认"
+          },
+          {
+            "title": "认识制图列",
+            "text": "打开其中一本。第一次进来会跳出「图学使用提示」，按「知道了」关掉。页面上方就是制图列，由上到下是：「制图笔」（选线型）、「图层」（顶层、中层、底层，各有眼睛与锁头）、「形状吸附」与「角度锁定」、「图学工具」、「立体辅助」。先别急着按，下面一步一步来。",
+            "fig": "guide_bar",
+            "cap": "制图列：制图笔、图层、形状吸附与角度锁定"
+          },
+          {
+            "title": "画第一条线",
+            "text": "点「粗实线」，用手指或触控笔在页面上画一条大概水平的线。到终点**停住约半秒、先不要放开**，手感轻轻一震，线就自动变成笔直的线。再画一条垂直的。画圆、矩形也一样：画好、停住，就会吸附成标准图形。",
+            "fig": "guide_snap",
+            "cap": "停住半秒，歪歪的线变成笔直的线"
+          },
+          {
+            "title": "隐藏线与图层",
+            "text": "点「隐藏线」再画一条，它会是虚线 —— 看不见的边在工程图里就用这种线。想暂时藏起某一层（例如辅助线），点那一层旁边的眼睛；锁头可以保护那一层，不会被误画。",
+            "fig": "guide_hidden",
+            "cap": "隐藏线是虚线；每一层都能用眼睛隐藏、用锁头保护"
+          },
+          {
+            "title": "逐项说明：图学：制图笔、图层与页面",
+            "text": "工程图学要的是等宽、硬边的线，而且要分层。选「图学笔组」就换成这一套，页面的 1 mm 就是纸上的 1 mm。",
+            "items": [
+              "点编辑画面上排的「图学笔组」，上方出现制图列。",
+              "「制图笔」依制图规范分成粗实线、细实线、隐藏线、中心线、假想线、辅助线与原题线。选一支笔，线型与图层就跟着它走（隐藏线是虚线、辅助线是浅蓝色）。",
+              "「图层」分成底层（原题）、中层（辅助）、顶层（答案）三层，另外 0 是一般笔迹。每一层都能用眼睛隐藏、用锁头保护；显示与锁定只存在这台装置、这一本笔记，不会同步到别的装置。",
+              "「形状吸附」：画一条线，在终点停住约半秒，会自动变成直线、圆、矩形或三角形。「角度锁定」可以把直线锁在 15°、30°、45°、90° 的倍数。",
+              "「步骤编号」：点页面就放上 ①②③。「移到图层」：点一条线，就把它改到目前选的图层，而且可以复原。",
+              "页面规格有 A3、A2 与自订尺寸（300 到 6000）。新增笔记本时可以一次建立「图学套件」（课堂笔记、作图练习、错误陷阱本）；内建的《图学范例》示范怎么用辅助线求三视图的交点。",
+              "页面上的长度就是纸上的毫米（A4 宽 210 mm），所以标注、量角器、尺与汇出的尺寸都是真实的毫米。"
+            ],
+            "fig": "drafting",
+            "cap": "制图列：制图笔、图层、形状吸附与角度锁定"
+          },
+          {
+            "part": "立体辅助与玻璃盒"
+          },
+          {
+            "title": "用立体辅助产生三视图",
+            "text": "点「立体辅助」。在「轮廓」挑一个形状（例如 U 形槽），再调宽、高、深。预览画的就是插入之后的样子。想看内部，在「剖面」选「全剖面」。",
+            "fig": "solidstudio",
+            "cap": "立体辅助：选轮廓、调尺寸、看预览"
+          },
+          {
+            "title": "插入页面",
+            "text": "按右上角的「插入页面」。三视图会放在你目前看到的范围正中央，而且已经选住 —— 拖一下就能搬到喜欢的位置。看看它们怎么摆：俯视图在正视图正上方、右视图在正右方（第三角法）。",
+            "fig": "guide_inserted",
+            "cap": "三视图插进页面：俯视图在上、右视图在右"
+          },
+          {
+            "title": "逐项说明：立体辅助与玻璃盒",
+            "text": "画一个封闭轮廓，拉伸成立体，再看它的三视图、等角图、剖面，以及三视图是怎么从玻璃盒展开来的。",
+            "items": [
+              "点制图列的「立体辅助」。挑一个默认轮廓，或按「使用这一页上的封闭图形」用你画的草图；再调宽、高、深。",
+              "「视图」分页：三视图、等角图、投影线、中心线、尺寸（总长、总高、总深）、第一角或第三角法，以及剖面（全剖、阶梯、旋转、平行正面、斜切）。阶梯与旋转剖面会画出切口后面的形状，斜切会画出切面的实形。按「插入页面」把整组线放在目前视野正中央，并自动选住。",
+              "「旋转对照」分页：拖曳画面或用滑杆，从任何角度看这个立体；看不见的边用虚线。",
+              "「玻璃盒」分页：立体放在玻璃盒里，三个视图画在盒子的三个面上。按「播放展开」，约 4 秒把顶面与右面（第一角法是底面与左面）掀开、摊平，就是三视图的版面。",
+              "可以拖进度条停在任何一格、切换第一角法，也能拖曳画面转动观看的角度。",
+              "预览画的就是插入时写进页面的那组线，预览长什么样，插进去就长什么样。"
+            ],
+            "fig": "solidstudio",
+            "cap": "立体辅助：默认轮廓、剖面与排版选项"
+          },
+          {
+            "title": "玻璃盒",
+            "text": "玻璃盒：顶面与右面掀开到一半，拖曳画面可以转动观看的角度",
+            "fig": "glassbox",
+            "cap": "玻璃盒：顶面与右面掀开到一半，拖曳画面可以转动观看的角度"
+          },
+          {
+            "part": "尺寸标注、符号与图框"
+          },
+          {
+            "title": "标上尺寸",
+            "text": "点「图学工具」，再点「线性标注」。照画面上方的提示做：先点第一个点，再点第二个点（它会自动吸附到线的端点），最后按住拖出尺寸线要放的位置，放开就标好了。数字依比例尺换算。",
+            "fig": "guide_dim",
+            "cap": "线性标注：点两个点，再拖出尺寸线"
+          },
+          {
+            "title": "比例尺、图框与标题栏",
+            "text": "再打开「图学工具」：先在「比例尺」选一个（例如 1:2），再按「插入图框与标题栏」。依这一页的纸张，图框、标题栏与投影法符号就画好了；标题栏里的文字点两下可以改成你的名字和图名。",
+            "fig": "guide_frame",
+            "cap": "插入图框与标题栏（比例栏带入目前的比例尺）"
+          },
+          {
+            "title": "逐项说明：尺寸标注、符号与图框",
+            "text": "用工具箱把尺寸、符号、图框与标题栏放进图面。",
+            "items": [
+              "点制图列的「图学工具」打开工具箱。",
+              "「尺寸标注」有线性、直径、半径、角度四种。选一种之后，画面上方的提示会告诉你下一步：线性＝点两个点，再按住拖出尺寸线的位置；直径与半径＝点一个画好的圆，再拖向要引出的方向；角度＝依序点顶点与两条边，再拖出弧线。",
+              "点的位置会自动吸附到线的端点与圆心，所以量得准。",
+              "「比例尺」决定标注的数字：数字＝纸上毫米×比例尺。1:2 的图，纸上量 50 mm 就标 100。比例尺逐本记在这台装置上。",
+              "「制图符号」有表面粗糙度、焊接、螺纹、几何公差（含基准与公差框）、标记，以及标准件（六角螺栓、螺母、垫圈，依 M 规格）。调好参数按「放进页面」，符号会放在目前视野正中央并选住，拖一下就能搬。",
+              "「插入图框与标题栏」依这一页的纸张规格（A4、A3、A2）画出图框、标题栏与投影法符号；可以选第三角法（台湾、美国）或第一角法。",
+              "尺寸数字与文字是笔画字形，不是文字方块，所以会跟着图层一起隐藏，也会一起汇出。",
+              "标注前先确认比例尺。同一张图要用不同比例尺时，先标完一种再换。"
+            ],
+            "fig": "drafttools",
+            "cap": "工具箱：尺寸标注、比例尺、符号与图框（上方页面是刚标好的线性尺寸）"
+          },
+          {
+            "part": "对齐、尺规与圆规"
+          },
+          {
+            "title": "尺规与对齐",
+            "text": "工具箱的「对齐与尺规」可以放直尺、丁字尺、三角板和量角器。放出量角器，按住外圈的刻度带就读得出角度；靠着尺的边起笔，线会自动画直；画线时如果对齐了页面上已有的端点，会出现淡蓝色的虚线导引（长对正、高平齐）。",
+            "fig": "draftaids",
+            "cap": "量角器：按住外圈刻度带读出 60°"
+          },
+          {
+            "title": "逐项说明：对齐、尺规与圆规",
+            "text": "投影要对齐、线要画直：让画面帮你对位，再用虚拟的尺规画。",
+            "items": [
+              "「投影对齐」（默认开启）：画线的起点与终点会对齐页面上既有线的端点，也就是长对正与高平齐；对齐时会出现淡蓝色的虚线。不需要时可以在工具箱关掉。",
+              "设了「45° 转折点」之后，宽度也会对齐（宽相等）：点「设置 45° 转折点」，再点俯视图与右视图之间的那个角，也就是 45° 线通过的点。转折点每一页各存一个。",
+              "「对齐与尺规」可以放出「直尺」、「丁字尺」、两种三角板与「量角器」。尺上的刻度是真实的毫米。",
+              "靠着尺的边起笔，整条线就会沿着边画成直线。按住尺身中间可以拖动它；用旋转钮转 15° 或 1°；丁字尺贴着页面左缘，只能上下滑动、不能转。",
+              "量角器：按住外圈的刻度带读角度，制图列会显示两边的刻度（例如 60.0° / 120.0°）；按「画出读数线」把它画成一条线；按内圈则是移动量角器，读数会跟着尺走。",
+              "「圆规」：先点圆心，再在圆周上按住、沿着圆拖出圆弧。可以转超过半圈，放开就画出，一次就能复原。",
+              "「第三角法（台湾、美国）」的开关在工具箱，它决定 45° 传递的方向，也决定图框里的投影法符号。",
+              "尺是叠在页面上的工具，不会变成笔画；用完按「收起尺规」就消失。"
+            ],
+            "fig": "draftaids",
+            "cap": "量角器：按住外圈的刻度带读出 60°，制图列显示两边的刻度"
+          },
+          {
+            "part": "编辑工具：修剪、延伸、圆角、偏移、镜射、阵列"
+          },
+          {
+            "title": "修改图形",
+            "text": "画错不必擦掉重画。工具箱最下面的「编辑」区有修剪、延伸、圆角、偏移、镜射和阵列。例如点「修剪」，再点多出来的那一段，它会剪到最近的交点；每个动作都可以一次复原。",
+            "fig": "draftedit",
+            "cap": "编辑工具：修剪、延伸、圆角、偏移、镜射、阵列"
+          },
+          {
+            "title": "逐项说明：编辑工具：修剪、延伸、圆角、偏移、镜射、阵列",
+            "text": "改图不必擦掉重画：对已经画好的线直接修剪、延伸、接圆角、偏移、镜射或排成阵列。",
+            "items": [
+              "在工具箱最下面的「编辑」区选工具。每个动作都是一次复原。",
+              "「修剪」：点要剪掉的那一段，会剪到前后最近的交点；画好的圆也能剪成圆弧。没有交点时会告诉你「这条线没有和别的线相交」。",
+              "「延伸」：点要延伸的那一端附近，会沿着末端方向延到最近的线。",
+              "「圆角」：依序点两条直线，用设置的半径（毫米）接起来，两条线会自动修短或延伸到切点。只支援直线；两条线平行、或半径比线还长时会说明原因。",
+              "「偏移」：点一条线，再点要偏向的那一侧，就多出一条平行线（距离用工具箱的「偏移距离（mm）」设置），原来那条留着；封闭的线偏移之后仍然封闭。",
+              "「镜射」与阵列要先用套索选好线。镜射：点对称轴的第一点，再按住拖到第二点，拖的时候会即时预览，放开就复制一份。",
+              "「矩形阵列」设列数、栏数与间距；「环形阵列」设份数与总角度，再点圆心。",
+              "做出来的线沿用原线的笔、颜色、图层与线型。",
+              "圆角的半径与偏移的距离都是纸上毫米，设一次就会记住。"
+            ],
+            "fig": "draftedit",
+            "cap": "工具箱的「编辑」区：修剪、延伸、圆角、偏移、镜射与阵列"
+          },
+          {
+            "part": "练习题与自动批改"
+          },
+          {
+            "title": "做一题练习",
+            "text": "工具箱的「练习题」选「补第三视图」。题目的正视图与俯视图已经放好了，请用顶层的制图笔在右边补画右视图：外形用粗实线、看不见的边用隐藏线。画完按「批改」，缺线、多线、线型错、没对齐都会被标出来；不会的话按「看答案」，绿色的线就是标准答案。",
+            "fig": "draftpractice",
+            "cap": "批改之后标出缺线，绿色是标准答案"
+          },
+          {
+            "title": "逐项说明：练习题与自动批改",
+            "text": "程序帮你出题，画完按一下就批改，指出缺线、多线、线型错与没对齐。",
+            "items": [
+              "工具箱的「练习题」有五种题型：补第三视图、等角图画三视图、判断第一角或第三角法、找出图上的错、画剖视图。",
+              "选一种，题目线会放进目前这一页的底层，页面角落出现练习卡，写着题目与立体的尺寸。",
+              "画图题请用顶层的制图笔作答：外形用粗实线、看不见的边用隐藏线、剖面线用细实线。",
+              "按「批改」：标出缺线（橘色虚线是该画的位置）、多画的线（红色）、线型错（黄色）、没对齐（蓝色虚线是正确的位置）；剖面题另外检查剖面线有没有画够、角度是不是 45°，最后给 0 到 100 分。",
+              "「看答案」把标准答案叠成绿色的线（不会改到你画的内容）；「再出一题」换同一种题型的另一题。",
+              "判断题直接选答案；找错题先选错误的种类（缺线、多线、线型错、没对齐），再点图上错的位置。",
+              "题目由种子产生，同一个种子在手机与平板上出的是同一题。",
+              "批改只看作答范围里、顶层的线；题目线在底层，不会算成你画的。"
+            ],
+            "fig": "draftpractice",
+            "cap": "练习：空白页批改后标出缺线，绿色的线是标准答案"
+          },
+          {
+            "part": "汇出图形与 3D 模型"
+          },
+          {
+            "title": "汇出",
+            "text": "完成之后，在工具箱的「汇出本页图形」存成 SVG 或 DXF，交给向量软件或 CAD；在立体辅助最下面的「汇出 3D 模型」存成 STL（3D 列印）、OBJ、GLB 或 USDZ。所有汇出都在你的装置上完成。",
+            "fig": "draftexport",
+            "cap": "汇出本页图形：SVG 或 DXF"
+          },
+          {
+            "title": "逐项说明：汇出图形与 3D 模型",
+            "text": "把图交给 CAD、向量软件、3D 列印或 AR：全部在你的装置上完成。",
+            "items": [
+              "工具箱的「汇出本页图形」：SVG 给向量软件、DXF 给 AutoCAD、LibreCAD 等 CAD。单位是毫米，A4 宽就是 210 mm；隐藏的图层不会输出；DXF 带有图层与线型（隐藏线、中心线、假想线）。",
+              "汇出之后交给系统的分享表，可以存成文件或传给别的 App。",
+              "立体辅助最下面的「汇出 3D 模型」：STL（3D 列印、毫米）、OBJ（毫米）、GLB（网页与 Blender，公尺）、USDZ（公尺）。",
+              "有洞的轮廓也能正确汇出，例如环与带孔的板。",
+              "在 Apple 装置上，USDZ 旁边有「用 AR 看」，用系统内建的预览把模型放到桌上看；那是系统的功能，Kairumo 不会取得相机的画面。其他装置可以把 USDZ 档传到 Apple 装置去看。",
+              "所有汇出都在你的装置上完成；文件只有在你按分享的时候才会离开 App。"
+            ],
+            "fig": "draftexport",
+            "cap": "工具箱的汇出区：本页图形可存成 SVG 或 DXF"
+          },
+          {
+            "title": "立体辅助的汇出区",
+            "text": "立体辅助的汇出区：STL、OBJ、GLB、USDZ 与「用 AR 看」",
+            "fig": "solidexport",
+            "cap": "立体辅助的汇出区：STL、OBJ、GLB、USDZ 与「用 AR 看」"
+          }
+        ],
+        "tip": "整章跟着做大约 30 分钟。做到一半想休息没关系：所有图层、比例尺等设置都记在这台装置上，下次打开还在。"
       },
       {
         "id": "data",
@@ -1840,6 +2527,235 @@ window.KAIRUMO_MANUAL = {
         "cap2": "素材ライブラリ：カテゴリから探し、ダウンロードして配置"
       },
       {
+        "id": "drafting",
+        "title": "製図（工学図面）：ゼロから始める完全ガイド",
+        "lead": "この章は「製図」だけを扱います。習ったことがなくても大丈夫です。まず 12 ステップで、ノート作成・最初の線から、3 面図・寸法・図枠・採点される練習問題・書き出しまで通しで体験します。各ステップに画面付きです。各パートの最後の「ひとつずつ詳しく」で、すべてのボタンを説明します。",
+        "buttons": [
+          "新規ノート",
+          "製図セット",
+          "製図",
+          "製図ツール",
+          "立体ヘルパー",
+          "採点"
+        ],
+        "walk": [
+          {
+            "part": "製図：ペン・レイヤー・ページ"
+          },
+          {
+            "title": "「製図キット」を作る",
+            "text": "ホーム画面で「新規ノート」をタップします。「セットを作成」の欄で「製図セット」をタップし、「OK」を押します。3 冊のノート（授業ノート・作図練習・誤りの罠ノート）が一度にでき、製図用の紙とペンも選ばれています。気軽に試したいときは、白紙を選び、開いたらエディターの上段で「製図」をタップしても構いません。",
+            "fig": "guide_kit",
+            "cap": "新規ノート：製図キットを選んで確認"
+          },
+          {
+            "title": "製図バーを知る",
+            "text": "ノートを開きます。初回は「製図のヒント」が出るので「わかりました」を押します。ページの上にあるのが製図バーです。上から順に、「製図ペン」（線種）、「レイヤー」（上層・中層・下層。それぞれ目と鍵付き）、「図形スナップ」と「角度ロック」、「製図ツール」、「立体ヘルパー」。まだ押さなくて大丈夫です。順番に進めます。",
+            "fig": "guide_bar",
+            "cap": "製図バー：ペン、レイヤー、図形スナップ、角度ロック"
+          },
+          {
+            "title": "最初の線を描く",
+            "text": "「太実線」をタップし、指かペンでページに水平に近い線を描きます。終点で**指を離さず約 0.5 秒止まる**と、軽い振動とともに線がまっすぐになります。垂直の線も描いてみましょう。円や長方形も同じで、描いて止まると整った図形になります。",
+            "fig": "guide_snap",
+            "cap": "0.5 秒止まると、ゆがんだ線がまっすぐになる"
+          },
+          {
+            "title": "隠れ線とレイヤー",
+            "text": "「かくれ線」をタップしてもう 1 本描くと、破線になります。工学図面では、見えない辺にこの線を使います。レイヤーを一時的に隠す（たとえば補助線）には、そのレイヤーの目のアイコンをタップします。鍵は、そのレイヤーに誤って描かないよう保護します。",
+            "fig": "guide_hidden",
+            "cap": "隠れ線は破線。各レイヤーは目で非表示、鍵で保護できる"
+          },
+          {
+            "title": "ひとつずつ詳しく：製図：ペン・レイヤー・ページ",
+            "text": "工学図面には、太さが一定でくっきりした線をレイヤーに分けて描くことが必要です。「製図ペン」を選ぶとその設定になります。ページの 1 mm は紙の 1 mm です。",
+            "items": [
+              "エディターの上段で「製図」をタップすると、製図バーが現れます。",
+              "「製図ペン」は製図規格に沿って、太い実線・細い実線・隠れ線・中心線・仮想線・補助線・与件の線に分かれています。ペンを選ぶと線種とレイヤーも一緒に決まります（隠れ線は破線、補助線は水色）。",
+              "「レイヤー」は、下層（与件）・中層（補助）・上層（答え）の 3 つで、0 は通常のインクです。各レイヤーは目のアイコンで非表示に、鍵のアイコンで保護できます。表示とロックはこの端末のこのノートだけの設定で、同期されません。",
+              "「図形スナップ」：線を描き、終点で約 0.5 秒止まると、直線・円・長方形・三角形に整います。「角度ロック」は直線を 15°・30°・45°・90° の倍数に固定します。",
+              "「手順番号」：ページをタップすると ①②③ を置きます。「レイヤーへ移動」：線をタップすると、選択中のレイヤーに移せます（元に戻せます）。",
+              "ページサイズは A3・A2・カスタム（300～6000）です。新しいノートは「製図キット」（授業ノート・作図練習・誤りの罠ノート）としてまとめて作れます。内蔵の「製図の例」では、補助線で 3 面図の交点を求める手順を示しています。",
+              "ページ上の長さは紙の上のミリメートルです（A4 の幅は 210 mm）。寸法・分度器・定規・書き出しは、すべて実寸のミリメートルです。"
+            ],
+            "fig": "drafting",
+            "cap": "製図バー：製図ペン、レイヤー、図形スナップ、角度ロック"
+          },
+          {
+            "part": "立体アシストとガラスの箱"
+          },
+          {
+            "title": "立体アシストで 3 面図を作る",
+            "text": "「立体ヘルパー」をタップします。「断面形状」で形（例：U 形槽）を選び、幅・高さ・奥行きを調整します。プレビューは、挿入されるものそのままです。内部を見るには、「断面」で「全断面」を選びます。",
+            "fig": "solidstudio",
+            "cap": "立体アシスト：輪郭を選び、寸法を調整してプレビューを確認"
+          },
+          {
+            "title": "ページに入れる",
+            "text": "右上の「ページに挿入」をタップします。3 面図は表示範囲の中央に置かれ、選択状態です。ドラッグで好きな場所に動かせます。配置を見てみましょう。平面図は正面図の真上、右側面図は真右です（第三角法）。",
+            "fig": "guide_inserted",
+            "cap": "3 面図が入った：平面図が上、右側面図が右"
+          },
+          {
+            "title": "ひとつずつ詳しく：立体アシストとガラスの箱",
+            "text": "閉じた輪郭を描いて立体に押し出し、3 面図・等角図・断面と、3 面図がガラスの箱から展開される様子を見ます。",
+            "items": [
+              "製図バーの「立体ヘルパー」をタップします。既定の輪郭を選ぶか、「このページの閉じた図形を使う」で自分のスケッチを使い、幅・高さ・奥行きを調整します。",
+              "「図面」タブ：3 面図、等角図、投影線、中心線、寸法（全長・全高・全奥行き）、第一角法／第三角法、断面（全断面・階段断面・回転断面・正面に平行・斜め）。階段断面と回転断面は切り口の奥の形も描き、斜め断面は切断面の実形を描きます。「ページに挿入」で、表示範囲の中央にひとまとめで置かれ、選択状態になります。",
+              "「回転」タブ：画面をドラッグするかスライダーで、どの角度からでも立体を見られます。見えない辺は破線です。",
+              "「ガラスの箱」タブ：立体がガラスの箱に入っていて、3 つの図は箱の 3 つの面に描かれています。「展開を再生」を押すと、約 4 秒で上面と右面（第一角法では下面と左面）が倒れて平らになり、3 面図の配置になります。",
+              "進行バーをドラッグして好きなところで止めたり、第一角法に切り替えたり、画面をドラッグして見る角度を変えたりできます。",
+              "プレビューは、ページに書き込まれる線そのものを描いています。プレビューどおりにページに入ります。"
+            ],
+            "fig": "solidstudio",
+            "cap": "立体アシスト：既定の輪郭、断面、レイアウトの設定"
+          },
+          {
+            "title": "ガラスの箱",
+            "text": "ガラスの箱：上面と右面が半分ほど展開した状態。画面をドラッグすると見る角度が変わります",
+            "fig": "glassbox",
+            "cap": "ガラスの箱：上面と右面が半分ほど展開した状態。画面をドラッグすると見る角度が変わります"
+          },
+          {
+            "part": "寸法・記号・図枠"
+          },
+          {
+            "title": "寸法を入れる",
+            "text": "「製図ツール」をタップし、「長さ寸法」をタップします。画面上部のヒントに従います。1 点目をタップ、2 点目をタップ（線の端点に吸着します）、最後に寸法線を置きたい位置まで押さえたままドラッグして離します。数字は尺度に従います。",
+            "fig": "guide_dim",
+            "cap": "直線寸法：2 点をタップして、寸法線をドラッグで出す"
+          },
+          {
+            "title": "尺度・図枠・表題欄",
+            "text": "もう一度「製図ツール」を開き、まず「尺度」を選び（例：1:2）、「図枠と表題欄を挿入」を押します。このページの用紙に合わせて、図枠・表題欄・投影法の記号が描かれます。表題欄の文字はダブルタップで、自分の名前と図名に書き換えられます。",
+            "fig": "guide_frame",
+            "cap": "図枠と表題欄を挿入（尺度欄には現在の尺度が入る）"
+          },
+          {
+            "title": "ひとつずつ詳しく：寸法・記号・図枠",
+            "text": "ツールボックスで、寸法・記号・図枠・表題欄を図面に入れます。",
+            "items": [
+              "製図バーの「製図ツール」をタップして、ツールボックスを開きます。",
+              "「寸法記入」には、直線・直径・半径・角度の 4 種類があります。選ぶと画面上部のヒントが次の操作を教えてくれます。直線＝2 点をタップし、押さえたままドラッグして寸法線の位置を決める。直径・半径＝描いた円をタップし、引出線を出したい方向へドラッグ。角度＝頂点と 2 辺を順にタップし、円弧をドラッグで出す。",
+              "タップした位置は線の端点や円の中心に吸着するので、正確に測れます。",
+              "「尺度」は寸法の数字を決めます。数字＝紙上のミリメートル×尺度。1:2 の図面で紙上 50 mm なら 100 と記入します。尺度はこの端末でノートごとに記憶されます。",
+              "「製図記号」には、表面性状・溶接・ねじ・幾何公差（データムと公差枠を含む）・記号・標準部品（M サイズ別の六角ボルト、ナット、ワッシャー）があります。パラメーターを調整して「ページに配置」を押すと、表示範囲の中央に置かれて選択されるので、ドラッグで動かせます。",
+              "「図枠と表題欄を挿入」は、このページの用紙サイズ（A4・A3・A2）に合わせて図枠・表題欄・投影法の記号を描きます。第三角法（台湾・米国）か第一角法を選べます。",
+              "寸法の数字と文字はテキストボックスではなく線の字形です。そのためレイヤーと一緒に非表示になり、書き出しにも含まれます。",
+              "寸法を入れる前に尺度を確認してください。1 枚で尺度を変えたいときは、一方を入れ終えてから切り替えます。"
+            ],
+            "fig": "drafttools",
+            "cap": "ツールボックス：寸法・尺度・記号・図枠（上のページには直線寸法を記入したところ）"
+          },
+          {
+            "part": "位置合わせ・器具・コンパス"
+          },
+          {
+            "title": "器具と位置合わせ",
+            "text": "ツールボックスの「位置合わせと製図器具」で、定規・T 定規・三角定規・分度器を置けます。分度器を出して外側の目盛りの帯を押さえると角度を読み取れます。器具の縁から描き始めると線がまっすぐになり、ページ上の既存の端点に揃うと薄い青の破線が出ます（平面図と正面図の左右、正面図と側面図の高さ）。",
+            "fig": "draftaids",
+            "cap": "分度器：外側の目盛りの帯を押さえて 60° を読み取る"
+          },
+          {
+            "title": "ひとつずつ詳しく：位置合わせ・器具・コンパス",
+            "text": "投影は揃え、線はまっすぐに。位置合わせは画面に任せ、仮想の器具で描きます。",
+            "items": [
+              "「投影の位置合わせ」（初期設定でオン）：線の始点と終点が、ページ上の既存の線の端点に揃います（平面図と正面図の左右、正面図と側面図の高さ）。揃うと薄い青の破線が出ます。不要なときはツールボックスでオフにできます。",
+              "「45° の転換点」を設定すると、奥行きも揃います。「45° の転換点を設定」をタップし、平面図と側面図の間の角（45° の線が通る点）をタップします。転換点はページごとに 1 つ保存されます。",
+              "「位置合わせと製図器具」で、「定規」・「T 定規」・2 種類の三角定規・「分度器」を置けます。目盛りは実寸のミリメートルです。",
+              "器具の縁から描き始めると、線全体が縁に沿ったまっすぐな線になります。器具の中央を押さえてドラッグすると動かせます。回転ボタンで 15° や 1° ずつ回せます。T 定規はページの左端に沿って上下にだけ動き、回転できません。",
+              "分度器：外側の目盛りの帯を押さえると角度を読み取れ、製図バーに両側の目盛り（例：60.0° / 120.0°）が出ます。「読み取り線を描く」でその角度の線を描きます。内側を押さえると分度器が動き、読み取りも一緒に動きます。",
+              "「コンパス」：中心をタップし、円周上の点を押さえて円に沿ってドラッグすると円弧が描けます。半周より大きく回すこともでき、指を離すと描かれて、1 回で元に戻せます。",
+              "「第三角法（台湾・米国）」のスイッチはツールボックスにあり、45° の転送の向きと図枠の投影法記号を決めます。",
+              "器具はページの上に重ねて使う道具で、線にはなりません。「器具をしまう」で消えます。"
+            ],
+            "fig": "draftaids",
+            "cap": "分度器：外側の目盛りの帯を押さえて 60° を読み取り、製図バーに両側の目盛りを表示"
+          },
+          {
+            "part": "編集ツール：トリム・延長・フィレット・オフセット・鏡像・配列"
+          },
+          {
+            "title": "図を直す",
+            "text": "間違えても、消して描き直す必要はありません。ツールボックス最下部の「編集」に、トリム・延長・フィレット・オフセット・鏡像・配列があります。たとえば「トリム」を選び、はみ出した部分をタップすると、最も近い交点まで切れます。どの操作も 1 回で元に戻せます。",
+            "fig": "draftedit",
+            "cap": "編集ツール：トリム・延長・フィレット・オフセット・鏡像・配列"
+          },
+          {
+            "title": "ひとつずつ詳しく：編集ツール：トリム・延長・フィレット・オフセット・鏡像・配列",
+            "text": "描いた線を消して描き直さずに、トリム、延長、フィレット、オフセット、鏡像、配列ができます。",
+            "items": [
+              "ツールボックス下部の「編集」からツールを選びます。どの操作も 1 回で元に戻せます。",
+              "「トリム」：切り取りたい部分をタップすると、前後の最も近い交点まで切れます。描いた円は円弧にできます。交点がないときは「この線はほかの線と交わっていません」と知らせます。",
+              "「延長」：延ばしたい端の近くをタップすると、端の向きに最も近い線まで伸びます。",
+              "「フィレット」：直線を順に 2 本タップすると、設定した半径（ミリメートル）の円弧でつなぎ、2 本とも接点まで短く（または長く）なります。直線のみ対応です。平行な線や、線より半径が大きいときは理由を表示します。",
+              "「オフセット」：線をタップし、寄せたい側をタップすると平行な線が 1 本増えます（距離はツールボックスの「オフセット距離（mm）」）。元の線は残ります。閉じた線は閉じたままです。",
+              "「鏡像」と配列は、先に投げ縄で線を選んでおきます。鏡像：対称軸の 1 点目をタップし、押さえたまま 2 点目までドラッグします。ドラッグ中はリアルタイムでプレビューされ、指を離すとコピーされます。",
+              "「矩形状配列」は行数・列数・間隔、「円形状配列」はコピー数と総角度を設定し、中心をタップします。",
+              "作られた線は、元の線のペン・色・レイヤー・線種を引き継ぎます。",
+              "フィレットの半径とオフセットの距離は紙上のミリメートルで、一度設定すれば記憶されます。"
+            ],
+            "fig": "draftedit",
+            "cap": "ツールボックスの「編集」欄：トリム・延長・フィレット・オフセット・鏡像・配列"
+          },
+          {
+            "part": "練習問題と自動採点"
+          },
+          {
+            "title": "練習問題をやってみる",
+            "text": "ツールボックスの「練習問題」で「3 つ目の図を描く」を選びます。正面図と平面図はすでにページにあります。右側に、上層の製図ペンで右側面図を描きましょう（外形は太い実線、見えない辺は隠れ線）。描き終えたら「採点」を押すと、足りない線・余分な線・線種の誤り・位置ずれが示されます。困ったら「答えを見る」を押すと、緑の線が模範解答です。",
+            "fig": "draftpractice",
+            "cap": "採点後、足りない線が示される。緑が模範解答"
+          },
+          {
+            "title": "ひとつずつ詳しく：練習問題と自動採点",
+            "text": "問題はアプリが出します。描き終えたらボタン 1 つで採点し、足りない線・余分な線・線種の誤り・位置ずれを示します。",
+            "items": [
+              "ツールボックスの「練習問題」には 5 種類あります。3 つ目の図を描く、等角図から 3 面図、第一角法か第三角法か、誤りを見つける、断面図を描く。",
+              "ひとつ選ぶと、問題の線がこのページの下層に置かれ、角に練習カードが現れて、課題と立体の寸法が表示されます。",
+              "作図の問題は、上層の製図ペンで答えます。外形は太い実線、見えない辺は隠れ線、ハッチングは細い実線です。",
+              "「採点」を押すと、足りない線（オレンジの破線＝描くべき位置）、余分な線（赤）、線種の誤り（黄）、位置ずれ（青の破線＝正しい位置）を示します。断面の問題はハッチングの有無と 45° の角度も確認し、0～100 点で採点します。",
+              "「答えを見る」は模範解答を緑の線で重ねて表示します（描いた内容は変わりません）。「次の問題」は同じ種類の別の問題を出します。",
+              "第一角法／第三角法の問題は答えを選ぶだけです。誤り探しは、まず誤りの種類（線が足りない・余分な線・線種の誤り・位置が揃っていない）を選び、図の誤りの位置をタップします。",
+              "問題はシードから作られるため、同じシードならスマートフォンでもタブレットでも同じ問題になります。",
+              "採点の対象は、解答範囲の中の上層の線だけです。問題の線は下層にあるので、あなたが描いた線には数えられません。"
+            ],
+            "fig": "draftpractice",
+            "cap": "練習：白紙を採点して足りない線を表示。緑の線が模範解答"
+          },
+          {
+            "part": "図面と 3D モデルの書き出し"
+          },
+          {
+            "title": "書き出す",
+            "text": "仕上がったら、ツールボックスの「このページを書き出す」で SVG または DXF に保存してベクターソフトや CAD に渡します。立体アシスト下部の「3D モデルを書き出す」では STL（3D プリント）・OBJ・GLB・USDZ に保存できます。書き出しはすべてあなたの端末の中で行われます。",
+            "fig": "draftexport",
+            "cap": "このページを書き出す：SVG または DXF"
+          },
+          {
+            "title": "ひとつずつ詳しく：図面と 3D モデルの書き出し",
+            "text": "図面を CAD・ベクターソフト・3D プリンター・AR に渡します。すべてあなたの端末の中で完結します。",
+            "items": [
+              "ツールボックスの「このページを書き出す」：SVG はベクターアプリ向け、DXF は AutoCAD・LibreCAD などの CAD 向けです。単位はミリメートル（A4 の幅は 210 mm）。非表示のレイヤーは書き出されません。DXF にはレイヤーと線種（隠れ線・中心線・仮想線）が入ります。",
+              "書き出したファイルはシステムの共有シートに渡されるので、ファイルとして保存したり、ほかのアプリに送ったりできます。",
+              "立体アシスト下部の「3D モデルを書き出す」：STL（3D プリント・ミリメートル）、OBJ（ミリメートル）、GLB（Web と Blender・メートル）、USDZ（メートル）。",
+              "穴のある輪郭（リングや穴あきプレートなど）も正しく書き出せます。",
+              "Apple のデバイスでは、USDZ の横に「AR で見る」があり、システムのプレビューでモデルを机の上に置いて見られます。これはシステムの機能で、Kairumo はカメラの映像を受け取りません。ほかのデバイスでは、USDZ ファイルを Apple のデバイスに送って見られます。",
+              "書き出しはすべて端末の中で行われ、共有を選んだときだけファイルがアプリの外に出ます。"
+            ],
+            "fig": "draftexport",
+            "cap": "ツールボックスの書き出し欄：このページの線を SVG または DXF で保存"
+          },
+          {
+            "title": "立体アシストの書き出し欄",
+            "text": "立体アシストの書き出し欄：STL・OBJ・GLB・USDZ と「AR で見る」",
+            "fig": "solidexport",
+            "cap": "立体アシストの書き出し欄：STL・OBJ・GLB・USDZ と「AR で見る」"
+          }
+        ],
+        "tip": "章全体を通してやると 30 分ほどです。途中でやめても大丈夫です。レイヤーや尺度などの設定はこの端末に記憶されます。"
+      },
+      {
         "id": "data",
         "title": "バックアップと同期",
         "lead": "アカウントも当方のサーバーも不要です。バックアップは 1 つのファイル、同期はご自身のクラウドフォルダです。",
@@ -2364,6 +3280,235 @@ window.KAIRUMO_MANUAL = {
         "cap2": "에셋 라이브러리: 분류에서 찾아 내려받고 배치"
       },
       {
+        "id": "drafting",
+        "title": "제도(공학 도면): 처음부터 시작하는 완전 가이드",
+        "lead": "이 장은 “제도”만 다룹니다. 배운 적이 없어도 괜찮습니다. 먼저 12단계로 노트 만들기와 첫 선부터 3면도, 치수, 도면 테두리, 채점되는 연습 문제, 내보내기까지 한 번 따라 해 보세요. 모든 단계에 화면이 있습니다. 각 부분 끝의 “하나씩 자세히”에서 모든 버튼을 설명합니다.",
+        "buttons": [
+          "새 노트",
+          "공학 도면 세트",
+          "제도",
+          "제도 도구",
+          "입체 도우미",
+          "채점"
+        ],
+        "walk": [
+          {
+            "part": "제도: 펜, 레이어, 페이지"
+          },
+          {
+            "title": "“제도 키트” 만들기",
+            "text": "홈 화면에서 “새 노트”를 누릅니다. “세트 만들기” 영역에서 “공학 도면 세트”를 누르고 “확인”을 누르세요. 노트 세 권(수업 노트, 작도 연습, 오류 함정 노트)이 한 번에 만들어지고 제도용 종이와 펜이 이미 골라져 있습니다. 가볍게 해 보고 싶다면 빈 종이를 고른 뒤, 열리면 편집 화면 윗줄의 “제도”을 눌러도 됩니다.",
+            "fig": "guide_kit",
+            "cap": "새 노트: 제도 키트를 고르고 확인"
+          },
+          {
+            "title": "제도 막대 알아보기",
+            "text": "노트 한 권을 엽니다. 처음에는 “도면 도움말”가 나오는데 “확인”를 누르세요. 페이지 위쪽이 제도 막대입니다. 위에서 아래로 “제도 펜”(선 종류), “레이어”(위층·중간층·아래층, 각각 눈과 자물쇠), “도형 스냅”과 “각도 잠금”, “제도 도구”, “입체 도우미”입니다. 아직 누르지 말고 한 단계씩 진행합니다.",
+            "fig": "guide_bar",
+            "cap": "제도 막대: 제도 펜, 레이어, 도형 스냅, 각도 고정"
+          },
+          {
+            "title": "첫 번째 선 긋기",
+            "text": "“굵은 실선”을 누르고 손가락이나 펜으로 페이지에 대략 수평인 선을 긋습니다. 끝점에서 **떼지 말고 약 0.5초 멈추면** 가볍게 진동하며 선이 곧은 선이 됩니다. 수직선도 하나 그어 보세요. 원과 직사각형도 마찬가지로, 그리고 멈추면 정확한 도형으로 붙습니다.",
+            "fig": "guide_snap",
+            "cap": "0.5초 멈추면 삐뚤빼뚤한 선이 곧은 선이 된다"
+          },
+          {
+            "title": "은선과 레이어",
+            "text": "“숨은선”을 누르고 한 줄 더 그으면 점선이 됩니다. 공학 도면에서는 보이지 않는 모서리에 이런 선을 씁니다. 레이어를 잠시 숨기려면(예: 보조선) 그 레이어 옆의 눈을 누르세요. 자물쇠는 그 레이어에 잘못 그리지 않도록 보호합니다.",
+            "fig": "guide_hidden",
+            "cap": "은선은 점선. 각 레이어는 눈으로 숨기고 자물쇠로 보호할 수 있다"
+          },
+          {
+            "title": "하나씩 자세히：제도: 펜, 레이어, 페이지",
+            "text": "공학 도면에는 굵기가 일정하고 또렷한 선을 레이어로 나누어 그리는 것이 필요합니다. “제도 펜”을 고르면 그 설정이 됩니다. 페이지의 1 mm가 종이의 1 mm입니다.",
+            "items": [
+              "편집 화면 윗줄에서 “제도”을 누르면 제도 막대가 나타납니다.",
+              "“제도 펜”은 제도 규격에 따라 굵은 실선, 가는 실선, 은선, 중심선, 가상선, 보조선, 문제 선으로 나뉩니다. 펜을 고르면 선 종류와 레이어가 함께 정해집니다(은선은 점선, 보조선은 연한 파랑).",
+              "“레이어”는 아래층(문제), 중간층(보조), 위층(답) 세 층이고, 0은 일반 필기입니다. 각 레이어는 눈 아이콘으로 숨기고 자물쇠로 보호할 수 있습니다. 표시와 잠금은 이 기기의 이 노트에만 저장되며 동기화되지 않습니다.",
+              "“도형 스냅”: 선을 그리고 끝점에서 약 0.5초 멈추면 직선, 원, 직사각형, 삼각형으로 바뀝니다. “각도 잠금”은 직선을 15°, 30°, 45°, 90°의 배수로 고정합니다.",
+              "“단계 번호”: 페이지를 누르면 ①②③을 놓습니다. “레이어로 이동”: 선을 누르면 현재 선택한 레이어로 옮기며, 되돌릴 수 있습니다.",
+              "페이지 크기는 A3, A2, 사용자 지정(300~6000)입니다. 새 노트를 “제도 키트”(수업 노트, 작도 연습, 오류 함정 노트)로 한 번에 만들 수 있습니다. 기본 제공 “제도 예제”는 보조선으로 3면도의 교점을 구하는 방법을 보여 줍니다.",
+              "페이지의 길이는 종이 위의 밀리미터입니다(A4 너비는 210 mm). 치수, 각도기, 자, 내보내기 모두 실제 밀리미터입니다."
+            ],
+            "fig": "drafting",
+            "cap": "제도 막대: 제도 펜, 레이어, 도형 스냅, 각도 고정"
+          },
+          {
+            "part": "입체 도우미와 유리 상자"
+          },
+          {
+            "title": "입체 도우미로 3면도 만들기",
+            "text": "“입체 도우미”를 누릅니다. “단면 형상”에서 모양(예: U자 홈)을 고르고 너비·높이·깊이를 조절합니다. 미리 보기는 삽입될 모습 그대로입니다. 안쪽을 보려면 “단면”에서 “온단면”을 고르세요.",
+            "fig": "solidstudio",
+            "cap": "입체 도우미: 윤곽 선택, 크기 조절, 미리 보기 확인"
+          },
+          {
+            "title": "페이지에 넣기",
+            "text": "오른쪽 위의 “페이지에 삽입”를 누릅니다. 3면도가 보이는 범위의 가운데에 선택된 채로 놓입니다. 끌어서 원하는 곳으로 옮기세요. 배치를 보세요. 평면도는 정면도 바로 위, 우측면도는 바로 오른쪽입니다(제3각법).",
+            "fig": "guide_inserted",
+            "cap": "3면도가 페이지에 들어감: 평면도는 위, 우측면도는 오른쪽"
+          },
+          {
+            "title": "하나씩 자세히：입체 도우미와 유리 상자",
+            "text": "닫힌 윤곽을 그려 입체로 늘린 뒤 3면도, 등각도, 단면, 그리고 3면도가 유리 상자에서 펼쳐지는 모습을 봅니다.",
+            "items": [
+              "제도 막대의 “입체 도우미”를 누릅니다. 기본 윤곽을 고르거나 “이 페이지의 닫힌 도형 사용”으로 직접 그린 스케치를 쓰고, 너비·높이·깊이를 조절합니다.",
+              "“도면” 탭: 3면도, 등각도, 투상선, 중심선, 치수(전체 길이·높이·깊이), 제1각법/제3각법, 단면(전체, 계단, 회전, 정면과 평행, 경사). 계단·회전 단면은 절단면 뒤의 모양도 그리고, 경사 단면은 절단면의 실제 모양을 그립니다. “페이지에 삽입”는 전체를 보이는 범위 가운데에 놓고 선택해 둡니다.",
+              "“회전” 탭: 화면을 끌거나 슬라이더로 어느 각도에서든 입체를 봅니다. 보이지 않는 모서리는 점선입니다.",
+              "“유리 상자” 탭: 입체가 유리 상자 안에 있고 세 도면이 상자의 세 면에 그려져 있습니다. “펼치기 재생”을 누르면 약 4초 동안 윗면과 오른쪽 면(제1각법에서는 아랫면과 왼쪽 면)이 젖혀져 평평해지며 3면도 배치가 됩니다.",
+              "진행 막대를 끌어 원하는 곳에서 멈추고, 제1각법으로 바꾸고, 화면을 끌어 보는 각도를 바꿀 수 있습니다.",
+              "미리 보기는 페이지에 쓰이는 선 그대로를 그립니다. 미리 보기와 똑같이 페이지에 들어갑니다."
+            ],
+            "fig": "solidstudio",
+            "cap": "입체 도우미: 기본 윤곽, 단면, 배치 옵션"
+          },
+          {
+            "title": "유리 상자",
+            "text": "유리 상자: 윗면과 오른쪽 면이 절반쯤 펼쳐진 모습. 화면을 끌면 보는 각도가 바뀝니다",
+            "fig": "glassbox",
+            "cap": "유리 상자: 윗면과 오른쪽 면이 절반쯤 펼쳐진 모습. 화면을 끌면 보는 각도가 바뀝니다"
+          },
+          {
+            "part": "치수, 기호, 도면 테두리"
+          },
+          {
+            "title": "치수 넣기",
+            "text": "“제도 도구”를 누르고 “선형 치수”을 누릅니다. 화면 위쪽의 안내를 따르세요. 첫 점을 누르고, 둘째 점을 누른 뒤(선의 끝점에 붙습니다), 마지막으로 치수선을 놓을 곳까지 누른 채 끌었다가 놓습니다. 숫자는 축척을 따릅니다.",
+            "fig": "guide_dim",
+            "cap": "선형 치수: 두 점을 누르고 치수선을 끌어냄"
+          },
+          {
+            "title": "축척, 도면 테두리, 표제란",
+            "text": "“제도 도구”를 다시 열어 먼저 “축척”을 고르고(예: 1:2) “도곽과 표제란 삽입”을 누릅니다. 이 페이지의 용지에 맞게 도면 테두리, 표제란, 투상법 기호가 그려집니다. 표제란의 글자는 두 번 눌러 내 이름과 도면 이름으로 바꿀 수 있습니다.",
+            "fig": "guide_frame",
+            "cap": "도면 테두리와 표제란 삽입(축척 칸에 현재 축척이 들어감)"
+          },
+          {
+            "title": "하나씩 자세히：치수, 기호, 도면 테두리",
+            "text": "도구 상자로 치수, 기호, 도면 테두리, 표제란을 도면에 넣습니다.",
+            "items": [
+              "제도 막대의 “제도 도구”을 눌러 도구 상자를 엽니다.",
+              "“치수 기입”에는 선형, 지름, 반지름, 각도 네 가지가 있습니다. 하나를 고르면 화면 위쪽의 안내가 다음 동작을 알려 줍니다. 선형 = 두 점을 누른 뒤 누른 채 끌어 치수선 위치를 정합니다. 지름·반지름 = 그려 둔 원을 누른 뒤 지시선을 낼 방향으로 끕니다. 각도 = 꼭짓점과 두 변을 차례로 누른 뒤 호를 끌어냅니다.",
+              "누른 위치는 선의 끝점과 원의 중심에 자동으로 붙으므로 정확하게 잴 수 있습니다.",
+              "“축척”은 치수 숫자를 정합니다. 숫자 = 종이 위 밀리미터 × 축척. 1:2 도면에서 종이에서 50 mm이면 100으로 표기합니다. 축척은 이 기기에서 노트별로 기억됩니다.",
+              "“제도 기호”에는 표면 거칠기, 용접, 나사, 기하 공차(데이텀과 공차 틀 포함), 표시, 표준 부품(M 규격별 육각 볼트, 너트, 와셔)이 있습니다. 매개변수를 맞추고 “페이지에 넣기”를 누르면 보이는 범위의 가운데에 놓이고 선택되어 있어 끌어서 옮길 수 있습니다.",
+              "“도곽과 표제란 삽입”은 이 페이지의 용지 크기(A4, A3, A2)에 맞춰 도면 테두리, 표제란, 투상법 기호를 그립니다. 제3각법(대만, 미국) 또는 제1각법을 고를 수 있습니다.",
+              "치수 숫자와 글자는 텍스트 상자가 아니라 선으로 된 글자라서 레이어와 함께 숨겨지고 내보내기에도 포함됩니다.",
+              "치수를 넣기 전에 축척을 확인하세요. 한 도면에 축척이 둘 필요하면 한쪽을 끝낸 뒤 바꾸세요."
+            ],
+            "fig": "drafttools",
+            "cap": "도구 상자: 치수, 축척, 기호, 도면 테두리(위쪽 페이지에는 방금 넣은 선형 치수)"
+          },
+          {
+            "part": "정렬, 제도 기구, 컴퍼스"
+          },
+          {
+            "title": "제도 기구와 정렬",
+            "text": "도구 상자의 “정렬과 제도 도구”에서 자, T자, 삼각자, 각도기를 놓을 수 있습니다. 각도기를 꺼내 바깥쪽 눈금 띠를 누르면 각도를 읽을 수 있습니다. 기구의 가장자리에서 그리기 시작하면 선이 곧게 나오고, 페이지에 있는 끝점에 맞으면 연한 파란 점선이 나타납니다(평면도와 정면도의 가로, 정면도와 측면도의 높이).",
+            "fig": "draftaids",
+            "cap": "각도기: 바깥쪽 눈금 띠를 눌러 60°를 읽음"
+          },
+          {
+            "title": "하나씩 자세히：정렬, 제도 기구, 컴퍼스",
+            "text": "투상은 맞추고 선은 곧게. 정렬은 화면이 돕고, 가상 제도 기구로 그립니다.",
+            "items": [
+              "“투상 정렬”(기본 켜짐): 선의 시작점과 끝점이 페이지의 기존 선 끝점에 맞춰집니다(정면도와 평면도의 가로, 정면도와 측면도의 높이). 맞춰지면 연한 파란 점선이 나타납니다. 필요 없으면 도구 상자에서 끌 수 있습니다.",
+              "“45° 전환점”을 설정하면 폭도 맞춰집니다. “45° 전환점 설정”을 누르고 평면도와 측면도 사이의 모서리(45° 선이 지나는 점)를 누릅니다. 전환점은 페이지마다 하나씩 저장됩니다.",
+              "“정렬과 제도 도구”에서 “자”, “T자”, 삼각자 두 종류, “각도기”를 놓을 수 있습니다. 눈금은 실제 밀리미터입니다.",
+              "기구의 가장자리에서 그리기 시작하면 선 전체가 가장자리를 따라 곧은 선이 됩니다. 기구의 가운데를 눌러 끌면 움직입니다. 회전 버튼으로 15° 또는 1°씩 돌립니다. T자는 페이지 왼쪽 가장자리를 따라 위아래로만 움직이며 돌릴 수 없습니다.",
+              "각도기: 바깥쪽 눈금 띠를 누르면 각도를 읽을 수 있고, 제도 막대에 양쪽 눈금(예: 60.0° / 120.0°)이 표시됩니다. “읽은 선 그리기”는 그 각도의 선을 그립니다. 안쪽을 누르면 각도기가 움직이고 읽은 값도 함께 움직입니다.",
+              "“컴퍼스”: 중심을 누른 다음 원주 위의 점을 누르고 원을 따라 끌면 호가 그려집니다. 반 바퀴를 넘겨서 돌릴 수 있고, 놓으면 그려지며 한 번에 되돌릴 수 있습니다.",
+              "“제3각법(대만·미국)” 스위치는 도구 상자에 있으며 45° 전달 방향과 도면 테두리의 투상법 기호를 정합니다.",
+              "기구는 페이지 위에 올려 쓰는 도구이며 선이 되지 않습니다. “도구 치우기”를 누르면 사라집니다."
+            ],
+            "fig": "draftaids",
+            "cap": "각도기: 바깥쪽 눈금 띠를 눌러 60°를 읽고, 제도 막대에 양쪽 눈금을 표시"
+          },
+          {
+            "part": "편집 도구: 자르기, 연장, 모깎기, 간격 띄우기, 대칭, 배열"
+          },
+          {
+            "title": "도형 고치기",
+            "text": "틀려도 지우고 다시 그릴 필요가 없습니다. 도구 상자 맨 아래 “편집”에 자르기, 연장, 모깎기, 간격 띄우기, 대칭, 배열이 있습니다. 예를 들어 “자르기”를 고르고 튀어나온 부분을 누르면 가장 가까운 교점까지 잘립니다. 모든 동작은 한 번에 되돌릴 수 있습니다.",
+            "fig": "draftedit",
+            "cap": "편집 도구: 자르기, 연장, 모깎기, 간격 띄우기, 대칭, 배열"
+          },
+          {
+            "title": "하나씩 자세히：편집 도구: 자르기, 연장, 모깎기, 간격 띄우기, 대칭, 배열",
+            "text": "그린 선을 지우고 다시 그리지 않고도 자르기, 연장, 모깎기, 간격 띄우기, 대칭, 배열을 할 수 있습니다.",
+            "items": [
+              "도구 상자 맨 아래 “편집” 영역에서 도구를 고릅니다. 모든 동작은 한 번에 되돌릴 수 있습니다.",
+              "“자르기”: 잘라낼 부분을 누르면 앞뒤의 가장 가까운 교점까지 잘립니다. 그려 둔 원은 호로 자를 수 있습니다. 교점이 없으면 “이 선은 다른 선과 만나지 않습니다”라고 알려 줍니다.",
+              "“연장”: 늘릴 끝 근처를 누르면 끝의 방향으로 가장 가까운 선까지 늘어납니다.",
+              "“모깎기”: 직선 두 개를 차례로 누르면 설정한 반지름(밀리미터)의 호로 이어지고, 두 선이 접점까지 짧아지거나 늘어납니다. 직선만 지원합니다. 평행하거나 반지름이 선보다 길면 이유를 알려 줍니다.",
+              "“간격 띄우기”: 선을 누른 뒤 옮길 쪽을 누르면 평행선이 하나 더 생깁니다(거리는 도구 상자의 “간격(mm)”). 원래 선은 남습니다. 닫힌 선은 닫힌 채로 유지됩니다.",
+              "“대칭”와 배열은 먼저 올가미로 선을 골라야 합니다. 대칭: 대칭축의 첫 점을 누르고 누른 채 두 번째 점까지 끕니다. 끄는 동안 실시간 미리 보기가 나오고 놓으면 복사됩니다.",
+              "“직사각형 배열”은 행 수, 열 수, 간격을, “원형 배열”은 개수와 전체 각도를 설정한 뒤 중심을 누릅니다.",
+              "만들어진 선은 원래 선의 펜, 색, 레이어, 선 종류를 그대로 따릅니다.",
+              "모깎기 반지름과 간격 띄우기 거리는 종이 위 밀리미터이며 한 번 설정하면 기억됩니다."
+            ],
+            "fig": "draftedit",
+            "cap": "도구 상자의 “편집” 영역: 자르기, 연장, 모깎기, 간격 띄우기, 대칭, 배열"
+          },
+          {
+            "part": "연습 문제와 자동 채점"
+          },
+          {
+            "title": "연습 문제 풀어 보기",
+            "text": "도구 상자의 “연습 문제”에서 “세 번째 도면 완성”을 고릅니다. 정면도와 평면도는 이미 페이지에 있습니다. 오른쪽에 위층의 제도 펜으로 우측면도를 그리세요(외형은 굵은 실선, 보이지 않는 모서리는 은선). 다 그리면 “채점”를 누르세요. 빠진 선, 불필요한 선, 선 종류 오류, 위치 어긋남이 표시됩니다. 막히면 “정답 보기”를 누르세요. 초록 선이 모범 답안입니다.",
+            "fig": "draftpractice",
+            "cap": "채점 후 빠진 선이 표시됨. 초록색이 모범 답안"
+          },
+          {
+            "title": "하나씩 자세히：연습 문제와 자동 채점",
+            "text": "문제는 앱이 내고, 다 그린 뒤 한 번 누르면 채점해서 빠진 선, 불필요한 선, 선 종류 오류, 위치 어긋남을 알려 줍니다.",
+            "items": [
+              "도구 상자의 “연습 문제”에는 다섯 가지가 있습니다. 세 번째 도면 완성, 등각도에서 3면도, 제1각법인가 제3각법인가, 틀린 곳 찾기, 단면도 그리기.",
+              "하나를 고르면 문제의 선이 이 페이지의 아래층에 놓이고, 모서리에 연습 카드가 나타나 과제와 입체의 치수를 보여 줍니다.",
+              "그리기 문제는 위층의 제도 펜으로 답합니다. 외형은 굵은 실선, 보이지 않는 모서리는 은선, 해칭은 가는 실선입니다.",
+              "“채점”를 누르면 빠진 선(주황 점선 = 그릴 위치), 불필요한 선(빨강), 선 종류 오류(노랑), 위치 어긋남(파란 점선 = 올바른 위치)을 표시합니다. 단면 문제는 해칭이 있는지와 45° 각도도 확인하고 0~100점을 줍니다.",
+              "“정답 보기”는 모범 답안을 초록색 선으로 겹쳐 보여 줍니다(그린 내용은 바뀌지 않습니다). “다음 문제”는 같은 유형의 다른 문제를 냅니다.",
+              "제1각법/제3각법 문제는 답을 고르기만 하면 됩니다. 틀린 곳 찾기는 먼저 오류의 종류(선이 빠짐, 선이 하나 많음, 선 종류 오류, 위치가 맞지 않음)를 고른 뒤 도면에서 틀린 위치를 누릅니다.",
+              "문제는 시드로 만들어지므로 같은 시드면 휴대폰과 태블릿에서 같은 문제가 나옵니다.",
+              "채점은 답안 범위 안에 있는 위층의 선만 봅니다. 문제의 선은 아래층에 있어서 내가 그린 선으로 세지 않습니다."
+            ],
+            "fig": "draftpractice",
+            "cap": "연습: 빈 페이지를 채점해 빠진 선을 표시한 모습. 초록 선이 모범 답안"
+          },
+          {
+            "part": "도면과 3D 모델 내보내기"
+          },
+          {
+            "title": "내보내기",
+            "text": "완성하면 도구 상자의 “이 페이지 내보내기”로 SVG나 DXF로 저장해 벡터 소프트웨어나 CAD에 넘깁니다. 입체 도우미 맨 아래 “3D 모델 내보내기”에서는 STL(3D 프린팅), OBJ, GLB, USDZ로 저장할 수 있습니다. 모든 내보내기는 내 기기 안에서 이루어집니다.",
+            "fig": "draftexport",
+            "cap": "이 페이지 내보내기: SVG 또는 DXF"
+          },
+          {
+            "title": "하나씩 자세히：도면과 3D 모델 내보내기",
+            "text": "도면을 CAD, 벡터 소프트웨어, 3D 프린터, AR로 넘깁니다. 모두 내 기기 안에서 이루어집니다.",
+            "items": [
+              "도구 상자의 “이 페이지 내보내기”: SVG는 벡터 앱용, DXF는 AutoCAD·LibreCAD 같은 CAD용입니다. 단위는 밀리미터(A4 너비는 210 mm)이고, 숨긴 레이어는 내보내지 않습니다. DXF에는 레이어와 선 종류(은선, 중심선, 가상선)가 들어갑니다.",
+              "내보낸 파일은 시스템 공유 시트로 넘어가므로 파일로 저장하거나 다른 앱으로 보낼 수 있습니다.",
+              "입체 도우미 맨 아래의 “3D 모델 내보내기”: STL(3D 프린팅, 밀리미터), OBJ(밀리미터), GLB(웹과 Blender, 미터), USDZ(미터).",
+              "구멍이 있는 윤곽(링, 구멍 뚫린 판 등)도 올바르게 내보냅니다.",
+              "Apple 기기에서는 USDZ 옆에 “AR로 보기”가 있어 시스템 미리 보기로 모델을 책상 위에 놓고 볼 수 있습니다. 이는 시스템 기능이며 Kairumo는 카메라 화면을 받지 않습니다. 다른 기기에서는 USDZ 파일을 Apple 기기로 보내 볼 수 있습니다.",
+              "모든 내보내기는 기기 안에서 이루어지며, 공유를 선택했을 때만 파일이 앱 밖으로 나갑니다."
+            ],
+            "fig": "draftexport",
+            "cap": "도구 상자의 내보내기 영역: 이 페이지의 선을 SVG 또는 DXF로 저장"
+          },
+          {
+            "title": "입체 도우미의 내보내기 영역",
+            "text": "입체 도우미의 내보내기 영역: STL, OBJ, GLB, USDZ와 “AR로 보기”",
+            "fig": "solidexport",
+            "cap": "입체 도우미의 내보내기 영역: STL, OBJ, GLB, USDZ와 “AR로 보기”"
+          }
+        ],
+        "tip": "장 전체를 따라 하면 약 30분 걸립니다. 중간에 쉬어도 괜찮습니다. 레이어와 축척 등의 설정은 이 기기에 기억됩니다."
+      },
+      {
         "id": "data",
         "title": "백업 및 동기화",
         "lead": "계정도, 저희 서버도 필요 없습니다. 백업은 파일 하나, 동기화는 본인의 클라우드 폴더입니다.",
@@ -2886,6 +4031,235 @@ window.KAIRUMO_MANUAL = {
         "cap": "เมนูแทรก: คลังวัสดุ รูปภาพ สมการ โมเดล 3 มิติ หมุดสนทนา และทำงานร่วมกัน",
         "fig2": "assetlib",
         "cap2": "คลังวัสดุ: เลือกตามหมวด กดดาวน์โหลด แล้ววางลงหน้า"
+      },
+      {
+        "id": "drafting",
+        "title": "การเขียนแบบ (แบบวิศวกรรม): คู่มือฉบับสมบูรณ์จากศูนย์",
+        "lead": "บทนี้พูดถึง \"การเขียนแบบ\" โดยเฉพาะ ไม่เคยเรียนมาก่อนก็ไม่เป็นไร เริ่มจากทำตาม 12 ขั้นก่อน ตั้งแต่สร้างสมุดและวาดเส้นแรก ไปจนถึงภาพสามมุมมอง ขนาด กรอบแบบ โจทย์ฝึกหัดที่มีการตรวจ และการส่งออก ทุกขั้นมีภาพหน้าจอ แล้วการ์ด \"รายละเอียดทีละรายการ\" ท้ายแต่ละส่วนจะอธิบายทุกปุ่มให้ชัดเจน",
+        "buttons": [
+          "สร้างบันทึกใหม่",
+          "ชุดวิชาเขียนแบบ",
+          "งานเขียนแบบ",
+          "เครื่องมือเขียนแบบ",
+          "ตัวช่วยงานสามมิติ",
+          "ตรวจ"
+        ],
+        "walk": [
+          {
+            "part": "การเขียนแบบ: ปากกา เลเยอร์ และหน้ากระดาษ"
+          },
+          {
+            "title": "สร้าง \"ชุดเขียนแบบ\"",
+            "text": "ที่หน้าแรกแตะ “สร้างบันทึกใหม่” ตรงส่วน “สร้างชุด” แตะ “ชุดวิชาเขียนแบบ” แล้วกด “ตกลง” จะได้สมุดสามเล่มในครั้งเดียว (บันทึกในชั้นเรียน ฝึกเขียนแบบ สมุดกับดักความผิดพลาด) พร้อมกระดาษและปากกาเขียนแบบที่เลือกไว้ให้แล้ว ถ้าอยากลองเล่นก่อน เลือกกระดาษเปล่า แล้วเมื่อเปิดแล้วแตะ “งานเขียนแบบ” ที่แถวบนของหน้าแก้ไข",
+            "fig": "guide_kit",
+            "cap": "สมุดใหม่: เลือกชุดเขียนแบบแล้วยืนยัน"
+          },
+          {
+            "title": "รู้จักแถบเขียนแบบ",
+            "text": "เปิดสมุดเล่มใดก็ได้ ครั้งแรกจะมี “เคล็ดลับงานเขียนแบบ” ขึ้นมา แตะ “เข้าใจแล้ว” แถบเขียนแบบอยู่ด้านบนของหน้า เรียงจากบนลงล่าง: “ปากกาเขียนแบบ” (ชนิดเส้น) “เลเยอร์” (ชั้นบน ชั้นกลาง ชั้นล่าง แต่ละชั้นมีตาและกุญแจ) “จัดรูปทรงอัตโนมัติ” และ “ล็อกมุม” “เครื่องมือเขียนแบบ” และ “ตัวช่วยงานสามมิติ” อย่าเพิ่งกด เราไปทีละขั้น",
+            "fig": "guide_bar",
+            "cap": "แถบเขียนแบบ: ปากกาเขียนแบบ เลเยอร์ การดูดรูปทรง และล็อกมุม"
+          },
+          {
+            "title": "วาดเส้นแรก",
+            "text": "แตะ “เส้นหนา” แล้วใช้นิ้วหรือปากกาวาดเส้นที่ค่อนข้างแนวนอนบนหน้ากระดาษ ที่ปลายให้ **หยุดค้างประมาณครึ่งวินาทีโดยยังไม่ยกนิ้ว** จะรู้สึกสั่นเบา ๆ แล้วเส้นจะตรงเป๊ะ วาดเส้นแนวตั้งด้วย วงกลมและสี่เหลี่ยมก็เหมือนกัน วาดแล้วหยุดค้าง จะดูดเป็นรูปทรงที่ถูกต้อง",
+            "fig": "guide_snap",
+            "cap": "หยุดค้างครึ่งวินาที เส้นเบี้ยวจะกลายเป็นเส้นตรง"
+          },
+          {
+            "title": "เส้นประและเลเยอร์",
+            "text": "แตะ “เส้นซ่อน” แล้ววาดอีกเส้น จะเป็นเส้นประ ในแบบวิศวกรรมขอบที่มองไม่เห็นใช้เส้นแบบนี้ ถ้าอยากซ่อนเลเยอร์ไว้ชั่วคราว (เช่น เส้นช่วย) แตะรูปตาข้างเลเยอร์นั้น ส่วนกุญแจป้องกันเลเยอร์ไม่ให้วาดผิด",
+            "fig": "guide_hidden",
+            "cap": "เส้นประคือเส้นซ่อน ทุกเลเยอร์ซ่อนด้วยตาและล็อกด้วยกุญแจได้"
+          },
+          {
+            "title": "รายละเอียดทีละรายการ：การเขียนแบบ: ปากกา เลเยอร์ และหน้ากระดาษ",
+            "text": "งานเขียนแบบวิศวกรรมต้องใช้เส้นที่หนาเท่ากันและคมชัด แยกเป็นเลเยอร์ เลือกชุดปากกาเขียนแบบเพื่อสลับมาใช้ชุดนี้ 1 มม. บนหน้ากระดาษคือ 1 มม. บนกระดาษจริง",
+            "items": [
+              "แตะ “งานเขียนแบบ” ที่แถวบนของหน้าแก้ไข แล้วแถบเขียนแบบจะปรากฏด้านบน",
+              "“ปากกาเขียนแบบ” แบ่งตามมาตรฐานการเขียนแบบ: เส้นทึบหนา เส้นทึบบาง เส้นประ เส้นศูนย์กลาง เส้นสมมติ เส้นช่วย และเส้นของโจทย์ เลือกปากกาแล้วชนิดเส้นและเลเยอร์จะมาพร้อมกัน (เส้นประคือเส้นซ่อน เส้นช่วยเป็นสีฟ้าอ่อน)",
+              "“เลเยอร์” มีชั้นล่าง (โจทย์) ชั้นกลาง (ช่วย) ชั้นบน (คำตอบ) ส่วน 0 คือลายมือทั่วไป แต่ละเลเยอร์ซ่อนได้ด้วยไอคอนตา และป้องกันได้ด้วยกุญแจ การแสดงและการล็อกเก็บไว้เฉพาะเครื่องนี้และสมุดเล่มนี้ ไม่ซิงก์",
+              "“จัดรูปทรงอัตโนมัติ”: วาดเส้นแล้วหยุดค้างที่ปลายประมาณครึ่งวินาที เส้นจะกลายเป็นเส้นตรง วงกลม สี่เหลี่ยม หรือสามเหลี่ยม “ล็อกมุม” ล็อกเส้นตรงให้เป็นพหุคูณของ 15° 30° 45° หรือ 90°",
+              "“เลขขั้นตอน”: แตะหน้ากระดาษเพื่อวาง ①②③ “ย้ายไปเลเยอร์”: แตะเส้นเพื่อย้ายไปเลเยอร์ที่เลือกอยู่ และย้อนกลับได้",
+              "ขนาดหน้ามี A3 A2 และกำหนดเอง (300 ถึง 6000) สมุดใหม่สร้างเป็น “ชุดเขียนแบบ” ได้ในครั้งเดียว (บันทึกในชั้นเรียน ฝึกเขียนแบบ สมุดกับดักความผิดพลาด) ตัวอย่างการเขียนแบบที่มีมาให้แสดงวิธีหาจุดตัดของภาพสามมุมมองด้วยเส้นช่วย",
+              "ความยาวบนหน้ากระดาษคือมิลลิเมตรบนกระดาษจริง (A4 กว้าง 210 มม.) ดังนั้นขนาด ไม้โปรแทรกเตอร์ ไม้บรรทัด และไฟล์ที่ส่งออกล้วนเป็นมิลลิเมตรจริง"
+            ],
+            "fig": "drafting",
+            "cap": "แถบเขียนแบบ: ปากกาเขียนแบบ เลเยอร์ การดูดรูปทรง และล็อกมุม"
+          },
+          {
+            "part": "ตัวช่วยสร้างทรงตันและกล่องแก้ว"
+          },
+          {
+            "title": "สร้างภาพสามมุมมองด้วยตัวช่วยสร้างทรงตัน",
+            "text": "แตะ “ตัวช่วยงานสามมิติ” ตรง “โครงร่าง” เลือกรูปร่าง (เช่น ร่อง U) แล้วปรับความกว้าง ความสูง และความลึก ตัวอย่างคือสิ่งที่จะถูกใส่ลงหน้าจริง ๆ ถ้าอยากดูข้างใน ตรง “ภาพตัด” เลือก “ตัดเต็ม”",
+            "fig": "solidstudio",
+            "cap": "ตัวช่วยสร้างทรงตัน: เลือกเส้นรอบรูป ปรับขนาด ดูตัวอย่าง"
+          },
+          {
+            "title": "ใส่ลงในหน้า",
+            "text": "แตะ “แทรกลงหน้า” ที่มุมขวาบน ภาพสามมุมมองจะอยู่กลางส่วนที่คุณกำลังมองและถูกเลือกไว้ ลากครั้งเดียวก็ย้ายไปที่ที่ชอบ ลองดูการจัดวาง: ภาพด้านบนอยู่เหนือภาพด้านหน้าตรง ๆ และภาพด้านขวาอยู่ทางขวาตรง ๆ (มุมที่สาม)",
+            "fig": "guide_inserted",
+            "cap": "ภาพสามมุมมองบนหน้า: ภาพด้านบนอยู่บน ภาพด้านขวาอยู่ขวา"
+          },
+          {
+            "title": "รายละเอียดทีละรายการ：ตัวช่วยสร้างทรงตันและกล่องแก้ว",
+            "text": "วาดเส้นรอบรูปปิด ดึงเป็นทรงตัน แล้วดูภาพสามมุมมอง ภาพไอโซเมตริก ภาพตัด และดูว่าภาพสามมุมมองคลี่ออกมาจากกล่องแก้วอย่างไร",
+            "items": [
+              "แตะ “ตัวช่วยงานสามมิติ” บนแถบเขียนแบบ เลือกรูปร่างที่มีให้ หรือแตะ “ใช้รูปปิดบนหน้านี้” เพื่อใช้ภาพร่างของคุณ แล้วปรับความกว้าง ความสูง และความลึก",
+              "แท็บ “ภาพ”: ภาพสามมุมมอง ภาพไอโซเมตริก เส้นฉาย เส้นศูนย์กลาง ขนาด (ยาวรวม สูงรวม ลึกรวม) มุมที่หนึ่งหรือมุมที่สาม และภาพตัด (ตัดเต็ม ตัดขั้นบันได ตัดหมุน ขนานด้านหน้า เฉียง) ภาพตัดขั้นบันไดและตัดหมุนจะวาดรูปร่างที่อยู่หลังรอยตัดด้วย และภาพตัดเฉียงจะวาดรูปจริงของหน้าตัด “แทรกลงหน้า” วางทั้งชุดไว้กลางส่วนที่กำลังมอง และเลือกไว้ให้",
+              "แท็บ “หมุน”: ลากภาพหรือใช้แถบเลื่อนเพื่อดูทรงตันจากมุมใดก็ได้ ขอบที่มองไม่เห็นเป็นเส้นประ",
+              "แท็บ “กล่องแก้ว”: ทรงตันอยู่ในกล่องแก้ว และภาพสามมุมมองถูกวาดบนสามด้านของกล่อง กด “เล่นการคลี่” ภายในประมาณ 4 วินาที ด้านบนและด้านขวา (มุมที่หนึ่งคือด้านล่างและด้านซ้าย) จะพับราบ นั่นคือผังภาพสามมุมมอง",
+              "ลากแถบความคืบหน้าไปหยุดที่ช่วงใดก็ได้ สลับเป็นมุมที่หนึ่ง และลากภาพเพื่อเปลี่ยนมุมมอง",
+              "ตัวอย่างวาดเส้นเดียวกับที่เขียนลงหน้า จึงเหมือนตัวอย่างทุกประการ"
+            ],
+            "fig": "solidstudio",
+            "cap": "ตัวช่วยสร้างทรงตัน: รูปร่างที่มีให้ ภาพตัด และตัวเลือกการจัดวาง"
+          },
+          {
+            "title": "กล่องแก้ว",
+            "text": "กล่องแก้ว: ด้านบนและด้านขวาคลี่ออกมาครึ่งหนึ่ง ลากภาพเพื่อเปลี่ยนมุมมอง",
+            "fig": "glassbox",
+            "cap": "กล่องแก้ว: ด้านบนและด้านขวาคลี่ออกมาครึ่งหนึ่ง ลากภาพเพื่อเปลี่ยนมุมมอง"
+          },
+          {
+            "part": "ขนาด สัญลักษณ์ และกรอบแบบ"
+          },
+          {
+            "title": "ใส่ขนาด",
+            "text": "แตะ “เครื่องมือเขียนแบบ” แล้วแตะ “ขนาดเชิงเส้น” ทำตามข้อความแนะนำด้านบน: แตะจุดแรก แตะจุดที่สอง (ดูดไปที่ปลายเส้น) แล้วกดค้างลากไปตำแหน่งที่จะวางเส้นขนาด ปล่อยก็เสร็จ ตัวเลขเป็นไปตามมาตราส่วน",
+            "fig": "guide_dim",
+            "cap": "ขนาดเชิงเส้น: แตะสองจุดแล้วลากเส้นขนาดออกมา"
+          },
+          {
+            "title": "มาตราส่วน กรอบ และช่องชื่อแบบ",
+            "text": "เปิด “เครื่องมือเขียนแบบ” อีกครั้ง: เลือก “มาตราส่วน” ก่อน (เช่น 1:2) แล้วกด “แทรกกรอบแบบและช่องชื่อแบบ” กรอบ ช่องชื่อแบบ และสัญลักษณ์วิธีการฉายภาพจะถูกวาดตามกระดาษของหน้านี้ ข้อความในช่องชื่อแบบแตะสองครั้งเพื่อใส่ชื่อของคุณและชื่อแบบ",
+            "fig": "guide_frame",
+            "cap": "ใส่กรอบและช่องชื่อแบบแล้ว (ช่องมาตราส่วนใส่ค่าปัจจุบันให้)"
+          },
+          {
+            "title": "รายละเอียดทีละรายการ：ขนาด สัญลักษณ์ และกรอบแบบ",
+            "text": "ใช้กล่องเครื่องมือใส่ขนาด สัญลักษณ์ กรอบ และช่องชื่อแบบลงในแบบ",
+            "items": [
+              "แตะ “เครื่องมือเขียนแบบ” บนแถบเขียนแบบเพื่อเปิดกล่องเครื่องมือ",
+              "“การกำหนดขนาด” มี 4 แบบ: เชิงเส้น เส้นผ่านศูนย์กลาง รัศมี และมุม เมื่อเลือกแล้ว ข้อความแนะนำด้านบนจะบอกขั้นต่อไป เชิงเส้น = แตะสองจุด แล้วกดค้างลากเพื่อกำหนดตำแหน่งเส้นขนาด เส้นผ่านศูนย์กลางและรัศมี = แตะวงกลมที่วาดไว้ แล้วลากไปทางที่จะดึงเส้นบอก มุม = แตะจุดยอดและสองด้านตามลำดับ แล้วลากส่วนโค้งออกมา",
+              "ตำแหน่งที่แตะจะดูดไปที่ปลายเส้นและจุดศูนย์กลางวงกลมอัตโนมัติ จึงวัดได้แม่นยำ",
+              "“มาตราส่วน” กำหนดตัวเลขของขนาด: ตัวเลข = มิลลิเมตรบนกระดาษ × มาตราส่วน แบบ 1:2 ที่วัดบนกระดาษได้ 50 มม. จะใส่ขนาด 100 มาตราส่วนจะแยกตามสมุดในเครื่องนี้",
+              "“สัญลักษณ์เขียนแบบ” มีผิวสัมผัส การเชื่อม เกลียว ค่าพิกัดเรขาคณิต (รวมดาตัมและกรอบพิกัด) เครื่องหมาย และชิ้นส่วนมาตรฐาน (สลักเกลียวหัวหกเหลี่ยม น็อต แหวนรอง ตามขนาด M) ตั้งค่าแล้วกด “วางลงในหน้า” สัญลักษณ์จะอยู่กลางส่วนที่กำลังมองและถูกเลือกไว้ ลากครั้งเดียวก็ย้ายได้",
+              "“แทรกกรอบแบบและช่องชื่อแบบ” วาดกรอบ ช่องชื่อแบบ และสัญลักษณ์วิธีการฉายภาพตามขนาดกระดาษของหน้านี้ (A4 A3 A2) เลือกมุมที่สาม (ไต้หวัน สหรัฐฯ) หรือมุมที่หนึ่งได้",
+              "ตัวเลขและข้อความของขนาดเป็นรูปอักษรที่ทำจากเส้น ไม่ใช่กล่องข้อความ จึงซ่อนไปพร้อมเลเยอร์และถูกส่งออกด้วย",
+              "ตรวจมาตราส่วนก่อนใส่ขนาด ถ้าแบบเดียวต้องใช้สองมาตราส่วน ให้ทำแบบหนึ่งให้เสร็จก่อนแล้วค่อยเปลี่ยน"
+            ],
+            "fig": "drafttools",
+            "cap": "กล่องเครื่องมือ: ขนาด มาตราส่วน สัญลักษณ์ และกรอบ (หน้าด้านบนมีขนาดเชิงเส้นที่เพิ่งใส่)"
+          },
+          {
+            "part": "การจัดแนว เครื่องมือวัด และวงเวียน"
+          },
+          {
+            "title": "เครื่องมือวัดและการจัดแนว",
+            "text": "“การจัดแนวและเครื่องมือวัด” ในกล่องเครื่องมือวางไม้บรรทัด ไม้ที ฉาก และไม้โปรแทรกเตอร์ได้ วางไม้โปรแทรกเตอร์แล้วกดแถบสเกลด้านนอกเพื่ออ่านมุม เริ่มลากเส้นชิดขอบเครื่องมือ เส้นจะออกมาตรง เมื่อเส้นตรงกับปลายเส้นที่มีอยู่ในหน้า จะมีเส้นประสีฟ้าอ่อนปรากฏ (ภาพด้านบนตรงกับภาพด้านหน้า ความสูงของภาพด้านหน้าเท่ากับภาพด้านข้าง)",
+            "fig": "draftaids",
+            "cap": "ไม้โปรแทรกเตอร์: กดแถบสเกลด้านนอกอ่านได้ 60°"
+          },
+          {
+            "title": "รายละเอียดทีละรายการ：การจัดแนว เครื่องมือวัด และวงเวียน",
+            "text": "ภาพฉายต้องตรงแนวและเส้นต้องตรง ให้หน้ากระดาษช่วยจัดแนว แล้ววาดด้วยเครื่องมือวัดเสมือนจริง",
+            "items": [
+              "“จัดแนวการฉายภาพ” (เปิดไว้เป็นค่าเริ่มต้น): จุดเริ่มและจุดสิ้นสุดของเส้นจะจัดแนวกับปลายเส้นที่มีอยู่ในหน้า (ภาพด้านบนตรงกับภาพด้านหน้า ความสูงของภาพด้านหน้าเท่ากับภาพด้านข้าง) เมื่อจัดแนวจะมีเส้นประสีฟ้าอ่อนปรากฏ ปิดได้ในกล่องเครื่องมือ",
+              "เมื่อตั้ง “จุดหักมุม 45°” ความกว้างก็จะตรงกันด้วย: แตะ “ตั้งจุดหักมุม 45°” แล้วแตะมุมระหว่างภาพด้านบนกับภาพด้านข้าง คือจุดที่เส้น 45° ผ่าน เก็บจุดหักมุมไว้หน้าละหนึ่งจุด",
+              "“การจัดแนวและเครื่องมือวัด” วาง “ไม้บรรทัด” “ไม้ที” ฉากสองแบบ และ “ไม้โปรแทรกเตอร์” ได้ สเกลบนเครื่องมือเป็นมิลลิเมตรจริง",
+              "เริ่มลากเส้นชิดขอบเครื่องมือ เส้นทั้งเส้นจะตรงตามขอบ กดกลางเครื่องมือค้างแล้วลากเพื่อย้าย ใช้ปุ่มหมุนทีละ 15° หรือ 1° ไม้ทีวิ่งชิดขอบซ้ายของหน้า เลื่อนขึ้นลงได้อย่างเดียวและหมุนไม่ได้",
+              "ไม้โปรแทรกเตอร์: กดที่แถบสเกลด้านนอกค้างเพื่ออ่านมุม แถบเขียนแบบจะแสดงสเกลทั้งสองด้าน (เช่น 60.0° / 120.0°) “วาดเส้นที่อ่านได้” จะวาดมุมนั้นเป็นเส้น ส่วนการกดด้านในคือการย้ายไม้โปรแทรกเตอร์ และค่าที่อ่านจะย้ายตามไปด้วย",
+              "“วงเวียน”: แตะจุดศูนย์กลาง แล้วกดบนวงกลมค้างและลากไปตามวงเพื่อวาดส่วนโค้ง หมุนเกินครึ่งรอบได้ ปล่อยแล้วจะวาด และย้อนกลับได้ในครั้งเดียว",
+              "สวิตช์ “การฉายภาพมุมที่สาม (ไต้หวัน สหรัฐฯ)” อยู่ในกล่องเครื่องมือ กำหนดทิศทางการส่งผ่าน 45° และสัญลักษณ์วิธีการฉายภาพในกรอบ",
+              "เครื่องมือวัดเป็นเครื่องมือที่วางทับหน้ากระดาษ ไม่กลายเป็นเส้น กด “เก็บเครื่องมือ” แล้วจะหายไป"
+            ],
+            "fig": "draftaids",
+            "cap": "ไม้โปรแทรกเตอร์: กดแถบสเกลด้านนอกอ่านได้ 60° แถบเขียนแบบแสดงสเกลทั้งสองด้าน"
+          },
+          {
+            "part": "เครื่องมือแก้ไข: ตัด ต่อเส้น มุมโค้ง เส้นขนาน สะท้อน เรียงซ้ำ"
+          },
+          {
+            "title": "แก้ไขแบบ",
+            "text": "วาดผิดไม่ต้องลบแล้ววาดใหม่ ส่วน “แก้ไข” ที่ด้านล่างสุดของกล่องเครื่องมือมี ตัด ต่อเส้น มุมโค้ง เส้นขนาน สะท้อน และเรียงซ้ำ เช่น เลือก “ตัด” แล้วแตะส่วนที่ยื่นออกมา จะตัดถึงจุดตัดที่ใกล้ที่สุด ทุกการกระทำย้อนกลับได้ในครั้งเดียว",
+            "fig": "draftedit",
+            "cap": "เครื่องมือแก้ไข: ตัด ต่อเส้น มุมโค้ง เส้นขนาน สะท้อน เรียงซ้ำ"
+          },
+          {
+            "title": "รายละเอียดทีละรายการ：เครื่องมือแก้ไข: ตัด ต่อเส้น มุมโค้ง เส้นขนาน สะท้อน เรียงซ้ำ",
+            "text": "แก้แบบได้โดยไม่ต้องลบแล้ววาดใหม่: ตัด ต่อเส้น ทำมุมโค้ง ทำเส้นขนาน สะท้อน หรือเรียงซ้ำเส้นที่มีอยู่แล้ว",
+            "items": [
+              "เลือกเครื่องมือในส่วน “แก้ไข” ที่ด้านล่างสุดของกล่องเครื่องมือ ทุกการกระทำย้อนกลับได้ในครั้งเดียว",
+              "“ตัด”: แตะส่วนที่จะตัดทิ้ง จะตัดถึงจุดตัดที่ใกล้ที่สุดทั้งสองด้าน วงกลมที่วาดไว้ตัดเป็นส่วนโค้งได้ ถ้าไม่มีจุดตัดจะแจ้งว่า “เส้นนี้ไม่ตัดกับเส้นอื่น”",
+              "“ต่อเส้น”: แตะใกล้ปลายที่จะต่อ เส้นจะต่อไปตามทิศของปลายจนถึงเส้นที่ใกล้ที่สุด",
+              "“มุมโค้ง”: แตะเส้นตรงสองเส้นตามลำดับ จะต่อกันด้วยรัศมีที่ตั้งไว้ (มิลลิเมตร) และเส้นทั้งสองถูกตัดสั้นหรือต่อยาวถึงจุดสัมผัส รองรับเฉพาะเส้นตรง ถ้าขนานกันหรือรัศมียาวกว่าเส้นจะบอกเหตุผล",
+              "“เส้นขนาน”: แตะเส้น แล้วแตะด้านที่จะย้ายไป จะได้เส้นขนานเพิ่มหนึ่งเส้น (ระยะตาม “ระยะเส้นขนาน (มม.)” ในกล่องเครื่องมือ) เส้นเดิมยังอยู่ เส้นปิดยังคงปิด",
+              "“สะท้อน”และการเรียงซ้ำต้องเลือกเส้นด้วยบ่วงก่อน สะท้อน: แตะจุดแรกของแกนสะท้อน แล้วกดค้างลากไปจุดที่สอง ระหว่างลากจะมีตัวอย่างแบบทันที ปล่อยแล้วจะคัดลอก",
+              "“เรียงเป็นตาราง” ตั้งจำนวนแถว คอลัมน์ และระยะห่าง “เรียงเป็นวงกลม” ตั้งจำนวนและมุมรวม แล้วแตะจุดศูนย์กลาง",
+              "เส้นที่ได้ใช้ปากกา สี เลเยอร์ และชนิดเส้นเดียวกับเส้นเดิม",
+              "รัศมีมุมโค้งและระยะเส้นขนานเป็นมิลลิเมตรบนกระดาษ ตั้งครั้งเดียวก็จำไว้"
+            ],
+            "fig": "draftedit",
+            "cap": "ส่วน “แก้ไข” ของกล่องเครื่องมือ: ตัด ต่อเส้น มุมโค้ง เส้นขนาน สะท้อน และเรียงซ้ำ"
+          },
+          {
+            "part": "โจทย์ฝึกหัดและการตรวจอัตโนมัติ"
+          },
+          {
+            "title": "ลองทำโจทย์ฝึกหัด",
+            "text": "ใน “โจทย์ฝึกหัด” ของกล่องเครื่องมือ เลือก “เติมภาพที่สาม” ภาพด้านหน้าและภาพด้านบนอยู่บนหน้าแล้ว ให้วาดภาพด้านขวาทางขวาด้วยปากกาเขียนแบบชั้นบน: รูปร่างใช้เส้นทึบหนา ขอบที่มองไม่เห็นใช้เส้นประ เมื่อเสร็จกด “ตรวจ” จะทำเครื่องหมายเส้นที่ขาด เส้นเกิน ชนิดเส้นผิด และเส้นที่ไม่ตรงแนว ถ้าติดให้กด “ดูเฉลย” เส้นสีเขียวคือเฉลย",
+            "fig": "draftpractice",
+            "cap": "หลังตรวจแล้วจะทำเครื่องหมายเส้นที่ขาด สีเขียวคือเฉลย"
+          },
+          {
+            "title": "รายละเอียดทีละรายการ：โจทย์ฝึกหัดและการตรวจอัตโนมัติ",
+            "text": "แอปตั้งโจทย์ให้ เมื่อวาดเสร็จแตะครั้งเดียวก็ตรวจ และชี้เส้นที่ขาด เส้นเกิน ชนิดเส้นผิด และเส้นที่ไม่ตรงแนว",
+            "items": [
+              "ส่วน “โจทย์ฝึกหัด” ในกล่องเครื่องมือมี 5 แบบ: เติมภาพที่สาม วาดสามมุมมองจากภาพไอโซเมตริก มุมที่หนึ่งหรือมุมที่สาม หาจุดผิด และวาดภาพตัด",
+              "เลือกแล้วเส้นของโจทย์จะอยู่ชั้นล่างของหน้านี้ และมีการ์ดฝึกหัดที่มุมแสดงโจทย์และขนาดของทรงตัน",
+              "โจทย์วาดภาพให้ตอบด้วยปากกาเขียนแบบชั้นบน: รูปร่างใช้เส้นทึบหนา ขอบที่มองไม่เห็นใช้เส้นประ ลายตัดใช้เส้นทึบบาง",
+              "กด “ตรวจ” จะทำเครื่องหมายเส้นที่ขาด (เส้นประสีส้มคือตำแหน่งที่ต้องวาด) เส้นเกิน (สีแดง) ชนิดเส้นผิด (สีเหลือง) และเส้นที่ไม่ตรงแนว (เส้นประสีน้ำเงินคือตำแหน่งที่ถูก) โจทย์ภาพตัดยังตรวจว่ามีเส้นลายและเป็นมุม 45° หรือไม่ แล้วให้คะแนน 0 ถึง 100",
+              "“ดูเฉลย” วางเฉลยเป็นเส้นสีเขียวทับ (งานที่วาดไม่เปลี่ยน) “โจทย์ใหม่” ให้โจทย์ใหม่ชนิดเดียวกัน",
+              "โจทย์มุมที่หนึ่ง/สามเลือกคำตอบได้เลย โจทย์หาจุดผิดให้เลือกชนิดของข้อผิดพลาดก่อน (เส้นขาด เส้นเกิน ชนิดเส้นผิด ไม่ตรงแนว) แล้วแตะตำแหน่งที่ผิดบนภาพ",
+              "โจทย์สร้างจากเมล็ดสุ่ม เมล็ดเดียวกันจึงได้โจทย์เดียวกันทั้งบนโทรศัพท์และแท็บเล็ต",
+              "การตรวจดูเฉพาะเส้นชั้นบนที่อยู่ในพื้นที่คำตอบ เส้นของโจทย์อยู่ชั้นล่างและไม่นับเป็นเส้นที่คุณวาด"
+            ],
+            "fig": "draftpractice",
+            "cap": "ฝึกหัด: ตรวจหน้าเปล่าแล้วทำเครื่องหมายเส้นที่ขาด เส้นสีเขียวคือเฉลย"
+          },
+          {
+            "part": "ส่งออกแบบและโมเดล 3 มิติ"
+          },
+          {
+            "title": "ส่งออก",
+            "text": "เมื่อเสร็จ ใช้ “ส่งออกหน้านี้” ในกล่องเครื่องมือเพื่อบันทึกเป็น SVG หรือ DXF ส่งให้ซอฟต์แวร์เวกเตอร์หรือ CAD ส่วน “ส่งออกโมเดล 3 มิติ” ที่ด้านล่างของตัวช่วยสร้างทรงตันบันทึกเป็น STL (พิมพ์ 3 มิติ) OBJ GLB หรือ USDZ การส่งออกทั้งหมดทำในเครื่องของคุณ",
+            "fig": "draftexport",
+            "cap": "ส่งออกหน้านี้: SVG หรือ DXF"
+          },
+          {
+            "title": "รายละเอียดทีละรายการ：ส่งออกแบบและโมเดล 3 มิติ",
+            "text": "ส่งแบบให้ CAD ซอฟต์แวร์เวกเตอร์ เครื่องพิมพ์ 3 มิติ หรือ AR ทำทั้งหมดในเครื่องของคุณ",
+            "items": [
+              "“ส่งออกหน้านี้” ในกล่องเครื่องมือ: SVG สำหรับแอปเวกเตอร์ DXF สำหรับ CAD เช่น AutoCAD และ LibreCAD หน่วยเป็นมิลลิเมตร (A4 กว้าง 210 มม.) เลเยอร์ที่ซ่อนไม่ถูกส่งออก DXF มีเลเยอร์และชนิดเส้น (เส้นประ เส้นศูนย์กลาง เส้นสมมติ)",
+              "ไฟล์จะส่งไปยังชีตแชร์ของระบบ จึงบันทึกเป็นไฟล์หรือส่งไปแอปอื่นได้",
+              "“ส่งออกโมเดล 3 มิติ” ที่ด้านล่างสุดของตัวช่วยสร้างทรงตัน: STL (พิมพ์ 3 มิติ มิลลิเมตร) OBJ (มิลลิเมตร) GLB (เว็บและ Blender เมตร) และ USDZ (เมตร)",
+              "เส้นรอบรูปที่มีรูก็ส่งออกได้ถูกต้อง เช่น วงแหวนและแผ่นที่มีรู",
+              "บนอุปกรณ์ Apple มี “ดูด้วย AR” ข้าง USDZ ใช้ตัวอย่างของระบบวางโมเดลบนโต๊ะดู นั่นเป็นฟีเจอร์ของระบบ Kairumo ไม่ได้รับภาพจากกล้อง บนอุปกรณ์อื่นส่งไฟล์ USDZ ไปดูบนอุปกรณ์ Apple ได้",
+              "การส่งออกทั้งหมดทำในเครื่องของคุณ ไฟล์จะออกจากแอปเมื่อคุณเลือกแชร์เท่านั้น"
+            ],
+            "fig": "draftexport",
+            "cap": "ส่วนส่งออกของกล่องเครื่องมือ: เส้นของหน้านี้บันทึกเป็น SVG หรือ DXF ได้"
+          },
+          {
+            "title": "ส่วนส่งออกของตัวช่วยสร้างทรงตัน",
+            "text": "ส่วนส่งออกของตัวช่วยสร้างทรงตัน: STL OBJ GLB USDZ และ “ดูด้วย AR”",
+            "fig": "solidexport",
+            "cap": "ส่วนส่งออกของตัวช่วยสร้างทรงตัน: STL OBJ GLB USDZ และ “ดูด้วย AR”"
+          }
+        ],
+        "tip": "ทำตามทั้งบทใช้เวลาประมาณ 30 นาที หยุดพักกลางทางได้ เลเยอร์ มาตราส่วน และการตั้งค่าอื่น ๆ ถูกจำไว้ในเครื่องนี้"
       },
       {
         "id": "data",

@@ -16,11 +16,15 @@
 //! 不是文字方塊 —— 這樣它們會跟著圖層、橡皮擦與匯出一起走。
 
 pub mod align;
+pub mod check;
 pub mod dim;
+pub mod edit;
+pub mod export2d;
 pub mod fastener;
 pub mod frame;
 pub mod gdt;
 pub mod instruments;
+pub mod problems;
 pub mod symbols;
 
 pub use padnote_solid::geom::P2;

@@ -3,6 +3,8 @@
 //! 幾何全在 `padnote-solid`；這裡只做三件事：換型別、把線的**角色**換成製圖筆組裡的
 //! 圖層／線型／筆寬（對照表在 `ffi_draft.rs`，兩個平台共用），以及擋掉不合理的輸入。
 
+use padnote_solid::export3d::{self, Format};
+use padnote_solid::glass::{self, GlassKind};
 use padnote_solid::section::Cut;
 use padnote_solid::sheet::{Convention, Role, SheetOptions, compose};
 use padnote_solid::solid::{PRESETS, Profile, Solid, preset, profile_from_strokes};
@@ -389,6 +391,138 @@ pub fn draft_step_marker(number: u32, cx: f32, cy: f32, radius: f32) -> Vec<FfiS
     out
 }
 
+// MARK: - 3D 匯出
+
+/// 可匯出的檔案格式，依顯示順序：`stl`、`obj`、`glb`、`usdz`。
+#[uniffi::export]
+pub fn solid_export_formats() -> Vec<String> {
+    export3d::FORMATS
+        .iter()
+        .map(|f| f.id().to_string())
+        .collect()
+}
+
+/// 立體 → 檔案內容。`mm_per_unit` 是一個模型單位等於幾毫米（頁面單位用 `1 / draft_units_per_mm()`）。
+/// STL、OBJ 的單位是毫米；GLB、USDZ 是公尺（AR 與 3D 檢視器的慣例）。輪廓或深度不合理回 `None`。
+#[uniffi::export]
+pub fn solid_export_3d(
+    profile: FfiSolidProfile,
+    depth: f32,
+    format: String,
+    mm_per_unit: f32,
+) -> Option<Vec<u8>> {
+    let format = Format::from_id(&format)?;
+    let profile = from_ffi(&profile)?;
+    if !depth.is_finite() || depth < 1.0 || !mm_per_unit.is_finite() || mm_per_unit <= 0.0 {
+        return None;
+    }
+    Some(export3d::export(
+        &Solid::new(profile, depth),
+        format,
+        mm_per_unit,
+    ))
+}
+
+// MARK: - 玻璃盒展開
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, uniffi::Enum)]
+pub enum FfiGlassKind {
+    /// 投影面的邊框。
+    Frame,
+    /// 立體本身的稜線。
+    Object,
+    /// 視圖上看得見的線。
+    Visible,
+    /// 視圖上的隱藏線。
+    Hidden,
+    /// 從立體的角落投射到各面的線（闔著時才有意義，隨展開淡出）。
+    Projection,
+}
+
+#[derive(Clone, Debug, uniffi::Record)]
+pub struct FfiGlassLine {
+    pub ax: f32,
+    pub ay: f32,
+    pub bx: f32,
+    pub by: f32,
+    pub kind: FfiGlassKind,
+}
+
+/// 一格玻璃盒動畫。座標是畫面座標（y 向上），範圍見 [`solid_glass_bounds`]。
+#[derive(Clone, Debug, uniffi::Record)]
+pub struct FfiGlassFrame {
+    pub lines: Vec<FfiGlassLine>,
+}
+
+fn glass_setup(
+    profile: &FfiSolidProfile,
+    depth: f32,
+    third_angle: bool,
+    yaw_deg: f32,
+    pitch_deg: f32,
+) -> Option<(Solid, Convention, Camera)> {
+    let profile = from_ffi(profile)?;
+    if !depth.is_finite() || depth < 1.0 {
+        return None;
+    }
+    Some((
+        Solid::new(profile, depth),
+        if third_angle {
+            Convention::ThirdAngle
+        } else {
+            Convention::FirstAngle
+        },
+        Camera::free(yaw_deg, pitch_deg),
+    ))
+}
+
+/// 玻璃盒展開的一格。`t` 0 = 盒子闔著、1 = 全部攤平；`yaw`、`pitch` 是觀看的角度（度）。
+#[uniffi::export]
+pub fn solid_glass_frame(
+    profile: FfiSolidProfile,
+    depth: f32,
+    third_angle: bool,
+    t: f32,
+    yaw_deg: f32,
+    pitch_deg: f32,
+) -> Option<FfiGlassFrame> {
+    let (solid, conv, cam) = glass_setup(&profile, depth, third_angle, yaw_deg, pitch_deg)?;
+    let f = glass::frame(&solid, conv, t.clamp(0.0, 1.0), &cam);
+    Some(FfiGlassFrame {
+        lines: f
+            .lines
+            .into_iter()
+            .map(|(a, b, kind)| FfiGlassLine {
+                ax: a.0,
+                ay: a.1,
+                bx: b.0,
+                by: b.1,
+                kind: match kind {
+                    GlassKind::Frame => FfiGlassKind::Frame,
+                    GlassKind::Object => FfiGlassKind::Object,
+                    GlassKind::Visible => FfiGlassKind::Visible,
+                    GlassKind::Hidden => FfiGlassKind::Hidden,
+                    GlassKind::Projection => FfiGlassKind::Projection,
+                },
+            })
+            .collect(),
+    })
+}
+
+/// 整段動畫的畫面範圍 `(左, 下, 右, 上)`（畫面座標，y 向上）。算一次、整段動畫共用，畫面才不會忽大忽小。
+#[uniffi::export]
+pub fn solid_glass_bounds(
+    profile: FfiSolidProfile,
+    depth: f32,
+    third_angle: bool,
+    yaw_deg: f32,
+    pitch_deg: f32,
+) -> Option<Vec<f32>> {
+    let (solid, conv, cam) = glass_setup(&profile, depth, third_angle, yaw_deg, pitch_deg)?;
+    let (lo, hi) = glass::bounds(&solid, conv, &cam);
+    Some(vec![lo.0, lo.1, hi.0, hi.1])
+}
+
 #[derive(Clone, Debug, uniffi::Record)]
 pub struct FfiSolidLine {
     pub ax: f32,
@@ -612,5 +746,39 @@ mod tests {
                 assert!((-0.5..=300.5).contains(&v), "{v}");
             }
         }
+    }
+    #[test]
+    fn export_and_glass_box_work_through_the_ffi() {
+        let profile = solid_preset_profile("plate_holes".into(), 80.0, 60.0).unwrap();
+        for f in solid_export_formats() {
+            let bytes = solid_export_3d(profile.clone(), 30.0, f.clone(), 1.0 / 3.81).unwrap();
+            assert!(bytes.len() > 100, "{f}");
+        }
+        assert!(solid_export_3d(profile.clone(), 30.0, "step".into(), 1.0).is_none());
+        assert!(solid_export_3d(profile.clone(), 0.0, "stl".into(), 1.0).is_none());
+        assert!(solid_export_3d(profile.clone(), 30.0, "stl".into(), 0.0).is_none());
+
+        let b = solid_glass_bounds(profile.clone(), 30.0, true, 30.0, 25.0).unwrap();
+        assert!(b[2] > b[0] && b[3] > b[1]);
+        let closed = solid_glass_frame(profile.clone(), 30.0, true, 0.0, 30.0, 25.0).unwrap();
+        let flat = solid_glass_frame(profile.clone(), 30.0, true, 1.0, 30.0, 25.0).unwrap();
+        assert_eq!(closed.lines.len(), flat.lines.len());
+        assert!(
+            closed
+                .lines
+                .iter()
+                .zip(&flat.lines)
+                .any(|(a, c)| (a.ax - c.ax).abs() > 1.0),
+            "展開前後的線要不一樣"
+        );
+        assert!(flat.lines.iter().any(|l| l.kind == FfiGlassKind::Hidden));
+        // 範圍之外的進度被夾回 0…1。
+        assert_eq!(
+            solid_glass_frame(profile, 30.0, false, 5.0, 0.0, 0.0)
+                .unwrap()
+                .lines
+                .len(),
+            flat.lines.len()
+        );
     }
 }

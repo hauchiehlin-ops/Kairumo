@@ -5623,6 +5623,94 @@ extension LocalizationManager {
             .ko: "각도 잠금",
             .th: "ล็อกมุม"
         ],
+        "draft_array_angle": [
+            .zhHant: "總角度（°）",
+            .en: "Total angle (°)",
+            .zhHans: "总角度（°）",
+            .ja: "総角度（°）",
+            .ko: "전체 각도(°)",
+            .th: "มุมรวม (°)"
+        ],
+        "draft_array_apply": [
+            .zhHant: "做出陣列",
+            .en: "Make the array",
+            .zhHans: "做出阵列",
+            .ja: "配列を作成",
+            .ko: "배열 만들기",
+            .th: "สร้างการเรียง"
+        ],
+        "draft_array_cols": [
+            .zhHant: "欄數",
+            .en: "Columns",
+            .zhHans: "栏数",
+            .ja: "列数",
+            .ko: "열 수",
+            .th: "จำนวนคอลัมน์"
+        ],
+        "draft_array_count": [
+            .zhHant: "份數",
+            .en: "Copies in total",
+            .zhHans: "份数",
+            .ja: "総数",
+            .ko: "총 개수",
+            .th: "จำนวนทั้งหมด"
+        ],
+        "draft_array_dx": [
+            .zhHant: "欄距（mm）",
+            .en: "Column spacing (mm)",
+            .zhHans: "栏距（mm）",
+            .ja: "列間隔（mm）",
+            .ko: "열 간격(mm)",
+            .th: "ระยะห่างคอลัมน์ (มม.)"
+        ],
+        "draft_array_dy": [
+            .zhHant: "列距（mm）",
+            .en: "Row spacing (mm)",
+            .zhHans: "列距（mm）",
+            .ja: "行間隔（mm）",
+            .ko: "행 간격(mm)",
+            .th: "ระยะห่างแถว (มม.)"
+        ],
+        "draft_array_mode_polar": [
+            .zhHant: "環形",
+            .en: "Polar",
+            .zhHans: "环形",
+            .ja: "円形",
+            .ko: "원형",
+            .th: "วงกลม"
+        ],
+        "draft_array_mode_rect": [
+            .zhHant: "矩形",
+            .en: "Rectangular",
+            .zhHans: "矩形",
+            .ja: "矩形",
+            .ko: "직사각형",
+            .th: "ตาราง"
+        ],
+        "draft_array_polar_go": [
+            .zhHant: "下一步：點圓心",
+            .en: "Next: tap the centre",
+            .zhHans: "下一步：点圆心",
+            .ja: "次へ：中心をタップ",
+            .ko: "다음: 중심 누르기",
+            .th: "ถัดไป: แตะจุดศูนย์กลาง"
+        ],
+        "draft_array_rows": [
+            .zhHant: "列數",
+            .en: "Rows",
+            .zhHans: "列数",
+            .ja: "行数",
+            .ko: "행 수",
+            .th: "จำนวนแถว"
+        ],
+        "draft_array_title": [
+            .zhHant: "陣列",
+            .en: "Array",
+            .zhHans: "阵列",
+            .ja: "配列",
+            .ko: "배열",
+            .th: "การเรียง"
+        ],
         "draft_bar_collapse": [
             .zhHant: "收合面板",
             .en: "Collapse panel",
@@ -5662,6 +5750,126 @@ extension LocalizationManager {
             .ja: "このレイヤーに描く",
             .ko: "이 레이어에 그리기",
             .th: "วาดบนเลเยอร์นี้"
+        ],
+        "draft_edit_array_rect": [
+            .zhHant: "矩形陣列…",
+            .en: "Rectangular array…",
+            .zhHans: "矩形阵列…",
+            .ja: "矩形状配列…",
+            .ko: "직사각형 배열…",
+            .th: "เรียงเป็นตาราง…"
+        ],
+        "draft_edit_fillet_fail": [
+            .zhHant: "圓角做不出來：要兩條不平行的直線，而且半徑不能比線還長",
+            .en: "Cannot fillet: it needs two straight lines that are not parallel, and the radius must fit",
+            .zhHans: "圆角做不出来：要两条不平行的直线，而且半径不能比线还长",
+            .ja: "フィレットできません：平行でない直線が2本必要で、半径が線の長さに収まる必要があります",
+            .ko: "모깎기를 할 수 없습니다: 평행하지 않은 직선 두 개가 필요하고 반지름이 선 길이에 맞아야 합니다",
+            .th: "ทำมุมโค้งไม่ได้: ต้องเป็นเส้นตรงสองเส้นที่ไม่ขนานกัน และรัศมีต้องไม่ยาวกว่าเส้น"
+        ],
+        "draft_edit_fillet_radius": [
+            .zhHant: "圓角半徑（mm）",
+            .en: "Fillet radius (mm)",
+            .zhHans: "圆角半径（mm）",
+            .ja: "フィレット半径（mm）",
+            .ko: "모깎기 반지름(mm)",
+            .th: "รัศมีมุมโค้ง (มม.)"
+        ],
+        "draft_edit_footer": [
+            .zhHant: "修剪與延伸：點一下線，會對著其他線找交點。圓角：依序點兩條直線。偏移：點線，再點要偏向的那一側。鏡射與陣列：先用套索選好要處理的線。每一個動作都可以一次復原。",
+            .en: "Trim and extend: tap a line; they work against the other lines. Fillet: tap two straight lines in turn. Offset: tap a line, then the side to move it to. Mirror and array: select the lines with the lasso first. Every action undoes in one step.",
+            .zhHans: "修剪与延伸：点一下线，会对著其他线找交点。圆角：依序点两条直线。偏移：点线，再点要偏向的那一侧。镜射与阵列：先用套索选好要处理的线。每一个动作都可以一次复原。",
+            .ja: "トリム・延長：線をタップすると、ほかの線との交点を使います。フィレット：直線を順に2本タップ。オフセット：線をタップし、寄せたい側をタップ。鏡像・配列：先に投げ縄で線を選びます。どの操作も1回で元に戻せます。",
+            .ko: "자르기·연장: 선을 누르면 다른 선과의 교점을 사용합니다. 모깎기: 직선 두 개를 차례로 누르세요. 간격 띄우기: 선을 누른 뒤 옮길 쪽을 누르세요. 대칭·배열: 먼저 올가미로 선을 고르세요. 모든 동작은 한 번에 되돌릴 수 있습니다.",
+            .th: "ตัดและต่อเส้น: แตะที่เส้น จะใช้จุดตัดกับเส้นอื่น มุมโค้ง: แตะเส้นตรงสองเส้นตามลำดับ เส้นขนาน: แตะเส้น แล้วแตะด้านที่จะย้ายไป สะท้อนและเรียง: เลือกเส้นด้วยบ่วงก่อน ทุกการกระทำย้อนกลับได้ในครั้งเดียว"
+        ],
+        "draft_edit_need_selection": [
+            .zhHant: "先用套索選取要處理的線",
+            .en: "Select the lines with the lasso first",
+            .zhHans: "先用套索选取要处理的线",
+            .ja: "先に投げ縄で線を選んでください",
+            .ko: "먼저 올가미로 선을 선택하세요",
+            .th: "เลือกเส้นด้วยบ่วงก่อน"
+        ],
+        "draft_edit_no_boundary": [
+            .zhHant: "這一端的延長線上沒有別的線",
+            .en: "Nothing in line with this end to extend to",
+            .zhHans: "这一端的延长线上没有别的线",
+            .ja: "この端の延長線上に線がありません",
+            .ko: "이 끝의 연장선에 다른 선이 없습니다",
+            .th: "ไม่มีเส้นอยู่ในแนวปลายนี้"
+        ],
+        "draft_edit_no_crossing": [
+            .zhHant: "這條線沒有和別的線相交",
+            .en: "This line does not cross any other line",
+            .zhHans: "这条线没有和别的线相交",
+            .ja: "この線はほかの線と交わっていません",
+            .ko: "이 선은 다른 선과 만나지 않습니다",
+            .th: "เส้นนี้ไม่ตัดกับเส้นอื่น"
+        ],
+        "draft_edit_nothing": [
+            .zhHant: "這裡沒有可以處理的線",
+            .en: "Nothing to work on here",
+            .zhHans: "这里没有可以处理的线",
+            .ja: "ここには処理できる線がありません",
+            .ko: "여기에는 처리할 선이 없습니다",
+            .th: "ไม่มีเส้นให้จัดการตรงนี้"
+        ],
+        "draft_edit_offset_distance": [
+            .zhHant: "偏移距離（mm）",
+            .en: "Offset distance (mm)",
+            .zhHans: "偏移距离（mm）",
+            .ja: "オフセット距離（mm）",
+            .ko: "간격(mm)",
+            .th: "ระยะเส้นขนาน (มม.)"
+        ],
+        "draft_edit_offset_fail": [
+            .zhHant: "偏移做不出來",
+            .en: "Cannot offset this line",
+            .zhHans: "偏移做不出来",
+            .ja: "この線はオフセットできません",
+            .ko: "이 선은 간격 띄우기를 할 수 없습니다",
+            .th: "ทำเส้นขนานไม่ได้"
+        ],
+        "draft_export_dxf": [
+            .zhHant: "DXF（CAD）",
+            .en: "DXF (CAD)",
+            .zhHans: "DXF（CAD）",
+            .ja: "DXF（CAD）",
+            .ko: "DXF(CAD)",
+            .th: "DXF (CAD)"
+        ],
+        "draft_export_empty": [
+            .zhHant: "這一頁沒有可以匯出的線",
+            .en: "There are no lines to export on this page",
+            .zhHans: "这一页没有可以汇出的线",
+            .ja: "このページには書き出せる線がありません",
+            .ko: "이 페이지에는 내보낼 선이 없습니다",
+            .th: "หน้านี้ไม่มีเส้นให้ส่งออก"
+        ],
+        "draft_export_failed": [
+            .zhHant: "匯出失敗",
+            .en: "Export failed",
+            .zhHans: "汇出失败",
+            .ja: "書き出しに失敗しました",
+            .ko: "내보내기에 실패했습니다",
+            .th: "ส่งออกไม่สำเร็จ"
+        ],
+        "draft_export_footer": [
+            .zhHant: "把本頁的線匯出成毫米單位的檔案：SVG 給向量軟體，DXF 給 AutoCAD、LibreCAD 等。隱藏的圖層不會匯出。",
+            .en: "Exports this page's lines in millimetres: SVG for vector apps, DXF for AutoCAD, LibreCAD and similar. Hidden layers are not exported.",
+            .zhHans: "把本页的线汇出成毫米单位的文件：SVG 给向量软件，DXF 给 AutoCAD、LibreCAD 等。隐藏的图层不会汇出。",
+            .ja: "このページの線をミリメートル単位で書き出します。SVG はベクターアプリ、DXF は AutoCAD や LibreCAD など向けです。非表示のレイヤーは書き出しません。",
+            .ko: "이 페이지의 선을 밀리미터 단위로 내보냅니다. SVG는 벡터 앱용, DXF는 AutoCAD·LibreCAD 등용입니다. 숨긴 레이어는 내보내지 않습니다.",
+            .th: "ส่งออกเส้นของหน้านี้เป็นหน่วยมิลลิเมตร: SVG สำหรับแอปเวกเตอร์ DXF สำหรับ AutoCAD, LibreCAD และอื่น ๆ เลเยอร์ที่ซ่อนจะไม่ถูกส่งออก"
+        ],
+        "draft_export_svg": [
+            .zhHant: "SVG（向量圖）",
+            .en: "SVG (vector)",
+            .zhHans: "SVG（向量图）",
+            .ja: "SVG（ベクター）",
+            .ko: "SVG(벡터)",
+            .th: "SVG (เวกเตอร์)"
         ],
         "draft_frame_footer": [
             .zhHant: "依這一頁的紙張規格（A4／A3／A2）畫出圖框與標題欄；比例欄會帶入目前的比例尺。",
@@ -5807,6 +6015,62 @@ extension LocalizationManager {
             .ko: "두 번째 점을 누르세요",
             .th: "แตะจุดที่สอง"
         ],
+        "draft_hint_extend": [
+            .zhHant: "點要延伸的那一端附近（會延到最近的線）",
+            .en: "Tap near the end to extend (it runs to the nearest line)",
+            .zhHans: "点要延伸的那一端附近（会延到最近的线）",
+            .ja: "延長したい端の近くをタップ（最も近い線まで伸びます）",
+            .ko: "연장할 끝 근처를 누르세요(가장 가까운 선까지 늘어납니다)",
+            .th: "แตะใกล้ปลายที่จะต่อ (ต่อไปถึงเส้นที่ใกล้ที่สุด)"
+        ],
+        "draft_hint_fillet_first": [
+            .zhHant: "點第一條直線（靠近要接圓角的那一側）",
+            .en: "Tap the first straight line (on the side that gets the fillet)",
+            .zhHans: "点第一条直线（靠近要接圆角的那一侧）",
+            .ja: "1本目の直線をタップ（フィレットを付ける側）",
+            .ko: "첫 번째 직선을 누르세요(모깎기할 쪽)",
+            .th: "แตะเส้นตรงเส้นแรก (ด้านที่จะทำมุมโค้ง)"
+        ],
+        "draft_hint_fillet_second": [
+            .zhHant: "再點第二條直線",
+            .en: "Now tap the second straight line",
+            .zhHans: "再点第二条直线",
+            .ja: "続けて2本目の直線をタップ",
+            .ko: "이제 두 번째 직선을 누르세요",
+            .th: "แตะเส้นตรงเส้นที่สอง"
+        ],
+        "draft_hint_mirror_first": [
+            .zhHant: "點對稱軸的第一個點",
+            .en: "Tap the first point of the mirror line",
+            .zhHans: "点对称轴的第一个点",
+            .ja: "対称軸の1点目をタップ",
+            .ko: "대칭축의 첫 번째 점을 누르세요",
+            .th: "แตะจุดแรกของเส้นแกนสะท้อน"
+        ],
+        "draft_hint_mirror_second": [
+            .zhHant: "按住拖到對稱軸的第二個點，放開就鏡射",
+            .en: "Press and drag to the second point of the mirror line, release to mirror",
+            .zhHans: "按住拖到对称轴的第二个点，放开就镜射",
+            .ja: "対称軸の2点目までドラッグして離すと鏡像になります",
+            .ko: "대칭축의 두 번째 점까지 끌고 놓으면 대칭됩니다",
+            .th: "กดลากไปยังจุดที่สองของแกนสะท้อน ปล่อยเพื่อสะท้อน"
+        ],
+        "draft_hint_offset_first": [
+            .zhHant: "點要偏移的線",
+            .en: "Tap the line to offset",
+            .zhHans: "点要偏移的线",
+            .ja: "オフセットする線をタップ",
+            .ko: "간격을 띄울 선을 누르세요",
+            .th: "แตะเส้นที่จะทำเส้นขนาน"
+        ],
+        "draft_hint_offset_side": [
+            .zhHant: "點要偏向的那一側",
+            .en: "Tap the side to offset towards",
+            .zhHans: "点要偏向的那一侧",
+            .ja: "寄せたい側をタップ",
+            .ko: "옮길 쪽을 누르세요",
+            .th: "แตะด้านที่จะย้ายไป"
+        ],
         "draft_hint_pivot": [
             .zhHant: "點俯視圖與右視圖之間的那個角（45° 線通過的點）",
             .en: "Tap the corner between the top view and the side view (where the 45° line passes)",
@@ -5814,6 +6078,22 @@ extension LocalizationManager {
             .ja: "平面図と側面図の間の角（45° の線が通る点）をタップ",
             .ko: "평면도와 측면도 사이의 모서리(45° 선이 지나는 점)를 누르세요",
             .th: "แตะมุมระหว่างภาพด้านบนกับภาพด้านข้าง (จุดที่เส้น 45° ผ่าน)"
+        ],
+        "draft_hint_polar_center": [
+            .zhHant: "點環形陣列的圓心",
+            .en: "Tap the centre of the polar array",
+            .zhHans: "点环形阵列的圆心",
+            .ja: "円形状配列の中心をタップ",
+            .ko: "원형 배열의 중심을 누르세요",
+            .th: "แตะจุดศูนย์กลางของการเรียงเป็นวงกลม"
+        ],
+        "draft_hint_trim": [
+            .zhHant: "點要剪掉的那一段（會剪到最近的交點）",
+            .en: "Tap the part to cut away (it trims to the nearest crossings)",
+            .zhHans: "点要剪掉的那一段（会剪到最近的交点）",
+            .ja: "削除したい部分をタップ（最も近い交点まで切り取ります）",
+            .ko: "잘라낼 부분을 누르세요(가장 가까운 교점까지 잘립니다)",
+            .th: "แตะส่วนที่จะตัดทิ้ง (ตัดถึงจุดตัดที่ใกล้ที่สุด)"
         ],
         "draft_inst_footer": [
             .zhHant: "拖尺的中間可以移動它；從尺邊附近起筆，線就會貼著尺邊畫成直線。用旋轉鈕轉角度（丁字尺只能上下移動）。尺上的刻度是真實毫米。",
@@ -5823,6 +6103,14 @@ extension LocalizationManager {
             .ko: "도구 가운데를 끌어 옮깁니다. 가장자리 근처에서 선을 시작하면 가장자리를 따라 직선이 그려집니다. 회전 버튼으로 각도를 바꿉니다(T자는 위아래로만 움직입니다). 눈금은 실제 밀리미터입니다.",
             .th: "ลากกลางเครื่องมือเพื่อย้าย เริ่มเส้นใกล้ขอบเครื่องมือ เส้นจะเป็นเส้นตรงตามขอบ ใช้ปุ่มหมุนเพื่อเปลี่ยนมุม (ไม้ทีเลื่อนได้เฉพาะขึ้นลง) สเกลเป็นมิลลิเมตรจริง"
         ],
+        "draft_inst_mark_angle": [
+            .zhHant: "畫出讀數線",
+            .en: "Draw the reading line",
+            .zhHans: "画出读数线",
+            .ja: "読み取り線を描く",
+            .ko: "읽은 선 그리기",
+            .th: "วาดเส้นที่อ่านได้"
+        ],
         "draft_inst_protractor": [
             .zhHant: "量角器",
             .en: "Protractor",
@@ -5830,6 +6118,22 @@ extension LocalizationManager {
             .ja: "分度器",
             .ko: "각도기",
             .th: "ไม้โปรแทรกเตอร์"
+        ],
+        "draft_inst_protractor_footer": [
+            .zhHant: "量角器：按住外圈的刻度區可以讀角度（顯示在製圖列），按住內圈可以移動它。「畫出讀數線」會把讀到的角度畫成一條線。",
+            .en: "Protractor: press the scale ring near the rim to read an angle (shown in the drafting bar); press the inner part to move it. \"Draw the reading line\" draws the angle you read as a line.",
+            .zhHans: "量角器：按住外圈的刻度区可以读角度（显示在制图列），按住内圈可以移动它。「画出读数线」会把读到的角度画成一条线。",
+            .ja: "分度器：外側の目盛りの帯を押さえると角度を読み取れます（製図バーに表示）。内側を押さえると動かせます。「読み取り線を描く」で、読んだ角度の線を描きます。",
+            .ko: "각도기: 가장자리 눈금 띠를 누르면 각도를 읽을 수 있습니다(제도 바에 표시). 안쪽을 누르면 옮길 수 있습니다. \"읽은 선 그리기\"는 읽은 각도를 선으로 그립니다.",
+            .th: "กดที่แถบสเกลใกล้ขอบเพื่ออ่านมุม (แสดงในแถบเขียนแบบ) กดส่วนด้านในเพื่อย้าย \"วาดเส้นที่อ่านได้\" จะวาดมุมที่อ่านเป็นเส้น"
+        ],
+        "draft_inst_reading": [
+            .zhHant: "量角器讀數 %1@",
+            .en: "Protractor reading %1@",
+            .zhHans: "量角器读数 %1@",
+            .ja: "分度器の読み取り %1@",
+            .ko: "각도기 눈금 %1@",
+            .th: "ค่าที่อ่านจากไม้โปรแทรกเตอร์ %1@"
         ],
         "draft_inst_remove": [
             .zhHant: "收起尺規",
@@ -6054,6 +6358,302 @@ extension LocalizationManager {
             .ja: "転換点を消去",
             .ko: "전환점 지우기",
             .th: "ล้างจุดหักมุม"
+        ],
+        "draft_prob_answer_shown": [
+            .zhHant: "綠色的線是標準答案",
+            .en: "The green lines are the model answer",
+            .zhHans: "绿色的线是标准答案",
+            .ja: "緑の線が模範解答です",
+            .ko: "초록 선이 모범 답안입니다",
+            .th: "เส้นสีเขียวคือเฉลย"
+        ],
+        "draft_prob_choice_right": [
+            .zhHant: "答對了！",
+            .en: "Correct!",
+            .zhHans: "答对了！",
+            .ja: "正解です！",
+            .ko: "정답입니다!",
+            .th: "ถูกต้อง!"
+        ],
+        "draft_prob_choice_wrong": [
+            .zhHant: "不是這個，再想想。",
+            .en: "Not that one — think again.",
+            .zhHans: "不是这个，再想想。",
+            .ja: "違います。もう一度考えてみましょう。",
+            .ko: "아니에요. 다시 생각해 보세요.",
+            .th: "ไม่ใช่ ลองคิดอีกครั้ง"
+        ],
+        "draft_prob_clear": [
+            .zhHant: "清除標記",
+            .en: "Clear the marks",
+            .zhHans: "清除标记",
+            .ja: "印を消す",
+            .ko: "표시 지우기",
+            .th: "ล้างเครื่องหมาย"
+        ],
+        "draft_prob_close": [
+            .zhHant: "結束練習",
+            .en: "End practice",
+            .zhHans: "结束练习",
+            .ja: "練習を終える",
+            .ko: "연습 끝내기",
+            .th: "จบการฝึก"
+        ],
+        "draft_prob_err_align": [
+            .zhHant: "沒對齊",
+            .en: "Views out of line",
+            .zhHans: "没对齐",
+            .ja: "位置が揃っていない",
+            .ko: "위치가 맞지 않음",
+            .th: "ไม่ตรงแนว"
+        ],
+        "draft_prob_err_extra": [
+            .zhHant: "多一條線",
+            .en: "An extra line",
+            .zhHans: "多一条线",
+            .ja: "余分な線",
+            .ko: "선이 하나 많음",
+            .th: "เส้นเกิน"
+        ],
+        "draft_prob_err_missing": [
+            .zhHant: "缺線",
+            .en: "A missing line",
+            .zhHans: "缺线",
+            .ja: "線が足りない",
+            .ko: "선이 빠짐",
+            .th: "เส้นขาด"
+        ],
+        "draft_prob_err_type": [
+            .zhHant: "線型錯",
+            .en: "Wrong line type",
+            .zhHans: "线型错",
+            .ja: "線種の誤り",
+            .ko: "선 종류 오류",
+            .th: "ชนิดเส้นผิด"
+        ],
+        "draft_prob_first_angle": [
+            .zhHant: "第一角法",
+            .en: "First angle",
+            .zhHans: "第一角法",
+            .ja: "第一角法",
+            .ko: "제1각법",
+            .th: "มุมที่หนึ่ง"
+        ],
+        "draft_prob_footer": [
+            .zhHant: "題目的線畫在底層；你的答案請用「頂層」的製圖筆畫（粗實線、隱藏線、剖面線用細線）。按「批改」會標出缺線、多線、線型錯與沒對齊。",
+            .en: "The problem lines are on the bottom layer; draw your answer with the top-layer drafting pens (thick line for outlines, hidden line, thin line for hatching). \"Check my drawing\" marks missing, extra, wrong-type and misaligned lines.",
+            .zhHans: "题目的线画在底层；你的答案请用「顶层」的制图笔画（粗实线、隐藏线、剖面线用细线）。按「批改」会标出缺线、多线、线型错与没对齐。",
+            .ja: "問題の線は下層にあります。答えは最上層の製図ペンで描いてください（外形は太線、隠れ線、ハッチングは細線）。「採点」で足りない線・余分な線・線種の誤り・位置ずれを示します。",
+            .ko: "문제 선은 맨 아래 레이어에 있습니다. 답은 맨 위 레이어의 제도 펜으로 그리세요(외형은 굵은 선, 은선, 해칭은 가는 선). \"채점\"은 빠진 선·불필요한 선·선 종류 오류·위치 어긋남을 표시합니다.",
+            .th: "เส้นของโจทย์อยู่ชั้นล่างสุด ให้วาดคำตอบด้วยปากกาเขียนแบบชั้นบนสุด (เส้นหนาสำหรับรูปร่าง เส้นประ และเส้นบางสำหรับลาย) ปุ่ม \"ตรวจ\" จะทำเครื่องหมายเส้นที่ขาด เกิน ชนิดผิด และไม่ตรงแนว"
+        ],
+        "draft_prob_grade": [
+            .zhHant: "批改",
+            .en: "Check my drawing",
+            .zhHans: "批改",
+            .ja: "採点",
+            .ko: "채점",
+            .th: "ตรวจ"
+        ],
+        "draft_prob_hint_dims": [
+            .zhHant: "尺寸：寬 %1@ × 高 %2@ × 深 %3@ mm",
+            .en: "Size: %1@ wide × %2@ high × %3@ deep mm",
+            .zhHans: "尺寸：宽 %1@ × 高 %2@ × 深 %3@ mm",
+            .ja: "寸法：幅 %1@ × 高さ %2@ × 奥行 %3@ mm",
+            .ko: "치수: 너비 %1@ × 높이 %2@ × 깊이 %3@ mm",
+            .th: "ขนาด: กว้าง %1@ × สูง %2@ × ลึก %3@ มม."
+        ],
+        "draft_prob_issue_align": [
+            .zhHant: "沒對齊 %1@ 條（藍色虛線是正確的位置）",
+            .en: "%1@ line(s) out of line (the dashed blue line is the right place)",
+            .zhHans: "没对齐 %1@ 条（蓝色虚线是正确的位置）",
+            .ja: "位置ずれ %1@ 本（青い破線が正しい位置）",
+            .ko: "위치 어긋남 %1@개(파란 점선이 올바른 위치)",
+            .th: "เส้นไม่ตรงแนว %1@ เส้น (เส้นประสีน้ำเงินคือตำแหน่งที่ถูก)"
+        ],
+        "draft_prob_issue_extra": [
+            .zhHant: "多畫 %1@ 條（紅色的線）",
+            .en: "%1@ extra line(s) (in red)",
+            .zhHans: "多画 %1@ 条（红色的线）",
+            .ja: "余分な線 %1@ 本（赤い線）",
+            .ko: "불필요한 선 %1@개(빨간 선)",
+            .th: "เส้นเกิน %1@ เส้น (สีแดง)"
+        ],
+        "draft_prob_issue_hatch_angle": [
+            .zhHant: "剖面線角度不對（要 45°）",
+            .en: "The hatching angle is wrong (it should be 45°)",
+            .zhHans: "剖面线角度不对（要 45°）",
+            .ja: "ハッチングの角度が違います（45° にします）",
+            .ko: "해칭 각도가 틀렸습니다(45°여야 함)",
+            .th: "มุมเส้นลายผิด (ต้องเป็น 45°)"
+        ],
+        "draft_prob_issue_hatch_missing": [
+            .zhHant: "剖面線畫得太少",
+            .en: "The hatching is missing or too sparse",
+            .zhHans: "剖面线画得太少",
+            .ja: "ハッチングが足りません",
+            .ko: "해칭이 부족합니다",
+            .th: "เส้นลายน้อยเกินไป"
+        ],
+        "draft_prob_issue_missing": [
+            .zhHant: "缺線 %1@ 條（橘色虛線是該畫的位置）",
+            .en: "%1@ missing line(s) (the dashed orange line shows where)",
+            .zhHans: "缺线 %1@ 条（橘色虚线是该画的位置）",
+            .ja: "足りない線 %1@ 本（オレンジの破線が描く位置）",
+            .ko: "빠진 선 %1@개(주황 점선이 그릴 위치)",
+            .th: "เส้นขาด %1@ เส้น (เส้นประสีส้มคือตำแหน่งที่ต้องวาด)"
+        ],
+        "draft_prob_issue_type": [
+            .zhHant: "線型錯 %1@ 條（黃色的線）",
+            .en: "%1@ line(s) of the wrong type (in yellow)",
+            .zhHans: "线型错 %1@ 条（黄色的线）",
+            .ja: "線種の誤り %1@ 本（黄色の線）",
+            .ko: "선 종류 오류 %1@개(노란 선)",
+            .th: "ชนิดเส้นผิด %1@ เส้น (สีเหลือง)"
+        ],
+        "draft_prob_kind_angle_judgement": [
+            .zhHant: "判斷第一角或第三角法",
+            .en: "First or third angle?",
+            .zhHans: "判断第一角或第三角法",
+            .ja: "第一角法か第三角法か",
+            .ko: "제1각법인가 제3각법인가",
+            .th: "มุมที่หนึ่งหรือมุมที่สาม"
+        ],
+        "draft_prob_kind_complete_view": [
+            .zhHant: "補第三視圖",
+            .en: "Complete the third view",
+            .zhHans: "补第三视图",
+            .ja: "3 つ目の図を描く",
+            .ko: "세 번째 도면 완성",
+            .th: "เติมภาพที่สาม"
+        ],
+        "draft_prob_kind_iso_to_views": [
+            .zhHant: "等角圖畫三視圖",
+            .en: "Draw the three views from the isometric",
+            .zhHans: "等角图画三视图",
+            .ja: "等角図から 3 面図",
+            .ko: "등각도에서 3면도",
+            .th: "วาดสามมุมมองจากภาพไอโซเมตริก"
+        ],
+        "draft_prob_kind_section": [
+            .zhHant: "畫剖視圖",
+            .en: "Draw the section view",
+            .zhHans: "画剖视图",
+            .ja: "断面図を描く",
+            .ko: "단면도 그리기",
+            .th: "วาดภาพตัด"
+        ],
+        "draft_prob_kind_spot_error": [
+            .zhHant: "找出圖上的錯",
+            .en: "Spot the error",
+            .zhHans: "找出图上的错",
+            .ja: "誤りを見つける",
+            .ko: "틀린 곳 찾기",
+            .th: "หาจุดผิด"
+        ],
+        "draft_prob_new": [
+            .zhHant: "再出一題",
+            .en: "Another problem",
+            .zhHans: "再出一题",
+            .ja: "次の問題",
+            .ko: "다음 문제",
+            .th: "โจทย์ใหม่"
+        ],
+        "draft_prob_perfect": [
+            .zhHant: "全對！每一條線都對。",
+            .en: "Perfect! Every line is right.",
+            .zhHans: "全对！每一条线都对。",
+            .ja: "全問正解！すべての線が正しいです。",
+            .ko: "완벽해요! 모든 선이 맞습니다.",
+            .th: "ถูกหมด! ทุกเส้นถูกต้อง"
+        ],
+        "draft_prob_prompt_angle_judgement": [
+            .zhHant: "這是第一角法還是第三角法的三視圖？",
+            .en: "Is this a first-angle or third-angle drawing?",
+            .zhHans: "这是第一角法还是第三角法的三视图？",
+            .ja: "これは第一角法ですか、第三角法ですか。",
+            .ko: "제1각법입니까, 제3각법입니까?",
+            .th: "นี่คือการฉายภาพมุมที่หนึ่งหรือมุมที่สาม"
+        ],
+        "draft_prob_prompt_complete_view": [
+            .zhHant: "已經給了正視圖與俯視圖，請在右邊補畫右視圖（實線、隱藏線都要畫）。",
+            .en: "The front and top views are given. Draw the right view on the right (visible and hidden lines).",
+            .zhHans: "已经给了正视图与俯视图，请在右边补画右视图（实线、隐藏线都要画）。",
+            .ja: "正面図と平面図が与えられています。右側に右側面図を描いてください（実線と隠れ線）。",
+            .ko: "정면도와 평면도가 주어졌습니다. 오른쪽에 우측면도를 그리세요(실선과 은선).",
+            .th: "มีภาพด้านหน้าและด้านบนให้แล้ว วาดภาพด้านขวาทางขวา (เส้นทึบและเส้นประ)"
+        ],
+        "draft_prob_prompt_iso_to_views": [
+            .zhHant: "看右上角的等角圖，在左邊畫出它的三視圖（第三角法）。",
+            .en: "Look at the isometric view and draw its three views on the left (third angle).",
+            .zhHans: "看右上角的等角图，在左边画出它的三视图（第三角法）。",
+            .ja: "右上の等角図を見て、左側に 3 面図を描いてください（第三角法）。",
+            .ko: "오른쪽 위의 등각도를 보고 왼쪽에 3면도를 그리세요(제3각법).",
+            .th: "ดูภาพไอโซเมตริกด้านขวาบน แล้ววาดสามมุมมองทางซ้าย (มุมที่สาม)"
+        ],
+        "draft_prob_prompt_section": [
+            .zhHant: "正視圖上有剖切線。請在右邊畫出剖視圖，並畫上 45° 剖面線。",
+            .en: "The cutting line is on the front view. Draw the section view on the right with 45° hatching.",
+            .zhHans: "正视图上有剖切线。请在右边画出剖视图，并画上 45° 剖面线。",
+            .ja: "正面図に切断線があります。右側に断面図を描き、45° のハッチングを入れてください。",
+            .ko: "정면도에 절단선이 있습니다. 오른쪽에 단면도를 그리고 45° 해칭을 넣으세요.",
+            .th: "มีเส้นตัดบนภาพด้านหน้า วาดภาพตัดทางขวา และใส่เส้นลาย 45°"
+        ],
+        "draft_prob_prompt_spot_error": [
+            .zhHant: "這張三視圖有一處錯。先選錯的種類，再點圖上錯的位置。",
+            .en: "This three-view drawing has one error. Pick the kind of error, then tap where it is.",
+            .zhHans: "这张三视图有一处错。先选错的种类，再点图上错的位置。",
+            .ja: "この 3 面図には誤りが 1 つあります。誤りの種類を選び、その位置をタップしてください。",
+            .ko: "이 3면도에는 틀린 곳이 하나 있습니다. 오류 종류를 고른 뒤 틀린 위치를 누르세요.",
+            .th: "ภาพสามมุมมองนี้มีจุดผิดหนึ่งจุด เลือกชนิดของข้อผิดพลาด แล้วแตะตำแหน่งที่ผิด"
+        ],
+        "draft_prob_score": [
+            .zhHant: "得分 %1@ / 100",
+            .en: "Score %1@ / 100",
+            .zhHans: "得分 %1@ / 100",
+            .ja: "得点 %1@ / 100",
+            .ko: "점수 %1@ / 100",
+            .th: "คะแนน %1@ / 100"
+        ],
+        "draft_prob_show_answer": [
+            .zhHant: "看答案",
+            .en: "Show the answer",
+            .zhHans: "看答案",
+            .ja: "答えを見る",
+            .ko: "정답 보기",
+            .th: "ดูเฉลย"
+        ],
+        "draft_prob_spot_right": [
+            .zhHant: "找到了！種類與位置都對。",
+            .en: "Found it! Both the kind and the spot are right.",
+            .zhHans: "找到了！种类与位置都对。",
+            .ja: "見つけました！種類も位置も正解です。",
+            .ko: "찾았어요! 종류와 위치 모두 맞습니다.",
+            .th: "เจอแล้ว! ทั้งชนิดและตำแหน่งถูกต้อง"
+        ],
+        "draft_prob_spot_tap": [
+            .zhHant: "現在點圖上錯的位置",
+            .en: "Now tap the spot on the drawing",
+            .zhHans: "现在点图上错的位置",
+            .ja: "次に、図の誤りの位置をタップ",
+            .ko: "이제 도면에서 틀린 위치를 누르세요",
+            .th: "ตอนนี้แตะตำแหน่งที่ผิดบนภาพ"
+        ],
+        "draft_prob_spot_wrong": [
+            .zhHant: "位置不對（紅圈是錯的地方）",
+            .en: "Not there (the red circle is the error)",
+            .zhHans: "位置不对（红圈是错的地方）",
+            .ja: "そこではありません（赤い丸が誤りの位置）",
+            .ko: "거기가 아닙니다(빨간 원이 틀린 곳)",
+            .th: "ไม่ใช่ตรงนั้น (วงกลมสีแดงคือจุดผิด)"
+        ],
+        "draft_prob_third_angle": [
+            .zhHant: "第三角法",
+            .en: "Third angle",
+            .zhHans: "第三角法",
+            .ja: "第三角法",
+            .ko: "제3각법",
+            .th: "มุมที่สาม"
         ],
         "draft_reassign": [
             .zhHant: "移到圖層",
@@ -6679,6 +7279,14 @@ extension LocalizationManager {
             .ko: "도면 도움말",
             .th: "เคล็ดลับงานเขียนแบบ"
         ],
+        "draft_tool_array_polar": [
+            .zhHant: "環形陣列",
+            .en: "Polar array",
+            .zhHans: "环形阵列",
+            .ja: "円形状配列",
+            .ko: "원형 배열",
+            .th: "เรียงเป็นวงกลม"
+        ],
         "draft_tool_close": [
             .zhHant: "結束目前工具",
             .en: "Finish the current tool",
@@ -6727,6 +7335,30 @@ extension LocalizationManager {
             .ko: "반지름 치수",
             .th: "ขนาดรัศมี"
         ],
+        "draft_tool_extend": [
+            .zhHant: "延伸",
+            .en: "Extend",
+            .zhHans: "延伸",
+            .ja: "延長",
+            .ko: "연장",
+            .th: "ต่อเส้น"
+        ],
+        "draft_tool_fillet": [
+            .zhHant: "圓角",
+            .en: "Fillet",
+            .zhHans: "圆角",
+            .ja: "フィレット",
+            .ko: "모깎기",
+            .th: "มุมโค้ง"
+        ],
+        "draft_tool_mirror": [
+            .zhHant: "鏡射",
+            .en: "Mirror",
+            .zhHans: "镜射",
+            .ja: "鏡像",
+            .ko: "대칭",
+            .th: "สะท้อน"
+        ],
         "draft_tool_none": [
             .zhHant: "沒有工具",
             .en: "No tool",
@@ -6735,6 +7367,14 @@ extension LocalizationManager {
             .ko: "도구 없음",
             .th: "ไม่มีเครื่องมือ"
         ],
+        "draft_tool_offset": [
+            .zhHant: "偏移",
+            .en: "Offset",
+            .zhHans: "偏移",
+            .ja: "オフセット",
+            .ko: "간격 띄우기",
+            .th: "เส้นขนาน"
+        ],
         "draft_tool_set_pivot": [
             .zhHant: "設定 45° 轉折點",
             .en: "Set the 45° turning point",
@@ -6742,6 +7382,14 @@ extension LocalizationManager {
             .ja: "45° の転換点を設定",
             .ko: "45° 전환점 설정",
             .th: "ตั้งจุดหักมุม 45°"
+        ],
+        "draft_tool_trim": [
+            .zhHant: "修剪",
+            .en: "Trim",
+            .zhHans: "修剪",
+            .ja: "トリム",
+            .ko: "자르기",
+            .th: "ตัด"
         ],
         "draft_toolbox_aids": [
             .zhHant: "對齊與尺規",
@@ -6759,6 +7407,22 @@ extension LocalizationManager {
             .ko: "치수 기입",
             .th: "การกำหนดขนาด"
         ],
+        "draft_toolbox_edit": [
+            .zhHant: "編輯",
+            .en: "Edit",
+            .zhHans: "编辑",
+            .ja: "編集",
+            .ko: "편집",
+            .th: "แก้ไข"
+        ],
+        "draft_toolbox_export": [
+            .zhHant: "匯出本頁圖形",
+            .en: "Export this page",
+            .zhHans: "汇出本页图形",
+            .ja: "このページを書き出す",
+            .ko: "이 페이지 내보내기",
+            .th: "ส่งออกหน้านี้"
+        ],
         "draft_toolbox_frame": [
             .zhHant: "圖框與標題欄",
             .en: "Frame and title block",
@@ -6766,6 +7430,14 @@ extension LocalizationManager {
             .ja: "図枠と表題欄",
             .ko: "도곽과 표제란",
             .th: "กรอบแบบและช่องชื่อแบบ"
+        ],
+        "draft_toolbox_practice": [
+            .zhHant: "練習題",
+            .en: "Practice problems",
+            .zhHans: "练习题",
+            .ja: "練習問題",
+            .ko: "연습 문제",
+            .th: "โจทย์ฝึกหัด"
         ],
         "draft_toolbox_symbols": [
             .zhHant: "符號",
@@ -16575,6 +17247,70 @@ extension LocalizationManager {
             .ko: "치수 기입",
             .th: "ใส่ขนาด"
         ],
+        "solid_export_ar": [
+            .zhHant: "用 AR 看",
+            .en: "View in AR",
+            .zhHans: "用 AR 看",
+            .ja: "AR で見る",
+            .ko: "AR로 보기",
+            .th: "ดูด้วย AR"
+        ],
+        "solid_export_failed": [
+            .zhHant: "匯出失敗",
+            .en: "Export failed",
+            .zhHans: "汇出失败",
+            .ja: "書き出しに失敗しました",
+            .ko: "내보내기에 실패했습니다",
+            .th: "ส่งออกไม่สำเร็จ"
+        ],
+        "solid_export_footer": [
+            .zhHant: "尺寸是紙上的毫米（STL、OBJ 用毫米，GLB、USDZ 用公尺）。USDZ 可以在 iPhone、iPad 上用 AR 放到桌上看。",
+            .en: "Sizes are paper millimetres (STL and OBJ in millimetres, GLB and USDZ in metres). A USDZ can be placed on your desk in AR on iPhone and iPad.",
+            .zhHans: "尺寸是纸上的毫米（STL、OBJ 用毫米，GLB、USDZ 用公尺）。USDZ 可以在 iPhone、iPad 上用 AR 放到桌上看。",
+            .ja: "寸法は紙上のミリメートルです（STL・OBJ はミリメートル、GLB・USDZ はメートル）。USDZ は iPhone・iPad の AR で机の上に置いて見られます。",
+            .ko: "크기는 종이 위의 밀리미터입니다(STL·OBJ는 밀리미터, GLB·USDZ는 미터). USDZ는 iPhone·iPad의 AR로 책상 위에 올려 볼 수 있습니다.",
+            .th: "ขนาดเป็นมิลลิเมตรบนกระดาษ (STL และ OBJ ใช้มิลลิเมตร GLB และ USDZ ใช้เมตร) USDZ วางบนโต๊ะดูด้วย AR บน iPhone และ iPad ได้"
+        ],
+        "solid_export_glb": [
+            .zhHant: "GLB（網頁、Blender）",
+            .en: "GLB (web, Blender)",
+            .zhHans: "GLB（网页、Blender）",
+            .ja: "GLB（Web、Blender）",
+            .ko: "GLB(웹, Blender)",
+            .th: "GLB (เว็บ, Blender)"
+        ],
+        "solid_export_obj": [
+            .zhHant: "OBJ",
+            .en: "OBJ",
+            .zhHans: "OBJ",
+            .ja: "OBJ",
+            .ko: "OBJ",
+            .th: "OBJ"
+        ],
+        "solid_export_stl": [
+            .zhHant: "STL（3D 列印）",
+            .en: "STL (3D printing)",
+            .zhHans: "STL（3D 列印）",
+            .ja: "STL（3D プリント）",
+            .ko: "STL(3D 프린팅)",
+            .th: "STL (พิมพ์ 3 มิติ)"
+        ],
+        "solid_export_title": [
+            .zhHant: "匯出 3D 模型",
+            .en: "Export the 3D model",
+            .zhHans: "汇出 3D 模型",
+            .ja: "3D モデルを書き出す",
+            .ko: "3D 모델 내보내기",
+            .th: "ส่งออกโมเดล 3 มิติ"
+        ],
+        "solid_export_usdz": [
+            .zhHant: "USDZ（Apple AR）",
+            .en: "USDZ (Apple AR)",
+            .zhHans: "USDZ（Apple AR）",
+            .ja: "USDZ（Apple AR）",
+            .ko: "USDZ(Apple AR)",
+            .th: "USDZ (Apple AR)"
+        ],
         "solid_first_angle": [
             .zhHant: "第一角法",
             .en: "First-angle projection",
@@ -16598,6 +17334,46 @@ extension LocalizationManager {
             .ja: "このページの閉じた図形を使う",
             .ko: "이 페이지의 닫힌 도형 사용",
             .th: "ใช้รูปปิดบนหน้านี้"
+        ],
+        "solid_glass_hint": [
+            .zhHant: "立體放在玻璃盒裡，三個視圖畫在盒子的三個面上。把頂面與右面（第一角法是底面與左面）掀開、攤平到正面，就是三視圖的版面。拖曳畫面可以轉動觀看的角度。",
+            .en: "The solid sits in a glass box and the three views are drawn on three of its faces. Folding the top and right faces (bottom and left in first angle) flat into the front face gives the three-view layout. Drag the picture to change the viewing angle.",
+            .zhHans: "立体放在玻璃盒里，三个视图画在盒子的三个面上。把顶面与右面（第一角法是底面与左面）掀开、摊平到正面，就是三视图的版面。拖曳画面可以转动观看的角度。",
+            .ja: "立体はガラスの箱に入っていて、3 つの図は箱の 3 つの面に描かれます。上面と右面（第一角法では下面と左面）を正面に倒して広げると、3 面図の配置になります。画面をドラッグすると見る角度が変わります。",
+            .ko: "입체는 유리 상자 안에 있고, 세 도면은 상자의 세 면에 그려집니다. 윗면과 오른쪽 면(제1각법에서는 아랫면과 왼쪽 면)을 정면으로 펼치면 3면도 배치가 됩니다. 화면을 끌면 보는 각도가 바뀝니다.",
+            .th: "ชิ้นงานอยู่ในกล่องแก้ว และภาพสามมุมมองถูกวาดบนสามด้านของกล่อง การคลี่ด้านบนและด้านขวา (มุมที่หนึ่งคือด้านล่างและด้านซ้าย) ลงมาที่ด้านหน้า จะได้ผังภาพสามมุมมอง ลากภาพเพื่อเปลี่ยนมุมมอง"
+        ],
+        "solid_glass_pause": [
+            .zhHant: "暫停",
+            .en: "Pause",
+            .zhHans: "暂停",
+            .ja: "一時停止",
+            .ko: "일시정지",
+            .th: "หยุดชั่วคราว"
+        ],
+        "solid_glass_play": [
+            .zhHant: "播放展開",
+            .en: "Play the unfolding",
+            .zhHans: "播放展开",
+            .ja: "展開を再生",
+            .ko: "펼치기 재생",
+            .th: "เล่นการคลี่"
+        ],
+        "solid_glass_progress": [
+            .zhHant: "展開進度",
+            .en: "Unfolding progress",
+            .zhHans: "展开进度",
+            .ja: "展開の進行",
+            .ko: "펼침 진행",
+            .th: "ความคืบหน้าการคลี่"
+        ],
+        "solid_glass_replay": [
+            .zhHant: "重播",
+            .en: "Replay",
+            .zhHans: "重播",
+            .ja: "もう一度",
+            .ko: "다시 재생",
+            .th: "เล่นซ้ำ"
         ],
         "solid_height": [
             .zhHant: "高",
@@ -16846,6 +17622,14 @@ extension LocalizationManager {
             .ja: "スケッチを押し出し、三面図・等角図・断面図を作成",
             .ko: "스케치를 돌출시켜 3면도, 등각도, 단면도 만들기",
             .th: "ดึงสเก็ตช์เป็นชิ้นงาน แล้ววาดสามมุมมอง ภาพไอโซเมตริก และภาพตัด"
+        ],
+        "solid_tab_glass": [
+            .zhHant: "玻璃盒",
+            .en: "Glass box",
+            .zhHans: "玻璃盒",
+            .ja: "ガラスの箱",
+            .ko: "유리 상자",
+            .th: "กล่องแก้ว"
         ],
         "solid_tab_rotate": [
             .zhHant: "旋轉對照",

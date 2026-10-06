@@ -572,6 +572,10 @@ final class AdaptiveCanvasView: PKCanvasView {
                 guard let self else { return }
                 self.accessibilityValue = CanvasRepresentable.testReadout(self)
             }
+            layer.onDraftingChanged = { [weak self] in
+                guard let self else { return }
+                self.accessibilityValue = CanvasRepresentable.testReadout(self)
+            }
         }
         addSubview(layer)
         proLayer = layer
@@ -1201,7 +1205,27 @@ struct CanvasRepresentable: UIViewRepresentable {
     static func testReadout(_ canvas: PKCanvasView) -> String {
         // `pro:` 是專業筆畫（含製圖線、標註）的數量：它們不在 PencilKit 的 drawing 裡。
         let pro = (canvas as? AdaptiveCanvasView)?.proLayer?.ownStrokes.count ?? 0
-        return String(format: "zoom:%.3f strokes:%d pro:%d", canvas.zoomScale, canvas.drawing.strokes.count, pro)
+        var text = String(format: "zoom:%.3f strokes:%d pro:%d", canvas.zoomScale, canvas.drawing.strokes.count, pro)
+        // 測試要知道尺在哪裡、最後一筆畫到哪裡（頁面座標與視窗座標兩套）。
+        if let layer = (canvas as? AdaptiveCanvasView)?.proLayer {
+            if let last = layer.ownStrokes.last, let f = last.points.first, let l = last.points.last {
+                text += String(format: " last:%.2f,%.2f,%.2f,%.2f", f.x, f.y, l.x, l.y)
+            }
+            if let pivot = DraftingState.shared.pivot(notebookId: layer.notebookId, page: layer.pageIndex) {
+                text += String(format: " pivot:%.2f,%.2f", pivot.x, pivot.y)
+            }
+            if let inst = DraftingState.shared.instrument {
+                func win(_ p: CGPoint) -> CGPoint { layer.convert(p, to: nil) }
+                if let (a, b) = inst.pageEdges.first {
+                    text += String(format: " edge:%.2f,%.2f,%.2f,%.2f", a.x, a.y, b.x, b.y)
+                    let wa = win(a), wb = win(b)
+                    text += String(format: " edgeW:%.2f,%.2f,%.2f,%.2f", wa.x, wa.y, wb.x, wb.y)
+                }
+                let box = inst.pageOutline.flatMap { $0 }.reduce(CGRect.null) { $0.union(CGRect(origin: win($1), size: .zero)) }
+                text += String(format: " instW:%.2f,%.2f,%.2f,%.2f", box.minX, box.minY, box.width, box.height)
+            }
+        }
+        return text
     }
     func makeCoordinator() -> Coordinator {
         Coordinator(self)
@@ -1859,6 +1883,7 @@ public struct NotebookEditorView: View {
     /// 立體輔助（草圖拉伸、三視圖、剖面）。
     @State private var showSolidStudio = false
     @State private var showDraftingToolbox = false
+    @State private var draftExportShare: SharedFile?
     @State private var previousTool: EditorToolType?
     @State private var lastObservedTool: EditorToolType = .pen
 
@@ -4024,6 +4049,14 @@ public struct NotebookEditorView: View {
                     notebookId: notebook.id,
                     frameSupported: frameSupportedForCurrentPage,
                     onPickTool: { tool in
+                        // 鏡射、陣列要處理套索選的那批線：在離開套索之前把它帶過來。
+                        if tool.needsSelection {
+                            guard !lasso.proIds.isEmpty else {
+                                showCanvasNotice(localizationManager.localized("draft_edit_need_selection"))
+                                return
+                            }
+                            DraftingState.shared.editSelection = lasso.proIds
+                        }
                         selectedTool = .drafting
                         DraftingState.shared.tool = tool
                         DraftToolController.shared.reset(layer: (canvasView as? AdaptiveCanvasView)?.proLayer)
@@ -4035,7 +4068,13 @@ public struct NotebookEditorView: View {
                         selectedTool = .drafting
                         let center = draftViewportCenter()
                         DraftingState.shared.placeInstrument(kind: kind, center: center, pageWidth: PageGeometry.size.width)
-                    })
+                    },
+                    onRectArray: { rows, cols, dx, dy in applyRectArray(rows: rows, cols: cols, dxMm: dx, dyMm: dy) },
+                    onStartPractice: { startPractice(kind: $0) },
+                    onExport: { exportDrafting(format: $0) })
+            }
+            .sheet(item: $draftExportShare) { item in
+                ShareItemsSheet(items: [item.url])
             }
             .sheet(isPresented: $showSolidStudio) {
                 SolidStudioSheet(
@@ -4043,11 +4082,23 @@ public struct NotebookEditorView: View {
                     sketchPolylines: { solidSketchPolylines() },
                     onInsert: { insertSolidSheet($0) })
             }
+            .overlay(alignment: .bottomLeading) {
+                // 練習題進行中：題目、選項、批改結果（見 DraftingPractice.swift）。
+                if editorMode == .draw && selectedTool == .drafting {
+                    PracticeCard(
+                        layer: { (canvasView as? AdaptiveCanvasView)?.proLayer },
+                        onNew: {
+                            if let kind = PracticeSession.shared.problem?.kind { startPractice(kind: kind) }
+                        })
+                        .padding(12)
+                }
+            }
             .overlay(alignment: .top) {
                 // 圖學：製圖筆組、圖層、吸附（見 DraftingBar.swift）。
                 if editorMode == .draw && selectedTool == .drafting {
                     DraftingBar(onOpenSolidStudio: { showSolidStudio = true },
-                                onOpenToolbox: { showDraftingToolbox = true })
+                                onOpenToolbox: { showDraftingToolbox = true },
+                                onMarkAngle: { markProtractorReading() })
                         .padding(.top, 12)
                         .transition(.opacity.combined(with: .move(edge: .top)))
                 }
@@ -9832,6 +9883,76 @@ public struct NotebookEditorView: View {
         let ids = Set(made.map(\.id))
         let box = made.map(\.bounds).reduce(CGRect.null) { $0.union($1) }
         DispatchQueue.main.async { lasso.select(proStrokeIds: ids, around: box) }
+    }
+
+    /// 匯出本頁的製圖線（SVG 或 DXF，毫米）：隱藏的圖層不輸出；寫進暫存資料夾再交給分享表。
+    private func exportDrafting(format: String) {
+        guard let canvas = canvasView as? AdaptiveCanvasView, let layer = canvas.proLayer else { return }
+        let drafting = DraftingState.shared
+        let strokes: [FfiExportStroke] = layer.allStrokes.compactMap { s in
+            guard s.points.count >= 2,
+                  s.layerId == 0 || !drafting.isHidden(layer: s.layerId, notebookId: layer.notebookId)
+            else { return nil }
+            let c = s.colorRGBA
+            let hex = c.count >= 3 ? String(format: "#%02X%02X%02X", c[0], c[1], c[2]) : "#111827"
+            return FfiExportStroke(
+                points: s.points.map { FfiPoint(x: $0.x, y: $0.y) }, layer: s.layerId, lineType: s.lineTypeId,
+                width: s.baseWidth, colorHex: hex)
+        }
+        guard !strokes.isEmpty else {
+            showCanvasNotice(localizationManager.localized("draft_export_empty"))
+            return
+        }
+        let size = PageGeometry.size
+        let text = format == "dxf"
+            ? draftExportDxf(strokes: strokes, pageWidth: Float(size.width), pageHeight: Float(size.height))
+            : draftExportSvg(strokes: strokes, pageWidth: Float(size.width), pageHeight: Float(size.height))
+        let url = FileManager.default.temporaryDirectory
+            .appending(path: "padnote-page-\(currentPageIndex + 1).\(format)")
+        do {
+            try text.write(to: url, atomically: true, encoding: .utf8)
+        } catch {
+            showCanvasNotice(localizationManager.localized("draft_export_failed"))
+            return
+        }
+        // 工具箱剛關：等它收起來再開分享表，兩個 sheet 同時換手會被系統吃掉。
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { draftExportShare = SharedFile(url: url) }
+    }
+
+    /// 開始一題練習：把題目線放進目前這一頁（頁面大小由核心依它排版）。
+    private func startPractice(kind: String) {
+        guard let canvas = canvasView as? AdaptiveCanvasView, let layer = canvas.proLayer else { return }
+        selectedTool = .drafting
+        PracticeSession.shared.start(kind: kind, layer: layer, pageSize: PageGeometry.size)
+    }
+
+    /// 矩形陣列：套用在套索選的那批線上（一次復原）。
+    private func applyRectArray(rows: Int, cols: Int, dxMm: Double, dyMm: Double) {
+        guard let canvas = canvasView as? AdaptiveCanvasView, let layer = canvas.proLayer else { return }
+        DraftingState.shared.editSelection = lasso.proIds
+        guard !lasso.proIds.isEmpty else {
+            showCanvasNotice(localizationManager.localized("draft_edit_need_selection"))
+            return
+        }
+        DraftEditController.shared.applyRectArray(rows: rows, cols: cols, dxMm: dxMm, dyMm: dyMm, layer: layer)
+    }
+
+    /// 把量角器讀到的角度畫成一條線（從圓心到外緣），一次復原。
+    private func markProtractorReading() {
+        guard let canvas = canvasView as? AdaptiveCanvasView, let layer = canvas.proLayer else { return }
+        let drafting = DraftingState.shared
+        guard let (a, b) = drafting.instrument?.readingRay else { return }
+        let pen = drafting.activePen
+        let stroke = FfiSheetStroke(
+            points: [FfiPoint(x: Float(a.x), y: Float(a.y)), FfiPoint(x: Float(b.x), y: Float(b.y))],
+            layer: drafting.activeLayerId, lineType: drafting.activeLineType, width: pen.width, colorHex: pen.colorHex)
+        guard !drafting.isLocked(layer: stroke.layer, notebookId: layer.notebookId) else {
+            UINotificationFeedbackGenerator().notificationOccurred(.warning)
+            return
+        }
+        drafting.ensureVisible(layer: stroke.layer, notebookId: layer.notebookId)
+        layer.insertDrafted([stroke], origin: .zero)
+        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
     }
 
     /// 目前視野的正中央（頁面座標）。

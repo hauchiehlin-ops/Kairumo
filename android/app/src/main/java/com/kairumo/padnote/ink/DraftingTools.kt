@@ -92,6 +92,9 @@ object DraftToolController {
                 listOf("draft_hint_angle_vertex", "draft_hint_angle_ray1", "draft_hint_angle_ray2", "draft_hint_angle_arc")[minOf(n, 3)]
             DraftTool.COMPASS -> if (n == 0) "draft_hint_compass_center" else "draft_hint_compass_arc"
             DraftTool.SET_PIVOT -> "draft_hint_pivot"
+            DraftTool.TRIM, DraftTool.EXTEND, DraftTool.FILLET, DraftTool.OFFSET, DraftTool.MIRROR, DraftTool.ARRAY_POLAR ->
+                DraftEditController.hintKey(DraftingState.tool)
+            DraftTool.PROBLEM_SPOT -> "draft_prob_spot_tap"
         }
         DraftingState.toolHint = key?.let { L10n.t(it) }
     }
@@ -99,6 +102,7 @@ object DraftToolController {
     fun reset(engine: InkEngine?) {
         picks.clear()
         fitted = null
+        DraftEditController.reset(engine)
         engine?.clearOverlay()
         refreshHint()
     }
@@ -114,6 +118,14 @@ object DraftToolController {
             engine.setOverlay(emptyList(), picks.toList())
             return
         }
+        if (tool == DraftTool.PROBLEM_SPOT) {
+            if (phase == FfiPhase.ENDED) PracticeSession.spot(x, y, engine)
+            return
+        }
+        if (tool.isEdit) {
+            DraftEditController.handle(phase, x, y, tool, engine)
+            return
+        }
         val radius = 14f / engine.toolZoom.coerceAtLeast(0.25f)
         val raw = InkEngine.Offset2(x, y)
         val snapped = engine.snapAnchor(x, y, radius) ?: raw
@@ -123,7 +135,8 @@ object DraftToolController {
             DraftTool.DIM_ANGLE -> angular(phase, raw, snapped, engine)
             DraftTool.COMPASS -> compass(phase, raw, snapped, engine)
             DraftTool.SET_PIVOT -> setPivot(phase, snapped, engine)
-            DraftTool.NONE -> Unit
+            DraftTool.NONE, DraftTool.TRIM, DraftTool.EXTEND, DraftTool.FILLET, DraftTool.OFFSET,
+            DraftTool.MIRROR, DraftTool.ARRAY_POLAR, DraftTool.PROBLEM_SPOT -> Unit
         }
     }
 
@@ -323,12 +336,31 @@ fun DraftingToolboxDialog(
     onInsertSymbol: (FfiDraftKit) -> Unit,
     onInsertFrame: (thirdAngle: Boolean) -> Unit,
     onPlaceInstrument: (String) -> Unit,
+    onRectArray: (Int, Int, Double, Double) -> Unit,
+    onStartPractice: (String) -> Unit,
+    onExport: (String) -> Unit,
     onDismiss: () -> Unit
 ) {
     fun t(key: String) = LocalizationStrings.localized(key, languageTag)
     var symbols by remember { mutableStateOf(false) }
+    var arrayDialog by remember { mutableStateOf(false) }
     var thirdAngle by remember { mutableStateOf(true) }
     @Suppress("UNUSED_EXPRESSION") DraftingState.version
+
+    if (arrayDialog) {
+        DraftArrayDialog(
+            languageTag = languageTag,
+            onRect = { rows, cols, dx, dy -> arrayDialog = false; onRectArray(rows, cols, dx, dy) },
+            onPolar = { count, total ->
+                DraftingState.polarCount = count
+                DraftingState.polarTotalDeg = total
+                arrayDialog = false
+                onPickTool(DraftTool.ARRAY_POLAR)
+            },
+            onBack = { arrayDialog = false }
+        )
+        return
+    }
 
     if (symbols) {
         DraftSymbolPickerDialog(
@@ -413,6 +445,57 @@ fun DraftingToolboxDialog(
                 }
                 Text(t("draft_align_footer"), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text(t("draft_inst_footer"), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                HorizontalDivider()
+                Text(t("draft_toolbox_edit"), style = MaterialTheme.typography.labelLarge)
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    for (tool in listOf(DraftTool.TRIM, DraftTool.EXTEND, DraftTool.FILLET, DraftTool.OFFSET, DraftTool.MIRROR)) {
+                        FilterChip(
+                            selected = DraftingState.tool == tool,
+                            onClick = { onPickTool(tool) },
+                            label = { Text(t(tool.nameKey), fontSize = 12.sp) },
+                            modifier = Modifier.testTag("draft.tool.${tool.name}")
+                        )
+                    }
+                    FilterChip(
+                        selected = false,
+                        onClick = { arrayDialog = true },
+                        label = { Text(t("draft_array_title"), fontSize = 12.sp) },
+                        modifier = Modifier.testTag("draft.edit.array")
+                    )
+                }
+                EditStepper(t("draft_edit_fillet_radius"), DraftingState.filletRadiusMm, 1.0, 100.0, "draft.edit.filletRadius") {
+                    DraftingState.changeFilletRadius(it)
+                }
+                EditStepper(t("draft_edit_offset_distance"), DraftingState.offsetDistanceMm, 1.0, 200.0, "draft.edit.offsetDistance") {
+                    DraftingState.changeOffsetDistance(it)
+                }
+                Text(t("draft_edit_footer"), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                HorizontalDivider()
+                Text(t("draft_toolbox_practice"), style = MaterialTheme.typography.labelLarge)
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    for (kind in uniffi.padnote_core.draftProblemKinds()) {
+                        FilterChip(
+                            selected = false,
+                            onClick = { onStartPractice(kind) },
+                            label = { Text(t("draft_prob_kind_$kind"), fontSize = 12.sp) },
+                            modifier = Modifier.testTag("draft.practice.start.$kind")
+                        )
+                    }
+                }
+                Text(t("draft_prob_footer"), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                HorizontalDivider()
+                Text(t("draft_toolbox_export"), style = MaterialTheme.typography.labelLarge)
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    for (format in listOf("svg", "dxf")) {
+                        FilterChip(
+                            selected = false,
+                            onClick = { onExport(format) },
+                            label = { Text(t("draft_export_$format"), fontSize = 12.sp) },
+                            modifier = Modifier.testTag("draft.export.$format")
+                        )
+                    }
+                }
+                Text(t("draft_export_footer"), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 HorizontalDivider()
                 FilterChip(
                     selected = false,
@@ -637,4 +720,65 @@ fun SymbolPreview(kit: FfiDraftKit?, modifier: Modifier = Modifier) {
             }
         }
     }
+}
+
+
+/** 「標籤：數值　− ＋」一列。 */
+@Composable
+private fun EditStepper(label: String, value: Double, min: Double, max: Double, tag: String, onChange: (Double) -> Unit) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+        Text("$label: ${value.toInt()}", fontSize = 13.sp, modifier = Modifier.weight(1f).testTag("$tag.value"))
+        TextButton(onClick = { onChange((value - 1).coerceIn(min, max)) }, modifier = Modifier.testTag("$tag.minus")) { Text("−") }
+        TextButton(onClick = { onChange((value + 1).coerceIn(min, max)) }, modifier = Modifier.testTag("$tag.plus")) { Text("+") }
+    }
+}
+
+/** 陣列面板：矩形（列數、欄數、列距、欄距）或環形（份數、總角度，下一步點圓心）。 */
+@Composable
+fun DraftArrayDialog(
+    languageTag: String,
+    onRect: (Int, Int, Double, Double) -> Unit,
+    onPolar: (Int, Double) -> Unit,
+    onBack: () -> Unit
+) {
+    fun t(key: String) = LocalizationStrings.localized(key, languageTag)
+    var polar by remember { mutableStateOf(false) }
+    var rows by remember { mutableStateOf(2) }
+    var cols by remember { mutableStateOf(3) }
+    var dx by remember { mutableStateOf(20.0) }
+    var dy by remember { mutableStateOf(20.0) }
+    var count by remember { mutableStateOf(6) }
+    var total by remember { mutableStateOf(360.0) }
+    AlertDialog(
+        onDismissRequest = onBack,
+        title = { Text(t("draft_array_title")) },
+        confirmButton = {
+            TextButton(
+                onClick = { if (polar) onPolar(count, total) else onRect(rows, cols, dx, dy) },
+                modifier = Modifier.testTag("draft.array.apply")
+            ) { Text(t(if (polar) "draft_array_polar_go" else "draft_array_apply")) }
+        },
+        dismissButton = {
+            TextButton(onClick = onBack, modifier = Modifier.testTag("draft.array.close")) { Text(t("cancel")) }
+        },
+        text = {
+            Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    FilterChip(selected = !polar, onClick = { polar = false },
+                        label = { Text(t("draft_array_mode_rect"), fontSize = 12.sp) }, modifier = Modifier.testTag("draft.array.rect"))
+                    FilterChip(selected = polar, onClick = { polar = true },
+                        label = { Text(t("draft_array_mode_polar"), fontSize = 12.sp) }, modifier = Modifier.testTag("draft.array.polar"))
+                }
+                if (polar) {
+                    EditStepper(t("draft_array_count"), count.toDouble(), 2.0, 72.0, "draft.array.count") { count = it.toInt() }
+                    EditStepper(t("draft_array_angle"), total, 15.0, 360.0, "draft.array.angle") { total = it }
+                } else {
+                    EditStepper(t("draft_array_rows"), rows.toDouble(), 1.0, 20.0, "draft.array.rows") { rows = it.toInt() }
+                    EditStepper(t("draft_array_cols"), cols.toDouble(), 1.0, 20.0, "draft.array.cols") { cols = it.toInt() }
+                    EditStepper(t("draft_array_dx"), dx, -300.0, 300.0, "draft.array.dx") { dx = it }
+                    EditStepper(t("draft_array_dy"), dy, -300.0, 300.0, "draft.array.dy") { dy = it }
+                }
+            }
+        }
+    )
 }

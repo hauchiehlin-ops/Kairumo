@@ -66,6 +66,8 @@ pub struct Geometry {
     /// 外框的概略包圍盒大小（頁面單位），給平台排版與命中測試。
     pub width: f32,
     pub height: f32,
+    /// 讀數的圓心（量角器的圓心，尺自己的座標）。沒有讀數功能的尺是 `None`。
+    pub reading_center: Option<P2>,
 }
 
 fn scale_pt(p: P2) -> P2 {
@@ -123,7 +125,7 @@ fn linear_ticks(
 }
 
 /// 尺規的幾何。`size_mm` 是主要長度（直尺的長、三角板的長邊、量角器的半徑，丁字尺會自動貼滿頁寬）。
-/// 原點在尺的**左上角**（量角器是底邊的圓心）；y 向下。
+/// 原點在尺的**左上角**（量角器也一樣，圓心在底邊中點，見 `reading_center`）；y 向下。
 pub fn geometry(kind: InstrumentKind, size_mm: f32, page_width: f32) -> Geometry {
     let size = size_mm.clamp(40.0, 400.0);
     match kind {
@@ -153,6 +155,7 @@ pub fn geometry(kind: InstrumentKind, size_mm: f32, page_width: f32) -> Geometry
                 vertical_only: false,
                 width: size * UNITS_PER_MM,
                 height: w * UNITS_PER_MM,
+                reading_center: None,
             }
         }
         InstrumentKind::TSquare => {
@@ -195,6 +198,7 @@ pub fn geometry(kind: InstrumentKind, size_mm: f32, page_width: f32) -> Geometry
                 vertical_only: true,
                 width: len,
                 height: blade_h * UNITS_PER_MM,
+                reading_center: None,
             }
         }
         InstrumentKind::SetSquare45 => {
@@ -234,6 +238,7 @@ pub fn geometry(kind: InstrumentKind, size_mm: f32, page_width: f32) -> Geometry
                 vertical_only: false,
                 width: size * UNITS_PER_MM,
                 height: size * UNITS_PER_MM,
+                reading_center: None,
             }
         }
         InstrumentKind::SetSquare30 => {
@@ -264,6 +269,7 @@ pub fn geometry(kind: InstrumentKind, size_mm: f32, page_width: f32) -> Geometry
                 vertical_only: false,
                 width: size * UNITS_PER_MM,
                 height: short * UNITS_PER_MM,
+                reading_center: None,
             }
         }
         InstrumentKind::Protractor => {
@@ -316,16 +322,41 @@ pub fn geometry(kind: InstrumentKind, size_mm: f32, page_width: f32) -> Geometry
                     ),
                 });
             }
+            // 原點移到左上角（與其他尺一致）：圓心在 (ru, ru)。
+            let shift = |q: P2| (q.0 + ru, q.1 + ru);
             Geometry {
-                outline,
-                ticks,
-                edges: vec![((-ru, 0.0), (ru, 0.0))],
+                outline: outline
+                    .into_iter()
+                    .map(|ring| ring.into_iter().map(shift).collect())
+                    .collect(),
+                ticks: ticks
+                    .into_iter()
+                    .map(|t| Tick {
+                        a: shift(t.a),
+                        b: shift(t.b),
+                        label_at: shift(t.label_at),
+                        ..t
+                    })
+                    .collect(),
+                edges: vec![(shift((-ru, 0.0)), shift((ru, 0.0)))],
                 vertical_only: false,
                 width: 2.0 * ru,
                 height: ru,
+                reading_center: Some((ru, ru)),
             }
         }
     }
+}
+
+/// 量角器的讀數：從圓心 `center` 看 `p` 的角度（度，0° 在右端、逆時針到 180° 在左端；尺自己的座標，y 向下）。
+/// 在底邊以下（讀不到的半邊）回 `None`；貼著底邊的容差 0.5 單位。
+pub fn protractor_angle(center: P2, p: P2) -> Option<f32> {
+    let dx = p.0 - center.0;
+    let dy = center.1 - p.1;
+    if dx.hypot(dy) < 1e-3 || dy < -0.5 {
+        return None;
+    }
+    Some(dy.max(0.0).atan2(dx).to_degrees())
 }
 
 /// 把 `p` 投影到線段 `(a, b)` 上（夾在兩端之內）。
@@ -453,12 +484,41 @@ mod tests {
         assert_eq!(labels.len(), 19);
         assert_eq!(labels[0], "0");
         assert_eq!(labels[18], "180");
-        // 90° 的刻線正好在圓心正上方（x = 0、y 為負）。
+        // 原點在左上角、圓心在底邊中點：外框包圍盒從 (0,0) 開始。
+        let c = g.reading_center.expect("量角器有讀數圓心");
+        assert!((c.0 - g.width / 2.0).abs() < 1e-3 && (c.1 - g.height).abs() < 1e-3);
+        let pts: Vec<P2> = g.outline.iter().flatten().copied().collect();
+        let min_x = pts.iter().map(|q| q.0).fold(f32::MAX, f32::min);
+        let min_y = pts.iter().map(|q| q.1).fold(f32::MAX, f32::min);
+        assert!(min_x.abs() < 1e-2 && min_y.abs() < 1e-2);
+        // 90° 的刻線正好在圓心正上方。
         let t90 = &g.ticks[90];
-        assert!(t90.a.0.abs() < 1e-2 && t90.a.1 < 0.0);
+        assert!((t90.a.0 - c.0).abs() < 1e-2 && t90.a.1 < c.1);
         // 底邊是一條水平線，通過圓心。
         let e = g.edges[0];
-        assert!(e.0.1 == 0.0 && e.1.1 == 0.0 && e.0.0 < 0.0 && e.1.0 > 0.0);
+        assert!(e.0.1 == c.1 && e.1.1 == c.1 && e.0.0 < c.0 && e.1.0 > c.0);
+        // 其他尺沒有讀數功能。
+        assert!(
+            geometry(InstrumentKind::Ruler, 100.0, 800.0)
+                .reading_center
+                .is_none()
+        );
+    }
+
+    #[test]
+    fn the_protractor_reads_angles_from_its_center() {
+        let c = (100.0, 100.0);
+        let near = |a: Option<f32>, b: f32| (a.unwrap() - b).abs() < 1e-3;
+        assert!(near(protractor_angle(c, (200.0, 100.0)), 0.0), "右端 0°");
+        assert!(near(protractor_angle(c, (100.0, 0.0)), 90.0), "正上方 90°");
+        assert!(near(protractor_angle(c, (0.0, 100.0)), 180.0), "左端 180°");
+        assert!(near(protractor_angle(c, (200.0, 0.0)), 45.0));
+        assert!(near(protractor_angle(c, (0.0, 0.0)), 135.0));
+        // 在底邊以下讀不到；剛好貼著底邊的容差內算 0°／180°。
+        assert!(protractor_angle(c, (150.0, 140.0)).is_none());
+        assert!(near(protractor_angle(c, (150.0, 100.3)), 0.0));
+        // 圓心本身沒有方向。
+        assert!(protractor_angle(c, c).is_none());
     }
 
     #[test]

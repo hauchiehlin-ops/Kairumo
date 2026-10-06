@@ -20,6 +20,10 @@ class InstrumentModel private constructor(
     var angle = 0f
         private set
 
+    /** 量角器的讀數點（尺自己的座標，所以尺移動、轉動時讀數跟著走）。沒讀過是 null。 */
+    var readingLocal: Pair<Float, Float>? = null
+        private set
+
     val verticalOnly: Boolean get() = geometry.verticalOnly
     val angleDegrees: Double get() = Math.toDegrees(angle.toDouble())
 
@@ -60,11 +64,57 @@ class InstrumentModel private constructor(
         angle += Math.toRadians(degrees).toFloat()
     }
 
-    /** 點在尺的身體上（外框內）。 */
+    /** 點在尺的身體上（外框內）。量角器是半圓，其他是包圍盒。 */
     fun containsBody(x: Float, y: Float): Boolean {
         val l = toLocal(x, y)
+        val c = geometry.readingCenter
+        if (c != null) return hypot(l.x - c.x, l.y - c.y) <= geometry.width / 2f && l.y <= c.y + 0.5f
         return l.x in 0f..geometry.width && l.y in 0f..geometry.height
     }
+
+    // ── 量角器讀角度 ──
+
+    /** 在量角器外圈的刻度帶（半徑的 55% 以外）：按住是讀角度，不是搬尺。 */
+    fun isReadingZone(x: Float, y: Float): Boolean {
+        val c = geometry.readingCenter ?: return false
+        if (!containsBody(x, y)) return false
+        val l = toLocal(x, y)
+        return hypot(l.x - c.x, l.y - c.y) >= geometry.width / 2f * 0.55f
+    }
+
+    /** 把讀數點設在頁面上的 (x, y)；null 清掉。 */
+    fun setReading(at: Pair<Float, Float>?) {
+        readingLocal = at?.let { val l = toLocal(it.first, it.second); l.x to l.y }
+    }
+
+    /** 目前讀到的角度（度；0° 在量角器右端、逆時針到 180°）。沒讀過或讀不到回 null。 */
+    val readingDegrees: Float?
+        get() {
+            val c = geometry.readingCenter ?: return null
+            val r = readingLocal ?: return null
+            return uniffi.padnote_core.draftProtractorAngle(c, FfiPoint(r.first, r.second))
+        }
+
+    /** 讀數線：從圓心沿讀到的方向到外緣（頁面座標）。沒讀數回 null。 */
+    val readingRay: Pair<InkEngine.Offset2, InkEngine.Offset2>?
+        get() {
+            val c = geometry.readingCenter ?: return null
+            val r = readingLocal ?: return null
+            if (readingDegrees == null) return null
+            val dx = r.first - c.x
+            val dy = r.second - c.y
+            val len = hypot(dx, dy)
+            if (len < 0.001f) return null
+            val radius = geometry.width / 2f
+            return toPage(c) to toPage(FfiPoint(c.x + dx / len * radius, c.y + dy / len * radius))
+        }
+
+    /** 讀數的顯示字：「37.5° / 142.5°」（量角器兩邊的刻度）。 */
+    val readingText: String?
+        get() {
+            val a = readingDegrees ?: return null
+            return "%.1f° / %.1f°".format(a, 180f - a)
+        }
 
     /** 離哪一條邊最近（[band] 之內）：回邊的起點、終點與 (x, y) 投影在那條邊所在直線上的點。 */
     fun nearestEdge(x: Float, y: Float, band: Float): Edge? {

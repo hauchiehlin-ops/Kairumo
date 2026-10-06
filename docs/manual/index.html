@@ -283,6 +283,27 @@
     margin-top: 4px;
   }
 
+
+  /* 手把手：每一步一張卡片，文字在上、截圖在下 */
+  .walk { display: flex; flex-direction: column; gap: 18px; margin: 0 0 22px; }
+  .walk-step {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 12px;
+    padding: 16px 18px 18px;
+    max-width: 640px;
+  }
+  .walk-step h3 {
+    display: flex; align-items: baseline; gap: 10px;
+    margin: 0 0 8px; font-size: 17px; line-height: 1.35;
+  }
+  .walk-step h3 .wn {
+    font-family: var(--mono); font-size: 12px; color: var(--accent);
+    background: var(--accent-soft); border-radius: 6px; padding: 2px 8px;
+  }
+  .walk-step p { margin: 0 0 12px; max-width: 62ch; }
+  .walk-step figure { margin: 0; max-width: 420px; }
+
   dl.faq { margin: 0; display: flex; flex-direction: column; gap: 18px; max-width: 68ch; }
   dl.faq dt { font-weight: 600; margin-bottom: 2px; }
   dl.faq dd { margin: 0; color: var(--ink-soft); }
@@ -419,6 +440,20 @@
         const lab = el("span", "chip-label"); lab.textContent = ui.buttonsLabel; chips.appendChild(lab);
         s.buttons.forEach(b => { const c = el("span", "chip"); c.textContent = b; chips.appendChild(c); });
         sec.appendChild(chips);
+      }
+
+      if (s.walk && s.walk.length) {
+        const w = el("div", "walk");
+        s.walk.forEach((st, k) => {
+          const card = el("div", "walk-step");
+          const hd = el("h3");
+          hd.innerHTML = '<span class="wn">' + pad(k + 1) + "</span><span>" + st.title + "</span>";
+          card.appendChild(hd);
+          const p = el("p"); richText(p, st.text); card.appendChild(p);
+          if (st.fig) card.appendChild(figure(st.fig, st.cap, d.figset, ui.figNote));
+          w.appendChild(card);
+        });
+        sec.appendChild(w);
       }
 
       if (s.steps && s.steps.length) {

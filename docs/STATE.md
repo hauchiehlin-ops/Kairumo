@@ -471,10 +471,42 @@ Markdown / SVG 匯出 · 手寫辨識 fallback 鏈 · 引擎與權限中心狀�
   的**筆畫字形**（跟著圖層、隱藏圖層時一起隱藏、匯出帶得走），不是文字方塊。
 - 效能（release）：預設形狀 ≤10 ms；200 邊外框＋20 個 32 邊孔的極端輪廓約 0.8 s（`padnote-solid/tests/perf.rs`）。
   debug 組建（Android 開發版 .so）慢很多，不代表正式版。
-- 已知限制：階梯／旋轉剖面只畫切口外框與剖面線（不畫切口後面的形狀）；斜切面（同時斜向深度與輪廓）不支援；
-  Android 的「改圖層」不可復原（Apple 可）；Android 手機寬度下編輯器標題列會換成多排、畫布偏矮（既有行為，非圖學專屬）；
+- 已知限制：Android 手機寬度下編輯器標題列會換成多排、畫布偏矮（既有行為，非圖學專屬）；
   VoiceOver 沒跑過（模擬器不支援）；TalkBack 已在 Android 模擬器上開過，但朗讀文字不會寫進 logcat，改以無障礙節點樹（uiautomator）逐一檢查製圖面板每個控制項的名稱
-  （標籤與 contentDescription 已補、`AccessibilityLabelTests` 通過）；多語系文案未經母語者審閱。
+  （標籤與 contentDescription 已補、`AccessibilityLabelTests` 通過）；多語系文案未經母語者審閱（由使用者自行處理）。
+  （2026-10-06 已解決：階梯／旋轉剖面現在畫出切口後面的形狀、斜切面已支援、Android「改圖層」可復原。）
+
+### 圖學學習工具（2026-10-06 起，計畫書：`docs/plans/drafting-learning-tools.md`）
+
+對象是大學工程圖學課。全部幾何在核心（`padnote-drafting`、`padnote-solid`），兩平台只畫與收手勢；同一個操作兩邊產生同樣的線。
+入口都在製圖列的「圖學工具」與「立體輔助」。
+
+| 功能 | 核心 | 重點 |
+|---|---|---|
+| 尺寸標註（線性／直徑／半徑／角度） | `dim.rs` | 點兩個點再拖出尺寸線；數字依比例尺換算；數字是筆畫字形 |
+| 圖學符號、圖框與標題欄 | `symbols.rs`、`gdt.rs`、`fastener.rs`、`frame.rs` | 表面粗度、焊接、螺紋、幾何公差、緊固件；A4／A3／A2 圖框＋投影法符號 |
+| 實尺與比例尺 | `UNITS_PER_MM`（800/210） | 頁面＝紙上毫米；比例尺逐本記在本機 |
+| 投影對齊 | `align.rs` | 長對正、高平齊、經 45° 轉折點的寬相等；虛線導引；可關閉 |
+| 虛擬尺規 | `instruments.rs` | 直尺、丁字尺、兩種三角板、量角器（讀角度、可畫出讀數線）；靠邊畫線、拖動、旋轉；圓規 |
+| 編輯工具 | `edit.rs` | 修剪、延伸、圓角（直線）、偏移、鏡射、矩形／環形陣列；沿用原筆畫的筆與圖層；一次復原 |
+| 題庫與批改 | `problems.rs`、`check.rs` | 五題型：補第三視圖、等角圖畫三視圖、判斷第一／第三角法、挑錯、剖視圖；種子可重現；批改指出缺線／多線／線型錯／沒對齊／剖面線 |
+| 玻璃盒展開、旋轉檢視 | `padnote-solid::glass` | 第一／第三角法；進度可拖；拖曳轉視角 |
+| 2D 匯出 | `export2d.rs` | SVG、DXF（R12、毫米、圖層與線型） |
+| 3D 匯出 | `export3d.rs` | STL、OBJ（毫米）、GLB、USDZ（公尺）；有洞的輪廓以耳切三角化；Apple 可用 Quick Look 的 AR 預覽 |
+
+- 驗證：核心單元測試（`padnote-drafting` 103、`padnote-solid` 84）；Android 儀器測試（`ink/Drafting*Test.kt`）；
+  Apple 單元測試（`DraftingEditTests`、`DraftingPracticeTests`、`DraftingExportTests`，後者用 Model I/O 把匯出的 USDZ／STL／OBJ 讀回來驗尺寸）
+  與 UI 測試（`DraftingToolsUITests`）。
+- 已知限制：
+  - 圓角只支援直線（曲線會提示做不到）；偏移的轉角用尖角（銳角過長時改斜接）。
+  - 題庫的立體是輪廓拉伸的柱體（沒有曲面立體）；剖面題只有垂直全剖；剖面線只檢查有沒有畫夠與角度，不檢查間距；
+    批改只看作答範圍內、頂層的線，中心線與假想線不批改。
+  - 量角器只有一組刻度（0° 在右端）；尺規沒有「量長度」的讀數。
+  - 玻璃盒沒有隱藏線消除（畫各面的線、立體稜線與投射線，用來說明展開的概念）。
+  - 3D 匯出沒有材質貼圖（淺灰單色）；Android 沒有 AR 預覽（USDZ 的 AR Quick Look 是 Apple 專屬），沒有在真機上放置 USDZ 驗證過。
+  - 使用手冊（`docs/manual`）已新增獨立的「圖學」章（零基礎、手把手，12 步＋逐項說明，六語系、中英截圖），隱私權政策已加「圖學工具與匯出」一節（2026-10-07）。《Kairumo手冊》預載筆記本（手繪）尚未涵蓋圖學。
+  - Apple UI 測試常被系統層崩潰（XCTAutomationSupport 在日誌量過大時崩在 `os_log` 路徑）打斷，重跑即過；
+    跑法用 `xcodebuild test -retry-tests-on-failure -test-iterations 3`。CI 若跑這類測試也要同樣重試。
 
 ## 預載筆記本《Kairumo手冊》（手繪）
 

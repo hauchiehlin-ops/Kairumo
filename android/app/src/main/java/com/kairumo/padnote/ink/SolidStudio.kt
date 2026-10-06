@@ -67,7 +67,12 @@ fun SolidStudioDialog(
 ) {
     fun t(key: String) = LocalizationStrings.localized(key, languageTag)
 
-    var rotate by remember { mutableStateOf(false) }
+    // 0 = 圖紙、1 = 旋轉對照、2 = 玻璃盒展開。
+    var tab by remember { mutableStateOf(0) }
+    val rotate = tab == 1
+    val glass = remember { GlassState() }
+    val context = androidx.compose.ui.platform.LocalContext.current
+    var exportNotice by remember { mutableStateOf<String?>(null) }
     var presetId by remember { mutableStateOf("u_shape") }
     var width by remember { mutableFloatStateOf(240f) }
     var height by remember { mutableFloatStateOf(180f) }
@@ -161,17 +166,22 @@ fun SolidStudioDialog(
             Column(Modifier.testTag("solid.dialog"), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     FilterChip(
-                        selected = !rotate, onClick = { rotate = false },
+                        selected = tab == 0, onClick = { tab = 0 },
                         label = { Text(t("solid_tab_sheet")) }, modifier = Modifier.testTag("solid.tab.sheet")
                     )
                     FilterChip(
-                        selected = rotate, onClick = { rotate = true },
+                        selected = tab == 1, onClick = { tab = 1 },
                         label = { Text(t("solid_tab_rotate")) }, modifier = Modifier.testTag("solid.tab.rotate")
+                    )
+                    FilterChip(
+                        selected = tab == 2, onClick = { tab = 2 },
+                        label = { Text(t("solid_tab_glass")) }, modifier = Modifier.testTag("solid.tab.glass")
                     )
                 }
 
                 // ── 預覽 ──
-                Canvas(
+                if (tab == 2) GlassBoxPreview(glass, profile, depth)
+                if (tab != 2) Canvas(
                     Modifier.fillMaxWidth().height(220.dp).background(Color.White)
                         .border(1.dp, Color(0x33000000)).testTag("solid.preview")
                 ) {
@@ -207,6 +217,8 @@ fun SolidStudioDialog(
                     Modifier.heightIn(max = 360.dp).verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
+                // 玻璃盒的播放與進度放在最上面：拉滑桿、看動畫要同時看得到預覽與控制。
+                if (tab == 2) GlassBoxControls(glass, ::t)
                 // ── 輪廓 ──
                 Text(t("solid_profile"), style = MaterialTheme.typography.labelLarge)
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -242,7 +254,9 @@ fun SolidStudioDialog(
                 }
                 LabeledSlider(t("solid_depth"), depth, 20f..600f, "solid.depth") { depth = it }
 
-                if (!rotate) {
+                if (tab == 2) {
+                    // 控制已經放在最上面。
+                } else if (!rotate) {
                     // ── 剖面 ──
                     Text(t("solid_section"), style = MaterialTheme.typography.labelLarge)
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -304,6 +318,13 @@ fun SolidStudioDialog(
                     LabeledSlider(t("solid_yaw"), yaw, -180f..180f, "solid.yaw", deg) { yaw = it }
                     LabeledSlider(t("solid_pitch"), pitch, -90f..90f, "solid.pitch", deg) { pitch = it }
                 }
+                SolidExportSection(
+                    t = ::t, enabled = profile != null, notice = exportNotice,
+                    onExport = { format ->
+                        val p = profile
+                        exportNotice = if (p != null && DraftingExport.shareSolid(context, p, depth, format)) null else t("solid_export_failed")
+                    }
+                )
                 }
             }
         }
@@ -327,5 +348,26 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawSheetStroke(
             strokeWidth = kotlin.math.max(0.8f, s.width * widthScale * dens * 1.1f),
             pathEffect = effect
         )
+    }
+}
+
+
+/** 3D 匯出：STL、OBJ、GLB、USDZ（頂層函式：避免把對話框的 lambda 撐得更大）。 */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun SolidExportSection(t: (String) -> String, enabled: Boolean, notice: String?, onExport: (String) -> Unit) {
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Text(t("solid_export_title"), style = MaterialTheme.typography.labelLarge)
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            for (format in uniffi.padnote_core.solidExportFormats()) {
+                FilterChip(
+                    selected = false, enabled = enabled, onClick = { onExport(format) },
+                    label = { Text(t("solid_export_$format"), fontSize = 12.sp) },
+                    modifier = Modifier.testTag("solid.export.$format")
+                )
+            }
+        }
+        notice?.let { Text(it, fontSize = 12.sp, color = MaterialTheme.colorScheme.error) }
+        Text(t("solid_export_footer"), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
