@@ -7,7 +7,7 @@
 | 版本 | commit `bddc96d41bef78427ed0e034e9f7e31d71fd1b92`（2026-03-08） |
 | `graphics.txt` SHA-256 | `a28c478b5178e98f67f510b2d52fde08a69dc664654ef43498253b9b764d46ee` |
 | 授權 | Arphic Public License（1999，文泰科技 Arphic Technology Co., Ltd.）；全文見 `ARPHICPL.TXT`（未改動，SHA-256 `ba74a961aaa5fa7e73dc67276df2781ba405da2cb30c52c9d9eee9c200d4d11e`，取自 https://ftp.gnu.org/non-gnu/chinese-fonts-truetype/LICENSE） |
-| 本專案裡的檔案 | `strokes-subset.json`（170 個字的筆畫中線）、`ARPHICPL.TXT`、`NOTICE.txt` |
+| 本專案裡的檔案 | `strokes-subset.json`（229 個字的筆畫中線：繁體與簡體手冊用到的字）、`ARPHICPL.TXT`、`NOTICE.txt` |
 
 ## 授權評估（2026-10-06）
 

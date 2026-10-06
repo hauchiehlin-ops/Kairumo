@@ -541,11 +541,12 @@ Markdown / SVG 匯出 · 手寫辨識 fallback 鏈 · 引擎與權限中心狀�
 Android 核心狀態畫面與兩端的筆輸入診斷（壓力、傾角、延遲）改用 `diag_*` 鍵（34 條）。
 
 ### 《Kairumo手冊》—— 部分解決
-- **繁體中文**：手寫版不變（筆順來自 makemeahanzi，逐位元組與之前相同）。
-- **其他語言（簡中／英／日／韓／泰）**：同一套手繪插圖 + 該語言排版的文字方塊（`assets/seed/kairumo-manual-typed.json`，由 `manual.py` 的 `build_typed` 產生；
+- **繁體中文、簡體中文**：手寫版（筆順來自 makemeahanzi；簡體字資料集同一份，2026-10-06 經使用者同意再下載一次，SHA-256 與先前記錄相同）。
+  `kairumo-manual-ink.json`（繁）與 `kairumo-manual-ink-zhHans.json`（簡）；繁中版逐位元組沒變。子集 229 字（`strokes-subset.json`）。
+- **英／日／韓／泰**：同一套手繪插圖 + 該語言排版的文字方塊（`assets/seed/kairumo-manual-typed.json`，由 `manual.py` 的 `build_typed` 產生；
   文字在 `manual_text.py` 的 `TYPED`）。插圖逐點相同（腳本斷言），文字位置與繁中版的手寫字一一對應、放不下會自動縮字級。
 - **名稱與摘要跟著語言**（`seed_manual_title`／`seed_manual_snippet`），舊使用者的「Kairumo手冊」也會認出來補上語系鍵。
-- **做不到的部分**：非繁中版**不是手寫**。手寫需要筆順中線資料，makemeahanzi 只有漢字、沒有假名／諺文／泰文；簡體字雖有，但要再下載一次資料集（下載要使用者同意），所以簡中也用排版文字。
+- **做不到的部分**：英／日／韓／泰**不是手寫**。手寫需要筆順中線資料，makemeahanzi 只有漢字、沒有假名／諺文／泰文。
   已經植入過的手冊內容不會隨語言切換重做（那是使用者的筆記）；只有名稱會變。
 
 ### 母語者審閱 —— **尚未發生**

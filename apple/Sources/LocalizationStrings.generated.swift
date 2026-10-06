@@ -14354,7 +14354,7 @@ extension LocalizationManager {
         "seed_manual_snippet": [
             .zhHant: "Kairumo 優勢：結構化、視覺化、多語言 —— 全部手繪",
             .en: "Kairumo’s advantages: structured, visual and multilingual",
-            .zhHans: "Kairumo 优势：结构化、视觉化、多语言",
+            .zhHans: "Kairumo 优势：结构化、视觉化、多语言 —— 全部手绘",
             .ja: "Kairumo の強み: 構造化・視覚化・多言語",
             .ko: "Kairumo의 강점: 체계적 구성, 시각화, 다국어",
             .th: "จุดเด่นของ Kairumo: เป็นระบบ เห็นภาพ หลายภาษา"

@@ -58,6 +58,10 @@ FOOTER_PAGE = ["第一頁", "第二頁", "第三頁", "第四頁"]
 PUNCT = set("，。、：；「」（）")
 
 
+# 結語的前半（手寫版是「結語＋手繪 Kairumo＋句號」三段拼起來）。
+CLOSING = "讓每個人，都能輕鬆上手"
+
+
 def all_text() -> str:
     parts = list(HEADINGS.values()) + [TITLE_CJK, SUBTITLE] + FOOTER_PAGE
     for s in SECTIONS.values():
@@ -246,3 +250,42 @@ TYPED = {
 
 # 繁體中文的結語（手寫版是「結語＋手繪 Kairumo＋句號」三段拼起來，排版版需要整句）。
 ZH_HANT_CLOSING = "讓每個人，都能輕鬆上手 Kairumo。"
+
+
+# ---- 簡體中文的手寫版 ---------------------------------------------------------------
+#
+# 筆順資料集（makemeahanzi）以簡體字為主，簡體手冊因此也能手寫。文字來自 `TYPED["zhHans"]`
+# （同一份，所以排版版與手寫版不會各說各話），整理成與上面繁體版同樣的欄位，讓版面程式不必分兩套。
+from types import SimpleNamespace as _NS  # noqa: E402
+
+_H = TYPED["zhHans"]
+HANS = _NS(
+    HEADINGS=_H["headings"],
+    TITLE_CJK=_H["title"],
+    SUBTITLE=_H["subtitle"],
+    SECTIONS=_H["sections"],
+    FOOTER_PAGE=_H["footer"],
+    CLOSING="让每个人，都能轻松上手",
+    PUNCT=PUNCT,
+)
+del _H
+
+
+def hans_text() -> str:
+    parts = list(HANS.HEADINGS.values()) + [HANS.TITLE_CJK, HANS.SUBTITLE, HANS.CLOSING] + HANS.FOOTER_PAGE
+    for s in HANS.SECTIONS.values():
+        parts.append(s["lead"])
+        parts += s["points"]
+        parts.append(s.get("closing", ""))
+        parts.append(s.get("seal", ""))
+    return "".join(parts)
+
+
+def cjk_chars_all() -> list:
+    """繁體版與簡體版手寫用到的全部漢字（不含全形標點）。"""
+    seen = []
+    for ch in all_text() + hans_text():
+        if ch in PUNCT or ch.isascii() or ch == " " or ch in seen:
+            continue
+        seen.append(ch)
+    return seen

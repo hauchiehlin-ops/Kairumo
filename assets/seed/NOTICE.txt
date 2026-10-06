@@ -11,8 +11,8 @@ Co., Ltd. The unaltered licence text is in ARPHICPL.TXT next to this file.
 Modification notice (Arphic Public License, section 2a):
   2026-10-06  Kairumo project. From graphics.txt (commit bddc96d41bef78427ed0e034e9f7e31d71fd1b92,
   SHA-256 a28c478b5178e98f67f510b2d52fde08a69dc664654ef43498253b9b764d46ee) only the "medians"
-  (stroke centre lines) of the 170 characters used in the notebook were kept; glyph outlines were
-  dropped. The notebook's strokes (kairumo-manual-ink.json) are those centre lines, scaled,
+  (stroke centre lines) of the 229 characters used in the notebook (Traditional and Simplified Chinese editions) were kept; glyph outlines were
+  dropped. The notebook's strokes (kairumo-manual-ink.json and kairumo-manual-ink-zhHans.json) are those centre lines, scaled,
   slightly perturbed to look hand-written, and drawn as pen strokes. The reduced data are
   available at third_party/makemeahanzi/strokes-subset.json in the Kairumo source tree, and
   remain freely available under the Arphic Public License.

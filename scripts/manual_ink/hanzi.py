@@ -22,6 +22,11 @@ PUNCT = set("，。、：；「」（）")
 _rng = random.Random(20261006)
 
 
+def reset_jitter():
+    """手寫的歪斜與抖動回到固定的起點：同樣的輸入每次產生逐位元組相同的筆畫。"""
+    _rng.seed(20261006)
+
+
 def _jit(a):
     return _rng.uniform(-a, a)
 

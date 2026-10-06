@@ -11,14 +11,14 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from manual_text import cjk_chars  # noqa: E402
+from manual_text import cjk_chars_all  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[2]
 OUT = ROOT / "third_party/makemeahanzi/strokes-subset.json"
 
 
 def main(src: str):
-    need = cjk_chars()
+    need = cjk_chars_all()
     found = {}
     for line in Path(src).read_text(encoding="utf-8").splitlines():
         rec = json.loads(line)
@@ -32,7 +32,7 @@ def main(src: str):
             "Derived from makemeahanzi graphics.txt (https://github.com/skishore/makemeahanzi), "
             "itself derived from Arphic PL KaitiM GB / Arphic PL UKai. Licensed under the Arphic "
             "Public License (see ARPHICPL.TXT). Modified 2026-10-06 by the Kairumo project: only the "
-            "'medians' (stroke centre lines) of the characters used in the preloaded manual were "
+            "'medians' (stroke centre lines) of the characters used in the preloaded manual (Traditional and Simplified Chinese editions) were "
             "kept; glyph outlines were dropped. Coordinates are unchanged (1024 grid, y up, "
             "baseline at y=-124 ... top at y=900)."
         ),

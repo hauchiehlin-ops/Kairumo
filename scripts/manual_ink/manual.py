@@ -19,6 +19,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 import hanzi  # noqa: E402
 import manual_text as T  # noqa: E402
+import manual_text  # noqa: E402
 from ink import Page, draw_latin, preview  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -547,7 +548,7 @@ def page_summary():
     if TY is not None:
         box(p, TY["sections"]["s4"]["closing"], 56, 868, 688, 25, NAVY, bold=True, max_h=80)
     else:
-        cx = hanzi.write_line(p, "讓每個人，都能輕鬆上手", 56, 872, 32, NAVY, 2.8, gap=0.10, hand=0.8)
+        cx = hanzi.write_line(p, T.CLOSING, 56, 872, 32, NAVY, 2.8, gap=0.10, hand=0.8)
         cx = draw_latin(p, "Kairumo", cx + 10, 876, 34, RED, 3.0, gap=6)
         hanzi.write_line(p, "。", cx - 2, 872, 32, NAVY, 2.8, hand=0.8)
     seal(p, 676, 975, sec["seal"])
@@ -560,6 +561,29 @@ def _strokes_json(pages):
              for s in pg.strokes] for pg in pages]
 
 
+def build_hans():
+    """簡體中文手寫版 → `assets/seed/kairumo-manual-ink-zhHans.json`（筆順資料集以簡體字為主）。"""
+    global T
+    saved, T = T, manual_text.HANS
+    try:
+        random.seed(5807)
+        rng.seed(5807)
+        hanzi.reset_jitter()
+        pages = [cover(), page_s2(), page_s3(), page_summary()]
+    finally:
+        T = saved
+    data = {
+        "version": 1, "title": "Kairumo手册", "page": {"width": W, "height": H},
+        "pages": [{"strokes": st} for st in _strokes_json(pages)],
+    }
+    out = ROOT / "assets/seed/kairumo-manual-ink-zhHans.json"
+    out.write_text(json.dumps(data, ensure_ascii=False, separators=(",", ":")))
+    (ROOT / "apple/Resources/Templates/kairumo-manual-ink-zhHans.json").write_text(out.read_text())
+    total = sum(len(pg.strokes) for pg in pages)
+    print(f"{out.relative_to(ROOT)}  {len(pages)} 頁 / {total} 筆 / {out.stat().st_size // 1024} KB")
+    preview(pages, "/private/tmp/claude-501/manual_hans{0}.png", scale=0.9)
+
+
 def build_typed():
     """非繁中語言：同一套手繪插圖＋各語言的文字方塊 → `assets/seed/kairumo-manual-typed.json`。
 
@@ -570,6 +594,8 @@ def build_typed():
     illustration = None
     texts = {}
     for lang, data in T.TYPED.items():
+        if lang == "zhHans":
+            continue   # 簡體中文是手寫版（build_hans），不在排版檔裡
         TY = data
         random.seed(5807)
         rng.seed(5807)
@@ -588,12 +614,13 @@ def build_typed():
         "texts": texts,
     }, ensure_ascii=False, separators=(",", ":")))
     (ROOT / "apple/Resources/Templates/kairumo-manual-typed.json").write_text(out.read_text())
-    print(f"{out.relative_to(ROOT)}  {len(T.TYPED)} 種語言 / {out.stat().st_size // 1024} KB")
+    print(f"{out.relative_to(ROOT)}  {len(T.TYPED) - 1} 種語言 / {out.stat().st_size // 1024} KB")
 
 
 def build():
     random.seed(5807)
     rng.seed(5807)
+    hanzi.reset_jitter()
     pages = [cover(), page_s2(), page_s3(), page_summary()]
     data = {
         "version": 1,
@@ -628,4 +655,5 @@ def build():
 
 if __name__ == "__main__":
     build()
+    build_hans()
     build_typed()

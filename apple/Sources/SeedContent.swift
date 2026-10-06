@@ -324,17 +324,17 @@ enum SeedContent {
 
     /// 手冊每一頁的筆畫（繁體中文版：標題與內文都是手寫）。讀不到資源就回空陣列
     /// （筆記本仍然建立，只是空白）。
-    static func kairumoManualDrawings() -> [PKDrawing] {
-        manualDrawings(from: manualJSON("kairumo-manual-ink") ?? [:])
+    static func kairumoManualDrawings(language: AppLanguage = .zhHant) -> [PKDrawing] {
+        manualDrawings(from: manualJSON(language == .zhHans ? "kairumo-manual-ink-zhHans" : "kairumo-manual-ink") ?? [:])
     }
 
-    /// 其他語言的手冊：同一套手繪插圖＋該語言排版的文字方塊（`kairumo-manual-typed.json`）。
+    /// 英／日／韓／泰的手冊：同一套手繪插圖＋該語言排版的文字方塊（`kairumo-manual-typed.json`）。
     ///
-    /// 手寫只有繁體中文：筆順資料只有漢字，沒有假名、諺文、泰文。位置與繁中版的手寫字一一對應。
+    /// 手寫只有繁體與簡體中文：筆順資料只有漢字，沒有假名、諺文、泰文。位置與繁中版的手寫字一一對應。
     static func kairumoManualTyped(language: AppLanguage) -> (drawings: [PKDrawing], texts: [NoteTextAttachment])? {
         guard let root = manualJSON("kairumo-manual-typed"),
               let all = root["texts"] as? [String: Any],
-              let perPage = all[typedKey(language)] as? [[[String: Any]]]
+              let perPage = all[language.rawValue] as? [[[String: Any]]]
         else { return nil }
         var texts: [NoteTextAttachment] = []
         for (pageIndex, boxes) in perPage.enumerated() {
@@ -360,10 +360,6 @@ enum SeedContent {
         return (manualDrawings(from: root), texts)
     }
 
-    private static func typedKey(_ language: AppLanguage) -> String {
-        language == .zhHans ? "zhHans" : language.rawValue
-    }
-
     /// 起筆與收筆輕、中段重 —— 手寫的筆壓，不是等粗的線。
     private static func manualStroke(_ points: [CGPoint], color: UIColor, width: CGFloat) -> PKStroke {
         let count = points.count
@@ -383,11 +379,11 @@ enum SeedContent {
 
     /// 填進《Kairumo手冊》。
     ///
-    /// 繁體中文是手寫版；其他語言是同一套插圖＋排版文字（見 `kairumoManualTyped`）。
+    /// 繁體與簡體中文是手寫版；其他語言是同一套插圖＋排版文字（見 `kairumoManualTyped`）。
     static func fillKairumoManual(_ doc: inout NotebookDocument, store: NotebookStore? = nil) {
         let language = LocalizationManager.snapshotLanguage
-        var drawings = kairumoManualDrawings()
-        if language != .zhHant, let typed = kairumoManualTyped(language: language) {
+        var drawings = kairumoManualDrawings(language: language)
+        if language != .zhHant, language != .zhHans, let typed = kairumoManualTyped(language: language) {
             drawings = typed.drawings
             doc.textAttachments = typed.texts
         }

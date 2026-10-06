@@ -997,11 +997,15 @@ private fun buildFeatureShowcase(context: Context, deviceId: UInt, l: (String) -
     private fun buildKairumoManual(
         context: Context, deviceId: UInt, languageTag: String, l: (String) -> String
     ): Boolean {
-        // 繁體中文是手寫版；其他語言是同一套手繪插圖＋該語言排版的文字方塊
-        // （手寫只有繁中：筆順資料只有漢字，沒有假名、諺文、泰文）。
+        // 繁體與簡體中文是手寫版；其他語言是同一套手繪插圖＋該語言排版的文字方塊
+        // （手寫需要筆順資料：只有漢字，沒有假名、諺文、泰文）。
         val tag = languageTag
-        val typed = tag != "zh-Hant"
-        val resource = if (typed) "seed/kairumo-manual-typed.json" else "seed/kairumo-manual-ink.json"
+        val typed = tag != "zh-Hant" && tag != "zh-Hans"
+        val resource = when {
+            typed -> "seed/kairumo-manual-typed.json"
+            tag == "zh-Hans" -> "seed/kairumo-manual-ink-zhHans.json"
+            else -> "seed/kairumo-manual-ink.json"
+        }
         val root = runCatching {
             org.json.JSONObject(context.assets.open(resource).bufferedReader().use { it.readText() })
         }.getOrNull() ?: return false
@@ -1043,7 +1047,7 @@ private fun buildFeatureShowcase(context: Context, deviceId: UInt, l: (String) -
         }
 
         if (typed) {
-            val perPage = root.optJSONObject("texts")?.optJSONArray(tag.replace("-", ""))
+            val perPage = root.optJSONObject("texts")?.optJSONArray(tag)
             if (perPage != null) {
                 for (index in 0 until minOf(perPage.length(), pages.size)) {
                     val boxes = perPage.getJSONArray(index)

@@ -14451,7 +14451,7 @@ object LocalizationStrings {
         "seed_manual_snippet" to mapOf(
             "zh-Hant" to "Kairumo 優勢：結構化、視覺化、多語言 —— 全部手繪",
             "en" to "Kairumo’s advantages: structured, visual and multilingual",
-            "zh-Hans" to "Kairumo 优势：结构化、视觉化、多语言",
+            "zh-Hans" to "Kairumo 优势：结构化、视觉化、多语言 —— 全部手绘",
             "ja" to "Kairumo の強み: 構造化・視覚化・多言語",
             "ko" to "Kairumo의 강점: 체계적 구성, 시각화, 다국어",
             "th" to "จุดเด่นของ Kairumo: เป็นระบบ เห็นภาพ หลายภาษา"

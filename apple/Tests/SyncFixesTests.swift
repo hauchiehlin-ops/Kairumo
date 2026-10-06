@@ -403,10 +403,22 @@ final class KairumoManualSeedTests: XCTestCase {
         }
     }
 
-    func testTheTraditionalChineseManualIsInkOnlyAndUsesDifferentColoursPerSection() {
+    /// 繁體與簡體中文都是手寫版：沒有任何文字方塊，每一頁筆畫夠多，每個段落有自己的顏色。
+    func testTheChineseManualsAreInkOnlyAndUseDifferentColoursPerSection() {
+        for language in [AppLanguage.zhHant, .zhHans] {
+            assertInkOnlyManual(language)
+        }
+    }
+
+    private func assertInkOnlyManual(_ language: AppLanguage) {
         let saved = LocalizationManager.snapshotLanguage
         defer { LocalizationManager.snapshotLanguage = saved }
-        LocalizationManager.snapshotLanguage = .zhHant
+        LocalizationManager.snapshotLanguage = language
+        let drawings = SeedContent.kairumoManualDrawings(language: language)
+        XCTAssertEqual(drawings.count, 4, "\(language)")
+        for (index, drawing) in drawings.enumerated() {
+            XCTAssertGreaterThan(drawing.strokes.count, 100, "\(language) 第 \(index + 1) 頁的筆畫太少")
+        }
         var doc = NotebookDocument(id: SeedContent.kairumoManualId, title: SeedContent.kairumoManualTitle, pageCount: 4)
         SeedContent.fillKairumoManual(&doc)
         XCTAssertEqual(doc.pageCount, 4)
@@ -414,7 +426,7 @@ final class KairumoManualSeedTests: XCTestCase {
         XCTAssertTrue((doc.shapeAttachments ?? []).isEmpty)
         XCTAssertTrue((doc.attachments ?? []).isEmpty)
         XCTAssertTrue((doc.tableAttachments ?? []).isEmpty)
-        let colours = Set(SeedContent.kairumoManualDrawings().flatMap { $0.strokes }.map { stroke -> String in
+        let colours = Set(drawings.flatMap { $0.strokes }.map { stroke -> String in
             var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
             stroke.ink.color.getRed(&r, green: &g, blue: &b, alpha: &a)
             return String(format: "%02x%02x%02x", Int(r * 255), Int(g * 255), Int(b * 255))
@@ -422,11 +434,11 @@ final class KairumoManualSeedTests: XCTestCase {
         XCTAssertGreaterThanOrEqual(colours.count, 5, "每個段落要有自己的顏色")
     }
 
-    /// 其他語言：同一套手繪插圖＋該語言排版的文字方塊（手寫只有繁中：筆順資料只有漢字）。
+    /// 英／日／韓／泰：同一套手繪插圖＋該語言排版的文字方塊（手寫只有中文：筆順資料只有漢字）。
     func testEveryOtherLanguageGetsTheSameIllustrationsWithTypedText() {
         let saved = LocalizationManager.snapshotLanguage
         defer { LocalizationManager.snapshotLanguage = saved }
-        for language in [AppLanguage.en, .zhHans, .ja, .ko, .th] {
+        for language in [AppLanguage.en, .ja, .ko, .th] {
             LocalizationManager.snapshotLanguage = language
             var doc = NotebookDocument(id: SeedContent.kairumoManualId, title: "x", pageCount: 4)
             SeedContent.fillKairumoManual(&doc)
@@ -435,12 +447,10 @@ final class KairumoManualSeedTests: XCTestCase {
             for page in 0..<4 {
                 XCTAssertFalse(texts.filter { $0.pageIndex == page }.isEmpty, "\(language) 第 \(page + 1) 頁沒有文字方塊")
             }
-            // 沒有任何中文以外語言的頁面混進手寫的中文字：文字方塊裡不該出現另一種語言的標題。
-            if language != .zhHans {
-                let han = texts.map(\.text).joined().unicodeScalars.filter { (0x4E00...0x9FFF).contains($0.value) }
-                if language == .en || language == .th || language == .ko {
-                    XCTAssertTrue(han.isEmpty, "\(language) 的手冊文字裡混進了漢字")
-                }
+            // 英／韓／泰的文字方塊裡不該混進漢字（日文本來就有漢字）。
+            let han = texts.map(\.text).joined().unicodeScalars.filter { (0x4E00...0x9FFF).contains($0.value) }
+            if language == .en || language == .th || language == .ko {
+                XCTAssertTrue(han.isEmpty, "\(language) 的手冊文字裡混進了漢字")
             }
         }
     }
