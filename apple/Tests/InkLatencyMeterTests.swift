@@ -99,7 +99,8 @@ final class InkLatencyMeterTests: XCTestCase {
         let summary = meter.summaryMs()
         XCTAssertTrue(summary.contains("p50"), summary)
         XCTAssertTrue(summary.contains("p95"), summary)
-        XCTAssertTrue(summary.contains("3 樣本"), summary)
+        // 「樣本」這個詞跟著語言走；數字 3 一定在。
+        XCTAssertTrue(summary.contains(" 3 "), summary)
         XCTAssertTrue(summary.contains("ms"), summary)
     }
 
@@ -116,9 +117,10 @@ final class InkLatencyMeterTests: XCTestCase {
         // 出問題時要看得到輸入本身長什麼樣 —— 是筆還是手指、有沒有壓力、
         // 有沒有取到中間的取樣點。
         let labels = InkInputDiagnostics().lines().map(\.0)
-        XCTAssertTrue(labels.contains("輸入裝置"))
-        XCTAssertTrue(labels.contains("壓力"))
-        XCTAssertTrue(labels.contains("聯合取樣點"), "快速書寫變折線就是靠這個數字發現的")
-        XCTAssertTrue(labels.contains("筆尖延遲"))
+        // 標籤跟著介面語言走，所以比對的是語系鍵翻出來的字，不是寫死的中文。
+        XCTAssertTrue(labels.contains(L10n.t("diag_input_device")))
+        XCTAssertTrue(labels.contains(L10n.t("diag_pressure")))
+        XCTAssertTrue(labels.contains(L10n.t("diag_coalesced")), "快速書寫變折線就是靠這個數字發現的")
+        XCTAssertTrue(labels.contains(L10n.t("diag_tip_latency")))
     }
 }

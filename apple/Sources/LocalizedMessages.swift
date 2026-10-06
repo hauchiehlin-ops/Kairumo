@@ -42,16 +42,72 @@ extension L10n {
 }
 
 extension L10n {
-    /// 核心（Rust）丟出來的錯誤訊息是**中文**（開發語言）。其他語言的使用者看到一串看不懂的中文
-    /// 沒有任何幫助，所以非中文介面改顯示通用訊息（細節仍在日誌裡）。
+    /// 核心（Rust）丟出來的錯誤訊息是**中文**（開發語言）。使用者看到的語言由介面決定，所以在這個
+    /// 「介面邊界」依 `CoreMessagePatterns`（產生自 `i18n/core-patterns.json`）比對訊息、換成使用者語系的句子，
+    /// 動態的部分（檔名、數字、內層的錯誤）原樣帶進去，內層若又是核心訊息就遞迴翻譯。
+    ///
+    /// - 繁體中文：原樣。
+    /// - 其他語言：比得到就翻；整句都比不到而且含漢字，才退成通用訊息（細節仍在日誌裡）。
+    ///   `scripts/core_messages.py check` 保證核心裡的每一條訊息都有收錄，所以退成通用訊息只會發生在
+    ///   系統或第三方函式庫丟出來的字串。
     ///
     /// 只用在「確定是核心產生的字串」上。Swift 這邊組的訊息本來就已經在地化，不要經過這裡
     /// （日文也有漢字，看漢字判斷會誤殺）。
     public static func coreText(_ message: String) -> String {
         let lang = LocalizationManager.snapshotLanguage
-        if lang == .zhHant || lang == .zhHans { return message }
+        if lang == .zhHant { return message }
+        if let translated = translateCore(message, lang) { return translated }
+        if lang == .zhHans { return message }
         let hasCJK = message.unicodeScalars.contains { (0x3400...0x9FFF).contains($0.value) }
         return hasCJK ? t("error_generic") : message
+    }
+
+    /// 同步日誌的一行：依樣式翻成目前語言，比不到就原樣（日誌是給人看狀況的，不像錯誤訊息要退成通用句）。
+    public static func logText(_ message: String) -> String {
+        let lang = LocalizationManager.snapshotLanguage
+        if lang == .zhHant { return message }
+        return translateCore(message, lang) ?? message
+    }
+
+    private static let corePatterns: [(key: String, regex: NSRegularExpression)] =
+        CoreMessagePatterns.all.compactMap { entry in
+            let body = entry.parts.map { NSRegularExpression.escapedPattern(for: $0) }.joined(separator: "(.*?)")
+            guard let regex = try? NSRegularExpression(pattern: "^" + body + "$", options: [.dotMatchesLineSeparators])
+            else { return nil }
+            return (entry.key, regex)
+        }
+
+    private static func collapseSpaces(_ s: String) -> String {
+        s.replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
+            .trimmingCharacters(in: .whitespaces)
+    }
+
+    private static func translateCore(_ message: String, _ lang: AppLanguage) -> String? {
+        let text = collapseSpaces(message)
+        let whole = NSRange(text.startIndex..., in: text)
+        for (key, regex) in corePatterns {
+            guard let match = regex.firstMatch(in: text, options: [], range: whole) else { continue }
+            var args: [String] = []
+            for i in 1..<max(match.numberOfRanges, 1) {
+                guard let r = Range(match.range(at: i), in: text) else { args.append(""); continue }
+                args.append(translateFragment(String(text[r]), lang))
+            }
+            var out = LocalizationManager.localizedString(key)
+            for (i, value) in args.enumerated() { out = out.replacingOccurrences(of: "%\(i + 1)@", with: value) }
+            return out
+        }
+        return nil
+    }
+
+    /// 動態片段：本身可能又是核心訊息，或是一串用「、」連起來的名稱（例如「需要：麥克風、手寫辨識」）。
+    private static func translateFragment(_ fragment: String, _ lang: AppLanguage) -> String {
+        if let inner = translateCore(fragment, lang) { return inner }
+        if fragment.contains("、") {
+            let separator = (lang == .ja || lang == .zhHans || lang == .zhHant) ? "、" : ", "
+            return fragment.components(separatedBy: "、")
+                .map { translateCore($0, lang) ?? $0 }.joined(separator: separator)
+        }
+        return fragment
     }
 
     /// 使用者看得到的錯誤文字：核心的錯誤（UniFFI 產生的 `Ffi*` 型別）走 `coreText`，

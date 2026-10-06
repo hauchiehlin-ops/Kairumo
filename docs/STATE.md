@@ -515,16 +515,52 @@ Markdown / SVG 匯出 · 手寫辨識 fallback 鏈 · 引擎與權限中心狀�
 
 ## 介面多語系稽核（2026-10-06）
 
-範圍：程式介面、工具快顯提示（tooltip／無障礙標籤）、警告與錯誤、通知。
-- **做法**：所有使用者看得到的文字走 `i18n/ui-strings.json`（六語，約 2100 條），Swift 用 `L10n.t/f`（`apple/Sources/LocalizedMessages.swift`），
+範圍：程式介面、工具快顯提示（tooltip／無障礙標籤）、警告與錯誤、通知、診斷畫面、同步日誌、預載手冊。
+- **做法**：所有使用者看得到的文字走 `i18n/ui-strings.json`（六語，約 2450 條），Swift 用 `L10n.t/f`（`apple/Sources/LocalizedMessages.swift`），
   Kotlin 用 `L10n`（`LocalizedMessages.kt`）；同步訊息走 `SyncText`。錯誤訊息以「⚠️ 」前綴標記，不再用中文子字串判斷是否為錯誤。
-- **閘門**：`scripts/check-hardcoded-strings.py` 已擴充（訊息接收端、log、持久化 id、英文呼叫）；刻意不翻的用 `i18n-ok` 標記。
-- **核心 Rust 的診斷訊息仍是中文**（約 150 條）：不改寫 Rust 字串，而是在 UI 邊界用 `L10n.coreText/errorText` 辨識後換成通用的 `error_generic`
-  （非繁中介面時）。代價：非繁中使用者看到的是「發生錯誤」而不是具體原因。
-- **已知缺口**：診斷畫面與同步日誌仍是中文；區網同步的協定訊息是中文；手寫的《Kairumo手冊》只有中文；**App 沒有任何系統通知**（沒有可翻的東西）；
-  新增的譯文沒有母語者審閱。
-- **PDF 排版引擎只用 Noto Sans Thai 在正式輸出路徑上**；其他字型（含 CFF／OTTO）引擎讀得動，但 PDF 寫出端還只會嵌 TrueType 外框，要嵌其他字型須再做 FontFile3。
-  `scripts/verify-otl-coretext.py`（僅 macOS，不在 CI）把引擎輸出與 CoreText 逐字形比對：28 組全部一致；可變字型只比字形編號、希伯來文（從右到左）只比字形，引擎沒有雙向排版。
+- **閘門**：`check-hardcoded-strings.py`（訊息接收端、log、持久化 id、英文呼叫；刻意不翻的用 `i18n-ok`）、
+  `i18n_tool.py verify`、`core_messages.py check`、`i18n_review.py lint`，都在 CI。
+
+### 核心（Rust）的診斷訊息 —— 已解決
+核心的錯誤訊息仍是繁體中文（開發語言），但**不再退成通用錯誤**：`i18n/core-patterns.json` 登記了 222 條樣式（`{}` = 動態片段），
+譯文在 `ui-strings.json`（鍵 `core_msg_NNN`，六語）。兩端在介面邊界（`L10n.coreText`／`errorText`）依樣式比對、換成使用者語言：
+動態片段（檔名、數字）原樣帶入，內層若又是核心訊息就遞迴翻譯，「、」連起來的清單逐項翻。
+`scripts/core_messages.py check` 掃 Rust 原始碼，**新增一條中文訊息沒登記就紅**；整句比不到而且含漢字（只會是系統或第三方函式庫的字串）才退成通用訊息。
+簡體中文也走這套（原本直接顯示繁體）。
+
+### 同步日誌 —— 已解決
+日誌行仍以中文寫進 `SyncLogger`，**顯示時**才依樣式翻（`L10n.logText`；81 條，另含授權流程訊息），比不到就原樣（不像錯誤訊息退成通用句）。
+`core_messages.py check` 也掃日誌來源檔（`LOG_SOURCES`）：每一條中文字面值都必須是某個樣式的一段。匯出日誌檔（給開發者）保留原文。
+
+### 區網／中繼協定訊息 —— 使用者看不到
+中繼伺服器（Rust `padnote-relay`、Apple 的 `LocalRelayServer`）回的 `error`／`reason` 文字是中文，但兩端客戶端**從來不顯示它**
+（`CollaborationManager` 收到 `error` 型別直接忽略；`room_closed` 只斷線），行為由 `code`／`type` 決定。所以這些中文只存在於協定與服務端日誌，不是使用者介面。
+若日後要把伺服器訊息顯示出來，必須走 `L10n.coreText`（樣式已收錄）。
+
+### 診斷畫面 —— 已解決
+Android 核心狀態畫面與兩端的筆輸入診斷（壓力、傾角、延遲）改用 `diag_*` 鍵（34 條）。
+
+### 《Kairumo手冊》—— 部分解決
+- **繁體中文**：手寫版不變（筆順來自 makemeahanzi，逐位元組與之前相同）。
+- **其他語言（簡中／英／日／韓／泰）**：同一套手繪插圖 + 該語言排版的文字方塊（`assets/seed/kairumo-manual-typed.json`，由 `manual.py` 的 `build_typed` 產生；
+  文字在 `manual_text.py` 的 `TYPED`）。插圖逐點相同（腳本斷言），文字位置與繁中版的手寫字一一對應、放不下會自動縮字級。
+- **名稱與摘要跟著語言**（`seed_manual_title`／`seed_manual_snippet`），舊使用者的「Kairumo手冊」也會認出來補上語系鍵。
+- **做不到的部分**：非繁中版**不是手寫**。手寫需要筆順中線資料，makemeahanzi 只有漢字、沒有假名／諺文／泰文；簡體字雖有，但要再下載一次資料集（下載要使用者同意），所以簡中也用排版文字。
+  已經植入過的手冊內容不會隨語言切換重做（那是使用者的筆記）；只有名稱會變。
+
+### 母語者審閱 —— **尚未發生**
+所有非繁中譯文都是開發者撰寫、機器輔助，**沒有任何母語者審閱過**（`python3 scripts/i18n_review.py status` 全部 0%）。
+能由機器做的檢查已經做了：`i18n_review.py lint`（佔位符與原文一致、沒有混入別種文字、沒有缺譯文；抓到並修了一處韓文裡混入的「筆」）。
+審閱流程已備好：`export <語言>` 產生 `docs/i18n-review/<語言>.tsv` 給審閱者填，`apply` 把修改寫回並登記審閱者與日期；繁中原文改了，舊審閱自動視為過期。
+
+### 仍然是中文／未翻的地方（刻意或無法）
+- Rust 微服務 `padnote-relay` 的 stdout 日誌、核心的 `expect`／`panic` 訊息（給開發者）。
+- 匯出 Markdown 裡的標記（「[手寫內容 — 見 PDF 匯出]」等）：App 目前沒有任何地方呼叫 Markdown 匯出。
+- 系統或第三方函式庫丟出來的錯誤字串（作業系統本身的語言）。
+
+### PDF 排版引擎與 CoreText 比對
+PDF 排版引擎只用 Noto Sans Thai 在正式輸出路徑上；其他字型（含 CFF／OTTO）引擎讀得動，但 PDF 寫出端還只會嵌 TrueType 外框，要嵌其他字型須再做 FontFile3。
+`scripts/verify-otl-coretext.py`（僅 macOS，不在 CI）把引擎輸出與 CoreText 逐字形比對：28 組全部一致；可變字型只比字形編號、希伯來文（從右到左）只比字形，引擎沒有雙向排版。
 
 ### UI 測試的已知不穩（不是程式碼問題）
 - 整批跑 `xcodebuild test` 時，`KairumoUITests` 會因 **XCTAutomationSupport 在日誌被系統隔離時崩潰**（堆疊：`runtime_issue_os_log_fault_callback` → `_platform_strcmp`）而掉一批測試

@@ -292,14 +292,19 @@ enum SeedContent {
     static let kairumoManualId = "seed-kairumo-manual-v1"
     static let kairumoManualTitle = "Kairumo手冊"
 
-    /// 手冊每一頁的筆畫。讀不到資源就回空陣列（筆記本仍然建立，只是空白）。
-    static func kairumoManualDrawings() -> [PKDrawing] {
-        guard let url = Bundle.main.url(forResource: "kairumo-manual-ink", withExtension: "json", subdirectory: "Templates")
-            ?? Bundle.main.url(forResource: "kairumo-manual-ink", withExtension: "json"),
+    /// 讀手冊的 JSON 資源（`Resources/Templates` 或 bundle 根目錄）。
+    private static func manualJSON(_ name: String) -> [String: Any]? {
+        guard let url = Bundle.main.url(forResource: name, withExtension: "json", subdirectory: "Templates")
+            ?? Bundle.main.url(forResource: name, withExtension: "json"),
               let data = try? Data(contentsOf: url),
-              let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let pages = root["pages"] as? [[String: Any]]
-        else { return [] }
+              let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+        else { return nil }
+        return root
+    }
+
+    /// 把 JSON 的每一頁筆畫變成 `PKDrawing`。
+    private static func manualDrawings(from root: [String: Any]) -> [PKDrawing] {
+        guard let pages = root["pages"] as? [[String: Any]] else { return [] }
         return pages.map { page in
             var strokes: [PKStroke] = []
             for raw in (page["strokes"] as? [[String: Any]]) ?? [] {
@@ -315,6 +320,48 @@ enum SeedContent {
             }
             return PKDrawing(strokes: strokes)
         }
+    }
+
+    /// 手冊每一頁的筆畫（繁體中文版：標題與內文都是手寫）。讀不到資源就回空陣列
+    /// （筆記本仍然建立，只是空白）。
+    static func kairumoManualDrawings() -> [PKDrawing] {
+        manualDrawings(from: manualJSON("kairumo-manual-ink") ?? [:])
+    }
+
+    /// 其他語言的手冊：同一套手繪插圖＋該語言排版的文字方塊（`kairumo-manual-typed.json`）。
+    ///
+    /// 手寫只有繁體中文：筆順資料只有漢字，沒有假名、諺文、泰文。位置與繁中版的手寫字一一對應。
+    static func kairumoManualTyped(language: AppLanguage) -> (drawings: [PKDrawing], texts: [NoteTextAttachment])? {
+        guard let root = manualJSON("kairumo-manual-typed"),
+              let all = root["texts"] as? [String: Any],
+              let perPage = all[typedKey(language)] as? [[[String: Any]]]
+        else { return nil }
+        var texts: [NoteTextAttachment] = []
+        for (pageIndex, boxes) in perPage.enumerated() {
+            for b in boxes {
+                guard let text = b["text"] as? String,
+                      let x = (b["x"] as? NSNumber)?.doubleValue, let y = (b["y"] as? NSNumber)?.doubleValue,
+                      let w = (b["w"] as? NSNumber)?.doubleValue, let h = (b["h"] as? NSNumber)?.doubleValue,
+                      let size = (b["size"] as? NSNumber)?.doubleValue
+                else { continue }
+                texts.append(NoteTextAttachment(
+                    pageIndex: pageIndex,
+                    text: text,
+                    fontSize: CGFloat(size),
+                    isBold: (b["bold"] as? Bool) ?? false,
+                    alignmentRaw: (b["align"] as? String) ?? "left",
+                    textColorHex: (b["color"] as? String) ?? "#2D3748",
+                    backgroundColorHex: "clear",
+                    hasBorder: false,
+                    x: CGFloat(x), y: CGFloat(y), width: CGFloat(w), height: CGFloat(h)
+                ))
+            }
+        }
+        return (manualDrawings(from: root), texts)
+    }
+
+    private static func typedKey(_ language: AppLanguage) -> String {
+        language == .zhHans ? "zhHans" : language.rawValue
     }
 
     /// 起筆與收筆輕、中段重 —— 手寫的筆壓，不是等粗的線。
@@ -335,8 +382,15 @@ enum SeedContent {
     }
 
     /// 填進《Kairumo手冊》。
+    ///
+    /// 繁體中文是手寫版；其他語言是同一套插圖＋排版文字（見 `kairumoManualTyped`）。
     static func fillKairumoManual(_ doc: inout NotebookDocument, store: NotebookStore? = nil) {
-        let drawings = kairumoManualDrawings()
+        let language = LocalizationManager.snapshotLanguage
+        var drawings = kairumoManualDrawings()
+        if language != .zhHant, let typed = kairumoManualTyped(language: language) {
+            drawings = typed.drawings
+            doc.textAttachments = typed.texts
+        }
         ensurePages(&doc, count: max(2, drawings.count))
         for (index, drawing) in drawings.enumerated() where index < doc.pagesData.count {
             doc.pagesData[index] = drawing.dataRepresentation()

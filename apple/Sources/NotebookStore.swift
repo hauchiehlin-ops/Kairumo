@@ -1468,7 +1468,8 @@ public final class NotebookStore: ObservableObject {
     private static let legacySeedTitles: [String: (title: String, snippet: String)] = [
         LocalizationManager.shared.localized("sample_welcome"): ("seed_welcome_title", "seed_welcome_snippet"),
         "课堂与会议记录": ("seed_meeting_title", "seed_meeting_snippet"),
-        LocalizationManager.shared.localized("sample_lectures"): ("seed_meeting_title", "seed_meeting_snippet")
+        LocalizationManager.shared.localized("sample_lectures"): ("seed_meeting_title", "seed_meeting_snippet"),
+        SeedContent.kairumoManualTitle: ("seed_manual_title", "seed_manual_snippet")
     ]
 
     private func migrateSeedTitles(_ doc: NotebookDocument) -> NotebookDocument {
@@ -1994,7 +1995,7 @@ public final class NotebookStore: ObservableObject {
     private static let manualSeededKey = "seed.kairumoManual.added"
 
     private static func makeKairumoManual() -> NotebookDocument {
-        NotebookDocument(
+        var manual = NotebookDocument(
             id: SeedContent.kairumoManualId,
             title: SeedContent.kairumoManualTitle,
             createdAt: Date().addingTimeInterval(-600),
@@ -2004,6 +2005,10 @@ public final class NotebookStore: ObservableObject {
             previewSnippet: "Kairumo 優勢：結構化、視覺化、多語言 —— 全部手繪",
             template: .blank
         )
+        // 標題與摘要跟著介面語言走（使用者改名後這個標記就會清掉）。
+        manual.titleKey = "seed_manual_title"
+        manual.snippetKey = "seed_manual_snippet"
+        return manual
     }
 
     // MARK: - 筆記操作 CRUD

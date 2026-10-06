@@ -5582,7 +5582,7 @@ public struct CloudSyncDetailSheet: View {
 
                                     sourceBadge(entry.source)
 
-                                    Text(entry.message)
+                                    Text(L10n.logText(entry.message))
                                         .foregroundColor(.primary)
                                 }
                                 .font(.system(size: 11, design: .monospaced))

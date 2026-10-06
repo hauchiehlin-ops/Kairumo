@@ -38,6 +38,10 @@ object LocalizationStrings {
             putAll(part24())
             putAll(part25())
             putAll(part26())
+            putAll(part27())
+            putAll(part28())
+            putAll(part29())
+            putAll(part30())
         }
     }
 
@@ -2902,6 +2906,1791 @@ object LocalizationStrings {
             "ko" to "Rust Core 엔진",
             "th" to "เอนจิน Rust Core"
         ),
+        "core_msg_001" to mapOf(
+            "zh-Hant" to "模型尚未下載或載入",
+            "en" to "The model has not been downloaded or loaded yet",
+            "zh-Hans" to "模型尚未下载或加载",
+            "ja" to "モデルがまだダウンロードまたは読み込まれていません",
+            "ko" to "모델이 아직 다운로드되거나 로드되지 않았습니다",
+            "th" to "ยังไม่ได้ดาวน์โหลดหรือโหลดโมเดล"
+        ),
+        "core_msg_002" to mapOf(
+            "zh-Hant" to "不支援的語言：%1@",
+            "en" to "Unsupported language: %1@",
+            "zh-Hans" to "不支持的语言：%1@",
+            "ja" to "サポートされていない言語: %1@",
+            "ko" to "지원하지 않는 언어: %1@",
+            "th" to "ไม่รองรับภาษา: %1@"
+        ),
+        "core_msg_003" to mapOf(
+            "zh-Hant" to "後端錯誤：%1@",
+            "en" to "Backend error: %1@",
+            "zh-Hans" to "后端错误：%1@",
+            "ja" to "バックエンドのエラー: %1@",
+            "ko" to "백엔드 오류: %1@",
+            "th" to "ข้อผิดพลาดของส่วนหลังบ้าน: %1@"
+        ),
+        "core_msg_004" to mapOf(
+            "zh-Hant" to "標點模型尚未下載或載入",
+            "en" to "The punctuation model has not been downloaded or loaded yet",
+            "zh-Hans" to "标点模型尚未下载或加载",
+            "ja" to "句読点モデルがまだダウンロードまたは読み込まれていません",
+            "ko" to "문장 부호 모델이 아직 다운로드되거나 로드되지 않았습니다",
+            "th" to "ยังไม่ได้ดาวน์โหลดหรือโหลดโมเดลเครื่องหมายวรรคตอน"
+        ),
+        "core_msg_005" to mapOf(
+            "zh-Hant" to "標點還原失敗：%1@",
+            "en" to "Punctuation restoration failed: %1@",
+            "zh-Hans" to "标点还原失败：%1@",
+            "ja" to "句読点の復元に失敗しました: %1@",
+            "ko" to "문장 부호 복원에 실패했습니다: %1@",
+            "th" to "คืนค่าเครื่องหมายวรรคตอนไม่สำเร็จ: %1@"
+        ),
+        "core_msg_006" to mapOf(
+            "zh-Hant" to "找不到模型檔：%1@",
+            "en" to "Model file not found: %1@",
+            "zh-Hans" to "找不到模型文件：%1@",
+            "ja" to "モデルファイルが見つかりません: %1@",
+            "ko" to "모델 파일을 찾을 수 없습니다: %1@",
+            "th" to "ไม่พบไฟล์โมเดล: %1@"
+        ),
+        "core_msg_007" to mapOf(
+            "zh-Hant" to "模型資源格式錯誤：%1@",
+            "en" to "Invalid model resource format: %1@",
+            "zh-Hans" to "模型资源格式错误：%1@",
+            "ja" to "モデルリソースの形式が正しくありません: %1@",
+            "ko" to "모델 리소스 형식이 올바르지 않습니다: %1@",
+            "th" to "รูปแบบทรัพยากรโมเดลไม่ถูกต้อง: %1@"
+        ),
+        "core_msg_008" to mapOf(
+            "zh-Hant" to "ONNX Runtime 錯誤：%1@",
+            "en" to "ONNX Runtime error: %1@",
+            "zh-Hans" to "ONNX Runtime 错误：%1@",
+            "ja" to "ONNX Runtime のエラー: %1@",
+            "ko" to "ONNX Runtime 오류: %1@",
+            "th" to "ข้อผิดพลาดของ ONNX Runtime: %1@"
+        ),
+        "core_msg_009" to mapOf(
+            "zh-Hant" to "am.mvn 解析失敗",
+            "en" to "Failed to parse am.mvn",
+            "zh-Hans" to "am.mvn 解析失败",
+            "ja" to "am.mvn の解析に失敗しました",
+            "ko" to "am.mvn 파싱에 실패했습니다",
+            "th" to "แยกวิเคราะห์ am.mvn ไม่สำเร็จ"
+        ),
+        "core_msg_010" to mapOf(
+            "zh-Hant" to "Opus 編碼失敗：%1@",
+            "en" to "Opus encoding failed: %1@",
+            "zh-Hans" to "Opus 编码失败：%1@",
+            "ja" to "Opus のエンコードに失敗しました: %1@",
+            "ko" to "Opus 인코딩에 실패했습니다: %1@",
+            "th" to "เข้ารหัส Opus ไม่สำเร็จ: %1@"
+        ),
+        "core_msg_011" to mapOf(
+            "zh-Hant" to "音框長度錯誤：得到 %1@ 個樣本，應為 %2@",
+            "en" to "Wrong audio frame length: got %1@ samples, expected %2@",
+            "zh-Hans" to "音频帧长度错误：得到 %1@ 个样本，应为 %2@",
+            "ja" to "オーディオフレームの長さが正しくありません: %1@ サンプル（期待値 %2@）",
+            "ko" to "오디오 프레임 길이가 올바르지 않습니다: %1@개 샘플(필요: %2@개)",
+            "th" to "ความยาวเฟรมเสียงไม่ถูกต้อง: ได้ %1@ ตัวอย่าง ควรเป็น %2@"
+        ),
+        "core_msg_012" to mapOf(
+            "zh-Hant" to "IO 錯誤：%1@",
+            "en" to "I/O error: %1@",
+            "zh-Hans" to "IO 错误：%1@",
+            "ja" to "入出力エラー: %1@",
+            "ko" to "입출력 오류: %1@",
+            "th" to "ข้อผิดพลาดการอ่าน/เขียน: %1@"
+        ),
+        "core_msg_013" to mapOf(
+            "zh-Hant" to "圖表設定格式錯誤：%1@",
+            "en" to "Invalid chart settings: %1@",
+            "zh-Hans" to "图表设置格式错误：%1@",
+            "ja" to "グラフの設定形式が正しくありません: %1@",
+            "ko" to "차트 설정 형식이 올바르지 않습니다: %1@",
+            "th" to "รูปแบบการตั้งค่าแผนภูมิไม่ถูกต้อง: %1@"
+        ),
+        "core_msg_014" to mapOf(
+            "zh-Hant" to "圖表沒有任何資料數列",
+            "en" to "The chart has no data series",
+            "zh-Hans" to "图表没有任何数据数列",
+            "ja" to "グラフにデータ系列がありません",
+            "ko" to "차트에 데이터 계열이 없습니다",
+            "th" to "แผนภูมิไม่มีชุดข้อมูล"
+        ),
+        "core_msg_015" to mapOf(
+            "zh-Hant" to "圖表的資料數列都是空的",
+            "en" to "All data series in the chart are empty",
+            "zh-Hans" to "图表的数据数列都是空的",
+            "ja" to "グラフのデータ系列がすべて空です",
+            "ko" to "차트의 데이터 계열이 모두 비어 있습니다",
+            "th" to "ชุดข้อมูลในแผนภูมิว่างเปล่าทั้งหมด"
+        ),
+        "core_msg_016" to mapOf(
+            "zh-Hant" to "已經在錄音中",
+            "en" to "Already recording",
+            "zh-Hans" to "已经在录音中",
+            "ja" to "すでに録音中です",
+            "ko" to "이미 녹음 중입니다",
+            "th" to "กำลังบันทึกเสียงอยู่แล้ว"
+        ),
+        "core_msg_017" to mapOf(
+            "zh-Hant" to "目前沒有錄音",
+            "en" to "Not recording",
+            "zh-Hans" to "目前没有录音",
+            "ja" to "録音していません",
+            "ko" to "녹음 중이 아닙니다",
+            "th" to "ไม่ได้บันทึกเสียงอยู่"
+        ),
+        "core_msg_018" to mapOf(
+            "zh-Hant" to "找不到頁面：%1@",
+            "en" to "Page not found: %1@",
+            "zh-Hans" to "找不到页面：%1@",
+            "ja" to "ページが見つかりません: %1@",
+            "ko" to "페이지를 찾을 수 없습니다: %1@",
+            "th" to "ไม่พบหน้า: %1@"
+        ),
+        "core_msg_019" to mapOf(
+            "zh-Hant" to "找不到區塊：%1@",
+            "en" to "Block not found: %1@",
+            "zh-Hans" to "找不到区块：%1@",
+            "ja" to "ブロックが見つかりません: %1@",
+            "ko" to "블록을 찾을 수 없습니다: %1@",
+            "th" to "ไม่พบบล็อก: %1@"
+        ),
+        "core_msg_020" to mapOf(
+            "zh-Hant" to "找不到里程碑：%1@",
+            "en" to "Milestone not found: %1@",
+            "zh-Hans" to "找不到里程碑：%1@",
+            "ja" to "マイルストーンが見つかりません: %1@",
+            "ko" to "마일스톤을 찾을 수 없습니다: %1@",
+            "th" to "ไม่พบจุดสำคัญ: %1@"
+        ),
+        "core_msg_021" to mapOf(
+            "zh-Hant" to "不支援的格式：%1@",
+            "en" to "Unsupported format: %1@",
+            "zh-Hans" to "不支持的格式：%1@",
+            "ja" to "サポートされていない形式: %1@",
+            "ko" to "지원하지 않는 형식: %1@",
+            "th" to "ไม่รองรับรูปแบบ: %1@"
+        ),
+        "core_msg_022" to mapOf(
+            "zh-Hant" to "簡報（%1@ 張投影片）",
+            "en" to "Presentation (%1@ slides)",
+            "zh-Hans" to "演示文稿（%1@ 张投视频）",
+            "ja" to "プレゼンテーション（%1@ 枚のスライド）",
+            "ko" to "프레젠테이션(슬라이드 %1@장)",
+            "th" to "งานนำเสนอ (%1@ สไลด์)"
+        ),
+        "core_msg_023" to mapOf(
+            "zh-Hant" to "簡報（無法讀取：%1@）",
+            "en" to "Presentation (cannot be read: %1@)",
+            "zh-Hans" to "演示文稿（无法读取：%1@）",
+            "ja" to "プレゼンテーション（読み取れません: %1@）",
+            "ko" to "프레젠테이션(읽을 수 없음: %1@)",
+            "th" to "งานนำเสนอ (อ่านไม่ได้: %1@)"
+        ),
+        "core_msg_024" to mapOf(
+            "zh-Hant" to "blob id 無法解析：%1@",
+            "en" to "Cannot parse blob id: %1@",
+            "zh-Hans" to "blob id 无法解析：%1@",
+            "ja" to "blob id を解析できません: %1@",
+            "ko" to "blob id를 해석할 수 없습니다: %1@",
+            "th" to "แยกวิเคราะห์ blob id ไม่ได้: %1@"
+        ),
+        "core_msg_025" to mapOf(
+            "zh-Hant" to "變換矩陣必須是 6 個數字",
+            "en" to "The transform matrix must have 6 numbers",
+            "zh-Hans" to "变换矩阵必须是 6 个数字",
+            "ja" to "変換行列は 6 つの数値である必要があります",
+            "ko" to "변환 행렬은 숫자 6개여야 합니다",
+            "th" to "เมทริกซ์การแปลงต้องมีตัวเลข 6 ตัว"
+        ),
+        "core_msg_026" to mapOf(
+            "zh-Hant" to "變換矩陣無效",
+            "en" to "Invalid transform matrix",
+            "zh-Hans" to "变换矩阵无效",
+            "ja" to "変換行列が無効です",
+            "ko" to "변환 행렬이 올바르지 않습니다",
+            "th" to "เมทริกซ์การแปลงไม่ถูกต้อง"
+        ),
+        "core_msg_027" to mapOf(
+            "zh-Hant" to "找不到指定頁面：%1@",
+            "en" to "The specified page was not found: %1@",
+            "zh-Hans" to "找不到指定页面：%1@",
+            "ja" to "指定されたページが見つかりません: %1@",
+            "ko" to "지정한 페이지를 찾을 수 없습니다: %1@",
+            "th" to "ไม่พบหน้าที่ระบุ: %1@"
+        ),
+        "core_msg_028" to mapOf(
+            "zh-Hant" to "不是合法的 id：%1@",
+            "en" to "Not a valid id: %1@",
+            "zh-Hans" to "不是合法的 id：%1@",
+            "ja" to "有効な id ではありません: %1@",
+            "ko" to "올바른 id가 아닙니다: %1@",
+            "th" to "ไม่ใช่ id ที่ถูกต้อง: %1@"
+        ),
+        "core_msg_029" to mapOf(
+            "zh-Hant" to "模型檔案不存在或無法載入: %1@",
+            "en" to "The model file does not exist or cannot be loaded: %1@",
+            "zh-Hans" to "模型文件不存在或无法加载: %1@",
+            "ja" to "モデルファイルが存在しないか読み込めません: %1@",
+            "ko" to "모델 파일이 없거나 로드할 수 없습니다: %1@",
+            "th" to "ไม่มีไฟล์โมเดลหรือโหลดไม่ได้: %1@"
+        ),
+        "core_msg_030" to mapOf(
+            "zh-Hant" to "轉錄處理失敗: %1@",
+            "en" to "Transcription failed: %1@",
+            "zh-Hans" to "转录处理失败: %1@",
+            "ja" to "文字起こしの処理に失敗しました: %1@",
+            "ko" to "받아쓰기 처리에 실패했습니다: %1@",
+            "th" to "ถอดเสียงไม่สำเร็จ: %1@"
+        ),
+        "core_msg_031" to mapOf(
+            "zh-Hant" to "音訊資料無效: %1@",
+            "en" to "Invalid audio data: %1@",
+            "zh-Hans" to "音频数据无效: %1@",
+            "ja" to "オーディオデータが無効です: %1@",
+            "ko" to "오디오 데이터가 올바르지 않습니다: %1@",
+            "th" to "ข้อมูลเสียงไม่ถูกต้อง: %1@"
+        ),
+        "core_msg_032" to mapOf(
+            "zh-Hant" to "音訊資料長度為零",
+            "en" to "The audio data is empty",
+            "zh-Hans" to "音频数据长度为零",
+            "ja" to "オーディオデータの長さが 0 です",
+            "ko" to "오디오 데이터 길이가 0입니다",
+            "th" to "ข้อมูลเสียงมีความยาวเป็นศูนย์"
+        ),
+        "core_msg_033" to mapOf(
+            "zh-Hant" to "此平台版本未啟用 Whisper 語音引擎",
+            "en" to "The Whisper speech engine is not enabled in this build",
+            "zh-Hans" to "此平台版本未启用 Whisper 语音引擎",
+            "ja" to "このビルドでは Whisper 音声エンジンが有効になっていません",
+            "ko" to "이 버전에서는 Whisper 음성 엔진을 사용할 수 없습니다",
+            "th" to "เวอร์ชันนี้ไม่ได้เปิดใช้เอนจินเสียง Whisper"
+        ),
+        "core_msg_034" to mapOf(
+            "zh-Hant" to "不是 Kairumo 備份檔",
+            "en" to "This is not a Kairumo backup file",
+            "zh-Hans" to "不是 Kairumo 备份文件",
+            "ja" to "Kairumo のバックアップファイルではありません",
+            "ko" to "Kairumo 백업 파일이 아닙니다",
+            "th" to "ไม่ใช่ไฟล์สำรองข้อมูลของ Kairumo"
+        ),
+        "core_msg_035" to mapOf(
+            "zh-Hant" to "備份檔版本 %1@ 比這個版本的 App 新（支援到 %2@），請先更新 App",
+            "en" to "This backup (version %1@) is newer than this app supports (up to %2@). Please update the app first",
+            "zh-Hans" to "备份文件版本 %1@ 比这个版本的 App 新（支持到 %2@），请先更新 App",
+            "ja" to "このバックアップ（バージョン %1@）はこのアプリより新しい形式です（対応: %2@ まで）。先にアプリを更新してください",
+            "ko" to "이 백업(버전 %1@)은 이 앱보다 최신입니다(지원: %2@까지). 먼저 앱을 업데이트하세요",
+            "th" to "ไฟล์สำรองนี้ (เวอร์ชัน %1@) ใหม่กว่าที่แอปนี้รองรับ (สูงสุด %2@) โปรดอัปเดตแอปก่อน"
+        ),
+        "core_msg_036" to mapOf(
+            "zh-Hant" to "備份檔已損毀：%1@",
+            "en" to "The backup file is corrupted: %1@",
+            "zh-Hans" to "备份文件已损毁：%1@",
+            "ja" to "バックアップファイルが壊れています: %1@",
+            "ko" to "백업 파일이 손상되었습니다: %1@",
+            "th" to "ไฟล์สำรองข้อมูลเสียหาย: %1@"
+        ),
+        "core_msg_037" to mapOf(
+            "zh-Hant" to "讀寫失敗：%1@",
+            "en" to "Read/write failed: %1@",
+            "zh-Hans" to "读写失败：%1@",
+            "ja" to "読み書きに失敗しました: %1@",
+            "ko" to "읽기/쓰기에 실패했습니다: %1@",
+            "th" to "อ่าน/เขียนไม่สำเร็จ: %1@"
+        ),
+        "core_msg_038" to mapOf(
+            "zh-Hant" to "索引長度超出檔案",
+            "en" to "The index length exceeds the file",
+            "zh-Hans" to "索引长度超出文件",
+            "ja" to "インデックスの長さがファイルを超えています",
+            "ko" to "인덱스 길이가 파일 크기를 초과합니다",
+            "th" to "ความยาวดัชนีเกินขนาดไฟล์"
+        ),
+        "core_msg_039" to mapOf(
+            "zh-Hant" to "索引解析失敗：%1@",
+            "en" to "Failed to parse the index: %1@",
+            "zh-Hans" to "索引解析失败：%1@",
+            "ja" to "インデックスの解析に失敗しました: %1@",
+            "ko" to "인덱스 해석에 실패했습니다: %1@",
+            "th" to "แยกวิเคราะห์ดัชนีไม่สำเร็จ: %1@"
+        ),
+        "core_msg_040" to mapOf(
+            "zh-Hant" to "開不了舊套件：%1@",
+            "en" to "Cannot open the old package: %1@",
+            "zh-Hans" to "开不了旧套件：%1@",
+            "ja" to "旧パッケージを開けません: %1@",
+            "ko" to "이전 패키지를 열 수 없습니다: %1@",
+            "th" to "เปิดแพ็กเกจเก่าไม่ได้: %1@"
+        ),
+        "core_msg_041" to mapOf(
+            "zh-Hant" to "讀不到舊套件的操作：%1@",
+            "en" to "Cannot read the old package's operations: %1@",
+            "zh-Hans" to "读不到旧套件的操作：%1@",
+            "ja" to "旧パッケージの操作を読み取れません: %1@",
+            "ko" to "이전 패키지의 작업을 읽을 수 없습니다: %1@",
+            "th" to "อ่านการดำเนินการของแพ็กเกจเก่าไม่ได้: %1@"
+        ),
+        "core_msg_042" to mapOf(
+            "zh-Hant" to "開不了新套件：%1@",
+            "en" to "Cannot open the new package: %1@",
+            "zh-Hans" to "开不了新套件：%1@",
+            "ja" to "新しいパッケージを開けません: %1@",
+            "ko" to "새 패키지를 열 수 없습니다: %1@",
+            "th" to "เปิดแพ็กเกจใหม่ไม่ได้: %1@"
+        ),
+        "core_msg_043" to mapOf(
+            "zh-Hant" to "寫不進新套件：%1@",
+            "en" to "Cannot write to the new package: %1@",
+            "zh-Hans" to "写不进新套件：%1@",
+            "ja" to "新しいパッケージに書き込めません: %1@",
+            "ko" to "새 패키지에 쓸 수 없습니다: %1@",
+            "th" to "เขียนลงแพ็กเกจใหม่ไม่ได้: %1@"
+        ),
+        "core_msg_044" to mapOf(
+            "zh-Hant" to "密碼錯誤或資料已被竄改",
+            "en" to "Wrong password, or the data has been tampered with",
+            "zh-Hans" to "密码错误或数据已被窜改",
+            "ja" to "パスワードが違うか、データが改ざんされています",
+            "ko" to "비밀번호가 틀렸거나 데이터가 변조되었습니다",
+            "th" to "รหัสผ่านไม่ถูกต้องหรือข้อมูลถูกแก้ไข"
+        )
+    )
+
+    private fun part5(): Map<String, Map<String, String>> = mapOf(
+        "core_msg_045" to mapOf(
+            "zh-Hant" to "復原碼不正確：%1@",
+            "en" to "Incorrect recovery phrase: %1@",
+            "zh-Hans" to "恢复码不正确：%1@",
+            "ja" to "復元フレーズが正しくありません: %1@",
+            "ko" to "복구 문구가 올바르지 않습니다: %1@",
+            "th" to "วลีกู้คืนไม่ถูกต้อง: %1@"
+        ),
+        "core_msg_046" to mapOf(
+            "zh-Hant" to "金鑰長度不對（要 32 位元組）",
+            "en" to "Wrong key length (32 bytes required)",
+            "zh-Hans" to "密钥长度不对（要 32 字节）",
+            "ja" to "鍵の長さが正しくありません（32 バイト必要）",
+            "ko" to "키 길이가 올바르지 않습니다(32바이트 필요)",
+            "th" to "ความยาวคีย์ไม่ถูกต้อง (ต้องเป็น 32 ไบต์)"
+        ),
+        "core_msg_047" to mapOf(
+            "zh-Hant" to "起不了區網節點：%1@",
+            "en" to "Cannot start the local network node: %1@",
+            "zh-Hans" to "起不了局域网节点：%1@",
+            "ja" to "ローカルネットワークのノードを起動できません: %1@",
+            "ko" to "로컬 네트워크 노드를 시작할 수 없습니다: %1@",
+            "th" to "เริ่มโหนดเครือข่ายภายในไม่ได้: %1@"
+        ),
+        "core_msg_048" to mapOf(
+            "zh-Hant" to "找不到：%1@",
+            "en" to "Not found: %1@",
+            "zh-Hans" to "找不到：%1@",
+            "ja" to "見つかりません: %1@",
+            "ko" to "찾을 수 없습니다: %1@",
+            "th" to "ไม่พบ: %1@"
+        ),
+        "core_msg_049" to mapOf(
+            "zh-Hant" to "權限不足：%1@",
+            "en" to "Permission denied: %1@",
+            "zh-Hans" to "权限不足：%1@",
+            "ja" to "権限がありません: %1@",
+            "ko" to "권한이 없습니다: %1@",
+            "th" to "ไม่มีสิทธิ์: %1@"
+        ),
+        "core_msg_050" to mapOf(
+            "zh-Hant" to "網路或伺服器錯誤：%1@",
+            "en" to "Network or server error: %1@",
+            "zh-Hans" to "网络或服务器错误：%1@",
+            "ja" to "ネットワークまたはサーバーのエラー: %1@",
+            "ko" to "네트워크 또는 서버 오류: %1@",
+            "th" to "ข้อผิดพลาดของเครือข่ายหรือเซิร์ฟเวอร์: %1@"
+        ),
+        "core_msg_051" to mapOf(
+            "zh-Hant" to "Drive 回應不是合法 JSON：%1@",
+            "en" to "The Drive response is not valid JSON: %1@",
+            "zh-Hans" to "Drive 回应不是合法 JSON：%1@",
+            "ja" to "Drive の応答が正しい JSON ではありません: %1@",
+            "ko" to "Drive 응답이 올바른 JSON이 아닙니다: %1@",
+            "th" to "คำตอบจาก Drive ไม่ใช่ JSON ที่ถูกต้อง: %1@"
+        ),
+        "core_msg_052" to mapOf(
+            "zh-Hant" to "開不了套件：%1@",
+            "en" to "Cannot open the package: %1@",
+            "zh-Hans" to "开不了套件：%1@",
+            "ja" to "パッケージを開けません: %1@",
+            "ko" to "패키지를 열 수 없습니다: %1@",
+            "th" to "เปิดแพ็กเกจไม่ได้: %1@"
+        ),
+        "core_msg_053" to mapOf(
+            "zh-Hant" to "讀不到本機 oplog：%1@",
+            "en" to "Cannot read the local oplog: %1@",
+            "zh-Hans" to "读不到本机 oplog：%1@",
+            "ja" to "ローカルの oplog を読み取れません: %1@",
+            "ko" to "로컬 oplog를 읽을 수 없습니다: %1@",
+            "th" to "อ่าน oplog ในเครื่องไม่ได้: %1@"
+        ),
+        "core_msg_054" to mapOf(
+            "zh-Hant" to "讀不到 %1@：%2@",
+            "en" to "Cannot read %1@: %2@",
+            "zh-Hans" to "读不到 %1@：%2@",
+            "ja" to "%1@ を読み取れません: %2@",
+            "ko" to "%1@을(를) 읽을 수 없습니다: %2@",
+            "th" to "อ่าน %1@ ไม่ได้: %2@"
+        ),
+        "core_msg_055" to mapOf(
+            "zh-Hant" to "寫不進 %1@：%2@",
+            "en" to "Cannot write %1@: %2@",
+            "zh-Hans" to "写不进 %1@：%2@",
+            "ja" to "%1@ に書き込めません: %2@",
+            "ko" to "%1@에 쓸 수 없습니다: %2@",
+            "th" to "เขียน %1@ ไม่ได้: %2@"
+        ),
+        "core_msg_056" to mapOf(
+            "zh-Hant" to "讀不到本機筆跡：%1@",
+            "en" to "Cannot read the local ink data: %1@",
+            "zh-Hans" to "读不到本机笔迹：%1@",
+            "ja" to "ローカルの手書きデータを読み取れません: %1@",
+            "ko" to "로컬 필기 데이터를 읽을 수 없습니다: %1@",
+            "th" to "อ่านลายเส้นในเครื่องไม่ได้: %1@"
+        ),
+        "core_msg_057" to mapOf(
+            "zh-Hant" to "讀不到筆跡 %1@：%2@",
+            "en" to "Cannot read ink data %1@: %2@",
+            "zh-Hans" to "读不到笔迹 %1@：%2@",
+            "ja" to "手書きデータ %1@ を読み取れません: %2@",
+            "ko" to "필기 데이터 %1@을(를) 읽을 수 없습니다: %2@",
+            "th" to "อ่านลายเส้น %1@ ไม่ได้: %2@"
+        ),
+        "core_msg_058" to mapOf(
+            "zh-Hant" to "寫不進筆跡 %1@：%2@",
+            "en" to "Cannot write ink data %1@: %2@",
+            "zh-Hans" to "写不进笔迹 %1@：%2@",
+            "ja" to "手書きデータ %1@ に書き込めません: %2@",
+            "ko" to "필기 데이터 %1@에 쓸 수 없습니다: %2@",
+            "th" to "เขียนลายเส้น %1@ ไม่ได้: %2@"
+        ),
+        "core_msg_059" to mapOf(
+            "zh-Hant" to "網路錯誤：%1@",
+            "en" to "Network error: %1@",
+            "zh-Hans" to "网络错误：%1@",
+            "ja" to "ネットワークエラー: %1@",
+            "ko" to "네트워크 오류: %1@",
+            "th" to "ข้อผิดพลาดของเครือข่าย: %1@"
+        ),
+        "core_msg_060" to mapOf(
+            "zh-Hant" to "清單裡沒有這個模型：%1@",
+            "en" to "This model is not in the list: %1@",
+            "zh-Hans" to "清单里没有这个模型：%1@",
+            "ja" to "このモデルは一覧にありません: %1@",
+            "ko" to "목록에 이 모델이 없습니다: %1@",
+            "th" to "ไม่มีโมเดลนี้ในรายการ: %1@"
+        ),
+        "core_msg_061" to mapOf(
+            "zh-Hant" to "空白紙張",
+            "en" to "Blank paper",
+            "zh-Hans" to "空白纸张",
+            "ja" to "白紙",
+            "ko" to "백지",
+            "th" to "กระดาษเปล่า"
+        ),
+        "core_msg_062" to mapOf(
+            "zh-Hant" to "方格點陣",
+            "en" to "Dot grid",
+            "zh-Hans" to "方格点阵",
+            "ja" to "ドット方眼",
+            "ko" to "점 격자",
+            "th" to "ตารางจุด"
+        ),
+        "core_msg_063" to mapOf(
+            "zh-Hant" to "橫線筆記",
+            "en" to "Lined notes",
+            "zh-Hans" to "横线笔记",
+            "ja" to "罫線ノート",
+            "ko" to "줄 노트",
+            "th" to "สมุดบรรทัด"
+        ),
+        "core_msg_064" to mapOf(
+            "zh-Hant" to "康乃爾",
+            "en" to "Cornell",
+            "zh-Hans" to "康乃尔",
+            "ja" to "コーネル式",
+            "ko" to "코넬식",
+            "th" to "แบบคอร์เนลล์"
+        ),
+        "core_msg_065" to mapOf(
+            "zh-Hant" to "極細點陣 (5mm)",
+            "en" to "Fine dot grid (5 mm)",
+            "zh-Hans" to "极细点阵 (5mm)",
+            "ja" to "極細ドット（5 mm）",
+            "ko" to "초미세 점 격자(5mm)",
+            "th" to "ตารางจุดละเอียด (5 มม.)"
+        ),
+        "core_msg_066" to mapOf(
+            "zh-Hant" to "黃金比例與三分構圖",
+            "en" to "Golden ratio and rule of thirds",
+            "zh-Hans" to "黄金比例与三分构图",
+            "ja" to "黄金比と三分割構図",
+            "ko" to "황금비와 삼분할 구도",
+            "th" to "สัดส่วนทองคำและกฎสามส่วน"
+        ),
+        "core_msg_067" to mapOf(
+            "zh-Hant" to "情緒板與色卡矩陣",
+            "en" to "Mood board and color swatch matrix",
+            "zh-Hans" to "情绪板与色卡矩阵",
+            "ja" to "ムードボードとカラーチップ",
+            "ko" to "무드보드와 색상 견본 매트릭스",
+            "th" to "มูดบอร์ดและตารางตัวอย่างสี"
+        ),
+        "core_msg_068" to mapOf(
+            "zh-Hant" to "工程藍圖坐標紙",
+            "en" to "Engineering blueprint grid paper",
+            "zh-Hans" to "工程蓝图坐标纸",
+            "ja" to "設計図用の方眼紙",
+            "ko" to "공학 청사진 좌표지",
+            "th" to "กระดาษกราฟพิมพ์เขียววิศวกรรม"
+        ),
+        "core_msg_069" to mapOf(
+            "zh-Hant" to "30° 等角立體軸測網格",
+            "en" to "30° isometric grid",
+            "zh-Hans" to "30° 等角立体轴测网格",
+            "ja" to "30° アイソメトリックグリッド",
+            "ko" to "30° 등각 격자",
+            "th" to "ตารางไอโซเมตริก 30°"
+        ),
+        "core_msg_070" to mapOf(
+            "zh-Hant" to "三視圖與剖面範本",
+            "en" to "Three-view and section templates",
+            "zh-Hans" to "三视图与剖面模板",
+            "ja" to "三面図と断面図のテンプレート",
+            "ko" to "삼면도 및 단면 템플릿",
+            "th" to "แม่แบบภาพสามมุมมองและภาพตัด"
+        ),
+        "core_msg_071" to mapOf(
+            "zh-Hant" to "行動端線框 (8pt Grid)",
+            "en" to "Mobile wireframe (8 pt grid)",
+            "zh-Hans" to "行动端线框 (8pt Grid)",
+            "ja" to "モバイル ワイヤーフレーム（8pt グリッド）",
+            "ko" to "모바일 와이어프레임(8pt 그리드)",
+            "th" to "ไวร์เฟรมมือถือ (กริด 8pt)"
+        ),
+        "core_msg_072" to mapOf(
+            "zh-Hant" to "響應式 Web 12 欄網格",
+            "en" to "Responsive web 12-column grid",
+            "zh-Hans" to "响应式 Web 12 栏网格",
+            "ja" to "レスポンシブ Web 12 カラムグリッド",
+            "ko" to "반응형 웹 12열 그리드",
+            "th" to "กริด 12 คอลัมน์สำหรับเว็บตอบสนอง"
+        ),
+        "core_msg_073" to mapOf(
+            "zh-Hant" to "使用者旅程與流程圖",
+            "en" to "User journey and flowchart",
+            "zh-Hans" to "使用者旅程与流程图",
+            "ja" to "ユーザージャーニーとフローチャート",
+            "ko" to "사용자 여정과 순서도",
+            "th" to "เส้นทางผู้ใช้และผังงาน"
+        ),
+        "core_msg_074" to mapOf(
+            "zh-Hant" to "無法建立執行緒池：%1@",
+            "en" to "Cannot create the thread pool: %1@",
+            "zh-Hans" to "无法建立线程池：%1@",
+            "ja" to "スレッドプールを作成できません: %1@",
+            "ko" to "스레드 풀을 만들 수 없습니다: %1@",
+            "th" to "สร้างเธรดพูลไม่ได้: %1@"
+        ),
+        "core_msg_075" to mapOf(
+            "zh-Hant" to "無效的埠號 %1@",
+            "en" to "Invalid port number %1@",
+            "zh-Hans" to "无效的埠号 %1@",
+            "ja" to "無効なポート番号 %1@",
+            "ko" to "잘못된 포트 번호 %1@",
+            "th" to "หมายเลขพอร์ตไม่ถูกต้อง %1@"
+        ),
+        "core_msg_076" to mapOf(
+            "zh-Hant" to "無法綁定 %1@：%2@",
+            "en" to "Cannot bind %1@: %2@",
+            "zh-Hans" to "无法绑定 %1@：%2@",
+            "ja" to "%1@ にバインドできません: %2@",
+            "ko" to "%1@에 바인딩할 수 없습니다: %2@",
+            "th" to "ผูกกับ %1@ ไม่ได้: %2@"
+        ),
+        "core_msg_077" to mapOf(
+            "zh-Hant" to "取不到綁定的埠：%1@",
+            "en" to "Cannot get the bound port: %1@",
+            "zh-Hans" to "取不到绑定的埠：%1@",
+            "ja" to "バインドしたポートを取得できません: %1@",
+            "ko" to "바인딩된 포트를 가져올 수 없습니다: %1@",
+            "th" to "อ่านพอร์ตที่ผูกไว้ไม่ได้: %1@"
+        ),
+        "core_msg_078" to mapOf(
+            "zh-Hant" to "設定非阻塞失敗：%1@",
+            "en" to "Failed to set non-blocking mode: %1@",
+            "zh-Hans" to "设置非阻塞失败：%1@",
+            "ja" to "ノンブロッキングの設定に失敗しました: %1@",
+            "ko" to "논블로킹 설정에 실패했습니다: %1@",
+            "th" to "ตั้งค่าโหมดไม่บล็อกไม่สำเร็จ: %1@"
+        ),
+        "core_msg_079" to mapOf(
+            "zh-Hant" to "中繼狀態鎖已毀損",
+            "en" to "The relay state is corrupted",
+            "zh-Hans" to "中继状态锁已毁损",
+            "ja" to "中継の状態が壊れています",
+            "ko" to "릴레이 상태가 손상되었습니다",
+            "th" to "สถานะของรีเลย์เสียหาย"
+        ),
+        "core_msg_080" to mapOf(
+            "zh-Hant" to "麥克風",
+            "en" to "Microphone",
+            "zh-Hans" to "麦克风",
+            "ja" to "マイク",
+            "ko" to "마이크",
+            "th" to "ไมโครโฟน"
+        ),
+        "core_msg_081" to mapOf(
+            "zh-Hant" to "語音辨識權限",
+            "en" to "Speech recognition permission",
+            "zh-Hans" to "语音辨识权限",
+            "ja" to "音声認識の権限",
+            "ko" to "음성 인식 권한",
+            "th" to "สิทธิ์การรู้จำเสียงพูด"
+        ),
+        "core_msg_082" to mapOf(
+            "zh-Hant" to "手寫辨識",
+            "en" to "Handwriting recognition",
+            "zh-Hans" to "手写辨识",
+            "ja" to "手書き認識",
+            "ko" to "필기 인식",
+            "th" to "การรู้จำลายมือ"
+        ),
+        "core_msg_083" to mapOf(
+            "zh-Hant" to "語音模型（%1@）",
+            "en" to "Speech model (%1@)",
+            "zh-Hans" to "语音模型（%1@）",
+            "ja" to "音声モデル（%1@）",
+            "ko" to "음성 모델(%1@)",
+            "th" to "โมเดลเสียง (%1@)"
+        ),
+        "core_msg_084" to mapOf(
+            "zh-Hant" to "AI 模型（%1@）",
+            "en" to "AI model (%1@)",
+            "zh-Hans" to "AI 模型（%1@）",
+            "ja" to "AI モデル（%1@）",
+            "ko" to "AI 모델(%1@)",
+            "th" to "โมเดล AI (%1@)"
+        ),
+        "core_msg_085" to mapOf(
+            "zh-Hant" to "本機同步資料夾",
+            "en" to "Local sync folder",
+            "zh-Hans" to "本机同步数据夹",
+            "ja" to "ローカル同期フォルダ",
+            "ko" to "로컬 동기화 폴더",
+            "th" to "โฟลเดอร์ซิงก์ในเครื่อง"
+        ),
+        "core_msg_086" to mapOf(
+            "zh-Hant" to "可以使用",
+            "en" to "Ready to use",
+            "zh-Hans" to "可以使用",
+            "ja" to "利用できます",
+            "ko" to "사용할 수 있습니다",
+            "th" to "พร้อมใช้งาน"
+        ),
+        "core_msg_087" to mapOf(
+            "zh-Hant" to "需要：%1@",
+            "en" to "Needs: %1@",
+            "zh-Hans" to "需要：%1@",
+            "ja" to "必要なもの: %1@",
+            "ko" to "필요: %1@",
+            "th" to "ต้องมี: %1@"
+        ),
+        "core_msg_088" to mapOf(
+            "zh-Hant" to "解密失敗：密語錯誤或資料已被竄改",
+            "en" to "Decryption failed: wrong passphrase, or the data has been tampered with",
+            "zh-Hans" to "解密失败：密码短语错误或数据已被窜改",
+            "ja" to "復号に失敗しました: パスフレーズが違うか、データが改ざんされています",
+            "ko" to "복호화에 실패했습니다: 암호가 틀렸거나 데이터가 변조되었습니다",
+            "th" to "ถอดรหัสไม่สำเร็จ: รหัสผ่านไม่ถูกต้องหรือข้อมูลถูกแก้ไข"
+        ),
+        "core_msg_089" to mapOf(
+            "zh-Hant" to "金鑰匯出失敗：%1@",
+            "en" to "Key derivation failed: %1@",
+            "zh-Hans" to "密钥汇出失败：%1@",
+            "ja" to "鍵の導出に失敗しました: %1@",
+            "ko" to "키 파생에 실패했습니다: %1@",
+            "th" to "สร้างคีย์ไม่สำเร็จ: %1@"
+        ),
+        "core_msg_090" to mapOf(
+            "zh-Hant" to "亂數來源失敗：%1@",
+            "en" to "Random number source failed: %1@",
+            "zh-Hans" to "随机数来源失败：%1@",
+            "ja" to "乱数源でエラーが発生しました: %1@",
+            "ko" to "난수 생성기 오류: %1@",
+            "th" to "แหล่งตัวเลขสุ่มล้มเหลว: %1@"
+        ),
+        "core_msg_091" to mapOf(
+            "zh-Hant" to "資料格式錯誤：%1@",
+            "en" to "Invalid data format: %1@",
+            "zh-Hans" to "数据格式错误：%1@",
+            "ja" to "データ形式が正しくありません: %1@",
+            "ko" to "데이터 형식이 올바르지 않습니다: %1@",
+            "th" to "รูปแบบข้อมูลไม่ถูกต้อง: %1@"
+        ),
+        "core_msg_092" to mapOf(
+            "zh-Hant" to "DEK 長度錯誤",
+            "en" to "Wrong DEK length",
+            "zh-Hans" to "DEK 长度错误",
+            "ja" to "DEK の長さが正しくありません",
+            "ko" to "DEK 길이가 올바르지 않습니다",
+            "th" to "ความยาว DEK ไม่ถูกต้อง"
+        ),
+        "core_msg_093" to mapOf(
+            "zh-Hant" to "資料過短",
+            "en" to "The data is too short",
+            "zh-Hans" to "数据过短",
+            "ja" to "データが短すぎます",
+            "ko" to "데이터가 너무 짧습니다",
+            "th" to "ข้อมูลสั้นเกินไป"
+        ),
+        "core_msg_094" to mapOf(
+            "zh-Hant" to "chunk 過短",
+            "en" to "The chunk is too short",
+            "zh-Hans" to "chunk 过短",
+            "ja" to "チャンクが短すぎます",
+            "ko" to "청크가 너무 짧습니다",
+            "th" to "ชังก์สั้นเกินไป"
+        ),
+        "core_msg_095" to mapOf(
+            "zh-Hant" to "詞表必須是 %1@ 個詞，實得 %2@",
+            "en" to "The word list must have %1@ words, got %2@",
+            "zh-Hans" to "词表必须是 %1@ 个词，实得 %2@",
+            "ja" to "単語リストは %1@ 語である必要があります（実際: %2@）",
+            "ko" to "단어 목록은 %1@개여야 합니다(실제: %2@개)",
+            "th" to "รายการคำต้องมี %1@ คำ แต่ได้ %2@"
+        ),
+        "core_msg_096" to mapOf(
+            "zh-Hant" to "熵長度須為 16 或 32 bytes，實得 %1@",
+            "en" to "Entropy length must be 16 or 32 bytes, got %1@",
+            "zh-Hans" to "熵长度须为 16 或 32 bytes，实得 %1@",
+            "ja" to "エントロピーの長さは 16 または 32 バイトである必要があります（実際: %1@）",
+            "ko" to "엔트로피 길이는 16 또는 32바이트여야 합니다(실제: %1@)",
+            "th" to "ความยาวเอนโทรปีต้องเป็น 16 หรือ 32 ไบต์ แต่ได้ %1@"
+        ),
+        "core_msg_097" to mapOf(
+            "zh-Hant" to "無法辨識的詞：%1@",
+            "en" to "Unrecognized word: %1@",
+            "zh-Hans" to "无法辨识的词：%1@",
+            "ja" to "認識できない単語: %1@",
+            "ko" to "인식할 수 없는 단어: %1@",
+            "th" to "ไม่รู้จักคำ: %1@"
+        ),
+        "core_msg_098" to mapOf(
+            "zh-Hant" to "詞數須為 12 或 24，實得 %1@",
+            "en" to "The phrase must have 12 or 24 words, got %1@",
+            "zh-Hans" to "词数须为 12 或 24，实得 %1@",
+            "ja" to "フレーズは 12 語または 24 語である必要があります（実際: %1@）",
+            "ko" to "문구는 12개 또는 24개 단어여야 합니다(실제: %1@개)",
+            "th" to "วลีต้องมี 12 หรือ 24 คำ แต่ได้ %1@"
+        ),
+        "core_msg_099" to mapOf(
+            "zh-Hant" to "復原碼校驗失敗，請檢查是否抄錯字或順序有誤",
+            "en" to "The recovery phrase checksum failed. Check for a typo or a wrong word order",
+            "zh-Hans" to "恢复码校验失败，请检查是否抄错字或顺序有误",
+            "ja" to "復元フレーズのチェックに失敗しました。誤字や語順の間違いがないか確認してください",
+            "ko" to "복구 문구 검증에 실패했습니다. 오타나 단어 순서가 틀리지 않았는지 확인하세요",
+            "th" to "ตรวจสอบวลีกู้คืนไม่ผ่าน โปรดตรวจดูว่าพิมพ์ผิดหรือเรียงคำผิดลำดับหรือไม่"
+        ),
+        "core_msg_100" to mapOf(
+            "zh-Hant" to "房間金鑰格式錯誤（需要 base64 的 32 位元組）",
+            "en" to "Invalid room key format (a base64-encoded 32-byte key is required)",
+            "zh-Hans" to "房间密钥格式错误（需要 base64 的 32 字节）",
+            "ja" to "ルームキーの形式が正しくありません（base64 の 32 バイトが必要）",
+            "ko" to "방 키 형식이 올바르지 않습니다(base64로 인코딩된 32바이트 필요)",
+            "th" to "รูปแบบคีย์ห้องไม่ถูกต้อง (ต้องเป็น base64 ขนาด 32 ไบต์)"
+        ),
+        "core_msg_101" to mapOf(
+            "zh-Hant" to "密文長度不足，不可能是有效的訊息",
+            "en" to "The ciphertext is too short to be a valid message",
+            "zh-Hans" to "密文长度不足，不可能是有效的消息",
+            "ja" to "暗号文が短すぎて、有効なメッセージではありません",
+            "ko" to "암호문이 너무 짧아 올바른 메시지일 수 없습니다",
+            "th" to "ข้อความเข้ารหัสสั้นเกินกว่าจะเป็นข้อความที่ถูกต้อง"
+        ),
+        "core_msg_102" to mapOf(
+            "zh-Hant" to "加密失敗",
+            "en" to "Encryption failed",
+            "zh-Hans" to "加密失败",
+            "ja" to "暗号化に失敗しました",
+            "ko" to "암호화에 실패했습니다",
+            "th" to "เข้ารหัสไม่สำเร็จ"
+        ),
+        "core_msg_103" to mapOf(
+            "zh-Hant" to "解密失敗（金鑰不符或內容被竄改）",
+            "en" to "Decryption failed (wrong key, or the content has been tampered with)",
+            "zh-Hans" to "解密失败（密钥不符或内容被窜改）",
+            "ja" to "復号に失敗しました（鍵が一致しないか、内容が改ざんされています）",
+            "ko" to "복호화에 실패했습니다(키가 맞지 않거나 내용이 변조되었습니다)",
+            "th" to "ถอดรหัสไม่สำเร็จ (คีย์ไม่ตรงหรือเนื้อหาถูกแก้ไข)"
+        ),
+        "core_msg_104" to mapOf(
+            "zh-Hant" to "取不到亂數",
+            "en" to "Cannot get random numbers",
+            "zh-Hans" to "取不到随机数",
+            "ja" to "乱数を取得できません",
+            "ko" to "난수를 가져올 수 없습니다",
+            "th" to "สร้างตัวเลขสุ่มไม่ได้"
+        ),
+        "core_msg_105" to mapOf(
+            "zh-Hant" to "找不到物件：%1@",
+            "en" to "Object not found: %1@",
+            "zh-Hans" to "找不到对象：%1@",
+            "ja" to "オブジェクトが見つかりません: %1@",
+            "ko" to "개체를 찾을 수 없습니다: %1@",
+            "th" to "ไม่พบวัตถุ: %1@"
+        ),
+        "core_msg_106" to mapOf(
+            "zh-Hant" to "群組會形成迴圈",
+            "en" to "This grouping would create a loop",
+            "zh-Hans" to "群组会形成回圈",
+            "ja" to "このグループ化はループになります",
+            "ko" to "이 그룹은 순환을 만듭니다",
+            "th" to "การจัดกลุ่มนี้จะวนเป็นลูป"
+        ),
+        "core_msg_107" to mapOf(
+            "zh-Hant" to "物件已屬於其他群組：%1@",
+            "en" to "The object already belongs to another group: %1@",
+            "zh-Hans" to "对象已属於其他群组：%1@",
+            "ja" to "オブジェクトはすでに別のグループに属しています: %1@",
+            "ko" to "개체가 이미 다른 그룹에 속해 있습니다: %1@",
+            "th" to "วัตถุอยู่ในกลุ่มอื่นแล้ว: %1@"
+        ),
+        "core_msg_108" to mapOf(
+            "zh-Hant" to "文件操作資料被截斷",
+            "en" to "The document operation data is truncated",
+            "zh-Hans" to "文件操作数据被截断",
+            "ja" to "ドキュメント操作のデータが途中で切れています",
+            "ko" to "문서 작업 데이터가 잘렸습니다",
+            "th" to "ข้อมูลการดำเนินการของเอกสารถูกตัดทอน"
+        ),
+        "core_msg_109" to mapOf(
+            "zh-Hant" to "未知的操作類型：%1@",
+            "en" to "Unknown operation type: %1@",
+            "zh-Hans" to "未知的操作类型：%1@",
+            "ja" to "不明な操作の種類: %1@",
+            "ko" to "알 수 없는 작업 유형: %1@",
+            "th" to "ไม่รู้จักประเภทการดำเนินการ: %1@"
+        ),
+        "core_msg_110" to mapOf(
+            "zh-Hant" to "未知的頁面模板：%1@",
+            "en" to "Unknown page template: %1@",
+            "zh-Hans" to "未知的页面模板：%1@",
+            "ja" to "不明なページテンプレート: %1@",
+            "ko" to "알 수 없는 페이지 템플릿: %1@",
+            "th" to "ไม่รู้จักแม่แบบหน้า: %1@"
+        ),
+        "core_msg_111" to mapOf(
+            "zh-Hant" to "未知的文字樣式：%1@",
+            "en" to "Unknown text style: %1@",
+            "zh-Hans" to "未知的文字样式：%1@",
+            "ja" to "不明な文字スタイル: %1@",
+            "ko" to "알 수 없는 텍스트 스타일: %1@",
+            "th" to "ไม่รู้จักรูปแบบข้อความ: %1@"
+        ),
+        "core_msg_112" to mapOf(
+            "zh-Hant" to "未知的物件類型：%1@",
+            "en" to "Unknown object type: %1@",
+            "zh-Hans" to "未知的对象类型：%1@",
+            "ja" to "不明なオブジェクトの種類: %1@",
+            "ko" to "알 수 없는 개체 유형: %1@",
+            "th" to "ไม่รู้จักประเภทวัตถุ: %1@"
+        ),
+        "core_msg_113" to mapOf(
+            "zh-Hant" to "未知的形狀類型：%1@",
+            "en" to "Unknown shape type: %1@",
+            "zh-Hans" to "未知的形状类型：%1@",
+            "ja" to "不明な図形の種類: %1@",
+            "ko" to "알 수 없는 도형 유형: %1@",
+            "th" to "ไม่รู้จักประเภทรูปทรง: %1@"
+        ),
+        "core_msg_114" to mapOf(
+            "zh-Hant" to "未知的連接點：%1@",
+            "en" to "Unknown connection point: %1@",
+            "zh-Hans" to "未知的连接点：%1@",
+            "ja" to "不明な接続点: %1@",
+            "ko" to "알 수 없는 연결점: %1@",
+            "th" to "ไม่รู้จักจุดเชื่อมต่อ: %1@"
+        ),
+        "core_msg_115" to mapOf(
+            "zh-Hant" to "未知的連接線路由：%1@",
+            "en" to "Unknown connector routing: %1@",
+            "zh-Hans" to "未知的连接线路由：%1@",
+            "ja" to "不明なコネクタの経路: %1@",
+            "ko" to "알 수 없는 연결선 경로: %1@",
+            "th" to "ไม่รู้จักการเดินเส้นเชื่อม: %1@"
+        ),
+        "core_msg_116" to mapOf(
+            "zh-Hant" to "未知的線端樣式：%1@",
+            "en" to "Unknown line-end style: %1@",
+            "zh-Hans" to "未知的线端样式：%1@",
+            "ja" to "不明な線端のスタイル: %1@",
+            "ko" to "알 수 없는 선 끝 스타일: %1@",
+            "th" to "ไม่รู้จักรูปแบบปลายเส้น: %1@"
+        ),
+        "core_msg_117" to mapOf(
+            "zh-Hant" to "字串不是合法的 UTF-8",
+            "en" to "The string is not valid UTF-8",
+            "zh-Hans" to "字符串不是合法的 UTF-8",
+            "ja" to "文字列が正しい UTF-8 ではありません",
+            "ko" to "문자열이 올바른 UTF-8이 아닙니다",
+            "th" to "สตริงไม่ใช่ UTF-8 ที่ถูกต้อง"
+        ),
+        "core_msg_118" to mapOf(
+            "zh-Hant" to "非法的 Unicode 碼位：%1@",
+            "en" to "Invalid Unicode code point: %1@",
+            "zh-Hans" to "非法的 Unicode 码位：%1@",
+            "ja" to "無効な Unicode コードポイント: %1@",
+            "ko" to "잘못된 유니코드 코드 포인트: %1@",
+            "th" to "โค้ดพอยต์ยูนิโคดไม่ถูกต้อง: %1@"
+        ),
+        "core_msg_119" to mapOf(
+            "zh-Hant" to "分欄",
+            "en" to "Columns",
+            "zh-Hans" to "分栏",
+            "ja" to "段組み",
+            "ko" to "단 나누기",
+            "th" to "คอลัมน์"
+        ),
+        "core_msg_120" to mapOf(
+            "zh-Hant" to "浮動圖文",
+            "en" to "Floating text and images",
+            "zh-Hans" to "浮动图文",
+            "ja" to "フローティングの図と文章",
+            "ko" to "떠 있는 그림과 텍스트",
+            "th" to "รูปภาพและข้อความลอย"
+        ),
+        "core_msg_121" to mapOf(
+            "zh-Hant" to "追蹤修訂",
+            "en" to "Track changes",
+            "zh-Hans" to "修订",
+            "ja" to "変更履歴",
+            "ko" to "변경 내용 추적",
+            "th" to "ติดตามการเปลี่ยนแปลง"
+        ),
+        "core_msg_122" to mapOf(
+            "zh-Hant" to "頁首頁尾",
+            "en" to "Headers and footers",
+            "zh-Hans" to "页眉页脚",
+            "ja" to "ヘッダーとフッター",
+            "ko" to "머리글과 바닥글",
+            "th" to "ส่วนหัวและส่วนท้าย"
+        ),
+        "core_msg_123" to mapOf(
+            "zh-Hant" to "註腳",
+            "en" to "Footnotes",
+            "zh-Hans" to "脚注",
+            "ja" to "脚注",
+            "ko" to "각주",
+            "th" to "เชิงอรรถ"
+        ),
+        "core_msg_124" to mapOf(
+            "zh-Hant" to "巨集",
+            "en" to "Macros",
+            "zh-Hans" to "宏",
+            "ja" to "マクロ",
+            "ko" to "매크로",
+            "th" to "มาโคร"
+        )
+    )
+
+    private fun part6(): Map<String, Map<String, String>> = mapOf(
+        "core_msg_125" to mapOf(
+            "zh-Hant" to "樞紐分析",
+            "en" to "Pivot tables",
+            "zh-Hans" to "数据透视表",
+            "ja" to "ピボットテーブル",
+            "ko" to "피벗 테이블",
+            "th" to "พิวอตเทเบิล"
+        ),
+        "core_msg_126" to mapOf(
+            "zh-Hant" to "圖表",
+            "en" to "Charts",
+            "zh-Hans" to "图表",
+            "ja" to "グラフ",
+            "ko" to "차트",
+            "th" to "แผนภูมิ"
+        ),
+        "core_msg_127" to mapOf(
+            "zh-Hant" to "條件式格式",
+            "en" to "Conditional formatting",
+            "zh-Hans" to "条件格式",
+            "ja" to "条件付き書式",
+            "ko" to "조건부 서식",
+            "th" to "การจัดรูปแบบตามเงื่อนไข"
+        ),
+        "core_msg_128" to mapOf(
+            "zh-Hant" to "資料驗證",
+            "en" to "Data validation",
+            "zh-Hans" to "数据验证",
+            "ja" to "データの入力規則",
+            "ko" to "데이터 유효성 검사",
+            "th" to "การตรวจสอบข้อมูล"
+        ),
+        "core_msg_129" to mapOf(
+            "zh-Hant" to "編輯（僅預覽）",
+            "en" to "Editing (preview only)",
+            "zh-Hans" to "编辑（仅预览）",
+            "ja" to "編集（プレビューのみ）",
+            "ko" to "편집(미리보기 전용)",
+            "th" to "การแก้ไข (ดูตัวอย่างเท่านั้น)"
+        ),
+        "core_msg_130" to mapOf(
+            "zh-Hant" to "動畫",
+            "en" to "Animations",
+            "zh-Hans" to "动画",
+            "ja" to "アニメーション",
+            "ko" to "애니메이션",
+            "th" to "แอนิเมชัน"
+        ),
+        "core_msg_131" to mapOf(
+            "zh-Hant" to "轉場",
+            "en" to "Transitions",
+            "zh-Hans" to "切换",
+            "ja" to "画面切り替え",
+            "ko" to "전환",
+            "th" to "การเปลี่ยนสไลด์"
+        ),
+        "core_msg_132" to mapOf(
+            "zh-Hant" to "備忘稿",
+            "en" to "Speaker notes",
+            "zh-Hans" to "备注",
+            "ja" to "スピーカーノート",
+            "ko" to "발표자 노트",
+            "th" to "บันทึกผู้บรรยาย"
+        ),
+        "core_msg_133" to mapOf(
+            "zh-Hant" to "表單欄位",
+            "en" to "Form fields",
+            "zh-Hans" to "表单字段",
+            "ja" to "フォームフィールド",
+            "ko" to "양식 필드",
+            "th" to "ช่องแบบฟอร์ม"
+        ),
+        "core_msg_134" to mapOf(
+            "zh-Hant" to "數位簽章",
+            "en" to "Digital signatures",
+            "zh-Hans" to "数字签名",
+            "ja" to "電子署名",
+            "ko" to "디지털 서명",
+            "th" to "ลายเซ็นดิจิทัล"
+        ),
+        "core_msg_135" to mapOf(
+            "zh-Hant" to "找不到檔案：%1@",
+            "en" to "File not found: %1@",
+            "zh-Hans" to "找不到文件：%1@",
+            "ja" to "ファイルが見つかりません: %1@",
+            "ko" to "파일을 찾을 수 없습니다: %1@",
+            "th" to "ไม่พบไฟล์: %1@"
+        ),
+        "core_msg_136" to mapOf(
+            "zh-Hant" to "%1@ 目前不支援：%2@",
+            "en" to "%1@ is not supported yet: %2@",
+            "zh-Hans" to "%1@ 目前不支持：%2@",
+            "ja" to "%1@ はまだサポートされていません: %2@",
+            "ko" to "%1@은(는) 아직 지원하지 않습니다: %2@",
+            "th" to "ยังไม่รองรับ %1@: %2@"
+        ),
+        "core_msg_137" to mapOf(
+            "zh-Hant" to "檔案格式錯誤：%1@",
+            "en" to "Invalid file format: %1@",
+            "zh-Hans" to "文件格式错误：%1@",
+            "ja" to "ファイル形式が正しくありません: %1@",
+            "ko" to "파일 형식이 올바르지 않습니다: %1@",
+            "th" to "รูปแบบไฟล์ไม่ถูกต้อง: %1@"
+        ),
+        "core_msg_138" to mapOf(
+            "zh-Hant" to "不是 ZIP 容器，無法作為 pptx",
+            "en" to "Not a ZIP container, so it cannot be a pptx",
+            "zh-Hans" to "不是 ZIP 容器，无法作为 pptx",
+            "ja" to "ZIP コンテナではないため pptx として扱えません",
+            "ko" to "ZIP 컨테이너가 아니므로 pptx로 처리할 수 없습니다",
+            "th" to "ไม่ใช่คอนเทนเนอร์ ZIP จึงใช้เป็น pptx ไม่ได้"
+        ),
+        "core_msg_139" to mapOf(
+            "zh-Hant" to "找不到投影片；可能不是 pptx 或已加密",
+            "en" to "No slides found; the file may not be a pptx, or it may be encrypted",
+            "zh-Hans" to "找不到投视频；可能不是 pptx 或已加密",
+            "ja" to "スライドが見つかりません。pptx ではないか、暗号化されている可能性があります",
+            "ko" to "슬라이드를 찾을 수 없습니다. pptx가 아니거나 암호화되었을 수 있습니다",
+            "th" to "ไม่พบสไลด์ ไฟล์อาจไม่ใช่ pptx หรืออาจถูกเข้ารหัส"
+        ),
+        "core_msg_140" to mapOf(
+            "zh-Hant" to "第 %1@ 個區塊缺少 source",
+            "en" to "Block %1@ is missing source",
+            "zh-Hans" to "第 %1@ 个区块缺少 source",
+            "ja" to "%1@ 番目のブロックに source がありません",
+            "ko" to "%1@번째 블록에 source가 없습니다",
+            "th" to "บล็อกที่ %1@ ไม่มี source"
+        ),
+        "core_msg_141" to mapOf(
+            "zh-Hant" to "第 %1@ 個區塊缺少 content",
+            "en" to "Block %1@ is missing content",
+            "zh-Hans" to "第 %1@ 个区块缺少 content",
+            "ja" to "%1@ 番目のブロックに content がありません",
+            "ko" to "%1@번째 블록에 content가 없습니다",
+            "th" to "บล็อกที่ %1@ ไม่มี content"
+        ),
+        "core_msg_142" to mapOf(
+            "zh-Hant" to "第 %1@ 個區塊的類型未知：%2@",
+            "en" to "Block %1@ has an unknown type: %2@",
+            "zh-Hans" to "第 %1@ 个区块的类型未知：%2@",
+            "ja" to "%1@ 番目のブロックの種類が不明です: %2@",
+            "ko" to "%1@번째 블록의 유형을 알 수 없습니다: %2@",
+            "th" to "บล็อกที่ %1@ มีประเภทที่ไม่รู้จัก: %2@"
+        ),
+        "core_msg_143" to mapOf(
+            "zh-Hant" to "筆記本內無任何頁面可匯出",
+            "en" to "The notebook has no pages to export",
+            "zh-Hans" to "笔记本内无任何页面可汇出",
+            "ja" to "書き出せるページがノートにありません",
+            "ko" to "내보낼 페이지가 노트에 없습니다",
+            "th" to "สมุดบันทึกไม่มีหน้าให้ส่งออก"
+        ),
+        "core_msg_144" to mapOf(
+            "zh-Hant" to "儲存讀取錯誤：%1@",
+            "en" to "Storage read error: %1@",
+            "zh-Hans" to "保存读取错误：%1@",
+            "ja" to "ストレージの読み取りエラー: %1@",
+            "ko" to "저장소 읽기 오류: %1@",
+            "th" to "ข้อผิดพลาดในการอ่านที่เก็บข้อมูล: %1@"
+        ),
+        "core_msg_145" to mapOf(
+            "zh-Hant" to "圖片編碼錯誤：%1@",
+            "en" to "Image encoding error: %1@",
+            "zh-Hans" to "图片编码错误：%1@",
+            "ja" to "画像のエンコードエラー: %1@",
+            "ko" to "이미지 인코딩 오류: %1@",
+            "th" to "ข้อผิดพลาดในการเข้ารหัสรูปภาพ: %1@"
+        ),
+        "core_msg_146" to mapOf(
+            "zh-Hant" to "資料無效：%1@",
+            "en" to "Invalid data: %1@",
+            "zh-Hans" to "数据无效：%1@",
+            "ja" to "データが無効です: %1@",
+            "ko" to "데이터가 올바르지 않습니다: %1@",
+            "th" to "ข้อมูลไม่ถูกต้อง: %1@"
+        ),
+        "core_msg_147" to mapOf(
+            "zh-Hant" to "不是 PADNINK 筆畫檔",
+            "en" to "Not a PADNINK ink file",
+            "zh-Hans" to "不是 PADNINK 笔画文件",
+            "ja" to "PADNINK の手書きファイルではありません",
+            "ko" to "PADNINK 필기 파일이 아닙니다",
+            "th" to "ไม่ใช่ไฟล์ลายเส้น PADNINK"
+        ),
+        "core_msg_148" to mapOf(
+            "zh-Hant" to "不支援的格式版本：%1@",
+            "en" to "Unsupported format version: %1@",
+            "zh-Hans" to "不支持的格式版本：%1@",
+            "ja" to "サポートされていない形式のバージョン: %1@",
+            "ko" to "지원하지 않는 형식 버전: %1@",
+            "th" to "ไม่รองรับรูปแบบเวอร์ชัน: %1@"
+        ),
+        "core_msg_149" to mapOf(
+            "zh-Hant" to "檔案被截斷",
+            "en" to "The file is truncated",
+            "zh-Hans" to "文件被截断",
+            "ja" to "ファイルが途中で切れています",
+            "ko" to "파일이 잘렸습니다",
+            "th" to "ไฟล์ถูกตัดทอน"
+        ),
+        "core_msg_150" to mapOf(
+            "zh-Hant" to "未知的 tool_id：%1@",
+            "en" to "Unknown tool_id: %1@",
+            "zh-Hans" to "未知的 tool_id：%1@",
+            "ja" to "不明な tool_id: %1@",
+            "ko" to "알 수 없는 tool_id: %1@",
+            "th" to "ไม่รู้จัก tool_id: %1@"
+        ),
+        "core_msg_151" to mapOf(
+            "zh-Hant" to "未知的記錄類型：%1@",
+            "en" to "Unknown record type: %1@",
+            "zh-Hans" to "未知的记录类型：%1@",
+            "ja" to "不明なレコードの種類: %1@",
+            "ko" to "알 수 없는 레코드 유형: %1@",
+            "th" to "ไม่รู้จักประเภทระเบียน: %1@"
+        ),
+        "core_msg_152" to mapOf(
+            "zh-Hant" to "沒有可以處理的文字",
+            "en" to "There is no text to process",
+            "zh-Hans" to "没有可以处理的文字",
+            "ja" to "処理できるテキストがありません",
+            "ko" to "처리할 텍스트가 없습니다",
+            "th" to "ไม่มีข้อความให้ประมวลผล"
+        ),
+        "core_msg_153" to mapOf(
+            "zh-Hant" to "載入模型失敗：%1@",
+            "en" to "Failed to load the model: %1@",
+            "zh-Hans" to "加载模型失败：%1@",
+            "ja" to "モデルの読み込みに失敗しました: %1@",
+            "ko" to "모델 로드에 실패했습니다: %1@",
+            "th" to "โหลดโมเดลไม่สำเร็จ: %1@"
+        ),
+        "core_msg_154" to mapOf(
+            "zh-Hant" to "模型狀態已損毀",
+            "en" to "The model state is corrupted",
+            "zh-Hans" to "模型状态已损毁",
+            "ja" to "モデルの状態が壊れています",
+            "ko" to "모델 상태가 손상되었습니다",
+            "th" to "สถานะของโมเดลเสียหาย"
+        ),
+        "core_msg_155" to mapOf(
+            "zh-Hant" to "提示詞轉 token 失敗：%1@",
+            "en" to "Failed to tokenize the prompt: %1@",
+            "zh-Hans" to "提示词转 token 失败：%1@",
+            "ja" to "プロンプトのトークン化に失敗しました: %1@",
+            "ko" to "프롬프트 토큰화에 실패했습니다: %1@",
+            "th" to "แปลงพรอมต์เป็นโทเค็นไม่สำเร็จ: %1@"
+        ),
+        "core_msg_156" to mapOf(
+            "zh-Hant" to "建立 context 失敗：%1@",
+            "en" to "Failed to create the context: %1@",
+            "zh-Hans" to "建立 context 失败：%1@",
+            "ja" to "コンテキストの作成に失敗しました: %1@",
+            "ko" to "컨텍스트 생성에 실패했습니다: %1@",
+            "th" to "สร้างคอนเท็กซ์ไม่สำเร็จ: %1@"
+        ),
+        "core_msg_157" to mapOf(
+            "zh-Hant" to "decode 失敗：%1@",
+            "en" to "Decode failed: %1@",
+            "zh-Hans" to "decode 失败：%1@",
+            "ja" to "デコードに失敗しました: %1@",
+            "ko" to "디코딩에 실패했습니다: %1@",
+            "th" to "ถอดรหัสไม่สำเร็จ: %1@"
+        ),
+        "core_msg_158" to mapOf(
+            "zh-Hant" to "模型校驗失敗：期望 %1@…，實得 %2@…（檔案已刪除）",
+            "en" to "Model verification failed: expected %1@…, got %2@… (the file was deleted)",
+            "zh-Hans" to "模型校验失败：期望 %1@…，实得 %2@…（文件已删除）",
+            "ja" to "モデルの検証に失敗しました: 期待値 %1@…、実際 %2@…（ファイルは削除されました）",
+            "ko" to "모델 검증에 실패했습니다: 기대값 %1@…, 실제 %2@…(파일이 삭제되었습니다)",
+            "th" to "ตรวจสอบโมเดลไม่ผ่าน: คาดว่า %1@… แต่ได้ %2@… (ลบไฟล์แล้ว)"
+        ),
+        "core_msg_159" to mapOf(
+            "zh-Hant" to "大小不符：期望 %1@ bytes，實得 %2@",
+            "en" to "Size mismatch: expected %1@ bytes, got %2@",
+            "zh-Hans" to "大小不符：期望 %1@ bytes，实得 %2@",
+            "ja" to "サイズが一致しません: 期待値 %1@ バイト、実際 %2@",
+            "ko" to "크기가 맞지 않습니다: 기대값 %1@바이트, 실제 %2@",
+            "th" to "ขนาดไม่ตรงกัน: คาดว่า %1@ ไบต์ แต่ได้ %2@"
+        ),
+        "core_msg_160" to mapOf(
+            "zh-Hant" to "模型清單格式錯誤：%1@",
+            "en" to "Invalid model list format: %1@",
+            "zh-Hans" to "模型清单格式错误：%1@",
+            "ja" to "モデル一覧の形式が正しくありません: %1@",
+            "ko" to "모델 목록 형식이 올바르지 않습니다: %1@",
+            "th" to "รูปแบบรายการโมเดลไม่ถูกต้อง: %1@"
+        ),
+        "core_msg_161" to mapOf(
+            "zh-Hant" to "revision 必須是實際的 commit sha，不能是浮動參照：%1@",
+            "en" to "revision must be an actual commit sha, not a floating reference: %1@",
+            "zh-Hans" to "revision 必须是实际的 commit sha，不能是浮动参照：%1@",
+            "ja" to "revision は実際の commit sha である必要があり、可変の参照は使えません: %1@",
+            "ko" to "revision은 실제 commit sha여야 하며 유동 참조는 안 됩니다: %1@",
+            "th" to "revision ต้องเป็น commit sha จริง ไม่ใช่การอ้างอิงที่เปลี่ยนได้: %1@"
+        ),
+        "core_msg_162" to mapOf(
+            "zh-Hant" to "授權檔雜湊格式錯誤：%1@",
+            "en" to "Invalid licence file hash format: %1@",
+            "zh-Hans" to "授权文件杂凑格式错误：%1@",
+            "ja" to "ライセンスファイルのハッシュ形式が正しくありません: %1@",
+            "ko" to "라이선스 파일 해시 형식이 올바르지 않습니다: %1@",
+            "th" to "รูปแบบแฮชของไฟล์สัญญาอนุญาตไม่ถูกต้อง: %1@"
+        ),
+        "core_msg_163" to mapOf(
+            "zh-Hant" to "授權檔只有 %1@ bytes，多半不是授權文本而是錯誤頁",
+            "en" to "The licence file is only %1@ bytes; it is probably an error page, not licence text",
+            "zh-Hans" to "授权文件只有 %1@ bytes，多半不是授权文本而是错误页",
+            "ja" to "ライセンスファイルは %1@ バイトしかありません。ライセンス本文ではなくエラーページの可能性があります",
+            "ko" to "라이선스 파일이 %1@바이트뿐입니다. 라이선스 본문이 아니라 오류 페이지일 가능성이 큽니다",
+            "th" to "ไฟล์สัญญาอนุญาตมีเพียง %1@ ไบต์ น่าจะเป็นหน้าแสดงข้อผิดพลาดไม่ใช่ข้อความสัญญาอนุญาต"
+        ),
+        "core_msg_164" to mapOf(
+            "zh-Hant" to "model card 未宣告授權名稱",
+            "en" to "The model card does not declare a licence name",
+            "zh-Hans" to "model card 未宣告授权名称",
+            "ja" to "モデルカードにライセンス名が記載されていません",
+            "ko" to "모델 카드에 라이선스 이름이 명시되어 있지 않습니다",
+            "th" to "โมเดลการ์ดไม่ได้ระบุชื่อสัญญาอนุญาต"
+        ),
+        "core_msg_165" to mapOf(
+            "zh-Hant" to "沒有任何產出檔案",
+            "en" to "There are no output files",
+            "zh-Hans" to "没有任何产出文件",
+            "ja" to "出力ファイルがありません",
+            "ko" to "출력 파일이 없습니다",
+            "th" to "ไม่มีไฟล์ผลลัพธ์"
+        ),
+        "core_msg_166" to mapOf(
+            "zh-Hant" to "產出檔案雜湊格式錯誤：%1@",
+            "en" to "Invalid output file hash format: %1@",
+            "zh-Hans" to "产出文件杂凑格式错误：%1@",
+            "ja" to "出力ファイルのハッシュ形式が正しくありません: %1@",
+            "ko" to "출력 파일 해시 형식이 올바르지 않습니다: %1@",
+            "th" to "รูปแบบแฮชของไฟล์ผลลัพธ์ไม่ถูกต้อง: %1@"
+        ),
+        "core_msg_167" to mapOf(
+            "zh-Hant" to "缺少工具版本紀錄：%1@",
+            "en" to "Missing tool version record: %1@",
+            "zh-Hans" to "缺少工具版本纪录：%1@",
+            "ja" to "ツールのバージョン記録がありません: %1@",
+            "ko" to "도구 버전 기록이 없습니다: %1@",
+            "th" to "ไม่มีบันทึกเวอร์ชันของเครื่องมือ: %1@"
+        ),
+        "core_msg_168" to mapOf(
+            "zh-Hant" to "不是有效的 PDF 檔",
+            "en" to "Not a valid PDF file",
+            "zh-Hans" to "不是有效的 PDF 文件",
+            "ja" to "有効な PDF ファイルではありません",
+            "ko" to "올바른 PDF 파일이 아닙니다",
+            "th" to "ไม่ใช่ไฟล์ PDF ที่ถูกต้อง"
+        ),
+        "core_msg_169" to mapOf(
+            "zh-Hant" to "這份 PDF 需要密碼",
+            "en" to "This PDF requires a password",
+            "zh-Hans" to "这份 PDF 需要密码",
+            "ja" to "この PDF にはパスワードが必要です",
+            "ko" to "이 PDF에는 비밀번호가 필요합니다",
+            "th" to "PDF นี้ต้องใช้รหัสผ่าน"
+        ),
+        "core_msg_170" to mapOf(
+            "zh-Hant" to "頁碼 %1@ 超出範圍（共 %2@ 頁）",
+            "en" to "Page number %1@ is out of range (%2@ pages in total)",
+            "zh-Hans" to "页码 %1@ 超出范围（共 %2@ 页）",
+            "ja" to "ページ番号 %1@ が範囲外です（全 %2@ ページ）",
+            "ko" to "페이지 번호 %1@이(가) 범위를 벗어났습니다(총 %2@페이지)",
+            "th" to "หมายเลขหน้า %1@ เกินช่วง (ทั้งหมด %2@ หน้า)"
+        ),
+        "core_msg_171" to mapOf(
+            "zh-Hant" to "PDF 引擎錯誤：%1@",
+            "en" to "PDF engine error: %1@",
+            "zh-Hans" to "PDF 引擎错误：%1@",
+            "ja" to "PDF エンジンのエラー: %1@",
+            "ko" to "PDF 엔진 오류: %1@",
+            "th" to "ข้อผิดพลาดของเอนจิน PDF: %1@"
+        ),
+        "core_msg_172" to mapOf(
+            "zh-Hant" to "找不到 libpdfium：%1@",
+            "en" to "libpdfium not found: %1@",
+            "zh-Hans" to "找不到 libpdfium：%1@",
+            "ja" to "libpdfium が見つかりません: %1@",
+            "ko" to "libpdfium을 찾을 수 없습니다: %1@",
+            "th" to "ไม่พบ libpdfium: %1@"
+        ),
+        "core_msg_173" to mapOf(
+            "zh-Hant" to "找不到標點模型：%1@",
+            "en" to "Punctuation model not found: %1@",
+            "zh-Hans" to "找不到标点模型：%1@",
+            "ja" to "句読点モデルが見つかりません: %1@",
+            "ko" to "문장 부호 모델을 찾을 수 없습니다: %1@",
+            "th" to "ไม่พบโมเดลเครื่องหมายวรรคตอน: %1@"
+        ),
+        "core_msg_174" to mapOf(
+            "zh-Hant" to "找不到詞表：%1@",
+            "en" to "Vocabulary not found: %1@",
+            "zh-Hans" to "找不到词表：%1@",
+            "ja" to "語彙リストが見つかりません: %1@",
+            "ko" to "어휘 목록을 찾을 수 없습니다: %1@",
+            "th" to "ไม่พบรายการคำศัพท์: %1@"
+        ),
+        "core_msg_175" to mapOf(
+            "zh-Hant" to "詞表格式錯誤：%1@",
+            "en" to "Invalid vocabulary format: %1@",
+            "zh-Hans" to "词表格式错误：%1@",
+            "ja" to "語彙リストの形式が正しくありません: %1@",
+            "ko" to "어휘 목록 형식이 올바르지 않습니다: %1@",
+            "th" to "รูปแบบรายการคำศัพท์ไม่ถูกต้อง: %1@"
+        ),
+        "core_msg_176" to mapOf(
+            "zh-Hant" to "詞表缺少 <unk>",
+            "en" to "The vocabulary is missing <unk>",
+            "zh-Hans" to "词表缺少 <unk>",
+            "ja" to "語彙リストに <unk> がありません",
+            "ko" to "어휘 목록에 <unk>가 없습니다",
+            "th" to "รายการคำศัพท์ไม่มี <unk>"
+        ),
+        "core_msg_177" to mapOf(
+            "zh-Hant" to "logits 維度為 0",
+            "en" to "The logits dimension is 0",
+            "zh-Hans" to "logits 维度为 0",
+            "ja" to "logits の次元が 0 です",
+            "ko" to "logits 차원이 0입니다",
+            "th" to "มิติของ logits เป็น 0"
+        ),
+        "core_msg_178" to mapOf(
+            "zh-Hant" to "辨識後端不可用：%1@",
+            "en" to "Recognition backend unavailable: %1@",
+            "zh-Hans" to "辨识后端不可用：%1@",
+            "ja" to "認識バックエンドを利用できません: %1@",
+            "ko" to "인식 백엔드를 사용할 수 없습니다: %1@",
+            "th" to "ส่วนหลังบ้านการรู้จำใช้ไม่ได้: %1@"
+        ),
+        "core_msg_179" to mapOf(
+            "zh-Hant" to "無候選結果",
+            "en" to "No candidate results",
+            "zh-Hans" to "无候选结果",
+            "ja" to "候補がありません",
+            "ko" to "후보 결과가 없습니다",
+            "th" to "ไม่มีผลลัพธ์ตัวเลือก"
+        ),
+        "core_msg_180" to mapOf(
+            "zh-Hant" to "密碼錯誤，無法加入房間",
+            "en" to "Wrong password; cannot join the room",
+            "zh-Hans" to "密码错误，无法加入房间",
+            "ja" to "パスワードが違うため、ルームに参加できません",
+            "ko" to "비밀번호가 틀려 방에 참가할 수 없습니다",
+            "th" to "รหัสผ่านไม่ถูกต้อง เข้าร่วมห้องไม่ได้"
+        ),
+        "core_msg_181" to mapOf(
+            "zh-Hant" to "僅房主有權關閉此房間",
+            "en" to "Only the host can close this room",
+            "zh-Hans" to "仅房主有权关闭此房间",
+            "ja" to "このルームを閉じられるのはホストだけです",
+            "ko" to "방장만 이 방을 닫을 수 있습니다",
+            "th" to "เฉพาะเจ้าของห้องเท่านั้นที่ปิดห้องนี้ได้"
+        ),
+        "core_msg_182" to mapOf(
+            "zh-Hant" to "房主已結束本次線上協同會議",
+            "en" to "The host has ended this collaboration session",
+            "zh-Hans" to "房主已结束本次线上协同会议",
+            "ja" to "ホストがこの共同編集セッションを終了しました",
+            "ko" to "방장이 이번 공동 편집 세션을 종료했습니다",
+            "th" to "เจ้าของห้องได้จบการแก้ไขร่วมกันครั้งนี้แล้ว"
+        ),
+        "core_msg_183" to mapOf(
+            "zh-Hant" to "房間不存在",
+            "en" to "The room does not exist",
+            "zh-Hans" to "房间不存在",
+            "ja" to "ルームが存在しません",
+            "ko" to "방이 없습니다",
+            "th" to "ไม่มีห้องนี้"
+        ),
+        "core_msg_184" to mapOf(
+            "zh-Hant" to "無法解析之訊息格式",
+            "en" to "The message format could not be parsed",
+            "zh-Hans" to "无法解析之消息格式",
+            "ja" to "メッセージの形式を解析できませんでした",
+            "ko" to "메시지 형식을 해석할 수 없습니다",
+            "th" to "แยกวิเคราะห์รูปแบบข้อความไม่ได้"
+        ),
+        "core_msg_185" to mapOf(
+            "zh-Hant" to "找不到 blob：%1@",
+            "en" to "Blob not found: %1@",
+            "zh-Hans" to "找不到 blob：%1@",
+            "ja" to "blob が見つかりません: %1@",
+            "ko" to "blob을 찾을 수 없습니다: %1@",
+            "th" to "ไม่พบ blob: %1@"
+        ),
+        "core_msg_186" to mapOf(
+            "zh-Hant" to "blob 損毀：期望 %1@，實得 %2@",
+            "en" to "Blob is corrupted: expected %1@, got %2@",
+            "zh-Hans" to "blob 损毁：期望 %1@，实得 %2@",
+            "ja" to "blob が壊れています: 期待値 %1@、実際 %2@",
+            "ko" to "blob이 손상되었습니다: 기대값 %1@, 실제 %2@",
+            "th" to "blob เสียหาย: คาดว่า %1@ แต่ได้ %2@"
+        ),
+        "core_msg_187" to mapOf(
+            "zh-Hant" to "不是 .padnote 套件：%1@",
+            "en" to "Not a .padnote package: %1@",
+            "zh-Hans" to "不是 .padnote 套件：%1@",
+            "ja" to ".padnote パッケージではありません: %1@",
+            "ko" to ".padnote 패키지가 아닙니다: %1@",
+            "th" to "ไม่ใช่แพ็กเกจ .padnote: %1@"
+        ),
+        "core_msg_188" to mapOf(
+            "zh-Hant" to "此筆記本需要版本 %1@ 的讀取器，本程式為 %2@，請升級",
+            "en" to "This notebook needs a reader of version %1@; this app is %2@. Please update",
+            "zh-Hans" to "此笔记本需要版本 %1@ 的读取器，本程序为 %2@，请升级",
+            "ja" to "このノートにはバージョン %1@ のリーダーが必要です（このアプリは %2@）。アップデートしてください",
+            "ko" to "이 노트는 버전 %1@ 리더가 필요합니다(이 앱은 %2@). 업데이트하세요",
+            "th" to "สมุดบันทึกนี้ต้องใช้ตัวอ่านเวอร์ชัน %1@ แต่แอปนี้เป็น %2@ โปรดอัปเดต"
+        ),
+        "core_msg_189" to mapOf(
+            "zh-Hant" to "manifest 解析失敗：%1@",
+            "en" to "Failed to parse the manifest: %1@",
+            "zh-Hans" to "manifest 解析失败：%1@",
+            "ja" to "manifest の解析に失敗しました: %1@",
+            "ko" to "manifest 해석에 실패했습니다: %1@",
+            "th" to "แยกวิเคราะห์ manifest ไม่สำเร็จ: %1@"
+        ),
+        "core_msg_190" to mapOf(
+            "zh-Hant" to "文件操作日誌損毀：%1@",
+            "en" to "The document operation log is corrupted: %1@",
+            "zh-Hans" to "文件操作日志损毁：%1@",
+            "ja" to "ドキュメント操作ログが壊れています: %1@",
+            "ko" to "문서 작업 로그가 손상되었습니다: %1@",
+            "th" to "บันทึกการดำเนินการของเอกสารเสียหาย: %1@"
+        ),
+        "core_msg_191" to mapOf(
+            "zh-Hant" to "筆畫檔錯誤：%1@",
+            "en" to "Ink file error: %1@",
+            "zh-Hans" to "笔画文件错误：%1@",
+            "ja" to "手書きファイルのエラー: %1@",
+            "ko" to "필기 파일 오류: %1@",
+            "th" to "ข้อผิดพลาดของไฟล์ลายเส้น: %1@"
+        ),
+        "core_msg_192" to mapOf(
+            "zh-Hant" to "封裝壓縮錯誤：%1@",
+            "en" to "Package compression error: %1@",
+            "zh-Hans" to "封装压缩错误：%1@",
+            "ja" to "パッケージの圧縮エラー: %1@",
+            "ko" to "패키지 압축 오류: %1@",
+            "th" to "ข้อผิดพลาดในการบีบอัดแพ็กเกจ: %1@"
+        ),
+        "core_msg_193" to mapOf(
+            "zh-Hant" to "這個套件沒有加密",
+            "en" to "This package is not encrypted",
+            "zh-Hans" to "这个套件没有加密",
+            "ja" to "このパッケージは暗号化されていません",
+            "ko" to "이 패키지는 암호화되어 있지 않습니다",
+            "th" to "แพ็กเกจนี้ไม่ได้เข้ารหัส"
+        ),
+        "core_msg_194" to mapOf(
+            "zh-Hant" to "salt 不是合法 base64：%1@",
+            "en" to "salt is not valid base64: %1@",
+            "zh-Hans" to "salt 不是合法 base64：%1@",
+            "ja" to "salt が正しい base64 ではありません: %1@",
+            "ko" to "salt가 올바른 base64가 아닙니다: %1@",
+            "th" to "salt ไม่ใช่ base64 ที่ถูกต้อง: %1@"
+        ),
+        "core_msg_195" to mapOf(
+            "zh-Hant" to "這本筆記是在復原碼還不能解鎖的版本建立的 —— 它的復原碼從來沒有被用來包住金鑰，只有密碼開得了",
+            "en" to "This notebook was created by a version that could not yet unlock with a recovery phrase — its recovery phrase was never used to wrap the key, so only the password opens it",
+            "zh-Hans" to "这本笔记是在恢复码还不能解锁的版本建立的 —— 它的恢复码从来没有被用来包住密钥，只有密码开得了",
+            "ja" to "このノートは、復元フレーズでロック解除できない旧バージョンで作成されました。復元フレーズで鍵を包んだことがないため、パスワードでのみ開けます",
+            "ko" to "이 노트는 복구 문구로 잠금을 풀 수 없던 버전에서 만들어졌습니다. 복구 문구로 키를 감싼 적이 없어 비밀번호로만 열 수 있습니다",
+            "th" to "สมุดบันทึกนี้สร้างจากเวอร์ชันที่ยังปลดล็อกด้วยวลีกู้คืนไม่ได้ วลีกู้คืนไม่เคยถูกใช้ห่อหุ้มคีย์ จึงเปิดได้ด้วยรหัสผ่านเท่านั้น"
+        ),
+        "core_msg_196" to mapOf(
+            "zh-Hant" to "不合法的裝置 id：%1@",
+            "en" to "Invalid device id: %1@",
+            "zh-Hans" to "不合法的装置 id：%1@",
+            "ja" to "無効なデバイス id: %1@",
+            "ko" to "잘못된 기기 id: %1@",
+            "th" to "id อุปกรณ์ไม่ถูกต้อง: %1@"
+        ),
+        "core_msg_197" to mapOf(
+            "zh-Hant" to "不合法的錄音檔名：%1@",
+            "en" to "Invalid recording file name: %1@",
+            "zh-Hans" to "不合法的录音文件名：%1@",
+            "ja" to "無効な録音ファイル名: %1@",
+            "ko" to "잘못된 녹음 파일 이름: %1@",
+            "th" to "ชื่อไฟล์บันทึกเสียงไม่ถูกต้อง: %1@"
+        ),
+        "core_msg_198" to mapOf(
+            "zh-Hant" to "不合法的 oplog 檔名：%1@",
+            "en" to "Invalid oplog file name: %1@",
+            "zh-Hans" to "不合法的 oplog 文件名：%1@",
+            "ja" to "無効な oplog ファイル名: %1@",
+            "ko" to "잘못된 oplog 파일 이름: %1@",
+            "th" to "ชื่อไฟล์ oplog ไม่ถูกต้อง: %1@"
+        ),
+        "core_msg_199" to mapOf(
+            "zh-Hant" to "這個套件已加密，需要先解鎖才讀得出內容",
+            "en" to "This package is encrypted; unlock it first to read its contents",
+            "zh-Hans" to "这个套件已加密，需要先解锁才读得出内容",
+            "ja" to "このパッケージは暗号化されています。内容を読むには先にロックを解除してください",
+            "ko" to "이 패키지는 암호화되어 있습니다. 내용을 읽으려면 먼저 잠금을 해제하세요",
+            "th" to "แพ็กเกจนี้เข้ารหัสอยู่ ต้องปลดล็อกก่อนจึงจะอ่านเนื้อหาได้"
+        ),
+        "core_msg_200" to mapOf(
+            "zh-Hant" to "oplog 操作筆數超過上限，已終止載入以防止記憶體溢出",
+            "en" to "The number of oplog operations exceeds the limit; loading was stopped to prevent running out of memory",
+            "zh-Hans" to "oplog 操作笔数超过上限，已终止加载以防止内存溢出",
+            "ja" to "oplog の操作数が上限を超えました。メモリ不足を防ぐため読み込みを中止しました",
+            "ko" to "oplog 작업 수가 한도를 초과하여 메모리 부족을 막기 위해 로드를 중단했습니다",
+            "th" to "จำนวนการดำเนินการใน oplog เกินขีดจำกัด จึงหยุดโหลดเพื่อป้องกันหน่วยความจำไม่พอ"
+        ),
+        "core_msg_201" to mapOf(
+            "zh-Hant" to "路徑包含非法穿越",
+            "en" to "The path contains an illegal traversal",
+            "zh-Hans" to "路径包含非法穿越",
+            "ja" to "パスに不正な階層移動が含まれています",
+            "ko" to "경로에 허용되지 않는 상위 이동이 포함되어 있습니다",
+            "th" to "เส้นทางมีการย้อนขึ้นที่ไม่อนุญาต"
+        ),
+        "core_msg_202" to mapOf(
+            "zh-Hant" to "Drive 沒有回傳 startPageToken",
+            "en" to "Drive did not return a startPageToken",
+            "zh-Hans" to "Drive 没有回传 startPageToken",
+            "ja" to "Drive が startPageToken を返しませんでした",
+            "ko" to "Drive가 startPageToken을 반환하지 않았습니다",
+            "th" to "Drive ไม่ส่ง startPageToken กลับมา"
+        ),
+        "core_msg_203" to mapOf(
+            "zh-Hant" to "建立 %1@ 之後 Drive 沒有回傳 id",
+            "en" to "Drive did not return an id after creating %1@",
+            "zh-Hans" to "建立 %1@ 之后 Drive 没有回传 id",
+            "ja" to "%1@ の作成後に Drive が id を返しませんでした",
+            "ko" to "%1@을(를) 만든 뒤 Drive가 id를 반환하지 않았습니다",
+            "th" to "หลังสร้าง %1@ Drive ไม่ส่ง id กลับมา"
+        ),
+        "core_msg_204" to mapOf(
+            "zh-Hant" to "Google Drive 不支援 append（%1@）；請改用分塊檔策略",
+            "en" to "Google Drive does not support append (%1@); use the chunked-file strategy instead",
+            "zh-Hans" to "Google Drive 不支持 append（%1@）；请改用分块文件策略",
+            "ja" to "Google Drive は追記（%1@）をサポートしていません。分割ファイル方式に切り替えてください",
+            "ko" to "Google Drive는 이어쓰기(%1@)를 지원하지 않습니다. 분할 파일 방식을 사용하세요",
+            "th" to "Google Drive ไม่รองรับการต่อท้าย (%1@) โปรดใช้วิธีแบ่งไฟล์แทน"
+        )
+    )
+
+    private fun part7(): Map<String, Map<String, String>> = mapOf(
+        "core_msg_205" to mapOf(
+            "zh-Hant" to "Drive API 速率限制（HTTP 403），稍後重試：%1@",
+            "en" to "Drive API rate limit (HTTP 403); try again later: %1@",
+            "zh-Hans" to "Drive API 速率限制（HTTP 403），稍后重试：%1@",
+            "ja" to "Drive API のレート制限（HTTP 403）です。しばらくしてからやり直してください: %1@",
+            "ko" to "Drive API 속도 제한(HTTP 403)입니다. 잠시 후 다시 시도하세요: %1@",
+            "th" to "ถึงขีดจำกัดอัตราของ Drive API (HTTP 403) โปรดลองใหม่ภายหลัง: %1@"
+        ),
+        "core_msg_206" to mapOf(
+            "zh-Hant" to "可續傳上傳沒有回傳 Location",
+            "en" to "The resumable upload did not return a Location",
+            "zh-Hans" to "可续传上传没有回传 Location",
+            "ja" to "再開可能なアップロードが Location を返しませんでした",
+            "ko" to "이어서 올리기가 Location을 반환하지 않았습니다",
+            "th" to "การอัปโหลดแบบต่อได้ไม่ส่ง Location กลับมา"
+        ),
+        "core_msg_207" to mapOf(
+            "zh-Hant" to "訊框太大",
+            "en" to "The frame is too large",
+            "zh-Hans" to "帧太大",
+            "ja" to "フレームが大きすぎます",
+            "ko" to "프레임이 너무 큽니다",
+            "th" to "เฟรมใหญ่เกินไป"
+        ),
+        "core_msg_208" to mapOf(
+            "zh-Hant" to "訊框超過上限",
+            "en" to "The frame exceeds the limit",
+            "zh-Hans" to "帧超过上限",
+            "ja" to "フレームが上限を超えています",
+            "ko" to "프레임이 한도를 초과했습니다",
+            "th" to "เฟรมเกินขีดจำกัด"
+        ),
+        "core_msg_209" to mapOf(
+            "zh-Hant" to "訊框太短",
+            "en" to "The frame is too short",
+            "zh-Hans" to "帧太短",
+            "ja" to "フレームが短すぎます",
+            "ko" to "프레임이 너무 짧습니다",
+            "th" to "เฟรมสั้นเกินไป"
+        ),
+        "core_msg_210" to mapOf(
+            "zh-Hant" to "方向不符（疑似反射）",
+            "en" to "Wrong direction (possible reflection)",
+            "zh-Hans" to "方向不符（疑似反射）",
+            "ja" to "方向が一致しません（反射の疑い）",
+            "ko" to "방향이 맞지 않습니다(반사 의심)",
+            "th" to "ทิศทางไม่ตรง (สงสัยว่าเป็นการสะท้อนกลับ)"
+        ),
+        "core_msg_211" to mapOf(
+            "zh-Hant" to "標頭超出訊框",
+            "en" to "The header extends beyond the frame",
+            "zh-Hans" to "标头超出帧",
+            "ja" to "ヘッダーがフレームをはみ出しています",
+            "ko" to "헤더가 프레임을 벗어났습니다",
+            "th" to "ส่วนหัวเกินขอบเฟรม"
+        ),
+        "core_msg_212" to mapOf(
+            "zh-Hant" to "標頭不是合法訊息",
+            "en" to "The header is not a valid message",
+            "zh-Hans" to "标头不是合法消息",
+            "ja" to "ヘッダーが有効なメッセージではありません",
+            "ko" to "헤더가 올바른 메시지가 아닙니다",
+            "th" to "ส่วนหัวไม่ใช่ข้อความที่ถูกต้อง"
+        ),
+        "core_msg_213" to mapOf(
+            "zh-Hant" to "解析不到位址",
+            "en" to "Cannot resolve the address",
+            "zh-Hans" to "解析不到位址",
+            "ja" to "アドレスを解決できません",
+            "ko" to "주소를 확인할 수 없습니다",
+            "th" to "แปลงที่อยู่ไม่ได้"
+        ),
+        "core_msg_214" to mapOf(
+            "zh-Hant" to "魔數不符",
+            "en" to "Magic number mismatch",
+            "zh-Hans" to "魔数不符",
+            "ja" to "マジックナンバーが一致しません",
+            "ko" to "매직 넘버가 일치하지 않습니다",
+            "th" to "เลขมายากลไม่ตรงกัน"
+        ),
+        "core_msg_215" to mapOf(
+            "zh-Hant" to "對端裝置 id 不符",
+            "en" to "The peer device id does not match",
+            "zh-Hans" to "对端装置 id 不符",
+            "ja" to "相手デバイスの id が一致しません",
+            "ko" to "상대 기기 id가 일치하지 않습니다",
+            "th" to "id ของอุปกรณ์ปลายทางไม่ตรงกัน"
+        ),
+        "core_msg_216" to mapOf(
+            "zh-Hant" to "金鑰不符",
+            "en" to "Key mismatch",
+            "zh-Hans" to "密钥不符",
+            "ja" to "鍵が一致しません",
+            "ko" to "키가 일치하지 않습니다",
+            "th" to "คีย์ไม่ตรงกัน"
+        ),
+        "core_msg_217" to mapOf(
+            "zh-Hant" to "第一個訊框不是 Ready",
+            "en" to "The first frame is not Ready",
+            "zh-Hans" to "第一个帧不是 Ready",
+            "ja" to "最初のフレームが Ready ではありません",
+            "ko" to "첫 프레임이 Ready가 아닙니다",
+            "th" to "เฟรมแรกไม่ใช่ Ready"
+        ),
+        "core_msg_218" to mapOf(
+            "zh-Hant" to "標籤不符",
+            "en" to "Tag mismatch",
+            "zh-Hans" to "标签不符",
+            "ja" to "タグが一致しません",
+            "ko" to "태그가 일치하지 않습니다",
+            "th" to "แท็กไม่ตรงกัน"
+        ),
+        "core_msg_219" to mapOf(
+            "zh-Hant" to "不該由這一方連過來",
+            "en" to "This side should not have been the one to connect",
+            "zh-Hans" to "不该由这一方连过来",
+            "ja" to "この側から接続すべきではありません",
+            "ko" to "이쪽에서 연결하면 안 됩니다",
+            "th" to "ฝั่งนี้ไม่ควรเป็นฝ่ายเชื่อมต่อ"
+        ),
+        "core_msg_220" to mapOf(
+            "zh-Hant" to "檔案尚未從雲端下載：%1@",
+            "en" to "The file has not been downloaded from the cloud yet: %1@",
+            "zh-Hans" to "文件尚未从云端下载：%1@",
+            "ja" to "ファイルはまだクラウドからダウンロードされていません: %1@",
+            "ko" to "파일이 아직 클라우드에서 다운로드되지 않았습니다: %1@",
+            "th" to "ยังไม่ได้ดาวน์โหลดไฟล์จากคลาวด์: %1@"
+        ),
+        "core_msg_221" to mapOf(
+            "zh-Hant" to "停止門檻必須低於開始門檻，否則遲滯失效",
+            "en" to "The stop threshold must be lower than the start threshold, otherwise hysteresis does not work",
+            "zh-Hans" to "停止门槛必须低於开始门槛，否则迟滞失效",
+            "ja" to "停止のしきい値は開始のしきい値より低くする必要があります。そうでないとヒステリシスが機能しません",
+            "ko" to "중지 임계값은 시작 임계값보다 낮아야 합니다. 그렇지 않으면 히스테리시스가 작동하지 않습니다",
+            "th" to "เกณฑ์หยุดต้องต่ำกว่าเกณฑ์เริ่ม ไม่เช่นนั้นฮิสเทอรีซิสจะไม่ทำงาน"
+        ),
+        "core_msg_222" to mapOf(
+            "zh-Hant" to "找不到 VAD 模型：%1@",
+            "en" to "VAD model not found: %1@",
+            "zh-Hans" to "找不到 VAD 模型：%1@",
+            "ja" to "VAD モデルが見つかりません: %1@",
+            "ko" to "VAD 모델을 찾을 수 없습니다: %1@",
+            "th" to "ไม่พบโมเดล VAD: %1@"
+        ),
         "corner_style" to mapOf(
             "zh-Hant" to "圓角",
             "en" to "Corners",
@@ -3253,10 +5042,7 @@ object LocalizationStrings {
             "ja" to "選択を解除",
             "ko" to "선택 해제",
             "th" to "ยกเลิกเลือกทั้งหมด"
-        )
-    )
-
-    private fun part5(): Map<String, Map<String, String>> = mapOf(
+        ),
         "designer_palette" to mapOf(
             "zh-Hant" to "設計師色系",
             "en" to "Designer Palette",
@@ -3264,6 +5050,281 @@ object LocalizationStrings {
             "ja" to "デザイナーパレット",
             "ko" to "디자이너 팔레트",
             "th" to "จานสีนักออกแบบ"
+        ),
+        "diag_azimuth" to mapOf(
+            "zh-Hant" to "方位",
+            "en" to "Azimuth",
+            "zh-Hans" to "方位",
+            "ja" to "方位角",
+            "ko" to "방위각",
+            "th" to "ทิศทาง"
+        ),
+        "diag_coalesced" to mapOf(
+            "zh-Hant" to "聯合取樣點",
+            "en" to "Coalesced samples",
+            "zh-Hans" to "合并取样点",
+            "ja" to "結合サンプル",
+            "ko" to "병합 샘플",
+            "th" to "ตัวอย่างที่รวมกัน"
+        ),
+        "diag_collab_crypto" to mapOf(
+            "zh-Hant" to "協同加密",
+            "en" to "Collaboration encryption",
+            "zh-Hans" to "协同加密",
+            "ja" to "共同編集の暗号化",
+            "ko" to "공동 편집 암호화",
+            "th" to "การเข้ารหัสการแก้ไขร่วมกัน"
+        ),
+        "diag_collab_relay" to mapOf(
+            "zh-Hant" to "協同中繼",
+            "en" to "Collaboration relay",
+            "zh-Hans" to "协同中继",
+            "ja" to "共同編集の中継",
+            "ko" to "공동 편집 릴레이",
+            "th" to "รีเลย์การแก้ไขร่วมกัน"
+        ),
+        "diag_core_load_failed" to mapOf(
+            "zh-Hant" to "核心載入失敗",
+            "en" to "Core failed to load",
+            "zh-Hans" to "核心载入失败",
+            "ja" to "コアの読み込みに失敗",
+            "ko" to "코어 로드 실패",
+            "th" to "โหลดแกนหลักไม่สำเร็จ"
+        ),
+        "diag_core_version" to mapOf(
+            "zh-Hant" to "核心版本",
+            "en" to "Core version",
+            "zh-Hans" to "核心版本",
+            "ja" to "コアのバージョン",
+            "ko" to "코어 버전",
+            "th" to "เวอร์ชันแกนหลัก"
+        ),
+        "diag_crypto_empty" to mapOf(
+            "zh-Hant" to "加密回傳空字串",
+            "en" to "Encryption returned an empty string",
+            "zh-Hans" to "加密回传空字串",
+            "ja" to "暗号化の結果が空の文字列でした",
+            "ko" to "암호화 결과가 빈 문자열입니다",
+            "th" to "การเข้ารหัสส่งสตริงว่างกลับมา"
+        ),
+        "diag_crypto_mismatch" to mapOf(
+            "zh-Hant" to "內容不符",
+            "en" to "Content mismatch",
+            "zh-Hans" to "内容不符",
+            "ja" to "内容が一致しません",
+            "ko" to "내용이 일치하지 않습니다",
+            "th" to "เนื้อหาไม่ตรงกัน"
+        ),
+        "diag_crypto_ok" to mapOf(
+            "zh-Hant" to "AES-256-GCM round-trip 通過",
+            "en" to "AES-256-GCM round trip passed",
+            "zh-Hans" to "AES-256-GCM round-trip 通过",
+            "ja" to "AES-256-GCM の往復テストに合格",
+            "ko" to "AES-256-GCM 왕복 테스트 통과",
+            "th" to "การทดสอบ AES-256-GCM ไป-กลับผ่าน"
+        ),
+        "diag_failed" to mapOf(
+            "zh-Hant" to "失敗：%1@",
+            "en" to "Failed: %1@",
+            "zh-Hans" to "失败：%1@",
+            "ja" to "失敗: %1@",
+            "ko" to "실패: %1@",
+            "th" to "ล้มเหลว: %1@"
+        ),
+        "diag_first_stroke" to mapOf(
+            "zh-Hant" to "　首筆",
+            "en" to "  First stroke",
+            "zh-Hans" to "　首笔",
+            "ja" to "　最初のストローク",
+            "ko" to "  첫 획",
+            "th" to "  เส้นแรก"
+        ),
+        "diag_first_stroke_value" to mapOf(
+            "zh-Hant" to "RGBA(%1@)、起點(%2@, %3@)、%4@ 點",
+            "en" to "RGBA(%1@), start (%2@, %3@), %4@ points",
+            "zh-Hans" to "RGBA(%1@)、起点(%2@, %3@)、%4@ 点",
+            "ja" to "RGBA(%1@)、始点(%2@, %3@)、%4@ 点",
+            "ko" to "RGBA(%1@), 시작점(%2@, %3@), %4@개 점",
+            "th" to "RGBA(%1@) จุดเริ่ม (%2@, %3@) %4@ จุด"
+        ),
+        "diag_handoff_note" to mapOf(
+            "zh-Hant" to "跨平台筆記",
+            "en" to "Cross-platform note",
+            "zh-Hans" to "跨平台笔记",
+            "ja" to "クロスプラットフォームのノート",
+            "ko" to "크로스 플랫폼 노트",
+            "th" to "สมุดบันทึกข้ามแพลตฟอร์ม"
+        ),
+        "diag_input_device" to mapOf(
+            "zh-Hant" to "輸入裝置",
+            "en" to "Input device",
+            "zh-Hans" to "输入装置",
+            "ja" to "入力デバイス",
+            "ko" to "입력 장치",
+            "th" to "อุปกรณ์อินพุต"
+        ),
+        "diag_not_supported" to mapOf(
+            "zh-Hant" to "不支援",
+            "en" to "Not supported",
+            "zh-Hans" to "不支援",
+            "ja" to "非対応",
+            "ko" to "지원 안 함",
+            "th" to "ไม่รองรับ"
+        ),
+        "diag_open_failed" to mapOf(
+            "zh-Hant" to "開啟失敗：%1@",
+            "en" to "Failed to open: %1@",
+            "zh-Hans" to "开启失败：%1@",
+            "ja" to "開けませんでした: %1@",
+            "ko" to "열기 실패: %1@",
+            "th" to "เปิดไม่สำเร็จ: %1@"
+        ),
+        "diag_page_n" to mapOf(
+            "zh-Hant" to "第 %1@ 頁",
+            "en" to "Page %1@",
+            "zh-Hans" to "第 %1@ 页",
+            "ja" to "%1@ ページ目",
+            "ko" to "%1@페이지",
+            "th" to "หน้า %1@"
+        )
+    )
+
+    private fun part8(): Map<String, Map<String, String>> = mapOf(
+        "diag_page_value" to mapOf(
+            "zh-Hant" to "筆畫 %1@、高 %2@pt",
+            "en" to "%1@ strokes, %2@ pt tall",
+            "zh-Hans" to "笔画 %1@、高 %2@pt",
+            "ja" to "ストローク %1@、高さ %2@pt",
+            "ko" to "획 %1@개, 높이 %2@pt",
+            "th" to "%1@ เส้น สูง %2@pt"
+        ),
+        "diag_pages" to mapOf(
+            "zh-Hant" to "頁數",
+            "en" to "Pages",
+            "zh-Hans" to "页数",
+            "ja" to "ページ数",
+            "ko" to "페이지 수",
+            "th" to "จำนวนหน้า"
+        ),
+        "diag_predicted" to mapOf(
+            "zh-Hant" to "預測取樣點",
+            "en" to "Predicted samples",
+            "zh-Hans" to "预测取样点",
+            "ja" to "予測サンプル",
+            "ko" to "예측 샘플",
+            "th" to "ตัวอย่างที่คาดการณ์"
+        ),
+        "diag_pressure" to mapOf(
+            "zh-Hant" to "壓力",
+            "en" to "Pressure",
+            "zh-Hans" to "压力",
+            "ja" to "筆圧",
+            "ko" to "압력",
+            "th" to "แรงกด"
+        ),
+        "diag_relay_start_failed" to mapOf(
+            "zh-Hant" to "啟動失敗",
+            "en" to "Failed to start",
+            "zh-Hans" to "启动失败",
+            "ja" to "起動に失敗",
+            "ko" to "시작 실패",
+            "th" to "เริ่มไม่สำเร็จ"
+        ),
+        "diag_relay_started" to mapOf(
+            "zh-Hant" to "已啟動於埠 %1@（已停止）",
+            "en" to "Started on port %1@ (now stopped)",
+            "zh-Hans" to "已启动於埠 %1@（已停止）",
+            "ja" to "ポート %1@ で起動しました（現在は停止済み）",
+            "ko" to "포트 %1@에서 시작됨(현재 중지됨)",
+            "th" to "เริ่มที่พอร์ต %1@ แล้ว (ตอนนี้หยุดแล้ว)"
+        ),
+        "diag_roll" to mapOf(
+            "zh-Hant" to "滾動",
+            "en" to "Roll",
+            "zh-Hans" to "滚动",
+            "ja" to "ロール",
+            "ko" to "롤",
+            "th" to "การกลิ้ง"
+        ),
+        "diag_sample_string" to mapOf(
+            "zh-Hant" to "示例字串",
+            "en" to "Sample string",
+            "zh-Hans" to "示例字符串",
+            "ja" to "サンプル文字列",
+            "ko" to "예시 문자열",
+            "th" to "สตริงตัวอย่าง"
+        ),
+        "diag_samples" to mapOf(
+            "zh-Hant" to "p50 %1@ms · p95 %2@ms · %3@ 樣本",
+            "en" to "p50 %1@ms · p95 %2@ms · %3@ samples",
+            "zh-Hans" to "p50 %1@ms · p95 %2@ms · %3@ 样本",
+            "ja" to "p50 %1@ms · p95 %2@ms · %3@ サンプル",
+            "ko" to "p50 %1@ms · p95 %2@ms · 샘플 %3@개",
+            "th" to "p50 %1@ms · p95 %2@ms · %3@ ตัวอย่าง"
+        ),
+        "diag_string_table" to mapOf(
+            "zh-Hant" to "字串表",
+            "en" to "String table",
+            "zh-Hans" to "字符串表",
+            "ja" to "文字列テーブル",
+            "ko" to "문자열 표",
+            "th" to "ตารางสตริง"
+        ),
+        "diag_string_table_value" to mapOf(
+            "zh-Hant" to "%1@ 條（與 Apple 版同源）",
+            "en" to "%1@ entries (shared with the Apple app)",
+            "zh-Hans" to "%1@ 条（与 Apple 版同源）",
+            "ja" to "%1@ 件（Apple 版と共通）",
+            "ko" to "%1@개(Apple 앱과 동일 출처)",
+            "th" to "%1@ รายการ (ใช้ร่วมกับแอป Apple)"
+        ),
+        "diag_target_platform" to mapOf(
+            "zh-Hant" to "目標平台",
+            "en" to "Target platform",
+            "zh-Hans" to "目标平台",
+            "ja" to "ターゲットプラットフォーム",
+            "ko" to "대상 플랫폼",
+            "th" to "แพลตฟอร์มเป้าหมาย"
+        ),
+        "diag_tilt" to mapOf(
+            "zh-Hant" to "傾角",
+            "en" to "Tilt",
+            "zh-Hans" to "倾角",
+            "ja" to "傾き",
+            "ko" to "기울기",
+            "th" to "มุมเอียง"
+        ),
+        "diag_tip_latency" to mapOf(
+            "zh-Hant" to "筆尖延遲",
+            "en" to "Pen-tip latency",
+            "zh-Hans" to "笔尖延迟",
+            "ja" to "ペン先の遅延",
+            "ko" to "펜촉 지연",
+            "th" to "ความหน่วงปลายปากกา"
+        ),
+        "diag_touches" to mapOf(
+            "zh-Hant" to "同時觸控",
+            "en" to "Simultaneous touches",
+            "zh-Hans" to "同时触控",
+            "ja" to "同時タッチ数",
+            "ko" to "동시 터치",
+            "th" to "การแตะพร้อมกัน"
+        ),
+        "diag_ui_language" to mapOf(
+            "zh-Hant" to "介面語系",
+            "en" to "Interface language",
+            "zh-Hans" to "界面语言",
+            "ja" to "表示言語",
+            "ko" to "인터페이스 언어",
+            "th" to "ภาษาของอินเทอร์เฟซ"
+        ),
+        "diag_ui_version" to mapOf(
+            "zh-Hant" to "介面版本",
+            "en" to "App version",
+            "zh-Hans" to "界面版本",
+            "ja" to "アプリのバージョン",
+            "ko" to "앱 버전",
+            "th" to "เวอร์ชันแอป"
         ),
         "diagnostics" to mapOf(
             "zh-Hant" to "診斷",
@@ -3768,7 +5829,10 @@ object LocalizationStrings {
             "ja" to "太実線",
             "ko" to "굵은 실선",
             "th" to "เส้นหนา"
-        ),
+        )
+    )
+
+    private fun part9(): Map<String, Map<String, String>> = mapOf(
         "draft_pen_thin" to mapOf(
             "zh-Hant" to "細實線",
             "en" to "Thin solid",
@@ -3896,10 +5960,7 @@ object LocalizationStrings {
             "ja" to "製図のヒント",
             "ko" to "도면 도움말",
             "th" to "เคล็ดลับงานเขียนแบบ"
-        )
-    )
-
-    private fun part6(): Map<String, Map<String, String>> = mapOf(
+        ),
         "draft_unlock_layer" to mapOf(
             "zh-Hant" to "解除鎖定",
             "en" to "Unlock layer",
@@ -4411,7 +6472,10 @@ object LocalizationStrings {
             "ja" to "共同編集を終了",
             "ko" to "공동 편집 종료",
             "th" to "สิ้นสุดการทำงานร่วมกัน"
-        ),
+        )
+    )
+
+    private fun part10(): Map<String, Map<String, String>> = mapOf(
         "end_session_confirm" to mapOf(
             "zh-Hant" to "確認結束多人協同會議？所有在線成員將被中斷連線。",
             "en" to "End collaborative session? All online participants will be disconnected.",
@@ -4539,10 +6603,7 @@ object LocalizationStrings {
             "ja" to "録音を挿入できませんでした。音声ファイルが削除されている可能性があります",
             "ko" to "녹음을 삽입하지 못했습니다. 오디오 파일이 삭제되었을 수 있습니다",
             "th" to "แทรกเสียงบันทึกไม่สำเร็จ ไฟล์เสียงอาจถูกลบไปแล้ว"
-        )
-    )
-
-    private fun part7(): Map<String, Map<String, String>> = mapOf(
+        ),
         "err_mic_open_failed" to mapOf(
             "zh-Hant" to "無法開啟麥克風：%@",
             "en" to "Could not open the microphone: %@",
@@ -5054,7 +7115,10 @@ object LocalizationStrings {
             "ja" to "1:1.618のフィボナッチ螺旋で視線を自然に誘導",
             "ko" to "1:1.618 피보나치 나선 오버레이로 시선 유도",
             "th" to "ซ้อนทับเกลียวฟีโบนัชชี 1:1.618 เพื่อนำสายตา"
-        ),
+        )
+    )
+
+    private fun part11(): Map<String, Map<String, String>> = mapOf(
         "golden_spiral_ref" to mapOf(
             "zh-Hant" to "黃金螺旋參考線 (Golden Spiral)",
             "en" to "Golden Spiral Guide",
@@ -5182,10 +7246,7 @@ object LocalizationStrings {
             "ja" to "作図エリア",
             "ko" to "작도 영역",
             "th" to "พื้นที่วาด"
-        )
-    )
-
-    private fun part8(): Map<String, Map<String, String>> = mapOf(
+        ),
         "guide_due" to mapOf(
             "zh-Hant" to "期限",
             "en" to "Due",
@@ -5697,7 +7758,10 @@ object LocalizationStrings {
             "ja" to "次に、ページ上の**好きな場所をタップ**するとピンが置かれます。ツールバーのアイコンをもう一度押すと配置モードを終了します。",
             "ko" to "이제 페이지의 **아무 곳이나 탭**하면 핀이 놓입니다. 도구 모음 아이콘을 다시 누르면 배치 모드를 벗어납니다.",
             "th" to "จากนั้น**แตะที่ใดก็ได้บนหน้า**เพื่อวางหมุด แตะไอคอนบนแถบเครื่องมืออีกครั้งเพื่อออกจากโหมดวาง"
-        ),
+        )
+    )
+
+    private fun part12(): Map<String, Map<String, String>> = mapOf(
         "hint_comment_pin_title" to mapOf(
             "zh-Hant" to "新增討論圖釘",
             "en" to "Add Comment Pin",
@@ -5825,10 +7889,7 @@ object LocalizationStrings {
             "ja" to "キャラメルピンク",
             "ko" to "캐러멜 핑크",
             "th" to "ชมพูคาราเมล"
-        )
-    )
-
-    private fun part9(): Map<String, Map<String, String>> = mapOf(
+        ),
         "hue_chestnut" to mapOf(
             "zh-Hant" to "深栗褐",
             "en" to "Deep Chestnut",
@@ -6340,7 +8401,10 @@ object LocalizationStrings {
             "ja" to "手書き認識は「%@」に対応していません",
             "ko" to "필기 인식이 “%@”를 지원하지 않습니다",
             "th" to "การรู้จำลายมือไม่รองรับ “%@”"
-        ),
+        )
+    )
+
+    private fun part13(): Map<String, Map<String, String>> = mapOf(
         "identity_color" to mapOf(
             "zh-Hant" to "身分顏色",
             "en" to "Identity Colour",
@@ -6468,10 +8532,7 @@ object LocalizationStrings {
             "ja" to "音声ファイルを読み込む",
             "ko" to "오디오 파일 가져오기",
             "th" to "นำเข้าไฟล์เสียง"
-        )
-    )
-
-    private fun part10(): Map<String, Map<String, String>> = mapOf(
+        ),
         "import_builtin_shapes" to mapOf(
             "zh-Hant" to "內建形狀",
             "en" to "Built-in shapes",
@@ -6983,7 +9044,10 @@ object LocalizationStrings {
             "ja" to "最前面へ",
             "ko" to "맨 앞으로",
             "th" to "ไปหน้าสุด"
-        ),
+        )
+    )
+
+    private fun part14(): Map<String, Map<String, String>> = mapOf(
         "layer_group" to mapOf(
             "zh-Hant" to "群組",
             "en" to "Group",
@@ -7111,10 +9175,7 @@ object LocalizationStrings {
             "ja" to "名称未設定の図形",
             "ko" to "이름 없는 도형",
             "th" to "รูปร่างไม่มีชื่อ"
-        )
-    )
-
-    private fun part11(): Map<String, Map<String, String>> = mapOf(
+        ),
         "layers_empty" to mapOf(
             "zh-Hant" to "這一頁還沒有形狀",
             "en" to "No shapes on this page yet",
@@ -7322,6 +9383,657 @@ object LocalizationStrings {
             "ja" to "現在のタブ",
             "ko" to "현재 탭",
             "th" to "แท็บปัจจุบัน"
+        ),
+        "log_msg_001" to mapOf(
+            "zh-Hant" to "Google 帳號授權成功！已儲存憑證。",
+            "en" to "Google account authorized. Credentials saved.",
+            "zh-Hans" to "Google 账号授权成功！已储存凭据。",
+            "ja" to "Google アカウントの認証に成功しました。認証情報を保存しました。",
+            "ko" to "Google 계정 인증에 성공했습니다. 자격 증명을 저장했습니다.",
+            "th" to "อนุญาตบัญชี Google สำเร็จ บันทึกข้อมูลรับรองแล้ว"
+        ),
+        "log_msg_002" to mapOf(
+            "zh-Hant" to "Google 授權取消或失敗：%1@",
+            "en" to "Google authorization was cancelled or failed: %1@",
+            "zh-Hans" to "Google 授权取消或失败：%1@",
+            "ja" to "Google の認証がキャンセルされたか失敗しました: %1@",
+            "ko" to "Google 인증이 취소되었거나 실패했습니다: %1@",
+            "th" to "การอนุญาต Google ถูกยกเลิกหรือล้มเหลว: %1@"
+        ),
+        "log_msg_003" to mapOf(
+            "zh-Hant" to "Google 授權失敗：缺少 Code 或 Verifier",
+            "en" to "Google authorization failed: missing Code or Verifier",
+            "zh-Hans" to "Google 授权失败：缺少 Code 或 Verifier",
+            "ja" to "Google の認証に失敗しました: Code または Verifier がありません",
+            "ko" to "Google 인증 실패: Code 또는 Verifier가 없습니다",
+            "th" to "การอนุญาต Google ล้มเหลว: ไม่มี Code หรือ Verifier"
+        ),
+        "log_msg_004" to mapOf(
+            "zh-Hant" to "Google 授權驗證失敗：State 不符合",
+            "en" to "Google authorization check failed: State mismatch",
+            "zh-Hans" to "Google 授权验证失败：State 不符合",
+            "ja" to "Google の認証の検証に失敗しました: State が一致しません",
+            "ko" to "Google 인증 검증 실패: State가 일치하지 않습니다",
+            "th" to "ตรวจสอบการอนุญาต Google ล้มเหลว: State ไม่ตรงกัน"
+        ),
+        "log_msg_005" to mapOf(
+            "zh-Hant" to "授權失敗：未收到重導向資料",
+            "en" to "Authorization failed: no redirect data received",
+            "zh-Hans" to "授权失败：未收到重导向数据",
+            "ja" to "認証に失敗しました: リダイレクトのデータを受け取っていません",
+            "ko" to "인증 실패: 리디렉션 데이터를 받지 못했습니다",
+            "th" to "การอนุญาตล้มเหลว: ไม่ได้รับข้อมูลการเปลี่ยนเส้นทาง"
+        ),
+        "log_msg_006" to mapOf(
+            "zh-Hant" to "正在向 Google 交換授權憑證...",
+            "en" to "Exchanging the authorization code with Google…",
+            "zh-Hans" to "正在向 Google 交换授权凭据...",
+            "ja" to "Google と認証情報を交換しています…",
+            "ko" to "Google과 인증 정보를 교환하는 중…",
+            "th" to "กำลังแลกเปลี่ยนข้อมูลรับรองกับ Google…"
+        ),
+        "log_msg_007" to mapOf(
+            "zh-Hant" to "交換權杖失敗：%1@",
+            "en" to "Token exchange failed: %1@",
+            "zh-Hans" to "交换令牌失败：%1@",
+            "ja" to "トークンの交換に失敗しました: %1@",
+            "ko" to "토큰 교환에 실패했습니다: %1@",
+            "th" to "แลกเปลี่ยนโทเค็นไม่สำเร็จ: %1@"
+        ),
+        "log_msg_008" to mapOf(
+            "zh-Hant" to "無法取得有效權杖，Google Drive 同步中止",
+            "en" to "Cannot get a valid token; Google Drive sync stopped",
+            "zh-Hans" to "无法取得有效令牌，Google Drive 同步中止",
+            "ja" to "有効なトークンを取得できないため、Google Drive の同期を中止しました",
+            "ko" to "유효한 토큰을 가져올 수 없어 Google Drive 동기화를 중단했습니다",
+            "th" to "ขอโทเค็นที่ใช้ได้ไม่ได้ จึงหยุดซิงก์ Google Drive"
+        ),
+        "log_msg_009" to mapOf(
+            "zh-Hant" to "【同步中斷】已送出中斷要求，正在終止進行中的任務...",
+            "en" to "[Sync stopped] Stop requested; ending the running tasks…",
+            "zh-Hans" to "【同步中断】已送出中断要求，正在终止进行中的任务...",
+            "ja" to "【同期の中断】中断を要求しました。実行中のタスクを終了しています…",
+            "ko" to "[동기화 중단] 중단을 요청했습니다. 진행 중인 작업을 끝내는 중…",
+            "th" to "[หยุดซิงก์] ส่งคำขอหยุดแล้ว กำลังยุติงานที่ทำอยู่…"
+        ),
+        "log_msg_010" to mapOf(
+            "zh-Hant" to "【資料夾同步】等待上一輪結束逾時，已保留待同步狀態",
+            "en" to "[Folder sync] Timed out waiting for the previous round to finish; the pending state is kept",
+            "zh-Hans" to "【文件夹同步】等待上一轮结束逾时，已保留待同步状态",
+            "ja" to "【フォルダ同期】前回の同期の終了待ちがタイムアウトしました。同期待ちの状態は保持しています",
+            "ko" to "[폴더 동기화] 이전 회차가 끝나기를 기다리다 시간이 초과되었습니다. 대기 상태는 유지됩니다",
+            "th" to "[ซิงก์โฟลเดอร์] รอรอบก่อนหน้าเสร็จหมดเวลา เก็บสถานะที่รอซิงก์ไว้แล้ว"
+        ),
+        "log_msg_011" to mapOf(
+            "zh-Hant" to "【資料夾同步】上一輪（%1@）卡了 %2@ 秒沒收尾，接手",
+            "en" to "[Folder sync] The previous round (%1@) was stuck for %2@ s; taking over",
+            "zh-Hans" to "【文件夹同步】上一轮（%1@）卡了 %2@ 秒没收尾，接手",
+            "ja" to "【フォルダ同期】前回（%1@）が %2@ 秒間終了しなかったため、引き継ぎました",
+            "ko" to "[폴더 동기화] 이전 회차(%1@)가 %2@초 동안 끝나지 않아 이어받습니다",
+            "th" to "[ซิงก์โฟลเดอร์] รอบก่อนหน้า (%1@) ค้างอยู่ %2@ วินาที จึงเข้ารับช่วงต่อ"
+        ),
+        "log_msg_012" to mapOf(
+            "zh-Hant" to "【資料夾同步】開始執行，目標：%1@",
+            "en" to "[Folder sync] Started; target: %1@",
+            "zh-Hans" to "【文件夹同步】开始执行，目标：%1@",
+            "ja" to "【フォルダ同期】開始しました。対象: %1@",
+            "ko" to "[폴더 동기화] 시작했습니다. 대상: %1@",
+            "th" to "[ซิงก์โฟลเดอร์] เริ่มทำงาน เป้าหมาย: %1@"
+        ),
+        "log_msg_013" to mapOf(
+            "zh-Hant" to "【資料夾同步】已手動中斷。",
+            "en" to "[Folder sync] Stopped manually.",
+            "zh-Hans" to "【文件夹同步】已手动中断。",
+            "ja" to "【フォルダ同期】手動で中断しました。",
+            "ko" to "[폴더 동기화] 수동으로 중단했습니다.",
+            "th" to "[ซิงก์โฟลเดอร์] หยุดด้วยตนเองแล้ว"
+        ),
+        "log_msg_014" to mapOf(
+            "zh-Hant" to "【資料夾同步】全部完成。",
+            "en" to "[Folder sync] All done.",
+            "zh-Hans" to "【文件夹同步】全部完成。",
+            "ja" to "【フォルダ同期】すべて完了しました。",
+            "ko" to "[폴더 동기화] 모두 완료했습니다.",
+            "th" to "[ซิงก์โฟลเดอร์] เสร็จสมบูรณ์"
+        ),
+        "log_msg_015" to mapOf(
+            "zh-Hant" to "【資料夾同步】失敗：無法在遠端建立套件目錄 %1@",
+            "en" to "[Folder sync] Failed: cannot create the package folder %1@ at the destination",
+            "zh-Hans" to "【文件夹同步】失败：无法在远端建立套件目录 %1@",
+            "ja" to "【フォルダ同期】失敗: 同期先にパッケージのフォルダ %1@ を作成できません",
+            "ko" to "[폴더 동기화] 실패: 대상에 패키지 폴더 %1@을(를) 만들 수 없습니다",
+            "th" to "[ซิงก์โฟลเดอร์] ล้มเหลว: สร้างโฟลเดอร์แพ็กเกจ %1@ ที่ปลายทางไม่ได้"
+        ),
+        "log_msg_016" to mapOf(
+            "zh-Hant" to "【資料夾同步】%1@ 完成。上傳: %2@, 下載: %3@, 失敗: %4@",
+            "en" to "[Folder sync] %1@ finished. Uploaded: %2@, downloaded: %3@, failed: %4@",
+            "zh-Hans" to "【文件夹同步】%1@ 完成。上传: %2@, 下载: %3@, 失败: %4@",
+            "ja" to "【フォルダ同期】%1@ が完了しました。アップロード: %2@、ダウンロード: %3@、失敗: %4@",
+            "ko" to "[폴더 동기화] %1@ 완료. 업로드: %2@, 다운로드: %3@, 실패: %4@",
+            "th" to "[ซิงก์โฟลเดอร์] %1@ เสร็จแล้ว อัปโหลด: %2@ ดาวน์โหลด: %3@ ล้มเหลว: %4@"
+        ),
+        "log_msg_017" to mapOf(
+            "zh-Hant" to "【Google Drive 同步】等待上一輪結束逾時，已保留待同步狀態",
+            "en" to "[Google Drive sync] Timed out waiting for the previous round to finish; the pending state is kept",
+            "zh-Hans" to "【Google Drive 同步】等待上一轮结束逾时，已保留待同步状态",
+            "ja" to "【Google Drive 同期】前回の同期の終了待ちがタイムアウトしました。同期待ちの状態は保持しています",
+            "ko" to "[Google Drive 동기화] 이전 회차가 끝나기를 기다리다 시간이 초과되었습니다. 대기 상태는 유지됩니다",
+            "th" to "[ซิงก์ Google Drive] รอรอบก่อนหน้าเสร็จหมดเวลา เก็บสถานะที่รอซิงก์ไว้แล้ว"
+        ),
+        "log_msg_018" to mapOf(
+            "zh-Hant" to "【Google Drive 同步】上一輪（%1@）卡了 %2@ 秒沒收尾，接手",
+            "en" to "[Google Drive sync] The previous round (%1@) was stuck for %2@ s; taking over",
+            "zh-Hans" to "【Google Drive 同步】上一轮（%1@）卡了 %2@ 秒没收尾，接手",
+            "ja" to "【Google Drive 同期】前回（%1@）が %2@ 秒間終了しなかったため、引き継ぎました",
+            "ko" to "[Google Drive 동기화] 이전 회차(%1@)가 %2@초 동안 끝나지 않아 이어받습니다",
+            "th" to "[ซิงก์ Google Drive] รอบก่อนหน้า (%1@) ค้างอยู่ %2@ วินาที จึงเข้ารับช่วงต่อ"
+        ),
+        "log_msg_019" to mapOf(
+            "zh-Hant" to "【Google Drive 同步】開始執行",
+            "en" to "[Google Drive sync] Started",
+            "zh-Hans" to "【Google Drive 同步】开始执行",
+            "ja" to "【Google Drive 同期】開始しました",
+            "ko" to "[Google Drive 동기화] 시작했습니다",
+            "th" to "[ซิงก์ Google Drive] เริ่มทำงาน"
+        ),
+        "log_msg_020" to mapOf(
+            "zh-Hant" to "【Google Drive 同步】已手動中斷。",
+            "en" to "[Google Drive sync] Stopped manually.",
+            "zh-Hans" to "【Google Drive 同步】已手动中断。",
+            "ja" to "【Google Drive 同期】手動で中断しました。",
+            "ko" to "[Google Drive 동기화] 수동으로 중단했습니다.",
+            "th" to "[ซิงก์ Google Drive] หยุดด้วยตนเองแล้ว"
+        ),
+        "log_msg_021" to mapOf(
+            "zh-Hant" to "【Google Drive 同步】全部完成。",
+            "en" to "[Google Drive sync] All done.",
+            "zh-Hans" to "【Google Drive 同步】全部完成。",
+            "ja" to "【Google Drive 同期】すべて完了しました。",
+            "ko" to "[Google Drive 동기화] 모두 완료했습니다.",
+            "th" to "[ซิงก์ Google Drive] เสร็จสมบูรณ์"
+        ),
+        "log_msg_022" to mapOf(
+            "zh-Hant" to "步驟 1：匯出本機筆記 (%1@ 本)...",
+            "en" to "Step 1: exporting local notebooks (%1@)…",
+            "zh-Hans" to "步骤 1：导出本机笔记 (%1@ 本)...",
+            "ja" to "手順 1: ローカルのノートを書き出しています（%1@ 冊）…",
+            "ko" to "1단계: 로컬 노트 내보내는 중(%1@개)…",
+            "th" to "ขั้นตอนที่ 1: กำลังส่งออกสมุดบันทึกในเครื่อง (%1@ เล่ม)…"
+        ),
+        "log_msg_023" to mapOf(
+            "zh-Hant" to "步驟 1 完成，成功匯出 %1@ 本",
+            "en" to "Step 1 done: %1@ notebooks exported",
+            "zh-Hans" to "步骤 1 完成，成功导出 %1@ 本",
+            "ja" to "手順 1 完了: %1@ 冊を書き出しました",
+            "ko" to "1단계 완료: %1@개 내보냈습니다",
+            "th" to "ขั้นตอนที่ 1 เสร็จ: ส่งออกสำเร็จ %1@ เล่ม"
+        ),
+        "log_msg_024" to mapOf(
+            "zh-Hant" to "步驟 1：同步中繼資料與索引 (連線中)...",
+            "en" to "Step 1: syncing metadata and the index (connecting)…",
+            "zh-Hans" to "步骤 1：同步元数据与索引 (连线中)...",
+            "ja" to "手順 1: メタデータとインデックスを同期しています（接続中）…",
+            "ko" to "1단계: 메타데이터와 색인을 동기화하는 중(연결 중)…",
+            "th" to "ขั้นตอนที่ 1: กำลังซิงก์เมทาดาทาและดัชนี (กำลังเชื่อมต่อ)…"
+        ),
+        "log_msg_025" to mapOf(
+            "zh-Hant" to "步驟 2：搬移雲端檔案 (雙軌並行排程)...",
+            "en" to "Step 2: moving cloud files (two lanes in parallel)…",
+            "zh-Hans" to "步骤 2：搬移云端文件 (双轨并行排程)...",
+            "ja" to "手順 2: クラウドのファイルを移動しています（2 系統を並行処理）…",
+            "ko" to "2단계: 클라우드 파일 이동 중(두 경로 병렬 처리)…",
+            "th" to "ขั้นตอนที่ 2: กำลังย้ายไฟล์บนคลาวด์ (สองเลนพร้อมกัน)…"
+        ),
+        "log_msg_026" to mapOf(
+            "zh-Hant" to "步驟 2：更新雲端快照（changes.list）...",
+            "en" to "Step 2: updating the cloud snapshot (changes.list)…",
+            "zh-Hans" to "步骤 2：更新云端快照（changes.list）...",
+            "ja" to "手順 2: クラウドのスナップショットを更新しています（changes.list）…",
+            "ko" to "2단계: 클라우드 스냅샷 업데이트 중(changes.list)…",
+            "th" to "ขั้นตอนที่ 2: กำลังอัปเดตสแนปช็อตคลาวด์ (changes.list)…"
+        ),
+        "log_msg_027" to mapOf(
+            "zh-Hant" to "步驟 2 完成。上傳: %1@, 下載: %2@, 新增: %3@, 失敗: %4@",
+            "en" to "Step 2 done. Uploaded: %1@, downloaded: %2@, new: %3@, failed: %4@",
+            "zh-Hans" to "步骤 2 完成。上传: %1@, 下载: %2@, 新增: %3@, 失败: %4@",
+            "ja" to "手順 2 完了。アップロード: %1@、ダウンロード: %2@、新規: %3@、失敗: %4@",
+            "ko" to "2단계 완료. 업로드: %1@, 다운로드: %2@, 신규: %3@, 실패: %4@",
+            "th" to "ขั้นตอนที่ 2 เสร็จ อัปโหลด: %1@ ดาวน์โหลด: %2@ ใหม่: %3@ ล้มเหลว: %4@"
+        ),
+        "log_msg_028" to mapOf(
+            "zh-Hant" to "步驟 2 完成。上傳: %1@, 下載: %2@, 新增: %3@",
+            "en" to "Step 2 done. Uploaded: %1@, downloaded: %2@, new: %3@",
+            "zh-Hans" to "步骤 2 完成。上传: %1@, 下载: %2@, 新增: %3@",
+            "ja" to "手順 2 完了。アップロード: %1@、ダウンロード: %2@、新規: %3@",
+            "ko" to "2단계 완료. 업로드: %1@, 다운로드: %2@, 신규: %3@",
+            "th" to "ขั้นตอนที่ 2 เสร็จ อัปโหลด: %1@ ดาวน์โหลด: %2@ ใหม่: %3@"
+        ),
+        "log_msg_029" to mapOf(
+            "zh-Hant" to "步驟 3：匯入套件回本機筆記...",
+            "en" to "Step 3: importing the packages back into local notebooks…",
+            "zh-Hans" to "步骤 3：导入套件回本机笔记...",
+            "ja" to "手順 3: パッケージをローカルのノートに取り込んでいます…",
+            "ko" to "3단계: 패키지를 로컬 노트로 가져오는 중…",
+            "th" to "ขั้นตอนที่ 3: กำลังนำเข้าแพ็กเกจกลับเป็นสมุดบันทึกในเครื่อง…"
+        ),
+        "log_msg_030" to mapOf(
+            "zh-Hant" to "📊【同步前核實】本機現存: %1@ 本，待同步活躍筆記: %2@ 本",
+            "en" to "📊 [Pre-sync check] Local notebooks: %1@; active notebooks waiting to sync: %2@",
+            "zh-Hans" to "📊【同步前核实】本机现存: %1@ 本，待同步活跃笔记: %2@ 本",
+            "ja" to "📊【同期前の確認】ローカルのノート: %1@ 冊、同期待ちのアクティブなノート: %2@ 冊",
+            "ko" to "📊 [동기화 전 확인] 로컬 노트: %1@개, 동기화 대기 중인 활성 노트: %2@개",
+            "th" to "📊 [ตรวจสอบก่อนซิงก์] สมุดบันทึกในเครื่อง: %1@ เล่ม สมุดที่ใช้งานรอซิงก์: %2@ เล่ม"
+        ),
+        "log_msg_031" to mapOf(
+            "zh-Hant" to "📊【同步前核實】本機 %1@ 本，清理 %2@ 本，有差異待同步 %3@ 本（跳過 %4@ 本）",
+            "en" to "📊 [Pre-sync check] Local: %1@, cleaned up: %2@, with differences to sync: %3@ (skipped %4@)",
+            "zh-Hans" to "📊【同步前核实】本机 %1@ 本，清理 %2@ 本，有差异待同步 %3@ 本（跳过 %4@ 本）",
+            "ja" to "📊【同期前の確認】ローカル %1@ 冊、整理 %2@ 冊、差分があり同期待ち %3@ 冊（スキップ %4@ 冊）",
+            "ko" to "📊 [동기화 전 확인] 로컬 %1@개, 정리 %2@개, 차이가 있어 동기화 대기 %3@개(건너뜀 %4@개)",
+            "th" to "📊 [ตรวจสอบก่อนซิงก์] ในเครื่อง %1@ เล่ม ล้างทิ้ง %2@ เล่ม มีความต่างรอซิงก์ %3@ เล่ม (ข้าม %4@ เล่ม)"
+        ),
+        "log_msg_032" to mapOf(
+            "zh-Hant" to "【前台極速軌】優先同步當前作用中筆記 (%1@...)...",
+            "en" to "[Foreground fast lane] Syncing the active notebook first (%1@…)…",
+            "zh-Hans" to "【前台极速轨】优先同步当前活动笔记 (%1@...)...",
+            "ja" to "【フォアグラウンド優先】現在開いているノート（%1@…）を優先して同期しています…",
+            "ko" to "[전면 우선 처리] 현재 열려 있는 노트(%1@…)를 먼저 동기화하는 중…",
+            "th" to "[เลนด่วนด้านหน้า] กำลังซิงก์สมุดที่เปิดอยู่ก่อน (%1@…)…"
+        ),
+        "log_msg_033" to mapOf(
+            "zh-Hant" to "【前台極速軌】當前筆記 (%1@...) 完成（上傳: %2@, 下載: %3@）",
+            "en" to "[Foreground fast lane] Active notebook (%1@…) done (uploaded: %2@, downloaded: %3@)",
+            "zh-Hans" to "【前台极速轨】当前笔记 (%1@...) 完成（上传: %2@, 下载: %3@）",
+            "ja" to "【フォアグラウンド優先】現在のノート（%1@…）が完了しました（アップロード: %2@、ダウンロード: %3@）",
+            "ko" to "[전면 우선 처리] 현재 노트(%1@…) 완료(업로드: %2@, 다운로드: %3@)",
+            "th" to "[เลนด่วนด้านหน้า] สมุดที่เปิดอยู่ (%1@…) เสร็จแล้ว (อัปโหลด: %2@ ดาวน์โหลด: %3@)"
+        ),
+        "log_msg_034" to mapOf(
+            "zh-Hant" to "【背景佇列】開始同步其餘 %1@ 本非作用中筆記...",
+            "en" to "[Background queue] Syncing the other %1@ inactive notebooks…",
+            "zh-Hans" to "【后台队列】开始同步其余 %1@ 本非活动笔记...",
+            "ja" to "【バックグラウンド】残りの %1@ 冊の非アクティブなノートを同期しています…",
+            "ko" to "[백그라운드 대기열] 나머지 비활성 노트 %1@개를 동기화하는 중…",
+            "th" to "[คิวเบื้องหลัง] กำลังซิงก์สมุดที่ไม่ได้ใช้งานที่เหลือ %1@ เล่ม…"
+        ),
+        "log_msg_035" to mapOf(
+            "zh-Hant" to "【背景佇列】開始同步筆記本 (%1@...)...",
+            "en" to "[Background queue] Syncing notebook (%1@…)…",
+            "zh-Hans" to "【后台队列】开始同步笔记本 (%1@...)...",
+            "ja" to "【バックグラウンド】ノート（%1@…）の同期を開始しました…",
+            "ko" to "[백그라운드 대기열] 노트(%1@…) 동기화 시작…",
+            "th" to "[คิวเบื้องหลัง] เริ่มซิงก์สมุดบันทึก (%1@…)…"
+        ),
+        "log_msg_036" to mapOf(
+            "zh-Hant" to "【背景佇列】筆記本 (%1@...) 完成（上傳: %2@, 下載: %3@）",
+            "en" to "[Background queue] Notebook (%1@…) done (uploaded: %2@, downloaded: %3@)",
+            "zh-Hans" to "【后台队列】笔记本 (%1@...) 完成（上传: %2@, 下载: %3@）",
+            "ja" to "【バックグラウンド】ノート（%1@…）が完了しました（アップロード: %2@、ダウンロード: %3@）",
+            "ko" to "[백그라운드 대기열] 노트(%1@…) 완료(업로드: %2@, 다운로드: %3@)",
+            "th" to "[คิวเบื้องหลัง] สมุดบันทึก (%1@…) เสร็จแล้ว (อัปโหลด: %2@ ดาวน์โหลด: %3@)"
+        ),
+        "log_msg_037" to mapOf(
+            "zh-Hant" to "匯出失敗 (%1@)：%2@",
+            "en" to "Export failed (%1@): %2@",
+            "zh-Hans" to "导出失败 (%1@)：%2@",
+            "ja" to "書き出しに失敗しました（%1@）: %2@",
+            "ko" to "내보내기 실패(%1@): %2@",
+            "th" to "ส่งออกไม่สำเร็จ (%1@): %2@"
+        ),
+        "log_msg_038" to mapOf(
+            "zh-Hant" to "無法取得 Google Drive 工作階段！",
+            "en" to "Cannot get a Google Drive session!",
+            "zh-Hans" to "无法取得 Google Drive 会话！",
+            "ja" to "Google Drive のセッションを取得できません！",
+            "ko" to "Google Drive 세션을 가져올 수 없습니다!",
+            "th" to "เปิดเซสชัน Google Drive ไม่ได้!"
+        )
+    )
+
+    private fun part15(): Map<String, Map<String, String>> = mapOf(
+        "log_msg_039" to mapOf(
+            "zh-Hant" to "無法取得 Google Drive 索引！",
+            "en" to "Cannot get the Google Drive index!",
+            "zh-Hans" to "无法取得 Google Drive 索引！",
+            "ja" to "Google Drive のインデックスを取得できません！",
+            "ko" to "Google Drive 색인을 가져올 수 없습니다!",
+            "th" to "อ่านดัชนี Google Drive ไม่ได้!"
+        ),
+        "log_msg_040" to mapOf(
+            "zh-Hant" to "雲端快照更新失敗：%1@",
+            "en" to "Cloud snapshot update failed: %1@",
+            "zh-Hans" to "云端快照更新失败：%1@",
+            "ja" to "クラウドのスナップショットの更新に失敗しました: %1@",
+            "ko" to "클라우드 스냅샷 업데이트 실패: %1@",
+            "th" to "อัปเดตสแนปช็อตคลาวด์ไม่สำเร็จ: %1@"
+        ),
+        "log_msg_041" to mapOf(
+            "zh-Hant" to "雲端快照重建完成（%1@ 個檔案）",
+            "en" to "Cloud snapshot rebuilt (%1@ files)",
+            "zh-Hans" to "云端快照重建完成（%1@ 个文件）",
+            "ja" to "クラウドのスナップショットを再構築しました（%1@ ファイル）",
+            "ko" to "클라우드 스냅샷을 다시 만들었습니다(파일 %1@개)",
+            "th" to "สร้างสแนปช็อตคลาวด์ใหม่เสร็จ (%1@ ไฟล์)"
+        ),
+        "log_msg_042" to mapOf(
+            "zh-Hant" to "雲端變動 %1@ 筆，快照共 %2@ 個檔案",
+            "en" to "%1@ cloud changes; the snapshot has %2@ files",
+            "zh-Hans" to "云端变动 %1@ 笔，快照共 %2@ 个文件",
+            "ja" to "クラウドの変更 %1@ 件、スナップショットは計 %2@ ファイル",
+            "ko" to "클라우드 변경 %1@건, 스냅샷은 총 파일 %2@개",
+            "th" to "การเปลี่ยนแปลงบนคลาวด์ %1@ รายการ สแนปช็อตมีทั้งหมด %2@ ไฟล์"
+        ),
+        "log_msg_043" to mapOf(
+            "zh-Hant" to "元資料同步失敗：%1@",
+            "en" to "Metadata sync failed: %1@",
+            "zh-Hans" to "元数据同步失败：%1@",
+            "ja" to "メタデータの同期に失敗しました: %1@",
+            "ko" to "메타데이터 동기화 실패: %1@",
+            "th" to "ซิงก์เมทาดาทาไม่สำเร็จ: %1@"
+        ),
+        "log_msg_044" to mapOf(
+            "zh-Hant" to "中繼資料同步失敗：%1@",
+            "en" to "Metadata sync failed: %1@",
+            "zh-Hans" to "元数据同步失败：%1@",
+            "ja" to "メタデータの同期に失敗しました: %1@",
+            "ko" to "메타데이터 동기화 실패: %1@",
+            "th" to "ซิงก์เมทาดาทาไม่สำเร็จ: %1@"
+        ),
+        "log_msg_045" to mapOf(
+            "zh-Hant" to "筆記本 %1@… 完成（上傳 %2@、下載 %3@）",
+            "en" to "Notebook %1@… done (uploaded %2@, downloaded %3@)",
+            "zh-Hans" to "笔记本 %1@… 完成（上传 %2@、下载 %3@）",
+            "ja" to "ノート %1@… が完了しました（アップロード %2@、ダウンロード %3@）",
+            "ko" to "노트 %1@… 완료(업로드 %2@, 다운로드 %3@)",
+            "th" to "สมุดบันทึก %1@… เสร็จแล้ว (อัปโหลด %2@ ดาวน์โหลด %3@)"
+        ),
+        "log_msg_046" to mapOf(
+            "zh-Hant" to "筆記本 %1@… 同步失敗：%2@",
+            "en" to "Notebook %1@… sync failed: %2@",
+            "zh-Hans" to "笔记本 %1@… 同步失败：%2@",
+            "ja" to "ノート %1@… の同期に失敗しました: %2@",
+            "ko" to "노트 %1@… 동기화 실패: %2@",
+            "th" to "ซิงก์สมุดบันทึก %1@… ไม่สำเร็จ: %2@"
+        ),
+        "log_msg_047" to mapOf(
+            "zh-Hant" to "筆記本 %1@… 正在被焦點同步佔用，這一輪略過匯入",
+            "en" to "Notebook %1@… is in use by Focus sync; skipping its import this round",
+            "zh-Hans" to "笔记本 %1@… 正在被焦点同步占用，这一轮略过导入",
+            "ja" to "ノート %1@… はフォーカス同期で使用中のため、今回は取り込みをスキップします",
+            "ko" to "노트 %1@…은(는) 집중 동기화에서 사용 중이라 이번 회차 가져오기를 건너뜁니다",
+            "th" to "สมุดบันทึก %1@… ถูกซิงก์โฟกัสใช้อยู่ จึงข้ามการนำเข้ารอบนี้"
+        ),
+        "log_msg_048" to mapOf(
+            "zh-Hant" to "筆記本 %1@… %2@",
+            "en" to "Notebook %1@… %2@",
+            "zh-Hans" to "笔记本 %1@… %2@",
+            "ja" to "ノート %1@… %2@",
+            "ko" to "노트 %1@… %2@",
+            "th" to "สมุดบันทึก %1@… %2@"
+        ),
+        "log_msg_049" to mapOf(
+            "zh-Hant" to "筆記本 %1@ 同步中斷",
+            "en" to "Notebook %1@ sync stopped",
+            "zh-Hans" to "笔记本 %1@ 同步中断",
+            "ja" to "ノート %1@ の同期を中断しました",
+            "ko" to "노트 %1@ 동기화가 중단되었습니다",
+            "th" to "หยุดซิงก์สมุดบันทึก %1@"
+        ),
+        "log_msg_050" to mapOf(
+            "zh-Hant" to "筆記本 %1@ 同步失敗：%2@",
+            "en" to "Notebook %1@ sync failed: %2@",
+            "zh-Hans" to "笔记本 %1@ 同步失败：%2@",
+            "ja" to "ノート %1@ の同期に失敗しました: %2@",
+            "ko" to "노트 %1@ 동기화 실패: %2@",
+            "th" to "ซิงก์สมุดบันทึก %1@ ไม่สำเร็จ: %2@"
+        ),
+        "log_msg_051" to mapOf(
+            "zh-Hant" to "筆記本 %1@ %2@",
+            "en" to "Notebook %1@ %2@",
+            "zh-Hans" to "笔记本 %1@ %2@",
+            "ja" to "ノート %1@ %2@",
+            "ko" to "노트 %1@ %2@",
+            "th" to "สมุดบันทึก %1@ %2@"
+        ),
+        "log_msg_052" to mapOf(
+            "zh-Hant" to "發現新筆記「%1@」(%2@)，開始自雲端下載...",
+            "en" to "Found a new notebook “%1@” (%2@); downloading it from the cloud…",
+            "zh-Hans" to "发现新笔记「%1@」(%2@)，开始自云端下载...",
+            "ja" to "新しいノート「%1@」（%2@）を見つけました。クラウドからダウンロードしています…",
+            "ko" to "새 노트 “%1@”(%2@)을(를) 찾았습니다. 클라우드에서 다운로드하는 중…",
+            "th" to "พบสมุดบันทึกใหม่ “%1@” (%2@) กำลังดาวน์โหลดจากคลาวด์…"
+        ),
+        "log_msg_053" to mapOf(
+            "zh-Hant" to "筆記本「%1@」成功自雲端下載完成",
+            "en" to "Notebook “%1@” was downloaded from the cloud",
+            "zh-Hans" to "笔记本「%1@」成功自云端下载完成",
+            "ja" to "ノート「%1@」をクラウドからダウンロードしました",
+            "ko" to "노트 “%1@”을(를) 클라우드에서 다운로드했습니다",
+            "th" to "ดาวน์โหลดสมุดบันทึก “%1@” จากคลาวด์สำเร็จ"
+        ),
+        "log_msg_054" to mapOf(
+            "zh-Hant" to "筆記本「%1@」自雲端下載失敗：%2@",
+            "en" to "Downloading notebook “%1@” from the cloud failed: %2@",
+            "zh-Hans" to "笔记本「%1@」自云端下载失败：%2@",
+            "ja" to "ノート「%1@」のクラウドからのダウンロードに失敗しました: %2@",
+            "ko" to "노트 “%1@”을(를) 클라우드에서 다운로드하지 못했습니다: %2@",
+            "th" to "ดาวน์โหลดสมุดบันทึก “%1@” จากคลาวด์ไม่สำเร็จ: %2@"
+        ),
+        "log_msg_055" to mapOf(
+            "zh-Hant" to "已清理已刪除筆記本殘留套件：%1@",
+            "en" to "Cleaned up the leftover package of a deleted notebook: %1@",
+            "zh-Hans" to "已清理已删除笔记本残留套件：%1@",
+            "ja" to "削除済みノートの残ったパッケージを整理しました: %1@",
+            "ko" to "삭제된 노트의 남은 패키지를 정리했습니다: %1@",
+            "th" to "ล้างแพ็กเกจที่ตกค้างของสมุดบันทึกที่ลบแล้ว: %1@"
+        ),
+        "log_msg_056" to mapOf(
+            "zh-Hant" to "【回收桶】確認檔沒發布成功：%1@",
+            "en" to "[Trash] The confirmation file was not published: %1@",
+            "zh-Hans" to "【回收站】确认档没发布成功：%1@",
+            "ja" to "【ゴミ箱】確認ファイルを公開できませんでした: %1@",
+            "ko" to "[휴지통] 확인 파일을 게시하지 못했습니다: %1@",
+            "th" to "[ถังขยะ] เผยแพร่ไฟล์ยืนยันไม่สำเร็จ: %1@"
+        ),
+        "log_msg_057" to mapOf(
+            "zh-Hant" to "【回收桶】已永久清理雲端 %1@ 個過期檔案",
+            "en" to "[Trash] Permanently removed %1@ expired files from the cloud",
+            "zh-Hans" to "【回收站】已永久清理云端 %1@ 个过期文件",
+            "ja" to "【ゴミ箱】期限切れのクラウドのファイル %1@ 件を完全に削除しました",
+            "ko" to "[휴지통] 만료된 클라우드 파일 %1@개를 영구 삭제했습니다",
+            "th" to "[ถังขยะ] ลบไฟล์หมดอายุบนคลาวด์ %1@ ไฟล์ถาวรแล้ว"
+        ),
+        "log_msg_058" to mapOf(
+            "zh-Hant" to "【回收桶】已永久清理本機 %1@ 本過期筆記本",
+            "en" to "[Trash] Permanently removed %1@ expired notebooks from this device",
+            "zh-Hans" to "【回收站】已永久清理本机 %1@ 本过期笔记本",
+            "ja" to "【ゴミ箱】期限切れのノート %1@ 冊をこのデバイスから完全に削除しました",
+            "ko" to "[휴지통] 만료된 노트 %1@개를 이 기기에서 영구 삭제했습니다",
+            "th" to "[ถังขยะ] ลบสมุดบันทึกหมดอายุ %1@ เล่มออกจากอุปกรณ์นี้ถาวรแล้ว"
+        ),
+        "log_msg_059" to mapOf(
+            "zh-Hant" to "【回收桶】%1@ 本已期滿，等待這些裝置確認：%2@",
+            "en" to "[Trash] %1@ notebooks have expired and are waiting for these devices to confirm: %2@",
+            "zh-Hans" to "【回收站】%1@ 本已期满，等待这些设备确认：%2@",
+            "ja" to "【ゴミ箱】期限切れのノート %1@ 冊が、次のデバイスの確認を待っています: %2@",
+            "ko" to "[휴지통] 만료된 노트 %1@개가 다음 기기의 확인을 기다리고 있습니다: %2@",
+            "th" to "[ถังขยะ] สมุดบันทึกหมดอายุ %1@ เล่มกำลังรออุปกรณ์เหล่านี้ยืนยัน: %2@"
+        ),
+        "log_msg_060" to mapOf(
+            "zh-Hant" to "【回收桶】%1@ 本已期滿，等待這些裝置確認：",
+            "en" to "[Trash] %1@ notebooks have expired and are waiting for these devices to confirm:",
+            "zh-Hans" to "【回收站】%1@ 本已期满，等待这些设备确认：",
+            "ja" to "【ゴミ箱】期限切れのノート %1@ 冊が、次のデバイスの確認を待っています:",
+            "ko" to "[휴지통] 만료된 노트 %1@개가 다음 기기의 확인을 기다리고 있습니다:",
+            "th" to "[ถังขยะ] สมุดบันทึกหมดอายุ %1@ เล่มกำลังรออุปกรณ์เหล่านี้ยืนยัน:"
+        ),
+        "log_msg_061" to mapOf(
+            "zh-Hant" to "【回收】等待上一輪結束逾時，請稍後重試",
+            "en" to "[Cleanup] Timed out waiting for the previous round to finish; please try again later",
+            "zh-Hans" to "【回收】等待上一轮结束逾时，请稍后重试",
+            "ja" to "【整理】前回の処理の終了待ちがタイムアウトしました。しばらくしてからやり直してください",
+            "ko" to "[정리] 이전 회차가 끝나기를 기다리다 시간이 초과되었습니다. 잠시 후 다시 시도하세요",
+            "th" to "[ล้างข้อมูล] รอรอบก่อนหน้าเสร็จหมดเวลา โปรดลองใหม่ภายหลัง"
+        ),
+        "log_msg_062" to mapOf(
+            "zh-Hant" to "【回收】完成，刪除 %1@ 個檔案",
+            "en" to "[Cleanup] Done; deleted %1@ files",
+            "zh-Hans" to "【回收】完成，删除 %1@ 个文件",
+            "ja" to "【整理】完了しました。%1@ ファイルを削除しました",
+            "ko" to "[정리] 완료. 파일 %1@개를 삭제했습니다",
+            "th" to "[ล้างข้อมูล] เสร็จแล้ว ลบ %1@ ไฟล์"
+        ),
+        "log_msg_063" to mapOf(
+            "zh-Hant" to "【回收】完成，刪除 %1@ 個檔案；%2@ 本在等這些裝置確認：%3@",
+            "en" to "[Cleanup] Done; deleted %1@ files; %2@ notebooks are waiting for these devices to confirm: %3@",
+            "zh-Hans" to "【回收】完成，删除 %1@ 个文件；%2@ 本在等这些设备确认：%3@",
+            "ja" to "【整理】完了しました。%1@ ファイルを削除しました。%2@ 冊が次のデバイスの確認を待っています: %3@",
+            "ko" to "[정리] 완료. 파일 %1@개를 삭제했습니다. 노트 %2@개가 다음 기기의 확인을 기다립니다: %3@",
+            "th" to "[ล้างข้อมูล] เสร็จแล้ว ลบ %1@ ไฟล์ สมุดบันทึก %2@ เล่มรออุปกรณ์เหล่านี้ยืนยัน: %3@"
+        ),
+        "log_msg_064" to mapOf(
+            "zh-Hant" to "【回收】刪除 %1@ 個，失敗 %2@ 個：%3@",
+            "en" to "[Cleanup] Deleted %1@, failed %2@: %3@",
+            "zh-Hans" to "【回收】删除 %1@ 个，失败 %2@ 个：%3@",
+            "ja" to "【整理】%1@ 件を削除、%2@ 件が失敗しました: %3@",
+            "ko" to "[정리] %1@개 삭제, %2@개 실패: %3@",
+            "th" to "[ล้างข้อมูล] ลบ %1@ รายการ ล้มเหลว %2@ รายการ: %3@"
+        ),
+        "log_msg_065" to mapOf(
+            "zh-Hant" to "【回收】刪除 %1@ 個，失敗 %2@ 個：%3@；%4@ 本在等這些裝置確認：%5@",
+            "en" to "[Cleanup] Deleted %1@, failed %2@: %3@; %4@ notebooks are waiting for these devices to confirm: %5@",
+            "zh-Hans" to "【回收】删除 %1@ 个，失败 %2@ 个：%3@；%4@ 本在等这些设备确认：%5@",
+            "ja" to "【整理】%1@ 件を削除、%2@ 件が失敗しました: %3@。%4@ 冊が次のデバイスの確認を待っています: %5@",
+            "ko" to "[정리] %1@개 삭제, %2@개 실패: %3@. 노트 %4@개가 다음 기기의 확인을 기다립니다: %5@",
+            "th" to "[ล้างข้อมูล] ลบ %1@ รายการ ล้มเหลว %2@ รายการ: %3@ สมุดบันทึก %4@ เล่มรออุปกรณ์เหล่านี้ยืนยัน: %5@"
+        ),
+        "log_msg_066" to mapOf(
+            "zh-Hant" to "【重置雲端】開始刪除雲端資料…",
+            "en" to "[Reset cloud] Deleting the cloud data…",
+            "zh-Hans" to "【重置云端】开始删除云端数据…",
+            "ja" to "【クラウドのリセット】クラウドのデータを削除しています…",
+            "ko" to "[클라우드 초기화] 클라우드 데이터를 삭제하는 중…",
+            "th" to "[รีเซ็ตคลาวด์] กำลังลบข้อมูลบนคลาวด์…"
+        ),
+        "log_msg_067" to mapOf(
+            "zh-Hant" to "【重置雲端】等待上一輪結束逾時，請稍後重試",
+            "en" to "[Reset cloud] Timed out waiting for the previous round to finish; please try again later",
+            "zh-Hans" to "【重置云端】等待上一轮结束逾时，请稍后重试",
+            "ja" to "【クラウドのリセット】前回の処理の終了待ちがタイムアウトしました。しばらくしてからやり直してください",
+            "ko" to "[클라우드 초기화] 이전 회차가 끝나기를 기다리다 시간이 초과되었습니다. 잠시 후 다시 시도하세요",
+            "th" to "[รีเซ็ตคลาวด์] รอรอบก่อนหน้าเสร็จหมดเวลา โปรดลองใหม่ภายหลัง"
+        ),
+        "log_msg_068" to mapOf(
+            "zh-Hant" to "【重置雲端】完成，刪除 %1@ 個檔案",
+            "en" to "[Reset cloud] Done; deleted %1@ files",
+            "zh-Hans" to "【重置云端】完成，删除 %1@ 个文件",
+            "ja" to "【クラウドのリセット】完了しました。%1@ ファイルを削除しました",
+            "ko" to "[클라우드 초기화] 완료. 파일 %1@개를 삭제했습니다",
+            "th" to "[รีเซ็ตคลาวด์] เสร็จแล้ว ลบ %1@ ไฟล์"
+        ),
+        "log_msg_069" to mapOf(
+            "zh-Hant" to "【重置雲端】刪除 %1@ 個，失敗 %2@ 個：%3@",
+            "en" to "[Reset cloud] Deleted %1@, failed %2@: %3@",
+            "zh-Hans" to "【重置云端】删除 %1@ 个，失败 %2@ 个：%3@",
+            "ja" to "【クラウドのリセット】%1@ 件を削除、%2@ 件が失敗しました: %3@",
+            "ko" to "[클라우드 초기화] %1@개 삭제, %2@개 실패: %3@",
+            "th" to "[รีเซ็ตคลาวด์] ลบ %1@ รายการ ล้มเหลว %2@ รายการ: %3@"
+        ),
+        "log_msg_070" to mapOf(
+            "zh-Hant" to "【焦點同步】%1@… 失敗：%2@",
+            "en" to "[Focus sync] %1@… failed: %2@",
+            "zh-Hans" to "【焦点同步】%1@… 失败：%2@",
+            "ja" to "【フォーカス同期】%1@… が失敗しました: %2@",
+            "ko" to "[집중 동기화] %1@… 실패: %2@",
+            "th" to "[ซิงก์โฟกัส] %1@… ล้มเหลว: %2@"
+        ),
+        "log_msg_071" to mapOf(
+            "zh-Hant" to "【焦點同步】%1@… 上傳 %2@、下載 %3@",
+            "en" to "[Focus sync] %1@… uploaded %2@, downloaded %3@",
+            "zh-Hans" to "【焦点同步】%1@… 上传 %2@、下载 %3@",
+            "ja" to "【フォーカス同期】%1@… アップロード %2@、ダウンロード %3@",
+            "ko" to "[집중 동기화] %1@… 업로드 %2@, 다운로드 %3@",
+            "th" to "[ซิงก์โฟกัส] %1@… อัปโหลด %2@ ดาวน์โหลด %3@"
+        ),
+        "log_msg_072" to mapOf(
+            "zh-Hant" to "【焦點同步】%1@… 上傳 %2@、下載 %3@（匯出 %4@ms、雲端 %5@ms、匯入 %6@ms）",
+            "en" to "[Focus sync] %1@… uploaded %2@, downloaded %3@ (export %4@ ms, cloud %5@ ms, import %6@ ms)",
+            "zh-Hans" to "【焦点同步】%1@… 上传 %2@、下载 %3@（导出 %4@ms、云端 %5@ms、导入 %6@ms）",
+            "ja" to "【フォーカス同期】%1@… アップロード %2@、ダウンロード %3@（書き出し %4@ms、クラウド %5@ms、取り込み %6@ms）",
+            "ko" to "[집중 동기화] %1@… 업로드 %2@, 다운로드 %3@(내보내기 %4@ms, 클라우드 %5@ms, 가져오기 %6@ms)",
+            "th" to "[ซิงก์โฟกัส] %1@… อัปโหลด %2@ ดาวน์โหลด %3@ (ส่งออก %4@ ms คลาวด์ %5@ ms นำเข้า %6@ ms)"
+        ),
+        "log_msg_073" to mapOf(
+            "zh-Hant" to "【焦點同步】%1@… 上傳 %2@、下載 %3@（雲端 %4@ms）",
+            "en" to "[Focus sync] %1@… uploaded %2@, downloaded %3@ (cloud %4@ ms)",
+            "zh-Hans" to "【焦点同步】%1@… 上传 %2@、下载 %3@（云端 %4@ms）",
+            "ja" to "【フォーカス同期】%1@… アップロード %2@、ダウンロード %3@（クラウド %4@ms）",
+            "ko" to "[집중 동기화] %1@… 업로드 %2@, 다운로드 %3@(클라우드 %4@ms)",
+            "th" to "[ซิงก์โฟกัส] %1@… อัปโหลด %2@ ดาวน์โหลด %3@ (คลาวด์ %4@ ms)"
+        ),
+        "log_msg_074" to mapOf(
+            "zh-Hant" to "【焦點同步】%1@… %2@",
+            "en" to "[Focus sync] %1@… %2@",
+            "zh-Hans" to "【焦点同步】%1@… %2@",
+            "ja" to "【フォーカス同期】%1@… %2@",
+            "ko" to "[집중 동기화] %1@… %2@",
+            "th" to "[ซิงก์โฟกัส] %1@… %2@"
+        ),
+        "log_msg_075" to mapOf(
+            "zh-Hant" to "【區網直連】%1@… 忙碌中，稍後再匯入",
+            "en" to "[Local link] %1@… is busy; will import it later",
+            "zh-Hans" to "【局域网直连】%1@… 忙碌中，稍后再导入",
+            "ja" to "【ローカル直接接続】%1@… は処理中のため、後で取り込みます",
+            "ko" to "[로컬 직접 연결] %1@…은(는) 사용 중이라 나중에 가져옵니다",
+            "th" to "[เชื่อมต่อตรงในเครือข่ายภายใน] %1@… กำลังไม่ว่าง จะนำเข้าภายหลัง"
+        ),
+        "log_msg_076" to mapOf(
+            "zh-Hant" to "【區網直連】%1@… 收到並匯入（%2@ms）",
+            "en" to "[Local link] %1@… received and imported (%2@ ms)",
+            "zh-Hans" to "【局域网直连】%1@… 收到并导入（%2@ms）",
+            "ja" to "【ローカル直接接続】%1@… を受信して取り込みました（%2@ms）",
+            "ko" to "[로컬 직접 연결] %1@… 수신 및 가져오기 완료(%2@ms)",
+            "th" to "[เชื่อมต่อตรงในเครือข่ายภายใน] %1@… รับและนำเข้าแล้ว (%2@ ms)"
+        ),
+        "log_msg_077" to mapOf(
+            "zh-Hant" to "【區網直連】%1@… 收到對端的更新",
+            "en" to "[Local link] %1@… received an update from the peer",
+            "zh-Hans" to "【局域网直连】%1@… 收到对端的更新",
+            "ja" to "【ローカル直接接続】%1@… で相手からの更新を受信しました",
+            "ko" to "[로컬 직접 연결] %1@… 상대방의 업데이트를 받았습니다",
+            "th" to "[เชื่อมต่อตรงในเครือข่ายภายใน] %1@… ได้รับการอัปเดตจากปลายทาง"
+        ),
+        "log_msg_078" to mapOf(
+            "zh-Hant" to "【區網直連】啟動失敗：%1@",
+            "en" to "[Local link] Failed to start: %1@",
+            "zh-Hans" to "【局域网直连】启动失败：%1@",
+            "ja" to "【ローカル直接接続】起動に失敗しました: %1@",
+            "ko" to "[로컬 직접 연결] 시작 실패: %1@",
+            "th" to "[เชื่อมต่อตรงในเครือข่ายภายใน] เริ่มไม่สำเร็จ: %1@"
+        ),
+        "log_msg_079" to mapOf(
+            "zh-Hant" to "【區網直連】已連上 %1@ 台裝置",
+            "en" to "[Local link] Connected to %1@ devices",
+            "zh-Hans" to "【局域网直连】已连上 %1@ 台设备",
+            "ja" to "【ローカル直接接続】%1@ 台のデバイスに接続しました",
+            "ko" to "[로컬 직접 연결] 기기 %1@대에 연결되었습니다",
+            "th" to "[เชื่อมต่อตรงในเครือข่ายภายใน] เชื่อมต่ออุปกรณ์แล้ว %1@ เครื่อง"
+        ),
+        "log_msg_080" to mapOf(
+            "zh-Hant" to "自動清理：%1@ 項（%2@ MB），回收桶期滿 %3@ 本",
+            "en" to "Auto cleanup: %1@ items (%2@ MB); %3@ expired notebooks removed from the trash",
+            "zh-Hans" to "自动清理：%1@ 项（%2@ MB），回收站期满 %3@ 本",
+            "ja" to "自動整理: %1@ 件（%2@ MB）、ゴミ箱の期限切れ %3@ 冊",
+            "ko" to "자동 정리: %1@개 항목(%2@MB), 휴지통 만료 노트 %3@개",
+            "th" to "ล้างอัตโนมัติ: %1@ รายการ (%2@ MB) สมุดบันทึกในถังขยะหมดอายุ %3@ เล่ม"
+        ),
+        "log_msg_081" to mapOf(
+            "zh-Hant" to "自動清理：暫存 %1@ 項、模型殘檔 %2@ 項（共 %3@ MB），回收桶期滿 %4@ 本",
+            "en" to "Auto cleanup: %1@ temp items, %2@ leftover model files (%3@ MB in total); %4@ expired notebooks removed from the trash",
+            "zh-Hans" to "自动清理：临时 %1@ 项、模型残留文件 %2@ 项（共 %3@ MB），回收站期满 %4@ 本",
+            "ja" to "自動整理: 一時ファイル %1@ 件、モデルの残りファイル %2@ 件（合計 %3@ MB）、ゴミ箱の期限切れ %4@ 冊",
+            "ko" to "자동 정리: 임시 항목 %1@개, 모델 잔여 파일 %2@개(총 %3@MB), 휴지통 만료 노트 %4@개",
+            "th" to "ล้างอัตโนมัติ: ไฟล์ชั่วคราว %1@ รายการ ไฟล์โมเดลที่เหลือ %2@ รายการ (รวม %3@ MB) สมุดบันทึกในถังขยะหมดอายุ %4@ เล่ม"
         ),
         "magnetic_snap_active" to mapOf(
             "zh-Hant" to "幾何角度與格線磁吸對齊中",
@@ -7618,7 +10330,10 @@ object LocalizationStrings {
             "ja" to "材料仕様カード",
             "ko" to "재료 사양 카드",
             "th" to "การ์ดสเปกวัสดุ"
-        ),
+        )
+    )
+
+    private fun part16(): Map<String, Map<String, String>> = mapOf(
         "material_specs_tip" to mapOf(
             "zh-Hant" to "插入工程材質與表面工藝標籤",
             "en" to "Insert Engineering Material & Specs Label",
@@ -7754,10 +10469,7 @@ object LocalizationStrings {
             "ja" to "アボガドロ定数 Nₐ",
             "ko" to "아보가드로 상수 Nₐ",
             "th" to "ค่าคงที่อาโวกาโดร Nₐ"
-        )
-    )
-
-    private fun part12(): Map<String, Map<String, String>> = mapOf(
+        ),
         "math_error" to mapOf(
             "zh-Hant" to "算式格式無效或無法計算",
             "en" to "Invalid formula or syntax error",
@@ -8261,7 +10973,10 @@ object LocalizationStrings {
             "ja" to "手書き",
             "ko" to "필기",
             "th" to "เขียน"
-        ),
+        )
+    )
+
+    private fun part17(): Map<String, Map<String, String>> = mapOf(
         "mode_draw_badge" to mapOf(
             "zh-Hant" to "手寫模式",
             "en" to "Handwriting",
@@ -8397,10 +11112,7 @@ object LocalizationStrings {
             "ja" to "このモデルファイルには形状が入っていません",
             "ko" to "이 모델 파일에는 도형이 없습니다",
             "th" to "ไฟล์โมเดลนี้ไม่มีรูปทรงอยู่เลย"
-        )
-    )
-
-    private fun part13(): Map<String, Map<String, String>> = mapOf(
+        ),
         "model_optional" to mapOf(
             "zh-Hant" to "可選",
             "en" to "Optional",
@@ -8904,7 +11616,10 @@ object LocalizationStrings {
             "ja" to "マイクを許可しました",
             "ko" to "마이크가 허용되었습니다",
             "th" to "อนุญาตไมโครโฟนแล้ว"
-        ),
+        )
+    )
+
+    private fun part18(): Map<String, Map<String, String>> = mapOf(
         "onboarding_next" to mapOf(
             "zh-Hant" to "下一步",
             "en" to "Next",
@@ -9040,10 +11755,7 @@ object LocalizationStrings {
             "ja" to "リンクを開く",
             "ko" to "링크 열기",
             "th" to "เปิดลิงก์"
-        )
-    )
-
-    private fun part14(): Map<String, Map<String, String>> = mapOf(
+        ),
         "open_note" to mapOf(
             "zh-Hant" to "開啟",
             "en" to "Open",
@@ -9547,7 +12259,10 @@ object LocalizationStrings {
             "ja" to "ペンが触れたときの取り消し時間",
             "ko" to "펜이 닿을 때 되돌릴 시간",
             "th" to "ช่วงเวลาย้อนกลับเมื่อปากกาแตะ"
-        ),
+        )
+    )
+
+    private fun part19(): Map<String, Map<String, String>> = mapOf(
         "palm_threshold_retract_hint" to mapOf(
             "zh-Hant" to "手掌常常比筆先碰到螢幕。這段時間內畫出來的手掌筆畫會在筆落下時收回。",
             "en" to "Your palm usually lands before the pen. Palm marks drawn within this window are taken back when the pen touches down.",
@@ -9683,10 +12398,7 @@ object LocalizationStrings {
             "ja" to "段落",
             "ko" to "단락",
             "th" to "ย่อหน้า"
-        )
-    )
-
-    private fun part15(): Map<String, Map<String, String>> = mapOf(
+        ),
         "paste_strokes" to mapOf(
             "zh-Hant" to "貼上",
             "en" to "Paste",
@@ -10190,7 +12902,10 @@ object LocalizationStrings {
             "ja" to "接続が切断されました。再接続中 (%d/%d)...",
             "ko" to "연결이 끊어졌습니다. 다시 연결하는 중 (%d/%d)...",
             "th" to "การเชื่อมต่อขาดหาย กำลังเชื่อมต่อใหม่ (%d/%d)..."
-        ),
+        )
+    )
+
+    private fun part20(): Map<String, Map<String, String>> = mapOf(
         "record" to mapOf(
             "zh-Hant" to "錄音",
             "en" to "Record",
@@ -10326,10 +13041,7 @@ object LocalizationStrings {
             "ja" to "リカバリーコードを書き留めてください",
             "ko" to "복구 코드를 적어 두세요",
             "th" to "จดรหัสกู้คืนของคุณไว้"
-        )
-    )
-
-    private fun part16(): Map<String, Map<String, String>> = mapOf(
+        ),
         "recovery_warning" to mapOf(
             "zh-Hant" to "沒有「忘記密碼」這回事。忘了密碼時，這組碼是唯一的後路，而且只顯示這一次。",
             "en" to "There is no password reset. If you forget your passphrase, this code is the ONLY way back. It is shown once.",
@@ -10833,7 +13545,10 @@ object LocalizationStrings {
             "ja" to "第35週|第36週|第37週|第38週",
             "ko" to "35주|36주|37주|38주",
             "th" to "สัปดาห์ 35|สัปดาห์ 36|สัปดาห์ 37|สัปดาห์ 38"
-        ),
+        )
+    )
+
+    private fun part21(): Map<String, Map<String, String>> = mapOf(
         "sample_meeting_chart_series" to mapOf(
             "zh-Hant" to "已完成",
             "en" to "Completed",
@@ -10969,10 +13684,7 @@ object LocalizationStrings {
             "ja" to "🔗 GitHub オープンソース\nKairumo\n100%オープンソース、Rust + UniFFI 高性能コア",
             "ko" to "🔗 GitHub 오픈소스 저장소\nKairumo\n100% 오픈소스, Rust + UniFFI 고성능 코어 탑재",
             "th" to "🔗 คลัง GitHub โอเพนซอร์ส\nKairumo\nโอเพนซอร์ส 100% ขับเคลื่อนด้วย Rust + UniFFI ประสิทธิภาพสูง"
-        )
-    )
-
-    private fun part17(): Map<String, Map<String, String>> = mapOf(
+        ),
         "sample_showcase_card_model_body" to mapOf(
             "zh-Hant" to "🧊 3D 空間幾何體\n正十二面體模型\n支援手指 360° 空間自由旋轉視角檢視",
             "en" to "🧊 3D Geometry Model\nDodecahedron shape\nSupports 360° touch rotation in 3D space",
@@ -11186,7 +13898,7 @@ object LocalizationStrings {
             "en" to "Family I: Precision Writing Tools (Pen, Fineliner, Ballpoint, Brush, Calligraphy, Pencil)",
             "zh-Hans" to "第一家族：精密书写族（钢笔、针笔、原子笔、毛笔、书法笔、铅笔）",
             "ja" to "第1グループ：精密筆記ツール（万年筆、ミリペン、ボールペン、筆、カリグラフィ、鉛筆）",
-            "ko" to "제1계열: 정밀 필기 도구 (만년筆, 세밀펜, 볼펜, 붓, 캘리그래피, 연필)",
+            "ko" to "제1계열: 정밀 필기 도구 (만년필, 세밀펜, 볼펜, 붓, 캘리그래피, 연필)",
             "th" to "กลุ่มที่ 1: เครื่องมือเขียนความแม่นยำสูง (ปากกาหมึกซึม, หัวเข็ม, ลูกลื่น, พู่กัน, ตัวเขียน, ดินสอ)"
         ),
         "sample_showcase_p2_subtitle" to mapOf(
@@ -11476,7 +14188,10 @@ object LocalizationStrings {
             "ja" to "1. Pen (万年筆):",
             "ko" to "1. Pen (만년필):",
             "th" to "1. Pen (ปากกาหมึกซึม):"
-        ),
+        )
+    )
+
+    private fun part22(): Map<String, Map<String, String>> = mapOf(
         "sample_showcase_tool_2_fineliner" to mapOf(
             "zh-Hant" to "2. Fineliner (針筆):",
             "en" to "2. Fineliner:",
@@ -11612,10 +14327,7 @@ object LocalizationStrings {
             "ja" to "入力",
             "ko" to "입력",
             "th" to "พิมพ์"
-        )
-    )
-
-    private fun part18(): Map<String, Map<String, String>> = mapOf(
+        ),
         "sample_welcome_pill_write" to mapOf(
             "zh-Hant" to "手寫",
             "en" to "Handwriting",
@@ -11735,6 +14447,22 @@ object LocalizationStrings {
             "ja" to "Kairumo(機能の例)",
             "ko" to "Kairumo (기능 예시)",
             "th" to "Kairumo (ตัวอย่างฟังก์ชัน)"
+        ),
+        "seed_manual_snippet" to mapOf(
+            "zh-Hant" to "Kairumo 優勢：結構化、視覺化、多語言 —— 全部手繪",
+            "en" to "Kairumo’s advantages: structured, visual and multilingual",
+            "zh-Hans" to "Kairumo 优势：结构化、视觉化、多语言",
+            "ja" to "Kairumo の強み: 構造化・視覚化・多言語",
+            "ko" to "Kairumo의 강점: 체계적 구성, 시각화, 다국어",
+            "th" to "จุดเด่นของ Kairumo: เป็นระบบ เห็นภาพ หลายภาษา"
+        ),
+        "seed_manual_title" to mapOf(
+            "zh-Hant" to "Kairumo手冊",
+            "en" to "Kairumo Manual",
+            "zh-Hans" to "Kairumo手册",
+            "ja" to "Kairumo マニュアル",
+            "ko" to "Kairumo 매뉴얼",
+            "th" to "คู่มือ Kairumo"
         ),
         "seed_meeting_snippet" to mapOf(
             "zh-Hant" to "支援麥克風即時收音，聲音與筆跡精確對齊",
@@ -12103,7 +14831,10 @@ object LocalizationStrings {
             "ja" to "右矢印",
             "ko" to "오른쪽 화살표",
             "th" to "ลูกศรขวา"
-        ),
+        )
+    )
+
+    private fun part23(): Map<String, Map<String, String>> = mapOf(
         "shape_kind_arrowblockup" to mapOf(
             "zh-Hant" to "上箭頭",
             "en" to "Up arrow",
@@ -12255,10 +14986,7 @@ object LocalizationStrings {
             "ja" to "表示",
             "ko" to "표시",
             "th" to "แสดงผล"
-        )
-    )
-
-    private fun part19(): Map<String, Map<String, String>> = mapOf(
+        ),
         "shape_kind_document" to mapOf(
             "zh-Hant" to "文件",
             "en" to "Document",
@@ -12746,7 +15474,10 @@ object LocalizationStrings {
             "ja" to "フローチャート：フロー制御（ISO 5807）",
             "ko" to "순서도: 흐름 제어(ISO 5807)",
             "th" to "ผังงาน: การควบคุมการไหล (ISO 5807)"
-        ),
+        )
+    )
+
+    private fun part24(): Map<String, Map<String, String>> = mapOf(
         "shape_section_flow_data" to mapOf(
             "zh-Hant" to "流程圖：資料與儲存（ISO 5807）",
             "en" to "Flowchart: Data & storage (ISO 5807)",
@@ -12898,10 +15629,7 @@ object LocalizationStrings {
             "ja" to "エラー処理と再試行",
             "ko" to "오류 처리와 재시도",
             "th" to "จัดการข้อผิดพลาดและลองใหม่"
-        )
-    )
-
-    private fun part20(): Map<String, Map<String, String>> = mapOf(
+        ),
         "shape_text_section" to mapOf(
             "zh-Hant" to "文字",
             "en" to "Text",
@@ -13389,7 +16117,10 @@ object LocalizationStrings {
             "ja" to "名前順",
             "ko" to "이름순",
             "th" to "เรียงตามชื่อ"
-        ),
+        )
+    )
+
+    private fun part25(): Map<String, Map<String, String>> = mapOf(
         "sort_date" to mapOf(
             "zh-Hant" to "依修改時間排序",
             "en" to "Sort by Date Modified",
@@ -13541,10 +16272,7 @@ object LocalizationStrings {
             "ja" to "録音開始",
             "ko" to "녹음 시작",
             "th" to "เริ่มบันทึกเสียง"
-        )
-    )
-
-    private fun part21(): Map<String, Map<String, String>> = mapOf(
+        ),
         "start_recording_desc" to mapOf(
             "zh-Hant" to "同步語音轉錄與書寫對齊",
             "en" to "Sync voice transcription & strokes",
@@ -14032,7 +16760,10 @@ object LocalizationStrings {
             "ja" to "録音停止",
             "ko" to "녹음 중지",
             "th" to "หยุดบันทึก"
-        ),
+        )
+    )
+
+    private fun part26(): Map<String, Map<String, String>> = mapOf(
         "storage_caches" to mapOf(
             "zh-Hant" to "快取",
             "en" to "Caches",
@@ -14184,10 +16915,7 @@ object LocalizationStrings {
             "ja" to "ダウンロード済みモデル",
             "ko" to "다운로드한 모델",
             "th" to "โมเดลที่ดาวน์โหลด"
-        )
-    )
-
-    private fun part22(): Map<String, Map<String, String>> = mapOf(
+        ),
         "storage_move_cancelled" to mapOf(
             "zh-Hant" to "已取消搬移，沒有任何改動。",
             "en" to "Move cancelled. Nothing was changed.",
@@ -14675,7 +17403,10 @@ object LocalizationStrings {
             "ja" to "パッケージを展開できませんでした：%@",
             "ko" to "패키지를 풀지 못했습니다: %@",
             "th" to "แตกแพ็กเกจไม่สำเร็จ: %@"
-        ),
+        )
+    )
+
+    private fun part27(): Map<String, Map<String, String>> = mapOf(
         "sync_fail_unpack_cloud" to mapOf(
             "zh-Hant" to "解開雲端 .padnote 失敗：%@",
             "en" to "Could not unpack the cloud .padnote: %@",
@@ -14827,10 +17558,7 @@ object LocalizationStrings {
             "ja" to "セッションの有効期限が切れました。もう一度ログインしてください",
             "ko" to "세션이 만료되었습니다. 다시 로그인해 주세요",
             "th" to "เซสชันหมดอายุ โปรดลงชื่อเข้าใช้ใหม่"
-        )
-    )
-
-    private fun part23(): Map<String, Map<String, String>> = mapOf(
+        ),
         "sync_never" to mapOf(
             "zh-Hant" to "尚未同步過",
             "en" to "Not yet",
@@ -15318,7 +18046,10 @@ object LocalizationStrings {
             "ja" to "ここに入力…",
             "ko" to "여기에 입력…",
             "th" to "พิมพ์ที่นี่…"
-        ),
+        )
+    )
+
+    private fun part28(): Map<String, Map<String, String>> = mapOf(
         "text_italic" to mapOf(
             "zh-Hant" to "斜體",
             "en" to "Italic",
@@ -15470,10 +18201,7 @@ object LocalizationStrings {
             "ja" to "基本スタイル",
             "ko" to "기본 스타일",
             "th" to "ทั่วไป"
-        )
-    )
-
-    private fun part24(): Map<String, Map<String, String>> = mapOf(
+        ),
         "theme_method" to mapOf(
             "zh-Hant" to "筆記方法",
             "en" to "Note-taking Methods",
@@ -15961,7 +18689,10 @@ object LocalizationStrings {
             "ja" to "要点・疑問・決定・行動。次の一手で終わる議事録",
             "ko" to "요점·질문·결정·실행. 다음 할 일로 끝나는 회의록",
             "th" to "ประเด็น คำถาม ข้อสรุป การกระทำ"
-        ),
+        )
+    )
+
+    private fun part29(): Map<String, Map<String, String>> = mapOf(
         "tmpl_study_planner" to mapOf(
             "zh-Hant" to "學習計畫",
             "en" to "Study Planner",
@@ -16113,10 +18844,7 @@ object LocalizationStrings {
             "ja" to "ボールペン",
             "ko" to "볼펜",
             "th" to "ปากกาลูกลื่น"
-        )
-    )
-
-    private fun part25(): Map<String, Map<String, String>> = mapOf(
+        ),
         "tool_brush" to mapOf(
             "zh-Hant" to "毛筆",
             "en" to "Calligraphy Brush",
@@ -16604,7 +19332,10 @@ object LocalizationStrings {
             "ja" to "削除したノートを保持する期間",
             "ko" to "삭제한 노트를 보관할 기간",
             "th" to "เก็บสมุดบันทึกที่ลบไว้เป็นเวลา"
-        ),
+        )
+    )
+
+    private fun part30(): Map<String, Map<String, String>> = mapOf(
         "trash_title" to mapOf(
             "zh-Hant" to "回收桶",
             "en" to "Trash",
@@ -16756,10 +19487,7 @@ object LocalizationStrings {
             "ja" to "ロック解除中…",
             "ko" to "잠금 해제 중…",
             "th" to "กำลังปลดล็อก…"
-        )
-    )
-
-    private fun part26(): Map<String, Map<String, String>> = mapOf(
+        ),
         "unlock_wrong_recovery" to mapOf(
             "zh-Hant" to "這組復原碼開不了這本筆記",
             "en" to "That recovery code does not open this notebook",

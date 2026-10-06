@@ -403,7 +403,10 @@ final class KairumoManualSeedTests: XCTestCase {
         }
     }
 
-    func testTheManualIsInkOnlyAndUsesDifferentColoursPerSection() {
+    func testTheTraditionalChineseManualIsInkOnlyAndUsesDifferentColoursPerSection() {
+        let saved = LocalizationManager.snapshotLanguage
+        defer { LocalizationManager.snapshotLanguage = saved }
+        LocalizationManager.snapshotLanguage = .zhHant
         var doc = NotebookDocument(id: SeedContent.kairumoManualId, title: SeedContent.kairumoManualTitle, pageCount: 4)
         SeedContent.fillKairumoManual(&doc)
         XCTAssertEqual(doc.pageCount, 4)
@@ -419,6 +422,38 @@ final class KairumoManualSeedTests: XCTestCase {
         XCTAssertGreaterThanOrEqual(colours.count, 5, "每個段落要有自己的顏色")
     }
 
+    /// 其他語言：同一套手繪插圖＋該語言排版的文字方塊（手寫只有繁中：筆順資料只有漢字）。
+    func testEveryOtherLanguageGetsTheSameIllustrationsWithTypedText() {
+        let saved = LocalizationManager.snapshotLanguage
+        defer { LocalizationManager.snapshotLanguage = saved }
+        for language in [AppLanguage.en, .zhHans, .ja, .ko, .th] {
+            LocalizationManager.snapshotLanguage = language
+            var doc = NotebookDocument(id: SeedContent.kairumoManualId, title: "x", pageCount: 4)
+            SeedContent.fillKairumoManual(&doc)
+            XCTAssertEqual(doc.pageCount, 4, "\(language)")
+            let texts = doc.textAttachments ?? []
+            for page in 0..<4 {
+                XCTAssertFalse(texts.filter { $0.pageIndex == page }.isEmpty, "\(language) 第 \(page + 1) 頁沒有文字方塊")
+            }
+            // 沒有任何中文以外語言的頁面混進手寫的中文字：文字方塊裡不該出現另一種語言的標題。
+            if language != .zhHans {
+                let han = texts.map(\.text).joined().unicodeScalars.filter { (0x4E00...0x9FFF).contains($0.value) }
+                if language == .en || language == .th || language == .ko {
+                    XCTAssertTrue(han.isEmpty, "\(language) 的手冊文字裡混進了漢字")
+                }
+            }
+        }
+    }
+
+    func testTheManualTitleFollowsTheInterfaceLanguage() {
+        let saved = LocalizationManager.snapshotLanguage
+        defer { LocalizationManager.snapshotLanguage = saved }
+        LocalizationManager.snapshotLanguage = .en
+        XCTAssertEqual(LocalizationManager.localizedString("seed_manual_title"), "Kairumo Manual")
+        LocalizationManager.snapshotLanguage = .zhHant
+        XCTAssertEqual(LocalizationManager.localizedString("seed_manual_title"), SeedContent.kairumoManualTitle)
+    }
+
     func testTheStrokeDataLicenceTravelsWithTheApp() {
         // 筆順資料來自 Arphic 字型（Arphic Public License）：授權全文要隨 App 一起散布。
         for name in ["ARPHICPL", "NOTICE", "OFL-NotoSansThai"] {
@@ -429,7 +464,8 @@ final class KairumoManualSeedTests: XCTestCase {
         }
     }
 
-    func testTheNameIsFixed() {
+    func testTheLegacyTitleStaysRecognisable() {
+        // 升級上來的舊筆記用這個固定的繁中名稱認出手冊並補上語系鍵。
         XCTAssertEqual(SeedContent.kairumoManualTitle, "Kairumo手冊")
     }
 }
