@@ -296,6 +296,8 @@ struct DraftingToolbox: View {
     var onRectArray: (_ rows: Int, _ cols: Int, _ dxMm: Double, _ dyMm: Double) -> Void = { _, _, _, _ in }
     /// 開始一題練習（題型編號）。
     var onStartPractice: (String) -> Void = { _ in }
+    /// 匯出本頁圖形（`svg` 或 `dxf`）。
+    var onExport: (String) -> Void = { _ in }
 
     @ObservedObject private var state = DraftingState.shared
     @ObservedObject private var localizationManager = LocalizationManager.shared
@@ -418,6 +420,18 @@ struct DraftingToolbox: View {
                         .accessibilityIdentifier("draft.practice.start.\(kind)")
                     }
                     Text(t("draft_prob_footer")).font(.footnote).foregroundColor(.secondary)
+                }
+                Section(t("draft_toolbox_export")) {
+                    ForEach(["svg", "dxf"], id: \.self) { format in
+                        Button {
+                            onExport(format)
+                            dismiss()
+                        } label: {
+                            Label(t("draft_export_\(format)"), systemImage: "square.and.arrow.up")
+                        }
+                        .accessibilityIdentifier("draft.export.\(format)")
+                    }
+                    Text(t("draft_export_footer")).font(.footnote).foregroundColor(.secondary)
                 }
             }
             .navigationTitle(t("draft_tools"))

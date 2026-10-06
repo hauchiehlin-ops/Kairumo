@@ -1883,6 +1883,7 @@ public struct NotebookEditorView: View {
     /// 立體輔助（草圖拉伸、三視圖、剖面）。
     @State private var showSolidStudio = false
     @State private var showDraftingToolbox = false
+    @State private var draftExportShare: SharedFile?
     @State private var previousTool: EditorToolType?
     @State private var lastObservedTool: EditorToolType = .pen
 
@@ -4069,7 +4070,11 @@ public struct NotebookEditorView: View {
                         DraftingState.shared.placeInstrument(kind: kind, center: center, pageWidth: PageGeometry.size.width)
                     },
                     onRectArray: { rows, cols, dx, dy in applyRectArray(rows: rows, cols: cols, dxMm: dx, dyMm: dy) },
-                    onStartPractice: { startPractice(kind: $0) })
+                    onStartPractice: { startPractice(kind: $0) },
+                    onExport: { exportDrafting(format: $0) })
+            }
+            .sheet(item: $draftExportShare) { item in
+                ShareItemsSheet(items: [item.url])
             }
             .sheet(isPresented: $showSolidStudio) {
                 SolidStudioSheet(
@@ -9878,6 +9883,40 @@ public struct NotebookEditorView: View {
         let ids = Set(made.map(\.id))
         let box = made.map(\.bounds).reduce(CGRect.null) { $0.union($1) }
         DispatchQueue.main.async { lasso.select(proStrokeIds: ids, around: box) }
+    }
+
+    /// 匯出本頁的製圖線（SVG 或 DXF，毫米）：隱藏的圖層不輸出；寫進暫存資料夾再交給分享表。
+    private func exportDrafting(format: String) {
+        guard let canvas = canvasView as? AdaptiveCanvasView, let layer = canvas.proLayer else { return }
+        let drafting = DraftingState.shared
+        let strokes: [FfiExportStroke] = layer.allStrokes.compactMap { s in
+            guard s.points.count >= 2,
+                  s.layerId == 0 || !drafting.isHidden(layer: s.layerId, notebookId: layer.notebookId)
+            else { return nil }
+            let c = s.colorRGBA
+            let hex = c.count >= 3 ? String(format: "#%02X%02X%02X", c[0], c[1], c[2]) : "#111827"
+            return FfiExportStroke(
+                points: s.points.map { FfiPoint(x: $0.x, y: $0.y) }, layer: s.layerId, lineType: s.lineTypeId,
+                width: s.baseWidth, colorHex: hex)
+        }
+        guard !strokes.isEmpty else {
+            showCanvasNotice(localizationManager.localized("draft_export_empty"))
+            return
+        }
+        let size = PageGeometry.size
+        let text = format == "dxf"
+            ? draftExportDxf(strokes: strokes, pageWidth: Float(size.width), pageHeight: Float(size.height))
+            : draftExportSvg(strokes: strokes, pageWidth: Float(size.width), pageHeight: Float(size.height))
+        let url = FileManager.default.temporaryDirectory
+            .appending(path: "padnote-page-\(currentPageIndex + 1).\(format)")
+        do {
+            try text.write(to: url, atomically: true, encoding: .utf8)
+        } catch {
+            showCanvasNotice(localizationManager.localized("draft_export_failed"))
+            return
+        }
+        // 工具箱剛關：等它收起來再開分享表，兩個 sheet 同時換手會被系統吃掉。
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { draftExportShare = SharedFile(url: url) }
     }
 
     /// 開始一題練習：把題目線放進目前這一頁（頁面大小由核心依它排版）。

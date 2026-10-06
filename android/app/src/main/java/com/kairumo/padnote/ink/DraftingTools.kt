@@ -338,6 +338,7 @@ fun DraftingToolboxDialog(
     onPlaceInstrument: (String) -> Unit,
     onRectArray: (Int, Int, Double, Double) -> Unit,
     onStartPractice: (String) -> Unit,
+    onExport: (String) -> Unit,
     onDismiss: () -> Unit
 ) {
     fun t(key: String) = LocalizationStrings.localized(key, languageTag)
@@ -482,6 +483,19 @@ fun DraftingToolboxDialog(
                     }
                 }
                 Text(t("draft_prob_footer"), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                HorizontalDivider()
+                Text(t("draft_toolbox_export"), style = MaterialTheme.typography.labelLarge)
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    for (format in listOf("svg", "dxf")) {
+                        FilterChip(
+                            selected = false,
+                            onClick = { onExport(format) },
+                            label = { Text(t("draft_export_$format"), fontSize = 12.sp) },
+                            modifier = Modifier.testTag("draft.export.$format")
+                        )
+                    }
+                }
+                Text(t("draft_export_footer"), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 HorizontalDivider()
                 FilterChip(
                     selected = false,

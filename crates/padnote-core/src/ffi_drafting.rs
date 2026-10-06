@@ -8,6 +8,7 @@ use padnote_drafting::align;
 use padnote_drafting::check::{self, Issue, LineKind, Seg, Tolerance};
 use padnote_drafting::dim::{self, DimStyle, LinearAxis};
 use padnote_drafting::edit;
+use padnote_drafting::export2d::{self, ExportStroke};
 use padnote_drafting::frame::{self, FrameOptions};
 use padnote_drafting::instruments::{self, InstrumentKind};
 use padnote_drafting::problems::{self, ErrorKind};
@@ -901,6 +902,64 @@ pub fn draft_error_kinds() -> Vec<String> {
     .collect()
 }
 
+// MARK: - 2D 匯出（SVG、DXF）
+
+/// 要匯出的一筆。`color_hex` 是 `#RRGGBB`。
+#[derive(Clone, Debug, uniffi::Record)]
+pub struct FfiExportStroke {
+    pub points: Vec<FfiPoint>,
+    pub layer: u8,
+    pub line_type: u8,
+    pub width: f32,
+    pub color_hex: String,
+}
+
+fn export_strokes(strokes: &[FfiExportStroke]) -> Vec<ExportStroke> {
+    let hex = |s: &str| -> (u8, u8, u8) {
+        let h = s.trim_start_matches('#');
+        let v = u32::from_str_radix(h.get(..6).unwrap_or("111827"), 16).unwrap_or(0x11_18_27);
+        ((v >> 16) as u8, (v >> 8) as u8, v as u8)
+    };
+    strokes
+        .iter()
+        .map(|s| ExportStroke {
+            points: poly(&s.points),
+            layer: s.layer,
+            line_type: s.line_type,
+            width: s.width,
+            color: hex(&s.color_hex),
+        })
+        .collect()
+}
+
+/// 頁面筆畫 → SVG（毫米；每個圖層一個群組；線型換成虛線圖樣）。
+#[uniffi::export]
+pub fn draft_export_svg(
+    strokes: Vec<FfiExportStroke>,
+    page_width: f32,
+    page_height: f32,
+) -> String {
+    export2d::to_svg(
+        &export_strokes(&strokes),
+        page_width.max(1.0),
+        page_height.max(1.0),
+    )
+}
+
+/// 頁面筆畫 → DXF（R12、毫米、y 向上；圖層與線型都定義好）。
+#[uniffi::export]
+pub fn draft_export_dxf(
+    strokes: Vec<FfiExportStroke>,
+    page_width: f32,
+    page_height: f32,
+) -> String {
+    export2d::to_dxf(
+        &export_strokes(&strokes),
+        page_width.max(1.0),
+        page_height.max(1.0),
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1230,5 +1289,44 @@ mod tests {
                 .score
                 < 100
         );
+    }
+
+    #[test]
+    fn two_d_export_works_through_the_ffi() {
+        let strokes = vec![
+            FfiExportStroke {
+                points: vec![pt(0.0, 0.0), pt(381.0, 0.0)],
+                layer: 3,
+                line_type: 1,
+                width: 1.4,
+                color_hex: "#111827".into(),
+            },
+            FfiExportStroke {
+                points: vec![pt(10.0, 10.0), pt(10.0, 100.0)],
+                layer: 2,
+                line_type: 0,
+                width: 1.0,
+                color_hex: "#3B82F6".into(),
+            },
+        ];
+        let svg = draft_export_svg(strokes.clone(), 800.0, 1132.0);
+        assert_eq!(svg.matches("<polyline").count(), 2);
+        assert!(svg.contains("stroke=\"#3B82F6\"") && svg.contains("stroke-dasharray"));
+        let dxf = draft_export_dxf(strokes, 800.0, 1132.0);
+        assert_eq!(dxf.matches("0\nPOLYLINE\n").count(), 2);
+        assert!(dxf.ends_with("0\nEOF\n"));
+        // 壞的顏色不會讓匯出失敗。
+        let bad = draft_export_svg(
+            vec![FfiExportStroke {
+                points: vec![pt(0.0, 0.0), pt(5.0, 5.0)],
+                layer: 3,
+                line_type: 0,
+                width: 1.0,
+                color_hex: "zzz".into(),
+            }],
+            800.0,
+            600.0,
+        );
+        assert!(bad.contains("<polyline"));
     }
 }

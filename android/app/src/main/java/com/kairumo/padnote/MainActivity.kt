@@ -2534,6 +2534,7 @@ private fun InkScreen(
     }
     if (showDraftingToolbox) {
         val density = LocalDensity.current.density
+        val ctx = androidx.compose.ui.platform.LocalContext.current
         DraftingToolboxDialog(
             languageTag = deviceLanguageTag(),
             frameSupported = currentPaperId()?.let { uniffi.padnote_core.draftSheetFrame(it, "", true, false) != null } == true,
@@ -2547,6 +2548,10 @@ private fun InkScreen(
                     DraftToolController.reset(engine)
                     showDraftingToolbox = false
                 }
+            },
+            onExport = { format ->
+                showDraftingToolbox = false
+                message = if (exportDraftingPage(ctx, engine, format)) null else l10n("draft_export_empty")
             },
             onStartPractice = { kind ->
                 showDraftingToolbox = false
@@ -7508,6 +7513,10 @@ private fun placeDraftKit(
     val b = (pts.maxOf { it.y } + box[1] + 8f) * density
     return engine.lastInsertedCoreIds to listOf(Offset(l, t), Offset(r, t), Offset(r, b), Offset(l, b))
 }
+
+/** 匯出本頁的製圖線（SVG／DXF）並開分享表；沒有任何線回 false（頂層函式：避免在巨大的 InkScreen 裡放大 lambda）。 */
+private fun exportDraftingPage(ctx: android.content.Context, engine: com.kairumo.padnote.ink.InkEngine, format: String): Boolean =
+    com.kairumo.padnote.ink.DraftingExport.sharePage(ctx, engine, format, PageGeometry.width, PageGeometry.height)
 
 /** 再出同一題型的一題。 */
 private fun PracticeSession_next(engine: com.kairumo.padnote.ink.InkEngine) {

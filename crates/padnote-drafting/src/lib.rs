@@ -19,6 +19,7 @@ pub mod align;
 pub mod check;
 pub mod dim;
 pub mod edit;
+pub mod export2d;
 pub mod fastener;
 pub mod frame;
 pub mod gdt;

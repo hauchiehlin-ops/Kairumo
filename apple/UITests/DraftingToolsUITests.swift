@@ -404,4 +404,28 @@ final class DraftingToolsUITests: XCTestCase {
         element("draft.practice.close").tap()
         XCTAssertFalse(element("draft.practice.card").waitForExistence(timeout: 3), "結束練習後卡片還在")
     }
+
+    func testTheGlassBoxPlaysAndTheExportsAreOffered() {
+        guard openDrafting() else { XCTFail("進不了圖學模式"); return }
+        let studio = element("draft.solidStudio")
+        XCTAssertTrue(studio.waitForExistence(timeout: 10), "製圖列上沒有立體輔助")
+        studio.tap()
+        let tabs = element("solid.tab")
+        XCTAssertTrue(tabs.waitForExistence(timeout: 10), "立體輔助沒有打開")
+        // 玻璃盒是第三個分頁。
+        tabs.buttons.element(boundBy: 2).tap()
+        let play = element("solid.glass.play")
+        XCTAssertTrue(play.waitForExistence(timeout: 5), "玻璃盒分頁沒有播放鈕")
+        let slider = element("solid.glass.t")
+        XCTAssertTrue(slider.waitForExistence(timeout: 5) || reveal("solid.glass.t").exists, "找不到展開進度")
+        let before = slider.value as? String
+        play.tap()
+        sleep(3)
+        let after = slider.value as? String
+        XCTAssertNotEqual(before, after, "播放三秒進度應該往前走：\(before ?? "nil") → \(after ?? "nil")")
+        // 四種 3D 格式都有匯出鈕。
+        for format in ["stl", "obj", "glb", "usdz"] {
+            XCTAssertTrue(reveal("solid.export.\(format)").exists, "沒有 \(format) 匯出鈕")
+        }
+    }
 }

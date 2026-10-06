@@ -5831,6 +5831,46 @@ extension LocalizationManager {
             .ko: "이 선은 간격 띄우기를 할 수 없습니다",
             .th: "ทำเส้นขนานไม่ได้"
         ],
+        "draft_export_dxf": [
+            .zhHant: "DXF（CAD）",
+            .en: "DXF (CAD)",
+            .zhHans: "DXF（CAD）",
+            .ja: "DXF（CAD）",
+            .ko: "DXF(CAD)",
+            .th: "DXF (CAD)"
+        ],
+        "draft_export_empty": [
+            .zhHant: "這一頁沒有可以匯出的線",
+            .en: "There are no lines to export on this page",
+            .zhHans: "这一页没有可以汇出的线",
+            .ja: "このページには書き出せる線がありません",
+            .ko: "이 페이지에는 내보낼 선이 없습니다",
+            .th: "หน้านี้ไม่มีเส้นให้ส่งออก"
+        ],
+        "draft_export_failed": [
+            .zhHant: "匯出失敗",
+            .en: "Export failed",
+            .zhHans: "汇出失败",
+            .ja: "書き出しに失敗しました",
+            .ko: "내보내기에 실패했습니다",
+            .th: "ส่งออกไม่สำเร็จ"
+        ],
+        "draft_export_footer": [
+            .zhHant: "把本頁的線匯出成毫米單位的檔案：SVG 給向量軟體，DXF 給 AutoCAD、LibreCAD 等。隱藏的圖層不會匯出。",
+            .en: "Exports this page's lines in millimetres: SVG for vector apps, DXF for AutoCAD, LibreCAD and similar. Hidden layers are not exported.",
+            .zhHans: "把本页的线汇出成毫米单位的文件：SVG 给向量软件，DXF 给 AutoCAD、LibreCAD 等。隐藏的图层不会汇出。",
+            .ja: "このページの線をミリメートル単位で書き出します。SVG はベクターアプリ、DXF は AutoCAD や LibreCAD など向けです。非表示のレイヤーは書き出しません。",
+            .ko: "이 페이지의 선을 밀리미터 단위로 내보냅니다. SVG는 벡터 앱용, DXF는 AutoCAD·LibreCAD 등용입니다. 숨긴 레이어는 내보내지 않습니다.",
+            .th: "ส่งออกเส้นของหน้านี้เป็นหน่วยมิลลิเมตร: SVG สำหรับแอปเวกเตอร์ DXF สำหรับ AutoCAD, LibreCAD และอื่น ๆ เลเยอร์ที่ซ่อนจะไม่ถูกส่งออก"
+        ],
+        "draft_export_svg": [
+            .zhHant: "SVG（向量圖）",
+            .en: "SVG (vector)",
+            .zhHans: "SVG（向量图）",
+            .ja: "SVG（ベクター）",
+            .ko: "SVG(벡터)",
+            .th: "SVG (เวกเตอร์)"
+        ],
         "draft_frame_footer": [
             .zhHant: "依這一頁的紙張規格（A4／A3／A2）畫出圖框與標題欄；比例欄會帶入目前的比例尺。",
             .en: "Draws the frame and title block for this page’s paper size (A4/A3/A2); the scale cell uses the current scale.",
@@ -7374,6 +7414,14 @@ extension LocalizationManager {
             .ja: "編集",
             .ko: "편집",
             .th: "แก้ไข"
+        ],
+        "draft_toolbox_export": [
+            .zhHant: "匯出本頁圖形",
+            .en: "Export this page",
+            .zhHans: "汇出本页图形",
+            .ja: "このページを書き出す",
+            .ko: "이 페이지 내보내기",
+            .th: "ส่งออกหน้านี้"
         ],
         "draft_toolbox_frame": [
             .zhHant: "圖框與標題欄",
@@ -17199,6 +17247,70 @@ extension LocalizationManager {
             .ko: "치수 기입",
             .th: "ใส่ขนาด"
         ],
+        "solid_export_ar": [
+            .zhHant: "用 AR 看",
+            .en: "View in AR",
+            .zhHans: "用 AR 看",
+            .ja: "AR で見る",
+            .ko: "AR로 보기",
+            .th: "ดูด้วย AR"
+        ],
+        "solid_export_failed": [
+            .zhHant: "匯出失敗",
+            .en: "Export failed",
+            .zhHans: "汇出失败",
+            .ja: "書き出しに失敗しました",
+            .ko: "내보내기에 실패했습니다",
+            .th: "ส่งออกไม่สำเร็จ"
+        ],
+        "solid_export_footer": [
+            .zhHant: "尺寸是紙上的毫米（STL、OBJ 用毫米，GLB、USDZ 用公尺）。USDZ 可以在 iPhone、iPad 上用 AR 放到桌上看。",
+            .en: "Sizes are paper millimetres (STL and OBJ in millimetres, GLB and USDZ in metres). A USDZ can be placed on your desk in AR on iPhone and iPad.",
+            .zhHans: "尺寸是纸上的毫米（STL、OBJ 用毫米，GLB、USDZ 用公尺）。USDZ 可以在 iPhone、iPad 上用 AR 放到桌上看。",
+            .ja: "寸法は紙上のミリメートルです（STL・OBJ はミリメートル、GLB・USDZ はメートル）。USDZ は iPhone・iPad の AR で机の上に置いて見られます。",
+            .ko: "크기는 종이 위의 밀리미터입니다(STL·OBJ는 밀리미터, GLB·USDZ는 미터). USDZ는 iPhone·iPad의 AR로 책상 위에 올려 볼 수 있습니다.",
+            .th: "ขนาดเป็นมิลลิเมตรบนกระดาษ (STL และ OBJ ใช้มิลลิเมตร GLB และ USDZ ใช้เมตร) USDZ วางบนโต๊ะดูด้วย AR บน iPhone และ iPad ได้"
+        ],
+        "solid_export_glb": [
+            .zhHant: "GLB（網頁、Blender）",
+            .en: "GLB (web, Blender)",
+            .zhHans: "GLB（网页、Blender）",
+            .ja: "GLB（Web、Blender）",
+            .ko: "GLB(웹, Blender)",
+            .th: "GLB (เว็บ, Blender)"
+        ],
+        "solid_export_obj": [
+            .zhHant: "OBJ",
+            .en: "OBJ",
+            .zhHans: "OBJ",
+            .ja: "OBJ",
+            .ko: "OBJ",
+            .th: "OBJ"
+        ],
+        "solid_export_stl": [
+            .zhHant: "STL（3D 列印）",
+            .en: "STL (3D printing)",
+            .zhHans: "STL（3D 列印）",
+            .ja: "STL（3D プリント）",
+            .ko: "STL(3D 프린팅)",
+            .th: "STL (พิมพ์ 3 มิติ)"
+        ],
+        "solid_export_title": [
+            .zhHant: "匯出 3D 模型",
+            .en: "Export the 3D model",
+            .zhHans: "汇出 3D 模型",
+            .ja: "3D モデルを書き出す",
+            .ko: "3D 모델 내보내기",
+            .th: "ส่งออกโมเดล 3 มิติ"
+        ],
+        "solid_export_usdz": [
+            .zhHant: "USDZ（Apple AR）",
+            .en: "USDZ (Apple AR)",
+            .zhHans: "USDZ（Apple AR）",
+            .ja: "USDZ（Apple AR）",
+            .ko: "USDZ(Apple AR)",
+            .th: "USDZ (Apple AR)"
+        ],
         "solid_first_angle": [
             .zhHant: "第一角法",
             .en: "First-angle projection",
@@ -17222,6 +17334,46 @@ extension LocalizationManager {
             .ja: "このページの閉じた図形を使う",
             .ko: "이 페이지의 닫힌 도형 사용",
             .th: "ใช้รูปปิดบนหน้านี้"
+        ],
+        "solid_glass_hint": [
+            .zhHant: "立體放在玻璃盒裡，三個視圖畫在盒子的三個面上。把頂面與右面（第一角法是底面與左面）掀開、攤平到正面，就是三視圖的版面。拖曳畫面可以轉動觀看的角度。",
+            .en: "The solid sits in a glass box and the three views are drawn on three of its faces. Folding the top and right faces (bottom and left in first angle) flat into the front face gives the three-view layout. Drag the picture to change the viewing angle.",
+            .zhHans: "立体放在玻璃盒里，三个视图画在盒子的三个面上。把顶面与右面（第一角法是底面与左面）掀开、摊平到正面，就是三视图的版面。拖曳画面可以转动观看的角度。",
+            .ja: "立体はガラスの箱に入っていて、3 つの図は箱の 3 つの面に描かれます。上面と右面（第一角法では下面と左面）を正面に倒して広げると、3 面図の配置になります。画面をドラッグすると見る角度が変わります。",
+            .ko: "입체는 유리 상자 안에 있고, 세 도면은 상자의 세 면에 그려집니다. 윗면과 오른쪽 면(제1각법에서는 아랫면과 왼쪽 면)을 정면으로 펼치면 3면도 배치가 됩니다. 화면을 끌면 보는 각도가 바뀝니다.",
+            .th: "ชิ้นงานอยู่ในกล่องแก้ว และภาพสามมุมมองถูกวาดบนสามด้านของกล่อง การคลี่ด้านบนและด้านขวา (มุมที่หนึ่งคือด้านล่างและด้านซ้าย) ลงมาที่ด้านหน้า จะได้ผังภาพสามมุมมอง ลากภาพเพื่อเปลี่ยนมุมมอง"
+        ],
+        "solid_glass_pause": [
+            .zhHant: "暫停",
+            .en: "Pause",
+            .zhHans: "暂停",
+            .ja: "一時停止",
+            .ko: "일시정지",
+            .th: "หยุดชั่วคราว"
+        ],
+        "solid_glass_play": [
+            .zhHant: "播放展開",
+            .en: "Play the unfolding",
+            .zhHans: "播放展开",
+            .ja: "展開を再生",
+            .ko: "펼치기 재생",
+            .th: "เล่นการคลี่"
+        ],
+        "solid_glass_progress": [
+            .zhHant: "展開進度",
+            .en: "Unfolding progress",
+            .zhHans: "展开进度",
+            .ja: "展開の進行",
+            .ko: "펼침 진행",
+            .th: "ความคืบหน้าการคลี่"
+        ],
+        "solid_glass_replay": [
+            .zhHant: "重播",
+            .en: "Replay",
+            .zhHans: "重播",
+            .ja: "もう一度",
+            .ko: "다시 재생",
+            .th: "เล่นซ้ำ"
         ],
         "solid_height": [
             .zhHant: "高",
@@ -17470,6 +17622,14 @@ extension LocalizationManager {
             .ja: "スケッチを押し出し、三面図・等角図・断面図を作成",
             .ko: "스케치를 돌출시켜 3면도, 등각도, 단면도 만들기",
             .th: "ดึงสเก็ตช์เป็นชิ้นงาน แล้ววาดสามมุมมอง ภาพไอโซเมตริก และภาพตัด"
+        ],
+        "solid_tab_glass": [
+            .zhHant: "玻璃盒",
+            .en: "Glass box",
+            .zhHans: "玻璃盒",
+            .ja: "ガラスの箱",
+            .ko: "유리 상자",
+            .th: "กล่องแก้ว"
         ],
         "solid_tab_rotate": [
             .zhHant: "旋轉對照",

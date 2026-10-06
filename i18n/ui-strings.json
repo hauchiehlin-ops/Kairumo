@@ -5815,6 +5815,46 @@
     "zhHans": "偏移做不出来",
     "zhHant": "偏移做不出來"
   },
+  "draft_export_dxf": {
+    "en": "DXF (CAD)",
+    "ja": "DXF（CAD）",
+    "ko": "DXF(CAD)",
+    "th": "DXF (CAD)",
+    "zhHans": "DXF（CAD）",
+    "zhHant": "DXF（CAD）"
+  },
+  "draft_export_empty": {
+    "en": "There are no lines to export on this page",
+    "ja": "このページには書き出せる線がありません",
+    "ko": "이 페이지에는 내보낼 선이 없습니다",
+    "th": "หน้านี้ไม่มีเส้นให้ส่งออก",
+    "zhHans": "这一页没有可以汇出的线",
+    "zhHant": "這一頁沒有可以匯出的線"
+  },
+  "draft_export_failed": {
+    "en": "Export failed",
+    "ja": "書き出しに失敗しました",
+    "ko": "내보내기에 실패했습니다",
+    "th": "ส่งออกไม่สำเร็จ",
+    "zhHans": "汇出失败",
+    "zhHant": "匯出失敗"
+  },
+  "draft_export_footer": {
+    "en": "Exports this page's lines in millimetres: SVG for vector apps, DXF for AutoCAD, LibreCAD and similar. Hidden layers are not exported.",
+    "ja": "このページの線をミリメートル単位で書き出します。SVG はベクターアプリ、DXF は AutoCAD や LibreCAD など向けです。非表示のレイヤーは書き出しません。",
+    "ko": "이 페이지의 선을 밀리미터 단위로 내보냅니다. SVG는 벡터 앱용, DXF는 AutoCAD·LibreCAD 등용입니다. 숨긴 레이어는 내보내지 않습니다.",
+    "th": "ส่งออกเส้นของหน้านี้เป็นหน่วยมิลลิเมตร: SVG สำหรับแอปเวกเตอร์ DXF สำหรับ AutoCAD, LibreCAD และอื่น ๆ เลเยอร์ที่ซ่อนจะไม่ถูกส่งออก",
+    "zhHans": "把本页的线汇出成毫米单位的文件：SVG 给向量软件，DXF 给 AutoCAD、LibreCAD 等。隐藏的图层不会汇出。",
+    "zhHant": "把本頁的線匯出成毫米單位的檔案：SVG 給向量軟體，DXF 給 AutoCAD、LibreCAD 等。隱藏的圖層不會匯出。"
+  },
+  "draft_export_svg": {
+    "en": "SVG (vector)",
+    "ja": "SVG（ベクター）",
+    "ko": "SVG(벡터)",
+    "th": "SVG (เวกเตอร์)",
+    "zhHans": "SVG（向量图）",
+    "zhHant": "SVG（向量圖）"
+  },
   "draft_frame_footer": {
     "en": "Draws the frame and title block for this page’s paper size (A4/A3/A2); the scale cell uses the current scale.",
     "ja": "このページの用紙サイズ（A4/A3/A2）に合わせて図枠と表題欄を描きます。尺度欄には現在の尺度が入ります。",
@@ -7358,6 +7398,14 @@
     "th": "แก้ไข",
     "zhHans": "编辑",
     "zhHant": "編輯"
+  },
+  "draft_toolbox_export": {
+    "en": "Export this page",
+    "ja": "このページを書き出す",
+    "ko": "이 페이지 내보내기",
+    "th": "ส่งออกหน้านี้",
+    "zhHans": "汇出本页图形",
+    "zhHant": "匯出本頁圖形"
   },
   "draft_toolbox_frame": {
     "en": "Frame and title block",
@@ -17183,6 +17231,70 @@
     "zhHans": "标注尺寸",
     "zhHant": "標註尺寸"
   },
+  "solid_export_ar": {
+    "en": "View in AR",
+    "ja": "AR で見る",
+    "ko": "AR로 보기",
+    "th": "ดูด้วย AR",
+    "zhHans": "用 AR 看",
+    "zhHant": "用 AR 看"
+  },
+  "solid_export_failed": {
+    "en": "Export failed",
+    "ja": "書き出しに失敗しました",
+    "ko": "내보내기에 실패했습니다",
+    "th": "ส่งออกไม่สำเร็จ",
+    "zhHans": "汇出失败",
+    "zhHant": "匯出失敗"
+  },
+  "solid_export_footer": {
+    "en": "Sizes are paper millimetres (STL and OBJ in millimetres, GLB and USDZ in metres). A USDZ can be placed on your desk in AR on iPhone and iPad.",
+    "ja": "寸法は紙上のミリメートルです（STL・OBJ はミリメートル、GLB・USDZ はメートル）。USDZ は iPhone・iPad の AR で机の上に置いて見られます。",
+    "ko": "크기는 종이 위의 밀리미터입니다(STL·OBJ는 밀리미터, GLB·USDZ는 미터). USDZ는 iPhone·iPad의 AR로 책상 위에 올려 볼 수 있습니다.",
+    "th": "ขนาดเป็นมิลลิเมตรบนกระดาษ (STL และ OBJ ใช้มิลลิเมตร GLB และ USDZ ใช้เมตร) USDZ วางบนโต๊ะดูด้วย AR บน iPhone และ iPad ได้",
+    "zhHans": "尺寸是纸上的毫米（STL、OBJ 用毫米，GLB、USDZ 用公尺）。USDZ 可以在 iPhone、iPad 上用 AR 放到桌上看。",
+    "zhHant": "尺寸是紙上的毫米（STL、OBJ 用毫米，GLB、USDZ 用公尺）。USDZ 可以在 iPhone、iPad 上用 AR 放到桌上看。"
+  },
+  "solid_export_glb": {
+    "en": "GLB (web, Blender)",
+    "ja": "GLB（Web、Blender）",
+    "ko": "GLB(웹, Blender)",
+    "th": "GLB (เว็บ, Blender)",
+    "zhHans": "GLB（网页、Blender）",
+    "zhHant": "GLB（網頁、Blender）"
+  },
+  "solid_export_obj": {
+    "en": "OBJ",
+    "ja": "OBJ",
+    "ko": "OBJ",
+    "th": "OBJ",
+    "zhHans": "OBJ",
+    "zhHant": "OBJ"
+  },
+  "solid_export_stl": {
+    "en": "STL (3D printing)",
+    "ja": "STL（3D プリント）",
+    "ko": "STL(3D 프린팅)",
+    "th": "STL (พิมพ์ 3 มิติ)",
+    "zhHans": "STL（3D 列印）",
+    "zhHant": "STL（3D 列印）"
+  },
+  "solid_export_title": {
+    "en": "Export the 3D model",
+    "ja": "3D モデルを書き出す",
+    "ko": "3D 모델 내보내기",
+    "th": "ส่งออกโมเดล 3 มิติ",
+    "zhHans": "汇出 3D 模型",
+    "zhHant": "匯出 3D 模型"
+  },
+  "solid_export_usdz": {
+    "en": "USDZ (Apple AR)",
+    "ja": "USDZ（Apple AR）",
+    "ko": "USDZ(Apple AR)",
+    "th": "USDZ (Apple AR)",
+    "zhHans": "USDZ（Apple AR）",
+    "zhHant": "USDZ（Apple AR）"
+  },
   "solid_first_angle": {
     "en": "First-angle projection",
     "ja": "第一角法",
@@ -17206,6 +17318,46 @@
     "th": "ใช้รูปปิดบนหน้านี้",
     "zhHans": "使用这一页上的封闭图形",
     "zhHant": "使用這一頁上的封閉圖形"
+  },
+  "solid_glass_hint": {
+    "en": "The solid sits in a glass box and the three views are drawn on three of its faces. Folding the top and right faces (bottom and left in first angle) flat into the front face gives the three-view layout. Drag the picture to change the viewing angle.",
+    "ja": "立体はガラスの箱に入っていて、3 つの図は箱の 3 つの面に描かれます。上面と右面（第一角法では下面と左面）を正面に倒して広げると、3 面図の配置になります。画面をドラッグすると見る角度が変わります。",
+    "ko": "입체는 유리 상자 안에 있고, 세 도면은 상자의 세 면에 그려집니다. 윗면과 오른쪽 면(제1각법에서는 아랫면과 왼쪽 면)을 정면으로 펼치면 3면도 배치가 됩니다. 화면을 끌면 보는 각도가 바뀝니다.",
+    "th": "ชิ้นงานอยู่ในกล่องแก้ว และภาพสามมุมมองถูกวาดบนสามด้านของกล่อง การคลี่ด้านบนและด้านขวา (มุมที่หนึ่งคือด้านล่างและด้านซ้าย) ลงมาที่ด้านหน้า จะได้ผังภาพสามมุมมอง ลากภาพเพื่อเปลี่ยนมุมมอง",
+    "zhHans": "立体放在玻璃盒里，三个视图画在盒子的三个面上。把顶面与右面（第一角法是底面与左面）掀开、摊平到正面，就是三视图的版面。拖曳画面可以转动观看的角度。",
+    "zhHant": "立體放在玻璃盒裡，三個視圖畫在盒子的三個面上。把頂面與右面（第一角法是底面與左面）掀開、攤平到正面，就是三視圖的版面。拖曳畫面可以轉動觀看的角度。"
+  },
+  "solid_glass_pause": {
+    "en": "Pause",
+    "ja": "一時停止",
+    "ko": "일시정지",
+    "th": "หยุดชั่วคราว",
+    "zhHans": "暂停",
+    "zhHant": "暫停"
+  },
+  "solid_glass_play": {
+    "en": "Play the unfolding",
+    "ja": "展開を再生",
+    "ko": "펼치기 재생",
+    "th": "เล่นการคลี่",
+    "zhHans": "播放展开",
+    "zhHant": "播放展開"
+  },
+  "solid_glass_progress": {
+    "en": "Unfolding progress",
+    "ja": "展開の進行",
+    "ko": "펼침 진행",
+    "th": "ความคืบหน้าการคลี่",
+    "zhHans": "展开进度",
+    "zhHant": "展開進度"
+  },
+  "solid_glass_replay": {
+    "en": "Replay",
+    "ja": "もう一度",
+    "ko": "다시 재생",
+    "th": "เล่นซ้ำ",
+    "zhHans": "重播",
+    "zhHant": "重播"
   },
   "solid_height": {
     "en": "Height",
@@ -17454,6 +17606,14 @@
     "th": "ดึงสเก็ตช์เป็นชิ้นงาน แล้ววาดสามมุมมอง ภาพไอโซเมตริก และภาพตัด",
     "zhHans": "把草图拉伸成立体，画出三视图、等角图与剖面",
     "zhHant": "把草圖拉伸成立體，畫出三視圖、等角圖與剖面"
+  },
+  "solid_tab_glass": {
+    "en": "Glass box",
+    "ja": "ガラスの箱",
+    "ko": "유리 상자",
+    "th": "กล่องแก้ว",
+    "zhHans": "玻璃盒",
+    "zhHant": "玻璃盒"
   },
   "solid_tab_rotate": {
     "en": "Rotate",
