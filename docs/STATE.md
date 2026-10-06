@@ -504,7 +504,7 @@ Markdown / SVG 匯出 · 手寫辨識 fallback 鏈 · 引擎與權限中心狀�
   - 量角器只有一組刻度（0° 在右端）；尺規沒有「量長度」的讀數。
   - 玻璃盒沒有隱藏線消除（畫各面的線、立體稜線與投射線，用來說明展開的概念）。
   - 3D 匯出沒有材質貼圖（淺灰單色）；Android 沒有 AR 預覽（USDZ 的 AR Quick Look 是 Apple 專屬），沒有在真機上放置 USDZ 驗證過。
-  - 使用手冊（《Kairumo手冊》、`docs/manual`）還沒寫這些新功能。
+  - 使用手冊（`docs/manual`）已新增獨立的「圖學」章（零基礎、手把手，12 步＋逐項說明，六語系、中英截圖），隱私權政策已加「圖學工具與匯出」一節（2026-10-07）。《Kairumo手冊》預載筆記本（手繪）尚未涵蓋圖學。
   - Apple UI 測試常被系統層崩潰（XCTAutomationSupport 在日誌量過大時崩在 `os_log` 路徑）打斷，重跑即過；
     跑法用 `xcodebuild test -retry-tests-on-failure -test-iterations 3`。CI 若跑這類測試也要同樣重試。
 

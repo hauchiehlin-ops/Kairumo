@@ -100,6 +100,12 @@ enum ScreenAudit {
             // 停用的控制項不該被算成「點不到」—— 那是它自己的狀態。
             guard element.isEnabled else { continue }
             // 沒有面積的東西本來就點不到，那是版面問題不是遮蔽問題。
+            // 惰性清單裡還沒捲到的列也是 0 面積：先捲過去再量一次，仍是 0 才算。
+            var scrolls = 0
+            while (element.frame.width <= 0 || element.frame.height <= 0) && scrolls < 4 {
+                (app.collectionViews.firstMatch.exists ? app.collectionViews.firstMatch : app).swipeUp()
+                scrolls += 1
+            }
             guard element.frame.width > 0, element.frame.height > 0 else {
                 missing.append("\(id)（面積是 0）")
                 continue
