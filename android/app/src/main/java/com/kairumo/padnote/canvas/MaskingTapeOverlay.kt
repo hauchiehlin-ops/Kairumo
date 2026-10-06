@@ -454,7 +454,7 @@ fun MaskingTapeOverlay(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Close,
-                            contentDescription = "刪除膠帶",
+                            contentDescription = com.kairumo.padnote.L10n.t("tape_delete"),
                             tint = Color.DarkGray,
                             modifier = Modifier.size(14.dp)
                         )
@@ -521,7 +521,7 @@ fun MaskingTapeOverlay(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Refresh,
-                                contentDescription = "翻開或遮回",
+                                contentDescription = com.kairumo.padnote.L10n.t("tape_toggle"),
                                 tint = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(16.dp)
                             )
@@ -538,7 +538,7 @@ fun MaskingTapeOverlay(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Delete,
-                                contentDescription = "刪除膠帶",
+                                contentDescription = com.kairumo.padnote.L10n.t("tape_delete"),
                                 tint = MaterialTheme.colorScheme.error,
                                 modifier = Modifier.size(16.dp)
                             )

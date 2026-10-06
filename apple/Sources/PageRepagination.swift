@@ -194,8 +194,7 @@ public enum PageRepagination {
             let newObjectCount = objectCount(result.document)
             guard newStrokeCount == oldStrokeCount, newObjectCount == oldObjectCount else {
                 report.outcomes[doc.id] = .failed(
-                    reason: "重新分頁前後內容不符：筆畫 \(oldStrokeCount)→\(newStrokeCount)、"
-                        + "物件 \(oldObjectCount)→\(newObjectCount)")
+                    reason: L10n.f("repagination_mismatch", oldStrokeCount, newStrokeCount, oldObjectCount, newObjectCount))
                 continue
             }
 

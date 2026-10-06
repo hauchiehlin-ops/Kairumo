@@ -274,7 +274,7 @@ public class CollaborationManager: ObservableObject {
 
         guard let url = URL(string: serverAddress) else {
             print("❌ 無效的 WebSocket 伺服器網址: \(serverAddress)")
-            self.lastErrorMessage = "無效的協同伺服器位址：\(serverAddress)"
+            self.lastErrorMessage = L10n.f("collab_err_bad_address", serverAddress)
             self.status = .disconnected
             return
         }
@@ -416,7 +416,7 @@ public class CollaborationManager: ObservableObject {
         guard !userInitiatedDisconnect, !currentRoomId.isEmpty else { return }
         if reconnectAttempt >= maxReconnectAttempts {
             print("❌ 已達到最大重連次數 (\(maxReconnectAttempts))")
-            self.lastErrorMessage = "無法連上協同伺服器 \(serverAddress)，已停止重試。"
+            self.lastErrorMessage = L10n.f("collab_err_unreachable", serverAddress)
             self.status = .disconnected
             return
         }
@@ -620,7 +620,7 @@ public class CollaborationManager: ObservableObject {
 
                 case .failure(let error):
                     print("⚠️ WebSocket 接收中斷: \(error.localizedDescription)")
-                    self.lastErrorMessage = error.localizedDescription
+                    self.lastErrorMessage = L10n.errorText(error)
                     if !self.userInitiatedDisconnect {
                         self.scheduleReconnect()
                     } else {

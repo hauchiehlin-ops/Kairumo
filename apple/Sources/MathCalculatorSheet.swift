@@ -53,60 +53,60 @@ public struct MathCalculatorSheet: View {
     ]
 
     // 微積分與工程數學常見算式模板
-    private let calculusTemplates: [(name: String, expr: String)] = [
-        ("微積分 - 多項式導數表列", "d/dx(3x^2 + 5x - 4) = 6x + 5"),
-        ("微積分 - 定積分求值", "∫(0 to 2) (3x^2) dx = 8"),
-        ("微積分 - 瑕積分", "∫(0 to ∞) e^(-x) dx = 1"),
-        ("工數 - 傅立葉級數表列", "f(x) = a0/2 + ∑(an cos(nx) + bn sin(nx))"),
-        ("工數 - 拉普拉斯轉換", "L{e^(at)} = 1 / (s - a)"),
-        ("工數 - 二階常微分ODE", "y'' + 4y' + 13y = 0"),
-        ("向量分析 - 梯度運算", "∇f = ∂f/∂x i + ∂f/∂y j + ∂f/∂z k"),
-        ("向量分析 - 散度運算", "∇·F = ∂P/∂x + ∂Q/∂y + ∂R/∂z"),
-        ("向量分析 - 旋度運算", "∇×F = det |i j k; ∂x ∂y ∂z; P Q R|"),
-        ("線性代數 - 特徵方程式", "det(A - λI) = 0"),
-        ("複變數 - 歐拉公式", "e^(iθ) = cos(θ) + i sin(θ)"),
-        ("高斯積分", "∫(-∞ to ∞) e^(-x^2) dx = √π"),
-        ("泰勒展開式", "f(x) = ∑ (f^(n)(a)/n!) (x - a)^n"),
-        ("工數 - 熱傳導方程式", "∂u/∂t = α ∇²u"),
-        ("工數 - 波動方程式", "∂²u/∂t² = c² ∇²u")
-    ]
+    private var calculusTemplates: [(name: String, expr: String)] { [
+        (L10n.t("math_tpl_01"), "d/dx(3x^2 + 5x - 4) = 6x + 5"),
+        (L10n.t("math_tpl_02"), "∫(0 to 2) (3x^2) dx = 8"),
+        (L10n.t("math_tpl_03"), "∫(0 to ∞) e^(-x) dx = 1"),
+        (L10n.t("math_tpl_04"), "f(x) = a0/2 + ∑(an cos(nx) + bn sin(nx))"),
+        (L10n.t("math_tpl_05"), "L{e^(at)} = 1 / (s - a)"),
+        (L10n.t("math_tpl_06"), "y'' + 4y' + 13y = 0"),
+        (L10n.t("math_tpl_07"), "∇f = ∂f/∂x i + ∂f/∂y j + ∂f/∂z k"),
+        (L10n.t("math_tpl_08"), "∇·F = ∂P/∂x + ∂Q/∂y + ∂R/∂z"),
+        (L10n.t("math_tpl_09"), "∇×F = det |i j k; ∂x ∂y ∂z; P Q R|"),
+        (L10n.t("math_tpl_10"), "det(A - λI) = 0"),
+        (L10n.t("math_tpl_11"), "e^(iθ) = cos(θ) + i sin(θ)"),
+        (L10n.t("math_tpl_12"), "∫(-∞ to ∞) e^(-x^2) dx = √π"),
+        (L10n.t("math_tpl_13"), "f(x) = ∑ (f^(n)(a)/n!) (x - a)^n"),
+        (L10n.t("math_tpl_14"), "∂u/∂t = α ∇²u"),
+        (L10n.t("math_tpl_15"), "∂²u/∂t² = c² ∇²u")
+    ] }
 
     // 常用科學常數
-    private let scientificConstants: [(name: String, symbol: String, valueDesc: String)] = [
-        ("圓周率 π", "pi", "3.14159265..."),
-        ("自然常數 e", "e", "2.71828182..."),
-        ("黃金比例 φ", "phi", "1.61803398..."),
-        ("光速 c", "c", "299,792,458 m/s"),
-        ("重力加速度 g", "g", "9.80665 m/s²"),
-        ("普朗克常數 h", "h", "6.62607e-34 J·s"),
-        ("波茲曼常數 k", "k", "1.38065e-23 J/K"),
-        ("亞佛加厥常數 Na", "na", "6.02214e23 mol⁻¹")
-    ]
+    private var scientificConstants: [(name: String, symbol: String, valueDesc: String)] { [
+        (L10n.t("math_const_01"), "pi", "3.14159265..."),
+        (L10n.t("math_const_02"), "e", "2.71828182..."),
+        (L10n.t("math_const_03"), "phi", "1.61803398..."),
+        (L10n.t("math_const_04"), "c", "299,792,458 m/s"),
+        (L10n.t("math_const_05"), "g", "9.80665 m/s²"),
+        (L10n.t("math_const_06"), "h", "6.62607e-34 J·s"),
+        (L10n.t("math_const_07"), "k", "1.38065e-23 J/K"),
+        (L10n.t("math_const_08"), "na", "6.02214e23 mol⁻¹")
+    ] }
 
     // 完整的數學特殊符號分類清單（涵蓋微積分、工數、幾何、集合、希臘字母）
-    private let mathSymbolSections: [(title: String, symbols: [String])] = [
-        ("微積分與微分方程", [
+    private var mathSymbolSections: [(title: String, symbols: [String])] { [
+        (L10n.t("math_sec_01"), [
             "∫", "∬", "∭", "∮", "∯", "∰", "∂", "∇", "∆", "d", "dx", "dy", "dz", "dt", "′", "″"
         ]),
-        ("工數、向量與場論", [
+        (L10n.t("math_sec_02"), [
             "×", "·", "⊗", "⊕", "⊙", "⊥", "∥", "∠", "∢", "°", "∇·", "∇×", "∇²", "‖", "⟨", "⟩"
         ]),
-        ("運算子與關係", [
+        (L10n.t("math_sec_03"), [
             "±", "∓", "≠", "≈", "≡", "≤", "≥", "≪", "≫", "∝", "∞", "√", "∛", "∜", "∑", "∏"
         ]),
-        ("集合與邏輯", [
+        (L10n.t("math_sec_04"), [
             "∈", "∉", "⊂", "⊃", "⊆", "⊇", "∪", "∩", "∅", "∀", "∃", "∄", "∴", "∵", "⇒", "⇔"
         ]),
-        ("希臘字母 (小寫)", [
+        (L10n.t("math_sec_05"), [
             "α", "β", "γ", "δ", "ε", "ζ", "η", "θ", "ι", "κ", "λ", "μ", "ν", "ξ", "π", "ρ", "σ", "τ", "υ", "φ", "χ", "ψ", "ω"
         ]),
-        ("希臘字母 (大寫)", [
+        (L10n.t("math_sec_06"), [
             "Α", "Β", "Γ", "Δ", "Ε", "Ζ", "Η", "Θ", "Ι", "Κ", "Λ", "Μ", "Ν", "Ξ", "Π", "Ρ", "Σ", "Τ", "Υ", "Φ", "Χ", "Ψ", "Ω"
         ]),
-        ("括號與矩陣符號", [
+        (L10n.t("math_sec_07"), [
             "(", ")", "[", "]", "{", "}", "⌈", "⌉", "⌊", "⌋", "|", "‖"
         ])
-    ]
+    ] }
 
     public init(
         initialFormula: String = "125 * 8 + 45",
@@ -501,7 +501,7 @@ public struct MathCalculatorSheet: View {
             self.errorMessage = nil
         case .failure(let error):
             self.currentResult = nil
-            self.errorMessage = "\(localizationManager.localized("math_error")): \(error.localizedDescription)"
+            self.errorMessage = "\(localizationManager.localized("math_error")): \(L10n.errorText(error))"
         }
     }
 

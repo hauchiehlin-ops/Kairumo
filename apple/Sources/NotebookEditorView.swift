@@ -1692,7 +1692,7 @@ struct GoldenSpiralOverlayView: View {
 
                 HStack(spacing: 6) {
                     Image(systemName: "camera.metering.center.weighted")
-                    Text("GOLDEN SPIRAL (Φ 1.618)")
+                    Text(L10n.t("composition_golden_spiral"))
                         .font(.system(size: 11, weight: .bold, design: .monospaced))
                 }
                 .foregroundColor(.orange)
@@ -1748,7 +1748,7 @@ struct RuleOfThirdsOverlayView: View {
 
                 HStack(spacing: 6) {
                     Image(systemName: "grid")
-                    Text("RULE OF THIRDS (3×3)")
+                    Text(L10n.t("composition_rule_of_thirds"))
                         .font(.system(size: 11, weight: .bold, design: .monospaced))
                 }
                 .foregroundColor(.cyan)
@@ -4244,7 +4244,7 @@ public struct NotebookEditorView: View {
                             Image(systemName: "circle.grid.cross")
                                 .font(.system(size: 20))
                                 .foregroundColor(.purple)
-                            Text("Radial")
+                            Text(L10n.t("tool_radial_short"))
                                 .font(.caption2)
                                 .foregroundColor(.purple)
                         }
@@ -14227,7 +14227,7 @@ public struct CollabAdvancedFeaturesPanel: View {
                 }) {
                     HStack {
                         Image(systemName: isVoiceRoomActive ? "mic.fill" : "mic.slash")
-                        Text(isVoiceRoomActive ? "連線中" : "已中斷")
+                        Text(isVoiceRoomActive ? L10n.t("voice_connected") : L10n.t("voice_disconnected"))
                     }
                     .padding(8)
                     .background(isVoiceRoomActive ? Color.green.opacity(0.2) : Color.gray.opacity(0.2))

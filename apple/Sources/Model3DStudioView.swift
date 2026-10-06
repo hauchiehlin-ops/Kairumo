@@ -125,7 +125,7 @@ public struct Model3DStudioView: View {
 
     @State private var selectedModelType: Model3DType = .sphere
     @State private var selectedMaterial: MaterialType = .gold
-    @State private var title: String = "3D 幾何模型"
+    @State private var title: String = L10n.t("model3d_default_title")
     @State private var previewRotationY: Float = 0.5
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var previewRotationX: Float = 0.3
@@ -202,7 +202,7 @@ public struct Model3DStudioView: View {
             return
         }
         imported = (outcome.storedName, outcome.displayName)
-        if title.isEmpty || title == "3D 幾何模型" {
+        if title.isEmpty || title == L10n.t("model3d_default_title") || title == "3D 幾何模型" {
             title = outcome.displayName
         }
     }
@@ -404,15 +404,15 @@ public struct Model3DStudioView: View {
 
     private func materialDescription(_ mat: MaterialType) -> String {
         switch mat {
-        case .plastic: return "Smooth synthetic polymer with balanced specular highlights."
-        case .gold: return "100% metallic gold with warm mirror specular reflection."
-        case .silver: return "High-reflectance pure silver with radiant chrome finish."
-        case .copper: return "Warm reddish metallic sheen with soft specular tone."
-        case .iron: return "Dark matte industrial steel with robust weight appearance."
-        case .wood: return "Natural organic grain with warm diffuse scattering."
-        case .marble: return "Polished stone with subtle translucency and delicate veins."
-        case .granite: return "Textured mineral rock with natural granular diffusion."
-        case .obsidian: return "Volcanic glass with deep contrast and glossy sheen."
+        case .plastic: return L10n.t("material_desc_plastic")
+        case .gold: return L10n.t("material_desc_gold")
+        case .silver: return L10n.t("material_desc_silver")
+        case .copper: return L10n.t("material_desc_copper")
+        case .iron: return L10n.t("material_desc_iron")
+        case .wood: return L10n.t("material_desc_wood")
+        case .marble: return L10n.t("material_desc_marble")
+        case .granite: return L10n.t("material_desc_granite")
+        case .obsidian: return L10n.t("material_desc_obsidian")
         }
     }
 }

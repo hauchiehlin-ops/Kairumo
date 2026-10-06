@@ -94,7 +94,7 @@ object Exporter {
             }
             Format.PNG -> {
                 val page = pageId ?: session.firstPageId()
-                    ?: error("這本筆記沒有任何頁面")
+                    ?: error(com.kairumo.padnote.L10n.t("export_err_no_pages"))
                 // @2x：螢幕截圖級的解析度，列印或再編輯都還堪用。
                 // 走 PageImageRenderer 而不是核心的 export_page_png：
                 // 後者把文字畫成灰條，匯出的圖上會看不到字（工作項 S-60）。

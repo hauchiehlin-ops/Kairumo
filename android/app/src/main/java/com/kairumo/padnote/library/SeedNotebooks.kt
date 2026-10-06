@@ -262,10 +262,10 @@ private fun buildFeatureShowcase(context: Context, deviceId: UInt, l: (String) -
 
         // 底部亮點膠囊
         val pillY0 = 825f
-        shapes0.create(pill("100% 完全開源免費", MARGIN, pillY0, "#EBF8FF"))
-        shapes0.create(pill("零廣告無廠商鎖定", MARGIN + 175f, pillY0, "#F0FFF4"))
-        shapes0.create(pill("次世代多維思考架構", MARGIN + 350f, pillY0, "#FAF5FF"))
-        shapes0.create(pill("原生高效向量核心", MARGIN + 525f, pillY0, "#FFFAF0"))
+        shapes0.create(pill(l("seed_pill_01"), MARGIN, pillY0, "#EBF8FF"))
+        shapes0.create(pill(l("seed_pill_02"), MARGIN + 175f, pillY0, "#F0FFF4"))
+        shapes0.create(pill(l("seed_pill_03"), MARGIN + 350f, pillY0, "#FAF5FF"))
+        shapes0.create(pill(l("seed_pill_04"), MARGIN + 525f, pillY0, "#FFFAF0"))
 
 
         // =========================================================================
@@ -362,10 +362,10 @@ private fun buildFeatureShowcase(context: Context, deviceId: UInt, l: (String) -
 
         // 底部筆刷徽章
         val pillY1 = 825f
-        shapes1.create(pill("16 種物理級筆刷", MARGIN, pillY1, "#EBF8FF"))
-        shapes1.create(pill("真實壓感與毛筆提按", MARGIN + 175f, pillY1, "#F0FFF4"))
-        shapes1.create(pill("互動考點遮蔽膠帶", MARGIN + 350f, pillY1, "#FFFFF0"))
-        shapes1.create(pill("尺規與套索精準幾何", MARGIN + 525f, pillY1, "#FAF5FF"))
+        shapes1.create(pill(l("seed_pill_05"), MARGIN, pillY1, "#EBF8FF"))
+        shapes1.create(pill(l("seed_pill_06"), MARGIN + 175f, pillY1, "#F0FFF4"))
+        shapes1.create(pill(l("seed_pill_07"), MARGIN + 350f, pillY1, "#FFFFF0"))
+        shapes1.create(pill(l("seed_pill_08"), MARGIN + 525f, pillY1, "#FAF5FF"))
 
 
         // =========================================================================
@@ -538,10 +538,10 @@ private fun buildFeatureShowcase(context: Context, deviceId: UInt, l: (String) -
 
         // 底部文字模式徽章
         val pillY2 = 825f
-        shapes2.create(pill("桌面級專業排版", MARGIN, pillY2, "#EBF8FF"))
-        shapes2.create(pill("原生高格自適應表", MARGIN + 175f, pillY2, "#F0FFF4"))
-        shapes2.create(pill("智慧拓撲流程圖", MARGIN + 350f, pillY2, "#FAF5FF"))
-        shapes2.create(pill("3D 與音訊多媒體", MARGIN + 525f, pillY2, "#FFFAF0"))
+        shapes2.create(pill(l("seed_pill_09"), MARGIN, pillY2, "#EBF8FF"))
+        shapes2.create(pill(l("seed_pill_10"), MARGIN + 175f, pillY2, "#F0FFF4"))
+        shapes2.create(pill(l("seed_pill_11"), MARGIN + 350f, pillY2, "#FAF5FF"))
+        shapes2.create(pill(l("seed_pill_12"), MARGIN + 525f, pillY2, "#FFFAF0"))
 
 
         // =========================================================================
@@ -667,7 +667,7 @@ private fun buildFeatureShowcase(context: Context, deviceId: UInt, l: (String) -
         // 插入動態可編輯長條圖
         val chartSpec = ChartSpec(
             title = l("sample_showcase_chart_spec_title"),
-            categories = mutableListOf("向量書寫延遲", "圖表動態可編修", "空間圖釘協作", "開源與無訂閱限制"),
+            categories = mutableListOf(l("seed_chart_cat_1"), l("seed_chart_cat_2"), l("seed_chart_cat_3"), l("seed_chart_cat_4")),
             series = mutableListOf(
                 ChartSeries(
                     name = "Kairumo (Padnote)",
@@ -755,10 +755,10 @@ private fun buildFeatureShowcase(context: Context, deviceId: UInt, l: (String) -
 
         // 底部亮點膠囊
         val pillY3 = 825f
-        shapes3.create(pill("STEM 微積分深度解析", MARGIN, pillY3, "#FAF5FF"))
-        shapes3.create(pill("動態可編修圖表工坊", MARGIN + 175f, pillY3, "#EBF8FF"))
-        shapes3.create(pill("空間討論圖釘協作", MARGIN + 350f, pillY3, "#F0FFF4"))
-        shapes3.create(pill("終極無界數位紙張", MARGIN + 525f, pillY3, "#FFFAF0"))
+        shapes3.create(pill(l("seed_pill_13"), MARGIN, pillY3, "#FAF5FF"))
+        shapes3.create(pill(l("seed_pill_14"), MARGIN + 175f, pillY3, "#EBF8FF"))
+        shapes3.create(pill(l("seed_pill_15"), MARGIN + 350f, pillY3, "#F0FFF4"))
+        shapes3.create(pill(l("seed_pill_16"), MARGIN + 525f, pillY3, "#FFFAF0"))
 
         return true
     }

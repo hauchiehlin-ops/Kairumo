@@ -150,7 +150,7 @@ struct StorageLocationView: View {
             ) { result in
                 guard case let .success(urls) = result, let folder = urls.first else {
                     if case let .failure(error) = result {
-                        statusMessage = error.localizedDescription
+                        statusMessage = L10n.errorText(error)
                     }
                     return
                 }
@@ -229,7 +229,7 @@ struct StorageLocationView: View {
             } catch is CancellationError {
                 statusMessage = localization.localized("storage_move_cancelled")
             } catch {
-                statusMessage = error.localizedDescription
+                statusMessage = L10n.errorText(error)
             }
         }
     }
@@ -287,7 +287,7 @@ struct StorageLocationView: View {
                 }
                 statusMessage = "✓ " + localization.localized("storage_reset_done")
             } catch {
-                statusMessage = error.localizedDescription
+                statusMessage = L10n.errorText(error)
             }
         }
     }

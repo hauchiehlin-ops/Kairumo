@@ -1360,7 +1360,7 @@ public struct HomeWorkbenchView: View {
                                     Text("•")
                                         .font(.caption2)
                                         .foregroundColor(.secondary)
-                                    Text(rec.transcriptionStatus)
+                                    Text(L10n.transcriptionStatus(rec.transcriptionStatus))
                                         .font(.caption2)
                                         .foregroundColor(.green)
                                     Text("•")
@@ -2218,8 +2218,8 @@ public struct HomeWorkbenchView: View {
         if homeGoogleSyncing || autoSync.isSyncing {
             return localizationManager.localized("syncing")
         }
-        if let msg = homeGoogleMessage ?? (autoSync.lastMessage.isEmpty ? nil : autoSync.lastMessage), msg.contains("失敗") || msg.contains("錯誤") || msg.contains("逾時") {
-            return "同步發生錯誤"
+        if let msg = homeGoogleMessage ?? (autoSync.lastMessage.isEmpty ? nil : autoSync.lastMessage), SyncText.isError(msg) {
+            return L10n.t("sync_status_error")
         }
         return localizationManager.localized("sync_done")
     }
@@ -2231,7 +2231,7 @@ public struct HomeWorkbenchView: View {
         if homeGoogleSyncing || autoSync.isSyncing {
             return .teal
         }
-        if let msg = homeGoogleMessage ?? (autoSync.lastMessage.isEmpty ? nil : autoSync.lastMessage), msg.contains("失敗") || msg.contains("錯誤") || msg.contains("逾時") {
+        if let msg = homeGoogleMessage ?? (autoSync.lastMessage.isEmpty ? nil : autoSync.lastMessage), SyncText.isError(msg) {
             return .red
         }
         return .green
@@ -2244,8 +2244,8 @@ public struct HomeWorkbenchView: View {
         if homeFolderSyncing {
             return localizationManager.localized("syncing")
         }
-        if let msg = homeGoogleMessage, msg.contains("失敗") || msg.contains("錯誤") {
-            return "同步失敗"
+        if let msg = homeGoogleMessage, SyncText.isError(msg) {
+            return L10n.t("sync_status_failed")
         }
         return localizationManager.localized("sync_done")
     }
@@ -2257,7 +2257,7 @@ public struct HomeWorkbenchView: View {
         if homeFolderSyncing {
             return .teal
         }
-        if let msg = homeGoogleMessage, msg.contains("失敗") || msg.contains("錯誤") {
+        if let msg = homeGoogleMessage, SyncText.isError(msg) {
             return .red
         }
         return .green
@@ -2430,7 +2430,7 @@ public struct HomeWorkbenchView: View {
                 )
             }
         } catch {
-            homeGoogleMessage = "同步逾時，請確認網路連線後重試"
+            homeGoogleMessage = SyncText.error(L10n.t("sync_timeout_network"))
             return
         }
         guard let report else {
@@ -2446,7 +2446,7 @@ public struct HomeWorkbenchView: View {
             SyncHistory.markGoogleSynced()
         }
         if let failure = report.failures.first {
-            homeGoogleMessage = "\(failure.key)：\(failure.value)"
+            homeGoogleMessage = SyncText.error("\(failure.key)：\(failure.value)")
         } else if report.isNoOp {
             homeGoogleMessage = localizationManager.localized("sync_up_to_date")
         } else {
@@ -2484,7 +2484,7 @@ public struct HomeWorkbenchView: View {
                 homeGoogleMessage = localizationManager.localized("sync_needs_attention")
                     .replacingFirst("%@", with: first)
             } else if let failure = report.failures.first {
-                homeGoogleMessage = "\(failure.key)：\(failure.value)"
+                homeGoogleMessage = SyncText.error("\(failure.key)：\(failure.value)")
             } else if report.isNoOp {
                 homeGoogleMessage = localizationManager.localized("sync_up_to_date")
             } else {
@@ -3294,7 +3294,7 @@ struct QuickAudioRecorderModal: View {
                     } label: {
                         HStack(spacing: 4) {
                             Image(systemName: "folder")
-                            Text("Kairumo Record")
+                            Text("Kairumo Record") // i18n-ok: 資料夾的實際名稱
                                 .font(.caption)
                         }
                     }
@@ -3428,7 +3428,7 @@ public struct AppDiagnosticsSheet: View {
                     HStack {
                         Text(localizationManager.localized("arch_mode"))
                         Spacer()
-                        Text("Mac Catalyst / iOS Universal")
+                        Text("Mac Catalyst / iOS Universal") // i18n-ok: 平台名稱
                             .foregroundColor(.secondary)
                     }
                 }
@@ -3444,14 +3444,14 @@ public struct AppDiagnosticsSheet: View {
 
                 Section(localizationManager.localized("about_app")) {
                     HStack {
-                        Text("License")
+                        Text(localizationManager.localized("about_license"))
                         Spacer()
                         Text("Apache-2.0")
                             .foregroundColor(.secondary)
                     }
 
                     HStack {
-                        Text("Stack")
+                        Text(localizationManager.localized("about_stack"))
                         Spacer()
                         Text("Rust Core + UniFFI + PencilKit/Metal/SwiftUI")
                             .foregroundColor(.secondary)
@@ -3494,12 +3494,12 @@ public struct AppDiagnosticsSheet: View {
                 guard let url = urls.first else { return }
                 do {
                     try transcriber.importWhisperModel(from: url)
-                    modelImportMessage = "✅ 成功匯入 Whisper 離線模型！"
+                    modelImportMessage = "✅ " + L10n.t("whisper_import_ok")
                 } catch {
-                    modelImportMessage = "❌ 匯入失敗: \(error.localizedDescription)"
+                    modelImportMessage = "❌ " + L10n.f("whisper_import_failed", L10n.errorText(error))
                 }
             case let .failure(error):
-                modelImportMessage = "❌ 選取檔案失敗: \(error.localizedDescription)"
+                modelImportMessage = "❌ " + L10n.f("whisper_pick_failed", L10n.errorText(error))
             }
         }
     }
@@ -3564,7 +3564,7 @@ extension AppDiagnosticsSheet {
             // 使用者要把它放到雲端或電腦上才算數。
             shareBackupURL = url
         } catch {
-            backupMessage = error.localizedDescription
+            backupMessage = SyncText.error(L10n.errorText(error))
         }
     }
 
@@ -3591,7 +3591,7 @@ extension AppDiagnosticsSheet {
             }
             backupMessage = message
         } catch {
-            backupMessage = error.localizedDescription
+            backupMessage = SyncText.error(L10n.errorText(error))
         }
     }
 
@@ -3770,7 +3770,7 @@ extension AppDiagnosticsSheet {
                         .foregroundColor(.red)
                     }
                     HStack {
-                        Text(transcriber.downloadStatusText.isEmpty ? "下載中..." : "Whisper 模型下載中：\(transcriber.downloadStatusText)")
+                        Text(transcriber.downloadStatusText.isEmpty ? L10n.t("whisper_downloading") : L10n.f("whisper_downloading_status", transcriber.downloadStatusText))
                             .font(.caption2)
                             .foregroundColor(.secondary)
                         Spacer()
@@ -3858,7 +3858,7 @@ extension AppDiagnosticsSheet {
                 )
             }
         } catch {
-            googleMessage = "同步逾時，請確認網路連線後重試"
+            googleMessage = SyncText.error(L10n.t("sync_timeout_network"))
             return
         }
         guard let report else {
@@ -3874,7 +3874,7 @@ extension AppDiagnosticsSheet {
             SyncHistory.markGoogleSynced()
         }
         if let failure = report.failures.first {
-            googleMessage = "\(failure.key)：\(failure.value)"
+            googleMessage = SyncText.error("\(failure.key)：\(failure.value)")
         } else if report.isNoOp {
             googleMessage = localizationManager.localized("sync_up_to_date")
         } else {
@@ -3908,7 +3908,7 @@ extension AppDiagnosticsSheet {
                 syncMessage = localizationManager.localized("sync_needs_attention")
                     .replacingFirst("%@", with: first)
             } else if let failure = report.failures.first {
-                syncMessage = "\(failure.key)：\(failure.value)"
+                syncMessage = SyncText.error("\(failure.key)：\(failure.value)")
             } else if report.isNoOp {
                 syncMessage = localizationManager.localized("sync_up_to_date")
             } else {
@@ -4162,7 +4162,7 @@ extension AppDiagnosticsSheet {
             migrationReport = nil
             rollbackMessage = localizationManager.localized("migration_rollback_done")
         } catch {
-            rollbackMessage = error.localizedDescription
+            rollbackMessage = SyncText.error(L10n.errorText(error))
         }
     }
 }
@@ -4494,10 +4494,10 @@ public struct CloudSyncDetailSheet: View {
                         try CloudSyncFolder.setFolder(url)
                         folderSyncTask = Task { await runFolderSync() }
                     } catch {
-                        folderStatusMessage = error.localizedDescription
+                        folderStatusMessage = SyncText.error(L10n.errorText(error))
                     }
                 case let .failure(error):
-                    folderStatusMessage = error.localizedDescription
+                    folderStatusMessage = SyncText.error(L10n.errorText(error))
                 }
             }
             .sheet(item: Binding(
@@ -4598,7 +4598,7 @@ public struct CloudSyncDetailSheet: View {
             if let googleStatusMessage {
                 Text(googleStatusMessage)
                     .font(DS.Font.caption)
-                    .foregroundColor(googleStatusMessage.contains("失敗") || googleStatusMessage.contains("過期") ? .red : .secondary)
+                    .foregroundColor(SyncText.isError(googleStatusMessage) ? .red : .secondary)
                     .padding(.horizontal, DS.Space.xs)
             }
 
@@ -4667,12 +4667,12 @@ public struct CloudSyncDetailSheet: View {
                                 if !isGoogleSyncing {
                                     await runGoogleSync()
                                 } else {
-                                    googleStatusMessage = "已登入成功（目前正有其他同步執行中）"
+                                    googleStatusMessage = L10n.t("sync_signed_in_busy")
                                 }
                             case .failure(.cancelled):
                                 break
                             case let .failure(error):
-                                googleStatusMessage = error.errorDescription ?? error.localizedDescription
+                                googleStatusMessage = SyncText.error(L10n.errorText(error))
                             }
                         }
                     } label: {
@@ -4715,7 +4715,7 @@ public struct CloudSyncDetailSheet: View {
                 guideStep(
                     number: "3",
                     title: localizationManager.localized("sync_x_platform_title"),
-                    desc: "支援 Android、iPadOS 與 macOS 雙向增量筆跡與圖表合併，各平台均可無縫協同編輯。"
+                    desc: localizationManager.localized("sync_a_platform")
                 )
             }
             .padding(DS.Space.m)
@@ -4803,7 +4803,7 @@ public struct CloudSyncDetailSheet: View {
             if let folderStatusMessage {
                 Text(folderStatusMessage)
                     .font(DS.Font.caption)
-                    .foregroundColor(folderStatusMessage.contains("失敗") || folderStatusMessage.contains("錯誤") ? .red : .secondary)
+                    .foregroundColor(SyncText.isError(folderStatusMessage) ? .red : .secondary)
                     .padding(.horizontal, DS.Space.xs)
             }
 
@@ -4843,7 +4843,7 @@ public struct CloudSyncDetailSheet: View {
                             folderSyncTask?.cancel()
                             NotebookSyncCoordinator.cancelSync()
                             isFolderSyncing = false
-                            folderStatusMessage = "已中斷同步"
+                            folderStatusMessage = L10n.t("sync_cancelled")
                         } label: {
                             HStack {
                                 ProgressView()
@@ -4945,17 +4945,17 @@ public struct CloudSyncDetailSheet: View {
                 guideStep(
                     number: "1",
                     title: localizationManager.localized("sync_q_what"),
-                    desc: "本功能採用去中心化的架構。設定 iCloud Drive 或自選資料夾後，每一本筆記都會自動產生對應的 `.padnote` 專屬資料夾（內含手寫向量筆畫與錄音檔等）。這些多出來的 `.padnote` 是維持同步的正常結構，請勿隨意刪除。"
+                    desc: localizationManager.localized("sync_a_what")
                 )
                 guideStep(
                     number: "2",
                     title: localizationManager.localized("sync_q_how"),
-                    desc: "在您的其他 iPad 或 Mac 上，只要在「雲端同步」指定「同一個上層根目錄」（不要點進個別的 .padnote），App 即會自動掃描所有筆記並進行雙向合併更新。"
+                    desc: localizationManager.localized("sync_a_how")
                 )
                 guideStep(
                     number: "3",
                     title: localizationManager.localized("sync_q_privacy"),
-                    desc: "沒有第三方伺服器儲存您的手繪或筆記，同步直接由 Apple 系統的 iCloud 傳輸，確保 100% 隱私與資料主權。"
+                    desc: localizationManager.localized("sync_a_privacy")
                 )
             }
             .padding(DS.Space.m)
@@ -4971,14 +4971,14 @@ public struct CloudSyncDetailSheet: View {
         if isFolderSyncing {
             return localizationManager.localized("syncing")
         }
-        if let msg = folderStatusMessage, msg.contains("失敗") || msg.contains("錯誤") {
-            return "同步發生錯誤"
+        if let msg = folderStatusMessage, SyncText.isError(msg) {
+            return L10n.t("sync_status_error")
         }
         let history = SyncHistory.lastFolderSyncDescription(none: "never")
         if history != "never" {
             return localizationManager.localized("sync_done")
         }
-        return "已設定資料夾 (待同步)"
+        return L10n.t("sync_folder_pending")
     }
 
     private var folderStatusText: String {
@@ -4988,14 +4988,14 @@ public struct CloudSyncDetailSheet: View {
         if isFolderSyncing {
             return folderStatusMessage ?? localizationManager.localized("syncing")
         }
-        if let msg = folderStatusMessage, msg.contains("失敗") || msg.contains("錯誤") {
-            return "同步失敗"
+        if let msg = folderStatusMessage, SyncText.isError(msg) {
+            return L10n.t("sync_status_failed")
         }
         let history = SyncHistory.lastFolderSyncDescription(none: "never")
         if history != "never" {
             return localizationManager.localized("sync_done")
         }
-        return "已設定 (待同步)"
+        return L10n.t("sync_configured_pending")
     }
 
     private var googleStatusText: String {
@@ -5005,8 +5005,8 @@ public struct CloudSyncDetailSheet: View {
         if isGoogleSyncing || autoSync.isSyncing {
             return localizationManager.localized("syncing")
         }
-        if let msg = googleStatusMessage ?? (autoSync.lastMessage.isEmpty ? nil : autoSync.lastMessage), msg.contains("失敗") || msg.contains("錯誤") || msg.contains("過期") || msg.contains("逾時") {
-            return "同步發生錯誤"
+        if let msg = googleStatusMessage ?? (autoSync.lastMessage.isEmpty ? nil : autoSync.lastMessage), SyncText.isError(msg) {
+            return L10n.t("sync_status_error")
         }
         return localizationManager.localized("sync_done")
     }
@@ -5018,7 +5018,7 @@ public struct CloudSyncDetailSheet: View {
         if isGoogleSyncing || autoSync.isSyncing {
             return .teal
         }
-        if let msg = googleStatusMessage ?? (autoSync.lastMessage.isEmpty ? nil : autoSync.lastMessage), msg.contains("失敗") || msg.contains("錯誤") || msg.contains("過期") || msg.contains("逾時") {
+        if let msg = googleStatusMessage ?? (autoSync.lastMessage.isEmpty ? nil : autoSync.lastMessage), SyncText.isError(msg) {
             return .red
         }
         return .green
@@ -5031,7 +5031,7 @@ public struct CloudSyncDetailSheet: View {
         if isFolderSyncing {
             return .teal
         }
-        if let msg = folderStatusMessage, msg.contains("失敗") || msg.contains("錯誤") {
+        if let msg = folderStatusMessage, SyncText.isError(msg) {
             return .red
         }
         let history = SyncHistory.lastFolderSyncDescription(none: "never")
@@ -5156,18 +5156,18 @@ public struct CloudSyncDetailSheet: View {
                 )
             }
         } catch is CancellationError {
-            googleStatusMessage = "已中斷同步"
+            googleStatusMessage = L10n.t("sync_cancelled")
             return
         } catch {
             if Task.isCancelled || NotebookSyncCoordinator.isCancelled {
-                googleStatusMessage = "已中斷同步"
+                googleStatusMessage = L10n.t("sync_cancelled")
             } else {
-                googleStatusMessage = "同步逾時，請確認網路連線後重試"
+                googleStatusMessage = SyncText.error(L10n.t("sync_timeout_network"))
             }
             return
         }
         if Task.isCancelled || NotebookSyncCoordinator.isCancelled {
-            googleStatusMessage = "已中斷同步"
+            googleStatusMessage = L10n.t("sync_cancelled")
             return
         }
         guard let report else {
@@ -5183,7 +5183,7 @@ public struct CloudSyncDetailSheet: View {
             SyncHistory.markGoogleSynced()
         }
         if let failure = report.failures.first {
-            googleStatusMessage = "\(failure.key)：\(failure.value)"
+            googleStatusMessage = SyncText.error("\(failure.key)：\(failure.value)")
         } else if report.isNoOp {
             googleStatusMessage = localizationManager.localized("sync_up_to_date")
         } else {
@@ -5207,7 +5207,7 @@ public struct CloudSyncDetailSheet: View {
             }
         }
 
-        folderStatusMessage = "iCloud / 資料夾同步中..."
+        folderStatusMessage = L10n.t("sync_folder_syncing")
         let report: NotebookSyncCoordinator.Report
         do {
             report = try await withSyncTimeout(seconds: 180) {
@@ -5216,18 +5216,18 @@ public struct CloudSyncDetailSheet: View {
                 )
             }
         } catch is CancellationError {
-            folderStatusMessage = "已中斷同步"
+            folderStatusMessage = L10n.t("sync_cancelled")
             return
         } catch {
             if Task.isCancelled || NotebookSyncCoordinator.isCancelled {
-                folderStatusMessage = "已中斷同步"
+                folderStatusMessage = L10n.t("sync_cancelled")
             } else {
-                folderStatusMessage = "同步逾時，請確認網路連線或 iCloud 狀態後重試"
+                folderStatusMessage = SyncText.error(L10n.t("sync_timeout_folder"))
             }
             return
         }
         if Task.isCancelled || NotebookSyncCoordinator.isCancelled {
-            folderStatusMessage = "已中斷同步"
+            folderStatusMessage = L10n.t("sync_cancelled")
             return
         }
         if report.failures.isEmpty, report.needsAttention.isEmpty {
@@ -5237,7 +5237,7 @@ public struct CloudSyncDetailSheet: View {
             folderStatusMessage = localizationManager.localized("sync_needs_attention")
                 .replacingFirst("%@", with: first)
         } else if let failure = report.failures.first {
-            folderStatusMessage = "\(failure.key)：\(failure.value)"
+            folderStatusMessage = SyncText.error("\(failure.key)：\(failure.value)")
         } else if report.isNoOp {
             folderStatusMessage = localizationManager.localized("sync_up_to_date")
         } else {
@@ -5280,9 +5280,9 @@ public struct CloudSyncDetailSheet: View {
             )
         } catch {
             if selectedProvider == .googleDrive {
-                googleStatusMessage = error.localizedDescription
+                googleStatusMessage = SyncText.error(L10n.errorText(error))
             } else {
-                folderStatusMessage = error.localizedDescription
+                folderStatusMessage = SyncText.error(L10n.errorText(error))
             }
         }
     }
@@ -5317,22 +5317,22 @@ public struct CloudSyncDetailSheet: View {
                     .foregroundColor(.secondary)
                 VStack(alignment: .leading, spacing: 6) {
                     doctorRow(
-                        "雲端快照",
+                        L10n.t("doctor_cloud_snapshot"),
                         diagnostics.hasCursor
-                            ? "已建立（追蹤 \(diagnostics.trackedFiles) 個檔案）"
-                            : "尚未建立，下次同步會重新盤點一次"
+                            ? L10n.f("doctor_snapshot_built", diagnostics.trackedFiles)
+                            : L10n.t("doctor_snapshot_missing")
                     )
                     doctorRow(
-                        "待同步筆記",
+                        L10n.t("doctor_pending_notes"),
                         diagnostics.pendingNotebooks.isEmpty
-                            ? "無（已檢查 \(diagnostics.checkedNotebooks) 本）"
-                            : "\(diagnostics.pendingNotebooks.count) / \(diagnostics.checkedNotebooks) 本"
+                            ? L10n.f("doctor_pending_none", diagnostics.checkedNotebooks)
+                            : L10n.f("doctor_pending_count", diagnostics.pendingNotebooks.count, diagnostics.checkedNotebooks)
                     )
                     doctorRow(
-                        "自動同步",
+                        L10n.t("doctor_auto_sync"),
                         AutoSyncController.shared.needsSignIn
-                            ? "已暫停，請重新登入"
-                            : (AutoSyncController.shared.isSyncing ? "進行中" : "待命")
+                            ? L10n.t("doctor_paused_sign_in")
+                            : (AutoSyncController.shared.isSyncing ? L10n.t("doctor_running") : L10n.t("doctor_idle"))
                     )
                     doctorRow(
                         localizationManager.localized("sync_audit_files"),
@@ -5347,10 +5347,10 @@ public struct CloudSyncDetailSheet: View {
                             .foregroundColor(.secondary)
                     }
                     if !AutoSyncController.shared.lastMessage.isEmpty {
-                        doctorRow("最後結果", AutoSyncController.shared.lastMessage)
+                        doctorRow(L10n.t("doctor_last_result"), AutoSyncController.shared.lastMessage)
                     }
                     if let wipeMessage {
-                        doctorRow("重置", wipeMessage)
+                        doctorRow(L10n.t("doctor_reset"), wipeMessage)
                     }
                 }
                 .font(DS.Font.caption)
@@ -5769,7 +5769,7 @@ public struct NotebookSnapshotDetailSheet: View {
             } catch {
                 await MainActor.run {
                     self.snapshotMessage = self.localizationManager.localized("export_failed")
-                        .replacingFirst("%@", with: error.localizedDescription)
+                        .replacingFirst("%@", with: L10n.errorText(error))
                     self.creatingNotebookId = nil
                 }
             }
@@ -5972,7 +5972,7 @@ public struct BackupCreateDetailSheet: View {
                 ))
             shareBackupURL = url
         } catch {
-            backupMessage = error.localizedDescription
+            backupMessage = SyncText.error(L10n.errorText(error))
         }
     }
 }
@@ -6168,7 +6168,7 @@ public struct BackupRestoreDetailSheet: View {
             }
             restoreMessage = message
         } catch {
-            restoreMessage = error.localizedDescription
+            restoreMessage = SyncText.error(L10n.errorText(error))
         }
     }
 }

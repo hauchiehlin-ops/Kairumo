@@ -471,10 +471,10 @@ enum SeedContent {
 
         // 底部品質徽章
         let pillY0: CGFloat = 825
-        shapes.append(pillShape("100% 完全開源免費", page: 0, x: margin, y: pillY0, fill: "#EBF8FF", stroke: "#3182CE"))
-        shapes.append(pillShape("零廣告無廠商鎖定", page: 0, x: margin + 175, y: pillY0, fill: "#F0FFF4", stroke: "#38A169"))
-        shapes.append(pillShape("次世代多維思考架構", page: 0, x: margin + 350, y: pillY0, fill: "#FAF5FF", stroke: "#805AD5"))
-        shapes.append(pillShape("原生高效向量核心", page: 0, x: margin + 525, y: pillY0, fill: "#FFFAF0", stroke: "#DD6B20"))
+        shapes.append(pillShape(L10n.t("seed_pill_01"), page: 0, x: margin, y: pillY0, fill: "#EBF8FF", stroke: "#3182CE"))
+        shapes.append(pillShape(L10n.t("seed_pill_02"), page: 0, x: margin + 175, y: pillY0, fill: "#F0FFF4", stroke: "#38A169"))
+        shapes.append(pillShape(L10n.t("seed_pill_03"), page: 0, x: margin + 350, y: pillY0, fill: "#FAF5FF", stroke: "#805AD5"))
+        shapes.append(pillShape(L10n.t("seed_pill_04"), page: 0, x: margin + 525, y: pillY0, fill: "#FFFAF0", stroke: "#DD6B20"))
 
 
         // =========================================================================
@@ -589,10 +589,10 @@ enum SeedContent {
 
         // 底部手繪筆刷徽章
         let pillY1: CGFloat = 825
-        shapes.append(pillShape("16 種物理級筆刷", page: 1, x: margin, y: pillY1, fill: "#EBF8FF", stroke: "#3182CE"))
-        shapes.append(pillShape("真實壓感與毛筆提按", page: 1, x: margin + 175, y: pillY1, fill: "#F0FFF4", stroke: "#38A169"))
-        shapes.append(pillShape("互動考點遮蔽膠帶", page: 1, x: margin + 350, y: pillY1, fill: "#FFFFF0", stroke: "#D69E2E"))
-        shapes.append(pillShape("尺規與套索精準幾何", page: 1, x: margin + 525, y: pillY1, fill: "#FAF5FF", stroke: "#805AD5"))
+        shapes.append(pillShape(L10n.t("seed_pill_05"), page: 1, x: margin, y: pillY1, fill: "#EBF8FF", stroke: "#3182CE"))
+        shapes.append(pillShape(L10n.t("seed_pill_06"), page: 1, x: margin + 175, y: pillY1, fill: "#F0FFF4", stroke: "#38A169"))
+        shapes.append(pillShape(L10n.t("seed_pill_07"), page: 1, x: margin + 350, y: pillY1, fill: "#FFFFF0", stroke: "#D69E2E"))
+        shapes.append(pillShape(L10n.t("seed_pill_08"), page: 1, x: margin + 525, y: pillY1, fill: "#FAF5FF", stroke: "#805AD5"))
 
 
         // =========================================================================
@@ -786,10 +786,10 @@ enum SeedContent {
 
         // 底部排版模式徽章
         let pillY2: CGFloat = 825
-        shapes.append(pillShape("桌面級專業排版", page: 2, x: margin, y: pillY2, fill: "#EBF8FF", stroke: "#3182CE"))
-        shapes.append(pillShape("原生高格自適應表", page: 2, x: margin + 175, y: pillY2, fill: "#F0FFF4", stroke: "#38A169"))
-        shapes.append(pillShape("智慧拓撲流程圖", page: 2, x: margin + 350, y: pillY2, fill: "#FAF5FF", stroke: "#805AD5"))
-        shapes.append(pillShape("3D 與音訊多媒體", page: 2, x: margin + 525, y: pillY2, fill: "#FFFAF0", stroke: "#DD6B20"))
+        shapes.append(pillShape(L10n.t("seed_pill_09"), page: 2, x: margin, y: pillY2, fill: "#EBF8FF", stroke: "#3182CE"))
+        shapes.append(pillShape(L10n.t("seed_pill_10"), page: 2, x: margin + 175, y: pillY2, fill: "#F0FFF4", stroke: "#38A169"))
+        shapes.append(pillShape(L10n.t("seed_pill_11"), page: 2, x: margin + 350, y: pillY2, fill: "#FAF5FF", stroke: "#805AD5"))
+        shapes.append(pillShape(L10n.t("seed_pill_12"), page: 2, x: margin + 525, y: pillY2, fill: "#FFFAF0", stroke: "#DD6B20"))
 
 
         // =========================================================================
@@ -980,10 +980,10 @@ enum SeedContent {
 
         // 底部亮點膠囊
         let pillY3: CGFloat = 825
-        shapes.append(pillShape("STEM 微積分深度解析", page: 3, x: margin, y: pillY3, fill: "#FAF5FF", stroke: "#805AD5"))
-        shapes.append(pillShape("動態可編修圖表工坊", page: 3, x: margin + 175, y: pillY3, fill: "#EBF8FF", stroke: "#3182CE"))
-        shapes.append(pillShape("空間討論圖釘協作", page: 3, x: margin + 350, y: pillY3, fill: "#F0FFF4", stroke: "#38A169"))
-        shapes.append(pillShape("終極無界數位紙張", page: 3, x: margin + 525, y: pillY3, fill: "#FFFAF0", stroke: "#DD6B20"))
+        shapes.append(pillShape(L10n.t("seed_pill_13"), page: 3, x: margin, y: pillY3, fill: "#FAF5FF", stroke: "#805AD5"))
+        shapes.append(pillShape(L10n.t("seed_pill_14"), page: 3, x: margin + 175, y: pillY3, fill: "#EBF8FF", stroke: "#3182CE"))
+        shapes.append(pillShape(L10n.t("seed_pill_15"), page: 3, x: margin + 350, y: pillY3, fill: "#F0FFF4", stroke: "#38A169"))
+        shapes.append(pillShape(L10n.t("seed_pill_16"), page: 3, x: margin + 525, y: pillY3, fill: "#FFFAF0", stroke: "#DD6B20"))
 
         // 組裝進 document
         doc.textAttachments = texts
@@ -1117,7 +1117,7 @@ enum SeedContent {
         var spec = ChartSpec()
         spec.kind = .bar
         spec.title = l("sample_showcase_chart_spec_title")
-        spec.categories = ["向量書寫延遲", "圖表動態可編修", "空間圖釘協作", "開源與無訂閱限制"]
+        spec.categories = (1...4).map { L10n.t("seed_chart_cat_\($0)") }
         var seriesKairumo = ChartSeries(
             name: "Kairumo (Padnote)",
             values: [98, 95, 96, 100],

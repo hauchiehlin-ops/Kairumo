@@ -37,18 +37,9 @@ fun AdvancedPenSettingsDialog(
         mutableFloatStateOf(PenSettingsStore.gamma(context) ?: 1.0f)
     }
 
-    fun l(key: String): String {
-        val map = mapOf(
-            "pen_settings_title" to mapOf("en" to "Advanced Pen Settings", "zh" to "進階畫筆設定"),
-            "pressure_floor" to mapOf("en" to "Pressure Floor", "zh" to "下筆起始壓力"),
-            "pressure_gamma" to mapOf("en" to "Pressure Gamma", "zh" to "壓力敏感度曲線"),
-            "confirm" to mapOf("en" to "Confirm", "zh" to "確定"),
-            "cancel" to mapOf("en" to "Cancel", "zh" to "取消"),
-            "reset" to mapOf("en" to "Reset", "zh" to "重設")
-        )
-        val lang = if (languageTag.startsWith("zh")) "zh" else "en"
-        return map[key]?.get(lang) ?: key
-    }
+    // 原本這裡自己放了一份只有英文與中文的字典，日文、韓文、泰文使用者看到的是英文。
+    // 一律走共用字串表。
+    fun l(key: String): String = com.kairumo.padnote.LocalizationStrings.localized(key, languageTag)
 
     AlertDialog(
         onDismissRequest = onDismiss,

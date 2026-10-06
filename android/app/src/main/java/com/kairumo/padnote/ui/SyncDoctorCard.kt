@@ -110,27 +110,29 @@ fun SyncDoctorCard(deviceId: UInt, modifier: Modifier = Modifier) {
                 Row(Modifier.padding(top = 6.dp)) { Text(l("sd_loading"), style = MaterialTheme.typography.bodySmall) }
             } else {
                 DoctorRow(
-                    "雲端快照",
+                    l("doctor_cloud_snapshot"),
                     if (d.hasCursor) {
-                        "已建立（追蹤 ${d.trackedFiles} 個檔案）"
+                        l("doctor_snapshot_built").replace("%@", "${d.trackedFiles}")
                     } else {
-                        "尚未建立，下次同步會重新盤點一次"
+                        l("doctor_snapshot_missing")
                     }
                 )
                 DoctorRow(
-                    "待同步筆記",
+                    l("doctor_pending_notes"),
                     if (d.pendingNotebooks.isEmpty()) {
-                        "無（已檢查 ${d.checkedNotebooks} 本）"
+                        l("doctor_pending_none").replace("%@", "${d.checkedNotebooks}")
                     } else {
-                        "${d.pendingNotebooks.size} / ${d.checkedNotebooks} 本"
+                        l("doctor_pending_count")
+                            .replace("%1@", "${d.pendingNotebooks.size}")
+                            .replace("%2@", "${d.checkedNotebooks}")
                     }
                 )
                 DoctorRow(
-                    "自動同步",
+                    l("doctor_auto_sync"),
                     when {
-                        needsSignIn -> "已暫停，請重新登入"
-                        isSyncing -> "進行中"
-                        else -> "待命"
+                        needsSignIn -> l("doctor_paused_sign_in")
+                        isSyncing -> l("doctor_running")
+                        else -> l("doctor_idle")
                     }
                 )
                 // **這幾千個檔案裡有多少是活的。** 在這之前沒有人答得出來。
@@ -151,7 +153,7 @@ fun SyncDoctorCard(deviceId: UInt, modifier: Modifier = Modifier) {
                         )
                     }
                 }
-                wipeMessage?.let { DoctorRow("重置", it) }
+                wipeMessage?.let { DoctorRow(l("doctor_reset"), it) }
             }
 
             // **重置雲端同步。**

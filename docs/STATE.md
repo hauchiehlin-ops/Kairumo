@@ -498,7 +498,7 @@ Markdown / SVG 匯出 · 手寫辨識 fallback 鏈 · 引擎與權限中心狀�
 - 打字輸入法（注音、拼音、日文、韓文組字）：兩平台的文字輸入都用框架內建的 TextField／BasicTextField 且狀態同步更新，沒有自己改寫輸入中的文字。
 - **PDF 裡的泰文**：PDF 沒有可以不嵌入的標準泰文字型，所以內嵌 Noto Sans Thai（SIL OFL，`third_party/notosansthai/`），
   **只有文件裡有泰文時才嵌**（約 +45 KB）。聲調符號疊在子音／上母音之上、ำ 拆開等排版由字型自己的 GSUB／GPOS 決定，
-  `crates/padnote-export/src/otl.rs` 是照表執行的最小排版引擎（沒有泰文規則寫死在程式裡）；附 ToUnicode，複製與搜尋拿得到字碼。
+  `crates/padnote-export/src/otl.rs` 是 OpenType 排版引擎：GSUB 1–8（含擴充型別）、GPOS 1–9、GDEF（lookup 旗標、markFilteringSet、markAttachmentType），字型內的規則照表執行；泰文只有字碼序列的前處理（ำ 拆成 ํ＋า 並排在聲調之前、結合符號依結合類別排序）寫在程式裡，因為那是 Unicode 規則、不在字型裡；附 ToUnicode，複製與搜尋拿得到字碼。
   用 macOS 預覽實際看過：ไม่、มี、ช่อง、ระหว่าง、ประชุม、บันทึก 全部正確。
 - **簡繁互查**：搜尋前把漢字**逐字**折成簡體（OpenCC 表，Apache-2.0；不用 GPL 的 MediaWiki 表），所以搜「笔记」找得到「筆記」，反之亦然。
   逐字而不是整句，是因為整句轉換看上下文，查詢（兩三個字）與文件（整段）的上下文不同會轉出不同的字而查不到。
@@ -512,3 +512,23 @@ Markdown / SVG 匯出 · 手寫辨識 fallback 鏈 · 引擎與權限中心狀�
 - 墨跡 Swift 層：語法檢查通過，**延遲未量測**
 - VAD：已換成 Silero（白噪音誤判 0/100，EnergyVad 為 100/100）
 - ASR 串流粒度：**段級**（VAD 段，上限 5 秒），非幀級。幀級需重新匯出計算圖（S-32）
+
+## 介面多語系稽核（2026-10-06）
+
+範圍：程式介面、工具快顯提示（tooltip／無障礙標籤）、警告與錯誤、通知。
+- **做法**：所有使用者看得到的文字走 `i18n/ui-strings.json`（六語，約 2100 條），Swift 用 `L10n.t/f`（`apple/Sources/LocalizedMessages.swift`），
+  Kotlin 用 `L10n`（`LocalizedMessages.kt`）；同步訊息走 `SyncText`。錯誤訊息以「⚠️ 」前綴標記，不再用中文子字串判斷是否為錯誤。
+- **閘門**：`scripts/check-hardcoded-strings.py` 已擴充（訊息接收端、log、持久化 id、英文呼叫）；刻意不翻的用 `i18n-ok` 標記。
+- **核心 Rust 的診斷訊息仍是中文**（約 150 條）：不改寫 Rust 字串，而是在 UI 邊界用 `L10n.coreText/errorText` 辨識後換成通用的 `error_generic`
+  （非繁中介面時）。代價：非繁中使用者看到的是「發生錯誤」而不是具體原因。
+- **已知缺口**：診斷畫面與同步日誌仍是中文；區網同步的協定訊息是中文；手寫的《Kairumo手冊》只有中文；**App 沒有任何系統通知**（沒有可翻的東西）；
+  新增的譯文沒有母語者審閱。
+- **PDF 排版引擎只用 Noto Sans Thai 在正式輸出路徑上**；其他字型（含 CFF／OTTO）引擎讀得動，但 PDF 寫出端還只會嵌 TrueType 外框，要嵌其他字型須再做 FontFile3。
+  `scripts/verify-otl-coretext.py`（僅 macOS，不在 CI）把引擎輸出與 CoreText 逐字形比對：28 組全部一致；可變字型只比字形編號、希伯來文（從右到左）只比字形，引擎沒有雙向排版。
+
+### UI 測試的已知不穩（不是程式碼問題）
+- 整批跑 `xcodebuild test` 時，`KairumoUITests` 會因 **XCTAutomationSupport 在日誌被系統隔離時崩潰**（堆疊：`runtime_issue_os_log_fault_callback` → `_platform_strcmp`）而掉一批測試
+  （Smoke／Responsive／InteractionMatrix／InsertTools 的個別項目）；單獨跑通常通過。原因是 XCUITest 取整棵無障礙樹，單頁有數萬個元素，日誌量爆掉。
+  純 HEAD 也一樣有（Sidebar／Toolbar／Trash／Ink 本來就紅），不是這次改動造成的。
+- `testTextModeSharesThePaperAndItsTextBoxesStayEditableInDrawMode` 單獨跑會失敗（純 HEAD 也是），整批跑時靠前面測試留下的狀態才過。
+- `MultiDeviceUITests` 需要 Android 同時配合，單獨跑必紅；跑整批時要 `-skip-testing:KairumoUITests/MultiDeviceUITests`。

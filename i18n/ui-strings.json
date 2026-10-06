@@ -47,6 +47,22 @@
     "zhHans": "关于 Kairumo",
     "zhHant": "關於 Kairumo"
   },
+  "about_license": {
+    "en": "License",
+    "ja": "ライセンス",
+    "ko": "라이선스",
+    "th": "สัญญาอนุญาต",
+    "zhHans": "授权",
+    "zhHant": "授權"
+  },
+  "about_stack": {
+    "en": "Stack",
+    "ja": "技術スタック",
+    "ko": "기술 스택",
+    "th": "สแตกเทคโนโลยี",
+    "zhHans": "技术架构",
+    "zhHant": "技術架構"
+  },
   "account_settings": {
     "en": "Account & Settings",
     "ja": "アカウントと設定",
@@ -526,6 +542,118 @@
     "th": "ดาวน์โหลดโมเดล Whisper ออฟไลน์ (574 MB)",
     "zhHans": "下载 Whisper 离线模型（574 MB）",
     "zhHant": "下載 Whisper 離線模型（574 MB）"
+  },
+  "asr_err_buffer": {
+    "en": "Could not allocate the audio buffer",
+    "ja": "音声バッファを確保できませんでした",
+    "ko": "오디오 버퍼를 할당할 수 없습니다",
+    "th": "จัดสรรบัฟเฟอร์เสียงไม่ได้",
+    "zhHans": "无法分配音频缓冲区",
+    "zhHant": "無法配置音訊緩衝區"
+  },
+  "asr_err_converter": {
+    "en": "Could not create the audio converter",
+    "ja": "音声フォーマット変換器を作成できませんでした",
+    "ko": "오디오 형식 변환기를 만들 수 없습니다",
+    "th": "สร้างตัวแปลงรูปแบบเสียงไม่ได้",
+    "zhHans": "无法创建音频格式转换器",
+    "zhHant": "無法建立音訊格式轉換器"
+  },
+  "asr_err_decoder": {
+    "en": "Could not start the audio decoder",
+    "ja": "音声デコーダを起動できませんでした",
+    "ko": "오디오 디코더를 시작할 수 없습니다",
+    "th": "เริ่มตัวถอดรหัสเสียงไม่ได้",
+    "zhHans": "无法启动音频解码器",
+    "zhHant": "無法啟動音訊解碼器"
+  },
+  "asr_err_file_missing": {
+    "en": "The audio file does not exist: %@",
+    "ja": "音声ファイルが存在しません：%@",
+    "ko": "오디오 파일이 없습니다: %@",
+    "th": "ไม่พบไฟล์เสียง: %@",
+    "zhHans": "音频文件不存在：%@",
+    "zhHant": "音訊檔案不存在：%@"
+  },
+  "asr_err_format_init": {
+    "en": "Could not set up the 16 kHz target format",
+    "ja": "16kHz の出力形式を初期化できませんでした",
+    "ko": "16kHz 대상 형식을 초기화할 수 없습니다",
+    "th": "ตั้งค่ารูปแบบเป้าหมาย 16kHz ไม่ได้",
+    "zhHans": "无法初始化 16kHz 目标格式",
+    "zhHant": "無法初始化 16kHz 目標格式"
+  },
+  "asr_err_locale_unavailable": {
+    "en": "Speech recognition isn't available for the current language",
+    "ja": "現在の言語では音声認識を利用できません",
+    "ko": "현재 언어에서는 음성 인식을 사용할 수 없습니다",
+    "th": "ไม่รองรับการรู้จำเสียงสำหรับภาษาปัจจุบัน",
+    "zhHans": "当前语言不支持语音识别",
+    "zhHant": "目前語系不支援語音辨識"
+  },
+  "asr_err_model_size": {
+    "en": "The model file is unexpectedly small (only %@ MB). Make sure you selected the complete Whisper ggml weights file.",
+    "ja": "モデルファイルのサイズが異常です（%@ MB のみ）。完全な Whisper ggml 重みファイルを選択してください。",
+    "ko": "모델 파일 크기가 비정상적입니다 (%@ MB뿐). 완전한 Whisper ggml 가중치 파일을 선택했는지 확인하세요.",
+    "th": "ขนาดไฟล์โมเดลผิดปกติ (เพียง %@ MB) โปรดตรวจสอบว่าเลือกไฟล์น้ำหนัก Whisper ggml ที่สมบูรณ์",
+    "zhHans": "模型文件大小异常（仅 %@ MB），请确认选取的是完整的 Whisper ggml 权重文件",
+    "zhHant": "模型檔案大小異常（僅 %@ MB），請確認選取的是完整的 Whisper ggml 權重檔"
+  },
+  "asr_err_no_result": {
+    "en": "The transcription returned no result",
+    "ja": "文字起こしの結果がありません",
+    "ko": "받아쓰기 결과가 없습니다",
+    "th": "การถอดเสียงไม่มีผลลัพธ์",
+    "zhHans": "转录无结果",
+    "zhHant": "轉錄無結果"
+  },
+  "asr_err_no_track": {
+    "en": "No audio track found",
+    "ja": "音声トラックが見つかりません",
+    "ko": "오디오 트랙을 찾을 수 없습니다",
+    "th": "ไม่พบแทร็กเสียง",
+    "zhHans": "找不到音频轨道",
+    "zhHant": "找不到音訊軌道"
+  },
+  "asr_err_output_buffer": {
+    "en": "Could not allocate the output audio buffer",
+    "ja": "出力用の音声バッファを確保できませんでした",
+    "ko": "출력 오디오 버퍼를 할당할 수 없습니다",
+    "th": "จัดสรรบัฟเฟอร์เสียงขาออกไม่ได้",
+    "zhHans": "无法分配输出音频缓冲区",
+    "zhHant": "無法配置輸出音訊緩衝區"
+  },
+  "asr_err_permission": {
+    "en": "Speech recognition permission was denied",
+    "ja": "音声認識の権限が拒否されました",
+    "ko": "음성 인식 권한이 거부되었습니다",
+    "th": "สิทธิ์การรู้จำเสียงถูกปฏิเสธ",
+    "zhHans": "语音识别权限被拒绝",
+    "zhHant": "語音辨識權限被拒絕"
+  },
+  "asr_err_timeout": {
+    "en": "Speech recognition timed out (15 s). Check your connection or the system dictation model.",
+    "ja": "音声認識がタイムアウトしました（15 秒）。ネットワーク接続またはシステムの音声入力モデルを確認してください。",
+    "ko": "음성 인식 시간이 초과되었습니다 (15초). 네트워크 연결 또는 시스템 받아쓰기 모델을 확인하세요.",
+    "th": "การรู้จำเสียงหมดเวลา (15 วินาที) โปรดตรวจสอบการเชื่อมต่อหรือโมเดลการสั่งงานด้วยเสียงของระบบ",
+    "zhHans": "语音识别超时（15 秒）。请检查网络连接或系统听写模型。",
+    "zhHant": "語音辨識超時（15 秒）。請檢查網路連線或系統聽寫模型。"
+  },
+  "asr_err_unavailable": {
+    "en": "Speech recognition is currently unavailable",
+    "ja": "音声認識は現在利用できません",
+    "ko": "음성 인식을 현재 사용할 수 없습니다",
+    "th": "ขณะนี้ใช้การรู้จำเสียงไม่ได้",
+    "zhHans": "语音识别目前无法使用",
+    "zhHant": "語音辨識目前無法使用"
+  },
+  "asr_err_wav_init": {
+    "en": "Could not set up the WAV format",
+    "ja": "WAV 形式を初期化できませんでした",
+    "ko": "WAV 형식을 초기화할 수 없습니다",
+    "th": "ตั้งค่ารูปแบบ WAV ไม่ได้",
+    "zhHans": "无法初始化 WAV 格式",
+    "zhHant": "無法初始化 WAV 格式"
   },
   "asr_model_not_listed": {
     "en": "%@ is not in the list",
@@ -1247,6 +1375,30 @@
     "zhHans": "点击笔迹跳转录音时间",
     "zhHant": "點擊筆跡跳轉錄音時間"
   },
+  "auth_busy": {
+    "en": "Sign-in is in progress. Please don't tap again.",
+    "ja": "サインイン処理中です。もう一度タップしないでください。",
+    "ko": "로그인 처리 중입니다. 다시 누르지 마세요.",
+    "th": "กำลังลงชื่อเข้าใช้ โปรดอย่าแตะซ้ำ",
+    "zhHans": "登录处理中，请勿重复点击",
+    "zhHant": "登入處理中，請勿重複點擊"
+  },
+  "auth_cannot_present": {
+    "en": "Could not open the system sign-in window. Please try again.",
+    "ja": "システムのサインインウィンドウを開けませんでした。もう一度お試しください。",
+    "ko": "시스템 로그인 창을 열 수 없습니다. 다시 시도하세요.",
+    "th": "เปิดหน้าต่างลงชื่อเข้าใช้ของระบบไม่ได้ โปรดลองอีกครั้ง",
+    "zhHans": "无法启动系统登录窗口，请重试",
+    "zhHant": "無法啟動系統登入視窗，請重試"
+  },
+  "auth_timeout": {
+    "en": "Sign-in timed out. Please try again.",
+    "ja": "サインインがタイムアウトしました。もう一度お試しください。",
+    "ko": "로그인 시간이 초과되었습니다. 다시 시도하세요.",
+    "th": "การลงชื่อเข้าใช้หมดเวลา โปรดลองอีกครั้ง",
+    "zhHans": "登录超时，请重新尝试",
+    "zhHant": "登入逾時，請重新嘗試"
+  },
   "back_to_home": {
     "en": "Back to home",
     "ja": "ホームに戻る",
@@ -1286,6 +1438,14 @@
     "th": "สร้างไฟล์สำรองแล้ว: %1@ ไฟล์ %2@",
     "zhHans": "已创建备份：%1@ 个文件、%2@",
     "zhHant": "已建立備份：%1@ 個檔案、%2@"
+  },
+  "backup_err_read_file": {
+    "en": "Could not read the selected file",
+    "ja": "選択したファイルを読み取れませんでした",
+    "ko": "선택한 파일을 읽을 수 없습니다",
+    "th": "อ่านไฟล์ที่เลือกไม่ได้",
+    "zhHans": "无法读取选取的文件",
+    "zhHant": "無法讀取選取的檔案"
   },
   "backup_explainer": {
     "en": "The backup contains notebooks, pages, handwriting, images, recordings, folder structure and app settings. Keep it in the cloud or on a computer — one tap restores everything if the app breaks.",
@@ -1422,6 +1582,22 @@
     "th": "ความกว้างกล่อง",
     "zhHans": "方块宽度",
     "zhHant": "方塊寬度"
+  },
+  "bridge_err_keep_audio": {
+    "en": "Could not keep the recordings and transcripts: %@",
+    "ja": "録音と文字起こしを保持できませんでした：%@",
+    "ko": "녹음과 받아쓰기 내용을 보존할 수 없습니다: %@",
+    "th": "เก็บการบันทึกเสียงและข้อความถอดเสียงไม่ได้: %@",
+    "zhHans": "无法保留录音与转录内容：%@",
+    "zhHant": "無法保留錄音與轉錄內容：%@"
+  },
+  "bridge_err_read_other": {
+    "en": "Could not read content written by another device",
+    "ja": "他の端末で書かれた内容を読み取れませんでした",
+    "ko": "다른 기기에서 작성한 내용을 읽을 수 없습니다",
+    "th": "อ่านเนื้อหาที่เขียนจากอุปกรณ์อื่นไม่ได้",
+    "zhHans": "无法读取其他设备写入的内容",
+    "zhHant": "無法讀取其他裝置寫的內容"
   },
   "brush_family_marking": {
     "en": "Marking",
@@ -2199,6 +2375,22 @@
     "zhHans": "进阶协作控制面板",
     "zhHant": "進階協作控制面板"
   },
+  "collab_err_bad_address": {
+    "en": "Invalid collaboration server address: %@",
+    "ja": "共同編集サーバーのアドレスが無効です：%@",
+    "ko": "잘못된 협업 서버 주소: %@",
+    "th": "ที่อยู่เซิร์ฟเวอร์การทำงานร่วมกันไม่ถูกต้อง: %@",
+    "zhHans": "无效的协同服务器地址：%@",
+    "zhHant": "無效的協同伺服器位址：%@"
+  },
+  "collab_err_unreachable": {
+    "en": "Could not reach the collaboration server %@. Retrying has stopped.",
+    "ja": "共同編集サーバー %@ に接続できません。再試行を停止しました。",
+    "ko": "협업 서버 %@에 연결할 수 없습니다. 재시도를 중단했습니다.",
+    "th": "เชื่อมต่อเซิร์ฟเวอร์การทำงานร่วมกัน %@ ไม่ได้ หยุดลองใหม่แล้ว",
+    "zhHans": "无法连接协同服务器 %@，已停止重试。",
+    "zhHant": "無法連上協同伺服器 %@，已停止重試。"
+  },
   "collab_history_playback": {
     "en": "History Playback",
     "ja": "履歴再生",
@@ -2463,6 +2655,14 @@
     "zhHans": "送出",
     "zhHant": "送出"
   },
+  "composition_golden_spiral": {
+    "en": "GOLDEN SPIRAL (Φ 1.618)",
+    "ja": "黄金螺旋 (Φ 1.618)",
+    "ko": "황금 나선 (Φ 1.618)",
+    "th": "เกลียวทองคำ (Φ 1.618)",
+    "zhHans": "黄金螺旋 (Φ 1.618)",
+    "zhHant": "黃金螺旋 (Φ 1.618)"
+  },
   "composition_overlay": {
     "en": "Composition HUD",
     "ja": "構図補助線",
@@ -2470,6 +2670,14 @@
     "th": "เส้นไกด์การจัดองค์ประกอบ",
     "zhHans": "构图辅助线",
     "zhHant": "構圖輔助線"
+  },
+  "composition_rule_of_thirds": {
+    "en": "RULE OF THIRDS (3×3)",
+    "ja": "三分割構図 (3×3)",
+    "ko": "삼분할 구도 (3×3)",
+    "th": "กฎสามส่วน (3×3)",
+    "zhHans": "三分构图 (3×3)",
+    "zhHant": "三分構圖 (3×3)"
   },
   "confirm": {
     "en": "OK",
@@ -3135,6 +3343,102 @@
     "zhHans": "完整案例",
     "zhHant": "完整案例"
   },
+  "doctor_auto_sync": {
+    "en": "Auto sync",
+    "ja": "自動同期",
+    "ko": "자동 동기화",
+    "th": "ซิงก์อัตโนมัติ",
+    "zhHans": "自动同步",
+    "zhHant": "自動同步"
+  },
+  "doctor_cloud_snapshot": {
+    "en": "Cloud snapshot",
+    "ja": "クラウドスナップショット",
+    "ko": "클라우드 스냅샷",
+    "th": "สแนปช็อตบนคลาวด์",
+    "zhHans": "云端快照",
+    "zhHant": "雲端快照"
+  },
+  "doctor_idle": {
+    "en": "Idle",
+    "ja": "待機中",
+    "ko": "대기 중",
+    "th": "พร้อมทำงาน",
+    "zhHans": "待命",
+    "zhHant": "待命"
+  },
+  "doctor_last_result": {
+    "en": "Last result",
+    "ja": "直近の結果",
+    "ko": "마지막 결과",
+    "th": "ผลล่าสุด",
+    "zhHans": "最后结果",
+    "zhHant": "最後結果"
+  },
+  "doctor_paused_sign_in": {
+    "en": "Paused — please sign in again",
+    "ja": "一時停止中です。再度サインインしてください",
+    "ko": "일시 중지됨 — 다시 로그인하세요",
+    "th": "หยุดชั่วคราว โปรดลงชื่อเข้าใช้อีกครั้ง",
+    "zhHans": "已暂停，请重新登录",
+    "zhHant": "已暫停，請重新登入"
+  },
+  "doctor_pending_count": {
+    "en": "%1@ of %2@",
+    "ja": "%1@ / %2@ 冊",
+    "ko": "%1@ / %2@권",
+    "th": "%1@ / %2@ เล่ม",
+    "zhHans": "%1@ / %2@ 本",
+    "zhHant": "%1@ / %2@ 本"
+  },
+  "doctor_pending_none": {
+    "en": "None (%@ checked)",
+    "ja": "なし（%@ 冊を確認）",
+    "ko": "없음 (%@권 확인함)",
+    "th": "ไม่มี (ตรวจแล้ว %@ เล่ม)",
+    "zhHans": "无（已检查 %@ 本）",
+    "zhHant": "無（已檢查 %@ 本）"
+  },
+  "doctor_pending_notes": {
+    "en": "Notes waiting to sync",
+    "ja": "同期待ちのノート",
+    "ko": "동기화 대기 중인 노트",
+    "th": "โน้ตที่รอซิงก์",
+    "zhHans": "待同步笔记",
+    "zhHant": "待同步筆記"
+  },
+  "doctor_reset": {
+    "en": "Reset",
+    "ja": "リセット",
+    "ko": "초기화",
+    "th": "รีเซ็ต",
+    "zhHans": "重置",
+    "zhHant": "重置"
+  },
+  "doctor_running": {
+    "en": "Running",
+    "ja": "実行中",
+    "ko": "진행 중",
+    "th": "กำลังทำงาน",
+    "zhHans": "进行中",
+    "zhHant": "進行中"
+  },
+  "doctor_snapshot_built": {
+    "en": "Built (tracking %@ files)",
+    "ja": "作成済み（%@ 件のファイルを追跡）",
+    "ko": "생성됨 (파일 %@개 추적 중)",
+    "th": "สร้างแล้ว (ติดตาม %@ ไฟล์)",
+    "zhHans": "已建立（追踪 %@ 个文件）",
+    "zhHant": "已建立（追蹤 %@ 個檔案）"
+  },
+  "doctor_snapshot_missing": {
+    "en": "Not built yet; the next sync will take inventory again",
+    "ja": "未作成です。次回の同期で再度確認します",
+    "ko": "아직 생성되지 않았습니다. 다음 동기화 때 다시 점검합니다",
+    "th": "ยังไม่ได้สร้าง การซิงก์ครั้งถัดไปจะตรวจสอบใหม่",
+    "zhHans": "尚未建立，下次同步会重新盘点一次",
+    "zhHant": "尚未建立，下次同步會重新盤點一次"
+  },
   "document_missing": {
     "en": "The bundled document is missing. Please report this.",
     "ja": "同梱ドキュメントが見つかりません。ご報告ください。",
@@ -3679,6 +3983,46 @@
     "zhHans": "拖拽移动卡片",
     "zhHant": "拖曳移動卡片"
   },
+  "drive_auth_expired": {
+    "en": "Your Google sign-in has expired. Please sign in again (HTTP 401).",
+    "ja": "Google のサインインの有効期限が切れました。再度サインインしてください（HTTP 401）",
+    "ko": "Google 로그인이 만료되었습니다. 다시 로그인하세요 (HTTP 401).",
+    "th": "การลงชื่อเข้าใช้ Google หมดอายุ โปรดลงชื่อเข้าใช้อีกครั้ง (HTTP 401)",
+    "zhHans": "Google 帐号凭证已失效或过期，请重新登录 (HTTP 401)",
+    "zhHant": "Google 帳號憑證已失效或過期，請重新登入 (HTTP 401)"
+  },
+  "drive_cred_refresh_failed": {
+    "en": "Could not refresh your Google sign-in right now (offline?). Try again later.",
+    "ja": "Google のサインインを更新できませんでした（オフライン？）。後でもう一度お試しください。",
+    "ko": "지금은 Google 로그인을 갱신할 수 없습니다 (오프라인?). 나중에 다시 시도하세요.",
+    "th": "ไม่สามารถต่ออายุการลงชื่อเข้าใช้ Google ได้ในขณะนี้ (ออฟไลน์?) โปรดลองใหม่ภายหลัง",
+    "zhHans": "暂时无法更新 Google 凭证（网络不通？），稍后重试",
+    "zhHant": "暫時無法更新 Google 憑證（網路不通？），稍後重試"
+  },
+  "drive_permission_denied": {
+    "en": "Your Google account does not have permission (HTTP 403).",
+    "ja": "Google アカウントに権限がありません（HTTP 403）",
+    "ko": "Google 계정에 권한이 없습니다 (HTTP 403).",
+    "th": "บัญชี Google ไม่มีสิทธิ์เพียงพอ (HTTP 403)",
+    "zhHans": "Google 帐号权限不足 (HTTP 403)",
+    "zhHant": "Google 帳號權限不足 (HTTP 403)"
+  },
+  "drive_rate_limited": {
+    "en": "Drive rate limit reached (HTTP 403). Try again later.",
+    "ja": "Drive のレート制限に達しました（HTTP 403）。後でもう一度お試しください。",
+    "ko": "Drive 속도 제한에 도달했습니다 (HTTP 403). 나중에 다시 시도하세요.",
+    "th": "ถึงขีดจำกัดอัตราของ Drive (HTTP 403) โปรดลองใหม่ภายหลัง",
+    "zhHans": "Drive 速率限制（HTTP 403），稍后重试",
+    "zhHant": "Drive 速率限制（HTTP 403），稍後重試"
+  },
+  "drive_resume_no_location": {
+    "en": "The resumable upload returned no Location header",
+    "ja": "再開可能なアップロードが Location を返しませんでした",
+    "ko": "이어 올리기 업로드가 Location을 반환하지 않았습니다",
+    "th": "การอัปโหลดแบบต่อได้ไม่ส่ง Location กลับมา",
+    "zhHans": "可续传上传没有返回 Location",
+    "zhHant": "可續傳上傳沒有回傳 Location"
+  },
   "drive_timeout_download": {
     "en": "Download timed out (over 300 s)",
     "ja": "ダウンロードがタイムアウトしました（300 秒超過）",
@@ -3710,6 +4054,14 @@
     "th": "การซิงก์หมดเวลา (เกิน 120 วินาที) โปรดตรวจสอบการเชื่อมต่อแล้วลองใหม่",
     "zhHans": "同步超时（超过 120 秒），请检查网络后重试",
     "zhHant": "同步逾時（超過 120 秒），請檢查網路後重試"
+  },
+  "drive_user_cancelled": {
+    "en": "Sync was stopped by the user",
+    "ja": "ユーザーが同期を中断しました",
+    "ko": "사용자가 동기화를 중단했습니다",
+    "th": "ผู้ใช้หยุดการซิงก์",
+    "zhHans": "用户中断同步",
+    "zhHant": "使用者中斷同步"
   },
   "drop_here_to_unfile": {
     "en": "Drag a note here to take it out of its folder",
@@ -4183,6 +4535,14 @@
     "zhHans": "无法在同步文件夹创建 %@",
     "zhHant": "無法在同步資料夾建立 %@"
   },
+  "error_generic": {
+    "en": "Something went wrong. Please try again; details are in the sync log.",
+    "ja": "エラーが発生しました。もう一度お試しください。詳細は同期ログにあります。",
+    "ko": "오류가 발생했습니다. 다시 시도하세요. 자세한 내용은 동기화 로그에 있습니다.",
+    "th": "เกิดข้อผิดพลาด โปรดลองอีกครั้ง รายละเอียดอยู่ในบันทึกการซิงก์",
+    "zhHans": "发生错误，请稍后再试。详细信息在同步日志里。",
+    "zhHant": "發生錯誤，請稍後再試。詳細資訊在同步日誌裡。"
+  },
   "exit_canvas_minimal_mode": {
     "en": "Exit minimal canvas mode",
     "ja": "キャンバス最小モードを終了",
@@ -4214,6 +4574,14 @@
     "th": "ส่งออกแล้ว: %@",
     "zhHans": "已导出：%@",
     "zhHant": "已匯出：%@"
+  },
+  "export_err_no_pages": {
+    "en": "This notebook has no pages",
+    "ja": "このノートにはページがありません",
+    "ko": "이 노트에는 페이지가 없습니다",
+    "th": "สมุดบันทึกเล่มนี้ไม่มีหน้า",
+    "zhHans": "这本笔记没有任何页面",
+    "zhHant": "這本筆記沒有任何頁面"
   },
   "export_failed": {
     "en": "Export failed: %@",
@@ -4430,6 +4798,14 @@
     "th": "ชื่อโฟลเดอร์",
     "zhHans": "文件夹名称",
     "zhHant": "資料夾名稱"
+  },
+  "folder_new_default": {
+    "en": "New folder",
+    "ja": "新しいフォルダ",
+    "ko": "새 폴더",
+    "th": "โฟลเดอร์ใหม่",
+    "zhHans": "新建文件夹",
+    "zhHant": "新增資料夾"
   },
   "folder_sync_inaccessible": {
     "en": "Folder inaccessible",
@@ -5166,6 +5542,14 @@
     "th": "✗ วาดผิด",
     "zhHans": "✗ 错误画法",
     "zhHant": "✗ 錯誤畫法"
+  },
+  "handwriting_err_bitmap": {
+    "en": "Could not get the bitmap",
+    "ja": "ビットマップを取得できませんでした",
+    "ko": "비트맵을 가져올 수 없습니다",
+    "th": "รับบิตแมปไม่ได้",
+    "zhHans": "无法获取位图",
+    "zhHant": "無法取得點陣圖"
   },
   "handwriting_mode": {
     "en": "Handwriting",
@@ -6775,6 +7159,14 @@
     "zhHans": "粘贴网址",
     "zhHant": "貼上網址"
   },
+  "llm_no_response": {
+    "en": "No response",
+    "ja": "応答がありません",
+    "ko": "응답이 없습니다",
+    "th": "ไม่มีการตอบกลับ",
+    "zhHans": "没有回应",
+    "zhHant": "沒有回應"
+  },
   "local_relay_failed": {
     "en": "This device could not host the room: %@. Start the session from another device, or enter a relay address.",
     "ja": "この端末ではルームを開けませんでした：%@。別の端末から開始するか、中継アドレスを入力してください。",
@@ -7023,6 +7415,78 @@
     "zhHans": "特性",
     "zhHant": "特性"
   },
+  "material_desc_copper": {
+    "en": "Warm reddish metallic sheen with soft specular tone.",
+    "ja": "赤みのある金属光沢。やわらかなハイライト。",
+    "ko": "붉은빛 금속 광택, 부드러운 하이라이트.",
+    "th": "ประกายโลหะอมแดง ไฮไลต์นุ่มนวล",
+    "zhHans": "偏红的金属光泽，高光柔和。",
+    "zhHant": "偏紅的金屬光澤，高光柔和。"
+  },
+  "material_desc_gold": {
+    "en": "100% metallic gold with warm mirror specular reflection.",
+    "ja": "100% 金属の金。温かみのある鏡面反射。",
+    "ko": "100% 금속 금, 따뜻한 거울 반사.",
+    "th": "ทองคำโลหะ 100% สะท้อนเงาแบบกระจกโทนอุ่น",
+    "zhHans": "100% 纯金属金，带暖调镜面反射。",
+    "zhHant": "100% 純金屬金，帶暖調鏡面反射。"
+  },
+  "material_desc_granite": {
+    "en": "Textured mineral rock with natural granular diffusion.",
+    "ja": "粒状の質感を持つ鉱石。自然な拡散反射。",
+    "ko": "알갱이 질감의 광물 암석, 자연스러운 확산.",
+    "th": "หินแร่ผิวหยาบเป็นเม็ด สะท้อนแสงกระจายตามธรรมชาติ",
+    "zhHans": "有颗粒质感的矿石，自然漫反射。",
+    "zhHant": "有顆粒質感的礦石，自然漫反射。"
+  },
+  "material_desc_iron": {
+    "en": "Dark matte industrial steel with robust weight appearance.",
+    "ja": "ダークなマット仕上げの工業用鋼。重厚な見た目。",
+    "ko": "어두운 무광 산업용 강철, 묵직한 느낌.",
+    "th": "เหล็กอุตสาหกรรมสีเข้มผิวด้าน ดูหนักแน่น",
+    "zhHans": "深色哑光工业钢，质感厚重。",
+    "zhHant": "深色霧面工業鋼，質感厚重。"
+  },
+  "material_desc_marble": {
+    "en": "Polished stone with subtle translucency and delicate veins.",
+    "ja": "磨かれた石材。わずかな透明感と繊細な模様。",
+    "ko": "광택 처리된 석재, 은은한 투명감과 섬세한 결.",
+    "th": "หินขัดมัน โปร่งแสงเล็กน้อย มีลายเส้นละเอียด",
+    "zhHans": "抛光石材，微透光并带细致纹路。",
+    "zhHant": "拋光石材，微透光並帶細緻紋路。"
+  },
+  "material_desc_obsidian": {
+    "en": "Volcanic glass with deep contrast and glossy sheen.",
+    "ja": "火山ガラス。深いコントラストと艶やかな光沢。",
+    "ko": "화산 유리, 깊은 대비와 윤기 나는 광택.",
+    "th": "แก้วภูเขาไฟ คอนทราสต์เข้มและเงางาม",
+    "zhHans": "火山玻璃，对比强烈、光泽明亮。",
+    "zhHant": "火山玻璃，對比強烈、光澤明亮。"
+  },
+  "material_desc_plastic": {
+    "en": "Smooth synthetic polymer with balanced specular highlights.",
+    "ja": "なめらかな合成樹脂。ハイライトのバランスが良い質感。",
+    "ko": "매끄러운 합성 고분자, 균형 잡힌 하이라이트.",
+    "th": "พอลิเมอร์สังเคราะห์ผิวเรียบ ไฮไลต์สมดุล",
+    "zhHans": "表面平滑的合成高分子，高光均衡。",
+    "zhHant": "表面平滑的合成高分子，高光均衡。"
+  },
+  "material_desc_silver": {
+    "en": "High-reflectance pure silver with radiant chrome finish.",
+    "ja": "高反射率の純銀。輝くクロームの仕上げ。",
+    "ko": "반사율이 높은 순은, 빛나는 크롬 마감.",
+    "th": "เงินแท้สะท้อนแสงสูง ผิวโครเมียมแวววาว",
+    "zhHans": "高反射率纯银，带光亮铬质感。",
+    "zhHant": "高反射率純銀，帶光亮鉻質感。"
+  },
+  "material_desc_wood": {
+    "en": "Natural organic grain with warm diffuse scattering.",
+    "ja": "自然な木目。やわらかな拡散反射。",
+    "ko": "자연스러운 나뭇결, 따뜻한 확산 반사.",
+    "th": "ลายไม้ธรรมชาติ สะท้อนแสงกระจายนุ่มนวล",
+    "zhHans": "天然有机纹理，柔和漫反射。",
+    "zhHant": "天然有機紋理，柔和漫反射。"
+  },
   "material_pcabs_spec": {
     "en": "UL94 V-0 / textured mould finish",
     "ja": "UL94 V-0／シボ加工表面",
@@ -7151,6 +7615,70 @@
     "zhHans": "清除",
     "zhHant": "清除"
   },
+  "math_const_01": {
+    "en": "Pi π",
+    "ja": "円周率 π",
+    "ko": "원주율 π",
+    "th": "ค่าพาย π",
+    "zhHans": "圆周率 π",
+    "zhHant": "圓周率 π"
+  },
+  "math_const_02": {
+    "en": "Euler's number e",
+    "ja": "自然対数の底 e",
+    "ko": "자연상수 e",
+    "th": "ค่าคงที่ธรรมชาติ e",
+    "zhHans": "自然常数 e",
+    "zhHant": "自然常數 e"
+  },
+  "math_const_03": {
+    "en": "Golden ratio φ",
+    "ja": "黄金比 φ",
+    "ko": "황금비 φ",
+    "th": "อัตราส่วนทองคำ φ",
+    "zhHans": "黄金比例 φ",
+    "zhHant": "黃金比例 φ"
+  },
+  "math_const_04": {
+    "en": "Speed of light c",
+    "ja": "光速 c",
+    "ko": "광속 c",
+    "th": "ความเร็วแสง c",
+    "zhHans": "光速 c",
+    "zhHant": "光速 c"
+  },
+  "math_const_05": {
+    "en": "Gravitational acceleration g",
+    "ja": "重力加速度 g",
+    "ko": "중력 가속도 g",
+    "th": "ความเร่งโน้มถ่วง g",
+    "zhHans": "重力加速度 g",
+    "zhHant": "重力加速度 g"
+  },
+  "math_const_06": {
+    "en": "Planck constant h",
+    "ja": "プランク定数 h",
+    "ko": "플랑크 상수 h",
+    "th": "ค่าคงที่ของพลังค์ h",
+    "zhHans": "普朗克常数 h",
+    "zhHant": "普朗克常數 h"
+  },
+  "math_const_07": {
+    "en": "Boltzmann constant k",
+    "ja": "ボルツマン定数 k",
+    "ko": "볼츠만 상수 k",
+    "th": "ค่าคงที่โบลต์ซมันน์ k",
+    "zhHans": "玻尔兹曼常数 k",
+    "zhHant": "波茲曼常數 k"
+  },
+  "math_const_08": {
+    "en": "Avogadro constant Nₐ",
+    "ja": "アボガドロ定数 Nₐ",
+    "ko": "아보가드로 상수 Nₐ",
+    "th": "ค่าคงที่อาโวกาโดร Nₐ",
+    "zhHans": "阿伏伽德罗常数 Nₐ",
+    "zhHant": "亞佛加厥常數 Na"
+  },
   "math_error": {
     "en": "Invalid formula or syntax error",
     "ja": "無効な数式または構文エラー",
@@ -7231,6 +7759,62 @@
     "zhHans": "例如: 125 * 8 + 45",
     "zhHant": "例如: 125 * 8 + 45"
   },
+  "math_sec_01": {
+    "en": "Calculus & differential equations",
+    "ja": "微積分と微分方程式",
+    "ko": "미적분과 미분방정식",
+    "th": "แคลคูลัสและสมการเชิงอนุพันธ์",
+    "zhHans": "微积分与微分方程",
+    "zhHant": "微積分與微分方程"
+  },
+  "math_sec_02": {
+    "en": "Engineering math, vectors & fields",
+    "ja": "工業数学・ベクトル・場の理論",
+    "ko": "공업수학·벡터·장론",
+    "th": "คณิตศาสตร์วิศวกรรม เวกเตอร์ และสนาม",
+    "zhHans": "工数、向量与场论",
+    "zhHant": "工數、向量與場論"
+  },
+  "math_sec_03": {
+    "en": "Operators & relations",
+    "ja": "演算子と関係",
+    "ko": "연산자와 관계",
+    "th": "ตัวดำเนินการและความสัมพันธ์",
+    "zhHans": "运算符与关系",
+    "zhHant": "運算子與關係"
+  },
+  "math_sec_04": {
+    "en": "Sets & logic",
+    "ja": "集合と論理",
+    "ko": "집합과 논리",
+    "th": "เซตและตรรกศาสตร์",
+    "zhHans": "集合与逻辑",
+    "zhHant": "集合與邏輯"
+  },
+  "math_sec_05": {
+    "en": "Greek letters (lowercase)",
+    "ja": "ギリシャ文字（小文字）",
+    "ko": "그리스 문자 (소문자)",
+    "th": "ตัวอักษรกรีก (ตัวพิมพ์เล็ก)",
+    "zhHans": "希腊字母（小写）",
+    "zhHant": "希臘字母 (小寫)"
+  },
+  "math_sec_06": {
+    "en": "Greek letters (uppercase)",
+    "ja": "ギリシャ文字（大文字）",
+    "ko": "그리스 문자 (대문자)",
+    "th": "ตัวอักษรกรีก (ตัวพิมพ์ใหญ่)",
+    "zhHans": "希腊字母（大写）",
+    "zhHant": "希臘字母 (大寫)"
+  },
+  "math_sec_07": {
+    "en": "Brackets & matrix symbols",
+    "ja": "括弧と行列の記号",
+    "ko": "괄호와 행렬 기호",
+    "th": "วงเล็บและสัญลักษณ์เมทริกซ์",
+    "zhHans": "括号与矩阵符号",
+    "zhHant": "括號與矩陣符號"
+  },
   "math_symbols": {
     "en": "Math Symbols",
     "ja": "数学記号",
@@ -7270,6 +7854,126 @@
     "th": "ค่าคงที่และหน่วย",
     "zhHans": "常数与单位",
     "zhHant": "常數與單位"
+  },
+  "math_tpl_01": {
+    "en": "Calculus – derivative of a polynomial",
+    "ja": "微積分 – 多項式の導関数",
+    "ko": "미적분 – 다항식의 도함수",
+    "th": "แคลคูลัส – อนุพันธ์ของพหุนาม",
+    "zhHans": "微积分 - 多项式导数列表",
+    "zhHant": "微積分 - 多項式導數表列"
+  },
+  "math_tpl_02": {
+    "en": "Calculus – definite integral",
+    "ja": "微積分 – 定積分の値",
+    "ko": "미적분 – 정적분 계산",
+    "th": "แคลคูลัส – ปริพันธ์จำกัดเขต",
+    "zhHans": "微积分 - 定积分求值",
+    "zhHant": "微積分 - 定積分求值"
+  },
+  "math_tpl_03": {
+    "en": "Calculus – improper integral",
+    "ja": "微積分 – 広義積分",
+    "ko": "미적분 – 이상적분",
+    "th": "แคลคูลัส – ปริพันธ์ไม่ตรงแบบ",
+    "zhHans": "微积分 - 瑕积分",
+    "zhHant": "微積分 - 瑕積分"
+  },
+  "math_tpl_04": {
+    "en": "Engineering math – Fourier series",
+    "ja": "工業数学 – フーリエ級数",
+    "ko": "공업수학 – 푸리에 급수",
+    "th": "คณิตศาสตร์วิศวกรรม – อนุกรมฟูริเยร์",
+    "zhHans": "工数 - 傅立叶级数",
+    "zhHant": "工數 - 傅立葉級數表列"
+  },
+  "math_tpl_05": {
+    "en": "Engineering math – Laplace transform",
+    "ja": "工業数学 – ラプラス変換",
+    "ko": "공업수학 – 라플라스 변환",
+    "th": "คณิตศาสตร์วิศวกรรม – การแปลงลาปลาซ",
+    "zhHans": "工数 - 拉普拉斯变换",
+    "zhHant": "工數 - 拉普拉斯轉換"
+  },
+  "math_tpl_06": {
+    "en": "Engineering math – 2nd-order ODE",
+    "ja": "工業数学 – 2 階常微分方程式",
+    "ko": "공업수학 – 2계 상미분방정식",
+    "th": "คณิตศาสตร์วิศวกรรม – ODE อันดับสอง",
+    "zhHans": "工数 - 二阶常微分方程",
+    "zhHant": "工數 - 二階常微分ODE"
+  },
+  "math_tpl_07": {
+    "en": "Vector calculus – gradient",
+    "ja": "ベクトル解析 – 勾配",
+    "ko": "벡터 해석 – 기울기",
+    "th": "แคลคูลัสเวกเตอร์ – เกรเดียนต์",
+    "zhHans": "向量分析 - 梯度运算",
+    "zhHant": "向量分析 - 梯度運算"
+  },
+  "math_tpl_08": {
+    "en": "Vector calculus – divergence",
+    "ja": "ベクトル解析 – 発散",
+    "ko": "벡터 해석 – 발산",
+    "th": "แคลคูลัสเวกเตอร์ – ไดเวอร์เจนซ์",
+    "zhHans": "向量分析 - 散度运算",
+    "zhHant": "向量分析 - 散度運算"
+  },
+  "math_tpl_09": {
+    "en": "Vector calculus – curl",
+    "ja": "ベクトル解析 – 回転",
+    "ko": "벡터 해석 – 회전",
+    "th": "แคลคูลัสเวกเตอร์ – เคิร์ล",
+    "zhHans": "向量分析 - 旋度运算",
+    "zhHant": "向量分析 - 旋度運算"
+  },
+  "math_tpl_10": {
+    "en": "Linear algebra – characteristic equation",
+    "ja": "線形代数 – 特性方程式",
+    "ko": "선형대수 – 특성방정식",
+    "th": "พีชคณิตเชิงเส้น – สมการลักษณะเฉพาะ",
+    "zhHans": "线性代数 - 特征方程",
+    "zhHant": "線性代數 - 特徵方程式"
+  },
+  "math_tpl_11": {
+    "en": "Complex analysis – Euler's formula",
+    "ja": "複素解析 – オイラーの公式",
+    "ko": "복소해석 – 오일러 공식",
+    "th": "การวิเคราะห์เชิงซ้อน – สูตรของออยเลอร์",
+    "zhHans": "复变函数 - 欧拉公式",
+    "zhHant": "複變數 - 歐拉公式"
+  },
+  "math_tpl_12": {
+    "en": "Gaussian integral",
+    "ja": "ガウス積分",
+    "ko": "가우스 적분",
+    "th": "ปริพันธ์เกาส์เซียน",
+    "zhHans": "高斯积分",
+    "zhHant": "高斯積分"
+  },
+  "math_tpl_13": {
+    "en": "Taylor expansion",
+    "ja": "テイラー展開",
+    "ko": "테일러 전개",
+    "th": "การกระจายเทย์เลอร์",
+    "zhHans": "泰勒展开式",
+    "zhHant": "泰勒展開式"
+  },
+  "math_tpl_14": {
+    "en": "Engineering math – heat equation",
+    "ja": "工業数学 – 熱伝導方程式",
+    "ko": "공업수학 – 열전도 방정식",
+    "th": "คณิตศาสตร์วิศวกรรม – สมการความร้อน",
+    "zhHans": "工数 - 热传导方程",
+    "zhHant": "工數 - 熱傳導方程式"
+  },
+  "math_tpl_15": {
+    "en": "Engineering math – wave equation",
+    "ja": "工業数学 – 波動方程式",
+    "ko": "공업수학 – 파동방정식",
+    "th": "คณิตศาสตร์วิศวกรรม – สมการคลื่น",
+    "zhHans": "工数 - 波动方程",
+    "zhHant": "工數 - 波動方程式"
   },
   "math_value_prefix": {
     "en": "Value",
@@ -7527,6 +8231,14 @@
     "zhHans": "3D 模型",
     "zhHant": "3D 模型"
   },
+  "model3d_default_title": {
+    "en": "3D geometric model",
+    "ja": "3D 幾何モデル",
+    "ko": "3D 기하 모델",
+    "th": "โมเดลเรขาคณิต 3 มิติ",
+    "zhHans": "3D 几何模型",
+    "zhHant": "3D 幾何模型"
+  },
   "model3d_rotate_mode": {
     "en": "Rotate",
     "ja": "回転",
@@ -7558,6 +8270,22 @@
     "th": "โมเดล 3 มิติ",
     "zhHans": "3D模型",
     "zhHant": "3D模型"
+  },
+  "model_dl_bad_url": {
+    "en": "Invalid address: %@",
+    "ja": "無効なアドレス：%@",
+    "ko": "잘못된 주소: %@",
+    "th": "ที่อยู่ไม่ถูกต้อง: %@",
+    "zhHans": "网址无效：%@",
+    "zhHant": "網址無效：%@"
+  },
+  "model_dl_no_response": {
+    "en": "No HTTP response",
+    "ja": "HTTP 応答がありません",
+    "ko": "HTTP 응답이 없습니다",
+    "th": "ไม่มีการตอบกลับ HTTP",
+    "zhHans": "没有 HTTP 响应",
+    "zhHant": "沒有 HTTP 回應"
   },
   "model_download": {
     "en": "Download",
@@ -8214,6 +8942,14 @@
     "th": "เปิดโฟลเดอร์ Kairumo Record",
     "zhHans": "打开 Kairumo Record 文件夹",
     "zhHant": "開啟 Kairumo Record 資料夾"
+  },
+  "open_in_browser": {
+    "en": "Open in Browser",
+    "ja": "ブラウザで開く",
+    "ko": "브라우저에서 열기",
+    "th": "เปิดในเบราว์เซอร์",
+    "zhHans": "在浏览器中打开",
+    "zhHant": "在瀏覽器中開啟"
   },
   "open_link": {
     "en": "Open Link",
@@ -9127,6 +9863,30 @@
     "zhHans": "上一页",
     "zhHant": "上一頁"
   },
+  "print_err_create": {
+    "en": "Could not start the print job",
+    "ja": "印刷ジョブを作成できませんでした",
+    "ko": "인쇄 작업을 만들지 못했습니다",
+    "th": "สร้างงานพิมพ์ไม่สำเร็จ",
+    "zhHans": "创建打印任务失败",
+    "zhHant": "建立列印操作失敗"
+  },
+  "print_err_parse": {
+    "en": "Could not read the PDF data",
+    "ja": "PDF データを読み取れませんでした",
+    "ko": "PDF 데이터를 읽을 수 없습니다",
+    "th": "อ่านข้อมูล PDF ไม่ได้",
+    "zhHans": "无法解析 PDF 数据",
+    "zhHant": "無法解析 PDF 資料"
+  },
+  "print_job_title": {
+    "en": "Kairumo Document",
+    "ja": "Kairumo ドキュメント",
+    "ko": "Kairumo 문서",
+    "th": "เอกสาร Kairumo",
+    "zhHans": "Kairumo 文档",
+    "zhHant": "Kairumo 文件"
+  },
   "print_note": {
     "en": "Print Notebook",
     "ja": "ノートを印刷",
@@ -9198,6 +9958,62 @@
     "th": "เมนูเครื่องมือแบบวงกลม",
     "zhHans": "环形快捷工具盘",
     "zhHant": "環形快捷工具盤"
+  },
+  "rec_err_convert": {
+    "en": "Audio conversion failed: %@",
+    "ja": "音声の変換に失敗しました：%@",
+    "ko": "오디오 변환 실패: %@",
+    "th": "แปลงเสียงไม่สำเร็จ: %@",
+    "zhHans": "音频转换失败：%@",
+    "zhHant": "音訊轉換失敗：%@"
+  },
+  "rec_err_core_start": {
+    "en": "Could not start recording: %@",
+    "ja": "録音を開始できませんでした：%@",
+    "ko": "녹음을 시작할 수 없습니다: %@",
+    "th": "เริ่มบันทึกเสียงไม่ได้: %@",
+    "zhHans": "无法开始录音：%@",
+    "zhHant": "無法開始錄音：%@"
+  },
+  "rec_err_engine_start": {
+    "en": "The audio engine failed to start: %@",
+    "ja": "オーディオエンジンを起動できませんでした：%@",
+    "ko": "오디오 엔진을 시작하지 못했습니다: %@",
+    "th": "เริ่มเครื่องมือเสียงไม่สำเร็จ: %@",
+    "zhHans": "音频引擎启动失败：%@",
+    "zhHant": "音訊引擎啟動失敗：%@"
+  },
+  "rec_err_feed": {
+    "en": "Could not pass audio to the recorder: %@",
+    "ja": "録音エンジンに音声を渡せませんでした：%@",
+    "ko": "녹음 엔진에 오디오를 전달하지 못했습니다: %@",
+    "th": "ส่งเสียงให้ตัวบันทึกไม่สำเร็จ: %@",
+    "zhHans": "向录音引擎送入音频失败：%@",
+    "zhHant": "餵音訊失敗：%@"
+  },
+  "rec_err_no_channels": {
+    "en": "The audio input has no usable channel. Check the microphone connection and system permission.",
+    "ja": "音声入力に使えるチャンネルがありません。マイクの接続とシステムの権限を確認してください。",
+    "ko": "오디오 입력에 사용할 수 있는 채널이 없습니다. 마이크 연결과 시스템 권한을 확인하세요.",
+    "th": "อินพุตเสียงไม่มีช่องสัญญาณที่ใช้ได้ โปรดตรวจสอบการเชื่อมต่อไมโครโฟนและสิทธิ์ของระบบ",
+    "zhHans": "音频输入没有可用声道，请确认麦克风连接与系统权限",
+    "zhHant": "音訊輸入節點無可用聲道，請確認麥克風連線與系統權限"
+  },
+  "rec_err_no_mic": {
+    "en": "No microphone is connected, or no audio input is available",
+    "ja": "マイクが接続されていないか、使用できる音声入力がありません",
+    "ko": "마이크가 연결되어 있지 않거나 사용할 수 있는 오디오 입력이 없습니다",
+    "th": "ไม่ได้เชื่อมต่อไมโครโฟน หรือไม่มีอุปกรณ์รับเสียงที่ใช้ได้",
+    "zhHans": "设备未连接麦克风或没有可用的音频输入设备",
+    "zhHant": "裝置未連接麥克風或無可用音訊輸入設備"
+  },
+  "rec_err_not_ready": {
+    "en": "The microphone isn't ready (sample rate: %1@, channels: %2@)",
+    "ja": "マイクの準備ができていません（サンプルレート：%1@、チャンネル：%2@）",
+    "ko": "마이크가 아직 준비되지 않았습니다 (샘플 레이트: %1@, 채널: %2@)",
+    "th": "ไมโครโฟนยังไม่พร้อม (อัตราสุ่มตัวอย่าง: %1@, ช่องสัญญาณ: %2@)",
+    "zhHans": "麦克风尚未就绪（采样率：%1@，声道：%2@）",
+    "zhHant": "麥克風尚未就緒（取樣率：%1@、聲道：%2@）"
   },
   "rec_title_input": {
     "en": "Recording Title",
@@ -9335,6 +10151,14 @@
     "zhHans": "录音质量提示",
     "zhHant": "錄音品質提示"
   },
+  "recording_default_title": {
+    "en": "Voice recording",
+    "ja": "音声録音",
+    "ko": "음성 녹음",
+    "th": "บันทึกเสียง",
+    "zhHans": "语音录音",
+    "zhHant": "語音錄音"
+  },
   "recording_failed": {
     "en": "Recording could not start",
     "ja": "録音を開始できませんでした",
@@ -9463,6 +10287,14 @@
     "zhHans": "修饰强度",
     "zhHant": "修飾強度"
   },
+  "relay_invalid_port": {
+    "en": "Invalid port number %@",
+    "ja": "ポート番号 %@ は無効です",
+    "ko": "잘못된 포트 번호 %@",
+    "th": "หมายเลขพอร์ต %@ ไม่ถูกต้อง",
+    "zhHans": "无效的端口号 %@",
+    "zhHant": "無效的埠號 %@"
+  },
   "relay_needs_tls": {
     "en": "This relay is on the public internet, so it must use wss:// (encrypted). Plain ws:// is only allowed on your own local network.",
     "ja": "この中継サーバーはインターネット上にあるため、wss://（暗号化）が必要です。ws:// はローカルネットワーク内でのみ使えます。",
@@ -9558,6 +10390,14 @@
     "th": "เปิดใหม่",
     "zhHans": "重新开启",
     "zhHant": "重新開啟"
+  },
+  "repagination_mismatch": {
+    "en": "Content changed during repagination: strokes %1@→%2@, objects %3@→%4@",
+    "ja": "ページ再分割の前後で内容が一致しません：筆跡 %1@→%2@、オブジェクト %3@→%4@",
+    "ko": "페이지 다시 나누기 전후의 내용이 다릅니다: 획 %1@→%2@, 개체 %3@→%4@",
+    "th": "เนื้อหาไม่ตรงกันก่อนและหลังแบ่งหน้าใหม่: ลายเส้น %1@→%2@ วัตถุ %3@→%4@",
+    "zhHans": "重新分页前后内容不符：笔画 %1@→%2@、对象 %3@→%4@",
+    "zhHant": "重新分頁前後內容不符：筆畫 %1@→%2@、物件 %3@→%4@"
   },
   "reply": {
     "en": "Reply",
@@ -10751,6 +11591,38 @@
     "zhHans": "账号与安全",
     "zhHant": "帳號與安全"
   },
+  "seed_chart_cat_1": {
+    "en": "Ink latency",
+    "ja": "筆記の遅延",
+    "ko": "필기 지연",
+    "th": "ความหน่วงของการเขียน",
+    "zhHans": "矢量书写延迟",
+    "zhHant": "向量書寫延遲"
+  },
+  "seed_chart_cat_2": {
+    "en": "Editable charts",
+    "ja": "編集できるグラフ",
+    "ko": "편집 가능한 차트",
+    "th": "แผนภูมิแก้ไขได้",
+    "zhHans": "图表动态可编辑",
+    "zhHant": "圖表動態可編修"
+  },
+  "seed_chart_cat_3": {
+    "en": "Pin collaboration",
+    "ja": "ピンで共同作業",
+    "ko": "핀 협업",
+    "th": "ทำงานร่วมกันด้วยหมุด",
+    "zhHans": "空间图钉协作",
+    "zhHant": "空間圖釘協作"
+  },
+  "seed_chart_cat_4": {
+    "en": "Open source, no subscription",
+    "ja": "オープンソース・サブスクなし",
+    "ko": "오픈소스, 구독 없음",
+    "th": "โอเพนซอร์ส ไม่ต้องสมัครสมาชิก",
+    "zhHans": "开源与无订阅限制",
+    "zhHant": "開源與無訂閱限制"
+  },
   "seed_feature_showcase_snippet": {
     "en": "Deep integration showcase: pencil, fountain pen & brush handwriting, comparison table, calculus solver, digital chart & discussion pins",
     "ja": "鉛筆・万年筆・毛筆の手描き、比較表、微積分方程式、デジタル作図とピン議論を網羅した機能活用サンプル",
@@ -10782,6 +11654,134 @@
     "th": "บันทึกการเรียนและการประชุม",
     "zhHans": "课堂与会议记录",
     "zhHant": "課堂與會議記錄"
+  },
+  "seed_pill_01": {
+    "en": "100% free & open source",
+    "ja": "100% 無料・オープンソース",
+    "ko": "100% 무료 오픈소스",
+    "th": "ฟรีและโอเพนซอร์ส 100%",
+    "zhHans": "100% 完全开源免费",
+    "zhHant": "100% 完全開源免費"
+  },
+  "seed_pill_02": {
+    "en": "No ads, no lock-in",
+    "ja": "広告なし・ロックインなし",
+    "ko": "광고 없음, 종속 없음",
+    "th": "ไม่มีโฆษณา ไม่ผูกมัด",
+    "zhHans": "零广告无厂商锁定",
+    "zhHant": "零廣告無廠商鎖定"
+  },
+  "seed_pill_03": {
+    "en": "Next-gen way to think",
+    "ja": "次世代の思考スタイル",
+    "ko": "차세대 사고 구조",
+    "th": "แนวคิดยุคใหม่หลายมิติ",
+    "zhHans": "次世代多维思考架构",
+    "zhHant": "次世代多維思考架構"
+  },
+  "seed_pill_04": {
+    "en": "Fast native vector core",
+    "ja": "高速ネイティブ描画",
+    "ko": "빠른 네이티브 벡터 코어",
+    "th": "แกนเวกเตอร์เนทีฟเร็วแรง",
+    "zhHans": "原生高效矢量核心",
+    "zhHant": "原生高效向量核心"
+  },
+  "seed_pill_05": {
+    "en": "16 realistic brushes",
+    "ja": "リアルなブラシ 16 種",
+    "ko": "사실적인 브러시 16종",
+    "th": "แปรงสมจริง 16 แบบ",
+    "zhHans": "16 种物理级笔刷",
+    "zhHant": "16 種物理級筆刷"
+  },
+  "seed_pill_06": {
+    "en": "True pressure & brush feel",
+    "ja": "本物の筆圧と筆の運び",
+    "ko": "실제 필압과 붓 터치",
+    "th": "แรงกดจริงและสัมผัสพู่กัน",
+    "zhHans": "真实压感与毛笔提按",
+    "zhHant": "真實壓感與毛筆提按"
+  },
+  "seed_pill_07": {
+    "en": "Study masking tape",
+    "ja": "暗記用マスキングテープ",
+    "ko": "암기용 마스킹 테이프",
+    "th": "เทปปิดคำตอบสำหรับท่องจำ",
+    "zhHans": "互动考点遮蔽胶带",
+    "zhHant": "互動考點遮蔽膠帶"
+  },
+  "seed_pill_08": {
+    "en": "Precise ruler & lasso",
+    "ja": "定規と投げ縄で正確に",
+    "ko": "자와 올가미로 정밀하게",
+    "th": "ไม้บรรทัดและบ่วงบาศแม่นยำ",
+    "zhHans": "尺规与套索精准几何",
+    "zhHant": "尺規與套索精準幾何"
+  },
+  "seed_pill_09": {
+    "en": "Desktop-grade layout",
+    "ja": "デスクトップ級のレイアウト",
+    "ko": "데스크톱급 편집",
+    "th": "จัดหน้าระดับมืออาชีพ",
+    "zhHans": "桌面级专业排版",
+    "zhHant": "桌面級專業排版"
+  },
+  "seed_pill_10": {
+    "en": "Adaptive native tables",
+    "ja": "自動調整できる表",
+    "ko": "자동 조정되는 표",
+    "th": "ตารางที่ปรับอัตโนมัติ",
+    "zhHans": "原生高格自适应表",
+    "zhHant": "原生高格自適應表"
+  },
+  "seed_pill_11": {
+    "en": "Smart flowcharts",
+    "ja": "スマートなフローチャート",
+    "ko": "스마트 순서도",
+    "th": "ผังงานอัจฉริยะ",
+    "zhHans": "智能拓扑流程图",
+    "zhHant": "智慧拓撲流程圖"
+  },
+  "seed_pill_12": {
+    "en": "3D & audio media",
+    "ja": "3D とオーディオ",
+    "ko": "3D와 오디오",
+    "th": "3 มิติและเสียง",
+    "zhHans": "3D 与音频多媒体",
+    "zhHant": "3D 與音訊多媒體"
+  },
+  "seed_pill_13": {
+    "en": "In-depth STEM calculus",
+    "ja": "STEM 微積分を深く解説",
+    "ko": "STEM 미적분 심층 해설",
+    "th": "แคลคูลัส STEM เชิงลึก",
+    "zhHans": "STEM 微积分深度解析",
+    "zhHant": "STEM 微積分深度解析"
+  },
+  "seed_pill_14": {
+    "en": "Live editable charts",
+    "ja": "編集できるライブチャート",
+    "ko": "편집 가능한 실시간 차트",
+    "th": "แผนภูมิแก้ไขได้สด",
+    "zhHans": "动态可编辑图表工坊",
+    "zhHant": "動態可編修圖表工坊"
+  },
+  "seed_pill_15": {
+    "en": "Pin-based discussion",
+    "ja": "ピンで議論・共同作業",
+    "ko": "핀으로 토론·협업",
+    "th": "พูดคุยด้วยหมุด",
+    "zhHans": "空间讨论图钉协作",
+    "zhHant": "空間討論圖釘協作"
+  },
+  "seed_pill_16": {
+    "en": "Boundless digital paper",
+    "ja": "無限に広がるデジタル紙",
+    "ko": "끝없는 디지털 종이",
+    "th": "กระดาษดิจิทัลไร้ขอบเขต",
+    "zhHans": "终极无界数字纸张",
+    "zhHant": "終極無界數位紙張"
   },
   "seed_welcome_snippet": {
     "en": "Open the canvas to handwrite, draw, record audio and export to PDF",
@@ -12935,6 +13935,30 @@
     "zhHans": "缓存",
     "zhHant": "快取"
   },
+  "storage_cannot_create": {
+    "en": "Cannot create the Kairumo document folder at %@.",
+    "ja": "%@ に Kairumo のドキュメントフォルダを作成できません。",
+    "ko": "%@에 Kairumo 문서 폴더를 만들 수 없습니다.",
+    "th": "สร้างโฟลเดอร์เอกสาร Kairumo ที่ %@ ไม่ได้",
+    "zhHans": "无法在 %@ 创建 Kairumo 文档文件夹。",
+    "zhHant": "無法在 %@ 建立 Kairumo 文件資料夾。"
+  },
+  "storage_cannot_move": {
+    "en": "Kairumo could not move the document library: %@",
+    "ja": "Kairumo はドキュメントライブラリを移動できませんでした：%@",
+    "ko": "Kairumo가 문서 라이브러리를 이동하지 못했습니다: %@",
+    "th": "Kairumo ย้ายคลังเอกสารไม่ได้: %@",
+    "zhHans": "Kairumo 无法移动文档库：%@",
+    "zhHant": "Kairumo 無法移動文件庫：%@"
+  },
+  "storage_cannot_remember": {
+    "en": "Kairumo could not retain access to the selected folder. Please choose it again.",
+    "ja": "Kairumo は選択したフォルダへのアクセスを保持できませんでした。もう一度選択してください。",
+    "ko": "Kairumo가 선택한 폴더에 대한 접근 권한을 유지하지 못했습니다. 다시 선택하세요.",
+    "th": "Kairumo เก็บสิทธิ์เข้าถึงโฟลเดอร์ที่เลือกไว้ไม่ได้ โปรดเลือกอีกครั้ง",
+    "zhHans": "Kairumo 无法保留所选文件夹的访问权限，请重新选择。",
+    "zhHant": "Kairumo 無法保留所選資料夾的存取權，請重新選擇。"
+  },
   "storage_choose_parent": {
     "en": "Choose Document Folder…",
     "ja": "書類フォルダを選択…",
@@ -12966,6 +13990,14 @@
     "th": "คลังหลักปัจจุบัน",
     "zhHans": "当前主要资料库",
     "zhHant": "目前主要資料庫"
+  },
+  "storage_has_library": {
+    "en": "%@ already contains another Kairumo library. Choose an empty folder so existing documents are not overwritten.",
+    "ja": "%@ にはすでに別の Kairumo ライブラリがあります。既存のドキュメントが上書きされないよう、空のフォルダを選んでください。",
+    "ko": "%@에 이미 다른 Kairumo 라이브러리가 있습니다. 기존 문서를 덮어쓰지 않도록 빈 폴더를 선택하세요.",
+    "th": "%@ มีคลัง Kairumo อื่นอยู่แล้ว โปรดเลือกโฟลเดอร์ว่างเพื่อไม่ให้เอกสารเดิมถูกเขียนทับ",
+    "zhHans": "%@ 已有另一个 Kairumo 文档库。请选择空文件夹，以免覆盖现有文档。",
+    "zhHant": "%@ 已經有另一個 Kairumo 文件庫。請選擇空的資料夾，以免覆蓋既有文件。"
   },
   "storage_icloud_continue": {
     "en": "Use it anyway",
@@ -13062,6 +14094,14 @@
     "th": "ขณะนี้คลังหลักจะถูกบันทึกอย่างต่อเนื่องในตำแหน่งที่เลือก",
     "zhHans": "主要资料库现已持续保存到所选位置。",
     "zhHant": "主要資料庫現已持續儲存到所選位置。"
+  },
+  "storage_nested": {
+    "en": "Choose a folder outside the current Kairumo Doc folder.",
+    "ja": "現在の Kairumo ドキュメントフォルダの外にあるフォルダを選んでください。",
+    "ko": "현재 Kairumo 문서 폴더 밖의 폴더를 선택하세요.",
+    "th": "เลือกโฟลเดอร์ที่อยู่นอกโฟลเดอร์เอกสาร Kairumo ปัจจุบัน",
+    "zhHans": "请选择当前 Kairumo 文档文件夹以外的文件夹。",
+    "zhHant": "請選擇目前 Kairumo 文件資料夾以外的資料夾。"
   },
   "storage_progress_cleaning": {
     "en": "Removing the old copy…",
@@ -13199,6 +14239,14 @@
     "zhHans": "此位置仅属于本设备。跨设备更新会使用稳定的笔记本 ID，以及您设置的 Google Drive 或文件夹同步，因此 Mac、iPhone、iPad 和 Android 都不依赖其他设备的本机路径。",
     "zhHant": "此位置僅屬於本裝置。跨設備更新會使用穩定的筆記本 ID，以及您設定的 Google Drive 或資料夾同步，因此 Mac、iPhone、iPad 與 Android 都不依賴其他裝置的本機路徑。"
   },
+  "storage_sync_running": {
+    "en": "A sync operation is still running. Please try again after it finishes.",
+    "ja": "同期がまだ実行中です。終了してからもう一度お試しください。",
+    "ko": "동기화가 아직 진행 중입니다. 끝난 후 다시 시도하세요.",
+    "th": "การซิงก์ยังทำงานอยู่ โปรดลองอีกครั้งหลังจากเสร็จสิ้น",
+    "zhHans": "同步仍在进行中，请等它结束后再试一次。",
+    "zhHant": "同步仍在進行中，請等它結束後再試一次。"
+  },
   "storage_temp": {
     "en": "Temporary files",
     "ja": "一時ファイル",
@@ -13214,6 +14262,14 @@
     "th": "พื้นที่จัดเก็บ",
     "zhHans": "存储空间",
     "zhHant": "儲存空間"
+  },
+  "storage_verify_failed": {
+    "en": "Verification after copying failed: %@",
+    "ja": "コピー後の検証に失敗しました：%@",
+    "ko": "복사 후 검증에 실패했습니다: %@",
+    "th": "การตรวจสอบหลังคัดลอกล้มเหลว: %@",
+    "zhHans": "复制后验证失败：%@",
+    "zhHant": "複製後驗證失敗：%@"
   },
   "stroke_color": {
     "en": "Stroke color",
@@ -13303,6 +14359,38 @@
     "zhHans": "镜像对称辅助尺规，实时绘制平衡对称图形",
     "zhHant": "鏡像對稱輔助尺規，即時繪製平衡對稱圖案"
   },
+  "sync_a_how": {
+    "en": "On your other iPad or Mac, just point “Cloud sync” at the same top-level root folder (not an individual .padnote). The app scans every notebook and merges changes in both directions.",
+    "ja": "ほかの iPad や Mac では、「クラウド同期」で同じ最上位のルートフォルダを指定するだけです（個別の .padnote は選ばないでください）。アプリがすべてのノートを自動で調べ、双方向にマージします。",
+    "ko": "다른 iPad나 Mac에서 '클라우드 동기화'에 같은 최상위 루트 폴더를 지정하기만 하면 됩니다(개별 .padnote는 선택하지 마세요). 앱이 모든 노트를 자동으로 검사하고 양방향으로 병합합니다.",
+    "th": "บน iPad หรือ Mac เครื่องอื่นของคุณ เพียงชี้ “ซิงก์คลาวด์” ไปที่โฟลเดอร์รากระดับบนสุดเดียวกัน (อย่าเลือก .padnote ทีละเล่ม) แอปจะสแกนโน้ตทั้งหมดและผสานการเปลี่ยนแปลงสองทางให้อัตโนมัติ",
+    "zhHans": "在您的其他 iPad 或 Mac 上，只要在“云端同步”中指定“同一个上层根目录”（不要点进单个 .padnote），App 就会自动扫描所有笔记并进行双向合并更新。",
+    "zhHant": "在您的其他 iPad 或 Mac 上，只要在「雲端同步」指定「同一個上層根目錄」（不要點進個別的 .padnote），App 即會自動掃描所有筆記並進行雙向合併更新。"
+  },
+  "sync_a_platform": {
+    "en": "Android, iPadOS and macOS merge ink and charts incrementally in both directions, so you can keep editing seamlessly on any of them.",
+    "ja": "Android・iPadOS・macOS の間で、筆跡とグラフを双方向に差分マージします。どのプラットフォームでもシームレスに編集を続けられます。",
+    "ko": "Android, iPadOS, macOS 간에 필기와 차트를 양방향으로 증분 병합하여 어느 플랫폼에서든 끊김 없이 편집할 수 있습니다.",
+    "th": "Android, iPadOS และ macOS ผสานลายเส้นและแผนภูมิแบบเพิ่มทีละส่วนสองทาง คุณจึงแก้ไขต่อได้อย่างราบรื่นบนทุกแพลตฟอร์ม",
+    "zhHans": "支持 Android、iPadOS 与 macOS 双向增量笔迹与图表合并，各平台均可无缝协同编辑。",
+    "zhHant": "支援 Android、iPadOS 與 macOS 雙向增量筆跡與圖表合併，各平台均可無縫協同編輯。"
+  },
+  "sync_a_privacy": {
+    "en": "No third-party server stores your drawings or notes. Sync travels directly through Apple's iCloud, keeping your data private and in your own hands.",
+    "ja": "手描きやノートをサードパーティのサーバーに保存することはありません。同期は Apple の iCloud を直接経由するので、プライバシーとデータの主権が守られます。",
+    "ko": "손글씨나 노트를 저장하는 외부 서버는 없습니다. 동기화는 Apple iCloud를 통해 직접 전달되므로 개인정보와 데이터 주권이 보장됩니다.",
+    "th": "ไม่มีเซิร์ฟเวอร์ของบุคคลที่สามเก็บลายเส้นหรือโน้ตของคุณ การซิงก์ส่งผ่าน iCloud ของ Apple โดยตรง ข้อมูลของคุณจึงเป็นส่วนตัวและอยู่ในมือคุณเอง",
+    "zhHans": "没有第三方服务器存储您的手绘或笔记，同步直接通过 Apple 系统的 iCloud 传输，确保 100% 隐私与数据主权。",
+    "zhHant": "沒有第三方伺服器儲存您的手繪或筆記，同步直接由 Apple 系統的 iCloud 傳輸，確保 100% 隱私與資料主權。"
+  },
+  "sync_a_what": {
+    "en": "Sync is decentralized. Once you set up iCloud Drive or a folder of your choice, every notebook gets its own `.padnote` folder (holding vector ink, recordings and more). These extra `.padnote` folders are how sync works — please don't delete them.",
+    "ja": "同期は分散型の仕組みです。iCloud Drive または任意のフォルダを設定すると、ノートごとに専用の `.padnote` フォルダ（ベクター筆跡や録音などを格納）が自動で作られます。この `.padnote` は同期に必要な正常な構成なので、むやみに削除しないでください。",
+    "ko": "동기화는 분산형 구조입니다. iCloud Drive 또는 원하는 폴더를 설정하면 노트마다 전용 `.padnote` 폴더(벡터 필기와 녹음 파일 등 포함)가 자동으로 만들어집니다. 이 `.padnote` 폴더는 동기화를 유지하는 정상적인 구조이므로 함부로 삭제하지 마세요.",
+    "th": "การซิงก์ใช้สถาปัตยกรรมแบบกระจายศูนย์ เมื่อตั้งค่า iCloud Drive หรือโฟลเดอร์ที่คุณเลือก โน้ตแต่ละเล่มจะสร้างโฟลเดอร์ `.padnote` ของตัวเองโดยอัตโนมัติ (เก็บลายเส้นเวกเตอร์ ไฟล์เสียง ฯลฯ) โฟลเดอร์ `.padnote` เหล่านี้เป็นโครงสร้างปกติที่ใช้ซิงก์ โปรดอย่าลบทิ้ง",
+    "zhHans": "本功能采用去中心化的架构。设置 iCloud Drive 或自选文件夹后，每一本笔记都会自动生成对应的 `.padnote` 专属文件夹（内含手写矢量笔画与录音文件等）。这些多出来的 `.padnote` 是维持同步的正常结构，请勿随意删除。",
+    "zhHant": "本功能採用去中心化的架構。設定 iCloud Drive 或自選資料夾後，每一本筆記都會自動產生對應的 `.padnote` 專屬資料夾（內含手寫向量筆畫與錄音檔等）。這些多出來的 `.padnote` 是維持同步的正常結構，請勿隨意刪除。"
+  },
   "sync_account": {
     "en": "Account",
     "ja": "アカウント",
@@ -13343,6 +14431,14 @@
     "zhHans": "「尚未辨识」通常代表这些是别台设备建立的，而这台还没拉到索引。系统绝不会自动删除它们。",
     "zhHant": "「尚未辨識」通常代表這些是別台裝置建立的，而這台還沒拉到索引。系統絕不會自動刪除它們。"
   },
+  "sync_cancelled": {
+    "en": "Sync stopped",
+    "ja": "同期を中断しました",
+    "ko": "동기화를 중단했습니다",
+    "th": "หยุดการซิงก์แล้ว",
+    "zhHans": "已中断同步",
+    "zhHant": "已中斷同步"
+  },
   "sync_choose_folder": {
     "en": "Choose Sync Folder",
     "ja": "同期フォルダを選択",
@@ -13350,6 +14446,14 @@
     "th": "เลือกโฟลเดอร์ซิงก์",
     "zhHans": "选择同步文件夹",
     "zhHant": "iCloud 或本機資料夾同步"
+  },
+  "sync_configured_pending": {
+    "en": "Set up (waiting to sync)",
+    "ja": "設定済み（同期待ち）",
+    "ko": "설정됨 (동기화 대기)",
+    "th": "ตั้งค่าแล้ว (รอซิงก์)",
+    "zhHans": "已设置（待同步）",
+    "zhHant": "已設定（待同步）"
   },
   "sync_destination": {
     "en": "Destination",
@@ -13399,6 +14503,78 @@
     "zhHans": "支持 Google Drive 跨平台同步，或 iCloud Drive 文件夹免账号同步。",
     "zhHant": "支援 Google Drive 跨平台同步，或 iCloud Drive 資料夾免帳號同步。"
   },
+  "sync_fail_cannot_read": {
+    "en": "Cannot read %@",
+    "ja": "%@ を読み込めません",
+    "ko": "%@을(를) 읽을 수 없습니다",
+    "th": "อ่าน %@ ไม่ได้",
+    "zhHans": "无法读取 %@",
+    "zhHant": "無法讀取 %@"
+  },
+  "sync_fail_cannot_write": {
+    "en": "Cannot write %@",
+    "ja": "%@ に書き込めません",
+    "ko": "%@에 쓸 수 없습니다",
+    "th": "เขียน %@ ไม่ได้",
+    "zhHans": "无法写入 %@",
+    "zhHant": "無法寫入 %@"
+  },
+  "sync_fail_delete": {
+    "en": "Delete failed: %@",
+    "ja": "削除に失敗しました：%@",
+    "ko": "삭제 실패: %@",
+    "th": "ลบไม่สำเร็จ: %@",
+    "zhHans": "删除失败：%@",
+    "zhHant": "刪除失敗：%@"
+  },
+  "sync_fail_export": {
+    "en": "Export failed (%1@): %2@",
+    "ja": "書き出しに失敗しました（%1@）：%2@",
+    "ko": "내보내기 실패 (%1@): %2@",
+    "th": "ส่งออกไม่สำเร็จ (%1@): %2@",
+    "zhHans": "导出失败（%1@）：%2@",
+    "zhHant": "匯出失敗（%1@）：%2@"
+  },
+  "sync_fail_file_downloading": {
+    "en": "The file is being downloaded from iCloud. Try again in a moment.",
+    "ja": "ファイルを iCloud からダウンロード中です。しばらくしてからもう一度お試しください。",
+    "ko": "파일을 iCloud에서 다운로드하는 중입니다. 잠시 후 다시 시도하세요.",
+    "th": "กำลังดาวน์โหลดไฟล์จาก iCloud โปรดลองอีกครั้งในอีกสักครู่",
+    "zhHans": "文件正在从 iCloud 云端下载中，请稍候重试",
+    "zhHant": "檔案正在從 iCloud 雲端下載中，請稍候重試"
+  },
+  "sync_fail_icloud_downloading": {
+    "en": "The iCloud file is still downloading. Try again in a moment.",
+    "ja": "iCloud のファイルをダウンロード中です。しばらくしてからもう一度お試しください。",
+    "ko": "iCloud 파일을 다운로드하는 중입니다. 잠시 후 다시 시도하세요.",
+    "th": "กำลังดาวน์โหลดไฟล์จาก iCloud โปรดลองอีกครั้งในอีกสักครู่",
+    "zhHans": "iCloud 云端文件下载中，请稍候重试",
+    "zhHant": "iCloud 雲端檔案下載中，請稍候重試"
+  },
+  "sync_fail_no_manifest": {
+    "en": "The package has no manifest.json; the invalid leftover folder was removed",
+    "ja": "パッケージに manifest.json がないため、不要なフォルダを削除しました",
+    "ko": "패키지에 manifest.json이 없어 남은 잘못된 폴더를 정리했습니다",
+    "th": "แพ็กเกจไม่มี manifest.json จึงลบโฟลเดอร์ที่ไม่ถูกต้องที่เหลืออยู่แล้ว",
+    "zhHans": "套件缺少 manifest.json，已清理无效残留目录",
+    "zhHant": "套件缺少 manifest.json，已清理無效殘留目錄"
+  },
+  "sync_fail_unpack": {
+    "en": "Could not unpack the package: %@",
+    "ja": "パッケージを展開できませんでした：%@",
+    "ko": "패키지를 풀지 못했습니다: %@",
+    "th": "แตกแพ็กเกจไม่สำเร็จ: %@",
+    "zhHans": "解开套件失败：%@",
+    "zhHant": "解開套件失敗：%@"
+  },
+  "sync_fail_unpack_cloud": {
+    "en": "Could not unpack the cloud .padnote: %@",
+    "ja": "クラウド上の .padnote を展開できませんでした：%@",
+    "ko": "클라우드 .padnote를 풀지 못했습니다: %@",
+    "th": "แตก .padnote บนคลาวด์ไม่สำเร็จ: %@",
+    "zhHans": "解开云端 .padnote 失败：%@",
+    "zhHant": "解開雲端 .padnote 失敗：%@"
+  },
   "sync_failed": {
     "en": "Sync failed: %@",
     "ja": "同期に失敗しました：%@",
@@ -13447,6 +14623,30 @@
     "zhHans": "资料夹路径",
     "zhHant": "資料夾路徑"
   },
+  "sync_folder_pending": {
+    "en": "Folder set (waiting to sync)",
+    "ja": "フォルダ設定済み（同期待ち）",
+    "ko": "폴더 설정됨 (동기화 대기)",
+    "th": "ตั้งค่าโฟลเดอร์แล้ว (รอซิงก์)",
+    "zhHans": "已设置文件夹（待同步）",
+    "zhHant": "已設定資料夾（待同步）"
+  },
+  "sync_folder_placeholder": {
+    "en": "<folder>",
+    "ja": "<フォルダ>",
+    "ko": "<폴더>",
+    "th": "<โฟลเดอร์>",
+    "zhHans": "<文件夹>",
+    "zhHant": "<資料夾>"
+  },
+  "sync_folder_syncing": {
+    "en": "Syncing iCloud / folder…",
+    "ja": "iCloud / フォルダを同期中…",
+    "ko": "iCloud / 폴더 동기화 중…",
+    "th": "กำลังซิงก์ iCloud / โฟลเดอร์…",
+    "zhHans": "iCloud / 文件夹同步中…",
+    "zhHant": "iCloud / 資料夾同步中..."
+  },
   "sync_folder_unlink_confirm_desc": {
     "en": "This will only unlink the folder from syncing. It will not delete any notes on your device or in the folder.",
     "ja": "同期のリンクを解除するだけで、端末内やフォルダ内のノートが削除されることはありません。",
@@ -13470,6 +14670,14 @@
     "th": "กำลังซิงก์ Google Drive…",
     "zhHans": "Google Drive 同步中…",
     "zhHant": "Google Drive 同步中…"
+  },
+  "sync_google_authorized": {
+    "en": "Google account authorized. Syncing…",
+    "ja": "Google アカウントを承認しました。同期中…",
+    "ko": "Google 계정 인증 완료. 동기화 중…",
+    "th": "อนุญาตบัญชี Google แล้ว กำลังซิงก์…",
+    "zhHans": "Google 帐号授权成功，正在同步…",
+    "zhHant": "Google 帳號授權成功，正在同步..."
   },
   "sync_interrupted": {
     "en": "Sync interrupted",
@@ -13695,6 +14903,22 @@
     "zhHans": "云端同步",
     "zhHant": "雲端同步"
   },
+  "sync_signed_in_busy": {
+    "en": "Signed in (another sync is already running)",
+    "ja": "サインインしました（別の同期が実行中です）",
+    "ko": "로그인했습니다 (다른 동기화가 실행 중입니다)",
+    "th": "ลงชื่อเข้าใช้แล้ว (มีการซิงก์อื่นกำลังทำงานอยู่)",
+    "zhHans": "已登录成功（目前有其他同步正在执行）",
+    "zhHant": "已登入成功（目前正有其他同步執行中）"
+  },
+  "sync_snapshot_timeout": {
+    "en": "Timed out refreshing the cloud snapshot",
+    "ja": "クラウドスナップショットの更新がタイムアウトしました",
+    "ko": "클라우드 스냅샷 갱신 시간이 초과되었습니다",
+    "th": "การอัปเดตสแนปช็อตบนคลาวด์หมดเวลา",
+    "zhHans": "云端快照更新超时",
+    "zhHant": "雲端快照更新逾時"
+  },
   "sync_status": {
     "en": "Status",
     "ja": "状態",
@@ -13702,6 +14926,46 @@
     "th": "สถานะ",
     "zhHans": "状态",
     "zhHant": "狀態"
+  },
+  "sync_status_error": {
+    "en": "Sync error",
+    "ja": "同期エラーが発生しました",
+    "ko": "동기화 오류가 발생했습니다",
+    "th": "เกิดข้อผิดพลาดในการซิงก์",
+    "zhHans": "同步发生错误",
+    "zhHant": "同步發生錯誤"
+  },
+  "sync_status_failed": {
+    "en": "Sync failed",
+    "ja": "同期に失敗しました",
+    "ko": "동기화 실패",
+    "th": "ซิงก์ล้มเหลว",
+    "zhHans": "同步失败",
+    "zhHant": "同步失敗"
+  },
+  "sync_timeout_folder": {
+    "en": "Sync timed out. Check your connection or iCloud status and try again.",
+    "ja": "同期がタイムアウトしました。ネットワーク接続または iCloud の状態を確認して、もう一度お試しください。",
+    "ko": "동기화 시간이 초과되었습니다. 네트워크 연결 또는 iCloud 상태를 확인한 후 다시 시도하세요.",
+    "th": "การซิงก์หมดเวลา โปรดตรวจสอบการเชื่อมต่อหรือสถานะ iCloud แล้วลองอีกครั้ง",
+    "zhHans": "同步超时，请确认网络连接或 iCloud 状态后重试",
+    "zhHant": "同步逾時，請確認網路連線或 iCloud 狀態後重試"
+  },
+  "sync_timeout_network": {
+    "en": "Sync timed out. Check your connection and try again.",
+    "ja": "同期がタイムアウトしました。ネットワーク接続を確認して、もう一度お試しください。",
+    "ko": "동기화 시간이 초과되었습니다. 네트워크 연결을 확인한 후 다시 시도하세요.",
+    "th": "การซิงก์หมดเวลา โปรดตรวจสอบการเชื่อมต่ออินเทอร์เน็ตแล้วลองอีกครั้ง",
+    "zhHans": "同步超时，请确认网络连接后重试",
+    "zhHant": "同步逾時，請確認網路連線後重試"
+  },
+  "sync_transcript_lag": {
+    "en": "transcript %@ s behind",
+    "ja": "文字起こしが %@ 秒遅れ",
+    "ko": "받아쓰기 %@초 지연",
+    "th": "การถอดเสียงช้ากว่า %@ วินาที",
+    "zhHans": "转录落后 %@ 秒",
+    "zhHant": "轉錄落後 %@ 秒"
   },
   "sync_up_to_date": {
     "en": "Already up to date",
@@ -13903,6 +15167,22 @@
     "zhHans": "点击画布任意处即可开始打字输入",
     "zhHant": "點選畫布任意處即可開始打字輸入"
   },
+  "tape_delete": {
+    "en": "Delete tape",
+    "ja": "テープを削除",
+    "ko": "테이프 삭제",
+    "th": "ลบเทป",
+    "zhHans": "删除胶带",
+    "zhHant": "刪除膠帶"
+  },
+  "tape_toggle": {
+    "en": "Reveal or cover",
+    "ja": "めくる／隠す",
+    "ko": "열기/가리기",
+    "th": "เปิดหรือปิดคลุม",
+    "zhHans": "翻开或遮回",
+    "zhHant": "翻開或遮回"
+  },
   "text_bold": {
     "en": "Bold",
     "ja": "太字",
@@ -13918,6 +15198,14 @@
     "th": "สีข้อความ",
     "zhHans": "文字颜色",
     "zhHant": "文字顏色"
+  },
+  "text_default_content": {
+    "en": "Type here…",
+    "ja": "ここに入力…",
+    "ko": "여기에 입력…",
+    "th": "พิมพ์ที่นี่…",
+    "zhHans": "请在此输入文字…",
+    "zhHant": "請在此輸入文字..."
   },
   "text_italic": {
     "en": "Italic",
@@ -14695,6 +15983,14 @@
     "zhHans": "喷枪",
     "zhHant": "噴槍"
   },
+  "tool_anchor_short": {
+    "en": "Anchor",
+    "ja": "アンカー",
+    "ko": "앵커",
+    "th": "ยึดตำแหน่ง",
+    "zhHans": "锚定",
+    "zhHant": "錨定"
+  },
   "tool_ballpoint": {
     "en": "Ballpoint",
     "ja": "ボールペン",
@@ -14814,6 +16110,14 @@
     "th": "ดินสอ",
     "zhHans": "铅笔",
     "zhHant": "鉛筆"
+  },
+  "tool_radial_short": {
+    "en": "Radial",
+    "ja": "放射状",
+    "ko": "방사형",
+    "th": "รัศมี",
+    "zhHans": "放射状",
+    "zhHant": "放射狀"
   },
   "tool_text": {
     "en": "Text Studio",
@@ -14998,6 +16302,22 @@
     "th": "กำลังแปลงเสียง…",
     "zhHans": "正在转录文字…",
     "zhHant": "正在轉錄文字…"
+  },
+  "transcription_done": {
+    "en": "Done",
+    "ja": "完了",
+    "ko": "완료",
+    "th": "เสร็จสิ้น",
+    "zhHans": "已完成",
+    "zhHant": "已完成"
+  },
+  "transcription_ready": {
+    "en": "Transcript ready",
+    "ja": "文字起こし完了",
+    "ko": "받아쓰기 준비됨",
+    "th": "ถอดเสียงพร้อมแล้ว",
+    "zhHans": "转录就绪",
+    "zhHant": "轉錄就緒"
   },
   "transfer_failed": {
     "en": "Nothing was transferred",
@@ -15367,6 +16687,22 @@
     "zhHans": "版本号",
     "zhHant": "版本號"
   },
+  "voice_connected": {
+    "en": "Connected",
+    "ja": "接続中",
+    "ko": "연결됨",
+    "th": "เชื่อมต่ออยู่",
+    "zhHans": "连线中",
+    "zhHant": "連線中"
+  },
+  "voice_disconnected": {
+    "en": "Disconnected",
+    "ja": "切断されました",
+    "ko": "연결 끊김",
+    "th": "ตัดการเชื่อมต่อแล้ว",
+    "zhHans": "已中断",
+    "zhHant": "已中斷"
+  },
   "wd_a4_layout": {
     "en": "A4 layout · 100%",
     "ja": "A4 レイアウト · 100%",
@@ -15471,6 +16807,46 @@
     "zhHans": "点这里或用触控笔，直接在文档里手写推导",
     "zhHant": "點這裡或用觸控筆，直接在文件裡手寫推導"
   },
+  "whisper_downloading": {
+    "en": "Downloading…",
+    "ja": "ダウンロード中…",
+    "ko": "다운로드 중…",
+    "th": "กำลังดาวน์โหลด…",
+    "zhHans": "下载中…",
+    "zhHant": "下載中..."
+  },
+  "whisper_downloading_status": {
+    "en": "Downloading Whisper model: %@",
+    "ja": "Whisper モデルをダウンロード中：%@",
+    "ko": "Whisper 모델 다운로드 중: %@",
+    "th": "กำลังดาวน์โหลดโมเดล Whisper: %@",
+    "zhHans": "Whisper 模型下载中：%@",
+    "zhHant": "Whisper 模型下載中：%@"
+  },
+  "whisper_import_failed": {
+    "en": "Import failed: %@",
+    "ja": "読み込みに失敗しました：%@",
+    "ko": "가져오기 실패: %@",
+    "th": "นำเข้าไม่สำเร็จ: %@",
+    "zhHans": "导入失败：%@",
+    "zhHant": "匯入失敗：%@"
+  },
+  "whisper_import_ok": {
+    "en": "Whisper offline model imported.",
+    "ja": "Whisper オフラインモデルを読み込みました。",
+    "ko": "Whisper 오프라인 모델을 가져왔습니다.",
+    "th": "นำเข้าโมเดล Whisper แบบออฟไลน์สำเร็จ",
+    "zhHans": "成功导入 Whisper 离线模型！",
+    "zhHant": "成功匯入 Whisper 離線模型！"
+  },
+  "whisper_pick_failed": {
+    "en": "Could not select the file: %@",
+    "ja": "ファイルを選択できませんでした：%@",
+    "ko": "파일을 선택하지 못했습니다: %@",
+    "th": "เลือกไฟล์ไม่สำเร็จ: %@",
+    "zhHans": "选取文件失败：%@",
+    "zhHant": "選取檔案失敗：%@"
+  },
   "wireframe_button": {
     "en": "Primary action button (CTA)",
     "ja": "主要アクションボタン（CTA）",
@@ -15542,5 +16918,21 @@
     "th": "เปิดแผงจัดรูปแบบข้อความและการจัดพิมพ์",
     "zhHans": "打开字体、字号、段落与版式调色面板",
     "zhHant": "打開字型、字級、段落與版面樣式面板"
+  },
+  "word_style_body": {
+    "en": "Body",
+    "ja": "本文",
+    "ko": "본문",
+    "th": "เนื้อหา",
+    "zhHans": "正文",
+    "zhHant": "本文"
+  },
+  "word_table_label": {
+    "en": "Table (%1@ × %2@)",
+    "ja": "表（%1@ × %2@）",
+    "ko": "표 (%1@ × %2@)",
+    "th": "ตาราง (%1@ × %2@)",
+    "zhHans": "表格（%1@ × %2@）",
+    "zhHant": "表格（%1@ × %2@）"
   }
 }

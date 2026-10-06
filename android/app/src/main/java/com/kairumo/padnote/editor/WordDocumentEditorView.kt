@@ -77,7 +77,7 @@ fun WordDocumentEditorView(
     var textAlign by remember { mutableStateOf(TextAlign.Start) }
     var selectedFontSize by remember { mutableStateOf(16.sp) }
     var selectedTextColor by remember { mutableStateOf(Color(0xFF1E293B)) }
-    var selectedStyleName by remember { mutableStateOf("本文") }
+    var selectedStyleName by remember { mutableStateOf("body") }
 
     val palette = listOf(
         Color(0xFF0F172A),
@@ -108,15 +108,15 @@ fun WordDocumentEditorView(
                 horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 // 樣式切換（本文 / 標題 1 / 標題 2）
-                listOf("本文" to 16.sp, "標題 1" to 22.sp, "標題 2" to 18.sp).forEach { (name, size) ->
+                listOf(Triple("body", "word_style_body", 16.sp), Triple("h1", "heading_1", 22.sp), Triple("h2", "heading_2", 18.sp)).forEach { (name, labelKey, size) ->
                     FilterChip(
                         selected = selectedStyleName == name,
                         onClick = {
                             selectedStyleName = name
                             selectedFontSize = size
-                            if (name == "標題 1") isBold = true
+                            if (name == "h1") isBold = true
                         },
-                        label = { Text(name, fontSize = 12.sp) },
+                        label = { Text(l(labelKey), fontSize = 12.sp) },
                         modifier = Modifier.height(32.dp)
                     )
                 }
@@ -339,7 +339,7 @@ fun WordDocumentEditorView(
                                 .padding(8.dp)
                         ) {
                             Text(
-                                "表格（${table.rows} × ${table.cols}）",
+                                l("word_table_label").replace("%1@", "${table.rows}").replace("%2@", "${table.cols}"),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = Color.Gray
                             )

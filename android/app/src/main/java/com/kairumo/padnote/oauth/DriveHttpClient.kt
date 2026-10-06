@@ -102,7 +102,7 @@ class DriveHttpClient(
                 throw classify(it.code, request.url.encodedPath, it.body?.string() ?: "")
             }
             return it.header("Location")
-                ?: throw FfiDriveException.Backend("可續傳上傳沒有回傳 Location")
+                ?: throw FfiDriveException.Backend(com.kairumo.padnote.L10n.t("drive_resume_no_location"))
         }
     }
 

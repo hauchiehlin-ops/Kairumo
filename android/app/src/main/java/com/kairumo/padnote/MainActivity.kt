@@ -507,7 +507,7 @@ private fun NotebookHome(
             cloudMessage = when {
                 meta == null -> l("not_signed_in")
                 meta.needsReauth -> l("sync_needs_reauth")
-                !meta.ok -> l("sync_failed").replace("%@", meta.error)
+                !meta.ok -> l("sync_failed").replace("%@", L10n.coreText(meta.error))
                 // 講出上傳與下載的數量，與 Apple 一致。只說「完成」的話，
                 // 使用者分不出「真的傳了東西」與「其實什麼也沒做」。
                 else -> l("sync_result")
@@ -520,7 +520,7 @@ private fun NotebookHome(
 
     LaunchedEffect(authRevision) {
         if (authRevision > 0 && com.kairumo.padnote.oauth.GoogleAuth.isSignedIn(activity)) {
-            cloudMessage = "Google 帳號授權成功，正在同步..."
+            cloudMessage = l("sync_google_authorized")
             com.kairumo.padnote.sync.AutoSync.request(
                 activity, uniffi.padnote_core.FfiSyncTrigger.SIGNED_IN)
             runCloudSync()
@@ -3071,7 +3071,7 @@ private fun InkScreen(
                         showShareMenu = false
                         val session = notebook?.first ?: return@DropdownMenuItem
                         runCatching { Exporter.print(activity, session) }
-                            .onFailure { message = it.message }
+                            .onFailure { message = L10n.errorText(it) }
                     }
                 )
                 Divider()
@@ -3172,7 +3172,7 @@ private fun InkScreen(
                         showMenu = false
                         val session = notebook?.first ?: return@DropdownMenuItem
                         runCatching { Exporter.print(activity, session) }
-                            .onFailure { message = it.message }
+                            .onFailure { message = L10n.errorText(it) }
                     }
                 )
                 DropdownMenuItem(
@@ -3910,7 +3910,7 @@ private fun InkScreen(
                     Spacer(Modifier.width(8.dp))
                     Text(
                         if (recordingPaused) "${l10n("recording_paused")}: $timeStr"
-                        else if (backlogUs > 5_000_000L) "${l10n("sync_recording_in_progress")}: $timeStr (轉錄落後 ${backlogUs / 1_000_000L}s)"
+                        else if (backlogUs > 5_000_000L) "${l10n("sync_recording_in_progress")}: $timeStr (${l10n("sync_transcript_lag").replace("%@", "${backlogUs / 1_000_000L}")})"
                         else "${l10n("sync_recording_in_progress")}: $timeStr",
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.SemiBold,
@@ -6151,7 +6151,7 @@ private fun TabletopControlDeck(
                     modifier = Modifier.weight(1f),
                     contentPadding = PaddingValues(horizontal = 4.dp, vertical = 2.dp)
                 ) {
-                    Text("◎ Radial", fontSize = 11.sp, maxLines = 1)
+                    Text("◎ ${l10n("tool_radial_short")}", fontSize = 11.sp, maxLines = 1)
                 }
 
                 OutlinedButton(
@@ -6172,7 +6172,7 @@ private fun TabletopControlDeck(
                     modifier = Modifier.weight(1f),
                     contentPadding = PaddingValues(horizontal = 4.dp, vertical = 2.dp)
                 ) {
-                    Text("🔗 Anchor", fontSize = 11.sp, maxLines = 1)
+                    Text("🔗 ${l10n("tool_anchor_short")}", fontSize = 11.sp, maxLines = 1)
                 }
             }
 
@@ -6361,6 +6361,8 @@ private fun catalogLang(tag: String): String = when (tag) {
     "th" -> "th"
     else -> "zhHant"
 }
+
+internal fun currentLanguageTag(): String = deviceLanguageTag()
 
 private fun deviceLanguageTag(): String {
     // 跨裝置設定優先於系統語系：使用者在 iPad 上把語言改成日文之後，

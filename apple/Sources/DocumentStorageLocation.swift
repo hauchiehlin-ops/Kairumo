@@ -37,15 +37,15 @@ final class DocumentStorageLocation: ObservableObject {
         var errorDescription: String? {
             switch self {
             case let .cannotCreateFolder(path):
-                return "Cannot create the Kairumo document folder at \(path)."
+                return L10n.f("storage_cannot_create", path)
             case let .cannotMoveLibrary(message):
-                return "Kairumo could not move the document library: \(message)"
+                return L10n.f("storage_cannot_move", message)
             case .nestedLibraryLocation:
-                return "Choose a folder outside the current Kairumo Doc folder."
+                return L10n.t("storage_nested")
             case let .destinationContainsAnotherLibrary(path):
-                return "\(path) already contains another Kairumo library. Choose an empty folder so existing documents are not overwritten."
+                return L10n.f("storage_has_library", path)
             case .cannotRememberFolder:
-                return "Kairumo could not retain access to the selected folder. Please choose it again."
+                return L10n.t("storage_cannot_remember")
             }
         }
     }
@@ -378,7 +378,7 @@ final class DocumentStorageLocation: ObservableObject {
             guard fm.fileExists(atPath: to.path),
                   Int64((try? to.resourceValues(forKeys: [.fileSizeKey]))?.fileSize ?? -1) == file.size
             else {
-                throw LocationError.cannotMoveLibrary("複製後驗證失敗：\(file.relative)")
+                throw LocationError.cannotMoveLibrary(L10n.f("storage_verify_failed", file.relative))
             }
         }
     }
