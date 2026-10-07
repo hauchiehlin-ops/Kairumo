@@ -54,6 +54,16 @@ enum StrokeDelta {
         private static func quantize(_ value: CGFloat) -> Int {
             Int((value * 100).rounded())
         }
+
+        /// 可以存檔的字串身分（「已擦除」名單用）。
+        var key: String {
+            "\(pointCount)|\(firstX),\(firstY)|\(lastX),\(lastY)|\(color.map(String.init).joined(separator: ","))"
+        }
+    }
+
+    /// `baseline` 裡有、`current` 已經沒有的筆畫 —— 使用者擦掉（或復原掉）的。
+    static func removed(in current: PKDrawing, since baseline: PKDrawing) -> [PKStroke] {
+        added(in: baseline, since: current)
     }
 
     /// `current` 裡不在 `baseline` 的筆畫。
@@ -79,5 +89,56 @@ enum StrokeDelta {
             }
         }
         return out
+    }
+}
+
+
+/// 使用者在這台擦掉的 PencilKit 筆畫的身分，每頁一份。
+///
+/// # 為什麼需要
+///
+/// 匯出時這台舊的筆畫檔會被整批換掉，但同步是看**檔案大小**的：雲端那份較大的舊檔會被
+/// 下載回來，已經擦掉的筆畫就「復活」了（使用者看到的是橡皮擦擦不乾淨、過一陣子又回來）。
+/// 格式是只追加的，要讓「刪除」成為可同步的資料得動核心；在那之前，本機先記住自己擦過什麼，
+/// 匯入時把它們濾掉。重新畫出同一條線（或復原擦除）會把它從名單拿掉。
+enum ErasedInkLedger {
+    private nonisolated static func url(_ directory: URL, _ notebookId: String, _ page: Int) -> URL {
+        directory.appending(path: "\(notebookId)_p\(page).erased-ink.json")
+    }
+
+    nonisolated static func load(in directory: URL, notebookId: String, page: Int) -> Set<String> {
+        guard let data = try? Data(contentsOf: url(directory, notebookId, page)),
+              let keys = try? JSONDecoder().decode([String].self, from: data)
+        else { return [] }
+        return Set(keys)
+    }
+
+    nonisolated static func save(_ keys: Set<String>, in directory: URL, notebookId: String, page: Int) {
+        let file = url(directory, notebookId, page)
+        if keys.isEmpty {
+            try? FileManager.default.removeItem(at: file)
+            return
+        }
+        guard let data = try? JSONEncoder().encode(keys.sorted()) else { return }
+        try? data.write(to: file, options: .atomic)
+    }
+
+    /// 這次編輯擦掉與重新加入的筆畫，更新名單。沒有變動就不寫檔。
+    nonisolated static func record(
+        removed: [PKStroke], added: [PKStroke], in directory: URL, notebookId: String, page: Int
+    ) {
+        guard !removed.isEmpty || !added.isEmpty else { return }
+        var keys = load(in: directory, notebookId: notebookId, page: page)
+        let before = keys
+        keys.formUnion(removed.map { StrokeDelta.Identity($0).key })
+        keys.subtract(added.map { StrokeDelta.Identity($0).key })
+        if keys != before { save(keys, in: directory, notebookId: notebookId, page: page) }
+    }
+
+    /// 把名單上的筆畫從一份（同步合併回來的）圖濾掉。
+    nonisolated static func filtered(_ drawing: PKDrawing, erased: Set<String>) -> PKDrawing {
+        guard !erased.isEmpty else { return drawing }
+        let kept = drawing.strokes.filter { !erased.contains(StrokeDelta.Identity($0).key) }
+        return kept.count == drawing.strokes.count ? drawing : PKDrawing(strokes: kept)
     }
 }

@@ -356,6 +356,17 @@ final class PencilIntentObserver: UIGestureRecognizer, UIGestureRecognizerDelega
     ) -> Bool { true }
 }
 
+/// 畫布復原／橡皮擦的診斷紀錄（進「診斷」的系統日誌）。
+///
+/// 「最先畫的幾筆無法復原、也擦不掉」只在實機出現過，模擬器重現不了；
+/// 這一條線記下每一次**程式指派 `drawing`**（會讓 PencilKit 先前登記的復原項失效）
+/// 與每一次復原的實際效果，下次發生時就看得出是哪條路徑弄壞的。
+enum CanvasDiag {
+    static func log(_ message: String) {
+        SyncLogger.logAsync("【畫布】\(message)", source: .general)
+    }
+}
+
 final class AdaptiveCanvasView: PKCanvasView {
     /// 這一頁的高度（由 SwiftUI 端更新）
     /// 觸控觀察。
@@ -740,6 +751,15 @@ final class AdaptiveCanvasView: PKCanvasView {
         for delay in [0.0, 0.4] {
             DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
                 guard let self, self.window != nil, !self.drawing.strokes.isEmpty else { return }
+                // 使用者已經畫了東西（復原堆疊有項目）就**不要**再指派：指派會讓那些復原項
+                // 全部失效 —— 這正是「剛打開筆記本畫的前幾筆復原不了」的候選原因。
+                // 只讓畫面重畫就夠了。
+                if self.undoManager?.canUndo == true {
+                    CanvasDiag.log("初次補畫略過指派（已有復原項，延遲 \(delay)s）")
+                    self.setNeedsDisplay()
+                    return
+                }
+                CanvasDiag.log("初次補畫重新指派 drawing（\(self.drawing.strokes.count) 筆，延遲 \(delay)s）")
                 let coordinator = self.delegate as? CanvasRepresentable.Coordinator
                 let current = self.drawing
                 coordinator?.isProgrammaticUpdate = true
@@ -1090,6 +1110,7 @@ struct CanvasRepresentable: UIViewRepresentable {
         }
 
         if uiView.drawing != drawing {
+            CanvasDiag.log("updateUIView 重新指派 drawing：畫布 \(uiView.drawing.strokes.count) 筆 → \(drawing.strokes.count) 筆，復原項 \(uiView.undoManager?.canUndo == true ? "有" : "無")")
             context.coordinator.isProgrammaticUpdate = true
             uiView.drawing = drawing
             context.coordinator.isProgrammaticUpdate = false
@@ -1117,6 +1138,7 @@ struct CanvasRepresentable: UIViewRepresentable {
                 let cleaned = PalmRejectionCoordinator.retracting(uiView.drawing, landedAt: landedAt)
                 guard cleaned.strokes.count != uiView.drawing.strokes.count else { return }
                 let removed = uiView.drawing.strokes.count - cleaned.strokes.count
+                CanvasDiag.log("掌拒收回 \(removed) 筆並重新指派 drawing")
                 context.coordinator.isProgrammaticUpdate = true
                 uiView.drawing = cleaned
                 context.coordinator.isProgrammaticUpdate = false
@@ -1479,9 +1501,11 @@ struct CanvasRepresentable: UIViewRepresentable {
                 // 寫成功了，而匯出的檔案裡沒有它；更糟的是它留在畫布上，
                 // 於是**下一筆、再下一筆**都會連它一起重新檢查，
                 // 「這一筆畫在可列印範圍之外」的提示就一直跳。
+                CanvasDiag.log("可列印範圍收回 \(effective.strokes.count - corrected.strokes.count) 筆並重新指派 drawing")
                 isProgrammaticUpdate = true
                 canvasView.drawing = corrected
                 isProgrammaticUpdate = false
+                (canvasView as? AdaptiveCanvasView)?.dropDeadUndoEntries(max: max(0, effective.strokes.count - corrected.strokes.count))
                 effective = corrected
             }
             parent.drawing = effective
@@ -1957,6 +1981,16 @@ public struct NotebookEditorView: View {
     /// 一鍵恢復初始狀態（捨棄進入編輯器後的所有修改）
     @State private var initialNotebookSnapshot: NotebookDocument? = nil
     @State private var initialPageDrawings: [Int: PKDrawing] = [:]
+    /// 每一頁第一次載入時的專業筆畫（圖學筆畫、專業筆刷）與「已擦除」名單 ——
+    /// 「恢復初始狀態」要連它們一起還原，不然圖學筆記本裡畫的線一條都不會少。
+    @State private var initialPageInk: [Int: InitialPageInk] = [:]
+
+    struct InitialPageInk {
+        var own: [ProStroke]
+        var foreign: [ProStroke]
+        var suppressed: Set<String>
+        var erasedPencilKit: Set<String>
+    }
     @State private var showRevertConfirmAlert: Bool = false
     /// 圖層面板裡選取的形狀。多選才群組得起來。
     @State private var selectedShapeIds: Set<String> = []
@@ -2418,7 +2452,8 @@ public struct NotebookEditorView: View {
             loadCurrentPage()
             initialNotebookSnapshot = notebook
             initialPageDrawings.removeAll()
-            initialPageDrawings[0] = currentDrawing
+            initialPageInk.removeAll()
+            captureInitialPageState(page: 0, drawing: currentDrawing)
             PageThumbnailRenderer.invalidateAll()
         }
         .background(
@@ -2455,7 +2490,7 @@ public struct NotebookEditorView: View {
             // 擷取剛打開筆記本時的初始狀態（提供一鍵恢復初始狀態功能）
             if initialNotebookSnapshot == nil {
                 initialNotebookSnapshot = notebook
-                initialPageDrawings[currentPageIndex] = currentDrawing
+                captureInitialPageState(page: currentPageIndex, drawing: currentDrawing)
             }
             // 進到編輯器時也亮一次：第一次開的人要知道自己在哪個模式。
             flashModeBadge()
@@ -2827,12 +2862,14 @@ public struct NotebookEditorView: View {
             Button(localizationManager.localized("revert_confirm_action"), role: .destructive) {
                 if let snapshot = initialNotebookSnapshot {
                     notebook = snapshot
-                    for (pageIdx, savedDrawing) in initialPageDrawings {
-                        store.saveDrawing(notebookId: notebook.id, pageIndex: pageIdx, drawing: savedDrawing)
-                    }
+                    restoreInitialPages()
                     currentDrawing = initialPageDrawings[currentPageIndex] ?? store.loadDrawing(notebookId: notebook.id, pageIndex: currentPageIndex)
                     if let canvas = canvasView {
+                        // 程式指派 drawing 會讓復原堆疊裡的項目全部失效：整個清掉，
+                        // 免得按復原吃掉點擊、什麼都沒發生。
                         canvas.drawing = currentDrawing
+                        canvas.undoManager?.removeAllActions()
+                        (canvas as? AdaptiveCanvasView)?.proLayer?.reload()
                     }
                     store.updateNotebook(notebook)
                     activeSelectedObjectId = nil
@@ -8542,6 +8579,45 @@ public struct NotebookEditorView: View {
     }
 
     // MARK: - 儲存、延伸與套索編輯核心
+    /// 這一頁第一次載入時的狀態（只記一次）：筆畫、專業筆畫與已擦除名單。
+    /// 第一次載入一定早於這頁的任何編輯，所以它就是「初始狀態」。
+    private func captureInitialPageState(page: Int, drawing: PKDrawing) {
+        if initialPageDrawings[page] == nil { initialPageDrawings[page] = drawing }
+        if initialPageInk[page] == nil {
+            let dir = store.drawingsDirectory
+            initialPageInk[page] = InitialPageInk(
+                own: ProInkStore.load(in: dir, notebookId: notebook.id, page: page),
+                foreign: ProInkStore.load(in: dir, notebookId: notebook.id, page: page, foreign: true),
+                suppressed: ProInkStore.loadSuppressed(in: dir, notebookId: notebook.id, page: page),
+                erasedPencilKit: ErasedInkLedger.load(
+                    in: store.syncBaselineDirectory, notebookId: notebook.id, page: page))
+        }
+    }
+
+    /// 把所有看過的頁面還原成第一次載入時的樣子。
+    private func restoreInitialPages() {
+        let dir = store.drawingsDirectory
+        let baselineDir = store.syncBaselineDirectory
+        for (page, initial) in initialPageDrawings {
+            // 這一頁現在的筆畫 → 被還原拿掉的要記進「已擦除」名單，不然同步會把雲端的舊檔帶回來。
+            let now = store.loadDrawing(notebookId: notebook.id, pageIndex: page)
+            let state = initialPageInk[page]
+            var erased = ErasedInkLedger.load(in: baselineDir, notebookId: notebook.id, page: page)
+            erased.formUnion(StrokeDelta.removed(in: initial, since: now).map { StrokeDelta.Identity($0).key })
+            erased.subtract(initial.strokes.map { StrokeDelta.Identity($0).key })
+            ErasedInkLedger.save(erased, in: baselineDir, notebookId: notebook.id, page: page)
+
+            store.saveDrawing(notebookId: notebook.id, pageIndex: page, drawing: initial)
+            coreInkBaselines[page] = initial
+            if let state {
+                ProInkStore.save(state.own, in: dir, notebookId: notebook.id, page: page)
+                ProInkStore.save(state.foreign, in: dir, notebookId: notebook.id, page: page, foreign: true)
+                ProInkStore.saveSuppressed(state.suppressed, in: dir, notebookId: notebook.id, page: page)
+            }
+        }
+        pendingCoreInk.removeAll()
+    }
+
     private func loadCurrentPage() {
         if let updated = store.notebooks.first(where: { $0.id == notebook.id }) {
             self.notebook = updated
@@ -8551,6 +8627,7 @@ public struct NotebookEditorView: View {
         PageGeometry.use(format: notebook.pageFormatId)
         let loaded = store.loadDrawing(notebookId: notebook.id, pageIndex: currentPageIndex)
         self.currentDrawing = loaded
+        captureInitialPageState(page: currentPageIndex, drawing: loaded)
         self.lastStrokeCount = loaded.strokes.count
         self.currentPageHeight = notebook.height(forPage: currentPageIndex)
         self.lasso.clear()
@@ -8841,7 +8918,11 @@ public struct NotebookEditorView: View {
             collaborationManager.broadcastAttachmentDelete(id: addedId, type: "text")
             PageThumbnailRenderer.invalidateAll()
         } else {
+            let before = canvasView?.drawing.strokes.count ?? -1
+            let canUndo = canvasView?.undoManager?.canUndo == true
             canvasView?.undoManager?.undo()
+            let after = canvasView?.drawing.strokes.count ?? -1
+            CanvasDiag.log("復原：筆畫 \(before) → \(after)，復原項\(canUndo ? "有" : "無")")
         }
     }
 
@@ -9050,6 +9131,10 @@ public struct NotebookEditorView: View {
             store.saveDrawing(notebookId: notebook.id, pageIndex: page, drawing: drawing)
             let baseline = coreInkBaseline(for: page)
             let added = StrokeDelta.added(in: drawing, since: baseline)
+            // 擦掉的筆畫記下來，匯入時濾掉（不然同步會把雲端的舊檔下載回來、筆畫復活）。
+            ErasedInkLedger.record(
+                removed: StrokeDelta.removed(in: drawing, since: baseline), added: added,
+                in: store.syncBaselineDirectory, notebookId: notebook.id, page: page)
             guard !added.isEmpty else {
                 coreInkBaselines[page] = drawing
                 continue
