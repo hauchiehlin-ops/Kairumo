@@ -192,6 +192,28 @@ enum ProInkStore {
         try? data.write(to: file, options: .atomic)
     }
 
+    /// 使用者在這台擦掉的「別台的筆畫」的內容指紋。
+    ///
+    /// 別台的筆畫是同步下載下來的，雲端那一份還在：不記住的話，下一輪匯入又把它
+    /// 帶回來，使用者擦掉的東西會「復活」。匯入時用它過濾。
+    nonisolated static func loadSuppressed(in directory: URL, notebookId: String, page: Int) -> Set<String> {
+        let file = directory.appending(path: "\(notebookId)_p\(page).proink-suppressed.json")
+        guard let data = try? Data(contentsOf: file),
+              let keys = try? JSONDecoder().decode([String].self, from: data)
+        else { return [] }
+        return Set(keys)
+    }
+
+    nonisolated static func saveSuppressed(_ keys: Set<String>, in directory: URL, notebookId: String, page: Int) {
+        let file = directory.appending(path: "\(notebookId)_p\(page).proink-suppressed.json")
+        if keys.isEmpty {
+            try? FileManager.default.removeItem(at: file)
+            return
+        }
+        guard let data = try? JSONEncoder().encode(keys.sorted()) else { return }
+        try? data.write(to: file, options: .atomic)
+    }
+
     /// 檔案時間，同步用來判斷「工作副本是不是比套件新」。
     nonisolated static func modified(in directory: URL, notebookId: String, page: Int) -> Date? {
         let values = try? url(directory, notebookId, page, foreign: false)
@@ -805,13 +827,63 @@ final class ProInkLayerView: UIView {
         where drafting.canEdit(layer: stroke.layerId, notebookId: notebookId) && touches(stroke, path: path, radius: radius) {
             hit.append(stroke)
         }
-        guard !hit.isEmpty else { return 0 }
-        let ids = Set(hit.map(\.id))
-        ownStrokes.removeAll { ids.contains($0.id) }
-        for stroke in hit { setNeedsDisplay(stroke.bounds) }
-        persist()
-        registerUndo(restoring: hit)
-        return hit.count
+        // **別台（或舊安裝、重新下載之後）的筆畫也要擦得掉。** 它們看得見，
+        // 只擦自己的話使用者會遇到「畫面上有、橡皮擦與復原都碰不到」的筆畫。
+        var hitForeign: [ProStroke] = []
+        for stroke in foreignStrokes
+        where drafting.canEdit(layer: stroke.layerId, notebookId: notebookId) && touches(stroke, path: path, radius: radius) {
+            hitForeign.append(stroke)
+        }
+        guard !hit.isEmpty || !hitForeign.isEmpty else { return 0 }
+        if !hit.isEmpty {
+            let ids = Set(hit.map(\.id))
+            ownStrokes.removeAll { ids.contains($0.id) }
+            for stroke in hit { setNeedsDisplay(stroke.bounds) }
+            persist()
+            registerUndo(restoring: hit)
+        }
+        if !hitForeign.isEmpty { removeForeign(hitForeign) }
+        return hit.count + hitForeign.count
+    }
+
+    /// 擦掉別台的筆畫：從畫面與檔案拿掉，指紋記進「已擦除」名單讓下一輪同步不再帶回來。可復原。
+    private func removeForeign(_ strokes: [ProStroke]) {
+        guard let directory else { return }
+        let ids = Set(strokes.map(\.id))
+        foreignStrokes.removeAll { ids.contains($0.id) }
+        for stroke in strokes { setNeedsDisplay(stroke.bounds) }
+        var keys = ProInkStore.loadSuppressed(in: directory, notebookId: notebookId, page: pageIndex)
+        keys.formUnion(strokes.map(\.contentKey))
+        ProInkStore.saveSuppressed(keys, in: directory, notebookId: notebookId, page: pageIndex)
+        ProInkStore.save(foreignStrokes, in: directory, notebookId: notebookId, page: pageIndex, foreign: true)
+        onChanged?()
+        registerForeignUndo(restoring: strokes)
+    }
+
+    private func restoreForeign(_ strokes: [ProStroke]) {
+        guard let directory else { return }
+        foreignStrokes.append(contentsOf: strokes)
+        for stroke in strokes { setNeedsDisplay(stroke.bounds) }
+        var keys = ProInkStore.loadSuppressed(in: directory, notebookId: notebookId, page: pageIndex)
+        keys.subtract(strokes.map(\.contentKey))
+        ProInkStore.saveSuppressed(keys, in: directory, notebookId: notebookId, page: pageIndex)
+        ProInkStore.save(foreignStrokes, in: directory, notebookId: notebookId, page: pageIndex, foreign: true)
+        onChanged?()
+    }
+
+    private func registerForeignUndo(restoring strokes: [ProStroke]) {
+        guard let manager = undoManagerProvider?() else { return }
+        manager.registerUndo(withTarget: self) { layer in
+            layer.restoreForeign(strokes)
+            layer.registerForeignRedo(removing: strokes)
+        }
+    }
+
+    private func registerForeignRedo(removing strokes: [ProStroke]) {
+        guard let manager = undoManagerProvider?() else { return }
+        manager.registerUndo(withTarget: self) { layer in
+            layer.removeForeign(strokes)
+        }
     }
 
     private func touches(_ stroke: ProStroke, path: [CGPoint], radius: CGFloat) -> Bool {

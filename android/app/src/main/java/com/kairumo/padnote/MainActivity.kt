@@ -4278,8 +4278,24 @@ private fun InkScreen(
                     .verticalScroll(rememberScrollState())
             ) { inkBar() }
         }
+        // 圖學列佔用版面，不浮在畫布上：疊在頁面最上方會蓋住頁首標題與題目文字。
+        // 與 Apple 的 `safeAreaInset(edge: .top)` 一致。
+        Column(modifier = Modifier.weight(1f).fillMaxHeight()) {
+        if (inkTool.isDrafting && editorMode == EditorMode.DRAW) {
+            com.kairumo.padnote.ink.DraftingBar(
+                languageTag = deviceLanguageTag(),
+                onOpenSolidStudio = { showSolidStudio = true },
+                onOpenToolbox = { showDraftingToolbox = true },
+                onMarkAngle = { markProtractorReading(engine); revision++ },
+                onCloseTool = {
+                    DraftingState.selectTool(DraftTool.NONE)
+                    DraftToolController.reset(engine)
+                },
+                modifier = Modifier.padding(top = 8.dp, bottom = 2.dp, start = 8.dp, end = 8.dp)
+            )
+        }
         Box(
-            modifier = Modifier.weight(1f).fillMaxHeight().padding(8.dp)
+            modifier = Modifier.weight(1f).fillMaxWidth().padding(8.dp)
                 .dragAndDropTarget(
                     shouldStartDragAndDrop = { start ->
                         start.mimeTypes().any { it.startsWith("image/") }
@@ -4583,22 +4599,6 @@ private fun InkScreen(
                     modifier = Modifier.zIndex(10f).align(Alignment.BottomStart).padding(12.dp)
                 )
             }
-            // 圖學：製圖筆組、圖層、吸附（見 DraftingBar.kt）。
-            if (inkTool.isDrafting && editorMode == EditorMode.DRAW) {
-                com.kairumo.padnote.ink.DraftingBar(
-                    languageTag = deviceLanguageTag(),
-                    onOpenSolidStudio = { showSolidStudio = true },
-                    onOpenToolbox = { showDraftingToolbox = true },
-                    onMarkAngle = { markProtractorReading(engine); revision++ },
-                    onCloseTool = {
-                        DraftingState.selectTool(DraftTool.NONE)
-                        DraftToolController.reset(engine)
-                    },
-                    // zIndex：頁面上的文字方塊等物件畫在後面，不加的話它們會蓋住工具列、吃掉點擊。
-                    modifier = Modifier.zIndex(10f).align(Alignment.TopCenter).padding(top = 12.dp, start = 8.dp, end = 8.dp)
-                )
-            }
-
             // 套索層疊在畫布上面。套索模式下它吃掉所有觸控，畫布完全收不到 ——
             // 不必在 InkEngine 裡加「現在是不是套索模式」的分支，而那種分支
             // 正是墨跡路徑最不該有的東西。
@@ -5217,6 +5217,7 @@ private fun InkScreen(
                 )
             }
 
+        }
         }
         if (sideToolbar && toolbarPlacement == uniffi.padnote_core.FfiPlacement.RIGHT) {
             androidx.compose.foundation.layout.Column(

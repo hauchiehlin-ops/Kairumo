@@ -27,6 +27,7 @@ object CoreMessagePatterns {
         "log_msg_016" to listOf("【資料夾同步】", " 完成。上傳: ", ", 下載: ", ", 失敗: ", ""),
         "log_msg_032" to listOf("【前台極速軌】優先同步當前作用中筆記 (", "...)..."),
         "core_msg_163" to listOf("授權檔只有 ", " bytes，多半不是授權文本而是錯誤頁"),
+        "core_msg_223" to listOf("雲端尚無此筆記本之操作記錄，已清理暫存等待來源端上傳"),
         "log_msg_008" to listOf("無法取得有效權杖，Google Drive 同步中止"),
         "log_msg_063" to listOf("【回收】完成，刪除 ", " 個檔案；", " 本在等這些裝置確認：", ""),
         "core_msg_202" to listOf("Drive 沒有回傳 startPageToken"),

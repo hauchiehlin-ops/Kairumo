@@ -1609,6 +1609,45 @@ private fun CloudSyncCard(state: CloudSyncUiState, l: (String) -> String) {
                 )
             }
 
+            // 雲端有條目、沒有內容的筆記本：本機沒有副本，清單上刪不到它。
+            // 這裡是唯一能把它清掉的地方（與 Apple 的雲端同步面板一致）。
+            if (state.signedIn) {
+                val context = androidx.compose.ui.platform.LocalContext.current
+                var pending by remember { mutableStateOf<Pair<String, String>?>(null) }
+                CloudSync.emptyCloudNotebooks.forEach { item ->
+                    TextButton(
+                        onClick = { pending = item },
+                        modifier = Modifier.testTag("home.cloud.remove_empty")
+                    ) {
+                        Text(
+                            l("sync_orphan_remove").replace("%@", item.second),
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
+                }
+                pending?.let { item ->
+                    AlertDialog(
+                        onDismissRequest = { pending = null },
+                        title = { Text(l("sync_orphan_confirm_title")) },
+                        text = { Text(l("sync_orphan_confirm_message")) },
+                        confirmButton = {
+                            TextButton(onClick = {
+                                AccountSyncStore.recordDeletion(context, item.first)
+                                CloudSync.forgetEmptyCloudNotebook(item.first)
+                                pending = null
+                                state.onSyncNow()
+                            }) {
+                                Text(
+                                    l("sync_orphan_remove").replace("%@", item.second),
+                                    color = MaterialTheme.colorScheme.error
+                                )
+                            }
+                        },
+                        dismissButton = { TextButton(onClick = { pending = null }) { Text(l("cancel")) } }
+                    )
+                }
+            }
+
             if (state.signedIn) {
                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     TextButton(

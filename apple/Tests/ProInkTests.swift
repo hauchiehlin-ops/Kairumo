@@ -144,6 +144,36 @@ final class ProInkTests: XCTestCase {
         XCTAssertEqual(layer.ownStrokes.count, 1)
     }
 
+    /// 別台（或舊安裝、重新下載之後）的筆畫看得見，橡皮擦與復原卻碰不到 ——
+    /// 使用者看到的是「前幾筆擦不掉也無法復原」。
+    @MainActor
+    func testForeignStrokesCanBeErasedUndoneAndStayErasedAcrossSync() throws {
+        let nb = "foreign-\(UUID().uuidString)"
+        let foreign = stroke("charcoal")
+        ProInkStore.save([foreign], in: workDir, notebookId: nb, page: 0, foreign: true)
+        let manager = UndoManager()
+        manager.groupsByEvent = false
+        let layer = ProInkLayerView(frame: CGRect(x: 0, y: 0, width: 400, height: 300))
+        layer.undoManagerProvider = { manager }
+        layer.load(directory: workDir, notebookId: nb, pageIndex: 0)
+        XCTAssertEqual(layer.allStrokes.count, 1)
+
+        let p = CGPoint(x: CGFloat(foreign.points[0].x), y: CGFloat(foreign.points[0].y))
+        manager.beginUndoGrouping()
+        XCTAssertEqual(layer.erase(along: [p], radius: 12), 1, "別台的筆畫要擦得掉")
+        manager.endUndoGrouping()
+        XCTAssertTrue(layer.allStrokes.isEmpty)
+        XCTAssertTrue(ProInkStore.loadSuppressed(in: workDir, notebookId: nb, page: 0).contains(foreign.contentKey),
+                      "要記住它被擦掉了，不然下一輪同步又帶回來")
+        XCTAssertTrue(ProInkStore.load(in: workDir, notebookId: nb, page: 0, foreign: true).isEmpty)
+
+        manager.undo()
+        XCTAssertEqual(layer.allStrokes.count, 1, "復原要把它放回來")
+        XCTAssertTrue(ProInkStore.loadSuppressed(in: workDir, notebookId: nb, page: 0).isEmpty)
+        manager.redo()
+        XCTAssertTrue(layer.allStrokes.isEmpty)
+    }
+
     @MainActor
     func testErasingMissesStrokesFarAway() {
         let layer = ProInkLayerView(frame: CGRect(x: 0, y: 0, width: 400, height: 300))

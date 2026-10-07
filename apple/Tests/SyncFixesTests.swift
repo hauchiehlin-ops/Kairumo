@@ -314,6 +314,24 @@ final class RecordingTitleInPackageTests: XCTestCase {
         XCTAssertEqual(imported.recordingTitles["a.opus"], "週會紀錄")
     }
 
+    /// 只有 manifest、沒有任何 oplog 的套件，檔案時間比工作副本新時，原本被判成
+    /// 「已經包含」而永遠不匯出 —— 雲端清單有條目、卻永遠沒有內容。
+    func testAPackageWithoutAnyOplogIsAlwaysExported() throws {
+        let inputs = try exportInputs(titles: [:], document: doc())
+        _ = try NotebookSyncCoordinator.exportOne(inputs)
+        XCTAssertFalse(NotebookSyncCoordinator.workingCopyNeedsExport(inputs))
+        // 模擬「只剩 manifest」：套件在、時間比工作副本新、但沒有任何操作記錄。
+        let opsDir = inputs.package.appendingPathComponent("doc/ops")
+        for url in try FileManager.default.contentsOfDirectory(at: opsDir, includingPropertiesForKeys: nil)
+        where url.pathExtension == "oplog" {
+            try FileManager.default.removeItem(at: url)
+        }
+        XCTAssertTrue(NotebookSyncCoordinator.workingCopyNeedsExport(inputs),
+                      "沒有 oplog 的套件從來沒匯出過，不能因為時間較新就略過")
+        _ = try NotebookSyncCoordinator.exportOne(inputs)
+        XCTAssertFalse(NotebookSyncCoordinator.workingCopyNeedsExport(inputs))
+    }
+
     func testANewOrRenamedTitleForcesAnExportEvenWhenThePackageLooksNewer() throws {
         let first = try exportInputs(titles: ["a.opus": "T0"], document: doc())
         _ = try NotebookSyncCoordinator.exportOne(first)
