@@ -2890,6 +2890,7 @@ public struct NotebookEditorView: View {
                     store.updateNotebook(notebook)
                     continuousReloadGeneration += 1
                     thumbnailRevision += 1
+                    showCanvasNotice(localizationManager.localized("revert_done"))
                     activeSelectedObjectId = nil
                     inlineEditingTextId = nil
                     editingTextId = nil

@@ -848,7 +848,7 @@ final class ProInkLayerView: UIView {
     }
 
     /// 擦掉別台的筆畫：從畫面與檔案拿掉，指紋記進「已擦除」名單讓下一輪同步不再帶回來。可復原。
-    private func removeForeign(_ strokes: [ProStroke]) {
+    private func removeForeign(_ strokes: [ProStroke], registersUndo: Bool = true) {
         guard let directory else { return }
         let ids = Set(strokes.map(\.id))
         foreignStrokes.removeAll { ids.contains($0.id) }
@@ -859,7 +859,7 @@ final class ProInkLayerView: UIView {
         ProInkStore.save(foreignStrokes, in: directory, notebookId: notebookId, page: pageIndex, foreign: true)
         onChanged?()
         NotificationCenter.default.post(name: AppCommand.proInkDidChange, object: notebookId.lowercased())
-        registerForeignUndo(restoring: strokes)
+        if registersUndo { registerForeignUndo(restoring: strokes) }
     }
 
     private func restoreForeign(_ strokes: [ProStroke]) {
@@ -1131,11 +1131,42 @@ final class ProInkLayerView: UIView {
 
     /// 把離 `point` 最近的一筆（鎖定／隱藏的圖層除外）改到 `layer`，線型與顏色不動。
     /// 回傳有沒有改到。可復原。
+    ///
+    /// **別台裝置同步來的筆畫也能改。** 它們在自己的檔案裡（唯讀的外來區），不能就地改；
+    /// 做法與「擦掉別台的筆畫」同一套：外來的那一筆記進「已擦除」名單（本機不再顯示），
+    /// 同時在自己名下寫一筆新圖層的複本。一次復原兩件事一起還原。
     @discardableResult
     func reassignLayer(near point: CGPoint, to layer: UInt8, radius: CGFloat = 14) -> Bool {
+        let own = nearestStroke(in: ownStrokes, to: point, radius: radius)
+        let foreign = nearestStroke(in: foreignStrokes, to: point, radius: radius)
+        // 兩邊都有就取比較近的；一樣近取自己的。
+        if let own, own.distance <= (foreign?.distance ?? .greatestFiniteMagnitude) {
+            let before = ownStrokes[own.index]
+            guard before.layerId != layer else { return true }
+            setLayer(layer, ofStroke: before.id)
+            registerLayerUndo(strokeId: before.id, previous: before.layerId)
+            return true
+        }
+        guard let foreign else { return false }
+        let original = foreignStrokes[foreign.index]
+        guard original.layerId != layer else { return true }
+        var copy = original
+        copy.id = UUID().uuidString
+        copy.layer = layer == 0 ? nil : layer
+        removeForeign([original], registersUndo: false)
+        ownStrokes.append(copy)
+        setNeedsDisplay(copy.bounds)
+        persist()
+        registerForeignReassignUndo(original: original, copyId: copy.id, target: layer)
+        return true
+    }
+
+    /// 在 `strokes` 裡找離 `point` 最近、而且圖層可編輯的一筆。
+    private func nearestStroke(in strokes: [ProStroke], to point: CGPoint, radius: CGFloat)
+        -> (index: Int, distance: CGFloat)? {
         let drafting = DraftingState.shared
         var best: (index: Int, distance: CGFloat)?
-        for (i, stroke) in ownStrokes.enumerated()
+        for (i, stroke) in strokes.enumerated()
         where drafting.canEdit(layer: stroke.layerId, notebookId: notebookId) {
             guard stroke.bounds.insetBy(dx: -radius, dy: -radius).contains(point) else { continue }
             let reach = radius + CGFloat(stroke.baseWidth) * 0.5
@@ -1145,17 +1176,41 @@ final class ProInkLayerView: UIView {
             if pts.count == 1 {
                 nearest = hypot(CGFloat(pts[0].x) - point.x, CGFloat(pts[0].y) - point.y)
             }
-            for i in 0..<max(0, pts.count - 1) {
-                nearest = min(nearest, Self.distance(from: point, toSegment: pts[i], pts[i + 1]))
+            for j in 0..<max(0, pts.count - 1) {
+                nearest = min(nearest, Self.distance(from: point, toSegment: pts[j], pts[j + 1]))
             }
             if nearest <= reach, nearest < (best?.distance ?? .greatestFiniteMagnitude) { best = (i, nearest) }
         }
-        guard let best else { return false }
-        let before = ownStrokes[best.index]
-        guard before.layerId != layer else { return true }
-        setLayer(layer, ofStroke: before.id)
-        registerLayerUndo(strokeId: before.id, previous: before.layerId)
-        return true
+        return best
+    }
+
+    /// 復原「別台筆畫改圖層」：拿掉自己名下的複本，把外來的原筆畫放回來。
+    private func registerForeignReassignUndo(original: ProStroke, copyId: String, target: UInt8) {
+        guard let manager = undoManagerProvider?() else { return }
+        manager.registerUndo(withTarget: self) { layer in
+            if let i = layer.ownStrokes.firstIndex(where: { $0.id == copyId }) {
+                let copy = layer.ownStrokes.remove(at: i)
+                layer.setNeedsDisplay(copy.bounds)
+                layer.persist()
+            }
+            layer.restoreForeign([original])
+            // 重做：再改一次同一筆。
+            manager.registerUndo(withTarget: layer) { again in
+                again.redoForeignReassign(original: original, to: target, copyId: copyId)
+            }
+        }
+    }
+
+    private func redoForeignReassign(original: ProStroke, to target: UInt8, copyId: String) {
+        guard foreignStrokes.contains(where: { $0.id == original.id }) else { return }
+        var copy = original
+        copy.id = copyId
+        copy.layer = target == 0 ? nil : target
+        removeForeign([original], registersUndo: false)
+        ownStrokes.append(copy)
+        setNeedsDisplay(copy.bounds)
+        persist()
+        registerForeignReassignUndo(original: original, copyId: copyId, target: target)
     }
 
     private static func distance(from p: CGPoint, toSegment a: ProPoint, _ b: ProPoint) -> CGFloat {

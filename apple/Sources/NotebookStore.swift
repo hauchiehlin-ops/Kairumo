@@ -3638,7 +3638,10 @@ public final class NotebookStore: ObservableObject {
         if let session = try? PadnoteSession.openExisting(path: package.path, deviceId: deviceId),
             let milestones = try? session.milestones()
         {
-            list = milestones.map { snapshot(from: $0, notebookId: notebookId) }
+            // Android 每次開編輯器會插一個內部標記（「一鍵恢復初始狀態」用），不是使用者的快照。
+            list = milestones
+                .filter { $0.title != "\u{200B}editor-open" }
+                .map { snapshot(from: $0, notebookId: notebookId) }
         }
         return list + legacySnapshots(notebookId: notebookId)
     }

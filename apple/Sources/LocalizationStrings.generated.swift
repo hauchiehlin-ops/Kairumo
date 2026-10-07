@@ -15127,6 +15127,22 @@ extension LocalizationManager {
             .ko: "버리고 복원",
             .th: "ละทิ้งและย้อนกลับ"
         ],
+        "revert_done": [
+            .zhHant: "已恢復到初始狀態",
+            .en: "Reverted to the initial state",
+            .zhHans: "已恢复到初始状态",
+            .ja: "開いた時の状態に戻しました",
+            .ko: "초기 상태로 복원했습니다",
+            .th: "ย้อนกลับเป็นสถานะเริ่มต้นแล้ว"
+        ],
+        "revert_safety_note": [
+            .zhHant: "恢復前的狀態會自動存成快照，可以在「快照」清單裡找回。",
+            .en: "The state before reverting is saved as a snapshot you can restore from the Snapshots list.",
+            .zhHans: "恢复前的状态会自动存成快照，可以在“快照”列表里找回。",
+            .ja: "元に戻す前の状態はスナップショットとして自動保存され、「スナップショット」一覧から復元できます。",
+            .ko: "복원 전 상태는 스냅샷으로 자동 저장되며 ‘스냅샷’ 목록에서 되찾을 수 있습니다.",
+            .th: "สถานะก่อนย้อนกลับจะถูกบันทึกเป็นสแนปชอตอัตโนมัติ กู้คืนได้จากรายการสแนปชอต"
+        ],
         "revert_to_initial_state": [
             .zhHant: "一鍵恢復初始狀態",
             .en: "Revert to Initial State",

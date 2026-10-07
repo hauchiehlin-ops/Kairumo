@@ -160,6 +160,8 @@ fun ContinuousPagesView(
     onModeChange: (EditorMode) -> Unit = {},
     /** 外層插入物件之後 bump，讓對應的頁重新讀 store。 */
     reloadToken: Int,
+    /** 遞增就代表「再捲到目前頁一次」（點了目前這一頁的縮圖：頁碼沒變，但要回到頁頂）。 */
+    scrollRequest: Int = 0,
     modifier: Modifier = Modifier
 ) {
     val listState = rememberLazyListState()
@@ -182,8 +184,11 @@ fun ContinuousPagesView(
     // 因為 key 變了被取消，**動畫在半路被砍掉**，使用者看到畫面停在第 11 頁附近。
     // 點縮圖「時而跳得到、時而停在半路」就是這個。
     var programmaticScroll by remember { mutableStateOf(false) }
-    LaunchedEffect(focusIndex) {
-        if (focusIndex != lastReported) {
+    var lastRequest by remember { mutableIntStateOf(scrollRequest) }
+    LaunchedEffect(focusIndex, scrollRequest) {
+        val requested = scrollRequest != lastRequest
+        lastRequest = scrollRequest
+        if (focusIndex != lastReported || requested) {
             val target = focusIndex.coerceAtLeast(0)
             programmaticScroll = true
             try {
