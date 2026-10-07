@@ -14,7 +14,7 @@ pub mod geometry;
 pub mod refine;
 pub mod streamline;
 
-pub use align::{Alignment, SnapResult, align, distribute, snap};
+pub use align::{SnapResult, snap};
 pub use brush::{Dab, apply_line_type, dabs, dabs_styled};
 pub use codec::{StrokeReader, StrokeWriter};
 pub use draft::{SnapKind, Snapped, dash_runs, snap_direction, snap_stroke};

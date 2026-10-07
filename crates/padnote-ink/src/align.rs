@@ -1,119 +1,15 @@
-//! 物件對齊與吸附（S-38，需求 5）。
+//! 物件吸附（S-38，需求 5）。
 //!
-//! 兩者都是**純幾何**：算出來的是「該套用什麼位移」，
-//! 不直接改動任何座標。因此對齊可以被復原，也不破壞原始取樣點。
+//! **純幾何**：算出來的是「該套用什麼位移」，不直接改動任何座標。
+//! 因此吸附可以被復原，也不破壞原始取樣點。
+//!
+//! # 對齊與分佈不在這裡
+//!
+//! 它們在 `padnote_shapes::align`，那是兩邊平台實際在用的那一份。
+//! 這裡原本也有一套（`Alignment` / `align` / `distribute`），沒有任何
+//! 呼叫端 —— 核心裡放兩種「靠左」的定義，只是讓下一個人有五成機率接錯。
 
 use crate::geometry::Rect;
-
-/// 對齊基準。
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub enum Alignment {
-    Left,
-    HorizontalCenter,
-    Right,
-    Top,
-    VerticalCenter,
-    Bottom,
-}
-
-impl Alignment {
-    /// 這個對齊方式是否只影響水平方向。UI 據此決定要畫哪條輔助線。
-    pub fn is_horizontal(self) -> bool {
-        matches!(self, Self::Left | Self::HorizontalCenter | Self::Right)
-    }
-}
-
-/// 算出把每個物件對齊所需的位移量。
-///
-/// 基準取**所有物件的整體外框**，而不是第一個或最後一個物件 ——
-/// 以某一個物件為基準會讓結果取決於選取順序，使用者無從預期。
-pub fn align(bounds: &[Rect], how: Alignment) -> Vec<(f32, f32)> {
-    if bounds.is_empty() {
-        return Vec::new();
-    }
-    let group = bounds
-        .iter()
-        .skip(1)
-        .fold(bounds[0], |acc, r| acc.union(*r));
-
-    bounds
-        .iter()
-        .map(|r| match how {
-            Alignment::Left => (group.min_x - r.min_x, 0.0),
-            Alignment::Right => (group.max_x - r.max_x, 0.0),
-            Alignment::HorizontalCenter => (
-                (group.min_x + group.max_x) / 2.0 - (r.min_x + r.max_x) / 2.0,
-                0.0,
-            ),
-            Alignment::Top => (0.0, group.min_y - r.min_y),
-            Alignment::Bottom => (0.0, group.max_y - r.max_y),
-            Alignment::VerticalCenter => (
-                0.0,
-                (group.min_y + group.max_y) / 2.0 - (r.min_y + r.max_y) / 2.0,
-            ),
-        })
-        .collect()
-}
-
-/// 平均分佈物件之間的間距。
-///
-/// 頭尾兩個物件不動 —— 使用者的心智模型是「把中間的排整齊」，
-/// 而不是「整組跟著移動」。
-pub fn distribute(bounds: &[Rect], horizontal: bool) -> Vec<(f32, f32)> {
-    if bounds.len() < 3 {
-        // 兩個以下沒有「中間」可以分佈。
-        return vec![(0.0, 0.0); bounds.len()];
-    }
-
-    let mut order: Vec<usize> = (0..bounds.len()).collect();
-    order.sort_by(|&i, &j| {
-        let (a, b) = if horizontal {
-            (bounds[i].min_x, bounds[j].min_x)
-        } else {
-            (bounds[i].min_y, bounds[j].min_y)
-        };
-        a.total_cmp(&b)
-    });
-
-    let first = &bounds[order[0]];
-    let last = &bounds[order[order.len() - 1]];
-    let span = if horizontal {
-        last.max_x - first.min_x
-    } else {
-        last.max_y - first.min_y
-    };
-    let occupied: f32 = order
-        .iter()
-        .map(|&i| {
-            if horizontal {
-                bounds[i].width()
-            } else {
-                bounds[i].height()
-            }
-        })
-        .sum();
-    let gap = (span - occupied) / (order.len() - 1) as f32;
-
-    let mut deltas = vec![(0.0, 0.0); bounds.len()];
-    let mut cursor = if horizontal { first.min_x } else { first.min_y };
-
-    for &i in &order {
-        let r = &bounds[i];
-        let (current, size) = if horizontal {
-            (r.min_x, r.width())
-        } else {
-            (r.min_y, r.height())
-        };
-        let delta = cursor - current;
-        deltas[i] = if horizontal {
-            (delta, 0.0)
-        } else {
-            (0.0, delta)
-        };
-        cursor += size + gap;
-    }
-    deltas
-}
 
 /// 吸附目標。
 #[derive(Clone, Copy, PartialEq, Debug)]
@@ -192,97 +88,6 @@ mod tests {
 
     fn r(x: f32, y: f32, w: f32, h: f32) -> Rect {
         Rect::new(x, y, x + w, y + h)
-    }
-
-    #[test]
-    fn align_left_uses_the_group_bounds_not_the_first_item() {
-        // 以第一個物件為基準會讓結果取決於選取順序。
-        let items = [r(50.0, 0.0, 10.0, 10.0), r(20.0, 20.0, 10.0, 10.0)];
-        let d = align(&items, Alignment::Left);
-        assert_eq!(d[0], (-30.0, 0.0), "應對齊到整體最左的 20");
-        assert_eq!(d[1], (0.0, 0.0));
-    }
-
-    #[test]
-    fn align_is_order_independent() {
-        let a = [r(50.0, 0.0, 10.0, 10.0), r(20.0, 20.0, 10.0, 10.0)];
-        let b = [r(20.0, 20.0, 10.0, 10.0), r(50.0, 0.0, 10.0, 10.0)];
-        let da = align(&a, Alignment::Left);
-        let db = align(&b, Alignment::Left);
-        assert_eq!(da[0], db[1]);
-        assert_eq!(da[1], db[0]);
-    }
-
-    #[test]
-    fn align_center_centres_on_the_group() {
-        let items = [r(0.0, 0.0, 10.0, 10.0), r(90.0, 0.0, 10.0, 10.0)];
-        let d = align(&items, Alignment::HorizontalCenter);
-        // 整體中心 50；各自中心 5 與 95
-        assert_eq!(d[0], (45.0, 0.0));
-        assert_eq!(d[1], (-45.0, 0.0));
-    }
-
-    #[test]
-    fn horizontal_alignment_never_moves_vertically() {
-        for how in [
-            Alignment::Left,
-            Alignment::HorizontalCenter,
-            Alignment::Right,
-        ] {
-            assert!(how.is_horizontal());
-            let d = align(&[r(0.0, 0.0, 10.0, 10.0), r(30.0, 50.0, 10.0, 10.0)], how);
-            assert!(d.iter().all(|(_, dy)| *dy == 0.0), "{how:?} 不該改變 y");
-        }
-    }
-
-    #[test]
-    fn align_of_empty_or_single_is_safe() {
-        assert!(align(&[], Alignment::Left).is_empty());
-        assert_eq!(
-            align(&[r(5.0, 5.0, 1.0, 1.0)], Alignment::Left),
-            vec![(0.0, 0.0)]
-        );
-    }
-
-    #[test]
-    fn distribute_keeps_the_outer_items_fixed() {
-        // 使用者的心智模型是「把中間的排整齊」，不是整組跟著移動。
-        let items = [
-            r(0.0, 0.0, 10.0, 10.0),
-            r(15.0, 0.0, 10.0, 10.0),
-            r(100.0, 0.0, 10.0, 10.0),
-        ];
-        let d = distribute(&items, true);
-        assert_eq!(d[0], (0.0, 0.0), "最左不動");
-        assert_eq!(d[2], (0.0, 0.0), "最右不動");
-        assert_ne!(d[1], (0.0, 0.0), "中間應被移動");
-    }
-
-    #[test]
-    fn distribute_makes_gaps_equal() {
-        let items = [
-            r(0.0, 0.0, 10.0, 10.0),
-            r(15.0, 0.0, 10.0, 10.0),
-            r(100.0, 0.0, 10.0, 10.0),
-        ];
-        let d = distribute(&items, true);
-        let moved: Vec<f32> = items
-            .iter()
-            .zip(&d)
-            .map(|(r, (dx, _))| r.min_x + dx)
-            .collect();
-        let gap1 = moved[1] - (moved[0] + 10.0);
-        let gap2 = moved[2] - (moved[1] + 10.0);
-        assert!((gap1 - gap2).abs() < 1e-4, "間距應相等：{gap1} vs {gap2}");
-    }
-
-    #[test]
-    fn distribute_needs_at_least_three_items() {
-        assert_eq!(distribute(&[r(0.0, 0.0, 1.0, 1.0)], true), vec![(0.0, 0.0)]);
-        assert_eq!(
-            distribute(&[r(0.0, 0.0, 1.0, 1.0), r(9.0, 0.0, 1.0, 1.0)], true),
-            vec![(0.0, 0.0), (0.0, 0.0)]
-        );
     }
 
     #[test]

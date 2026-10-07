@@ -17,7 +17,21 @@
     "readme_url": "https://huggingface.co/funasr/ct-punc/raw/d0e55e2b8722a78b63705ff443d09c4f86e5d750/README.md",
     "readme_sha256": "caa13cf2d2b7ea4246d6da5390925d6adcb03de2805017c42d86fe53264c1d15",
     "sha256": "fbea03a0f7e90768f6205884fc27229552d26cb488612a6e5931ed9cee051522",
-    "bytes": 2090
+    "bytes": 2090,
+    "snapshot_file": "README.snapshot.md",
+    "checked_utc": "2026-09-16",
+    "has_license_file": false,
+    "secondary_declaration": {
+      "evidence": "model_card_metadata",
+      "host": "modelscope.cn",
+      "repo": "iic/punc_ct-transformer_zh-cn-common-vocab272727-pytorch",
+      "declared_license": "Apache License 2.0",
+      "readme_url": "https://modelscope.cn/models/iic/punc_ct-transformer_zh-cn-common-vocab272727-pytorch/resolve/master/README.md",
+      "readme_sha256": "ec69d294e9975c70ddd04c883559e656e7032eed57cf578e536db95efe9ecf02",
+      "readme_bytes": 11564,
+      "snapshot_file": "README.modelscope.snapshot.md",
+      "checked_utc": "2026-09-16"
+    }
   },
   "exported_at_utc": "2026-09-12T10:30:17.675043+00:00",
   "exported_by": "scripts/export-funasr-onnx.py",
@@ -55,5 +69,5 @@
     }
   ],
   "quantized": true,
-  "note": "依 ADR-0006 / 決策 D-07 自行匯出。授權依據為上方 license 欄位所記錄的檔案內容（其雜湊已固定），而非任何第三方轉換者的宣告。"
+  "note": "依 ADR-0006 / 決策 D-07 自行匯出（與 paraformer-zh-streaming 同一支腳本、同一套規矩）。**授權證據到此為止**：2026-09-16 重新查驗，HuggingFace funasr/ct-punc 與 ModelScope iic/punc_ct-transformer_zh-cn-common-vocab272727-pytorch 兩邊都沒有 LICENSE 檔，所以拿不到 paraformer-zh-streaming 那種授權原文。現有證據是模型擁有者（阿里巴巴達摩院／iic）在兩個獨立平台的 model card front-matter 上各自宣告 apache-2.0，兩份 README 都已快照並釘住雜湊。這比單一來源強，但**仍然不是授權原文**；要完全解除疑慮只能請上游補上 LICENSE 檔。"
 }

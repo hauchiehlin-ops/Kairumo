@@ -164,11 +164,10 @@ enum ObjectEditingUsage {
         )
     }
 
-    /// 對齊選取的物件。基準是整體外框，與選取順序無關。
-    static func alignSelection(_ bounds: [CGRect], to how: FfiAlignment) -> [CGVector] {
-        alignObjects(bounds: bounds.map(rect), how: how)
-            .map { CGVector(dx: CGFloat($0.dx), dy: CGFloat($0.dy)) }
-    }
+    // 對齊與分佈的範例不在這裡：實際在用的是 `ObjectStacking.swift` 的
+    // `ObjectAlignment`，走核心的 `alignRects`。這裡原本另有一份走
+    // `alignObjects` 的範例，而那個 FFI 已經沒有了 —— 核心裡曾經有兩種
+    // 「靠左」的定義，留著範例只會讓下一個人接到不存在的那一份。
 
     private static func rect(_ r: CGRect) -> FfiRect {
         FfiRect(

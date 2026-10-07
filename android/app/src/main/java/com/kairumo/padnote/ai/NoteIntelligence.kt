@@ -1,5 +1,8 @@
 package com.kairumo.padnote.ai
 
+import android.content.Context
+import com.google.mediapipe.tasks.genai.llminference.LlmInference
+import java.io.File
 import uniffi.padnote_core.FfiLlm
 import uniffi.padnote_core.FfiLlmException
 import uniffi.padnote_core.FfiSummaryResult
@@ -21,22 +24,30 @@ import uniffi.padnote_core.llmSummarize
  * 核心只定義介面（[FfiLlm]），產生文字的後端由平台提供。Apple 那一側用
  * 系統內建的語言模型：不必下載、不會讓 App 變大、文字不離開裝置。
  *
- * Android 沒有對等的東西。能走的兩條路都有明確的代價：
+ * Android 沒有對等的東西。三條路的代價不一樣：
  *
  * | 選項 | 代價 |
  * |---|---|
  * | `com.google.ai.edge.aicore`（Gemini Nano）| 實驗版（0.0.1-exp01），而且會帶進 Guava 與 play-services-basement。為一個只在少數機型上跑得動的功能，讓**每個**使用者多背好幾 MB |
  * | 把 llama.cpp 連進來 + 下載 2.4 GB 模型 | APK 變大，而且要使用者下載一個比整個 App 大幾十倍的檔案 |
+ * | **MediaPipe `tasks-genai`**（採用） | 原生庫約 12 MB／ABI，但**模型完全不隨 App 出貨** |
  *
- * 兩條都違反這個專案已經做過兩次的同一個判斷（reqwest 不進核心、
- * llama.cpp 不進核心）：**平台裝得下不代表使用者該下載它。**
+ * 選了第三條。關鍵差別在「誰下載什麼」：前兩條是**每個**使用者都要背，
+ * 不管他用不用得到摘要；MediaPipe 只有那 12 MB 是全體共擔，而真正大的
+ * 東西（模型）只有想用的人才放。這與專案前兩次的判斷（reqwest 不進核心、
+ * llama.cpp 不進核心）是同一條線 —— **平台裝得下不代表使用者該下載它**，
+ * 而這次要全體下載的只有函式庫本身。
  *
- * 所以這一側現在回報「這台裝置上沒有可用的模型」，而那正是
- * `FfiLlmError.ModelNotLoaded` 存在的理由 —— 核心用它區分「要引導使用者
- * 去處理」與「只能請他重試」。誠實地說沒有，比丟一個「摘要失敗，請重試」
- * 讓使用者按一百次好。
+ * 同時把 `abiFilters` 收成 arm64-v8a 與 x86_64：第三方 AAR 會帶進
+ * armeabi-v7a 與 x86 的原生庫，而那兩個 ABI 上根本沒有 `libpadnote_core.so`，
+ * App 一啟動就會死在 `UnsatisfiedLinkError`。收掉之後，APK 反而比加
+ * MediaPipe 之前更小。
  *
- * 要補上後端時，改的只有 [backend] 這一個函式；畫面與流程都不用動。
+ * # 模型不在的時候
+ *
+ * 回 [FfiLlmException.ModelNotLoaded]，不是後端錯誤。核心用它區分
+ * 「要引導使用者去處理」與「只能請他重試」—— 誠實地說沒有，比丟一個
+ * 「摘要失敗，請重試」讓使用者按一百次好。
  */
 object NoteIntelligence {
 
@@ -51,24 +62,55 @@ object NoteIntelligence {
         NOT_READY,
     }
 
+    /** App 私有目錄裡的模型路徑。 */
+    private const val MODEL_RELATIVE_PATH = "llm/model.task"
+
+    /**
+     * 模型檔，不存在時回 null。
+     *
+     * **每次都重看一次檔案，不要快取**：使用者可能在 App 開著的時候才把
+     * 模型放進去。快取的話，他照做之後回到 App 仍然看到「沒有可用的模型」。
+     */
+    private fun modelFile(context: Context): File? =
+        File(context.filesDir, MODEL_RELATIVE_PATH).takeIf { it.isFile && it.length() > 0 }
+
     /**
      * 目前的可用狀態。
      *
-     * 接上裝置端後端時，這裡要改成真的去問它 —— 而不是無條件回
-     * [Availability.AVAILABLE]，那會讓使用者按下去才看到失敗。
+     * 問的是檔案系統，不是猜的 —— 無條件回 [Availability.AVAILABLE] 會讓
+     * 使用者按下去才看到失敗。模型放進去之後**不必重開 App**就會變成可用。
      */
-    fun availability(): Availability = Availability.UNSUPPORTED
+    fun availability(context: Context): Availability =
+        if (modelFile(context) != null) Availability.AVAILABLE else Availability.UNSUPPORTED
 
     /**
      * 產生文字的後端。
      *
-     * 目前一律丟 [FfiLlmException.ModelNotLoaded] —— 見類別說明。
-     * **這不是 TODO 樁**：它回報的是這台裝置真實的狀態，核心與畫面都會
-     * 照著它做出正確的行為。
+     * 模型檔不在時丟 [FfiLlmException.ModelNotLoaded]（見類別說明）。
      */
-    fun backend(): FfiLlm = object : FfiLlm {
+    fun backend(context: Context): FfiLlm = object : FfiLlm {
         override fun generate(prompt: String, maxTokens: UInt): String {
-            throw FfiLlmException.ModelNotLoaded()
+            val model = modelFile(context) ?: throw FfiLlmException.ModelNotLoaded()
+
+            // 每次生成開一個新的 engine 再關掉。
+            //
+            // 留著重用會省下載入時間，但 `LlmInference` 抓著好幾百 MB 的原生
+            // 記憶體不放，而使用者按一次摘要之後通常就回去寫字了 ——
+            // 手寫才是這個 App 的主線，不能為了偶爾一次的摘要一直壓著記憶體。
+            return try {
+                LlmInference.createFromOptions(
+                    context,
+                    LlmInference.LlmInferenceOptions.builder()
+                        .setModelPath(model.absolutePath)
+                        .setMaxTokens(maxTokens.toInt())
+                        .build()
+                ).use { engine -> engine.generateResponse(prompt) ?: "" }
+            } catch (t: Throwable) {
+                // 載入或推論失敗是「後端壞了」，不是「沒有模型」——
+                // 混成一種的話，一個壞掉的模型檔會讓畫面說「這台裝置不支援」，
+                // 而使用者永遠不會想到去換那個檔案。
+                throw FfiLlmException.Backend(t.message ?: "llm_backend_error")
+            }
         }
     }
 
@@ -81,8 +123,8 @@ object NoteIntelligence {
      * @param locale BCP-47。**一定要給** —— 不指定輸出語言的話，模型會跟著
      *   輸入走，而一份中英夾雜的會議記錄會拿到一半中文、一半英文的摘要。
      */
-    fun summarize(text: String, locale: String): FfiSummaryResult =
-        llmSummarize(backend(), text, locale, 400u)
+    fun summarize(context: Context, text: String, locale: String): FfiSummaryResult =
+        llmSummarize(backend(context), text, locale, 400u)
 
     /**
      * 跑一次待辦抽取。
@@ -90,8 +132,8 @@ object NoteIntelligence {
      * **沒有待辦是正常的答案**，`ok` 仍然是 true、清單是空的。當成錯誤的話，
      * 使用者每次對一段沒有待辦的筆記按下去都會看到紅字。
      */
-    fun extractTodos(text: String, locale: String): FfiTodoResult =
-        llmExtractTodos(backend(), text, locale, 400u)
+    fun extractTodos(context: Context, text: String, locale: String): FfiTodoResult =
+        llmExtractTodos(backend(context), text, locale, 400u)
 }
 
 /**

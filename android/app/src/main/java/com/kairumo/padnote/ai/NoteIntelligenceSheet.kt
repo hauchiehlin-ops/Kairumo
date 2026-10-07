@@ -72,7 +72,10 @@ fun NoteIntelligenceSheet(
     var failure by remember { mutableStateOf<String?>(null) }
     var hasResult by remember { mutableStateOf(false) }
 
-    val availability = NoteIntelligence.availability()
+    val context = androidx.compose.ui.platform.LocalContext.current
+    // 每次重組都重問一次：使用者可能在 App 開著的時候才把模型放進去，
+    // 快取的話他照做之後仍然看到「沒有可用的模型」。
+    val availability = NoteIntelligence.availability(context)
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -108,17 +111,20 @@ fun NoteIntelligenceSheet(
                                         // 模型一次要跑數秒到數十秒 —— 在主執行緒上
                                         // 畫面會整個停住。
                                         val s = withContext(Dispatchers.Default) {
-                                            NoteIntelligence.summarize(text, locale)
+                                            NoteIntelligence.summarize(context, text, locale)
                                         }
                                         val t = withContext(Dispatchers.Default) {
-                                            NoteIntelligence.extractTodos(text, locale)
+                                            NoteIntelligence.extractTodos(context, text, locale)
                                         }
                                         running = false
-                                        if (s.ok) summary = s.summary else failure = s.error
+                                        if (s.ok) summary = s.summary
+                                        else failure = describe(l, s.needsModel, s.emptyInput, s.error)
                                         // 待辦失敗不覆蓋摘要的錯誤訊息 —— 兩段紅字
                                         // 只會更難讀。
                                         if (t.ok) todos = t.todos
-                                        else if (failure == null) failure = t.error
+                                        else if (failure == null) {
+                                            failure = describe(l, t.needsModel, t.emptyInput, t.error)
+                                        }
                                         hasResult = s.ok || t.ok
                                     }
                                 },
@@ -203,6 +209,32 @@ internal fun insertableText(
         parts += "## ${l("ai_todos")}\n\n$lines"
     }
     return parts.joinToString("\n\n")
+}
+
+/**
+ * 把核心回來的旗標翻成使用者看得懂的一句話。
+ *
+ * # 為什麼不能直接顯示 `error`
+ *
+ * 那個字串來自核心的 `LlmError::Display`，是**寫死的繁體中文**。
+ * 日文介面的使用者會看到一句中文，而且內容是「沒有可以處理的文字」
+ * 這種本來就該在地化的話。
+ *
+ * 旗標的優先序有意義：沒有模型 > 沒有文字 > 其他。前兩種是「使用者做得了
+ * 某件事」（放一份模型、先打點字），最後一種只能請他重試 —— 擠成一句的話，
+ * 前兩種人會照著「重試」按一百次。
+ *
+ * Apple 端是同一份規則（見 `NoteIntelligence.swift` 的 `describe`）。
+ */
+private fun describe(
+    l: (String) -> String,
+    needsModel: Boolean,
+    emptyInput: Boolean,
+    error: String
+): String = when {
+    needsModel -> l("ai_unsupported")
+    emptyInput -> l("ai_nothing_to_summarize")
+    else -> error
 }
 
 @Composable

@@ -1,9 +1,23 @@
-//! 對齊、吸附與變換的 FFI（S-38）。
+//! 矩形、吸附與可列印區的 FFI（S-38）。
 //!
 //! 這些都是**純函式**：輸入外框、輸出位移。不持有狀態，
 //! 因此平台層可以在拖曳的每一幀呼叫而不必擔心同步。
+//!
+//! # 對齊與分佈不在這裡
+//!
+//! 它們在 [`crate::ffi_shapes::align_rects`]，那是**唯一一份**。
+//!
+//! 這個模組原本也有一份（`align_objects` / `distribute_objects`，走
+//! `padnote_ink::align`），而兩邊平台用的一直是 `ffi_shapes` 那份 ——
+//! 核心裡躺著第二種「靠左」的定義，沒有任何呼叫端，而且與在用的那份
+//! **回傳的東西都不一樣**（位移 vs 新座標）。
+//!
+//! 那正是這些函式的註解在警告的事：「靠左」有好幾種合理答案（對齊到最左的
+//! 物件還是選取範圍？分佈時頭尾動不動？），各寫一份就會各挑一種。
+//! 兩份都放在核心並不會比較安全 —— 只是讓下一個人有五成機率接到沒人用的
+//! 那一份，而接錯時物件會整批飛到別的位置。
 
-use padnote_ink::{Alignment, Rect, align, distribute, snap};
+use padnote_ink::{Rect, snap};
 
 /// 軸對齊矩形。
 #[derive(Clone, Copy, Debug, uniffi::Record)]
@@ -20,36 +34,6 @@ impl From<FfiRect> for Rect {
     }
 }
 
-/// 位移量。
-#[derive(Clone, Copy, Debug, uniffi::Record)]
-pub struct FfiDelta {
-    pub dx: f32,
-    pub dy: f32,
-}
-
-#[derive(Clone, Copy, Debug, uniffi::Enum)]
-pub enum FfiAlignment {
-    Left,
-    HorizontalCenter,
-    Right,
-    Top,
-    VerticalCenter,
-    Bottom,
-}
-
-impl From<FfiAlignment> for Alignment {
-    fn from(a: FfiAlignment) -> Self {
-        match a {
-            FfiAlignment::Left => Self::Left,
-            FfiAlignment::HorizontalCenter => Self::HorizontalCenter,
-            FfiAlignment::Right => Self::Right,
-            FfiAlignment::Top => Self::Top,
-            FfiAlignment::VerticalCenter => Self::VerticalCenter,
-            FfiAlignment::Bottom => Self::Bottom,
-        }
-    }
-}
-
 /// 吸附結果。
 #[derive(Clone, Copy, Debug, uniffi::Record)]
 pub struct FfiSnap {
@@ -59,29 +43,6 @@ pub struct FfiSnap {
     pub snapped_x: bool,
     /// 垂直方向是否吸附。UI 據此畫水平輔助線。
     pub snapped_y: bool,
-}
-
-/// 算出把每個物件對齊所需的位移。
-///
-/// 基準是**所有物件的整體外框**，不是第一個 —— 以某一個為基準會讓結果
-/// 取決於選取順序，使用者無從預期。
-#[uniffi::export]
-pub fn align_objects(bounds: Vec<FfiRect>, how: FfiAlignment) -> Vec<FfiDelta> {
-    let rects: Vec<Rect> = bounds.into_iter().map(Into::into).collect();
-    align(&rects, how.into())
-        .into_iter()
-        .map(|(dx, dy)| FfiDelta { dx, dy })
-        .collect()
-}
-
-/// 平均分佈物件間距。**頭尾不動** —— 使用者的心智模型是「把中間的排整齊」。
-#[uniffi::export]
-pub fn distribute_objects(bounds: Vec<FfiRect>, horizontal: bool) -> Vec<FfiDelta> {
-    let rects: Vec<Rect> = bounds.into_iter().map(Into::into).collect();
-    distribute(&rects, horizontal)
-        .into_iter()
-        .map(|(dx, dy)| FfiDelta { dx, dy })
-        .collect()
 }
 
 /// 把 `moving` 吸附到其他物件的邊緣與中心，或吸附到網格。
@@ -121,31 +82,6 @@ mod tests {
     }
 
     #[test]
-    fn alignment_crosses_the_boundary() {
-        let d = align_objects(
-            vec![r(50.0, 0.0, 10.0, 10.0), r(20.0, 20.0, 10.0, 10.0)],
-            FfiAlignment::Left,
-        );
-        assert_eq!(d[0].dx, -30.0);
-        assert_eq!(d[1].dx, 0.0);
-    }
-
-    #[test]
-    fn distribution_keeps_outer_items_fixed() {
-        let d = distribute_objects(
-            vec![
-                r(0.0, 0.0, 10.0, 10.0),
-                r(15.0, 0.0, 10.0, 10.0),
-                r(100.0, 0.0, 10.0, 10.0),
-            ],
-            true,
-        );
-        assert_eq!(d[0].dx, 0.0);
-        assert_eq!(d[2].dx, 0.0);
-        assert_ne!(d[1].dx, 0.0);
-    }
-
-    #[test]
     fn snapping_reports_axes_separately() {
         // UI 只有 x 吸附時不該畫水平輔助線。
         let s = snap_object(
@@ -173,9 +109,11 @@ mod tests {
     }
 
     #[test]
-    fn empty_input_is_safe() {
-        assert!(align_objects(vec![], FfiAlignment::Left).is_empty());
-        assert!(distribute_objects(vec![], true).is_empty());
+    fn snapping_with_no_targets_is_safe() {
+        // 畫面上只有一個物件時 targets 是空的 —— 那是常態，不是錯誤。
+        let s = snap_object(r(10.0, 10.0, 5.0, 5.0), vec![], 0.0, 5.0);
+        assert!(!s.snapped_x && !s.snapped_y);
+        assert_eq!((s.dx, s.dy), (0.0, 0.0));
     }
 }
 

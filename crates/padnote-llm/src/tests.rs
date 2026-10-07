@@ -235,3 +235,45 @@ fn the_prompt_names_the_output_language() {
     assert!(summary_prompt("內容", "ja").contains("ja"));
     assert!(todo_prompt("內容", "zh-Hant").contains("zh-Hant"));
 }
+
+#[test]
+fn a_page_of_bare_markers_has_nothing_to_summarize() {
+    // 文字是 `export_markdown` 取出來的，所以一本「版面建好了、還沒打字」的
+    // 筆記拿到的是幾個記號而不是空字串 —— 逐段 trim 之後每一段都還是非空。
+    // 不擋的話，模型會對著幾個記號生成，回一段憑空編出來的摘要。
+    assert!(!has_substance("   \n\n  \n"));
+    assert!(!has_substance("#\n\n##\n\n- \n"));
+    assert!(!has_substance("- [ ]\n- [x]\n"));
+    assert!(!has_substance("1. \n2. \n"));
+    assert!(!has_substance("**__**"));
+}
+
+#[test]
+fn one_real_line_is_enough() {
+    // 反面也要顧到：只要有一行真的有字，就不能擋下來。
+    // **標題本身就算數** —— 使用者打的「會議」是他寫的字，不是版面記號。
+    assert!(has_substance("# 會議\n\n## 議程\n"));
+    assert!(has_substance("# 會議\n\n- 決定改用方案 B\n"));
+    assert!(has_substance("## 標題\n\n內文"));
+    assert!(has_substance("hello"));
+}
+
+#[test]
+fn bare_markers_reach_the_caller_as_empty_input_not_a_fake_summary() {
+    // 這一項守的是**整條路**：守衛放在 chunk 之前，所以引擎根本不該被呼叫。
+    // 只測 has_substance 的話，守衛放錯位置（放在 chunk 之後）也看不出來。
+    let engine = ScriptedLlm::new(&["這是一段憑空編出來的摘要。"]);
+    assert_eq!(
+        summarize(&engine, "#\n\n- [ ]\n", "zh-Hant", 64),
+        Err(LlmError::EmptyInput)
+    );
+    assert_eq!(
+        extract_todos(&engine, "#\n\n- [ ]\n", "zh-Hant", 64),
+        Err(LlmError::EmptyInput)
+    );
+    assert_eq!(
+        engine.calls(),
+        0,
+        "沒有實質內容時不該叫模型，否則白跑好幾秒還回一段編的"
+    );
+}

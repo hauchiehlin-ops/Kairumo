@@ -14,7 +14,7 @@
 | `ppocr-v5` | Apache-2.0 | ✅ 可用 |
 | `qwen3-4b-instruct` | Apache-2.0 | ✅ 可用 |
 | `paraformer-zh-streaming` | Apache-2.0（**repo 內含完整授權原文**） | ⚪ 選用（已自行匯出）—— 預設改為 Whisper，見 ADR-0013 |
-| `ct-punc`（中文標點） | Apache-2.0（**僅 model card 標籤**） | ⚪ **已退出預設路徑**（2026-09-17，ADR-0013）—— Whisper 自己就會標點 |
+| `ct-punc`（中文標點） | Apache-2.0（**兩個平台的 model card 各自宣告，無授權原文**；見 §2.1） | ⚪ **已退出預設路徑**（2026-09-17，ADR-0013）—— Whisper 自己就會標點 |
 | `sensevoice-small` | ❌ FunASR Model License v1.1 | ❌ **不採用** |
 | speaker-diarization | 未確認 | ⏸️ 延後（P2） |
 
@@ -39,6 +39,38 @@
 - README 明文：「This repository publishes the model weights and accompanying
   files under the Apache License 2.0, unless an individual file carries a
   different notice.」
+
+### 2.1 ct-punc 的授權證據：2026-09-16 查到底，已補到上限
+
+> **先講結論的位階**：ADR-0013 已經把 ct-punc **移出預設路徑**，所以下面這
+> 一節描述的是「選用路徑上的殘餘風險」，不是 P0 的阻斷項。真正解決這個問題
+> 的是那個決策，不是這一節的證據補強。
+
+曾經考慮過「比照 Paraformer 自行匯出、把授權原文帶進 repo」。查下去之後，
+**前半已經是既成事實，後半做不到**：
+
+- **自行匯出早就做了。** `models/exported/ct-punc/` 與 `exported-int8/`
+  都是 `scripts/export-funasr-onnx.py` 產的，與 paraformer-zh-streaming
+  同一支腳本、同一套 PROVENANCE 規矩。上面標記「證據較弱」指的**只有授權**，
+  不是匯出來源 —— 這一點以前寫得不夠清楚。
+- **授權原文不存在，不是我們沒去拿。** 2026-09-16 逐一查驗兩個平台：
+
+  | 平台 | repo | LICENSE 檔 | model card 宣告 |
+  |---|---|---|---|
+  | HuggingFace | `funasr/ct-punc`（rev `d0e55e2b`，與釘住的版本相同） | ❌ 無 | `apache-2.0` |
+  | ModelScope | `iic/punc_ct-transformer_zh-cn-common-vocab272727-pytorch` | ❌ 無 | `Apache License 2.0` |
+
+  Paraformer 那條路（repo 內 11,358 bytes 的 Apache-2.0 全文）在這個模型上
+  **沒有對應物**。
+
+- **已補強的部分**：ModelScope 的 model card 也快照進 repo
+  （`README.modelscope.snapshot.md`，雜湊已釘），兩份 PROVENANCE.json 加上
+  `has_license_file: false` 與 `secondary_declaration`。
+
+**誠實的結論**：證據是**模型擁有者（阿里巴巴達摩院／iic）在兩個獨立平台
+各自宣告 apache-2.0**，兩份都釘住雜湊。這比單一來源強，但**仍然不是授權原文**。
+殘餘風險是「宣告與原文之間的落差」，不是「來源不明」。
+要完全解除只有一條路 —— 請上游在 repo 裡補上 LICENSE 檔，而那不在我們手上。
 
 ### 通路 B：FunASR GitHub 的 `MODEL_LICENSE`
 「FunASR Model Open Source License Agreement, Version 1.1」，關鍵條款：
