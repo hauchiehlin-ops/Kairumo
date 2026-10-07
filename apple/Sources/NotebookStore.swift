@@ -2059,6 +2059,17 @@ public final class NotebookStore: ObservableObject {
         return newDoc
     }
 
+    /// 這份文件除了修改時間之外，是否與 store 裡的那一份完全一樣。
+    ///
+    /// 編輯器在切頁、切模式、點縮圖時都會「存檔」。存之前先問這個：沒有任何東西變，
+    /// 就不要更新修改時間、也不要通知同步有編輯（否則同步與編輯器會互相觸發，沒完沒了）。
+    public func notebookMatchesStored(_ doc: NotebookDocument) -> Bool {
+        guard let stored = notebooks.first(where: { $0.id == doc.id }) else { return false }
+        var probe = doc
+        probe.lastModifiedDate = stored.lastModifiedDate
+        return probe == stored
+    }
+
     public func updateNotebook(_ doc: NotebookDocument) {
         if let idx = notebooks.firstIndex(where: { $0.id == doc.id }) {
             let previous = notebooks[idx]

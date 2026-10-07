@@ -225,3 +225,123 @@ struct PageFocusPreferenceKey: PreferenceKey {
         value.merge(nextValue()) { _, new in new }
     }
 }
+
+
+/// 連續模式下的兩指捲動。
+///
+/// # 為什麼不能交給系統
+///
+/// 連續模式的頁面是一個外層 `ScrollView` 裡的多張畫布，畫布自己不捲（`isScrollEnabled = false`）。
+/// `.anyInput` 時手指會畫圖，所以「兩指捲動」得靠外層捲動手勢搶贏畫布的落筆手勢 ——
+/// 而那是**競賽**：第一指落下的瞬間畫布就開始畫了，第二指有沒有及時趕上、外層手勢能不能接手，
+/// 取決於兩指落下的時間差。結果就是使用者回報的「時好時壞」：有時捲得動，有時畫出一道線，有時兩者都沒有。
+///
+/// 這裡改成確定性的做法：畫布上掛一個**兩指**拖曳手勢，一認得就
+/// ① 關掉畫布的落筆手勢（會把第一指已經畫的那一筆取消）、
+/// ② 關掉外層捲動自己的手勢（免得兩邊各捲一次，速度變兩倍）、
+/// ③ 自己改外層的 `contentOffset`，放開時用速度做慣性減速。
+final class TwoFingerScrollForwarder: NSObject, UIGestureRecognizerDelegate {
+    private weak var canvas: PKCanvasView?
+    private weak var scrollView: UIScrollView?
+    private var drawingWasEnabled = true
+    private var lastTranslationY: CGFloat = 0
+    private var displayLink: CADisplayLink?
+    private var velocity: CGFloat = 0
+    private var lastTick: CFTimeInterval = 0
+
+    private lazy var recognizer: UIPanGestureRecognizer = {
+        let g = UIPanGestureRecognizer(target: self, action: #selector(handle(_:)))
+        g.minimumNumberOfTouches = 2
+        g.maximumNumberOfTouches = 2
+        g.cancelsTouchesInView = false
+        g.allowedTouchTypes = [NSNumber(value: UITouch.TouchType.direct.rawValue)]
+        g.delegate = self
+        return g
+    }()
+
+    /// 掛上或拿掉。畫布重用時（單頁／連續互換）要拿掉，否則單頁模式會跟畫布自己的捲動搶。
+    func setEnabled(_ on: Bool, on canvas: PKCanvasView) {
+        self.canvas = canvas
+        if on {
+            if recognizer.view !== canvas { canvas.addGestureRecognizer(recognizer) }
+        } else {
+            if recognizer.view != nil { recognizer.view?.removeGestureRecognizer(recognizer) }
+            stopMomentum()
+        }
+    }
+
+    private func enclosingScrollView() -> UIScrollView? {
+        var view = canvas?.superview
+        while let v = view {
+            if let sv = v as? UIScrollView, !(sv is PKCanvasView) { return sv }
+            view = v.superview
+        }
+        return nil
+    }
+
+    @objc private func handle(_ g: UIPanGestureRecognizer) {
+        switch g.state {
+        case .began:
+            stopMomentum()
+            scrollView = enclosingScrollView()
+            lastTranslationY = 0
+            if let canvas {
+                drawingWasEnabled = canvas.drawingGestureRecognizer.isEnabled
+                canvas.drawingGestureRecognizer.isEnabled = false
+            }
+            scrollView?.panGestureRecognizer.isEnabled = false
+        case .changed:
+            let y = g.translation(in: nil).y
+            scroll(by: -(y - lastTranslationY))
+            lastTranslationY = y
+        case .ended, .cancelled, .failed:
+            let v = -g.velocity(in: nil).y
+            finish()
+            if g.state == .ended { startMomentum(velocity: v) }
+        default:
+            break
+        }
+    }
+
+    private func finish() {
+        if let canvas { canvas.drawingGestureRecognizer.isEnabled = drawingWasEnabled }
+        scrollView?.panGestureRecognizer.isEnabled = true
+    }
+
+    private func scroll(by dy: CGFloat) {
+        guard let sv = scrollView else { return }
+        let minY = -sv.adjustedContentInset.top
+        let maxY = max(minY, sv.contentSize.height - sv.bounds.height + sv.adjustedContentInset.bottom)
+        let y = min(max(sv.contentOffset.y + dy, minY), maxY)
+        sv.contentOffset = CGPoint(x: sv.contentOffset.x, y: y)
+    }
+
+    private func startMomentum(velocity: CGFloat) {
+        guard abs(velocity) > 80, scrollView != nil else { return }
+        self.velocity = velocity
+        lastTick = CACurrentMediaTime()
+        let link = CADisplayLink(target: self, selector: #selector(tick))
+        link.add(to: .main, forMode: .common)
+        displayLink = link
+    }
+
+    @objc private func tick() {
+        let now = CACurrentMediaTime()
+        let dt = min(now - lastTick, 0.05)
+        lastTick = now
+        // 與 UIScrollView 的 normal 減速率同一個量級：每毫秒剩 0.998。
+        velocity *= CGFloat(pow(0.998, dt * 1000))
+        scroll(by: velocity * CGFloat(dt))
+        if abs(velocity) < 20 { stopMomentum() }
+    }
+
+    private func stopMomentum() {
+        displayLink?.invalidate()
+        displayLink = nil
+    }
+
+    // 與畫布自己的手勢同時辨識 —— 不然落筆手勢一開始，這個就永遠起不來。
+    func gestureRecognizer(
+        _ g: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith other: UIGestureRecognizer
+    ) -> Bool { true }
+}

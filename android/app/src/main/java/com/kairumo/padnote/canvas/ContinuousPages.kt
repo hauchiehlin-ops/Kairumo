@@ -175,9 +175,23 @@ fun ContinuousPagesView(
     // 記住「最後一次由捲動回報出去的頁碼」，只有在外層的值與它不同時才捲 ——
     // 不這樣分的話，捲動→回報→外層更新→再捲回去，會自己跟自己打架。
     var lastReported by remember { mutableIntStateOf(-1) }
+    // 程式捲動進行中。這段時間內捲動「途中」經過的頁面不算焦點。
+    //
+    // 原本沒有這個旗標：點縮圖從第 12 頁跳到第 9 頁，動畫才開始，途中第 11 頁
+    // 經過視窗中央 → 回報焦點 → 外層 `focusIndex` 變成 11 → 這個 LaunchedEffect
+    // 因為 key 變了被取消，**動畫在半路被砍掉**，使用者看到畫面停在第 11 頁附近。
+    // 點縮圖「時而跳得到、時而停在半路」就是這個。
+    var programmaticScroll by remember { mutableStateOf(false) }
     LaunchedEffect(focusIndex) {
         if (focusIndex != lastReported) {
-            listState.animateScrollToItem(focusIndex.coerceAtLeast(0))
+            val target = focusIndex.coerceAtLeast(0)
+            programmaticScroll = true
+            try {
+                listState.animateScrollToItem(target)
+            } finally {
+                programmaticScroll = false
+            }
+            lastReported = target
         }
     }
 
@@ -189,7 +203,7 @@ fun ContinuousPagesView(
                 kotlin.math.abs(item.offset + item.size / 2 - center)
             }?.index
         }.collect { index ->
-            if (index != null && index != lastReported) {
+            if (index != null && index != lastReported && !programmaticScroll) {
                 lastReported = index
                 onFocusChange(index)
             }
