@@ -2450,6 +2450,13 @@ public struct NotebookEditorView: View {
             if tool.isBrush { lastBrushTool = tool }
             lastObservedTool = tool
         }
+        .onReceive(NotificationCenter.default.publisher(for: AppCommand.proInkDidChange)) { note in
+            guard (note.object as? String) == notebook.id.lowercased() else { return }
+            // 專業筆畫（製圖線等）變了：縮圖要重畫，筆記本要標成已修改（同步才會匯出）。
+            proInkDirty = true
+            thumbnailRevision += 1
+            noteInkEdited()
+        }
         .onChange(of: notebook.id) { _ in
             // 外層換綁之後才會走到這裡，這時 notebook 已經是新的那一則。
             currentPageIndex = 0
@@ -2881,6 +2888,8 @@ public struct NotebookEditorView: View {
                         (canvas as? AdaptiveCanvasView)?.proLayer?.reload()
                     }
                     store.updateNotebook(notebook)
+                    continuousReloadGeneration += 1
+                    thumbnailRevision += 1
                     activeSelectedObjectId = nil
                     inlineEditingTextId = nil
                     editingTextId = nil
@@ -4546,6 +4555,12 @@ public struct NotebookEditorView: View {
     /// （點側欄縮圖、上一頁／下一頁、新增頁面…）。後者才要捲過去；
     /// 前者再捲一次會跟使用者的手指打架。
     @State private var continuousReportedPage: Int = -1
+    /// 專業筆畫有未標記的變動（見 `AppCommand.proInkDidChange`）。存檔時不能當成「沒變」略過。
+    @State private var proInkDirty = false
+    /// 「恢復初始狀態」之後遞增，讓連續模式的每一頁重讀磁碟（見 `ContinuousPageView.reloadGeneration`）。
+    @State private var continuousReloadGeneration = 0
+    /// 側欄縮圖的重繪計數：專業筆畫的變動不在任何 @State 裡，要靠它讓側欄重新算繪。
+    @State private var thumbnailRevision = 0
     /// 要求連續模式再捲一次到目前頁（頁碼沒變但使用者點了同一頁的縮圖）。
     @State private var continuousScrollRequest: Int = 0
     /// 程式捲動進行中。這段時間內捲動中途經過的頁面不算焦點，否則
@@ -4606,6 +4621,10 @@ public struct NotebookEditorView: View {
                             onImageDropped: { page, providers, location in
                                 acceptImageDrop(providers, at: location, page: page)
                             },
+                            onInitialLoaded: { page, loaded in
+                                captureInitialPageState(page: page, drawing: loaded)
+                            },
+                            reloadGeneration: continuousReloadGeneration,
                             notebook: $notebook,
                             onNotebookChanged: {
                                 store.updateNotebook(notebook)
@@ -6195,6 +6214,7 @@ public struct NotebookEditorView: View {
                 // 舊版固定 800 寬、卡片固定 130 高，一張 800x1800 的頁面
                 // scaledToFit 之後只剩 50pt 寬，物件小到看不出是什麼。
                 let pageDrawing = drawingForPage(idx)
+                let _ = thumbnailRevision  // 專業筆畫變動時讓這張縮圖重算
                 let img = PageThumbnailRenderer.render(
                     notebook: notebook,
                     pageIndex: idx,
@@ -9225,7 +9245,8 @@ public struct NotebookEditorView: View {
             // 每次碰都會把修改時間往前推並通知同步「本機有編輯」，於是只是切換模式、
             // 點縮圖跳頁，同步就匯出重建一次套件、下載、再觸發編輯器重載 ——
             // 同步日誌裡那串首尾相接、每一輪都「匯出 1 本、下載 4」的迴圈就是這樣來的。
-            if !hadPendingInk && store.notebookMatchesStored(notebook) { return }
+            if !hadPendingInk && !proInkDirty && store.notebookMatchesStored(notebook) { return }
+            proInkDirty = false
             notebook.lastModifiedDate = Date()
             store.updateNotebook(notebook)
             return
@@ -9246,7 +9267,8 @@ public struct NotebookEditorView: View {
             lastPersistedInk = (currentPageIndex, currentDrawing)
         }
         // 同上：筆跡沒變、文件也與 store 一致就不碰。
-        if unchanged && store.notebookMatchesStored(notebook) { return }
+        if unchanged && !proInkDirty && store.notebookMatchesStored(notebook) { return }
+        proInkDirty = false
         notebook.lastModifiedDate = Date()
         store.updateNotebook(notebook)
     }

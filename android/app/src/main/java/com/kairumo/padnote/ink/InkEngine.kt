@@ -763,7 +763,14 @@ class InkEngine(
             val reassign = reassignTarget
             if (reassign != null) {
                 if (sample.event.phase == FfiPhase.BEGAN) {
-                    reassignLayerAt(sample.event.x, sample.event.y, reassign)
+                    val done = reassignLayerAt(sample.event.x, sample.event.y, reassign)
+                    DraftingState.reassignResult = if (done) {
+                        val name = DraftingState.layers.firstOrNull { it.id.toInt() == reassign }
+                            ?.let { com.kairumo.padnote.L10n.t(it.nameKey) } ?: ""
+                        com.kairumo.padnote.L10n.f("draft_reassigned", name)
+                    } else {
+                        com.kairumo.padnote.L10n.t("draft_reassign_miss")
+                    }
                     drawn++
                 }
                 continue

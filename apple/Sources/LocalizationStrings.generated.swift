@@ -6671,6 +6671,30 @@ extension LocalizationManager {
             .ko: "레이어로 이동",
             .th: "ย้ายไปเลเยอร์"
         ],
+        "draft_reassign_hint": [
+            .zhHant: "點一條線，把它改到目前選的圖層",
+            .en: "Tap a line to move it to the selected layer",
+            .zhHans: "点一条线，把它改到当前选的图层",
+            .ja: "線をタップすると、選択中のレイヤーに移動します",
+            .ko: "선을 탭하면 선택한 레이어로 옮깁니다",
+            .th: "แตะเส้นเพื่อย้ายไปยังเลเยอร์ที่เลือก"
+        ],
+        "draft_reassign_miss": [
+            .zhHant: "這裡沒有可移動的線（鎖定、隱藏或別台裝置畫的線不能改）",
+            .en: "No line here to move (locked, hidden, or drawn on another device)",
+            .zhHans: "这里没有可移动的线（锁定、隐藏或其他设备画的线不能改）",
+            .ja: "ここには移動できる線がありません（ロック・非表示・他のデバイスで描いた線は変更できません）",
+            .ko: "여기에는 옮길 선이 없습니다 (잠금·숨김 또는 다른 기기에서 그린 선은 바꿀 수 없음)",
+            .th: "ไม่มีเส้นให้ย้ายตรงนี้ (เส้นที่ล็อก ซ่อน หรือวาดจากอุปกรณ์อื่นแก้ไม่ได้)"
+        ],
+        "draft_reassigned": [
+            .zhHant: "已移到「%@」",
+            .en: "Moved to “%@”",
+            .zhHans: "已移到「%@」",
+            .ja: "「%@」に移動しました",
+            .ko: "“%@” 레이어로 이동했습니다",
+            .th: "ย้ายไปที่ “%@” แล้ว"
+        ],
         "draft_scale": [
             .zhHant: "比例尺",
             .en: "Scale",

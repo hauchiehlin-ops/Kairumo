@@ -264,6 +264,14 @@ fun DraftingBar(
                     label = { Text(l10n("draft_reassign"), fontSize = 12.sp) },
                     modifier = Modifier.testTag("draft.reassign")
                 )
+                if (DraftingState.reassignMode) {
+                    Text(
+                        DraftingState.reassignResult ?: l10n("draft_reassign_hint"),
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.testTag("draft.reassign.result")
+                    )
+                }
                 // 步驟編號：開著時點頁面就放一個 ①②③…（中層，跟輔助線一起隱藏）。
                 FilterChip(
                     selected = DraftingState.markerMode,

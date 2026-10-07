@@ -71,6 +71,12 @@ struct ContinuousPageView<ObjectLayer: View>: View {
     var onPenControl: ((FfiPenControl, Bool) -> Void)? = nil
     /// 有圖片拖到這一頁上（工作項 S-68）。落點是**這一頁的**座標。
     var onImageDropped: ((Int, [NSItemProvider], CGPoint) -> Bool)? = nil
+    /// 這一頁第一次載入完（筆跡剛從磁碟讀進來、還沒有任何編輯）。
+    /// 呼叫端用它記下「初始狀態」—— 連續模式的頁面不經過整頁模式的換頁，
+    /// 沒有這一步，「一鍵恢復初始狀態」就不知道這些頁面原本長什麼樣。
+    var onInitialLoaded: ((Int, PKDrawing) -> Void)? = nil
+    /// 呼叫端要求整頁重讀（恢復初始狀態之後）。數字一變，畫布連同專業筆畫層重建、筆跡重新從磁碟載入。
+    var reloadGeneration: Int = 0
     @Binding var notebook: NotebookDocument
     var onNotebookChanged: (() -> Void)? = nil
     var onLassoBegan: ((CGPoint) -> Void)? = nil
@@ -142,6 +148,7 @@ struct ContinuousPageView<ObjectLayer: View>: View {
                     onCanvasTap?(location)
                 }
             )
+            .id(reloadGeneration)
             .frame(width: PageGeometry.width, height: PageGeometry.height, alignment: .topLeading)
             .allowsHitTesting(true)
             .zIndex(editorMode == .draw ? 2 : 1)
@@ -208,6 +215,10 @@ struct ContinuousPageView<ObjectLayer: View>: View {
             guard !loaded else { return }
             drawing = store.loadDrawing(notebookId: notebookId, pageIndex: pageIndex)
             loaded = true
+            onInitialLoaded?(pageIndex, drawing)
+        }
+        .onChange(of: reloadGeneration) { _ in
+            drawing = store.loadDrawing(notebookId: notebookId, pageIndex: pageIndex)
         }
     }
 }

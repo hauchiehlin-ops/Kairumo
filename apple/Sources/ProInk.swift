@@ -425,6 +425,7 @@ final class ProInkLayerView: UIView {
         guard let directory else { return }
         ProInkStore.save(ownStrokes, in: directory, notebookId: notebookId, page: pageIndex)
         onChanged?()
+        NotificationCenter.default.post(name: AppCommand.proInkDidChange, object: notebookId.lowercased())
     }
 
     // MARK: 繪製
@@ -857,6 +858,7 @@ final class ProInkLayerView: UIView {
         ProInkStore.saveSuppressed(keys, in: directory, notebookId: notebookId, page: pageIndex)
         ProInkStore.save(foreignStrokes, in: directory, notebookId: notebookId, page: pageIndex, foreign: true)
         onChanged?()
+        NotificationCenter.default.post(name: AppCommand.proInkDidChange, object: notebookId.lowercased())
         registerForeignUndo(restoring: strokes)
     }
 
@@ -869,6 +871,7 @@ final class ProInkLayerView: UIView {
         ProInkStore.saveSuppressed(keys, in: directory, notebookId: notebookId, page: pageIndex)
         ProInkStore.save(foreignStrokes, in: directory, notebookId: notebookId, page: pageIndex, foreign: true)
         onChanged?()
+        NotificationCenter.default.post(name: AppCommand.proInkDidChange, object: notebookId.lowercased())
     }
 
     private func registerForeignUndo(restoring strokes: [ProStroke]) {
@@ -1267,10 +1270,13 @@ final class ProStrokeGestureRecognizer: UIGestureRecognizer {
             state = .cancelled
             return
         }
-        // 圖學工具（標註…）是刻意的點選與拖曳，不是書寫：不受「手指能不能畫」的掌拒政策限制 ——
-        // 政策擋的是手掌誤觸留下墨跡，而工具每一步都要使用者明確點下去。
+        // 圖學工具（標註…）、改圖層、步驟編號都是刻意的點選，不是書寫：不受「手指能不能畫」的掌拒政策限制 ——
+        // 政策擋的是手掌誤觸留下墨跡，而這些每一步都要使用者明確點下去。
+        // （改圖層與步驟編號原本沒列進來：用過 Apple Pencil 之後政策變成 `.pencilOnly`，
+        // 手指點下去整個被擋掉 —— 「移到圖層」看起來完全沒作用。）
         guard touches.count == 1, let touch = touches.first,
               touch.type == .pencil || allowsFingerDrawing() || mode == .tool
+                  || mode == .reassign || mode == .marker
         else { state = .failed; return }
 
         tracked = touch
@@ -1306,7 +1312,17 @@ final class ProStrokeGestureRecognizer: UIGestureRecognizer {
             erasePath = [CGPoint(x: CGFloat(point.x), y: CGFloat(point.y))]
             layerView.erase(along: erasePath, radius: eraserRadius())
         case .reassign:
-            layerView.reassignLayer(near: CGPoint(x: CGFloat(point.x), y: CGFloat(point.y)), to: reassignTarget())
+            let target = reassignTarget()
+            let done = layerView.reassignLayer(
+                near: CGPoint(x: CGFloat(point.x), y: CGFloat(point.y)), to: target)
+            let drafting = DraftingState.shared
+            if done {
+                let name = drafting.layers.first { $0.id == target }
+                    .map { L10n.t($0.nameKey) } ?? ""
+                drafting.reassignResult = L10n.f("draft_reassigned", name)
+            } else {
+                drafting.reassignResult = L10n.t("draft_reassign_miss")
+            }
         case .marker:
             onMarker?(CGPoint(x: CGFloat(point.x), y: CGFloat(point.y)))
         case .tool:

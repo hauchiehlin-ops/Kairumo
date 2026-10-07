@@ -50,6 +50,12 @@ enum AppCommand {
     /// 接到這個通知的編輯器，如果打開的是這本，就丟掉舊的 coreInkBaselines
     /// 並重新讀取套件，讓畫面顯示最新的跨裝置筆跡。
     static let notebookPackageChanged = Notification.Name("kairumo.notebookPackageChanged")
+    /// 專業筆畫（製圖線、專業筆刷）存檔了。object 是小寫的筆記本 id。
+    ///
+    /// 專業筆畫在自己的檔案裡、不在 `PKDrawing`，編輯器原本**完全不知道它變了**
+    /// （只有 UI 測試的讀數會接）—— 所以側欄縮圖不更新、筆記本也沒被標成已修改，
+    /// 使用者看到「預覽與畫布的筆跡不一樣」。
+    static let proInkDidChange = Notification.Name("kairumo.proInkDidChange")
 }
 
 /// App delegate。存在的唯一理由就是註冊上面那些命令。
