@@ -1593,7 +1593,11 @@ enum NotebookSyncCoordinator {
                 try? bytes.write(to: url, options: .atomic)
             }
         }
-        for (index, drawing) in imported.drawings.enumerated() {
+        for (index, merged) in imported.drawings.enumerated() {
+            // 使用者在這台擦掉的筆畫：雲端的舊檔還在，合併結果會把它們帶回來，要濾掉。
+            let drawing = ErasedInkLedger.filtered(
+                merged,
+                erased: ErasedInkLedger.load(in: baselineDir, notebookId: documentId, page: index))
             store.syncSaveDrawing(notebookId: documentId, pageIndex: index, drawing: drawing)
             // 別台裝置的部分 = 合併後的 − 自己的。下次匯出要扣掉它。
             let mine = ownStrokes[baselineKey(documentId, index)] ?? PKDrawing()
