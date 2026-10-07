@@ -2873,36 +2873,8 @@ public struct NotebookEditorView: View {
                 }
             }
         }
-        .alert(localizationManager.localized("revert_to_initial_state"), isPresented: $showRevertConfirmAlert) {
-            Button(localizationManager.localized("cancel"), role: .cancel) {}
-            Button(localizationManager.localized("revert_confirm_action"), role: .destructive) {
-                if let snapshot = initialNotebookSnapshot {
-                    notebook = snapshot
-                    restoreInitialPages()
-                    currentDrawing = initialPageDrawings[currentPageIndex] ?? store.loadDrawing(notebookId: notebook.id, pageIndex: currentPageIndex)
-                    if let canvas = canvasView {
-                        // 程式指派 drawing 會讓復原堆疊裡的項目全部失效：整個清掉，
-                        // 免得按復原吃掉點擊、什麼都沒發生。
-                        canvas.drawing = currentDrawing
-                        canvas.undoManager?.removeAllActions()
-                        (canvas as? AdaptiveCanvasView)?.proLayer?.reload()
-                    }
-                    store.updateNotebook(notebook)
-                    continuousReloadGeneration += 1
-                    thumbnailRevision += 1
-                    showCanvasNotice(localizationManager.localized("revert_done"))
-                    activeSelectedObjectId = nil
-                    inlineEditingTextId = nil
-                    editingTextId = nil
-                    selectedShapeIds = []
-                    selectedConnectionId = nil
-                    selectedObjectIds = []
-                    PageThumbnailRenderer.invalidateAll()
-                }
-            }
-        } message: {
-            Text(localizationManager.localized("revert_to_initial_state_confirm"))
-        }
+        // 確認視窗掛在自己的隱藏載體上（見 `revertAlertHost`）。
+        .background(revertAlertHost)
         .background(Color.clear.alert(localizationManager.localized("clear_page"), isPresented: $showClearConfirmAlert) {
             Button(localizationManager.localized("cancel"), role: .cancel) {}
             Button(localizationManager.localized("clear_confirm"), role: .destructive) {
@@ -2968,6 +2940,46 @@ public struct NotebookEditorView: View {
         .sheet(isPresented: $showMoveNotebookSheet) { resizableSheet {
             MoveNotebookSheet(notebookId: notebookToMoveId ?? notebook.id)
         } }
+    }
+
+    /// 「一鍵恢復初始狀態」的確認視窗載體。
+    ///
+    /// 每個 `.alert` 要各掛在自己的 view 上：同一個 view 上疊多個 `.alert` 時只有一個會出現，
+    /// 其餘的永遠不跳 —— 按了「恢復初始狀態」沒反應、確認視窗根本沒出現就是這樣。
+    /// 抽成獨立屬性也讓 `body` 的型別推導不至於過長。
+    private var revertAlertHost: some View {
+        Color.clear
+            .frame(width: 0, height: 0)
+            .alert(localizationManager.localized("revert_to_initial_state"), isPresented: $showRevertConfirmAlert) {
+                Button(localizationManager.localized("cancel"), role: .cancel) {}
+                Button(localizationManager.localized("revert_confirm_action"), role: .destructive) {
+                    if let snapshot = initialNotebookSnapshot {
+                        notebook = snapshot
+                        restoreInitialPages()
+                        currentDrawing = initialPageDrawings[currentPageIndex] ?? store.loadDrawing(notebookId: notebook.id, pageIndex: currentPageIndex)
+                        if let canvas = canvasView {
+                            // 程式指派 drawing 會讓復原堆疊裡的項目全部失效：整個清掉，
+                            // 免得按復原吃掉點擊、什麼都沒發生。
+                            canvas.drawing = currentDrawing
+                            canvas.undoManager?.removeAllActions()
+                            (canvas as? AdaptiveCanvasView)?.proLayer?.reload()
+                        }
+                        store.updateNotebook(notebook)
+                        continuousReloadGeneration += 1
+                        thumbnailRevision += 1
+                        showCanvasNotice(localizationManager.localized("revert_done"))
+                        activeSelectedObjectId = nil
+                        inlineEditingTextId = nil
+                        editingTextId = nil
+                        selectedShapeIds = []
+                        selectedConnectionId = nil
+                        selectedObjectIds = []
+                        PageThumbnailRenderer.invalidateAll()
+                    }
+                }
+            } message: {
+                Text(localizationManager.localized("revert_to_initial_state_confirm"))
+            }
     }
 
     // MARK: - 1. 頂部自訂主工作列（自適應寬窄螢幕模式）

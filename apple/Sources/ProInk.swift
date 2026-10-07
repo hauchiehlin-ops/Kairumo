@@ -1164,10 +1164,10 @@ final class ProInkLayerView: UIView {
     /// 在 `strokes` 裡找離 `point` 最近、而且圖層可編輯的一筆。
     private func nearestStroke(in strokes: [ProStroke], to point: CGPoint, radius: CGFloat)
         -> (index: Int, distance: CGFloat)? {
-        let drafting = DraftingState.shared
+        // 鎖定與隱藏的圖層**也能改**：改圖層本身就是搬動的動作，使用者要把線搬出鎖定的圖層
+        // 或把隱藏圖層裡的線救出來，正是靠這個（鎖定只擋「畫」與「擦」）。
         var best: (index: Int, distance: CGFloat)?
-        for (i, stroke) in strokes.enumerated()
-        where drafting.canEdit(layer: stroke.layerId, notebookId: notebookId) {
+        for (i, stroke) in strokes.enumerated() {
             guard stroke.bounds.insetBy(dx: -radius, dy: -radius).contains(point) else { continue }
             let reach = radius + CGFloat(stroke.baseWidth) * 0.5
             // 點到線段的距離（不是取樣點）：吸附出來的直線取樣點很少。
