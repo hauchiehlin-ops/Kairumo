@@ -272,7 +272,8 @@ fn bare_markers_reach_the_caller_as_empty_input_not_a_fake_summary() {
         Err(LlmError::EmptyInput)
     );
     assert_eq!(
-        engine.calls(), 0,
+        engine.calls(),
+        0,
         "沒有實質內容時不該叫模型，否則白跑好幾秒還回一段編的"
     );
 }

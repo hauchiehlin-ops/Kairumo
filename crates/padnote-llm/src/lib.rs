@@ -100,7 +100,10 @@ fn has_substance(text: &str) -> bool {
             .trim_start_matches(['.', ')'])
             .trim();
         // `- [ ]` 這種待辦記號也要剝掉，否則一份全是空待辦框的清單會被當成有內容。
-        let body = body.trim_start_matches("[ ]").trim_start_matches("[x]").trim();
+        let body = body
+            .trim_start_matches("[ ]")
+            .trim_start_matches("[x]")
+            .trim();
         !strip_markdown(body).is_empty()
     })
 }

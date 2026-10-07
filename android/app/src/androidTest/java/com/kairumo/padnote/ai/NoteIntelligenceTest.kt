@@ -1,6 +1,7 @@
 package com.kairumo.padnote.ai
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -11,17 +12,21 @@ import uniffi.padnote_core.FfiTodoItem
 /**
  * 摘要與待辦的入口（工作項 S-20）。
  *
- * 模型本身不在這裡驗 —— 這台裝置上根本沒有裝置端後端（見 [NoteIntelligence]
- * 的說明）。能驗、而且真的會出錯的是兩件事：
+ * 模型本身不在這裡驗 —— CI 的機器上沒有放模型檔（後端走 MediaPipe，模型
+ * 不隨 App 出貨，見 [NoteIntelligence] 的說明）。能驗、而且真的會出錯的是
+ * 兩件事：
  *
  * 1. **餵給模型的文字**取得對不對，以及與 Apple 端是不是同一份規則；
- * 2. **沒有後端時的行為**是不是「明確地說沒有」，而不是一個看起來像暫時性
+ * 2. **沒有模型時的行為**是不是「明確地說沒有」，而不是一個看起來像暫時性
  *    失敗的錯誤。
  *
  * Apple 端的對照組是 `NoteIntelligenceTests.swift`，字串刻意逐字相同。
  */
 @RunWith(AndroidJUnit4::class)
 class NoteIntelligenceTest {
+
+    /** 後端要拿 Context 才找得到模型檔（App 私有目錄）。 */
+    private val context get() = InstrumentationRegistry.getInstrumentation().targetContext
 
     @Test
     fun anEmptyNoteProducesEmptyText() {
@@ -74,10 +79,14 @@ class NoteIntelligenceTest {
     }
 
     @Test
-    fun withoutABackendTheResultSaysSoInsteadOfLookingTransient() {
+    fun withoutAModelTheResultSaysSoInsteadOfLookingTransient() {
         // **這一條是重點。** 回一個看起來像暫時性失敗的錯誤，使用者會一直按；
         // `needsModel` 才是讓畫面知道「這不是重試能解決的」的旗標。
-        val result = NoteIntelligence.summarize("一些文字", "zh-Hant")
+        //
+        // 這台機器上沒有模型檔，所以走的是 ModelNotLoaded 那條路 ——
+        // 放了模型之後這一條會變成真的去跑模型，到那時要改成在有模型的
+        // 裝置上驗，而不是放寬這個斷言。
+        val result = NoteIntelligence.summarize(context, "一些文字", "zh-Hant")
         assertFalse(result.ok)
         assertTrue("沒有標成需要模型，使用者會一直重試", result.needsModel)
     }
@@ -85,9 +94,9 @@ class NoteIntelligenceTest {
     @Test
     fun theAvailabilityMatchesWhatTheBackendActuallyDoes() {
         // 兩者不一致的話，畫面會給一顆按下去必定失敗的按鈕。
-        val claimsAvailable = NoteIntelligence.availability() ==
+        val claimsAvailable = NoteIntelligence.availability(context) ==
             NoteIntelligence.Availability.AVAILABLE
-        val actuallyWorks = NoteIntelligence.summarize("x", "en").ok
+        val actuallyWorks = NoteIntelligence.summarize(context, "x", "en").ok
         assertEquals(claimsAvailable, actuallyWorks)
     }
 
