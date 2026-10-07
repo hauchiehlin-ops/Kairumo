@@ -63,6 +63,21 @@ public final class AutoSyncController: ObservableObject {
         lastGoogleSyncDate = date
     }
 
+    /// 雲端清單裡有條目、卻沒有任何操作記錄的筆記本（id → 標題）。
+    ///
+    /// 本機沒有副本，所以清單上看不到、也就**沒有地方可以刪它**；而每一輪同步都
+    /// 會對它報同一個錯。面板用這份名單提供「從雲端移除」。
+    @Published public private(set) var emptyCloudNotebooks: [EmptyCloudNotebook] = []
+
+    public struct EmptyCloudNotebook: Identifiable, Equatable {
+        public let id: String
+        public let title: String
+    }
+
+    func setEmptyCloudNotebooks(_ items: [EmptyCloudNotebook]) {
+        if items != emptyCloudNotebooks { emptyCloudNotebooks = items }
+    }
+
     public func setSyncing(_ syncing: Bool, message: String? = nil) {
         isSyncing = syncing
         if let message {

@@ -1068,6 +1068,10 @@ enum NotebookSyncCoordinator {
         return report
     }
 
+    /// 核心 `clone_notebook` 在「雲端沒有任何操作記錄」時回的訊息。
+    /// 與 `ffi_gdrive.rs` 同文 —— 兩邊要一起改。
+    static let cloudNotebookHasNoOpsError = "雲端尚無此筆記本之操作記錄，已清理暫存等待來源端上傳" // i18n-ok
+
     /// 把雲端有、本機還沒有的筆記本整本抓下來。回傳抓了幾本。
     ///
     /// 清單來自**合併後的索引**，不是本機那一份 —— 用本機的話，剛從雲端
@@ -1083,6 +1087,11 @@ enum NotebookSyncCoordinator {
         let fm = FileManager.default
         var pulled = 0
         var pulledIds = Set<String>()
+        var emptyOnCloud: [AutoSyncController.EmptyCloudNotebook] = []
+        defer {
+            let found = emptyOnCloud
+            Task { @MainActor in AutoSyncController.shared.setEmptyCloudNotebooks(found) }
+        }
         for item in syncLiveNotebooks(indexJson: index) {
             let normId = item.id.lowercased()
             guard !deletedNotebookIds.contains(normId) else { continue }
@@ -1113,6 +1122,14 @@ enum NotebookSyncCoordinator {
                 // 抓失敗時把空殼刪掉。留著的話，下一輪 `fileExists` 為真，
                 // 這本就再也不會被重抓 —— 使用者會看到一本永遠打不開的空筆記。
                 try? fm.removeItem(at: targetPackage)
+                // 雲端只有條目、沒有內容：來源端還沒傳完（或永遠不會傳）。
+                // **這不是同步失敗** —— 算成失敗的話，一本空殼就讓整體同步永遠
+                // 顯示錯誤、「上次同步」停在幾天前，其他筆記也被拖累。
+                // 只記下來，讓面板能提供「從雲端移除」；來源端一上傳就會自己抓下來。
+                if result.error == Self.cloudNotebookHasNoOpsError {
+                    emptyOnCloud.append(.init(id: item.id, title: item.title))
+                    continue
+                }
                 report.failures[item.title] = L10n.coreText(result.error)
                 if result.needsReauth {
                     break
@@ -1489,6 +1506,16 @@ enum NotebookSyncCoordinator {
     nonisolated static func workingCopyNeedsExport(_ inputs: ExportInputs) -> Bool {
         let fm = FileManager.default
         guard fm.fileExists(atPath: inputs.package.path) else { return true }
+        // **套件裡沒有任何操作記錄 = 從來沒匯出過，不管時間怎麼比。**
+        //
+        // 只有 manifest 的套件（建立時就先建好、或上一輪匯出中途被中斷）的時間
+        // 可能比工作副本還新，下面的時間比較會判成「已經包含」而永遠略過。
+        // 結果是雲端清單有這一本的條目、卻永遠沒有內容，別台裝置每一輪都抓不下來
+        // （「雲端尚無此筆記本之操作記錄」）。
+        let opsDir = inputs.package.appending(path: "doc/ops")
+        let hasOps = ((try? fm.contentsOfDirectory(at: opsDir, includingPropertiesForKeys: nil)) ?? [])
+            .contains { $0.pathExtension == "oplog" }
+        if !hasOps { return true }
         // 錄音的名字不在文件裡，檔案時間看不出它變了：新錄的音檔（比筆記本新）、改名之後又落筆
         // （增量寫入讓套件比較新）都會被判成「不必匯出」，名字就沒帶出去。
         if RecordingTitleLedger.hasUnsynced(
@@ -1578,8 +1605,10 @@ enum NotebookSyncCoordinator {
         for (index, merged) in imported.proStrokes.enumerated() {
             let own = Set(
                 ProInkStore.load(in: drawingsDir, notebookId: documentId, page: index).map(\.contentKey))
+            // 使用者在這台擦掉的別台筆畫：雲端那份還在，不能再帶回來。
+            let erased = ProInkStore.loadSuppressed(in: drawingsDir, notebookId: documentId, page: index)
             ProInkStore.save(
-                merged.filter { !own.contains($0.contentKey) },
+                merged.filter { !own.contains($0.contentKey) && !erased.contains($0.contentKey) },
                 in: drawingsDir, notebookId: documentId, page: index, foreign: true)
         }
         if !imported.proStrokes.isEmpty {

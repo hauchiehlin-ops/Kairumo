@@ -3117,7 +3117,7 @@ public struct NotebookEditorView: View {
             .help(L("posture_tabletop_mode_desc"))
 
             // 復原與重做 (Undo / Redo)
-            HStack(spacing: 3) {
+            HStack(spacing: 10) {
                 Button {
                     performUndo()
                 } label: {
@@ -3127,6 +3127,8 @@ public struct NotebookEditorView: View {
                         .padding(5)
                         .background(Color(uiColor: .tertiarySystemGroupedBackground))
                         .cornerRadius(6)
+                        .frame(minWidth: 44, minHeight: 44)
+                        .contentShape(Rectangle())
                 }
                 .accessibilityLabel(localizationManager.localized("undo"))
                 .help(localizationManager.localized("undo_desc"))
@@ -3140,9 +3142,13 @@ public struct NotebookEditorView: View {
                         .padding(5)
                         .background(Color(uiColor: .tertiarySystemGroupedBackground))
                         .cornerRadius(6)
+                        .frame(minWidth: 44, minHeight: 44)
+                        .contentShape(Rectangle())
                 }
                 .accessibilityLabel(localizationManager.localized("redo"))
                 .help(localizationManager.localized("redo_desc"))
+
+                Divider().frame(height: 20)
 
                 Button {
                     showRevertConfirmAlert = true
@@ -3153,6 +3159,8 @@ public struct NotebookEditorView: View {
                         .padding(5)
                         .background(Color(uiColor: .tertiarySystemGroupedBackground))
                         .cornerRadius(6)
+                        .frame(minWidth: 44, minHeight: 44)
+                        .contentShape(Rectangle())
                 }
                 .accessibilityLabel(localizationManager.localized("revert_to_initial_state"))
                 .help(localizationManager.localized("revert_to_initial_state"))
@@ -3560,7 +3568,7 @@ public struct NotebookEditorView: View {
         .accessibilityIdentifier("editor.title")
 
         // 復原、重做與恢復初始狀態（緊湊模式工具列，支援連續無限制復原）
-        HStack(spacing: 3) {
+        HStack(spacing: 10) {
             Button {
                 performUndo()
             } label: {
@@ -3570,6 +3578,8 @@ public struct NotebookEditorView: View {
                     .padding(4)
                     .background(Color(uiColor: .tertiarySystemGroupedBackground))
                     .cornerRadius(EditorToolbarMetrics.corner)
+                    .frame(minWidth: 44, minHeight: 44)
+                    .contentShape(Rectangle())
             }
             .accessibilityLabel(localizationManager.localized("undo"))
             .help(localizationManager.localized("undo_desc"))
@@ -3584,10 +3594,14 @@ public struct NotebookEditorView: View {
                     .padding(4)
                     .background(Color(uiColor: .tertiarySystemGroupedBackground))
                     .cornerRadius(EditorToolbarMetrics.corner)
+                    .frame(minWidth: 44, minHeight: 44)
+                    .contentShape(Rectangle())
             }
             .accessibilityLabel(localizationManager.localized("redo"))
             .help(localizationManager.localized("redo_desc"))
             .accessibilityIdentifier("editor.compact.redo")
+
+            Divider().frame(height: 20)
 
             Button {
                 showRevertConfirmAlert = true
@@ -3598,6 +3612,8 @@ public struct NotebookEditorView: View {
                     .padding(4)
                     .background(Color(uiColor: .tertiarySystemGroupedBackground))
                     .cornerRadius(EditorToolbarMetrics.corner)
+                    .frame(minWidth: 44, minHeight: 44)
+                    .contentShape(Rectangle())
             }
             .accessibilityLabel(localizationManager.localized("revert_to_initial_state"))
             .help(localizationManager.localized("revert_to_initial_state"))
@@ -4093,13 +4109,18 @@ public struct NotebookEditorView: View {
                         .padding(12)
                 }
             }
-            .overlay(alignment: .top) {
-                // 圖學：製圖筆組、圖層、吸附（見 DraftingBar.swift）。
+            // 圖學：製圖筆組、圖層、吸附（見 DraftingBar.swift）。
+            //
+            // **佔用版面，不是浮在畫布上。** 原本是 `.overlay`，列疊在頁面最上方，
+            // 蓋住頁首標題與題目文字（圖學頁一開頭就是標題）。改成 `safeAreaInset`：
+            // 畫布整個往下讓出位置，收合或展開都不會壓到頁面內容。
+            .safeAreaInset(edge: .top, spacing: 0) {
                 if editorMode == .draw && selectedTool == .drafting {
                     DraftingBar(onOpenSolidStudio: { showSolidStudio = true },
                                 onOpenToolbox: { showDraftingToolbox = true },
                                 onMarkAngle: { markProtractorReading() })
-                        .padding(.top, 12)
+                        .padding(.top, 8)
+                        .padding(.bottom, 6)
                         .transition(.opacity.combined(with: .move(edge: .top)))
                 }
             }

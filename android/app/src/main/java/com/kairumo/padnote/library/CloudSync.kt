@@ -1,5 +1,7 @@
 package com.kairumo.padnote.library
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import android.content.Context
 import com.kairumo.padnote.oauth.DriveHttpClient
 import com.kairumo.padnote.oauth.GoogleAuth
@@ -25,6 +27,22 @@ import uniffi.padnote_core.syncOrderActiveFirst
  * （每一本筆記的 oplog 檔）。
  */
 object CloudSync {
+
+    /** 核心 `clone_notebook` 在「雲端沒有任何操作記錄」時回的訊息。與 `ffi_gdrive.rs` 同文，要一起改。 */
+    private const val NO_OPS_ERROR = "雲端尚無此筆記本之操作記錄，已清理暫存等待來源端上傳"
+
+    /**
+     * 雲端清單有條目、卻沒有任何內容的筆記本（id → 標題）。
+     *
+     * 本機沒有副本，清單上看不到、也就沒有地方可以刪它；它**不算同步失敗**
+     * （來源端一上傳就會自己抓下來），只是讓畫面能提供「從雲端移除」。
+     */
+    var emptyCloudNotebooks by androidx.compose.runtime.mutableStateOf(listOf<Pair<String, String>>())
+        private set
+
+    fun forgetEmptyCloudNotebook(id: String) {
+        emptyCloudNotebooks = emptyCloudNotebooks.filter { it.first != id }
+    }
 
     /**
      * 同一行程內的同步入口佇列。核心閘負責互斥，這裡把「忙碌就丟掉」
@@ -573,6 +591,8 @@ object CloudSync {
     ): List<String> {
         val dir = NotebookLibrary.directory(context)
         val pulled = mutableListOf<String>()
+        val emptyOnCloud = mutableListOf<Pair<String, String>>()
+        try {
         for (item in syncLiveNotebooks(mergedIndexJson)) {
             if (deletedNotebookIds.contains(item.id)) continue
             val path = File(dir, "${item.id}.padnote")
@@ -602,8 +622,12 @@ object CloudSync {
                 // 抓失敗時把空殼刪掉。留著的話，下一輪 `path.exists()` 為真，
                 // 這本就再也不會被重抓 —— 使用者會看到一本永遠打不開的空筆記。
                 path.deleteRecursively()
+                if (result.error == NO_OPS_ERROR) emptyOnCloud += item.id to item.title
                 if (result.needsReauth) break
             }
+        }
+        } finally {
+            emptyCloudNotebooks = emptyOnCloud
         }
         return pulled
     }

@@ -4316,6 +4316,7 @@ public struct CloudSyncDetailSheet: View {
     @State private var logFilter: LogFilter = .currentTab
     @State private var selectedProvider: CloudSyncProvider = .googleDrive
     @State private var googleStatusMessage: String?
+    @State private var pendingEmptyCloudRemoval: AutoSyncController.EmptyCloudNotebook?
     /// 「重置雲端同步」的確認與進行狀態。
     @State private var showWipeConfirm = false
     @State private var showReclaimConfirm = false
@@ -4600,6 +4601,47 @@ public struct CloudSyncDetailSheet: View {
                     .font(DS.Font.caption)
                     .foregroundColor(SyncText.isError(googleStatusMessage) ? .red : .secondary)
                     .padding(.horizontal, DS.Space.xs)
+            }
+
+            // 雲端有條目、沒有內容的筆記本：本機沒有副本，清單上刪不到它，
+            // 同步卻每一輪都報錯。這裡是唯一能把它清掉的地方。
+            if googleAuth.isSignedIn, !autoSync.emptyCloudNotebooks.isEmpty {
+                Group {
+                ForEach(autoSync.emptyCloudNotebooks) { item in
+                    Button(role: .destructive) {
+                        pendingEmptyCloudRemoval = item
+                    } label: {
+                        HStack {
+                            Image(systemName: "trash")
+                            Text(L10n.f("sync_orphan_remove", item.title))
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 10)
+                    }
+                    .buttonStyle(.bordered)
+                }
+                .confirmationDialog(
+                    localizationManager.localized("sync_orphan_confirm_title"),
+                    isPresented: Binding(
+                        get: { pendingEmptyCloudRemoval != nil },
+                        set: { if !$0 { pendingEmptyCloudRemoval = nil } }
+                    ),
+                    titleVisibility: .visible,
+                    presenting: pendingEmptyCloudRemoval
+                ) { item in
+                    Button(L10n.f("sync_orphan_remove", item.title), role: .destructive) {
+                        AccountSyncStore.shared.recordDeletion(id: item.id)
+                        autoSync.setEmptyCloudNotebooks(
+                            autoSync.emptyCloudNotebooks.filter { $0.id != item.id }
+                        )
+                        pendingEmptyCloudRemoval = nil
+                        googleSyncTask = Task { await runGoogleSync() }
+                    }
+                    Button(localizationManager.localized("cancel"), role: .cancel) {}
+                } message: { _ in
+                    Text(localizationManager.localized("sync_orphan_confirm_message"))
+                }
+                }
             }
 
             VStack(spacing: DS.Space.s) {
