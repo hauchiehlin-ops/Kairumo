@@ -431,10 +431,29 @@ public struct NotebookDocument: Identifiable, Codable, Hashable {
         return l10n.localized(key)
     }
 
+    /// 六種語言的 `created_on` 前綴（`%@` 之前的字），用來認出舊筆記存下的「建立於 …」。
+    @MainActor private static let createdOnPrefixes: [String] = {
+        AppLanguage.allCases.compactMap { lang in
+            LocalizationManager.generatedStrings["created_on"]?[lang]?
+                .components(separatedBy: "%@").first
+        }.filter { !$0.isEmpty }
+    }()
+
+    @MainActor static func isCreatedOnSnippet(_ text: String) -> Bool {
+        createdOnPrefixes.contains { text.hasPrefix($0) }
+    }
+
     /// 顯示用摘要，語意同 `displayTitle`。
     @MainActor
     public func displaySnippet(_ l10n: LocalizationManager = .shared) -> String? {
         if let key = snippetKey { return l10n.localized(key) }
+        // 「建立於 <日期>」是建立當下存下來的整句話 —— 語言與日期格式都是那一刻的。
+        // 換了介面語言之後它還是舊語言，所以認出這種句子就依建立時間重新組。
+        if let stored = previewSnippet, Self.isCreatedOnSnippet(stored) {
+            return String(
+                format: l10n.localized("created_on"),
+                LocalizationManager.formatted(createdAt, date: .abbreviated, time: .shortened))
+        }
         return previewSnippet
     }
 
@@ -1242,22 +1261,22 @@ public final class NotebookStore: ObservableObject {
     }
 
     private init() {
-        StartupLogger.log("NotebookStore.init 開始載入資料")
+        StartupLogger.logKey("log_store_init_begin")
         documentsRootOverride = nil
         loadData()
         let nonInbox = notebooks.filter {
             $0.id.caseInsensitiveCompare(recordingInboxNotebookId()) != .orderedSame
         }
         if nonInbox.isEmpty {
-            StartupLogger.log("NotebookStore: 建立預設種子筆記")
+            StartupLogger.logKey("log_store_seed_create")
             seedDefaultNotebooks()
         } else {
-            StartupLogger.log("NotebookStore: 檢查/回填種子筆記")
+            StartupLogger.logKey("log_store_seed_check")
             backfillEmptySeedNotebooks()
         }
         refreshRecordings()
         injectInteractionFixturesIfRequested()
-        StartupLogger.log("NotebookStore.init 初始化完成")
+        StartupLogger.logKey("log_store_init_done")
     }
 
     /// 互動矩陣專用筆記本的 id（`InteractionMatrixAudit` 靠它從首頁找到這本）。
@@ -1448,7 +1467,7 @@ public final class NotebookStore: ObservableObject {
            !Self.legacyDefaultRootNames.contains(savedRoot) {
             self.rootFolderName = savedRoot
         }
-        StartupLogger.log("NotebookStore.loadData 完成: \(self.notebooks.count) 本筆記, \(self.recordings.count) 則錄音, \(self.folders.count) 個資料夾")
+        StartupLogger.logKey("log_store_load_done", self.notebooks.count, self.recordings.count, self.folders.count)
     }
 
     /// 背景序列寫檔佇列。
@@ -1720,7 +1739,7 @@ public final class NotebookStore: ObservableObject {
         trashedNotebooks = []
         loadData()
         refreshRecordings()
-        StartupLogger.log("主要文件庫已切換至：\(documentsDir.path)")
+        StartupLogger.logKey("log_library_switched", documentsDir.path)
         AutoSyncController.shared.request(.localEdit)
     }
 
@@ -1787,7 +1806,7 @@ public final class NotebookStore: ObservableObject {
         trashedNotebooks = []
         loadData()
         refreshRecordings()
-        StartupLogger.log("本機資料已重設：\(root.path)")
+        StartupLogger.logKey("log_local_reset", root.path)
         AutoSyncController.shared.request(.localEdit)
     }
 
@@ -2025,7 +2044,7 @@ public final class NotebookStore: ObservableObject {
             hasRecording: false,
             previewSnippet: String(
                 format: LocalizationManager.shared.localized("created_on"),
-                Date().formatted(date: .abbreviated, time: .shortened)),
+                LocalizationManager.formatted(Date(), date: .abbreviated, time: .shortened)),
             template: template,
             folderId: folderId
         )
@@ -3274,7 +3293,7 @@ public final class NotebookStore: ObservableObject {
     /// 時間才是區分兩段錄音的東西。
     static func defaultRecordingTitle(at date: Date = Date()) -> String {
         let label = LocalizationManager.shared.localized("recording_suffix")
-        return "\(label) \(date.formatted(date: .numeric, time: .shortened))"
+        return "\(label) \(LocalizationManager.formatted(date, date: .numeric, time: .shortened))"
     }
 
     public func refreshRecordings() {

@@ -134,7 +134,7 @@ public struct HomeWorkbenchView: View {
     }
 
     public init() {
-        StartupLogger.log("HomeWorkbenchView.init 實例化完成")
+        StartupLogger.logKey("log_home_init")
     }
 
     /// 取得核心版本資訊
@@ -183,7 +183,7 @@ public struct HomeWorkbenchView: View {
             return text.localizedCaseInsensitiveContains(searchText)
         }
 
-        if hit(doc.displayTitle()) || hit(doc.previewSnippet) {
+        if hit(doc.displayTitle()) || hit(doc.displaySnippet()) {
             return true
         }
 
@@ -507,7 +507,7 @@ public struct HomeWorkbenchView: View {
                 Text(localizationManager.localized("mic_permission_msg"))
             }
             .onAppear {
-                StartupLogger.log("HomeWorkbenchView.onAppear: 首頁畫面載入就緒")
+                StartupLogger.logKey("log_home_appear")
                 // 不限定 macCatalyst：使用者在 Mac 上跑的是 iOS 版（Designed for iPad）
                 MacWindowTitle.apply()
                 autoSync.start(store: notebookStore, deviceId: NotebookMigration.deviceId)
@@ -3304,7 +3304,7 @@ struct QuickAudioRecorderModal: View {
             }
             .onAppear {
                 if recordingTitle.isEmpty {
-                    recordingTitle = "\(localizationManager.localized("quick_record_title")) \(Date().formatted(date: .numeric, time: .shortened))"
+                    recordingTitle = "\(localizationManager.localized("quick_record_title")) \(LocalizationManager.formatted(Date(), date: .numeric, time: .shortened))"
                 }
                 Task { await startQuickRecording() }
             }
@@ -4025,7 +4025,7 @@ extension AppDiagnosticsSheet {
                 filename: "kairumo-startup-logs.txt"
             )
         } catch {
-            StartupLogger.log("啟動日誌匯出失敗：\(error.localizedDescription)")
+            StartupLogger.logKey("log_export_fail", error.localizedDescription)
         }
     }
 

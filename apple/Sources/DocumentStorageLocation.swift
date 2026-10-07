@@ -286,7 +286,7 @@ final class DocumentStorageLocation: ObservableObject {
             }
             defaults.set(true, forKey: migrationKey)
         } catch {
-            StartupLogger.log("文件庫預設位置遷移失敗：\(error.localizedDescription)")
+            StartupLogger.logKey("log_library_migrate_fail", error.localizedDescription)
         }
     }
 

@@ -272,11 +272,11 @@ import java.util.Locale
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        com.kairumo.padnote.platform.StartupLogger.log("MainActivity.onCreate 啟動")
+        com.kairumo.padnote.platform.StartupLogger.logKey("log_main_activity_create")
         // 跨裝置語言要在畫出任何東西**之前**讀進來，不然第一幀會是舊語言，
         // 使用者會看到介面閃一下才變過去。
         applySyncedLanguage(this)
-        com.kairumo.padnote.platform.StartupLogger.log("語言套用完成: ${deviceLanguageTag()}")
+        com.kairumo.padnote.platform.StartupLogger.logKey("log_language_applied", deviceLanguageTag())
         // 自動清理暫存、過期殘檔與期滿的回收桶（背景執行緒，不拖慢第一幀）。
         Thread {
             runCatching { com.kairumo.padnote.platform.StorageSweeper.sweepAtLaunch(applicationContext) }

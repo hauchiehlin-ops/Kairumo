@@ -145,8 +145,8 @@ enum StorageSweeper {
         report.trashPurged = store.purgeExpiredTrash()
         if report.totalBytes > 0 || report.trashPurged > 0 {
             let mb = String(format: "%.1f", Double(report.totalBytes) / 1_048_576)
-            StartupLogger.log(
-                "自動清理：暫存 \(report.tempFiles) 項、模型殘檔 \(report.partialFiles) 項（共 \(mb) MB），回收桶期滿 \(report.trashPurged) 本")
+            StartupLogger.logKey(
+                "log_sweep_apple", report.tempFiles, report.partialFiles, mb, report.trashPurged)
         }
         return report
     }

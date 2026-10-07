@@ -96,7 +96,7 @@ public enum AudioPCMDecoder {
                 return Array(UnsafeBufferPointer(start: channelData, count: count))
             }
         } catch {
-            StartupLogger.log("ℹ️ AVAudioFile 解碼未完成，退回 AVAssetReader 降級解析: \(error.localizedDescription)")
+            StartupLogger.logKey("log_audio_decode_fallback", error.localizedDescription)
         }
 
         // 備援：走 AVAssetReader（針對 MPEG4 / M4A 等容器媒體解碼）
@@ -356,10 +356,10 @@ public final class AudioTranscriber: ObservableObject {
         downloadError = error
         if error == nil {
             downloadProgress = 1
-            StartupLogger.log("✅ Whisper 模型下載完成並通過 SHA-256 驗證")
+            StartupLogger.logKey("log_whisper_download_ok")
         } else {
             downloadProgress = 0
-            StartupLogger.log("⚠️ Whisper 模型下載未完成：\(error ?? "")")
+            StartupLogger.logKey("log_whisper_download_fail", error ?? "")
         }
     }
 
@@ -403,7 +403,7 @@ public final class AudioTranscriber: ObservableObject {
             try FileManager.default.removeItem(at: destUrl)
         }
         try FileManager.default.copyItem(at: sourceUrl, to: destUrl)
-        StartupLogger.log("✅ 成功匯入 Whisper 離線模型 (\(size / 1_000_000) MB)")
+        StartupLogger.logKey("log_whisper_import_ok", size / 1_000_000)
         objectWillChange.send()
     }
 
@@ -412,7 +412,7 @@ public final class AudioTranscriber: ObservableObject {
         let destUrl = URL(fileURLWithPath: whisperModelPath)
         if FileManager.default.fileExists(atPath: destUrl.path) {
             try FileManager.default.removeItem(at: destUrl)
-            StartupLogger.log("🗑️ 已刪除本地 Whisper 模型以釋放空間")
+            StartupLogger.logKey("log_whisper_deleted")
             objectWillChange.send()
         }
     }
@@ -442,7 +442,7 @@ public final class AudioTranscriber: ObservableObject {
                 try AudioPCMDecoder.decodeTo16kMono(url: url)
             }.value
         } catch {
-            StartupLogger.log("⚠️ 音訊解碼失敗: \(error.localizedDescription)")
+            StartupLogger.logKey("log_audio_decode_fail", error.localizedDescription)
             throw error
         }
 
@@ -457,26 +457,26 @@ public final class AudioTranscriber: ObservableObject {
         // 1. 優先路徑：若已下載端側 Whisper 模型，走 Rust 核心 ASR 管線（支援多語言自動偵測與標點還原）
         if isWhisperAvailable {
             do {
-                StartupLogger.log("🎙️ 開始使用端側 Whisper 模型轉錄（自動語言偵測）...")
+                StartupLogger.logKey("log_whisper_start")
                 let result = try await Task.detached(priority: .userInitiated) { [path = whisperModelPath] () -> FfiTranscribeResult in
                     try whisperTranscribePcm(modelPath: path, pcm16kMono: pcm, language: languageCode)
                 }.value
 
                 lastUsedOnDevice = true
                 lastEngineUsed = "Whisper (\(result.language))"
-                StartupLogger.log("🎙️ Whisper 轉錄完成（語言: \(result.language), 片段數: \(result.segments.count)）")
+                StartupLogger.logKey("log_whisper_done", result.language, result.segments.count)
                 let trimmed = result.text.trimmingCharacters(in: .whitespacesAndNewlines)
                 if !trimmed.isEmpty {
                     return Self.localizedScript(trimmed)
                 }
             } catch {
-                StartupLogger.log("⚠️ Whisper 轉錄異常: \(error.localizedDescription)，平滑降級至 Apple Speech...")
+                StartupLogger.logKey("log_whisper_error", error.localizedDescription)
             }
         }
 
         // 2. 降級備援路徑：走 Apple 系統聽寫框架
         lastEngineUsed = "Apple Speech"
-        StartupLogger.log("🎙️ 使用 Apple Speech 系統聽寫進行轉錄...")
+        StartupLogger.logKey("log_apple_speech")
         let text = try await transcribeWithAppleSpeech(pcm: pcm, languageCode: languageCode)
         return Self.localizedScript(text)
     }

@@ -4623,6 +4623,14 @@
     "zhHans": "找不到 VAD 模型：%1@",
     "zhHant": "找不到 VAD 模型：%1@"
   },
+  "core_msg_223": {
+    "en": "The cloud has no content for this notebook yet; waiting for the source device to upload it",
+    "ja": "クラウドにはこのノートの内容がまだありません。元の端末のアップロードを待っています",
+    "ko": "클라우드에 이 노트북의 내용이 아직 없습니다. 원본 기기의 업로드를 기다리는 중입니다",
+    "th": "คลาวด์ยังไม่มีเนื้อหาของสมุดบันทึกนี้ กำลังรอให้อุปกรณ์ต้นทางอัปโหลด",
+    "zhHans": "云端暂无这本笔记本的内容，等待来源设备上传",
+    "zhHant": "雲端尚無此筆記本之操作記錄，已清理暫存等待來源端上傳"
+  },
   "corner_style": {
     "en": "Corners",
     "ja": "角丸",
@@ -10783,6 +10791,94 @@
     "zhHans": "地址指向 127.0.0.1 时，App 会直接在这台设备上开启协作中继；同一网络的队友请改填房主画面显示的局域网地址。",
     "zhHant": "位址指向 127.0.0.1 時，App 會直接在這台裝置上開啟協同中繼；同一網路的隊友請改填房主畫面顯示的區域網路位址。"
   },
+  "log_advice_no_view": {
+    "en": "[RecordingAdvice] no screen found to present the tip: %1@",
+    "ja": "[RecordingAdvice] ヒントを表示できる画面が見つかりません: %1@",
+    "ko": "[RecordingAdvice] 안내를 표시할 화면을 찾지 못했습니다: %1@",
+    "th": "[RecordingAdvice] ไม่พบหน้าจอที่จะแสดงคำแนะนำ: %1@",
+    "zhHans": "[RecordingAdvice] 找不到可显示提示的画面：%1@",
+    "zhHant": "[RecordingAdvice] 找不到可呈現提示的畫面：%1@"
+  },
+  "log_app_init": {
+    "en": "KairumoApp.init: app launch initialization",
+    "ja": "KairumoApp.init: アプリ起動の初期化",
+    "ko": "KairumoApp.init: 앱 시작 초기화",
+    "th": "KairumoApp.init: การเริ่มต้นแอปตอนเปิด",
+    "zhHans": "KairumoApp.init: 应用启动初始化",
+    "zhHant": "KairumoApp.init: 應用程式啟動初始化"
+  },
+  "log_app_task": {
+    "en": "KairumoApp.task: cold-start sync initialization",
+    "ja": "KairumoApp.task: コールドスタート時の同期を初期化",
+    "ko": "KairumoApp.task: 콜드 스타트 동기화 초기화",
+    "th": "KairumoApp.task: เริ่มต้นการซิงก์ตอนเปิดแอปใหม่",
+    "zhHans": "KairumoApp.task: 冷启动初始化同步",
+    "zhHant": "KairumoApp.task: 冷啟動初始化同步"
+  },
+  "log_apple_speech": {
+    "en": "🎙️ Transcribing with Apple Speech system dictation...",
+    "ja": "🎙️ Apple Speech のシステム音声認識で文字起こし中...",
+    "ko": "🎙️ Apple Speech 시스템 받아쓰기로 변환 중...",
+    "th": "🎙️ กำลังถอดเสียงด้วยการเขียนตามคำบอกของ Apple Speech...",
+    "zhHans": "🎙️ 使用 Apple Speech 系统听写进行转录...",
+    "zhHant": "🎙️ 使用 Apple Speech 系統聽寫進行轉錄..."
+  },
+  "log_audio_decode_fail": {
+    "en": "⚠️ Audio decoding failed: %1@",
+    "ja": "⚠️ 音声のデコードに失敗しました: %1@",
+    "ko": "⚠️ 오디오 디코딩 실패: %1@",
+    "th": "⚠️ ถอดรหัสเสียงไม่สำเร็จ: %1@",
+    "zhHans": "⚠️ 音频解码失败: %1@",
+    "zhHant": "⚠️ 音訊解碼失敗: %1@"
+  },
+  "log_audio_decode_fallback": {
+    "en": "ℹ️ AVAudioFile decoding did not finish; falling back to AVAssetReader: %1@",
+    "ja": "ℹ️ AVAudioFile のデコードが完了せず、AVAssetReader にフォールバック: %1@",
+    "ko": "ℹ️ AVAudioFile 디코딩이 끝나지 않아 AVAssetReader로 대체: %1@",
+    "th": "ℹ️ ถอดรหัส AVAudioFile ไม่สำเร็จ ถอยไปใช้ AVAssetReader: %1@",
+    "zhHans": "ℹ️ AVAudioFile 解码未完成，退回 AVAssetReader 降级解析: %1@",
+    "zhHant": "ℹ️ AVAudioFile 解碼未完成，退回 AVAssetReader 降級解析: %1@"
+  },
+  "log_autosync_done": {
+    "en": "AutoCloudSync: background auto sync finished (uploaded: %1@, downloaded: %2@)",
+    "ja": "AutoCloudSync: バックグラウンド自動同期が完了 (アップロード: %1@、ダウンロード: %2@)",
+    "ko": "AutoCloudSync: 백그라운드 자동 동기화 완료 (업로드: %1@, 다운로드: %2@)",
+    "th": "AutoCloudSync: ซิงก์อัตโนมัติเบื้องหลังเสร็จสิ้น (อัปโหลด: %1@, ดาวน์โหลด: %2@)",
+    "zhHans": "AutoCloudSync: 后台自动同步完成 (上传: %1@, 下载: %2@)",
+    "zhHant": "AutoCloudSync: 背景自動同步完成 (上傳: %1@, 下載: %2@)"
+  },
+  "log_autosync_skipped": {
+    "en": "AutoCloudSync: skipped (not signed in to Google, or already running: running=%1@)",
+    "ja": "AutoCloudSync: スキップ（Google 未ログイン、または実行中: running=%1@）",
+    "ko": "AutoCloudSync: 건너뜀 (Google에 로그인하지 않았거나 이미 실행 중: running=%1@)",
+    "th": "AutoCloudSync: ข้าม (ยังไม่ได้ลงชื่อเข้าใช้ Google หรือกำลังทำงานอยู่: running=%1@)",
+    "zhHans": "AutoCloudSync: 跳过（未登录 Google 或正在运行中: running=%1@）",
+    "zhHant": "AutoCloudSync: 略過（未登入 Google 或正在執行中: running=%1@）"
+  },
+  "log_autosync_start": {
+    "en": "AutoCloudSync: starting background auto sync...",
+    "ja": "AutoCloudSync: バックグラウンド自動同期を開始...",
+    "ko": "AutoCloudSync: 백그라운드 자동 동기화 시작...",
+    "th": "AutoCloudSync: เริ่มซิงก์อัตโนมัติเบื้องหลัง...",
+    "zhHans": "AutoCloudSync: 开始后台自动同步...",
+    "zhHant": "AutoCloudSync: 開始背景自動同步..."
+  },
+  "log_capture_cardioid": {
+    "en": "[CoreAudioCapture] cardioid data source note: %1@",
+    "ja": "[CoreAudioCapture] カーディオイド指向性データソースの設定に関する注記: %1@",
+    "ko": "[CoreAudioCapture] 카디오이드 지향성 데이터 소스 설정 알림: %1@",
+    "th": "[CoreAudioCapture] หมายเหตุการตั้งค่าแหล่งข้อมูลแบบคาร์ดิออยด์: %1@",
+    "zhHans": "[CoreAudioCapture] 心形指向数据源设置提示: %1@",
+    "zhHant": "[CoreAudioCapture] 心形指向資料源設定提示: %1@"
+  },
+  "log_capture_session": {
+    "en": "[CoreAudioCapture] AVAudioSession configuration warning: %1@",
+    "ja": "[CoreAudioCapture] AVAudioSession 設定の警告: %1@",
+    "ko": "[CoreAudioCapture] AVAudioSession 설정 경고: %1@",
+    "th": "[CoreAudioCapture] คำเตือนการตั้งค่า AVAudioSession: %1@",
+    "zhHans": "[CoreAudioCapture] AVAudioSession 设置警告: %1@",
+    "zhHant": "[CoreAudioCapture] AVAudioSession 設定警告: %1@"
+  },
   "log_clear": {
     "en": "Clear",
     "ja": "消去",
@@ -10807,6 +10903,14 @@
     "zhHans": "复制日志",
     "zhHant": "複製日誌"
   },
+  "log_core_version": {
+    "en": "Core engine version: %1@, target platform: %2@/%3@",
+    "ja": "コアエンジンのバージョン: %1@、ターゲットプラットフォーム: %2@/%3@",
+    "ko": "코어 엔진 버전: %1@, 대상 플랫폼: %2@/%3@",
+    "th": "เวอร์ชันเอนจินหลัก: %1@, แพลตฟอร์มเป้าหมาย: %2@/%3@",
+    "zhHans": "核心引擎版本: %1@, 平台目标: %2@/%3@",
+    "zhHant": "核心引擎版本: %1@, 平台目標: %2@/%3@"
+  },
   "log_empty": {
     "en": "No logs recorded",
     "ja": "ログの記録はありません",
@@ -10822,6 +10926,14 @@
     "th": "ส่งออกบันทึก",
     "zhHans": "导出日志",
     "zhHant": "匯出日誌"
+  },
+  "log_export_fail": {
+    "en": "Exporting the startup log failed: %1@",
+    "ja": "起動ログの書き出しに失敗しました: %1@",
+    "ko": "시작 로그를 내보내지 못했습니다: %1@",
+    "th": "ส่งออกบันทึกการเริ่มต้นไม่สำเร็จ: %1@",
+    "zhHans": "启动日志导出失败：%1@",
+    "zhHant": "啟動日誌匯出失敗：%1@"
   },
   "log_filter": {
     "en": "Filter Logs",
@@ -10846,6 +10958,62 @@
     "th": "แท็บปัจจุบัน",
     "zhHans": "当前标签",
     "zhHant": "當前分頁"
+  },
+  "log_home_appear": {
+    "en": "HomeWorkbenchView.onAppear: home screen ready",
+    "ja": "HomeWorkbenchView.onAppear: ホーム画面の読み込み完了",
+    "ko": "HomeWorkbenchView.onAppear: 홈 화면 로드 완료",
+    "th": "HomeWorkbenchView.onAppear: หน้าหลักโหลดพร้อมแล้ว",
+    "zhHans": "HomeWorkbenchView.onAppear: 首页画面加载就绪",
+    "zhHant": "HomeWorkbenchView.onAppear: 首頁畫面載入就緒"
+  },
+  "log_home_init": {
+    "en": "HomeWorkbenchView.init instantiated",
+    "ja": "HomeWorkbenchView.init インスタンス化が完了",
+    "ko": "HomeWorkbenchView.init 인스턴스 생성 완료",
+    "th": "HomeWorkbenchView.init สร้างอินสแตนซ์เสร็จสิ้น",
+    "zhHans": "HomeWorkbenchView.init 实例化完成",
+    "zhHant": "HomeWorkbenchView.init 實例化完成"
+  },
+  "log_language_applied": {
+    "en": "Language applied: %1@",
+    "ja": "言語の適用が完了: %1@",
+    "ko": "언어 적용 완료: %1@",
+    "th": "ใช้ภาษาเรียบร้อย: %1@",
+    "zhHans": "语言应用完成: %1@",
+    "zhHant": "語言套用完成: %1@"
+  },
+  "log_library_migrate_fail": {
+    "en": "Moving the library to the default location failed: %1@",
+    "ja": "ライブラリを既定の場所へ移行できませんでした: %1@",
+    "ko": "라이브러리를 기본 위치로 옮기지 못했습니다: %1@",
+    "th": "ย้ายคลังไปยังตำแหน่งเริ่มต้นไม่สำเร็จ: %1@",
+    "zhHans": "文件库默认位置迁移失败：%1@",
+    "zhHant": "文件庫預設位置遷移失敗：%1@"
+  },
+  "log_library_switched": {
+    "en": "Main library switched to: %1@",
+    "ja": "メインのライブラリを切り替えました: %1@",
+    "ko": "기본 라이브러리를 전환했습니다: %1@",
+    "th": "สลับคลังหลักไปที่: %1@",
+    "zhHans": "主文件库已切换至：%1@",
+    "zhHant": "主要文件庫已切換至：%1@"
+  },
+  "log_local_reset": {
+    "en": "Local data reset: %1@",
+    "ja": "ローカルデータをリセットしました: %1@",
+    "ko": "로컬 데이터를 초기화했습니다: %1@",
+    "th": "รีเซ็ตข้อมูลในเครื่องแล้ว: %1@",
+    "zhHans": "本机数据已重置：%1@",
+    "zhHant": "本機資料已重設：%1@"
+  },
+  "log_main_activity_create": {
+    "en": "MainActivity.onCreate started",
+    "ja": "MainActivity.onCreate 開始",
+    "ko": "MainActivity.onCreate 시작",
+    "th": "MainActivity.onCreate เริ่มทำงาน",
+    "zhHans": "MainActivity.onCreate 启动",
+    "zhHant": "MainActivity.onCreate 啟動"
   },
   "log_msg_001": {
     "en": "Google account authorized. Credentials saved.",
@@ -11494,6 +11662,142 @@
     "th": "ล้างอัตโนมัติ: ไฟล์ชั่วคราว %1@ รายการ ไฟล์โมเดลที่เหลือ %2@ รายการ (รวม %3@ MB) สมุดบันทึกในถังขยะหมดอายุ %4@ เล่ม",
     "zhHans": "自动清理：临时 %1@ 项、模型残留文件 %2@ 项（共 %3@ MB），回收站期满 %4@ 本",
     "zhHant": "自動清理：暫存 %1@ 項、模型殘檔 %2@ 項（共 %3@ MB），回收桶期滿 %4@ 本"
+  },
+  "log_recorder_message": {
+    "en": "[AudioRecorderManager] %1@",
+    "ja": "[AudioRecorderManager] %1@",
+    "ko": "[AudioRecorderManager] %1@",
+    "th": "[AudioRecorderManager] %1@",
+    "zhHans": "[AudioRecorderManager] %1@",
+    "zhHant": "[AudioRecorderManager] %1@"
+  },
+  "log_recorder_stop_warning": {
+    "en": "[AudioRecorderManager] core stop-recording warning: %1@",
+    "ja": "[AudioRecorderManager] コアの録音停止に関する警告: %1@",
+    "ko": "[AudioRecorderManager] 코어 녹음 중지 경고: %1@",
+    "th": "[AudioRecorderManager] คำเตือนจากแกนหลักตอนหยุดบันทึกเสียง: %1@",
+    "zhHans": "[AudioRecorderManager] 核心停止录音警告: %1@",
+    "zhHant": "[AudioRecorderManager] 核心停止錄音警告: %1@"
+  },
+  "log_scene_phase": {
+    "en": "ScenePhase changed to: %1@",
+    "ja": "ScenePhase が次に切り替わりました: %1@",
+    "ko": "ScenePhase 전환: %1@",
+    "th": "ScenePhase เปลี่ยนเป็น: %1@",
+    "zhHans": "ScenePhase 切换为: %1@",
+    "zhHant": "ScenePhase 切換為: %1@"
+  },
+  "log_store_init_begin": {
+    "en": "NotebookStore.init started loading data",
+    "ja": "NotebookStore.init データの読み込みを開始",
+    "ko": "NotebookStore.init 데이터 로드 시작",
+    "th": "NotebookStore.init เริ่มโหลดข้อมูล",
+    "zhHans": "NotebookStore.init 开始加载数据",
+    "zhHant": "NotebookStore.init 開始載入資料"
+  },
+  "log_store_init_done": {
+    "en": "NotebookStore.init finished initializing",
+    "ja": "NotebookStore.init 初期化が完了",
+    "ko": "NotebookStore.init 초기화 완료",
+    "th": "NotebookStore.init เริ่มต้นเสร็จสิ้น",
+    "zhHans": "NotebookStore.init 初始化完成",
+    "zhHant": "NotebookStore.init 初始化完成"
+  },
+  "log_store_load_done": {
+    "en": "NotebookStore.loadData finished: %1@ notebooks, %2@ recordings, %3@ folders",
+    "ja": "NotebookStore.loadData 完了: ノート %1@ 冊、録音 %2@ 件、フォルダ %3@ 個",
+    "ko": "NotebookStore.loadData 완료: 노트 %1@권, 녹음 %2@개, 폴더 %3@개",
+    "th": "NotebookStore.loadData เสร็จสิ้น: %1@ เล่มบันทึก, %2@ รายการบันทึกเสียง, %3@ โฟลเดอร์",
+    "zhHans": "NotebookStore.loadData 完成: %1@ 本笔记, %2@ 条录音, %3@ 个文件夹",
+    "zhHant": "NotebookStore.loadData 完成: %1@ 本筆記, %2@ 則錄音, %3@ 個資料夾"
+  },
+  "log_store_seed_check": {
+    "en": "NotebookStore: checking / backfilling sample notes",
+    "ja": "NotebookStore: サンプルノートの確認／補完",
+    "ko": "NotebookStore: 샘플 노트 확인/보충",
+    "th": "NotebookStore: ตรวจสอบ/เติมบันทึกตัวอย่าง",
+    "zhHans": "NotebookStore: 检查/回填示例笔记",
+    "zhHant": "NotebookStore: 檢查/回填種子筆記"
+  },
+  "log_store_seed_create": {
+    "en": "NotebookStore: creating default sample notes",
+    "ja": "NotebookStore: 既定のサンプルノートを作成",
+    "ko": "NotebookStore: 기본 샘플 노트 생성",
+    "th": "NotebookStore: สร้างบันทึกตัวอย่างเริ่มต้น",
+    "zhHans": "NotebookStore: 创建默认示例笔记",
+    "zhHant": "NotebookStore: 建立預設種子筆記"
+  },
+  "log_sweep_android": {
+    "en": "Auto cleanup: %1@ items (%2@ MB), %3@ expired from Trash",
+    "ja": "自動クリーンアップ: %1@ 件（%2@ MB）、ゴミ箱の期限切れ %3@ 冊",
+    "ko": "자동 정리: %1@개 항목 (%2@ MB), 휴지통 만료 %3@권",
+    "th": "ล้างอัตโนมัติ: %1@ รายการ (%2@ MB), ถังขยะหมดอายุ %3@ เล่ม",
+    "zhHans": "自动清理：%1@ 项（%2@ MB），回收站到期 %3@ 本",
+    "zhHant": "自動清理：%1@ 項（%2@ MB），回收桶期滿 %3@ 本"
+  },
+  "log_sweep_apple": {
+    "en": "Auto cleanup: %1@ temp items, %2@ partial model files (%3@ MB total), %4@ expired from Trash",
+    "ja": "自動クリーンアップ: 一時ファイル %1@ 件、モデルの残骸 %2@ 件（合計 %3@ MB）、ゴミ箱の期限切れ %4@ 冊",
+    "ko": "자동 정리: 임시 항목 %1@개, 모델 잔여 파일 %2@개 (총 %3@ MB), 휴지통 만료 %4@권",
+    "th": "ล้างอัตโนมัติ: ไฟล์ชั่วคราว %1@ รายการ, ไฟล์โมเดลที่ค้าง %2@ รายการ (รวม %3@ MB), ถังขยะหมดอายุ %4@ เล่ม",
+    "zhHans": "自动清理：临时文件 %1@ 项、模型残留文件 %2@ 项（共 %3@ MB），回收站到期 %4@ 本",
+    "zhHant": "自動清理：暫存 %1@ 項、模型殘檔 %2@ 項（共 %3@ MB），回收桶期滿 %4@ 本"
+  },
+  "log_whisper_deleted": {
+    "en": "🗑️ Local Whisper model deleted to free up space",
+    "ja": "🗑️ ローカルの Whisper モデルを削除して容量を確保しました",
+    "ko": "🗑️ 공간 확보를 위해 로컬 Whisper 모델을 삭제했습니다",
+    "th": "🗑️ ลบโมเดล Whisper ในเครื่องเพื่อคืนพื้นที่แล้ว",
+    "zhHans": "🗑️ 已删除本地 Whisper 模型以释放空间",
+    "zhHant": "🗑️ 已刪除本地 Whisper 模型以釋放空間"
+  },
+  "log_whisper_done": {
+    "en": "🎙️ Whisper transcription finished (language: %1@, segments: %2@)",
+    "ja": "🎙️ Whisper の文字起こしが完了（言語: %1@、セグメント数: %2@）",
+    "ko": "🎙️ Whisper 받아쓰기 완료 (언어: %1@, 구간 수: %2@)",
+    "th": "🎙️ Whisper ถอดเสียงเสร็จ (ภาษา: %1@, จำนวนช่วง: %2@)",
+    "zhHans": "🎙️ Whisper 转录完成（语言: %1@, 片段数: %2@）",
+    "zhHant": "🎙️ Whisper 轉錄完成（語言: %1@, 片段數: %2@）"
+  },
+  "log_whisper_download_fail": {
+    "en": "⚠️ Whisper model download did not finish: %1@",
+    "ja": "⚠️ Whisper モデルのダウンロードが完了しませんでした: %1@",
+    "ko": "⚠️ Whisper 모델 다운로드가 완료되지 않았습니다: %1@",
+    "th": "⚠️ ดาวน์โหลดโมเดล Whisper ไม่สำเร็จ: %1@",
+    "zhHans": "⚠️ Whisper 模型下载未完成：%1@",
+    "zhHant": "⚠️ Whisper 模型下載未完成：%1@"
+  },
+  "log_whisper_download_ok": {
+    "en": "✅ Whisper model downloaded and SHA-256 verified",
+    "ja": "✅ Whisper モデルのダウンロードが完了し、SHA-256 検証に合格しました",
+    "ko": "✅ Whisper 모델 다운로드가 완료되고 SHA-256 검증을 통과했습니다",
+    "th": "✅ ดาวน์โหลดโมเดล Whisper เสร็จและผ่านการตรวจสอบ SHA-256",
+    "zhHans": "✅ Whisper 模型下载完成并通过 SHA-256 校验",
+    "zhHant": "✅ Whisper 模型下載完成並通過 SHA-256 驗證"
+  },
+  "log_whisper_error": {
+    "en": "⚠️ Whisper transcription error: %1@; falling back to Apple Speech...",
+    "ja": "⚠️ Whisper の文字起こしでエラー: %1@。Apple Speech に切り替えます...",
+    "ko": "⚠️ Whisper 받아쓰기 오류: %1@. Apple Speech로 전환합니다...",
+    "th": "⚠️ การถอดเสียงของ Whisper ผิดพลาด: %1@ สลับไปใช้ Apple Speech...",
+    "zhHans": "⚠️ Whisper 转录异常: %1@，平滑降级至 Apple Speech...",
+    "zhHant": "⚠️ Whisper 轉錄異常: %1@，平滑降級至 Apple Speech..."
+  },
+  "log_whisper_import_ok": {
+    "en": "✅ Whisper offline model imported (%1@ MB)",
+    "ja": "✅ Whisper オフラインモデルを読み込みました (%1@ MB)",
+    "ko": "✅ Whisper 오프라인 모델을 가져왔습니다 (%1@ MB)",
+    "th": "✅ นำเข้าโมเดล Whisper ออฟไลน์สำเร็จ (%1@ MB)",
+    "zhHans": "✅ 成功导入 Whisper 离线模型 (%1@ MB)",
+    "zhHant": "✅ 成功匯入 Whisper 離線模型 (%1@ MB)"
+  },
+  "log_whisper_start": {
+    "en": "🎙️ Transcribing with the on-device Whisper model (automatic language detection)...",
+    "ja": "🎙️ 端末内 Whisper モデルで文字起こしを開始（言語自動判定）...",
+    "ko": "🎙️ 기기 내 Whisper 모델로 받아쓰기 시작 (언어 자동 감지)...",
+    "th": "🎙️ เริ่มถอดเสียงด้วยโมเดล Whisper ในเครื่อง (ตรวจจับภาษาอัตโนมัติ)...",
+    "zhHans": "🎙️ 开始使用端侧 Whisper 模型转录（自动语言检测）...",
+    "zhHant": "🎙️ 開始使用端側 Whisper 模型轉錄（自動語言偵測）..."
   },
   "magnetic_snap_active": {
     "en": "Snapping to geometric angles and grid",
@@ -19143,6 +19447,30 @@
     "zhHans": "立即同步",
     "zhHant": "立即同步"
   },
+  "sync_orphan_confirm_message": {
+    "en": "The cloud has an entry for this notebook but no content, usually because the source device never finished uploading. If the other device still holds the notebook, it will move to its trash (kept for the retention period).",
+    "ja": "クラウドにはこのノートの項目だけがあり、内容がありません。多くは元の端末がアップロードを完了していないためです。他の端末にノートが残っている場合は、その端末のごみ箱に移動します（保持期間内は復元できます）。",
+    "ko": "클라우드에는 이 노트북의 항목만 있고 내용이 없습니다. 보통 원본 기기가 업로드를 끝내지 못한 경우입니다. 다른 기기에 노트북이 남아 있으면 그 기기의 휴지통으로 이동합니다(보관 기간 동안 복원 가능).",
+    "th": "คลาวด์มีเพียงรายการของสมุดบันทึกนี้แต่ไม่มีเนื้อหา มักเกิดจากอุปกรณ์ต้นทางอัปโหลดไม่เสร็จ หากอุปกรณ์อื่นยังมีสมุดบันทึกนี้อยู่ จะถูกย้ายไปที่ถังขยะ (กู้คืนได้ภายในระยะเวลาเก็บรักษา)",
+    "zhHans": "云端只有这本笔记本的条目，没有内容，通常是来源设备尚未传完。若其他设备上还有这本笔记本，会被移到该设备的回收桶（保留期内可还原）。",
+    "zhHant": "雲端只有這本筆記本的條目、沒有內容，通常是來源裝置尚未上傳完成。若其他裝置上還有這本筆記本，會被移到該裝置的回收桶（保留期內可還原）。"
+  },
+  "sync_orphan_confirm_title": {
+    "en": "Remove this empty cloud notebook?",
+    "ja": "クラウド上の空のノートを削除しますか？",
+    "ko": "클라우드의 빈 노트북을 제거할까요?",
+    "th": "ลบสมุดบันทึกว่างบนคลาวด์นี้หรือไม่",
+    "zhHans": "移除云端上的空笔记本？",
+    "zhHant": "移除雲端上的空筆記本？"
+  },
+  "sync_orphan_remove": {
+    "en": "Remove “%@” from cloud",
+    "ja": "クラウドから「%@」を削除",
+    "ko": "클라우드에서 “%@” 제거",
+    "th": "ลบ “%@” ออกจากคลาวด์",
+    "zhHans": "从云端移除「%@」",
+    "zhHant": "從雲端移除「%@」"
+  },
   "sync_q_how": {
     "en": "How does it link my devices together?",
     "ja": "他の端末とどのように連携しますか？",
@@ -21326,37 +21654,5 @@
     "th": "ตาราง (%1@ × %2@)",
     "zhHans": "表格（%1@ × %2@）",
     "zhHant": "表格（%1@ × %2@）"
-  },
-  "sync_orphan_remove": {
-    "en": "Remove “%@” from cloud",
-    "ja": "クラウドから「%@」を削除",
-    "ko": "클라우드에서 “%@” 제거",
-    "th": "ลบ “%@” ออกจากคลาวด์",
-    "zhHans": "从云端移除「%@」",
-    "zhHant": "從雲端移除「%@」"
-  },
-  "sync_orphan_confirm_title": {
-    "en": "Remove this empty cloud notebook?",
-    "ja": "クラウド上の空のノートを削除しますか？",
-    "ko": "클라우드의 빈 노트북을 제거할까요?",
-    "th": "ลบสมุดบันทึกว่างบนคลาวด์นี้หรือไม่",
-    "zhHans": "移除云端上的空笔记本？",
-    "zhHant": "移除雲端上的空筆記本？"
-  },
-  "sync_orphan_confirm_message": {
-    "en": "The cloud has an entry for this notebook but no content, usually because the source device never finished uploading. If the other device still holds the notebook, it will move to its trash (kept for the retention period).",
-    "ja": "クラウドにはこのノートの項目だけがあり、内容がありません。多くは元の端末がアップロードを完了していないためです。他の端末にノートが残っている場合は、その端末のごみ箱に移動します（保持期間内は復元できます）。",
-    "ko": "클라우드에는 이 노트북의 항목만 있고 내용이 없습니다. 보통 원본 기기가 업로드를 끝내지 못한 경우입니다. 다른 기기에 노트북이 남아 있으면 그 기기의 휴지통으로 이동합니다(보관 기간 동안 복원 가능).",
-    "th": "คลาวด์มีเพียงรายการของสมุดบันทึกนี้แต่ไม่มีเนื้อหา มักเกิดจากอุปกรณ์ต้นทางอัปโหลดไม่เสร็จ หากอุปกรณ์อื่นยังมีสมุดบันทึกนี้อยู่ จะถูกย้ายไปที่ถังขยะ (กู้คืนได้ภายในระยะเวลาเก็บรักษา)",
-    "zhHans": "云端只有这本笔记本的条目，没有内容，通常是来源设备尚未传完。若其他设备上还有这本笔记本，会被移到该设备的回收桶（保留期内可还原）。",
-    "zhHant": "雲端只有這本筆記本的條目、沒有內容，通常是來源裝置尚未上傳完成。若其他裝置上還有這本筆記本，會被移到該裝置的回收桶（保留期內可還原）。"
-  },
-  "core_msg_223": {
-    "en": "The cloud has no content for this notebook yet; waiting for the source device to upload it",
-    "ja": "クラウドにはこのノートの内容がまだありません。元の端末のアップロードを待っています",
-    "ko": "클라우드에 이 노트북의 내용이 아직 없습니다. 원본 기기의 업로드를 기다리는 중입니다",
-    "th": "คลาวด์ยังไม่มีเนื้อหาของสมุดบันทึกนี้ กำลังรอให้อุปกรณ์ต้นทางอัปโหลด",
-    "zhHans": "云端暂无这本笔记本的内容，等待来源设备上传",
-    "zhHant": "雲端尚無此筆記本之操作記錄，已清理暫存等待來源端上傳"
   }
 }
