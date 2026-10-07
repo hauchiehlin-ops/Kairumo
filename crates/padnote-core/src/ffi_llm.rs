@@ -93,6 +93,12 @@ pub struct FfiSummaryResult {
     pub error: String,
     /// true 表示要引導使用者去下載模型，而不是請他重試。
     pub needs_model: bool,
+    /// true 表示這本筆記根本沒有可以處理的文字。
+    ///
+    /// **不要讓平台自己判斷「是不是空的」**：`padnote_llm` 是在剝掉標題符號、
+    /// 清單記號與空白之後才下這個判斷的。兩邊各寫一次的話，一本只有版面記號的
+    /// 筆記會在 iPad 上說「沒有文字」、在 Android 上跑一次模型再回一句空摘要。
+    pub empty_input: bool,
 }
 
 #[derive(Clone, Debug, uniffi::Record)]
@@ -101,6 +107,8 @@ pub struct FfiTodoResult {
     pub todos: Vec<FfiTodoItem>,
     pub error: String,
     pub needs_model: bool,
+    /// 同 [`FfiSummaryResult::empty_input`]。
+    pub empty_input: bool,
 }
 
 /// 產生摘要。
@@ -123,12 +131,14 @@ pub fn llm_summarize(
             summary,
             error: String::new(),
             needs_model: false,
+            empty_input: false,
         },
         Err(e) => FfiSummaryResult {
             ok: false,
             summary: String::new(),
             error: e.to_string(),
             needs_model: matches!(e, LlmError::ModelNotLoaded),
+            empty_input: matches!(e, LlmError::EmptyInput),
         },
     }
 }
@@ -158,12 +168,14 @@ pub fn llm_extract_todos(
                 .collect(),
             error: String::new(),
             needs_model: false,
+            empty_input: false,
         },
         Err(e) => FfiTodoResult {
             ok: false,
             todos: Vec::new(),
             error: e.to_string(),
             needs_model: matches!(e, LlmError::ModelNotLoaded),
+            empty_input: matches!(e, LlmError::EmptyInput),
         },
     }
 }
@@ -233,5 +245,40 @@ mod tests {
         assert!(out.ok, "沒有待辦是正常答案，不是錯誤");
         assert!(out.todos.is_empty());
         assert!(!out.needs_model);
+        assert!(!out.empty_input, "有內容只是沒待辦，不是「沒有文字」");
+    }
+
+    #[test]
+    fn an_empty_notebook_is_flagged_so_the_ui_does_not_say_failed() {
+        // 三種「沒結果」在 UI 上是三句不同的話：沒有模型（去設定裡開）、
+        // 沒有文字（先打點字）、沒有待辦（那是答案）。擠成一句「產生失敗」
+        // 的話，三種情況的使用者都不知道下一步該做什麼。
+        let out = llm_summarize(
+            Arc::new(Fake("不會被呼叫")),
+            "#\n\n- [ ]\n".into(),
+            "zh-Hant".into(),
+            64,
+        );
+        assert!(!out.ok);
+        assert!(out.empty_input, "要標成「沒有文字」而不是「產生失敗」");
+        assert!(!out.needs_model, "這與模型有沒有下載無關");
+
+        let todos = llm_extract_todos(
+            Arc::new(Fake("不會被呼叫")),
+            "   ".into(),
+            "zh-Hant".into(),
+            64,
+        );
+        assert!(!todos.ok);
+        assert!(todos.empty_input);
+        assert!(!todos.needs_model);
+    }
+
+    #[test]
+    fn a_missing_model_is_not_confused_with_missing_text() {
+        // 兩個旗標要互斥，否則 UI 的 if 順序一改，訊息就換了一句。
+        let out = llm_summarize(Arc::new(NoModel), "有內容".into(), "zh-Hant".into(), 64);
+        assert!(out.needs_model);
+        assert!(!out.empty_input);
     }
 }

@@ -164,7 +164,10 @@ final class NoteIntelligenceModel: ObservableObject {
                 if summary.ok {
                     self.summary = summary.summary
                 } else {
-                    self.failure = summary.error
+                    self.failure = Self.describe(
+                        needsModel: summary.needsModel,
+                        emptyInput: summary.emptyInput,
+                        error: summary.error)
                     self.needsModel = summary.needsModel
                 }
                 // 待辦失敗不覆蓋摘要的錯誤訊息 —— 兩個都失敗時，先講摘要
@@ -172,11 +175,32 @@ final class NoteIntelligenceModel: ObservableObject {
                 if todos.ok {
                     self.todos = todos.todos
                 } else if self.failure == nil {
-                    self.failure = todos.error
+                    self.failure = Self.describe(
+                        needsModel: todos.needsModel,
+                        emptyInput: todos.emptyInput,
+                        error: todos.error)
                     self.needsModel = todos.needsModel
                 }
             }
         }
+    }
+
+    /// 把核心回來的旗標翻成使用者看得懂的一句話。
+    ///
+    /// # 為什麼不能直接顯示 `error`
+    ///
+    /// 那個字串來自核心的 `LlmError::Display`，是**寫死的繁體中文**。
+    /// 日文介面的使用者會看到一句中文，而且內容是「沒有可以處理的文字」
+    /// 這種本來就該在地化的話。
+    ///
+    /// 旗標的優先序有意義：沒有模型 > 沒有文字 > 其他。前兩種是「使用者
+    /// 做得了某件事」（去設定裡開、先打點字），最後一種只能請他重試 ——
+    /// 擠成一句的話，前兩種人會照著「重試」按一百次。
+    private static func describe(needsModel: Bool, emptyInput: Bool, error: String) -> String {
+        let l = LocalizationManager.shared
+        if needsModel { return l.localized("ai_unsupported") }
+        if emptyInput { return l.localized("ai_nothing_to_summarize") }
+        return error
     }
 
     func reset() {

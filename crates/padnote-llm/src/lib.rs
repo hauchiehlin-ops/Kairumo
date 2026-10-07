@@ -80,7 +80,32 @@ pub struct TodoItem {
 /// 「後半段的待辦完全不見」，看起來像模型漏掉而不是我們送太多。
 pub const CHUNK_CHARS: usize = 3_000;
 
-/// 把長文切塊。
+/// 這段文字有沒有**實質內容**可以處理。
+///
+/// # 為什麼不是 `text.trim().is_empty()`
+///
+/// 筆記本的文字是用 `export_markdown` 取出來的，所以一本「版面建好了、
+/// 還沒打字」的筆記拿到的是 `#\n\n- \n- [ ]\n` 而不是空字串。逐段 trim 之後
+/// 每一段都還是非空（`#`、`-`），於是模型會被叫起來對著幾個記號生成，
+/// 回一段憑空編出來的摘要 —— 那比明講「沒有可以處理的文字」糟得多。
+///
+/// 所以要剝掉標題與清單記號之後再看。**剝的是記號，不是內容**：
+/// `# 會議` 算有內容，使用者打的那兩個字是他寫的東西，不是版面。
+fn has_substance(text: &str) -> bool {
+    text.lines().any(|line| {
+        let line = line.trim();
+        let body = line
+            .trim_start_matches(['#', '>', '-', '*', '+'])
+            .trim_start_matches(|c: char| c.is_ascii_digit())
+            .trim_start_matches(['.', ')'])
+            .trim();
+        // `- [ ]` 這種待辦記號也要剝掉，否則一份全是空待辦框的清單會被當成有內容。
+        let body = body.trim_start_matches("[ ]").trim_start_matches("[x]").trim();
+        !strip_markdown(body).is_empty()
+    })
+}
+
+/// 把長文切成模型吃得下的塊。
 ///
 /// **在段落邊界切**，不在字元數到了就硬切：切在句子中間的話，模型會把
 /// 半句話當成完整輸入去理解，摘要出來的東西可能與原意相反。
@@ -278,6 +303,9 @@ pub fn summarize(
     locale: &str,
     max_tokens: u32,
 ) -> Result<String, LlmError> {
+    if !has_substance(text) {
+        return Err(LlmError::EmptyInput);
+    }
     let pieces = chunk(text, CHUNK_CHARS);
     if pieces.is_empty() {
         return Err(LlmError::EmptyInput);
@@ -313,6 +341,9 @@ pub fn extract_todos(
     locale: &str,
     max_tokens: u32,
 ) -> Result<Vec<TodoItem>, LlmError> {
+    if !has_substance(text) {
+        return Err(LlmError::EmptyInput);
+    }
     let pieces = chunk(text, CHUNK_CHARS);
     if pieces.is_empty() {
         return Err(LlmError::EmptyInput);

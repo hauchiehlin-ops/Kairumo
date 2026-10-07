@@ -22,6 +22,20 @@ android {
         // 筆跡引擎的正確性只有在真的 Android runtime 上才驗得出來
         // （MotionEvent、密度換算、JNA 載入 .so 都不是純 JVM 模擬得了的）。
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        ndk {
+            // **只出貨我們自己的核心撐得住的 ABI。**
+            //
+            // `build-android-libs.sh` 只產 arm64-v8a 與 x86_64 的
+            // `libpadnote_core.so`。第三方 AAR（ML Kit、MediaPipe）卻會帶進
+            // armeabi-v7a 與 x86 的原生庫 —— 那些 ABI 上根本沒有核心可以載入，
+            // App 一啟動就會死在 `UnsatisfiedLinkError`。
+            //
+            // 也就是說，多出來的那些不只是白佔空間（實測 19 MB，主要是
+            // ML Kit 的 `libdigitalink.so`），它們還讓 App **看起來**支援
+            // 那些裝置，而使用者裝了只會得到一個開不起來的 App。
+            abiFilters += setOf("arm64-v8a", "x86_64")
+        }
     }
 
     // 發佈簽章設定。
@@ -165,6 +179,14 @@ dependencies {
     // 沒有服務的裝置要明確降級，不能靜默失敗。
     implementation("com.google.mlkit:digital-ink-recognition:18.1.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.9.0")
+
+    // 摘要與待辦的裝置端後端（S-20）。Apple 那邊用系統的 Foundation Models，
+    // Android 沒有對等的東西 —— 三條路的取捨見 ai/NoteIntelligence.kt 的說明。
+    //
+    // **模型不隨 App 出貨**：使用者自己把 `.task` 檔放進 App 私有目錄
+    // （`files/llm/model.task`），不在那裡就回 ModelNotLoaded。
+    // 全體共擔的只有這個函式庫本身（約 12 MB／ABI）。
+    implementation("com.google.mediapipe:tasks-genai:0.10.24")
 
     // OAuth 要在系統瀏覽器裡完成 —— Google 會拒絕 WebView 裡的授權
     // （disallowed_useragent），而且 WebView 拿不到使用者已登入的 session。
