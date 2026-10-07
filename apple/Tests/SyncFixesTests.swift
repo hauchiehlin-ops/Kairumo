@@ -497,3 +497,51 @@ final class KairumoManualSeedTests: XCTestCase {
         XCTAssertEqual(SeedContent.kairumoManualTitle, "Kairumo手冊")
     }
 }
+
+/// 橡皮擦擦掉的筆畫過一陣子又回來：匯出把這台的舊筆畫檔換掉，但同步看檔案大小，
+/// 雲端較大的舊檔又被下載回來。本機要記住自己擦過什麼，匯入時濾掉。
+final class ErasedInkLedgerTests: XCTestCase {
+    private var dir: URL!
+
+    override func setUpWithError() throws {
+        dir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("erased-ink-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+    }
+
+    override func tearDownWithError() throws { try? FileManager.default.removeItem(at: dir) }
+
+    private func stroke(_ x: CGFloat) -> PKStroke {
+        let points = (0 ..< 5).map { i in
+            PKStrokePoint(location: CGPoint(x: x + CGFloat(i) * 10, y: 20), timeOffset: TimeInterval(i) * 0.01,
+                          size: CGSize(width: 3, height: 3), opacity: 1, force: 1, azimuth: 0, altitude: .pi / 2)
+        }
+        return PKStroke(ink: PKInk(.pen, color: .black), path: PKStrokePath(controlPoints: points, creationDate: Date()))
+    }
+
+    func testAnErasedStrokeIsFilteredOutOfTheMergedDrawingAndAReDrawnOneIsNot() {
+        let a = stroke(10), b = stroke(200)
+        let baseline = PKDrawing(strokes: [a, b])
+        let afterErase = PKDrawing(strokes: [b])
+        let removed = StrokeDelta.removed(in: afterErase, since: baseline)
+        XCTAssertEqual(removed.count, 1)
+
+        ErasedInkLedger.record(removed: removed, added: [], in: dir, notebookId: "nb", page: 0)
+        let erased = ErasedInkLedger.load(in: dir, notebookId: "nb", page: 0)
+        XCTAssertEqual(erased.count, 1)
+
+        // 同步合併回來的圖（雲端舊檔把 a 帶回來了）。
+        let merged = PKDrawing(strokes: [a, b])
+        let filtered = ErasedInkLedger.filtered(merged, erased: erased)
+        XCTAssertEqual(filtered.strokes.count, 1, "擦掉的筆畫不能因為同步而復活")
+
+        // 復原擦除（又把同一筆加回來）→ 從名單拿掉，之後不再濾。
+        ErasedInkLedger.record(removed: [], added: [a], in: dir, notebookId: "nb", page: 0)
+        XCTAssertTrue(ErasedInkLedger.load(in: dir, notebookId: "nb", page: 0).isEmpty)
+    }
+
+    func testRemovedFindsEverythingWhenTheDrawingIsEmptied() {
+        let baseline = PKDrawing(strokes: [stroke(10), stroke(200)])
+        XCTAssertEqual(StrokeDelta.removed(in: PKDrawing(), since: baseline).count, 2)
+    }
+}
