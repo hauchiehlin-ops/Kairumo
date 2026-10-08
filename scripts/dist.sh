@@ -95,7 +95,11 @@ SCHEME="${SCHEME:-Kairumo}"
 APP_VER=$(python3 -c "import re; print(re.search(r'version\s*=\s*\"([^\"]+)\"', open('${REPO_ROOT}/Cargo.toml').read()).group(1))")
 BUNDLE_VER=$(python3 -c "import re; print(re.search(r'CURRENT_PROJECT_VERSION\s*=\s*(\d+)', open('${REPO_ROOT}/apple/Kairumo.xcodeproj/project.pbxproj').read()).group(1))")
 
-WORK_DIR="${REPO_ROOT}/build/dist-work"
+# 暫存（xcarchive、匯出、DMG 內容）放本機磁碟：exFAT 上 codesign 會被 `._*` 擋下。
+# 最終成品仍寫到專案內的 OUT_DIR。可用 KAIRUMO_WORK_DIR 覆寫。
+# shellcheck source=lib-exfat.sh
+source "${SCRIPT_DIR}/lib-exfat.sh"
+WORK_DIR="${KAIRUMO_WORK_DIR:-${TMPDIR:-/tmp}/kairumo-dist-work}"
 OUT_DIR="${REPO_ROOT}/build/dist/v${APP_VER}-b${BUNDLE_VER}"
 rm -rf "$WORK_DIR"; mkdir -p "$WORK_DIR" "$OUT_DIR"
 
@@ -259,7 +263,7 @@ if [[ "$DO_MAC" -eq 1 ]]; then
             # DMG 是單一檔案，整份原封不動地搬運。
             STAGE="${WORK_DIR}/dmg-stage"
             rm -rf "$STAGE"; mkdir -p "$STAGE"
-            cp -R "$APP_BUNDLE" "$STAGE/"
+            ditto --norsrc --noextattr --noqtn "$APP_BUNDLE" "$STAGE/$(basename "$APP_BUNDLE")"
             ln -s /Applications "$STAGE/Applications"
             DMG="${OUT_DIR}/Kairumo-${APP_VER}-mac.dmg"
             rm -f "$DMG"
@@ -495,8 +499,9 @@ EOF
         echo "   ⚠️ 使用側載金鑰（非上架金鑰）。要上架請改用 scripts/android-release.sh。"
     fi
 
-    ( cd "${REPO_ROOT}/android" && ./gradlew --console=plain :app:assembleRelease )
-    APK=$(find "${REPO_ROOT}/android/app/build/outputs/apk/release" -name "*.apk" | head -n 1)
+    kairumo_setup_gradle_dirs "$REPO_ROOT"
+    ( cd "${REPO_ROOT}/android" && ./gradlew ${KAIRUMO_GRADLE_ARGS[@]+"${KAIRUMO_GRADLE_ARGS[@]}"} --console=plain :app:assembleRelease )
+    APK=$(find "${KAIRUMO_ANDROID_APP_BUILD}/outputs/apk/release" -name "*.apk" | head -n 1)
     if [[ -z "$APK" ]]; then
         FAILED+=("Android：找不到建置產出的 APK")
     else

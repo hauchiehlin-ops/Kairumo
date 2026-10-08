@@ -103,6 +103,12 @@ enum RuledWriting {
         font(fontSize, bold: bold).lineHeight
     }
 
+    /// 第一行文字底部距方塊頂端的偏移量（內距 + 行高 + 2pt 微調底距）。
+    /// 讓文字貼著格線上方，以格線為底，吸附格線時絕不穿透重疊。
+    static func textBottomOffset(fontSize: CGFloat, bold: Bool = false) -> CGFloat {
+        padding + lineHeight(fontSize: fontSize, bold: bold) + 2
+    }
+
     private static func font(_ size: CGFloat, bold: Bool) -> UIFont {
         UIFont.systemFont(ofSize: size, weight: bold ? .bold : .regular)
     }
@@ -115,16 +121,16 @@ enum RuledWriting {
         // 字級：一行要放得進格線間距。
         var size = fontSize
         while lineHeight(fontSize: size) > step && size > 9 { size -= 1 }
-        let asc = ascender(fontSize: size)
         let natural = lineHeight(fontSize: size)
+        let bottomOffset = textBottomOffset(fontSize: size)
 
         // 從點到的那條線開始往下找，第一條讓方塊頂端落在可用範圍內的。
         guard var rule = rule(forTapY: tapY, in: rules, step: step) else { return nil }
-        while rule - padding - asc < minTop, let next = rules.first(where: { $0 > rule + 0.5 }) {
+        while rule - bottomOffset < minTop, let next = rules.first(where: { $0 > rule + 0.5 }) {
             rule = next
         }
         return Placement(
-            top: rule - padding - asc,
+            top: rule - bottomOffset,
             fontSize: size,
             lineSpacing: max(0, step - natural),
             rule: rule,
@@ -135,7 +141,7 @@ enum RuledWriting {
     static func freePlacement(tapY: CGFloat, fontSize: CGFloat, minTop: CGFloat) -> Placement {
         let natural = lineHeight(fontSize: fontSize)
         let top = max(minTop, tapY - padding - natural / 2)
-        return Placement(top: top, fontSize: fontSize, lineSpacing: 0, rule: top + padding + ascender(fontSize: fontSize), step: natural)
+        return Placement(top: top, fontSize: fontSize, lineSpacing: 0, rule: top + textBottomOffset(fontSize: fontSize), step: natural)
     }
 
     // MARK: 高度

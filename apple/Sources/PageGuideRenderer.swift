@@ -27,7 +27,9 @@ public enum PageGuideRenderer {
         paperId: String,
         paletteId: String?,
         in ctx: CGContext,
-        size: CGSize
+        size: CGSize,
+        pageIndex: Int = 0,
+        checkedGuideItems: [String: Bool]? = nil
     ) {
         guard size.width > 0, size.height > 0 else { return }
         let colors = Palette(id: paletteId)
@@ -66,6 +68,21 @@ public enum PageGuideRenderer {
                 ctx.setLineWidth(1.0)
                 ctx.addPath(rounded(x, y, w, h, min(3, w * 0.25)))
                 ctx.strokePath()
+
+                let key = "\(pageIndex)_\(Int(round(x)))_\(Int(round(y)))"
+                if checkedGuideItems?[key] == true {
+                    ctx.saveGState()
+                    ctx.setStrokeColor(UIColor.systemGreen.cgColor)
+                    ctx.setLineWidth(max(1.6, w * 0.12))
+                    ctx.setLineCap(.round)
+                    ctx.setLineJoin(.round)
+                    ctx.beginPath()
+                    ctx.move(to: CGPoint(x: x + w * 0.22, y: y + h * 0.52))
+                    ctx.addLine(to: CGPoint(x: x + w * 0.44, y: y + h * 0.76))
+                    ctx.addLine(to: CGPoint(x: x + w * 0.82, y: y + h * 0.26))
+                    ctx.strokePath()
+                    ctx.restoreGState()
+                }
 
             case .dot:
                 ctx.setFillColor(colors.color(g.tone).cgColor)

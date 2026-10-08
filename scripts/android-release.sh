@@ -38,6 +38,9 @@ export PYTHONIOENCODING=utf-8
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 cd "$REPO_ROOT/android"
+# shellcheck source=lib-exfat.sh
+source "$SCRIPT_DIR/lib-exfat.sh"
+kairumo_setup_gradle_dirs "$REPO_ROOT"
 
 MODE="${1:-signed}"
 export ANDROID_HOME="${ANDROID_HOME:-$HOME/Library/Android/sdk}"
@@ -102,10 +105,10 @@ esac
 
 # --- 4. 建置 -------------------------------------------------------------
 echo "==> 建置 AAB 與 APK"
-./gradlew :app:bundleRelease :app:assembleRelease
+./gradlew ${KAIRUMO_GRADLE_ARGS[@]+"${KAIRUMO_GRADLE_ARGS[@]}"} :app:bundleRelease :app:assembleRelease
 
-AAB="app/build/outputs/bundle/release/app-release.aab"
-APK_DIR="app/build/outputs/apk/release"
+AAB="${KAIRUMO_ANDROID_APP_BUILD}/outputs/bundle/release/app-release.aab"
+APK_DIR="${KAIRUMO_ANDROID_APP_BUILD}/outputs/apk/release"
 
 echo "==> 完成"
 ls -lh "$AAB" | awk '{print "   AAB  " $9 "  " $5}'

@@ -62,8 +62,8 @@ final class RuledWritingTests: XCTestCase {
 
     func testTheBaselineSitsOnTheRule() throws {
         let p = try XCTUnwrap(RuledWriting.placement(tapY: 140, rules: lined, fontSize: 16, minTop: 40))
-        let baseline = p.top + RuledWriting.padding + RuledWriting.ascender(fontSize: p.fontSize)
-        XCTAssertEqual(baseline, p.rule, accuracy: 0.01, "第一行基準線要剛好在格線上")
+        let bottom = p.top + RuledWriting.textBottomOffset(fontSize: p.fontSize)
+        XCTAssertEqual(bottom, p.rule, accuracy: 0.01, "第一行文字貼著格線上方，以格線為底")
     }
 
     func testEverySecondLineLandsOnTheNextRule() throws {
@@ -90,8 +90,8 @@ final class RuledWritingTests: XCTestCase {
     func testTheBoxNeverStartsAboveThePrintableArea() throws {
         let p = try XCTUnwrap(RuledWriting.placement(tapY: 90, rules: lined, fontSize: 16, minTop: 80))
         XCTAssertGreaterThanOrEqual(p.top, 80, "第一條格線太靠上時要換到下一條，不能讓方塊跑出可用範圍")
-        let baseline = p.top + RuledWriting.padding + RuledWriting.ascender(fontSize: p.fontSize)
-        XCTAssertEqual(baseline, p.rule, accuracy: 0.01)
+        let bottom = p.top + RuledWriting.textBottomOffset(fontSize: p.fontSize)
+        XCTAssertEqual(bottom, p.rule, accuracy: 0.01)
     }
 
     func testTheFontShrinksWhenARowCannotHoldIt() throws {

@@ -72,3 +72,6 @@ Icon$'\r'
 
 # Sync-Nexus 本機端點標記檔
 .syncnexus-endpoint
+
+# exFAT 外接碟產生的 AppleDouble 檔
+._*

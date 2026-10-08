@@ -169,7 +169,9 @@ public enum PageThumbnailRenderer {
                 paperId: notebook.paperId(forPage: pageIndex),
                 paletteId: notebook.guidePaletteId,
                 in: ctx.cgContext,
-                size: fullPageRect.size
+                size: fullPageRect.size,
+                pageIndex: pageIndex,
+                checkedGuideItems: notebook.checkedGuideItems
             )
 
             // 墨跡：PencilKit 手繪，再疊專業筆刷與製圖線（依圖層由下往上，隱藏的圖層不畫）。

@@ -91,7 +91,12 @@ struct ContinuousPageView<ObjectLayer: View>: View {
 
     var body: some View {
         ZStack(alignment: .topLeading) {
-            PageBackgroundRepresentable(paperId: paperId, paletteId: paletteId)
+            PageBackgroundRepresentable(
+                paperId: paperId,
+                paletteId: paletteId,
+                pageIndex: pageIndex,
+                checkedGuideItems: notebook.checkedGuideItems
+            )
                 .frame(width: PageGeometry.width, height: PageGeometry.height, alignment: .topLeading)
                 .allowsHitTesting(false)
                 .zIndex(0)

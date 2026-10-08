@@ -330,6 +330,8 @@ public struct NotebookDocument: Identifiable, Codable, Hashable {
     public var tapeAttachments: [NoteTapeAttachment]?
     /// 手寫與文字動態流式錨定 (Fluid Sticky Annotations)
     public var stickyAnchors: [StickyAnnotationAnchor]?
+    /// 特殊版面互動引導線狀態（例如核取清單勾選、選項狀態），Key 格式為 "\(pageIndex)_\(Int(x))_\(Int(y))"
+    public var checkedGuideItems: [String: Bool]?
 
     /// 每一頁各自的紙張樣板 id。
     ///
@@ -519,7 +521,8 @@ public struct NotebookDocument: Identifiable, Codable, Hashable {
         tableAttachments: [NoteTableAttachment]? = [],
         shapeAttachments: [NoteShapeAttachment]? = [],
         connectionAttachments: [NoteConnectionAttachment]? = [],
-        audioAttachments: [NoteAudioAttachment]? = []
+        audioAttachments: [NoteAudioAttachment]? = [],
+        checkedGuideItems: [String: Bool]? = nil
     ) {
         self.id = id
         self.title = title
@@ -541,6 +544,7 @@ public struct NotebookDocument: Identifiable, Codable, Hashable {
         self.model3DAttachments = model3DAttachments ?? []
         self.commentPins = commentPins ?? []
         self.audioAttachments = audioAttachments ?? []
+        self.checkedGuideItems = checkedGuideItems
         if pagesData.isEmpty {
             // 預設建立一頁空白筆劃
             let emptyDrawing = PKDrawing()

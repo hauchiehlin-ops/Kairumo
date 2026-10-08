@@ -166,6 +166,12 @@ final class TemplateCanvasBackgroundView: UIView {
     var paletteId: String? {
         didSet { if oldValue != paletteId { setNeedsDisplay() } }
     }
+    var pageIndex: Int = 0 {
+        didSet { if oldValue != pageIndex { setNeedsDisplay() } }
+    }
+    var checkedGuideItems: [String: Bool]? {
+        didSet { if oldValue != checkedGuideItems { setNeedsDisplay() } }
+    }
 
     private var template: NoteTemplate { NoteTemplate(paperId: paperId) ?? .blank }
 
@@ -263,7 +269,9 @@ final class TemplateCanvasBackgroundView: UIView {
             // **頁面高度，不是畫布高度。** 畫布比頁面高（它要捲動），
             // 用 `bounds.height` 算的話四象限的十字會落在頁面下緣之外 ——
             // 畫面上看得到，列印出來卻不在紙上。
-            size: PageGeometry.size
+            size: PageGeometry.size,
+            pageIndex: pageIndex,
+            checkedGuideItems: checkedGuideItems
         )
     }
 }
@@ -4125,21 +4133,7 @@ public struct NotebookEditorView: View {
                         .transition(.opacity.combined(with: .move(edge: .top)))
                 }
             }
-            .overlay(alignment: .top) {
-                // 🌟 套索選取浮動控制面板（兩種頁面模式共用）
-                if editorMode == .draw && selectedTool == .lasso {
-                    // 這一排按鈕比 iPad 直向的寬度還寬。原本直接畫出來，
-                    // 超出的部分讓整個編輯器的版面被撐寬（畫布整個右移、右側被切掉），
-                    // 套索拖曳也就落在錯的位置。放進橫向捲動，寬度回到螢幕內。
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        lassoFloatingActionBar
-                            .padding(.horizontal, 12)
-                    }
-                    .fixedSize(horizontal: false, vertical: true)
-                        .padding(.top, 12)
-                        .transition(.opacity.combined(with: .move(edge: .top)))
-                }
-            }
+
             .sheet(isPresented: $showDraftingToolbox) {
                 DraftingToolbox(
                     notebookId: notebook.id,
@@ -5082,6 +5076,31 @@ public struct NotebookEditorView: View {
                     }
                 }
 
+                // 🌟 特殊樣板智慧互動元件層（核取清單 Checkbox、選項切換與進度管控）
+                ForEach(interactiveGuideCheckboxes(forPage: page)) { item in
+                    InteractiveGuideCheckboxView(
+                        isChecked: notebook.checkedGuideItems?[item.key] ?? false,
+                        size: CGSize(width: CGFloat(item.guide.w), height: CGFloat(item.guide.h)),
+                        onToggle: {
+                            toggleGuideCheckbox(key: item.key, guide: item.guide, page: page)
+                        },
+                        onStrikethroughRow: {
+                            toggleRowStrikethrough(y: CGFloat(item.guide.y), page: page)
+                        },
+                        onClearRowText: {
+                            clearRowText(y: CGFloat(item.guide.y), page: page)
+                        },
+                        onResetPage: {
+                            resetPageCheckboxes(page: page)
+                        }
+                    )
+                    .position(
+                        x: CGFloat(item.guide.x) + CGFloat(item.guide.w) / 2,
+                        y: CGFloat(item.guide.y) + CGFloat(item.guide.h) / 2
+                    )
+                    .zIndex(10)
+                }
+
         }
         .environment(\.objectReorder, { id, op in reorderObject(id, op) })
         .coordinateSpace(name: CanvasCoordinateSpace.name)
@@ -5089,7 +5108,12 @@ public struct NotebookEditorView: View {
 
     private var canvasWorkAreaContent: some View {
         ZStack(alignment: .topTrailing) {
-            PageBackgroundRepresentable(paperId: notebook.paperId(forPage: currentPageIndex), paletteId: notebook.guidePaletteId)
+            PageBackgroundRepresentable(
+                paperId: notebook.paperId(forPage: currentPageIndex),
+                paletteId: notebook.guidePaletteId,
+                pageIndex: currentPageIndex,
+                checkedGuideItems: notebook.checkedGuideItems
+            )
                 .frame(width: PageGeometry.width, height: currentPageHeight, alignment: .topLeading)
                 .scaleEffect(canvasZoomScale, anchor: .topLeading)
                 .offset(x: -canvasContentOffset.x, y: -canvasContentOffset.y)
@@ -7045,12 +7069,6 @@ public struct NotebookEditorView: View {
             // 原始碼裡有沒有那個字串），而使用者在 iPad 上**根本點不到**
             // 這些功能，Android 卻有。
             //
-            // 它與底下的 `WordToolbarView` 不是重複：這一份操作的是畫布上
-            // 的**文字方塊物件**（位置、疊層、對齊到格線），`WordToolbarView`
-            // 操作的是**文件內文**（標題階層、字體、清單、表格）。
-            // 兩者是不同層次，所以兩份都留。
-            typingToolbar
-
             WordToolbarView(
                 activeText: Binding(
                     get: { activeTextAttachment ?? NoteTextAttachment(pageIndex: currentPageIndex) },
@@ -7120,8 +7138,29 @@ public struct NotebookEditorView: View {
                 onCommitChange: {
                     store.updateNotebook(notebook)
                     PageThumbnailRenderer.invalidateAll()
+                },
+                onAddTextBox: {
+                    let draft = insertTextBox(at: CGPoint(x: 200, y: 200))
+                    withAnimation(.easeInOut(duration: 0.18)) {
+                        editorMode = .type
+                        inlineEditingTextId = draft.id
+                    }
+                },
+                isSnapToGrid: snapToGrid,
+                onToggleSnapToGrid: {
+                    snapToGrid.toggle()
                 }
             )
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+            .background(Color(uiColor: .tertiarySystemGroupedBackground))
+
+            if isMarqueeActive {
+                Divider()
+                ScrollView(.horizontal, showsIndicators: false) {
+                    marqueeToolbar
+                }
+            }
         }
     }
 
@@ -7363,6 +7402,16 @@ public struct NotebookEditorView: View {
 
     private var drawingToolbarContent: some View {
         VStack(spacing: 0) {
+            if editorMode == .draw && selectedTool == .lasso {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    lassoFloatingActionBar
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 4)
+                }
+                .background(Color(uiColor: .secondarySystemGroupedBackground))
+                Divider()
+            }
+
             if editorMode == .type && activeInlineInkBlockId != nil {
                 HStack(spacing: 8) {
                     Image(systemName: "pencil.tip")
@@ -10713,10 +10762,101 @@ public struct NotebookEditorView: View {
         currentDrawing = PKDrawing(strokes: strokes)
     }
 
+    // MARK: - 特殊樣板智慧互動引導線（核取方塊 Checkbox、選項狀態與進度管控）
+
+    struct GuideCheckboxItem: Identifiable {
+        let id: String
+        let key: String
+        let guide: FfiGuide
+        let page: Int
+    }
+
+    private func interactiveGuideCheckboxes(forPage page: Int) -> [GuideCheckboxItem] {
+        let paper = notebook.paperId(forPage: page)
+        let guides = pageGuides(
+            paperId: paper,
+            width: Float(PageGeometry.width),
+            height: Float(PageGeometry.height)
+        )
+        return guides.filter { $0.kind == .checkbox }.map { g in
+            let gx = CGFloat(g.x), gy = CGFloat(g.y)
+            let key = "\(page)_\(Int(round(gx)))_\(Int(round(gy)))"
+            return GuideCheckboxItem(id: key, key: key, guide: g, page: page)
+        }
+    }
+
+    private func hitTestGuideCheckbox(at location: CGPoint, page: Int) -> (guide: FfiGuide, key: String)? {
+        let items = interactiveGuideCheckboxes(forPage: page)
+        for item in items {
+            let gx = CGFloat(item.guide.x), gy = CGFloat(item.guide.y)
+            let gw = CGFloat(item.guide.w), gh = CGFloat(item.guide.h)
+            // 擴展點擊範圍（約 34x34pt），手指與觸控筆皆能精準觸發
+            let hitRect = CGRect(x: gx, y: gy, width: gw, height: gh).insetBy(dx: -12, dy: -10)
+            if hitRect.contains(location) {
+                return (item.guide, item.key)
+            }
+        }
+        return nil
+    }
+
+    private func toggleGuideCheckbox(key: String, guide: FfiGuide, page: Int) {
+        if notebook.checkedGuideItems == nil {
+            notebook.checkedGuideItems = [:]
+        }
+        let current = notebook.checkedGuideItems?[key] ?? false
+        notebook.checkedGuideItems?[key] = !current
+        store.updateNotebook(notebook)
+        #if os(iOS)
+        let generator = UIImpactFeedbackGenerator(style: .medium)
+        generator.prepare()
+        generator.impactOccurred()
+        #endif
+        PageThumbnailRenderer.invalidateAll()
+    }
+
+    private func toggleRowStrikethrough(y: CGFloat, page: Int) {
+        guard let texts = notebook.textAttachments, !texts.isEmpty else { return }
+        recordTextUndoState()
+        var updated = texts
+        for i in 0 ..< updated.count where updated[i].pageIndex == page && abs(updated[i].y - y) < 30 {
+            updated[i].isStrikethrough.toggle()
+        }
+        notebook.textAttachments = updated
+        store.updateNotebook(notebook)
+        PageThumbnailRenderer.invalidateAll()
+    }
+
+    private func clearRowText(y: CGFloat, page: Int) {
+        guard let texts = notebook.textAttachments, !texts.isEmpty else { return }
+        recordTextUndoState()
+        notebook.textAttachments?.removeAll { $0.pageIndex == page && abs($0.y - y) < 30 }
+        store.updateNotebook(notebook)
+        PageThumbnailRenderer.invalidateAll()
+    }
+
+    private func resetPageCheckboxes(page: Int) {
+        guard var checked = notebook.checkedGuideItems, !checked.isEmpty else { return }
+        let prefix = "\(page)_"
+        for key in checked.keys where key.hasPrefix(prefix) {
+            checked[key] = false
+        }
+        notebook.checkedGuideItems = checked
+        store.updateNotebook(notebook)
+        PageThumbnailRenderer.invalidateAll()
+    }
+
     /// 🌟 方案 A+B：手指或游標在畫布上的單擊事件
     private func handleCanvasDirectTap(at location: CGPoint, page: Int? = nil) {
         let targetPage = page ?? currentPageIndex
         currentPageIndex = targetPage
+
+        // 🌟 優先檢查是否點擊在特殊樣板引導線互動元件上（例如核取方塊 Checkbox）
+        if let (guide, key) = hitTestGuideCheckbox(at: location, page: targetPage) {
+            removeTapDotStroke(near: location)
+            toggleGuideCheckbox(key: key, guide: guide, page: targetPage)
+            return
+        }
+
         if editorMode == .type {
             handleCanvasTapInTypeMode(at: location, page: targetPage)
         } else {
@@ -10777,6 +10917,7 @@ public struct NotebookEditorView: View {
     private func handleCanvasDirectDoubleTap(at location: CGPoint, page: Int? = nil) {
         let targetPage = page ?? currentPageIndex
         currentPageIndex = targetPage
+        if hitTestGuideCheckbox(at: location, page: targetPage) != nil { return }
         if isLocationInsideAnyObject(at: location, page: targetPage) { return }
         // 若先前有空白文字方塊先清理
         if let activeId = inlineEditingTextId,
@@ -10801,6 +10942,12 @@ public struct NotebookEditorView: View {
     private func handleCanvasTapInTypeMode(at location: CGPoint, page: Int? = nil) {
         let targetPage = page ?? currentPageIndex
         currentPageIndex = targetPage
+
+        // 0. 特殊頁面智慧引導線元件（核取方塊 Checkbox 等）點擊判定
+        if let (guide, key) = hitTestGuideCheckbox(at: location, page: targetPage) {
+            toggleGuideCheckbox(key: key, guide: guide, page: targetPage)
+            return
+        }
         // 1. 若先前有就地編輯但未打任何字的空方塊，先自動清理
         if let activeId = inlineEditingTextId,
            let activeItem = notebook.textAttachments?.first(where: { $0.id == activeId }),
@@ -10872,15 +11019,15 @@ public struct NotebookEditorView: View {
         return RuledWriting.horizontalRules(guides: guides, bands: bands)
     }
 
-    /// 拖曳文字方塊時的吸附：讓第一行基準線坐在最近的格線上。
+    /// 拖曳文字方塊時的吸附：讓第一行底部坐在最近的格線上（文字貼著格線上方、格線為底，絕不穿透重疊）。
     private func snapYToGuideLine(at y: CGFloat, page: Int? = nil) -> CGFloat {
         let rules = pageHorizontalRules(page: page)
         let fontSize: CGFloat = activeTextAttachment?.fontSize ?? 16
-        // 第一行基準線距方塊頂端 = 內距 + 字體 ascender（與 `RuledWriting.placement` 同一條式子）。
-        let baselineOffset = RuledWriting.padding + RuledWriting.ascender(fontSize: fontSize)
+        let offset = RuledWriting.textBottomOffset(fontSize: fontSize)
 
-        if let nearest = rules.min(by: { abs($0 - y) < abs($1 - y) }), abs(nearest - y) < 50 {
-            return max(PageGeometry.printableInset, nearest - baselineOffset)
+        let targetBottom = y + offset
+        if let nearest = rules.min(by: { abs($0 - targetBottom) < abs($1 - targetBottom) }), abs(nearest - targetBottom) < 50 {
+            return max(PageGeometry.printableInset, nearest - offset)
         }
         // 沒有格線或離得遠：吸附至 20pt 步進網格。
         let step: CGFloat = 20.0
@@ -14849,3 +14996,77 @@ public struct CollabAdvancedFeaturesPanel: View {
         .shadow(radius: 5)
     }
 }
+
+/// 特殊樣板核取清單 Checkbox 互動視圖（支援點選勾選、觸覺回饋、右鍵／長按進度管控選單）
+struct InteractiveGuideCheckboxView: View {
+    let isChecked: Bool
+    let size: CGSize
+    let onToggle: () -> Void
+    let onStrikethroughRow: () -> Void
+    let onClearRowText: () -> Void
+    let onResetPage: () -> Void
+
+    @ObservedObject var localizationManager = LocalizationManager.shared
+
+    private var toggleTitle: String {
+        isChecked
+            ? (localizationManager.currentLanguage == .en ? "Mark Incomplete" : "取消勾選")
+            : (localizationManager.currentLanguage == .en ? "Mark Completed" : "✓ 標記完成")
+    }
+    private var strikethroughTitle: String {
+        localizationManager.currentLanguage == .en ? "Strikethrough Row" : "劃除本行文字"
+    }
+    private var clearRowTitle: String {
+        localizationManager.currentLanguage == .en ? "Clear Row Text" : "清空本行文字"
+    }
+    private var resetPageTitle: String {
+        localizationManager.currentLanguage == .en ? "Reset Page Checkboxes" : "重設此頁核取清單"
+    }
+
+    var body: some View {
+        Button(action: onToggle) {
+            ZStack {
+                // 隱形延伸觸控區（32x32pt），手指與觸控筆皆極易點擊
+                Rectangle()
+                    .fill(Color.clear)
+                    .frame(width: max(32, size.width + 16), height: max(32, size.height + 16))
+
+                // 方塊外框（依樣板大小適配）
+                RoundedRectangle(cornerRadius: min(3, size.width * 0.25))
+                    .stroke(isChecked ? Color.green : Color.secondary.opacity(0.4), lineWidth: isChecked ? 1.5 : 1)
+                    .background(
+                        RoundedRectangle(cornerRadius: min(3, size.width * 0.25))
+                            .fill(isChecked ? Color.green.opacity(0.12) : Color.clear)
+                    )
+                    .frame(width: max(14, size.width), height: max(14, size.height))
+
+                // 勾選符號
+                if isChecked {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: max(9, size.width * 0.75), weight: .bold))
+                        .foregroundColor(.green)
+                        .transition(.scale.combined(with: .opacity))
+                }
+            }
+        }
+        .buttonStyle(.plain)
+        .contextMenu {
+            Button(action: onToggle) {
+                Label(toggleTitle, systemImage: isChecked ? "circle" : "checkmark.circle.fill")
+            }
+            Button(action: onStrikethroughRow) {
+                Label(strikethroughTitle, systemImage: "strikethrough")
+            }
+            Button(role: .destructive, action: onClearRowText) {
+                Label(clearRowTitle, systemImage: "delete.left")
+            }
+            Divider()
+            Button(action: onResetPage) {
+                Label(resetPageTitle, systemImage: "arrow.counterclockwise")
+            }
+        }
+        .accessibilityLabel(isChecked ? (localizationManager.currentLanguage == .en ? "Completed" : "已完成") : (localizationManager.currentLanguage == .en ? "Incomplete" : "未完成"))
+        .accessibilityIdentifier("editor.guide.checkbox")
+    }
+}
+

@@ -116,7 +116,11 @@ if [[ ! -d "$PROJECT_PATH" ]]; then
     exit 1
 fi
 
-BUILD_DIR="${REPO_ROOT}/build/apple"
+# 建置與簽署目錄放在本機磁碟：專案在 exFAT 外接碟上時，macOS 會在每個檔案旁
+# 產生 `._*`（AppleDouble），codesign 會拒絕，匯出的 ipa/pkg 也會夾帶它們。
+# 可用 KAIRUMO_BUILD_DIR 覆寫。
+export COPYFILE_DISABLE=1
+BUILD_DIR="${KAIRUMO_BUILD_DIR:-${TMPDIR:-/tmp}/kairumo-build-apple}"
 ARCHIVE_PATH="${BUILD_DIR}/${SCHEME}.xcarchive"
 EXPORT_PATH="${BUILD_DIR}/export"
 EXPORT_PLIST="${BUILD_DIR}/ExportOptions.plist"

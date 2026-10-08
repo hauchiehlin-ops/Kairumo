@@ -53,6 +53,9 @@ public struct WordToolbarView: View {
     let onInsertNumbered: () -> Void
     let onClearFormat: () -> Void
     let onCommitChange: () -> Void
+    var onAddTextBox: (() -> Void)? = nil
+    var isSnapToGrid: Bool? = nil
+    var onToggleSnapToGrid: (() -> Void)? = nil
 
     private let textColors = ["#000000", "#4A5568", "#2B6CB0", "#C53030", "#2F855A", "#DD6B20", "#6B46C1"]
     private let highlightColors = ["clear", "#FEFCBF", "#C6F6D5", "#BEE3F8", "#FED7E2", "#E9D8FD"]
@@ -60,6 +63,48 @@ public struct WordToolbarView: View {
     public var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 6) {
+                // 0. 新增文字方塊與格線吸附快捷入口
+                if let onAddTextBox = onAddTextBox {
+                    Button(action: onAddTextBox) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "plus.bubble")
+                                .font(.system(size: 13, weight: .semibold))
+                            Text(localizationManager.localized("add_text_box"))
+                                .font(.system(size: 11, weight: .semibold))
+                        }
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 9)
+                        .frame(height: 28)
+                        .background(Color.accentColor)
+                        .cornerRadius(6)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(localizationManager.localized("add_text_box"))
+                    .accessibilityIdentifier("editor.text.add_box")
+
+                    Divider().frame(height: 20)
+                }
+
+                if let isSnap = isSnapToGrid, let onToggleSnap = onToggleSnapToGrid {
+                    Button(action: onToggleSnap) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "rectangle.split.3x3")
+                                .font(.system(size: 12))
+                            Text(localizationManager.localized("snap_to_grid"))
+                                .font(.system(size: 11))
+                        }
+                        .foregroundColor(isSnap ? .accentColor : .secondary)
+                        .padding(.horizontal, 7)
+                        .frame(height: 28)
+                        .background(isSnap ? Color.accentColor.opacity(0.12) : Color.secondary.opacity(0.08))
+                        .cornerRadius(6)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(localizationManager.localized("snap_to_grid"))
+                    .accessibilityIdentifier("editor.text.snap_to_grid")
+
+                    Divider().frame(height: 20)
+                }
                 // 1. 復原 / 重做組
                 HStack(spacing: 2) {
                     Button(action: onUndo) {
