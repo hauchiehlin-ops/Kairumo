@@ -1204,6 +1204,12 @@ impl NotebookSession {
         Ok(materialize(&self.package.read_ink(page)?))
     }
 
+    /// 把這一頁本裝置的筆畫檔補到至少 `min_len` 位元組（見 `NotebookPackage::pad_ink_to`）。
+    pub fn pad_ink_to(&self, page: Uuid, min_len: u64) -> Result<(), AppError> {
+        self.package.pad_ink_to(page, min_len)?;
+        Ok(())
+    }
+
     /// 這一頁**被擦掉**的筆畫 id（所有裝置的墓碑合起來）。
     ///
     /// 平台端要靠它確認「我自己的這一筆是被別台擦掉的」—— 只憑「合併結果裡沒有它」不夠：

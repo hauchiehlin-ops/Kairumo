@@ -212,6 +212,117 @@ final class NotebookSyncCoordinatorTests: XCTestCase {
         XCTAssertTrue(b.foreign.isEmpty, "B 不該又收到 A 的原線")
     }
 
+    // MARK: - PencilKit 筆畫的擦除要傳到每一台
+
+    private func pencilKitNote() -> (note: NotebookDocument, a: PKStroke, b: PKStroke) {
+        let note = NotebookDocument(title: "手寫", pageCount: 1)
+        return (note, stroke(at: 20), stroke(at: 220))
+    }
+
+    private func strokeCount(_ store: FakeStore, _ note: NotebookDocument) -> Int {
+        store.syncLoadDrawing(notebookId: note.id, pageIndex: 0).strokes.count
+    }
+
+    func testErasingYourOwnPencilKitStrokeReachesTheOtherDevice() async throws {
+        let (note, a, b) = pencilKitNote()
+        alice.documents = [note]
+        alice.syncSaveDrawing(notebookId: note.id, pageIndex: 0, drawing: PKDrawing(strokes: [a, b]))
+        await sync(alice, aliceId)
+        await sync(bob, bobId)
+        XCTAssertEqual(strokeCount(bob, note), 2)
+
+        alice.syncSaveDrawing(notebookId: note.id, pageIndex: 0, drawing: PKDrawing(strokes: [a]))
+        await sync(alice, aliceId)
+        await sync(bob, bobId)
+        for _ in 0 ..< 2 {
+            await sync(alice, aliceId)
+            await sync(bob, bobId)
+        }
+        XCTAssertEqual(strokeCount(alice, note), 1)
+        XCTAssertEqual(strokeCount(bob, note), 1, "擦掉的那一筆在另一台還在 —— 擦除沒有傳出去")
+    }
+
+    func testErasingTheOtherDevicesPencilKitStrokeReachesTheOwnerToo() async throws {
+        let (note, a, b) = pencilKitNote()
+        alice.documents = [note]
+        alice.syncSaveDrawing(notebookId: note.id, pageIndex: 0, drawing: PKDrawing(strokes: [a, b]))
+        await sync(alice, aliceId)
+        await sync(bob, bobId)
+        XCTAssertEqual(strokeCount(bob, note), 2)
+
+        // Bob 擦掉 Alice 畫的第二筆。
+        bob.syncSaveDrawing(notebookId: note.id, pageIndex: 0, drawing: PKDrawing(strokes: [a]))
+        await sync(bob, bobId)
+        await sync(alice, aliceId)
+        for _ in 0 ..< 2 {
+            await sync(bob, bobId)
+            await sync(alice, aliceId)
+        }
+        XCTAssertEqual(strokeCount(bob, note), 1, "Bob 自己擦掉的不能又回來")
+        XCTAssertEqual(strokeCount(alice, note), 1, "原作者那台還看得到被別台擦掉的筆畫")
+    }
+
+    func testRedrawingAnErasedPencilKitStrokeComesBackOnBothDevices() async throws {
+        // 擦掉 → 同步 → 復原（把同一條線畫回來）：墓碑已經傳出去、撤不掉，所以那一筆要拿新的身分。
+        let (note, a, b) = pencilKitNote()
+        alice.documents = [note]
+        alice.syncSaveDrawing(notebookId: note.id, pageIndex: 0, drawing: PKDrawing(strokes: [a, b]))
+        await sync(alice, aliceId)
+        await sync(bob, bobId)
+        alice.syncSaveDrawing(notebookId: note.id, pageIndex: 0, drawing: PKDrawing(strokes: [a]))
+        await sync(alice, aliceId)
+        await sync(bob, bobId)
+        XCTAssertEqual(strokeCount(bob, note), 1)
+
+        alice.syncSaveDrawing(notebookId: note.id, pageIndex: 0, drawing: PKDrawing(strokes: [a, b]))
+        await sync(alice, aliceId)
+        await sync(bob, bobId)
+        await sync(alice, aliceId)
+        XCTAssertEqual(strokeCount(alice, note), 2, "畫回來的那一筆在自己這台不見了")
+        XCTAssertEqual(strokeCount(bob, note), 2, "畫回來的那一筆沒傳到另一台")
+    }
+
+    func testBothDevicesKeepDrawingAfterAnEraseWithoutLosingAnything() async throws {
+        let (note, a, b) = pencilKitNote()
+        alice.documents = [note]
+        alice.syncSaveDrawing(notebookId: note.id, pageIndex: 0, drawing: PKDrawing(strokes: [a, b]))
+        await sync(alice, aliceId)
+        await sync(bob, bobId)
+        bob.syncSaveDrawing(notebookId: note.id, pageIndex: 0, drawing: PKDrawing(strokes: [a, stroke(at: 420)]))
+        await sync(bob, bobId)       // Bob 擦掉 b、又畫了一筆
+        alice.syncSaveDrawing(
+            notebookId: note.id, pageIndex: 0, drawing: PKDrawing(strokes: [a, b, stroke(at: 620)]))
+        await sync(alice, aliceId)   // Alice 同時又畫了一筆
+        for _ in 0 ..< 3 {
+            await sync(bob, bobId)
+            await sync(alice, aliceId)
+        }
+        // a、Bob 新畫的、Alice 新畫的；b 被擦掉。
+        XCTAssertEqual(strokeCount(alice, note), 3)
+        XCTAssertEqual(strokeCount(bob, note), 3)
+    }
+
+    func testUpgradingAnExistingNotebookRewritesItOnceEvenWithoutEdits() async throws {
+        // 升級前的筆記：帳本版本是 0。第一次同步就要用穩定身分重寫一次 —— 即使沒有任何編輯。
+        let (note, a, b) = pencilKitNote()
+        alice.documents = [note]
+        try FileManager.default.createDirectory(
+            at: alice.syncDrawingsDirectory, withIntermediateDirectories: true)
+        alice.syncSaveDrawing(notebookId: note.id, pageIndex: 0, drawing: PKDrawing(strokes: [a, b]))
+        await sync(alice, aliceId)
+        XCTAssertEqual(
+            ProInkStore.loadLedger(in: alice.syncDrawingsDirectory, notebookId: note.id, page: 0).schema, 2)
+        // 模擬升級前：帳本被清掉（等同從未用新方式匯出過）。
+        let ledgerFile = alice.syncDrawingsDirectory.appending(path: "\(note.id)_p0.proink-ledger.json")
+        try? FileManager.default.removeItem(at: ledgerFile)
+        await sync(alice, aliceId)
+        XCTAssertEqual(
+            ProInkStore.loadLedger(in: alice.syncDrawingsDirectory, notebookId: note.id, page: 0).schema, 2,
+            "沒有編輯也要把升級前的筆記重寫一次")
+        await sync(bob, bobId)
+        XCTAssertEqual(strokeCount(bob, note), 2, "重寫不能讓別台多出或少掉筆畫")
+    }
+
     func testRepeatedSyncsDoNotGrowTheNotebook() async throws {
         // 同步會來回很多次。每一趟讓內容長一點的話，幾趟之後筆記就走樣了。
         let note = NotebookDocument(title: "來回很多次", pageCount: 1)

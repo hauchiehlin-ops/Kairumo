@@ -120,6 +120,11 @@ fn wrap_with(
     })
 }
 
+/// 補位墓碑指向的 id：全零後面一個固定尾碼，不會是任何真筆畫的 id（筆畫 id 是 v7 UUID）。
+pub const PAD_STROKE_ID: Uuid = Uuid::from_bytes([
+    0x6b, 0x61, 0x69, 0x72, 0x75, 0x6d, 0x6f, 0x50, 0x41, 0x44, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01,
+]);
+
 impl NotebookPackage {
     /// 建立新套件。目錄必須不存在或為空。
     pub fn create(
@@ -530,6 +535,36 @@ impl NotebookPackage {
             fs::write(&path, &bytes)?;
         }
         Ok(())
+    }
+
+    /// 把這一頁**本裝置的筆畫檔**補到至少 `min_len` 位元組，補的是一串指向固定「空 id」的墓碑
+    /// （[`PAD_STROKE_ID`]，不屬於任何筆畫，`materialize` 看不出差別）。
+    ///
+    /// 為什麼要有：同步只傳**變大**的檔案（雲端那份較大就下載、本機較大才上傳）。平台端重寫自己的筆畫檔時，
+    /// 內容若變小（擦掉了東西）或大小沒變（換了筆畫身分），別台永遠收不到。補位讓重寫之後的檔案
+    /// **不比重寫前小**，改動才傳得出去。檔案不存在時會建立。
+    pub fn pad_ink_to(&self, page: Uuid, min_len: u64) -> Result<(), StorageError> {
+        let path = self.ink_write_path(page);
+        let len = fs::metadata(&path).map(|m| m.len()).unwrap_or(0);
+        if len >= min_len {
+            return Ok(());
+        }
+        // 一筆墓碑記錄的大小：寫一筆量一次，不假設編碼細節。
+        let mut probe = StrokeWriter::new(page);
+        probe.push(&InkRecord::Remove(PAD_STROKE_ID));
+        let record_len = (probe.into_bytes().len() - padnote_ink::codec::HEADER_LEN) as u64;
+        // 檔案不存在時還要多出檔頭。
+        let header = if path.exists() {
+            0
+        } else {
+            padnote_ink::codec::HEADER_LEN as u64
+        };
+        let need = min_len
+            .saturating_sub(len + header)
+            .div_ceil(record_len.max(1))
+            .max(1);
+        let records = vec![InkRecord::Remove(PAD_STROKE_ID); need as usize];
+        self.append_ink(page, &records)
     }
 
     /// 重寫某一頁的完整筆畫（用於整體垂直空白推開、幾何形狀變換或頁面筆跡整理）。

@@ -1440,14 +1440,17 @@ enum NotebookSyncCoordinator {
         // 扣掉的是「別台裝置寫的那些」，不是「上次同步時的全部」——
         // 扣掉全部的話，這台裝置自己的筆畫在下一次匯出時會被扣成空的，
         // 而它的檔案又會被整個重寫，等於自己把自己的內容刪掉。
-        let own = try snapshotOwnStrokes(inputs)
+        let snapshots = try snapshotPages(inputs)
+        var own: OwnStrokes = [:]
         var drawings = [PKDrawing]()
         drawings.reserveCapacity(pageCount)
         for page in 0 ..< pageCount {
             if NotebookSyncCoordinator.isCancelled || Task.isCancelled {
                 throw CancellationError()
             }
-            drawings.append(own[baselineKey(document.id, page)] ?? PKDrawing())
+            let mine = snapshots[page].own
+            own[baselineKey(document.id, page)] = mine
+            drawings.append(mine)
         }
         var images: [String: Data] = [:]
         for attachment in document.attachments ?? [] {
@@ -1460,24 +1463,62 @@ enum NotebookSyncCoordinator {
         let pro = (0 ..< pageCount).map {
             ProInkStore.load(in: inputs.drawingsDirectory, notebookId: document.id, page: $0)
         }
-        // 錄音的名字要**一起**交給匯出：漏傳的話套件裡永遠沒有 `rectitle` 區塊，
-        // 別台只看得到掃描時取的預設名稱（單元測試直接呼叫橋接層、有帶這個參數，所以測不出來）。
-        // 專業筆畫的同步帳本（墓碑）。先讀出來這一份，寫完才依「這次真的寫出去的」更新 ——
+        // 同步帳本（墓碑）。先讀出來這一份，寫完才依「這次真的寫出去的」更新 ——
         // 匯出途中編輯器可能又擦了一筆，那一筆要留給下一輪。
         let ledgers = (0 ..< pageCount).map {
             ProInkStore.loadLedger(in: inputs.drawingsDirectory, notebookId: document.id, page: $0)
         }
+
+        // 筆畫的穩定身分與擦除：算出每一頁「要寫什麼」。見 InkSyncLedger.swift。
+        // 到套件裡找別台筆畫的核心 id 是唯讀的，而且只有真的需要時才會去讀那一頁。
+        let resolver = PackageInkResolver(package: inputs.package, deviceId: inputs.deviceId)
+        var plans: [PKInkPlan] = []
+        var exportLedgers = ledgers
+        var proExtra: [[String: [String]]] = Array(repeating: [:], count: pageCount)
+        var needsGrowth = false
+        for page in 0 ..< pageCount {
+            let snapshot = snapshots[page]
+            let hasInk = !snapshot.current.strokes.isEmpty || !pro[page].isEmpty || !ledgers[page].isEmpty
+            if ledgers[page].schema < 2 && hasInk { needsGrowth = true }
+            let plan = PKInkSync.plan(
+                ledger: ledgers[page], ownNow: snapshot.own,
+                prevOwn: PKInkSnapshotStore.load(in: inputs.drawingsDirectory, notebookId: document.id, page: page),
+                current: snapshot.current, others: snapshot.others,
+                resolveForeign: { key, count, excluding in
+                    resolver.pencilKitIds(page: page, key: key, count: count, excluding: excluding)
+                })
+            plans.append(plan)
+            exportLedgers[page].pkRetiredOwn = plan.pkRetiredOwn
+            exportLedgers[page].foreignTombstones = plan.foreignTombstones
+            // 升級前匯入的別台專業筆畫：本機認得的 id 不是核心的 id，依內容指紋到套件裡找。
+            let ownProIds = Set(pro[page].map(\.packageId))
+            for i in exportLedgers[page].retired.indices {
+                let entry = exportLedgers[page].retired[i]
+                guard entry.stroke == nil, entry.extraIds == nil, let key = entry.contentKey else { continue }
+                let extra = resolver.hasStroke(page: page, id: entry.coreId)
+                    ? [] : resolver.proIds(page: page, contentKey: key, excluding: ownProIds)
+                exportLedgers[page].retired[i].extraIds = extra
+                proExtra[page][entry.coreId] = extra
+            }
+        }
+        // 錄音的名字要**一起**交給匯出：漏傳的話套件裡永遠沒有 `rectitle` 區塊，
+        // 別台只看得到掃描時取的預設名稱（單元測試直接呼叫橋接層、有帶這個參數，所以測不出來）。
         try NotebookPackageBridge.exportPreservingOtherDevices(
             document: document, drawings: drawings, imageData: images,
-            to: inputs.package, deviceId: inputs.deviceId, proStrokes: pro, proLedgers: ledgers,
+            to: inputs.package, deviceId: inputs.deviceId, proStrokes: pro, proLedgers: exportLedgers,
+            pkStrokeIds: plans.map(\.ids), growInkFiles: needsGrowth,
             recordingTitles: inputs.recordingTitles
         )
         for page in 0 ..< pageCount {
             let sentTombstones = Set(ledgers[page].retired.map(\.coreId))
             let sentStrokes = pro[page]
+            let plan = plans[page]
+            let snapshot = snapshots[page]
+            let hasInk = !snapshot.current.strokes.isEmpty || !sentStrokes.isEmpty || !ledgers[page].isEmpty
             ProInkStore.updateLedger(in: inputs.drawingsDirectory, notebookId: document.id, page: page) { ledger in
                 for i in ledger.retired.indices where sentTombstones.contains(ledger.retired[i].coreId) {
                     ledger.retired[i].exported = true
+                    if let extra = proExtra[page][ledger.retired[i].coreId] { ledger.retired[i].extraIds = extra }
                 }
                 // 這次寫出去的自己的活筆畫。匯入時用它認出「這一筆是被別台擦掉／改掉的」。
                 ledger.exportedIds = sentStrokes.map(\.packageId)
@@ -1490,6 +1531,19 @@ enum NotebookSyncCoordinator {
                     && !ledger.retired.contains(where: { $0.coreId == stroke.packageId }) {
                     ledger.retired.append(.init(coreId: stroke.packageId, stroke: stroke, exported: false))
                 }
+                // PencilKit 筆畫的擦除（見 InkSyncLedger.swift）。
+                ledger.pkRetiredOwn = plan.pkRetiredOwn
+                ledger.foreignTombstones = plan.foreignTombstones
+                ledger.pkGen = plan.pkGen
+                if hasInk { ledger.schema = 2 }
+            }
+            PKInkSnapshotStore.save(
+                snapshot.own, in: inputs.drawingsDirectory, notebookId: document.id, page: page)
+            // 這台擦掉的別台筆畫已經寫成墓碑：別台基準線同步拿掉，下一輪不會再當成「剛擦掉」。
+            if !plan.erasedForeign.isEmpty {
+                let rebased = PKDrawing(strokes: StrokeDelta.added(
+                    in: snapshot.others, since: PKDrawing(strokes: plan.erasedForeign)))
+                saveBaseline(rebased, in: inputs.baselineDirectory, notebookId: document.id, pageIndex: page)
             }
         }
         RecordingTitleLedger.save(
@@ -1505,6 +1559,21 @@ enum NotebookSyncCoordinator {
     /// 下一次匯出時再把自己的 oplog 刪掉，造成看似隨機的內容回退。
     private nonisolated static func snapshotOwnStrokes(_ inputs: ExportInputs) throws -> OwnStrokes {
         var own: OwnStrokes = [:]
+        for (page, snapshot) in try snapshotPages(inputs).enumerated() {
+            own[baselineKey(inputs.document.id, page)] = snapshot.own
+        }
+        return own
+    }
+
+    /// 一頁的三份 PencilKit 快照：工作副本整份、別台的基準線、以及自己的（= 前兩者相減）。
+    struct PageInkSnapshot {
+        let current: PKDrawing
+        let others: PKDrawing
+        let own: PKDrawing
+    }
+
+    private nonisolated static func snapshotPages(_ inputs: ExportInputs) throws -> [PageInkSnapshot] {
+        var out: [PageInkSnapshot] = []
         for page in 0 ..< max(inputs.document.pageCount, 1) {
             if NotebookSyncCoordinator.isCancelled || Task.isCancelled {
                 throw CancellationError()
@@ -1515,11 +1584,11 @@ enum NotebookSyncCoordinator {
                 notebookId: inputs.document.id,
                 pageIndex: page
             )
-            own[baselineKey(inputs.document.id, page)] = PKDrawing(
-                strokes: StrokeDelta.added(in: current, since: others)
-            )
+            out.append(PageInkSnapshot(
+                current: current, others: others,
+                own: PKDrawing(strokes: StrokeDelta.added(in: current, since: others))))
         }
-        return own
+        return out
     }
 
     /// 工作副本是否真的比套件新。
@@ -1549,6 +1618,18 @@ enum NotebookSyncCoordinator {
         }
 
         if ObjectLedger.hasUnsynced(inputs.document, in: inputs.baselineDirectory) { return true }
+        // 升級前的筆記：這一頁的筆畫還沒用穩定身分寫出過（帳本版本 < 2）。要重寫一次，
+        // 雲端那份舊身分的檔案才會被換掉 —— 別台對舊身分寫的墓碑才不會落空。
+        for page in 0 ..< max(inputs.document.pageCount, 1) {
+            let hasInk = ["drawing", "proink.json"].contains { ext in
+                fm.fileExists(atPath: inputs.drawingsDirectory
+                    .appending(path: "\(inputs.document.id)_p\(page).\(ext)").path)
+            }
+            if hasInk,
+               ProInkStore.loadLedger(in: inputs.drawingsDirectory, notebookId: inputs.document.id, page: page).schema < 2 {
+                return true
+            }
+        }
         // 專業筆畫還有墓碑沒寫進套件（擦掉、搬動、改圖層）：筆畫檔本身的時間看不出來。
         for page in 0 ..< max(inputs.document.pageCount, 1)
         where ProInkStore.hasUnexportedRetirements(

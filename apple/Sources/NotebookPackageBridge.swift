@@ -73,6 +73,8 @@ enum NotebookPackageBridge {
         skipBlockIds: Set<String> = [],
         proStrokes: [[ProStroke]] = [],
         proLedgers: [ProInkLedger] = [],
+        pkStrokeIds: [[String]] = [],
+        minInkBytes: [UInt64] = [],
         recordingTitles: [String: String] = [:]
     ) throws -> ExportSummary {
         let pageCount = max(document.pageCount, drawings.count)
@@ -149,14 +151,23 @@ enum NotebookPackageBridge {
                 )
 
                 if index < drawings.count {
-                    for draft in InkInterop.drafts(from: drawings[index]) {
-                        _ = try session.addStroke(
-                            pageId: pageId,
-                            tool: draft.tool,
-                            colorRgba: draft.colorRgba,
-                            baseWidth: draft.baseWidth,
-                            points: draft.points
-                        )
+                    let ids = index < pkStrokeIds.count ? pkStrokeIds[index] : []
+                    for (i, draft) in InkInterop.drafts(from: drawings[index]).enumerated() {
+                        // 有穩定身分就用（同一條線每次匯出都是同一個 id，別台的墓碑才對得上）。
+                        if i < ids.count, UUID(uuidString: ids[i]) != nil {
+                            try session.addStrokeDraftedWithId(
+                                pageId: pageId, strokeId: ids[i], tool: draft.tool,
+                                colorRgba: draft.colorRgba, baseWidth: draft.baseWidth,
+                                points: draft.points, layer: 0, lineType: 0)
+                        } else {
+                            _ = try session.addStroke(
+                                pageId: pageId,
+                                tool: draft.tool,
+                                colorRgba: draft.colorRgba,
+                                baseWidth: draft.baseWidth,
+                                points: draft.points
+                            )
+                        }
                         summary.strokeCount += 1
                     }
                 }
@@ -171,14 +182,38 @@ enum NotebookPackageBridge {
                 // 墓碑：被擦掉、搬動或改了圖層的筆畫。自己的筆畫連 `Add` 一起寫 ——
                 // 同步只傳**變大**的檔案，只寫 `Remove` 的話檔案會比雲端那份小，墓碑永遠傳不出去。
                 if index < proLedgers.count {
-                    for retired in proLedgers[index].retired {
+                    let ledger = proLedgers[index]
+                    for retired in ledger.retired {
                         if let old = retired.stroke, let kind = ProInk.kind(named: old.tool) {
                             var again = old
                             again.coreId = retired.coreId
                             try addPro(again, kind: kind, to: session, page: pageId)
                         }
                         try session.eraseStroke(pageId: pageId, strokeId: retired.coreId)
+                        for extra in retired.extraIds ?? [] {
+                            try session.eraseStroke(pageId: pageId, strokeId: extra)
+                        }
                     }
+                    // 擦掉的自己的 PencilKit 筆畫：連 Add 一起寫（檔案才不會變小），再寫 Remove。
+                    for gone in ledger.pkRetiredOwn {
+                        guard let drawing = try? PKDrawing(data: gone.drawing),
+                              let draft = InkInterop.drafts(from: drawing).first,
+                              UUID(uuidString: gone.id) != nil
+                        else { continue }
+                        try session.addStrokeDraftedWithId(
+                            pageId: pageId, strokeId: gone.id, tool: draft.tool,
+                            colorRgba: draft.colorRgba, baseWidth: draft.baseWidth,
+                            points: draft.points, layer: 0, lineType: 0)
+                        try session.eraseStroke(pageId: pageId, strokeId: gone.id)
+                    }
+                    // 這台擦掉的別台筆畫（PencilKit、升級前的專業筆畫）：只寫墓碑。
+                    for id in ledger.foreignTombstones {
+                        try session.eraseStroke(pageId: pageId, strokeId: id)
+                    }
+                }
+                // 重寫之後的筆畫檔不能比重寫前小：同步只傳「變大」的檔案。
+                if index < minInkBytes.count, minInkBytes[index] > 0 {
+                    try session.padInkTo(pageId: pageId, minBytes: minInkBytes[index])
                 }
 
                 for text in document.textAttachments?.filter({ $0.pageIndex == index }) ?? [] {
@@ -552,6 +587,8 @@ enum NotebookPackageBridge {
         pageIds knownPageIds: [String]? = nil,
         proStrokes: [[ProStroke]] = [],
         proLedgers: [ProInkLedger] = [],
+        pkStrokeIds: [[String]] = [],
+        growInkFiles: Bool = false,
         recordingTitles: [String: String] = [:]
     ) throws -> ExportSummary {
         let fm = FileManager.default
@@ -564,7 +601,8 @@ enum NotebookPackageBridge {
             return try export(
                 document: document, drawings: drawings, imageData: imageData,
                 to: destination, deviceId: deviceId, pageIds: pageIds,
-                proStrokes: proStrokes, proLedgers: proLedgers, recordingTitles: recordingTitles
+                proStrokes: proStrokes, proLedgers: proLedgers, pkStrokeIds: pkStrokeIds,
+                recordingTitles: recordingTitles
             )
         }
 
@@ -582,10 +620,23 @@ enum NotebookPackageBridge {
             throw BridgeError.coreRejected(L10n.t("bridge_err_read_other"))
         }
 
+        // 這台每一頁現有的筆畫檔大小。重寫之後不能比它小 —— 同步只傳「變大」的檔案，變小或不變的改動
+        // （擦掉、換身分）別台永遠收不到。`growInkFiles`：升級後第一次匯出，內容的身分整批換了、大小卻可能
+        // 一樣，要至少多一點才會被傳出去、把雲端舊身分的檔案換掉。
+        let ownSuffix = deviceSuffix(deviceId)
+        let minInkBytes: [UInt64] = (pageIds ?? []).map { (pageId: String) -> UInt64 in
+            let path = destination.appending(path: "ink/\(pageId)\(ownSuffix).strokes").path
+            let attributes = try? fm.attributesOfItem(atPath: path)
+            let size = (attributes?[.size] as? NSNumber)?.uint64Value ?? 0
+            guard size > 0 else { return 0 }
+            return size + (growInkFiles ? 1 : 0)
+        }
+
         let summary = try export(
             document: document, drawings: drawings, imageData: imageData,
             to: fresh, deviceId: deviceId, pageIds: pageIds,
             skipBlockIds: foreign.ids, proStrokes: proStrokes, proLedgers: proLedgers,
+            pkStrokeIds: pkStrokeIds, minInkBytes: minInkBytes,
             recordingTitles: recordingTitles
         )
 

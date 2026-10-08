@@ -947,6 +947,16 @@ impl PadnoteSession {
         Ok(())
     }
 
+    /// 把這一頁本裝置的筆畫檔補到至少 `min_bytes` 位元組。
+    ///
+    /// 同步只傳「變大」的檔案：平台端重寫自己的筆畫檔之後，檔案不能比重寫前小，
+    /// 擦掉、換身分的改動才會被傳出去。補的是不指向任何筆畫的墓碑，不影響內容。
+    pub fn pad_ink_to(&self, page_id: String, min_bytes: u64) -> Result<(), FfiError> {
+        let page = parse_uuid(&page_id)?;
+        self.lock().pad_ink_to(page, min_bytes)?;
+        Ok(())
+    }
+
     /// 這一頁被擦掉的筆畫 id（所有裝置的墓碑合起來，小寫）。
     pub fn removed_stroke_ids(&self, page_id: String) -> Result<Vec<String>, FfiError> {
         let page = parse_uuid(&page_id)?;
@@ -3048,6 +3058,37 @@ mod tests {
 
         s.erase_stroke(page.clone(), id.clone()).unwrap();
         assert!(s.visible_stroke_details(page).unwrap().is_empty());
+    }
+
+    #[test]
+    fn padding_never_shrinks_the_stroke_file_and_does_not_change_the_content() {
+        let s = session("pad");
+        let page = s.first_page_id().unwrap();
+        let id = "0192f0aa-1111-7222-8333-aaaabbbbcccc".to_string();
+        s.add_stroke_drafted_with_id(
+            page.clone(),
+            id.clone(),
+            ToolKind::Fineliner,
+            vec![0, 0, 0, 255],
+            1.4,
+            points(),
+            0,
+            0,
+        )
+        .unwrap();
+        // 補位到一個比現在大的長度，內容不變、墓碑清單也不該多出東西。
+        s.pad_ink_to(page.clone(), 4096).unwrap();
+        let all = s.visible_stroke_details(page.clone()).unwrap();
+        assert_eq!(all.len(), 1);
+        assert_eq!(all[0].id, id);
+        assert_eq!(
+            s.removed_stroke_ids(page.clone()).unwrap().len(),
+            1,
+            "只有補位用的那個固定 id"
+        );
+        // 已經夠大就不動。
+        s.pad_ink_to(page.clone(), 10).unwrap();
+        assert_eq!(s.visible_stroke_details(page).unwrap().len(), 1);
     }
 
     #[test]

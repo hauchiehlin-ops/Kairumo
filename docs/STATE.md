@@ -601,3 +601,13 @@ PDF 排版引擎只用 Noto Sans Thai 在正式輸出路徑上；其他字型（
   純 HEAD 也一樣有（Sidebar／Toolbar／Trash／Ink 本來就紅），不是這次改動造成的。
 - `testTextModeSharesThePaperAndItsTextBoxesStayEditableInDrawMode` 單獨跑會失敗（純 HEAD 也是），整批跑時靠前面測試留下的狀態才過。
 - `MultiDeviceUITests` 需要 Android 同時配合，單獨跑必紅；跑整批時要 `-skip-testing:KairumoUITests/MultiDeviceUITests`。
+
+### 擦除／改圖層的跨裝置同步（2026-10）
+- **規則**：同步只傳**變大**的檔案（`ffi_gdrive.rs` 筆畫檔上傳／下載都比大小），所以「擦掉」不能是「少寫」，要是**追加的墓碑**；
+  重寫自己的筆畫檔時用 `pad_ink_to` 補位，檔案不比重寫前小。
+- **專業筆畫**：套件身分穩定（`add_stroke_drafted_with_id`），帳本 `ProInkLedger`（每頁 `*_pN.proink-ledger.json`，在文件庫目錄）記墓碑；
+  匯入時只在套件裡**有墓碑**才拿掉自己的那一筆（`removed_stroke_ids`），不能只憑「合併結果裡沒有」。
+- **PencilKit 筆畫**：沒有 id，身分 = SHA-256(內容指紋｜第幾筆｜世代)；擦除在**匯出當下**用三份快照比對偵測
+  （上次匯出的自己／這次的自己／別台基準線），墓碑與被擦掉的自己的筆畫（連資料）永遠留在帳本；擦掉別台的筆畫到套件裡依內容指紋找核心 id。
+- **升級**：帳本 `schema < 2` 的頁面第一次同步會強制重寫並讓檔案多一點，雲端舊身分的檔案才會被換掉。
+  已知殘餘：升級前的舊筆畫在**原作者還沒升級重寫之前**被別台擦掉，墓碑指向的是舊的隨機 id，原作者重寫後那一筆會在第三台重現（本機仍濾掉）。

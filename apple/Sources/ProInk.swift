@@ -204,13 +204,59 @@ struct ProInkLedger: Codable, Equatable, Sendable {
         var stroke: ProStroke?
         /// 墓碑已經寫進套件（之後就不能再讓同一個 id 復活）。
         var exported: Bool
+        /// 別台的筆畫被擦掉時它的內容指紋。升級前匯入的別台筆畫，本機認得的 id 不是核心的 id，
+        /// 匯出時改用內容指紋到套件裡找出真正的 id。
+        var contentKey: String? = nil
+        /// 用內容指紋額外找到的核心 id（墓碑要一併寫）。`nil` = 還沒找過。
+        var extraIds: [String]? = nil
+    }
+
+    /// 擦掉的一筆 PencilKit 筆畫（自己的）。連資料一起留著：匯出時要寫 `Add` 再寫 `Remove`。
+    struct PKRetired: Codable, Equatable, Sendable {
+        var id: String
+        /// 只含這一筆的 `PKDrawing` 資料。
+        var drawing: Data
     }
 
     var retired: [Retired] = []
     /// 上一次匯出寫出的、自己的活筆畫的套件 id。
     var exportedIds: [String] = []
 
-    var isEmpty: Bool { retired.isEmpty && exportedIds.isEmpty }
+    /// 帳本格式版本。< 2 = 升級前：這一頁的筆畫還沒用穩定身分寫出過，匯出要強制重寫並讓檔案變大。
+    var schema = 0
+    /// 擦掉的自己的 PencilKit 筆畫（見 `PKInkSync`）。**永遠留著**：每次匯出都整個重寫自己的筆畫檔，
+    /// 少寫一筆墓碑，別台下載到新檔就會讓那一筆復活。
+    var pkRetiredOwn: [PKRetired] = []
+    /// 別台的筆畫被這台擦掉時寫出的墓碑 id（PencilKit 與升級前的專業筆畫）。同樣永遠留著。
+    var foreignTombstones: [String] = []
+    /// 每個「內容 × 第幾筆」被擦掉過幾次。套件身分含這個數字：擦掉又復原的筆畫要拿新的身分，
+    /// 已上傳的墓碑撤不掉。
+    var pkGen: [String: Int] = [:]
+
+    var isEmpty: Bool {
+        retired.isEmpty && exportedIds.isEmpty && schema == 0 && pkRetiredOwn.isEmpty
+            && foreignTombstones.isEmpty && pkGen.isEmpty
+    }
+
+    init(retired: [Retired] = [], exportedIds: [String] = []) {
+        self.retired = retired
+        self.exportedIds = exportedIds
+    }
+
+    // 舊版帳本的 JSON 沒有後來加的欄位，一律用預設值讀進來。
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: Keys.self)
+        retired = try c.decodeIfPresent([Retired].self, forKey: .retired) ?? []
+        exportedIds = try c.decodeIfPresent([String].self, forKey: .exportedIds) ?? []
+        schema = try c.decodeIfPresent(Int.self, forKey: .schema) ?? 0
+        pkRetiredOwn = try c.decodeIfPresent([PKRetired].self, forKey: .pkRetiredOwn) ?? []
+        foreignTombstones = try c.decodeIfPresent([String].self, forKey: .foreignTombstones) ?? []
+        pkGen = try c.decodeIfPresent([String: Int].self, forKey: .pkGen) ?? [:]
+    }
+
+    private enum Keys: String, CodingKey {
+        case retired, exportedIds, schema, pkRetiredOwn, foreignTombstones, pkGen
+    }
 }
 
 enum ProInkStore {
@@ -1012,7 +1058,7 @@ final class ProInkLayerView: UIView {
             for stroke in strokes {
                 let cid = stroke.id.lowercased()
                 if !ledger.retired.contains(where: { $0.coreId == cid }) {
-                    ledger.retired.append(.init(coreId: cid, stroke: nil, exported: false))
+                    ledger.retired.append(.init(coreId: cid, stroke: nil, exported: false, contentKey: stroke.contentKey))
                 }
             }
         }
