@@ -21135,6 +21135,54 @@
     "zhHans": "转录失败",
     "zhHant": "轉錄失敗"
   },
+  "transcribe_lang_en": {
+    "en": "English (en)",
+    "ja": "英語 (en)",
+    "ko": "영어 (en)",
+    "th": "ภาษาอังกฤษ (en)",
+    "zhHans": "英语 (en)",
+    "zhHant": "英文 (en)"
+  },
+  "transcribe_lang_ja": {
+    "en": "Japanese (ja)",
+    "ja": "日本語 (ja)",
+    "ko": "일본어 (ja)",
+    "th": "ภาษาญี่ปุ่น (ja)",
+    "zhHans": "日语 (ja)",
+    "zhHant": "日本語 (ja)"
+  },
+  "transcribe_lang_ko": {
+    "en": "Korean (ko)",
+    "ja": "韓国語 (ko)",
+    "ko": "한국어 (ko)",
+    "th": "ภาษาเกาหลี (ko)",
+    "zhHans": "韩语 (ko)",
+    "zhHant": "韓語 (ko)"
+  },
+  "transcribe_lang_th": {
+    "en": "Thai (th)",
+    "ja": "タイ語 (th)",
+    "ko": "태국어 (th)",
+    "th": "ภาษาไทย (th)",
+    "zhHans": "泰语 (th)",
+    "zhHant": "泰語 (th)"
+  },
+  "transcribe_lang_zh_cn": {
+    "en": "Simplified Chinese (zh-CN)",
+    "ja": "簡体字中国語 (zh-CN)",
+    "ko": "간체 중국어 (zh-CN)",
+    "th": "จีนตัวย่อ (zh-CN)",
+    "zhHans": "简体中文 (zh-CN)",
+    "zhHant": "簡體中文 (zh-CN)"
+  },
+  "transcribe_lang_zh_tw": {
+    "en": "Traditional Chinese (zh-TW)",
+    "ja": "繁体字中国語 (zh-TW)",
+    "ko": "번체 중국어 (zh-TW)",
+    "th": "จีนตัวเต็ม (zh-TW)",
+    "zhHans": "繁体中文 (zh-TW)",
+    "zhHant": "繁體中文 (zh-TW)"
+  },
   "transcribe_language_auto": {
     "en": "Auto Detect Language",
     "ja": "自動言語検出",

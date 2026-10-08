@@ -391,12 +391,12 @@ struct AudioAttachmentItemView: View {
                     Label(localizationManager.localized("transcribe_language_auto"), systemImage: "sparkles")
                 }
                 Divider()
-                Button("繁體中文 (zh-TW)") { performTranscribe(language: "zh-Hant") }
-                Button("English (en)") { performTranscribe(language: "en") }
-                Button("日本語 (ja)") { performTranscribe(language: "ja") }
-                Button("한국어 (ko)") { performTranscribe(language: "ko") }
-                Button("ภาษาไทย (th)") { performTranscribe(language: "th") }
-                Button("簡體中文 (zh-CN)") { performTranscribe(language: "zh-Hans") }
+                Button(localizationManager.localized("transcribe_lang_zh_tw")) { performTranscribe(language: "zh-Hant") }
+                Button(localizationManager.localized("transcribe_lang_en")) { performTranscribe(language: "en") }
+                Button(localizationManager.localized("transcribe_lang_ja")) { performTranscribe(language: "ja") }
+                Button(localizationManager.localized("transcribe_lang_ko")) { performTranscribe(language: "ko") }
+                Button(localizationManager.localized("transcribe_lang_th")) { performTranscribe(language: "th") }
+                Button(localizationManager.localized("transcribe_lang_zh_cn")) { performTranscribe(language: "zh-Hans") }
             } label: {
                 Label(localizationManager.localized("transcribe_audio"), systemImage: "waveform.badge.magnifyingglass")
             }

@@ -21285,6 +21285,54 @@ object LocalizationStrings {
             "ko" to "변환 실패",
             "th" to "การแปลงเสียงล้มเหลว"
         ),
+        "transcribe_lang_en" to mapOf(
+            "zh-Hant" to "英文 (en)",
+            "en" to "English (en)",
+            "zh-Hans" to "英语 (en)",
+            "ja" to "英語 (en)",
+            "ko" to "영어 (en)",
+            "th" to "ภาษาอังกฤษ (en)"
+        ),
+        "transcribe_lang_ja" to mapOf(
+            "zh-Hant" to "日本語 (ja)",
+            "en" to "Japanese (ja)",
+            "zh-Hans" to "日语 (ja)",
+            "ja" to "日本語 (ja)",
+            "ko" to "일본어 (ja)",
+            "th" to "ภาษาญี่ปุ่น (ja)"
+        ),
+        "transcribe_lang_ko" to mapOf(
+            "zh-Hant" to "韓語 (ko)",
+            "en" to "Korean (ko)",
+            "zh-Hans" to "韩语 (ko)",
+            "ja" to "韓国語 (ko)",
+            "ko" to "한국어 (ko)",
+            "th" to "ภาษาเกาหลี (ko)"
+        ),
+        "transcribe_lang_th" to mapOf(
+            "zh-Hant" to "泰語 (th)",
+            "en" to "Thai (th)",
+            "zh-Hans" to "泰语 (th)",
+            "ja" to "タイ語 (th)",
+            "ko" to "태국어 (th)",
+            "th" to "ภาษาไทย (th)"
+        ),
+        "transcribe_lang_zh_cn" to mapOf(
+            "zh-Hant" to "簡體中文 (zh-CN)",
+            "en" to "Simplified Chinese (zh-CN)",
+            "zh-Hans" to "简体中文 (zh-CN)",
+            "ja" to "簡体字中国語 (zh-CN)",
+            "ko" to "간체 중국어 (zh-CN)",
+            "th" to "จีนตัวย่อ (zh-CN)"
+        ),
+        "transcribe_lang_zh_tw" to mapOf(
+            "zh-Hant" to "繁體中文 (zh-TW)",
+            "en" to "Traditional Chinese (zh-TW)",
+            "zh-Hans" to "繁体中文 (zh-TW)",
+            "ja" to "繁体字中国語 (zh-TW)",
+            "ko" to "번체 중국어 (zh-TW)",
+            "th" to "จีนตัวเต็ม (zh-TW)"
+        ),
         "transcribe_language_auto" to mapOf(
             "zh-Hant" to "自動辨識語言",
             "en" to "Auto Detect Language",
@@ -21860,7 +21908,10 @@ object LocalizationStrings {
             "ja" to "手書きキャンバスを挿入",
             "ko" to "필기 캔버스 삽입",
             "th" to "แทรกผืนผ้าใบลายมือ"
-        ),
+        )
+    )
+
+    private fun part34(): Map<String, Map<String, String>> = mapOf(
         "wd_placeholder" to mapOf(
             "zh-Hant" to "在這裡輸入文件內容…",
             "en" to "Type the document here…",
@@ -21908,10 +21959,7 @@ object LocalizationStrings {
             "ja" to "Whisper オフラインモデルを読み込みました。",
             "ko" to "Whisper 오프라인 모델을 가져왔습니다.",
             "th" to "นำเข้าโมเดล Whisper แบบออฟไลน์สำเร็จ"
-        )
-    )
-
-    private fun part34(): Map<String, Map<String, String>> = mapOf(
+        ),
         "whisper_pick_failed" to mapOf(
             "zh-Hant" to "選取檔案失敗：%@",
             "en" to "Could not select the file: %@",

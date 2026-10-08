@@ -21151,6 +21151,54 @@ extension LocalizationManager {
             .ko: "변환 실패",
             .th: "การแปลงเสียงล้มเหลว"
         ],
+        "transcribe_lang_en": [
+            .zhHant: "英文 (en)",
+            .en: "English (en)",
+            .zhHans: "英语 (en)",
+            .ja: "英語 (en)",
+            .ko: "영어 (en)",
+            .th: "ภาษาอังกฤษ (en)"
+        ],
+        "transcribe_lang_ja": [
+            .zhHant: "日本語 (ja)",
+            .en: "Japanese (ja)",
+            .zhHans: "日语 (ja)",
+            .ja: "日本語 (ja)",
+            .ko: "일본어 (ja)",
+            .th: "ภาษาญี่ปุ่น (ja)"
+        ],
+        "transcribe_lang_ko": [
+            .zhHant: "韓語 (ko)",
+            .en: "Korean (ko)",
+            .zhHans: "韩语 (ko)",
+            .ja: "韓国語 (ko)",
+            .ko: "한국어 (ko)",
+            .th: "ภาษาเกาหลี (ko)"
+        ],
+        "transcribe_lang_th": [
+            .zhHant: "泰語 (th)",
+            .en: "Thai (th)",
+            .zhHans: "泰语 (th)",
+            .ja: "タイ語 (th)",
+            .ko: "태국어 (th)",
+            .th: "ภาษาไทย (th)"
+        ],
+        "transcribe_lang_zh_cn": [
+            .zhHant: "簡體中文 (zh-CN)",
+            .en: "Simplified Chinese (zh-CN)",
+            .zhHans: "简体中文 (zh-CN)",
+            .ja: "簡体字中国語 (zh-CN)",
+            .ko: "간체 중국어 (zh-CN)",
+            .th: "จีนตัวย่อ (zh-CN)"
+        ],
+        "transcribe_lang_zh_tw": [
+            .zhHant: "繁體中文 (zh-TW)",
+            .en: "Traditional Chinese (zh-TW)",
+            .zhHans: "繁体中文 (zh-TW)",
+            .ja: "繁体字中国語 (zh-TW)",
+            .ko: "번체 중국어 (zh-TW)",
+            .th: "จีนตัวเต็ม (zh-TW)"
+        ],
         "transcribe_language_auto": [
             .zhHant: "自動辨識語言",
             .en: "Auto Detect Language",
