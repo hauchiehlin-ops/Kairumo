@@ -357,17 +357,24 @@ APPLE_MULTI_FOLDABLE_BUTTONS = {
 # 語言中立的 `【Apple】` 標記起頭。Apple 版拿掉標記、Android 版整條丟掉，
 # 並一併丟掉該節只為這些步驟而放的第二張截圖（`fig2`）。
 APPLE_ONLY = "\u3010Apple\u3011"
+# 同理：Android 獨有的步驟用 `【Android】` 起頭。Android 版拿掉標記、Apple 版整條丟掉。
+ANDROID_ONLY = "\u3010Android\u3011"
 
 
 def strip_apple_marker(step):
     return step[len(APPLE_ONLY):].lstrip() if step.startswith(APPLE_ONLY) else step
 
 
+def strip_android_marker(step):
+    return step[len(ANDROID_ONLY):].lstrip() if step.startswith(ANDROID_ONLY) else step
+
+
 def build_apple(data):
     d = copy.deepcopy(data)
     for locale in [k for k in d if k != "figsets"]:
         for sec in d[locale]["sections"]:
-            sec["steps"] = [strip_apple_marker(st) for st in sec.get("steps", [])]
+            sec["steps"] = [strip_apple_marker(st) for st in sec.get("steps", [])
+                            if not st.startswith(ANDROID_ONLY)]
         frag   = APPLE_MULTI_FOLDABLE_FRAGMENTS[locale]
         btn    = APPLE_MULTI_FOLDABLE_BUTTONS[locale]
         for sec in d[locale]["sections"]:
@@ -383,6 +390,8 @@ def build_android(data):
     d = copy.deepcopy(data)
     for locale in [k for k in d if k != "figsets"]:
         for sec in d[locale]["sections"]:
+            if "steps" in sec:
+                sec["steps"] = [strip_android_marker(st) for st in sec["steps"]]
             if any(st.startswith(APPLE_ONLY) for st in sec.get("steps", [])):
                 sec["steps"] = [st for st in sec["steps"] if not st.startswith(APPLE_ONLY)]
                 if sec.get("fig2") == "storage":
