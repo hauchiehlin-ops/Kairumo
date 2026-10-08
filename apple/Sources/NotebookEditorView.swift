@@ -480,7 +480,6 @@ final class AdaptiveCanvasView: PKCanvasView {
     func configurePro(
         mode: ProMode, directory: URL?, notebookId: String, pageIndex: Int, pencilOnly: Bool = false
     ) {
-        if mode == .off, proLayer == nil { return }
         let layer = installProLayerIfNeeded()
         if let directory {
             layer.load(directory: directory, notebookId: notebookId, pageIndex: pageIndex)
@@ -2025,6 +2024,19 @@ public struct NotebookEditorView: View {
     /// 隨點隨打就地輸入狀態（連動 TextAttachmentItemView 的焦點與鍵盤）
     @State private var inlineEditingTextId: String? = nil
     @State private var lastAddedTextId: String? = nil
+    // 文字復原/重做堆疊（供文字模式與文字框使用）
+    @State private var textUndoStack: [[NoteTextAttachment]] = []
+    @State private var textRedoStack: [[NoteTextAttachment]] = []
+    @State private var lastTextUndoTimestamp: Date = .distantPast
+
+    // 單頁模式排版與縮放狀態（全頁 vs 適寬，支援手動放大縮小與捲動）
+    enum SinglePageFitMode: String {
+        case fitWidth
+        case fitPage
+    }
+    @State private var singlePageFitMode: SinglePageFitMode = .fitWidth
+    @State private var singlePageManualZoom: CGFloat = 1.0
+
     @State private var snapToGrid: Bool = true
     @State private var newTextDraft: NoteTextAttachment = NoteTextAttachment()
     @State private var showLinkPreviewSheet: Bool = false
@@ -3202,7 +3214,7 @@ public struct NotebookEditorView: View {
                 .help(localizationManager.localized("undo_desc"))
 
                 Button {
-                    canvasView?.undoManager?.redo()
+                    performRedo()
                 } label: {
                     Image(systemName: "arrow.uturn.forward")
                         .font(.system(size: 11, weight: .medium))
@@ -3654,7 +3666,7 @@ public struct NotebookEditorView: View {
             .accessibilityIdentifier("editor.compact.undo")
 
             Button {
-                canvasView?.undoManager?.redo()
+                performRedo()
             } label: {
                 Image(systemName: "arrow.uturn.forward")
                     .font(.system(size: EditorToolbarMetrics.icon - 2, weight: .medium))
@@ -4250,51 +4262,80 @@ public struct NotebookEditorView: View {
     /// 視窗寬就放大到填滿可用寬度（上限見 `PageViewportLayout.maxFitScale`）。
     private var singlePageWorkArea: some View {
         GeometryReader { outer in
-            // 只用寬度算一次「放得進視窗」的比例。鍵盤、錄音列、工具列等
-            // 垂直 UI 出現時，GeometryReader 的高度會改變；若把高度也拿來算，
-            // 每一次點文字或物件都會讓整張紙忽大忽小。垂直空間現在只決定
-            // 看得到多少紙，縮放交給使用者的捏合手勢。
             let availableWidth = max(outer.size.width - 32, 1)
-            let scale = PageViewportLayout.scale(
+            let availableHeight = max(outer.size.height - 32, 1)
+            let widthScale = PageViewportLayout.scale(
                 availableWidth: availableWidth,
                 pageWidth: PageGeometry.width
             )
-            ZStack(alignment: .bottom) {
-                canvasWorkAreaContent
-                    // 頁面用**它自己的尺寸**佈局，再整個縮到放得下 ——
-                    // 不給高度的話它會被壓成剩餘空間那麼扁（iPhone 上整張
-                    // A4 被壓進六百點，見上面的說明）。
-                    .frame(width: PageGeometry.width, height: PageGeometry.height)
-                    // 固定頂緣，鍵盤若改變可見高度，紙張不會跟著上下跳動。
-                    .scaleEffect(scale, anchor: .top)
-                    // 工作區**就是可用空間**，不會因為頁面而長高 ——
-                    // 長高的話外層 VStack 會把工具列擠出畫面（踩過）。
-                    .frame(width: outer.size.width, height: outer.size.height, alignment: .top)
-                    // 識別字也掛在 SwiftUI 這一層。
-                    //
-                    // `PKCanvasView` 自己設了 `accessibilityIdentifier`，但整頁
-                    // 模式把它套上 `scaleEffect` 之後，它就不再出現在 XCUITest
-                    // 的樹裡 —— 測試說「找不到畫布」而畫面上明明有，VoiceOver
-                    // 也就同樣找不到。掛在外層這一個，縮放不會把它吃掉。
-                    //
-                    // **名字用規格那一個（`editor.canvas`）。** 在此之前畫布有
-                    // 兩個名字：真正畫出來的這一層叫 `kairumo.canvas`，而規格
-                    // 要求的 `editor.canvas` 掛在另一個**不會被算繪**的分支上。
-                    // 於是畫面稽核一直報「少了 editor.canvas」，而那一項被放進
-                    // 棘輪、附上一段解釋 —— 解釋是對的，但沒有人回頭把它修好。
-                    //
-                    // **`children: .contain` 不能拿掉。** 識別字掛在一個
-                    // **容器**上，而 SwiftUI 預設會把容器底下的東西合併成
-                    // 一個元素 —— 畫布上所有的物件（3D 卡片、圖片、表格…）
-                    // 就此從無障礙樹裡消失。症狀認不出來：稽核說「模型上
-                    // 沒有縮放把手」，而把手畫得好好的，截圖裡看得見。
-                    // 受害的不只是測試 —— VoiceOver 的使用者同樣碰不到
-                    // 畫布上的任何物件。
-                    .accessibilityElement(children: .contain)
-                    .accessibilityIdentifier("editor.canvas")
+            let fitPageScale = min(widthScale, availableHeight / PageGeometry.height)
+            let baseScale = (singlePageFitMode == .fitPage) ? fitPageScale : widthScale
+            let effectiveScale = max(0.3, min(4.0, baseScale * singlePageManualZoom))
+            let scaledW = PageGeometry.width * effectiveScale
+            let scaledH = PageGeometry.height * effectiveScale
 
+            ScrollView([.vertical, .horizontal], showsIndicators: true) {
+                ZStack(alignment: .top) {
+                    canvasWorkAreaContent
+                        // 頁面用**它自己的尺寸**佈局，再等比縮放
+                        .frame(width: PageGeometry.width, height: PageGeometry.height)
+                        .scaleEffect(effectiveScale, anchor: .top)
+                        .frame(width: scaledW, height: scaledH, alignment: .top)
+                        .accessibilityElement(children: .contain)
+                        .accessibilityIdentifier("editor.canvas")
+                }
+                .frame(
+                    minWidth: outer.size.width,
+                    minHeight: outer.size.height,
+                    alignment: .top
+                )
             }
             .frame(width: outer.size.width, height: outer.size.height)
+            .overlay(alignment: .bottomTrailing) {
+                HStack(spacing: 6) {
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.15)) {
+                            singlePageManualZoom = max(0.4, singlePageManualZoom - 0.15)
+                        }
+                    } label: {
+                        Image(systemName: "minus.magnifyingglass")
+                            .font(.system(size: 12, weight: .semibold))
+                    }
+                    .buttonStyle(.plain)
+
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            singlePageManualZoom = 1.0
+                            singlePageFitMode = (singlePageFitMode == .fitPage) ? .fitWidth : .fitPage
+                        }
+                    } label: {
+                        Text(singlePageFitMode == .fitPage
+                            ? (localizationManager.currentLanguage == .zhHant ? "全頁" : "Fit Page")
+                            : (localizationManager.currentLanguage == .zhHant ? "適寬" : "Fit Width"))
+                            .font(.system(size: 11, weight: .bold))
+                            .frame(minWidth: 28)
+                    }
+                    .buttonStyle(.plain)
+
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.15)) {
+                            singlePageManualZoom = min(3.0, singlePageManualZoom + 0.15)
+                        }
+                    } label: {
+                        Image(systemName: "plus.magnifyingglass")
+                            .font(.system(size: 12, weight: .semibold))
+                    }
+                    .buttonStyle(.plain)
+                }
+                .foregroundColor(.primary)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background(.ultraThinMaterial)
+                .cornerRadius(18)
+                .shadow(color: Color.black.opacity(0.12), radius: 4, y: 2)
+                .padding(.trailing, 16)
+                .padding(.bottom, 16)
+            }
         }
     }
 
@@ -4496,7 +4537,7 @@ public struct NotebookEditorView: View {
                         }
                         .buttonStyle(.plain)
 
-                        Button { canvasView?.undoManager?.redo() } label: {
+                        Button { performRedo() } label: {
                             Image(systemName: "arrow.uturn.forward")
                                 .font(.system(size: 15, weight: .semibold))
                                 .frame(width: 36, height: 36)
@@ -4921,6 +4962,7 @@ public struct NotebookEditorView: View {
                                 get: { inlineEditingTextId == item.id },
                                 set: { editing in
                                     if editing {
+                                        recordTextUndoState()
                                         inlineEditingTextId = item.id
                                     } else if inlineEditingTextId == item.id {
                                         inlineEditingTextId = nil
@@ -4933,10 +4975,12 @@ public struct NotebookEditorView: View {
                             snapToGrid: snapToGrid,
                             snapY: { y in snapYToGuideLine(at: y) },
                             onEdit: {
+                                recordTextUndoState()
                                 self.editingTextId = item.id
                             },
                             onDelete: {
                                 if inlineEditingTextId == item.id { inlineEditingTextId = nil }
+                                recordTextUndoState()
                                 deletedAttachmentBackup = (type: "text", data: item)
                                 collaborationManager.broadcastAttachmentDelete(id: item.id, type: "text")
                                 notebook.textAttachments?.removeAll { $0.id == item.id }
@@ -5199,7 +5243,7 @@ public struct NotebookEditorView: View {
                     }
                 },
                 onUndo: { performUndo() },
-                onRedo: { canvasView?.undoManager?.redo() },
+                onRedo: { performRedo() },
                 magneticSnapEnabled: isMagneticSnapActive,
                 onMagneticSnap: { start, end in
                     magneticGuideStart = start
@@ -5601,7 +5645,7 @@ public struct NotebookEditorView: View {
                             performUndo()
                         },
                         RadialMenuItem(id: "redo", icon: "arrow.uturn.forward", labelKey: "redo", color: .blue) {
-                            canvasView?.undoManager?.redo()
+                            performRedo()
                         },
                         RadialMenuItem(id: "color", icon: "paintpalette.fill", labelKey: "pro_color", color: .pink) {
                             showProColorWheel = true
@@ -7031,10 +7075,10 @@ public struct NotebookEditorView: View {
                         PageThumbnailRenderer.invalidateAll()
                     }
                 ),
-                canUndo: canvasView?.undoManager?.canUndo ?? true,
-                canRedo: canvasView?.undoManager?.canRedo ?? false,
+                canUndo: !textUndoStack.isEmpty || (canvasView?.undoManager?.canUndo ?? true),
+                canRedo: !textRedoStack.isEmpty || (canvasView?.undoManager?.canRedo ?? false),
                 onUndo: { performUndo() },
-                onRedo: { canvasView?.undoManager?.redo() },
+                onRedo: { performRedo() },
                 onInsertTable: { rows, cols in
                     let targetX = max(PageGeometry.printableInset, (PageGeometry.width - 440) / 2)
                     let baseOffsetY = max(PageGeometry.printableInset, canvasContentOffset.y + 120)
@@ -7727,7 +7771,7 @@ public struct NotebookEditorView: View {
 
                     if toolbarSettings.isVisible("editor.ink.redo") {
                     Button {
-                        canvasView?.undoManager?.redo()
+                        performRedo()
                     } label: {
                         Image(systemName: "arrow.uturn.forward")
                             .font(.subheadline)
@@ -8133,7 +8177,7 @@ public struct NotebookEditorView: View {
             .accessibilityIdentifier("editor.text.undo")
 
             Button {
-                canvasView?.undoManager?.redo()
+                performRedo()
             } label: {
                 Image(systemName: "arrow.uturn.forward")
                     .font(.subheadline)
@@ -8963,8 +9007,37 @@ public struct NotebookEditorView: View {
         collaborationManager.broadcastSelection(selectedId: nil)
     }
 
+    private func recordTextUndoState() {
+        let current = notebook.textAttachments ?? []
+        textUndoStack.append(current)
+        if textUndoStack.count > 50 {
+            textUndoStack.removeFirst()
+        }
+        textRedoStack.removeAll()
+        lastTextUndoTimestamp = Date()
+    }
+
+    private func recordTextUndoStateDebounced() {
+        let now = Date()
+        if now.timeIntervalSince(lastTextUndoTimestamp) > 1.2 {
+            recordTextUndoState()
+        }
+    }
+
     /// 協同個人專屬復原與防誤刪墓碑還原
     private func performUndo() {
+        // 1. 如果在文字輸入模式、文字方塊編輯中，或文字堆疊有操作記錄
+        if (editorMode == .type || inlineEditingTextId != nil || editingTextId != nil) && !textUndoStack.isEmpty {
+            let previous = textUndoStack.removeLast()
+            let current = notebook.textAttachments ?? []
+            textRedoStack.append(current)
+            notebook.textAttachments = previous
+            store.updateNotebook(notebook)
+            PageThumbnailRenderer.invalidateAll()
+            CanvasDiag.log("文字復原成功，剩餘堆疊: \(textUndoStack.count)")
+            return
+        }
+
         if let backup = deletedAttachmentBackup {
             // 優先復原防誤刪墓碑中的物件
             if backup.type == "image", let item = backup.data as? NoteImageAttachment {
@@ -8976,6 +9049,7 @@ public struct NotebookEditorView: View {
                     collaborationManager.broadcastAttachmentUpsert(type: "image", itemDict: dict)
                 }
             } else if backup.type == "text", let item = backup.data as? NoteTextAttachment {
+                recordTextUndoState()
                 if notebook.textAttachments == nil { notebook.textAttachments = [] }
                 if let idx = notebook.textAttachments?.firstIndex(where: { $0.id == item.id }) {
                     notebook.textAttachments?[idx] = item
@@ -9004,10 +9078,20 @@ public struct NotebookEditorView: View {
             // 如果剛剛隨點隨打新增了空白文字方塊，復原會優先撤銷該文字方塊
             if inlineEditingTextId == addedId { inlineEditingTextId = nil }
             lastAddedTextId = nil
+            recordTextUndoState()
             notebook.textAttachments?.removeAll { $0.id == addedId }
             store.updateNotebook(notebook)
             collaborationManager.broadcastAttachmentDelete(id: addedId, type: "text")
             PageThumbnailRenderer.invalidateAll()
+        } else if !textUndoStack.isEmpty && canvasView?.undoManager?.canUndo != true {
+            // 畫筆沒有可復原項，但文字堆疊有
+            let previous = textUndoStack.removeLast()
+            let current = notebook.textAttachments ?? []
+            textRedoStack.append(current)
+            notebook.textAttachments = previous
+            store.updateNotebook(notebook)
+            PageThumbnailRenderer.invalidateAll()
+            CanvasDiag.log("文字復原成功 (回退模式)，剩餘堆疊: \(textUndoStack.count)")
         } else {
             let before = canvasView?.drawing.strokes.count ?? -1
             let canUndo = canvasView?.undoManager?.canUndo == true
@@ -9015,6 +9099,37 @@ public struct NotebookEditorView: View {
             let after = canvasView?.drawing.strokes.count ?? -1
             CanvasDiag.log("復原：筆畫 \(before) → \(after)，復原項\(canUndo ? "有" : "無")")
         }
+    }
+
+    /// 協同個人專屬重做
+    private func performRedo() {
+        if (editorMode == .type || inlineEditingTextId != nil || editingTextId != nil) && !textRedoStack.isEmpty {
+            let next = textRedoStack.removeLast()
+            let current = notebook.textAttachments ?? []
+            textUndoStack.append(current)
+            notebook.textAttachments = next
+            store.updateNotebook(notebook)
+            PageThumbnailRenderer.invalidateAll()
+            CanvasDiag.log("文字重做成功，剩餘重做堆疊: \(textRedoStack.count)")
+            return
+        }
+
+        if !textRedoStack.isEmpty && canvasView?.undoManager?.canRedo != true {
+            let next = textRedoStack.removeLast()
+            let current = notebook.textAttachments ?? []
+            textUndoStack.append(current)
+            notebook.textAttachments = next
+            store.updateNotebook(notebook)
+            PageThumbnailRenderer.invalidateAll()
+            CanvasDiag.log("文字重做成功 (回退模式)，剩餘重做堆疊: \(textRedoStack.count)")
+            return
+        }
+
+        let before = canvasView?.drawing.strokes.count ?? -1
+        let canRedo = canvasView?.undoManager?.canRedo == true
+        canvasView?.undoManager?.redo()
+        let after = canvasView?.drawing.strokes.count ?? -1
+        CanvasDiag.log("重做：筆畫 \(before) → \(after)，重做項\(canRedo ? "有" : "無")")
     }
 
     /// 接住拖進畫布的圖片（工作項 S-68）。
@@ -9108,9 +9223,9 @@ public struct NotebookEditorView: View {
         case .showInkAttributes:
             showProColorPicker = true
         case .undo:
-            canvasView?.undoManager?.undo()
+            performUndo()
         case .redo:
-            canvasView?.undoManager?.redo()
+            performRedo()
         case .toggleRuler:
             isRulerActive.toggle()
         }
@@ -10439,6 +10554,7 @@ public struct NotebookEditorView: View {
     private func toggleActiveTextBold() {
         let target = ensureActiveTextAttachment()
         guard let items = notebook.textAttachments, items.indices.contains(target.index) else { return }
+        recordTextUndoState()
         notebook.textAttachments?[target.index].isBold.toggle()
         store.updateNotebook(notebook)
         PageThumbnailRenderer.invalidateAll()
@@ -10447,6 +10563,7 @@ public struct NotebookEditorView: View {
     private func toggleActiveTextItalic() {
         let target = ensureActiveTextAttachment()
         guard let items = notebook.textAttachments, items.indices.contains(target.index) else { return }
+        recordTextUndoState()
         notebook.textAttachments?[target.index].isItalic.toggle()
         store.updateNotebook(notebook)
         PageThumbnailRenderer.invalidateAll()
@@ -10455,6 +10572,7 @@ public struct NotebookEditorView: View {
     private func toggleActiveTextUnderline() {
         let target = ensureActiveTextAttachment()
         guard let items = notebook.textAttachments, items.indices.contains(target.index) else { return }
+        recordTextUndoState()
         notebook.textAttachments?[target.index].isUnderline.toggle()
         store.updateNotebook(notebook)
         PageThumbnailRenderer.invalidateAll()
@@ -10463,6 +10581,7 @@ public struct NotebookEditorView: View {
     private func setActiveTextAlignment(_ align: String) {
         let target = ensureActiveTextAttachment()
         guard let items = notebook.textAttachments, items.indices.contains(target.index) else { return }
+        recordTextUndoState()
         notebook.textAttachments?[target.index].alignmentRaw = align
         store.updateNotebook(notebook)
         PageThumbnailRenderer.invalidateAll()
@@ -10471,6 +10590,7 @@ public struct NotebookEditorView: View {
     private func changeActiveTextFontSize(delta: CGFloat) {
         let target = ensureActiveTextAttachment()
         guard let items = notebook.textAttachments, items.indices.contains(target.index) else { return }
+        recordTextUndoState()
         let current = notebook.textAttachments?[target.index].fontSize ?? 16
         notebook.textAttachments?[target.index].fontSize = max(10, min(72, current + delta))
         store.updateNotebook(notebook)
@@ -10480,6 +10600,7 @@ public struct NotebookEditorView: View {
     private func setActiveTextColor(_ hex: String) {
         let target = ensureActiveTextAttachment()
         guard let items = notebook.textAttachments, items.indices.contains(target.index) else { return }
+        recordTextUndoState()
         notebook.textAttachments?[target.index].textColorHex = hex
         store.updateNotebook(notebook)
         PageThumbnailRenderer.invalidateAll()
@@ -10826,6 +10947,7 @@ public struct NotebookEditorView: View {
         if let placement = tapPlacement, placement.lineSpacing > 0 {
             draft.lineSpacing = placement.lineSpacing
         }
+        recordTextUndoState()
         if notebook.textAttachments == nil {
             notebook.textAttachments = []
         }
@@ -12267,6 +12389,10 @@ public struct NotebookEditorView: View {
             },
             set: { updated in
                 if let idx = index(in: notebook.textAttachments) {
+                    let oldItem = notebook.textAttachments?[idx]
+                    if oldItem?.text != updated.text {
+                        recordTextUndoStateDebounced()
+                    }
                     notebook.textAttachments?[idx] = updated
                     store.updateNotebook(notebook)
                 }
@@ -14216,7 +14342,7 @@ public struct MaskingTapeOverlayView: View {
                         selectedTapeId = nil
                     }
                     .gesture(
-                        DragGesture(minimumDistance: 4)
+                        DragGesture(minimumDistance: 6)
                             .onChanged { value in
                                 if selectedTapeId != nil {
                                     selectedTapeId = nil
@@ -14238,7 +14364,6 @@ public struct MaskingTapeOverlayView: View {
                                     notebook.tapeAttachments = []
                                 }
                                 notebook.tapeAttachments?.append(dragTape)
-                                // 連續畫膠帶：畫完一條後保持未選取狀態，讓使用者可以一條接著一條順暢繪製，而不必每次手動解除選取
                                 selectedTapeId = nil
                                 currentDragTape = nil
                                 onTapesChanged()
@@ -14252,7 +14377,6 @@ public struct MaskingTapeOverlayView: View {
                     tape: tape,
                     isActive: isActive,
                     isSelected: selectedTapeId == tape.id,
-                    presetColors: tapePresetHexes,
                     fallbackColor: selectedColor,
                     onSelect: {
                         selectedTapeId = tape.id
@@ -14263,15 +14387,15 @@ public struct MaskingTapeOverlayView: View {
                             onTapesChanged()
                         }
                     },
-                    onColorChanged: { hex in
-                        if let idx = notebook.tapeAttachments?.firstIndex(where: { $0.id == tape.id }) {
-                            notebook.tapeAttachments?[idx].colorHex = hex
-                            onTapesChanged()
-                        }
-                    },
                     onRectChanged: { newRect in
                         if let idx = notebook.tapeAttachments?.firstIndex(where: { $0.id == tape.id }) {
                             notebook.tapeAttachments?[idx].rect = newRect
+                            onTapesChanged()
+                        }
+                    },
+                    onRotationChanged: { newRot in
+                        if let idx = notebook.tapeAttachments?.firstIndex(where: { $0.id == tape.id }) {
+                            notebook.tapeAttachments?[idx].rotation = newRot
                             onTapesChanged()
                         }
                     },
@@ -14284,7 +14408,7 @@ public struct MaskingTapeOverlayView: View {
                     }
                 )
             }
-            
+
             // 繪製中的預覽
             if let dragTape = currentDragTape {
                 RoundedRectangle(cornerRadius: 4)
@@ -14297,7 +14421,107 @@ public struct MaskingTapeOverlayView: View {
                     .position(x: dragTape.rect.midX, y: dragTape.rect.midY)
                     .shadow(color: Color.black.opacity(0.12), radius: 3, y: 1)
             }
+
+            // 選中膠帶時，在頂層獨立浮動顯示快捷工具條（保證按鈕點擊 100% 作用且不被邊界裁切）
+            if isActive, let selId = selectedTapeId, let selectedTape = tapes.first(where: { $0.id == selId }) {
+                TapeFloatingToolbar(
+                    tape: selectedTape,
+                    presetColors: tapePresetHexes,
+                    onColorChanged: { hex in
+                        if let idx = notebook.tapeAttachments?.firstIndex(where: { $0.id == selId }) {
+                            notebook.tapeAttachments?[idx].colorHex = hex
+                            onTapesChanged()
+                        }
+                    },
+                    onToggleReveal: {
+                        if let idx = notebook.tapeAttachments?.firstIndex(where: { $0.id == selId }) {
+                            notebook.tapeAttachments?[idx].isRevealed.toggle()
+                            onTapesChanged()
+                        }
+                    },
+                    onRotate: {
+                        if let idx = notebook.tapeAttachments?.firstIndex(where: { $0.id == selId }) {
+                            let cur = notebook.tapeAttachments?[idx].rotation ?? 0.0
+                            notebook.tapeAttachments?[idx].rotation = (cur + 45.0).truncatingRemainder(dividingBy: 360.0)
+                            onTapesChanged()
+                        }
+                    },
+                    onRemove: {
+                        selectedTapeId = nil
+                        notebook.tapeAttachments?.removeAll { $0.id == selId }
+                        onTapesChanged()
+                    }
+                )
+                .position(x: selectedTape.rect.midX, y: max(32, selectedTape.rect.minY - 32))
+                .zIndex(20)
+            }
         }
+    }
+}
+
+private struct TapeFloatingToolbar: View {
+    let tape: NoteTapeAttachment
+    let presetColors: [String]
+    let onColorChanged: (String) -> Void
+    let onToggleReveal: () -> Void
+    let onRotate: () -> Void
+    let onRemove: () -> Void
+
+    var body: some View {
+        HStack(spacing: 8) {
+            // 色票選擇
+            ForEach(presetColors, id: \.self) { hex in
+                Button {
+                    onColorChanged(hex)
+                } label: {
+                    Circle()
+                        .fill(Color(hex: hex) ?? .yellow)
+                        .frame(width: 20, height: 20)
+                        .overlay(
+                            Circle()
+                                .stroke(Color.primary.opacity(tape.colorHex?.uppercased() == hex.uppercased() ? 0.9 : 0.2), lineWidth: tape.colorHex?.uppercased() == hex.uppercased() ? 2.5 : 1)
+                        )
+                }
+                .buttonStyle(.plain)
+            }
+
+            Divider().frame(height: 16)
+
+            // 旋轉
+            Button(action: onRotate) {
+                Image(systemName: "rotate.right.fill")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(.accentColor)
+            }
+            .buttonStyle(.plain)
+
+            Divider().frame(height: 16)
+
+            // 翻開 / 遮回切換
+            Button(action: onToggleReveal) {
+                Image(systemName: tape.isRevealed ? "eye.fill" : "eye.slash.fill")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(.accentColor)
+            }
+            .buttonStyle(.plain)
+
+            Divider().frame(height: 16)
+
+            // 刪除
+            Button(action: onRemove) {
+                Image(systemName: "trash.fill")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(.red)
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 7)
+        .background(
+            RoundedRectangle(cornerRadius: 20)
+                .fill(Color(uiColor: .systemBackground))
+                .shadow(color: Color.black.opacity(0.22), radius: 8, y: 3)
+        )
     }
 }
 
@@ -14305,18 +14529,17 @@ private struct TapeView: View {
     let tape: NoteTapeAttachment
     let isActive: Bool
     let isSelected: Bool
-    let presetColors: [String]
     let fallbackColor: Color
     let onSelect: () -> Void
     let onToggleReveal: () -> Void
-    let onColorChanged: (String) -> Void
     let onRectChanged: (CGRect) -> Void
+    let onRotationChanged: (Double) -> Void
     let onRemove: () -> Void
-    
+
     @State private var dragOffset: CGSize = .zero
     @State private var resizeBaseRect: CGRect? = nil
     @State private var liveRect: CGRect? = nil
-    
+
     private var currentRect: CGRect {
         if let live = liveRect { return live }
         return CGRect(
@@ -14326,17 +14549,17 @@ private struct TapeView: View {
             height: tape.rect.height
         )
     }
-    
+
     private var baseColor: Color {
         if let hex = tape.colorHex, let c = Color(hex: hex) {
             return c
         }
         return fallbackColor
     }
-    
+
     var body: some View {
         let rect = currentRect
-        
+
         ZStack {
             // 膠帶本體
             RoundedRectangle(cornerRadius: 4)
@@ -14346,12 +14569,12 @@ private struct TapeView: View {
                         .stroke(baseColor.opacity(tape.isRevealed ? 0.4 : 0.8), lineWidth: 1)
                 )
                 .shadow(color: Color.black.opacity(tape.isRevealed ? 0.02 : 0.08), radius: 2, y: 1)
-            
+
             // 選取外框與編輯把手（當工具啟動且該膠帶被選中時）
             if isActive && isSelected {
                 RoundedRectangle(cornerRadius: 4)
                     .stroke(Color.accentColor, style: StrokeStyle(lineWidth: 1.5, dash: [4, 4]))
-                
+
                 // 左縮放把手
                 Circle()
                     .fill(Color.white)
@@ -14379,7 +14602,7 @@ private struct TapeView: View {
                                 liveRect = nil
                             }
                     )
-                
+
                 // 右縮放把手
                 Circle()
                     .fill(Color.white)
@@ -14406,8 +14629,29 @@ private struct TapeView: View {
                                 liveRect = nil
                             }
                     )
+
+                // 旋轉把手（頂部拉桿）
+                VStack(spacing: 0) {
+                    Circle()
+                        .fill(Color.accentColor)
+                        .overlay(Circle().stroke(Color.white, lineWidth: 2))
+                        .frame(width: 14, height: 14)
+                    Rectangle()
+                        .fill(Color.accentColor)
+                        .frame(width: 1.5, height: 10)
+                }
+                .frame(width: 36, height: 36)
+                .contentShape(Rectangle())
+                .position(x: rect.width / 2, y: -12)
+                .gesture(
+                    DragGesture(minimumDistance: 1)
+                        .onChanged { value in
+                            let angle = atan2(value.translation.height, value.translation.width) * 180 / .pi
+                            onRotationChanged(Double(angle))
+                        }
+                )
             }
-            
+
             // 翻開與刪除按鈕（未選中時只在右側顯示輕便移除鈕）
             if isActive && !isSelected {
                 HStack {
@@ -14422,14 +14666,9 @@ private struct TapeView: View {
                 }
             }
         }
-        // **`.position` 一定要放在 `contentShape` 與手勢「之後」。**
-        //
-        // `.position` 會讓視圖撐滿整個父層（整頁）。原本它排在 `.contentShape(Rectangle())`、
-        // `.onTapGesture`、`.gesture` 前面，於是**每一條膠帶的點擊範圍都是整頁**：
-        // 畫完第一條，它就蓋住背景的繪製層（第二條畫不出來）、也蓋住底下的畫布
-        // （換成別的工具後筆也寫不了、點不到任何東西）。範圍要先收在膠帶自己的矩形裡再定位。
         .frame(width: rect.width, height: rect.height)
         .contentShape(Rectangle())
+        .rotationEffect(.degrees(tape.rotation))
         .onTapGesture {
             if isActive {
                 if isSelected {
@@ -14459,56 +14698,6 @@ private struct TapeView: View {
                     onRectChanged(movedRect)
                 }
         )
-        // 選中時在膠帶上方浮現快捷操作工具條：切換顏色、翻開/遮蔽、刪除
-        .overlay(alignment: .top) {
-            if isActive && isSelected {
-                HStack(spacing: 8) {
-                    // 色票選擇
-                    ForEach(presetColors, id: \.self) { hex in
-                        Button {
-                            onColorChanged(hex)
-                        } label: {
-                            Circle()
-                                .fill(Color(hex: hex) ?? .yellow)
-                                .frame(width: 18, height: 18)
-                                .overlay(
-                                    Circle()
-                                        .stroke(Color.primary.opacity(tape.colorHex?.uppercased() == hex.uppercased() ? 0.8 : 0.2), lineWidth: tape.colorHex?.uppercased() == hex.uppercased() ? 2 : 1)
-                                )
-                        }
-                        .buttonStyle(.plain)
-                    }
-                    
-                    Divider().frame(height: 14)
-                    
-                    // 翻開 / 遮回切換
-                    Button(action: onToggleReveal) {
-                        Image(systemName: tape.isRevealed ? "eye.fill" : "eye.slash.fill")
-                            .font(.system(size: 13, weight: .semibold))
-                            .foregroundColor(.accentColor)
-                    }
-                    .buttonStyle(.plain)
-                    
-                    Divider().frame(height: 14)
-                    
-                    // 刪除
-                    Button(action: onRemove) {
-                        Image(systemName: "trash.fill")
-                            .font(.system(size: 13, weight: .semibold))
-                            .foregroundColor(.red)
-                    }
-                    .buttonStyle(.plain)
-                }
-                .padding(.horizontal, 10)
-                .padding(.vertical, 6)
-                .background(
-                    RoundedRectangle(cornerRadius: 20)
-                        .fill(Color(uiColor: .systemBackground))
-                        .shadow(color: Color.black.opacity(0.18), radius: 6, y: 3)
-                )
-                .offset(y: -44)
-            }
-        }
         .position(x: rect.midX, y: rect.midY)
     }
 }

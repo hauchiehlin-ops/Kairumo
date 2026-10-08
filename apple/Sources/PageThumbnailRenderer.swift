@@ -928,6 +928,14 @@ public enum PageThumbnailRenderer {
         let rect = tape.rect
         guard rect.width > 0, rect.height > 0 else { return }
         let cornerRadius: CGFloat = 4.0
+        
+        guard let ctx = UIGraphicsGetCurrentContext() else { return }
+        ctx.saveGState()
+        if tape.rotation != 0 {
+            ctx.translateBy(x: rect.midX, y: rect.midY)
+            ctx.rotate(by: CGFloat(tape.rotation * .pi / 180.0))
+            ctx.translateBy(x: -rect.midX, y: -rect.midY)
+        }
         let path = UIBezierPath(roundedRect: rect, cornerRadius: cornerRadius)
         
         let tapeColor = tape.colorHex.flatMap { UIColor(hexString: $0) }
@@ -941,6 +949,7 @@ public enum PageThumbnailRenderer {
         tapeColor.withAlphaComponent(strokeAlpha).setStroke()
         path.lineWidth = 1.0
         path.stroke()
+        ctx.restoreGState()
     }
 }
 

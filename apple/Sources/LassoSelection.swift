@@ -98,16 +98,61 @@ final class LassoSelection: ObservableObject {
             return
         }
         let polygon = path.flatMap { [Float($0.x), Float($0.y)] }
+        let polyPts = path
         var picked = IndexSet()
         for (index, stroke) in drawing.strokes.enumerated() {
             let points = Self.samplePoints(of: stroke)
             if lassoEncloses(polygon: polygon, points: points) {
+                picked.insert(index)
+            } else if Self.isStrokeEnclosedTolerant(stroke: stroke, in: polyPts) {
                 picked.insert(index)
             }
         }
         selected = picked
         proIds = proHost()?.strokeIds(enclosedBy: polygon) ?? []
         committed = (picked.isEmpty && proIds.isEmpty) ? [] : path
+    }
+
+    /// 寬容度判定：當一般筆畫取樣點較多時，只要超過 55% 取樣點在套索圈內，或中心點在圈內且至少 35% 點在圈內，即視為選中。
+    private static func isStrokeEnclosedTolerant(stroke: PKStroke, in polygon: [CGPoint]) -> Bool {
+        guard polygon.count >= 3 else { return false }
+        let totalCount = stroke.path.count
+        guard totalCount > 0 else { return false }
+        let step = max(1, totalCount / 30)
+        var insideCount = 0
+        var sampledCount = 0
+        for i in stride(from: 0, to: totalCount, by: step) {
+            let pt = stroke.path[i].location.applying(stroke.transform)
+            sampledCount += 1
+            if isPointInPolygon(pt, polygon: polygon) {
+                insideCount += 1
+            }
+        }
+        guard sampledCount > 0 else { return false }
+        let ratio = Double(insideCount) / Double(sampledCount)
+        if ratio >= 0.55 { return true }
+        let bounds = stroke.renderBounds
+        let center = CGPoint(x: bounds.midX, y: bounds.midY)
+        if isPointInPolygon(center, polygon: polygon) && ratio >= 0.35 {
+            return true
+        }
+        return false
+    }
+
+    private static func isPointInPolygon(_ p: CGPoint, polygon: [CGPoint]) -> Bool {
+        guard polygon.count >= 3 else { return false }
+        var inside = false
+        var j = polygon.count - 1
+        for i in 0..<polygon.count {
+            let pi = polygon[i]
+            let pj = polygon[j]
+            if ((pi.y > p.y) != (pj.y > p.y)) &&
+               (p.x < (pj.x - pi.x) * (p.y - pi.y) / (pj.y - pi.y) + pi.x) {
+                inside.toggle()
+            }
+            j = i
+        }
+        return inside
     }
 
     /// 程式直接選定一批專業筆畫（例如剛插入的立體圖紙），並畫出選取框，

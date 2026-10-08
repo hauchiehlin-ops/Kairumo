@@ -3774,17 +3774,19 @@ public struct NoteTapeAttachment: Identifiable, Codable, Hashable {
     public var rect: CGRect
     public var isRevealed: Bool
     public var colorHex: String?
+    public var rotation: Double
     
-    public init(id: String = UUID().uuidString, pageIndex: Int, rect: CGRect, isRevealed: Bool = false, colorHex: String? = nil) {
+    public init(id: String = UUID().uuidString, pageIndex: Int, rect: CGRect, isRevealed: Bool = false, colorHex: String? = nil, rotation: Double = 0.0) {
         self.id = id
         self.pageIndex = pageIndex
         self.rect = rect
         self.isRevealed = isRevealed
         self.colorHex = colorHex
+        self.rotation = rotation
     }
 
     private enum CodingKeys: String, CodingKey {
-        case id, pageIndex, rect, isRevealed, colorHex, x, y, width, height
+        case id, pageIndex, rect, isRevealed, colorHex, x, y, width, height, rotation
     }
 
     private struct KeyedRect: Decodable {
@@ -3803,6 +3805,7 @@ public struct NoteTapeAttachment: Identifiable, Codable, Hashable {
         pageIndex = try c.decodeIfPresent(Int.self, forKey: .pageIndex) ?? 0
         isRevealed = try c.decodeIfPresent(Bool.self, forKey: .isRevealed) ?? false
         colorHex = try c.decodeIfPresent(String.self, forKey: .colorHex)
+        rotation = try c.decodeIfPresent(Double.self, forKey: .rotation) ?? 0.0
         if let r = try? c.decode(CGRect.self, forKey: .rect) {
             rect = r
         } else if let k = try? c.decode(KeyedRect.self, forKey: .rect) {
@@ -3823,5 +3826,6 @@ public struct NoteTapeAttachment: Identifiable, Codable, Hashable {
         try c.encode(rect, forKey: .rect)
         try c.encode(isRevealed, forKey: .isRevealed)
         try c.encodeIfPresent(colorHex, forKey: .colorHex)
+        try c.encode(rotation, forKey: .rotation)
     }
 }
