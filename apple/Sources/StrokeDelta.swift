@@ -17,6 +17,10 @@
 //  筆畫，擦除不會傳出去（核心有 `erase_stroke` 的墓碑機制，但這條路還沒接）。
 //  對使用者的影響是「刪除不同步」，不是資料損毀 —— 下次同步那筆會再出現。
 //
+//  ✅ **專業筆畫（製圖線、專業筆刷）已經接上了**：用穩定的筆畫 id 寫出、擦掉／搬動／改圖層寫成追加的
+//  墓碑，原作者那台匯入時依墓碑拿掉自己的那一筆（見 `ProInkLedger`、`ProInkLayerView.reconcileLedger`）。
+//  上面這個限制現在只剩 **PencilKit 筆畫**：它們沒有穩定的 id，仍走本檔的指紋與「已擦除」名單。
+//
 
 import Foundation
 import PencilKit

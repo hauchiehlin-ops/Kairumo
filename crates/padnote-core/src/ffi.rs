@@ -913,6 +913,51 @@ impl PadnoteSession {
         Ok(id.to_string())
     }
 
+    /// 與 [`Self::add_stroke_drafted`] 相同，但**由呼叫端指定筆畫 id**。
+    ///
+    /// 平台端（Apple）每次匯出都重建自己的筆畫檔；若每次都由核心發新 id，
+    /// 同一條線在兩次匯出之間就是兩個身分，別台對它寫的墓碑（`erase_stroke`）
+    /// 隨著下一次匯出落空，線又冒出來 —— 「在別台改圖層／擦掉」就傳不回原作者。
+    /// 筆畫 id 是**身分**：同一條線永遠用同一個 id 寫出，墓碑才對得上。
+    #[allow(clippy::too_many_arguments)]
+    pub fn add_stroke_drafted_with_id(
+        &self,
+        page_id: String,
+        stroke_id: String,
+        tool: ToolKind,
+        color_rgba: Vec<u8>,
+        base_width: f32,
+        points: Vec<StrokePoint>,
+        layer: u8,
+        line_type: u8,
+    ) -> Result<(), FfiError> {
+        let page = parse_uuid(&page_id)?;
+        let id = parse_uuid(&stroke_id)?;
+        let stroke = Stroke {
+            id,
+            started_at: NotebookTime::ZERO,
+            tool: tool.into(),
+            color_rgba8: to_rgba(&color_rgba),
+            base_width,
+            points: points.into_iter().map(to_ink_point).collect(),
+            layer,
+            line_type,
+        };
+        self.lock().add_stroke(page, stroke)?;
+        Ok(())
+    }
+
+    /// 這一頁被擦掉的筆畫 id（所有裝置的墓碑合起來，小寫）。
+    pub fn removed_stroke_ids(&self, page_id: String) -> Result<Vec<String>, FfiError> {
+        let page = parse_uuid(&page_id)?;
+        Ok(self
+            .lock()
+            .removed_stroke_ids(page)?
+            .into_iter()
+            .map(|id| id.to_string())
+            .collect())
+    }
+
     pub fn erase_stroke(&self, page_id: String, stroke_id: String) -> Result<(), FfiError> {
         let (page, stroke) = (parse_uuid(&page_id)?, parse_uuid(&stroke_id)?);
         self.lock().erase_stroke(page, stroke)?;
@@ -2977,6 +3022,77 @@ mod tests {
                 .map(|x| (x.layer, x.line_type))
                 .collect::<Vec<_>>()
         );
+    }
+
+    #[test]
+    fn a_stroke_written_with_a_caller_id_keeps_that_id_and_can_be_erased_by_it() {
+        // 同一條線永遠用同一個 id 寫出；另一台裝置對那個 id 寫的墓碑才擦得掉它。
+        let s = session("stable-id");
+        let page = s.first_page_id().unwrap();
+        let id = "0192f0aa-1111-7222-8333-444455556666".to_string();
+        s.add_stroke_drafted_with_id(
+            page.clone(),
+            id.clone(),
+            ToolKind::Fineliner,
+            vec![0, 0, 0, 255],
+            1.4,
+            points(),
+            2,
+            0,
+        )
+        .unwrap();
+        let all = s.visible_stroke_details(page.clone()).unwrap();
+        assert_eq!(all.len(), 1);
+        assert_eq!(all[0].id, id, "id 必須是呼叫端給的那一個");
+        assert_eq!(all[0].layer, 2);
+
+        s.erase_stroke(page.clone(), id.clone()).unwrap();
+        assert!(s.visible_stroke_details(page).unwrap().is_empty());
+    }
+
+    #[test]
+    fn removed_stroke_ids_lists_tombstones_not_merely_missing_strokes() {
+        let s = session("removed-ids");
+        let page = s.first_page_id().unwrap();
+        let kept = "0192f0aa-1111-7222-8333-aaaabbbbcccc".to_string();
+        let gone = "0192f0aa-1111-7222-8333-ddddeeeeffff".to_string();
+        for id in [&kept, &gone] {
+            s.add_stroke_drafted_with_id(
+                page.clone(),
+                id.clone(),
+                ToolKind::Fineliner,
+                vec![0, 0, 0, 255],
+                1.4,
+                points(),
+                0,
+                0,
+            )
+            .unwrap();
+        }
+        s.erase_stroke(page.clone(), gone.clone()).unwrap();
+        assert_eq!(s.removed_stroke_ids(page).unwrap(), vec![gone]);
+    }
+
+    #[test]
+    fn a_tombstone_for_an_id_that_was_never_added_here_is_harmless_and_wins_later() {
+        // 別台的筆畫在這台的套件裡可能還沒有（或已被壓實）：墓碑先到不能出錯，
+        // 而且之後那一筆出現時要是被擦掉的狀態。
+        let s = session("tombstone-first");
+        let page = s.first_page_id().unwrap();
+        let id = "0192f0aa-1111-7222-8333-777788889999".to_string();
+        s.erase_stroke(page.clone(), id.clone()).unwrap();
+        s.add_stroke_drafted_with_id(
+            page.clone(),
+            id,
+            ToolKind::Fineliner,
+            vec![0, 0, 0, 255],
+            1.4,
+            points(),
+            0,
+            0,
+        )
+        .unwrap();
+        assert!(s.visible_stroke_details(page).unwrap().is_empty());
     }
 
     #[test]

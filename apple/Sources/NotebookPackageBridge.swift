@@ -72,6 +72,7 @@ enum NotebookPackageBridge {
         pageIds knownPageIds: [String]? = nil,
         skipBlockIds: Set<String> = [],
         proStrokes: [[ProStroke]] = [],
+        proLedgers: [ProInkLedger] = [],
         recordingTitles: [String: String] = [:]
     ) throws -> ExportSummary {
         let pageCount = max(document.pageCount, drawings.count)
@@ -163,17 +164,20 @@ enum NotebookPackageBridge {
                 if index < proStrokes.count {
                     for pro in proStrokes[index] {
                         guard let kind = ProInk.kind(named: pro.tool) else { continue }
-                        // 圖層與線型跟著筆畫走（核心的 ink 擴充區塊），別台裝置才畫得出同樣的圖。
-                        _ = try session.addStrokeDrafted(
-                            pageId: pageId,
-                            tool: kind,
-                            colorRgba: Data(pro.colorRGBA),
-                            baseWidth: pro.baseWidth,
-                            points: ProInk.strokePoints(pro.points),
-                            layer: pro.layerId,
-                            lineType: pro.lineTypeId
-                        )
+                        try addPro(pro, kind: kind, to: session, page: pageId)
                         summary.strokeCount += 1
+                    }
+                }
+                // 墓碑：被擦掉、搬動或改了圖層的筆畫。自己的筆畫連 `Add` 一起寫 ——
+                // 同步只傳**變大**的檔案，只寫 `Remove` 的話檔案會比雲端那份小，墓碑永遠傳不出去。
+                if index < proLedgers.count {
+                    for retired in proLedgers[index].retired {
+                        if let old = retired.stroke, let kind = ProInk.kind(named: old.tool) {
+                            var again = old
+                            again.coreId = retired.coreId
+                            try addPro(again, kind: kind, to: session, page: pageId)
+                        }
+                        try session.eraseStroke(pageId: pageId, strokeId: retired.coreId)
                     }
                 }
 
@@ -547,6 +551,7 @@ enum NotebookPackageBridge {
         deviceId: UInt32,
         pageIds knownPageIds: [String]? = nil,
         proStrokes: [[ProStroke]] = [],
+        proLedgers: [ProInkLedger] = [],
         recordingTitles: [String: String] = [:]
     ) throws -> ExportSummary {
         let fm = FileManager.default
@@ -559,7 +564,7 @@ enum NotebookPackageBridge {
             return try export(
                 document: document, drawings: drawings, imageData: imageData,
                 to: destination, deviceId: deviceId, pageIds: pageIds,
-                proStrokes: proStrokes, recordingTitles: recordingTitles
+                proStrokes: proStrokes, proLedgers: proLedgers, recordingTitles: recordingTitles
             )
         }
 
@@ -580,7 +585,8 @@ enum NotebookPackageBridge {
         let summary = try export(
             document: document, drawings: drawings, imageData: imageData,
             to: fresh, deviceId: deviceId, pageIds: pageIds,
-            skipBlockIds: foreign.ids, proStrokes: proStrokes, recordingTitles: recordingTitles
+            skipBlockIds: foreign.ids, proStrokes: proStrokes, proLedgers: proLedgers,
+            recordingTitles: recordingTitles
         )
 
         // **把錄音當下由核心直接寫的操作搬過去。** 重建只含平台文件模型有的東西（文字、圖片、筆畫…），
@@ -1100,6 +1106,7 @@ enum NotebookPackageBridge {
         var imageData: [String: Data] = [:]
         var envelopes = EnvelopeObjects()
         var proStrokes: [[ProStroke]] = []
+        var removedProStrokeIds: [Set<String>] = []
 
         for (index, pageId) in pageIds.enumerated() {
             // 專業筆刷（自繪引擎）的筆畫不能變成 PKStroke —— PencilKit 畫不出來，
@@ -1107,6 +1114,7 @@ enum NotebookPackageBridge {
             let details = try session.visibleStrokeDetails(pageId: pageId)
             drawings.append(InkInterop.drawing(from: details.filter { !brushIsCustom(tool: $0.tool) }))
             proStrokes.append(details.filter { brushIsCustom(tool: $0.tool) }.compactMap(ProStroke.init(from:)))
+            removedProStrokeIds.append(Set(try session.removedStrokeIds(pageId: pageId).map { $0.lowercased() }))
 
             for blockId in try session.textBlockIds(pageId: pageId) {
                 // 附件 id 就是核心的區塊 id：同一個方塊在每一台裝置、每一次匯入都是同一個 id，
@@ -1386,7 +1394,8 @@ enum NotebookPackageBridge {
         // 中繼資料可能是別台裝置寫的舊版本。下次匯出要沿用這批。
         return ImportedNotebook(
             document: document, drawings: drawings, imageData: imageData, pageIds: pageIds,
-            proStrokes: proStrokes, recordingTitles: envelopes.recordingTitles
+            proStrokes: proStrokes, removedProStrokeIds: removedProStrokeIds,
+            recordingTitles: envelopes.recordingTitles
         )
     }
 
@@ -1401,11 +1410,45 @@ enum NotebookPackageBridge {
         let pageIds: [String]
         /// 每一頁的專業筆刷筆畫（自繪引擎），索引與頁次相同。包含這台自己的與別台的。
         var proStrokes: [[ProStroke]] = []
+        /// 每一頁被擦掉（有墓碑）的筆畫 id，小寫。匯入時用它認出「自己的這一筆被別台擦掉／改掉了」。
+        var removedProStrokeIds: [Set<String>] = []
         /// 檔名（小寫）→ 錄音的名字。
         var recordingTitles: [String: String] = [:]
     }
 
     // MARK: - 私有
+
+    /// 寫一筆專業筆畫，**用它的套件身分當核心的筆畫 id**。
+    ///
+    /// 每次匯出若都由核心發新 id，同一條線在兩次匯出之間就是兩個身分，別台對它寫的墓碑
+    /// （擦掉、改圖層）隨下一次匯出落空，線又冒出來。身分不是合法 UUID（不該發生）時退回舊做法。
+    private static func addPro(
+        _ pro: ProStroke, kind: ToolKind, to session: PadnoteSession, page pageId: String
+    ) throws {
+        // 圖層與線型跟著筆畫走（核心的 ink 擴充區塊），別台裝置才畫得出同樣的圖。
+        if UUID(uuidString: pro.packageId) != nil {
+            try session.addStrokeDraftedWithId(
+                pageId: pageId,
+                strokeId: pro.packageId,
+                tool: kind,
+                colorRgba: Data(pro.colorRGBA),
+                baseWidth: pro.baseWidth,
+                points: ProInk.strokePoints(pro.points),
+                layer: pro.layerId,
+                lineType: pro.lineTypeId
+            )
+        } else {
+            _ = try session.addStrokeDrafted(
+                pageId: pageId,
+                tool: kind,
+                colorRgba: Data(pro.colorRGBA),
+                baseWidth: pro.baseWidth,
+                points: ProInk.strokePoints(pro.points),
+                layer: pro.layerId,
+                lineType: pro.lineTypeId
+            )
+        }
+    }
 
     /// 依頁次取出頁面 id。
     ///

@@ -1462,11 +1462,36 @@ enum NotebookSyncCoordinator {
         }
         // 錄音的名字要**一起**交給匯出：漏傳的話套件裡永遠沒有 `rectitle` 區塊，
         // 別台只看得到掃描時取的預設名稱（單元測試直接呼叫橋接層、有帶這個參數，所以測不出來）。
+        // 專業筆畫的同步帳本（墓碑）。先讀出來這一份，寫完才依「這次真的寫出去的」更新 ——
+        // 匯出途中編輯器可能又擦了一筆，那一筆要留給下一輪。
+        let ledgers = (0 ..< pageCount).map {
+            ProInkStore.loadLedger(in: inputs.drawingsDirectory, notebookId: document.id, page: $0)
+        }
         try NotebookPackageBridge.exportPreservingOtherDevices(
             document: document, drawings: drawings, imageData: images,
-            to: inputs.package, deviceId: inputs.deviceId, proStrokes: pro,
+            to: inputs.package, deviceId: inputs.deviceId, proStrokes: pro, proLedgers: ledgers,
             recordingTitles: inputs.recordingTitles
         )
+        for page in 0 ..< pageCount {
+            let sentTombstones = Set(ledgers[page].retired.map(\.coreId))
+            let sentStrokes = pro[page]
+            ProInkStore.updateLedger(in: inputs.drawingsDirectory, notebookId: document.id, page: page) { ledger in
+                for i in ledger.retired.indices where sentTombstones.contains(ledger.retired[i].coreId) {
+                    ledger.retired[i].exported = true
+                }
+                // 這次寫出去的自己的活筆畫。匯入時用它認出「這一筆是被別台擦掉／改掉的」。
+                ledger.exportedIds = sentStrokes.map(\.packageId)
+                // 匯出途中被擦掉的（寫出去之後、這裡之前）：編輯器當時還不知道它已經匯出，
+                // 沒記墓碑 —— 在這裡補上，下一輪寫出。
+                let now = Set(ProInkStore.load(
+                    in: inputs.drawingsDirectory, notebookId: document.id, page: page).map(\.packageId))
+                for stroke in sentStrokes
+                where !now.contains(stroke.packageId)
+                    && !ledger.retired.contains(where: { $0.coreId == stroke.packageId }) {
+                    ledger.retired.append(.init(coreId: stroke.packageId, stroke: stroke, exported: false))
+                }
+            }
+        }
         RecordingTitleLedger.save(
             inputs.recordingTitles, in: inputs.baselineDirectory, notebookId: document.id)
         ObjectLedger.save(document, in: inputs.baselineDirectory)
@@ -1524,6 +1549,12 @@ enum NotebookSyncCoordinator {
         }
 
         if ObjectLedger.hasUnsynced(inputs.document, in: inputs.baselineDirectory) { return true }
+        // 專業筆畫還有墓碑沒寫進套件（擦掉、搬動、改圖層）：筆畫檔本身的時間看不出來。
+        for page in 0 ..< max(inputs.document.pageCount, 1)
+        where ProInkStore.hasUnexportedRetirements(
+            in: inputs.drawingsDirectory, notebookId: inputs.document.id, page: page) {
+            return true
+        }
 
         guard let enumerator = fm.enumerator(
             at: inputs.package,
@@ -1606,16 +1637,35 @@ enum NotebookSyncCoordinator {
         }
         // 專業筆刷：合併後的全部 − 這台自己的 = 別台的。比對用內容指紋（核心每次匯出都換 id）。
         let drawingsDir = store.syncDrawingsDirectory
+        var ownProStrokesRemoved = false
         for (index, merged) in imported.proStrokes.enumerated() {
-            let own = Set(
-                ProInkStore.load(in: drawingsDir, notebookId: documentId, page: index).map(\.contentKey))
+            var ownStrokesNow = ProInkStore.load(in: drawingsDir, notebookId: documentId, page: index)
+            // **別台擦掉、搬動或改了圖層的「自己的」筆畫。**
+            // 套件裡有墓碑指著自己的某一筆 —— 別台擦掉了它，或搬動／改圖層而用新的筆畫取代了它。
+            // 本機要跟著拿掉；不拿掉的話下次匯出又把它寫回去，而且本機畫面上它還在，兩台就永遠不一樣。
+            // （自己擦掉的筆畫已經不在自己的筆畫檔裡，不受影響。）
+            // **要有墓碑才算**，不能只憑「合併結果裡沒有它」：同步可能下載到一份較舊但較大的筆畫檔，
+            // 剛畫的筆畫也會暫時不見 —— 那不是被擦掉，拿掉就是遺失使用者的筆跡。
+            let removedElsewhere = index < imported.removedProStrokeIds.count ? imported.removedProStrokeIds[index] : []
+            let kept = ownStrokesNow.filter { !removedElsewhere.contains($0.packageId) }
+            if kept.count != ownStrokesNow.count {
+                ProInkStore.save(kept, in: drawingsDir, notebookId: documentId, page: index)
+                ownStrokesNow = kept
+                ownProStrokesRemoved = true
+            }
+            // 自己的筆畫認 id；舊版匯出的 id 是核心隨機發的，退回內容指紋。
+            let ownIds = Set(ownStrokesNow.map(\.packageId))
+            let own = Set(ownStrokesNow.map(\.contentKey))
             // 使用者在這台擦掉的別台筆畫：雲端那份還在，不能再帶回來。
             let erased = ProInkStore.loadSuppressed(in: drawingsDir, notebookId: documentId, page: index)
             ProInkStore.save(
-                merged.filter { !own.contains($0.contentKey) && !erased.contains($0.contentKey) },
+                merged.filter {
+                    !ownIds.contains($0.id.lowercased()) && !own.contains($0.contentKey)
+                        && !erased.contains($0.contentKey)
+                },
                 in: drawingsDir, notebookId: documentId, page: index, foreign: true)
         }
-        if !imported.proStrokes.isEmpty {
+        if !imported.proStrokes.isEmpty || ownProStrokesRemoved {
             NotificationCenter.default.post(
                 name: .kairumoProInkChangedOnDisk, object: nil, userInfo: ["notebookId": documentId])
         }

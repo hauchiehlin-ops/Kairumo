@@ -36,7 +36,9 @@ struct ProPoint: Codable, Hashable, Sendable {
 }
 
 struct ProStroke: Codable, Identifiable, Hashable, Sendable {
-    var id: String = UUID().uuidString
+    /// 本機身分。**換掉 `id` 就是做了一筆新的筆畫**（複本、鏡射、陣列），所以 `coreId` 一併歸零 ——
+    /// 複本若沿用原本的套件身分，匯出時兩筆會寫成同一個 id，擦掉其中一筆另一筆也跟著消失。
+    var id: String = UUID().uuidString { didSet { if id != oldValue { coreId = nil } } }
     /// `ProInk.name(of:)` 的結果，例如 `"charcoal"`。存字串而不是數字：新增筆刷時不會錯位。
     var tool: String
     var colorRGBA: [UInt8]
@@ -49,6 +51,16 @@ struct ProStroke: Codable, Identifiable, Hashable, Sendable {
     var layer: UInt8? = nil
     /// 工程線型（0 實線、1 隱藏線、2 中心線、3 假想線）。
     var lineType: UInt8? = nil
+    /// 寫進套件時用的**身分**；`nil` 表示就用 `id`。
+    ///
+    /// `id` 是這台裝置上復原／重做、選取認的身分，不能變。但筆畫一旦被匯出，它在套件裡的 id
+    /// 就是別台裝置對它寫墓碑（擦掉、改圖層）時指的東西 —— 墓碑一旦上傳就**不能撤銷**。
+    /// 所以已經匯出過的筆畫被擦掉又復原、被搬動或改圖層時，要換一個新的套件身分
+    /// （`coreId`），本機的 `id` 照舊。
+    var coreId: String? = nil
+
+    /// 套件裡這一筆的身分（小寫，與核心一致）。
+    var packageId: String { (coreId ?? id).lowercased() }
 
     var layerId: UInt8 { layer ?? 0 }
     var lineTypeId: UInt8 { lineType ?? 0 }
@@ -84,7 +96,9 @@ extension ProStroke {
     /// 從核心的筆畫還原。不是自繪引擎筆刷的回 `nil`。
     init?(from full: FullStroke) {
         guard let name = ProInk.name(of: full.tool) else { return nil }
+        // id 用核心的筆畫 id：別台的筆畫在本機就以同一個身分出現，擦掉／改圖層才寫得出對得上的墓碑。
         self.init(
+            id: full.id.lowercased(),
             tool: name,
             colorRGBA: Array(full.colorRgba),
             baseWidth: full.baseWidth,
@@ -170,7 +184,80 @@ enum ProInk {
 ///
 /// 分開存的原因與 PencilKit 筆畫的 baseline 相同：匯出只能寫**自己的**，
 /// 把別人的複製一份掛在自己名下，下一輪合併就會看到兩份。
+/// 專業筆畫的**同步帳本**，每頁一份。
+///
+/// # 為什麼需要
+///
+/// 筆畫檔只追加（見 `StrokeDelta`）：同步看的是檔案大小，**只有變大的檔案才會傳出去**。
+/// 擦掉、搬動、改圖層如果只是從這台的筆畫檔裡拿掉，檔案變小，雲端那份較大的舊檔反而會被下載回來 ——
+/// 別台看不到變化，原作者那台也不知道線被動過。
+///
+/// 所以「動過」要變成**追加的墓碑**：匯出時把被擦掉的筆畫連同 `Remove(id)` 一起寫出
+/// （自己的筆畫寫 `Add` + `Remove`，別台的只寫 `Remove`），檔案只會變大。
+/// 這份帳本記的就是「還要寫墓碑的 id」，以及上一次匯出寫出了哪些自己的筆畫
+/// （匯入時用它認出「這一筆是被別台擦掉的」）。
+struct ProInkLedger: Codable, Equatable, Sendable {
+    struct Retired: Codable, Equatable, Sendable {
+        /// 套件裡的筆畫 id（小寫）。
+        var coreId: String
+        /// 自己的筆畫：匯出時要連 `Add` 一起寫，檔案才不會變小。別台的筆畫為 `nil`（只寫墓碑）。
+        var stroke: ProStroke?
+        /// 墓碑已經寫進套件（之後就不能再讓同一個 id 復活）。
+        var exported: Bool
+    }
+
+    var retired: [Retired] = []
+    /// 上一次匯出寫出的、自己的活筆畫的套件 id。
+    var exportedIds: [String] = []
+
+    var isEmpty: Bool { retired.isEmpty && exportedIds.isEmpty }
+}
+
 enum ProInkStore {
+    /// 帳本的讀改寫要互斥：編輯器（主執行緒）與匯出（背景）都會改它。
+    private nonisolated static let ledgerLock = NSLock()
+
+    private nonisolated static func ledgerURL(_ directory: URL, _ notebookId: String, _ page: Int) -> URL {
+        directory.appending(path: "\(notebookId)_p\(page).proink-ledger.json")
+    }
+
+    nonisolated static func loadLedger(in directory: URL, notebookId: String, page: Int) -> ProInkLedger {
+        ledgerLock.lock(); defer { ledgerLock.unlock() }
+        return readLedger(directory, notebookId, page)
+    }
+
+    private nonisolated static func readLedger(_ directory: URL, _ notebookId: String, _ page: Int) -> ProInkLedger {
+        guard let data = try? Data(contentsOf: ledgerURL(directory, notebookId, page)),
+              let ledger = try? JSONDecoder().decode(ProInkLedger.self, from: data)
+        else { return ProInkLedger() }
+        return ledger
+    }
+
+    /// 讀、改、寫一次完成。回傳 `body` 的結果。
+    @discardableResult
+    nonisolated static func updateLedger<T>(
+        in directory: URL, notebookId: String, page: Int, _ body: (inout ProInkLedger) -> T
+    ) -> T {
+        ledgerLock.lock(); defer { ledgerLock.unlock() }
+        var ledger = readLedger(directory, notebookId, page)
+        let before = ledger
+        let result = body(&ledger)
+        if ledger != before {
+            let file = ledgerURL(directory, notebookId, page)
+            if ledger.isEmpty {
+                try? FileManager.default.removeItem(at: file)
+            } else if let data = try? JSONEncoder().encode(ledger) {
+                try? data.write(to: file, options: .atomic)
+            }
+        }
+        return result
+    }
+
+    /// 還有墓碑沒寫進套件（匯出要判成「有變動」）。
+    nonisolated static func hasUnexportedRetirements(in directory: URL, notebookId: String, page: Int) -> Bool {
+        loadLedger(in: directory, notebookId: notebookId, page: page).retired.contains { !$0.exported }
+    }
+
     private nonisolated static func url(_ directory: URL, _ notebookId: String, _ page: Int, foreign: Bool) -> URL {
         directory.appending(path: "\(notebookId)_p\(page).\(foreign ? "proink-foreign" : "proink").json")
     }
@@ -216,9 +303,17 @@ enum ProInkStore {
 
     /// 檔案時間，同步用來判斷「工作副本是不是比套件新」。
     nonisolated static func modified(in directory: URL, notebookId: String, page: Int) -> Date? {
-        let values = try? url(directory, notebookId, page, foreign: false)
-            .resourceValues(forKeys: [.contentModificationDateKey])
-        return values?.contentModificationDate
+        let own = (try? url(directory, notebookId, page, foreign: false)
+            .resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate
+        // 帳本也算：筆畫全擦光時自己的檔案被刪掉，只剩帳本記得「有墓碑要寫」。
+        let ledger = (try? ledgerURL(directory, notebookId, page)
+            .resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate
+        switch (own, ledger) {
+        case let (a?, b?): return max(a, b)
+        case let (a?, nil): return a
+        case let (nil, b?): return b
+        default: return nil
+        }
     }
 }
 
@@ -417,12 +512,68 @@ final class ProInkLayerView: UIView {
         guard let directory else { return }
         ownStrokes = ProInkStore.load(in: directory, notebookId: notebookId, page: pageIndex)
         foreignStrokes = ProInkStore.load(in: directory, notebookId: notebookId, page: pageIndex, foreign: true)
+        strokeSnapshot = Dictionary(ownStrokes.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
         cache.removeAll()
         setNeedsDisplay()
     }
 
+    /// 上一次存檔時自己的筆畫（以本機 `id` 為鍵）。存檔時與現在比對，找出被拿掉／加回來的筆畫，
+    /// 對應地更新同步帳本（見 `ProInkLedger`）。
+    private var strokeSnapshot: [String: ProStroke] = [:]
+
+    /// 把「筆畫消失／重新出現」記進同步帳本。**每個改動自己筆畫的路徑都會經過 `persist`**，
+    /// 所以放在這裡一處就涵蓋擦除、復原、重做、套索刪除、清頁 —— 不必在每個入口各補一次。
+    ///
+    /// - 消失的筆畫：若它**已經匯出過**（上一次匯出寫出了它），要寫墓碑，記進帳本（帶著整筆資料，
+    ///   匯出時才寫得出 `Add`，檔案才不會變小）。沒匯出過的不必：別台從來沒看過它。
+    /// - 以同一個本機 `id` 重新出現的筆畫（復原擦除）：墓碑還沒寫出去就撤掉；
+    ///   **已經寫出去的墓碑撤不掉**，這一筆改用新的套件身分。
+    private func reconcileLedger() {
+        guard let directory else { return }
+        let current = Dictionary(ownStrokes.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
+        let removed = strokeSnapshot.values.filter { current[$0.id] == nil }
+        let appeared = ownStrokes.indices.filter { strokeSnapshot[ownStrokes[$0].id] == nil }
+        if !removed.isEmpty || !appeared.isEmpty {
+            ProInkStore.updateLedger(in: directory, notebookId: notebookId, page: pageIndex) { ledger in
+                let exported = Set(ledger.exportedIds)
+                for old in removed {
+                    let cid = old.packageId
+                    guard exported.contains(cid), !ledger.retired.contains(where: { $0.coreId == cid }) else { continue }
+                    ledger.retired.append(.init(coreId: cid, stroke: old, exported: false))
+                }
+                for i in appeared {
+                    let cid = ownStrokes[i].packageId
+                    guard let at = ledger.retired.firstIndex(where: { $0.coreId == cid }) else { continue }
+                    if ledger.retired[at].exported {
+                        ownStrokes[i].coreId = UUID().uuidString.lowercased()
+                    } else {
+                        ledger.retired.remove(at: at)
+                    }
+                }
+            }
+        }
+        strokeSnapshot = Dictionary(ownStrokes.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
+    }
+
+    /// 已經匯出過的筆畫被**就地改動**（搬動、改圖層）：舊的那個樣子要寫墓碑，這一筆換新的套件身分 ——
+    /// 否則同一個 id 的內容變了、檔案大小卻沒變，別台永遠收不到。
+    private func retireForModification(ids: Set<String>) {
+        guard let directory, !ids.isEmpty else { return }
+        ProInkStore.updateLedger(in: directory, notebookId: notebookId, page: pageIndex) { ledger in
+            let exported = Set(ledger.exportedIds)
+            for i in ownStrokes.indices where ids.contains(ownStrokes[i].id) {
+                guard let old = strokeSnapshot[ownStrokes[i].id] else { continue }
+                let cid = old.packageId
+                guard exported.contains(cid), !ledger.retired.contains(where: { $0.coreId == cid }) else { continue }
+                ledger.retired.append(.init(coreId: cid, stroke: old, exported: false))
+                ownStrokes[i].coreId = UUID().uuidString.lowercased()
+            }
+        }
+    }
+
     private func persist() {
         guard let directory else { return }
+        reconcileLedger()
         ProInkStore.save(ownStrokes, in: directory, notebookId: notebookId, page: pageIndex)
         onChanged?()
         NotificationCenter.default.post(name: AppCommand.proInkDidChange, object: notebookId.lowercased())
@@ -847,7 +998,8 @@ final class ProInkLayerView: UIView {
         return hit.count + hitForeign.count
     }
 
-    /// 擦掉別台的筆畫：從畫面與檔案拿掉，指紋記進「已擦除」名單讓下一輪同步不再帶回來。可復原。
+    /// 擦掉別台的筆畫：從畫面與檔案拿掉，指紋記進「已擦除」名單（舊版相容）、**並在帳本記一筆墓碑**，
+    /// 下次匯出就寫進自己的筆畫檔 —— 別台與原作者那台才會一起消失這一筆。可復原。
     private func removeForeign(_ strokes: [ProStroke], registersUndo: Bool = true) {
         guard let directory else { return }
         let ids = Set(strokes.map(\.id))
@@ -856,29 +1008,77 @@ final class ProInkLayerView: UIView {
         var keys = ProInkStore.loadSuppressed(in: directory, notebookId: notebookId, page: pageIndex)
         keys.formUnion(strokes.map(\.contentKey))
         ProInkStore.saveSuppressed(keys, in: directory, notebookId: notebookId, page: pageIndex)
+        ProInkStore.updateLedger(in: directory, notebookId: notebookId, page: pageIndex) { ledger in
+            for stroke in strokes {
+                let cid = stroke.id.lowercased()
+                if !ledger.retired.contains(where: { $0.coreId == cid }) {
+                    ledger.retired.append(.init(coreId: cid, stroke: nil, exported: false))
+                }
+            }
+        }
         ProInkStore.save(foreignStrokes, in: directory, notebookId: notebookId, page: pageIndex, foreign: true)
         onChanged?()
         NotificationCenter.default.post(name: AppCommand.proInkDidChange, object: notebookId.lowercased())
         if registersUndo { registerForeignUndo(restoring: strokes) }
     }
 
-    private func restoreForeign(_ strokes: [ProStroke]) {
-        guard let directory else { return }
-        foreignStrokes.append(contentsOf: strokes)
+    /// 把擦掉的別台筆畫放回來（復原）。回傳**改成自己的複本**的那幾筆的 id。
+    ///
+    /// 墓碑還沒寫進套件：撤掉帳本那一筆，原樣放回外來區。
+    /// 墓碑已經上傳：別台那邊那一筆**永遠消失了**，撤不掉 —— 改在自己名下放一筆內容相同的新筆畫。
+    @discardableResult
+    private func restoreForeign(_ strokes: [ProStroke]) -> Set<String> {
+        guard let directory else { return [] }
+        var plain: [ProStroke] = []
+        var copies: [ProStroke] = []
+        ProInkStore.updateLedger(in: directory, notebookId: notebookId, page: pageIndex) { ledger in
+            for stroke in strokes {
+                let cid = stroke.id.lowercased()
+                if let at = ledger.retired.firstIndex(where: { $0.coreId == cid }), ledger.retired[at].exported {
+                    var copy = stroke
+                    copy.id = UUID().uuidString
+                    copies.append(copy)
+                } else {
+                    ledger.retired.removeAll { $0.coreId == cid && !$0.exported }
+                    plain.append(stroke)
+                }
+            }
+        }
+        foreignStrokes.append(contentsOf: plain)
+        ownStrokes.append(contentsOf: copies)
         for stroke in strokes { setNeedsDisplay(stroke.bounds) }
         var keys = ProInkStore.loadSuppressed(in: directory, notebookId: notebookId, page: pageIndex)
-        keys.subtract(strokes.map(\.contentKey))
+        keys.subtract(plain.map(\.contentKey))
         ProInkStore.saveSuppressed(keys, in: directory, notebookId: notebookId, page: pageIndex)
         ProInkStore.save(foreignStrokes, in: directory, notebookId: notebookId, page: pageIndex, foreign: true)
+        if !copies.isEmpty { persist() }
         onChanged?()
         NotificationCenter.default.post(name: AppCommand.proInkDidChange, object: notebookId.lowercased())
+        return Set(copies.map(\.id))
     }
 
     private func registerForeignUndo(restoring strokes: [ProStroke]) {
         guard let manager = undoManagerProvider?() else { return }
         manager.registerUndo(withTarget: self) { layer in
-            layer.restoreForeign(strokes)
-            layer.registerForeignRedo(removing: strokes)
+            let copyIds = layer.restoreForeign(strokes)
+            if copyIds.isEmpty {
+                layer.registerForeignRedo(removing: strokes)
+            } else {
+                // 放回來的是自己的複本：重做 = 再把複本擦掉。
+                layer.registerGroupRedoRemoving(ids: copyIds)
+            }
+        }
+    }
+
+    /// 重做：把這幾筆自己的筆畫拿掉（復原擦除別台筆畫、而墓碑已寫出時放回來的複本）。
+    private func registerGroupRedoRemoving(ids: Set<String>) {
+        guard let manager = undoManagerProvider?() else { return }
+        manager.registerUndo(withTarget: self) { layer in
+            let hit = layer.ownStrokes.filter { ids.contains($0.id) }
+            layer.ownStrokes.removeAll { ids.contains($0.id) }
+            for s in hit { layer.setNeedsDisplay(s.bounds) }
+            layer.persist()
+            layer.registerUndo(restoring: hit)
         }
     }
 
@@ -981,6 +1181,7 @@ final class ProInkLayerView: UIView {
         let ids = moveIds, total = moveTotal
         moveIds = []
         moveTotal = .zero
+        retireForModification(ids: ids)
         persist()
         setNeedsDisplay()   // 拖曳途中的局部重畫可能殘留舊位置的像素，放手時整層重畫一次
         registerMoveUndo(ids: ids, delta: total)
@@ -992,6 +1193,7 @@ final class ProInkLayerView: UIView {
             layer.move(ids: ids, by: CGSize(width: -delta.width, height: -delta.height))
             layer.moveIds = []
             layer.moveTotal = .zero
+            layer.retireForModification(ids: ids)
             layer.persist()
             layer.registerMoveUndo(ids: ids, delta: CGSize(width: -delta.width, height: -delta.height))
         }
@@ -1193,10 +1395,15 @@ final class ProInkLayerView: UIView {
                 layer.setNeedsDisplay(copy.bounds)
                 layer.persist()
             }
-            layer.restoreForeign([original])
-            // 重做：再改一次同一筆。
+            let restoredCopies = layer.restoreForeign([original])
+            // 重做：再改一次同一筆。原筆畫的墓碑已經寫出時，放回來的是自己的複本，重做就是改它的圖層。
             manager.registerUndo(withTarget: layer) { again in
-                again.redoForeignReassign(original: original, to: target, copyId: copyId)
+                if let restored = restoredCopies.first {
+                    again.setLayer(target, ofStroke: restored)
+                    again.registerLayerUndo(strokeId: restored, previous: original.layerId)
+                } else {
+                    again.redoForeignReassign(original: original, to: target, copyId: copyId)
+                }
             }
         }
     }
@@ -1222,6 +1429,7 @@ final class ProInkLayerView: UIView {
 
     private func setLayer(_ layer: UInt8, ofStroke id: String) {
         guard let i = ownStrokes.firstIndex(where: { $0.id == id }) else { return }
+        retireForModification(ids: [id])
         ownStrokes[i].layer = layer == 0 ? nil : layer
         setNeedsDisplay(ownStrokes[i].bounds)
         persist()

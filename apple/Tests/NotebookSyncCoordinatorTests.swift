@@ -163,6 +163,55 @@ final class NotebookSyncCoordinatorTests: XCTestCase {
         XCTAssertEqual(alice.documents.first?.pageCount, 1, "頁數變多了")
     }
 
+    /// 在 B 把 A 畫的製圖線改到別的圖層：兩台最後要看到同樣的畫面（一條、新圖層），
+    /// 而且 A 那台的原線要真的消失。這條走真實的 `NotebookSyncCoordinator.run`（匯出、資料夾同步、匯入），
+    /// 不是直接呼叫橋接層 —— 墓碑能不能傳回原作者，取決於整條路徑上「檔案只有變大才會傳」這條規則。
+    func testReassigningAnotherDevicesLineReachesBothDevices() async throws {
+        let note = NotebookDocument(title: "圖學", pageCount: 1)
+        alice.documents = [note]
+        for store in [alice!, bob!] {
+            try FileManager.default.createDirectory(
+                at: store.syncDrawingsDirectory, withIntermediateDirectories: true)
+        }
+        let line = ProStroke(
+            tool: "fineliner", colorRGBA: [0, 0, 0, 255], baseWidth: 2,
+            points: (0 ..< 12).map {
+                ProPoint(x: 20 + Float($0) * 9, y: 80, pressure: 0.5, tilt: 0, azimuth: 0, dtUs: 8_000)
+            })
+        ProInkStore.save([line], in: alice.syncDrawingsDirectory, notebookId: note.id, page: 0)
+
+        await sync(alice, aliceId)
+        await sync(bob, bobId)
+        XCTAssertEqual(
+            ProInkStore.load(in: bob.syncDrawingsDirectory, notebookId: note.id, page: 0, foreign: true).count, 1,
+            "B 要先收到 A 的那條線")
+
+        // B 把它改到頂層。
+        let layer = ProInkLayerView(frame: CGRect(x: 0, y: 0, width: 800, height: 600))
+        layer.load(directory: bob.syncDrawingsDirectory, notebookId: note.id, pageIndex: 0)
+        XCTAssertTrue(layer.reassignLayer(near: CGPoint(x: 20, y: 80), to: 3))
+
+        await sync(bob, bobId)
+        await sync(alice, aliceId)
+
+        func state(_ store: FakeStore) -> (own: [ProStroke], foreign: [ProStroke]) {
+            (ProInkStore.load(in: store.syncDrawingsDirectory, notebookId: note.id, page: 0),
+             ProInkStore.load(in: store.syncDrawingsDirectory, notebookId: note.id, page: 0, foreign: true))
+        }
+        // 再來回幾輪：不能復活、不能增生。
+        for _ in 0 ..< 3 {
+            await sync(alice, aliceId)
+            await sync(bob, bobId)
+        }
+        let a = state(alice), b = state(bob)
+        XCTAssertTrue(a.own.isEmpty, "A 那台的原線要被拿掉（別台把它改到別的圖層了）")
+        XCTAssertEqual(a.foreign.count, 1, "A 要看到 B 改過圖層的那一條")
+        XCTAssertEqual(a.foreign.first?.layerId, 3)
+        XCTAssertEqual(b.own.count, 1)
+        XCTAssertEqual(b.own.first?.layerId, 3)
+        XCTAssertTrue(b.foreign.isEmpty, "B 不該又收到 A 的原線")
+    }
+
     func testRepeatedSyncsDoNotGrowTheNotebook() async throws {
         // 同步會來回很多次。每一趟讓內容長一點的話，幾趟之後筆記就走樣了。
         let note = NotebookDocument(title: "來回很多次", pageCount: 1)
