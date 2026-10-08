@@ -5108,7 +5108,7 @@ public struct NotebookEditorView: View {
                             isChecked: notebook.checkedGuideItems?[item.key] ?? false,
                             size: CGSize(width: CGFloat(item.guide.w), height: CGFloat(item.guide.h)),
                             onToggle: {
-                                toggleGuideCheckbox(key: item.key, guide: item.guide, page: page)
+                                toggleGuideCheckbox(key: item.key)
                             },
                             onStrikethroughRow: {
                                 toggleRowStrikethrough(y: CGFloat(item.guide.y), page: page)
@@ -10907,7 +10907,7 @@ public struct NotebookEditorView: View {
         return nil
     }
 
-    private func toggleGuideCheckbox(key: String, guide: FfiGuide, page: Int) {
+    private func toggleGuideCheckbox(key: String) {
         if notebook.checkedGuideItems == nil {
             notebook.checkedGuideItems = [:]
         }
@@ -10959,9 +10959,9 @@ public struct NotebookEditorView: View {
         currentPageIndex = targetPage
 
         // 🌟 優先檢查是否點擊在特殊樣板引導線互動元件上（例如核取方塊 Checkbox）
-        if let (guide, key) = hitTestGuideCheckbox(at: location, page: targetPage) {
+        if let (_, key) = hitTestGuideCheckbox(at: location, page: targetPage) {
             removeTapDotStroke(near: location)
-            toggleGuideCheckbox(key: key, guide: guide, page: targetPage)
+            toggleGuideCheckbox(key: key)
             return
         }
 
@@ -11062,8 +11062,8 @@ public struct NotebookEditorView: View {
         currentPageIndex = targetPage
 
         // 0. 特殊頁面智慧引導線元件（核取方塊 Checkbox 等）點擊判定
-        if let (guide, key) = hitTestGuideCheckbox(at: location, page: targetPage) {
-            toggleGuideCheckbox(key: key, guide: guide, page: targetPage)
+        if let (_, key) = hitTestGuideCheckbox(at: location, page: targetPage) {
+            toggleGuideCheckbox(key: key)
             return
         }
         // 1. 若先前有就地編輯但未打任何字的空方塊，先自動清理
