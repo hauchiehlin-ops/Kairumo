@@ -39,9 +39,6 @@ enum PKStrokeId {
                                b[8], b[9], b[10], b[11], b[12], b[13], b[14], b[15]))
         return uuid.uuidString.lowercased()
     }
-
-    /// `pkGen` 的鍵。
-    static func genKey(_ key: String, _ n: Int) -> String { "\(key)#\(n)" }
 }
 
 /// 一頁 PencilKit 筆畫的匯出計畫。
