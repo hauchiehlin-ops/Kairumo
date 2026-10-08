@@ -61,6 +61,7 @@ enum SyncHistory {
         guard let date else { return none }
         let formatter = RelativeDateTimeFormatter()
         formatter.unitsStyle = .short
+        formatter.locale = LocalizationManager.formatLocale
         return formatter.localizedString(for: date, relativeTo: Date())
     }
 }

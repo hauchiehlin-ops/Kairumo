@@ -176,7 +176,7 @@ final class CoreAudioCapture {
                 }
             }
         } catch {
-            StartupLogger.log("[CoreAudioCapture] 心形指向資料源設定提示: \(error)")
+            StartupLogger.logKey("log_capture_cardioid", "\(error)")
         }
     }
     #endif
@@ -220,7 +220,7 @@ final class CoreAudioCapture {
             }
             #endif
         } catch {
-            StartupLogger.log("[CoreAudioCapture] AVAudioSession 設定警告: \(error)")
+            StartupLogger.logKey("log_capture_session", "\(error)")
         }
         #endif
 

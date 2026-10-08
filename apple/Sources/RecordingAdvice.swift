@@ -52,7 +52,7 @@ enum RecordingAdvice {
                     return
                 }
             }
-            StartupLogger.log("[RecordingAdvice] 找不到可呈現提示的畫面：\(key)")
+            StartupLogger.logKey("log_advice_no_view", key)
         }
     }
 

@@ -367,7 +367,7 @@ public final class AudioRecorderManager: NSObject, ObservableObject, AVAudioReco
         let capture = coreCapture ?? CoreAudioCapture()
         coreCapture = capture
         capture.onError = { message in
-            StartupLogger.log("[AudioRecorderManager] \(message)")
+            StartupLogger.logKey("log_recorder_message", L10n.coreText(message))
         }
         guard let recordingId = capture.start(session: session) else { return false }
 
@@ -419,7 +419,7 @@ public final class AudioRecorderManager: NSObject, ObservableObject, AVAudioReco
         do {
             _ = try session.stopRecording()
         } catch {
-            StartupLogger.log("[AudioRecorderManager] 核心停止錄音警告: \(error)")
+            StartupLogger.logKey("log_recorder_stop_warning", L10n.errorText(error))
         }
         let durationUs = session.recordedAudioUs()
         // 錄音品質提示（一次性）。編輯器與首頁快速錄音都走這裡，所以只需接一處。

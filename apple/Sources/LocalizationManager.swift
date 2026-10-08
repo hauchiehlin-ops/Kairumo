@@ -36,6 +36,18 @@ public enum AppLanguage: String, CaseIterable, Identifiable {
         }
     }
 
+    /// 日期、時間與相對時間的格式語系。
+    ///
+    /// 介面語言與系統地區是兩件事：日文介面搭配繁中地區的裝置，若日期用系統地區格式化，
+    /// 畫面上就會出現「晚上11:36」。格式一律跟著 **App 的介面語言**。
+    public var formatLocale: Locale {
+        switch self {
+        case .zhHant: return Locale(identifier: "zh_TW")
+        case .zhHans: return Locale(identifier: "zh_CN")
+        default: return Locale(identifier: rawValue)
+        }
+    }
+
     public var endonym: String {
         switch self {
         case .zhHant: return "繁體中文"
@@ -146,6 +158,17 @@ public final class LocalizationManager: ObservableObject {
     /// 同步的代價。
     nonisolated(unsafe) static var snapshotLanguage: AppLanguage = .zhHant
 
+    /// 目前介面語言的格式語系，不受 actor 隔離（背景執行緒組日期字串用）。
+    public nonisolated static var formatLocale: Locale { snapshotLanguage.formatLocale }
+
+    /// 依介面語言格式化日期時間。
+    public nonisolated static func formatted(
+        _ date: Date, date dateStyle: Date.FormatStyle.DateStyle = .abbreviated,
+        time timeStyle: Date.FormatStyle.TimeStyle = .shortened
+    ) -> String {
+        date.formatted(Date.FormatStyle(date: dateStyle, time: timeStyle).locale(formatLocale))
+    }
+
     public func localized(_ key: String) -> String {
         guard let dict = Self.generatedStrings[key] else { return key }
         return dict[currentLanguage] ?? dict[.en] ?? dict[.zhHant] ?? key
@@ -156,4 +179,18 @@ public final class LocalizationManager: ObservableObject {
     // 字串表本身在 LocalizationStrings.generated.swift，由 i18n/ui-strings.json
     // 產生（scripts/i18n_tool.py）。Android 端的 Kotlin 表出自同一份 catalog，
     // 所以兩個平台不會各自漂移。要改字串請改 catalog，不要改產生檔。
+}
+
+/// 讓 SwiftUI 內建的日期／時間顯示（`Text(date, style:)`）也跟著 App 的介面語言，
+/// 而不是系統地區。每個根畫面都要套一次（Mac 的多視窗各是一棵獨立的樹）。
+private struct AppLocaleModifier: ViewModifier {
+    @ObservedObject private var localization = LocalizationManager.shared
+
+    func body(content: Content) -> some View {
+        content.environment(\.locale, localization.currentLanguage.formatLocale)
+    }
+}
+
+extension View {
+    public func appLocale() -> some View { modifier(AppLocaleModifier()) }
 }

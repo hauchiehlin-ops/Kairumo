@@ -272,11 +272,11 @@ import java.util.Locale
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        com.kairumo.padnote.platform.StartupLogger.log("MainActivity.onCreate 啟動")
+        com.kairumo.padnote.platform.StartupLogger.logKey("log_main_activity_create")
         // 跨裝置語言要在畫出任何東西**之前**讀進來，不然第一幀會是舊語言，
         // 使用者會看到介面閃一下才變過去。
         applySyncedLanguage(this)
-        com.kairumo.padnote.platform.StartupLogger.log("語言套用完成: ${deviceLanguageTag()}")
+        com.kairumo.padnote.platform.StartupLogger.logKey("log_language_applied", deviceLanguageTag())
         // 自動清理暫存、過期殘檔與期滿的回收桶（背景執行緒，不拖慢第一幀）。
         Thread {
             runCatching { com.kairumo.padnote.platform.StorageSweeper.sweepAtLaunch(applicationContext) }
@@ -1459,6 +1459,23 @@ private fun InkScreen(
     // 檔案變了，記憶體裡那份還是同步前的。
     var sessionRevision by remember(notebookId) { mutableIntStateOf(0) }
     val notebook = remember(notebookId, sessionRevision) { openNotebook(activity, notebookId) }
+    // 「一鍵恢復初始狀態」：開啟編輯器的這一刻在核心裡插一個標記（里程碑），還原就是還原到它。
+    // 只在這次開啟的第一次建立（`remember(notebookId)`）；同步或還原之後重開 session 不會移動它，
+    // 所以「初始」永遠是**打開這本筆記的那一刻**，與 Apple 一致。
+    var openMarkId by remember(notebookId) { mutableStateOf<String?>(null) }
+    var showRevertConfirm by remember { mutableStateOf(false) }
+    LaunchedEffect(notebook?.second) {
+        val session = notebook?.first ?: return@LaunchedEffect
+        if (openMarkId == null) {
+            // 用編輯器**自己的** session 寫：另開一個 session 寫同一個套件，
+            // 編輯器之後的寫入不知道那一筆，會跟它搶同一個 oplog 的序號。
+            openMarkId = runCatching {
+                session.createMilestone(
+                    NotebookLibrary.EDITOR_OPEN_MARK, "Kairumo", System.currentTimeMillis().toULong()
+                ).id
+            }.getOrNull()
+        }
+    }
     // 分頁狀態。
     //
     // 在此之前 Android **只認第一頁** —— `notebook.second` 是 firstPageId，
@@ -1476,6 +1493,8 @@ private fun InkScreen(
 
     /// 頁面顯示模式。記住使用者的選擇 —— 每次開筆記都退回整頁模式的話，
     /// 習慣連續捲動的人每次都要再按一次。與 Apple 端的 AppStorage 對應。
+    // 側欄點了縮圖就遞增：連續模式據此再捲到目前頁（點的正好是目前頁時頁碼不變，只靠頁碼不會捲）。
+    var continuousScrollRequest by remember { mutableIntStateOf(0) }
     var pageDisplayMode by remember {
         mutableStateOf(
             PageDisplayMode.fromWire(
@@ -3305,6 +3324,12 @@ private fun InkScreen(
                     onClick = { showMenu = false; showCalculator = true }
                 )
                 DropdownMenuItem(
+                    text = { Text(l10n("revert_to_initial_state")) },
+                    enabled = openMarkId != null,
+                    modifier = Modifier.testTag("editor.revert_initial_state"),
+                    onClick = { showMenu = false; showRevertConfirm = true }
+                )
+                DropdownMenuItem(
                     text = { Text(l10n("layers_panel")) },
                     modifier = Modifier.testTag("editor.insert.layers"),
                     onClick = { showMenu = false; showStackPanel = true }
@@ -4064,7 +4089,7 @@ private fun InkScreen(
                         revision = textRevision + shapeRevision + tableRevision +
                             chartRevision + imageRevision + model3DRevision,
                         l = { key -> l10n(key) },
-                        onSelectPage = { pageIndex = it },
+                        onSelectPage = { pageIndex = it; continuousScrollRequest++ },
                         onAddPage = {
                             val s = notebook?.first
                             if (s != null) {
@@ -4105,6 +4130,7 @@ private fun InkScreen(
                 // 之後新增一種物件很容易忘記接上，而症狀是「插進去看不到」。
                 reloadToken = textRevision + shapeRevision + tableRevision +
                     chartRevision + imageRevision + model3DRevision,
+                scrollRequest = continuousScrollRequest,
                 modifier = Modifier.weight(1f).fillMaxHeight()
             )
             }
@@ -5737,6 +5763,41 @@ private fun InkScreen(
                 penTuned = floor != null
             },
             onDismiss = { showPenSettings = false }
+        )
+    }
+
+    if (showRevertConfirm) {
+        AlertDialog(
+            onDismissRequest = { showRevertConfirm = false },
+            title = { Text(l10n("revert_to_initial_state")) },
+            text = { Text(l10n("revert_to_initial_state_confirm") + "\n\n" + l10n("revert_safety_note")) },
+            confirmButton = {
+                TextButton(
+                    modifier = Modifier.testTag("editor.revert_confirm"),
+                    onClick = {
+                        showRevertConfirm = false
+                        val id = notebook?.second
+                        val mark = openMarkId
+                        if (id != null && mark != null) {
+                            val safety = NotebookLibrary.restoreMilestone(
+                                activity, id, deviceId(activity), mark,
+                                l10n("milestone_before_restore").replace("%@", l10n("revert_to_initial_state"))
+                            )
+                            if (safety != null) {
+                                sessionRevision++
+                                android.widget.Toast.makeText(
+                                    activity, l10n("revert_done"), android.widget.Toast.LENGTH_SHORT
+                                ).show()
+                            } else {
+                                android.widget.Toast.makeText(
+                                    activity, l10n("milestone_restore_failed"), android.widget.Toast.LENGTH_LONG
+                                ).show()
+                            }
+                        }
+                    }
+                ) { Text(l10n("revert_confirm_action")) }
+            },
+            dismissButton = { TextButton(onClick = { showRevertConfirm = false }) { Text(l10n("cancel")) } }
         )
     }
 

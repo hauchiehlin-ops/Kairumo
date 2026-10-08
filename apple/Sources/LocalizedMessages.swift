@@ -16,8 +16,12 @@ public enum L10n {
 
     /// 查字串表並代入參數：`%1@`、`%2@`… 依編號取代；沒有編號的 `%@` 依序取代。
     public static func f(_ key: String, _ args: any CustomStringConvertible...) -> String {
+        format(key, args.map { "\($0)" })
+    }
+
+    /// `f` 的陣列版，給已經把參數轉成字串存起來的呼叫端（診斷日誌）。
+    public static func format(_ key: String, _ values: [String]) -> String {
         var text = t(key)
-        let values = args.map { "\($0)" }
         for (index, value) in values.enumerated() {
             let numbered = "%\(index + 1)@"
             if text.contains(numbered) {

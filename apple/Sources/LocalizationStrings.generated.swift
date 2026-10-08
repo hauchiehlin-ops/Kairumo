@@ -6671,6 +6671,30 @@ extension LocalizationManager {
             .ko: "레이어로 이동",
             .th: "ย้ายไปเลเยอร์"
         ],
+        "draft_reassign_hint": [
+            .zhHant: "點一條線，把它改到目前選的圖層",
+            .en: "Tap a line to move it to the selected layer",
+            .zhHans: "点一条线，把它改到当前选的图层",
+            .ja: "線をタップすると、選択中のレイヤーに移動します",
+            .ko: "선을 탭하면 선택한 레이어로 옮깁니다",
+            .th: "แตะเส้นเพื่อย้ายไปยังเลเยอร์ที่เลือก"
+        ],
+        "draft_reassign_miss": [
+            .zhHant: "這裡附近沒有線可以移動",
+            .en: "No line near here to move",
+            .zhHans: "这里附近没有线可以移动",
+            .ja: "この近くに移動できる線がありません",
+            .ko: "이 근처에는 옮길 선이 없습니다",
+            .th: "ไม่มีเส้นใกล้ตรงนี้ให้ย้าย"
+        ],
+        "draft_reassigned": [
+            .zhHant: "已移到「%@」",
+            .en: "Moved to “%@”",
+            .zhHans: "已移到「%@」",
+            .ja: "「%@」に移動しました",
+            .ko: "“%@” 레이어로 이동했습니다",
+            .th: "ย้ายไปที่ “%@” แล้ว"
+        ],
         "draft_scale": [
             .zhHant: "比例尺",
             .en: "Scale",
@@ -10807,6 +10831,94 @@ extension LocalizationManager {
             .ko: "127.0.0.1 을 가리키는 동안에는 이 기기가 중계를 맡습니다. 같은 네트워크의 참여자는 호스트 화면에 표시된 로컬 주소를 입력하세요.",
             .th: "เมื่อชี้ไปที่ 127.0.0.1 เครื่องนี้จะทำหน้าที่รีเลย์เอง ผู้ร่วมงานในเครือข่ายเดียวกันให้กรอกที่อยู่ในเครือข่ายที่แสดงบนหน้าจอผู้เปิดห้อง"
         ],
+        "log_advice_no_view": [
+            .zhHant: "[RecordingAdvice] 找不到可呈現提示的畫面：%1@",
+            .en: "[RecordingAdvice] no screen found to present the tip: %1@",
+            .zhHans: "[RecordingAdvice] 找不到可显示提示的画面：%1@",
+            .ja: "[RecordingAdvice] ヒントを表示できる画面が見つかりません: %1@",
+            .ko: "[RecordingAdvice] 안내를 표시할 화면을 찾지 못했습니다: %1@",
+            .th: "[RecordingAdvice] ไม่พบหน้าจอที่จะแสดงคำแนะนำ: %1@"
+        ],
+        "log_app_init": [
+            .zhHant: "KairumoApp.init: 應用程式啟動初始化",
+            .en: "KairumoApp.init: app launch initialization",
+            .zhHans: "KairumoApp.init: 应用启动初始化",
+            .ja: "KairumoApp.init: アプリ起動の初期化",
+            .ko: "KairumoApp.init: 앱 시작 초기화",
+            .th: "KairumoApp.init: การเริ่มต้นแอปตอนเปิด"
+        ],
+        "log_app_task": [
+            .zhHant: "KairumoApp.task: 冷啟動初始化同步",
+            .en: "KairumoApp.task: cold-start sync initialization",
+            .zhHans: "KairumoApp.task: 冷启动初始化同步",
+            .ja: "KairumoApp.task: コールドスタート時の同期を初期化",
+            .ko: "KairumoApp.task: 콜드 스타트 동기화 초기화",
+            .th: "KairumoApp.task: เริ่มต้นการซิงก์ตอนเปิดแอปใหม่"
+        ],
+        "log_apple_speech": [
+            .zhHant: "🎙️ 使用 Apple Speech 系統聽寫進行轉錄...",
+            .en: "🎙️ Transcribing with Apple Speech system dictation...",
+            .zhHans: "🎙️ 使用 Apple Speech 系统听写进行转录...",
+            .ja: "🎙️ Apple Speech のシステム音声認識で文字起こし中...",
+            .ko: "🎙️ Apple Speech 시스템 받아쓰기로 변환 중...",
+            .th: "🎙️ กำลังถอดเสียงด้วยการเขียนตามคำบอกของ Apple Speech..."
+        ],
+        "log_audio_decode_fail": [
+            .zhHant: "⚠️ 音訊解碼失敗: %1@",
+            .en: "⚠️ Audio decoding failed: %1@",
+            .zhHans: "⚠️ 音频解码失败: %1@",
+            .ja: "⚠️ 音声のデコードに失敗しました: %1@",
+            .ko: "⚠️ 오디오 디코딩 실패: %1@",
+            .th: "⚠️ ถอดรหัสเสียงไม่สำเร็จ: %1@"
+        ],
+        "log_audio_decode_fallback": [
+            .zhHant: "ℹ️ AVAudioFile 解碼未完成，退回 AVAssetReader 降級解析: %1@",
+            .en: "ℹ️ AVAudioFile decoding did not finish; falling back to AVAssetReader: %1@",
+            .zhHans: "ℹ️ AVAudioFile 解码未完成，退回 AVAssetReader 降级解析: %1@",
+            .ja: "ℹ️ AVAudioFile のデコードが完了せず、AVAssetReader にフォールバック: %1@",
+            .ko: "ℹ️ AVAudioFile 디코딩이 끝나지 않아 AVAssetReader로 대체: %1@",
+            .th: "ℹ️ ถอดรหัส AVAudioFile ไม่สำเร็จ ถอยไปใช้ AVAssetReader: %1@"
+        ],
+        "log_autosync_done": [
+            .zhHant: "AutoCloudSync: 背景自動同步完成 (上傳: %1@, 下載: %2@)",
+            .en: "AutoCloudSync: background auto sync finished (uploaded: %1@, downloaded: %2@)",
+            .zhHans: "AutoCloudSync: 后台自动同步完成 (上传: %1@, 下载: %2@)",
+            .ja: "AutoCloudSync: バックグラウンド自動同期が完了 (アップロード: %1@、ダウンロード: %2@)",
+            .ko: "AutoCloudSync: 백그라운드 자동 동기화 완료 (업로드: %1@, 다운로드: %2@)",
+            .th: "AutoCloudSync: ซิงก์อัตโนมัติเบื้องหลังเสร็จสิ้น (อัปโหลด: %1@, ดาวน์โหลด: %2@)"
+        ],
+        "log_autosync_skipped": [
+            .zhHant: "AutoCloudSync: 略過（未登入 Google 或正在執行中: running=%1@）",
+            .en: "AutoCloudSync: skipped (not signed in to Google, or already running: running=%1@)",
+            .zhHans: "AutoCloudSync: 跳过（未登录 Google 或正在运行中: running=%1@）",
+            .ja: "AutoCloudSync: スキップ（Google 未ログイン、または実行中: running=%1@）",
+            .ko: "AutoCloudSync: 건너뜀 (Google에 로그인하지 않았거나 이미 실행 중: running=%1@)",
+            .th: "AutoCloudSync: ข้าม (ยังไม่ได้ลงชื่อเข้าใช้ Google หรือกำลังทำงานอยู่: running=%1@)"
+        ],
+        "log_autosync_start": [
+            .zhHant: "AutoCloudSync: 開始背景自動同步...",
+            .en: "AutoCloudSync: starting background auto sync...",
+            .zhHans: "AutoCloudSync: 开始后台自动同步...",
+            .ja: "AutoCloudSync: バックグラウンド自動同期を開始...",
+            .ko: "AutoCloudSync: 백그라운드 자동 동기화 시작...",
+            .th: "AutoCloudSync: เริ่มซิงก์อัตโนมัติเบื้องหลัง..."
+        ],
+        "log_capture_cardioid": [
+            .zhHant: "[CoreAudioCapture] 心形指向資料源設定提示: %1@",
+            .en: "[CoreAudioCapture] cardioid data source note: %1@",
+            .zhHans: "[CoreAudioCapture] 心形指向数据源设置提示: %1@",
+            .ja: "[CoreAudioCapture] カーディオイド指向性データソースの設定に関する注記: %1@",
+            .ko: "[CoreAudioCapture] 카디오이드 지향성 데이터 소스 설정 알림: %1@",
+            .th: "[CoreAudioCapture] หมายเหตุการตั้งค่าแหล่งข้อมูลแบบคาร์ดิออยด์: %1@"
+        ],
+        "log_capture_session": [
+            .zhHant: "[CoreAudioCapture] AVAudioSession 設定警告: %1@",
+            .en: "[CoreAudioCapture] AVAudioSession configuration warning: %1@",
+            .zhHans: "[CoreAudioCapture] AVAudioSession 设置警告: %1@",
+            .ja: "[CoreAudioCapture] AVAudioSession 設定の警告: %1@",
+            .ko: "[CoreAudioCapture] AVAudioSession 설정 경고: %1@",
+            .th: "[CoreAudioCapture] คำเตือนการตั้งค่า AVAudioSession: %1@"
+        ],
         "log_clear": [
             .zhHant: "清除",
             .en: "Clear",
@@ -10831,6 +10943,14 @@ extension LocalizationManager {
             .ko: "로그 복사",
             .th: "คัดลอกบันทึก"
         ],
+        "log_core_version": [
+            .zhHant: "核心引擎版本: %1@, 平台目標: %2@/%3@",
+            .en: "Core engine version: %1@, target platform: %2@/%3@",
+            .zhHans: "核心引擎版本: %1@, 平台目标: %2@/%3@",
+            .ja: "コアエンジンのバージョン: %1@、ターゲットプラットフォーム: %2@/%3@",
+            .ko: "코어 엔진 버전: %1@, 대상 플랫폼: %2@/%3@",
+            .th: "เวอร์ชันเอนจินหลัก: %1@, แพลตฟอร์มเป้าหมาย: %2@/%3@"
+        ],
         "log_empty": [
             .zhHant: "尚無日誌紀錄",
             .en: "No logs recorded",
@@ -10846,6 +10966,14 @@ extension LocalizationManager {
             .ja: "ログをエクスポート",
             .ko: "로그 내보내기",
             .th: "ส่งออกบันทึก"
+        ],
+        "log_export_fail": [
+            .zhHant: "啟動日誌匯出失敗：%1@",
+            .en: "Exporting the startup log failed: %1@",
+            .zhHans: "启动日志导出失败：%1@",
+            .ja: "起動ログの書き出しに失敗しました: %1@",
+            .ko: "시작 로그를 내보내지 못했습니다: %1@",
+            .th: "ส่งออกบันทึกการเริ่มต้นไม่สำเร็จ: %1@"
         ],
         "log_filter": [
             .zhHant: "日誌篩選",
@@ -10870,6 +10998,62 @@ extension LocalizationManager {
             .ja: "現在のタブ",
             .ko: "현재 탭",
             .th: "แท็บปัจจุบัน"
+        ],
+        "log_home_appear": [
+            .zhHant: "HomeWorkbenchView.onAppear: 首頁畫面載入就緒",
+            .en: "HomeWorkbenchView.onAppear: home screen ready",
+            .zhHans: "HomeWorkbenchView.onAppear: 首页画面加载就绪",
+            .ja: "HomeWorkbenchView.onAppear: ホーム画面の読み込み完了",
+            .ko: "HomeWorkbenchView.onAppear: 홈 화면 로드 완료",
+            .th: "HomeWorkbenchView.onAppear: หน้าหลักโหลดพร้อมแล้ว"
+        ],
+        "log_home_init": [
+            .zhHant: "HomeWorkbenchView.init 實例化完成",
+            .en: "HomeWorkbenchView.init instantiated",
+            .zhHans: "HomeWorkbenchView.init 实例化完成",
+            .ja: "HomeWorkbenchView.init インスタンス化が完了",
+            .ko: "HomeWorkbenchView.init 인스턴스 생성 완료",
+            .th: "HomeWorkbenchView.init สร้างอินสแตนซ์เสร็จสิ้น"
+        ],
+        "log_language_applied": [
+            .zhHant: "語言套用完成: %1@",
+            .en: "Language applied: %1@",
+            .zhHans: "语言应用完成: %1@",
+            .ja: "言語の適用が完了: %1@",
+            .ko: "언어 적용 완료: %1@",
+            .th: "ใช้ภาษาเรียบร้อย: %1@"
+        ],
+        "log_library_migrate_fail": [
+            .zhHant: "文件庫預設位置遷移失敗：%1@",
+            .en: "Moving the library to the default location failed: %1@",
+            .zhHans: "文件库默认位置迁移失败：%1@",
+            .ja: "ライブラリを既定の場所へ移行できませんでした: %1@",
+            .ko: "라이브러리를 기본 위치로 옮기지 못했습니다: %1@",
+            .th: "ย้ายคลังไปยังตำแหน่งเริ่มต้นไม่สำเร็จ: %1@"
+        ],
+        "log_library_switched": [
+            .zhHant: "主要文件庫已切換至：%1@",
+            .en: "Main library switched to: %1@",
+            .zhHans: "主文件库已切换至：%1@",
+            .ja: "メインのライブラリを切り替えました: %1@",
+            .ko: "기본 라이브러리를 전환했습니다: %1@",
+            .th: "สลับคลังหลักไปที่: %1@"
+        ],
+        "log_local_reset": [
+            .zhHant: "本機資料已重設：%1@",
+            .en: "Local data reset: %1@",
+            .zhHans: "本机数据已重置：%1@",
+            .ja: "ローカルデータをリセットしました: %1@",
+            .ko: "로컬 데이터를 초기화했습니다: %1@",
+            .th: "รีเซ็ตข้อมูลในเครื่องแล้ว: %1@"
+        ],
+        "log_main_activity_create": [
+            .zhHant: "MainActivity.onCreate 啟動",
+            .en: "MainActivity.onCreate started",
+            .zhHans: "MainActivity.onCreate 启动",
+            .ja: "MainActivity.onCreate 開始",
+            .ko: "MainActivity.onCreate 시작",
+            .th: "MainActivity.onCreate เริ่มทำงาน"
         ],
         "log_msg_001": [
             .zhHant: "Google 帳號授權成功！已儲存憑證。",
@@ -11518,6 +11702,142 @@ extension LocalizationManager {
             .ja: "自動整理: 一時ファイル %1@ 件、モデルの残りファイル %2@ 件（合計 %3@ MB）、ゴミ箱の期限切れ %4@ 冊",
             .ko: "자동 정리: 임시 항목 %1@개, 모델 잔여 파일 %2@개(총 %3@MB), 휴지통 만료 노트 %4@개",
             .th: "ล้างอัตโนมัติ: ไฟล์ชั่วคราว %1@ รายการ ไฟล์โมเดลที่เหลือ %2@ รายการ (รวม %3@ MB) สมุดบันทึกในถังขยะหมดอายุ %4@ เล่ม"
+        ],
+        "log_recorder_message": [
+            .zhHant: "[AudioRecorderManager] %1@",
+            .en: "[AudioRecorderManager] %1@",
+            .zhHans: "[AudioRecorderManager] %1@",
+            .ja: "[AudioRecorderManager] %1@",
+            .ko: "[AudioRecorderManager] %1@",
+            .th: "[AudioRecorderManager] %1@"
+        ],
+        "log_recorder_stop_warning": [
+            .zhHant: "[AudioRecorderManager] 核心停止錄音警告: %1@",
+            .en: "[AudioRecorderManager] core stop-recording warning: %1@",
+            .zhHans: "[AudioRecorderManager] 核心停止录音警告: %1@",
+            .ja: "[AudioRecorderManager] コアの録音停止に関する警告: %1@",
+            .ko: "[AudioRecorderManager] 코어 녹음 중지 경고: %1@",
+            .th: "[AudioRecorderManager] คำเตือนจากแกนหลักตอนหยุดบันทึกเสียง: %1@"
+        ],
+        "log_scene_phase": [
+            .zhHant: "ScenePhase 切換為: %1@",
+            .en: "ScenePhase changed to: %1@",
+            .zhHans: "ScenePhase 切换为: %1@",
+            .ja: "ScenePhase が次に切り替わりました: %1@",
+            .ko: "ScenePhase 전환: %1@",
+            .th: "ScenePhase เปลี่ยนเป็น: %1@"
+        ],
+        "log_store_init_begin": [
+            .zhHant: "NotebookStore.init 開始載入資料",
+            .en: "NotebookStore.init started loading data",
+            .zhHans: "NotebookStore.init 开始加载数据",
+            .ja: "NotebookStore.init データの読み込みを開始",
+            .ko: "NotebookStore.init 데이터 로드 시작",
+            .th: "NotebookStore.init เริ่มโหลดข้อมูล"
+        ],
+        "log_store_init_done": [
+            .zhHant: "NotebookStore.init 初始化完成",
+            .en: "NotebookStore.init finished initializing",
+            .zhHans: "NotebookStore.init 初始化完成",
+            .ja: "NotebookStore.init 初期化が完了",
+            .ko: "NotebookStore.init 초기화 완료",
+            .th: "NotebookStore.init เริ่มต้นเสร็จสิ้น"
+        ],
+        "log_store_load_done": [
+            .zhHant: "NotebookStore.loadData 完成: %1@ 本筆記, %2@ 則錄音, %3@ 個資料夾",
+            .en: "NotebookStore.loadData finished: %1@ notebooks, %2@ recordings, %3@ folders",
+            .zhHans: "NotebookStore.loadData 完成: %1@ 本笔记, %2@ 条录音, %3@ 个文件夹",
+            .ja: "NotebookStore.loadData 完了: ノート %1@ 冊、録音 %2@ 件、フォルダ %3@ 個",
+            .ko: "NotebookStore.loadData 완료: 노트 %1@권, 녹음 %2@개, 폴더 %3@개",
+            .th: "NotebookStore.loadData เสร็จสิ้น: %1@ เล่มบันทึก, %2@ รายการบันทึกเสียง, %3@ โฟลเดอร์"
+        ],
+        "log_store_seed_check": [
+            .zhHant: "NotebookStore: 檢查/回填種子筆記",
+            .en: "NotebookStore: checking / backfilling sample notes",
+            .zhHans: "NotebookStore: 检查/回填示例笔记",
+            .ja: "NotebookStore: サンプルノートの確認／補完",
+            .ko: "NotebookStore: 샘플 노트 확인/보충",
+            .th: "NotebookStore: ตรวจสอบ/เติมบันทึกตัวอย่าง"
+        ],
+        "log_store_seed_create": [
+            .zhHant: "NotebookStore: 建立預設種子筆記",
+            .en: "NotebookStore: creating default sample notes",
+            .zhHans: "NotebookStore: 创建默认示例笔记",
+            .ja: "NotebookStore: 既定のサンプルノートを作成",
+            .ko: "NotebookStore: 기본 샘플 노트 생성",
+            .th: "NotebookStore: สร้างบันทึกตัวอย่างเริ่มต้น"
+        ],
+        "log_sweep_android": [
+            .zhHant: "自動清理：%1@ 項（%2@ MB），回收桶期滿 %3@ 本",
+            .en: "Auto cleanup: %1@ items (%2@ MB), %3@ expired from Trash",
+            .zhHans: "自动清理：%1@ 项（%2@ MB），回收站到期 %3@ 本",
+            .ja: "自動クリーンアップ: %1@ 件（%2@ MB）、ゴミ箱の期限切れ %3@ 冊",
+            .ko: "자동 정리: %1@개 항목 (%2@ MB), 휴지통 만료 %3@권",
+            .th: "ล้างอัตโนมัติ: %1@ รายการ (%2@ MB), ถังขยะหมดอายุ %3@ เล่ม"
+        ],
+        "log_sweep_apple": [
+            .zhHant: "自動清理：暫存 %1@ 項、模型殘檔 %2@ 項（共 %3@ MB），回收桶期滿 %4@ 本",
+            .en: "Auto cleanup: %1@ temp items, %2@ partial model files (%3@ MB total), %4@ expired from Trash",
+            .zhHans: "自动清理：临时文件 %1@ 项、模型残留文件 %2@ 项（共 %3@ MB），回收站到期 %4@ 本",
+            .ja: "自動クリーンアップ: 一時ファイル %1@ 件、モデルの残骸 %2@ 件（合計 %3@ MB）、ゴミ箱の期限切れ %4@ 冊",
+            .ko: "자동 정리: 임시 항목 %1@개, 모델 잔여 파일 %2@개 (총 %3@ MB), 휴지통 만료 %4@권",
+            .th: "ล้างอัตโนมัติ: ไฟล์ชั่วคราว %1@ รายการ, ไฟล์โมเดลที่ค้าง %2@ รายการ (รวม %3@ MB), ถังขยะหมดอายุ %4@ เล่ม"
+        ],
+        "log_whisper_deleted": [
+            .zhHant: "🗑️ 已刪除本地 Whisper 模型以釋放空間",
+            .en: "🗑️ Local Whisper model deleted to free up space",
+            .zhHans: "🗑️ 已删除本地 Whisper 模型以释放空间",
+            .ja: "🗑️ ローカルの Whisper モデルを削除して容量を確保しました",
+            .ko: "🗑️ 공간 확보를 위해 로컬 Whisper 모델을 삭제했습니다",
+            .th: "🗑️ ลบโมเดล Whisper ในเครื่องเพื่อคืนพื้นที่แล้ว"
+        ],
+        "log_whisper_done": [
+            .zhHant: "🎙️ Whisper 轉錄完成（語言: %1@, 片段數: %2@）",
+            .en: "🎙️ Whisper transcription finished (language: %1@, segments: %2@)",
+            .zhHans: "🎙️ Whisper 转录完成（语言: %1@, 片段数: %2@）",
+            .ja: "🎙️ Whisper の文字起こしが完了（言語: %1@、セグメント数: %2@）",
+            .ko: "🎙️ Whisper 받아쓰기 완료 (언어: %1@, 구간 수: %2@)",
+            .th: "🎙️ Whisper ถอดเสียงเสร็จ (ภาษา: %1@, จำนวนช่วง: %2@)"
+        ],
+        "log_whisper_download_fail": [
+            .zhHant: "⚠️ Whisper 模型下載未完成：%1@",
+            .en: "⚠️ Whisper model download did not finish: %1@",
+            .zhHans: "⚠️ Whisper 模型下载未完成：%1@",
+            .ja: "⚠️ Whisper モデルのダウンロードが完了しませんでした: %1@",
+            .ko: "⚠️ Whisper 모델 다운로드가 완료되지 않았습니다: %1@",
+            .th: "⚠️ ดาวน์โหลดโมเดล Whisper ไม่สำเร็จ: %1@"
+        ],
+        "log_whisper_download_ok": [
+            .zhHant: "✅ Whisper 模型下載完成並通過 SHA-256 驗證",
+            .en: "✅ Whisper model downloaded and SHA-256 verified",
+            .zhHans: "✅ Whisper 模型下载完成并通过 SHA-256 校验",
+            .ja: "✅ Whisper モデルのダウンロードが完了し、SHA-256 検証に合格しました",
+            .ko: "✅ Whisper 모델 다운로드가 완료되고 SHA-256 검증을 통과했습니다",
+            .th: "✅ ดาวน์โหลดโมเดล Whisper เสร็จและผ่านการตรวจสอบ SHA-256"
+        ],
+        "log_whisper_error": [
+            .zhHant: "⚠️ Whisper 轉錄異常: %1@，平滑降級至 Apple Speech...",
+            .en: "⚠️ Whisper transcription error: %1@; falling back to Apple Speech...",
+            .zhHans: "⚠️ Whisper 转录异常: %1@，平滑降级至 Apple Speech...",
+            .ja: "⚠️ Whisper の文字起こしでエラー: %1@。Apple Speech に切り替えます...",
+            .ko: "⚠️ Whisper 받아쓰기 오류: %1@. Apple Speech로 전환합니다...",
+            .th: "⚠️ การถอดเสียงของ Whisper ผิดพลาด: %1@ สลับไปใช้ Apple Speech..."
+        ],
+        "log_whisper_import_ok": [
+            .zhHant: "✅ 成功匯入 Whisper 離線模型 (%1@ MB)",
+            .en: "✅ Whisper offline model imported (%1@ MB)",
+            .zhHans: "✅ 成功导入 Whisper 离线模型 (%1@ MB)",
+            .ja: "✅ Whisper オフラインモデルを読み込みました (%1@ MB)",
+            .ko: "✅ Whisper 오프라인 모델을 가져왔습니다 (%1@ MB)",
+            .th: "✅ นำเข้าโมเดล Whisper ออฟไลน์สำเร็จ (%1@ MB)"
+        ],
+        "log_whisper_start": [
+            .zhHant: "🎙️ 開始使用端側 Whisper 模型轉錄（自動語言偵測）...",
+            .en: "🎙️ Transcribing with the on-device Whisper model (automatic language detection)...",
+            .zhHans: "🎙️ 开始使用端侧 Whisper 模型转录（自动语言检测）...",
+            .ja: "🎙️ 端末内 Whisper モデルで文字起こしを開始（言語自動判定）...",
+            .ko: "🎙️ 기기 내 Whisper 모델로 받아쓰기 시작 (언어 자동 감지)...",
+            .th: "🎙️ เริ่มถอดเสียงด้วยโมเดล Whisper ในเครื่อง (ตรวจจับภาษาอัตโนมัติ)..."
         ],
         "magnetic_snap_active": [
             .zhHant: "幾何角度與格線磁吸對齊中",
@@ -14806,6 +15126,22 @@ extension LocalizationManager {
             .ja: "破棄して復元",
             .ko: "버리고 복원",
             .th: "ละทิ้งและย้อนกลับ"
+        ],
+        "revert_done": [
+            .zhHant: "已恢復到初始狀態",
+            .en: "Reverted to the initial state",
+            .zhHans: "已恢复到初始状态",
+            .ja: "開いた時の状態に戻しました",
+            .ko: "초기 상태로 복원했습니다",
+            .th: "ย้อนกลับเป็นสถานะเริ่มต้นแล้ว"
+        ],
+        "revert_safety_note": [
+            .zhHant: "恢復前的狀態會自動存成快照，可以在「快照」清單裡找回。",
+            .en: "The state before reverting is saved as a snapshot you can restore from the Snapshots list.",
+            .zhHans: "恢复前的状态会自动存成快照，可以在“快照”列表里找回。",
+            .ja: "元に戻す前の状態はスナップショットとして自動保存され、「スナップショット」一覧から復元できます。",
+            .ko: "복원 전 상태는 스냅샷으로 자동 저장되며 ‘스냅샷’ 목록에서 되찾을 수 있습니다.",
+            .th: "สถานะก่อนย้อนกลับจะถูกบันทึกเป็นสแนปชอตอัตโนมัติ กู้คืนได้จากรายการสแนปชอต"
         ],
         "revert_to_initial_state": [
             .zhHant: "一鍵恢復初始狀態",

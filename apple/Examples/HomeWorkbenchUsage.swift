@@ -43,13 +43,13 @@ struct KairumoApp: App {
     @UIApplicationDelegateAdaptor(KairumoAppDelegate.self) private var appDelegate
 
     init() {
-        StartupLogger.log("KairumoApp.init: 應用程式啟動初始化")
+        StartupLogger.logKey("log_app_init")
         KairumoAppDelegate.configureInstantToolTips()
         // 啟動時確認 Rust Core 與版本狀態
         #if canImport(PadnoteCore)
             let coreVer = coreVersion()
             let info = appInfo()
-            StartupLogger.log("核心引擎版本: \(coreVer), 平台目標: \(info.targetOs)/\(info.targetArch)")
+            StartupLogger.logKey("log_core_version", coreVer, info.targetOs, info.targetArch)
             print("🚀 Kairumo 啟動完成 - 核心引擎版本: \(coreVer), 平台目標: \(info.targetOs)/\(info.targetArch)")
         #endif
 
@@ -84,8 +84,9 @@ struct KairumoApp: App {
     var body: some Scene {
         WindowGroup(appVersionTitle) {
             RootView()
+                .appLocale()
                 .task {
-                    StartupLogger.log("KairumoApp.task: 冷啟動初始化同步")
+                    StartupLogger.logKey("log_app_task")
                     try? await Task.sleep(nanoseconds: 1_000_000_000)
                     // 自動清理暫存、過期模型殘檔與期滿的回收桶（見 `StorageSweeper`）。
                     // 放在同步之前：此刻沒有任何上一輪的流程還在用 tmp，之後才會有新的。
@@ -103,7 +104,7 @@ struct KairumoApp: App {
                 }
                 // 單參數的 onChange：新的兩參數版本要 iOS 17，而部署目標更低。
                 .onChange(of: scenePhase) { phase in
-                    StartupLogger.log("ScenePhase 切換為: \(phase)")
+                    StartupLogger.logKey("log_scene_phase", "\(phase)")
                     guard phase == .active else { return }
                     // 啟動時先給予 1 秒寬限期讓 UI 算繪完畢，避免阻塞主執行緒造成卡頓感
                     Task { @MainActor in
@@ -170,6 +171,7 @@ struct KairumoApp: App {
         // 一邊操作 App 的時候，那個工作表就擋在那裡。
         WindowGroup(id: DocumentWindow.id, for: BundledDocument.ID.self) { $documentId in
             DocumentWindowContent(documentId: documentId)
+                .appLocale()
             #if os(macOS) || targetEnvironment(macCatalyst)
                 .frame(minWidth: 520, minHeight: 420)
             #endif
@@ -203,16 +205,16 @@ enum AutoCloudSync {
 
     static func runIfSignedIn() async {
         guard !running, GoogleAuth.shared.isSignedIn else {
-            StartupLogger.log("AutoCloudSync: 略過（未登入 Google 或正在執行中: running=\(running)）")
+            StartupLogger.logKey("log_autosync_skipped", running)
             return
         }
         running = true
         defer { running = false }
-        StartupLogger.log("AutoCloudSync: 開始背景自動同步...")
+        StartupLogger.logKey("log_autosync_start")
         let report = await NotebookSyncCoordinator.runDrive(
             store: NotebookStore.shared, deviceId: NotebookMigration.deviceId
         )
-        StartupLogger.log("AutoCloudSync: 背景自動同步完成 (上傳: \(report?.uploaded ?? 0), 下載: \(report?.downloaded ?? 0))")
+        StartupLogger.logKey("log_autosync_done", report?.uploaded ?? 0, report?.downloaded ?? 0)
     }
 
     /// 走排程器的觸發。新的呼叫點一律用這個 —— 直接跑一輪會繞過

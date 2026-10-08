@@ -39,10 +39,13 @@ final class DraftingState: ObservableObject {
     @Published var angleStep: Int {
         didSet { UserDefaults.standard.set(angleStep, forKey: Keys.angle); changed() }
     }
+    /// 「移到圖層」最後一次點選的結果（給製圖列顯示）。改圖層看不出畫面變化 ——
+    /// 線型與顏色都不動，只有所屬圖層變了 —— 沒有回饋的話使用者以為按鈕沒作用。
+    @Published var reassignResult: String?
     /// 點筆畫就把它改到目前圖層。
     @Published var reassignMode = false {
         didSet {
-            if reassignMode { markerMode = false }
+            if reassignMode { markerMode = false } else { reassignResult = nil }
             changed()
         }
     }

@@ -654,7 +654,7 @@ class InkEngine(
         var best: CompletedStroke? = null
         var bestDist = Float.MAX_VALUE
         for (stroke in _strokes) {
-            if (!DraftingState.canEdit(stroke.layer)) continue
+            // 鎖定與隱藏的圖層也能改：改圖層本身就是搬動，不受「鎖定只擋畫與擦」限制。
             val reach = radius + stroke.baseWidth * 0.5f
             // 點到**線段**的距離，不是點到取樣點：直線只有兩三個取樣點，
             // 點在兩點中間會離任何一個取樣點都很遠。
@@ -763,7 +763,14 @@ class InkEngine(
             val reassign = reassignTarget
             if (reassign != null) {
                 if (sample.event.phase == FfiPhase.BEGAN) {
-                    reassignLayerAt(sample.event.x, sample.event.y, reassign)
+                    val done = reassignLayerAt(sample.event.x, sample.event.y, reassign)
+                    DraftingState.reassignResult = if (done) {
+                        val name = DraftingState.layers.firstOrNull { it.id.toInt() == reassign }
+                            ?.let { com.kairumo.padnote.L10n.t(it.nameKey) } ?: ""
+                        com.kairumo.padnote.L10n.f("draft_reassigned", name)
+                    } else {
+                        com.kairumo.padnote.L10n.t("draft_reassign_miss")
+                    }
                     drawn++
                 }
                 continue

@@ -368,6 +368,9 @@ enum CanvasDiag {
 }
 
 final class AdaptiveCanvasView: PKCanvasView {
+    /// 連續模式下的兩指捲動（見 `TwoFingerScrollForwarder`）。
+    let twoFingerScroll = TwoFingerScrollForwarder()
+
     /// 這一頁的高度（由 SwiftUI 端更新）
     /// 觸控觀察。
     ///
@@ -1082,6 +1085,12 @@ struct CanvasRepresentable: UIViewRepresentable {
         let targetPolicy = resolvedPolicy()
         if uiView.drawingPolicy != targetPolicy {
             uiView.drawingPolicy = targetPolicy
+        }
+        // 連續模式（畫布自己不捲）且手指會畫圖時，兩指捲動由我們自己接管；
+        // `.pencilOnly` 時手指不畫，外層捲動單指就能動，不必（也不該）再轉發。
+        if let adaptive = uiView as? AdaptiveCanvasView {
+            adaptive.twoFingerScroll.setEnabled(
+                !isScrollEnabled && targetPolicy == .anyInput && selectedTool != .lasso, on: adaptive)
         }
         if let adaptive = uiView as? AdaptiveCanvasView {
             let defer_ = EditorCanvasInputPolicy.defersPencilIntent(effectiveMode: editorMode)
@@ -2441,6 +2450,13 @@ public struct NotebookEditorView: View {
             if tool.isBrush { lastBrushTool = tool }
             lastObservedTool = tool
         }
+        .onReceive(NotificationCenter.default.publisher(for: AppCommand.proInkDidChange)) { note in
+            guard (note.object as? String) == notebook.id.lowercased() else { return }
+            // 專業筆畫（製圖線等）變了：縮圖要重畫，筆記本要標成已修改（同步才會匯出）。
+            proInkDirty = true
+            thumbnailRevision += 1
+            noteInkEdited()
+        }
         .onChange(of: notebook.id) { _ in
             // 外層換綁之後才會走到這裡，這時 notebook 已經是新的那一則。
             currentPageIndex = 0
@@ -2857,33 +2873,8 @@ public struct NotebookEditorView: View {
                 }
             }
         }
-        .alert(localizationManager.localized("revert_to_initial_state"), isPresented: $showRevertConfirmAlert) {
-            Button(localizationManager.localized("cancel"), role: .cancel) {}
-            Button(localizationManager.localized("revert_confirm_action"), role: .destructive) {
-                if let snapshot = initialNotebookSnapshot {
-                    notebook = snapshot
-                    restoreInitialPages()
-                    currentDrawing = initialPageDrawings[currentPageIndex] ?? store.loadDrawing(notebookId: notebook.id, pageIndex: currentPageIndex)
-                    if let canvas = canvasView {
-                        // 程式指派 drawing 會讓復原堆疊裡的項目全部失效：整個清掉，
-                        // 免得按復原吃掉點擊、什麼都沒發生。
-                        canvas.drawing = currentDrawing
-                        canvas.undoManager?.removeAllActions()
-                        (canvas as? AdaptiveCanvasView)?.proLayer?.reload()
-                    }
-                    store.updateNotebook(notebook)
-                    activeSelectedObjectId = nil
-                    inlineEditingTextId = nil
-                    editingTextId = nil
-                    selectedShapeIds = []
-                    selectedConnectionId = nil
-                    selectedObjectIds = []
-                    PageThumbnailRenderer.invalidateAll()
-                }
-            }
-        } message: {
-            Text(localizationManager.localized("revert_to_initial_state_confirm"))
-        }
+        // 確認視窗掛在自己的隱藏載體上（見 `revertAlertHost`）。
+        .background(revertAlertHost)
         .background(Color.clear.alert(localizationManager.localized("clear_page"), isPresented: $showClearConfirmAlert) {
             Button(localizationManager.localized("cancel"), role: .cancel) {}
             Button(localizationManager.localized("clear_confirm"), role: .destructive) {
@@ -2949,6 +2940,46 @@ public struct NotebookEditorView: View {
         .sheet(isPresented: $showMoveNotebookSheet) { resizableSheet {
             MoveNotebookSheet(notebookId: notebookToMoveId ?? notebook.id)
         } }
+    }
+
+    /// 「一鍵恢復初始狀態」的確認視窗載體。
+    ///
+    /// 每個 `.alert` 要各掛在自己的 view 上：同一個 view 上疊多個 `.alert` 時只有一個會出現，
+    /// 其餘的永遠不跳 —— 按了「恢復初始狀態」沒反應、確認視窗根本沒出現就是這樣。
+    /// 抽成獨立屬性也讓 `body` 的型別推導不至於過長。
+    private var revertAlertHost: some View {
+        Color.clear
+            .frame(width: 0, height: 0)
+            .alert(localizationManager.localized("revert_to_initial_state"), isPresented: $showRevertConfirmAlert) {
+                Button(localizationManager.localized("cancel"), role: .cancel) {}
+                Button(localizationManager.localized("revert_confirm_action"), role: .destructive) {
+                    if let snapshot = initialNotebookSnapshot {
+                        notebook = snapshot
+                        restoreInitialPages()
+                        currentDrawing = initialPageDrawings[currentPageIndex] ?? store.loadDrawing(notebookId: notebook.id, pageIndex: currentPageIndex)
+                        if let canvas = canvasView {
+                            // 程式指派 drawing 會讓復原堆疊裡的項目全部失效：整個清掉，
+                            // 免得按復原吃掉點擊、什麼都沒發生。
+                            canvas.drawing = currentDrawing
+                            canvas.undoManager?.removeAllActions()
+                            (canvas as? AdaptiveCanvasView)?.proLayer?.reload()
+                        }
+                        store.updateNotebook(notebook)
+                        continuousReloadGeneration += 1
+                        thumbnailRevision += 1
+                        showCanvasNotice(localizationManager.localized("revert_done"))
+                        activeSelectedObjectId = nil
+                        inlineEditingTextId = nil
+                        editingTextId = nil
+                        selectedShapeIds = []
+                        selectedConnectionId = nil
+                        selectedObjectIds = []
+                        PageThumbnailRenderer.invalidateAll()
+                    }
+                }
+            } message: {
+                Text(localizationManager.localized("revert_to_initial_state_confirm"))
+            }
     }
 
     // MARK: - 1. 頂部自訂主工作列（自適應寬窄螢幕模式）
@@ -3704,13 +3735,13 @@ public struct NotebookEditorView: View {
             // 整頁／連續切換。放在頁碼旁邊 —— 它改的就是這一組按鈕的意義：
             // 連續模式下上一頁／下一頁變成捲到那一頁，而不是換掉整個畫布。
             Button {
-                pageDisplayModeRaw = (pageDisplayMode == .single
-                    ? PageDisplayMode.continuous
-                    : PageDisplayMode.single).rawValue
-                // 切換前把當頁存好。整頁模式的筆跡在記憶體裡，不存就丟了。
-                if pageDisplayMode == .continuous {
-                    saveCurrentPageDrawing()
-                } else {
+                // **先存、後切。** 存檔函式依「目前模式」走不同的路：整頁模式存記憶體裡的
+                // 那一頁，連續模式只沖掉待寫的核心墨跡。原本先改模式再存，從整頁切到連續時
+                // 走的是連續那一支 —— 整頁畫布上最後那幾筆沒有被存。
+                saveCurrentPageDrawing()
+                let next: PageDisplayMode = pageDisplayMode == .single ? .continuous : .single
+                pageDisplayModeRaw = next.rawValue
+                if next == .single {
                     loadCurrentPage()
                 }
             } label: {
@@ -4531,6 +4562,24 @@ public struct NotebookEditorView: View {
         }
     }
 
+    /// 連續模式：由捲動算出來的焦點頁（`updateFocusedPage` 寫入）。
+    ///
+    /// 用來分辨 `currentPageIndex` 的變動是「捲動帶來的」還是「程式叫它跳頁」
+    /// （點側欄縮圖、上一頁／下一頁、新增頁面…）。後者才要捲過去；
+    /// 前者再捲一次會跟使用者的手指打架。
+    @State private var continuousReportedPage: Int = -1
+    /// 專業筆畫有未標記的變動（見 `AppCommand.proInkDidChange`）。存檔時不能當成「沒變」略過。
+    @State private var proInkDirty = false
+    /// 「恢復初始狀態」之後遞增，讓連續模式的每一頁重讀磁碟（見 `ContinuousPageView.reloadGeneration`）。
+    @State private var continuousReloadGeneration = 0
+    /// 側欄縮圖的重繪計數：專業筆畫的變動不在任何 @State 裡，要靠它讓側欄重新算繪。
+    @State private var thumbnailRevision = 0
+    /// 要求連續模式再捲一次到目前頁（頁碼沒變但使用者點了同一頁的縮圖）。
+    @State private var continuousScrollRequest: Int = 0
+    /// 程式捲動進行中。這段時間內捲動中途經過的頁面不算焦點，否則
+    /// 「點縮圖跳到第 3 頁」會在途中被第 7 頁的焦點判定打斷，最後停在半路。
+    @State private var continuousProgrammaticScrollUntil: Date = .distantPast
+
     @ViewBuilder
     private func continuousPages(scale: CGFloat) -> some View {
         ScrollViewReader { proxy in
@@ -4585,6 +4634,10 @@ public struct NotebookEditorView: View {
                             onImageDropped: { page, providers, location in
                                 acceptImageDrop(providers, at: location, page: page)
                             },
+                            onInitialLoaded: { page, loaded in
+                                captureInitialPageState(page: page, drawing: loaded)
+                            },
+                            reloadGeneration: continuousReloadGeneration,
                             notebook: $notebook,
                             onNotebookChanged: {
                                 store.updateNotebook(notebook)
@@ -4638,9 +4691,39 @@ public struct NotebookEditorView: View {
             .onPreferenceChange(PageFocusPreferenceKey.self) { mids in
                 updateFocusedPage(from: mids)
             }
+            .onChange(of: currentPageIndex) { page in
+                // 捲動自己帶來的變動不用再捲。
+                guard page != continuousReportedPage else { return }
+                continuousReportedPage = page
+                scrollContinuous(to: page, proxy: proxy, animated: true)
+            }
+            .onChange(of: continuousScrollRequest) { _ in
+                scrollContinuous(to: currentPageIndex, proxy: proxy, animated: true)
+            }
+            .onChange(of: notebook.pageCount) { _ in
+                // 新增／刪除頁面之後頁碼可能沒變但內容換了，確保焦點頁在畫面上。
+                scrollContinuous(to: currentPageIndex, proxy: proxy, animated: false)
+            }
             .onAppear {
                 // 從整頁模式切過來時，停在原本那一頁而不是回到第 1 頁。
-                proxy.scrollTo(currentPageIndex, anchor: .top)
+                // LazyVStack 第一輪排版還沒完成時 scrollTo 會落空，所以下一輪與稍後再各補一次。
+                continuousReportedPage = currentPageIndex
+                scrollContinuous(to: currentPageIndex, proxy: proxy, animated: false)
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                    scrollContinuous(to: currentPageIndex, proxy: proxy, animated: false)
+                }
+            }
+        }
+    }
+
+    private func scrollContinuous(to page: Int, proxy: ScrollViewProxy, animated: Bool) {
+        let target = min(max(0, page), max(0, notebook.pageCount - 1))
+        continuousProgrammaticScrollUntil = Date().addingTimeInterval(animated ? 0.8 : 0.4)
+        DispatchQueue.main.async {
+            if animated {
+                withAnimation(.easeInOut(duration: 0.35)) { proxy.scrollTo(target, anchor: .top) }
+            } else {
+                proxy.scrollTo(target, anchor: .top)
             }
         }
     }
@@ -4664,6 +4747,8 @@ public struct NotebookEditorView: View {
     /// 取畫面中央最近的那一頁當焦點頁。
     private func updateFocusedPage(from mids: [Int: CGFloat]) {
         guard !mids.isEmpty else { return }
+        // 程式捲動進行中不判焦點（理由見 `continuousProgrammaticScrollUntil`）。
+        guard Date() >= continuousProgrammaticScrollUntil else { return }
         // 視窗中央的 y。用固定的頁高估一個中線就夠 —— 這裡只要挑出
         // 「最接近中央的那一頁」，不需要精準的可見面積。
         let viewportCenter = continuousViewportHeight / 2
@@ -4671,6 +4756,7 @@ public struct NotebookEditorView: View {
             abs($0.value - viewportCenter) < abs($1.value - viewportCenter)
         }
         guard let page = nearest?.key, page != currentPageIndex else { return }
+        continuousReportedPage = page
         currentPageIndex = page
         currentDrawing = drawingForPage(page)
     }
@@ -6132,12 +6218,16 @@ public struct NotebookEditorView: View {
                     saveCurrentPageDrawing()
                     currentPageIndex = idx
                     loadCurrentPage()
+                } else if pageDisplayMode == .continuous {
+                    // 焦點頁本來就是這一頁（它可能只露出一角），點縮圖也要把它捲到最上面。
+                    continuousScrollRequest += 1
                 }
             } label: {
                 // 縮圖用畫布的實際寬度算繪，並讓卡片維持同樣的長寬比 ——
                 // 舊版固定 800 寬、卡片固定 130 高，一張 800x1800 的頁面
                 // scaledToFit 之後只剩 50pt 寬，物件小到看不出是什麼。
                 let pageDrawing = drawingForPage(idx)
+                let _ = thumbnailRevision  // 專業筆畫變動時讓這張縮圖重算
                 let img = PageThumbnailRenderer.render(
                     notebook: notebook,
                     pageIndex: idx,
@@ -9162,7 +9252,14 @@ public struct NotebookEditorView: View {
         inkTouchWork?.cancel()
         inkTouchWork = nil
         if pageDisplayMode == .continuous {
+            let hadPendingInk = !pendingCoreInk.isEmpty
             flushPendingCoreInk()
+            // 沒有待寫的墨跡、文件也跟 store 裡一樣，就不要「碰」這本筆記。
+            // 每次碰都會把修改時間往前推並通知同步「本機有編輯」，於是只是切換模式、
+            // 點縮圖跳頁，同步就匯出重建一次套件、下載、再觸發編輯器重載 ——
+            // 同步日誌裡那串首尾相接、每一輪都「匯出 1 本、下載 4」的迴圈就是這樣來的。
+            if !hadPendingInk && !proInkDirty && store.notebookMatchesStored(notebook) { return }
+            proInkDirty = false
             notebook.lastModifiedDate = Date()
             store.updateNotebook(notebook)
             return
@@ -9182,6 +9279,9 @@ public struct NotebookEditorView: View {
             flushPendingCoreInk()
             lastPersistedInk = (currentPageIndex, currentDrawing)
         }
+        // 同上：筆跡沒變、文件也與 store 一致就不碰。
+        if unchanged && !proInkDirty && store.notebookMatchesStored(notebook) { return }
+        proInkDirty = false
         notebook.lastModifiedDate = Date()
         store.updateNotebook(notebook)
     }

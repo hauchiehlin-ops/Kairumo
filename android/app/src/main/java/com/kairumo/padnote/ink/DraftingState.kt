@@ -75,12 +75,15 @@ object DraftingState {
     private var reassignFlag by mutableStateOf(false)
     private var markerFlag by mutableStateOf(false)
 
+    /** 「移到圖層」最後一次點選的結果。改圖層看不出畫面變化，沒有回饋使用者會以為沒作用。 */
+    var reassignResult by mutableStateOf<String?>(null)
+
     /** 點筆畫就把它改到目前圖層。 */
     var reassignMode: Boolean
         get() = reassignFlag
         set(value) {
             reassignFlag = value
-            if (value) markerFlag = false
+            if (value) markerFlag = false else reassignResult = null
         }
 
     /** 點一下就放一個步驟編號（①②③…，畫在中層）。 */

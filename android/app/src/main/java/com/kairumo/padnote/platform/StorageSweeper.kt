@@ -99,8 +99,8 @@ object StorageSweeper {
         val report = sweepDisposables(context)
         report.trashPurged = runCatching { NotebookTrash.purgeExpired(context) }.getOrDefault(0)
         if (report.bytes > 0 || report.trashPurged > 0) {
-            StartupLogger.log(
-                "自動清理：${report.files} 項（${"%.1f".format(report.bytes / 1_048_576.0)} MB），回收桶期滿 ${report.trashPurged} 本"
+            StartupLogger.logKey(
+                "log_sweep_android", report.files, "%.1f".format(report.bytes / 1_048_576.0), report.trashPurged
             )
         }
         return report

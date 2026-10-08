@@ -157,12 +157,23 @@ object NotebookLibrary {
     // 三支都只是把 session 的取得集中在一處。Android 的套件就是**唯一**的
     // 真相來源，所以還原一步到位 —— 不像 Apple 還要先把工作副本鏡進套件。
 
+    /**
+     * 「開啟編輯器當下」的標記。「一鍵恢復初始狀態」靠它還原。
+     * 它是核心的一個里程碑，但使用者不該在快照清單裡看到它 —— 每開一次編輯器就多一筆的話，
+     * 清單很快就被淹沒。清單用 [milestones] 取，已經把它濾掉；找它用 [allMilestones]。
+     */
+    const val EDITOR_OPEN_MARK = "\u200Beditor-open"
+
     /** 這本筆記的全部里程碑，新的在前。開不了套件時回空清單。 */
-    fun milestones(context: Context, id: String, deviceId: UInt): List<FfiMilestone> =
+    fun allMilestones(context: Context, id: String, deviceId: UInt): List<FfiMilestone> =
         runCatching {
             val path = File(directory(context), "$id.$EXTENSION")
             PadnoteSession.openExisting(path.absolutePath, deviceId).milestones()
         }.getOrDefault(emptyList())
+
+    /** 給使用者看的里程碑清單（不含 [EDITOR_OPEN_MARK]）。 */
+    fun milestones(context: Context, id: String, deviceId: UInt): List<FfiMilestone> =
+        allMilestones(context, id, deviceId).filter { it.title != EDITOR_OPEN_MARK }
 
     /** 在現在這一刻插一個名字。 */
     fun createMilestone(

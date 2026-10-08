@@ -265,6 +265,12 @@ struct DraftingBar: View {
                 }
                 .toggleStyle(.button)
                 .accessibilityIdentifier("draft.reassign")
+                if state.reassignMode {
+                    Text(state.reassignResult ?? localizationManager.localized("draft_reassign_hint"))
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                        .accessibilityIdentifier("draft.reassign.result")
+                }
 
                 // 步驟編號：開著時點頁面就放一個 ①②③…（中層，跟輔助線一起隱藏）。
                 Toggle(isOn: $state.markerMode) {
