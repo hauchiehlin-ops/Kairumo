@@ -2503,6 +2503,14 @@ extension LocalizationManager {
             .ko: "접기",
             .th: "ยุบ"
         ],
+        "collapse_all": [
+            .zhHant: "全部收合",
+            .en: "Collapse All",
+            .zhHans: "全部折叠",
+            .ja: "すべて折りたたむ",
+            .ko: "모두 접기",
+            .th: "ยุบทั้งหมด"
+        ],
         "collapse_minimal_toolbox": [
             .zhHant: "收合迷你工具列",
             .en: "Collapse mini toolbar",
@@ -7855,6 +7863,14 @@ extension LocalizationManager {
             .ko: "이메일",
             .th: "อีเมล"
         ],
+        "empty_folder": [
+            .zhHant: "資料夾內尚無筆記",
+            .en: "No notes in folder",
+            .zhHans: "文件夹内暂无笔记",
+            .ja: "フォルダー内にノートはありません",
+            .ko: "폴더에 노트가 없습니다",
+            .th: "ไม่มีบันทึกในโฟลเดอร์"
+        ],
         "encrypt_covers_images": [
             .zhHant: "圖片",
             .en: "Images",
@@ -8206,6 +8222,14 @@ extension LocalizationManager {
             .ja: "展開",
             .ko: "펼치기",
             .th: "ขยาย"
+        ],
+        "expand_all": [
+            .zhHant: "全部展開",
+            .en: "Expand All",
+            .zhHans: "全部展开",
+            .ja: "すべて展開",
+            .ko: "모두 확장",
+            .th: "ขยายทั้งหมด"
         ],
         "expand_minimal_toolbox": [
             .zhHant: "展開迷你工具列",
@@ -21582,6 +21606,22 @@ extension LocalizationManager {
             .ja: "バージョン",
             .ko: "버전",
             .th: "เวอร์ชัน"
+        ],
+        "view_mode_grid": [
+            .zhHant: "卡片網格",
+            .en: "Card Grid",
+            .zhHans: "卡片网格",
+            .ja: "カードグリッド",
+            .ko: "카드 그리드",
+            .th: "ตารางการ์ด"
+        ],
+        "view_mode_hierarchy": [
+            .zhHant: "階層列表",
+            .en: "Hierarchical List",
+            .zhHans: "层级列表",
+            .ja: "階層リスト",
+            .ko: "계층 목록",
+            .th: "รายการลำดับชั้น"
         ],
         "voice_connected": [
             .zhHant: "連線中",

@@ -5404,7 +5404,7 @@ public struct NotebookEditorView: View {
             .frame(width: PageGeometry.width, height: currentPageHeight, alignment: .topLeading)
             .scaleEffect(canvasZoomScale, anchor: .topLeading)
             .offset(x: -canvasContentOffset.x, y: -canvasContentOffset.y)
-            .allowsHitTesting(selectedTool == .maskingTape || !(notebook.tapeAttachments?.filter { $0.pageIndex == currentPageIndex }.isEmpty ?? true))
+            .allowsHitTesting(selectedTool == .maskingTape || (editorMode != .draw && !(notebook.tapeAttachments?.filter { $0.pageIndex == currentPageIndex }.isEmpty ?? true)))
             .zIndex(selectedTool == .maskingTape ? 4 : 2.5)
 
             // 🌟 專業鏡像對稱尺規視覺參考線

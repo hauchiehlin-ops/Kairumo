@@ -177,7 +177,7 @@ struct ContinuousPageView<ObjectLayer: View>: View {
                 }
             )
             .frame(width: PageGeometry.width, height: PageGeometry.height, alignment: .topLeading)
-            .allowsHitTesting((isFocused && selectedTool == .maskingTape) || !(notebook.tapeAttachments?.filter { $0.pageIndex == pageIndex }.isEmpty ?? true))
+            .allowsHitTesting((isFocused && selectedTool == .maskingTape) || (editorMode != .draw && !(notebook.tapeAttachments?.filter { $0.pageIndex == pageIndex }.isEmpty ?? true)))
             .zIndex((isFocused && selectedTool == .maskingTape) ? 4 : 2.5)
         }
         .coordinateSpace(name: CanvasCoordinateSpace.name)

@@ -482,10 +482,10 @@ struct TableAttachmentItemView: View {
             }
             .shadow(color: isDragging ? .clear : Color.black.opacity(0.08), radius: 6, y: 3)
             .gesture(
+                (editingCell != nil) ? nil :
                 DragGesture(minimumDistance: 5, coordinateSpace: .named(CanvasCoordinateSpace.name))
                     .onChanged { value in
                         isDragging = true
-                        editingCell = nil
                         dragOffset = value.translation
                     }
                     .onEnded { value in
@@ -498,6 +498,32 @@ struct TableAttachmentItemView: View {
                         isDragging = false
                     }
             )
+            .overlay(alignment: .top) {
+                if isSelected {
+                    Capsule()
+                        .fill(Color.secondary.opacity(0.4))
+                        .frame(width: 44, height: 6)
+                        .padding(.vertical, 8)
+                        .contentShape(Rectangle())
+                        .offset(y: -18)
+                        .gesture(
+                            DragGesture(minimumDistance: 2, coordinateSpace: .named(CanvasCoordinateSpace.name))
+                                .onChanged { value in
+                                    isDragging = true
+                                    dragOffset = value.translation
+                                }
+                                .onEnded { value in
+                                    if hypot(value.translation.width, value.translation.height) >= 2 {
+                                        table.x += dragOffset.width
+                                        table.y += dragOffset.height
+                                    }
+                                    onSelect?()
+                                    dragOffset = .zero
+                                    isDragging = false
+                                }
+                        )
+                }
+            }
             // 表格本體跟著轉；把手掛在旋轉**外面**的 overlay ——
             // 包進去的話拖曳算出的角度會疊加自身旋轉，表格會失控加速。
             .rotationEffect(.degrees(table.canvasRotation))

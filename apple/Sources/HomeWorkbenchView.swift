@@ -114,6 +114,11 @@ public struct HomeWorkbenchView: View {
     @State private var showMoveNotebookSheet: Bool = false
     @State private var notebookToMoveId: String? = nil
 
+    @AppStorage("home_notebook_display_mode") private var notebookDisplayModeRaw: String = "hierarchy"
+    @State private var expandedFolderIds: Set<String> = []
+    @State private var hasExpandedFoldersInit: Bool = false
+    @State private var isRootUnfiledExpanded: Bool = true
+
     public enum SortOption: String, CaseIterable, Identifiable {
         case byDate = "date"
         case byTitle = "title"
@@ -1525,7 +1530,7 @@ public struct HomeWorkbenchView: View {
         return VStack(alignment: .leading, spacing: 12) {
             ViewThatFits(in: .horizontal) {
                 // 寬螢幕排版
-                HStack {
+                HStack(spacing: 8) {
                     Text("\(localizationManager.localized("all_notebooks")) (\(visibleList.count))")
                         .font(.title3)
                         .fontWeight(.bold)
@@ -1544,6 +1549,7 @@ public struct HomeWorkbenchView: View {
                     }
 
                     Spacer()
+                    notebookViewModePicker
                     allNotebooksSortMenu
                 }
 
@@ -1572,225 +1578,650 @@ public struct HomeWorkbenchView: View {
 
                     HStack {
                         Spacer()
+                        notebookViewModePicker
                         allNotebooksSortMenu
                     }
                 }
             }
 
-            // 📁 資料夾分類導覽列（顯示最上層資料夾名稱與子資料夾）
-            VStack(alignment: .leading, spacing: 8) {
-                HStack(spacing: 8) {
-                    Image(systemName: "tray.2.fill")
-                        .foregroundColor(.accentColor)
-                        .font(.subheadline)
-                    Text(notebookStore.displayRootFolderName)
-                        .font(.subheadline)
-                        .fontWeight(.bold)
-                    Button {
-                        rootFolderRenameText = notebookStore.displayRootFolderName
-                        showRenameRootFolderAlert = true
-                    } label: {
-                        Image(systemName: "pencil")
-                            .font(.caption2)
-                            .foregroundColor(.secondary)
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel(localizationManager.localized("edit_root_folder"))
-                    .help(localizationManager.localized("edit_root_folder"))
-                    .accessibilityIdentifier("home.notebooks.rename_root")
+            if notebookDisplayModeRaw == "hierarchy" {
+                hierarchicalNotebooksTreeView(visibleNotes: visibleList)
+            } else {
+                folderCapsuleBar
+                notebooksCardGrid(visibleList: visibleList)
+            }
+        }
+    }
 
-                    Spacer()
+    private var notebookViewModePicker: some View {
+        HStack(spacing: 2) {
+            Button {
+                notebookDisplayModeRaw = "hierarchy"
+            } label: {
+                Image(systemName: "list.bullet.indent")
+                    .font(.caption)
+                    .foregroundColor(notebookDisplayModeRaw == "hierarchy" ? .accentColor : .secondary)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 5)
+                    .background(notebookDisplayModeRaw == "hierarchy" ? Color.accentColor.opacity(0.15) : Color.clear)
+                    .cornerRadius(6)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(localizationManager.localized("view_mode_hierarchy"))
+            .help(localizationManager.localized("view_mode_hierarchy"))
 
-                    Button {
-                        newFolderParentId = nil
-                        newFolderNameText = ""
-                        showNewFolderAlert = true
-                    } label: {
-                        HStack(spacing: 4) {
-                            Image(systemName: "folder.badge.plus")
-                            Text(localizationManager.localized("new_subfolder"))
+            Button {
+                notebookDisplayModeRaw = "grid"
+            } label: {
+                Image(systemName: "square.grid.2x2")
+                    .font(.caption)
+                    .foregroundColor(notebookDisplayModeRaw == "grid" ? .accentColor : .secondary)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 5)
+                    .background(notebookDisplayModeRaw == "grid" ? Color.accentColor.opacity(0.15) : Color.clear)
+                    .cornerRadius(6)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(localizationManager.localized("view_mode_grid"))
+            .help(localizationManager.localized("view_mode_grid"))
+        }
+        .padding(2)
+        .background(Color(uiColor: .tertiarySystemGroupedBackground))
+        .cornerRadius(8)
+    }
+
+    private var areAllFoldersExpanded: Bool {
+        if !hasExpandedFoldersInit { return true }
+        let allIds = Set(notebookStore.folders.map { $0.id })
+        return allIds.isSubset(of: expandedFolderIds) && isRootUnfiledExpanded
+    }
+
+    private func isFolderExpanded(_ folderId: String) -> Bool {
+        if !hasExpandedFoldersInit { return true }
+        return expandedFolderIds.contains(folderId)
+    }
+
+    private func toggleFolderExpanded(_ folderId: String) {
+        if !hasExpandedFoldersInit {
+            expandedFolderIds = Set(notebookStore.folders.map { $0.id })
+            hasExpandedFoldersInit = true
+        }
+        if expandedFolderIds.contains(folderId) {
+            expandedFolderIds.remove(folderId)
+        } else {
+            expandedFolderIds.insert(folderId)
+        }
+    }
+
+    private func expandAllFolders() {
+        hasExpandedFoldersInit = true
+        expandedFolderIds = Set(notebookStore.folders.map { $0.id })
+        isRootUnfiledExpanded = true
+    }
+
+    private func collapseAllFolders() {
+        hasExpandedFoldersInit = true
+        expandedFolderIds.removeAll()
+        isRootUnfiledExpanded = false
+    }
+
+    // MARK: - 階層式樹狀資料夾與筆記本檢視（Hierarchical Tree View）
+    @ViewBuilder
+    private func hierarchicalNotebooksTreeView(visibleNotes: [NotebookDocument]) -> some View {
+        let topFolders = notebookStore.subfolders(of: nil)
+        let unfiledNotes = visibleNotes.filter { $0.folderId == nil }
+
+        VStack(alignment: .leading, spacing: 10) {
+            // 工具列：根資料夾名稱、全部展開/收合、新增子資料夾
+            HStack(spacing: 8) {
+                Image(systemName: "tray.2.fill")
+                    .foregroundColor(.accentColor)
+                    .font(.subheadline)
+                Text(notebookStore.displayRootFolderName)
+                    .font(.subheadline)
+                    .fontWeight(.bold)
+                Button {
+                    rootFolderRenameText = notebookStore.displayRootFolderName
+                    showRenameRootFolderAlert = true
+                } label: {
+                    Image(systemName: "pencil")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(localizationManager.localized("edit_root_folder"))
+
+                Spacer()
+
+                Button {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        if areAllFoldersExpanded {
+                            collapseAllFolders()
+                        } else {
+                            expandAllFolders()
                         }
-                        .dsChip()
                     }
-                    .buttonStyle(.plain)
-                    .accessibilityIdentifier("home.notebooks.new_folder")
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: areAllFoldersExpanded ? "chevron.up.circle" : "chevron.down.circle")
+                        Text(areAllFoldersExpanded ? localizationManager.localized("collapse_all") : localizationManager.localized("expand_all"))
+                    }
+                    .font(.caption)
+                    .foregroundColor(.accentColor)
+                }
+                .buttonStyle(.plain)
+
+                Button {
+                    newFolderParentId = nil
+                    newFolderNameText = ""
+                    showNewFolderAlert = true
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "folder.badge.plus")
+                        Text(localizationManager.localized("new_subfolder"))
+                    }
+                    .dsChip()
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("home.notebooks.new_folder")
+            }
+            .padding(10)
+            .background(Color(uiColor: .secondarySystemGroupedBackground))
+            .cornerRadius(12)
+
+            // 階層樹節點
+            VStack(alignment: .leading, spacing: 4) {
+                // 最頂層資料夾（及其遞迴子資料夾）
+                ForEach(topFolders) { folder in
+                    hierarchicalFolderNode(folder: folder, level: 0, allVisibleNotes: visibleNotes)
                 }
 
-                ScrollView(.horizontal, showsIndicators: true) {
-                    HStack(spacing: 8) {
-                        // 全部檔案
-                        Button {
-                            selectedFolderId = nil
-                        } label: {
-                            HStack(spacing: 4) {
-                                Image(systemName: "square.grid.2x2")
-                                Text(localizationManager.localized("all_folders"))
+                // 未分類筆記本
+                if !unfiledNotes.isEmpty {
+                    VStack(alignment: .leading, spacing: 2) {
+                        HStack(spacing: 8) {
+                            Button {
+                                withAnimation(.easeInOut(duration: 0.2)) {
+                                    isRootUnfiledExpanded.toggle()
+                                }
+                            } label: {
+                                Image(systemName: isRootUnfiledExpanded ? "chevron.down" : "chevron.right")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                    .frame(width: 20, height: 20)
                             }
-                            .font(.caption)
-                            .fontWeight(selectedFolderId == nil ? .bold : .regular)
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 5)
-                            .background(selectedFolderId == nil ? Color.accentColor : Color(uiColor: .tertiarySystemGroupedBackground))
-                            .foregroundColor(selectedFolderId == nil ? .white : .primary)
-                            .cornerRadius(8)
+                            .buttonStyle(.plain)
+
+                            Image(systemName: "tray.fill")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+
+                            Text(localizationManager.localized("unfiled_notes"))
+                                .font(.subheadline)
+                                .fontWeight(.semibold)
+                                .foregroundColor(.primary)
+
+                            Text("(\(unfiledNotes.count))")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+
+                            Spacer()
                         }
-                        .buttonStyle(.plain)
-                        // 「全部檔案」也是落點：拖到這裡＝移出資料夾（S-88）。
-                        // 只有資料夾接受落下的話，拖得進去、拖不出來 ——
-                        // 編輯器側欄踩過同一個坑。
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 8)
+                        .background(Color(uiColor: .secondarySystemGroupedBackground))
+                        .cornerRadius(8)
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                isRootUnfiledExpanded.toggle()
+                            }
+                        }
                         .dropDestination(for: String.self) { items, _ in
                             guard let noteId = items.first else { return false }
                             notebookStore.moveNotebook(id: noteId, toFolderId: nil)
                             return true
                         }
 
-                        // 各資料夾
-                        // 過濾即可，**不要改成 `subfolders(of: nil)`** ——
-                        // 這份側邊清單是攤平的，換成只列最上層會讓子資料夾消失。
-                        ForEach(notebookStore.folders.filter { !notebookStore.isHiddenBySync($0.id) }) { folder in
-                            let isSel = (selectedFolderId == folder.id)
-                            let count = notebookStore.notebooks(in: folder.id).count
-                            Menu {
-                                Button {
-                                    createSubfolderFromMenu(parentId: folder.id)
-                                } label: {
-                                    Label(localizationManager.localized("new_subfolder"), systemImage: "folder.badge.plus")
+                        if isRootUnfiledExpanded {
+                            VStack(alignment: .leading, spacing: 2) {
+                                ForEach(unfiledNotes) { note in
+                                    compactNotebookRow(note: note, level: 1)
                                 }
-                                Button {
-                                    renameFolderFromMenu(folder)
-                                } label: {
-                                    Label(localizationManager.localized("rename_folder"), systemImage: "pencil")
-                                }
-                                Divider()
-                                Button(role: .destructive) {
-                                    deleteFolderFromMenu(folder)
-                                } label: {
-                                    Label(localizationManager.localized("delete_folder"), systemImage: "trash")
-                                }
-                            } label: {
-                                HStack(spacing: 4) {
-                                    Image(systemName: folder.parentId == nil ? "folder.fill" : "folder.badge.gearshape")
-                                    Text("\(folder.name) (\(count))")
-                                }
-                                .font(.caption)
-                                .fontWeight(isSel ? .bold : .regular)
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 5)
-                                .background(isSel ? Color.accentColor : Color(uiColor: .tertiarySystemGroupedBackground))
-                                .foregroundColor(isSel ? .white : .primary)
-                                .cornerRadius(8)
-                            } primaryAction: {
-                                selectedFolderId = folder.id
-                            }
-                            .buttonStyle(.plain)
-                            // 筆記卡片拖到這裡就移進這個資料夾（S-88）。
-                            .dropDestination(for: String.self) { items, _ in
-                                guard let noteId = items.first else { return false }
-                                notebookStore.moveNotebook(id: noteId, toFolderId: folder.id)
-                                return true
                             }
                         }
                     }
                 }
+
+                if topFolders.isEmpty && unfiledNotes.isEmpty {
+                    HStack {
+                        Spacer()
+                        VStack(spacing: 8) {
+                            Image(systemName: "doc.text.magnifyingglass")
+                                .font(.largeTitle)
+                                .foregroundColor(.secondary.opacity(0.6))
+                            Text(localizationManager.localized("no_notes_empty"))
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                        }
+                        .padding(.vertical, 30)
+                        Spacer()
+                    }
+                }
             }
-            .padding(10)
+            .padding(8)
             .background(Color(uiColor: .secondarySystemGroupedBackground))
             .cornerRadius(12)
+        }
+    }
 
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 150, maximum: 200), spacing: 14)], spacing: 14) {
-                ForEach(visibleList) { note in
-                    VStack(alignment: .leading, spacing: 8) {
-                        ZStack(alignment: .topTrailing) {
-                            Button {
-                                selectedNotebookForEditing = note
-                            } label: {
-                                ZStack {
-                                    RoundedRectangle(cornerRadius: 10)
-                                        .fill(Color(uiColor: .tertiarySystemGroupedBackground))
-                                        .frame(height: 110)
+    private func hierarchicalFolderNode(folder: FolderItem, level: Int, allVisibleNotes: [NotebookDocument]) -> AnyView {
+        let isExpanded = isFolderExpanded(folder.id)
+        let childFolders = notebookStore.subfolders(of: folder.id)
+        let notesInThisFolder = allVisibleNotes.filter { $0.folderId == folder.id }
+        let totalCount = notesInThisFolder.count
 
-                                    VStack(spacing: 6) {
-                                        Image(systemName: note.template.iconName)
-                                            .font(.largeTitle)
-                                            .foregroundColor(.accentColor.opacity(0.7))
-                                        Text(note.displayTitle())
-                                            .font(.caption2)
-                                            .lineLimit(1)
-                                            .foregroundColor(.secondary)
-                                    }
-                                    .padding(8)
-                                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                                }
-                                .contentShape(Rectangle())
-                            }
-                            .buttonStyle(.plain)
+        return AnyView(
+            VStack(alignment: .leading, spacing: 2) {
+                // 資料夾列
+                HStack(spacing: 8) {
+                    // 階層縮排
+                    if level > 0 {
+                        Color.clear
+                            .frame(width: CGFloat(level) * 20, height: 1)
+                    }
 
-                            // 個別功能選項
-                            Menu {
-                                notebookCardContextMenuItems(note: note)
-                            } label: {
-                                Image(systemName: "ellipsis.circle.fill")
-                                    .font(.system(size: 16))
-                                    .foregroundColor(.secondary.opacity(0.8))
-                                    .frame(width: 44, height: 44)
-                                    .contentShape(Rectangle())
-                            }
-                            .buttonStyle(.plain)
+                    // 展開／收合箭頭按鈕
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            toggleFolderExpanded(folder.id)
+                        }
+                    } label: {
+                        Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .frame(width: 20, height: 20)
+                    }
+                    .buttonStyle(.plain)
+
+                    // 資料夾圖示
+                    Image(systemName: folder.parentId == nil ? "folder.fill" : "folder.badge.gearshape")
+                        .font(.subheadline)
+                        .foregroundColor(.accentColor)
+
+                    // 資料夾名稱
+                    Text(folder.name)
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.primary)
+                        .lineLimit(1)
+
+                    // 筆記數量
+                    Text("(\(totalCount))")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+
+                    Spacer()
+
+                    // 功能選單
+                    Menu {
+                        Button {
+                            createSubfolderFromMenu(parentId: folder.id)
+                        } label: {
+                            Label(localizationManager.localized("new_subfolder"), systemImage: "folder.badge.plus")
+                        }
+                        Button {
+                            renameFolderFromMenu(folder)
+                        } label: {
+                            Label(localizationManager.localized("rename_folder"), systemImage: "pencil")
+                        }
+                        Divider()
+                        Button(role: .destructive) {
+                            deleteFolderFromMenu(folder)
+                        } label: {
+                            Label(localizationManager.localized("delete_folder"), systemImage: "trash")
+                        }
+                    } label: {
+                        Image(systemName: "ellipsis")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .padding(6)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                }
+                .padding(.horizontal, 10)
+                .padding(.vertical, 8)
+                .background(Color(uiColor: .secondarySystemGroupedBackground))
+                .cornerRadius(8)
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        toggleFolderExpanded(folder.id)
+                    }
+                }
+                .dropDestination(for: String.self) { items, _ in
+                    guard let noteId = items.first else { return false }
+                    notebookStore.moveNotebook(id: noteId, toFolderId: folder.id)
+                    return true
+                }
+
+                // 展開子內容
+                if isExpanded {
+                    VStack(alignment: .leading, spacing: 2) {
+                        // 子資料夾
+                        ForEach(childFolders) { subFolder in
+                            hierarchicalFolderNode(folder: subFolder, level: level + 1, allVisibleNotes: allVisibleNotes)
                         }
 
+                        // 該資料夾下的筆記本
+                        ForEach(notesInThisFolder) { note in
+                            compactNotebookRow(note: note, level: level + 1)
+                        }
+
+                        // 空資料夾提示
+                        if childFolders.isEmpty && notesInThisFolder.isEmpty {
+                            HStack(spacing: 6) {
+                                Color.clear.frame(width: CGFloat(level + 1) * 20 + 20, height: 1)
+                                Text(localizationManager.localized("empty_folder"))
+                                    .font(.caption2)
+                                    .foregroundColor(.secondary)
+                                    .italic()
+                            }
+                            .padding(.vertical, 4)
+                        }
+                    }
+                }
+            }
+        )
+    }
+
+    @ViewBuilder
+    private func compactNotebookRow(note: NotebookDocument, level: Int) -> some View {
+        Button {
+            selectedNotebookForEditing = note
+        } label: {
+            HStack(spacing: 8) {
+                // 階層縮排
+                if level > 0 {
+                    Color.clear
+                        .frame(width: CGFloat(level) * 20, height: 1)
+                }
+
+                // 筆記範本圖示
+                Image(systemName: note.template.iconName)
+                    .font(.body)
+                    .foregroundColor(.accentColor.opacity(0.85))
+                    .frame(width: 22, height: 22)
+
+                // 標題
+                Text(note.displayTitle())
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                    .foregroundColor(.primary)
+                    .lineLimit(1)
+
+                // 標記與資訊
+                if note.isEncrypted {
+                    Image(systemName: "lock.fill")
+                        .font(.caption2)
+                        .foregroundColor(.orange)
+                }
+                if note.hasRecording {
+                    Image(systemName: "waveform")
+                        .font(.caption2)
+                        .foregroundColor(.blue)
+                }
+
+                Spacer()
+
+                // 頁數
+                Text("\(note.pageCount) \(localizationManager.localized("pages_count_suffix"))")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+
+                // 修改日期
+                Text(note.lastModifiedDate, style: .date)
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+
+                // 功能選單
+                Menu {
+                    notebookCardContextMenuItems(note: note)
+                } label: {
+                    Image(systemName: "ellipsis.circle")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary.opacity(0.8))
+                        .padding(6)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 7)
+            .background(Color(uiColor: .tertiarySystemGroupedBackground).opacity(0.6))
+            .cornerRadius(8)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("home.notebooks.card.\(note.id)")
+        .contextMenu {
+            notebookCardContextMenuItems(note: note)
+        }
+        .draggable(note.id) {
+            HStack(spacing: 6) {
+                Image(systemName: "doc.fill")
+                Text(note.displayTitle()).lineLimit(1)
+            }
+            .font(.caption)
+            .padding(8)
+            .background(Color(uiColor: .secondarySystemGroupedBackground))
+            .cornerRadius(8)
+        }
+    }
+
+    // MARK: - 網格卡片資料夾列（Grid View Folder Bar）
+    @ViewBuilder
+    private var folderCapsuleBar: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 8) {
+                Image(systemName: "tray.2.fill")
+                    .foregroundColor(.accentColor)
+                    .font(.subheadline)
+                Text(notebookStore.displayRootFolderName)
+                    .font(.subheadline)
+                    .fontWeight(.bold)
+                Button {
+                    rootFolderRenameText = notebookStore.displayRootFolderName
+                    showRenameRootFolderAlert = true
+                } label: {
+                    Image(systemName: "pencil")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(localizationManager.localized("edit_root_folder"))
+                .help(localizationManager.localized("edit_root_folder"))
+                .accessibilityIdentifier("home.notebooks.rename_root")
+
+                Spacer()
+
+                Button {
+                    newFolderParentId = nil
+                    newFolderNameText = ""
+                    showNewFolderAlert = true
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "folder.badge.plus")
+                        Text(localizationManager.localized("new_subfolder"))
+                    }
+                    .dsChip()
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("home.notebooks.new_folder")
+            }
+
+            ScrollView(.horizontal, showsIndicators: true) {
+                HStack(spacing: 8) {
+                    // 全部檔案
+                    Button {
+                        selectedFolderId = nil
+                    } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: "square.grid.2x2")
+                            Text(localizationManager.localized("all_folders"))
+                        }
+                        .font(.caption)
+                        .fontWeight(selectedFolderId == nil ? .bold : .regular)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 5)
+                        .background(selectedFolderId == nil ? Color.accentColor : Color(uiColor: .tertiarySystemGroupedBackground))
+                        .foregroundColor(selectedFolderId == nil ? .white : .primary)
+                        .cornerRadius(8)
+                    }
+                    .buttonStyle(.plain)
+                    .dropDestination(for: String.self) { items, _ in
+                        guard let noteId = items.first else { return false }
+                        notebookStore.moveNotebook(id: noteId, toFolderId: nil)
+                        return true
+                    }
+
+                    // 各資料夾
+                    ForEach(notebookStore.folders.filter { !notebookStore.isHiddenBySync($0.id) }) { folder in
+                        let isSel = (selectedFolderId == folder.id)
+                        let count = notebookStore.notebooks(in: folder.id).count
+                        Menu {
+                            Button {
+                                createSubfolderFromMenu(parentId: folder.id)
+                            } label: {
+                                Label(localizationManager.localized("new_subfolder"), systemImage: "folder.badge.plus")
+                            }
+                            Button {
+                                renameFolderFromMenu(folder)
+                            } label: {
+                                Label(localizationManager.localized("rename_folder"), systemImage: "pencil")
+                            }
+                            Divider()
+                            Button(role: .destructive) {
+                                deleteFolderFromMenu(folder)
+                            } label: {
+                                Label(localizationManager.localized("delete_folder"), systemImage: "trash")
+                            }
+                        } label: {
+                            HStack(spacing: 4) {
+                                Image(systemName: folder.parentId == nil ? "folder.fill" : "folder.badge.gearshape")
+                                Text("\(folder.name) (\(count))")
+                            }
+                            .font(.caption)
+                            .fontWeight(isSel ? .bold : .regular)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 5)
+                            .background(isSel ? Color.accentColor : Color(uiColor: .tertiarySystemGroupedBackground))
+                            .foregroundColor(isSel ? .white : .primary)
+                            .cornerRadius(8)
+                        } primaryAction: {
+                            selectedFolderId = folder.id
+                        }
+                        .buttonStyle(.plain)
+                        .dropDestination(for: String.self) { items, _ in
+                            guard let noteId = items.first else { return false }
+                            notebookStore.moveNotebook(id: noteId, toFolderId: folder.id)
+                            return true
+                        }
+                    }
+                }
+            }
+        }
+        .padding(10)
+        .background(Color(uiColor: .secondarySystemGroupedBackground))
+        .cornerRadius(12)
+    }
+
+    // MARK: - 網格卡片列表（Grid View Cards）
+    @ViewBuilder
+    private func notebooksCardGrid(visibleList: [NotebookDocument]) -> some View {
+        LazyVGrid(columns: [GridItem(.adaptive(minimum: 150, maximum: 200), spacing: 14)], spacing: 14) {
+            ForEach(visibleList) { note in
+                VStack(alignment: .leading, spacing: 8) {
+                    ZStack(alignment: .topTrailing) {
                         Button {
                             selectedNotebookForEditing = note
                         } label: {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(note.displayTitle())
-                                    .font(.subheadline)
-                                    .fontWeight(.medium)
-                                    .foregroundColor(.primary)
-                                    .lineLimit(1)
+                            ZStack {
+                                RoundedRectangle(cornerRadius: 10)
+                                    .fill(Color(uiColor: .tertiarySystemGroupedBackground))
+                                    .frame(height: 110)
 
-                                HStack {
-                                    Text("\(note.pageCount) \(localizationManager.localized("pages_count_suffix"))")
+                                VStack(spacing: 6) {
+                                    Image(systemName: note.template.iconName)
+                                        .font(.largeTitle)
+                                        .foregroundColor(.accentColor.opacity(0.7))
+                                    Text(note.displayTitle())
                                         .font(.caption2)
-                                        .foregroundColor(.secondary)
-                                    Spacer()
-                                    Text(note.lastModifiedDate, style: .date)
-                                        .font(.caption2)
+                                        .lineLimit(1)
                                         .foregroundColor(.secondary)
                                 }
+                                .padding(8)
+                                .frame(maxWidth: .infinity, maxHeight: .infinity)
                             }
                             .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
-                        // 識別碼必須掛在真正可操作的 accessibility element 上。
-                        // 掛在外層 VStack 時，畫面看得到卡片，但 XCUITest 的樹裡
-                        // 沒有 `home.notebooks.card.*`，所有要開編輯器的測試都會
-                        // 把它誤報成「種子筆記不存在」。
-                        //
-                        // 用 id 而不是序號：排序、新增或語言切換都不會改變它。
-                        .accessibilityIdentifier("home.notebooks.card.\(note.id)")
-                    }
-                    .padding(10)
-                    .background(Color(uiColor: .secondarySystemGroupedBackground))
-                    .cornerRadius(12)
-                    .shadow(color: Color.black.opacity(0.03), radius: 4, y: 2)
-                    .contextMenu {
-                        notebookCardContextMenuItems(note: note)
-                    }
-                    // 拖到上面的資料夾膠囊上就分類完成（S-88）。
-                    //
-                    // 編輯器的側欄早就能這樣拖，首頁卻不行 —— 而首頁才是
-                    // 使用者整理筆記的地方。要整理一本筆記得先打開它，
-                    // 那個順序是反的。
-                    .draggable(note.id) {
-                        HStack(spacing: 6) {
-                            Image(systemName: "doc.fill")
-                            Text(note.displayTitle()).lineLimit(1)
+
+                        // 個別功能選項
+                        Menu {
+                            notebookCardContextMenuItems(note: note)
+                        } label: {
+                            Image(systemName: "ellipsis.circle.fill")
+                                .font(.system(size: 16))
+                                .foregroundColor(.secondary.opacity(0.8))
+                                .frame(width: 44, height: 44)
+                                .contentShape(Rectangle())
                         }
-                        .font(.caption)
-                        .padding(8)
-                        .background(Color(uiColor: .secondarySystemGroupedBackground))
-                        .cornerRadius(8)
+                        .buttonStyle(.plain)
                     }
+
+                    Button {
+                        selectedNotebookForEditing = note
+                    } label: {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(note.displayTitle())
+                                .font(.subheadline)
+                                .fontWeight(.medium)
+                                .foregroundColor(.primary)
+                                .lineLimit(1)
+
+                            HStack {
+                                Text("\(note.pageCount) \(localizationManager.localized("pages_count_suffix"))")
+                                    .font(.caption2)
+                                    .foregroundColor(.secondary)
+                                Spacer()
+                                Text(note.lastModifiedDate, style: .date)
+                                    .font(.caption2)
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("home.notebooks.card.\(note.id)")
+                }
+                .padding(10)
+                .background(Color(uiColor: .secondarySystemGroupedBackground))
+                .cornerRadius(12)
+                .shadow(color: Color.black.opacity(0.03), radius: 4, y: 2)
+                .contextMenu {
+                    notebookCardContextMenuItems(note: note)
+                }
+                .draggable(note.id) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "doc.fill")
+                        Text(note.displayTitle()).lineLimit(1)
+                    }
+                    .font(.caption)
+                    .padding(8)
+                    .background(Color(uiColor: .secondarySystemGroupedBackground))
+                    .cornerRadius(8)
                 }
             }
         }

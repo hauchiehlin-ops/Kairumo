@@ -2487,6 +2487,14 @@
     "zhHans": "收起",
     "zhHant": "收合"
   },
+  "collapse_all": {
+    "en": "Collapse All",
+    "ja": "すべて折りたたむ",
+    "ko": "모두 접기",
+    "th": "ยุบทั้งหมด",
+    "zhHans": "全部折叠",
+    "zhHant": "全部收合"
+  },
   "collapse_minimal_toolbox": {
     "en": "Collapse mini toolbar",
     "ja": "ミニツールバーを折りたたむ",
@@ -7839,6 +7847,14 @@
     "zhHans": "电子邮件",
     "zhHant": "電子郵件"
   },
+  "empty_folder": {
+    "en": "No notes in folder",
+    "ja": "フォルダー内にノートはありません",
+    "ko": "폴더에 노트가 없습니다",
+    "th": "ไม่มีบันทึกในโฟลเดอร์",
+    "zhHans": "文件夹内暂无笔记",
+    "zhHant": "資料夾內尚無筆記"
+  },
   "encrypt_covers_images": {
     "en": "Images",
     "ja": "画像",
@@ -8190,6 +8206,14 @@
     "th": "ขยาย",
     "zhHans": "展开",
     "zhHant": "展開"
+  },
+  "expand_all": {
+    "en": "Expand All",
+    "ja": "すべて展開",
+    "ko": "모두 확장",
+    "th": "ขยายทั้งหมด",
+    "zhHans": "全部展开",
+    "zhHant": "全部展開"
   },
   "expand_minimal_toolbox": {
     "en": "Open mini toolbar",
@@ -21566,6 +21590,22 @@
     "th": "เวอร์ชัน",
     "zhHans": "版本号",
     "zhHant": "版本號"
+  },
+  "view_mode_grid": {
+    "en": "Card Grid",
+    "ja": "カードグリッド",
+    "ko": "카드 그리드",
+    "th": "ตารางการ์ด",
+    "zhHans": "卡片网格",
+    "zhHant": "卡片網格"
+  },
+  "view_mode_hierarchy": {
+    "en": "Hierarchical List",
+    "ja": "階層リスト",
+    "ko": "계층 목록",
+    "th": "รายการลำดับชั้น",
+    "zhHans": "层级列表",
+    "zhHant": "階層列表"
   },
   "voice_connected": {
     "en": "Connected",
