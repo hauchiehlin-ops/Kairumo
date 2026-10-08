@@ -98,7 +98,7 @@ def main() -> int:
     hits = []
     for base, pattern, skip in TARGETS:
         for path in sorted(base.rglob(pattern)):
-            if path.name in skip:
+            if path.name.startswith("._") or path.name in skip:
                 continue
             for n, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
                 if line.strip().startswith(("//", "*", "///")):
