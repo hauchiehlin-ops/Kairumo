@@ -373,7 +373,7 @@ public struct CanvasStackPanel: View {
 
 /// 單一物件的排列動作。
 public enum ObjectReorderOp: CaseIterable {
-    case toFront, forward, backward, toBack
+    case toFront, forward, backward, toBack, sendBelowInk, bringAboveInk
 
     /// 套用到順序上。實作全部走上面四個純函式，確保選單、圖層面板與
     /// 編輯面板行為一致。
@@ -383,6 +383,7 @@ public enum ObjectReorderOp: CaseIterable {
         case .forward: return ObjectStacking.bringForward([id], in: order)
         case .backward: return ObjectStacking.sendBackward([id], in: order)
         case .toBack: return ObjectStacking.sendToBack([id], in: order)
+        case .sendBelowInk, .bringAboveInk: return order
         }
     }
 
@@ -392,6 +393,8 @@ public enum ObjectReorderOp: CaseIterable {
         case .forward: return "layer_bring_forward"
         case .backward: return "layer_send_backward"
         case .toBack: return "layer_send_back"
+        case .sendBelowInk: return "layer_send_below_ink"
+        case .bringAboveInk: return "layer_bring_above_ink"
         }
     }
 
@@ -401,6 +404,8 @@ public enum ObjectReorderOp: CaseIterable {
         case .forward: return "arrow.up"
         case .backward: return "arrow.down"
         case .toBack: return "arrow.down.to.line"
+        case .sendBelowInk: return "square.2.layers.3d.bottom.filled"
+        case .bringAboveInk: return "square.2.layers.3d.top.filled"
         }
     }
 }
@@ -418,7 +423,7 @@ extension EnvironmentValues {
     }
 }
 
-/// 放進物件右鍵／長按選單的四個排列動作。
+/// 放進物件右鍵／長按選單的排列動作。
 struct ObjectOrderMenu: View {
     let id: String
     @Environment(\.objectReorder) private var reorder
@@ -427,12 +432,38 @@ struct ObjectOrderMenu: View {
     var body: some View {
         if let reorder {
             Menu {
-                ForEach(ObjectReorderOp.allCases, id: \.key) { op in
-                    Button {
-                        reorder(id, op)
-                    } label: {
-                        Label(localizationManager.localized(op.key), systemImage: op.symbol)
-                    }
+                Button {
+                    reorder(id, .toFront)
+                } label: {
+                    Label(localizationManager.localized("layer_bring_front"), systemImage: "arrow.up.to.line")
+                }
+                Button {
+                    reorder(id, .forward)
+                } label: {
+                    Label(localizationManager.localized("layer_bring_forward"), systemImage: "arrow.up")
+                }
+                Button {
+                    reorder(id, .backward)
+                } label: {
+                    Label(localizationManager.localized("layer_send_backward"), systemImage: "arrow.down")
+                }
+                Button {
+                    reorder(id, .toBack)
+                } label: {
+                    Label(localizationManager.localized("layer_send_back"), systemImage: "arrow.down.to.line")
+                }
+
+                Divider()
+
+                Button {
+                    reorder(id, .bringAboveInk)
+                } label: {
+                    Label(localizationManager.localized("layer_bring_above_ink"), systemImage: "square.2.layers.3d.top.filled")
+                }
+                Button {
+                    reorder(id, .sendBelowInk)
+                } label: {
+                    Label(localizationManager.localized("layer_send_below_ink"), systemImage: "square.2.layers.3d.bottom.filled")
                 }
             } label: {
                 Label(localizationManager.localized("layers_panel"), systemImage: "square.3.layers.3d")

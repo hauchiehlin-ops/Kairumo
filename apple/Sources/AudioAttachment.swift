@@ -51,6 +51,7 @@ struct AudioAttachmentItemView: View {
     @State private var isTranscribing: Bool = false
     @State private var transcribeAlertMessage: String? = nil
     @State private var showOfflineInfo: Bool = false
+    @State private var showLimitsInfo: Bool = false
 
     private var displayWidth: CGFloat { liveSize?.width ?? item.width }
     private var displayHeight: CGFloat { liveSize?.height ?? item.height }
@@ -64,11 +65,17 @@ struct AudioAttachmentItemView: View {
     private var fileUrl: URL {
         // 套件裡的優先（那份會被同步），找不到才退回舊的 Kairumo Record。
         NotebookStore.shared.recordingFileURL(
-            fileName: item.fileName, notebookId: notebookId)
+            fileName: item.fileName, notebookId: notebookId, recordingId: item.recordingId)
     }
 
     private var fileExists: Bool {
-        FileManager.default.fileExists(atPath: fileUrl.path)
+        let exists = FileManager.default.fileExists(atPath: fileUrl.path)
+        if exists && item.fileName != fileUrl.lastPathComponent && !fileUrl.lastPathComponent.isEmpty {
+            DispatchQueue.main.async {
+                item.fileName = fileUrl.lastPathComponent
+            }
+        }
+        return exists
     }
 
     var body: some View {
@@ -252,6 +259,19 @@ struct AudioAttachmentItemView: View {
                     }
                 }
             }
+            .alert(localizationManager.localized("transcribe_limits_info"), isPresented: $showLimitsInfo) {
+                Button(localizationManager.localized("done"), role: .cancel) {}
+            } message: {
+                Text("""
+                【時間與長度限制】
+                • 本機 Whisper 端側模型：無時間或字數上限！支援分段神經網路處理，數十分鐘至數小時錄音皆可完整離線轉錄。
+                • Apple 系統聽寫：連線模式建議單次於 1 分鐘內；若已下載系統離線語音包則可延長。
+
+                【多國語言支援】
+                • 支援繁體中文 (zh-TW)、英文 (English)、日文 (日本語)、韓文 (한국어)、泰文 (ภาษาไทย)、簡體中文 (zh-CN) 等 99+ 種語言。
+                • 支援自動語言偵測，並能自動對齊介面語系之正體/簡體字型。
+                """)
+            }
     }
 
     private var card: some View {
@@ -289,7 +309,28 @@ struct AudioAttachmentItemView: View {
                     .lineLimit(1)
 
                 if fileExists {
-                    if isPlayingThis {
+                    if isTranscribing {
+                        VStack(alignment: .leading, spacing: 3) {
+                            ProgressView(value: transcriber.transcriptionProgress > 0 ? transcriber.transcriptionProgress : nil)
+                                .progressViewStyle(.linear)
+                                .tint(.blue)
+                            HStack(spacing: 4) {
+                                Text(transcriber.transcriptionStatusText.isEmpty
+                                     ? localizationManager.localized("transcribing")
+                                     : transcriber.transcriptionStatusText)
+                                    .font(.system(size: 9, weight: .medium))
+                                    .foregroundColor(.blue)
+                                    .lineLimit(1)
+                                Spacer(minLength: 0)
+                                if transcriber.transcriptionProgress > 0 {
+                                    Text("\(Int(transcriber.transcriptionProgress * 100))%")
+                                        .font(.system(size: 9))
+                                        .monospacedDigit()
+                                        .foregroundColor(.secondary)
+                                }
+                            }
+                        }
+                    } else if isPlayingThis {
                         VStack(alignment: .leading, spacing: 2) {
                             ProgressView(value: audioManager.playbackProgress)
                                 .progressViewStyle(.linear)
@@ -343,14 +384,31 @@ struct AudioAttachmentItemView: View {
         .contentShape(Rectangle())
         .contextMenu {
             ObjectOrderMenu(id: item.id)
-            Button {
-                SheetCoordinator.shared.presentFromMenu {
+            Menu {
+                Button {
                     performTranscribe()
+                } label: {
+                    Label(localizationManager.localized("transcribe_language_auto"), systemImage: "sparkles")
                 }
+                Divider()
+                Button("繁體中文 (zh-TW)") { performTranscribe(language: "zh-Hant") }
+                Button("English (en)") { performTranscribe(language: "en") }
+                Button("日本語 (ja)") { performTranscribe(language: "ja") }
+                Button("한국어 (ko)") { performTranscribe(language: "ko") }
+                Button("ภาษาไทย (th)") { performTranscribe(language: "th") }
+                Button("簡體中文 (zh-CN)") { performTranscribe(language: "zh-Hans") }
             } label: {
                 Label(localizationManager.localized("transcribe_audio"), systemImage: "waveform.badge.magnifyingglass")
             }
             .disabled(isTranscribing || !fileExists)
+
+            Button {
+                SheetCoordinator.shared.presentFromMenu {
+                    showLimitsInfo = true
+                }
+            } label: {
+                Label(localizationManager.localized("transcribe_limits_info"), systemImage: "info.circle")
+            }
 
             Button {
                 SheetCoordinator.shared.presentFromMenu {
@@ -424,12 +482,12 @@ struct AudioAttachmentItemView: View {
         }
     }
 
-    private func performTranscribe() {
+    private func performTranscribe(language: String? = nil) {
         guard fileExists, !isTranscribing else { return }
         isTranscribing = true
         Task {
             do {
-                let text = try await AudioTranscriber.shared.transcribe(url: fileUrl)
+                let text = try await AudioTranscriber.shared.transcribe(url: fileUrl, languageCode: language)
                 let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
                 await MainActor.run {
                     self.isTranscribing = false

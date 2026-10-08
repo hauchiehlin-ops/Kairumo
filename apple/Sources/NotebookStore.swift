@@ -393,6 +393,20 @@ public struct NotebookDocument: Identifiable, Codable, Hashable {
         objectOrderByPage = map
     }
 
+    /// 某一頁位於手寫筆跡（PKDrawing Ink）下方的物件 ID 清單（背景圖層）。
+    /// 預設為空（即物件位於筆跡上方的前景圖層）。
+    public var underInkObjectIdsByPage: [String: [String]]?
+
+    public func underInkObjectIds(forPage page: Int) -> Set<String> {
+        Set(underInkObjectIdsByPage?[String(page)] ?? [])
+    }
+
+    public mutating func setUnderInkObjectIds(_ ids: Set<String>, forPage page: Int) {
+        var map = underInkObjectIdsByPage ?? [:]
+        map[String(page)] = Array(ids)
+        underInkObjectIdsByPage = map
+    }
+
     /// 系統預設標題的語系鍵。
     ///
     /// 內建的示範筆記若把中文標題直接寫死存進 JSON，切換介面語言時檔名不會跟著變
@@ -1162,6 +1176,8 @@ public struct NoteAudioAttachment: Identifiable, Codable, Hashable, ObjectFrameS
     public var borderWidth: CGFloat?
     /// `"clear"` 為透明。
     public var backgroundColorHex: String?
+    /// 關聯的轉譯文字方塊 ID（避免重複轉譯產生多個相同的文字方塊）。
+    public var transcriptTextId: String?
 
     public init(
         id: String = UUID().uuidString,
@@ -1181,7 +1197,8 @@ public struct NoteAudioAttachment: Identifiable, Codable, Hashable, ObjectFrameS
         cornerRadius: CGFloat = 12,
         borderColorHex: String? = nil,
         borderWidth: CGFloat? = nil,
-        backgroundColorHex: String? = nil
+        backgroundColorHex: String? = nil,
+        transcriptTextId: String? = nil
     ) {
         self.id = id
         self.pageIndex = pageIndex
@@ -1199,6 +1216,7 @@ public struct NoteAudioAttachment: Identifiable, Codable, Hashable, ObjectFrameS
         self.borderColorHex = borderColorHex
         self.borderWidth = borderWidth
         self.backgroundColorHex = backgroundColorHex
+        self.transcriptTextId = transcriptTextId
     }
 }
 
@@ -3114,37 +3132,138 @@ public final class NotebookStore: ObservableObject {
     /// 依檔名解析錄音的位置（`notebookId` 為這一段錄音所屬的筆記本）。
     ///
     /// 與 [`recordingFileURL(for:)`] 同一條規則，給只拿得到檔名的呼叫端用。
-    public func recordingFileURL(fileName: String, notebookId: String?) -> URL {
-        if let notebookId {
-            let inPackage = corePackagesDirectory
-                .appending(path: "\(notebookId.lowercased()).padnote")
-                .appending(path: "media/audio")
-                .appending(path: fileName)
-            if FileManager.default.fileExists(atPath: inPackage.path) {
-                return inPackage
+    public func recordingFileURL(fileName: String, notebookId: String? = nil, recordingId: String? = nil) -> URL {
+        let fm = FileManager.default
+        let raw = fileName.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        // 0. 如果傳進來的字串本身就是本機上實際存在的檔案路徑或 file:// URL
+        if !raw.isEmpty {
+            if raw.hasPrefix("file://"), let u = URL(string: raw), fm.fileExists(atPath: u.path) {
+                return u
+            }
+            if raw.hasPrefix("/") && fm.fileExists(atPath: raw) {
+                return URL(fileURLWithPath: raw)
             }
         }
-        let inInbox = corePackagesDirectory
-            .appending(path: "\(recordingInboxNotebookId().lowercased()).padnote")
-            .appending(path: "media/audio")
-            .appending(path: fileName)
-        if FileManager.default.fileExists(atPath: inInbox.path) {
-            return inInbox
+
+        // 取得純檔名（過濾路徑成分、URL 編碼與 media/audio 前綴）
+        var cleanName = (raw as NSString).lastPathComponent
+        if let decoded = cleanName.removingPercentEncoding, !decoded.isEmpty {
+            cleanName = decoded
         }
-        let fm = FileManager.default
-        if let packages = try? fm.contentsOfDirectory(at: corePackagesDirectory, includingPropertiesForKeys: nil) {
-            for pkg in packages where pkg.pathExtension == "padnote" {
-                let candidate = pkg.appending(path: "media/audio").appending(path: fileName)
+        if (cleanName.isEmpty || cleanName == "/") && recordingId != nil {
+            if let rec = recordings.first(where: { $0.id == recordingId }) {
+                cleanName = (rec.fileName as NSString).lastPathComponent
+            }
+        }
+        guard !cleanName.isEmpty && cleanName != "/" else {
+            return AudioRecorderManager.shared.recordingsDirectory.appending(path: "missing.m4a")
+        }
+
+        // 收集所有可能的候選檔名（同名、或者不同音訊副檔名如 .m4a / .opus / .wav / .caf / .mp3）
+        let baseName = (cleanName as NSString).deletingPathExtension
+        let originalExt = (cleanName as NSString).pathExtension.lowercased()
+        let candidateNames: [String]
+        if originalExt.isEmpty {
+            candidateNames = [cleanName, "\(baseName).m4a", "\(baseName).opus", "\(baseName).wav", "\(baseName).caf", "\(baseName).mp3"]
+        } else {
+            candidateNames = [cleanName, "\(baseName).opus", "\(baseName).m4a", "\(baseName).wav", "\(baseName).caf", "\(baseName).mp3"]
+        }
+
+        // 檢查給定目錄底下是否有任何候選檔名
+        func probeDirectory(_ dir: URL) -> URL? {
+            for name in candidateNames {
+                let candidate = dir.appending(path: name)
                 if fm.fileExists(atPath: candidate.path) {
                     return candidate
                 }
             }
+            return nil
         }
-        return AudioRecorderManager.shared.recordingsDirectory.appending(path: fileName)
+
+        // 1. 當前筆記本的套件 media/audio
+        if let notebookId {
+            let pkgAudio = corePackagesDirectory
+                .appending(path: "\(notebookId.lowercased()).padnote")
+                .appending(path: "media/audio")
+            if let found = probeDirectory(pkgAudio) {
+                return found
+            }
+        }
+
+        // 2. 透過 recordingId 或 cleanName 查詢 recordings 索引中的 linkedNotebookId 套件
+        if let rec = recordings.first(where: { (!cleanName.isEmpty && $0.fileName == cleanName) || ($0.id == recordingId) }) {
+            if let linkedId = rec.linkedNotebookId, !linkedId.isEmpty, linkedId.caseInsensitiveCompare(notebookId ?? "") != .orderedSame {
+                let linkedPkgAudio = corePackagesDirectory
+                    .appending(path: "\(linkedId.lowercased()).padnote")
+                    .appending(path: "media/audio")
+                if let found = probeDirectory(linkedPkgAudio) {
+                    return found
+                }
+            }
+        }
+
+        // 3. 錄音收件匣 inbox 的套件 media/audio
+        let inInbox = corePackagesDirectory
+            .appending(path: "\(recordingInboxNotebookId().lowercased()).padnote")
+            .appending(path: "media/audio")
+        if let found = probeDirectory(inInbox) {
+            return found
+        }
+
+        // 4. 掃描 corePackagesDirectory 底下所有 .padnote 套件的 media/audio
+        if let packages = try? fm.contentsOfDirectory(at: corePackagesDirectory, includingPropertiesForKeys: nil) {
+            for pkg in packages where pkg.pathExtension == "padnote" {
+                if let found = probeDirectory(pkg.appending(path: "media/audio")) {
+                    return found
+                }
+            }
+        }
+
+        // 5. 掃描 documentsDir 底下的 .padnote（防止遷移未進 corePackagesDirectory）
+        if let docPackages = try? fm.contentsOfDirectory(at: documentsDir, includingPropertiesForKeys: nil) {
+            for pkg in docPackages where pkg.pathExtension == "padnote" {
+                if let found = probeDirectory(pkg.appending(path: "media/audio")) {
+                    return found
+                }
+            }
+        }
+
+        // 6. 主要錄音目錄 AudioRecorderManager.shared.recordingsDirectory
+        let recDir = AudioRecorderManager.shared.recordingsDirectory
+        if let found = probeDirectory(recDir) {
+            return found
+        }
+
+        // 7. 使用者文件庫 DocumentStorageLocation.shared.rootURL / Kairumo Record
+        let rootKairumoRecord = DocumentStorageLocation.shared.rootURL.appendingPathComponent("Kairumo Record", isDirectory: true)
+        if let found = probeDirectory(rootKairumoRecord) {
+            return found
+        }
+
+        // 8. 舊容器 Documents / Kairumo Record（沙盒內的傳統路徑）
+        if let legacyDocs = fm.urls(for: .documentDirectory, in: .userDomainMask).first {
+            let legacyRecord = legacyDocs.appendingPathComponent("Kairumo Record", isDirectory: true)
+            if let found = probeDirectory(legacyRecord) {
+                return found
+            }
+            if let found = probeDirectory(legacyDocs) {
+                return found
+            }
+        }
+
+        // 9. documentsDir / Attachments 目錄（匯入音訊可能落點）
+        let attachmentsDir = documentsDir.appendingPathComponent("Attachments", isDirectory: true)
+        if let found = probeDirectory(attachmentsDir) {
+            return found
+        }
+
+        // 10. 預設退回路徑
+        return recDir.appending(path: cleanName)
     }
 
     public func recordingFileURL(for record: AudioRecordingRecord) -> URL {
-        recordingFileURL(fileName: record.fileName, notebookId: record.linkedNotebookId)
+        recordingFileURL(fileName: record.fileName, notebookId: record.linkedNotebookId, recordingId: record.id)
     }
 
     /// 重新掃描所有套件裡的錄音，與本機那份清單合併。

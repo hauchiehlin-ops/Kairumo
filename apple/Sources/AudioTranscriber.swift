@@ -190,6 +190,10 @@ public final class AudioTranscriber: ObservableObject {
     @Published public var lastUsedOnDevice: Bool = false
     @Published public var lastEngineUsed: String = "Whisper"
 
+    // 轉錄即時進度狀態（供轉譯進度條與狀態指示器顯示）
+    @Published public var transcriptionProgress: Double = 0.0
+    @Published public var transcriptionStatusText: String = ""
+
     // 模型下載狀態
     @Published public var isDownloadingModel: Bool = false
     @Published public var downloadProgress: Double = 0.0
@@ -433,7 +437,13 @@ public final class AudioTranscriber: ObservableObject {
     /// - Returns: 辨識出的文字稿字串
     public func transcribe(url: URL, languageCode: String? = nil) async throws -> String {
         isTranscribing = true
-        defer { isTranscribing = false }
+        transcriptionProgress = 0.10
+        transcriptionStatusText = LocalizationManager.shared.localized("transcribe_step_decode")
+        defer {
+            isTranscribing = false
+            transcriptionProgress = 0.0
+            transcriptionStatusText = ""
+        }
 
         // 先驗證並解碼音訊 PCM（避免傳遞空緩衝區給 Whisper 或 Apple Speech）
         let pcm: [Float]
@@ -454,6 +464,9 @@ public final class AudioTranscriber: ObservableObject {
             )
         }
 
+        transcriptionProgress = 0.35
+        transcriptionStatusText = LocalizationManager.shared.localized("transcribe_step_recognize")
+
         // 1. 優先路徑：若已下載端側 Whisper 模型，走 Rust 核心 ASR 管線（支援多語言自動偵測與標點還原）
         if isWhisperAvailable {
             do {
@@ -467,6 +480,8 @@ public final class AudioTranscriber: ObservableObject {
                 StartupLogger.logKey("log_whisper_done", result.language, result.segments.count)
                 let trimmed = result.text.trimmingCharacters(in: .whitespacesAndNewlines)
                 if !trimmed.isEmpty {
+                    transcriptionProgress = 0.90
+                    transcriptionStatusText = LocalizationManager.shared.localized("transcribe_step_postprocess")
                     return Self.localizedScript(trimmed)
                 }
             } catch {
@@ -478,6 +493,8 @@ public final class AudioTranscriber: ObservableObject {
         lastEngineUsed = "Apple Speech"
         StartupLogger.logKey("log_apple_speech")
         let text = try await transcribeWithAppleSpeech(pcm: pcm, languageCode: languageCode)
+        transcriptionProgress = 0.90
+        transcriptionStatusText = LocalizationManager.shared.localized("transcribe_step_postprocess")
         return Self.localizedScript(text)
     }
 

@@ -10527,6 +10527,14 @@
     "zhHans": "已圈选笔画：可拖曳移动，或点击删除 / 剪切 / 复制",
     "zhHant": "已圈選筆劃：可拖曳移動，或點擊刪除 / 剪下 / 複製"
   },
+  "layer_bring_above_ink": {
+    "en": "Bring Above Ink (Foreground)",
+    "ja": "手書きインクの前面へ",
+    "ko": "필기 잉크 위로 가져오기",
+    "th": "ย้ายไปไว้เหนือลายมือ",
+    "zhHans": "移至笔迹上方（前景层）",
+    "zhHant": "移至筆跡上方（前景層）"
+  },
   "layer_bring_forward": {
     "en": "Bring Forward",
     "ja": "前面へ",
@@ -10662,6 +10670,14 @@
     "th": "เลื่อนวัตถุที่เลือกลงหนึ่งชั้น",
     "zhHans": "将选中的物件向下移动一层",
     "zhHant": "將選取的物件向下移動一層"
+  },
+  "layer_send_below_ink": {
+    "en": "Send Below Ink (Background)",
+    "ja": "手書きインクの背面へ",
+    "ko": "필기 잉크 아래로 보내기",
+    "th": "ย้ายไปไว้ใต้ลายมือ",
+    "zhHans": "移至笔迹下方（背景层）",
+    "zhHant": "移至筆跡下方（背景層）"
   },
   "layer_ungroup": {
     "en": "Ungroup",
@@ -21095,6 +21111,22 @@
     "zhHans": "转录失败",
     "zhHant": "轉錄失敗"
   },
+  "transcribe_language_auto": {
+    "en": "Auto Detect Language",
+    "ja": "自動言語検出",
+    "ko": "언어 자동 감지",
+    "th": "ตรวจหาภาษาอัตโนมัติ",
+    "zhHans": "自动辨识语言",
+    "zhHant": "自動辨識語言"
+  },
+  "transcribe_limits_info": {
+    "en": "Speech Transcription Info",
+    "ja": "音声文字起こしの情報",
+    "ko": "음성 변환 안내",
+    "th": "ข้อมูลการแปลงเสียงเป็นข้อความ",
+    "zhHans": "语音转文字说明",
+    "zhHant": "語音轉文字說明"
+  },
   "transcribe_needs_model": {
     "en": "On-device transcription needs a model. Download it in Settings.",
     "ja": "端末内の文字起こしにはモデルが必要です。設定からダウンロードしてください。",
@@ -21110,6 +21142,30 @@
     "th": "ตรวจไม่พบเสียงพูดที่ชัดเจน",
     "zhHans": "未检测到清晰人声语音",
     "zhHant": "未偵測到清晰人聲語音"
+  },
+  "transcribe_step_decode": {
+    "en": "Decoding audio stream…",
+    "ja": "音声ストリームを解析中…",
+    "ko": "오디오 스트림 디코딩 중…",
+    "th": "กำลังถอดรหัสสัญญาณเสียง…",
+    "zhHans": "正在解析音频流…",
+    "zhHant": "正在解析音訊串流…"
+  },
+  "transcribe_step_postprocess": {
+    "en": "Formatting punctuation…",
+    "ja": "句読点と書式を整形中…",
+    "ko": "구두점 및 텍스트 서식 정리 중…",
+    "th": "กำลังจัดรูปแบบเครื่องหมายวรรคตอน…",
+    "zhHans": "正在标点断句与后处理…",
+    "zhHant": "正在標點斷句與後處理…"
+  },
+  "transcribe_step_recognize": {
+    "en": "Recognizing speech…",
+    "ja": "音声を認識中…",
+    "ko": "음성 인식 중…",
+    "th": "กำลังประมวลผลเสียงพูด…",
+    "zhHans": "正在进行神经网络辨识…",
+    "zhHant": "正在進行神經網路辨識…"
   },
   "transcribe_success": {
     "en": "Transcription complete, text box added",

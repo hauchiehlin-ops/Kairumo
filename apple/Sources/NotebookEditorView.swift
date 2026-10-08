@@ -2501,15 +2501,7 @@ public struct NotebookEditorView: View {
             }
         )
         .onAppear {
-            lasso.onDragSelection = { [self] delta in
-                if let updated = lasso.moveSelected(in: currentDrawing, by: delta) {
-                    currentDrawing = updated
-                    if let canvas = canvasView {
-                        canvas.drawing = updated
-                    }
-                }
-            }
-            lasso.proHost = { [self] in (canvasView as? AdaptiveCanvasView)?.proLayer }
+            lasso.proHost = { (canvasView as? AdaptiveCanvasView)?.proLayer }
             store.activeNotebookId = notebook.id
             // 開著的這一本走焦點通道（秒同步）與區網直連。
             sanitizeTextAttachments()
@@ -4682,10 +4674,26 @@ public struct NotebookEditorView: View {
                                 lasso.begin(at: pt)
                             },
                             onLassoMoved: { pt in
-                                lasso.extend(to: pt)
+                                if lasso.isDraggingSelection {
+                                    let lastPt = lasso.dragPoint ?? pt
+                                    let delta = CGSize(width: pt.x - lastPt.x, height: pt.y - lastPt.y)
+                                    lasso.updateDragPoint(pt)
+                                    if let updated = lasso.moveSelected(in: currentDrawing, by: delta) {
+                                        currentDrawing = updated
+                                        canvasView?.drawing = updated
+                                    }
+                                } else {
+                                    lasso.extend(to: pt)
+                                }
                             },
                             onLassoEnded: {
+                                let wasDragging = lasso.isDraggingSelection
                                 lasso.finish(in: currentDrawing)
+                                if wasDragging {
+                                    recordDrawingEdit(page: index, drawing: currentDrawing)
+                                    broadcastDrawingChange(page: index, drawing: currentDrawing)
+                                    PageThumbnailRenderer.invalidateAll()
+                                }
                             },
                             lassoPath: lasso.path.isEmpty ? lasso.committed : lasso.path,
                             isLassoCommitted: lasso.path.isEmpty
@@ -4802,18 +4810,35 @@ public struct NotebookEditorView: View {
     /// 抽成帶頁碼的方法，是為了讓連續頁面模式能對每一頁各叫一次 ——
     /// 原本這一整段寫死在畫布工作區裡、只認 `currentPageIndex`，
     /// 連續模式下就只有一頁有物件，其餘頁面是空的。
+    enum ObjectInkLayerFilter {
+        case all
+        case underInkOnly
+        case overInkOnly
+    }
+
+    private func shouldIncludeInInkLayer(id: String, filter: ObjectInkLayerFilter, underInkSet: Set<String>) -> Bool {
+        switch filter {
+        case .all: return true
+        case .underInkOnly: return underInkSet.contains(id)
+        case .overInkOnly: return !underInkSet.contains(id)
+        }
+    }
+
+    /// 某一頁的插入物件層（圖片、形狀、表格、文字、連結、3D、討論圖釘）。
     ///
-    /// **手寫模式下這一整層不攔截觸控。** 這些物件是疊在 PKCanvasView 之上的
-    /// SwiftUI 視圖，預設會吃掉觸控 —— 於是使用者拿筆想在一張圖上圈重點，
-    /// 筆畫根本到不了畫布，看起來就是「筆刷在物件上沒作用」。
+    /// 支援依筆跡上下圖層進行過濾：
+    /// - `.underInkOnly`: 移至筆跡下方的物件（置於 PKCanvasView 底層）
+    /// - `.overInkOnly`: 筆跡上方的物件（置於 PKCanvasView 頂層）
+    /// - `.all`: 完整物件層（連續頁面等情境）
     @ViewBuilder
-    private func objectLayer(forPage page: Int) -> some View {
+    private func objectLayer(forPage page: Int, filter: ObjectInkLayerFilter = .all) -> some View {
+        let underInkSet = notebook.underInkObjectIds(forPage: page)
         // 堆疊順序的索引表：一次算繪只建一次，不要每個物件各掃一遍
         // （見 `ObjectStacking.Lookup`）。
         let stacking = ObjectStacking.Lookup(order: notebook.objectOrder(forPage: page))
         ZStack(alignment: .topLeading) {
             ForEach(notebook.attachments ?? []) { item in
-                    if item.pageIndex == page {
+                    if item.pageIndex == page && shouldIncludeInInkLayer(id: item.id, filter: filter, underInkSet: underInkSet) {
                         AttachmentItemView(
                             attachment: binding(for: item.id),
                             isSelected: activeSelectedObjectId == item.id,
@@ -4841,7 +4866,7 @@ public struct NotebookEditorView: View {
 
                 // 連接線先畫 —— 畫在形狀之上的話，線會壓過方塊的邊，看起來像穿幫。
                 ForEach(notebook.connectionAttachments ?? []) { item in
-                    if item.pageIndex == page,
+                    if item.pageIndex == page && shouldIncludeInInkLayer(id: item.id, filter: filter, underInkSet: underInkSet),
                        let from = notebook.shapeAttachments?.first(where: { $0.id == item.fromShapeId }),
                        let to = notebook.shapeAttachments?.first(where: { $0.id == item.toShapeId }),
                        let geometry = ShapeGeometry.connection(item, from: from, to: to) {
@@ -4870,7 +4895,7 @@ public struct NotebookEditorView: View {
 
                 // 形狀。
                 ForEach(notebook.shapeAttachments ?? []) { item in
-                    if item.pageIndex == page {
+                    if item.pageIndex == page && shouldIncludeInInkLayer(id: item.id, filter: filter, underInkSet: underInkSet) {
                         ShapeAttachmentItemView(
                             shape: shapeBinding(for: item.id),
                             isSelected: selectedShapeIds.contains(item.id),
@@ -4927,9 +4952,9 @@ public struct NotebookEditorView: View {
                     .zIndex(9999)
                 }
 
-                // 表格。與文字方塊一樣疊在墨跡之上，手寫模式下不攔截觸控。
+                // 表格。
                 ForEach(notebook.tableAttachments ?? []) { item in
-                    if item.pageIndex == page {
+                    if item.pageIndex == page && shouldIncludeInInkLayer(id: item.id, filter: filter, underInkSet: underInkSet) {
                         TableAttachmentItemView(
                             table: tableBinding(for: item.id),
                             isSelected: activeSelectedObjectId == item.id,
@@ -4949,7 +4974,7 @@ public struct NotebookEditorView: View {
 
                 // 🌟 筆記內嵌 Word 級文字方塊（支援段落對齊、特殊符號與便利貼卡片底色）
                 ForEach(Array((notebook.textAttachments ?? []).enumerated()), id: \.element.id) { position, item in
-                    if item.pageIndex == page {
+                    if item.pageIndex == page && shouldIncludeInInkLayer(id: item.id, filter: filter, underInkSet: underInkSet) {
                         TextAttachmentItemView(
                             textItem: binding(forTextId: item.id, hint: position),
                             isEditingInline: Binding(
@@ -4995,7 +5020,7 @@ public struct NotebookEditorView: View {
 
                 // 🌟 筆記內嵌網址 Rich Link 預覽卡片（支援點擊跳轉瀏覽器與自由平移）
                 ForEach(notebook.linkAttachments ?? []) { item in
-                    if item.pageIndex == page {
+                    if item.pageIndex == page && shouldIncludeInInkLayer(id: item.id, filter: filter, underInkSet: underInkSet) {
                         LinkAttachmentItemView(
                             linkItem: binding(forLinkId: item.id),
                             isSelected: activeSelectedObjectId == item.id,
@@ -5011,7 +5036,7 @@ public struct NotebookEditorView: View {
 
                 // 🌟 頁面上的錄音卡片（可播放、可搬移、可縮放、可旋轉、可改名、音訊轉文字）
                 ForEach(notebook.audioAttachments ?? []) { item in
-                    if item.pageIndex == page {
+                    if item.pageIndex == page && shouldIncludeInInkLayer(id: item.id, filter: filter, underInkSet: underInkSet) {
                         AudioAttachmentItemView(
                             item: binding(forAudioId: item.id),
                             isSelected: activeSelectedObjectId == item.id,
@@ -5031,7 +5056,7 @@ public struct NotebookEditorView: View {
 
                 // 🌟 筆記內嵌 3D 幾何模型展示層（支援 360° 空間旋轉、9大材質 PBR 物理反射、縮放與文字標題）
                 ForEach(notebook.model3DAttachments ?? []) { item in
-                    if item.pageIndex == page {
+                    if item.pageIndex == page && shouldIncludeInInkLayer(id: item.id, filter: filter, underInkSet: underInkSet) {
                         Model3DCanvasItemView(
                             item: binding(forModel3DId: item.id),
                             isSelected: activeSelectedObjectId == item.id,
@@ -5050,7 +5075,7 @@ public struct NotebookEditorView: View {
 
                 // 🌟 筆記內嵌討論圖釘展示層（支援多方訊息留言串、已解決標記與即時推播）
                 ForEach(notebook.commentPins ?? []) { pin in
-                    if pin.pageIndex == page {
+                    if pin.pageIndex == page && filter != .underInkOnly {
                         CommentPinMarkerView(
                             pin: pin,
                             isSelected: selectedCommentPinId == pin.id,
@@ -5077,28 +5102,30 @@ public struct NotebookEditorView: View {
                 }
 
                 // 🌟 特殊樣板智慧互動元件層（核取清單 Checkbox、選項切換與進度管控）
-                ForEach(interactiveGuideCheckboxes(forPage: page)) { item in
-                    InteractiveGuideCheckboxView(
-                        isChecked: notebook.checkedGuideItems?[item.key] ?? false,
-                        size: CGSize(width: CGFloat(item.guide.w), height: CGFloat(item.guide.h)),
-                        onToggle: {
-                            toggleGuideCheckbox(key: item.key, guide: item.guide, page: page)
-                        },
-                        onStrikethroughRow: {
-                            toggleRowStrikethrough(y: CGFloat(item.guide.y), page: page)
-                        },
-                        onClearRowText: {
-                            clearRowText(y: CGFloat(item.guide.y), page: page)
-                        },
-                        onResetPage: {
-                            resetPageCheckboxes(page: page)
-                        }
-                    )
-                    .position(
-                        x: CGFloat(item.guide.x) + CGFloat(item.guide.w) / 2,
-                        y: CGFloat(item.guide.y) + CGFloat(item.guide.h) / 2
-                    )
-                    .zIndex(10)
+                if filter != .underInkOnly {
+                    ForEach(interactiveGuideCheckboxes(forPage: page)) { item in
+                        InteractiveGuideCheckboxView(
+                            isChecked: notebook.checkedGuideItems?[item.key] ?? false,
+                            size: CGSize(width: CGFloat(item.guide.w), height: CGFloat(item.guide.h)),
+                            onToggle: {
+                                toggleGuideCheckbox(key: item.key, guide: item.guide, page: page)
+                            },
+                            onStrikethroughRow: {
+                                toggleRowStrikethrough(y: CGFloat(item.guide.y), page: page)
+                            },
+                            onClearRowText: {
+                                clearRowText(y: CGFloat(item.guide.y), page: page)
+                            },
+                            onResetPage: {
+                                resetPageCheckboxes(page: page)
+                            }
+                        )
+                        .position(
+                            x: CGFloat(item.guide.x) + CGFloat(item.guide.w) / 2,
+                            y: CGFloat(item.guide.y) + CGFloat(item.guide.h) / 2
+                        )
+                        .zIndex(10)
+                    }
                 }
 
         }
@@ -5120,23 +5147,27 @@ public struct NotebookEditorView: View {
                 .allowsHitTesting(false)
                 .zIndex(0)
 
-            // 打字模式的空白處點擊：交給畫布自己的「手指／游標限定」點擊手勢
-            // （`handleDirectSingleTap` → `handleCanvasTapInTypeMode`）。
-            //
-            // 過去這裡疊了一層透明的 SwiftUI 點擊層在畫布上方，它會連 Apple Pencil
-            // 一起吃掉 —— 打字模式下拿筆寫字只會開出文字框，寫不出墨水。
-            // 融合輸入規則（`EditorCanvasInputPolicy`）要求 Pencil 在任何模式都能寫，
-            // 所以空白處必須讓觸控落到畫布：手指交給點擊手勢，Pencil 交給 PencilKit。
-
-            objectLayer(forPage: currentPageIndex)
+            // 筆跡下方層（Background / Under-ink objects）：在 CanvasRepresentable 之下，zIndex 1
+            objectLayer(forPage: currentPageIndex, filter: .underInkOnly)
                 .frame(width: PageGeometry.width, height: currentPageHeight, alignment: .topLeading)
                 .scaleEffect(canvasZoomScale, anchor: .topLeading)
                 .offset(x: -canvasContentOffset.x, y: -canvasContentOffset.y)
                 .allowsHitTesting(
                     !isInlineInkEditing
-                        && (editorMode == .type || inlineEditingTextId != nil || editingTextId != nil)
+                        && (editorMode == .type || inlineEditingTextId != nil || editingTextId != nil || activeSelectedObjectId != nil)
                 )
-                .zIndex((!isInlineInkEditing && (editorMode == .type || inlineEditingTextId != nil)) ? 3 : 1)
+                .zIndex(1)
+
+            // 筆跡上方層（Foreground / Over-ink objects）：在 CanvasRepresentable 之上，zIndex 3
+            objectLayer(forPage: currentPageIndex, filter: .overInkOnly)
+                .frame(width: PageGeometry.width, height: currentPageHeight, alignment: .topLeading)
+                .scaleEffect(canvasZoomScale, anchor: .topLeading)
+                .offset(x: -canvasContentOffset.x, y: -canvasContentOffset.y)
+                .allowsHitTesting(
+                    !isInlineInkEditing
+                        && (editorMode == .type || inlineEditingTextId != nil || editingTextId != nil || activeSelectedObjectId != nil)
+                )
+                .zIndex(3)
 
             CanvasRepresentable(
                 drawing: $currentDrawing,
@@ -5214,10 +5245,26 @@ public struct NotebookEditorView: View {
                     lasso.begin(at: pt)
                 },
                 onLassoMoved: { pt in
-                    lasso.extend(to: pt)
+                    if lasso.isDraggingSelection {
+                        let lastPt = lasso.dragPoint ?? pt
+                        let delta = CGSize(width: pt.x - lastPt.x, height: pt.y - lastPt.y)
+                        lasso.updateDragPoint(pt)
+                        if let updated = lasso.moveSelected(in: currentDrawing, by: delta) {
+                            currentDrawing = updated
+                            canvasView?.drawing = updated
+                        }
+                    } else {
+                        lasso.extend(to: pt)
+                    }
                 },
                 onLassoEnded: {
+                    let wasDragging = lasso.isDraggingSelection
                     lasso.finish(in: currentDrawing)
+                    if wasDragging {
+                        recordDrawingEdit(page: currentPageIndex, drawing: currentDrawing)
+                        broadcastDrawingChange(page: currentPageIndex, drawing: currentDrawing)
+                        PageThumbnailRenderer.invalidateAll()
+                    }
                 },
                 canvasRef: { ref in
                     // `updateUIView` 每次更新都會叫到這裡；直接寫 @State 就是在畫面更新途中改狀態
@@ -5303,6 +5350,22 @@ public struct NotebookEditorView: View {
                     )
                     .allowsHitTesting(false)
                 }
+
+                // 🌟 當套索圈選完成且有選中筆劃時，在選取範圍上方浮現動作面板與拖曳邊框提示
+                if selectedTool == .lasso && lasso.hasSelection, let rect = lasso.boundingRect {
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(Color.accentColor.opacity(0.35), style: StrokeStyle(lineWidth: 1.2, dash: [5, 4]))
+                        .frame(width: rect.width + 16, height: rect.height + 16)
+                        .position(x: rect.midX, y: rect.midY)
+                        .allowsHitTesting(false)
+
+                    lassoFloatingActionBar
+                        .position(
+                            x: min(max(rect.midX, 220), PageGeometry.width - 220),
+                            y: max(32, rect.minY - 26)
+                        )
+                        .zIndex(100)
+                }
             }
             // 從別的 App 把圖拖進來（工作項 S-68）。
             //
@@ -5321,7 +5384,7 @@ public struct NotebookEditorView: View {
                         }
                 }
             )
-            .zIndex(isCanvasInkActive ? 2 : 1)
+            .zIndex(2)
 
             modeBadge
                 .padding(.top, DS.Space.s)
@@ -8548,6 +8611,44 @@ public struct NotebookEditorView: View {
             .accessibilityLabel(localizationManager.localized("paste_strokes_hint"))
             .help(localizationManager.localized("paste_strokes_hint"))
 
+            lassoRecolorButton
+
+            Button {
+                recognizeHandwritingToTextBox()
+            } label: {
+                HStack(spacing: 4) {
+                    Image(systemName: "text.viewfinder")
+                    Text(localizationManager.localized("recognize_handwriting"))
+                }
+                .font(.caption2)
+                .foregroundColor(.primary)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(Color.secondary.opacity(0.15))
+                .cornerRadius(6)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(localizationManager.localized("recognize_handwriting"))
+            .help(localizationManager.localized("recognize_handwriting"))
+
+            Button {
+                anchorSelectedStrokesToNearestText()
+            } label: {
+                HStack(spacing: 4) {
+                    Image(systemName: "link.badge.plus")
+                    Text(localizationManager.localized("sticky_anchor_text"))
+                }
+                .font(.caption2)
+                .foregroundColor(.primary)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(Color.secondary.opacity(0.15))
+                .cornerRadius(6)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(localizationManager.localized("sticky_anchored_hint"))
+            .help(localizationManager.localized("sticky_anchored_hint"))
+
             Button {
                 deleteSelectedStrokes()
             } label: {
@@ -10673,50 +10774,57 @@ public struct NotebookEditorView: View {
         store.updateNotebook(notebook)
     }
 
-    private func isLocationInsideAnyObject(at location: CGPoint, page: Int) -> Bool {
+    private func findObjectAt(location: CGPoint, page: Int) -> (id: String, kind: String)? {
+        let order = notebook.objectOrder(forPage: page)
+        let stacking = ObjectStacking.Lookup(order: order)
+
+        var candidates: [(id: String, kind: String, z: Double, rect: CGRect)] = []
         if let items = notebook.attachments {
             for item in items where item.pageIndex == page {
-                if CGRect(x: item.x, y: item.y, width: item.width, height: item.height).insetBy(dx: -4, dy: -4).contains(location) {
-                    return true
-                }
+                let rect = CGRect(x: item.x, y: item.y, width: item.width, height: item.height).insetBy(dx: -4, dy: -4)
+                candidates.append((item.id, "image", stacking.zIndex(for: item.id, kind: .image), rect))
             }
         }
         if let items = notebook.shapeAttachments {
             for item in items where item.pageIndex == page {
-                if CGRect(x: item.x, y: item.y, width: item.width, height: item.height).insetBy(dx: -4, dy: -4).contains(location) {
-                    return true
-                }
+                let rect = CGRect(x: item.x, y: item.y, width: item.width, height: item.height).insetBy(dx: -4, dy: -4)
+                candidates.append((item.id, "shape", stacking.zIndex(for: item.id, kind: .shape), rect))
             }
         }
         if let items = notebook.tableAttachments {
             for item in items where item.pageIndex == page {
                 let layout = item.layout()
-                if CGRect(x: item.x, y: item.y, width: CGFloat(layout.width), height: CGFloat(layout.height)).insetBy(dx: -4, dy: -4).contains(location) {
-                    return true
-                }
+                let rect = CGRect(x: item.x, y: item.y, width: CGFloat(layout.width), height: CGFloat(layout.height)).insetBy(dx: -4, dy: -4)
+                candidates.append((item.id, "table", stacking.zIndex(for: item.id, kind: .table), rect))
             }
         }
         if let items = notebook.audioAttachments {
             for item in items where item.pageIndex == page {
-                if CGRect(x: item.x, y: item.y, width: item.width, height: item.height).insetBy(dx: -4, dy: -4).contains(location) {
-                    return true
-                }
+                let rect = CGRect(x: item.x, y: item.y, width: item.width, height: item.height).insetBy(dx: -4, dy: -4)
+                candidates.append((item.id, "audio", stacking.zIndex(for: item.id, kind: .audio), rect))
             }
         }
         if let items = notebook.linkAttachments {
             for item in items where item.pageIndex == page {
-                if CGRect(x: item.x, y: item.y, width: item.width, height: item.height).insetBy(dx: -4, dy: -4).contains(location) {
-                    return true
-                }
+                let rect = CGRect(x: item.x, y: item.y, width: item.width, height: item.height).insetBy(dx: -4, dy: -4)
+                candidates.append((item.id, "link", stacking.zIndex(for: item.id, kind: .link), rect))
             }
         }
         if let items = notebook.model3DAttachments {
             for item in items where item.pageIndex == page {
-                if CGRect(x: item.x, y: item.y, width: item.width, height: item.height).insetBy(dx: -4, dy: -4).contains(location) {
-                    return true
-                }
+                let rect = CGRect(x: item.x, y: item.y, width: item.width, height: item.height).insetBy(dx: -4, dy: -4)
+                candidates.append((item.id, "3d", stacking.zIndex(for: item.id, kind: .model3D), rect))
             }
         }
+        let hit = candidates.filter { $0.rect.contains(location) }.sorted(by: { $0.z > $1.z })
+        if let first = hit.first {
+            return (first.id, first.kind)
+        }
+        return nil
+    }
+
+    private func isLocationInsideAnyObject(at location: CGPoint, page: Int) -> Bool {
+        if findObjectAt(location: location, page: page) != nil { return true }
         if let items = notebook.tapeAttachments {
             for item in items where item.pageIndex == page {
                 if item.rect.insetBy(dx: -4, dy: -4).contains(location) {
@@ -10880,12 +10988,22 @@ public struct NotebookEditorView: View {
 
             // 手指輕點到文字以外的物件（圖片、形狀、表格、錄音卡…）：使用者要的是「選它」。
             // 手寫模式下物件層不吃觸控，原本這一下什麼事都沒有（還多一顆墨點），使用者得自己先去切模式 ——
-            // 那就是『點物件取不到控制權』的卡頓感。現在直接切到打字模式，物件馬上可操作。
-            if isLocationInsideAnyObject(at: location, page: targetPage) {
+            // 那就是『點物件取不到控制權』的卡頓感。現在直接切到打字模式並直接選定該物件，物件馬上可操作。
+            if let (hitId, hitKind) = findObjectAt(location: location, page: targetPage) {
                 removeTapDotStroke(near: location)
                 withAnimation(.easeInOut(duration: 0.15)) {
                     editorMode = .type
                     inlineEditingTextId = nil
+                    if hitKind == "shape" {
+                        selectedShapeIds = [hitId]
+                        activeSelectedObjectId = nil
+                    } else {
+                        selectedShapeIds = []
+                        activeSelectedObjectId = hitId
+                    }
+                    selectedConnectionId = nil
+                    selectedObjectIds = [hitId]
+                    collaborationManager.broadcastSelection(selectedId: hitId)
                 }
                 flashModeBadge()
                 #if os(iOS)
@@ -10974,9 +11092,19 @@ public struct NotebookEditorView: View {
             return
         }
 
-        // 3. 若點擊在其他畫布物件（圖片、表格、形狀、錄音卡片、3D等）上，不新增文字，讓該物件處理選取
-        if isLocationInsideAnyObject(at: location, page: targetPage) {
+        // 3. 若點擊在其他畫布物件（圖片、表格、形狀、錄音卡片、3D等）上，選取該物件並展開操作把手
+        if let (hitId, hitKind) = findObjectAt(location: location, page: targetPage) {
             inlineEditingTextId = nil
+            if hitKind == "shape" {
+                selectedShapeIds = [hitId]
+                activeSelectedObjectId = nil
+            } else {
+                selectedShapeIds = []
+                activeSelectedObjectId = hitId
+            }
+            selectedConnectionId = nil
+            selectedObjectIds = [hitId]
+            collaborationManager.broadcastSelection(selectedId: hitId)
             return
         }
 
@@ -11233,29 +11361,44 @@ public struct NotebookEditorView: View {
             lineSpacing: 0
         )
         let targetY = max(printable.minY, min(audio.y + audio.height + 16, printable.maxY - calculatedHeight))
+        let existingId = audio.transcriptTextId
+        let existingIndex = notebook.textAttachments?.firstIndex(where: { $0.id == existingId })
 
-        let transcriptBox = NoteTextAttachment(
-            id: UUID().uuidString,
-            pageIndex: audio.pageIndex,
-            text: text,
-            fontSize: baseFontSize,
-            isBold: false,
-            textColorHex: activeTextAttachment?.textColorHex ?? "#000000",
-            backgroundColorHex: "clear",
-            hasBorder: false,
-            x: startX,
-            y: targetY,
-            width: availWidth,
-            height: calculatedHeight
-        )
-
-        if notebook.textAttachments == nil {
-            notebook.textAttachments = []
-        }
-        if let idx = notebook.textAttachments?.firstIndex(where: { $0.id == transcriptBox.id }) {
-            notebook.textAttachments?[idx] = transcriptBox
+        let transcriptBox: NoteTextAttachment
+        if let idx = existingIndex, var existing = notebook.textAttachments?[idx] {
+            existing.text = text
+            existing.height = RuledWriting.boxHeight(
+                text: text,
+                width: existing.width,
+                fontSize: existing.fontSize,
+                bold: existing.isBold,
+                lineSpacing: existing.lineSpacing ?? 0
+            )
+            notebook.textAttachments?[idx] = existing
+            transcriptBox = existing
         } else {
-            notebook.textAttachments?.append(transcriptBox)
+            let newBox = NoteTextAttachment(
+                id: existingId ?? UUID().uuidString,
+                pageIndex: audio.pageIndex,
+                text: text,
+                fontSize: baseFontSize,
+                isBold: false,
+                textColorHex: activeTextAttachment?.textColorHex ?? "#000000",
+                backgroundColorHex: "clear",
+                hasBorder: false,
+                x: startX,
+                y: targetY,
+                width: availWidth,
+                height: calculatedHeight
+            )
+            if notebook.textAttachments == nil {
+                notebook.textAttachments = []
+            }
+            notebook.textAttachments?.append(newBox)
+            if let aIdx = notebook.audioAttachments?.firstIndex(where: { $0.id == audio.id }) {
+                notebook.audioAttachments?[aIdx].transcriptTextId = newBox.id
+            }
+            transcriptBox = newBox
         }
 
         var order = ObjectStacking.normalized(objects: pageStackableObjects, order: notebook.objectOrder(forPage: audio.pageIndex))
@@ -12305,15 +12448,34 @@ public struct NotebookEditorView: View {
         return nil
     }
 
-    /// 調整單一物件的層級（選單、編輯面板共用）。
+    /// 調整單一物件的層級（選單、編輯面板共用，支援移至筆跡下方/上方）。
     private func reorderObject(_ id: String, _ op: ObjectReorderOp) {
         guard let page = pageOfObject(id) else { return }
-        let order = ObjectStacking.normalized(
-            objects: stackableObjects(forPage: page),
-            order: notebook.objectOrder(forPage: page))
-        notebook.setObjectOrder(op.apply(id, to: order), forPage: page)
-        store.updateNotebook(notebook)
-        PageThumbnailRenderer.invalidateAll()
+        switch op {
+        case .sendBelowInk:
+            var current = notebook.underInkObjectIds(forPage: page)
+            if !current.contains(id) {
+                current.insert(id)
+                notebook.setUnderInkObjectIds(current, forPage: page)
+                store.updateNotebook(notebook)
+                PageThumbnailRenderer.invalidateAll()
+            }
+        case .bringAboveInk:
+            var current = notebook.underInkObjectIds(forPage: page)
+            if current.contains(id) {
+                current.remove(id)
+                notebook.setUnderInkObjectIds(current, forPage: page)
+                store.updateNotebook(notebook)
+                PageThumbnailRenderer.invalidateAll()
+            }
+        default:
+            let order = ObjectStacking.normalized(
+                objects: stackableObjects(forPage: page),
+                order: notebook.objectOrder(forPage: page))
+            notebook.setObjectOrder(op.apply(id, to: order), forPage: page)
+            store.updateNotebook(notebook)
+            PageThumbnailRenderer.invalidateAll()
+        }
     }
 
     /// 這本筆記上所有物件的 id（不含連接線）。用來偵測「新插入了什麼」。
@@ -13321,6 +13483,63 @@ struct TextAttachmentItemView: View {
                 // 原本這裡有一顆「雙向箭頭」縮放把手：它很小、會擋住文字、
                 // 又只能改寬度，使用者反映沒必要。寬度改到「文字排版」裡調整，
                 // 畫布上只保留編輯／邊框／刪除三個明確的動作。
+            }
+
+            // 🌟 頂部精準拖曳把手（膠囊造型 ≡），即使在就地打字中也能隨意拖拉換位排版
+            if isSelected || isEditingInline {
+                HStack {
+                    Spacer()
+                    HStack(spacing: 3) {
+                        Image(systemName: "line.3.horizontal")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundColor(.secondary)
+                    }
+                    .frame(width: 38, height: 16)
+                    .background(Color(uiColor: .secondarySystemBackground).opacity(0.95))
+                    .clipShape(Capsule())
+                    .overlay(Capsule().stroke(Color.secondary.opacity(0.3), lineWidth: 0.8))
+                    .shadow(color: Color.black.opacity(0.12), radius: 3, y: 1)
+                    .contentShape(Rectangle())
+                    .highPriorityGesture(
+                        DragGesture(minimumDistance: 1, coordinateSpace: .named(CanvasCoordinateSpace.name))
+                            .onChanged { value in
+                                guard lockedByPeer == nil else { return }
+                                isDragging = true
+                                var transaction = Transaction()
+                                transaction.animation = nil
+                                withTransaction(transaction) {
+                                    dragOffset = value.translation
+                                }
+                            }
+                            .onEnded { value in
+                                guard lockedByPeer == nil else { return }
+                                let oldX = textItem.x
+                                let oldY = textItem.y
+                                var transaction = Transaction()
+                                transaction.animation = nil
+                                withTransaction(transaction) {
+                                    let landed = PrintableArea.clampOrigin(
+                                        x: textItem.x + value.translation.width,
+                                        y: textItem.y + value.translation.height,
+                                        width: textItem.width, height: textItem.height)
+                                    textItem.x = landed.x
+                                    textItem.y = (snapToGrid && snapY != nil) ? snapY!(landed.y) : landed.y
+                                    dragOffset = .zero
+                                    isDragging = false
+                                }
+                                let deltaX = textItem.x - oldX
+                                let deltaY = textItem.y - oldY
+                                if deltaX != 0 || deltaY != 0 {
+                                    onMoved?(CGSize(width: deltaX, height: deltaY))
+                                }
+                                onSelect?()
+                                broadcastTextChange()
+                            }
+                    )
+                    Spacer()
+                }
+                .frame(width: displayWidth)
+                .offset(y: (isSelected && !isEditingInline) ? -42 : -24)
             }
         }
         .objectProbe("text")

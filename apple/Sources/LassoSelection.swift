@@ -50,10 +50,29 @@ final class LassoSelection: ObservableObject {
     var hasSelection: Bool { !selected.isEmpty || !proIds.isEmpty }
     var canPaste: Bool { !clipboard.isEmpty || !proClipboard.isEmpty }
 
+    var boundingRect: CGRect? {
+        guard !committed.isEmpty else { return nil }
+        var minX = committed[0].x, maxX = committed[0].x
+        var minY = committed[0].y, maxY = committed[0].y
+        for p in committed {
+            minX = min(minX, p.x)
+            maxX = max(maxX, p.x)
+            minY = min(minY, p.y)
+            maxY = max(maxY, p.y)
+        }
+        return CGRect(x: minX, y: minY, width: maxX - minX, height: maxY - minY)
+    }
+
+    var dragPoint: CGPoint? { dragLastPoint }
+
+    func updateDragPoint(_ point: CGPoint) {
+        dragLastPoint = point
+    }
+
     // MARK: - 圈選生命週期
 
     func begin(at point: CGPoint) {
-        if hasSelection && isPointInsideCommitted(point) {
+        if hasSelection && (isPointInsideCommitted(point) || boundingRect?.insetBy(dx: -12, dy: -12).contains(point) == true) {
             isDraggingSelection = true
             dragLastPoint = point
             return

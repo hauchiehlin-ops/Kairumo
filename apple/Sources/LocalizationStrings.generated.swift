@@ -10543,6 +10543,14 @@ extension LocalizationManager {
             .ko: "획 선택됨: 드래그하여 이동 또는 삭제/잘라내기/복사",
             .th: "เลือกลายเส้นแล้ว: ลากเพื่อย้าย หรือแตะลบ / ตัด / คัดลอก"
         ],
+        "layer_bring_above_ink": [
+            .zhHant: "移至筆跡上方（前景層）",
+            .en: "Bring Above Ink (Foreground)",
+            .zhHans: "移至笔迹上方（前景层）",
+            .ja: "手書きインクの前面へ",
+            .ko: "필기 잉크 위로 가져오기",
+            .th: "ย้ายไปไว้เหนือลายมือ"
+        ],
         "layer_bring_forward": [
             .zhHant: "上移一層",
             .en: "Bring Forward",
@@ -10678,6 +10686,14 @@ extension LocalizationManager {
             .ja: "選択したオブジェクトを背面へ移動",
             .ko: "선택한 개체를 한 단계 뒤로 보내기",
             .th: "เลื่อนวัตถุที่เลือกลงหนึ่งชั้น"
+        ],
+        "layer_send_below_ink": [
+            .zhHant: "移至筆跡下方（背景層）",
+            .en: "Send Below Ink (Background)",
+            .zhHans: "移至笔迹下方（背景层）",
+            .ja: "手書きインクの背面へ",
+            .ko: "필기 잉크 아래로 보내기",
+            .th: "ย้ายไปไว้ใต้ลายมือ"
         ],
         "layer_ungroup": [
             .zhHant: "解散群組",
@@ -21111,6 +21127,22 @@ extension LocalizationManager {
             .ko: "변환 실패",
             .th: "การแปลงเสียงล้มเหลว"
         ],
+        "transcribe_language_auto": [
+            .zhHant: "自動辨識語言",
+            .en: "Auto Detect Language",
+            .zhHans: "自动辨识语言",
+            .ja: "自動言語検出",
+            .ko: "언어 자동 감지",
+            .th: "ตรวจหาภาษาอัตโนมัติ"
+        ],
+        "transcribe_limits_info": [
+            .zhHant: "語音轉文字說明",
+            .en: "Speech Transcription Info",
+            .zhHans: "语音转文字说明",
+            .ja: "音声文字起こしの情報",
+            .ko: "음성 변환 안내",
+            .th: "ข้อมูลการแปลงเสียงเป็นข้อความ"
+        ],
         "transcribe_needs_model": [
             .zhHant: "端側轉錄需要先下載模型，請到設定下載。",
             .en: "On-device transcription needs a model. Download it in Settings.",
@@ -21126,6 +21158,30 @@ extension LocalizationManager {
             .ja: "明瞭な音声が検出されませんでした",
             .ko: "선명한 음성이 감지되지 않았습니다",
             .th: "ตรวจไม่พบเสียงพูดที่ชัดเจน"
+        ],
+        "transcribe_step_decode": [
+            .zhHant: "正在解析音訊串流…",
+            .en: "Decoding audio stream…",
+            .zhHans: "正在解析音频流…",
+            .ja: "音声ストリームを解析中…",
+            .ko: "오디오 스트림 디코딩 중…",
+            .th: "กำลังถอดรหัสสัญญาณเสียง…"
+        ],
+        "transcribe_step_postprocess": [
+            .zhHant: "正在標點斷句與後處理…",
+            .en: "Formatting punctuation…",
+            .zhHans: "正在标点断句与后处理…",
+            .ja: "句読点と書式を整形中…",
+            .ko: "구두점 및 텍스트 서식 정리 중…",
+            .th: "กำลังจัดรูปแบบเครื่องหมายวรรคตอน…"
+        ],
+        "transcribe_step_recognize": [
+            .zhHant: "正在進行神經網路辨識…",
+            .en: "Recognizing speech…",
+            .zhHans: "正在进行神经网络辨识…",
+            .ja: "音声を認識中…",
+            .ko: "음성 인식 중…",
+            .th: "กำลังประมวลผลเสียงพูด…"
         ],
         "transcribe_success": [
             .zhHant: "轉錄完成，已插入文字方塊",
