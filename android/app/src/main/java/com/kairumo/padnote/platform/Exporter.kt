@@ -122,6 +122,97 @@ object Exporter {
         }
     }
 
+    /**
+     * **所見即所得**的匯出（PDF／PNG）：每一頁都用編輯器畫布自己的元件算繪（見 [PageSnapshot]），
+     * 不走核心的匯出器 —— 後者的筆畫是等寬折線、也沒有形狀／圖表／連結卡片／圖片濾鏡，
+     * 匯出來的東西與畫布上看到的不一樣。
+     *
+     * - PDF：整本，每頁一張點陣圖，頁面尺寸 = 頁面點數。文字不能選取（要向量請用 `.padnote`）。
+     * - PNG：[pageIndex] 這一頁（編輯器目前停的那一頁；原本不論在哪一頁都匯出第一頁）。
+     *
+     * 算繪失敗（逾時、系統不支援）才退回核心的匯出器 —— 拿得到一份缺東西的檔案，
+     * 好過一個錯誤訊息。
+     */
+    suspend fun exportWysiwyg(
+        activity: androidx.activity.ComponentActivity,
+        session: PadnoteSession,
+        format: Format,
+        pageIndex: Int,
+        audioDirectory: File?,
+        baseName: String = "kairumo",
+        languageTag: String = "zh-Hant"
+    ): Result<File> = runCatching {
+        require(format == Format.PDF || format == Format.PNG) { "only PDF and PNG are rendered page-by-page" }
+        val stamp = System.currentTimeMillis()
+        val file = File(exportsDir(activity), "$baseName-$stamp.${format.extension}")
+        if (format == Format.PNG) {
+            val bitmap = PageSnapshot.render(activity, session, pageIndex, 2f, languageTag, audioDirectory)
+                ?: return@runCatching export(activity, session, format, languageTag = languageTag).getOrThrow()
+            FileOutputStream(file).use { bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
+            bitmap.recycle()
+            return@runCatching file
+        }
+        val ok = renderPdf(activity, session, file, audioDirectory, languageTag)
+        if (!ok) {
+            file.delete()
+            return@runCatching export(activity, session, format, languageTag = languageTag).getOrThrow()
+        }
+        file
+    }
+
+    /** 逐頁算繪、逐頁寫進 PDF（不把所有頁面的點陣圖一次留在記憶體）。任何一頁畫不出來回 `false`。 */
+    private suspend fun renderPdf(
+        activity: androidx.activity.ComponentActivity,
+        session: PadnoteSession,
+        out: File,
+        audioDirectory: File?,
+        languageTag: String
+    ): Boolean {
+        val pageCount = maxOf(1, runCatching { session.pageCount().toInt() }.getOrDefault(1))
+        val document = android.graphics.pdf.PdfDocument()
+        try {
+            for (index in 0 until pageCount) {
+                val bitmap = PageSnapshot.render(activity, session, index, 2f, languageTag, audioDirectory)
+                    ?: return false
+                // 頁面尺寸用點數（頁面座標 1 點 = PDF 1 點），圖是 2 倍：列印與放大都不糊。
+                val widthPt = (bitmap.width / 2f).toInt().coerceAtLeast(1)
+                val heightPt = (bitmap.height / 2f).toInt().coerceAtLeast(1)
+                val page = document.startPage(
+                    android.graphics.pdf.PdfDocument.PageInfo.Builder(widthPt, heightPt, index + 1).create())
+                try {
+                    page.canvas.drawBitmap(bitmap, null, android.graphics.Rect(0, 0, widthPt, heightPt), null)
+                } finally {
+                    // 畫失敗也要收頁，不然 `close()` 會再丟一個「Current page not finished」蓋掉真正的錯誤。
+                    document.finishPage(page)
+                    bitmap.recycle()
+                }
+            }
+            FileOutputStream(out).use { document.writeTo(it) }
+            return true
+        } finally {
+            document.close()
+        }
+    }
+
+    /** 列印：與匯出 PDF 同一份算繪結果（印出來就是畫布上的樣子）。 */
+    suspend fun printWysiwyg(
+        activity: androidx.activity.ComponentActivity,
+        session: PadnoteSession,
+        audioDirectory: File?,
+        languageTag: String,
+        jobName: String = "Kairumo"
+    ) {
+        val temp = File(exportsDir(activity), "print-${System.currentTimeMillis()}.pdf")
+        val bytes = if (renderPdf(activity, session, temp, audioDirectory, languageTag)) {
+            temp.readBytes()
+        } else {
+            session.printData(pageId = null)
+        }
+        temp.delete()
+        val manager = activity.getSystemService(Context.PRINT_SERVICE) as PrintManager
+        manager.print(jobName, BytesPrintAdapter(bytes, jobName), PrintAttributes.Builder().build())
+    }
+
     /** 封裝整個 .padnote 套件目錄為單一壓縮檔並回傳。 */
     fun sharePackage(context: Context, notebookDir: File, title: String): Result<File> = runCatching {
         val safeTitle = title.replace(Regex("[/\\\\:*?\"<>|]"), "_").ifBlank { "kairumo" }

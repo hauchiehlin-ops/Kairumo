@@ -947,6 +947,17 @@ impl PadnoteSession {
         Ok(())
     }
 
+    /// 這一頁所有裝置的筆畫檔裡出現過 `Add` 的筆畫 id（含已被擦掉的，小寫）。
+    pub fn added_stroke_ids(&self, page_id: String) -> Result<Vec<String>, FfiError> {
+        let page = parse_uuid(&page_id)?;
+        Ok(self
+            .lock()
+            .added_stroke_ids(page)?
+            .into_iter()
+            .map(|id| id.to_string())
+            .collect())
+    }
+
     /// 把這一頁本裝置的筆畫檔補到至少 `min_bytes` 位元組。
     ///
     /// 同步只傳「變大」的檔案：平台端重寫自己的筆畫檔之後，檔案不能比重寫前小，
@@ -3058,6 +3069,28 @@ mod tests {
 
         s.erase_stroke(page.clone(), id.clone()).unwrap();
         assert!(s.visible_stroke_details(page).unwrap().is_empty());
+    }
+
+    #[test]
+    fn added_stroke_ids_includes_erased_strokes_but_not_tombstones() {
+        let s = session("added-ids");
+        let page = s.first_page_id().unwrap();
+        let id = "0192f0aa-1111-7222-8333-aaaabbbbcccc".to_string();
+        s.add_stroke_drafted_with_id(
+            page.clone(),
+            id.clone(),
+            ToolKind::Fineliner,
+            vec![0, 0, 0, 255],
+            1.4,
+            points(),
+            0,
+            0,
+        )
+        .unwrap();
+        s.erase_stroke(page.clone(), id.clone()).unwrap();
+        s.erase_stroke(page.clone(), "0192f0aa-1111-7222-8333-000000000001".into())
+            .unwrap();
+        assert_eq!(s.added_stroke_ids(page).unwrap(), vec![id]);
     }
 
     #[test]

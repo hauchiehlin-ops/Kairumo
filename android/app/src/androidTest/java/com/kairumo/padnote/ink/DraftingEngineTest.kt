@@ -166,20 +166,22 @@ class DraftingEngineTest {
     }
 
     @Test
-    fun reassignAndErasingLeaveLockedLayersAlone() {
+    fun erasingLeavesLockedLayersAloneButReassigningCanMoveTheirLines() {
         val engine = InkEngine().apply { layer = 3 }
         stroke(engine, 20f to 100f, 220f to 100f)
         DraftingState.setLocked(3, true)
         engine.layer = 0
-        engine.reassignTarget = 1
-        engine.onMotionEvent(touch(MotionEvent.ACTION_DOWN, 100f, 100f, 5_000), 1f)
-        assertEquals("鎖定的圖層不能被改", 3, engine.strokes[0].layer)
-        engine.reassignTarget = null
+        // 鎖定只擋「擦」與「畫」。
         engine.isErasing = true
         engine.baseWidth = 20f
         engine.onMotionEvent(touch(MotionEvent.ACTION_DOWN, 100f, 100f, 6_000), 1f)
         engine.onMotionEvent(touch(MotionEvent.ACTION_MOVE, 110f, 100f, 6_010), 1f)
         assertEquals("鎖定的圖層擦不到", 1, engine.strokes.size)
+        // 改圖層本身就是搬動：使用者要把線搬出鎖定的圖層，所以不受鎖定限制。
+        engine.isErasing = false
+        engine.reassignTarget = 1
+        engine.onMotionEvent(touch(MotionEvent.ACTION_DOWN, 100f, 100f, 5_000), 1f)
+        assertEquals("鎖定圖層裡的線也要能搬到別的圖層", 1, engine.strokes[0].layer)
     }
 
     @Test

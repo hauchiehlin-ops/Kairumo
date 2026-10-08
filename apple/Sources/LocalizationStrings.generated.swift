@@ -8311,6 +8311,14 @@ extension LocalizationManager {
             .ko: "내보내기 및 인쇄",
             .th: "ส่งออกและพิมพ์"
         ],
+        "export_rendering": [
+            .zhHant: "正在算繪頁面…",
+            .en: "Rendering pages…",
+            .zhHans: "正在渲染页面…",
+            .ja: "ページを描画中…",
+            .ko: "페이지 렌더링 중…",
+            .th: "กำลังเรนเดอร์หน้า…"
+        ],
         "export_save_as": [
             .zhHant: "儲存到…",
             .en: "Save to Files…",
@@ -18782,6 +18790,62 @@ extension LocalizationManager {
             .ja: "このフォルダは iCloud Drive で同期されます",
             .ko: "이 폴더는 iCloud Drive로 동기화됩니다",
             .th: "โฟลเดอร์นี้ซิงก์ผ่าน iCloud Drive"
+        ],
+        "storage_ink_clear": [
+            .zhHant: "清除擦除記錄…",
+            .en: "Clear erase records…",
+            .zhHans: "清除擦除记录…",
+            .ja: "消去の記録をクリア…",
+            .ko: "지우기 기록 삭제…",
+            .th: "ล้างบันทึกการลบ…"
+        ],
+        "storage_ink_clear_action": [
+            .zhHant: "清除",
+            .en: "Clear",
+            .zhHans: "清除",
+            .ja: "クリア",
+            .ko: "삭제",
+            .th: "ล้าง"
+        ],
+        "storage_ink_clear_confirm": [
+            .zhHant: "這會清掉「這台擦掉了別台筆畫」的所有記錄。之後同步時，別台已被擦掉的筆畫可能會重新出現。平常不需要這麼做，系統會自動整理。",
+            .en: "This clears every record of other devices' strokes erased on this device. Strokes erased earlier may reappear after the next sync. You normally don't need this — records are tidied automatically.",
+            .zhHans: "这会清掉“这台擦掉了别台笔画”的所有记录。之后同步时，别台已被擦掉的笔画可能会重新出现。平常不需要这么做，系统会自动整理。",
+            .ja: "このデバイスで消した他デバイスのストロークの記録をすべて消去します。次回の同期で、消したストロークが再び現れることがあります。通常は不要です（自動で整理されます）。",
+            .ko: "이 기기에서 지운 다른 기기 획의 모든 기록을 삭제합니다. 다음 동기화 때 지웠던 획이 다시 나타날 수 있습니다. 평소에는 필요 없으며 자동으로 정리됩니다.",
+            .th: "การล้างนี้จะลบบันทึกทั้งหมดของเส้นจากอุปกรณ์อื่นที่ลบบนเครื่องนี้ เส้นที่ลบไปแล้วอาจกลับมาหลังการซิงก์ครั้งถัดไป ปกติไม่จำเป็นต้องทำ ระบบจัดระเบียบให้อัตโนมัติ"
+        ],
+        "storage_ink_cleared": [
+            .zhHant: "已清除，釋出 %@",
+            .en: "Cleared, freed %@",
+            .zhHans: "已清除，释放 %@",
+            .ja: "クリアしました（%@ 解放）",
+            .ko: "삭제했습니다(%@ 확보)",
+            .th: "ล้างแล้ว คืนพื้นที่ %@"
+        ],
+        "storage_ink_compact": [
+            .zhHant: "整理同步記錄",
+            .en: "Tidy sync records",
+            .zhHans: "整理同步记录",
+            .ja: "同期の記録を整理",
+            .ko: "동기화 기록 정리",
+            .th: "จัดระเบียบบันทึกการซิงก์"
+        ],
+        "storage_ink_compacted": [
+            .zhHant: "已整理，釋出 %@",
+            .en: "Tidied up, freed %@",
+            .zhHans: "已整理，释放 %@",
+            .ja: "整理しました（%@ 解放）",
+            .ko: "정리했습니다(%@ 확보)",
+            .th: "จัดระเบียบแล้ว คืนพื้นที่ %@"
+        ],
+        "storage_ink_ledger": [
+            .zhHant: "同步記錄（擦除）",
+            .en: "Sync records (erasures)",
+            .zhHans: "同步记录（擦除）",
+            .ja: "同期の記録（消去）",
+            .ko: "동기화 기록(지우기)",
+            .th: "บันทึกการซิงก์ (การลบ)"
         ],
         "storage_library": [
             .zhHant: "筆記與錄音",

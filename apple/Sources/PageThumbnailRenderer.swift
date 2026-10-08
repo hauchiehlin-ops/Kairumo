@@ -73,10 +73,12 @@ public enum PageThumbnailRenderer {
         drawing: PKDrawing,
         store: NotebookStore,
         canvasWidth: CGFloat,
-        scale: CGFloat = 0.4
+        scale: CGFloat = 0.4,
+        inkOnTop: Bool = true
     ) -> UIImage {
         compose(notebook: notebook, pageIndex: pageIndex, drawing: drawing, store: store,
-                canvasWidth: canvasWidth, scale: scale, cropToPreviewRatio: true, useCache: true)
+                canvasWidth: canvasWidth, scale: scale, cropToPreviewRatio: true, useCache: true,
+                inkOnTop: inkOnTop)
     }
 
     /// 整頁算繪（不裁切、不取快取），給匯出 PDF / 圖片與列印用。
@@ -92,11 +94,12 @@ public enum PageThumbnailRenderer {
         drawing: PKDrawing,
         store: NotebookStore,
         canvasWidth: CGFloat,
-        scale: CGFloat = 2.0
+        scale: CGFloat = 2.0,
+        inkOnTop: Bool = true
     ) -> UIImage {
         compose(notebook: notebook, pageIndex: pageIndex, drawing: drawing, store: store,
                 canvasWidth: canvasWidth, scale: scale, cropToPreviewRatio: false,
-                useCache: false, quality: .export)
+                useCache: false, quality: .export, inkOnTop: inkOnTop)
     }
 
     @MainActor
@@ -121,7 +124,8 @@ public enum PageThumbnailRenderer {
         scale: CGFloat,
         cropToPreviewRatio: Bool,
         useCache: Bool,
-        quality: Quality = .preview
+        quality: Quality = .preview,
+        inkOnTop: Bool = true
     ) -> UIImage {
         // 匯出與縮圖一律以**頁面**為準，不是以當下的畫布寬度為準。
         // 以畫布寬度取圖的話，同一則筆記在 Mac 與 iPhone 上匯出的結果不一樣 ——
@@ -134,7 +138,8 @@ public enum PageThumbnailRenderer {
         let proStamp = ProInkStore.modified(in: store.drawingsDirectory, notebookId: notebook.id, page: pageIndex)?
             .timeIntervalSince1970 ?? 0
         let key = (cacheKey(notebook: notebook, pageIndex: pageIndex, drawing: drawing, canvasWidth: width) as String
-            + "|\(pro.count)|\(proStamp)|\(DraftingState.shared.hiddenStamp(notebookId: notebook.id))") as NSString
+            + "|\(pro.count)|\(proStamp)|\(DraftingState.shared.hiddenStamp(notebookId: notebook.id))"
+            + "|\(inkOnTop ? 1 : 0)|\(notebook.objectOrder(forPage: pageIndex)?.joined(separator: ",").hashValue ?? 0)") as NSString
         if useCache, let cached = cache.object(forKey: key) { return cached }
 
         let pageHeight = PageGeometry.height
@@ -147,7 +152,13 @@ public enum PageThumbnailRenderer {
         format.scale = scale
         format.opaque = true
 
+        // 匯出的紙是白的：不論目前是不是深色模式。畫布在深色模式下把近黑墨水提亮（見 `ProInkRenderer.displayColor`），
+        // 那是給深色底看的 —— 白紙上要用原色。縮圖跟著目前的外觀。
+        let traits = quality == .export
+            ? UITraitCollection(userInterfaceStyle: .light) : UITraitCollection.current
+
         let image = UIGraphicsImageRenderer(size: pageRect.size, format: format).image { ctx in
+          traits.performAsCurrent {
             UIColor.systemBackground.setFill()
             ctx.fill(pageRect)
 
@@ -161,56 +172,85 @@ public enum PageThumbnailRenderer {
                 size: fullPageRect.size
             )
 
-            // 疊放順序刻意對齊畫布：手繪在最底，圖釘在最上。
-            drawing.image(from: fullPageRect, scale: scale)
-                .draw(in: fullPageRect)
-
-            // 專業筆刷與製圖線：依圖層由下往上，隱藏的圖層不畫（匯出的 PDF 與畫面一致）。
-            for stroke in pro {
-                guard let cached = ProInkRenderer.cache(for: stroke) else { continue }
-                ctx.cgContext.saveGState()
-                ProInkRenderer.draw(cached, toolName: stroke.tool,
-                    color: ProInkRenderer.displayColor(stroke.colorRGBA, dark: UITraitCollection.current.userInterfaceStyle == .dark),
-                                    in: ctx.cgContext, clip: fullPageRect)
-                ctx.cgContext.restoreGState()
+            // 墨跡：PencilKit 手繪，再疊專業筆刷與製圖線（依圖層由下往上，隱藏的圖層不畫）。
+            let drawInk = {
+                drawing.image(from: fullPageRect, scale: scale)
+                    .draw(in: fullPageRect)
+                for stroke in pro {
+                    guard let cached = ProInkRenderer.cache(for: stroke) else { continue }
+                    ctx.cgContext.saveGState()
+                    ProInkRenderer.draw(cached, toolName: stroke.tool,
+                        color: ProInkRenderer.displayColor(
+                            stroke.colorRGBA, dark: UITraitCollection.current.userInterfaceStyle == .dark),
+                                        in: ctx.cgContext, clip: fullPageRect)
+                    ctx.cgContext.restoreGState()
+                }
+            }
+            let drawTapes = {
+                for tape in notebook.tapeAttachments ?? [] where tape.pageIndex == pageIndex {
+                    drawTape(tape)
+                }
             }
 
-            for item in notebook.attachments ?? [] where item.pageIndex == pageIndex {
-                drawImage(item, store: store, ctx: ctx)
+            // 物件：照畫布的堆疊順序（`objectOrder`，沒排過的照型別預設層級），不是寫死的型別順序。
+            // 原本固定「圖片 → 形狀 → 表格 → 文字…」，使用者在圖層面板把文字拉到圖片下面，匯出卻還是在上面。
+            let stacking = ObjectStacking.Lookup(order: notebook.objectOrder(forPage: pageIndex))
+            var layers: [(z: Double, draw: () -> Void)] = []
+            func add(_ id: String, _ kind: StackableObject.Kind, _ draw: @escaping () -> Void) {
+                layers.append((stacking.zIndex(for: id, kind: kind), draw))
             }
-            // 形狀與連接線在圖片之上、表格之下 —— 與畫布的疊放順序一致
-            // （見 `StackableObject.Kind.defaultLayer`）。
-            //
-            // 這三種型別原本**完全沒有畫**：側邊欄的縮圖與匯出的圖片裡看不到
-            // 表格與流程圖，而畫布上看得到。使用者看到的是「預覽跟畫布不一樣」，
-            // 而且會以為自己的內容掉了。
             let pageShapes = (notebook.shapeAttachments ?? []).filter { $0.pageIndex == pageIndex }
-            for item in pageShapes {
-                drawShape(item, ctx: ctx)
+            for item in notebook.attachments ?? [] where item.pageIndex == pageIndex {
+                add(item.id, .image) { drawImage(item, store: store, ctx: ctx) }
             }
+            // 連接線畫在它連著的兩個形狀的下面（與畫布一致）。
             for item in notebook.connectionAttachments ?? [] where item.pageIndex == pageIndex {
-                drawConnection(item, shapes: pageShapes, ctx: ctx)
+                guard let from = pageShapes.first(where: { $0.id == item.fromShapeId }),
+                      let to = pageShapes.first(where: { $0.id == item.toShapeId }) else {
+                    layers.append((Double.greatestFiniteMagnitude, { drawConnection(item, shapes: pageShapes, ctx: ctx) }))
+                    continue
+                }
+                let z = min(stacking.zIndex(for: from.id, kind: .shape), stacking.zIndex(for: to.id, kind: .shape)) - 0.1
+                layers.append((z, { drawConnection(item, shapes: pageShapes, ctx: ctx) }))
             }
+            for item in pageShapes { add(item.id, .shape) { drawShape(item, ctx: ctx) } }
             for item in notebook.tableAttachments ?? [] where item.pageIndex == pageIndex {
-                drawTable(item, ctx: ctx)
+                add(item.id, .table) { drawTable(item, ctx: ctx) }
             }
             for item in notebook.textAttachments ?? [] where item.pageIndex == pageIndex {
-                drawText(item, ctx: ctx)
+                add(item.id, .text) { drawText(item, ctx: ctx) }
             }
             for item in notebook.linkAttachments ?? [] where item.pageIndex == pageIndex {
-                drawLink(item)
-            }
-            for item in notebook.model3DAttachments ?? [] where item.pageIndex == pageIndex {
-                drawModel3D(item, quality: quality, scale: scale)
+                add(item.id, .link) { drawLink(item) }
             }
             for item in notebook.audioAttachments ?? [] where item.pageIndex == pageIndex {
-                drawAudio(item)
+                add(item.id, .audio) { drawAudio(item) }
+            }
+            for item in notebook.model3DAttachments ?? [] where item.pageIndex == pageIndex {
+                add(item.id, .model3D) { drawModel3D(item, quality: quality, scale: scale) }
             }
             for pin in notebook.commentPins ?? [] where pin.pageIndex == pageIndex {
-                drawPin(pin)
+                add(pin.id, .pin) { drawPin(pin) }
             }
-            for tape in notebook.tapeAttachments ?? [] where tape.pageIndex == pageIndex {
-                drawTape(tape)
+            // 穩定排序：同一層級照加入順序（`sorted` 不保證穩定，所以帶上序號）。
+            let drawObjects = {
+                for entry in layers.enumerated().sorted(by: {
+                    $0.element.z != $1.element.z ? $0.element.z < $1.element.z : $0.offset < $1.offset
+                }) {
+                    entry.element.draw()
+                }
+            }
+
+            // 墨跡與物件誰在上面，跟著畫布：手寫模式墨跡在物件之上（在圖上圈重點），打字模式物件在墨跡之上。
+            // 遮蔽膠帶在兩種模式下都在墨跡之上（畫布 z 2.5）。
+            if inkOnTop {
+                drawObjects()
+                drawInk()
+                drawTapes()
+            } else {
+                drawInk()
+                drawTapes()
+                drawObjects()
             }
 
             // 有被裁掉的內容時，底部畫一道漸層，讓使用者知道這不是整頁。
@@ -239,6 +279,7 @@ public enum PageThumbnailRenderer {
                     ctx.cgContext.restoreGState()
                 }
             }
+          }
         }
 
         if useCache { cache.setObject(image, forKey: key) }
@@ -376,10 +417,24 @@ public enum PageThumbnailRenderer {
         }
 
         let cg = ctx.cgContext
+        // 畫布上的濾鏡、材質與陰影（見 `ImageEffects`）。原本匯出一律畫原圖。
+        let shown = ImageEffects.apply(filter: item.filterStyle, material: item.materialType, to: image)
         withRotation(item, in: rect) {
+            if item.hasShadow {
+                // 陰影要畫在裁切之外，不然會被一起裁掉。
+                cg.saveGState()
+                cg.setShadow(offset: CGSize(width: 2, height: 4), blur: 8,
+                             color: UIColor.black.withAlphaComponent(0.18).cgColor)
+                UIColor.white.setFill()
+                UIBezierPath(roundedRect: rect, cornerRadius: item.cornerRadius).fill()
+                cg.restoreGState()
+            }
             cg.saveGState()
             UIBezierPath(roundedRect: rect, cornerRadius: item.cornerRadius).addClip()
-            image.draw(in: rect)
+            shown.draw(in: rect)
+            if let material = item.materialType {
+                ImageEffects.drawOverlay(ImageEffects.overlay(for: material), in: rect, context: cg)
+            }
             cg.restoreGState()
             strokeFrame(item, in: rect, defaults: .image)
         }

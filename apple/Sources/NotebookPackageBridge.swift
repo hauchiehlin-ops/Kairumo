@@ -179,34 +179,18 @@ enum NotebookPackageBridge {
                         summary.strokeCount += 1
                     }
                 }
-                // 墓碑：被擦掉、搬動或改了圖層的筆畫。自己的筆畫連 `Add` 一起寫 ——
-                // 同步只傳**變大**的檔案，只寫 `Remove` 的話檔案會比雲端那份小，墓碑永遠傳不出去。
+                // 墓碑：只有**別台的**筆畫需要（那一筆的 `Add` 在別台的檔案裡，我們改不了，只能追加 `Remove`）。
+                // 自己擦掉／搬動／改了圖層的筆畫**不必寫任何東西**：自己的筆畫檔是整個被別台換掉的，
+                // 新檔裡沒有那一筆就是沒有了 —— 只要新檔比舊檔大（見下面的補位），別台就會下載。
+                // （原本連 `Add` 帶 `Remove` 永遠留著，帳本只增不減；補位讓那些資料不再有存在的理由。）
                 if index < proLedgers.count {
                     let ledger = proLedgers[index]
-                    for retired in ledger.retired {
-                        if let old = retired.stroke, let kind = ProInk.kind(named: old.tool) {
-                            var again = old
-                            again.coreId = retired.coreId
-                            try addPro(again, kind: kind, to: session, page: pageId)
-                        }
+                    for retired in ledger.retired where retired.stroke == nil {
                         try session.eraseStroke(pageId: pageId, strokeId: retired.coreId)
                         for extra in retired.extraIds ?? [] {
                             try session.eraseStroke(pageId: pageId, strokeId: extra)
                         }
                     }
-                    // 擦掉的自己的 PencilKit 筆畫：連 Add 一起寫（檔案才不會變小），再寫 Remove。
-                    for gone in ledger.pkRetiredOwn {
-                        guard let drawing = try? PKDrawing(data: gone.drawing),
-                              let draft = InkInterop.drafts(from: drawing).first,
-                              UUID(uuidString: gone.id) != nil
-                        else { continue }
-                        try session.addStrokeDraftedWithId(
-                            pageId: pageId, strokeId: gone.id, tool: draft.tool,
-                            colorRgba: draft.colorRgba, baseWidth: draft.baseWidth,
-                            points: draft.points, layer: 0, lineType: 0)
-                        try session.eraseStroke(pageId: pageId, strokeId: gone.id)
-                    }
-                    // 這台擦掉的別台筆畫（PencilKit、升級前的專業筆畫）：只寫墓碑。
                     for id in ledger.foreignTombstones {
                         try session.eraseStroke(pageId: pageId, strokeId: id)
                     }
@@ -588,7 +572,7 @@ enum NotebookPackageBridge {
         proStrokes: [[ProStroke]] = [],
         proLedgers: [ProInkLedger] = [],
         pkStrokeIds: [[String]] = [],
-        growInkFiles: Bool = false,
+        growInkFiles: [Bool] = [],
         recordingTitles: [String: String] = [:]
     ) throws -> ExportSummary {
         let fm = FileManager.default
@@ -621,15 +605,15 @@ enum NotebookPackageBridge {
         }
 
         // 這台每一頁現有的筆畫檔大小。重寫之後不能比它小 —— 同步只傳「變大」的檔案，變小或不變的改動
-        // （擦掉、換身分）別台永遠收不到。`growInkFiles`：升級後第一次匯出，內容的身分整批換了、大小卻可能
-        // 一樣，要至少多一點才會被傳出去、把雲端舊身分的檔案換掉。
+        // （擦掉、換身分）別台永遠收不到。`growInkFiles`（每頁一個）：這一頁有改動（擦掉、搬動、換身分、新墓碑）而大小可能一樣，
+        // 要至少多一點才會被傳出去、把雲端舊的檔案換掉。
         let ownSuffix = deviceSuffix(deviceId)
-        let minInkBytes: [UInt64] = (pageIds ?? []).map { (pageId: String) -> UInt64 in
+        let minInkBytes: [UInt64] = (pageIds ?? []).enumerated().map { (index: Int, pageId: String) -> UInt64 in
             let path = destination.appending(path: "ink/\(pageId)\(ownSuffix).strokes").path
             let attributes = try? fm.attributesOfItem(atPath: path)
             let size = (attributes?[.size] as? NSNumber)?.uint64Value ?? 0
             guard size > 0 else { return 0 }
-            return size + (growInkFiles ? 1 : 0)
+            return size + (index < growInkFiles.count && growInkFiles[index] ? 1 : 0)
         }
 
         let summary = try export(

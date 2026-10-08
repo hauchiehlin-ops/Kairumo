@@ -37,31 +37,23 @@ final class InkSyncLedgerTests: XCTestCase {
         XCTAssertNotNil(UUID(uuidString: first.ids[0]))
     }
 
-    func testErasingAnOwnStrokeRetiresItsIdAndRedrawingItUsesANewOne() {
+    func testErasingAnOwnStrokeAsksForGrowthAndKeepsTheSurvivorsIds() {
+        // 自己擦掉的筆畫不必寫墓碑（自己的筆畫檔整個被換掉），但檔案要變大才傳得出去。
         let both = PKDrawing(strokes: [stroke(at: 10), stroke(at: 100)])
         let before = PKInkSync.plan(
             ledger: ProInkLedger(), ownNow: both, prevOwn: nil, current: both, others: PKDrawing(),
             resolveForeign: noForeign)
-        // 擦掉第二筆。
+        XCTAssertFalse(before.grow, "沒擦東西不必變大")
         let one = PKDrawing(strokes: [both.strokes[0]])
-        var ledger = ProInkLedger()
         let erased = PKInkSync.plan(
-            ledger: ledger, ownNow: one, prevOwn: both, current: one, others: PKDrawing(),
+            ledger: ProInkLedger(), ownNow: one, prevOwn: both, current: one, others: PKDrawing(),
             resolveForeign: noForeign)
-        XCTAssertEqual(erased.pkRetiredOwn.map(\.id), [before.ids[1]], "擦掉的那一筆要寫墓碑，用的是它當初匯出的身分")
-        XCTAssertEqual(erased.ids, [before.ids[0]])
-
-        // 墓碑上傳之後又把同一條線畫回來（復原）：身分必須換新，已寫出的墓碑撤不掉。
-        ledger.pkRetiredOwn = erased.pkRetiredOwn
-        ledger.pkGen = erased.pkGen
-        let redrawn = PKInkSync.plan(
-            ledger: ledger, ownNow: both, prevOwn: one, current: both, others: PKDrawing(),
-            resolveForeign: noForeign)
-        XCTAssertNotEqual(redrawn.ids[1], before.ids[1])
-        XCTAssertEqual(redrawn.ids[0], before.ids[0], "沒動過的那一筆身分不變")
+        XCTAssertTrue(erased.grow)
+        XCTAssertEqual(erased.ids, [before.ids[0]], "沒動過的那一筆身分不變")
+        XCTAssertTrue(erased.foreignTombstones.isEmpty)
     }
 
-    func testIdenticalStrokesAreRetiredFromTheEnd() {
+    func testIdenticalStrokesKeepTheSurvivorsIdWhenOneIsErased() {
         let twin = stroke(at: 10)
         let two = PKDrawing(strokes: [twin, twin])
         let ids = PKInkSync.plan(
@@ -72,8 +64,24 @@ final class InkSyncLedgerTests: XCTestCase {
         let plan = PKInkSync.plan(
             ledger: ProInkLedger(), ownNow: one, prevOwn: two, current: one, others: PKDrawing(),
             resolveForeign: noForeign)
-        XCTAssertEqual(plan.ids, [ids[0]], "留下來的那一筆身分不能變，不然會被墓碑誤殺")
-        XCTAssertEqual(plan.pkRetiredOwn.map(\.id), [ids[1]])
+        XCTAssertEqual(plan.ids, [ids[0]], "留下來的那一筆身分不能變")
+        XCTAssertTrue(plan.grow)
+    }
+
+    func testTombstonesForStrokesThatNoLongerExistAnywhereAreDropped() {
+        // 自動清理：墓碑指向的 id 在套件裡已經沒有任何 Add（原作者重寫了檔案），沒有東西可擦。
+        var ledger = ProInkLedger()
+        ledger.foreignTombstones = ["aaaaaaaa-0000-4000-8000-000000000001", "aaaaaaaa-0000-4000-8000-000000000002"]
+        let empty = PKDrawing()
+        let plan = PKInkSync.plan(
+            ledger: ledger, ownNow: empty, prevOwn: empty, current: empty, others: empty,
+            addedIds: ["aaaaaaaa-0000-4000-8000-000000000002"], resolveForeign: noForeign)
+        XCTAssertEqual(plan.foreignTombstones, ["aaaaaaaa-0000-4000-8000-000000000002"])
+        // 讀不到套件時不清理（寧可多留）。
+        let keep = PKInkSync.plan(
+            ledger: ledger, ownNow: empty, prevOwn: empty, current: empty, others: empty,
+            addedIds: nil, resolveForeign: noForeign)
+        XCTAssertEqual(keep.foreignTombstones.count, 2)
     }
 
     func testWithoutAPreviousSnapshotNothingIsInferredAsErased() {
@@ -82,7 +90,7 @@ final class InkSyncLedgerTests: XCTestCase {
         let plan = PKInkSync.plan(
             ledger: ProInkLedger(), ownNow: a, prevOwn: nil, current: a, others: PKDrawing(),
             resolveForeign: noForeign)
-        XCTAssertTrue(plan.pkRetiredOwn.isEmpty)
+        XCTAssertFalse(plan.grow)
         XCTAssertTrue(plan.foreignTombstones.isEmpty)
     }
 
@@ -138,9 +146,71 @@ final class InkSyncLedgerTests: XCTestCase {
         // 升級後第一次匯出：內容身分整批換了，大小要「至少多一點」才會被傳出去。
         let sizeNow = inkBytes()
         try NotebookPackageBridge.exportPreservingOtherDevices(
-            document: doc, drawings: [small], to: package, deviceId: device, growInkFiles: true)
+            document: doc, drawings: [small], to: package, deviceId: device, growInkFiles: [true])
         XCTAssertGreaterThan(inkBytes(), sizeNow)
         let imported = try NotebookPackageBridge.importDocument(fromPackageAt: package, deviceId: 0x0B0B)
         XCTAssertEqual(imported.drawings.first?.strokes.count, 1, "補位不能影響內容")
+    }
+
+    // MARK: 清理
+
+    func testCompactDropsLegacyRetiredStrokeDataAndKeepsForeignTombstones() throws {
+        let dir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("kairumo-janitor-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let big = ProStroke(
+            tool: "fineliner", colorRGBA: [0, 0, 0, 255], baseWidth: 2,
+            points: (0 ..< 500).map { ProPoint(x: Float($0), y: 80, pressure: 0.5, tilt: 0, azimuth: 0, dtUs: 8_000) })
+        ProInkStore.updateLedger(in: dir, notebookId: "nb", page: 0) { ledger in
+            ledger.schema = 2
+            ledger.retired = [
+                .init(coreId: "own-done", stroke: big, exported: true),
+                .init(coreId: "own-pending", stroke: big, exported: false),
+                .init(coreId: "foreign", stroke: nil, exported: true),
+            ]
+            ledger.foreignTombstones = ["t1"]
+            ledger.pkRetiredOwn = [.init(id: "x", drawing: Data(count: 4096))]
+            ledger.pkGen = ["k#0": 3]
+        }
+        let file = dir.appending(path: "nb_p0.proink-ledger.json")
+        func bytes() -> Int {
+            ((try? FileManager.default.attributesOfItem(atPath: file.path)[.size]) as? NSNumber)?.intValue ?? 0
+        }
+        let before = bytes()
+        let report = InkLedgerJanitor.compact(drawingsDirectory: dir)
+        let after = bytes()
+        XCTAssertLessThan(after, before)
+        XCTAssertEqual(report.bytesFreed, Int64(before - after))
+        let ledger = ProInkStore.loadLedger(in: dir, notebookId: "nb", page: 0)
+        XCTAssertEqual(Set(ledger.retired.map(\.coreId)), ["own-pending", "foreign"],
+                       "已匯出的自己的退休記錄丟掉；還沒匯出的（要讓檔案變大）與別台的墓碑留著")
+        XCTAssertEqual(ledger.foreignTombstones, ["t1"])
+        XCTAssertTrue(ledger.pkRetiredOwn.isEmpty)
+        XCTAssertTrue(ledger.pkGen.isEmpty)
+    }
+
+    func testClearEraseHistoryRemovesEveryTombstoneAndFingerprintList() throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("kairumo-janitor2-\(UUID().uuidString)", isDirectory: true)
+        let drawings = root.appendingPathComponent("D"), baseline = root.appendingPathComponent("B")
+        try FileManager.default.createDirectory(at: drawings, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: baseline, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        ProInkStore.updateLedger(in: drawings, notebookId: "nb", page: 0) { ledger in
+            ledger.schema = 2
+            ledger.retired = [.init(coreId: "foreign", stroke: nil, exported: true)]
+            ledger.foreignTombstones = ["t1"]
+        }
+        ProInkStore.saveSuppressed(["k"], in: drawings, notebookId: "nb", page: 0)
+        ErasedInkLedger.save(["e"], in: baseline, notebookId: "nb", page: 0)
+        XCTAssertGreaterThan(InkLedgerJanitor.usage(drawingsDirectory: drawings, baselineDirectory: baseline), 0)
+        InkLedgerJanitor.clearEraseHistory(drawingsDirectory: drawings, baselineDirectory: baseline)
+        let ledger = ProInkStore.loadLedger(in: drawings, notebookId: "nb", page: 0)
+        XCTAssertTrue(ledger.foreignTombstones.isEmpty)
+        XCTAssertTrue(ledger.retired.isEmpty)
+        XCTAssertEqual(ledger.schema, 2, "帳本版本不能被清掉，否則整本筆記會被當成升級前再重寫一次")
+        XCTAssertTrue(ProInkStore.loadSuppressed(in: drawings, notebookId: "nb", page: 0).isEmpty)
+        XCTAssertTrue(ErasedInkLedger.load(in: baseline, notebookId: "nb", page: 0).isEmpty)
     }
 }

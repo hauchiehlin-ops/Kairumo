@@ -300,21 +300,22 @@ final class ProInkTests: XCTestCase {
         XCTAssertTrue(imported.removedProStrokeIds.first?.isEmpty == true)
     }
 
-    func testAnErasedOwnStrokeIsWrittenWithItsAddSoTheStrokeFileOnlyGrows() throws {
-        // 同步只傳「變大」的筆畫檔。擦掉自己的筆畫若只是不寫它，檔案變小、墓碑永遠傳不出去。
+    func testErasingAnOwnStrokeStillMakesTheStrokeFileGrow() throws {
+        // 同步只傳「變大」的筆畫檔。自己擦掉的筆畫不寫墓碑（整個檔案被換掉），但檔案必須比舊的大。
         let doc = NotebookDocument(title: "G", pageCount: 1)
-        let mine = stroke("fineliner")
-        let before = workDir.appendingPathComponent("grow-before.padnote")
+        let device = deviceA
+        let mine = stroke("fineliner"), other = stroke("fineliner", x: 220)
+        let package = workDir.appendingPathComponent("grow.padnote")
         try NotebookPackageBridge.export(
-            document: doc, drawings: [PKDrawing()], to: before, deviceId: deviceA, proStrokes: [[mine]])
-        let after = workDir.appendingPathComponent("grow-after.padnote")
-        let ledger = ProInkLedger(retired: [.init(coreId: mine.packageId, stroke: mine, exported: false)])
-        try NotebookPackageBridge.export(
-            document: doc, drawings: [PKDrawing()], to: after, deviceId: deviceA,
-            proStrokes: [[]], proLedgers: [ledger])
-        XCTAssertGreaterThan(inkBytes(after), inkBytes(before))
-        let imported = try NotebookPackageBridge.importDocument(fromPackageAt: after, deviceId: deviceB)
-        XCTAssertTrue(imported.proStrokes.first?.isEmpty == true, "寫了墓碑，這一筆在別台看不到")
+            document: doc, drawings: [PKDrawing()], to: package, deviceId: device, proStrokes: [[mine, other]])
+        let before = inkBytes(package)
+        // 擦掉 mine，這一頁要求變大。
+        try NotebookPackageBridge.exportPreservingOtherDevices(
+            document: doc, drawings: [PKDrawing()], to: package, deviceId: device,
+            proStrokes: [[other]], growInkFiles: [true])
+        XCTAssertGreaterThan(inkBytes(package), before)
+        let imported = try NotebookPackageBridge.importDocument(fromPackageAt: package, deviceId: deviceB)
+        XCTAssertEqual(imported.proStrokes.first?.map(\.packageId), [other.packageId], "擦掉的那一筆不能還在")
     }
 
     @MainActor

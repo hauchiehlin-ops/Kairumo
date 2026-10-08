@@ -6233,7 +6233,8 @@ public struct NotebookEditorView: View {
                     pageIndex: idx,
                     drawing: pageDrawing,
                     store: store,
-                    canvasWidth: canvasContentWidth
+                    canvasWidth: canvasContentWidth,
+                    inkOnTop: inkDrawnOnTop
                 )
                 Image(uiImage: img)
                     .resizable()
@@ -9759,69 +9760,48 @@ public struct NotebookEditorView: View {
     /// 舊版寫死 612×792（信紙尺寸）並且只畫 `PKDrawing` —— 但畫布座標是
     /// 「視圖寬度 × 頁面高度」，通常遠大於這個框，所以只截到左上角一小塊，
     /// 匯出檔看起來就是空白；文字方塊、圖片、3D、圖釘也全都沒畫進去。
-    private func composedPageImages(scale: CGFloat) -> [(image: UIImage, size: CGSize)] {
-        let width = max(canvasContentWidth, PageThumbnailRenderer.minPageWidth)
-        return (0..<max(1, notebook.pageCount)).map { i in
-            let drawing = drawingForPage(i)
-            let image = PageThumbnailRenderer.renderFullPage(
-                notebook: notebook,
-                pageIndex: i,
-                drawing: drawing,
-                store: store,
-                canvasWidth: width,
-                scale: scale
-            )
-            return (image, CGSize(width: width, height: notebook.height(forPage: i)))
-        }
+    /// 墨跡在物件之上嗎？跟著畫布目前的模式：手寫模式墨跡在上（在圖上圈重點），打字模式物件在上。
+    /// 匯出、列印、縮圖都用這個答案，「所見即所得」。
+    private var inkDrawnOnTop: Bool { editorMode == .draw }
+
+    /// 把某一頁算繪成圖（與縮圖、PNG 匯出是同一份繪圖程式碼）。
+    private func composedPageImage(_ index: Int, scale: CGFloat) -> UIImage {
+        PageThumbnailRenderer.renderFullPage(
+            notebook: notebook,
+            pageIndex: index,
+            drawing: drawingForPage(index),
+            store: store,
+            canvasWidth: max(canvasContentWidth, PageThumbnailRenderer.minPageWidth),
+            scale: scale,
+            inkOnTop: inkDrawnOnTop
+        )
     }
 
-    /// 匯出 PDF。
+    /// 匯出 PDF（也是列印走的路）。
     ///
-    /// 走核心的匯出器，因為它同時輸出**向量筆畫與標準 `/Ink` 標註** ——
-    /// 在各主流 PDF 閱讀器與筆記軟體打開後可以繼續編輯那些筆畫。
-    /// App 原本的做法是把整頁算繪成點陣圖，那樣只能「在上面加註」，
-    /// 我們的筆畫本身不是物件。
+    /// # 為什麼是點陣而不是核心的向量匯出
     ///
-    /// 核心拒絕這份資料時退回原本的點陣匯出 —— 拿得到一份看得見內容的 PDF，
-    /// 比拿到一個錯誤訊息好。
+    /// 「所見即所得」是底線。核心的向量匯出器把每一筆畫成**等寬折線**：PencilKit 的壓感粗細、鉛筆與麥克筆的
+    /// 紋理、螢光筆的疊色、專業筆刷的筆點全都不見；圖片的濾鏡與材質、物件的堆疊順序、形狀、圖表、連結卡片也不在它
+    /// 的文件模型裡。結果是「畫布上是一個樣子，PDF 是另一個樣子」。
+    /// 這裡每一頁用**縮圖與 PNG 匯出同一份繪圖程式碼**算繪，三者逐像素一致。
+    /// 代價：PDF 裡的文字不能選取、筆畫不是可編輯的標註 —— 要向量與標註請用 `.padnote` 或「製圖輸出（SVG／DXF）」。
     private func buildNotebookPdf(scale: CGFloat = 2.0) -> Data {
         saveCurrentPageDrawing()
-
-        let drawings = (0..<max(notebook.pageCount, 1)).map {
-            store.loadDrawing(notebookId: notebook.id, pageIndex: $0)
-        }
-        var images: [String: Data] = [:]
-        for attachment in notebook.attachments ?? [] {
-            if let image = store.loadAttachmentImage(fileName: attachment.fileName),
-               let png = image.pngData() {
-                images[attachment.fileName] = png
-            }
-        }
-
-        // 專業筆刷（含全部製圖線）不在 PKDrawing 裡：另外讀進來，隱藏的圖層略過。
-        let pro = (0..<max(notebook.pageCount, 1)).map {
-            PageThumbnailRenderer.proStrokes(notebook: notebook, pageIndex: $0, store: store)
-        }
-        if let data = try? NotebookPackageBridge.exportPdf(
-            document: notebook, drawings: drawings, imageData: images,
-            deviceId: NotebookMigration.deviceId, proStrokes: pro
-        ), !data.isEmpty {
-            return data
-        }
-
         return buildRasterPdf(scale: scale)
     }
 
-    /// 點陣匯出（備援）。與畫布逐像素一致，但筆畫不是可編輯的標註。
+    /// 逐頁算繪、逐頁寫進 PDF：不先把所有頁面的點陣圖都留在記憶體裡（頁數多的筆記本會吃掉幾百 MB）。
     private func buildRasterPdf(scale: CGFloat = 2.0) -> Data {
-        let pages = composedPageImages(scale: scale)
-        let firstSize = pages.first?.size ?? CGSize(width: 612, height: 792)
-        let renderer = UIGraphicsPDFRenderer(bounds: CGRect(origin: .zero, size: firstSize))
+        let count = max(1, notebook.pageCount)
+        let first = composedPageImage(0, scale: scale)
+        let renderer = UIGraphicsPDFRenderer(bounds: CGRect(origin: .zero, size: first.size))
         return renderer.pdfData { context in
-            for page in pages {
-                // 每一頁用自己的尺寸開頁：頁面可以被「向下延長」，高度不一定相同
-                context.beginPage(withBounds: CGRect(origin: .zero, size: page.size), pageInfo: [:])
-                page.image.draw(in: CGRect(origin: .zero, size: page.size))
+            for i in 0..<count {
+                // 圖的大小就是頁面大小（點），每一頁用自己的尺寸開頁（頁面高度可以不同）。
+                let image = i == 0 ? first : composedPageImage(i, scale: scale)
+                context.beginPage(withBounds: CGRect(origin: .zero, size: image.size), pageInfo: [:])
+                image.draw(in: CGRect(origin: .zero, size: image.size))
             }
         }
     }
@@ -9861,15 +9841,7 @@ public struct NotebookEditorView: View {
 
     private func exportAsPngImage() {
         saveCurrentPageDrawing()
-        let width = max(canvasContentWidth, PageThumbnailRenderer.minPageWidth)
-        let img = PageThumbnailRenderer.renderFullPage(
-            notebook: notebook,
-            pageIndex: currentPageIndex,
-            drawing: drawingForPage(currentPageIndex),
-            store: store,
-            canvasWidth: width,
-            scale: 2.0
-        )
+        let img = composedPageImage(currentPageIndex, scale: 2.0)
         if let pngData = img.pngData() {
             self.exportPdfData = pngData
             self.exportFileExtension = "png"
@@ -9905,12 +9877,21 @@ public struct NotebookEditorView: View {
                     imageMap[att.fileName] = data
                 }
             }
+            // 專業筆刷與製圖線不在 PKDrawing 裡：原本分享出去的 `.padnote` **完全沒有它們** ——
+            // 在別台打開，畫的三視圖整個不見。自己的與別台同步來的都要帶，**隱藏的圖層也要**
+            // （隱藏只是這台的顯示設定，不是刪除；收到的人打開圖層面板可以打開）。
+            let dir = store.drawingsDirectory
+            let pro = (0..<max(notebook.pageCount, 1)).map { page in
+                ProInkStore.load(in: dir, notebookId: notebook.id, page: page, foreign: true)
+                    + ProInkStore.load(in: dir, notebookId: notebook.id, page: page)
+            }
             try NotebookPackageBridge.export(
                 document: notebook,
                 drawings: drawings,
                 imageData: imageMap,
                 to: pkgDir,
-                deviceId: 0x4150
+                deviceId: 0x4150,
+                proStrokes: pro
             )
             try archiveNotebook(packageDir: pkgDir.path, outFile: zipUrl.path)
             let zipData = try Data(contentsOf: zipUrl)

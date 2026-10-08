@@ -12,6 +12,8 @@ struct StorageUsageSection: View {
     @State private var usage: StorageSweeper.Usage?
     @State private var busy = false
     @State private var message: String?
+    @State private var inkLedgerBytes: Int64 = 0
+    @State private var confirmClearEraseHistory = false
 
     var body: some View {
         Section(loc.localized("storage_title")) {
@@ -35,6 +37,40 @@ struct StorageUsageSection: View {
             }
             .disabled(busy)
             .accessibilityIdentifier("diagnostics.storage.clean")
+            // 同步記錄（擦除墓碑、被擦掉的別台筆畫指紋）。平常會自動清理；這裡讓使用者看得到、也能自己動手。
+            row("storage_ink_ledger", inkLedgerBytes)
+            Button {
+                Task { await compactInkLedger() }
+            } label: {
+                HStack {
+                    Image(systemName: "archivebox")
+                    Text(loc.localized("storage_ink_compact"))
+                    Spacer()
+                }
+            }
+            .disabled(busy)
+            .accessibilityIdentifier("diagnostics.storage.ink_compact")
+            Button(role: .destructive) {
+                confirmClearEraseHistory = true
+            } label: {
+                HStack {
+                    Image(systemName: "eraser.line.dashed")
+                    Text(loc.localized("storage_ink_clear"))
+                    Spacer()
+                }
+            }
+            .disabled(busy)
+            .accessibilityIdentifier("diagnostics.storage.ink_clear")
+            .confirmationDialog(
+                loc.localized("storage_ink_clear"), isPresented: $confirmClearEraseHistory, titleVisibility: .visible
+            ) {
+                Button(loc.localized("storage_ink_clear_action"), role: .destructive) {
+                    Task { await clearEraseHistory() }
+                }
+                Button(loc.localized("cancel"), role: .cancel) {}
+            } message: {
+                Text(loc.localized("storage_ink_clear_confirm"))
+            }
             if let message {
                 Text(message).font(.caption).foregroundColor(.secondary)
                     .accessibilityIdentifier("diagnostics.storage.result")
@@ -56,9 +92,43 @@ struct StorageUsageSection: View {
     private func refresh() async {
         let library = DocumentStorageLocation.shared.rootURL
         let models = ModelDownloadManager.shared.modelsRoot
+        let drawings = NotebookStore.shared.syncDrawingsDirectory
+        let baseline = NotebookStore.shared.syncBaselineDirectory
         usage = await Task.detached(priority: .utility) {
             StorageSweeper.usage(library: library, modelsRoot: models)
         }.value
+        inkLedgerBytes = await Task.detached(priority: .utility) {
+            InkLedgerJanitor.usage(drawingsDirectory: drawings, baselineDirectory: baseline)
+        }.value
+    }
+
+    @MainActor
+    private func compactInkLedger() async {
+        busy = true
+        defer { busy = false }
+        let drawings = NotebookStore.shared.syncDrawingsDirectory
+        let report = await Task.detached(priority: .utility) {
+            InkLedgerJanitor.compact(drawingsDirectory: drawings)
+        }.value
+        await refresh()
+        message = String(
+            format: loc.localized("storage_ink_compacted"),
+            ByteCountFormatter.string(fromByteCount: report.bytesFreed, countStyle: .file))
+    }
+
+    @MainActor
+    private func clearEraseHistory() async {
+        busy = true
+        defer { busy = false }
+        let drawings = NotebookStore.shared.syncDrawingsDirectory
+        let baseline = NotebookStore.shared.syncBaselineDirectory
+        let report = await Task.detached(priority: .utility) {
+            InkLedgerJanitor.clearEraseHistory(drawingsDirectory: drawings, baselineDirectory: baseline)
+        }.value
+        await refresh()
+        message = String(
+            format: loc.localized("storage_ink_cleared"),
+            ByteCountFormatter.string(fromByteCount: report.bytesFreed, countStyle: .file))
     }
 
     @MainActor

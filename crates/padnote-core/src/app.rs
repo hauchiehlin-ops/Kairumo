@@ -1204,6 +1204,23 @@ impl NotebookSession {
         Ok(materialize(&self.package.read_ink(page)?))
     }
 
+    /// 這一頁**所有裝置的筆畫檔裡出現過 `Add` 的**筆畫 id（包含已被擦掉的）。
+    ///
+    /// 平台端清理自己寫的墓碑用：某個 id 在任何檔案裡都沒有 `Add` 了（原作者重寫了檔案、
+    /// 我們也下載到新檔），指向它的墓碑就沒有東西可擦，可以丟掉。
+    pub fn added_stroke_ids(&self, page: Uuid) -> Result<Vec<Uuid>, AppError> {
+        let mut seen = std::collections::HashSet::new();
+        Ok(self
+            .package
+            .read_ink(page)?
+            .into_iter()
+            .filter_map(|r| match r {
+                InkRecord::Add(s) if seen.insert(s.id) => Some(s.id),
+                _ => None,
+            })
+            .collect())
+    }
+
     /// 把這一頁本裝置的筆畫檔補到至少 `min_len` 位元組（見 `NotebookPackage::pad_ink_to`）。
     pub fn pad_ink_to(&self, page: Uuid, min_len: u64) -> Result<(), AppError> {
         self.package.pad_ink_to(page, min_len)?;
