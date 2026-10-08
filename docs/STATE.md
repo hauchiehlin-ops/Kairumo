@@ -601,3 +601,28 @@ PDF 排版引擎只用 Noto Sans Thai 在正式輸出路徑上；其他字型（
   純 HEAD 也一樣有（Sidebar／Toolbar／Trash／Ink 本來就紅），不是這次改動造成的。
 - `testTextModeSharesThePaperAndItsTextBoxesStayEditableInDrawMode` 單獨跑會失敗（純 HEAD 也是），整批跑時靠前面測試留下的狀態才過。
 - `MultiDeviceUITests` 需要 Android 同時配合，單獨跑必紅；跑整批時要 `-skip-testing:KairumoUITests/MultiDeviceUITests`。
+
+### 擦除／改圖層的跨裝置同步（2026-10）
+- **規則**：同步只傳**變大**的檔案（`ffi_gdrive.rs` 筆畫檔上傳／下載都比大小），所以「擦掉」不能是「少寫」，要是**追加的墓碑**；
+  重寫自己的筆畫檔時用 `pad_ink_to` 補位，檔案不比重寫前小。
+- **專業筆畫**：套件身分穩定（`add_stroke_drafted_with_id`），帳本 `ProInkLedger`（每頁 `*_pN.proink-ledger.json`，在文件庫目錄）記墓碑；
+  匯入時只在套件裡**有墓碑**才拿掉自己的那一筆（`removed_stroke_ids`），不能只憑「合併結果裡沒有」。
+- **PencilKit 筆畫**：沒有 id，身分 = SHA-256(內容指紋｜第幾筆)；擦除在**匯出當下**用三份快照比對偵測
+  （上次匯出的自己／這次的自己／別台基準線）。**自己擦掉的不必寫墓碑**（自己的筆畫檔整個被別台換掉，只要新檔比舊檔大就會被下載，靠 `pad_ink_to` 補位）；
+  只有**別台的**筆畫要墓碑（只有 id，匯出時到套件裡依內容指紋找核心 id），而且指向的 id 在套件裡已無任何 `Add`（`added_stroke_ids`）就自動丟掉。
+- **升級**：帳本 `schema < 2` 的頁面第一次同步會強制重寫並讓檔案多一點，雲端舊身分的檔案才會被換掉。
+  已知殘餘：升級前的舊筆畫在**原作者還沒升級重寫之前**被別台擦掉，墓碑指向的是舊的隨機 id，原作者重寫後那一筆會在第三台重現（本機仍濾掉）。
+
+### 同步帳本的清理（2026-10）
+自動：啟動時 `InkLedgerJanitor.compact` 丟掉舊版留下的資料；每次匯出自動清掉沒用的墓碑。手動：診斷面板「儲存空間」→「整理同步記錄」（安全）、
+「清除擦除記錄…」（最差情況的出路，別台已擦掉的筆畫可能重現，有確認）。Android 沒有這份帳本（核心直接追加），沒有對應的選項。
+
+### 匯出 = 畫布（所見即所得，2026-10）
+- **Apple**：PDF、列印、PNG、縮圖走同一份 `PageThumbnailRenderer.compose`：物件照 `objectOrder` 堆疊；墨跡在物件之上或之下**跟著編輯模式**
+  （手寫模式在上、打字模式在下，遮蔽膠帶都在墨跡之上）；圖片的濾鏡、材質、陰影照畫布（`ImageEffects`，CPU 逐像素，不用 CoreImage——模擬器上第一次要 3 分鐘）；
+  匯出一律白紙（深色模式不影響）。**PDF 是點陣**（不再走核心的向量匯出：它的筆畫是等寬折線、沒有紋理／疊色／形狀／圖表／濾鏡）；要向量請用 `.padnote` 或 SVG／DXF。
+  `.padnote` 分享現在帶專業筆畫（含隱藏圖層）。
+- **Android**：PDF、PNG、列印用畫布自己的元件離螢幕算繪（`PageSnapshot`：離螢幕的 `ComposeView` + `GraphicsLayer`，同一組 `InkCanvas`／`*Layer`、`interactive = false`），
+  沒有第二份繪圖程式碼。PNG 匯出**目前這一頁**（原本永遠是第一頁）。算繪逾時才退回核心的匯出器。測試不能用 Compose 測試規則（它換掉畫面時脈，離螢幕的 ComposeView 收不到幀）。
+- 已知差異（不是匯出的問題）：Android 的物件永遠在墨跡之上，Apple 依模式；兩個平台各自的匯出與各自的畫布一致。
+

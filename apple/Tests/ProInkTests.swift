@@ -232,6 +232,193 @@ final class ProInkTests: XCTestCase {
         }
     }
 
+    // MARK: 刪除與改圖層的同步（墓碑）
+
+    private func point(of s: ProStroke) -> CGPoint {
+        CGPoint(x: CGFloat(s.points[0].x), y: CGFloat(s.points[0].y))
+    }
+
+    private func layerView(_ nb: String, undo: UndoManager? = nil) -> ProInkLayerView {
+        let layer = ProInkLayerView(frame: CGRect(x: 0, y: 0, width: 800, height: 600))
+        if let undo { layer.undoManagerProvider = { undo } }
+        layer.load(directory: workDir, notebookId: nb, pageIndex: 0)
+        return layer
+    }
+
+    private func inkBytes(_ package: URL) -> Int {
+        let files = (try? FileManager.default.contentsOfDirectory(
+            at: package.appendingPathComponent("ink"), includingPropertiesForKeys: [.fileSizeKey])) ?? []
+        return files.reduce(0) { $0 + ((try? $1.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0) }
+    }
+
+    func testProStrokeKeepsItsIdentityThroughThePackage() throws {
+        // 同一條線每次匯出都要是同一個身分：別台的墓碑才對得上。
+        let package = workDir.appendingPathComponent("identity.padnote")
+        let original = stroke("fineliner")
+        try NotebookPackageBridge.export(
+            document: NotebookDocument(title: "I", pageCount: 1), drawings: [PKDrawing()],
+            to: package, deviceId: deviceA, proStrokes: [[original]])
+        let back = try XCTUnwrap(
+            NotebookPackageBridge.importDocument(fromPackageAt: package, deviceId: deviceB).proStrokes.first?.first)
+        XCTAssertEqual(back.id, original.packageId)
+    }
+
+    func testAnotherDevicesTombstoneRemovesTheStrokeAndIsReportedToItsOwner() throws {
+        // B 畫一筆 → A 把它改到別的圖層（擦掉原筆畫 + 自己名下一筆複本）→ B 匯入：原筆畫消失、複本出現、
+        // 而且匯入結果明說「你的這一筆被擦掉了」（B 才知道要把本機那一筆拿掉）。
+        let package = workDir.appendingPathComponent("tomb.padnote")
+        let doc = NotebookDocument(title: "T", pageCount: 1)
+        let bs = stroke("fineliner", x: 20)
+        try NotebookPackageBridge.export(
+            document: doc, drawings: [PKDrawing()], to: package, deviceId: deviceB, proStrokes: [[bs]])
+
+        let importedA = try NotebookPackageBridge.importDocument(fromPackageAt: package, deviceId: deviceA)
+        let theirs = try XCTUnwrap(importedA.proStrokes.first?.first)
+        var copy = theirs
+        copy.id = UUID().uuidString
+        copy.layer = 3
+        let ledger = ProInkLedger(retired: [.init(coreId: theirs.packageId, stroke: nil, exported: false)])
+        try NotebookPackageBridge.exportPreservingOtherDevices(
+            document: importedA.document, drawings: [PKDrawing()], to: package, deviceId: deviceA,
+            pageIds: importedA.pageIds, proStrokes: [[copy]], proLedgers: [ledger])
+
+        let importedB = try NotebookPackageBridge.importDocument(fromPackageAt: package, deviceId: deviceB)
+        let merged = try XCTUnwrap(importedB.proStrokes.first)
+        XCTAssertEqual(merged.count, 1, "原筆畫要消失、只剩改過圖層的那一筆")
+        XCTAssertEqual(merged.first?.layerId, 3)
+        XCTAssertTrue(importedB.removedProStrokeIds.first?.contains(bs.packageId) == true,
+                      "原作者要能從匯入結果知道自己的這一筆被擦掉了")
+    }
+
+    func testAMissingStrokeWithoutATombstoneIsNotReportedAsRemoved() throws {
+        // 同步可能下載到較舊的筆畫檔，剛畫的筆畫暫時不見 —— 那不是被擦掉，不能被當成被擦掉。
+        let package = workDir.appendingPathComponent("nottomb.padnote")
+        try NotebookPackageBridge.export(
+            document: NotebookDocument(title: "N", pageCount: 1), drawings: [PKDrawing()],
+            to: package, deviceId: deviceA, proStrokes: [[stroke("fineliner")]])
+        let imported = try NotebookPackageBridge.importDocument(fromPackageAt: package, deviceId: deviceB)
+        XCTAssertTrue(imported.removedProStrokeIds.first?.isEmpty == true)
+    }
+
+    func testErasingAnOwnStrokeStillMakesTheStrokeFileGrow() throws {
+        // 同步只傳「變大」的筆畫檔。自己擦掉的筆畫不寫墓碑（整個檔案被換掉），但檔案必須比舊的大。
+        let doc = NotebookDocument(title: "G", pageCount: 1)
+        let device = deviceA
+        let mine = stroke("fineliner"), other = stroke("fineliner", x: 220)
+        let package = workDir.appendingPathComponent("grow.padnote")
+        try NotebookPackageBridge.export(
+            document: doc, drawings: [PKDrawing()], to: package, deviceId: device, proStrokes: [[mine, other]])
+        let before = inkBytes(package)
+        // 擦掉 mine，這一頁要求變大。
+        try NotebookPackageBridge.exportPreservingOtherDevices(
+            document: doc, drawings: [PKDrawing()], to: package, deviceId: device,
+            proStrokes: [[other]], growInkFiles: [true])
+        XCTAssertGreaterThan(inkBytes(package), before)
+        let imported = try NotebookPackageBridge.importDocument(fromPackageAt: package, deviceId: deviceB)
+        XCTAssertEqual(imported.proStrokes.first?.map(\.packageId), [other.packageId], "擦掉的那一筆不能還在")
+    }
+
+    @MainActor
+    func testErasingAnExportedOwnStrokeLeavesATombstoneButAnUnexportedOneDoesNot() {
+        let nb = "tomb-\(UUID().uuidString)"
+        let sent = stroke("fineliner", x: 20), fresh = stroke("fineliner", x: 420)
+        ProInkStore.save([sent, fresh], in: workDir, notebookId: nb, page: 0)
+        ProInkStore.updateLedger(in: workDir, notebookId: nb, page: 0) { $0.exportedIds = [sent.packageId] }
+        let layer = layerView(nb)
+        XCTAssertEqual(layer.erase(along: [point(of: sent)], radius: 12), 1)
+        XCTAssertEqual(layer.erase(along: [point(of: fresh)], radius: 12), 1)
+        let ledger = ProInkStore.loadLedger(in: workDir, notebookId: nb, page: 0)
+        XCTAssertEqual(ledger.retired.map(\.coreId), [sent.packageId], "沒匯出過的不必寫墓碑")
+        XCTAssertEqual(ledger.retired.first?.stroke?.id, sent.id, "自己的筆畫要帶著整筆資料，匯出才寫得出 Add")
+        XCTAssertTrue(ProInkStore.hasUnexportedRetirements(in: workDir, notebookId: nb, page: 0))
+    }
+
+    @MainActor
+    func testUndoingAnEraseBeforeItWasExportedDropsTheTombstone() {
+        let nb = "undo1-\(UUID().uuidString)"
+        let sent = stroke("fineliner")
+        ProInkStore.save([sent], in: workDir, notebookId: nb, page: 0)
+        ProInkStore.updateLedger(in: workDir, notebookId: nb, page: 0) { $0.exportedIds = [sent.packageId] }
+        let manager = UndoManager()
+        manager.groupsByEvent = false
+        let layer = layerView(nb, undo: manager)
+        manager.beginUndoGrouping()
+        XCTAssertEqual(layer.erase(along: [point(of: sent)], radius: 12), 1)
+        manager.endUndoGrouping()
+        XCTAssertEqual(ProInkStore.loadLedger(in: workDir, notebookId: nb, page: 0).retired.count, 1)
+        manager.undo()
+        XCTAssertEqual(layer.ownStrokes.count, 1)
+        XCTAssertTrue(ProInkStore.loadLedger(in: workDir, notebookId: nb, page: 0).retired.isEmpty,
+                      "墓碑還沒寫出去，復原就把它撤掉")
+        XCTAssertEqual(layer.ownStrokes.first?.packageId, sent.packageId)
+    }
+
+    @MainActor
+    func testUndoingAnEraseAfterTheTombstoneWasExportedUsesANewPackageId() {
+        // 已經上傳的墓碑撤不掉：同一個套件身分不能再活過來，這一筆要換新的。
+        let nb = "undo2-\(UUID().uuidString)"
+        let sent = stroke("fineliner")
+        ProInkStore.save([sent], in: workDir, notebookId: nb, page: 0)
+        ProInkStore.updateLedger(in: workDir, notebookId: nb, page: 0) { $0.exportedIds = [sent.packageId] }
+        let manager = UndoManager()
+        manager.groupsByEvent = false
+        let layer = layerView(nb, undo: manager)
+        manager.beginUndoGrouping()
+        layer.erase(along: [point(of: sent)], radius: 12)
+        manager.endUndoGrouping()
+        ProInkStore.updateLedger(in: workDir, notebookId: nb, page: 0) { ledger in
+            for i in ledger.retired.indices { ledger.retired[i].exported = true }
+        }
+        manager.undo()
+        let back = layer.ownStrokes.first
+        XCTAssertEqual(back?.id, sent.id, "本機身分不變，復原／重做才找得到它")
+        XCTAssertNotEqual(back?.packageId, sent.packageId, "已寫出的墓碑撤不掉，要換新的套件身分")
+        XCTAssertEqual(ProInkStore.loadLedger(in: workDir, notebookId: nb, page: 0).retired.count, 1,
+                       "舊身分的墓碑要留著")
+    }
+
+    @MainActor
+    func testReassigningAnExportedOwnStrokeRetiresTheOldVersion() {
+        let nb = "layer1-\(UUID().uuidString)"
+        let sent = stroke("fineliner")
+        ProInkStore.save([sent], in: workDir, notebookId: nb, page: 0)
+        ProInkStore.updateLedger(in: workDir, notebookId: nb, page: 0) { $0.exportedIds = [sent.packageId] }
+        let layer = layerView(nb)
+        XCTAssertTrue(layer.reassignLayer(near: point(of: sent), to: 3))
+        let now = layer.ownStrokes[0]
+        XCTAssertEqual(now.layerId, 3)
+        XCTAssertNotEqual(now.packageId, sent.packageId, "內容變了要換套件身分，別台才收得到")
+        let ledger = ProInkStore.loadLedger(in: workDir, notebookId: nb, page: 0)
+        XCTAssertEqual(ledger.retired.map(\.coreId), [sent.packageId])
+        XCTAssertEqual(ledger.retired.first?.stroke?.layerId, 0, "墓碑帶的是改之前的樣子")
+    }
+
+    @MainActor
+    func testReassigningAnotherDevicesStrokeTombstonesItAndKeepsAnOwnCopy() {
+        let nb = "layer2-\(UUID().uuidString)"
+        var theirs = stroke("fineliner")
+        theirs.id = "0192f0aa-1111-7222-8333-444455556666"   // 核心發的 id（小寫）
+        ProInkStore.save([theirs], in: workDir, notebookId: nb, page: 0, foreign: true)
+        let layer = layerView(nb)
+        XCTAssertTrue(layer.reassignLayer(near: point(of: theirs), to: 2))
+        XCTAssertEqual(layer.ownStrokes.count, 1)
+        XCTAssertEqual(layer.ownStrokes[0].layerId, 2)
+        XCTAssertNotEqual(layer.ownStrokes[0].packageId, theirs.id)
+        XCTAssertTrue(ProInkStore.load(in: workDir, notebookId: nb, page: 0, foreign: true).isEmpty)
+        let ledger = ProInkStore.loadLedger(in: workDir, notebookId: nb, page: 0)
+        XCTAssertEqual(ledger.retired.map(\.coreId), [theirs.id])
+        XCTAssertNil(ledger.retired.first?.stroke, "別台的筆畫只寫墓碑，不重寫它")
+    }
+
+    func testCopiesOfAStrokeNeverShareItsPackageId() {
+        var original = stroke("fineliner")
+        original.coreId = UUID().uuidString.lowercased()
+        var copy = original
+        copy.id = UUID().uuidString
+        XCTAssertNil(copy.coreId, "複本沿用套件身分的話，擦掉其中一筆另一筆也跟著消失")
+        XCTAssertNotEqual(copy.packageId, original.packageId)
+    }
+
     // MARK: 圖學：圖層、線型、吸附
 
     private func drafted(layer: UInt8, lineType: UInt8, x: Float = 20) -> ProStroke {

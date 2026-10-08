@@ -1204,6 +1204,46 @@ impl NotebookSession {
         Ok(materialize(&self.package.read_ink(page)?))
     }
 
+    /// 這一頁**所有裝置的筆畫檔裡出現過 `Add` 的**筆畫 id（包含已被擦掉的）。
+    ///
+    /// 平台端清理自己寫的墓碑用：某個 id 在任何檔案裡都沒有 `Add` 了（原作者重寫了檔案、
+    /// 我們也下載到新檔），指向它的墓碑就沒有東西可擦，可以丟掉。
+    pub fn added_stroke_ids(&self, page: Uuid) -> Result<Vec<Uuid>, AppError> {
+        let mut seen = std::collections::HashSet::new();
+        Ok(self
+            .package
+            .read_ink(page)?
+            .into_iter()
+            .filter_map(|r| match r {
+                InkRecord::Add(s) if seen.insert(s.id) => Some(s.id),
+                _ => None,
+            })
+            .collect())
+    }
+
+    /// 把這一頁本裝置的筆畫檔補到至少 `min_len` 位元組（見 `NotebookPackage::pad_ink_to`）。
+    pub fn pad_ink_to(&self, page: Uuid, min_len: u64) -> Result<(), AppError> {
+        self.package.pad_ink_to(page, min_len)?;
+        Ok(())
+    }
+
+    /// 這一頁**被擦掉**的筆畫 id（所有裝置的墓碑合起來）。
+    ///
+    /// 平台端要靠它確認「我自己的這一筆是被別台擦掉的」—— 只憑「合併結果裡沒有它」不夠：
+    /// 同步可能下載到一份較舊但較大的筆畫檔，剛畫的筆畫也會暫時不見，那不是被擦掉。
+    pub fn removed_stroke_ids(&self, page: Uuid) -> Result<Vec<Uuid>, AppError> {
+        let mut seen = std::collections::HashSet::new();
+        Ok(self
+            .package
+            .read_ink(page)?
+            .into_iter()
+            .filter_map(|r| match r {
+                InkRecord::Remove(id) if seen.insert(id) => Some(id),
+                _ => None,
+            })
+            .collect())
+    }
+
     /// 在指定頁面的垂直座標 `at_y` 插入空白（Insert Space Tool / Push Space）。
     ///
     /// 所有落在 `at_y` 及其下方的筆畫與文字/圖片區塊將整體向下平移 `amount_y`。

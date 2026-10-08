@@ -2204,6 +2204,33 @@ private fun InkScreen(
     var pendingExport by remember {
         mutableStateOf<Pair<java.io.File, Exporter.Format>?>(null)
     }
+    // PDF／PNG／列印都用畫布自己的元件算繪（見 `PageSnapshot`）：所見即所得。
+    // PNG 匯出的是**目前停的這一頁**（原本不論在哪一頁都匯出第一頁）。
+    val exportNow: (Exporter.Format) -> Unit = { format ->
+        val session = notebook?.first
+        if (session == null) {
+            message = exportFailureMessage(
+                IllegalStateException(L10n.t("err_core_not_ready")))
+        } else {
+            message = l10n("export_rendering")
+            scope.launch {
+                Exporter.exportWysiwyg(
+                    activity, session, format, pageIndex, audioDirectory,
+                    languageTag = deviceLanguageTag()
+                ).fold(
+                    onSuccess = { message = null; pendingExport = it to format },
+                    onFailure = { message = exportFailureMessage(it) }
+                )
+            }
+        }
+    }
+    val printNow: (PadnoteSession) -> Unit = { session ->
+        scope.launch {
+            runCatching {
+                Exporter.printWysiwyg(activity, session, audioDirectory, deviceLanguageTag())
+            }.onFailure { message = L10n.errorText(it) }
+        }
+    }
     /// 使用者是否調過掌拒門檻 —— 晶片要亮起來，不然沒有人知道自己改過。
     var palmTuned by remember {
         mutableStateOf(PalmThresholdStore.radius(activity) != null)
@@ -3147,10 +3174,7 @@ private fun InkScreen(
                     modifier = Modifier.testTag("editor.export.pdf"),
                     onClick = {
                         showShareMenu = false
-                        exportToFile(activity, notebook?.first, Exporter.Format.PDF).fold(
-                            onSuccess = { pendingExport = it to Exporter.Format.PDF },
-                            onFailure = { message = exportFailureMessage(it) }
-                        )
+                        exportNow(Exporter.Format.PDF)
                     }
                 )
                 DropdownMenuItem(
@@ -3158,10 +3182,7 @@ private fun InkScreen(
                     modifier = Modifier.testTag("editor.export.image"),
                     onClick = {
                         showShareMenu = false
-                        exportToFile(activity, notebook?.first, Exporter.Format.PNG).fold(
-                            onSuccess = { pendingExport = it to Exporter.Format.PNG },
-                            onFailure = { message = exportFailureMessage(it) }
-                        )
+                        exportNow(Exporter.Format.PNG)
                     }
                 )
                 DropdownMenuItem(
@@ -3180,8 +3201,7 @@ private fun InkScreen(
                     onClick = {
                         showShareMenu = false
                         val session = notebook?.first ?: return@DropdownMenuItem
-                        runCatching { Exporter.print(activity, session) }
-                            .onFailure { message = L10n.errorText(it) }
+                        printNow(session)
                     }
                 )
                 Divider()
@@ -3250,20 +3270,14 @@ private fun InkScreen(
                     text = { Text(l10n("export_pdf")) },
                     onClick = {
                         showMenu = false
-                        exportToFile(activity, notebook?.first, Exporter.Format.PDF).fold(
-                            onSuccess = { pendingExport = it to Exporter.Format.PDF },
-                            onFailure = { message = exportFailureMessage(it) }
-                        )
+                        exportNow(Exporter.Format.PDF)
                     }
                 )
                 DropdownMenuItem(
                     text = { Text(l10n("export_image")) },
                     onClick = {
                         showMenu = false
-                        exportToFile(activity, notebook?.first, Exporter.Format.PNG).fold(
-                            onSuccess = { pendingExport = it to Exporter.Format.PNG },
-                            onFailure = { message = exportFailureMessage(it) }
-                        )
+                        exportNow(Exporter.Format.PNG)
                     }
                 )
                 DropdownMenuItem(
@@ -3281,8 +3295,7 @@ private fun InkScreen(
                     onClick = {
                         showMenu = false
                         val session = notebook?.first ?: return@DropdownMenuItem
-                        runCatching { Exporter.print(activity, session) }
-                            .onFailure { message = L10n.errorText(it) }
+                        printNow(session)
                     }
                 )
                 DropdownMenuItem(

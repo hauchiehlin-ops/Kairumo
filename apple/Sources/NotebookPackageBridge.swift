@@ -72,6 +72,9 @@ enum NotebookPackageBridge {
         pageIds knownPageIds: [String]? = nil,
         skipBlockIds: Set<String> = [],
         proStrokes: [[ProStroke]] = [],
+        proLedgers: [ProInkLedger] = [],
+        pkStrokeIds: [[String]] = [],
+        minInkBytes: [UInt64] = [],
         recordingTitles: [String: String] = [:]
     ) throws -> ExportSummary {
         let pageCount = max(document.pageCount, drawings.count)
@@ -148,14 +151,23 @@ enum NotebookPackageBridge {
                 )
 
                 if index < drawings.count {
-                    for draft in InkInterop.drafts(from: drawings[index]) {
-                        _ = try session.addStroke(
-                            pageId: pageId,
-                            tool: draft.tool,
-                            colorRgba: draft.colorRgba,
-                            baseWidth: draft.baseWidth,
-                            points: draft.points
-                        )
+                    let ids = index < pkStrokeIds.count ? pkStrokeIds[index] : []
+                    for (i, draft) in InkInterop.drafts(from: drawings[index]).enumerated() {
+                        // 有穩定身分就用（同一條線每次匯出都是同一個 id，別台的墓碑才對得上）。
+                        if i < ids.count, UUID(uuidString: ids[i]) != nil {
+                            try session.addStrokeDraftedWithId(
+                                pageId: pageId, strokeId: ids[i], tool: draft.tool,
+                                colorRgba: draft.colorRgba, baseWidth: draft.baseWidth,
+                                points: draft.points, layer: 0, lineType: 0)
+                        } else {
+                            _ = try session.addStroke(
+                                pageId: pageId,
+                                tool: draft.tool,
+                                colorRgba: draft.colorRgba,
+                                baseWidth: draft.baseWidth,
+                                points: draft.points
+                            )
+                        }
                         summary.strokeCount += 1
                     }
                 }
@@ -163,18 +175,29 @@ enum NotebookPackageBridge {
                 if index < proStrokes.count {
                     for pro in proStrokes[index] {
                         guard let kind = ProInk.kind(named: pro.tool) else { continue }
-                        // 圖層與線型跟著筆畫走（核心的 ink 擴充區塊），別台裝置才畫得出同樣的圖。
-                        _ = try session.addStrokeDrafted(
-                            pageId: pageId,
-                            tool: kind,
-                            colorRgba: Data(pro.colorRGBA),
-                            baseWidth: pro.baseWidth,
-                            points: ProInk.strokePoints(pro.points),
-                            layer: pro.layerId,
-                            lineType: pro.lineTypeId
-                        )
+                        try addPro(pro, kind: kind, to: session, page: pageId)
                         summary.strokeCount += 1
                     }
+                }
+                // 墓碑：只有**別台的**筆畫需要（那一筆的 `Add` 在別台的檔案裡，我們改不了，只能追加 `Remove`）。
+                // 自己擦掉／搬動／改了圖層的筆畫**不必寫任何東西**：自己的筆畫檔是整個被別台換掉的，
+                // 新檔裡沒有那一筆就是沒有了 —— 只要新檔比舊檔大（見下面的補位），別台就會下載。
+                // （原本連 `Add` 帶 `Remove` 永遠留著，帳本只增不減；補位讓那些資料不再有存在的理由。）
+                if index < proLedgers.count {
+                    let ledger = proLedgers[index]
+                    for retired in ledger.retired where retired.stroke == nil {
+                        try session.eraseStroke(pageId: pageId, strokeId: retired.coreId)
+                        for extra in retired.extraIds ?? [] {
+                            try session.eraseStroke(pageId: pageId, strokeId: extra)
+                        }
+                    }
+                    for id in ledger.foreignTombstones {
+                        try session.eraseStroke(pageId: pageId, strokeId: id)
+                    }
+                }
+                // 重寫之後的筆畫檔不能比重寫前小：同步只傳「變大」的檔案。
+                if index < minInkBytes.count, minInkBytes[index] > 0 {
+                    try session.padInkTo(pageId: pageId, minBytes: minInkBytes[index])
                 }
 
                 for text in document.textAttachments?.filter({ $0.pageIndex == index }) ?? [] {
@@ -547,6 +570,9 @@ enum NotebookPackageBridge {
         deviceId: UInt32,
         pageIds knownPageIds: [String]? = nil,
         proStrokes: [[ProStroke]] = [],
+        proLedgers: [ProInkLedger] = [],
+        pkStrokeIds: [[String]] = [],
+        growInkFiles: [Bool] = [],
         recordingTitles: [String: String] = [:]
     ) throws -> ExportSummary {
         let fm = FileManager.default
@@ -559,7 +585,8 @@ enum NotebookPackageBridge {
             return try export(
                 document: document, drawings: drawings, imageData: imageData,
                 to: destination, deviceId: deviceId, pageIds: pageIds,
-                proStrokes: proStrokes, recordingTitles: recordingTitles
+                proStrokes: proStrokes, proLedgers: proLedgers, pkStrokeIds: pkStrokeIds,
+                recordingTitles: recordingTitles
             )
         }
 
@@ -577,10 +604,24 @@ enum NotebookPackageBridge {
             throw BridgeError.coreRejected(L10n.t("bridge_err_read_other"))
         }
 
+        // 這台每一頁現有的筆畫檔大小。重寫之後不能比它小 —— 同步只傳「變大」的檔案，變小或不變的改動
+        // （擦掉、換身分）別台永遠收不到。`growInkFiles`（每頁一個）：這一頁有改動（擦掉、搬動、換身分、新墓碑）而大小可能一樣，
+        // 要至少多一點才會被傳出去、把雲端舊的檔案換掉。
+        let ownSuffix = deviceSuffix(deviceId)
+        let minInkBytes: [UInt64] = (pageIds ?? []).enumerated().map { (index: Int, pageId: String) -> UInt64 in
+            let path = destination.appending(path: "ink/\(pageId)\(ownSuffix).strokes").path
+            let attributes = try? fm.attributesOfItem(atPath: path)
+            let size = (attributes?[.size] as? NSNumber)?.uint64Value ?? 0
+            guard size > 0 else { return 0 }
+            return size + (index < growInkFiles.count && growInkFiles[index] ? 1 : 0)
+        }
+
         let summary = try export(
             document: document, drawings: drawings, imageData: imageData,
             to: fresh, deviceId: deviceId, pageIds: pageIds,
-            skipBlockIds: foreign.ids, proStrokes: proStrokes, recordingTitles: recordingTitles
+            skipBlockIds: foreign.ids, proStrokes: proStrokes, proLedgers: proLedgers,
+            pkStrokeIds: pkStrokeIds, minInkBytes: minInkBytes,
+            recordingTitles: recordingTitles
         )
 
         // **把錄音當下由核心直接寫的操作搬過去。** 重建只含平台文件模型有的東西（文字、圖片、筆畫…），
@@ -1100,6 +1141,7 @@ enum NotebookPackageBridge {
         var imageData: [String: Data] = [:]
         var envelopes = EnvelopeObjects()
         var proStrokes: [[ProStroke]] = []
+        var removedProStrokeIds: [Set<String>] = []
 
         for (index, pageId) in pageIds.enumerated() {
             // 專業筆刷（自繪引擎）的筆畫不能變成 PKStroke —— PencilKit 畫不出來，
@@ -1107,6 +1149,7 @@ enum NotebookPackageBridge {
             let details = try session.visibleStrokeDetails(pageId: pageId)
             drawings.append(InkInterop.drawing(from: details.filter { !brushIsCustom(tool: $0.tool) }))
             proStrokes.append(details.filter { brushIsCustom(tool: $0.tool) }.compactMap(ProStroke.init(from:)))
+            removedProStrokeIds.append(Set(try session.removedStrokeIds(pageId: pageId).map { $0.lowercased() }))
 
             for blockId in try session.textBlockIds(pageId: pageId) {
                 // 附件 id 就是核心的區塊 id：同一個方塊在每一台裝置、每一次匯入都是同一個 id，
@@ -1386,7 +1429,8 @@ enum NotebookPackageBridge {
         // 中繼資料可能是別台裝置寫的舊版本。下次匯出要沿用這批。
         return ImportedNotebook(
             document: document, drawings: drawings, imageData: imageData, pageIds: pageIds,
-            proStrokes: proStrokes, recordingTitles: envelopes.recordingTitles
+            proStrokes: proStrokes, removedProStrokeIds: removedProStrokeIds,
+            recordingTitles: envelopes.recordingTitles
         )
     }
 
@@ -1401,11 +1445,45 @@ enum NotebookPackageBridge {
         let pageIds: [String]
         /// 每一頁的專業筆刷筆畫（自繪引擎），索引與頁次相同。包含這台自己的與別台的。
         var proStrokes: [[ProStroke]] = []
+        /// 每一頁被擦掉（有墓碑）的筆畫 id，小寫。匯入時用它認出「自己的這一筆被別台擦掉／改掉了」。
+        var removedProStrokeIds: [Set<String>] = []
         /// 檔名（小寫）→ 錄音的名字。
         var recordingTitles: [String: String] = [:]
     }
 
     // MARK: - 私有
+
+    /// 寫一筆專業筆畫，**用它的套件身分當核心的筆畫 id**。
+    ///
+    /// 每次匯出若都由核心發新 id，同一條線在兩次匯出之間就是兩個身分，別台對它寫的墓碑
+    /// （擦掉、改圖層）隨下一次匯出落空，線又冒出來。身分不是合法 UUID（不該發生）時退回舊做法。
+    private static func addPro(
+        _ pro: ProStroke, kind: ToolKind, to session: PadnoteSession, page pageId: String
+    ) throws {
+        // 圖層與線型跟著筆畫走（核心的 ink 擴充區塊），別台裝置才畫得出同樣的圖。
+        if UUID(uuidString: pro.packageId) != nil {
+            try session.addStrokeDraftedWithId(
+                pageId: pageId,
+                strokeId: pro.packageId,
+                tool: kind,
+                colorRgba: Data(pro.colorRGBA),
+                baseWidth: pro.baseWidth,
+                points: ProInk.strokePoints(pro.points),
+                layer: pro.layerId,
+                lineType: pro.lineTypeId
+            )
+        } else {
+            _ = try session.addStrokeDrafted(
+                pageId: pageId,
+                tool: kind,
+                colorRgba: Data(pro.colorRGBA),
+                baseWidth: pro.baseWidth,
+                points: ProInk.strokePoints(pro.points),
+                layer: pro.layerId,
+                lineType: pro.lineTypeId
+            )
+        }
+    }
 
     /// 依頁次取出頁面 id。
     ///

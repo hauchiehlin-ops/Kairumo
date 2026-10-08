@@ -1440,14 +1440,17 @@ enum NotebookSyncCoordinator {
         // 扣掉的是「別台裝置寫的那些」，不是「上次同步時的全部」——
         // 扣掉全部的話，這台裝置自己的筆畫在下一次匯出時會被扣成空的，
         // 而它的檔案又會被整個重寫，等於自己把自己的內容刪掉。
-        let own = try snapshotOwnStrokes(inputs)
+        let snapshots = try snapshotPages(inputs)
+        var own: OwnStrokes = [:]
         var drawings = [PKDrawing]()
         drawings.reserveCapacity(pageCount)
         for page in 0 ..< pageCount {
             if NotebookSyncCoordinator.isCancelled || Task.isCancelled {
                 throw CancellationError()
             }
-            drawings.append(own[baselineKey(document.id, page)] ?? PKDrawing())
+            let mine = snapshots[page].own
+            own[baselineKey(document.id, page)] = mine
+            drawings.append(mine)
         }
         var images: [String: Data] = [:]
         for attachment in document.attachments ?? [] {
@@ -1460,13 +1463,107 @@ enum NotebookSyncCoordinator {
         let pro = (0 ..< pageCount).map {
             ProInkStore.load(in: inputs.drawingsDirectory, notebookId: document.id, page: $0)
         }
+        // 同步帳本（墓碑）。先讀出來這一份，寫完才依「這次真的寫出去的」更新 ——
+        // 匯出途中編輯器可能又擦了一筆，那一筆要留給下一輪。
+        let ledgers = (0 ..< pageCount).map {
+            ProInkStore.loadLedger(in: inputs.drawingsDirectory, notebookId: document.id, page: $0)
+        }
+
+        // 筆畫的穩定身分與擦除：算出每一頁「要寫什麼」。見 InkSyncLedger.swift。
+        // 到套件裡讀東西是唯讀的，而且只有真的需要時才會去讀那一頁。
+        let resolver = PackageInkResolver(package: inputs.package, deviceId: inputs.deviceId)
+        var plans: [PKInkPlan] = []
+        var exportLedgers = ledgers
+        var proExtra: [[String: [String]]] = Array(repeating: [:], count: pageCount)
+        var prunedForeign: [Set<String>] = Array(repeating: [], count: pageCount)
+        var grow: [Bool] = Array(repeating: false, count: pageCount)
+        for page in 0 ..< pageCount {
+            let snapshot = snapshots[page]
+            let ledger = ledgers[page]
+            let hasInk = !snapshot.current.strokes.isEmpty || !pro[page].isEmpty || !ledger.isEmpty
+            let added = resolver.addedIds(page: page)
+            let plan = PKInkSync.plan(
+                ledger: ledger, ownNow: snapshot.own,
+                prevOwn: PKInkSnapshotStore.load(in: inputs.drawingsDirectory, notebookId: document.id, page: page),
+                current: snapshot.current, others: snapshot.others, addedIds: added,
+                resolveForeign: { key, count, excluding in
+                    resolver.pencilKitIds(page: page, key: key, count: count, excluding: excluding)
+                })
+            plans.append(plan)
+            exportLedgers[page].foreignTombstones = plan.foreignTombstones
+            // 升級前匯入的別台專業筆畫：本機認得的 id 不是核心的 id，依內容指紋到套件裡找。
+            let ownProIds = Set(pro[page].map(\.packageId))
+            for i in exportLedgers[page].retired.indices {
+                let entry = exportLedgers[page].retired[i]
+                guard entry.stroke == nil, entry.extraIds == nil, let key = entry.contentKey else { continue }
+                let extra = resolver.hasStroke(page: page, id: entry.coreId)
+                    ? [] : resolver.proIds(page: page, contentKey: key, excluding: ownProIds)
+                exportLedgers[page].retired[i].extraIds = extra
+                proExtra[page][entry.coreId] = extra
+            }
+            // 自動清理：已經寫出的別台筆畫墓碑，指向的 id 在套件裡不再有任何 Add 就丟掉。
+            if let added {
+                for entry in exportLedgers[page].retired where entry.stroke == nil && entry.exported {
+                    let targets = [entry.coreId] + (entry.extraIds ?? [])
+                    if !targets.contains(where: { added.contains($0.lowercased()) }) {
+                        prunedForeign[page].insert(entry.coreId)
+                    }
+                }
+                exportLedgers[page].retired.removeAll { prunedForeign[page].contains($0.coreId) }
+            }
+            // 這一頁的筆畫檔要「變大」才會被傳出去：升級後第一次、自己擦掉／搬動／換身分、有新的墓碑。
+            let newTombstone = plan.foreignTombstones.contains { !ledger.foreignTombstones.contains($0) }
+            grow[page] = (ledger.schema < 2 && hasInk) || plan.grow || newTombstone
+                || ledger.retired.contains { !$0.exported }
+        }
         // 錄音的名字要**一起**交給匯出：漏傳的話套件裡永遠沒有 `rectitle` 區塊，
         // 別台只看得到掃描時取的預設名稱（單元測試直接呼叫橋接層、有帶這個參數，所以測不出來）。
         try NotebookPackageBridge.exportPreservingOtherDevices(
             document: document, drawings: drawings, imageData: images,
-            to: inputs.package, deviceId: inputs.deviceId, proStrokes: pro,
+            to: inputs.package, deviceId: inputs.deviceId, proStrokes: pro, proLedgers: exportLedgers,
+            pkStrokeIds: plans.map(\.ids), growInkFiles: grow,
             recordingTitles: inputs.recordingTitles
         )
+        for page in 0 ..< pageCount {
+            let sentTombstones = Set(ledgers[page].retired.map(\.coreId))
+            let sentStrokes = pro[page]
+            let plan = plans[page]
+            let snapshot = snapshots[page]
+            let hasInk = !snapshot.current.strokes.isEmpty || !sentStrokes.isEmpty || !ledgers[page].isEmpty
+            ProInkStore.updateLedger(in: inputs.drawingsDirectory, notebookId: document.id, page: page) { ledger in
+                for i in ledger.retired.indices where sentTombstones.contains(ledger.retired[i].coreId) {
+                    ledger.retired[i].exported = true
+                    if let extra = proExtra[page][ledger.retired[i].coreId] { ledger.retired[i].extraIds = extra }
+                }
+                // 自己的筆畫的「退休」記錄用完即丟：寫出去的只是一個更大的檔案，沒有墓碑要留
+                // （舊版把整筆資料永遠留著，這裡一併清掉）。
+                ledger.retired.removeAll { $0.stroke != nil && $0.exported }
+                ledger.retired.removeAll { prunedForeign[page].contains($0.coreId) }
+                // 這次寫出去的自己的活筆畫。匯入時用它認出「這一筆是被別台擦掉／改掉的」。
+                ledger.exportedIds = sentStrokes.map(\.packageId)
+                // 匯出途中被擦掉的（寫出去之後、這裡之前）：編輯器當時還不知道它已經匯出，
+                // 沒記退休 —— 在這裡補上，下一輪讓檔案變大。
+                let now = Set(ProInkStore.load(
+                    in: inputs.drawingsDirectory, notebookId: document.id, page: page).map(\.packageId))
+                for stroke in sentStrokes
+                where !now.contains(stroke.packageId)
+                    && !ledger.retired.contains(where: { $0.coreId == stroke.packageId }) {
+                    ledger.retired.append(.init(coreId: stroke.packageId, stroke: stroke, exported: false))
+                }
+                ledger.foreignTombstones = plan.foreignTombstones
+                ledger.pkRetiredOwn = []
+                ledger.pkGen = [:]
+                if hasInk { ledger.schema = 2 }
+            }
+            PKInkSnapshotStore.save(
+                snapshot.own, in: inputs.drawingsDirectory, notebookId: document.id, page: page)
+            // 這台擦掉的別台筆畫已經寫成墓碑：別台基準線同步拿掉，下一輪不會再當成「剛擦掉」。
+            if !plan.erasedForeign.isEmpty {
+                let rebased = PKDrawing(strokes: StrokeDelta.added(
+                    in: snapshot.others, since: PKDrawing(strokes: plan.erasedForeign)))
+                saveBaseline(rebased, in: inputs.baselineDirectory, notebookId: document.id, pageIndex: page)
+            }
+        }
         RecordingTitleLedger.save(
             inputs.recordingTitles, in: inputs.baselineDirectory, notebookId: document.id)
         ObjectLedger.save(document, in: inputs.baselineDirectory)
@@ -1480,6 +1577,21 @@ enum NotebookSyncCoordinator {
     /// 下一次匯出時再把自己的 oplog 刪掉，造成看似隨機的內容回退。
     private nonisolated static func snapshotOwnStrokes(_ inputs: ExportInputs) throws -> OwnStrokes {
         var own: OwnStrokes = [:]
+        for (page, snapshot) in try snapshotPages(inputs).enumerated() {
+            own[baselineKey(inputs.document.id, page)] = snapshot.own
+        }
+        return own
+    }
+
+    /// 一頁的三份 PencilKit 快照：工作副本整份、別台的基準線、以及自己的（= 前兩者相減）。
+    struct PageInkSnapshot {
+        let current: PKDrawing
+        let others: PKDrawing
+        let own: PKDrawing
+    }
+
+    private nonisolated static func snapshotPages(_ inputs: ExportInputs) throws -> [PageInkSnapshot] {
+        var out: [PageInkSnapshot] = []
         for page in 0 ..< max(inputs.document.pageCount, 1) {
             if NotebookSyncCoordinator.isCancelled || Task.isCancelled {
                 throw CancellationError()
@@ -1490,11 +1602,11 @@ enum NotebookSyncCoordinator {
                 notebookId: inputs.document.id,
                 pageIndex: page
             )
-            own[baselineKey(inputs.document.id, page)] = PKDrawing(
-                strokes: StrokeDelta.added(in: current, since: others)
-            )
+            out.append(PageInkSnapshot(
+                current: current, others: others,
+                own: PKDrawing(strokes: StrokeDelta.added(in: current, since: others))))
         }
-        return own
+        return out
     }
 
     /// 工作副本是否真的比套件新。
@@ -1524,6 +1636,24 @@ enum NotebookSyncCoordinator {
         }
 
         if ObjectLedger.hasUnsynced(inputs.document, in: inputs.baselineDirectory) { return true }
+        // 升級前的筆記：這一頁的筆畫還沒用穩定身分寫出過（帳本版本 < 2）。要重寫一次，
+        // 雲端那份舊身分的檔案才會被換掉 —— 別台對舊身分寫的墓碑才不會落空。
+        for page in 0 ..< max(inputs.document.pageCount, 1) {
+            let hasInk = ["drawing", "proink.json"].contains { ext in
+                fm.fileExists(atPath: inputs.drawingsDirectory
+                    .appending(path: "\(inputs.document.id)_p\(page).\(ext)").path)
+            }
+            if hasInk,
+               ProInkStore.loadLedger(in: inputs.drawingsDirectory, notebookId: inputs.document.id, page: page).schema < 2 {
+                return true
+            }
+        }
+        // 專業筆畫還有墓碑沒寫進套件（擦掉、搬動、改圖層）：筆畫檔本身的時間看不出來。
+        for page in 0 ..< max(inputs.document.pageCount, 1)
+        where ProInkStore.hasUnexportedRetirements(
+            in: inputs.drawingsDirectory, notebookId: inputs.document.id, page: page) {
+            return true
+        }
 
         guard let enumerator = fm.enumerator(
             at: inputs.package,
@@ -1606,16 +1736,35 @@ enum NotebookSyncCoordinator {
         }
         // 專業筆刷：合併後的全部 − 這台自己的 = 別台的。比對用內容指紋（核心每次匯出都換 id）。
         let drawingsDir = store.syncDrawingsDirectory
+        var ownProStrokesRemoved = false
         for (index, merged) in imported.proStrokes.enumerated() {
-            let own = Set(
-                ProInkStore.load(in: drawingsDir, notebookId: documentId, page: index).map(\.contentKey))
+            var ownStrokesNow = ProInkStore.load(in: drawingsDir, notebookId: documentId, page: index)
+            // **別台擦掉、搬動或改了圖層的「自己的」筆畫。**
+            // 套件裡有墓碑指著自己的某一筆 —— 別台擦掉了它，或搬動／改圖層而用新的筆畫取代了它。
+            // 本機要跟著拿掉；不拿掉的話下次匯出又把它寫回去，而且本機畫面上它還在，兩台就永遠不一樣。
+            // （自己擦掉的筆畫已經不在自己的筆畫檔裡，不受影響。）
+            // **要有墓碑才算**，不能只憑「合併結果裡沒有它」：同步可能下載到一份較舊但較大的筆畫檔，
+            // 剛畫的筆畫也會暫時不見 —— 那不是被擦掉，拿掉就是遺失使用者的筆跡。
+            let removedElsewhere = index < imported.removedProStrokeIds.count ? imported.removedProStrokeIds[index] : []
+            let kept = ownStrokesNow.filter { !removedElsewhere.contains($0.packageId) }
+            if kept.count != ownStrokesNow.count {
+                ProInkStore.save(kept, in: drawingsDir, notebookId: documentId, page: index)
+                ownStrokesNow = kept
+                ownProStrokesRemoved = true
+            }
+            // 自己的筆畫認 id；舊版匯出的 id 是核心隨機發的，退回內容指紋。
+            let ownIds = Set(ownStrokesNow.map(\.packageId))
+            let own = Set(ownStrokesNow.map(\.contentKey))
             // 使用者在這台擦掉的別台筆畫：雲端那份還在，不能再帶回來。
             let erased = ProInkStore.loadSuppressed(in: drawingsDir, notebookId: documentId, page: index)
             ProInkStore.save(
-                merged.filter { !own.contains($0.contentKey) && !erased.contains($0.contentKey) },
+                merged.filter {
+                    !ownIds.contains($0.id.lowercased()) && !own.contains($0.contentKey)
+                        && !erased.contains($0.contentKey)
+                },
                 in: drawingsDir, notebookId: documentId, page: index, foreign: true)
         }
-        if !imported.proStrokes.isEmpty {
+        if !imported.proStrokes.isEmpty || ownProStrokesRemoved {
             NotificationCenter.default.post(
                 name: .kairumoProInkChangedOnDisk, object: nil, userInfo: ["notebookId": documentId])
         }
