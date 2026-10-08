@@ -288,7 +288,7 @@ def check_keys_exist(catalog):
         if not root.exists():
             continue
         for path in list(root.rglob("*.swift")) + list(root.rglob("*.kt")):
-            if "Localization" in path.name:
+            if path.name.startswith("._") or "Localization" in path.name:
                 continue
             for key in pattern.findall(path.read_text(encoding="utf-8")):
                 if key not in catalog:
