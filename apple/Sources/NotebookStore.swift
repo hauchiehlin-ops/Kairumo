@@ -1414,11 +1414,16 @@ public final class NotebookStore: ObservableObject {
         let migrated = notebooks.map(migrateSeedTitles)
         var deduped = Self.deduplicateById(migrated)
 
-        // 同步索引庫具備最新 Lamport 時戳權威：若遠端或其他裝置已改名，讓工作副本的標題同步跟進
+        // 同步索引庫具備最新 Lamport 時戳權威：若遠端或其他裝置已改名或調整資料夾，讓工作副本同步跟進
         let liveIndex = syncLiveNotebooks(indexJson: AccountSyncStore.shared.indexJSON)
         let liveTitles = Dictionary(liveIndex.compactMap { item -> (String, String)? in
             let clean = item.title.trimmingCharacters(in: .whitespacesAndNewlines)
             return clean.isEmpty ? nil : (item.id.lowercased(), clean)
+        }, uniquingKeysWith: { first, _ in first })
+
+        let liveParents = Dictionary(liveIndex.map { item -> (String, String?) in
+            let p = item.parentId.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            return (item.id.lowercased(), p.isEmpty ? nil : p)
         }, uniquingKeysWith: { first, _ in first })
 
         for i in deduped.indices {
@@ -1427,21 +1432,125 @@ public final class NotebookStore: ObservableObject {
                 deduped[i].title = indexTitle
                 deduped[i].titleKey = nil
             }
+            if let indexParent = liveParents[nid], deduped[i].folderId?.lowercased() != indexParent {
+                deduped[i].folderId = indexParent
+            }
         }
 
         let retainedIds = Set(deduped.map { $0.id.lowercased() })
         let removed = migrated.filter { !retainedIds.contains($0.id.lowercased()) }
-        guard !removed.isEmpty || deduped != notebooks else { return }
+        let needsSave = !removed.isEmpty || deduped != notebooks
 
-        notebooks = deduped
-        for document in removed {
-            AccountSyncStore.shared.recordDeletion(id: document.id)
-            let original = corePackagesDirectory.appending(path: "\(document.id).padnote")
-            let canonical = corePackagesDirectory.appending(path: "\(document.id.lowercased()).padnote")
-            try? FileManager.default.removeItem(at: original)
-            if canonical != original { try? FileManager.default.removeItem(at: canonical) }
+        if needsSave {
+            notebooks = deduped
+            for document in removed {
+                AccountSyncStore.shared.recordDeletion(id: document.id)
+                let original = corePackagesDirectory.appending(path: "\(document.id).padnote")
+                let canonical = corePackagesDirectory.appending(path: "\(document.id.lowercased()).padnote")
+                try? FileManager.default.removeItem(at: original)
+                if canonical != original { try? FileManager.default.removeItem(at: canonical) }
+            }
+            markDirtyAndPersist(signalsLocalEdit: false)
         }
-        markDirtyAndPersist(signalsLocalEdit: false)
+
+        reconcileFoldersAndAssignmentsFromSync()
+    }
+
+    /// 依據帳號同步索引（AccountSyncStore / LibraryIndex）收斂資料夾結構與筆記所屬資料夾
+    public func reconcileFoldersAndAssignmentsFromSync() {
+        let indexJSON = AccountSyncStore.shared.indexJSON
+        guard !indexJSON.isEmpty else { return }
+
+        var foldersChanged = false
+        var notebooksChanged = false
+
+        // 1. 取得同步索引中所有有效資料夾
+        let syncFolders = AccountSyncStore.shared.liveFolders()
+        let syncFolderMap = Dictionary(syncFolders.map { ($0.id.lowercased(), $0) }, uniquingKeysWith: { first, _ in first })
+
+        // 2. 移除已被墓碑標記刪除的本機資料夾，更新現有資料夾的名稱與 parentId
+        var updatedFolders: [FolderItem] = []
+        for var folder in self.folders {
+            let fId = folder.id.lowercased()
+            // 若在同步索引中被標記刪除或因祖先刪除而隱藏，予以移除
+            if AccountSyncStore.shared.isDeleted(id: folder.id) || isHiddenBySync(folder.id) {
+                foldersChanged = true
+                continue
+            }
+            // 若同步索引中有最新中繼資料，更新名稱與 parentId
+            if let syncItem = syncFolderMap[fId] {
+                let cleanTitle = syncItem.title.trimmingCharacters(in: .whitespacesAndNewlines)
+                if !cleanTitle.isEmpty && folder.name != cleanTitle {
+                    folder.name = cleanTitle
+                    foldersChanged = true
+                }
+                let newParent = syncItem.parentId.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+                let targetParent = newParent.isEmpty ? nil : newParent
+                if folder.parentId?.lowercased() != targetParent {
+                    folder.parentId = targetParent
+                    foldersChanged = true
+                }
+            }
+            updatedFolders.append(folder)
+        }
+
+        // 3. 加入同步索引中有、但本機尚未建立的資料夾
+        let existingFolderIds = Set(updatedFolders.map { $0.id.lowercased() })
+        for syncFolder in syncFolders {
+            let sfId = syncFolder.id.lowercased()
+            if !existingFolderIds.contains(sfId) {
+                let cleanTitle = syncFolder.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                    ? L10n.t("folder_new_default")
+                    : syncFolder.title.trimmingCharacters(in: .whitespacesAndNewlines)
+                let parent = syncFolder.parentId.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+                let targetParent = parent.isEmpty ? nil : parent
+                let newFolder = FolderItem(
+                    id: sfId,
+                    name: cleanTitle,
+                    parentId: targetParent
+                )
+                updatedFolders.append(newFolder)
+                foldersChanged = true
+            }
+        }
+
+        // 去重保護（以小寫 id 為準）
+        var seenIds = Set<String>()
+        var dedupedFolders: [FolderItem] = []
+        for folder in updatedFolders {
+            let lower = folder.id.lowercased()
+            if seenIds.insert(lower).inserted {
+                dedupedFolders.append(folder)
+            } else {
+                foldersChanged = true
+            }
+        }
+        updatedFolders = dedupedFolders
+
+        if foldersChanged || updatedFolders != self.folders {
+            self.folders = updatedFolders
+        }
+
+        // 4. 收斂筆記本的所屬資料夾 (folderId)
+        // 同步索引具備最新時戳權威：比對 liveNotebooks 取得正確的 parentId
+        let liveNotebooksList = syncLiveNotebooks(indexJson: indexJSON)
+        let liveNotebookMap = Dictionary(liveNotebooksList.map { ($0.id.lowercased(), $0) }, uniquingKeysWith: { first, _ in first })
+
+        for i in self.notebooks.indices {
+            let nid = self.notebooks[i].id.lowercased()
+            if let item = liveNotebookMap[nid] {
+                let indexParent = item.parentId.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+                let targetFolderId = indexParent.isEmpty ? nil : indexParent
+                if self.notebooks[i].folderId?.lowercased() != targetFolderId {
+                    self.notebooks[i].folderId = targetFolderId
+                    notebooksChanged = true
+                }
+            }
+        }
+
+        if foldersChanged || notebooksChanged {
+            markDirtyAndPersist(signalsLocalEdit: false)
+        }
     }
 
 
@@ -1477,6 +1586,7 @@ public final class NotebookStore: ObservableObject {
         if let fData = try? Data(contentsOf: foldersFile),
            let fList = try? JSONDecoder().decode([FolderItem].self, from: fData) {
             self.folders = fList
+            reconcileFoldersAndAssignmentsFromSync()
         }
 
         if let tData = try? Data(contentsOf: trashFile),
@@ -2557,11 +2667,33 @@ public final class NotebookStore: ObservableObject {
     }
 
     public func subfolders(of parentId: String?) -> [FolderItem] {
-        folders.filter { $0.parentId == parentId && !isHiddenBySync($0.id) }
+        let target = parentId?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        if let target, !target.isEmpty {
+            return folders.filter {
+                $0.parentId?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == target
+                && !isHiddenBySync($0.id)
+            }
+        } else {
+            return folders.filter {
+                ($0.parentId == nil || $0.parentId?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == true)
+                && !isHiddenBySync($0.id)
+            }
+        }
     }
 
     public func notebooks(in folderId: String?) -> [NotebookDocument] {
-        notebooks.filter { $0.folderId == folderId && !isHiddenBySync($0.id) }
+        let target = folderId?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        if let target, !target.isEmpty {
+            return notebooks.filter {
+                $0.folderId?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == target
+                && !isHiddenBySync($0.id)
+            }
+        } else {
+            return notebooks.filter {
+                ($0.folderId == nil || $0.folderId?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == true)
+                && !isHiddenBySync($0.id)
+            }
+        }
     }
 
     /// 清單要顯示的筆記本。**不要用 `notebooks`** —— 那一份是真相來源，

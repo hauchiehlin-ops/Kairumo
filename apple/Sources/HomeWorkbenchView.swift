@@ -1521,7 +1521,7 @@ public struct HomeWorkbenchView: View {
         let baseList = filteredNotebooks.filter { !hiddenNoteIds.contains($0.id) }
         let visibleList: [NotebookDocument] = {
             if let fId = selectedFolderId {
-                return baseList.filter { $0.folderId == fId }
+                return baseList.filter { $0.folderId?.caseInsensitiveCompare(fId) == .orderedSame }
             } else {
                 return baseList
             }
@@ -1669,7 +1669,7 @@ public struct HomeWorkbenchView: View {
     @ViewBuilder
     private func hierarchicalNotebooksTreeView(visibleNotes: [NotebookDocument]) -> some View {
         let topFolders = notebookStore.subfolders(of: nil)
-        let unfiledNotes = visibleNotes.filter { $0.folderId == nil }
+        let unfiledNotes = visibleNotes.filter { $0.folderId == nil || $0.folderId?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == true }
 
         VStack(alignment: .leading, spacing: 10) {
             // 工具列：根資料夾名稱、全部展開/收合、新增子資料夾
@@ -1818,7 +1818,7 @@ public struct HomeWorkbenchView: View {
     private func hierarchicalFolderNode(folder: FolderItem, level: Int, allVisibleNotes: [NotebookDocument]) -> AnyView {
         let isExpanded = isFolderExpanded(folder.id)
         let childFolders = notebookStore.subfolders(of: folder.id)
-        let notesInThisFolder = allVisibleNotes.filter { $0.folderId == folder.id }
+        let notesInThisFolder = allVisibleNotes.filter { $0.folderId?.caseInsensitiveCompare(folder.id) == .orderedSame }
         let totalCount = notesInThisFolder.count
 
         return AnyView(

@@ -145,6 +145,88 @@ final class SyncFixesTests: XCTestCase {
         XCTAssertEqual(merged.audioAttachments?.map(\.id), ["a"], "沒有名單就分不出「新增」與「被刪」，不能補")
         XCTAssertFalse(preserved)
     }
+
+    // MARK: - 資料夾結構與筆記所屬階層跨裝置收斂 (G-05)
+
+    func testRemoteFolderStructureReconcilesToLocalStore() {
+        let store = isolatedNotebookStore()
+        let syncStore = AccountSyncStore.shared
+        defer { syncStore.resetLocalSyncState(account: "test") }
+
+        // 模擬遠端同步過來的 index.json：頂層資料夾 f_work，子資料夾 f_sub，筆記本 n1 在 f_sub
+        syncStore.record(id: "f_work", title: "工作筆記", parentId: nil, isFolder: true)
+        syncStore.record(id: "f_sub", title: "專案A", parentId: "f_work", isFolder: true)
+        syncStore.record(id: "n1", title: "專案會議", parentId: "f_sub", isFolder: false)
+
+        var note = NotebookDocument(id: "n1", title: "專案會議", pageCount: 1)
+        note.folderId = nil // 本機尚未歸類
+        store.notebooks = [note]
+        store.folders = []
+
+        store.reconcileFoldersAndAssignmentsFromSync()
+
+        // 驗證本機 folders 陣列已同步建立
+        XCTAssertEqual(store.folders.count, 2)
+        let topFolders = store.subfolders(of: nil)
+        XCTAssertEqual(topFolders.count, 1)
+        XCTAssertEqual(topFolders.first?.name, "工作筆記")
+        XCTAssertEqual(topFolders.first?.id, "f_work")
+
+        let childFolders = store.subfolders(of: "f_work")
+        XCTAssertEqual(childFolders.count, 1)
+        XCTAssertEqual(childFolders.first?.name, "專案A")
+        XCTAssertEqual(childFolders.first?.id, "f_sub")
+
+        // 驗證筆記本已被歸入子資料夾
+        XCTAssertEqual(store.notebooks.first?.folderId, "f_sub")
+        let notesInSub = store.notebooks(in: "f_sub")
+        XCTAssertEqual(notesInSub.count, 1)
+        XCTAssertEqual(notesInSub.first?.id, "n1")
+
+        // 驗證未分類筆記為空
+        let unfiled = store.notebooks(in: nil)
+        XCTAssertTrue(unfiled.isEmpty)
+    }
+
+    func testRemoteFolderRenameAndMoveConverges() {
+        let store = isolatedNotebookStore()
+        let syncStore = AccountSyncStore.shared
+        defer { syncStore.resetLocalSyncState(account: "test") }
+
+        syncStore.record(id: "f_proj", title: "原專案", parentId: nil, isFolder: true)
+        syncStore.record(id: "n2", title: "開發筆記", parentId: nil, isFolder: false)
+
+        let note = NotebookDocument(id: "n2", title: "開發筆記", pageCount: 1)
+        store.notebooks = [note]
+        store.folders = [FolderItem(id: "f_proj", name: "原專案", parentId: nil)]
+
+        // 遠端更名與將筆記移入該資料夾
+        syncStore.record(id: "f_proj", title: "全新專案名稱", parentId: nil, isFolder: true)
+        syncStore.record(id: "n2", title: "開發筆記", parentId: "f_proj", isFolder: false)
+
+        store.reconcileFoldersAndAssignmentsFromSync()
+
+        XCTAssertEqual(store.folders.first?.name, "全新專案名稱")
+        XCTAssertEqual(store.notebooks.first?.folderId, "f_proj")
+        XCTAssertEqual(store.notebooks(in: "f_proj").count, 1)
+    }
+
+    func testRemoteFolderDeletionRemovesLocalFolder() {
+        let store = isolatedNotebookStore()
+        let syncStore = AccountSyncStore.shared
+        defer { syncStore.resetLocalSyncState(account: "test") }
+
+        syncStore.record(id: "f_trash", title: "要刪除的資料夾", parentId: nil, isFolder: true)
+        store.folders = [FolderItem(id: "f_trash", name: "要刪除的資料夾", parentId: nil)]
+
+        // 遠端標記刪除（墓碑）
+        syncStore.recordDeletion(id: "f_trash")
+
+        store.reconcileFoldersAndAssignmentsFromSync()
+
+        XCTAssertTrue(store.folders.isEmpty)
+        XCTAssertTrue(store.subfolders(of: nil).isEmpty)
+    }
 }
 
 // MARK: - 錄音改名要跟著同步

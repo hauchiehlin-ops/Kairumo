@@ -211,6 +211,26 @@ public final class AccountSyncStore: ObservableObject {
         syncChildrenOf(indexJson: indexJSON, parentId: parentId ?? "")
     }
 
+    /// 所有目前有效的資料夾（已排除已刪除與祖先被刪除之項目，以層級遍歷取得）。
+    public func liveFolders() -> [FfiLibraryItem] {
+        var result: [FfiLibraryItem] = []
+        var visited = Set<String>()
+        func walk(parent: String, depth: Int) {
+            guard depth <= 32 else { return }
+            for item in syncChildrenOf(indexJson: indexJSON, parentId: parent) {
+                if item.isFolder {
+                    let lower = item.id.lowercased()
+                    if visited.insert(lower).inserted {
+                        result.append(item)
+                        walk(parent: lower, depth: depth + 1)
+                    }
+                }
+            }
+        }
+        walk(parent: "", depth: 0)
+        return result
+    }
+
     /// 把一個資料夾搬進去會不會形成環。**動手之前**問 ——
     /// 搬進自己的子孫裡，那棵子樹會從樹上斷開，救不回來。
     public func wouldCreateCycle(itemId: String, newParentId: String?) -> Bool {

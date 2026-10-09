@@ -130,6 +130,8 @@ protocol SyncableNotebookStore: AnyObject {
     func syncPurgeExpiredTrash() -> Int
     func syncRepairSeedDuplicates()
     func syncRefreshRecordings()
+    var syncFolders: [FolderItem] { get }
+    func syncReconcileFoldersAndHierarchy()
     /// 錄音清單。匯出時取出「屬於這本筆記的錄音」的名字。
     var syncRecordings: [AudioRecordingRecord] { get }
     /// 把別台改的錄音名字套進清單。`exported` 是匯出當下各錄音的名字：
@@ -147,6 +149,8 @@ extension SyncableNotebookStore {
     func syncPurgeExpiredTrash() -> Int { 0 }
     func syncRepairSeedDuplicates() {}
     func syncRefreshRecordings() {}
+    var syncFolders: [FolderItem] { [] }
+    func syncReconcileFoldersAndHierarchy() {}
     var syncRecordings: [AudioRecordingRecord] { [] }
     func syncApplyRecordingTitles(_: [String: String], exported _: [String: String]?) {}
 }
@@ -156,6 +160,12 @@ extension NotebookStore: SyncableNotebookStore {
 
     func syncApplyRecordingTitles(_ titles: [String: String], exported: [String: String]?) {
         applyRecordingTitles(titles, exported: exported)
+    }
+
+    var syncFolders: [FolderItem] { folders }
+
+    func syncReconcileFoldersAndHierarchy() {
+        reconcileFoldersAndAssignmentsFromSync()
     }
 
     var syncNotebooks: [NotebookDocument] {
@@ -613,6 +623,7 @@ enum NotebookSyncCoordinator {
             report: &report
         )
         store.syncRepairSeedDuplicates()
+        store.syncReconcileFoldersAndHierarchy()
         store.syncPurgeDeletedNotebooks(deletedNotebookIds)
         store.syncRefreshRecordings()
         SyncLogger.logAsync("【資料夾同步】全部完成。", source: .folder)
@@ -681,6 +692,21 @@ enum NotebookSyncCoordinator {
                     title: document.title,
                     parentId: document.folderId,
                     isFolder: false
+                )
+            }
+        }
+        // (A2) 把「索引從未見過」的舊版本機資料夾補進去。
+        let localFolders = AccountSyncStore.shared.liveFolders()
+        let localFolderIds = Set(localFolders.map { $0.id.lowercased() })
+        for folder in store.syncFolders {
+            let fId = folder.id.lowercased()
+            guard !AccountSyncStore.shared.isDeleted(id: folder.id) else { continue }
+            if !localFolderIds.contains(fId) {
+                AccountSyncStore.shared.record(
+                    id: folder.id,
+                    title: folder.name,
+                    parentId: folder.parentId,
+                    isFolder: true
                 )
             }
         }
@@ -837,6 +863,9 @@ enum NotebookSyncCoordinator {
             SyncLogger.logAsync("【Google Drive 同步】已手動中斷。", source: .googleDrive)
             return report
         }
+
+        // ── 中繼資料合併完成：立即收斂本機資料夾結構 ──────────────
+        store.syncReconcileFoldersAndHierarchy()
 
         // ── 同步前即時核實：本機現存 vs. 雲端索引差異樣態 ──────────────
         let activeLocalIds = Set(store.syncNotebooks.map { $0.id.lowercased() })
@@ -1016,8 +1045,9 @@ enum NotebookSyncCoordinator {
             onlyNotebookIds: changedPackageIds,
             report: &report
         )
-        // ── 4. 清理已被遠端刪除的本地殭屍筆記 ─────────────────
+        // ── 4. 清理已被遠端刪除的本地殭屍筆記與收斂資料夾結構 ─────────
         store.syncRepairSeedDuplicates()
+        store.syncReconcileFoldersAndHierarchy()
         store.syncPurgeDeletedNotebooks(deletedNotebookIds)
         store.syncRefreshRecordings()
 
@@ -1768,11 +1798,18 @@ enum NotebookSyncCoordinator {
             NotificationCenter.default.post(
                 name: .kairumoProInkChangedOnDisk, object: nil, userInfo: ["notebookId": documentId])
         }
-        let (merged, preserved) = preservingLocalChanges(
+        var (merged, preserved) = preservingLocalChanges(
             imported.document, local: store.allNotebooks.first {
                 $0.id.caseInsensitiveCompare(documentId) == .orderedSame
             },
             exported: ExportedObjectIds.shared.take(documentId))
+        if merged.folderId == nil,
+           let item = syncItem(indexJson: AccountSyncStore.shared.indexJSON, itemId: documentId) {
+            let pid = item.parentId.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            if !pid.isEmpty {
+                merged.folderId = pid
+            }
+        }
         store.syncUpsert(merged)
         SyncKnownObjects.recordVisible(merged)
         store.syncApplyRecordingTitles(
