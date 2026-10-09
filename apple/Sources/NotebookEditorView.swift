@@ -379,6 +379,13 @@ final class AdaptiveCanvasView: PKCanvasView {
     /// 連續模式下的兩指捲動（見 `TwoFingerScrollForwarder`）。
     let twoFingerScroll = TwoFingerScrollForwarder()
 
+    private let internalUndoManager = UndoManager()
+    override var undoManager: UndoManager? {
+        super.undoManager ?? internalUndoManager
+    }
+    override var canBecomeFirstResponder: Bool { true }
+    var initialLoadedStrokeCount: Int = 0
+
     /// 這一頁的高度（由 SwiftUI 端更新）
     /// 觸控觀察。
     ///
@@ -497,6 +504,7 @@ final class AdaptiveCanvasView: PKCanvasView {
         case .off:
             gesture.isEnabled = false
             gesture.deferUntilMoved = false
+            drawingGestureRecognizer.isEnabled = true
             restorePan()
         case .draw:
             gesture.mode = .draw
@@ -758,25 +766,27 @@ final class AdaptiveCanvasView: PKCanvasView {
     private func refreshInitialRenderIfNeeded() {
         guard !didInitialRefresh, window != nil, bounds.width > 1, bounds.height > 1 else { return }
         didInitialRefresh = true
-        for delay in [0.0, 0.4] {
-            DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
-                guard let self, self.window != nil, !self.drawing.strokes.isEmpty else { return }
-                // 使用者已經畫了東西（復原堆疊有項目）就**不要**再指派：指派會讓那些復原項
-                // 全部失效 —— 這正是「剛打開筆記本畫的前幾筆復原不了」的候選原因。
-                // 只讓畫面重畫就夠了。
-                if self.undoManager?.canUndo == true {
-                    CanvasDiag.log("初次補畫略過指派（已有復原項，延遲 \(delay)s）")
-                    self.setNeedsDisplay()
-                    return
-                }
-                CanvasDiag.log("初次補畫重新指派 drawing（\(self.drawing.strokes.count) 筆，延遲 \(delay)s）")
-                let coordinator = self.delegate as? CanvasRepresentable.Coordinator
-                let current = self.drawing
-                coordinator?.isProgrammaticUpdate = true
-                self.drawing = current
-                coordinator?.isProgrammaticUpdate = false
+        // 初始載入時畫布若本為空白（0 筆），根本不需要也不應該補畫。
+        // 若使用者在視窗剛呈現時就已落筆（筆畫數大於載入值或正在觸控），更絕不能重新指派 drawing，
+        // 否則會直接清除 PencilKit 為新筆畫登記的復原堆疊。
+        guard initialLoadedStrokeCount > 0 else { return }
+        guard self.drawing.strokes.count == initialLoadedStrokeCount, activeTouchesCount == 0 else { return }
+        if self.undoManager?.canUndo == true { return }
+
+        DispatchQueue.main.async { [weak self] in
+            guard let self, self.window != nil, self.activeTouchesCount == 0 else { return }
+            guard self.drawing.strokes.count == self.initialLoadedStrokeCount else { return }
+            if self.undoManager?.canUndo == true {
                 self.setNeedsDisplay()
+                return
             }
+            CanvasDiag.log("初次補畫重新指派 drawing（\(self.drawing.strokes.count) 筆）")
+            let coordinator = self.delegate as? CanvasRepresentable.Coordinator
+            let current = self.drawing
+            coordinator?.isProgrammaticUpdate = true
+            self.drawing = current
+            coordinator?.isProgrammaticUpdate = false
+            self.setNeedsDisplay()
         }
     }
 
@@ -959,6 +969,7 @@ struct CanvasRepresentable: UIViewRepresentable {
         // 建立時這一處漏了。
         context.coordinator.isProgrammaticUpdate = true
         canvas.drawing = drawing
+        canvas.initialLoadedStrokeCount = drawing.strokes.count
         context.coordinator.isProgrammaticUpdate = false
 
         // 給自動化測試一個穩定的抓取點（畫面上有多個 scroll view）
@@ -1084,8 +1095,8 @@ struct CanvasRepresentable: UIViewRepresentable {
             uiView.showsVerticalScrollIndicator = wantsScroll
         }
         // 打字模式不再關掉落筆手勢：靠 `.pencilOnly` 擋手指，Pencil 第一筆就收得到。
-        // 套索模式下關閉繪圖手勢，確保所有碰觸皆由自定義 lassoPan 處理。
-        let gestureOn = EditorCanvasInputPolicy.drawingGestureEnabled(effectiveMode: editorMode) && (selectedTool != .lasso)
+        // 套索與遮蔽膠帶模式下關閉繪圖手勢，確保所有碰觸皆由自定義物件層全權接收。
+        let gestureOn = EditorCanvasInputPolicy.drawingGestureEnabled(effectiveMode: editorMode) && (selectedTool != .lasso) && (selectedTool != .maskingTape)
         if uiView.drawingGestureRecognizer.isEnabled != gestureOn {
             uiView.drawingGestureRecognizer.isEnabled = gestureOn
         }
@@ -1097,7 +1108,7 @@ struct CanvasRepresentable: UIViewRepresentable {
         // `.pencilOnly` 時手指不畫，外層捲動單指就能動，不必（也不該）再轉發。
         if let adaptive = uiView as? AdaptiveCanvasView {
             adaptive.twoFingerScroll.setEnabled(
-                !isScrollEnabled && targetPolicy == .anyInput && selectedTool != .lasso, on: adaptive)
+                !isScrollEnabled && targetPolicy == .anyInput && selectedTool != .lasso && selectedTool != .maskingTape, on: adaptive)
         }
         if let adaptive = uiView as? AdaptiveCanvasView {
             let defer_ = EditorCanvasInputPolicy.defersPencilIntent(effectiveMode: editorMode)
@@ -4166,7 +4177,8 @@ public struct NotebookEditorView: View {
             }
             .overlay(alignment: .bottomLeading) {
                 // 練習題進行中：題目、選項、批改結果（見 DraftingPractice.swift）。
-                if editorMode == .draw && selectedTool == .drafting {
+                let isDraftingPaper = paperUsesDrafting(paperId: notebook.paperId(forPage: currentPageIndex))
+                if editorMode == .draw && (selectedTool == .drafting || isDraftingPaper) {
                     PracticeCard(
                         layer: { (canvasView as? AdaptiveCanvasView)?.proLayer },
                         onNew: {
@@ -4180,8 +4192,10 @@ public struct NotebookEditorView: View {
             // **佔用版面，不是浮在畫布上。** 原本是 `.overlay`，列疊在頁面最上方，
             // 蓋住頁首標題與題目文字（圖學頁一開頭就是標題）。改成 `safeAreaInset`：
             // 畫布整個往下讓出位置，收合或展開都不會壓到頁面內容。
+            // 在圖學專用紙張中保持列位穩定，切換一般畫筆寫筆記時不會突然收合引發整個畫布抖動重繪與觸控延遲。
             .safeAreaInset(edge: .top, spacing: 0) {
-                if editorMode == .draw && selectedTool == .drafting {
+                let isDraftingPaper = paperUsesDrafting(paperId: notebook.paperId(forPage: currentPageIndex))
+                if editorMode == .draw && (selectedTool == .drafting || isDraftingPaper) {
                     DraftingBar(onOpenSolidStudio: { showSolidStudio = true },
                                 onOpenToolbox: { showDraftingToolbox = true },
                                 onMarkAngle: { markProtractorReading() })
@@ -14708,7 +14722,7 @@ public struct MaskingTapeOverlayView: View {
                         selectedTapeId = nil
                     }
                     .gesture(
-                        DragGesture(minimumDistance: 6)
+                        DragGesture(minimumDistance: 10)
                             .onChanged { value in
                                 if selectedTapeId != nil {
                                     selectedTapeId = nil
@@ -14790,6 +14804,9 @@ public struct MaskingTapeOverlayView: View {
 
             // 選中膠帶時，在頂層獨立浮動顯示快捷工具條（保證按鈕點擊 100% 作用且不被邊界裁切）
             if isActive, let selId = selectedTapeId, let selectedTape = tapes.first(where: { $0.id == selId }) {
+                let toolbarY: CGFloat = selectedTape.rect.minY < 75
+                    ? selectedTape.rect.maxY + 48
+                    : selectedTape.rect.minY - 50
                 TapeFloatingToolbar(
                     tape: selectedTape,
                     presetColors: tapePresetHexes,
@@ -14818,7 +14835,7 @@ public struct MaskingTapeOverlayView: View {
                         onTapesChanged()
                     }
                 )
-                .position(x: selectedTape.rect.midX, y: max(32, selectedTape.rect.minY - 32))
+                .position(x: min(max(selectedTape.rect.midX, 180), PageGeometry.width - 180), y: toolbarY)
                 .zIndex(20)
             }
         }
@@ -14847,47 +14864,57 @@ private struct TapeFloatingToolbar: View {
                             Circle()
                                 .stroke(Color.primary.opacity(tape.colorHex?.uppercased() == hex.uppercased() ? 0.9 : 0.2), lineWidth: tape.colorHex?.uppercased() == hex.uppercased() ? 2.5 : 1)
                         )
+                        .frame(width: 34, height: 34)
+                        .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
             }
 
-            Divider().frame(height: 16)
+            Divider().frame(height: 18)
 
             // 旋轉
             Button(action: onRotate) {
                 Image(systemName: "rotate.right.fill")
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(.system(size: 14, weight: .semibold))
                     .foregroundColor(.accentColor)
+                    .frame(width: 34, height: 34)
+                    .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
 
-            Divider().frame(height: 16)
+            Divider().frame(height: 18)
 
             // 翻開 / 遮回切換
             Button(action: onToggleReveal) {
                 Image(systemName: tape.isRevealed ? "eye.fill" : "eye.slash.fill")
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(.system(size: 14, weight: .semibold))
                     .foregroundColor(.accentColor)
+                    .frame(width: 34, height: 34)
+                    .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
 
-            Divider().frame(height: 16)
+            Divider().frame(height: 18)
 
             // 刪除
             Button(action: onRemove) {
                 Image(systemName: "trash.fill")
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(.system(size: 14, weight: .semibold))
                     .foregroundColor(.red)
+                    .frame(width: 34, height: 34)
+                    .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
         }
         .padding(.horizontal, 12)
-        .padding(.vertical, 7)
+        .padding(.vertical, 4)
         .background(
-            RoundedRectangle(cornerRadius: 20)
+            RoundedRectangle(cornerRadius: 22)
                 .fill(Color(uiColor: .systemBackground))
                 .shadow(color: Color.black.opacity(0.22), radius: 8, y: 3)
         )
+        .contentShape(RoundedRectangle(cornerRadius: 22))
+        .onTapGesture {}
     }
 }
 
@@ -14941,7 +14968,7 @@ private struct TapeView: View {
                 RoundedRectangle(cornerRadius: 4)
                     .stroke(Color.accentColor, style: StrokeStyle(lineWidth: 1.5, dash: [4, 4]))
 
-                // 左縮放把手
+                // 左縮放把手（水平拉伸）
                 Circle()
                     .fill(Color.white)
                     .overlay(Circle().stroke(Color.accentColor, lineWidth: 2))
@@ -14969,7 +14996,7 @@ private struct TapeView: View {
                             }
                     )
 
-                // 右縮放把手
+                // 右縮放把手（水平拉伸）
                 Circle()
                     .fill(Color.white)
                     .overlay(Circle().stroke(Color.accentColor, lineWidth: 2))
@@ -14996,6 +15023,61 @@ private struct TapeView: View {
                             }
                     )
 
+                // 上縮放把手（垂直拉伸）
+                Circle()
+                    .fill(Color.white)
+                    .overlay(Circle().stroke(Color.accentColor, lineWidth: 2))
+                    .frame(width: 14, height: 14)
+                    .frame(width: 36, height: 36)
+                    .contentShape(Rectangle())
+                    .position(x: rect.width / 2, y: 0)
+                    .gesture(
+                        DragGesture(minimumDistance: 1)
+                            .onChanged { value in
+                                if resizeBaseRect == nil {
+                                    resizeBaseRect = tape.rect
+                                }
+                                guard let base = resizeBaseRect else { return }
+                                let newMinY = min(base.minY + value.translation.height, base.maxY - 16)
+                                let newH = base.maxY - newMinY
+                                liveRect = CGRect(x: base.minX, y: newMinY, width: base.width, height: newH)
+                            }
+                            .onEnded { _ in
+                                if let finalRect = liveRect {
+                                    onRectChanged(finalRect)
+                                }
+                                resizeBaseRect = nil
+                                liveRect = nil
+                            }
+                    )
+
+                // 下縮放把手（垂直拉伸）
+                Circle()
+                    .fill(Color.white)
+                    .overlay(Circle().stroke(Color.accentColor, lineWidth: 2))
+                    .frame(width: 14, height: 14)
+                    .frame(width: 36, height: 36)
+                    .contentShape(Rectangle())
+                    .position(x: rect.width / 2, y: rect.height)
+                    .gesture(
+                        DragGesture(minimumDistance: 1)
+                            .onChanged { value in
+                                if resizeBaseRect == nil {
+                                    resizeBaseRect = tape.rect
+                                }
+                                guard let base = resizeBaseRect else { return }
+                                let newH = max(16, base.height + value.translation.height)
+                                liveRect = CGRect(x: base.minX, y: base.minY, width: base.width, height: newH)
+                            }
+                            .onEnded { _ in
+                                if let finalRect = liveRect {
+                                    onRectChanged(finalRect)
+                                }
+                                resizeBaseRect = nil
+                                liveRect = nil
+                            }
+                    )
+
                 // 旋轉把手（頂部拉桿）
                 VStack(spacing: 0) {
                     Circle()
@@ -15004,11 +15086,11 @@ private struct TapeView: View {
                         .frame(width: 14, height: 14)
                     Rectangle()
                         .fill(Color.accentColor)
-                        .frame(width: 1.5, height: 10)
+                        .frame(width: 1.5, height: 14)
                 }
-                .frame(width: 36, height: 36)
+                .frame(width: 36, height: 40)
                 .contentShape(Rectangle())
-                .position(x: rect.width / 2, y: -12)
+                .position(x: rect.width / 2, y: -22)
                 .gesture(
                     DragGesture(minimumDistance: 1)
                         .onChanged { value in
@@ -15037,9 +15119,7 @@ private struct TapeView: View {
         .rotationEffect(.degrees(tape.rotation))
         .onTapGesture {
             if isActive {
-                if isSelected {
-                    onToggleReveal()
-                } else {
+                if !isSelected {
                     onSelect()
                 }
             } else {
@@ -15049,11 +15129,14 @@ private struct TapeView: View {
         .gesture(
             DragGesture(minimumDistance: 2)
                 .onChanged { value in
-                    guard isActive && isSelected else { return }
+                    guard isActive else { return }
+                    if !isSelected {
+                        onSelect()
+                    }
                     dragOffset = value.translation
                 }
                 .onEnded { value in
-                    guard isActive && isSelected else { return }
+                    guard isActive else { return }
                     let movedRect = CGRect(
                         x: tape.rect.minX + value.translation.width,
                         y: tape.rect.minY + value.translation.height,

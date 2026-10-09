@@ -526,6 +526,7 @@ final class ProInkLayerView: UIView {
 
     /// 圖層顯示／鎖定改了：整層重畫（只是不畫某些筆畫，筆點快取不必清）。
     @objc private func draftingChanged() {
+        invalidateAlignAnchors()
         setNeedsDisplay()
         onDraftingChanged?()
     }
@@ -618,6 +619,7 @@ final class ProInkLayerView: UIView {
     }
 
     private func persist() {
+        invalidateAlignAnchors()
         guard let directory else { return }
         reconcileLedger()
         ProInkStore.save(ownStrokes, in: directory, notebookId: notebookId, page: pageIndex)
@@ -753,8 +755,15 @@ final class ProInkLayerView: UIView {
 
     private var pageScale: CGFloat { max(transform.a, 0.25) }
 
+    private var cachedAlignAnchors: [FfiPoint]?
+
+    func invalidateAlignAnchors() {
+        cachedAlignAnchors = nil
+    }
+
     /// 對齊用的點：看得見的筆畫的端點與短折線的轉折點（上限 600 個，免得大頁面拖慢）。
     private func alignAnchors() -> [FfiPoint] {
+        if let cached = cachedAlignAnchors { return cached }
         let drafting = DraftingState.shared
         var out: [FfiPoint] = []
         for stroke in allStrokes where stroke.layerId == 0 || !drafting.isHidden(layer: stroke.layerId, notebookId: notebookId) {
@@ -765,6 +774,7 @@ final class ProInkLayerView: UIView {
             if pts.count <= 12 { for q in pts.dropFirst().dropLast() { out.append(FfiPoint(x: q.x, y: q.y)) } }
             if out.count > 600 { break }
         }
+        cachedAlignAnchors = out
         return out
     }
 
