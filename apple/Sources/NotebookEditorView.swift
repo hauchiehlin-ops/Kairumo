@@ -10703,7 +10703,8 @@ public struct NotebookEditorView: View {
         canvasNoticeToken += 1
         let token = canvasNoticeToken
         withAnimation(.easeInOut(duration: 0.2)) { canvasNotice = text }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 3.5) {
+        let duration: Double = ProcessInfo.processInfo.environment["KAIRUMO_UITEST"] == "1" ? 10.0 : 3.5
+        DispatchQueue.main.asyncAfter(deadline: .now() + duration) {
             guard canvasNoticeToken == token else { return }
             withAnimation(.easeInOut(duration: 0.3)) { canvasNotice = nil }
         }

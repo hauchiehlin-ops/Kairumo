@@ -221,8 +221,6 @@ final class InsertToolsAudit: XCTestCase {
             XCTFail("貼紙庫第一張貼紙存在但點不到")
             return
         }
-        // 等候面板進場動畫完全穩定，避免點擊在過渡期間被 UIKit/SwiftUI 吞掉
-        Thread.sleep(forTimeInterval: 0.6)
         sticker.tap()
 
         // 若因動畫殘餘或 CI 延遲導致首次 tap 未送達，補點一次
