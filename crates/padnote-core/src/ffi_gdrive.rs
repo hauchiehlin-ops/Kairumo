@@ -3591,8 +3591,7 @@ mod tests {
         // 還在錄：每一輪都長一點點，但都不到門檻。
         for extra in 1..=3usize {
             let base_len = 1000 + extra * 1000;
-            pkg.write_audio_file(name, &vec![0u8; base_len])
-                .unwrap();
+            pkg.write_audio_file(name, &vec![0u8; base_len]).unwrap();
             // 真的還在錄：在同步期間持續微量增長，避免受排程延遲抖動影響。
             let stop = Arc::new(std::sync::atomic::AtomicBool::new(false));
             let still_recording = {
