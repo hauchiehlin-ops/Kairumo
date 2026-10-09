@@ -227,6 +227,57 @@ final class SyncFixesTests: XCTestCase {
         XCTAssertTrue(store.folders.isEmpty)
         XCTAssertTrue(store.subfolders(of: nil).isEmpty)
     }
+
+    func testSubfoldersPreventsSelfReferenceAndCycles() {
+        let store = isolatedNotebookStore()
+        let selfRef = FolderItem(id: "f_self", name: "自指資料夾", parentId: "f_self")
+        store.folders = [selfRef]
+
+        // 子資料夾查詢絕不能回傳自身，避免遞迴無窮迴圈
+        let children = store.subfolders(of: "f_self")
+        XCTAssertTrue(children.isEmpty, "subfolders(of: id) 不得回傳指向自己的資料夾")
+
+        // 頂層資料夾查詢能包容自指資料夾作為根，而不致於消失
+        let root = store.subfolders(of: nil)
+        XCTAssertEqual(root.count, 1)
+        XCTAssertEqual(root.first?.id, "f_self")
+    }
+
+    func testSanitizeFoldersBreaksCyclesAndSelfReferences() {
+        let store = isolatedNotebookStore()
+        // 建立包含多種循環引用的資料夾集合
+        let f1 = FolderItem(id: "f1", name: "F1自指", parentId: "f1")
+        let f2 = FolderItem(id: "f2", name: "F2雙節點環", parentId: "f3")
+        let f3 = FolderItem(id: "f3", name: "F3雙節點環", parentId: "f2")
+        let fa = FolderItem(id: "fa", name: "FA三節點環", parentId: "fb")
+        let fb = FolderItem(id: "fb", name: "FB三節點環", parentId: "fc")
+        let fc = FolderItem(id: "fc", name: "FC三節點環", parentId: "fa")
+        let fNormalRoot = FolderItem(id: "f_root", name: "正常根目錄", parentId: nil)
+        let fNormalChild = FolderItem(id: "f_child", name: "正常子目錄", parentId: "f_root")
+
+        store.folders = [f1, f2, f3, fa, fb, fc, fNormalRoot, fNormalChild]
+        store.sanitizeFolders()
+
+        // 驗證自指已斷開
+        let sanitizedF1 = store.folders.first { $0.id == "f1" }
+        XCTAssertNil(sanitizedF1?.parentId, "自指資料夾的 parentId 必須被清理為 nil")
+
+        // 驗證二節點與三節點環中至少有一個節點被斷開為根目錄，破除循環
+        let p2 = store.folders.first { $0.id == "f2" }?.parentId
+        let p3 = store.folders.first { $0.id == "f3" }?.parentId
+        XCTAssertTrue(p2 == nil || p3 == nil, "二節點環中必須有節點被重設為 nil")
+
+        let pa = store.folders.first { $0.id == "fa" }?.parentId
+        let pb = store.folders.first { $0.id == "fb" }?.parentId
+        let pc = store.folders.first { $0.id == "fc" }?.parentId
+        XCTAssertTrue(pa == nil || pb == nil || pc == nil, "三節點環中必須有節點被重設為 nil")
+
+        // 正常資料夾關係不受影響
+        let sanitizedNormalRoot = store.folders.first { $0.id == "f_root" }
+        let sanitizedNormalChild = store.folders.first { $0.id == "f_child" }
+        XCTAssertNil(sanitizedNormalRoot?.parentId)
+        XCTAssertEqual(sanitizedNormalChild?.parentId, "f_root")
+    }
 }
 
 // MARK: - 錄音改名要跟著同步

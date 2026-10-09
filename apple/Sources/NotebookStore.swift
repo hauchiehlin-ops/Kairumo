@@ -1530,6 +1530,7 @@ public final class NotebookStore: ObservableObject {
         if foldersChanged || updatedFolders != self.folders {
             self.folders = updatedFolders
         }
+        sanitizeFolders()
 
         // 4. 收斂筆記本的所屬資料夾 (folderId)
         // 同步索引具備最新時戳權威：比對 liveNotebooks 取得正確的 parentId
@@ -1587,6 +1588,7 @@ public final class NotebookStore: ObservableObject {
            let fList = try? JSONDecoder().decode([FolderItem].self, from: fData) {
             self.folders = fList
             reconcileFoldersAndAssignmentsFromSync()
+            sanitizeFolders()
         }
 
         if let tData = try? Data(contentsOf: trashFile),
@@ -2666,17 +2668,64 @@ public final class NotebookStore: ObservableObject {
         return result
     }
 
+    /// 檢查並修復資料夾階層中的循環引用與自我引用，避免遞迴無窮迴圈（工作項 S-62、G-05）
+    public func sanitizeFolders() {
+        var folderMap = [String: FolderItem]()
+        for folder in folders {
+            folderMap[folder.id.lowercased()] = folder
+        }
+
+        var changed = false
+        var cleanedFolders: [FolderItem] = []
+
+        for var folder in folders {
+            let fId = folder.id.lowercased()
+            if let pId = folder.parentId?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
+                // 1. 自指保護：若 parentId 指向自己，重設為 nil
+                if pId == fId {
+                    folder.parentId = nil
+                    changed = true
+                } else {
+                    // 2. 迴圈保護：檢查祖先鏈是否成環
+                    var seen = Set<String>([fId])
+                    var cursor: String? = pId
+                    var hasCycle = false
+                    while let c = cursor {
+                        if seen.contains(c) {
+                            hasCycle = true
+                            break
+                        }
+                        seen.insert(c)
+                        cursor = folderMap[c]?.parentId?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+                    }
+                    if hasCycle {
+                        folder.parentId = nil
+                        changed = true
+                    }
+                }
+            }
+            cleanedFolders.append(folder)
+        }
+
+        if changed {
+            self.folders = cleanedFolders
+        }
+    }
+
     public func subfolders(of parentId: String?) -> [FolderItem] {
         let target = parentId?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         if let target, !target.isEmpty {
             return folders.filter {
-                $0.parentId?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == target
-                && !isHiddenBySync($0.id)
+                let fId = $0.id.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+                let pId = $0.parentId?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+                return pId == target && fId != target && !isHiddenBySync($0.id)
             }
         } else {
             return folders.filter {
-                ($0.parentId == nil || $0.parentId?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == true)
-                && !isHiddenBySync($0.id)
+                let fId = $0.id.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+                let pId = $0.parentId?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+                return (pId == nil || pId?.isEmpty == true || pId == fId)
+                    && !isHiddenBySync($0.id)
             }
         }
     }

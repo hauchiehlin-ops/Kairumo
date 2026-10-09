@@ -1666,12 +1666,12 @@ public struct HomeWorkbenchView: View {
     }
 
     // MARK: - 階層式樹狀資料夾與筆記本檢視（Hierarchical Tree View）
-    @ViewBuilder
-    private func hierarchicalNotebooksTreeView(visibleNotes: [NotebookDocument]) -> some View {
+    private func hierarchicalNotebooksTreeView(visibleNotes: [NotebookDocument]) -> AnyView {
         let topFolders = notebookStore.subfolders(of: nil)
         let unfiledNotes = visibleNotes.filter { $0.folderId == nil || $0.folderId?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == true }
 
-        VStack(alignment: .leading, spacing: 10) {
+        return AnyView(
+            VStack(alignment: .leading, spacing: 10) {
             // 工具列：根資料夾名稱、全部展開/收合、新增子資料夾
             HStack(spacing: 8) {
                 Image(systemName: "tray.2.fill")
@@ -1733,7 +1733,7 @@ public struct HomeWorkbenchView: View {
             VStack(alignment: .leading, spacing: 4) {
                 // 最頂層資料夾（及其遞迴子資料夾）
                 ForEach(topFolders) { folder in
-                    hierarchicalFolderNode(folder: folder, level: 0, allVisibleNotes: visibleNotes)
+                    hierarchicalFolderNode(folder: folder, level: 0, allVisibleNotes: visibleNotes, visitedFolderIds: [])
                 }
 
                 // 未分類筆記本
@@ -1812,12 +1812,28 @@ public struct HomeWorkbenchView: View {
             .padding(8)
             .background(Color(uiColor: .secondarySystemGroupedBackground))
             .cornerRadius(12)
-        }
+            }
+        )
     }
 
-    private func hierarchicalFolderNode(folder: FolderItem, level: Int, allVisibleNotes: [NotebookDocument]) -> AnyView {
+    private func hierarchicalFolderNode(
+        folder: FolderItem,
+        level: Int,
+        allVisibleNotes: [NotebookDocument],
+        visitedFolderIds: Set<String> = []
+    ) -> AnyView {
+        let fIdLower = folder.id.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        // 深度上限與循環保護：避免遞迴堆疊耗盡造成 SIGSEGV
+        guard level <= 16, !fIdLower.isEmpty, !visitedFolderIds.contains(fIdLower) else {
+            return AnyView(EmptyView())
+        }
+
+        let newVisited = visitedFolderIds.union([fIdLower])
         let isExpanded = isFolderExpanded(folder.id)
-        let childFolders = notebookStore.subfolders(of: folder.id)
+        let childFolders = notebookStore.subfolders(of: folder.id).filter {
+            let childLower = $0.id.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            return childLower != fIdLower && !newVisited.contains(childLower)
+        }
         let notesInThisFolder = allVisibleNotes.filter { $0.folderId?.caseInsensitiveCompare(folder.id) == .orderedSame }
         let totalCount = notesInThisFolder.count
 
@@ -1828,7 +1844,7 @@ public struct HomeWorkbenchView: View {
                     // 階層縮排
                     if level > 0 {
                         Color.clear
-                            .frame(width: CGFloat(level) * 20, height: 1)
+                            .frame(width: CGFloat(min(level, 16)) * 20, height: 1)
                     }
 
                     // 展開／收合箭頭按鈕
@@ -1911,7 +1927,12 @@ public struct HomeWorkbenchView: View {
                     VStack(alignment: .leading, spacing: 2) {
                         // 子資料夾
                         ForEach(childFolders) { subFolder in
-                            hierarchicalFolderNode(folder: subFolder, level: level + 1, allVisibleNotes: allVisibleNotes)
+                            hierarchicalFolderNode(
+                                folder: subFolder,
+                                level: level + 1,
+                                allVisibleNotes: allVisibleNotes,
+                                visitedFolderIds: newVisited
+                            )
                         }
 
                         // 該資料夾下的筆記本
@@ -1922,7 +1943,7 @@ public struct HomeWorkbenchView: View {
                         // 空資料夾提示
                         if childFolders.isEmpty && notesInThisFolder.isEmpty {
                             HStack(spacing: 6) {
-                                Color.clear.frame(width: CGFloat(level + 1) * 20 + 20, height: 1)
+                                Color.clear.frame(width: CGFloat(min(level + 1, 16)) * 20 + 20, height: 1)
                                 Text(localizationManager.localized("empty_folder"))
                                     .font(.caption2)
                                     .foregroundColor(.secondary)
