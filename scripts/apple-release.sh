@@ -74,10 +74,16 @@ PROJECT_PATH="${PROJECT_PATH:-${REPO_ROOT}/apple/Kairumo.xcodeproj}"
 SCHEME="${SCHEME:-Kairumo}"
 
 if [[ -z "$APPLE_TEAM_ID" ]]; then
+    APPLE_TEAM_ID="$(sed -n 's/.*DEVELOPMENT_TEAM = \([A-Z0-9]\{10\}\);/\1/p' "${PROJECT_PATH}/project.pbxproj" 2>/dev/null | head -n 1)"
+fi
+
+if [[ -z "$APPLE_TEAM_ID" ]]; then
     echo "⚠️ 尚未設定 APPLE_TEAM_ID。"
     echo "   請複製 apple/ExportConfig.env.template 為 apple/ExportConfig.env 並填寫您的資訊："
     echo "   cp apple/ExportConfig.env.template apple/ExportConfig.env"
     echo ""
+else
+    echo "==> 使用 Apple Team ID: ${APPLE_TEAM_ID}"
 fi
 
 # 版本閘門。android-release.sh 本來就有這道，apple 這邊沒有 —— 2.8.0 (20)
