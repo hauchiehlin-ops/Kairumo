@@ -3604,7 +3604,8 @@ mod tests {
                     let p = padnote_storage::NotebookPackage::open(&root).unwrap();
                     while !stop.load(std::sync::atomic::Ordering::Relaxed) {
                         growth += 1;
-                        p.write_audio_file(name, &vec![0u8; base_len + growth]).unwrap();
+                        p.write_audio_file(name, &vec![0u8; base_len + growth])
+                            .unwrap();
                         started.store(true, std::sync::atomic::Ordering::Relaxed);
                         std::thread::yield_now();
                     }
