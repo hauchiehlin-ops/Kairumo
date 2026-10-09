@@ -312,6 +312,7 @@ enum ScreenAudit {
                 let frame = element.frame
                 guard frame.width > 0, frame.height > 0,
                       frame.midX >= viewport.minX, frame.midX <= viewport.maxX,
+                      frame.midY >= viewport.minY + 5, frame.midY <= viewport.maxY - 5,
                       viewport.intersects(frame)
                 else { return nil }
                 return (element, frame)
@@ -321,7 +322,11 @@ enum ScreenAudit {
             guard attempt < 6 else { break }
 
             if menuCollection.exists {
-                menuCollection.swipeUp()
+                if attempt >= 4 {
+                    menuCollection.swipeDown()
+                } else {
+                    menuCollection.swipeUp()
+                }
             } else {
                 let scroll = app.scrollViews.firstMatch
                 if scroll.exists {

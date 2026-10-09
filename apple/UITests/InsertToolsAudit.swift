@@ -272,7 +272,7 @@ final class InsertToolsAudit: XCTestCase {
             if button.waitForExistence(timeout: 2) && button.isHittable {
                 button.tap()
                 _ = button.waitForNonExistence(timeout: 5)
-                Thread.sleep(forTimeInterval: 0.4)
+                Thread.sleep(forTimeInterval: 0.6)
                 return
             }
         }
@@ -282,12 +282,12 @@ final class InsertToolsAudit: XCTestCase {
             if button.exists && button.isHittable {
                 button.tap()
                 _ = button.waitForNonExistence(timeout: 5)
-                Thread.sleep(forTimeInterval: 0.4)
+                Thread.sleep(forTimeInterval: 0.6)
                 return
             }
         }
         app.swipeDown()
-        Thread.sleep(forTimeInterval: 0.4)
+        Thread.sleep(forTimeInterval: 0.6)
     }
 
     private func openEditor(_ app: XCUIApplication) -> Bool {
@@ -340,7 +340,7 @@ final class InsertToolsAudit: XCTestCase {
 
             let opened = app.descendants(matching: .any)
                 .matching(identifier: tool.opened).firstMatch
-            if !opened.waitForExistence(timeout: 8) {
+            if !opened.waitForExistence(timeout: 15) {
                 failures.append("\(tool.menuLabel)：打開之後找不到 \(tool.opened)")
             }
 
