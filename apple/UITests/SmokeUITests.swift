@@ -980,6 +980,14 @@ extension SmokeUITests {
             return XCTFail("編輯器上沒有可操作的「更多」選單")
         }
         more.tap()
+        let firstMenuItem = app.descendants(matching: .any)
+            .matching(NSPredicate(format: "label == %@", "Asset Library")).firstMatch
+        if !firstMenuItem.waitForExistence(timeout: 3) {
+            if more.isHittable {
+                more.tap()
+                _ = firstMenuItem.waitForExistence(timeout: 3)
+            }
+        }
         guard ScreenAudit.tapMenuItem(app, label: "Customize Toolbar") else {
             return XCTFail("「更多」選單裡找不到 Customize Toolbar")
         }

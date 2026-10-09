@@ -321,11 +321,7 @@ enum ScreenAudit {
             guard attempt < 6 else { break }
 
             if menuCollection.exists {
-                // 原生 UIMenu 在 iOS 上若直接 full swipeUp()，可能因慣性滑動跳過相鄰項目。
-                // 優先使用精確平滑的拖曳手勢，避免過度翻動。
-                let start = menuCollection.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.7))
-                let end = menuCollection.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.3))
-                start.press(forDuration: 0.05, thenDragTo: end)
+                menuCollection.swipeUp()
             } else {
                 let scroll = app.scrollViews.firstMatch
                 if scroll.exists {
