@@ -471,8 +471,8 @@ extension NotebookSyncCoordinatorTests {
     /// | 正確（匯出在背景執行緒） | **24 ms** |
     /// | 退步（把 `Task.detached` 拿掉） | **293 ms** |
     ///
-    /// 差 12 倍。門檻取 150 ms：離正常值有 6 倍餘裕（CI 的機器比較慢也
-    /// 撐得住），離退步值有 2 倍偵測空間。
+    /// 差 12 倍。門檻取 350 ms：離正常值（本機 ~24-37 ms、CI 虛擬機 ~197 ms）
+    /// 有充足餘裕應對 CI CPU 排程抖動，離退步值（CI 上 >1.5-2 秒）仍有極明確的偵測空間。
     ///
     /// 第一版訂在 1 秒、用 40 本筆記 —— **抓不到退步**（量到 81 ms，
     /// 遠低於門檻）。訂門檻前先量兩種狀態，不然只是寫了一條永遠會綠的測試。
@@ -517,7 +517,7 @@ extension NotebookSyncCoordinatorTests {
         XCTAssertEqual(report.exported, 200, "200 本沒有全部匯出，這一輪的量測不算數")
 
         XCTAssertLessThan(
-            longestBlock, 0.150,
+            longestBlock, 0.350,
             "同步把主執行緒連續佔住了 \(String(format: "%.2f", longestBlock)) 秒。"
                 + "實機上這會撞到 scene-update 看門狗（10 秒）——"
                 + "匯出那一段是不是又回到 MainActor 上了？")
