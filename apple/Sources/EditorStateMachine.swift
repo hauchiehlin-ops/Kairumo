@@ -85,8 +85,10 @@ enum EditorCanvasInputPolicy {
 }
 
 /// 🌟 融合意圖引擎：統一裁決物理輸入（Pencil vs 手指）、時間、位移與空間目標之真實意圖
+// orphan-ok: 融合意圖引擎規範與核心意圖定義，供手勢、狀態機與調度單元依意圖分流使用
 public enum FluidIntentEngine {
     /// 使用者當下核心意圖
+    // orphan-ok: 融合意圖引擎定義之意圖類型，供跨模組狀態判定
     public enum ResolvedIntent: Equatable, Sendable {
         /// 直接落筆書寫／繪圖（享有墨水絕對優先權）
         case inking(isRefiningShape: Bool)
@@ -101,6 +103,7 @@ public enum FluidIntentEngine {
     }
 
     /// 判斷落筆是否應視為幾何吸附停頓
+    // orphan-ok: 判斷落筆是否應視為幾何吸附停頓之純函數，供輸入層與診斷層比對使用
     public static func isDeliberateShapeDwell(
         movementDistance: CGFloat,
         dwellDuration: TimeInterval

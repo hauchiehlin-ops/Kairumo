@@ -392,7 +392,7 @@ final class AdaptiveCanvasView: PKCanvasView {
     var lastStrokeHadHoldDwell: Bool = false
     var onHoldDwellTriggered: (() -> Void)?
 
-    private func schedulePencilDwellTimer(at loc: CGPoint) {
+    private func schedulePencilDwellTimer() {
         pencilDwellWorkItem?.cancel()
         let work = DispatchWorkItem { [weak self] in
             guard let self else { return }
@@ -698,7 +698,7 @@ final class AdaptiveCanvasView: PKCanvasView {
             if touch.type == .pencil {
                 lastPencilLocation = touch.location(in: self)
                 lastStrokeHadHoldDwell = false
-                schedulePencilDwellTimer(at: lastPencilLocation)
+                schedulePencilDwellTimer()
                 if !deferPencilIntent {
                     onPencilTouchBegan?()
                 }
@@ -719,7 +719,7 @@ final class AdaptiveCanvasView: PKCanvasView {
             if dist > EditorCanvasInputPolicy.holdToSnapMaxJitter {
                 lastPencilLocation = loc
                 lastStrokeHadHoldDwell = false
-                schedulePencilDwellTimer(at: loc)
+                schedulePencilDwellTimer()
             }
         }
         if InkInputDiagnostics.isEnabled || ProcessInfo.processInfo.environment["KAIRUMO_UITEST"] == "1" {
