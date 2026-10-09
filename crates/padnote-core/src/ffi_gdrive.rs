@@ -804,7 +804,7 @@ const AUDIO_GROWTH_THRESHOLD: u64 = 1024 * 1024;
 #[cfg(not(test))]
 const AUDIO_SETTLE_PROBE: std::time::Duration = std::time::Duration::from_millis(1200);
 #[cfg(test)]
-const AUDIO_SETTLE_PROBE: std::time::Duration = std::time::Duration::from_millis(200);
+const AUDIO_SETTLE_PROBE: std::time::Duration = std::time::Duration::from_millis(400);
 
 /// 上一輪看到的本機檔案長度，用來判斷「還在成長」還是「已經穩定」。
 type SeenSizes = std::collections::BTreeMap<String, u64>;
@@ -3601,13 +3601,12 @@ mod tests {
                 let started = started.clone();
                 std::thread::spawn(move || {
                     let mut growth = 0usize;
-                    if let Ok(p) = padnote_storage::NotebookPackage::open(&root) {
-                        while !stop.load(std::sync::atomic::Ordering::Relaxed) {
-                            growth += 1;
-                            let _ = p.write_audio_file(name, &vec![0u8; base_len + growth]);
-                            started.store(true, std::sync::atomic::Ordering::Relaxed);
-                            std::thread::sleep(std::time::Duration::from_millis(5));
-                        }
+                    let p = padnote_storage::NotebookPackage::open(&root).unwrap();
+                    while !stop.load(std::sync::atomic::Ordering::Relaxed) {
+                        growth += 1;
+                        p.write_audio_file(name, &vec![0u8; base_len + growth]).unwrap();
+                        started.store(true, std::sync::atomic::Ordering::Relaxed);
+                        std::thread::yield_now();
                     }
                 })
             };
