@@ -30,7 +30,7 @@ hits = []
 
 for root in SCAN:
     for path in sorted(root.rglob("*.swift")):
-        if path.name == "SheetCoordinator.swift":
+        if path.name.startswith(".") or path.name == "SheetCoordinator.swift":
             continue
         content = path.read_text(encoding="utf-8")
         for match in SHEET_FLAG_PATTERN.finditer(content):

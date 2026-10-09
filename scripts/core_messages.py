@@ -50,6 +50,8 @@ def scan_rust() -> dict:
     """掃 Rust 非測試程式碼，回傳 {樣式: "檔:行"}。"""
     found = {}
     for f in sorted(ROOT.glob("crates/*/src/**/*.rs")):
+        if f.name.startswith("."):
+            continue
         rel = str(f.relative_to(ROOT))
         if any(k in rel for k in SKIP_FILES):
             continue

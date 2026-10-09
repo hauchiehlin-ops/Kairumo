@@ -28,6 +28,8 @@ BAD = re.compile(r"(?<!NSString\))\.appendingPathComponent\((?!\s*[^)]*isDirecto
 hits = []
 for root in SCAN:
     for path in sorted(root.rglob("*.swift")):
+        if path.name.startswith("."):
+            continue
         for lineno, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
             if BAD.search(line):
                 hits.append((path.relative_to(ROOT), lineno, line.strip()))

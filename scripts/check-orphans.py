@@ -123,7 +123,7 @@ def _read(roots) -> dict[str, str]:
         if not root.exists():
             continue
         for path in sorted(root.rglob(ext)):
-            if _generated(path):
+            if path.name.startswith(".") or _generated(path):
                 continue
             out[str(path.relative_to(ROOT))] = path.read_text(encoding="utf-8")
     return out

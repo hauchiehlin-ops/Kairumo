@@ -62,6 +62,8 @@ def identifiers(root: Path, patterns: list[str], suffix: str) -> set[str]:
     found: set[str] = set()
     regexes = [re.compile(p) for p in patterns]
     for path in root.rglob(f"*{suffix}"):
+        if path.name.startswith("."):
+            continue
         # 產生的字串表有一萬行、而且不含任何控制項，掃它只是浪費時間。
         if "generated" in path.name.lower() or path.name == "LocalizationStrings.kt":
             continue

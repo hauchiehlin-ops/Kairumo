@@ -4,6 +4,8 @@ root = pathlib.Path('.')
 # 1. 收集核心所有 #[uniffi::export] 的自由函式與方法
 fns = {}   # rust_name -> file
 for p in root.glob('crates/padnote-core/src/*.rs'):
+    if p.name.startswith("."):
+        continue
     src = p.read_text(encoding='utf-8')
     lines = src.split('\n')
     for i, line in enumerate(lines):

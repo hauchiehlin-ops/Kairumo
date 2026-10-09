@@ -22,6 +22,8 @@ import sys
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 hits = []
 for path in sorted((ROOT / "apple").rglob("*.swift")):
+    if path.name.startswith("."):
+        continue
     for lineno, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
         if "assumeIsolated" not in line:
             continue

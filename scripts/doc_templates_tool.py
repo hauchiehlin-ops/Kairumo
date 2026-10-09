@@ -219,6 +219,8 @@ def load_sources():
         sys.exit(f"找不到來源目錄：{SRC_DIR}")
     themes = []
     for path in sorted(SRC_DIR.glob("*.json")):
+        if path.name.startswith("."):
+            continue
         with path.open(encoding="utf-8") as handle:
             themes.append(json.load(handle))
     return themes

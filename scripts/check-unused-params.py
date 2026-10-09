@@ -305,6 +305,8 @@ GENERATED = ("/Generated/", "/uniffi/", ".generated.")
 
 
 def _is_generated(path: pathlib.Path) -> bool:
+    if path.name.startswith("."):
+        return True
     p = "/" + str(path).replace("\\", "/")
     return any(marker in p for marker in GENERATED)
 
