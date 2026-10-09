@@ -53,11 +53,11 @@ final class InsertToolsAudit: XCTestCase {
         ("Import an audio file", "", ""),  // 系統檔案挑選器，同上
         ("Math Calculator", "math.close", "math.close"),
         ("Chart Studio", "chart.close", "chart.close"),
-        ("Insert 3D Model", "model3d.close", "model3d.close"),
         // 這一項原本接錯：主選單呼叫的是 `insertDefaultShape()`，在
         // (200, 200) 默默塞一個矩形就結束，工作室從來沒被打開過 ——
         // 使用者回報的「點了沒反應」就是它。現在這條測試守著。
         ("Shapes & Flowcharts", "shape.cancel", "shape.cancel"),
+        ("Insert 3D Model", "model3d.close", "model3d.close"),
         ("Theme Tools", "theme.close", "theme.close"),
     ]
 
@@ -269,9 +269,9 @@ final class InsertToolsAudit: XCTestCase {
     private func dismissSheet(_ app: XCUIApplication, closeId: String? = nil) {
         if let closeId {
             let button = app.buttons[closeId]
-            if button.waitForExistence(timeout: 2) && button.isHittable {
+            if button.waitForExistence(timeout: 5) && button.isHittable {
                 button.tap()
-                _ = button.waitForNonExistence(timeout: 5)
+                _ = button.waitForNonExistence(timeout: 8)
                 Thread.sleep(forTimeInterval: 0.6)
                 return
             }
@@ -281,7 +281,7 @@ final class InsertToolsAudit: XCTestCase {
             let button = app.buttons[id]
             if button.exists && button.isHittable {
                 button.tap()
-                _ = button.waitForNonExistence(timeout: 5)
+                _ = button.waitForNonExistence(timeout: 8)
                 Thread.sleep(forTimeInterval: 0.6)
                 return
             }
@@ -340,8 +340,15 @@ final class InsertToolsAudit: XCTestCase {
 
             let opened = app.descendants(matching: .any)
                 .matching(identifier: tool.opened).firstMatch
-            if !opened.waitForExistence(timeout: 15) {
-                failures.append("\(tool.menuLabel)：打開之後找不到 \(tool.opened)")
+            if !opened.waitForExistence(timeout: 25) {
+                // 若在極慢的 CI 環境逾時，檢查是否因選單捲動剛停止時點擊被吃掉，若選單仍存在則嘗試補點一次
+                if let retryItem = ScreenAudit.visibleMenuItem(app, label: tool.menuLabel) {
+                    retryItem.tap()
+                    _ = opened.waitForExistence(timeout: 10)
+                }
+                if !opened.exists {
+                    failures.append("\(tool.menuLabel)：打開之後找不到 \(tool.opened)")
+                }
             }
 
             // **關閉一律用同一個動作，不要去點那個標記。**

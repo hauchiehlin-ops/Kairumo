@@ -3594,20 +3594,26 @@ mod tests {
             pkg.write_audio_file(name, &vec![0u8; base_len]).unwrap();
             // 真的還在錄：在同步期間持續微量增長，避免受排程延遲抖動影響。
             let stop = Arc::new(std::sync::atomic::AtomicBool::new(false));
+            let started = Arc::new(std::sync::atomic::AtomicBool::new(false));
             let still_recording = {
                 let root = root.clone();
                 let stop = stop.clone();
+                let started = started.clone();
                 std::thread::spawn(move || {
                     let mut growth = 0usize;
-                    while !stop.load(std::sync::atomic::Ordering::Relaxed) {
-                        std::thread::sleep(std::time::Duration::from_millis(15));
-                        growth += 1;
-                        if let Ok(p) = padnote_storage::NotebookPackage::open(&root) {
+                    if let Ok(p) = padnote_storage::NotebookPackage::open(&root) {
+                        while !stop.load(std::sync::atomic::Ordering::Relaxed) {
+                            growth += 1;
                             let _ = p.write_audio_file(name, &vec![0u8; base_len + growth]);
+                            started.store(true, std::sync::atomic::Ordering::Relaxed);
+                            std::thread::sleep(std::time::Duration::from_millis(5));
                         }
                     }
                 })
             };
+            while !started.load(std::sync::atomic::Ordering::Relaxed) {
+                std::thread::yield_now();
+            }
             let uploaded_this_round = session
                 .sync_notebook(path.clone(), "nb1".into(), 0xAA)
                 .uploaded;
