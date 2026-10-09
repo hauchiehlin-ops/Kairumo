@@ -801,7 +801,10 @@ fn gdrive_sync_notebook(
 const AUDIO_GROWTH_THRESHOLD: u64 = 1024 * 1024;
 
 /// 錄音疑似還在成長時，再量一次之前等多久。
+#[cfg(not(test))]
 const AUDIO_SETTLE_PROBE: std::time::Duration = std::time::Duration::from_millis(1200);
+#[cfg(test)]
+const AUDIO_SETTLE_PROBE: std::time::Duration = std::time::Duration::from_millis(200);
 
 /// 上一輪看到的本機檔案長度，用來判斷「還在成長」還是「已經穩定」。
 type SeenSizes = std::collections::BTreeMap<String, u64>;
@@ -3587,23 +3590,29 @@ mod tests {
 
         // 還在錄：每一輪都長一點點，但都不到門檻。
         for extra in 1..=3usize {
-            pkg.write_audio_file(name, &vec![0u8; 1000 + extra * 100])
+            let base_len = 1000 + extra * 1000;
+            pkg.write_audio_file(name, &vec![0u8; base_len])
                 .unwrap();
-            // 真的還在錄：同步在「再量一次」的空檔裡，檔案又長了一點。
-            // （沒有這一步的話，檔案在空檔裡沒變，會被正確地判成「已經錄完」而上傳。）
+            // 真的還在錄：在同步期間持續微量增長，避免受排程延遲抖動影響。
+            let stop = Arc::new(std::sync::atomic::AtomicBool::new(false));
             let still_recording = {
                 let root = root.clone();
+                let stop = stop.clone();
                 std::thread::spawn(move || {
-                    std::thread::sleep(std::time::Duration::from_millis(300));
-                    padnote_storage::NotebookPackage::open(&root)
-                        .unwrap()
-                        .write_audio_file(name, &vec![0u8; 1000 + extra * 100 + 37])
-                        .unwrap();
+                    let mut growth = 0usize;
+                    while !stop.load(std::sync::atomic::Ordering::Relaxed) {
+                        std::thread::sleep(std::time::Duration::from_millis(15));
+                        growth += 1;
+                        if let Ok(p) = padnote_storage::NotebookPackage::open(&root) {
+                            let _ = p.write_audio_file(name, &vec![0u8; base_len + growth]);
+                        }
+                    }
                 })
             };
             let uploaded_this_round = session
                 .sync_notebook(path.clone(), "nb1".into(), 0xAA)
                 .uploaded;
+            stop.store(true, std::sync::atomic::Ordering::Relaxed);
             still_recording.join().unwrap();
             assert_eq!(uploaded_this_round, 0, "錄製中的小幅成長不該整檔重傳");
         }
