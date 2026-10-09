@@ -295,12 +295,13 @@ enum ScreenAudit {
         _ app: XCUIApplication, label: String
     ) -> XCUIElement? {
         let window = app.windows.firstMatch.frame
-        let menuCollection = app.collectionViews.firstMatch
-        let viewport = menuCollection.exists
-            ? window.intersection(menuCollection.frame)
-            : window
 
         for attempt in 0...6 {
+            let menuCollection = app.collectionViews.firstMatch
+            let viewport = (menuCollection.exists && menuCollection.frame.width > 0 && menuCollection.frame.height > 0)
+                ? window.intersection(menuCollection.frame)
+                : window
+
             // 每次捲動後重建 query：原生選單會回收離開畫面的 row。
             let matches = app.descendants(matching: .any)
                 .matching(NSPredicate(format: "label == %@", label))
@@ -317,8 +318,22 @@ enum ScreenAudit {
             }.sorted { $0.frame.width > $1.frame.width }
 
             if let (element, _) = candidates.first { return element }
-            guard attempt < 6, menuCollection.exists else { break }
-            menuCollection.swipeUp()
+            guard attempt < 6 else { break }
+
+            if menuCollection.exists {
+                // 原生 UIMenu 在 iOS 上若直接 full swipeUp()，可能因慣性滑動跳過相鄰項目。
+                // 優先使用精確平滑的拖曳手勢，避免過度翻動。
+                let start = menuCollection.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.7))
+                let end = menuCollection.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.3))
+                start.press(forDuration: 0.05, thenDragTo: end)
+            } else {
+                let scroll = app.scrollViews.firstMatch
+                if scroll.exists {
+                    scroll.swipeUp()
+                } else {
+                    app.swipeUp()
+                }
+            }
         }
         return nil
     }

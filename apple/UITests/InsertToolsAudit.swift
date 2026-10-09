@@ -272,6 +272,7 @@ final class InsertToolsAudit: XCTestCase {
             if button.waitForExistence(timeout: 2) && button.isHittable {
                 button.tap()
                 _ = button.waitForNonExistence(timeout: 5)
+                Thread.sleep(forTimeInterval: 0.4)
                 return
             }
         }
@@ -281,10 +282,12 @@ final class InsertToolsAudit: XCTestCase {
             if button.exists && button.isHittable {
                 button.tap()
                 _ = button.waitForNonExistence(timeout: 5)
+                Thread.sleep(forTimeInterval: 0.4)
                 return
             }
         }
         app.swipeDown()
+        Thread.sleep(forTimeInterval: 0.4)
     }
 
     private func openEditor(_ app: XCUIApplication) -> Bool {
@@ -310,7 +313,21 @@ final class InsertToolsAudit: XCTestCase {
                 failures.append("\(tool.menuLabel)：找不到「更多」選單按鈕")
                 continue
             }
+            if !more.isHittable {
+                let hittable = NSPredicate(format: "isHittable == true")
+                _ = XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: hittable, object: more)], timeout: 5)
+            }
             more.tap()
+
+            // 等待選單展開：選單首項應可見。若未及時展開（如前一視窗退場延遲吞掉 tap），補點一次。
+            let firstMenuItem = app.descendants(matching: .any)
+                .matching(NSPredicate(format: "label == %@", "Asset Library")).firstMatch
+            if !firstMenuItem.waitForExistence(timeout: 3) {
+                if more.isHittable {
+                    more.tap()
+                    _ = firstMenuItem.waitForExistence(timeout: 3)
+                }
+            }
 
             // **一定要捲。** 這張選單有十九個項目，在手機上會捲動。
             guard ScreenAudit.tapMenuItem(app, label: tool.menuLabel) else {
@@ -351,7 +368,25 @@ final class InsertToolsAudit: XCTestCase {
             XCTFail("進不到編輯器")
             return
         }
-        element(app, "editor.more").tap()
+        let more = element(app, "editor.more")
+        guard more.waitForExistence(timeout: 10) else {
+            XCTFail("找不到「更多」選單按鈕")
+            return
+        }
+        if !more.isHittable {
+            let hittable = NSPredicate(format: "isHittable == true")
+            _ = XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: hittable, object: more)], timeout: 5)
+        }
+        more.tap()
+
+        let firstMenuItem = app.descendants(matching: .any)
+            .matching(NSPredicate(format: "label == %@", "Asset Library")).firstMatch
+        if !firstMenuItem.waitForExistence(timeout: 3) {
+            if more.isHittable {
+                more.tap()
+                _ = firstMenuItem.waitForExistence(timeout: 3)
+            }
+        }
 
         var missing: [String] = []
         for label in ["Choose from Files", "Import an audio file", "Insert 3D Model"] {
