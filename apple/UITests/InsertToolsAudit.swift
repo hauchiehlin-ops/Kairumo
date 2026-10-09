@@ -221,10 +221,18 @@ final class InsertToolsAudit: XCTestCase {
             XCTFail("貼紙庫第一張貼紙存在但點不到")
             return
         }
+        // 等候面板進場動畫完全穩定，避免點擊在過渡期間被 UIKit/SwiftUI 吞掉
+        Thread.sleep(forTimeInterval: 0.6)
         sticker.tap()
 
+        // 若因動畫殘餘或 CI 延遲導致首次 tap 未送達，補點一次
+        let notice = element(app, "editor.notice")
+        if !notice.waitForExistence(timeout: 3) && sticker.exists && sticker.isHittable {
+            sticker.tap()
+        }
+
         XCTAssertTrue(
-            element(app, "editor.notice").waitForExistence(timeout: 6),
+            notice.waitForExistence(timeout: 8),
             "貼紙插不進去，畫面上卻什麼都沒說。\n現場的識別碼："
                 + app.descendants(matching: .any).allElementsBoundByIndex
                     .prefix(50).map { $0.identifier }.filter { !$0.isEmpty }
@@ -272,7 +280,7 @@ final class InsertToolsAudit: XCTestCase {
             if button.waitForExistence(timeout: 5) && button.isHittable {
                 button.tap()
                 _ = button.waitForNonExistence(timeout: 8)
-                Thread.sleep(forTimeInterval: 0.6)
+                Thread.sleep(forTimeInterval: 0.8)
                 return
             }
         }
@@ -282,12 +290,12 @@ final class InsertToolsAudit: XCTestCase {
             if button.exists && button.isHittable {
                 button.tap()
                 _ = button.waitForNonExistence(timeout: 8)
-                Thread.sleep(forTimeInterval: 0.6)
+                Thread.sleep(forTimeInterval: 0.8)
                 return
             }
         }
         app.swipeDown()
-        Thread.sleep(forTimeInterval: 0.6)
+        Thread.sleep(forTimeInterval: 0.8)
     }
 
     private func openEditor(_ app: XCUIApplication) -> Bool {
@@ -319,13 +327,16 @@ final class InsertToolsAudit: XCTestCase {
             }
             more.tap()
 
-            // 等待選單展開：選單首項應可見。若未及時展開（如前一視窗退場延遲吞掉 tap），補點一次。
+            // 等待選單展開：優先以選單容器或首項判定。
+            // 只有在選單確定未展開時（如前一視窗退場延遲吞掉 tap）才補點一次，
+            // 避免在選單已開啟時誤點關閉選單。
+            let menuCollection = app.collectionViews.firstMatch
             let firstMenuItem = app.descendants(matching: .any)
                 .matching(NSPredicate(format: "label == %@", "Asset Library")).firstMatch
-            if !firstMenuItem.waitForExistence(timeout: 3) {
+            if !menuCollection.waitForExistence(timeout: 3) && !firstMenuItem.waitForExistence(timeout: 2) {
                 if more.isHittable {
                     more.tap()
-                    _ = firstMenuItem.waitForExistence(timeout: 3)
+                    _ = menuCollection.waitForExistence(timeout: 3)
                 }
             }
 
@@ -386,12 +397,13 @@ final class InsertToolsAudit: XCTestCase {
         }
         more.tap()
 
+        let menuCollection = app.collectionViews.firstMatch
         let firstMenuItem = app.descendants(matching: .any)
             .matching(NSPredicate(format: "label == %@", "Asset Library")).firstMatch
-        if !firstMenuItem.waitForExistence(timeout: 3) {
+        if !menuCollection.waitForExistence(timeout: 3) && !firstMenuItem.waitForExistence(timeout: 2) {
             if more.isHittable {
                 more.tap()
-                _ = firstMenuItem.waitForExistence(timeout: 3)
+                _ = menuCollection.waitForExistence(timeout: 3)
             }
         }
 

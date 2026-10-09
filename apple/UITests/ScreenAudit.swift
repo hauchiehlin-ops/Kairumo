@@ -305,7 +305,7 @@ enum ScreenAudit {
             // 每次捲動後重建 query：原生選單會回收離開畫面的 row。
             let matches = app.descendants(matching: .any)
                 .matching(NSPredicate(format: "label == %@", label))
-            _ = matches.firstMatch.waitForExistence(timeout: attempt == 0 ? 3 : 1)
+            _ = matches.firstMatch.waitForExistence(timeout: 2.5)
             let candidates = matches.allElementsBoundByIndex.compactMap {
                 element -> (element: XCUIElement, frame: CGRect)? in
                 guard element.exists else { return nil }
@@ -327,6 +327,7 @@ enum ScreenAudit {
                 } else {
                     menuCollection.swipeUp()
                 }
+                Thread.sleep(forTimeInterval: 0.3)
             } else {
                 let scroll = app.scrollViews.firstMatch
                 if scroll.exists {
@@ -334,6 +335,7 @@ enum ScreenAudit {
                 } else {
                     app.swipeUp()
                 }
+                Thread.sleep(forTimeInterval: 0.3)
             }
         }
         return nil
