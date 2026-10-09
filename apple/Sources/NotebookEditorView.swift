@@ -343,7 +343,7 @@ final class PencilIntentObserver: UIGestureRecognizer, UIGestureRecognizerDelega
         state = .failed
         switch kind {
         case .tap: onTap?(start)
-        case .stroke: onStroke?()
+        case .stroke, .holdToSnap: onStroke?()
         }
     }
 
@@ -385,6 +385,29 @@ final class AdaptiveCanvasView: PKCanvasView {
     }
     override var canBecomeFirstResponder: Bool { true }
     var initialLoadedStrokeCount: Int = 0
+
+    // MARK: - Hold-to-Snap 筆尖停留成形監測（第二階段：幾何停頓轉正）
+    private var pencilDwellWorkItem: DispatchWorkItem?
+    private var lastPencilLocation: CGPoint = .zero
+    var lastStrokeHadHoldDwell: Bool = false
+    var onHoldDwellTriggered: (() -> Void)?
+
+    private func schedulePencilDwellTimer(at loc: CGPoint) {
+        pencilDwellWorkItem?.cancel()
+        let work = DispatchWorkItem { [weak self] in
+            guard let self else { return }
+            self.lastStrokeHadHoldDwell = true
+            self.onHoldDwellTriggered?()
+            #if os(iOS)
+            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+            #endif
+        }
+        pencilDwellWorkItem = work
+        DispatchQueue.main.asyncAfter(
+            deadline: .now() + EditorCanvasInputPolicy.holdToSnapMinDuration,
+            execute: work
+        )
+    }
 
     /// 這一頁的高度（由 SwiftUI 端更新）
     /// 觸控觀察。
@@ -672,8 +695,13 @@ final class AdaptiveCanvasView: PKCanvasView {
         forwardLasso(touches, .began)
         activeTouchesCount += touches.count
         for touch in touches {
-            if touch.type == .pencil && !deferPencilIntent {
-                onPencilTouchBegan?()
+            if touch.type == .pencil {
+                lastPencilLocation = touch.location(in: self)
+                lastStrokeHadHoldDwell = false
+                schedulePencilDwellTimer(at: lastPencilLocation)
+                if !deferPencilIntent {
+                    onPencilTouchBegan?()
+                }
             }
             onTouchObserved?(touch)
             if InkInputDiagnostics.isEnabled || ProcessInfo.processInfo.environment["KAIRUMO_UITEST"] == "1" {
@@ -685,6 +713,15 @@ final class AdaptiveCanvasView: PKCanvasView {
 
     override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
         forwardLasso(touches, .changed)
+        if let pTouch = touches.first(where: { $0.type == .pencil }) {
+            let loc = pTouch.location(in: self)
+            let dist = hypot(loc.x - lastPencilLocation.x, loc.y - lastPencilLocation.y)
+            if dist > EditorCanvasInputPolicy.holdToSnapMaxJitter {
+                lastPencilLocation = loc
+                lastStrokeHadHoldDwell = false
+                schedulePencilDwellTimer(at: loc)
+            }
+        }
         if InkInputDiagnostics.isEnabled || ProcessInfo.processInfo.environment["KAIRUMO_UITEST"] == "1" {
             touches.forEach { onTouchDiagnostics?($0, event) }
         }
@@ -693,6 +730,9 @@ final class AdaptiveCanvasView: PKCanvasView {
 
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
         forwardLasso(touches, .ended)
+        if touches.contains(where: { $0.type == .pencil }) {
+            pencilDwellWorkItem?.cancel()
+        }
         activeTouchesCount = max(0, activeTouchesCount - touches.count)
         touches.forEach {
             onTouchObserved?($0)
@@ -706,6 +746,10 @@ final class AdaptiveCanvasView: PKCanvasView {
 
     override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
         forwardLasso(touches, .cancelled)
+        if touches.contains(where: { $0.type == .pencil }) {
+            pencilDwellWorkItem?.cancel()
+            lastStrokeHadHoldDwell = false
+        }
         activeTouchesCount = max(0, activeTouchesCount - touches.count)
         super.touchesCancelled(touches, with: event)
         checkPendingRetract()
@@ -992,6 +1036,13 @@ struct CanvasRepresentable: UIViewRepresentable {
         }
         context.coordinator.penHover.isPreviewEnabled = { [weak coordinator = context.coordinator] in
             coordinator?.parent.editorMode == .draw
+        }
+        context.coordinator.penHover.snapQuery = { [weak coordinator = context.coordinator] loc in
+            guard let coordinator else { return nil }
+            let isDrafting = coordinator.parent.selectedTool == .drafting || coordinator.parent.magneticSnapEnabled
+            guard isDrafting else { return nil }
+            let snap = SmartMagneticSnap.snap(start: loc, current: loc, enableGrid: true)
+            return snap.didSnap ? snap.snappedPoint : nil
         }
         canvas.installHoverPreviewIfNeeded(coordinator: context.coordinator.penHover)
         canvas.refreshPointer(BrushCursor.path(for: selectedTool, strokeWidth: strokeWidth))
@@ -1543,35 +1594,29 @@ struct CanvasRepresentable: UIViewRepresentable {
                 canvasView.accessibilityValue = CanvasRepresentable.testReadout(canvasView)
             }
 
-            // ── 長按圖形辨識 ────────────────────────────────────
-            // 新增筆劃時啟動 0.5 秒計時器；期間若再下筆就取消。
-            // 計時器到了表示使用者停住了，嘗試美化最後一筆。
+            // ── 真・Hold-to-Snap（手勢停頓即吸附成形） ──────────────────
+            // 只有在繪製時有刻意停留（hadDwell），或工具為圖學／磁吸直線時才觸發幾何美化轉正。
+            // 快速連貫書寫（一般筆記落筆提筆無停頓）100% 保持手繪原生線條，絕不誤把字體筆畫轉正！
             self.shapeRefineTimer?.cancel()
             let count = effective.strokes.count
-            if count > self.lastStrokeCountBeforeRefine, parent.selectedTool.isBrush {
-                let work = DispatchWorkItem { [weak canvasView, weak self] in
-                    guard let canvas = canvasView else { return }
-                    let drawing = canvas.drawing
-                    guard let lastStroke = drawing.strokes.last else { return }
-                    guard let (refined, kind) = SketchRefineEngine.refineSingleStroke(lastStroke) else { return }
-                    // 只有辨識出幾何圖形才替換
-                    guard kind != .freehand else { return }
-                    
+            let hadDwell = (canvasView as? AdaptiveCanvasView)?.lastStrokeHadHoldDwell ?? false
+            (canvasView as? AdaptiveCanvasView)?.lastStrokeHadHoldDwell = false
+
+            if count > self.lastStrokeCountBeforeRefine, parent.selectedTool.isBrush,
+               (hadDwell || parent.selectedTool == .drafting || parent.magneticSnapEnabled) {
+                let drawing = canvasView.drawing
+                if let lastStroke = drawing.strokes.last,
+                   let (refined, kind) = SketchRefineEngine.refineSingleStroke(lastStroke),
+                   kind != .freehand {
                     var strokes = drawing.strokes
                     strokes[strokes.count - 1] = refined
-                    
-                    DispatchQueue.main.async {
-                        guard let self else { return }
-                        self.replaceLastStroke(in: canvas, resulting: PKDrawing(strokes: strokes))
-                        self.parent.drawing = canvas.drawing
-                        _ = self.parent.onDrawingChanged?(canvas.drawing)
-                        // Haptic 回饋
-                        let generator = UIImpactFeedbackGenerator(style: .medium)
-                        generator.impactOccurred()
-                    }
+                    self.replaceLastStroke(in: canvasView, resulting: PKDrawing(strokes: strokes))
+                    self.parent.drawing = canvasView.drawing
+                    _ = self.parent.onDrawingChanged?(canvasView.drawing)
+                    #if os(iOS)
+                    UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                    #endif
                 }
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5, execute: work)
-                self.shapeRefineTimer = work
             }
 
             // ── 智慧磁吸對齊的引導線（實際的扶正已在上面、存檔之前做完）──────────
@@ -2129,6 +2174,8 @@ public struct NotebookEditorView: View {
 
     // 筆記主模式：手繪 (Draw) vs 鍵盤打字 (Type)
     @State private var editorMode: EditorMode = .draw
+    /// 軟體鍵盤避讓高度（Word 級打字流暢滾動視窗，避免畫面跳動或文字被遮擋）
+    @State private var keyboardHeight: CGFloat = 0
     /// 模式徽章是不是正顯示著。切換模式時亮起，過幾秒自己淡掉。
     ///
     /// **不常駐**（工作項 S-62）：它原本一直蓋在畫布右上角，330pt 寬，
@@ -4206,6 +4253,18 @@ public struct NotebookEditorView: View {
             }
             .onAppear { if knownObjectIds == nil { knownObjectIds = Set(allObjectIds) } }
             .onChange(of: allObjectIds.count) { _ in placeNewObjectsOnTop() }
+            .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { note in
+                if let frame = (note.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? NSValue)?.cgRectValue {
+                    withAnimation(.easeOut(duration: 0.25)) {
+                        keyboardHeight = frame.height
+                    }
+                }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in
+                withAnimation(.easeOut(duration: 0.25)) {
+                    keyboardHeight = 0
+                }
+            }
         )
     }
 
@@ -4281,6 +4340,7 @@ public struct NotebookEditorView: View {
                         .frame(width: PageGeometry.width, height: PageGeometry.height)
                         .scaleEffect(effectiveScale, anchor: .top)
                         .frame(width: scaledW, height: scaledH, alignment: .top)
+                        .padding(.bottom, inlineEditingTextId != nil ? keyboardHeight : 0)
                         .accessibilityElement(children: .contain)
                         .accessibilityIdentifier("editor.canvas")
                 }
@@ -10991,22 +11051,20 @@ public struct NotebookEditorView: View {
                 // 手指輕點會被畫成一個小點。這一下是「點文字方塊」，不是落筆 ——
                 // 把那個點拿掉，否則每次點方塊紙上都多一顆墨點。
                 removeTapDotStroke(near: location)
-                withAnimation(.easeInOut(duration: 0.2)) {
-                    // 全自動意圖感知：點擊文字方塊，自動切換至文字模式並聚焦，展開 Word 級文字編輯工具
-                    editorMode = .type
+                withAnimation(.easeInOut(duration: 0.15)) {
+                    // 全自動意圖感知：手指點擊文字方塊，立即進入行內聚焦編輯並展開 Word 級文字工具列
                     inlineEditingTextId = existing.id
                     editingTextId = nil
+                    activeSelectedObjectId = existing.id
                 }
                 return
             }
 
             // 手指輕點到文字以外的物件（圖片、形狀、表格、錄音卡…）：使用者要的是「選它」。
-            // 手寫模式下物件層不吃觸控，原本這一下什麼事都沒有（還多一顆墨點），使用者得自己先去切模式 ——
-            // 那就是『點物件取不到控制權』的卡頓感。現在直接切到打字模式並直接選定該物件，物件馬上可操作。
+            // 手寫模式下手指點中物件，精準選中物件並顯示把手，同時維持手繪工具列就緒，不強迫進入打字模式。
             if let (hitId, hitKind) = findObjectAt(location: location, page: targetPage) {
                 removeTapDotStroke(near: location)
                 withAnimation(.easeInOut(duration: 0.15)) {
-                    editorMode = .type
                     inlineEditingTextId = nil
                     if hitKind == "shape" {
                         selectedShapeIds = [hitId]
@@ -11019,7 +11077,6 @@ public struct NotebookEditorView: View {
                     selectedObjectIds = [hitId]
                     collaborationManager.broadcastSelection(selectedId: hitId)
                 }
-                flashModeBadge()
                 #if os(iOS)
                 UIImpactFeedbackGenerator(style: .light).impactOccurred()
                 #endif

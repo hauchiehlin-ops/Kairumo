@@ -35,6 +35,7 @@ import UIKit
 final class PenHoverPreviewView: UIView {
 
     private let shape = CAShapeLayer()
+    private let reticleLayer = CAShapeLayer()
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -45,6 +46,14 @@ final class PenHoverPreviewView: UIView {
         shape.fillColor = UIColor.clear.cgColor
         shape.lineWidth = 1
         layer.addSublayer(shape)
+
+        // 圖學／幾何磁吸十字準心（提供「所見即所得」的預先反饋）
+        reticleLayer.fillColor = UIColor.clear.cgColor
+        reticleLayer.lineWidth = 1.2
+        reticleLayer.strokeColor = UIColor.systemTeal.withAlphaComponent(0.85).cgColor
+        layer.addSublayer(reticleLayer)
+        reticleLayer.isHidden = true
+
         isHidden = true
     }
 
@@ -59,12 +68,14 @@ final class PenHoverPreviewView: UIView {
     ///   - tilt: 偏離垂直的角度，0 為垂直握筆。
     ///   - azimuth: 筆桿的方位角。
     ///   - color: 目前的墨色。
+    ///   - snapPoint: 專業圖學或磁吸格線對齊目標點（若存在，呈現吸附十字準心）。
     func show(
         at point: CGPoint,
         path: UIBezierPath?,
         tilt: CGFloat,
         azimuth: CGFloat,
-        color: UIColor
+        color: UIColor,
+        snapPoint: CGPoint? = nil
     ) {
         guard let path else {
             hide()
@@ -85,11 +96,31 @@ final class PenHoverPreviewView: UIView {
         shape.path = transformed.cgPath
         // 只描邊、不填滿：填滿的預覽會把它自己要對齊的那個字蓋住。
         shape.strokeColor = color.withAlphaComponent(0.55).cgColor
+
+        // 繪製磁吸準心（所見即所得吸附指示）
+        if let snap = snapPoint {
+            let reticle = UIBezierPath(arcCenter: snap, radius: 5.5, startAngle: 0, endAngle: .pi * 2, clockwise: true)
+            // 十字刻度線
+            reticle.move(to: CGPoint(x: snap.x - 11, y: snap.y))
+            reticle.addLine(to: CGPoint(x: snap.x - 6, y: snap.y))
+            reticle.move(to: CGPoint(x: snap.x + 6, y: snap.y))
+            reticle.addLine(to: CGPoint(x: snap.x + 11, y: snap.y))
+            reticle.move(to: CGPoint(x: snap.x, y: snap.y - 11))
+            reticle.addLine(to: CGPoint(x: snap.x, y: snap.y - 6))
+            reticle.move(to: CGPoint(x: snap.x, y: snap.y + 6))
+            reticle.addLine(to: CGPoint(x: snap.x, y: snap.y + 11))
+            reticleLayer.path = reticle.cgPath
+            reticleLayer.isHidden = false
+        } else {
+            reticleLayer.isHidden = true
+        }
+
         isHidden = false
     }
 
     func hide() {
         isHidden = true
+        reticleLayer.isHidden = true
     }
 }
 
@@ -101,6 +132,8 @@ final class PenHoverCoordinator: NSObject {
     var currentColor: (() -> UIColor)?
     /// 手寫模式才預覽。打字模式下畫布不收筆畫，畫一個筆頭只會誤導。
     var isPreviewEnabled: (() -> Bool)?
+    /// 專業圖學與幾何磁吸點查詢（若命中格線或錨點，回傳吸附座標）。
+    var snapQuery: ((CGPoint) -> CGPoint?)?
 
     private weak var preview: PenHoverPreviewView?
 
@@ -131,6 +164,7 @@ final class PenHoverCoordinator: NSObject {
         case .began, .changed:
             var tilt: CGFloat = 0
             var azimuth: CGFloat = 0
+            let location = gesture.location(in: view)
             if #available(iOS 16.4, *) {
                 // `altitudeAngle` 是與螢幕平面的夾角（π/2 為垂直握筆），
                 // 我們要的是偏離垂直的角度。兩者是互補角，不是同一個東西
@@ -139,12 +173,14 @@ final class PenHoverCoordinator: NSObject {
                 tilt = max(.pi / 2 - gesture.altitudeAngle, 0)
                 azimuth = gesture.azimuthAngle(in: view)
             }
+            let snapPoint = snapQuery?(location)
             preview.show(
-                at: gesture.location(in: view),
+                at: location,
                 path: currentPath?(),
                 tilt: tilt,
                 azimuth: azimuth,
-                color: currentColor?() ?? .label)
+                color: currentColor?() ?? .label,
+                snapPoint: snapPoint)
         default:
             preview.hide()
         }

@@ -68,14 +68,45 @@ enum EditorCanvasInputPolicy {
         effectiveMode == .type
     }
 
-    enum PencilGesture: Equatable { case tap, stroke }
+    enum PencilGesture: Equatable { case tap, stroke, holdToSnap }
 
-    /// 輕點的判準：移動距離小於 6pt、且停留不到 0.35 秒。
-    static let pencilTapMaxDistance: CGFloat = 6
-    static let pencilTapMaxDuration: TimeInterval = 0.35
+    /// 輕點的判準：移動距離小於 5pt、且停留不到 0.20 秒。
+    static let pencilTapMaxDistance: CGFloat = 5
+    static let pencilTapMaxDuration: TimeInterval = 0.20
 
-    static func classifyPencil(distance: CGFloat, duration: TimeInterval) -> PencilGesture {
-        (distance < pencilTapMaxDistance && duration < pencilTapMaxDuration) ? .tap : .stroke
+    /// 停頓成形（Hold-to-Snap）之門檻：終點停頓超過 0.32 秒、且抖動小於 6pt。
+    static let holdToSnapMinDuration: TimeInterval = 0.32
+    static let holdToSnapMaxJitter: CGFloat = 6.0
+
+    static func classifyPencil(distance: CGFloat, duration: TimeInterval, hasDwell: Bool = false) -> PencilGesture {
+        if hasDwell { return .holdToSnap }
+        return (distance < pencilTapMaxDistance && duration < pencilTapMaxDuration) ? .tap : .stroke
+    }
+}
+
+/// 🌟 融合意圖引擎：統一裁決物理輸入（Pencil vs 手指）、時間、位移與空間目標之真實意圖
+public enum FluidIntentEngine {
+    /// 使用者當下核心意圖
+    public enum ResolvedIntent: Equatable, Sendable {
+        /// 直接落筆書寫／繪圖（享有墨水絕對優先權）
+        case inking(isRefiningShape: Bool)
+        /// 選取物件或進入文字行內編輯
+        case selectOrEditText(targetId: String)
+        /// 操控已選取物件之調整把手（縮放、旋轉）
+        case manipulateHandle
+        /// 頁面平移、雙指縮放或復原
+        case navigationOrGesture
+        /// 空白處快速定位或即點即書
+        case placeCursorOrNewText
+    }
+
+    /// 判斷落筆是否應視為幾何吸附停頓
+    public static func isDeliberateShapeDwell(
+        movementDistance: CGFloat,
+        dwellDuration: TimeInterval
+    ) -> Bool {
+        movementDistance <= EditorCanvasInputPolicy.holdToSnapMaxJitter
+            && dwellDuration >= EditorCanvasInputPolicy.holdToSnapMinDuration
     }
 }
 
