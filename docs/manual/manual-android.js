@@ -578,7 +578,7 @@ window.KAIRUMO_MANUAL = {
           "**步驟 2｜即時共筆。** 任何一方的手寫筆畫、貼紙、圖片、文字方塊、表格、圖形、連接線、連結預覽、3D 模型與圖釘，都會毫秒級同步並自動儲存留存在雙方的筆記中。",
           "**步驟 3｜結束協同。** 房主點擊「結束協同會議」將關閉房間；隊友點擊「中斷連線」則只有自己退出，不影響其他成員。"
         ],
-        "tip": "【安全與隱私保證】協同內容全程以 AES-256-GCM 端對端加密，金鑰只存在邀請連結的「#key=...」片段中，中繼點只負責轉發看不懂的密文，任何第三方甚至中繼伺服器都無法解讀。離線期間的操作會自動暫存於本機佇列，網路恢復後自動補齊。頂部工具列採用群組折疊排版，工具收納於「插入」與「更多工具」中，畫面簡潔不擁擠。",
+        "tip": "【安全與隱私保證】協同內容全程以 AES-256-GCM 端對端加密，金鑰只存在邀請連結片段（#key=...）中，中繼點只負責轉發看不懂的密文，任何第三方甚至中繼伺服器都無法解讀。離線期間的操作會自動暫存於本機佇列，網路恢復後自動補齊。頂部工具列採用群組折疊排版，工具收納於「插入」與「更多工具」中，畫面簡潔不擁擠。",
         "fig": "collab",
         "cap": "尚未連線：開始多人協同、發現區域網路房間、加入協同房間、協同伺服器位址",
         "fig2": "collab_on",
@@ -1350,7 +1350,7 @@ window.KAIRUMO_MANUAL = {
           "**Step 2 — Real-time co-authoring.** Strokes, stickers, images, text boxes, tables, shapes, connectors, link previews, 3D models and pins sync with millisecond latency and are persisted locally on all canvases.",
           "**Step 3 — Ending the session.** The host taps “End Collaboration” to close the room; guests tapping “Disconnect” only leave individually without affecting others."
         ],
-        "tip": "【Security & Privacy Guarantees】Canvas content is fully end-to-end encrypted with AES-256-GCM. The encryption key travels strictly inside the “#key=...” fragment of the invite link, and the relay only forwards opaque ciphertext. Edits made while offline are queued locally and synchronized automatically upon reconnection. The top toolbar is neatly grouped into “Insert” and “More Tools” to keep your workspace uncluttered.",
+        "tip": "【Security & Privacy Guarantees】Canvas content is fully end-to-end encrypted with AES-256-GCM. The encryption key travels strictly inside the invite link fragment (#key=...), and the relay only forwards opaque ciphertext. Edits made while offline are queued locally and synchronized automatically upon reconnection. The top toolbar is neatly grouped into “Insert” and “More Tools” to keep your workspace uncluttered.",
         "fig": "collab",
         "cap": "Not connected: Start Collaboration, Discovered LAN Rooms, Join Room, Relay Server Address",
         "fig2": "collab_on",
@@ -2118,7 +2118,7 @@ window.KAIRUMO_MANUAL = {
           "**步骤 2｜实时共笔。** 任何一方的手写笔画、贴纸、图片、文本框、表格、图形、连接线、链接预览、3D 模型与图钉，都会毫秒级同步并自动持久化留存在双方的笔记中。",
           "**步骤 3｜结束协作。** 房主点击“结束协作会议”将关闭房间；队友点击“断开连接”则只有自己退出，不影响其他成员。"
         ],
-        "tip": "【安全与隐私保证】协作内容全程以 AES-256-GCM 端对端加密，密钥只存在邀请链接的“#key=...”片段中，中继点只负责转发看不懂的密文，任何第三方甚至中继服务器都无法解密。离线期间的操作会自动暂存于本地队列，网络恢复后自动补发。顶部工具栏采用分组折叠排版，工具收纳于“插入”与“更多工具”中，画面简洁不拥挤。",
+        "tip": "【安全与隐私保证】协作内容全程以 AES-256-GCM 端对端加密，密钥只存在邀请链接片段（#key=...）中，中继点只负责转发看不懂的密文，任何第三方甚至中继服务器都无法解密。离线期间的操作会自动暂存于本地队列，网络恢复后自动补发。顶部工具栏采用分组折叠排版，工具收纳于“插入”与“更多工具”中，画面简洁不拥挤。",
         "fig": "collab",
         "cap": "尚未连接：开始多人协作、发现局域网房间、加入协作房间、协作服务器地址",
         "fig2": "collab_on",
@@ -2886,7 +2886,7 @@ window.KAIRUMO_MANUAL = {
           "**手順2 — リアルタイム書き込み：** 筆跡、画像、テキストボックス、表、図形、接続線、3Dモデルなどがミリ秒単位で同期され、双方のノートに自動保存されます。",
           "**手順3 — 終了：** ホストが「共同編集を終了」を押すとルームが閉じ、参加者が「切断」を押すと自分だけ退出します。"
         ],
-        "tip": "【セキュリティとプライバシー保証】キャンバスの内容はすべて AES-256-GCM でエンドツーエンド暗号化されます。暗号鍵は招待リンクの「#key=...」フラグメント内にのみ存在し、中継地点は読めない暗号文を転送するだけです。オフライン中の編集はローカルに蓄積され、再接続時に自動送信されます。上部ツールバーは「挿入」と「詳細ツール」にすっきりグループ化されています。",
+        "tip": "【セキュリティとプライバシー保証】キャンバスの内容はすべて AES-256-GCM でエンドツーエンド暗号化されます。暗号鍵は招待リンクのフラグメント（#key=...）内にのみ存在し、中継地点は読めない暗号文を転送するだけです。オフライン中の編集はローカルに蓄積され、再接続時に自動送信されます。上部ツールバーは「挿入」と「詳細ツール」にすっきりグループ化されています。",
         "fig": "collab",
         "cap": "未接続：共同編集を開始、見つかったLANルーム、ルームに参加、中継サーバーアドレス",
         "fig2": "collab_on",
@@ -3654,7 +3654,7 @@ window.KAIRUMO_MANUAL = {
           "**2단계 — 실시간 필기:** 펜 선, 스티커, 이미지, 텍스트 상자, 표, 도형, 연결선, 3D 모델 등이 밀리초 단위로 동기화되며 양쪽 기기 캔버스에 영구 보존됩니다.",
           "**3단계 — 협업 종료:** 호스트가 “공동 편집 종료”를 누르면 방이 닫히며, 참여자가 “연결 해제”를 누르면 본인만 퇴장합니다."
         ],
-        "tip": "【보안 및 개인정보 보호】캔버스 내용은 전 구간 AES-256-GCM 종단 간 암호화됩니다. 암호화 키는 초대 링크의 “#key=...” 프래그먼트에만 존재하며, 중계기는 해독 불가능한 암호문만 전달합니다. 오프라인 중 작업은 로컬 큐에 보관되었다가 재연결 시 자동으로 전송됩니다. 상단 툴바는 “삽입” 및 “더보기”로 깔끔하게 그룹화되어 있습니다.",
+        "tip": "【보안 및 개인정보 보호】캔버스 내용은 전 구간 AES-256-GCM 종단 간 암호화됩니다. 암호화 키는 초대 링크의 프래그먼트(#key=...)에만 존재하며, 중계기는 해독 불가능한 암호문만 전달합니다. 오프라인 중 작업은 로컬 큐에 보관되었다가 재연결 시 자동으로 전송됩니다. 상단 툴바는 “삽입” 및 “더보기”로 깔끔하게 그룹화되어 있습니다.",
         "fig": "collab",
         "cap": "연결 전: 공동 편집 시작, 발견된 LAN 방, 방 참가, 중계 서버 주소",
         "fig2": "collab_on",
@@ -4417,7 +4417,7 @@ window.KAIRUMO_MANUAL = {
           "**ขั้นที่ 2 — ร่วมเขียนแบบเรียลไทม์:** ลายเส้น สติกเกอร์ รูปภาพ กล่องข้อความ ตาราง รูปทรง เส้นเชื่อม โมเดล 3D และหมุด จะซิงค์ด้วยความเร็วระดับมิลลิวินาทีและบันทึกเก็บไว้ในสมุดของทั้งสองฝ่ายอัตโนมัติ",
           "**ขั้นที่ 3 — สิ้นสุด:** ผู้เปิดห้องแตะ “สิ้นสุดการทำงานร่วมกัน” เพื่อปิดห้อง ผู้เข้าร่วมแตะ “ตัดการเชื่อมต่อ” จะออกเฉพาะตัวเอง"
         ],
-        "tip": "【การรับประกันความปลอดภัยและความเป็นส่วนตัว】เนื้อหาทั้งหมดเข้ารหัสแบบ End-to-End ด้วย AES-256-GCM กุญแจอยู่ในส่วน “#key=...” ของลิงก์เท่านั้น รีเลย์เพียงส่งผ่านข้อมูลที่อ่านไม่ออก ข้อมูลช่วงออฟไลน์จะถูกพักไว้และส่งอัตโนมัติเมื่อกลับมาออนไลน์ แถบเครื่องมือด้านบนจัดกลุ่มเป็น “แทรก” และ “เครื่องมือเพิ่มเติม” สบายตาไม่แออัด",
+        "tip": "【การรับประกันความปลอดภัยและความเป็นส่วนตัว】เนื้อหาทั้งหมดเข้ารหัสแบบ End-to-End ด้วย AES-256-GCM กุญแจอยู่ในส่วนท้ายของลิงก์ (#key=...) เท่านั้น รีเลย์เพียงส่งผ่านข้อมูลที่อ่านไม่ออก ข้อมูลช่วงออฟไลน์จะถูกพักไว้และส่งอัตโนมัติเมื่อกลับมาออนไลน์ แถบเครื่องมือด้านบนจัดกลุ่มเป็น “แทรก” และ “เครื่องมือเพิ่มเติม” สบายตาไม่แออัด",
         "fig": "collab",
         "cap": "ยังไม่เชื่อมต่อ: เริ่มทำงานร่วมกัน ห้อง LAN ที่ค้นพบ เข้าร่วมห้อง ที่อยู่เซิร์ฟเวอร์รีเลย์",
         "fig2": "collab_on",
