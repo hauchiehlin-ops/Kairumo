@@ -466,6 +466,7 @@ public final class LocalRelayServer {
     }
 
     /// 取得 Tailscale 虛擬網 IPv4 位址
+    // orphan-ok: Tailscale 虛擬網 IPv4 查詢輔助函式，與 lanIPv4Address 對稱供診斷與外部調用
     public static func tailscaleIPv4Address() -> String? {
         let (_, ts) = availableIPv4Addresses()
         return ts
