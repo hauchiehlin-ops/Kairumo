@@ -113,6 +113,8 @@ public class CollaborationManager: ObservableObject {
     @Published public var isHostingLocalRelay: Bool = false
     /// 本機中繼服務在區域網路上的位址（給隊友輸入）
     @Published public var lanRelayAddress: String? = nil
+    /// 本機中繼服務在 Tailscale 虛擬私有網路上的位址（給不同網段／遠端隊友連線）
+    @Published public var tailscaleRelayAddress: String? = nil
 
     /// 內建中繼起不來的原因。**要顯示給使用者看**，不要只 print。
     ///
@@ -221,9 +223,80 @@ public class CollaborationManager: ObservableObject {
         return dict
     }
 
-    /// 取得帶有 E2EE 金鑰的安全邀請連結
+    /// 取得帶有 E2EE 金鑰與伺服器位址的安全邀請連結
+    public func inviteLink(forTailscale: Bool = false) -> String {
+        let baseLink = collabInviteLink(roomId: currentRoomId, keyBase64: roomKeyBase64 ?? "")
+        let targetServer: String?
+        if isHostingLocalRelay {
+            if forTailscale, let ts = tailscaleRelayAddress {
+                targetServer = ts
+            } else {
+                targetServer = lanRelayAddress ?? tailscaleRelayAddress
+            }
+        } else {
+            targetServer = Self.isLoopbackHost(URL(string: serverAddress)?.host) ? nil : serverAddress
+        }
+        if let s = targetServer, !s.isEmpty {
+            if let hashIdx = baseLink.firstIndex(of: "#") {
+                let prefix = baseLink[..<hashIdx]
+                let fragment = baseLink[hashIdx...]
+                let delimiter = prefix.contains("?") ? "&" : "?"
+                let encodedServer = s.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? s
+                return "\(prefix)\(delimiter)server=\(encodedServer)\(fragment)"
+            } else {
+                let delimiter = baseLink.contains("?") ? "&" : "?"
+                let encodedServer = s.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? s
+                return "\(baseLink)\(delimiter)server=\(encodedServer)"
+            }
+        }
+        return baseLink
+    }
+
+    /// 取得帶有 E2EE 金鑰與伺服器位址的安全邀請連結（預設區網）
     public var encryptedInviteLink: String {
-        collabInviteLink(roomId: currentRoomId, keyBase64: roomKeyBase64 ?? "")
+        inviteLink(forTailscale: false)
+    }
+
+    /// 取得 Tailscale 跨網段安全邀請連結（若已連線 Tailscale 則提供）
+    public var tailscaleInviteLink: String? {
+        tailscaleRelayAddress != nil ? inviteLink(forTailscale: true) : nil
+    }
+
+    /// 從輸入字串中解析伺服器位址（若有提供）
+    public static func extractServerUrl(from text: String) -> String? {
+        let cleaned = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let url = URL(string: cleaned),
+           let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
+           let val = components.queryItems?.first(where: { $0.name == "server" })?.value,
+           !val.isEmpty {
+            return val
+        }
+        if let range = cleaned.range(of: "server=") {
+            let sub = cleaned[range.upperBound...]
+            let endIdx = sub.firstIndex(where: { $0 == "&" || $0 == "#" || $0.isWhitespace }) ?? sub.endIndex
+            let rawVal = String(sub[..<endIdx])
+            let extracted = rawVal.removingPercentEncoding ?? rawVal
+            if !extracted.isEmpty {
+                return extracted
+            }
+        }
+        return nil
+    }
+
+    /// 從輸入字串中解析乾淨的房間代碼
+    public static func extractRoomId(from text: String) -> String {
+        let cleaned = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let url = URL(string: cleaned),
+           let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
+           let val = components.queryItems?.first(where: { $0.name == "room" })?.value,
+           !val.isEmpty {
+            return val
+        }
+        let invite = collabParseInvite(text: cleaned)
+        if let ampIdx = invite.roomId.firstIndex(of: "&") {
+            return String(invite.roomId[..<ampIdx])
+        }
+        return invite.roomId
     }
 
     // MARK: - 連線與房間管理
@@ -238,14 +311,29 @@ public class CollaborationManager: ObservableObject {
 
     /// 加入既有協同房間
     public func joinRoom(roomId: String) {
-        // 房號、連結、連結帶金鑰三種輸入都由核心解析 —— 使用者三種都會貼，
-        // 而 Android 端要用同一套規則，否則同一個連結兩邊解出不同房號。
-        let invite = collabParseInvite(text: roomId)
-        guard !invite.roomId.isEmpty else { return }
+        let trimmed = roomId.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        // 1. 若輸入包含 server 參數，立即套用該伺服器位址
+        if let serverParam = Self.extractServerUrl(from: trimmed) {
+            self.serverAddress = serverParam
+        } else if Self.isLoopbackHost(URL(string: self.serverAddress)?.host) {
+            // 2. 若本地仍為 127.0.0.1，檢查是否有局域網掃描到的房間
+            let targetRoomId = Self.extractRoomId(from: trimmed)
+            if let matched = LocalSyncDiscovery.shared.discoveredRooms.first(where: { $0.roomId == targetRoomId }) {
+                self.serverAddress = matched.serverUrl
+            } else if let firstDiscovered = LocalSyncDiscovery.shared.discoveredRooms.first {
+                self.serverAddress = firstDiscovered.serverUrl
+            }
+        }
+
+        let cleanedRoomId = Self.extractRoomId(from: trimmed)
+        guard !cleanedRoomId.isEmpty else { return }
+
+        let invite = collabParseInvite(text: trimmed)
         if !invite.keyBase64.isEmpty {
             setRoomKey(base64: invite.keyBase64)
         }
-        connect(roomId: invite.roomId, asHost: false)
+        connect(roomId: cleanedRoomId, asHost: false)
     }
 
     /// 連線至中繼伺服器
@@ -279,14 +367,21 @@ public class CollaborationManager: ObservableObject {
             return
         }
 
-        // 位址指向本機時，直接由這台裝置提供中繼服務。
-        // 沒有這一步，預設的 ws://127.0.0.1:9002 後面根本沒有人在聽，
-        // 連線一定失敗，畫面就永遠卡在「正在自動重新連線」。
+        // 位址指向本機時，只有發起者（Host）才啟動中繼服務。
+        // 加入者若指向本機，代表沒有配置正確的主機區網 IP，必須提醒使用者而不是在本地開空房間。
         if Self.isLoopbackHost(url.host) {
-            startLocalRelayIfNeeded(port: UInt16(url.port ?? 9002))
+            if asHost {
+                startLocalRelayIfNeeded(port: UInt16(url.port ?? 9002), roomId: roomId)
+            } else {
+                print("⚠️ [Collab] 加入者不能將 127.0.0.1 視為中繼位址，請使用邀請連結或輸入房主的區網 IP (如 ws://192.168.x.x:9002)")
+                self.lastErrorMessage = LocalizationManager.shared.localized("collab_err_guest_loopback")
+                self.status = .disconnected
+                return
+            }
         } else {
             isHostingLocalRelay = false
             lanRelayAddress = nil
+            tailscaleRelayAddress = nil
         }
         lastErrorMessage = nil
 
@@ -298,8 +393,16 @@ public class CollaborationManager: ObservableObject {
         startListening()
         startPingTimer()
 
-        // 發送 Join 申請
-        let myName = AccountManager.shared.profile.displayName
+        // 發送 Join 申請（附帶裝置型號後綴，即使登錄同一個 Google 帳號也能清晰辨識）
+        #if os(macOS) || targetEnvironment(macCatalyst)
+        let deviceTag = "Mac"
+        #elseif os(iOS)
+        let deviceTag = (UIDevice.current.userInterfaceIdiom == .pad) ? "iPad" : "iPhone"
+        #else
+        let deviceTag = "Device"
+        #endif
+        let rawName = AccountManager.shared.profile.displayName
+        let myName = "\(rawName) (\(deviceTag))"
         let roleStr = asHost ? "owner" : "editor"
         let joinPayload: [String: Any] = [
             "type": "join",
@@ -318,7 +421,7 @@ public class CollaborationManager: ObservableObject {
     }
 
     /// 啟動內建中繼服務（冪等；已在執行中則直接沿用）
-    private func startLocalRelayIfNeeded(port: UInt16) {
+    private func startLocalRelayIfNeeded(port: UInt16, roomId: String? = nil) {
         // **真正的狀態是非同步來的。** `start()` 回傳成功只代表 NWListener
         // 建得起來；能不能聽要等 `stateUpdateHandler`。在此之前這裡樂觀地
         // 設成 true 就不管了 —— 監聽其實失敗時，畫面照樣說「正在擔任中繼」。
@@ -329,24 +432,36 @@ public class CollaborationManager: ObservableObject {
                 self.isHostingLocalRelay = true
                 self.isBonjourDegraded = !isBonjourActive
                 self.localRelayFailure = nil
-                self.lanRelayAddress = LocalRelayServer.lanIPv4Address()
-                    .map { "ws://\($0):\(boundPort)" }
+                let addrs = LocalRelayServer.availableIPv4Addresses()
+                self.lanRelayAddress = addrs.lan.map { "ws://\($0):\(boundPort)" }
+                self.tailscaleRelayAddress = addrs.tailscale.map { "ws://\($0):\(boundPort)" }
             case .failed(let why):
                 self.isHostingLocalRelay = false
                 self.isBonjourDegraded = false
                 self.lanRelayAddress = nil
+                self.tailscaleRelayAddress = nil
                 self.localRelayFailure = String(
                     format: LocalizationManager.shared.localized("local_relay_failed"), why)
             }
         }
 
-        switch LocalRelayServer.shared.start(port: port) {
+        #if os(macOS) || targetEnvironment(macCatalyst)
+        let deviceTag = "Mac"
+        #elseif os(iOS)
+        let deviceTag = (UIDevice.current.userInterfaceIdiom == .pad) ? "iPad" : "iPhone"
+        #else
+        let deviceTag = "Device"
+        #endif
+        let myHostName = "\(AccountManager.shared.profile.displayName) (\(deviceTag))"
+
+        switch LocalRelayServer.shared.start(port: port, roomId: roomId, hostName: myHostName) {
         case .success:
             // 這裡**先不宣稱在聽** —— 要等 `.ready` 回來才算。
             break
         case .failure(let error):
             isHostingLocalRelay = false
             lanRelayAddress = nil
+            tailscaleRelayAddress = nil
             // 埠被佔用通常代表已經有一個中繼（例如 `cargo run -p padnote-relay`）
             // 在聽，那就照常連過去，不是致命錯誤 —— 連上之後這個訊息會自己
             // 清掉。其餘的失敗（例如沙盒擋下監聽）則會一直留在畫面上。
@@ -391,6 +506,7 @@ public class CollaborationManager: ObservableObject {
                 LocalRelayServer.shared.stop()
                 isHostingLocalRelay = false
                 lanRelayAddress = nil
+                tailscaleRelayAddress = nil
             }
         }
     }

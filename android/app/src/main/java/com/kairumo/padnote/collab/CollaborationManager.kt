@@ -87,6 +87,10 @@ class CollaborationManager(private val context: Context) {
         private set
     var isHostingLocalRelay by mutableStateOf(false)
         private set
+    var lanRelayAddress by mutableStateOf<String?>(null)
+        private set
+    var tailscaleRelayAddress by mutableStateOf<String?>(null)
+        private set
     var queuedOplogCount by mutableIntStateOf(0)
         private set
 
@@ -119,7 +123,20 @@ class CollaborationManager(private val context: Context) {
 
     /** 房號、邀請連結、連結帶金鑰三種都吃得下（解析在核心）。 */
     fun joinRoom(text: String) {
-        val invite = collabParseInvite(text)
+        val trimmed = text.trim()
+        // 若包含 server 參數，立即套用該伺服器位址
+        val serverParam = runCatching {
+            android.net.Uri.parse(trimmed).getQueryParameter("server")
+        }.getOrNull() ?: if (trimmed.contains("server=")) {
+            trimmed.substringAfter("server=").substringBefore("&").substringBefore("#").trim()
+        } else null
+
+        if (!serverParam.isNullOrEmpty()) {
+            val decoded = runCatching { java.net.URLDecoder.decode(serverParam, "UTF-8") }.getOrDefault(serverParam)
+            serverAddress = decoded
+        }
+
+        val invite = collabParseInvite(trimmed)
         if (invite.roomId.isEmpty()) {
             lastError = "invalid_room"
             return
@@ -130,8 +147,36 @@ class CollaborationManager(private val context: Context) {
         connect(invite.roomId, asHost = false)
     }
 
+    fun getInviteLink(useTailscale: Boolean = false): String {
+        val base = collabInviteLink(roomId, roomKeyBase64 ?: "")
+        val target = if (isHostingLocalRelay) {
+            if (useTailscale && tailscaleRelayAddress != null) {
+                tailscaleRelayAddress
+            } else {
+                lanRelayAddress ?: tailscaleRelayAddress
+            }
+        } else if (!collabIsLoopbackHost(runCatching { java.net.URI(serverAddress).host ?: "" }.getOrDefault(""))) {
+            serverAddress
+        } else null
+
+        return if (target != null) {
+            val encodedTarget = runCatching { java.net.URLEncoder.encode(target, "UTF-8") }.getOrDefault(target)
+            if (base.contains("#")) {
+                val parts = base.split("#", limit = 2)
+                val delim = if (parts[0].contains("?")) "&" else "?"
+                "${parts[0]}${delim}server=${encodedTarget}#${parts[1]}"
+            } else {
+                val delim = if (base.contains("?")) "&" else "?"
+                "$base${delim}server=${encodedTarget}"
+            }
+        } else base
+    }
+
     val inviteLink: String
-        get() = collabInviteLink(roomId, roomKeyBase64 ?: "")
+        get() = getInviteLink(useTailscale = false)
+
+    val tailscaleInviteLink: String?
+        get() = if (tailscaleRelayAddress != null) getInviteLink(useTailscale = true) else null
 
     private fun connect(room: String, asHost: Boolean, isReconnecting: Boolean = false) {
         userInitiatedDisconnect = false
@@ -159,7 +204,13 @@ class CollaborationManager(private val context: Context) {
 
         val host = runCatching { java.net.URI(url).host ?: "" }.getOrDefault("")
         if (collabIsLoopbackHost(host)) {
-            startLocalRelay(runCatching { java.net.URI(url).port }.getOrDefault(-1))
+            if (asHost) {
+                startLocalRelay(runCatching { java.net.URI(url).port }.getOrDefault(-1))
+            } else {
+                lastError = "relay_guest_cannot_loopback"
+                status = Status.Disconnected
+                return
+            }
         } else {
             isHostingLocalRelay = false
         }
@@ -185,11 +236,50 @@ class CollaborationManager(private val context: Context) {
         else -> this
     }
 
+    fun getLocalIpAddresses(): Pair<String?, String?> {
+        var lanIp: String? = null
+        var tailscaleIp: String? = null
+        try {
+            val interfaces = java.net.NetworkInterface.getNetworkInterfaces() ?: return Pair(null, null)
+            for (intf in interfaces.asSequence()) {
+                if (!intf.isUp || intf.isLoopback) continue
+                for (addr in intf.inetAddresses.asSequence()) {
+                    if (addr is java.net.Inet4Address && !addr.isLoopbackAddress) {
+                        val hostAddress = addr.hostAddress ?: continue
+                        if (hostAddress.startsWith("100.")) {
+                            val parts = hostAddress.split(".")
+                            if (parts.size == 4) {
+                                val second = parts[1].toIntOrNull() ?: 0
+                                if (second in 64..127) {
+                                    tailscaleIp = hostAddress
+                                }
+                            }
+                        } else if (!hostAddress.startsWith("127.") && !hostAddress.startsWith("169.254.")) {
+                            if (lanIp == null || intf.name.startsWith("wlan") || intf.name.startsWith("eth")) {
+                                lanIp = hostAddress
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (_: Exception) {}
+        return Pair(lanIp, tailscaleIp)
+    }
+
     private fun startLocalRelay(port: Int) {
         val p = if (port in 1..65535) port.toUShort() else 9002u
         val server = relay ?: RelayServer().also { relay = it }
         // 埠被佔用通常代表已經有一個中繼在聽，照常連過去就好，不是致命錯誤。
-        isHostingLocalRelay = runCatching { server.start(p); server.isRunning() }.getOrDefault(false)
+        val ok = runCatching { server.start(p); server.isRunning() }.getOrDefault(false)
+        isHostingLocalRelay = ok
+        if (ok) {
+            val (lan, ts) = getLocalIpAddresses()
+            lanRelayAddress = lan?.let { "ws://$it:$p" }
+            tailscaleRelayAddress = ts?.let { "ws://$it:$p" }
+        } else {
+            lanRelayAddress = null
+            tailscaleRelayAddress = null
+        }
     }
 
     fun disconnect(userInitiated: Boolean = true) {
@@ -206,6 +296,8 @@ class CollaborationManager(private val context: Context) {
         if (userInitiated) {
             runCatching { relay?.stop() }
             isHostingLocalRelay = false
+            lanRelayAddress = null
+            tailscaleRelayAddress = null
             status = Status.Disconnected
         }
     }
@@ -281,11 +373,12 @@ class CollaborationManager(private val context: Context) {
     private inner class Listener : WebSocketListener() {
         override fun onOpen(webSocket: WebSocket, response: Response) {
             val profile = AccountManager.load(context, fallbackName = "Kairumo")
+            val rawName = profile.displayName.ifEmpty { "Kairumo" }
             val join = JSONObject()
                 .put("type", "join")
                 .put("room_id", roomId)
                 .put("user_id", currentUserId)
-                .put("user_name", profile.displayName)
+                .put("user_name", "$rawName (Android)")
                 .put("user_color", profile.colorHex)
                 .put("role", if (isHost) "owner" else "editor")
             webSocket.send(join.toString())

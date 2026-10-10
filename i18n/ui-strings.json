@@ -2383,6 +2383,14 @@
     "zhHans": "无效的协同服务器地址：%@",
     "zhHant": "無效的協同伺服器位址：%@"
   },
+  "collab_err_guest_loopback": {
+    "en": "Cannot connect to loopback address (127.0.0.1). Please use the host's LAN or Tailscale IP address.",
+    "ja": "ループバックアドレス (127.0.0.1) には接続できません。ホストの LAN または Tailscale IP アドレスを使用してください。",
+    "ko": "루프백 주소(127.0.0.1)로는 연결할 수 없습니다. 호스트의 LAN 또는 Tailscale IP 주소를 사용하세요.",
+    "th": "ไม่สามารถเชื่อมต่อไปยังที่อยู่ย้อนกลับ (127.0.0.1) ได้ โปรดใช้ที่อยู่ LAN หรือ Tailscale IP ของผู้เปิดห้อง",
+    "zhHans": "无法连接至本设备回送地址 (127.0.0.1)。请使用房主的局域网或 Tailscale IP 地址。",
+    "zhHant": "無法連線至本機迴環位址 (127.0.0.1)。請使用房主的區域網路或 Tailscale IP 位址。"
+  },
   "collab_err_unreachable": {
     "en": "Could not reach the collaboration server %@. Retrying has stopped.",
     "ja": "共同編集サーバー %@ に接続できません。再試行を停止しました。",
@@ -2790,6 +2798,22 @@
     "th": "คัดลอกลิงก์คำเชิญที่เข้ารหัส",
     "zhHans": "复制加密邀请链接",
     "zhHant": "複製加密邀請連結"
+  },
+  "copy_lan_link": {
+    "en": "Copy Local Link (Wi-Fi)",
+    "ja": "ローカル招待リンクをコピー",
+    "ko": "로컬 초대 링크 복사",
+    "th": "คัดลอกลิงก์ภายในเครือข่าย",
+    "zhHans": "复制局域网链接 (Wi-Fi)",
+    "zhHant": "複製區網連結 (Wi-Fi)"
+  },
+  "copy_tailscale_link": {
+    "en": "Copy Cross-Network Link (Tailscale)",
+    "ja": "Tailscale招待リンクをコピー",
+    "ko": "Tailscale 초대 링크 복사",
+    "th": "คัดลอกลิงก์ Tailscale",
+    "zhHans": "复制跨网段链接 (Tailscale)",
+    "zhHant": "複製跨網段連結 (Tailscale)"
   },
   "copy_pages_to_title": {
     "en": "Copy the selected pages into",
@@ -5334,6 +5358,14 @@
     "th": "บอกรัศมี",
     "zhHans": "圆弧半径标注",
     "zhHant": "圓弧半徑標註"
+  },
+  "discovered_lan_rooms": {
+    "en": "Discovered LAN Rooms",
+    "ja": "見つかったLANルーム",
+    "ko": "발견된 LAN 방",
+    "th": "ห้อง LAN ที่ค้นพบ",
+    "zhHans": "发现局域网协作房间",
+    "zhHant": "發現區域網路協同房間"
   },
   "disconnect": {
     "en": "Disconnect",
@@ -10463,6 +10495,14 @@
     "zhHans": "这个中继位址无法使用。",
     "zhHant": "這個中繼位址無法使用。"
   },
+  "join_discovered_room": {
+    "en": "Join Discovered Room",
+    "ja": "発見したルームに参加",
+    "ko": "발견된 방 참가",
+    "th": "เข้าร่วมห้องที่ค้นพบ",
+    "zhHans": "加入发现房间",
+    "zhHant": "加入發現房間"
+  },
   "join_room": {
     "en": "Join Room",
     "ja": "ルームに参加",
@@ -14927,6 +14967,14 @@
     "zhHans": "这个中继在公开网络上，必须用 wss://（加密）。ws:// 只允许用在你自己的局域网里。",
     "zhHant": "這個中繼在公開網路上，必須用 wss://（加密）。ws:// 只允許用在你自己的區域網路裡。"
   },
+  "relay_lan_address": {
+    "en": "Local Network (Wi-Fi)",
+    "ja": "ローカルネットワーク (Wi-Fi)",
+    "ko": "로컬 네트워크 (Wi-Fi)",
+    "th": "เครือข่ายภายใน (Wi-Fi)",
+    "zhHans": "局域网 (Wi-Fi)",
+    "zhHant": "區域網路 (Wi-Fi)"
+  },
   "relay_remote_hint": {
     "en": "Not on the same network? Collaboration is not limited to one network. Enter any relay you control as wss://… (a TLS address) and everyone can join from anywhere. Plain ws:// is only accepted inside your own private network, because the room ID and membership travel in the clear even though the content does not. See the manual for three ways to get one.",
     "ja": "同じネットワークでなくても使えます。共同編集は1つのネットワークに縛られません。自分で用意した中継を wss://…（TLS）で指定すれば、どこからでも参加できます。内容は暗号化されていてもルームIDや参加者は平文で流れるため、ws:// は自分のプライベートネットワーク内でのみ許可されます。入手方法は3通り、手引きを参照してください。",
@@ -14934,6 +14982,14 @@
     "th": "ไม่ได้อยู่เครือข่ายเดียวกันก็ใช้ได้ การทำงานร่วมกันไม่ได้ผูกกับเครือข่ายเดียว กรอกที่อยู่รีเลย์ที่คุณดูแลเองเป็น wss://… (TLS) แล้วทุกคนเข้าร่วมจากที่ไหนก็ได้ ws:// ธรรมดาอนุญาตเฉพาะในเครือข่ายส่วนตัวของคุณ เพราะ Room ID และรายชื่อผู้เข้าร่วมส่งแบบไม่เข้ารหัสแม้เนื้อหาจะเข้ารหัสแล้ว ดูสามวิธีได้ในคู่มือ",
     "zhHans": "不在同一个网络？协作并不限于单一网络。把你自己掌握的中继填成 wss://…（TLS 地址），所有人就能从任何地方加入。明文 ws:// 只允许用在你自己的私有网络里 —— 内容虽然已加密，房号与成员名单仍是明文。三种取得方式见操作手册。",
     "zhHant": "不在同一個網路？協同並不限於單一網路。把你自己掌握的中繼填成 wss://…（TLS 位址），所有人就能從任何地方加入。明文 ws:// 只允許用在你自己的私有網路裡 —— 內容雖然已加密，房號與成員名單仍是明文。三種取得方式見操作手冊。"
+  },
+  "relay_tailscale_address": {
+    "en": "Cross-Network VPN (Tailscale)",
+    "ja": "仮想プライベート網 (Tailscale)",
+    "ko": "가상 사설망 (Tailscale)",
+    "th": "เครือข่ายเสมือน (Tailscale)",
+    "zhHans": "跨网段虚拟网 (Tailscale)",
+    "zhHant": "跨網段虛擬網 (Tailscale)"
   },
   "relay_server_address": {
     "en": "Relay Server Address",

@@ -206,7 +206,7 @@ public final class FocusSyncController: ObservableObject {
         // 雲端有**別的**東西動了（別本筆記、索引）而這一本沒事：叫整庫通道去看。
         // 用 `remoteChanges`（快照真的改變的）而不是原始變更數 —— 自己剛上傳的
         // 檔案也會出現在 changes.list，不能因為它就叫醒整庫。
-        if report.remoteChanges > 0, !report.hadWork {
+        if report.remoteChanges > 0, !report.hadWork, !AutoSyncController.shared.isSyncing {
             AutoSyncController.shared.request(.periodic)
         }
         return .success

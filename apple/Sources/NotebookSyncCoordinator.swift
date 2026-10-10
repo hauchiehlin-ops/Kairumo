@@ -1736,6 +1736,16 @@ enum NotebookSyncCoordinator {
             )
         }.value
         applyImported(imported, documentId: documentId, into: store, ownStrokes: ownStrokes)
+
+        // 關鍵防護：applyImported 把剛下載的筆跡落地寫入 Drawings 目錄時，
+        // 該 .drawing 檔案在磁碟上的 mtime 會變成現在時間（Date()）。
+        // 若不將套件目錄及 manifest.json 的 mtime 同步更新為最新時間，
+        // 下一輪 workingCopyNeedsExport 就會因為 workingNewest > packageNewest
+        // 誤判為「工作副本有本地新編輯」，導致不斷重新匯出並上傳，形成兩端無限互相推拉同步的惡性循環！
+        let now = Date()
+        let manifestUrl = package.appending(path: "manifest.json")
+        try? FileManager.default.setAttributes([.modificationDate: now], ofItemAtPath: manifestUrl.path)
+        try? FileManager.default.setAttributes([.modificationDate: now], ofItemAtPath: package.path)
     }
 
     private static func applyImported(

@@ -230,7 +230,8 @@ public final class AutoSyncController: ObservableObject {
     private func scheduleNextWake() {
         let due = scheduler.nextDueInMs(nowMs: nowMs)
         guard due != UInt64.max else { return }
-        let seconds = max(0.05, Double(due) / 1000.0)
+        // 剛跑完一輪若又有待辦，至少去抖動 1 秒，避免 0.05 秒狂衝打爆 Google Drive API (503/429)
+        let seconds = max(1.0, Double(due) / 1000.0)
         Task { @MainActor in
             try? await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
             self.pump()

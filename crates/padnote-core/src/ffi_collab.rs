@@ -138,11 +138,23 @@ pub fn collab_parse_invite(text: String) -> FfiCollabInvite {
         Some((a, b)) => (a, b),
         None => (cleaned, ""),
     };
-    let room_id = room_part
-        .trim()
-        .trim_start_matches("kairumo://collab?room=")
-        .trim()
-        .to_string();
+    let mut raw_room = room_part.trim();
+    if let Some(r) = raw_room.strip_prefix("kairumo://collab?room=") {
+        raw_room = r;
+    } else if let Some(r) = raw_room.strip_prefix("https://kairumo.app/collab?room=") {
+        raw_room = r;
+    } else if let Some(r) = raw_room.strip_prefix("http://kairumo.app/collab?room=") {
+        raw_room = r;
+    } else if let Some(r) = raw_room.strip_prefix("https://kairumo.app/collab/") {
+        raw_room = r;
+    } else if let Some(r) = raw_room.strip_prefix("http://kairumo.app/collab/") {
+        raw_room = r;
+    }
+    let raw_room = raw_room.trim();
+    let room_id = match raw_room.split_once('&') {
+        Some((r, _)) => r.trim().to_string(),
+        None => raw_room.to_string(),
+    };
     let key_base64 = key_part
         .trim()
         .trim_start_matches("key=")
@@ -486,6 +498,21 @@ mod tests {
         let parsed = collab_parse_invite("kairumo://collab?room=kairumo-abc123".into());
         assert_eq!(parsed.room_id, "kairumo-abc123");
         assert!(parsed.key_base64.is_empty());
+    }
+
+    #[test]
+    fn a_link_with_server_query_parses_room_id_cleanly() {
+        let link = "kairumo://collab?room=kairumo-123456&server=ws://192.168.1.50:9002#key=abc";
+        let parsed = collab_parse_invite(link.into());
+        assert_eq!(parsed.room_id, "kairumo-123456");
+    }
+
+    #[test]
+    fn a_web_link_parses_room_id_and_key() {
+        let link1 = "https://kairumo.app/collab?room=kairumo-web123&server=ws://100.80.1.2:9002";
+        assert_eq!(collab_parse_invite(link1.into()).room_id, "kairumo-web123");
+        let link2 = "https://kairumo.app/collab/kairumo-web456#key=AAA";
+        assert_eq!(collab_parse_invite(link2.into()).room_id, "kairumo-web456");
     }
 
     #[test]

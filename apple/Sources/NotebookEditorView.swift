@@ -2542,7 +2542,7 @@ public struct NotebookEditorView: View {
                         }
                     }
                 ) {
-                    drawingToolbarContent
+                    AnyView(minimalToolboxContent)
                 }
                 .padding(20)
                 .shadow(color: Color.black.opacity(0.2), radius: 10, y: 4)
@@ -3800,18 +3800,15 @@ public struct NotebookEditorView: View {
         .buttonStyle(.plain)
         .accessibilityIdentifier("editor.title")
 
-        // 復原、重做與恢復初始狀態（緊湊模式工具列，支援連續無限制復原）
-        HStack(spacing: 10) {
+        // 復原、重做與恢復初始狀態（膠囊群組，支援連續無限制復原）
+        HStack(spacing: 2) {
             Button {
                 performUndo()
             } label: {
                 Image(systemName: "arrow.uturn.backward")
-                    .font(.system(size: EditorToolbarMetrics.icon - 2, weight: .medium))
+                    .font(.system(size: EditorToolbarMetrics.icon - 3, weight: .medium))
                     .foregroundColor(.primary)
-                    .padding(4)
-                    .background(Color(uiColor: .tertiarySystemGroupedBackground))
-                    .cornerRadius(EditorToolbarMetrics.corner)
-                    .frame(minWidth: 44, minHeight: 44)
+                    .frame(width: 28, height: 28)
                     .contentShape(Rectangle())
             }
             .accessibilityLabel(localizationManager.localized("undo"))
@@ -3822,41 +3819,39 @@ public struct NotebookEditorView: View {
                 performRedo()
             } label: {
                 Image(systemName: "arrow.uturn.forward")
-                    .font(.system(size: EditorToolbarMetrics.icon - 2, weight: .medium))
+                    .font(.system(size: EditorToolbarMetrics.icon - 3, weight: .medium))
                     .foregroundColor(.primary)
-                    .padding(4)
-                    .background(Color(uiColor: .tertiarySystemGroupedBackground))
-                    .cornerRadius(EditorToolbarMetrics.corner)
-                    .frame(minWidth: 44, minHeight: 44)
+                    .frame(width: 28, height: 28)
                     .contentShape(Rectangle())
             }
             .accessibilityLabel(localizationManager.localized("redo"))
             .help(localizationManager.localized("redo_desc"))
             .accessibilityIdentifier("editor.compact.redo")
 
-            Divider().frame(height: 20)
+            Divider().frame(height: 14)
 
             Button {
                 showRevertConfirmAlert = true
             } label: {
                 Image(systemName: "arrow.counterclockwise")
-                    .font(.system(size: EditorToolbarMetrics.icon - 2, weight: .medium))
+                    .font(.system(size: EditorToolbarMetrics.icon - 3, weight: .medium))
                     .foregroundColor(.primary)
-                    .padding(4)
-                    .background(Color(uiColor: .tertiarySystemGroupedBackground))
-                    .cornerRadius(EditorToolbarMetrics.corner)
-                    .frame(minWidth: 44, minHeight: 44)
+                    .frame(width: 28, height: 28)
                     .contentShape(Rectangle())
             }
             .accessibilityLabel(localizationManager.localized("revert_to_initial_state"))
             .help(localizationManager.localized("revert_to_initial_state"))
             .accessibilityIdentifier("editor.compact.revert")
         }
+        .padding(.horizontal, 3)
+        .padding(.vertical, 2)
+        .background(Color(uiColor: .tertiarySystemGroupedBackground))
+        .cornerRadius(EditorToolbarMetrics.corner)
 
         Spacer(minLength: 2)
 
-        // 頁碼切換
-        HStack(spacing: 3) {
+        // 頁面導覽群組膠囊 (上一頁、頁碼指示、下一頁、新增頁面、連續/整頁切換)
+        HStack(spacing: 2) {
             Button {
                 if currentPageIndex > 0 {
                     saveCurrentPageDrawing()
@@ -3864,8 +3859,9 @@ public struct NotebookEditorView: View {
                     loadCurrentPage()
                 }
             } label: {
-                Image(systemName: "chevron.left.circle")
-                    .font(.system(size: EditorToolbarMetrics.icon))
+                Image(systemName: "chevron.left")
+                    .font(.system(size: EditorToolbarMetrics.icon - 3, weight: .semibold))
+                    .frame(width: 24, height: 28)
             }
             .disabled(currentPageIndex <= 0)
             .accessibilityIdentifier("editor.page.prev")
@@ -3873,6 +3869,7 @@ public struct NotebookEditorView: View {
             Text("\(currentPageIndex + 1)/\(max(1, notebook.pageCount))")
                 .font(.system(size: EditorToolbarMetrics.label, weight: .medium))
                 .foregroundColor(.secondary)
+                .padding(.horizontal, 3)
                 .accessibilityIdentifier("editor.page.indicator")
 
             Button {
@@ -3882,27 +3879,28 @@ public struct NotebookEditorView: View {
                     loadCurrentPage()
                 }
             } label: {
-                Image(systemName: "chevron.right.circle")
-                    .font(.system(size: EditorToolbarMetrics.icon))
+                Image(systemName: "chevron.right")
+                    .font(.system(size: EditorToolbarMetrics.icon - 3, weight: .semibold))
+                    .frame(width: 24, height: 28)
             }
             .disabled(currentPageIndex >= notebook.pageCount - 1)
             .accessibilityIdentifier("editor.page.next")
 
+            Divider().frame(height: 14)
+
             Button {
                 addNewPage()
             } label: {
-                Image(systemName: "plus.square.dashed")
-                    .font(.system(size: EditorToolbarMetrics.icon))
+                Image(systemName: "plus")
+                    .font(.system(size: EditorToolbarMetrics.icon - 3, weight: .bold))
                     .foregroundColor(.accentColor)
+                    .frame(width: 24, height: 28)
             }
+            .accessibilityLabel(localizationManager.localized("add_page"))
+            .help(localizationManager.localized("add_page_desc"))
             .accessibilityIdentifier("editor.page.add")
 
-            // 整頁／連續切換。放在頁碼旁邊 —— 它改的就是這一組按鈕的意義：
-            // 連續模式下上一頁／下一頁變成捲到那一頁，而不是換掉整個畫布。
             Button {
-                // **先存、後切。** 存檔函式依「目前模式」走不同的路：整頁模式存記憶體裡的
-                // 那一頁，連續模式只沖掉待寫的核心墨跡。原本先改模式再存，從整頁切到連續時
-                // 走的是連續那一支 —— 整頁畫布上最後那幾筆沒有被存。
                 saveCurrentPageDrawing()
                 let next: PageDisplayMode = pageDisplayMode == .single ? .continuous : .single
                 pageDisplayModeRaw = next.rawValue
@@ -3913,26 +3911,63 @@ public struct NotebookEditorView: View {
                 Image(systemName: pageDisplayMode == .continuous
                     ? "rectangle.split.1x2"
                     : "doc.plaintext")
-                    .font(.system(size: EditorToolbarMetrics.icon))
+                    .font(.system(size: EditorToolbarMetrics.icon - 3))
                     .foregroundColor(pageDisplayMode == .continuous ? .accentColor : .secondary)
+                    .frame(width: 24, height: 28)
             }
             .help(localizationManager.localized(
                 pageDisplayMode == .continuous ? "page_mode_continuous" : "page_mode_single"))
             .accessibilityLabel(localizationManager.localized("page_mode"))
             .accessibilityIdentifier("editor.page.display_mode")
         }
+        .padding(.horizontal, 4)
+        .padding(.vertical, 2)
+        .background(Color(uiColor: .tertiarySystemGroupedBackground))
+        .cornerRadius(EditorToolbarMetrics.corner)
 
-        // ⋯ 更多（次要功能收在這裡）
-        //
-        // 緊湊模式下不再把每個功能都攤在工具列上 —— 視窗一窄就會互相擠掉。
-        // 主要動作（首頁、模式、頁碼、錄音、匯出）留在列上，其餘收進選單，
-        // 位置固定、不會因為視窗寬度而消失。
-        pageFormatMenu
-            .accessibilityIdentifier("editor.page_format")
+        // 紙張規格與版面調色膠囊（整合為一體化功能膠囊）
+        HStack(spacing: 2) {
+            pageFormatMenu
+                .accessibilityIdentifier("editor.page_format")
+            Divider().frame(height: 14)
+            guidePaletteMenu
+                .accessibilityIdentifier("editor.guide_palette")
+        }
+        .padding(.horizontal, 3)
+        .padding(.vertical, 2)
+        .background(Color(uiColor: .tertiarySystemGroupedBackground))
+        .cornerRadius(EditorToolbarMetrics.corner)
 
-        guidePaletteMenu
-            .accessibilityIdentifier("editor.guide_palette")
+        // 👥 線上多人即時協同按鈕（常駐於頂部列，與 Mac 對齊；iPad 顯示圖示+文字，iPhone 顯示精簡圖示）
+        Button {
+            showCollaborationSheet = true
+        } label: {
+            HStack(spacing: 4) {
+                Image(systemName: isCollaborating ? "person.2.wave.2.fill" : "person.2.fill")
+                    .font(.system(size: EditorToolbarMetrics.icon - 1))
+                    .foregroundColor(isCollaborating ? .green : .accentColor)
+                if horizontalSizeClass == .regular {
+                    Text(localizationManager.localized("collaborate"))
+                        .font(.system(size: EditorToolbarMetrics.label, weight: .medium))
+                        .foregroundColor(isCollaborating ? .green : .primary)
+                }
+                if isCollaborating {
+                    Text("\(collaborationManager.peers.count + 1)")
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundColor(.green)
+                }
+            }
+            .padding(.horizontal, horizontalSizeClass == .regular ? 6 : EditorToolbarMetrics.padding)
+            .padding(.vertical, EditorToolbarMetrics.padding)
+            .background(isCollaborating ? Color.green.opacity(0.15) : Color(uiColor: .tertiarySystemGroupedBackground))
+            .cornerRadius(EditorToolbarMetrics.corner)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(localizationManager.localized("collaborate"))
+        .help(localizationManager.localized("collaborate_desc"))
+        .accessibilityIdentifier("editor.compact.collaborate")
 
+        // ➕ 插入物件選單（藍色品牌主按鈕，在 iPad 上以醒目膠囊呈現，對齊 Mac 體驗）
         Menu {
             Section {
                 Button {
@@ -4066,16 +4101,26 @@ public struct NotebookEditorView: View {
                 .accessibilityIdentifier("editor.revert_initial_state")
             }
         } label: {
-            Image(systemName: "ellipsis.circle.fill")
-                .font(.system(size: EditorToolbarMetrics.icon))
-                .foregroundColor(.accentColor)
-                .padding(EditorToolbarMetrics.padding)
-                .background(Color(uiColor: .tertiarySystemGroupedBackground))
-                .cornerRadius(EditorToolbarMetrics.corner)
+            HStack(spacing: 4) {
+                Image(systemName: "plus.circle.fill")
+                    .font(.system(size: EditorToolbarMetrics.icon - 1, weight: .semibold))
+                if horizontalSizeClass == .regular {
+                    Text(localizationManager.localized("insert_object"))
+                        .font(.system(size: EditorToolbarMetrics.label, weight: .semibold))
+                }
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 8, weight: .bold))
+            }
+            .foregroundColor(.white)
+            .padding(.horizontal, horizontalSizeClass == .regular ? 8 : EditorToolbarMetrics.padding + 2)
+            .padding(.vertical, EditorToolbarMetrics.padding)
+            .background(Color.accentColor)
+            .cornerRadius(EditorToolbarMetrics.corner)
+            .shadow(color: Color.accentColor.opacity(0.3), radius: 2, y: 1)
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(localizationManager.localized("more_tools"))
-        .help(localizationManager.localized("more_tools"))
+        .accessibilityLabel(localizationManager.localized("insert_object"))
+        .help(localizationManager.localized("insert_object"))
         .accessibilityIdentifier("editor.more")
 
         // 錄音
@@ -7692,6 +7737,122 @@ public struct NotebookEditorView: View {
         generator.impactOccurred()
     }
 
+    /// 🌟 響應式極簡畫布懸浮工作丸專屬內容
+    /// 專為 340pt 懸浮氣泡設計：輕量、緊湊、快速，不裝載重量級 ViewThatFits 與多層 WrapLayout，
+    /// 徹底根除深層視圖階層引起的主執行緒堆疊溢位（Stack Overflow / EXC_BAD_ACCESS）。
+    @ViewBuilder
+    private var minimalToolboxContent: some View {
+        VStack(spacing: 8) {
+            // 1. 筆刷工具水平快捷滑動列
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 6) {
+                    ForEach(EditorToolType.allCases.filter { toolbarSettings.isVisible($0.parityIdentifier) }) { tool in
+                        Button {
+                            withAnimation(.spring(response: 0.32, dampingFraction: 0.72)) {
+                                selectEditorTool(tool)
+                            }
+                        } label: {
+                            VStack(spacing: 2) {
+                                Image(systemName: tool.iconName)
+                                    .font(.system(size: 14, weight: selectedTool == tool ? .bold : .regular))
+                                    .foregroundColor(selectedTool == tool ? .accentColor : .primary)
+                                    .frame(width: 32, height: 32)
+                                    .background(selectedTool == tool ? Color.accentColor.opacity(0.18) : Color.secondary.opacity(0.08))
+                                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                            }
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel(localizationManager.localized(tool.localizationKey))
+                    }
+
+                    // 文字方塊快捷按鈕
+                    Button {
+                        let draft = insertTextBox(at: CGPoint(x: 200, y: 200))
+                        withAnimation(.easeInOut(duration: 0.18)) {
+                            editorMode = .type
+                            inlineEditingTextId = draft.id
+                        }
+                    } label: {
+                        Image(systemName: "plus.bubble")
+                            .font(.system(size: 14, weight: .regular))
+                            .foregroundColor(.secondary)
+                            .frame(width: 32, height: 32)
+                            .background(Color.secondary.opacity(0.08))
+                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(localizationManager.localized("add_text_box"))
+                }
+                .padding(.horizontal, 4)
+            }
+
+            // 2. 粗細預設點、快速色彩盤與復原
+            HStack(spacing: 10) {
+                // 筆刷粗細預設點
+                HStack(spacing: 5) {
+                    ForEach([2.0, 4.0, 8.0, 14.0], id: \.self) { w in
+                        Button {
+                            strokeWidth = CGFloat(w)
+                        } label: {
+                            Circle()
+                                .fill(abs(strokeWidth - CGFloat(w)) < 0.01 ? Color.accentColor : Color.secondary.opacity(0.5))
+                                .frame(width: max(6, CGFloat(w)), height: max(6, CGFloat(w)))
+                                .padding(3)
+                                .background(abs(strokeWidth - CGFloat(w)) < 0.01 ? Color.accentColor.opacity(0.15) : Color.clear)
+                                .clipShape(Circle())
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+
+                Divider()
+                    .frame(height: 16)
+
+                // 常用色彩
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 5) {
+                        ForEach(colorPalette.prefix(6), id: \.self) { color in
+                            Button {
+                                selectedColor = color
+                            } label: {
+                                Circle()
+                                    .fill(color)
+                                    .frame(width: 16, height: 16)
+                                    .overlay(Circle().stroke(Color.white, lineWidth: 1))
+                                    .overlay(Circle().stroke(selectedColor == color ? Color.accentColor : Color.clear, lineWidth: 1.5))
+                            }
+                            .buttonStyle(.plain)
+                        }
+
+                        Button {
+                            showProColorPicker = true
+                        } label: {
+                            Image(systemName: "paintpalette")
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundStyle(Color.secondary)
+                                .frame(width: 18, height: 18)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+
+                Spacer(minLength: 0)
+
+                // 復原
+                Button {
+                    performUndo()
+                } label: {
+                    Image(systemName: "arrow.uturn.backward")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(.secondary)
+                        .padding(4)
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.horizontal, 4)
+        }
+    }
+
     private var drawingToolbarContent: some View {
         VStack(spacing: 0) {
             if editorMode == .draw && selectedTool == .lasso {
@@ -7765,12 +7926,14 @@ public struct NotebookEditorView: View {
                 // fixedSize：量的是**理想寬度**。不加的話裡面的橫向捲動區（套索按鈕列）
                 // 什麼寬度都「塞得下」，這一排就永遠被選中，然後被切掉一截而不是換行。
                 if toolbarSettings.showLabels {
-                    drawingToolbarRow(showToolLabels: true).fixedSize(horizontal: true, vertical: false)
+                    AnyView(drawingToolbarRow(showToolLabels: true).fixedSize(horizontal: true, vertical: false))
                 }
-                drawingToolbarRow(showToolLabels: false).fixedSize(horizontal: true, vertical: false)
-                WrapLayout(spacing: 12, lineSpacing: 8) {
-                    drawingToolbarItems(showToolLabels: false)
-                }
+                AnyView(drawingToolbarRow(showToolLabels: false).fixedSize(horizontal: true, vertical: false))
+                AnyView(
+                    WrapLayout(spacing: 12, lineSpacing: 8) {
+                        drawingToolbarItems(showToolLabels: false)
+                    }
+                )
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 8)
@@ -9108,6 +9271,9 @@ public struct NotebookEditorView: View {
         isApplyingRemoteUpdate = true
         currentDrawing = merged
         canvasView?.drawing = merged
+        if let adaptive = canvasView as? AdaptiveCanvasView {
+            adaptive.forceDisplayRefresh(with: merged)
+        }
         lastStrokeCount = merged.strokes.count
         DispatchQueue.main.async {
             isApplyingRemoteUpdate = false
@@ -10456,10 +10622,9 @@ public struct NotebookEditorView: View {
                     .font(.system(size: EditorToolbarMetrics.label))
             }
             .foregroundColor(.accentColor)
-            .padding(.horizontal, EditorToolbarMetrics.padding + 2)
-            .padding(.vertical, EditorToolbarMetrics.padding)
-            .background(Color(uiColor: .tertiarySystemGroupedBackground))
-            .cornerRadius(EditorToolbarMetrics.corner)
+            .padding(.horizontal, 4)
+            .padding(.vertical, 3)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .accessibilityLabel(localizationManager.localized("page_format"))
@@ -10673,10 +10838,8 @@ public struct NotebookEditorView: View {
                     .font(.system(size: EditorToolbarMetrics.label))
             }
             .foregroundColor(.accentColor)
-            .padding(.horizontal, EditorToolbarMetrics.padding + 2)
-            .padding(.vertical, EditorToolbarMetrics.padding)
-            .background(Color(uiColor: .tertiarySystemGroupedBackground))
-            .cornerRadius(EditorToolbarMetrics.corner)
+            .padding(.horizontal, 4)
+            .padding(.vertical, 3)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

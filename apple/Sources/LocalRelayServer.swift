@@ -13,6 +13,9 @@
 
 import Foundation
 import Network
+#if canImport(UIKit)
+import UIKit
+#endif
 
 /// 裝置內建的房間中繼服務。與 `padnote-relay` 的 hub.rs 行為一致：
 /// 第一位加入者即房主、presence/oplog 轉發給房內其他人、oplog 保留最近
@@ -91,7 +94,7 @@ public final class LocalRelayServer {
 
     /// 啟動本機中繼服務。已在相同埠號執行時直接回傳成功。
     @discardableResult
-    public func start(port: UInt16) -> Result<UInt16, Error> {
+    public func start(port: UInt16, roomId: String? = nil, hostName: String? = nil) -> Result<UInt16, Error> {
         var outcome: Result<UInt16, Error> = .success(port)
         queue.sync {
             if listener != nil, runningPort == port {
@@ -102,12 +105,12 @@ public final class LocalRelayServer {
                 stopLocked()
             }
 
-            startInternalLocked(port: port, enableBonjour: true, outcome: &outcome)
+            startInternalLocked(port: port, enableBonjour: true, roomId: roomId, hostName: hostName, outcome: &outcome)
         }
         return outcome
     }
 
-    private func startInternalLocked(port: UInt16, enableBonjour: Bool, outcome: inout Result<UInt16, Error>) {
+    private func startInternalLocked(port: UInt16, enableBonjour: Bool, roomId: String? = nil, hostName: String? = nil, outcome: inout Result<UInt16, Error>) {
         guard let nwPort = NWEndpoint.Port(rawValue: port) else {
             outcome = .failure(RelayError.invalidPort(port))
             return
@@ -124,7 +127,24 @@ public final class LocalRelayServer {
             if enableBonjour {
                 // 廣播 mDNS 服務，讓區網內的其他裝置能自動發現（跨裝置即時同步）
                 // 類型與核心 lan_service_type 保持一致（_kairumo-sync._tcp）
-                newListener.service = NWListener.Service(name: "Kairumo_\(UUID().uuidString.prefix(8))", type: "_kairumo-sync._tcp", domain: "local.")
+                var txt = NWTXTRecord()
+                if let hostIp = Self.lanIPv4Address() {
+                    txt["ip"] = hostIp
+                }
+                txt["port"] = "\(port)"
+                if let rid = roomId, !rid.isEmpty {
+                    txt["room"] = rid
+                }
+                if let name = hostName, !name.isEmpty {
+                    txt["user"] = name
+                }
+
+                newListener.service = NWListener.Service(
+                    name: "Kairumo_\(UUID().uuidString.prefix(8))",
+                    type: "_kairumo-sync._tcp",
+                    domain: "local.",
+                    txtRecord: txt
+                )
             }
             newListener.newConnectionHandler = { [weak self] connection in
                 self?.accept(connection)
@@ -144,7 +164,7 @@ public final class LocalRelayServer {
                         print("⚠️ [LocalRelay] Bonjour mDNS 廣播被系統隱私拒絕 (-65555 NoAuth)，自動降級為純 TCP WebSocket 監聽")
                         self.stopLocked()
                         var retryOutcome: Result<UInt16, Error> = .success(port)
-                        self.startInternalLocked(port: port, enableBonjour: false, outcome: &retryOutcome)
+                        self.startInternalLocked(port: port, enableBonjour: false, roomId: roomId, hostName: hostName, outcome: &retryOutcome)
                         return
                     }
                     // 這個 handler 已經在 queue 上執行，不能再 queue.sync 進去
@@ -386,20 +406,25 @@ public final class LocalRelayServer {
     }
 
     /// 取得本機在區域網路上的 IPv4 位址，供隊友輸入連線（沒有則回 nil）。
-    public static func lanIPv4Address() -> String? {
-        var address: String?
+    /// 取得本機所有可連線之 IPv4 位址（區網 LAN 與 Tailscale 虛擬私有網路）
+    public static func availableIPv4Addresses() -> (lan: String?, tailscale: String?) {
+        var lan: String?
+        var tailscale: String?
         var ifaddrPtr: UnsafeMutablePointer<ifaddrs>?
-        guard getifaddrs(&ifaddrPtr) == 0, let first = ifaddrPtr else { return nil }
+        guard getifaddrs(&ifaddrPtr) == 0, let first = ifaddrPtr else {
+            return (nil, TailscaleDetector.check().ipAddress)
+        }
         defer { freeifaddrs(ifaddrPtr) }
 
         var pointer: UnsafeMutablePointer<ifaddrs>? = first
         while let current = pointer {
             let interface = current.pointee
-            let family = interface.ifa_addr.pointee.sa_family
-            if family == UInt8(AF_INET) {
-                let name = String(cString: interface.ifa_name)
-                // en0 = Wi-Fi / 有線；其餘（lo0、awdl0、utun*）不是隊友連得到的位址
-                if name == "en0" || name == "en1" {
+            let flags = Int32(interface.ifa_flags)
+            // 介面必須已啟動且正在運行，排除 loopback
+            if (flags & (IFF_UP | IFF_RUNNING)) == (IFF_UP | IFF_RUNNING) && (flags & IFF_LOOPBACK) == 0 {
+                let family = interface.ifa_addr.pointee.sa_family
+                if family == UInt8(AF_INET) {
+                    let name = String(cString: interface.ifa_name)
                     var hostBuffer = [CChar](repeating: 0, count: Int(NI_MAXHOST))
                     if getnameinfo(interface.ifa_addr,
                                    socklen_t(interface.ifa_addr.pointee.sa_len),
@@ -408,21 +433,64 @@ public final class LocalRelayServer {
                                    nil,
                                    0,
                                    NI_NUMERICHOST) == 0 {
-                        address = String(cString: hostBuffer)
+                        let ip = String(cString: hostBuffer)
+                        // 1. 檢查 Tailscale (100.64.0.0/10)
+                        if ip.hasPrefix("100.") {
+                            let parts = ip.split(separator: ".")
+                            if parts.count == 4, let second = Int(parts[1]), second >= 64, second <= 127 {
+                                tailscale = ip
+                            }
+                        } else if !ip.hasPrefix("127.") && !ip.hasPrefix("169.254.") {
+                            // 2. 檢查 LAN（en0, en1, en4, en5, bridge*, ap* 等）
+                            if name.hasPrefix("en") || name.hasPrefix("bridge") || name.hasPrefix("ap") {
+                                if lan == nil || name == "en0" {
+                                    lan = ip
+                                }
+                            }
+                        }
                     }
                 }
             }
             pointer = interface.ifa_next
         }
-        return address
+        if tailscale == nil {
+            tailscale = TailscaleDetector.check().ipAddress
+        }
+        return (lan, tailscale)
+    }
+
+    /// 取得最合適的局域網 IPv4 位址
+    public static func lanIPv4Address() -> String? {
+        let (lan, _) = availableIPv4Addresses()
+        return lan
+    }
+
+    /// 取得 Tailscale 虛擬網 IPv4 位址
+    public static func tailscaleIPv4Address() -> String? {
+        let (_, ts) = availableIPv4Addresses()
+        return ts
     }
 }
 import Foundation
 import Network
 import Combine
 
+/// 局域網掃描發現的協同房間
+public struct DiscoveredRoom: Identifiable, Hashable {
+    public var id: String { "\(serverUrl)_\(roomId)" }
+    public let roomId: String
+    public let hostName: String
+    public let serverUrl: String
+
+    public init(roomId: String, hostName: String, serverUrl: String) {
+        self.roomId = roomId
+        self.hostName = hostName
+        self.serverUrl = serverUrl
+    }
+}
+
 /// 局域網同步自動發現（mDNS / Bonjour）。
-/// 用於尋找同一 Wi-Fi 下廣播 `_kairumosync._tcp` 的其他裝置，並建立 WebSocket 捷徑。
+/// 用於尋找同一 Wi-Fi 下廣播 `_kairumo-sync._tcp` 的其他裝置，並建立 WebSocket 捷徑。
 public final class LocalSyncDiscovery: ObservableObject {
     public static let shared = LocalSyncDiscovery()
     
@@ -430,6 +498,7 @@ public final class LocalSyncDiscovery: ObservableObject {
     private let queue = DispatchQueue(label: "com.kairumo.sync.discovery")
     
     @Published public var discoveredEndpoints: [NWEndpoint] = []
+    @Published public var discoveredRooms: [DiscoveredRoom] = []
     
     private init() {}
     
@@ -441,9 +510,31 @@ public final class LocalSyncDiscovery: ObservableObject {
         let browser = NWBrowser(for: .bonjour(type: "_kairumo-sync._tcp", domain: "local."), using: parameters)
         
         browser.browseResultsChangedHandler = { [weak self] results, changes in
-            let endpoints = results.map { $0.endpoint }
+            guard let self = self else { return }
+            var endpoints: [NWEndpoint] = []
+            var rooms: [DiscoveredRoom] = []
+            
+            for result in results {
+                endpoints.append(result.endpoint)
+                if case .bonjour(let txtRecord) = result.metadata {
+                    let room = txtRecord["room"] ?? ""
+                    let ip = txtRecord["ip"] ?? ""
+                    let port = txtRecord["port"] ?? "9002"
+                    let user = txtRecord["user"] ?? "Host"
+                    
+                    if !room.isEmpty, !ip.isEmpty {
+                        let serverUrl = "ws://\(ip):\(port)"
+                        let item = DiscoveredRoom(roomId: room, hostName: user, serverUrl: serverUrl)
+                        if !rooms.contains(item) {
+                            rooms.append(item)
+                        }
+                    }
+                }
+            }
+            
             DispatchQueue.main.async {
-                self?.discoveredEndpoints = endpoints
+                self.discoveredEndpoints = endpoints
+                self.discoveredRooms = rooms
             }
         }
         
@@ -456,6 +547,7 @@ public final class LocalSyncDiscovery: ObservableObject {
         browser = nil
         DispatchQueue.main.async {
             self.discoveredEndpoints.removeAll()
+            self.discoveredRooms.removeAll()
         }
     }
     

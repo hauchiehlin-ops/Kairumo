@@ -2399,6 +2399,14 @@ extension LocalizationManager {
             .ko: "잘못된 협업 서버 주소: %@",
             .th: "ที่อยู่เซิร์ฟเวอร์การทำงานร่วมกันไม่ถูกต้อง: %@"
         ],
+        "collab_err_guest_loopback": [
+            .zhHant: "無法連線至本機迴環位址 (127.0.0.1)。請使用房主的區域網路或 Tailscale IP 位址。",
+            .en: "Cannot connect to loopback address (127.0.0.1). Please use the host's LAN or Tailscale IP address.",
+            .zhHans: "无法连接至本设备回送地址 (127.0.0.1)。请使用房主的局域网或 Tailscale IP 地址。",
+            .ja: "ループバックアドレス (127.0.0.1) には接続できません。ホストの LAN または Tailscale IP アドレスを使用してください。",
+            .ko: "루프백 주소(127.0.0.1)로는 연결할 수 없습니다. 호스트의 LAN 또는 Tailscale IP 주소를 사용하세요.",
+            .th: "ไม่สามารถเชื่อมต่อไปยังที่อยู่ย้อนกลับ (127.0.0.1) ได้ โปรดใช้ที่อยู่ LAN หรือ Tailscale IP ของผู้เปิดห้อง"
+        ],
         "collab_err_unreachable": [
             .zhHant: "無法連上協同伺服器 %@，已停止重試。",
             .en: "Could not reach the collaboration server %@. Retrying has stopped.",
@@ -2807,6 +2815,14 @@ extension LocalizationManager {
             .ko: "암호화된 초대 링크 복사",
             .th: "คัดลอกลิงก์คำเชิญที่เข้ารหัส"
         ],
+        "copy_lan_link": [
+            .zhHant: "複製區網連結 (Wi-Fi)",
+            .en: "Copy Local Link (Wi-Fi)",
+            .zhHans: "复制局域网链接 (Wi-Fi)",
+            .ja: "ローカル招待リンクをコピー",
+            .ko: "로컬 초대 링크 복사",
+            .th: "คัดลอกลิงก์ภายในเครือข่าย"
+        ],
         "copy_pages_to_title": [
             .zhHant: "把選取的頁面複製到",
             .en: "Copy the selected pages into",
@@ -2846,6 +2862,14 @@ extension LocalizationManager {
             .ja: "%@（コピー）",
             .ko: "%@(사본)",
             .th: "%@ (สำเนา)"
+        ],
+        "copy_tailscale_link": [
+            .zhHant: "複製跨網段連結 (Tailscale)",
+            .en: "Copy Cross-Network Link (Tailscale)",
+            .zhHans: "复制跨网段链接 (Tailscale)",
+            .ja: "Tailscale招待リンクをコピー",
+            .ko: "Tailscale 초대 링크 복사",
+            .th: "คัดลอกลิงก์ Tailscale"
         ],
         "copy_to": [
             .zhHant: "複製到…",
@@ -5358,6 +5382,14 @@ extension LocalizationManager {
             .ja: "切断",
             .ko: "연결 끊기",
             .th: "ตัดการเชื่อมต่อ"
+        ],
+        "discovered_lan_rooms": [
+            .zhHant: "發現區域網路協同房間",
+            .en: "Discovered LAN Rooms",
+            .zhHans: "发现局域网协作房间",
+            .ja: "見つかったLANルーム",
+            .ko: "발견된 LAN 방",
+            .th: "ห้อง LAN ที่ค้นพบ"
         ],
         "display_name": [
             .zhHant: "顯示名稱",
@@ -10615,6 +10647,14 @@ extension LocalizationManager {
             .ko: "그 중계 서버 주소는 사용할 수 없습니다.",
             .th: "ใช้ที่อยู่รีเลย์นี้ไม่ได้"
         ],
+        "join_discovered_room": [
+            .zhHant: "加入發現房間",
+            .en: "Join Discovered Room",
+            .zhHans: "加入发现房间",
+            .ja: "発見したルームに参加",
+            .ko: "발견된 방 참가",
+            .th: "เข้าร่วมห้องที่ค้นพบ"
+        ],
         "join_room": [
             .zhHant: "加入協同房間",
             .en: "Join Room",
@@ -15071,6 +15111,14 @@ extension LocalizationManager {
             .ko: "잘못된 포트 번호 %@",
             .th: "หมายเลขพอร์ต %@ ไม่ถูกต้อง"
         ],
+        "relay_lan_address": [
+            .zhHant: "區域網路 (Wi-Fi)",
+            .en: "Local Network (Wi-Fi)",
+            .zhHans: "局域网 (Wi-Fi)",
+            .ja: "ローカルネットワーク (Wi-Fi)",
+            .ko: "로컬 네트워크 (Wi-Fi)",
+            .th: "เครือข่ายภายใน (Wi-Fi)"
+        ],
         "relay_needs_tls": [
             .zhHant: "這個中繼在公開網路上，必須用 wss://（加密）。ws:// 只允許用在你自己的區域網路裡。",
             .en: "This relay is on the public internet, so it must use wss:// (encrypted). Plain ws:// is only allowed on your own local network.",
@@ -15094,6 +15142,14 @@ extension LocalizationManager {
             .ja: "中継サーバーアドレス",
             .ko: "중계 서버 주소",
             .th: "ที่อยู่เซิร์ฟเวอร์รีเลย์"
+        ],
+        "relay_tailscale_address": [
+            .zhHant: "跨網段虛擬網 (Tailscale)",
+            .en: "Cross-Network VPN (Tailscale)",
+            .zhHans: "跨网段虚拟网 (Tailscale)",
+            .ja: "仮想プライベート網 (Tailscale)",
+            .ko: "가상 사설망 (Tailscale)",
+            .th: "เครือข่ายเสมือน (Tailscale)"
         ],
         "relay_url_empty": [
             .zhHant: "請先填入中繼位址。",

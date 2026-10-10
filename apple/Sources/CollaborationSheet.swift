@@ -11,6 +11,7 @@ public struct CollaborationSheet: View {
     @Environment(\.dismiss) private var dismiss
     @ObservedObject var collaborationManager = CollaborationManager.shared
     @ObservedObject var localizationManager = LocalizationManager.shared
+    @ObservedObject var localSyncDiscovery = LocalSyncDiscovery.shared
     @ObservedObject var store = NotebookStore.shared
 
     public let notebookId: String?
@@ -84,6 +85,10 @@ public struct CollaborationSheet: View {
             }
             .onAppear {
                 loadSnapshots()
+                localSyncDiscovery.startBrowsing()
+            }
+            .onDisappear {
+                localSyncDiscovery.stopBrowsing()
             }
             .navigationTitle(localizationManager.localized("collaborate"))
             #if os(iOS) || targetEnvironment(macCatalyst)
@@ -278,21 +283,33 @@ public struct CollaborationSheet: View {
                         .font(.system(size: 20))
                         .foregroundColor(.blue)
 
-                    VStack(alignment: .leading, spacing: 2) {
+                    VStack(alignment: .leading, spacing: 3) {
                         Text(localizationManager.localized("hosting_local_relay"))
                             .font(.subheadline)
                             .fontWeight(.semibold)
                             .foregroundColor(.primary)
 
-                        // 區網位址是**別台裝置要連的那一個**。
-                        Text(
-                            collaborationManager.lanRelayAddress
-                                ?? localizationManager.localized("local_relay_hint")
-                        )
-                        .font(.caption2)
-                        .monospaced()
-                        .foregroundColor(.secondary)
-                        .textSelection(.enabled)
+                        if let lan = collaborationManager.lanRelayAddress {
+                            Text("\(localizationManager.localized("relay_lan_address")): \(lan)")
+                                .font(.caption2)
+                                .monospaced()
+                                .foregroundColor(.secondary)
+                                .textSelection(.enabled)
+                        }
+
+                        if let ts = collaborationManager.tailscaleRelayAddress {
+                            Text("\(localizationManager.localized("relay_tailscale_address")): \(ts)")
+                                .font(.caption2)
+                                .monospaced()
+                                .foregroundColor(.blue)
+                                .textSelection(.enabled)
+                        }
+
+                        if collaborationManager.lanRelayAddress == nil && collaborationManager.tailscaleRelayAddress == nil {
+                            Text(localizationManager.localized("local_relay_hint"))
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
+                        }
                     }
 
                     Spacer()
@@ -371,6 +388,27 @@ public struct CollaborationSheet: View {
 
                     Spacer()
 
+                    if collaborationManager.tailscaleRelayAddress != nil {
+                        Button {
+                            #if canImport(UIKit)
+                            UIPasteboard.general.string = collaborationManager.tailscaleInviteLink ?? collaborationManager.encryptedInviteLink
+                            #endif
+                            showCopiedAlert = true
+                        } label: {
+                            HStack(spacing: 4) {
+                                Image(systemName: "globe")
+                                Text(localizationManager.localized("copy_tailscale_link"))
+                            }
+                            .font(.caption)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .background(Color.blue.opacity(0.15))
+                            .foregroundColor(.blue)
+                            .cornerRadius(8)
+                        }
+                        .buttonStyle(.plain)
+                    }
+
                     Button {
                         #if canImport(UIKit)
                         UIPasteboard.general.string = collaborationManager.encryptedInviteLink
@@ -379,7 +417,7 @@ public struct CollaborationSheet: View {
                     } label: {
                         HStack(spacing: 4) {
                             Image(systemName: showCopiedAlert ? "checkmark" : "link.badge.plus")
-                            Text(showCopiedAlert ? localizationManager.localized("room_id_copied") : localizationManager.localized("copy_encrypted_link"))
+                            Text(showCopiedAlert ? localizationManager.localized("room_id_copied") : (collaborationManager.tailscaleRelayAddress != nil ? localizationManager.localized("copy_lan_link") : localizationManager.localized("copy_encrypted_link")))
                         }
                         .font(.caption)
                         .padding(.horizontal, 10)
@@ -415,16 +453,29 @@ public struct CollaborationSheet: View {
                 // 本機正在當中繼點時，把隊友要輸入的區域網路位址直接顯示出來，
                 // 否則對方只拿到房號，還是不知道要連到哪一台。
                 if collaborationManager.isHostingLocalRelay {
-                    HStack(spacing: 6) {
-                        Image(systemName: "antenna.radiowaves.left.and.right")
-                            .font(.caption2)
-                            .foregroundColor(.green)
-                        Text(collaborationManager.lanRelayAddress.map {
-                            "\(localizationManager.localized("hosting_local_relay"))  \($0)"
-                        } ?? localizationManager.localized("hosting_local_relay"))
-                            .font(.system(size: 11, design: .monospaced))
-                            .foregroundColor(.secondary)
-                            .textSelection(.enabled)
+                    VStack(alignment: .leading, spacing: 4) {
+                        if let lan = collaborationManager.lanRelayAddress {
+                            HStack(spacing: 6) {
+                                Image(systemName: "wifi")
+                                    .font(.caption2)
+                                    .foregroundColor(.green)
+                                Text("\(localizationManager.localized("relay_lan_address")): \(lan)")
+                                    .font(.system(size: 11, design: .monospaced))
+                                    .foregroundColor(.secondary)
+                                    .textSelection(.enabled)
+                            }
+                        }
+                        if let ts = collaborationManager.tailscaleRelayAddress {
+                            HStack(spacing: 6) {
+                                Image(systemName: "network")
+                                    .font(.caption2)
+                                    .foregroundColor(.blue)
+                                Text("\(localizationManager.localized("relay_tailscale_address")): \(ts)")
+                                    .font(.system(size: 11, design: .monospaced))
+                                    .foregroundColor(.blue)
+                                    .textSelection(.enabled)
+                            }
+                        }
                     }
                     .padding(.horizontal, 4)
                 }
@@ -610,6 +661,63 @@ public struct CollaborationSheet: View {
             .buttonStyle(.plain)
 
             Divider()
+
+            // 📡 發現區域網路協同房間（同 Wi-Fi 一鍵加入）
+            if !localSyncDiscovery.discoveredRooms.isEmpty {
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "antenna.radiowaves.left.and.right")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(.blue)
+                        Text(localizationManager.localized("discovered_lan_rooms"))
+                            .font(.caption)
+                            .fontWeight(.semibold)
+                            .foregroundColor(.secondary)
+                        Spacer()
+                    }
+
+                    ForEach(localSyncDiscovery.discoveredRooms) { room in
+                        HStack(spacing: 12) {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(room.roomId)
+                                    .font(.system(.subheadline, design: .monospaced))
+                                    .fontWeight(.bold)
+                                    .foregroundColor(.primary)
+
+                                Text(room.hostName)
+                                    .font(.caption2)
+                                    .foregroundColor(.secondary)
+                            }
+
+                            Spacer()
+
+                            Button {
+                                collaborationManager.serverAddress = room.serverUrl
+                                collaborationManager.joinRoom(roomId: room.roomId)
+                            } label: {
+                                HStack(spacing: 4) {
+                                    Image(systemName: "arrow.right.circle.fill")
+                                    Text(localizationManager.localized("join_discovered_room"))
+                                }
+                                .font(.caption)
+                                .fontWeight(.semibold)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 7)
+                                .background(Color.accentColor)
+                                .foregroundColor(.white)
+                                .cornerRadius(8)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                        .padding(10)
+                        .background(Color(uiColor: .tertiarySystemGroupedBackground))
+                        .cornerRadius(10)
+                    }
+                }
+                .padding(14)
+                .background(Color(uiColor: .secondarySystemGroupedBackground))
+                .cornerRadius(12)
+            }
 
             // 輸入房間代碼加入既有房間
             VStack(alignment: .leading, spacing: 8) {

@@ -2023,7 +2023,7 @@ public final class NotebookStore: ObservableObject {
         doc.hasRecording = true
         notebooks.append(doc)
         AccountSyncStore.shared.record(id: id, title: doc.title, parentId: nil, isFolder: false)
-        markDirtyAndPersist()
+        markDirtyAndPersist(signalsLocalEdit: false)
         return doc
     }
 
@@ -2468,7 +2468,7 @@ public final class NotebookStore: ObservableObject {
         AccountSyncStore.shared.stampLegacyTombstonesIfNeeded()
         let expired = AccountSyncStore.shared.expiredNotebookIdsForLocalPurge()
         for id in expired { purgeLocally(id: id) }
-        if !expired.isEmpty { persistData() }
+        if !expired.isEmpty { persistData(signalsLocalEdit: false) }
         return expired.count
     }
 
@@ -2505,7 +2505,7 @@ public final class NotebookStore: ObservableObject {
         }
 
         if changed {
-            persistData()
+            persistData(signalsLocalEdit: false)
         }
     }
 

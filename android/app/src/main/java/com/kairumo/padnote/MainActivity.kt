@@ -454,14 +454,15 @@ private fun NotebookHome(
     // 見 `SeedNotebooks.seedIfEmpty`。
     val seeded = remember { SeedNotebooks.seedIfEmpty(activity, device, lang) }
 
-    // revision 是重讀的觸發器。清單來自檔案系統，沒有觀察者可以訂閱 ——
-    // 新增或刪除之後不主動重讀的話，畫面會停在舊的內容。
-    val entries = remember(revision, sort, folderId, seeded) {
-        NotebookLibrary.all(activity, device, sort, folderId)
-    }
     // 搜尋要搜整個筆記庫，不是只搜眼前這一層。
     val allEntries = remember(revision, sort, seeded) {
         NotebookLibrary.all(activity, device, sort)
+    }
+    // revision 是重讀的觸發器。清單來自檔案系統，沒有觀察者可以訂閱 ——
+    // 新增或刪除之後不主動重讀的話，畫面會停在舊的內容。
+    val entries = remember(allEntries, folderId) {
+        if (folderId == NotebookLibrary.ANY_FOLDER) allEntries
+        else allEntries.filter { FolderTree.parentOf(activity, it.id) == folderId }
     }
     val folders = remember(revision, folderId) { FolderTree.subfolders(activity, folderId) }
     val breadcrumb = remember(revision, folderId) { FolderTree.pathTo(activity, folderId) }
@@ -2715,12 +2716,12 @@ private fun InkScreen(
     var showNoteIntelligence by remember { mutableStateOf(false) }
     // 標題只在摘要時用得到，而編輯器畫面上不顯示它 —— 查一次存著，
     // 不要每次重組都去掃一遍筆記庫。
-    val noteTitle = remember(notebookId) {
+    val noteTitle = remember(notebookId, notebook) {
         notebookId?.let { id ->
-            runCatching {
-                NotebookLibrary.all(activity, deviceId(activity))
-                    .firstOrNull { it.id == id }?.title
-            }.getOrNull()
+            NotebookLibrary.liveIndexTitles(activity)[id.lowercase()]
+                ?: runCatching { notebook?.first?.title() }.getOrNull()
+                ?: FolderTree.titleOf(activity, id)
+                ?: id
         }.orEmpty()
     }
     val collaboration = remember { CollaborationManager(activity) }
@@ -2923,250 +2924,353 @@ private fun InkScreen(
                 )
             }
 
-            // 分頁導覽。與 Apple 端同一組：上一頁 · 頁碼 · 下一頁 · 新增。
-            TextButton(
-                onClick = { if (pageIndex > 0) pageIndex-- },
-                enabled = pageIndex > 0,
-                modifier = Modifier.testTag("editor.page.prev")
-            ) { Text("‹") }
-            Text(
-                "${pageIndex + 1}/${maxOf(1, pageCount)}",
-                style = MaterialTheme.typography.labelMedium,
-                modifier = Modifier.padding(top = 14.dp).testTag("editor.page.indicator")
-            )
-            TextButton(
-                onClick = { if (pageIndex < pageCount - 1) pageIndex++ },
-                enabled = pageIndex < pageCount - 1,
-                modifier = Modifier.testTag("editor.page.next")
-            ) { Text("›") }
-            TextButton(modifier = Modifier.testTag("editor.page.display_mode"), onClick = {
-                pageDisplayMode = if (pageDisplayMode == PageDisplayMode.CONTINUOUS) {
-                    PageDisplayMode.SINGLE
-                } else {
-                    PageDisplayMode.CONTINUOUS
-                }
-                activity.getSharedPreferences("kairumo_editor", android.content.Context.MODE_PRIVATE)
-                    .edit().putString("pageDisplayMode", pageDisplayMode.wire).apply()
-            }) {
-                Text(
-                    l10n(
-                        if (pageDisplayMode == PageDisplayMode.CONTINUOUS) "page_mode_continuous"
-                        else "page_mode_single"
-                    ),
-                    style = MaterialTheme.typography.labelLarge
-                )
-            }
-            TextButton(modifier = Modifier.testTag("editor.page.add"), onClick = {
-                val session = notebook?.first
-                if (session != null) {
-                    runCatching { session.addPage(uniffi.padnote_core.PageStyle.BLANK) }
-                    pageCount = runCatching { session.pageCount().toInt() }.getOrDefault(pageCount + 1)
-                    // 新增之後直接翻過去 —— 加了一頁卻停在原地，
-                    // 使用者不確定到底加成功了沒有。
-                    pageIndex = pageCount - 1
-                }
-            }) { Text("+") }
-
-            // FlowRow 裡沒有 weight 可以撐開，靠換行自然排就好。
-            // 頁面規格（S-84）。Apple 的頂列一直都有這一顆，Android 原本
-            // 連「這本筆記是什麼尺寸」都看不到。
-            Box {
-                var formatMenu by remember { mutableStateOf(false) }
-                val meta = remember(notebookId, revision) {
-                    com.kairumo.padnote.library.NotebookMeta.load(notebook?.first)
-                }
-                val currentFormat = remember(meta) {
-                    meta.pageFormatId().ifEmpty { uniffi.padnote_core.defaultPageFormatId() }
-                }
-                var customPageSize by remember { mutableStateOf(false) }
-                TextButton(
-                    onClick = { formatMenu = true },
-                    modifier = Modifier.testTag("editor.page_format")
-                ) {
-                    val fmt = uniffi.padnote_core.pageFormat(currentFormat)
-                    Text(
-                        // 自訂尺寸直接顯示「寬×高」。
-                        if (uniffi.padnote_core.isCustomPageFormat(currentFormat)) {
-                            "${fmt.width.toInt()}×${fmt.height.toInt()}"
-                        } else l10n(fmt.titleKey),
-                        style = MaterialTheme.typography.labelLarge
-                    )
-                }
-                DropdownMenu(expanded = formatMenu, onDismissRequest = { formatMenu = false }) {
-                    uniffi.padnote_core.pageFormats().forEach { format ->
-                        DropdownMenuItem(
-                            text = { Text(l10n(format.titleKey)) },
-                            trailingIcon = { if (format.id == currentFormat) Text("✓") },
-                            onClick = {
-                                formatMenu = false
-                                meta.setPageFormatId(notebook?.first, format.id)
-                                com.kairumo.padnote.ink.PageGeometry.use(format.id)
-                                revision++
-                            }
-                        )
-                    }
-                    // 大尺寸頁取代無限畫布：任意寬高（300–6000）。
-                    DropdownMenuItem(
-                        text = { Text(l10n("page_format_custom")) },
-                        trailingIcon = {
-                            if (uniffi.padnote_core.isCustomPageFormat(currentFormat)) Text("✓")
-                        },
-                        onClick = { formatMenu = false; customPageSize = true },
-                        modifier = Modifier.testTag("page_format.custom")
-                    )
-                }
-                if (customPageSize) {
-                    val current = uniffi.padnote_core.pageFormat(currentFormat)
-                    var wText by remember { mutableStateOf(current.width.toInt().toString()) }
-                    var hText by remember { mutableStateOf(current.height.toInt().toString()) }
-                    AlertDialog(
-                        onDismissRequest = { customPageSize = false },
-                        title = { Text(l10n("page_format_custom_title")) },
-                        text = {
-                            Column {
-                                Text(l10n("page_format_custom_hint"), style = MaterialTheme.typography.labelSmall)
-                                OutlinedTextField(
-                                    value = wText, onValueChange = { wText = it.filter(Char::isDigit) },
-                                    label = { Text(l10n("page_format_custom_width")) }, singleLine = true,
-                                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
-                                        keyboardType = androidx.compose.ui.text.input.KeyboardType.Number),
-                                    modifier = Modifier.testTag("page_format.custom.width")
-                                )
-                                OutlinedTextField(
-                                    value = hText, onValueChange = { hText = it.filter(Char::isDigit) },
-                                    label = { Text(l10n("page_format_custom_height")) }, singleLine = true,
-                                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
-                                        keyboardType = androidx.compose.ui.text.input.KeyboardType.Number),
-                                    modifier = Modifier.testTag("page_format.custom.height")
-                                )
-                            }
-                        },
-                        confirmButton = {
-                            TextButton(
-                                onClick = {
-                                    customPageSize = false
-                                    val id = uniffi.padnote_core.customPageFormatId(
-                                        (wText.toUIntOrNull() ?: current.width.toUInt()),
-                                        (hText.toUIntOrNull() ?: current.height.toUInt())
-                                    )
-                                    meta.setPageFormatId(notebook?.first, id)
-                                    com.kairumo.padnote.ink.PageGeometry.use(id)
-                                    revision++
-                                },
-                                modifier = Modifier.testTag("page_format.custom.apply")
-                            ) { Text(l10n("page_format_custom_apply")) }
-                        },
-                        dismissButton = {
-                            TextButton(onClick = { customPageSize = false }) { Text(l10n("cancel")) }
-                        }
-                    )
-                }
-            }
-
-            // 版面配色（S-93）。建立筆記時選過，之後也改得動 —— 與 Apple 一致。
-            Box {
-                var paletteMenu by remember { mutableStateOf(false) }
-                val meta = remember(notebookId, revision) {
-                    com.kairumo.padnote.library.NotebookMeta.load(notebook?.first)
-                }
-                val currentPalette = remember(meta) {
-                    meta.paletteId().ifEmpty { uniffi.padnote_core.guidePalettes().first().id }
-                }
-                TextButton(
-                    onClick = { paletteMenu = true },
-                    modifier = Modifier.testTag("editor.guide_palette")
-                ) {
-                    Text(
-                        l10n(
-                            uniffi.padnote_core.guidePalettes()
-                                .firstOrNull { it.id == currentPalette }?.nameKey
-                                ?: "guide_palette"
-                        ),
-                        style = MaterialTheme.typography.labelSmall
-                    )
-                }
-                DropdownMenu(expanded = paletteMenu, onDismissRequest = { paletteMenu = false }) {
-                    uniffi.padnote_core.guidePalettes().forEach { palette ->
-                        DropdownMenuItem(
-                            text = { Text(l10n(palette.nameKey)) },
-                            trailingIcon = { if (palette.id == currentPalette) Text("✓") },
-                            onClick = {
-                                paletteMenu = false
-                                meta.setPaletteId(notebook?.first, palette.id)
-                                revision++
-                            }
-                        )
-                    }
-                }
-            }
-
-            // 復原／重做（S-64 的缺口）。Apple 的兩個工具列上都有，
-            // Android 原本**完全沒有** —— 寫錯一筆只能用橡皮擦擦掉。
-            //
-            // 「自訂工具列」只管**繪圖**那一排（S-261）。這兩顆按鈕在
-            // Android 是兩個模式共用的，所以只在繪圖模式下才跟著設定走 ——
-            // 否則使用者關掉繪圖的復原，連打字的復原也會一起不見。
+            // 復原／重做群組膠囊（Apple 與 Android 統一膠囊設計）
             val hiddenTools = com.kairumo.padnote.ui.ToolbarSettings.hiddenIdentifiers
             fun toolShown(id: String) =
                 editorMode != EditorMode.DRAW || id !in hiddenTools
-            if (toolShown("editor.ink.undo")) {
-            TextButton(
-                onClick = { if (engine.undo()) { revision++; clearToken++ } },
-                enabled = engine.canUndo,
-                modifier = Modifier.testTag(
-                    if (editorMode == EditorMode.DRAW) "editor.ink.undo" else "editor.text.undo"
-                )
-            ) { Text("↶") }
-            }
-            if (toolShown("editor.ink.redo")) {
-            TextButton(
-                onClick = { if (engine.redo()) { revision++; clearToken++ } },
-                enabled = engine.canRedo,
-                modifier = Modifier.testTag(
-                    if (editorMode == EditorMode.DRAW) "editor.ink.redo" else "editor.text.redo"
-                )
-            ) { Text("↷") }
-            }
-
-            // **錄音在工具列上，不在「更多」選單裡。**
-            //
-            // 原本它是選單的第十幾項。Apple 端一直是工具列上的一顆紅點，
-            // 而錄音是這個 App 的主要動作之一 —— 上課上到一半要按兩下再
-            // 找一行字，那個差別使用者感覺得到。
-            //
-            // 核心規格把它放在 `editor.topbar`（與 `editor.more`、
-            // `editor.share` 同一組），所以這是規格早就說好的位置，
-            // 只是 Android 這邊沒照著做 —— 而在 `FfiReveal` 出現之前，
-            // 沒有任何閘門分得出「藏在選單裡」與「放在工具列上」。
-            TextButton(
-                onClick = {
-                    val session = notebook?.first
-                    if (session != null) {
-                        if (recording) {
-                            val us = audio.stop(session)
-                            recording = false
-                            recordingPaused = false
-                            message = l10n("recorded_duration")
-                                .replace("%@", "${us / 1_000_000uL}")
-                            audio.showAdviceOnce(deviceLanguageTag())
-                        } else if (AudioCapture.hasPermission(activity)) {
-                            recordSeconds = 0
-                            recordingPaused = false
-                            message = audio.start(pageId ?: "", session, deviceLanguageTag()) { message = it }
-                            recording = audio.isRecording
-                        } else {
-                            micPermission.launch(Manifest.permission.RECORD_AUDIO)
+            if (toolShown("editor.ink.undo") || toolShown("editor.ink.redo")) {
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                    modifier = Modifier.padding(vertical = 2.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(2.dp),
+                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                    ) {
+                        if (toolShown("editor.ink.undo")) {
+                            TextButton(
+                                onClick = { if (engine.undo()) { revision++; clearToken++ } },
+                                enabled = engine.canUndo,
+                                modifier = Modifier.size(32.dp).testTag(
+                                    if (editorMode == EditorMode.DRAW) "editor.ink.undo" else "editor.text.undo"
+                                ),
+                                contentPadding = PaddingValues(0.dp)
+                            ) { Text("↶", style = MaterialTheme.typography.titleMedium) }
+                        }
+                        if (toolShown("editor.ink.redo")) {
+                            TextButton(
+                                onClick = { if (engine.redo()) { revision++; clearToken++ } },
+                                enabled = engine.canRedo,
+                                modifier = Modifier.size(32.dp).testTag(
+                                    if (editorMode == EditorMode.DRAW) "editor.ink.redo" else "editor.text.redo"
+                                ),
+                                contentPadding = PaddingValues(0.dp)
+                            ) { Text("↷", style = MaterialTheme.typography.titleMedium) }
                         }
                     }
-                },
-                modifier = Modifier.testTag("editor.record")
-            ) { Text(if (recording) "⏹" else "⏺") }
+                }
+            }
+
+            // 分頁導覽群組膠囊：上一頁 · 頁碼 · 下一頁 · 新增 · 連續/單頁模式
+            Surface(
+                shape = RoundedCornerShape(8.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                modifier = Modifier.padding(vertical = 2.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(2.dp),
+                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                ) {
+                    TextButton(
+                        onClick = { if (pageIndex > 0) pageIndex-- },
+                        enabled = pageIndex > 0,
+                        modifier = Modifier.size(32.dp).testTag("editor.page.prev"),
+                        contentPadding = PaddingValues(0.dp)
+                    ) { Text("‹", style = MaterialTheme.typography.titleMedium) }
+
+                    Text(
+                        "${pageIndex + 1}/${maxOf(1, pageCount)}",
+                        style = MaterialTheme.typography.labelMedium,
+                        modifier = Modifier.padding(horizontal = 4.dp).testTag("editor.page.indicator")
+                    )
+
+                    TextButton(
+                        onClick = { if (pageIndex < pageCount - 1) pageIndex++ },
+                        enabled = pageIndex < pageCount - 1,
+                        modifier = Modifier.size(32.dp).testTag("editor.page.next"),
+                        contentPadding = PaddingValues(0.dp)
+                    ) { Text("›", style = MaterialTheme.typography.titleMedium) }
+
+                    Divider(
+                        modifier = Modifier.height(16.dp).width(1.dp),
+                        color = MaterialTheme.colorScheme.outlineVariant
+                    )
+
+                    TextButton(
+                        modifier = Modifier.size(32.dp).testTag("editor.page.add"),
+                        contentPadding = PaddingValues(0.dp),
+                        onClick = {
+                            val session = notebook?.first
+                            if (session != null) {
+                                runCatching { session.addPage(uniffi.padnote_core.PageStyle.BLANK) }
+                                pageCount = runCatching { session.pageCount().toInt() }.getOrDefault(pageCount + 1)
+                                pageIndex = pageCount - 1
+                            }
+                        }
+                    ) { Text("+", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary) }
+
+                    TextButton(
+                        modifier = Modifier.testTag("editor.page.display_mode"),
+                        contentPadding = PaddingValues(horizontal = 6.dp),
+                        onClick = {
+                            pageDisplayMode = if (pageDisplayMode == PageDisplayMode.CONTINUOUS) {
+                                PageDisplayMode.SINGLE
+                            } else {
+                                PageDisplayMode.CONTINUOUS
+                            }
+                            activity.getSharedPreferences("kairumo_editor", android.content.Context.MODE_PRIVATE)
+                                .edit().putString("pageDisplayMode", pageDisplayMode.wire).apply()
+                        }
+                    ) {
+                        Text(
+                            l10n(
+                                if (pageDisplayMode == PageDisplayMode.CONTINUOUS) "page_mode_continuous"
+                                else "page_mode_single"
+                            ),
+                            style = MaterialTheme.typography.labelSmall
+                        )
+                    }
+                }
+            }
+
+            // 紙張規格與版面調色群組膠囊
+            Surface(
+                shape = RoundedCornerShape(8.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                modifier = Modifier.padding(vertical = 2.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(2.dp),
+                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                ) {
+                    Box {
+                        var formatMenu by remember { mutableStateOf(false) }
+                        val meta = remember(notebookId, revision) {
+                            com.kairumo.padnote.library.NotebookMeta.load(notebook?.first)
+                        }
+                        val currentFormat = remember(meta) {
+                            meta.pageFormatId().ifEmpty { uniffi.padnote_core.defaultPageFormatId() }
+                        }
+                        var customPageSize by remember { mutableStateOf(false) }
+                        TextButton(
+                            onClick = { formatMenu = true },
+                            modifier = Modifier.testTag("editor.page_format"),
+                            contentPadding = PaddingValues(horizontal = 6.dp, vertical = 4.dp)
+                        ) {
+                            val fmt = uniffi.padnote_core.pageFormat(currentFormat)
+                            Text(
+                                if (uniffi.padnote_core.isCustomPageFormat(currentFormat)) {
+                                    "${fmt.width.toInt()}×${fmt.height.toInt()}"
+                                } else l10n(fmt.titleKey),
+                                style = MaterialTheme.typography.labelMedium
+                            )
+                        }
+                        DropdownMenu(expanded = formatMenu, onDismissRequest = { formatMenu = false }) {
+                            uniffi.padnote_core.pageFormats().forEach { format ->
+                                DropdownMenuItem(
+                                    text = { Text(l10n(format.titleKey)) },
+                                    trailingIcon = { if (format.id == currentFormat) Text("✓") },
+                                    onClick = {
+                                        formatMenu = false
+                                        meta.setPageFormatId(notebook?.first, format.id)
+                                        com.kairumo.padnote.ink.PageGeometry.use(format.id)
+                                        revision++
+                                    }
+                                )
+                            }
+                            DropdownMenuItem(
+                                text = { Text(l10n("page_format_custom")) },
+                                trailingIcon = {
+                                    if (uniffi.padnote_core.isCustomPageFormat(currentFormat)) Text("✓")
+                                },
+                                onClick = { formatMenu = false; customPageSize = true },
+                                modifier = Modifier.testTag("page_format.custom")
+                            )
+                        }
+                        if (customPageSize) {
+                            val current = uniffi.padnote_core.pageFormat(currentFormat)
+                            var wText by remember { mutableStateOf(current.width.toInt().toString()) }
+                            var hText by remember { mutableStateOf(current.height.toInt().toString()) }
+                            AlertDialog(
+                                onDismissRequest = { customPageSize = false },
+                                title = { Text(l10n("page_format_custom_title")) },
+                                text = {
+                                    Column {
+                                        Text(l10n("page_format_custom_hint"), style = MaterialTheme.typography.labelSmall)
+                                        OutlinedTextField(
+                                            value = wText, onValueChange = { wText = it.filter(Char::isDigit) },
+                                            label = { Text(l10n("page_format_custom_width")) }, singleLine = true,
+                                            keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                                                keyboardType = androidx.compose.ui.text.input.KeyboardType.Number),
+                                            modifier = Modifier.testTag("page_format.custom.width")
+                                        )
+                                        OutlinedTextField(
+                                            value = hText, onValueChange = { hText = it.filter(Char::isDigit) },
+                                            label = { Text(l10n("page_format_custom_height")) }, singleLine = true,
+                                            keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                                                keyboardType = androidx.compose.ui.text.input.KeyboardType.Number),
+                                            modifier = Modifier.testTag("page_format.custom.height")
+                                        )
+                                    }
+                                },
+                                confirmButton = {
+                                    TextButton(
+                                        onClick = {
+                                            customPageSize = false
+                                            val id = uniffi.padnote_core.customPageFormatId(
+                                                (wText.toUIntOrNull() ?: current.width.toUInt()),
+                                                (hText.toUIntOrNull() ?: current.height.toUInt())
+                                            )
+                                            meta.setPageFormatId(notebook?.first, id)
+                                            com.kairumo.padnote.ink.PageGeometry.use(id)
+                                            revision++
+                                        },
+                                        modifier = Modifier.testTag("page_format.custom.apply")
+                                    ) { Text(l10n("page_format_custom_apply")) }
+                                },
+                                dismissButton = {
+                                    TextButton(onClick = { customPageSize = false }) { Text(l10n("cancel")) }
+                                }
+                            )
+                        }
+                    }
+
+                    Divider(
+                        modifier = Modifier.height(16.dp).width(1.dp),
+                        color = MaterialTheme.colorScheme.outlineVariant
+                    )
+
+                    Box {
+                        var paletteMenu by remember { mutableStateOf(false) }
+                        val meta = remember(notebookId, revision) {
+                            com.kairumo.padnote.library.NotebookMeta.load(notebook?.first)
+                        }
+                        val currentPalette = remember(meta) {
+                            meta.paletteId().ifEmpty { uniffi.padnote_core.guidePalettes().first().id }
+                        }
+                        TextButton(
+                            onClick = { paletteMenu = true },
+                            modifier = Modifier.testTag("editor.guide_palette"),
+                            contentPadding = PaddingValues(horizontal = 6.dp, vertical = 4.dp)
+                        ) {
+                            Text(
+                                l10n(
+                                    uniffi.padnote_core.guidePalettes()
+                                        .firstOrNull { it.id == currentPalette }?.nameKey
+                                        ?: "guide_palette"
+                                ),
+                                style = MaterialTheme.typography.labelSmall
+                            )
+                        }
+                        DropdownMenu(expanded = paletteMenu, onDismissRequest = { paletteMenu = false }) {
+                            uniffi.padnote_core.guidePalettes().forEach { palette ->
+                                DropdownMenuItem(
+                                    text = { Text(l10n(palette.nameKey)) },
+                                    trailingIcon = { if (palette.id == currentPalette) Text("✓") },
+                                    onClick = {
+                                        paletteMenu = false
+                                        meta.setPaletteId(notebook?.first, palette.id)
+                                        revision++
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 👥 線上多人即時協同按鈕（常駐於頂部列，與 iOS / Mac 對齊）
+            val isCollabConnected = collaboration.status is com.kairumo.padnote.collab.CollaborationManager.Status.Connected
+            Surface(
+                shape = RoundedCornerShape(8.dp),
+                color = if (isCollabConnected) Color(0xFFE8F5E9) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                modifier = Modifier.padding(vertical = 2.dp)
+            ) {
+                TextButton(
+                    onClick = { showCollaboration = true },
+                    modifier = Modifier.testTag("editor.collaborate"),
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                ) {
+                    Text(
+                        if (isCollabConnected) "👥 ${l10n("collaborate")} (${collaboration.peers.size + 1})" else "👥 ${l10n("collaborate")}",
+                        color = if (isCollabConnected) Color(0xFF2E7D32) else MaterialTheme.colorScheme.primary,
+                        style = MaterialTheme.typography.labelMedium
+                    )
+                }
+            }
+
+            // ➕ 插入物件選單（醒目藍色品牌膠囊按鈕，對齊 Mac / iPad）
+            FilledTonalButton(
+                onClick = { showMenu = true },
+                colors = ButtonDefaults.filledTonalButtonColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
+                ),
+                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                shape = RoundedCornerShape(8.dp),
+                modifier = Modifier.height(36.dp).testTag("editor.more")
+            ) {
+                Text(
+                    "➕ ${l10n("insert_object")} ▾",
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+
+            // 錄音
+            Surface(
+                shape = RoundedCornerShape(8.dp),
+                color = if (recording) Color(0xFFFFEBEE) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                modifier = Modifier.padding(vertical = 2.dp)
+            ) {
+                TextButton(
+                    onClick = {
+                        val session = notebook?.first
+                        if (session != null) {
+                            if (recording) {
+                                val us = audio.stop(session)
+                                recording = false
+                                recordingPaused = false
+                                message = l10n("recorded_duration")
+                                    .replace("%@", "${us / 1_000_000uL}")
+                                audio.showAdviceOnce(deviceLanguageTag())
+                            } else if (AudioCapture.hasPermission(activity)) {
+                                recordSeconds = 0
+                                recordingPaused = false
+                                message = audio.start(pageId ?: "", session, deviceLanguageTag()) { message = it }
+                                recording = audio.isRecording
+                            } else {
+                                micPermission.launch(Manifest.permission.RECORD_AUDIO)
+                            }
+                        }
+                    },
+                    modifier = Modifier.testTag("editor.record"),
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                ) {
+                    Text(
+                        if (recording) "⏹" else "⏺",
+                        color = if (recording) Color.Red else MaterialTheme.colorScheme.onSurface,
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                }
+            }
 
             var showShareMenu by remember { mutableStateOf(false) }
-            TextButton(
-                onClick = { showShareMenu = true },
-                modifier = Modifier.testTag("editor.share")
-            ) { Text("↗") }
+            Surface(
+                shape = RoundedCornerShape(8.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                modifier = Modifier.padding(vertical = 2.dp)
+            ) {
+                TextButton(
+                    onClick = { showShareMenu = true },
+                    modifier = Modifier.testTag("editor.share"),
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                ) { Text("↗", style = MaterialTheme.typography.titleMedium) }
+            }
 
             DropdownMenu(expanded = showShareMenu, onDismissRequest = { showShareMenu = false }) {
                 DropdownMenuItem(
@@ -3245,11 +3349,6 @@ private fun InkScreen(
                     }
                 )
             }
-
-            TextButton(
-                onClick = { showMenu = true },
-                modifier = Modifier.testTag("editor.more")
-            ) { Text("⋯") }
 
             DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
                 if (toolShown("editor.ink.clear")) {

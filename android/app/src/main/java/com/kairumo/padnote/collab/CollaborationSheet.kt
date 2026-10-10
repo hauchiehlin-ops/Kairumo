@@ -105,6 +105,22 @@ fun CollaborationSheet(
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
+                                manager.lanRelayAddress?.let {
+                                    Text(
+                                        "${l("relay_lan_address")}：$it",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontFamily = FontFamily.Monospace,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                manager.tailscaleRelayAddress?.let {
+                                    Text(
+                                        "${l("relay_tailscale_address")}：$it",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontFamily = FontFamily.Monospace,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
                             }
 
                             Text(l("copy_encrypted_link"), style = MaterialTheme.typography.labelMedium)
@@ -121,8 +137,13 @@ fun CollaborationSheet(
                                 )
                             }
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                if (manager.tailscaleRelayAddress != null) {
+                                    OutlinedButton(onClick = { copy(context, manager.tailscaleInviteLink ?: manager.inviteLink) }) {
+                                        Text(l("copy_tailscale_link"))
+                                    }
+                                }
                                 OutlinedButton(onClick = { copy(context, manager.inviteLink) }) {
-                                    Text(l("copy_encrypted_link"))
+                                    Text(if (manager.tailscaleRelayAddress != null) l("copy_lan_link") else l("copy_encrypted_link"))
                                 }
                                 OutlinedButton(onClick = { manager.disconnect() }) {
                                     Text(l("end_collaboration"))
