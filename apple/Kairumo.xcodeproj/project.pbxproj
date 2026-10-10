@@ -234,6 +234,8 @@
 		FE7819F27B65DF1C258ED52E /* WrapLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6EA2D926C0FD0991AE0BC01D /* WrapLayout.swift */; };
 		FE9BE01D870836EE7426D078 /* PlatformContractTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D36DA9A7FD1451AA75A8161B /* PlatformContractTests.swift */; };
 		FEE111DF10D0F0623F16BEB0 /* BackupManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6A2A119D757D992BD181DEE /* BackupManager.swift */; };
+		CB17B1F3F192497EBBBB48A5 /* ContextGuidanceHUD.swift in Sources */ = {isa = PBXBuildFile; fileRef = C6AFDE668D95410B8B58CD2E /* ContextGuidanceHUD.swift */; };
+		9041391E85A74B3C8E584FC4 /* InteractionWatchdog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6AFD594EB51D46FB8ED3EE5C /* InteractionWatchdog.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -489,6 +491,8 @@
 		F9BA3DC03F5BD38348D5D9DE /* PenHardware.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PenHardware.swift; sourceTree = "<group>"; };
 		FC9E514062C89FE97A8E8E89 /* ExportParityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExportParityTests.swift; sourceTree = "<group>"; };
 		FD3609DAFC6CD0A448F250C1 /* PalmThresholdSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PalmThresholdSheet.swift; sourceTree = "<group>"; };
+		C6AFDE668D95410B8B58CD2E /* ContextGuidanceHUD.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContextGuidanceHUD.swift; sourceTree = "<group>"; };
+		6AFD594EB51D46FB8ED3EE5C /* InteractionWatchdog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InteractionWatchdog.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -809,6 +813,8 @@
 				B9BFDAE4EA9BBA2EA8438447 /* WordDocumentEditorView.swift */,
 				F30959766B1D00F248AD7D2D /* WordTextStudioView.swift */,
 				6EA2D926C0FD0991AE0BC01D /* WrapLayout.swift */,
+				C6AFDE668D95410B8B58CD2E /* ContextGuidanceHUD.swift */,
+				6AFD594EB51D46FB8ED3EE5C /* InteractionWatchdog.swift */,
 			);
 			path = Sources;
 			sourceTree = "<group>";
@@ -1180,6 +1186,8 @@
 				A44EE7C0B4F7E4620207AD56 /* WordDocumentEditorView.swift in Sources */,
 				7BF616F79113EDEF36132B11 /* WordTextStudioView.swift in Sources */,
 				FE7819F27B65DF1C258ED52E /* WrapLayout.swift in Sources */,
+				CB17B1F3F192497EBBBB48A5 /* ContextGuidanceHUD.swift in Sources */,
+				9041391E85A74B3C8E584FC4 /* InteractionWatchdog.swift in Sources */,
 				4778715DC0B3FB2B8CAB004B /* padnote_core.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

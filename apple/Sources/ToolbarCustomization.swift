@@ -132,6 +132,7 @@ public struct ToolbarCustomizationView: View {
 
     @ObservedObject private var settings = ToolbarSettings.shared
     @ObservedObject private var localizationManager = LocalizationManager.shared
+    @ObservedObject private var guidanceManager = GuidanceSuppressionManager.shared
     @Environment(\.dismiss) private var dismiss
 
     public init() {}
@@ -194,6 +195,11 @@ public struct ToolbarCustomizationView: View {
                 Text(L("toolbar_labels_hint"))
                     .font(.footnote)
                     .foregroundStyle(.secondary)
+
+                Toggle(isOn: $guidanceManager.isEnabled) {
+                    Text(L("guidance_smart_assist_setting"))
+                }
+                .accessibilityIdentifier("settings.smart_guidance")
             }
 
             ForEach(Array(settings.groups().enumerated()), id: \.offset) { _, group in

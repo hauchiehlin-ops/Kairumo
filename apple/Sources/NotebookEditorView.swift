@@ -2130,6 +2130,8 @@ public struct NotebookEditorView: View {
     @State private var textUndoStack: [[NoteTextAttachment]] = []
     @State private var textRedoStack: [[NoteTextAttachment]] = []
     @State private var lastTextUndoTimestamp: Date = .distantPast
+    @ObservedObject private var watchdog = InteractionWatchdog.shared
+
 
     // 單頁模式排版與縮放狀態（全頁 vs 適寬，支援手動放大縮小與捲動）
     enum SinglePageFitMode: String {
@@ -2546,6 +2548,25 @@ public struct NotebookEditorView: View {
                 .shadow(color: Color.black.opacity(0.2), radius: 10, y: 4)
                 .transition(.scale(scale: 0.85).combined(with: .opacity))
             }
+        }
+        .overlay(alignment: .top) {
+            if let guidance = watchdog.activeGuidance {
+                ContextGuidanceHUDView(
+                    item: guidance,
+                    onPerformAction: {
+                        guidance.action?()
+                    },
+                    onDismiss: {
+                        guidance.onDismiss?()
+                        watchdog.dismissGuidance()
+                    }
+                )
+                .padding(.top, 54)
+                .zIndex(99999)
+            }
+        }
+        .onChange(of: editorMode) { newMode in
+            watchdog.notifyModeSwitch(to: newMode)
         }
         .background {
             // 實體鍵盤 Esc 鍵支援一鍵退出畫布極簡模式
@@ -5108,7 +5129,27 @@ public struct NotebookEditorView: View {
                         TableAttachmentItemView(
                             table: tableBinding(for: item.id),
                             isSelected: activeSelectedObjectId == item.id,
-                            onSelect: { selectSingleObject(item.id) },
+                            onSelect: {
+                                let wasControlled = (activeSelectedObjectId == item.id)
+                                selectSingleObject(item.id)
+                                if selectedTool == .eraser {
+                                    watchdog.notifyEraserUsedOnNonInk(targetType: .table) {
+                                        let id = item.id
+                                        notebook.tableAttachments?.removeAll { $0.id == id }
+                                        store.updateNotebook(notebook)
+                                        PageThumbnailRenderer.invalidateAll()
+                                    }
+                                } else {
+                                    watchdog.notifyObjectTapped(
+                                        targetId: item.id,
+                                        targetType: .table,
+                                        isControlled: wasControlled,
+                                        onControlObject: {
+                                            selectSingleObject(item.id)
+                                        }
+                                    )
+                                }
+                            },
                             onEdit: { editingTable = item },
                             onDelete: {
                                 let id = item.id
@@ -5348,6 +5389,23 @@ public struct NotebookEditorView: View {
                     let newDrawing = processedDrawing
                     recordDrawingEdit(page: currentPageIndex, drawing: newDrawing)
 
+                    // 🌟 智慧意圖感知：手繪筆劃覆蓋於文字方塊上方
+                    if let latestStroke = newDrawing.strokes.last, newDrawing.strokes.count > lastStrokeCount {
+                        let strokeRect = latestStroke.renderBounds
+                        if let overlapped = (notebook.textAttachments ?? []).first(where: {
+                            $0.pageIndex == currentPageIndex && strokeRect.intersects(CGRect(x: $0.x, y: $0.y, width: $0.width, height: $0.height))
+                        }) {
+                            watchdog.notifyStrokeDrawnOverText(
+                                strokeBounds: strokeRect,
+                                textBoxId: overlapped.id,
+                                textBoxBounds: CGRect(x: overlapped.x, y: overlapped.y, width: overlapped.width, height: overlapped.height),
+                                onAnchor: {
+                                    anchorSelectedStrokesToNearestText()
+                                }
+                            )
+                        }
+                    }
+
                     if !isApplyingRemoteUpdate && isCollaborating {
                         let count = newDrawing.strokes.count
                         if count > lastStrokeCount {
@@ -5520,6 +5578,13 @@ public struct NotebookEditorView: View {
                             y: max(32, rect.minY - 26)
                         )
                         .zIndex(100)
+                        .onAppear {
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
+                                if selectedTool == .lasso && lasso.hasSelection {
+                                    watchdog.notifyLassoSelectionStalled()
+                                }
+                            }
+                        }
                 }
             }
             // 從別的 App 把圖拖進來（工作項 S-68）。
@@ -11158,6 +11223,9 @@ public struct NotebookEditorView: View {
                     notebook.textAttachments?.removeAll { $0.id == activeId }
                     store.updateNotebook(notebook)
                     PageThumbnailRenderer.invalidateAll()
+                    watchdog.notifyEmptyTextBoxDismissedQuickly(isStylusActive: true) {
+                        withAnimation { editorMode = .draw }
+                    }
                 }
                 inlineEditingTextId = nil
             }
@@ -11207,6 +11275,9 @@ public struct NotebookEditorView: View {
             store.updateNotebook(notebook)
             inlineEditingTextId = nil
             PageThumbnailRenderer.invalidateAll()
+            watchdog.notifyEmptyTextBoxDismissedQuickly(isStylusActive: true) {
+                withAnimation { editorMode = .draw }
+            }
         }
 
         // 2. 檢查是否點擊在既有文字範圍內
@@ -12799,8 +12870,35 @@ public struct NotebookEditorView: View {
             set: { updated in
                 guard let index = notebook.tableAttachments?
                     .firstIndex(where: { $0.id == id }) else { return }
+                let previous = notebook.tableAttachments![index]
                 notebook.tableAttachments?[index] = updated
                 store.updateNotebook(notebook)
+
+                // 🌟 智慧意圖感知：檢查表格移動時，原表格範圍內是否有手繪筆跡
+                let dx = updated.x - previous.x
+                let dy = updated.y - previous.y
+                if abs(dx) > 10 || abs(dy) > 10 {
+                    let oldRect = CGRect(x: previous.x, y: previous.y, width: previous.width, height: previous.height)
+                    let strokesInside = currentDrawing.strokes.filter { oldRect.contains($0.renderBounds.origin) }
+                    if !strokesInside.isEmpty {
+                        watchdog.notifyTableMovedWithOrphanStrokes(
+                            tableId: id,
+                            orphanStrokeCount: strokesInside.count,
+                            onMoveStrokesTogether: {
+                                var newStrokes = currentDrawing.strokes
+                                for i in 0..<newStrokes.count {
+                                    if oldRect.contains(newStrokes[i].renderBounds.origin) {
+                                        var moved = newStrokes[i]
+                                        moved.transform = moved.transform.concatenating(CGAffineTransform(translationX: dx, y: dy))
+                                        newStrokes[i] = moved
+                                    }
+                                }
+                                currentDrawing = PKDrawing(strokes: newStrokes)
+                                recordDrawingEdit(page: currentPageIndex, drawing: currentDrawing)
+                            }
+                        )
+                    }
+                }
             }
         )
     }

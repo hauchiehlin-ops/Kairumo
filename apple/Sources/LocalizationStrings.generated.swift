@@ -8695,6 +8695,38 @@ extension LocalizationManager {
             .ko: "Google 로그아웃",
             .th: "ออกจากระบบ Google"
         ],
+        "guidance_confirm": [
+            .zhHant: "確認",
+            .en: "Confirm",
+            .zhHans: "确认",
+            .ja: "確認",
+            .ko: "확인",
+            .th: "ยืนยัน"
+        ],
+        "guidance_dismiss": [
+            .zhHant: "關閉",
+            .en: "Dismiss",
+            .zhHans: "关闭",
+            .ja: "閉じる",
+            .ko: "닫기",
+            .th: "ปิด"
+        ],
+        "guidance_dont_show_again": [
+            .zhHant: "不再提示",
+            .en: "Don't show again",
+            .zhHans: "不再提示",
+            .ja: "今後表示しない",
+            .ko: "다시 표시하지 않음",
+            .th: "ไม่ต้องแสดงอีก"
+        ],
+        "guidance_smart_assist_setting": [
+            .zhHant: "智慧操作輔助與卡關即時引導",
+            .en: "Smart Interaction Guidance & Assistance",
+            .zhHans: "智能操作辅助与卡关实时引导",
+            .ja: "スマート操作ガイドとアシスト",
+            .ko: "스마트 작업 안내 및 지원",
+            .th: "คำแนะนำและการสนับสนุนการทำงานอัจฉริยะ"
+        ],
         "guide_action": [
             .zhHant: "行為",
             .en: "Action",
@@ -9311,6 +9343,22 @@ extension LocalizationManager {
             .ko: "형광펜 색상",
             .th: "สีไฮไลต์"
         ],
+        "hint_anchor_ink_action": [
+            .zhHant: "錨定至文字",
+            .en: "Anchor to Text",
+            .zhHans: "锚定至文字",
+            .ja: "テキストに固定",
+            .ko: "텍스트에 고정",
+            .th: "ยึดกับข้อความ"
+        ],
+        "hint_anchor_ink_to_text": [
+            .zhHant: "手繪筆劃覆蓋於文字上：是否將筆劃錨定至文字，隨文字增刪自動對齊？",
+            .en: "Handwritten strokes overlay text: Anchor them to the text block so they flow with future edits?",
+            .zhHans: "手绘笔画覆盖于文字上：是否将笔画锚定至文字，随文字增删自动对齐？",
+            .ja: "手書きストロークがテキストに重なっています。テキストの編集に合わせて自動移動するように固定しますか？",
+            .ko: "손글씨 획이 텍스트 위에 겹쳐 있습니다. 텍스트 수정 시 함께 이동하도록 고정하시겠습니까?",
+            .th: "ลายมือซ้อนทับข้อความ: ต้องการยึดเส้นปากกากับข้อความเพื่อให้เลื่อนตามการแก้ไขหรือไม่?"
+        ],
         "hint_comment_pin_body": [
             .zhHant: "接著**點頁面上任何一處**就會放下圖釘。再按一次工具列上的圖示即可離開放置模式。",
             .en: "Now tap anywhere on the page to drop a pin there. Tap the toolbar icon again to leave placement mode.",
@@ -9335,6 +9383,22 @@ extension LocalizationManager {
             .ko: "이 안내를 다시 표시하지 않기",
             .th: "ไม่ต้องแสดงคำแนะนำนี้อีก"
         ],
+        "hint_eraser_action_delete": [
+            .zhHant: "刪除選取物件",
+            .en: "Delete Object",
+            .zhHans: "删除选中对象",
+            .ja: "オブジェクトを削除",
+            .ko: "개체 삭제",
+            .th: "ลบวัตถุ"
+        ],
+        "hint_eraser_non_ink": [
+            .zhHant: "表格、文字方塊與圖片不是手繪筆跡，橡皮擦無法擦除。請輕點該物件並點選刪除。",
+            .en: "Tables, text boxes, and images are not ink strokes. The eraser cannot remove them. Tap the object and select delete.",
+            .zhHans: "表格、文本框与图片不是手绘笔迹，橡皮擦无法擦除。请轻点该对象并选择删除。",
+            .ja: "表、テキストボックス、画像は手書きストロークではないため、消しゴムでは消せません。オブジェクトをタップして削除を選択してください。",
+            .ko: "표, 텍스트 상자 및 이미지는 필기 획이 아니므로 지우개로 지울 수 없습니다. 개체를 탭하고 삭제를 선택하세요.",
+            .th: "ตาราง กล่องข้อความ และรูปภาพไม่ใช่เส้นลายมือ ยางลบไม่สามารถลบได้ กรุณาแตะวัตถุแล้วเลือกกดลบ"
+        ],
         "hint_got_it": [
             .zhHant: "知道了",
             .en: "Got it",
@@ -9342,6 +9406,30 @@ extension LocalizationManager {
             .ja: "わかりました",
             .ko: "알겠습니다",
             .th: "เข้าใจแล้ว"
+        ],
+        "hint_lasso_drag_guide": [
+            .zhHant: "已圈選筆劃：直接按住藍色選取框內部即可拖曳搬移。",
+            .en: "Strokes selected: Touch and drag inside the selection box to move them.",
+            .zhHans: "已圈选笔画：直接按住蓝色选框内部即可拖拽搬移。",
+            .ja: "ストロークが選択されました。青い枠内をドラッグすると移動できます。",
+            .ko: "획이 선택되었습니다. 파란색 선택 상자 내부를 드래그하여 이동하세요.",
+            .th: "เลือกเส้นแล้ว: แตะค้างแล้วลากภายในกล่องเพื่อย้ายตำแหน่ง"
+        ],
+        "hint_mode_switch_guide": [
+            .zhHant: "若要在畫布任意處隨點即書，請使用打字模式；若要手寫繪圖，請使用手繪筆刷。",
+            .en: "To type anywhere on the canvas, use Type mode. For handwriting or drawing, use a brush tool.",
+            .zhHans: "若要在画布任意处随点即书，请使用打字模式；若要手写绘图，请使用手绘笔刷。",
+            .ja: "キャンバス上の任意の位置に入力するにはテキストモードを使用してください。手書きや描画にはブラシツールを使用してください。",
+            .ko: "캔버스 어디서나 텍스트를 입력하려면 입력 모드를 사용하세요. 손글씨나 그리기는 브러시 도구를 사용하세요.",
+            .th: "หากต้องการพิมพ์ข้อความที่ใดก็ได้บนผืนผ้าใบ โปรดใช้โหมดพิมพ์ สำหรับลายมือหรือการวาดภาพ โปรดใช้แปรง"
+        ],
+        "hint_palm_rest_detected": [
+            .zhHant: "偵測到手寫筆接觸：已自動切換為手繪模式，避免手掌誤觸產生文字框。",
+            .en: "Stylus contact detected: Automatically switched to drawing mode to prevent accidental text boxes from palm rest.",
+            .zhHans: "检测到手写笔接触：已自动切换为手绘模式，避免手掌误触产生文字框。",
+            .ja: "スタイラスの接触を検出しました。手のひらの誤タッチによるテキストボックス生成を防ぐため、手書きモードに切り替えました。",
+            .ko: "스타일러스 터치가 감지되었습니다. 손바닥 오작동으로 인한 텍스트 상자 생성을 방지하기 위해 그리기 모드로 전환했습니다.",
+            .th: "ตรวจพบการสัมผัสของปากกา: สลับไปใช้โหมดวาดรูปโดยอัตโนมัติ เพื่อป้องกันการสร้างกล่องข้อความจากฝ่ามือ"
         ],
         "hint_recognize_body": [
             .zhHant: "這會讀**目前這一頁**的手寫字並轉成文字。空白頁不會有結果 —— 先寫一點東西。",
@@ -9375,6 +9463,38 @@ extension LocalizationManager {
             .ko: "스케치 다듬기",
             .th: "ปรับแต่งภาพร่าง"
         ],
+        "hint_table_ink_action": [
+            .zhHant: "移動筆劃",
+            .en: "Move Strokes",
+            .zhHans: "移动笔画",
+            .ja: "ストロークを移動",
+            .ko: "획 이동",
+            .th: "ย้ายเส้น"
+        ],
+        "hint_table_ink_follow": [
+            .zhHant: "表格已移動：儲存格內的手繪標記是否隨表格一同移動？",
+            .en: "Table moved: Would you like handwritten markings inside the cells to move with the table?",
+            .zhHans: "表格已移动：单元格内的手绘标记是否随表格一同移动？",
+            .ja: "表が移動しました。セル内の手書きマークも一緒に移動しますか？",
+            .ko: "표가 이동되었습니다. 셀 안의 손글씨 표시도 함께 이동하시겠습니까?",
+            .th: "ย้ายตารางแล้ว: ต้องการย้ายลายมือภายในเซลล์ไปพร้อมกับตารางหรือไม่?"
+        ],
+        "hint_table_select_action": [
+            .zhHant: "選取表格",
+            .en: "Select Table",
+            .zhHans: "选取表格",
+            .ja: "表を選択",
+            .ko: "표 선택",
+            .th: "เลือกตาราง"
+        ],
+        "hint_table_tap_to_select": [
+            .zhHant: "輕點表格上方握把可直接拖曳移動；點兩下儲存格可編輯文字。",
+            .en: "Tap the top handle to drag and move the table; double-tap any cell to edit text.",
+            .zhHans: "轻点表格上方握把可直接拖拽移动；双击单元格可编辑文字。",
+            .ja: "上部のハンドルをタップして表をドラッグ移動できます。セルをダブルタップするとテキストを編集できます。",
+            .ko: "상단 핸들을 탭하여 표를 드래그하여 이동할 수 있습니다. 셀을 두 번 탭하면 텍스트를 편집할 수 있습니다.",
+            .th: "แตะที่จับด้านบนเพื่อลากและย้ายตาราง แตะสองครั้งที่เซลล์เพื่อแก้ไขข้อความ"
+        ],
         "hint_tabletop_body": [
             .zhHant: "把畫面分成兩半：畫布在上，工具移到下半部。這是給立在桌上的裝置用的 —— 上面看、下面寫。",
             .en: "Splits the screen: the canvas goes on top, the tools move to the bottom half. Made for a device standing on a desk — look at the top, write on the bottom.",
@@ -9390,6 +9510,14 @@ extension LocalizationManager {
             .ja: "卓上／フレックスモード",
             .ko: "탁상 / 플렉스 모드",
             .th: "โหมดตั้งโต๊ะ / เฟล็กซ์"
+        ],
+        "hint_tag_callout_auto": [
+            .zhHant: "已切換為緊湊透明註釋標籤，不遮擋周圍手繪內容。",
+            .en: "Switched to a compact transparent callout so surrounding ink strokes remain visible.",
+            .zhHans: "已切换为紧凑透明注释标签，不遮挡周围手绘内容。",
+            .ja: "周囲の手書きを隠さないよう、コンパクトな透明ラベルに切り替えました。",
+            .ko: "주변 손글씨를 가리지 않도록 컴팩트하고 투명한 라벨로 전환되었습니다.",
+            .th: "เปลี่ยนเป็นป้ายข้อความโปร่งใสขนาดกะทัดรัดแล้ว เพื่อไม่ให้บดบังลายมือโดยรอบ"
         ],
         "home": [
             .zhHant: "首頁",
