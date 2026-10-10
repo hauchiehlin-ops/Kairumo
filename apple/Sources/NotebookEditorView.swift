@@ -5150,6 +5150,7 @@ public struct NotebookEditorView: View {
                                     )
                                 }
                             },
+                            onMove: { delta in moveTable(item.id, by: delta) },
                             onEdit: { editingTable = item },
                             onDelete: {
                                 let id = item.id
@@ -12861,6 +12862,19 @@ public struct NotebookEditorView: View {
         )
     }
 
+    private func moveTable(_ id: String, by delta: CGSize) {
+        guard hypot(delta.width, delta.height) >= 1 else { return }
+        guard var all = notebook.tableAttachments,
+              let index = all.firstIndex(where: { $0.id == id }) else { return }
+        let previous = all[index]
+        all[index].x += delta.width
+        all[index].y += delta.height
+        notebook.tableAttachments = all
+        store.updateNotebook(notebook)
+
+        moveStrokesInsideTable(previous, by: delta)
+    }
+
     private func tableBinding(for id: String) -> Binding<NoteTableAttachment> {
         Binding(
             get: {
@@ -12874,33 +12888,72 @@ public struct NotebookEditorView: View {
                 notebook.tableAttachments?[index] = updated
                 store.updateNotebook(notebook)
 
-                // 🌟 智慧意圖感知：檢查表格移動時，原表格範圍內是否有手繪筆跡
                 let dx = updated.x - previous.x
                 let dy = updated.y - previous.y
-                if abs(dx) > 10 || abs(dy) > 10 {
-                    let oldRect = CGRect(x: previous.x, y: previous.y, width: previous.width, height: previous.height)
-                    let strokesInside = currentDrawing.strokes.filter { oldRect.contains($0.renderBounds.origin) }
-                    if !strokesInside.isEmpty {
-                        watchdog.notifyTableMovedWithOrphanStrokes(
-                            tableId: id,
-                            orphanStrokeCount: strokesInside.count,
-                            onMoveStrokesTogether: {
-                                var newStrokes = currentDrawing.strokes
-                                for i in 0..<newStrokes.count {
-                                    if oldRect.contains(newStrokes[i].renderBounds.origin) {
-                                        var moved = newStrokes[i]
-                                        moved.transform = moved.transform.concatenating(CGAffineTransform(translationX: dx, y: dy))
-                                        newStrokes[i] = moved
-                                    }
-                                }
-                                currentDrawing = PKDrawing(strokes: newStrokes)
-                                recordDrawingEdit(page: currentPageIndex, drawing: currentDrawing)
-                            }
-                        )
-                    }
+                if hypot(dx, dy) >= 1 {
+                    moveStrokesInsideTable(previous, by: CGSize(width: dx, height: dy))
                 }
             }
         )
+    }
+
+    private func moveStrokesInsideTable(_ table: NoteTableAttachment, by delta: CGSize) {
+        guard hypot(delta.width, delta.height) >= 0.5 else { return }
+        let page = table.pageIndex
+
+        // 1. 標準 PencilKit 筆跡（PKDrawing）
+        let drawing = (pageDisplayMode == .single && page == currentPageIndex && canvasView != nil)
+            ? (canvasView?.drawing ?? currentDrawing)
+            : drawingForPage(page)
+
+        let result = table.offsetContainedStrokes(in: drawing, by: delta)
+        if result.movedCount > 0 {
+            let updatedDrawing = result.drawing
+            if page == currentPageIndex {
+                currentDrawing = updatedDrawing
+                if let canvas = canvasView {
+                    canvas.drawing = updatedDrawing
+                    if let adaptive = canvas as? AdaptiveCanvasView {
+                        adaptive.initialLoadedStrokeCount = updatedDrawing.strokes.count
+                        adaptive.forceDisplayRefresh(with: updatedDrawing)
+                    }
+                }
+            }
+            store.saveDrawing(notebookId: notebook.id, pageIndex: page, drawing: updatedDrawing)
+            recordDrawingEdit(page: page, drawing: updatedDrawing)
+            broadcastDrawingChange(page: page, drawing: updatedDrawing)
+            PageThumbnailRenderer.invalidateAll()
+            if pageDisplayMode == .continuous {
+                continuousReloadGeneration += 1
+            }
+        }
+
+        // 2. 專業製圖筆畫（ProInk）
+        if page == currentPageIndex, let proLayer = (canvasView as? AdaptiveCanvasView)?.proLayer {
+            let layout = table.layout()
+            let tableWidth = max(table.width, CGFloat(layout.width))
+            let tableHeight = max(table.height, CGFloat(layout.height))
+            let tableRect = CGRect(x: table.x, y: table.y, width: tableWidth, height: tableHeight)
+            let hitRect = tableRect.insetBy(dx: -4, dy: -4)
+
+            var proIdsToMove = Set<String>()
+            for s in proLayer.ownStrokes {
+                let b = s.bounds
+                let mid = CGPoint(x: b.midX, y: b.midY)
+                let intersection = tableRect.intersection(b)
+                let isInside = tableRect.contains(b)
+                    || hitRect.contains(mid)
+                    || (!intersection.isNull && (intersection.width * intersection.height) >= (b.width * b.height * 0.4))
+                    || (hitRect.contains(b.origin) && !intersection.isNull && intersection.width > 2 && intersection.height > 2)
+                if isInside {
+                    proIdsToMove.insert(s.id)
+                }
+            }
+            if !proIdsToMove.isEmpty {
+                proLayer.move(ids: proIdsToMove, by: delta)
+                proLayer.endMove()
+            }
+        }
     }
 
     private func binding(for id: String) -> Binding<NoteImageAttachment> {

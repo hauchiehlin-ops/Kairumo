@@ -14,6 +14,9 @@
 //
 
 import XCTest
+#if canImport(PencilKit)
+import PencilKit
+#endif
 @testable import Kairumo
 
 final class NoteTableTests: XCTestCase {
@@ -234,4 +237,42 @@ final class NoteTableTests: XCTestCase {
             NotebookDocument.self, from: XCTUnwrap(json.data(using: .utf8)))
         XCTAssertNil(document.tableAttachments)
     }
+
+    // MARK: - 表格與筆跡連動
+
+    #if canImport(PencilKit)
+    private func makeStroke(at point: CGPoint) -> PKStroke {
+        let points = [
+            PKStrokePoint(location: point, timeOffset: 0, size: CGSize(width: 2, height: 2), opacity: 1, force: 1, azimuth: 0, altitude: 0),
+            PKStrokePoint(location: CGPoint(x: point.x + 10, y: point.y + 10), timeOffset: 0.1, size: CGSize(width: 2, height: 2), opacity: 1, force: 1, azimuth: 0, altitude: 0)
+        ]
+        return PKStroke(ink: PKInk(.pen, color: .black), path: PKStrokePath(controlPoints: points, creationDate: Date(timeIntervalSince1970: 0)))
+    }
+
+    func testTableMovesContainedStrokes() {
+        var t = NoteTableAttachment(x: 100, y: 100, width: 300, rows: 2, cols: 2)
+        let strokeInside = makeStroke(at: CGPoint(x: 150, y: 130))
+        let strokeOutside = makeStroke(at: CGPoint(x: 20, y: 30))
+
+        XCTAssertTrue(t.containsStroke(strokeInside), "表格內的筆劃應被判定為包含")
+        XCTAssertFalse(t.containsStroke(strokeOutside), "表格外的筆劃不應被判定為包含")
+
+        let drawing = PKDrawing(strokes: [strokeInside, strokeOutside])
+        let delta = CGSize(width: 40, height: -50)
+        let (updated, count) = t.offsetContainedStrokes(in: drawing, by: delta)
+
+        XCTAssertEqual(count, 1, "應該只平移 1 筆表格內的筆劃")
+        XCTAssertEqual(updated.strokes.count, 2)
+
+        // 驗證表格內筆劃的 transform 正確加上了 delta
+        let movedStroke = updated.strokes[0]
+        XCTAssertEqual(movedStroke.transform.tx, delta.width, accuracy: 0.001)
+        XCTAssertEqual(movedStroke.transform.ty, delta.height, accuracy: 0.001)
+
+        // 驗證表格外筆劃未受影響
+        let unmovedStroke = updated.strokes[1]
+        XCTAssertEqual(unmovedStroke.transform.tx, 0, accuracy: 0.001)
+        XCTAssertEqual(unmovedStroke.transform.ty, 0, accuracy: 0.001)
+    }
+    #endif
 }

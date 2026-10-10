@@ -549,6 +549,7 @@ struct TableAttachmentItemView: View {
     /// 選取狀態由編輯器統一管理（畫布上同時最多一個待編輯物件）。
     var isSelected: Bool = false
     var onSelect: (() -> Void)? = nil
+    var onMove: ((CGSize) -> Void)? = nil
     let onEdit: () -> Void
     let onDelete: () -> Void
 
@@ -593,8 +594,14 @@ struct TableAttachmentItemView: View {
                     .onEnded { value in
                         if editingCell == nil {
                             if hypot(value.translation.width, value.translation.height) >= 3 {
-                                table.x += dragOffset.width
-                                table.y += dragOffset.height
+                                if let onMove = onMove {
+                                    onMove(dragOffset)
+                                } else {
+                                    var updated = table
+                                    updated.x += dragOffset.width
+                                    updated.y += dragOffset.height
+                                    table = updated
+                                }
                             }
                             onSelect?()
                             dragOffset = .zero
@@ -625,8 +632,14 @@ struct TableAttachmentItemView: View {
                                 }
                                 .onEnded { value in
                                     if hypot(value.translation.width, value.translation.height) >= 2 {
-                                        table.x += dragOffset.width
-                                        table.y += dragOffset.height
+                                        if let onMove = onMove {
+                                            onMove(dragOffset)
+                                        } else {
+                                            var updated = table
+                                            updated.x += dragOffset.width
+                                            updated.y += dragOffset.height
+                                            table = updated
+                                        }
                                     }
                                     onSelect?()
                                     dragOffset = .zero

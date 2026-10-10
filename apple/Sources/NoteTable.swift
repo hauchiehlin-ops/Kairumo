@@ -230,3 +230,63 @@ public struct NoteTableAttachment: Identifiable, Codable, Hashable {
     /// 這張表在畫布上的高度。位置排版要用它。
     public var height: CGFloat { CGFloat(layout().height) }
 }
+
+#if canImport(PencilKit)
+import PencilKit
+
+extension NoteTableAttachment {
+    /// 檢查筆劃是否位於表格範圍內（支援包含、中心點、面積交集與旋轉）
+    public func containsStroke(_ stroke: PKStroke) -> Bool {
+        let layout = self.layout()
+        let tableWidth = max(self.width, CGFloat(layout.width))
+        let tableHeight = max(self.height, CGFloat(layout.height))
+        let tableRect = CGRect(x: self.x, y: self.y, width: tableWidth, height: tableHeight)
+        let hitRect = tableRect.insetBy(dx: -4, dy: -4)
+
+        let center = CGPoint(x: self.x + tableWidth / 2, y: self.y + tableHeight / 2)
+        let rad = -self.canvasRotation * .pi / 180.0
+        let cosA = cos(rad)
+        let sinA = sin(rad)
+        func unrotatedPoint(_ p: CGPoint) -> CGPoint {
+            guard abs(self.canvasRotation) > 0.01 else { return p }
+            let dx = p.x - center.x
+            let dy = p.y - center.y
+            return CGPoint(
+                x: center.x + CGFloat(Double(dx) * cosA - Double(dy) * sinA),
+                y: center.y + CGFloat(Double(dx) * sinA + Double(dy) * cosA)
+            )
+        }
+
+        let bounds = stroke.renderBounds
+        let mid = CGPoint(x: bounds.midX, y: bounds.midY)
+        let unrotatedMid = unrotatedPoint(mid)
+        let unrotatedOrigin = unrotatedPoint(bounds.origin)
+        let intersection = tableRect.intersection(bounds)
+
+        if abs(self.canvasRotation) > 0.01 {
+            return hitRect.contains(unrotatedMid) || hitRect.contains(unrotatedOrigin)
+        }
+
+        return tableRect.contains(bounds)
+            || hitRect.contains(mid)
+            || (!intersection.isNull && (intersection.width * intersection.height) >= (bounds.width * bounds.height * 0.4))
+            || (hitRect.contains(bounds.origin) && !intersection.isNull && intersection.width > 2 && intersection.height > 2)
+    }
+
+    /// 將畫布筆跡中位於表格內的所有筆劃平移 delta
+    public func offsetContainedStrokes(in drawing: PKDrawing, by delta: CGSize) -> (drawing: PKDrawing, movedCount: Int) {
+        guard hypot(delta.width, delta.height) >= 0.5 else { return (drawing, 0) }
+        var newStrokes = drawing.strokes
+        var movedCount = 0
+        for i in 0..<newStrokes.count {
+            if containsStroke(newStrokes[i]) {
+                var moved = newStrokes[i]
+                moved.transform = moved.transform.concatenating(CGAffineTransform(translationX: delta.width, y: delta.height))
+                newStrokes[i] = moved
+                movedCount += 1
+            }
+        }
+        return (PKDrawing(strokes: newStrokes), movedCount)
+    }
+}
+#endif
