@@ -241,7 +241,7 @@ enum CloudSyncFolder {
     public static func wipeCloud() async -> FfiWipeResult? {
         await Task.detached(priority: .utility) {
             guard let folder = resolveFolder() else {
-                return FfiWipeResult(ok: false, deleted: 0, failed: 0, error: LocalizationManager.shared.localizedUnsafe("folder_sync_not_set"), needsReauth: false)
+                return FfiWipeResult(ok: false, deleted: 0, failed: 0, error: LocalizationManager.localizedString("folder_sync_not_set"), needsReauth: false)
             }
             let scoped = folder.startAccessingSecurityScopedResource()
             defer { if scoped { folder.stopAccessingSecurityScopedResource() } }

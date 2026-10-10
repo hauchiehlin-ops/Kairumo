@@ -41,9 +41,10 @@ final class TableStudioLayoutTests: XCTestCase {
         // 欄要橫向長出來。只驗高度的話，「每列只畫得出第一格」會漏掉。
         let three = try renderedSize(rows: 3, cols: 3).width
         let eight = try renderedSize(rows: 3, cols: 8).width
-        // 一欄 120pt 寬加 4pt 間距；多五欄至少要寬出 500pt。
+        // 3 欄為 120pt 寬（約 400pt）；8 欄因自動緊湊化採 96pt 寬（約 828pt）。
+        // 多五欄至少要寬出 400pt（若塌成一格則兩者會差不多寬）。
         XCTAssertGreaterThan(
-            eight, three + 500,
+            eight, three + 400,
             "八欄的格子只比三欄寬 \(eight - three)pt —— 欄可能沒有全部畫出來")
     }
 }

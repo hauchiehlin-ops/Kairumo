@@ -73,6 +73,7 @@ public final class InteractionWatchdog: ObservableObject {
     // MARK: - 意圖感知監聽接口
 
     /// 1. 手繪與打字融合：手寫筆劃覆蓋於文字方塊上
+    // unused-param-ok: textBoxId 保留供後續特定文字框筆劃關聯追蹤
     public func notifyStrokeDrawnOverText(
         strokeBounds: CGRect,
         textBoxId: String,
@@ -127,6 +128,7 @@ public final class InteractionWatchdog: ObservableObject {
     }
 
     /// 3. 手繪與打字融合：表格移動時內部手繪標記未跟隨
+    // unused-param-ok: tableId 保留供後續特定表格物件歷程追蹤
     public func notifyTableMovedWithOrphanStrokes(
         tableId: String,
         orphanStrokeCount: Int,
@@ -234,6 +236,7 @@ public final class InteractionWatchdog: ObservableObject {
     }
 
     /// 6. 工具錯配：3 秒內手寫與打字模式頻繁交替切換
+    // unused-param-ok: mode 保留供後續區分切入模式之細緻化引導
     public func notifyModeSwitch(to mode: EditorMode) {
         let now = Date().timeIntervalSince1970
         lastModeSwitchTimes.append(now)
