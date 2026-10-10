@@ -83,38 +83,31 @@ public struct NoteTableView: View {
                 )
 
                 if isEditingThis {
-                    TextField(
-                        "",
+                    NoteTableInlineEditor(
                         text: Binding(
                             get: { table.cell(row: r, col: c) },
                             set: { table.setCell($0, row: r, col: c) }
-                        )
-                    )
-                    .textFieldStyle(.plain)
-                    .font(.system(size: table.fontSize, weight: cell.isHeader ? .semibold : .regular))
-                    .padding(.horizontal, 4)
-                    .padding(.vertical, 2)
-                    .background(Color(uiColor: .systemBackground).opacity(0.95))
-                    .cornerRadius(4)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 4)
-                            .stroke(Color.accentColor, lineWidth: 1.5)
-                    )
-                    .frame(width: max(20, cell.width - 6), height: max(20, cell.height - 6), alignment: .leading)
-                    .offset(x: cell.x + 3, y: cell.y + 3)
-                    .onSubmit {
-                        let nextCol = c + 1
-                        if nextCol < table.cols {
-                            editingCell = TableCellCoordinate(row: r, col: nextCol)
-                        } else {
-                            let nextRow = r + 1
-                            if nextRow < table.rows {
-                                editingCell = TableCellCoordinate(row: nextRow, col: 0)
+                        ),
+                        fontSize: table.fontSize,
+                        isHeader: cell.isHeader,
+                        width: cell.width,
+                        height: cell.height,
+                        x: cell.x,
+                        y: cell.y,
+                        onSubmit: {
+                            let nextCol = c + 1
+                            if nextCol < table.cols {
+                                editingCell = TableCellCoordinate(row: r, col: nextCol)
                             } else {
-                                editingCell = nil
+                                let nextRow = r + 1
+                                if nextRow < table.rows {
+                                    editingCell = TableCellCoordinate(row: nextRow, col: 0)
+                                } else {
+                                    editingCell = nil
+                                }
                             }
                         }
-                    }
+                    )
                 } else {
                     Text(displayText.isEmpty ? cell.lines.joined(separator: "\n") : displayText)
                         .font(.system(size: table.fontSize, weight: cell.isHeader ? .semibold : .regular))
@@ -136,6 +129,40 @@ public struct NoteTableView: View {
         .contentShape(Rectangle())
         .onTapGesture(count: 2, perform: onEdit)
     }
+
+private struct NoteTableInlineEditor: View {
+    @Binding var text: String
+    let fontSize: CGFloat
+    let isHeader: Bool
+    let width: CGFloat
+    let height: CGFloat
+    let x: CGFloat
+    let y: CGFloat
+    let onSubmit: () -> Void
+
+    @FocusState private var isFieldFocused: Bool
+
+    var body: some View {
+        TextField("", text: $text)
+            .focused($isFieldFocused)
+            .textFieldStyle(.plain)
+            .font(.system(size: fontSize, weight: isHeader ? .semibold : .regular))
+            .padding(.horizontal, 4)
+            .padding(.vertical, 2)
+            .background(Color(uiColor: .systemBackground).opacity(0.96))
+            .cornerRadius(4)
+            .overlay(
+                RoundedRectangle(cornerRadius: 4)
+                    .stroke(Color.accentColor, lineWidth: 2)
+            )
+            .frame(width: max(20, width - 6), height: max(20, height - 6), alignment: .leading)
+            .offset(x: x + 3, y: y + 3)
+            .onSubmit(onSubmit)
+            .onAppear {
+                isFieldFocused = true
+            }
+    }
+}
 
     private var ruleColor: Color {
         table.ruleColorHex.flatMap(Color.init(hex:)) ?? Color.primary.opacity(0.35)
@@ -161,6 +188,7 @@ public struct TableStudioView: View {
     @State private var selectedRow: Int = 0
     @State private var selectedCol: Int = 0
     @FocusState private var activeCellKey: String?
+    @State private var isCompactColumns: Bool = false
     private let isEditingExisting: Bool
     private let onCommit: Commit
 
@@ -179,13 +207,13 @@ public struct TableStudioView: View {
     public var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                ScrollView([.horizontal, .vertical]) {
-                    VStack(alignment: .leading, spacing: 14) {
+                ScrollView(.vertical) {
+                    VStack(alignment: .leading, spacing: 16) {
                         preview
                         Divider()
-                        grid
+                        gridSection
                     }
-                    .padding(12)
+                    .padding(14)
                 }
                 Divider()
                 controls
@@ -217,37 +245,107 @@ public struct TableStudioView: View {
     /// `NoteTableView`，所以看到的就是會得到的。
     private var preview: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text(localizationManager.localized("table_preview"))
-                .font(.caption2)
-                .foregroundColor(.secondary)
-            NoteTableView(table: $table, isSelected: false, onEdit: {})
-                // 預覽不接受點擊 —— 這裡點兩下會再開一層同樣的面板。
-                .allowsHitTesting(false)
-                .padding(8)
-                .background(Color(uiColor: .secondarySystemGroupedBackground))
-                .cornerRadius(8)
+            HStack {
+                Text(localizationManager.localized("table_preview"))
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+                Spacer()
+                Text("\(table.rows) × \(table.cols)")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+            }
+            ScrollView(.horizontal, showsIndicators: true) {
+                NoteTableView(table: $table, isSelected: false, onEdit: {})
+                    .allowsHitTesting(false)
+                    .padding(8)
+            }
+            .background(Color(uiColor: .secondarySystemGroupedBackground))
+            .cornerRadius(8)
         }
     }
 
     // MARK: - 格子
 
+    private var cellWidth: CGFloat {
+        if isCompactColumns { return 82 }
+        return table.cols >= 6 ? 96 : 120
+    }
+
+    private func columnLabel(for col: Int) -> String {
+        let alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+        if col < alphabet.count {
+            let index = alphabet.index(alphabet.startIndex, offsetBy: col)
+            return String(alphabet[index])
+        }
+        return "\(col + 1)"
+    }
+
+    private var gridSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text("儲存格內容")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+                Spacer()
+                if table.cols >= 4 {
+                    Button {
+                        withAnimation { isCompactColumns.toggle() }
+                    } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: isCompactColumns ? "arrow.left.and.right" : "arrow.right.and.line.vertical.and.arrow.left")
+                            Text(isCompactColumns ? "標準欄寬" : "緊湊欄寬")
+                        }
+                        .font(.caption2)
+                    }
+                    .buttonStyle(.bordered)
+                }
+            }
+
+            if table.cols > 4 {
+                HStack(spacing: 4) {
+                    Image(systemName: "arrow.left.and.right")
+                        .font(.caption2)
+                    Text("表格欄位較多，可向右水平滑動檢視與編輯更多欄位")
+                        .font(.caption2)
+                }
+                .foregroundColor(.secondary)
+            }
+
+            ScrollView(.horizontal, showsIndicators: true) {
+                grid
+                    .padding(.vertical, 4)
+            }
+        }
+    }
+
     /// 可編輯的儲存格。
-    ///
-    /// **刻意不用 `Grid`。** `Grid` 在 Mac Catalyst 上放進雙向 `ScrollView`
-    /// 時會塌成一格：使用者看到的是一個文字框，其餘的行列完全不見 ——
-    /// 而控制列（合併、刪除欄列）仍然是正常的，所以看起來像「表格壞了」。
-    /// VStack + HStack 在兩個平台上的行為一致。
-    // internal（而不是 private）是為了讓測試能單獨把它算繪出來量尺寸 ——
-    // 整個面板包在 `NavigationStack` 裡，`ImageRenderer` 對它回 nil。
     var grid: some View {
         VStack(alignment: .leading, spacing: 4) {
+            // 欄位標籤 (A, B, C...)
+            HStack(spacing: 4) {
+                Text("")
+                    .frame(width: 28, height: 20)
+                ForEach(0..<table.cols, id: \.self) { col in
+                    Text(columnLabel(for: col))
+                        .font(.caption2.bold())
+                        .foregroundColor(.secondary)
+                        .frame(width: cellWidth, height: 20)
+                        .background(Color.secondary.opacity(0.08))
+                        .cornerRadius(3)
+                }
+            }
+
             ForEach(0..<table.rows, id: \.self) { row in
                 HStack(spacing: 4) {
+                    Text("\(row + 1)")
+                        .font(.caption2.bold())
+                        .foregroundColor(.secondary)
+                        .frame(width: 28)
                     ForEach(0..<table.cols, id: \.self) { col in
                         if table.isCovered(row: row, col: col) {
                             // 被合併蓋住的格子不給編輯 —— 它的內容不會被顯示，
                             // 讓人輸入等於讓人把字打進看不見的地方。
-                            Color.clear.frame(width: 120, height: 34)
+                            Color.clear.frame(width: cellWidth, height: 34)
                         } else {
                             cellField(row: row, col: col)
                         }
@@ -269,7 +367,7 @@ public struct TableStudioView: View {
         .focused($activeCellKey, equals: cellKey)
         .textFieldStyle(.roundedBorder)
         .font(.system(size: 13, weight: row == 0 && table.headerRow ? .semibold : .regular))
-        .frame(width: 120)
+        .frame(width: cellWidth)
         .overlay(
             RoundedRectangle(cornerRadius: 5)
                 .strokeBorder(
@@ -482,30 +580,43 @@ struct TableAttachmentItemView: View {
             }
             .shadow(color: isDragging ? .clear : Color.black.opacity(0.08), radius: 6, y: 3)
             .gesture(
-                (editingCell != nil) ? nil :
-                DragGesture(minimumDistance: 5, coordinateSpace: .named(CanvasCoordinateSpace.name))
+                DragGesture(minimumDistance: 4, coordinateSpace: .named(CanvasCoordinateSpace.name))
                     .onChanged { value in
-                        isDragging = true
-                        dragOffset = value.translation
+                        if editingCell != nil && hypot(value.translation.width, value.translation.height) > 8 {
+                            editingCell = nil
+                        }
+                        if editingCell == nil {
+                            isDragging = true
+                            dragOffset = value.translation
+                        }
                     }
                     .onEnded { value in
-                        if hypot(value.translation.width, value.translation.height) >= 4 {
-                            table.x += dragOffset.width
-                            table.y += dragOffset.height
+                        if editingCell == nil {
+                            if hypot(value.translation.width, value.translation.height) >= 3 {
+                                table.x += dragOffset.width
+                                table.y += dragOffset.height
+                            }
+                            onSelect?()
+                            dragOffset = .zero
+                            isDragging = false
                         }
-                        onSelect?()
-                        dragOffset = .zero
-                        isDragging = false
                     }
             )
             .overlay(alignment: .top) {
                 if isSelected {
-                    Capsule()
-                        .fill(Color.secondary.opacity(0.4))
-                        .frame(width: 44, height: 6)
-                        .padding(.vertical, 8)
+                    HStack(spacing: 8) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "arrow.up.and.down.and.arrow.left.and.right")
+                                .font(.system(size: 11, weight: .semibold))
+                            Text("拖曳移動")
+                                .font(.system(size: 11, weight: .semibold))
+                        }
+                        .foregroundColor(.primary)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .background(Color(uiColor: .secondarySystemBackground))
+                        .cornerRadius(12)
                         .contentShape(Rectangle())
-                        .offset(y: -18)
                         .gesture(
                             DragGesture(minimumDistance: 2, coordinateSpace: .named(CanvasCoordinateSpace.name))
                                 .onChanged { value in
@@ -522,6 +633,29 @@ struct TableAttachmentItemView: View {
                                     isDragging = false
                                 }
                         )
+
+                        Button(action: onEdit) {
+                            HStack(spacing: 3) {
+                                Image(systemName: "slider.horizontal.3")
+                                    .font(.system(size: 11))
+                                Text(localizationManager.localized("edit"))
+                                    .font(.system(size: 11, weight: .medium))
+                            }
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 6)
+                            .background(Color.accentColor.opacity(0.12))
+                            .foregroundColor(.accentColor)
+                            .cornerRadius(12)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    .padding(3)
+                    .background(
+                        Capsule()
+                            .fill(Color(uiColor: .systemBackground))
+                            .shadow(color: Color.black.opacity(0.16), radius: 6, y: 2)
+                    )
+                    .offset(y: -38)
                 }
             }
             // 表格本體跟著轉；把手掛在旋轉**外面**的 overlay ——

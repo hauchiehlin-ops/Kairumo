@@ -2752,6 +2752,8 @@ public struct NotebookEditorView: View {
                 table.y = min(PageGeometry.height - 200, baseOffsetY + CGFloat(existingCount * 40))
                 if notebook.tableAttachments == nil { notebook.tableAttachments = [] }
                 notebook.tableAttachments?.append(table)
+                activeSelectedObjectId = table.id
+                selectedObjectIds = [table.id]
                 store.updateNotebook(notebook)
                 PageThumbnailRenderer.invalidateAll()
                 if let data = try? JSONEncoder().encode(table),
@@ -2759,6 +2761,7 @@ public struct NotebookEditorView: View {
                     collaborationManager.broadcastAttachmentUpsert(type: "table", itemDict: dict)
                 }
             }
+            .frame(minWidth: 540)
         } }
         .sheet(item: $editingTable) { target in resizableSheet {
             TableStudioView(editing: target) { updated in
@@ -2776,6 +2779,7 @@ public struct NotebookEditorView: View {
                     collaborationManager.broadcastAttachmentUpsert(type: "table", itemDict: dict)
                 }
             }
+            .frame(minWidth: 540)
         } }
         .sheet(isPresented: $showChartStudio) { resizableSheet {
             ChartStudioView { chartSpec, chartImage in
@@ -4142,6 +4146,8 @@ public struct NotebookEditorView: View {
                 let table = NoteTableAttachment(pageIndex: currentPageIndex, x: 40, y: 120, rows: 3, cols: 3)
                 if notebook.tableAttachments == nil { notebook.tableAttachments = [] }
                 notebook.tableAttachments?.append(table)
+                activeSelectedObjectId = table.id
+                selectedObjectIds = [table.id]
                 store.updateNotebook(notebook)
                 PageThumbnailRenderer.invalidateAll()
                 if let data = try? JSONEncoder().encode(table),
@@ -7243,6 +7249,8 @@ public struct NotebookEditorView: View {
                     let table = NoteTableAttachment(pageIndex: currentPageIndex, x: targetX, y: targetY, rows: rows, cols: cols)
                     if notebook.tableAttachments == nil { notebook.tableAttachments = [] }
                     notebook.tableAttachments?.append(table)
+                    activeSelectedObjectId = table.id
+                    selectedObjectIds = [table.id]
                     store.updateNotebook(notebook)
                     PageThumbnailRenderer.invalidateAll()
                     showCanvasNotice(String(format: localizationManager.localized("table_rows_cols"), "\(rows)", "\(cols)"))
@@ -7422,8 +7430,17 @@ public struct NotebookEditorView: View {
 
     @ViewBuilder
     private var lassoRecolorButton: some View {
-        Button {
-            showLassoColorPicker.toggle()
+        Menu {
+            ForEach(inkPalette(), id: \.hex) { swatch in
+                if let color = Color(hex: swatch.hex) {
+                    Button {
+                        recolorSelectedStrokes(to: color)
+                    } label: {
+                        let labelText = swatch.key.isEmpty ? swatch.hex : localizationManager.localized(swatch.key)
+                        Label(labelText, systemImage: "circle.fill")
+                    }
+                }
+            }
         } label: {
             Image(systemName: "paintbrush.fill")
                 .font(.system(size: 14))
@@ -7431,27 +7448,8 @@ public struct NotebookEditorView: View {
                 .background(Color.secondary.opacity(0.12))
                 .cornerRadius(6)
         }
-        .buttonStyle(.plain)
         .help(localizationManager.localized("ink_change_colour"))
         .accessibilityLabel(localizationManager.localized("ink_change_colour"))
-        .popover(isPresented: $showLassoColorPicker) {
-            HStack(spacing: 12) {
-                ForEach(colorPalette, id: \.self) { color in
-                    Button {
-                        recolorSelectedStrokes(to: color)
-                        showLassoColorPicker = false
-                    } label: {
-                        Circle()
-                            .fill(color)
-                            .frame(width: 28, height: 28)
-                            .overlay(Circle().stroke(Color.gray.opacity(0.3), lineWidth: 1))
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-            .padding()
-            .modifier(PopoverCompactAdaptation())
-        }
     }
 
     /// iOS 16.4+ 限定修飾器，低版本直接略過。
@@ -7471,8 +7469,15 @@ public struct NotebookEditorView: View {
             showCanvasNotice(localizationManager.localized("lasso_active_hint"))
             return
         }
-        guard let updated = lasso.recolorSelected(in: currentDrawing, to: UIColor(newColor)) else { return }
+        guard let updated = lasso.recolorSelected(in: currentDrawing, to: UIColor(newColor)) else {
+            showCanvasNotice("未能為選取筆劃更換色彩")
+            return
+        }
         applyLassoResult(updated)
+        showCanvasNotice("已為圈選筆劃更換色彩")
+        #if os(iOS)
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        #endif
     }
 
     /// 在指定 Y 軸座標插入或調整垂直空間（GoodNotes 風格插入空間工具）
@@ -9690,7 +9695,6 @@ public struct NotebookEditorView: View {
             showCanvasNotice(localizationManager.localized("lasso_active_hint"))
             return
         }
-        let targetDrawing = PKDrawing(strokes: selectedStrokes)
         
         // 計算筆跡包圍盒與平均色彩（原地轉化：沿用位置、寬度、筆色）
         var strokeBounds: CGRect = .null
@@ -9708,19 +9712,24 @@ public struct NotebookEditorView: View {
         
         let language = localizationManager.currentLanguage.rawValue
         let hasSelection = lasso.hasSelection
+        showCanvasNotice("正在辨識手寫文字…")
+
         Task { @MainActor in
-            switch await HandwritingRecognizer.recognize(drawing: targetDrawing, languageTag: language) {
-            case .success(let groups):
-                let recognizedText = groups.map(\.text).joined(separator: "\n")
-                guard !recognizedText.isEmpty else { return }
+            switch await HandwritingRecognizer.recognize(strokes: selectedStrokes, languageTag: language) {
+            case .success(let recognizedText):
+                let trimmed = recognizedText.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !trimmed.isEmpty else {
+                    showCanvasNotice("未能在圈選筆劃中辨識出文字，請嘗試圈選更清晰的手寫筆跡")
+                    return
+                }
                 
                 // 原地取代：產生對準原筆劃位置之 NoteTextAttachment
                 let pad: CGFloat = 8
                 let draft = NoteTextAttachment(
                     id: UUID().uuidString,
                     pageIndex: currentPageIndex,
-                    text: recognizedText,
-                    fontSize: max(16, min(32, strokeBounds.height / CGFloat(max(1, groups.count)) * 0.7)),
+                    text: trimmed,
+                    fontSize: max(16, min(32, strokeBounds.height * 0.7)),
                     textColorHex: strokeColorHex,
                     backgroundColorHex: "#FFFFFF",
                     hasBorder: false,
@@ -9749,11 +9758,12 @@ public struct NotebookEditorView: View {
                 }
                 store.updateNotebook(notebook)
                 PageThumbnailRenderer.invalidateAll()
+                showCanvasNotice("已成功將手寫轉換為文字")
                 #if os(iOS)
                 UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                 #endif
             case .failure:
-                break
+                showCanvasNotice("手寫辨識未完成：請確認圈選內容包含清晰文字")
             }
         }
     }
@@ -9796,10 +9806,16 @@ public struct NotebookEditorView: View {
 
     private func anchorSelectedStrokesToNearestText() {
         let drawing = currentDrawing
-        guard !drawing.strokes.isEmpty else { return }
+        guard !drawing.strokes.isEmpty else {
+            showCanvasNotice("目前頁面沒有手寫筆劃可供錨定")
+            return
+        }
 
         let pageTexts = (notebook.textAttachments ?? []).filter { $0.pageIndex == currentPageIndex }
-        guard !pageTexts.isEmpty else { return }
+        guard !pageTexts.isEmpty else {
+            showCanvasNotice("頁面上尚無文字方塊。請先新增文字方塊並使手寫筆劃相鄰，即可建立動態連動錨定")
+            return
+        }
 
         let candidateIndices = lasso.hasSelection ? Array(lasso.selected) : Array(drawing.strokes.indices)
         for target in pageTexts {
@@ -9824,6 +9840,7 @@ public struct NotebookEditorView: View {
                 notebook.stickyAnchors?.append(anchor)
                 store.updateNotebook(notebook)
                 lasso.clear()
+                showCanvasNotice("手寫筆劃已成功錨定至文字方塊！移動該文字方塊時，筆跡將隨之連動")
                 #if os(iOS)
                 UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                 #endif
@@ -9832,6 +9849,8 @@ public struct NotebookEditorView: View {
         }
         if let firstText = pageTexts.first {
             anchorOverlappingInkToText(textItem: firstText)
+        } else {
+            showCanvasNotice("未找到與所選筆劃相鄰的文字方塊；請圈選與文字方塊相重疊或相鄰的筆劃")
         }
     }
 
@@ -9847,7 +9866,10 @@ public struct NotebookEditorView: View {
             }
         }
 
-        guard !matchedIndices.isEmpty else { return }
+        guard !matchedIndices.isEmpty else {
+            showCanvasNotice("未找到與所選筆劃相鄰的文字方塊；請圈選與文字方塊相重疊或相鄰的筆劃")
+            return
+        }
         let anchor = StickyAnnotationAnchor(
             pageIndex: currentPageIndex,
             targetId: textItem.id,
@@ -9859,6 +9881,7 @@ public struct NotebookEditorView: View {
         notebook.stickyAnchors?.removeAll { $0.targetId == textItem.id }
         notebook.stickyAnchors?.append(anchor)
         store.updateNotebook(notebook)
+        showCanvasNotice("手寫筆劃已成功錨定至文字方塊！移動該文字方塊時，筆跡將隨之連動")
         #if os(iOS)
         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
         #endif
@@ -10011,7 +10034,7 @@ public struct NotebookEditorView: View {
         
         lasso.clear()
         selectedTool = previousTool ?? lastBrushTool
-        showCanvasNotice(localizationManager.localized("save_as_sticker"))
+        showCanvasNotice("已儲存為自訂貼紙！可於頂端「插入 > 貼紙」選單中重複取用")
         #if os(iOS)
         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
         #endif
@@ -11197,13 +11220,22 @@ public struct NotebookEditorView: View {
             return
         }
 
-        // 4. 點擊空白處：隨點隨打，像 Word 即點即書，建立自然排版文字，並清理其他選取狀態
+        // 4. 點擊空白處：若先前已有選取物件或文字正在編輯，先取消選取與收回鍵盤（避免誤觸產生多餘文字方塊）
+        let hadActiveSelectionOrEditing = (inlineEditingTextId != nil || activeSelectedObjectId != nil || !selectedShapeIds.isEmpty || !selectedObjectIds.isEmpty)
+
         activeSelectedObjectId = nil
         selectedShapeIds = []
         selectedConnectionId = nil
         selectedObjectIds = []
+        inlineEditingTextId = nil
+        editingTextId = nil
         collaborationManager.broadcastSelection(selectedId: nil)
 
+        if hadActiveSelectionOrEditing {
+            return
+        }
+
+        // 若原先已處於無選取狀態，點擊空白處才啟動隨點隨打（即點即書）
         let draft = insertTextBox(at: location, page: targetPage, tapToWrite: true)
         activeSelectedObjectId = draft.id
         inlineEditingTextId = draft.id

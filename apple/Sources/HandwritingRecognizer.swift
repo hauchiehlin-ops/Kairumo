@@ -89,6 +89,37 @@ public enum HandwritingRecognizer {
         return .success(out)
     }
 
+    /// 針對套索圈選筆畫進行整體文字辨識。
+    /// 優先將全部圈選筆跡合成為單一張圖像進行辨識，防止時間停頓將同一字元肢解。
+    public static func recognize(
+        strokes: [PKStroke],
+        languageTag: String
+    ) async -> Result<String, Failure> {
+        guard !strokes.isEmpty else { return .success("") }
+
+        // 1. 優先全景辨識：將整組被圈選筆劃算繪為單一圖像送進 Vision
+        if let unifiedImage = render(strokes: strokes) {
+            let unifiedResult = await recognize(image: unifiedImage, languageTag: languageTag)
+            if case .success(let text) = unifiedResult {
+                let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+                if !trimmed.isEmpty {
+                    return .success(trimmed)
+                }
+            }
+        }
+
+        // 2. 備援方案：若整體辨識未得，透過時間分組逐一辨識再拼合
+        let drawing = PKDrawing(strokes: strokes)
+        let groupResult = await recognize(drawing: drawing, languageTag: languageTag)
+        switch groupResult {
+        case .success(let groups):
+            let combined = groups.map(\.text).joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines)
+            return .success(combined)
+        case .failure(let error):
+            return .failure(error)
+        }
+    }
+
     /// 落筆時刻（毫秒）。
     ///
     /// `PKStrokePath.creationDate` 是這一筆開始的絕對時間；用它相減才知道
