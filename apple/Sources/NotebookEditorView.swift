@@ -5935,19 +5935,27 @@ public struct NotebookEditorView: View {
         .padding(.bottom, 12)
     }
 
-    /// 套索操作按鈕：圖示 + 文字 + 說明提示
-    private func lassoActionButton(_ icon: String, _ titleKey: String, _ hintKey: String, action: @escaping () -> Void) -> some View {
+    /// 套索操作按鈕：圖示 + 可選文字標籤 + 說明提示
+    private func lassoActionButton(
+        _ icon: String,
+        _ titleKey: String,
+        _ hintKey: String,
+        showLabel: Bool = true,
+        action: @escaping () -> Void
+    ) -> some View {
         Button(action: action) {
             HStack(spacing: 4) {
                 Image(systemName: icon)
                     .font(.caption)
-                Text(localizationManager.localized(titleKey))
-                    .font(.system(size: 11, weight: .medium))
-                    .lineLimit(1)
-                    .fixedSize()
+                if showLabel {
+                    Text(localizationManager.localized(titleKey))
+                        .font(.system(size: 11, weight: .medium))
+                        .lineLimit(1)
+                        .fixedSize()
+                }
             }
             .foregroundColor(.primary)
-            .padding(.horizontal, 8)
+            .padding(.horizontal, showLabel ? 8 : 6)
             .padding(.vertical, 5)
             .background(Color.secondary.opacity(0.12))
             .cornerRadius(6)
@@ -5957,6 +5965,7 @@ public struct NotebookEditorView: View {
         .accessibilityLabel(localizationManager.localized(titleKey))
         .help(localizationManager.localized(hintKey))
     }
+
 
     /// 版本標示（v2.2.0 這種）。點一下可複製，回報問題時直接貼上。
     // 版本號**不放在編輯器工具列**（工作項 S-62）。
@@ -7620,11 +7629,29 @@ public struct NotebookEditorView: View {
     private var drawingToolbarContent: some View {
         VStack(spacing: 0) {
             if editorMode == .draw && selectedTool == .lasso {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    lassoFloatingActionBar
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 4)
+                ViewThatFits(in: .horizontal) {
+                    // 1. 寬螢幕：長提示文字 + 圖示文字按鈕
+                    lassoFloatingActionBarRow(showLabels: true, showHint: true)
+                        .fixedSize(horizontal: true, vertical: false)
+
+                    // 2. 中等寬度（700~1000pt）：隱藏長提示文字，保留圖示文字按鈕
+                    lassoFloatingActionBarRow(showLabels: true, showHint: false)
+                        .fixedSize(horizontal: true, vertical: false)
+
+                    // 3. 窄螢幕（Mac 縮小視窗、iPad 分割螢幕/側邊欄展開）：精簡純圖示模式，所有按鈕完全放得下
+                    lassoFloatingActionBarRow(showLabels: false, showHint: false)
+                        .fixedSize(horizontal: true, vertical: false)
+
+                    // 4. 超窄螢幕（如 iPhone 直向或 <360pt）：可橫向捲動並顯示指示器
+                    ScrollView(.horizontal, showsIndicators: true) {
+                        lassoFloatingActionBarRow(showLabels: false, showHint: false)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 2)
+                    }
                 }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 4)
+                .frame(maxWidth: .infinity)
                 .background(Color(uiColor: .secondarySystemGroupedBackground))
                 Divider()
             }
@@ -7972,48 +7999,30 @@ public struct NotebookEditorView: View {
                         .frame(height: 24)
 
                     ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 6) {
-                        lassoActionButton("scissors", "cut_selected", "cut_selected_hint") { cutSelectedStrokes() }
-                        lassoActionButton("doc.on.doc", "copy_selected", "copy_selected_hint") { copySelectedStrokes() }
-                        lassoActionButton("plus.square.on.square", "duplicate_selected", "duplicate_selected_hint") { duplicateSelectedStrokes() }
-                        lassoActionButton("doc.on.clipboard", "paste_strokes", "paste_strokes_hint") { pasteStrokes() }
-                        lassoActionButton("photo.on.rectangle", "save_as_sticker", "save_as_sticker") { saveSelectedAsSticker() }
+                        HStack(spacing: 6) {
+                            lassoActionButton("scissors", "cut_selected", "cut_selected_hint", showLabel: showToolLabels) { cutSelectedStrokes() }
+                            lassoActionButton("doc.on.doc", "copy_selected", "copy_selected_hint", showLabel: showToolLabels) { copySelectedStrokes() }
+                            lassoActionButton("plus.square.on.square", "duplicate_selected", "duplicate_selected_hint", showLabel: showToolLabels) { duplicateSelectedStrokes() }
+                            lassoActionButton("doc.on.clipboard", "paste_strokes", "paste_strokes_hint", showLabel: showToolLabels) { pasteStrokes() }
+                            lassoActionButton("photo.on.rectangle", "save_as_sticker", "save_as_sticker", showLabel: showToolLabels) { saveSelectedAsSticker() }
 
-                        // 🌟 套索轉化傳送門：手寫直接轉為文字方塊
-                        lassoActionButton("text.viewfinder", "recognize_handwriting", "recognize_handwriting") {
-                            recognizeHandwritingToTextBox()
-                        }
-
-                        // 🌟 動態流式錨定：手寫筆劃錨定至文字方塊
-                        lassoActionButton("link.badge.plus", "sticky_anchor_text", "sticky_anchored_hint") {
-                            anchorSelectedStrokesToNearestText()
-                        }
-                        
-                        lassoRecolorButton
-
-                        Button {
-                            deleteSelectedStrokes()
-                        } label: {
-                            HStack(spacing: 4) {
-                                Image(systemName: "trash.fill")
-                                    .font(.caption)
-                                Text(localizationManager.localized("delete_selected"))
-                                    .font(.caption2)
-                                    .fontWeight(.medium)
+                            // 🌟 套索轉化傳送門：手寫直接轉為文字方塊
+                            lassoActionButton("text.viewfinder", "recognize_handwriting", "recognize_handwriting", showLabel: showToolLabels) {
+                                recognizeHandwritingToTextBox()
                             }
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 5)
-                            .background(Color.red)
-                            .cornerRadius(6)
+
+                            // 🌟 動態流式錨定：手寫筆劃錨定至文字方塊
+                            lassoActionButton("link.badge.plus", "sticky_anchor_text", "sticky_anchored_hint", showLabel: showToolLabels) {
+                                anchorSelectedStrokesToNearestText()
+                            }
+                            
+                            lassoRecolorButton
+
+                            lassoDeleteButton(showLabel: showToolLabels)
                         }
-                        .buttonStyle(.plain)
-                        .accessibilityLabel(localizationManager.localized("delete_selected"))
-                        .help(localizationManager.localized("delete_selected"))
                     }
-                    }
-                    // 窄畫面（側邊欄開著的直向 iPad 只剩約 550pt）塞不下 560，會把整排撐出畫面。
-                    .frame(maxWidth: 400)
+                    // 依據是否顯示標籤動態調整最大寬度，避免窄畫面撐出視窗
+                    .frame(maxWidth: showToolLabels ? 420 : 280)
                 }
 
 
@@ -8663,186 +8672,117 @@ public struct NotebookEditorView: View {
     // MARK: - 7. 🌟 套索選取浮動工具列（圈選筆跡後隨選隨刪、隨選隨複製）
     /// 型別邊界：SwiftUI 會把整棵子樹的型別編進 body 的 mangled 名稱，
     /// 名稱一長，裝置端（主執行緒只有 1MB 堆疊）解析時就會遞迴爆堆疊。
-    private var lassoFloatingActionBar: AnyView { AnyView(lassoFloatingActionBarContent) }
+    private var lassoFloatingActionBar: AnyView {
+        AnyView(
+            ViewThatFits(in: .horizontal) {
+                lassoFloatingActionBarRow(showLabels: true, showHint: false)
+                    .fixedSize(horizontal: true, vertical: false)
+                lassoFloatingActionBarRow(showLabels: false, showHint: false)
+                    .fixedSize(horizontal: true, vertical: false)
+            }
+        )
+    }
 
-    private var lassoFloatingActionBarContent: some View {
-        HStack(spacing: 10) {
+    private func lassoDeleteButton(showLabel: Bool = true) -> some View {
+        Button {
+            deleteSelectedStrokes()
+        } label: {
+            HStack(spacing: 4) {
+                Image(systemName: "trash.fill")
+                    .font(.caption2)
+                if showLabel {
+                    Text(localizationManager.localized("delete_selected"))
+                        .font(.caption2)
+                        .fontWeight(.semibold)
+                        .lineLimit(1)
+                        .fixedSize()
+                }
+            }
+            .foregroundColor(.white)
+            .padding(.horizontal, showLabel ? 10 : 8)
+            .padding(.vertical, 4)
+            .background(Color.red)
+            .cornerRadius(6)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(localizationManager.localized("delete_selected"))
+        .help(localizationManager.localized("delete_selected"))
+    }
+
+    private var lassoCancelButton: some View {
+        Button {
+            exitLassoMode()
+        } label: {
+            Image(systemName: "xmark.circle.fill")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .padding(.horizontal, 4)
+                .padding(.vertical, 4)
+        }
+        .buttonStyle(.plain)
+        .keyboardShortcut(.escape, modifiers: [])
+        .accessibilityLabel(localizationManager.localized("ed_cancel_selection"))
+        .help(localizationManager.localized("cancel_selection_hint"))
+    }
+
+    @ViewBuilder
+    private func lassoFloatingActionItems(showLabels: Bool) -> some View {
+        lassoActionButton("scissors", "cut_selected", "cut_selected_hint", showLabel: showLabels) {
+            cutSelectedStrokes()
+        }
+        lassoActionButton("doc.on.doc", "copy_selected", "copy_selected_hint", showLabel: showLabels) {
+            copySelectedStrokes()
+        }
+        lassoActionButton("photo.on.rectangle", "save_as_sticker", "save_as_sticker", showLabel: showLabels) {
+            saveSelectedAsSticker()
+        }
+        lassoActionButton("plus.square.on.square", "duplicate_selected", "duplicate_selected_hint", showLabel: showLabels) {
+            duplicateSelectedStrokes()
+        }
+        lassoActionButton("doc.on.clipboard", "paste_strokes", "paste_strokes_hint", showLabel: showLabels) {
+            pasteStrokes()
+        }
+        lassoRecolorButton
+        lassoActionButton("text.viewfinder", "recognize_handwriting", "recognize_handwriting", showLabel: showLabels) {
+            recognizeHandwritingToTextBox()
+        }
+        lassoActionButton("link.badge.plus", "sticky_anchor_text", "sticky_anchored_hint", showLabel: showLabels) {
+            anchorSelectedStrokesToNearestText()
+        }
+        lassoDeleteButton(showLabel: showLabels)
+
+        Divider()
+            .frame(height: 16)
+
+        lassoCancelButton
+    }
+
+    private func lassoFloatingActionBarRow(showLabels: Bool, showHint: Bool) -> some View {
+        HStack(spacing: 8) {
             Image(systemName: "lasso")
                 .foregroundColor(.accentColor)
                 .font(.subheadline)
 
-            Text(localizationManager.localized("lasso_active_hint"))
-                .font(.caption2)
-                .fontWeight(.medium)
-                .foregroundColor(.primary)
+            if showHint {
+                Text(localizationManager.localized("lasso_active_hint"))
+                    .font(.caption2)
+                    .fontWeight(.medium)
+                    .foregroundColor(.primary)
+                    .lineLimit(1)
 
-            Divider()
-                .frame(height: 16)
-
-            Button {
-                cutSelectedStrokes()
-            } label: {
-                HStack(spacing: 4) {
-                    Image(systemName: "scissors")
-                    Text(localizationManager.localized("cut_selected"))
-                }
-                .font(.caption2)
-                .foregroundColor(.primary)
-                .padding(.horizontal, 8)
-                .padding(.vertical, 4)
-                .background(Color.secondary.opacity(0.15))
-                .cornerRadius(6)
+                Divider()
+                    .frame(height: 16)
             }
-            .buttonStyle(.plain)
 
-            Button {
-                copySelectedStrokes()
-            } label: {
-                HStack(spacing: 4) {
-                    Image(systemName: "doc.on.doc")
-                    Text(localizationManager.localized("copy_selected"))
-                }
-                .font(.caption2)
-                .foregroundColor(.primary)
-                .padding(.horizontal, 8)
-                .padding(.vertical, 4)
-                .background(Color.secondary.opacity(0.15))
-                .cornerRadius(6)
-            }
-            .buttonStyle(.plain)
-
-            Button {
-                saveSelectedAsSticker()
-            } label: {
-                HStack(spacing: 4) {
-                    Image(systemName: "photo.on.rectangle")
-                    Text(localizationManager.localized("save_as_sticker"))
-                }
-                .font(.caption2)
-                .foregroundColor(.primary)
-                .padding(.horizontal, 8)
-                .padding(.vertical, 4)
-                .background(Color.secondary.opacity(0.15))
-                .cornerRadius(6)
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(localizationManager.localized("copy_selected_hint"))
-            .help(localizationManager.localized("copy_selected_hint"))
-
-            Button {
-                duplicateSelectedStrokes()
-            } label: {
-                HStack(spacing: 4) {
-                    Image(systemName: "plus.square.on.square")
-                    Text(localizationManager.localized("duplicate_selected"))
-                }
-                .font(.caption2)
-                .foregroundColor(.primary)
-                .padding(.horizontal, 8)
-                .padding(.vertical, 4)
-                .background(Color.secondary.opacity(0.15))
-                .cornerRadius(6)
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(localizationManager.localized("duplicate_selected_hint"))
-            .help(localizationManager.localized("duplicate_selected_hint"))
-
-            Button {
-                pasteStrokes()
-            } label: {
-                HStack(spacing: 4) {
-                    Image(systemName: "doc.on.clipboard")
-                    Text(localizationManager.localized("paste_strokes"))
-                }
-                .font(.caption2)
-                .foregroundColor(.primary)
-                .padding(.horizontal, 8)
-                .padding(.vertical, 4)
-                .background(Color.secondary.opacity(0.15))
-                .cornerRadius(6)
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(localizationManager.localized("paste_strokes_hint"))
-            .help(localizationManager.localized("paste_strokes_hint"))
-
-            lassoRecolorButton
-
-            Button {
-                recognizeHandwritingToTextBox()
-            } label: {
-                HStack(spacing: 4) {
-                    Image(systemName: "text.viewfinder")
-                    Text(localizationManager.localized("recognize_handwriting"))
-                }
-                .font(.caption2)
-                .foregroundColor(.primary)
-                .padding(.horizontal, 8)
-                .padding(.vertical, 4)
-                .background(Color.secondary.opacity(0.15))
-                .cornerRadius(6)
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(localizationManager.localized("recognize_handwriting"))
-            .help(localizationManager.localized("recognize_handwriting"))
-
-            Button {
-                anchorSelectedStrokesToNearestText()
-            } label: {
-                HStack(spacing: 4) {
-                    Image(systemName: "link.badge.plus")
-                    Text(localizationManager.localized("sticky_anchor_text"))
-                }
-                .font(.caption2)
-                .foregroundColor(.primary)
-                .padding(.horizontal, 8)
-                .padding(.vertical, 4)
-                .background(Color.secondary.opacity(0.15))
-                .cornerRadius(6)
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(localizationManager.localized("sticky_anchored_hint"))
-            .help(localizationManager.localized("sticky_anchored_hint"))
-
-            Button {
-                deleteSelectedStrokes()
-            } label: {
-                HStack(spacing: 4) {
-                    Image(systemName: "trash.fill")
-                    Text(localizationManager.localized("delete_selected"))
-                }
-                .font(.caption2)
-                .fontWeight(.semibold)
-                .foregroundColor(.white)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 4)
-                .background(Color.red)
-                .cornerRadius(6)
-            }
-            .buttonStyle(.plain)
-
-            Divider()
-                .frame(height: 16)
-
-            Button {
-                exitLassoMode()
-            } label: {
-                Image(systemName: "xmark.circle.fill")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .padding(.horizontal, 4)
-                    .padding(.vertical, 4)
-            }
-            .buttonStyle(.plain)
-            .keyboardShortcut(.escape, modifiers: [])
-            .accessibilityLabel(localizationManager.localized("ed_cancel_selection"))
-            .help(localizationManager.localized("cancel_selection_hint"))
+            lassoFloatingActionItems(showLabels: showLabels)
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 6)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 5)
         .background(.ultraThinMaterial)
-        .cornerRadius(14)
-        .shadow(color: Color.black.opacity(0.12), radius: 6, y: 3)
+        .cornerRadius(12)
+        .shadow(color: Color.black.opacity(0.12), radius: 5, y: 2)
     }
+
 
     // MARK: - 🌟 草圖智慧修飾浮動控制面板
     /// 型別邊界：SwiftUI 會把整棵子樹的型別編進 body 的 mangled 名稱，
