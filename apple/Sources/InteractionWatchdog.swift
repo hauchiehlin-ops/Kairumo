@@ -129,6 +129,7 @@ public final class InteractionWatchdog: ObservableObject {
 
     /// 3. 手繪與打字融合：表格移動時內部手繪標記未跟隨
     // unused-param-ok: tableId 保留供後續特定表格物件歷程追蹤
+    // orphan-ok: 表格已實作自動連動內部筆跡平移，此引導提示函式保留供非自動跟隨情境或歷程回溯使用
     public func notifyTableMovedWithOrphanStrokes(
         tableId: String,
         orphanStrokeCount: Int,
