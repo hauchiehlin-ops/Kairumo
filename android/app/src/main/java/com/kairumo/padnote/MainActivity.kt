@@ -4091,6 +4091,9 @@ private fun InkScreen(
         // 兩條完全獨立的路。連續模式不碰整頁模式的任何一行 ——
         // 那一段綁著存檔、物件層、掌拒與模式切換，是最沒本錢壞掉的地方。
         if (pageDisplayMode == PageDisplayMode.CONTINUOUS) {
+            val sideToolbar = effectiveToolbarMode == EditorMode.DRAW &&
+                (toolbarPlacement == uniffi.padnote_core.FfiPlacement.LEFT ||
+                    toolbarPlacement == uniffi.padnote_core.FfiPlacement.RIGHT)
             EditorWorkArea(
                 sidebarInline = showPageSidebar && layout.sidebarIsInline,
                 posture = posture,
@@ -4099,7 +4102,7 @@ private fun InkScreen(
                         session = notebook?.first,
                         pageCount = pageCount,
                         pageIndex = pageIndex,
-                        revision = textRevision + shapeRevision + tableRevision +
+                        revision = revision + textRevision + shapeRevision + tableRevision +
                             chartRevision + imageRevision + model3DRevision,
                         l = { key -> l10n(key) },
                         onSelectPage = { pageIndex = it; continuousScrollRequest++ },
@@ -4122,30 +4125,55 @@ private fun InkScreen(
                     )
                 }
             ) {
-            ContinuousPagesView(
-                session = notebook?.first,
-                meta = meta,
-                pageCount = pageCount,
-                focusIndex = pageIndex,
-                // 焦點頁就是外層的 pageIndex，所以選單裡的插入動作
-                // 自然落在使用者正在看的那一頁。
-                onFocusChange = { pageIndex = it },
-                ink = InkSettings(
-                    tool = engine.tool,
-                    colorRgba = engine.colorRgba,
-                    baseWidth = engine.baseWidth,
-                    isErasing = engine.isErasing,
-                    penOnly = penOnly
-                ),
-                editorMode = editorMode,
-                onModeChange = { editorMode = it },
-                // 任何一種物件有變動就讓連續模式重讀。逐項接 callback 的話，
-                // 之後新增一種物件很容易忘記接上，而症狀是「插進去看不到」。
-                reloadToken = textRevision + shapeRevision + tableRevision +
-                    chartRevision + imageRevision + model3DRevision,
-                scrollRequest = continuousScrollRequest,
-                modifier = Modifier.weight(1f).fillMaxHeight()
-            )
+                androidx.compose.foundation.layout.Row(
+                    modifier = Modifier.weight(1f).fillMaxWidth()
+                ) {
+                    if (sideToolbar && toolbarPlacement == uniffi.padnote_core.FfiPlacement.LEFT) {
+                        androidx.compose.foundation.layout.Column(
+                            modifier = Modifier
+                                .width(110.dp)
+                                .fillMaxHeight()
+                                .verticalScroll(rememberScrollState())
+                        ) { inkBar() }
+                    }
+                    ContinuousPagesView(
+                        session = notebook?.first,
+                        meta = meta,
+                        pageCount = pageCount,
+                        focusIndex = pageIndex,
+                        // 焦點頁就是外層的 pageIndex，所以選單裡的插入動作
+                        // 自然落在使用者正在看的那一頁。
+                        onFocusChange = { pageIndex = it },
+                        ink = InkSettings(
+                            tool = engine.tool,
+                            colorRgba = engine.colorRgba,
+                            baseWidth = engine.baseWidth,
+                            isErasing = engine.isErasing,
+                            penOnly = penOnly
+                        ),
+                        editorMode = editorMode,
+                        onModeChange = { editorMode = it },
+                        // 任何一種物件有變動就讓連續模式重讀。逐項接 callback 的話，
+                        // 之後新增一種物件很容易忘記接上，而症狀是「插進去看不到」。
+                        reloadToken = textRevision + shapeRevision + tableRevision +
+                            chartRevision + imageRevision + model3DRevision,
+                        scrollRequest = continuousScrollRequest,
+                        modifier = Modifier.weight(1f).fillMaxHeight()
+                    )
+                    if (sideToolbar && toolbarPlacement == uniffi.padnote_core.FfiPlacement.RIGHT) {
+                        androidx.compose.foundation.layout.Column(
+                            modifier = Modifier
+                                .width(110.dp)
+                                .fillMaxHeight()
+                                .verticalScroll(rememberScrollState())
+                        ) { inkBar() }
+                    }
+                }
+            }
+            if (effectiveToolbarMode == EditorMode.DRAW &&
+                toolbarPlacement == uniffi.padnote_core.FfiPlacement.BOTTOM
+            ) {
+                inkBar()
             }
             return@Column
         }
@@ -4230,7 +4258,7 @@ private fun InkScreen(
                     session = notebook?.first,
                     pageCount = pageCount,
                     pageIndex = pageIndex,
-                    revision = textRevision + shapeRevision + tableRevision +
+                    revision = revision + textRevision + shapeRevision + tableRevision +
                         chartRevision + imageRevision + model3DRevision,
                     l = { key -> l10n(key) },
                     onSelectPage = { pageIndex = it },
@@ -5380,7 +5408,7 @@ private fun InkScreen(
                     session = notebook?.first,
                     pageCount = pageCount,
                     pageIndex = pageIndex,
-                    revision = textRevision + shapeRevision + tableRevision +
+                    revision = revision + textRevision + shapeRevision + tableRevision +
                         chartRevision + imageRevision + model3DRevision,
                     l = { key -> l10n(key) },
                     onSelectPage = { pageIndex = it; showPageSidebar = false },

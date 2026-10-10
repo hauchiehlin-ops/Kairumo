@@ -50,13 +50,19 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.ui.text.font.FontWeight
+import android.util.LruCache
+import androidx.activity.ComponentActivity
 import com.kairumo.padnote.platform.PageImageRenderer
+import com.kairumo.padnote.platform.PageSnapshot
 import com.kairumo.padnote.ui.DS
+import com.kairumo.padnote.ui.LocalAppLanguage
 import com.kairumo.padnote.ui.dsCard
 import com.kairumo.padnote.ui.dsHairline
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import uniffi.padnote_core.PadnoteSession
+
+private val pageThumbnailCache = LruCache<String, ImageBitmap>(40)
 
 /**
  * 編輯器左側的頁面結構欄。
@@ -269,23 +275,43 @@ private fun PageSidebarRow(
     onDeletePage: (Int) -> Unit
 ) {
     val context = LocalContext.current
+    val appLanguage = LocalAppLanguage.current
     var thumb by remember(index, revision) { mutableStateOf<ImageBitmap?>(null) }
     var ratio by remember(index, revision) { mutableFloatStateOf(800f / 1132f) }
 
-    LaunchedEffect(index, revision, session) {
+    LaunchedEffect(index, revision, session, appLanguage) {
         val s = session ?: return@LaunchedEffect
+        val pageId = s.pageIdAt(index.toUInt()) ?: return@LaunchedEffect
+        s.pageSize(pageId)?.let { size ->
+            if (size.size >= 2 && size[0] > 0f && size[1] > 0f) {
+                ratio = size[0] / size[1]
+            }
+        }
+        val cacheKey = "$pageId-$revision-$appLanguage"
+        val cached = pageThumbnailCache.get(cacheKey)
+        if (cached != null) {
+            thumb = cached
+            return@LaunchedEffect
+        }
+
+        val act = context as? ComponentActivity
+        if (act != null) {
+            val bmp = PageSnapshot.render(act, s, index, 0.22f, appLanguage)
+            if (bmp != null) {
+                val imageBitmap = bmp.asImageBitmap()
+                pageThumbnailCache.put(cacheKey, imageBitmap)
+                thumb = imageBitmap
+                return@LaunchedEffect
+            }
+        }
+
         thumb = withContext(Dispatchers.Default) {
             runCatching {
-                val pageId = s.pageIdAt(index.toUInt()) ?: return@runCatching null
-                s.pageSize(pageId)?.let { size ->
-                    if (size.size >= 2 && size[0] > 0f && size[1] > 0f) {
-                        ratio = size[0] / size[1]
-                    }
-                }
                 val png = PageImageRenderer.renderPng(s, pageId, 0.22f, context.cacheDir)
                 android.graphics.BitmapFactory
                     .decodeByteArray(png, 0, png.size)
                     ?.asImageBitmap()
+                    ?.also { pageThumbnailCache.put(cacheKey, it) }
             }.getOrNull()
         }
     }

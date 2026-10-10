@@ -99,7 +99,9 @@ object PageSnapshot {
         val heightPx = ceil(heightDp * scale).toInt()
 
         val result = CompletableDeferred<Bitmap?>()
-        val host = FrameLayout(activity)
+        val host = FrameLayout(activity).apply {
+            alpha = 0f
+        }
         // 視窗的根視圖通常已經有生命週期與狀態擁有者（`setContent` 設的）；沒有時（例如測試用的空白
         // Activity）ComposeView 會拋「No lifecycle owner exists」，所以掛在這個宿主上補齊。
         host.setViewTreeLifecycleOwner(activity)

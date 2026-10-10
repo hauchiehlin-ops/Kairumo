@@ -1047,6 +1047,13 @@ enum SeedContent {
         doc.model3DAttachments = models3D
         doc.commentPins = pins
 
+        // 所有背景大卡片（矩形、無文字標籤）置於筆跡下方圖層（underInkObjectIds），
+        // 確保手寫與示範 PKDrawing 筆畫在卡片上方清晰可見，且畫布可正常手繪與打字
+        for p in 0..<4 {
+            let bgCardIds = shapes.filter { $0.pageIndex == p && $0.kindName == "rectangle" && $0.label.isEmpty }.map(\.id)
+            doc.setUnderInkObjectIds(Set(bgCardIds), forPage: p)
+        }
+
         // =========================================================================
         // 【生成四頁真實向量手繪筆畫 (PKDrawing)】
         // =========================================================================

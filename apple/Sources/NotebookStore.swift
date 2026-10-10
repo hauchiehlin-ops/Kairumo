@@ -1713,6 +1713,21 @@ public final class NotebookStore: ObservableObject {
             changed = true
         }
 
+        // 自癒修復：若現有示範筆記《Kairumo(功能範例)》尚未設定背景卡片 underInkObjectIds，自動補齊
+        for index in notebooks.indices {
+            if notebooks[index].id == "seed-feature-showcase-v1" || notebooks[index].titleKey == "seed_feature_showcase_title" {
+                if notebooks[index].underInkObjectIds(forPage: 1).isEmpty {
+                    for p in 0..<notebooks[index].pageCount {
+                        let bgCardIds = (notebooks[index].shapeAttachments ?? []).filter {
+                            $0.pageIndex == p && $0.kindName == "rectangle" && $0.label.isEmpty
+                        }.map(\.id)
+                        notebooks[index].setUnderInkObjectIds(Set(bgCardIds), forPage: p)
+                    }
+                    changed = true
+                }
+            }
+        }
+
         // 《Kairumo手冊》：舊使用者只補一次（旗標），之後刪掉就不再長回來。
         if !UserDefaults.standard.bool(forKey: Self.manualSeededKey) {
             UserDefaults.standard.set(true, forKey: Self.manualSeededKey)

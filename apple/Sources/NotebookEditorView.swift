@@ -2563,6 +2563,7 @@ public struct NotebookEditorView: View {
             store.activeNotebookId = notebook.id
             // 開著的這一本走焦點通道（秒同步）與區網直連。
             sanitizeTextAttachments()
+            sanitizeUnderInkObjects()
             if let targetPageStr = ProcessInfo.processInfo.environment["KAIRUMO_AUTO_OPEN_PAGE"],
                let targetPage = Int(targetPageStr), targetPage >= 0 && targetPage < notebook.pageCount {
                 currentPageIndex = targetPage
@@ -10740,6 +10741,22 @@ public struct NotebookEditorView: View {
         }
     }
 
+    /// 自動自癒示範筆記《Kairumo(功能範例)》：將背景大卡片移至筆跡下方圖層，使筆跡可見且不干擾手繪與打字。
+    private func sanitizeUnderInkObjects() {
+        if notebook.id == "seed-feature-showcase-v1" || notebook.titleKey == "seed_feature_showcase_title" {
+            if notebook.underInkObjectIds(forPage: 1).isEmpty {
+                for p in 0..<notebook.pageCount {
+                    let bgCardIds = (notebook.shapeAttachments ?? []).filter {
+                        $0.pageIndex == p && $0.kindName == "rectangle" && $0.label.isEmpty
+                    }.map(\.id)
+                    notebook.setUnderInkObjectIds(Set(bgCardIds), forPage: p)
+                }
+                store.updateNotebook(notebook)
+                PageThumbnailRenderer.invalidateAll()
+            }
+        }
+    }
+
     private var activeTextAttachment: NoteTextAttachment? {
         if let id = inlineEditingTextId {
             return notebook.textAttachments?.first(where: { $0.id == id })
@@ -14780,7 +14797,7 @@ public struct MaskingTapeOverlayView: View {
                         selectedTapeId = nil
                     }
                     .gesture(
-                        DragGesture(minimumDistance: 10)
+                        DragGesture(minimumDistance: 10, coordinateSpace: .named(CanvasCoordinateSpace.name))
                             .onChanged { value in
                                 if selectedTapeId != nil {
                                     selectedTapeId = nil
@@ -14897,6 +14914,7 @@ public struct MaskingTapeOverlayView: View {
                 .zIndex(20)
             }
         }
+        .coordinateSpace(name: CanvasCoordinateSpace.name)
     }
 }
 
@@ -15035,7 +15053,7 @@ private struct TapeView: View {
                     .contentShape(Rectangle())
                     .position(x: 0, y: rect.height / 2)
                     .gesture(
-                        DragGesture(minimumDistance: 1)
+                        DragGesture(minimumDistance: 1, coordinateSpace: .named(CanvasCoordinateSpace.name))
                             .onChanged { value in
                                 if resizeBaseRect == nil {
                                     resizeBaseRect = tape.rect
@@ -15043,14 +15061,22 @@ private struct TapeView: View {
                                 guard let base = resizeBaseRect else { return }
                                 let newMinX = min(base.minX + value.translation.width, base.maxX - 20)
                                 let newW = base.maxX - newMinX
-                                liveRect = CGRect(x: newMinX, y: base.minY, width: newW, height: base.height)
+                                var transaction = Transaction()
+                                transaction.animation = nil
+                                withTransaction(transaction) {
+                                    liveRect = CGRect(x: newMinX, y: base.minY, width: newW, height: base.height)
+                                }
                             }
                             .onEnded { _ in
-                                if let finalRect = liveRect {
-                                    onRectChanged(finalRect)
+                                var transaction = Transaction()
+                                transaction.animation = nil
+                                withTransaction(transaction) {
+                                    if let finalRect = liveRect {
+                                        onRectChanged(finalRect)
+                                    }
+                                    resizeBaseRect = nil
+                                    liveRect = nil
                                 }
-                                resizeBaseRect = nil
-                                liveRect = nil
                             }
                     )
 
@@ -15063,21 +15089,29 @@ private struct TapeView: View {
                     .contentShape(Rectangle())
                     .position(x: rect.width, y: rect.height / 2)
                     .gesture(
-                        DragGesture(minimumDistance: 1)
+                        DragGesture(minimumDistance: 1, coordinateSpace: .named(CanvasCoordinateSpace.name))
                             .onChanged { value in
                                 if resizeBaseRect == nil {
                                     resizeBaseRect = tape.rect
                                 }
                                 guard let base = resizeBaseRect else { return }
                                 let newW = max(20, base.width + value.translation.width)
-                                liveRect = CGRect(x: base.minX, y: base.minY, width: newW, height: base.height)
+                                var transaction = Transaction()
+                                transaction.animation = nil
+                                withTransaction(transaction) {
+                                    liveRect = CGRect(x: base.minX, y: base.minY, width: newW, height: base.height)
+                                }
                             }
                             .onEnded { _ in
-                                if let finalRect = liveRect {
-                                    onRectChanged(finalRect)
+                                var transaction = Transaction()
+                                transaction.animation = nil
+                                withTransaction(transaction) {
+                                    if let finalRect = liveRect {
+                                        onRectChanged(finalRect)
+                                    }
+                                    resizeBaseRect = nil
+                                    liveRect = nil
                                 }
-                                resizeBaseRect = nil
-                                liveRect = nil
                             }
                     )
 
@@ -15090,7 +15124,7 @@ private struct TapeView: View {
                     .contentShape(Rectangle())
                     .position(x: rect.width / 2, y: 0)
                     .gesture(
-                        DragGesture(minimumDistance: 1)
+                        DragGesture(minimumDistance: 1, coordinateSpace: .named(CanvasCoordinateSpace.name))
                             .onChanged { value in
                                 if resizeBaseRect == nil {
                                     resizeBaseRect = tape.rect
@@ -15098,14 +15132,22 @@ private struct TapeView: View {
                                 guard let base = resizeBaseRect else { return }
                                 let newMinY = min(base.minY + value.translation.height, base.maxY - 16)
                                 let newH = base.maxY - newMinY
-                                liveRect = CGRect(x: base.minX, y: newMinY, width: base.width, height: newH)
+                                var transaction = Transaction()
+                                transaction.animation = nil
+                                withTransaction(transaction) {
+                                    liveRect = CGRect(x: base.minX, y: newMinY, width: base.width, height: newH)
+                                }
                             }
                             .onEnded { _ in
-                                if let finalRect = liveRect {
-                                    onRectChanged(finalRect)
+                                var transaction = Transaction()
+                                transaction.animation = nil
+                                withTransaction(transaction) {
+                                    if let finalRect = liveRect {
+                                        onRectChanged(finalRect)
+                                    }
+                                    resizeBaseRect = nil
+                                    liveRect = nil
                                 }
-                                resizeBaseRect = nil
-                                liveRect = nil
                             }
                     )
 
@@ -15118,21 +15160,29 @@ private struct TapeView: View {
                     .contentShape(Rectangle())
                     .position(x: rect.width / 2, y: rect.height)
                     .gesture(
-                        DragGesture(minimumDistance: 1)
+                        DragGesture(minimumDistance: 1, coordinateSpace: .named(CanvasCoordinateSpace.name))
                             .onChanged { value in
                                 if resizeBaseRect == nil {
                                     resizeBaseRect = tape.rect
                                 }
                                 guard let base = resizeBaseRect else { return }
                                 let newH = max(16, base.height + value.translation.height)
-                                liveRect = CGRect(x: base.minX, y: base.minY, width: base.width, height: newH)
+                                var transaction = Transaction()
+                                transaction.animation = nil
+                                withTransaction(transaction) {
+                                    liveRect = CGRect(x: base.minX, y: base.minY, width: base.width, height: newH)
+                                }
                             }
                             .onEnded { _ in
-                                if let finalRect = liveRect {
-                                    onRectChanged(finalRect)
+                                var transaction = Transaction()
+                                transaction.animation = nil
+                                withTransaction(transaction) {
+                                    if let finalRect = liveRect {
+                                        onRectChanged(finalRect)
+                                    }
+                                    resizeBaseRect = nil
+                                    liveRect = nil
                                 }
-                                resizeBaseRect = nil
-                                liveRect = nil
                             }
                     )
 
@@ -15150,10 +15200,14 @@ private struct TapeView: View {
                 .contentShape(Rectangle())
                 .position(x: rect.width / 2, y: -22)
                 .gesture(
-                    DragGesture(minimumDistance: 1)
+                    DragGesture(minimumDistance: 1, coordinateSpace: .named(CanvasCoordinateSpace.name))
                         .onChanged { value in
-                            let angle = atan2(value.translation.height, value.translation.width) * 180 / .pi
-                            onRotationChanged(Double(angle))
+                            let center = CGPoint(x: rect.midX, y: rect.midY)
+                            let vx = value.location.x - center.x
+                            let vy = value.location.y - center.y
+                            let raw = atan2(vy, vx) * 180 / .pi + 90
+                            let angle = CanvasRotation.snapped(Double(raw))
+                            onRotationChanged(angle)
                         }
                 )
             }
@@ -15185,13 +15239,17 @@ private struct TapeView: View {
             }
         }
         .gesture(
-            DragGesture(minimumDistance: 2)
+            DragGesture(minimumDistance: 2, coordinateSpace: .named(CanvasCoordinateSpace.name))
                 .onChanged { value in
                     guard isActive else { return }
                     if !isSelected {
                         onSelect()
                     }
-                    dragOffset = value.translation
+                    var transaction = Transaction()
+                    transaction.animation = nil
+                    withTransaction(transaction) {
+                        dragOffset = value.translation
+                    }
                 }
                 .onEnded { value in
                     guard isActive else { return }
@@ -15201,11 +15259,17 @@ private struct TapeView: View {
                         width: tape.rect.width,
                         height: tape.rect.height
                     )
-                    dragOffset = .zero
+                    var transaction = Transaction()
+                    transaction.animation = nil
+                    withTransaction(transaction) {
+                        dragOffset = .zero
+                    }
                     onRectChanged(movedRect)
                 }
         )
         .position(x: rect.midX, y: rect.midY)
+        .animation(nil, value: dragOffset)
+        .animation(nil, value: liveRect)
     }
 }
 
