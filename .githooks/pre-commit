@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+#
+# .githooks/pre-commit
+# 自動在 commit 前檢查並同步衍生產物（手冊、隱私權政策、範本）
+#
+set -euo pipefail
+export PYTHONIOENCODING=utf-8
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+
+# 檢查暫存區中是否包含來源手冊、法規、範本或版本檔案
+STAGED_SOURCES=$(git diff --cached --name-only | grep -E '^(docs/manual/manual\.js|docs/legal/privacy\.html|Cargo\.toml|templates/src/)' || true)
+
+if [[ -n "$STAGED_SOURCES" ]]; then
+    echo "📄 偵測到手冊、隱私權政策、範本或版本來源檔案變更，自動重新產生衍生平台產物..."
+    
+    python3 "${REPO_ROOT}/scripts/build-platform-docs.py" >/dev/null
+    python3 "${REPO_ROOT}/scripts/build-privacy-docs.py" >/dev/null
+    python3 "${REPO_ROOT}/scripts/doc_templates_tool.py" build >/dev/null
+    
+    # 自動將產物加入本次 commit，徹底杜絕手動遺漏造成的 CI 失敗
+    git add "${REPO_ROOT}/docs/manual/manual-apple.js" \
+            "${REPO_ROOT}/docs/manual/manual-android.js" \
+            "${REPO_ROOT}/docs/legal/privacy-apple.html" \
+            "${REPO_ROOT}/docs/legal/privacy-android.html" \
+            "${REPO_ROOT}/templates/document-templates.json" \
+            "${REPO_ROOT}/apple/Resources/Docs/manual-apple.js" \
+            "${REPO_ROOT}/apple/Resources/Docs/privacy.html" 2>/dev/null || true
+    echo "✅ 衍生平台檔案已自動同步並納入暫存區。"
+fi
+
+exit 0

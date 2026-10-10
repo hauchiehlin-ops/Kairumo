@@ -308,8 +308,8 @@ import re, sys, os
 new_ver, new_bundle, repo_root = sys.argv[1], sys.argv[2], sys.argv[3]
 
 docs = [
-    "docs/manual/manual.js", "docs/manual/manual-apple.js", "docs/manual/manual-android.js",
-    "docs/legal/privacy.html", "docs/legal/privacy-apple.html", "docs/legal/privacy-android.html"
+    "docs/manual/manual.js",
+    "docs/legal/privacy.html"
 ]
 
 def bump(rel_path):
@@ -323,7 +323,7 @@ def bump(rel_path):
         if re.search(r"[\"']?(version|appver)[\"']?\s*:", line):
             line = re.sub(r"\d+\.\d+\.\d+", new_ver, line)
             line = re.sub(r"((?:bundle|build)\s*)\d+", r"\g<1>" + new_bundle, line)
-        line = re.sub(r"(Kairumo\s+v)\d+\.\d+\.\d+", r"\g<1>" + new_ver, line)
+        line = re.sub(r"((?:Kairumo\s+)?v)\d+\.\d+\.\d+", r"\g<1>" + new_ver, line)
         out.append(line)
     with open(path, "w", encoding="utf-8") as f:
         f.writelines(out)
@@ -331,6 +331,10 @@ def bump(rel_path):
 for d in docs:
     bump(d)
 PY
+
+# 6.4 由來源重新產生各平台版本手冊與隱私權政策，杜絕版本與步驟漂移
+python3 "${REPO_ROOT}/scripts/build-platform-docs.py"
+python3 "${REPO_ROOT}/scripts/build-privacy-docs.py"
 
 # 6.5 寫入後驗證：確認每個檔案都真的帶上新版本號。
 # 沒有這一步的話，任何一個正則沒對上都會靜默跳過，接著又是一次版本漂移。

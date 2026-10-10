@@ -27,6 +27,10 @@ DEST="$ROOT/apple/Resources/Docs"
 
 mkdir -p "$DEST"
 
+echo "==> 重建各平台手冊與隱私權政策"
+python3 "$ROOT/scripts/build-platform-docs.py"
+python3 "$ROOT/scripts/build-privacy-docs.py"
+
 echo "==> 同步操作手冊"
 cp "$SRC_MANUAL/index-apple.html" "$DEST/manual.html"
 cp "$SRC_MANUAL/manual-apple.js" "$DEST/manual-apple.js"

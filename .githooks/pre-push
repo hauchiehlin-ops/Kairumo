@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+#
+# .githooks/pre-push
+# 推送前做一致性檢查
+#
+set -uo pipefail
+export PYTHONIOENCODING=utf-8
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+
+# 1. 介面字串必須與 catalog 一致
+if [[ -f "${REPO_ROOT}/scripts/i18n_tool.py" ]]; then
+    if ! python3 "${REPO_ROOT}/scripts/i18n_tool.py" verify; then
+        echo "❌ 介面字串表與 i18n/ui-strings.json 不一致，請改 catalog 後重跑 generate。" >&2
+        exit 1
+    fi
+fi
+
+# 2. 檢查各平台操作手冊與來源一致
+if [[ -f "${REPO_ROOT}/scripts/build-platform-docs.py" ]]; then
+    if ! python3 "${REPO_ROOT}/scripts/build-platform-docs.py" --check >/dev/null 2>&1; then
+        echo "⚠️ 偵測到操作手冊平台版與來源不一致，自動修復中..." >&2
+        python3 "${REPO_ROOT}/scripts/build-platform-docs.py"
+        echo "❌ 請將重新產生後的 docs/manual/ 檔案加入 commit 後再推（已為您自動重新產生）。" >&2
+        exit 1
+    fi
+fi
+
+# 3. 檢查隱私權政策與來源一致
+if [[ -f "${REPO_ROOT}/scripts/build-privacy-docs.py" ]]; then
+    if ! python3 "${REPO_ROOT}/scripts/build-privacy-docs.py" --check >/dev/null 2>&1; then
+        echo "⚠️ 偵測到隱私權政策各平台版與來源不一致，自動修復中..." >&2
+        python3 "${REPO_ROOT}/scripts/build-privacy-docs.py"
+        echo "❌ 請將重新產生後的 docs/legal/ 檔案加入 commit 後再推（已為您自動重新產生）。" >&2
+        exit 1
+    fi
+fi
+
+# 4. 只在 UTF-8 終端機才發作的 shell 寫法
+if [[ -x "${REPO_ROOT}/scripts/check-shell-cjk-vars.sh" ]]; then
+    if ! "${REPO_ROOT}/scripts/check-shell-cjk-vars.sh"; then
+        exit 1
+    fi
+fi
+
+# 5. 版本號漂移攔截
+if [[ -x "${REPO_ROOT}/scripts/check-version-consistency.sh" ]]; then
+    if ! "${REPO_ROOT}/scripts/check-version-consistency.sh"; then
+        echo "   （要跳過這次檢查：git push --no-verify）" >&2
+        exit 1
+    fi
+fi
+
+exit 0
