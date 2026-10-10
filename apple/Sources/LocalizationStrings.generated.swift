@@ -7639,6 +7639,14 @@ extension LocalizationManager {
             .ko: "드래그하여 이동",
             .th: "ลากเพื่อย้ายการ์ด"
         ],
+        "drag_to_move": [
+            .zhHant: "拖曳移動",
+            .en: "Drag to move",
+            .zhHans: "拖拽移动",
+            .ja: "ドラッグして移動",
+            .ko: "드래그하여 이동",
+            .th: "ลากเพื่อย้าย"
+        ],
         "drive_auth_expired": [
             .zhHant: "Google 帳號憑證已失效或過期，請重新登入 (HTTP 401)",
             .en: "Your Google sign-in has expired. Please sign in again (HTTP 401).",
@@ -19903,6 +19911,30 @@ extension LocalizationManager {
             .ko: "행 추가",
             .th: "เพิ่มแถว"
         ],
+        "table_cell_content": [
+            .zhHant: "儲存格內容",
+            .en: "Cell Content",
+            .zhHans: "单元格内容",
+            .ja: "セル内容",
+            .ko: "셀 내용",
+            .th: "เนื้อหาของเซลล์"
+        ],
+        "table_col_width_compact": [
+            .zhHant: "緊湊欄寬",
+            .en: "Compact Width",
+            .zhHans: "紧凑列宽",
+            .ja: "コンパクト列幅",
+            .ko: "좁은 열 너비",
+            .th: "ความกว้างกระชับ"
+        ],
+        "table_col_width_standard": [
+            .zhHant: "標準欄寬",
+            .en: "Standard Width",
+            .zhHans: "标准列宽",
+            .ja: "標準列幅",
+            .ko: "표준 열 너비",
+            .th: "ความกว้างมาตรฐาน"
+        ],
         "table_delete_column": [
             .zhHant: "刪除欄",
             .en: "Delete Column",
@@ -19942,6 +19974,14 @@ extension LocalizationManager {
             .ja: "先頭行を見出しに",
             .ko: "머리글 행",
             .th: "แถวหัวตาราง"
+        ],
+        "table_horizontal_scroll_hint": [
+            .zhHant: "表格欄位較多，可向右水平滑動檢視與編輯更多欄位",
+            .en: "Scroll horizontally to view and edit more columns",
+            .zhHans: "表格列数较多，可向右水平滑动检视与编辑更多列",
+            .ja: "列数が多いため、右にスクロールして他の列を表示・編集できます",
+            .ko: "열이 많을 경우 오른쪽으로 가로 스크롤하여 더 많은 열을 확인하고 편집할 수 있습니다",
+            .th: "ตารางมีหลายคอลัมน์ สามารถเลื่อนในแนวนอนเพื่อดูและแก้ไขเพิ่มเติมได้"
         ],
         "table_insert": [
             .zhHant: "插入表格",

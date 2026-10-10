@@ -336,6 +336,48 @@ def cmd_verify():
     return 1
 
 
+def cmd_add():
+    """方便快速新增字串鍵並自動產生雙平台程式碼。
+
+    用法：
+      python3 scripts/i18n_tool.py add <key> <繁中文字> [英文] [簡中] [日文] [韓文] [泰文]
+    """
+    if len(sys.argv) < 4:
+        print("用法：python3 scripts/i18n_tool.py add <key> <繁中文字> [英文] [簡中] [日文] [韓文] [泰文]")
+        return 1
+
+    key = sys.argv[2]
+    zh_hant = sys.argv[3]
+    en = sys.argv[4] if len(sys.argv) > 4 else zh_hant
+    zh_hans = sys.argv[5] if len(sys.argv) > 5 else zh_hant
+    ja = sys.argv[6] if len(sys.argv) > 6 else (en if en != zh_hant else zh_hant)
+    ko = sys.argv[7] if len(sys.argv) > 7 else (en if en != zh_hant else zh_hant)
+    th = sys.argv[8] if len(sys.argv) > 8 else (en if en != zh_hant else zh_hant)
+
+    catalog = json.loads(CATALOG.read_text(encoding="utf-8"))
+    catalog[key] = {
+        "en": en,
+        "ja": ja,
+        "ko": ko,
+        "th": th,
+        "zhHans": zh_hans,
+        "zhHant": zh_hant,
+    }
+
+    CATALOG.write_text(json.dumps(catalog, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    print(f"✅ 已將鍵 '{key}' 寫入 {CATALOG.name}")
+
+    cmd_generate()
+    print(f"🎉 雙平台程式碼已自動更新！在 Swift 中使用：localizationManager.localized(\"{key}\")")
+    print(f"                               在 Kotlin 中使用：l10n(\"{key}\")")
+    return 0
+
+
 if __name__ == "__main__":
     cmd = sys.argv[1] if len(sys.argv) > 1 else "verify"
-    sys.exit({"extract": cmd_extract, "generate": cmd_generate, "verify": cmd_verify}[cmd]() or 0)
+    commands = {"extract": cmd_extract, "generate": cmd_generate, "verify": cmd_verify, "add": cmd_add}
+    if cmd not in commands:
+        print(f"未知指令：{cmd}。支援指令：{', '.join(commands.keys())}")
+        sys.exit(1)
+    sys.exit(commands[cmd]() or 0)
+

@@ -283,7 +283,7 @@ public struct TableStudioView: View {
     private var gridSection: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Text("儲存格內容")
+                Text(localizationManager.localized("table_cell_content"))
                     .font(.caption2)
                     .foregroundColor(.secondary)
                 Spacer()
@@ -293,7 +293,7 @@ public struct TableStudioView: View {
                     } label: {
                         HStack(spacing: 4) {
                             Image(systemName: isCompactColumns ? "arrow.left.and.right" : "arrow.right.and.line.vertical.and.arrow.left")
-                            Text(isCompactColumns ? "標準欄寬" : "緊湊欄寬")
+                            Text(localizationManager.localized(isCompactColumns ? "table_col_width_standard" : "table_col_width_compact"))
                         }
                         .font(.caption2)
                     }
@@ -305,7 +305,7 @@ public struct TableStudioView: View {
                 HStack(spacing: 4) {
                     Image(systemName: "arrow.left.and.right")
                         .font(.caption2)
-                    Text("表格欄位較多，可向右水平滑動檢視與編輯更多欄位")
+                    Text(localizationManager.localized("table_horizontal_scroll_hint"))
                         .font(.caption2)
                 }
                 .foregroundColor(.secondary)
@@ -608,7 +608,7 @@ struct TableAttachmentItemView: View {
                         HStack(spacing: 4) {
                             Image(systemName: "arrow.up.and.down.and.arrow.left.and.right")
                                 .font(.system(size: 11, weight: .semibold))
-                            Text("拖曳移動")
+                            Text(localizationManager.localized("drag_to_move"))
                                 .font(.system(size: 11, weight: .semibold))
                         }
                         .foregroundColor(.primary)

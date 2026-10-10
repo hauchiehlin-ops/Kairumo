@@ -21902,5 +21902,45 @@
     "th": "ตาราง (%1@ × %2@)",
     "zhHans": "表格（%1@ × %2@）",
     "zhHant": "表格（%1@ × %2@）"
+  },
+  "table_cell_content": {
+    "en": "Cell Content",
+    "ja": "セル内容",
+    "ko": "셀 내용",
+    "th": "เนื้อหาของเซลล์",
+    "zhHans": "单元格内容",
+    "zhHant": "儲存格內容"
+  },
+  "table_col_width_standard": {
+    "en": "Standard Width",
+    "ja": "標準列幅",
+    "ko": "표준 열 너비",
+    "th": "ความกว้างมาตรฐาน",
+    "zhHans": "标准列宽",
+    "zhHant": "標準欄寬"
+  },
+  "table_col_width_compact": {
+    "en": "Compact Width",
+    "ja": "コンパクト列幅",
+    "ko": "좁은 열 너비",
+    "th": "ความกว้างกระชับ",
+    "zhHans": "紧凑列宽",
+    "zhHant": "緊湊欄寬"
+  },
+  "table_horizontal_scroll_hint": {
+    "en": "Scroll horizontally to view and edit more columns",
+    "ja": "列数が多いため、右にスクロールして他の列を表示・編集できます",
+    "ko": "열이 많을 경우 오른쪽으로 가로 스크롤하여 더 많은 열을 확인하고 편집할 수 있습니다",
+    "th": "ตารางมีหลายคอลัมน์ สามารถเลื่อนในแนวนอนเพื่อดูและแก้ไขเพิ่มเติมได้",
+    "zhHans": "表格列数较多，可向右水平滑动检视与编辑更多列",
+    "zhHant": "表格欄位較多，可向右水平滑動檢視與編輯更多欄位"
+  },
+  "drag_to_move": {
+    "en": "Drag to move",
+    "ja": "ドラッグして移動",
+    "ko": "드래그하여 이동",
+    "th": "ลากเพื่อย้าย",
+    "zhHans": "拖拽移动",
+    "zhHant": "拖曳移動"
   }
 }

@@ -29,4 +29,21 @@ if [[ -n "$STAGED_SOURCES" ]]; then
     echo "✅ 衍生平台檔案已自動同步並納入暫存區。"
 fi
 
+# 檢查暫存區中是否包含介面程式碼（Swift / Kotlin），若有則檢查是否有硬寫死文字
+STAGED_UI_FILES=$(git diff --cached --name-only | grep -E '\.(swift|kt)$' || true)
+if [[ -n "$STAGED_UI_FILES" ]]; then
+    if [[ -f "${REPO_ROOT}/scripts/check-hardcoded-strings.py" ]]; then
+        if ! python3 "${REPO_ROOT}/scripts/check-hardcoded-strings.py"; then
+            echo "" >&2
+            echo "❌ [Pre-Commit 阻擋] 介面上發現硬寫死的文字，提交已被阻止！" >&2
+            echo "💡 永久解決辦法：" >&2
+            echo "   1. 跑 python3 scripts/i18n_tool.py add <鍵名> \"<中文>\" [\"英文\"] 自動登錄字串表" >&2
+            echo "   2. 在程式碼中改用 localized(\"鍵名\")" >&2
+            echo "   3. 重新 git add 並 commit 即可。" >&2
+            exit 1
+        fi
+    fi
+fi
+
 exit 0
+
