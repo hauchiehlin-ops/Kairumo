@@ -768,6 +768,13 @@ final class AdaptiveCanvasView: PKCanvasView {
     /// 底層樣板背景，要跟著 contentSize 一起變
     weak var templateBackgroundView: UIView?
 
+    override func didMoveToWindow() {
+        super.didMoveToWindow()
+        if window != nil {
+            refreshInitialRenderIfNeeded()
+        }
+    }
+
     override func layoutSubviews() {
         super.layoutSubviews()
         syncContentSize()
@@ -781,6 +788,33 @@ final class AdaptiveCanvasView: PKCanvasView {
     /// 畫布第一次有了視窗與尺寸之後，把同一份 `drawing` 再指派一次，強迫它重畫。
     /// 要包在 `isProgrammaticUpdate` 裡：不然 delegate 會把這份當成使用者的編輯存回去。
     private var didInitialRefresh = false
+
+    /// 強制畫布立即重新刷出指定筆跡（若無傳入則取畫布既有 drawing），無需使用者落筆點擊觸發
+    func forceDisplayRefresh(with newDrawing: PKDrawing? = nil) {
+        let coordinator = delegate as? CanvasRepresentable.Coordinator
+        let target = newDrawing ?? self.drawing
+        guard target.strokes.count > 0 else { return }
+        coordinator?.isProgrammaticUpdate = true
+        self.drawing = target
+        coordinator?.isProgrammaticUpdate = false
+        self.setNeedsLayout()
+        self.layoutIfNeeded()
+        self.setNeedsDisplay()
+        for subview in self.subviews {
+            subview.setNeedsDisplay()
+        }
+        DispatchQueue.main.async { [weak self] in
+            guard let self, self.window != nil, self.activeTouchesCount == 0 else { return }
+            let coord = self.delegate as? CanvasRepresentable.Coordinator
+            coord?.isProgrammaticUpdate = true
+            self.drawing = target
+            coord?.isProgrammaticUpdate = false
+            self.setNeedsDisplay()
+            for subview in self.subviews {
+                subview.setNeedsDisplay()
+            }
+        }
+    }
 
     /// 程式替換／收回筆畫之後，把 PencilKit 登記的「已經失效」的復原項消耗掉。
     ///
@@ -809,17 +843,14 @@ final class AdaptiveCanvasView: PKCanvasView {
 
     private func refreshInitialRenderIfNeeded() {
         guard !didInitialRefresh, window != nil, bounds.width > 1, bounds.height > 1 else { return }
+        let strokeCount = max(drawing.strokes.count, initialLoadedStrokeCount)
+        guard strokeCount > 0 else { return }
         didInitialRefresh = true
-        // 初始載入時畫布若本為空白（0 筆），根本不需要也不應該補畫。
-        // 若使用者在視窗剛呈現時就已落筆（筆畫數大於載入值或正在觸控），更絕不能重新指派 drawing，
-        // 否則會直接清除 PencilKit 為新筆畫登記的復原堆疊。
-        guard initialLoadedStrokeCount > 0 else { return }
-        guard self.drawing.strokes.count == initialLoadedStrokeCount, activeTouchesCount == 0 else { return }
+        guard activeTouchesCount == 0 else { return }
         if self.undoManager?.canUndo == true { return }
 
         DispatchQueue.main.async { [weak self] in
             guard let self, self.window != nil, self.activeTouchesCount == 0 else { return }
-            guard self.drawing.strokes.count == self.initialLoadedStrokeCount else { return }
             if self.undoManager?.canUndo == true {
                 self.setNeedsDisplay()
                 return
@@ -831,6 +862,9 @@ final class AdaptiveCanvasView: PKCanvasView {
             self.drawing = current
             coordinator?.isProgrammaticUpdate = false
             self.setNeedsDisplay()
+            for subview in self.subviews {
+                subview.setNeedsDisplay()
+            }
         }
     }
 
@@ -1192,6 +1226,10 @@ struct CanvasRepresentable: UIViewRepresentable {
             context.coordinator.isProgrammaticUpdate = true
             uiView.drawing = drawing
             context.coordinator.isProgrammaticUpdate = false
+            if let adaptive = uiView as? AdaptiveCanvasView {
+                adaptive.initialLoadedStrokeCount = drawing.strokes.count
+                adaptive.forceDisplayRefresh(with: drawing)
+            }
             // 讀數要跟著更新。
             //
             // `isProgrammaticUpdate` 會讓 delegate 直接 return（那是對的 ——
@@ -2329,6 +2367,14 @@ public struct NotebookEditorView: View {
     ) {
         self._notebook = notebook
         self.onRequestSwitch = onRequestSwitch
+        var initialPage = 0
+        if let targetPageStr = ProcessInfo.processInfo.environment["KAIRUMO_AUTO_OPEN_PAGE"],
+           let targetPage = Int(targetPageStr), targetPage >= 0 && targetPage < notebook.wrappedValue.pageCount {
+            initialPage = targetPage
+        }
+        let initialDrawing = NotebookStore.shared.loadDrawing(notebookId: notebook.wrappedValue.id, pageIndex: initialPage)
+        self._currentDrawing = State(initialValue: initialDrawing)
+        self._currentPageIndex = State(initialValue: initialPage)
     }
 
     public var body: some View {
@@ -2528,13 +2574,8 @@ public struct NotebookEditorView: View {
             if tool.isBrush { lastBrushTool = tool }
             lastObservedTool = tool
         }
-        .onReceive(NotificationCenter.default.publisher(for: AppCommand.proInkDidChange)) { note in
-            guard (note.object as? String) == notebook.id.lowercased() else { return }
-            // 專業筆畫（製圖線等）變了：縮圖要重畫，筆記本要標成已修改（同步才會匯出）。
-            proInkDirty = true
-            thumbnailRevision += 1
-            noteInkEdited()
-        }
+        .onReceive(NotificationCenter.default.publisher(for: AppCommand.proInkDidChange), perform: handleProInkDidChange)
+        .onReceive(NotificationCenter.default.publisher(for: AppCommand.notebookPackageChanged), perform: handleNotebookPackageChanged)
         .onChange(of: notebook.id) { _ in
             // 外層換綁之後才會走到這裡，這時 notebook 已經是新的那一則。
             currentPageIndex = 0
@@ -2592,6 +2633,11 @@ public struct NotebookEditorView: View {
         .onChange(of: scenePhase) { phase in
             if phase == .background || phase == .inactive {
                 saveCurrentPageDrawing()
+            } else if phase == .active {
+                // 從背景切回前景時，檢查同步是否已更新這本筆記
+                coreInkBaselines.removeAll()
+                loadCurrentPage()
+                PageThumbnailRenderer.invalidateAll()
             }
         }
         .sheet(isPresented: $showShareSheet) { erasedView {
@@ -3012,9 +3058,32 @@ public struct NotebookEditorView: View {
                 folderToRename = nil
             }
         }
-        .sheet(isPresented: $showMoveNotebookSheet) { resizableSheet {
+        .sheet(isPresented: $showMoveNotebookSheet) {
+            moveNotebookSheetContent
+        }
+    }
+
+    private func handleProInkDidChange(_ note: Notification) {
+        guard (note.object as? String) == notebook.id.lowercased() else { return }
+        proInkDirty = true
+        thumbnailRevision += 1
+        noteInkEdited()
+    }
+
+    private func handleNotebookPackageChanged(_ note: Notification) {
+        let changedId = note.object as? String
+        if changedId == nil || changedId?.caseInsensitiveCompare(notebook.id) == .orderedSame {
+            coreInkBaselines.removeAll()
+            loadCurrentPage()
+            PageThumbnailRenderer.invalidateAll()
+        }
+    }
+
+    @ViewBuilder
+    private var moveNotebookSheetContent: some View {
+        resizableSheet {
             MoveNotebookSheet(notebookId: notebookToMoveId ?? notebook.id)
-        } }
+        }
     }
 
     /// 「一鍵恢復初始狀態」的確認視窗載體。
@@ -5353,7 +5422,12 @@ public struct NotebookEditorView: View {
                     // 好幾十次），而且同一個物件重複指派也會再觸發一輪更新。
                     // 只在真的換了才寫，並且挪到這一輪更新之後。
                     guard self.canvasView !== ref else { return }
-                    DispatchQueue.main.async { self.canvasView = ref }
+                    DispatchQueue.main.async { 
+                        self.canvasView = ref 
+                        if let adaptive = ref as? AdaptiveCanvasView, self.currentDrawing.strokes.count > 0 {
+                            adaptive.forceDisplayRefresh(with: self.currentDrawing)
+                        }
+                    }
                 },
                 onScrollMetrics: { visible, fraction in
                     canvasVisibleFraction = visible
@@ -8992,6 +9066,10 @@ public struct NotebookEditorView: View {
         PageGeometry.use(format: notebook.pageFormatId)
         let loaded = store.loadDrawing(notebookId: notebook.id, pageIndex: currentPageIndex)
         self.currentDrawing = loaded
+        if let canvas = canvasView as? AdaptiveCanvasView {
+            canvas.initialLoadedStrokeCount = loaded.strokes.count
+            canvas.forceDisplayRefresh(with: loaded)
+        }
         captureInitialPageState(page: currentPageIndex, drawing: loaded)
         self.lastStrokeCount = loaded.strokes.count
         self.currentPageHeight = notebook.height(forPage: currentPageIndex)
@@ -10024,17 +10102,20 @@ public struct NotebookEditorView: View {
         
         let tempDrawing = PKDrawing(strokes: extractedStrokes)
         let bounds = tempDrawing.bounds
-        let center = CGPoint(x: bounds.midX, y: bounds.midY)
-        let transform = CGAffineTransform(translationX: -center.x, y: -center.y)
-        let centeredStrokes = extractedStrokes.map {
+        guard bounds.width > 0, bounds.height > 0 else { return }
+        
+        // 筆畫座標正規化至正數象限（預留 16pt 邊距），防止 PKDrawing.image 負值邊界造成算繪空白或截斷
+        let padding: CGFloat = 16
+        let transform = CGAffineTransform(translationX: -bounds.minX + padding, y: -bounds.minY + padding)
+        let normalizedStrokes = extractedStrokes.map {
             PKStroke(ink: $0.ink, path: $0.path, transform: $0.transform.concatenating(transform), mask: $0.mask)
         }
-        let stickerDrawing = PKDrawing(strokes: centeredStrokes)
+        let stickerDrawing = PKDrawing(strokes: normalizedStrokes)
         StickerManager.shared.saveSticker(stickerDrawing)
         
         lasso.clear()
         selectedTool = previousTool ?? lastBrushTool
-        showCanvasNotice("已儲存為自訂貼紙！可於頂端「插入 > 貼紙」選單中重複取用")
+        showCanvasNotice("已儲存為貼紙！可於頂端「插入 > 貼紙 > 我的貼紙」中選用")
         #if os(iOS)
         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
         #endif
@@ -14600,13 +14681,14 @@ public class StickerManager: ObservableObject {
         persist()
     }
     
-    private func persist() {
+    public func persist() {
         if let data = try? JSONEncoder().encode(stickers) {
             UserDefaults.standard.set(data, forKey: storageKey)
+            UserDefaults.standard.synchronize()
         }
     }
     
-    private func loadStickers() {
+    public func loadStickers() {
         guard let data = UserDefaults.standard.data(forKey: storageKey),
               let loaded = try? JSONDecoder().decode([Sticker].self, from: data) else {
             return
@@ -14637,6 +14719,9 @@ public struct StickerLibraryView: View {
 
     public init(onSelect: ((PKDrawing) -> Void)? = nil) {
         self.onSelect = onSelect
+        if !StickerManager.shared.stickers.isEmpty {
+            self._tab = State(initialValue: .mine)
+        }
     }
 
     private func L(_ key: String) -> String { localizationManager.localized(key) }
@@ -14667,6 +14752,9 @@ public struct StickerLibraryView: View {
                     Button(L("cancel")) { dismiss() }
                         .accessibilityIdentifier("stickers.cancel")
                 }
+            }
+            .onAppear {
+                manager.loadStickers()
             }
         }
     }
@@ -14773,17 +14861,30 @@ private struct StickerCell: View {
     let onSelect: () -> Void
     let onRemove: () -> Void
     
+    private var renderedImage: UIImage? {
+        let b = drawing.bounds
+        guard b.width > 0, b.height > 0 else { return nil }
+        return drawing.image(from: b, scale: 2.0)
+    }
+    
     var body: some View {
         ZStack(alignment: .topTrailing) {
             Button(action: onSelect) {
-                Image(uiImage: drawing.image(from: drawing.bounds, scale: 2.0))
-                    .resizable()
-                    .scaledToFit()
-                    .padding()
-                    .frame(height: 120)
-                    .frame(maxWidth: .infinity)
-                    .background(Color(uiColor: .secondarySystemBackground))
-                    .cornerRadius(12)
+                if let image = renderedImage {
+                    Image(uiImage: image)
+                        .resizable()
+                        .scaledToFit()
+                        .padding()
+                        .frame(height: 120)
+                        .frame(maxWidth: .infinity)
+                        .background(Color(uiColor: .secondarySystemBackground))
+                        .cornerRadius(12)
+                } else {
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(Color(uiColor: .secondarySystemBackground))
+                        .frame(height: 120)
+                        .overlay(Image(systemName: "pencil.tip").foregroundColor(.secondary))
+                }
             }
             .buttonStyle(.plain)
             

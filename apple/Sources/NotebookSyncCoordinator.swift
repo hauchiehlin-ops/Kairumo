@@ -2062,6 +2062,10 @@ enum NotebookSyncCoordinator {
             do {
                 try await importOne(package, into: store, deviceId: deviceId, ownStrokes: ownStrokes)
                 report.imported += 1
+                NotificationCenter.default.post(
+                    name: AppCommand.notebookPackageChanged,
+                    object: normId
+                )
             } catch {
                 report.failures[package.lastPathComponent] = L10n.errorText(error)
                 // 匯入失敗（無論是沒有頁面、非套件、或是壞檔）：
@@ -2137,6 +2141,10 @@ enum NotebookSyncCoordinator {
             do {
                 try await importOne(package, into: store, deviceId: deviceId, ownStrokes: ownStrokes)
                 report.imported += 1
+                NotificationCenter.default.post(
+                    name: AppCommand.notebookPackageChanged,
+                    object: normId
+                )
             } catch {
                 report.failures[package.lastPathComponent] = L10n.errorText(error)
                 if !activeLocalIds.contains(normId) {
