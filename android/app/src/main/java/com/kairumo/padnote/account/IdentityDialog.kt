@@ -41,8 +41,20 @@ fun IdentityDialog(
     onDismiss: () -> Unit,
     onSave: (String, String) -> Unit
 ) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    var currentDisplayName by remember(profile.displayName) { mutableStateOf(profile.displayName) }
     var name by remember { mutableStateOf(profile.displayName) }
     var hex by remember { mutableStateOf(profile.colorHex) }
+
+    androidx.compose.runtime.LaunchedEffect(isCloudBound) {
+        if (isCloudBound && AccountManager.cloudAccountName(context) == null) {
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                com.kairumo.padnote.library.CloudSync.accountEmail(context)
+            }
+            val loaded = AccountManager.load(context, l("default_user_name"))
+            currentDisplayName = loaded.displayName
+        }
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -51,7 +63,7 @@ fun IdentityDialog(
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 if (isCloudBound) {
                     OutlinedTextField(
-                        value = profile.displayName,
+                        value = currentDisplayName,
                         onValueChange = {},
                         enabled = false,
                         label = { Text("Google Drive") },

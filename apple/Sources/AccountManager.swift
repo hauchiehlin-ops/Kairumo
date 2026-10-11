@@ -47,6 +47,7 @@ public final class AccountManager: ObservableObject {
 
     private let profileKey = "kairumo.user.profile"
     private let customNameKey = "kairumo.user.customDisplayName"
+    private var cancellables = Set<AnyCancellable>()
 
     @Published public var profile: UserProfile {
         didSet { saveProfile() }
@@ -73,6 +74,12 @@ public final class AccountManager: ObservableObject {
             if let email = GoogleAuth.shared.accountEmail, !email.isEmpty {
                 return email
             }
+            // 若已登入 Google Drive 但尚未抓取到帳號資訊，立即在背景觸發刷新
+            Task {
+                await GoogleAuth.shared.refreshAccountEmail()
+            }
+            // 絕不可回退到 iCloud，否則在 iOS 上會誤用裝置名稱（如 "Mobile User"）
+            return nil
         }
 
         // 2. iCloud 同步登入判定
@@ -131,6 +138,19 @@ public final class AccountManager: ObservableObject {
     /// 若有登入 Google Drive 或 iCloud，自動以該帳號名稱為使用者名稱；
     /// 若無同步登入，維持現狀（使用者自訂名稱）。
     public func refreshDisplayName() {
+        if GoogleAuth.shared.isSignedIn {
+            if let cloudName = activeCloudAccountName, !cloudName.isEmpty {
+                if profile.displayName != cloudName {
+                    profile.displayName = cloudName
+                }
+            } else {
+                Task {
+                    await GoogleAuth.shared.refreshAccountEmail()
+                }
+            }
+            return
+        }
+
         if let cloudName = activeCloudAccountName, !cloudName.isEmpty {
             if profile.displayName != cloudName {
                 profile.displayName = cloudName
@@ -163,7 +183,25 @@ public final class AccountManager: ObservableObject {
             self.customDisplayName = initial
         }
         cleanUpLegacyKeys()
+        if GoogleAuth.shared.isSignedIn {
+            #if canImport(UIKit)
+            if profile.displayName == UIDevice.current.name || profile.displayName == "Mobile User" {
+                profile.displayName = GoogleAuth.shared.accountName
+                    ?? GoogleAuth.shared.accountEmail
+                    ?? LocalizationManager.shared.localized("default_user_name")
+            }
+            #endif
+        }
         refreshDisplayName()
+
+        // 監聽 Google 帳號狀態變化，一旦背景非同步取得或登入/登出，立即自動刷新名稱
+        GoogleAuth.shared.$accountName
+            .combineLatest(GoogleAuth.shared.$accountEmail, GoogleAuth.shared.$isSignedIn)
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                self?.refreshDisplayName()
+            }
+            .store(in: &cancellables)
     }
 
     /// 清掉訪客模式時代留下的鍵，避免舊狀態在未來被誤讀。
@@ -199,6 +237,7 @@ public final class AccountManager: ObservableObject {
 /// 協作身分編輯視圖
 public struct AccountProfileSheet: View {
     @ObservedObject var accountManager = AccountManager.shared
+    @ObservedObject var googleAuth = GoogleAuth.shared
     @ObservedObject var localizationManager = LocalizationManager.shared
     @Environment(\.dismiss) private var dismiss
 
@@ -250,6 +289,22 @@ public struct AccountProfileSheet: View {
                                 .foregroundColor(.accentColor)
                                 .cornerRadius(4)
                         }
+                    } else if GoogleAuth.shared.isSignedIn {
+                        HStack {
+                            Text(localizationManager.localized("display_name"))
+                                .frame(width: 80, alignment: .leading)
+                            Text(GoogleAuth.shared.accountEmail ?? "...")
+                                .foregroundColor(.primary)
+                            Spacer()
+                            Text("Google Drive")
+                                .font(.caption2)
+                                .fontWeight(.medium)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(Color.accentColor.opacity(0.12))
+                                .foregroundColor(.accentColor)
+                                .cornerRadius(4)
+                        }
                     } else {
                         HStack {
                             Text(localizationManager.localized("display_name"))
@@ -260,7 +315,7 @@ public struct AccountProfileSheet: View {
                 } header: {
                     Text(localizationManager.localized("identity_title"))
                 } footer: {
-                    if accountManager.activeCloudAccountName != nil {
+                    if GoogleAuth.shared.isSignedIn || accountManager.activeCloudAccountName != nil {
                         Text(localizationManager.currentLanguage == .zhHant
                              ? "已登入同步帳號，首頁「使用者」名稱已自動採用該帳號名稱。"
                              : localizationManager.localized("identity_desc"))
@@ -344,7 +399,7 @@ public struct AccountProfileSheet: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button(localizationManager.localized("save")) {
-                        if accountManager.activeCloudAccountName == nil {
+                        if !GoogleAuth.shared.isSignedIn && accountManager.activeCloudAccountName == nil {
                             accountManager.updateDisplayName(tempDisplayName)
                         }
                         accountManager.updateColor(tempColorHex)
@@ -354,6 +409,11 @@ public struct AccountProfileSheet: View {
                 }
             }
             .onAppear {
+                if GoogleAuth.shared.isSignedIn {
+                    Task {
+                        await GoogleAuth.shared.refreshAccountEmail()
+                    }
+                }
                 tempDisplayName = accountManager.activeCloudAccountName ?? (accountManager.customDisplayName.isEmpty ? accountManager.profile.displayName : accountManager.customDisplayName)
                 tempColorHex = accountManager.profile.colorHex
             }

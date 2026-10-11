@@ -92,6 +92,11 @@ public final class GoogleAuth: NSObject, ObservableObject {
         accountName = isSignedIn
             ? UserDefaults.standard.string(forKey: accountNameKey)
             : nil
+        if isSignedIn && (accountName == nil || accountEmail == nil) {
+            Task { [weak self] in
+                await self?.refreshAccountEmail()
+            }
+        }
     }
 
     /// 向 Drive 問一次「這是誰的帳號」，並記下來。

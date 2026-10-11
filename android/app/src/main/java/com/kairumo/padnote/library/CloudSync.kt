@@ -93,7 +93,11 @@ object CloudSync {
         if (!accountName.isNullOrEmpty()) {
             SyncHistory.setAccountName(context, accountName)
         }
+        if (!email.isNullOrEmpty()) {
+            SyncHistory.setAccount(context, email)
+        }
         email?.also { AccountSyncStore.setLastAccount(context, it) }
+        accountName ?: email
     }.getOrNull()
 
     // ── P1：帶著雲端快照的工作階段 ────────────────────────────────
@@ -372,6 +376,9 @@ object CloudSync {
 
     private fun runFullBody(context: Context, deviceId: UInt, activeNotebookId: String? = null): FullResult {
         SyncLogger.log("【Google Drive 同步】開始執行", SyncSource.GOOGLE_DRIVE)
+        if (SyncHistory.accountName(context) == null) {
+            accountEmail(context)
+        }
         SyncLogger.log("步驟 1：同步中繼資料與索引 (連線中)...", SyncSource.GOOGLE_DRIVE)
 
         // 舊版本機資料遷移：只補「索引從未見過」的套件。

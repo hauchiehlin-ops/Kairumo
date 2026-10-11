@@ -7,6 +7,7 @@ import android.net.Uri
 import androidx.browser.customtabs.CustomTabsIntent
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
+import kotlinx.coroutines.launch
 import java.io.IOException
 import okhttp3.FormBody
 import okhttp3.OkHttpClient
@@ -172,6 +173,10 @@ object GoogleAuth {
             if (tokens.error.isNotEmpty()) throw IllegalStateException(tokens.error)
             save(context, tokens, previousRefresh = "")
             notifyAuthChanged(context)
+            kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+                com.kairumo.padnote.library.CloudSync.accountEmail(context)
+                notifyAuthChanged(context)
+            }
             com.kairumo.padnote.sync.SyncLogger.log("Google 帳號授權成功！已儲存憑證。", com.kairumo.padnote.sync.SyncSource.GOOGLE_DRIVE)
         }.onFailure { err ->
             com.kairumo.padnote.sync.SyncLogger.log("交換權杖失敗：${err.message}", com.kairumo.padnote.sync.SyncSource.GOOGLE_DRIVE)

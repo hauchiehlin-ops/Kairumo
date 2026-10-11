@@ -634,6 +634,9 @@ enum NotebookSyncCoordinator {
     /// 跑完一輪**Google Drive** 的同步。
     static func runDrive(store: SyncableNotebookStore, deviceId: UInt32) async -> Report? {
         guard await GoogleAuth.shared.isSignedIn else { return nil }
+        if await (GoogleAuth.shared.accountName == nil || GoogleAuth.shared.accountEmail == nil) {
+            await GoogleAuth.shared.refreshAccountEmail()
+        }
         // **整個行程同一時間只准跑一輪。**
         //
         // 每個入口原本各自帶一個旗標（首頁一顆、設定兩顆、自動同步一個），

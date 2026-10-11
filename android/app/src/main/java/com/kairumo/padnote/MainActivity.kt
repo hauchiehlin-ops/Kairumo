@@ -524,6 +524,13 @@ private fun NotebookHome(
     }
 
     LaunchedEffect(authRevision, signedIn) {
+        if (signedIn) {
+            withContext(Dispatchers.IO) {
+                if (com.kairumo.padnote.library.SyncHistory.accountName(activity) == null) {
+                    com.kairumo.padnote.library.CloudSync.accountEmail(activity)
+                }
+            }
+        }
         profile = AccountManager.load(activity, l("default_user_name"))
         if (authRevision > 0 && com.kairumo.padnote.oauth.GoogleAuth.isSignedIn(activity)) {
             cloudMessage = l("sync_google_authorized")
