@@ -1386,10 +1386,12 @@ private fun RecordingRow(
                         text = { Text(l("rename_audio_card")) },
                         onClick = { menu = false; onRename(recording) }
                     )
-                    DropdownMenuItem(
-                        text = { Text(l("open_note")) },
-                        onClick = { menu = false; onOpen(recording.notebookId) }
-                    )
+                    if (!recording.notebookId.equals(uniffi.padnote_core.recordingInboxNotebookId(), ignoreCase = true)) {
+                        DropdownMenuItem(
+                            text = { Text(l("open_note")) },
+                            onClick = { menu = false; onOpen(recording.notebookId) }
+                        )
+                    }
                 }
             }
         }

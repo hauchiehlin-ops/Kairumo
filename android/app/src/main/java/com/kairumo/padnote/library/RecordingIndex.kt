@@ -41,8 +41,22 @@ object RecordingIndex {
         /** 別台（或這台）取的錄音名字；套件裡沒有就是 null。 */
         val title: String? = null
     ) {
-        /** 清單上顯示的名字：有錄音名字用它，沒有退回筆記本標題。 */
-        val displayTitle: String get() = title?.takeIf { it.isNotBlank() } ?: notebookTitle
+        /** 清單上顯示的名字：有錄音名字用它；若是收件匣錄音退回預設快速錄音標題（帶時間），其他退回筆記本標題。 */
+        val displayTitle: String get() {
+            if (!title.isNullOrBlank()) return title
+            val inboxId = uniffi.padnote_core.recordingInboxNotebookId()
+            if (notebookId.equals(inboxId, ignoreCase = true) ||
+                notebookTitle.equals("錄音收件匣", ignoreCase = true) ||
+                notebookTitle.equals("Recording Inbox", ignoreCase = true)
+            ) {
+                val label = com.kairumo.padnote.LocalizationStrings.localized("quick_record_title", java.util.Locale.getDefault().toLanguageTag())
+                val dateStr = java.text.DateFormat.getDateTimeInstance(
+                    java.text.DateFormat.SHORT, java.text.DateFormat.SHORT
+                ).format(java.util.Date(recordedAt))
+                return "$label $dateStr"
+            }
+            return notebookTitle
+        }
     }
 
     private const val TITLE_KIND = "rectitle"
@@ -53,7 +67,23 @@ object RecordingIndex {
      * `limit` 是上限；首頁只放得下幾筆，全部撈出來只是白掃。
      */
     fun recent(context: Context, deviceId: UInt, limit: Int = 20): List<Recording> {
-        val found = NotebookLibrary.all(context, deviceId, folderId = NotebookLibrary.ANY_FOLDER)
+        val inboxId = uniffi.padnote_core.recordingInboxNotebookId()
+        val allEntries = NotebookLibrary.all(context, deviceId, folderId = NotebookLibrary.ANY_FOLDER)
+        val inboxDir = File(NotebookLibrary.directory(context), "$inboxId.${NotebookLibrary.EXTENSION}")
+        val searchEntries = if (inboxDir.exists() && inboxDir.isDirectory) {
+            val inboxEntry = NotebookLibrary.Entry(
+                id = inboxId,
+                title = com.kairumo.padnote.LocalizationStrings.localized("quick_record_title", java.util.Locale.getDefault().toLanguageTag()),
+                pageCount = 1,
+                path = inboxDir,
+                modifiedAt = inboxDir.lastModified()
+            )
+            allEntries + inboxEntry
+        } else {
+            allEntries
+        }
+
+        val found = searchEntries
             .flatMap { entry ->
                 File(entry.path, "media/audio").listFiles()
                     ?.filter { it.isFile && it.length() > 0 }
@@ -89,11 +119,25 @@ object RecordingIndex {
         val session = runCatching { PadnoteSession.openExisting(packageDir.absolutePath, deviceId) }
             .getOrNull() ?: return emptyMap()
         return try {
-            val page = runCatching { session.pageIdAt(0u) }.getOrNull() ?: return emptyMap()
             val out = HashMap<String, String>()
-            for (blockId in runCatching { session.imageBlockIds(page) }.getOrDefault(emptyList())) {
-                val json = runCatching { session.blockAppearance(blockId) }.getOrNull() ?: continue
-                parseTitle(json)?.let { (file, title) -> out[file] = title }
+            // 1. 先讀取筆記本中繼資料裡的 audioCards (NoteAudioAttachment)
+            val meta = runCatching { NotebookMeta.load(session) }.getOrNull()
+            if (meta != null) {
+                for (card in meta.audioCards()) {
+                    val f = card.fileName.trim().lowercase()
+                    val t = card.title.trim()
+                    if (f.isNotEmpty() && t.isNotEmpty()) {
+                        out[f] = t
+                    }
+                }
+            }
+            // 2. 讀取第一頁上的 rectitle 區塊（逐個覆蓋或補充）
+            val page = runCatching { session.pageIdAt(0u) }.getOrNull()
+            if (page != null) {
+                for (blockId in runCatching { session.imageBlockIds(page) }.getOrDefault(emptyList())) {
+                    val json = runCatching { session.blockAppearance(blockId) }.getOrNull() ?: continue
+                    parseTitle(json)?.let { (file, title) -> out[file] = title }
+                }
             }
             out
         } finally {

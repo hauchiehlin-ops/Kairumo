@@ -52,7 +52,22 @@ object RecordingTitles {
         val session = runCatching { PadnoteSession.openExisting(path.absolutePath, deviceId) }
             .getOrNull() ?: return false
         return try {
-            write(session, fileName, title)
+            val ok = write(session, fileName, title)
+            // 同時更新 NotebookMeta 裡的 audioCards，確保雙向來源一致
+            runCatching {
+                val meta = NotebookMeta.load(session)
+                var changed = false
+                val cards = meta.audioCards().map { card ->
+                    if (card.fileName.equals(fileName, ignoreCase = true)) {
+                        changed = true
+                        card.copy(title = title.trim())
+                    } else card
+                }
+                if (changed) {
+                    meta.setAudioCards(session, cards)
+                }
+            }
+            ok
         } finally {
             runCatching { session.close() }
         }

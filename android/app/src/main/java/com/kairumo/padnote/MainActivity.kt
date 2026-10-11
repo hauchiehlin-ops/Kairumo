@@ -353,13 +353,21 @@ private fun KairumoApp() {
         NotebookHome(
             folderId = folderId,
             onFolderChange = { folderId = it },
-            onOpen = { openedId = it }
+            onOpen = {
+                if (!it.equals(uniffi.padnote_core.recordingInboxNotebookId(), ignoreCase = true)) {
+                    openedId = it
+                }
+            }
         )
     } else {
         InkScreen(
             notebookId = id,
             onBack = { openedId = null },
-            onOpenNotebook = { openedId = it }
+            onOpenNotebook = {
+                if (!it.equals(uniffi.padnote_core.recordingInboxNotebookId(), ignoreCase = true)) {
+                    openedId = it
+                }
+            }
         )
     }
 }
@@ -1471,7 +1479,23 @@ private fun InkScreen(
     // 同步把別台的 oplog 寫進套件之後，要重開 session 才看得到 ——
     // 檔案變了，記憶體裡那份還是同步前的。
     var sessionRevision by remember(notebookId) { mutableIntStateOf(0) }
-    val notebook = remember(notebookId, sessionRevision) { openNotebook(activity, notebookId) }
+    val notebook = remember(notebookId, sessionRevision) {
+        if (notebookId != null && notebookId.equals(uniffi.padnote_core.recordingInboxNotebookId(), ignoreCase = true)) {
+            null
+        } else {
+            openNotebook(activity, notebookId)
+        }
+    }
+    LaunchedEffect(notebook) {
+        if (notebook == null) {
+            android.widget.Toast.makeText(
+                activity,
+                LocalizationStrings.localized("import_failed_read", deviceLanguageTag()),
+                android.widget.Toast.LENGTH_SHORT
+            ).show()
+            onBack?.invoke()
+        }
+    }
     // 「一鍵恢復初始狀態」：開啟編輯器的這一刻在核心裡插一個標記（里程碑），還原就是還原到它。
     // 只在這次開啟的第一次建立（`remember(notebookId)`）；同步或還原之後重開 session 不會移動它，
     // 所以「初始」永遠是**打開這本筆記的那一刻**，與 Apple 一致。

@@ -81,8 +81,10 @@ object NotebookLibrary {
         /** 同步索引裡的標題（小寫 id → 標題）。預設讀真的索引；測試可以注入。 */
         indexTitles: Map<String, String> = liveIndexTitles(context)
     ): List<Entry> {
+        val inboxId = uniffi.padnote_core.recordingInboxNotebookId()
         val entries = directory(context).listFiles()
             ?.filter { it.isDirectory && it.name.endsWith(".$EXTENSION") }
+            ?.filter { !it.nameWithoutExtension.equals(inboxId, ignoreCase = true) }
             ?.mapNotNull { describe(it, deviceId, indexTitles) }
             // 另一台裝置刪掉的不要列出來。檔案這時可能還在本機硬碟上
             // （真正的清除是同步引擎的事），但它已經被刪了 ——
@@ -90,6 +92,10 @@ object NotebookLibrary {
             //
             // 用 `isHidden` 而不是 `isDeleted`：後者只看自己那一筆，
             // 刪掉一個資料夾之後，裡面的筆記本仍然會被列出來。
+            //
+            // 同時過濾系統級錄音收件匣（與 Apple 端 visibleNotebooks 完全一致）：
+            // 收件匣是快速錄音的系統容器，非實體筆記本，不應出現在全部筆記與繼續清單。
+            ?.filter { !it.id.equals(inboxId, ignoreCase = true) }
             ?.filter { !AccountSyncStore.isHidden(context, it.id) }
             ?.filter { folderId == ANY_FOLDER || FolderTree.parentOf(context, it.id) == folderId }
             ?: return emptyList()
