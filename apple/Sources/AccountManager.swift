@@ -151,49 +151,74 @@ public final class AccountManager: ObservableObject {
         return nil
     }
 
-    /// 是否登入 iCloud（包含 iCloud 帳號登入或已選擇 iCloud/資料夾同步）
+    /// 是否在 Kairumo 啟用了 iCloud / 資料夾雲端同步。
+    /// 只有在使用者實際設定了同步資料夾、且資料夾位於 iCloud 範圍或已啟用時才成立。
+    /// 未設定同步資料夾時絕對不應視為已登入 iCloud。
     public var isICloudSignedIn: Bool {
-        if FileManager.default.ubiquityIdentityToken != nil {
-            return true
+        guard let folder = CloudSyncFolder.resolveFolder() else {
+            return false
         }
-        if ICloudSyncFolder.isAvailable || CloudSyncFolder.resolveFolder() != nil {
-            return true
-        }
-        return false
+        return DocumentStorageLocation.isICloudSynced(folder)
+            || folder.path.contains("/Mobile Documents/")
+            || folder.path.contains("com~apple~CloudDocs")
     }
 
     /// 從裝置名稱解析出 Apple 帳號名稱（支援中文、英文、日文及歐洲語系命名）
     public static func extractAppleAccountName(fromDeviceName deviceName: String) -> String? {
         let trimmed = deviceName.trimmingCharacters(in: .whitespacesAndNewlines)
-        let pattern1 = #"^(.*?)(?:'s|’s| 的| の)\s*(?:iPhone|iPad|iPod|Mac|Apple\s*Watch).*"#
+        let pattern1 = #"^(.*?)(?:'s|’s|\s*的|\s*の)\s*(?:iPhone|iPad|iPod|Mac|Apple\s*Watch).*"#
         if let regex = try? NSRegularExpression(pattern: pattern1, options: .caseInsensitive),
            let match = regex.firstMatch(in: trimmed, options: [], range: NSRange(location: 0, length: trimmed.utf16.count)),
            let range = Range(match.range(at: 1), in: trimmed) {
             let extracted = String(trimmed[range]).trimmingCharacters(in: .whitespacesAndNewlines)
-            if !extracted.isEmpty {
+            if isValidAppleAccountName(extracted) {
                 return extracted
             }
+            return nil
         }
         let pattern2 = #"^(?:iPhone|iPad|iPod|Mac)\s*(?:von|de|de\s+la)\s*(.*)"#
         if let regex = try? NSRegularExpression(pattern: pattern2, options: .caseInsensitive),
            let match = regex.firstMatch(in: trimmed, options: [], range: NSRange(location: 0, length: trimmed.utf16.count)),
            let range = Range(match.range(at: 1), in: trimmed) {
             let extracted = String(trimmed[range]).trimmingCharacters(in: .whitespacesAndNewlines)
-            if !extracted.isEmpty {
+            if isValidAppleAccountName(extracted) {
                 return extracted
             }
+            return nil
         }
-        if !trimmed.isEmpty && trimmed != "iPhone" && trimmed != "iPad" && trimmed != "Mobile User" {
+        if isValidAppleAccountName(trimmed) {
             return trimmed
         }
         return nil
+    }
+
+    /// 檢驗是否為有效的 Apple 帳號顯示名稱（過濾常見裝置型號或系統預設佔位名稱）
+    public static func isValidAppleAccountName(_ name: String) -> Bool {
+        let clean = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        if clean.isEmpty { return false }
+        let lower = clean.lowercased()
+        let invalid = [
+            "iphone", "ipad", "ipod", "mac", "apple", "apple watch",
+            "mobile user", "mobil user", "mobile", "user", "root",
+            "mobileuser", "admin", "administrator", "guest", "default"
+        ]
+        if invalid.contains(lower) {
+            return false
+        }
+        if lower.contains("mobile user") || lower.contains("mobil user") || lower.contains("mobileuser") {
+            return false
+        }
+        if lower.contains("iphone") || lower.contains("ipad") || lower.contains("ipod") || lower.contains("apple watch") {
+            return false
+        }
+        return true
     }
 
     /// 取得 iCloud 帳號名稱
     public var iCloudAccountName: String {
         // Mac / Mac Catalyst 上，系統使用者全名即為 Apple/iCloud 帳號名稱
         let fullName = NSFullUserName().trimmingCharacters(in: .whitespacesAndNewlines)
-        if !fullName.isEmpty && fullName != "mobile" && fullName != "root" {
+        if AccountManager.isValidAppleAccountName(fullName) {
             return fullName
         }
 
@@ -204,7 +229,7 @@ public final class AccountManager: ObservableObject {
         #endif
 
         let userName = NSUserName().trimmingCharacters(in: .whitespacesAndNewlines)
-        if !userName.isEmpty && userName != "mobile" && userName != "root" {
+        if AccountManager.isValidAppleAccountName(userName) {
             return userName
         }
 
@@ -252,20 +277,34 @@ public final class AccountManager: ObservableObject {
             self.customDisplayName = initial
         }
         cleanUpLegacyKeys()
-        if GoogleAuth.shared.isSignedIn {
-            #if canImport(UIKit)
-            if profile.displayName == UIDevice.current.name || profile.displayName == "Mobile User" {
+        #if canImport(UIKit)
+        let isPlaceholder = !AccountManager.isValidAppleAccountName(profile.displayName)
+            || profile.displayName == UIDevice.current.name
+        if isPlaceholder {
+            if GoogleAuth.shared.isSignedIn {
                 profile.displayName = GoogleAuth.shared.accountName
                     ?? GoogleAuth.shared.accountEmail
                     ?? LocalizationManager.shared.localized("default_user_name")
+            } else if !customDisplayName.isEmpty && AccountManager.isValidAppleAccountName(customDisplayName) {
+                profile.displayName = customDisplayName
+            } else {
+                profile.displayName = LocalizationManager.shared.localized("default_user_name")
             }
-            #endif
         }
+        #endif
         refreshDisplayName()
 
         // 監聽 Google 帳號狀態變化，一旦背景非同步取得或登入/登出，立即自動刷新名稱
         GoogleAuth.shared.$accountName
             .combineLatest(GoogleAuth.shared.$accountEmail, GoogleAuth.shared.$isSignedIn)
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                self?.refreshDisplayName()
+            }
+            .store(in: &cancellables)
+
+        // 監聽同步資料夾設定變化（設定或清除 iCloud/資料夾同步）
+        CloudSyncFolderMonitor.shared.$currentFolder
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
                 self?.refreshDisplayName()

@@ -35,7 +35,7 @@ final class PlatformContractTests: XCTestCase {
 
     /// 剛錄完音（audio session 還停在 `.playAndRecord`）就播 —— 回報的「錄完按播放沒反應」。
     func testPlaybackRightAfterRecordingSessionStillWorks() async throws {
-        #if os(iOS)
+        #if os(iOS) && !targetEnvironment(macCatalyst)
         let session = AVAudioSession.sharedInstance()
         try session.setCategory(.playAndRecord, mode: .default, options: [.defaultToSpeaker])
         try session.setActive(true)
@@ -122,6 +122,28 @@ final class PlatformContractTests: XCTestCase {
         XCTAssertNil(AccountManager.extractAppleAccountName(fromDeviceName: "iPhone"))
         XCTAssertNil(AccountManager.extractAppleAccountName(fromDeviceName: "iPad"))
         XCTAssertNil(AccountManager.extractAppleAccountName(fromDeviceName: "Mobile User"))
+        XCTAssertNil(AccountManager.extractAppleAccountName(fromDeviceName: "Mobil User"))
+        XCTAssertNil(AccountManager.extractAppleAccountName(fromDeviceName: "Mobile User 的 iPhone"))
+        XCTAssertNil(AccountManager.extractAppleAccountName(fromDeviceName: "Mobil User 的 iPad"))
+
+        // 驗證有效名稱過濾邏輯
+        XCTAssertTrue(AccountManager.isValidAppleAccountName("Barret Lin"))
+        XCTAssertTrue(AccountManager.isValidAppleAccountName("林豪傑"))
+        XCTAssertFalse(AccountManager.isValidAppleAccountName("Mobile User"))
+        XCTAssertFalse(AccountManager.isValidAppleAccountName("Mobil User"))
+        XCTAssertFalse(AccountManager.isValidAppleAccountName("mobile user"))
+        XCTAssertFalse(AccountManager.isValidAppleAccountName("mobile"))
+        XCTAssertFalse(AccountManager.isValidAppleAccountName("user"))
+        XCTAssertFalse(AccountManager.isValidAppleAccountName("root"))
+        XCTAssertFalse(AccountManager.isValidAppleAccountName("iPhone"))
+        XCTAssertFalse(AccountManager.isValidAppleAccountName("iPad"))
+    }
+
+    /// 驗證未在 App 內設定 iCloud 同步資料夾時，isICloudSignedIn 必須回傳 false，不誤判為 iCloud 登入
+    func testIsICloudSignedInRequiresConfiguredCloudFolder() {
+        CloudSyncFolder.clearFolder()
+        let accountManager = AccountManager.shared
+        XCTAssertFalse(accountManager.isICloudSignedIn, "未設定同步資料夾時，絕對不可將系統 ubiquity token 視為已登入 iCloud 同步")
     }
 
     /// 驗證若同時登錄 Google Drive 與 iCloud 時，預設以 Apple (iCloud) 名稱為優先，並可切換
