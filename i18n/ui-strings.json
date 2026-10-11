@@ -18327,6 +18327,38 @@
     "zhHans": "启动与性能日志 (工程调试)",
     "zhHant": "啟動與效能日誌 (工程除錯)"
   },
+  "crash_logs_title": {
+    "en": "Crash Logs",
+    "ja": "クラッシュログ",
+    "ko": "충돌 로그",
+    "th": "บันทึกข้อขัดข้อง",
+    "zhHans": "崩溃记录",
+    "zhHant": "當機紀錄"
+  },
+  "crash_logs_empty": {
+    "en": "Great! No uncaught crash logs found recently.",
+    "ja": "素晴らしい！最近の未捕捉クラッシュログはありません。",
+    "ko": "최근 포착되지 않은 충돌 로그가 없습니다.",
+    "th": "ยอดเยี่ยม! ไม่พบบันทึกข้อขัดข้องเมื่อเร็วๆ นี้",
+    "zhHans": "太棒了！近期没有发生任何未捕获的崩溃异常记录。",
+    "zhHant": "太棒了！近期沒有發生任何未捕捉的當機異常紀錄。"
+  },
+  "crash_logs_copy": {
+    "en": "Copy Crash Report",
+    "ja": "クラッシュレポートをコピー",
+    "ko": "충돌 보고서 복사",
+    "th": "คัดลอกรายงานข้อขัดข้อง",
+    "zhHans": "复制崩溃报告",
+    "zhHant": "複製當機報告"
+  },
+  "crash_logs_clear": {
+    "en": "Clear Crash Logs",
+    "ja": "ログをクリア",
+    "ko": "충돌 로그 지우기",
+    "th": "ล้างบันทึก",
+    "zhHans": "清除崩溃记录",
+    "zhHant": "清除當機紀錄"
+  },
   "status_connected": {
     "en": "Connected",
     "ja": "接続中",

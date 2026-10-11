@@ -65,6 +65,8 @@ fun AppDiagnosticsDialog(
     val context = LocalContext.current
     var selectedTab by remember { mutableIntStateOf(0) }
     var copiedStartupLogs by remember { mutableStateOf(false) }
+    var copiedCrashLog by remember { mutableStateOf(false) }
+    var crashLogContent by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
     var selfCheck by remember { mutableStateOf<List<SelfCheckResult>>(emptyList()) }
     var selfCheckRunning by remember { mutableStateOf(false) }
@@ -73,12 +75,19 @@ fun AppDiagnosticsDialog(
     var cleanedMessage by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(selectedTab) {
         if (selectedTab == 3) usage = withContext(Dispatchers.IO) { StorageSweeper.usage(context) }
+        if (selectedTab == 4) crashLogContent = withContext(Dispatchers.IO) { com.kairumo.padnote.platform.CrashLogger.lastCrashLog(context) }
     }
 
     LaunchedEffect(copiedStartupLogs) {
         if (copiedStartupLogs) {
             delay(1500)
             copiedStartupLogs = false
+        }
+    }
+    LaunchedEffect(copiedCrashLog) {
+        if (copiedCrashLog) {
+            delay(1500)
+            copiedCrashLog = false
         }
     }
 
@@ -99,7 +108,10 @@ fun AppDiagnosticsDialog(
                     .fillMaxWidth()
                     .heightIn(max = 520.dp)
             ) {
-                TabRow(selectedTabIndex = selectedTab) {
+                androidx.compose.material3.ScrollableTabRow(
+                    selectedTabIndex = selectedTab,
+                    edgePadding = 0.dp
+                ) {
                     Tab(
                         selected = selectedTab == 0,
                         onClick = { selectedTab = 0 },
@@ -122,11 +134,92 @@ fun AppDiagnosticsDialog(
                         modifier = Modifier.testTag("diagnostics.storage.tab"),
                         text = { Text(l("storage_title"), maxLines = 1, fontSize = 12.sp) }
                     )
+                    Tab(
+                        selected = selectedTab == 4,
+                        onClick = { selectedTab = 4 },
+                        modifier = Modifier.testTag("diagnostics.crash.tab"),
+                        text = { Text(l("crash_logs_title"), maxLines = 1, fontSize = 12.sp) }
+                    )
                 }
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                if (selectedTab == 3) {
+                if (selectedTab == 4) {
+                    // 分頁 5：當機紀錄 (Crash Logs)
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.End,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            val hasCrash = !crashLogContent.isNullOrBlank()
+                            TextButton(
+                                onClick = {
+                                    crashLogContent?.let {
+                                        LogExportUtility.copy(context, it)
+                                        copiedCrashLog = true
+                                    }
+                                },
+                                enabled = hasCrash
+                            ) {
+                                Text(
+                                    if (copiedCrashLog) "✓ ${l("log_copied")}" else l("crash_logs_copy"),
+                                    color = if (copiedCrashLog) Color(0xFF2E7D32) else MaterialTheme.colorScheme.primary,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.width(4.dp))
+
+                            TextButton(
+                                onClick = {
+                                    com.kairumo.padnote.platform.CrashLogger.clearCrashLog(context)
+                                    crashLogContent = null
+                                },
+                                enabled = hasCrash
+                            ) {
+                                Text(l("crash_logs_clear"), fontSize = 12.sp, color = MaterialTheme.colorScheme.error)
+                            }
+                        }
+
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+
+                        if (crashLogContent.isNullOrBlank()) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 32.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    l("crash_logs_empty"),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        } else {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .weight(1f, fill = false)
+                                    .verticalScroll(rememberScrollState())
+                                    .background(
+                                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                                        RoundedCornerShape(6.dp)
+                                    )
+                                    .padding(8.dp)
+                            ) {
+                                Text(
+                                    text = crashLogContent ?: "",
+                                    fontSize = 11.sp,
+                                    fontFamily = FontFamily.Monospace,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+                        }
+                    }
+                } else if (selectedTab == 3) {
                     // 分頁 4：儲存空間（與 Apple 同一組項目與清理規則）
                     Column(
                         modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()),

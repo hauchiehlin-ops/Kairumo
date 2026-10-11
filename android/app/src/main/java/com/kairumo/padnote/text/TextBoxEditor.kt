@@ -55,10 +55,12 @@ import uniffi.padnote_core.symbolPalette
  * 分頁不是裝飾：原本是一條長 Column 塞進 AlertDialog，控制項一多就超出
  * 對話框高度被裁掉 —— 與 Apple 端浮動面板原本的毛病一模一樣。
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun TextBoxEditor(
     box: TextBox,
     languageTag: String,
+    onReorder: ((com.kairumo.padnote.canvas.ObjectStacking.Reorder) -> Unit)? = null,
     onChanged: (TextBox) -> Unit,
     onDelete: () -> Unit,
     onDismiss: () -> Unit
@@ -195,6 +197,19 @@ fun TextBoxEditor(
                         }
 
                         2 -> {
+                            if (onReorder != null) {
+                                label(l("layers_panel"))
+                                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    for (op in com.kairumo.padnote.canvas.ObjectStacking.Reorder.entries) {
+                                        AssistChip(
+                                            onClick = { onReorder(op) },
+                                            label = { Text(l(op.labelKey)) }
+                                        )
+                                    }
+                                }
+                                Divider()
+                            }
+
                             // 透明放最前面：那是使用者最常想要、原本完全做不到的一項。
                             label(l("card_style"))
                             chipRow(

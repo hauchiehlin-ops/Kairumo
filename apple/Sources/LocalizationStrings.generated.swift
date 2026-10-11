@@ -4735,6 +4735,38 @@ extension LocalizationManager {
             .ko: "채도",
             .th: "ความอิ่มตัว"
         ],
+        "crash_logs_clear": [
+            .zhHant: "清除當機紀錄",
+            .en: "Clear Crash Logs",
+            .zhHans: "清除崩溃记录",
+            .ja: "ログをクリア",
+            .ko: "충돌 로그 지우기",
+            .th: "ล้างบันทึก"
+        ],
+        "crash_logs_copy": [
+            .zhHant: "複製當機報告",
+            .en: "Copy Crash Report",
+            .zhHans: "复制崩溃报告",
+            .ja: "クラッシュレポートをコピー",
+            .ko: "충돌 보고서 복사",
+            .th: "คัดลอกรายงานข้อขัดข้อง"
+        ],
+        "crash_logs_empty": [
+            .zhHant: "太棒了！近期沒有發生任何未捕捉的當機異常紀錄。",
+            .en: "Great! No uncaught crash logs found recently.",
+            .zhHans: "太棒了！近期没有发生任何未捕获的崩溃异常记录。",
+            .ja: "素晴らしい！最近の未捕捉クラッシュログはありません。",
+            .ko: "최근 포착되지 않은 충돌 로그가 없습니다.",
+            .th: "ยอดเยี่ยม! ไม่พบบันทึกข้อขัดข้องเมื่อเร็วๆ นี้"
+        ],
+        "crash_logs_title": [
+            .zhHant: "當機紀錄",
+            .en: "Crash Logs",
+            .zhHans: "崩溃记录",
+            .ja: "クラッシュログ",
+            .ko: "충돌 로그",
+            .th: "บันทึกข้อขัดข้อง"
+        ],
         "create_snapshot": [
             .zhHant: "建立協同快照",
             .en: "Create Snapshot",

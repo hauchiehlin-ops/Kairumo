@@ -272,6 +272,7 @@ import java.util.Locale
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        com.kairumo.padnote.platform.CrashLogger.install(applicationContext)
         com.kairumo.padnote.platform.StartupLogger.logKey("log_main_activity_create")
         // 跨裝置語言要在畫出任何東西**之前**讀進來，不然第一幀會是舊語言，
         // 使用者會看到介面閃一下才變過去。
@@ -2848,13 +2849,26 @@ private fun InkScreen(
             horizontalArrangement = Arrangement.spacedBy(6.dp),
             verticalArrangement = Arrangement.spacedBy(2.dp)
         ) {
-            // 回首頁。沒有這顆的話，進了筆記就出不來了 ——
-            // Android 的系統返回鍵在單一 Compose 畫面裡不會有任何作用。
+            // 回首頁。對齊 iPad：帶藍色底色、首頁小圖示與文字（更容易辨識且位置一致）
             if (onBack != null) {
-                TextButton(
-                    onClick = onBack,
-                    modifier = Modifier.testTag("editor.home")
-                ) { Text("‹ ${l10n("back_to_home")}") }
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(vertical = 2.dp)
+                ) {
+                    TextButton(
+                        onClick = onBack,
+                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
+                        modifier = Modifier.testTag("editor.home")
+                    ) {
+                        Text(
+                            "‹ 🏠 ${l10n("home")}",
+                            color = MaterialTheme.colorScheme.onPrimary,
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                }
             }
             if (minimalistCanvasMode) {
                 // 🌟 畫布極簡模式恢復按鈕（讓使用者一秒找到退出鍵）
@@ -2973,20 +2987,26 @@ private fun InkScreen(
                 }
             }
 
-            // 頁面結構欄的開關。Apple 端工具列上就有這一顆。
-            TextButton(
-                onClick = { showPageSidebar = !showPageSidebar },
-                modifier = Modifier.testTag("editor.sidebar_toggle")
+            // 頁面結構欄的開關（對齊 iPad：帶側欄圖示與背景高亮）。
+            Surface(
+                shape = RoundedCornerShape(8.dp),
+                color = if (showPageSidebar) MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                        else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                modifier = Modifier.padding(vertical = 2.dp)
             ) {
-                Text(
-                    l10n("structure_pages"),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = if (showPageSidebar) {
-                        MaterialTheme.colorScheme.primary
-                    } else {
-                        MaterialTheme.colorScheme.onSurface
-                    }
-                )
+                TextButton(
+                    onClick = { showPageSidebar = !showPageSidebar },
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                    modifier = Modifier.testTag("editor.sidebar_toggle")
+                ) {
+                    Text(
+                        "📑 ${l10n("structure_pages")}",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = if (showPageSidebar) FontWeight.SemiBold else FontWeight.Normal,
+                        color = if (showPageSidebar) MaterialTheme.colorScheme.primary
+                                else MaterialTheme.colorScheme.onSurface
+                    )
+                }
             }
 
             // 復原／重做群組膠囊（Apple 與 Android 統一膠囊設計）
@@ -3327,14 +3347,21 @@ private fun InkScreen(
             var showShareMenu by remember { mutableStateOf(false) }
             Surface(
                 shape = RoundedCornerShape(8.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.padding(vertical = 2.dp)
             ) {
                 TextButton(
                     onClick = { showShareMenu = true },
                     modifier = Modifier.testTag("editor.share"),
                     contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
-                ) { Text("↗", style = MaterialTheme.typography.titleMedium) }
+                ) {
+                    Text(
+                        "↗ ${l10n("export_print")} ▾",
+                        color = MaterialTheme.colorScheme.onPrimary,
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
             }
 
             DropdownMenu(expanded = showShareMenu, onDismissRequest = { showShareMenu = false }) {
@@ -6117,10 +6144,15 @@ private fun InkScreen(
         CanvasStackPanel(
             items = stackItems,
             order = stackOrder,
+            underInkIds = underInkIds,
             languageTag = deviceLanguageTag(),
             onOrderChange = { updated ->
                 // 只寫這一頁，其餘頁面與其餘中繼資料欄位原封不動。
                 meta.setObjectOrder(notebook?.first, pageIndex, updated)
+                stackRevision++
+            },
+            onUnderInkChange = { updatedUnder ->
+                meta.setUnderInkObjectIds(notebook?.first, pageIndex, updatedUnder)
                 stackRevision++
             },
             onAlign = { mode, ids -> alignObjects(mode, ids) },
@@ -6132,6 +6164,7 @@ private fun InkScreen(
         ImageEditor(
             image = image,
             languageTag = deviceLanguageTag(),
+            onReorder = { op -> objectReorder(image.id, op) },
             onChanged = { imageStore.persist(it); imageRevision++ },
             onDelete = {
                 imageStore.remove(image)
@@ -6188,6 +6221,7 @@ private fun InkScreen(
         TextBoxEditor(
             box = box,
             languageTag = deviceLanguageTag(),
+            onReorder = { op -> objectReorder(box.id, op) },
             onChanged = { textStore.persist(it); textRevision++ },
             onDelete = {
                 textStore.remove(box)

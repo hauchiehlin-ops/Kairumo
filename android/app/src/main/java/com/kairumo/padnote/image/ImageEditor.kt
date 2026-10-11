@@ -44,6 +44,7 @@ import com.kairumo.padnote.LocalizationStrings
 fun ImageEditor(
     image: NoteImage,
     languageTag: String,
+    onReorder: ((com.kairumo.padnote.canvas.ObjectStacking.Reorder) -> Unit)? = null,
     onChanged: (NoteImage) -> Unit,
     onDelete: () -> Unit,
     onDismiss: () -> Unit
@@ -70,6 +71,17 @@ fun ImageEditor(
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                     modifier = Modifier.height(height.value).verticalScroll(rememberScrollState())
                 ) {
+                    if (onReorder != null) {
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            for (op in com.kairumo.padnote.canvas.ObjectStacking.Reorder.entries) {
+                                androidx.compose.material3.AssistChip(
+                                    onClick = { onReorder(op) },
+                                    label = { Text(l(op.labelKey)) }
+                                )
+                            }
+                        }
+                    }
+
                     Text(l("image_filter"), style = MaterialTheme.typography.labelMedium)
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         for (option in ImageFilterStyle.entries) {

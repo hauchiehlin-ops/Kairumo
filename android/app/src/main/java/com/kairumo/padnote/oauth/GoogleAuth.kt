@@ -67,6 +67,8 @@ object GoogleAuth {
         _authRevision.value += 1
     }
 
+    private var cachedStore: android.content.SharedPreferences? = null
+
     /**
      * 權杖存在**加密**的 SharedPreferences。
      *
@@ -75,20 +77,27 @@ object GoogleAuth {
      *
      * 建不起來（極舊裝置、Keystore 損壞）時回退到一般偏好儲存或回 null。
      */
-    private fun store(context: Context) = runCatching {
-        val key = MasterKey.Builder(context)
-            .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-            .build()
-        EncryptedSharedPreferences.create(
-            context,
-            PREFS,
-            key,
-            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-        )
-    }.getOrElse { err ->
-        android.util.Log.e("GoogleAuth", "Failed to create EncryptedSharedPreferences: ${err.message}", err)
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+    @Synchronized
+    private fun store(context: Context): android.content.SharedPreferences? {
+        cachedStore?.let { return it }
+        val prefs = runCatching {
+            val key = MasterKey.Builder(context)
+                .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+                .build()
+            EncryptedSharedPreferences.create(
+                context,
+                PREFS,
+                key,
+                EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+            )
+        }.getOrElse { err ->
+            android.util.Log.e("GoogleAuth", "Failed to create EncryptedSharedPreferences: ${err.message}", err)
+            // 若加密失敗，嘗試一般 SharedPreferences
+            context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        }
+        cachedStore = prefs
+        return prefs
     }
 
     /** 目前存著的權杖。沒登入過時每個欄位都是空的。 */
@@ -236,6 +245,7 @@ object GoogleAuth {
      */
     fun signOutLocally(context: Context) {
         store(context)?.edit()?.clear()?.apply()
+        cachedStore = null
         com.kairumo.padnote.library.SyncHistory.setAccountName(context, null)
         // 共用的雲端工作階段綁著舊帳號的快照，登出就要丟掉。
         com.kairumo.padnote.library.CloudSync.invalidateSession()

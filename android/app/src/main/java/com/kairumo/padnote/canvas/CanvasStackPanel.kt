@@ -44,8 +44,10 @@ import com.kairumo.padnote.LocalizationStrings
 fun CanvasStackPanel(
     items: List<ObjectStacking.Item>,
     order: List<String>,
+    underInkIds: Set<String> = emptySet(),
     languageTag: String,
     onOrderChange: (List<String>) -> Unit,
+    onUnderInkChange: ((Set<String>) -> Unit)? = null,
     /**
      * 對齊指定的那些物件。
      *
@@ -67,6 +69,37 @@ fun CanvasStackPanel(
     fun apply(op: (Set<String>, List<String>) -> List<String>) {
         if (selection.isEmpty()) return
         onOrderChange(op(selection, order))
+    }
+
+    fun sendToBack() {
+        if (selection.isEmpty()) return
+        // 置底時，若有支援 underInkChange 則自動置於筆跡下方
+        if (onUnderInkChange != null) {
+            val updated = underInkIds + selection
+            onUnderInkChange(updated)
+        }
+        onOrderChange(ObjectStacking.sendToBack(selection, order))
+    }
+
+    fun bringToFront() {
+        if (selection.isEmpty()) return
+        // 置頂時，自動自筆跡下方移除（置於筆跡上方）
+        if (onUnderInkChange != null) {
+            val updated = underInkIds - selection
+            onUnderInkChange(updated)
+        }
+        onOrderChange(ObjectStacking.bringToFront(selection, order))
+    }
+
+    fun toggleBelowInk() {
+        if (selection.isEmpty() || onUnderInkChange == null) return
+        val allBelow = selection.all { it in underInkIds }
+        val updated = if (allBelow) {
+            underInkIds - selection
+        } else {
+            underInkIds + selection
+        }
+        onUnderInkChange(updated)
     }
 
     AlertDialog(
@@ -100,6 +133,7 @@ fun CanvasStackPanel(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
+                                val isBelowInk = item.id in underInkIds
                                 Text(item.kind.mark(), style = MaterialTheme.typography.labelMedium)
                                 Text(
                                     item.title,
@@ -107,6 +141,13 @@ fun CanvasStackPanel(
                                     maxLines = 1,
                                     modifier = Modifier.weight(1f)
                                 )
+                                if (isBelowInk) {
+                                    Text(
+                                        "[" + l("layer_send_below_ink") + "]",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.tertiary
+                                    )
+                                }
                                 if (picked) Text("✓", fontWeight = FontWeight.Bold)
                             }
                         }
@@ -115,11 +156,27 @@ fun CanvasStackPanel(
                     // 放進去的話把手會跟著內容捲走，捲到一半就再也找不到它。
                     DialogResizeHandle(height, "layerPanel")
 
-                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                        TextButton(onClick = { apply(ObjectStacking::sendToBack) }) { Text("⤓") }
-                        TextButton(onClick = { apply(ObjectStacking::sendBackward) }) { Text("↓") }
-                        TextButton(onClick = { apply(ObjectStacking::bringForward) }) { Text("↑") }
-                        TextButton(onClick = { apply(ObjectStacking::bringToFront) }) { Text("⤒") }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        TextButton(onClick = { sendToBack() }, enabled = selection.isNotEmpty()) { Text("⤓") }
+                        TextButton(onClick = { apply(ObjectStacking::sendBackward) }, enabled = selection.isNotEmpty()) { Text("↓") }
+                        TextButton(onClick = { apply(ObjectStacking::bringForward) }, enabled = selection.isNotEmpty()) { Text("↑") }
+                        TextButton(onClick = { bringToFront() }, enabled = selection.isNotEmpty()) { Text("⤒") }
+                        if (onUnderInkChange != null) {
+                            val allBelow = selection.isNotEmpty() && selection.all { it in underInkIds }
+                            TextButton(
+                                onClick = { toggleBelowInk() },
+                                enabled = selection.isNotEmpty()
+                            ) {
+                                Text(
+                                    if (allBelow) l("layer_bring_above_ink") else l("layer_send_below_ink"),
+                                    style = MaterialTheme.typography.labelSmall
+                                )
+                            }
+                        }
                     }
 
                     Text(l("align_objects"), style = MaterialTheme.typography.labelSmall)
