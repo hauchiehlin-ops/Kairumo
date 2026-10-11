@@ -176,17 +176,26 @@ impl TextCrdt {
     }
 
     fn walk(&self, origin: Option<OpId>, out: &mut String) {
-        let Some(kids) = self.children.get(&origin) else {
-            return;
-        };
-        for &id in kids {
+        // 改為迭代堆疊走訪，避免長文本（如數千字之課堂錄音逐字稿或大量文字）
+        // 造成深層呼叫堆疊溢位（Stack Overflow / EXC_BAD_ACCESS）。
+        let mut stack: Vec<OpId> = Vec::new();
+        if let Some(kids) = self.children.get(&origin) {
+            for &id in kids.iter().rev() {
+                stack.push(id);
+            }
+        }
+        while let Some(id) = stack.pop() {
             if let Some(n) = self.nodes.get(&id)
                 && !n.deleted
             {
                 out.push(n.ch);
             }
             // 即使被刪除也要走訪子節點 —— 墓碑仍是別人的 origin。
-            self.walk(Some(id), out);
+            if let Some(kids) = self.children.get(&Some(id)) {
+                for &kid in kids.iter().rev() {
+                    stack.push(kid);
+                }
+            }
         }
     }
 
@@ -199,16 +208,23 @@ impl TextCrdt {
     }
 
     fn collect_visible(&self, origin: Option<OpId>, out: &mut Vec<OpId>) {
-        let Some(kids) = self.children.get(&origin) else {
-            return;
-        };
-        for &id in kids {
+        let mut stack: Vec<OpId> = Vec::new();
+        if let Some(kids) = self.children.get(&origin) {
+            for &id in kids.iter().rev() {
+                stack.push(id);
+            }
+        }
+        while let Some(id) = stack.pop() {
             if let Some(n) = self.nodes.get(&id)
                 && !n.deleted
             {
                 out.push(id);
             }
-            self.collect_visible(Some(id), out);
+            if let Some(kids) = self.children.get(&Some(id)) {
+                for &kid in kids.iter().rev() {
+                    stack.push(kid);
+                }
+            }
         }
     }
 
@@ -453,6 +469,23 @@ mod tests {
         let ops = e.delete(&c, 1, 1);
         c.apply_all(ops);
         assert_eq!(c.text(), "線代數");
+    }
+
+    #[test]
+    fn long_text_does_not_overflow_stack() {
+        // 課堂筆記、長篇轉錄或大文件輸入數千字時，不可發生遞迴堆疊溢位 (Stack Overflow / 3637 frames crash)
+        let mut c = TextCrdt::new();
+        let mut e = TextEditor::new(1);
+        let sample = "這是一段長篇文字測試語句。";
+        for _ in 0..500 {
+            let ops = e.insert(&c, c.len(), sample);
+            c.apply_all(ops);
+        }
+        assert_eq!(c.len(), 500 * sample.chars().count());
+        let full_text = c.text();
+        assert_eq!(full_text.chars().count(), 500 * sample.chars().count());
+        let ids = c.visible_ids();
+        assert_eq!(ids.len(), full_text.chars().count());
     }
 }
 

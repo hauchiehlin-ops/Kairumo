@@ -448,8 +448,12 @@ impl ObjectTree {
     pub fn world_transform(&self, id: Uuid) -> Affine2 {
         let mut chain = Vec::new();
         let mut cursor = Some(id);
-        // 由下往上收集，避免遞迴。
+        let mut seen = std::collections::HashSet::new();
+        // 由下往上收集，避免遞迴；加上成環保護防禦惡意或異常中繼資料
         while let Some(c) = cursor {
+            if !seen.insert(c) {
+                break;
+            }
             let Some(node) = self.nodes.get(&c) else {
                 break;
             };
@@ -466,27 +470,31 @@ impl ObjectTree {
     /// 展開成所有葉節點（筆畫與區塊）的 id 與其世界變換。
     pub fn flatten(&self, id: Uuid) -> Vec<(Uuid, Affine2)> {
         let mut out = Vec::new();
-        self.flatten_into(id, Affine2::IDENTITY, &mut out);
-        out
-    }
+        let mut stack = vec![(id, Affine2::IDENTITY)];
+        let mut visited = std::collections::HashSet::new();
 
-    fn flatten_into(&self, id: Uuid, inherited: Affine2, out: &mut Vec<(Uuid, Affine2)>) {
-        let Some(node) = self.nodes.get(&id) else {
-            return;
-        };
-        let world = node.transform.then(&inherited);
-        match &node.kind {
-            ObjectKind::Group(members) => {
-                for m in members {
-                    self.flatten_into(*m, world, out);
+        while let Some((curr_id, inherited)) = stack.pop() {
+            if !visited.insert(curr_id) {
+                continue;
+            }
+            let Some(node) = self.nodes.get(&curr_id) else {
+                continue;
+            };
+            let world = node.transform.then(&inherited);
+            match &node.kind {
+                ObjectKind::Group(members) => {
+                    for m in members.iter().rev() {
+                        stack.push((*m, world));
+                    }
                 }
+                ObjectKind::Strokes(strokes) => {
+                    out.extend(strokes.iter().map(|s| (*s, world)));
+                }
+                ObjectKind::Block(b) => out.push((*b, world)),
+                ObjectKind::Shape(_) | ObjectKind::Connection(_) => out.push((curr_id, world)),
             }
-            ObjectKind::Strokes(strokes) => {
-                out.extend(strokes.iter().map(|s| (*s, world)));
-            }
-            ObjectKind::Block(b) => out.push((*b, world)),
-            ObjectKind::Shape(_) | ObjectKind::Connection(_) => out.push((id, world)),
         }
+        out
     }
 }
 
