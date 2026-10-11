@@ -106,4 +106,30 @@ final class PlatformContractTests: XCTestCase {
         let fallback = LocalizationManager.shared.localized("default_user_name")
         XCTAssertEqual(accountManager.customDisplayName, fallback)
     }
+
+    /// 驗證從各種語系的 iOS 裝置名稱萃取 Apple 帳號名稱的能力
+    func testExtractAppleAccountNameFromDeviceName() {
+        XCTAssertEqual(AccountManager.extractAppleAccountName(fromDeviceName: "Barret 的 iPhone"), "Barret")
+        XCTAssertEqual(AccountManager.extractAppleAccountName(fromDeviceName: "Barret Lin 的 iPad"), "Barret Lin")
+        XCTAssertEqual(AccountManager.extractAppleAccountName(fromDeviceName: "林豪傑 的 iPhone 15 Pro"), "林豪傑")
+        XCTAssertEqual(AccountManager.extractAppleAccountName(fromDeviceName: "Barret's iPhone"), "Barret")
+        XCTAssertEqual(AccountManager.extractAppleAccountName(fromDeviceName: "Barret’s iPad mini"), "Barret")
+        XCTAssertEqual(AccountManager.extractAppleAccountName(fromDeviceName: "Barret の iPad"), "Barret")
+        XCTAssertEqual(AccountManager.extractAppleAccountName(fromDeviceName: "iPad de Barret"), "Barret")
+        XCTAssertEqual(AccountManager.extractAppleAccountName(fromDeviceName: "iPhone von Barret"), "Barret")
+        XCTAssertEqual(AccountManager.extractAppleAccountName(fromDeviceName: "Barret Lin"), "Barret Lin")
+        // 預設純裝置型號或測試機佔位名稱回傳 nil
+        XCTAssertNil(AccountManager.extractAppleAccountName(fromDeviceName: "iPhone"))
+        XCTAssertNil(AccountManager.extractAppleAccountName(fromDeviceName: "iPad"))
+        XCTAssertNil(AccountManager.extractAppleAccountName(fromDeviceName: "Mobile User"))
+    }
+
+    /// 驗證若同時登錄 Google Drive 與 iCloud 時，預設以 Apple (iCloud) 名稱為優先，並可切換
+    func testDualCloudLoginPreferenceDefaultsToICloud() {
+        let accountManager = AccountManager.shared
+        XCTAssertEqual(AccountManager.CloudProviderPreference.iCloud.rawValue, "iCloud")
+        XCTAssertEqual(AccountManager.CloudProviderPreference.googleDrive.rawValue, "google")
+        UserDefaults.standard.removeObject(forKey: "kairumo.account.cloudProviderPreference")
+        XCTAssertEqual(accountManager.cloudProviderPreference, .iCloud)
+    }
 }

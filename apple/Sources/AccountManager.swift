@@ -63,30 +63,91 @@ public final class AccountManager: ObservableObject {
         }
     }
 
+    public enum CloudProviderPreference: String, CaseIterable {
+        case iCloud = "iCloud"
+        case googleDrive = "google"
+    }
+
+    private let cloudPrefKey = "kairumo.account.cloudProviderPreference"
+
+    /// 若兩者（Google Drive 與 iCloud）同時登錄時的偏好。預設以 Apple (iCloud) 名稱為優先。
+    public var cloudProviderPreference: CloudProviderPreference {
+        get {
+            if let saved = UserDefaults.standard.string(forKey: cloudPrefKey),
+               let pref = CloudProviderPreference(rawValue: saved) {
+                return pref
+            }
+            return .iCloud
+        }
+        set {
+            UserDefaults.standard.set(newValue.rawValue, forKey: cloudPrefKey)
+            refreshDisplayName()
+        }
+    }
+
+    /// 是否同時登入 iCloud 與 Google Drive
+    public var hasBothCloudsSignedIn: Bool {
+        isICloudSignedIn && GoogleAuth.shared.isSignedIn
+    }
+
+    /// Google Drive 帳號名稱（若登入且已獲取）
+    public var googleAccountName: String? {
+        guard GoogleAuth.shared.isSignedIn else { return nil }
+        if let name = GoogleAuth.shared.accountName, !name.isEmpty {
+            return name
+        }
+        if let email = GoogleAuth.shared.accountEmail, !email.isEmpty {
+            return email
+        }
+        Task {
+            await GoogleAuth.shared.refreshAccountEmail()
+        }
+        return nil
+    }
+
     /// 目前生效的雲端帳號名稱（Google Drive 或 iCloud）。
     /// 未進行同步登入時為 nil。
+    /// 若兩者（Google Drive 與 iCloud）同時登錄，以 Apple (iCloud) 帳戶名稱為預設。
     public var activeCloudAccountName: String? {
-        // 1. Google Drive 登入
-        if GoogleAuth.shared.isSignedIn {
-            if let name = GoogleAuth.shared.accountName, !name.isEmpty {
-                return name
+        let hasICloud = isICloudSignedIn
+        let hasGoogle = GoogleAuth.shared.isSignedIn
+
+        if hasICloud && hasGoogle {
+            // 兩者同時登錄：預設為 Apple (iCloud)
+            if cloudProviderPreference == .googleDrive {
+                return googleAccountName
+            } else {
+                return iCloudAccountName
             }
-            if let email = GoogleAuth.shared.accountEmail, !email.isEmpty {
-                return email
-            }
-            // 若已登入 Google Drive 但尚未抓取到帳號資訊，立即在背景觸發刷新
-            Task {
-                await GoogleAuth.shared.refreshAccountEmail()
-            }
-            // 絕不可回退到 iCloud，否則在 iOS 上會誤用裝置名稱（如 "Mobile User"）
-            return nil
         }
 
-        // 2. iCloud 同步登入判定
-        if isICloudSignedIn {
+        // 僅登入 iCloud
+        if hasICloud {
             return iCloudAccountName
         }
 
+        // 僅登入 Google Drive
+        if hasGoogle {
+            return googleAccountName
+        }
+
+        return nil
+    }
+
+    /// 目前生效的雲端服務標籤（iCloud 或 Google Drive）
+    public var activeCloudProviderBadge: String? {
+        let hasICloud = isICloudSignedIn
+        let hasGoogle = GoogleAuth.shared.isSignedIn
+
+        if hasICloud && hasGoogle {
+            return cloudProviderPreference == .googleDrive ? "Google Drive" : "iCloud"
+        }
+        if hasICloud {
+            return "iCloud"
+        }
+        if hasGoogle {
+            return "Google Drive"
+        }
         return nil
     }
 
@@ -101,6 +162,33 @@ public final class AccountManager: ObservableObject {
         return false
     }
 
+    /// 從裝置名稱解析出 Apple 帳號名稱（支援中文、英文、日文及歐洲語系命名）
+    public static func extractAppleAccountName(fromDeviceName deviceName: String) -> String? {
+        let trimmed = deviceName.trimmingCharacters(in: .whitespacesAndNewlines)
+        let pattern1 = #"^(.*?)(?:'s|’s| 的| の)\s*(?:iPhone|iPad|iPod|Mac|Apple\s*Watch).*"#
+        if let regex = try? NSRegularExpression(pattern: pattern1, options: .caseInsensitive),
+           let match = regex.firstMatch(in: trimmed, options: [], range: NSRange(location: 0, length: trimmed.utf16.count)),
+           let range = Range(match.range(at: 1), in: trimmed) {
+            let extracted = String(trimmed[range]).trimmingCharacters(in: .whitespacesAndNewlines)
+            if !extracted.isEmpty {
+                return extracted
+            }
+        }
+        let pattern2 = #"^(?:iPhone|iPad|iPod|Mac)\s*(?:von|de|de\s+la)\s*(.*)"#
+        if let regex = try? NSRegularExpression(pattern: pattern2, options: .caseInsensitive),
+           let match = regex.firstMatch(in: trimmed, options: [], range: NSRange(location: 0, length: trimmed.utf16.count)),
+           let range = Range(match.range(at: 1), in: trimmed) {
+            let extracted = String(trimmed[range]).trimmingCharacters(in: .whitespacesAndNewlines)
+            if !extracted.isEmpty {
+                return extracted
+            }
+        }
+        if !trimmed.isEmpty && trimmed != "iPhone" && trimmed != "iPad" && trimmed != "Mobile User" {
+            return trimmed
+        }
+        return nil
+    }
+
     /// 取得 iCloud 帳號名稱
     public var iCloudAccountName: String {
         // Mac / Mac Catalyst 上，系統使用者全名即為 Apple/iCloud 帳號名稱
@@ -110,19 +198,8 @@ public final class AccountManager: ObservableObject {
         }
 
         #if canImport(UIKit)
-        let deviceName = UIDevice.current.name.trimmingCharacters(in: .whitespacesAndNewlines)
-        // 嘗試從常見命名規則如「XXX 的 iPad / iPhone」或「XXX's iPad / iPhone」萃取名稱
-        let pattern = #"^(.*?)(?:'s| 的| の)\s*(?:iPhone|iPad|iPod|Mac).*"#
-        if let regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive),
-           let match = regex.firstMatch(in: deviceName, options: [], range: NSRange(location: 0, length: deviceName.utf16.count)),
-           let range = Range(match.range(at: 1), in: deviceName) {
-            let extracted = String(deviceName[range]).trimmingCharacters(in: .whitespacesAndNewlines)
-            if !extracted.isEmpty {
-                return extracted
-            }
-        }
-        if !deviceName.isEmpty && deviceName != "iPhone" && deviceName != "iPad" {
-            return deviceName
+        if let extracted = AccountManager.extractAppleAccountName(fromDeviceName: UIDevice.current.name) {
+            return extracted
         }
         #endif
 
@@ -136,24 +213,16 @@ public final class AccountManager: ObservableObject {
 
     /// 根據同步登入狀態刷新名稱：
     /// 若有登入 Google Drive 或 iCloud，自動以該帳號名稱為使用者名稱；
+    /// 若兩者同時登入，以 Apple (iCloud) 為預設；
     /// 若無同步登入，維持現狀（使用者自訂名稱）。
     public func refreshDisplayName() {
-        if GoogleAuth.shared.isSignedIn {
-            if let cloudName = activeCloudAccountName, !cloudName.isEmpty {
-                if profile.displayName != cloudName {
-                    profile.displayName = cloudName
-                }
-            } else {
-                Task {
-                    await GoogleAuth.shared.refreshAccountEmail()
-                }
-            }
-            return
-        }
-
         if let cloudName = activeCloudAccountName, !cloudName.isEmpty {
             if profile.displayName != cloudName {
                 profile.displayName = cloudName
+            }
+        } else if GoogleAuth.shared.isSignedIn && (!isICloudSignedIn || cloudProviderPreference == .googleDrive) {
+            Task {
+                await GoogleAuth.shared.refreshAccountEmail()
             }
         } else {
             let manual = customDisplayName.isEmpty
@@ -280,7 +349,7 @@ public struct AccountProfileSheet: View {
                             Text(cloudName)
                                 .foregroundColor(.primary)
                             Spacer()
-                            Text(GoogleAuth.shared.isSignedIn ? "Google Drive" : "iCloud")
+                            Text(accountManager.activeCloudProviderBadge ?? (GoogleAuth.shared.isSignedIn ? "Google Drive" : "iCloud"))
                                 .font(.caption2)
                                 .fontWeight(.medium)
                                 .padding(.horizontal, 6)
@@ -288,6 +357,21 @@ public struct AccountProfileSheet: View {
                                 .background(Color.accentColor.opacity(0.12))
                                 .foregroundColor(.accentColor)
                                 .cornerRadius(4)
+                        }
+
+                        if accountManager.hasBothCloudsSignedIn {
+                            Picker(localizationManager.currentLanguage == .zhHant ? "同步身分來源" : "Identity Source", selection: Binding(
+                                get: { accountManager.cloudProviderPreference },
+                                set: { pref in
+                                    accountManager.cloudProviderPreference = pref
+                                    tempDisplayName = accountManager.activeCloudAccountName ?? tempDisplayName
+                                }
+                            )) {
+                                Text("Apple (iCloud)").tag(AccountManager.CloudProviderPreference.iCloud)
+                                Text("Google Drive").tag(AccountManager.CloudProviderPreference.googleDrive)
+                            }
+                            .pickerStyle(.segmented)
+                            .padding(.top, 4)
                         }
                     } else if GoogleAuth.shared.isSignedIn {
                         HStack {
@@ -315,7 +399,11 @@ public struct AccountProfileSheet: View {
                 } header: {
                     Text(localizationManager.localized("identity_title"))
                 } footer: {
-                    if GoogleAuth.shared.isSignedIn || accountManager.activeCloudAccountName != nil {
+                    if accountManager.hasBothCloudsSignedIn {
+                        Text(localizationManager.currentLanguage == .zhHant
+                             ? "已同時登入 iCloud 與 Google Drive，預設採用 Apple (iCloud) 帳號名稱，可自由切換。"
+                             : "Both iCloud and Google Drive are signed in. Apple (iCloud) name is used by default.")
+                    } else if accountManager.activeCloudAccountName != nil {
                         Text(localizationManager.currentLanguage == .zhHant
                              ? "已登入同步帳號，首頁「使用者」名稱已自動採用該帳號名稱。"
                              : localizationManager.localized("identity_desc"))
