@@ -435,6 +435,17 @@ final class AdaptiveCanvasView: PKCanvasView {
     /// Mac Catalyst 上跑同一份程式碼，而 Catalyst 沒有直接可用的 `NSCursor`。
     var brushPointerPath: UIBezierPath?
 
+    private var lastPointerTool: EditorToolType?
+    private var lastPointerStrokeWidth: CGFloat?
+
+    func refreshPointer(for tool: EditorToolType, strokeWidth: CGFloat) {
+        guard tool != lastPointerTool || abs((lastPointerStrokeWidth ?? 0) - strokeWidth) > 0.05 else { return }
+        lastPointerTool = tool
+        lastPointerStrokeWidth = strokeWidth
+        brushPointerPath = BrushCursor.path(for: tool, strokeWidth: strokeWidth)
+        pointerInteractions.forEach { $0.invalidate() }
+    }
+
     func refreshPointer(_ path: UIBezierPath?) {
         brushPointerPath = path
         // 讓系統重新問一次要顯示什麼游標。不呼叫的話，換了筆刷游標仍是舊的，
@@ -1079,7 +1090,7 @@ struct CanvasRepresentable: UIViewRepresentable {
             return snap.didSnap ? snap.snappedPoint : nil
         }
         canvas.installHoverPreviewIfNeeded(coordinator: context.coordinator.penHover)
-        canvas.refreshPointer(BrushCursor.path(for: selectedTool, strokeWidth: strokeWidth))
+        canvas.refreshPointer(for: selectedTool, strokeWidth: strokeWidth)
         canvas.pageContentHeight = PageGeometry.height
         canvas.contentSize = CGSize(width: max(canvas.bounds.width, 1), height: canvas.pageContentHeight)
 
@@ -1218,7 +1229,7 @@ struct CanvasRepresentable: UIViewRepresentable {
         if let adaptive = uiView as? AdaptiveCanvasView {
             adaptive.onPencilTouchBegan = onPencilTouchBegan
             adaptive.installPointerInteractionIfNeeded(delegate: context.coordinator)
-            adaptive.refreshPointer(BrushCursor.path(for: selectedTool, strokeWidth: strokeWidth))
+            adaptive.refreshPointer(for: selectedTool, strokeWidth: strokeWidth)
         }
 
         if uiView.drawing != drawing {
@@ -7542,15 +7553,20 @@ public struct NotebookEditorView: View {
 
     /// 點擊筆刷或繪圖工具時，在工具列緊鄰處顯示微型快顯提示，提示該工具名稱。
     private func flashToolToast(for tool: EditorToolType) {
+        // 若工具列已有文字標籤，使用者已能清楚辨識工具名稱，不重複彈出快顯遮罩以保證極致流暢
+        guard !toolbarSettings.showLabels else {
+            if activeToolToast != nil { activeToolToast = nil }
+            return
+        }
         let localizedName = localizationManager.localized(tool.localizationKey)
         toolToastToken += 1
         let token = toolToastToken
-        withAnimation(.spring(response: 0.28, dampingFraction: 0.78)) {
+        withAnimation(.spring(response: 0.24, dampingFraction: 0.82)) {
             activeToolToast = (name: localizedName, icon: tool.iconName)
         }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.3) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
             guard toolToastToken == token else { return }
-            withAnimation(.easeInOut(duration: 0.24)) {
+            withAnimation(.easeInOut(duration: 0.2)) {
                 activeToolToast = nil
             }
         }
@@ -7570,12 +7586,12 @@ public struct NotebookEditorView: View {
             }
             .padding(.horizontal, 10)
             .padding(.vertical, 4)
-            .background(.ultraThinMaterial, in: Capsule())
+            .background(Color(uiColor: .secondarySystemGroupedBackground), in: Capsule())
             .overlay(
                 Capsule().stroke(Color.accentColor.opacity(0.4), lineWidth: 1)
             )
-            .shadow(color: Color.black.opacity(0.12), radius: 6, y: 2)
-            .transition(.scale(scale: 0.85).combined(with: .opacity))
+            .shadow(color: Color.black.opacity(0.12), radius: 4, y: 1)
+            .transition(.scale(scale: 0.9).combined(with: .opacity))
             .allowsHitTesting(false)
             .padding(.horizontal, 16)
             .padding(.vertical, 4)
@@ -7764,9 +7780,7 @@ public struct NotebookEditorView: View {
                 HStack(spacing: 6) {
                     ForEach(EditorToolType.allCases.filter { toolbarSettings.isVisible($0.parityIdentifier) }) { tool in
                         Button {
-                            withAnimation(.spring(response: 0.32, dampingFraction: 0.72)) {
-                                selectEditorTool(tool)
-                            }
+                            selectEditorTool(tool)
                         } label: {
                             VStack(spacing: 2) {
                                 Image(systemName: tool.iconName)
@@ -7976,9 +7990,7 @@ public struct NotebookEditorView: View {
     @ViewBuilder
     private func brushToolButton(_ tool: EditorToolType, showToolLabels: Bool) -> some View {
         Button {
-            withAnimation(.spring(response: 0.32, dampingFraction: 0.72)) {
-                selectEditorTool(tool)
-            }
+            selectEditorTool(tool)
         } label: {
             VStack(spacing: 2) {
                 BrushToolContent(tool: tool, isSelected: selectedTool == tool, ink: selectedColor)

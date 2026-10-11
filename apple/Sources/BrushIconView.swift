@@ -35,14 +35,53 @@ extension EditorToolType {
     }
 }
 
-/// 一支筆的向量圖示。`ink` 是使用者目前的筆色：圖示裡標成 `currentColor` 的部分（含漸層色標）會跟著換色。
+///// 一支筆的向量圖示。`ink` 是使用者目前的筆色：圖示裡標成 `currentColor` 的部分（含漸層色標）會跟著換色。
 struct BrushVectorIcon: View {
     let tool: EditorToolType
     let ink: Color
 
+    private struct CachedShape {
+        let path: Path
+        let opacity: Double
+        let fill: FfiPaint
+        let stroke: FfiPaint
+        let strokeWidth: CGFloat
+        let roundCap: Bool
+    }
+    private static var parsedShapesCache: [EditorToolType: [CachedShape]] = [:]
+
+    private static func cachedShapes(for tool: EditorToolType) -> [CachedShape] {
+        if let hit = parsedShapesCache[tool] { return hit }
+        let shapes = shapes(for: tool)
+        let parsed = shapes.map { shape in
+            var path = Path()
+            for command in shape.commands {
+                let a = command.args
+                switch command.op {
+                case "M": path.move(to: CGPoint(x: CGFloat(a[0]), y: CGFloat(a[1])))
+                case "L": path.addLine(to: CGPoint(x: CGFloat(a[0]), y: CGFloat(a[1])))
+                case "C": path.addCurve(to: CGPoint(x: CGFloat(a[4]), y: CGFloat(a[5])),
+                                        control1: CGPoint(x: CGFloat(a[0]), y: CGFloat(a[1])),
+                                        control2: CGPoint(x: CGFloat(a[2]), y: CGFloat(a[3])))
+                case "Z": path.closeSubpath()
+                default: break
+                }
+            }
+            return CachedShape(
+                path: path,
+                opacity: Double(shape.opacity),
+                fill: shape.fill,
+                stroke: shape.stroke,
+                strokeWidth: CGFloat(shape.strokeWidth),
+                roundCap: shape.roundCap
+            )
+        }
+        parsedShapesCache[tool] = parsed
+        return parsed
+    }
+
     var body: some View {
-        // 解析一次就好：核心每次呼叫都會重新讀 SVG。
-        let shapes = Self.shapes(for: tool)
+        let shapes = Self.cachedShapes(for: tool)
         let inkRGB = Self.rgb(of: ink)
         Canvas { context, size in
             let scale = min(size.width, size.height) / 48
@@ -50,28 +89,20 @@ struct BrushVectorIcon: View {
             func point(_ x: Float, _ y: Float) -> CGPoint {
                 CGPoint(x: origin.x + CGFloat(x) * scale, y: origin.y + CGFloat(y) * scale)
             }
+            let transform = CGAffineTransform(translationX: origin.x, y: origin.y)
+                .scaledBy(x: scale, y: scale)
             for shape in shapes {
-                var path = Path()
-                for command in shape.commands {
-                    let a = command.args
-                    switch command.op {
-                    case "M": path.move(to: point(a[0], a[1]))
-                    case "L": path.addLine(to: point(a[0], a[1]))
-                    case "C": path.addCurve(to: point(a[4], a[5]), control1: point(a[0], a[1]), control2: point(a[2], a[3]))
-                    case "Z": path.closeSubpath()
-                    default: break
-                    }
-                }
+                let transformedPath = shape.path.applying(transform)
                 var layer = context
-                layer.opacity = Double(shape.opacity)
+                layer.opacity = shape.opacity
                 if let fill = Self.shading(shape.fill, ink: ink, inkRGB: inkRGB, scale: scale, point: point) {
-                    layer.fill(path, with: fill)
+                    layer.fill(transformedPath, with: fill)
                 }
                 if let stroke = Self.shading(shape.stroke, ink: ink, inkRGB: inkRGB, scale: scale, point: point) {
                     layer.stroke(
-                        path, with: stroke,
+                        transformedPath, with: stroke,
                         style: StrokeStyle(
-                            lineWidth: CGFloat(shape.strokeWidth) * scale,
+                            lineWidth: shape.strokeWidth * scale,
                             lineCap: shape.roundCap ? .round : .butt, lineJoin: .round))
                 }
             }
@@ -138,9 +169,18 @@ struct BrushStrokePreview: View {
     let tool: EditorToolType
     let ink: Color
 
+    private static var dabsCache: [EditorToolType: [FfiDab]] = [:]
+
+    private static func cachedDabs(for tool: EditorToolType, width: Float, height: Float) -> [FfiDab] {
+        if let hit = dabsCache[tool] { return hit }
+        let dabs = brushPreviewDabs(tool: tool.ffiTool, width: width, height: height)
+        dabsCache[tool] = dabs
+        return dabs
+    }
+
     var body: some View {
         Canvas { context, size in
-            let dabs = brushPreviewDabs(tool: tool.ffiTool, width: Float(size.width), height: Float(size.height))
+            let dabs = Self.cachedDabs(for: tool, width: Float(size.width), height: Float(size.height))
             guard !dabs.isEmpty else { return }
             let resolved = UIColor(ink).resolvedColor(with: .current)
             var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
@@ -185,7 +225,6 @@ struct BrushToolContent: View {
             BrushVectorIcon(tool: tool, ink: ink)
                 .frame(width: 44, height: 44)
                 .offset(y: isSelected ? -6 : 0)
-                .shadow(color: .black.opacity(isSelected ? 0.25 : 0), radius: 4, x: 0, y: 4)
             if tool.isBrush {
                 BrushStrokePreview(tool: tool, ink: ink)
                     .frame(width: 44, height: 14)
@@ -195,8 +234,9 @@ struct BrushToolContent: View {
         .background(
             RoundedRectangle(cornerRadius: 8)
                 .fill(Color.accentColor.opacity(isSelected ? 0.14 : 0))
+                .shadow(color: Color.black.opacity(isSelected ? 0.18 : 0), radius: 3, x: 0, y: 2)
         )
-        .animation(.spring(response: 0.3, dampingFraction: 0.75), value: isSelected)
+        .animation(.spring(response: 0.25, dampingFraction: 0.8), value: isSelected)
         .contentShape(Rectangle())
     }
 }
