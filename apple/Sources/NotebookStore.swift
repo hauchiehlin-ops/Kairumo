@@ -3553,7 +3553,12 @@ public final class NotebookStore: ObservableObject {
             guard let incoming = titles[key],
                   !incoming.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
                   incoming != recordings[index].title else { continue }
-            if let exported, let was = exported[key], recordings[index].title != was { continue }
+            if let exported, let was = exported[key], recordings[index].title != was {
+                // 如果本機現有名稱只是通用名稱（如「快速錄音」），而遠端送來具體名稱，不能被 exported 擋下
+                if !Self.isGenericOrQuickRecordTitle(recordings[index].title) {
+                    continue
+                }
+            }
             recordings[index].title = incoming
             changed = true
         }
@@ -3563,7 +3568,9 @@ public final class NotebookStore: ObservableObject {
             let clean = incoming.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !clean.isEmpty else { continue }
             if let exported, let was = exported[key], let currentRec = recordings.first(where: { $0.fileName.lowercased() == key }), currentRec.title != was && currentRec.title != clean {
-                continue
+                if !Self.isGenericOrQuickRecordTitle(currentRec.title) {
+                    continue
+                }
             }
             for notebookIndex in notebooks.indices {
                 guard var cards = notebooks[notebookIndex].audioAttachments else { continue }
@@ -3616,6 +3623,50 @@ public final class NotebookStore: ObservableObject {
         }
     }
 
+    /// 新快速錄音的預設名稱：「語音錄音與對齊 日期時間」（與 iPad 首頁保持一致）。
+    static func defaultQuickRecordingTitle(at date: Date = Date()) -> String {
+        let label = LocalizationManager.localizedString("quick_record_title")
+        return "\(label) \(LocalizationManager.formatted(date, date: .numeric, time: .shortened))"
+    }
+
+    /// 判斷標題是否為尚未經使用者自訂命名的通用「快速錄音」佔位標題。
+    static func isGenericOrQuickRecordTitle(_ title: String) -> Bool {
+        let clean = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        if clean.isEmpty { return true }
+        let quickRecord = LocalizationManager.localizedString("quick_record").trimmingCharacters(in: .whitespacesAndNewlines)
+        let inbox = LocalizationManager.localizedString("recording_inbox").trimmingCharacters(in: .whitespacesAndNewlines)
+        if clean == quickRecord || clean == inbox { return true }
+        if clean.caseInsensitiveCompare("快速錄音") == .orderedSame ||
+           clean.caseInsensitiveCompare("Quick Record") == .orderedSame ||
+           clean.caseInsensitiveCompare("Quick Recording") == .orderedSame ||
+           clean.caseInsensitiveCompare("錄音") == .orderedSame {
+            return true
+        }
+        return false
+    }
+
+    /// 讀出一個套件裡的全部 `rectitle` 錄音標題（與 Android `RecordingIndex.titlesIn` 100% 對齊）。
+    static func packageRecordingTitles(packageURL: URL, deviceId: UInt32 = 0) -> [String: String] {
+        guard FileManager.default.fileExists(atPath: packageURL.path) else { return [:] }
+        guard let session = try? PadnoteSession.openExisting(path: packageURL.path, deviceId: deviceId) else {
+            return [:]
+        }
+        guard let pageId = (try? session.pageIdAt(index: 0)) else { return [:] }
+        var titles: [String: String] = [:]
+        guard let imageBlocks = try? session.imageBlockIds(pageId: pageId) else { return [:] }
+        for blockId in imageBlocks {
+            guard let appearance = try? session.blockAppearance(blockId: blockId) else { continue }
+            if ObjectEnvelope.kind(of: appearance) == "rectitle",
+               let item = ObjectEnvelope.decode(RecordingTitle.self, kind: "rectitle", from: appearance) {
+                let clean = item.title.trimmingCharacters(in: .whitespacesAndNewlines)
+                if !clean.isEmpty {
+                    titles[item.fileName.lowercased()] = clean
+                }
+            }
+        }
+        return titles
+    }
+
     /// 新錄音的預設名稱：「錄音 日期時間」。
     ///
     /// **不帶筆記本名稱。** 原本是「<筆記本名> 錄音」，於是在名為「mac建立」的筆記本裡錄的音，
@@ -3646,35 +3697,54 @@ public final class NotebookStore: ObservableObject {
 
         for doc in targets {
             let isInbox = doc.id.caseInsensitiveCompare(inboxId) == .orderedSame
-            let audioDir = corePackagesDirectory
+            let packageURL = corePackagesDirectory
                 .appending(path: "\(doc.id.lowercased()).padnote")
-                .appending(path: "media/audio")
+            let packageTitles = Self.packageRecordingTitles(packageURL: packageURL)
+            let audioDir = packageURL.appending(path: "media/audio")
             let files = (try? fm.contentsOfDirectory(
                 at: audioDir, includingPropertiesForKeys: [.contentModificationDateKey]))?
                 .filter { $0.pathExtension.lowercased() == "opus" } ?? []
             for file in files {
                 let name = file.lastPathComponent
-                if let existing = byFileName[name.lowercased()] {
+                let lowerName = name.lowercased()
+                let bytes = (try? Data(contentsOf: file)) ?? Data()
+                let realSeconds = Int(audioDurationSeconds(bytes: bytes))
+                let candidateTitle = packageTitles[lowerName] ?? unmatchedIncomingTitles[lowerName]
+
+                if let existing = byFileName[lowerName] {
                     var updated = existing
                     if updated.linkedNotebookId == nil {
                         updated.linkedNotebookId = doc.id
                     }
+                    // 1. 真實時長校正：實體音檔是唯一事實來源，若現存時長不符或為 0 則校正為真實秒數
+                    if realSeconds > 0 && updated.durationSeconds != realSeconds {
+                        updated.durationSeconds = realSeconds
+                    }
+                    // 2. 標題校正：若本機標題為通用名稱（如「快速錄音」），且套件或遠端有具體名稱，自動採納
+                    if let named = candidateTitle, !named.isEmpty {
+                        if Self.isGenericOrQuickRecordTitle(updated.title) || updated.title != named {
+                            if Self.isGenericOrQuickRecordTitle(updated.title) || !Self.isGenericOrQuickRecordTitle(named) {
+                                updated.title = named
+                            }
+                        }
+                    }
                     scanned.append(updated)
-                    byFileName.removeValue(forKey: name.lowercased())
+                    byFileName.removeValue(forKey: lowerName)
+                    unmatchedIncomingTitles.removeValue(forKey: lowerName)
                     continue
                 }
                 // 從別台同步過來的：索引裡沒有，要補一筆才看得到。
                 // 長度走核心算 —— 兩個平台各自問系統 API 的話，
                 // 同一段錄音會顯示不同的秒數，而使用者會以為同步壞了。
-                let bytes = (try? Data(contentsOf: file)) ?? Data()
-                let seconds = Int(audioDurationSeconds(bytes: bytes))
+                let seconds = realSeconds > 0 ? realSeconds : Int(audioDurationSeconds(bytes: bytes))
                 let modified = (try? file.resourceValues(forKeys: [.contentModificationDateKey]))?
                     .contentModificationDate ?? Date()
                 let title: String
-                if let named = unmatchedIncomingTitles.removeValue(forKey: name.lowercased()) {
+                if let named = candidateTitle, !named.isEmpty {
                     title = named
+                    unmatchedIncomingTitles.removeValue(forKey: lowerName)
                 } else if isInbox {
-                    title = LocalizationManager.shared.localized("quick_record")
+                    title = Self.defaultQuickRecordingTitle(at: modified)
                 } else {
                     // 不放筆記本名稱：錄音檔是獨立的東西，它在「錄音」清單裡以時間辨識。
                     // 把筆記本名稱放在最前面，會讓每一段錄音的名字都以同一個詞開頭，

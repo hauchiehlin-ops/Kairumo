@@ -78,4 +78,32 @@ final class PlatformContractTests: XCTestCase {
         // 所以只斷言「不會當掉」與型別正確。
         _ = DocumentPickerPresenter.canPresent()
     }
+
+    /// 驗證首頁「使用者」身分：未登入同步時維持自訂編輯名稱；登入雲端同步時自動採用帳號名稱。
+    func testAccountManagerSyncDisplayNameParity() {
+        let accountManager = AccountManager.shared
+        let originalCustom = accountManager.customDisplayName
+        defer {
+            accountManager.updateDisplayName(originalCustom)
+            accountManager.refreshDisplayName()
+        }
+
+        // 1. 自訂編輯名稱
+        accountManager.updateDisplayName("測試筆記家")
+        XCTAssertEqual(accountManager.customDisplayName, "測試筆記家")
+
+        // 2. 測試雲端帳號生效時的自動切換（若有 activeCloudAccountName 則優先採用）
+        if let cloudName = accountManager.activeCloudAccountName, !cloudName.isEmpty {
+            accountManager.refreshDisplayName()
+            XCTAssertEqual(accountManager.profile.displayName, cloudName)
+        } else {
+            accountManager.refreshDisplayName()
+            XCTAssertEqual(accountManager.profile.displayName, "測試筆記家")
+        }
+
+        // 3. 空白名稱自動回退
+        accountManager.updateDisplayName("   ")
+        let fallback = LocalizationManager.shared.localized("default_user_name")
+        XCTAssertEqual(accountManager.customDisplayName, fallback)
+    }
 }

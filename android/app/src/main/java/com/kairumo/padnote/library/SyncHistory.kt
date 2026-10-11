@@ -21,6 +21,7 @@ object SyncHistory {
     private const val KEY_GOOGLE_AT = "lastGoogleAt"
     private const val KEY_FOLDER_AT = "lastFolderAt"
     private const val KEY_ACCOUNT = "accountEmail"
+    private const val KEY_ACCOUNT_NAME = "accountName"
 
     private fun prefs(context: Context) =
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
@@ -37,7 +38,7 @@ object SyncHistory {
      * 記下這些筆記正在同步到**誰的** Drive。
      *
      * 不需要新增授權範圍：Drive 的 `about.get` 在 `drive.appdata` 底下
-     * 就讀得到 `user.emailAddress`。多要一個 `openid email` 只為了顯示
+     * 就讀得到 `user.emailAddress` 與 `user.displayName`。多要一個 `openid email` 只為了顯示
      * 一行字，與這個 App 的定位相反。
      */
     fun setAccount(context: Context, email: String?) {
@@ -47,6 +48,17 @@ object SyncHistory {
     }
 
     fun account(context: Context): String? = prefs(context).getString(KEY_ACCOUNT, null)
+
+    fun setAccountName(context: Context, name: String?) {
+        val editor = prefs(context).edit()
+        if (name.isNullOrEmpty()) editor.remove(KEY_ACCOUNT_NAME) else editor.putString(KEY_ACCOUNT_NAME, name)
+        editor.apply()
+    }
+
+    fun accountName(context: Context): String? {
+        return prefs(context).getString(KEY_ACCOUNT_NAME, null)
+            ?: if (com.kairumo.padnote.oauth.FakeDrive.enabled) "Fake Drive User" else null
+    }
 
     fun lastGoogleSync(context: Context, none: String): String =
         describe(prefs(context).getLong(KEY_GOOGLE_AT, 0L), none)

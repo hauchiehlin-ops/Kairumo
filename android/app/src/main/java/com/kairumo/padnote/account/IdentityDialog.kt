@@ -36,6 +36,7 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun IdentityDialog(
     profile: AccountManager.Profile,
+    isCloudBound: Boolean = false,
     l: (String) -> String,
     onDismiss: () -> Unit,
     onSave: (String, String) -> Unit
@@ -48,14 +49,30 @@ fun IdentityDialog(
         title = { Text(l("edit_identity")) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                OutlinedTextField(
-                    value = name,
-                    onValueChange = { name = it },
-                    label = { Text(l("default_user_name")) },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Text(l("identity_desc"), style = MaterialTheme.typography.bodySmall)
+                if (isCloudBound) {
+                    OutlinedTextField(
+                        value = profile.displayName,
+                        onValueChange = {},
+                        enabled = false,
+                        label = { Text("Google Drive") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Text(
+                        "已登入 Google Drive，首頁「使用者」名稱已自動採用該帳號名稱。",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                } else {
+                    OutlinedTextField(
+                        value = name,
+                        onValueChange = { name = it },
+                        label = { Text(l("default_user_name")) },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Text(l("identity_desc"), style = MaterialTheme.typography.bodySmall)
+                }
                 FlowRow(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)

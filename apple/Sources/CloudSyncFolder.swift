@@ -105,6 +105,7 @@ enum CloudSyncFolder {
         _lastBookmarkData = data
         Task { @MainActor in
             CloudSyncFolderMonitor.shared.refresh()
+            AccountManager.shared.refreshDisplayName()
         }
     }
 
@@ -114,6 +115,7 @@ enum CloudSyncFolder {
         _lastBookmarkData = nil
         Task { @MainActor in
             CloudSyncFolderMonitor.shared.refresh()
+            AccountManager.shared.refreshDisplayName()
         }
     }
 

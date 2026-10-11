@@ -50,9 +50,24 @@ public final class GoogleAuth: NSObject, ObservableObject {
     /// Drive 的 `about.get` 在 `drive.appdata` 這個範圍底下就讀得到
     /// `user.emailAddress` —— **不需要 `openid email`**，也就不必讓使用者
     /// 重新同意一次。多要一個範圍只為了顯示一行字，與這個 App 的定位相反。
+    /// 這些筆記正在同步到**誰的** Drive。
+    ///
+    /// # 為什麼要顯示它
+    ///
+    /// 同步頁原本只有「已登入 / 尚未登入」兩種狀態 —— 使用者看不出來
+    /// 資料進了哪一個帳號。一台裝置上有兩個 Google 帳號是常態，
+    /// 而「同步好像沒作用」最常見的真正原因就是兩台連到了不同帳號。
+    ///
+    /// # 為什麼不必新增授權範圍
+    ///
+    /// Drive 的 `about.get` 在 `drive.appdata` 這個範圍底下就讀得到
+    /// `user.emailAddress` 與 `user.displayName` —— **不需要 `openid email`**，
+    /// 也就不必讓使用者重新同意一次。多要一個範圍只為了顯示一行字，與這個 App 的定位相反。
     @Published public private(set) var accountEmail: String?
+    @Published public private(set) var accountName: String?
 
     private let accountEmailKey = "kairumo.google.accountEmail"
+    private let accountNameKey = "kairumo.google.accountName"
 
     private var session: ASWebAuthenticationSession?
     /// 授權期間暫存的 PKCE。**不落盤** —— 它只在這一次授權裡有意義。
@@ -65,6 +80,7 @@ public final class GoogleAuth: NSObject, ObservableObject {
         if FakeDrive.isEnabled {
             isSignedIn = true
             accountEmail = FakeDrive.accountEmail
+            accountName = "Fake Drive User"
             return
         }
         isSignedIn = !KeychainTokens.load().refreshToken.isEmpty
@@ -72,6 +88,9 @@ public final class GoogleAuth: NSObject, ObservableObject {
         // 登出時忘了清會留下一個「已登出但還顯示著帳號」的狀態。
         accountEmail = isSignedIn
             ? UserDefaults.standard.string(forKey: accountEmailKey)
+            : nil
+        accountName = isSignedIn
+            ? UserDefaults.standard.string(forKey: accountNameKey)
             : nil
     }
 
@@ -86,11 +105,20 @@ public final class GoogleAuth: NSObject, ObservableObject {
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         guard let (data, _) = try? await URLSession.shared.data(for: request),
               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let user = json["user"] as? [String: Any],
-              let email = user["emailAddress"] as? String, !email.isEmpty
+              let user = json["user"] as? [String: Any]
         else { return }
-        accountEmail = email
-        UserDefaults.standard.set(email, forKey: accountEmailKey)
+        let email = user["emailAddress"] as? String
+        if let email, !email.isEmpty {
+            accountEmail = email
+            UserDefaults.standard.set(email, forKey: accountEmailKey)
+        }
+        let displayName = (user["displayName"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let effectiveName = (displayName != nil && !displayName!.isEmpty) ? displayName! : (accountEmail ?? "")
+        if !effectiveName.isEmpty {
+            accountName = effectiveName
+            UserDefaults.standard.set(effectiveName, forKey: accountNameKey)
+        }
+        AccountManager.shared.refreshDisplayName()
     }
 
     public enum Failure: LocalizedError {
@@ -340,15 +368,21 @@ public final class GoogleAuth: NSObject, ObservableObject {
         KeychainTokens.clear()
         isSignedIn = false
         accountEmail = nil
+        accountName = nil
         UserDefaults.standard.removeObject(forKey: accountEmailKey)
+        UserDefaults.standard.removeObject(forKey: accountNameKey)
+        AccountManager.shared.refreshDisplayName()
     }
 
     public nonisolated func markNeedsReauthSync() {
         KeychainTokens.clear()
         UserDefaults.standard.removeObject(forKey: "kairumo.account.googleEmail")
+        UserDefaults.standard.removeObject(forKey: "kairumo.google.accountName")
         DispatchQueue.main.async {
             GoogleAuth.shared.isSignedIn = false
             GoogleAuth.shared.accountEmail = nil
+            GoogleAuth.shared.accountName = nil
+            AccountManager.shared.refreshDisplayName()
         }
     }
 
@@ -369,7 +403,10 @@ public final class GoogleAuth: NSObject, ObservableObject {
         await MainActor.run {
             isSignedIn = false
             accountEmail = nil
+            accountName = nil
             UserDefaults.standard.removeObject(forKey: accountEmailKey)
+            UserDefaults.standard.removeObject(forKey: accountNameKey)
+            AccountManager.shared.refreshDisplayName()
         }
     }
 

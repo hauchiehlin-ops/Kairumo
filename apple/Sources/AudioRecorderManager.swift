@@ -501,7 +501,7 @@ public final class AudioRecorderManager: NSObject, ObservableObject, AVAudioReco
     /// `audioDurationSeconds`（四捨五入）：同一段錄音在 iPad 寫 00:06、在 Mac 寫 00:05。
     /// 兩邊都從檔案算同一個函式，數字才一定一樣。讀不出來（檔案還沒寫完、格式不認得）才退回計時器。
     nonisolated static func displaySeconds(of url: URL, fallback: TimeInterval) -> Int {
-        if let data = try? Data(contentsOf: url, options: .mappedIfSafe) {
+        if let data = try? Data(contentsOf: url) {
             let seconds = Int(audioDurationSeconds(bytes: data))
             if seconds > 0 { return seconds }
         }

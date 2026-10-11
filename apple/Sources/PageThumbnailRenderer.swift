@@ -197,9 +197,9 @@ public enum PageThumbnailRenderer {
             // 物件：照畫布的堆疊順序（`objectOrder`，沒排過的照型別預設層級），不是寫死的型別順序。
             // 原本固定「圖片 → 形狀 → 表格 → 文字…」，使用者在圖層面板把文字拉到圖片下面，匯出卻還是在上面。
             let stacking = ObjectStacking.Lookup(order: notebook.objectOrder(forPage: pageIndex))
-            var layers: [(id: String, z: Double, draw: () -> Void)] = []
+            var layers: [(id: String, kind: StackableObject.Kind, z: Double, draw: () -> Void)] = []
             func add(_ id: String, _ kind: StackableObject.Kind, _ draw: @escaping () -> Void) {
-                layers.append((id, stacking.zIndex(for: id, kind: kind), draw))
+                layers.append((id, kind, stacking.zIndex(for: id, kind: kind), draw))
             }
             let pageShapes = (notebook.shapeAttachments ?? []).filter { $0.pageIndex == pageIndex }
             for item in notebook.attachments ?? [] where item.pageIndex == pageIndex {
@@ -209,11 +209,11 @@ public enum PageThumbnailRenderer {
             for item in notebook.connectionAttachments ?? [] where item.pageIndex == pageIndex {
                 guard let from = pageShapes.first(where: { $0.id == item.fromShapeId }),
                       let to = pageShapes.first(where: { $0.id == item.toShapeId }) else {
-                    layers.append((item.id, Double.greatestFiniteMagnitude, { drawConnection(item, shapes: pageShapes, ctx: ctx) }))
+                    layers.append((item.id, .shape, Double.greatestFiniteMagnitude, { drawConnection(item, shapes: pageShapes, ctx: ctx) }))
                     continue
                 }
                 let z = min(stacking.zIndex(for: from.id, kind: .shape), stacking.zIndex(for: to.id, kind: .shape)) - 0.1
-                layers.append((item.id, z, { drawConnection(item, shapes: pageShapes, ctx: ctx) }))
+                layers.append((item.id, .shape, z, { drawConnection(item, shapes: pageShapes, ctx: ctx) }))
             }
             for item in pageShapes { add(item.id, .shape) { drawShape(item, ctx: ctx) } }
             for item in notebook.tableAttachments ?? [] where item.pageIndex == pageIndex {
@@ -249,11 +249,15 @@ public enum PageThumbnailRenderer {
             // 2. 墨跡與其餘物件誰在上面，跟著模式與層級配置：
             let remainingLayers = sortedLayers.filter { !underInkIds.contains($0.element.id) }
             if inkOnTop {
-                for entry in remainingLayers {
+                // 手寫繪圖模式：圖片預設在墨跡之下（在照片上圈劃重點），其餘物件（文字方塊、圖釘等）保持在墨跡之上
+                for entry in remainingLayers where entry.element.kind == .image {
                     entry.element.draw()
                 }
                 drawInk()
                 drawTapes()
+                for entry in remainingLayers where entry.element.kind != .image {
+                    entry.element.draw()
+                }
             } else {
                 drawInk()
                 drawTapes()

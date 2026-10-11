@@ -63,6 +63,7 @@ class NotebookMeta private constructor(private var root: JSONObject) {
 
     companion object {
         private const val KEY_ORDER_BY_PAGE = "objectOrderByPage"
+        private const val KEY_UNDER_INK_BY_PAGE = "underInkObjectIdsByPage"
         /** v3.8.0 的舊欄位：整本一份。只讀不寫，見 format-spec §6.2.1。 */
         private const val KEY_LEGACY_ORDER = "objectOrder"
         private const val KEY_COMMENT_PINS = "commentPins"
@@ -262,6 +263,26 @@ class NotebookMeta private constructor(private var root: JSONObject) {
             root.put(KEY_ORDER_BY_PAGE, remapped)
         }
 
+        // 筆跡下方物件名單（鍵就是頁碼）
+        val under = root.optJSONObject(KEY_UNDER_INK_BY_PAGE)
+        if (under != null) {
+            val remapped = JSONObject()
+            val keys = under.keys()
+            while (keys.hasNext()) {
+                val key = keys.next()
+                val index = key.toIntOrNull()
+                if (index == null || index >= totalPages) {
+                    remapped.put(key, under.get(key))
+                    continue
+                }
+                val dest = uniffi.padnote_core.pageIndexAfterMove(
+                    index.toUInt(), from.toUInt(), to.toUInt()
+                ).toInt()
+                remapped.put(dest.toString(), under.get(key))
+            }
+            root.put(KEY_UNDER_INK_BY_PAGE, remapped)
+        }
+
         flush(session)
     }
 
@@ -278,6 +299,27 @@ class NotebookMeta private constructor(private var root: JSONObject) {
             currentTemplates.removeAt(atIndex)
         }
         root.put(KEY_PAGE_TEMPLATES, JSONArray(currentTemplates))
+        flush(session)
+    }
+
+    /**
+     * 某一頁位於手寫筆跡下方的物件 ID 清單（背景層）。
+     */
+    fun underInkObjectIds(pageIndex: Int): Set<String> {
+        val map = root.optJSONObject(KEY_UNDER_INK_BY_PAGE) ?: return emptySet()
+        val arr = map.optJSONArray(pageIndex.toString()) ?: return emptySet()
+        return arr.toStringList().toSet()
+    }
+
+    /** 寫入某一頁位於筆跡下方的物件清單並落盤。 */
+    fun setUnderInkObjectIds(session: PadnoteSession?, pageIndex: Int, ids: Set<String>) {
+        val map = root.optJSONObject(KEY_UNDER_INK_BY_PAGE) ?: JSONObject()
+        if (ids.isEmpty()) {
+            map.remove(pageIndex.toString())
+        } else {
+            map.put(pageIndex.toString(), JSONArray(ids.toList()))
+        }
+        root.put(KEY_UNDER_INK_BY_PAGE, map)
         flush(session)
     }
 

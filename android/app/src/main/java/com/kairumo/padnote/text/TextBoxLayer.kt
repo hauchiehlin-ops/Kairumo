@@ -8,6 +8,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -144,6 +146,8 @@ private fun TextBoxView(
     val rotation = CanvasRotation.normalized(box.rotationDegrees ?: 0f)
     var startX by remember { mutableFloatStateOf(box.x) }
     var startY by remember { mutableFloatStateOf(box.y) }
+    var liveWidth by remember(box.id, box.width) { mutableFloatStateOf(box.width) }
+    var liveHeight by remember(box.id, box.height) { mutableFloatStateOf(box.height) }
 
     // 外層只負責定位，**不旋轉** —— 旋轉把手要掛在這一層，
     // 放進旋轉裡的話拖曳算出的角度會疊加自身旋轉，物件會失控加速。
@@ -151,7 +155,8 @@ private fun TextBoxView(
 
     Box(
         modifier = Modifier
-            .size(width = box.width.dp, height = box.height.dp)
+            .width(liveWidth.dp)
+            .heightIn(min = liveHeight.dp)
             .graphicsLayer { rotationZ = rotation }
             .clip(shape)
             .background(resolveBackground(box))
@@ -205,12 +210,13 @@ private fun TextBoxView(
                     }
                 )
             } }
-            .padding(textBoxPadding(box.width, box.height).dp)
+            .padding(textBoxPadding(liveWidth, liveHeight).dp)
     ) {
         Text(
             text = box.text,
             style = TextStyle(
                 fontSize = box.fontSize.sp,
+                fontFamily = resolveFontFamily(box.fontFamily),
                 fontWeight = if (box.bold) FontWeight.Bold else FontWeight.Normal,
                 fontStyle = if (box.italic) FontStyle.Italic else FontStyle.Normal,
                 textDecoration = decoration(box),
@@ -232,8 +238,8 @@ private fun TextBoxView(
         if (isSelected && interactive) {
             // 左下角的樣式鈕：字級、顏色、邊框、圓角、段落全部在那裡。
             StyleHandle(
-                widthDp = box.width,
-                heightDp = box.height,
+                widthDp = liveWidth,
+                heightDp = liveHeight,
                 onTap = onEditStyle,
                 objectId = box.id
             )
@@ -241,26 +247,40 @@ private fun TextBoxView(
             // 右下角的縮放把手。原本 Android 完全沒有 —— 文字方塊的大小
             // 只能進編輯面板調，而 Apple 端畫布上就有把手。
             ResizeHandle(
-                widthDp = box.width,
-                heightDp = box.height,
+                widthDp = liveWidth,
+                heightDp = liveHeight,
                 density = density,
                 onResize = { dw, dh ->
-                    box.width = maxOf(MIN_TEXT_BOX_WIDTH_DP, box.width + dw)
-                    box.height = maxOf(MIN_TEXT_BOX_HEIGHT_DP, box.height + dh)
+                    liveWidth = maxOf(MIN_TEXT_BOX_WIDTH_DP, liveWidth + dw)
+                    liveHeight = maxOf(MIN_TEXT_BOX_HEIGHT_DP, liveHeight + dh)
+                    box.width = liveWidth
+                    box.height = liveHeight
                 },
-                onCommit = { onChanged(box) }
+                onCommit = {
+                    box.width = liveWidth
+                    box.height = liveHeight
+                    onChanged(box)
+                }
             )
 
             RotationHandle(
                 degrees = rotation,
-                widthDp = box.width,
-                heightDp = box.height,
+                widthDp = liveWidth,
+                heightDp = liveHeight,
                 density = density,
                 onRotate = { box.rotationDegrees = it },
                 onCommit = { onChanged(box) }
             )
         }
     }
+}
+
+internal fun resolveFontFamily(family: String?): androidx.compose.ui.text.font.FontFamily = when (family?.lowercase()) {
+    "serif", "georgia", "times new roman" -> androidx.compose.ui.text.font.FontFamily.Serif
+    "monospace", "mono", "courier", "menlo" -> androidx.compose.ui.text.font.FontFamily.Monospace
+    "sans-serif", "sans", "system" -> androidx.compose.ui.text.font.FontFamily.SansSerif
+    "cursive" -> androidx.compose.ui.text.font.FontFamily.Cursive
+    else -> androidx.compose.ui.text.font.FontFamily.Default
 }
 
 /** `"clear"` 是哨符不是顏色 —— 不能走 hex 轉換，那會丟掉 alpha 變成黑色。 */

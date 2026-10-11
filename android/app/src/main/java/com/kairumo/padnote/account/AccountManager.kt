@@ -15,6 +15,7 @@ object AccountManager {
 
     private const val PREFS = "kairumo.account"
     private const val KEY_NAME = "displayName"
+    private const val KEY_CUSTOM_NAME = "customDisplayName"
     private const val KEY_COLOR = "colorHex"
 
     /**
@@ -31,10 +32,30 @@ object AccountManager {
 
     data class Profile(val displayName: String, val colorHex: String)
 
+    fun isCloudBound(context: Context): Boolean =
+        com.kairumo.padnote.oauth.GoogleAuth.isSignedIn(context)
+
+    fun cloudAccountName(context: Context): String? {
+        if (!isCloudBound(context)) return null
+        return com.kairumo.padnote.library.SyncHistory.accountName(context)
+            ?: com.kairumo.padnote.library.SyncHistory.account(context)
+            ?: if (com.kairumo.padnote.oauth.FakeDrive.enabled) "Fake Drive User" else null
+    }
+
+    fun customName(context: Context, fallbackName: String): String {
+        val p = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        return p.getString(KEY_CUSTOM_NAME, null)
+            ?: p.getString(KEY_NAME, null)?.takeIf { it.isNotBlank() }
+            ?: fallbackName
+    }
+
     fun load(context: Context, fallbackName: String): Profile {
         val p = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        val custom = customName(context, fallbackName)
+        val cloud = cloudAccountName(context)
+        val effective = if (!cloud.isNullOrBlank()) cloud else custom
         return Profile(
-            displayName = p.getString(KEY_NAME, null)?.takeIf { it.isNotBlank() } ?: fallbackName,
+            displayName = effective,
             colorHex = p.getString(KEY_COLOR, null) ?: DEFAULT_COLOR
         )
     }
@@ -44,7 +65,10 @@ object AccountManager {
         // 而那個人是誰只有他自己知道。
         val clean = name.trim().ifEmpty { fallbackName }
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-            .edit().putString(KEY_NAME, clean).apply()
+            .edit()
+            .putString(KEY_CUSTOM_NAME, clean)
+            .putString(KEY_NAME, clean)
+            .apply()
     }
 
     fun saveColor(context: Context, hex: String) {

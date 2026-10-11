@@ -421,6 +421,34 @@ final class RecordingTitleInPackageTests: XCTestCase {
         XCTAssertGreaterThan(inbox?.lastModifiedDate ?? Date.distantPast, Date(timeIntervalSince1970: 1))
     }
 
+    func testGenericQuickRecordTitleCanBeReplacedBySpecificIncomingTitle() {
+        let store = isolatedNotebookStore()
+        store.recordings = [
+            AudioRecordingRecord(title: "快速錄音", durationSeconds: 6, fileName: "test.opus")
+        ]
+        // 即使 exported 當初記錄了 "快速錄音"，但因為本機是通用佔位標題，遠端帶來的具體標題應該成功覆蓋
+        store.applyRecordingTitles(
+            ["test.opus": "語音錄音與對齊 2026/10/11 下午 1:42"],
+            exported: ["test.opus": "快速錄音"]
+        )
+        XCTAssertEqual(store.recordings[0].title, "語音錄音與對齊 2026/10/11 下午 1:42")
+    }
+
+    func testPackageRecordingTitlesReadsRectitleDirectly() throws {
+        let package = workDir.appendingPathComponent("rectitle_direct.padnote")
+        try NotebookPackageBridge.export(
+            document: doc(), drawings: [PKDrawing()], to: package, deviceId: deviceB,
+            recordingTitles: ["sound.opus": "語音錄音與對齊 2026/10/11 下午 1:42"])
+        let titles = NotebookStore.packageRecordingTitles(packageURL: package)
+        XCTAssertEqual(titles["sound.opus"], "語音錄音與對齊 2026/10/11 下午 1:42")
+    }
+
+    func testAudioTranscriberEnginePreferenceEnum() {
+        XCTAssertEqual(AudioTranscriber.EnginePreference.auto.rawValue, "auto")
+        XCTAssertEqual(AudioTranscriber.EnginePreference.appleSpeech.rawValue, "apple")
+        XCTAssertEqual(AudioTranscriber.EnginePreference.whisper.rawValue, "whisper")
+    }
+
     private func exportInputs(titles: [String: String], document: NotebookDocument) throws
         -> NotebookSyncCoordinator.ExportInputs
     {

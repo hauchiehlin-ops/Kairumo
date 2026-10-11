@@ -65,4 +65,9 @@ class ObjectStackingTest {
         )
         assertEquals(listOf("i", "t"), ObjectStacking.normalized(items, emptyList()))
     }
+
+    @Test fun inkLayerReorderKeepsOrderListIntact() {
+        assertEquals(order, ObjectStacking.Reorder.BRING_ABOVE_INK.apply("b", order))
+        assertEquals(order, ObjectStacking.Reorder.SEND_BELOW_INK.apply("b", order))
+    }
 }

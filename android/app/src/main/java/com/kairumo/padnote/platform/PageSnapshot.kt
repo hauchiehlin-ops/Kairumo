@@ -12,6 +12,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.zIndex
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asAndroidBitmap
@@ -208,8 +209,10 @@ object PageSnapshot {
             val order = ObjectStacking.normalized(items, meta.objectOrder(pageIndex))
             order to items.associate { it.id to it.kind }
         }
+        val underInkIds = meta.underInkObjectIds(pageIndex)
         val zIndexOf: (String) -> Float = { id ->
-            ObjectStacking.zIndex(id, stack.second[id] ?: ObjectStacking.Kind.TEXT, stack.first)
+            val baseZ = ObjectStacking.zIndex(id, stack.second[id] ?: ObjectStacking.Kind.TEXT, stack.first)
+            if (underInkIds.contains(id)) 10f + baseZ else 200f + baseZ
         }
         val l10n: (String) -> String = { key -> LocalizationStrings.localized(key, languageTag) }
         val guideMeasurer = rememberTextMeasurer()
@@ -217,7 +220,8 @@ object PageSnapshot {
         Box(Modifier.fillMaxSize().background(Color.White)) {
             InkCanvas(
                 engine = engine,
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier.fillMaxSize().zIndex(100f),
+                backgroundColor = Color.Transparent,
                 pageStyle = uniffi.padnote_core.PageStyle.BLANK,
                 paperId = meta.paperId(pageIndex),
                 localizeGuide = l10n,
@@ -226,7 +230,7 @@ object PageSnapshot {
                 acceptsInk = false
             )
             MaskingTapeOverlay(
-                pageIndex = pageIndex, isActive = false, tapes = tapes, modifier = Modifier.fillMaxSize()
+                pageIndex = pageIndex, isActive = false, tapes = tapes, modifier = Modifier.fillMaxSize().zIndex(150f)
             )
             ImageLayer(
                 zIndexOf = zIndexOf, images = imageStore.all, store = imageStore, density = density,

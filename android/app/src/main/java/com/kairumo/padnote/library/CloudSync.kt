@@ -86,11 +86,14 @@ object CloudSync {
             readTimeout = 10_000
         }
         val body = conn.inputStream.bufferedReader().use { it.readText() }
-        org.json.JSONObject(body)
-            .optJSONObject("user")
-            ?.optString("emailAddress")
-            ?.takeIf { it.isNotEmpty() }
-            ?.also { AccountSyncStore.setLastAccount(context, it) }
+        val userObj = org.json.JSONObject(body).optJSONObject("user")
+        val email = userObj?.optString("emailAddress")?.takeIf { it.isNotEmpty() }
+        val displayName = userObj?.optString("displayName")?.trim()?.takeIf { it.isNotEmpty() }
+        val accountName = displayName ?: email
+        if (!accountName.isNullOrEmpty()) {
+            SyncHistory.setAccountName(context, accountName)
+        }
+        email?.also { AccountSyncStore.setLastAccount(context, it) }
     }.getOrNull()
 
     // ── P1：帶著雲端快照的工作階段 ────────────────────────────────

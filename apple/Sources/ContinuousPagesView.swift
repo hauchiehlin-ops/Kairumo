@@ -54,6 +54,8 @@ struct ContinuousPageView<ObjectLayer: View>: View {
     let isFocused: Bool
     /// 這一頁的物件層，由呼叫端提供（它才拿得到那一大串 binding 與 callback）。
     let objectLayer: () -> ObjectLayer
+    var underInkObjectLayer: (() -> AnyView)? = nil
+    var overInkObjectLayer: (() -> AnyView)? = nil
     /// 筆跡有變動時通知呼叫端（協同廣播用）。
     let onDrawingChanged: (Int, PKDrawing) -> Void
     /// 套索選取狀態。只有焦點頁回報 —— 每一頁都報的話，捲過別頁就會把
@@ -101,10 +103,12 @@ struct ContinuousPageView<ObjectLayer: View>: View {
                 .allowsHitTesting(false)
                 .zIndex(0)
 
-            objectLayer()
-                .frame(width: PageGeometry.width, height: PageGeometry.height, alignment: .topLeading)
-                .allowsHitTesting(editorMode == .type)
-                .zIndex(editorMode == .type ? 3 : 1)
+            if let underInk = underInkObjectLayer {
+                underInk()
+                    .frame(width: PageGeometry.width, height: PageGeometry.height, alignment: .topLeading)
+                    .allowsHitTesting(editorMode == .type)
+                    .zIndex(1)
+            }
 
             CanvasRepresentable(
                 drawing: $drawing,
@@ -156,7 +160,21 @@ struct ContinuousPageView<ObjectLayer: View>: View {
             .id(reloadGeneration)
             .frame(width: PageGeometry.width, height: PageGeometry.height, alignment: .topLeading)
             .allowsHitTesting(true)
-            .zIndex(editorMode == .draw ? 2 : 1)
+            .zIndex(2)
+
+            Group {
+                if let overInk = overInkObjectLayer {
+                    overInk()
+                        .frame(width: PageGeometry.width, height: PageGeometry.height, alignment: .topLeading)
+                        .allowsHitTesting(editorMode == .type)
+                        .zIndex(3)
+                } else {
+                    objectLayer()
+                        .frame(width: PageGeometry.width, height: PageGeometry.height, alignment: .topLeading)
+                        .allowsHitTesting(editorMode == .type)
+                        .zIndex(3)
+                }
+            }
             .overlay(alignment: .topLeading) {
                 if selectedTool == .lasso && isFocused && !lassoPath.isEmpty {
                     LassoPathOverlay(

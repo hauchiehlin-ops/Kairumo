@@ -26,6 +26,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.zIndex
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
@@ -366,8 +367,12 @@ private fun ContinuousPage(
             textStore.all.forEach { put(it.id, ObjectStacking.Kind.TEXT) }
         }
     }
+    val underInkIds = remember(meta, pageIndex, revision) {
+        meta.underInkObjectIds(pageIndex)
+    }
     val zIndexOf: (String) -> Float = { id ->
-        ObjectStacking.zIndex(id, kindOf[id] ?: ObjectStacking.Kind.TEXT, order)
+        val baseZ = ObjectStacking.zIndex(id, kindOf[id] ?: ObjectStacking.Kind.TEXT, order)
+        if (underInkIds.contains(id)) 10f + baseZ else 200f + baseZ
     }
 
     val interactive = editorMode == EditorMode.TYPE
@@ -439,7 +444,8 @@ private fun ContinuousPage(
     ) {
         InkCanvas(
             engine = engine,
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier.fillMaxSize().zIndex(100f),
+            backgroundColor = Color.Transparent,
             inkColor = currentInkColor,
             onInkChanged = { revision++ },
             onStylusDetected = {
@@ -459,17 +465,50 @@ private fun ContinuousPage(
         // 其實是根本沒有那顆鈕）。單頁模式有的選取、編輯面板、層級調整，這裡一樣要有。
         CompositionLocalProvider(
             com.kairumo.padnote.canvas.LocalObjectReorder provides { id, op ->
-                // 只寫這一頁，其餘頁面與其餘中繼資料欄位原封不動。
-                val items = buildList {
-                    imageStore.all.forEach { add(ObjectStacking.Item(it.id, ObjectStacking.Kind.IMAGE, "")) }
-                    shapeStore.all.forEach { add(ObjectStacking.Item(it.id, ObjectStacking.Kind.SHAPE, "")) }
-                    tableStore.all.forEach { add(ObjectStacking.Item(it.id, ObjectStacking.Kind.TABLE, "")) }
-                    chartStore.all.forEach { add(ObjectStacking.Item(it.id, ObjectStacking.Kind.CHART, "")) }
-                    textStore.all.forEach { add(ObjectStacking.Item(it.id, ObjectStacking.Kind.TEXT, "")) }
+                when (op) {
+                    com.kairumo.padnote.canvas.ObjectStacking.Reorder.SEND_BELOW_INK -> {
+                        val current = meta.underInkObjectIds(pageIndex).toMutableSet()
+                        if (current.add(id)) {
+                            meta.setUnderInkObjectIds(session, pageIndex, current)
+                            revision++
+                        }
+                    }
+                    com.kairumo.padnote.canvas.ObjectStacking.Reorder.BRING_ABOVE_INK -> {
+                        val current = meta.underInkObjectIds(pageIndex).toMutableSet()
+                        if (current.remove(id)) {
+                            meta.setUnderInkObjectIds(session, pageIndex, current)
+                            revision++
+                        }
+                    }
+                    com.kairumo.padnote.canvas.ObjectStacking.Reorder.TO_FRONT -> {
+                        val current = meta.underInkObjectIds(pageIndex).toMutableSet()
+                        if (current.remove(id)) {
+                            meta.setUnderInkObjectIds(session, pageIndex, current)
+                        }
+                        val items = buildList {
+                            imageStore.all.forEach { add(ObjectStacking.Item(it.id, ObjectStacking.Kind.IMAGE, "")) }
+                            shapeStore.all.forEach { add(ObjectStacking.Item(it.id, ObjectStacking.Kind.SHAPE, "")) }
+                            tableStore.all.forEach { add(ObjectStacking.Item(it.id, ObjectStacking.Kind.TABLE, "")) }
+                            chartStore.all.forEach { add(ObjectStacking.Item(it.id, ObjectStacking.Kind.CHART, "")) }
+                            textStore.all.forEach { add(ObjectStacking.Item(it.id, ObjectStacking.Kind.TEXT, "")) }
+                        }
+                        val currentOrder = ObjectStacking.normalized(items, meta.objectOrder(pageIndex))
+                        meta.setObjectOrder(session, pageIndex, op.apply(id, currentOrder))
+                        revision++
+                    }
+                    else -> {
+                        val items = buildList {
+                            imageStore.all.forEach { add(ObjectStacking.Item(it.id, ObjectStacking.Kind.IMAGE, "")) }
+                            shapeStore.all.forEach { add(ObjectStacking.Item(it.id, ObjectStacking.Kind.SHAPE, "")) }
+                            tableStore.all.forEach { add(ObjectStacking.Item(it.id, ObjectStacking.Kind.TABLE, "")) }
+                            chartStore.all.forEach { add(ObjectStacking.Item(it.id, ObjectStacking.Kind.CHART, "")) }
+                            textStore.all.forEach { add(ObjectStacking.Item(it.id, ObjectStacking.Kind.TEXT, "")) }
+                        }
+                        val currentOrder = ObjectStacking.normalized(items, meta.objectOrder(pageIndex))
+                        meta.setObjectOrder(session, pageIndex, op.apply(id, currentOrder))
+                        revision++
+                    }
                 }
-                val current = ObjectStacking.normalized(items, meta.objectOrder(pageIndex))
-                meta.setObjectOrder(session, pageIndex, op.apply(id, current))
-                revision++
             }
         ) {
             key(revision) {

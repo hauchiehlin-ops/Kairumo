@@ -9903,6 +9903,38 @@ extension LocalizationManager {
             .ko: "기기 내 Whisper 모델 다운로드(574 MB)",
             .th: "ดาวน์โหลดโมเดล Whisper ในเครื่อง (574 MB)"
         ],
+        "hw_asr_engine_apple": [
+            .zhHant: "Apple Neural Engine（極速端側 / 低發燙）",
+            .en: "Apple Neural Engine (Ultra Fast / Low Heat)",
+            .zhHans: "Apple Neural Engine（极速端侧 / 低发烫）",
+            .ja: "Apple Neural Engine（超高速 / 省電力）",
+            .ko: "Apple Neural Engine (초고속 / 저발열)",
+            .th: "Apple Neural Engine (เร็วพิเศษ / ไม่ร้อน)"
+        ],
+        "hw_asr_engine_auto": [
+            .zhHant: "智慧推薦（ANE 神經引擎優先 / 秒級完成）",
+            .en: "Smart Auto (Apple Neural Engine First / Lightning Fast)",
+            .zhHans: "智能推荐（ANE 神经引擎优先 / 秒级完成）",
+            .ja: "スマート自動（Apple Neural Engine優先 / 秒速完了）",
+            .ko: "스마트 자동 (Apple Neural Engine 우선 / 초고속 완료)",
+            .th: "อัตโนมัติอัจฉริยะ (Apple Neural Engine ก่อน / รวดเร็ว)"
+        ],
+        "hw_asr_engine_pref": [
+            .zhHant: "轉譯引擎偏好",
+            .en: "Transcription Engine Preference",
+            .zhHans: "转译引擎偏好",
+            .ja: "音声認識エンジン設定",
+            .ko: "음성 인식 엔진 환경설정",
+            .th: "การตั้งค่าเครื่องมือแปลงเสียง"
+        ],
+        "hw_asr_engine_whisper": [
+            .zhHant: "Whisper 端側神經模型（多語精確）",
+            .en: "Whisper On-Device Neural Model (Multilingual)",
+            .zhHans: "Whisper 端侧神经模型（多语精确）",
+            .ja: "Whisper 端末内ニューラルモデル（多言語対応）",
+            .ko: "Whisper 온디바이스 신경망 모델 (다국어 지원)",
+            .th: "โมเดลโครงข่ายประสาท Whisper ในเครื่อง (หลายภาษา)"
+        ],
         "hw_asr_explainer": [
             .zhHant: "優先使用端側 Whisper 模型（自動偵測 99 種語言、自動標點，全程離線）。沒有模型時會自動改用系統聽寫。",
             .en: "Prefers the on-device Whisper model (99 languages detected automatically, punctuation restored, fully offline). Falls back to system dictation when no model is present.",

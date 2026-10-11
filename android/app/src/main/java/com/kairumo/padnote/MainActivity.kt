@@ -507,6 +507,7 @@ private fun NotebookHome(
                         com.kairumo.padnote.library.CloudSync.accountEmail(activity)
                     )
                 }
+                profile = AccountManager.load(activity, l("default_user_name"))
             }
             cloudMessage = when {
                 meta == null -> l("not_signed_in")
@@ -522,7 +523,8 @@ private fun NotebookHome(
         }
     }
 
-    LaunchedEffect(authRevision) {
+    LaunchedEffect(authRevision, signedIn) {
+        profile = AccountManager.load(activity, l("default_user_name"))
         if (authRevision > 0 && com.kairumo.padnote.oauth.GoogleAuth.isSignedIn(activity)) {
             cloudMessage = l("sync_google_authorized")
             com.kairumo.padnote.sync.AutoSync.request(
@@ -1367,10 +1369,13 @@ private fun NotebookHome(
     if (editingIdentity) {
         IdentityDialog(
             profile = profile,
+            isCloudBound = AccountManager.isCloudBound(activity),
             l = ::l,
             onDismiss = { editingIdentity = false },
             onSave = { name, hex ->
-                AccountManager.saveName(activity, name, l("default_user_name"))
+                if (!AccountManager.isCloudBound(activity)) {
+                    AccountManager.saveName(activity, name, l("default_user_name"))
+                }
                 AccountManager.saveColor(activity, hex)
                 profile = AccountManager.load(activity, l("default_user_name"))
             }
@@ -2106,15 +2111,44 @@ private fun InkScreen(
         ObjectStacking.normalized(stackItems, meta.objectOrder(pageIndex))
     }
     val kindOf = remember(stackItems) { stackItems.associate { it.id to it.kind } }
+    val underInkIds = remember(meta, pageIndex, stackRevision) {
+        meta.underInkObjectIds(pageIndex)
+    }
     val zIndexOf: (String) -> Float = { id ->
-        ObjectStacking.zIndex(id, kindOf[id] ?: ObjectStacking.Kind.TEXT, stackOrder)
+        val baseZ = ObjectStacking.zIndex(id, kindOf[id] ?: ObjectStacking.Kind.TEXT, stackOrder)
+        if (underInkIds.contains(id)) 10f + baseZ else 200f + baseZ
     }
 
-    // 調整單一物件的層級（每個物件的把手、編輯面板共用）。
+    // 調整單一物件的層級（每個物件的把手、編輯面板共用，支援移至筆跡下方/上方）。
     val objectReorder: (String, ObjectStacking.Reorder) -> Unit = { id, op ->
-        // 只寫這一頁，其餘頁面與其餘中繼資料欄位原封不動。
-        meta.setObjectOrder(notebook?.first, pageIndex, op.apply(id, stackOrder))
-        stackRevision++
+        when (op) {
+            ObjectStacking.Reorder.SEND_BELOW_INK -> {
+                val current = meta.underInkObjectIds(pageIndex).toMutableSet()
+                if (current.add(id)) {
+                    meta.setUnderInkObjectIds(notebook?.first, pageIndex, current)
+                    stackRevision++
+                }
+            }
+            ObjectStacking.Reorder.BRING_ABOVE_INK -> {
+                val current = meta.underInkObjectIds(pageIndex).toMutableSet()
+                if (current.remove(id)) {
+                    meta.setUnderInkObjectIds(notebook?.first, pageIndex, current)
+                    stackRevision++
+                }
+            }
+            ObjectStacking.Reorder.TO_FRONT -> {
+                val current = meta.underInkObjectIds(pageIndex).toMutableSet()
+                if (current.remove(id)) {
+                    meta.setUnderInkObjectIds(notebook?.first, pageIndex, current)
+                }
+                meta.setObjectOrder(notebook?.first, pageIndex, op.apply(id, stackOrder))
+                stackRevision++
+            }
+            else -> {
+                meta.setObjectOrder(notebook?.first, pageIndex, op.apply(id, stackOrder))
+                stackRevision++
+            }
+        }
     }
 
     // **新插入的物件一律放在最上層。**
@@ -4669,7 +4703,7 @@ private fun InkScreen(
                 LowLatencyInkCanvas(
                     engine = engine,
                     latency = latency,
-                    modifier = Modifier.fillMaxSize().testTag("editor.canvas"),
+                    modifier = Modifier.fillMaxSize().zIndex(100f).testTag("editor.canvas"),
                     onInkChanged = {
                         revision++
                         if (engine.consumeOutsidePrintableArea()) {
@@ -4690,7 +4724,8 @@ private fun InkScreen(
             } else {
                 InkCanvas(
                     engine = engine,
-                    modifier = Modifier.fillMaxSize().testTag("editor.canvas"),
+                    modifier = Modifier.fillMaxSize().zIndex(100f).testTag("editor.canvas"),
+                    backgroundColor = Color.Transparent,
                     inkColor = if (inkTool.isDrafting) {
                         DraftingState.parseHex(DraftingState.activeColorHex)
                     } else runCatching {
@@ -4798,7 +4833,7 @@ private fun InkScreen(
                     }
                     revision++
                 },
-                modifier = Modifier.fillMaxSize()
+                modifier = Modifier.fillMaxSize().zIndex(150f)
             )
 
             // 圖片疊在墨跡之上、文字方塊之下 —— 與 Apple 端的預設層級一致
@@ -5120,9 +5155,19 @@ private fun InkScreen(
                             newBox.backgroundColorHex = "clear"
                             newBox.hasBorder = false
                             textStore.persist(newBox)
+                            val currentUnder = meta.underInkObjectIds(pageIndex).toMutableSet()
+                            if (currentUnder.remove(newBox.id)) {
+                                meta.setUnderInkObjectIds(notebook?.first, pageIndex, currentUnder)
+                            }
+                            val updatedOrder = com.kairumo.padnote.canvas.ObjectStacking.bringToFront(
+                                setOf(newBox.id),
+                                meta.objectOrder(pageIndex)
+                            )
+                            meta.setObjectOrder(notebook?.first, pageIndex, updatedOrder)
                             selectedTextId = newBox.id
                             editingText = newBox
                             editorMode = EditorMode.TYPE
+                            stackRevision++
                             textRevision++
                             message = l10n("transcribe_success")
                         }

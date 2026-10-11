@@ -48,6 +48,7 @@ data class TextBox(
     var borderColorHex: String? = null,
     var borderWidth: Float? = null,
     var cornerRadius: Float = 8f,
+    var fontFamily: String? = null,
 
     // 段落
     var lineSpacing: Float? = null,
@@ -84,6 +85,7 @@ object TextBoxAppearance {
         box.backgroundColorHex?.let { json.put("backgroundColorHex", it) }
         box.borderColorHex?.let { json.put("borderColorHex", it) }
         box.borderWidth?.let { json.put("borderWidth", it.toDouble()) }
+        box.fontFamily?.let { json.put("fontFamily", it) }
         // 畫布旋轉。與 Apple 端同一個鍵，不然轉過的方塊換平台打開會變回正的。
         box.rotationDegrees?.let { json.put("rotationDegrees", it.toDouble()) }
         box.lineSpacing?.let { json.put("lineSpacing", it.toDouble()) }
@@ -114,6 +116,7 @@ object TextBoxAppearance {
         if (obj.has("borderColorHex")) box.borderColorHex = obj.getString("borderColorHex")
         if (obj.has("borderWidth")) box.borderWidth = obj.getDouble("borderWidth").toFloat()
         if (obj.has("cornerRadius")) box.cornerRadius = obj.getDouble("cornerRadius").toFloat()
+        if (obj.has("fontFamily")) box.fontFamily = obj.getString("fontFamily")
         if (obj.has("width")) box.width = obj.getDouble("width").toFloat()
         if (obj.has("height")) box.height = obj.getDouble("height").toFloat()
         if (obj.has("rotationDegrees")) box.rotationDegrees = obj.getDouble("rotationDegrees").toFloat()

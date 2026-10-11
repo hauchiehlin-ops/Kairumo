@@ -221,6 +221,36 @@ public final class AudioTranscriber: ObservableObject {
         case unsupported
     }
 
+    public enum EnginePreference: String, CaseIterable, Identifiable {
+        case auto = "auto"
+        case appleSpeech = "apple"
+        case whisper = "whisper"
+
+        public var id: String { rawValue }
+
+        @MainActor
+        public var localizedTitle: String {
+            switch self {
+            case .auto:
+                return LocalizationManager.localizedString("hw_asr_engine_auto")
+            case .appleSpeech:
+                return LocalizationManager.localizedString("hw_asr_engine_apple")
+            case .whisper:
+                return LocalizationManager.localizedString("hw_asr_engine_whisper")
+            }
+        }
+    }
+
+    private static let enginePrefKey = "kairumo_asr_engine_preference"
+    @Published public var enginePreference: EnginePreference = {
+        let raw = UserDefaults.standard.string(forKey: enginePrefKey) ?? EnginePreference.auto.rawValue
+        return EnginePreference(rawValue: raw) ?? .auto
+    }() {
+        didSet {
+            UserDefaults.standard.set(enginePreference.rawValue, forKey: Self.enginePrefKey)
+        }
+    }
+
     private init() {}
 
     /// 本地 Whisper 模型檔案路徑
@@ -467,11 +497,22 @@ public final class AudioTranscriber: ObservableObject {
         transcriptionProgress = 0.35
         transcriptionStatusText = LocalizationManager.shared.localized("transcribe_step_recognize")
 
-        // 1. 優先路徑：若已下載端側 Whisper 模型，走 Rust 核心 ASR 管線（支援多語言自動偵測與標點還原）
-        if isWhisperAvailable {
+        let shouldUseWhisperFirst: Bool
+        switch enginePreference {
+        case .whisper:
+            shouldUseWhisperFirst = isWhisperAvailable
+        case .appleSpeech:
+            shouldUseWhisperFirst = false
+        case .auto:
+            // 智慧模式：Apple Speech 透過 Apple Neural Engine (ANE) 具備硬體神經加速，速度比 CPU Whisper 快 30~50 倍。
+            // 優先嘗試 Apple Speech；若系統聽寫未開啟或失敗，無縫降級回 Whisper。
+            shouldUseWhisperFirst = false
+        }
+
+        if shouldUseWhisperFirst && isWhisperAvailable {
             do {
                 StartupLogger.logKey("log_whisper_start")
-                let result = try await Task.detached(priority: .userInitiated) { [path = whisperModelPath] () -> FfiTranscribeResult in
+                let result = try await Task.detached(priority: .userInitiated) { [path = self.whisperModelPath] () -> FfiTranscribeResult in
                     try whisperTranscribePcm(modelPath: path, pcm16kMono: pcm, language: languageCode)
                 }.value
 
@@ -486,16 +527,41 @@ public final class AudioTranscriber: ObservableObject {
                 }
             } catch {
                 StartupLogger.logKey("log_whisper_error", error.localizedDescription)
+                if enginePreference == .whisper { throw error }
             }
         }
 
-        // 2. 降級備援路徑：走 Apple 系統聽寫框架
-        lastEngineUsed = "Apple Speech"
-        StartupLogger.logKey("log_apple_speech")
-        let text = try await transcribeWithAppleSpeech(pcm: pcm, languageCode: languageCode)
-        transcriptionProgress = 0.90
-        transcriptionStatusText = LocalizationManager.shared.localized("transcribe_step_postprocess")
-        return Self.localizedScript(text)
+        // 嘗試 Apple Speech (支援 Apple Neural Engine 極速硬體辨識)
+        do {
+            lastEngineUsed = "Apple Speech"
+            StartupLogger.logKey("log_apple_speech")
+            let text = try await transcribeWithAppleSpeech(pcm: pcm, languageCode: languageCode)
+            let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !trimmed.isEmpty {
+                transcriptionProgress = 0.90
+                transcriptionStatusText = LocalizationManager.shared.localized("transcribe_step_postprocess")
+                return Self.localizedScript(trimmed)
+            }
+        } catch {
+            StartupLogger.logKey("log_apple_speech_fallback_whisper", error.localizedDescription)
+            // 若 Apple Speech 失敗且尚未跑過 Whisper，且 Whisper 可用，降級備援
+            if !shouldUseWhisperFirst && isWhisperAvailable {
+                StartupLogger.logKey("log_whisper_start")
+                let result = try await Task.detached(priority: .userInitiated) { [path = self.whisperModelPath] () -> FfiTranscribeResult in
+                    try whisperTranscribePcm(modelPath: path, pcm16kMono: pcm, language: languageCode)
+                }.value
+                lastUsedOnDevice = true
+                lastEngineUsed = "Whisper (\(result.language))"
+                let trimmed = result.text.trimmingCharacters(in: .whitespacesAndNewlines)
+                if !trimmed.isEmpty {
+                    transcriptionProgress = 0.90
+                    transcriptionStatusText = LocalizationManager.shared.localized("transcribe_step_postprocess")
+                    return Self.localizedScript(trimmed)
+                }
+            }
+            throw error
+        }
+        return ""
     }
 
     /// 轉錄結果的字體跟著介面語言（繁體介面 → 正體）。轉換在核心，
@@ -561,22 +627,23 @@ public final class AudioTranscriber: ObservableObject {
 
         if recognizer.supportsOnDeviceRecognition {
             do {
-                let res = try await performRecognitionTask(recognizer: recognizer, url: effectiveUrl, requiresOnDevice: true)
+                let res = try await performRecognitionTask(recognizer: recognizer, url: effectiveUrl, pcmCount: pcm.count, requiresOnDevice: true)
                 lastUsedOnDevice = true
                 return res
             } catch {
                 lastUsedOnDevice = false
-                return try await performRecognitionTask(recognizer: recognizer, url: effectiveUrl, requiresOnDevice: false)
+                return try await performRecognitionTask(recognizer: recognizer, url: effectiveUrl, pcmCount: pcm.count, requiresOnDevice: false)
             }
         } else {
             lastUsedOnDevice = false
-            return try await performRecognitionTask(recognizer: recognizer, url: effectiveUrl, requiresOnDevice: false)
+            return try await performRecognitionTask(recognizer: recognizer, url: effectiveUrl, pcmCount: pcm.count, requiresOnDevice: false)
         }
     }
 
     private func performRecognitionTask(
         recognizer: SFSpeechRecognizer,
         url: URL,
+        pcmCount: Int,
         requiresOnDevice: Bool
     ) async throws -> String {
         let request = SFSpeechURLRecognitionRequest(url: url)
@@ -612,7 +679,9 @@ public final class AudioTranscriber: ObservableObject {
             }
 
             group.addTask {
-                try await Task.sleep(nanoseconds: 15_000_000_000)
+                let audioSeconds = Double(pcmCount) / 16000.0
+                let timeoutSeconds = max(45.0, audioSeconds * 2.0 + 30.0)
+                try await Task.sleep(nanoseconds: UInt64(timeoutSeconds * 1_000_000_000))
                 throw NSError(
                     domain: "AudioTranscriber",
                     code: 4,

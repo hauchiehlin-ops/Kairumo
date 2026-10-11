@@ -231,6 +231,7 @@ object GoogleAuth {
      */
     fun signOutLocally(context: Context) {
         store(context)?.edit()?.clear()?.apply()
+        com.kairumo.padnote.library.SyncHistory.setAccountName(context, null)
         // 共用的雲端工作階段綁著舊帳號的快照，登出就要丟掉。
         com.kairumo.padnote.library.CloudSync.invalidateSession()
         notifyAuthChanged(context)

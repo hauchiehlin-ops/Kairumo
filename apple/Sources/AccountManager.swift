@@ -46,26 +46,124 @@ public final class AccountManager: ObservableObject {
     public static let shared = AccountManager()
 
     private let profileKey = "kairumo.user.profile"
+    private let customNameKey = "kairumo.user.customDisplayName"
 
     @Published public var profile: UserProfile {
         didSet { saveProfile() }
+    }
+
+    /// 使用者自訂編輯的名稱（未進行同步登入時使用）
+    public var customDisplayName: String {
+        get {
+            UserDefaults.standard.string(forKey: customNameKey) ?? ""
+        }
+        set {
+            UserDefaults.standard.set(newValue, forKey: customNameKey)
+        }
+    }
+
+    /// 目前生效的雲端帳號名稱（Google Drive 或 iCloud）。
+    /// 未進行同步登入時為 nil。
+    public var activeCloudAccountName: String? {
+        // 1. Google Drive 登入
+        if GoogleAuth.shared.isSignedIn {
+            if let name = GoogleAuth.shared.accountName, !name.isEmpty {
+                return name
+            }
+            if let email = GoogleAuth.shared.accountEmail, !email.isEmpty {
+                return email
+            }
+        }
+
+        // 2. iCloud 同步登入判定
+        if isICloudSignedIn {
+            return iCloudAccountName
+        }
+
+        return nil
+    }
+
+    /// 是否登入 iCloud（包含 iCloud 帳號登入或已選擇 iCloud/資料夾同步）
+    public var isICloudSignedIn: Bool {
+        if FileManager.default.ubiquityIdentityToken != nil {
+            return true
+        }
+        if ICloudSyncFolder.isAvailable || CloudSyncFolder.resolveFolder() != nil {
+            return true
+        }
+        return false
+    }
+
+    /// 取得 iCloud 帳號名稱
+    public var iCloudAccountName: String {
+        // Mac / Mac Catalyst 上，系統使用者全名即為 Apple/iCloud 帳號名稱
+        let fullName = NSFullUserName().trimmingCharacters(in: .whitespacesAndNewlines)
+        if !fullName.isEmpty && fullName != "mobile" && fullName != "root" {
+            return fullName
+        }
+
+        #if canImport(UIKit)
+        let deviceName = UIDevice.current.name.trimmingCharacters(in: .whitespacesAndNewlines)
+        // 嘗試從常見命名規則如「XXX 的 iPad / iPhone」或「XXX's iPad / iPhone」萃取名稱
+        let pattern = #"^(.*?)(?:'s| 的| の)\s*(?:iPhone|iPad|iPod|Mac).*"#
+        if let regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive),
+           let match = regex.firstMatch(in: deviceName, options: [], range: NSRange(location: 0, length: deviceName.utf16.count)),
+           let range = Range(match.range(at: 1), in: deviceName) {
+            let extracted = String(deviceName[range]).trimmingCharacters(in: .whitespacesAndNewlines)
+            if !extracted.isEmpty {
+                return extracted
+            }
+        }
+        if !deviceName.isEmpty && deviceName != "iPhone" && deviceName != "iPad" {
+            return deviceName
+        }
+        #endif
+
+        let userName = NSUserName().trimmingCharacters(in: .whitespacesAndNewlines)
+        if !userName.isEmpty && userName != "mobile" && userName != "root" {
+            return userName
+        }
+
+        return "iCloud"
+    }
+
+    /// 根據同步登入狀態刷新名稱：
+    /// 若有登入 Google Drive 或 iCloud，自動以該帳號名稱為使用者名稱；
+    /// 若無同步登入，維持現狀（使用者自訂名稱）。
+    public func refreshDisplayName() {
+        if let cloudName = activeCloudAccountName, !cloudName.isEmpty {
+            if profile.displayName != cloudName {
+                profile.displayName = cloudName
+            }
+        } else {
+            let manual = customDisplayName.isEmpty
+                ? LocalizationManager.shared.localized("default_user_name")
+                : customDisplayName
+            if profile.displayName != manual {
+                profile.displayName = manual
+            }
+        }
     }
 
     private init() {
         if let savedData = UserDefaults.standard.data(forKey: profileKey),
            let decoded = try? JSONDecoder().decode(UserProfile.self, from: savedData) {
             self.profile = decoded
+            if UserDefaults.standard.string(forKey: customNameKey) == nil {
+                self.customDisplayName = decoded.displayName
+            }
         } else {
             // 舊版可能存過含 username/email 的格式，欄位對不上就解不出來。
             // 盡量把名字撈回來，撈不到就用預設值，不去讀系統帳號。
             let legacyName = (UserDefaults.standard.data(forKey: profileKey))
                 .flatMap { try? JSONSerialization.jsonObject(with: $0) as? [String: Any] }
                 .flatMap { $0?["displayName"] as? String }
-            self.profile = UserProfile(
-                displayName: legacyName ?? LocalizationManager.shared.localized("default_user_name")
-            )
+            let initial = legacyName ?? LocalizationManager.shared.localized("default_user_name")
+            self.profile = UserProfile(displayName: initial)
+            self.customDisplayName = initial
         }
         cleanUpLegacyKeys()
+        refreshDisplayName()
     }
 
     /// 清掉訪客模式時代留下的鍵，避免舊狀態在未來被誤讀。
@@ -84,9 +182,13 @@ public final class AccountManager: ObservableObject {
     /// 更新顯示名稱。空白會退回預設名 —— 協作中出現一個沒有名字的游標最難辨認。
     public func updateDisplayName(_ name: String) {
         let clean = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        profile.displayName = clean.isEmpty
+        let resolved = clean.isEmpty
             ? LocalizationManager.shared.localized("default_user_name")
             : clean
+        customDisplayName = resolved
+        if activeCloudAccountName == nil {
+            profile.displayName = resolved
+        }
     }
 
     public func updateColor(_ hex: String) {
@@ -132,16 +234,40 @@ public struct AccountProfileSheet: View {
                     }
                     .padding(.vertical, 6)
 
-                    HStack {
-                        Text(localizationManager.localized("display_name"))
-                            .frame(width: 80, alignment: .leading)
-                        TextField(localizationManager.localized("display_name"), text: $tempDisplayName)
+                    if let cloudName = accountManager.activeCloudAccountName {
+                        HStack {
+                            Text(localizationManager.localized("display_name"))
+                                .frame(width: 80, alignment: .leading)
+                            Text(cloudName)
+                                .foregroundColor(.primary)
+                            Spacer()
+                            Text(GoogleAuth.shared.isSignedIn ? "Google Drive" : "iCloud")
+                                .font(.caption2)
+                                .fontWeight(.medium)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(Color.accentColor.opacity(0.12))
+                                .foregroundColor(.accentColor)
+                                .cornerRadius(4)
+                        }
+                    } else {
+                        HStack {
+                            Text(localizationManager.localized("display_name"))
+                                .frame(width: 80, alignment: .leading)
+                            TextField(localizationManager.localized("display_name"), text: $tempDisplayName)
+                        }
                     }
                 } header: {
                     Text(localizationManager.localized("identity_title"))
                 } footer: {
-                    // 講清楚這不是帳號，免得使用者以為需要註冊或擔心資料上傳。
-                    Text(localizationManager.localized("identity_desc"))
+                    if accountManager.activeCloudAccountName != nil {
+                        Text(localizationManager.currentLanguage == .zhHant
+                             ? "已登入同步帳號，首頁「使用者」名稱已自動採用該帳號名稱。"
+                             : localizationManager.localized("identity_desc"))
+                    } else {
+                        // 講清楚這不是帳號，免得使用者以為需要註冊或擔心資料上傳。
+                        Text(localizationManager.localized("identity_desc"))
+                    }
                 }
 
                 Section(localizationManager.localized("identity_color")) {
@@ -218,7 +344,9 @@ public struct AccountProfileSheet: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button(localizationManager.localized("save")) {
-                        accountManager.updateDisplayName(tempDisplayName)
+                        if accountManager.activeCloudAccountName == nil {
+                            accountManager.updateDisplayName(tempDisplayName)
+                        }
                         accountManager.updateColor(tempColorHex)
                         dismiss()
                     }
@@ -226,7 +354,7 @@ public struct AccountProfileSheet: View {
                 }
             }
             .onAppear {
-                tempDisplayName = accountManager.profile.displayName
+                tempDisplayName = accountManager.activeCloudAccountName ?? (accountManager.customDisplayName.isEmpty ? accountManager.profile.displayName : accountManager.customDisplayName)
                 tempColorHex = accountManager.profile.colorHex
             }
         }

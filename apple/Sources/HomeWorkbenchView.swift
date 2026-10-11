@@ -513,6 +513,7 @@ public struct HomeWorkbenchView: View {
             }
             .onAppear {
                 StartupLogger.logKey("log_home_appear")
+                accountManager.refreshDisplayName()
                 // 不限定 macCatalyst：使用者在 Mac 上跑的是 iOS 版（Designed for iPad）
                 MacWindowTitle.apply()
                 autoSync.start(store: notebookStore, deviceId: NotebookMigration.deviceId)
@@ -4195,6 +4196,12 @@ extension AppDiagnosticsSheet {
                     Label(localizationManager.localized("hw_asr_unsupported"), systemImage: "info.circle")
                         .foregroundColor(.secondary)
                         .font(.footnote)
+                }
+            }
+
+            Picker(localizationManager.localized("hw_asr_engine_pref"), selection: $transcriber.enginePreference) {
+                ForEach(AudioTranscriber.EnginePreference.allCases) { pref in
+                    Text(pref.localizedTitle).tag(pref)
                 }
             }
 

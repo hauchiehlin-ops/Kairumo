@@ -17,7 +17,9 @@ object ObjectStacking {
         TO_FRONT("layer_bring_front"),
         FORWARD("layer_bring_forward"),
         BACKWARD("layer_send_backward"),
-        TO_BACK("layer_send_back");
+        TO_BACK("layer_send_back"),
+        BRING_ABOVE_INK("layer_bring_above_ink"),
+        SEND_BELOW_INK("layer_send_below_ink");
 
         fun apply(id: String, order: List<String>): List<String> {
             val ids = setOf(id)
@@ -26,6 +28,7 @@ object ObjectStacking {
                 FORWARD -> bringForward(ids, order)
                 BACKWARD -> sendBackward(ids, order)
                 TO_BACK -> sendToBack(ids, order)
+                BRING_ABOVE_INK, SEND_BELOW_INK -> order
             }
         }
     }
