@@ -11408,12 +11408,15 @@ public struct NotebookEditorView: View {
            activeItem.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             notebook.textAttachments?.removeAll { $0.id == activeId }
             store.updateNotebook(notebook)
+            if activeSelectedObjectId == activeId {
+                activeSelectedObjectId = nil
+            }
             PageThumbnailRenderer.invalidateAll()
         }
         let draft = insertTextBox(at: location, page: targetPage, tapToWrite: true)
         withAnimation(.easeInOut(duration: 0.18)) {
             editorMode = .type
-            activeSelectedObjectId = draft.id
+            activeSelectedObjectId = nil
             inlineEditingTextId = draft.id
             editingTextId = nil
             selectedShapeIds = []
@@ -11438,6 +11441,9 @@ public struct NotebookEditorView: View {
             notebook.textAttachments?.removeAll { $0.id == activeId }
             store.updateNotebook(notebook)
             inlineEditingTextId = nil
+            if activeSelectedObjectId == activeId {
+                activeSelectedObjectId = nil
+            }
             PageThumbnailRenderer.invalidateAll()
             watchdog.notifyEmptyTextBoxDismissedQuickly(isStylusActive: true) {
                 withAnimation { editorMode = .draw }
@@ -11476,9 +11482,8 @@ public struct NotebookEditorView: View {
             return
         }
 
-        // 4. 點擊空白處：若先前已有選取物件或文字正在編輯，先取消選取與收回鍵盤（避免誤觸產生多餘文字方塊）
-        let hadActiveSelectionOrEditing = (inlineEditingTextId != nil || activeSelectedObjectId != nil || !selectedShapeIds.isEmpty || !selectedObjectIds.isEmpty)
-
+        // 4. 點擊空白處：在打字模式下，點擊空白處即為「隨點即書」
+        // 先清理所有先前的物件選取與就地編輯焦點
         activeSelectedObjectId = nil
         selectedShapeIds = []
         selectedConnectionId = nil
@@ -11487,13 +11492,11 @@ public struct NotebookEditorView: View {
         editingTextId = nil
         collaborationManager.broadcastSelection(selectedId: nil)
 
-        if hadActiveSelectionOrEditing {
-            return
-        }
-
-        // 若原先已處於無選取狀態，點擊空白處才啟動隨點隨打（即點即書）
+        // 立即在手指點擊處啟動隨點隨打（隨點即書）
         let draft = insertTextBox(at: location, page: targetPage, tapToWrite: true)
-        activeSelectedObjectId = draft.id
+        // 隨點即書為純文字輸入游標，不啟用物件選取態（保持 activeSelectedObjectId = nil），
+        // 避免渲染出選取藍框與縮放/旋轉把手（使用戶誤以為是「新增文字方塊」按鈕產生的物件）
+        activeSelectedObjectId = nil
         inlineEditingTextId = draft.id
         editingTextId = nil
     }
@@ -11569,14 +11572,18 @@ public struct NotebookEditorView: View {
             targetY = snapYToGuideLine(at: location.y)
         }
         let printable = PageGeometry.printableRect
-        let startX = max(printable.minX, targetX)
+        var startX = max(printable.minX, targetX)
+        if tapToWrite {
+            // 隨點即書：若點擊處過於靠右，留出合理輸入起點，避免文字方塊超出可視區域
+            startX = min(startX, printable.maxX - 60)
+        }
         let midX = PageGeometry.width / 2
         // 若在左右分欄或四象限結構的左半部，文字寬度以中線為界；否則延伸至右側可列印邊界
         let availWidth: CGFloat
         if startX < midX - 30 && printable.maxX > midX {
-            availWidth = max(180, midX - startX - 12)
+            availWidth = max(tapToWrite ? 60 : 180, midX - startX - 12)
         } else {
-            availWidth = max(180, printable.maxX - startX)
+            availWidth = max(tapToWrite ? 60 : 180, printable.maxX - startX)
         }
         let tapHeight = RuledWriting.boxHeight(
             text: "", width: availWidth, fontSize: tapPlacement?.fontSize ?? 16, bold: false,
