@@ -170,9 +170,8 @@ extension NotebookStore: SyncableNotebookStore {
 
     var syncNotebooks: [NotebookDocument] {
         var list = visibleNotebooks
-        let inboxId = recordingInboxNotebookId()
-        if let inbox = notebooks.first(where: { $0.id.caseInsensitiveCompare(inboxId) == .orderedSame }),
-           !list.contains(where: { $0.id.caseInsensitiveCompare(inboxId) == .orderedSame }) {
+        let inbox = recordingInbox()
+        if !list.contains(where: { $0.id.caseInsensitiveCompare(inbox.id) == .orderedSame }) {
             list.append(inbox)
         }
         return list
@@ -191,7 +190,12 @@ extension NotebookStore: SyncableNotebookStore {
     }
 
     var allNotebooks: [NotebookDocument] {
-        notebooks
+        var list = notebooks
+        let inboxId = recordingInboxNotebookId()
+        if !list.contains(where: { $0.id.caseInsensitiveCompare(inboxId) == .orderedSame }) {
+            list.append(recordingInbox())
+        }
+        return list
     }
 
     var syncPackagesDirectory: URL {
@@ -1931,6 +1935,15 @@ enum NotebookSyncCoordinator {
     ) -> (NotebookDocument, Bool) {
         var merged = imported
         var preserved = false
+        if local.title != imported.title && !local.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            merged.title = local.title
+            merged.titleKey = local.titleKey
+            preserved = true
+        }
+        if let lf = local.folderId, lf != imported.folderId {
+            merged.folderId = lf
+            preserved = true
+        }
         let mine = ExportedObjectIds.fingerprints(of: local)
         let theirs = ExportedObjectIds.fingerprints(of: imported)
         func keep<T: Identifiable>(_ keyPath: WritableKeyPath<NotebookDocument, [T]?>) where T.ID == String {

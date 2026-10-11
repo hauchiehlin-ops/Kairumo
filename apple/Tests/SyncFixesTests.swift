@@ -214,6 +214,7 @@ final class SyncFixesTests: XCTestCase {
     func testRemoteFolderDeletionRemovesLocalFolder() {
         let store = isolatedNotebookStore()
         let syncStore = AccountSyncStore.shared
+        syncStore.resetLocalSyncState(account: "test")
         defer { syncStore.resetLocalSyncState(account: "test") }
 
         syncStore.record(id: "f_trash", title: "要刪除的資料夾", parentId: nil, isFolder: true)
@@ -432,6 +433,65 @@ final class RecordingTitleInPackageTests: XCTestCase {
             exported: ["test.opus": "快速錄音"]
         )
         XCTAssertEqual(store.recordings[0].title, "語音錄音與對齊 2026/10/11 下午 1:42")
+    }
+
+    func testIsGenericOrQuickRecordTitleRecognizesDefaultTimestampTitles() {
+        XCTAssertTrue(NotebookStore.isGenericOrQuickRecordTitle("快速錄音"))
+        XCTAssertTrue(NotebookStore.isGenericOrQuickRecordTitle("Quick Record"))
+        XCTAssertTrue(NotebookStore.isGenericOrQuickRecordTitle("語音錄音與對齊 2026/10/11 晚上 8:15"))
+        XCTAssertTrue(NotebookStore.isGenericOrQuickRecordTitle("語音錄音與對齊 2026/10/11晚上 8:15"))
+        XCTAssertTrue(NotebookStore.isGenericOrQuickRecordTitle("語音錄音與對齊 2026/10/11下午 5:46"))
+        XCTAssertTrue(NotebookStore.isGenericOrQuickRecordTitle("錄音 2026/10/11 12:00"))
+        XCTAssertTrue(NotebookStore.isGenericOrQuickRecordTitle("Voice recording"))
+
+        // 使用者自訂標題絕不可被判定為通用佔位標題
+        XCTAssertFalse(NotebookStore.isGenericOrQuickRecordTitle("IPAD錄音"))
+        XCTAssertFalse(NotebookStore.isGenericOrQuickRecordTitle("Jhvgcg ㄒㄨ"))
+        XCTAssertFalse(NotebookStore.isGenericOrQuickRecordTitle("課堂筆記錄音"))
+    }
+
+    func testCustomIncomingTitleOverwritesLocalGenericTimestampTitle() {
+        let store = isolatedNotebookStore()
+        store.recordings = [
+            AudioRecordingRecord(title: "語音錄音與對齊 2026/10/11晚上 8:15", durationSeconds: 17, fileName: "rec17.opus"),
+            AudioRecordingRecord(title: "語音錄音與對齊 2026/10/11下午 5:46", durationSeconds: 53, fileName: "rec53.opus")
+        ]
+        // 當遠端傳來 iPad 上使用者自訂命名的標題時，即使 exported 記下的是本地預設標題，也必須覆蓋
+        store.applyRecordingTitles(
+            ["rec17.opus": "IPAD錄音", "rec53.opus": "Jhvgcg ㄒㄨ"],
+            exported: ["rec17.opus": "語音錄音與對齊 2026/10/11晚上 8:15", "rec53.opus": "語音錄音與對齊 2026/10/11下午 5:46"]
+        )
+        XCTAssertEqual(store.recordings[0].title, "IPAD錄音")
+        XCTAssertEqual(store.recordings[1].title, "Jhvgcg ㄒㄨ")
+    }
+
+    func testAdoptingCardTitlesDoesNotOverwriteCustomRecordingTitleWithGenericCardTitle() {
+        var book = NotebookDocument(title: "Notebook", pageCount: 1)
+        book.audioAttachments = [
+            NoteAudioAttachment(recordingId: "r1", fileName: "a.opus", title: "快速錄音")
+        ]
+        let record = AudioRecordingRecord(title: "IPAD錄音", durationSeconds: 17, fileName: "a.opus")
+        let adopted = NotebookStore.adoptingCardTitles([record], notebooks: [book])
+        XCTAssertEqual(adopted[0].title, "IPAD錄音", "卡片上的通用佔位標題不得反向覆蓋使用者在錄音清單中的具體自訂標題")
+    }
+
+    func testLocalGenericTitleDoesNotOverwriteForeignCustomTitleInPackageExport() throws {
+        let package = workDir.appendingPathComponent("preserve_foreign_custom.padnote")
+        // 1. iPad（A）建立了錄音並自訂名稱為 "IPAD錄音"
+        try NotebookPackageBridge.export(
+            document: doc(), drawings: [PKDrawing()], to: package, deviceId: deviceA,
+            recordingTitles: ["a.opus": "IPAD錄音"])
+
+        // 2. Mac（B）本地尚未同步到該自訂名稱，只有通用名稱 "語音錄音與對齊 2026/10/11 晚上 8:15"
+        let first = try NotebookPackageBridge.importDocument(fromPackageAt: package, deviceId: deviceB)
+        try NotebookPackageBridge.exportPreservingOtherDevices(
+            document: first.document, drawings: [PKDrawing()], to: package, deviceId: deviceB,
+            pageIds: first.pageIds,
+            recordingTitles: ["a.opus": "語音錄音與對齊 2026/10/11 晚上 8:15"])
+
+        // 3. 匯入檢查：iPad 的 "IPAD錄音" 必須被完整保留，不得被 Mac 的通用標題覆蓋
+        let merged = try NotebookPackageBridge.importDocument(fromPackageAt: package, deviceId: deviceA)
+        XCTAssertEqual(merged.recordingTitles["a.opus"], "IPAD錄音", "本機的通用佔位標題絕不能反向覆蓋別台裝置的自訂標題")
     }
 
     func testPackageRecordingTitlesReadsRectitleDirectly() throws {

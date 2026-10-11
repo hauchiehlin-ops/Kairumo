@@ -3292,7 +3292,15 @@ public final class NotebookStore: ObservableObject {
 
     @discardableResult
     public func addRecording(title: String, durationSeconds: Int, fileName: String, linkedNotebookId: String? = nil) -> AudioRecordingRecord {
-        let safeTitle = title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? L10n.t("recording_default_title") : title
+        let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        let safeTitle: String
+        if !trimmed.isEmpty {
+            safeTitle = trimmed
+        } else if let nId = linkedNotebookId, nId.caseInsensitiveCompare(recordingInboxNotebookId()) == .orderedSame {
+            safeTitle = Self.defaultQuickRecordingTitle()
+        } else {
+            safeTitle = Self.defaultRecordingTitle()
+        }
         let rec = AudioRecordingRecord(
             title: safeTitle,
             durationSeconds: durationSeconds,
@@ -3553,7 +3561,10 @@ public final class NotebookStore: ObservableObject {
             guard let incoming = titles[key],
                   !incoming.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
                   incoming != recordings[index].title else { continue }
-            if let exported, let was = exported[key], recordings[index].title != was {
+            // 遠端是具體名稱，而本機是通用佔位名稱：一律採納遠端具體名稱
+            if Self.isGenericOrQuickRecordTitle(recordings[index].title) && !Self.isGenericOrQuickRecordTitle(incoming) {
+                // 直接採納
+            } else if let exported, let was = exported[key], recordings[index].title != was {
                 // 如果本機現有名稱只是通用名稱（如「快速錄音」），而遠端送來具體名稱，不能被 exported 擋下
                 if !Self.isGenericOrQuickRecordTitle(recordings[index].title) {
                     continue
@@ -3567,9 +3578,13 @@ public final class NotebookStore: ObservableObject {
         for (key, incoming) in titles {
             let clean = incoming.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !clean.isEmpty else { continue }
-            if let exported, let was = exported[key], let currentRec = recordings.first(where: { $0.fileName.lowercased() == key }), currentRec.title != was && currentRec.title != clean {
-                if !Self.isGenericOrQuickRecordTitle(currentRec.title) {
-                    continue
+            if let currentRec = recordings.first(where: { $0.fileName.lowercased() == key }) {
+                if Self.isGenericOrQuickRecordTitle(currentRec.title) && !Self.isGenericOrQuickRecordTitle(clean) {
+                    // 直接採納
+                } else if let exported, let was = exported[key], currentRec.title != was && currentRec.title != clean {
+                    if !Self.isGenericOrQuickRecordTitle(currentRec.title) {
+                        continue
+                    }
                 }
             }
             for notebookIndex in notebooks.indices {
@@ -3617,6 +3632,10 @@ public final class NotebookStore: ObservableObject {
             guard let title = cardTitles[record.fileName.lowercased()], title != record.title else {
                 return record
             }
+            // 如果卡片標題只是通用佔位名稱，而清單標題是具體自訂名稱，絕對不能被卡片反向覆蓋
+            if isGenericOrQuickRecordTitle(title) && !isGenericOrQuickRecordTitle(record.title) {
+                return record
+            }
             var updated = record
             updated.title = title
             return updated
@@ -3629,19 +3648,72 @@ public final class NotebookStore: ObservableObject {
         return "\(label) \(LocalizationManager.formatted(date, date: .numeric, time: .shortened))"
     }
 
-    /// 判斷標題是否為尚未經使用者自訂命名的通用「快速錄音」佔位標題。
-    static func isGenericOrQuickRecordTitle(_ title: String) -> Bool {
+    /// 判斷標題是否為尚未經使用者自訂命名的通用「快速錄音」佔位標題（跨語系與自動時間戳格式）。
+    nonisolated static func isGenericOrQuickRecordTitle(_ title: String) -> Bool {
         let clean = title.trimmingCharacters(in: .whitespacesAndNewlines)
         if clean.isEmpty { return true }
-        let quickRecord = LocalizationManager.localizedString("quick_record").trimmingCharacters(in: .whitespacesAndNewlines)
-        let inbox = LocalizationManager.localizedString("recording_inbox").trimmingCharacters(in: .whitespacesAndNewlines)
-        if clean == quickRecord || clean == inbox { return true }
-        if clean.caseInsensitiveCompare("快速錄音") == .orderedSame ||
-           clean.caseInsensitiveCompare("Quick Record") == .orderedSame ||
-           clean.caseInsensitiveCompare("Quick Recording") == .orderedSame ||
-           clean.caseInsensitiveCompare("錄音") == .orderedSame {
-            return true
+
+        // 1. 完全比對各語系通用字串
+        let genericExact: [String] = [
+            "快速錄音", "快速录音", "Quick Record", "Quick Recording", "クイック録音", "빠른 녹음", "บันทึกเสียงด่วน",
+            "錄音", "录音", "Recording", "녹음", "การบันทึก",
+            "語音錄音", "语音录音", "Voice recording", "音声録音", "음성 녹음", "บันทึกเสียง",
+            "錄音收件匣", "录音收件箱", "Recording Inbox", "録音受信箱", "녹음 받은편지함", "กล่องข้อความเสียง",
+            "語音錄音與對齊", "语音录音与对齐", "Audio Recording & Sync", "音声録音と同期", "음성 녹음 및 동기화", "การบันทึกเสียงและการซิงค์"
+        ]
+        for candidate in genericExact {
+            if clean.caseInsensitiveCompare(candidate) == .orderedSame { return true }
         }
+
+        let localizedTerms = [
+            LocalizationManager.localizedString("quick_record"),
+            LocalizationManager.localizedString("recording_inbox"),
+            LocalizationManager.localizedString("recording_suffix"),
+            LocalizationManager.localizedString("quick_record_title"),
+            LocalizationManager.localizedString("recording_default_title")
+        ]
+        for term in localizedTerms {
+            let t = term.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !t.isEmpty && clean.caseInsensitiveCompare(t) == .orderedSame { return true }
+        }
+
+        // 2. 字首比對：自動生成的預設名稱，如「語音錄音與對齊 2026/10/11 晚上 8:15」或「錄音 2026/10/11 下午 5:46」
+        let genericPrefixes: [String] = [
+            "語音錄音與對齊", "语音录音与对齐", "Audio Recording & Sync", "音声録音と同期", "음성 녹음 및 동기化", "음성 녹음 및 동기화", "การบันทึกเสียงและการซิงค์",
+            "快速錄音", "快速录音", "Quick Record", "Quick Recording", "クイック録音", "빠른 녹음", "บันทึกเสียงด่วน",
+            "語音錄音", "语音录音", "Voice recording", "音声録音", "음성 녹음", "บันทึกเสียง",
+            "錄音", "录音", "Recording", "녹음", "การบันทึก"
+        ]
+        let lowerClean = clean.lowercased()
+        for prefix in genericPrefixes {
+            let lowerPrefix = prefix.lowercased()
+            if lowerClean.hasPrefix(lowerPrefix) {
+                let remainder = lowerClean.dropFirst(lowerPrefix.count).trimmingCharacters(in: .whitespacesAndNewlines)
+                if remainder.isEmpty { return true }
+                let firstChar = remainder.first
+                if firstChar?.isNumber == true ||
+                   remainder.hasPrefix("晚上") || remainder.hasPrefix("下午") || remainder.hasPrefix("上午") ||
+                   remainder.hasPrefix("am") || remainder.hasPrefix("pm") ||
+                   remainder.contains("/") || remainder.contains("-") || remainder.contains(":") {
+                    return true
+                }
+            }
+        }
+        for term in localizedTerms {
+            let lowerTerm = term.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            if !lowerTerm.isEmpty && lowerClean.hasPrefix(lowerTerm) {
+                let remainder = lowerClean.dropFirst(lowerTerm.count).trimmingCharacters(in: .whitespacesAndNewlines)
+                if remainder.isEmpty { return true }
+                let firstChar = remainder.first
+                if firstChar?.isNumber == true ||
+                   remainder.hasPrefix("晚上") || remainder.hasPrefix("下午") || remainder.hasPrefix("上午") ||
+                   remainder.hasPrefix("am") || remainder.hasPrefix("pm") ||
+                   remainder.contains("/") || remainder.contains("-") || remainder.contains(":") {
+                    return true
+                }
+            }
+        }
+
         return false
     }
 

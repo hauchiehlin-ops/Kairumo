@@ -935,6 +935,18 @@ enum NotebookPackageBridge {
                   let now = ObjectEnvelope.canonicalPayload(payload),
                   ObjectEnvelope.canonicalPayload(of: foreign.appearances[id]) != now
             else { return }
+
+            // 錄音標題保護：若別台已經有標題且不是通用佔位名稱，而本機目前是通用佔位名稱，
+            // 絕不能用本機的通用佔位名稱反向覆蓋別台的自訂名稱！
+            if kind == "rectitle",
+               let foreignTitleObj = ObjectEnvelope.decode(RecordingTitle.self, kind: "rectitle", from: foreign.appearances[id]),
+               let localTitleObj = payload as? RecordingTitle {
+                if NotebookStore.isGenericOrQuickRecordTitle(localTitleObj.title) &&
+                   !NotebookStore.isGenericOrQuickRecordTitle(foreignTitleObj.title) {
+                    return
+                }
+            }
+
             edits.append(Edit(
                 id: id, position: CGPoint(x: x, y: y),
                 appearance: ObjectEnvelope.encode(kind: kind, fileName: "\(rawId).png", payload: payload)))
