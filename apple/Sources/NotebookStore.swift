@@ -1296,9 +1296,14 @@ public final class NotebookStore: ObservableObject {
             StartupLogger.logKey("log_store_seed_check")
             backfillEmptySeedNotebooks()
         }
-        refreshRecordings()
         injectInteractionFixturesIfRequested()
         StartupLogger.logKey("log_store_init_done")
+
+        // 錄音檔案掃描與時長校正非關鍵啟動路徑，改為非同步執行，
+        // 避免在主執行緒上開啟所有套件及讀取龐大音檔，消除 App 啟動凍結 (7-8 秒卡頓)。
+        DispatchQueue.main.async { [weak self] in
+            self?.refreshRecordings()
+        }
     }
 
     /// 互動矩陣專用筆記本的 id（`InteractionMatrixAudit` 靠它從首頁找到這本）。
@@ -1767,6 +1772,12 @@ public final class NotebookStore: ObservableObject {
             + (doc.commentPins?.count ?? 0)
         guard objectCount == 0 else { return false }
 
+        if doc.pagesData.isEmpty { return true }
+        // 快速路徑：若任何頁面位元組大於 64 bytes，表示已有繪製筆跡（空白 PKDrawing 標頭小於 32 bytes），
+        // 避免在啟動主執行緒逐頁反序列化 PKDrawing 造成多秒卡頓。
+        if doc.pagesData.contains(where: { $0.count > 64 }) {
+            return false
+        }
         // 解不開的筆跡資料當成「有東西」。判斷不出來就不要動它。
         return doc.pagesData.allSatisfy { data in
             guard let drawing = try? PKDrawing(data: data) else { return false }
@@ -3771,16 +3782,17 @@ public final class NotebookStore: ObservableObject {
             let isInbox = doc.id.caseInsensitiveCompare(inboxId) == .orderedSame
             let packageURL = corePackagesDirectory
                 .appending(path: "\(doc.id.lowercased()).padnote")
-            let packageTitles = Self.packageRecordingTitles(packageURL: packageURL)
             let audioDir = packageURL.appending(path: "media/audio")
+            guard fm.fileExists(atPath: audioDir.path) else { continue }
             let files = (try? fm.contentsOfDirectory(
                 at: audioDir, includingPropertiesForKeys: [.contentModificationDateKey]))?
                 .filter { $0.pathExtension.lowercased() == "opus" } ?? []
+            guard !files.isEmpty else { continue }
+
+            let packageTitles = Self.packageRecordingTitles(packageURL: packageURL)
             for file in files {
                 let name = file.lastPathComponent
                 let lowerName = name.lowercased()
-                let bytes = (try? Data(contentsOf: file)) ?? Data()
-                let realSeconds = Int(audioDurationSeconds(bytes: bytes))
                 let candidateTitle = packageTitles[lowerName] ?? unmatchedIncomingTitles[lowerName]
 
                 if let existing = byFileName[lowerName] {
@@ -3788,9 +3800,13 @@ public final class NotebookStore: ObservableObject {
                     if updated.linkedNotebookId == nil {
                         updated.linkedNotebookId = doc.id
                     }
-                    // 1. 真實時長校正：實體音檔是唯一事實來源，若現存時長不符或為 0 則校正為真實秒數
-                    if realSeconds > 0 && updated.durationSeconds != realSeconds {
-                        updated.durationSeconds = realSeconds
+                    // 1. 真實時長校正：僅當現存時長為 0 或缺漏時，才讀檔解碼，避免每次重複讀取龐大音檔
+                    if updated.durationSeconds <= 0 {
+                        let bytes = (try? Data(contentsOf: file)) ?? Data()
+                        let realSeconds = Int(audioDurationSeconds(bytes: bytes))
+                        if realSeconds > 0 {
+                            updated.durationSeconds = realSeconds
+                        }
                     }
                     // 2. 標題校正：若本機標題為通用名稱（如「快速錄音」），且套件或遠端有具體名稱，自動採納
                     if let named = candidateTitle, !named.isEmpty {
@@ -3808,7 +3824,8 @@ public final class NotebookStore: ObservableObject {
                 // 從別台同步過來的：索引裡沒有，要補一筆才看得到。
                 // 長度走核心算 —— 兩個平台各自問系統 API 的話，
                 // 同一段錄音會顯示不同的秒數，而使用者會以為同步壞了。
-                let seconds = realSeconds > 0 ? realSeconds : Int(audioDurationSeconds(bytes: bytes))
+                let bytes = (try? Data(contentsOf: file)) ?? Data()
+                let seconds = Int(audioDurationSeconds(bytes: bytes))
                 let modified = (try? file.resourceValues(forKeys: [.contentModificationDateKey]))?
                     .contentModificationDate ?? Date()
                 let title: String
