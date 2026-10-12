@@ -57,6 +57,7 @@ struct ContinuousPageView<ObjectLayer: View>: View {
     let objectLayer: () -> ObjectLayer
     var underInkObjectLayer: (() -> AnyView)? = nil
     var overInkObjectLayer: (() -> AnyView)? = nil
+    var isUnderInkPointPassThrough: ((_ point: CGPoint, _ page: Int, _ event: UIEvent?) -> Bool)? = nil
     /// 筆跡有變動時通知呼叫端（協同廣播用）。
     let onDrawingChanged: (Int, PKDrawing) -> Void
     /// 套索選取狀態。只有焦點頁回報 —— 每一頁都報的話，捲過別頁就會把
@@ -125,6 +126,9 @@ struct ContinuousPageView<ObjectLayer: View>: View {
                 paletteId: paletteId,
                 pageHeight: PageGeometry.height,
                 editorMode: editorMode,
+                hitPassThroughCheck: { point, event in
+                    isUnderInkPointPassThrough?(point, pageIndex, event) ?? false
+                },
                 // 裡層不捲 —— 外面那個 ScrollView 才是捲動的主體。
                 isScrollEnabled: false,
                 onDrawingChanged: { updated -> PKDrawing? in

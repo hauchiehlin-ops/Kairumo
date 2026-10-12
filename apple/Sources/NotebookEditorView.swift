@@ -410,6 +410,9 @@ final class AdaptiveCanvasView: PKCanvasView {
     }
 
     /// 這一頁的高度（由 SwiftUI 端更新）
+    /// 判定觸控點是否應穿透畫布至底層（筆跡下方物件層，使已選取或文字模式下的下層物件能順暢接收手勢）
+    var hitPassThroughCheck: ((CGPoint, UIEvent?) -> Bool)? = nil
+
     /// 觸控觀察。
     ///
     /// 觀察而**不攔截**：一律呼叫 `super`，PencilKit 的繪製路徑完全不受影響。
@@ -779,6 +782,13 @@ final class AdaptiveCanvasView: PKCanvasView {
     /// 底層樣板背景，要跟著 contentSize 一起變
     weak var templateBackgroundView: UIView?
 
+    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        if let check = hitPassThroughCheck, check(point, event) {
+            return nil
+        }
+        return super.hitTest(point, with: event)
+    }
+
     override func didMoveToWindow() {
         super.didMoveToWindow()
         if window != nil {
@@ -919,6 +929,8 @@ struct CanvasRepresentable: UIViewRepresentable {
     var paletteId: String?
     var pageHeight: CGFloat
     var editorMode: EditorMode = .draw
+    /// 判定觸控點是否應穿透畫布至底層（筆跡下方物件層）
+    var hitPassThroughCheck: ((CGPoint, UIEvent?) -> Bool)? = nil
     /// 這個畫布要不要自己捲動。
     ///
     /// 連續頁面模式下每一頁都是一個 PKCanvasView，外面還有一個 ScrollView。
@@ -990,6 +1002,7 @@ struct CanvasRepresentable: UIViewRepresentable {
 
     func makeUIView(context: Context) -> PKCanvasView {
         let canvas = AdaptiveCanvasView()
+        canvas.hitPassThroughCheck = hitPassThroughCheck
         // 無限制復原/重做次數（0 代表 levelsOfUndo 無上限，直到記憶體或棧頂耗盡為止）
         canvas.undoManager?.levelsOfUndo = 0
         canvas.drawingPolicy = resolvedPolicy()
@@ -1227,6 +1240,7 @@ struct CanvasRepresentable: UIViewRepresentable {
         // 換筆刷或拉筆寬時，游標要跟著變 —— 不更新的話使用者得把滑鼠移出去
         // 再移回來才看得到新的筆頭。
         if let adaptive = uiView as? AdaptiveCanvasView {
+            adaptive.hitPassThroughCheck = hitPassThroughCheck
             adaptive.onPencilTouchBegan = onPencilTouchBegan
             adaptive.installPointerInteractionIfNeeded(delegate: context.coordinator)
             adaptive.refreshPointer(for: selectedTool, strokeWidth: strokeWidth)
@@ -4859,6 +4873,9 @@ public struct NotebookEditorView: View {
                             objectLayer: { objectLayer(forPage: index) },
                             underInkObjectLayer: { AnyView(objectLayer(forPage: index, filter: .underInkOnly)) },
                             overInkObjectLayer: { AnyView(objectLayer(forPage: index, filter: .overInkOnly)) },
+                            isUnderInkPointPassThrough: { point, page, event in
+                                isUnderInkPointPassThrough(point: point, page: page, event: event)
+                            },
                             onDrawingChanged: { page, updated in
                                 recordDrawingEdit(page: page, drawing: updated)
                                 broadcastDrawingChange(page: page, drawing: updated)
@@ -5056,14 +5073,12 @@ public struct NotebookEditorView: View {
     }
 
     private func shouldIncludeInInkLayer(id: String, filter: ObjectInkLayerFilter, underInkSet: Set<String>) -> Bool {
-        let isSelected = (activeSelectedObjectId == id || selectedObjectIds.contains(id) || selectedShapeIds.contains(id) || inlineEditingTextId == id || editingTextId == id)
         switch filter {
         case .all: return true
         case .underInkOnly:
-            // 當物件處於選取編輯狀態時，暫時由上方前景層繪製，以允許拖曳、縮放與點擊控制把手
-            return underInkSet.contains(id) && !isSelected
+            return underInkSet.contains(id)
         case .overInkOnly:
-            return !underInkSet.contains(id) || isSelected
+            return !underInkSet.contains(id)
         }
     }
 
@@ -5419,7 +5434,7 @@ public struct NotebookEditorView: View {
                 .offset(x: -canvasContentOffset.x, y: -canvasContentOffset.y)
                 .allowsHitTesting(
                     !isInlineInkEditing
-                        && (editorMode == .type || inlineEditingTextId != nil || editingTextId != nil || activeSelectedObjectId != nil)
+                        && (editorMode == .type || inlineEditingTextId != nil || editingTextId != nil || activeSelectedObjectId != nil || !selectedObjectIds.isEmpty || !selectedShapeIds.isEmpty)
                 )
                 .zIndex(1)
 
@@ -5436,10 +5451,10 @@ public struct NotebookEditorView: View {
                 paperId: notebook.paperId(forPage: currentPageIndex),
                 paletteId: notebook.guidePaletteId,
                 pageHeight: currentPageHeight,
-                // 打字模式中的「手繪區塊」是局部繪圖情境。主模式仍保持
-                // `.type`，但 PencilKit 必須收到 `.draw`，否則它會關掉自己的
-                // drawingGestureRecognizer，造成工具列已切到筆、畫布卻完全沒反應。
                 editorMode: effectiveCanvasMode,
+                hitPassThroughCheck: { point, event in
+                    isUnderInkPointPassThrough(point: point, page: currentPageIndex, event: event)
+                },
                 onDrawingChanged: { rawDrawing -> PKDrawing? in
                     // **頁面框線就是編輯區域。**
                     var processedDrawing = enforcePrintableArea(rawDrawing)
@@ -5697,7 +5712,7 @@ public struct NotebookEditorView: View {
                 .offset(x: -canvasContentOffset.x, y: -canvasContentOffset.y)
                 .allowsHitTesting(
                     !isInlineInkEditing
-                        && (editorMode == .type || inlineEditingTextId != nil || editingTextId != nil || activeSelectedObjectId != nil)
+                        && (editorMode == .type || inlineEditingTextId != nil || editingTextId != nil || activeSelectedObjectId != nil || !selectedObjectIds.isEmpty || !selectedShapeIds.isEmpty)
                 )
                 .zIndex(3)
 
@@ -11245,6 +11260,99 @@ public struct NotebookEditorView: View {
         return nil
     }
 
+    private func rectContainsPoint(_ baseRect: CGRect, rotation: Double, touchPadding: CGFloat, point: CGPoint) -> Bool {
+        let touchRect = baseRect.insetBy(dx: -touchPadding, dy: -touchPadding)
+        if abs(rotation) < 0.1 {
+            return touchRect.contains(point)
+        }
+        let center = CGPoint(x: baseRect.midX, y: baseRect.midY)
+        let rad = -rotation * .pi / 180.0
+        let dx = point.x - center.x
+        let dy = point.y - center.y
+        let unrotated = CGPoint(
+            x: center.x + CGFloat(Double(dx) * cos(rad) - Double(dy) * sin(rad)),
+            y: center.y + CGFloat(Double(dx) * sin(rad) + Double(dy) * cos(rad))
+        )
+        return touchRect.contains(unrotated)
+    }
+
+    /// 智慧穿透判定：當觸控點落在筆跡下方的物件時，決定是否讓畫布返回 nil 使得觸控能直達下層物件
+    private func isUnderInkPointPassThrough(point: CGPoint, page: Int, event: UIEvent?) -> Bool {
+        let underInkSet = notebook.underInkObjectIds(forPage: page)
+        guard !underInkSet.isEmpty else { return false }
+
+        var hitSelected = false
+        var hitUnselected = false
+
+        let checkHit: (CGRect, Double, Bool) -> Void = { baseRect, rot, isSel in
+            let padding: CGFloat = isSel ? 36 : 8
+            if rectContainsPoint(baseRect, rotation: rot, touchPadding: padding, point: point) {
+                if isSel {
+                    hitSelected = true
+                } else {
+                    hitUnselected = true
+                }
+            }
+        }
+
+        if let items = notebook.attachments {
+            for item in items where item.pageIndex == page && underInkSet.contains(item.id) {
+                let isSel = (activeSelectedObjectId == item.id || selectedObjectIds.contains(item.id))
+                checkHit(CGRect(x: item.x, y: item.y, width: item.width, height: item.height), item.canvasRotation, isSel)
+            }
+        }
+        if let items = notebook.textAttachments {
+            for item in items where item.pageIndex == page && underInkSet.contains(item.id) {
+                let isSel = (activeSelectedObjectId == item.id || selectedObjectIds.contains(item.id) || inlineEditingTextId == item.id || editingTextId == item.id)
+                checkHit(CGRect(x: item.x, y: item.y, width: item.width, height: item.height), item.canvasRotation, isSel)
+            }
+        }
+        if let items = notebook.shapeAttachments {
+            for item in items where item.pageIndex == page && underInkSet.contains(item.id) {
+                let isSel = (selectedShapeIds.contains(item.id) || activeSelectedObjectId == item.id || selectedObjectIds.contains(item.id))
+                checkHit(CGRect(x: item.x, y: item.y, width: item.width, height: item.height), item.canvasRotation, isSel)
+            }
+        }
+        if let items = notebook.tableAttachments {
+            for item in items where item.pageIndex == page && underInkSet.contains(item.id) {
+                let isSel = (activeSelectedObjectId == item.id || selectedObjectIds.contains(item.id))
+                let layout = item.layout()
+                checkHit(CGRect(x: item.x, y: item.y, width: CGFloat(layout.width), height: CGFloat(layout.height)), 0, isSel)
+            }
+        }
+        if let items = notebook.linkAttachments {
+            for item in items where item.pageIndex == page && underInkSet.contains(item.id) {
+                let isSel = (activeSelectedObjectId == item.id || selectedObjectIds.contains(item.id))
+                checkHit(CGRect(x: item.x, y: item.y, width: item.width, height: item.height), 0, isSel)
+            }
+        }
+        if let items = notebook.audioAttachments {
+            for item in items where item.pageIndex == page && underInkSet.contains(item.id) {
+                let isSel = (activeSelectedObjectId == item.id || selectedObjectIds.contains(item.id))
+                checkHit(CGRect(x: item.x, y: item.y, width: item.width, height: item.height), 0, isSel)
+            }
+        }
+        if let items = notebook.model3DAttachments {
+            for item in items where item.pageIndex == page && underInkSet.contains(item.id) {
+                let isSel = (activeSelectedObjectId == item.id || selectedObjectIds.contains(item.id))
+                checkHit(CGRect(x: item.x, y: item.y, width: item.width, height: item.height), 0, isSel)
+            }
+        }
+
+        if hitSelected {
+            // 已選取的筆跡下方物件：優先穿透，以操作控制把手、旋轉、縮放與拖曳
+            return true
+        }
+
+        if hitUnselected {
+            // 未選取的筆跡下方物件：
+            // 打字模式下穿透以利點選；手繪模式下不穿透，由畫布接收以順暢在其上方繪圖
+            return editorMode == .type
+        }
+
+        return false
+    }
+
     private func isLocationInsideAnyObject(at location: CGPoint, page: Int) -> Bool {
         if findObjectAt(location: location, page: page) != nil { return true }
         if let items = notebook.tapeAttachments {
@@ -12922,6 +13030,18 @@ public struct NotebookEditorView: View {
             var current = notebook.underInkObjectIds(forPage: page)
             if current.contains(id) {
                 current.remove(id)
+                notebook.setUnderInkObjectIds(current, forPage: page)
+            }
+            let order = ObjectStacking.normalized(
+                objects: stackableObjects(forPage: page),
+                order: notebook.objectOrder(forPage: page))
+            notebook.setObjectOrder(op.apply(id, to: order), forPage: page)
+            store.updateNotebook(notebook)
+            PageThumbnailRenderer.invalidateAll()
+        case .toBack:
+            var current = notebook.underInkObjectIds(forPage: page)
+            if !current.contains(id) {
+                current.insert(id)
                 notebook.setUnderInkObjectIds(current, forPage: page)
             }
             let order = ObjectStacking.normalized(

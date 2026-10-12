@@ -202,4 +202,30 @@ final class ObjectLayerTests: XCTestCase {
             }
         }
     }
+
+    // MARK: - 筆跡上下層級與排列操作
+
+    func testObjectReorderOpApply() {
+        let order = ["a", "b", "c"]
+        XCTAssertEqual(ObjectReorderOp.toFront.apply("a", to: order), ["b", "c", "a"])
+        XCTAssertEqual(ObjectReorderOp.toBack.apply("c", to: order), ["c", "a", "b"])
+        XCTAssertEqual(ObjectReorderOp.forward.apply("a", to: order), ["b", "a", "c"])
+        XCTAssertEqual(ObjectReorderOp.backward.apply("c", to: order), ["a", "c", "b"])
+        XCTAssertEqual(ObjectReorderOp.sendBelowInk.apply("b", to: order), order)
+        XCTAssertEqual(ObjectReorderOp.bringAboveInk.apply("b", to: order), order)
+    }
+
+    func testUnderInkObjectIdsStorage() {
+        var doc = NotebookDocument(id: "test", title: "Test")
+        XCTAssertTrue(doc.underInkObjectIds(forPage: 0).isEmpty)
+
+        doc.setUnderInkObjectIds(["obj-1", "obj-2"], forPage: 0)
+        XCTAssertEqual(doc.underInkObjectIds(forPage: 0), ["obj-1", "obj-2"])
+        XCTAssertTrue(doc.underInkObjectIds(forPage: 1).isEmpty, "其他頁面不受影響")
+
+        var page0 = doc.underInkObjectIds(forPage: 0)
+        page0.remove("obj-1")
+        doc.setUnderInkObjectIds(page0, forPage: 0)
+        XCTAssertEqual(doc.underInkObjectIds(forPage: 0), ["obj-2"])
+    }
 }
