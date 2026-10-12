@@ -11277,7 +11277,8 @@ public struct NotebookEditorView: View {
     }
 
     /// 智慧穿透判定：當觸控點落在筆跡下方的物件時，決定是否讓畫布返回 nil 使得觸控能直達下層物件
-    private func isUnderInkPointPassThrough(point: CGPoint, page: Int, event: UIEvent?) -> Bool {
+    // unused-param-ok: 依 UIKit hitTest(_:with:) 簽章保留 event 參數供擴充使用，穿透邏輯以座標與物件狀態裁決
+    private func isUnderInkPointPassThrough(point: CGPoint, page: Int, event: UIEvent? = nil) -> Bool {
         let underInkSet = notebook.underInkObjectIds(forPage: page)
         guard !underInkSet.isEmpty else { return false }
 
