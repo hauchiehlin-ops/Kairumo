@@ -28,8 +28,15 @@ object CrashLogger {
     private var defaultHandler: Thread.UncaughtExceptionHandler? = null
     private var installed = false
     private var appContext: Context? = null
-    private val logDateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.US)
     private val lock = Any()
+    // 寫檔放背景單一執行緒：同步日誌可能從主執行緒呼叫，同步寫檔會重新造成 ANR。
+    private val writer = java.util.concurrent.Executors.newSingleThreadExecutor { r ->
+        Thread(r, "kairumo-runtime-log").apply { isDaemon = true }
+    }
+
+    // SimpleDateFormat 不是執行緒安全的，每次新建。
+    private fun now(): String =
+        SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.US).format(Date())
 
     fun install(context: Context) {
         if (installed) return
@@ -52,8 +59,11 @@ object CrashLogger {
 
     fun logRuntime(message: String) {
         val ctx = appContext ?: return
-        val timestamp = logDateFormat.format(Date())
-        val line = "[$timestamp] $message\n"
+        val line = "[${now()}] $message\n"
+        runCatching { writer.execute { appendLine(ctx, line) } }
+    }
+
+    private fun appendLine(ctx: Context, line: String) {
         synchronized(lock) {
             try {
                 val file = File(ctx.filesDir, RUNTIME_LOG_NAME)
@@ -75,7 +85,7 @@ object CrashLogger {
         throwable.printStackTrace(pw)
         val stackTrace = sw.toString()
 
-        val now = logDateFormat.format(Date())
+        val now = now()
 
         val report = buildString {
             append("=== KAIRUMO CRASH REPORT ===\n")
@@ -94,7 +104,7 @@ object CrashLogger {
             val file = File(context.filesDir, CRASH_FILE_NAME)
             file.writeText(report)
             Log.e(TAG, "Crash logged to ${file.absolutePath}")
-            logRuntime("FATAL EXCEPTION:\n$report")
+            appendLine(context, "[${now()}] FATAL EXCEPTION:\n$report\n") // 行程將結束，同步寫
         } catch (e: Exception) {
             Log.e(TAG, "Cannot write crash log to disk", e)
         }
@@ -131,7 +141,7 @@ object CrashLogger {
             append("=== KAIRUMO 系統與診斷日誌匯出 ===\n")
             append("裝置: ").append(Build.MANUFACTURER).append(" ").append(Build.MODEL).append("\n")
             append("系統版本: Android ").append(Build.VERSION.RELEASE).append(" (API ").append(Build.VERSION.SDK_INT).append(")\n")
-            append("時間: ").append(logDateFormat.format(Date())).append("\n\n")
+            append("時間: ").append(now()).append("\n\n")
             if (!crash.isNullOrBlank()) {
                 append("--- 最新崩潰記錄 (LAST CRASH) ---\n")
                 append(crash)
