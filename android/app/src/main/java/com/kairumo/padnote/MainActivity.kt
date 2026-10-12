@@ -528,7 +528,7 @@ private fun NotebookHome(
                     .replace("%1@", result.uploaded.toString())
                     .replace("%2@", result.downloaded.toString())
             }
-            if (result.changed.isNotEmpty()) revision++
+            if (result.changed.isNotEmpty() || result.downloaded > 0 || (meta != null && meta.ok)) revision++
         }
     }
 

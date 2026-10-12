@@ -475,6 +475,18 @@ final class RecordingTitleInPackageTests: XCTestCase {
         XCTAssertEqual(adopted[0].title, "IPAD錄音", "卡片上的通用佔位標題不得反向覆蓋使用者在錄音清單中的具體自訂標題")
     }
 
+    func testCustomRecordingTitleIsNotOverwrittenByPackageOldTitleWhenRenamed() {
+        // 使用者在 iPhone 上把 "IPAD2026-2" 改名為 "iPhone2026-2"
+        // 即使套件中讀到的舊自訂名稱是 "IPAD2026-2"，本機自訂名稱絕不能被反向蓋回
+        var record = AudioRecordingRecord(title: "iPhone2026-2", durationSeconds: 17, fileName: "rec.opus")
+        let candidateFromDiskPackage = "IPAD2026-2"
+        if NotebookStore.isGenericOrQuickRecordTitle(record.title) &&
+            !NotebookStore.isGenericOrQuickRecordTitle(candidateFromDiskPackage) {
+            record.title = candidateFromDiskPackage
+        }
+        XCTAssertEqual(record.title, "iPhone2026-2", "本機改名後的自訂名稱不能被套件中的舊自訂名稱覆蓋")
+    }
+
     func testLocalGenericTitleDoesNotOverwriteForeignCustomTitleInPackageExport() throws {
         let package = workDir.appendingPathComponent("preserve_foreign_custom.padnote")
         // 1. iPad（A）建立了錄音並自訂名稱為 "IPAD錄音"

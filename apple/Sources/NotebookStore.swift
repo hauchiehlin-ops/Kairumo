@@ -3817,12 +3817,10 @@ public final class NotebookStore: ObservableObject {
                                 updated.durationSeconds = realSeconds
                             }
                         }
-                        // 2. 標題校正：若本機標題為通用名稱（如「快速錄音」），且套件或遠端有具體名稱，自動採納
+                        // 2. 標題校正：僅當本機標題為通用佔位名稱（如「快速錄音」），且套件或遠端有具體自訂名稱時才採納
                         if let named = candidateTitle, !named.isEmpty {
-                            if Self.isGenericOrQuickRecordTitle(updated.title) || updated.title != named {
-                                if Self.isGenericOrQuickRecordTitle(updated.title) || !Self.isGenericOrQuickRecordTitle(named) {
-                                    updated.title = named
-                                }
+                            if Self.isGenericOrQuickRecordTitle(updated.title) && !Self.isGenericOrQuickRecordTitle(named) {
+                                updated.title = named
                             }
                         }
                         scanned.append(updated)
@@ -3969,15 +3967,7 @@ public final class NotebookStore: ObservableObject {
             if changed {
                 notebooks[notebookIndex].audioAttachments = cards
                 notebooks[notebookIndex].lastModifiedDate = Date()
-                let targetPkg = corePackagesDirectory.appending(path: "\(notebooks[notebookIndex].id.lowercased()).padnote")
-                if FileManager.default.fileExists(atPath: targetPkg.path) {
-                    try? FileManager.default.setAttributes([.modificationDate: Date()], ofItemAtPath: targetPkg.path)
-                }
             }
-        }
-        let linkedPkg = corePackagesDirectory.appending(path: "\(targetNotebookId.lowercased()).padnote")
-        if FileManager.default.fileExists(atPath: linkedPkg.path) {
-            try? FileManager.default.setAttributes([.modificationDate: Date()], ofItemAtPath: linkedPkg.path)
         }
         markDirtyAndPersist(signalsLocalEdit: true)
     }
