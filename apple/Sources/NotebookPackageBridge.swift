@@ -1028,7 +1028,8 @@ enum NotebookPackageBridge {
         }
 
         let style = pageStyle(for: document.template)
-        while Int(session.pageCount()) <= pageIndex {
+        let targetPageCount = max(document.pageCount, pageIndex + 1)
+        while Int(session.pageCount()) < targetPageCount {
             _ = try session.addPage(style: style)
         }
 

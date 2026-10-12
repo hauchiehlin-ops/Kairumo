@@ -274,6 +274,18 @@ enum ObjectLedger {
         add(d.attachments); add(d.textAttachments); add(d.tableAttachments); add(d.shapeAttachments)
         add(d.connectionAttachments); add(d.linkAttachments); add(d.model3DAttachments)
         add(d.audioAttachments); add(d.commentPins); add(d.tapeAttachments); add(d.stickyAnchors)
+        // 文檔層級關鍵屬性（頁數、標題、頁面高度、紙張樣式、資料夾、圖層堆疊順序）：
+        // 若只看物件，使用者單純「新增頁面」、「改筆記名稱」或「調整圖層至筆跡下方」時，
+        // 碰上套件時間剛更新就會被判成不必匯出，導致新頁面與圖層變更永遠無法同步至其他設備。
+        out["__doc.pageCount"] = String(d.pageCount)
+        out["__doc.title"] = d.title
+        out["__doc.pageHeights"] = d.pageHeights?.map { String(Int($0)) }.joined(separator: ",") ?? ""
+        out["__doc.pagePaperIds"] = d.pagePaperIds?.joined(separator: ",") ?? ""
+        out["__doc.template"] = d.template.rawValue
+        if let folderId = d.folderId { out["__doc.folderId"] = folderId }
+        if let order = d.objectOrderByPage, let data = try? encoder.encode(order) {
+            out["__doc.order"] = SHA256.hash(data: data).prefix(8).map { String(format: "%02x", $0) }.joined()
+        }
         return out
     }
 

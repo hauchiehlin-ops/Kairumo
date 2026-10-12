@@ -3121,6 +3121,8 @@ public struct NotebookEditorView: View {
         if changedId == nil || changedId?.caseInsensitiveCompare(notebook.id) == .orderedSame {
             coreInkBaselines.removeAll()
             loadCurrentPage()
+            continuousReloadGeneration += 1
+            thumbnailRevision += 1
             PageThumbnailRenderer.invalidateAll()
         }
     }
@@ -4971,6 +4973,7 @@ public struct NotebookEditorView: View {
                 .frame(maxWidth: .infinity)
             }
             .coordinateSpace(name: ContinuousPagesSpace.name)
+            .environment(\.objectReorder, { id, op in reorderObject(id, op) })
             .background(
                 GeometryReader { geo in
                     Color.clear
@@ -13059,6 +13062,8 @@ public struct NotebookEditorView: View {
             store.updateNotebook(notebook)
             PageThumbnailRenderer.invalidateAll()
         }
+        continuousReloadGeneration += 1
+        thumbnailRevision += 1
     }
 
     /// 這本筆記上所有物件的 id（不含連接線）。用來偵測「新插入了什麼」。
