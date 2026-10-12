@@ -1590,7 +1590,7 @@ enum NotebookSyncCoordinator {
                 ledger.foreignTombstones = plan.foreignTombstones
                 ledger.pkRetiredOwn = []
                 ledger.pkGen = [:]
-                ledger.schema = 2
+                if hasInk { ledger.schema = 2 }
             }
             PKInkSnapshotStore.save(
                 snapshot.own, in: inputs.drawingsDirectory, notebookId: document.id, page: page)
@@ -1676,10 +1676,9 @@ enum NotebookSyncCoordinator {
         // 升級前的筆記：這一頁的筆畫還沒用穩定身分寫出過（帳本版本 < 2）。要重寫一次，
         // 雲端那份舊身分的檔案才會被換掉 —— 別台對舊身分寫的墓碑才不會落空。
         for page in 0 ..< max(inputs.document.pageCount, 1) {
-            let hasInk = ["drawing", "proink.json"].contains { ext in
-                fm.fileExists(atPath: inputs.drawingsDirectory
-                    .appending(path: "\(inputs.document.id)_p\(page).\(ext)").path)
-            }
+            let hasProInk = !ProInkStore.load(in: inputs.drawingsDirectory, notebookId: inputs.document.id, page: page).isEmpty
+            let hasDrawingInk = !inputs.loadDrawing(inputs.document.id, page).strokes.isEmpty
+            let hasInk = hasProInk || hasDrawingInk
             if hasInk,
                ProInkStore.loadLedger(in: inputs.drawingsDirectory, notebookId: inputs.document.id, page: page).schema < 2 {
                 return true
