@@ -5143,6 +5143,14 @@ extension LocalizationManager {
             .ko: "AES-256-GCM 왕복 테스트 통과",
             .th: "การทดสอบ AES-256-GCM ไป-กลับผ่าน"
         ],
+        "diag_export_logs": [
+            .zhHant: "📤 匯出系統日誌",
+            .en: "📤 Export system logs",
+            .zhHans: "📤 导出系统日志",
+            .ja: "📤 システムログを書き出す",
+            .ko: "📤 시스템 로그 내보내기",
+            .th: "📤 ส่งออกบันทึกระบบ"
+        ],
         "diag_failed": [
             .zhHant: "失敗：%1@",
             .en: "Failed: %1@",

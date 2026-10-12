@@ -152,6 +152,16 @@ fun AppDiagnosticsDialog(
                             horizontalArrangement = Arrangement.End,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
+                            TextButton(
+                                onClick = {
+                                    com.kairumo.padnote.platform.CrashLogger.exportLogs(context)
+                                }
+                            ) {
+                                Text(com.kairumo.padnote.L10n.t("diag_export_logs"), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                            }
+
+                            Spacer(modifier = Modifier.width(4.dp))
+
                             val hasCrash = !crashLogContent.isNullOrBlank()
                             TextButton(
                                 onClick = {
@@ -159,8 +169,7 @@ fun AppDiagnosticsDialog(
                                         LogExportUtility.copy(context, it)
                                         copiedCrashLog = true
                                     }
-                                },
-                                enabled = hasCrash
+                                }
                             ) {
                                 Text(
                                     if (copiedCrashLog) "✓ ${l("log_copied")}" else l("crash_logs_copy"),
@@ -186,17 +195,39 @@ fun AppDiagnosticsDialog(
                         HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
 
                         if (crashLogContent.isNullOrBlank()) {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 32.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    l("crash_logs_empty"),
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
+                            val runtimeLogs = remember { com.kairumo.padnote.platform.CrashLogger.runtimeLog(context) }
+                            if (runtimeLogs.isNotBlank()) {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .weight(1f, fill = false)
+                                        .verticalScroll(rememberScrollState())
+                                        .background(
+                                            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                                            RoundedCornerShape(6.dp)
+                                        )
+                                        .padding(8.dp)
+                                ) {
+                                    Text(
+                                        text = runtimeLogs,
+                                        fontSize = 10.sp,
+                                        fontFamily = FontFamily.Monospace,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
+                            } else {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 32.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        l("crash_logs_empty"),
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
                             }
                         } else {
                             Column(

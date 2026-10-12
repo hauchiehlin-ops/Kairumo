@@ -1667,6 +1667,14 @@ enum NotebookSyncCoordinator {
     nonisolated static func workingCopyNeedsExport(_ inputs: ExportInputs) -> Bool {
         let fm = FileManager.default
         guard fm.fileExists(atPath: inputs.package.path) else { return true }
+
+        // **如果磁碟上的套件已有更多頁面，本地工作副本頁數落後，絕不應反向覆蓋套件！**
+        // 否則落後的裝置開機或碰過時間戳後，會在步驟 1 把套件截短為較少頁數。
+        if let pkgPages = NotebookPackageBridge.packagePageCount(at: inputs.package, deviceId: inputs.deviceId),
+           pkgPages > inputs.document.pageCount {
+            return false
+        }
+
         // **套件裡沒有任何操作記錄 = 從來沒匯出過，不管時間怎麼比。**
         //
         // 只有 manifest 的套件（建立時就先建好、或上一輪匯出中途被中斷）的時間
@@ -2048,9 +2056,17 @@ enum NotebookSyncCoordinator {
                 continue
             }
 
-            // 如果指定了只匯入特定變更的筆記本，且此筆記本不在名單中，且本地已載入過，則跳過重算
+            // 如果指定了只匯入特定變更的筆記本，且此筆記本不在名單中，且本地已載入過：
+            // 只有在套件頁數與本地頁數完全一致時才可跳過；若套件頁數不同，必須強制匯入！
             if let only = onlyNotebookIds, !only.contains(normId), activeLocalIds.contains(normId) {
-                continue
+                let localDoc = store.allNotebooks.first(where: { $0.id.caseInsensitiveCompare(normId) == .orderedSame })
+                if let localDoc = localDoc,
+                   let pkgPages = NotebookPackageBridge.packagePageCount(at: package, deviceId: deviceId),
+                   pkgPages != localDoc.pageCount {
+                    // 頁數不一致，不可跳過，繼續執行匯入
+                } else {
+                    continue
+                }
             }
 
             var isDir: ObjCBool = false
