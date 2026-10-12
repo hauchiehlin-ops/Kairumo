@@ -56,6 +56,8 @@ public struct WordToolbarView: View {
     var onAddTextBox: (() -> Void)? = nil
     var isSnapToGrid: Bool? = nil
     var onToggleSnapToGrid: (() -> Void)? = nil
+    var isUnderInk: Bool? = nil
+    var onReorder: ((ObjectReorderOp) -> Void)? = nil
 
     private let textColors = ["#000000", "#4A5568", "#2B6CB0", "#C53030", "#2F855A", "#DD6B20", "#6B46C1"]
     private let highlightColors = ["clear", "#FEFCBF", "#C6F6D5", "#BEE3F8", "#FED7E2", "#E9D8FD"]
@@ -102,36 +104,9 @@ public struct WordToolbarView: View {
                     .buttonStyle(.plain)
                     .accessibilityLabel(localizationManager.localized("snap_to_grid"))
                     .accessibilityIdentifier("editor.text.snap_to_grid")
-
                     Divider().frame(height: 20)
                 }
-                // 1. 復原 / 重做組
-                HStack(spacing: 2) {
-                    Button(action: onUndo) {
-                        Image(systemName: "arrow.uturn.backward")
-                            .font(.system(size: 13, weight: .semibold))
-                            .frame(width: 28, height: 28)
-                    }
-                    .buttonStyle(.plain)
-                    .disabled(!canUndo)
-                    .opacity(canUndo ? 1.0 : 0.4)
-                    .accessibilityLabel(localizationManager.localized("undo"))
 
-                    Button(action: onRedo) {
-                        Image(systemName: "arrow.uturn.forward")
-                            .font(.system(size: 13, weight: .semibold))
-                            .frame(width: 28, height: 28)
-                    }
-                    .buttonStyle(.plain)
-                    .disabled(!canRedo)
-                    .opacity(canRedo ? 1.0 : 0.4)
-                    .accessibilityLabel(localizationManager.localized("redo"))
-                }
-                .padding(2)
-                .background(Color.secondary.opacity(0.08))
-                .cornerRadius(6)
-
-                Divider().frame(height: 20)
 
                 // 2. 樣式階層選單（內文、標題 1、標題 2、標題 3）
                 Menu {
@@ -435,6 +410,63 @@ public struct WordToolbarView: View {
                 .buttonStyle(.plain)
                 .accessibilityLabel(localizationManager.localized("wd_clear_format"))
                 .help(localizationManager.localized("wd_clear_format"))
+
+                // 11. 🌟 圖層順序與筆跡上下層級切換
+                if let onReorder = onReorder {
+                    let under = isUnderInk ?? false
+                    Divider().frame(height: 20)
+
+                    Menu {
+                        Button {
+                            onReorder(.bringAboveInk)
+                        } label: {
+                            Label(localizationManager.localized("layer_bring_above_ink"), systemImage: "square.2.layers.3d.top.filled")
+                        }
+                        Button {
+                            onReorder(.sendBelowInk)
+                        } label: {
+                            Label(localizationManager.localized("layer_send_below_ink"), systemImage: "square.2.layers.3d.bottom.filled")
+                        }
+                        Divider()
+                        Button {
+                            onReorder(.toFront)
+                        } label: {
+                            Label(localizationManager.localized("layer_bring_front"), systemImage: "arrow.up.to.line")
+                        }
+                        Button {
+                            onReorder(.toBack)
+                        } label: {
+                            Label(localizationManager.localized("layer_send_back"), systemImage: "arrow.down.to.line")
+                        }
+                        Button {
+                            onReorder(.forward)
+                        } label: {
+                            Label(localizationManager.localized("layer_bring_forward"), systemImage: "arrow.up")
+                        }
+                        Button {
+                            onReorder(.backward)
+                        } label: {
+                            Label(localizationManager.localized("layer_send_backward"), systemImage: "arrow.down")
+                        }
+                    } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: under ? "square.2.layers.3d.bottom.filled" : "square.2.layers.3d.top.filled")
+                                .font(.system(size: 12))
+                            Text(localizationManager.localized(under ? "layer_send_below_ink" : "layer_bring_above_ink"))
+                                .font(.system(size: 11, weight: .medium))
+                            Image(systemName: "chevron.down")
+                                .font(.system(size: 9, weight: .bold))
+                        }
+                        .padding(.horizontal, 7)
+                        .frame(height: 28)
+                        .background(under ? Color.orange.opacity(0.18) : Color.purple.opacity(0.15))
+                        .foregroundColor(under ? .orange : .purple)
+                        .cornerRadius(6)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(localizationManager.localized("layers_panel"))
+                    .help(localizationManager.localized("layers_panel"))
+                }
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 7)

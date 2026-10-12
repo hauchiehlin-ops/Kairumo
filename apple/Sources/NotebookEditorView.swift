@@ -4854,6 +4854,7 @@ public struct NotebookEditorView: View {
                             eraserMode: eraserMode,
                             pixelEraserWidth: pixelEraserWidth,
                             palmRejection: palmRejection,
+                            isObjectActive: (editorMode == .type || inlineEditingTextId != nil || editingTextId != nil || activeSelectedObjectId != nil || !selectedObjectIds.isEmpty || !selectedShapeIds.isEmpty) && !isInlineInkEditing,
                             isFocused: index == currentPageIndex,
                             objectLayer: { objectLayer(forPage: index) },
                             underInkObjectLayer: { AnyView(objectLayer(forPage: index, filter: .underInkOnly)) },
@@ -4976,6 +4977,11 @@ public struct NotebookEditorView: View {
                 // 新增／刪除頁面之後頁碼可能沒變但內容換了，確保焦點頁在畫面上。
                 scrollContinuous(to: currentPageIndex, proxy: proxy, animated: false)
             }
+            .onChange(of: editorMode) { _ in
+                // 切換手繪/打字模式時，鎖定焦點頁面並維持捲動位置，避免跳回第 1 頁
+                continuousProgrammaticScrollUntil = Date().addingTimeInterval(0.8)
+                scrollContinuous(to: currentPageIndex, proxy: proxy, animated: false)
+            }
             .onAppear {
                 // 從整頁模式切過來時，停在原本那一頁而不是回到第 1 頁。
                 // LazyVStack 第一輪排版還沒完成時 scrollTo 會落空，所以下一輪與稍後再各補一次。
@@ -5021,6 +5027,10 @@ public struct NotebookEditorView: View {
         guard !mids.isEmpty else { return }
         // 程式捲動進行中不判焦點（理由見 `continuousProgrammaticScrollUntil`）。
         guard Date() >= continuousProgrammaticScrollUntil else { return }
+        // 若當前頁碼大於 0，但 mids 尚未包含當前頁且數量不足，防止 LazyVStack 重排初始暫態奪走焦點覆蓋為第 0 頁
+        if currentPageIndex > 0 && !mids.keys.contains(currentPageIndex) && mids.count < min(2, notebook.pageCount) {
+            return
+        }
         // 視窗中央的 y。用固定的頁高估一個中線就夠 —— 這裡只要挑出
         // 「最接近中央的那一頁」，不需要精準的可見面積。
         let viewportCenter = continuousViewportHeight / 2
@@ -5046,10 +5056,14 @@ public struct NotebookEditorView: View {
     }
 
     private func shouldIncludeInInkLayer(id: String, filter: ObjectInkLayerFilter, underInkSet: Set<String>) -> Bool {
+        let isSelected = (activeSelectedObjectId == id || selectedObjectIds.contains(id) || selectedShapeIds.contains(id) || inlineEditingTextId == id || editingTextId == id)
         switch filter {
         case .all: return true
-        case .underInkOnly: return underInkSet.contains(id)
-        case .overInkOnly: return !underInkSet.contains(id)
+        case .underInkOnly:
+            // 當物件處於選取編輯狀態時，暫時由上方前景層繪製，以允許拖曳、縮放與點擊控制把手
+            return underInkSet.contains(id) && !isSelected
+        case .overInkOnly:
+            return !underInkSet.contains(id) || isSelected
         }
     }
 
@@ -5241,6 +5255,7 @@ public struct NotebookEditorView: View {
                             isSelected: activeSelectedObjectId == item.id,
                             onSelect: { selectSingleObject(item.id) },
                             isTypeMode: editorMode == .type,
+                            isUnderInk: underInkSet.contains(item.id),
                             snapToGrid: snapToGrid,
                             snapY: { y in snapYToGuideLine(at: y) },
                             onEdit: {
@@ -6110,6 +6125,8 @@ public struct NotebookEditorView: View {
             editorMode: $editorMode,
             contextualState: contextualPortalState,
             onModeChange: { mode in
+                let targetPage = currentPageIndex
+                continuousProgrammaticScrollUntil = Date().addingTimeInterval(0.8)
                 saveCurrentPageDrawing()
                 // PencilKit 可能仍握有 first responder。先交還鍵盤焦點，否則
                 // 新建立的 TextEditor 在同一個 run loop 內無法成為第一回應者。
@@ -6121,6 +6138,8 @@ public struct NotebookEditorView: View {
                     inlineEditingTextId = nil
                     activeInlineInkBlockId = nil
                 }
+                currentPageIndex = targetPage
+                continuousReportedPage = targetPage
                 flashModeBadge()
             },
             onExitContextual: {
@@ -7516,6 +7535,12 @@ public struct NotebookEditorView: View {
                 isSnapToGrid: snapToGrid,
                 onToggleSnapToGrid: {
                     snapToGrid.toggle()
+                },
+                isUnderInk: activeTextAttachment.map { notebook.underInkObjectIds(forPage: currentPageIndex).contains($0.id) },
+                onReorder: { op in
+                    if let id = activeTextAttachment?.id {
+                        reorderObject(id, op)
+                    }
                 }
             )
             .padding(.horizontal, 16)
@@ -13606,12 +13631,15 @@ struct TextAttachmentItemView: View {
     var isSelected: Bool = false
     var onSelect: (() -> Void)? = nil
     var isTypeMode: Bool = false
+    var isUnderInk: Bool = false
     var snapToGrid: Bool = false
     var snapY: ((CGFloat) -> CGFloat)? = nil
     let onEdit: () -> Void
     let onDelete: () -> Void
     var onMoved: ((CGSize) -> Void)? = nil
     var onAnchorInk: (() -> Void)? = nil
+
+    @Environment(\.objectReorder) private var reorder
 
     @ObservedObject var localizationManager = LocalizationManager.shared
     @ObservedObject var collaborationManager = CollaborationManager.shared
@@ -14011,6 +14039,59 @@ struct TextAttachmentItemView: View {
             if isSelected && !isEditingInline {
                 HStack(spacing: 6) {
                     textActionButton("pencil", "edit", .blue) { onEdit() }
+
+                    // 🌟 圖層順序與筆跡上下層級切換選單
+                    if let reorder {
+                        Menu {
+                            Button {
+                                reorder(textItem.id, .bringAboveInk)
+                            } label: {
+                                Label(localizationManager.localized("layer_bring_above_ink"), systemImage: "square.2.layers.3d.top.filled")
+                            }
+                            Button {
+                                reorder(textItem.id, .sendBelowInk)
+                            } label: {
+                                Label(localizationManager.localized("layer_send_below_ink"), systemImage: "square.2.layers.3d.bottom.filled")
+                            }
+                            Divider()
+                            Button {
+                                reorder(textItem.id, .toFront)
+                            } label: {
+                                Label(localizationManager.localized("layer_bring_front"), systemImage: "arrow.up.to.line")
+                            }
+                            Button {
+                                reorder(textItem.id, .toBack)
+                            } label: {
+                                Label(localizationManager.localized("layer_send_back"), systemImage: "arrow.down.to.line")
+                            }
+                            Button {
+                                reorder(textItem.id, .forward)
+                            } label: {
+                                Label(localizationManager.localized("layer_bring_forward"), systemImage: "arrow.up")
+                            }
+                            Button {
+                                reorder(textItem.id, .backward)
+                            } label: {
+                                Label(localizationManager.localized("layer_send_backward"), systemImage: "arrow.down")
+                            }
+                        } label: {
+                            HStack(spacing: 4) {
+                                Image(systemName: isUnderInk ? "square.2.layers.3d.bottom.filled" : "square.2.layers.3d.top.filled")
+                                    .font(.system(size: 11, weight: .bold))
+                                Text(localizationManager.localized(isUnderInk ? "layer_send_below_ink" : "layer_bring_above_ink"))
+                                    .font(.system(size: 11, weight: .semibold))
+                                    .fixedSize()
+                                Image(systemName: "chevron.down")
+                                    .font(.system(size: 9, weight: .bold))
+                            }
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 9)
+                            .padding(.vertical, 6)
+                            .background(isUnderInk ? Color.orange : Color.purple)
+                            .cornerRadius(7)
+                        }
+                    }
+
                     // 邊框開關已移進「文字排版」面板的「樣式」分頁。
                     // 保留在畫布上的只有真正需要立即觸及的動作：編輯與刪除。
                     textActionButton("trash.fill", "delete", .red) { onDelete() }

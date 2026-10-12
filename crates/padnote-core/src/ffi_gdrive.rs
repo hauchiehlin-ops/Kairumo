@@ -798,7 +798,7 @@ fn gdrive_sync_notebook(
 /// 規則：長度還在成長時，成長不到這個量就先不傳；**長度穩定下來（錄完了）
 /// 就一定傳**。只看門檻的話，最後那一小段永遠傳不出去，而雲端上那份會
 /// 少掉結尾 —— 使用者會說「同步過去的錄音被截斷了」。
-const AUDIO_GROWTH_THRESHOLD: u64 = 1024 * 1024;
+const AUDIO_GROWTH_THRESHOLD: u64 = 64 * 1024;
 
 /// 錄音疑似還在成長時，再量一次之前等多久。
 #[cfg(not(test))]

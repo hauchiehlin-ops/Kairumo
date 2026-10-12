@@ -226,9 +226,11 @@ object AutoSync {
                 if (scheduler.isDormant()) sleepSyncServices(context.applicationContext)
             }
             // 這一輪跑完之後還有待辦（例如跑到一半又存了檔）就接著跑。
+            // 至少去抖動 1.5 秒，與 Apple 端一致，避免狂衝打爆 Google Drive API 或耗盡連線與記憶體。
             val due = scheduler.nextDueInMs(nowMs())
             if (due != ULong.MAX_VALUE) {
-                if (due > 0u) delay(due.toLong())
+                val waitMs = maxOf(1500L, due.toLong())
+                delay(waitMs)
                 pump(context)
             }
         }

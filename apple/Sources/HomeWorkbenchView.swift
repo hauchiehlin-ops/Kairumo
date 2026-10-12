@@ -516,8 +516,11 @@ public struct HomeWorkbenchView: View {
                 accountManager.refreshDisplayName()
                 // 不限定 macCatalyst：使用者在 Mac 上跑的是 iOS 版（Designed for iPad）
                 MacWindowTitle.apply()
-                autoSync.start(store: notebookStore, deviceId: NotebookMigration.deviceId)
-                autoSync.request(.foreground)
+                // 啟動首頁時先讓主執行緒完成初始視圖佈局與手勢響應，
+                // 稍後再啟動背景自動同步，避免啟動當下畫面停滯數秒無法操作。
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+                    autoSync.start(store: notebookStore, deviceId: NotebookMigration.deviceId)
+                }
 
                 if let autoOpenId = ProcessInfo.processInfo.environment["KAIRUMO_AUTO_OPEN_NOTEBOOK"],
                    let target = notebookStore.notebooks.first(where: { $0.id == autoOpenId }) {

@@ -1299,9 +1299,9 @@ public final class NotebookStore: ObservableObject {
         injectInteractionFixturesIfRequested()
         StartupLogger.logKey("log_store_init_done")
 
-        // 錄音檔案掃描與時長校正非關鍵啟動路徑，改為非同步執行，
-        // 避免在主執行緒上開啟所有套件及讀取龐大音檔，消除 App 啟動凍結 (7-8 秒卡頓)。
-        DispatchQueue.main.async { [weak self] in
+        // 錄音檔案掃描與時長校正非關鍵啟動路徑，改為真正非同步於背景佇列執行，
+        // 避免在主執行緒上開啟所有套件及讀取龐大音檔，徹底消除 App 啟動凍結 (卡頓數秒)。
+        DispatchQueue.global(qos: .utility).async { [weak self] in
             self?.refreshRecordings()
         }
     }
@@ -3762,112 +3762,132 @@ public final class NotebookStore: ObservableObject {
 
     public func refreshRecordings() {
         let fm = FileManager.default
-        var byFileName: [String: AudioRecordingRecord] = [:]
-        for rec in recordings {
-            byFileName[rec.fileName.lowercased()] = rec
-        }
+        let currentRecordings = self.recordings
+        let currentNotebooks = self.notebooks
+        let currentUnmatched = self.unmatchedIncomingTitles
+        let pkgDir = self.corePackagesDirectory
+        let legacyDir = AudioRecorderManager.shared.recordingsDirectory
+        let inboxId = recordingInboxNotebookId()
 
-        var scanned: [AudioRecordingRecord] = []
         struct TargetInfo {
             let id: String
             let displayTitle: String
         }
-        var targets: [TargetInfo] = notebooks.map { TargetInfo(id: $0.id, displayTitle: $0.displayTitle()) }
-        let inboxId = recordingInboxNotebookId()
+        var targets: [TargetInfo] = currentNotebooks.map { TargetInfo(id: $0.id, displayTitle: $0.displayTitle()) }
         if !targets.contains(where: { $0.id.caseInsensitiveCompare(inboxId) == .orderedSame }) {
             targets.append(TargetInfo(id: inboxId, displayTitle: LocalizationManager.shared.localized("recording_inbox")))
         }
 
-        for doc in targets {
-            let isInbox = doc.id.caseInsensitiveCompare(inboxId) == .orderedSame
-            let packageURL = corePackagesDirectory
-                .appending(path: "\(doc.id.lowercased()).padnote")
-            let audioDir = packageURL.appending(path: "media/audio")
-            guard fm.fileExists(atPath: audioDir.path) else { continue }
-            let files = (try? fm.contentsOfDirectory(
-                at: audioDir, includingPropertiesForKeys: [.contentModificationDateKey]))?
-                .filter { $0.pathExtension.lowercased() == "opus" } ?? []
-            guard !files.isEmpty else { continue }
+        let work: () -> ([AudioRecordingRecord], Set<String>) = {
+            var byFileName: [String: AudioRecordingRecord] = [:]
+            for rec in currentRecordings {
+                byFileName[rec.fileName.lowercased()] = rec
+            }
 
-            let packageTitles = Self.packageRecordingTitles(packageURL: packageURL)
-            for file in files {
-                let name = file.lastPathComponent
-                let lowerName = name.lowercased()
-                let candidateTitle = packageTitles[lowerName] ?? unmatchedIncomingTitles[lowerName]
+            var localUnmatched = currentUnmatched
+            var consumedUnmatchedKeys: Set<String> = []
+            var scanned: [AudioRecordingRecord] = []
 
-                if let existing = byFileName[lowerName] {
-                    var updated = existing
-                    if updated.linkedNotebookId == nil {
-                        updated.linkedNotebookId = doc.id
-                    }
-                    // 1. 真實時長校正：僅當現存時長為 0 或缺漏時，才讀檔解碼，避免每次重複讀取龐大音檔
-                    if updated.durationSeconds <= 0 {
-                        let bytes = (try? Data(contentsOf: file)) ?? Data()
-                        let realSeconds = Int(audioDurationSeconds(bytes: bytes))
-                        if realSeconds > 0 {
-                            updated.durationSeconds = realSeconds
+            for doc in targets {
+                let isInbox = doc.id.caseInsensitiveCompare(inboxId) == .orderedSame
+                let packageURL = pkgDir.appending(path: "\(doc.id.lowercased()).padnote")
+                let audioDir = packageURL.appending(path: "media/audio")
+                guard fm.fileExists(atPath: audioDir.path) else { continue }
+                let files = (try? fm.contentsOfDirectory(
+                    at: audioDir, includingPropertiesForKeys: [.contentModificationDateKey]))?
+                    .filter { $0.pathExtension.lowercased() == "opus" } ?? []
+                guard !files.isEmpty else { continue }
+
+                let packageTitles = Self.packageRecordingTitles(packageURL: packageURL)
+                for file in files {
+                    let name = file.lastPathComponent
+                    let lowerName = name.lowercased()
+                    let candidateTitle = packageTitles[lowerName] ?? localUnmatched[lowerName]
+
+                    if let existing = byFileName[lowerName] {
+                        var updated = existing
+                        if updated.linkedNotebookId == nil {
+                            updated.linkedNotebookId = doc.id
                         }
-                    }
-                    // 2. 標題校正：若本機標題為通用名稱（如「快速錄音」），且套件或遠端有具體名稱，自動採納
-                    if let named = candidateTitle, !named.isEmpty {
-                        if Self.isGenericOrQuickRecordTitle(updated.title) || updated.title != named {
-                            if Self.isGenericOrQuickRecordTitle(updated.title) || !Self.isGenericOrQuickRecordTitle(named) {
-                                updated.title = named
+                        // 1. 真實時長校正：僅當現存時長為 0 或缺漏時，才讀檔解碼，避免每次重複讀取龐大音檔
+                        if updated.durationSeconds <= 0 {
+                            let bytes = (try? Data(contentsOf: file)) ?? Data()
+                            let realSeconds = Int(audioDurationSeconds(bytes: bytes))
+                            if realSeconds > 0 {
+                                updated.durationSeconds = realSeconds
                             }
                         }
+                        // 2. 標題校正：若本機標題為通用名稱（如「快速錄音」），且套件或遠端有具體名稱，自動採納
+                        if let named = candidateTitle, !named.isEmpty {
+                            if Self.isGenericOrQuickRecordTitle(updated.title) || updated.title != named {
+                                if Self.isGenericOrQuickRecordTitle(updated.title) || !Self.isGenericOrQuickRecordTitle(named) {
+                                    updated.title = named
+                                }
+                            }
+                        }
+                        scanned.append(updated)
+                        byFileName.removeValue(forKey: lowerName)
+                        localUnmatched.removeValue(forKey: lowerName)
+                        consumedUnmatchedKeys.insert(lowerName)
+                        continue
                     }
-                    scanned.append(updated)
-                    byFileName.removeValue(forKey: lowerName)
-                    unmatchedIncomingTitles.removeValue(forKey: lowerName)
-                    continue
+                    // 從別台同步過來的：索引裡沒有，要補一筆才看得到。
+                    let bytes = (try? Data(contentsOf: file)) ?? Data()
+                    let seconds = Int(audioDurationSeconds(bytes: bytes))
+                    let modified = (try? file.resourceValues(forKeys: [.contentModificationDateKey]))?
+                        .contentModificationDate ?? Date()
+                    let title: String
+                    if let named = candidateTitle, !named.isEmpty {
+                        title = named
+                        localUnmatched.removeValue(forKey: lowerName)
+                        consumedUnmatchedKeys.insert(lowerName)
+                    } else if isInbox {
+                        title = Self.defaultQuickRecordingTitle(at: modified)
+                    } else {
+                        title = Self.defaultRecordingTitle(at: modified)
+                    }
+                    scanned.append(AudioRecordingRecord(
+                        title: title,
+                        durationSeconds: seconds,
+                        recordedDate: modified,
+                        fileName: name,
+                        linkedNotebookId: doc.id))
                 }
-                // 從別台同步過來的：索引裡沒有，要補一筆才看得到。
-                // 長度走核心算 —— 兩個平台各自問系統 API 的話，
-                // 同一段錄音會顯示不同的秒數，而使用者會以為同步壞了。
-                let bytes = (try? Data(contentsOf: file)) ?? Data()
-                let seconds = Int(audioDurationSeconds(bytes: bytes))
-                let modified = (try? file.resourceValues(forKeys: [.contentModificationDateKey]))?
-                    .contentModificationDate ?? Date()
-                let title: String
-                if let named = candidateTitle, !named.isEmpty {
-                    title = named
-                    unmatchedIncomingTitles.removeValue(forKey: lowerName)
-                } else if isInbox {
-                    title = Self.defaultQuickRecordingTitle(at: modified)
-                } else {
-                    // 不放筆記本名稱：錄音檔是獨立的東西，它在「錄音」清單裡以時間辨識。
-                    // 把筆記本名稱放在最前面，會讓每一段錄音的名字都以同一個詞開頭，
-                    // 而且筆記本改名之後舊錄音的名字就對不上了。
-                    title = Self.defaultRecordingTitle(at: modified)
+            }
+
+            let legacy = byFileName.values.filter {
+                fm.fileExists(atPath: legacyDir.appending(path: $0.fileName).path)
+            }
+
+            let refreshed = Self.adoptingCardTitles(
+                (scanned + legacy).sorted { $0.recordedDate > $1.recordedDate }, notebooks: currentNotebooks)
+
+            return (refreshed, consumedUnmatchedKeys)
+        }
+
+        let applyResult: ([AudioRecordingRecord], Set<String>) -> Void = { [weak self] refreshed, consumedKeys in
+            guard let self else { return }
+            for key in consumedKeys {
+                self.unmatchedIncomingTitles.removeValue(forKey: key)
+            }
+            guard refreshed != self.recordings else { return }
+            self.recordings = refreshed
+            self.persistData(signalsLocalEdit: false)
+        }
+
+        if Thread.isMainThread {
+            DispatchQueue.global(qos: .utility).async {
+                let (refreshed, consumedKeys) = work()
+                DispatchQueue.main.async {
+                    applyResult(refreshed, consumedKeys)
                 }
-                scanned.append(AudioRecordingRecord(
-                    title: title,
-                    durationSeconds: seconds,
-                    recordedDate: modified,
-                    fileName: name,
-                    linkedNotebookId: doc.id))
+            }
+        } else {
+            let (refreshed, consumedKeys) = work()
+            DispatchQueue.main.async {
+                applyResult(refreshed, consumedKeys)
             }
         }
-
-        // 還沒遷移、仍然躺在 Kairumo Record 的舊錄音要留著，
-        // 否則使用者會以為它們不見了。
-        let legacyDir = AudioRecorderManager.shared.recordingsDirectory
-        let legacy = byFileName.values.filter {
-            fm.fileExists(atPath: legacyDir.appending(path: $0.fileName).path)
-        }
-
-        // 別台改的名字會跟著錄音卡片一起同步過來（卡片在筆記本裡，錄音清單不在）。
-        // 清單的名字跟著卡片走，否則在 Mac 改了名，iPad 的清單永遠是舊名字。
-        let refreshed = Self.adoptingCardTitles(
-            (scanned + legacy).sorted { $0.recordedDate > $1.recordedDate }, notebooks: notebooks)
-        // **沒有變就不要寫檔。** 每一輪同步都會呼叫這裡；無條件 `persistData()` 會通知
-        // 排程器「本機有編輯」，於是同步自己又排出下一輪（約一秒後）—— 一個自我觸發的
-        // 迴圈：持續打 Drive、主執行緒永遠不閒（UI 測試的每個動作因此各等 60 秒才等到
-        // 「App 閒下來」）。
-        guard refreshed != recordings else { return }
-        recordings = refreshed
-        // 掃描結果是從磁碟（含同步下載的套件）讀出來的，不是使用者的編輯：不通知同步。
-        persistData(signalsLocalEdit: false)
     }
 
     /// 遷移之後改指到套件裡的新檔案。

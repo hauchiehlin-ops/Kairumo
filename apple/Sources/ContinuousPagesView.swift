@@ -49,6 +49,7 @@ struct ContinuousPageView<ObjectLayer: View>: View {
     var eraserMode: EraserMode = .stroke
     var pixelEraserWidth: CGFloat = 20.0
     let palmRejection: PalmRejectionCoordinator?
+    var isObjectActive: Bool = false
 
     /// 這一頁是不是目前的焦點頁。插入物件、工具列動作都以焦點頁為準。
     let isFocused: Bool
@@ -106,7 +107,7 @@ struct ContinuousPageView<ObjectLayer: View>: View {
             if let underInk = underInkObjectLayer {
                 underInk()
                     .frame(width: PageGeometry.width, height: PageGeometry.height, alignment: .topLeading)
-                    .allowsHitTesting(editorMode == .type)
+                    .allowsHitTesting(editorMode == .type || isObjectActive)
                     .zIndex(1)
             }
 
@@ -166,12 +167,12 @@ struct ContinuousPageView<ObjectLayer: View>: View {
                 if let overInk = overInkObjectLayer {
                     overInk()
                         .frame(width: PageGeometry.width, height: PageGeometry.height, alignment: .topLeading)
-                        .allowsHitTesting(editorMode == .type)
+                        .allowsHitTesting(editorMode == .type || isObjectActive)
                         .zIndex(3)
                 } else {
                     objectLayer()
                         .frame(width: PageGeometry.width, height: PageGeometry.height, alignment: .topLeading)
-                        .allowsHitTesting(editorMode == .type)
+                        .allowsHitTesting(editorMode == .type || isObjectActive)
                         .zIndex(3)
                 }
             }

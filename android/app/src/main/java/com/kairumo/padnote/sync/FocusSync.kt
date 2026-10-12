@@ -281,6 +281,7 @@ object FocusSync {
     }
 
     internal fun lanPeersChanged(count: Int) {
+        if (_lanPeers.value == count) return
         _lanPeers.value = count
         if (count > 0) {
             SyncLogger.log("【區網直連】已連上 $count 台裝置", SyncSource.GOOGLE_DRIVE)
