@@ -96,8 +96,17 @@ object NotebookLibrary {
             // 同時過濾系統級錄音收件匣（與 Apple 端 visibleNotebooks 完全一致）：
             // 收件匣是快速錄音的系統容器，非實體筆記本，不應出現在全部筆記與繼續清單。
             ?.filter { !it.id.equals(inboxId, ignoreCase = true) }
-            ?.filter { !AccountSyncStore.isHidden(context, it.id) }
-            ?.filter { folderId == ANY_FOLDER || FolderTree.parentOf(context, it.id) == folderId }
+            ?.filter {
+                if (folderId == ANY_FOLDER) true
+                else {
+                    val p = FolderTree.parentOf(context, it.id)
+                    if (folderId == null) {
+                        p == null || FolderTree.all(context).none { f -> f.id == p }
+                    } else {
+                        p == folderId
+                    }
+                }
+            }
             ?: return emptyList()
         return when (sort) {
             // 最近修改排前面 —— 使用者要找的十之八九是剛剛在寫的那本。

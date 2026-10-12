@@ -467,16 +467,23 @@ private fun NotebookHome(
     val allEntries = remember(revision, sort, seeded) {
         NotebookLibrary.all(activity, device, sort)
     }
+    // 搬移對話框要列出**全部**資料夾，不是只有這一層的。
+    val allFolders = remember(revision) { FolderTree.all(activity) }
     // revision 是重讀的觸發器。清單來自檔案系統，沒有觀察者可以訂閱 ——
     // 新增或刪除之後不主動重讀的話，畫面會停在舊的內容。
-    val entries = remember(allEntries, folderId) {
+    val entries = remember(allEntries, folderId, allFolders) {
         if (folderId == NotebookLibrary.ANY_FOLDER) allEntries
-        else allEntries.filter { FolderTree.parentOf(activity, it.id) == folderId }
+        else allEntries.filter {
+            val parent = FolderTree.parentOf(activity, it.id)
+            if (folderId == null) {
+                parent == null || allFolders.none { f -> f.id == parent }
+            } else {
+                parent == folderId
+            }
+        }
     }
     val folders = remember(revision, folderId) { FolderTree.subfolders(activity, folderId) }
     val breadcrumb = remember(revision, folderId) { FolderTree.pathTo(activity, folderId) }
-    // 搬移對話框要列出**全部**資料夾，不是只有這一層的。
-    val allFolders = remember(revision) { FolderTree.all(activity) }
     // 掃整個筆記本目錄，所以不要每次重組都做 —— 綁在 revision 上就好。
     val recordings = remember(revision) { RecordingIndex.recent(activity, device) }
 
@@ -4614,24 +4621,37 @@ private fun InkScreen(
                                     canvasScale = uniffi.padnote_core.clampZoom(
                                         canvasScale * zoomChange
                                     )
-                                    // **內容是「頁面」，不是「視窗」。**
-                                    //
-                                    // 一開始兩個參數都填了視窗尺寸，於是
-                                    // `scaled <= viewport` 永遠成立、可拖範圍
-                                    // 一律是 0 —— 畫面完全不動，看起來就像
-                                    // 手勢沒接上。頁面比視窗高的時候本來就
-                                    // 該拖得動。
                                     val contentW = PageGeometry.width * canvasDensity
                                     val contentH = PageGeometry.height * canvasDensity
-                                    val maxX = uniffi.padnote_core.maxPanOffset(
-                                        contentW, canvasViewport.width, canvasScale
-                                    )
-                                    val maxY = uniffi.padnote_core.maxPanOffset(
-                                        contentH, canvasViewport.height, canvasScale
-                                    )
+                                    val scaledW = contentW * canvasScale
+                                    val scaledH = contentH * canvasScale
+                                    val margin = 80f * canvasDensity
+
+                                    val minX = if (scaledW > canvasViewport.width) {
+                                        canvasViewport.width - scaledW - margin
+                                    } else {
+                                        minOf(-margin, canvasViewport.width - scaledW - margin)
+                                    }
+                                    val maxX = if (scaledW > canvasViewport.width) {
+                                        margin
+                                    } else {
+                                        maxOf(margin, canvasViewport.width - scaledW + margin)
+                                    }
+
+                                    val minY = if (scaledH > canvasViewport.height) {
+                                        canvasViewport.height - scaledH - margin
+                                    } else {
+                                        minOf(-margin, canvasViewport.height - scaledH - margin)
+                                    }
+                                    val maxY = if (scaledH > canvasViewport.height) {
+                                        margin
+                                    } else {
+                                        maxOf(margin, canvasViewport.height - scaledH + margin)
+                                    }
+
                                     canvasOffset = Offset(
-                                        (canvasOffset.x + panChange.x).coerceIn(-maxX, maxX),
-                                        (canvasOffset.y + panChange.y).coerceIn(-maxY, maxY)
+                                        (canvasOffset.x + panChange.x).coerceIn(minX, maxX),
+                                        (canvasOffset.y + panChange.y).coerceIn(minY, maxY)
                                     )
                                 }
                                 event.changes.forEach { it.consume() }
@@ -4672,6 +4692,7 @@ private fun InkScreen(
                     scaleY = canvasScale,
                     translationX = canvasOffset.x,
                     translationY = canvasOffset.y,
+                    transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0f, 0f),
                     // **一定要裁切。** 不裁的話平移之後頁面會畫到畫布範圍
                     // 外面，蓋在工具列上 —— 實機上看到的是「捲一下工具列
                     // 就不見了」。

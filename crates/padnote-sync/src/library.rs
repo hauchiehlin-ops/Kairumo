@@ -280,7 +280,7 @@ impl LibraryIndex {
         false
     }
 
-    /// 祖先鏈上有沒有已刪除（或根本不存在）的資料夾。
+    /// 祖先鏈上有沒有已刪除的資料夾。
     fn has_deleted_ancestor(&self, item: &LibraryItem) -> bool {
         let mut seen = Vec::new();
         let mut cursor = item.parent_id.clone();
@@ -294,9 +294,8 @@ impl LibraryIndex {
             match self.items.get(&id) {
                 Some(parent) if parent.deleted => return true,
                 Some(parent) => cursor = parent.parent_id.clone(),
-                // 父項在這台裝置上根本沒看過：當成不可見，
-                // 免得在樹上掛出一個沒有上層的項目。
-                None => return true,
+                // 父項在這台裝置上尚未同步或不存在：不當成刪除，避免筆記本被隱藏或無法同步。
+                None => return false,
             }
         }
         false

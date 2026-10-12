@@ -110,12 +110,11 @@ object PageSnapshot {
         host.setViewTreeViewModelStoreOwner(activity)
         val view = ComposeView(activity).apply {
             setContent {
-                val layer = rememberGraphicsLayer()
-                val scope = rememberCoroutineScope()
                 CompositionLocalProvider(
                     LocalDensity provides Density(scale, 1f),
                     LocalAppLanguage provides languageTag
                 ) {
+                    val layer = rememberGraphicsLayer()
                     KairumoTheme {
                         Box(
                             Modifier
@@ -128,21 +127,17 @@ object PageSnapshot {
                             ExportPageContent(session, meta, pageIndex, scale, languageTag, audioDirectory)
                         }
                     }
-                }
-                LaunchedEffect(Unit) {
-                    // 等第一輪組合、版面、繪製都走完，再多給兩幀：圖層裡有幾處（圖表、文字量測）
-                    // 要等版面量完才畫得出來。
-                    repeat(3) { androidx.compose.runtime.withFrameNanos { } }
-                    result.complete(
-                        runCatching {
-                            // `GraphicsLayer` 給的是 HARDWARE 點陣圖：讀不了像素、也畫不進 PDF 的軟體畫布。
-                            // 複製成一般的 ARGB_8888 再交出去。
-                            val hardware = layer.toImageBitmap().asAndroidBitmap()
-                            hardware.copy(Bitmap.Config.ARGB_8888, false).also { hardware.recycle() }
-                        }
-                            .onFailure { android.util.Log.e("PageSnapshot", "toImageBitmap failed", it) }
-                            .getOrNull()
-                    )
+                    LaunchedEffect(Unit) {
+                        repeat(3) { androidx.compose.runtime.withFrameNanos { } }
+                        result.complete(
+                            runCatching {
+                                val hardware = layer.toImageBitmap().asAndroidBitmap()
+                                hardware.copy(Bitmap.Config.ARGB_8888, false).also { hardware.recycle() }
+                            }
+                                .onFailure { android.util.Log.e("PageSnapshot", "toImageBitmap failed", it) }
+                                .getOrNull()
+                        )
+                    }
                 }
             }
         }

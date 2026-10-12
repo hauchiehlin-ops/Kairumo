@@ -26,6 +26,7 @@ object SyncLogger {
 
     fun log(message: String, source: SyncSource = SyncSource.GENERAL) {
         val entry = SyncLogEntry(source = source, message = message)
+        com.kairumo.padnote.platform.CrashLogger.logRuntime("[Sync] [${source.rawValue}] $message")
         if (Looper.myLooper() == Looper.getMainLooper()) {
             addEntry(entry)
         } else {

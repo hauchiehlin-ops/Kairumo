@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
@@ -294,6 +295,20 @@ private fun PageSidebarRow(
             return@LaunchedEffect
         }
 
+        val cachedBmp = withContext(Dispatchers.IO) {
+            runCatching {
+                val png = PageImageRenderer.renderPng(s, pageId, 0.22f, context.cacheDir)
+                android.graphics.BitmapFactory
+                    .decodeByteArray(png, 0, png.size)
+                    ?.asImageBitmap()
+            }.getOrNull()
+        }
+        if (cachedBmp != null) {
+            pageThumbnailCache.put(cacheKey, cachedBmp)
+            thumb = cachedBmp
+            return@LaunchedEffect
+        }
+
         val act = context as? ComponentActivity
         if (act != null) {
             val bmp = PageSnapshot.render(act, s, index, 0.22f, appLanguage)
@@ -303,16 +318,6 @@ private fun PageSidebarRow(
                 thumb = imageBitmap
                 return@LaunchedEffect
             }
-        }
-
-        thumb = withContext(Dispatchers.Default) {
-            runCatching {
-                val png = PageImageRenderer.renderPng(s, pageId, 0.22f, context.cacheDir)
-                android.graphics.BitmapFactory
-                    .decodeByteArray(png, 0, png.size)
-                    ?.asImageBitmap()
-                    ?.also { pageThumbnailCache.put(cacheKey, it) }
-            }.getOrNull()
         }
     }
 
@@ -470,7 +475,7 @@ private fun PageSidebarRow(
                     painter = BitmapPainter(bitmap),
                     contentDescription = null,
                     contentScale = ContentScale.Fit,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxSize()
                 )
             }
         }
