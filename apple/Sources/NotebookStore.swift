@@ -246,7 +246,7 @@ public enum NoteTemplate: String, Codable, CaseIterable, Identifiable {
 }
 
 /// 筆記資料夾模型（支援多層級子資料夾與自訂名稱）
-public struct FolderItem: Identifiable, Codable, Hashable {
+public struct FolderItem: Identifiable, Codable, Hashable, Sendable {
     public let id: String
     public var name: String
     public var parentId: String? // nil 代表位於最上層根目錄下
@@ -269,7 +269,7 @@ public struct FolderItem: Identifiable, Codable, Hashable {
 }
 
 /// 筆記文件本機模型
-public struct NotebookDocument: Identifiable, Codable, Hashable {
+public struct NotebookDocument: Identifiable, Codable, Hashable, @unchecked Sendable {
     public let id: String
     public var title: String
     public var createdAt: Date
@@ -1106,7 +1106,7 @@ public struct NotebookMilestoneSnapshot: Identifiable, Codable, Equatable {
 }
 
 /// 錄音項目資料模型
-public struct AudioRecordingRecord: Identifiable, Codable, Hashable {
+public struct AudioRecordingRecord: Identifiable, Codable, Hashable, Sendable {
     public let id: String
     public var title: String
     public var durationSeconds: Int
@@ -1746,9 +1746,16 @@ public final class NotebookStore: ObservableObject {
             if let idx = notebooks.firstIndex(where: { $0.id == std.id || $0.titleKey == std.key }) {
                 if notebooks[idx].pageCount > std.standardCount || (notebooks[idx].textAttachments ?? []).count > 100 {
                     std.heal(&notebooks[idx])
-                    let pkgDir = corePackagesDirectory.appending(path: "\(notebooks[idx].id).padnote")
+                    let pkgDir = corePackagesDirectory.appending(path: "\(notebooks[idx].id.lowercased()).padnote")
                     try? FileManager.default.removeItem(at: pkgDir)
-                    exportToCorePackage(notebookId: notebooks[idx].id)
+                    let doc = notebooks[idx]
+                    let drawings = (0..<doc.pageCount).map { self.loadDrawing(notebookId: doc.id, pageIndex: $0) }
+                    try? NotebookPackageBridge.export(
+                        document: doc,
+                        drawings: drawings,
+                        to: pkgDir,
+                        deviceId: NotebookMigration.deviceId
+                    )
                     changed = true
                 }
             }
