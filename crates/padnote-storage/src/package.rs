@@ -1247,7 +1247,8 @@ impl NotebookPackage {
             .filter_map(Result::ok)
             .filter(|e| {
                 let name = e.file_name().to_string_lossy().into_owned();
-                !is_ignored_entry_name(&name) && e.path().extension().is_some_and(|ext| ext == "oplog")
+                !is_ignored_entry_name(&name)
+                    && e.path().extension().is_some_and(|ext| ext == "oplog")
             })
             .map(|e| e.path())
             .collect();
@@ -1432,7 +1433,8 @@ impl NotebookPackage {
             .filter_map(Result::ok)
             .filter(|e| {
                 let name = e.file_name().to_string_lossy().into_owned();
-                !is_ignored_entry_name(&name) && e.path().extension().is_some_and(|ext| ext == "oplog")
+                !is_ignored_entry_name(&name)
+                    && e.path().extension().is_some_and(|ext| ext == "oplog")
             })
             .map(|e| e.path())
             .collect();
