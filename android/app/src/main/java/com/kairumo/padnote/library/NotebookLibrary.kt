@@ -118,27 +118,55 @@ object NotebookLibrary {
                 .associate { it.id.lowercase() to it.title }
         }.getOrDefault(emptyMap())
 
+    private data class CachedEntry(val mtime: Long, val entry: Entry)
+    private val entryCache = java.util.concurrent.ConcurrentHashMap<String, CachedEntry>()
+
+    fun invalidateCache(id: String? = null) {
+        if (id == null) {
+            entryCache.clear()
+        } else {
+            entryCache.keys.filter { it.contains(id) }.forEach { entryCache.remove(it) }
+        }
+    }
+
     private fun describe(path: File, deviceId: UInt, indexTitles: Map<String, String>): Entry? {
+        val id = path.nameWithoutExtension
+        val manifestFile = File(path, "manifest.json")
+        if (!manifestFile.exists()) return null
+        val opsDir = File(path, "doc/ops")
+        val inkDir = File(path, "ink")
+        val currentMtime = maxOf(
+            manifestFile.lastModified(),
+            if (opsDir.exists()) opsDir.lastModified() else 0L,
+            if (inkDir.exists()) inkDir.lastModified() else 0L,
+            path.lastModified()
+        )
+
+        val cached = entryCache[path.absolutePath]
+        if (cached != null && cached.mtime == currentMtime) {
+            val title = indexTitles[id.lowercase()] ?: cached.entry.title
+            return if (title != cached.entry.title) {
+                val updated = cached.entry.copy(title = title)
+                entryCache[path.absolutePath] = CachedEntry(currentMtime, updated)
+                updated
+            } else {
+                cached.entry
+            }
+        }
+
         val session = runCatching { PadnoteSession.openExisting(path.absolutePath, deviceId) }
             .getOrNull() ?: return null
-        val id = path.nameWithoutExtension
-        return Entry(
+        val entry = Entry(
             id = id,
             // **標題以同步索引為權威**，索引沒有（或是空白）才用套件裡的。
-            //
-            // 標題存在兩個地方：套件內的標題 CRDT，與同步索引。Apple 更名只寫索引，
-            // 所以另一台（Android）如果只看套件，就會**永遠顯示舊名字** —— 在兩台真的模擬器上
-            // 重現過（iPad 改名之後 Android 同步完還是舊名）。Apple 匯入時本來就是
-            // 「索引權威」，這裡與它對齊。Android 自己更名時兩邊都寫，所以不會不一致。
             title = indexTitles[id.lowercase()]
                 ?: runCatching { session.title() }.getOrDefault(id),
             pageCount = runCatching { session.pageCount().toInt() }.getOrDefault(0),
             path = path,
-            // 取套件裡最新的那個檔案。目錄本身的 mtime 在某些檔案系統上
-            // 不會隨內容更新，拿它排序會得到一個永遠不動的清單。
-            modifiedAt = path.walkTopDown().filter { it.isFile }
-                .maxOfOrNull { it.lastModified() } ?: path.lastModified()
+            modifiedAt = currentMtime
         )
+        entryCache[path.absolutePath] = CachedEntry(currentMtime, entry)
+        return entry
     }
 
     /** 改標題。改的是套件裡的標題，不是檔名 —— 檔名是 id，換掉會斷掉同步。 */
@@ -148,6 +176,7 @@ object NotebookLibrary {
             if (!path.exists()) return false
             val session = PadnoteSession.openExisting(path.absolutePath, deviceId)
             session.setTitle(title)
+            invalidateCache(id)
             // 記進同步索引。改名**不能**靠「刪掉舊的再加一個」表示 ——
             // 那在合併時與真正的刪除完全一樣，另一台裝置會把它當成已刪除。
             // 保住原本所在的資料夾。不帶 parentId 的話，改個名字
@@ -214,9 +243,10 @@ object NotebookLibrary {
     fun delete(context: Context, id: String): Boolean =
         runCatching {
             val moved = NotebookTrash.moveToTrash(context, id)
-            // **留墓碑。** 不留的話，等雲端接上，另一台還沒同步到刪除的裝置
-            // 會把這本筆記原封不動傳回來 —— 刪除永遠刪不掉。
-            if (moved) AccountSyncStore.recordDeletion(context, id)
+            if (moved) {
+                invalidateCache(id)
+                AccountSyncStore.recordDeletion(context, id)
+            }
             moved
         }.getOrDefault(false)
 

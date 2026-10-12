@@ -3307,12 +3307,13 @@ private fun InkScreen(
             }
 
             // 錄音
+            // 錄音（對齊 iPad 頂欄麥克風圖示）
             Surface(
                 shape = RoundedCornerShape(8.dp),
                 color = if (recording) Color(0xFFFFEBEE) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
                 modifier = Modifier.padding(vertical = 2.dp)
             ) {
-                TextButton(
+                IconButton(
                     onClick = {
                         val session = notebook?.first
                         if (session != null) {
@@ -3333,11 +3334,10 @@ private fun InkScreen(
                             }
                         }
                     },
-                    modifier = Modifier.testTag("editor.record"),
-                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                    modifier = Modifier.size(36.dp).testTag("editor.record")
                 ) {
                     Text(
-                        if (recording) "⏹" else "⏺",
+                        if (recording) "⏹" else "🎙️",
                         color = if (recording) Color.Red else MaterialTheme.colorScheme.onSurface,
                         style = MaterialTheme.typography.titleMedium
                     )
@@ -3347,19 +3347,16 @@ private fun InkScreen(
             var showShareMenu by remember { mutableStateOf(false) }
             Surface(
                 shape = RoundedCornerShape(8.dp),
-                color = MaterialTheme.colorScheme.primary,
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
                 modifier = Modifier.padding(vertical = 2.dp)
             ) {
-                TextButton(
+                IconButton(
                     onClick = { showShareMenu = true },
-                    modifier = Modifier.testTag("editor.share"),
-                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                    modifier = Modifier.size(36.dp).testTag("editor.share")
                 ) {
                     Text(
-                        "↗ ${l10n("export_print")} ▾",
-                        color = MaterialTheme.colorScheme.onPrimary,
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.SemiBold
+                        "⬆️",
+                        style = MaterialTheme.typography.titleMedium
                     )
                 }
             }
@@ -3848,21 +3845,22 @@ private fun InkScreen(
             // 雙向情境工具列：effectiveToolbarMode 在「手繪模式中編輯文字方塊」時
             // 自動切為 TYPE，讓使用者在不切換全域模式的情況下使用文字工具。
             if (effectiveToolbarMode == EditorMode.DRAW) {
-                // 低延遲與掌拒是**手寫的**設定。
-                FilterChip(
-                    selected = lowLatency && !lowLatencyUnavailable,
-                    enabled = !lowLatencyUnavailable,
-                    onClick = { lowLatency = !lowLatency; latency.clear() },
-                    label = { Text(l10n("ink_low_latency")) }
-                )
-                FilterChip(
-                    selected = penOnly,
-                    onClick = {
-                        penOnly = !penOnly
-                        engine.setPenOnly(penOnly)
-                    },
-                    label = { Text(l10n("ink_pen_only")) }
-                )
+                if (showInkDebug) {
+                    FilterChip(
+                        selected = lowLatency && !lowLatencyUnavailable,
+                        enabled = !lowLatencyUnavailable,
+                        onClick = { lowLatency = !lowLatency; latency.clear() },
+                        label = { Text(l10n("ink_low_latency")) }
+                    )
+                    FilterChip(
+                        selected = penOnly,
+                        onClick = {
+                            penOnly = !penOnly
+                            engine.setPenOnly(penOnly)
+                        },
+                        label = { Text(l10n("ink_pen_only")) }
+                    )
+                }
             } else {
                 FilterChip(
                     selected = marqueeActive,
@@ -4051,12 +4049,14 @@ private fun InkScreen(
         //
         // 兩個模式都要說 —— 只在打字模式掛提示的話，切回手寫時畫面上
         // 沒有任何差別，而兩邊「同一個手勢會發生什麼事」完全不同。
-        Text(
-            l10n(if (editorMode == EditorMode.DRAW) "mode_draw_hint" else "mode_type_hint"),
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 2.dp)
-        )
+        if (showInkDebug) {
+            Text(
+                l10n(if (editorMode == EditorMode.DRAW) "mode_draw_hint" else "mode_type_hint"),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 2.dp)
+            )
+        }
 
         // 筆刷列只在手寫模式出現（雙向情境切換：effectiveToolbarMode）。
         //
@@ -4162,12 +4162,14 @@ private fun InkScreen(
         // 讀一下 revision 讓筆畫數會跟著重繪；真相來源仍是 engine。
         val strokeCount = remember(revision) { engine.strokes.size }
         val eventDebug = remember(revision) { engine.lastEventDebug }
-        Text(
-            l10n("ink_stroke_count").replace("%@", "$strokeCount"),
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(horizontal = 12.dp)
-        )
+        if (showInkDebug) {
+            Text(
+                l10n("ink_stroke_count").replace("%@", "$strokeCount"),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 12.dp)
+            )
+        }
 
         if (micBlocked) {
             TextButton(onClick = { Onboarding.openAppSettings(activity) }) {

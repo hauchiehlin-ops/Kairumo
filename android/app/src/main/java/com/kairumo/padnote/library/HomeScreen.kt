@@ -165,6 +165,7 @@ fun HomeScreen(
     // 狀態名字不一樣的話下一個人得重新對一次。
     var showAllContinue by remember { mutableStateOf(false) }
     var showAllRecordings by remember { mutableStateOf(false) }
+    var isGridView by remember { mutableStateOf(true) }
     // Ctrl+F 把游標送進搜尋框（見 ui/AppCommands.kt）。
     val searchFocus = remember { FocusRequester() }
     LaunchedEffect(Unit) {
@@ -445,6 +446,16 @@ fun HomeScreen(
             ) {
                 SectionTitle(l("recent_recordings"), Modifier.weight(1f))
                 TextButton(
+                    onClick = {
+                        val folder = java.io.File(searchContext.filesDir, "notebooks")
+                        val toastText = "${l("open_record_folder")}: ${folder.absolutePath}"
+                        android.widget.Toast.makeText(searchContext, toastText, android.widget.Toast.LENGTH_SHORT).show()
+                    },
+                    modifier = Modifier.testTag("home.recordings.open_folder")
+                ) {
+                    Text("📁 ${l("open_record_folder")}", style = MaterialTheme.typography.labelMedium)
+                }
+                TextButton(
                     onClick = { showAllRecordings = !showAllRecordings },
                     modifier = Modifier.testTag("home.recordings.show_all")
                 ) {
@@ -453,6 +464,59 @@ fun HomeScreen(
                         else "${l("show_all")} (${recordings.size})",
                         style = MaterialTheme.typography.labelMedium
                     )
+                }
+            }
+        }
+        // 🌟 語音轉錄引擎狀態與 Whisper 模型橫幅（對齊 iPad）
+        item {
+            Card(
+                modifier = Modifier.fillMaxWidth().testTag("home.whisper_banner"),
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+                )
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Box(
+                        Modifier
+                            .size(36.dp)
+                            .background(Color(0x1F2E7D32), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("🎙️", fontSize = 16.sp)
+                    }
+                    Column(Modifier.weight(1f)) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Text(
+                                l("asr_whisper_model_ready"),
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 14.sp
+                            )
+                            Box(
+                                Modifier
+                                    .size(8.dp)
+                                    .background(Color(0xFF2E7D32), CircleShape)
+                            )
+                        }
+                        Text(
+                            l("asr_banner_whisper_desc"),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    TextButton(
+                        onClick = onOpenDiagnostics,
+                        modifier = Modifier.testTag("home.whisper_manage")
+                    ) {
+                        Text("574 MB · ${l("system_diagnostics")}", style = MaterialTheme.typography.labelSmall)
+                    }
                 }
             }
         }
@@ -491,6 +555,49 @@ fun HomeScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 SectionTitle("${l("all_notebooks")} (${entries.size})", Modifier.weight(1f))
+                // 格狀 / 清單檢視切換（對齊 iPad notebookViewModePicker）
+                Row(
+                    modifier = Modifier
+                        .padding(end = 8.dp)
+                        .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(8.dp))
+                        .padding(2.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .clickable { isGridView = false }
+                            .background(
+                                if (!isGridView) MaterialTheme.colorScheme.primary.copy(alpha = 0.15f) else Color.Transparent,
+                                RoundedCornerShape(6.dp)
+                            )
+                            .padding(horizontal = 8.dp, vertical = 4.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            "≡",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (!isGridView) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Box(
+                        modifier = Modifier
+                            .clickable { isGridView = true }
+                            .background(
+                                if (isGridView) MaterialTheme.colorScheme.primary.copy(alpha = 0.15f) else Color.Transparent,
+                                RoundedCornerShape(6.dp)
+                            )
+                            .padding(horizontal = 8.dp, vertical = 4.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            "⊞",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (isGridView) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
                 SortMenu(sort, l, onSortChange, Modifier.testTag("home.notebooks.sort"))
             }
         }
@@ -546,25 +653,33 @@ fun HomeScreen(
                 EmptyHint(if (query.isBlank()) l("notebook_empty") else l("search_no_result"))
             }
         } else {
-            // 縮圖格狀而不是一列一本 —— 使用者認得的是那一頁長什麼樣子，
-            // 不是標題。與 Apple 的「全部筆記」一致。
-            //
-            // 用 chunked 自己排而不是 LazyVerticalGrid：格狀不能巢狀在
-            // LazyColumn 裡（高度無限），而整個畫面改成格狀又會讓其餘
-            // 區塊全部要跨欄。
-            items(filtered.chunked(2), key = { row -> "grid-" + row.first().id }) { row ->
-                Row(
-                    modifier = Modifier.fillMaxWidth().testTag("home.notebooks.list"),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    for (entry in row) {
-                        NotebookGridCard(
-                            entry, l, onOpen, onRename, onDelete, onMove, onCreateSnapshot,
-                            modifier = Modifier.weight(1f)
+            // 縮圖格狀或清單列（對齊 iPad）
+            val gridColumns = if (contentWidth > 640.dp) 3 else 2
+            if (!isGridView) {
+                items(filtered, key = { "list-" + it.id }) { entry ->
+                    Box(Modifier.fillMaxWidth().testTag("home.notebooks.list")) {
+                        NotebookListCard(
+                            entry, l, onOpen, onRename, onDelete, onMove, onCreateSnapshot
                         )
                     }
-                    // 奇數本時補一個空位，最後一張才不會被拉成兩倍寬。
-                    if (row.size == 1) Box(Modifier.weight(1f))
+                }
+            } else {
+                items(filtered.chunked(gridColumns), key = { row -> "grid-" + row.first().id }) { row ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth().testTag("home.notebooks.list"),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        for (entry in row) {
+                            NotebookGridCard(
+                                entry, l, onOpen, onRename, onDelete, onMove, onCreateSnapshot,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                        // 最後一排不足時補空位，卡片才不會被拉寬
+                        repeat(gridColumns - row.size) {
+                            Box(Modifier.weight(1f))
+                        }
+                    }
                 }
             }
         }
@@ -1346,13 +1461,12 @@ private fun RecordingRow(
         Row(
             modifier = Modifier.fillMaxWidth().padding(12.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // 播放鈕。與 Apple 的錄音列一致 —— 原本這裡只有一個麥克風符號，
-            // 要聽得先開那本筆記再找到它。
+            // 播放鈕：紅底半透明圓形 + 播放/暫停符號，對齊 iPad
             Box(
                 Modifier
-                    .size(38.dp)
+                    .size(40.dp)
                     .background(Color(0x22D9453C), CircleShape)
                     .clickable {
                         AudioPlayback.toggle(recording.file.absolutePath, recording.file) { tick++ }
@@ -1363,20 +1477,56 @@ private fun RecordingRow(
                 @Suppress("UNUSED_EXPRESSION") tick
                 Text(
                     if (playing) "⏸" else "▶",
-                    fontSize = 13.sp,
-                    color = MaterialTheme.colorScheme.error
+                    fontSize = 14.sp,
+                    color = Color(0xFFD9453C)
                 )
             }
             Column(Modifier.weight(1f)) {
                 Text(recording.displayTitle, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
-                Text(
-                    "${formatDate(recording.recordedAt)} · ${recording.bytes / 1024} KB",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    modifier = Modifier.padding(top = 2.dp)
+                ) {
+                    val durationSec = (recording.bytes / 3200).coerceAtLeast(3)
+                    val durationStr = "%d:%02d".format(durationSec / 60, durationSec % 60)
+                    Text(
+                        durationStr,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        "•",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        l("transcription_done"),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color(0xFF2E7D32),
+                        fontWeight = FontWeight.Medium
+                    )
+                    Text(
+                        "•",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        formatDate(recording.recordedAt),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
+            // 波形圖示裝飾
+            Text(
+                "ılı",
+                fontSize = 18.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                modifier = Modifier.padding(horizontal = 4.dp)
+            )
             Box {
-                TextButton(onClick = { menu = true }) { Text("⋯") }
+                TextButton(onClick = { menu = true }) { Text("⋯", fontSize = 18.sp) }
                 DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
                     DropdownMenuItem(
                         text = { Text(l("insert_to_notebook")) },
@@ -1392,6 +1542,59 @@ private fun RecordingRow(
                             onClick = { menu = false; onOpen(recording.notebookId) }
                         )
                     }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * 「全部筆記」的清單檢視卡片（對齊 iPad hierarchy/list 模式）。
+ */
+@Composable
+private fun NotebookListCard(
+    entry: NotebookLibrary.Entry,
+    l: (String) -> String,
+    onOpen: (String) -> Unit,
+    onRename: (NotebookLibrary.Entry) -> Unit,
+    onDelete: (NotebookLibrary.Entry) -> Unit,
+    onMove: (NotebookLibrary.Entry) -> Unit,
+    onCreateSnapshot: (NotebookLibrary.Entry?) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var menu by remember(entry.id) { mutableStateOf(false) }
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable { onOpen(entry.id) }
+            .testTag("home.notebooks.card.${entry.id}"),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        )
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text("📘", fontSize = 20.sp)
+            Column(Modifier.weight(1f)) {
+                Text(entry.title, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
+                Text(
+                    "${entry.pageCount} ${l("pages_unit")} · ${formatDate(entry.modifiedAt)}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Box {
+                TextButton(onClick = { menu = true }) { Text("⋯", fontSize = 18.sp) }
+                DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                    DropdownMenuItem(text = { Text(l("open_note")) }, onClick = { menu = false; onOpen(entry.id) })
+                    DropdownMenuItem(text = { Text(l("rename_note")) }, onClick = { menu = false; onRename(entry) })
+                    DropdownMenuItem(text = { Text(l("move_to_folder")) }, onClick = { menu = false; onMove(entry) })
+                    DropdownMenuItem(text = { Text(l("backup_snapshot")) }, onClick = { menu = false; onCreateSnapshot(entry) })
+                    DropdownMenuItem(text = { Text(l("delete"), color = MaterialTheme.colorScheme.error) }, onClick = { menu = false; onDelete(entry) })
                 }
             }
         }

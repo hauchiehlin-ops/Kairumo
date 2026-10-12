@@ -99,12 +99,6 @@ fun RealisticPenItem(
                 drawPreview(ffiTool, inkColor, size)
             }
         }
-        Text(
-            text = toolLabel,
-            fontSize = 9.sp,
-            color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(top = 2.dp)
-        )
     }
 }
 

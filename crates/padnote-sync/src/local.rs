@@ -135,6 +135,9 @@ fn collect_recursive(
         let entry = entry?;
         let meta = entry.metadata()?;
         let name = entry.file_name().to_string_lossy().into_owned();
+        if name.starts_with("._") || name == ".DS_Store" {
+            continue;
+        }
         let path = if prefix.is_empty() {
             name.clone()
         } else {

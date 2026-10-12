@@ -47,8 +47,14 @@ object SeedNotebooks {
     fun seedIfEmpty(context: Context, deviceId: UInt, languageTag: String): Int {
         fun l(key: String) = LocalizationStrings.localized(key, languageTag)
 
+        // 🌟 在讀取 NotebookLibrary.all() 之前先執行磁碟層級自癒，
+        // 避免主線程在 describe() 內對膨脹套件進行昂貴重播造成 ANR 卡死。
+        healBloatedSeeds(context, deviceId, languageTag, ::l)
+
         val existing = NotebookLibrary.all(context, deviceId)
-        if (existing.isNotEmpty()) return backfill(context, deviceId, existing, languageTag, ::l)
+        if (existing.isNotEmpty()) {
+            return backfill(context, deviceId, existing, languageTag, ::l)
+        }
 
         var created = 0
         if (buildWelcome(context, deviceId, ::l)) created++
@@ -59,6 +65,50 @@ object SeedNotebooks {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
             .edit().putBoolean(KEY_MANUAL, true).putBoolean(KEY_DRAFT_EXAMPLE, true).apply()
         return created
+    }
+
+    /**
+     * 自癒修復：若預載範例筆記因為跨裝置同步 CRDT 合併產生頁數或區塊膨脹，自動收斂重設回標準頁數。
+     * 直接檢查檔案系統指標（oplog 數量與大小），不呼叫 openExisting，避免主執行緒阻塞。
+     */
+    fun healBloatedSeeds(
+        context: Context,
+        deviceId: UInt,
+        languageTag: String,
+        l: (String) -> String
+    ): Int {
+        val baseDir = NotebookLibrary.directory(context)
+        val seeds = listOf(
+            SHOWCASE_ID to 4,
+            MANUAL_ID to 4,
+            DRAFT_EXAMPLE_ID to 6,
+            WELCOME_ID to 3,
+            MEETING_ID to 3
+        )
+        var healed = 0
+        for ((id, maxPages) in seeds) {
+            val dir = java.io.File(baseDir, "$id.${NotebookLibrary.EXTENSION}")
+            if (!dir.exists() || !dir.isDirectory) continue
+
+            val opsDir = java.io.File(dir, "doc/ops")
+            val opFiles = opsDir.listFiles() ?: emptyArray()
+            val totalOpsSize = opFiles.sumOf { it.length() }
+            val isBloated = opFiles.size > 8 || totalOpsSize > 250_000L
+
+            if (isBloated) {
+                dir.deleteRecursively()
+                NotebookLibrary.invalidateCache(id)
+                when (id) {
+                    SHOWCASE_ID -> buildFeatureShowcase(context, deviceId, l)
+                    MANUAL_ID -> buildKairumoManual(context, deviceId, languageTag, l)
+                    DRAFT_EXAMPLE_ID -> buildDraftingExample(context, deviceId, l)
+                    WELCOME_ID -> buildWelcome(context, deviceId, l)
+                    MEETING_ID -> buildMeeting(context, deviceId, l)
+                }
+                healed++
+            }
+        }
+        return healed
     }
 
     /**
@@ -167,8 +217,8 @@ private fun buildFeatureShowcase(context: Context, deviceId: UInt, l: (String) -
             context, l("seed_feature_showcase_title"), deviceId, id = SHOWCASE_ID
         ) ?: return false
         val opened = NotebookLibrary.open(context, id, deviceId) ?: return false
-        val (session, firstPage) = opened
-        val pages = ensurePages(session, firstPage, 4)
+        val (session, _) = opened
+        val pages = ensureSeedPages(session, SHOWCASE_ID, 4, PageStyle.BLANK)
 
         // 設定為方格點陣 (grid) 樣板
         val meta = NotebookMeta.load(session)
@@ -829,8 +879,8 @@ private fun buildFeatureShowcase(context: Context, deviceId: UInt, l: (String) -
             context, l("seed_welcome_title"), deviceId, id = WELCOME_ID
         ) ?: return false
         val opened = NotebookLibrary.open(context, id, deviceId) ?: return false
-        val (session, firstPage) = opened
-        val pages = ensurePages(session, firstPage, 3)
+        val (session, _) = opened
+        val pages = ensureSeedPages(session, WELCOME_ID, 3, PageStyle.BLANK)
 
         // 第 1 頁：這個 App 是什麼
         title(session, pages[0], l("sample_welcome_p1_title"), 72f)
@@ -858,8 +908,8 @@ private fun buildFeatureShowcase(context: Context, deviceId: UInt, l: (String) -
             context, l("seed_meeting_title"), deviceId, id = MEETING_ID
         ) ?: return false
         val opened = NotebookLibrary.open(context, id, deviceId) ?: return false
-        val (session, firstPage) = opened
-        val pages = ensurePages(session, firstPage, 3)
+        val (session, _) = opened
+        val pages = ensureSeedPages(session, MEETING_ID, 3, PageStyle.BLANK)
 
         // 第 1 頁：議程 + 重點
         title(session, pages[0], l("sample_meeting_p1_title"), 72f)
@@ -1012,8 +1062,8 @@ private fun buildFeatureShowcase(context: Context, deviceId: UInt, l: (String) -
         val pagesJson = root.optJSONArray("pages") ?: return false
 
         val id = NotebookLibrary.create(context, l("seed_manual_title"), deviceId, id = MANUAL_ID) ?: return false
-        val (session, firstPage) = NotebookLibrary.open(context, id, deviceId) ?: return false
-        val pages = ensurePages(session, firstPage, maxOf(2, pagesJson.length()))
+        val (session, _) = NotebookLibrary.open(context, id, deviceId) ?: return false
+        val pages = ensureSeedPages(session, MANUAL_ID, maxOf(2, pagesJson.length()), PageStyle.BLANK)
 
         for (index in 0 until pagesJson.length()) {
             val strokes = pagesJson.getJSONObject(index).optJSONArray("strokes") ?: continue
@@ -1084,9 +1134,9 @@ private fun buildFeatureShowcase(context: Context, deviceId: UInt, l: (String) -
         val id = NotebookLibrary.create(
             context, title, deviceId, style = style, paperId = ex.paperId, id = DRAFT_EXAMPLE_ID
         ) ?: return false
-        val (session, firstPage) = NotebookLibrary.open(context, id, deviceId, title) ?: return false
+        val (session, _) = NotebookLibrary.open(context, id, deviceId, title) ?: return false
         NotebookMeta.load(session).setPageFormatId(session, ex.pageFormatId)
-        val pages = ensurePagesStyled(session, firstPage, ex.pages.size, style)
+        val pages = ensureSeedPages(session, DRAFT_EXAMPLE_ID, ex.pages.size, style)
 
         for ((index, page) in ex.pages.withIndex()) {
             if (index >= pages.size) break
@@ -1121,23 +1171,34 @@ private fun buildFeatureShowcase(context: Context, deviceId: UInt, l: (String) -
         return true
     }
 
-    private fun ensurePagesStyled(
-        session: PadnoteSession, firstPage: String, count: Int, style: PageStyle
-    ): List<String> {
-        val ids = mutableListOf(firstPage)
-        while (ids.size < count) {
-            val next = runCatching { session.addPage(style) }.getOrNull() ?: break
-            ids += next
+    fun deterministicSeedPageIds(notebookId: String, count: Int): List<String> {
+        val prefix = when (notebookId) {
+            SHOWCASE_ID -> "b0000001-0000-4000-8000"
+            MANUAL_ID -> "b0000002-0000-4000-8000"
+            DRAFT_EXAMPLE_ID -> "b0000003-0000-4000-8000"
+            WELCOME_ID -> "b0000004-0000-4000-8000"
+            MEETING_ID -> "b0000005-0000-4000-8000"
+            else -> return emptyList()
         }
-        return ids
+        return (1..count).map { String.format(java.util.Locale.US, "%s-0000000000%02x", prefix, it) }
     }
 
-    private fun ensurePages(session: PadnoteSession, firstPage: String, count: Int): List<String> {
-        val ids = mutableListOf(firstPage)
-        while (ids.size < count) {
-            val next = runCatching { session.addPage(PageStyle.BLANK) }.getOrNull() ?: break
-            ids += next
+    private fun ensureSeedPages(
+        session: PadnoteSession, notebookId: String, count: Int, style: PageStyle = PageStyle.BLANK
+    ): List<String> {
+        val seedIds = deterministicSeedPageIds(notebookId, count)
+        for (pageId in seedIds) {
+            runCatching { session.addPageWithId(pageId, style) }
         }
-        return ids
+        val currentCount = runCatching { session.pageCount().toInt() }.getOrDefault(0)
+        val existing = (0 until currentCount).mapNotNull {
+            runCatching { session.pageIdAt(it.toUInt()) }.getOrNull()
+        }
+        for (pageId in existing) {
+            if (pageId !in seedIds) {
+                runCatching { session.removePage(pageId) }
+            }
+        }
+        return seedIds
     }
 }

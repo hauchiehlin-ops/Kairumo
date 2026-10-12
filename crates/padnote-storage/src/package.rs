@@ -58,6 +58,11 @@ impl From<CodecError> for StorageError {
     }
 }
 
+#[inline]
+pub(crate) fn is_ignored_entry_name(name: &str) -> bool {
+    name.starts_with('.') || crate::atomic::is_temp_name(name)
+}
+
 /// 只壓實自己那幾個檔的結果，帶明確的涵蓋名單。
 #[derive(Clone, Debug)]
 pub struct CompactOutcome {
@@ -498,6 +503,9 @@ impl NotebookPackage {
         if let Ok(entries) = fs::read_dir(&dir) {
             for entry in entries.flatten() {
                 let name = entry.file_name().to_string_lossy().into_owned();
+                if is_ignored_entry_name(&name) {
+                    continue;
+                }
                 if let Some(stem) = name.strip_suffix(".strokes")
                     && let Some(rest) = stem.strip_prefix(&prefix)
                     && rest.starts_with('-')
@@ -592,9 +600,11 @@ impl NotebookPackage {
                     continue;
                 }
                 let name = entry.file_name().to_string_lossy().into_owned();
-                if (name == format!("{prefix}.strokes")
-                    || (name.starts_with(&prefix) && name.ends_with(".strokes")))
-                    && !crate::atomic::is_temp_name(&name)
+                if is_ignored_entry_name(&name) {
+                    continue;
+                }
+                if name == format!("{prefix}.strokes")
+                    || (name.starts_with(&prefix) && name.ends_with(".strokes"))
                 {
                     let _ = fs::remove_file(&p);
                 }
@@ -723,6 +733,10 @@ impl NotebookPackage {
         entries
             .filter_map(Result::ok)
             .filter_map(|e| {
+                let name = e.file_name().to_str()?.to_string();
+                if is_ignored_entry_name(&name) {
+                    return None;
+                }
                 let path = e.path();
                 if path.extension().is_some_and(|x| x == "oplog") {
                     let stem = path.file_stem()?.to_str()?;
@@ -750,7 +764,7 @@ impl NotebookPackage {
             .filter(|e| e.path().extension().is_some_and(|x| x == "opus"))
             .filter_map(|e| {
                 let name = e.file_name().to_str()?.to_string();
-                if crate::atomic::is_temp_name(&name) {
+                if is_ignored_entry_name(&name) {
                     return None;
                 }
                 Some((name, e.metadata().ok()?.len()))
@@ -803,7 +817,7 @@ impl NotebookPackage {
             .filter(|e| e.path().extension().is_some_and(|x| x == "json"))
             .filter_map(|e| {
                 let name = e.file_name().to_str()?.to_string();
-                if crate::atomic::is_temp_name(&name) {
+                if is_ignored_entry_name(&name) {
                     return None;
                 }
                 Some((name, e.metadata().ok()?.len()))
@@ -878,9 +892,7 @@ impl NotebookPackage {
             .filter(|e| e.path().extension().is_some_and(|x| x == "oplog"))
             .filter_map(|e| {
                 let name = e.file_name().to_str()?.to_string();
-                // 原子寫入的臨時檔不是同步單位 —— 算進去的話，對面會下載到
-                // 一個永遠不會完成的檔案。
-                if crate::atomic::is_temp_name(&name) {
+                if is_ignored_entry_name(&name) {
                     return None;
                 }
                 let size = e.metadata().ok()?.len();
@@ -902,7 +914,7 @@ impl NotebookPackage {
             .filter(|e| e.path().extension().is_some_and(|x| x == "strokes"))
             .filter_map(|e| {
                 let name = e.file_name().to_str()?.to_string();
-                if crate::atomic::is_temp_name(&name) {
+                if is_ignored_entry_name(&name) {
                     return None;
                 }
                 let size = e.metadata().ok()?.len();
@@ -953,7 +965,7 @@ impl NotebookPackage {
             for entry in entries.filter_map(Result::ok) {
                 let path = entry.path();
                 let file_name = match path.file_name().and_then(|n| n.to_str()) {
-                    Some(name) if name.ends_with(".oplog") => name,
+                    Some(name) if name.ends_with(".oplog") && !is_ignored_entry_name(name) => name,
                     _ => continue,
                 };
                 if let Some(pos) = file_name.rfind('-') {
@@ -1041,7 +1053,7 @@ impl NotebookPackage {
         let own: Vec<PathBuf> = fs::read_dir(&dir)?
             .filter_map(Result::ok)
             .filter_map(|e| e.file_name().to_str().map(str::to_string))
-            .filter(|name| name.ends_with(&suffix) && !crate::atomic::is_temp_name(name))
+            .filter(|name| !is_ignored_entry_name(name) && name.ends_with(&suffix))
             .map(|name| dir.join(name))
             .collect();
         if own.len() < threshold {
@@ -1233,8 +1245,11 @@ impl NotebookPackage {
 
         let mut files: Vec<PathBuf> = fs::read_dir(&dir)?
             .filter_map(Result::ok)
+            .filter(|e| {
+                let name = e.file_name().to_string_lossy().into_owned();
+                !is_ignored_entry_name(&name) && e.path().extension().is_some_and(|ext| ext == "oplog")
+            })
             .map(|e| e.path())
-            .filter(|p| p.extension().is_some_and(|e| e == "oplog"))
             .collect();
         files.sort(); // 字典序 = 因果序
 
@@ -1364,14 +1379,13 @@ impl NotebookPackage {
             return clock;
         };
         for e in entries.filter_map(Result::ok) {
-            let path = e.path();
-            if !path.extension().is_some_and(|x| x == "oplog") {
-                continue;
-            }
-            let Some(name) = path.file_name().and_then(|n| n.to_str()) else {
+            let Some(name) = e.file_name().to_str().map(str::to_string) else {
                 continue;
             };
-            if let Some((lamport, device)) = parse_oplog_name(name) {
+            if is_ignored_entry_name(&name) || !e.path().extension().is_some_and(|x| x == "oplog") {
+                continue;
+            }
+            if let Some((lamport, device)) = parse_oplog_name(&name) {
                 let slot = clock.entry(device).or_insert(0);
                 *slot = (*slot).max(lamport);
             }
@@ -1416,8 +1430,11 @@ impl NotebookPackage {
 
         let mut files: Vec<PathBuf> = fs::read_dir(&dir)?
             .filter_map(Result::ok)
+            .filter(|e| {
+                let name = e.file_name().to_string_lossy().into_owned();
+                !is_ignored_entry_name(&name) && e.path().extension().is_some_and(|ext| ext == "oplog")
+            })
             .map(|e| e.path())
-            .filter(|p| p.extension().is_some_and(|e| e == "oplog"))
             .collect();
         files.sort();
 
@@ -1494,6 +1511,9 @@ impl NotebookPackage {
         let mut out = Vec::new();
         for entry in fs::read_dir(&dir)? {
             let name = entry?.file_name().to_string_lossy().into_owned();
+            if is_ignored_entry_name(&name) {
+                continue;
+            }
             // 檔名可能是舊版的 `<page>.strokes` 或新版的 `<page>-<device>.strokes`。
             if let Some(stem) = name.strip_suffix(".strokes") {
                 let page_part = stem.split_once('-').map_or(stem, |_| {

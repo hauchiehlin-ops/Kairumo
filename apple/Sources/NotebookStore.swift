@@ -1718,6 +1718,42 @@ public final class NotebookStore: ObservableObject {
             changed = true
         }
 
+        // 自癒修復：若預載範例筆記因為跨裝置同步 CRDT 合併產生頁數或區塊膨脹，自動收斂重設回標準頁數
+        let seedStandards: [(id: String, key: String, standardCount: Int, heal: (inout NotebookDocument) -> Void)] = [
+            ("seed-feature-showcase-v1", "seed_feature_showcase_title", 4, { doc in
+                doc.pageCount = 4
+                SeedContent.fillFeatureShowcase(&doc, store: self)
+            }),
+            (SeedContent.kairumoManualId, "seed_manual_title", 4, { doc in
+                doc.pageCount = 4
+                SeedContent.fillKairumoManual(&doc, store: self)
+            }),
+            (Self.draftingExampleId, "seed_drafting_example_title", 6, { doc in
+                let fresh = self.makeDraftingExample()
+                doc = fresh
+            }),
+            ("seed-welcome-notebook-v1", "seed_welcome_title", SeedContent.welcomePageCount, { doc in
+                doc.pageCount = SeedContent.welcomePageCount
+                SeedContent.fillWelcome(&doc)
+            }),
+            ("seed-meeting-notebook-v1", "seed_meeting_title", SeedContent.meetingPageCount, { doc in
+                doc.pageCount = SeedContent.meetingPageCount
+                SeedContent.fillMeeting(&doc, store: self)
+            })
+        ]
+
+        for std in seedStandards {
+            if let idx = notebooks.firstIndex(where: { $0.id == std.id || $0.titleKey == std.key }) {
+                if notebooks[idx].pageCount > std.standardCount || (notebooks[idx].textAttachments ?? []).count > 100 {
+                    std.heal(&notebooks[idx])
+                    let pkgDir = corePackagesDirectory.appending(path: "\(notebooks[idx].id).padnote")
+                    try? FileManager.default.removeItem(at: pkgDir)
+                    exportToCorePackage(notebookId: notebooks[idx].id)
+                    changed = true
+                }
+            }
+        }
+
         // 自癒修復：若現有示範筆記《Kairumo(功能範例)》尚未設定背景卡片 underInkObjectIds，自動補齊
         for index in notebooks.indices {
             if notebooks[index].id == "seed-feature-showcase-v1" || notebooks[index].titleKey == "seed_feature_showcase_title" {

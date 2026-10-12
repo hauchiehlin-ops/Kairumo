@@ -38,6 +38,26 @@ enum NotebookPackageBridge {
         }
     }
 
+    /// 預載範例筆記的確定性頁面 ID，確保多裝置同步時 CRDT 頁面不膨脹。
+    static func deterministicSeedPageIds(for notebookId: String, pageCount: Int) -> [String]? {
+        let prefix: String
+        switch notebookId {
+        case "seed-feature-showcase-v1":
+            prefix = "b0000001-0000-4000-8000"
+        case "seed-kairumo-manual-v1":
+            prefix = "b0000002-0000-4000-8000"
+        case "seed-drafting-example-v1":
+            prefix = "b0000003-0000-4000-8000"
+        case "seed-welcome-notebook-v1":
+            prefix = "b0000004-0000-4000-8000"
+        case "seed-meeting-notebook-v1":
+            prefix = "b0000005-0000-4000-8000"
+        default:
+            return nil
+        }
+        return (1...pageCount).map { String(format: "%@-0000000000%02x", prefix, $0) }
+    }
+
     /// 匯出的結果摘要，供測試與 UI 顯示「帶出去了什麼」。
     struct ExportSummary {
         var pageCount: Int
@@ -112,6 +132,11 @@ enum NotebookPackageBridge {
                 let fixedInboxPageId = "a0d10000-0000-4000-8000-000000000002"
                 try session.addPageWithId(pageId: fixedInboxPageId, style: style)
                 pageIds.append(fixedInboxPageId)
+            } else if let seedIds = deterministicSeedPageIds(for: document.id, pageCount: pageCount) {
+                for id in seedIds {
+                    try session.addPageWithId(pageId: id, style: style)
+                    pageIds.append(id)
+                }
             } else {
                 // 有已知的頁面 id 就照用 —— 頁面身分要跟著筆記走，不是跟著某一次
                 // 匯出走，否則兩台裝置的頁永遠不會收斂。
