@@ -14,6 +14,7 @@
 //  「卡之前最後一件事」來自 `breadcrumb(_:)`：重要動作（開筆記本、切換工具…）各記一筆。
 
 import Darwin
+import MachO
 import Foundation
 
 /// 在另一條執行緒上取主執行緒的堆疊。
