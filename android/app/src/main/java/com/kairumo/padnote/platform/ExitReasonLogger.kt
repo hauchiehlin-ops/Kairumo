@@ -28,7 +28,7 @@ object ExitReasonLogger {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return
         runCatching {
             val am = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
-            val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            val prefs = com.kairumo.padnote.profile.ProfileContext.devicePrefs(context, PREFS)
             val seen = prefs.getLong(KEY_LAST, 0L)
             val infos = am.getHistoricalProcessExitReasons(context.packageName, 0, MAX_ENTRIES)
                 .filter { it.timestamp > seen }
