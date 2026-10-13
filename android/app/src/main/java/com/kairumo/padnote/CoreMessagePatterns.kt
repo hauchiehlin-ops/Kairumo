@@ -104,6 +104,7 @@ object CoreMessagePatterns {
         "log_msg_066" to listOf("【重置雲端】開始刪除雲端資料…"),
         "log_msg_071" to listOf("【焦點同步】", "… 上傳 ", "、下載 ", ""),
         "log_msg_077" to listOf("【區網直連】", "… 收到對端的更新"),
+        "log_msg_087" to listOf("筆跡尚未完成寫入，延後本輪同步"),
         "core_msg_029" to listOf("模型檔案不存在或無法載入: ", ""),
         "core_msg_034" to listOf("不是 Kairumo 備份檔"),
         "core_msg_072" to listOf("響應式 Web 12 欄網格"),

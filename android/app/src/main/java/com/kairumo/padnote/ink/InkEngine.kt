@@ -10,6 +10,7 @@ import uniffi.padnote_core.InkArbiter
 import uniffi.padnote_core.PadnoteSession
 import uniffi.padnote_core.StrokePoint
 import uniffi.padnote_core.ToolKind
+import java.util.UUID
 
 /**
  * Android 的筆跡引擎（工作包 WP5）。
@@ -338,6 +339,30 @@ class InkEngine(
      */
     var onContentCommitted: (() -> Unit)? = null
 
+    private fun notifyContentCommittedAfterWrites() {
+        val callback = onContentCommitted ?: return
+        InkPackageWriter.afterWrites(callback)
+    }
+
+    private fun queueCoreAdd(
+        target: PadnoteSession,
+        page: String,
+        tool: ToolKind,
+        color: ByteArray,
+        width: Float,
+        points: List<StrokePoint>,
+        layer: UByte,
+        lineType: UByte,
+    ): String {
+        val id = UUID.randomUUID().toString()
+        InkPackageWriter.add(target, page, id, tool, color, width, points, layer, lineType)
+        return id
+    }
+
+    private fun queueCoreErase(target: PadnoteSession, page: String, strokeId: String) {
+        InkPackageWriter.erase(target, page, strokeId)
+    }
+
     /** 筆跡磁吸對齊開關 (Smart Magnetic Snap) */
     var isMagneticSnapActive: Boolean = false
     /** 磁吸吸附觸發回呼 (起點, 吸附終點) */
@@ -386,10 +411,11 @@ class InkEngine(
         for (stroke in removed) {
             _strokes.remove(stroke)
             stroke.coreStrokeId?.let { id ->
-                if (target != null && page != null) runCatching { target.eraseStroke(page, id) }
+                if (target != null && page != null) queueCoreErase(target, page, id)
             }
         }
         redoStack += removed.asReversed()
+        if (removed.any { it.coreStrokeId != null }) notifyContentCommittedAfterWrites()
         return true
     }
 
@@ -421,17 +447,16 @@ class InkEngine(
         val page = pageId
         for (stroke in batch) {
             val newId = if (target != null && page != null) {
-                runCatching {
-                    target.addStrokeDrafted(
-                        page, stroke.tool, stroke.colorRgba, stroke.baseWidth, stroke.points,
-                        stroke.layer.toUByte(), stroke.lineType.toUByte()
-                    )
-                }.getOrNull()
+                queueCoreAdd(
+                    target, page, stroke.tool, stroke.colorRgba, stroke.baseWidth, stroke.points,
+                    stroke.layer.toUByte(), stroke.lineType.toUByte()
+                )
             } else {
                 null
             }
             _strokes += stroke.copy(coreStrokeId = newId)
         }
+        if (batch.any { it.coreStrokeId != null }) notifyContentCommittedAfterWrites()
         return true
     }
 
@@ -458,12 +483,10 @@ class InkEngine(
             val pts = DraftingState.points(item, ox, oy)
             val rgba = DraftingState.rgba(item.colorHex)
             val coreId = if (target != null && page != null) {
-                runCatching {
-                    target.addStrokeDrafted(
-                        page, ToolKind.FINELINER, rgba, item.width, pts,
-                        item.layer, item.lineType
-                    )
-                }.getOrNull()
+                queueCoreAdd(
+                    target, page, ToolKind.FINELINER, rgba, item.width, pts,
+                    item.layer, item.lineType
+                )
             } else null
             coreId?.let { inserted += it }
             _strokes += CompletedStroke(
@@ -485,7 +508,7 @@ class InkEngine(
             redoStack.clear()
             redoActs.clear()
             acts += AddAct
-            onContentCommitted?.invoke()
+            notifyContentCommittedAfterWrites()
         }
         return count
     }
@@ -501,10 +524,9 @@ class InkEngine(
         val target = session
         val page = pageId
         val id = if (target != null && page != null) {
-            runCatching {
-                target.addStrokeDrafted(
-                    page, s.tool, s.colorRgba, s.baseWidth, s.points, s.layer.toUByte(), s.lineType.toUByte())
-            }.getOrNull()
+            queueCoreAdd(
+                target, page, s.tool, s.colorRgba, s.baseWidth, s.points,
+                s.layer.toUByte(), s.lineType.toUByte())
         } else null
         return s.copy(coreStrokeId = id)
     }
@@ -513,7 +535,7 @@ class InkEngine(
         val target = session
         val page = pageId
         val id = s.coreStrokeId
-        if (target != null && page != null && id != null) runCatching { target.eraseStroke(page, id) }
+        if (target != null && page != null && id != null) queueCoreErase(target, page, id)
     }
 
     /** 把 [remove]（以實例認）換成 [add]。回傳真正放進去的實例（核心重新發了 id）。 */
@@ -524,7 +546,7 @@ class InkEngine(
         }
         val added = add.map { coreAdd(it) }
         _strokes += added
-        onContentCommitted?.invoke()
+        notifyContentCommittedAfterWrites()
         return added
     }
 
@@ -608,7 +630,7 @@ class InkEngine(
         redoStack.clear()
         redoActs.clear()
         acts += AddAct
-        onContentCommitted?.invoke()
+        notifyContentCommittedAfterWrites()
         return copies.size
     }
 
@@ -638,9 +660,10 @@ class InkEngine(
         for (stroke in hit) {
             _strokes.remove(stroke)
             stroke.coreStrokeId?.let { id ->
-                if (target != null && page != null) runCatching { target.eraseStroke(page, id) }
+                if (target != null && page != null) queueCoreErase(target, page, id)
             }
         }
+        if (hit.isNotEmpty()) notifyContentCommittedAfterWrites()
         return hit
     }
 
@@ -682,16 +705,13 @@ class InkEngine(
         val page = pageId
         var newId: String? = null
         if (target != null && page != null) {
-            old.coreStrokeId?.let { runCatching { target.eraseStroke(page, it) } }
-            newId = runCatching {
-                target.addStrokeDrafted(
-                    page, old.tool, old.colorRgba, old.baseWidth, old.points,
-                    layer.toUByte(), old.lineType.toUByte()
-                )
-            }.getOrNull()
+            old.coreStrokeId?.let { queueCoreErase(target, page, it) }
+            newId = queueCoreAdd(
+                target, page, old.tool, old.colorRgba, old.baseWidth, old.points,
+                layer.toUByte(), old.lineType.toUByte())
         }
         _strokes[index] = old.copy(coreStrokeId = newId, layer = layer)
-        if (newId != null) onContentCommitted?.invoke()
+        if (newId != null) notifyContentCommittedAfterWrites()
         return true
     }
 
@@ -958,15 +978,13 @@ class InkEngine(
         val target = session
         val page = pageId
         val coreId = if (target != null && page != null) {
-            runCatching {
-                target.addStrokeDrafted(
-                    page, tool, colorRgba, baseWidth, finalPoints, layer.toUByte(), lineType.toUByte()
-                )
-            }.getOrNull()
+            queueCoreAdd(
+                target, page, tool, colorRgba, baseWidth, finalPoints,
+                layer.toUByte(), lineType.toUByte())
         } else {
             null
         }
-        if (coreId != null) onContentCommitted?.invoke()
+        if (coreId != null) notifyContentCommittedAfterWrites()
 
         val stroke = CompletedStroke(
             pointerId = id,
@@ -1048,7 +1066,8 @@ class InkEngine(
         val page = pageId
         if (coreId != null && target != null && page != null) {
             // 核心是 append-only：收回是追加墓碑，不是刪位元組。
-            runCatching { target.eraseStroke(page, coreId) }
+            queueCoreErase(target, page, coreId)
+            notifyContentCommittedAfterWrites()
         }
         return removed
     }
@@ -1181,17 +1200,14 @@ class InkEngine(
         val page = pageId
         if (target != null && page != null) {
             for (old in _strokes) {
-                old.coreStrokeId?.let { runCatching { target.eraseStroke(page, it) } }
+                old.coreStrokeId?.let { queueCoreErase(target, page, it) }
             }
         }
         val written = next.map { stroke ->
             val coreId = if (target != null && page != null) {
-                runCatching {
-                    target.addStrokeDrafted(
-                        page, stroke.tool, stroke.colorRgba, stroke.baseWidth, stroke.points,
-                        stroke.layer.toUByte(), stroke.lineType.toUByte()
-                    )
-                }.getOrNull()
+                queueCoreAdd(
+                    target, page, stroke.tool, stroke.colorRgba, stroke.baseWidth, stroke.points,
+                    stroke.layer.toUByte(), stroke.lineType.toUByte())
             } else {
                 null
             }

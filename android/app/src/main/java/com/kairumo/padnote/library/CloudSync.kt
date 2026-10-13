@@ -371,6 +371,12 @@ object CloudSync {
      * 鎖在核心（`syncGateTryEnter`／`syncGateLeave`），與 Apple 共用同一把。
      */
     fun runFull(context: Context, deviceId: UInt, activeNotebookId: String? = null): FullResult {
+        // Ink mutations are queued off the UI thread. Drain them before sync reads
+        // package state, so upload/export cannot race a pending add or erase tombstone.
+        if (!com.kairumo.padnote.ink.InkPackageWriter.awaitIdleBlocking()) {
+            SyncLogger.log("筆跡尚未完成寫入，延後本輪同步", SyncSource.GOOGLE_DRIVE)
+            return FullResult(null, 0, 0, emptyList(), skipped = true)
+        }
         // 單調時鐘：牆上時鐘跳一下會讓「拿著多久」算錯，於是不是永遠不
         // 接手，就是立刻把正在跑的那輪踢掉。
         val grant = acquireGate("android:google-drive")
@@ -388,7 +394,9 @@ object CloudSync {
             )
         }
         return try {
-            runFullBody(context, deviceId, activeNotebookId)
+            com.kairumo.padnote.ink.InkPackageWriter.withSyncLock {
+                runFullBody(context, deviceId, activeNotebookId)
+            }
         } finally {
             syncGateLeave(grant.ticket)
         }

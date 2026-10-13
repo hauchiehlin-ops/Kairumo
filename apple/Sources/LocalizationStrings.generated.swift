@@ -14199,6 +14199,14 @@ extension LocalizationManager {
             .ko: "【즉시 전송】%1@… 실패: %2@",
             .th: "【ส่งทันที】%1@… ล้มเหลว: %2@"
         ],
+        "log_msg_087": [
+            .zhHant: "筆跡尚未完成寫入，延後本輪同步",
+            .en: "Ink writes are still pending; this sync round is deferred",
+            .zhHans: "笔迹尚未完成写入，延后本轮同步",
+            .ja: "手書きの保存が完了していないため、今回の同期を延期します",
+            .ko: "잉크 쓰기가 아직 완료되지 않아 이번 동기화를 연기합니다",
+            .th: "กำลังรอบันทึกหมึก จึงเลื่อนการซิงก์รอบนี้"
+        ],
         "log_recorder_message": [
             .zhHant: "[AudioRecorderManager] %1@",
             .en: "[AudioRecorderManager] %1@",

@@ -9960,9 +9960,8 @@ public struct NotebookEditorView: View {
 
     /// 把待寫的筆跡存起來，並把「新增的筆畫」追加進核心套件。
     ///
-    /// **只有 `.drawing` 檔在主執行緒寫**（畫面其他地方——縮圖、換頁——讀的就是它）。套件那一段
-    /// （讀基準、算差異、寫帳本、追加筆畫）整段丟到背景：它要開檔、重播、寫好幾個檔，在檔案系統慢的裝置上
-    /// （例如文件庫放在 iCloud 資料夾的 iPad）一次可以卡主執行緒十幾秒 —— 使用者看到的是換畫筆之後
+    /// 套件寫入與 `.drawing` 序列化／落盤都在背景序列佇列執行。它們要開檔、重播、序列化並寫好幾個檔，
+    /// 在檔案系統慢的裝置上（例如文件庫放在 iCloud 資料夾的 iPad）一次可以卡主執行緒十幾秒 —— 使用者看到的是換畫筆之後
     /// 整條工具列點不動。卡頓記錄的堆疊樣本與存檔標記就是停在這一步。
     ///
     /// 基準先**樂觀地**設成這一版：後面再來的存檔是跟這一版比。背景佇列是序列的，所以第一個工作
@@ -9979,8 +9978,10 @@ public struct NotebookEditorView: View {
         var jobs: [CoreInkFlush.Job] = []
         for (page, drawing) in pending {
             MainThreadStallMonitor.shared.breadcrumb("flush p\(page) saveDrawing (\(drawing.strokes.count) strokes)")
-            store.saveDrawing(notebookId: notebook.id, pageIndex: page, drawing: drawing)
-            jobs.append(CoreInkFlush.Job(page: page, drawing: drawing, cachedBaseline: coreInkBaselines[page]))
+            let drawingURL = store.drawingsDirectory.appending(path: "\(notebook.id)_p\(page).drawing")
+            jobs.append(CoreInkFlush.Job(
+                page: page, drawing: drawing, drawingFileURL: drawingURL,
+                cachedBaseline: coreInkBaselines[page]))
             coreInkBaselines[page] = drawing
         }
 

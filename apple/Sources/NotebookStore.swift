@@ -2061,6 +2061,14 @@ public final class NotebookStore: ObservableObject {
         try? data.write(to: fileUrl, options: .atomic)
     }
 
+    /// Background counterpart used by the editor's serialized ink writer.
+    /// The caller resolves the URL on the main actor; serialization and disk I/O
+    /// happen on the writer queue.
+    nonisolated static func writeDrawing(_ drawing: PKDrawing, to fileURL: URL) {
+        let data = drawing.dataRepresentation()
+        try? data.write(to: fileURL, options: .atomic)
+    }
+
     /// 讀取單頁手繪內容
     public func loadDrawing(notebookId: String, pageIndex: Int) -> PKDrawing {
         let fileUrl = drawingsDirectory.appending(path: "\(notebookId)_p\(pageIndex).drawing")

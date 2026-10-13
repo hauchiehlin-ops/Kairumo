@@ -165,9 +165,12 @@ object FocusSync {
         if (!lock.granted) return false
         try {
             val pkg = LanLink.findPackage(context, id) ?: return true
-            link?.announce(id)
+            if (!com.kairumo.padnote.ink.InkPackageWriter.awaitIdleBlocking()) return false
             val started = SystemClock.elapsedRealtime()
-            val round = session.focusRound(pkg.absolutePath, id, deviceId)
+            val round = com.kairumo.padnote.ink.InkPackageWriter.withSyncLock {
+                link?.announce(id)
+                session.focusRound(pkg.absolutePath, id, deviceId)
+            }
             val elapsed = SystemClock.elapsedRealtime() - started
             if (!round.ok) {
                 SyncLogger.log("【立即推送】${id.take(8)}… 失敗：${round.error}", SyncSource.GOOGLE_DRIVE)
@@ -249,10 +252,14 @@ object FocusSync {
         try {
             val pkg = LanLink.findPackage(context, id) ?: return FfiFocusOutcome.SUCCESS
             // 有寫入就先通知區網對端 —— 不必等 Drive 那一趟。
-            if (run.push) link?.announce(id)
-
+            if (!com.kairumo.padnote.ink.InkPackageWriter.awaitIdleBlocking()) {
+                return FfiFocusOutcome.TRANSIENT
+            }
             val started = SystemClock.elapsedRealtime()
-            val round = session.focusRound(pkg.absolutePath, id, deviceId)
+            val round = com.kairumo.padnote.ink.InkPackageWriter.withSyncLock {
+                if (run.push) link?.announce(id)
+                session.focusRound(pkg.absolutePath, id, deviceId)
+            }
             val elapsed = SystemClock.elapsedRealtime() - started
 
             if (!round.ok) {

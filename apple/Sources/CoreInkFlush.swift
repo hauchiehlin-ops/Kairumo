@@ -13,6 +13,7 @@ enum CoreInkFlush {
     struct Job {
         let page: Int
         let drawing: PKDrawing
+        let drawingFileURL: URL
         /// 編輯器記著的「套件裡這一頁目前的樣子」。`nil` = 還不知道，要從套件讀。
         let cachedBaseline: PKDrawing?
     }
@@ -25,6 +26,7 @@ enum CoreInkFlush {
     ) -> [(page: Int, drawing: PKDrawing)] {
         var failed: [(page: Int, drawing: PKDrawing)] = []
         for job in jobs {
+            NotebookStore.writeDrawing(job.drawing, to: job.drawingFileURL)
             let baseline: PKDrawing
             if let cached = job.cachedBaseline {
                 baseline = cached
