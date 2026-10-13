@@ -13503,6 +13503,14 @@ extension LocalizationManager {
             .ko: "메인 스레드가 %1@초 동안 멈췄습니다(화면 응답 없음). 직전 작업: %2@",
             .th: "เธรดหลักค้าง %1@ วินาที (หน้าจอไม่ตอบสนอง) สิ่งสุดท้ายก่อนค้าง: %2@"
         ],
+        "log_main_stall_stack": [
+            .zhHant: "卡頓時主執行緒的堆疊樣本（模組基底 %1@；位址 %2@）",
+            .en: "Main-thread stack sample during the stall (image base %1@; addresses %2@)",
+            .zhHans: "卡顿时主线程的堆栈样本（模块基址 %1@；地址 %2@）",
+            .ja: "停止中のメインスレッドのスタックサンプル（イメージ基底 %1@；アドレス %2@）",
+            .ko: "멈춘 동안의 메인 스레드 스택 샘플(이미지 기준 %1@, 주소 %2@)",
+            .th: "ตัวอย่างสแต็กของเธรดหลักระหว่างค้าง (ฐานอิมเมจ %1@; แอดเดรส %2@)"
+        ],
         "log_msg_001": [
             .zhHant: "Google 帳號授權成功！已儲存憑證。",
             .en: "Google account authorized. Credentials saved.",

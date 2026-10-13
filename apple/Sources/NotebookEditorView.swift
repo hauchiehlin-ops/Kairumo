@@ -9977,10 +9977,15 @@ public struct NotebookEditorView: View {
         }
 
         for (page, drawing) in pending {
+            let crumb = MainThreadStallMonitor.shared
+            crumb.breadcrumb("flush p\(page) saveDrawing (\(drawing.strokes.count) strokes)")
             store.saveDrawing(notebookId: notebook.id, pageIndex: page, drawing: drawing)
+            crumb.breadcrumb("flush p\(page) coreInkBaseline")
             let baseline = coreInkBaseline(for: page)
+            crumb.breadcrumb("flush p\(page) StrokeDelta")
             let added = StrokeDelta.added(in: drawing, since: baseline)
             // 擦掉的筆畫記下來，匯入時濾掉（不然同步會把雲端的舊檔下載回來、筆畫復活）。
+            crumb.breadcrumb("flush p\(page) ErasedInkLedger")
             ErasedInkLedger.record(
                 removed: StrokeDelta.removed(in: drawing, since: baseline), added: added,
                 in: store.syncBaselineDirectory, notebookId: notebook.id, page: page)
@@ -9988,6 +9993,7 @@ public struct NotebookEditorView: View {
                 coreInkBaselines[page] = drawing
                 continue
             }
+            crumb.breadcrumb("flush p\(page) appendInkDelta (\(added.count) strokes)")
             do {
                 try NotebookPackageBridge.appendInkDelta(
                     document: notebook,
