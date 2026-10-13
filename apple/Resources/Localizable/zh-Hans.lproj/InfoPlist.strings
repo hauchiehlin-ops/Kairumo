@@ -7,3 +7,4 @@
 "NSLocalNetworkUsageDescription" = "Kairumo 需要局域网权限，以便在同一个 Wi-Fi 下让您自己的设备秒级同步笔记，并与同网络的协作伙伴共同编辑。所有传输均经端到端加密且不经外部服务器。";
 "NSPhotoLibraryUsageDescription" = "Kairumo 需要访问您的相片图库，以便您挑选图片插入笔记页面进行批注与绘制。";
 "NSPhotoLibraryAddUsageDescription" = "Kairumo 需要保存图片权限，以便将您导出的笔记页面或绘图成果保存至相片图库。";
+"NSFaceIDUsageDescription" = "Kairumo 使用 Face ID 解锁你的用户，避免共用此设备的其他人打开你的笔记。";

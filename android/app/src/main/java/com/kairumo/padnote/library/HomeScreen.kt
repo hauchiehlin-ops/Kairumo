@@ -123,6 +123,8 @@ fun HomeScreen(
     onMove: (NotebookLibrary.Entry) -> Unit,
     onSortChange: (NotebookLibrary.Sort) -> Unit,
     onEditIdentity: () -> Unit,
+    /** 切換使用者（設定檔）。一台裝置可以有最多 5 位使用者，各自有自己的筆記與雲端帳號。 */
+    onSwitchUser: () -> Unit,
     onToggleRecording: () -> Unit,
     onBackup: () -> Unit,
     onCreateSnapshot: (NotebookLibrary.Entry?) -> Unit,
@@ -328,6 +330,10 @@ fun HomeScreen(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
+                    TextButton(
+                        onClick = onSwitchUser,
+                        modifier = Modifier.testTag("home.profile.switch")
+                    ) { Text(l("profile_switch_button")) }
                     TextButton(
                         onClick = onEditIdentity,
                         modifier = Modifier.testTag("home.identity.edit")

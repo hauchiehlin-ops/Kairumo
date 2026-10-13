@@ -209,6 +209,15 @@ dependencies {
     // WorkManager 是唯一會處理 Doze、開機重啟與重試的排程器。
     implementation("androidx.work:work-runtime-ktx:2.9.1")
 
+    // 設定檔鎖的生物辨識（指紋、臉部）。只認 BIOMETRIC_STRONG，不退到裝置密碼 ——
+    // 裝置密碼是共用裝置的人都知道的，退到它等於鎖形同虛設（見 ProfileLockService）。
+    // BiometricPrompt 需要 FragmentActivity，所以 MainActivity 繼承它（FragmentActivity 本來就是 ComponentActivity）。
+    implementation("androidx.biometric:biometric:1.1.0")
+    // biometric 1.1.0 帶進來的 fragment 太舊：FragmentActivity 會驗證 requestPermissions 的 requestCode 只能用低 16 位元，
+    // 而 Activity Result API 產生的碼是 0x00010000 起跳 —— 首次引導的「要求麥克風權限」一按就崩潰（模擬器上實測）。
+    // 新版 fragment 已經修正。
+    implementation("androidx.fragment:fragment-ktx:1.8.5")
+
     // 折疊機的姿態（鉸鏈在哪、闔起還是攤開）。Configuration 只給得出寬度，
     // 給不出「畫面中間橫著一條鉸鏈」—— 內容壓在鉸鏈上是折疊機最明顯的毛病。
     implementation("androidx.window:window:1.3.0")

@@ -27,6 +27,7 @@ import uniffi.padnote_core.oauthRefreshBody
 import uniffi.padnote_core.oauthRevokeUrl
 import uniffi.padnote_core.oauthTokenEndpoint
 import com.kairumo.padnote.profile.ProfileContext
+import com.kairumo.padnote.profile.unbindGoogle
 
 /**
  * Google 授權（Android，G-01 / ADR-0011）。
@@ -253,6 +254,8 @@ object GoogleAuth {
      * 但本機必須清掉，否則背景會一直拿一個死權杖重試。
      */
     fun signOutLocally(context: Context) {
+        // 解除這個設定檔與 Google 帳號的綁定，帳號才能讓別的設定檔用。
+        com.kairumo.padnote.profile.ProfileManager.run { unbindGoogle(context) }
         store(context)?.edit()?.clear()?.apply()
         cachedStore = null
         com.kairumo.padnote.library.SyncHistory.setAccountName(context, null)

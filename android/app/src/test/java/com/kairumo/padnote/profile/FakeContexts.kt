@@ -50,8 +50,33 @@ class FakeSharedPreferences : SharedPreferences {
 class FakeActivity : Activity() {
     val prefsByName = mutableMapOf<String, FakeSharedPreferences>()
 
+    /** 假的應用程式資料夾：files／cache／app_profiles／shared_prefs 都在這底下。 */
+    val root: java.io.File = java.nio.file.Files.createTempDirectory("fake-activity").toFile()
+    private val filesRoot = java.io.File(root, "files").also { it.mkdirs() }
+    private val cacheRoot = java.io.File(root, "cache").also { it.mkdirs() }
+    private val appInfo = android.content.pm.ApplicationInfo().also { it.dataDir = root.path }
+
     fun prefs(name: String) = prefsByName.getOrPut(name) { FakeSharedPreferences() }
 
-    override fun getSharedPreferences(name: String?, mode: Int): SharedPreferences = prefs(name ?: "")
+    /** 把偏好檔也落成真的檔案（`ownedPrefsNames` 掃的是 shared_prefs/ 底下的檔名）。 */
+    private fun touchPrefsFile(name: String) {
+        val dir = java.io.File(root, "shared_prefs").also { it.mkdirs() }
+        java.io.File(dir, "$name.xml").writeText("<map/>")
+    }
+
+    override fun getSharedPreferences(name: String?, mode: Int): SharedPreferences {
+        if (name != null) touchPrefsFile(name)
+        return prefs(name ?: "")
+    }
+
+    override fun deleteSharedPreferences(name: String?): Boolean {
+        prefsByName.remove(name)
+        return java.io.File(java.io.File(root, "shared_prefs"), "$name.xml").delete()
+    }
+
     override fun getApplicationContext(): Context = this
+    override fun getFilesDir(): java.io.File = filesRoot
+    override fun getCacheDir(): java.io.File = cacheRoot
+    override fun getDir(name: String?, mode: Int): java.io.File = java.io.File(root, "app_$name").also { it.mkdirs() }
+    override fun getApplicationInfo(): android.content.pm.ApplicationInfo = appInfo
 }

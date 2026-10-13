@@ -15,6 +15,7 @@ import uniffi.padnote_core.syncGateLeave
 import uniffi.padnote_core.syncGateTryEnter
 import uniffi.padnote_core.syncLiveNotebooks
 import uniffi.padnote_core.syncOrderActiveFirst
+import com.kairumo.padnote.profile.bindGoogle
 
 /**
  * 跑一輪雲端同步（Android）。
@@ -98,6 +99,19 @@ object CloudSync {
             SyncHistory.setAccount(context, email)
         }
         email?.also { AccountSyncStore.setLastAccount(context, it) }
+        // **一個 Google 帳號只能綁一個設定檔。** 範例筆記的 id 在每個設定檔都一樣，兩個設定檔登入同一個帳號，
+        // 雲端上的筆記就混在一起了。綁在別人身上就登出，並記下是誰佔著。
+        if (!email.isNullOrEmpty()) {
+            try {
+                com.kairumo.padnote.profile.ProfileManager.run { bindGoogle(context, email) }
+            } catch (e: com.kairumo.padnote.profile.ProfileException) {
+                if (e.kind == com.kairumo.padnote.profile.ProfileException.Kind.GOOGLE_ALREADY_BOUND) {
+                    com.kairumo.padnote.profile.ProfileManager.googleConflict.value = e.profileName
+                    GoogleAuth.signOutLocally(context)
+                    return@runCatching null
+                }
+            }
+        }
         accountName ?: email
     }.getOrNull()
 

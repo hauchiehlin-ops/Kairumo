@@ -22,11 +22,20 @@ private struct RootView: View {
                 // 切換中只顯示一個中性的畫面：編輯器等舊畫面要在舊設定檔還有效時消失、存檔
                 // （見 `ProfileManager` 檔頭）。
                 ProfileSwitchingView()
+            } else if profiles.isLocked {
+                // 使用者上了鎖：過了關才看得到內容。
+                ProfileLockView()
             } else {
                 // `.id(epoch)`：每次切換整棵重建。舊設定檔的任何畫面狀態（捲動位置、開著的筆記、
                 // `@State`）一個都不會留給下一個使用者。
                 ProfileContentView().id(profiles.epoch)
             }
+        }
+        .alert(
+            profiles.notice ?? "",
+            isPresented: Binding(get: { profiles.notice != nil }, set: { if !$0 { profiles.notice = nil } })
+        ) {
+            Button(LocalizationManager.shared.localized("confirm"), role: .cancel) {}
         }
     }
 }
@@ -64,6 +73,7 @@ struct KairumoApp: App {
     init() {
         // **必須在任何單例被碰到之前**：單例的 init 會依 `ProfileContext.activeId` 讀資料，
         // 它若還是舊的，整個 App 就載入錯的設定檔。
+        ProfileManager.resetForUITestsIfRequested()
         ProfileManager.reconcileContextBeforeLaunch()
         StartupLogger.logKey("log_app_init")
         KairumoAppDelegate.configureInstantToolTips()
@@ -127,6 +137,9 @@ struct KairumoApp: App {
                 // 單參數的 onChange：新的兩參數版本要 iOS 17，而部署目標更低。
                 .onChange(of: scenePhase) { phase in
                     StartupLogger.logKey("log_scene_phase", "\(phase)")
+                    // 離開 App 超過一分鐘、回來時有鎖的設定檔要重新上鎖。
+                    if phase == .background { ProfileManager.shared.noteEnteredBackground() }
+                    if phase == .active { ProfileManager.shared.noteBecameActive() }
                     guard phase == .active else { return }
                     // 啟動時先給予 1 秒寬限期讓 UI 算繪完畢，避免阻塞主執行緒造成卡頓感
                     Task { @MainActor in

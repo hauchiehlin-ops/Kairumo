@@ -4171,3 +4171,25 @@ CRDT 頁面**聯集**，所以下一次同步就全部合併回來（104 = 26×4
 **連帶抓到的 bug：** 匯入端用小寫的套件 id 去比對 `activeLocalIds`（大寫 UUID），永遠判成「本機沒載入」，
 所以兩條路徑的「略過沒變動的」其實從來沒生效過。兩個匯入函式現在先把 `activeLocalIds` 轉小寫。
 `testASecondRoundWithNothingChangedExportsAndImportsNothing` 守著這件事（連跑幾輪後必須匯出 0、匯入 0）。
+
+## 2026-10-13 · 一台裝置多位使用者（設定檔）
+
+設計與取捨見 [ADR-0014](adr/0014-multiple-profiles.md)。這裡記實作過程中**實際踩到的坑**：
+
+- **背景寫檔佇列在「執行時」才問現在是哪個設定檔**（`NotebookStore.persistData` 裡的
+  `ProfileDefaults.current`）。切換發生在排進佇列與執行之間的話，舊設定檔的資料夾名稱就寫進新設定檔。
+  現在在排進佇列的**當下**就取定。路徑本來就是當下取定的，所以只有這一處。
+- **`GuidanceSuppressionManager` 把 `ProfileDefaults.current` 存成屬性** —— 它是值，永遠指著建立當下的
+  設定檔。門禁新增規則 A6 擋這個形狀。
+- **`switchTo` 的閘門在 `restart()` 之後才放**（用 `defer`）：順序測試抓到，改成重載完成後、重啟前放掉。
+- **模擬器上未簽署的建置沒有 Keychain 權限**，PIN 寫不進去 —— 而畫面誤報成「PIN 必須是 4 到 8 位數字」。
+  這暴露兩個真問題：「存不進去」與「格式不對」要分開（`pinStorageFailed`），以及「建立使用者 → 設 PIN 失敗」
+  會留下一個沒鎖的使用者（現在整個回滾）。UI 測試改用記憶體儲存（`KAIRUMO_UITEST_MEMORY_SECRETS`）。
+- **Android 改繼承 `FragmentActivity`（生物辨識需要）後，首次引導的要求麥克風權限一按就崩潰**
+  （`requestCode` 超過 16 位元）。是 biometric 帶進來的 fragment 太舊；明確升到 fragment 1.8.5。
+  這是**端到端測試在模擬器上抓到的**，單元測試完全看不到。
+- Android 的 Dialog 是獨立視窗，`testTagsAsResourceId` 要在它自己的 Surface 上開，uiautomator 才看得到。
+- 預設設定檔的名稱一開始取自 `"Kairumo"`，與首頁身分卡上的「You」不一致 —— 兩處是同一個人，
+  改取協作身分名稱。
+- 登入的 Google 帳號綁定在 `refreshAccountEmail` 之後強制檢查（Apple）與 `CloudSync.accountEmail`
+  （Android）；綁在別的設定檔上就登出並告訴使用者是哪一位。

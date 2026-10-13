@@ -41,6 +41,7 @@ public struct HomeWorkbenchView: View {
     @State private var showFolderSyncSheet: Bool = false
     @State private var showStorageLocationSheet: Bool = false
     @State private var showAccountSheet: Bool = false
+    @State private var showProfilePicker: Bool = false
     @State private var showNewNotebookSheet: Bool = false
     /// 建立**加密**筆記本的流程（H-CRYPTO）。與一般新增分開：
     /// 它有三步而且不能跳（設密碼 → 抄復原碼 → 把復原碼輸回來）。
@@ -558,6 +559,7 @@ public struct HomeWorkbenchView: View {
                 userAvatarCircle
                 userProfileTexts
                 Spacer(minLength: 8)
+                switchUserButton
                 switchAccountButton
             }
 
@@ -570,10 +572,14 @@ public struct HomeWorkbenchView: View {
                 }
                 HStack {
                     Spacer()
+                    switchUserButton
                     switchAccountButton
                 }
             }
         }
+        // 切換使用者的選單。掛在橫幅這個小子樹上，而不是整個首頁那一長串修飾子 ——
+        // 後者再多一個編譯器就放棄型別推論。
+        .sheet(isPresented: $showProfilePicker) { ProfilePickerSheet() }
         .padding(12)
         .background(Color(uiColor: .secondarySystemGroupedBackground))
         .cornerRadius(12)
@@ -604,6 +610,23 @@ public struct HomeWorkbenchView: View {
                 .foregroundColor(.secondary)
                 .lineLimit(1)
         }
+    }
+
+    /// 切換使用者（設定檔）。一台裝置可以有最多 5 位使用者，各自有自己的筆記與雲端帳號。
+    private var switchUserButton: some View {
+        Button {
+            showProfilePicker = true
+        } label: {
+            Label(localizationManager.localized("profile_switch_button"), systemImage: "person.2.circle")
+                .font(.caption)
+                .fontWeight(.medium)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 5)
+                .background(Color(uiColor: .tertiarySystemGroupedBackground))
+                .cornerRadius(8)
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("home.profile.switch")
     }
 
     private var switchAccountButton: some View {

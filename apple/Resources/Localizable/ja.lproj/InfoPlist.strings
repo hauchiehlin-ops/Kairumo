@@ -7,3 +7,4 @@
 "NSLocalNetworkUsageDescription" = "Kairumo は、同じ Wi-Fi 上のご自身のデバイス間でノートを瞬時に同期し、同じネットワーク上の相手と一緒に編集するためにローカルネットワークを使用します。通信はすべてエンドツーエンドで暗号化され、サーバーを経由しません。";
 "NSPhotoLibraryUsageDescription" = "Kairumo は、写真をノートに挿入して書き込めるようにするために写真ライブラリにアクセスします。";
 "NSPhotoLibraryAddUsageDescription" = "Kairumo は、書き出したページや描画を写真ライブラリに保存します。";
+"NSFaceIDUsageDescription" = "Kairumo は、この端末を共有する他の人があなたのノートを開けないよう、プロファイルのロック解除に Face ID を使用します。";

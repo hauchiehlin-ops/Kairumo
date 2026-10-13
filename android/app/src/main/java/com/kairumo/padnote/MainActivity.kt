@@ -4,6 +4,8 @@ import android.os.Bundle
 import java.io.File
 import android.view.KeyEvent
 import androidx.activity.ComponentActivity
+import androidx.fragment.app.FragmentActivity
+import com.kairumo.padnote.profile.ProfileGate
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -117,6 +119,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.compose.foundation.gestures.calculatePan
 import androidx.compose.foundation.gestures.calculateZoom
 import androidx.compose.ui.geometry.Offset
@@ -270,7 +273,8 @@ import com.kairumo.padnote.profile.ProfileContext
  * 現階段的唯一任務：證明 Kotlin ⇄ UniFFI ⇄ libpadnote_core.so 這條路是通的。
  * 筆跡引擎（WP5）與其餘平台功能（WP6）會在這之上長出來。
  */
-class MainActivity : ComponentActivity() {
+@OptIn(androidx.compose.ui.ExperimentalComposeUiApi::class)
+class MainActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         com.kairumo.padnote.platform.CrashLogger.install(applicationContext)
@@ -292,8 +296,29 @@ class MainActivity : ComponentActivity() {
             // 把 languageTag 一路串過六個檔案。
             CompositionLocalProvider(LocalAppLanguage provides deviceLanguageTag()) {
             KairumoTheme {
-                Surface(modifier = Modifier.fillMaxSize()) {
-                    KairumoApp()
+                Surface(
+                    modifier = Modifier.fillMaxSize().semantics { testTagsAsResourceId = true }
+                ) {
+                    // 使用中的設定檔上了鎖：過了關才看得到內容。**只是畫面閘門**（見 ProfileLockService）。
+                    var locked by remember { mutableStateOf(ProfileGate.isLocked(this@MainActivity)) }
+                    DisposableEffect(Unit) {
+                        // 離開超過一分鐘再回來，有鎖的設定檔要重新上鎖。
+                        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+                            when (event) {
+                                androidx.lifecycle.Lifecycle.Event.ON_STOP -> ProfileGate.noteStopped()
+                                androidx.lifecycle.Lifecycle.Event.ON_START ->
+                                    if (ProfileGate.noteStarted(this@MainActivity)) locked = true
+                                else -> Unit
+                            }
+                        }
+                        lifecycle.addObserver(observer)
+                        onDispose { lifecycle.removeObserver(observer) }
+                    }
+                    if (locked) {
+                        com.kairumo.padnote.profile.ProfileLockScreen(this@MainActivity) { locked = false }
+                    } else {
+                        KairumoApp()
+                    }
                 }
             }
             }
@@ -423,6 +448,7 @@ private fun NotebookHome(
     var showCloudSyncDialog by remember { mutableStateOf(false) }
     var deletingFolder by remember { mutableStateOf<FolderTree.Folder?>(null) }
     var editingIdentity by remember { mutableStateOf(false) }
+    var showProfilePicker by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf<String?>(null) }
     var recording by remember { mutableStateOf(false) }
     var showQuickRecordDialog by remember { mutableStateOf(false) }
@@ -677,6 +703,7 @@ private fun NotebookHome(
             onMove = { moving = it },
             onSortChange = { sort = it },
             onEditIdentity = { editingIdentity = true },
+            onSwitchUser = { showProfilePicker = true },
             onToggleRecording = {
                 if (AudioCapture.hasPermission(activity)) {
                     showQuickRecordDialog = true
@@ -1393,6 +1420,14 @@ private fun NotebookHome(
             }
         )
     }
+
+    if (showProfilePicker) {
+        com.kairumo.padnote.profile.ProfilePickerDialog(activity as androidx.fragment.app.FragmentActivity) {
+            showProfilePicker = false
+        }
+    }
+    // 登入的 Google 帳號已經綁在另一位使用者：告訴使用者一次。
+    com.kairumo.padnote.profile.ProfileGoogleConflictDialog()
 
     if (editingIdentity) {
         IdentityDialog(

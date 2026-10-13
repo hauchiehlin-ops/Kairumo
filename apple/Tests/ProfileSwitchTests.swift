@@ -286,3 +286,267 @@ final class ProfileIsolationTests: XCTestCase {
         XCTAssertEqual(snapshot(), before)
     }
 }
+
+/// 管理操作：新增、重新命名、刪除、鎖、Google 帳號綁定。
+/// 全部用臨時名單與記憶體裡的 PIN 儲存，不碰真的設定檔名單與 Keychain。
+@MainActor
+final class ProfileManagementTests: XCTestCase {
+    private var dir: URL!
+    private var created: [String] = []
+    private var originalActive = ProfileContext.activeId
+
+    override func setUp() async throws {
+        try await super.setUp()
+        originalActive = ProfileContext.activeId
+        ProfileContext.setActive(ProfileRecord.defaultId)
+        dir = FileManager.default.temporaryDirectory.appending(path: "mgmt-\(UUID().uuidString)")
+    }
+
+    override func tearDown() async throws {
+        for id in created {
+            for url in ProfileContext.ownedDirectories(for: id) { try? FileManager.default.removeItem(at: url) }
+            ProfileDefaults.removeAll(forProfile: id)
+        }
+        ProfileContext.setActive(originalActive)
+        try? FileManager.default.removeItem(at: dir)
+        try await super.tearDown()
+    }
+
+    private func makeManager() -> ProfileManager {
+        let storage = ProfileRegistryStorage(fileURL: dir.appending(path: "profiles_v1.json"))
+        try? storage.save(ProfileRegistry.initial(displayName: "我", colorHex: "#007AFF"))
+        return ProfileManager(
+            storage: storage, lockService: ProfileLockService(store: InMemorySecretStore()),
+            participants: { [] }, extraResets: { [] }, quiesce: { .init(release: {}) }, restart: {})
+    }
+
+    private func addProfile(_ manager: ProfileManager, _ name: String) throws -> ProfileRecord {
+        let record = try manager.createProfile(name: name)
+        created.append(record.id)
+        return record
+    }
+
+    func testCreatingAProfileSeedsItsOwnIdentityAndLanguageWithoutTouchingTheDefault() throws {
+        let manager = makeManager()
+        let record = try addProfile(manager, "小明")
+
+        XCTAssertEqual(manager.profiles.count, 2)
+        let defaults = ProfileDefaults(profileId: record.id)
+        let identity = try JSONDecoder().decode(UserProfile.self, from: XCTUnwrap(defaults.data(forKey: "kairumo.user.profile")))
+        XCTAssertEqual(identity.displayName, "小明")
+        XCTAssertEqual(identity.colorHex, record.colorHex)
+        XCTAssertEqual(defaults.string(forKey: "kairumo.app.language"), LocalizationManager.shared.currentLanguage.rawValue)
+        XCTAssertEqual(manager.active.id, ProfileRecord.defaultId, "新增不會自動切過去")
+    }
+
+    func testTheFiveProfileLimitAppliesToCreate() throws {
+        let manager = makeManager()
+        for i in 1 ..< ProfileRegistry.maxProfiles { _ = try addProfile(manager, "人\(i)") }
+        XCTAssertFalse(manager.canAddProfile)
+        XCTAssertThrowsError(try manager.createProfile(name: "第六個")) {
+            XCTAssertEqual($0 as? ProfileError, .limitReached)
+        }
+    }
+
+    func testRenameKeepsTheCollaborationIdentityInSync() throws {
+        let manager = makeManager()
+        let record = try addProfile(manager, "舊名")
+
+        try manager.renameProfile(id: record.id, to: "新名")
+        try manager.setProfileColor(id: record.id, hex: "#FF2D55")
+
+        XCTAssertEqual(manager.registry.profile(id: record.id)?.displayName, "新名")
+        let identity = try JSONDecoder().decode(
+            UserProfile.self,
+            from: XCTUnwrap(ProfileDefaults(profileId: record.id).data(forKey: "kairumo.user.profile")))
+        XCTAssertEqual(identity.displayName, "新名", "選單上叫新名，協作畫面上也要叫新名")
+        XCTAssertEqual(identity.colorHex, "#FF2D55")
+        XCTAssertThrowsError(try manager.renameProfile(id: record.id, to: "我")) {
+            XCTAssertEqual($0 as? ProfileError, .duplicateName)
+        }
+    }
+
+    func testDeleteRemovesEverythingOfThatProfileAndNothingElse() throws {
+        let manager = makeManager()
+        let doomed = try addProfile(manager, "要刪的")
+        let kept = try addProfile(manager, "要留的")
+        try manager.setPIN("1234", for: doomed.id)
+        // 假裝它有資料：目錄、偏好。
+        let dirs = ProfileContext.ownedDirectories(for: doomed.id)
+        for url in dirs { try FileManager.default.createDirectory(at: url, withIntermediateDirectories: true) }
+        ProfileDefaults(profileId: doomed.id).set("x", forKey: "kairumo.some.pref")
+        ProfileDefaults(profileId: kept.id).set("keep", forKey: "kairumo.some.pref")
+        let keptDirs = ProfileContext.ownedDirectories(for: kept.id)
+        for url in keptDirs { try FileManager.default.createDirectory(at: url, withIntermediateDirectories: true) }
+
+        try manager.deleteProfile(id: doomed.id)
+
+        XCTAssertNil(manager.registry.profile(id: doomed.id))
+        XCTAssertTrue(dirs.allSatisfy { !FileManager.default.fileExists(atPath: $0.path) })
+        XCTAssertNil(ProfileDefaults(profileId: doomed.id).object(forKey: "kairumo.some.pref"))
+        XCTAssertFalse(manager.lockService.hasPIN(for: doomed.id), "PIN 也要清掉")
+        // 別的設定檔完全不受影響。
+        XCTAssertEqual(ProfileDefaults(profileId: kept.id).string(forKey: "kairumo.some.pref"), "keep")
+        XCTAssertTrue(keptDirs.allSatisfy { FileManager.default.fileExists(atPath: $0.path) })
+        XCTAssertNotNil(manager.registry.profile(id: kept.id))
+    }
+
+    func testTheDefaultAndTheActiveProfileCannotBeDeleted() throws {
+        let manager = makeManager()
+        let other = try addProfile(manager, "別人")
+        XCTAssertThrowsError(try manager.deleteProfile(id: ProfileRecord.defaultId)) {
+            XCTAssertEqual($0 as? ProfileError, .cannotDeleteActive, "它現在就是使用中的")
+        }
+        // 切到 other 之後，預設設定檔不再是使用中的，但仍然不能刪。
+        var next = manager.registry
+        try next.activate(id: other.id)
+        manager.registry = next
+        XCTAssertThrowsError(try manager.deleteProfile(id: ProfileRecord.defaultId)) {
+            XCTAssertEqual($0 as? ProfileError, .cannotDeleteDefault, "預設設定檔對應升級前的資料，不能刪")
+        }
+        XCTAssertThrowsError(try manager.deleteProfile(id: other.id)) {
+            XCTAssertEqual($0 as? ProfileError, .cannotDeleteActive)
+        }
+        XCTAssertThrowsError(try manager.deleteProfile(id: "nope")) {
+            XCTAssertEqual($0 as? ProfileError, .notFound)
+        }
+    }
+
+    func testPINLifecycleSetVerifyChangeRemove() throws {
+        let manager = makeManager()
+        XCTAssertFalse(manager.active.lock.isEnabled)
+
+        try manager.setPIN("2468", for: ProfileRecord.defaultId)
+        XCTAssertTrue(manager.active.lock.hasPIN)
+        XCTAssertEqual(manager.verifyPIN("2468", for: ProfileRecord.defaultId), .ok)
+
+        // 沒有 PIN 就不能開生物辨識；有了才可以。
+        try manager.setBiometrics(true, for: ProfileRecord.defaultId)
+        XCTAssertTrue(manager.active.lock.useBiometrics)
+        // 更換 PIN 之後生物辨識設定保留。
+        try manager.setPIN("1357", for: ProfileRecord.defaultId)
+        XCTAssertTrue(manager.active.lock.useBiometrics)
+        XCTAssertEqual(manager.verifyPIN("2468", for: ProfileRecord.defaultId).isOK, false)
+
+        // 移除鎖需要目前的 PIN：錯的 PIN 拿不掉。
+        XCTAssertThrowsError(try manager.removeLock(for: ProfileRecord.defaultId, currentPIN: "0000")) {
+            XCTAssertEqual($0 as? ProfileError, .wrongPIN)
+        }
+        XCTAssertTrue(manager.active.lock.hasPIN, "輸錯 PIN，鎖還在")
+        try manager.removeLock(for: ProfileRecord.defaultId, currentPIN: "1357")
+        XCTAssertEqual(manager.active.lock, .none)
+        XCTAssertFalse(manager.lockService.hasPIN(for: ProfileRecord.defaultId))
+        XCTAssertThrowsError(try manager.setBiometrics(true, for: ProfileRecord.defaultId)) {
+            XCTAssertEqual($0 as? ProfileError, .pinRequired)
+        }
+    }
+
+    func testUnlockingTheActiveProfileLiftsTheScreenGateOnlyWithTheRightPIN() throws {
+        let manager = makeManager()
+        try manager.setPIN("2468", for: ProfileRecord.defaultId)
+        manager.isLocked = true
+
+        XCTAssertNotEqual(manager.unlockActive(pin: "1111"), .ok)
+        XCTAssertTrue(manager.isLocked)
+        XCTAssertEqual(manager.unlockActive(pin: "2468"), .ok)
+        XCTAssertFalse(manager.isLocked)
+    }
+
+    func testTheLockComesBackAfterTheAppWasAwayLongEnoughButNotForAQuickLook() throws {
+        let manager = makeManager()
+        try manager.setPIN("2468", for: ProfileRecord.defaultId)
+        manager.isLocked = false
+        let t0 = Date(timeIntervalSince1970: 1_000_000)
+
+        manager.noteEnteredBackground(now: t0)
+        manager.noteBecameActive(now: t0.addingTimeInterval(ProfileManager.relockAfterBackground - 1))
+        XCTAssertFalse(manager.isLocked, "只是看一下通知，不該重新上鎖")
+
+        manager.noteEnteredBackground(now: t0)
+        manager.noteBecameActive(now: t0.addingTimeInterval(ProfileManager.relockAfterBackground + 1))
+        XCTAssertTrue(manager.isLocked)
+    }
+
+    func testAProfileWithoutALockIsNeverGated() throws {
+        let manager = makeManager()
+        let t0 = Date(timeIntervalSince1970: 1_000_000)
+        manager.noteEnteredBackground(now: t0)
+        manager.noteBecameActive(now: t0.addingTimeInterval(3600))
+        XCTAssertFalse(manager.isLocked)
+    }
+
+    func testOneGoogleAccountCannotBeBoundToTwoProfiles() throws {
+        let manager = makeManager()
+        let other = try addProfile(manager, "別人")
+        try manager.bindGoogle(email: "Me@Example.com")  // 綁在使用中的（預設）
+
+        var next = manager.registry
+        try next.activate(id: other.id)
+        manager.registry = next
+        XCTAssertThrowsError(try manager.bindGoogle(email: "me@example.com")) {
+            XCTAssertEqual($0 as? ProfileError, .googleAlreadyBound(profileName: "我"))
+        }
+        // 預設設定檔登出之後帳號才放出來。
+        var back = manager.registry
+        back.unbindGoogle(id: ProfileRecord.defaultId)
+        manager.registry = back
+        XCTAssertNoThrow(try manager.bindGoogle(email: "me@example.com"))
+        XCTAssertEqual(manager.registry.profile(id: other.id)?.googleEmail, "me@example.com")
+    }
+}
+
+private extension PINVerifyResult {
+    var isOK: Bool { self == .ok }
+}
+
+/// 同步身分的隔離：每個設定檔有自己的雲端快照、同步索引、`deviceId`。
+@MainActor
+final class ProfileSyncIsolationTests: XCTestCase {
+    private var originalActive = ProfileContext.activeId
+    private let other = "sync-iso-\(UUID().uuidString.lowercased())"
+
+    override func setUp() async throws {
+        try await super.setUp()
+        originalActive = ProfileContext.activeId
+        ProfileContext.setActive(ProfileRecord.defaultId)
+    }
+
+    override func tearDown() async throws {
+        for url in ProfileContext.ownedDirectories(for: other) { try? FileManager.default.removeItem(at: url) }
+        try? FileManager.default.removeItem(
+            at: FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+                .appendingPathComponent("Kairumo/sync/\(other)", isDirectory: true))
+        ProfileDefaults.removeAll(forProfile: other)
+        ProfileContext.setActive(originalActive)
+        try await super.tearDown()
+    }
+
+    func testEachProfileHasItsOwnRemoteSnapshotFileEvenWithoutAGoogleAccount() {
+        let store = AccountSyncStore.shared
+        let defaultPath = store.remoteIndexURL(account: "").path
+        ProfileContext.setActive(other)
+        let otherPath = store.remoteIndexURL(account: "").path
+        XCTAssertNotEqual(defaultPath, otherPath, "沒登入帳號時兩個設定檔不能共用同一個快照檔")
+        XCTAssertTrue(otherPath.contains("/Kairumo/sync/\(other)/"))
+        XCTAssertFalse(defaultPath.contains("/Kairumo/sync/\(other)/"), "預設設定檔維持原位置")
+    }
+
+    func testTheSyncIdentityIsPerProfile() {
+        let before = NotebookMigration.deviceId
+        ProfileContext.setActive(other)
+        let inOther = NotebookMigration.deviceId
+        XCTAssertNotEqual(before, inOther, "oplog 檔名裡的 device id：兩個設定檔共用的話，綁到同一個雲端資料夾時檔名會撞")
+        XCTAssertEqual(NotebookMigration.deviceId, inOther, "同一個設定檔每次取到的是同一個（存起來了）")
+        ProfileContext.setActive(ProfileRecord.defaultId)
+        XCTAssertEqual(NotebookMigration.deviceId, before, "切回來還是原本的")
+    }
+
+    func testKeychainTokensAreScopedPerProfile() {
+        XCTAssertNotEqual(
+            ProfileContext.scopedAccount("tokens", for: ProfileRecord.defaultId),
+            ProfileContext.scopedAccount("tokens", for: other),
+            "兩個設定檔的 Google 登入不能放在同一個 Keychain 項目裡")
+        XCTAssertEqual(ProfileContext.scopedAccount("tokens", for: ProfileRecord.defaultId), "tokens",
+                       "預設設定檔的項目名不能變 —— 升級前登入過的人不必重新登入")
+    }
+}

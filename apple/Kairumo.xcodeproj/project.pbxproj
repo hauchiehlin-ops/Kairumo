@@ -138,6 +138,7 @@
 		9C2756ABBB3E04433C88F83B /* ExportFidelityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A779F6ADCC3B71D4D84A687 /* ExportFidelityTests.swift */; };
 		9C429E1FB16DC03782075A0D /* ProInkTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5D09410716D4157EA2CBB2FA /* ProInkTests.swift */; };
 		9E2083F7B72EFB98A936CE83 /* DriveHttpClientCancelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E76BAB03EC45026C27611AD /* DriveHttpClientCancelTests.swift */; };
+		9ECE09157CD83B508BDB860D /* ProfileFlowUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA3B0C455B902F93D03CA587 /* ProfileFlowUITests.swift */; };
 		9F2B0BAAA1DE545936528DA8 /* NotebookSyncCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = D76C7E92895F6C4334996D92 /* NotebookSyncCoordinator.swift */; };
 		9F575A6A1D60950F27CB7642 /* StickerCatalogue.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1FECFA7F2244CC1719BB6AC9 /* StickerCatalogue.swift */; };
 		9F604F0E1403CBF029FDB93A /* LocalRelayServer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FFA100928CD3224E43D7382 /* LocalRelayServer.swift */; };
@@ -154,6 +155,7 @@
 		A948A24B15D21C3F14896D56 /* DraftingEditTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64BE539525B38BC90E4A7010 /* DraftingEditTests.swift */; };
 		AAA8F61705854E2C0B7294DE /* DesignSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4741BF2C2C92CDA117AEE5E /* DesignSystem.swift */; };
 		AAE3093621AF51975747F597 /* EditorStateMachineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 57625E7602263EE82B9C517B /* EditorStateMachineTests.swift */; };
+		AB3642A31CA9ABD4242BA87C /* ProfileManagerOperations.swift in Sources */ = {isa = PBXBuildFile; fileRef = F780E53F154CBE85FE25785B /* ProfileManagerOperations.swift */; };
 		AC0494BC1197FBE105D32E19 /* ProfileManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09A7DB60E278A34AF668B4F2 /* ProfileManager.swift */; };
 		AC68B6EC6A6BA0BF03560351 /* InkLatencyMeter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00CDBBB784601FDFB342136D /* InkLatencyMeter.swift */; };
 		AFE9F37C2A119458E52BA13C /* ChartSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8CDA20E9C287F58F4315EA3C /* ChartSpec.swift */; };
@@ -190,6 +192,7 @@
 		CC6E899FF912FD65D58573B3 /* NoteIntelligenceSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = E90D65B77C9075837E5F50D2 /* NoteIntelligenceSheet.swift */; };
 		CF102CC89EA1C12A585B1C6C /* SketchRefineEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3D05E57F469CF735B91FC514 /* SketchRefineEngine.swift */; };
 		CFEC94B2A58A067F88A1BBC7 /* StartupLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = A315B137252D82142C8E4452 /* StartupLogger.swift */; };
+		D03D600C6C4C4798B5F6BF2A /* ProfileViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 143977F7D5EA0A3ACD41FDF9 /* ProfileViews.swift */; };
 		D074A01F0D72F8305204D1B4 /* StorageUsageSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F9676DA3ADE252494EE9881 /* StorageUsageSection.swift */; };
 		D22176F0157CE8624CA7590B /* PenHardware.swift in Sources */ = {isa = PBXBuildFile; fileRef = F9BA3DC03F5BD38348D5D9DE /* PenHardware.swift */; };
 		D259D790432BD38F30537209 /* ToolbarSeparator.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC7046379C24B0D590B6F0E8 /* ToolbarSeparator.swift */; };
@@ -279,6 +282,7 @@
 		0FF2EC412BA37683FBBE2FC1 /* CollaborationSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CollaborationSheet.swift; sourceTree = "<group>"; };
 		0FFA100928CD3224E43D7382 /* LocalRelayServer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalRelayServer.swift; sourceTree = "<group>"; };
 		1064607D4E02AABFD6A63F53 /* PalmRejection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PalmRejection.swift; sourceTree = "<group>"; };
+		143977F7D5EA0A3ACD41FDF9 /* ProfileViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileViews.swift; sourceTree = "<group>"; };
 		15867EB19A9148EC69D47FC5 /* ShapeEditingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShapeEditingTests.swift; sourceTree = "<group>"; };
 		15AC78A0794D4E7FFDE676EC /* InteractionMatrixAudit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InteractionMatrixAudit.swift; sourceTree = "<group>"; };
 		16799A63AE107AAA8CCA34B4 /* ResizableSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResizableSheet.swift; sourceTree = "<group>"; };
@@ -453,6 +457,7 @@
 		B8F51C245CED14D4079BC5B4 /* DocumentTemplateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentTemplateTests.swift; sourceTree = "<group>"; };
 		B9BFDAE4EA9BBA2EA8438447 /* WordDocumentEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WordDocumentEditorView.swift; sourceTree = "<group>"; };
 		B9DFE7E365BA2170726481B9 /* PageGuideRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PageGuideRenderer.swift; sourceTree = "<group>"; };
+		BA3B0C455B902F93D03CA587 /* ProfileFlowUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileFlowUITests.swift; sourceTree = "<group>"; };
 		BACCB2718485E44E72B1164F /* DraftingEdit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DraftingEdit.swift; sourceTree = "<group>"; };
 		BC0776567843FC6C74C2A9C0 /* NoteShapeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NoteShapeTests.swift; sourceTree = "<group>"; };
 		BFC2EC4F24CB728264AB91A5 /* ObjectRotationControls.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ObjectRotationControls.swift; sourceTree = "<group>"; };
@@ -503,6 +508,7 @@
 		F3111941E411F546450CCE85 /* StrokeWidthSlider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StrokeWidthSlider.swift; sourceTree = "<group>"; };
 		F646239F772A80D0EE6368D6 /* Drafting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Drafting.swift; sourceTree = "<group>"; };
 		F65D4DD5D5DF9A56132D032E /* LocalizationStrings.generated.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalizationStrings.generated.swift; sourceTree = "<group>"; };
+		F780E53F154CBE85FE25785B /* ProfileManagerOperations.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileManagerOperations.swift; sourceTree = "<group>"; };
 		F85F010611BBEED2B2DF9AC3 /* PalmRejectionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PalmRejectionTests.swift; sourceTree = "<group>"; };
 		F9BA3DC03F5BD38348D5D9DE /* PenHardware.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PenHardware.swift; sourceTree = "<group>"; };
 		FC9E514062C89FE97A8E8E89 /* ExportParityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExportParityTests.swift; sourceTree = "<group>"; };
@@ -619,6 +625,7 @@
 				EE7E0D02EC1F70920FAAAE35 /* ManualShots.swift */,
 				A968389DD95F97ED562C256F /* MultiDeviceUITests.swift */,
 				5AE68ABA84E6B38FA439464F /* PlatformContractUITests.swift */,
+				BA3B0C455B902F93D03CA587 /* ProfileFlowUITests.swift */,
 				D32FB35605394A7823F6017B /* ResponsiveAudit.swift */,
 				6E69D62954A410C548C81F3A /* ScreenAudit.swift */,
 				DC6D1F547D3EA6FBF9266760 /* SmokeUITests.swift */,
@@ -797,6 +804,8 @@
 				62F572D32AE937168DC8C3E3 /* ProfileContext.swift */,
 				50368CB2CCE9DFF3B756C400 /* ProfileLockService.swift */,
 				09A7DB60E278A34AF668B4F2 /* ProfileManager.swift */,
+				F780E53F154CBE85FE25785B /* ProfileManagerOperations.swift */,
+				143977F7D5EA0A3ACD41FDF9 /* ProfileViews.swift */,
 				42E10D0FA1C1F6E77B180793 /* ProInk.swift */,
 				2E8568739E3C10539C54B9DC /* RadialMarkMenuView.swift */,
 				B2929D89A7985F84100FDB68 /* RecentTemplates.swift */,
@@ -1050,6 +1059,7 @@
 				4454AD2DAFEB214565F0719D /* ManualShots.swift in Sources */,
 				B0B6E675497689B5CF200607 /* MultiDeviceUITests.swift in Sources */,
 				909B53D2A1C7B9BB4784BEA9 /* PlatformContractUITests.swift in Sources */,
+				9ECE09157CD83B508BDB860D /* ProfileFlowUITests.swift in Sources */,
 				47AF8E7626A6A3C946AB0185 /* ResponsiveAudit.swift in Sources */,
 				1CC2292EB91628D7287E4780 /* ScreenAudit.swift in Sources */,
 				613D0C4337E03D7899725FA7 /* SmokeUITests.swift in Sources */,
@@ -1178,6 +1188,8 @@
 				6EC9B36592D3998C6486E934 /* ProfileContext.swift in Sources */,
 				667291FF2407A8B04D74AD4C /* ProfileLockService.swift in Sources */,
 				AC0494BC1197FBE105D32E19 /* ProfileManager.swift in Sources */,
+				AB3642A31CA9ABD4242BA87C /* ProfileManagerOperations.swift in Sources */,
+				D03D600C6C4C4798B5F6BF2A /* ProfileViews.swift in Sources */,
 				115AA723F107721EC68777AA /* RadialMarkMenuView.swift in Sources */,
 				E26B4411597679C8486D535D /* RecentTemplates.swift in Sources */,
 				EB681C3CBEB152B531200F27 /* RecordingAdvice.swift in Sources */,
@@ -1429,6 +1441,7 @@
 				INFOPLIST_KEY_CFBundleVersion = 100;
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
+				INFOPLIST_KEY_NSFaceIDUsageDescription = "Kairumo uses Face ID to unlock your profile, so other people using this device cannot open your notes.";
 				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "Kairumo uses the local network to sync your own devices on the same Wi-Fi within a second, and to edit notes together with people on that network. Everything is end-to-end encrypted and never passes through a server.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Kairumo uses the microphone to record voice notes in class or meetings, keeping your handwriting in sync with the recording timeline.";
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Kairumo saves pages and drawings you export to your photo library.";
@@ -1513,6 +1526,7 @@
 				INFOPLIST_KEY_CFBundleVersion = 100;
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
+				INFOPLIST_KEY_NSFaceIDUsageDescription = "Kairumo uses Face ID to unlock your profile, so other people using this device cannot open your notes.";
 				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "Kairumo uses the local network to sync your own devices on the same Wi-Fi within a second, and to edit notes together with people on that network. Everything is end-to-end encrypted and never passes through a server.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Kairumo uses the microphone to record voice notes in class or meetings, keeping your handwriting in sync with the recording timeline.";
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Kairumo saves pages and drawings you export to your photo library.";

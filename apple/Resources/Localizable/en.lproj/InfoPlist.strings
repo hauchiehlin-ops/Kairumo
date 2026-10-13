@@ -7,3 +7,4 @@
 "NSLocalNetworkUsageDescription" = "Kairumo uses the local network to sync your own devices on the same Wi-Fi within a second, and to edit notes together with people on that network. Everything is end-to-end encrypted and never passes through a server.";
 "NSPhotoLibraryUsageDescription" = "Kairumo accesses your photo library so you can place pictures into a note and annotate them.";
 "NSPhotoLibraryAddUsageDescription" = "Kairumo saves pages and drawings you export to your photo library.";
+"NSFaceIDUsageDescription" = "Kairumo uses Face ID to unlock your profile, so other people using this device cannot open your notes.";

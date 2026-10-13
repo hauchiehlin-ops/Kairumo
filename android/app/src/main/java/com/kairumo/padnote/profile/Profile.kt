@@ -59,7 +59,18 @@ class ProfileException(val kind: Kind, val profileName: String? = null) : Except
         LAST_PROFILE,
         /** 這個 Google 帳號已經綁在另一個設定檔上（[profileName] 是那個設定檔的名稱）。 */
         GOOGLE_ALREADY_BOUND,
-        INVALID_PIN
+        INVALID_PIN,
+        PIN_REQUIRED,
+        WRONG_PIN,
+
+        /** PIN 格式沒問題，但存不進去（金鑰庫拒絕）。與 INVALID_PIN 分開，理由同 Apple 端。 */
+        PIN_STORAGE_FAILED,
+
+        /** 預設設定檔對應升級前就存在的那一份資料，不能刪。 */
+        CANNOT_DELETE_DEFAULT,
+
+        /** 要刪的是正在使用的設定檔：先切到別的。 */
+        CANNOT_DELETE_ACTIVE
     }
 }
 
@@ -122,6 +133,7 @@ class ProfileRegistry private constructor(
     fun remove(id: String): ProfileRecord {
         val index = indexOf(id)
         if (list.size <= 1) throw ProfileException(ProfileException.Kind.LAST_PROFILE)
+        if (id == ProfileRecord.DEFAULT_ID) throw ProfileException(ProfileException.Kind.CANNOT_DELETE_DEFAULT)
         val removed = list.removeAt(index)
         if (activeId == id) {
             activeId = list.maxByOrNull { it.lastActiveAt }?.id ?: list[0].id

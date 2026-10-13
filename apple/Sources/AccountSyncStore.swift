@@ -337,7 +337,8 @@ public final class AccountSyncStore: ObservableObject {
         try? FileManager.default.removeItem(at: remoteIndexURL(account: account))
     }
 
-    private func remoteIndexURL(account: String) -> URL {
+    /// 雲端快照檔的位置（每個設定檔各一個子目錄；預設設定檔維持原位置）。測試也要看得到它。
+    func remoteIndexURL(account: String) -> URL {
         let safe = account.isEmpty
             ? "default"
             : account.lowercased().map { $0.isLetter || $0.isNumber ? String($0) : "-" }.joined()

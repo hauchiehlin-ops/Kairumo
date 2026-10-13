@@ -1920,6 +1920,13 @@ public final class NotebookStore: ObservableObject {
         toParentFolder folder: URL,
         progress: DocumentStorageLocation.ProgressHandler? = nil
     ) async throws {
+        // 位置設定（書籤）是預設設定檔的。其他設定檔的資料固定放在 `Profiles/<id>/`，
+        // 讓它走這裡會把預設設定檔的位置一起改掉。介面已經停用這個入口，這裡是第二道防線。
+        guard ProfileContext.isDefault else {
+            throw NSError(
+                domain: "Kairumo.StorageLocation", code: 3,
+                userInfo: [NSLocalizedDescriptionKey: L10n.t("profile_storage_default_only")])
+        }
         // 先把記憶體裡最後一版確實落盤。若此時直接換根目錄，背景寫入會在
         // 舊路徑收尾，使用者剛寫的最後幾筆就不在新文件庫裡。
         markDirtyAndPersist()

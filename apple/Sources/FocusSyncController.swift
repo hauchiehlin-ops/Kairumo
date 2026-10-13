@@ -170,6 +170,14 @@ public final class FocusSyncController: ObservableObject {
         }
     }
 
+    /// 切換到了另一個設定檔：區網節點要用新設定檔的金鑰與套件目錄重建（舊的在切換前已經停掉），
+    /// 並且立刻問一次雲端。`start()` 只做一次，所以切換之後要由這裡叫醒。
+    public func noteProfileActivated() {
+        lane.noteSignedIn(nowMs: nowMs)
+        reschedule()
+        ensureLan()
+    }
+
     /// 重新登入了。
     public func noteSignedIn() {
         lane.noteSignedIn(nowMs: nowMs)
@@ -394,6 +402,15 @@ enum LanKeychain {
               let data = item as? Data, data.count == 32
         else { return nil }
         return data
+    }
+
+    static func delete(account: String) {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: account,
+        ]
+        SecItemDelete(query as CFDictionary)
     }
 
     static func save(_ key: Data, account: String) {

@@ -79,6 +79,7 @@ targets:
         INFOPLIST_KEY_NSLocalNetworkUsageDescription: "Kairumo uses the local network to sync your own devices on the same Wi-Fi within a second, and to edit notes together with people on that network. Everything is end-to-end encrypted and never passes through a server."
         INFOPLIST_KEY_NSPhotoLibraryUsageDescription: "Kairumo accesses your photo library so you can place pictures into a note and annotate them."
         INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription: "Kairumo saves pages and drawings you export to your photo library."
+        INFOPLIST_KEY_NSFaceIDUsageDescription: "Kairumo uses Face ID to unlock your profile, so other people using this device cannot open your notes."
         INFOPLIST_KEY_ITSAppUsesNonExemptEncryption: NO
         # Mac App Store 必填（上傳時被 altool 以 90242 擋下過）。
         INFOPLIST_KEY_LSApplicationCategoryType: "public.app-category.productivity"

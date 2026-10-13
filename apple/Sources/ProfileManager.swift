@@ -66,6 +66,10 @@ public final class ProfileManager: ObservableObject {
     @Published public private(set) var isSwitching = false
     /// 使用中的設定檔需要解鎖。**只是畫面閘門**：資料已經在記憶體裡（見 `ProfileLockService` 的說明）。
     @Published public internal(set) var isLocked: Bool
+    /// 要告訴使用者的一句話（切換失敗…）。畫面顯示一次就清掉。
+    @Published public var notice: String?
+    /// 剛才登入的 Google 帳號已經綁在另一個設定檔：那個設定檔的名稱（登入流程據此報錯並登出）。
+    @Published public var googleConflictProfileName: String?
 
     var storage: ProfileRegistryStorage
     let lockService: ProfileLockService
@@ -128,10 +132,16 @@ public final class ProfileManager: ObservableObject {
 
     /// 讀名單；沒有就建立只有預設設定檔的初始名單（對應升級前就存在的資料，什麼都不搬）。
     static func loadOrCreateRegistry(storage: ProfileRegistryStorage) -> ProfileRegistry {
-        let fallbackName = ProfileDefaults(profileId: ProfileRecord.defaultId)
-            .data(forKey: "kairumo.user.profile")
-            .flatMap { try? JSONDecoder().decode(UserProfile.self, from: $0) }?
-            .displayName ?? "Kairumo"
+        // 預設設定檔的名稱：這台裝置上原本那位使用者的協作身分名稱；沒有就用「你」。
+        // 與首頁橫幅上顯示的是同一個名字 —— 選單上叫「Kairumo」、橫幅上叫「你」會讓人以為是兩個人。
+        let defaults = ProfileDefaults(profileId: ProfileRecord.defaultId)
+        let savedName = defaults.data(forKey: "kairumo.user.profile")
+            .flatMap { try? JSONDecoder().decode(UserProfile.self, from: $0) }?.displayName
+        let customName = defaults.string(forKey: "kairumo.user.customDisplayName")
+        let fallbackName = [savedName, customName]
+            .compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .first { !$0.isEmpty }
+            ?? LocalizationManager.shared.localized("default_user_name")
         let fallbackColor = IdentityPalette.defaultHex
         if let existing = storage.load() {
             let repaired = existing.repaired(fallbackName: fallbackName, fallbackColor: fallbackColor)
@@ -141,6 +151,26 @@ public final class ProfileManager: ObservableObject {
         let initial = ProfileRegistry.initial(displayName: fallbackName, colorHex: fallbackColor)
         try? storage.save(initial)
         return initial
+    }
+
+    /// UI 測試用（`KAIRUMO_UITEST_RESET_PROFILES=1`）：把設定檔名單與所有非預設設定檔的資料清掉，
+    /// 回到「只有預設設定檔」。每個 UI 測試都從同一個起點開始，不受上一輪留下的使用者影響。
+    /// 沒設環境變數時完全不動。
+    public nonisolated static func resetForUITestsIfRequested() {
+        guard ProcessInfo.processInfo.environment["KAIRUMO_UITEST_RESET_PROFILES"] == "1" else { return }
+        let storage = ProfileRegistryStorage(fileURL: ProfileRegistryStorage.standardURL)
+        if let registry = storage.load() {
+            for profile in registry.profiles where !profile.isDefault {
+                for url in ProfileContext.ownedDirectories(for: profile.id) { try? FileManager.default.removeItem(at: url) }
+                ProfileDefaults.removeAll(forProfile: profile.id)
+                ProfileLockService.shared.clearPIN(for: profile.id)
+                KeychainTokens.clear(account: ProfileContext.scopedAccount("tokens", for: profile.id))
+            }
+            // 預設設定檔的鎖與綁定也清掉，才是同一個起點。
+            ProfileLockService.shared.clearPIN(for: ProfileRecord.defaultId)
+        }
+        try? FileManager.default.removeItem(at: storage.fileURL)
+        ProfileContext.setActive(ProfileRecord.defaultId)
     }
 
     /// 在**任何單例被碰到之前**呼叫（`KairumoApp.init`）：讓 `ProfileContext` 對齊名單。
@@ -292,6 +322,7 @@ public final class ProfileManager: ObservableObject {
             store: NotebookStore.shared, deviceId: NotebookMigration.deviceId
         )
         AutoSyncController.shared.request(.foreground)
+        FocusSyncController.shared.noteProfileActivated()
     }
 
     // MARK: - 上鎖

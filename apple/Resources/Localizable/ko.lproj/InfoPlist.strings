@@ -7,3 +7,4 @@
 "NSLocalNetworkUsageDescription" = "Kairumo는 같은 Wi-Fi에 있는 내 기기끼리 노트를 즉시 동기화하고, 같은 네트워크의 사람과 함께 편집하기 위해 로컬 네트워크를 사용합니다. 모든 전송은 종단간 암호화되며 서버를 거치지 않습니다.";
 "NSPhotoLibraryUsageDescription" = "Kairumo는 사진을 노트에 넣고 주석을 달 수 있도록 사진 보관함에 접근합니다.";
 "NSPhotoLibraryAddUsageDescription" = "Kairumo는 내보낸 페이지나 그림을 사진 보관함에 저장합니다.";
+"NSFaceIDUsageDescription" = "Kairumo는 이 기기를 함께 쓰는 다른 사람이 내 노트를 열 수 없도록 프로필 잠금 해제에 Face ID를 사용합니다.";

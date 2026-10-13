@@ -7,3 +7,4 @@
 "NSLocalNetworkUsageDescription" = "Kairumo 需要區域網路權限，以便在同一個 Wi-Fi 下讓您自己的裝置秒級同步筆記，並與同網路的協同夥伴共同編輯。所有傳輸均經端對端加密且不經外部伺服器。";
 "NSPhotoLibraryUsageDescription" = "Kairumo 需要存取您的相片圖庫，以便您挑選圖片插入筆記頁面進行批註與繪製。";
 "NSPhotoLibraryAddUsageDescription" = "Kairumo 需要儲存圖片權限，以便將您導出的筆記頁面或繪圖成果儲存至相片圖庫。";
+"NSFaceIDUsageDescription" = "Kairumo 使用 Face ID 解鎖你的使用者，避免共用此裝置的其他人開啟你的筆記。";

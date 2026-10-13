@@ -22246,5 +22246,429 @@
     "th": "กำลังสลับผู้ใช้…",
     "zhHans": "正在切换用户…",
     "zhHant": "正在切換使用者…"
+  },
+  "NSFaceIDUsageDescription": {
+    "en": "Kairumo uses Face ID to unlock your profile, so other people using this device cannot open your notes.",
+    "ja": "Kairumo は、この端末を共有する他の人があなたのノートを開けないよう、プロファイルのロック解除に Face ID を使用します。",
+    "ko": "Kairumo는 이 기기를 함께 쓰는 다른 사람이 내 노트를 열 수 없도록 프로필 잠금 해제에 Face ID를 사용합니다.",
+    "th": "Kairumo ใช้ Face ID เพื่อปลดล็อกโปรไฟล์ของคุณ เพื่อไม่ให้ผู้อื่นที่ใช้อุปกรณ์เครื่องนี้เปิดโน้ตของคุณได้",
+    "zhHans": "Kairumo 使用 Face ID 解锁你的用户，避免共用此设备的其他人打开你的笔记。",
+    "zhHant": "Kairumo 使用 Face ID 解鎖你的使用者，避免共用此裝置的其他人開啟你的筆記。"
+  },
+  "profile_picker_title": {
+    "zhHant": "切換使用者",
+    "en": "Switch user",
+    "zhHans": "切换用户",
+    "ja": "ユーザーを切り替え",
+    "ko": "사용자 전환",
+    "th": "สลับผู้ใช้"
+  },
+  "profile_users": {
+    "zhHant": "使用者",
+    "en": "Users",
+    "zhHans": "用户",
+    "ja": "ユーザー",
+    "ko": "사용자",
+    "th": "ผู้ใช้"
+  },
+  "profile_switch_button": {
+    "zhHant": "切換使用者",
+    "en": "Switch user",
+    "zhHans": "切换用户",
+    "ja": "ユーザー切替",
+    "ko": "사용자 전환",
+    "th": "สลับผู้ใช้"
+  },
+  "profile_current": {
+    "zhHant": "目前使用中",
+    "en": "In use",
+    "zhHans": "正在使用",
+    "ja": "使用中",
+    "ko": "사용 중",
+    "th": "กำลังใช้งาน"
+  },
+  "profile_add": {
+    "zhHant": "新增使用者",
+    "en": "Add user",
+    "zhHans": "新增用户",
+    "ja": "ユーザーを追加",
+    "ko": "사용자 추가",
+    "th": "เพิ่มผู้ใช้"
+  },
+  "profile_limit_reached": {
+    "zhHant": "最多 %1@ 位使用者，請先刪除不用的",
+    "en": "Up to %1@ users. Delete one you no longer need first.",
+    "zhHans": "最多 %1@ 位用户，请先删除不用的",
+    "ja": "ユーザーは最大 %1@ 人です。不要なユーザーを先に削除してください",
+    "ko": "사용자는 최대 %1@명입니다. 필요 없는 사용자를 먼저 삭제하세요",
+    "th": "ผู้ใช้ได้สูงสุด %1@ คน โปรดลบผู้ใช้ที่ไม่ใช้ก่อน"
+  },
+  "profile_manage": {
+    "zhHant": "管理",
+    "en": "Manage",
+    "zhHans": "管理",
+    "ja": "管理",
+    "ko": "관리",
+    "th": "จัดการ"
+  },
+  "profile_create_title": {
+    "zhHant": "新增使用者",
+    "en": "New user",
+    "zhHans": "新增用户",
+    "ja": "新しいユーザー",
+    "ko": "새 사용자",
+    "th": "ผู้ใช้ใหม่"
+  },
+  "profile_create_footer": {
+    "zhHant": "每位使用者有自己的筆記、設定、雲端帳號與同步，彼此完全分開。",
+    "en": "Each user has their own notes, settings, cloud account and sync, completely separate from the others.",
+    "zhHans": "每位用户有自己的笔记、设置、云端账号与同步，彼此完全分开。",
+    "ja": "各ユーザーは自分専用のノート、設定、クラウドアカウント、同期を持ち、互いに完全に分かれています。",
+    "ko": "각 사용자는 자신만의 노트, 설정, 클라우드 계정, 동기화를 가지며 서로 완전히 분리됩니다.",
+    "th": "ผู้ใช้แต่ละคนมีโน้ต การตั้งค่า บัญชีคลาวด์ และการซิงก์ของตัวเอง แยกจากกันอย่างสมบูรณ์"
+  },
+  "profile_name": {
+    "zhHant": "名稱",
+    "en": "Name",
+    "zhHans": "名称",
+    "ja": "名前",
+    "ko": "이름",
+    "th": "ชื่อ"
+  },
+  "profile_name_placeholder": {
+    "zhHant": "例如：小明",
+    "en": "e.g. Alex",
+    "zhHans": "例如：小明",
+    "ja": "例：たろう",
+    "ko": "예: 민수",
+    "th": "เช่น สมชาย"
+  },
+  "profile_color": {
+    "zhHant": "顏色",
+    "en": "Color",
+    "zhHans": "颜色",
+    "ja": "色",
+    "ko": "색상",
+    "th": "สี"
+  },
+  "profile_create_button": {
+    "zhHant": "建立並切換",
+    "en": "Create and switch",
+    "zhHans": "创建并切换",
+    "ja": "作成して切り替え",
+    "ko": "만들고 전환",
+    "th": "สร้างและสลับ"
+  },
+  "profile_rename": {
+    "zhHant": "重新命名",
+    "en": "Rename",
+    "zhHans": "重命名",
+    "ja": "名前を変更",
+    "ko": "이름 바꾸기",
+    "th": "เปลี่ยนชื่อ"
+  },
+  "profile_save": {
+    "zhHant": "儲存",
+    "en": "Save",
+    "zhHans": "保存",
+    "ja": "保存",
+    "ko": "저장",
+    "th": "บันทึก"
+  },
+  "profile_delete": {
+    "zhHant": "刪除這位使用者",
+    "en": "Delete this user",
+    "zhHans": "删除这位用户",
+    "ja": "このユーザーを削除",
+    "ko": "이 사용자 삭제",
+    "th": "ลบผู้ใช้นี้"
+  },
+  "profile_delete_title": {
+    "zhHant": "刪除「%1@」？",
+    "en": "Delete “%1@”?",
+    "zhHans": "删除“%1@”？",
+    "ja": "「%1@」を削除しますか？",
+    "ko": "“%1@”을(를) 삭제할까요?",
+    "th": "ลบ “%1@” หรือไม่?"
+  },
+  "profile_delete_message": {
+    "zhHant": "將刪除「%1@」在這台裝置上的所有筆記、設定與登入，無法復原。雲端上的資料不受影響：用同一個 Google 帳號重新登入即可取回。",
+    "en": "All notes, settings and sign-ins of “%1@” on this device will be deleted and cannot be recovered. Data in the cloud is not affected: sign in with the same Google account to get it back.",
+    "zhHans": "将删除“%1@”在这台设备上的所有笔记、设置与登录，无法恢复。云端上的数据不受影响：用同一个 Google 账号重新登录即可取回。",
+    "ja": "「%1@」のこの端末上のノート、設定、サインインをすべて削除します。元に戻せません。クラウド上のデータには影響しません。同じ Google アカウントでサインインすれば取り戻せます。",
+    "ko": "이 기기에 있는 “%1@”의 모든 노트, 설정, 로그인이 삭제되며 복구할 수 없습니다. 클라우드의 데이터는 영향을 받지 않으며, 같은 Google 계정으로 다시 로그인하면 되찾을 수 있습니다.",
+    "th": "โน้ต การตั้งค่า และการลงชื่อเข้าใช้ทั้งหมดของ “%1@” บนอุปกรณ์นี้จะถูกลบและกู้คืนไม่ได้ ข้อมูลบนคลาวด์ไม่ได้รับผลกระทบ ลงชื่อเข้าใช้ด้วยบัญชี Google เดิมเพื่อนำกลับมา"
+  },
+  "profile_delete_default": {
+    "zhHant": "這是這台裝置原本的使用者，無法刪除。",
+    "en": "This is the original user of this device and cannot be deleted.",
+    "zhHans": "这是这台设备原本的用户，无法删除。",
+    "ja": "これはこの端末の元のユーザーのため、削除できません。",
+    "ko": "이 기기의 기존 사용자이므로 삭제할 수 없습니다.",
+    "th": "นี่คือผู้ใช้เดิมของอุปกรณ์นี้ จึงลบไม่ได้"
+  },
+  "profile_delete_active": {
+    "zhHant": "要先切換到其他使用者，才能刪除目前的使用者。",
+    "en": "Switch to another user before deleting the current one.",
+    "zhHans": "要先切换到其他用户，才能删除当前的用户。",
+    "ja": "現在のユーザーを削除するには、先に別のユーザーに切り替えてください。",
+    "ko": "현재 사용자를 삭제하려면 먼저 다른 사용자로 전환하세요.",
+    "th": "สลับไปผู้ใช้อื่นก่อนจึงจะลบผู้ใช้ปัจจุบันได้"
+  },
+  "profile_lock_section": {
+    "zhHant": "鎖定",
+    "en": "Lock",
+    "zhHans": "锁定",
+    "ja": "ロック",
+    "ko": "잠금",
+    "th": "ล็อก"
+  },
+  "profile_lock_off": {
+    "zhHant": "未設定",
+    "en": "Not set",
+    "zhHans": "未设置",
+    "ja": "未設定",
+    "ko": "설정 안 됨",
+    "th": "ยังไม่ได้ตั้ง"
+  },
+  "profile_lock_on_pin": {
+    "zhHant": "已用 PIN 鎖定",
+    "en": "Locked with a PIN",
+    "zhHans": "已用 PIN 锁定",
+    "ja": "PIN でロック中",
+    "ko": "PIN으로 잠김",
+    "th": "ล็อกด้วย PIN"
+  },
+  "profile_lock_on_bio": {
+    "zhHant": "已用 PIN 與生物辨識鎖定",
+    "en": "Locked with a PIN and biometrics",
+    "zhHans": "已用 PIN 与生物识别锁定",
+    "ja": "PIN と生体認証でロック中",
+    "ko": "PIN과 생체 인식으로 잠김",
+    "th": "ล็อกด้วย PIN และชีวมิติ"
+  },
+  "profile_lock_set": {
+    "zhHant": "設定 PIN",
+    "en": "Set a PIN",
+    "zhHans": "设置 PIN",
+    "ja": "PIN を設定",
+    "ko": "PIN 설정",
+    "th": "ตั้ง PIN"
+  },
+  "profile_lock_change": {
+    "zhHant": "更換 PIN",
+    "en": "Change PIN",
+    "zhHans": "更换 PIN",
+    "ja": "PIN を変更",
+    "ko": "PIN 변경",
+    "th": "เปลี่ยน PIN"
+  },
+  "profile_lock_remove": {
+    "zhHant": "移除鎖定",
+    "en": "Remove lock",
+    "zhHans": "移除锁定",
+    "ja": "ロックを解除",
+    "ko": "잠금 해제",
+    "th": "ลบการล็อก"
+  },
+  "profile_lock_biometrics": {
+    "zhHant": "用生物辨識解鎖",
+    "en": "Unlock with biometrics",
+    "zhHans": "用生物识别解锁",
+    "ja": "生体認証で解除",
+    "ko": "생체 인식으로 잠금 해제",
+    "th": "ปลดล็อกด้วยชีวมิติ"
+  },
+  "profile_lock_note": {
+    "zhHant": "鎖定只能防止共用裝置的其他人不小心點進你的使用者，並不是加密。忘記 PIN 沒有辦法救回，只能刪除這位使用者（雲端資料不受影響）。",
+    "en": "The lock only keeps other people sharing this device from opening your user by accident. It is not encryption. A forgotten PIN cannot be recovered; the only way out is to delete this user (cloud data is not affected).",
+    "zhHans": "锁定只能防止共用设备的其他人不小心点进你的用户，并不是加密。忘记 PIN 没有办法找回，只能删除这位用户（云端数据不受影响）。",
+    "ja": "ロックは、端末を共有する他の人が誤ってあなたのユーザーを開くのを防ぐだけで、暗号化ではありません。PIN を忘れると復旧できず、このユーザーを削除するしかありません（クラウドのデータには影響しません）。",
+    "ko": "잠금은 기기를 함께 쓰는 다른 사람이 실수로 내 사용자를 여는 것을 막을 뿐이며 암호화가 아닙니다. 잊어버린 PIN은 복구할 수 없고 이 사용자를 삭제하는 방법뿐입니다(클라우드 데이터는 영향 없음).",
+    "th": "การล็อกช่วยกันไม่ให้คนอื่นที่ใช้อุปกรณ์ร่วมกันเปิดผู้ใช้ของคุณโดยไม่ตั้งใจเท่านั้น ไม่ใช่การเข้ารหัส หากลืม PIN จะกู้คืนไม่ได้ ต้องลบผู้ใช้นี้เท่านั้น (ข้อมูลบนคลาวด์ไม่ได้รับผลกระทบ)"
+  },
+  "profile_pin_enter": {
+    "zhHant": "輸入 PIN",
+    "en": "Enter PIN",
+    "zhHans": "输入 PIN",
+    "ja": "PIN を入力",
+    "ko": "PIN 입력",
+    "th": "ใส่ PIN"
+  },
+  "profile_pin_current": {
+    "zhHant": "目前的 PIN",
+    "en": "Current PIN",
+    "zhHans": "当前的 PIN",
+    "ja": "現在の PIN",
+    "ko": "현재 PIN",
+    "th": "PIN ปัจจุบัน"
+  },
+  "profile_pin_new": {
+    "zhHant": "新的 PIN（4～8 位數字）",
+    "en": "New PIN (4–8 digits)",
+    "zhHans": "新的 PIN（4～8 位数字）",
+    "ja": "新しい PIN（4〜8 桁の数字）",
+    "ko": "새 PIN (4~8자리 숫자)",
+    "th": "PIN ใหม่ (ตัวเลข 4–8 หลัก)"
+  },
+  "profile_pin_confirm": {
+    "zhHant": "再輸入一次",
+    "en": "Enter it again",
+    "zhHans": "再输入一次",
+    "ja": "もう一度入力",
+    "ko": "다시 입력",
+    "th": "ใส่อีกครั้ง"
+  },
+  "profile_pin_mismatch": {
+    "zhHant": "兩次輸入不一樣",
+    "en": "The two entries do not match",
+    "zhHans": "两次输入不一样",
+    "ja": "2 回の入力が一致しません",
+    "ko": "두 번 입력한 값이 다릅니다",
+    "th": "ทั้งสองครั้งไม่ตรงกัน"
+  },
+  "profile_pin_invalid": {
+    "zhHant": "PIN 必須是 4 到 8 位數字",
+    "en": "A PIN must be 4 to 8 digits",
+    "zhHans": "PIN 必须是 4 到 8 位数字",
+    "ja": "PIN は 4〜8 桁の数字にしてください",
+    "ko": "PIN은 4~8자리 숫자여야 합니다",
+    "th": "PIN ต้องเป็นตัวเลข 4 ถึง 8 หลัก"
+  },
+  "profile_pin_wrong": {
+    "zhHant": "PIN 不正確，再錯 %1@ 次會暫時鎖住",
+    "en": "Wrong PIN. %1@ more wrong tries will lock it for a while.",
+    "zhHans": "PIN 不正确，再错 %1@ 次会暂时锁住",
+    "ja": "PIN が違います。あと %1@ 回間違えると一時的にロックされます",
+    "ko": "PIN이 올바르지 않습니다. %1@번 더 틀리면 잠시 잠깁니다",
+    "th": "PIN ไม่ถูกต้อง ผิดอีก %1@ ครั้งจะถูกล็อกชั่วคราว"
+  },
+  "profile_pin_locked": {
+    "zhHant": "嘗試次數太多，請在 %1@ 之後再試",
+    "en": "Too many attempts. Try again in %1@.",
+    "zhHans": "尝试次数太多，请在 %1@ 之后再试",
+    "ja": "試行回数が多すぎます。%1@ 後にもう一度お試しください",
+    "ko": "시도 횟수가 너무 많습니다. %1@ 후에 다시 시도하세요",
+    "th": "ลองมากเกินไป โปรดลองอีกครั้งใน %1@"
+  },
+  "profile_unlock_title": {
+    "zhHant": "解鎖「%1@」",
+    "en": "Unlock “%1@”",
+    "zhHans": "解锁“%1@”",
+    "ja": "「%1@」のロックを解除",
+    "ko": "“%1@” 잠금 해제",
+    "th": "ปลดล็อก “%1@”"
+  },
+  "profile_unlock_button": {
+    "zhHant": "解鎖",
+    "en": "Unlock",
+    "zhHans": "解锁",
+    "ja": "解除",
+    "ko": "잠금 해제",
+    "th": "ปลดล็อก"
+  },
+  "profile_unlock_biometric_reason": {
+    "zhHant": "解鎖你的使用者",
+    "en": "Unlock your user",
+    "zhHans": "解锁你的用户",
+    "ja": "ユーザーのロックを解除",
+    "ko": "사용자 잠금 해제",
+    "th": "ปลดล็อกผู้ใช้ของคุณ"
+  },
+  "profile_use_biometrics": {
+    "zhHant": "用生物辨識解鎖",
+    "en": "Use biometrics",
+    "zhHans": "用生物识别解锁",
+    "ja": "生体認証を使う",
+    "ko": "생체 인식 사용",
+    "th": "ใช้ชีวมิติ"
+  },
+  "profile_other_user": {
+    "zhHant": "換一位使用者",
+    "en": "Use another user",
+    "zhHans": "换一位用户",
+    "ja": "別のユーザーにする",
+    "ko": "다른 사용자로 전환",
+    "th": "ใช้ผู้ใช้คนอื่น"
+  },
+  "profile_google_account": {
+    "zhHant": "Google 帳號",
+    "en": "Google account",
+    "zhHans": "Google 账号",
+    "ja": "Google アカウント",
+    "ko": "Google 계정",
+    "th": "บัญชี Google"
+  },
+  "profile_google_none": {
+    "zhHant": "尚未登入",
+    "en": "Not signed in",
+    "zhHans": "尚未登录",
+    "ja": "未サインイン",
+    "ko": "로그인 안 됨",
+    "th": "ยังไม่ได้ลงชื่อเข้าใช้"
+  },
+  "profile_google_bound_elsewhere": {
+    "zhHant": "這個 Google 帳號已經用在使用者「%1@」。每個 Google 帳號只能用在一位使用者。",
+    "en": "This Google account is already used by “%1@”. A Google account can only be used by one user.",
+    "zhHans": "这个 Google 账号已经用在用户“%1@”。每个 Google 账号只能用在一位用户。",
+    "ja": "この Google アカウントはすでに「%1@」で使われています。Google アカウントは 1 人のユーザーだけが使えます。",
+    "ko": "이 Google 계정은 이미 “%1@”에서 사용 중입니다. Google 계정은 한 사용자만 사용할 수 있습니다.",
+    "th": "บัญชี Google นี้ถูกใช้โดย “%1@” แล้ว บัญชี Google ใช้ได้กับผู้ใช้เพียงคนเดียว"
+  },
+  "profile_error_busy": {
+    "zhHant": "同步還在進行，請稍後再試。",
+    "en": "Sync is still running. Please try again in a moment.",
+    "zhHans": "同步还在进行，请稍后再试。",
+    "ja": "同期が実行中です。しばらくしてからもう一度お試しください。",
+    "ko": "동기화가 진행 중입니다. 잠시 후 다시 시도하세요.",
+    "th": "การซิงก์ยังทำงานอยู่ โปรดลองอีกครั้งในอีกสักครู่"
+  },
+  "profile_error_generic": {
+    "zhHant": "無法切換使用者，目前的使用者沒有變動。",
+    "en": "Could not switch users. The current user is unchanged.",
+    "zhHans": "无法切换用户，当前的用户没有变动。",
+    "ja": "ユーザーを切り替えられませんでした。現在のユーザーは変わっていません。",
+    "ko": "사용자를 전환할 수 없습니다. 현재 사용자는 변경되지 않았습니다.",
+    "th": "สลับผู้ใช้ไม่ได้ ผู้ใช้ปัจจุบันไม่เปลี่ยนแปลง"
+  },
+  "profile_error_name": {
+    "zhHant": "名稱不可空白，最多 24 個字。",
+    "en": "The name cannot be empty and can be at most 24 characters.",
+    "zhHans": "名称不可为空，最多 24 个字。",
+    "ja": "名前は空にできません。最大 24 文字です。",
+    "ko": "이름은 비워 둘 수 없으며 최대 24자입니다.",
+    "th": "ชื่อต้องไม่ว่างและยาวไม่เกิน 24 ตัวอักษร"
+  },
+  "profile_error_duplicate": {
+    "zhHant": "已經有同名的使用者。",
+    "en": "A user with this name already exists.",
+    "zhHans": "已经有同名的用户。",
+    "ja": "同じ名前のユーザーがすでにいます。",
+    "ko": "같은 이름의 사용자가 이미 있습니다.",
+    "th": "มีผู้ใช้ชื่อนี้อยู่แล้ว"
+  },
+  "profile_lock_on_hint": {
+    "zhHant": "點一下解鎖",
+    "en": "Tap to unlock",
+    "zhHans": "点一下解锁",
+    "ja": "タップして解除",
+    "ko": "탭하여 잠금 해제",
+    "th": "แตะเพื่อปลดล็อก"
+  },
+  "profile_error_pin_storage": {
+    "zhHant": "無法安全地儲存 PIN，所以沒有上鎖。請再試一次。",
+    "en": "The PIN could not be stored securely, so nothing was locked. Please try again.",
+    "zhHans": "无法安全地保存 PIN，所以没有上锁。请再试一次。",
+    "ja": "PIN を安全に保存できなかったため、ロックされていません。もう一度お試しください。",
+    "ko": "PIN을 안전하게 저장하지 못해 잠금이 설정되지 않았습니다. 다시 시도하세요.",
+    "th": "บันทึก PIN อย่างปลอดภัยไม่ได้ จึงไม่ได้ล็อก โปรดลองอีกครั้ง"
+  },
+  "profile_storage_default_only": {
+    "zhHant": "只有這台裝置原本的使用者可以更換文件庫位置；其他使用者的資料固定放在這個 App 內。",
+    "en": "Only the original user of this device can change the library location; other users’ data always stays inside this app.",
+    "zhHans": "只有这台设备原本的用户可以更换文档库位置；其他用户的数据固定放在这个 App 内。",
+    "ja": "ライブラリの場所を変更できるのは、この端末の元のユーザーだけです。他のユーザーのデータは常にこのアプリ内に保存されます。",
+    "ko": "이 기기의 기존 사용자만 라이브러리 위치를 바꿀 수 있습니다. 다른 사용자의 데이터는 항상 이 앱 안에 저장됩니다.",
+    "th": "มีเพียงผู้ใช้เดิมของอุปกรณ์นี้เท่านั้นที่เปลี่ยนตำแหน่งคลังได้ ข้อมูลของผู้ใช้อื่นจะอยู่ภายในแอปนี้เสมอ"
   }
 }

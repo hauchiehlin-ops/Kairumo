@@ -125,6 +125,19 @@ public final class GoogleAuth: NSObject, ObservableObject {
             ProfileDefaults.current.set(effectiveName, forKey: accountNameKey)
         }
         AccountManager.shared.refreshDisplayName()
+        await enforceProfileBinding()
+    }
+
+    /// **一個 Google 帳號只能綁一個設定檔。** 範例筆記的 id 在每個設定檔都一樣，兩個設定檔登入同一個帳號，
+    /// 雲端上的筆記就混在一起了。綁在別人身上就登出（連同撤銷授權），並記下是誰佔著。
+    private func enforceProfileBinding() async {
+        guard let email = accountEmail, !email.isEmpty else { return }
+        do {
+            try ProfileManager.shared.bindGoogle(email: email)
+        } catch ProfileError.googleAlreadyBound(let name) {
+            ProfileManager.shared.googleConflictProfileName = name
+            await signOut()
+        } catch {}
     }
 
     public enum Failure: LocalizedError {
@@ -209,6 +222,10 @@ public final class GoogleAuth: NSObject, ObservableObject {
             KeychainTokens.save(tokens, previousRefresh: "")
             isSignedIn = !tokens.refreshToken.isEmpty
             await refreshAccountEmail()
+            if let owner = ProfileManager.shared.googleConflictProfileName {
+                ProfileManager.shared.googleConflictProfileName = nil
+                return .failure(.server(L10n.f("profile_google_bound_elsewhere", owner)))
+            }
             if isSignedIn {
                 // 登入完成就立刻同步一輪。使用者剛設定好卻什麼也沒發生，
                 // 他會以為設定沒生效。
@@ -413,6 +430,7 @@ public final class GoogleAuth: NSObject, ObservableObject {
             ProfileDefaults.current.removeObject(forKey: accountEmailKey)
             ProfileDefaults.current.removeObject(forKey: accountNameKey)
             AccountManager.shared.refreshDisplayName()
+            ProfileManager.shared.unbindGoogle()
         }
     }
 
@@ -517,6 +535,11 @@ enum KeychainTokens {
     }
 
     static func clear() {
+        clear(account: account)
+    }
+
+    /// 清掉**指定帳號名**的權杖（刪除其他設定檔時用，它不是目前使用中的）。
+    static func clear(account: String) {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,

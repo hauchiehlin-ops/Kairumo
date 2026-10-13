@@ -98,7 +98,15 @@ public enum PINVerifyResult: Equatable {
 }
 
 public final class ProfileLockService {
-    public static let shared = ProfileLockService(store: KeychainSecretStore())
+    public static let shared = ProfileLockService(store: defaultStore())
+
+    /// 正式環境存 Keychain。UI 測試（`KAIRUMO_UITEST_MEMORY_SECRETS=1`）改用記憶體：
+    /// 模擬器上未簽署的建置沒有 Keychain 權限，寫入會失敗 —— 那是測試環境的限制，不是產品行為。
+    private static func defaultStore() -> ProfileSecretStore {
+        ProcessInfo.processInfo.environment["KAIRUMO_UITEST_MEMORY_SECRETS"] == "1"
+            ? InMemorySecretStore()
+            : KeychainSecretStore()
+    }
 
     public static let minDigits = 4
     public static let maxDigits = 8

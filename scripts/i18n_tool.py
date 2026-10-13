@@ -35,6 +35,7 @@ INFO_PLIST_KEYS = [
     "NSLocalNetworkUsageDescription",
     "NSPhotoLibraryUsageDescription",
     "NSPhotoLibraryAddUsageDescription",
+    "NSFaceIDUsageDescription",
 ]
 
 LANGS = ["zhHant", "en", "zhHans", "ja", "ko", "th"]

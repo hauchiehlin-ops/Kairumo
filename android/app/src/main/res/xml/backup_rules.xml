@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 11 以下的自動備份規則。設定檔的 PIN 紀錄存在 Keystore 保護的加密偏好裡：
+     備份還原到另一台裝置之後 Keystore 金鑰不在了，那份檔案就讀不出來 —— 鎖會悄悄消失。
+     所以不備份它（換機後鎖要重設；雲端上的筆記不受影響）。 -->
+<full-backup-content>
+    <exclude domain="sharedpref" path="kairumo.profilelock.xml" />
+</full-backup-content>

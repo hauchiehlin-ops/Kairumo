@@ -261,3 +261,21 @@ final class ProfileLockServiceTests: XCTestCase {
         XCTAssertFalse(s.hasPIN(for: "p"))
     }
 }
+
+/// 儲存失敗的路徑：PIN 存不進去要如實回報，不能謊報成「格式不對」。
+final class ProfileLockStorageFailureTests: XCTestCase {
+    private final class FailingStore: ProfileSecretStore {
+        func read(account: String) -> Data? { nil }
+        func write(_ data: Data, account: String) -> Bool { false }
+        func delete(account: String) {}
+    }
+
+    func testAFailingStoreIsReportedAsFailureNotAsAnInvalidPIN() throws {
+        let service = ProfileLockService(store: FailingStore())
+        XCTAssertFalse(try service.setPIN("2468", for: "p"), "寫不進去就是 false，不是丟 invalidPIN")
+        XCTAssertFalse(service.hasPIN(for: "p"))
+        XCTAssertThrowsError(try service.setPIN("12", for: "p")) {
+            XCTAssertEqual($0 as? ProfileError, .invalidPIN, "格式不對才是 invalidPIN")
+        }
+    }
+}

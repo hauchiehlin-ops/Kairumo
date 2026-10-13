@@ -122,8 +122,15 @@ struct StorageLocationView: View {
                         .padding(.vertical, 12)
                     }
                     .buttonStyle(.borderedProminent)
-                    .disabled(isMoving || isResetting)
+                    // 換位置只屬於預設設定檔（它的位置是使用者自己選的）。其他設定檔固定放在 App 內，
+                    // 讓它搬的話會把預設設定檔的位置書籤一起改掉 —— 兩個人的資料就纏在一起了。
+                    .disabled(isMoving || isResetting || !ProfileContext.isDefault)
                     .accessibilityIdentifier("storage.location.choose")
+                    if !ProfileContext.isDefault {
+                        Text(localization.localized("profile_storage_default_only"))
+                            .font(DS.Font.caption)
+                            .foregroundStyle(.secondary)
+                    }
 
                     Divider().padding(.vertical, DS.Space.s)
 

@@ -82,6 +82,14 @@ public enum ProfileError: Error, Equatable {
     case googleAlreadyBound(profileName: String)
     case invalidPIN
     case pinRequired
+    /// 預設設定檔對應升級前就存在的那一份資料（位置可能是使用者自己選的），不能刪。
+    case cannotDeleteDefault
+    /// 要刪的是正在使用的設定檔：先切到別的。
+    case cannotDeleteActive
+    case wrongPIN
+    /// PIN 格式沒問題，但**存不進去**（Keychain 拒絕寫入）。與 `invalidPIN` 分開：
+    /// 把「存不進去」說成「格式不對」，使用者再怎麼改 PIN 都沒用。
+    case pinStorageFailed
 }
 
 /// 所有設定檔與「現在是哪一個」。純資料，可編碼存檔。
@@ -162,6 +170,7 @@ public struct ProfileRegistry: Codable, Equatable, Sendable {
     public mutating func remove(id: String) throws -> ProfileRecord {
         guard let index = profiles.firstIndex(where: { $0.id == id }) else { throw ProfileError.notFound }
         guard profiles.count > 1 else { throw ProfileError.lastProfile }
+        guard id != ProfileRecord.defaultId else { throw ProfileError.cannotDeleteDefault }
         let removed = profiles.remove(at: index)
         if activeId == id {
             activeId = profiles.max { $0.lastActiveAt < $1.lastActiveAt }?.id ?? profiles[0].id
