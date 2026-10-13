@@ -5239,6 +5239,14 @@ extension LocalizationManager {
             .ko: "페이지 수",
             .th: "จำนวนหน้า"
         ],
+        "diag_peak_pressure": [
+            .zhHant: "看到的最大壓力",
+            .en: "Peak pressure seen",
+            .zhHans: "观察到的最大压力",
+            .ja: "最大筆圧",
+            .ko: "관측된 최대 필압",
+            .th: "แรงกดสูงสุดที่พบ"
+        ],
         "diag_predicted": [
             .zhHant: "預測取樣點",
             .en: "Predicted samples",
@@ -5254,6 +5262,62 @@ extension LocalizationManager {
             .ja: "筆圧",
             .ko: "압력",
             .th: "แรงกด"
+        ],
+        "diag_probe_hint": [
+            .zhHant: "用手寫板、Apple Pencil 或游標在下方灰色區塊寫字，數字會即時更新。",
+            .en: "Write in the grey area below with your tablet, Apple Pencil or pointer; the numbers update live.",
+            .zhHans: "用手写板、Apple Pencil 或光标在下方灰色区块写字，数字会实时更新。",
+            .ja: "下のグレーの領域にペンタブレット、Apple Pencil、ポインタで書くと、数値がリアルタイムで更新されます。",
+            .ko: "아래 회색 영역에 태블릿, Apple Pencil 또는 포인터로 써 보세요. 숫자가 실시간으로 갱신됩니다.",
+            .th: "เขียนในพื้นที่สีเทาด้านล่างด้วยแท็บเล็ต Apple Pencil หรือเมาส์ ตัวเลขจะอัปเดตทันที"
+        ],
+        "diag_probe_pressure_no": [
+            .zhHant: "沒有回報壓力：這個輸入沒有壓力資料",
+            .en: "No pressure reported: this input has no pressure data",
+            .zhHans: "没有汇报压力：这个输入没有压力数据",
+            .ja: "筆圧なし：この入力には筆圧データがありません",
+            .ko: "필압 없음: 이 입력에는 필압 데이터가 없습니다",
+            .th: "ไม่มีค่าแรงกด: อินพุตนี้ไม่มีข้อมูลแรงกด"
+        ],
+        "diag_probe_pressure_yes": [
+            .zhHant: "有回報壓力：這個輸入可以做壓力感應",
+            .en: "Pressure reported: this input can drive pressure sensitivity",
+            .zhHans: "有汇报压力：这个输入可以做压力感应",
+            .ja: "筆圧あり：この入力は筆圧に対応できます",
+            .ko: "필압 보고됨: 이 입력은 필압을 사용할 수 있습니다",
+            .th: "มีค่าแรงกด: อินพุตนี้ใช้ความไวต่อแรงกดได้"
+        ],
+        "diag_probe_reset": [
+            .zhHant: "重設測試",
+            .en: "Reset test",
+            .zhHans: "重置测试",
+            .ja: "テストをリセット",
+            .ko: "테스트 초기화",
+            .th: "รีเซ็ตการทดสอบ"
+        ],
+        "diag_probe_samples": [
+            .zhHant: "取樣點（有壓力／全部）",
+            .en: "Samples (with pressure / total)",
+            .zhHans: "取样点（有压力／全部）",
+            .ja: "サンプル数（筆圧あり／全体）",
+            .ko: "샘플(필압 있음/전체)",
+            .th: "จุดตัวอย่าง (มีแรงกด / ทั้งหมด)"
+        ],
+        "diag_probe_title": [
+            .zhHant: "手寫板壓力測試",
+            .en: "Pen tablet pressure test",
+            .zhHans: "手写板压力测试",
+            .ja: "ペンタブレットの筆圧テスト",
+            .ko: "펜 태블릿 필압 테스트",
+            .th: "ทดสอบแรงกดแท็บเล็ตปากกา"
+        ],
+        "diag_probe_waiting": [
+            .zhHant: "在上方區塊寫字開始測試",
+            .en: "Write in the area above to start",
+            .zhHans: "在上方区块写字开始测试",
+            .ja: "上の領域に書いてテストを開始",
+            .ko: "위 영역에 써서 테스트를 시작하세요",
+            .th: "เขียนในพื้นที่ด้านบนเพื่อเริ่มทดสอบ"
         ],
         "diag_relay_start_failed": [
             .zhHant: "啟動失敗",

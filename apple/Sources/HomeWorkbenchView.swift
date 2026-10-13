@@ -3919,6 +3919,7 @@ public struct AppDiagnosticsSheet: View {
                 unifiedSyncSection
                 pageModelSection
                 backupSection
+                InkPressureProbeSection()
                 inputDiagnosticsSection
 
                 Section(localizationManager.localized("about_app")) {
