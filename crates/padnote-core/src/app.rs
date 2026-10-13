@@ -2814,7 +2814,11 @@ mod tests {
             .iter()
             .filter_map(|b| b.searchable_text().map(str::to_string))
             .collect();
-        assert_eq!(shown, [expected.clone()], "頁面上的區塊內容要是最終文字");
+        assert_eq!(
+            shown,
+            std::slice::from_ref(&expected),
+            "頁面上的區塊內容要是最終文字"
+        );
         assert!(live_hits > 0, "測試前提：即時編輯時搜尋要找得到");
         assert_eq!(
             reopened.search("abcde", 5).len(),
