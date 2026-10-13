@@ -13,6 +13,7 @@ private let documentLibraryManifestFileName = ".kairumo-library.json"
 
 @MainActor
 final class DocumentStorageLocation: ObservableObject {
+    // profile-scope: device 整台裝置共用，不屬於任何使用者
     static let shared = DocumentStorageLocation()
 
     static let defaultFolderName = "Kairumo Doc"
@@ -94,6 +95,17 @@ final class DocumentStorageLocation: ObservableObject {
         #else
         return false
         #endif
+    }
+
+    /// **目前設定檔**的資料庫根目錄。
+    ///
+    /// 預設設定檔就是 `rootURL`（使用者可能自己選過位置）；其他設定檔固定放在
+    /// `Application Support/Kairumo/Profiles/<id>/Documents`。**程式裡要「找使用者的資料在哪」
+    /// 一律問這個，不要直接用 `rootURL`** —— 後者永遠是預設設定檔的位置。
+    var libraryRootURL: URL {
+        guard let custom = ProfileContext.activeDocumentsRoot else { return rootURL }
+        try? FileManager.default.createDirectory(at: custom, withIntermediateDirectories: true)
+        return custom
     }
 
     var displayPath: String {
@@ -192,7 +204,7 @@ final class DocumentStorageLocation: ObservableObject {
         if scopedAccessActive, let scopedURL {
             scopedURL.stopAccessingSecurityScopedResource()
         }
-        UserDefaults.standard.set(bookmark, forKey: Self.bookmarkKey)
+        ProfileDefaults.device.set(bookmark, forKey: Self.bookmarkKey)
         rootURL = destination
         isUserSelected = true
         scopedURL = destination
@@ -232,7 +244,7 @@ final class DocumentStorageLocation: ObservableObject {
     }
 
     private static func resolveBookmark() -> URL? {
-        guard let data = UserDefaults.standard.data(forKey: bookmarkKey) else { return nil }
+        guard let data = ProfileDefaults.device.data(forKey: bookmarkKey) else { return nil }
         var stale = false
         guard let url = try? URL(
             resolvingBookmarkData: data,
@@ -245,7 +257,7 @@ final class DocumentStorageLocation: ObservableObject {
             let scoped = url.startAccessingSecurityScopedResource()
             defer { if scoped { url.stopAccessingSecurityScopedResource() } }
             if let refreshed = try? url.bookmarkData(options: bookmarkCreationOptions) {
-                UserDefaults.standard.set(refreshed, forKey: bookmarkKey)
+                ProfileDefaults.device.set(refreshed, forKey: bookmarkKey)
             }
         }
         return url
@@ -254,13 +266,14 @@ final class DocumentStorageLocation: ObservableObject {
     // MARK: - Library migration
 
     static var containerDocumentsDirectory: URL {
+        // profile-scope: default 預設設定檔的容器位置；其他設定檔走 ProfileContext
         FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
     }
 
     /// 舊版把資料直接散在 Documents 根目錄。升級時先複製到名稱固定、可由
     /// 使用者辨認的資料夾；保留舊檔，直到新位置完整可讀，不做破壞性搬移。
     private static func migrateLegacyContainerIfNeeded(from source: URL, to destination: URL) {
-        let defaults = UserDefaults.standard
+        let defaults = ProfileDefaults.device
         guard !defaults.bool(forKey: migrationKey) else { return }
 
         let fm = FileManager.default

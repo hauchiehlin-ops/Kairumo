@@ -113,6 +113,7 @@ public final class InkInputDiagnostics {
     ///
     /// 診斷是**跨畫面**的：使用者在編輯器裡寫字，接著到設定頁去看數字。
     /// 每個畫面各持有一份的話，設定頁看到的永遠是空的。
+    // profile-scope: device 整台裝置共用，不屬於任何使用者
     public static let shared = InkInputDiagnostics()
     /// 是否啟用診斷紀錄。預設關閉以降低 240Hz 手繪時的記憶體分配與 CPU 負荷（極致溫控優化）。
     public static var isEnabled: Bool = false

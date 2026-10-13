@@ -63,6 +63,7 @@ import Network
 /// 全局 Tailscale 連線狀態監聽器（提供 SwiftUI 響應式更新，採用零輪詢 NWPathMonitor）
 @MainActor
 public final class TailscaleMonitor: ObservableObject {
+    // profile-scope: device 整台裝置共用，不屬於任何使用者
     public static let shared = TailscaleMonitor()
 
     @Published public private(set) var status: TailscaleDetector.Status = TailscaleDetector.check()

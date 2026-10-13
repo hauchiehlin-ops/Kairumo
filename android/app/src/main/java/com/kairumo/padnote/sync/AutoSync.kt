@@ -53,6 +53,7 @@ import uniffi.padnote_core.syncHeartbeatIntervalMs
  * 餵給排程器的是 [SystemClock.elapsedRealtime]，不是 `System.currentTimeMillis`。
  * 使用者改時區或系統校時會讓牆上時間往前或往後跳，排程會因此卡住或暴衝。
  */
+// profile-scope: profile 整庫同步的排程與狀態
 object AutoSync {
 
     private val scheduler = FfiSyncScheduler.create()

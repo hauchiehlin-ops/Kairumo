@@ -97,6 +97,7 @@ final class ModelRangeFetcher: FfiModelFetcher {
 @MainActor
 public final class ModelDownloadManager: ObservableObject {
 
+    // profile-scope: device 整台裝置共用，不屬於任何使用者
     public static let shared = ModelDownloadManager()
 
     @Published public private(set) var models: [FfiModelInfo] = []
@@ -116,6 +117,7 @@ public final class ModelDownloadManager: ObservableObject {
     /// 不該出現在使用者的「檔案」App 裡，也不該被備份上 iCloud
     /// （一個 574 MB 的模型會把使用者的免費空間吃掉）。
     public var modelsRoot: URL {
+        // profile-scope: device 語音模型數百 MB，整台裝置共用一份
         let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("Kairumo/models", isDirectory: true)
         try? FileManager.default.createDirectory(at: base, withIntermediateDirectories: true)

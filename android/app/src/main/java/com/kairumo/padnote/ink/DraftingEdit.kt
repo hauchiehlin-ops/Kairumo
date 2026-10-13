@@ -21,6 +21,7 @@ import kotlin.math.hypot
  * 幾何全在核心（`draft_trim`…），這裡只管「點了哪一筆、現在第幾步」，並把結果換成筆畫
  * （沿用原筆畫的筆、顏色、圖層與線型）。每個動作都是**一次復原**。
  */
+// profile-scope: profile 每個設定檔各有一份狀態，切換時必須重設
 object DraftEditController {
     private var first: InkEngine.CompletedStroke? = null
     private var firstClick = InkEngine.Offset2(0f, 0f)

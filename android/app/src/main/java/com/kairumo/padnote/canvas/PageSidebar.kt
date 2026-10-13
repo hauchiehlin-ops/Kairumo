@@ -62,6 +62,7 @@ import com.kairumo.padnote.ui.dsHairline
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import uniffi.padnote_core.PadnoteSession
+import com.kairumo.padnote.profile.ProfileContext
 
 private val pageThumbnailCache = LruCache<String, ImageBitmap>(40)
 
@@ -115,14 +116,14 @@ fun PageSidebar(
     var tab by remember { mutableStateOf(SidebarTab.PAGES) }
     var thumbWidth by remember {
         mutableFloatStateOf(
-            context.getSharedPreferences("kairumo_editor", android.content.Context.MODE_PRIVATE)
+            ProfileContext.prefs(context, "kairumo_editor")
                 .getFloat("sidebarThumbWidth", 160f)
         )
     }
 
     fun saveThumbWidth(value: Float) {
         thumbWidth = value
-        context.getSharedPreferences("kairumo_editor", android.content.Context.MODE_PRIVATE)
+        ProfileContext.prefs(context, "kairumo_editor")
             .edit().putFloat("sidebarThumbWidth", value).apply()
     }
 
@@ -297,6 +298,7 @@ private fun PageSidebarRow(
 
         val cachedBmp = withContext(Dispatchers.IO) {
             runCatching {
+                // profile-scope: device 算繪的暫存
                 val png = PageImageRenderer.renderPng(s, pageId, 0.22f, context.cacheDir)
                 android.graphics.BitmapFactory
                     .decodeByteArray(png, 0, png.size)

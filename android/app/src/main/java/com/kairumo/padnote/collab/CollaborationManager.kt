@@ -25,6 +25,7 @@ import uniffi.padnote_core.collabIsValidRoomKey
 import uniffi.padnote_core.collabNewRoomId
 import uniffi.padnote_core.collabParseInvite
 import uniffi.padnote_core.collabTuning
+import com.kairumo.padnote.profile.ProfileContext
 
 /**
  * 協同編輯（Android）。
@@ -492,12 +493,12 @@ class CollaborationManager(private val context: Context) {
     // ── 設定 ────────────────────────────────────────────────────
 
     private fun loadServer(): String =
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        ProfileContext.prefs(context, PREFS)
             .getString(KEY_SERVER, null) ?: tuning.defaultServer
 
     fun saveServer(address: String) {
         serverAddress = address
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        ProfileContext.prefs(context, PREFS)
             .edit().putString(KEY_SERVER, address).apply()
     }
 

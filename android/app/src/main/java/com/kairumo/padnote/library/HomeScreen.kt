@@ -79,6 +79,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import java.text.DateFormat
 import java.util.Date
+import com.kairumo.padnote.profile.ProfileContext
 
 /**
  * 首頁（Android）。
@@ -447,7 +448,7 @@ fun HomeScreen(
                 SectionTitle(l("recent_recordings"), Modifier.weight(1f))
                 TextButton(
                     onClick = {
-                        val folder = java.io.File(searchContext.filesDir, "notebooks")
+                        val folder = java.io.File(ProfileContext.dataDir(searchContext), "notebooks")
                         val toastText = "${l("open_record_folder")}: ${folder.absolutePath}"
                         android.widget.Toast.makeText(searchContext, toastText, android.widget.Toast.LENGTH_SHORT).show()
                     },

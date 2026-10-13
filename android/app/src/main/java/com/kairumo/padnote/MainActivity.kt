@@ -262,6 +262,7 @@ import uniffi.padnote_core.coreVersion
 import uniffi.padnote_core.PadnoteSession
 import uniffi.padnote_core.RelayServer
 import java.util.Locale
+import com.kairumo.padnote.profile.ProfileContext
 
 /**
  * Android 外殼的起點（工作包 WP2）。
@@ -1547,7 +1548,7 @@ private fun InkScreen(
     var pageDisplayMode by remember {
         mutableStateOf(
             PageDisplayMode.fromWire(
-                activity.getSharedPreferences("kairumo_editor", android.content.Context.MODE_PRIVATE)
+                ProfileContext.prefs(activity, "kairumo_editor")
                     .getString("pageDisplayMode", null)
             )
         )
@@ -1932,6 +1933,7 @@ private fun InkScreen(
                     message = l10n("import_unsupported_type")
                 } else {
                     try {
+                        // profile-scope: device 匯入文件的暫存
                         importedDocument = DocumentImport.parse(activity.cacheDir, f, outcome.displayName)
                     } catch (_: DocumentImport.EmptyDocumentException) {
                         message = l10n("import_empty_file")
@@ -3117,7 +3119,7 @@ private fun InkScreen(
                             } else {
                                 PageDisplayMode.CONTINUOUS
                             }
-                            activity.getSharedPreferences("kairumo_editor", android.content.Context.MODE_PRIVATE)
+                            ProfileContext.prefs(activity, "kairumo_editor")
                                 .edit().putString("pageDisplayMode", pageDisplayMode.wire).apply()
                         }
                     ) {
@@ -6732,6 +6734,7 @@ private fun checkRelay(): String = try {
  * 沒有檔案時整段略過。
  */
 private fun ComponentActivity.readHandoffPackage(): List<Pair<String, String>> {
+    // profile-scope: device 除錯用的交接檔
     val pkg = java.io.File(filesDir, "handoff.padnote")
     if (!pkg.exists()) return emptyList()
 
@@ -6882,7 +6885,7 @@ private fun openNotebook(
  * 每次啟動換一個 id，同一台裝置在檔案裡會看起來像很多台。
  */
 private fun deviceId(activity: ComponentActivity): UInt {
-    val prefs = activity.getSharedPreferences("kairumo", android.content.Context.MODE_PRIVATE)
+    val prefs = ProfileContext.prefs(activity, "kairumo")
     val saved = prefs.getInt("deviceId", 0)
     if (saved != 0) return saved.toUInt()
     var hash = 2_166_136_261u // FNV-1a
@@ -7090,6 +7093,7 @@ private fun hexToRgba(hex: String): ByteArray {
 
 /** 從外部 URI 匯入 .padnote 筆記本檔案。 */
 private fun runImportNote(context: Context, uri: android.net.Uri, deviceId: UInt): NotebookLibrary.Entry? = runCatching {
+    // profile-scope: device 匯入的暫存檔
     val tempFile = File(context.cacheDir, "temp_import_${System.currentTimeMillis()}.padnote")
     context.contentResolver.openInputStream(uri)?.use { input ->
         tempFile.outputStream().use { output ->

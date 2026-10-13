@@ -26,6 +26,7 @@ import uniffi.padnote_core.syncOrderActiveFirst
  * 兩層都同步：中繼資料（設定、筆記本清單、刪除墓碑）與**內容**
  * （每一本筆記的 oplog 檔）。
  */
+// profile-scope: profile 雲端同步 session 與空殼清單屬於某個 Google 帳號
 object CloudSync {
 
     /** 核心 `clone_notebook` 在「雲端沒有任何操作記錄」時回的訊息。與 `ffi_gdrive.rs` 同文，要一起改。 */

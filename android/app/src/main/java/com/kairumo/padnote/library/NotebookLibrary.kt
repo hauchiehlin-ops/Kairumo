@@ -7,6 +7,7 @@ import java.io.File
 import uniffi.padnote_core.syncLiveNotebooks
 import uniffi.padnote_core.FfiMilestone
 import uniffi.padnote_core.PadnoteSession
+import com.kairumo.padnote.profile.ProfileContext
 
 /**
  * 這台裝置上的所有筆記本（Android）。
@@ -20,6 +21,7 @@ import uniffi.padnote_core.PadnoteSession
  *
  * 所以這裡把筆記本當成**一個目錄下的多個套件**，跟 Apple 端同一個模型。
  */
+// profile-scope: profile 筆記清單快取：不同設定檔的同一個筆記本 id 是不同的內容
 object NotebookLibrary {
 
     private const val DIRECTORY = "Notebooks"
@@ -49,7 +51,7 @@ object NotebookLibrary {
 
     /** 套件目錄。第一次呼叫時會把舊版那本單一筆記搬進來。 */
     fun directory(context: Context): File {
-        val dir = File(context.filesDir, DIRECTORY)
+        val dir = File(ProfileContext.dataDir(context), DIRECTORY)
         if (!dir.exists()) dir.mkdirs()
         migrateLegacyNotebook(context, dir)
         return dir
@@ -64,6 +66,7 @@ object NotebookLibrary {
      * 搬不動時保持原狀而不是刪掉 —— 那是使用者唯一的一份資料。
      */
     private fun migrateLegacyNotebook(context: Context, dir: File) {
+        // profile-scope: default 舊版單一筆記本只可能在預設設定檔
         val legacy = File(context.filesDir, LEGACY_NAME)
         if (!legacy.exists()) return
         val target = File(dir, LEGACY_NAME)
@@ -289,6 +292,7 @@ object NotebookLibrary {
 
     /** 從外部 .padnote 封裝壓縮檔匯入整本筆記本。 */
     fun importArchive(context: Context, archiveFile: File, deviceId: UInt): Entry? = runCatching {
+        // profile-scope: device 匯入的暫存資料夾
         val tempDir = File(context.cacheDir, "import_${System.currentTimeMillis()}")
         tempDir.mkdirs()
         try {

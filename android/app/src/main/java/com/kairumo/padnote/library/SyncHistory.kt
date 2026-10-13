@@ -2,6 +2,7 @@ package com.kairumo.padnote.library
 
 import android.content.Context
 import android.text.format.DateUtils
+import com.kairumo.padnote.profile.ProfileContext
 
 /**
  * 上次同步的時間，以及正在同步到哪一個帳號。
@@ -24,7 +25,7 @@ object SyncHistory {
     private const val KEY_ACCOUNT_NAME = "accountName"
 
     private fun prefs(context: Context) =
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        ProfileContext.prefs(context, PREFS)
 
     fun markGoogleSynced(context: Context, at: Long = System.currentTimeMillis()) {
         prefs(context).edit().putLong(KEY_GOOGLE_AT, at).apply()

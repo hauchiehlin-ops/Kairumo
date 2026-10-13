@@ -9,6 +9,7 @@ import Foundation
 import Combine
 
 public final class StartupLogger: ObservableObject, @unchecked Sendable {
+    // profile-scope: device 整台裝置共用，不屬於任何使用者
     public static let shared = StartupLogger()
 
     public struct LogEntry: Identifiable, Sendable {

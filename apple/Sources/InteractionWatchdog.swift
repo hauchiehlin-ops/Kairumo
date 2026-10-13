@@ -26,6 +26,7 @@ private struct InteractionRecord {
 }
 
 public final class InteractionWatchdog: ObservableObject {
+    // profile-scope: device 整台裝置共用，不屬於任何使用者
     public static let shared = InteractionWatchdog()
 
     @Published public var activeGuidance: GuidancePromptItem? = nil

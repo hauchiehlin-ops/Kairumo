@@ -1607,19 +1607,19 @@ enum SyncKnownObjects {
     }
 
     static func known(_ notebook: String) -> Set<String> {
-        Set(UserDefaults.standard.stringArray(forKey: key("known", notebook)) ?? [])
+        Set(ProfileDefaults.current.stringArray(forKey: key("known", notebook)) ?? [])
     }
 
     static func setKnown(_ ids: Set<String>, _ notebook: String) {
-        UserDefaults.standard.set(Array(ids), forKey: key("known", notebook))
+        ProfileDefaults.current.set(Array(ids), forKey: key("known", notebook))
     }
 
     static func pending(_ notebook: String) -> Set<String> {
-        Set(UserDefaults.standard.stringArray(forKey: key("pending", notebook)) ?? [])
+        Set(ProfileDefaults.current.stringArray(forKey: key("pending", notebook)) ?? [])
     }
 
     static func setPending(_ ids: Set<String>, _ notebook: String) {
-        UserDefaults.standard.set(Array(ids), forKey: key("pending", notebook))
+        ProfileDefaults.current.set(Array(ids), forKey: key("pending", notebook))
     }
 
     /// 匯入完成後：使用者現在看得到的就是合併後的文件。

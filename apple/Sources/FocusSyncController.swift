@@ -41,6 +41,7 @@ import Network
 
 @MainActor
 public final class FocusSyncController: ObservableObject {
+    // profile-scope: profile 每個設定檔各有一份狀態，切換時必須重設
     public static let shared = FocusSyncController()
 
     /// 目前有幾台區網對端直連中。介面可以顯示「區網直連」。

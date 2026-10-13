@@ -22,14 +22,14 @@ enum SyncHistory {
     private static let folderKey = "kairumo.sync.lastFolderAt"
 
     static func markGoogleSynced(at date: Date = Date()) {
-        UserDefaults.standard.set(date.timeIntervalSince1970, forKey: googleKey)
+        ProfileDefaults.current.set(date.timeIntervalSince1970, forKey: googleKey)
         Task { @MainActor in
             AutoSyncController.shared.noteGoogleSynced(at: date)
         }
     }
 
     static func markFolderSynced(at date: Date = Date()) {
-        UserDefaults.standard.set(date.timeIntervalSince1970, forKey: folderKey)
+        ProfileDefaults.current.set(date.timeIntervalSince1970, forKey: folderKey)
     }
 
     static func lastGoogleSync() -> Date? {
@@ -49,7 +49,7 @@ enum SyncHistory {
     }
 
     private static func date(forKey key: String) -> Date? {
-        let raw = UserDefaults.standard.double(forKey: key)
+        let raw = ProfileDefaults.current.double(forKey: key)
         return raw > 0 ? Date(timeIntervalSince1970: raw) : nil
     }
 

@@ -27,7 +27,7 @@ struct OnboardingView: View {
 
     static var hasSeen: Bool {
         if let forced = Self.uiTestHasSeen { return forced }
-        return UserDefaults.standard.bool(forKey: Self.seenKey)
+        return ProfileDefaults.current.bool(forKey: Self.seenKey)
     }
 
     /// UI 測試指定的起始狀態。
@@ -143,7 +143,7 @@ struct OnboardingView: View {
     }
 
     private func finish() {
-        UserDefaults.standard.set(true, forKey: Self.seenKey)
+        ProfileDefaults.current.set(true, forKey: Self.seenKey)
         onDone()
     }
 

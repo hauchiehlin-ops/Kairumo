@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.dp
 import com.kairumo.padnote.LocalizationStrings
 import uniffi.padnote_core.FfiFeatureHint
 import uniffi.padnote_core.featureHint
+import com.kairumo.padnote.profile.ProfileContext
 
 /**
  * 功能的操作提示（首次使用時出現一次）。
@@ -53,7 +54,7 @@ object FeatureHintStore {
     fun dismiss(context: Context, id: String) {
         val all = dismissed(context).toMutableSet()
         all.add(id)
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        ProfileContext.prefs(context, PREFS)
             .edit().putStringSet(KEY, all).apply()
     }
 
@@ -62,12 +63,12 @@ object FeatureHintStore {
      * 對後來才需要它的人等於不存在。
      */
     fun resetAll(context: Context) {
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        ProfileContext.prefs(context, PREFS)
             .edit().remove(KEY).apply()
     }
 
     private fun dismissed(context: Context): Set<String> =
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        ProfileContext.prefs(context, PREFS)
             .getStringSet(KEY, emptySet()) ?: emptySet()
 }
 

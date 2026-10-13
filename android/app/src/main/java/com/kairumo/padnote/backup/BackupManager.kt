@@ -12,6 +12,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.UUID
+import com.kairumo.padnote.profile.ProfileContext
 
 /**
  * 個人資料備份與一鍵復原（Android）。
@@ -26,6 +27,7 @@ object BackupManager {
 
     /** 備份檔暫存區。使用者要自己把它帶到雲端或電腦上才算數。 */
     private fun backupsDir(context: Context): File =
+        // profile-scope: device 備份檔的暫存位置
         File(context.cacheDir, "backups").apply { mkdirs() }
 
     // MARK: - 設定
@@ -37,7 +39,7 @@ object BackupManager {
      * URI 權限）帶過去只會讓使用者以為資料夾還在。
      */
     fun currentSettings(context: Context): String {
-        val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        val prefs = ProfileContext.prefs(context, PREFS)
         val json = JSONObject()
         for ((key, value) in prefs.all) {
             if (key == "sync.treeUri") continue   // 換一台裝置就沒有那個授權了
@@ -50,7 +52,7 @@ object BackupManager {
     }
 
     fun applySettings(context: Context, json: String) {
-        val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+        val prefs = ProfileContext.prefs(context, PREFS).edit()
         runCatching {
             val obj = JSONObject(json)
             for (key in obj.keys()) {
@@ -89,7 +91,7 @@ object BackupManager {
         val out = File(backupsDir(context), "Kairumo-$stamp$suffix-$unique.$FILE_EXTENSION")
 
         val info = createBackup(
-            sourceDir = context.filesDir.absolutePath,
+            sourceDir = ProfileContext.dataDir(context).absolutePath,
             outPath = out.absolutePath,
             appVersion = appVersion,
             settingsJson = currentSettings(context),
@@ -129,7 +131,7 @@ object BackupManager {
      */
     fun restore(context: Context, file: File, appVersion: String): RestoreOutcome {
         val safety = runCatching { create(context, appVersion, label = "safety").first }.getOrNull()
-        val report = restoreBackup(file.absolutePath, context.filesDir.absolutePath)
+        val report = restoreBackup(file.absolutePath, ProfileContext.dataDir(context).absolutePath)
         applySettings(context, report.settingsJson)
         return RestoreOutcome(report.restored.size, report.corrupted, safety)
     }

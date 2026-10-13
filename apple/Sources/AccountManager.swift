@@ -43,6 +43,7 @@ public enum IdentityPalette {
 /// 協作身分管理中樞
 @MainActor
 public final class AccountManager: ObservableObject {
+    // profile-scope: profile 每個設定檔各有一份狀態，切換時必須重設
     public static let shared = AccountManager()
 
     private let profileKey = "kairumo.user.profile"
@@ -56,10 +57,10 @@ public final class AccountManager: ObservableObject {
     /// 使用者自訂編輯的名稱（未進行同步登入時使用）
     public var customDisplayName: String {
         get {
-            UserDefaults.standard.string(forKey: customNameKey) ?? ""
+            ProfileDefaults.current.string(forKey: customNameKey) ?? ""
         }
         set {
-            UserDefaults.standard.set(newValue, forKey: customNameKey)
+            ProfileDefaults.current.set(newValue, forKey: customNameKey)
         }
     }
 
@@ -73,14 +74,14 @@ public final class AccountManager: ObservableObject {
     /// 若兩者（Google Drive 與 iCloud）同時登錄時的偏好。預設以 Apple (iCloud) 名稱為優先。
     public var cloudProviderPreference: CloudProviderPreference {
         get {
-            if let saved = UserDefaults.standard.string(forKey: cloudPrefKey),
+            if let saved = ProfileDefaults.current.string(forKey: cloudPrefKey),
                let pref = CloudProviderPreference(rawValue: saved) {
                 return pref
             }
             return .iCloud
         }
         set {
-            UserDefaults.standard.set(newValue.rawValue, forKey: cloudPrefKey)
+            ProfileDefaults.current.set(newValue.rawValue, forKey: cloudPrefKey)
             refreshDisplayName()
         }
     }
@@ -260,16 +261,16 @@ public final class AccountManager: ObservableObject {
     }
 
     private init() {
-        if let savedData = UserDefaults.standard.data(forKey: profileKey),
+        if let savedData = ProfileDefaults.current.data(forKey: profileKey),
            let decoded = try? JSONDecoder().decode(UserProfile.self, from: savedData) {
             self.profile = decoded
-            if UserDefaults.standard.string(forKey: customNameKey) == nil {
+            if ProfileDefaults.current.string(forKey: customNameKey) == nil {
                 self.customDisplayName = decoded.displayName
             }
         } else {
             // 舊版可能存過含 username/email 的格式，欄位對不上就解不出來。
             // 盡量把名字撈回來，撈不到就用預設值，不去讀系統帳號。
-            let legacyName = (UserDefaults.standard.data(forKey: profileKey))
+            let legacyName = (ProfileDefaults.current.data(forKey: profileKey))
                 .flatMap { try? JSONSerialization.jsonObject(with: $0) as? [String: Any] }
                 .flatMap { $0?["displayName"] as? String }
             let initial = legacyName ?? LocalizationManager.shared.localized("default_user_name")
@@ -315,13 +316,13 @@ public final class AccountManager: ObservableObject {
     /// 清掉訪客模式時代留下的鍵，避免舊狀態在未來被誤讀。
     private func cleanUpLegacyKeys() {
         for key in ["kairumo.user.profile.beforeGuest", "kairumo.user.isGuest"] {
-            UserDefaults.standard.removeObject(forKey: key)
+            ProfileDefaults.current.removeObject(forKey: key)
         }
     }
 
     private func saveProfile() {
         if let encoded = try? JSONEncoder().encode(profile) {
-            UserDefaults.standard.set(encoded, forKey: profileKey)
+            ProfileDefaults.current.set(encoded, forKey: profileKey)
         }
     }
 

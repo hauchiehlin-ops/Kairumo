@@ -3,6 +3,7 @@ package com.kairumo.padnote.platform
 import android.content.Context
 import com.kairumo.padnote.library.NotebookTrash
 import java.io.File
+import com.kairumo.padnote.profile.ProfileContext
 
 /**
  * 自動清理 App 自己留下的暫存與過時資料（與 Apple 的 `StorageSweeper` 同一組規則）。
@@ -76,18 +77,28 @@ object StorageSweeper {
 
     /** 用量：筆記與錄音（filesDir 扣掉模型）、快取、已下載的模型。背景執行緒呼叫。 */
     fun usage(context: Context): Usage {
+        // profile-scope: device 模型是整台裝置共用
         val models = sizeOf(File(context.filesDir, "models"))
-        val files = sizeOf(context.filesDir)
-        return Usage(library = (files - models).coerceAtLeast(0), cache = sizeOf(context.cacheDir), models = models)
+        // 目前設定檔的資料。預設設定檔就是 filesDir（扣掉模型）；其他設定檔在 app_profiles/<id>/。
+        val files = sizeOf(ProfileContext.dataDir(context))
+        val library = if (ProfileContext.isDefault(context)) (files - models).coerceAtLeast(0) else files
+        // profile-scope: device 清的是整台裝置的快取
+        return Usage(library = library, cache = sizeOf(context.cacheDir), models = models)
     }
 
     /** 清可丟棄的東西（背景執行緒呼叫）。 */
     fun sweepDisposables(context: Context, now: Long = System.currentTimeMillis()): Report {
         val report = Report()
         // 縮圖由下面自己的規則管，不歸「一小時」那條。
-        delete(stale(context.cacheDir, TEMP_MIN_AGE_MS, now, skip = { it == "thumbnails" }), report)
-        delete(overBudgetThumbnails(File(context.cacheDir, "thumbnails"), now), report)
+        // `profiles/` 是其他設定檔的快取根目錄：不能被當成「一小時前的暫存」整個清掉。
         delete(
+            // profile-scope: device
+            stale(context.cacheDir, TEMP_MIN_AGE_MS, now, skip = { it == "thumbnails" || it == "profiles" }),
+            report
+        )
+        delete(overBudgetThumbnails(File(ProfileContext.cacheDir(context), "thumbnails"), now), report)
+        delete(
+            // profile-scope: device
             stale(File(context.filesDir, "models"), PARTIAL_MIN_AGE_MS, now, accept = { it.endsWith(".partial") }),
             report
         )

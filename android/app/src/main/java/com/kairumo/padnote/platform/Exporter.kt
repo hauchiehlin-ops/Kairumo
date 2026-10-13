@@ -35,6 +35,7 @@ object Exporter {
 
     /** 匯出檔只放在 App 私有 cache：不落到外部儲存，任何 App 都讀得到那裡。 */
     private fun exportsDir(context: Context): File =
+        // profile-scope: device 匯出的暫存
         File(context.cacheDir, "exports").apply { mkdirs() }
 
     /**
@@ -98,6 +99,7 @@ object Exporter {
                 // @2x：螢幕截圖級的解析度，列印或再編輯都還堪用。
                 // 走 PageImageRenderer 而不是核心的 export_page_png：
                 // 後者把文字畫成灰條，匯出的圖上會看不到字（工作項 S-60）。
+                // profile-scope: device 算繪的暫存
                 PageImageRenderer.renderPng(session, page, 2f, context.cacheDir)
             }
             Format.MARKDOWN -> session.exportMarkdown().toByteArray()

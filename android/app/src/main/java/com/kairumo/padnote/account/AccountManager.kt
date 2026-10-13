@@ -1,6 +1,7 @@
 package com.kairumo.padnote.account
 
 import android.content.Context
+import com.kairumo.padnote.profile.ProfileContext
 
 /**
  * 協作身分（Android）。
@@ -43,14 +44,14 @@ object AccountManager {
     }
 
     fun customName(context: Context, fallbackName: String): String {
-        val p = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        val p = ProfileContext.prefs(context, PREFS)
         return p.getString(KEY_CUSTOM_NAME, null)
             ?: p.getString(KEY_NAME, null)?.takeIf { it.isNotBlank() }
             ?: fallbackName
     }
 
     fun load(context: Context, fallbackName: String): Profile {
-        val p = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        val p = ProfileContext.prefs(context, PREFS)
         val custom = customName(context, fallbackName)
         val cloud = cloudAccountName(context)
         val effective = if (!cloud.isNullOrBlank()) cloud else custom
@@ -64,7 +65,7 @@ object AccountManager {
         // 空白名字不存。存了的話協作清單上會出現一個沒有名字的人，
         // 而那個人是誰只有他自己知道。
         val clean = name.trim().ifEmpty { fallbackName }
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        ProfileContext.prefs(context, PREFS)
             .edit()
             .putString(KEY_CUSTOM_NAME, clean)
             .putString(KEY_NAME, clean)
@@ -72,7 +73,7 @@ object AccountManager {
     }
 
     fun saveColor(context: Context, hex: String) {
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        ProfileContext.prefs(context, PREFS)
             .edit().putString(KEY_COLOR, hex).apply()
     }
 }

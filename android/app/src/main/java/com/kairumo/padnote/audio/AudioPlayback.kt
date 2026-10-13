@@ -14,6 +14,7 @@ import java.io.File
  * 狀態以**卡片 id** 為鍵，不是錄音檔名：同一段錄音可以插在兩頁上，
  * 按第 2 頁那張時第 1 頁不該一起變成暫停鈕。
  */
+// profile-scope: profile 每個設定檔各有一份狀態，切換時必須重設（正在播放的錄音要停掉）
 object AudioPlayback {
 
     private var player: MediaPlayer? = null

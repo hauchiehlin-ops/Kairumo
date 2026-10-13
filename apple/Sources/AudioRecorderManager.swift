@@ -21,6 +21,7 @@ public enum RecordingStatus {
 
 @MainActor
 public final class AudioRecorderManager: NSObject, ObservableObject, AVAudioRecorderDelegate, AVAudioPlayerDelegate {
+    // profile-scope: profile 每個設定檔各有一份狀態，切換時必須重設
     public static let shared = AudioRecorderManager()
 
     @Published public var status: RecordingStatus = .idle
@@ -61,7 +62,7 @@ public final class AudioRecorderManager: NSObject, ObservableObject, AVAudioReco
     public var recordingsDirectory: URL {
         // 舊格式的散裝錄音也要跟著使用者選定的主要文件庫走；否則切換位置後
         // 筆記在新目錄、錄音仍留在 App container，備份與遷移就會漏檔。
-        let docs = DocumentStorageLocation.shared.rootURL
+        let docs = DocumentStorageLocation.shared.libraryRootURL
         let kairumoRecordDir = docs.appendingPathComponent("Kairumo Record", isDirectory: true)
 
         if !FileManager.default.fileExists(atPath: kairumoRecordDir.path) {

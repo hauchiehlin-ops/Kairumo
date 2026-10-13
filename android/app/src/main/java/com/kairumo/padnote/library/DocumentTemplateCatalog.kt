@@ -24,6 +24,7 @@ import uniffi.padnote_core.PadnoteSession
  * `apple/Sources/DocumentTemplateCatalog.swift` 是同一組模型、同一份資料。
  * 改這裡之前先確認那邊要不要一起改。
  */
+// profile-scope: device 範本目錄是內建內容，沒有使用者資料
 object DocumentTemplateCatalog {
 
     private const val ASSET = "templates/document-templates.json"

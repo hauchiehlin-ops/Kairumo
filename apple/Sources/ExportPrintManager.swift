@@ -13,6 +13,7 @@ import PDFKit
 @MainActor
 public final class ExportPrintManager {
 
+    // profile-scope: profile 每個設定檔各有一份狀態，切換時必須重設
     public static let shared = ExportPrintManager()
 
     private init() {}

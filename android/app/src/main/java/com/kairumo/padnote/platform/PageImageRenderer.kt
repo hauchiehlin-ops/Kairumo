@@ -47,6 +47,7 @@ object PageImageRenderer {
      *
      * @param scale 相對於頁面點數的倍率（2.0 約等於 Retina 級）。
      */
+    // profile-scope: device 算繪的暫存目錄由呼叫端給
     fun renderPng(session: PadnoteSession, pageId: String, scale: Float, cacheDir: File): ByteArray =
         runCatching { viaSystemRenderer(session, pageId, scale, cacheDir) }
             .getOrNull()
@@ -56,9 +57,11 @@ object PageImageRenderer {
         session: PadnoteSession,
         pageId: String,
         scale: Float,
+        // profile-scope: device
         cacheDir: File
     ): ByteArray? {
         // PdfRenderer 只吃檔案描述子，不吃位元組陣列，所以一定要先落地。
+        // profile-scope: device 算繪的暫存檔
         val file = File(cacheDir, "render-${System.nanoTime()}.pdf")
         try {
             file.writeBytes(session.exportPagePdf(pageId))

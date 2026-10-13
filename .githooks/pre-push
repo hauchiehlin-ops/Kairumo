@@ -20,6 +20,14 @@ if [[ -f "${REPO_ROOT}/scripts/check-hardcoded-strings.py" ]]; then
     fi
 fi
 
+# 0b. 多設定檔：每一份使用者狀態都必須經過設定檔層（見 scripts/check-profile-scope.py 檔頭）
+if [[ -f "${REPO_ROOT}/scripts/check-profile-scope.py" ]]; then
+    if ! python3 "${REPO_ROOT}/scripts/check-profile-scope.py"; then
+        echo "❌ [Pre-Push 阻擋] 有使用者狀態沒有經過設定檔層，切換設定檔之後會漏給下一個使用者。" >&2
+        exit 1
+    fi
+fi
+
 # 1. 介面字串必須與 catalog 一致
 if [[ -f "${REPO_ROOT}/scripts/i18n_tool.py" ]]; then
     if ! python3 "${REPO_ROOT}/scripts/i18n_tool.py" verify; then

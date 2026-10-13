@@ -81,30 +81,44 @@ object ProfileContext {
 
     // ── 檔案 ─────────────────────────────────────────────────
 
-    /** 純函式：預設設定檔的根目錄就是 [base] 本身，其他是 `<base>/profiles/<id>`。 */
-    fun dataRoot(base: File, profileId: String): File =
-        if (profileId == ProfileRecord.DEFAULT_ID) base else File(File(base, "profiles"), profileId)
+    /**
+     * 純函式：預設設定檔的根目錄就是 [filesDir] 本身，其他是 `<profilesDir>/<id>`。
+     *
+     * 其他設定檔**不放在 `filesDir` 底下**，而是 `Context.getDir("profiles")`（`app_profiles/`，與 `files/` 同層）：
+     * 預設設定檔的根目錄就是整個 `filesDir`，其他設定檔放在它裡面的話，預設設定檔的備份、
+     * 用量統計、清理都會把別人的資料算進去，甚至一起備份出去。
+     */
+    fun dataRoot(filesDir: File, profilesDir: File, profileId: String): File =
+        if (profileId == ProfileRecord.DEFAULT_ID) filesDir else File(profilesDir, profileId)
+
+    /** 快取的根目錄。純函式：預設設定檔就是 [cacheDir] 本身，其他是 `<cacheDir>/profiles/<id>`。 */
+    fun cacheRoot(cacheDir: File, profileId: String): File =
+        if (profileId == ProfileRecord.DEFAULT_ID) cacheDir else File(File(cacheDir, "profiles"), profileId)
 
     /** 這個設定檔的資料根目錄（筆記、垃圾桶、同步快照都在底下）。取代 `context.filesDir`。 */
     fun dataDir(context: Context): File =
-        dataRoot(context.filesDir, activeId(context)).also { it.mkdirs() }
+        dataRoot(
+            context.filesDir, context.getDir(PROFILES_DIR, Context.MODE_PRIVATE), activeId(context)
+        ).also { it.mkdirs() }
 
-    /** 快取（縮圖、預覽、匯出暫存）。**一定要分開**：範例筆記的 id 在每個設定檔都一樣。 */
+    /** 快取（縮圖、預覽）。**一定要分開**：範例筆記的 id 在每個設定檔都一樣。 */
     fun cacheDir(context: Context): File =
-        dataRoot(context.cacheDir, activeId(context)).also { it.mkdirs() }
+        cacheRoot(context.cacheDir, activeId(context)).also { it.mkdirs() }
+
+    internal const val PROFILES_DIR = "profiles"
 
     // ── 刪除 ─────────────────────────────────────────────────
 
     /**
      * 這個設定檔留在磁碟上的所有東西（刪除設定檔時用）。
-     * 預設設定檔回空 —— 它的根目錄就是整個 `filesDir`，裡面還有別人的設定檔與裝置共用的東西，
+     * 預設設定檔回空 —— 它的根目錄就是整個 `filesDir`，裡面還有裝置共用的東西（模型、日誌），
      * 刪除時要逐項處理，不能整個砍。
      */
     fun ownedDirectories(context: Context, profileId: String): List<File> {
         if (profileId == ProfileRecord.DEFAULT_ID) return emptyList()
         return listOf(
-            dataRoot(context.filesDir, profileId),
-            dataRoot(context.cacheDir, profileId)
+            dataRoot(context.filesDir, context.getDir(PROFILES_DIR, Context.MODE_PRIVATE), profileId),
+            cacheRoot(context.cacheDir, profileId)
         )
     }
 

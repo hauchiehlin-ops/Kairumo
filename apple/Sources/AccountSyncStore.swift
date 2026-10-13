@@ -24,6 +24,7 @@ import Foundation
 @MainActor
 public final class AccountSyncStore: ObservableObject {
 
+    // profile-scope: profile 每個設定檔各有一份狀態，切換時必須重設
     public static let shared = AccountSyncStore()
 
     /// 筆記本與資料夾索引（`notebooks/index.json` 的內容）。
@@ -49,11 +50,11 @@ public final class AccountSyncStore: ObservableObject {
     /// 落盤的那一份永遠與記憶體同步（`setIndex` 兩個一起寫），
     /// 所以從 UserDefaults 讀是安全的。
     public nonisolated static func indexJSONSnapshot() -> String {
-        UserDefaults.standard.string(forKey: indexKey) ?? ""
+        ProfileDefaults.current.string(forKey: indexKey) ?? ""
     }
 
     private init() {
-        let defaults = UserDefaults.standard
+        let defaults = ProfileDefaults.current
         if let existing = defaults.string(forKey: deviceKey) {
             deviceId = existing
         } else {
@@ -332,8 +333,15 @@ public final class AccountSyncStore: ObservableObject {
         let safe = account.isEmpty
             ? "default"
             : account.lowercased().map { $0.isLetter || $0.isNumber ? String($0) : "-" }.joined()
-        let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+        // profile-scope: profile 非預設設定檔放進自己的子目錄（見下面）
+        var base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("Kairumo/sync", isDirectory: true)
+        // 沒有登入帳號時 `safe` 都是 "default"，兩個設定檔會共用同一個快照檔。
+        // 預設設定檔維持原位置；其他設定檔放進自己的子目錄。
+        if !ProfileContext.isDefault {
+            base = base.appending(path: ProfileContext.activeId, directoryHint: .isDirectory)
+            try? FileManager.default.createDirectory(at: base, withIntermediateDirectories: true)
+        }
         return base.appending(path: "remote-index-\(safe).json")
     }
 
@@ -351,12 +359,12 @@ public final class AccountSyncStore: ObservableObject {
 
     private func setIndex(_ json: String) {
         indexJSON = json
-        UserDefaults.standard.set(json, forKey: indexKey)
+        ProfileDefaults.current.set(json, forKey: indexKey)
     }
 
     private func setSettings(_ json: String) {
         settingsJSON = json
-        UserDefaults.standard.set(json, forKey: settingsKey)
+        ProfileDefaults.current.set(json, forKey: settingsKey)
     }
 
     private struct DecodedLibraryIndex: Decodable {

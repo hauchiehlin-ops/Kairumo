@@ -171,11 +171,28 @@ class ProfileContextTest {
     }
 
     @Test
-    fun dataRootsAreSeparatePerProfileAndTheDefaultIsTheBaseItself() {
-        val base = File("/data/files")
-        assertEquals(base, ProfileContext.dataRoot(base, ProfileRecord.DEFAULT_ID))
-        assertEquals(File("/data/files/profiles/abc"), ProfileContext.dataRoot(base, "abc"))
-        assertNotEquals(ProfileContext.dataRoot(base, "a"), ProfileContext.dataRoot(base, "b"))
+    fun dataRootsAreSeparatePerProfileAndTheDefaultIsTheFilesDirItself() {
+        val files = File("/data/files")
+        val profiles = File("/data/app_profiles")
+        assertEquals(files, ProfileContext.dataRoot(files, profiles, ProfileRecord.DEFAULT_ID))
+        assertEquals(File("/data/app_profiles/abc"), ProfileContext.dataRoot(files, profiles, "abc"))
+        assertNotEquals(ProfileContext.dataRoot(files, profiles, "a"), ProfileContext.dataRoot(files, profiles, "b"))
+    }
+
+    @Test
+    fun otherProfilesLiveOutsideFilesDirSoTheDefaultProfileNeverContainsThem() {
+        // 預設設定檔的根目錄就是整個 filesDir：別人的設定檔放在裡面，預設設定檔的備份與用量都會把它們算進去。
+        val files = File("/data/files")
+        val other = ProfileContext.dataRoot(files, File("/data/app_profiles"), "abc")
+        assertFalse(other.path.startsWith(files.path + "/"))
+    }
+
+    @Test
+    fun cacheRootsAreSeparatePerProfileAndTheDefaultIsTheCacheDirItself() {
+        val cache = File("/data/cache")
+        assertEquals(cache, ProfileContext.cacheRoot(cache, ProfileRecord.DEFAULT_ID))
+        assertEquals(File("/data/cache/profiles/abc"), ProfileContext.cacheRoot(cache, "abc"))
+        assertNotEquals(ProfileContext.cacheRoot(cache, "a"), ProfileContext.cacheRoot(cache, "b"))
     }
 }
 

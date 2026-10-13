@@ -33,7 +33,7 @@ enum BackupManager {
     /// 只挑我們自己的鍵（`kairumo.` 開頭）。整包 UserDefaults 倒出來會夾帶
     /// 系統與其他框架的東西，還原時寫回去可能造成很難追的行為。
     static func currentSettings() -> String {
-        let all = UserDefaults.standard.dictionaryRepresentation()
+        let all = ProfileDefaults.current.dictionaryRepresentation()
         var ours: [String: String] = [:]
         for (key, value) in all where key.hasPrefix("kairumo.") {
             // 只帶字串與數字。二進位（例如 security-scoped bookmark）換一台
@@ -53,7 +53,7 @@ enum BackupManager {
         guard let data = json.data(using: .utf8),
               let map = try? JSONDecoder().decode([String: String].self, from: data) else { return }
         for (key, value) in map where key.hasPrefix("kairumo.") {
-            UserDefaults.standard.set(value, forKey: key)
+            ProfileDefaults.current.set(value, forKey: key)
         }
     }
 

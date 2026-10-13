@@ -21,6 +21,7 @@ import UIKit
 /// 第一位加入者即房主、presence/oplog 轉發給房內其他人、oplog 保留最近
 /// 200 筆供斷線追趕、房空自動回收。
 public final class LocalRelayServer {
+    // profile-scope: profile 每個設定檔各有一份狀態，切換時必須重設
     public static let shared = LocalRelayServer()
 
     /// 單一在線成員
@@ -493,6 +494,7 @@ public struct DiscoveredRoom: Identifiable, Hashable {
 /// 局域網同步自動發現（mDNS / Bonjour）。
 /// 用於尋找同一 Wi-Fi 下廣播 `_kairumo-sync._tcp` 的其他裝置，並建立 WebSocket 捷徑。
 public final class LocalSyncDiscovery: ObservableObject {
+    // profile-scope: profile 每個設定檔各有一份狀態，切換時必須重設
     public static let shared = LocalSyncDiscovery()
     
     private var browser: NWBrowser?

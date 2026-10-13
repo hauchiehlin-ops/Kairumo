@@ -43,6 +43,7 @@ import uniffi.padnote_core.draftProblemIsDrawing
  * 題目與標準答案全在核心（`draft_problem`、`draft_grade`）—— 同一個種子在兩個平台產生同一題、
  * 同一份答案批出同一個分數。這裡只管把題目線放進頁面、把學生畫的線交給核心批改、把結果標在畫面上。
  */
+// profile-scope: profile 每個設定檔各有一份狀態，切換時必須重設
 object PracticeSession {
     /** 批改摘要：各種問題的條數與分數。 */
     data class Summary(

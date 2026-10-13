@@ -1223,6 +1223,7 @@ public struct NoteAudioAttachment: Identifiable, Codable, Hashable, ObjectFrameS
 /// 筆記資料持久化中樞
 @MainActor
 public final class NotebookStore: ObservableObject {
+    // profile-scope: profile 每個設定檔各有一份狀態，切換時必須重設
     public static let shared = NotebookStore()
 
     @Published public var notebooks: [NotebookDocument] = []
@@ -1263,7 +1264,7 @@ public final class NotebookStore: ObservableObject {
 
     private var documentsDir: URL {
         documentsRootOverride
-            ?? DocumentStorageLocation.shared.rootURL
+            ?? DocumentStorageLocation.shared.libraryRootURL
     }
 
     private var notebooksFile: URL {
@@ -1601,7 +1602,7 @@ public final class NotebookStore: ObservableObject {
             self.trashedNotebooks = Self.deduplicateById(tList)
         }
 
-        if let savedRoot = UserDefaults.standard.string(forKey: rootFolderNameKey),
+        if let savedRoot = ProfileDefaults.current.string(forKey: rootFolderNameKey),
            !savedRoot.isEmpty,
            !Self.legacyDefaultRootNames.contains(savedRoot) {
             self.rootFolderName = savedRoot
@@ -1777,8 +1778,8 @@ public final class NotebookStore: ObservableObject {
         }
 
         // 《Kairumo手冊》：舊使用者只補一次（旗標），之後刪掉就不再長回來。
-        if !UserDefaults.standard.bool(forKey: Self.manualSeededKey) {
-            UserDefaults.standard.set(true, forKey: Self.manualSeededKey)
+        if !ProfileDefaults.current.bool(forKey: Self.manualSeededKey) {
+            ProfileDefaults.current.set(true, forKey: Self.manualSeededKey)
             let hasManual = notebooks.contains {
                 $0.id == SeedContent.kairumoManualId || $0.title == SeedContent.kairumoManualTitle
             }
@@ -1791,8 +1792,8 @@ public final class NotebookStore: ObservableObject {
         }
 
         // 《圖學範例》：舊使用者只補一次（旗標），之後刪掉就不再長回來。
-        if !UserDefaults.standard.bool(forKey: Self.draftingExampleSeededKey) {
-            UserDefaults.standard.set(true, forKey: Self.draftingExampleSeededKey)
+        if !ProfileDefaults.current.bool(forKey: Self.draftingExampleSeededKey) {
+            ProfileDefaults.current.set(true, forKey: Self.draftingExampleSeededKey)
             if !notebooks.contains(where: { $0.id == Self.draftingExampleId }) {
                 notebooks.append(makeDraftingExample())
                 changed = true
@@ -1862,7 +1863,7 @@ public final class NotebookStore: ObservableObject {
             if let tData = try? JSONEncoder().encode(snapshot.trash) {
                 try? tData.write(to: files.trash, options: .atomic)
             }
-            UserDefaults.standard.set(rootName, forKey: key)
+            ProfileDefaults.current.set(rootName, forKey: key)
 
             Task { @MainActor in
                 guard let self else { return }
@@ -2204,10 +2205,10 @@ public final class NotebookStore: ObservableObject {
 
         var n4 = Self.makeKairumoManual()
         SeedContent.fillKairumoManual(&n4, store: self)
-        UserDefaults.standard.set(true, forKey: Self.manualSeededKey)
+        ProfileDefaults.current.set(true, forKey: Self.manualSeededKey)
 
         let n5 = makeDraftingExample()
-        UserDefaults.standard.set(true, forKey: Self.draftingExampleSeededKey)
+        ProfileDefaults.current.set(true, forKey: Self.draftingExampleSeededKey)
 
         self.notebooks = [n1, n2, n3, n4, n5]
         persistData()
@@ -3502,12 +3503,13 @@ public final class NotebookStore: ObservableObject {
         }
 
         // 7. 使用者文件庫 DocumentStorageLocation.shared.rootURL / Kairumo Record
-        let rootKairumoRecord = DocumentStorageLocation.shared.rootURL.appendingPathComponent("Kairumo Record", isDirectory: true)
+        let rootKairumoRecord = DocumentStorageLocation.shared.libraryRootURL.appendingPathComponent("Kairumo Record", isDirectory: true)
         if let found = probeDirectory(rootKairumoRecord) {
             return found
         }
 
         // 8. 舊容器 Documents / Kairumo Record（沙盒內的傳統路徑）
+        // profile-scope: default 舊版容器路徑，只有升級前的預設設定檔會有東西在這裡
         if let legacyDocs = fm.urls(for: .documentDirectory, in: .userDomainMask).first {
             let legacyRecord = legacyDocs.appendingPathComponent("Kairumo Record", isDirectory: true)
             if let found = probeDirectory(legacyRecord) {
@@ -3549,7 +3551,7 @@ public final class NotebookStore: ObservableObject {
 
     /// 每天最多清一次（App 啟動之後，背景、低優先）。規則與理由見 `StorageJanitor`。
     func cleanUnusedFilesIfDue(now: Date = Date()) {
-        let last = UserDefaults.standard.object(forKey: Self.janitorLastRunKey) as? Date
+        let last = ProfileDefaults.current.object(forKey: Self.janitorLastRunKey) as? Date
         if let last, now.timeIntervalSince(last) < 24 * 3600 { return }
         cleanUnusedFiles(now: now)
     }
@@ -3566,7 +3568,7 @@ public final class NotebookStore: ObservableObject {
         let drawings = drawingsDirectory
         let baseline = documentsDir.appendingPathComponent("SyncBaseline", isDirectory: true)
         let protectedIds = Self.notebookIds(inSyncIndex: AccountSyncStore.indexJSONSnapshot())
-        UserDefaults.standard.set(now, forKey: Self.janitorLastRunKey)
+        ProfileDefaults.current.set(now, forKey: Self.janitorLastRunKey)
 
         Task.detached(priority: .background) {
             let plan = StorageJanitor.plan(

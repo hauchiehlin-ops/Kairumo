@@ -62,6 +62,7 @@ public enum AppLanguage: String, CaseIterable, Identifiable {
 
 @MainActor
 public final class LocalizationManager: ObservableObject {
+    // profile-scope: profile 每個設定檔各有一份狀態，切換時必須重設
     public static let shared = LocalizationManager()
 
     private let languageKey = "kairumo.app.language"
@@ -89,7 +90,7 @@ public final class LocalizationManager: ObservableObject {
 
     @Published public var currentLanguage: AppLanguage {
         didSet {
-            UserDefaults.standard.set(currentLanguage.rawValue, forKey: languageKey)
+            ProfileDefaults.current.set(currentLanguage.rawValue, forKey: languageKey)
         }
     }
 
@@ -100,7 +101,7 @@ public final class LocalizationManager: ObservableObject {
         // 記錄還是舊的；本機優先的話，同步過來的設定永遠不會生效 ——
         // 使用者會覺得「同步根本沒在動」。
         let synced = AccountSyncStore.shared.syncedLanguage.flatMap(AppLanguage.init(rawValue:))
-        let local = UserDefaults.standard.string(forKey: languageKey).flatMap(AppLanguage.init(rawValue:))
+        let local = ProfileDefaults.current.string(forKey: languageKey).flatMap(AppLanguage.init(rawValue:))
         let resolved = Self.uiTestLanguage ?? synced ?? local ?? .en
         self.currentLanguage = resolved
         Self.snapshotLanguage = resolved

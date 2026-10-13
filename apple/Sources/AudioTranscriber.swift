@@ -183,6 +183,7 @@ public enum AudioPCMDecoder {
 
 @MainActor
 public final class AudioTranscriber: ObservableObject {
+    // profile-scope: profile 每個設定檔各有一份狀態，切換時必須重設
     public static let shared = AudioTranscriber()
 
     @Published public var isTranscribing: Bool = false
@@ -243,11 +244,11 @@ public final class AudioTranscriber: ObservableObject {
 
     private static let enginePrefKey = "kairumo_asr_engine_preference"
     @Published public var enginePreference: EnginePreference = {
-        let raw = UserDefaults.standard.string(forKey: enginePrefKey) ?? EnginePreference.auto.rawValue
+        let raw = ProfileDefaults.current.string(forKey: enginePrefKey) ?? EnginePreference.auto.rawValue
         return EnginePreference(rawValue: raw) ?? .auto
     }() {
         didSet {
-            UserDefaults.standard.set(enginePreference.rawValue, forKey: Self.enginePrefKey)
+            ProfileDefaults.current.set(enginePreference.rawValue, forKey: Self.enginePrefKey)
         }
     }
 

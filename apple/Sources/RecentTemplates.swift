@@ -24,7 +24,7 @@ enum RecentTemplates {
     private static let key = "kairumo.recentTemplateIds"
 
     static func load() -> [String] {
-        UserDefaults.standard.stringArray(forKey: key) ?? []
+        ProfileDefaults.current.stringArray(forKey: key) ?? []
     }
 
     /// 記下剛套用的樣板，回傳新的清單。
@@ -32,7 +32,7 @@ enum RecentTemplates {
     static func record(_ id: String) -> [String] {
         let updated = recentTemplatesPush(
             existing: load(), id: id, limit: recentTemplateLimit())
-        UserDefaults.standard.set(updated, forKey: key)
+        ProfileDefaults.current.set(updated, forKey: key)
         return updated
     }
 }

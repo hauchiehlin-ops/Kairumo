@@ -4,6 +4,7 @@ import android.content.Context
 import java.util.UUID
 import uniffi.padnote_core.syncChildrenOf
 import uniffi.padnote_core.syncWouldCreateCycle
+import com.kairumo.padnote.profile.ProfileContext
 
 /**
  * 資料夾階層（Android）。
@@ -37,7 +38,7 @@ object FolderTree {
     private const val ROOT_NAME_PREF = "kairumo.root_folder_name"
 
     fun rootName(context: Context, fallback: String): String =
-        context.getSharedPreferences("kairumo", Context.MODE_PRIVATE)
+        ProfileContext.prefs(context, "kairumo")
             .getString(ROOT_NAME_PREF, null)
             ?.takeIf { it.isNotBlank() }
             ?: fallback
@@ -45,7 +46,7 @@ object FolderTree {
     fun renameRoot(context: Context, name: String) {
         val clean = name.trim()
         if (clean.isEmpty()) return
-        context.getSharedPreferences("kairumo", Context.MODE_PRIVATE)
+        ProfileContext.prefs(context, "kairumo")
             .edit()
             .putString(ROOT_NAME_PREF, clean)
             .apply()

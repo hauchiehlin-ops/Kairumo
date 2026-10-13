@@ -41,9 +41,10 @@ public struct GuidancePromptItem: Identifiable, Equatable {
 
 /// 智慧引導冷卻與免打擾管理器
 public final class GuidanceSuppressionManager: ObservableObject {
+    // profile-scope: profile 每個設定檔各有一份狀態，切換時必須重設
     public static let shared = GuidanceSuppressionManager()
 
-    private let defaults = UserDefaults.standard
+    private let defaults = ProfileDefaults.current
     private let enabledKey = "kairumo_smart_guidance_enabled"
     private let historyPrefix = "kairumo_guidance_history_"
     private let learnedPrefix = "kairumo_guidance_learned_"

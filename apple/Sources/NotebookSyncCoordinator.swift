@@ -350,6 +350,7 @@ enum RecordingTitleLedger {
 }
 
 final class ExportedObjectIds: @unchecked Sendable {
+    // profile-scope: profile 每個設定檔各有一份狀態，切換時必須重設
     static let shared = ExportedObjectIds()
     private let lock = NSLock()
     private var prints: [String: [String: Int]] = [:]
@@ -2344,6 +2345,7 @@ public enum SyncSource: String, Sendable, CaseIterable {
 
 @MainActor
 public final class SyncLogger: ObservableObject {
+    // profile-scope: profile 每個設定檔各有一份狀態，切換時必須重設
     public static let shared = SyncLogger()
 
     public struct LogEntry: Identifiable, Sendable {

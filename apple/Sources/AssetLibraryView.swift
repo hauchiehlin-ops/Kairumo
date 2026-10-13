@@ -18,7 +18,7 @@ public struct AssetLibraryView: View {
 
     /// 卡片預覽與插入畫布使用的算繪樣式。
     /// 預設實物 —— 貼進筆記本的多半希望是個物件，而不是一張工程圖紙。
-    @AppStorage("kairumo.assetRenderStyle") private var renderStyleRaw: String =
+    @AppStorage(ProfileContext.scopedKey("kairumo.assetRenderStyle")) private var renderStyleRaw: String =
         AssetLibraryManager.AssetRenderStyle.solid.rawValue
 
     private var renderStyle: AssetLibraryManager.AssetRenderStyle {

@@ -60,7 +60,7 @@ enum CloudSyncFolder {
     private static var _lastBookmarkData: Data? = nil
 
     static func resolveFolder() -> URL? {
-        guard let data = UserDefaults.standard.data(forKey: bookmarkKey) else { 
+        guard let data = ProfileDefaults.current.data(forKey: bookmarkKey) else { 
             _cachedURL = nil
             _lastBookmarkData = nil
             return nil 
@@ -91,7 +91,7 @@ enum CloudSyncFolder {
             let scoped = url.startAccessingSecurityScopedResource()
             defer { if scoped { url.stopAccessingSecurityScopedResource() } }
             if let refreshed = try? url.bookmarkData(options: bookmarkCreationOptions) {
-                UserDefaults.standard.set(refreshed, forKey: bookmarkKey)
+                ProfileDefaults.current.set(refreshed, forKey: bookmarkKey)
             }
         }
         return url
@@ -100,7 +100,7 @@ enum CloudSyncFolder {
     /// 記住使用者選的資料夾。
     static func setFolder(_ url: URL) throws {
         let data = try url.bookmarkData(options: bookmarkCreationOptions)
-        UserDefaults.standard.set(data, forKey: bookmarkKey)
+        ProfileDefaults.current.set(data, forKey: bookmarkKey)
         _cachedURL = url
         _lastBookmarkData = data
         Task { @MainActor in
@@ -110,7 +110,7 @@ enum CloudSyncFolder {
     }
 
     static func clearFolder() {
-        UserDefaults.standard.removeObject(forKey: bookmarkKey)
+        ProfileDefaults.current.removeObject(forKey: bookmarkKey)
         _cachedURL = nil
         _lastBookmarkData = nil
         Task { @MainActor in
@@ -281,6 +281,7 @@ enum CloudSyncFolder {
 /// 全局同步資料夾設定監聽器（提供 SwiftUI 響應式即時重繪）
 @MainActor
 public final class CloudSyncFolderMonitor: ObservableObject {
+    // profile-scope: profile 每個設定檔各有一份狀態，切換時必須重設
     public static let shared = CloudSyncFolderMonitor()
 
     @Published public private(set) var currentFolder: URL? = CloudSyncFolder.resolveFolder()

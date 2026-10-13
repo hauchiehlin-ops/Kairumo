@@ -33,6 +33,7 @@ import Foundation
 @MainActor
 public final class NotebookSearchIndex: ObservableObject {
 
+    // profile-scope: profile 每個設定檔各有一份狀態，切換時必須重設
     public static let shared = NotebookSearchIndex()
 
     /// 查詢字數下限。

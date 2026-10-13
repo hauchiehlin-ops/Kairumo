@@ -55,16 +55,20 @@ public enum NotebookMigration {
     /// 並存起來。**存起來這一步不能省**：每次啟動換一個 id 會讓同一台裝置
     /// 在檔案裡看起來像很多台。
     public static var deviceId: UInt32 {
-        if let saved = UserDefaults.standard.object(forKey: deviceIdKey) as? Int {
+        if let saved = ProfileDefaults.current.object(forKey: deviceIdKey) as? Int {
             return UInt32(truncatingIfNeeded: saved)
         }
-        let seed = UIDevice.current.identifierForVendor?.uuidString ?? UUID().uuidString
+        // 每個設定檔是同步協定裡**獨立的一台裝置**：各自的 oplog 檔名、各自的雲端身分。
+        // 兩個設定檔共用 id 的話，若有一天綁到同一個雲端資料夾，檔名就撞了。
+        // 預設設定檔的種子與升級前完全相同，所以既有裝置的 id 不變。
+        let vendor = UIDevice.current.identifierForVendor?.uuidString ?? UUID().uuidString
+        let seed = ProfileContext.isDefault ? vendor : "\(vendor):\(ProfileContext.activeId)"
         var hash: UInt32 = 2_166_136_261 // FNV-1a
         for byte in seed.utf8 {
             hash ^= UInt32(byte)
             hash = hash &* 16_777_619
         }
-        UserDefaults.standard.set(Int(hash), forKey: deviceIdKey)
+        ProfileDefaults.current.set(Int(hash), forKey: deviceIdKey)
         return hash
     }
 

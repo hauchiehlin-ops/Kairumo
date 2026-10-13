@@ -1824,11 +1824,11 @@ struct CanvasRepresentable: UIViewRepresentable {
         func applyPressureCurve() {
             // 讀取使用者設定，未設定時退回預設
             // 這裡只做輕量的持久化確認，真正的壓感曲線邏輯在核心 `ink_width_scale`。
-            let floor = max(0.01, min(1.0, Double(UserDefaults.standard.float(forKey: "kairumo.pen.pressureFloor"))))
-            let gamma = max(0.5, min(2.5, Double(UserDefaults.standard.float(forKey: "kairumo.pen.pressureGamma"))))
+            let floor = max(0.01, min(1.0, Double(ProfileDefaults.current.float(forKey: "kairumo.pen.pressureFloor"))))
+            let gamma = max(0.5, min(2.5, Double(ProfileDefaults.current.float(forKey: "kairumo.pen.pressureGamma"))))
             // 只在有使用者明確設定值的情況下套用（避免 UserDefaults 回傳 0 的未設狀態）
-            let floorSet = UserDefaults.standard.object(forKey: "kairumo.pen.pressureFloor") != nil
-            let gammaSet = UserDefaults.standard.object(forKey: "kairumo.pen.pressureGamma") != nil
+            let floorSet = ProfileDefaults.current.object(forKey: "kairumo.pen.pressureFloor") != nil
+            let gammaSet = ProfileDefaults.current.object(forKey: "kairumo.pen.pressureGamma") != nil
             guard floorSet || gammaSet else { return }
             // 記錄到核心側（Android 的 InkEngine.setPressureCurve 對應實作在 JNI；
             // Apple 這裡以 UserDefaults 為橋，核心 ink_width_scale 在畫線時讀取）
@@ -1983,7 +1983,7 @@ public struct NotebookEditorView: View {
     /// 存在 AppStorage 而不是筆記裡：它是「怎麼看」而不是「內容是什麼」，
     /// 跟著人走比跟著筆記走合理 —— 跟著筆記的話，同一個人在不同本筆記裡
     /// 會拿到不同的捲動方式。
-    @AppStorage("kairumo.editor.pageDisplayMode")
+    @AppStorage(ProfileContext.scopedKey("kairumo.editor.pageDisplayMode"))
     private var pageDisplayModeRaw: String = PageDisplayMode.single.rawValue
     private var pageDisplayMode: PageDisplayMode {
         PageDisplayMode(rawValue: pageDisplayModeRaw) ?? .single
@@ -2276,7 +2276,7 @@ public struct NotebookEditorView: View {
     @State private var canvasScrollFraction: CGFloat = 0
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var didAutoOpenSidebar: Bool = false
-    @AppStorage("kairumo_editor_sidebar_tab") private var sidebarTabRaw: String = SidebarTabMode.folders.rawValue
+    @AppStorage(ProfileContext.scopedKey("kairumo_editor_sidebar_tab")) private var sidebarTabRaw: String = SidebarTabMode.folders.rawValue
 
     private var sidebarTab: SidebarTabMode {
         get { SidebarTabMode(rawValue: sidebarTabRaw) ?? .folders }
@@ -2328,7 +2328,7 @@ public struct NotebookEditorView: View {
     /// 存絕對寬度而不是倍率：倍率的基準是側欄寬度，而側欄寬度也是使用者
     /// 在調的 —— 兩個都在動的話，拉寬側欄會讓縮圖跟著跳一次，
     /// 而使用者只是想把欄位拉寬一點看資料夾名稱。
-    @AppStorage("kairumo_editor_page_thumb_width") private var pageThumbnailWidth: Double = 240
+    @AppStorage(ProfileContext.scopedKey("kairumo_editor_page_thumb_width")) private var pageThumbnailWidth: Double = 240
     /// 編輯工作區目前可用的總寬度。夾側欄寬度要用到它。
     ///
     /// # 為什麼是 @State 而不是 Environment
@@ -2341,7 +2341,7 @@ public struct NotebookEditorView: View {
     @State private var editorAvailableWidth: CGFloat = 1024
     /// 使用者拖動界線之後的側欄寬度。落盤 —— 每次開筆記都要重調一次的設定
     /// 不算設定，只是每次都要做一遍的事。
-    @AppStorage("kairumo_editor_sidebar_width") private var storedSidebarWidth: Double = 280
+    @AppStorage(ProfileContext.scopedKey("kairumo_editor_sidebar_width")) private var storedSidebarWidth: Double = 280
     /// 拖曳界線期間的暫時寬度。放開才落盤，拖曳中每一格都寫 UserDefaults
     /// 會在拖動時卡頓。
     @State private var draggingSidebarWidth: CGFloat? = nil
@@ -15209,6 +15209,7 @@ public struct Sticker: Identifiable, Codable {
 }
 
 public class StickerManager: ObservableObject {
+    // profile-scope: profile 每個設定檔各有一份狀態，切換時必須重設
     public static let shared = StickerManager()
     private let storageKey = "user_saved_stickers"
     
@@ -15231,13 +15232,13 @@ public class StickerManager: ObservableObject {
     
     public func persist() {
         if let data = try? JSONEncoder().encode(stickers) {
-            UserDefaults.standard.set(data, forKey: storageKey)
-            UserDefaults.standard.synchronize()
+            ProfileDefaults.current.set(data, forKey: storageKey)
+            ProfileDefaults.current.synchronize()
         }
     }
     
     public func loadStickers() {
-        guard let data = UserDefaults.standard.data(forKey: storageKey),
+        guard let data = ProfileDefaults.current.data(forKey: storageKey),
               let loaded = try? JSONDecoder().decode([Sticker].self, from: data) else {
             return
         }

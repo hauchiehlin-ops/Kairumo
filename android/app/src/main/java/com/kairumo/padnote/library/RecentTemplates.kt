@@ -1,6 +1,7 @@
 package com.kairumo.padnote.library
 
 import android.content.Context
+import com.kairumo.padnote.profile.ProfileContext
 
 /**
  * 最近套用過的樣板 id。
@@ -22,7 +23,7 @@ object RecentTemplates {
     private const val KEY = "recentIds"
 
     fun load(context: Context): List<String> =
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        ProfileContext.prefs(context, PREFS)
             .getString(KEY, null)
             ?.split("\n")
             ?.filter { it.isNotEmpty() }
@@ -33,7 +34,7 @@ object RecentTemplates {
         val updated = uniffi.padnote_core.recentTemplatesPush(
             load(context), id, uniffi.padnote_core.recentTemplateLimit()
         )
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        ProfileContext.prefs(context, PREFS)
             .edit()
             .putString(KEY, updated.joinToString("\n"))
             .apply()

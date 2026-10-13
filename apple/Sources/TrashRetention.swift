@@ -30,14 +30,14 @@ public enum TrashRetention {
     /// 變成「永不」（不清）或「1 天」（一下就清）。
     public static var days: UInt32 {
         get {
-            guard let stored = UserDefaults.standard.object(forKey: defaultsKey) as? Int,
+            guard let stored = ProfileDefaults.current.object(forKey: defaultsKey) as? Int,
                   stored >= 0,
                   choices.contains(UInt32(stored))
             else { return defaultDays }
             return UInt32(stored)
         }
         set {
-            UserDefaults.standard.set(Int(newValue), forKey: defaultsKey)
+            ProfileDefaults.current.set(Int(newValue), forKey: defaultsKey)
         }
     }
 

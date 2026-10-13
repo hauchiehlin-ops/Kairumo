@@ -8,6 +8,7 @@ import androidx.documentfile.provider.DocumentFile
 import uniffi.padnote_core.SyncFileEntry
 import uniffi.padnote_core.planFolderSync
 import java.io.File
+import com.kairumo.padnote.profile.ProfileContext
 
 /**
  * 用使用者自己的雲端硬碟同步（決策 D3 選項 A）。
@@ -52,12 +53,12 @@ object FolderSync {
                     android.content.Intent.FLAG_GRANT_WRITE_URI_PERMISSION
             )
         }
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        ProfileContext.prefs(context, PREFS)
             .edit().putString(KEY_TREE_URI, treeUri.toString()).apply()
     }
 
     fun folderUri(context: Context): Uri? =
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        ProfileContext.prefs(context, PREFS)
             .getString(KEY_TREE_URI, null)?.let(Uri::parse)
 
     /**
@@ -87,7 +88,7 @@ object FolderSync {
     }
 
     fun clearFolder(context: Context) {
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        ProfileContext.prefs(context, PREFS)
             .edit().remove(KEY_TREE_URI).apply()
     }
 

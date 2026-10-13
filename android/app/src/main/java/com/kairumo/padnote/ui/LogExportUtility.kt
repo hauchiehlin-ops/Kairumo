@@ -15,6 +15,7 @@ object LogExportUtility {
     }
 
     fun shareTextFile(context: Context, text: String, filename: String) {
+        // profile-scope: device 匯出的暫存
         val exportDir = File(context.cacheDir, "exports").apply { mkdirs() }
         val file = File(exportDir, filename)
         file.writeText(text, Charsets.UTF_8)

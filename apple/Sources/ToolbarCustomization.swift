@@ -27,6 +27,7 @@ import PadnoteCore
 @MainActor
 public final class ToolbarSettings: ObservableObject {
 
+    // profile-scope: profile 每個設定檔各有一份狀態，切換時必須重設
     public static let shared = ToolbarSettings()
 
     /// 目前隱藏的工具，以**跨平台識別字**表示（`editor.ink.pen`…）。

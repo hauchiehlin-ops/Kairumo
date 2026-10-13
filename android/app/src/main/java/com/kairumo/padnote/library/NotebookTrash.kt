@@ -2,6 +2,7 @@ package com.kairumo.padnote.library
 
 import android.content.Context
 import java.io.File
+import com.kairumo.padnote.profile.ProfileContext
 
 /**
  * 筆記本的回收桶。設計見 `docs/plans/expiry-purge.md`。
@@ -25,7 +26,7 @@ object NotebookTrash {
 
     /** 回收桶的套件目錄。與 `notebooks/` 同層。 */
     fun directory(context: Context): File {
-        val dir = File(context.filesDir, DIRECTORY)
+        val dir = File(ProfileContext.dataDir(context), DIRECTORY)
         if (!dir.exists()) dir.mkdirs()
         return dir
     }

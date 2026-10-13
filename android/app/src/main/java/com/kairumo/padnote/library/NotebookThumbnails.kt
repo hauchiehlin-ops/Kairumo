@@ -7,6 +7,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import com.kairumo.padnote.platform.PageImageRenderer
 import uniffi.padnote_core.PadnoteSession
 import java.io.File
+import com.kairumo.padnote.profile.ProfileContext
 
 /**
  * 筆記本第一頁的縮圖（Android）。
@@ -62,10 +63,11 @@ object NotebookThumbnails {
     private fun render(context: Context, entry: NotebookLibrary.Entry): ByteArray? = runCatching {
         val session = PadnoteSession.openExisting(entry.path.absolutePath, 0u)
         val pageId = session.pageIdAt(0u) ?: session.firstPageId() ?: return null
+        // profile-scope: device 算繪的暫存
         PageImageRenderer.renderPng(session, pageId, SCALE, context.cacheDir)
     }.getOrNull()
 
-    private fun dir(context: Context) = File(context.cacheDir, "thumbnails")
+    private fun dir(context: Context) = File(ProfileContext.cacheDir(context), "thumbnails")
 
     private fun cacheFile(context: Context, entry: NotebookLibrary.Entry) =
         File(dir(context), "${entry.id}-${entry.modifiedAt}.png")

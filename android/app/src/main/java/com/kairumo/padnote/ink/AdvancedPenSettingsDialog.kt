@@ -19,6 +19,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import com.kairumo.padnote.profile.ProfileContext
 
 @Composable
 fun AdvancedPenSettingsDialog(
@@ -101,7 +102,7 @@ object PenSettingsStore {
     private const val KEY_GAMMA = "pressureGamma"
 
     private fun prefs(context: Context) =
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        ProfileContext.prefs(context, PREFS)
 
     fun floor(context: Context): Float? =
         prefs(context).let { if (it.contains(KEY_FLOOR)) it.getFloat(KEY_FLOOR, 0.1f) else null }

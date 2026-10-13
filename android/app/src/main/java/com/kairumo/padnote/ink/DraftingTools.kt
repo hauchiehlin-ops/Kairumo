@@ -68,6 +68,7 @@ import uniffi.padnote_core.draftSymbolCatalog
  * 幾何（尺寸線、箭頭、數字）全在核心（`draft_dim_*`），這裡只管「點了哪裡、現在在第幾步、預覽什麼」。
  * 預覽畫在引擎的覆蓋層（不存檔、不進復原）；完成時整組標註一次插入、一次復原。
  */
+// profile-scope: profile 每個設定檔各有一份狀態，切換時必須重設
 object DraftToolController {
     private val picks = mutableListOf<InkEngine.Offset2>()
     /** 圓形標註：從已經畫好的圓（擬合出來的）取得圓心與半徑；手動點圓心的話是 null。 */

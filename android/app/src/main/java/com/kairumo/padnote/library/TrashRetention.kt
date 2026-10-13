@@ -1,6 +1,7 @@
 package com.kairumo.padnote.library
 
 import android.content.Context
+import com.kairumo.padnote.profile.ProfileContext
 
 /**
  * 回收桶的保留期限設定。設計見 `docs/plans/expiry-purge.md`。
@@ -31,14 +32,14 @@ object TrashRetention {
      * 變成「永不」（不清）或「1 天」（一下就清）。
      */
     fun days(context: Context): UInt {
-        val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        val prefs = ProfileContext.prefs(context, PREFS)
         if (!prefs.contains(KEY_DAYS)) return DEFAULT_DAYS
         val stored = prefs.getInt(KEY_DAYS, -1)
         return if (stored >= 0 && CHOICES.contains(stored.toUInt())) stored.toUInt() else DEFAULT_DAYS
     }
 
     fun setDays(context: Context, days: UInt) {
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        ProfileContext.prefs(context, PREFS)
             .edit().putInt(KEY_DAYS, days.toInt()).apply()
     }
 

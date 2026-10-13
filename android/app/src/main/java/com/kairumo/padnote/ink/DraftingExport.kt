@@ -29,6 +29,7 @@ object DraftingExport {
         else -> "application/octet-stream"
     }
 
+    // profile-scope: device 匯出的暫存
     private fun exportsDir(context: Context) = File(context.cacheDir, "exports").also { it.mkdirs() }
 
     /** 本頁看得見的製圖線 → 匯出用的筆畫（隱藏的圖層不輸出）。 */

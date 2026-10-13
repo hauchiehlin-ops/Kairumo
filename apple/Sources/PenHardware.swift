@@ -35,6 +35,7 @@ import UIKit
 @MainActor
 final class PenHardwareSettings: ObservableObject {
 
+    // profile-scope: profile 每個設定檔各有一份狀態，切換時必須重設
     static let shared = PenHardwareSettings()
 
     private static let key = "kairumo.pen.controls.v1"
@@ -44,7 +45,7 @@ final class PenHardwareSettings: ObservableObject {
     let controls: PenControls
 
     private init() {
-        let saved = UserDefaults.standard.string(forKey: Self.key)
+        let saved = ProfileDefaults.current.string(forKey: Self.key)
         controls = saved.map { PenControls.decode(text: $0) } ?? PenControls()
     }
 
@@ -54,7 +55,7 @@ final class PenHardwareSettings: ObservableObject {
 
     func setAction(_ action: FfiPenAction, for control: FfiPenControl) {
         controls.setAction(control: control, action: action)
-        UserDefaults.standard.set(controls.encode(), forKey: Self.key)
+        ProfileDefaults.current.set(controls.encode(), forKey: Self.key)
         objectWillChange.send()
     }
 
@@ -158,9 +159,9 @@ struct AdvancedPenSettingsSheet: View {
 
     // MARK: 壓感曲線（跨平台：iOS/iPadOS/macOS）
     @State private var pressureFloor: Double =
-        Double(UserDefaults.standard.float(forKey: "kairumo.pen.pressureFloor").nonZero ?? 0.1)
+        Double(ProfileDefaults.current.float(forKey: "kairumo.pen.pressureFloor").nonZero ?? 0.1)
     @State private var pressureGamma: Double =
-        Double(UserDefaults.standard.float(forKey: "kairumo.pen.pressureGamma").nonZero ?? 1.0)
+        Double(ProfileDefaults.current.float(forKey: "kairumo.pen.pressureGamma").nonZero ?? 1.0)
 
     private let loc = LocalizationManager.shared
 
@@ -202,7 +203,7 @@ struct AdvancedPenSettingsSheet: View {
                         }
                         Slider(value: $pressureFloor, in: 0.01...1.0, step: 0.01)
                             .onChange(of: pressureFloor) { v in
-                                UserDefaults.standard.set(Float(v), forKey: "kairumo.pen.pressureFloor")
+                                ProfileDefaults.current.set(Float(v), forKey: "kairumo.pen.pressureFloor")
                             }
                         Text(loc.localized("pressure_gamma"))
                             .font(.subheadline)
@@ -218,14 +219,14 @@ struct AdvancedPenSettingsSheet: View {
                         }
                         Slider(value: $pressureGamma, in: 0.5...2.5, step: 0.05)
                             .onChange(of: pressureGamma) { v in
-                                UserDefaults.standard.set(Float(v), forKey: "kairumo.pen.pressureGamma")
+                                ProfileDefaults.current.set(Float(v), forKey: "kairumo.pen.pressureGamma")
                             }
                     }
                     Button(loc.localized("reset")) {
                         pressureFloor = 0.1
                         pressureGamma = 1.0
-                        UserDefaults.standard.removeObject(forKey: "kairumo.pen.pressureFloor")
-                        UserDefaults.standard.removeObject(forKey: "kairumo.pen.pressureGamma")
+                        ProfileDefaults.current.removeObject(forKey: "kairumo.pen.pressureFloor")
+                        ProfileDefaults.current.removeObject(forKey: "kairumo.pen.pressureGamma")
                     }
                     .foregroundColor(.secondary)
                     .font(.caption)

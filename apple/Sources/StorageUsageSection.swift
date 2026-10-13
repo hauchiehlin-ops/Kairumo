@@ -90,7 +90,7 @@ struct StorageUsageSection: View {
 
     @MainActor
     private func refresh() async {
-        let library = DocumentStorageLocation.shared.rootURL
+        let library = DocumentStorageLocation.shared.libraryRootURL
         let models = ModelDownloadManager.shared.modelsRoot
         let drawings = NotebookStore.shared.syncDrawingsDirectory
         let baseline = NotebookStore.shared.syncBaselineDirectory

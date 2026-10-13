@@ -69,6 +69,7 @@ public final class SheetCoordinator: ObservableObject {
     /// 是否正在等待前一個轉場動畫完成
     @Published public private(set) var isTransitioning: Bool = false
 
+    // profile-scope: profile 每個設定檔各有一份狀態，切換時必須重設
     public static let shared = SheetCoordinator()
 
     public init() {}

@@ -36,17 +36,17 @@ public enum FeatureHintStore {
     public static func dismiss(_ id: String) {
         var all = dismissed()
         all.insert(id)
-        UserDefaults.standard.set(Array(all), forKey: key)
+        ProfileDefaults.current.set(Array(all), forKey: key)
     }
 
     /// 全部重新顯示。設定頁要有這個 —— 關掉之後就再也找不回來的說明，
     /// 對後來才需要它的人等於不存在。
     public static func resetAll() {
-        UserDefaults.standard.removeObject(forKey: key)
+        ProfileDefaults.current.removeObject(forKey: key)
     }
 
     private static func dismissed() -> Set<String> {
-        Set(UserDefaults.standard.stringArray(forKey: key) ?? [])
+        Set(ProfileDefaults.current.stringArray(forKey: key) ?? [])
     }
 }
 

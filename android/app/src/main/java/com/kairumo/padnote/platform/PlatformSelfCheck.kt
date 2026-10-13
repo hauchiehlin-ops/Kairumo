@@ -12,6 +12,7 @@ import uniffi.padnote_core.audioEncodePcmToOpus
 import uniffi.padnote_core.localizeTranscriptScript
 import kotlin.math.PI
 import kotlin.math.sin
+import com.kairumo.padnote.profile.ProfileContext
 
 /**
  * 裝置上的一鍵自檢（驗證層 L4，見 docs/plans/ipad-first-verification.md）。
@@ -46,6 +47,7 @@ object PlatformSelfCheck {
     /** 合成一小段 Opus → 用真正的播放器播 → 位置要前進。 */
     private suspend fun checkPlaybackPipeline(context: Context): SelfCheckResult {
         val title = "Playback pipeline"
+        // profile-scope: device 自我檢查的暫存
         val file = File(context.cacheDir, "selfcheck-${System.nanoTime()}.opus")
         return try {
             val pcm = List(16_000) { (sin(it * 2.0 * PI * 440.0 / 16_000.0) * 0.05).toFloat() }
@@ -84,7 +86,7 @@ object PlatformSelfCheck {
 
     /** 筆記庫所在目錄存在而且寫得進去。 */
     private fun checkLibraryFolder(context: Context): SelfCheckResult {
-        val dir = context.filesDir
+        val dir = ProfileContext.dataDir(context)
         val probe = File(dir, ".selfcheck-${System.nanoTime()}")
         val writable = runCatching { probe.writeText("x"); true }.getOrDefault(false)
         probe.delete()

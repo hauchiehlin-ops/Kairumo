@@ -4,6 +4,7 @@ import android.content.Context
 import android.view.MotionEvent
 import uniffi.padnote_core.FfiPenControl
 import uniffi.padnote_core.PenControls
+import com.kairumo.padnote.profile.ProfileContext
 
 /**
  * 觸控筆硬體：筆桿側鍵、反向筆頭、滾動角與懸停（工作項 S-40 / S-67 / S-69）。
@@ -51,7 +52,7 @@ object PenHardware {
     }
 
     private fun prefs(context: Context) =
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        ProfileContext.prefs(context, PREFS)
 
     /**
      * 這個事件上按著哪一個筆身控制項。沒有的話回 `null`。

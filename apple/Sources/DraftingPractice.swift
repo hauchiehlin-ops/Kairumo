@@ -7,6 +7,7 @@ import UIKit
 /// 同一份答案批出同一個分數。這裡只管把題目線放進頁面、把學生畫的線交給核心批改、把結果標在畫面上。
 @MainActor
 final class PracticeSession: ObservableObject {
+    // profile-scope: profile 每個設定檔各有一份狀態，切換時必須重設
     static let shared = PracticeSession()
 
     /// 批改摘要：各種問題的條數與分數。

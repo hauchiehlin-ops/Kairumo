@@ -68,7 +68,7 @@ public struct HomeWorkbenchView: View {
     /// 篩不到任何東西的分頁。
     /// 新筆記要用哪一組版面配色。**落盤** —— 使用者通常有固定的偏好，
     /// 每建一本都要重挑一次的設定不算設定。
-    @AppStorage("kairumo_guide_palette") private var newNotePaletteId: String = "graphite"
+    @AppStorage(ProfileContext.scopedKey("kairumo_guide_palette")) private var newNotePaletteId: String = "graphite"
     @State private var selectedNewNoteCategory: FfiPaperTheme = .general
     // 文件範本（工作項 S-61）。`nil` 代表只要一張空紙，不鋪任何內容。
     @State private var selectedDocTemplateId: String?
@@ -114,7 +114,7 @@ public struct HomeWorkbenchView: View {
     @State private var showMoveNotebookSheet: Bool = false
     @State private var notebookToMoveId: String? = nil
 
-    @AppStorage("home_notebook_display_mode") private var notebookDisplayModeRaw: String = "hierarchy"
+    @AppStorage(ProfileContext.scopedKey("home_notebook_display_mode")) private var notebookDisplayModeRaw: String = "hierarchy"
     @State private var expandedFolderIds: Set<String> = []
     @State private var hasExpandedFoldersInit: Bool = false
     @State private var isRootUnfiledExpanded: Bool = true

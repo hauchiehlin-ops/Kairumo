@@ -15,6 +15,7 @@ extension Notification.Name {
 /// 在 iPad 上隱藏了輔助線，不該讓手機上的同一本筆記也跟著少了線。
 @MainActor
 final class DraftingState: ObservableObject {
+    // profile-scope: profile 每個設定檔各有一份狀態，切換時必須重設
     static let shared = DraftingState()
 
     // MARK: 核心的定義
@@ -23,21 +24,21 @@ final class DraftingState: ObservableObject {
 
     // MARK: 使用者的選擇
     @Published var activePenId: String {
-        didSet { UserDefaults.standard.set(activePenId, forKey: Keys.pen); changed() }
+        didSet { ProfileDefaults.current.set(activePenId, forKey: Keys.pen); changed() }
     }
     /// 畫在哪一層。`nil` = 跟著筆走（每支製圖筆有自己的預設圖層）。
     @Published var layerOverride: UInt8? {
         didSet {
-            UserDefaults.standard.set(Int(layerOverride ?? 0), forKey: Keys.layerOverride)
+            ProfileDefaults.current.set(Int(layerOverride ?? 0), forKey: Keys.layerOverride)
             changed()
         }
     }
     @Published var snapEnabled: Bool {
-        didSet { UserDefaults.standard.set(snapEnabled, forKey: Keys.snap); changed() }
+        didSet { ProfileDefaults.current.set(snapEnabled, forKey: Keys.snap); changed() }
     }
     /// 角度鎖定（度）。0 = 自由。
     @Published var angleStep: Int {
-        didSet { UserDefaults.standard.set(angleStep, forKey: Keys.angle); changed() }
+        didSet { ProfileDefaults.current.set(angleStep, forKey: Keys.angle); changed() }
     }
     /// 「移到圖層」最後一次點選的結果（給製圖列顯示）。改圖層看不出畫面變化 ——
     /// 線型與顏色都不動，只有所屬圖層變了 —— 沒有回饋的話使用者以為按鈕沒作用。
@@ -70,18 +71,18 @@ final class DraftingState: ObservableObject {
     @Published var toolHint: String?
     /// 投影對齊：畫線的起點與終點對齊既有線的端點（長對正、高平齊），設了 45° 轉折點還會對齊寬度。
     @Published var alignEnabled: Bool {
-        didSet { UserDefaults.standard.set(alignEnabled, forKey: Keys.align); changed() }
+        didSet { ProfileDefaults.current.set(alignEnabled, forKey: Keys.align); changed() }
     }
     /// 第三角法（台灣、美國）。影響圖框裡的投影法符號與 45° 傳遞的方向。
     @Published var thirdAngle: Bool {
-        didSet { UserDefaults.standard.set(thirdAngle, forKey: Keys.thirdAngle); changed() }
+        didSet { ProfileDefaults.current.set(thirdAngle, forKey: Keys.thirdAngle); changed() }
     }
     /// 圓角半徑與偏移距離（紙上毫米）。
     @Published var filletRadiusMm: Double {
-        didSet { UserDefaults.standard.set(filletRadiusMm, forKey: Keys.filletRadius) }
+        didSet { ProfileDefaults.current.set(filletRadiusMm, forKey: Keys.filletRadius) }
     }
     @Published var offsetDistanceMm: Double {
-        didSet { UserDefaults.standard.set(offsetDistanceMm, forKey: Keys.offsetDistance) }
+        didSet { ProfileDefaults.current.set(offsetDistanceMm, forKey: Keys.offsetDistance) }
     }
     /// 環形陣列的份數與總角度（做完陣列的工具從這裡讀）。
     var polarCount: Int = 6
@@ -96,13 +97,13 @@ final class DraftingState: ObservableObject {
     /// 收合成一列的精簡面板。`nil` = 還沒選過，由畫面寬度決定（手機預設收合）。
     @Published var compactChoice: Bool? {
         didSet {
-            if let v = compactChoice { UserDefaults.standard.set(v, forKey: Keys.compact) }
-            else { UserDefaults.standard.removeObject(forKey: Keys.compact) }
+            if let v = compactChoice { ProfileDefaults.current.set(v, forKey: Keys.compact) }
+            else { ProfileDefaults.current.removeObject(forKey: Keys.compact) }
         }
     }
     /// 第一次使用的提示卡看過了沒。
     @Published var tipsSeen: Bool {
-        didSet { UserDefaults.standard.set(tipsSeen, forKey: Keys.tipsSeen) }
+        didSet { ProfileDefaults.current.set(tipsSeen, forKey: Keys.tipsSeen) }
     }
 
     static let angleChoices = [0, 15, 30, 45, 90]
@@ -132,7 +133,7 @@ final class DraftingState: ObservableObject {
     }
 
     private init() {
-        let d = UserDefaults.standard
+        let d = ProfileDefaults.current
         activePenId = d.string(forKey: Keys.pen) ?? "thick"
         let o = d.integer(forKey: Keys.layerOverride)
         layerOverride = o == 0 ? nil : UInt8(clamping: o)
@@ -152,16 +153,16 @@ final class DraftingState: ObservableObject {
 
     /// 這一頁的 45° 轉折點。
     func pivot(notebookId nb: String, page: Int) -> CGPoint? {
-        guard let text = UserDefaults.standard.string(forKey: Keys.pivot(nb, page)) else { return nil }
+        guard let text = ProfileDefaults.current.string(forKey: Keys.pivot(nb, page)) else { return nil }
         let parts = text.split(separator: ",").compactMap { Double($0) }
         return parts.count == 2 ? CGPoint(x: parts[0], y: parts[1]) : nil
     }
 
     func setPivot(_ point: CGPoint?, notebookId nb: String, page: Int) {
         if let point {
-            UserDefaults.standard.set("\(point.x),\(point.y)", forKey: Keys.pivot(nb, page))
+            ProfileDefaults.current.set("\(point.x),\(point.y)", forKey: Keys.pivot(nb, page))
         } else {
-            UserDefaults.standard.removeObject(forKey: Keys.pivot(nb, page))
+            ProfileDefaults.current.removeObject(forKey: Keys.pivot(nb, page))
         }
         changed()
     }
@@ -228,7 +229,7 @@ final class DraftingState: ObservableObject {
     private func load(_ id: String) {
         let key = id.lowercased()
         guard hidden[key] == nil else { return }
-        let d = UserDefaults.standard
+        let d = ProfileDefaults.current
         hidden[key] = Set((d.array(forKey: Keys.hidden(id)) as? [Int] ?? []).map { UInt8(clamping: $0) })
         locked[key] = Set((d.array(forKey: Keys.locked(id)) as? [Int] ?? []).map { UInt8(clamping: $0) })
     }
@@ -239,7 +240,7 @@ final class DraftingState: ObservableObject {
     func scaleRatio(notebookId nb: String) -> Double {
         let key = nb.lowercased()
         if let v = scaleRatios[key] { return v }
-        let stored = UserDefaults.standard.double(forKey: Keys.scale(nb))
+        let stored = ProfileDefaults.current.double(forKey: Keys.scale(nb))
         let v = stored > 0 ? stored : 1
         scaleRatios[key] = v
         return v
@@ -247,7 +248,7 @@ final class DraftingState: ObservableObject {
 
     func setScaleRatio(_ ratio: Double, notebookId nb: String) {
         scaleRatios[nb.lowercased()] = ratio
-        UserDefaults.standard.set(ratio, forKey: Keys.scale(nb))
+        ProfileDefaults.current.set(ratio, forKey: Keys.scale(nb))
         changed()
     }
 
@@ -277,7 +278,7 @@ final class DraftingState: ObservableObject {
         var set = hidden[key] ?? []
         if on { set.insert(layer) } else { set.remove(layer) }
         hidden[key] = set
-        UserDefaults.standard.set(set.map(Int.init), forKey: Keys.hidden(notebookId))
+        ProfileDefaults.current.set(set.map(Int.init), forKey: Keys.hidden(notebookId))
         changed()
     }
 
@@ -286,7 +287,7 @@ final class DraftingState: ObservableObject {
         var set = locked[key] ?? []
         if on { set.insert(layer) } else { set.remove(layer) }
         locked[key] = set
-        UserDefaults.standard.set(set.map(Int.init), forKey: Keys.locked(notebookId))
+        ProfileDefaults.current.set(set.map(Int.init), forKey: Keys.locked(notebookId))
         changed()
     }
 

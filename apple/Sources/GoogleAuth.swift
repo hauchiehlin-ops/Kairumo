@@ -26,6 +26,7 @@ import Foundation
 @MainActor
 public final class GoogleAuth: NSObject, ObservableObject {
 
+    // profile-scope: profile 每個設定檔各有一份狀態，切換時必須重設
     public static let shared = GoogleAuth()
 
     /// 有沒有可用的長期授權。
@@ -87,10 +88,10 @@ public final class GoogleAuth: NSObject, ObservableObject {
         // 帳號只是顯示用的字串，放 UserDefaults 就好 —— 放 Keychain 的話
         // 登出時忘了清會留下一個「已登出但還顯示著帳號」的狀態。
         accountEmail = isSignedIn
-            ? UserDefaults.standard.string(forKey: accountEmailKey)
+            ? ProfileDefaults.current.string(forKey: accountEmailKey)
             : nil
         accountName = isSignedIn
-            ? UserDefaults.standard.string(forKey: accountNameKey)
+            ? ProfileDefaults.current.string(forKey: accountNameKey)
             : nil
         if isSignedIn && (accountName == nil || accountEmail == nil) {
             Task { [weak self] in
@@ -115,13 +116,13 @@ public final class GoogleAuth: NSObject, ObservableObject {
         let email = user["emailAddress"] as? String
         if let email, !email.isEmpty {
             accountEmail = email
-            UserDefaults.standard.set(email, forKey: accountEmailKey)
+            ProfileDefaults.current.set(email, forKey: accountEmailKey)
         }
         let displayName = (user["displayName"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines)
         let effectiveName = (displayName != nil && !displayName!.isEmpty) ? displayName! : (accountEmail ?? "")
         if !effectiveName.isEmpty {
             accountName = effectiveName
-            UserDefaults.standard.set(effectiveName, forKey: accountNameKey)
+            ProfileDefaults.current.set(effectiveName, forKey: accountNameKey)
         }
         AccountManager.shared.refreshDisplayName()
     }
@@ -374,15 +375,15 @@ public final class GoogleAuth: NSObject, ObservableObject {
         isSignedIn = false
         accountEmail = nil
         accountName = nil
-        UserDefaults.standard.removeObject(forKey: accountEmailKey)
-        UserDefaults.standard.removeObject(forKey: accountNameKey)
+        ProfileDefaults.current.removeObject(forKey: accountEmailKey)
+        ProfileDefaults.current.removeObject(forKey: accountNameKey)
         AccountManager.shared.refreshDisplayName()
     }
 
     public nonisolated func markNeedsReauthSync() {
         KeychainTokens.clear()
-        UserDefaults.standard.removeObject(forKey: "kairumo.account.googleEmail")
-        UserDefaults.standard.removeObject(forKey: "kairumo.google.accountName")
+        ProfileDefaults.current.removeObject(forKey: "kairumo.account.googleEmail")
+        ProfileDefaults.current.removeObject(forKey: "kairumo.google.accountName")
         DispatchQueue.main.async {
             GoogleAuth.shared.isSignedIn = false
             GoogleAuth.shared.accountEmail = nil
@@ -409,8 +410,8 @@ public final class GoogleAuth: NSObject, ObservableObject {
             isSignedIn = false
             accountEmail = nil
             accountName = nil
-            UserDefaults.standard.removeObject(forKey: accountEmailKey)
-            UserDefaults.standard.removeObject(forKey: accountNameKey)
+            ProfileDefaults.current.removeObject(forKey: accountEmailKey)
+            ProfileDefaults.current.removeObject(forKey: accountNameKey)
             AccountManager.shared.refreshDisplayName()
         }
     }
@@ -466,7 +467,9 @@ extension GoogleAuth: ASWebAuthenticationPresentationContextProviding {
 enum KeychainTokens {
 
     private static let service = "com.kairumo.padnote.googleoauth"
-    private static let account = "tokens"
+    /// 帳號名依設定檔：預設設定檔**原樣**（升級前登入過的人不必重新登入），其他加上設定檔 id。
+    /// 每次都現算，不存起來 —— 切換設定檔之後下一次讀寫就會拿到新的那一把。
+    private static var account: String { ProfileContext.scopedAccount("tokens") }
 
     static func load() -> FfiTokenSet {
         let query: [String: Any] = [

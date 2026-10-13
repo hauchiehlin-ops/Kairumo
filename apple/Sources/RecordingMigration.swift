@@ -40,7 +40,7 @@ enum RecordingMigration {
     /// 用一個旗標而不是「看看還有沒有 m4a」——後者會讓**失敗的那幾個**
     /// 每次開 App 都重試一次，而失敗通常是檔案本身壞了，重試一百次也一樣。
     static var isDone: Bool {
-        UserDefaults.standard.bool(forKey: doneKey)
+        ProfileDefaults.current.bool(forKey: doneKey)
     }
 
     /// 跑一次遷移。**會解碼與編碼整段音訊，要在背景執行緒呼叫。**
@@ -48,7 +48,7 @@ enum RecordingMigration {
     static func runIfNeeded(store: NotebookStore) async -> Report {
         guard !isDone else { return Report() }
         let report = await migrate(store: store)
-        UserDefaults.standard.set(true, forKey: doneKey)
+        ProfileDefaults.current.set(true, forKey: doneKey)
         return report
     }
 

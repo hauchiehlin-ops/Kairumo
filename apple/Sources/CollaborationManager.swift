@@ -89,6 +89,7 @@ public struct RemoteOplogEvent {
 /// 線上多人協同核心管理器
 @MainActor
 public class CollaborationManager: ObservableObject {
+    // profile-scope: profile 每個設定檔各有一份狀態，切換時必須重設
     public static let shared = CollaborationManager()
 
     public let oplogReceived = PassthroughSubject<RemoteOplogEvent, Never>()
@@ -100,7 +101,7 @@ public class CollaborationManager: ObservableObject {
     @Published public var latencyMs: Int = 18
     @Published public var serverAddress: String {
         didSet {
-            UserDefaults.standard.set(serverAddress, forKey: "kairumo_relay_server_url")
+            ProfileDefaults.current.set(serverAddress, forKey: "kairumo_relay_server_url")
         }
     }
 
@@ -151,7 +152,7 @@ public class CollaborationManager: ObservableObject {
         Double(collabTuning().presenceThrottleMs) / 1000.0
 
     public init() {
-        let savedServer = UserDefaults.standard.string(forKey: "kairumo_relay_server_url")
+        let savedServer = ProfileDefaults.current.string(forKey: "kairumo_relay_server_url")
         self.serverAddress = savedServer ?? collabTuning().defaultServer
 
     }

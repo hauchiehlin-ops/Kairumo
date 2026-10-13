@@ -40,6 +40,7 @@ object ModelDownloadManager {
      * 不該出現在使用者的檔案管理員裡，也不需要權限。
      */
     fun root(context: Context): String =
+        // profile-scope: device 語音模型整台裝置共用
         File(context.filesDir, "models").apply { mkdirs() }.absolutePath
 
     fun catalog(context: Context): List<FfiModelInfo> = modelCatalog(root(context))

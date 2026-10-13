@@ -72,6 +72,7 @@ object NoteIntelligence {
      * 模型放進去。快取的話，他照做之後回到 App 仍然看到「沒有可用的模型」。
      */
     private fun modelFile(context: Context): File? =
+        // profile-scope: device 語言模型是整台裝置共用
         File(context.filesDir, MODEL_RELATIVE_PATH).takeIf { it.isFile && it.length() > 0 }
 
     /**

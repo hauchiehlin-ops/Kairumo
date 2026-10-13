@@ -29,23 +29,23 @@ enum PalmThresholdStore {
 
     /// `nil` 表示使用者沒有自訂過，跟著核心的預設走。
     static var radius: Float? {
-        UserDefaults.standard.object(forKey: radiusKey) as? Float
+        ProfileDefaults.current.object(forKey: radiusKey) as? Float
     }
 
     static var retractMs: UInt32? {
-        (UserDefaults.standard.object(forKey: retractKey) as? NSNumber)?.uint32Value
+        (ProfileDefaults.current.object(forKey: retractKey) as? NSNumber)?.uint32Value
     }
 
     static var isCustomised: Bool { radius != nil }
 
     static func save(radius: Float, retractMs: UInt32) {
-        UserDefaults.standard.set(radius, forKey: radiusKey)
-        UserDefaults.standard.set(NSNumber(value: retractMs), forKey: retractKey)
+        ProfileDefaults.current.set(radius, forKey: radiusKey)
+        ProfileDefaults.current.set(NSNumber(value: retractMs), forKey: retractKey)
     }
 
     static func clear() {
-        UserDefaults.standard.removeObject(forKey: radiusKey)
-        UserDefaults.standard.removeObject(forKey: retractKey)
+        ProfileDefaults.current.removeObject(forKey: radiusKey)
+        ProfileDefaults.current.removeObject(forKey: retractKey)
     }
 }
 

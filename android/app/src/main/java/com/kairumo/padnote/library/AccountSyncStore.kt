@@ -20,6 +20,7 @@ import uniffi.padnote_core.syncTrash
 import uniffi.padnote_core.syncSetSetting
 import uniffi.padnote_core.syncUpsertItem
 import uniffi.padnote_core.syncWouldCreateCycle
+import com.kairumo.padnote.profile.ProfileContext
 
 /**
  * 帳號式同步的本機那一半（G-04 / G-05，ADR-0011）。
@@ -46,7 +47,7 @@ object AccountSyncStore {
     private const val KEY_DEVICE = "deviceId.v1"
 
     private fun prefs(context: Context) =
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        ProfileContext.prefs(context, PREFS)
 
     /**
      * 這台裝置的 id。**每次安裝一個，重裝就是新裝置**（ADR-0011）。
@@ -111,7 +112,7 @@ object AccountSyncStore {
             .lowercase()
             .map { if (it.isLetterOrDigit()) it else '-' }
             .joinToString("")
-        return java.io.File(java.io.File(context.filesDir, "sync"), "remote-index-$safe.json")
+        return java.io.File(java.io.File(ProfileContext.dataDir(context), "sync"), "remote-index-$safe.json")
     }
 
     // ── 筆記本與資料夾（G-05）──────────────────────────────────

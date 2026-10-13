@@ -7,6 +7,7 @@ import UIKit
 /// （沿用原筆畫的筆、顏色、圖層與線型）。每個動作都是**一次復原**。
 @MainActor
 final class DraftEditController {
+    // profile-scope: profile 每個設定檔各有一份狀態，切換時必須重設
     static let shared = DraftEditController()
 
     private var first: ProStroke?

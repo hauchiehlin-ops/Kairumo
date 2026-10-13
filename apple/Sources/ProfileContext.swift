@@ -94,6 +94,13 @@ public enum ProfileContext {
 
     // MARK: - 偏好設定的鍵
 
+    /// 套用設定檔前綴後的偏好鍵。給 `@AppStorage` 用（它只吃字串鍵，吃不下 `ProfileDefaults`）：
+    /// `@AppStorage(ProfileContext.scopedKey("某個鍵"))`。預設設定檔沒有前綴，鍵名原樣。
+    /// 鍵是在 View 建立時解析的 —— 切換設定檔會整棵重建（見 `ProfileSwitcher`），新的 View 就拿到新的鍵。
+    public static func scopedKey(_ key: String, for id: String = activeId) -> String {
+        prefix(for: id) + key
+    }
+
     static func prefix(for id: String) -> String {
         id == ProfileRecord.defaultId ? "" : "kairumo.pf.\(id)::"
     }

@@ -170,6 +170,7 @@ public struct AssetItem: Identifiable, Codable, Hashable {
 /// 素材圖庫管理員（提供單件隨需下載、整類主題下載、快取清除與本機容量統計）
 @MainActor
 public final class AssetLibraryManager: ObservableObject {
+    // profile-scope: device 整台裝置共用，不屬於任何使用者
     public static let shared = AssetLibraryManager()
 
     @Published public var items: [AssetItem] = []
@@ -193,6 +194,7 @@ public final class AssetLibraryManager: ObservableObject {
     /// 完全是假的。現在真的產出 PNG 檔，容量也照實際位元組數回報。
     public var assetsDirectory: URL {
         let fm = FileManager.default
+        // profile-scope: device 素材快取是算繪出來的、整台裝置共用，不是使用者資料
         let supportRoot = fm.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("Kairumo", isDirectory: true)
         let dir = supportRoot.appendingPathComponent("AssetLibrary", isDirectory: true)
@@ -201,6 +203,7 @@ public final class AssetLibraryManager: ObservableObject {
 
             // 舊版曾把可重建的素材快取放在 Documents。為避免升級後重新算繪，
             // 首次使用時複製到 Application Support；舊快取保留，不碰使用者資料。
+            // profile-scope: device 舊版素材快取的搬家來源
             let legacy = fm.urls(for: .documentDirectory, in: .userDomainMask)[0]
                 .appendingPathComponent("AssetLibrary", isDirectory: true)
             if fm.fileExists(atPath: legacy.path) {
@@ -338,7 +341,7 @@ public final class AssetLibraryManager: ObservableObject {
     }
 
     private func loadDownloadedState() {
-        if let saved = UserDefaults.standard.array(forKey: downloadedDefaultsKey) as? [String] {
+        if let saved = ProfileDefaults.device.array(forKey: downloadedDefaultsKey) as? [String] {
             self.downloadedItemIds = Set(saved)
         }
         // 已下載清單一律以磁碟實況為準；舊版會預先塞 4 個 id 假裝已下載，
@@ -346,7 +349,7 @@ public final class AssetLibraryManager: ObservableObject {
     }
 
     private func saveDownloadedState() {
-        UserDefaults.standard.set(Array(downloadedItemIds), forKey: downloadedDefaultsKey)
+        ProfileDefaults.device.set(Array(downloadedItemIds), forKey: downloadedDefaultsKey)
     }
 
     // MARK: - 圖庫資料集

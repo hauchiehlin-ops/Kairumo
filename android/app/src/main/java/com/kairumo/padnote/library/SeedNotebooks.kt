@@ -12,6 +12,7 @@ import com.kairumo.padnote.table.TableStore
 import com.kairumo.padnote.text.TextBoxStore
 import uniffi.padnote_core.PadnoteSession
 import uniffi.padnote_core.PageStyle
+import com.kairumo.padnote.profile.ProfileContext
 
 /**
  * 兩本內建範例筆記的內容（Android）。
@@ -62,7 +63,7 @@ object SeedNotebooks {
         if (buildFeatureShowcase(context, deviceId, ::l)) created++
         if (buildKairumoManual(context, deviceId, languageTag, ::l)) created++
         if (buildDraftingExample(context, deviceId, ::l)) created++
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        ProfileContext.prefs(context, PREFS)
             .edit().putBoolean(KEY_MANUAL, true).putBoolean(KEY_DRAFT_EXAMPLE, true).apply()
         return created
     }
@@ -140,7 +141,7 @@ object SeedNotebooks {
         // 主動清理廢除的舊版《Kairumo（精選實例）》
         NotebookLibrary.delete(context, LEGACY_FEATURED_ID)
 
-        val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        val prefs = ProfileContext.prefs(context, PREFS)
         val showcaseTitle = l("seed_feature_showcase_title")
         val hasShowcase = existing.any { it.title == showcaseTitle || it.id == SHOWCASE_ID }
         if (!hasShowcase) {

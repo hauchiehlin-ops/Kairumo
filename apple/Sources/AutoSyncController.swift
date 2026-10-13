@@ -43,6 +43,7 @@ import Network
 
 @MainActor
 public final class AutoSyncController: ObservableObject {
+    // profile-scope: profile 每個設定檔各有一份狀態，切換時必須重設
     public static let shared = AutoSyncController()
 
     /// 目前正在跑一輪同步。介面用它顯示轉圈。
@@ -55,7 +56,7 @@ public final class AutoSyncController: ObservableObject {
     @Published public private(set) var lastSuccessAt: UInt64?
     /// 最近一次成功同步的時間（供 UI 統一即時重繪）。
     @Published public private(set) var lastGoogleSyncDate: Date? = {
-        let raw = UserDefaults.standard.double(forKey: "kairumo.sync.lastGoogleAt")
+        let raw = ProfileDefaults.current.double(forKey: "kairumo.sync.lastGoogleAt")
         return raw > 0 ? Date(timeIntervalSince1970: raw) : nil
     }()
 

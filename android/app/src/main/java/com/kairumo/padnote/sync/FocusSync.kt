@@ -52,6 +52,7 @@ import uniffi.padnote_core.syncGateHolder
  *
  * 與 [AutoSync] 相同：[SystemClock.elapsedRealtime]。
  */
+// profile-scope: profile 焦點通道與待推名單
 object FocusSync {
 
     private val lane = FfiFocusLane.create()

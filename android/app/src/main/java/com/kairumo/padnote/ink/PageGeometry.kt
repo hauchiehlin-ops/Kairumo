@@ -9,6 +9,7 @@ import uniffi.padnote_core.standardPageSize
  * 各自寫一份常數的話遲早會差一點點，而差一點點的後果是兩個平台的分頁位置
  * 不一樣：同一則筆記在 iPad 上是三頁，在 Android 上變成四頁。
  */
+// profile-scope: profile 目前頁面的尺寸，屬於正在開著的那一本筆記
 object PageGeometry {
 
     private val defaultSize: Pair<Float, Float> = runCatching {

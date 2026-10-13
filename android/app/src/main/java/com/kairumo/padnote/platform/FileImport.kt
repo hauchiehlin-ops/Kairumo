@@ -9,6 +9,7 @@ import java.util.UUID
 import uniffi.padnote_core.FfiImportSlot
 import uniffi.padnote_core.importCheck
 import uniffi.padnote_core.importExtensions
+import com.kairumo.padnote.profile.ProfileContext
 
 /**
  * 從本機檔案匯入東西到筆記頁（Android）。
@@ -121,7 +122,7 @@ object FileImport {
         File(attachmentsDir(context), storedName)
 
     private fun attachmentsDir(context: Context): File =
-        File(context.filesDir, "attachments").apply { mkdirs() }
+        File(ProfileContext.dataDir(context), "attachments").apply { mkdirs() }
 
     /**
      * 問檔案的名字與大小。

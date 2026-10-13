@@ -18,6 +18,7 @@ import java.util.Locale
  * 2. 同步及執行時期關鍵日誌自動滾動寫入 filesDir/kairumo_runtime.log。
  * 3. 提供一鍵匯出完整診斷日誌，讓使用者精確回報當機或 ANR 問題。
  */
+// profile-scope: device 崩潰與診斷日誌是整台裝置的
 object CrashLogger {
     private const val TAG = "CrashLogger"
     private const val CRASH_FILE_NAME = "kairumo_last_crash.log"
@@ -66,8 +67,10 @@ object CrashLogger {
     private fun appendLine(ctx: Context, line: String) {
         synchronized(lock) {
             try {
+                // profile-scope: device 崩潰與診斷日誌是整台裝置的
                 val file = File(ctx.filesDir, RUNTIME_LOG_NAME)
                 if (file.exists() && file.length() > MAX_LOG_SIZE) {
+                    // profile-scope: device
                     val oldFile = File(ctx.filesDir, RUNTIME_LOG_OLD_NAME)
                     if (oldFile.exists()) oldFile.delete()
                     file.renameTo(oldFile)
@@ -101,6 +104,7 @@ object CrashLogger {
         }
 
         try {
+            // profile-scope: device
             val file = File(context.filesDir, CRASH_FILE_NAME)
             file.writeText(report)
             Log.e(TAG, "Crash logged to ${file.absolutePath}")
@@ -111,6 +115,7 @@ object CrashLogger {
     }
 
     fun lastCrashLog(context: Context): String? {
+        // profile-scope: device
         val file = File(context.filesDir, CRASH_FILE_NAME)
         return if (file.exists() && file.length() > 0) {
             runCatching { file.readText() }.getOrNull()
@@ -121,7 +126,9 @@ object CrashLogger {
 
     fun runtimeLog(context: Context): String {
         return synchronized(lock) {
+            // profile-scope: device
             val oldFile = File(context.filesDir, RUNTIME_LOG_OLD_NAME)
+            // profile-scope: device
             val file = File(context.filesDir, RUNTIME_LOG_NAME)
             buildString {
                 if (oldFile.exists()) {
@@ -161,6 +168,7 @@ object CrashLogger {
     }
 
     fun clearCrashLog(context: Context) {
+        // profile-scope: device
         val file = File(context.filesDir, CRASH_FILE_NAME)
         if (file.exists()) {
             file.delete()

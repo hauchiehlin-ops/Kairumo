@@ -21,6 +21,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.kairumo.padnote.profile.ProfileContext
 
 /**
  * 可由使用者調整高度的對話框內容。
@@ -44,13 +45,13 @@ object DialogSize {
     private const val PREFS = "kairumo.dialogSize"
 
     fun load(context: Context, key: String, fallback: Dp): Dp {
-        val stored = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        val stored = ProfileContext.prefs(context, PREFS)
             .getFloat(key, -1f)
         return if (stored > 0f) stored.dp else fallback
     }
 
     fun save(context: Context, key: String, height: Dp) {
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        ProfileContext.prefs(context, PREFS)
             .edit()
             .putFloat(key, height.value)
             .apply()

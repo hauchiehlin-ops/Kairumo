@@ -37,6 +37,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import com.kairumo.padnote.LocalizationStrings
+import com.kairumo.padnote.profile.ProfileContext
 
 /**
  * 首次啟動引導與權限說明（工作項 S-66）。
@@ -67,10 +68,10 @@ object Onboarding {
     private const val KEY_SEEN = "seen_v1"
 
     fun hasSeen(context: Context): Boolean =
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean(KEY_SEEN, false)
+        ProfileContext.prefs(context, PREFS).getBoolean(KEY_SEEN, false)
 
     fun markSeen(context: Context) {
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        ProfileContext.prefs(context, PREFS)
             .edit().putBoolean(KEY_SEEN, true).apply()
     }
 

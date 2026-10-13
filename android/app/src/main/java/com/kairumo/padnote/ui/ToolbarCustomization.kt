@@ -40,6 +40,7 @@ import uniffi.padnote_core.localeForTag
  * 在 Android 上關掉的水彩筆，iPad 打開就已經是關的。那條管線其實早就鋪好了，
  * 只是一直沒有人讀寫它。
  */
+// profile-scope: profile 工具列配置是使用者偏好
 object ToolbarSettings {
 
     private var core: FfiToolbar? = null

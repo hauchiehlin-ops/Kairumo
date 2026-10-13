@@ -11,6 +11,7 @@ import uniffi.padnote_core.FfiDraftLayer
 import uniffi.padnote_core.FfiDraftPen
 import uniffi.padnote_core.draftLayers
 import uniffi.padnote_core.draftPens
+import com.kairumo.padnote.profile.ProfileContext
 
 /** 圖學工具。啟用時單指拿來點選與拖曳（由 [DraftToolController] 處理）。 */
 enum class DraftTool(val nameKey: String) {
@@ -49,6 +50,7 @@ enum class DraftTool(val nameKey: String) {
  * 這台裝置、這本筆記的檢視狀態，不同步 —— 在平板上隱藏了輔助線，不該讓手機上的同一本
  * 筆記也跟著少了線。
  */
+// profile-scope: profile 每個設定檔各有一份狀態，切換時必須重設
 object DraftingState {
     val layers: List<FfiDraftLayer> by lazy { draftLayers() }
     val pens: List<FfiDraftPen> by lazy { draftPens() }
@@ -249,7 +251,7 @@ object DraftingState {
 
     fun attach(context: Context) {
         if (prefs != null) return
-        val p = context.applicationContext.getSharedPreferences("kairumo_drafting", Context.MODE_PRIVATE)
+        val p = ProfileContext.prefs(context.applicationContext, "kairumo_drafting")
         prefs = p
         activePenId = p.getString("pen", "thick") ?: "thick"
         layerOverride = p.getInt("layer", 0)

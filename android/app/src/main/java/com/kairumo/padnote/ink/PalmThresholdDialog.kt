@@ -24,6 +24,7 @@ import uniffi.padnote_core.palmRadiusClamped
 import uniffi.padnote_core.palmRetractMsClamped
 import uniffi.padnote_core.palmThresholdLimits
 import kotlin.math.roundToInt
+import com.kairumo.padnote.profile.ProfileContext
 
 /**
  * 掌拒門檻的調整介面（工作項 S-101）。
@@ -145,7 +146,7 @@ object PalmThresholdStore {
     private const val KEY_RETRACT = "palmRetractMs"
 
     private fun prefs(context: Context) =
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        ProfileContext.prefs(context, PREFS)
 
     /** `null` 表示使用者沒有自訂過，跟著核心的預設走。 */
     fun radius(context: Context): Float? =

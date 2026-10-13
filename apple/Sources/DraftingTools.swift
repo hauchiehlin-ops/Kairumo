@@ -7,6 +7,7 @@ import UIKit
 /// 預覽畫在 `ProInkLayerView` 的覆蓋層（不存檔、不進復原）；完成時整組標註一次插入、一次復原。
 @MainActor
 final class DraftToolController {
+    // profile-scope: profile 每個設定檔各有一份狀態，切換時必須重設
     static let shared = DraftToolController()
 
     private var picks: [CGPoint] = []

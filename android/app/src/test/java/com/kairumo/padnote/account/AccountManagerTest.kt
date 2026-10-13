@@ -12,6 +12,9 @@ class AccountManagerTest {
 
     private class FakeContext(private val prefs: SharedPreferences) : ContextWrapper(null) {
         override fun getSharedPreferences(name: String?, mode: Int): SharedPreferences = prefs
+
+        // 偏好設定現在經過 `ProfileContext.prefs`，它一律用 applicationContext 取偏好（正式環境一定有）。
+        override fun getApplicationContext(): Context = this
     }
 
     private fun mockContext(prefsMap: MutableMap<String, Any?> = mutableMapOf()): Context {

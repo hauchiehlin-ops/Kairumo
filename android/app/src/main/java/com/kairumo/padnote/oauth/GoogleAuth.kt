@@ -26,6 +26,7 @@ import uniffi.padnote_core.oauthParseTokenResponse
 import uniffi.padnote_core.oauthRefreshBody
 import uniffi.padnote_core.oauthRevokeUrl
 import uniffi.padnote_core.oauthTokenEndpoint
+import com.kairumo.padnote.profile.ProfileContext
 
 /**
  * Google 授權（Android，G-01 / ADR-0011）。
@@ -44,6 +45,7 @@ import uniffi.padnote_core.oauthTokenEndpoint
  * Google **會拒絕**在 WebView 裡完成的 OAuth（`disallowed_useragent`）。
  * 而且 WebView 拿不到使用者已登入的 Google session，每次都要重打密碼。
  */
+// profile-scope: profile 登入狀態與權杖屬於某個設定檔
 object GoogleAuth {
 
     private const val PREFS = "kairumo_oauth"
@@ -69,6 +71,9 @@ object GoogleAuth {
 
     private var cachedStore: android.content.SharedPreferences? = null
 
+    /** [cachedStore] 是哪個設定檔的。切換設定檔之後要重建，不然會拿到上一個人的權杖。 */
+    private var cachedStoreProfile: String? = null
+
     /**
      * 權杖存在**加密**的 SharedPreferences。
      *
@@ -79,14 +84,16 @@ object GoogleAuth {
      */
     @Synchronized
     private fun store(context: Context): android.content.SharedPreferences? {
-        cachedStore?.let { return it }
+        val profileId = ProfileContext.activeId(context)
+        if (cachedStoreProfile == profileId) cachedStore?.let { return it }
+        val prefsName = ProfileContext.prefsName(PREFS, profileId)
         val prefs = runCatching {
             val key = MasterKey.Builder(context)
                 .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
                 .build()
             EncryptedSharedPreferences.create(
                 context,
-                PREFS,
+                prefsName,
                 key,
                 EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
                 EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
@@ -94,9 +101,11 @@ object GoogleAuth {
         }.getOrElse { err ->
             android.util.Log.e("GoogleAuth", "Failed to create EncryptedSharedPreferences: ${err.message}", err)
             // 若加密失敗，嘗試一般 SharedPreferences
-            context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            // profile-scope: profile 檔名已經用 prefsName 套用設定檔
+            context.getSharedPreferences(prefsName, Context.MODE_PRIVATE)
         }
         cachedStore = prefs
+        cachedStoreProfile = profileId
         return prefs
     }
 
