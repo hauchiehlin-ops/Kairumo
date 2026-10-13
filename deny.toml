@@ -97,6 +97,14 @@ ignore = [
     # 待辦：calamine / docx-rs 放行修補版後就回來移除這兩條。
     "RUSTSEC-2026-0194",
     "RUSTSEC-2026-0195",
+
+    # ruzstd 0.8.x 的解壓炸彈（RUSTSEC-2026-0344）：精心製作的 .zst 輸入可以讓解碼器一次配置數 GB 記憶體。
+    # 來源是 zhconv 0.4.2（繁簡轉換，padnote-search 與 padnote-text 用它），它把 ruzstd 鎖在 0.8，
+    # 修補版 0.9.1 要等 zhconv 放行。這個專案不受影響：zhconv 只用 ruzstd 解開**它自己編進程式裡的
+    # 轉換規則表**（`zstd_decompress` 只吃 crate 內建的常數資料），沒有任何一條路徑讓使用者或網路
+    # 的資料進到解碼器。也不是記憶體安全問題（公告自己寫明只有 DoS）。
+    # 待辦：zhconv 放行 ruzstd >= 0.9.1 後就回來移除這一條。
+    "RUSTSEC-2026-0344",
 ]
 
 [sources]

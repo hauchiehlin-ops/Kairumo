@@ -2788,7 +2788,11 @@ mod tests {
             let mut expected = String::new();
             for i in 0..1500 {
                 // 單字一筆：一個字元一筆操作，每隔幾個字一個空格，搜尋才切得出詞。
-                let ch = if i % 6 == 5 { " ".to_string() } else { char::from_u32('a' as u32 + (i % 5)).unwrap().to_string() };
+                let ch = if i % 6 == 5 {
+                    " ".to_string()
+                } else {
+                    char::from_u32('a' as u32 + (i % 5)).unwrap().to_string()
+                };
                 s.insert_text(block, expected.chars().count(), &ch).unwrap();
                 expected.push_str(&ch);
             }
@@ -2797,7 +2801,10 @@ mod tests {
         };
 
         let reopened = NotebookSession::open(&dir, 0xA1).unwrap();
-        assert_eq!(reopened.block_text(block).as_deref(), Some(expected.as_str()));
+        assert_eq!(
+            reopened.block_text(block).as_deref(),
+            Some(expected.as_str())
+        );
         let page = reopened.first_page().unwrap();
         let shown: Vec<String> = reopened
             .notebook()
