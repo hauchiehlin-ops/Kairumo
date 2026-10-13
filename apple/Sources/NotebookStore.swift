@@ -4472,10 +4472,18 @@ extension NotebookStore: ProfileScoped {
         // 不等的話，寫檔會在切換之後才收尾 —— 路徑雖然是當下取定的，但寫完之後的
         // `Task { @MainActor }` 會拿新設定檔的陣列再排一次寫入，兩個設定檔的狀態就纏在一起了。
         markDirtyAndPersist(signalsLocalEdit: false)
+        // **不能用一個很短的上限放棄等待。** 這裡原本最多等 10 秒就照常切換 —— 慢的裝置（舊 iPad、CI 機器）
+        // 上，整份文件庫（含範例的手繪資料）編碼並寫檔可以超過 10 秒；放棄等待的結果是新設定檔重讀檔案時，
+        // 舊設定檔最後一次編輯**還沒寫完**，那筆資料就在切換裡消失了。寫檔慢是慢，丟資料是另一回事。
+        // 上限只是防止永遠卡住（2 分鐘），不是「太久就算了」。
         var waited = 0
-        while (pendingWrite || needsAnotherWrite), waited < 200 {
+        while (pendingWrite || needsAnotherWrite), waited < 2_400 {
             try? await Task.sleep(nanoseconds: 50_000_000)
             waited += 1
+        }
+        // 旗標清掉只代表「最後一次排進去的寫入」收尾了；再用一個屏障確認寫檔佇列裡沒有殘留的工作。
+        await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
+            Self.ioQueue.async { continuation.resume() }
         }
     }
 
