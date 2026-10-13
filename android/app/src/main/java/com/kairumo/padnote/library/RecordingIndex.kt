@@ -62,6 +62,23 @@ object RecordingIndex {
     private const val TITLE_KIND = "rectitle"
 
     /**
+     * 錄音檔名（`<UUIDv7>.opus`）裡的建立時間（毫秒）。不是 v7 或不合理就回 [fallback]。
+     *
+     * 核心的錄音 id 是 UUIDv7，前 48 位元是 Unix 毫秒 —— 每台裝置都算得出同一個錄音時間。
+     * 檔案修改時間在別台同步下載來的檔案上是「下載時間」，拿它命名會讓幾段錄音全是同一分鐘
+     * （與 Apple 端 `NotebookStore.recordingDate(fromFileName:)` 同一條規則）。
+     */
+    internal fun recordedAtFromName(fileName: String, fallback: Long): Long {
+        val stem = fileName.substringBeforeLast('.')
+        val uuid = runCatching { java.util.UUID.fromString(stem) }.getOrNull() ?: return fallback
+        if (uuid.version() != 7) return fallback
+        val ms = uuid.mostSignificantBits ushr 16
+        val earliest = 1_577_836_800_000L // 2020-01-01
+        val latest = System.currentTimeMillis() + 86_400_000L
+        return if (ms in earliest..latest) ms else fallback
+    }
+
+    /**
      * 全部錄音，新的在前。**會掃整個筆記本目錄，要在背景執行緒呼叫。**
      *
      * `limit` 是上限；首頁只放得下幾筆，全部撈出來只是白掃。
@@ -92,7 +109,7 @@ object RecordingIndex {
                             notebookId = entry.id,
                             notebookTitle = entry.title,
                             file = it,
-                            recordedAt = it.lastModified(),
+                            recordedAt = recordedAtFromName(it.name, it.lastModified()),
                             bytes = it.length()
                         )
                     }

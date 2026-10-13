@@ -3756,6 +3756,29 @@ public final class NotebookStore: ObservableObject {
         }
     }
 
+    /// 錄音檔名（`<UUIDv7>.opus`）裡的建立時間。不是 v7 或不合理就回 `fallback`。
+    ///
+    /// UUIDv7 的前 48 位元是 Unix 毫秒。核心的錄音 id 就是 v7（`start_recording`），所以同一段錄音在每台裝置上
+    /// 都能算出同一個時間 —— 不必依賴檔案修改時間（同步下載後那是下載時間）。
+    nonisolated static func recordingDate(fromFileName name: String, fallback: Date) -> Date {
+        let stem = (name as NSString).deletingPathExtension
+        guard let uuid = UUID(uuidString: stem) else { return fallback }
+        let b = uuid.uuid
+        guard (b.6 >> 4) == 7 else { return fallback }
+        let ms = (UInt64(b.0) << 40) | (UInt64(b.1) << 32) | (UInt64(b.2) << 24)
+            | (UInt64(b.3) << 16) | (UInt64(b.4) << 8) | UInt64(b.5)
+        let date = Date(timeIntervalSince1970: TimeInterval(ms) / 1000)
+        guard date > Date(timeIntervalSince1970: 1_577_836_800), date < Date().addingTimeInterval(86_400) else {
+            return fallback
+        }
+        return date
+    }
+
+    /// 這個名字是 App 依時間自動產生的預設名稱（而不是使用者取的）。
+    static func isAutoPlaceholderTitle(_ title: String, recordedDate: Date) -> Bool {
+        title == defaultQuickRecordingTitle(at: recordedDate) || title == defaultRecordingTitle(at: recordedDate)
+    }
+
     /// 新快速錄音的預設名稱：「語音錄音與對齊 日期時間」（與 iPad 首頁保持一致）。
     static func defaultQuickRecordingTitle(at date: Date = Date()) -> String {
         let label = LocalizationManager.localizedString("quick_record_title")
@@ -3920,9 +3943,27 @@ public final class NotebookStore: ObservableObject {
                                 updated.durationSeconds = realSeconds
                             }
                         }
-                        // 2. 標題校正：僅當本機標題為通用佔位名稱（如「快速錄音」），且套件或遠端有具體自訂名稱時才採納
-                        if let named = candidateTitle, !named.isEmpty {
+                        // 1b. 修復：以前從別台下載來的錄音拿「檔案修改時間」（= 下載時間）當錄音時間，
+                        // 名字就成了「語音錄音與對齊 <下載那一刻>」，幾段錄音全是同一分鐘。
+                        // 檔名是 UUIDv7，前 48 位元就是錄音建立時間 —— 只修**自動產生**的名字，使用者改過的不碰。
+                        let fileDate = Self.recordingDate(fromFileName: name, fallback: updated.recordedDate)
+                        if abs(fileDate.timeIntervalSince(updated.recordedDate)) > 60,
+                           Self.isAutoPlaceholderTitle(updated.title, recordedDate: updated.recordedDate)
+                        {
+                            let wasQuick = updated.title == Self.defaultQuickRecordingTitle(at: updated.recordedDate)
+                            updated.recordedDate = fileDate
+                            updated.title = wasQuick
+                                ? Self.defaultQuickRecordingTitle(at: fileDate)
+                                : Self.defaultRecordingTitle(at: fileDate)
+                        }
+                        // 2. 標題校正：
+                        //   - 本機標題是通用佔位名稱（如「快速錄音」），套件或遠端有具體自訂名稱 → 採納；
+                        //   - 本機標題是**自己依時間產生的預設名稱**（不是使用者取的），遠端有名字（即使也是預設名稱，
+                        //     那一個帶的是錄音當下的時間）→ 採納遠端的。
+                        if let named = candidateTitle, !named.isEmpty, named != updated.title {
                             if Self.isGenericOrQuickRecordTitle(updated.title) && !Self.isGenericOrQuickRecordTitle(named) {
+                                updated.title = named
+                            } else if Self.isAutoPlaceholderTitle(updated.title, recordedDate: updated.recordedDate) {
                                 updated.title = named
                             }
                         }
@@ -3935,8 +3976,10 @@ public final class NotebookStore: ObservableObject {
                     // 從別台同步過來的：索引裡沒有，要補一筆才看得到。
                     let bytes = (try? Data(contentsOf: file)) ?? Data()
                     let seconds = Int(audioDurationSeconds(bytes: bytes))
-                    let modified = (try? file.resourceValues(forKeys: [.contentModificationDateKey]))?
+                    let fileModified = (try? file.resourceValues(forKeys: [.contentModificationDateKey]))?
                         .contentModificationDate ?? Date()
+                    // 錄音時間取檔名裡的 UUIDv7 時間戳；修改時間在別台同步來的檔案上是「下載時間」。
+                    let modified = Self.recordingDate(fromFileName: name, fallback: fileModified)
                     let title: String
                     if let named = candidateTitle, !named.isEmpty {
                         title = named

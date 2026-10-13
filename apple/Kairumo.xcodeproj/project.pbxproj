@@ -235,6 +235,7 @@
 		EBB0282BC8BEC636B952FE2C /* CollaborationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 44D061C8E2977FB257C12E81 /* CollaborationManager.swift */; };
 		ED78060E3D4FFB5D6F0A3AF6 /* PenHardwareTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3F5C250C0AEBC876CF34807D /* PenHardwareTests.swift */; };
 		EE282DFD419D4B01DE647AC2 /* Model3DStudioView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 61D0BC500318C879D185099E /* Model3DStudioView.swift */; };
+		F14B350340D4A636AB3BFC2D /* RecordingDateFromFileNameTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A04D12182C32115E098030A7 /* RecordingDateFromFileNameTests.swift */; };
 		F27FB2D126ECCD38DCCFE5CD /* TextBoxEditingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DFB782C4FBD863E4DD9CC1D7 /* TextBoxEditingTests.swift */; };
 		F2D819B6D4518C51C8235CCB /* EditorStateMachine.swift in Sources */ = {isa = PBXBuildFile; fileRef = EA02348946BB281EFAFD082E /* EditorStateMachine.swift */; };
 		F312AD32B369C2F9E1CB8F99 /* TailscaleDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32D00743AB6B587D7885AC40 /* TailscaleDetector.swift */; };
@@ -445,6 +446,7 @@
 		9E0D4938AD7ED09F531105A2 /* NotebookEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotebookEditorView.swift; sourceTree = "<group>"; };
 		9F016253ED72A5C3AC2D8B56 /* DocumentImport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentImport.swift; sourceTree = "<group>"; };
 		9F9676DA3ADE252494EE9881 /* StorageUsageSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageUsageSection.swift; sourceTree = "<group>"; };
+		A04D12182C32115E098030A7 /* RecordingDateFromFileNameTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingDateFromFileNameTests.swift; sourceTree = "<group>"; };
 		A09B19AED1DC70D31503F82C /* NotebookPackageBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotebookPackageBridge.swift; sourceTree = "<group>"; };
 		A0A240F9E5D8ED4900468913 /* BundledDocumentTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BundledDocumentTests.swift; sourceTree = "<group>"; };
 		A315B137252D82142C8E4452 /* StartupLogger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StartupLogger.swift; sourceTree = "<group>"; };
@@ -617,6 +619,7 @@
 				6ACF93199185F834DAC8F080 /* ProfileTests.swift */,
 				5D09410716D4157EA2CBB2FA /* ProInkTests.swift */,
 				83E9E9B615E14B72409346C7 /* RecordingAdviceTests.swift */,
+				A04D12182C32115E098030A7 /* RecordingDateFromFileNameTests.swift */,
 				892A096B9AFA17B2035E1239 /* RuledWritingTests.swift */,
 				98B5139C5BB2AA68EF515F5F /* SeedNotebookSyncTests.swift */,
 				15867EB19A9148EC69D47FC5 /* ShapeEditingTests.swift */,
@@ -1058,6 +1061,7 @@
 				4425A26B9D9D03D63352AC47 /* ProfileSwitchTests.swift in Sources */,
 				1168B5631860B875A7B6EEAB /* ProfileTests.swift in Sources */,
 				05933F884326CEA77F05C558 /* RecordingAdviceTests.swift in Sources */,
+				F14B350340D4A636AB3BFC2D /* RecordingDateFromFileNameTests.swift in Sources */,
 				0891D161C2817A366435C393 /* RuledWritingTests.swift in Sources */,
 				96FFBB3E6244C5DEAFAE8B07 /* SeedNotebookSyncTests.swift in Sources */,
 				3BFD4D389E0973A423DBDBD0 /* ShapeEditingTests.swift in Sources */,
