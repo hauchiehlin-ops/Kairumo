@@ -2642,6 +2642,7 @@ public struct NotebookEditorView: View {
         .onChange(of: notebook.id) { _ in
             // 外層換綁之後才會走到這裡，這時 notebook 已經是新的那一則。
             currentPageIndex = 0
+            MainThreadStallMonitor.shared.breadcrumb("open notebook \(notebook.id.prefix(8))")
             FocusSyncController.shared.setFocus(notebook.id)
             coreInkBaselines.removeAll()
             pendingCoreInk.removeAll()
@@ -7667,6 +7668,7 @@ public struct NotebookEditorView: View {
     private var drawingToolbar: AnyView { AnyView(drawingToolbarContent) }
 
     private func selectEditorTool(_ tool: EditorToolType) {
+        MainThreadStallMonitor.shared.breadcrumb("select tool \(tool)")
         // 在文件內的手繪區塊換筆，只換工具；不可順手把整份文件的主模式
         // 改成手繪，否則「完成、回到文件」的情境會被拆掉。
         if editorMode != .draw && !isInlineInkEditing {
@@ -9963,6 +9965,7 @@ public struct NotebookEditorView: View {
     }
 
     private func flushPendingCoreInk() {
+        MainThreadStallMonitor.shared.breadcrumb("flushPendingCoreInk(\(notebook.id.prefix(8)))")
         coreInkWork?.cancel()
         coreInkWork = nil
         coreInkFirstPendingAt = nil

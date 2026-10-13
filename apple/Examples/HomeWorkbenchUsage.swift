@@ -76,6 +76,7 @@ struct KairumoApp: App {
         ProfileManager.resetForUITestsIfRequested()
         ProfileManager.reconcileContextBeforeLaunch()
         StartupLogger.logKey("log_app_init")
+        MainThreadStallMonitor.shared.start()
         KairumoAppDelegate.configureInstantToolTips()
         // 啟動時確認 Rust Core 與版本狀態
         #if canImport(PadnoteCore)

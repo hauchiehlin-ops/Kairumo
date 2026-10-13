@@ -11471,6 +11471,14 @@ extension LocalizationManager {
             .ko: "MainActivity.onCreate 시작",
             .th: "MainActivity.onCreate เริ่มทำงาน"
         ],
+        "log_main_stall": [
+            .zhHant: "主執行緒卡住 %1@ 秒（畫面無回應）。卡住前最後一件事：%2@",
+            .en: "Main thread stalled for %1@ s (UI unresponsive). Last thing before it: %2@",
+            .zhHans: "主线程卡住 %1@ 秒（界面无响应）。卡住前最后一件事：%2@",
+            .ja: "メインスレッドが %1@ 秒間停止しました（画面が応答しません）。直前の処理：%2@",
+            .ko: "메인 스레드가 %1@초 동안 멈췄습니다(화면 응답 없음). 직전 작업: %2@",
+            .th: "เธรดหลักค้าง %1@ วินาที (หน้าจอไม่ตอบสนอง) สิ่งสุดท้ายก่อนค้าง: %2@"
+        ],
         "log_msg_001": [
             .zhHant: "Google 帳號授權成功！已儲存憑證。",
             .en: "Google account authorized. Credentials saved.",
