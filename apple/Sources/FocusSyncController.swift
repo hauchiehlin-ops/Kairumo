@@ -58,6 +58,12 @@ public final class FocusSyncController: ObservableObject {
     /// 區網收到東西之後的匯入要一個一個來，而且合併成一次。
     private var lanImporting = false
     private var lanImportQueue: [String] = []
+    /// 有寫入、還沒確認推到雲端的筆記本（小寫 id）。**獨立於排程器的 dirty 旗標**：
+    /// 排程器換焦點時會把 dirty 清掉，離開筆記本那一刻的最後一筆就這樣被丟掉了。
+    private var unflushed: Set<String> = []
+    /// 剛離開的那一本與離開的時間。離開後才落盤的編輯（文字、物件走延遲存檔）要算回它身上。
+    private var lastFocusedId: String?
+    private var lastBlurMs: UInt64 = 0
     private var lastPersistMs: UInt64 = 0
 
     private var nowMs: UInt64 {
@@ -90,22 +96,72 @@ public final class FocusSyncController: ObservableObject {
             ) { [weak self] _ in
                 Task { @MainActor in self?.stopLan() }
             }
+
         #endif
         ensureLan()
     }
 
     /// 打開／離開一本筆記時呼叫。`nil` = 回到首頁。
     public func setFocus(_ notebookId: String?) {
-        lane.setFocus(notebookId: notebookId?.lowercased(), nowMs: nowMs)
-        link?.setFocused(notebookId?.lowercased())
+        let next = notebookId?.lowercased()
+        // 離開一本有未推寫入的筆記：立刻推。核心換焦點時會把 dirty 清掉，
+        // 不在這裡接手的話，最後那一筆只能等整庫那一輪（慢，而且進背景會被凍結）。
+        if let previous = lane.focused(), previous != next {
+            lastFocusedId = previous
+            lastBlurMs = nowMs
+            if unflushed.contains(previous) {
+                Task { @MainActor [weak self] in await self?.flushUnpushed() }
+            }
+        }
+        lane.setFocus(notebookId: next, nowMs: nowMs)
+        link?.setFocused(next)
         reschedule()
         if notebookId != nil { ensureLan() }
     }
 
     /// 焦點筆記本存檔完成（**落盤之後**）。
     public func noteLocalEdit() {
+        if let focused = lane.focused() {
+            unflushed.insert(focused)
+        } else if let last = lastFocusedId, nowMs - lastBlurMs < 10_000 {
+            // 剛離開：延遲落盤的編輯（文字、物件）現在才到，仍然屬於剛離開的那一本。
+            unflushed.insert(last)
+            Task { @MainActor [weak self] in
+                try? await Task.sleep(nanoseconds: 300_000_000)
+                await self?.flushUnpushed()
+            }
+        }
         lane.noteLocalEdit(nowMs: nowMs)
         reschedule()
+    }
+
+    /// 把還沒推的筆記本**現在**推上雲端：只匯出、上傳這幾本，不跑整庫。
+    ///
+    /// 給「離開筆記本」與「進背景」用 —— 這兩個時間點之後，App 隨時會被 iOS 凍結。
+    /// 成功才從待推名單移除；失敗留著，下次焦點或背景再試。
+    public func flushUnpushed() async {
+        guard let store, !unflushed.isEmpty else { return }
+        guard await GoogleAuth.shared.isSignedIn, let session = await CloudSync.makeSession() else { return }
+        for id in Array(unflushed) {
+            // 焦點通道自己正在推這一本的話等它（最多 5 秒），再補一輪確認。
+            guard let ticket = await NotebookLock.enter(id, label: "flush", waitMs: 5_000) else { continue }
+            let link = self.link
+            let report = await NotebookSyncCoordinator.runFocusRound(
+                store: store, deviceId: deviceId, notebookId: id, push: true,
+                session: session, afterExport: { link?.announce(id) }
+            )
+            NotebookLock.leave(id, ticket: ticket)
+            if report.ok {
+                unflushed.remove(id)
+                SyncLogger.logAsync(
+                    "【立即推送】\(id.prefix(8))… 上傳 \(report.uploaded)"
+                        + "（匯出 \(report.exportMs)ms、雲端 \(report.driveMs)ms）",
+                    source: .googleDrive
+                )
+            } else {
+                SyncLogger.logAsync("【立即推送】\(id.prefix(8))… 失敗：\(report.error)", source: .googleDrive)
+            }
+        }
     }
 
     /// 重新登入了。

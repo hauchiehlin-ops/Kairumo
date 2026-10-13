@@ -87,3 +87,47 @@ class SyncWorker(context: Context, params: WorkerParameters) :
         }
     }
 }
+
+/**
+ * 進背景那一刻的「最後一哩」：把還沒推的筆記本立刻推上去，再讓整庫跑一輪。
+ *
+ * # 為什麼要另開一個 worker
+ *
+ * App 一離開前景，系統會把行程降成快取狀態，之後可能凍結或回收 —— [AutoSync] 的協程
+ * 就跟著停。週期 worker 最快 15 分鐘才跑一次，下課關掉 App 到另一台裝置打開，
+ * 通常遠不到 15 分鐘。**加急工作（expedited）** 會馬上被排進去，並讓行程活到做完。
+ *
+ * Android 12（API 31）以上才用加急：更早的版本加急工作要靠前景服務與通知，
+ * 為了這個不值得；那裡退回一般工作（網路一通就跑，通常也是幾秒內）。
+ */
+class FlushWorker(context: Context, params: WorkerParameters) :
+    CoroutineWorker(context, params) {
+
+    override suspend fun doWork(): Result {
+        val context = applicationContext
+        if (!GoogleAuth.isSignedIn(context)) return Result.success()
+        // 先推待推名單（單本、很快），再讓整庫跑一輪。
+        runCatching { FocusSync.flushUnpushed(context) }
+        runCatching { CloudSync.runFull(context, AutoSync.currentDeviceId()) }
+        return if (FocusSync.hasUnflushed()) Result.retry() else Result.success()
+    }
+
+    companion object {
+        private const val WORK_NAME = "kairumo.sync.flush"
+
+        fun enqueue(context: Context) {
+            val builder = androidx.work.OneTimeWorkRequestBuilder<FlushWorker>()
+                .setConstraints(
+                    Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build()
+                )
+            if (android.os.Build.VERSION.SDK_INT >= 31) {
+                builder.setExpedited(androidx.work.OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
+            }
+            runCatching {
+                WorkManager.getInstance(context.applicationContext).enqueueUniqueWork(
+                    WORK_NAME, androidx.work.ExistingWorkPolicy.KEEP, builder.build()
+                )
+            }
+        }
+    }
+}

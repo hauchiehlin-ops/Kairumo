@@ -583,6 +583,10 @@ private fun NotebookHome(
                     com.kairumo.padnote.sync.AutoSync.request(
                         activity, uniffi.padnote_core.FfiSyncTrigger.BACKGROUND)
                     com.kairumo.padnote.sync.FocusSync.onBackground()
+                    // 有還沒推上雲端的編輯：排一個加急背景工作，讓行程活到推完。
+                    if (com.kairumo.padnote.sync.FocusSync.hasUnflushed()) {
+                        com.kairumo.padnote.sync.FlushWorker.enqueue(activity)
+                    }
                 }
                 else -> Unit
             }

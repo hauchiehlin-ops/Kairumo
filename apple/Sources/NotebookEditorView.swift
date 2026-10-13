@@ -2670,11 +2670,13 @@ public struct NotebookEditorView: View {
             flashModeBadge()
         }
         .onDisappear {
+            // **先存檔、再放掉焦點。** 顛倒的話，存檔通知到達時已經沒有焦點筆記本，
+            // 離開前最後一筆編輯不會被焦點通道推出去。
+            saveCurrentPageDrawing()
             if store.activeNotebookId == notebook.id {
                 store.activeNotebookId = nil
                 FocusSyncController.shared.setFocus(nil)
             }
-            saveCurrentPageDrawing()
         }
         .onChange(of: scenePhase) { phase in
             if phase == .background || phase == .inactive {

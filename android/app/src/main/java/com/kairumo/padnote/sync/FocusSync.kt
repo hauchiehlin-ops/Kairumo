@@ -63,6 +63,14 @@ object FocusSync {
     @Volatile private var lanStarting = false
     private var lastPersistMs = 0L
 
+    /**
+     * 有寫入、還沒確認推到雲端的筆記本。**獨立於排程器的 dirty 旗標**：核心換焦點時會把
+     * dirty 清掉，離開筆記本那一刻的最後一筆就這樣被丟給整庫那一輪（慢）。
+     */
+    private val unflushed: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()
+    @Volatile private var lastFocusedId: String? = null
+    @Volatile private var lastBlurMs = 0L
+
     /** 目前有幾台區網對端直連中。 */
     private val _lanPeers = MutableStateFlow(0)
     val lanPeers: StateFlow<Int> = _lanPeers
@@ -94,6 +102,15 @@ object FocusSync {
 
     /** 打開／離開一本筆記時呼叫。`null` = 回到首頁。 */
     fun setFocus(notebookId: String?) {
+        val previous = lane.focused()
+        if (previous != null && previous != notebookId) {
+            lastFocusedId = previous
+            lastBlurMs = SystemClock.elapsedRealtime()
+            // 離開一本有未推寫入的筆記：立刻推，不等整庫那一輪。
+            if (unflushed.contains(previous)) {
+                appContext?.let { ctx -> scope.launch { flushUnpushed(ctx) } }
+            }
+        }
         lane.setFocus(notebookId, nowMs())
         link?.setFocused(notebookId)
         reschedule()
@@ -102,8 +119,68 @@ object FocusSync {
 
     /** 焦點筆記本存檔完成。Android 每一筆都直接寫 oplog，所以這時候套件已經是最新的。 */
     fun noteLocalEdit() {
+        val focused = lane.focused()
+        if (focused != null) {
+            unflushed.add(focused)
+        } else {
+            // 剛離開：延遲提交的編輯現在才到，仍然屬於剛離開的那一本。
+            val last = lastFocusedId
+            if (last != null && SystemClock.elapsedRealtime() - lastBlurMs < 10_000L) {
+                unflushed.add(last)
+                appContext?.let { ctx -> scope.launch { delay(300); flushUnpushed(ctx) } }
+            }
+        }
         lane.noteLocalEdit(nowMs())
         reschedule()
+    }
+
+    /** 還有沒推上雲端的筆記本。進背景時據此決定要不要排背景工作。 */
+    fun hasUnflushed(): Boolean = unflushed.isNotEmpty()
+
+    /**
+     * 把還沒推的筆記本**現在**推上雲端：只上傳這幾本，不跑整庫。
+     * 成功才從名單移除；失敗留著，下次再試。
+     */
+    suspend fun flushUnpushed(context: Context) {
+        if (unflushed.isEmpty() || !GoogleAuth.isSignedIn(context)) return
+        val session = withContext(Dispatchers.IO) { CloudSync.makeSession(context) } ?: return
+        for (id in unflushed.toList()) {
+            val ok = withContext(Dispatchers.IO) { pushOne(context, session, id) }
+            if (ok) unflushed.remove(id)
+        }
+    }
+
+    private suspend fun pushOne(
+        context: Context, session: uniffi.padnote_core.FfiSyncSession, id: String
+    ): Boolean {
+        // 焦點通道自己正在推這一本的話等它（最多 5 秒）。
+        var lock = notebookLockTryEnter(id, "flush", nowMs())
+        var waited = 0L
+        while (!lock.granted && waited < 5_000L) {
+            delay(80)
+            waited += 80
+            lock = notebookLockTryEnter(id, "flush", nowMs())
+        }
+        if (!lock.granted) return false
+        try {
+            val pkg = LanLink.findPackage(context, id) ?: return true
+            link?.announce(id)
+            val started = SystemClock.elapsedRealtime()
+            val round = session.focusRound(pkg.absolutePath, id, deviceId)
+            val elapsed = SystemClock.elapsedRealtime() - started
+            if (!round.ok) {
+                SyncLogger.log("【立即推送】${id.take(8)}… 失敗：${round.error}", SyncSource.GOOGLE_DRIVE)
+                if (round.needsReauth) GoogleAuth.signOutLocally(context)
+                return false
+            }
+            SyncLogger.log(
+                "【立即推送】${id.take(8)}… 上傳 ${round.uploaded}（雲端 ${elapsed}ms）",
+                SyncSource.GOOGLE_DRIVE
+            )
+            return true
+        } finally {
+            notebookLockLeave(id, lock.ticket)
+        }
     }
 
     fun noteSignedIn() {

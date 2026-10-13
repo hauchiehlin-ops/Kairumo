@@ -402,8 +402,30 @@ public final class AutoSyncController: ObservableObject {
                 forName: UIApplication.didEnterBackgroundNotification, object: nil, queue: .main
             ) { [weak self] _ in
                 Task { @MainActor in
-                    self?.request(.background)
-                    self?.scheduleBackgroundTask()
+                    guard let self else { return }
+                    // **向 iOS 要執行時間。** 沒有這一步，進背景幾秒內就被凍結，
+                    // 一輪同步（網路來回）根本跑不完 —— 下課關掉 App 的最後一段筆記
+                    // 就是這樣留在 iPad 上。先推焦點筆記本（只有那一本，很快），
+                    // 再讓整庫那一輪接著跑，最多撐到系統給的時間窗快用完。
+                    let app = UIApplication.shared
+                    var grace = UIBackgroundTaskIdentifier.invalid
+                    grace = app.beginBackgroundTask(withName: "kairumo.sync.flush") {
+                        app.endBackgroundTask(grace)
+                        grace = .invalid
+                    }
+                    self.request(.background)
+                    self.scheduleBackgroundTask()
+                    await FocusSyncController.shared.flushUnpushed()
+                    // 整庫這一輪結束（或快超時）就歸還時間窗。
+                    var waited = 0.0
+                    while self.isSyncing, waited < 20 {
+                        try? await Task.sleep(nanoseconds: 500_000_000)
+                        waited += 0.5
+                    }
+                    if grace != .invalid {
+                        app.endBackgroundTask(grace)
+                        grace = .invalid
+                    }
                 }
             }
         #endif
