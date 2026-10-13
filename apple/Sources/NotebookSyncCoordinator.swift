@@ -169,7 +169,8 @@ extension NotebookStore: SyncableNotebookStore {
     }
 
     var syncNotebooks: [NotebookDocument] {
-        var list = visibleNotebooks
+        // 預載範例由各裝置自己產生，不同步（見 `NotebookPackageBridge.isDeviceLocalSeed`）。
+        var list = visibleNotebooks.filter { !NotebookPackageBridge.isDeviceLocalSeed($0.id) }
         let inbox = recordingInbox()
         if !list.contains(where: { $0.id.caseInsensitiveCompare(inbox.id) == .orderedSame }) {
             list.append(inbox)
@@ -1161,6 +1162,7 @@ enum NotebookSyncCoordinator {
         for item in syncLiveNotebooks(indexJson: index) {
             let normId = item.id.lowercased()
             guard !deletedNotebookIds.contains(normId) else { continue }
+            guard !NotebookPackageBridge.isDeviceLocalSeed(normId) else { continue }
             let package = packagesDir.appending(path: "\(item.id).padnote")
             let lowerPackage = packagesDir.appending(path: "\(normId).padnote")
             let targetPackage = fm.fileExists(atPath: package.path) ? package : lowerPackage
@@ -2081,6 +2083,8 @@ enum NotebookSyncCoordinator {
         for package in allPackages {
             let notebookId = packageId(for: package)
             let normId = notebookId.lowercased()
+            // 預載範例不經同步匯入：本機那一份是自己產生的標準內容。
+            if NotebookPackageBridge.isDeviceLocalSeed(normId) { continue }
             if deletedNotebookIds.contains(normId) {
                 try? fm.removeItem(at: package)
                 SyncLogger.logAsync("已清理已刪除筆記本殘留套件：\(notebookId)", source: .general)
@@ -2194,6 +2198,8 @@ enum NotebookSyncCoordinator {
         for package in allPackages {
             let notebookId = packageId(for: package)
             let normId = notebookId.lowercased()
+            // 預載範例不經同步匯入：本機那一份是自己產生的標準內容。
+            if NotebookPackageBridge.isDeviceLocalSeed(normId) { continue }
 
             if deletedNotebookIds.contains(normId) {
                 try? fm.removeItem(at: package)

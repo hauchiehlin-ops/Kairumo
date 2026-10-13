@@ -190,6 +190,8 @@ class LanLink(
          * 直接拼路徑會找不到。
          */
         fun findPackage(context: Context, notebookId: String): File? {
+            // 預載範例各裝置自己產生，不經焦點、區網或 Drive 同步（見 `SeedNotebooks.isDeviceLocal`）。
+            if (com.kairumo.padnote.library.SeedNotebooks.isDeviceLocal(notebookId)) return null
             val dir = NotebookLibrary.directory(context)
             File(dir, "$notebookId.padnote").takeIf { it.exists() }?.let { return it }
             File(dir, "${notebookId.lowercase()}.padnote").takeIf { it.exists() }?.let { return it }

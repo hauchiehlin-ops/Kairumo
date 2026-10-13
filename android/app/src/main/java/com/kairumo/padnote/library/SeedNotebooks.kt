@@ -64,7 +64,8 @@ object SeedNotebooks {
         if (buildKairumoManual(context, deviceId, languageTag, ::l)) created++
         if (buildDraftingExample(context, deviceId, ::l)) created++
         ProfileContext.prefs(context, PREFS)
-            .edit().putBoolean(KEY_MANUAL, true).putBoolean(KEY_DRAFT_EXAMPLE, true).apply()
+            .edit().putBoolean(KEY_MANUAL, true).putBoolean(KEY_DRAFT_EXAMPLE, true)
+            .putInt(KEY_CONTENT_GENERATION, CONTENT_GENERATION).apply()
         return created
     }
 
@@ -87,6 +88,10 @@ object SeedNotebooks {
             MEETING_ID to 3
         )
         var healed = 0
+        // 一次性重設：過去同步把各裝置各自生成的同一份內容合併成兩份。範例身上只有「重複」，
+        // 沒有值得保留的東西（使用者自己的筆記本不在這個名單裡）。
+        val prefs = ProfileContext.prefs(context, PREFS)
+        val resetAll = prefs.getInt(KEY_CONTENT_GENERATION, 0) < CONTENT_GENERATION
         for ((id, maxPages) in seeds) {
             val dir = java.io.File(baseDir, "$id.${NotebookLibrary.EXTENSION}")
             if (!dir.exists() || !dir.isDirectory) continue
@@ -94,7 +99,7 @@ object SeedNotebooks {
             val opsDir = java.io.File(dir, "doc/ops")
             val opFiles = opsDir.listFiles() ?: emptyArray()
             val totalOpsSize = opFiles.sumOf { it.length() }
-            val isBloated = opFiles.size > 8 || totalOpsSize > 250_000L
+            val isBloated = resetAll || opFiles.size > 8 || totalOpsSize > 250_000L
 
             if (isBloated) {
                 dir.deleteRecursively()
@@ -109,6 +114,7 @@ object SeedNotebooks {
                 healed++
             }
         }
+        if (resetAll) prefs.edit().putInt(KEY_CONTENT_GENERATION, CONTENT_GENERATION).apply()
         return healed
     }
 
@@ -194,6 +200,24 @@ object SeedNotebooks {
         }
         return true
     }
+
+    /**
+     * 預載範例筆記本是「每台裝置各自產生」的內容，**不參與同步**（與 Apple 的 `isDeviceLocalSeed` 同一條規則）。
+     *
+     * 同一份範例在每台裝置上各自生成，物件與筆畫的 id 都是新的；同步把兩份「長得一樣、id 不同」的
+     * 內容合併成兩倍，每一頁的文字、圖形、筆跡都重複（頁數膨脹是同一個問題的另一個樣子）。
+     * 使用者自己建立的筆記本只在一台裝置上誕生，不受影響。
+     */
+    private val DEVICE_LOCAL_SEEDS = setOf(
+        "seed-feature-showcase-v1", "seed-kairumo-manual-v1", "seed-drafting-example-v1",
+        "seed-welcome-notebook-v1", "seed-meeting-notebook-v1"
+    )
+
+    fun isDeviceLocal(notebookId: String): Boolean = notebookId.lowercase() in DEVICE_LOCAL_SEEDS
+
+    /** 範例內容的世代。提高它，下次啟動所有範例重設回標準內容一次。 */
+    private const val KEY_CONTENT_GENERATION = "seed_content_generation"
+    private const val CONTENT_GENERATION = 2
 
     private const val PREFS = "kairumo.seed"
     private const val KEY_MANUAL = "kairumo_manual_added"

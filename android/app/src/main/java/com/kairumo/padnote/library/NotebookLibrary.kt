@@ -430,6 +430,8 @@ object NotebookLibrary {
         for (remote in remoteRoot.listFiles()) {
             val name = remote.name ?: continue
             if (!remote.isDirectory || !name.endsWith(".$EXTENSION")) continue
+            // 預載範例各裝置自己產生，不經同步（見 `SeedNotebooks.isDeviceLocal`）。
+            if (SeedNotebooks.isDeviceLocal(name.removeSuffix(".$EXTENSION"))) continue
             val local = File(dir, name)
             if (local.exists()) continue
             val result = FolderSync.sync(context, local, remoteRoot, languageTag)
@@ -443,6 +445,7 @@ object NotebookLibrary {
         var merged = FolderSync.Result()
         for (path in directory(context).listFiles().orEmpty()) {
             if (!path.isDirectory || !path.name.endsWith(".$EXTENSION")) continue
+            if (SeedNotebooks.isDeviceLocal(path.name.removeSuffix(".$EXTENSION"))) continue
             val result = FolderSync.sync(context, path, remoteRoot, languageTag)
             merged = FolderSync.Result(
                 uploaded = merged.uploaded + result.uploaded,

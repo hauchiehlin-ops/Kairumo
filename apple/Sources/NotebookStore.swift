@@ -1305,6 +1305,8 @@ public final class NotebookStore: ObservableObject {
         if nonInbox.isEmpty {
             StartupLogger.logKey("log_store_seed_create")
             seedDefaultNotebooks()
+            // 剛產生的就是標準內容，不必再被「重設」一次。
+            ProfileDefaults.current.set(Self.seedGeneration, forKey: Self.seedGenerationKey)
         } else {
             StartupLogger.logKey("log_store_seed_check")
             backfillEmptySeedNotebooks()
@@ -1659,7 +1661,7 @@ public final class NotebookStore: ObservableObject {
     /// 種子跑完，那些字就是**使用者自己的內容**了。他可能已經在上面寫了東西、
     /// 刪掉了幾段、加了頁。只要有任何一筆筆跡或物件，就一個字都不碰 ——
     /// 補內容補掉使用者的筆記，比一片空白嚴重得多。
-    private func backfillEmptySeedNotebooks() {
+    func backfillEmptySeedNotebooks() {
         var changed = false
         for index in notebooks.indices {
             guard let key = notebooks[index].titleKey,
@@ -1747,6 +1749,20 @@ public final class NotebookStore: ObservableObject {
                 SeedContent.fillMeeting(&doc, store: self)
             })
         ]
+
+        // 一次性清理：過去範例筆記本參與同步，各裝置各自生成的同一份內容（id 不同）被合併成兩份，
+        // 每一頁的文字、圖形、筆跡都重複。範例現在不再同步（見 `isDeviceLocalSeed`），
+        // 這裡把本機每一本範例重設回乾淨的標準內容（它們身上的筆跡與物件只有「重複」，沒有值得保留的東西
+        // —— 使用者自己的筆記本不在這個名單裡）。
+        if ProfileDefaults.current.integer(forKey: Self.seedGenerationKey) < Self.seedGeneration {
+            for std in seedStandards {
+                guard let idx = notebooks.firstIndex(where: { $0.id == std.id || $0.titleKey == std.key }) else { continue }
+                resetSeedStorage(notebookId: notebooks[idx].id)
+                std.heal(&notebooks[idx])
+                changed = true
+            }
+            ProfileDefaults.current.set(Self.seedGeneration, forKey: Self.seedGenerationKey)
+        }
 
         for std in seedStandards {
             if let idx = notebooks.firstIndex(where: { $0.id == std.id || $0.titleKey == std.key }) {
@@ -2231,6 +2247,25 @@ public final class NotebookStore: ObservableObject {
 
     /// 《Kairumo手冊》：全手繪的預載筆記本。名稱是固定的，不走語系表。
     private static let manualSeededKey = "seed.kairumoManual.added"
+    /// 範例筆記本內容的「世代」。提高它，下次啟動時所有範例會重設回標準內容一次。
+    private static let seedGenerationKey = "seed.contentGeneration"
+    private static let seedGeneration = 2
+
+    /// 刪掉一本範例筆記本在磁碟上的衍生資料（核心套件、手繪與專業筆畫檔、同步基準），
+    /// 讓重新產生的標準內容不會疊在舊的（含重複的）內容上。
+    private func resetSeedStorage(notebookId: String) {
+        let fm = FileManager.default
+        for name in [notebookId, notebookId.lowercased()] {
+            try? fm.removeItem(at: corePackagesDirectory.appending(path: "\(name).padnote"))
+        }
+        let prefix = "\(notebookId)_p"
+        for directory in [drawingsDirectory, syncBaselineDirectory] {
+            let files = (try? fm.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil)) ?? []
+            for file in files where file.lastPathComponent.hasPrefix(prefix) {
+                try? fm.removeItem(at: file)
+            }
+        }
+    }
 
     private static func makeKairumoManual() -> NotebookDocument {
         var manual = NotebookDocument(

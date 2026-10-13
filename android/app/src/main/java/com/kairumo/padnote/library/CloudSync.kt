@@ -317,6 +317,7 @@ object CloudSync {
         notebookId: String,
         deviceId: UInt = 0u
     ): uniffi.padnote_core.FfiNotebookSyncResult? {
+        if (SeedNotebooks.isDeviceLocal(notebookId)) return null
         val path = File(NotebookLibrary.directory(context), "$notebookId.padnote")
         if (!path.exists()) return null
         val session = makeSession(context) ?: return null
@@ -488,6 +489,8 @@ object CloudSync {
 
         for (pkg in allDiskPackages) {
             val id = pkg.name.removeSuffix(".padnote")
+            // 預載範例由各裝置自己產生，不同步（見 `SeedNotebooks.isDeviceLocal`）。
+            if (SeedNotebooks.isDeviceLocal(id)) continue
             // 判定 1：本機現存活躍的筆記本擁有最高本機權威（絕不刪除）
             if (activeLocalIds.contains(id)) {
                 deletedNotebookIds.remove(id)
@@ -637,6 +640,7 @@ object CloudSync {
         try {
         for (item in syncLiveNotebooks(mergedIndexJson)) {
             if (deletedNotebookIds.contains(item.id)) continue
+            if (SeedNotebooks.isDeviceLocal(item.id)) continue
             val path = File(dir, "${item.id}.padnote")
             // 防禦性檢查：若本地存在該目錄，但本機尚未載入該筆記本，檢查是否為無 ops 的空殼目錄
             if (path.exists() && !activeLocalIds.contains(item.id)) {
