@@ -8,6 +8,9 @@ export PYTHONIOENCODING=utf-8
 
 REPO_ROOT="$(git rev-parse --show-toplevel)"
 
+# exFAT 上 macOS 會在 .git 裡生出 `._*`，先清掉避免 git 報 non-monotonic index
+"${REPO_ROOT}/scripts/clean-git-appledouble.sh" || true
+
 # 檢查暫存區中是否包含來源手冊、法規、範本或版本檔案
 STAGED_SOURCES=$(git diff --cached --name-only | grep -E '^(docs/manual/manual\.js|docs/legal/privacy\.html|Cargo\.toml|templates/src/)' || true)
 

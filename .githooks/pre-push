@@ -8,6 +8,9 @@ export PYTHONIOENCODING=utf-8
 
 REPO_ROOT="$(git rev-parse --show-toplevel)"
 
+# exFAT 上 macOS 會在 .git 裡生出 `._*`，先清掉避免 git 報 non-monotonic index
+"${REPO_ROOT}/scripts/clean-git-appledouble.sh" || true
+
 # 0. 介面上絕對不准有硬寫死的文字（CJK 門禁）
 if [[ -f "${REPO_ROOT}/scripts/check-hardcoded-strings.py" ]]; then
     if ! python3 "${REPO_ROOT}/scripts/check-hardcoded-strings.py"; then
