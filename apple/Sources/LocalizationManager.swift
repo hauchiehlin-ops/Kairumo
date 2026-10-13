@@ -157,6 +157,7 @@ public final class LocalizationManager: ObservableObject {
     /// 用 `nonisolated(unsafe)` 是刻意的：它只被寫入一次（切換語言時），
     /// 而讀到舊值的後果只是一句錯誤訊息用了上一個語言 —— 不值得為此付
     /// 同步的代價。
+    // profile-scope: profile 目前語言的快照；由 LocalizationManager.resetForProfileSwitch 更新
     nonisolated(unsafe) static var snapshotLanguage: AppLanguage = .zhHant
 
     /// 目前介面語言的格式語系，不受 actor 隔離（背景執行緒組日期字串用）。
@@ -194,4 +195,18 @@ private struct AppLocaleModifier: ViewModifier {
 
 extension View {
     public func appLocale() -> some View { modifier(AppLocaleModifier()) }
+}
+
+// MARK: - 設定檔切換
+
+extension LocalizationManager: ProfileScoped {
+    func resetForProfileSwitch() {
+        // 與 `init` 同一個優先順序：跨裝置設定、本機記錄、預設。**不呼叫 `setLanguage`** ——
+        // 它會把語言寫進同步設定，等於把上一個人的語言推給這個設定檔的雲端。
+        let synced = AccountSyncStore.shared.syncedLanguage.flatMap(AppLanguage.init(rawValue:))
+        let local = ProfileDefaults.current.string(forKey: languageKey).flatMap(AppLanguage.init(rawValue:))
+        let resolved = Self.uiTestLanguage ?? synced ?? local ?? .en
+        currentLanguage = resolved
+        Self.snapshotLanguage = resolved
+    }
 }

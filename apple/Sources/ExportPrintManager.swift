@@ -145,3 +145,10 @@ public final class ExportPrintManager {
     }
     #endif
 }
+
+// MARK: - 設定檔切換
+
+extension ExportPrintManager: ProfileScoped {
+    /// 沒有狀態：每次匯出都是獨立的一次呼叫。
+    func resetForProfileSwitch() {}
+}

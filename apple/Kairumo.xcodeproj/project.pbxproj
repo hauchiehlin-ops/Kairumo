@@ -58,6 +58,7 @@
 		3BFD4D389E0973A423DBDBD0 /* ShapeEditingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15867EB19A9148EC69D47FC5 /* ShapeEditingTests.swift */; };
 		3CFD6D8CF0C7C32DF12770A2 /* DeadControlSurvey.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2E4B63FC00CBE41E1C67031 /* DeadControlSurvey.swift */; };
 		427CD086184ECF37CA2A5994 /* TrashView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 511C49E782DD9FA707534D02 /* TrashView.swift */; };
+		4425A26B9D9D03D63352AC47 /* ProfileSwitchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 71156576BE56F9CFBD6A260D /* ProfileSwitchTests.swift */; };
 		4454AD2DAFEB214565F0719D /* ManualShots.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE7E0D02EC1F70920FAAAE35 /* ManualShots.swift */; };
 		44F395EF97582BCF2480ECDD /* BackupManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 473B5EDC9DF95F4358F83CFB /* BackupManagerTests.swift */; };
 		4514902261D4A927D6FBC105 /* Templates in Resources */ = {isa = PBXBuildFile; fileRef = 2A2253FE74C35178B0F901C8 /* Templates */; };
@@ -153,6 +154,7 @@
 		A948A24B15D21C3F14896D56 /* DraftingEditTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64BE539525B38BC90E4A7010 /* DraftingEditTests.swift */; };
 		AAA8F61705854E2C0B7294DE /* DesignSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4741BF2C2C92CDA117AEE5E /* DesignSystem.swift */; };
 		AAE3093621AF51975747F597 /* EditorStateMachineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 57625E7602263EE82B9C517B /* EditorStateMachineTests.swift */; };
+		AC0494BC1197FBE105D32E19 /* ProfileManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09A7DB60E278A34AF668B4F2 /* ProfileManager.swift */; };
 		AC68B6EC6A6BA0BF03560351 /* InkLatencyMeter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00CDBBB784601FDFB342136D /* InkLatencyMeter.swift */; };
 		AFE9F37C2A119458E52BA13C /* ChartSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8CDA20E9C287F58F4315EA3C /* ChartSpec.swift */; };
 		AFF32DB932FC4031A86B8F57 /* MaterialEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 51E8541179F28A49C13A1967 /* MaterialEngine.swift */; };
@@ -270,6 +272,7 @@
 		07778624DF38AB1341C695BD /* CoreMessageTranslationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoreMessageTranslationTests.swift; sourceTree = "<group>"; };
 		07DF98DF756A573952CE9BA3 /* ObjectMarquee.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ObjectMarquee.swift; sourceTree = "<group>"; };
 		07F27CA2672052EAEA15EBF5 /* TextBoxMetrics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextBoxMetrics.swift; sourceTree = "<group>"; };
+		09A7DB60E278A34AF668B4F2 /* ProfileManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileManager.swift; sourceTree = "<group>"; };
 		0B7A62A484B92A5A4BA4B508 /* MultilingualPdfExportTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MultilingualPdfExportTests.swift; sourceTree = "<group>"; };
 		0B829DBCA4D5374715A49087 /* LinkPreviewEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LinkPreviewEngine.swift; sourceTree = "<group>"; };
 		0FE426D9CEBCB2E74598C365 /* NoteTableTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NoteTableTests.swift; sourceTree = "<group>"; };
@@ -379,6 +382,7 @@
 		6EA2D926C0FD0991AE0BC01D /* WrapLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WrapLayout.swift; sourceTree = "<group>"; };
 		6FF4AA82DF5A02A09AE79B7E /* PageBackgroundRepresentable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PageBackgroundRepresentable.swift; sourceTree = "<group>"; };
 		70C131DA3FD4378868485464 /* PaperTemplateCoverageTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaperTemplateCoverageTests.swift; sourceTree = "<group>"; };
+		71156576BE56F9CFBD6A260D /* ProfileSwitchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileSwitchTests.swift; sourceTree = "<group>"; };
 		7187AC2B18533F28DABBB98A /* NotebookMeta.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotebookMeta.swift; sourceTree = "<group>"; };
 		7245DE41B9104E9F47F0C21B /* PadnoteCore.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; path = PadnoteCore.xcframework; sourceTree = "<group>"; };
 		731CDDC574A6D78F0621BA61 /* CloudSyncFolderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudSyncFolderTests.swift; sourceTree = "<group>"; };
@@ -587,6 +591,7 @@
 				E769C6B3B1895BA7A6BC71AB /* PdfPageRendererTests.swift */,
 				3F5C250C0AEBC876CF34807D /* PenHardwareTests.swift */,
 				D36DA9A7FD1451AA75A8161B /* PlatformContractTests.swift */,
+				71156576BE56F9CFBD6A260D /* ProfileSwitchTests.swift */,
 				6ACF93199185F834DAC8F080 /* ProfileTests.swift */,
 				5D09410716D4157EA2CBB2FA /* ProInkTests.swift */,
 				83E9E9B615E14B72409346C7 /* RecordingAdviceTests.swift */,
@@ -791,6 +796,7 @@
 				A66B0EEDEEF84A72A0702647 /* Profile.swift */,
 				62F572D32AE937168DC8C3E3 /* ProfileContext.swift */,
 				50368CB2CCE9DFF3B756C400 /* ProfileLockService.swift */,
+				09A7DB60E278A34AF668B4F2 /* ProfileManager.swift */,
 				42E10D0FA1C1F6E77B180793 /* ProInk.swift */,
 				2E8568739E3C10539C54B9DC /* RadialMarkMenuView.swift */,
 				B2929D89A7985F84100FDB68 /* RecentTemplates.swift */,
@@ -1017,6 +1023,7 @@
 				ED78060E3D4FFB5D6F0A3AF6 /* PenHardwareTests.swift in Sources */,
 				FE9BE01D870836EE7426D078 /* PlatformContractTests.swift in Sources */,
 				9C429E1FB16DC03782075A0D /* ProInkTests.swift in Sources */,
+				4425A26B9D9D03D63352AC47 /* ProfileSwitchTests.swift in Sources */,
 				1168B5631860B875A7B6EEAB /* ProfileTests.swift in Sources */,
 				05933F884326CEA77F05C558 /* RecordingAdviceTests.swift in Sources */,
 				0891D161C2817A366435C393 /* RuledWritingTests.swift in Sources */,
@@ -1170,6 +1177,7 @@
 				F38FC2756538DC06F0276E38 /* Profile.swift in Sources */,
 				6EC9B36592D3998C6486E934 /* ProfileContext.swift in Sources */,
 				667291FF2407A8B04D74AD4C /* ProfileLockService.swift in Sources */,
+				AC0494BC1197FBE105D32E19 /* ProfileManager.swift in Sources */,
 				115AA723F107721EC68777AA /* RadialMarkMenuView.swift in Sources */,
 				E26B4411597679C8486D535D /* RecentTemplates.swift in Sources */,
 				EB681C3CBEB152B531200F27 /* RecordingAdvice.swift in Sources */,

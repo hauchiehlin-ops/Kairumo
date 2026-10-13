@@ -56,7 +56,9 @@ enum CloudSyncFolder {
     ///
     /// 用書籤而不是路徑字串：使用者選的可能是雲端硬碟或別的 App 的容器，
     /// 路徑會變，而且下次啟動時沒有存取權。
+    // profile-scope: profile 書籤快取；切換時由 resetCacheForProfileSwitch 清掉
     private static var _cachedURL: URL? = nil
+    // profile-scope: profile
     private static var _lastBookmarkData: Data? = nil
 
     static func resolveFolder() -> URL? {
@@ -287,6 +289,21 @@ public final class CloudSyncFolderMonitor: ObservableObject {
     @Published public private(set) var currentFolder: URL? = CloudSyncFolder.resolveFolder()
 
     public func refresh() {
+        currentFolder = CloudSyncFolder.resolveFolder()
+    }
+}
+
+extension CloudSyncFolder {
+    /// 切換設定檔：書籤快取屬於上一個設定檔，丟掉。
+    static func resetCacheForProfileSwitch() {
+        _cachedURL = nil
+        _lastBookmarkData = nil
+    }
+}
+
+extension CloudSyncFolderMonitor: ProfileScoped {
+    func resetForProfileSwitch() {
+        CloudSyncFolder.resetCacheForProfileSwitch()
         currentFolder = CloudSyncFolder.resolveFolder()
     }
 }

@@ -44,7 +44,8 @@ public final class GuidanceSuppressionManager: ObservableObject {
     // profile-scope: profile 每個設定檔各有一份狀態，切換時必須重設
     public static let shared = GuidanceSuppressionManager()
 
-    private let defaults = ProfileDefaults.current
+    /// **不能存成屬性**：`ProfileDefaults` 是值，存起來就永遠指著建立當下的設定檔。
+    private var defaults: ProfileDefaults { .current }
     private let enabledKey = "kairumo_smart_guidance_enabled"
     private let historyPrefix = "kairumo_guidance_history_"
     private let learnedPrefix = "kairumo_guidance_learned_"
@@ -57,7 +58,7 @@ public final class GuidanceSuppressionManager: ObservableObject {
 
     private init() {
         // 預設開啟智慧引導
-        self.isEnabled = defaults.object(forKey: enabledKey) as? Bool ?? true
+        self.isEnabled = ProfileDefaults.current.object(forKey: "kairumo_smart_guidance_enabled") as? Bool ?? true
     }
 
     /// 檢查特定情境是否符合顯示條件（未被靜默、未達冷卻）
@@ -225,5 +226,13 @@ public struct ContextGuidanceHUDView: View {
             .cornerRadius(7)
         }
         .buttonStyle(.plain)
+    }
+}
+
+// MARK: - 設定檔切換
+
+extension GuidanceSuppressionManager: ProfileScoped {
+    func resetForProfileSwitch() {
+        isEnabled = defaults.object(forKey: enabledKey) as? Bool ?? true
     }
 }

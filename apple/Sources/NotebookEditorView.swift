@@ -2406,6 +2406,10 @@ public struct NotebookEditorView: View {
 
     public var body: some View {
         VStack(spacing: 0) {
+            // 設定檔即將切換：這一刻 `ProfileContext` 還是舊的，存下去的位置才對（見 `ProfileManager`）。
+            // 放在這裡而不是接在下面那串修飾子後面：那一串已經長到再加一個編譯器就放棄型別推論。
+            ProfileWillSwitchSaver { saveCurrentPageDrawing() }
+
             // 1. 頂部自訂主工作列（返回首頁、筆記結構、打字/手繪切換、標題、頁面切換、匯出與列印）
             editorTopBar
 
@@ -16176,3 +16180,11 @@ struct InteractiveGuideCheckboxView: View {
     }
 }
 
+// MARK: - 設定檔切換
+
+extension StickerManager: ProfileScoped {
+    func resetForProfileSwitch() {
+        stickers = []
+        loadStickers()
+    }
+}

@@ -577,3 +577,20 @@ public final class LocalSyncDiscovery: ObservableObject {
         // 注意：需在全域保存 connection 實體以避免被釋放
     }
 }
+
+// MARK: - 設定檔切換
+
+extension LocalRelayServer: ProfileScoped {
+    func prepareForProfileSwitch() async { stop() }
+    /// 房間與成員是上一個設定檔的；`stop()` 已經全部清掉。
+    func resetForProfileSwitch() {}
+}
+
+extension LocalSyncDiscovery: ProfileScoped {
+    func prepareForProfileSwitch() async { stopBrowsing() }
+
+    func resetForProfileSwitch() {
+        discoveredEndpoints = []
+        discoveredRooms = []
+    }
+}

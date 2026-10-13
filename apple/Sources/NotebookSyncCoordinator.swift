@@ -2392,3 +2392,21 @@ public extension SyncLogger {
         }
     }
 }
+
+// MARK: - 設定檔切換
+
+extension ExportedObjectIds {
+    /// 切換設定檔：指紋與標題都是「上一輪匯出了哪些物件」，屬於上一個設定檔的筆記本。
+    func resetForProfileSwitch() {
+        lock.lock(); defer { lock.unlock() }
+        prints.removeAll()
+        titles.removeAll()
+    }
+}
+
+extension SyncLogger: ProfileScoped {
+    /// 同步日誌裡有筆記本的標題。留著的話，下一個使用者在「同步日誌」畫面就讀得到上一個人的筆記名稱。
+    func resetForProfileSwitch() {
+        entries = []
+    }
+}

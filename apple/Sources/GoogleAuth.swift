@@ -531,3 +531,28 @@ enum KeychainTokens {
         let expiresAtS: UInt64
     }
 }
+
+// MARK: - 設定檔切換
+
+extension GoogleAuth: ProfileScoped {
+    func resetForProfileSwitch() {
+        pendingAuthResume = nil
+        session = nil
+        pendingVerifier = ""
+        pendingState = ""
+        isSigningIn = false
+        if FakeDrive.isEnabled {
+            isSignedIn = true
+            accountEmail = FakeDrive.accountEmail
+            accountName = "Fake Drive User"
+            return
+        }
+        // 權杖在 Keychain，帳號名稱在偏好設定 —— 兩者現在都依設定檔分開。
+        isSignedIn = !KeychainTokens.load().refreshToken.isEmpty
+        accountEmail = isSignedIn ? ProfileDefaults.current.string(forKey: accountEmailKey) : nil
+        accountName = isSignedIn ? ProfileDefaults.current.string(forKey: accountNameKey) : nil
+        if isSignedIn && (accountName == nil || accountEmail == nil) {
+            Task { [weak self] in await self?.refreshAccountEmail() }
+        }
+    }
+}

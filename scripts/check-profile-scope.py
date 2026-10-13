@@ -19,6 +19,9 @@ Apple（`apple/Sources/*.swift`，不含 `Profile*.swift` 與產生檔）：
       `// profile-scope: device|profile|default` 標記，說明它為什麼是對的。
   A4. 每個 `static let shared` 必須在前三行內標明 `// profile-scope: device` 或 `profile`。
       標 `profile` 的類別，同一個檔案裡必須有 `resetForProfileSwitch`（切換時重設它）。
+  A5. 可變的 `static var`（全域快取）必須標明 `// profile-scope: device|profile`。
+  A6. 不可以把 `ProfileDefaults.current` 存成屬性（它是值，切換之後仍指著舊的設定檔）。
+  A7. `static let` 不可以在載入時就算定設定檔相關的位置（ProfileContext／libraryRootURL…）。
 
 Android（`android/app/src/main/java/**/*.kt`，不含 `profile/` 與產生檔）：
   K1. 不可以直接呼叫 `getSharedPreferences(` —— 用 `ProfileContext.prefs` / `devicePrefs`
@@ -43,8 +46,11 @@ ROOT = Path(__file__).resolve().parent.parent
 APPLE = ROOT / "apple" / "Sources"
 ANDROID = ROOT / "android" / "app" / "src" / "main" / "java" / "com" / "kairumo" / "padnote"
 
-# 階段 3 完成、所有標成 profile 的單例都實作了 resetForProfileSwitch 之後才設成 True。
-REQUIRE_RESET = False
+# Apple 切換設定檔是**就地重設**（iOS 不能自己重啟 App），所以每個標成 profile 的單例都必須實作
+# `resetForProfileSwitch`。Android 切換時整個行程重啟（見 `ProfileSwitcher`）—— 記憶體裡的東西全部
+# 消失，不需要逐個重設，所以不要求。
+REQUIRE_RESET_APPLE = True
+REQUIRE_RESET_ANDROID = False
 
 MARK = re.compile(r"profile-scope:\s*(device|profile|default)")
 STATE_HINT = re.compile(
@@ -89,12 +95,26 @@ def check_apple(problems: list[str]) -> None:
                 problems.append(
                     f"{where}  A3 直接取用 Documents／Application Support，沒有標記 —— "
                     "加 `// profile-scope: device|profile|default` 說明它屬於誰")
+            # A5: 可變的 static（全域快取）。範例筆記的 id 在每個設定檔都一樣，以 id 為鍵的快取會串味。
+            if re.search(r"static var \w+\s*(?::[^={]+)?(?:=|$)", line) and "{" not in line and not has_mark(lines, i):
+                problems.append(
+                    f"{where}  A5 全域可變狀態（static var）沒有分類 —— 加 `// profile-scope: device|profile 說明`；"
+                    "profile 的要接進 ProfileManager.defaultExtraResets()")
+            # A6: 把 ProfileDefaults.current 存成屬性 = 永遠指著建立當下的設定檔。
+            if re.match(r"\s{4}(?:private |fileprivate |public |internal )*(?:let|var)\s+\w+\s*(?::[^=]+)?=\s*ProfileDefaults\.current", line):
+                problems.append(
+                    f"{where}  A6 把 ProfileDefaults.current 存成屬性 —— 它是值，切換設定檔之後仍指著舊的。"
+                    "改成計算屬性：`private var defaults: ProfileDefaults { .current }`")
+            # A7: 單例或型別常數在載入時就算定了「設定檔相關的位置」。
+            if re.search(r"static let \w+[^=]*=.*(ProfileContext\.|libraryRootURL|corePackagesDirectory|documentsDirectory)", line):
+                problems.append(
+                    f"{where}  A7 static let 在載入時就算定了設定檔相關的位置 —— 改成計算屬性，每次取用才問現在是誰")
             if re.search(r"static let shared\b", line):
                 mark = has_mark(lines, i)
                 if mark is None:
                     problems.append(
                         f"{where}  A4 單例沒有分類 —— 在前面加 `// profile-scope: device` 或 `profile`")
-                elif REQUIRE_RESET and mark == "profile" and "resetForProfileSwitch" not in text:
+                elif REQUIRE_RESET_APPLE and mark == "profile" and "resetForProfileSwitch" not in text:
                     problems.append(
                         f"{where}  A4 標成 profile 的單例必須實作 resetForProfileSwitch()（切換設定檔時重設）")
 
@@ -138,7 +158,7 @@ def check_android(problems: list[str]) -> None:
                         problems.append(
                             f"{where}  K3 object {m.group(1)} 持有可變狀態卻沒有分類 —— "
                             "在前面加 `// profile-scope: device` 或 `profile`")
-                    elif REQUIRE_RESET and mark == "profile" and "resetForProfileSwitch" not in text:
+                    elif REQUIRE_RESET_ANDROID and mark == "profile" and "resetForProfileSwitch" not in text:
                         problems.append(
                             f"{where}  K3 標成 profile 的 object {m.group(1)} 必須實作 resetForProfileSwitch()")
 

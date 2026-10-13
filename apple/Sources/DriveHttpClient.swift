@@ -33,7 +33,9 @@ import Foundation
 final class DriveHttpClient: FfiDriveHttp {
 
     private static let activeLock = NSLock()
+    // profile-scope: device 進行中的連線；切換前由同步閘門確保已經沒有
     private static var activeSessions = [URLSession]()
+    // profile-scope: device 中斷旗標
     private static var isCancelled = false
 
     public static func cancelAll() {
@@ -404,6 +406,7 @@ public enum CloudSync {
     /// 同名檔案，結果是雲端多一份重複。共用一個，快照與游標就只有一份，
     /// 核心裡的索引鎖同時把兩條通道對同一份快照的存取串起來。
     private static let sessionLock = NSLock()
+    // profile-scope: profile 雲端同步 session（綁 Google 帳號）；切換時 CloudSync.invalidateSession 丟掉
     private static var shared: (session: FfiSyncSession, http: DriveHttpClient, account: String)?
 
     /// 取得共用的工作階段。回傳 nil 表示沒登入。

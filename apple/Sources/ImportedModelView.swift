@@ -104,7 +104,11 @@ private extension Color {
 /// 再試一次讀那個讀不到的檔 —— 那比慢更糟，那是整個畫面卡在磁碟 I/O 上。
 @MainActor
 enum ImportedModelCache {
+    // profile-scope: profile 解析過的 3D 模型，以檔名為鍵；不同設定檔的同名檔案是不同內容
     private static var entries: [String: FfiImportedModel3d?] = [:]
+
+    /// 切換設定檔：丟掉全部。
+    static func resetForProfileSwitch() { entries.removeAll() }
 
     /// 讀得到就回模型，讀不到回 `nil`（介面退回檔名卡片）。
     static func model(fileName: String) -> FfiImportedModel3d? {

@@ -643,3 +643,14 @@ struct SymbolPreview: View {
         .accessibilityHidden(true)
     }
 }
+
+// MARK: - 設定檔切換
+
+extension DraftToolController: ProfileScoped {
+    func resetForProfileSwitch() {
+        picks = []
+        fitted = nil
+        dragging = false
+        lastTool = .none
+    }
+}

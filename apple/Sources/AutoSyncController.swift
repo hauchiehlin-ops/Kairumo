@@ -86,7 +86,7 @@ public final class AutoSyncController: ObservableObject {
         }
     }
 
-    private let scheduler = FfiSyncScheduler.create()
+    private var scheduler = FfiSyncScheduler.create()
     private var timer: Timer?
     private var monitor: NWPathMonitor?
     private var wasOnline = true
@@ -208,6 +208,8 @@ public final class AutoSyncController: ObservableObject {
 
     /// 排程器說可以跑就跑一輪。
     private func pump() {
+        // 切換設定檔期間不起新的一輪（見 `FocusSyncController.pump`）。
+        guard !ProfileManager.shared.isSwitching else { return }
         guard let store else { return }
         guard scheduler.shouldStart(nowMs: nowMs) else { return }
         isSyncing = true
@@ -430,5 +432,36 @@ public final class AutoSyncController: ObservableObject {
                 }
             }
         #endif
+    }
+}
+
+// MARK: - 設定檔切換
+
+extension AutoSyncController: ProfileScoped {
+    func prepareForProfileSwitch() async {
+        timer?.invalidate()
+        timer = nil
+        // 進行中的一輪請它中斷。**要等它真的結束**（全域同步閘門之後還會再確認一次）。
+        if isSyncing { NotebookSyncCoordinator.cancelSync() }
+        var waited = 0
+        while isSyncing, waited < 100 {
+            try? await Task.sleep(nanoseconds: 50_000_000)
+            waited += 1
+        }
+    }
+
+    func resetForProfileSwitch() {
+        // 排程器的狀態（退避、「安靜」、等待登入）都屬於上一個設定檔的雲端帳號。
+        scheduler = FfiSyncScheduler.create()
+        isSyncing = false
+        lastMessage = ""
+        needsSignIn = false
+        lastSuccessAt = nil
+        roundChanged = true
+        emptyCloudNotebooks = []
+        let raw = ProfileDefaults.current.double(forKey: "kairumo.sync.lastGoogleAt")
+        lastGoogleSyncDate = raw > 0 ? Date(timeIntervalSince1970: raw) : nil
+        // 心跳計時器在 prepare 時停掉了；`start()` 之後不會再建（`started` 已經是 true），所以這裡重建。
+        startHeartbeat()
     }
 }

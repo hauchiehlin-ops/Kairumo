@@ -526,3 +526,34 @@ extension NotebookStore {
         return doc
     }
 }
+
+// MARK: - 設定檔切換
+
+extension DraftingState: ProfileScoped {
+    func resetForProfileSwitch() {
+        let d = ProfileDefaults.current
+        activePenId = d.string(forKey: Keys.pen) ?? "thick"
+        let o = d.integer(forKey: Keys.layerOverride)
+        layerOverride = o == 0 ? nil : UInt8(clamping: o)
+        snapEnabled = d.object(forKey: Keys.snap) as? Bool ?? true
+        angleStep = d.object(forKey: Keys.angle) as? Int ?? 15
+        compactChoice = d.object(forKey: Keys.compact) as? Bool
+        tipsSeen = d.bool(forKey: Keys.tipsSeen)
+        filletRadiusMm = d.object(forKey: Keys.filletRadius) as? Double ?? 5
+        offsetDistanceMm = d.object(forKey: Keys.offsetDistance) as? Double ?? 5
+        alignEnabled = d.object(forKey: Keys.align) as? Bool ?? true
+        thirdAngle = d.object(forKey: Keys.thirdAngle) as? Bool ?? true
+        // 逐本筆記的檢視狀態（顯示／鎖定圖層、比例尺）與目前選取：全部屬於上一個設定檔。
+        reassignMode = false
+        markerMode = false
+        stepNumber = 1
+        tool = .none
+        toolHint = nil
+        reassignResult = nil
+        editSelection = []
+        scaleRatios = [:]
+        hidden = [:]
+        locked = [:]
+        notebookId = ""
+    }
+}

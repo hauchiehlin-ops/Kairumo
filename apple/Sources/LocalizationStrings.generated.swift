@@ -14847,6 +14847,14 @@ extension LocalizationManager {
             .ko: "고급 색상 조색",
             .th: "สตูดิโอสีขั้นสูง"
         ],
+        "profile_switching": [
+            .zhHant: "正在切換使用者…",
+            .en: "Switching profile…",
+            .zhHans: "正在切换用户…",
+            .ja: "ユーザーを切り替えています…",
+            .ko: "사용자를 전환하는 중…",
+            .th: "กำลังสลับผู้ใช้…"
+        ],
         "punctuation_marks": [
             .zhHant: "標點符號",
             .en: "Punctuation",

@@ -36,7 +36,7 @@ public final class AccountSyncStore: ObservableObject {
     ///
     /// 用它在時戳平手時決勝，所以必須穩定；存進 UserDefaults 就夠 ——
     /// 它不是機密，也不需要跨安裝存活。
-    public let deviceId: String
+    public private(set) var deviceId: String
 
     private static let indexKey = "kairumo.sync.index.v1"
     private let indexKey = AccountSyncStore.indexKey
@@ -54,6 +54,12 @@ public final class AccountSyncStore: ObservableObject {
     }
 
     private init() {
+        deviceId = ""
+        loadFromProfile()
+    }
+
+    /// 從**目前設定檔**的偏好設定載入。每個設定檔有自己的同步身分（`deviceId`）、索引與設定。
+    private func loadFromProfile() {
         let defaults = ProfileDefaults.current
         if let existing = defaults.string(forKey: deviceKey) {
             deviceId = existing
@@ -64,6 +70,8 @@ public final class AccountSyncStore: ObservableObject {
         }
         indexJSON = defaults.string(forKey: indexKey) ?? ""
         settingsJSON = defaults.string(forKey: settingsKey) ?? ""
+        isDeletedCache.removeAll()
+        lastIndexJSONForCache = ""
     }
 
     // MARK: - 筆記本與資料夾（G-05）
@@ -374,5 +382,13 @@ public final class AccountSyncStore: ObservableObject {
     private struct DecodedLibraryItem: Decodable {
         var id: String?
         var deleted: Bool?
+    }
+}
+
+// MARK: - 設定檔切換
+
+extension AccountSyncStore: ProfileScoped {
+    func resetForProfileSwitch() {
+        loadFromProfile()
     }
 }

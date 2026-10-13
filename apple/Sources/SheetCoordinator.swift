@@ -132,3 +132,13 @@ public final class SheetCoordinator: ObservableObject {
         isTransitioning = false
     }
 }
+
+// MARK: - 設定檔切換
+
+extension SheetCoordinator: ProfileScoped {
+    func resetForProfileSwitch() {
+        activeSheet = nil
+        activeImportSlot = nil
+        isTransitioning = false
+    }
+}

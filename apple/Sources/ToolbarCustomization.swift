@@ -291,3 +291,17 @@ public struct ToolbarCustomizationView: View {
         }
     }
 }
+
+// MARK: - 設定檔切換
+
+extension ToolbarSettings: ProfileScoped {
+    func resetForProfileSwitch() {
+        let locale = ToolbarSettings.coreLocale()
+        if let saved = AccountSyncStore.shared.syncedToolbarJSON {
+            core = FfiToolbar.fromJson(locale: locale, json: saved)
+        } else {
+            core = FfiToolbar(locale: locale)
+        }
+        refresh()
+    }
+}

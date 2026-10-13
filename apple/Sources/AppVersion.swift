@@ -44,7 +44,9 @@ public enum AppVersion {
 /// 所以標題永遠停在 App 名稱。iOS 上設定 `UIWindowScene.title` 沒有副作用，
 /// 在 Mac 上跑的 iOS App 也會反映到視窗標題列。
 public enum MacWindowTitle {
+    // profile-scope: device 視窗標題，與使用者無關
     private static var desiredTitle: String = AppVersion.windowTitle
+    // profile-scope: device
     private static var observersInstalled = false
 
     /// 設定（並持續維持）Mac 視窗標題。

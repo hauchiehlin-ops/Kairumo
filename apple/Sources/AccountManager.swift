@@ -548,3 +548,23 @@ public struct AccountProfileSheet: View {
         }
     }
 }
+
+// MARK: - 設定檔切換
+
+extension AccountManager: ProfileScoped {
+    func resetForProfileSwitch() {
+        // 協作身分（名稱與顏色）屬於設定檔。每個設定檔建立時就寫了自己的一份；沒有就用預設名稱。
+        if let data = ProfileDefaults.current.data(forKey: profileKey),
+           let decoded = try? JSONDecoder().decode(UserProfile.self, from: data) {
+            profile = decoded
+            if ProfileDefaults.current.string(forKey: customNameKey) == nil {
+                customDisplayName = decoded.displayName
+            }
+        } else {
+            let fallback = LocalizationManager.shared.localized("default_user_name")
+            profile = UserProfile(displayName: fallback)
+            customDisplayName = fallback
+        }
+        refreshDisplayName()
+    }
+}

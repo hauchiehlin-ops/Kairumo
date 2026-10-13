@@ -168,6 +168,7 @@ enum FileImport {
 /// 從目前最上層的 view controller 呈現，結束就丟掉。
 @MainActor
 final class DocumentPickerPresenter: NSObject, UIDocumentPickerDelegate {
+    // profile-scope: device 目前顯示中的檔案選取器（UI 暫態）
     private static var current: DocumentPickerPresenter?
 
     private let completion: (Result<[URL], Error>?) -> Void

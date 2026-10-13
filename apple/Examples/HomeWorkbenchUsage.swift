@@ -14,6 +14,25 @@ import SwiftUI
 /// 應用程式主入口範例（支援 iOS、iPadOS 與 Mac Catalyst 通用）
 /// 第一次啟動先給引導，之後直接進首頁（見 `OnboardingView`）。
 private struct RootView: View {
+    @ObservedObject private var profiles = ProfileManager.shared
+
+    var body: some View {
+        Group {
+            if profiles.isSwitching {
+                // 切換中只顯示一個中性的畫面：編輯器等舊畫面要在舊設定檔還有效時消失、存檔
+                // （見 `ProfileManager` 檔頭）。
+                ProfileSwitchingView()
+            } else {
+                // `.id(epoch)`：每次切換整棵重建。舊設定檔的任何畫面狀態（捲動位置、開著的筆記、
+                // `@State`）一個都不會留給下一個使用者。
+                ProfileContentView().id(profiles.epoch)
+            }
+        }
+    }
+}
+
+/// 一個設定檔的內容：第一次使用先給引導，之後進首頁。
+private struct ProfileContentView: View {
     @State private var showOnboarding = !OnboardingView.hasSeen
     @ObservedObject private var storageLocation = DocumentStorageLocation.shared
 
@@ -26,7 +45,7 @@ private struct RootView: View {
             }
         }
         .sheet(isPresented: Binding(
-            get: { !showOnboarding && storageLocation.requiresMacSelection },
+            get: { !showOnboarding && ProfileContext.isDefault && storageLocation.requiresMacSelection },
             set: { _ in }
         )) {
             StorageLocationView(isRequired: true)
@@ -43,6 +62,9 @@ struct KairumoApp: App {
     @UIApplicationDelegateAdaptor(KairumoAppDelegate.self) private var appDelegate
 
     init() {
+        // **必須在任何單例被碰到之前**：單例的 init 會依 `ProfileContext.activeId` 讀資料，
+        // 它若還是舊的，整個 App 就載入錯的設定檔。
+        ProfileManager.reconcileContextBeforeLaunch()
         StartupLogger.logKey("log_app_init")
         KairumoAppDelegate.configureInstantToolTips()
         // 啟動時確認 Rust Core 與版本狀態

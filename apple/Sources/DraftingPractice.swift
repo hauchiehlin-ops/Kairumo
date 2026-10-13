@@ -272,3 +272,15 @@ struct PracticeCard: View {
         }
     }
 }
+
+// MARK: - 設定檔切換
+
+extension PracticeSession: ProfileScoped {
+    func resetForProfileSwitch() {
+        problem = nil
+        summary = nil
+        feedback = nil
+        pickedKind = nil
+        answerShown = false
+    }
+}

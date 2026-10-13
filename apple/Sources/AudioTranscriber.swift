@@ -763,3 +763,18 @@ public class StreamingTranscriber {
         transcribingTask = nil
     }
 }
+
+// MARK: - 設定檔切換
+
+extension AudioTranscriber: ProfileScoped {
+    /// 進行中的轉錄是呼叫端（畫面）的 `Task`，這裡取消不到；它的結果是依「錄音所在的筆記本 id」寫回的，
+    /// 錄音的 id 是唯一的 UUID，切換之後在另一個設定檔裡找不到，所以不會寫進別人的筆記。
+    func resetForProfileSwitch() {
+        isTranscribing = false
+        lastError = nil
+        transcriptionProgress = 0
+        transcriptionStatusText = ""
+        let raw = ProfileDefaults.current.string(forKey: Self.enginePrefKey) ?? EnginePreference.auto.rawValue
+        enginePreference = EnginePreference(rawValue: raw) ?? .auto
+    }
+}

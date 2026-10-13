@@ -49,7 +49,7 @@ public final class FocusSyncController: ObservableObject {
     /// 最近一次**有工作**的一輪的總耗時（毫秒）。給同步醫生看。
     @Published public private(set) var lastWorkRoundMs = 0
 
-    private let lane = FfiFocusLane.create()
+    private var lane = FfiFocusLane.create()
     private var store: SyncableNotebookStore?
     private var deviceId: UInt32 = 0
     private var started = false
@@ -66,6 +66,8 @@ public final class FocusSyncController: ObservableObject {
     private var lastFocusedId: String?
     private var lastBlurMs: UInt64 = 0
     private var lastPersistMs: UInt64 = 0
+    /// 正在跑的 `flushUnpushed` 數量。切換設定檔要等它歸零（見 `ProfileScoped`）。
+    private var flushInFlight = 0
 
     private var nowMs: UInt64 {
         UInt64(ProcessInfo.processInfo.systemUptime * 1000)
@@ -141,6 +143,9 @@ public final class FocusSyncController: ObservableObject {
     /// 給「離開筆記本」與「進背景」用 —— 這兩個時間點之後，App 隨時會被 iOS 凍結。
     /// 成功才從待推名單移除；失敗留著，下次焦點或背景再試。
     public func flushUnpushed() async {
+        guard !ProfileManager.shared.isSwitching else { return }
+        flushInFlight += 1
+        defer { flushInFlight -= 1 }
         guard let store, !unflushed.isEmpty else { return }
         guard await GoogleAuth.shared.isSignedIn, let session = await CloudSync.makeSession() else { return }
         for id in Array(unflushed) {
@@ -190,6 +195,8 @@ public final class FocusSyncController: ObservableObject {
     }
 
     private func pump() {
+        // 切換設定檔期間不起新的一輪：路徑是執行時才算的，跑到一半設定檔變了就寫進別人的目錄。
+        guard !ProfileManager.shared.isSwitching else { return }
         guard let store, let run = lane.poll(nowMs: nowMs) else {
             reschedule()
             return
@@ -620,4 +627,48 @@ private final class LanHostProxy: FfiLanHost, @unchecked Sendable {
         target?.onReceived(notebookId: notebookId, files: files)
     }
     func onPeersChanged(count: UInt32) { target?.onPeersChanged(count: count) }
+}
+
+// MARK: - 設定檔切換
+
+extension FocusSyncController: ProfileScoped {
+    func prepareForProfileSwitch() async {
+        wake?.cancel()
+        wake = nil
+        stopLan()
+        // 盡量把離開前的最後一筆推上去，但不為它拖住切換：3 秒還沒推完就中斷網路，讓它快點收尾。
+        // **一定要等它真的結束**：它的路徑是執行時才算的，切換之後才收尾就會碰到新設定檔的目錄。
+        await withTaskGroup(of: Bool.self) { group in
+            group.addTask { @MainActor in
+                await self.flushUnpushed()
+                return true
+            }
+            group.addTask { @MainActor in
+                try? await Task.sleep(nanoseconds: 3_000_000_000)
+                if !Task.isCancelled { NotebookSyncCoordinator.cancelSync() }
+                return false
+            }
+            for await finishedFlush in group where finishedFlush {
+                group.cancelAll()
+            }
+        }
+        var waited = 0
+        while lane.isRunning(), waited < 100 {
+            try? await Task.sleep(nanoseconds: 50_000_000)
+            waited += 1
+        }
+    }
+
+    func resetForProfileSwitch() {
+        lane = FfiFocusLane.create()
+        unflushed = []
+        lastFocusedId = nil
+        lastBlurMs = 0
+        lastPersistMs = 0
+        lanImporting = false
+        lanImportQueue = []
+        lanStarting = false
+        lanPeerCount = 0
+        lastWorkRoundMs = 0
+    }
 }

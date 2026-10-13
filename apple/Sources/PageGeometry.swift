@@ -64,6 +64,7 @@ public enum PageGeometry {
     /// 這讓同步的匯出搬不出主執行緒（見 H-SYNC-MAINACTOR）：一搬就在
     /// `PageGeometry.width` 上炸掉。改成一把鎖之後，寫的人照樣只有主執行緒，
     /// 但**任何執行緒都讀得到**，而且是編譯器管不到的地方由鎖真的管住。
+    // profile-scope: profile 目前開著那一本的頁面尺寸；切換時由 defaultExtraResets 重設
     private nonisolated(unsafe) static var storedCurrentSize: CGSize = defaultSize
     private nonisolated static let currentSizeLock = NSLock()
 

@@ -1286,6 +1286,18 @@ public final class NotebookStore: ObservableObject {
     private init() {
         StartupLogger.logKey("log_store_init_begin")
         documentsRootOverride = nil
+        loadAndSeed()
+        StartupLogger.logKey("log_store_init_done")
+
+        // 錄音檔案掃描與時長校正非關鍵啟動路徑，改為真正非同步於背景佇列執行，
+        // 避免在主執行緒上開啟所有套件及讀取龐大音檔，徹底消除 App 啟動凍結 (卡頓數秒)。
+        DispatchQueue.global(qos: .utility).async { [weak self] in
+            self?.refreshRecordings()
+        }
+    }
+
+    /// 讀目前設定檔的資料；是空的就放範例筆記。`init` 與切換設定檔共用。
+    private func loadAndSeed() {
         loadData()
         let nonInbox = notebooks.filter {
             $0.id.caseInsensitiveCompare(recordingInboxNotebookId()) != .orderedSame
@@ -1298,13 +1310,6 @@ public final class NotebookStore: ObservableObject {
             backfillEmptySeedNotebooks()
         }
         injectInteractionFixturesIfRequested()
-        StartupLogger.logKey("log_store_init_done")
-
-        // 錄音檔案掃描與時長校正非關鍵啟動路徑，改為真正非同步於背景佇列執行，
-        // 避免在主執行緒上開啟所有套件及讀取龐大音檔，徹底消除 App 啟動凍結 (卡頓數秒)。
-        DispatchQueue.global(qos: .utility).async { [weak self] in
-            self?.refreshRecordings()
-        }
     }
 
     /// 互動矩陣專用筆記本的 id（`InteractionMatrixAudit` 靠它從首頁找到這本）。
@@ -1846,6 +1851,9 @@ public final class NotebookStore: ObservableObject {
             trash: trashFile
         )
         let key = rootFolderNameKey
+        // **在排進佇列的當下就取定設定檔。** 背景寫檔是稍後才執行的；若到執行時才問「現在是哪個設定檔」，
+        // 切換發生在中間的話，舊設定檔的資料夾名稱就寫進了新設定檔。檔案路徑上面已經是當下取定的。
+        let defaults = ProfileDefaults.current
 
         guard !pendingWrite else { return }
         pendingWrite = true
@@ -1863,7 +1871,7 @@ public final class NotebookStore: ObservableObject {
             if let tData = try? JSONEncoder().encode(snapshot.trash) {
                 try? tData.write(to: files.trash, options: .atomic)
             }
-            ProfileDefaults.current.set(rootName, forKey: key)
+            defaults.set(rootName, forKey: key)
 
             Task { @MainActor in
                 guard let self else { return }
@@ -4368,5 +4376,41 @@ public struct NoteTapeAttachment: Identifiable, Codable, Hashable {
         try c.encode(isRevealed, forKey: .isRevealed)
         try c.encodeIfPresent(colorHex, forKey: .colorHex)
         try c.encode(rotation, forKey: .rotation)
+    }
+}
+
+// MARK: - 設定檔切換
+
+extension NotebookStore: ProfileScoped {
+    func finishPreparingForProfileSwitch() async {
+        // 同步已經安靜了：把記憶體裡最後一版落盤，並等背景寫檔佇列真的寫完。
+        // 不等的話，寫檔會在切換之後才收尾 —— 路徑雖然是當下取定的，但寫完之後的
+        // `Task { @MainActor }` 會拿新設定檔的陣列再排一次寫入，兩個設定檔的狀態就纏在一起了。
+        markDirtyAndPersist(signalsLocalEdit: false)
+        var waited = 0
+        while (pendingWrite || needsAnotherWrite), waited < 200 {
+            try? await Task.sleep(nanoseconds: 50_000_000)
+            waited += 1
+        }
+    }
+
+    func resetForProfileSwitch() {
+        notebooks = []
+        recordings = []
+        folders = []
+        trashedNotebooks = []
+        rootFolderName = ""
+        activeNotebookId = nil
+        pendingWrite = false
+        needsAnotherWrite = false
+        signalAfterWrite = false
+        imageCache.removeAllObjects()
+        isHiddenCache.removeAll()
+        lastIndexJSONForHidden = ""
+        unmatchedIncomingTitles.removeAll()
+        loadAndSeed()
+        DispatchQueue.global(qos: .utility).async { [weak self] in
+            self?.refreshRecordings()
+        }
     }
 }

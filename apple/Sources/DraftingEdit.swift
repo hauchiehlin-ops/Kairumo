@@ -328,3 +328,13 @@ struct DraftArraySheet: View {
         .presentationDetents([.medium])
     }
 }
+
+// MARK: - 設定檔切換
+
+extension DraftEditController: ProfileScoped {
+    func resetForProfileSwitch() {
+        first = nil
+        firstClick = .zero
+        axisStart = nil
+    }
+}

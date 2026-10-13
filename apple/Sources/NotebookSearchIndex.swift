@@ -109,3 +109,20 @@ public final class NotebookSearchIndex: ObservableObject {
         hits.contains(notebookId)
     }
 }
+
+// MARK: - 設定檔切換
+
+extension NotebookSearchIndex: ProfileScoped {
+    func prepareForProfileSwitch() async {
+        task?.cancel()
+        task = nil
+    }
+
+    func resetForProfileSwitch() {
+        // 快取的是「某個查詢命中哪些筆記本 id」—— 範例筆記的 id 在每個設定檔都一樣，
+        // 留著的話 B 的搜尋結果會帶出 A 的命中。
+        cache.removeAll()
+        hits = []
+        query = ""
+    }
+}

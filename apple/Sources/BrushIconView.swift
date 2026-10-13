@@ -48,6 +48,7 @@ struct BrushVectorIcon: View {
         let strokeWidth: CGFloat
         let roundCap: Bool
     }
+    // profile-scope: device 筆刷圖示快取（向量資料，與使用者無關）
     private static var parsedShapesCache: [EditorToolType: [CachedShape]] = [:]
 
     private static func cachedShapes(for tool: EditorToolType) -> [CachedShape] {
@@ -110,6 +111,7 @@ struct BrushVectorIcon: View {
         .accessibilityHidden(true)
     }
 
+    // profile-scope: device
     private static var cache: [EditorToolType: [FfiIconShape]] = [:]
 
     private static func shapes(for tool: EditorToolType) -> [FfiIconShape] {
@@ -169,6 +171,7 @@ struct BrushStrokePreview: View {
     let tool: EditorToolType
     let ink: Color
 
+    // profile-scope: device
     private static var dabsCache: [EditorToolType: [FfiDab]] = [:]
 
     private static func cachedDabs(for tool: EditorToolType, width: Float, height: Float) -> [FfiDab] {

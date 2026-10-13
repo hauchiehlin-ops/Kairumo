@@ -650,3 +650,25 @@ public final class AudioRecorderManager: NSObject, ObservableObject, AVAudioReco
         stopPlayback()
     }
 }
+
+// MARK: - 設定檔切換
+
+extension AudioRecorderManager: ProfileScoped {
+    func prepareForProfileSwitch() async {
+        // 錄音中就收尾存檔：這時設定檔還是舊的，檔案才會落在對的人的筆記本裡。
+        if status != .idle { _ = stopRecording() }
+        if isPlaying { stopPlayback() }
+    }
+
+    func resetForProfileSwitch() {
+        status = .idle
+        elapsedSeconds = 0
+        audioLevels = Array(repeating: 0.15, count: 20)
+        showPermissionAlert = false
+        isPlaying = false
+        playingRecordingId = nil
+        playbackProgress = 0
+        currentPlaybackTime = 0
+        lastRecordingAdviceKey = nil
+    }
+}

@@ -42,7 +42,7 @@ final class PenHardwareSettings: ObservableObject {
 
     /// 核心那一份表。**唯一的來源** —— 這邊不另外快取一份 Swift 的副本，
     /// 兩份狀態一定會有一個先改到。
-    let controls: PenControls
+    private(set) var controls: PenControls
 
     private init() {
         let saved = ProfileDefaults.current.string(forKey: Self.key)
@@ -263,3 +263,12 @@ private extension Float {
     var nonZero: Float? { self == 0 ? nil : self }
 }
 
+// MARK: - 設定檔切換
+
+extension PenHardwareSettings: ProfileScoped {
+    func resetForProfileSwitch() {
+        let saved = ProfileDefaults.current.string(forKey: Self.key)
+        controls = saved.map { PenControls.decode(text: $0) } ?? PenControls()
+        objectWillChange.send()
+    }
+}

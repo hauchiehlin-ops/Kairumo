@@ -867,3 +867,33 @@ public class CollaborationManager: ObservableObject {
         }
     }
 }
+
+// MARK: - 設定檔切換
+
+extension CollaborationManager: ProfileScoped {
+    func prepareForProfileSwitch() async {
+        // 離開房間、關掉自己開的中繼。房間是用這個設定檔的身分與金鑰進的。
+        disconnect()
+        LocalRelayServer.shared.stop()
+        isHostingLocalRelay = false
+        lanRelayAddress = nil
+        tailscaleRelayAddress = nil
+    }
+
+    func resetForProfileSwitch() {
+        status = .disconnected
+        currentRoomId = ""
+        isHost = false
+        peers = []
+        roomKeyBase64 = nil
+        lastErrorMessage = nil
+        localRelayFailure = nil
+        isBonjourDegraded = false
+        queuedOplogCount = 0
+        offlineOplogQueue.removeAll()
+        reconnectAttempt = 0
+        maxKnownLamport = 0
+        serverAddress = ProfileDefaults.current.string(forKey: "kairumo_relay_server_url")
+            ?? collabTuning().defaultServer
+    }
+}

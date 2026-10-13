@@ -259,6 +259,7 @@ enum ContinuousPagesSpace {
 
 /// 每一頁在捲動容器裡的中線 y。用來挑出焦點頁。
 struct PageFocusPreferenceKey: PreferenceKey {
+    // profile-scope: device PreferenceKey 的預設值常數
     static var defaultValue: [Int: CGFloat] = [:]
     static func reduce(value: inout [Int: CGFloat], nextValue: () -> [Int: CGFloat]) {
         value.merge(nextValue()) { _, new in new }
