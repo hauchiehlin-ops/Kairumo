@@ -516,11 +516,24 @@ object CloudSync {
             // 動同一個套件目錄。同步是冪等的，這一本下一輪再看沒有任何代價。
             val lock = notebookLockTryEnter(id, "full-sync", android.os.SystemClock.elapsedRealtime().toULong())
             if (!lock.granted) continue
+            // 進原生層之前先落一筆：原生層崩潰（OOM、堆疊溢位、abort）不會留下 Kotlin 例外，
+            // 日誌停在哪一本，就是哪一本。
+            val startedAt = android.os.SystemClock.elapsedRealtime()
+            val rt = Runtime.getRuntime()
+            SyncLogger.log(
+                "開始同步筆記本 $id（${pkg.walkTopDown().count { it.isFile }} 個檔案，" +
+                    "堆積 ${(rt.totalMemory() - rt.freeMemory()) / 1048576}/${rt.maxMemory() / 1048576} MB）",
+                SyncSource.GOOGLE_DRIVE
+            )
             val result = try {
                 runCatching { session.syncNotebook(pkg.absolutePath, id, deviceId) }.getOrNull()
             } finally {
                 notebookLockLeave(id, lock.ticket)
             }
+            SyncLogger.log(
+                "筆記本 $id 同步結束，耗時 ${android.os.SystemClock.elapsedRealtime() - startedAt} ms",
+                SyncSource.GOOGLE_DRIVE
+            )
             if (result == null) {
                 SyncLogger.log("筆記本 $id 同步中斷", SyncSource.GOOGLE_DRIVE)
                 continue
