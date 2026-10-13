@@ -699,6 +699,7 @@ enum NotebookPackageBridge {
         }
 
         let suffix = deviceSuffix(deviceId)
+        try bumpOwnOplogNamesIfChanged(old: destination, fresh: fresh, suffix: suffix)
         var deletedDocOps = [String]()
         // 1. 先清掉這台裝置舊的 oplog 與筆畫檔 —— 不清的話新舊會疊加。
         for relative in relativeFiles(in: destination) where relative.contains(suffix) {
@@ -759,6 +760,45 @@ enum NotebookPackageBridge {
         try? applyForeignDeletions(
             document: document, foreign: foreign, to: destination, deviceId: deviceId)
         return summary
+    }
+
+    /// **內容變了就換新檔名。**
+    ///
+    /// 每次匯出都把這台的整份 oplog 重建一遍，檔名（lamport 從 1 數）常常和上一輪一模一樣；
+    /// 但同步層把 oplog 當「只增不減」的檔：本機檔案**比雲端那份大**才上傳、雲端比本機大就下載覆蓋。
+    /// 所以改名成較短的名字（整份重建的檔案變小）永遠傳不出去，還會被雲端舊檔蓋回來 ——
+    /// 使用者回報「iPad 錄音更名後其他平台都沒變」就是這個。任何讓檔案變小或同大的編輯都會中。
+    ///
+    /// 做法：內容和舊的不同時，新檔的 lamport 加上舊檔的最大 lamport，檔名一定是全新、較大的；
+    /// 舊檔名由後面的步驟刪掉並記成墓碑，別台從頭讀新檔（區塊 id 相同、重放是冪等的）。
+    private static func bumpOwnOplogNamesIfChanged(old: URL, fresh: URL, suffix: String) throws {
+        let fm = FileManager.default
+        func ownOps(_ root: URL) -> [String: URL] {
+            let dir = root.appending(path: "doc/ops")
+            let names = (try? fm.contentsOfDirectory(atPath: dir.path)) ?? []
+            return Dictionary(uniqueKeysWithValues: names
+                .filter { $0.hasSuffix("\(suffix).oplog") }
+                .map { ($0, dir.appending(path: $0)) })
+        }
+        let oldOps = ownOps(old)
+        let freshOps = ownOps(fresh)
+        guard !oldOps.isEmpty, !freshOps.isEmpty else { return }
+        if Set(oldOps.keys) == Set(freshOps.keys),
+           oldOps.allSatisfy({ name, url in
+               (try? Data(contentsOf: url)) == (try? Data(contentsOf: freshOps[name]!))
+           }) {
+            return
+        }
+        func lamport(_ name: String) -> UInt64 {
+            UInt64(name.split(separator: "-").first ?? "", radix: 16) ?? 0
+        }
+        let offset = oldOps.keys.map(lamport).max() ?? 0
+        guard offset > 0 else { return }
+        // 由大到小搬：新名字可能剛好等於另一個還沒搬的新檔名。
+        for (name, url) in freshOps.sorted(by: { lamport($0.key) > lamport($1.key) }) {
+            let bumped = String(format: "%016llx", lamport(name) + offset) + suffix + ".oplog"
+            try fm.moveItem(at: url, to: url.deletingLastPathComponent().appending(path: bumped))
+        }
     }
 
     /// 文件裡所有物件在核心的區塊／物件 id（小寫）。

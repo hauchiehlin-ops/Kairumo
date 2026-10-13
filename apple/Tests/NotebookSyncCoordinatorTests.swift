@@ -46,6 +46,15 @@ final class FakeStore: SyncableNotebookStore {
         }
     }
 
+    /// 這台裝置的錄音清單（測錄音改名的同步用）。
+    var recordings: [AudioRecordingRecord] = []
+    /// 同步匯入時交給這台裝置套用的錄音名字（每一輪一份）。
+    var appliedTitles: [[String: String]] = []
+    var syncRecordings: [AudioRecordingRecord] { recordings }
+    func syncApplyRecordingTitles(_ titles: [String: String], exported _: [String: String]?) {
+        appliedTitles.append(titles)
+    }
+
     var syncNotebooks: [NotebookDocument] { documents }
     /// 全集（含被隱藏的）。測試裡沒有隱藏的概念，兩者相同。
     var allNotebooks: [NotebookDocument] { documents }
