@@ -23,8 +23,11 @@ import Foundation
 /// 位址 − 模組基底 = 檔案內偏移，與當機報告的 imageOffset 是同一回事）。
 enum StackSampler {
     private static let capacity = 64
+    // profile-scope: device 診斷用的堆疊緩衝區，整台裝置共用
     nonisolated(unsafe) fileprivate static var buffer = UnsafeMutablePointer<UnsafeMutableRawPointer?>.allocate(capacity: capacity)
+    // profile-scope: device 診斷用，整台裝置共用
     nonisolated(unsafe) fileprivate static var count: Int32 = 0
+    // profile-scope: device 診斷用（主執行緒的身分），整台裝置共用
     nonisolated(unsafe) private static var mainThread: pthread_t?
 
     /// 在主執行緒上呼叫一次（安裝處理常式、記下主執行緒）。
