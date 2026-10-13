@@ -60,6 +60,14 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.Kairumo">
+        <!-- 切換設定檔時重啟 App 用的跳板，跑在獨立行程（見 ProfileRestartActivity）。 -->
+        <activity
+            android:name=".profile.ProfileRestartActivity"
+            android:process=":restart"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:taskAffinity=""
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
         <activity
             android:name=".MainActivity"
             android:exported="true"
