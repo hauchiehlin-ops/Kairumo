@@ -481,7 +481,7 @@ enum NotebookSyncCoordinator {
         let inputs = store.syncNotebooks.map {
             exportInputs(for: $0, store: store, packagesDir: packagesDir, deviceId: deviceId)
         }
-        let exportOutcome = await Task.detached(priority: .utility) { () -> (OwnStrokes, Int, [String: String], Bool) in
+        let exportOutcome = await Task.detached(priority: .utility) { () -> (OwnStrokes, Int, [String: String], Bool, [String: ExportInputs]) in
             // **這一段不准回到主執行緒。**
             //
             // 不是效能建議，是硬性條件：這裡每本每頁要讀一次檔、解一次
@@ -496,9 +496,17 @@ enum NotebookSyncCoordinator {
             var own: OwnStrokes = [:]
             var exported = 0
             var failures = [String: String]()
+            var deferred = [String: ExportInputs]()
             for input in inputs {
                 if isCancelled || Task.isCancelled {
-                    return (own, exported, failures, true)
+                    return (own, exported, failures, true, deferred)
+                }
+                // 工作副本沒有比套件新：不重建套件（與 Google Drive 那條路徑同一條判斷）。
+                // 原本這裡每一輪對每一本都完整匯出一次，即使一個字都沒改。
+                // 「自己寫的筆畫」延到真的要匯入時才算（見 `importPackagesForFolderSync`）。
+                if !workingCopyNeedsExport(input) {
+                    deferred[input.document.id.lowercased()] = input
+                    continue
                 }
                 do {
                     let mine = try exportOne(input)
@@ -512,9 +520,10 @@ enum NotebookSyncCoordinator {
                     failures[input.document.title] = L10n.errorText(error)
                 }
             }
-            return (own, exported, failures, false)
+            return (own, exported, failures, false, deferred)
         }.value
         let ownStrokes = exportOutcome.0
+        let deferredInputs = exportOutcome.4
         report.exported = exportOutcome.1
         report.failures.merge(exportOutcome.2) { first, _ in first }
         if exportOutcome.3 {
@@ -533,12 +542,14 @@ enum NotebookSyncCoordinator {
         let activeLocalIds = Set(store.syncNotebooks.map { $0.id })
         let deletedNotebookIds = AccountSyncStore.shared.deletedNotebookIds
         let activeId = store.activeNotebookId ?? store.syncNotebooks.sorted { $0.lastModifiedDate > $1.lastModifiedDate }.first?.id
-        let (syncUploaded, syncDownloaded, syncNeedsAttention, syncFailures, newNotebooks) = await Task.detached(priority: .utility) {
+        let (syncUploaded, syncDownloaded, syncNeedsAttention, syncFailures, newNotebooks, changedIds) = await Task.detached(priority: .utility) {
             var up = 0
             var down = 0
             var attention = [String]()
             var fails = [String: String]()
             var newBooks = 0
+            // 這一輪真的從雲端資料夾下載到東西的筆記本：只有它們需要匯入回本機。
+            var changed = Set<String>()
 
             // (1) 先清理雲端資料夾中屬於已刪除（帶墓碑）的套件，阻斷死灰復燃
             let remoteFolderItems = (try? fm.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil, options: [])) ?? []
@@ -575,6 +586,7 @@ enum NotebookSyncCoordinator {
                 let res = CloudSyncFolder.sync(localPackage: activePkg, into: folder)
                 up += res.uploaded.count
                 down += res.downloaded.count
+                if !res.downloaded.isEmpty { changed.insert(activePkg.deletingPathExtension().lastPathComponent.lowercased()) }
                 attention.append(contentsOf: res.needsAttention)
                 fails.merge(res.failures) { first, _ in first }
                 SyncLogger.logAsync("【前台極速軌】當前筆記 (\(activeId.prefix(8))...) 完成（上傳: \(res.uploaded.count), 下載: \(res.downloaded.count)）", source: .folder)
@@ -592,6 +604,7 @@ enum NotebookSyncCoordinator {
                     let result = CloudSyncFolder.sync(localPackage: package, into: folder)
                     up += result.uploaded.count
                     down += result.downloaded.count
+                    if !result.downloaded.isEmpty { changed.insert(pkgId.lowercased()) }
                     attention.append(contentsOf: result.needsAttention)
                     fails.merge(result.failures) { first, _ in first }
                     SyncLogger.logAsync("【背景佇列】筆記本 (\(pkgId.prefix(8))...) 完成（上傳: \(result.uploaded.count), 下載: \(result.downloaded.count)）", source: .folder)
@@ -612,7 +625,7 @@ enum NotebookSyncCoordinator {
                 fails.merge(tempReport.failures) { first, _ in first }
             }
 
-            return (up, down, attention, fails, newBooks)
+            return (up, down, attention, fails, newBooks, changed)
         }.value
 
         report.uploaded += syncUploaded
@@ -634,8 +647,10 @@ enum NotebookSyncCoordinator {
             into: store,
             deviceId: deviceId,
             ownStrokes: ownStrokes,
+            deferredInputs: deferredInputs,
             activeLocalIds: activeLocalIds,
             deletedNotebookIds: deletedNotebookIds,
+            onlyNotebookIds: changedIds,
             report: &report
         )
         store.syncRepairSeedDuplicates()
@@ -754,7 +769,7 @@ enum NotebookSyncCoordinator {
         let inputs = store.syncNotebooks.map {
             exportInputs(for: $0, store: store, packagesDir: packagesDir, deviceId: deviceId)
         }
-        let exportOutcome = await Task.detached(priority: .utility) { () -> (OwnStrokes, Int, [String: String], Bool) in
+        let exportOutcome = await Task.detached(priority: .utility) { () -> (OwnStrokes, Int, [String: String], Bool, [String: ExportInputs]) in
             // **這一段不准回到主執行緒。**
             //
             // 不是效能建議，是硬性條件：這裡每本每頁要讀一次檔、解一次
@@ -769,9 +784,10 @@ enum NotebookSyncCoordinator {
             var own: OwnStrokes = [:]
             var exported = 0
             var failures = [String: String]()
+            var deferred = [String: ExportInputs]()
             for input in inputs {
                 if isCancelled || Task.isCancelled {
-                    return (own, exported, failures, true)
+                    return (own, exported, failures, true, deferred)
                 }
                 // 焦點通道正在處理這一本（它自己會匯出、推送、匯入）：
                 // 略過，不要兩條通道同時寫同一個套件。同步是冪等的，
@@ -786,13 +802,10 @@ enum NotebookSyncCoordinator {
                 // 終止。套件比工作副本新代表編輯器的增量寫入或上一輪匯出
                 // 已經包含這份內容，直接沿用即可。
                 if !workingCopyNeedsExport(input) {
-                    do {
-                        own.merge(try snapshotOwnStrokes(input)) { first, _ in first }
-                    } catch is CancellationError {
-                        return (own, exported, failures, true)
-                    } catch {
-                        failures[input.document.title] = L10n.errorText(error)
-                    }
+                    // **不在這裡解碼筆跡。** 「這台自己寫的筆畫」只有匯入那一本時才用得到，
+                    // 而每一輪對每一本的每一頁解一次 `PKDrawing` 是步驟 1 最大的成本。
+                    // 記下來，真的要匯入時才算（見 `importPackages` 的 `deferredInputs`）。
+                    deferred[input.document.id.lowercased()] = input
                     continue
                 }
                 do {
@@ -800,7 +813,7 @@ enum NotebookSyncCoordinator {
                     own.merge(mine) { first, _ in first }
                     exported += 1
                 } catch is CancellationError {
-                    return (own, exported, failures, true)
+                    return (own, exported, failures, true, deferred)
                 } catch {
                     SyncLogger.logAsync(
                         "匯出失敗 (\(input.document.title))：\(error.localizedDescription)",
@@ -809,9 +822,10 @@ enum NotebookSyncCoordinator {
                     failures[input.document.title] = L10n.errorText(error)
                 }
             }
-            return (own, exported, failures, false)
+            return (own, exported, failures, false, deferred)
         }.value
         let ownStrokes = exportOutcome.0
+        let deferredInputs = exportOutcome.4
         report.exported = exportOutcome.1
         report.failures.merge(exportOutcome.2) { first, _ in first }
         if exportOutcome.3 {
@@ -1031,6 +1045,7 @@ enum NotebookSyncCoordinator {
                 into: store,
                 deviceId: deviceId,
                 ownStrokes: ownStrokes,
+                deferredInputs: deferredInputs,
                 activeLocalIds: activeLocalIds,
                 deletedNotebookIds: deletedNotebookIds,
                 onlyNotebookIds: changedPackageIds,
@@ -1059,6 +1074,7 @@ enum NotebookSyncCoordinator {
             into: store,
             deviceId: deviceId,
             ownStrokes: ownStrokes,
+            deferredInputs: deferredInputs,
             activeLocalIds: activeLocalIds,
             deletedNotebookIds: deletedNotebookIds,
             onlyNotebookIds: changedPackageIds,
@@ -1665,15 +1681,25 @@ enum NotebookSyncCoordinator {
     /// 與它引用的附件。任何資訊讀不到都保守地回 true，寧可多匯出一次，
     /// 不冒漏資料的風險。
     nonisolated static func workingCopyNeedsExport(_ inputs: ExportInputs) -> Bool {
-        let fm = FileManager.default
-        guard fm.fileExists(atPath: inputs.package.path) else { return true }
-
+        let needs = workingCopyNeedsExportByTimestamp(inputs)
         // **如果磁碟上的套件已有更多頁面，本地工作副本頁數落後，絕不應反向覆蓋套件！**
         // 否則落後的裝置開機或碰過時間戳後，會在步驟 1 把套件截短為較少頁數。
-        if let pkgPages = NotebookPackageBridge.packagePageCount(at: inputs.package, deviceId: inputs.deviceId),
+        //
+        // **只在「本來要匯出」時才問。** 問頁數要把整本筆記的操作記錄重播一遍
+        // （`PadnoteSession.openExisting`），放在最前面等於每一輪對每一本都重播一次 ——
+        // 使用者看到的就是「什麼都沒改，卻每次都全部重新掃描」。
+        if needs,
+           let pkgPages = NotebookPackageBridge.packagePageCount(
+               at: inputs.package, deviceId: inputs.deviceId, notebookId: inputs.document.id),
            pkgPages > inputs.document.pageCount {
             return false
         }
+        return needs
+    }
+
+    private nonisolated static func workingCopyNeedsExportByTimestamp(_ inputs: ExportInputs) -> Bool {
+        let fm = FileManager.default
+        guard fm.fileExists(atPath: inputs.package.path) else { return true }
 
         // **套件裡沒有任何操作記錄 = 從來沒匯出過，不管時間怎麼比。**
         //
@@ -2039,11 +2065,15 @@ enum NotebookSyncCoordinator {
         into store: SyncableNotebookStore,
         deviceId: UInt32,
         ownStrokes: OwnStrokes,
+        deferredInputs: [String: ExportInputs] = [:],
         activeLocalIds: Set<String>,
         deletedNotebookIds: Set<String>,
         onlyNotebookIds: Set<String>? = nil,
         report: inout Report
     ) async {
+        // 筆記本 id 是大寫 UUID、套件 id 比對用小寫：不統一的話永遠判成「本機沒載入」，
+        // 於是每一輪都重新匯入每一本（匯入又讓文件時間變新，下一輪再觸發匯出）。
+        let activeLocalIds = Set(activeLocalIds.map { $0.lowercased() })
         let fm = FileManager.default
         let allPackages = (try? fm.contentsOfDirectory(at: packagesDir, includingPropertiesForKeys: nil))?
             .filter { $0.pathExtension == "padnote" } ?? []
@@ -2056,17 +2086,13 @@ enum NotebookSyncCoordinator {
                 continue
             }
 
-            // 如果指定了只匯入特定變更的筆記本，且此筆記本不在名單中，且本地已載入過：
-            // 只有在套件頁數與本地頁數完全一致時才可跳過；若套件頁數不同，必須強制匯入！
+            // 指定了只匯入有變更的筆記本，而這本不在名單裡、本機也載入過：略過。
+            //
+            // **這裡不能去讀套件內容來判斷**（例如比頁數）：要讀就得把整本的操作記錄重播，
+            // 對每一本、每一輪都做，比匯入本身還貴。下載到東西的那一輪本來就會把這本
+            // 放進名單（焦點通道與區網收到的，它們自己匯入）。
             if let only = onlyNotebookIds, !only.contains(normId), activeLocalIds.contains(normId) {
-                let localDoc = store.allNotebooks.first(where: { $0.id.caseInsensitiveCompare(normId) == .orderedSame })
-                if let localDoc = localDoc,
-                   let pkgPages = NotebookPackageBridge.packagePageCount(at: package, deviceId: deviceId),
-                   pkgPages != localDoc.pageCount {
-                    // 頁數不一致，不可跳過，繼續執行匯入
-                } else {
-                    continue
-                }
+                continue
             }
 
             var isDir: ObjCBool = false
@@ -2113,7 +2139,15 @@ enum NotebookSyncCoordinator {
             }
             defer { NotebookLock.leave(normId, ticket: lockTicket) }
             do {
-                try await importOne(package, into: store, deviceId: deviceId, ownStrokes: ownStrokes)
+                // 步驟 1 沒匯出的那些，「這台自己寫的筆畫」這時才算 —— 只算真的要匯入的這一本。
+                var own = ownStrokes
+                if let input = deferredInputs[normId] {
+                    let snapshot = try await Task.detached(priority: .utility) {
+                        try snapshotOwnStrokes(input)
+                    }.value
+                    own.merge(snapshot) { first, _ in first }
+                }
+                try await importOne(package, into: store, deviceId: deviceId, ownStrokes: own)
                 report.imported += 1
                 NotificationCenter.default.post(
                     name: AppCommand.notebookPackageChanged,
@@ -2144,10 +2178,15 @@ enum NotebookSyncCoordinator {
         into store: SyncableNotebookStore,
         deviceId: UInt32,
         ownStrokes: OwnStrokes,
+        deferredInputs: [String: ExportInputs] = [:],
         activeLocalIds: Set<String>,
         deletedNotebookIds: Set<String>,
+        onlyNotebookIds: Set<String>? = nil,
         report: inout Report
     ) async {
+        // 筆記本 id 是大寫 UUID、套件 id 比對用小寫：不統一的話永遠判成「本機沒載入」，
+        // 於是每一輪都重新匯入每一本（匯入又讓文件時間變新，下一輪再觸發匯出）。
+        let activeLocalIds = Set(activeLocalIds.map { $0.lowercased() })
         let fm = FileManager.default
         let allPackages = (try? fm.contentsOfDirectory(at: packagesDir, includingPropertiesForKeys: nil))?
             .filter { $0.pathExtension == "padnote" } ?? []
@@ -2157,6 +2196,12 @@ enum NotebookSyncCoordinator {
 
             if deletedNotebookIds.contains(normId) {
                 try? fm.removeItem(at: package)
+                continue
+            }
+
+            // 這一輪沒有從雲端資料夾下載到東西、本機也載入過：套件與工作副本是同一份，不必匯入。
+            // 原本每一輪把每一本都解碼匯入一次。
+            if let only = onlyNotebookIds, !only.contains(normId), activeLocalIds.contains(normId) {
                 continue
             }
 
@@ -2192,7 +2237,14 @@ enum NotebookSyncCoordinator {
             }
 
             do {
-                try await importOne(package, into: store, deviceId: deviceId, ownStrokes: ownStrokes)
+                var own = ownStrokes
+                if let input = deferredInputs[normId] {
+                    let snapshot = try await Task.detached(priority: .utility) {
+                        try snapshotOwnStrokes(input)
+                    }.value
+                    own.merge(snapshot) { first, _ in first }
+                }
+                try await importOne(package, into: store, deviceId: deviceId, ownStrokes: own)
                 report.imported += 1
                 NotificationCenter.default.post(
                     name: AppCommand.notebookPackageChanged,

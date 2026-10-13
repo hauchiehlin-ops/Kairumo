@@ -2472,8 +2472,14 @@ public final class NotebookStore: ObservableObject {
     /// 永久刪除本機的一本（**只動本機**）：回收桶裡的紀錄、套件、同步基準線。
     ///
     /// 原本的位置也一併清 —— 正常不會有東西留在那裡，但殘留的話等於沒刪乾淨。
-    public func purgeLocally(id: String) {
+    /// - Returns: 這一次**真的刪掉了東西**。索引裡的墓碑要等雲端確認才會消失，期滿名單
+    ///   每一輪都一樣；不回報這個的話，每輪同步都會宣稱「已清理 N 本」，而實際上什麼都沒動。
+    @discardableResult
+    public func purgeLocally(id: String) -> Bool {
+        var removedAny = false
+        let before = trashedNotebooks.count
         trashedNotebooks.removeAll { $0.id.caseInsensitiveCompare(id) == .orderedSame }
+        if trashedNotebooks.count != before { removedAny = true }
         let fm = FileManager.default
         for name in packageDirectoryNames(for: id) {
             for url in [
@@ -2481,11 +2487,13 @@ public final class NotebookStore: ObservableObject {
                 trashPackagesDirectory.appending(path: "SyncBaseline/\(name)"),
                 corePackagesDirectory.appending(path: name),
                 documentsDirectory.appending(path: "SyncBaseline/\(name)"),
-            ] {
+            ] where fm.fileExists(atPath: url.path) {
                 try? fm.removeItem(at: url)
+                removedAny = true
             }
         }
         removeFolderSyncCopy(id: id)
+        return removedAny
     }
 
     /// 使用者資料夾（雲端／匯出）裡這本筆記本的副本。
@@ -2521,9 +2529,9 @@ public final class NotebookStore: ObservableObject {
     public func purgeExpiredTrash() -> Int {
         AccountSyncStore.shared.stampLegacyTombstonesIfNeeded()
         let expired = AccountSyncStore.shared.expiredNotebookIdsForLocalPurge()
-        for id in expired { purgeLocally(id: id) }
-        if !expired.isEmpty { persistData(signalsLocalEdit: false) }
-        return expired.count
+        let purged = expired.filter { purgeLocally(id: $0) }
+        if !purged.isEmpty { persistData(signalsLocalEdit: false) }
+        return purged.count
     }
 
     /// 清空回收桶（使用者按了「立即清除」）。雲端那一半由呼叫端接著觸發回收。

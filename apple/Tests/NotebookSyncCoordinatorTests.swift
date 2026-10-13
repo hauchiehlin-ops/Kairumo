@@ -121,6 +121,36 @@ final class NotebookSyncCoordinatorTests: XCTestCase {
         await NotebookSyncCoordinator.run(store: store, folder: cloud, deviceId: deviceId)
     }
 
+    // MARK: - 沒變動就不該重做
+
+    func testASecondRoundWithNothingChangedExportsAndImportsNothing() async throws {
+        // 使用者看到的症狀：什麼都沒改，每一輪日誌都是「匯出 N 本」、再把每一本匯入一次。
+        // 每一輪對每一本都解碼每一頁、重寫整個套件，筆記本一多就是幾分鐘。
+        // 真正的 App 一定有這個目錄；沒有的話筆畫帳本寫不進去，每一輪都會被當成「升級前的筆記」重匯出。
+        try FileManager.default.createDirectory(
+            at: alice.syncDrawingsDirectory, withIntermediateDirectories: true)
+        var note = NotebookDocument(title: "不動它", pageCount: 2)
+        note.textAttachments = [NoteTextAttachment(pageIndex: 0, text: "穩定的內容")]
+        alice.documents = [note]
+        alice.syncSaveDrawing(notebookId: note.id, pageIndex: 0,
+                              drawing: PKDrawing(strokes: [stroke(at: 20)]))
+
+        let first = await sync(alice, 1)
+        XCTAssertGreaterThan(first.exported, 0, "第一輪要把筆記帶進套件")
+
+        var last = first
+        var rounds = [String]()
+        for _ in 0 ..< 5 {
+            last = await sync(alice, 1)
+            rounds.append("匯出\(last.exported)/匯入\(last.imported)/上傳\(last.uploaded)")
+        }
+        // 前幾輪可以收斂（匯入會讓時間戳與帳本再動一次），之後必須安靜。
+        XCTAssertEqual(last.exported, 0, "沒有任何編輯，不該重建套件：\(rounds)")
+        XCTAssertEqual(last.imported, 0, "沒有從雲端下載到東西，不該重新匯入：\(rounds)")
+        XCTAssertEqual(last.uploaded, 0, "\(rounds)")
+        XCTAssertEqual(last.downloaded, 0, "\(rounds)")
+    }
+
     // MARK: - 使用者要的那件事
 
     func testANotebookWrittenOnOneDeviceAppearsOnTheOther() async throws {

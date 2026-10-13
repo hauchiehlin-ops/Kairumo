@@ -4121,3 +4121,53 @@ CRDT 頁面**聯集**，所以下一次同步就全部合併回來（104 = 26×4
 
 修法在**讀的這一端**：匯入範例筆記時只認確定性 id 的標準頁，其餘一律忽略
 （`NotebookPackageBridge.importDocument`）。代價：使用者在範例筆記上自己加的頁不會被保留。
+
+### 下課關 App，最後一段筆記留在 iPad 上
+
+情境：iPad 寫完、直接關 App，路上用別台裝置看不到剛寫的內容。查到兩個缺口，
+都在「離開」這一刻，而不是同步機制本身慢：
+
+- **離開筆記本時最後一筆被焦點通道丟掉。** 編輯器 `onDisappear` 先 `setFocus(nil)`、
+  後存檔；核心的 `set_focus` 換焦點會清掉 dirty，存檔通知到達時已經沒有焦點筆記本
+  （`note_local_edit` 在沒焦點時直接 return）。最後一筆只能等整庫那一輪。
+  現在先存檔再放焦點，`FocusSyncController` 另記「待推名單」（不受排程器 dirty 旗標影響），
+  離開時立刻只推那一本（`flushUnpushed`）。
+- **進背景沒有向 iOS 要執行時間。** 整庫一輪要網路來回很多次，iOS 進背景幾秒就凍結。
+  現在 `didEnterBackground` 先 `beginBackgroundTask`，先推待推名單（單本、很快），
+  再讓整庫一輪接著跑，結束或約 20 秒後歸還時間窗。
+
+沒有做、也做不到的：系統完全不給時間（強制終止、沒網路、電量極低）時仍然推不出去，
+那時只能等下次開啟。BGTask 只是保底，系統可能幾小時才給一次。
+
+**Android 有同樣的缺口，已補上。** 核心的 `FfiFocusLane` 兩個平台共用，所以離開筆記本時
+`set_focus` 清掉 dirty 的問題在 Android 一模一樣；進背景則只有 `AutoSync.request(BACKGROUND)`，
+行程一降成快取狀態協程就可能被凍結。`FocusSync` 加了同樣的待推名單與 `flushUnpushed`，
+進背景（`ON_PAUSE`）有待推時排一個加急 `FlushWorker`（API 31+ expedited；更早退回一般工作，
+不為它引入前景服務與通知）。週期 worker 最快 15 分鐘，不是這條路徑。
+
+### 每一輪同步都「全部重新掃描」—— 三個各自成立的原因
+
+同步日誌（什麼都沒改）：步驟 1 花 2.5 分鐘、「有差異待同步 5 本（跳過 0 本）」、
+每本「上傳 0、下載 0」、步驟 3 又花 2.5 分鐘、「已永久清理 15 本」每一輪都是 15。
+
+1. **`notebook_differs` 比實際的下載規則寬鬆。** 它看到「雲端有、本機沒有」的檔案就說有差異，
+   但 `sync_notebook_ops` 會刻意跳過被壓實吃掉的碎檔、本機已有該裝置更新檔案的舊碎檔。
+   那些檔案雲端上永遠留著、本機永遠不抓，於是每一輪都判成有差異、白跑一趟。
+   不再去複製下載規則（會再次漂移），改記「上次同步成功且沒有任何傳輸時，本機＋雲端
+   兩邊的狀態指紋」（`FfiSyncSession::settled`）：雙方都沒變就略過。兩個平台共用核心。
+   不持久化 —— 重開 App 每本多同步一次，沒有正確性問題。
+2. **前一輪加的頁數保護對每一本、每一輪都重播整本操作記錄。**
+   `workingCopyNeedsExport` 開頭與 `importPackages` 的略過判斷都呼叫 `packagePageCount`，
+   它用 `PadnoteSession.openExisting`。改成只在「本來就要匯出」時才問；匯入端不再讀內容。
+   另外，步驟 1 對沒變動的筆記本也每輪解碼每一頁的 `PKDrawing`（為了「自己寫的筆畫」），
+   現在延到真的要匯入那一本時才算（`deferredInputs`）。
+3. **「已清理 N 本」是名單，不是動作。** 期滿名單來自索引，墓碑要等雲端確認才會消失，
+   所以每輪都是同一批；`purgeLocally` 現在回報有沒有真的刪到東西。
+
+資料夾同步（iCloud 資料夾）那條路徑也補上了：原本每一輪對每一本都完整匯出、再把每一本解碼匯入。
+現在與 Google Drive 那條共用同一個 `workingCopyNeedsExport` 判斷，匯入只做「這一輪真的從資料夾下載到東西」
+與「本機還沒載入」的筆記本（`onlyNotebookIds`），沒變動的筆畫解碼延到真的要匯入時。
+
+**連帶抓到的 bug：** 匯入端用小寫的套件 id 去比對 `activeLocalIds`（大寫 UUID），永遠判成「本機沒載入」，
+所以兩條路徑的「略過沒變動的」其實從來沒生效過。兩個匯入函式現在先把 `activeLocalIds` 轉小寫。
+`testASecondRoundWithNothingChangedExportsAndImportsNothing` 守著這件事（連跑幾輪後必須匯出 0、匯入 0）。

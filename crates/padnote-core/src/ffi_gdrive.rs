@@ -1444,6 +1444,14 @@ pub struct FfiSyncSession {
     /// 這台裝置上一次發布的確認檔內容。**不持久化** —— 重開 App 之後多抓一次自己的
     /// 確認檔而已，沒有正確性問題。
     own_ack: std::sync::Mutex<Option<padnote_sync::retention::DeviceAck>>,
+    /// 筆記本 id → **上次同步成功、而且沒有任何傳輸時**，本機與雲端兩邊的狀態指紋。
+    ///
+    /// 「雙方都跟上次同步完一模一樣」就不必再碰它。這比逐檔比對可靠：
+    /// [`notebook_differs`] 只會說「有檔案長度不一樣」，但實際的下載規則還會跳過
+    /// 被壓實吃掉的碎檔、墓碑名單上的檔案等 —— 那些檔案雲端上永遠留著、本機永遠不抓，
+    /// 於是每一輪都判成「有差異」、然後白跑一趟「上傳 0、下載 0」。
+    /// **不持久化**：重開 App 之後每本多同步一次，沒有正確性問題。
+    settled: std::sync::Mutex<std::collections::HashMap<String, u64>>,
 }
 
 #[uniffi::export]
@@ -1456,6 +1464,7 @@ impl FfiSyncSession {
             index: std::sync::Mutex::new(RemoteIndex::from_json(&remote_index_json)),
             seen_sizes: std::sync::Mutex::new(SeenSizes::new()),
             own_ack: std::sync::Mutex::new(None),
+            settled: std::sync::Mutex::new(std::collections::HashMap::new()),
         })
     }
 
@@ -1864,6 +1873,12 @@ impl FfiSyncSession {
     /// 快照還沒建立時一律回 true（不知道就別跳過）。
     pub fn notebook_needs_sync(&self, package_path: String, notebook_id: String) -> bool {
         let index = self.index.lock().unwrap();
+        // 雙方都跟上次「同步完沒有任何傳輸」時一模一樣 ⇒ 沒有事可做。
+        if let Some(now) = sync_fingerprint(&index, &package_path, &notebook_id)
+            && self.settled.lock().unwrap().get(&notebook_id) == Some(&now)
+        {
+            return false;
+        }
         notebook_differs(&index, &package_path, &notebook_id)
     }
 
@@ -1905,10 +1920,26 @@ impl FfiSyncSession {
         );
         let mut warnings = ink.warnings;
         warnings.extend(media.warnings);
+        let uploaded = ops.uploaded + ink.uploaded + media.uploaded;
+        let downloaded = ops.downloaded + ink.downloaded + media.downloaded;
+        // 沒有任何傳輸而且全部成功：記下這個「已收斂」的狀態。有傳輸就清掉舊記錄，
+        // 下一輪再確認一次（傳輸之後的狀態才是真正的基準）。
+        {
+            let mut settled = self.settled.lock().unwrap();
+            let fingerprint = sync_fingerprint(&index, &package_path, &notebook_id);
+            match fingerprint {
+                Some(fp) if media.ok && uploaded == 0 && downloaded == 0 => {
+                    settled.insert(notebook_id.clone(), fp);
+                }
+                _ => {
+                    settled.remove(&notebook_id);
+                }
+            }
+        }
         FfiNotebookSyncResult {
             ok: media.ok,
-            uploaded: ops.uploaded + ink.uploaded + media.uploaded,
-            downloaded: ops.downloaded + ink.downloaded + media.downloaded,
+            uploaded,
+            downloaded,
             error: media.error,
             needs_reauth: media.needs_reauth,
             warnings,
@@ -2171,6 +2202,70 @@ fn diagnose_index(
         pending_notebooks: pending,
         checked_notebooks: checked,
     }
+}
+
+/// 這本筆記本「本機＋雲端快照」兩邊現況的指紋。**完全在本機算。**
+///
+/// 涵蓋同步會碰到的每一類檔案（oplog、筆跡、錄音、圖片 blob、媒體墓碑、壓實墓碑）的
+/// 名字與長度，以及雲端快照裡同一本的對應條目。任何一邊多一個檔、少一個檔、變長，
+/// 指紋就不同。快照還沒建立或套件開不了回 `None`（不知道就別跳過）。
+fn sync_fingerprint(index: &RemoteIndex, package_path: &str, notebook_id: &str) -> Option<u64> {
+    use std::hash::{Hash, Hasher};
+    if index.needs_rebuild() {
+        return None;
+    }
+    let package =
+        padnote_storage::NotebookPackage::open(std::path::Path::new(package_path)).ok()?;
+    let mut hasher = std::collections::hash_map::DefaultHasher::new();
+
+    let mut ops = package.doc_op_files().ok()?;
+    ops.sort();
+    ops.hash(&mut hasher);
+    let mut ink = package.ink_files().ok()?;
+    ink.sort();
+    ink.hash(&mut hasher);
+    let mut audio = package.audio_files().ok()?;
+    audio.sort();
+    audio.hash(&mut hasher);
+    let mut blobs: Vec<String> = package
+        .blobs()
+        .list()
+        .ok()?
+        .iter()
+        .map(|id| id.to_string())
+        .collect();
+    blobs.sort();
+    blobs.hash(&mut hasher);
+    let mut tombstones: Vec<String> = package
+        .media_tombstone_files()
+        .map(|files| {
+            files
+                .into_iter()
+                .map(|(name, size)| format!("{name}:{size}"))
+                .collect()
+        })
+        .unwrap_or_default();
+    tombstones.sort();
+    tombstones.hash(&mut hasher);
+    std::fs::metadata(package.root().join("doc/ops/compaction.tombstones"))
+        .map(|m| m.len())
+        .unwrap_or(0)
+        .hash(&mut hasher);
+
+    for prefix in [
+        notebook_ops_prefix(notebook_id),
+        padnote_sync::paths::notebook_ink_prefix(notebook_id),
+        padnote_sync::paths::notebook_audio_prefix(notebook_id),
+        padnote_sync::paths::notebook_blobs_prefix(notebook_id),
+        padnote_sync::media_tombstone::tombstones_prefix(notebook_id),
+    ] {
+        for (key, file) in index.entries_under(&prefix) {
+            key.hash(&mut hasher);
+            file.id.hash(&mut hasher);
+            file.size.hash(&mut hasher);
+        }
+    }
+    Some(hasher.finish())
 }
 
 /// 這本筆記本與雲端快照有沒有差異。**完全在本機算。**
@@ -2678,6 +2773,65 @@ mod tests {
             fake.call_count(),
             1,
             "20 本筆記、什麼都沒變，整輪只該打一次 HTTP（changes.list）"
+        );
+    }
+
+    #[test]
+    fn a_notebook_that_synced_with_no_transfer_is_skipped_until_something_changes() {
+        // **使用者看到的症狀：** 什麼都沒改，每一輪日誌都是
+        // 「有差異待同步 N 本（跳過 0 本）」，然後每一本「上傳 0、下載 0」。
+        //
+        // 原因：雲端上留著本機**刻意永遠不抓**的檔案（別台壓實前的舊碎檔，本機已經有
+        // 該裝置更新的檔了）。`notebook_differs` 只比長度，看到「雲端有、本機沒有」就說有差異；
+        // 而實際的下載規則會跳過它 —— 於是永遠有差異、永遠白跑。
+        use padnote_doc::ops::DocOp;
+        let fake = Arc::new(FakeDrive::default());
+        let http: Arc<dyn FfiDriveHttp> = fake.clone();
+        let books = many_packages("settled", 1);
+        let (id, root) = &books[0];
+        let path: String = root.to_string_lossy().into();
+
+        let session = FfiSyncSession::create(http, String::new());
+        assert!(session.refresh().ok);
+        let first = session.sync_notebook(path.clone(), id.clone(), 0xAA);
+        assert!(first.ok, "{}", first.error);
+
+        // 雲端多一個本機永遠不會抓的舊碎檔：同一台裝置（0xAA）、lamport 比本機現有的小。
+        {
+            let name = padnote_sync::paths::notebook_op_file(id, "0000000000000000-000000aa.oplog");
+            let mut files = fake.files.lock().unwrap();
+            files.push((name, b"ghost-fragment".to_vec()));
+            let index = files.len() - 1;
+            drop(files);
+            fake.note_change(index);
+        }
+        assert!(session.refresh().ok);
+
+        assert!(
+            session.notebook_needs_sync(path.clone(), id.clone()),
+            "還沒確認過，不知道就別跳過"
+        );
+        let second = session.sync_notebook(path.clone(), id.clone(), 0xAA);
+        assert!(second.ok, "{}", second.error);
+        assert_eq!((second.uploaded, second.downloaded), (0, 0));
+        assert!(
+            !session.notebook_needs_sync(path.clone(), id.clone()),
+            "同步完沒有任何傳輸、雙方又都沒變：下一輪該略過它"
+        );
+
+        // 本機寫了新東西：必須立刻再被判成要同步。
+        let mut pkg = padnote_storage::NotebookPackage::open(root).unwrap();
+        pkg.append_doc_ops(
+            2,
+            0xAA,
+            &[DocOp::SetTitle {
+                title: "changed".into(),
+            }],
+        )
+        .unwrap();
+        assert!(
+            session.notebook_needs_sync(path, id.clone()),
+            "本機有變動，不能被「已收斂」的記憶蓋掉"
         );
     }
 

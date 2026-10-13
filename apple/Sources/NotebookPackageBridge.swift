@@ -556,11 +556,18 @@ enum NotebookPackageBridge {
     }
 
     /// 套件內現有之總頁數。若無法開啟或套件不存在則回傳 nil。
-    static func packagePageCount(at package: URL, deviceId: UInt32) -> Int? {
+    ///
+    /// **很貴**：要把整本的操作記錄重播一遍。呼叫端只能在「本來就要匯出」時問，
+    /// 不能對每一本、每一輪都問。範例筆記只算標準頁（多的是同步合併出來的幽靈頁）。
+    static func packagePageCount(at package: URL, deviceId: UInt32, notebookId: String? = nil) -> Int? {
         guard FileManager.default.fileExists(atPath: package.path),
               let session = try? PadnoteSession.openExisting(path: package.path, deviceId: deviceId)
         else { return nil }
-        return Int(session.pageCount())
+        let raw = Int(session.pageCount())
+        if let notebookId, let standard = seedStandardPageCount(for: notebookId) {
+            return min(raw, standard)
+        }
+        return raw
     }
 
     /// 套件裡每一張圖表的設定與位置，依頁次。

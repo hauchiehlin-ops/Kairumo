@@ -56,9 +56,13 @@ object NotebookTrash {
     }
 
     /** 永久刪除本機的一本（**只動本機**）。原本的位置也一併清。 */
-    fun purgeLocally(context: Context, id: String) {
+    fun purgeLocally(context: Context, id: String): Boolean {
+        // 回傳這次是不是真的刪掉了東西：索引裡的墓碑要等雲端確認才會消失，
+        // 期滿名單每一輪都一樣，不然每輪同步都會宣稱「已清理 N 本」。
+        val existed = trashed(context, id).exists() || live(context, id).exists()
         runCatching { trashed(context, id).deleteRecursively() }
         runCatching { live(context, id).deleteRecursively() }
+        return existed
     }
 
     /** 回收桶裡有哪些筆記本 id。 */
@@ -113,8 +117,7 @@ object NotebookTrash {
     fun purgeExpired(context: Context): Int {
         AccountSyncStore.stampLegacyTombstonesIfNeeded(context)
         val expired = AccountSyncStore.expiredNotebookIdsForLocalPurge(context)
-        expired.forEach { purgeLocally(context, it) }
-        return expired.size
+        return expired.count { purgeLocally(context, it) }
     }
 
     /**
