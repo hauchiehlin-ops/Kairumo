@@ -98,7 +98,7 @@ struct DocumentExportMenu: View {
     private func exportPDF() {
         guard let data = handle.makePDF() else { failed = true; return }
         let name = "Kairumo-\(document.rawValue).pdf"
-        let url = FileManager.default.temporaryDirectory.appendingPathComponent(name)
+        let url = FileManager.default.temporaryDirectory.appending(path: name)
         do {
             try data.write(to: url, options: .atomic)
             sharedFile = SharedFile(url: url)
