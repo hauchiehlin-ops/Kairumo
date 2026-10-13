@@ -76,6 +76,13 @@ pub enum RecordingState {
     },
 }
 
+/// 重播期間延後同步的文字（見 `NotebookSession::deferred_text`）。
+#[derive(Debug, Default)]
+struct DeferredText {
+    blocks: std::collections::BTreeSet<Uuid>,
+    title: bool,
+}
+
 /// 一個開啟中的筆記本工作階段。
 ///
 /// 所有變更都會**立即追加到文件 op-log 並落盤**（S-23）。在此之前只有筆畫
@@ -97,6 +104,12 @@ pub struct NotebookSession {
     lamport: u64,
     /// 每個文字區塊的 CRDT 狀態（ADR-0004）。
     texts: std::collections::HashMap<Uuid, TextCrdt>,
+    /// 重播一批操作期間，被文字操作碰過、等重播完再統一同步的區塊與標題。
+    ///
+    /// 每個文字操作都要把 CRDT 展開成字串、改內容、重建搜尋索引 —— 一個字一筆操作的長文本
+    /// （課堂逐字稿）開啟時是 O(n²)：實機上主執行緒被卡了好幾秒，被系統強制結束（0x8badf00d）。
+    /// 重播中只記下「哪些區塊髒了」，結束後每個區塊只展開一次。
+    deferred_text: Option<DeferredText>,
     editor: TextEditor,
     /// 錄音中的管線。**不持有 ASR 引擎** —— 轉錄由外部 worker 負責，
     /// 因此轉錄慢或失敗都不可能影響錄音（S-25）。
@@ -166,6 +179,7 @@ impl NotebookSession {
             device,
             lamport: 0,
             texts: Default::default(),
+            deferred_text: None,
             editor: TextEditor::new(device),
             pipeline: None,
             recorded_audio_us: 0,
@@ -194,6 +208,7 @@ impl NotebookSession {
             device,
             lamport: 0,
             texts: Default::default(),
+            deferred_text: None,
             editor: TextEditor::new(device),
             pipeline: None,
             recorded_audio_us: 0,
@@ -244,18 +259,50 @@ impl NotebookSession {
     }
 
     fn replay(&mut self, ops: &[DocOp]) {
+        // 巢狀呼叫（重播中又重播）由最外層負責收尾。
+        let outermost = self.deferred_text.is_none();
+        if outermost {
+            self.deferred_text = Some(DeferredText::default());
+        }
         for op in ops {
             self.apply_one(op);
+        }
+        if outermost {
+            self.flush_deferred_text();
+        }
+    }
+
+    /// 重播結束：每個被碰過的文字區塊只展開、同步一次。
+    fn flush_deferred_text(&mut self) {
+        let Some(deferred) = self.deferred_text.take() else {
+            return;
+        };
+        if deferred.title {
+            self.notebook.title = self.notebook.title_crdt.text();
+        }
+        for block in deferred.blocks {
+            if let Some(text) = self.texts.get(&block).map(TextCrdt::text) {
+                self.sync_text_block(block, text);
+            }
         }
     }
 
     fn apply_one(&mut self, op: &DocOp) {
         match op {
-            DocOp::SetTitle { title } => self.notebook.title = title.clone(),
+            DocOp::SetTitle { title } => {
+                self.notebook.title = title.clone();
+                // 直接設定在後面：先前被延後的 CRDT 展開不能蓋掉它。
+                if let Some(deferred) = &mut self.deferred_text {
+                    deferred.title = false;
+                }
+            }
             DocOp::TitleEdit { op } => {
                 self.editor.observe(op.id());
                 self.notebook.title_crdt.apply(op.clone());
-                self.notebook.title = self.notebook.title_crdt.text();
+                match &mut self.deferred_text {
+                    Some(deferred) => deferred.title = true,
+                    None => self.notebook.title = self.notebook.title_crdt.text(),
+                }
             }
             DocOp::SetNotebookMeta { json } => self.notebook.meta = Some(json.clone()),
 
@@ -501,8 +548,15 @@ impl NotebookSession {
                 self.editor.observe(op.id());
                 let crdt = self.texts.entry(*block).or_default();
                 crdt.apply(op.clone());
-                let text = crdt.text();
-                self.sync_text_block(*block, text);
+                match &mut self.deferred_text {
+                    Some(deferred) => {
+                        deferred.blocks.insert(*block);
+                    }
+                    None => {
+                        let text = crdt.text();
+                        self.sync_text_block(*block, text);
+                    }
+                }
             }
 
             DocOp::StartAudio {
@@ -2717,6 +2771,62 @@ mod tests {
             .filter_map(|b| b.searchable_text().map(str::to_string))
             .collect();
         assert_eq!(blocks, ["只該有一份"]);
+    }
+
+    /// **一個字一筆操作的長文本，開啟時只展開一次。**
+    ///
+    /// 課堂逐字稿會累積成千上萬筆單字元操作。每筆都展開字串並重建搜尋索引的話，開啟是 O(n²)，
+    /// iPad 上主執行緒被卡數秒而被系統強制結束。重播改成結束後每個區塊同步一次 —— 結果必須與逐筆同步完全相同。
+    #[test]
+    fn opening_a_long_text_block_gives_the_same_text_and_index() {
+        let dir = tmp("long-text-open");
+        let live_hits;
+        let (block, expected) = {
+            let mut s = NotebookSession::create(&dir, "長文本", 1_757_635_200_000, 0xA1).unwrap();
+            let page = s.first_page().unwrap();
+            let block = s.add_text_block(page, "", TextStyle::Body).unwrap();
+            let mut expected = String::new();
+            for i in 0..1500 {
+                // 單字一筆：一個字元一筆操作，每隔幾個字一個空格，搜尋才切得出詞。
+                let ch = if i % 6 == 5 { " ".to_string() } else { char::from_u32('a' as u32 + (i % 5)).unwrap().to_string() };
+                s.insert_text(block, expected.chars().count(), &ch).unwrap();
+                expected.push_str(&ch);
+            }
+            live_hits = s.search("abcde", 5).len();
+            (block, expected)
+        };
+
+        let reopened = NotebookSession::open(&dir, 0xA1).unwrap();
+        assert_eq!(reopened.block_text(block).as_deref(), Some(expected.as_str()));
+        let page = reopened.first_page().unwrap();
+        let shown: Vec<String> = reopened
+            .notebook()
+            .page(page)
+            .unwrap()
+            .blocks()
+            .iter()
+            .filter_map(|b| b.searchable_text().map(str::to_string))
+            .collect();
+        assert_eq!(shown, [expected.clone()], "頁面上的區塊內容要是最終文字");
+        assert!(live_hits > 0, "測試前提：即時編輯時搜尋要找得到");
+        assert_eq!(
+            reopened.search("abcde", 5).len(),
+            live_hits,
+            "重播後的搜尋索引要與即時編輯時一致"
+        );
+    }
+
+    /// 標題：`SetTitle` 在 `TitleEdit` 之後，最終標題必須是 `SetTitle` 的值（延後展開不能蓋掉它）。
+    #[test]
+    fn a_later_set_title_wins_over_earlier_title_edits_when_replayed() {
+        let dir = tmp("title-order");
+        {
+            let mut s = NotebookSession::create(&dir, "舊", 1_757_635_200_000, 0xA1).unwrap();
+            s.set_title("第一版").unwrap();
+            s.set_title("最終").unwrap();
+        }
+        let reopened = NotebookSession::open(&dir, 0xA1).unwrap();
+        assert_eq!(reopened.notebook().title, "最終");
     }
 
     // ---- 指定 id 的新增（物件身分，docs/plans/object-identity.md）----

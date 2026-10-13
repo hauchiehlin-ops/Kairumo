@@ -9903,12 +9903,14 @@ public struct NotebookEditorView: View {
         let packageDrawings = try? NotebookPackageBridge.drawings(
             fromPackageAt: corePackageURL(),
             deviceId: NotebookMigration.deviceId)
-        let baseline: PKDrawing
-        if let packageDrawings, packageDrawings.indices.contains(page) {
-            baseline = packageDrawings[page]
-        } else {
-            baseline = PKDrawing()
+        // 打開套件要重播整份 oplog，是整段流程裡最貴的一步，而它一次就讀出**每一頁**的筆跡。
+        // 只留下被問到的那一頁的話，每換一頁就要再開一次 —— 全部放進快取。
+        if let packageDrawings {
+            for (index, drawing) in packageDrawings.enumerated() where coreInkBaselines[index] == nil {
+                coreInkBaselines[index] = drawing
+            }
         }
+        let baseline = coreInkBaselines[page] ?? PKDrawing()
         coreInkBaselines[page] = baseline
         return baseline
     }

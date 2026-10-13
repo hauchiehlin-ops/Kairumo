@@ -307,6 +307,15 @@
   dl.faq { margin: 0; display: flex; flex-direction: column; gap: 18px; max-width: 68ch; }
   dl.faq dt { font-weight: 600; margin-bottom: 2px; }
   dl.faq dd { margin: 0; color: var(--ink-soft); }
+  dl.faq dt, h3.faq-cat { scroll-margin-top: 16px; }
+  h3.faq-cat { margin: 28px 0 10px; font-size: 1.05em; padding-bottom: 6px; border-bottom: 1px solid var(--rule); }
+  nav.faq-toc { margin: 0 0 8px; padding: 14px 16px; max-width: 68ch; border: 1px solid var(--rule); border-radius: 10px; background: var(--surface-sunk); }
+  nav.faq-toc .faq-toc-title { margin: 0 0 8px; font-weight: 700; }
+  nav.faq-toc a { color: inherit; text-decoration: none; }
+  nav.faq-toc a:hover { text-decoration: underline; }
+  nav.faq-toc .faq-toc-cat { display: block; margin-top: 10px; font-weight: 600; color: var(--accent); }
+  nav.faq-toc ul { margin: 4px 0 0; padding-left: 1.2em; }
+  nav.faq-toc li { margin: 3px 0; color: var(--ink-soft); }
 
   .back { font-family: var(--mono); font-size: 12px; text-decoration: none; }
   .back:hover { text-decoration: underline; }
@@ -478,13 +487,51 @@
       }
 
       if (s.faq) {
-        const dl = el("dl", "faq");
-        s.faq.forEach(([q, a]) => {
-          const dt = el("dt"); dt.textContent = q;
-          const dd = el("dd"); richText(dd, a);
-          dl.appendChild(dt); dl.appendChild(dd);
+        // 有分類的話（`faqCategories`）：節首放「問題一覽」目錄（分類 → 問題，都是連結），
+        // 內文依分類分組，每個分類與每個問題都有錨點。沒有分類就維持原來的平鋪。
+        const cats = s.faqCategories || [];
+        const entries = s.faq.map(([q, a, cat], i) => ({ q, a, cat, id: s.id + "-q" + (i + 1) }));
+        const groups = cats
+          .map(([key, title]) => ({ key, title, items: entries.filter((e) => e.cat === key) }))
+          .filter((g) => g.items.length);
+        const loose = entries.filter((e) => !cats.some(([key]) => key === e.cat));
+        if (loose.length) groups.push({ key: "other", title: "", items: loose });
+
+        if (cats.length) {
+          const nav = el("nav", "faq-toc");
+          nav.setAttribute("aria-label", s.faqTocTitle || s.title);
+          const head = el("p", "faq-toc-title"); head.textContent = s.faqTocTitle || s.title;
+          nav.appendChild(head);
+          groups.forEach((g) => {
+            if (g.title) {
+              const a = el("a", "faq-toc-cat");
+              a.href = "#" + s.id + "-cat-" + g.key; a.textContent = g.title;
+              nav.appendChild(a);
+            }
+            const ul = el("ul");
+            g.items.forEach((e) => {
+              const li = el("li"); const a = el("a");
+              a.href = "#" + e.id; a.textContent = e.q;
+              li.appendChild(a); ul.appendChild(li);
+            });
+            nav.appendChild(ul);
+          });
+          sec.appendChild(nav);
+        }
+
+        groups.forEach((g) => {
+          if (g.title) {
+            const h = el("h3", "faq-cat"); h.id = s.id + "-cat-" + g.key; h.textContent = g.title;
+            sec.appendChild(h);
+          }
+          const dl = el("dl", "faq");
+          g.items.forEach((e) => {
+            const dt = el("dt"); dt.id = e.id; dt.textContent = e.q;
+            const dd = el("dd"); richText(dd, e.a);
+            dl.appendChild(dt); dl.appendChild(dd);
+          });
+          sec.appendChild(dl);
         });
-        sec.appendChild(dl);
       }
 
       const back = el("a", "back");

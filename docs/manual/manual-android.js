@@ -745,74 +745,114 @@ window.KAIRUMO_MANUAL = {
         "title": "常見問題",
         "lead": "遇到狀況時先看這裡。",
         "buttons": [],
+        "faqTocTitle": "問題一覽",
+        "faqCategories": [
+          [
+            "write",
+            "書寫與頁面"
+          ],
+          [
+            "audio",
+            "錄音與轉錄"
+          ],
+          [
+            "collab",
+            "協同與同步"
+          ],
+          [
+            "data",
+            "資料與帳號"
+          ],
+          [
+            "help",
+            "分享、說明與回報"
+          ]
+        ],
         "faq": [
           [
             "為什麼打字模式下筆畫不出東西？",
-            "那是刻意的。打字模式只處理文字與物件 —— 手指與觸控筆都不會畫線，這樣點選、拖曳物件才不會每次都留下一條筆跡。畫布右上角的徽章會寫著目前是哪個模式。要寫字就切回手繪模式。"
+            "那是刻意的。打字模式只處理文字與物件 —— 手指與觸控筆都不會畫線，這樣點選、拖曳物件才不會每次都留下一條筆跡。畫布右上角的徽章會寫著目前是哪個模式。要寫字就切回手繪模式。",
+            "write"
           ],
           [
             "線上協同連不上怎麼辦？",
-            "看你是哪一種情況。**同一個網路**：（一）確認兩台真的在同一個 Wi-Fi 網路；（二）若要自動看見房間，請確認 Android 系統已允許鄰近裝置或區域網路權限（若被系統限制阻擋，App 會自動降級為純本機中繼模式，隊友只要手動填入房主顯示的區域網路位址即可正常加入）；（三）隊友的「協同伺服器位址」已改成房主畫面上顯示的 ws://…:9002，而不是預設的 127.0.0.1。**不同網域**：協同沒有被綁在同一個網路 —— 但公開網路上的位址必須是 wss://（加密），填 ws:// 會被擋下並顯示「這個中繼在公開網路上，必須用 wss://」。取得 wss:// 位址的三種方式見上面「線上協同」那一節。"
+            "看你是哪一種情況。**同一個網路**：（一）確認兩台真的在同一個 Wi-Fi 網路；（二）若要自動看見房間，請確認 Android 系統已允許鄰近裝置或區域網路權限（若被系統限制阻擋，App 會自動降級為純本機中繼模式，隊友只要手動填入房主顯示的區域網路位址即可正常加入）；（三）隊友的「協同伺服器位址」已改成房主畫面上顯示的 ws://…:9002，而不是預設的 127.0.0.1。**不同網域**：協同沒有被綁在同一個網路 —— 但公開網路上的位址必須是 wss://（加密），填 ws:// 會被擋下並顯示「這個中繼在公開網路上，必須用 wss://」。取得 wss:// 位址的三種方式見上面「線上協同」那一節。",
+            "collab"
           ],
           [
             "連上了，但對方寫的東西看不到？",
-            "八成是加入時只貼了房號，沒有貼整條邀請連結。金鑰在連結井號後面那一段，少了它就解不開對方的內容 —— 這時畫面上會出現一則橘色提醒。請向房主要完整的邀請連結，重新加入一次。"
+            "八成是加入時只貼了房號，沒有貼整條邀請連結。金鑰在連結井號後面那一段，少了它就解不開對方的內容 —— 這時畫面上會出現一則橘色提醒。請向房主要完整的邀請連結，重新加入一次。",
+            "collab"
           ],
           [
             "筆記會不會不見？",
-            "每一筆都即時寫入本機檔案。同步檔案只新增不修改，每台裝置只寫自己的檔案，所以不會互相覆蓋。"
+            "每一筆都即時寫入本機檔案。同步檔案只新增不修改，每台裝置只寫自己的檔案，所以不會互相覆蓋。",
+            "data"
           ],
           [
             "需要註冊帳號嗎？",
-            "不需要。Kairumo 沒有帳號系統，也沒有後端伺服器。"
+            "不需要。Kairumo 沒有帳號系統，也沒有後端伺服器。",
+            "data"
           ],
           [
             "手寫可以轉成文字嗎？",
-            "可以。使用系統內建的裝置端辨識，不會把筆跡送上網。"
+            "可以。使用系統內建的裝置端辨識，不會把筆跡送上網。",
+            "write"
           ],
           [
             "怎麼回報問題？",
-            "請附上版本號（在設定的「關於 Kairumo」查看，例如 Kairumo v5.10.0）與操作步驟。"
+            "請附上版本號（在設定的「關於 Kairumo」查看，例如 Kairumo v5.10.0）與操作步驟。",
+            "help"
           ],
           [
             "同一本筆記可以混用不同的頁面格式嗎？",
-            "可以。在「頁面結構」的縮圖上按右鍵或長按 → 「插入其他樣板頁面」→ 選主題與樣板，新的一頁就會用那一種版面，其餘頁面不受影響。建立筆記時選的那一個只是**預設值**。"
+            "可以。在「頁面結構」的縮圖上按右鍵或長按 → 「插入其他樣板頁面」→ 選主題與樣板，新的一頁就會用那一種版面，其餘頁面不受影響。建立筆記時選的那一個只是**預設值**。",
+            "write"
           ],
           [
             "寫到框線外面會怎樣？",
-            "那一圈虛線是可列印範圍，也是編輯區域。完全寫在外面的筆畫會被收回並跳出一則提醒 —— 因為它印不出來也匯不出去，留著只會讓人以為它還在。跨在線上的筆畫會留著，但也會提醒一次。"
+            "那一圈虛線是可列印範圍，也是編輯區域。完全寫在外面的筆畫會被收回並跳出一則提醒 —— 因為它印不出來也匯不出去，留著只會讓人以為它還在。跨在線上的筆畫會留著，但也會提醒一次。",
+            "write"
           ],
           [
             "Whisper 模型是什麼？一定要下載嗎？",
-            "Whisper 是 OpenAI 發布的開源語音辨識模型，Kairumo 把它裁剪並量化後放進 App。下載後完全在裝置本機運算，不會把聲音送出去。不下載也能用錄音功能，只是轉錄不會產生文字。橫幅只在找不到任何相容引擎時才出現。"
+            "Whisper 是 OpenAI 發布的開源語音辨識模型，Kairumo 把它裁剪並量化後放進 App。下載後完全在裝置本機運算，不會把聲音送出去。不下載也能用錄音功能，只是轉錄不會產生文字。橫幅只在找不到任何相容引擎時才出現。",
+            "audio"
           ],
           [
             "如何取消已設定的資料夾同步？",
-            "進入首頁 → 「雲端同步」卡片 → 設定頁 → 「資料夾」分頁，點「取消已設定的資料夾」並確認。取消後資料夾內已同步的檔案仍保留，只是 Kairumo 不再讀寫那個資料夾。若要重新啟用，重新選擇資料夾即可。"
+            "進入首頁 → 「雲端同步」卡片 → 設定頁 → 「資料夾」分頁，點「取消已設定的資料夾」並確認。取消後資料夾內已同步的檔案仍保留，只是 Kairumo 不再讀寫那個資料夾。若要重新啟用，重新選擇資料夾即可。",
+            "collab"
           ],
           [
             "播放鈕按了沒有聲音，或是錄完音不能播？",
-            "先確認手機／平板沒有靜音、也沒有其他 App 正在佔用喇叭或麥克風，再按一次。若仍不行，到首頁右上「診斷」▸「裝置自檢」按「執行自檢」，把報告「複製」後回報 —— 裡面會寫出是播放、權限還是資料夾出了問題。"
+            "先確認手機／平板沒有靜音、也沒有其他 App 正在佔用喇叭或麥克風，再按一次。若仍不行，到首頁右上「診斷」▸「裝置自檢」按「執行自檢」，把報告「複製」後回報 —— 裡面會寫出是播放、權限還是資料夾出了問題。",
+            "audio"
           ],
           [
             "我的錄音檔存在哪裡？",
-            "錄音是筆記本的一部分，會跟著筆記本一起儲存與同步，不需要自己找檔案：在筆記裡點「更多 → 插入錄音」，或到首頁的「最近錄音與轉錄」就能播放、改名與轉錄。文件庫的位置可在首頁的儲存位置設定中更換。"
+            "錄音是筆記本的一部分，會跟著筆記本一起儲存與同步，不需要自己找檔案：在筆記裡點「更多 → 插入錄音」，或到首頁的「最近錄音與轉錄」就能播放、改名與轉錄。文件庫的位置可在首頁的儲存位置設定中更換。",
+            "audio"
           ],
           [
             "App 會佔用越來越多空間嗎？",
-            "不會。Kairumo 啟動時會自動清掉自己的暫存檔、放棄了的模型下載殘檔與已期滿的回收桶筆記，另外每天一次清掉沒有任何物件引用的舊附件與筆跡；你的筆記與錄音絕不會被自動刪除。想立刻看用量或手動清理：首頁右上「診斷」▸「儲存空間」▸「立即清理」。"
+            "不會。Kairumo 啟動時會自動清掉自己的暫存檔、放棄了的模型下載殘檔與已期滿的回收桶筆記，另外每天一次清掉沒有任何物件引用的舊附件與筆跡；你的筆記與錄音絕不會被自動刪除。想立刻看用量或手動清理：首頁右上「診斷」▸「儲存空間」▸「立即清理」。",
+            "data"
           ],
           [
             "在手寫模式下點圖片、表格這類物件沒有反應？",
-            "手寫模式的畫面留給筆，所以物件預設不吃觸控。用手指輕點一個物件時，Kairumo 會自動切到打字模式，讓下一次點擊就能選取、拖曳、縮放或刪除它。"
+            "手寫模式的畫面留給筆，所以物件預設不吃觸控。用手指輕點一個物件時，Kairumo 會自動切到打字模式，讓下一次點擊就能選取、拖曳、縮放或刪除它。",
+            "write"
           ],
           [
             "操作手冊或隱私權政策打開是空白的？",
-            "兩份文件都完整內建、離線顯示，不會連網載入任何字型或圖片。若看到空白，請關閉後重開一次；仍然空白，請到「診斷」▸「裝置自檢」複製報告並回報。"
+            "兩份文件都完整內建、離線顯示，不會連網載入任何字型或圖片。若看到空白，請關閉後重開一次；仍然空白，請到「診斷」▸「裝置自檢」複製報告並回報。",
+            "help"
           ],
           [
             "點選「分享筆記」分享至 LINE 等通訊軟體時出現「含有無法分享的檔案」？",
-            "「分享筆記」傳送的是整本筆記的 .padnote 原始封裝檔（供對方在 Kairumo 中繼續編輯）。部分通訊軟體（例如 LINE）的系統分享面板不支援直接接收此類自訂檔案包，因而出現此提示。解決方式：（一）若要傳送原始檔供對方編輯：請在匯出選單中點選「另存新檔」，將 .padnote 儲存至裝置的「檔案」；接著打開 LINE 聊天室，點選輸入框旁的「＋」▸「檔案」選取該筆記發送即可；（二）若僅需分享內容供對方閱讀：請在匯出選單選擇「匯出 PDF」或「匯出為圖片」，即可直接分享至通訊軟體。"
+            "「分享筆記」傳送的是整本筆記的 .padnote 原始封裝檔（供對方在 Kairumo 中繼續編輯）。部分通訊軟體（例如 LINE）的系統分享面板不支援直接接收此類自訂檔案包，因而出現此提示。解決方式：（一）若要傳送原始檔供對方編輯：請在匯出選單中點選「另存新檔」，將 .padnote 儲存至裝置的「檔案」；接著打開 LINE 聊天室，點選輸入框旁的「＋」▸「檔案」選取該筆記發送即可；（二）若僅需分享內容供對方閱讀：請在匯出選單選擇「匯出 PDF」或「匯出為圖片」，即可直接分享至通訊軟體。",
+            "help"
           ]
         ],
         "fig": null
@@ -1546,70 +1586,109 @@ window.KAIRUMO_MANUAL = {
         "title": "Troubleshooting",
         "lead": "Check here first.",
         "buttons": [],
+        "faqTocTitle": "All questions",
+        "faqCategories": [
+          [
+            "write",
+            "Writing & pages"
+          ],
+          [
+            "audio",
+            "Recording & transcription"
+          ],
+          [
+            "collab",
+            "Collaboration & sync"
+          ],
+          [
+            "data",
+            "Data & accounts"
+          ],
+          [
+            "help",
+            "Sharing, help & reporting"
+          ]
+        ],
         "faq": [
           [
             "Why doesn’t the pen draw in typing mode?",
-            "That is deliberate. Typing mode only handles text and objects — neither finger nor stylus draws, so selecting and dragging objects never leaves a stray stroke behind. The badge at the top right of the canvas says which mode you are in. Switch back to handwriting mode to write."
+            "That is deliberate. Typing mode only handles text and objects — neither finger nor stylus draws, so selecting and dragging objects never leaves a stray stroke behind. The badge at the top right of the canvas says which mode you are in. Switch back to handwriting mode to write.",
+            "write"
           ],
           [
             "Collaboration won't connect",
-            "Make sure both devices are on the same Wi-Fi. For automatic room discovery, ensure Android system permissions for nearby devices/local network are granted (if restricted, Kairumo automatically falls back to local relay mode; guests can connect directly by typing the host's displayed local IP). The guest's “Relay Server Address” must be the ws://…:9002 address shown on the host's screen, not the default 127.0.0.1."
+            "Make sure both devices are on the same Wi-Fi. For automatic room discovery, ensure Android system permissions for nearby devices/local network are granted (if restricted, Kairumo automatically falls back to local relay mode; guests can connect directly by typing the host's displayed local IP). The guest's “Relay Server Address” must be the ws://…:9002 address shown on the host's screen, not the default 127.0.0.1.",
+            "collab"
           ],
           [
             "Can my notes get lost?",
-            "Every stroke is written to a local file as you go. Sync files are append-only and each device only ever writes its own file, so nothing overwrites anything."
+            "Every stroke is written to a local file as you go. Sync files are append-only and each device only ever writes its own file, so nothing overwrites anything.",
+            "data"
           ],
           [
             "Do I need an account?",
-            "No. Kairumo has no accounts and no backend server."
+            "No. Kairumo has no accounts and no backend server.",
+            "data"
           ],
           [
             "Can handwriting become text?",
-            "Yes, using the on-device recognition built into the system. Your ink never leaves the device."
+            "Yes, using the on-device recognition built into the system. Your ink never leaves the device.",
+            "write"
           ],
           [
             "How do I report a problem?",
-            "Include the version number (found in the app's About screen, for example Kairumo v5.10.0) and the steps you took."
+            "Include the version number (found in the app's About screen, for example Kairumo v5.10.0) and the steps you took.",
+            "help"
           ],
           [
             "Can one notebook mix different page formats?",
-            "Yes. Right-click or press and hold a thumbnail in Pages → Insert Page with Template… → pick a theme and a template. The new page uses that layout and the others are untouched. What you choose when creating the notebook is only the **default**."
+            "Yes. Right-click or press and hold a thumbnail in Pages → Insert Page with Template… → pick a theme and a template. The new page uses that layout and the others are untouched. What you choose when creating the notebook is only the **default**.",
+            "write"
           ],
           [
             "What happens if I write outside the frame?",
-            "The dashed rectangle is the printable area, which is also the editing area. A stroke drawn entirely outside it is taken back and you get a notice — it would neither print nor export, and leaving it there would only make you think it still exists. A stroke that straddles the line is kept, with a single reminder."
+            "The dashed rectangle is the printable area, which is also the editing area. A stroke drawn entirely outside it is taken back and you get a notice — it would neither print nor export, and leaving it there would only make you think it still exists. A stroke that straddles the line is kept, with a single reminder.",
+            "write"
           ],
           [
             "What is the Whisper model? Do I have to download it?",
-            "Whisper is an open-source speech-recognition model released by OpenAI. Kairumo ships a pruned and quantised version that runs entirely on-device — your audio never leaves the device. You can still record without it; transcription just won't produce text. The download banner only appears if no compatible engine is found."
+            "Whisper is an open-source speech-recognition model released by OpenAI. Kairumo ships a pruned and quantised version that runs entirely on-device — your audio never leaves the device. You can still record without it; transcription just won't produce text. The download banner only appears if no compatible engine is found.",
+            "audio"
           ],
           [
             "How do I remove the Folder sync I set up?",
-            "Go to the home screen → Cloud Sync card → settings → Folder tab, then tap \"Cancel Configured Folder\" and confirm. Files already synced to the folder are not deleted — Kairumo simply stops reading and writing there. You can re-enable sync at any time by choosing a folder again."
+            "Go to the home screen → Cloud Sync card → settings → Folder tab, then tap \"Cancel Configured Folder\" and confirm. Files already synced to the folder are not deleted — Kairumo simply stops reading and writing there. You can re-enable sync at any time by choosing a folder again.",
+            "collab"
           ],
           [
             "The play button is silent, or I can't play right after recording?",
-            "Make sure the device isn't muted and no other app is holding the speaker or microphone, then tap again. If it still fails, open Home ▸ Diagnostics ▸ Device self-check, tap “Run self-check” and copy the report when you contact us — it says whether playback, permission or the folder is the problem."
+            "Make sure the device isn't muted and no other app is holding the speaker or microphone, then tap again. If it still fails, open Home ▸ Diagnostics ▸ Device self-check, tap “Run self-check” and copy the report when you contact us — it says whether playback, permission or the folder is the problem.",
+            "audio"
           ],
           [
             "Where are my recordings?",
-            "Recordings are part of the notebook and are stored and synced with it — there is no file to hunt for: use More → Insert recording in a note, or Recent recordings on Home to play, rename or transcribe them. You can change the library location in the storage-location settings on Home."
+            "Recordings are part of the notebook and are stored and synced with it — there is no file to hunt for: use More → Insert recording in a note, or Recent recordings on Home to play, rename or transcribe them. You can change the library location in the storage-location settings on Home.",
+            "audio"
           ],
           [
             "Will the app keep growing in size?",
-            "No. On launch Kairumo automatically removes its own temporary files, abandoned model-download leftovers and trash that has passed its retention period, and once a day it removes old attachments and strokes that no object refers to. Your notes and recordings are never deleted automatically. To see usage or clean up now: Home ▸ Diagnostics ▸ Storage ▸ Clean up now."
+            "No. On launch Kairumo automatically removes its own temporary files, abandoned model-download leftovers and trash that has passed its retention period, and once a day it removes old attachments and strokes that no object refers to. Your notes and recordings are never deleted automatically. To see usage or clean up now: Home ▸ Diagnostics ▸ Storage ▸ Clean up now.",
+            "data"
           ],
           [
             "Tapping an image or table in Handwriting mode does nothing?",
-            "Handwriting mode keeps the canvas for the pen, so objects don't take touches by default. When you tap an object with a finger, Kairumo switches to Typing mode so your next tap can select, drag, resize or delete it."
+            "Handwriting mode keeps the canvas for the pen, so objects don't take touches by default. When you tap an object with a finger, Kairumo switches to Typing mode so your next tap can select, drag, resize or delete it.",
+            "write"
           ],
           [
             "The manual or privacy policy opens blank?",
-            "Both documents are bundled and shown fully offline — they load no fonts or images from the internet. If you see a blank page, close and reopen it; if it is still blank, copy the report from Diagnostics ▸ Device self-check and send it to us."
+            "Both documents are bundled and shown fully offline — they load no fonts or images from the internet. If you see a blank page, close and reopen it; if it is still blank, copy the report from Diagnostics ▸ Device self-check and send it to us.",
+            "help"
           ],
           [
             "Why do I get a “Contains unshareable files” error when sharing a note to LINE or messaging apps?",
-            "“Share Note” exports the raw .padnote package so the recipient can continue editing it in Kairumo. Some messaging apps (such as LINE) do not accept custom file formats via the system share sheet. Solutions: (1) To send the editable note: choose “Save As” in the export menu to save the .padnote file to your device's Files; then open the chat in the messaging app, tap “+” ▸ “Files”, and select the note to send. (2) To share content for viewing only: choose “Export PDF” or “Export as Image” from the export menu, which can be shared directly to any messaging app."
+            "“Share Note” exports the raw .padnote package so the recipient can continue editing it in Kairumo. Some messaging apps (such as LINE) do not accept custom file formats via the system share sheet. Solutions: (1) To send the editable note: choose “Save As” in the export menu to save the .padnote file to your device's Files; then open the chat in the messaging app, tap “+” ▸ “Files”, and select the note to send. (2) To share content for viewing only: choose “Export PDF” or “Export as Image” from the export menu, which can be shared directly to any messaging app.",
+            "help"
           ]
         ],
         "fig": null
@@ -2343,70 +2422,109 @@ window.KAIRUMO_MANUAL = {
         "title": "常见问题",
         "lead": "遇到状况时先看这里。",
         "buttons": [],
+        "faqTocTitle": "问题一览",
+        "faqCategories": [
+          [
+            "write",
+            "书写与页面"
+          ],
+          [
+            "audio",
+            "录音与转录"
+          ],
+          [
+            "collab",
+            "协作与同步"
+          ],
+          [
+            "data",
+            "数据与账号"
+          ],
+          [
+            "help",
+            "分享、说明与反馈"
+          ]
+        ],
         "faq": [
           [
             "为什么打字模式下笔画不出东西？",
-            "那是刻意的。打字模式只处理文字与物件 —— 手指与触控笔都不会画线，这样点选、拖曳物件才不会每次都留下一条笔迹。画布右上角的徽章会写着目前是哪个模式。要写字就切回手绘模式。"
+            "那是刻意的。打字模式只处理文字与物件 —— 手指与触控笔都不会画线，这样点选、拖曳物件才不会每次都留下一条笔迹。画布右上角的徽章会写着目前是哪个模式。要写字就切回手绘模式。",
+            "write"
           ],
           [
             "在线协作连不上怎么办？",
-            "看你是哪一种情况。**同一个网络**：（一）先确认两台设备在同一个 Wi-Fi；（二）若要自动发现房间，请确认 Android 系统已允许附近设备或本地网络权限（若被系统阻挡，App 会自动降级为纯本机中继模式，队友手动填入房主显示的局域网地址即可）；（三）队友的“协作服务器地址”已改成房主画面上显示的 ws://…:9002，而不是默认的 127.0.0.1。**不同网段**：协作没有被绑在同一个网络 —— 但公开网络上的地址必须是 wss://（加密），填 ws:// 会被挡下。获取 wss:// 地址的方式见上方“在线协作”章节。"
+            "看你是哪一种情况。**同一个网络**：（一）先确认两台设备在同一个 Wi-Fi；（二）若要自动发现房间，请确认 Android 系统已允许附近设备或本地网络权限（若被系统阻挡，App 会自动降级为纯本机中继模式，队友手动填入房主显示的局域网地址即可）；（三）队友的“协作服务器地址”已改成房主画面上显示的 ws://…:9002，而不是默认的 127.0.0.1。**不同网段**：协作没有被绑在同一个网络 —— 但公开网络上的地址必须是 wss://（加密），填 ws:// 会被挡下。获取 wss:// 地址的方式见上方“在线协作”章节。",
+            "collab"
           ],
           [
             "笔记会不会丢失？",
-            "每一笔都实时写入本机文件。同步文件只新增不修改，每台设备只写自己的文件，所以不会互相覆盖。"
+            "每一笔都实时写入本机文件。同步文件只新增不修改，每台设备只写自己的文件，所以不会互相覆盖。",
+            "data"
           ],
           [
             "需要注册账号吗？",
-            "不需要。Kairumo 没有账号系统，也没有后端服务器。"
+            "不需要。Kairumo 没有账号系统，也没有后端服务器。",
+            "data"
           ],
           [
             "手写可以转成文字吗？",
-            "可以。使用系统内置的设备端识别，不会把笔迹传上网。"
+            "可以。使用系统内置的设备端识别，不会把笔迹传上网。",
+            "write"
           ],
           [
             "怎么反馈问题？",
-            "请附上版本号（在设置的「关于 Kairumo」查看，例如 Kairumo v5.10.0）与操作步骤。"
+            "请附上版本号（在设置的「关于 Kairumo」查看，例如 Kairumo v5.10.0）与操作步骤。",
+            "help"
           ],
           [
             "同一本笔记可以混用不同的页面格式吗？",
-            "可以。在「页面结构」的缩图上按右键或长按 →「插入其他样板页面」→ 选主题与样板，新的一页就会用那一种版面，其余页面不受影响。创建笔记时选的那一个只是**默认值**。"
+            "可以。在「页面结构」的缩图上按右键或长按 →「插入其他样板页面」→ 选主题与样板，新的一页就会用那一种版面，其余页面不受影响。创建笔记时选的那一个只是**默认值**。",
+            "write"
           ],
           [
             "写到框线外面会怎样？",
-            "那一圈虚线是可打印范围，也是编辑区域。完全写在外面的笔画会被收回并跳出一则提醒 —— 因为它打印不出来也导不出去，留着只会让人以为它还在。跨在线上的笔画会留着，但也会提醒一次。"
+            "那一圈虚线是可打印范围，也是编辑区域。完全写在外面的笔画会被收回并跳出一则提醒 —— 因为它打印不出来也导不出去，留着只会让人以为它还在。跨在线上的笔画会留着，但也会提醒一次。",
+            "write"
           ],
           [
             "Whisper 模型是什么？一定要下载吗？",
-            "Whisper 是 OpenAI 发布的开源语音识别模型，Kairumo 将其裁剪并量化后内置于 App。下载后完全在设备本机运算，不会将声音发送出去。不下载也能使用录音功能，只是转录不会产生文字。横幅仅在找不到任何兼容引擎时才出现。"
+            "Whisper 是 OpenAI 发布的开源语音识别模型，Kairumo 将其裁剪并量化后内置于 App。下载后完全在设备本机运算，不会将声音发送出去。不下载也能使用录音功能，只是转录不会产生文字。横幅仅在找不到任何兼容引擎时才出现。",
+            "audio"
           ],
           [
             "如何取消已设置的文件夹同步？",
-            "进入首页 → 「云端同步」卡片 → 设置页 → 「文件夹」选项卡，点击「取消已设置的文件夹」并确认。取消后文件夹内已同步的文件仍保留，只是 Kairumo 不再读写该文件夹。若要重新启用，重新选择文件夹即可。"
+            "进入首页 → 「云端同步」卡片 → 设置页 → 「文件夹」选项卡，点击「取消已设置的文件夹」并确认。取消后文件夹内已同步的文件仍保留，只是 Kairumo 不再读写该文件夹。若要重新启用，重新选择文件夹即可。",
+            "collab"
           ],
           [
             "播放按钮没有声音，或录完音不能播放？",
-            "先确认设备没有静音、也没有其他 App 占用扬声器或麦克风，再点一次。仍不行的话，到首页右上“诊断”▸“设备自检”点“运行自检”，把报告“复制”后反馈 —— 报告会写出是播放、权限还是文件夹出了问题。"
+            "先确认设备没有静音、也没有其他 App 占用扬声器或麦克风，再点一次。仍不行的话，到首页右上“诊断”▸“设备自检”点“运行自检”，把报告“复制”后反馈 —— 报告会写出是播放、权限还是文件夹出了问题。",
+            "audio"
           ],
           [
             "我的录音文件存在哪里？",
-            "录音是笔记本的一部分，会随笔记本一起保存与同步，不需要自己找文件：在笔记里点“更多 → 插入录音”，或到首页的“最近录音与转录”就能播放、重命名与转录。文档库的位置可在首页的存储位置设置中更换。"
+            "录音是笔记本的一部分，会随笔记本一起保存与同步，不需要自己找文件：在笔记里点“更多 → 插入录音”，或到首页的“最近录音与转录”就能播放、重命名与转录。文档库的位置可在首页的存储位置设置中更换。",
+            "audio"
           ],
           [
             "App 会占用越来越多空间吗？",
-            "不会。Kairumo 启动时会自动清掉自己的临时文件、放弃的模型下载残留和已期满的回收站笔记，并每天一次清掉没有任何对象引用的旧附件与笔迹；你的笔记与录音绝不会被自动删除。想立刻查看用量或手动清理：首页右上“诊断”▸“存储空间”▸“立即清理”。"
+            "不会。Kairumo 启动时会自动清掉自己的临时文件、放弃的模型下载残留和已期满的回收站笔记，并每天一次清掉没有任何对象引用的旧附件与笔迹；你的笔记与录音绝不会被自动删除。想立刻查看用量或手动清理：首页右上“诊断”▸“存储空间”▸“立即清理”。",
+            "data"
           ],
           [
             "在手写模式下点图片、表格等对象没反应？",
-            "手写模式的画面留给笔，所以对象默认不接收触控。用手指轻点一个对象时，Kairumo 会自动切到打字模式，让下一次点击就能选取、拖动、缩放或删除它。"
+            "手写模式的画面留给笔，所以对象默认不接收触控。用手指轻点一个对象时，Kairumo 会自动切到打字模式，让下一次点击就能选取、拖动、缩放或删除它。",
+            "write"
           ],
           [
             "操作手册或隐私政策打开是空白的？",
-            "两份文档都完整内置、离线显示，不会联网加载任何字体或图片。如果看到空白，请关闭后重开；仍然空白，请到“诊断”▸“设备自检”复制报告并反馈。"
+            "两份文档都完整内置、离线显示，不会联网加载任何字体或图片。如果看到空白，请关闭后重开；仍然空白，请到“诊断”▸“设备自检”复制报告并反馈。",
+            "help"
           ],
           [
             "点击“分享笔记”分享至 LINE 等通讯软件时提示“含有无法分享的文件”？",
-            "“分享笔记”发送的是整本笔记的 .padnote 原始封装包（供对方在 Kairumo 中继续编辑）。部分通讯软件（如 LINE）的系统分享面板不支持直接接收此类自定义文件包，因而弹出此提示。解决方法：（一）若需发送原始文件供对方编辑：请在导出菜单中选择“另存为”，将 .padnote 保存至设备的“文件”；随后打开 LINE 聊天室，点击输入框旁的“＋”▸“文件”选取该笔记发送即可；（二）若仅需分享内容供对方查阅：请在导出菜单中选择“导出 PDF”或“导出为图片”，即可直接分享至通讯软件。"
+            "“分享笔记”发送的是整本笔记的 .padnote 原始封装包（供对方在 Kairumo 中继续编辑）。部分通讯软件（如 LINE）的系统分享面板不支持直接接收此类自定义文件包，因而弹出此提示。解决方法：（一）若需发送原始文件供对方编辑：请在导出菜单中选择“另存为”，将 .padnote 保存至设备的“文件”；随后打开 LINE 聊天室，点击输入框旁的“＋”▸“文件”选取该笔记发送即可；（二）若仅需分享内容供对方查阅：请在导出菜单中选择“导出 PDF”或“导出为图片”，即可直接分享至通讯软件。",
+            "help"
           ]
         ],
         "fig": null
@@ -3140,70 +3258,109 @@ window.KAIRUMO_MANUAL = {
         "title": "困ったときは",
         "lead": "まずここを確認してください。",
         "buttons": [],
+        "faqTocTitle": "質問一覧",
+        "faqCategories": [
+          [
+            "write",
+            "書き込みとページ"
+          ],
+          [
+            "audio",
+            "録音と文字起こし"
+          ],
+          [
+            "collab",
+            "共同編集と同期"
+          ],
+          [
+            "data",
+            "データとアカウント"
+          ],
+          [
+            "help",
+            "共有・ヘルプ・報告"
+          ]
+        ],
         "faq": [
           [
             "入力モードでペンが描けないのはなぜですか",
-            "意図的な動作です。入力モードは文字とオブジェクト専用で、指もスタイラスも線を描きません。そのため選択やドラッグのたびに余計な筆跡が残りません。現在のモードはキャンバス右上のバッジに表示されます。書くときは手書きモードに戻してください。"
+            "意図的な動作です。入力モードは文字とオブジェクト専用で、指もスタイラスも線を描きません。そのため選択やドラッグのたびに余計な筆跡が残りません。現在のモードはキャンバス右上のバッジに表示されます。書くときは手書きモードに戻してください。",
+            "write"
           ],
           [
             "共同編集に接続できない",
-            "どちらの状況か確認してください。**同じネットワーク**：（1）両方の端末が同じ Wi-Fi にあるか確認します；（2）部屋を自動検出する場合、Android の付近のデバイスまたはローカルネットワーク権限が許可されていることを確認してください（制限されている場合も純粋なローカルリレーとして自動フォールバックするため、ホスト画面のローカル IP を手動入力すれば問題なく接続できます）；（3）参加側の「中継サーバーアドレス」が、ホスト画面に表示された ws://…:9002 に変更されているか確認します。**異なるネットワーク**：公開インターネット経由の場合、アドレスは wss://（TLS暗号化）である必要があります。"
+            "どちらの状況か確認してください。**同じネットワーク**：（1）両方の端末が同じ Wi-Fi にあるか確認します；（2）部屋を自動検出する場合、Android の付近のデバイスまたはローカルネットワーク権限が許可されていることを確認してください（制限されている場合も純粋なローカルリレーとして自動フォールバックするため、ホスト画面のローカル IP を手動入力すれば問題なく接続できます）；（3）参加側の「中継サーバーアドレス」が、ホスト画面に表示された ws://…:9002 に変更されているか確認します。**異なるネットワーク**：公開インターネット経由の場合、アドレスは wss://（TLS暗号化）である必要があります。",
+            "collab"
           ],
           [
             "ノートが消えることは？",
-            "書いたそばからローカルファイルに保存されます。同期ファイルは追記のみで、各端末は自分のファイルしか書かないため上書きは起こりません。"
+            "書いたそばからローカルファイルに保存されます。同期ファイルは追記のみで、各端末は自分のファイルしか書かないため上書きは起こりません。",
+            "data"
           ],
           [
             "アカウントは必要？",
-            "不要です。Kairumo にはアカウントもバックエンドサーバーもありません。"
+            "不要です。Kairumo にはアカウントもバックエンドサーバーもありません。",
+            "data"
           ],
           [
             "手書きを文字にできますか？",
-            "できます。端末内蔵の認識機能を使うため、筆跡が外部に出ることはありません。"
+            "できます。端末内蔵の認識機能を使うため、筆跡が外部に出ることはありません。",
+            "write"
           ],
           [
             "不具合はどう報告しますか？",
-            "アプリの「設定」→「Kairumo について」で確認できるバージョン（例：Kairumo v5.10.0）と、操作手順を添えてください。"
+            "アプリの「設定」→「Kairumo について」で確認できるバージョン（例：Kairumo v5.10.0）と、操作手順を添えてください。",
+            "help"
           ],
           [
             "1 冊のノートでページ規格を混ぜられますか？",
-            "できます。「ページ」のサムネイルを右クリックまたは長押し →「テンプレートを選んでページを挿入」→ テーマとテンプレートを選びます。その新しいページだけがそのレイアウトになり、ほかのページは変わりません。ノート作成時に選んだものは**既定値**にすぎません。"
+            "できます。「ページ」のサムネイルを右クリックまたは長押し →「テンプレートを選んでページを挿入」→ テーマとテンプレートを選びます。その新しいページだけがそのレイアウトになり、ほかのページは変わりません。ノート作成時に選んだものは**既定値**にすぎません。",
+            "write"
           ],
           [
             "枠の外に書くとどうなりますか？",
-            "破線の枠は印刷可能範囲であり、編集領域でもあります。完全に枠外に書かれたストロークは取り消され、通知が出ます。印刷も書き出しもできないので、残しておくと「まだある」と思わせてしまうからです。枠にまたがるストロークは残りますが、一度だけ知らせます。"
+            "破線の枠は印刷可能範囲であり、編集領域でもあります。完全に枠外に書かれたストロークは取り消され、通知が出ます。印刷も書き出しもできないので、残しておくと「まだある」と思わせてしまうからです。枠にまたがるストロークは残りますが、一度だけ知らせます。",
+            "write"
           ],
           [
             "Whisper モデルとは何ですか？ダウンロードは必須ですか？",
-            "Whisper は OpenAI がリリースしたオープンソースの音声認識モデルです。Kairumo は軽量化・量子化したバージョンを使用しており、完全にデバイス上で処理されます。音声データが外部に送信されることはありません。ダウンロードしなくても録音機能は使えますが、文字起こしはできません。バナーは互換エンジンが見つからない場合にのみ表示されます。"
+            "Whisper は OpenAI がリリースしたオープンソースの音声認識モデルです。Kairumo は軽量化・量子化したバージョンを使用しており、完全にデバイス上で処理されます。音声データが外部に送信されることはありません。ダウンロードしなくても録音機能は使えますが、文字起こしはできません。バナーは互換エンジンが見つからない場合にのみ表示されます。",
+            "audio"
           ],
           [
             "設定したフォルダ同期を解除するには？",
-            "ホーム画面 → クラウド同期カード → 設定 → 「フォルダ」タブと進み、「設定済みフォルダを解除」をタップして確認します。解除後もフォルダ内の同期済みファイルは削除されません。Kairumo がそのフォルダへの読み書きを停止するだけです。再度有効にするには、フォルダを選び直してください。"
+            "ホーム画面 → クラウド同期カード → 設定 → 「フォルダ」タブと進み、「設定済みフォルダを解除」をタップして確認します。解除後もフォルダ内の同期済みファイルは削除されません。Kairumo がそのフォルダへの読み書きを停止するだけです。再度有効にするには、フォルダを選び直してください。",
+            "collab"
           ],
           [
             "再生ボタンを押しても音が出ない、録音直後に再生できない？",
-            "端末がミュートでないこと、他のアプリがスピーカーやマイクを使っていないことを確認してからもう一度押してください。それでもだめなら、ホームの「診断」▸「端末セルフチェック」で「セルフチェックを実行」し、「レポートをコピー」して連絡してください。再生・権限・フォルダのどれが原因か分かります。"
+            "端末がミュートでないこと、他のアプリがスピーカーやマイクを使っていないことを確認してからもう一度押してください。それでもだめなら、ホームの「診断」▸「端末セルフチェック」で「セルフチェックを実行」し、「レポートをコピー」して連絡してください。再生・権限・フォルダのどれが原因か分かります。",
+            "audio"
           ],
           [
             "録音ファイルはどこ？",
-            "録音はノートの一部として、ノートと一緒に保存・同期されます。ファイルを探す必要はありません。ノートで「その他 → 録音を挿入」、またはホームの「最近の録音と文字起こし」から再生・名前変更・文字起こしができます。ライブラリの場所はホームの保存場所設定で変更できます。"
+            "録音はノートの一部として、ノートと一緒に保存・同期されます。ファイルを探す必要はありません。ノートで「その他 → 録音を挿入」、またはホームの「最近の録音と文字起こし」から再生・名前変更・文字起こしができます。ライブラリの場所はホームの保存場所設定で変更できます。",
+            "audio"
           ],
           [
             "アプリの容量はどんどん増えますか？",
-            "いいえ。Kairumo は起動時に、自分の一時ファイル、中断されたモデルダウンロードの残り、保持期間を過ぎたゴミ箱のノートを自動で削除し、1日1回、どのオブジェクトからも参照されない古い添付と筆跡も削除します。ノートと録音が自動で削除されることはありません。使用量の確認や今すぐの整理は、ホーム ▸「診断」▸「ストレージ」▸「今すぐ整理」です。"
+            "いいえ。Kairumo は起動時に、自分の一時ファイル、中断されたモデルダウンロードの残り、保持期間を過ぎたゴミ箱のノートを自動で削除し、1日1回、どのオブジェクトからも参照されない古い添付と筆跡も削除します。ノートと録音が自動で削除されることはありません。使用量の確認や今すぐの整理は、ホーム ▸「診断」▸「ストレージ」▸「今すぐ整理」です。",
+            "data"
           ],
           [
             "手書きモードで画像や表をタップしても反応しない？",
-            "手書きモードの画面はペンのために空けてあるため、オブジェクトは既定でタッチを受け付けません。指でオブジェクトをタップすると Kairumo が自動的に入力モードへ切り替わり、次のタップで選択・ドラッグ・拡大縮小・削除ができます。"
+            "手書きモードの画面はペンのために空けてあるため、オブジェクトは既定でタッチを受け付けません。指でオブジェクトをタップすると Kairumo が自動的に入力モードへ切り替わり、次のタップで選択・ドラッグ・拡大縮小・削除ができます。",
+            "write"
           ],
           [
             "マニュアルやプライバシーポリシーが空白で開く？",
-            "どちらも完全に内蔵されオフラインで表示され、インターネットからフォントや画像を読み込みません。空白のときは一度閉じて開き直してください。それでも空白なら、「診断」▸「端末セルフチェック」のレポートをコピーして連絡してください。"
+            "どちらも完全に内蔵されオフラインで表示され、インターネットからフォントや画像を読み込みません。空白のときは一度閉じて開き直してください。それでも空白なら、「診断」▸「端末セルフチェック」のレポートをコピーして連絡してください。",
+            "help"
           ],
           [
             "「ノートを共有」で LINE などのメッセージアプリに共有すると「共有できないファイルが含まれています」と表示される？",
-            "「ノートを共有」は相手が Kairumo で編集を続けられるよう .padnote 形式の元データを書き出します。LINE などの一部のアプリの共有拡張機能はカスタム形式のファイルを直接受け付けないため、この警告が表示されます。対処法：(1) 編集用元データを送る場合：エクスポートメニューの「別名で保存」で端末の「ファイル」に保存し、LINE のトーク画面で「＋」▸「ファイル」からそのファイルを選択して送信してください。(2) 閲覧用に共有する場合：エクスポートメニューから「PDF を書き出し」または「画像として書き出し」を選択すると、直接スムーズに共有できます。"
+            "「ノートを共有」は相手が Kairumo で編集を続けられるよう .padnote 形式の元データを書き出します。LINE などの一部のアプリの共有拡張機能はカスタム形式のファイルを直接受け付けないため、この警告が表示されます。対処法：(1) 編集用元データを送る場合：エクスポートメニューの「別名で保存」で端末の「ファイル」に保存し、LINE のトーク画面で「＋」▸「ファイル」からそのファイルを選択して送信してください。(2) 閲覧用に共有する場合：エクスポートメニューから「PDF を書き出し」または「画像として書き出し」を選択すると、直接スムーズに共有できます。",
+            "help"
           ]
         ],
         "fig": null
@@ -3937,70 +4094,109 @@ window.KAIRUMO_MANUAL = {
         "title": "문제 해결",
         "lead": "먼저 여기를 확인하세요.",
         "buttons": [],
+        "faqTocTitle": "질문 목록",
+        "faqCategories": [
+          [
+            "write",
+            "필기와 페이지"
+          ],
+          [
+            "audio",
+            "녹음과 전사"
+          ],
+          [
+            "collab",
+            "협업과 동기화"
+          ],
+          [
+            "data",
+            "데이터와 계정"
+          ],
+          [
+            "help",
+            "공유, 도움말, 문의"
+          ]
+        ],
         "faq": [
           [
             "타이핑 모드에서 펜이 그려지지 않는 이유는?",
-            "의도한 동작입니다. 타이핑 모드는 글과 객체만 다루며 손가락도 스타일러스도 선을 그리지 않습니다. 그래서 객체를 고르고 끌 때마다 불필요한 획이 남지 않습니다. 현재 모드는 캔버스 오른쪽 위 배지에 표시됩니다. 쓰려면 필기 모드로 돌아가세요."
+            "의도한 동작입니다. 타이핑 모드는 글과 객체만 다루며 손가락도 스타일러스도 선을 그리지 않습니다. 그래서 객체를 고르고 끌 때마다 불필요한 획이 남지 않습니다. 현재 모드는 캔버스 오른쪽 위 배지에 표시됩니다. 쓰려면 필기 모드로 돌아가세요.",
+            "write"
           ],
           [
             "협업이 연결되지 않아요",
-            "어느 상황인지 확인하세요. **같은 네트워크**: (1) 두 기기가 같은 Wi-Fi에 있는지 확인하세요. (2) 룸 자동 검색을 원할 경우 Android 기기에서 근처 기기 또는 로컬 네트워크 접근이 허용되어 있는지 확인하세요(시스템 제한 시에도 순수 로컬 중계 모드로 자동 폴백되므로, 호스트 화면의 로컬 IP를 수동 입력하면 정상 연결됩니다). (3) 참여자의 “중계 서버 주소”가 호스트 화면에 표시된 ws://…:9002 로 변경되었는지 확인하세요. **다른 네트워크**: 공용 인터넷 환경에서는 주소가 wss://(TLS 암호화)여야 합니다."
+            "어느 상황인지 확인하세요. **같은 네트워크**: (1) 두 기기가 같은 Wi-Fi에 있는지 확인하세요. (2) 룸 자동 검색을 원할 경우 Android 기기에서 근처 기기 또는 로컬 네트워크 접근이 허용되어 있는지 확인하세요(시스템 제한 시에도 순수 로컬 중계 모드로 자동 폴백되므로, 호스트 화면의 로컬 IP를 수동 입력하면 정상 연결됩니다). (3) 참여자의 “중계 서버 주소”가 호스트 화면에 표시된 ws://…:9002 로 변경되었는지 확인하세요. **다른 네트워크**: 공용 인터넷 환경에서는 주소가 wss://(TLS 암호화)여야 합니다.",
+            "collab"
           ],
           [
             "노트가 사라질 수 있나요?",
-            "쓰는 즉시 로컬 파일에 저장됩니다. 동기화 파일은 추가만 하며 각 기기는 자기 파일만 쓰기 때문에 덮어쓰기가 일어나지 않습니다."
+            "쓰는 즉시 로컬 파일에 저장됩니다. 동기화 파일은 추가만 하며 각 기기는 자기 파일만 쓰기 때문에 덮어쓰기가 일어나지 않습니다.",
+            "data"
           ],
           [
             "계정이 필요한가요?",
-            "아니요. Kairumo에는 계정도, 백엔드 서버도 없습니다."
+            "아니요. Kairumo에는 계정도, 백엔드 서버도 없습니다.",
+            "data"
           ],
           [
             "손글씨를 글자로 바꿀 수 있나요?",
-            "가능합니다. 기기 내장 인식 기능을 사용하므로 필기가 외부로 나가지 않습니다."
+            "가능합니다. 기기 내장 인식 기능을 사용하므로 필기가 외부로 나가지 않습니다.",
+            "write"
           ],
           [
             "문제는 어떻게 알리나요?",
-            "앱 내 정보 화면에서 확인한 버전(예: Kairumo v5.10.0)과 진행한 단계를 함께 알려 주세요."
+            "앱 내 정보 화면에서 확인한 버전(예: Kairumo v5.10.0)과 진행한 단계를 함께 알려 주세요.",
+            "help"
           ],
           [
             "한 노트에서 페이지 규격을 섞어 쓸 수 있나요?",
-            "가능합니다. ‘페이지’의 미리보기에서 오른쪽 클릭 또는 길게 누르기 → ‘템플릿을 골라 페이지 삽입’ → 테마와 템플릿을 고르면 그 페이지만 해당 배치를 씁니다. 노트를 만들 때 고른 것은 **기본값**일 뿐입니다."
+            "가능합니다. ‘페이지’의 미리보기에서 오른쪽 클릭 또는 길게 누르기 → ‘템플릿을 골라 페이지 삽입’ → 테마와 템플릿을 고르면 그 페이지만 해당 배치를 씁니다. 노트를 만들 때 고른 것은 **기본값**일 뿐입니다.",
+            "write"
           ],
           [
             "테두리 밖에 쓰면 어떻게 되나요?",
-            "점선 사각형은 인쇄 가능 영역이자 편집 영역입니다. 완전히 바깥에 그린 획은 되돌려지고 알림이 뜹니다. 인쇄도 내보내기도 되지 않는데 남겨 두면 아직 있다고 착각하게 되기 때문입니다. 경계에 걸친 획은 남기되 한 번 알려 줍니다."
+            "점선 사각형은 인쇄 가능 영역이자 편집 영역입니다. 완전히 바깥에 그린 획은 되돌려지고 알림이 뜹니다. 인쇄도 내보내기도 되지 않는데 남겨 두면 아직 있다고 착각하게 되기 때문입니다. 경계에 걸친 획은 남기되 한 번 알려 줍니다.",
+            "write"
           ],
           [
             "Whisper 모델이란 무엇인가요? 꼭 다운로드해야 하나요?",
-            "Whisper는 OpenAI가 출시한 오픈소스 음성 인식 모델입니다. Kairumo는 경량화·양자화된 버전을 사용하며 완전히 기기 내에서 처리됩니다. 오디오가 외부로 전송되지 않습니다. 다운로드하지 않아도 녹음 기능을 사용할 수 있지만 전사 텍스트가 생성되지 않습니다. 배너는 호환 엔진이 없을 때만 표시됩니다."
+            "Whisper는 OpenAI가 출시한 오픈소스 음성 인식 모델입니다. Kairumo는 경량화·양자화된 버전을 사용하며 완전히 기기 내에서 처리됩니다. 오디오가 외부로 전송되지 않습니다. 다운로드하지 않아도 녹음 기능을 사용할 수 있지만 전사 텍스트가 생성되지 않습니다. 배너는 호환 엔진이 없을 때만 표시됩니다.",
+            "audio"
           ],
           [
             "설정된 폴더 동기화를 해제하려면?",
-            "홈 화면 → 클라우드 동기화 카드 → 설정 → '폴더' 탭으로 이동한 후 '설정된 폴더 해제'를 탭하고 확인합니다. 해제 후 폴더의 동기화된 파일은 삭제되지 않습니다. Kairumo가 해당 폴더 읽기/쓰기를 중단할 뿐입니다. 언제든지 폴더를 다시 선택하여 재활성화할 수 있습니다."
+            "홈 화면 → 클라우드 동기화 카드 → 설정 → '폴더' 탭으로 이동한 후 '설정된 폴더 해제'를 탭하고 확인합니다. 해제 후 폴더의 동기화된 파일은 삭제되지 않습니다. Kairumo가 해당 폴더 읽기/쓰기를 중단할 뿐입니다. 언제든지 폴더를 다시 선택하여 재활성화할 수 있습니다.",
+            "collab"
           ],
           [
             "재생 버튼을 눌러도 소리가 나지 않거나, 녹음 직후 재생이 안 되나요?",
-            "기기가 무음이 아니고 다른 앱이 스피커나 마이크를 사용하고 있지 않은지 확인한 뒤 다시 누르세요. 그래도 안 되면 홈의 '진단' ▸ '기기 자가 점검'에서 '자가 점검 실행'을 누르고 '보고서 복사'로 문의해 주세요. 재생·권한·폴더 중 무엇이 문제인지 알 수 있습니다."
+            "기기가 무음이 아니고 다른 앱이 스피커나 마이크를 사용하고 있지 않은지 확인한 뒤 다시 누르세요. 그래도 안 되면 홈의 '진단' ▸ '기기 자가 점검'에서 '자가 점검 실행'을 누르고 '보고서 복사'로 문의해 주세요. 재생·권한·폴더 중 무엇이 문제인지 알 수 있습니다.",
+            "audio"
           ],
           [
             "녹음 파일은 어디에 있나요?",
-            "녹음은 노트의 일부로 노트와 함께 저장·동기화되므로 파일을 찾을 필요가 없습니다. 노트에서 '더 보기 → 녹음 삽입'을 쓰거나 홈의 '최근 녹음 및 전사'에서 재생·이름 변경·전사를 할 수 있습니다. 라이브러리 위치는 홈의 저장 위치 설정에서 바꿀 수 있습니다."
+            "녹음은 노트의 일부로 노트와 함께 저장·동기화되므로 파일을 찾을 필요가 없습니다. 노트에서 '더 보기 → 녹음 삽입'을 쓰거나 홈의 '최근 녹음 및 전사'에서 재생·이름 변경·전사를 할 수 있습니다. 라이브러리 위치는 홈의 저장 위치 설정에서 바꿀 수 있습니다.",
+            "audio"
           ],
           [
             "앱 용량이 계속 늘어나나요?",
-            "아니요. Kairumo는 실행할 때 자신의 임시 파일, 중단된 모델 다운로드 잔여 파일, 보관 기간이 지난 휴지통 노트를 자동으로 지우고, 하루에 한 번 어떤 개체도 참조하지 않는 오래된 첨부와 필기를 지웁니다. 노트와 녹음은 자동으로 삭제되지 않습니다. 사용량 확인이나 즉시 정리는 홈 ▸ '진단' ▸ '저장 공간' ▸ '지금 정리'에서 할 수 있습니다."
+            "아니요. Kairumo는 실행할 때 자신의 임시 파일, 중단된 모델 다운로드 잔여 파일, 보관 기간이 지난 휴지통 노트를 자동으로 지우고, 하루에 한 번 어떤 개체도 참조하지 않는 오래된 첨부와 필기를 지웁니다. 노트와 녹음은 자동으로 삭제되지 않습니다. 사용량 확인이나 즉시 정리는 홈 ▸ '진단' ▸ '저장 공간' ▸ '지금 정리'에서 할 수 있습니다.",
+            "data"
           ],
           [
             "필기 모드에서 이미지나 표를 눌러도 반응이 없나요?",
-            "필기 모드의 화면은 펜을 위해 비워 두므로 개체는 기본적으로 터치를 받지 않습니다. 손가락으로 개체를 누르면 Kairumo가 자동으로 입력 모드로 전환하여, 다음 탭으로 선택·드래그·크기 조절·삭제를 할 수 있습니다."
+            "필기 모드의 화면은 펜을 위해 비워 두므로 개체는 기본적으로 터치를 받지 않습니다. 손가락으로 개체를 누르면 Kairumo가 자동으로 입력 모드로 전환하여, 다음 탭으로 선택·드래그·크기 조절·삭제를 할 수 있습니다.",
+            "write"
           ],
           [
             "사용 설명서나 개인정보 처리방침이 빈 화면으로 열리나요?",
-            "두 문서는 모두 앱에 내장되어 완전히 오프라인으로 표시되며 인터넷에서 글꼴이나 이미지를 불러오지 않습니다. 빈 화면이면 닫았다가 다시 여세요. 그래도 비어 있으면 '진단' ▸ '기기 자가 점검'의 보고서를 복사해 보내 주세요."
+            "두 문서는 모두 앱에 내장되어 완전히 오프라인으로 표시되며 인터넷에서 글꼴이나 이미지를 불러오지 않습니다. 빈 화면이면 닫았다가 다시 여세요. 그래도 비어 있으면 '진단' ▸ '기기 자가 점검'의 보고서를 복사해 보내 주세요.",
+            "help"
           ],
           [
             "“노트 공유”로 LINE 등의 메신저에 공유할 때 “공유할 수 없는 파일이 포함되어 있습니다” 오류가 발생합니까?",
-            "“노트 공유”는 상대방이 Kairumo에서 계속 편집할 수 있도록 원본 .padnote 패키지를 전송합니다. LINE 등 일부 메신저의 공유 기능은 사용자 지정 파일 형식을 직접 수신하지 못해 이 안내가 나타납니다. 해결 방법: (1) 편집용 원본을 보낼 때: 내보내기 메뉴에서 “다른 이름으로 저장”을 선택해 기기의 “파일”에 저장한 후, 채팅방에서 “+” ▸ “파일”을 통해 해당 노트를 전송하세요. (2) 열람용으로 공유할 때: 내보내기 메뉴에서 “PDF 내보내기” 또는 “이미지로 내보내기”를 선택하면 메신저로 바로 공유할 수 있습니다."
+            "“노트 공유”는 상대방이 Kairumo에서 계속 편집할 수 있도록 원본 .padnote 패키지를 전송합니다. LINE 등 일부 메신저의 공유 기능은 사용자 지정 파일 형식을 직접 수신하지 못해 이 안내가 나타납니다. 해결 방법: (1) 편집용 원본을 보낼 때: 내보내기 메뉴에서 “다른 이름으로 저장”을 선택해 기기의 “파일”에 저장한 후, 채팅방에서 “+” ▸ “파일”을 통해 해당 노트를 전송하세요. (2) 열람용으로 공유할 때: 내보내기 메뉴에서 “PDF 내보내기” 또는 “이미지로 내보내기”를 선택하면 메신저로 바로 공유할 수 있습니다.",
+            "help"
           ]
         ],
         "fig": null
@@ -4729,70 +4925,109 @@ window.KAIRUMO_MANUAL = {
         "title": "แก้ปัญหาที่พบบ่อย",
         "lead": "ตรวจที่นี่ก่อน",
         "buttons": [],
+        "faqTocTitle": "รายการคำถาม",
+        "faqCategories": [
+          [
+            "write",
+            "การเขียนและหน้า"
+          ],
+          [
+            "audio",
+            "การบันทึกเสียงและถอดความ"
+          ],
+          [
+            "collab",
+            "การทำงานร่วมกันและซิงก์"
+          ],
+          [
+            "data",
+            "ข้อมูลและบัญชี"
+          ],
+          [
+            "help",
+            "การแชร์ ความช่วยเหลือ และการรายงาน"
+          ]
+        ],
         "faq": [
           [
             "ทำไมปากกาไม่วาดในโหมดพิมพ์",
-            "เป็นการออกแบบไว้เช่นนั้น โหมดพิมพ์จัดการเฉพาะข้อความและวัตถุ ทั้งนิ้วและสไตลัสจะไม่วาดเส้น การเลือกและลากวัตถุจึงไม่ทิ้งรอยขีดไว้ ป้ายที่มุมขวาบนของผืนผ้าใบบอกว่าอยู่โหมดใด หากต้องการเขียนให้กลับไปโหมดเขียนด้วยลายมือ"
+            "เป็นการออกแบบไว้เช่นนั้น โหมดพิมพ์จัดการเฉพาะข้อความและวัตถุ ทั้งนิ้วและสไตลัสจะไม่วาดเส้น การเลือกและลากวัตถุจึงไม่ทิ้งรอยขีดไว้ ป้ายที่มุมขวาบนของผืนผ้าใบบอกว่าอยู่โหมดใด หากต้องการเขียนให้กลับไปโหมดเขียนด้วยลายมือ",
+            "write"
           ],
           [
             "เชื่อมต่อการทำงานร่วมกันไม่ได้",
-            "ตรวจดูว่าเป็นกรณีใด **เครือข่ายเดียวกัน**: (1) ตรวจว่าทั้งสองเครื่องอยู่บน Wi-Fi เดียวกัน; (2) หากต้องการให้ค้นหาห้องอัตโนมัติ โปรดตรวจสอบว่าได้รับอนุญาตสิทธิ์อุปกรณ์ใกล้เคียงหรือเครือข่ายใน Android แล้ว (หากถูกจำกัดโดยระบบ แอปจะสำรองการทำงานเป็นโหมดรีเลย์ภายในเครื่องอัตโนมัติ โดยสามารถกรอก IP ท้องถิ่นของผู้เปิดห้องด้วยตนเองเพื่อเชื่อมต่อได้ตามปกติ); (3) ตรวจว่าช่อง “ที่อยู่เซิร์ฟเวอร์รีเลย์” ของผู้เข้าร่วมเปลี่ยนเป็น ws://…:9002 ตามที่แสดงบนหน้าจอผู้เปิดห้องแล้ว **คนละเครือข่าย**: หากใช้งานผ่านอินเทอร์เน็ตสาธารณะ ที่อยู่ต้องเป็น wss:// (เข้ารหัส TLS)"
+            "ตรวจดูว่าเป็นกรณีใด **เครือข่ายเดียวกัน**: (1) ตรวจว่าทั้งสองเครื่องอยู่บน Wi-Fi เดียวกัน; (2) หากต้องการให้ค้นหาห้องอัตโนมัติ โปรดตรวจสอบว่าได้รับอนุญาตสิทธิ์อุปกรณ์ใกล้เคียงหรือเครือข่ายใน Android แล้ว (หากถูกจำกัดโดยระบบ แอปจะสำรองการทำงานเป็นโหมดรีเลย์ภายในเครื่องอัตโนมัติ โดยสามารถกรอก IP ท้องถิ่นของผู้เปิดห้องด้วยตนเองเพื่อเชื่อมต่อได้ตามปกติ); (3) ตรวจว่าช่อง “ที่อยู่เซิร์ฟเวอร์รีเลย์” ของผู้เข้าร่วมเปลี่ยนเป็น ws://…:9002 ตามที่แสดงบนหน้าจอผู้เปิดห้องแล้ว **คนละเครือข่าย**: หากใช้งานผ่านอินเทอร์เน็ตสาธารณะ ที่อยู่ต้องเป็น wss:// (เข้ารหัส TLS)",
+            "collab"
           ],
           [
             "โน้ตหายได้ไหม",
-            "ทุกเส้นถูกบันทึกลงไฟล์ในเครื่องทันทีที่เขียน ไฟล์ซิงก์เป็นแบบเพิ่มอย่างเดียว และแต่ละเครื่องเขียนเฉพาะไฟล์ของตัวเอง จึงไม่ทับกัน"
+            "ทุกเส้นถูกบันทึกลงไฟล์ในเครื่องทันทีที่เขียน ไฟล์ซิงก์เป็นแบบเพิ่มอย่างเดียว และแต่ละเครื่องเขียนเฉพาะไฟล์ของตัวเอง จึงไม่ทับกัน",
+            "data"
           ],
           [
             "ต้องมีบัญชีไหม",
-            "ไม่ต้อง Kairumo ไม่มีระบบบัญชีและไม่มีเซิร์ฟเวอร์เบื้องหลัง"
+            "ไม่ต้อง Kairumo ไม่มีระบบบัญชีและไม่มีเซิร์ฟเวอร์เบื้องหลัง",
+            "data"
           ],
           [
             "แปลงลายมือเป็นข้อความได้ไหม",
-            "ได้ โดยใช้การรู้จำที่ทำงานในเครื่อง ลายมือไม่ถูกส่งออกไปที่ใด"
+            "ได้ โดยใช้การรู้จำที่ทำงานในเครื่อง ลายมือไม่ถูกส่งออกไปที่ใด",
+            "write"
           ],
           [
             "รายงานปัญหาอย่างไร",
-            "โปรดแจ้งเวอร์ชัน (ดูได้ที่หน้า 'เกี่ยวกับ Kairumo' ในการตั้งค่า เช่น Kairumo v5.10.0) พร้อมขั้นตอนที่ทำ"
+            "โปรดแจ้งเวอร์ชัน (ดูได้ที่หน้า 'เกี่ยวกับ Kairumo' ในการตั้งค่า เช่น Kairumo v5.10.0) พร้อมขั้นตอนที่ทำ",
+            "help"
           ],
           [
             "สมุดเล่มเดียวใช้ขนาด/เทมเพลตหน้าต่างกันได้ไหม",
-            "ได้ คลิกขวาหรือกดค้างที่ภาพย่อในแท็บ “หน้า” → “แทรกหน้าด้วยเทมเพลต…” → เลือกหมวดและเทมเพลต หน้าใหม่จะใช้เลย์เอาต์นั้นโดยหน้าอื่นไม่เปลี่ยน สิ่งที่เลือกตอนสร้างสมุดเป็นเพียง **ค่าเริ่มต้น**"
+            "ได้ คลิกขวาหรือกดค้างที่ภาพย่อในแท็บ “หน้า” → “แทรกหน้าด้วยเทมเพลต…” → เลือกหมวดและเทมเพลต หน้าใหม่จะใช้เลย์เอาต์นั้นโดยหน้าอื่นไม่เปลี่ยน สิ่งที่เลือกตอนสร้างสมุดเป็นเพียง **ค่าเริ่มต้น**",
+            "write"
           ],
           [
             "ถ้าเขียนออกนอกกรอบจะเป็นอย่างไร",
-            "กรอบเส้นประคือพื้นที่ที่พิมพ์ได้ และเป็นพื้นที่แก้ไขด้วย เส้นที่วาดนอกกรอบทั้งหมดจะถูกดึงกลับพร้อมข้อความแจ้ง เพราะพิมพ์และส่งออกไม่ได้ หากปล่อยไว้จะทำให้เข้าใจผิดว่ายังอยู่ ส่วนเส้นที่คร่อมกรอบจะคงไว้และแจ้งหนึ่งครั้ง"
+            "กรอบเส้นประคือพื้นที่ที่พิมพ์ได้ และเป็นพื้นที่แก้ไขด้วย เส้นที่วาดนอกกรอบทั้งหมดจะถูกดึงกลับพร้อมข้อความแจ้ง เพราะพิมพ์และส่งออกไม่ได้ หากปล่อยไว้จะทำให้เข้าใจผิดว่ายังอยู่ ส่วนเส้นที่คร่อมกรอบจะคงไว้และแจ้งหนึ่งครั้ง",
+            "write"
           ],
           [
             "โมเดล Whisper คืออะไร? จำเป็นต้องดาวน์โหลดหรือไม่?",
-            "Whisper เป็นโมเดลจดจำเสียงพูดโอเพ่นซอร์สที่ OpenAI เปิดตัว Kairumo ใช้เวอร์ชันที่ตัดแต่งและควอนไทซ์แล้ว ทำงานทั้งหมดในอุปกรณ์ เสียงของคุณจะไม่ถูกส่งออกไปข้างนอก หากไม่ดาวน์โหลด ยังสามารถใช้ฟีเจอร์บันทึกเสียงได้ แต่จะไม่มีการถอดเสียงเป็นข้อความ แบนเนอร์จะปรากฏเฉพาะเมื่อไม่พบเครื่องมือที่เข้ากันได้"
+            "Whisper เป็นโมเดลจดจำเสียงพูดโอเพ่นซอร์สที่ OpenAI เปิดตัว Kairumo ใช้เวอร์ชันที่ตัดแต่งและควอนไทซ์แล้ว ทำงานทั้งหมดในอุปกรณ์ เสียงของคุณจะไม่ถูกส่งออกไปข้างนอก หากไม่ดาวน์โหลด ยังสามารถใช้ฟีเจอร์บันทึกเสียงได้ แต่จะไม่มีการถอดเสียงเป็นข้อความ แบนเนอร์จะปรากฏเฉพาะเมื่อไม่พบเครื่องมือที่เข้ากันได้",
+            "audio"
           ],
           [
             "วิธียกเลิกโฟลเดอร์ที่ตั้งค่าไว้?",
-            "ไปที่หน้าแรก → การ์ดซิงค์คลาวด์ → การตั้งค่า → แท็บ 'โฟลเดอร์' แตะแตะ 'ยกเลิกโฟลเดอร์ที่ตั้งค่า' แล้วยืนยัน ไฟล์ที่ซิงค์ไปแล้วจะไม่ถูกลบ Kairumo เพียงหยุดอ่านและเขียนในโฟลเดอร์นั้น สามารถเปิดใช้งานอีกครั้งได้ตลอดเวลาโดยเลือกโฟลเดอร์ใหม่"
+            "ไปที่หน้าแรก → การ์ดซิงค์คลาวด์ → การตั้งค่า → แท็บ 'โฟลเดอร์' แตะแตะ 'ยกเลิกโฟลเดอร์ที่ตั้งค่า' แล้วยืนยัน ไฟล์ที่ซิงค์ไปแล้วจะไม่ถูกลบ Kairumo เพียงหยุดอ่านและเขียนในโฟลเดอร์นั้น สามารถเปิดใช้งานอีกครั้งได้ตลอดเวลาโดยเลือกโฟลเดอร์ใหม่",
+            "collab"
           ],
           [
             "กดปุ่มเล่นแล้วไม่มีเสียง หรือเล่นไม่ได้หลังบันทึกเสร็จ?",
-            "ตรวจสอบว่าอุปกรณ์ไม่ได้ปิดเสียง และไม่มีแอปอื่นใช้ลำโพงหรือไมโครโฟนอยู่ แล้วกดอีกครั้ง หากยังไม่ได้ ไปที่หน้าหลัก ▸ “วินิจฉัย” ▸ “ตรวจสอบอุปกรณ์” กด “เริ่มตรวจสอบ” แล้ว “คัดลอกรายงาน” ส่งให้เรา รายงานจะบอกว่าปัญหาอยู่ที่การเล่น สิทธิ์ หรือโฟลเดอร์"
+            "ตรวจสอบว่าอุปกรณ์ไม่ได้ปิดเสียง และไม่มีแอปอื่นใช้ลำโพงหรือไมโครโฟนอยู่ แล้วกดอีกครั้ง หากยังไม่ได้ ไปที่หน้าหลัก ▸ “วินิจฉัย” ▸ “ตรวจสอบอุปกรณ์” กด “เริ่มตรวจสอบ” แล้ว “คัดลอกรายงาน” ส่งให้เรา รายงานจะบอกว่าปัญหาอยู่ที่การเล่น สิทธิ์ หรือโฟลเดอร์",
+            "audio"
           ],
           [
             "ไฟล์บันทึกเสียงอยู่ที่ไหน?",
-            "การบันทึกเสียงเป็นส่วนหนึ่งของโน้ต จัดเก็บและซิงก์ไปพร้อมกับโน้ต ไม่ต้องตามหาไฟล์: ในโน้ตเลือก “เพิ่มเติม → แทรกการบันทึกเสียง” หรือดู “การบันทึกและถอดเสียงล่าสุด” ที่หน้าหลักเพื่อเล่น เปลี่ยนชื่อ และถอดเสียง เปลี่ยนตำแหน่งคลังได้ในการตั้งค่าที่เก็บข้อมูลที่หน้าหลัก"
+            "การบันทึกเสียงเป็นส่วนหนึ่งของโน้ต จัดเก็บและซิงก์ไปพร้อมกับโน้ต ไม่ต้องตามหาไฟล์: ในโน้ตเลือก “เพิ่มเติม → แทรกการบันทึกเสียง” หรือดู “การบันทึกและถอดเสียงล่าสุด” ที่หน้าหลักเพื่อเล่น เปลี่ยนชื่อ และถอดเสียง เปลี่ยนตำแหน่งคลังได้ในการตั้งค่าที่เก็บข้อมูลที่หน้าหลัก",
+            "audio"
           ],
           [
             "แอปจะใช้พื้นที่เพิ่มขึ้นเรื่อยๆ หรือไม่?",
-            "ไม่ Kairumo จะล้างไฟล์ชั่วคราวของตัวเอง ไฟล์ค้างจากการดาวน์โหลดโมเดลที่ถูกละทิ้ง และโน้ตในถังขยะที่พ้นระยะเก็บรักษาโดยอัตโนมัติเมื่อเปิดแอป และวันละครั้งจะล้างไฟล์แนบและลายเส้นเก่าที่ไม่มีวัตถุใดอ้างถึง โน้ตและการบันทึกเสียงของคุณจะไม่ถูกลบอัตโนมัติ หากต้องการดูการใช้พื้นที่หรือล้างทันที: หน้าหลัก ▸ “วินิจฉัย” ▸ “พื้นที่จัดเก็บ” ▸ “ล้างข้อมูลตอนนี้”"
+            "ไม่ Kairumo จะล้างไฟล์ชั่วคราวของตัวเอง ไฟล์ค้างจากการดาวน์โหลดโมเดลที่ถูกละทิ้ง และโน้ตในถังขยะที่พ้นระยะเก็บรักษาโดยอัตโนมัติเมื่อเปิดแอป และวันละครั้งจะล้างไฟล์แนบและลายเส้นเก่าที่ไม่มีวัตถุใดอ้างถึง โน้ตและการบันทึกเสียงของคุณจะไม่ถูกลบอัตโนมัติ หากต้องการดูการใช้พื้นที่หรือล้างทันที: หน้าหลัก ▸ “วินิจฉัย” ▸ “พื้นที่จัดเก็บ” ▸ “ล้างข้อมูลตอนนี้”",
+            "data"
           ],
           [
             "แตะรูปภาพหรือตารางในโหมดเขียนด้วยมือแล้วไม่มีปฏิกิริยา?",
-            "โหมดเขียนด้วยมือเก็บพื้นที่ไว้ให้ปากกา วัตถุจึงไม่รับการสัมผัสโดยปริยาย เมื่อคุณแตะวัตถุด้วยนิ้ว Kairumo จะสลับเป็นโหมดพิมพ์ให้อัตโนมัติ เพื่อให้การแตะครั้งถัดไปเลือก ลาก ปรับขนาด หรือลบวัตถุได้"
+            "โหมดเขียนด้วยมือเก็บพื้นที่ไว้ให้ปากกา วัตถุจึงไม่รับการสัมผัสโดยปริยาย เมื่อคุณแตะวัตถุด้วยนิ้ว Kairumo จะสลับเป็นโหมดพิมพ์ให้อัตโนมัติ เพื่อให้การแตะครั้งถัดไปเลือก ลาก ปรับขนาด หรือลบวัตถุได้",
+            "write"
           ],
           [
             "คู่มือหรือนโยบายความเป็นส่วนตัวเปิดมาเป็นหน้าว่าง?",
-            "เอกสารทั้งสองฝังอยู่ในแอปและแสดงแบบออฟไลน์ทั้งหมด ไม่โหลดฟอนต์หรือรูปภาพจากอินเทอร์เน็ต หากเห็นหน้าว่างให้ปิดแล้วเปิดใหม่ ถ้ายังว่างอยู่ ให้คัดลอกรายงานจาก “วินิจฉัย” ▸ “ตรวจสอบอุปกรณ์” ส่งให้เรา"
+            "เอกสารทั้งสองฝังอยู่ในแอปและแสดงแบบออฟไลน์ทั้งหมด ไม่โหลดฟอนต์หรือรูปภาพจากอินเทอร์เน็ต หากเห็นหน้าว่างให้ปิดแล้วเปิดใหม่ ถ้ายังว่างอยู่ ให้คัดลอกรายงานจาก “วินิจฉัย” ▸ “ตรวจสอบอุปกรณ์” ส่งให้เรา",
+            "help"
           ],
           [
             "เมื่อเลือก “แชร์บันทึก” ไปยัง LINE หรือแอปแชทแล้วขึ้นข้อผิดพลาด “มีไฟล์ที่ไม่สามารถแชร์ได้”?",
-            "“แชร์บันทึก” จะส่งออกแพ็กเกจไฟล์ .padnote ต้นฉบับเพื่อให้ผู้รับเปิดแก้ไขต่อใน Kairumo ได้ แอปส่งข้อความบางแอป (เช่น LINE) ไม่รองรับการรับไฟล์รูปแบบพิเศษผ่านเมนูแชร์ของระบบ วิธีแก้ไข: (1) หากต้องการส่งไฟล์ต้นฉบับเพื่อให้แก้ไข: เลือก “บันทึกเป็น” ในเมนูส่งออกเพื่อบันทึกไฟล์ .padnote ลงใน “ไฟล์” ของอุปกรณ์ จากนั้นเปิดห้องแชทใน LINE แล้วแตะ “+” ▸ “ไฟล์” เพื่อเลือกไฟล์ส่ง (2) หากต้องการแชร์เนื้อหาสำหรับอ่านอย่างเดียว: ให้เลือก “ส่งออก PDF” หรือ “ส่งออกเป็นรูปภาพ” ในเมนูส่งออก ซึ่งสามารถแชร์ไปยังแอปต่างๆ ได้โดยตรง"
+            "“แชร์บันทึก” จะส่งออกแพ็กเกจไฟล์ .padnote ต้นฉบับเพื่อให้ผู้รับเปิดแก้ไขต่อใน Kairumo ได้ แอปส่งข้อความบางแอป (เช่น LINE) ไม่รองรับการรับไฟล์รูปแบบพิเศษผ่านเมนูแชร์ของระบบ วิธีแก้ไข: (1) หากต้องการส่งไฟล์ต้นฉบับเพื่อให้แก้ไข: เลือก “บันทึกเป็น” ในเมนูส่งออกเพื่อบันทึกไฟล์ .padnote ลงใน “ไฟล์” ของอุปกรณ์ จากนั้นเปิดห้องแชทใน LINE แล้วแตะ “+” ▸ “ไฟล์” เพื่อเลือกไฟล์ส่ง (2) หากต้องการแชร์เนื้อหาสำหรับอ่านอย่างเดียว: ให้เลือก “ส่งออก PDF” หรือ “ส่งออกเป็นรูปภาพ” ในเมนูส่งออก ซึ่งสามารถแชร์ไปยังแอปต่างๆ ได้โดยตรง",
+            "help"
           ]
         ],
         "fig": null
