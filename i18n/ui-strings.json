@@ -22814,5 +22814,13 @@
     "th": "รีเซ็ตการทดสอบ",
     "zhHans": "重置测试",
     "zhHant": "重設測試"
+  },
+  "recording_preparing": {
+    "en": "Getting ready to record…",
+    "ja": "録音の準備中…",
+    "ko": "녹음 준비 중…",
+    "th": "กำลังเตรียมบันทึกเสียง…",
+    "zhHans": "正在准备录音…",
+    "zhHant": "正在準備錄音…"
   }
 }

@@ -732,6 +732,8 @@ public struct HomeWorkbenchView: View {
                 tint: DS.Color.destructive,
                 prominent: false
             ) {
+                // 視窗滑出來的同時就開始準備（權限、音訊工作階段）。
+                AudioRecorderManager.shared.prewarmForRecording()
                 showQuickRecordSheet = true
             }
 
@@ -3662,7 +3664,21 @@ struct QuickAudioRecorderModal: View {
                 .padding(.horizontal, 32)
 
                 // 錄音控制大按鈕（支援暫停、繼續、停止並儲存）
-                if audioManager.status == .recording || audioManager.status == .paused {
+                if audioManager.isPreparing {
+                    // 準備中：畫面已經是錄音的樣子，不要停在「開始」按鈕上。
+                    HStack(spacing: 8) {
+                        ProgressView()
+                        Text(localizationManager.localized("recording_preparing"))
+                            .fontWeight(.semibold)
+                    }
+                    .padding()
+                    .frame(maxWidth: .infinity)
+                    .background(Color.red.opacity(0.12))
+                    .foregroundColor(.red)
+                    .cornerRadius(12)
+                    .padding(.horizontal, 32)
+                    .accessibilityIdentifier("record.preparing")
+                } else if audioManager.status == .recording || audioManager.status == .paused {
                     HStack(spacing: 16) {
                         // 暫停 / 繼續按鈕
                         Button {

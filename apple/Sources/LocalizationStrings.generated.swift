@@ -15663,6 +15663,14 @@ extension LocalizationManager {
             .ko: "녹음 일시정지됨",
             .th: "หยุดการบันทึกชั่วคราวแล้ว"
         ],
+        "recording_preparing": [
+            .zhHant: "正在準備錄音…",
+            .en: "Getting ready to record…",
+            .zhHans: "正在准备录音…",
+            .ja: "録音の準備中…",
+            .ko: "녹음 준비 중…",
+            .th: "กำลังเตรียมบันทึกเสียง…"
+        ],
         "recording_suffix": [
             .zhHant: "錄音",
             .en: "Recording",

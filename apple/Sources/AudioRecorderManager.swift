@@ -25,6 +25,9 @@ public final class AudioRecorderManager: NSObject, ObservableObject, AVAudioReco
     public static let shared = AudioRecorderManager()
 
     @Published public var status: RecordingStatus = .idle
+    /// 按下「開始錄音」到真正錄下第一個樣本之間（要權限、開收件匣套件、啟動音訊工作階段與引擎）。
+    /// 畫面在這段時間就要進入「錄音」的樣子，而不是停在一顆「開始」按鈕上讓人以為沒按到。
+    @Published public private(set) var isPreparing = false
     @Published public var elapsedSeconds: TimeInterval = 0
     @Published public var audioLevels: [CGFloat] = Array(repeating: 0.15, count: 20)
     @Published public var showPermissionAlert: Bool = false
@@ -357,6 +360,10 @@ public final class AudioRecorderManager: NSObject, ObservableObject, AVAudioReco
         pageIndex: Int,
         languageTag: String?
     ) async -> Bool {
+        // 已經在錄、或正在準備：不要重複開始（頁面出現與按鈕可能各觸發一次）。
+        guard status == .idle, !isPreparing else { return false }
+        isPreparing = true
+        defer { isPreparing = false }
         guard await requestMicrophonePermission() else { return false }
         guard let session = NotebookStore.shared.packageSession(
             forNotebookId: notebookId, title: notebookTitle)
@@ -388,6 +395,30 @@ public final class AudioRecorderManager: NSObject, ObservableObject, AVAudioReco
 
         startCoreElapsedTimer()
         return true
+    }
+
+    /// 在錄音視窗還在滑出來的時候先做掉最慢的那一段：麥克風權限與音訊工作階段的啟用。
+    ///
+    /// 這兩件事在 iPad 上各要一、兩百毫秒（第一次還有權限對話框）。放在「按下開始」之後才做，
+    /// 使用者看到的就是視窗出現了、卻遲遲不進入錄音。這裡在背景執行緒做，不卡畫面；
+    /// 正式開始時再做一次是幾乎免費的（工作階段已經是啟用的）。
+    public func prewarmForRecording() {
+        guard status == .idle, !isPreparing else { return }
+        Task { [weak self] in
+            guard let self, await self.requestMicrophonePermission() else { return }
+            #if os(iOS) || targetEnvironment(macCatalyst)
+            let onMac = self.isRunningOnMac
+            await Task.detached(priority: .userInitiated) {
+                let session = AVAudioSession.sharedInstance()
+                if onMac {
+                    try? session.setCategory(.playAndRecord, mode: .default)
+                } else {
+                    try? session.setCategory(.playAndRecord, mode: .default, options: CoreAudioCapture.recordingCategoryOptions)
+                }
+                try? session.setActive(true)
+            }.value
+            #endif
+        }
     }
 
     /// 核心錄音的秒數計時器。
