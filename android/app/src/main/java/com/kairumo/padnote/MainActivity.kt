@@ -278,6 +278,7 @@ class MainActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         com.kairumo.padnote.platform.CrashLogger.install(applicationContext)
+        com.kairumo.padnote.platform.MainThreadStallMonitor.start()
         com.kairumo.padnote.platform.StartupLogger.logKey("log_main_activity_create")
         // 跨裝置語言要在畫出任何東西**之前**讀進來，不然第一幀會是舊語言，
         // 使用者會看到介面閃一下才變過去。
@@ -2533,6 +2534,7 @@ private fun InkScreen(
     fun applyInkTool(picked: InkTool) {
         inkTool = picked
         engine.isErasing = picked.isEraser
+        com.kairumo.padnote.platform.MainThreadStallMonitor.breadcrumb("select tool ${picked.kind}")
         picked.kind?.let { engine.tool = it }
         // 離開套索就清掉選取。留著的話，畫面上會浮著一個虛線框與
         // 一排按鈕，而它們作用的對象使用者早就看不出是什麼了。

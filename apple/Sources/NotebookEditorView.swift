@@ -2691,6 +2691,7 @@ public struct NotebookEditorView: View {
             // **先存檔、再放掉焦點。** 顛倒的話，存檔通知到達時已經沒有焦點筆記本，
             // 離開前最後一筆編輯不會被焦點通道推出去。
             saveCurrentPageDrawing()
+            drainCoreInk()
             if store.activeNotebookId == notebook.id {
                 store.activeNotebookId = nil
                 FocusSyncController.shared.setFocus(nil)
@@ -2699,6 +2700,7 @@ public struct NotebookEditorView: View {
         .onChange(of: scenePhase) { phase in
             if phase == .background || phase == .inactive {
                 saveCurrentPageDrawing()
+                drainCoreInk()
             } else if phase == .active {
                 // 從背景切回前景時，檢查同步是否已更新這本筆記
                 coreInkBaselines.removeAll()
@@ -9900,23 +9902,6 @@ public struct NotebookEditorView: View {
         store.corePackagesDirectory.appending(path: "\(notebook.id.lowercased()).padnote")
     }
 
-    private func coreInkBaseline(for page: Int) -> PKDrawing {
-        if let cached = coreInkBaselines[page] { return cached }
-        let packageDrawings = try? NotebookPackageBridge.drawings(
-            fromPackageAt: corePackageURL(),
-            deviceId: NotebookMigration.deviceId)
-        // 打開套件要重播整份 oplog，是整段流程裡最貴的一步，而它一次就讀出**每一頁**的筆跡。
-        // 只留下被問到的那一頁的話，每換一頁就要再開一次 —— 全部放進快取。
-        if let packageDrawings {
-            for (index, drawing) in packageDrawings.enumerated() where coreInkBaselines[index] == nil {
-                coreInkBaselines[index] = drawing
-            }
-        }
-        let baseline = coreInkBaselines[page] ?? PKDrawing()
-        coreInkBaselines[page] = baseline
-        return baseline
-    }
-
     /// 取得指定頁面的手寫筆跡（優先取待存核心筆跡、當前單頁模式中正在編輯的筆跡、最後取磁碟存檔）
     private func drawingForPage(_ page: Int) -> PKDrawing {
         if let pending = pendingCoreInk[page] {
@@ -9964,6 +9949,24 @@ public struct NotebookEditorView: View {
         DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: work)
     }
 
+    /// 把筆跡增量寫進核心套件的**背景序列佇列**。同一個套件的寫入必須排隊（順序就是筆畫的順序）。
+    private static let coreInkQueue = DispatchQueue(label: "kairumo.editor.core-ink", qos: .utility)
+
+    /// 等背景佇列把已排進去的套件寫入做完。離開筆記本、進背景之前呼叫：焦點通道接著要把套件推上雲端，
+    /// 不能讓它讀到還沒寫完的檔案。
+    private func drainCoreInk() {
+        Self.coreInkQueue.sync {}
+    }
+
+    /// 把待寫的筆跡存起來，並把「新增的筆畫」追加進核心套件。
+    ///
+    /// **只有 `.drawing` 檔在主執行緒寫**（畫面其他地方——縮圖、換頁——讀的就是它）。套件那一段
+    /// （讀基準、算差異、寫帳本、追加筆畫）整段丟到背景：它要開檔、重播、寫好幾個檔，在檔案系統慢的裝置上
+    /// （例如文件庫放在 iCloud 資料夾的 iPad）一次可以卡主執行緒十幾秒 —— 使用者看到的是換畫筆之後
+    /// 整條工具列點不動。卡頓記錄的堆疊樣本與存檔標記就是停在這一步。
+    ///
+    /// 基準先**樂觀地**設成這一版：後面再來的存檔是跟這一版比。背景佇列是序列的，所以第一個工作
+    /// （從套件讀基準）一定先於第二個。寫入失敗的在主執行緒補回待寫名單、把基準清掉，下一輪從套件重算。
     private func flushPendingCoreInk() {
         MainThreadStallMonitor.shared.breadcrumb("flushPendingCoreInk(\(notebook.id.prefix(8)))")
         coreInkWork?.cancel()
@@ -9971,42 +9974,34 @@ public struct NotebookEditorView: View {
         coreInkFirstPendingAt = nil
         let pending = pendingCoreInk
         pendingCoreInk.removeAll()
-        // 增量寫進套件之後才通知焦點通道 —— 先通知的話，它可能推到還沒寫完的檔案。
-        defer {
-            if !pending.isEmpty { FocusSyncController.shared.noteLocalEdit() }
+        guard !pending.isEmpty else { return }
+
+        var jobs: [CoreInkFlush.Job] = []
+        for (page, drawing) in pending {
+            MainThreadStallMonitor.shared.breadcrumb("flush p\(page) saveDrawing (\(drawing.strokes.count) strokes)")
+            store.saveDrawing(notebookId: notebook.id, pageIndex: page, drawing: drawing)
+            jobs.append(CoreInkFlush.Job(page: page, drawing: drawing, cachedBaseline: coreInkBaselines[page]))
+            coreInkBaselines[page] = drawing
         }
 
-        for (page, drawing) in pending {
-            let crumb = MainThreadStallMonitor.shared
-            crumb.breadcrumb("flush p\(page) saveDrawing (\(drawing.strokes.count) strokes)")
-            store.saveDrawing(notebookId: notebook.id, pageIndex: page, drawing: drawing)
-            crumb.breadcrumb("flush p\(page) coreInkBaseline")
-            let baseline = coreInkBaseline(for: page)
-            crumb.breadcrumb("flush p\(page) StrokeDelta")
-            let added = StrokeDelta.added(in: drawing, since: baseline)
-            // 擦掉的筆畫記下來，匯入時濾掉（不然同步會把雲端的舊檔下載回來、筆畫復活）。
-            crumb.breadcrumb("flush p\(page) ErasedInkLedger")
-            ErasedInkLedger.record(
-                removed: StrokeDelta.removed(in: drawing, since: baseline), added: added,
-                in: store.syncBaselineDirectory, notebookId: notebook.id, page: page)
-            guard !added.isEmpty else {
-                coreInkBaselines[page] = drawing
-                continue
-            }
-            crumb.breadcrumb("flush p\(page) appendInkDelta (\(added.count) strokes)")
-            do {
-                try NotebookPackageBridge.appendInkDelta(
-                    document: notebook,
-                    pageIndex: page,
-                    strokes: added,
-                    to: corePackageURL(),
-                    deviceId: NotebookMigration.deviceId)
-                coreInkBaselines[page] = drawing
-            } catch {
-                // 保留下一輪再試；不要因為核心套件暫時寫不進去而丟掉 Apple 端的
-                // 即時 `.drawing` 自動存檔。
-                pendingCoreInk[page] = drawing
-                print("[InkAutosave] Failed to append ink to package: \(error)")
+        let document = notebook
+        let package = corePackageURL()
+        let baselineDirectory = store.syncBaselineDirectory
+        let deviceId = NotebookMigration.deviceId
+        nonisolated(unsafe) let jobsCopy = jobs
+        Self.coreInkQueue.async {
+            let failed = CoreInkFlush.apply(
+                jobsCopy, document: document, package: package,
+                baselineDirectory: baselineDirectory, deviceId: deviceId)
+            nonisolated(unsafe) let failedCopy = failed
+            DispatchQueue.main.async {
+                // 保留下一輪再試；不要因為核心套件暫時寫不進去而丟掉 Apple 端的即時 `.drawing` 自動存檔。
+                for item in failedCopy {
+                    pendingCoreInk[item.page] = item.drawing
+                    coreInkBaselines[item.page] = nil
+                }
+                // 增量寫進套件**之後**才通知焦點通道 —— 先通知的話，它可能推到還沒寫完的檔案。
+                FocusSyncController.shared.noteLocalEdit()
             }
         }
     }
