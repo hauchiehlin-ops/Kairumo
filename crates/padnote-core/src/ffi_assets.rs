@@ -154,6 +154,7 @@ pub struct FfiAssetItem {
 #[uniffi::export]
 pub fn asset_items() -> Vec<FfiAssetItem> {
     RAW.iter()
+        .chain(MORE.iter())
         .map(|r| FfiAssetItem {
             id: r.0.to_string(),
             title: r.1.to_string(),
@@ -852,16 +853,132 @@ static RAW: &[Row] = &[
     ),
 ];
 
+// 擴充素材（第二批）。由 `scripts/gen_asset_catalog.py` 產生。放在 `tests` 之前（clippy 的 items_after_test_module）。
+include!("asset_catalog_more.rs");
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use std::collections::HashSet;
 
     #[test]
-    fn the_catalog_matches_what_apple_ships() {
-        // 58 件是 Apple 端目前的數量。少了就是漏抄，多了就是重複 ——
-        // 兩種都會讓「兩個平台看到同一批素材」這句話不成立。
-        assert_eq!(asset_items().len(), 58);
+    fn the_catalog_is_the_original_58_plus_the_generated_extension() {
+        // 原本 58 件（`RAW`）加上產生器給的擴充（`MORE`）。數量不寫死：產生器重跑就會變，
+        // 要守的是「兩份加起來就是整個目錄」，以及原本那 58 件沒有被動到。
+        assert_eq!(RAW.len(), 58);
+        assert_eq!(asset_items().len(), RAW.len() + MORE.len());
+        assert!(MORE.len() >= 200, "擴充素材只有 {} 件", MORE.len());
+    }
+
+    /// 每個分類都要有足夠的素材，**而且物理規格與 AI 概念兩種來源都要有** ——
+    /// 面板上有「來源」篩選，只有一種來源的分類篩到另一種就是一頁空白。
+    #[test]
+    fn every_category_is_well_stocked_with_both_sources() {
+        for category in asset_categories() {
+            let items = asset_items_in(category);
+            assert!(items.len() >= 10, "{category:?} 只有 {} 件", items.len());
+            for source in [FfiAssetSource::PhysicalSpec, FfiAssetSource::AiConcept] {
+                assert!(
+                    items.iter().any(|i| i.source == source),
+                    "{category:?} 沒有 {source:?} 的素材（篩選會變成空白）"
+                );
+            }
+        }
+    }
+
+    /// 擴充素材的每個線圖代號都要有真正的繪圖分支，不是掉到「立方體」佔位圖。
+    #[test]
+    fn every_extension_code_has_a_real_drawing() {
+        for code in MORE_CODES {
+            let placeholder = crate::ffi_asset_art::asset_drawing("沒有這個代號".into());
+            let drawn = crate::ffi_asset_art::asset_drawing((*code).to_string());
+            assert!(!drawn.is_empty(), "{code} 沒有線圖");
+            let same_as_placeholder = drawn.len() == placeholder.len()
+                && drawn
+                    .iter()
+                    .zip(&placeholder)
+                    .all(|(a, b)| a.segs.len() == b.segs.len());
+            assert!(
+                !same_as_placeholder,
+                "{code} 掉到了佔位立方體：沒有對應的繪圖分支"
+            );
+        }
+    }
+
+    /// 同一個家族的不同規格，圖不能一模一樣（參數有被用到）。
+    #[test]
+    fn variants_of_a_family_do_not_all_draw_the_same() {
+        use std::collections::HashMap;
+        let mut by_family: HashMap<&str, Vec<String>> = HashMap::new();
+        for code in MORE_CODES {
+            if let Some((family, _)) = code.split_once(':') {
+                let paths = crate::ffi_asset_art::asset_drawing((*code).to_string());
+                let signature = format!(
+                    "{}:{:?}",
+                    paths.len(),
+                    paths
+                        .iter()
+                        .map(|p| p
+                            .segs
+                            .iter()
+                            .map(|s| ((s.x
+                                + 3.0 * s.y
+                                + 5.0 * s.c1x
+                                + 7.0 * s.c1y
+                                + 11.0 * s.c2x
+                                + 13.0 * s.c2y)
+                                * 10.0) as i64)
+                            .sum::<i64>())
+                        .collect::<Vec<_>>()
+                );
+                by_family.entry(family).or_default().push(signature);
+            }
+        }
+        // 這些家族只是「同一個形狀的款式」：參數不影響幾何，不在檢查之列。
+        let shape_only = [
+            "connector",
+            "chair",
+            "table",
+            "shelf",
+            "wire",
+            "device_frame",
+            "pcb",
+            "passive",
+            "brake_disc",
+            "car_profile",
+            "ui",
+            "comp",
+            "typo",
+            "motif",
+            "gesture",
+            "ease",
+            "ia",
+            "token",
+            "mold",
+            "sheet",
+            "cnc",
+            "finish",
+            "pipe",
+            "pneu",
+            "sofa",
+        ];
+        for (family, sigs) in by_family {
+            if shape_only.contains(&family) {
+                // 這些家族每個款式本來就是不同的圖：至少要互不相同。
+                let unique: std::collections::HashSet<_> = sigs.iter().collect();
+                assert_eq!(
+                    unique.len(),
+                    sigs.len(),
+                    "{family} 有兩個款式畫出一模一樣的圖"
+                );
+            } else {
+                let unique: std::collections::HashSet<_> = sigs.iter().collect();
+                assert!(
+                    unique.len() > 1,
+                    "{family} 的各規格畫出一模一樣的圖：參數沒被用到"
+                );
+            }
+        }
     }
 
     #[test]

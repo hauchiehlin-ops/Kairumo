@@ -1083,6 +1083,9 @@ fn draw(code: &str) -> Vec<FfiDrawPath> {
             }
         }
 
+        // 擴充素材（參數化家族，見 `asset_art_more.rs`）。
+        _ if draw_more(code, &mut b) => {}
+
         // 認不得的代號：立體透視立方幾何。與 Apple 端的 `default:` 相同。
         _ => {
             b.shape(&[

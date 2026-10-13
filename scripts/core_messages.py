@@ -32,7 +32,7 @@ LIT = re.compile(r'"((?:[^"\\\n]|\\.)*)"')
 
 # 不是「給使用者的訊息」的檔案或行（目錄資料、開發日誌、expect 訊息、測試）。
 SKIP_FILES = ("padnote-i18n/", "padnote-shapes/", "padnote-bench/", "padnote-llm/src/tests.rs",
-              "ffi_assets.rs", "ffi_model3d.rs", "padnote-text/src/convert.rs", "ffi_draft_example.rs",
+              "ffi_assets.rs", "asset_catalog_more.rs", "ffi_model3d.rs", "padnote-text/src/convert.rs", "ffi_draft_example.rs",
               "padnote-relay/src/main.rs", "padnote-export/src/markdown.rs", "ffi_screens.rs", "padnote-chart/src/layout.rs")
 SKIP_LINE = re.compile(r"\.expect\(|panic!|unreachable!|assert|debug_assert")
 

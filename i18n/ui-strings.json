@@ -22830,5 +22830,2029 @@
     "th": "เธรดหลักค้าง %1@ วินาที (หน้าจอไม่ตอบสนอง) สิ่งสุดท้ายก่อนค้าง: %2@",
     "zhHans": "主线程卡住 %1@ 秒（界面无响应）。卡住前最后一件事：%2@",
     "zhHant": "主執行緒卡住 %1@ 秒（畫面無回應）。卡住前最後一件事：%2@"
+  },
+  "asset_mech_07_title": {
+    "zhHant": "正齒輪 Z=12",
+    "en": "Spur Gear Z=12",
+    "zhHans": "直齿轮 Z=12",
+    "ja": "平歯車 Z=12",
+    "ko": "평기어 Z=12",
+    "th": "เฟืองตรง Z=12"
+  },
+  "asset_mech_08_title": {
+    "zhHant": "正齒輪 Z=18",
+    "en": "Spur Gear Z=18",
+    "zhHans": "直齿轮 Z=18",
+    "ja": "平歯車 Z=18",
+    "ko": "평기어 Z=18",
+    "th": "เฟืองตรง Z=18"
+  },
+  "asset_mech_09_title": {
+    "zhHant": "正齒輪 Z=24",
+    "en": "Spur Gear Z=24",
+    "zhHans": "直齿轮 Z=24",
+    "ja": "平歯車 Z=24",
+    "ko": "평기어 Z=24",
+    "th": "เฟืองตรง Z=24"
+  },
+  "asset_mech_10_title": {
+    "zhHant": "正齒輪 Z=36",
+    "en": "Spur Gear Z=36",
+    "zhHans": "直齿轮 Z=36",
+    "ja": "平歯車 Z=36",
+    "ko": "평기어 Z=36",
+    "th": "เฟืองตรง Z=36"
+  },
+  "asset_mech_11_title": {
+    "zhHant": "正齒輪 Z=48",
+    "en": "Spur Gear Z=48",
+    "zhHans": "直齿轮 Z=48",
+    "ja": "平歯車 Z=48",
+    "ko": "평기어 Z=48",
+    "th": "เฟืองตรง Z=48"
+  },
+  "asset_mech_12_title": {
+    "zhHant": "同步帶輪 16T",
+    "en": "Timing Pulley 16T",
+    "zhHans": "同步带轮 16T",
+    "ja": "タイミングプーリ 16T",
+    "ko": "타이밍 풀리 16T",
+    "th": "พูลเลย์ไทม์มิ่ง 16T"
+  },
+  "asset_mech_13_title": {
+    "zhHant": "同步帶輪 20T",
+    "en": "Timing Pulley 20T",
+    "zhHans": "同步带轮 20T",
+    "ja": "タイミングプーリ 20T",
+    "ko": "타이밍 풀리 20T",
+    "th": "พูลเลย์ไทม์มิ่ง 20T"
+  },
+  "asset_mech_14_title": {
+    "zhHant": "同步帶輪 40T",
+    "en": "Timing Pulley 40T",
+    "zhHans": "同步带轮 40T",
+    "ja": "タイミングプーリ 40T",
+    "ko": "타이밍 풀리 40T",
+    "th": "พูลเลย์ไทม์มิ่ง 40T"
+  },
+  "asset_mech_15_title": {
+    "zhHant": "壓縮彈簧 4 圈",
+    "en": "Compression Spring 4 Turns",
+    "zhHans": "压缩弹簧 4 圈",
+    "ja": "圧縮ばね 4 巻",
+    "ko": "압축 스프링 4회",
+    "th": "สปริงอัด 4 รอบ"
+  },
+  "asset_mech_16_title": {
+    "zhHant": "壓縮彈簧 6 圈",
+    "en": "Compression Spring 6 Turns",
+    "zhHans": "压缩弹簧 6 圈",
+    "ja": "圧縮ばね 6 巻",
+    "ko": "압축 스프링 6회",
+    "th": "สปริงอัด 6 รอบ"
+  },
+  "asset_mech_17_title": {
+    "zhHant": "壓縮彈簧 8 圈",
+    "en": "Compression Spring 8 Turns",
+    "zhHans": "压缩弹簧 8 圈",
+    "ja": "圧縮ばね 8 巻",
+    "ko": "압축 스프링 8회",
+    "th": "สปริงอัด 8 รอบ"
+  },
+  "asset_mech_18_title": {
+    "zhHant": "四連桿機構",
+    "en": "Four-Bar Linkage",
+    "zhHans": "四连杆机构",
+    "ja": "四節リンク機構",
+    "ko": "4절 링크 기구",
+    "th": "กลไกสี่ก้านต่อ"
+  },
+  "asset_mech_19_title": {
+    "zhHant": "曲柄滑塊機構",
+    "en": "Slider-Crank Mechanism",
+    "zhHans": "曲柄滑块机构",
+    "ja": "スライダクランク機構",
+    "ko": "슬라이더 크랭크 기구",
+    "th": "กลไกลูกสูบข้อเหวี่ยง"
+  },
+  "asset_mech_20_title": {
+    "zhHant": "齒輪齒條",
+    "en": "Rack and Pinion",
+    "zhHans": "齿轮齿条",
+    "ja": "ラック＆ピニオン",
+    "ko": "랙 앤 피니언",
+    "th": "เฟืองสะพาน"
+  },
+  "asset_mech_21_title": {
+    "zhHant": "蝸桿蝸輪",
+    "en": "Worm and Wheel",
+    "zhHans": "蜗杆蜗轮",
+    "ja": "ウォームギヤ",
+    "ko": "웜 기어",
+    "th": "เฟืองตัวหนอน"
+  },
+  "asset_mech_22_title": {
+    "zhHant": "行星齒輪組",
+    "en": "Planetary Gearset",
+    "zhHans": "行星齿轮组",
+    "ja": "遊星歯車機構",
+    "ko": "유성 기어",
+    "th": "ชุดเฟืองดาวเคราะห์"
+  },
+  "asset_mech_23_title": {
+    "zhHant": "棘輪棘爪",
+    "en": "Ratchet and Pawl",
+    "zhHans": "棘轮棘爪",
+    "ja": "ラチェット機構",
+    "ko": "래칫과 폴",
+    "th": "เฟืองฟันเลื่อยและตัวล็อก"
+  },
+  "asset_mech_24_title": {
+    "zhHant": "萬向接頭",
+    "en": "Universal Joint",
+    "zhHans": "万向接头",
+    "ja": "自在継手",
+    "ko": "유니버설 조인트",
+    "th": "ข้อต่ออเนกประสงค์"
+  },
+  "asset_mech_25_title": {
+    "zhHant": "傘齒輪",
+    "en": "Bevel Gear",
+    "zhHans": "锥齿轮",
+    "ja": "かさ歯車",
+    "ko": "베벨 기어",
+    "th": "เฟืองเฉียง"
+  },
+  "asset_mech_26_title": {
+    "zhHant": "仿生肌纖維致動器",
+    "en": "Bionic Muscle-Fibre Actuator",
+    "zhHans": "仿生肌纤维致动器",
+    "ja": "生体模倣筋繊維アクチュエータ",
+    "ko": "생체모방 근섬유 액추에이터",
+    "th": "แอคทูเอเตอร์เส้นใยกล้ามเนื้อชีวภาพ"
+  },
+  "asset_mech_27_title": {
+    "zhHant": "摺紙式可展開機構",
+    "en": "Origami Deployable Mechanism",
+    "zhHans": "折纸式可展开机构",
+    "ja": "折り紙式展開機構",
+    "ko": "종이접기식 전개 기구",
+    "th": "กลไกกางออกแบบโอริงามิ"
+  },
+  "asset_hard_07_title": {
+    "zhHant": "六角螺栓 M4",
+    "en": "Hex Bolt M4",
+    "zhHans": "六角螺栓 M4",
+    "ja": "六角ボルト M4",
+    "ko": "육각 볼트 M4",
+    "th": "สลักเกลียวหกเหลี่ยม M4"
+  },
+  "asset_hard_08_title": {
+    "zhHant": "六角螺栓 M6",
+    "en": "Hex Bolt M6",
+    "zhHans": "六角螺栓 M6",
+    "ja": "六角ボルト M6",
+    "ko": "육각 볼트 M6",
+    "th": "สลักเกลียวหกเหลี่ยม M6"
+  },
+  "asset_hard_09_title": {
+    "zhHant": "六角螺栓 M8",
+    "en": "Hex Bolt M8",
+    "zhHans": "六角螺栓 M8",
+    "ja": "六角ボルト M8",
+    "ko": "육각 볼트 M8",
+    "th": "สลักเกลียวหกเหลี่ยม M8"
+  },
+  "asset_hard_10_title": {
+    "zhHant": "六角螺栓 M10",
+    "en": "Hex Bolt M10",
+    "zhHans": "六角螺栓 M10",
+    "ja": "六角ボルト M10",
+    "ko": "육각 볼트 M10",
+    "th": "สลักเกลียวหกเหลี่ยม M10"
+  },
+  "asset_hard_11_title": {
+    "zhHant": "六角螺栓 M12",
+    "en": "Hex Bolt M12",
+    "zhHans": "六角螺栓 M12",
+    "ja": "六角ボルト M12",
+    "ko": "육각 볼트 M12",
+    "th": "สลักเกลียวหกเหลี่ยม M12"
+  },
+  "asset_hard_12_title": {
+    "zhHant": "六角螺帽 M4",
+    "en": "Hex Nut M4",
+    "zhHans": "六角螺母 M4",
+    "ja": "六角ナット M4",
+    "ko": "육각 너트 M4",
+    "th": "น็อตหกเหลี่ยม M4"
+  },
+  "asset_hard_13_title": {
+    "zhHant": "六角螺帽 M6",
+    "en": "Hex Nut M6",
+    "zhHans": "六角螺母 M6",
+    "ja": "六角ナット M6",
+    "ko": "육각 너트 M6",
+    "th": "น็อตหกเหลี่ยม M6"
+  },
+  "asset_hard_14_title": {
+    "zhHant": "六角螺帽 M8",
+    "en": "Hex Nut M8",
+    "zhHans": "六角螺母 M8",
+    "ja": "六角ナット M8",
+    "ko": "육각 너트 M8",
+    "th": "น็อตหกเหลี่ยม M8"
+  },
+  "asset_hard_15_title": {
+    "zhHant": "六角螺帽 M10",
+    "en": "Hex Nut M10",
+    "zhHans": "六角螺母 M10",
+    "ja": "六角ナット M10",
+    "ko": "육각 너트 M10",
+    "th": "น็อตหกเหลี่ยม M10"
+  },
+  "asset_hard_16_title": {
+    "zhHant": "內六角螺釘 M3",
+    "en": "Socket Cap Screw M3",
+    "zhHans": "内六角螺钉 M3",
+    "ja": "六角穴付きボルト M3",
+    "ko": "육각 구멍 볼트 M3",
+    "th": "สกรูหัวจมหกเหลี่ยมใน M3"
+  },
+  "asset_hard_17_title": {
+    "zhHant": "內六角螺釘 M5",
+    "en": "Socket Cap Screw M5",
+    "zhHans": "内六角螺钉 M5",
+    "ja": "六角穴付きボルト M5",
+    "ko": "육각 구멍 볼트 M5",
+    "th": "สกรูหัวจมหกเหลี่ยมใน M5"
+  },
+  "asset_hard_18_title": {
+    "zhHant": "內六角螺釘 M8",
+    "en": "Socket Cap Screw M8",
+    "zhHans": "内六角螺钉 M8",
+    "ja": "六角穴付きボルト M8",
+    "ko": "육각 구멍 볼트 M8",
+    "th": "สกรูหัวจมหกเหลี่ยมใน M8"
+  },
+  "asset_hard_19_title": {
+    "zhHant": "平墊圈 M4",
+    "en": "Flat Washer M4",
+    "zhHans": "平垫圈 M4",
+    "ja": "平座金 M4",
+    "ko": "평와셔 M4",
+    "th": "แหวนรองเรียบ M4"
+  },
+  "asset_hard_20_title": {
+    "zhHant": "平墊圈 M6",
+    "en": "Flat Washer M6",
+    "zhHans": "平垫圈 M6",
+    "ja": "平座金 M6",
+    "ko": "평와셔 M6",
+    "th": "แหวนรองเรียบ M6"
+  },
+  "asset_hard_21_title": {
+    "zhHant": "平墊圈 M8",
+    "en": "Flat Washer M8",
+    "zhHans": "平垫圈 M8",
+    "ja": "平座金 M8",
+    "ko": "평와셔 M8",
+    "th": "แหวนรองเรียบ M8"
+  },
+  "asset_hard_22_title": {
+    "zhHant": "定位銷",
+    "en": "Dowel Pin",
+    "zhHans": "定位销",
+    "ja": "位置決めピン",
+    "ko": "위치결정 핀",
+    "th": "พินกำหนดตำแหน่ง"
+  },
+  "asset_hard_23_title": {
+    "zhHant": "平行鍵",
+    "en": "Parallel Key",
+    "zhHans": "平行键",
+    "ja": "平行キー",
+    "ko": "평행 키",
+    "th": "ลิ่มขนาน"
+  },
+  "asset_hard_24_title": {
+    "zhHant": "吊環螺栓",
+    "en": "Eye Bolt",
+    "zhHans": "吊环螺栓",
+    "ja": "アイボルト",
+    "ko": "아이 볼트",
+    "th": "สลักตาเหล็ก"
+  },
+  "asset_hard_25_title": {
+    "zhHant": "叉銷",
+    "en": "Clevis Pin",
+    "zhHans": "叉销",
+    "ja": "クレビスピン",
+    "ko": "클레비스 핀",
+    "th": "พินคลีวิส"
+  },
+  "asset_hard_26_title": {
+    "zhHant": "花籃螺絲",
+    "en": "Turnbuckle",
+    "zhHans": "花篮螺丝",
+    "ja": "ターンバックル",
+    "ko": "턴버클",
+    "th": "เทิร์นบักเคิล"
+  },
+  "asset_hard_27_title": {
+    "zhHant": "平板合頁",
+    "en": "Butt Hinge",
+    "zhHans": "平板合页",
+    "ja": "平蝶番",
+    "ko": "경첩",
+    "th": "บานพับเรียบ"
+  },
+  "asset_hard_28_title": {
+    "zhHant": "腳輪",
+    "en": "Caster Wheel",
+    "zhHans": "脚轮",
+    "ja": "キャスター",
+    "ko": "캐스터",
+    "th": "ล้อเลื่อน"
+  },
+  "asset_hard_29_title": {
+    "zhHant": "U 型螺栓",
+    "en": "U-Bolt",
+    "zhHans": "U 型螺栓",
+    "ja": "Uボルト",
+    "ko": "U볼트",
+    "th": "ยูโบลต์"
+  },
+  "asset_hard_30_title": {
+    "zhHant": "全牙螺桿",
+    "en": "Threaded Rod",
+    "zhHans": "全牙螺杆",
+    "ja": "全ねじボルト",
+    "ko": "전산 볼트",
+    "th": "เหล็กเกลียวตลอด"
+  },
+  "asset_hard_31_title": {
+    "zhHant": "仿壁虎乾式黏附夾具",
+    "en": "Gecko-Inspired Dry-Adhesive Clamp",
+    "zhHans": "仿壁虎干式粘附夹具",
+    "ja": "ヤモリ模倣ドライ接着クランプ",
+    "ko": "게코 모방 건식 접착 클램프",
+    "th": "แคลมป์ยึดติดแห้งแบบตุ๊กแก"
+  },
+  "asset_hard_32_title": {
+    "zhHant": "形狀記憶合金扣件",
+    "en": "Shape-Memory Alloy Fastener",
+    "zhHans": "形状记忆合金扣件",
+    "ja": "形状記憶合金ファスナー",
+    "ko": "형상기억합금 체결구",
+    "th": "ตัวยึดโลหะผสมจำรูป"
+  },
+  "asset_auto_07_title": {
+    "zhHant": "鋁合金輪圈 5 輻",
+    "en": "Alloy Wheel 5-Spoke",
+    "zhHans": "铝合金轮圈 5 辐",
+    "ja": "アルミホイール 5スポーク",
+    "ko": "알로이 휠 5스포크",
+    "th": "ล้ออัลลอยด์ 5 ก้าน"
+  },
+  "asset_auto_08_title": {
+    "zhHant": "鋁合金輪圈 6 輻",
+    "en": "Alloy Wheel 6-Spoke",
+    "zhHans": "铝合金轮圈 6 辐",
+    "ja": "アルミホイール 6スポーク",
+    "ko": "알로이 휠 6스포크",
+    "th": "ล้ออัลลอยด์ 6 ก้าน"
+  },
+  "asset_auto_09_title": {
+    "zhHant": "鋁合金輪圈 10 輻",
+    "en": "Alloy Wheel 10-Spoke",
+    "zhHans": "铝合金轮圈 10 辐",
+    "ja": "アルミホイール 10スポーク",
+    "ko": "알로이 휠 10스포크",
+    "th": "ล้ออัลลอยด์ 10 ก้าน"
+  },
+  "asset_auto_10_title": {
+    "zhHant": "煞車碟盤（通風）",
+    "en": "Brake Disc (Vented)",
+    "zhHans": "制动盘（通风）",
+    "ja": "ブレーキディスク（ベンチレーテッド）",
+    "ko": "브레이크 디스크(벤틸레이티드)",
+    "th": "จานเบรก (ระบายอากาศ)"
+  },
+  "asset_auto_11_title": {
+    "zhHant": "煞車碟盤（打孔）",
+    "en": "Brake Disc (Cross-Drilled)",
+    "zhHans": "制动盘（打孔）",
+    "ja": "ブレーキディスク（ドリルド）",
+    "ko": "브레이크 디스크(드릴드)",
+    "th": "จานเบรก (เจาะรู)"
+  },
+  "asset_auto_12_title": {
+    "zhHant": "車身側視輪廓（轎車）",
+    "en": "Car Side Profile (Sedan)",
+    "zhHans": "车身侧视轮廓（轿车）",
+    "ja": "車体側面輪郭（セダン）",
+    "ko": "차체 측면 윤곽(세단)",
+    "th": "โครงรถด้านข้าง (ซีดาน)"
+  },
+  "asset_auto_13_title": {
+    "zhHant": "車身側視輪廓（休旅車）",
+    "en": "Car Side Profile (SUV)",
+    "zhHans": "车身侧视轮廓（SUV）",
+    "ja": "車体側面輪郭（SUV）",
+    "ko": "차체 측면 윤곽(SUV)",
+    "th": "โครงรถด้านข้าง (เอสยูวี)"
+  },
+  "asset_auto_14_title": {
+    "zhHant": "車身側視輪廓（掀背車）",
+    "en": "Car Side Profile (Hatchback)",
+    "zhHans": "车身侧视轮廓（掀背车）",
+    "ja": "車体側面輪郭（ハッチバック）",
+    "ko": "차체 측면 윤곽(해치백)",
+    "th": "โครงรถด้านข้าง (แฮทช์แบ็ก)"
+  },
+  "asset_auto_15_title": {
+    "zhHant": "渦輪增壓器",
+    "en": "Turbocharger",
+    "zhHans": "涡轮增压器",
+    "ja": "ターボチャージャー",
+    "ko": "터보차저",
+    "th": "เทอร์โบชาร์จเจอร์"
+  },
+  "asset_auto_16_title": {
+    "zhHant": "避震器",
+    "en": "Shock Absorber",
+    "zhHans": "减震器",
+    "ja": "ショックアブソーバー",
+    "ko": "쇼크 업소버",
+    "th": "โช้คอัพ"
+  },
+  "asset_auto_17_title": {
+    "zhHant": "活塞連桿組",
+    "en": "Piston and Connecting Rod",
+    "zhHans": "活塞连杆组",
+    "ja": "ピストンとコンロッド",
+    "ko": "피스톤과 커넥팅 로드",
+    "th": "ลูกสูบและก้านสูบ"
+  },
+  "asset_auto_18_title": {
+    "zhHant": "四旋翼飛行汽車",
+    "en": "Quad-Rotor Flying Car",
+    "zhHans": "四旋翼飞行汽车",
+    "ja": "四ローター空飛ぶ車",
+    "ko": "쿼드로터 플라잉카",
+    "th": "รถบินสี่โรเตอร์"
+  },
+  "asset_auto_19_title": {
+    "zhHant": "滑板式模組化電動車",
+    "en": "Modular Skateboard EV",
+    "zhHans": "滑板式模块化电动车",
+    "ja": "スケートボード型モジュラーEV",
+    "ko": "스케이트보드형 모듈형 전기차",
+    "th": "รถไฟฟ้าโมดูลาร์แบบสเก็ตบอร์ด"
+  },
+  "asset_furn_05_title": {
+    "zhHant": "椅子（餐椅）",
+    "en": "Chair (Dining)",
+    "zhHans": "椅子（餐椅）",
+    "ja": "椅子（ダイニング）",
+    "ko": "의자(식탁 의자)",
+    "th": "เก้าอี้ (เก้าอี้ทานข้าว)"
+  },
+  "asset_furn_06_title": {
+    "zhHant": "椅子（吧檯凳）",
+    "en": "Chair (Stool)",
+    "zhHans": "椅子（吧台凳）",
+    "ja": "椅子（スツール）",
+    "ko": "의자(스툴)",
+    "th": "เก้าอี้ (สตูล)"
+  },
+  "asset_furn_07_title": {
+    "zhHant": "椅子（辦公椅）",
+    "en": "Chair (Office)",
+    "zhHans": "椅子（办公椅）",
+    "ja": "椅子（オフィス）",
+    "ko": "의자(사무용)",
+    "th": "เก้าอี้ (เก้าอี้สำนักงาน)"
+  },
+  "asset_furn_08_title": {
+    "zhHant": "桌子（餐桌）",
+    "en": "Table (Dining)",
+    "zhHans": "桌子（餐桌）",
+    "ja": "テーブル（ダイニング）",
+    "ko": "테이블(식탁)",
+    "th": "โต๊ะ (โต๊ะอาหาร)"
+  },
+  "asset_furn_09_title": {
+    "zhHant": "桌子（茶几）",
+    "en": "Table (Coffee)",
+    "zhHans": "桌子（茶几）",
+    "ja": "テーブル（コーヒー）",
+    "ko": "테이블(커피 테이블)",
+    "th": "โต๊ะ (โต๊ะกาแฟ)"
+  },
+  "asset_furn_10_title": {
+    "zhHant": "桌子（書桌）",
+    "en": "Table (Desk)",
+    "zhHans": "桌子（书桌）",
+    "ja": "テーブル（デスク）",
+    "ko": "테이블(책상)",
+    "th": "โต๊ะ (โต๊ะทำงาน)"
+  },
+  "asset_furn_11_title": {
+    "zhHant": "置物架（書櫃）",
+    "en": "Shelving (Bookcase)",
+    "zhHans": "置物架（书柜）",
+    "ja": "棚（本棚）",
+    "ko": "선반(책장)",
+    "th": "ชั้นวาง (ตู้หนังสือ)"
+  },
+  "asset_furn_12_title": {
+    "zhHant": "置物架（壁架）",
+    "en": "Shelving (Wall)",
+    "zhHans": "置物架（壁架）",
+    "ja": "棚（ウォール）",
+    "ko": "선반(벽 선반)",
+    "th": "ชั้นวาง (ชั้นติดผนัง)"
+  },
+  "asset_furn_13_title": {
+    "zhHant": "2 人沙發",
+    "en": "2-Seat Sofa",
+    "zhHans": "2 人沙发",
+    "ja": "2人掛けソファ",
+    "ko": "2인 소파",
+    "th": "โซฟา 2 ที่นั่ง"
+  },
+  "asset_furn_14_title": {
+    "zhHant": "3 人沙發",
+    "en": "3-Seat Sofa",
+    "zhHans": "3 人沙发",
+    "ja": "3人掛けソファ",
+    "ko": "3인 소파",
+    "th": "โซฟา 3 ที่นั่ง"
+  },
+  "asset_furn_15_title": {
+    "zhHant": "床架",
+    "en": "Bed Frame",
+    "zhHans": "床架",
+    "ja": "ベッドフレーム",
+    "ko": "침대 프레임",
+    "th": "โครงเตียง"
+  },
+  "asset_furn_16_title": {
+    "zhHant": "落地燈",
+    "en": "Floor Lamp",
+    "zhHans": "落地灯",
+    "ja": "フロアランプ",
+    "ko": "플로어 램프",
+    "th": "โคมไฟตั้งพื้น"
+  },
+  "asset_furn_17_title": {
+    "zhHant": "雙門櫃",
+    "en": "Two-Door Cabinet",
+    "zhHans": "双门柜",
+    "ja": "両開きキャビネット",
+    "ko": "양문 캐비닛",
+    "th": "ตู้สองบาน"
+  },
+  "asset_furn_18_title": {
+    "zhHant": "自由組合方塊家具",
+    "en": "Free-Form Block Furniture",
+    "zhHans": "自由组合方块家具",
+    "ja": "自在に組める積木家具",
+    "ko": "자유 조합 블록 가구",
+    "th": "เฟอร์นิเจอร์บล็อกประกอบอิสระ"
+  },
+  "asset_furn_19_title": {
+    "zhHant": "磁浮躺椅",
+    "en": "Magnetic-Levitation Lounger",
+    "zhHans": "磁浮躺椅",
+    "ja": "磁気浮上ラウンジチェア",
+    "ko": "자기부상 라운지 체어",
+    "th": "เก้าอี้เอนนอนลอยด้วยแม่เหล็ก"
+  },
+  "asset_elec_06_title": {
+    "zhHant": "開發板（Arduino 型）",
+    "en": "Dev Board (Arduino-Type)",
+    "zhHans": "开发板（Arduino 型）",
+    "ja": "開発ボード（Arduino型）",
+    "ko": "개발 보드(Arduino형)",
+    "th": "บอร์ดพัฒนา (แบบ Arduino)"
+  },
+  "asset_elec_07_title": {
+    "zhHant": "開發板（樹莓派型）",
+    "en": "Dev Board (Raspberry-Pi-Type)",
+    "zhHans": "开发板（树莓派型）",
+    "ja": "開発ボード（ラズベリーパイ型）",
+    "ko": "개발 보드(라즈베리 파이형)",
+    "th": "บอร์ดพัฒนา (แบบราสเบอร์รีพาย)"
+  },
+  "asset_elec_08_title": {
+    "zhHant": "開發板（ESP32 型）",
+    "en": "Dev Board (ESP32-Type)",
+    "zhHans": "开发板（ESP32 型）",
+    "ja": "開発ボード（ESP32型）",
+    "ko": "개발 보드(ESP32형)",
+    "th": "บอร์ดพัฒนา (แบบ ESP32)"
+  },
+  "asset_elec_09_title": {
+    "zhHant": "連接器（USB-C）",
+    "en": "Connector (USB-C)",
+    "zhHans": "连接器（USB-C）",
+    "ja": "コネクタ（USB-C）",
+    "ko": "커넥터(USB-C)",
+    "th": "ขั้วต่อ (USB-C)"
+  },
+  "asset_elec_10_title": {
+    "zhHant": "連接器（HDMI）",
+    "en": "Connector (HDMI)",
+    "zhHans": "连接器（HDMI）",
+    "ja": "コネクタ（HDMI）",
+    "ko": "커넥터(HDMI)",
+    "th": "ขั้วต่อ (HDMI)"
+  },
+  "asset_elec_11_title": {
+    "zhHant": "連接器（3.5 mm 耳機孔）",
+    "en": "Connector (3.5 mm Jack)",
+    "zhHans": "连接器（3.5 mm 耳机孔）",
+    "ja": "コネクタ（3.5mmジャック）",
+    "ko": "커넥터(3.5mm 잭)",
+    "th": "ขั้วต่อ (แจ็ค 3.5 มม.)"
+  },
+  "asset_elec_12_title": {
+    "zhHant": "連接器（RJ45 網路）",
+    "en": "Connector (RJ45 Ethernet)",
+    "zhHans": "连接器（RJ45 网络）",
+    "ja": "コネクタ（RJ45 イーサネット）",
+    "ko": "커넥터(RJ45 이더넷)",
+    "th": "ขั้วต่อ (อีเทอร์เน็ต RJ45)"
+  },
+  "asset_elec_13_title": {
+    "zhHant": "QFP 晶片 32 腳",
+    "en": "QFP-32 IC",
+    "zhHans": "QFP 芯片 32 脚",
+    "ja": "QFP 32ピン IC",
+    "ko": "QFP 32핀 IC",
+    "th": "ไอซี QFP 32 ขา"
+  },
+  "asset_elec_14_title": {
+    "zhHant": "QFP 晶片 48 腳",
+    "en": "QFP-48 IC",
+    "zhHans": "QFP 芯片 48 脚",
+    "ja": "QFP 48ピン IC",
+    "ko": "QFP 48핀 IC",
+    "th": "ไอซี QFP 48 ขา"
+  },
+  "asset_elec_15_title": {
+    "zhHant": "DIP 晶片 8 腳",
+    "en": "DIP-8 IC",
+    "zhHans": "DIP 芯片 8 脚",
+    "ja": "DIP 8ピン IC",
+    "ko": "DIP 8핀 IC",
+    "th": "ไอซี DIP 8 ขา"
+  },
+  "asset_elec_16_title": {
+    "zhHant": "DIP 晶片 16 腳",
+    "en": "DIP-16 IC",
+    "zhHans": "DIP 芯片 16 脚",
+    "ja": "DIP 16ピン IC",
+    "ko": "DIP 16핀 IC",
+    "th": "ไอซี DIP 16 ขา"
+  },
+  "asset_elec_17_title": {
+    "zhHant": "被動元件（貼片電阻）",
+    "en": "Passive Component (SMD Resistor)",
+    "zhHans": "被动元件（贴片电阻）",
+    "ja": "受動部品（チップ抵抗）",
+    "ko": "수동 소자(SMD 저항)",
+    "th": "ชิ้นส่วนพาสซีฟ (ตัวต้านทาน SMD)"
+  },
+  "asset_elec_18_title": {
+    "zhHant": "被動元件（電解電容）",
+    "en": "Passive Component (Electrolytic Capacitor)",
+    "zhHans": "被动元件（电解电容）",
+    "ja": "受動部品（電解コンデンサ）",
+    "ko": "수동 소자(전해 커패시터)",
+    "th": "ชิ้นส่วนพาสซีฟ (ตัวเก็บประจุอิเล็กโทรไลต์)"
+  },
+  "asset_elec_19_title": {
+    "zhHant": "被動元件（功率電感）",
+    "en": "Passive Component (Power Inductor)",
+    "zhHans": "被动元件（功率电感）",
+    "ja": "受動部品（パワーインダクタ）",
+    "ko": "수동 소자(파워 인덕터)",
+    "th": "ชิ้นส่วนพาสซีฟ (ตัวเหนี่ยวนำกำลัง)"
+  },
+  "asset_elec_20_title": {
+    "zhHant": "智慧手錶",
+    "en": "Smartwatch",
+    "zhHans": "智能手表",
+    "ja": "スマートウォッチ",
+    "ko": "스마트워치",
+    "th": "สมาร์ทวอทช์"
+  },
+  "asset_elec_21_title": {
+    "zhHant": "行動電源",
+    "en": "Power Bank",
+    "zhHans": "移动电源",
+    "ja": "モバイルバッテリー",
+    "ko": "보조배터리",
+    "th": "พาวเวอร์แบงก์"
+  },
+  "asset_elec_22_title": {
+    "zhHant": "無線充電座",
+    "en": "Wireless Charger",
+    "zhHans": "无线充电座",
+    "ja": "ワイヤレス充電器",
+    "ko": "무선 충전기",
+    "th": "แท่นชาร์จไร้สาย"
+  },
+  "asset_elec_23_title": {
+    "zhHant": "智慧音箱",
+    "en": "Smart Speaker",
+    "zhHans": "智能音箱",
+    "ja": "スマートスピーカー",
+    "ko": "스마트 스피커",
+    "th": "ลำโพงอัจฉริยะ"
+  },
+  "asset_elec_24_title": {
+    "zhHant": "VR 頭戴顯示器",
+    "en": "VR Headset",
+    "zhHans": "VR 头戴显示器",
+    "ja": "VRヘッドセット",
+    "ko": "VR 헤드셋",
+    "th": "แว่น VR"
+  },
+  "asset_elec_25_title": {
+    "zhHant": "三折捲軸顯示器",
+    "en": "Tri-Fold Rollable Display",
+    "zhHans": "三折卷轴显示器",
+    "ja": "三つ折りローラブルディスプレイ",
+    "ko": "3단 롤러블 디스플레이",
+    "th": "จอภาพพับสามทบแบบม้วนได้"
+  },
+  "asset_elec_26_title": {
+    "zhHant": "腦波貼片穿戴裝置",
+    "en": "Neural-Interface Patch",
+    "zhHans": "脑波贴片穿戴设备",
+    "ja": "脳波パッチ型ウェアラブル",
+    "ko": "뇌파 패치 웨어러블",
+    "th": "แผ่นแปะคลื่นสมองแบบสวมใส่"
+  },
+  "asset_digi_05_title": {
+    "zhHant": "裝置外框（手機）",
+    "en": "Device Frame (Phone)",
+    "zhHans": "设备外框（手机）",
+    "ja": "デバイスフレーム（スマートフォン）",
+    "ko": "기기 프레임(스마트폰)",
+    "th": "กรอบอุปกรณ์ (โทรศัพท์)"
+  },
+  "asset_digi_06_title": {
+    "zhHant": "裝置外框（平板）",
+    "en": "Device Frame (Tablet)",
+    "zhHans": "设备外框（平板）",
+    "ja": "デバイスフレーム（タブレット）",
+    "ko": "기기 프레임(태블릿)",
+    "th": "กรอบอุปกรณ์ (แท็บเล็ต)"
+  },
+  "asset_digi_07_title": {
+    "zhHant": "裝置外框（筆電）",
+    "en": "Device Frame (Laptop)",
+    "zhHans": "设备外框（笔记本）",
+    "ja": "デバイスフレーム（ノートPC）",
+    "ko": "기기 프레임(노트북)",
+    "th": "กรอบอุปกรณ์ (แล็ปท็อป)"
+  },
+  "asset_digi_08_title": {
+    "zhHant": "裝置外框（桌機螢幕）",
+    "en": "Device Frame (Monitor)",
+    "zhHans": "设备外框（台式显示器）",
+    "ja": "デバイスフレーム（モニター）",
+    "ko": "기기 프레임(모니터)",
+    "th": "กรอบอุปกรณ์ (จอคอมพิวเตอร์)"
+  },
+  "asset_digi_09_title": {
+    "zhHant": "裝置外框（手錶）",
+    "en": "Device Frame (Watch)",
+    "zhHans": "设备外框（手表）",
+    "ja": "デバイスフレーム（ウォッチ）",
+    "ko": "기기 프레임(워치)",
+    "th": "กรอบอุปกรณ์ (นาฬิกา)"
+  },
+  "asset_digi_10_title": {
+    "zhHant": "線框範本（登陸頁）",
+    "en": "Wireframe (Landing Page)",
+    "zhHans": "线框模板（落地页）",
+    "ja": "ワイヤーフレーム（ランディングページ）",
+    "ko": "와이어프레임(랜딩 페이지)",
+    "th": "ไวร์เฟรม (หน้าแลนดิ้ง)"
+  },
+  "asset_digi_11_title": {
+    "zhHant": "線框範本（儀表板）",
+    "en": "Wireframe (Dashboard)",
+    "zhHans": "线框模板（仪表板）",
+    "ja": "ワイヤーフレーム（ダッシュボード）",
+    "ko": "와이어프레임(대시보드)",
+    "th": "ไวร์เฟรม (แดชบอร์ด)"
+  },
+  "asset_digi_12_title": {
+    "zhHant": "線框範本（登入）",
+    "en": "Wireframe (Login)",
+    "zhHans": "线框模板（登录）",
+    "ja": "ワイヤーフレーム（ログイン）",
+    "ko": "와이어프레임(로그인)",
+    "th": "ไวร์เฟรม (เข้าสู่ระบบ)"
+  },
+  "asset_digi_13_title": {
+    "zhHant": "線框範本（卡片清單）",
+    "en": "Wireframe (Card List)",
+    "zhHans": "线框模板（卡片列表）",
+    "ja": "ワイヤーフレーム（カードリスト）",
+    "ko": "와이어프레임(카드 목록)",
+    "th": "ไวร์เฟรม (รายการการ์ด)"
+  },
+  "asset_digi_14_title": {
+    "zhHant": "線框範本（看板）",
+    "en": "Wireframe (Kanban)",
+    "zhHans": "线框模板（看板）",
+    "ja": "ワイヤーフレーム（かんばん）",
+    "ko": "와이어프레임(칸반)",
+    "th": "ไวร์เฟรม (คัมบัง)"
+  },
+  "asset_digi_15_title": {
+    "zhHant": "線框範本（聊天）",
+    "en": "Wireframe (Chat)",
+    "zhHans": "线框模板（聊天）",
+    "ja": "ワイヤーフレーム（チャット）",
+    "ko": "와이어프레임(채팅)",
+    "th": "ไวร์เฟรม (แชต)"
+  },
+  "asset_digi_16_title": {
+    "zhHant": "空間運算介面",
+    "en": "Spatial-Computing Interface",
+    "zhHans": "空间计算界面",
+    "ja": "空間コンピューティングUI",
+    "ko": "공간 컴퓨팅 인터페이스",
+    "th": "อินเทอร์เฟซการประมวลผลเชิงพื้นที่"
+  },
+  "asset_digi_17_title": {
+    "zhHant": "自適應儀表板",
+    "en": "Adaptive Dashboard",
+    "zhHans": "自适应仪表板",
+    "ja": "適応型ダッシュボード",
+    "ko": "적응형 대시보드",
+    "th": "แดชบอร์ดแบบปรับตัวอัตโนมัติ"
+  },
+  "asset_aes_comp_04_title": {
+    "zhHant": "黃金矩形分割",
+    "en": "Golden Rectangle Division",
+    "zhHans": "黄金矩形分割",
+    "ja": "黄金矩形の分割",
+    "ko": "황금 사각형 분할",
+    "th": "การแบ่งสี่เหลี่ยมทองคำ"
+  },
+  "asset_aes_comp_05_title": {
+    "zhHant": "費氏方塊拼貼",
+    "en": "Fibonacci Tiling",
+    "zhHans": "斐波那契方块拼贴",
+    "ja": "フィボナッチタイリング",
+    "ko": "피보나치 타일링",
+    "th": "การปูกระเบื้องฟีโบนัชชี"
+  },
+  "asset_aes_comp_06_title": {
+    "zhHant": "對角線構圖",
+    "en": "Diagonal Composition",
+    "zhHans": "对角线构图",
+    "ja": "対角線構図",
+    "ko": "대각선 구도",
+    "th": "องค์ประกอบแนวทแยง"
+  },
+  "asset_aes_comp_07_title": {
+    "zhHant": "放射構圖",
+    "en": "Radial Composition",
+    "zhHans": "放射构图",
+    "ja": "放射構図",
+    "ko": "방사형 구도",
+    "th": "องค์ประกอบแบบรัศมี"
+  },
+  "asset_aes_comp_08_title": {
+    "zhHant": "三角構圖",
+    "en": "Triangular Composition",
+    "zhHans": "三角构图",
+    "ja": "三角構図",
+    "ko": "삼각 구도",
+    "th": "องค์ประกอบสามเหลี่ยม"
+  },
+  "asset_aes_comp_09_title": {
+    "zhHant": "引導線構圖",
+    "en": "Leading Lines",
+    "zhHans": "引导线构图",
+    "ja": "誘導線構図",
+    "ko": "리딩 라인 구도",
+    "th": "เส้นนำสายตา"
+  },
+  "asset_aes_comp_10_title": {
+    "zhHant": "框中框構圖",
+    "en": "Frame-in-Frame",
+    "zhHans": "框中框构图",
+    "ja": "額縁構図",
+    "ko": "프레임 속 프레임",
+    "th": "กรอบซ้อนกรอบ"
+  },
+  "asset_aes_comp_11_title": {
+    "zhHant": "對稱構圖",
+    "en": "Symmetrical Composition",
+    "zhHans": "对称构图",
+    "ja": "対称構図",
+    "ko": "대칭 구도",
+    "th": "องค์ประกอบสมมาตร"
+  },
+  "asset_aes_comp_12_title": {
+    "zhHant": "留白構圖",
+    "en": "Negative Space",
+    "zhHans": "留白构图",
+    "ja": "余白構図",
+    "ko": "여백 구도",
+    "th": "พื้นที่ว่าง"
+  },
+  "asset_aes_comp_13_title": {
+    "zhHant": "S 形曲線構圖",
+    "en": "S-Curve Composition",
+    "zhHans": "S 形曲线构图",
+    "ja": "S字曲線構図",
+    "ko": "S자 곡선 구도",
+    "th": "องค์ประกอบเส้นโค้งรูปตัว S"
+  },
+  "asset_aes_comp_14_title": {
+    "zhHant": "生成式版面",
+    "en": "Generative Layout",
+    "zhHans": "生成式版面",
+    "ja": "生成型レイアウト",
+    "ko": "생성형 레이아웃",
+    "th": "เลย์เอาต์เชิงสร้างสรรค์"
+  },
+  "asset_aes_comp_15_title": {
+    "zhHant": "視覺重量熱度圖",
+    "en": "Visual-Weight Heatmap",
+    "zhHans": "视觉重量热度图",
+    "ja": "視覚的重みヒートマップ",
+    "ko": "시각 무게 히트맵",
+    "th": "แผนภาพความหนักทางสายตา"
+  },
+  "asset_typo_04_title": {
+    "zhHant": "基線網格",
+    "en": "Baseline Grid",
+    "zhHans": "基线网格",
+    "ja": "ベースライングリッド",
+    "ko": "기준선 그리드",
+    "th": "กริดเส้นฐาน"
+  },
+  "asset_typo_05_title": {
+    "zhHant": "12 欄網格",
+    "en": "12-Column Grid",
+    "zhHans": "12 栏网格",
+    "ja": "12カラムグリッド",
+    "ko": "12열 그리드",
+    "th": "กริด 12 คอลัมน์"
+  },
+  "asset_typo_06_title": {
+    "zhHant": "范德格拉夫版心",
+    "en": "Van de Graaf Canon",
+    "zhHans": "范德格拉夫版心",
+    "ja": "ヴァン・デ・グラーフの図",
+    "ko": "반 더 흐라프 캐논",
+    "th": "สัดส่วนแวนเดอแกรฟ"
+  },
+  "asset_typo_07_title": {
+    "zhHant": "行寬（每行字數）",
+    "en": "Line Measure",
+    "zhHans": "行宽（每行字数）",
+    "ja": "行長",
+    "ko": "행 길이",
+    "th": "ความยาวบรรทัด"
+  },
+  "asset_typo_08_title": {
+    "zhHant": "字級階層",
+    "en": "Type Hierarchy",
+    "zhHans": "字级层次",
+    "ja": "文字の階層",
+    "ko": "서체 위계",
+    "th": "ลำดับชั้นตัวอักษร"
+  },
+  "asset_typo_09_title": {
+    "zhHant": "首字下沉",
+    "en": "Drop Cap",
+    "zhHans": "首字下沉",
+    "ja": "ドロップキャップ",
+    "ko": "드롭 캡",
+    "th": "อักษรตัวแรกขนาดใหญ่"
+  },
+  "asset_typo_10_title": {
+    "zhHant": "字距微調",
+    "en": "Kerning Pairs",
+    "zhHans": "字距微调",
+    "ja": "カーニング",
+    "ko": "커닝",
+    "th": "การปรับระยะห่างตัวอักษร"
+  },
+  "asset_typo_11_title": {
+    "zhHant": "襯線字形解剖",
+    "en": "Serif Anatomy",
+    "zhHans": "衬线字形解剖",
+    "ja": "セリフ体の構造",
+    "ko": "세리프 구조",
+    "th": "โครงสร้างตัวอักษรมีเชิง"
+  },
+  "asset_typo_12_title": {
+    "zhHant": "行距比較",
+    "en": "Leading Comparison",
+    "zhHans": "行距比较",
+    "ja": "行間の比較",
+    "ko": "행간 비교",
+    "th": "เปรียบเทียบระยะบรรทัด"
+  },
+  "asset_typo_13_title": {
+    "zhHant": "連字",
+    "en": "Ligatures",
+    "zhHans": "连字",
+    "ja": "リガチャ",
+    "ko": "합자",
+    "th": "ลิเกเจอร์"
+  },
+  "asset_typo_14_title": {
+    "zhHant": "可變字型軸向",
+    "en": "Variable-Font Axes",
+    "zhHans": "可变字体轴向",
+    "ja": "可変フォントの軸",
+    "ko": "가변 글꼴 축",
+    "th": "แกนฟอนต์แปรผัน"
+  },
+  "asset_typo_15_title": {
+    "zhHant": "智慧字體配對",
+    "en": "Smart Type Pairing",
+    "zhHans": "智能字体配对",
+    "ja": "スマートな書体ペアリング",
+    "ko": "스마트 서체 페어링",
+    "th": "การจับคู่ฟอนต์อัจฉริยะ"
+  },
+  "asset_motif_04_title": {
+    "zhHant": "青海波",
+    "en": "Seigaiha (Wave)",
+    "zhHans": "青海波",
+    "ja": "青海波",
+    "ko": "청해파",
+    "th": "ลายคลื่นเซไกฮะ"
+  },
+  "asset_motif_05_title": {
+    "zhHant": "麻葉紋",
+    "en": "Asanoha (Hemp Leaf)",
+    "zhHans": "麻叶纹",
+    "ja": "麻の葉",
+    "ko": "마엽 문양",
+    "th": "ลายใบกัญชง"
+  },
+  "asset_motif_06_title": {
+    "zhHant": "龜甲紋",
+    "en": "Kikko (Tortoiseshell)",
+    "zhHans": "龟甲纹",
+    "ja": "亀甲",
+    "ko": "귀갑 문양",
+    "th": "ลายกระดองเต่า"
+  },
+  "asset_motif_07_title": {
+    "zhHant": "回紋（雷紋）",
+    "en": "Greek Key (Meander)",
+    "zhHans": "回纹（雷纹）",
+    "ja": "雷文",
+    "ko": "뇌문",
+    "th": "ลายกุญแจกรีก"
+  },
+  "asset_motif_08_title": {
+    "zhHant": "四葉紋",
+    "en": "Quatrefoil",
+    "zhHans": "四叶纹",
+    "ja": "四つ葉紋",
+    "ko": "사엽 문양",
+    "th": "ลายสี่แฉก"
+  },
+  "asset_motif_09_title": {
+    "zhHant": "人字紋",
+    "en": "Herringbone",
+    "zhHans": "人字纹",
+    "ja": "ヘリンボーン",
+    "ko": "헤링본",
+    "th": "ลายก้างปลา"
+  },
+  "asset_motif_10_title": {
+    "zhHant": "山形紋",
+    "en": "Chevron",
+    "zhHans": "山形纹",
+    "ja": "シェブロン",
+    "ko": "셰브런",
+    "th": "ลายเชฟรอน"
+  },
+  "asset_motif_11_title": {
+    "zhHant": "菱格紋",
+    "en": "Trellis",
+    "zhHans": "菱格纹",
+    "ja": "格子（トレリス）",
+    "ko": "격자 문양",
+    "th": "ลายตาข่ายไม้ระแนง"
+  },
+  "asset_motif_12_title": {
+    "zhHant": "曼陀羅",
+    "en": "Mandala",
+    "zhHans": "曼陀罗",
+    "ja": "曼荼羅",
+    "ko": "만다라",
+    "th": "มันดาลา"
+  },
+  "asset_motif_13_title": {
+    "zhHant": "八角星（伊斯蘭幾何）",
+    "en": "Eight-Point Star (Islamic Geometry)",
+    "zhHans": "八角星（伊斯兰几何）",
+    "ja": "八芒星（イスラム幾何学）",
+    "ko": "팔각별(이슬람 기하)",
+    "th": "ดาวแปดแฉก (เรขาคณิตอิสลาม)"
+  },
+  "asset_motif_14_title": {
+    "zhHant": "碎形自相似拼貼",
+    "en": "Fractal Self-Similar Tiling",
+    "zhHans": "分形自相似拼贴",
+    "ja": "フラクタル自己相似タイリング",
+    "ko": "프랙탈 자기유사 타일링",
+    "th": "การปูกระเบื้องแฟรกทัลคล้ายตัวเอง"
+  },
+  "asset_mold_04_title": {
+    "zhHant": "注塑模剖面",
+    "en": "Injection Mold Cross-Section",
+    "zhHans": "注塑模剖面",
+    "ja": "射出成形金型の断面",
+    "ko": "사출 금형 단면",
+    "th": "ภาคตัดแม่พิมพ์ฉีด"
+  },
+  "asset_mold_05_title": {
+    "zhHant": "側澆口",
+    "en": "Edge Gate",
+    "zhHans": "侧浇口",
+    "ja": "サイドゲート",
+    "ko": "사이드 게이트",
+    "th": "เกทด้านข้าง"
+  },
+  "asset_mold_06_title": {
+    "zhHant": "針點澆口",
+    "en": "Pin Gate",
+    "zhHans": "针点浇口",
+    "ja": "ピンゲート",
+    "ko": "핀 게이트",
+    "th": "เกทแบบพิน"
+  },
+  "asset_mold_07_title": {
+    "zhHant": "潛伏式澆口",
+    "en": "Submarine Gate",
+    "zhHans": "潜伏式浇口",
+    "ja": "サブマリンゲート",
+    "ko": "서브마린 게이트",
+    "th": "เกทแบบเรือดำน้ำ"
+  },
+  "asset_mold_08_title": {
+    "zhHant": "冷卻水路配置",
+    "en": "Cooling Channel Layout",
+    "zhHans": "冷却水路布置",
+    "ja": "冷却水管レイアウト",
+    "ko": "냉각 채널 배치",
+    "th": "การจัดวางช่องระบายความร้อน"
+  },
+  "asset_mold_09_title": {
+    "zhHant": "頂針配置",
+    "en": "Ejector Pin Layout",
+    "zhHans": "顶针布置",
+    "ja": "エジェクターピン配置",
+    "ko": "이젝터 핀 배치",
+    "th": "การจัดวางพินดีด"
+  },
+  "asset_mold_10_title": {
+    "zhHant": "分模線",
+    "en": "Parting Line",
+    "zhHans": "分模线",
+    "ja": "パーティングライン",
+    "ko": "파팅 라인",
+    "th": "เส้นแบ่งแม่พิมพ์"
+  },
+  "asset_mold_11_title": {
+    "zhHant": "公母模",
+    "en": "Core and Cavity",
+    "zhHans": "公母模",
+    "ja": "コアとキャビティ",
+    "ko": "코어와 캐비티",
+    "th": "คอร์และคาวิตี้"
+  },
+  "asset_mold_12_title": {
+    "zhHant": "滑塊與斜頂",
+    "en": "Slider and Lifter",
+    "zhHans": "滑块与斜顶",
+    "ja": "スライドとリフター",
+    "ko": "슬라이더와 리프터",
+    "th": "สไลเดอร์และลิฟเตอร์"
+  },
+  "asset_mold_13_title": {
+    "zhHant": "冷澆道系統",
+    "en": "Cold Runner System",
+    "zhHans": "冷浇道系统",
+    "ja": "コールドランナー",
+    "ko": "콜드 러너",
+    "th": "ระบบรันเนอร์เย็น"
+  },
+  "asset_mold_14_title": {
+    "zhHant": "熱澆道系統",
+    "en": "Hot Runner System",
+    "zhHans": "热浇道系统",
+    "ja": "ホットランナー",
+    "ko": "핫 러너",
+    "th": "ระบบรันเนอร์ร้อน"
+  },
+  "asset_mold_15_title": {
+    "zhHant": "3D 列印隨形水路",
+    "en": "3D-Printed Conformal Cooling",
+    "zhHans": "3D 打印随形水路",
+    "ja": "3Dプリント追従冷却",
+    "ko": "3D 프린팅 컨포멀 냉각",
+    "th": "ช่องระบายความร้อนตามรูปทรงแบบพิมพ์ 3 มิติ"
+  },
+  "asset_mold_16_title": {
+    "zhHant": "可調式針陣模具",
+    "en": "Adaptive Pin-Array Mold",
+    "zhHans": "可调式针阵模具",
+    "ja": "可変ピンアレイ金型",
+    "ko": "가변 핀 어레이 금형",
+    "th": "แม่พิมพ์พินอาร์เรย์ปรับได้"
+  },
+  "asset_sheet_04_title": {
+    "zhHant": "V 型折彎",
+    "en": "V-Bend",
+    "zhHans": "V 型折弯",
+    "ja": "V曲げ",
+    "ko": "V 벤딩",
+    "th": "การพับรูปตัววี"
+  },
+  "asset_sheet_05_title": {
+    "zhHant": "摺邊",
+    "en": "Hem",
+    "zhHans": "折边",
+    "ja": "ヘミング",
+    "ko": "헤밍",
+    "th": "การพับขอบ"
+  },
+  "asset_sheet_06_title": {
+    "zhHant": "Z 形折彎（偏置）",
+    "en": "Z-Bend (Offset)",
+    "zhHans": "Z 形折弯（偏置）",
+    "ja": "Z曲げ（オフセット）",
+    "ko": "Z 벤딩(오프셋)",
+    "th": "การพับรูปตัวแซด"
+  },
+  "asset_sheet_07_title": {
+    "zhHant": "展開圖",
+    "en": "Flat Pattern",
+    "zhHans": "展开图",
+    "ja": "展開図",
+    "ko": "전개도",
+    "th": "แบบคลี่"
+  },
+  "asset_sheet_08_title": {
+    "zhHant": "百葉窗沖壓",
+    "en": "Louvre Forming",
+    "zhHans": "百叶窗冲压",
+    "ja": "ルーバー成形",
+    "ko": "루버 성형",
+    "th": "การปั๊มช่องระบายอากาศ"
+  },
+  "asset_sheet_09_title": {
+    "zhHant": "沖孔陣列",
+    "en": "Punched Hole Pattern",
+    "zhHans": "冲孔阵列",
+    "ja": "パンチ穴パターン",
+    "ko": "타공 패턴",
+    "th": "แบบรูเจาะ"
+  },
+  "asset_sheet_10_title": {
+    "zhHant": "卡榫與槽",
+    "en": "Tab and Slot",
+    "zhHans": "卡榫与槽",
+    "ja": "タブ＆スロット",
+    "ko": "탭과 슬롯",
+    "th": "แท็บและร่อง"
+  },
+  "asset_sheet_11_title": {
+    "zhHant": "口袋銑削刀路",
+    "en": "Pocket Milling Path",
+    "zhHans": "型腔铣削刀路",
+    "ja": "ポケット加工パス",
+    "ko": "포켓 밀링 경로",
+    "th": "เส้นทางกัดโพรง"
+  },
+  "asset_sheet_12_title": {
+    "zhHant": "輪廓銑削刀路",
+    "en": "Contour Milling Path",
+    "zhHans": "轮廓铣削刀路",
+    "ja": "輪郭加工パス",
+    "ko": "윤곽 밀링 경로",
+    "th": "เส้นทางกัดโครงร่าง"
+  },
+  "asset_sheet_13_title": {
+    "zhHant": "鑽孔陣列",
+    "en": "Drill Pattern",
+    "zhHans": "钻孔阵列",
+    "ja": "穴あけパターン",
+    "ko": "드릴 패턴",
+    "th": "แบบการเจาะรู"
+  },
+  "asset_sheet_14_title": {
+    "zhHant": "螺旋刀路",
+    "en": "Spiral Toolpath",
+    "zhHans": "螺旋刀路",
+    "ja": "スパイラルパス",
+    "ko": "나선 경로",
+    "th": "เส้นทางเกลียว"
+  },
+  "asset_sheet_15_title": {
+    "zhHant": "端銑刀",
+    "en": "End Mill",
+    "zhHans": "立铣刀",
+    "ja": "エンドミル",
+    "ko": "엔드밀",
+    "th": "ดอกกัดปลาย"
+  },
+  "asset_sheet_16_title": {
+    "zhHant": "倒角加工",
+    "en": "Chamfer Cut",
+    "zhHans": "倒角加工",
+    "ja": "面取り加工",
+    "ko": "모따기 가공",
+    "th": "การตัดเฉียงขอบ"
+  },
+  "asset_sheet_17_title": {
+    "zhHant": "機械臂漸進成形",
+    "en": "Robotic Incremental Forming",
+    "zhHans": "机械臂渐进成形",
+    "ja": "ロボット逐次成形",
+    "ko": "로봇 점진 성형",
+    "th": "การขึ้นรูปแบบค่อยเป็นค่อยไปด้วยหุ่นยนต์"
+  },
+  "asset_sheet_18_title": {
+    "zhHant": "自適應刀路最佳化",
+    "en": "Adaptive Toolpath Optimiser",
+    "zhHans": "自适应刀路优化",
+    "ja": "適応型ツールパス最適化",
+    "ko": "적응형 공구 경로 최적화",
+    "th": "ตัวปรับเส้นทางมีดตัดอัตโนมัติ"
+  },
+  "asset_surf_03_title": {
+    "zhHant": "表面粗糙度曲線",
+    "en": "Surface Roughness Profile",
+    "zhHans": "表面粗糙度曲线",
+    "ja": "表面粗さ曲線",
+    "ko": "표면 거칠기 곡선",
+    "th": "โปรไฟล์ความขรุขระผิว"
+  },
+  "asset_surf_04_title": {
+    "zhHant": "陽極處理層",
+    "en": "Anodised Layer",
+    "zhHans": "阳极处理层",
+    "ja": "アルマイト層",
+    "ko": "아노다이징 층",
+    "th": "ชั้นอะโนไดซ์"
+  },
+  "asset_surf_05_title": {
+    "zhHant": "粉體塗裝",
+    "en": "Powder Coating",
+    "zhHans": "粉末涂装",
+    "ja": "粉体塗装",
+    "ko": "분체 도장",
+    "th": "การพ่นสีฝุ่น"
+  },
+  "asset_surf_06_title": {
+    "zhHant": "電鍍層堆疊",
+    "en": "Plating Stack",
+    "zhHans": "电镀层堆叠",
+    "ja": "めっき層構成",
+    "ko": "도금 층 구조",
+    "th": "ชั้นชุบหลายชั้น"
+  },
+  "asset_surf_07_title": {
+    "zhHant": "菱形網紋",
+    "en": "Diamond Knurl",
+    "zhHans": "菱形网纹",
+    "ja": "あや目ローレット",
+    "ko": "다이아몬드 널링",
+    "th": "ลายเกลียวข้าวหลามตัด"
+  },
+  "asset_surf_08_title": {
+    "zhHant": "直紋網紋",
+    "en": "Straight Knurl",
+    "zhHans": "直纹网纹",
+    "ja": "平目ローレット",
+    "ko": "직선 널링",
+    "th": "ลายเกลียวตรง"
+  },
+  "asset_surf_09_title": {
+    "zhHant": "拉絲處理",
+    "en": "Brushed Finish",
+    "zhHans": "拉丝处理",
+    "ja": "ヘアライン仕上げ",
+    "ko": "헤어라인 마감",
+    "th": "ผิวขัดเส้นผม"
+  },
+  "asset_surf_10_title": {
+    "zhHant": "珠擊（噴砂）紋理",
+    "en": "Bead-Blasted Texture",
+    "zhHans": "喷珠纹理",
+    "ja": "ビーズブラスト",
+    "ko": "비드 블라스트",
+    "th": "ผิวพ่นเม็ดบีด"
+  },
+  "asset_surf_11_title": {
+    "zhHant": "雷射雕刻",
+    "en": "Laser Etching",
+    "zhHans": "激光雕刻",
+    "ja": "レーザー刻印",
+    "ko": "레이저 에칭",
+    "th": "การสลักด้วยเลเซอร์"
+  },
+  "asset_surf_12_title": {
+    "zhHant": "噴砂處理",
+    "en": "Sandblasting",
+    "zhHans": "喷砂处理",
+    "ja": "サンドブラスト",
+    "ko": "샌드블라스팅",
+    "th": "การพ่นทราย"
+  },
+  "asset_surf_13_title": {
+    "zhHant": "自修復塗層",
+    "en": "Self-Healing Coating",
+    "zhHans": "自修复涂层",
+    "ja": "自己修復コーティング",
+    "ko": "자가 치유 코팅",
+    "th": "สารเคลือบซ่อมแซมตัวเอง"
+  },
+  "asset_surf_14_title": {
+    "zhHant": "結構色薄膜",
+    "en": "Structural-Colour Film",
+    "zhHans": "结构色薄膜",
+    "ja": "構造色フィルム",
+    "ko": "구조색 필름",
+    "th": "ฟิล์มสีโครงสร้าง"
+  },
+  "asset_pipe_03_title": {
+    "zhHant": "90° 彎頭",
+    "en": "90° Elbow",
+    "zhHans": "90° 弯头",
+    "ja": "90°エルボ",
+    "ko": "90° 엘보",
+    "th": "ข้องอ 90°"
+  },
+  "asset_pipe_04_title": {
+    "zhHant": "三通",
+    "en": "Tee",
+    "zhHans": "三通",
+    "ja": "ティー",
+    "ko": "티",
+    "th": "ข้อต่อสามทาง"
+  },
+  "asset_pipe_05_title": {
+    "zhHant": "異徑接頭",
+    "en": "Concentric Reducer",
+    "zhHans": "同心异径接头",
+    "ja": "同心レデューサ",
+    "ko": "동심 리듀서",
+    "th": "ข้อลดแบบศูนย์กลาง"
+  },
+  "asset_pipe_06_title": {
+    "zhHant": "法蘭",
+    "en": "Flange",
+    "zhHans": "法兰",
+    "ja": "フランジ",
+    "ko": "플랜지",
+    "th": "หน้าแปลน"
+  },
+  "asset_pipe_07_title": {
+    "zhHant": "活接頭",
+    "en": "Union",
+    "zhHans": "活接头",
+    "ja": "ユニオン",
+    "ko": "유니온",
+    "th": "ข้อต่อยูเนียน"
+  },
+  "asset_pipe_08_title": {
+    "zhHant": "閘閥",
+    "en": "Gate Valve",
+    "zhHans": "闸阀",
+    "ja": "ゲートバルブ",
+    "ko": "게이트 밸브",
+    "th": "ประตูน้ำ"
+  },
+  "asset_pipe_09_title": {
+    "zhHant": "逆止閥",
+    "en": "Check Valve",
+    "zhHans": "止回阀",
+    "ja": "チェックバルブ",
+    "ko": "체크 밸브",
+    "th": "เช็ควาล์ว"
+  },
+  "asset_pipe_10_title": {
+    "zhHant": "球閥",
+    "en": "Ball Valve",
+    "zhHans": "球阀",
+    "ja": "ボールバルブ",
+    "ko": "볼 밸브",
+    "th": "บอลวาล์ว"
+  },
+  "asset_pipe_11_title": {
+    "zhHant": "單動氣壓缸",
+    "en": "Single-Acting Cylinder",
+    "zhHans": "单动气缸",
+    "ja": "単動シリンダ",
+    "ko": "단동 실린더",
+    "th": "กระบอกลมทำงานทางเดียว"
+  },
+  "asset_pipe_12_title": {
+    "zhHant": "雙動氣壓缸",
+    "en": "Double-Acting Cylinder",
+    "zhHans": "双动气缸",
+    "ja": "複動シリンダ",
+    "ko": "복동 실린더",
+    "th": "กระบอกลมทำงานสองทาง"
+  },
+  "asset_pipe_13_title": {
+    "zhHant": "3/2 方向閥",
+    "en": "3/2 Directional Valve",
+    "zhHans": "3/2 方向阀",
+    "ja": "3/2方向弁",
+    "ko": "3/2 방향 밸브",
+    "th": "วาล์วทิศทาง 3/2"
+  },
+  "asset_pipe_14_title": {
+    "zhHant": "5/2 方向閥",
+    "en": "5/2 Directional Valve",
+    "zhHans": "5/2 方向阀",
+    "ja": "5/2方向弁",
+    "ko": "5/2 방향 밸브",
+    "th": "วาล์วทิศทาง 5/2"
+  },
+  "asset_pipe_15_title": {
+    "zhHant": "氣源處理組合",
+    "en": "FRL Air-Prep Unit",
+    "zhHans": "气源处理组合",
+    "ja": "エアFRLユニット",
+    "ko": "FRL 공기 조절 유닛",
+    "th": "ชุดปรับสภาพลม FRL"
+  },
+  "asset_pipe_16_title": {
+    "zhHant": "空氣壓縮機",
+    "en": "Air Compressor",
+    "zhHans": "空气压缩机",
+    "ja": "エアコンプレッサ",
+    "ko": "공기 압축기",
+    "th": "ปั๊มลม"
+  },
+  "asset_pipe_17_title": {
+    "zhHant": "氣動夾爪",
+    "en": "Pneumatic Gripper",
+    "zhHans": "气动夹爪",
+    "ja": "エアグリッパ",
+    "ko": "공압 그리퍼",
+    "th": "มือจับลม"
+  },
+  "asset_pipe_18_title": {
+    "zhHant": "軟體氣動致動器",
+    "en": "Soft Pneumatic Actuator",
+    "zhHans": "软体气动致动器",
+    "ja": "ソフト空気圧アクチュエータ",
+    "ko": "소프트 공압 액추에이터",
+    "th": "แอคทูเอเตอร์ลมแบบนิ่ม"
+  },
+  "asset_pipe_19_title": {
+    "zhHant": "微流道晶片",
+    "en": "Microfluidic Chip",
+    "zhHans": "微流道芯片",
+    "ja": "マイクロ流体チップ",
+    "ko": "미세유체 칩",
+    "th": "ชิปไมโครฟลูอิดิก"
+  },
+  "asset_ui_03_title": {
+    "zhHant": "iOS 按鈕",
+    "en": "iOS Buttons",
+    "zhHans": "iOS 按钮",
+    "ja": "iOSのボタン",
+    "ko": "iOS 버튼",
+    "th": "ปุ่ม iOS"
+  },
+  "asset_ui_04_title": {
+    "zhHant": "Material 按鈕",
+    "en": "Material Buttons",
+    "zhHans": "Material 按钮",
+    "ja": "Materialのボタン",
+    "ko": "Material 버튼",
+    "th": "ปุ่ม Material"
+  },
+  "asset_ui_05_title": {
+    "zhHant": "開關與滑桿",
+    "en": "Toggle and Slider",
+    "zhHans": "开关与滑杆",
+    "ja": "トグルとスライダー",
+    "ko": "토글과 슬라이더",
+    "th": "สวิตช์และสไลเดอร์"
+  },
+  "asset_ui_06_title": {
+    "zhHant": "導覽列",
+    "en": "Navigation Bar",
+    "zhHans": "导览栏",
+    "ja": "ナビゲーションバー",
+    "ko": "내비게이션 바",
+    "th": "แถบนำทาง"
+  },
+  "asset_ui_07_title": {
+    "zhHant": "分頁列",
+    "en": "Tab Bar",
+    "zhHans": "分页栏",
+    "ja": "タブバー",
+    "ko": "탭 바",
+    "th": "แถบแท็บ"
+  },
+  "asset_ui_08_title": {
+    "zhHant": "對話框",
+    "en": "Dialog / Alert",
+    "zhHans": "对话框",
+    "ja": "ダイアログ",
+    "ko": "대화상자",
+    "th": "กล่องโต้ตอบ"
+  },
+  "asset_ui_09_title": {
+    "zhHant": "清單列",
+    "en": "List Row",
+    "zhHans": "列表行",
+    "ja": "リスト行",
+    "ko": "목록 행",
+    "th": "แถวรายการ"
+  },
+  "asset_ui_10_title": {
+    "zhHant": "搜尋列",
+    "en": "Search Bar",
+    "zhHans": "搜索栏",
+    "ja": "検索バー",
+    "ko": "검색 바",
+    "th": "แถบค้นหา"
+  },
+  "asset_ui_11_title": {
+    "zhHant": "分段控制",
+    "en": "Segmented Control",
+    "zhHans": "分段控制",
+    "ja": "セグメントコントロール",
+    "ko": "세그먼트 컨트롤",
+    "th": "ตัวควบคุมแบบแบ่งส่วน"
+  },
+  "asset_ui_12_title": {
+    "zhHant": "滑桿",
+    "en": "Slider",
+    "zhHans": "滑杆",
+    "ja": "スライダー",
+    "ko": "슬라이더",
+    "th": "สไลเดอร์"
+  },
+  "asset_ui_13_title": {
+    "zhHant": "情境變形元件",
+    "en": "Context-Morphing Component",
+    "zhHans": "情境变形组件",
+    "ja": "文脈に応じて変形する部品",
+    "ko": "상황 적응 변형 컴포넌트",
+    "th": "คอมโพเนนต์ปรับรูปตามบริบท"
+  },
+  "asset_ui_14_title": {
+    "zhHant": "手勢環狀調色盤",
+    "en": "Gestural Radial Palette",
+    "zhHans": "手势环形调色盘",
+    "ja": "ジェスチャーラジアルパレット",
+    "ko": "제스처 방사형 팔레트",
+    "th": "จานสีแบบวงกลมด้วยท่าทาง"
+  },
+  "asset_motion_03_title": {
+    "zhHant": "輕點",
+    "en": "Tap",
+    "zhHans": "轻点",
+    "ja": "タップ",
+    "ko": "탭",
+    "th": "แตะ"
+  },
+  "asset_motion_04_title": {
+    "zhHant": "連點兩下",
+    "en": "Double Tap",
+    "zhHans": "连点两下",
+    "ja": "ダブルタップ",
+    "ko": "더블 탭",
+    "th": "แตะสองครั้ง"
+  },
+  "asset_motion_05_title": {
+    "zhHant": "長按",
+    "en": "Long Press",
+    "zhHans": "长按",
+    "ja": "長押し",
+    "ko": "길게 누르기",
+    "th": "กดค้าง"
+  },
+  "asset_motion_06_title": {
+    "zhHant": "滑動",
+    "en": "Swipe",
+    "zhHans": "滑动",
+    "ja": "スワイプ",
+    "ko": "스와이프",
+    "th": "ปัด"
+  },
+  "asset_motion_07_title": {
+    "zhHant": "捏合縮放",
+    "en": "Pinch",
+    "zhHans": "捏合缩放",
+    "ja": "ピンチ",
+    "ko": "핀치",
+    "th": "ถ่างนิ้ว"
+  },
+  "asset_motion_08_title": {
+    "zhHant": "雙指旋轉",
+    "en": "Rotate",
+    "zhHans": "双指旋转",
+    "ja": "回転",
+    "ko": "회전",
+    "th": "หมุนสองนิ้ว"
+  },
+  "asset_motion_09_title": {
+    "zhHant": "拖曳",
+    "en": "Drag",
+    "zhHans": "拖曳",
+    "ja": "ドラッグ",
+    "ko": "드래그",
+    "th": "ลาก"
+  },
+  "asset_motion_10_title": {
+    "zhHant": "捲動",
+    "en": "Scroll",
+    "zhHans": "滚动",
+    "ja": "スクロール",
+    "ko": "스크롤",
+    "th": "เลื่อน"
+  },
+  "asset_motion_11_title": {
+    "zhHant": "緩入曲線",
+    "en": "Ease-In Curve",
+    "zhHans": "缓入曲线",
+    "ja": "イーズイン",
+    "ko": "이즈 인",
+    "th": "เส้นโค้ง Ease-In"
+  },
+  "asset_motion_12_title": {
+    "zhHant": "緩出曲線",
+    "en": "Ease-Out Curve",
+    "zhHans": "缓出曲线",
+    "ja": "イーズアウト",
+    "ko": "이즈 아웃",
+    "th": "เส้นโค้ง Ease-Out"
+  },
+  "asset_motion_13_title": {
+    "zhHant": "緩入緩出曲線",
+    "en": "Ease-In-Out Curve",
+    "zhHans": "缓入缓出曲线",
+    "ja": "イーズインアウト",
+    "ko": "이즈 인아웃",
+    "th": "เส้นโค้ง Ease-In-Out"
+  },
+  "asset_motion_14_title": {
+    "zhHant": "線性曲線",
+    "en": "Linear Curve",
+    "zhHans": "线性曲线",
+    "ja": "リニア",
+    "ko": "리니어",
+    "th": "เส้นโค้งเชิงเส้น"
+  },
+  "asset_motion_15_title": {
+    "zhHant": "彈跳曲線",
+    "en": "Bounce Curve",
+    "zhHans": "弹跳曲线",
+    "ja": "バウンス",
+    "ko": "바운스",
+    "th": "เส้นโค้งกระดอน"
+  },
+  "asset_motion_16_title": {
+    "zhHant": "過衝曲線",
+    "en": "Overshoot Curve",
+    "zhHans": "过冲曲线",
+    "ja": "オーバーシュート",
+    "ko": "오버슈트",
+    "th": "เส้นโค้งเกินเป้า"
+  },
+  "asset_motion_17_title": {
+    "zhHant": "預測式動效",
+    "en": "Predictive Motion",
+    "zhHans": "预测式动效",
+    "ja": "予測型モーション",
+    "ko": "예측형 모션",
+    "th": "แอนิเมชันเชิงคาดการณ์"
+  },
+  "asset_motion_18_title": {
+    "zhHant": "觸覺回饋對應圖",
+    "en": "Haptic Feedback Map",
+    "zhHans": "触觉反馈对应图",
+    "ja": "触覚フィードバックマップ",
+    "ko": "촉각 피드백 맵",
+    "th": "แผนที่การสั่นตอบสนอง"
+  },
+  "asset_ia_03_title": {
+    "zhHant": "使用者流程圖",
+    "en": "User Flow",
+    "zhHans": "用户流程图",
+    "ja": "ユーザーフロー",
+    "ko": "사용자 플로우",
+    "th": "ผังขั้นตอนผู้ใช้"
+  },
+  "asset_ia_04_title": {
+    "zhHant": "使用者旅程地圖",
+    "en": "Journey Map",
+    "zhHans": "用户旅程地图",
+    "ja": "ジャーニーマップ",
+    "ko": "사용자 여정 지도",
+    "th": "แผนที่การเดินทางของผู้ใช้"
+  },
+  "asset_ia_05_title": {
+    "zhHant": "卡片分類法",
+    "en": "Card Sorting",
+    "zhHans": "卡片分类法",
+    "ja": "カードソーティング",
+    "ko": "카드 소팅",
+    "th": "การจัดกลุ่มการ์ด"
+  },
+  "asset_ia_06_title": {
+    "zhHant": "轉換漏斗",
+    "en": "Conversion Funnel",
+    "zhHans": "转化漏斗",
+    "ja": "コンバージョンファネル",
+    "ko": "전환 퍼널",
+    "th": "กรวยการแปลง"
+  },
+  "asset_ia_07_title": {
+    "zhHant": "需求金字塔",
+    "en": "Needs Pyramid",
+    "zhHans": "需求金字塔",
+    "ja": "ニーズのピラミッド",
+    "ko": "요구 피라미드",
+    "th": "พีระมิดความต้องการ"
+  },
+  "asset_ia_08_title": {
+    "zhHant": "文氏圖",
+    "en": "Venn Diagram",
+    "zhHans": "文氏图",
+    "ja": "ベン図",
+    "ko": "벤 다이어그램",
+    "th": "แผนภาพเวนน์"
+  },
+  "asset_ia_09_title": {
+    "zhHant": "泳道圖",
+    "en": "Swimlane Diagram",
+    "zhHans": "泳道图",
+    "ja": "スイムレーン図",
+    "ko": "스윔레인 다이어그램",
+    "th": "แผนภาพสวิมเลน"
+  },
+  "asset_ia_10_title": {
+    "zhHant": "看板流程",
+    "en": "Kanban Flow",
+    "zhHans": "看板流程",
+    "ja": "かんばんフロー",
+    "ko": "칸반 흐름",
+    "th": "กระบวนการคัมบัง"
+  },
+  "asset_ia_11_title": {
+    "zhHant": "樹狀導覽結構",
+    "en": "Tree Navigation",
+    "zhHans": "树状导览结构",
+    "ja": "ツリーナビゲーション",
+    "ko": "트리 내비게이션",
+    "th": "โครงสร้างการนำทางแบบต้นไม้"
+  },
+  "asset_ia_12_title": {
+    "zhHant": "輻輳式導覽",
+    "en": "Hub and Spoke",
+    "zhHans": "辐辏式导览",
+    "ja": "ハブ＆スポーク",
+    "ko": "허브 앤 스포크",
+    "th": "โครงสร้างศูนย์กลางและซี่"
+  },
+  "asset_ia_13_title": {
+    "zhHant": "意圖地圖",
+    "en": "Intent Map",
+    "zhHans": "意图地图",
+    "ja": "インテントマップ",
+    "ko": "의도 맵",
+    "th": "แผนที่เจตนา"
+  },
+  "asset_ia_14_title": {
+    "zhHant": "自適應導覽架構",
+    "en": "Adaptive Navigation",
+    "zhHans": "自适应导览架构",
+    "ja": "適応型ナビゲーション",
+    "ko": "적응형 내비게이션",
+    "th": "โครงสร้างการนำทางแบบปรับตัว"
+  },
+  "asset_token_03_title": {
+    "zhHant": "10 階色階",
+    "en": "10-Step Colour Scale",
+    "zhHans": "10 阶色阶",
+    "ja": "10段階カラースケール",
+    "ko": "10단계 색상 스케일",
+    "th": "สเกลสี 10 ระดับ"
+  },
+  "asset_token_04_title": {
+    "zhHant": "字級比例",
+    "en": "Type Scale",
+    "zhHans": "字级比例",
+    "ja": "タイプスケール",
+    "ko": "타입 스케일",
+    "th": "สเกลตัวอักษร"
+  },
+  "asset_token_05_title": {
+    "zhHant": "圓角比例",
+    "en": "Radius Scale",
+    "zhHans": "圆角比例",
+    "ja": "角丸スケール",
+    "ko": "라운드 스케일",
+    "th": "สเกลมุมโค้ง"
+  },
+  "asset_token_06_title": {
+    "zhHant": "陰影層級",
+    "en": "Elevation Levels",
+    "zhHans": "阴影层级",
+    "ja": "エレベーション",
+    "ko": "엘리베이션",
+    "th": "ระดับเงา"
+  },
+  "asset_token_07_title": {
+    "zhHant": "響應式斷點",
+    "en": "Breakpoints",
+    "zhHans": "响应式断点",
+    "ja": "ブレークポイント",
+    "ko": "브레이크포인트",
+    "th": "จุดตัดการตอบสนอง"
+  },
+  "asset_token_08_title": {
+    "zhHant": "圖示尺寸",
+    "en": "Icon Sizes",
+    "zhHans": "图标尺寸",
+    "ja": "アイコンサイズ",
+    "ko": "아이콘 크기",
+    "th": "ขนาดไอคอน"
+  },
+  "asset_token_09_title": {
+    "zhHant": "透明度階",
+    "en": "Opacity Ramp",
+    "zhHans": "透明度阶",
+    "ja": "不透明度ランプ",
+    "ko": "불투명도 단계",
+    "th": "ระดับความโปร่งใส"
+  },
+  "asset_token_10_title": {
+    "zhHant": "線寬規格",
+    "en": "Stroke Weights",
+    "zhHans": "线宽规格",
+    "ja": "線幅の規格",
+    "ko": "선 굵기 규격",
+    "th": "ความหนาเส้น"
+  },
+  "asset_token_11_title": {
+    "zhHant": "動效時長",
+    "en": "Motion Durations",
+    "zhHans": "动效时长",
+    "ja": "モーション時間",
+    "ko": "모션 지속 시간",
+    "th": "ระยะเวลาแอนิเมชัน"
+  },
+  "asset_token_12_title": {
+    "zhHant": "4 點間距階",
+    "en": "4-pt Spacing Scale",
+    "zhHans": "4 点间距阶",
+    "ja": "4ptスペーシング",
+    "ko": "4pt 간격 스케일",
+    "th": "สเกลระยะห่าง 4 พอยต์"
+  },
+  "asset_token_13_title": {
+    "zhHant": "設計變數產生器",
+    "en": "Design-Token Generator",
+    "zhHans": "设计变量生成器",
+    "ja": "デザイントークン生成器",
+    "ko": "디자인 토큰 생성기",
+    "th": "ตัวสร้างดีไซน์โทเคน"
+  },
+  "asset_token_14_title": {
+    "zhHant": "主題變形（亮／暗）",
+    "en": "Theme Morphing (Light / Dark)",
+    "zhHans": "主题变形（亮／暗）",
+    "ja": "テーマモーフィング（ライト／ダーク）",
+    "ko": "테마 모핑(라이트/다크)",
+    "th": "การเปลี่ยนธีม (สว่าง/มืด)"
   }
 }

@@ -159,7 +159,11 @@ pub fn asset_dimension_callout() -> Vec<FfiDrawPath> {
 /// 有線圖的代號。測試用它確認目錄裡的每一件素材都畫得出東西。
 #[uniffi::export]
 pub fn asset_drawing_codes() -> Vec<String> {
-    CODES.iter().map(|s| s.to_string()).collect()
+    CODES
+        .iter()
+        .chain(crate::ffi_assets::MORE_CODES.iter())
+        .map(|s| s.to_string())
+        .collect()
 }
 
 // ── 建構小工具 ──────────────────────────────────────────────────────
@@ -443,6 +447,10 @@ fn arc_segs(cx: f32, cy: f32, r: f32, start_deg: f32, end_deg: f32) -> Vec<FfiPa
 // `items_after_test_module` 會擋下來，而那條規則是對的：測試模組
 // 之後還有正式程式碼，讀的人很容易以為檔案到那裡就結束了。
 include!("asset_art_shapes.rs");
+include!("asset_art_more.rs");
+include!("asset_art_more2.rs");
+include!("asset_art_more3.rs");
+include!("asset_art_more4.rs");
 
 /// 讓 `FfiPoint` 在這個模組裡不算未使用（平台層會用到同一個型別）。
 #[allow(dead_code)]
