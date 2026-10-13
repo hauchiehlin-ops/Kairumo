@@ -817,15 +817,7 @@ private fun NotebookHome(
             )
         ) {
             Surface(modifier = Modifier.fillMaxSize()) {
-                Column(modifier = Modifier.fillMaxSize()) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
-                        horizontalArrangement = Arrangement.End
-                    ) {
-                        TextButton(onClick = { homeDocs = null }) { Text(l("close")) }
-                    }
-                    DocsViewer(asset, languageTag = deviceLanguageTag(), modifier = Modifier.fillMaxSize())
-                }
+                com.kairumo.padnote.platform.DocsScreen(asset, deviceLanguageTag()) { homeDocs = null }
             }
         }
     }
@@ -2866,6 +2858,28 @@ private fun InkScreen(
     var canvasScale by remember(pageId) { mutableFloatStateOf(1f) }
     var canvasOffset by remember(pageId) { mutableStateOf(Offset.Zero) }
     var canvasViewport by remember { mutableStateOf(Size.Zero) }
+    // 「顯示全頁」等整頁縮放（與捏合不同：捏合看某個區域，這個看整頁）。
+    // 倍率與 Apple 端的 `PageViewportLayout.zoomScale` 同一套算法。
+    val canvasDensityForFit = LocalDensity.current.density
+    fun fitCanvas(mode: String) {
+        val vw = canvasViewport.width
+        val vh = canvasViewport.height
+        if (vw <= 1f || vh <= 1f) return
+        val cw = PageGeometry.width * canvasDensityForFit
+        val ch = PageGeometry.height * canvasDensityForFit
+        val raw = when (mode) {
+            "page" -> minOf(vw / cw, vh / ch)
+            "width" -> vw / cw
+            else -> 1f
+        }
+        val scale = uniffi.padnote_core.clampZoom(raw)
+        canvasScale = scale
+        // 比視窗小就置中；比視窗大就貼齊左上角（可捲動）。
+        canvasOffset = Offset(
+            if (cw * scale < vw) (vw - cw * scale) / 2f else 0f,
+            if (mode == "page" && ch * scale < vh) (vh - ch * scale) / 2f else 0f
+        )
+    }
     canvasInfo.viewport = canvasViewport
     canvasInfo.scale = canvasScale
     canvasInfo.offset = canvasOffset
@@ -3826,6 +3840,22 @@ private fun InkScreen(
                             }
                         }
                     }
+                )
+                Divider()
+                DropdownMenuItem(
+                    text = { Text(l10n("zoom_fit_page")) },
+                    modifier = Modifier.testTag("editor.zoom.fit_page"),
+                    onClick = { showMenu = false; fitCanvas("page") }
+                )
+                DropdownMenuItem(
+                    text = { Text(l10n("zoom_fit_width")) },
+                    modifier = Modifier.testTag("editor.zoom.fit_width"),
+                    onClick = { showMenu = false; fitCanvas("width") }
+                )
+                DropdownMenuItem(
+                    text = { Text(l10n("zoom_actual_size")) },
+                    modifier = Modifier.testTag("editor.zoom.actual"),
+                    onClick = { showMenu = false; fitCanvas("actual") }
                 )
                 Divider()
                 DropdownMenuItem(
@@ -6422,15 +6452,7 @@ private fun InkScreen(
             properties = DialogProperties(usePlatformDefaultWidth = false)
         ) {
             Surface(modifier = Modifier.fillMaxSize()) {
-                Column(modifier = Modifier.fillMaxSize()) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
-                        horizontalArrangement = Arrangement.End
-                    ) {
-                        TextButton(onClick = { docsAsset = null }) { Text(l10n("close")) }
-                    }
-                    DocsViewer(asset, languageTag = deviceLanguageTag(), modifier = Modifier.fillMaxSize())
-                }
+                com.kairumo.padnote.platform.DocsScreen(asset, deviceLanguageTag()) { docsAsset = null }
             }
         }
     }

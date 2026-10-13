@@ -118,3 +118,32 @@ final class DocumentTemplateTests: XCTestCase {
         }
     }
 }
+
+final class PageZoomTargetTests: XCTestCase {
+    private let page = CGSize(width: 800, height: 1132)
+
+    func testFitPageUsesTheTighterDimension() {
+        // 視窗又寬又矮：高度是限制
+        let wide = PageViewportLayout.zoomScale(for: .fitPage, viewport: CGSize(width: 1_600, height: 566), page: page)
+        XCTAssertEqual(wide, 0.5, accuracy: 0.001)
+        // 視窗又窄又高：寬度是限制
+        let narrow = PageViewportLayout.zoomScale(for: .fitPage, viewport: CGSize(width: 400, height: 3_000), page: page)
+        XCTAssertEqual(narrow, 0.5, accuracy: 0.001)
+    }
+
+    func testFitWidthIgnoresHeight() {
+        let scale = PageViewportLayout.zoomScale(for: .fitWidth, viewport: CGSize(width: 400, height: 100), page: page)
+        XCTAssertEqual(scale, 0.5, accuracy: 0.001)
+    }
+
+    func testRatioIsClampedToTheAllowedRange() {
+        let tooBig = PageViewportLayout.zoomScale(for: .ratio(50), viewport: CGSize(width: 800, height: 600), page: page, range: 0.5...3)
+        XCTAssertEqual(tooBig, 3)
+        let tooSmall = PageViewportLayout.zoomScale(for: .ratio(0.01), viewport: CGSize(width: 800, height: 600), page: page, range: 0.5...3)
+        XCTAssertEqual(tooSmall, 0.5)
+    }
+
+    func testDegenerateViewportFallsBackToActualSize() {
+        XCTAssertEqual(PageViewportLayout.zoomScale(for: .fitPage, viewport: .zero, page: page), 1)
+    }
+}

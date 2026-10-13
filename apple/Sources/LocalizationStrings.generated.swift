@@ -5447,6 +5447,54 @@ extension LocalizationManager {
             .ko: "표시 이름",
             .th: "ชื่อที่แสดง"
         ],
+        "doc_export_failed": [
+            .zhHant: "無法產生 PDF，請稍後再試。",
+            .en: "Could not create the PDF. Please try again.",
+            .zhHans: "无法生成 PDF，请稍后再试。",
+            .ja: "PDF を作成できませんでした。もう一度お試しください。",
+            .ko: "PDF를 만들 수 없습니다. 잠시 후 다시 시도해 주세요.",
+            .th: "สร้าง PDF ไม่สำเร็จ โปรดลองอีกครั้ง"
+        ],
+        "doc_export_pdf": [
+            .zhHant: "匯出為 PDF／分享",
+            .en: "Export as PDF / Share",
+            .zhHans: "导出为 PDF／分享",
+            .ja: "PDF として書き出し／共有",
+            .ko: "PDF로 내보내기/공유",
+            .th: "ส่งออกเป็น PDF / แชร์"
+        ],
+        "doc_print": [
+            .zhHant: "列印",
+            .en: "Print",
+            .zhHans: "打印",
+            .ja: "印刷",
+            .ko: "인쇄",
+            .th: "พิมพ์"
+        ],
+        "doc_print_or_pdf": [
+            .zhHant: "列印或存成 PDF",
+            .en: "Print or save as PDF",
+            .zhHans: "打印或存为 PDF",
+            .ja: "印刷または PDF として保存",
+            .ko: "인쇄 또는 PDF로 저장",
+            .th: "พิมพ์หรือบันทึกเป็น PDF"
+        ],
+        "doc_share_link": [
+            .zhHant: "分享網頁連結",
+            .en: "Share web link",
+            .zhHans: "分享网页链接",
+            .ja: "Web リンクを共有",
+            .ko: "웹 링크 공유",
+            .th: "แชร์ลิงก์เว็บ"
+        ],
+        "doc_share_or_print": [
+            .zhHant: "分享、匯出或列印",
+            .en: "Share, export or print",
+            .zhHans: "分享、导出或打印",
+            .ja: "共有・書き出し・印刷",
+            .ko: "공유, 내보내기 또는 인쇄",
+            .th: "แชร์ ส่งออก หรือพิมพ์"
+        ],
         "doc_template": [
             .zhHant: "套用的範本",
             .en: "Template in use",
@@ -22686,6 +22734,38 @@ extension LocalizationManager {
             .ja: "表（%1@ × %2@）",
             .ko: "표 (%1@ × %2@)",
             .th: "ตาราง (%1@ × %2@)"
+        ],
+        "zoom_actual_size": [
+            .zhHant: "實際大小（100%）",
+            .en: "Actual size (100%)",
+            .zhHans: "实际大小（100%）",
+            .ja: "実寸（100%）",
+            .ko: "실제 크기(100%)",
+            .th: "ขนาดจริง (100%)"
+        ],
+        "zoom_fit_page": [
+            .zhHant: "顯示全頁",
+            .en: "Fit whole page",
+            .zhHans: "显示全页",
+            .ja: "ページ全体を表示",
+            .ko: "페이지 전체 보기",
+            .th: "แสดงทั้งหน้า"
+        ],
+        "zoom_fit_width": [
+            .zhHant: "符合頁寬",
+            .en: "Fit page width",
+            .zhHans: "适合页宽",
+            .ja: "ページの幅に合わせる",
+            .ko: "페이지 너비에 맞춤",
+            .th: "พอดีความกว้างหน้า"
+        ],
+        "zoom_menu": [
+            .zhHant: "畫布縮放",
+            .en: "Canvas zoom",
+            .zhHans: "画布缩放",
+            .ja: "キャンバスの拡大率",
+            .ko: "캔버스 확대/축소",
+            .th: "ซูมแคนวาส"
         ]
     ]
 }

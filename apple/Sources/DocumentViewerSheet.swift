@@ -77,6 +77,8 @@ public enum BundledDocument: String, Identifiable {
 /// 隱私權政策若為了顯示自己而連到第三方，就違反了它自己寫的承諾。
 struct DocumentWebView: UIViewRepresentable {
     let url: URL
+    /// 讓外面的工具列取得這個網頁（匯出 PDF、列印用）。
+    var handle: DocumentWebHandle?
     /// 介面語言（`zh-Hant`、`en`…）。語言已經在首頁選過，頁面就照它顯示並隱藏自己的語言選單（`?lang=`）。
     var languageCode: String = LocalizationManager.shared.currentLanguage.rawValue
 
@@ -92,6 +94,7 @@ struct DocumentWebView: UIViewRepresentable {
         webView.scrollView.backgroundColor = .systemBackground
         webView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
         context.coordinator.webView = webView
+        handle?.webView = webView
         return webView
     }
 
@@ -208,6 +211,7 @@ public enum DocumentWindow {
 public struct DocumentWindowContent: View {
     @ObservedObject private var localizationManager = LocalizationManager.shared
     private let document: BundledDocument?
+    @StateObject private var handle = DocumentWebHandle()
 
     public init(documentId: BundledDocument.ID?) {
         self.document = documentId.flatMap(BundledDocument.init(rawValue:))
@@ -216,12 +220,19 @@ public struct DocumentWindowContent: View {
     public var body: some View {
         Group {
             if let document, let url = document.url {
-                DocumentWebView(url: url)
+                DocumentWebView(url: url, handle: handle)
             } else {
                 DocumentMissingView()
             }
         }
         .navigationTitle(document.map { localizationManager.localized($0.titleKey) } ?? "")
+        .toolbar {
+            if let document, document.url != nil {
+                ToolbarItem(placement: .primaryAction) {
+                    DocumentExportMenu(document: document, handle: handle)
+                }
+            }
+        }
     }
 }
 
@@ -249,6 +260,7 @@ public struct DocumentViewerSheet: View {
     @ObservedObject private var localizationManager = LocalizationManager.shared
     @Environment(\.dismiss) private var dismiss
     public let document: BundledDocument
+    @StateObject private var handle = DocumentWebHandle()
 
     public init(document: BundledDocument) {
         self.document = document
@@ -258,7 +270,7 @@ public struct DocumentViewerSheet: View {
         NavigationStack {
             Group {
                 if let url = document.url {
-                    DocumentWebView(url: url)
+                    DocumentWebView(url: url, handle: handle)
                 } else {
                     DocumentMissingView()
                 }
@@ -276,6 +288,11 @@ public struct DocumentViewerSheet: View {
                         }
                         .help(localizationManager.localized("open_in_browser"))
                         .accessibilityLabel(localizationManager.localized("open_in_browser"))
+                    }
+                }
+                if document.url != nil {
+                    ToolbarItem(placement: .primaryAction) {
+                        DocumentExportMenu(document: document, handle: handle)
                     }
                 }
                 ToolbarItem(placement: .confirmationAction) {

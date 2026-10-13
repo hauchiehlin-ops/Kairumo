@@ -889,6 +889,19 @@ final class AdaptiveCanvasView: PKCanvasView {
         }
     }
 
+    /// 把整頁（或指定倍率）顯示在可視區內，並回到頁面左上角。
+    ///
+    /// 與捏合縮放是兩件事：捏合看「某個區域」，這個看「整頁」。
+    func applyPageZoom(_ target: PageViewportLayout.ZoomTarget) {
+        let scale = PageViewportLayout.zoomScale(
+            for: target,
+            viewport: CGSize(width: bounds.width, height: bounds.height),
+            page: CGSize(width: PageGeometry.width, height: max(pageContentHeight, 1)),
+            range: minimumZoomScale...max(maximumZoomScale, minimumZoomScale))
+        setZoomScale(scale, animated: true)
+        setContentOffset(.zero, animated: true)
+    }
+
     func syncContentSize() {
         syncProLayerGeometry()
         let targetWidth = max(bounds.width, 1)
@@ -3952,6 +3965,8 @@ public struct NotebookEditorView: View {
                 pageDisplayMode == .continuous ? "page_mode_continuous" : "page_mode_single"))
             .accessibilityLabel(localizationManager.localized("page_mode"))
             .accessibilityIdentifier("editor.page.display_mode")
+
+            zoomMenu
         }
         .padding(.horizontal, 4)
         .padding(.vertical, 2)
@@ -4544,9 +4559,8 @@ public struct NotebookEditorView: View {
                             singlePageFitMode = (singlePageFitMode == .fitPage) ? .fitWidth : .fitPage
                         }
                     } label: {
-                        Text(singlePageFitMode == .fitPage
-                            ? (localizationManager.currentLanguage == .zhHant ? "全頁" : "Fit Page")
-                            : (localizationManager.currentLanguage == .zhHant ? "適寬" : "Fit Width"))
+                        Text(localizationManager.localized(
+                            singlePageFitMode == .fitPage ? "zoom_fit_page" : "zoom_fit_width"))
                             .font(.system(size: 11, weight: .bold))
                             .frame(minWidth: 28)
                     }
@@ -4832,10 +4846,77 @@ public struct NotebookEditorView: View {
             // 視窗比紙張寬就放大到填滿（上限見 `PageViewportLayout.maxFitScale`），
             // 不留兩片灰邊讓畫布看起來被框住。
             let available = max(outer.size.width - 32, 1)
-            let scale = PageViewportLayout.scale(
+            let fitWidth = PageViewportLayout.scale(
                 availableWidth: available, pageWidth: PageGeometry.width)
+            let viewport = CGSize(width: available, height: max(outer.size.height - 40, 1))
+            let pageSize = CGSize(width: PageGeometry.width, height: currentPageHeight)
+            let scale = continuousZoomTarget.map { target -> CGFloat in
+                if case .ratio(let value) = target {
+                    // 與單頁模式一致：倍率相對於「整頁剛好放進視窗」。
+                    let whole = PageViewportLayout.zoomScale(for: .fitPage, viewport: viewport, page: pageSize)
+                    return min(max(whole * value, 0.3), 4)
+                }
+                return PageViewportLayout.zoomScale(for: target, viewport: viewport, page: pageSize)
+            } ?? fitWidth
             continuousPages(scale: scale)
         }
+    }
+
+    /// 連續模式的縮放設定。`nil` = 預設（貼合頁寬）。
+    @State private var continuousZoomTarget: PageViewportLayout.ZoomTarget?
+
+    /// 整頁的顯示比例。單頁模式沿用既有的 `singlePageFitMode` / `singlePageManualZoom`（畫布右下角的 −／全頁／＋
+    /// 也是它們），連續模式用 `continuousZoomTarget`。倍率一律**相對於「整頁剛好放進視窗」**：100% = 全頁。
+    /// 捏合縮放（看某個區域）是另一件事，這裡一併歸位，才不會「選了全頁卻還停在放大的位置」。
+    private func applyEditorZoom(_ target: PageViewportLayout.ZoomTarget) {
+        if pageDisplayMode == .continuous {
+            continuousZoomTarget = target
+            return
+        }
+        withAnimation(.easeInOut(duration: 0.2)) {
+            switch target {
+            case .fitPage:
+                singlePageFitMode = .fitPage
+                singlePageManualZoom = 1
+            case .fitWidth:
+                singlePageFitMode = .fitWidth
+                singlePageManualZoom = 1
+            case .ratio(let value):
+                singlePageFitMode = .fitPage
+                singlePageManualZoom = min(max(value, 0.4), 3)
+            }
+        }
+        (canvasView as? AdaptiveCanvasView)?.applyPageZoom(.ratio(1))
+    }
+
+    /// 畫布區的「顯示比例」選單：顯示全頁、符合頁寬、實際大小與常用倍率。
+    private var zoomMenu: some View {
+        Menu {
+            Button {
+                applyEditorZoom(.fitPage)
+            } label: {
+                Label(localizationManager.localized("zoom_fit_page"), systemImage: "arrow.up.left.and.down.right.magnifyingglass")
+            }
+            .accessibilityIdentifier("editor.zoom.fit_page")
+            Button {
+                applyEditorZoom(.fitWidth)
+            } label: {
+                Label(localizationManager.localized("zoom_fit_width"), systemImage: "arrow.left.and.right")
+            }
+            .accessibilityIdentifier("editor.zoom.fit_width")
+            Divider()
+            ForEach([50, 75, 125, 150, 200], id: \.self) { percent in
+                Button("\(percent)%") { applyEditorZoom(.ratio(CGFloat(percent) / 100)) }
+            }
+        } label: {
+            Image(systemName: "plus.magnifyingglass")
+                .font(.system(size: EditorToolbarMetrics.icon - 3))
+                .foregroundColor(.secondary)
+                .frame(width: 24, height: 28)
+        }
+        .help(localizationManager.localized("zoom_menu"))
+        .accessibilityLabel(localizationManager.localized("zoom_menu"))
+        .accessibilityIdentifier("editor.zoom.menu")
     }
 
     /// 連續模式：由捲動算出來的焦點頁（`updateFocusedPage` 寫入）。

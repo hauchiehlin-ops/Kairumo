@@ -15,6 +15,7 @@ import uniffi.padnote_core.syncGateLeave
 import uniffi.padnote_core.syncGateTryEnter
 import uniffi.padnote_core.syncLiveNotebooks
 import uniffi.padnote_core.syncOrderActiveFirst
+import com.kairumo.padnote.profile.adoptCloudAccountName
 import com.kairumo.padnote.profile.bindGoogle
 
 /**
@@ -103,7 +104,10 @@ object CloudSync {
         // 雲端上的筆記就混在一起了。綁在別人身上就登出，並記下是誰佔著。
         if (!email.isNullOrEmpty()) {
             try {
-                com.kairumo.padnote.profile.ProfileManager.run { bindGoogle(context, email) }
+                com.kairumo.padnote.profile.ProfileManager.run {
+                    bindGoogle(context, email)
+                    if (!accountName.isNullOrEmpty()) adoptCloudAccountName(context, accountName)
+                }
             } catch (e: com.kairumo.padnote.profile.ProfileException) {
                 if (e.kind == com.kairumo.padnote.profile.ProfileException.Kind.GOOGLE_ALREADY_BOUND) {
                     com.kairumo.padnote.profile.ProfileManager.googleConflict.value = e.profileName

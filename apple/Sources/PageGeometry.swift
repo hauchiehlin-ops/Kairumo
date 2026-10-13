@@ -133,4 +133,35 @@ public enum PageViewportLayout {
         guard pageWidth > 0 else { return 1 }
         return min(maxFitScale, max(availableWidth, 1) / pageWidth)
     }
+
+    /// 使用者要的縮放方式（畫布區的「顯示比例」選單）。
+    ///
+    /// 與捏合縮放不同：捏合是看「某個區域」，這個是看**整頁**。
+    public enum ZoomTarget: Equatable {
+        /// 整頁剛好放進可視區（寬高都不超出）。
+        case fitPage
+        /// 頁寬剛好貼合可視區（高度要捲動）。
+        case fitWidth
+        /// 指定倍率（1 = 實際大小）。
+        case ratio(CGFloat)
+    }
+
+    /// 可視區 `viewport` 要用多大的倍率，才能達成 `target`。
+    /// 結果夾在 `range` 內（核心給的縮放範圍），避免要求畫布做它做不到的事。
+    public static func zoomScale(
+        for target: ZoomTarget, viewport: CGSize, page: CGSize,
+        range: ClosedRange<CGFloat> = 0.25...5
+    ) -> CGFloat {
+        guard page.width > 0, page.height > 0, viewport.width > 1, viewport.height > 1 else { return 1 }
+        let raw: CGFloat
+        switch target {
+        case .fitPage:
+            raw = min(viewport.width / page.width, viewport.height / page.height)
+        case .fitWidth:
+            raw = viewport.width / page.width
+        case .ratio(let value):
+            raw = value
+        }
+        return min(max(raw, range.lowerBound), range.upperBound)
+    }
 }

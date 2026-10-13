@@ -42,6 +42,15 @@ extension ProfileManager {
         syncIdentity(id: id) { $0.displayName = trimmed }
     }
 
+    /// 使用中的設定檔登入了 Google：設定檔名稱跟著雲端帳號名稱（與首頁身分卡的既有規則一致 ——
+    /// 有登入雲端就以該帳號名稱為使用者名稱）。名稱與別的設定檔重複、或存不進去時維持原名，不打擾使用者。
+    public func adoptCloudAccountName(_ cloudName: String) {
+        let trimmed = String(cloudName.trimmingCharacters(in: .whitespacesAndNewlines)
+            .prefix(ProfileRegistry.maxNameLength))
+        guard !trimmed.isEmpty, registry.active.displayName != trimmed else { return }
+        try? renameProfile(id: registry.activeId, to: trimmed)
+    }
+
     public func setProfileColor(id: String, hex: String) throws {
         var next = registry
         try next.setColor(id: id, hex: hex)

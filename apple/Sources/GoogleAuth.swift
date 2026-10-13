@@ -134,6 +134,9 @@ public final class GoogleAuth: NSObject, ObservableObject {
         guard let email = accountEmail, !email.isEmpty else { return }
         do {
             try ProfileManager.shared.bindGoogle(email: email)
+            if let name = accountName, !name.isEmpty {
+                ProfileManager.shared.adoptCloudAccountName(name)
+            }
         } catch ProfileError.googleAlreadyBound(let name) {
             ProfileManager.shared.googleConflictProfileName = name
             await signOut()

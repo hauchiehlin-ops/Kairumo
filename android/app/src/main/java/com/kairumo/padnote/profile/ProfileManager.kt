@@ -163,6 +163,21 @@ fun ProfileManager.bindGoogle(context: Context, email: String) {
     if (next != current) save(context, next)
 }
 
+/**
+ * 使用中的設定檔登入了 Google：設定檔名稱跟著雲端帳號名稱（與 Apple 端、首頁身分卡的既有規則一致）。
+ * 與別的設定檔重名或不合規時維持原名。
+ */
+fun ProfileManager.adoptCloudAccountName(context: Context, cloudName: String) {
+    val name = cloudName.trim().take(ProfileRegistry.MAX_NAME_LENGTH)
+    val current = registry(context)
+    if (name.isEmpty() || current.active.displayName == name) return
+    try {
+        renameProfile(context, current.activeId, name)
+    } catch (e: ProfileException) {
+        // 重名等：維持原名
+    }
+}
+
 /** 目前設定檔登出：解除綁定，帳號可以讓別的設定檔用。 */
 fun ProfileManager.unbindGoogle(context: Context) {
     val current = registry(context)
