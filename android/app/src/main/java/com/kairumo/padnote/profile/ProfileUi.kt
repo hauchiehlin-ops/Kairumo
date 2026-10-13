@@ -159,7 +159,7 @@ fun ProfilePickerDialog(activity: FragmentActivity, onDismiss: () -> Unit) {
             Column(Modifier.padding(20.dp)) {
                 when (val current = page) {
                     Page.List -> ListPage(
-                        activity, registry, error,
+                        registry, error,
                         onSelect = { record ->
                             error = null
                             when {
@@ -203,7 +203,6 @@ fun ProfilePickerDialog(activity: FragmentActivity, onDismiss: () -> Unit) {
 
 @Composable
 private fun ListPage(
-    activity: FragmentActivity,
     registry: ProfileRegistry,
     error: String?,
     onSelect: (ProfileRecord) -> Unit,
