@@ -134,7 +134,7 @@ object FolderTree {
      * 一定要在動手**之前**問：把資料夾搬進自己的子孫裡，那棵子樹會從樹上
      * 整個斷開，而且刪不掉也救不回來。
      */
-    fun move(context: Context, id: String, title: String, isFolder: Boolean, toParent: String?): Boolean {
+    fun move(context: Context, id: String, isFolder: Boolean, toParent: String?): Boolean {
         if (isFolder && syncWouldCreateCycle(AccountSyncStore.indexJson(context), id, toParent ?: "")) {
             return false
         }
