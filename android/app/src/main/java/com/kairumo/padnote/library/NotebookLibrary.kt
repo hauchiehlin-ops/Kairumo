@@ -193,9 +193,7 @@ object NotebookLibrary {
             // 那在合併時與真正的刪除完全一樣，另一台裝置會把它當成已刪除。
             // 保住原本所在的資料夾。不帶 parentId 的話，改個名字
             // 就會被搬回最上層 —— 而使用者完全不知道為什麼。
-            AccountSyncStore.record(
-                context, id = id, title = title, parentId = FolderTree.parentOf(context, id)
-            )
+            AccountSyncStore.recordTitle(context, id, title)
             true
         }.getOrDefault(false)
 

@@ -185,6 +185,39 @@ pub fn sync_upsert_item(index_json: String, item: FfiLibraryItem) -> String {
     index.to_json()
 }
 
+/// 只更新名稱，避免舊裝置上的資料夾位置覆蓋較新的搬移。
+#[uniffi::export]
+pub fn sync_update_item_title(
+    index_json: String,
+    item_id: String,
+    title: String,
+    lamport: u64,
+    device_id: String,
+) -> String {
+    let mut index = LibraryIndex::from_json(&index_json);
+    index.update_title(&item_id, title, lamport, &device_id);
+    index.to_json()
+}
+
+/// 只更新所在資料夾，保留另一台裝置較新的名稱。
+#[uniffi::export]
+pub fn sync_update_item_parent(
+    index_json: String,
+    item_id: String,
+    parent_id: String,
+    lamport: u64,
+    device_id: String,
+) -> String {
+    let mut index = LibraryIndex::from_json(&index_json);
+    index.update_parent(
+        &item_id,
+        (!parent_id.is_empty()).then_some(parent_id),
+        lamport,
+        &device_id,
+    );
+    index.to_json()
+}
+
 /// 刪除。**留下墓碑而不是移除** —— 從「檔案不見了」推論刪除的話，
 /// 還沒同步到的那台裝置會把它傳回去，刪除永遠刪不掉。
 ///

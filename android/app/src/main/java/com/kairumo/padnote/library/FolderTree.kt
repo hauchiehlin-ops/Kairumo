@@ -114,10 +114,7 @@ object FolderTree {
     }
 
     fun rename(context: Context, id: String, title: String) {
-        val parent = parentOf(context, id)
-        AccountSyncStore.record(
-            context, id = id, title = title, parentId = parent, isFolder = true
-        )
+        AccountSyncStore.recordTitle(context, id, title)
     }
 
     /**
@@ -141,9 +138,7 @@ object FolderTree {
         if (isFolder && syncWouldCreateCycle(AccountSyncStore.indexJson(context), id, toParent ?: "")) {
             return false
         }
-        AccountSyncStore.record(
-            context, id = id, title = title, parentId = toParent, isFolder = isFolder
-        )
+        AccountSyncStore.recordParent(context, id, toParent)
         return true
     }
 }

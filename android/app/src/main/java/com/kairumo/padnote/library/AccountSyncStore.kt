@@ -19,6 +19,8 @@ import uniffi.padnote_core.syncStampLegacyTombstones
 import uniffi.padnote_core.syncTrash
 import uniffi.padnote_core.syncSetSetting
 import uniffi.padnote_core.syncUpsertItem
+import uniffi.padnote_core.syncUpdateItemTitle
+import uniffi.padnote_core.syncUpdateItemParent
 import uniffi.padnote_core.syncWouldCreateCycle
 import com.kairumo.padnote.profile.ProfileContext
 
@@ -142,6 +144,14 @@ object AccountSyncStore {
             purgeAt = 0uL
         )
         setIndex(context, syncUpsertItem(indexJson(context), item))
+    }
+
+    fun recordTitle(context: Context, id: String, title: String) {
+        setIndex(context, syncUpdateItemTitle(indexJson(context), id, title, nextLamport(context), deviceId(context)))
+    }
+
+    fun recordParent(context: Context, id: String, parentId: String?) {
+        setIndex(context, syncUpdateItemParent(indexJson(context), id, parentId ?: "", nextLamport(context), deviceId(context)))
     }
 
     /**

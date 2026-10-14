@@ -100,6 +100,14 @@ public final class AccountSyncStore: ObservableObject {
         setIndex(syncUpsertItem(indexJson: indexJSON, item: item))
     }
 
+    public func recordTitle(id: String, title: String) {
+        setIndex(syncUpdateItemTitle(indexJson: indexJSON, itemId: id, title: title, lamport: nextLamport(), deviceId: deviceId))
+    }
+
+    public func recordParent(id: String, parentId: String?) {
+        setIndex(syncUpdateItemParent(indexJson: indexJSON, itemId: id, parentId: parentId ?? "", lamport: nextLamport(), deviceId: deviceId))
+    }
+
     /// 記下刪除。留**墓碑**，不是把它從索引裡拿掉。
     ///
     /// 墓碑帶刪除時間 —— 回收桶的保留期限從這一刻起算。

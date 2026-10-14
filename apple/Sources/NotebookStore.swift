@@ -2669,12 +2669,7 @@ public final class NotebookStore: ObservableObject {
             // 使用者親自命名之後就不再翻譯，否則改了名字又被語系蓋回去。
             notebooks[idx].titleKey = nil
             notebooks[idx].lastModifiedDate = Date()
-            AccountSyncStore.shared.record(
-                id: notebooks[idx].id,
-                title: notebooks[idx].title,
-                parentId: notebooks[idx].folderId,
-                isFolder: false
-            )
+            AccountSyncStore.shared.recordTitle(id: notebooks[idx].id, title: notebooks[idx].title)
             // 同步更新磁碟上的 .padnote 套件標題，並觸摸修改時間促使 workingCopyNeedsExport 判定為新
             let packagePath = corePackagesDirectory.appending(path: "\(notebooks[idx].id.lowercased()).padnote")
             if FileManager.default.fileExists(atPath: packagePath.path),
@@ -2708,12 +2703,7 @@ public final class NotebookStore: ObservableObject {
         let clean = newName.trimmingCharacters(in: .whitespacesAndNewlines)
         if !clean.isEmpty {
             folders[idx].name = clean
-            AccountSyncStore.shared.record(
-                id: id,
-                title: clean,
-                parentId: folders[idx].parentId,
-                isFolder: true
-            )
+            AccountSyncStore.shared.recordTitle(id: id, title: clean)
             markDirtyAndPersist(signalsLocalEdit: true)
         }
     }
@@ -2728,24 +2718,14 @@ public final class NotebookStore: ObservableObject {
         for i in 0..<notebooks.count {
             if notebooks[i].folderId == id {
                 notebooks[i].folderId = fallbackParentId
-                AccountSyncStore.shared.record(
-                    id: notebooks[i].id,
-                    title: notebooks[i].title,
-                    parentId: fallbackParentId,
-                    isFolder: false
-                )
+                AccountSyncStore.shared.recordParent(id: notebooks[i].id, parentId: fallbackParentId)
             }
         }
         // 將該資料夾底下的子資料夾提升至父資料夾
         for i in 0..<folders.count {
             if folders[i].parentId == id {
                 folders[i].parentId = fallbackParentId
-                AccountSyncStore.shared.record(
-                    id: folders[i].id,
-                    title: folders[i].name,
-                    parentId: fallbackParentId,
-                    isFolder: true
-                )
+                AccountSyncStore.shared.recordParent(id: folders[i].id, parentId: fallbackParentId)
             }
         }
         folders.removeAll { $0.id == id }
@@ -2765,12 +2745,7 @@ public final class NotebookStore: ObservableObject {
         guard let idx = notebooks.firstIndex(where: { $0.id == id }) else { return }
         notebooks[idx].folderId = toFolderId
         notebooks[idx].lastModifiedDate = Date()
-        AccountSyncStore.shared.record(
-            id: id,
-            title: notebooks[idx].title,
-            parentId: toFolderId,
-            isFolder: false
-        )
+        AccountSyncStore.shared.recordParent(id: id, parentId: toFolderId)
         persistData()
     }
 

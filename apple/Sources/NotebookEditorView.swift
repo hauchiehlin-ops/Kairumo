@@ -8019,34 +8019,6 @@ public struct NotebookEditorView: View {
 
     private var drawingToolbarContent: some View {
         VStack(spacing: 0) {
-            if editorMode == .draw && selectedTool == .lasso {
-                ViewThatFits(in: .horizontal) {
-                    // 1. 寬螢幕：長提示文字 + 圖示文字按鈕
-                    lassoFloatingActionBarRow(showLabels: true, showHint: true)
-                        .fixedSize(horizontal: true, vertical: false)
-
-                    // 2. 中等寬度（700~1000pt）：隱藏長提示文字，保留圖示文字按鈕
-                    lassoFloatingActionBarRow(showLabels: true, showHint: false)
-                        .fixedSize(horizontal: true, vertical: false)
-
-                    // 3. 窄螢幕（Mac 縮小視窗、iPad 分割螢幕/側邊欄展開）：精簡純圖示模式，所有按鈕完全放得下
-                    lassoFloatingActionBarRow(showLabels: false, showHint: false)
-                        .fixedSize(horizontal: true, vertical: false)
-
-                    // 4. 超窄螢幕（如 iPhone 直向或 <360pt）：可橫向捲動並顯示指示器
-                    ScrollView(.horizontal, showsIndicators: true) {
-                        lassoFloatingActionBarRow(showLabels: false, showHint: false)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 2)
-                    }
-                }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 4)
-                .frame(maxWidth: .infinity)
-                .background(Color(uiColor: .secondarySystemGroupedBackground))
-                Divider()
-            }
-
             if editorMode == .type && activeInlineInkBlockId != nil {
                 HStack(spacing: 8) {
                     Image(systemName: "pencil.tip")
@@ -8383,39 +8355,6 @@ public struct NotebookEditorView: View {
                 .accessibilityLabel(localizationManager.localized("radial_menu"))
 
                 eraserModeControls
-
-                // 若為套索選取工具，即時展開剪下、複製、轉文字與刪除選取筆劃按鈕
-                if selectedTool == .lasso {
-                    ToolbarSeparator()
-                        .frame(height: 24)
-
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 6) {
-                            lassoActionButton("scissors", "cut_selected", "cut_selected_hint", showLabel: showToolLabels) { cutSelectedStrokes() }
-                            lassoActionButton("doc.on.doc", "copy_selected", "copy_selected_hint", showLabel: showToolLabels) { copySelectedStrokes() }
-                            lassoActionButton("plus.square.on.square", "duplicate_selected", "duplicate_selected_hint", showLabel: showToolLabels) { duplicateSelectedStrokes() }
-                            lassoActionButton("doc.on.clipboard", "paste_strokes", "paste_strokes_hint", showLabel: showToolLabels) { pasteStrokes() }
-                            lassoActionButton("photo.on.rectangle", "save_as_sticker", "save_as_sticker", showLabel: showToolLabels) { saveSelectedAsSticker() }
-
-                            // 🌟 套索轉化傳送門：手寫直接轉為文字方塊
-                            lassoActionButton("text.viewfinder", "recognize_handwriting", "recognize_handwriting", showLabel: showToolLabels) {
-                                recognizeHandwritingToTextBox()
-                            }
-
-                            // 🌟 動態流式錨定：手寫筆劃錨定至文字方塊
-                            lassoActionButton("link.badge.plus", "sticky_anchor_text", "sticky_anchored_hint", showLabel: showToolLabels) {
-                                anchorSelectedStrokesToNearestText()
-                            }
-                            
-                            lassoRecolorButton
-
-                            lassoDeleteButton(showLabel: showToolLabels)
-                        }
-                    }
-                    // 依據是否顯示標籤動態調整最大寬度，避免窄畫面撐出視窗
-                    .frame(maxWidth: showToolLabels ? 420 : 280)
-                }
-
 
                 ToolbarSeparator()
                     .frame(height: 24)

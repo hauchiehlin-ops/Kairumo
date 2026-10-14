@@ -94,6 +94,30 @@ pub struct LibraryIndex {
     /// 順序不穩的話，同一份內容每次上傳的位元組都不同，
     /// 看起來像「一直有東西在改」。
     pub items: BTreeMap<String, LibraryItem>,
+    /// 名稱與位置各自仲裁；舊索引沒有此欄位時以項目原有時戳回填。
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    field_clocks: BTreeMap<String, LibraryFieldClocks>,
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct LibraryFieldClocks {
+    title: Option<(u64, String)>,
+    parent: Option<(u64, String)>,
+}
+
+fn field_wins<T: Ord>(
+    current_clock: &Option<(u64, String)>,
+    incoming_clock: &(u64, String),
+    current: &T,
+    incoming: &T,
+) -> bool {
+    match current_clock {
+        None => true,
+        Some(clock) if incoming_clock > clock => true,
+        Some(clock) if incoming_clock < clock => false,
+        Some(_) => incoming > current,
+    }
 }
 
 impl LibraryIndex {
@@ -102,11 +126,102 @@ impl LibraryIndex {
         if let Some(ref mut parent) = item.parent_id {
             *parent = parent.to_lowercase();
         }
-        match self.items.get(&item.id) {
-            Some(existing) if existing.wins_over(&item) => {}
-            _ => {
-                self.items.insert(item.id.clone(), item);
+        let id = item.id.clone();
+        let incoming_clock = (item.lamport, item.device.clone());
+        match self.items.get_mut(&id) {
+            Some(existing) => {
+                let legacy_clock = (existing.lamport, existing.device.clone());
+                let clocks =
+                    self.field_clocks
+                        .entry(id.clone())
+                        .or_insert_with(|| LibraryFieldClocks {
+                            title: Some(legacy_clock.clone()),
+                            parent: Some(legacy_clock),
+                        });
+                if !existing.wins_over(&item) {
+                    existing.kind = item.kind;
+                    existing.deleted = item.deleted;
+                    existing.deleted_at = item.deleted_at;
+                    existing.purge_at = item.purge_at;
+                    existing.lamport = item.lamport;
+                    existing.device = item.device.clone();
+                }
+                if field_wins(&clocks.title, &incoming_clock, &existing.title, &item.title) {
+                    existing.title = item.title;
+                    clocks.title = Some(incoming_clock.clone());
+                }
+                if field_wins(
+                    &clocks.parent,
+                    &incoming_clock,
+                    &existing.parent_id,
+                    &item.parent_id,
+                ) {
+                    existing.parent_id = item.parent_id;
+                    clocks.parent = Some(incoming_clock);
+                }
             }
+            None => {
+                self.field_clocks.insert(
+                    id.clone(),
+                    LibraryFieldClocks {
+                        title: Some(incoming_clock.clone()),
+                        parent: Some(incoming_clock),
+                    },
+                );
+                self.items.insert(id, item);
+            }
+        }
+    }
+
+    pub fn update_title(&mut self, id: &str, title: String, lamport: u64, device: &str) {
+        self.update_field(id, Some(title), None, lamport, device);
+    }
+
+    pub fn update_parent(
+        &mut self,
+        id: &str,
+        parent_id: Option<String>,
+        lamport: u64,
+        device: &str,
+    ) {
+        self.update_field(id, None, Some(parent_id), lamport, device);
+    }
+
+    fn update_field(
+        &mut self,
+        id: &str,
+        title: Option<String>,
+        parent: Option<Option<String>>,
+        lamport: u64,
+        device: &str,
+    ) {
+        let Some(item) = self.items.get_mut(&id.to_lowercase()) else {
+            return;
+        };
+        let legacy_clock = (item.lamport, item.device.clone());
+        let clocks = self
+            .field_clocks
+            .entry(id.to_lowercase())
+            .or_insert_with(|| LibraryFieldClocks {
+                title: Some(legacy_clock.clone()),
+                parent: Some(legacy_clock),
+            });
+        let clock = (lamport, device.to_string());
+        if let Some(title) = title {
+            if field_wins(&clocks.title, &clock, &item.title, &title) {
+                item.title = title;
+                clocks.title = Some(clock.clone());
+            }
+        }
+        if let Some(parent) = parent {
+            if field_wins(&clocks.parent, &clock, &item.parent_id, &parent) {
+                item.parent_id = parent;
+                clocks.parent = Some(clock);
+            }
+        }
+        if (lamport, device) > (item.lamport, item.device.as_str()) {
+            item.lamport = lamport;
+            item.device = device.to_string();
         }
     }
 
@@ -188,8 +303,55 @@ impl LibraryIndex {
 
     /// 合併另一台裝置的索引。可交換、冪等。
     pub fn merge(&mut self, other: &LibraryIndex) {
-        for item in other.items.values() {
-            self.upsert(item.clone());
+        for (id, incoming) in &other.items {
+            let Some(current) = self.items.get(id).cloned() else {
+                self.upsert(incoming.clone());
+                if let Some(clocks) = other.field_clocks.get(id) {
+                    self.field_clocks.insert(id.clone(), clocks.clone());
+                }
+                continue;
+            };
+            let mine_clocks =
+                self.field_clocks
+                    .entry(id.clone())
+                    .or_insert_with(|| LibraryFieldClocks {
+                        title: Some((current.lamport, current.device.clone())),
+                        parent: Some((current.lamport, current.device.clone())),
+                    });
+            let theirs_clocks = other.field_clocks.get(id);
+            let incoming_title_clock = theirs_clocks
+                .and_then(|c| c.title.clone())
+                .unwrap_or((incoming.lamport, incoming.device.clone()));
+            let incoming_parent_clock = theirs_clocks
+                .and_then(|c| c.parent.clone())
+                .unwrap_or((incoming.lamport, incoming.device.clone()));
+            let item = self.items.get_mut(id).expect("present");
+            if field_wins(
+                &mine_clocks.title,
+                &incoming_title_clock,
+                &item.title,
+                &incoming.title,
+            ) {
+                item.title = incoming.title.clone();
+                mine_clocks.title = Some(incoming_title_clock);
+            }
+            if field_wins(
+                &mine_clocks.parent,
+                &incoming_parent_clock,
+                &item.parent_id,
+                &incoming.parent_id,
+            ) {
+                item.parent_id = incoming.parent_id.clone();
+                mine_clocks.parent = Some(incoming_parent_clock);
+            }
+            if incoming.wins_over(&current) {
+                item.kind = incoming.kind;
+                item.deleted = incoming.deleted;
+                item.deleted_at = incoming.deleted_at;
+                item.purge_at = incoming.purge_at;
+                item.lamport = incoming.lamport;
+                item.device = incoming.device.clone();
+            }
         }
     }
 
