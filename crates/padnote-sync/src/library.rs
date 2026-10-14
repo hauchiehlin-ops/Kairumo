@@ -207,17 +207,17 @@ impl LibraryIndex {
                 parent: Some(legacy_clock),
             });
         let clock = (lamport, device.to_string());
-        if let Some(title) = title {
-            if field_wins(&clocks.title, &clock, &item.title, &title) {
-                item.title = title;
-                clocks.title = Some(clock.clone());
-            }
+        if let Some(title) = title
+            && field_wins(&clocks.title, &clock, &item.title, &title)
+        {
+            item.title = title;
+            clocks.title = Some(clock.clone());
         }
-        if let Some(parent) = parent {
-            if field_wins(&clocks.parent, &clock, &item.parent_id, &parent) {
-                item.parent_id = parent;
-                clocks.parent = Some(clock);
-            }
+        if let Some(parent) = parent
+            && field_wins(&clocks.parent, &clock, &item.parent_id, &parent)
+        {
+            item.parent_id = parent;
+            clocks.parent = Some(clock);
         }
         if (lamport, device) > (item.lamport, item.device.as_str()) {
             item.lamport = lamport;

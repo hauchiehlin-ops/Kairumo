@@ -360,9 +360,16 @@ fn remote_entries(
         return Ok(index.entries_under(prefix));
     }
     let entries = drive.list(prefix)?;
+    let child_prefix = format!("{}/", padnote_sync::paths::canonical_path(prefix));
     Ok(entries
         .into_iter()
         .filter_map(|e| {
+            // Some providers treat `list(prefix)` as a raw string prefix, so
+            // `media/audio` can also return siblings such as `media/audio-revisions`.
+            // Keep the directory boundary explicit before reducing to a basename.
+            if !padnote_sync::paths::canonical_path(&e.path).starts_with(&child_prefix) {
+                return None;
+            }
             let name = e.path.rsplit('/').next()?.to_string();
             Some((
                 padnote_sync::paths::canonical_name(&name),
@@ -1337,41 +1344,40 @@ fn sync_notebook_media(
                 .is_some_and(|b| padnote_sync::audio_revision::content_hash(b) != winner.hash)
             {
                 let object_name = format!("{}.opus", winner.hash);
-                if let Some(file) = remote_objects.get(&object_name) {
-                    if let Ok(content) = download_file(drive, file) {
-                        if padnote_sync::audio_revision::content_hash(&content) == winner.hash {
-                            bytes = Some(content);
-                            downloaded += 1;
-                        } else {
-                            warnings.push(format!("錄音版本 {name} 驗證失敗"));
-                        }
+                if let Some(file) = remote_objects.get(&object_name)
+                    && let Ok(content) = download_file(drive, file)
+                {
+                    if padnote_sync::audio_revision::content_hash(&content) == winner.hash {
+                        bytes = Some(content);
+                        downloaded += 1;
+                    } else {
+                        warnings.push(format!("錄音版本 {name} 驗證失敗"));
                     }
                 }
             }
-            if let Some(content) = bytes.as_ref() {
-                if padnote_sync::audio_revision::content_hash(content) == winner.hash {
-                    if let Some(local_name) = local_name.as_deref() {
-                        if local_hash.as_deref() != Some(winner.hash.as_str()) {
-                            if let Err(e) = package.write_audio_file(local_name, content) {
-                                return notebook_failed(format!("寫不進錄音 {name}：{e}"));
-                            }
-                        }
-                    } else if let Err(e) = package.write_audio_file(&name, content) {
+            if let Some(content) = bytes.as_ref()
+                && padnote_sync::audio_revision::content_hash(content) == winner.hash
+            {
+                if let Some(local_name) = local_name.as_deref() {
+                    if local_hash.as_deref() != Some(winner.hash.as_str())
+                        && let Err(e) = package.write_audio_file(local_name, content)
+                    {
                         return notebook_failed(format!("寫不進錄音 {name}：{e}"));
                     }
-                    index.set_audio_head(&logical_key, &winner.hash);
-                    let alias = padnote_sync::paths::notebook_audio_file(notebook_id, &name);
-                    if index.audio_alias(&logical_key) != Some(winner.hash.as_str()) {
-                        match upload_file(drive, remote_audio.get(&name), &alias, content) {
-                            Ok(id) => {
-                                if !id.is_empty() {
-                                    index.note_upload(&alias, &id, content.len() as u64);
-                                }
-                                index.set_audio_alias(&logical_key, &winner.hash);
-                                uploaded += 1;
+                } else if let Err(e) = package.write_audio_file(&name, content) {
+                    return notebook_failed(format!("寫不進錄音 {name}：{e}"));
+                }
+                index.set_audio_head(&logical_key, &winner.hash);
+                let alias = padnote_sync::paths::notebook_audio_file(notebook_id, &name);
+                if index.audio_alias(&logical_key) != Some(winner.hash.as_str()) {
+                    match upload_file(drive, remote_audio.get(&name), &alias, content) {
+                        Ok(id) => {
+                            if !id.is_empty() {
+                                index.note_upload(&alias, &id, content.len() as u64);
                             }
-                            Err(e) => return from_sync_error(e),
+                            index.set_audio_alias(&logical_key, &winner.hash);
                         }
+                        Err(e) => return from_sync_error(e),
                     }
                 }
             }
