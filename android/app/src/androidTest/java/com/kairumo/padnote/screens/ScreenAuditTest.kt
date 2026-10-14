@@ -206,22 +206,20 @@ class ScreenAuditTest {
         // 查 `SeedNotebooks`（實際發生過：查了 NDK、查了 .so 版本、查了
         // 種子邏輯，全部沒問題）。上面 `audit()` 那一段早就把同一件事
         // 寫清楚了，這裡卻漏了 —— 整份稽核裡唯一沒捲的就是這一步。
-        compose.waitUntil(timeoutMillis = 60_000) {
-            compose.onAllNodes(SemanticsMatcher("testTag 以 home.notebooks.card. 開頭") { node ->
-                node.config.getOrNull(SemanticsProperties.TestTag)
-                    ?.startsWith("home.notebooks.card.") == true
-            }).fetchSemanticsNodes().isNotEmpty()
-        }
         val matcher = SemanticsMatcher("testTag 以 home.notebooks.card. 開頭") { node ->
             node.config.getOrNull(SemanticsProperties.TestTag)
                 ?.startsWith("home.notebooks.card.") == true
         }
-        if (compose.onAllNodes(matcher).fetchSemanticsNodes().isEmpty()) {
-            runCatching {
-                compose.onNodeWithTag("home.scroll")
-                    .performScrollToNode(matcher)
-                compose.waitForIdle()
+        // LazyColumn 只會組合視窗內可見項目；種子筆記在折線下方，必須在等待過程中嘗試捲動
+        compose.waitUntil(timeoutMillis = 20_000) {
+            if (compose.onAllNodes(matcher).fetchSemanticsNodes().isEmpty()) {
+                runCatching {
+                    compose.onNodeWithTag("home.scroll")
+                        .performScrollToNode(matcher)
+                    compose.waitForIdle()
+                }
             }
+            compose.onAllNodes(matcher).fetchSemanticsNodes().isNotEmpty()
         }
 
         val cards = compose.onAllNodes(matcher)
@@ -254,11 +252,24 @@ class ScreenAuditTest {
             if (screen == "home") {
                 // Seeds are created on Dispatchers.IO after the first composition;
                 // waitForIdle only waits for Compose work, not that package creation.
-                compose.waitUntil(timeoutMillis = 60_000) {
-                    compose.onAllNodes(SemanticsMatcher("home notebook card") { node ->
-                        node.config.getOrNull(SemanticsProperties.TestTag)
-                            ?.startsWith("home.notebooks.card.") == true
-                    }).fetchSemanticsNodes().isNotEmpty()
+                // 捲動等待 LazyColumn 的項目組合完成。
+                val listMatcher = hasTestTag("home.notebooks.list")
+                compose.waitUntil(timeoutMillis = 20_000) {
+                    if (compose.onAllNodes(listMatcher, useUnmergedTree = true).fetchSemanticsNodes().isEmpty()) {
+                        runCatching {
+                            compose.onNodeWithTag("home.scroll")
+                                .performScrollToNode(listMatcher)
+                            compose.waitForIdle()
+                        }
+                    }
+                    compose.onAllNodes(listMatcher, useUnmergedTree = true)
+                        .fetchSemanticsNodes().isNotEmpty()
+                }
+                // 捲回頂端，讓 findMissingWhileScrolling 能從頭逐一向下比對控制項
+                runCatching {
+                    compose.onNodeWithTag("home.scroll")
+                        .performScrollToNode(hasTestTag("home.title"))
+                    compose.waitForIdle()
                 }
             }
             navigate()
