@@ -76,6 +76,9 @@ final class MainThreadStallMonitor: @unchecked Sendable {
     private var stallStarted: TimeInterval?
     private var samples: [[UInt]] = []
     private var lastSampleAt: TimeInterval = 0
+    private var lastTick: TimeInterval?
+    /// 監看器自己兩次巡查間隔超過這麼久，就是整個 App 被系統暫停過（進背景、鎖屏）。
+    private let suspendGap: TimeInterval = 2
 
     /// 記下最近一件事（任何執行緒都可以呼叫）。
     func breadcrumb(_ text: String) {
@@ -96,6 +99,16 @@ final class MainThreadStallMonitor: @unchecked Sendable {
     private func tick() {
         let now = ProcessInfo.processInfo.systemUptime
         lock.lock()
+        // **App 被暫停不是卡頓。** 進背景後 iOS 會把整個程序（包括這個監看器）凍住；醒來時第一輪
+        // 看到主執行緒「幾百秒沒回應」，其實是兩邊一起睡著了（使用者回報：背景 15 分鐘後記一筆
+        // 「卡住 906 秒」，堆疊是閒置的 run loop）。巡查自己隔太久就把這段時間整個丟掉、重新起算。
+        if let previous = lastTick, now - previous > suspendGap {
+            lastPong = now
+            stallStarted = nil
+            samples = []
+            lastSampleAt = 0
+        }
+        lastTick = now
         let silent = now - lastPong
         if silent > threshold, stallStarted == nil { stallStarted = lastPong }
         let stalled = stallStarted != nil

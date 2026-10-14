@@ -19,6 +19,8 @@ object MainThreadStallMonitor {
     private const val SAMPLE_INTERVAL_MS = 4_000L
     private const val MAX_SAMPLES = 3
     private const val MAX_FRAMES = 30
+    /** 監看器自己兩次巡查間隔超過這麼久，就是整個程序被凍結過（深度休眠、背景凍結）。 */
+    private const val SUSPEND_GAP_MS = 2_000L
 
     @Volatile private var lastPong = SystemClock.elapsedRealtime()
     @Volatile private var started = false
@@ -39,9 +41,19 @@ object MainThreadStallMonitor {
             var stallStart = 0L
             var samples = 0
             var lastSampleAt = 0L
+            var lastTick = SystemClock.elapsedRealtime()
             while (true) {
                 runCatching { Thread.sleep(POLL_MS) }
                 val now = SystemClock.elapsedRealtime()
+                // 程序被凍結不是卡頓：elapsedRealtime 在深度休眠／背景凍結時照走，醒來第一輪會看到
+                // 「幾百秒沒回應」。巡查自己隔太久就把這段時間丟掉、重新起算（iOS 實測誤報 906 秒）。
+                if (now - lastTick > SUSPEND_GAP_MS) {
+                    lastPong = now
+                    stallStart = 0L
+                    samples = 0
+                    lastSampleAt = 0L
+                }
+                lastTick = now
                 val silent = now - lastPong
                 if (silent > THRESHOLD_MS) {
                     if (stallStart == 0L) stallStart = lastPong
