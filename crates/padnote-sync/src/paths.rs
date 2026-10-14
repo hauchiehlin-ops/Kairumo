@@ -126,6 +126,30 @@ pub fn notebook_audio_file(notebook_id: &str, file_name: &str) -> String {
     )
 }
 
+pub fn notebook_audio_revisions_prefix(notebook_id: &str) -> String {
+    format!("{}/media/audio-revisions", notebook_root(notebook_id))
+}
+
+pub fn notebook_audio_revision_file(notebook_id: &str, marker_name: &str) -> String {
+    format!(
+        "{}/{}",
+        notebook_audio_revisions_prefix(notebook_id),
+        canonical_name(marker_name)
+    )
+}
+
+pub fn notebook_audio_objects_prefix(notebook_id: &str) -> String {
+    format!("{}/media/audio-objects", notebook_root(notebook_id))
+}
+
+pub fn notebook_audio_object_file(notebook_id: &str, hash: &str) -> String {
+    format!(
+        "{}/{}.opus",
+        notebook_audio_objects_prefix(notebook_id),
+        canonical_name(hash)
+    )
+}
+
 /// 筆跡手繪目錄前綴。
 pub fn notebook_ink_prefix(notebook_id: &str) -> String {
     format!("{}/ink", notebook_root(notebook_id))

@@ -63,6 +63,37 @@ pub struct RemoteIndex {
     /// 正規化路徑 → 檔案。
     #[serde(default)]
     pub files: BTreeMap<String, RemoteFile>,
+    /// Per-recording accepted media revision. Persisted with the cloud index so
+    /// a device can distinguish its own last upload from a later offline edit.
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub audio_heads: BTreeMap<String, String>,
+    /// Last revision projected to the mutable legacy `media/audio/*.opus` alias.
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub audio_aliases: BTreeMap<String, String>,
+}
+
+impl RemoteIndex {
+    pub fn audio_head(&self, key: &str) -> Option<&str> {
+        self.audio_heads
+            .get(&crate::paths::canonical_path(key))
+            .map(String::as_str)
+    }
+
+    pub fn set_audio_head(&mut self, key: &str, revision: &str) {
+        self.audio_heads
+            .insert(crate::paths::canonical_path(key), revision.to_string());
+    }
+
+    pub fn audio_alias(&self, key: &str) -> Option<&str> {
+        self.audio_aliases
+            .get(&crate::paths::canonical_path(key))
+            .map(String::as_str)
+    }
+
+    pub fn set_audio_alias(&mut self, key: &str, revision: &str) {
+        self.audio_aliases
+            .insert(crate::paths::canonical_path(key), revision.to_string());
+    }
 }
 
 impl RemoteIndex {

@@ -815,10 +815,11 @@ fn sync_notebook_media(
     seen: &mut SeenSizes,
     package_path: &str,
     notebook_id: &str,
+    device_id: u32,
 ) -> FfiNotebookSyncResult {
     let root = std::path::Path::new(package_path);
     let package = match padnote_storage::NotebookPackage::open(root) {
-        Ok(p) => p,
+        Ok(p) => p.with_device(device_id),
         Err(e) => return notebook_failed(format!("開不了套件：{e}")),
     };
 
@@ -983,98 +984,398 @@ fn sync_notebook_media(
         Err(e) => return from_sync_error(e),
     };
 
-    for (name, size) in &local_audio {
-        let key = padnote_sync::paths::canonical_name(name);
-        // 本機還留著、但已經有墓碑：別台刪掉而這台還沒清乾淨。不要傳上去。
-        if tombstones.contains(name) {
+    // Immutable audio protocol: each edit uploads a content-addressed blob first,
+    // then publishes an append-only revision marker. The legacy alias is only a
+    // compatibility view; revisions are the authority even when byte lengths tie.
+    let rev_prefix = padnote_sync::paths::notebook_audio_revisions_prefix(notebook_id);
+    let remote_revisions = match remote_entries(drive, index, &rev_prefix) {
+        Ok(entries) => entries,
+        Err(e) => return from_sync_error(e),
+    };
+    let objects_prefix = padnote_sync::paths::notebook_audio_objects_prefix(notebook_id);
+    let remote_objects = match remote_entries(drive, index, &objects_prefix) {
+        Ok(entries) => entries,
+        Err(e) => return from_sync_error(e),
+    };
+    let mut revisions: std::collections::BTreeMap<
+        String,
+        Vec<padnote_sync::audio_revision::AudioRevision>,
+    > = Default::default();
+    for marker in remote_revisions.keys() {
+        if let Some(rev) = padnote_sync::audio_revision::AudioRevision::parse(marker) {
+            revisions
+                .entry(padnote_sync::paths::canonical_name(&rev.recording))
+                .or_default()
+                .push(rev);
+        }
+    }
+    let mut names: std::collections::BTreeSet<String> = local_audio
+        .iter()
+        .map(|(n, _)| padnote_sync::paths::canonical_name(n))
+        .collect();
+    names.extend(revisions.keys().cloned());
+    names.extend(remote_audio.keys().cloned());
+    for name in names {
+        if tombstones.contains(&name) {
             continue;
         }
-        let existing = remote_audio.get(&key);
-        let remote_size = existing.map_or(0, |f| f.size);
-        if *size <= remote_size {
-            continue;
-        }
-        // 還在錄的那一段：成長不到門檻就先不傳，等它穩定或長夠多。
-        // 「穩定」＝這一輪看到的長度與上一輪相同 ⇒ 錄完了，一定要傳。
-        let previous = seen.insert(key.clone(), *size);
-        // **第一次看到不算「還在成長」。** 不知道就傳 —— 反過來假設的話，
-        // 一段錄完很久的短錄音會在重開 App 之後永遠不上傳。
-        let mut still_growing = matches!(previous, Some(p) if p != *size);
-        if still_growing && size.saturating_sub(remote_size) < AUDIO_GROWTH_THRESHOLD {
-            // **別直接等下一輪。** 上一輪看到的長度與這一輪不同，只代表它在這兩輪之間長過 ——
-            // 不代表現在還在長。錄音停在這一輪之前的話，下一輪才補傳的做法會把尾巴丟在雲端之外：
-            // 排程器看到這一輪「沒有上傳」就會安靜下來，下一輪也許要等很久才來
-            // （實測：iPad 錄 15 秒，另一台只收到 4 秒）。
-            // 在這裡停一下再量一次：長度沒動就是錄完了，現在傳。
-            std::thread::sleep(AUDIO_SETTLE_PROBE);
-            let settled = package
-                .audio_files()
-                .ok()
-                .and_then(|files| files.into_iter().find(|(n, _)| n == name))
-                .is_some_and(|(_, now)| now == *size);
-            if settled {
-                still_growing = false;
-            }
-            if still_growing {
-                continue;
-            }
-        }
-        let bytes = match package.read_audio_file(name) {
-            Ok(b) => b,
-            Err(padnote_storage::StorageError::Io(ref e))
+        let local_name = local_audio
+            .iter()
+            .find(|(n, _)| padnote_sync::paths::canonical_name(n) == name)
+            .map(|(n, _)| n.clone());
+        let mut bytes = match local_name.as_deref().map(|n| package.read_audio_file(n)) {
+            Some(Ok(b)) => Some(b),
+            Some(Err(padnote_storage::StorageError::Io(ref e)))
                 if e.kind() == std::io::ErrorKind::NotFound =>
             {
-                continue;
+                None
             }
-            Err(e) => return notebook_failed(format!("讀不到錄音 {name}：{e}")),
+            Some(Err(e)) => return notebook_failed(format!("讀不到錄音 {name}：{e}")),
+            None => None,
         };
-        let path = padnote_sync::paths::notebook_audio_file(notebook_id, name);
-        match upload_file(drive, existing, &path, &bytes) {
-            Ok(file_id) => {
-                if !file_id.is_empty() {
-                    index.note_upload(&path, &file_id, bytes.len() as u64);
+        if let Some(content) = bytes.as_ref() {
+            let previous = seen.insert(name.clone(), content.len() as u64);
+            if previous.is_some_and(|size| size != content.len() as u64)
+                && (content.len() as u64).saturating_sub(previous.unwrap_or(0))
+                    < AUDIO_GROWTH_THRESHOLD
+            {
+                std::thread::sleep(AUDIO_SETTLE_PROBE);
+                let stable = local_name
+                    .as_deref()
+                    .and_then(|n| package.read_audio_file(n).ok())
+                    .is_some_and(|now| now.len() == content.len());
+                if !stable {
+                    continue;
                 }
             }
-            Err(e) => return from_sync_error(e),
         }
-        uploaded += 1;
-    }
+        let mut versions = revisions.remove(&name).unwrap_or_default();
+        versions.sort_by(|a, b| {
+            (
+                a.lamport,
+                if a.lamport == 0 {
+                    a.duration_us
+                } else {
+                    a.device as u64
+                },
+                &a.hash,
+            )
+                .cmp(&(
+                    b.lamport,
+                    if b.lamport == 0 {
+                        b.duration_us
+                    } else {
+                        b.device as u64
+                    },
+                    &b.hash,
+                ))
+        });
+        let head = versions.last().cloned();
+        let logical_key = format!("{notebook_id}/{name}");
+        let local_hash = bytes
+            .as_ref()
+            .map(|b| padnote_sync::audio_revision::content_hash(b));
+        let head_hash = head.as_ref().map(|r| r.hash.clone());
+        let baseline = index.audio_head(&logical_key).map(str::to_owned);
+        let local_changed = local_hash.as_ref().is_some_and(|h| {
+            baseline.as_ref().map_or_else(
+                || head_hash.as_ref().is_some_and(|remote| h != remote),
+                |b| h != b,
+            )
+        });
+        let remote_changed = head_hash
+            .as_ref()
+            .is_some_and(|h| baseline.as_ref().is_some_and(|b| h != b));
 
-    let local_audio_sizes: std::collections::BTreeMap<String, u64> = local_audio
-        .iter()
-        .map(|(n, s)| (padnote_sync::paths::canonical_name(n), *s))
-        .collect();
-    for (name, file) in &remote_audio {
-        // **刪掉的不可以抓回來。**
-        //
-        // 原本的條件只有「遠端比本機長就下載」，而使用者刪掉之後本機是 0
-        // —— 於是每同步一次就復活一次。刪除是明確的事件（墓碑），不是
-        // 從「檔案不見了」推論出來的。
-        if tombstones.contains(name) {
-            // 順便把雲端那一份也收掉，否則別台每一輪都要重新判斷一次，
-            // 而且雲端會一直留著使用者以為已經刪掉的錄音。
-            if let Err(e) = drive.delete_by_id(&file.id) {
-                warnings.push(format!("刪不掉雲端的錄音 {name}：{e}"));
-            } else {
-                index.note_delete(&padnote_sync::paths::notebook_audio_file(notebook_id, name));
+        // Migrate legacy-only recordings by hashing their bytes. If local and cloud
+        // differ, retain both immutable blobs and select the longer valid recording.
+        if head.is_none() {
+            let legacy = remote_audio.get(&name);
+            let mut legacy_bytes = None;
+            if let Some(file) = legacy {
+                match download_file(drive, file) {
+                    Ok(b) => legacy_bytes = Some(b),
+                    Err(SyncError::NotFound(_)) => {}
+                    Err(e) => warnings.push(format!("下載舊錄音 {name} 失敗：{e}，將重試：{e}")),
+                }
             }
-            continue;
-        }
-        if file.size <= local_audio_sizes.get(name).copied().unwrap_or(0) {
-            continue;
-        }
-        let bytes = match download_file(drive, file) {
-            Ok(b) => b,
-            Err(SyncError::NotFound(_)) => continue,
-            Err(e) => {
-                warnings.push(format!("下載錄音 {name} 失敗：{e}，將在下一輪重試"));
-                continue;
+            if let (Some(local), Some(old)) = (bytes.as_ref(), legacy_bytes.as_ref()) {
+                if padnote_sync::audio_revision::content_hash(local)
+                    != padnote_sync::audio_revision::content_hash(old)
+                {
+                    let local_duration = padnote_audio::ogg_opus_duration_us(local).unwrap_or(0);
+                    let old_duration = padnote_audio::ogg_opus_duration_us(old).unwrap_or(0);
+                    let local_rev = padnote_sync::audio_revision::AudioRevision {
+                        recording: name.clone(),
+                        lamport: 0,
+                        device: package.device(),
+                        hash: padnote_sync::audio_revision::content_hash(local),
+                        duration_us: local_duration,
+                    };
+                    let old_rev = padnote_sync::audio_revision::AudioRevision {
+                        recording: name.clone(),
+                        lamport: 0,
+                        device: 0,
+                        hash: padnote_sync::audio_revision::content_hash(old),
+                        duration_us: old_duration,
+                    };
+                    for (rev, content) in [
+                        (local_rev.clone(), local.as_slice()),
+                        (old_rev.clone(), old.as_slice()),
+                    ] {
+                        if let Err(e) = publish_audio_revision(
+                            drive,
+                            index,
+                            notebook_id,
+                            &rev,
+                            content,
+                            &remote_objects,
+                            &remote_revisions,
+                        ) {
+                            return from_sync_error(e);
+                        }
+                        uploaded += 1;
+                    }
+                    versions = vec![local_rev, old_rev.clone()];
+                    versions.sort_by(|a, b| {
+                        (
+                            a.lamport,
+                            if a.lamport == 0 {
+                                a.duration_us
+                            } else {
+                                a.device as u64
+                            },
+                            &a.hash,
+                        )
+                            .cmp(&(
+                                b.lamport,
+                                if b.lamport == 0 {
+                                    b.duration_us
+                                } else {
+                                    b.device as u64
+                                },
+                                &b.hash,
+                            ))
+                    });
+                    if versions.last().is_some_and(|r| r.hash == old_rev.hash) {
+                        bytes = Some(old.clone());
+                        downloaded += 1;
+                    }
+                    warnings.push(format!(
+                        "舊錄音 {name} 在裝置間內容不同；兩個版本均已保留，依錄音時長選擇目前版本"
+                    ));
+                } else {
+                    let rev = padnote_sync::audio_revision::AudioRevision {
+                        recording: name.clone(),
+                        lamport: 1,
+                        device: package.device(),
+                        hash: local_hash.clone().unwrap(),
+                        duration_us: padnote_audio::ogg_opus_duration_us(local.as_slice())
+                            .unwrap_or(0),
+                    };
+                    if let Err(e) = publish_audio_revision(
+                        drive,
+                        index,
+                        notebook_id,
+                        &rev,
+                        local,
+                        &remote_objects,
+                        &remote_revisions,
+                    ) {
+                        return from_sync_error(e);
+                    }
+                    versions.push(rev);
+                    uploaded += 1;
+                }
+            } else if let Some(local) = bytes.as_ref() {
+                let rev = padnote_sync::audio_revision::AudioRevision {
+                    recording: name.clone(),
+                    lamport: 1,
+                    device: package.device(),
+                    hash: local_hash.clone().unwrap(),
+                    duration_us: padnote_audio::ogg_opus_duration_us(local).unwrap_or(0),
+                };
+                if let Err(e) = publish_audio_revision(
+                    drive,
+                    index,
+                    notebook_id,
+                    &rev,
+                    local,
+                    &remote_objects,
+                    &remote_revisions,
+                ) {
+                    return from_sync_error(e);
+                }
+                versions.push(rev);
+                uploaded += 1;
+            } else if let Some(old) = legacy_bytes {
+                let rev = padnote_sync::audio_revision::AudioRevision {
+                    recording: name.clone(),
+                    lamport: 1,
+                    device: 0,
+                    hash: padnote_sync::audio_revision::content_hash(&old),
+                    duration_us: padnote_audio::ogg_opus_duration_us(&old).unwrap_or(0),
+                };
+                if let Err(e) = publish_audio_revision(
+                    drive,
+                    index,
+                    notebook_id,
+                    &rev,
+                    &old,
+                    &remote_objects,
+                    &remote_revisions,
+                ) {
+                    return from_sync_error(e);
+                }
+                bytes = Some(old);
+                versions.push(rev);
+                downloaded += 1;
             }
-        };
-        if let Err(e) = package.write_audio_file(name, &bytes) {
-            return notebook_failed(format!("寫不進錄音 {name}：{e}"));
+        } else if let Some(current) = head.as_ref() {
+            if local_hash.as_deref() != Some(current.hash.as_str()) && !local_changed {
+                let object_name = format!("{}.opus", current.hash);
+                if let Some(file) = remote_objects.get(&object_name) {
+                    match download_file(drive, file) {
+                        Ok(content)
+                            if padnote_sync::audio_revision::content_hash(&content)
+                                == current.hash =>
+                        {
+                            bytes = Some(content);
+                            downloaded += 1;
+                        }
+                        Ok(_) => warnings.push(format!("錄音版本 {name} 內容雜湊不符，略過並重試")),
+                        Err(e) => warnings.push(format!("下載錄音版本 {name} 失敗：{e}，將重試")),
+                    }
+                } else {
+                    warnings.push(format!("找不到錄音版本物件 {name}，將重試"));
+                }
+            } else if local_hash.as_deref() != Some(current.hash.as_str())
+                && local_changed
+                && !remote_changed
+                && !versions
+                    .iter()
+                    .any(|rev| Some(rev.hash.as_str()) == local_hash.as_deref())
+            {
+                if let Some(content) = bytes.as_ref() {
+                    let next = padnote_sync::audio_revision::AudioRevision {
+                        recording: name.clone(),
+                        lamport: versions.iter().map(|v| v.lamport).max().unwrap_or(0) + 1,
+                        device: package.device(),
+                        hash: local_hash.clone().unwrap(),
+                        duration_us: padnote_audio::ogg_opus_duration_us(content).unwrap_or(0),
+                    };
+                    if let Err(e) = publish_audio_revision(
+                        drive,
+                        index,
+                        notebook_id,
+                        &next,
+                        content,
+                        &remote_objects,
+                        &remote_revisions,
+                    ) {
+                        return from_sync_error(e);
+                    }
+                    versions.push(next);
+                    uploaded += 1;
+                }
+            } else if local_hash.as_deref() != Some(current.hash.as_str())
+                && local_changed
+                && remote_changed
+                && !versions
+                    .iter()
+                    .any(|rev| Some(rev.hash.as_str()) == local_hash.as_deref())
+            {
+                // Concurrent offline edits: preserve local as a new immutable event;
+                // the deterministic Lamport/device order decides the converged head.
+                if let Some(content) = bytes.as_ref() {
+                    let next = padnote_sync::audio_revision::AudioRevision {
+                        recording: name.clone(),
+                        lamport: versions.iter().map(|v| v.lamport).max().unwrap_or(0) + 1,
+                        device: package.device(),
+                        hash: local_hash.clone().unwrap(),
+                        duration_us: padnote_audio::ogg_opus_duration_us(content).unwrap_or(0),
+                    };
+                    if let Err(e) = publish_audio_revision(
+                        drive,
+                        index,
+                        notebook_id,
+                        &next,
+                        content,
+                        &remote_objects,
+                        &remote_revisions,
+                    ) {
+                        return from_sync_error(e);
+                    }
+                    versions.push(next);
+                    uploaded += 1;
+                }
+            }
         }
-        downloaded += 1;
+        versions.sort_by(|a, b| {
+            (
+                a.lamport,
+                if a.lamport == 0 {
+                    a.duration_us
+                } else {
+                    a.device as u64
+                },
+                &a.hash,
+            )
+                .cmp(&(
+                    b.lamport,
+                    if b.lamport == 0 {
+                        b.duration_us
+                    } else {
+                        b.device as u64
+                    },
+                    &b.hash,
+                ))
+        });
+        if let Some(winner) = versions.last() {
+            if bytes
+                .as_ref()
+                .is_some_and(|b| padnote_sync::audio_revision::content_hash(b) != winner.hash)
+            {
+                let object_name = format!("{}.opus", winner.hash);
+                if let Some(file) = remote_objects.get(&object_name) {
+                    if let Ok(content) = download_file(drive, file) {
+                        if padnote_sync::audio_revision::content_hash(&content) == winner.hash {
+                            bytes = Some(content);
+                            downloaded += 1;
+                        } else {
+                            warnings.push(format!("錄音版本 {name} 驗證失敗"));
+                        }
+                    }
+                }
+            }
+            if let Some(content) = bytes.as_ref() {
+                if padnote_sync::audio_revision::content_hash(content) == winner.hash {
+                    if let Some(local_name) = local_name.as_deref() {
+                        if local_hash.as_deref() != Some(winner.hash.as_str()) {
+                            if let Err(e) = package.write_audio_file(local_name, content) {
+                                return notebook_failed(format!("寫不進錄音 {name}：{e}"));
+                            }
+                        }
+                    } else if let Err(e) = package.write_audio_file(&name, content) {
+                        return notebook_failed(format!("寫不進錄音 {name}：{e}"));
+                    }
+                    index.set_audio_head(&logical_key, &winner.hash);
+                    let alias = padnote_sync::paths::notebook_audio_file(notebook_id, &name);
+                    if index.audio_alias(&logical_key) != Some(winner.hash.as_str()) {
+                        match upload_file(drive, remote_audio.get(&name), &alias, content) {
+                            Ok(id) => {
+                                if !id.is_empty() {
+                                    index.note_upload(&alias, &id, content.len() as u64);
+                                }
+                                index.set_audio_alias(&logical_key, &winner.hash);
+                                uploaded += 1;
+                            }
+                            Err(e) => return from_sync_error(e),
+                        }
+                    }
+                }
+            }
+        }
     }
 
     FfiNotebookSyncResult {
@@ -1085,6 +1386,48 @@ fn sync_notebook_media(
         needs_reauth: false,
         warnings,
     }
+}
+
+fn publish_audio_revision(
+    drive: &GDriveProvider<ForeignHttp>,
+    index: &mut RemoteIndex,
+    notebook_id: &str,
+    revision: &padnote_sync::audio_revision::AudioRevision,
+    bytes: &[u8],
+    remote_objects: &std::collections::BTreeMap<String, RemoteFile>,
+    remote_revisions: &std::collections::BTreeMap<String, RemoteFile>,
+) -> Result<(), SyncError> {
+    use padnote_sync::audio_revision::content_hash;
+    if content_hash(bytes) != revision.hash {
+        return Err(SyncError::Backend("錄音版本雜湊不符".into()));
+    }
+    let object_name = format!("{}.opus", revision.hash);
+    let object_path = padnote_sync::paths::notebook_audio_object_file(notebook_id, &revision.hash);
+    // Reuse files uploaded earlier in this same sync run too. The initial remote
+    // map is intentionally a snapshot and does not include our own new uploads.
+    let object = remote_objects
+        .get(&object_name)
+        .or_else(|| index.get(&object_path));
+    let object_is_valid = if let Some(file) = object {
+        download_file(drive, file).is_ok_and(|remote| content_hash(&remote) == revision.hash)
+    } else {
+        false
+    };
+    if !object_is_valid {
+        let id = upload_file(drive, object, &object_path, bytes)?;
+        if !id.is_empty() {
+            index.note_upload(&object_path, &id, bytes.len() as u64);
+        }
+    }
+    let marker_name = revision.marker_name();
+    let marker_path = padnote_sync::paths::notebook_audio_revision_file(notebook_id, &marker_name);
+    if !remote_revisions.contains_key(&padnote_sync::paths::canonical_name(&marker_name))
+        && index.get(&marker_path).is_none()
+    {
+        let id = drive.create_and_upload(&marker_path, b"")?;
+        index.note_upload(&marker_path, &id, 0);
+    }
+    Ok(())
 }
 
 /// 同步一本筆記本的媒體檔。**只有測試在用**，正式路徑走
@@ -1098,7 +1441,14 @@ fn gdrive_sync_media(
     let drive = GDriveProvider::new(ForeignHttp(http));
     let mut index = RemoteIndex::default();
     let mut seen = SeenSizes::new();
-    sync_notebook_media(&drive, &mut index, &mut seen, &package_path, &notebook_id)
+    sync_notebook_media(
+        &drive,
+        &mut index,
+        &mut seen,
+        &package_path,
+        &notebook_id,
+        0,
+    )
 }
 
 /// 把一本**只存在於雲端**的筆記本抓下來。
@@ -1164,7 +1514,14 @@ fn gdrive_clone_notebook(
     // 媒體接在 oplog 與 ink 之後，理由與平台那一側相同：oplog 裡的 AddImage 會指向
     // 一個 blob id，媒體還沒到的話那一頁是一個指向不存在檔案的圖片區塊。
     let mut seen = SeenSizes::new();
-    let media = sync_notebook_media(&drive, &mut index, &mut seen, &package_path, &notebook_id);
+    let media = sync_notebook_media(
+        &drive,
+        &mut index,
+        &mut seen,
+        &package_path,
+        &notebook_id,
+        0,
+    );
     let mut warnings = ink.warnings;
     warnings.extend(media.warnings);
     FfiNotebookSyncResult {
@@ -1917,6 +2274,7 @@ impl FfiSyncSession {
             &mut seen,
             &package_path,
             &notebook_id,
+            device_id,
         );
         let mut warnings = ink.warnings;
         warnings.extend(media.warnings);
@@ -1996,6 +2354,7 @@ impl FfiSyncSession {
                 &mut seen,
                 &package_path,
                 &notebook_id,
+                0,
             )
         };
         let mut warnings = ink.warnings;
@@ -2227,6 +2586,11 @@ fn sync_fingerprint(index: &RemoteIndex, package_path: &str, notebook_id: &str) 
     let mut audio = package.audio_files().ok()?;
     audio.sort();
     audio.hash(&mut hasher);
+    for (name, _) in &audio {
+        if let Ok(bytes) = package.read_audio_file(name) {
+            padnote_sync::audio_revision::content_hash(&bytes).hash(&mut hasher);
+        }
+    }
     let mut blobs: Vec<String> = package
         .blobs()
         .list()
@@ -2256,6 +2620,8 @@ fn sync_fingerprint(index: &RemoteIndex, package_path: &str, notebook_id: &str) 
         notebook_ops_prefix(notebook_id),
         padnote_sync::paths::notebook_ink_prefix(notebook_id),
         padnote_sync::paths::notebook_audio_prefix(notebook_id),
+        padnote_sync::paths::notebook_audio_revisions_prefix(notebook_id),
+        padnote_sync::paths::notebook_audio_objects_prefix(notebook_id),
         padnote_sync::paths::notebook_blobs_prefix(notebook_id),
         padnote_sync::media_tombstone::tombstones_prefix(notebook_id),
     ] {
@@ -2279,6 +2645,7 @@ fn notebook_differs(index: &RemoteIndex, package_path: &str, notebook_id: &str) 
     else {
         return true;
     };
+    let tombstones = merged_tombstones(&package);
     if differs(
         &package.doc_op_files().unwrap_or_default(),
         &index.entries_under(&notebook_ops_prefix(notebook_id)),
@@ -2296,6 +2663,75 @@ fn notebook_differs(index: &RemoteIndex, package_path: &str, notebook_id: &str) 
         &index.entries_under(&padnote_sync::paths::notebook_audio_prefix(notebook_id)),
     ) {
         return true;
+    }
+    // Audio heads are compared by content identity, never file size. This catches
+    // equal-length re-encodes and remote changes hidden behind an unchanged alias.
+    let revisions = index.entries_under(&padnote_sync::paths::notebook_audio_revisions_prefix(
+        notebook_id,
+    ));
+    let mut remote_heads: std::collections::BTreeMap<
+        String,
+        padnote_sync::audio_revision::AudioRevision,
+    > = Default::default();
+    for marker in revisions.keys() {
+        if let Some(rev) = padnote_sync::audio_revision::AudioRevision::parse(marker) {
+            let key = padnote_sync::paths::canonical_name(&rev.recording);
+            if tombstones.contains(&key) {
+                continue;
+            }
+            let replace = remote_heads.get(&key).is_none_or(|old| {
+                (
+                    rev.lamport,
+                    if rev.lamport == 0 {
+                        rev.duration_us
+                    } else {
+                        rev.device as u64
+                    },
+                    &rev.hash,
+                ) > (
+                    old.lamport,
+                    if old.lamport == 0 {
+                        old.duration_us
+                    } else {
+                        old.device as u64
+                    },
+                    &old.hash,
+                )
+            });
+            if replace {
+                remote_heads.insert(key, rev);
+            }
+        }
+    }
+    for (recording, rev) in &remote_heads {
+        if tombstones.contains(recording) {
+            continue;
+        }
+        let key = format!("{notebook_id}/{recording}");
+        if index.audio_head(&key) != Some(rev.hash.as_str()) {
+            return true;
+        }
+    }
+    for (name, _) in package.audio_files().unwrap_or_default() {
+        if tombstones.contains(&name) {
+            continue;
+        }
+        let Ok(bytes) = package.read_audio_file(&name) else {
+            return true;
+        };
+        let hash = padnote_sync::audio_revision::content_hash(&bytes);
+        let key = format!(
+            "{notebook_id}/{}",
+            padnote_sync::paths::canonical_name(&name)
+        );
+        if index
+            .audio_head(&key)
+            .is_some_and(|baseline| baseline != hash)
+            || (index.audio_head(&key).is_none()
+                && !remote_heads.contains_key(&padnote_sync::paths::canonical_name(&name)))
+        {
+            return true;
+        }
     }
     // blob 是內容定址的，只看名字在不在。
     let local_blobs: std::collections::BTreeSet<String> = package

@@ -7,6 +7,7 @@
 //!
 //! ⇒ **檔案層級衝突在數學上不可能發生**（Dropbox/iCloud 的 "conflicted copy"）。
 
+pub mod audio_revision;
 pub mod audit;
 pub mod engine;
 pub mod focus;
