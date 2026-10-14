@@ -263,6 +263,7 @@ class InkEngineTest {
             touch(MotionEvent.ACTION_MOVE, MotionEvent.TOOL_TYPE_STYLUS, 30f, 4f, 1_016L),
             touch(MotionEvent.ACTION_UP, MotionEvent.TOOL_TYPE_STYLUS, 40f, 4f, 1_024L)
         )
+        assertTrue("筆畫寫入佇列應完成", InkPackageWriter.awaitIdleBlocking())
 
         val reopened = PadnoteSession.openExisting(path, 0xB0u)
         val details = reopened.visibleStrokeDetails(pageId)

@@ -32,6 +32,12 @@ class DraftingEditTest {
     fun setUp() {
         val ctx = InstrumentationRegistry.getInstrumentation().targetContext
         DraftingState.attach(ctx)
+        // 這個 controller 是 process-wide。其他製圖測試留下的尺規／工具狀態
+        // 會攔截合成 MotionEvent，造成線段少畫或編輯命中錯誤。
+        DraftingState.removeInstrument()
+        DraftingState.reassignMode = false
+        DraftingState.markerMode = false
+        DraftingState.editSelection = emptyList()
         DraftingState.use("edit-test-${System.nanoTime()}")
         DraftingState.changeAlign(false)
         DraftingState.selectTool(DraftTool.NONE)
@@ -46,6 +52,10 @@ class DraftingEditTest {
 
     @After
     fun tearDown() {
+        DraftingState.removeInstrument()
+        DraftingState.reassignMode = false
+        DraftingState.markerMode = false
+        DraftingState.editSelection = emptyList()
         DraftingState.changeAlign(true)
         DraftingState.selectTool(DraftTool.NONE)
         dir.deleteRecursively()
@@ -63,6 +73,7 @@ class DraftingEditTest {
         clock += 30
         engine.onMotionEvent(touch(MotionEvent.ACTION_UP, x, y), 1f)
         clock += 30
+        assertTrue("編輯筆畫寫入佇列應完成", InkPackageWriter.awaitIdleBlocking())
     }
 
     /** 畫一條直線（頂層、製圖筆）。 */
@@ -76,6 +87,7 @@ class DraftingEditTest {
         clock += 12
         engine.onMotionEvent(touch(MotionEvent.ACTION_UP, x1, y1), 1f)
         clock += 40
+        assertTrue("筆畫寫入佇列應完成", InkPackageWriter.awaitIdleBlocking())
     }
 
     private fun use(tool: DraftTool) {
@@ -218,6 +230,7 @@ class DraftingEditTest {
         assertEquals("預覽不算內容", 1, engine.strokes.size)
         clock += 20
         engine.onMotionEvent(touch(MotionEvent.ACTION_UP, 400f, 260f), 1f)
+        assertTrue("鏡射筆畫寫入佇列應完成", InkPackageWriter.awaitIdleBlocking())
         assertEquals("原件留著、多一份鏡射", 2, engine.strokes.size)
         val m = engine.strokes.last()
         assertEquals("鏡射過 x=400：100→700、200→600", 600f, xs(m).min(), 0.8f)
@@ -243,6 +256,7 @@ class DraftingEditTest {
         line(100f, 100f, 160f, 100f)
         DraftingState.editSelection = engine.strokes.mapNotNull { it.coreStrokeId }
         val n = DraftEditController.applyRectArray(2, 3, 30.0, 20.0, engine)
+        assertTrue("陣列筆畫寫入佇列應完成", InkPackageWriter.awaitIdleBlocking())
         assertEquals(5, n)
         assertEquals(6, engine.strokes.size)
         val unit = uniffi.padnote_core.draftUnitsPerMm()

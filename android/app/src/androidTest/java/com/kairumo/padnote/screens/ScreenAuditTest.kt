@@ -206,6 +206,12 @@ class ScreenAuditTest {
         // 查 `SeedNotebooks`（實際發生過：查了 NDK、查了 .so 版本、查了
         // 種子邏輯，全部沒問題）。上面 `audit()` 那一段早就把同一件事
         // 寫清楚了，這裡卻漏了 —— 整份稽核裡唯一沒捲的就是這一步。
+        compose.waitUntil(timeoutMillis = 60_000) {
+            compose.onAllNodes(SemanticsMatcher("testTag 以 home.notebooks.card. 開頭") { node ->
+                node.config.getOrNull(SemanticsProperties.TestTag)
+                    ?.startsWith("home.notebooks.card.") == true
+            }).fetchSemanticsNodes().isNotEmpty()
+        }
         val matcher = SemanticsMatcher("testTag 以 home.notebooks.card. 開頭") { node ->
             node.config.getOrNull(SemanticsProperties.TestTag)
                 ?.startsWith("home.notebooks.card.") == true
@@ -245,6 +251,16 @@ class ScreenAuditTest {
         skipOnboarding()
         ActivityScenario.launch(MainActivity::class.java).use {
             compose.waitForIdle()
+            if (screen == "home") {
+                // Seeds are created on Dispatchers.IO after the first composition;
+                // waitForIdle only waits for Compose work, not that package creation.
+                compose.waitUntil(timeoutMillis = 60_000) {
+                    compose.onAllNodes(SemanticsMatcher("home notebook card") { node ->
+                        node.config.getOrNull(SemanticsProperties.TestTag)
+                            ?.startsWith("home.notebooks.card.") == true
+                    }).fetchSemanticsNodes().isNotEmpty()
+                }
+            }
             navigate()
             compose.waitForIdle()
 
