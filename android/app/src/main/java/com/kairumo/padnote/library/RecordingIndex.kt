@@ -83,9 +83,15 @@ object RecordingIndex {
      *
      * `limit` 是上限；首頁只放得下幾筆，全部撈出來只是白掃。
      */
-    fun recent(context: Context, deviceId: UInt, limit: Int = 20): List<Recording> {
+    fun recent(
+        context: Context,
+        deviceId: UInt,
+        limit: Int = 20,
+        notebooks: List<NotebookLibrary.Entry>? = null
+    ): List<Recording> {
         val inboxId = uniffi.padnote_core.recordingInboxNotebookId()
-        val allEntries = NotebookLibrary.all(context, deviceId, folderId = NotebookLibrary.ANY_FOLDER)
+        val allEntries = notebooks
+            ?: NotebookLibrary.all(context, deviceId, folderId = NotebookLibrary.ANY_FOLDER)
         val inboxDir = File(NotebookLibrary.directory(context), "$inboxId.${NotebookLibrary.EXTENSION}")
         val searchEntries = if (inboxDir.exists() && inboxDir.isDirectory) {
             val inboxEntry = NotebookLibrary.Entry(

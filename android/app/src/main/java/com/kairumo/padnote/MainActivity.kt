@@ -490,11 +490,24 @@ private fun NotebookHome(
     // 放在這裡而不是 `NotebookLibrary.currentOrCreate`：那條路只有「直接開一本」
     // 才會走到，從首頁進來的使用者看到的會是空清單。已經有東西就什麼也不做 ——
     // 見 `SeedNotebooks.seedIfEmpty`。
-    val seeded = remember { SeedNotebooks.seedIfEmpty(activity, device, lang) }
-
-    // 搜尋要搜整個筆記庫，不是只搜眼前這一層。
-    val allEntries = remember(revision, sort, seeded) {
-        NotebookLibrary.all(activity, device, sort)
+    // 範例修復、筆記本核心重播和錄音索引讀取都可能很慢；不要在 Compose 主執行緒開啟套件。
+    var seedGeneration by remember { mutableIntStateOf(-1) }
+    var allEntries by remember { mutableStateOf(emptyList<NotebookLibrary.Entry>()) }
+    var recordings by remember { mutableStateOf(emptyList<RecordingIndex.Recording>()) }
+    LaunchedEffect(Unit) {
+        seedGeneration = withContext(Dispatchers.IO) {
+            SeedNotebooks.seedIfEmpty(activity, device, lang)
+        }
+    }
+    LaunchedEffect(revision, sort, seedGeneration) {
+        if (seedGeneration < 0) return@LaunchedEffect
+        val loaded = withContext(Dispatchers.IO) {
+            val notebooks = NotebookLibrary.all(activity, device, sort)
+            val recentRecordings = RecordingIndex.recent(activity, device, notebooks = notebooks)
+            notebooks to recentRecordings
+        }
+        allEntries = loaded.first
+        recordings = loaded.second
     }
     // 搬移對話框要列出**全部**資料夾，不是只有這一層的。
     val allFolders = remember(revision) { FolderTree.all(activity) }
@@ -513,9 +526,6 @@ private fun NotebookHome(
     }
     val folders = remember(revision, folderId) { FolderTree.subfolders(activity, folderId) }
     val breadcrumb = remember(revision, folderId) { FolderTree.pathTo(activity, folderId) }
-    // 掃整個筆記本目錄，所以不要每次重組都做 —— 綁在 revision 上就好。
-    val recordings = remember(revision) { RecordingIndex.recent(activity, device) }
-
     // 同步都在背景執行緒跑，共用同一個 scope。宣告要在第一個使用點之前 ——
     // Compose 的函式本體是由上往下讀的。
     val autoSyncScope = rememberCoroutineScope()
