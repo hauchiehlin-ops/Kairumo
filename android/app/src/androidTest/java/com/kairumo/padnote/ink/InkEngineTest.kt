@@ -292,6 +292,7 @@ class InkEngineTest {
             engine,
             touch(MotionEvent.ACTION_DOWN, MotionEvent.TOOL_TYPE_STYLUS, 100f, 4f, 1_100L, pointerId = 1)
         )
+        assertTrue("收回筆畫寫入佇列應完成", InkPackageWriter.awaitIdleBlocking())
 
         val reopened = PadnoteSession.openExisting(path, 0xB1u)
         assertEquals(
