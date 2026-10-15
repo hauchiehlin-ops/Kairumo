@@ -384,12 +384,14 @@ final class RecordingTitleInPackageTests: XCTestCase {
         defer { ProfileDefaults.current.removeObject(forKey: NotebookStore.retiredSamplesKey) }
         store.noteSampleOpened(id)
         store.notebooks[0].textAttachments = [NoteTextAttachment(pageIndex: 0, text: "我加的字")]
+        // 範例的名字隨介面語言翻譯（CI 是英文）：轉換後固定成「轉換當下看到的那個名字」。
+        let shownTitle = store.notebooks[0].displayTitle()
         store.promoteSampleIfEdited(id)
 
         let promoted = store.notebooks.first
         XCTAssertNotNil(promoted)
         XCTAssertFalse(NotebookPackageBridge.isDeviceLocalSeed(promoted?.id ?? id), "要換成會同步的一般 id")
-        XCTAssertEqual(promoted?.title, "歡迎使用 Kairumo")
+        XCTAssertEqual(promoted?.title, shownTitle)
         XCTAssertNil(promoted?.titleKey, "名字固定下來，不再被當成範例翻譯／重設")
         XCTAssertEqual(promoted?.folderId, "folder-intro", "資料夾不變")
         XCTAssertEqual(promoted?.textAttachments?.first?.text, "我加的字")
