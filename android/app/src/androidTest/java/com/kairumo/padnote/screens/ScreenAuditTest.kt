@@ -206,13 +206,20 @@ class ScreenAuditTest {
         // 查 `SeedNotebooks`（實際發生過：查了 NDK、查了 .so 版本、查了
         // 種子邏輯，全部沒問題）。上面 `audit()` 那一段早就把同一件事
         // 寫清楚了，這裡卻漏了 —— 整份稽核裡唯一沒捲的就是這一步。
+        val listMatcher = hasTestTag("home.notebooks.list")
         val matcher = SemanticsMatcher("testTag 以 home.notebooks.card. 開頭") { node ->
             node.config.getOrNull(SemanticsProperties.TestTag)
                 ?.startsWith("home.notebooks.card.") == true
         }
-        // LazyColumn 只會組合視窗內可見項目；種子筆記在折線下方，必須在等待過程中嘗試捲動
-        compose.waitUntil(timeoutMillis = 20_000) {
+        // LazyColumn 只會組合視窗內可見項目；種子筆記在折線下方，必須在等待過程中嘗試捲動。
+        // CI 全新冷啟動時首個測試需在背景建立種子筆記包，寬限至 60 秒。
+        compose.waitUntil(timeoutMillis = 60_000) {
             if (compose.onAllNodes(matcher).fetchSemanticsNodes().isEmpty()) {
+                runCatching {
+                    compose.onNodeWithTag("home.scroll")
+                        .performScrollToNode(listMatcher)
+                    compose.waitForIdle()
+                }
                 runCatching {
                     compose.onNodeWithTag("home.scroll")
                         .performScrollToNode(matcher)
@@ -254,7 +261,7 @@ class ScreenAuditTest {
                 // waitForIdle only waits for Compose work, not that package creation.
                 // 捲動等待 LazyColumn 的項目組合完成。
                 val listMatcher = hasTestTag("home.notebooks.list")
-                compose.waitUntil(timeoutMillis = 20_000) {
+                compose.waitUntil(timeoutMillis = 60_000) {
                     if (compose.onAllNodes(listMatcher, useUnmergedTree = true).fetchSemanticsNodes().isEmpty()) {
                         runCatching {
                             compose.onNodeWithTag("home.scroll")
