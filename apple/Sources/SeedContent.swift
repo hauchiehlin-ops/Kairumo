@@ -272,15 +272,25 @@ enum SeedContent {
         )
     }
 
-    // MARK: - 頁面
-
-    /// 補足空白頁。`pagesData` 每一頁一筆，少一筆那一頁就開不起來。
+    /// 確保範例筆記的頁面規格嚴格收斂至標準頁數。
     private static func ensurePages(_ doc: inout NotebookDocument, count: Int) {
         let empty = PKDrawing().dataRepresentation()
         while doc.pagesData.count < count {
             doc.pagesData.append(empty)
         }
-        doc.pageCount = max(doc.pageCount, count)
+        if doc.pagesData.count > count {
+            doc.pagesData = Array(doc.pagesData.prefix(count))
+        }
+        if let heights = doc.pageHeights, heights.count > count {
+            doc.pageHeights = Array(heights.prefix(count))
+        }
+        if let papers = doc.pagePaperIds, papers.count > count {
+            doc.pagePaperIds = Array(papers.prefix(count))
+        }
+        if let pids = doc.pageIds, pids.count > count {
+            doc.pageIds = Array(pids.prefix(count))
+        }
+        doc.pageCount = count
     }
 
     // MARK: - 《Kairumo手冊》：全部用手繪筆畫完成

@@ -9,6 +9,9 @@ final class SeedNotebookSyncTests: XCTestCase {
             .appendingPathComponent("kairumo-seed-tests-\(UUID().uuidString)")
         let store = NotebookStore(testDocumentsRoot: dir)
         store.loadData()
+        if store.notebooks.isEmpty {
+            store.seedDefaultNotebooks()
+        }
         store.backfillEmptySeedNotebooks()
         return store
     }
@@ -101,6 +104,35 @@ final class SeedNotebookSyncTests: XCTestCase {
             let ids = (doc.textAttachments ?? []).map(\.id) + (doc.shapeAttachments ?? []).map(\.id)
             XCTAssertEqual(ids.count, Set(ids).count, "\(doc.id) 有重複的物件 id")
         }
+    }
+
+    /// 驗證若「歡迎使用Kairumo」被膨脹成 9 頁、「課堂與會議記錄」被膨脹成 15 頁，自癒能收斂回 3 頁並重整確定性 ID
+    func testInflatedMeetingAndWelcomeNotebooksAreHealedToStandardCounts() throws {
+        let store = makeStore()
+        let welcomeIdx = try XCTUnwrap(store.notebooks.firstIndex { $0.id == "seed-welcome-notebook-v1" })
+        let meetingIdx = try XCTUnwrap(store.notebooks.firstIndex { $0.id == "seed-meeting-notebook-v1" })
+
+        // 模擬跨裝置 CRDT 膨脹成 9 頁與 15 頁
+        store.notebooks[welcomeIdx].pageCount = 9
+        store.notebooks[welcomeIdx].pagesData = Array(repeating: Data(), count: 9)
+        store.notebooks[welcomeIdx].pageIds = (0..<9).map { _ in UUID().uuidString.lowercased() }
+
+        store.notebooks[meetingIdx].pageCount = 15
+        store.notebooks[meetingIdx].pagesData = Array(repeating: Data(), count: 15)
+        store.notebooks[meetingIdx].pageIds = (0..<15).map { _ in UUID().uuidString.lowercased() }
+
+        let didHeal = store.healInflatedSeedNotebooksIfNeeded()
+        XCTAssertTrue(didHeal, "應該觸發自癒修復")
+
+        let healedWelcome = try XCTUnwrap(store.notebooks.first { $0.id == "seed-welcome-notebook-v1" })
+        XCTAssertEqual(healedWelcome.pageCount, 3, "歡迎筆記應收斂回標準 3 頁")
+        XCTAssertEqual(healedWelcome.pagesData.count, 3)
+        XCTAssertEqual(healedWelcome.pageIds, NotebookPackageBridge.deterministicSeedPageIds(for: "seed-welcome-notebook-v1"))
+
+        let healedMeeting = try XCTUnwrap(store.notebooks.first { $0.id == "seed-meeting-notebook-v1" })
+        XCTAssertEqual(healedMeeting.pageCount, 3, "會議記錄應收斂回標準 3 頁")
+        XCTAssertEqual(healedMeeting.pagesData.count, 3)
+        XCTAssertEqual(healedMeeting.pageIds, NotebookPackageBridge.deterministicSeedPageIds(for: "seed-meeting-notebook-v1"))
     }
 }
 
