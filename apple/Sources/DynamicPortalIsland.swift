@@ -188,6 +188,9 @@ public struct DynamicPortalIsland: View {
                     .clipShape(Capsule())
                 }
                 .buttonStyle(.plain)
+                // 編輯中的模式島只剩這顆鈕（`portal.draw`／`portal.type` 不在畫面上），
+                // 介面測試要靠它離開編輯。
+                .accessibilityIdentifier("portal.exit_contextual")
             }
         }
         .padding(.horizontal, 8)

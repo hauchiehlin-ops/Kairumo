@@ -847,7 +847,9 @@ final class AdaptiveCanvasView: PKCanvasView {
         guard max > 0, let manager = undoManager, !manager.isUndoing, !manager.isRedoing else { return 0 }
         let coordinator = delegate as? CanvasRepresentable.Coordinator
         var dropped = 0
-        while dropped < max, manager.canUndo {
+        // 堆疊頂端是物件的復原項（CanvasObjectHistory）就停：那不是筆畫，「復原一次看畫面有沒有變」
+        // 的判斷對它不成立，會把使用者真正的一步（例如搬圖）當成失效項吃掉。
+        while dropped < max, manager.canUndo, manager.undoActionName != CanvasObjectHistory.actionName {
             let before = drawing
             coordinator?.isProgrammaticUpdate = true
             manager.undo()
@@ -1594,7 +1596,8 @@ struct CanvasRepresentable: UIViewRepresentable {
             defer { isProgrammaticUpdate = false }
             let before = canvas.drawing
             if let manager = canvas.undoManager, manager.canUndo,
-               !manager.isUndoing, !manager.isRedoing {
+               !manager.isUndoing, !manager.isRedoing,
+               manager.undoActionName != CanvasObjectHistory.actionName {
                 manager.undo()
                 if canvas.drawing.strokes.count == before.strokes.count - 1 {
                     canvas.drawing = resulting
@@ -2163,11 +2166,38 @@ public struct NotebookEditorView: View {
     @State private var editingTextId: String? = nil
     /// 隨點隨打就地輸入狀態（連動 TextAttachmentItemView 的焦點與鍵盤）
     @State private var inlineEditingTextId: String? = nil
+    /// 打字工具列「正在格式化哪一個方塊」。
+    ///
+    /// 只靠 `inlineEditingTextId` 不夠：Mac 上一按工具列的按鈕，文字欄位在
+    /// 滑鼠按下那一刻就交出焦點 → 就地編輯結束 → `inlineEditingTextId` 變 nil，
+    /// 等到按鈕的動作真正執行時，目標已經不見了。以前的退路是「這一頁第一個
+    /// 文字方塊」—— 所以字級、清單符號時好時壞，而且常常改到頁首的標題方塊。
+    /// 這個值只在使用者明確換目標（點別的物件、點空白處、換頁、換模式）時才清掉。
+    @State private var textFormatTargetId: String? = nil
+    /// 焦點是「被工具列搶走」而不是使用者主動結束：格式套用完要把游標還回去。
+    @State private var suspendedInlineTextId: String? = nil
+    /// 就地編輯的選取範圍。用 `@State` 持有參考而**不訂閱** —— 游標每動一下都會發布，
+    /// 整個編輯器跟著重算會很卡；只有工具列訂閱它。
+    @State private var textSelectionTracker = TextSelectionTracker()
+    /// 沒有任何文字方塊可套用時，工具列改的是下一個新方塊的樣式
+    /// （Word 的「插入點格式」），而不是憑空在頁面上生出一個方塊。
+    @State private var pendingTypingStyle = NoteTextAttachment(
+        id: "pending-typing-style", text: "", backgroundColorHex: "clear", hasBorder: false)
     @State private var lastAddedTextId: String? = nil
     // 文字復原/重做堆疊（供文字模式與文字框使用）
-    @State private var textUndoStack: [[NoteTextAttachment]] = []
-    @State private var textRedoStack: [[NoteTextAttachment]] = []
-    @State private var lastTextUndoTimestamp: Date = .distantPast
+    /// 畫布物件（圖片、文字方塊、形狀、表格…）的復原紀錄，與筆跡登記在同一個 `UndoManager`
+    /// 上 —— 一次復原就照發生的先後退回，不分是筆跡還是物件（見 `CanvasHistory.swift`）。
+    @State private var objectHistory = CanvasObjectHistory()
+    /// 即時協同的物件合併（欄位層級 LWW，見 `CollabSync.swift`）。參考型別、不訂閱。
+    @State private var collabSync = CollabObjectSync()
+    /// 每一頁已經同步過的筆畫 id（逐筆增刪的比對基準）。
+    @State private var collabInkLedger = CollabInkLedger()
+    /// 文字方塊內容的字元 CRDT（兩人同時在同一個方塊打字，設計 §8.3）。
+    @State private var collabTextHub = CollabTextHub()
+    /// 加入房間、補發不完整時的整份狀態往來（設計 §7）。
+    @State private var collabStateSync = CollabStateSync()
+    /// 畫布還沒掛上視窗時的備用（正常情況下用畫布的 `undoManager`）。
+    @State private var fallbackUndoManager = UndoManager()
     @ObservedObject private var watchdog = InteractionWatchdog.shared
 
 
@@ -2219,6 +2249,8 @@ public struct NotebookEditorView: View {
     @State private var isMarqueeActive: Bool = false
     @State private var marqueeStart: CGPoint? = nil
     @State private var marqueeCurrent: CGPoint? = nil
+    /// 連續框選：新框到的、點到的物件加進選取，不取代原本的（見 `ObjectMarquee.combined`）。
+    @State private var marqueeAdditive: Bool = false
     @State private var selectedObjectIds: Set<String> = []
     /// 已知的物件 id，用來認出「剛插入的」。`nil` 代表尚未建立基準（開啟筆記當下）。
     @State private var knownObjectIds: Set<String>? = nil
@@ -2524,6 +2556,10 @@ public struct NotebookEditorView: View {
                         canvasWorkArea
                             .frame(minWidth: 0, maxWidth: .infinity)
                             .clipped()
+                            // 「頁面置中」指的是置中在**這一塊**（側欄右邊剩下的空間），
+                            // 不是整個視窗 —— 介面測試要量得到它。
+                            .accessibilityElement(children: .contain)
+                            .accessibilityIdentifier("editor.workspace")
                     }
                     .onAppear { editorAvailableWidth = geo.size.width }
                     .onChange(of: geo.size.width) { newValue in
@@ -2563,6 +2599,10 @@ public struct NotebookEditorView: View {
                 guard let index = note.object as? Int,
                       EditorToolType.shortcutOrder.indices.contains(index) else { return }
                 selectEditorTool(EditorToolType.shortcutOrder[index])
+            }
+            .onReceive(NotificationCenter.default.publisher(for: AppCommand.textFormat)) { note in
+                guard let command = note.object as? TextFormatCommand else { return }
+                handleTextFormatCommand(command)
             }
         }
         .overlay(alignment: .bottomLeading) {
@@ -2674,6 +2714,9 @@ public struct NotebookEditorView: View {
                 currentPageIndex = targetPage
             }
             loadCurrentPage()
+            objectHistory.reset(to: notebook)
+            if isCollaborating { ensureCollabPageIds() }
+            collabSync.reset(to: notebook)
             // 製圖用的紙（三視圖、等角、作圖步驟…）一打開就選好「圖學」筆組。
             if paperUsesDrafting(paperId: notebook.paperId(forPage: currentPageIndex)) {
                 selectedTool = .drafting
@@ -2851,7 +2894,7 @@ public struct NotebookEditorView: View {
                         collaborationManager.broadcastAttachmentUpsert(type: "connection", itemDict: dict)
                     }
                 }
-                store.updateNotebook(notebook)
+                commitNotebook()
                 PageThumbnailRenderer.invalidateAll()
             }
         } }
@@ -2868,7 +2911,7 @@ public struct NotebookEditorView: View {
                 notebook.tableAttachments?.append(table)
                 activeSelectedObjectId = table.id
                 selectedObjectIds = [table.id]
-                store.updateNotebook(notebook)
+                commitNotebook()
                 PageThumbnailRenderer.invalidateAll()
                 if let data = try? JSONEncoder().encode(table),
                    let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
@@ -2886,7 +2929,7 @@ public struct NotebookEditorView: View {
                 table.x = notebook.tableAttachments?[index].x ?? table.x
                 table.y = notebook.tableAttachments?[index].y ?? table.y
                 notebook.tableAttachments?[index] = table
-                store.updateNotebook(notebook)
+                commitNotebook()
                 PageThumbnailRenderer.invalidateAll()
                 if let data = try? JSONEncoder().encode(table),
                    let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
@@ -2939,7 +2982,7 @@ public struct NotebookEditorView: View {
                 } else {
                     notebook.textAttachments?.append(created)
                 }
-                store.updateNotebook(notebook)
+                commitNotebook()
                 PageThumbnailRenderer.invalidateAll()
                 if let data = try? JSONEncoder().encode(created),
                    let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
@@ -2958,7 +3001,7 @@ public struct NotebookEditorView: View {
                 var placed = linkItem
                 placed.pageIndex = currentPageIndex
                 notebook.linkAttachments?.append(placed)
-                store.updateNotebook(notebook)
+                commitNotebook()
                 if let data = try? JSONEncoder().encode(placed),
                    let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
                     collaborationManager.broadcastAttachmentUpsert(type: "link", itemDict: dict)
@@ -2976,7 +3019,7 @@ public struct NotebookEditorView: View {
                 var att = new3DAttachment
                 att.pageIndex = currentPageIndex
                 notebook.model3DAttachments?.append(att)
-                store.updateNotebook(notebook)
+                commitNotebook()
                 PageThumbnailRenderer.invalidateAll()
                 if let data = try? JSONEncoder().encode(att),
                    let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
@@ -3037,6 +3080,8 @@ public struct NotebookEditorView: View {
         .onReceive(collaborationManager.oplogReceived) { event in
             handleRemoteOplog(event)
         }
+        // 協同的事件掛在一個透明視圖上：直接接在這條修飾鏈後面，型別檢查會超時。
+        .background(collabEventSink)
         .sheet(isPresented: $showThemeToolsSheet) { resizableSheet {
             ThemeSpecificToolsView(
                 currentBrushColor: $selectedColor,
@@ -3133,6 +3178,7 @@ public struct NotebookEditorView: View {
 
     private func handleProInkDidChange(_ note: Notification) {
         guard (note.object as? String) == notebook.id.lowercased() else { return }
+        objectHistory.breakCoalescing()
         proInkDirty = true
         thumbnailRevision += 1
         noteInkEdited()
@@ -3143,6 +3189,10 @@ public struct NotebookEditorView: View {
         if changedId == nil || changedId?.caseInsensitiveCompare(notebook.id) == .orderedSame {
             coreInkBaselines.removeAll()
             loadCurrentPage()
+            // 整份從套件重新讀進來（別台同步）：以新內容為復原基準，不登記成這台的一步；
+            // 也不是這台的修改，不能當成協同修改送出去。
+            objectHistory.reset(to: notebook)
+            collabSync.refreshShadow(from: notebook)
             continuousReloadGeneration += 1
             thumbnailRevision += 1
             PageThumbnailRenderer.invalidateAll()
@@ -3178,7 +3228,7 @@ public struct NotebookEditorView: View {
                             canvas.undoManager?.removeAllActions()
                             (canvas as? AdaptiveCanvasView)?.proLayer?.reload()
                         }
-                        store.updateNotebook(notebook)
+                        commitNotebook()
                         continuousReloadGeneration += 1
                         thumbnailRevision += 1
                         showCanvasNotice(localizationManager.localized("revert_done"))
@@ -4319,13 +4369,13 @@ public struct NotebookEditorView: View {
                     } else {
                         notebook.textAttachments?.append(updated)
                     }
-                    store.updateNotebook(notebook)
+                    commitNotebook()
                     PageThumbnailRenderer.invalidateAll()
                 }
             ),
             activeInlineInkBlockId: $activeInlineInkBlockId,
             onCommit: {
-                store.updateNotebook(notebook)
+                commitNotebook()
                 PageThumbnailRenderer.invalidateAll()
             },
             onInsertTable: {
@@ -4334,7 +4384,7 @@ public struct NotebookEditorView: View {
                 notebook.tableAttachments?.append(table)
                 activeSelectedObjectId = table.id
                 selectedObjectIds = [table.id]
-                store.updateNotebook(notebook)
+                commitNotebook()
                 PageThumbnailRenderer.invalidateAll()
                 if let data = try? JSONEncoder().encode(table),
                    let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
@@ -4969,6 +5019,7 @@ public struct NotebookEditorView: View {
                                 isUnderInkPointPassThrough(point: point, page: page, event: event)
                             },
                             onDrawingChanged: { page, updated in
+                                objectHistory.breakCoalescing()
                                 recordDrawingEdit(page: page, drawing: updated)
                                 broadcastDrawingChange(page: page, drawing: updated)
                             },
@@ -5006,7 +5057,7 @@ public struct NotebookEditorView: View {
                             reloadGeneration: continuousReloadGeneration,
                             notebook: $notebook,
                             onNotebookChanged: {
-                                store.updateNotebook(notebook)
+                                commitNotebook()
                                 PageThumbnailRenderer.invalidateAll()
                             },
                             onLassoBegan: { pt in
@@ -5123,13 +5174,34 @@ public struct NotebookEditorView: View {
     ///
     /// 與整頁模式走同一組 oplog 事件與同一個 `page_index` —— 兩邊各發一種
     /// 事件的話，對方會在不同的模式下收到不同的東西。
+    /// 筆跡的變動以「加入哪幾筆、移除哪幾筆」送出（設計 §4.3）。
+    ///
+    /// 不再送整頁：整頁取代會把對方同一瞬間畫的筆畫蓋掉。這一頁還沒同步過時，
+    /// 第一次會把整頁的筆畫當成加入送出 —— 加入是冪等的，對方已有的不會重複。
     private func broadcastDrawingChange(page: Int, drawing: PKDrawing) {
         guard !isApplyingRemoteUpdate, isCollaborating else { return }
-        let b64 = drawing.dataRepresentation().base64EncodedString()
-        collaborationManager.broadcastOplog(
-            kind: "drawing_replace",
-            payload: ["page_index": page, "drawing_base64": b64]
-        )
+        ensureCollabPageIds()
+        guard let ids = notebook.pageIds, page >= 0, page < ids.count else { return }
+        let pageId = ids[page]
+        let current = drawing.strokes.map { (collabInkLedger.wireId(for: $0), $0) }
+        let currentIds = Set(current.map(\.0))
+        let known = collabInkLedger.known[pageId] ?? []
+        let added = current.filter { !known.contains($0.0) }
+        let removed = known.subtracting(currentIds)
+        collabInkLedger.known[pageId] = currentIds
+        if !added.isEmpty {
+            collabInkLedger.added(page: pageId, wires: added.map(\.0))
+            collaborationManager.broadcastOplog(kind: "ink_add", payload: [
+                "proto": Self.collabProto, "page": pageId,
+                "strokes": added.map { CollabStroke.encode($0.1, id: $0.0) }
+            ])
+        }
+        if !removed.isEmpty {
+            collabInkLedger.removed(page: pageId, wires: removed)
+            collaborationManager.broadcastOplog(kind: "ink_remove", payload: [
+                "proto": Self.collabProto, "page": pageId, "ids": Array(removed)
+            ])
+        }
     }
 
     /// 取畫面中央最近的那一頁當焦點頁。
@@ -5207,7 +5279,7 @@ public struct NotebookEditorView: View {
                                 deletedAttachmentBackup = (type: "image", data: item)
                                 collaborationManager.broadcastAttachmentDelete(id: item.id, type: "image")
                                 notebook.attachments?.removeAll { $0.id == item.id }
-                                store.updateNotebook(notebook)
+                                commitNotebook()
                                 collaborationManager.broadcastSelection(selectedId: nil)
                             }
                         )
@@ -5316,7 +5388,7 @@ public struct NotebookEditorView: View {
                                     watchdog.notifyEraserUsedOnNonInk(targetType: .table) {
                                         let id = item.id
                                         notebook.tableAttachments?.removeAll { $0.id == id }
-                                        store.updateNotebook(notebook)
+                                        commitNotebook()
                                         PageThumbnailRenderer.invalidateAll()
                                     }
                                 } else {
@@ -5335,7 +5407,7 @@ public struct NotebookEditorView: View {
                             onDelete: {
                                 let id = item.id
                                 notebook.tableAttachments?.removeAll { $0.id == id }
-                                store.updateNotebook(notebook)
+                                commitNotebook()
                                 PageThumbnailRenderer.invalidateAll()
                                 collaborationManager.broadcastAttachmentDelete(id: id, type: "table")
                             }
@@ -5354,8 +5426,13 @@ public struct NotebookEditorView: View {
                                 set: { editing in
                                     if editing {
                                         recordTextUndoState()
+                                        textFormatTargetId = item.id
+                                        suspendedInlineTextId = nil
                                         inlineEditingTextId = item.id
                                     } else if inlineEditingTextId == item.id {
+                                        // 失焦（多半是按了工具列）：記住目標，格式套用後再把游標還回來。
+                                        textFormatTargetId = item.id
+                                        suspendedInlineTextId = item.id
                                         inlineEditingTextId = nil
                                     }
                                 }
@@ -5376,7 +5453,7 @@ public struct NotebookEditorView: View {
                                 deletedAttachmentBackup = (type: "text", data: item)
                                 collaborationManager.broadcastAttachmentDelete(id: item.id, type: "text")
                                 notebook.textAttachments?.removeAll { $0.id == item.id }
-                                store.updateNotebook(notebook)
+                                commitNotebook()
                                 collaborationManager.broadcastSelection(selectedId: nil)
                                 PageThumbnailRenderer.invalidateAll()
                             },
@@ -5385,7 +5462,8 @@ public struct NotebookEditorView: View {
                             },
                             onAnchorInk: {
                                 anchorOverlappingInkToText(textItem: item)
-                            }
+                            },
+                            selectionTracker: textSelectionTracker
                         )
                         .zIndex(stacking.zIndex(for: item.id, kind: .text))
                     }
@@ -5400,7 +5478,7 @@ public struct NotebookEditorView: View {
                             onSelect: { selectSingleObject(item.id) },
                             onDelete: {
                                 notebook.linkAttachments?.removeAll { $0.id == item.id }
-                                store.updateNotebook(notebook)
+                                commitNotebook()
                             }
                         )
                         .zIndex(stacking.zIndex(for: item.id, kind: .link))
@@ -5417,7 +5495,7 @@ public struct NotebookEditorView: View {
                             notebookId: notebook.id,
                             onDelete: {
                                 notebook.audioAttachments?.removeAll { $0.id == item.id }
-                                store.updateNotebook(notebook)
+                                commitNotebook()
                             },
                             onTranscribe: { transcribedText in
                                 insertTranscriptText(transcribedText, for: item)
@@ -5438,7 +5516,7 @@ public struct NotebookEditorView: View {
                                 deletedAttachmentBackup = (type: "3d", data: item)
                                 collaborationManager.broadcastAttachmentDelete(id: item.id, type: "3d")
                                 notebook.model3DAttachments?.removeAll { $0.id == item.id }
-                                store.updateNotebook(notebook)
+                                commitNotebook()
                                 collaborationManager.broadcastSelection(selectedId: nil)
                             }
                         )
@@ -5549,6 +5627,8 @@ public struct NotebookEditorView: View {
                     isUnderInkPointPassThrough(point: point, page: currentPageIndex, event: event)
                 },
                 onDrawingChanged: { rawDrawing -> PKDrawing? in
+                    // 筆跡登記了自己的復原項：之後的物件變更不能併進前一個物件步驟。
+                    objectHistory.breakCoalescing()
                     // **頁面框線就是編輯區域。**
                     var processedDrawing = enforcePrintableArea(rawDrawing)
                     if strokeStabilizer > 0.05 {
@@ -5579,27 +5659,10 @@ public struct NotebookEditorView: View {
 
                     if !isApplyingRemoteUpdate && isCollaborating {
                         let count = newDrawing.strokes.count
-                        if count > lastStrokeCount {
-                            let deltaStrokes = Array(newDrawing.strokes.suffix(count - lastStrokeCount))
-                            let deltaDrawing = PKDrawing(strokes: deltaStrokes)
-                            let b64 = deltaDrawing.dataRepresentation().base64EncodedString()
-                            collaborationManager.broadcastOplog(
-                                kind: "stroke_delta",
-                                payload: [
-                                    "page_index": currentPageIndex,
-                                    "drawing_base64": b64
-                                ]
-                            )
-                        } else if count < lastStrokeCount {
-                            let b64 = newDrawing.dataRepresentation().base64EncodedString()
-                            collaborationManager.broadcastOplog(
-                                kind: "drawing_replace",
-                                payload: [
-                                    "page_index": currentPageIndex,
-                                    "drawing_base64": b64
-                                ]
-                            )
-                        }
+                        // 逐筆增刪（設計 §4.3）。以前是「多了就送尾巴幾筆、少了就送整頁取代」：
+                        // 套索搬動（筆數不變）不會送；擦掉一筆時送整頁，對方整頁被取代，
+                        // 同一瞬間對方畫的那一筆就沒了。
+                        broadcastDrawingChange(page: currentPageIndex, drawing: newDrawing)
                         lastStrokeCount = count
                     } else if !isApplyingRemoteUpdate {
                         lastStrokeCount = newDrawing.strokes.count
@@ -5788,7 +5851,7 @@ public struct NotebookEditorView: View {
                 isActive: selectedTool == .maskingTape,
                 selectedColor: selectedColor,
                 onTapesChanged: {
-                    store.updateNotebook(notebook)
+                    commitNotebook()
                     PageThumbnailRenderer.invalidateAll()
                 }
             )
@@ -5964,7 +6027,7 @@ public struct NotebookEditorView: View {
                                 notebook.commentPins = []
                             }
                             notebook.commentPins?.append(newPin)
-                            store.updateNotebook(notebook)
+                            commitNotebook()
                             selectedCommentPinId = newPin.id
                             isPlacingCommentPin = false
                             broadcastCommentPinUpsert(newPin)
@@ -6241,6 +6304,7 @@ public struct NotebookEditorView: View {
                 if mode == .type {
                     canvasView?.resignFirstResponder()
                 }
+                endTextFormatSession()
                 withAnimation(.easeInOut(duration: 0.18)) {
                     editorMode = mode
                     inlineEditingTextId = nil
@@ -6251,6 +6315,7 @@ public struct NotebookEditorView: View {
                 flashModeBadge()
             },
             onExitContextual: {
+                endTextFormatSession()
                 withAnimation(.easeInOut(duration: 0.18)) {
                     inlineEditingTextId = nil
                     activeInlineInkBlockId = nil
@@ -6273,9 +6338,20 @@ public struct NotebookEditorView: View {
         .accessibilityIdentifier("editor.mode")
     }
 
+    /// 就地編輯只是被工具列暫時借走焦點（方塊還在這一頁）。
+    private var isInlineEditingSuspendedOnThisPage: Bool {
+        guard let id = suspendedInlineTextId else { return false }
+        return notebook.textAttachments?.contains(where: { $0.id == id && $0.pageIndex == currentPageIndex }) == true
+    }
+
+    /// 手機寬度（核心的版面級別，與 Android 同一條規則）。工具列在這個寬度下改成單列捲動。
+    private var isCompactEditorWidth: Bool {
+        layoutMetrics(width: Float(editorAvailableWidth)).sizeClass == .compact
+    }
+
     private var effectiveToolbarMode: EditorMode {
         if editorMode == .draw {
-            if inlineEditingTextId != nil {
+            if inlineEditingTextId != nil || isInlineEditingSuspendedOnThisPage {
                 return .type
             }
             return .draw
@@ -7039,6 +7115,8 @@ public struct NotebookEditorView: View {
         if let updated = store.notebooks.first(where: { $0.id == notebook.id }) {
             notebook = updated
         }
+        // 頁面搬了位置，舊的物件復原紀錄裡的頁次全部對不上 —— 作廢（見 CanvasObjectHistory）。
+        objectHistory.pageStructureChanged(notebook, manager: historyUndoManager)
         loadCurrentPage()
         return true
     }
@@ -7505,7 +7583,7 @@ public struct NotebookEditorView: View {
 
     private var wordModeToolbarContent: some View {
         VStack(spacing: 0) {
-            if editorMode == .draw && inlineEditingTextId != nil {
+            if editorMode == .draw && (inlineEditingTextId != nil || isInlineEditingSuspendedOnThisPage) {
                 HStack(spacing: 8) {
                     Image(systemName: "character.textbox")
                         .font(.system(size: 12, weight: .bold))
@@ -7517,6 +7595,7 @@ public struct NotebookEditorView: View {
                     Button {
                         withAnimation(.easeInOut(duration: 0.18)) {
                             inlineEditingTextId = nil
+                            suspendedInlineTextId = nil
                         }
                     } label: {
                         HStack(spacing: 4) {
@@ -7549,44 +7628,16 @@ public struct NotebookEditorView: View {
             //
             WordToolbarView(
                 activeText: Binding(
-                    get: { activeTextAttachment ?? NoteTextAttachment(pageIndex: currentPageIndex) },
-                    set: { updated in
-                        var next = updated
-                        // 當修改字級或格式時，自動調適方塊高度，避免文字截斷
-                        let requiredHeight = RuledWriting.boxHeight(
-                            text: next.text.isEmpty ? " " : next.text,
-                            width: next.width,
-                            fontSize: next.fontSize,
-                            bold: next.isBold,
-                            lineSpacing: next.lineSpacing ?? 0
-                        )
-                        next.height = max(next.height, requiredHeight)
-                        if notebook.textAttachments == nil { notebook.textAttachments = [] }
-                        if let idx = notebook.textAttachments?.firstIndex(where: { $0.id == next.id }) {
-                            notebook.textAttachments?[idx] = next
-                        } else {
-                            var toAdd = next
-                            toAdd.pageIndex = currentPageIndex
-                            if toAdd.x == 0 && toAdd.y == 0 {
-                                toAdd.x = PageGeometry.printableInset
-                                toAdd.y = 200
-                                toAdd.width = PageGeometry.printableRect.width
-                                toAdd.hasBorder = true
-                            }
-                            notebook.textAttachments?.append(toAdd)
-                            inlineEditingTextId = toAdd.id
-                            editingTextId = toAdd.id
-                        }
-                        store.updateNotebook(notebook)
-                        PageThumbnailRenderer.invalidateAll()
-                        if let data = try? JSONEncoder().encode(next),
-                           let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
-                            collaborationManager.broadcastAttachmentUpsert(type: "text", itemDict: dict)
-                        }
-                    }
+                    get: { toolbarDisplayedText() },
+                    set: { updated in applyToolbarTextChange(updated) }
                 ),
-                canUndo: !textUndoStack.isEmpty || (canvasView?.undoManager?.canUndo ?? true),
-                canRedo: !textRedoStack.isEmpty || (canvasView?.undoManager?.canRedo ?? false),
+                hasTarget: activeTextAttachment != nil,
+                selection: textSelectionTracker,
+                currentHighlightHex: { toolbarHighlightHex() },
+                onHighlight: { applyToolbarHighlight($0) },
+                onClearFormatting: { clearToolbarFormatting() },
+                canUndo: historyUndoManager.canUndo,
+                canRedo: historyUndoManager.canRedo,
                 onUndo: { performUndo() },
                 onRedo: { performRedo() },
                 onInsertTable: { rows, cols in
@@ -7599,7 +7650,7 @@ public struct NotebookEditorView: View {
                     notebook.tableAttachments?.append(table)
                     activeSelectedObjectId = table.id
                     selectedObjectIds = [table.id]
-                    store.updateNotebook(notebook)
+                    commitNotebook()
                     PageThumbnailRenderer.invalidateAll()
                     showCanvasNotice(String(format: localizationManager.localized("table_rows_cols"), "\(rows)", "\(cols)"))
                 },
@@ -7610,29 +7661,8 @@ public struct NotebookEditorView: View {
                     }
                 },
                 onInsertLink: { showLinkPreviewSheet = true },
-                onInsertDivider: { insertQuickTextSnippet("────────────────────────────────────────") },
-                onInsertTodo: { insertQuickTextSnippet("☐ ") },
-                onInsertBullet: { insertQuickTextSnippet("• ") },
-                onInsertNumbered: { insertQuickTextSnippet("1. ") },
-                onClearFormat: {
-                    if let id = activeTextAttachment?.id,
-                       let idx = notebook.textAttachments?.firstIndex(where: { $0.id == id }) {
-                        notebook.textAttachments?[idx].fontSize = 15
-                        notebook.textAttachments?[idx].isBold = false
-                        notebook.textAttachments?[idx].isItalic = false
-                        notebook.textAttachments?[idx].isUnderline = false
-                        notebook.textAttachments?[idx].isStrikethrough = false
-                        notebook.textAttachments?[idx].textColorHex = "#000000"
-                        notebook.textAttachments?[idx].backgroundColorHex = "clear"
-                        notebook.textAttachments?[idx].alignmentRaw = "left"
-                        store.updateNotebook(notebook)
-                        PageThumbnailRenderer.invalidateAll()
-                    }
-                },
-                onCommitChange: {
-                    store.updateNotebook(notebook)
-                    PageThumbnailRenderer.invalidateAll()
-                },
+                onInsertDivider: { insertQuickTextSnippet("────────────────────────────────────────", onNewLine: true) },
+                onInsertSnippet: { insertQuickTextSnippet($0) },
                 onAddTextBox: {
                     let draft = insertTextBox(at: CGPoint(x: 200, y: 200))
                     withAnimation(.easeInOut(duration: 0.18)) {
@@ -7873,7 +7903,7 @@ public struct NotebookEditorView: View {
             }
             if changed {
                 notebook.textAttachments = attachments
-                store.updateNotebook(notebook)
+                commitNotebook()
             }
         }
 
@@ -7888,7 +7918,7 @@ public struct NotebookEditorView: View {
             }
             if changed {
                 notebook.attachments = images
-                store.updateNotebook(notebook)
+                commitNotebook()
             }
         }
 
@@ -8065,11 +8095,21 @@ public struct NotebookEditorView: View {
                     AnyView(drawingToolbarRow(showToolLabels: true).fixedSize(horizontal: true, vertical: false))
                 }
                 AnyView(drawingToolbarRow(showToolLabels: false).fixedSize(horizontal: true, vertical: false))
-                AnyView(
-                    WrapLayout(spacing: 12, lineSpacing: 8) {
-                        drawingToolbarItems(showToolLabels: false)
-                    }
-                )
+                if isCompactEditorWidth {
+                    // 手機寬度：一條可以左右捲的列。換行的版本在 iPhone SE 上折成五、六排，
+                    // 筆具面板佔掉下半個螢幕，畫布只剩一條 85pt 的縫 —— 根本寫不了字。
+                    AnyView(
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 12) { drawingToolbarItems(showToolLabels: false) }
+                        }
+                    )
+                } else {
+                    AnyView(
+                        WrapLayout(spacing: 12, lineSpacing: 8) {
+                            drawingToolbarItems(showToolLabels: false)
+                        }
+                    )
+                }
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 8)
@@ -8856,7 +8896,7 @@ public struct NotebookEditorView: View {
             Button {
                 notebook.hasRecording = false
                 notebook.recordingAudioPath = nil
-                store.updateNotebook(notebook)
+                commitNotebook()
                 audioManager.stopPlayback()
             } label: {
                 Image(systemName: "trash")
@@ -9259,7 +9299,7 @@ public struct NotebookEditorView: View {
                 var map = notebook.recognizedText ?? [:]
                 map[String(page)] = text
                 notebook.recognizedText = map
-                store.updateNotebook(notebook)
+                commitNotebook()
                 recognitionMessage = text
             case .failure(let error):
                 // 逐項分開 —— 「辨識失敗」四個字幫不了使用者。
@@ -9381,124 +9421,427 @@ public struct NotebookEditorView: View {
         }
     }
 
+    /// 協同事件：租約搶輸、換房間、舊版參與者。
+    private var collabEventSink: AnyView {
+        AnyView(Color.clear
+            .onReceive(collaborationManager.leaseLost) { lost in
+                // 兩人同時選了同一個物件、對方勝出：本機放手（設計 §5.3）。
+                if activeSelectedObjectId == lost.id { activeSelectedObjectId = nil }
+                if inlineEditingTextId == lost.id { inlineEditingTextId = nil }
+                if editingTextId == lost.id { editingTextId = nil }
+                selectedObjectIds.remove(lost.id)
+                collaborationManager.broadcastSelection(selectedId: nil)
+                showCanvasNotice(String(format: localizationManager.localized("collab_object_locked"), lost.holder))
+            }
+            .onChange(of: collaborationManager.currentRoomId) { _ in
+                // 進入（或換）房間：以目前的內容為大家共同的起點。斷線重連不算 ——
+                // 那段期間的本機修改還要送出去。
+                ensureCollabPageIds()
+                collabSync.reset(to: notebook)
+                collabInkLedger.reset()
+                collabTextHub.reset()
+                collabStateSync.reset()
+                // 已有的筆畫算「大家都有」—— 否則第一次在某一頁下筆，整頁舊筆畫會被當成新的再送一次，
+                // 而對方（尤其是 Android，筆畫 id 不同）會多出一份。
+                for (index, id) in (notebook.pageIds ?? []).enumerated() {
+                    collabInkLedger.known[id] = Set(CollabInk.ids(of: drawingForCollab(page: index)))
+                }
+                // 這台的檔案可能比房間裡的舊：向房間裡的人要整份狀態（設計 §7）。只有自己就不必。
+                if !collaborationManager.currentRoomId.isEmpty, !collaborationManager.peers.isEmpty {
+                    requestCollabState()
+                }
+            }
+            .onReceive(collaborationManager.stateSyncNeeded) { _ in
+                // 中繼補不回漏掉的那一段：向其他成員要整份狀態（剛要過就不重複）。
+                if Date().timeIntervalSince(collabStateSync.lastRequest) > 5 { requestCollabState() }
+            }
+            .onChange(of: collaborationManager.outdatedPeerIds) { ids in
+                guard !ids.isEmpty else { return }
+                showCanvasNotice(localizationManager.localized("collab_peer_outdated"))
+            }
+        )
+    }
+
+    /// 套用別人的物件修改（欄位層級 LWW，設計 §4.1）。
+    private func applyRemotePatches(_ patches: [ObjectPatch], stamp: LamportStamp) {
+        guard !patches.isEmpty else { return }
+        ensureCollabPageIds()
+        var doc = notebook
+        var changed = false
+        var pagesChanged = false
+        var anchored: [(id: String, anchors: [[String]])] = []
+        for var patch in patches {
+            if let b64 = patch.fields.removeValue(forKey: CollabObjectSync.blobField) as? String {
+                storeIncomingBlob(b64, fileName: (patch.fields["a.image.fileName"] as? String)
+                    ?? (collabSync.shadow[patch.key]?["a.image.fileName"] as? String),
+                    hash: patch.fields["blob"] as? String, fallbackId: patch.id)
+            }
+            if let anchors = patch.fields.removeValue(forKey: CollabObjectSync.anchorField) as? [[String]],
+               patch.type == "text", patch.fields["a.runs"] != nil {
+                anchored.append((patch.id, anchors))
+            }
+            if collabSync.apply(patch, stamp: stamp, to: &doc) {
+                changed = true
+                if patch.type == "page" { pagesChanged = true }
+            }
+        }
+        guard changed else { return }
+        collabSync.isApplyingRemote = true
+        notebook = doc
+        if pagesChanged {
+            store.updateNotebook(notebook)
+            reconcilePagesWithCollab()
+        }
+        var withDeferred = notebook
+        collabSync.retryDeferred(into: &withDeferred)
+        let stacking = collabSync.desiredStacking()
+        CollabCanonical.writeStacking(orders: stacking.orders, under: stacking.under, into: &withDeferred)
+        for item in anchored { resolveRunAnchors(id: item.id, anchors: item.anchors, in: &withDeferred) }
+        notebook = withDeferred
+        // 寫回後的編碼要成為新的同步基準，否則下一次本機修改會把這些欄位當成「我改的」再送一次。
+        collabSync.refreshShadow(from: notebook)
+        commitNotebook()
+        collabSync.isApplyingRemote = false
+        PageThumbnailRenderer.invalidateAll()
+        // 對方刪掉的物件，本機的選取與編輯狀態要清掉。
+        let alive = CanvasObjectState(notebook).allObjectIds
+        if let id = inlineEditingTextId, !alive.contains(id) { inlineEditingTextId = nil }
+        if let id = editingTextId, !alive.contains(id) { editingTextId = nil }
+        if let id = activeSelectedObjectId, !alive.contains(id) { activeSelectedObjectId = nil }
+        selectedObjectIds = selectedObjectIds.filter { alive.contains($0) }
+    }
+
+    /// 收到新圖片的位元組：存成檔案（已經有就不動），記下它的雜湊。
+    private func storeIncomingBlob(_ b64: String, fileName: String?, hash: String?, fallbackId: String) {
+        guard let data = Data(base64Encoded: b64) else { return }
+        let name = fileName.flatMap { $0.isEmpty ? nil : $0 } ?? "\(hash ?? fallbackId).png"
+        let url = store.attachmentsDirectory.appending(path: name)
+        if !FileManager.default.fileExists(atPath: url.path) {
+            try? data.write(to: url, options: .atomic)
+        }
+        if let hash { CollabCanonical.rememberBlob(fileName: name, hash: hash) }
+        _ = store.loadAttachmentImage(fileName: name)
+    }
+
+    /// 別人送來的逐字格式：以字的 id 換回這邊現在的位置（設計 §8.3）。
+    private func resolveRunAnchors(id: String, anchors: [[String]], in doc: inout NotebookDocument) {
+        guard let index = doc.textAttachments?.firstIndex(where: { CollabCanonical.canonicalId($0.id) == id }),
+              var item = doc.textAttachments?[index], let runs = item.runs, runs.count == anchors.count else { return }
+        let replica = collabTextHub.replica(for: id, base: item.text, site: collaborationManager.currentUserId)
+        guard replica.text == item.text else { return }
+        let resolved = CollabRunAnchors.resolve(anchors, in: replica)
+        var adjusted = runs
+        for (i, span) in resolved.enumerated() {
+            if let span { adjusted[i].start = span.start; adjusted[i].length = span.length }
+        }
+        guard adjusted != runs else { return }
+        item.runs = adjusted
+        doc.textAttachments?[index] = item
+    }
+
+    /// 依合併後的頁序調整本機的頁面：補上缺的、刪掉被刪的、搬到對的位置（設計 §8.4）。
+    private func reconcilePagesWithCollab() {
+        let desired = collabSync.desiredPageOrder()
+        guard !desired.isEmpty else { return }
+        func reload() {
+            if let updated = store.notebooks.first(where: { $0.id == notebook.id }) { notebook = updated }
+        }
+        saveCurrentPageDrawing()
+        var current = notebook.pageIds ?? []
+        let wanted = Set(desired)
+        for (index, id) in current.enumerated().reversed() where !wanted.contains(id) && notebook.pageCount > 1 {
+            currentPageIndex = store.deletePage(notebookId: notebook.id, pageIndex: index, currentIndex: currentPageIndex)
+            reload()
+        }
+        current = notebook.pageIds ?? []
+        for (target, id) in desired.enumerated() where !current.contains(id) {
+            let paper = collabSync.shadow["page:\(id)"]?["paper"] as? String
+            _ = store.insertPage(notebookId: notebook.id, afterIndex: min(target, current.count) - 1,
+                                 paperId: paper, pageId: id)
+            reload()
+            current = notebook.pageIds ?? []
+        }
+        for (target, id) in desired.enumerated() {
+            guard let from = current.firstIndex(of: id), from != target, target < current.count else { continue }
+            _ = store.movePage(notebookId: notebook.id, from: from, to: target)
+            reload()
+            current = notebook.pageIds ?? []
+        }
+        currentPageIndex = min(currentPageIndex, max(0, notebook.pageCount - 1))
+        // 頁面變了，舊的物件復原紀錄裡的頁次對不上（見 CanvasObjectHistory）。
+        objectHistory.pageStructureChanged(notebook, manager: historyUndoManager)
+        loadCurrentPage()
+        continuousReloadGeneration += 1
+        thumbnailRevision += 1
+    }
+
+    /// 套用別人在同一個文字方塊打的字（設計 §8.3）。
+    private func applyRemoteTextOps(_ payload: [String: Any]) {
+        guard let id = payload["id"] as? String,
+              let list = payload["ops"] as? [[String: Any]],
+              let fullText = payload["text"] as? String,
+              let index = notebook.textAttachments?.firstIndex(where: { CollabCanonical.canonicalId($0.id) == id })
+        else { return }
+        let me = collaborationManager.currentUserId
+        let current = notebook.textAttachments?[index].text ?? ""
+        let base = (collabSync.shadow["text:\(id)"]?["text"] as? String) ?? current
+        let replica = collabTextHub.replica(for: id, base: base, site: me)
+        var newText: String
+        if let theirBase = payload["base"] as? String, theirBase != replica.baseHash, replica.text == base {
+            // 兩邊的基準對不上（協同開始前就不一致）：以對方的全文為準並重建基準 —— 結果仍一致。
+            collabTextHub.rebase(id, text: fullText, site: me)
+            newText = fullText
+        } else {
+            for json in list { if let op = CollabText.Op(json: json) { replica.apply(op) } }
+            newText = replica.text
+        }
+        guard newText != current else { return }
+        collabSync.isApplyingRemote = true
+        replaceCollabText(at: index, with: newText, in: &notebook)
+        collabSync.refreshShadow(from: notebook)
+        commitNotebook()
+        collabSync.isApplyingRemote = false
+        PageThumbnailRenderer.invalidateAll()
+    }
+
+    /// 把某個方塊的內容換成別人的（格式區段跟著平移、方塊長高），不送出。
+    private func replaceCollabText(at index: Int, with newText: String, in doc: inout NotebookDocument) {
+        guard var item = doc.textAttachments?[index], item.text != newText else { return }
+        let old = item.text
+        item.text = newText
+        RichText.adjustRuns(of: &item, from: old)
+        item.height = max(item.height, RichText.boxHeight(for: item))
+        doc.textAttachments?[index] = item
+    }
+
+    /// 別人加的筆畫：已經有的（同 id）不重複加。
+    private func applyRemoteInkAdd(pageId: String, strokes list: [[String: Any]]) {
+        guard let pageIdx = notebook.pageIds?.firstIndex(of: pageId) else { return }
+        let known = collabInkLedger.known[pageId] ?? []
+        let decoded = list.compactMap(CollabStroke.decode).filter { !known.contains($0.id) }
+        guard !decoded.isEmpty else { return }
+        for item in decoded { collabInkLedger.remember(wire: item.id, local: CollabInk.strokeId(item.stroke)) }
+        let base = drawingForCollab(page: pageIdx)
+        let merged = CollabInk.adding(decoded.map(\.stroke), to: base)
+        collabInkLedger.known[pageId, default: []].formUnion(decoded.map(\.id))
+        collabInkLedger.added(page: pageId, wires: decoded.map(\.id))
+        if merged.strokes.count != base.strokes.count {
+            applyRemoteDrawing(page: pageIdx, remote: merged, replace: true)
+        }
+    }
+
+    /// 別人擦掉的筆畫：只移除這幾筆，別人同時畫的不受影響。
+    private func applyRemoteInkRemove(pageId: String, wires: [String]) {
+        guard let pageIdx = notebook.pageIds?.firstIndex(of: pageId), !wires.isEmpty else { return }
+        let base = drawingForCollab(page: pageIdx)
+        let merged = CollabInk.removing(Set(wires.map(collabInkLedger.localId(forWire:))), from: base)
+        collabInkLedger.known[pageId, default: []].subtract(wires)
+        collabInkLedger.removed(page: pageId, wires: wires)
+        if merged.strokes.count != base.strokes.count {
+            applyRemoteDrawing(page: pageIdx, remote: merged, replace: true)
+        }
+    }
+
+    // MARK: 整份狀態（設計 §7）
+
+    /// 向房間要整份狀態（加入房間、或中繼的暫存已經補不回漏掉的那一段）。
+    /// 附上自己已有的圖片：回覆的人只需帶我沒有的圖檔。
+    private func requestCollabState() {
+        guard isCollaborating else { return }
+        let req = collabStateSync.begin()
+        let blobs = Set(collabSync.shadow.values.compactMap { $0["blob"] as? String })
+        collaborationManager.broadcastOplog(kind: "state_request", payload: [
+            "proto": Self.collabProto, "req": req, "blobs": Array(blobs)
+        ])
+    }
+
+    /// 回覆一份整份狀態給 `to`，分段送。
+    private func answerCollabState(req: String, to: String, blobs: Set<String>) {
+        collabStateSync.remember(req)
+        func size(_ json: [String: Any]) -> Int { (try? JSONSerialization.data(withJSONObject: json))?.count ?? 0 }
+        var items: [(ink: Bool, json: [String: Any])] = []
+        for entry in collabSync.snapshot() {
+            var json = entry.json
+            if entry.type == "image",
+               let hash = entry.groups.lazy.compactMap({ $0.fields["blob"] as? String }).first, !blobs.contains(hash),
+               let fileName = collabSync.shadow[entry.key]?["a.image.fileName"] as? String, !fileName.isEmpty,
+               let data = try? Data(contentsOf: store.attachmentsDirectory.appending(path: fileName)) {
+                json["b64"] = data.base64EncodedString()
+            }
+            items.append((false, json))
+        }
+        // 筆跡：只帶這次協同期間加入與擦掉的 —— 之前就有的兩邊都有（設計 §8.1）。
+        let pages = Set(collabInkLedger.sessionAdded.keys).union(collabInkLedger.sessionRemoved.keys)
+        for page in pages {
+            let wanted = collabInkLedger.sessionAdded[page] ?? []
+            var strokes: [[String: Any]] = []
+            if !wanted.isEmpty, let index = notebook.pageIds?.firstIndex(of: page) {
+                for stroke in drawingForCollab(page: index).strokes {
+                    let wire = collabInkLedger.wireId(for: stroke)
+                    if wanted.contains(wire) { strokes.append(CollabStroke.encode(stroke, id: wire)) }
+                }
+            }
+            items.append((true, ["page": page, "strokes": strokes,
+                                 "removed": Array(collabInkLedger.sessionRemoved[page] ?? [])]))
+        }
+        var parts: [(objects: [[String: Any]], ink: [[String: Any]])] = [([], [])]
+        var bytes = 0
+        for item in items {
+            let length = size(item.json)
+            if bytes > 0, bytes + length > CollabStateSync.partBytes {
+                parts.append(([], []))
+                bytes = 0
+            }
+            if item.ink { parts[parts.count - 1].ink.append(item.json) } else { parts[parts.count - 1].objects.append(item.json) }
+            bytes += length
+        }
+        for (index, part) in parts.enumerated() {
+            collaborationManager.broadcastOplog(kind: "state_snapshot", payload: [
+                "proto": Self.collabProto, "req": req, "to": to, "part": index, "parts": parts.count,
+                "objects": part.objects, "ink": part.ink
+            ])
+        }
+    }
+
+    /// 收到整份狀態的一段。全部收齊後，「只有自己有」的物件補給房間。
+    private func applyCollabStateSnapshot(_ payload: [String: Any]) {
+        let req = (payload["req"] as? String) ?? ""
+        collabStateSync.remember(req)
+        guard req == collabStateSync.pendingRequest,
+              payload["to"] as? String == collaborationManager.currentUserId,
+              let part = (payload["part"] as? NSNumber)?.intValue,
+              collabStateSync.receivedParts.insert(part).inserted else { return }
+        let parts = (payload["parts"] as? NSNumber)?.intValue ?? 1
+        ensureCollabPageIds()
+        var entries: [SnapshotEntry] = []
+        for json in (payload["objects"] as? [[String: Any]]) ?? [] {
+            guard let entry = SnapshotEntry(json: json) else { continue }
+            if let b64 = json["b64"] as? String {
+                let fields = entry.groups.reduce(into: [String: Any]()) { $0.merge($1.fields) { a, _ in a } }
+                storeIncomingBlob(b64, fileName: fields["a.image.fileName"] as? String,
+                                  hash: fields["blob"] as? String, fallbackId: entry.id)
+            }
+            entries.append(entry)
+        }
+        collabStateSync.snapshotKeys.formUnion(entries.map(\.key))
+        let me = collaborationManager.currentUserId
+        collabSync.isApplyingRemote = true
+        var doc = notebook
+        let result = collabSync.applySnapshot(entries, to: &doc)
+        notebook = doc
+        if entries.contains(where: { $0.type == "page" }) {
+            store.updateNotebook(notebook)
+            reconcilePagesWithCollab()
+        }
+        var withDeferred = notebook
+        collabSync.retryDeferred(into: &withDeferred)
+        let stacking = collabSync.desiredStacking()
+        CollabCanonical.writeStacking(orders: stacking.orders, under: stacking.under, into: &withDeferred)
+        for override in result.textOverrides {
+            collabTextHub.rebase(override.id, text: override.text, site: me)
+            if let index = withDeferred.textAttachments?.firstIndex(where: { CollabCanonical.canonicalId($0.id) == override.id }) {
+                replaceCollabText(at: index, with: override.text, in: &withDeferred)
+            }
+        }
+        notebook = withDeferred
+        collabSync.refreshShadow(from: notebook)
+        commitNotebook()
+        collabSync.isApplyingRemote = false
+        for pageInk in (payload["ink"] as? [[String: Any]]) ?? [] {
+            guard let page = pageInk["page"] as? String else { continue }
+            if let strokes = pageInk["strokes"] as? [[String: Any]] { applyRemoteInkAdd(pageId: page, strokes: strokes) }
+            if let removed = pageInk["removed"] as? [String] { applyRemoteInkRemove(pageId: page, wires: removed) }
+        }
+        PageThumbnailRenderer.invalidateAll()
+        guard collabStateSync.receivedParts.count >= parts else { return }
+        collabStateSync.finish()
+        // 只有自己有的物件（例如離線時新增的）：忘掉它們，下一次送出就會當成新的補給房間。
+        let localOnly = collabSync.liveKeys.subtracting(collabStateSync.snapshotKeys).filter { !$0.hasPrefix("meta:") }
+        guard !localOnly.isEmpty else { return }
+        collabSync.forget(localOnly)
+        publishCollabChanges()
+    }
+
+    /// 協同套用筆跡時的基準：目前頁取畫面上的，其他頁取存檔的。
+    private func drawingForCollab(page: Int) -> PKDrawing {
+        page == currentPageIndex
+            ? (canvasView?.drawing ?? currentDrawing)
+            : store.loadDrawing(notebookId: notebook.id, pageIndex: page)
+    }
+
     /// 處理協同遠端廣播操作（CRDT Oplog 合併）
+    /// 別台送來的變更不算這台使用者的動作：不登記復原（否則按復原會把別人的修改退掉）。
     private func handleRemoteOplog(_ event: RemoteOplogEvent) {
+        objectHistory.withoutRecording { applyRemoteOplog(event) }
+    }
+
+    private func applyRemoteOplog(_ event: RemoteOplogEvent) {
         switch event.kind {
-        case "stroke_delta":
+        case "obj_patch":
+            guard let list = event.payload["patches"] as? [[String: Any]] else { return }
+            applyRemotePatches(list.compactMap(ObjectPatch.init(payload:)),
+                               stamp: LamportStamp(lamport: event.lamport, user: event.userId))
+
+        case "ink_add":
+            guard let pageId = event.payload["page"] as? String,
+                  let list = event.payload["strokes"] as? [[String: Any]] else { return }
+            applyRemoteInkAdd(pageId: pageId, strokes: list)
+
+        case "ink_remove":
+            guard let pageId = event.payload["page"] as? String,
+                  let ids = event.payload["ids"] as? [String] else { return }
+            applyRemoteInkRemove(pageId: pageId, wires: ids)
+
+        case "state_request":
+            guard let req = event.payload["req"] as? String else { return }
+            // 排名：除了請求者以外，依使用者 id 排序。第一名立刻回，其餘的人依序多等一下。
+            let everyone = (collaborationManager.peers.map(\.userId) + [collaborationManager.currentUserId])
+                .filter { $0 != event.userId }.sorted()
+            let rank = everyone.firstIndex(of: collaborationManager.currentUserId) ?? 0
+            let blobs = Set((event.payload["blobs"] as? [String]) ?? [])
+            let requester = event.userId
+            DispatchQueue.main.asyncAfter(deadline: .now() + Double(rank) * CollabStateSync.answerStagger) {
+                guard isCollaborating, !collabStateSync.wasAnswered(req) else { return }
+                answerCollabState(req: req, to: requester, blobs: blobs)
+            }
+
+        case "state_snapshot":
+            applyCollabStateSnapshot(event.payload)
+
+        case "text_ops":
+            applyRemoteTextOps(event.payload)
+
+        case "stroke_delta", "drawing_replace":
+            // 舊版送來的筆跡：一律當成「加入缺少的筆畫」，**不刪任何東西** ——
+            // 舊的整頁取代會把本機同時畫的筆畫蓋掉。
             guard let pageIdx = event.payload["page_index"] as? Int,
                   let b64 = event.payload["drawing_base64"] as? String,
                   let data = Data(base64Encoded: b64),
                   let remoteDrawing = try? PKDrawing(data: data) else { return }
-            applyRemoteDrawing(page: pageIdx, remote: remoteDrawing, replace: false)
-
-        case "drawing_replace":
-            guard let pageIdx = event.payload["page_index"] as? Int,
-                  let b64 = event.payload["drawing_base64"] as? String,
-                  let data = Data(base64Encoded: b64),
-                  let remoteDrawing = try? PKDrawing(data: data) else { return }
-            applyRemoteDrawing(page: pageIdx, remote: remoteDrawing, replace: true)
-
-        case "attachment_upsert":
-            guard let attType = event.payload["attachment_type"] as? String,
-                  let itemDict = event.payload["item"] as? [String: Any],
-                  let jsonData = try? JSONSerialization.data(withJSONObject: itemDict) else { return }
-
-            if attType == "text", let textItem = try? JSONDecoder().decode(NoteTextAttachment.self, from: jsonData) {
-                if let idx = notebook.textAttachments?.firstIndex(where: { $0.id == textItem.id }) {
-                    notebook.textAttachments?[idx] = textItem
-                } else {
-                    if notebook.textAttachments == nil { notebook.textAttachments = [] }
-                    notebook.textAttachments?.append(textItem)
-                }
-                store.updateNotebook(notebook)
-            } else if attType == "image", let imgItem = try? JSONDecoder().decode(NoteImageAttachment.self, from: jsonData) {
-                // 若包含圖片 Base64，且本地尚未儲存該圖檔，立即寫入磁碟供 AttachmentsLayer 載入
-                if let b64 = itemDict["image_base64"] as? String,
-                   let imgData = Data(base64Encoded: b64),
-                   let remoteImg = UIImage(data: imgData) {
-                    let fileUrl = store.attachmentsDirectory.appending(path: imgItem.fileName)
-                    if !FileManager.default.fileExists(atPath: fileUrl.path) {
-                        try? imgData.write(to: fileUrl, options: .atomic)
-                    }
-                    _ = store.loadAttachmentImage(fileName: imgItem.fileName)
-                }
-
-                if let idx = notebook.attachments?.firstIndex(where: { $0.id == imgItem.id }) {
-                    notebook.attachments?[idx] = imgItem
-                } else {
-                    if notebook.attachments == nil { notebook.attachments = [] }
-                    notebook.attachments?.append(imgItem)
-                }
-                store.updateNotebook(notebook)
-                PageThumbnailRenderer.invalidateAll()
-            } else if attType == "3d", let modelItem = try? JSONDecoder().decode(Note3DAttachment.self, from: jsonData) {
-                if let idx = notebook.model3DAttachments?.firstIndex(where: { $0.id == modelItem.id }) {
-                    notebook.model3DAttachments?[idx] = modelItem
-                } else {
-                    if notebook.model3DAttachments == nil { notebook.model3DAttachments = [] }
-                    notebook.model3DAttachments?.append(modelItem)
-                }
-                store.updateNotebook(notebook)
-                PageThumbnailRenderer.invalidateAll()
-            } else if attType == "table", let tableItem = try? JSONDecoder().decode(NoteTableAttachment.self, from: jsonData) {
-                if let idx = notebook.tableAttachments?.firstIndex(where: { $0.id == tableItem.id }) {
-                    notebook.tableAttachments?[idx] = tableItem
-                } else {
-                    if notebook.tableAttachments == nil { notebook.tableAttachments = [] }
-                    notebook.tableAttachments?.append(tableItem)
-                }
-                store.updateNotebook(notebook)
-                PageThumbnailRenderer.invalidateAll()
-            } else if attType == "shape", let shapeItem = try? JSONDecoder().decode(NoteShapeAttachment.self, from: jsonData) {
-                if let idx = notebook.shapeAttachments?.firstIndex(where: { $0.id == shapeItem.id }) {
-                    notebook.shapeAttachments?[idx] = shapeItem
-                } else {
-                    if notebook.shapeAttachments == nil { notebook.shapeAttachments = [] }
-                    notebook.shapeAttachments?.append(shapeItem)
-                }
-                store.updateNotebook(notebook)
-                PageThumbnailRenderer.invalidateAll()
-            } else if attType == "connection", let connItem = try? JSONDecoder().decode(NoteConnectionAttachment.self, from: jsonData) {
-                if let idx = notebook.connectionAttachments?.firstIndex(where: { $0.id == connItem.id }) {
-                    notebook.connectionAttachments?[idx] = connItem
-                } else {
-                    if notebook.connectionAttachments == nil { notebook.connectionAttachments = [] }
-                    notebook.connectionAttachments?.append(connItem)
-                }
-                store.updateNotebook(notebook)
-                PageThumbnailRenderer.invalidateAll()
-            } else if attType == "link", let linkItem = try? JSONDecoder().decode(NoteLinkAttachment.self, from: jsonData) {
-                if let idx = notebook.linkAttachments?.firstIndex(where: { $0.id == linkItem.id }) {
-                    notebook.linkAttachments?[idx] = linkItem
-                } else {
-                    if notebook.linkAttachments == nil { notebook.linkAttachments = [] }
-                    notebook.linkAttachments?.append(linkItem)
-                }
-                store.updateNotebook(notebook)
-                PageThumbnailRenderer.invalidateAll()
+            let base = drawingForCollab(page: pageIdx)
+            let merged = CollabInk.adding(remoteDrawing.strokes, to: base)
+            if merged.strokes.count != base.strokes.count {
+                applyRemoteDrawing(page: pageIdx, remote: merged, replace: true)
             }
 
         case "attachment_delete":
+            // 舊版的刪除：當成一筆帶時鐘的刪除修改，與新版走同一套合併。
             guard let attId = event.payload["id"] as? String,
                   let attType = event.payload["attachment_type"] as? String else { return }
+            applyRemotePatches([ObjectPatch(type: attType, id: attId, fields: [ObjectPatch.deletedField: true])],
+                               stamp: LamportStamp(lamport: event.lamport, user: event.userId))
 
-            if attType == "text" {
-                notebook.textAttachments?.removeAll { $0.id == attId }
-            } else if attType == "image" {
-                notebook.attachments?.removeAll { $0.id == attId }
-            } else if attType == "3d" {
-                notebook.model3DAttachments?.removeAll { $0.id == attId }
-            } else if attType == "table" {
-                notebook.tableAttachments?.removeAll { $0.id == attId }
-            } else if attType == "shape" {
-                notebook.shapeAttachments?.removeAll { $0.id == attId }
-            } else if attType == "connection" {
-                notebook.connectionAttachments?.removeAll { $0.id == attId }
-            } else if attType == "link" {
-                notebook.linkAttachments?.removeAll { $0.id == attId }
+        case "attachment_upsert":
+            // 舊版的整個物件：當成「所有欄位」的修改，以它的時鐘參與合併。
+            guard let attType = event.payload["attachment_type"] as? String,
+                  var itemDict = event.payload["item"] as? [String: Any],
+                  let itemId = itemDict["id"] as? String else { return }
+            if let b64 = itemDict.removeValue(forKey: "image_base64") as? String {
+                itemDict[CollabObjectSync.blobField] = b64
             }
-            store.updateNotebook(notebook)
-            PageThumbnailRenderer.invalidateAll()
+            itemDict[ObjectPatch.deletedField] = false
+            applyRemotePatches([ObjectPatch(type: attType, id: itemId, fields: itemDict)],
+                               stamp: LamportStamp(lamport: event.lamport, user: event.userId))
 
         case "comment_upsert":
             guard let pinDict = event.payload["pin"] as? [String: Any],
@@ -9511,7 +9854,7 @@ public struct NotebookEditorView: View {
                 if notebook.commentPins == nil { notebook.commentPins = [] }
                 notebook.commentPins?.append(pin)
             }
-            store.updateNotebook(notebook)
+            commitNotebook()
 
         case "comment_resolve":
             guard let pinId = event.payload["pin_id"] as? String,
@@ -9519,7 +9862,7 @@ public struct NotebookEditorView: View {
 
             if let idx = notebook.commentPins?.firstIndex(where: { $0.id == pinId }) {
                 notebook.commentPins?[idx].isResolved = isResolved
-                store.updateNotebook(notebook)
+                commitNotebook()
             }
 
         case "comment_delete":
@@ -9528,7 +9871,7 @@ public struct NotebookEditorView: View {
             if selectedCommentPinId == pinId {
                 selectedCommentPinId = nil
             }
-            store.updateNotebook(notebook)
+            commitNotebook()
 
         default:
             break
@@ -9550,7 +9893,7 @@ public struct NotebookEditorView: View {
         )
         if let idx = notebook.commentPins?.firstIndex(where: { $0.id == pinId }) {
             notebook.commentPins?[idx].messages.append(msg)
-            store.updateNotebook(notebook)
+            commitNotebook()
             if let pin = notebook.commentPins?[idx] {
                 broadcastCommentPinUpsert(pin)
             }
@@ -9561,7 +9904,7 @@ public struct NotebookEditorView: View {
         if let idx = notebook.commentPins?.firstIndex(where: { $0.id == pinId }) {
             notebook.commentPins?[idx].isResolved.toggle()
             let state = notebook.commentPins?[idx].isResolved ?? false
-            store.updateNotebook(notebook)
+            commitNotebook()
             collaborationManager.broadcastCommentResolve(pinId: pinId, isResolved: state)
         }
     }
@@ -9574,7 +9917,7 @@ public struct NotebookEditorView: View {
               let count = notebook.commentPins?[idx].messages.count,
               count > 1 else { return }
         notebook.commentPins?[idx].messages.removeAll { $0.id == messageId }
-        store.updateNotebook(notebook)
+        commitNotebook()
         if let pin = notebook.commentPins?[idx] {
             broadcastCommentPinUpsert(pin)
         }
@@ -9582,135 +9925,165 @@ public struct NotebookEditorView: View {
 
     private func deleteCommentPin(pinId: String) {
         notebook.commentPins?.removeAll { $0.id == pinId }
-        store.updateNotebook(notebook)
+        commitNotebook()
         selectedCommentPinId = nil
         collaborationManager.broadcastCommentDelete(pinId: pinId)
         collaborationManager.broadcastSelection(selectedId: nil)
     }
 
+    /// 使用者明確開始了一個新動作（開始編輯、刪除、拖曳…）：下一個變更另起一步，
+    /// 不跟前一個連續變動合併。
     private func recordTextUndoState() {
-        let current = notebook.textAttachments ?? []
-        textUndoStack.append(current)
-        if textUndoStack.count > 50 {
-            textUndoStack.removeFirst()
-        }
-        textRedoStack.removeAll()
-        lastTextUndoTimestamp = Date()
+        objectHistory.breakCoalescing()
     }
 
-    private func recordTextUndoStateDebounced() {
-        let now = Date()
-        if now.timeIntervalSince(lastTextUndoTimestamp) > 1.2 {
-            recordTextUndoState()
-        }
+    /// 全域復原用的 manager：畫布的（與 PencilKit、專業筆畫共用）。
+    private var historyUndoManager: UndoManager {
+        canvasView?.undoManager ?? fallbackUndoManager
     }
 
-    /// 協同個人專屬復原與防誤刪墓碑還原
-    private func performUndo() {
-        // 1. 如果在文字輸入模式、文字方塊編輯中，或文字堆疊有操作記錄
-        if (editorMode == .type || inlineEditingTextId != nil || editingTextId != nil) && !textUndoStack.isEmpty {
-            let previous = textUndoStack.removeLast()
-            let current = notebook.textAttachments ?? []
-            textRedoStack.append(current)
-            notebook.textAttachments = previous
-            store.updateNotebook(notebook)
-            PageThumbnailRenderer.invalidateAll()
-            CanvasDiag.log("文字復原成功，剩餘堆疊: \(textUndoStack.count)")
-            return
+    /// 編輯器寫回筆記本的唯一入口：先讓物件復原紀錄比對這一次的變更，再存檔。
+    private func commitNotebook() {
+        objectHistory.record(notebook, manager: historyUndoManager) { state in
+            applyHistoryState(state)
         }
+        store.updateNotebook(notebook)
+        publishCollabChanges()
+    }
 
-        if let backup = deletedAttachmentBackup {
-            // 優先復原防誤刪墓碑中的物件
-            if backup.type == "image", let item = backup.data as? NoteImageAttachment {
-                if notebook.attachments == nil { notebook.attachments = [] }
-                notebook.attachments?.append(item)
-                store.updateNotebook(notebook)
-                if let data = try? JSONEncoder().encode(item),
-                   let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
-                    collaborationManager.broadcastAttachmentUpsert(type: "image", itemDict: dict)
-                }
-            } else if backup.type == "text", let item = backup.data as? NoteTextAttachment {
-                recordTextUndoState()
-                if notebook.textAttachments == nil { notebook.textAttachments = [] }
-                if let idx = notebook.textAttachments?.firstIndex(where: { $0.id == item.id }) {
-                    notebook.textAttachments?[idx] = item
-                } else {
-                    notebook.textAttachments?.append(item)
-                }
-                store.updateNotebook(notebook)
-                PageThumbnailRenderer.invalidateAll()
-                if let data = try? JSONEncoder().encode(item),
-                   let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
-                    collaborationManager.broadcastAttachmentUpsert(type: "text", itemDict: dict)
-                }
-            } else if backup.type == "3d", let item = backup.data as? Note3DAttachment {
-                if notebook.model3DAttachments == nil { notebook.model3DAttachments = [] }
-                notebook.model3DAttachments?.append(item)
-                store.updateNotebook(notebook)
-                if let data = try? JSONEncoder().encode(item),
-                   let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
-                    collaborationManager.broadcastAttachmentUpsert(type: "3d", itemDict: dict)
+    /// 本機的物件修改即時送給協同的每一個人（設計 §2.1）。
+    ///
+    /// **所有修改都經過這裡**（`commitNotebook` 與復原／重做），所以框選搬移、圖層、核取方塊、
+    /// 紙張、復原…不會再有「這一種忘了廣播」。一次寫回的所有變動放在同一個操作裡，對方一次套用。
+    private func publishCollabChanges() {
+        guard isCollaborating, !collabSync.isApplyingRemote else { return }
+        ensureCollabPageIds()
+        let me = collaborationManager.currentUserId
+        let lamport = collaborationManager.nextLamport()
+        let outgoing = collabSync.outgoing(for: notebook, stamp: LamportStamp(lamport: lamport, user: me))
+        guard !outgoing.isEmpty else { return }
+
+        // 文字內容先送：對方先有了新的字，後面帶格式錨點的修改才認得那些字的 id（設計 §8.3）。
+        for edit in outgoing.textEdits {
+            let replica = collabTextHub.replica(for: edit.id, base: edit.old, site: me)
+            let ops = replica.localEdit(from: edit.old, to: edit.new)
+            guard !ops.isEmpty else { continue }
+            collaborationManager.broadcastOplog(kind: "text_ops", payload: [
+                "proto": Self.collabProto, "id": edit.id, "base": replica.baseHash, "text": edit.new,
+                "ops": ops.map(\.json)
+            ])
+        }
+        if !outgoing.patches.isEmpty {
+            var patches = outgoing.patches
+            for index in patches.indices where patches[index].type == "text" {
+                if let anchors = runAnchors(for: patches[index]) { patches[index].fields[CollabObjectSync.anchorField] = anchors }
+            }
+            for index in patches.indices where (patches[index].fields[ObjectPatch.deletedField] as? Bool) == false {
+                // 新的圖片要連檔案一起送，否則對方只收到一個空框。
+                if patches[index].type == "image",
+                   let fileName = collabSync.shadow[patches[index].key]?["a.image.fileName"] as? String,
+                   let data = try? Data(contentsOf: store.attachmentsDirectory.appending(path: fileName)) {
+                    patches[index].fields[CollabObjectSync.blobField] = data.base64EncodedString()
                 }
             }
-            deletedAttachmentBackup = nil
-        } else if let addedId = lastAddedTextId,
-                  let textItem = notebook.textAttachments?.first(where: { $0.id == addedId }),
-                  textItem.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            // 如果剛剛隨點隨打新增了空白文字方塊，復原會優先撤銷該文字方塊
-            if inlineEditingTextId == addedId { inlineEditingTextId = nil }
-            lastAddedTextId = nil
-            recordTextUndoState()
-            notebook.textAttachments?.removeAll { $0.id == addedId }
-            store.updateNotebook(notebook)
-            collaborationManager.broadcastAttachmentDelete(id: addedId, type: "text")
-            PageThumbnailRenderer.invalidateAll()
-        } else if !textUndoStack.isEmpty && canvasView?.undoManager?.canUndo != true {
-            // 畫筆沒有可復原項，但文字堆疊有
-            let previous = textUndoStack.removeLast()
-            let current = notebook.textAttachments ?? []
-            textRedoStack.append(current)
-            notebook.textAttachments = previous
-            store.updateNotebook(notebook)
-            PageThumbnailRenderer.invalidateAll()
-            CanvasDiag.log("文字復原成功 (回退模式)，剩餘堆疊: \(textUndoStack.count)")
-        } else {
-            let before = canvasView?.drawing.strokes.count ?? -1
-            let canUndo = canvasView?.undoManager?.canUndo == true
-            canvasView?.undoManager?.undo()
-            let after = canvasView?.drawing.strokes.count ?? -1
-            CanvasDiag.log("復原：筆畫 \(before) → \(after)，復原項\(canUndo ? "有" : "無")")
+            collaborationManager.broadcastOplog(
+                kind: "obj_patch", payload: ["proto": Self.collabProto, "patches": patches.map(\.payload)], lamport: lamport)
+            // 新增（或複製出來）的頁面：上面已有的筆畫也要送，否則對方只看到一張空白頁。
+            for patch in patches where patch.type == "page"
+                && (patch.fields[ObjectPatch.deletedField] as? Bool) == false {
+                if let index = notebook.pageIds?.firstIndex(of: patch.id) {
+                    broadcastDrawingChange(page: index, drawing: drawingForCollab(page: index))
+                }
+            }
         }
     }
 
-    /// 協同個人專屬重做
-    private func performRedo() {
-        if (editorMode == .type || inlineEditingTextId != nil || editingTextId != nil) && !textRedoStack.isEmpty {
-            let next = textRedoStack.removeLast()
-            let current = notebook.textAttachments ?? []
-            textUndoStack.append(current)
-            notebook.textAttachments = next
-            store.updateNotebook(notebook)
-            PageThumbnailRenderer.invalidateAll()
-            CanvasDiag.log("文字重做成功，剩餘重做堆疊: \(textRedoStack.count)")
-            return
-        }
+    /// 協定版本（設計 §8）。4：堆疊順序是物件欄位、格式錨點、整份狀態。
+    static let collabProto = 4
 
-        if !textRedoStack.isEmpty && canvasView?.undoManager?.canRedo != true {
-            let next = textRedoStack.removeLast()
-            let current = notebook.textAttachments ?? []
-            textUndoStack.append(current)
-            notebook.textAttachments = next
-            store.updateNotebook(notebook)
-            PageThumbnailRenderer.invalidateAll()
-            CanvasDiag.log("文字重做成功 (回退模式)，剩餘重做堆疊: \(textRedoStack.count)")
-            return
-        }
+    /// 這次修改帶了逐字格式：把每段的頭尾換成字的 id（設計 §8.3）。
+    private func runAnchors(for patch: ObjectPatch) -> [[String]]? {
+        guard let runs = patch.fields["a.runs"] as? [[String: Any]],
+              let text = collabSync.shadow[patch.key]?["text"] as? String else { return nil }
+        let replica = collabTextHub.replica(for: patch.id, base: text, site: collaborationManager.currentUserId)
+        guard replica.text == text else { return nil }
+        let spans = runs.map { ((($0["start"] as? NSNumber)?.intValue) ?? 0, (($0["length"] as? NSNumber)?.intValue) ?? 0) }
+        return CollabRunAnchors.anchors(spans.map { (start: $0.0, length: $0.1) }, in: replica)
+    }
 
-        let before = canvasView?.drawing.strokes.count ?? -1
-        let canRedo = canvasView?.undoManager?.canRedo == true
-        canvasView?.undoManager?.redo()
-        let after = canvasView?.drawing.strokes.count ?? -1
-        CanvasDiag.log("重做：筆畫 \(before) → \(after)，重做項\(canRedo ? "有" : "無")")
+    /// 協同要以頁面 id 指稱頁面（設計 §8.1）：還沒有的話沿用套件裡的那一批。
+    private func ensureCollabPageIds() {
+        CollabCanonical.attachmentsDirectory = store.attachmentsDirectory
+        let ids = NotebookPackageBridge.resolvedPageIds(for: notebook, packagesDirectory: store.syncPackagesDirectory)
+        guard notebook.pageIds != ids else { return }
+        notebook.pageIds = ids
+        store.updateNotebook(notebook)
+    }
+
+    /// 套上復原／重做的物件狀態。筆跡不動（它由 PencilKit 自己復原）。
+    private func applyHistoryState(_ state: CanvasObjectState) {
+        var doc = notebook
+        state.apply(to: &doc)
+        // 協同中：別人在我之後改過的欄位保留別人的值（設計 §6）。復原只退自己的動作。
+        if isCollaborating,
+           collabSync.protectRemoteEdits(target: &doc, current: notebook, me: collaborationManager.currentUserId) {
+            objectHistory.reset(to: doc)
+            showCanvasNotice(localizationManager.localized("collab_undo_partial"))
+        }
+        notebook = doc
+        store.updateNotebook(notebook)
+        publishCollabChanges()
+        PageThumbnailRenderer.invalidateAll()
+        thumbnailRevision += 1
+        // 指向已經不存在的物件的選取與編輯狀態要清掉，否則工具列對著一個空殼。
+        let alive = state.allObjectIds
+        if let id = inlineEditingTextId, !alive.contains(id) { inlineEditingTextId = nil }
+        if let id = editingTextId, !alive.contains(id) { editingTextId = nil }
+        if let id = activeSelectedObjectId, !alive.contains(id) { activeSelectedObjectId = nil }
+        if let id = textFormatTargetId, !alive.contains(id) { endTextFormatSession() }
+        selectedObjectIds = selectedObjectIds.filter { alive.contains($0) }
+        selectedShapeIds = selectedShapeIds.filter { alive.contains($0) }
+    }
+
+    /// 復原：筆跡、專業筆畫、物件的任何操作，照發生順序退一步。
+    private func performUndo() { stepHistory(undo: true) }
+
+    /// 重做（協同時只重做自己的操作）。
+    private func performRedo() { stepHistory(undo: false) }
+
+    /// 退一步／進一步，**跳過沒有效果的項目**。
+    ///
+    /// 堆疊裡會有空的或已經失效的項目：作廢物件紀錄後留下的空群組、程式替換筆畫後
+    /// PencilKit 指向不存在筆畫的那一項。照實執行的話使用者按一次復原什麼都沒發生，
+    /// 以為功能壞了。所以一直退到畫面真的有變（物件、筆跡或專業筆畫）為止。
+    private func stepHistory(undo: Bool) {
+        let manager = historyUndoManager
+        for _ in 0..<12 {
+            guard undo ? manager.canUndo : manager.canRedo else {
+                CanvasDiag.log(undo ? "復原：沒有可復原的項目" : "重做：沒有可重做的項目")
+                return
+            }
+            let canvas = canvasView as? AdaptiveCanvasView
+            let drawingBefore = canvasView?.drawing
+            let proBefore = canvas?.proLayer?.ownStrokes.map(\.id)
+            let appliedBefore = objectHistory.appliedCount
+            var proChanged = false
+            let token = NotificationCenter.default.addObserver(
+                forName: AppCommand.proInkDidChange, object: nil, queue: nil) { _ in proChanged = true }
+            if undo { manager.undo() } else { manager.redo() }
+            NotificationCenter.default.removeObserver(token)
+
+            if objectHistory.appliedCount != appliedBefore {
+                CanvasDiag.log(undo ? "復原：物件" : "重做：物件")
+                return
+            }
+            if canvasView?.drawing != drawingBefore || proChanged
+                || canvas?.proLayer?.ownStrokes.map(\.id) != proBefore {
+                CanvasDiag.log(undo ? "復原：筆畫" : "重做：筆畫")
+                return
+            }
+            CanvasDiag.log(undo ? "復原：略過一個沒有效果的項目" : "重做：略過一個沒有效果的項目")
+        }
     }
 
     /// 接住拖進畫布的圖片（工作項 S-68）。
@@ -9831,7 +10204,7 @@ public struct NotebookEditorView: View {
             // 裡通知自動同步。這裡不碰 `AccountSyncStore` —— 內容改動不是
             // 中繼資料改動，把時戳往前推會讓這台裝置永遠贏過另一台對同一本
             // 筆記的改名，而那次改名其實比較晚。
-            store.updateNotebook(notebook)
+            commitNotebook()
         }
         inkTouchWork = work
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.2, execute: work)
@@ -9961,7 +10334,7 @@ public struct NotebookEditorView: View {
             if !hadPendingInk && !proInkDirty && store.notebookMatchesStored(notebook) { return }
             proInkDirty = false
             notebook.lastModifiedDate = Date()
-            store.updateNotebook(notebook)
+            commitNotebook()
             return
         }
         // 模式切換會立即觸發 SwiftUI 更新；`@Binding` 的最後一次回寫有可能還
@@ -9983,7 +10356,7 @@ public struct NotebookEditorView: View {
         if unchanged && !proInkDirty && store.notebookMatchesStored(notebook) { return }
         proInkDirty = false
         notebook.lastModifiedDate = Date()
-        store.updateNotebook(notebook)
+        commitNotebook()
     }
 
     /// 內容寫到頁尾時，確保後面有一頁可以接下去。
@@ -9993,7 +10366,7 @@ public struct NotebookEditorView: View {
     private func ensureNextPageExists() {
         guard currentPageIndex == notebook.pageCount - 1 else { return }
         notebook.pageCount += 1
-        store.updateNotebook(notebook)
+        commitNotebook()
 
         withAnimation {
             showExtendedBanner = true
@@ -10110,7 +10483,7 @@ public struct NotebookEditorView: View {
                     inlineEditingTextId = draft.id
                     editingTextId = nil
                 }
-                store.updateNotebook(notebook)
+                commitNotebook()
                 PageThumbnailRenderer.invalidateAll()
                 showCanvasNotice("已成功將手寫轉換為文字")
                 #if os(iOS)
@@ -10154,7 +10527,7 @@ public struct NotebookEditorView: View {
                     notebook.stickyAnchors?[i].anchorOriginY += Float(delta.height)
                 }
             }
-            store.updateNotebook(notebook)
+            commitNotebook()
         }
     }
 
@@ -10192,7 +10565,7 @@ public struct NotebookEditorView: View {
                 if notebook.stickyAnchors == nil { notebook.stickyAnchors = [] }
                 notebook.stickyAnchors?.removeAll { $0.targetId == target.id }
                 notebook.stickyAnchors?.append(anchor)
-                store.updateNotebook(notebook)
+                commitNotebook()
                 lasso.clear()
                 showCanvasNotice("手寫筆劃已成功錨定至文字方塊！移動該文字方塊時，筆跡將隨之連動")
                 #if os(iOS)
@@ -10234,7 +10607,7 @@ public struct NotebookEditorView: View {
         if notebook.stickyAnchors == nil { notebook.stickyAnchors = [] }
         notebook.stickyAnchors?.removeAll { $0.targetId == textItem.id }
         notebook.stickyAnchors?.append(anchor)
-        store.updateNotebook(notebook)
+        commitNotebook()
         showCanvasNotice("手寫筆劃已成功錨定至文字方塊！移動該文字方塊時，筆跡將隨之連動")
         #if os(iOS)
         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
@@ -10282,7 +10655,7 @@ public struct NotebookEditorView: View {
 
         if hasChanges {
             notebook.stickyAnchors = updatedAnchors
-            store.updateNotebook(notebook)
+            commitNotebook()
         }
     }
 
@@ -10437,7 +10810,7 @@ public struct NotebookEditorView: View {
         )
         if notebook.attachments == nil { notebook.attachments = [] }
         notebook.attachments?.append(attachment)
-        store.updateNotebook(notebook)
+        commitNotebook()
         if var dict = (try? JSONSerialization.jsonObject(with: JSONEncoder().encode(attachment))) as? [String: Any] {
             if let imgData = image.pngData() {
                 dict["image_base64"] = imgData.base64EncodedString()
@@ -10464,7 +10837,7 @@ public struct NotebookEditorView: View {
             let fileName = result.url.lastPathComponent
             notebook.hasRecording = true
             notebook.recordingAudioPath = fileName
-            store.updateNotebook(notebook)
+            commitNotebook()
             let rec = store.addRecording(
                 title: NotebookStore.defaultRecordingTitle(),
                 durationSeconds: AudioRecorderManager.displaySeconds(of: result.url, fallback: result.duration),
@@ -10954,7 +11327,7 @@ public struct NotebookEditorView: View {
     private func applyGuidePalette(_ id: String) {
         guard notebook.guidePaletteId != id else { return }
         notebook.guidePaletteId = id
-        store.updateNotebook(notebook)
+        commitNotebook()
         // 縮圖的快取鍵含配色，所以側欄會跟著換 —— 但畫布要自己重畫一次。
         PageThumbnailRenderer.invalidateAll()
         showCanvasNotice(localizationManager.localized(guidePalette(id: id).nameKey))
@@ -10970,7 +11343,7 @@ public struct NotebookEditorView: View {
         notebook.pageFormatId = id
         PageGeometry.use(format: id)
         clampAttachmentsIntoPage()
-        store.updateNotebook(notebook)
+        commitNotebook()
         showCanvasNotice(localizationManager.localized("page_format_change_warning"))
     }
 
@@ -11113,7 +11486,7 @@ public struct NotebookEditorView: View {
         }
         if cleaned.count != attachments.count {
             notebook.textAttachments = cleaned
-            store.updateNotebook(notebook)
+            commitNotebook()
             PageThumbnailRenderer.invalidateAll()
         }
     }
@@ -11128,24 +11501,278 @@ public struct NotebookEditorView: View {
                     }.map(\.id)
                     notebook.setUnderInkObjectIds(Set(bgCardIds), forPage: p)
                 }
-                store.updateNotebook(notebook)
+                commitNotebook()
                 PageThumbnailRenderer.invalidateAll()
             }
         }
     }
 
+    /// 打字工具列要套用格式的那一個方塊。
+    ///
+    /// **不再退回「這一頁第一個方塊」。** 那個退路讓工具列在焦點一閃而過時
+    /// 改到不相干的方塊（例如頁首標題被加上「1. ☐」）。沒有目標就回 nil，
+    /// 由呼叫端決定（工具列改的是 `pendingTypingStyle`）。
     private var activeTextAttachment: NoteTextAttachment? {
-        if let id = inlineEditingTextId {
-            return notebook.textAttachments?.first(where: { $0.id == id })
+        func find(_ id: String) -> NoteTextAttachment? {
+            notebook.textAttachments?.first(where: { $0.id == id })
         }
-        if let id = editingTextId {
-            return notebook.textAttachments?.first(where: { $0.id == id })
+        if let id = inlineEditingTextId { return find(id) }
+        if let id = editingTextId { return find(id) }
+        if let id = activeSelectedObjectId {
+            // 選中的是圖片、表格等非文字物件：文字工具列沒有目標。
+            return find(id)
         }
-        if let id = activeSelectedObjectId,
-           let match = notebook.textAttachments?.first(where: { $0.id == id }) {
+        if !selectedShapeIds.isEmpty || !selectedObjectIds.isEmpty { return nil }
+        if let id = textFormatTargetId, let match = find(id), match.pageIndex == currentPageIndex {
             return match
         }
-        return notebook.textAttachments?.first(where: { $0.pageIndex == currentPageIndex })
+        return nil
+    }
+
+    /// 使用者主動換了目標（點畫布、換頁、換模式）：格式化工作階段結束。
+    private func endTextFormatSession() {
+        textFormatTargetId = nil
+        suspendedInlineTextId = nil
+    }
+
+    /// 打字工具列的每一個格式變更都走這裡：記復原點、調整高度、存檔、廣播，
+    /// 再把游標還給剛剛在打字的方塊 —— 跟 Word 一樣，按完粗體可以直接接著打。
+    /// 工具列這一次要改哪裡：選取的字、游標處、或整個方塊（見 `TextFormatScope`）。
+    private func textFormatScope(for target: NoteTextAttachment) -> TextFormatScope {
+        let tracker = textSelectionTracker
+        guard tracker.textId == target.id,
+              inlineEditingTextId == target.id || suspendedInlineTextId == target.id else { return .wholeBox }
+        let length = RichText.utf16Length(target.text)
+        let location = min(max(0, tracker.range.location), length)
+        let range = NSRange(location: location, length: min(max(0, tracker.range.length), length - location))
+        if range.length > 0 {
+            // 全選等於整個方塊：改方塊層級的值，之後在結尾接著打的字也會是這個格式。
+            return range.length == length ? .wholeBox : .selection(range)
+        }
+        if let word = RichText.wordRange(around: location, in: target.text) { return .selection(word) }
+        return .caret(location)
+    }
+
+    /// 工具列顯示的格式：有選取時是選取文字的格式（Word 的按鈕狀態跟著選取走），
+    /// 只有游標時是游標處的格式，否則是方塊層級的格式。
+    private func toolbarDisplayedText() -> NoteTextAttachment {
+        guard let target = activeTextAttachment else { return pendingTypingStyle }
+        let resolved: ResolvedCharStyle
+        switch textFormatScope(for: target) {
+        case .wholeBox:
+            return target
+        case .selection(let range):
+            resolved = RichText.resolvedStyle(at: range, in: target)
+        case .caret(let location):
+            let caret = textSelectionTracker.caretStyle
+            if let caret, caret.textId == target.id, caret.location == location {
+                resolved = RichText.resolve(caret.style, over: RichText.base(of: target))
+            } else {
+                resolved = RichText.resolvedStyle(at: NSRange(location: location, length: 0), in: target)
+            }
+        }
+        var shown = target
+        shown.isBold = resolved.bold
+        shown.isItalic = resolved.italic
+        shown.isUnderline = resolved.underline
+        shown.isStrikethrough = resolved.strikethrough
+        shown.fontSize = resolved.fontSize
+        shown.fontFamily = resolved.fontFamily
+        shown.textColorHex = resolved.textColorHex
+        return shown
+    }
+
+    /// 工具列改了哪些字元格式（與它看到的值比較）。
+    private func charStyleChange(from shown: NoteTextAttachment, to updated: NoteTextAttachment) -> TextCharStyle {
+        var edit = TextCharStyle()
+        if shown.isBold != updated.isBold { edit.bold = updated.isBold }
+        if shown.isItalic != updated.isItalic { edit.italic = updated.isItalic }
+        if shown.isUnderline != updated.isUnderline { edit.underline = updated.isUnderline }
+        if shown.isStrikethrough != updated.isStrikethrough { edit.strikethrough = updated.isStrikethrough }
+        if abs(shown.fontSize - updated.fontSize) > 0.001 { edit.fontSize = updated.fontSize }
+        if shown.fontFamily != updated.fontFamily { edit.fontFamily = updated.fontFamily ?? "" }
+        if shown.textColorHex != updated.textColorHex { edit.textColorHex = updated.textColorHex }
+        return edit
+    }
+
+    /// 打字工具列的每一個格式變更都走這裡：決定套用範圍、記復原點、調整高度、存檔、廣播，
+    /// 再把游標還給剛剛在打字的方塊 —— 跟 Word 一樣，按完粗體可以直接接著打。
+    private func applyToolbarTextChange(_ updated: NoteTextAttachment) {
+        guard let target = activeTextAttachment, target.id == updated.id,
+              notebook.textAttachments?.contains(where: { $0.id == target.id }) == true else {
+            var style = updated
+            style.text = ""
+            pendingTypingStyle = style
+            return
+        }
+        let edit = charStyleChange(from: toolbarDisplayedText(), to: updated)
+
+        // 段落層級的欄位（對齊、縮排、行距、文字內容…）直接沿用工具列的值；
+        // 字元層級的欄位先還原成方塊原本的值，再依範圍套用這一次的變更。
+        var next = updated
+        next.isBold = target.isBold
+        next.isItalic = target.isItalic
+        next.isUnderline = target.isUnderline
+        next.isStrikethrough = target.isStrikethrough
+        next.fontSize = target.fontSize
+        next.fontFamily = target.fontFamily
+        next.textColorHex = target.textColorHex
+        next.runs = target.runs
+        if next.text != target.text {
+            RichText.adjustRunsLineByLine(of: &next, from: target.text)
+        }
+        if !edit.isEmpty {
+            switch textFormatScope(for: target) {
+            case .wholeBox:
+                RichText.applyToWholeBox(edit, to: &next)
+            case .selection(let range):
+                RichText.apply(edit, range: range, to: &next)
+            case .caret(let location):
+                // 只有游標：不改現有的字，改接下來要打的字（Word 的行為）。
+                var caret = textSelectionTracker.caretStyle
+                if caret?.textId != target.id || caret?.location != location {
+                    caret = CaretStyle(textId: target.id, location: location, style: TextCharStyle())
+                }
+                if var caret {
+                    caret.style = caret.style.overlaid(with: edit)
+                    textSelectionTracker.setCaretStyle(caret)
+                }
+            }
+        }
+        commitToolbarText(next)
+    }
+
+    /// 把工具列算好的結果寫回筆記本。
+    private func commitToolbarText(_ candidate: NoteTextAttachment) {
+        guard let idx = notebook.textAttachments?.firstIndex(where: { $0.id == candidate.id }) else { return }
+        guard notebook.textAttachments?[idx] != candidate else {
+            resumeInlineEditingAfterToolbar(candidate.id)
+            return
+        }
+        recordTextUndoState()
+        var next = candidate
+        next.height = max(next.height, RichText.boxHeight(for: next))
+        notebook.textAttachments?[idx] = next
+        textFormatTargetId = next.id
+        commitNotebook()
+        PageThumbnailRenderer.invalidateAll()
+        if let data = try? JSONEncoder().encode(next),
+           let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+            collaborationManager.broadcastAttachmentUpsert(type: "text", itemDict: dict)
+        }
+        resumeInlineEditingAfterToolbar(next.id)
+    }
+
+    /// 工具列醒目提示按鈕目前代表的顏色。
+    private func toolbarHighlightHex() -> String? {
+        guard let target = activeTextAttachment else { return nil }
+        switch textFormatScope(for: target) {
+        case .selection(let range):
+            return RichText.resolvedStyle(at: range, in: target).highlightHex
+        case .caret(let location):
+            if let caret = textSelectionTracker.caretStyle, caret.textId == target.id, caret.location == location {
+                return caret.style.highlightHex == "clear" ? nil : caret.style.highlightHex
+            }
+            return RichText.resolvedStyle(at: NSRange(location: location, length: 0), in: target).highlightHex
+        case .wholeBox:
+            // 整個方塊都是同一個醒目提示色時才算「有」。
+            let runs = RichText.normalized(target) ?? []
+            let length = RichText.utf16Length(target.text)
+            if runs.count == 1, runs[0].start == 0, runs[0].length == length { return runs[0].style.highlightHex }
+            return nil
+        }
+    }
+
+    /// Word 的文字醒目提示：套在字上（字的背景），不是整個方塊的底色。
+    private func applyToolbarHighlight(_ hex: String) {
+        guard let target = activeTextAttachment else { return }
+        var next = target
+        let edit = TextCharStyle(highlightHex: hex)
+        switch textFormatScope(for: target) {
+        case .wholeBox:
+            RichText.applyToWholeBox(edit, to: &next)
+        case .selection(let range):
+            RichText.apply(edit, range: range, to: &next)
+        case .caret(let location):
+            var caret = textSelectionTracker.caretStyle
+            if caret?.textId != target.id || caret?.location != location {
+                caret = CaretStyle(textId: target.id, location: location, style: TextCharStyle())
+            }
+            if var caret {
+                caret.style = caret.style.overlaid(with: edit)
+                textSelectionTracker.setCaretStyle(caret)
+            }
+        }
+        commitToolbarText(next)
+    }
+
+    /// Word 的「清除所有格式設定」：有選取時只清選取的字；否則整個方塊回到內文樣式。
+    /// 段落設定（對齊、行距、縮排）一律回到預設。文字內容不動。
+    private func clearToolbarFormatting() {
+        guard let target = activeTextAttachment else {
+            pendingTypingStyle = NoteTextAttachment(
+                id: pendingTypingStyle.id, text: "", backgroundColorHex: "clear", hasBorder: false)
+            return
+        }
+        var next = target
+        next.alignmentRaw = "left"
+        next.lineSpacing = nil
+        next.paragraphIndent = nil
+        switch textFormatScope(for: target) {
+        case .selection(let range):
+            RichText.clearOverrides(in: range, of: &next)
+        case .caret:
+            textSelectionTracker.clear(textId: target.id)
+            next.runs = target.runs
+        case .wholeBox:
+            next.fontSize = 15
+            next.fontFamily = nil
+            next.isBold = false
+            next.isItalic = false
+            next.isUnderline = false
+            next.isStrikethrough = false
+            next.textColorHex = "#000000"
+            next.runs = nil
+        }
+        commitToolbarText(next)
+    }
+
+    /// Word 格式快捷鍵（見 `TextFormatCommand`）。只在打字工具列出現時作用，
+    /// 手繪時按 ⌘B 不該偷偷改掉某個文字方塊。
+    private func handleTextFormatCommand(_ command: TextFormatCommand) {
+        guard effectiveToolbarMode == .type else { return }
+        var next = toolbarDisplayedText()
+        switch command {
+        case .bold: next.isBold.toggle()
+        case .italic: next.isItalic.toggle()
+        case .underline: next.isUnderline.toggle()
+        case .strikethrough: next.isStrikethrough.toggle()
+        case .growFont: next.fontSize = min(400, next.fontSize + 1)
+        case .shrinkFont: next.fontSize = max(1, next.fontSize - 1)
+        case .alignLeft: next.alignmentRaw = "left"
+        case .alignRight: next.alignmentRaw = "right"
+        case .bulletList:
+            guard activeTextAttachment != nil else {
+                insertQuickTextSnippet("• ")
+                return
+            }
+            next.text = WordListKind.bullet.toggle(in: next.text)
+        }
+        applyToolbarTextChange(next)
+    }
+
+    /// 焦點是被工具列借走的：把就地編輯還回去，鍵盤／游標回到原方塊。
+    private func resumeInlineEditingAfterToolbar(_ id: String) {
+        guard suspendedInlineTextId == id else { return }
+        // 等選單／按鈕的事件跑完再要焦點，否則 UIKit 會在收選單時又把它收走。
+        DispatchQueue.main.async {
+            guard suspendedInlineTextId == id, inlineEditingTextId == nil,
+                  notebook.textAttachments?.contains(where: { $0.id == id }) == true else { return }
+            suspendedInlineTextId = nil
+            // 新的編輯器把游標（或選取範圍）放回原處，而不是跳到最後。
+            textSelectionTracker.restoreSelectionOnNextBegin = true
+            inlineEditingTextId = id
+        }
     }
 
     private var isCurrentTextBold: Bool {
@@ -11179,7 +11806,7 @@ public struct NotebookEditorView: View {
         guard let items = notebook.textAttachments, items.indices.contains(target.index) else { return }
         recordTextUndoState()
         notebook.textAttachments?[target.index].isBold.toggle()
-        store.updateNotebook(notebook)
+        commitNotebook()
         PageThumbnailRenderer.invalidateAll()
     }
 
@@ -11188,7 +11815,7 @@ public struct NotebookEditorView: View {
         guard let items = notebook.textAttachments, items.indices.contains(target.index) else { return }
         recordTextUndoState()
         notebook.textAttachments?[target.index].isItalic.toggle()
-        store.updateNotebook(notebook)
+        commitNotebook()
         PageThumbnailRenderer.invalidateAll()
     }
 
@@ -11197,7 +11824,7 @@ public struct NotebookEditorView: View {
         guard let items = notebook.textAttachments, items.indices.contains(target.index) else { return }
         recordTextUndoState()
         notebook.textAttachments?[target.index].isUnderline.toggle()
-        store.updateNotebook(notebook)
+        commitNotebook()
         PageThumbnailRenderer.invalidateAll()
     }
 
@@ -11206,7 +11833,7 @@ public struct NotebookEditorView: View {
         guard let items = notebook.textAttachments, items.indices.contains(target.index) else { return }
         recordTextUndoState()
         notebook.textAttachments?[target.index].alignmentRaw = align
-        store.updateNotebook(notebook)
+        commitNotebook()
         PageThumbnailRenderer.invalidateAll()
     }
 
@@ -11216,7 +11843,7 @@ public struct NotebookEditorView: View {
         recordTextUndoState()
         let current = notebook.textAttachments?[target.index].fontSize ?? 16
         notebook.textAttachments?[target.index].fontSize = max(10, min(72, current + delta))
-        store.updateNotebook(notebook)
+        commitNotebook()
         PageThumbnailRenderer.invalidateAll()
     }
 
@@ -11225,7 +11852,7 @@ public struct NotebookEditorView: View {
         guard let items = notebook.textAttachments, items.indices.contains(target.index) else { return }
         recordTextUndoState()
         notebook.textAttachments?[target.index].textColorHex = hex
-        store.updateNotebook(notebook)
+        commitNotebook()
         PageThumbnailRenderer.invalidateAll()
     }
 
@@ -11235,7 +11862,7 @@ public struct NotebookEditorView: View {
         guard let id = targetId else { return }
         let newOrder = ObjectStacking.bringForward([id], in: order)
         notebook.setObjectOrder(newOrder, forPage: currentPageIndex)
-        store.updateNotebook(notebook)
+        commitNotebook()
     }
 
     private func sendActiveObjectBackward() {
@@ -11244,7 +11871,7 @@ public struct NotebookEditorView: View {
         guard let id = targetId else { return }
         let newOrder = ObjectStacking.sendBackward([id], in: order)
         notebook.setObjectOrder(newOrder, forPage: currentPageIndex)
-        store.updateNotebook(notebook)
+        commitNotebook()
     }
 
     private func findObjectAt(location: CGPoint, page: Int) -> (id: String, kind: String)? {
@@ -11414,7 +12041,7 @@ public struct NotebookEditorView: View {
             if let activeItem = notebook.textAttachments?.first(where: { $0.id == activeId }),
                activeItem.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 notebook.textAttachments?.removeAll { $0.id == activeId }
-                store.updateNotebook(notebook)
+                commitNotebook()
                 PageThumbnailRenderer.invalidateAll()
             }
             inlineEditingTextId = nil
@@ -11480,7 +12107,7 @@ public struct NotebookEditorView: View {
         }
         let current = notebook.checkedGuideItems?[key] ?? false
         notebook.checkedGuideItems?[key] = !current
-        store.updateNotebook(notebook)
+        commitNotebook()
         #if os(iOS)
         let generator = UIImpactFeedbackGenerator(style: .medium)
         generator.prepare()
@@ -11497,7 +12124,7 @@ public struct NotebookEditorView: View {
             updated[i].isStrikethrough.toggle()
         }
         notebook.textAttachments = updated
-        store.updateNotebook(notebook)
+        commitNotebook()
         PageThumbnailRenderer.invalidateAll()
     }
 
@@ -11505,7 +12132,7 @@ public struct NotebookEditorView: View {
         guard let texts = notebook.textAttachments, !texts.isEmpty else { return }
         recordTextUndoState()
         notebook.textAttachments?.removeAll { $0.pageIndex == page && abs($0.y - y) < 30 }
-        store.updateNotebook(notebook)
+        commitNotebook()
         PageThumbnailRenderer.invalidateAll()
     }
 
@@ -11516,12 +12143,13 @@ public struct NotebookEditorView: View {
             checked[key] = false
         }
         notebook.checkedGuideItems = checked
-        store.updateNotebook(notebook)
+        commitNotebook()
         PageThumbnailRenderer.invalidateAll()
     }
 
     /// 🌟 方案 A+B：手指或游標在畫布上的單擊事件
     private func handleCanvasDirectTap(at location: CGPoint, page: Int? = nil) {
+        endTextFormatSession()
         let targetPage = page ?? currentPageIndex
         currentPageIndex = targetPage
 
@@ -11587,7 +12215,7 @@ public struct NotebookEditorView: View {
                 if let activeItem = notebook.textAttachments?.first(where: { $0.id == activeId }),
                    activeItem.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                     notebook.textAttachments?.removeAll { $0.id == activeId }
-                    store.updateNotebook(notebook)
+                    commitNotebook()
                     PageThumbnailRenderer.invalidateAll()
                     watchdog.notifyEmptyTextBoxDismissedQuickly(isStylusActive: true) {
                         withAnimation { editorMode = .draw }
@@ -11600,6 +12228,7 @@ public struct NotebookEditorView: View {
 
     /// 🌟 方案 A+B：手指或游標在畫布上的雙擊事件（手繪或打字模式下皆可直接建立並聚焦文字方塊）
     private func handleCanvasDirectDoubleTap(at location: CGPoint, page: Int? = nil) {
+        endTextFormatSession()
         let targetPage = page ?? currentPageIndex
         currentPageIndex = targetPage
         if hitTestGuideCheckbox(at: location, page: targetPage) != nil { return }
@@ -11609,7 +12238,7 @@ public struct NotebookEditorView: View {
            let activeItem = notebook.textAttachments?.first(where: { $0.id == activeId }),
            activeItem.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             notebook.textAttachments?.removeAll { $0.id == activeId }
-            store.updateNotebook(notebook)
+            commitNotebook()
             if activeSelectedObjectId == activeId {
                 activeSelectedObjectId = nil
             }
@@ -11628,6 +12257,7 @@ public struct NotebookEditorView: View {
     }
 
     private func handleCanvasTapInTypeMode(at location: CGPoint, page: Int? = nil) {
+        endTextFormatSession()
         let targetPage = page ?? currentPageIndex
         currentPageIndex = targetPage
 
@@ -11641,7 +12271,7 @@ public struct NotebookEditorView: View {
            let activeItem = notebook.textAttachments?.first(where: { $0.id == activeId }),
            activeItem.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             notebook.textAttachments?.removeAll { $0.id == activeId }
-            store.updateNotebook(notebook)
+            commitNotebook()
             inlineEditingTextId = nil
             if activeSelectedObjectId == activeId {
                 activeSelectedObjectId = nil
@@ -11754,8 +12384,10 @@ public struct NotebookEditorView: View {
         var targetX = location.x
         var targetY = location.y
         var tapPlacement: RuledWriting.Placement?
+        // 新方塊沿用目前方塊的樣式；沒有目前方塊時，沿用使用者在工具列預先選好的樣式。
+        let inheritedStyle = activeTextAttachment ?? pendingTypingStyle
         if tapToWrite {
-            let baseSize: CGFloat = activeTextAttachment?.fontSize ?? 16
+            let baseSize: CGFloat = inheritedStyle.fontSize
             let minTop = PageGeometry.printableRect.minY
             if snapToGrid,
                let ruled = RuledWriting.placement(
@@ -11782,20 +12414,27 @@ public struct NotebookEditorView: View {
         let midX = PageGeometry.width / 2
         // 若在左右分欄或四象限結構的左半部，文字寬度以中線為界；否則延伸至右側可列印邊界
         let availWidth: CGFloat
-        if startX < midX - 30 && printable.maxX > midX {
+        // 以中線為界只在左半邊還有像樣的寬度時才成立：點在中線左邊一點點時，
+        // 界線會把方塊壓到幾十點寬，打一個英文字就折成兩行。
+        if startX < midX - 30 && printable.maxX > midX && midX - startX - 12 >= 200 {
             availWidth = max(tapToWrite ? 60 : 180, midX - startX - 12)
         } else {
             availWidth = max(tapToWrite ? 60 : 180, printable.maxX - startX)
         }
         let tapHeight = RuledWriting.boxHeight(
-            text: "", width: availWidth, fontSize: tapPlacement?.fontSize ?? 16, bold: false,
+            text: "", width: availWidth, fontSize: tapPlacement?.fontSize ?? inheritedStyle.fontSize, bold: inheritedStyle.isBold,
             lineSpacing: tapPlacement?.lineSpacing ?? 0)
         var draft = NoteTextAttachment(
             id: UUID().uuidString,
             pageIndex: targetPage,
             text: "",
-            fontSize: tapPlacement?.fontSize ?? (activeTextAttachment?.fontSize ?? 16),
-            textColorHex: activeTextAttachment?.textColorHex ?? "#000000",
+            fontSize: tapPlacement?.fontSize ?? inheritedStyle.fontSize,
+            isBold: inheritedStyle.isBold,
+            isItalic: inheritedStyle.isItalic,
+            isUnderline: inheritedStyle.isUnderline,
+            isStrikethrough: inheritedStyle.isStrikethrough,
+            alignmentRaw: inheritedStyle.alignmentRaw,
+            textColorHex: inheritedStyle.textColorHex,
             backgroundColorHex: "clear",
             hasBorder: !tapToWrite,
             x: startX,
@@ -11805,6 +12444,7 @@ public struct NotebookEditorView: View {
             width: availWidth,
             height: tapToWrite ? tapHeight : 40
         )
+        draft.fontFamily = inheritedStyle.fontFamily
         if let placement = tapPlacement, placement.lineSpacing > 0 {
             draft.lineSpacing = placement.lineSpacing
         }
@@ -11817,7 +12457,7 @@ public struct NotebookEditorView: View {
         order = ObjectStacking.bringToFront([draft.id], in: order)
         notebook.setObjectOrder(order, forPage: targetPage)
 
-        store.updateNotebook(notebook)
+        commitNotebook()
         PageThumbnailRenderer.invalidateAll()
         if let data = try? JSONEncoder().encode(draft),
            let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
@@ -11843,19 +12483,28 @@ public struct NotebookEditorView: View {
         }
     }
 
-    private func insertQuickTextSnippet(_ text: String) {
-        if let id = inlineEditingTextId ?? editingTextId,
-           let idx = notebook.textAttachments?.firstIndex(where: { $0.id == id }) {
-            notebook.textAttachments?[idx].text.append(text)
-            store.updateNotebook(notebook)
-            PageThumbnailRenderer.invalidateAll()
+    private func insertQuickTextSnippet(_ text: String, onNewLine: Bool = false) {
+        // 跟格式按鈕同一個目標（焦點被工具列借走時也找得到），不會插到別的方塊。
+        if var target = activeTextAttachment {
+            if onNewLine, !target.text.isEmpty, !target.text.hasSuffix("\n") {
+                target.text.append("\n")
+            }
+            target.text.append(text)
+            if onNewLine { target.text.append("\n") }
+            applyToolbarTextChange(target)
             return
         }
+        let style = pendingTypingStyle
         let newBox = NoteTextAttachment(
             pageIndex: currentPageIndex,
             text: text,
-            fontSize: 20,
-            isBold: true,
+            fontSize: style.fontSize,
+            isBold: style.isBold,
+            isItalic: style.isItalic,
+            isUnderline: style.isUnderline,
+            isStrikethrough: style.isStrikethrough,
+            alignmentRaw: style.alignmentRaw,
+            textColorHex: style.textColorHex,
             hasBorder: true,
             x: PageGeometry.printableInset,
             y: 200,
@@ -11868,7 +12517,7 @@ public struct NotebookEditorView: View {
         notebook.textAttachments?.append(newBox)
         inlineEditingTextId = newBox.id
         editingTextId = newBox.id
-        store.updateNotebook(notebook)
+        commitNotebook()
         PageThumbnailRenderer.invalidateAll()
     }
 
@@ -11912,7 +12561,7 @@ public struct NotebookEditorView: View {
         order = ObjectStacking.bringToFront([mathBox.id], in: order)
         notebook.setObjectOrder(order, forPage: currentPageIndex)
 
-        store.updateNotebook(notebook)
+        commitNotebook()
         PageThumbnailRenderer.invalidateAll()
         if let data = try? JSONEncoder().encode(mathBox),
            let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
@@ -11998,7 +12647,7 @@ public struct NotebookEditorView: View {
             notebook.setUnderInkObjectIds(under, forPage: audio.pageIndex)
         }
 
-        store.updateNotebook(notebook)
+        commitNotebook()
         PageThumbnailRenderer.invalidateAll()
         if let data = try? JSONEncoder().encode(transcriptBox),
            let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
@@ -12062,7 +12711,7 @@ public struct NotebookEditorView: View {
             notebook.attachments = []
         }
         notebook.attachments?.append(newAttachment)
-        store.updateNotebook(notebook)
+        commitNotebook()
         if var dict = (try? JSONSerialization.jsonObject(with: JSONEncoder().encode(newAttachment))) as? [String: Any] {
             if let imgData = image.pngData() {
                 dict["image_base64"] = imgData.base64EncodedString()
@@ -12175,7 +12824,7 @@ public struct NotebookEditorView: View {
             item.pageIndex = base + item.pageIndex
             notebook.attachments = (notebook.attachments ?? []) + [item]
         }
-        store.updateNotebook(notebook)
+        commitNotebook()
         PageThumbnailRenderer.invalidateAll()
         showCanvasNotice(localizationManager.localized("import_document_done"))
     }
@@ -12224,7 +12873,7 @@ public struct NotebookEditorView: View {
         notebook.audioAttachments?.append(attachment)
         // 這本筆記從此「有錄音」—— 首頁的錄音篩選要看得到它。
         notebook.hasRecording = true
-        store.updateNotebook(notebook)
+        commitNotebook()
     }
 
     /// 用新算出來的圖表取代原本那一張。
@@ -12236,7 +12885,7 @@ public struct NotebookEditorView: View {
               let fileName = store.saveAttachmentImage(image) else { return }
         notebook.attachments?[index].fileName = fileName
         notebook.attachments?[index].chartSpecJSON = spec.encodedJSON()
-        store.updateNotebook(notebook)
+        commitNotebook()
         editingChartAttachmentId = nil
     }
 
@@ -12254,7 +12903,7 @@ public struct NotebookEditorView: View {
             // 使用者選擇轉插入為可編輯文字方塊
             notebook.attachments?.remove(at: index)
         }
-        store.updateNotebook(notebook)
+        commitNotebook()
         editingMathAttachmentId = nil
     }
 
@@ -12273,7 +12922,7 @@ public struct NotebookEditorView: View {
         notebook.connectionAttachments?.removeAll { $0.fromShapeId == id || $0.toShapeId == id }
         selectedShapeIds.remove(id)
         if editingShapeId == id { editingShapeId = nil }
-        store.updateNotebook(notebook)
+        commitNotebook()
         PageThumbnailRenderer.invalidateAll()
     }
 
@@ -12281,7 +12930,7 @@ public struct NotebookEditorView: View {
         notebook.connectionAttachments?.removeAll { $0.id == id }
         if selectedConnectionId == id { selectedConnectionId = nil }
         if editingConnectionId == id { editingConnectionId = nil }
-        store.updateNotebook(notebook)
+        commitNotebook()
         PageThumbnailRenderer.invalidateAll()
     }
 
@@ -12299,7 +12948,7 @@ public struct NotebookEditorView: View {
         fresh.textColorHex = copy.textColorHex; fresh.isBold = copy.isBold
         fresh.isItalic = copy.isItalic; fresh.opacity = copy.opacity
         notebook.shapeAttachments = (notebook.shapeAttachments ?? []) + [fresh]
-        store.updateNotebook(notebook)
+        commitNotebook()
         PageThumbnailRenderer.invalidateAll()
         selectedShapeIds = [fresh.id]
         editingShapeId = fresh.id
@@ -12315,7 +12964,7 @@ public struct NotebookEditorView: View {
                 guard let index = notebook.connectionAttachments?
                     .firstIndex(where: { $0.id == id }) else { return }
                 notebook.connectionAttachments?[index] = updated
-                store.updateNotebook(notebook)
+                commitNotebook()
                 PageThumbnailRenderer.invalidateAll()
             }
         )
@@ -12355,7 +13004,7 @@ public struct NotebookEditorView: View {
         connection.fromAnchor = anchor.rawValue
         connection.toAnchor = toAnchor.rawValue
         notebook.connectionAttachments = (notebook.connectionAttachments ?? []) + [connection]
-        store.updateNotebook(notebook)
+        commitNotebook()
         PageThumbnailRenderer.invalidateAll()
         selectedShapeIds = []
         selectedConnectionId = connection.id
@@ -12387,7 +13036,7 @@ public struct NotebookEditorView: View {
         for (id, origin) in zip(ids, origins) {
             moveObject(id: id, to: origin)
         }
-        store.updateNotebook(notebook)
+        commitNotebook()
     }
 
     /// 某個物件目前的版面框（頁面座標）。
@@ -12466,12 +13115,17 @@ public struct NotebookEditorView: View {
 
     // MARK: - 框選
 
-    /// 這一頁上每一個物件的位置與大小，給框選判定用。
+    /// 這一頁上每一個物件的位置與大小，給框選判定用。依堆疊順序由下到上排，
+    /// 點選時才拿得到最上面那一個。
     private var marqueeCandidates: [MarqueeHit] {
-        pageStackableObjects.compactMap { object in
-            guard let frame = frameOfObject(id: object.id) else { return nil }
+        let stacking = ObjectStacking.Lookup(order: notebook.objectOrder(forPage: currentPageIndex))
+        return pageStackableObjects.compactMap { object -> MarqueeHit? in
+            // 別人正在編輯的物件不能被框選帶著一起搬、一起刪（設計 §5.2）。
+            guard collaborationManager.leaseHolder(for: object.id) == nil,
+                  let frame = frameOfObject(id: object.id) else { return nil }
             return MarqueeHit(id: object.id, kind: object.kind, frame: frame)
         }
+        .sorted { stacking.zIndex(for: $0.id, kind: $0.kind) < stacking.zIndex(for: $1.id, kind: $1.kind) }
     }
 
     /// 框選層：拉框、顯示選取外框、整組拖曳。
@@ -12503,14 +13157,25 @@ public struct NotebookEditorView: View {
                                 groupDragOffset = .zero
                             } else if let start = marqueeStart {
                                 let rect = ObjectMarquee.rect(from: start, to: value.location)
-                                selectedObjectIds = ObjectMarquee.hits(in: rect, among: candidates)
+                                selectedObjectIds = ObjectMarquee.combined(
+                                    selectedObjectIds,
+                                    with: ObjectMarquee.hits(in: rect, among: candidates),
+                                    additive: marqueeAdditive)
                             }
                             marqueeStart = nil
                             marqueeCurrent = nil
                         }
                 )
-                // 點空白處＝取消選取。與所有繪圖工具的慣例一致。
-                .onTapGesture { selectedObjectIds = [] }
+                // 點物件＝選它（連續框選時切換加入／移除）；點空白＝取消選取（連續框選時保留）。
+                .simultaneousGesture(
+                    SpatialTapGesture(coordinateSpace: .named(CanvasCoordinateSpace.name))
+                        .onEnded { value in
+                            selectedObjectIds = ObjectMarquee.tapped(
+                                ObjectMarquee.topmostHit(at: value.location, among: candidates),
+                                existing: selectedObjectIds,
+                                additive: marqueeAdditive)
+                        }
+                )
 
             // 每個被選中的物件畫一個外框。只畫一個大框的話，
             // 使用者看不出「到底選到了哪幾個」。
@@ -12555,6 +13220,7 @@ public struct NotebookEditorView: View {
             showCanvasNotice(localizationManager.localized("marquee_hint"))
         } else {
             selectedObjectIds = []
+            marqueeAdditive = false
         }
     }
 
@@ -12564,7 +13230,10 @@ public struct NotebookEditorView: View {
         HStack(spacing: 10) {
             Image(systemName: "square.dashed.inset.filled")
                 .foregroundColor(.accentColor)
-            if selectedObjectIds.isEmpty {
+            if selectedObjectIds.isEmpty && isCompactEditorWidth {
+                // 手機寬度不放說明句：它會把整排按鈕擠到畫面外（進入框選時已用浮動提示說過一次）。
+                EmptyView()
+            } else if selectedObjectIds.isEmpty {
                 // 還沒選到東西時，顯示「怎麼選」而不是「已選 0 個」。
                 Text(localizationManager.localized("marquee_hint"))
                     .font(.caption)
@@ -12576,6 +13245,39 @@ public struct NotebookEditorView: View {
                     .font(.caption)
                     .monospacedDigit()
             }
+
+            Divider().frame(height: 18)
+
+            // 連續框選：一框一框累積，或點物件逐一加入／移除。
+            Button {
+                marqueeAdditive.toggle()
+                if marqueeAdditive { showCanvasNotice(localizationManager.localized("marquee_continuous_hint")) }
+            } label: {
+                Label(localizationManager.localized("marquee_continuous"),
+                      systemImage: marqueeAdditive ? "plus.square.fill.on.square.fill" : "plus.square.on.square")
+            }
+            .foregroundColor(marqueeAdditive ? .accentColor : .primary)
+            .accessibilityIdentifier("editor.marquee.continuous")
+            .accessibilityLabel(localizationManager.localized("marquee_continuous"))
+            .accessibilityAddTraits(marqueeAdditive ? .isSelected : [])
+            .help(localizationManager.localized("marquee_continuous_hint"))
+
+            // 全選：這一頁所有物件一次選起來。
+            Button {
+                selectedObjectIds = Set(marqueeCandidates.map(\.id))
+            } label: {
+                Label(localizationManager.localized("select_all"), systemImage: "checkmark.square")
+            }
+            .disabled(marqueeCandidates.isEmpty)
+            .accessibilityIdentifier("editor.marquee.select_all")
+
+            Button {
+                selectedObjectIds = []
+            } label: {
+                Label(localizationManager.localized("deselect_all"), systemImage: "square")
+            }
+            .disabled(selectedObjectIds.isEmpty)
+            .accessibilityIdentifier("editor.marquee.deselect_all")
 
             Divider().frame(height: 18)
 
@@ -12616,7 +13318,8 @@ public struct NotebookEditorView: View {
             }
         }
         .font(.caption)
-        .labelStyle(.titleAndIcon)
+        // 手機寬度只放圖示（名稱仍是無障礙標籤），一排放得下全部的動作。
+        .labelStyle(MarqueeLabelStyle(compact: isCompactEditorWidth))
         .padding(.horizontal, 14)
         .padding(.vertical, 7)
         .background(Color(uiColor: .tertiarySystemGroupedBackground))
@@ -12631,7 +13334,7 @@ public struct NotebookEditorView: View {
             moveObject(id: id, to: CGPoint(x: frame.minX + delta.width,
                                            y: frame.minY + delta.height))
         }
-        store.updateNotebook(notebook)
+        commitNotebook()
     }
 
     private func copySelection() {
@@ -12748,7 +13451,7 @@ public struct NotebookEditorView: View {
             }
         }
 
-        store.updateNotebook(notebook)
+        commitNotebook()
         // 貼上之後選取新的那一份，接著就能直接再拖一次。
         selectedObjectIds = pastedIds
     }
@@ -12784,7 +13487,7 @@ public struct NotebookEditorView: View {
             ids.contains($0.fromShapeId) || ids.contains($0.toShapeId)
         }
         selectedObjectIds = []
-        store.updateNotebook(notebook)
+        commitNotebook()
         PageThumbnailRenderer.invalidateAll()
     }
 
@@ -12869,12 +13572,12 @@ public struct NotebookEditorView: View {
                 VStack(spacing: 10) {
                     ObjectOrderBar(id: id)
                     WordTextStudioView(
-                        attachment: binding(forTextId: id),
+                        attachment: wholeBoxBinding(forTextId: id),
                         presentation: .inlinePanel
                     ) { updated in
                         if let idx = notebook.textAttachments?.firstIndex(where: { $0.id == id }) {
                             notebook.textAttachments?[idx] = updated
-                            store.updateNotebook(notebook)
+                            commitNotebook()
                         }
                     }
                 }
@@ -12930,7 +13633,7 @@ public struct NotebookEditorView: View {
                         onDone: { editingAttachmentId = nil },
                         onDelete: {
                             notebook.attachments?.removeAll { $0.id == id }
-                            store.updateNotebook(notebook)
+                            commitNotebook()
                             editingAttachmentId = nil
                         }
                     )
@@ -12996,7 +13699,7 @@ public struct NotebookEditorView: View {
                                 // 調一次順序，第 1 頁的順序就被清光了 ——
                                 // 那是 v3.8.0 (32) 已經出貨的 bug。
                                 notebook.setObjectOrder(updated, forPage: currentPageIndex)
-                                store.updateNotebook(notebook)
+                                commitNotebook()
                             }
                         ),
                         selection: $selectedShapeIds,
@@ -13052,7 +13755,7 @@ public struct NotebookEditorView: View {
             if !current.contains(id) {
                 current.insert(id)
                 notebook.setUnderInkObjectIds(current, forPage: page)
-                store.updateNotebook(notebook)
+                commitNotebook()
                 PageThumbnailRenderer.invalidateAll()
             }
         case .bringAboveInk:
@@ -13060,7 +13763,7 @@ public struct NotebookEditorView: View {
             if current.contains(id) {
                 current.remove(id)
                 notebook.setUnderInkObjectIds(current, forPage: page)
-                store.updateNotebook(notebook)
+                commitNotebook()
                 PageThumbnailRenderer.invalidateAll()
             }
         case .toFront:
@@ -13073,7 +13776,7 @@ public struct NotebookEditorView: View {
                 objects: stackableObjects(forPage: page),
                 order: notebook.objectOrder(forPage: page))
             notebook.setObjectOrder(op.apply(id, to: order), forPage: page)
-            store.updateNotebook(notebook)
+            commitNotebook()
             PageThumbnailRenderer.invalidateAll()
         case .toBack:
             var current = notebook.underInkObjectIds(forPage: page)
@@ -13085,14 +13788,14 @@ public struct NotebookEditorView: View {
                 objects: stackableObjects(forPage: page),
                 order: notebook.objectOrder(forPage: page))
             notebook.setObjectOrder(op.apply(id, to: order), forPage: page)
-            store.updateNotebook(notebook)
+            commitNotebook()
             PageThumbnailRenderer.invalidateAll()
         default:
             let order = ObjectStacking.normalized(
                 objects: stackableObjects(forPage: page),
                 order: notebook.objectOrder(forPage: page))
             notebook.setObjectOrder(op.apply(id, to: order), forPage: page)
-            store.updateNotebook(notebook)
+            commitNotebook()
             PageThumbnailRenderer.invalidateAll()
         }
         continuousReloadGeneration += 1
@@ -13137,7 +13840,7 @@ public struct NotebookEditorView: View {
             order += newIds   // 到達順序＝插入順序
             notebook.setObjectOrder(order, forPage: page)
         }
-        store.updateNotebook(notebook)
+        commitNotebook()
 
         // 手寫模式下物件不吃觸控：剛插進來的東西會拖不動、選不起來，看起來像插壞了
         // （使用者回報「形狀無法編輯」「圖片的編輯鈕沒有作用」的一個原因）。
@@ -13211,7 +13914,7 @@ public struct NotebookEditorView: View {
         var others = (notebook.shapeAttachments ?? []).filter { $0.pageIndex != currentPageIndex }
         others.append(contentsOf: updated)
         notebook.shapeAttachments = others
-        store.updateNotebook(notebook)
+        commitNotebook()
     }
 
     private func toggleShapeSelection(_ id: String) {
@@ -13251,7 +13954,7 @@ public struct NotebookEditorView: View {
             all[index].y += delta.height
         }
         notebook.shapeAttachments = all
-        store.updateNotebook(notebook)
+        commitNotebook()
     }
 
     private func shapeBinding(for id: String) -> Binding<NoteShapeAttachment> {
@@ -13264,7 +13967,7 @@ public struct NotebookEditorView: View {
                 guard let index = notebook.shapeAttachments?
                     .firstIndex(where: { $0.id == id }) else { return }
                 notebook.shapeAttachments?[index] = updated
-                store.updateNotebook(notebook)
+                commitNotebook()
             }
         )
     }
@@ -13277,7 +13980,7 @@ public struct NotebookEditorView: View {
         all[index].x += delta.width
         all[index].y += delta.height
         notebook.tableAttachments = all
-        store.updateNotebook(notebook)
+        commitNotebook()
 
         moveStrokesInsideTable(previous, by: delta)
     }
@@ -13293,7 +13996,7 @@ public struct NotebookEditorView: View {
                     .firstIndex(where: { $0.id == id }) else { return }
                 let previous = notebook.tableAttachments![index]
                 notebook.tableAttachments?[index] = updated
-                store.updateNotebook(notebook)
+                commitNotebook()
 
                 let dx = updated.x - previous.x
                 let dy = updated.y - previous.y
@@ -13371,7 +14074,7 @@ public struct NotebookEditorView: View {
             set: { updated in
                 if let idx = notebook.attachments?.firstIndex(where: { $0.id == id }) {
                     notebook.attachments?[idx] = updated
-                    store.updateNotebook(notebook)
+                    commitNotebook()
                 }
             }
         )
@@ -13399,12 +14102,36 @@ public struct NotebookEditorView: View {
             set: { updated in
                 if let idx = index(in: notebook.textAttachments) {
                     let oldItem = notebook.textAttachments?[idx]
-                    if oldItem?.text != updated.text {
-                        recordTextUndoStateDebounced()
-                    }
                     notebook.textAttachments?[idx] = updated
-                    store.updateNotebook(notebook)
+                    commitNotebook()
                 }
+            }
+        )
+    }
+
+    /// 排版面板用：面板改的是**整個方塊**。改了字級、顏色這類方塊層級的值時，
+    /// 逐字格式裡同一項的覆寫要一起拿掉，否則有覆寫的那幾個字看起來「改不動」；
+    /// 面板裡直接改文字時，區段跟著移動。
+    private func wholeBoxBinding(forTextId id: String) -> Binding<NoteTextAttachment> {
+        let base = binding(forTextId: id)
+        return Binding(
+            get: { base.wrappedValue },
+            set: { updated in
+                let old = base.wrappedValue
+                var next = updated
+                if next.runs != nil, next.runs == old.runs {
+                    if next.text != old.text { RichText.adjustRunsLineByLine(of: &next, from: old.text) }
+                    var edit = TextCharStyle()
+                    if next.isBold != old.isBold { edit.bold = next.isBold }
+                    if next.isItalic != old.isItalic { edit.italic = next.isItalic }
+                    if next.isUnderline != old.isUnderline { edit.underline = next.isUnderline }
+                    if next.isStrikethrough != old.isStrikethrough { edit.strikethrough = next.isStrikethrough }
+                    if next.fontSize != old.fontSize { edit.fontSize = next.fontSize }
+                    if next.fontFamily != old.fontFamily { edit.fontFamily = next.fontFamily ?? "" }
+                    if next.textColorHex != old.textColorHex { edit.textColorHex = next.textColorHex }
+                    if !edit.isEmpty { RichText.applyToWholeBox(edit, to: &next) }
+                }
+                base.wrappedValue = next
             }
         )
     }
@@ -13417,7 +14144,7 @@ public struct NotebookEditorView: View {
             set: { updated in
                 if let idx = notebook.linkAttachments?.firstIndex(where: { $0.id == id }) {
                     notebook.linkAttachments?[idx] = updated
-                    store.updateNotebook(notebook)
+                    commitNotebook()
                 }
             }
         )
@@ -13432,7 +14159,7 @@ public struct NotebookEditorView: View {
             set: { updated in
                 if let idx = notebook.audioAttachments?.firstIndex(where: { $0.id == id }) {
                     notebook.audioAttachments?[idx] = updated
-                    store.updateNotebook(notebook)
+                    commitNotebook()
                 }
             }
         )
@@ -13446,7 +14173,7 @@ public struct NotebookEditorView: View {
             set: { updated in
                 if let idx = notebook.model3DAttachments?.firstIndex(where: { $0.id == id }) {
                     notebook.model3DAttachments?[idx] = updated
-                    store.updateNotebook(notebook)
+                    commitNotebook()
                 }
             }
         )
@@ -13506,6 +14233,22 @@ struct ShareActivityView: UIViewControllerRepresentable {
 /// 視圖」的座標系 —— 視圖一被移動，座標原點跟著移動，translation 就會被重新
 /// 換算回較小的值，形成「移動 → 原點位移 → translation 縮回」的回授迴圈，
 /// 表現出來就是物件在手指底下抖動、跟不上。
+/// 框選工具列的標籤：手機寬度只顯示圖示（`Label` 的文字仍是無障礙名稱）。
+struct MarqueeLabelStyle: LabelStyle {
+    let compact: Bool
+    // orphan-ok: LabelStyle 協定要求，由 SwiftUI 呼叫
+    func makeBody(configuration: Configuration) -> some View {
+        if compact {
+            configuration.icon
+        } else {
+            HStack(spacing: 4) {
+                configuration.icon
+                configuration.title
+            }
+        }
+    }
+}
+
 enum CanvasCoordinateSpace {
     static let name = "kairumoCanvas"
 }
@@ -13535,7 +14278,8 @@ struct AttachmentItemView: View {
     @State private var resizeBaseSize: CGSize? = nil
 
     private var lockedByPeer: CollaboratorPeer? {
-        collaborationManager.peers.first(where: { $0.selectedId == attachment.id })
+        // 租約有效（5 秒內有續約）而且對方勝出才算鎖住 —— 對方當機時物件不會永遠鎖住。
+        collaborationManager.leaseHolder(for: attachment.id)
     }
 
     private var displayWidth: CGFloat { liveSize?.width ?? attachment.width }
@@ -13797,6 +14541,8 @@ struct TextAttachmentItemView: View {
     let onDelete: () -> Void
     var onMoved: ((CGSize) -> Void)? = nil
     var onAnchorInk: (() -> Void)? = nil
+    /// 就地編輯的選取範圍（工具列依它決定改選取的字還是整個方塊）。
+    var selectionTracker: TextSelectionTracker? = nil
 
     @Environment(\.objectReorder) private var reorder
 
@@ -13808,11 +14554,18 @@ struct TextAttachmentItemView: View {
     @State private var resizeBaseWidth: CGFloat? = nil
     @State private var isDragging: Bool = false
     @State private var hasBeenFocused: Bool = false
-    @FocusState private var inlineFocused: Bool
+    /// 就地編輯器是不是第一回應者（由 `RichTextEditorView` 雙向同步）。
+    @State private var inlineFocused: Bool = false
     @State private var showSlashMenu: Bool = false
 
     private var lockedByPeer: CollaboratorPeer? {
-        collaborationManager.peers.first(where: { $0.selectedId == textItem.id })
+        // 租約有效（5 秒內有續約）而且對方勝出才算鎖住 —— 對方當機時物件不會永遠鎖住。
+        collaborationManager.leaseHolder(for: textItem.id)
+    }
+
+    /// 正在這個方塊打字的人（不鎖住：大家可以同時打字，見設計 §8.3）。只用來畫外框提示。
+    private var typingPeer: CollaboratorPeer? {
+        collaborationManager.typingPeers(for: textItem.id).first
     }
 
     /// 選取時的動作按鈕（圖示 + 文字，看得懂也點得到）
@@ -13839,14 +14592,9 @@ struct TextAttachmentItemView: View {
     private var displayWidth: CGFloat { liveWidth ?? textItem.width }
     private var displayHeight: CGFloat { liveHeight ?? textItem.height }
     private var calculatedContentHeight: CGFloat {
-        let required = RuledWriting.boxHeight(
-            text: textItem.text.isEmpty ? " " : textItem.text,
-            width: displayWidth,
-            fontSize: textItem.fontSize,
-            bold: textItem.isBold,
-            lineSpacing: textItem.lineSpacing ?? 0
-        )
-        return max(displayHeight, required)
+        var probe = textItem
+        probe.width = displayWidth
+        return max(displayHeight, RichText.boxHeight(for: probe))
     }
 
     private func resolvedFont(size: CGFloat, bold: Bool, italic: Bool, family: String?) -> Font {
@@ -13872,7 +14620,8 @@ struct TextAttachmentItemView: View {
             onSelect?()
             hasBeenFocused = false
             isEditingInline = true
-            collaborationManager.broadcastSelection(selectedId: textItem.id)
+            // 打字用「共用」的在場標記：別人可以同時在這個方塊打字（字元 CRDT），但看得到我在打。
+            collaborationManager.broadcastSelection(selectedId: CollaborationManager.typingPrefix + textItem.id)
         }
         if afterContextMenu {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.12, execute: activate)
@@ -13928,16 +14677,11 @@ struct TextAttachmentItemView: View {
                         // 上下左右內距（隨系統版本不同），第一行基準線因此離方塊頂端多出一個
                         // 量不準的距離 —— 橫線紙上的字對不齊格線。垂直軸的 TextField 沒有內距，
                         // 編輯中與編輯後（`Text`）的字完全重疊，基準線 = 內距 + ascender。
-                        TextField("", text: $textItem.text, axis: .vertical)
-                            .font(resolvedFont(size: textItem.fontSize, bold: textItem.isBold, italic: textItem.isItalic, family: textItem.fontFamily))
-                            .foregroundColor(Color(hex: textItem.textColorHex) ?? .primary)
-                            .multilineTextAlignment(resolveMultilineAlignment(textItem.alignmentRaw))
-                            .lineSpacing(textItem.lineSpacing ?? 0)
-                            .textFieldStyle(.plain)
-                            .background(Color.clear)
-                            .frame(maxWidth: .infinity, minHeight: 20, alignment: resolveFrameAlignment(textItem.alignmentRaw))
-                            .focused($inlineFocused)
-                            .accessibilityIdentifier("editor.text.inline_editor")
+                        // `UITextView` 而不是 `TextField`：要拿得到選取範圍，Word 式的
+                        // 「選幾個字、按粗體」才做得到；逐字格式也要在編輯中就看得到。
+                        // 內距歸零，編輯中與編輯後（`Text`）的字完全重疊 —— 橫線紙上的基準線才對得齊。
+                        RichTextEditorView(item: $textItem, isFocused: $inlineFocused, tracker: selectionTracker)
+                            .frame(maxWidth: .infinity, minHeight: 20, alignment: .topLeading)
                     }
                     .overlay(alignment: .topLeading) {
                         if showSlashMenu {
@@ -13993,6 +14737,13 @@ struct TextAttachmentItemView: View {
                             .offset(x: 4, y: 22)
                         }
                     }
+                } else if textItem.runs?.isEmpty == false {
+                    // 有逐字格式：每一段的字型、顏色、醒目提示都寫在屬性字串裡。
+                    Text(RichText.swiftUIText(for: textItem))
+                        .multilineTextAlignment(resolveMultilineAlignment(textItem.alignmentRaw))
+                        .lineSpacing(textItem.lineSpacing ?? 0)
+                        .padding(.leading, textItem.paragraphIndent ?? 0)
+                        .frame(maxWidth: .infinity, alignment: resolveFrameAlignment(textItem.alignmentRaw))
                 } else {
                     Text(textItem.text)
                         .font(resolvedFont(size: textItem.fontSize, bold: textItem.isBold, italic: textItem.isItalic, family: textItem.fontFamily))
@@ -14014,7 +14765,7 @@ struct TextAttachmentItemView: View {
             .clipShape(RoundedRectangle(cornerRadius: textItem.cornerRadius))
             .overlay(
                 Group {
-                    if let peer = lockedByPeer {
+                    if let peer = lockedByPeer ?? typingPeer {
                         RoundedRectangle(cornerRadius: textItem.cornerRadius)
                             .stroke(Color(hex: peer.userColor) ?? .blue, lineWidth: 3)
                     } else if isEditingInline {
@@ -14176,13 +14927,15 @@ struct TextAttachmentItemView: View {
                     }
             )
 
-            // 遠端成員軟鎖定中指示徽章
-            if let peer = lockedByPeer {
+            // 遠端成員軟鎖定中指示徽章；別人正在這個方塊打字時也標出來（不鎖，可以一起打）。
+            if let peer = lockedByPeer ?? typingPeer {
                 HStack(spacing: 4) {
                     Circle()
                         .fill(Color(hex: peer.userColor) ?? .blue)
                         .frame(width: 8, height: 8)
-                    Text("\(peer.userName) \(localizationManager.localized("object_locked_by"))")
+                    Text(lockedByPeer != nil
+                         ? "\(peer.userName) \(localizationManager.localized("object_locked_by"))"
+                         : String(format: localizationManager.localized("collab_peer_typing"), peer.userName))
                         .font(.system(size: 10, weight: .semibold))
                         .foregroundColor(.white)
                 }
@@ -14358,6 +15111,11 @@ struct TextAttachmentItemView: View {
                 textItem.text = "│ "
             }
 
+            // 快捷排版把整段字換掉了：舊的逐字格式對不上新內容，一併清掉。
+            if textItem.text != newText, textItem.runs != nil {
+                textItem.runs = nil
+            }
+
             // 🌟 斜線快捷選單觸發
             if textItem.text == "/" {
                 showSlashMenu = true
@@ -14365,9 +15123,7 @@ struct TextAttachmentItemView: View {
                 showSlashMenu = false
             }
 
-            let needed = RuledWriting.boxHeight(
-                text: textItem.text, width: textItem.width, fontSize: textItem.fontSize,
-                bold: textItem.isBold, lineSpacing: textItem.lineSpacing ?? 0)
+            let needed = RichText.boxHeight(for: textItem)
             // 有框線的方塊是使用者自己調過大小的：只在內容放不下時才加高，不縮小。
             // 沒有框線的（隨點即書）完全跟著內容，刪字會縮回去。
             if needed > textItem.height || (!textItem.hasBorder && needed < textItem.height) {
@@ -14755,7 +15511,8 @@ struct Model3DCanvasItemView: View {
     @State private var dragOffset: CGSize = .zero
 
     private var lockedByPeer: CollaboratorPeer? {
-        collaborationManager.peers.first(where: { $0.selectedId == item.id })
+        // 租約有效（5 秒內有續約）而且對方勝出才算鎖住 —— 對方當機時物件不會永遠鎖住。
+        collaborationManager.leaseHolder(for: item.id)
     }
 
     var body: some View {

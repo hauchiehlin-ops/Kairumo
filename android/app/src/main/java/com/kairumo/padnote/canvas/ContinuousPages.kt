@@ -17,6 +17,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
@@ -163,9 +164,97 @@ fun ContinuousPagesView(
     reloadToken: Int,
     /** 遞增就代表「再捲到目前頁一次」（點了目前這一頁的縮圖：頁碼沒變，但要回到頁頂）。 */
     scrollRequest: Int = 0,
+    /** 外層工具列的復原／重做按鈕接到這裡（見 `ContinuousUndoController`）。 */
+    undoController: ContinuousUndoController? = null,
+    /** 即時協同讀寫每一頁的引擎與物件（見 `ContinuousCollabBridge`）。 */
+    collabBridge: com.kairumo.padnote.collab.ContinuousCollabBridge? = null,
     modifier: Modifier = Modifier
 ) {
     val listState = rememberLazyListState()
+
+    // ── 復原／重做 ─────────────────────────────────────────────
+    //
+    // 原本連續模式**完全沒有復原**：外層的鈕只認單頁模式的那一個引擎。
+    // 這裡比照單頁模式：筆跡與物件同一條時間軸，而且**跨頁** ——
+    // 在第 3 頁畫一筆、到第 5 頁搬一張圖，復原先回第 5 頁、再回第 3 頁。
+    //
+    // 每一頁的引擎與物件放在這裡的快取，不放在清單項目裡：捲出畫面的頁面會被
+    // `LazyColumn` 拆掉，引擎裡的復原紀錄跟著消失，回頭復原那一頁的筆畫就退錯東西。
+    val runtimes = remember(session) { HashMap<String, PageRuntime>() }
+    val history = remember(session, pageCount) { CanvasHistory() }
+    val currentFocus by androidx.compose.runtime.rememberUpdatedState(focusIndex)
+    val currentOnFocusChange by androidx.compose.runtime.rememberUpdatedState(onFocusChange)
+    fun pageIdAt(index: Int): String =
+        runCatching { session?.pageIdAt(index.toUInt()) }.getOrNull() ?: ""
+    fun indexOfPage(id: String): Int? = (0 until maxOf(1, pageCount)).firstOrNull { pageIdAt(it) == id }
+    /** 復原到別頁的步驟時把那一頁捲到眼前 —— 不然使用者按了復原卻看不到哪裡變了。 */
+    fun reveal(page: String) {
+        val index = indexOfPage(page) ?: return
+        if (index != currentFocus) currentOnFocusChange(index)
+    }
+    DisposableEffect(collabBridge, runtimes, history) {
+        val bridge = collabBridge
+        if (bridge != null) {
+            bridge.engineFor = { id -> runtimes[id]?.takeIf { it.inkLoaded }?.engine }
+            bridge.storesFor = { id ->
+                runtimes[id]?.let {
+                    com.kairumo.padnote.collab.CollabPageStores(
+                        it.textStore, it.imageStore, it.tableStore, it.chartStore, it.shapeStore)
+                }
+            }
+            bridge.loadedPages = { runtimes.keys.filter { it.isNotEmpty() } }
+            bridge.remoteApplied = {
+                for ((id, runtime) in runtimes) {
+                    val index = indexOfPage(id) ?: continue
+                    // 別人的修改不是這台的復原步驟：以寫回後的內容為新基準，再重畫。
+                    history.reset(runtime.snapshot(meta, index), id)
+                    runtime.bump()
+                }
+            }
+        }
+        onDispose {
+            bridge?.engineFor = { null }
+            bridge?.storesFor = { null }
+            bridge?.loadedPages = { emptyList() }
+            bridge?.remoteApplied = {}
+        }
+    }
+    DisposableEffect(undoController, history) {
+        undoController?.undoHandler = {
+            val did = history.undoAcrossPages(
+                applyObjects = { page, snapshot ->
+                    runtimes[page]?.restore(snapshot, meta, session, indexOfPage(page))
+                    reveal(page)
+                },
+                undoInk = { page ->
+                    val rt = runtimes[page]
+                    val undone = rt?.engine?.undo() == true
+                    if (undone) { rt?.bump(); reveal(page) }
+                    undone
+                }
+            )
+            // 這次開啟之後還沒做過任何事：與單頁模式相同，收回焦點頁檔案裡的最後一筆。
+            did || runtimes[pageIdAt(currentFocus)]?.let { rt -> rt.engine.undo().also { if (it) rt.bump() } } == true
+        }
+        undoController?.redoHandler = {
+            history.redoAcrossPages(
+                applyObjects = { page, snapshot ->
+                    runtimes[page]?.restore(snapshot, meta, session, indexOfPage(page))
+                    reveal(page)
+                },
+                redoInk = { page ->
+                    val rt = runtimes[page]
+                    val redone = rt?.engine?.redo() == true
+                    if (redone) { rt?.bump(); reveal(page) }
+                    redone
+                }
+            )
+        }
+        onDispose {
+            undoController?.undoHandler = null
+            undoController?.redoHandler = null
+        }
+    }
     val density = LocalDensity.current.density
     val scope = rememberCoroutineScope()
 
@@ -234,16 +323,20 @@ fun ContinuousPagesView(
             items(maxOf(1, pageCount)) { index ->
                 Box(Modifier.scaledPage(scale)) {
                     key(index) {
+                        val pageId = remember(session, index, pageCount) { pageIdAt(index) }
                         ContinuousPage(
                             session = session,
                             meta = meta,
+                            runtime = runtimes.getOrPut(pageId) { PageRuntime(session, pageId.ifEmpty { null }) },
+                            history = history,
                             pageIndex = index,
                             isFocused = index == focusIndex,
                             ink = ink,
                             editorMode = editorMode,
                             onModeChange = onModeChange,
                             density = density,
-                            reloadToken = reloadToken
+                            reloadToken = reloadToken,
+                            collabBridge = collabBridge
                         )
                     }
                 }
@@ -313,20 +406,23 @@ private fun Modifier.scaledPage(scale: Float): Modifier = this
 private fun ContinuousPage(
     session: PadnoteSession?,
     meta: NotebookMeta,
+    runtime: PageRuntime,
+    history: CanvasHistory,
     pageIndex: Int,
     isFocused: Boolean,
     ink: InkSettings,
     editorMode: EditorMode,
     onModeChange: (EditorMode) -> Unit,
     density: Float,
-    reloadToken: Int
+    reloadToken: Int,
+    collabBridge: com.kairumo.padnote.collab.ContinuousCollabBridge?
 ) {
-    val pageId = remember(session, pageIndex) {
-        runCatching { session?.pageIdAt(pageIndex.toUInt()) }.getOrNull()
-    }
+    val pageId = runtime.pageId
+    val historyKey = pageId ?: ""
 
     // 每一頁自己一個引擎。共用的話會把筆畫寫進別頁的檔案裡。
-    val engine = remember(session, pageId) { InkEngine(session = session, pageId = pageId) }
+    // 引擎與物件都在 `runtime`（ContinuousPagesView 的快取）：捲出畫面再捲回來，復原紀錄還在。
+    val engine = runtime.engine
     engine.tool = ink.tool
     engine.colorRgba = ink.colorRgba
     engine.baseWidth = ink.baseWidth
@@ -336,15 +432,28 @@ private fun ContinuousPage(
     LaunchedEffect(engine) {
         engine.setPenOnly(true)
         // 讀回這一頁已經存在的筆畫。見 InkEngine.load() 的說明。
-        engine.load()
+        // **只讀一次**：引擎留在快取裡，再讀一次會把它的復原紀錄清掉。
+        if (!runtime.inkLoaded) {
+            engine.load()
+            runtime.inkLoaded = true
+        }
+    }
+    DisposableEffect(engine, collabBridge) {
+        val previous = engine.onContentCommitted
+        engine.onContentCommitted = { previous?.invoke(); collabBridge?.onLocalChange?.invoke() }
+        onDispose { engine.onContentCommitted = previous }
+    }
+    DisposableEffect(engine, history) {
+        engine.onUndoableAction = { history.inkCommitted(historyKey) }
+        onDispose { engine.onUndoableAction = null }
     }
 
-    val textStore = remember(session, pageId) { TextBoxStore(session, pageId) }
-    val shapeStore = remember(session, pageId) { ShapeStore(session, pageId) }
-    val tableStore = remember(session, pageId) { TableStore(session, pageId) }
-    val chartStore = remember(session, pageId) { ChartStore(session, pageId) }
-    val imageStore = remember(session, pageId) { ImageStore(session, pageId) }
-    var revision by remember(pageId) { mutableIntStateOf(0) }
+    val textStore = runtime.textStore
+    val shapeStore = runtime.shapeStore
+    val tableStore = runtime.tableStore
+    val chartStore = runtime.chartStore
+    val imageStore = runtime.imageStore
+    var revision by runtime.revision
 
     // reloadToken 讓外層插入物件之後這一頁看得到新東西 ——
     // 不重讀的話，從選單插進去的文字方塊要等切換頁面才會出現。
@@ -354,7 +463,15 @@ private fun ContinuousPage(
         tableStore.load()
         chartStore.load()
         imageStore.load()
+        // 第一次讀進來是基準，不是「新增了所有物件」；之後外層插入的物件才算一步。
+        val loaded = runtime.snapshot(meta, pageIndex)
+        if (history.hasBaseline(historyKey)) history.observe(loaded, historyKey) else history.reset(loaded, historyKey)
         revision++
+    }
+    // 物件有動（各個 onChanged 都會遞增 revision）就比對一次；筆跡的變動比對不出差異，不會多記一步。
+    LaunchedEffect(revision) {
+        if (history.hasBaseline(historyKey)) history.observe(runtime.snapshot(meta, pageIndex), historyKey)
+        collabBridge?.onLocalChange?.invoke()
     }
 
     val order = remember(revision, pageIndex) { meta.objectOrder(pageIndex) }
@@ -699,5 +816,46 @@ private fun ContinuousPage(
             onDelete = { textStore.remove(box); selectedId = null; revision++; editingText = null },
             onDismiss = { editingText = null }
         )
+    }
+}
+
+/**
+ * 連續模式裡一頁的引擎與物件。放在 `ContinuousPagesView` 的快取裡，不隨清單項目拆掉 ——
+ * 捲出畫面再捲回來，筆跡的復原紀錄與物件都還在（見 ContinuousPagesView 的復原說明）。
+ */
+internal class PageRuntime(session: PadnoteSession?, val pageId: String?) {
+    val engine = InkEngine(session = session, pageId = pageId)
+    val textStore = TextBoxStore(session, pageId)
+    val shapeStore = ShapeStore(session, pageId)
+    val tableStore = TableStore(session, pageId)
+    val chartStore = ChartStore(session, pageId)
+    val imageStore = ImageStore(session, pageId)
+    /** 這一頁的版本號。頁面在畫面上時由它重組；復原改到不在畫面上的頁時也遞增它。 */
+    val revision = mutableIntStateOf(0)
+    var inkLoaded = false
+
+    fun bump() { revision.intValue++ }
+
+    /** 這一頁物件的快照（連續模式沒有連結卡、3D、錄音卡，那些只在單頁模式出現）。 */
+    fun snapshot(meta: NotebookMeta, pageIndex: Int) = CanvasSnapshot(
+        texts = textStore.all.map { it.copy() },
+        images = imageStore.all.map { it.copy() },
+        shapes = shapeStore.all.map { it.copy() },
+        connections = shapeStore.allConnections.map { it.copy() },
+        tables = tableStore.all.map { it.copyTable() },
+        charts = chartStore.all.map { it.copy() },
+        order = meta.objectOrder(pageIndex)
+    )
+
+    fun restore(snapshot: CanvasSnapshot, meta: NotebookMeta, session: PadnoteSession?, pageIndex: Int?) {
+        textStore.restoreTo(snapshot.texts)
+        imageStore.restoreTo(snapshot.images)
+        shapeStore.restoreTo(snapshot.shapes, snapshot.connections)
+        tableStore.restoreTo(snapshot.tables)
+        chartStore.restoreTo(snapshot.charts)
+        if (pageIndex != null && meta.objectOrder(pageIndex) != snapshot.order) {
+            meta.setObjectOrder(session, pageIndex, snapshot.order)
+        }
+        bump()
     }
 }

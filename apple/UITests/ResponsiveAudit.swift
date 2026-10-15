@@ -91,6 +91,154 @@ final class ResponsiveAudit: XCTestCase {
             "這些控制項在這個尺寸下有問題：\n" + problems.joined(separator: "\n"))
     }
 
+    /// 編輯器在這個尺寸（與方向）下：不能沒有的控制項都完整在畫面上、點得到；
+    /// 打字工具列、框選工具列出得來、點得到；打字時鍵盤不蓋住正在打的文字方塊。
+    ///
+    /// 每一步存一張截圖（`XCTAttachment`），給人眼看排版。
+    func testEditorChromeFitsTheScreen() {
+        let app = XCUIApplication()
+        app.launchEnvironment["KAIRUMO_UITEST"] = "1"
+        app.launch()
+        XCTAssertTrue(app.wait(for: .runningForeground, timeout: 15))
+
+        let newNote = element(app, "home.action.new_note")
+        guard newNote.waitForExistence(timeout: 15) else { return XCTFail("首頁找不到新增筆記") }
+        shot(app, "1-home")
+        newNote.tap()
+        let confirm = element(app, "new_notebook.confirm")
+        guard confirm.waitForExistence(timeout: 10) else { return XCTFail("新增筆記表單沒有確認鈕") }
+        confirm.tap()
+        guard element(app, "editor.more").waitForExistence(timeout: 15) else { return XCTFail("進不到編輯器") }
+        sleep(1)
+
+        var problems: [String] = []
+        let orientations: [UIDeviceOrientation] = UIDevice.current.userInterfaceIdiom == .pad
+            ? [.portrait, .landscapeLeft] : [.portrait]
+        for orientation in orientations {
+            XCUIDevice.shared.orientation = orientation
+            sleep(1)
+            let tag = orientation == .portrait ? "portrait" : "landscape"
+            problems += auditEditor(app, tag: tag)
+        }
+        XCUIDevice.shared.orientation = .portrait
+
+        XCTAssertTrue(
+            problems.isEmpty,
+            "編輯器在這個尺寸下有問題：\n" + problems.joined(separator: "\n"))
+    }
+
+    private func auditEditor(_ app: XCUIApplication, tag: String) -> [String] {
+        var problems: [String] = []
+        func mustFit(_ ids: [String], _ step: String) {
+            let window = app.windows.firstMatch.frame
+            for id in ids {
+                let e = element(app, id)
+                guard e.exists else { problems.append("[\(tag)] \(step) → \(id)：不存在"); continue }
+                if !window.contains(e.frame) {
+                    problems.append("[\(tag)] \(step) → \(id)：被切掉（元素 \(e.frame)，視窗 \(window)）")
+                } else if !e.isHittable {
+                    problems.append("[\(tag)] \(step) → \(id)：在畫面上卻點不到（被蓋住）")
+                }
+            }
+        }
+
+        // 1. 手繪模式：離開、模式切換、更多、復原／重做。
+        if element(app, "portal.draw").exists { element(app, "portal.draw").tap(); sleep(1) }
+        shot(app, "2-draw-\(tag)")
+        mustFit(["editor.home", "editor.more", "portal.draw", "portal.type"], "手繪模式")
+        // 復原：至少要有一顆**不用捲就看得到、點得到**的（頂列或筆具列都可以）。
+        // 手機上筆具列是一條左右捲的列，它那一顆可能在捲動範圍的另一端 —— 那沒關係，
+        // 只要頂列那一顆在畫面上。
+        let window = app.windows.firstMatch.frame
+        let visibleUndo = ["editor.compact.undo", "editor.ink.undo"].contains { id in
+            let e = element(app, id)
+            return e.exists && window.contains(e.frame) && e.isHittable
+        }
+        if !visibleUndo { problems.append("[\(tag)] 手繪模式 → 沒有一顆復原鈕是看得到、點得到的") }
+
+        // 2. 打字模式：工具列出得來；點畫布開始打字時，鍵盤不能蓋住文字方塊。
+        element(app, "portal.type").tap()
+        sleep(1)
+        shot(app, "3-type-\(tag)")
+        mustFit(["editor.home", "editor.more", "editor.text.add_box"], "打字模式")
+        let canvas = app.descendants(matching: .any).matching(identifier: "editor.canvas").firstMatch
+        if canvas.exists {
+            // 點在頁面**看得到的那一段**裡：橫向時頁面比螢幕高，按頁面比例算的點可能落在畫面外。
+            let window = app.windows.firstMatch.frame
+            let visible = canvas.frame.intersection(window)
+            let point = CGPoint(x: visible.minX + visible.width * 0.4, y: visible.minY + min(160, visible.height * 0.35))
+            app.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: point.x, dy: point.y)).tap()
+            let editor = app.descendants(matching: .any).matching(identifier: "editor.text.inline_editor").firstMatch
+            if editor.waitForExistence(timeout: 5) {
+                editor.typeText("Responsive")
+                sleep(1)
+                shot(app, "4-typing-\(tag)")
+                let keyboard = app.keyboards.firstMatch
+                if keyboard.exists, keyboard.frame.height > 0, editor.frame.maxY > keyboard.frame.minY + 2 {
+                    problems.append("[\(tag)] 打字 → 文字方塊被鍵盤蓋住（方塊 \(editor.frame)，鍵盤 \(keyboard.frame)）")
+                }
+            } else {
+                problems.append("[\(tag)] 打字 → 點畫布沒有出現就地編輯器")
+            }
+        }
+
+        // 3. 框選：工具列的全選、連續框選點得到（可以捲動，但要捲得到）。
+        element(app, "portal.draw").tap()
+        sleep(1)
+        element(app, "editor.more").tap()
+        let marquee = element(app, "editor.insert.marquee")
+        if marquee.waitForExistence(timeout: 3) {
+            for _ in 0..<6 where !marquee.isHittable { app.swipeUp() }
+            if marquee.isHittable {
+                marquee.tap()
+                sleep(1)
+                shot(app, "5-marquee-\(tag)")
+                let window = app.windows.firstMatch.frame
+                for id in ["editor.marquee.continuous", "editor.marquee.select_all"] {
+                    let e = element(app, id)
+                    if !e.exists { problems.append("[\(tag)] 框選 → \(id)：不存在"); continue }
+                    // 完全在畫面外的元素問 isHittable 會直接拋錯 —— 先看位置。
+                    if !window.contains(e.frame) {
+                        problems.append("[\(tag)] 框選 → \(id)：一開始不在畫面上，要左右捲才找得到（\(e.frame)）")
+                        let bar = app.scrollViews.containing(.button, identifier: id).firstMatch
+                        for _ in 0..<4 where bar.exists && !window.contains(e.frame) { bar.swipeLeft() }
+                        if !window.contains(e.frame) { problems.append("[\(tag)] 框選 → \(id)：捲了也找不到") }
+                    }
+                }
+            } else {
+                problems.append("[\(tag)] 更多選單裡點不到「框選」")
+                app.tap()
+            }
+        } else {
+            problems.append("[\(tag)] 更多選單沒有「框選」")
+        }
+        // 離開框選（再按一次選單裡的「框選」），回到乾淨狀態 —— 不離開的話，
+        // 下一個方向的檢查一開始就停在框選模式，點畫布會被框選層接走。
+        element(app, "editor.more").tap()
+        let exitMarquee = element(app, "editor.insert.marquee")
+        if exitMarquee.waitForExistence(timeout: 3) {
+            for _ in 0..<6 where !exitMarquee.isHittable { app.swipeUp() }
+            if exitMarquee.isHittable { exitMarquee.tap() } else { app.tap() }
+        }
+        sleep(1)
+        if element(app, "portal.draw").exists { element(app, "portal.draw").tap() }
+        return problems
+    }
+
+    private func shot(_ app: XCUIApplication, _ name: String) {
+        let screenshot = app.screenshot()
+        let attachment = XCTAttachment(screenshot: screenshot)
+        attachment.name = "\(UIDevice.current.name)-\(name)"
+        attachment.lifetime = .keepAlways
+        add(attachment)
+        // 結果包存不下來時（Xcode 有時寫不出 xcresult）也要看得到截圖：
+        // 以 `TEST_RUNNER_KAIRUMO_SHOT_DIR` 指定一個資料夾，直接寫成 PNG。
+        if let dir = ProcessInfo.processInfo.environment["KAIRUMO_SHOT_DIR"] {
+            let safe = "\(UIDevice.current.name)-\(name)".replacingOccurrences(of: " ", with: "_")
+            try? screenshot.pngRepresentation.write(to: URL(fileURLWithPath: dir).appendingPathComponent("\(safe).png"))
+        }
+    }
+
     /// 依識別碼找元素，**不掃整棵樹**。
     ///
     /// `descendants(matching: .any)` 會走完整棵無障礙樹，而這個 App 的樹

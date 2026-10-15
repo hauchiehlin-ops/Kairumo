@@ -62,7 +62,9 @@ class CollaborationManager(private val context: Context) {
         var cursorX: Float = 0f,
         var cursorY: Float = 0f,
         var isDrawing: Boolean = false,
-        var selectedId: String? = null
+        var selectedId: String? = null,
+        /** 最後一次收到在場資訊的時間。租約 5 秒沒續約就失效（設計 §5.1）。 */
+        var lastActiveMs: Long = System.currentTimeMillis()
     )
 
     /** 收到的遠端操作。呼叫端決定怎麼套進筆記。 */
@@ -100,8 +102,77 @@ class CollaborationManager(private val context: Context) {
     /** 這台裝置的身分。每次啟動換一個 —— 它只用來在房間裡區分人。 */
     val currentUserId: String = UUID.randomUUID().toString()
 
-    /** 收到遠端操作時呼叫。由畫面設定。 */
+    /** 收到遠端操作時呼叫。由畫面設定。**在背景執行緒上呼叫**，畫面要自己切回主執行緒。 */
     var onOplog: ((RemoteOplog) -> Unit)? = null
+    /** 兩人同時選了同一個物件、對方勝出：本機要放手（設計 §5.3）。參數是物件 id 與對方名字。 */
+    var onLeaseLost: ((String, String) -> Unit)? = null
+    /**
+     * 中繼的暫存已經補不回漏掉的那一段（設計 §7）：要向其他成員要整份狀態。
+     * 在連線的執行緒上呼叫，接手的人自己轉到主執行緒。
+     */
+    var onStateSyncNeeded: (() -> Unit)? = null
+    /** 看過的最大中繼序號（同一個房間裡重連時從這裡補發）。 */
+    @Volatile private var lastSeq = 0L
+
+    // ── 時鐘與去重（設計 §3、§7；與 Apple 端相同）────────────────
+    /** Lamport 時鐘：送出時 +1，收到時取最大值。以前每一筆都是 1，沒有任何先後依據。 */
+    var lamportClock = 0L
+        private set
+    private val seenOpIds = LinkedHashSet<String>()
+    /** 自己目前的選取（編輯租約）。持有期間每秒續約一次。 */
+    var mySelectedId: String? = null
+        private set
+    private var leaseRenewer: java.util.Timer? = null
+
+    @Synchronized
+    fun nextLamport(): Long {
+        lamportClock += 1
+        return lamportClock
+    }
+
+    /** 誰正在獨佔編輯這個物件（租約有效、而且對方勝出）。打字（`text:`）不是獨佔的。 */
+    fun leaseHolder(id: String): Peer? {
+        val now = System.currentTimeMillis()
+        val wanted = canonicalSelection(id)
+        return peers.firstOrNull { p ->
+            p.selectedId == wanted && now - p.lastActiveMs < LEASE_TIMEOUT_MS &&
+                (mySelectedId?.let(::canonicalSelection) != wanted || p.userId < currentUserId)
+        }
+    }
+
+    /** 正在這個文字方塊打字的人（不鎖：字元 CRDT 會合併）。 */
+    fun typingPeers(id: String): List<Peer> {
+        val now = System.currentTimeMillis()
+        val wanted = canonicalSelection(TYPING_PREFIX + id)
+        return peers.filter { it.selectedId == wanted && now - it.lastActiveMs < LEASE_TIMEOUT_MS }
+    }
+
+    /** 選取（或取消選取）物件：立刻告訴大家，並在持有期間每秒續約。 */
+    fun broadcastSelection(selectedId: String?) {
+        mySelectedId = selectedId
+        leaseRenewer?.cancel()
+        leaseRenewer = null
+        if (selectedId != null) {
+            leaseRenewer = java.util.Timer(true).apply {
+                scheduleAtFixedRate(object : java.util.TimerTask() {
+                    override fun run() { mySelectedId?.let { sendSelection(it) } }
+                }, 1000L, 1000L)
+            }
+        }
+        sendSelection(selectedId)
+    }
+
+    private fun sendSelection(selectedId: String?) {
+        val connected = status as? Status.Connected ?: return
+        val msg = JSONObject()
+            .put("type", "presence")
+            .put("room_id", connected.roomId)
+            .put("user_id", currentUserId)
+            .put("cursor", JSONObject().put("x", lastCursor.first).put("y", lastCursor.second)
+                .put("is_drawing", false).put("tool", "select"))
+        selectedId?.let { msg.put("selected_id", it) }
+        send(msg)
+    }
 
     private val client = OkHttpClient.Builder()
         // OkHttp 預設會在閒置時關掉連線；協同是長連線，交給自己的心跳管。
@@ -180,6 +251,8 @@ class CollaborationManager(private val context: Context) {
         get() = if (tailscaleRelayAddress != null) getInviteLink(useTailscale = true) else null
 
     private fun connect(room: String, asHost: Boolean, isReconnecting: Boolean = false) {
+        // 新的房間從頭來；斷線重連回同一個房間則從看過的序號接著補。
+        if (!isReconnecting) lastSeq = 0L
         userInitiatedDisconnect = false
         if (!isReconnecting) {
             disconnect(userInitiated = false)
@@ -331,13 +404,17 @@ class CollaborationManager(private val context: Context) {
      * 持久化操作。連線中斷時進離線佇列，重連後補送 ——
      * 丟掉的話使用者畫的東西不會出現在對方畫面上，而且沒有人會發現。
      */
-    fun broadcastOplog(kind: String, payload: JSONObject, lamport: ULong = 1uL) {
+    fun broadcastOplog(kind: String, payload: JSONObject, lamport: Long? = null): Long {
         val key = roomKeyBase64
+        // 時鐘由這裡配發（或由呼叫端事先以 nextLamport() 取得）；操作 id 放在 payload 裡 ——
+        // 三份中繼都原樣轉送 payload，但不見得保留外層的其他欄位。
+        val stamp = lamport ?: nextLamport()
+        payload.put("op_id", UUID.randomUUID().toString())
         val msg = JSONObject()
             .put("type", "oplog")
             .put("room_id", roomId)
             .put("user_id", currentUserId)
-            .put("lamport", lamport.toLong())
+            .put("lamport", stamp)
             .put("kind", kind)
 
         val cipher = if (key != null) collabEncrypt(key, payload.toString()) else ""
@@ -356,6 +433,7 @@ class CollaborationManager(private val context: Context) {
             offlineQueue += msg
             queuedOplogCount = offlineQueue.size
         }
+        return stamp
     }
 
     private fun send(msg: JSONObject) {
@@ -422,6 +500,12 @@ class CollaborationManager(private val context: Context) {
                 reconnectAttempt = 0
                 drainOfflineQueue()
                 json.optJSONArray("peers")?.let { addPeers(it) }
+                // 第一次進這個房間、而且裡面有人：向他們要整份狀態（這台的檔案可能比較舊，設計 §7）。
+                if (lastSeq == 0L && peers.isNotEmpty()) onStateSyncNeeded?.invoke()
+                // 新版中繼以序號補發（不會漏掉時鐘較小但較晚到的操作）；舊版中繼忽略 last_seq，
+                // 照 last_lamport = 0 從頭補 —— 合併規則冪等，重複收到沒有副作用（設計 §7）。
+                send(JSONObject().put("type", "catchup").put("room_id", roomId)
+                    .put("last_lamport", 0).put("last_seq", lastSeq))
             }
             "peer_joined" -> json.optJSONObject("peer")?.let { addPeer(it) }
             "peer_presence" -> {
@@ -429,12 +513,20 @@ class CollaborationManager(private val context: Context) {
                 val cursor = json.optJSONObject("cursor") ?: return
                 peers.indexOfFirst { it.userId == uid }.takeIf { it >= 0 }?.let { idx ->
                     val p = peers[idx]
+                    val selected = json.optString("selected_id").takeIf { it.isNotEmpty() }?.let(::canonicalSelection)
                     peers[idx] = p.copy(
                         cursorX = cursor.optDouble("x", 0.0).toFloat(),
                         cursorY = cursor.optDouble("y", 0.0).toFloat(),
                         isDrawing = cursor.optBoolean("is_drawing", false),
-                        selectedId = json.optString("selected_id").takeIf { it.isNotEmpty() }
+                        selectedId = selected,
+                        lastActiveMs = System.currentTimeMillis()
                     )
+                    // 兩人同時選了同一個物件：使用者 id 較小者勝（每一台算出同一個答案）。打字不搶。
+                    val mine = mySelectedId
+                    if (selected != null && mine != null && selected == canonicalSelection(mine) &&
+                        !selected.startsWith(TYPING_PREFIX) && uid < currentUserId) {
+                        onLeaseLost?.invoke(mine, p.userName)
+                    }
                 }
             }
             "peer_left" -> {
@@ -447,6 +539,7 @@ class CollaborationManager(private val context: Context) {
                 for (i in 0 until batch.length()) {
                     batch.optJSONObject(i)?.let { deliverOplog(it) }
                 }
+                if (json.optBoolean("truncated", false)) onStateSyncNeeded?.invoke()
             }
             "room_closed" -> disconnect()
             "pong" -> Unit
@@ -472,10 +565,14 @@ class CollaborationManager(private val context: Context) {
     }
 
     private fun deliverOplog(item: JSONObject) {
+        if (item.has("seq")) lastSeq = maxOf(lastSeq, item.optLong("seq"))
         val uid = item.optString("user_id").ifEmpty { return }
+        // 補發會包含自己送過的：自己的修改本機早就套用了。
+        if (uid == currentUserId) return
         val kind = item.optString("kind").ifEmpty { return }
         val raw = item.optJSONObject("payload") ?: return
         val lamport = item.optLong("lamport", 0L).toULong()
+        synchronized(this) { lamportClock = maxOf(lamportClock, lamport.toLong()) }
 
         val payload = if (item.optBoolean("encrypted", false)) {
             val key = roomKeyBase64 ?: return
@@ -486,6 +583,12 @@ class CollaborationManager(private val context: Context) {
             runCatching { JSONObject(plain) }.getOrNull() ?: return
         } else {
             raw
+        }
+        payload.optString("op_id").takeIf { it.isNotEmpty() }?.let { opId ->
+            synchronized(seenOpIds) {
+                if (!seenOpIds.add(opId)) return
+                if (seenOpIds.size > 4000) seenOpIds.remove(seenOpIds.first())
+            }
         }
         onOplog?.invoke(RemoteOplog(uid, kind, payload, lamport))
     }
@@ -502,8 +605,20 @@ class CollaborationManager(private val context: Context) {
             .edit().putString(KEY_SERVER, address).apply()
     }
 
-    private companion object {
-        const val PREFS = "kairumo_collab"
-        const val KEY_SERVER = "relay_server_url"
+    companion object {
+        private const val PREFS = "kairumo_collab"
+        private const val KEY_SERVER = "relay_server_url"
+        /** 編輯租約多久沒續約就失效（與 Apple 端相同）。 */
+        const val LEASE_TIMEOUT_MS = 5_000L
+        /** 在場資訊裡「正在這個方塊打字」的選取 id 前綴（與 Apple 端相同）。 */
+        /**
+         * 選取 id 的正規形式（設計 §8.1）：Apple 的附件 id 是大寫 UUID、這裡是核心的小寫 id，
+         * 不正規化的話兩個平台的編輯鎖互相看不見。收到時與比對時都過這一關。
+         */
+        fun canonicalSelection(id: String): String =
+            if (id.startsWith(TYPING_PREFIX)) TYPING_PREFIX + AndroidCollabCanvas.canonicalId(id.removePrefix(TYPING_PREFIX))
+            else AndroidCollabCanvas.canonicalId(id)
+
+        const val TYPING_PREFIX = "text:"
     }
 }

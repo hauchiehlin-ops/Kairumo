@@ -478,40 +478,9 @@ public enum PageThumbnailRenderer {
         return max(item.height, ceil(bounds.height) + pad * 2)
     }
 
+    /// 與畫布編輯器同一份排版（含字型、逐字格式與醒目提示），見 `RichText`。
     private static func attributedText(for item: NoteTextAttachment) -> NSAttributedString {
-        var traits: UIFontDescriptor.SymbolicTraits = []
-        if item.isBold { traits.insert(.traitBold) }
-        if item.isItalic { traits.insert(.traitItalic) }
-        let base = UIFont.systemFont(ofSize: item.fontSize)
-        let font = base.fontDescriptor.withSymbolicTraits(traits)
-            .map { UIFont(descriptor: $0, size: item.fontSize) } ?? base
-
-        let paragraph = NSMutableParagraphStyle()
-        switch item.alignmentRaw {
-        case "center": paragraph.alignment = .center
-        case "right": paragraph.alignment = .right
-        case "justified": paragraph.alignment = .justified
-        default: paragraph.alignment = .left
-        }
-        // 換行而不是截斷：畫布上的文字是會自動換行的，截斷等於匯出時
-        // 把使用者寫的東西吃掉一部分。
-        paragraph.lineBreakMode = .byWordWrapping
-
-        // 段落設定。畫布上套了什麼，匯出就要套什麼 —— 行距差幾點，
-        // 整塊文字的行數就不同，版面又會對不起來。
-        if let value = item.lineSpacing { paragraph.lineSpacing = value }
-        if let value = item.paragraphSpacing { paragraph.paragraphSpacing = value }
-        if let value = item.firstLineIndent { paragraph.firstLineHeadIndent = value }
-        if let value = item.paragraphIndent { paragraph.headIndent = value }
-
-        var attrs: [NSAttributedString.Key: Any] = [
-            .font: font,
-            .foregroundColor: UIColor(hexString: item.textColorHex) ?? .label,
-            .paragraphStyle: paragraph
-        ]
-        if item.isUnderline { attrs[.underlineStyle] = NSUnderlineStyle.single.rawValue }
-        if item.isStrikethrough { attrs[.strikethroughStyle] = NSUnderlineStyle.single.rawValue }
-        return NSAttributedString(string: item.text, attributes: attrs)
+        RichText.attributedString(for: item)
     }
 
     /// 以物件中心為軸套用畫布旋轉，畫完還原。

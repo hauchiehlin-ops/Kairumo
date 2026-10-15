@@ -46,6 +46,12 @@ enum TextBoxAppearance {
         if let value = item.paragraphSpacing { json["paragraphSpacing"] = value }
         if let value = item.firstLineIndent { json["firstLineIndent"] = value }
         if let value = item.paragraphIndent { json["paragraphIndent"] = value }
+        // Android 一直都有寫字型，Apple 漏了 —— 在 iPad 上換的字型到 Android 會變回預設。
+        if let value = item.fontFamily, !value.isEmpty { json["fontFamily"] = value }
+        // 逐字格式。位置是 UTF-16（見 `RichText`），兩個平台同一個單位。
+        if let runs = RichText.normalized(item) {
+            json["runs"] = runs.map(\.jsonObject)
+        }
 
         guard let data = try? JSONSerialization.data(withJSONObject: json, options: [.sortedKeys]),
               let text = String(data: data, encoding: .utf8) else { return "{}" }
@@ -80,5 +86,14 @@ enum TextBoxAppearance {
         if let value = map["paragraphSpacing"] as? Double { item.paragraphSpacing = CGFloat(value) }
         if let value = map["firstLineIndent"] as? Double { item.firstLineIndent = CGFloat(value) }
         if let value = map["paragraphIndent"] as? Double { item.paragraphIndent = CGFloat(value) }
+        if let value = map["fontFamily"] as? String { item.fontFamily = value.isEmpty ? nil : value }
+        // 沒有 `runs` 鍵 = 整個方塊同一種格式。一定要清掉：別台把逐字格式全部移除時，
+        // 送來的 JSON 就是沒有這個鍵，留著本機舊的區段會讓格式「刪不掉」。
+        if let list = map["runs"] as? [[String: Any]] {
+            let runs = list.compactMap(TextStyleRun.init(jsonObject:))
+            item.runs = runs.isEmpty ? nil : runs
+        } else {
+            item.runs = nil
+        }
     }
 }

@@ -54,7 +54,10 @@ data class TextBox(
     var lineSpacing: Float? = null,
     var paragraphSpacing: Float? = null,
     var firstLineIndent: Float? = null,
-    var paragraphIndent: Float? = null
+    var paragraphIndent: Float? = null,
+
+    /** 逐字格式（見 `RichText`）。`null` = 整個方塊同一種格式。 */
+    var runs: List<TextStyleRun>? = null
 ) {
     val isBackgroundClear: Boolean get() = backgroundColorHex == "clear"
 }
@@ -92,6 +95,8 @@ object TextBoxAppearance {
         box.paragraphSpacing?.let { json.put("paragraphSpacing", it.toDouble()) }
         box.firstLineIndent?.let { json.put("firstLineIndent", it.toDouble()) }
         box.paragraphIndent?.let { json.put("paragraphIndent", it.toDouble()) }
+        // 逐字格式。位置是 UTF-16（見 `RichText`），與 Apple 同一個單位。
+        RichText.normalized(box)?.let { json.put("runs", TextStyleRun.listToJson(it)) }
         return json.toString()
     }
 
@@ -124,5 +129,8 @@ object TextBoxAppearance {
         if (obj.has("paragraphSpacing")) box.paragraphSpacing = obj.getDouble("paragraphSpacing").toFloat()
         if (obj.has("firstLineIndent")) box.firstLineIndent = obj.getDouble("firstLineIndent").toFloat()
         if (obj.has("paragraphIndent")) box.paragraphIndent = obj.getDouble("paragraphIndent").toFloat()
+        // 沒有 `runs` 鍵 = 整個方塊同一種格式。一定要清掉：別台把逐字格式全部移除時，
+        // 送來的 JSON 就是沒有這個鍵，留著本機舊的區段會讓格式「刪不掉」。
+        box.runs = obj.optJSONArray("runs")?.let { TextStyleRun.listFromJson(it) }
     }
 }

@@ -62,8 +62,8 @@ class NotebookMeta private constructor(private var root: JSONObject) {
     }
 
     companion object {
-        private const val KEY_ORDER_BY_PAGE = "objectOrderByPage"
-        private const val KEY_UNDER_INK_BY_PAGE = "underInkObjectIdsByPage"
+        const val KEY_ORDER_BY_PAGE = "objectOrderByPage"
+        const val KEY_UNDER_INK_BY_PAGE = "underInkObjectIdsByPage"
         /** v3.8.0 的舊欄位：整本一份。只讀不寫，見 format-spec §6.2.1。 */
         private const val KEY_LEGACY_ORDER = "objectOrder"
         private const val KEY_COMMENT_PINS = "commentPins"
@@ -133,6 +133,13 @@ class NotebookMeta private constructor(private var root: JSONObject) {
          */
         private const val KEY_SHAPE_STYLES = "shapeStyles"
         private const val KEY_CONNECTION_STYLES = "connectionStyles"
+
+        /** 頁面物件清單的鍵（協同的 `link`、`model3d`…對應到這裡）。 */
+        val PAYLOAD_KEYS: Map<String, String> = linkedMapOf(
+            "link" to KEY_LINKS, "model3d" to KEY_MODELS_3D, "audio" to KEY_AUDIO,
+            "pin" to KEY_COMMENT_PINS, "tape" to KEY_TAPES, "sticky" to KEY_STICKY_ANCHORS
+        )
+        private val OBJECT_LIST_KEYS = PAYLOAD_KEYS.values.toSet()
 
         fun load(session: PadnoteSession?): NotebookMeta {
             val json = runCatching { session?.notebookMeta() }.getOrNull()
@@ -284,6 +291,39 @@ class NotebookMeta private constructor(private var root: JSONObject) {
         }
 
         flush(session)
+    }
+
+    /** 設定某一頁的紙張（協同：別人換了那一頁的紙）。 */
+    fun setPagePaperId(session: PadnoteSession?, pageIndex: Int, paperId: String, totalPages: Int) {
+        val arr = root.optJSONArray(KEY_PAGE_TEMPLATES)
+        val defaultPaper = paperId()
+        val current = MutableList(maxOf(totalPages, pageIndex + 1)) { i ->
+            if (arr != null && i < arr.length()) arr.optString(i, defaultPaper) else defaultPaper
+        }
+        if (current[pageIndex] == paperId && arr != null && pageIndex < arr.length()) return
+        current[pageIndex] = paperId
+        root.put(KEY_PAGE_TEMPLATES, JSONArray(current))
+        flush(session)
+    }
+
+    /**
+     * 協同用的原樣讀寫（設計 §8.2）。線上格式就是套件格式，所以連結卡片、圖釘這些清單
+     * 以 JSON 原樣進出 —— 經過型別化的編解碼會丟掉這一版不認得的欄位。
+     */
+    fun raw(key: String): Any? = root.opt(key)
+
+    /** 原樣寫回一個鍵（`null` = 移除）。改的是物件清單時一併清掉 `objectEnvelopes`（理由見那個鍵的說明）。 */
+    fun setRaw(session: PadnoteSession?, key: String, value: Any?) {
+        if (key in OBJECT_LIST_KEYS) root.remove(KEY_OBJECT_ENVELOPES)
+        if (value == null) root.remove(key) else root.put(key, value)
+        flush(session)
+    }
+
+    /** 重新讀一次核心裡的中繼資料（別的實例或協同剛寫過）。 */
+    fun refresh(session: PadnoteSession?) {
+        val latest = runCatching { JSONObject(session?.notebookMeta() ?: return) }.getOrNull() ?: return
+        root = latest
+        snapshot = JSONObject(latest.toString())
     }
 
     /** 移除某一頁的樣板。 */

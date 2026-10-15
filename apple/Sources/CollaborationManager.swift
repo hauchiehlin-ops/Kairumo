@@ -93,6 +93,14 @@ public class CollaborationManager: ObservableObject {
     public static let shared = CollaborationManager()
 
     public let oplogReceived = PassthroughSubject<RemoteOplogEvent, Never>()
+    /// 兩人同時選取同一個物件、而對方勝出：本機要放手（設計 §5.3）。值是物件 id 與對方名字。
+    public let leaseLost = PassthroughSubject<(id: String, holder: String), Never>()
+    /// 中繼的暫存已經補不回漏掉的那一段（設計 §7）：編輯器向其他成員要整份狀態。
+    public let stateSyncNeeded = PassthroughSubject<Void, Never>()
+    /// 看過的最大中繼序號（同一個房間裡重連時從這裡補發）。
+    private var lastSeq: UInt64 = 0
+    /// 還在用舊協定的參與者（送的是整頁筆跡、整個物件、沒有時鐘）。混用會單向同步，要提示更新。
+    @Published public var outdatedPeerIds: Set<String> = []
 
     @Published public var status: CollaborationStatus = .disconnected
     @Published public var currentRoomId: String = ""
@@ -136,6 +144,58 @@ public class CollaborationManager: ObservableObject {
     private var reconnectTimer: Timer?
     private var userInitiatedDisconnect: Bool = false
     public var maxKnownLamport: UInt64 = 0
+    /// Lamport 時鐘（設計 §3）。送出時 +1；收到時取最大值。
+    public private(set) var lamportClock: UInt64 = 0
+    /// 收過的操作 id（去重）。合併規則本來就冪等，這只是省掉重複的工。
+    private var seenOpIds: Set<String> = []
+    private var seenOpOrder: [String] = []
+    /// 選取（編輯租約）續約計時器：持有期間每秒重送一次在場資訊（設計 §5.1）。
+    private var leaseRenewTimer: Timer?
+
+    /// 這一次送出要用的時鐘值。
+    public func nextLamport() -> UInt64 {
+        lamportClock += 1
+        return lamportClock
+    }
+
+    /// 編輯租約多久沒續約就算失效（對方當機或斷線時，物件不能永遠鎖住）。
+    public static let leaseTimeout: TimeInterval = 5
+
+    /// 在場資訊裡「正在這個方塊打字」的選取 id 前綴（設計 §8.3）。
+    ///
+    /// 打字不是獨佔的：文字內容以字元 CRDT 合併，兩個人可以同時打。所以它不算租約，
+    /// 只用來讓別人看得到「誰正在這裡打字」。
+    public static let typingPrefix = "text:"
+
+    /// 選取 id 的正規形式（設計 §8.1）：Apple 的附件 id 是大寫 UUID、Android 是核心的小寫 id，
+    /// 不正規化的話兩個平台的編輯鎖互相看不見。收到時與比對時都過這一關。
+    nonisolated public static func canonicalSelection(_ id: String) -> String {
+        if id.hasPrefix(typingPrefix) {
+            return typingPrefix + NotebookPackageBridge.stableBlockId(String(id.dropFirst(typingPrefix.count)))
+        }
+        return NotebookPackageBridge.stableBlockId(id)
+    }
+
+    /// 正在這個文字方塊打字的人（不含自己）。
+    public func typingPeers(for id: String) -> [CollaboratorPeer] {
+        let now = Date()
+        return peers.filter {
+            $0.selectedId == Self.canonicalSelection(Self.typingPrefix + id)
+                && now.timeIntervalSince($0.lastActive) < Self.leaseTimeout
+        }
+    }
+
+    /// 誰正在編輯這個物件（租約有效、而且對方勝出）。沒有人就回 nil。
+    ///
+    /// 兩人同時選取時以使用者 id 較小者為準 —— 每一台都算得出同一個答案，不必另外協商。
+    public func leaseHolder(for id: String) -> CollaboratorPeer? {
+        let now = Date()
+        let wanted = Self.canonicalSelection(id)
+        return peers.first { peer in
+            guard peer.selectedId == wanted, now.timeIntervalSince(peer.lastActive) < Self.leaseTimeout else { return false }
+            return mySelectedId.map(Self.canonicalSelection) != wanted || peer.userId < currentUserId
+        }
+    }
 
     public let currentUserId: String = UUID().uuidString
 
@@ -345,6 +405,8 @@ public class CollaborationManager: ObservableObject {
             disconnect(userInitiated: false)
             reconnectAttempt = 0
             self.currentRoomId = roomId
+            // 新的房間從頭來；斷線重連回同一個房間則從看過的序號接著補。
+            self.lastSeq = 0
             self.isHost = asHost
             self.peers.removeAll()
             self.status = .connecting
@@ -388,6 +450,8 @@ public class CollaborationManager: ObservableObject {
 
         let session = URLSession(configuration: .default)
         let task = session.webSocketTask(with: url)
+        // 預設上限 1 MB：一張照片（base64 後）就超過，整條連線會被斷掉。與中繼的 64 MB 一致。
+        task.maximumMessageSize = 64 * 1024 * 1024
         self.webSocketTask = task
         task.resume()
 
@@ -577,7 +641,10 @@ public class CollaborationManager: ObservableObject {
         let msg: [String: Any] = [
             "type": "catchup",
             "room_id": rid,
-            "last_lamport": maxKnownLamport
+            // 新版中繼以序號補發（不會漏掉時鐘較小但較晚到的操作）；舊版中繼忽略 last_seq，
+            // 照 last_lamport = 0 從頭補 —— 合併規則冪等，重複收到沒有副作用（設計 §7）。
+            "last_lamport": 0,
+            "last_seq": lastSeq
         ]
         sendJson(msg)
     }
@@ -620,6 +687,21 @@ public class CollaborationManager: ObservableObject {
     /// 立即廣播物件選取/軟鎖定狀態
     public func broadcastSelection(selectedId: String?) {
         self.mySelectedId = selectedId
+        leaseRenewTimer?.invalidate()
+        leaseRenewTimer = nil
+        if selectedId != nil {
+            leaseRenewTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
+                Task { @MainActor [weak self] in
+                    guard let self, let id = self.mySelectedId else { return }
+                    self.sendSelectionPresence(id)
+                }
+            }
+        }
+        guard case .connected = status else { return }
+        sendSelectionPresence(selectedId)
+    }
+
+    private func sendSelectionPresence(_ selectedId: String?) {
         guard case .connected(let rid) = status else { return }
 
         var payload: [String: Any] = [
@@ -639,11 +721,20 @@ public class CollaborationManager: ObservableObject {
         sendJson(payload)
     }
 
-    /// 廣播持久化 CRDT 操作（落筆完成或物件增刪），支援 E2EE 硬體加速加密與離線佇列
-    public func broadcastOplog(kind: String, payload: [String: Any], lamport: UInt64 = 1) {
+    /// 廣播一個操作（物件修改、筆跡增刪），支援 E2EE 加密與離線佇列。回傳這個操作的時鐘值。
+    ///
+    /// **時鐘由這裡統一配發**（設計 §3）。以前呼叫端可以自己帶、預設值是 1，結果每一筆都是 1。
+    /// 操作 id 放在 payload 裡：三份中繼都原樣轉送 payload，但不見得保留外層的其他欄位。
+    @discardableResult
+    public func broadcastOplog(kind: String, payload: [String: Any], lamport explicit: UInt64? = nil) -> UInt64 {
+        // 呼叫端需要事先知道時鐘值時（物件合併要用同一個時戳記錄本機的欄位），
+        // 先以 `nextLamport()` 取得再傳進來；其餘一律由這裡配發。
+        let lamport = explicit ?? nextLamport()
         maxKnownLamport = max(maxKnownLamport, lamport)
+        var stamped = payload
+        stamped["op_id"] = UUID().uuidString
 
-        let (finalPayload, isEncrypted) = encryptPayload(payload)
+        let (finalPayload, isEncrypted) = encryptPayload(stamped)
 
         var msg: [String: Any] = [
             "type": "oplog",
@@ -663,43 +754,32 @@ public class CollaborationManager: ObservableObject {
             offlineOplogQueue.append(msg)
             queuedOplogCount = offlineOplogQueue.count
         }
+        return lamport
     }
 
-    /// 廣播附件新增或更新 (Text, Image, 3D)
-    public func broadcastAttachmentUpsert(type: String, itemDict: [String: Any]) {
-        let payload: [String: Any] = [
-            "attachment_type": type,
-            "item": itemDict
-        ]
-        broadcastOplog(kind: "attachment_upsert", payload: payload)
-    }
+    // MARK: - 舊協定（已停用）
+    //
+    // 物件的新增、修改、刪除與討論圖釘改由編輯器的單一入口（`commitNotebook`）比對後以
+    // `obj_patch` 送出（見 `CollabObjectSync`）：每一種修改都會送、帶時鐘、以欄位為單位合併。
+    // 以前這幾個方法散落在各個操作裡手動呼叫，漏掉的（框選搬移、圖層、復原…）就不會同步；
+    // 而且收到的一方以到達順序覆蓋，兩人同時改同一個物件時兩邊結果不同。
+    // 保留簽名讓既有呼叫端照常編譯，內容不再送出 —— 同一個修改送兩次（新舊各一）
+    // 會讓舊格式以到達順序覆蓋新格式的合併結果。
 
-    /// 廣播附件刪除
-    public func broadcastAttachmentDelete(id: String, type: String) {
-        let payload: [String: Any] = [
-            "id": id,
-            "attachment_type": type
-        ]
-        broadcastOplog(kind: "attachment_delete", payload: payload)
-    }
+    /// 已停用（見上方說明）。
+    public func broadcastAttachmentUpsert(type: String, itemDict: [String: Any]) {}
 
-    /// 廣播討論圖釘新增或回覆
-    public func broadcastCommentUpsert(pinDict: [String: Any]) {
-        broadcastOplog(kind: "comment_upsert", payload: ["pin": pinDict])
-    }
+    /// 已停用（見上方說明）。
+    public func broadcastAttachmentDelete(id: String, type: String) {}
 
-    /// 廣播討論圖釘狀態切換 (已解決 / 重新開啟)
-    public func broadcastCommentResolve(pinId: String, isResolved: Bool) {
-        broadcastOplog(kind: "comment_resolve", payload: [
-            "pin_id": pinId,
-            "is_resolved": isResolved
-        ])
-    }
+    /// 已停用（見上方說明）。
+    public func broadcastCommentUpsert(pinDict: [String: Any]) {}
 
-    /// 廣播討論圖釘刪除
-    public func broadcastCommentDelete(pinId: String) {
-        broadcastOplog(kind: "comment_delete", payload: ["pin_id": pinId])
-    }
+    /// 已停用（見上方說明）。
+    public func broadcastCommentResolve(pinId: String, isResolved: Bool) {}
+
+    /// 已停用（見上方說明）。
+    public func broadcastCommentDelete(pinId: String) {}
 
     // MARK: - 內部接收與心跳機制
 
@@ -773,6 +853,8 @@ public class CollaborationManager: ObservableObject {
                     parseAndAddPeer(pDict)
                 }
             }
+            // 第一次進這個房間、而且裡面有人：向他們要整份狀態（這台的檔案可能比較舊，設計 §7）。
+            if lastSeq == 0, !peers.isEmpty { stateSyncNeeded.send(()) }
 
         case "peer_joined":
             if let pDict = json["peer"] as? [String: Any] {
@@ -787,12 +869,18 @@ public class CollaborationManager: ObservableObject {
             let y = CGFloat((cursorDict["y"] as? NSNumber)?.floatValue ?? 0)
             let isDrawing = (cursorDict["is_drawing"] as? Bool) ?? false
             let tool = (cursorDict["tool"] as? String) ?? "pen"
-            let selectedId = json["selected_id"] as? String
+            let selectedId = (json["selected_id"] as? String).map(Self.canonicalSelection)
 
             if let idx = peers.firstIndex(where: { $0.userId == uid }) {
                 peers[idx].cursor = PeerCursor(x: x, y: y, isDrawing: isDrawing, tool: tool, selectedId: selectedId)
                 peers[idx].selectedId = selectedId
                 peers[idx].lastActive = Date()
+                // 兩人同時選了同一個物件：使用者 id 較小者勝（每一台算出同一個答案）。
+                // 「正在打字」不是獨佔的（字元 CRDT 會合併），不參與搶奪。
+                if let sel = selectedId, let mine = mySelectedId, sel == Self.canonicalSelection(mine),
+                   !sel.hasPrefix(Self.typingPrefix), uid < currentUserId {
+                    leaseLost.send((id: mine, holder: peers[idx].userName))
+                }
             }
 
         case "peer_left":
@@ -805,30 +893,26 @@ public class CollaborationManager: ObservableObject {
                   let kind = json["kind"] as? String,
                   let rawPayload = json["payload"] as? [String: Any] else { return }
             let lamport = (json["lamport"] as? NSNumber)?.uint64Value ?? 0
-            self.maxKnownLamport = max(self.maxKnownLamport, lamport)
             let isEncrypted = (json["encrypted"] as? Bool) ?? false
-
-            if let decryptedPayload = decryptPayload(rawPayload, isEncrypted: isEncrypted) {
-                let event = RemoteOplogEvent(userId: uid, kind: kind, payload: decryptedPayload, lamport: lamport)
-                oplogReceived.send(event)
-            }
+            if let seq = (json["seq"] as? NSNumber)?.uint64Value { lastSeq = max(lastSeq, seq) }
+            deliver(userId: uid, kind: kind, rawPayload: rawPayload, lamport: lamport, isEncrypted: isEncrypted)
 
         case "oplog_batch":
             if let batch = json["oplogs"] as? [[String: Any]] {
                 for item in batch {
+                    if let seq = (item["seq"] as? NSNumber)?.uint64Value { lastSeq = max(lastSeq, seq) }
                     if let uid = item["user_id"] as? String,
                        let kind = item["kind"] as? String,
                        let rawPayload = item["payload"] as? [String: Any] {
                         let lamport = (item["lamport"] as? NSNumber)?.uint64Value ?? 0
-                        self.maxKnownLamport = max(self.maxKnownLamport, lamport)
                         let isEncrypted = (item["encrypted"] as? Bool) ?? false
-                        if let decryptedPayload = decryptPayload(rawPayload, isEncrypted: isEncrypted) {
-                            let event = RemoteOplogEvent(userId: uid, kind: kind, payload: decryptedPayload, lamport: lamport)
-                            oplogReceived.send(event)
-                        }
+                        // 補發會包含自己送過的：自己的修改本機早就套用了。
+                        guard uid != currentUserId else { continue }
+                        deliver(userId: uid, kind: kind, rawPayload: rawPayload, lamport: lamport, isEncrypted: isEncrypted)
                     }
                 }
             }
+            if (json["truncated"] as? Bool) == true { stateSyncNeeded.send(()) }
 
         case "room_closed":
             disconnect()
@@ -841,6 +925,31 @@ public class CollaborationManager: ObservableObject {
             break
         }
     }
+
+    /// 收到一個操作：推進時鐘、去重、標記舊版參與者，再交給編輯器。
+    private func deliver(userId uid: String, kind: String, rawPayload: [String: Any], lamport: UInt64, isEncrypted: Bool) {
+        lamportClock = max(lamportClock, lamport)
+        maxKnownLamport = max(maxKnownLamport, lamport)
+        guard let payload = decryptPayload(rawPayload, isEncrypted: isEncrypted) else { return }
+        if let opId = payload["op_id"] as? String {
+            guard !seenOpIds.contains(opId) else { return }
+            seenOpIds.insert(opId)
+            seenOpOrder.append(opId)
+            if seenOpOrder.count > 4000 {
+                seenOpIds.remove(seenOpOrder.removeFirst())
+            }
+        }
+        if Self.legacyKinds.contains(kind), !outdatedPeerIds.contains(uid) {
+            outdatedPeerIds.insert(uid)
+        }
+        oplogReceived.send(RemoteOplogEvent(userId: uid, kind: kind, payload: payload, lamport: lamport))
+    }
+
+    /// 舊協定的操作種類。收到就代表對方的版本較舊。
+    static let legacyKinds: Set<String> = [
+        "attachment_upsert", "attachment_delete", "drawing_replace", "stroke_delta",
+        "comment_upsert", "comment_resolve", "comment_delete",
+    ]
 
     private func parseAndAddPeer(_ dict: [String: Any]) {
         guard let uid = dict["user_id"] as? String,
@@ -893,6 +1002,13 @@ extension CollaborationManager: ProfileScoped {
         offlineOplogQueue.removeAll()
         reconnectAttempt = 0
         maxKnownLamport = 0
+        lamportClock = 0
+        lastSeq = 0
+        seenOpIds.removeAll()
+        seenOpOrder.removeAll()
+        outdatedPeerIds.removeAll()
+        leaseRenewTimer?.invalidate()
+        leaseRenewTimer = nil
         serverAddress = ProfileDefaults.current.string(forKey: "kairumo_relay_server_url")
             ?? collabTuning().defaultServer
     }

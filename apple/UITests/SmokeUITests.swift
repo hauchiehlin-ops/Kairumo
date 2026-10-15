@@ -214,9 +214,24 @@ final class SmokeUITests: XCTestCase {
         let canvas = app.descendants(matching: .any)["editor.canvas"].firstMatch
         XCTAssertTrue(canvas.waitForExistence(timeout: 15), "建立筆記後沒有進入畫布")
         sleep(1)
-        let windowMidX = app.windows.firstMatch.frame.midX
-        XCTAssertGreaterThan(paperFrame().width, 0, "手繪模式量不到畫布")
-        XCTAssertEqual(paperFrame().midX, windowMidX, accuracy: 24, "手繪模式下頁面沒有置中")
+        // 置中的基準是**工作區**（結構側欄右邊剩下的空間），不是整個視窗。
+        //
+        // 以前比的是視窗中線：iPad 直式寬 834，側欄並排的條件（扣掉 280 還剩 480）成立，
+        // 進編輯器時又會自動展開側欄 —— 頁面正確地置中在剩下的 554 裡，卻被判成偏右 145。
+        // 能過的那幾次只是自動展開剛好沒觸發（進場那一瞬間量到的寬度還是 0）。
+        let workspace = app.descendants(matching: .any)["editor.workspace"].firstMatch
+        XCTAssertTrue(workspace.waitForExistence(timeout: 10), "量不到工作區（editor.workspace）")
+        func assertPaperCentered(_ message: String) {
+            let paper = paperFrame()
+            let area = workspace.frame
+            XCTAssertGreaterThan(paper.width, 0, "\(message)：量不到畫布")
+            XCTAssertEqual(paper.midX, area.midX, accuracy: 24, message)
+            // 頁面比工作區窄時，整張要在工作區裡面 —— 置中在別的東西上（例如被側欄壓住）也要抓得到。
+            if paper.width <= area.width {
+                XCTAssertGreaterThanOrEqual(paper.minX, area.minX - 1, "\(message)：頁面被推到工作區外")
+            }
+        }
+        assertPaperCentered("手繪模式下頁面沒有置中")
 
         // 1. 切到文字模式：還是同一塊畫布、頁面仍置中。
         //
@@ -232,7 +247,7 @@ final class SmokeUITests: XCTestCase {
             canvas.waitForExistence(timeout: 10),
             "切到文字模式後畫布不見了 —— 工作區被換成另一個視圖（樣板、置中、框線都會跟著沒有）")
         sleep(1)
-        XCTAssertEqual(paperFrame().midX, windowMidX, accuracy: 24, "文字模式下頁面沒有置中")
+        assertPaperCentered("文字模式下頁面沒有置中")
 
         // 2. 在文字模式打字。
         canvas.coordinate(withNormalizedOffset: CGVector(dx: 0.3, dy: 0.3)).tap()
@@ -265,10 +280,21 @@ final class SmokeUITests: XCTestCase {
         // 前提是它不會多出一個點。
         XCTAssertEqual(Self.strokeCount(in: app), 0, "點文字方塊多畫出了一筆")
 
-        // 4. 移動：拖曳只在「不在編輯中」時生效，所以先離開編輯狀態
-        //    （切到手繪再切回文字），再把方塊拖到別處。
-        app.descendants(matching: .any).matching(identifier: "portal.draw").firstMatch.tap()
+        // 4. 移動：拖曳只在「不在編輯中」時生效，所以先離開編輯狀態，再把方塊拖到別處。
+        //
+        //    手繪模式下編輯文字時，模式島換成「編輯中」橫條，`portal.draw`／`portal.type`
+        //    不在畫面上 —— 用橫條上的「完成」離開。以前這裡點 `portal.draw`，
+        //    能過只是因為舊的輸入框常常一下子就失焦、自己結束了編輯。
+        let exitEditing = app.descendants(matching: .any)
+            .matching(identifier: "portal.exit_contextual").firstMatch
+        guard exitEditing.waitForExistence(timeout: 10) else {
+            return XCTFail("手繪模式編輯文字時，模式島上找不到「完成」（portal.exit_contextual）")
+        }
+        exitEditing.tap()
         sleep(1)
+        XCTAssertTrue(
+            typeMode.waitForExistence(timeout: 10),
+            "按了「完成」之後模式島沒有回到手繪／文字兩個按鈕")
         typeMode.tap()
         sleep(1)
         let movable = app.staticTexts[sentinel].firstMatch
@@ -942,7 +968,13 @@ extension SmokeUITests {
             XCTFail("編輯器上沒有側欄開關")
             return
         }
-        toggle.tap()
+        // 寬度夠的 iPad 一打開編輯器側欄就是展開的（`autoOpenSidebarIfWideEnough`）——
+        // 這時再按一次開關反而把它收起來。已經展開就不按。
+        let sidebarTabs = app.descendants(matching: .any)
+            .matching(identifier: "editor.sidebar.tab.folders").firstMatch
+        if !sidebarTabs.waitForExistence(timeout: 3) {
+            toggle.tap()
+        }
 
         // **側欄預設開在「資料夾」分頁**（`kairumo_editor_sidebar_tab`
         // 的預設值是 `folders`），而縮圖大小那兩顆住在「頁面」分頁的底部。

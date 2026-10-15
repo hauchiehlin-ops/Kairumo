@@ -72,6 +72,31 @@ enum ObjectMarquee {
         return frames.dropFirst().reduce(first) { $0.union($1) }
     }
 
+    /// 這一次拉框之後的選取。
+    ///
+    /// **連續框選**（`additive`）：新框到的加進原本的選取，不取代 —— 散在頁面各處的
+    /// 物件可以一框一框地累積起來，不必一次框到全部（那常常會連帶框到不想要的東西）。
+    static func combined(_ existing: Set<String>, with hits: Set<String>, additive: Bool) -> Set<String> {
+        additive ? existing.union(hits) : hits
+    }
+
+    /// 點一下選取的結果。
+    ///
+    /// 點到物件：連續框選時切換它在不在選取裡（點錯了再點一次就拿掉）；一般模式只選它。
+    /// 點到空白：一般模式取消選取；連續框選時保留 —— 累積了半天的選取不能因為手滑點到空白就沒了。
+    static func tapped(_ id: String?, existing: Set<String>, additive: Bool) -> Set<String> {
+        guard let id else { return additive ? existing : [] }
+        guard additive else { return [id] }
+        var next = existing
+        if next.contains(id) { next.remove(id) } else { next.insert(id) }
+        return next
+    }
+
+    /// 點的位置上最上層的物件。候選依堆疊順序（由下到上）排列，所以從後面找。
+    static func topmostHit(at point: CGPoint, among candidates: [MarqueeHit]) -> String? {
+        candidates.last(where: { $0.frame.contains(point) })?.id
+    }
+
     /// 貼上時的位移。
     ///
     /// 貼在原位的話，使用者會以為沒貼成功 —— 畫面上完全沒有變化，

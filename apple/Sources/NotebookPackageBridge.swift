@@ -642,7 +642,11 @@ enum NotebookPackageBridge {
         let fm = FileManager.default
         // 已知的頁面 id 優先用呼叫端給的；沒給就沿用套件裡現有的那批 ——
         // 換一批新 id 等於把同一頁分裂成兩頁。
-        let pageIds = knownPageIds ?? existingPageIds(in: destination, deviceId: deviceId)
+        // 筆記自己記得頁面 id 時以它為準：頁面搬動之後，id 要跟著那一頁走，
+        // 不能再照「套件裡第幾頁」重新配對（那會讓搬過的頁在另一台換了身分）。
+        let pageIds = knownPageIds
+            ?? document.pageIds.flatMap { $0.count == max(1, document.pageCount) ? $0 : nil }
+            ?? existingPageIds(in: destination, deviceId: deviceId)
 
         // 目的地還不存在時就是一般的匯出，沒有別人的東西要保護。
         guard fm.fileExists(atPath: destination.path) else {
@@ -1163,6 +1167,21 @@ enum NotebookPackageBridge {
     }
 
     /// 套件裡現有的頁面 id，依頁次。開不起來時回 `nil`。
+    /// 這本筆記的頁面 id（即時協同用，設計 §8.1）。
+    ///
+    /// 已經記著就照用；沒有的話**沿用它套件裡的那一批** —— 與交換過這份套件的其他裝置一致。
+    /// 套件裡也沒有（從沒匯出過）才給新的。
+    static func resolvedPageIds(for document: NotebookDocument, packagesDirectory: URL) -> [String] {
+        let count = max(1, document.pageCount)
+        if let ids = document.pageIds, ids.count == count { return ids }
+        let package = packagesDirectory.appending(path: "\(document.id.lowercased()).padnote")
+        var ids = (document.pageIds ?? existingPageIds(in: package, deviceId: NotebookMigration.deviceId) ?? [])
+            .map { $0.lowercased() }
+        if ids.count > count { ids = Array(ids.prefix(count)) }
+        while ids.count < count { ids.append(UUID().uuidString.lowercased()) }
+        return ids
+    }
+
     private static func existingPageIds(in package: URL, deviceId: UInt32) -> [String]? {
         let pkgName = package.deletingPathExtension().lastPathComponent
         if pkgName.caseInsensitiveCompare(recordingInboxNotebookId()) == .orderedSame {
@@ -1486,6 +1505,8 @@ enum NotebookPackageBridge {
             template: .blank
         )
         document.textAttachments = texts.isEmpty ? nil : texts
+        // 頁面 id 跟著筆記走（即時協同以它指稱頁面，設計 §8.1）。
+        document.pageIds = pageIds.map { $0.lowercased() }
         document.tableAttachments = tables.isEmpty ? nil : tables
         document.attachments = images.isEmpty ? nil : images
         document.shapeAttachments = shapes.isEmpty ? nil : shapes

@@ -75,8 +75,27 @@ class ShapeStore(
             styleBlocks[id] = blockId
             if (kind == KIND_SHAPE) shapeStyles[id] = payload else connectionStyles[id] = payload
         }
-        val objects = runCatching { s.rootObjects(page) }.getOrDefault(emptyList())
-        for (node in objects) {
+        coreGroupIds.clear()
+        // 群組是核心物件樹裡的節點，成員在它底下：只讀最上層的話，群組裡的形狀整個不見。
+        // 展開一層，成員記下它所屬的群組。
+        val roots = runCatching { s.rootObjects(page) }.getOrDefault(emptyList())
+        val objects = mutableListOf<Pair<uniffi.padnote_core.FfiObject, String?>>()
+        for (node in roots) {
+            if (node.kind != FfiObjectKind.GROUP) {
+                objects += node to null
+                continue
+            }
+            coreGroupIds[node.id] = node.id
+            for (member in node.members) {
+                val kind = when {
+                    runCatching { s.shapeObject(page, member) }.getOrNull() != null -> FfiObjectKind.SHAPE
+                    runCatching { s.connectionObject(page, member) }.getOrNull() != null -> FfiObjectKind.CONNECTION
+                    else -> continue
+                }
+                objects += uniffi.padnote_core.FfiObject(member, kind, emptyList(), 0u) to node.id
+            }
+        }
+        for ((node, groupId) in objects) {
             if (node.kind == FfiObjectKind.CONNECTION) {
                 // 連接線也要讀回來 —— 少了它，另一台裝置看到的是一堆
                 // 沒有線連起來的方塊。
@@ -117,6 +136,7 @@ class ShapeStore(
             val transform = runCatching { s.objectTransform(page, node.id) }.getOrNull()
             if (transform != null && transform.size >= 6) applyTransform(shape, transform)
             shapeStyles[node.id.lowercase()]?.let { ShapeStyleMeta.apply(it, shape) }
+            shape.groupId = groupId
             shapes[node.id] = shape
         }
     }
@@ -349,6 +369,23 @@ class ShapeStore(
     /** 平台的群組 id → 核心的 Group 物件 id。 */
     private val coreGroupIds = mutableMapOf<String, String>()
 
+    /**
+     * 依目前每個形狀的 `groupId` 重建這幾個群組（協同：別人把形狀加入或移出群組）。
+     *
+     * 成員是一個一個到的：第一個成員到時群組還湊不成（少於兩個），第二個到了才建立 ——
+     * 所以每次都整組重建，而不是只看「新出現的群組 id」。
+     */
+    fun regroup(groupIds: Set<String>) {
+        val s = session ?: return
+        val page = pageId ?: return
+        for (group in groupIds) {
+            coreGroupIds.remove(group)?.let { runCatching { s.ungroup(it) } }
+            val members = shapes.values.filter { it.groupId == group }.map { it.id }
+            if (members.size < 2) continue
+            runCatching { s.groupObjects(page, members) }.getOrNull()?.let { coreGroupIds[group] = it }
+        }
+    }
+
     fun remove(shape: NoteShape) {
         shapes.remove(shape.id)
         // 連著它的線也要拿掉 —— 留著的話會指向一個不存在的形狀。
@@ -401,12 +438,12 @@ class ShapeStore(
         runCatching { session?.removeBlock(block) }
     }
 
-    private companion object {
-        const val KIND_SHAPE = "shapestyle"
-        const val KIND_CONNECTION = "connstyle"
+    companion object {
+        private const val KIND_SHAPE = "shapestyle"
+        private const val KIND_CONNECTION = "connstyle"
 
         /** 1×1 全透明 PNG（與 Apple 的 `ObjectEnvelope.transparentPNG` 同一張）。 */
-        val TRANSPARENT_PNG: ByteArray = android.util.Base64.decode(
+        private val TRANSPARENT_PNG: ByteArray = android.util.Base64.decode(
             "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==",
             android.util.Base64.DEFAULT)
 
@@ -426,4 +463,113 @@ class ShapeStore(
                 "${hex.substring(16, 20)}-${hex.substring(20)}"
         }
     }
+
+    /**
+     * 讓這一頁的形狀與連接線變成 [targetShapes]／[targetConnections] 那一份（全域復原用）。
+     *
+     * 刪掉的形狀用原 id 放回（`insertShapeWithId`），連著它的線才找得到兩端；
+     * 位置、大小、旋轉照「原始外框 + 變換」的規則重寫（見 `writeTransform`）。
+     */
+    fun restoreTo(targetShapes: List<NoteShape>, targetConnections: List<NoteConnection>) {
+        val wantedShapes = targetShapes.associateBy { it.id }
+        val wantedLinks = targetConnections.associateBy { it.id }
+        for (link in allConnections) if (link.id !in wantedLinks) remove(link)
+        for (shape in all) if (shape.id !in wantedShapes) remove(shape)
+
+        val s = session
+        val page = pageId
+        for (shape in targetShapes) {
+            val copy = shape.copy()
+            if (shapes.containsKey(shape.id)) {
+                persist(copy)
+                continue
+            }
+            val revived = s != null && page != null && runCatching {
+                s.insertShapeWithId(page, copy.id, copy.kind, copy.x, copy.y,
+                    copy.x + copy.width, copy.y + copy.height, copy.cornerRadius, copy.label)
+            }.getOrDefault(false)
+            if (revived || s == null) {
+                shapes[copy.id] = copy
+                base[copy.id] = ShapeFrameMath.Frame(copy.x, copy.y, copy.width, copy.height)
+                if (abs(copy.rotationDegrees ?: 0f) > 0.01f) writeTransform(copy)
+                writeStyle(KIND_SHAPE, copy.id, ShapeStyleMeta.encode(copy))
+            } else {
+                create(copy)
+            }
+        }
+        for (link in targetConnections) {
+            val copy = link.copy()
+            if (connections.containsKey(link.id)) {
+                persist(copy)
+                continue
+            }
+            val from = shapes[copy.fromShapeId] ?: continue
+            val to = shapes[copy.toShapeId] ?: continue
+            if (s == null || page == null) {
+                connections[copy.id] = copy
+                continue
+            }
+            val fields = copy.coreFields(from, to)
+            val revived = runCatching {
+                s.insertConnectionWithId(page, copy.id, from.id, to.id,
+                    fields.fromAnchor, fields.toAnchor, fields.route,
+                    fields.startCap, fields.endCap, copy.label)
+            }.getOrDefault(false)
+            if (revived) {
+                connections[copy.id] = copy
+                writeStyle(KIND_CONNECTION, copy.id, ShapeStyleMeta.encode(copy))
+            } else {
+                connect(copy, from, to)
+            }
+        }
+        // 堆疊順序也照那一份。
+        if (all.map { it.id } != targetShapes.map { it.id }) {
+            replaceAll(targetShapes.mapNotNull { shapes[it.id] })
+        }
+    }
+
+    /** 協同：新增或更新一個形狀（新的用原本的 id 建立，位置走物件變換）。 */
+    fun upsert(shape: NoteShape) {
+        if (shapes.containsKey(shape.id)) {
+            persist(shape)
+            return
+        }
+        val s = session
+        val page = pageId
+        if (s != null && page != null) {
+            runCatching {
+                s.insertShapeWithId(page, shape.id, shape.kind, shape.x, shape.y,
+                    shape.x + shape.width, shape.y + shape.height, shape.cornerRadius, shape.label)
+            }
+        }
+        shapes[shape.id] = shape
+        base[shape.id] = ShapeFrameMath.Frame(shape.x, shape.y, shape.width, shape.height)
+        if (abs(shape.rotationDegrees ?: 0f) > 0.01f) writeTransform(shape)
+        writeStyle(KIND_SHAPE, shape.id, ShapeStyleMeta.encode(shape))
+    }
+
+    /** 協同：新增或更新一條連接線。兩端的形狀還不在時回 false（晚點再試）。 */
+    fun upsertConnection(link: NoteConnection): Boolean {
+        if (connections.containsKey(link.id)) {
+            persist(link)
+            return true
+        }
+        val from = shapes[link.fromShapeId] ?: return false
+        val to = shapes[link.toShapeId] ?: return false
+        val s = session
+        val page = pageId
+        if (s != null && page != null) {
+            val fields = link.coreFields(from, to)
+            runCatching {
+                s.insertConnectionWithId(page, link.id, from.id, to.id, fields.fromAnchor, fields.toAnchor,
+                    fields.route, fields.startCap, fields.endCap, link.label)
+            }
+        }
+        connections[link.id] = link
+        writeStyle(KIND_CONNECTION, link.id, ShapeStyleMeta.encode(link))
+        return true
+    }
+
+    fun find(id: String): NoteShape? = shapes[id]
+    fun findConnection(id: String): NoteConnection? = connections[id]
 }

@@ -103,4 +103,36 @@ class ImageStore(
         bitmaps.remove(image.blobId)
         runCatching { session?.removeBlock(image.id) }
     }
+
+    /** 讓這一頁的圖片變成 [target] 那一份（全域復原用）。刪掉的用原 id 放回。 */
+    fun restoreTo(target: List<NoteImage>) {
+        val wanted = target.associateBy { it.id }
+        for (image in all) if (image.id !in wanted) remove(image)
+        for (image in target) {
+            val copy = image.copy()
+            if (!images.containsKey(image.id)) {
+                val s = session
+                val page = pageId
+                if (s != null && page != null) {
+                    runCatching { s.addImageWithId(page, image.id, image.blobId, image.width, image.height) }
+                }
+            }
+            persist(copy)
+        }
+    }
+
+    /** 協同：新增或更新一張圖（新的用原本的 id 與 blob 建立；blob 要先放進核心）。 */
+    fun upsert(image: NoteImage) {
+        if (!images.containsKey(image.id)) {
+            val s = session
+            val page = pageId
+            if (s != null && page != null) {
+                runCatching { s.addImageWithId(page, image.id, image.blobId, image.width, image.height) }
+            }
+        }
+        persist(image)
+    }
+
+    fun find(id: String): NoteImage? = images[id]
+
 }

@@ -164,4 +164,42 @@ class TableStore(
         tables.remove(table.id)
         runCatching { session?.removeBlock(table.id) }
     }
+
+    /** 讓這一頁的表格變成 [target] 那一份（全域復原用）。刪掉的用原 id 放回。 */
+    fun restoreTo(target: List<NoteTable>) {
+        val wanted = target.associateBy { it.id }
+        for (table in all) if (table.id !in wanted) remove(table)
+        for (table in target) {
+            val copy = table.copyTable()
+            if (tables.containsKey(table.id)) {
+                persist(copy)
+                continue
+            }
+            val s = session
+            val page = pageId
+            val revived = s != null && page != null && runCatching {
+                s.insertTableWithId(page, table.id, table.rows.toUInt(), table.cols.toUInt(),
+                    table.cells.toList(), table.headerRow)
+            }.getOrDefault(false)
+            if (revived || s == null) persist(copy) else create(copy)
+        }
+    }
+
+    /** 協同：新增或更新一張表（新的用原本的 id 建立）。 */
+    fun upsert(table: NoteTable) {
+        if (!tables.containsKey(table.id)) {
+            val s = session
+            val page = pageId
+            if (s != null && page != null) {
+                runCatching {
+                    s.insertTableWithId(page, table.id, table.rows.toUInt(), table.cols.toUInt(),
+                        table.cells.toList(), table.headerRow)
+                }
+            }
+        }
+        persist(table)
+    }
+
+    fun find(id: String): NoteTable? = tables[id]
+
 }

@@ -22,6 +22,22 @@ pub struct Room {
     pub passcode: Option<String>,
     pub peers: HashMap<String, Peer>,
     pub recent_oplogs: VecDeque<ServerMessage>,
+    /// 下一個要配發的序號。
+    pub next_seq: u64,
+    /// 暫存裡各操作的大約位元組數（與 `recent_oplogs` 一一對應），用來限制總量。
+    recent_sizes: VecDeque<usize>,
+    recent_bytes: usize,
+}
+
+/// 暫存上限：筆數與總位元組數，先到者為準。新圖片整張帶在操作裡，只限筆數的話
+/// 幾十張照片就能把中繼的記憶體吃光。
+pub const RECENT_MAX_COUNT: usize = 2000;
+pub const RECENT_MAX_BYTES: usize = 32 * 1024 * 1024;
+
+/// 只轉送、不暫存的操作種類：整份狀態的請求與回覆（設計 §7）—— 它們只對當下在線的人有意義，
+/// 而且一份快照可能比整個暫存還大。
+pub fn is_transient_kind(kind: &str) -> bool {
+    kind.starts_with("state_")
 }
 
 impl Room {
@@ -31,8 +47,37 @@ impl Room {
             owner_id,
             passcode,
             peers: HashMap::new(),
-            recent_oplogs: VecDeque::with_capacity(200),
+            recent_oplogs: VecDeque::new(),
+            next_seq: 1,
+            recent_sizes: VecDeque::new(),
+            recent_bytes: 0,
         }
+    }
+
+    /// 存進暫存，超過上限時從最舊的丟起。
+    fn remember(&mut self, msg: ServerMessage, size: usize) {
+        self.recent_oplogs.push_back(msg);
+        self.recent_sizes.push_back(size);
+        self.recent_bytes += size;
+        while self.recent_oplogs.len() > RECENT_MAX_COUNT
+            || (self.recent_bytes > RECENT_MAX_BYTES && self.recent_oplogs.len() > 1)
+        {
+            self.recent_oplogs.pop_front();
+            if let Some(gone) = self.recent_sizes.pop_front() {
+                self.recent_bytes -= gone;
+            }
+        }
+    }
+
+    /// 暫存裡最舊那一筆的序號（沒有就是下一個要配發的）。
+    fn oldest_seq(&self) -> u64 {
+        self.recent_oplogs
+            .front()
+            .and_then(|m| match m {
+                ServerMessage::PeerOplog { seq, .. } => *seq,
+                _ => None,
+            })
+            .unwrap_or(self.next_seq)
     }
 
     pub fn peer_infos(&self) -> Vec<PeerInfo> {
@@ -157,6 +202,19 @@ impl RoomHub {
     ) {
         let mut rooms = self.rooms.write().await;
         if let Some(room) = rooms.get_mut(room_id) {
+            let transient = is_transient_kind(&kind);
+            let seq = if transient {
+                None
+            } else {
+                let s = room.next_seq;
+                room.next_seq += 1;
+                Some(s)
+            };
+            let size = if transient {
+                0
+            } else {
+                payload.to_string().len() + kind.len() + 64
+            };
             let msg = ServerMessage::PeerOplog {
                 room_id: room_id.to_string(),
                 user_id: user_id.to_string(),
@@ -164,11 +222,11 @@ impl RoomHub {
                 kind,
                 encrypted,
                 payload,
+                seq,
             };
-            if room.recent_oplogs.len() >= 200 {
-                room.recent_oplogs.pop_front();
+            if !transient {
+                room.remember(msg.clone(), size);
             }
-            room.recent_oplogs.push_back(msg.clone());
 
             for (pid, peer) in &room.peers {
                 if pid != user_id {
@@ -178,7 +236,28 @@ impl RoomHub {
         }
     }
 
-    /// 取得指定房間在 last_lamport 之後的所有遺漏 Oplog（斷線追趕補發）
+    /// 補發序號 `last_seq` 之後的操作。回傳 `(操作, 是否不完整)` ——
+    /// 要補的那一段已經被擠出暫存時「不完整」，客戶端要向其他成員要整份狀態。
+    pub async fn catchup_since_seq(
+        &self,
+        room_id: &str,
+        last_seq: u64,
+    ) -> (Vec<ServerMessage>, bool) {
+        let rooms = self.rooms.read().await;
+        let Some(room) = rooms.get(room_id) else {
+            // 房間不在了（所有人都離開過）：沒有東西可補，也沒有人能給快照。
+            return (Vec::new(), false);
+        };
+        let missing = room
+            .recent_oplogs
+            .iter()
+            .filter(|m| matches!(m, ServerMessage::PeerOplog { seq: Some(s), .. } if *s > last_seq))
+            .cloned()
+            .collect();
+        (missing, room.oldest_seq() > last_seq + 1)
+    }
+
+    /// 取得指定房間在 last_lamport 之後的所有遺漏 Oplog（舊版客戶端的斷線追趕補發）
     pub async fn catchup(&self, room_id: &str, last_lamport: u64) -> Vec<ServerMessage> {
         let rooms = self.rooms.read().await;
         if let Some(room) = rooms.get(room_id) {
@@ -317,13 +396,25 @@ impl RoomHub {
             ClientMessage::Catchup {
                 room_id,
                 last_lamport,
-            } => {
-                let missing = self.catchup(&room_id, last_lamport).await;
-                Some(ServerMessage::OplogBatch {
-                    room_id,
-                    oplogs: missing,
-                })
-            }
+                last_seq,
+            } => match last_seq {
+                Some(seq) => {
+                    let (missing, truncated) = self.catchup_since_seq(&room_id, seq).await;
+                    Some(ServerMessage::OplogBatch {
+                        room_id,
+                        oplogs: missing,
+                        truncated: Some(truncated),
+                    })
+                }
+                None => {
+                    let missing = self.catchup(&room_id, last_lamport).await;
+                    Some(ServerMessage::OplogBatch {
+                        room_id,
+                        oplogs: missing,
+                        truncated: None,
+                    })
+                }
+            },
             ClientMessage::Leave { room_id, user_id } => {
                 self.leave(&room_id, &user_id).await;
                 *current_room = None;

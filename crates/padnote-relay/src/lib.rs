@@ -239,4 +239,105 @@ mod tests {
         let all = hub.catchup("room-303", 0).await;
         assert_eq!(all.len(), 2);
     }
+
+    async fn joined_hub(room: &str) -> (RoomHub, mpsc::UnboundedReceiver<ServerMessage>) {
+        let hub = RoomHub::new();
+        let (tx, rx) = mpsc::unbounded_channel();
+        hub.join(
+            room.into(),
+            "u1".into(),
+            "A".into(),
+            "#000".into(),
+            "owner".into(),
+            None,
+            tx,
+        )
+        .await
+        .unwrap();
+        (hub, rx)
+    }
+
+    #[tokio::test]
+    async fn test_seq_is_assigned_and_catchup_by_seq() {
+        let (hub, _rx) = joined_hub("r").await;
+        for l in [5u64, 3, 9] {
+            hub.broadcast_oplog(
+                "r",
+                "u1",
+                l,
+                "obj_patch".into(),
+                None,
+                serde_json::json!({}),
+            )
+            .await;
+        }
+        // 時鐘 3 比 5 晚到：以序號補發不會漏掉它（以時鐘補發 > 5 就漏了）。
+        let (after_first, truncated) = hub.catchup_since_seq("r", 1).await;
+        assert!(!truncated);
+        let lamports: Vec<u64> = after_first
+            .iter()
+            .map(|m| match m {
+                ServerMessage::PeerOplog { lamport, .. } => *lamport,
+                _ => 0,
+            })
+            .collect();
+        assert_eq!(lamports, vec![3, 9]);
+    }
+
+    #[tokio::test]
+    async fn test_transient_state_messages_are_not_buffered_and_get_no_seq() {
+        let (hub, _rx) = joined_hub("r").await;
+        hub.broadcast_oplog(
+            "r",
+            "u1",
+            1,
+            "state_snapshot".into(),
+            None,
+            serde_json::json!({}),
+        )
+        .await;
+        let (all, _) = hub.catchup_since_seq("r", 0).await;
+        assert!(all.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_catchup_reports_truncation_when_the_gap_was_evicted() {
+        let (hub, _rx) = joined_hub("r").await;
+        for l in 0..(hub::RECENT_MAX_COUNT as u64 + 5) {
+            hub.broadcast_oplog(
+                "r",
+                "u1",
+                l,
+                "obj_patch".into(),
+                None,
+                serde_json::json!({}),
+            )
+            .await;
+        }
+        let (_, truncated) = hub.catchup_since_seq("r", 0).await;
+        assert!(truncated, "最舊的 5 筆已被擠出，從 0 補發不完整");
+        let (recent, truncated) = hub.catchup_since_seq("r", 100).await;
+        assert!(!truncated);
+        assert_eq!(recent.len(), hub::RECENT_MAX_COUNT + 5 - 100);
+    }
+
+    #[test]
+    fn test_old_clients_without_seq_still_parse() {
+        let old: ClientMessage =
+            serde_json::from_str(r#"{"type":"catchup","room_id":"r","last_lamport":0}"#).unwrap();
+        assert_eq!(
+            old,
+            ClientMessage::Catchup {
+                room_id: "r".into(),
+                last_lamport: 0,
+                last_seq: None
+            }
+        );
+        let msg = ServerMessage::OplogBatch {
+            room_id: "r".into(),
+            oplogs: vec![],
+            truncated: None,
+        };
+        assert!(!serde_json::to_string(&msg).unwrap().contains("truncated"));
+    }
 }

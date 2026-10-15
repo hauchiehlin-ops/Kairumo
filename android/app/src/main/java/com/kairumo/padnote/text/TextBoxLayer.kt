@@ -212,8 +212,10 @@ private fun TextBoxView(
             } }
             .padding(textBoxPadding(liveWidth, liveHeight).dp)
     ) {
+        // 有逐字格式時，每一段的字級、字型、顏色與醒目提示寫在 AnnotatedString 裡，
+        // 底下的 TextStyle 是方塊層級的預設。
         Text(
-            text = box.text,
+            text = RichText.annotated(box),
             style = TextStyle(
                 fontSize = box.fontSize.sp,
                 fontFamily = resolveFontFamily(box.fontFamily),

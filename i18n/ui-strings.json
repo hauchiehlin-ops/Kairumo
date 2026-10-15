@@ -24870,5 +24870,389 @@
     "th": "กำลังรอบันทึกหมึก จึงเลื่อนการซิงก์รอบนี้",
     "zhHans": "笔迹尚未完成写入，延后本轮同步",
     "zhHant": "筆跡尚未完成寫入，延後本輪同步"
+  },
+  "wd_color_automatic": {
+    "en": "Automatic",
+    "ja": "自動",
+    "ko": "자동",
+    "th": "อัตโนมัติ",
+    "zhHans": "自动",
+    "zhHant": "自動"
+  },
+  "wd_theme_colors": {
+    "en": "Theme Colors",
+    "ja": "テーマの色",
+    "ko": "테마 색",
+    "th": "สีของธีม",
+    "zhHans": "主题颜色",
+    "zhHant": "佈景主題色彩"
+  },
+  "wd_standard_colors": {
+    "en": "Standard Colors",
+    "ja": "標準の色",
+    "ko": "표준 색",
+    "th": "สีมาตรฐาน",
+    "zhHans": "标准色",
+    "zhHant": "標準色彩"
+  },
+  "wd_more_colors": {
+    "en": "More Colors…",
+    "ja": "その他の色…",
+    "ko": "다른 색…",
+    "th": "สีอื่นๆ…",
+    "zhHans": "其他颜色…",
+    "zhHant": "其他色彩…"
+  },
+  "wd_tint_lighter": {
+    "en": "%@, Lighter %@",
+    "ja": "%@、明るめ %@",
+    "ko": "%@, 밝게 %@",
+    "th": "%@ อ่อนลง %@",
+    "zhHans": "%@，浅色 %@",
+    "zhHant": "%@，較淺 %@"
+  },
+  "wd_tint_darker": {
+    "en": "%@, Darker %@",
+    "ja": "%@、暗め %@",
+    "ko": "%@, 어둡게 %@",
+    "th": "%@ เข้มขึ้น %@",
+    "zhHans": "%@，深色 %@",
+    "zhHant": "%@，較深 %@"
+  },
+  "wd_font_color": {
+    "en": "Font Color",
+    "ja": "フォントの色",
+    "ko": "글꼴 색",
+    "th": "สีฟอนต์",
+    "zhHans": "字体颜色",
+    "zhHant": "字型色彩"
+  },
+  "wd_text_highlight": {
+    "en": "Text Highlight Color",
+    "ja": "蛍光ペンの色",
+    "ko": "텍스트 강조 색",
+    "th": "สีเน้นข้อความ",
+    "zhHans": "文本突出显示颜色",
+    "zhHant": "文字醒目提示色彩"
+  },
+  "wd_grow_font": {
+    "en": "Increase Font Size",
+    "ja": "フォント サイズの拡大",
+    "ko": "글꼴 크기 크게",
+    "th": "เพิ่มขนาดฟอนต์",
+    "zhHans": "增大字号",
+    "zhHant": "放大字型"
+  },
+  "wd_shrink_font": {
+    "en": "Decrease Font Size",
+    "ja": "フォント サイズの縮小",
+    "ko": "글꼴 크기 작게",
+    "th": "ลดขนาดฟอนต์",
+    "zhHans": "减小字号",
+    "zhHant": "縮小字型"
+  },
+  "wd_line_spacing": {
+    "en": "Line Spacing",
+    "ja": "行間",
+    "ko": "줄 간격",
+    "th": "ระยะห่างบรรทัด",
+    "zhHans": "行距",
+    "zhHant": "行距"
+  },
+  "wd_increase_indent": {
+    "en": "Increase Indent",
+    "ja": "インデントを増やす",
+    "ko": "들여쓰기",
+    "th": "เพิ่มการเยื้อง",
+    "zhHans": "增加缩进量",
+    "zhHant": "增加縮排"
+  },
+  "wd_decrease_indent": {
+    "en": "Decrease Indent",
+    "ja": "インデントを減らす",
+    "ko": "내어쓰기",
+    "th": "ลดการเยื้อง",
+    "zhHans": "减少缩进量",
+    "zhHant": "減少縮排"
+  },
+  "wd_all_fonts": {
+    "en": "All Fonts",
+    "ja": "すべてのフォント",
+    "ko": "모든 글꼴",
+    "th": "ฟอนต์ทั้งหมด",
+    "zhHans": "所有字体",
+    "zhHant": "所有字型"
+  },
+  "wd_font_family": {
+    "en": "Font",
+    "ja": "フォント",
+    "ko": "글꼴",
+    "th": "ฟอนต์",
+    "zhHans": "字体",
+    "zhHant": "字型"
+  },
+  "wd_no_text_target": {
+    "en": "No text box selected: settings apply to the next text you add",
+    "ja": "テキスト ボックス未選択：次に追加するテキストに適用されます",
+    "ko": "선택한 텍스트 상자 없음: 다음에 추가하는 텍스트에 적용됩니다",
+    "th": "ยังไม่ได้เลือกกล่องข้อความ: การตั้งค่าจะใช้กับข้อความถัดไปที่เพิ่ม",
+    "zhHans": "尚未选择文本框：设置将应用到下一个新增的文字",
+    "zhHant": "尚未選取文字方塊：設定會套用到下一個新增的文字"
+  },
+  "wd_c_white": {
+    "en": "White",
+    "ja": "白",
+    "ko": "흰색",
+    "th": "ขาว",
+    "zhHans": "白色",
+    "zhHant": "白色"
+  },
+  "wd_c_black": {
+    "en": "Black",
+    "ja": "黒",
+    "ko": "검정",
+    "th": "ดำ",
+    "zhHans": "黑色",
+    "zhHant": "黑色"
+  },
+  "wd_c_tan": {
+    "en": "Tan",
+    "ja": "ベージュ",
+    "ko": "황갈색",
+    "th": "สีแทน",
+    "zhHans": "浅灰褐色",
+    "zhHant": "淺灰褐色"
+  },
+  "wd_c_blue_gray": {
+    "en": "Blue-Gray",
+    "ja": "ブルーグレー",
+    "ko": "청회색",
+    "th": "เทาอมน้ำเงิน",
+    "zhHans": "蓝灰色",
+    "zhHant": "藍灰色"
+  },
+  "wd_c_blue": {
+    "en": "Blue",
+    "ja": "青",
+    "ko": "파랑",
+    "th": "น้ำเงิน",
+    "zhHans": "蓝色",
+    "zhHant": "藍色"
+  },
+  "wd_c_orange": {
+    "en": "Orange",
+    "ja": "オレンジ",
+    "ko": "주황",
+    "th": "ส้ม",
+    "zhHans": "橙色",
+    "zhHant": "橙色"
+  },
+  "wd_c_gray": {
+    "en": "Gray",
+    "ja": "グレー",
+    "ko": "회색",
+    "th": "เทา",
+    "zhHans": "灰色",
+    "zhHant": "灰色"
+  },
+  "wd_c_gold": {
+    "en": "Gold",
+    "ja": "ゴールド",
+    "ko": "금색",
+    "th": "ทอง",
+    "zhHans": "金色",
+    "zhHant": "金色"
+  },
+  "wd_c_sky_blue": {
+    "en": "Sky Blue",
+    "ja": "スカイブルー",
+    "ko": "하늘색",
+    "th": "ฟ้า",
+    "zhHans": "天蓝色",
+    "zhHant": "天藍色"
+  },
+  "wd_c_green": {
+    "en": "Green",
+    "ja": "緑",
+    "ko": "녹색",
+    "th": "เขียว",
+    "zhHans": "绿色",
+    "zhHant": "綠色"
+  },
+  "wd_c_dark_red": {
+    "en": "Dark Red",
+    "ja": "濃い赤",
+    "ko": "진한 빨강",
+    "th": "แดงเข้ม",
+    "zhHans": "深红色",
+    "zhHant": "深紅色"
+  },
+  "wd_c_red": {
+    "en": "Red",
+    "ja": "赤",
+    "ko": "빨강",
+    "th": "แดง",
+    "zhHans": "红色",
+    "zhHant": "紅色"
+  },
+  "wd_c_yellow": {
+    "en": "Yellow",
+    "ja": "黄",
+    "ko": "노랑",
+    "th": "เหลือง",
+    "zhHans": "黄色",
+    "zhHant": "黃色"
+  },
+  "wd_c_light_green": {
+    "en": "Light Green",
+    "ja": "薄い緑",
+    "ko": "연한 녹색",
+    "th": "เขียวอ่อน",
+    "zhHans": "浅绿色",
+    "zhHant": "淺綠色"
+  },
+  "wd_c_light_blue": {
+    "en": "Light Blue",
+    "ja": "薄い青",
+    "ko": "연한 파랑",
+    "th": "ฟ้าอ่อน",
+    "zhHans": "浅蓝色",
+    "zhHant": "淺藍色"
+  },
+  "wd_c_dark_blue": {
+    "en": "Dark Blue",
+    "ja": "濃い青",
+    "ko": "진한 파랑",
+    "th": "น้ำเงินเข้ม",
+    "zhHans": "深蓝色",
+    "zhHant": "深藍色"
+  },
+  "wd_c_purple": {
+    "en": "Purple",
+    "ja": "紫",
+    "ko": "보라",
+    "th": "ม่วง",
+    "zhHans": "紫色",
+    "zhHant": "紫色"
+  },
+  "wd_c_bright_green": {
+    "en": "Bright Green",
+    "ja": "明るい緑",
+    "ko": "밝은 녹색",
+    "th": "เขียวสด",
+    "zhHans": "鲜绿色",
+    "zhHant": "亮綠色"
+  },
+  "wd_c_turquoise": {
+    "en": "Turquoise",
+    "ja": "水色",
+    "ko": "청록",
+    "th": "ฟ้าอมเขียว",
+    "zhHans": "青绿色",
+    "zhHant": "青綠色"
+  },
+  "wd_c_pink": {
+    "en": "Pink",
+    "ja": "ピンク",
+    "ko": "분홍",
+    "th": "ชมพู",
+    "zhHans": "粉红色",
+    "zhHant": "粉紅色"
+  },
+  "wd_c_teal": {
+    "en": "Teal",
+    "ja": "青緑",
+    "ko": "청록색",
+    "th": "เขียวหัวเป็ด",
+    "zhHans": "蓝绿色",
+    "zhHant": "藍綠色"
+  },
+  "wd_c_violet": {
+    "en": "Violet",
+    "ja": "バイオレット",
+    "ko": "보라색",
+    "th": "ม่วงไวโอเล็ต",
+    "zhHans": "紫罗兰色",
+    "zhHant": "紫羅蘭色"
+  },
+  "wd_c_dark_yellow": {
+    "en": "Dark Yellow",
+    "ja": "濃い黄",
+    "ko": "진한 노랑",
+    "th": "เหลืองเข้ม",
+    "zhHans": "深黄色",
+    "zhHant": "深黃色"
+  },
+  "wd_c_gray_50": {
+    "en": "Gray 50%",
+    "ja": "灰色 50%",
+    "ko": "회색 50%",
+    "th": "เทา 50%",
+    "zhHans": "灰色 50%",
+    "zhHant": "灰色 50%"
+  },
+  "wd_c_gray_25": {
+    "en": "Gray 25%",
+    "ja": "灰色 25%",
+    "ko": "회색 25%",
+    "th": "เทา 25%",
+    "zhHans": "灰色 25%",
+    "zhHant": "灰色 25%"
+  },
+  "wd_align_center": {
+    "en": "Center",
+    "ja": "中央揃え",
+    "ko": "가운데 맞춤",
+    "th": "จัดกึ่งกลาง",
+    "zhHans": "居中",
+    "zhHant": "置中對齊"
+  },
+  "marquee_continuous": {
+    "en": "Add to Selection",
+    "ja": "連続選択",
+    "ko": "연속 선택",
+    "th": "เลือกต่อเนื่อง",
+    "zhHans": "连续框选",
+    "zhHant": "連續框選"
+  },
+  "marquee_continuous_hint": {
+    "en": "Each new drag adds to the selection; tap an object to add or remove it",
+    "ja": "ドラッグするたびに選択に追加。オブジェクトをタップで追加／解除",
+    "ko": "드래그할 때마다 선택에 추가됩니다. 개체를 탭하면 추가/제거됩니다",
+    "th": "ลากแต่ละครั้งจะเพิ่มในส่วนที่เลือก แตะวัตถุเพื่อเพิ่มหรือเอาออก",
+    "zhHans": "每次拉框都会加入选取；点对象可加入或移除",
+    "zhHant": "每次拉框都會加入選取；點物件可加入或移除"
+  },
+  "collab_object_locked": {
+    "en": "%@ is editing this",
+    "ja": "%@ が編集中です",
+    "ko": "%@ 님이 편집 중입니다",
+    "th": "%@ กำลังแก้ไขอยู่",
+    "zhHans": "%@ 正在编辑",
+    "zhHant": "%@ 正在編輯"
+  },
+  "collab_peer_outdated": {
+    "en": "A collaborator is using an older version of Kairumo — ask them to update so changes sync both ways",
+    "ja": "古いバージョンの Kairumo を使っている参加者がいます。双方向で同期するにはアップデートしてください",
+    "ko": "이전 버전의 Kairumo를 사용하는 참여자가 있습니다. 양방향으로 동기화하려면 업데이트하세요",
+    "th": "มีผู้ร่วมงานใช้ Kairumo เวอร์ชันเก่า โปรดให้อัปเดตเพื่อให้ซิงค์ได้ทั้งสองทาง",
+    "zhHans": "有协作者使用较旧版本的 Kairumo，请对方更新，修改才能双向同步",
+    "zhHant": "有協作者使用較舊版本的 Kairumo，請對方更新，修改才能雙向同步"
+  },
+  "collab_undo_partial": {
+    "en": "Parts changed by others afterwards were kept",
+    "ja": "その後ほかの人が変更した部分はそのまま残しました",
+    "ko": "이후 다른 사람이 변경한 부분은 유지했습니다",
+    "th": "ส่วนที่ผู้อื่นแก้ไขภายหลังยังคงไว้",
+    "zhHans": "之后被他人修改的部分已保留，没有复原",
+    "zhHant": "之後被他人修改的部分已保留，沒有復原"
+  },
+  "collab_peer_typing": {
+    "en": "%@ is typing here",
+    "ja": "%@ が入力中",
+    "ko": "%@ 님이 입력 중",
+    "th": "%@ กำลังพิมพ์ที่นี่",
+    "zhHans": "%@ 正在这里打字",
+    "zhHant": "%@ 正在這裡打字"
   }
 }

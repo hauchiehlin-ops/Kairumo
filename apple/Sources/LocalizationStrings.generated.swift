@@ -4471,6 +4471,14 @@ extension LocalizationManager {
             .ko: "Kairumo 공동 편집",
             .th: "การทำงานร่วมกันของ Kairumo"
         ],
+        "collab_object_locked": [
+            .zhHant: "%@ 正在編輯",
+            .en: "%@ is editing this",
+            .zhHans: "%@ 正在编辑",
+            .ja: "%@ が編集中です",
+            .ko: "%@ 님이 편집 중입니다",
+            .th: "%@ กำลังแก้ไขอยู่"
+        ],
         "collab_p2p_scan": [
             .zhHant: "掃描區網",
             .en: "Scan LAN",
@@ -4495,6 +4503,22 @@ extension LocalizationManager {
             .ko: "연결 테스트",
             .th: "ทดสอบการเชื่อมต่อ"
         ],
+        "collab_peer_outdated": [
+            .zhHant: "有協作者使用較舊版本的 Kairumo，請對方更新，修改才能雙向同步",
+            .en: "A collaborator is using an older version of Kairumo — ask them to update so changes sync both ways",
+            .zhHans: "有协作者使用较旧版本的 Kairumo，请对方更新，修改才能双向同步",
+            .ja: "古いバージョンの Kairumo を使っている参加者がいます。双方向で同期するにはアップデートしてください",
+            .ko: "이전 버전의 Kairumo를 사용하는 참여자가 있습니다. 양방향으로 동기화하려면 업데이트하세요",
+            .th: "มีผู้ร่วมงานใช้ Kairumo เวอร์ชันเก่า โปรดให้อัปเดตเพื่อให้ซิงค์ได้ทั้งสองทาง"
+        ],
+        "collab_peer_typing": [
+            .zhHant: "%@ 正在這裡打字",
+            .en: "%@ is typing here",
+            .zhHans: "%@ 正在这里打字",
+            .ja: "%@ が入力中",
+            .ko: "%@ 님이 입력 중",
+            .th: "%@ กำลังพิมพ์ที่นี่"
+        ],
         "collab_snapshot": [
             .zhHant: "協同快照",
             .en: "Shared snapshot",
@@ -4510,6 +4534,14 @@ extension LocalizationManager {
             .ja: "タイムマシンリプレイ",
             .ko: "타임머신 리플레이",
             .th: "การเล่นซ้ำไทม์แมชชีน"
+        ],
+        "collab_undo_partial": [
+            .zhHant: "之後被他人修改的部分已保留，沒有復原",
+            .en: "Parts changed by others afterwards were kept",
+            .zhHans: "之后被他人修改的部分已保留，没有复原",
+            .ja: "その後ほかの人が変更した部分はそのまま残しました",
+            .ko: "이후 다른 사람이 변경한 부분은 유지했습니다",
+            .th: "ส่วนที่ผู้อื่นแก้ไขภายหลังยังคงไว้"
         ],
         "collab_voice_room": [
             .zhHant: "協作語音房間",
@@ -14366,6 +14398,22 @@ extension LocalizationManager {
             .ja: "管理",
             .ko: "관리",
             .th: "จัดการ"
+        ],
+        "marquee_continuous": [
+            .zhHant: "連續框選",
+            .en: "Add to Selection",
+            .zhHans: "连续框选",
+            .ja: "連続選択",
+            .ko: "연속 선택",
+            .th: "เลือกต่อเนื่อง"
+        ],
+        "marquee_continuous_hint": [
+            .zhHant: "每次拉框都會加入選取；點物件可加入或移除",
+            .en: "Each new drag adds to the selection; tap an object to add or remove it",
+            .zhHans: "每次拉框都会加入选取；点对象可加入或移除",
+            .ja: "ドラッグするたびに選択に追加。オブジェクトをタップで追加／解除",
+            .ko: "드래그할 때마다 선택에 추가됩니다. 개체를 탭하면 추가/제거됩니다",
+            .th: "ลากแต่ละครั้งจะเพิ่มในส่วนที่เลือก แตะวัตถุเพื่อเพิ่มหรือเอาออก"
         ],
         "marquee_hint": [
             .zhHant: "拖曳拉框選取物件；在選取範圍內拖曳＝整組搬移",
@@ -24639,6 +24687,222 @@ extension LocalizationManager {
             .ko: "＋표",
             .th: "＋ตาราง"
         ],
+        "wd_align_center": [
+            .zhHant: "置中對齊",
+            .en: "Center",
+            .zhHans: "居中",
+            .ja: "中央揃え",
+            .ko: "가운데 맞춤",
+            .th: "จัดกึ่งกลาง"
+        ],
+        "wd_all_fonts": [
+            .zhHant: "所有字型",
+            .en: "All Fonts",
+            .zhHans: "所有字体",
+            .ja: "すべてのフォント",
+            .ko: "모든 글꼴",
+            .th: "ฟอนต์ทั้งหมด"
+        ],
+        "wd_c_black": [
+            .zhHant: "黑色",
+            .en: "Black",
+            .zhHans: "黑色",
+            .ja: "黒",
+            .ko: "검정",
+            .th: "ดำ"
+        ],
+        "wd_c_blue": [
+            .zhHant: "藍色",
+            .en: "Blue",
+            .zhHans: "蓝色",
+            .ja: "青",
+            .ko: "파랑",
+            .th: "น้ำเงิน"
+        ],
+        "wd_c_blue_gray": [
+            .zhHant: "藍灰色",
+            .en: "Blue-Gray",
+            .zhHans: "蓝灰色",
+            .ja: "ブルーグレー",
+            .ko: "청회색",
+            .th: "เทาอมน้ำเงิน"
+        ],
+        "wd_c_bright_green": [
+            .zhHant: "亮綠色",
+            .en: "Bright Green",
+            .zhHans: "鲜绿色",
+            .ja: "明るい緑",
+            .ko: "밝은 녹색",
+            .th: "เขียวสด"
+        ],
+        "wd_c_dark_blue": [
+            .zhHant: "深藍色",
+            .en: "Dark Blue",
+            .zhHans: "深蓝色",
+            .ja: "濃い青",
+            .ko: "진한 파랑",
+            .th: "น้ำเงินเข้ม"
+        ],
+        "wd_c_dark_red": [
+            .zhHant: "深紅色",
+            .en: "Dark Red",
+            .zhHans: "深红色",
+            .ja: "濃い赤",
+            .ko: "진한 빨강",
+            .th: "แดงเข้ม"
+        ],
+        "wd_c_dark_yellow": [
+            .zhHant: "深黃色",
+            .en: "Dark Yellow",
+            .zhHans: "深黄色",
+            .ja: "濃い黄",
+            .ko: "진한 노랑",
+            .th: "เหลืองเข้ม"
+        ],
+        "wd_c_gold": [
+            .zhHant: "金色",
+            .en: "Gold",
+            .zhHans: "金色",
+            .ja: "ゴールド",
+            .ko: "금색",
+            .th: "ทอง"
+        ],
+        "wd_c_gray": [
+            .zhHant: "灰色",
+            .en: "Gray",
+            .zhHans: "灰色",
+            .ja: "グレー",
+            .ko: "회색",
+            .th: "เทา"
+        ],
+        "wd_c_gray_25": [
+            .zhHant: "灰色 25%",
+            .en: "Gray 25%",
+            .zhHans: "灰色 25%",
+            .ja: "灰色 25%",
+            .ko: "회색 25%",
+            .th: "เทา 25%"
+        ],
+        "wd_c_gray_50": [
+            .zhHant: "灰色 50%",
+            .en: "Gray 50%",
+            .zhHans: "灰色 50%",
+            .ja: "灰色 50%",
+            .ko: "회색 50%",
+            .th: "เทา 50%"
+        ],
+        "wd_c_green": [
+            .zhHant: "綠色",
+            .en: "Green",
+            .zhHans: "绿色",
+            .ja: "緑",
+            .ko: "녹색",
+            .th: "เขียว"
+        ],
+        "wd_c_light_blue": [
+            .zhHant: "淺藍色",
+            .en: "Light Blue",
+            .zhHans: "浅蓝色",
+            .ja: "薄い青",
+            .ko: "연한 파랑",
+            .th: "ฟ้าอ่อน"
+        ],
+        "wd_c_light_green": [
+            .zhHant: "淺綠色",
+            .en: "Light Green",
+            .zhHans: "浅绿色",
+            .ja: "薄い緑",
+            .ko: "연한 녹색",
+            .th: "เขียวอ่อน"
+        ],
+        "wd_c_orange": [
+            .zhHant: "橙色",
+            .en: "Orange",
+            .zhHans: "橙色",
+            .ja: "オレンジ",
+            .ko: "주황",
+            .th: "ส้ม"
+        ],
+        "wd_c_pink": [
+            .zhHant: "粉紅色",
+            .en: "Pink",
+            .zhHans: "粉红色",
+            .ja: "ピンク",
+            .ko: "분홍",
+            .th: "ชมพู"
+        ],
+        "wd_c_purple": [
+            .zhHant: "紫色",
+            .en: "Purple",
+            .zhHans: "紫色",
+            .ja: "紫",
+            .ko: "보라",
+            .th: "ม่วง"
+        ],
+        "wd_c_red": [
+            .zhHant: "紅色",
+            .en: "Red",
+            .zhHans: "红色",
+            .ja: "赤",
+            .ko: "빨강",
+            .th: "แดง"
+        ],
+        "wd_c_sky_blue": [
+            .zhHant: "天藍色",
+            .en: "Sky Blue",
+            .zhHans: "天蓝色",
+            .ja: "スカイブルー",
+            .ko: "하늘색",
+            .th: "ฟ้า"
+        ],
+        "wd_c_tan": [
+            .zhHant: "淺灰褐色",
+            .en: "Tan",
+            .zhHans: "浅灰褐色",
+            .ja: "ベージュ",
+            .ko: "황갈색",
+            .th: "สีแทน"
+        ],
+        "wd_c_teal": [
+            .zhHant: "藍綠色",
+            .en: "Teal",
+            .zhHans: "蓝绿色",
+            .ja: "青緑",
+            .ko: "청록색",
+            .th: "เขียวหัวเป็ด"
+        ],
+        "wd_c_turquoise": [
+            .zhHant: "青綠色",
+            .en: "Turquoise",
+            .zhHans: "青绿色",
+            .ja: "水色",
+            .ko: "청록",
+            .th: "ฟ้าอมเขียว"
+        ],
+        "wd_c_violet": [
+            .zhHant: "紫羅蘭色",
+            .en: "Violet",
+            .zhHans: "紫罗兰色",
+            .ja: "バイオレット",
+            .ko: "보라색",
+            .th: "ม่วงไวโอเล็ต"
+        ],
+        "wd_c_white": [
+            .zhHant: "白色",
+            .en: "White",
+            .zhHans: "白色",
+            .ja: "白",
+            .ko: "흰색",
+            .th: "ขาว"
+        ],
+        "wd_c_yellow": [
+            .zhHant: "黃色",
+            .en: "Yellow",
+            .zhHans: "黄色",
+            .ja: "黄",
+            .ko: "노랑",
+            .th: "เหลือง"
+        ],
         "wd_char_count": [
             .zhHant: "字數：%@ 字元",
             .en: "%@ characters",
@@ -24655,6 +24919,22 @@ extension LocalizationManager {
             .ko: "서식 지우기",
             .th: "ล้างการจัดรูปแบบ"
         ],
+        "wd_color_automatic": [
+            .zhHant: "自動",
+            .en: "Automatic",
+            .zhHans: "自动",
+            .ja: "自動",
+            .ko: "자동",
+            .th: "อัตโนมัติ"
+        ],
+        "wd_decrease_indent": [
+            .zhHant: "減少縮排",
+            .en: "Decrease Indent",
+            .zhHans: "减少缩进量",
+            .ja: "インデントを減らす",
+            .ko: "내어쓰기",
+            .th: "ลดการเยื้อง"
+        ],
         "wd_editing_ink_mode": [
             .zhHant: "編輯中（工具列已切到手繪）",
             .en: "Editing (the toolbar switched to handwriting)",
@@ -24663,6 +24943,30 @@ extension LocalizationManager {
             .ko: "편집 중(도구 막대가 필기로 전환됨)",
             .th: "กำลังแก้ไข (แถบเครื่องมือสลับเป็นลายมือแล้ว)"
         ],
+        "wd_font_color": [
+            .zhHant: "字型色彩",
+            .en: "Font Color",
+            .zhHans: "字体颜色",
+            .ja: "フォントの色",
+            .ko: "글꼴 색",
+            .th: "สีฟอนต์"
+        ],
+        "wd_font_family": [
+            .zhHant: "字型",
+            .en: "Font",
+            .zhHans: "字体",
+            .ja: "フォント",
+            .ko: "글꼴",
+            .th: "ฟอนต์"
+        ],
+        "wd_grow_font": [
+            .zhHant: "放大字型",
+            .en: "Increase Font Size",
+            .zhHans: "增大字号",
+            .ja: "フォント サイズの拡大",
+            .ko: "글꼴 크기 크게",
+            .th: "เพิ่มขนาดฟอนต์"
+        ],
         "wd_highlight_color": [
             .zhHant: "螢光色",
             .en: "Highlight colour",
@@ -24670,6 +24974,14 @@ extension LocalizationManager {
             .ja: "蛍光色",
             .ko: "형광색",
             .th: "สีไฮไลต์"
+        ],
+        "wd_increase_indent": [
+            .zhHant: "增加縮排",
+            .en: "Increase Indent",
+            .zhHans: "增加缩进量",
+            .ja: "インデントを増やす",
+            .ko: "들여쓰기",
+            .th: "เพิ่มการเยื้อง"
         ],
         "wd_ink_block": [
             .zhHant: "手繪區塊",
@@ -24711,6 +25023,30 @@ extension LocalizationManager {
             .ko: "필기 캔버스 삽입",
             .th: "แทรกผืนผ้าใบลายมือ"
         ],
+        "wd_line_spacing": [
+            .zhHant: "行距",
+            .en: "Line Spacing",
+            .zhHans: "行距",
+            .ja: "行間",
+            .ko: "줄 간격",
+            .th: "ระยะห่างบรรทัด"
+        ],
+        "wd_more_colors": [
+            .zhHant: "其他色彩…",
+            .en: "More Colors…",
+            .zhHans: "其他颜色…",
+            .ja: "その他の色…",
+            .ko: "다른 색…",
+            .th: "สีอื่นๆ…"
+        ],
+        "wd_no_text_target": [
+            .zhHant: "尚未選取文字方塊：設定會套用到下一個新增的文字",
+            .en: "No text box selected: settings apply to the next text you add",
+            .zhHans: "尚未选择文本框：设置将应用到下一个新增的文字",
+            .ja: "テキスト ボックス未選択：次に追加するテキストに適用されます",
+            .ko: "선택한 텍스트 상자 없음: 다음에 추가하는 텍스트에 적용됩니다",
+            .th: "ยังไม่ได้เลือกกล่องข้อความ: การตั้งค่าจะใช้กับข้อความถัดไปที่เพิ่ม"
+        ],
         "wd_placeholder": [
             .zhHant: "在這裡輸入文件內容…",
             .en: "Type the document here…",
@@ -24719,6 +25055,22 @@ extension LocalizationManager {
             .ko: "여기에 문서 내용을 입력하세요…",
             .th: "พิมพ์เนื้อหาเอกสารที่นี่…"
         ],
+        "wd_shrink_font": [
+            .zhHant: "縮小字型",
+            .en: "Decrease Font Size",
+            .zhHans: "减小字号",
+            .ja: "フォント サイズの縮小",
+            .ko: "글꼴 크기 작게",
+            .th: "ลดขนาดฟอนต์"
+        ],
+        "wd_standard_colors": [
+            .zhHant: "標準色彩",
+            .en: "Standard Colors",
+            .zhHans: "标准色",
+            .ja: "標準の色",
+            .ko: "표준 색",
+            .th: "สีมาตรฐาน"
+        ],
         "wd_tap_to_draw": [
             .zhHant: "點這裡或用觸控筆，直接在文件裡手寫推導",
             .en: "Tap here, or use a stylus, to write directly inside the document",
@@ -24726,6 +25078,38 @@ extension LocalizationManager {
             .ja: "ここをタップするか、スタイラスで書類に直接手書きできます",
             .ko: "여기를 탭하거나 스타일러스로 문서 안에 바로 필기하세요",
             .th: "แตะที่นี่หรือใช้ปากกาสไตลัสเพื่อเขียนในเอกสารได้ทันที"
+        ],
+        "wd_text_highlight": [
+            .zhHant: "文字醒目提示色彩",
+            .en: "Text Highlight Color",
+            .zhHans: "文本突出显示颜色",
+            .ja: "蛍光ペンの色",
+            .ko: "텍스트 강조 색",
+            .th: "สีเน้นข้อความ"
+        ],
+        "wd_theme_colors": [
+            .zhHant: "佈景主題色彩",
+            .en: "Theme Colors",
+            .zhHans: "主题颜色",
+            .ja: "テーマの色",
+            .ko: "테마 색",
+            .th: "สีของธีม"
+        ],
+        "wd_tint_darker": [
+            .zhHant: "%@，較深 %@",
+            .en: "%@, Darker %@",
+            .zhHans: "%@，深色 %@",
+            .ja: "%@、暗め %@",
+            .ko: "%@, 어둡게 %@",
+            .th: "%@ เข้มขึ้น %@"
+        ],
+        "wd_tint_lighter": [
+            .zhHant: "%@，較淺 %@",
+            .en: "%@, Lighter %@",
+            .zhHans: "%@，浅色 %@",
+            .ja: "%@、明るめ %@",
+            .ko: "%@, 밝게 %@",
+            .th: "%@ อ่อนลง %@"
         ],
         "whisper_downloading": [
             .zhHant: "下載中...",
