@@ -364,8 +364,11 @@ public final class AudioRecorderManager: NSObject, ObservableObject, AVAudioReco
         guard status == .idle, !isPreparing else { return false }
         isPreparing = true
         defer { isPreparing = false }
+        // 一進來就歸零：核心那條路停止時不清秒數，準備期間錄音視窗會顯示上一段錄音的時間。
+        elapsedSeconds = 0
+        audioLevels = Array(repeating: 0.15, count: 20)
         guard await requestMicrophonePermission() else { return false }
-        guard let session = NotebookStore.shared.packageSession(
+        guard let session = await NotebookStore.shared.packageSessionInBackground(
             forNotebookId: notebookId, title: notebookTitle)
         else {
             print("[AudioRecorderManager] 開不了套件：\(notebookId)")

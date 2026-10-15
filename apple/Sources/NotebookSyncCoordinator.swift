@@ -134,9 +134,8 @@ protocol SyncableNotebookStore: AnyObject {
     func syncReconcileFoldersAndHierarchy()
     /// 錄音清單。匯出時取出「屬於這本筆記的錄音」的名字。
     var syncRecordings: [AudioRecordingRecord] { get }
-    /// 把別台改的錄音名字套進清單。`exported` 是匯出當下各錄音的名字：
-    /// 匯出之後使用者在這台又改過的（名字與 `exported` 不同）不被蓋掉。
-    func syncApplyRecordingTitles(_ titles: [String: String], exported: [String: String]?)
+    /// 把套件裡的錄音名字套進清單（套件是名字唯一的真相來源）。
+    func syncApplyRecordingTitles(_ titles: [String: String])
 }
 
 extension SyncableNotebookStore {
@@ -152,14 +151,14 @@ extension SyncableNotebookStore {
     var syncFolders: [FolderItem] { [] }
     func syncReconcileFoldersAndHierarchy() {}
     var syncRecordings: [AudioRecordingRecord] { [] }
-    func syncApplyRecordingTitles(_: [String: String], exported _: [String: String]?) {}
+    func syncApplyRecordingTitles(_: [String: String]) {}
 }
 
 extension NotebookStore: SyncableNotebookStore {
     var syncRecordings: [AudioRecordingRecord] { recordings }
 
-    func syncApplyRecordingTitles(_ titles: [String: String], exported: [String: String]?) {
-        applyRecordingTitles(titles, exported: exported)
+    func syncApplyRecordingTitles(_ titles: [String: String]) {
+        applyRecordingTitles(titles)
     }
 
     var syncFolders: [FolderItem] { folders }
@@ -1596,11 +1595,16 @@ enum NotebookSyncCoordinator {
         }
         // 錄音的名字要**一起**交給匯出：漏傳的話套件裡永遠沒有 `rectitle` 區塊，
         // 別台只看得到掃描時取的預設名稱（單元測試直接呼叫橋接層、有帶這個參數，所以測不出來）。
+        // 錄音名字：套件裡已經有的以套件為準（改名會直接寫進套件）；清單只補套件還沒有的。
+        // 以清單為準的話，清單若還是舊名字，匯出就會以新的時戳把舊名字寫回去，蓋掉別台剛改的。
+        let titles = inputs.recordingTitles.merging(
+            NotebookStore.packageRecordingTitles(packageURL: inputs.package, deviceId: inputs.deviceId)
+        ) { _, packaged in packaged }
         try NotebookPackageBridge.exportPreservingOtherDevices(
             document: document, drawings: drawings, imageData: images,
             to: inputs.package, deviceId: inputs.deviceId, proStrokes: pro, proLedgers: exportLedgers,
             pkStrokeIds: plans.map(\.ids), growInkFiles: grow,
-            recordingTitles: inputs.recordingTitles
+            recordingTitles: titles
         )
         for page in 0 ..< pageCount {
             let sentTombstones = Set(ledgers[page].retired.map(\.coreId))
@@ -1878,17 +1882,17 @@ enum NotebookSyncCoordinator {
                 $0.id.caseInsensitiveCompare(documentId) == .orderedSame
             },
             exported: ExportedObjectIds.shared.take(documentId))
-        if merged.folderId == nil,
-           let item = syncItem(indexJson: AccountSyncStore.shared.indexJSON, itemId: documentId) {
+        // 所屬資料夾**一律以同步索引為準**（它帶 Lamport 時戳，最後一次搬動的贏）。
+        // 套件裡的 folderId 只是匯出那台當時看到的樣子，可能早就過期 —— 原本只在本機與套件都沒有時
+        // 才問索引，於是別台的舊套件會把筆記本搬回它以前的資料夾、或搬回「未分類」。
+        if let item = syncItem(indexJson: AccountSyncStore.shared.indexJSON, itemId: documentId) {
             let pid = item.parentId.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-            if !pid.isEmpty {
-                merged.folderId = pid
-            }
+            merged.folderId = pid.isEmpty ? nil : pid
         }
         store.syncUpsert(merged)
         SyncKnownObjects.recordVisible(merged)
-        store.syncApplyRecordingTitles(
-            imported.recordingTitles, exported: ExportedObjectIds.shared.takeTitles(documentId))
+        store.syncApplyRecordingTitles(imported.recordingTitles)
+        _ = ExportedObjectIds.shared.takeTitles(documentId)
         // 套件裡已經是這個名字、這台也採用了的，記進帳本：不然下一輪會以為「名字沒同步」而白匯出一次。
         if !imported.recordingTitles.isEmpty,
            let doc = store.allNotebooks.first(where: {

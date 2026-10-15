@@ -150,7 +150,8 @@ object SeedNotebooks {
         val prefs = ProfileContext.prefs(context, PREFS)
         val showcaseTitle = l("seed_feature_showcase_title")
         val hasShowcase = existing.any { it.title == showcaseTitle || it.id == SHOWCASE_ID }
-        if (!hasShowcase) {
+        // 已經轉成一般筆記的範例不再補回（見 SamplePromotion）。
+        if (!hasShowcase && SHOWCASE_ID !in SamplePromotion.retired(context)) {
             buildFeatureShowcase(context, deviceId, l)
         }
 

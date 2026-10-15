@@ -51,7 +51,7 @@ final class FakeStore: SyncableNotebookStore {
     /// 同步匯入時交給這台裝置套用的錄音名字（每一輪一份）。
     var appliedTitles: [[String: String]] = []
     var syncRecordings: [AudioRecordingRecord] { recordings }
-    func syncApplyRecordingTitles(_ titles: [String: String], exported _: [String: String]?) {
+    func syncApplyRecordingTitles(_ titles: [String: String]) {
         appliedTitles.append(titles)
     }
 

@@ -1215,6 +1215,37 @@ enum NotebookPackageBridge {
         "rectitle:\(fileName.lowercased())"
     }
 
+    /// 錄音改名：**直接寫進套件**（與 Android `RecordingTitles.write` 同一個區塊、同一種格式）。
+    ///
+    /// 名字的唯一來源是套件裡的 `rectitle` 區塊 —— 它是核心的外觀操作，帶時戳、最後一次改的贏。
+    /// 原本改名只改了這台的清單，等下一輪匯出才寫進套件；那之間匯入、重掃、卡片名稱各自又會把
+    /// 名字改回去，於是名字在兩個值之間來回跳（使用者回報）。
+    @discardableResult
+    nonisolated static func writeRecordingTitle(
+        packagePath: String, fileName: String, title: String, deviceId: UInt32
+    ) -> Bool {
+        let clean = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        let file = fileName.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard !clean.isEmpty, !file.isEmpty,
+              let session = try? PadnoteSession.openExisting(path: packagePath, deviceId: deviceId),
+              let page = try? session.pageIdAt(index: 0) else { return false }
+        let blockId = stableBlockId(recordingTitleBlockId(file))
+        let appearance = ObjectEnvelope.encode(
+            kind: "rectitle", fileName: "\(recordingTitleBlockId(file)).png",
+            payload: RecordingTitle(fileName: file, title: clean))
+        do {
+            if !((try? session.imageBlockIds(pageId: page)) ?? []).contains(blockId) {
+                let blob = try session.putBlob(bytes: ObjectEnvelope.transparentPNG)
+                _ = try session.addImageWithId(pageId: page, blockId: blockId, blob: blob, width: 1, height: 1)
+                try session.setBlockPosition(blockId: blockId, x: 0, y: 0)
+            }
+            try session.setBlockAppearance(blockId: blockId, json: appearance)
+            return true
+        } catch {
+            return false
+        }
+    }
+
     /// 附件 id → 核心的區塊／物件 id（小寫 UUID 字串）。
     ///
     /// 附件的 id 本來就是 UUID 字串的話原樣（轉小寫）用；不是的（舊資料、測試）就用它的

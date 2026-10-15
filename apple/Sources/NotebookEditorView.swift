@@ -2729,21 +2729,30 @@ public struct NotebookEditorView: View {
             }
             // 進到編輯器時也亮一次：第一次開的人要知道自己在哪個模式。
             flashModeBadge()
+            // 範例筆記本：記下打開時的樣子，關掉後改過就轉成會同步的一般筆記（見 `promoteEditedSample`）。
+            store.noteSampleOpened(notebook.id)
         }
         .onDisappear {
             // **先存檔、再放掉焦點。** 顛倒的話，存檔通知到達時已經沒有焦點筆記本，
             // 離開前最後一筆編輯不會被焦點通道推出去。
             saveCurrentPageDrawing()
-            drainCoreInk()
-            if store.activeNotebookId == notebook.id {
-                store.activeNotebookId = nil
-                FocusSyncController.shared.setFocus(nil)
+            // **不在主執行緒上等寫入做完。** 原本這裡 `coreInkQueue.sync {}` —— 套件寫入慢的時候
+            // （文件庫在 iCloud 資料夾、筆跡多）主執行緒整個卡住（卡頓記錄：停在 flushPendingCoreInk 之後）。
+            // 改成排在寫入佇列後面：前面的寫入一定先做完，焦點通道才放掉這一本（它接著會把套件推上雲端）。
+            let leavingId = notebook.id
+            afterCoreInkWrites {
+                if store.activeNotebookId == leavingId {
+                    store.activeNotebookId = nil
+                    FocusSyncController.shared.setFocus(nil)
+                }
             }
+            store.promoteSampleIfEditedSoon(notebook.id)
         }
         .onChange(of: scenePhase) { phase in
             if phase == .background || phase == .inactive {
                 saveCurrentPageDrawing()
-                drainCoreInk()
+                // 進背景：向系統要一點時間讓寫入佇列做完，而不是在主執行緒上等（同上）。
+                finishCoreInkInBackground()
             } else if phase == .active {
                 // 從背景切回前景時，檢查同步是否已更新這本筆記
                 coreInkBaselines.removeAll()
@@ -10264,10 +10273,29 @@ public struct NotebookEditorView: View {
     /// 把筆跡增量寫進核心套件的**背景序列佇列**。同一個套件的寫入必須排隊（順序就是筆畫的順序）。
     private static let coreInkQueue = DispatchQueue(label: "kairumo.editor.core-ink", qos: .utility)
 
-    /// 等背景佇列把已排進去的套件寫入做完。離開筆記本、進背景之前呼叫：焦點通道接著要把套件推上雲端，
-    /// 不能讓它讀到還沒寫完的檔案。
-    private func drainCoreInk() {
-        Self.coreInkQueue.sync {}
+    /// 等背景佇列把已排進去的寫入做完，再在主執行緒上做 `work`。**不阻塞主執行緒。**
+    /// 佇列是序列的，所以排在它後面就保證前面的寫入都完成了。
+    private func afterCoreInkWrites(_ work: @escaping @MainActor () -> Void) {
+        Self.coreInkQueue.async {
+            Task { @MainActor in work() }
+        }
+    }
+
+    /// 進背景時讓寫入佇列做完：向系統要背景時間，佇列空了就交還。主執行緒不等。
+    private func finishCoreInkInBackground() {
+        #if os(iOS)
+        final class TaskBox: @unchecked Sendable { var id = UIBackgroundTaskIdentifier.invalid }
+        let box = TaskBox()
+        func end() {
+            guard box.id != .invalid else { return }
+            UIApplication.shared.endBackgroundTask(box.id)
+            box.id = .invalid
+        }
+        box.id = UIApplication.shared.beginBackgroundTask(withName: "kairumo.core-ink") { end() }
+        Self.coreInkQueue.async {
+            Task { @MainActor in end() }
+        }
+        #endif
     }
 
     /// 把待寫的筆跡存起來，並把「新增的筆畫」追加進核心套件。
