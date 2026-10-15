@@ -296,27 +296,6 @@ final class RecordingRenameSyncTests: XCTestCase {
         return doc
     }
 
-    func testARenameMadeOnAnotherDeviceReachesTheRecordingList() {
-        // Mac 改名 → 卡片名稱同步到 iPad；iPad 的清單用的是自己替同一個檔案產生的 id，
-        // 所以只能用檔名對。
-        let list = [record("錄音 10/1 06:33", file: "A.opus", id: "ipad-id")]
-        let books = [notebook(cardTitle: "週會紀錄", file: "a.opus", recordingId: "mac-id")]
-        let result = NotebookStore.adoptingCardTitles(list, notebooks: books)
-        XCTAssertEqual(result.first?.title, "週會紀錄")
-    }
-
-    func testARecordingWithoutACardKeepsItsName() {
-        let list = [record("我的錄音", file: "b.opus")]
-        let result = NotebookStore.adoptingCardTitles(list, notebooks: [NotebookDocument(title: "N", pageCount: 1)])
-        XCTAssertEqual(result.first?.title, "我的錄音")
-    }
-
-    func testAnEmptyCardTitleNeverBlanksTheList() {
-        let list = [record("我的錄音", file: "c.opus")]
-        let books = [notebook(cardTitle: "   ", file: "c.opus", recordingId: "x")]
-        XCTAssertEqual(NotebookStore.adoptingCardTitles(list, notebooks: books).first?.title, "我的錄音")
-    }
-
     func testRenamingARecordingMadeOnAnotherDeviceUpdatesItsCardToo() {
         // 卡片上的錄音 id 是建立那台裝置的；這台改名時要用檔名找到卡片，名字才會同步回去。
         let store = isolatedNotebookStore()
@@ -382,17 +361,87 @@ final class RecordingTitleInPackageTests: XCTestCase {
         XCTAssertEqual(merged.recordingTitles["a.opus"], "T1", "iPad 後改的名字要贏過 Mac 重匯出的舊名字")
     }
 
-    func testImportedTitlesUpdateTheListButNotARenameMadeSinceTheExport() {
+    // MARK: 改過的範例轉成一般筆記
+
+    private func sampleStore() -> (NotebookStore, String) {
+        let store = isolatedNotebookStore()
+        let id = "seed-welcome-notebook-v1"
+        var sample = NotebookDocument(id: id, title: "歡迎使用 Kairumo", pageCount: 1, template: .blank)
+        sample.titleKey = "seed_welcome_title"
+        sample.folderId = "folder-intro"
+        store.notebooks = [sample]
+        var ink = PKDrawing()
+        ink.strokes.append(PKStroke(ink: PKInk(.pen, color: .black), path: PKStrokePath(
+            controlPoints: [PKStrokePoint(location: .zero, timeOffset: 0, size: CGSize(width: 2, height: 2),
+                                          opacity: 1, force: 1, azimuth: 0, altitude: 0)],
+            creationDate: Date())))
+        store.saveDrawing(notebookId: id, pageIndex: 0, drawing: ink)
+        return (store, id)
+    }
+
+    func testAnEditedSampleBecomesANormalSyncedNotebook() {
+        let (store, id) = sampleStore()
+        defer { ProfileDefaults.current.removeObject(forKey: NotebookStore.retiredSamplesKey) }
+        store.noteSampleOpened(id)
+        store.notebooks[0].textAttachments = [NoteTextAttachment(pageIndex: 0, text: "我加的字")]
+        store.promoteSampleIfEdited(id)
+
+        let promoted = store.notebooks.first
+        XCTAssertNotNil(promoted)
+        XCTAssertFalse(NotebookPackageBridge.isDeviceLocalSeed(promoted?.id ?? id), "要換成會同步的一般 id")
+        XCTAssertEqual(promoted?.title, "歡迎使用 Kairumo")
+        XCTAssertNil(promoted?.titleKey, "名字固定下來，不再被當成範例翻譯／重設")
+        XCTAssertEqual(promoted?.folderId, "folder-intro", "資料夾不變")
+        XCTAssertEqual(promoted?.textAttachments?.first?.text, "我加的字")
+        XCTAssertEqual(store.loadDrawing(notebookId: promoted!.id, pageIndex: 0).strokes.count, 1, "筆跡一起搬過去")
+        XCTAssertFalse(store.notebooks.contains { $0.id == id }, "原本的範例在這台退役")
+        XCTAssertTrue(NotebookStore.retiredSamples.contains(id))
+        XCTAssertNotNil(syncItem(indexJson: AccountSyncStore.shared.indexJSON, itemId: promoted!.id), "記進同步索引")
+    }
+
+    func testOpeningASampleWithoutChangingItKeepsItASample() {
+        let (store, id) = sampleStore()
+        store.noteSampleOpened(id)
+        store.promoteSampleIfEdited(id)
+        XCTAssertEqual(store.notebooks.first?.id, id)
+    }
+
+    func testImportedTitlesAreTheAnswer() {
+        // 套件裡的名字是唯一的真相（改名會直接寫進套件，最後一次改的贏）。
+        // 以前這裡用「匯出當下的名字」猜「是不是我剛改的」，猜錯就把名字改回去 —— 名字來回跳。
         let store = isolatedNotebookStore()
         store.recordings = [
             AudioRecordingRecord(title: "舊", durationSeconds: 1, fileName: "a.opus"),
-            AudioRecordingRecord(title: "我剛改的", durationSeconds: 1, fileName: "b.opus"),
+            AudioRecordingRecord(title: "我的名字", durationSeconds: 1, fileName: "b.opus"),
         ]
         store.applyRecordingTitles(
-            ["a.opus": "別台改的", "b.opus": "別台對 b 的名字"],
-            exported: ["a.opus": "舊", "b.opus": "匯出當時的名字"])
-        XCTAssertEqual(store.recordings[0].title, "別台改的")
-        XCTAssertEqual(store.recordings[1].title, "我剛改的", "匯出之後我又改過，不能被蓋掉")
+            ["a.opus": "別台改的", "b.opus": "套件裡的名字"])
+        XCTAssertEqual(store.recordings.map(\.title), ["別台改的", "套件裡的名字"])
+    }
+
+    func testARenameIsWrittenStraightIntoThePackage() throws {
+        let package = workDir.appendingPathComponent("rename_direct.padnote")
+        try NotebookPackageBridge.export(
+            document: doc(), drawings: [PKDrawing()], to: package, deviceId: deviceA,
+            recordingTitles: ["a.opus": "原本的名字"])
+        XCTAssertTrue(NotebookPackageBridge.writeRecordingTitle(
+            packagePath: package.path, fileName: "A.opus", title: "改過的名字", deviceId: deviceA))
+        XCTAssertEqual(NotebookStore.packageRecordingTitles(packageURL: package)["a.opus"], "改過的名字")
+        // 另一台裝置寫的新名字也是同一個區塊：最後一次寫的贏。
+        XCTAssertTrue(NotebookPackageBridge.writeRecordingTitle(
+            packagePath: package.path, fileName: "a.opus", title: "別台改的", deviceId: deviceB))
+        XCTAssertEqual(NotebookStore.packageRecordingTitles(packageURL: package)["a.opus"], "別台改的")
+    }
+
+    func testAnExportWithAStaleListDoesNotWriteTheOldNameBack() throws {
+        // 名字來回跳的另一半：清單還是舊名字時，匯出以新的時戳把舊名字寫回套件。
+        var inputs = try exportInputs(titles: ["a.opus": "原本的名字"], document: doc())
+        try NotebookSyncCoordinator.exportOne(inputs)
+        XCTAssertTrue(NotebookPackageBridge.writeRecordingTitle(
+            packagePath: inputs.package.path, fileName: "a.opus", title: "改過的名字", deviceId: deviceA))
+        inputs = try exportInputs(titles: ["a.opus": "原本的名字"], document: doc()) // 清單還沒跟上
+        try NotebookSyncCoordinator.exportOne(inputs)
+        XCTAssertEqual(NotebookStore.packageRecordingTitles(packageURL: inputs.package)["a.opus"], "改過的名字")
     }
 
     func testRenamingARecordingMarksItsNotebookModifiedSoTheNextRoundExportsIt() {
@@ -429,9 +478,7 @@ final class RecordingTitleInPackageTests: XCTestCase {
         ]
         // 即使 exported 當初記錄了 "快速錄音"，但因為本機是通用佔位標題，遠端帶來的具體標題應該成功覆蓋
         store.applyRecordingTitles(
-            ["test.opus": "語音錄音與對齊 2026/10/11 下午 1:42"],
-            exported: ["test.opus": "快速錄音"]
-        )
+            ["test.opus": "語音錄音與對齊 2026/10/11 下午 1:42"])
         XCTAssertEqual(store.recordings[0].title, "語音錄音與對齊 2026/10/11 下午 1:42")
     }
 
@@ -458,33 +505,9 @@ final class RecordingTitleInPackageTests: XCTestCase {
         ]
         // 當遠端傳來 iPad 上使用者自訂命名的標題時，即使 exported 記下的是本地預設標題，也必須覆蓋
         store.applyRecordingTitles(
-            ["rec17.opus": "IPAD錄音", "rec53.opus": "Jhvgcg ㄒㄨ"],
-            exported: ["rec17.opus": "語音錄音與對齊 2026/10/11晚上 8:15", "rec53.opus": "語音錄音與對齊 2026/10/11下午 5:46"]
-        )
+            ["rec17.opus": "IPAD錄音", "rec53.opus": "Jhvgcg ㄒㄨ"])
         XCTAssertEqual(store.recordings[0].title, "IPAD錄音")
         XCTAssertEqual(store.recordings[1].title, "Jhvgcg ㄒㄨ")
-    }
-
-    func testAdoptingCardTitlesDoesNotOverwriteCustomRecordingTitleWithGenericCardTitle() {
-        var book = NotebookDocument(title: "Notebook", pageCount: 1)
-        book.audioAttachments = [
-            NoteAudioAttachment(recordingId: "r1", fileName: "a.opus", title: "快速錄音")
-        ]
-        let record = AudioRecordingRecord(title: "IPAD錄音", durationSeconds: 17, fileName: "a.opus")
-        let adopted = NotebookStore.adoptingCardTitles([record], notebooks: [book])
-        XCTAssertEqual(adopted[0].title, "IPAD錄音", "卡片上的通用佔位標題不得反向覆蓋使用者在錄音清單中的具體自訂標題")
-    }
-
-    func testCustomRecordingTitleIsNotOverwrittenByPackageOldTitleWhenRenamed() {
-        // 使用者在 iPhone 上把 "IPAD2026-2" 改名為 "iPhone2026-2"
-        // 即使套件中讀到的舊自訂名稱是 "IPAD2026-2"，本機自訂名稱絕不能被反向蓋回
-        var record = AudioRecordingRecord(title: "iPhone2026-2", durationSeconds: 17, fileName: "rec.opus")
-        let candidateFromDiskPackage = "IPAD2026-2"
-        if NotebookStore.isGenericOrQuickRecordTitle(record.title) &&
-            !NotebookStore.isGenericOrQuickRecordTitle(candidateFromDiskPackage) {
-            record.title = candidateFromDiskPackage
-        }
-        XCTAssertEqual(record.title, "iPhone2026-2", "本機改名後的自訂名稱不能被套件中的舊自訂名稱覆蓋")
     }
 
     func testLocalGenericTitleDoesNotOverwriteForeignCustomTitleInPackageExport() throws {
@@ -635,7 +658,7 @@ final class RecordingTitleInPackageTests: XCTestCase {
         ]
         store.notebooks = [book]
 
-        store.applyRecordingTitles(["card.opus": "遠端新標題"], exported: nil)
+        store.applyRecordingTitles(["card.opus": "遠端新標題"])
         XCTAssertEqual(store.recordings.first?.title, "遠端新標題")
         XCTAssertEqual(store.notebooks.first?.audioAttachments?.first?.title, "遠端新標題", "套用遠端錄音名稱時，畫布上的卡片也必須同步更新，防止後續覆蓋")
     }

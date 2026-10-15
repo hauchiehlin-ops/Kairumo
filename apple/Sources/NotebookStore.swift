@@ -9,6 +9,7 @@
 import SwiftUI
 import Combine
 import PencilKit
+import CryptoKit
 #if canImport(PadnoteCore)
 import PadnoteCore
 #endif
@@ -1661,7 +1662,10 @@ public final class NotebookStore: ObservableObject {
     ]
 
     private func migrateSeedTitles(_ doc: NotebookDocument) -> NotebookDocument {
-        guard doc.titleKey == nil, let keys = Self.legacySeedTitles[doc.title] else { return doc }
+        // UUID 的筆記不是舊範例：改過而轉成一般筆記的範例（`promoteEditedSample`）名字一樣，
+        // 被認回範例的話會被範例的自癒修復整本重設。
+        guard doc.titleKey == nil, UUID(uuidString: doc.id) == nil,
+              let keys = Self.legacySeedTitles[doc.title] else { return doc }
         var migrated = doc
         migrated.titleKey = keys.title
         migrated.snippetKey = keys.snippet
@@ -1730,7 +1734,7 @@ public final class NotebookStore: ObservableObject {
         let hasShowcase = notebooks.contains {
             $0.id == "seed-feature-showcase-v1" || $0.titleKey == "seed_feature_showcase_title"
         }
-        if !hasShowcase {
+        if !hasShowcase, !Self.retiredSamples.contains("seed-feature-showcase-v1") {
             var n3 = NotebookDocument(
                 id: "seed-feature-showcase-v1",
                 title: LocalizationManager.shared.localized("seed_feature_showcase_title"),
@@ -2065,13 +2069,30 @@ public final class NotebookStore: ObservableObject {
         let path = corePackagesDirectory.appending(path: "\(id.lowercased()).padnote")
         try? FileManager.default.createDirectory(
             at: corePackagesDirectory, withIntermediateDirectories: true)
+        return Self.openPackageSession(at: path, title: title, deviceId: NotebookMigration.deviceId)
+    }
+
+    /// 同 `packageSession(forNotebookId:title:)`，但在背景執行緒開。
+    ///
+    /// 開套件要把整份操作紀錄重播一次。「錄音收件匣」會隨每一段錄音與逐字稿越長越大，
+    /// 在主執行緒上開，按下「開始錄音」之後畫面要停好幾秒才開始錄。
+    public func packageSessionInBackground(forNotebookId id: String, title: String) async -> PadnoteSession? {
+        let path = corePackagesDirectory.appending(path: "\(id.lowercased()).padnote")
+        try? FileManager.default.createDirectory(
+            at: corePackagesDirectory, withIntermediateDirectories: true)
         let device = NotebookMigration.deviceId
-        if let existing = try? PadnoteSession.openExisting(path: path.path, deviceId: device) {
+        return await Task.detached(priority: .userInitiated) {
+            Self.openPackageSession(at: path, title: title, deviceId: device)
+        }.value
+    }
+
+    nonisolated static func openPackageSession(at path: URL, title: String, deviceId: UInt32) -> PadnoteSession? {
+        if let existing = try? PadnoteSession.openExisting(path: path.path, deviceId: deviceId) {
             return existing
         }
         let now = UInt64(max(0, Date().timeIntervalSince1970 * 1000))
         return try? PadnoteSession.create(
-            path: path.path, title: title, nowUnixMs: now, deviceId: device)
+            path: path.path, title: title, nowUnixMs: now, deviceId: deviceId)
     }
 
     /// 「錄音收件匣」筆記本，不存在就建立。
@@ -2231,6 +2252,12 @@ public final class NotebookStore: ObservableObject {
 
     /// 《Kairumo手冊》：全手繪的預載筆記本。名稱是固定的，不走語系表。
     private static let manualSeededKey = "seed.kairumoManual.added"
+    /// 已經「轉成一般筆記」的範例 id：不再自動補回（見 `promoteEditedSample`）。
+    static let retiredSamplesKey = "seed.retiredSamples"
+
+    static var retiredSamples: Set<String> {
+        Set(ProfileDefaults.current.stringArray(forKey: retiredSamplesKey) ?? [])
+    }
     /// 範例筆記本內容的「世代」。提高它，下次啟動時所有範例會重設回標準內容一次。
     private static let seedGenerationKey = "seed.contentGeneration"
     private static let seedGeneration = 2
@@ -2248,8 +2275,10 @@ public final class NotebookStore: ObservableObject {
                 SeedContent.fillKairumoManual(&doc, store: self)
             }),
             (Self.draftingExampleId, "seed_drafting_example_title", 6, { doc in
-                let fresh = self.makeDraftingExample()
-                doc = fresh
+                // 重建內容，但使用者放的資料夾要留著（整份換掉的話它就回到「未分類」）。
+                let folder = doc.folderId
+                doc = self.makeDraftingExample()
+                doc.folderId = folder
             }),
             ("seed-welcome-notebook-v1", "seed_welcome_title", SeedContent.welcomePageCount, { doc in
                 doc.pageCount = SeedContent.welcomePageCount
@@ -2263,9 +2292,8 @@ public final class NotebookStore: ObservableObject {
 
         var changed = false
         for std in seedStandards {
-            if let idx = notebooks.firstIndex(where: {
-                $0.id.caseInsensitiveCompare(std.id) == .orderedSame || $0.titleKey == std.key
-            }) {
+            // 只認範例自己的 id。以名字認的話，改過而轉成一般筆記的那一本（名字相同）會被整本重設。
+            if let idx = notebooks.firstIndex(where: { $0.id.caseInsensitiveCompare(std.id) == .orderedSame }) {
                 let docId = notebooks[idx].id
                 let currentCount = notebooks[idx].pageCount
                 let textCount = (notebooks[idx].textAttachments ?? []).count
@@ -2385,11 +2413,16 @@ public final class NotebookStore: ObservableObject {
             let previous = notebooks[idx]
             var updated = doc
             updated.lastModifiedDate = Date()
+            // **所屬資料夾不從這裡改。** 搬資料夾只走 `moveNotebook`；這裡收到的常是編輯器開啟時
+            // 抄的那一份 —— 開著的期間在首頁（或別台同步過來）把它搬進資料夾，編輯器一存檔
+            // 就把舊的「未分類」寫回去，而且帶著新的時戳傳到每一台（使用者回報：分類好的筆記本
+            // 又回到未分類）。
+            updated.folderId = previous.folderId
             notebooks[idx] = updated
             // 只有**中繼資料**變了才記進同步索引。每次存檔都記的話，
             // 寫一筆字就會把這本筆記的時戳往前推，於是它永遠贏過另一台裝置
             // 對同一本筆記的改名 —— 而那次改名其實比較晚。
-            if previous.title != updated.title || previous.folderId != updated.folderId {
+            if previous.title != updated.title {
                 AccountSyncStore.shared.record(
                     id: updated.id,
                     title: updated.title,
@@ -3716,11 +3749,17 @@ public final class NotebookStore: ObservableObject {
     /// 別台取的錄音名字，但這台的清單裡還沒有那段錄音（檔名小寫 → 名字）。
     private var unmatchedIncomingTitles: [String: String] = [:]
 
+    /// 編輯器打開範例時的指紋（id 小寫 → 指紋），見 `noteSampleOpened`。
+    var sampleBaselines: [String: String] = [:]
+
+    /// 剛改、還在寫進套件的錄音名字（檔名小寫 → 名字）。寫完之前套件裡還是舊名字 ——
+    /// 這段期間的重掃與匯入不能拿套件的舊名字蓋回去，否則改完名字會先跳回去一下。
+    private var pendingTitleWrites: [String: String] = [:]
+
     /// 把別台改的錄音名字套進清單（見 `RecordingTitle`）。
     ///
-    /// `exported` 是這一輪匯出當下各錄音的名字：清單現在的名字與它不同，代表匯出之後使用者在
-    /// 這台又改過 —— 保留使用者的，下一輪匯出會帶出去。沒有 `exported` 時一律採用別台的。
-    func applyRecordingTitles(_ titles: [String: String], exported: [String: String]?) {
+    /// 套件裡的名字一律採用（改名會直接寫進套件，見 `NotebookPackageBridge.writeRecordingTitle`）。
+    func applyRecordingTitles(_ titles: [String: String]) {
         guard !titles.isEmpty else { return }
         // 清單裡還沒有這段錄音的（別台剛錄、這台還沒掃描到）先記下來，掃描建立紀錄時用。
         // 匯入名字發生在掃描**之前**：不記的話，掃描替它取預設名（「快速錄音」），
@@ -3730,38 +3769,22 @@ public final class NotebookStore: ObservableObject {
             && !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             unmatchedIncomingTitles[key] = title
         }
+        // 套件裡的名字就是答案（核心的外觀操作，最後一次改的贏，見 `writeRecordingTitle`）。
+        // 以前這裡有一堆「通用名稱／匯出當下的名字」的猜測，那些猜測彼此打架，名字就來回跳。
         var changed = false
         for index in recordings.indices {
             let key = recordings[index].fileName.lowercased()
-            guard let incoming = titles[key],
-                  !incoming.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
-                  incoming != recordings[index].title else { continue }
-            // 遠端是具體名稱，而本機是通用佔位名稱：一律採納遠端具體名稱
-            if Self.isGenericOrQuickRecordTitle(recordings[index].title) && !Self.isGenericOrQuickRecordTitle(incoming) {
-                // 直接採納
-            } else if let exported, let was = exported[key], recordings[index].title != was {
-                // 如果本機現有名稱只是通用名稱（如「快速錄音」），而遠端送來具體名稱，不能被 exported 擋下
-                if !Self.isGenericOrQuickRecordTitle(recordings[index].title) {
-                    continue
-                }
-            }
+            guard pendingTitleWrites[key] == nil,
+                  let incoming = titles[key]?.trimmingCharacters(in: .whitespacesAndNewlines),
+                  !incoming.isEmpty, incoming != recordings[index].title else { continue }
             recordings[index].title = incoming
             changed = true
         }
 
-        // 同步把新名字更新至畫布上的卡片，避免隨後 adoptingCardTitles 時被舊卡片名稱反向覆蓋
-        for (key, incoming) in titles {
+        // 畫布上的錄音卡片跟著錄音的名字走（卡片不是名字的來源）。
+        for (key, incoming) in titles where pendingTitleWrites[key] == nil {
             let clean = incoming.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !clean.isEmpty else { continue }
-            if let currentRec = recordings.first(where: { $0.fileName.lowercased() == key }) {
-                if Self.isGenericOrQuickRecordTitle(currentRec.title) && !Self.isGenericOrQuickRecordTitle(clean) {
-                    // 直接採納
-                } else if let exported, let was = exported[key], currentRec.title != was && currentRec.title != clean {
-                    if !Self.isGenericOrQuickRecordTitle(currentRec.title) {
-                        continue
-                    }
-                }
-            }
             for notebookIndex in notebooks.indices {
                 guard var cards = notebooks[notebookIndex].audioAttachments else { continue }
                 var cardChanged = false
@@ -3779,42 +3802,6 @@ public final class NotebookStore: ObservableObject {
         }
 
         if changed { persistData(signalsLocalEdit: false) }
-    }
-
-    /// 錄音清單的名字以插在筆記裡的錄音卡片為準。
-    ///
-    /// # 為什麼
-    ///
-    /// 錄音清單（`recordings`）只存在這台裝置；跨裝置同步的是筆記本，錄音卡片的名字在裡面。
-    /// 在 Mac 改名只會讓 Mac 的清單和卡片變新名字，卡片同步到 iPad 之後，iPad 的清單仍是
-    /// 掃描時取的預設名稱。所以清單要跟著卡片：卡片與錄音用**檔名**對（兩台裝置各自替同一個檔案
-    /// 產生的錄音 id 不一樣）。
-    ///
-    /// 沒有插進任何筆記的錄音沒有卡片，它的改名不會同步 —— 名字只存在這台裝置的清單裡。
-    static func adoptingCardTitles(
-        _ records: [AudioRecordingRecord], notebooks: [NotebookDocument]
-    ) -> [AudioRecordingRecord] {
-        var cardTitles: [String: String] = [:]
-        for notebook in notebooks {
-            for card in notebook.audioAttachments ?? [] {
-                let title = card.title.trimmingCharacters(in: .whitespacesAndNewlines)
-                guard !title.isEmpty else { continue }
-                let key = card.fileName.lowercased()
-                if cardTitles[key] == nil { cardTitles[key] = title }
-            }
-        }
-        return records.map { record in
-            guard let title = cardTitles[record.fileName.lowercased()], title != record.title else {
-                return record
-            }
-            // 如果卡片標題只是通用佔位名稱，而清單標題是具體自訂名稱，絕對不能被卡片反向覆蓋
-            if isGenericOrQuickRecordTitle(title) && !isGenericOrQuickRecordTitle(record.title) {
-                return record
-            }
-            var updated = record
-            updated.title = title
-            return updated
-        }
     }
 
     /// 錄音檔名（`<UUIDv7>.opus`）裡的建立時間。不是 v7 或不合理就回 `fallback`。
@@ -3916,7 +3903,7 @@ public final class NotebookStore: ObservableObject {
     }
 
     /// 讀出一個套件裡的全部 `rectitle` 錄音標題（與 Android `RecordingIndex.titlesIn` 100% 對齊）。
-    static func packageRecordingTitles(packageURL: URL, deviceId: UInt32 = 0) -> [String: String] {
+    nonisolated static func packageRecordingTitles(packageURL: URL, deviceId: UInt32 = 0) -> [String: String] {
         guard FileManager.default.fileExists(atPath: packageURL.path) else { return [:] }
         guard let session = try? PadnoteSession.openExisting(path: packageURL.path, deviceId: deviceId) else {
             return [:]
@@ -3952,6 +3939,7 @@ public final class NotebookStore: ObservableObject {
         let currentRecordings = self.recordings
         let currentNotebooks = self.notebooks
         let currentUnmatched = self.unmatchedIncomingTitles
+        let pendingTitles = self.pendingTitleWrites
         let pkgDir = self.corePackagesDirectory
         let legacyDir = AudioRecorderManager.shared.recordingsDirectory
         let inboxId = recordingInboxNotebookId()
@@ -4021,12 +4009,14 @@ public final class NotebookStore: ObservableObject {
                         //   - 本機標題是通用佔位名稱（如「快速錄音」），套件或遠端有具體自訂名稱 → 採納；
                         //   - 本機標題是**自己依時間產生的預設名稱**（不是使用者取的），遠端有名字（即使也是預設名稱，
                         //     那一個帶的是錄音當下的時間）→ 採納遠端的。
-                        if let named = candidateTitle, !named.isEmpty, named != updated.title {
-                            if Self.isGenericOrQuickRecordTitle(updated.title) && !Self.isGenericOrQuickRecordTitle(named) {
-                                updated.title = named
-                            } else if Self.isAutoPlaceholderTitle(updated.title, recordedDate: updated.recordedDate) {
-                                updated.title = named
-                            }
+                        //   套件裡有名字：**一律採用**（套件是唯一的真相來源，改名會直接寫進去，見 `writeRecordingTitle`）。
+                        if let pending = pendingTitles[lowerName] {
+                            updated.title = pending // 剛改、套件還沒寫完
+                        } else if let named = packageTitles[lowerName], !named.isEmpty, named != updated.title {
+                            updated.title = named
+                        } else if let named = candidateTitle, !named.isEmpty, named != updated.title,
+                                  Self.isAutoPlaceholderTitle(updated.title, recordedDate: updated.recordedDate) {
+                            updated.title = named
                         }
                         scanned.append(updated)
                         byFileName.removeValue(forKey: lowerName)
@@ -4064,8 +4054,8 @@ public final class NotebookStore: ObservableObject {
                 fm.fileExists(atPath: legacyDir.appending(path: $0.fileName).path)
             }
 
-            let refreshed = Self.adoptingCardTitles(
-                (scanned + legacy).sorted { $0.recordedDate > $1.recordedDate }, notebooks: currentNotebooks)
+            // 不再以卡片名稱覆蓋清單：卡片跟著錄音的名字走，兩邊互相覆蓋就是名字來回跳的原因之一。
+            let refreshed = (scanned + legacy).sorted { $0.recordedDate > $1.recordedDate }
 
             return (refreshed, consumedUnmatchedKeys)
         }
@@ -4161,6 +4151,18 @@ public final class NotebookStore: ObservableObject {
         }
 
         let fileName = recordings[recordingIndex].fileName.lowercased()
+        // 名字直接寫進錄音所在的套件（唯一的真相來源，見 `writeRecordingTitle`）。
+        let packagePath = corePackagesDirectory
+            .appending(path: "\(targetNotebookId.lowercased()).padnote").path
+        let device = NotebookMigration.deviceId
+        pendingTitleWrites[fileName] = clean
+        Task.detached(priority: .userInitiated) { [weak self] in
+            NotebookPackageBridge.writeRecordingTitle(
+                packagePath: packagePath, fileName: fileName, title: clean, deviceId: device)
+            await MainActor.run {
+                if self?.pendingTitleWrites[fileName] == clean { self?.pendingTitleWrites.removeValue(forKey: fileName) }
+            }
+        }
         for notebookIndex in notebooks.indices {
             guard var cards = notebooks[notebookIndex].audioAttachments else { continue }
             var changed = false
@@ -4186,7 +4188,7 @@ public final class NotebookStore: ObservableObject {
             if let notebookId = rec.linkedNotebookId {
                 let packagePath = corePackagesDirectory
                     .appending(path: "\(notebookId.lowercased()).padnote").path
-                let error = mediaDeleteAudio(packagePath: packagePath, name: fileName)
+                let error = mediaDeleteAudio(packagePath: packagePath, name: fileName, deviceId: NotebookMigration.deviceId)
                 if !error.isEmpty {
                     SyncLogger.logAsync("刪除錄音：\(error)", source: .googleDrive)
                 }
@@ -4195,14 +4197,14 @@ public final class NotebookStore: ObservableObject {
             let inboxPath = corePackagesDirectory
                 .appending(path: "\(recordingInboxNotebookId().lowercased()).padnote").path
             if FileManager.default.fileExists(atPath: inboxPath) {
-                _ = mediaDeleteAudio(packagePath: inboxPath, name: fileName)
+                _ = mediaDeleteAudio(packagePath: inboxPath, name: fileName, deviceId: NotebookMigration.deviceId)
             }
             // 3. 搜尋所有本機套件目錄，凡有該音訊檔皆刪除並留墓碑
             if let packages = try? FileManager.default.contentsOfDirectory(at: corePackagesDirectory, includingPropertiesForKeys: nil) {
                 for pkg in packages where pkg.pathExtension == "padnote" {
                     let audioFile = pkg.appending(path: "media/audio").appending(path: fileName)
                     if FileManager.default.fileExists(atPath: audioFile.path) {
-                        _ = mediaDeleteAudio(packagePath: pkg.path, name: fileName)
+                        _ = mediaDeleteAudio(packagePath: pkg.path, name: fileName, deviceId: NotebookMigration.deviceId)
                         try? FileManager.default.removeItem(at: audioFile)
                     }
                 }
@@ -4568,5 +4570,113 @@ extension NotebookStore: ProfileScoped {
         DispatchQueue.global(qos: .utility).async { [weak self] in
             self?.refreshRecordings()
         }
+    }
+}
+
+
+// MARK: - 改過的範例轉成一般筆記
+
+/// 範例筆記本（歡迎使用、手冊、功能範例…）是**每台裝置自己產生、不同步**的 ——
+/// 各裝置各自生成同一份內容，若參與同步會被合併成兩份（見 `isDeviceLocalSeed`）。
+///
+/// 代價是使用者在範例裡寫的東西永遠只在那一台（使用者回報：Android 上的範例停在舊版本、
+/// iPad 上加的內容過不去）。所以：**使用者一改過範例，它就轉成一本一般的筆記** ——
+/// 換一個新的 id、內容（文件、筆跡、錄音）整本搬過去、所在資料夾不變，從此跟其他筆記一樣同步；
+/// 原本的範例在這台退役，不再自動補回。
+///
+/// 「改過」以開啟時與關閉後的指紋比對（文件內容 + 每頁筆跡），只是打開看看不會轉。
+extension NotebookStore {
+
+    /// 編輯器打開一本範例時記下它的樣子。
+    func noteSampleOpened(_ id: String) {
+        guard NotebookPackageBridge.isDeviceLocalSeed(id), sampleBaselines[id.lowercased()] == nil else { return }
+        sampleBaselines[id.lowercased()] = sampleFingerprint(id)
+    }
+
+    /// 編輯器關掉之後稍等一下（筆跡由背景寫入，要等它落盤）再比對；改過就轉成一般筆記。
+    func promoteSampleIfEditedSoon(_ id: String) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { [weak self] in
+            self?.promoteSampleIfEdited(id)
+        }
+    }
+
+    func promoteSampleIfEdited(_ id: String) {
+        let key = id.lowercased()
+        guard let baseline = sampleBaselines.removeValue(forKey: key) else { return }
+        guard sampleFingerprint(id) != baseline else { return }
+        promoteEditedSample(id)
+    }
+
+    /// 文件內容（不含修改時間）+ 每一頁筆跡檔的位元組。
+    private func sampleFingerprint(_ id: String) -> String {
+        guard var doc = notebooks.first(where: { $0.id.caseInsensitiveCompare(id) == .orderedSame }) else { return "" }
+        doc.lastModifiedDate = Date(timeIntervalSince1970: 0)
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        var data = (try? encoder.encode(doc)) ?? Data()
+        let fm = FileManager.default
+        let files = ((try? fm.contentsOfDirectory(at: drawingsDirectory, includingPropertiesForKeys: nil)) ?? [])
+            .filter { $0.lastPathComponent.hasPrefix("\(doc.id)_p") }
+            .sorted { $0.lastPathComponent < $1.lastPathComponent }
+        for file in files {
+            data.append(Data(file.lastPathComponent.utf8))
+            data.append((try? Data(contentsOf: file)) ?? Data())
+        }
+        return SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
+    }
+
+    /// 把一本範例整本轉成一般的（會同步的）筆記本。回傳新的 id。
+    @discardableResult
+    func promoteEditedSample(_ id: String) -> String? {
+        guard let index = notebooks.firstIndex(where: { $0.id.caseInsensitiveCompare(id) == .orderedSame }) else { return nil }
+        let original = notebooks[index]
+        let newId = UUID().uuidString.lowercased()
+
+        // 1. 文件：所有欄位照抄，只換 id；名字固定成目前看到的那一個（不再隨語系翻譯）。
+        guard var json = (try? JSONSerialization.jsonObject(with: JSONEncoder().encode(original))) as? [String: Any]
+        else { return nil }
+        json["id"] = newId
+        json["title"] = original.displayTitle()
+        json.removeValue(forKey: "titleKey")
+        guard let data = try? JSONSerialization.data(withJSONObject: json),
+              var copy = try? JSONDecoder().decode(NotebookDocument.self, from: data) else { return nil }
+        copy.lastModifiedDate = Date()
+
+        // 2. 筆跡（含專業筆刷檔）：`<id>_p…` 全部搬一份到新 id 底下。
+        let fm = FileManager.default
+        let prefix = "\(original.id)_p"
+        for file in (try? fm.contentsOfDirectory(at: drawingsDirectory, includingPropertiesForKeys: nil)) ?? []
+        where file.lastPathComponent.hasPrefix(prefix) {
+            let renamed = "\(newId)_p" + file.lastPathComponent.dropFirst(prefix.count)
+            try? fm.copyItem(at: file, to: drawingsDirectory.appending(path: renamed))
+        }
+
+        // 3. 套件：以工作副本匯出一份新的；範例套件裡的錄音一起搬過去。
+        let newPackage = corePackagesDirectory.appending(path: "\(newId).padnote")
+        let drawings = (0..<max(copy.pageCount, 1)).map { loadDrawing(notebookId: newId, pageIndex: $0) }
+        try? NotebookPackageBridge.export(
+            document: copy, drawings: drawings, to: newPackage, deviceId: NotebookMigration.deviceId)
+        for name in [original.id, original.id.lowercased()] {
+            let audio = corePackagesDirectory.appending(path: "\(name).padnote/media/audio")
+            guard let files = try? fm.contentsOfDirectory(at: audio, includingPropertiesForKeys: nil) else { continue }
+            let target = newPackage.appending(path: "media/audio")
+            try? fm.createDirectory(at: target, withIntermediateDirectories: true)
+            for file in files where !fm.fileExists(atPath: target.appending(path: file.lastPathComponent).path) {
+                try? fm.copyItem(at: file, to: target.appending(path: file.lastPathComponent))
+            }
+        }
+        for r in recordings.indices where recordings[r].linkedNotebookId?.caseInsensitiveCompare(original.id) == .orderedSame {
+            recordings[r].linkedNotebookId = newId
+        }
+
+        // 4. 換上新的那一本、記進同步索引（資料夾不變）；範例在這台退役。
+        notebooks[index] = copy
+        AccountSyncStore.shared.record(id: newId, title: copy.title, parentId: copy.folderId, isFolder: false)
+        resetSeedStorage(notebookId: original.id)
+        var retired = Self.retiredSamples
+        retired.insert(original.id.lowercased())
+        ProfileDefaults.current.set(Array(retired).sorted(), forKey: Self.retiredSamplesKey)
+        markDirtyAndPersist(signalsLocalEdit: true)
+        return newId
     }
 }

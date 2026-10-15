@@ -12720,12 +12720,12 @@
     "zhHant": "已轉換 %@ 本"
   },
   "migration_explainer": {
-    "en": "Converted files open in the Android version. Your original notes are never modified; a backup is made first and you can restore it at any time.",
-    "ja": "変換後のファイルは Android 版で開けます。元のノートは変更されません。変換前に自動でバックアップを作成し、いつでも復元できます。",
-    "ko": "변환된 파일은 Android 버전에서 열 수 있습니다. 원본 노트는 변경되지 않으며, 변환 전에 백업이 만들어져 언제든 복원할 수 있습니다.",
-    "th": "ไฟล์ที่แปลงแล้วเปิดได้ในเวอร์ชัน Android ข้อมูลบันทึกต้นฉบับจะไม่ถูกแก้ไข และจะสำรองข้อมูลก่อนแปลงเสมอ คุณกู้คืนได้ทุกเมื่อ",
-    "zhHans": "转换后的文件可在 Android 版打开。原始笔记不会被更动，转换前会自动备份，随时可以还原。",
-    "zhHant": "轉換後的檔案可在 Android 版開啟。原始筆記不會被更動，轉換前會自動備份，隨時可以還原。"
+    "en": "Notes are converted to the cross-platform format automatically every time they sync, so Android can open them — no manual step is needed. This button only converts old data in one go; a backup is made first and you can restore it at any time.",
+    "ja": "ノートは同期のたびに自動でクロスプラットフォーム形式に変換され、Android でも開けます。手動の変換は不要です。このボタンは古いデータを一括変換するためのもので、変換前に自動でバックアップを作成し、いつでも復元できます。",
+    "ko": "노트는 동기화할 때마다 자동으로 크로스 플랫폼 형식으로 변환되어 Android에서도 열 수 있습니다. 수동 변환은 필요하지 않습니다. 이 버튼은 이전 데이터를 한 번에 변환할 때만 사용하며, 변환 전에 백업이 만들어져 언제든 복원할 수 있습니다.",
+    "th": "บันทึกจะถูกแปลงเป็นรูปแบบข้ามแพลตฟอร์มโดยอัตโนมัติทุกครั้งที่ซิงค์ จึงเปิดได้ใน Android โดยไม่ต้องแปลงเอง ปุ่มนี้ใช้แปลงข้อมูลเก่าทั้งหมดในครั้งเดียวเท่านั้น และจะสำรองข้อมูลก่อนเสมอ คุณกู้คืนได้ทุกเมื่อ",
+    "zhHans": "每次同步时都会自动把笔记转换成跨平台格式，Android 也能打开，不需要手动转换。这个按钮只用来一次转换旧版数据；转换前会自动备份，随时可以还原。",
+    "zhHant": "每次同步時都會自動把筆記轉換成跨平台格式，Android 也能開啟，不需要手動轉換。這個按鈕只用來一次轉換舊版資料；轉換前會自動備份，隨時可以還原。"
   },
   "migration_never_run": {
     "en": "Not converted yet",

@@ -398,6 +398,8 @@ private fun KairumoApp() {
             onFolderChange = { folderId = it },
             onOpen = {
                 if (!it.equals(uniffi.padnote_core.recordingInboxNotebookId(), ignoreCase = true)) {
+                    // 範例：記下打開時的樣子，關掉後改過就轉成會同步的一般筆記（見 SamplePromotion）。
+                    com.kairumo.padnote.library.SamplePromotion.noteOpened(activity, it)
                     openedId = it
                 }
             }
@@ -405,9 +407,14 @@ private fun KairumoApp() {
     } else {
         InkScreen(
             notebookId = id,
-            onBack = { openedId = null },
+            onBack = {
+                openedId = null
+                com.kairumo.padnote.library.SamplePromotion.promoteIfEditedSoon(activity, id, deviceId(activity))
+            },
             onOpenNotebook = {
                 if (!it.equals(uniffi.padnote_core.recordingInboxNotebookId(), ignoreCase = true)) {
+                    com.kairumo.padnote.library.SamplePromotion.promoteIfEditedSoon(activity, id, deviceId(activity))
+                    com.kairumo.padnote.library.SamplePromotion.noteOpened(activity, it)
                     openedId = it
                 }
             }
@@ -650,6 +657,9 @@ private fun NotebookHome(
 
     // 同步把別台的 oplog 寫進套件之後，清單要重讀 —— 不重讀的話，
     // 畫面上還是同步前的樣子，使用者會以為同步沒作用。
+    // 範例轉成一般筆記之後（背景完成），清單要重讀。
+    val samplePromotions by com.kairumo.padnote.library.SamplePromotion.promotions.collectAsState()
+    LaunchedEffect(samplePromotions) { if (samplePromotions > 0) revision++ }
     val changedNotebooks by com.kairumo.padnote.sync.AutoSync.changedNotebooks.collectAsState()
     LaunchedEffect(changedNotebooks) {
         if (changedNotebooks.isNotEmpty()) {
@@ -715,7 +725,6 @@ private fun NotebookHome(
             deviceId = device,
             allEntries = allEntries,
             folders = folders,
-            breadcrumb = breadcrumb,
             profileName = profile.displayName,
             profileColorHex = profile.colorHex,
             appVersion = "Kairumo v${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})",
@@ -2516,7 +2525,7 @@ private fun InkScreen(
     // 看起來像渲染壞掉而不是少讀一份資料。
     LaunchedEffect(notebook, pageId, penOnly) {
         engine.setPenOnly(penOnly)
-        engine.load()
+        engine.loadAsync()
         revision++
         clearToken++   // 低延遲路徑的前緩衝也要重畫，否則讀回來的筆畫不會出現
     }

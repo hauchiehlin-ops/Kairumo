@@ -1126,7 +1126,28 @@ class InkEngine(
         val target = session ?: return
         val page = pageId ?: return
         val loaded = runCatching { target.visibleStrokeDetails(page) }.getOrNull() ?: return
+        applyLoaded(loaded, keepUnsaved = false)
+    }
 
+    /**
+     * 同 [load]，但讀核心在背景執行緒。
+     *
+     * 讀整頁筆畫要重播套件；背景的寫入器（[InkPackageWriter]）正在寫同一個套件時，還要等它放開核心的鎖 ——
+     * 在主執行緒上做，換頁或開筆記時畫面會卡住（Apple 端的卡頓記錄抓到的是同一類問題）。
+     * 讀的期間使用者已經畫下的筆畫保留（核心還沒寫完的那幾筆不在讀回來的結果裡）。
+     */
+    suspend fun loadAsync() {
+        val target = session ?: return
+        val page = pageId ?: return
+        val loaded = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            runCatching { target.visibleStrokeDetails(page) }.getOrNull()
+        } ?: return
+        applyLoaded(loaded, keepUnsaved = true)
+    }
+
+    private fun applyLoaded(loaded: List<uniffi.padnote_core.FullStroke>, keepUnsaved: Boolean) {
+        val loadedIds = loaded.map { it.id }.toHashSet()
+        val unsaved = if (keepUnsaved) _strokes.filter { it.coreStrokeId == null || it.coreStrokeId !in loadedIds } else emptyList()
         _strokes.clear()
         acts.clear()
         redoActs.clear()
@@ -1146,6 +1167,7 @@ class InkEngine(
             )
             syntheticId -= 1uL
         }
+        _strokes += unsaved
         // 讀回來的筆畫不在「可收回時間窗」內 —— 它們是上次寫的，
         // 掌拒不該把它們收回去。所以刻意不填 committed。
     }

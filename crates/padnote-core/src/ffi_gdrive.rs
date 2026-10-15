@@ -862,6 +862,8 @@ fn sync_notebook_media(
             warnings.push(format!("寫不進墓碑 {device}：{e}"));
         }
     }
+    // 舊版寫錯名字的墓碑先改成自己的，等一下才傳得上去。
+    fold_unattributed_tombstones(&package);
     let tombstones = merged_tombstones(&package);
     // **別台刪掉的，這台也要跟著刪。**
     //
@@ -1699,11 +1701,16 @@ fn merged_tombstones(package: &padnote_storage::NotebookPackage) -> padnote_sync
 ///
 /// 平台層刪錄音一律走這裡。只刪檔案的話，同步看到「遠端有、本機沒有」
 /// 就會把它抓回來 —— 刪除永遠刪不掉，每同步一次復活一次。
+///
+/// `device_id` 必須是同步時用的那一個：墓碑檔以裝置命名（`<device>.json`），
+/// 同步**只上傳自己那一份**。原本這裡沒帶裝置，墓碑一律寫成 `0.json` ——
+/// 而同步只傳 `<自己的 id>.json`，於是刪除從來沒有離開過刪除它的那台裝置
+/// （使用者回報：在 iPhone 刪掉的錄音，Mac 上永遠刪不掉）。
 #[uniffi::export]
-pub fn media_delete_audio(package_path: String, name: String) -> String {
+pub fn media_delete_audio(package_path: String, name: String, device_id: u32) -> String {
     let root = std::path::Path::new(&package_path);
     let package = match padnote_storage::NotebookPackage::open(root) {
-        Ok(p) => p,
+        Ok(p) => p.with_device(device_id),
         Err(e) => return format!("開不了套件：{e}"),
     };
     if let Err(e) = package.delete_audio_file(&name) {
@@ -1723,6 +1730,56 @@ pub fn media_delete_audio(package_path: String, name: String) -> String {
         Ok(()) => String::new(),
         Err(e) => format!("寫不進墓碑：{e}"),
     }
+}
+
+/// 舊版寫錯的墓碑（`0.json`，見 [`media_delete_audio`]）併進這台自己那一份，再刪掉它。
+///
+/// 那些是**這台使用者真的刪過**的錄音，只是名字寫錯了所以從來沒傳出去。
+/// 併進自己的檔案，下一次上傳就會帶著走 —— 已經刪了好幾次的錄音，終於會在別台消失。
+fn fold_unattributed_tombstones(package: &padnote_storage::NotebookPackage) {
+    let own = package.device().to_string();
+    if own == "0" {
+        return;
+    }
+    let Ok(stray_json) = package.read_media_tombstone("0") else {
+        return;
+    };
+    let stray = padnote_sync::MediaTombstones::from_json(&stray_json);
+    if stray.is_empty() {
+        return;
+    }
+    let mut mine = padnote_sync::MediaTombstones::from_json(
+        &package.read_media_tombstone(&own).unwrap_or_default(),
+    );
+    mine.merge(&stray);
+    if package.write_media_tombstone(&own, &mine.to_json()).is_ok() {
+        let _ = std::fs::remove_file(package.root().join("media/tombstones/0.json"));
+    }
+}
+
+/// 把墓碑套到這個套件：已經被刪掉（任何一台）的錄音檔，這裡也刪掉。回傳刪了幾個。
+///
+/// 給「同步資料夾」（iCloud 雲碟）那條路用。它是逐檔對拷，看到「一邊有、一邊沒有」
+/// 就補過去 —— 不套墓碑的話，在一台刪掉的錄音會被另一邊的那一份補回來，永遠刪不掉。
+/// 本機與資料夾裡的那一份都要套。
+#[uniffi::export]
+pub fn media_apply_tombstones(package_path: String, device_id: u32) -> u32 {
+    let root = std::path::Path::new(&package_path);
+    let Ok(package) = padnote_storage::NotebookPackage::open(root) else {
+        return 0;
+    };
+    let package = package.with_device(device_id);
+    fold_unattributed_tombstones(&package);
+    let tombstones = merged_tombstones(&package);
+    let mut removed = 0;
+    if let Ok(files) = package.audio_files() {
+        for (name, _) in files.iter().filter(|(n, _)| tombstones.contains(n)) {
+            if package.delete_audio_file(name).is_ok() {
+                removed += 1;
+            }
+        }
+    }
+    removed
 }
 
 /// [`FfiSyncSession::collect_garbage`] 的結果。
@@ -2652,6 +2709,17 @@ fn notebook_differs(index: &RemoteIndex, package_path: &str, notebook_id: &str) 
         return true;
     };
     let tombstones = merged_tombstones(&package);
+    // 媒體墓碑（別台刪掉的錄音）。**一定要比。** 不比的話，對已經有那段錄音的裝置來說，
+    // 錄音檔兩邊都在、操作與筆跡都沒變 —— 判定「沒有差異」，墓碑永遠不會被拉下來，
+    // 在 iPhone 刪掉的錄音在 Mac 上就永遠刪不掉（使用者回報）。
+    if differs(
+        &package.media_tombstone_files().unwrap_or_default(),
+        &index.entries_under(&padnote_sync::media_tombstone::tombstones_prefix(
+            notebook_id,
+        )),
+    ) {
+        return true;
+    }
     if differs(
         &package.doc_op_files().unwrap_or_default(),
         &index.entries_under(&notebook_ops_prefix(notebook_id)),
@@ -4804,7 +4872,7 @@ mod tests {
         assert_eq!(first.uploaded, 1);
 
         // 使用者把它刪掉。**一定要走留墓碑的那條路**，只刪檔案是不夠的。
-        let err = media_delete_audio(path.clone(), name.to_string());
+        let err = media_delete_audio(path.clone(), name.to_string(), 0);
         assert!(err.is_empty(), "{err}");
 
         // 再同步一次 —— **不可以把它抓回來**。
@@ -4854,7 +4922,8 @@ mod tests {
         );
 
         // A 刪掉它，同步。
-        let err = media_delete_audio(a_path.clone(), name.to_string());
+        // 裝置 id 要與同步用的那一個相同（`gdrive_sync_media` 以裝置 0 同步）。
+        let err = media_delete_audio(a_path.clone(), name.to_string(), 0);
         assert!(err.is_empty(), "{err}");
         let a_second = gdrive_sync_media(cloud.clone(), a_path, "nb1".into());
         assert!(a_second.ok, "{}", a_second.error);
@@ -4868,6 +4937,111 @@ mod tests {
             "A 刪掉的錄音在 B 上還在 —— 刪除沒有傳播：{:?}",
             b_after.audio_files().unwrap()
         );
+    }
+
+    #[test]
+    fn a_recording_deleted_elsewhere_makes_a_settled_notebook_sync_again() {
+        // 使用者回報：在 iPhone 刪掉的錄音，Mac 上永遠刪不掉。
+        //
+        // 上一個測試直接呼叫媒體同步，沒有經過「這本要不要同步」那道閘。真實流程會先問
+        // `notebook_needs_sync` —— 而它原本不比墓碑：對 Mac 來說錄音檔兩邊都還在、
+        // 操作與筆跡都沒變，於是判定「沒有差異」，墓碑永遠不會被拉下來，錄音也就永遠在。
+        let fake = Arc::new(FakeDrive::default());
+        let http: Arc<dyn FfiDriveHttp> = fake.clone();
+        let name = "33333333-3333-3333-3333-333333333333.opus";
+        let a_root = tmp_package("settled-tomb-a", 0xA1);
+        let b_root = tmp_package("settled-tomb-b", 0xB2);
+        let a_path: String = a_root.to_string_lossy().into();
+        let b_path: String = b_root.to_string_lossy().into();
+        let id = "nb-rec".to_string();
+
+        padnote_storage::NotebookPackage::open(&a_root)
+            .unwrap()
+            .write_audio_file(name, b"recorded-on-a")
+            .unwrap();
+        let a = FfiSyncSession::create(http.clone(), String::new());
+        let b = FfiSyncSession::create(http, String::new());
+        assert!(a.refresh().ok);
+        assert!(a.sync_notebook(a_path.clone(), id.clone(), 0xA1).ok);
+
+        // B 拿到錄音，再同步一次直到「已收斂」。
+        assert!(b.refresh().ok);
+        assert!(b.sync_notebook(b_path.clone(), id.clone(), 0xB2).ok);
+        assert!(b.sync_notebook(b_path.clone(), id.clone(), 0xB2).ok);
+        assert!(
+            !b.notebook_needs_sync(b_path.clone(), id.clone()),
+            "前提：B 已收斂"
+        );
+
+        // A 刪掉那段錄音並同步（墓碑上雲端）。
+        assert!(media_delete_audio(a_path.clone(), name.to_string(), 0xA1).is_empty());
+        assert!(a.refresh().ok);
+        assert!(a.sync_notebook(a_path, id.clone(), 0xA1).ok);
+
+        // B：雲端多了別台的墓碑 —— 一定要判成「要同步」，同步後錄音要消失。
+        assert!(b.refresh().ok);
+        assert!(
+            b.notebook_needs_sync(b_path.clone(), id.clone()),
+            "雲端有新的媒體墓碑，B 卻判定沒有差異：刪除永遠傳不過來"
+        );
+        assert!(b.sync_notebook(b_path, id, 0xB2).ok);
+        assert!(
+            padnote_storage::NotebookPackage::open(&b_root)
+                .unwrap()
+                .audio_files()
+                .unwrap()
+                .is_empty(),
+            "A 刪掉的錄音在 B 上還在"
+        );
+    }
+
+    #[test]
+    fn a_tombstone_written_under_the_wrong_device_still_reaches_the_other_device() {
+        // 舊版的刪除把墓碑寫成 `0.json`。使用者已經在 iPhone 刪過的錄音，墓碑就躺在那裡、
+        // 從來沒傳出去 —— 升級之後的第一次同步要把它們補送出去。
+        let fake = Arc::new(FakeDrive::default());
+        let http: Arc<dyn FfiDriveHttp> = fake.clone();
+        let name = "44444444-4444-4444-4444-444444444444.opus";
+        let a_root = tmp_package("stray-tomb-a", 0xA1);
+        let b_root = tmp_package("stray-tomb-b", 0xB2);
+        let a_path: String = a_root.to_string_lossy().into();
+        let b_path: String = b_root.to_string_lossy().into();
+        let id = "nb-stray".to_string();
+        padnote_storage::NotebookPackage::open(&a_root)
+            .unwrap()
+            .write_audio_file(name, b"x")
+            .unwrap();
+        let a = FfiSyncSession::create(http.clone(), String::new());
+        let b = FfiSyncSession::create(http, String::new());
+        assert!(a.refresh().ok && a.sync_notebook(a_path.clone(), id.clone(), 0xA1).ok);
+        assert!(b.refresh().ok && b.sync_notebook(b_path.clone(), id.clone(), 0xB2).ok);
+
+        // 舊版的刪除：裝置 0。
+        assert!(media_delete_audio(a_path.clone(), name.to_string(), 0).is_empty());
+        assert!(a.refresh().ok && a.sync_notebook(a_path, id.clone(), 0xA1).ok);
+        assert!(b.refresh().ok && b.sync_notebook(b_path, id, 0xB2).ok);
+        assert!(
+            padnote_storage::NotebookPackage::open(&b_root)
+                .unwrap()
+                .audio_files()
+                .unwrap()
+                .is_empty(),
+            "寫成 0.json 的墓碑沒有被補送出去"
+        );
+    }
+
+    #[test]
+    fn applying_tombstones_removes_a_resurrected_file() {
+        // 同步資料夾那條路：逐檔對拷把別處的那一份補了回來，套墓碑要再把它刪掉。
+        let name = "55555555-5555-5555-5555-555555555555.opus";
+        let root = tmp_package("apply-tomb", 0xA1);
+        let path: String = root.to_string_lossy().into();
+        let pkg = padnote_storage::NotebookPackage::open(&root).unwrap();
+        pkg.write_audio_file(name, b"x").unwrap();
+        assert!(media_delete_audio(path.clone(), name.to_string(), 0xA1).is_empty());
+        pkg.write_audio_file(name, b"x").unwrap(); // 對拷補回來了
+        assert_eq!(media_apply_tombstones(path, 0xA1), 1);
+        assert!(pkg.audio_files().unwrap().is_empty());
     }
 
     #[test]

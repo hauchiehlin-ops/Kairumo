@@ -41,6 +41,17 @@ final class RecordingRenameSyncRoundTests: XCTestCase {
         try Data(repeating: 9, count: 4096).write(to: dir.appendingPathComponent(name))
     }
 
+    /// `renameRecording` 做的事：清單改名、名字直接寫進套件、筆記本標成有修改。
+    private func rename(_ store: FakeStore, notebookId: String, file: String, to name: String, device: UInt32) {
+        if let index = store.recordings.firstIndex(where: { $0.fileName == file }) { store.recordings[index].title = name }
+        let package = store.syncPackagesDirectory.appendingPathComponent("\(notebookId.lowercased()).padnote")
+        XCTAssertTrue(NotebookPackageBridge.writeRecordingTitle(
+            packagePath: package.path, fileName: file, title: name, deviceId: device))
+        if let index = store.documents.firstIndex(where: { $0.id == notebookId }) {
+            store.documents[index].lastModifiedDate = Date()
+        }
+    }
+
     private func scenario(inbox: Bool) async throws {
         let notebookId = inbox ? recordingInboxNotebookId() : UUID().uuidString.lowercased()
         var note = NotebookDocument(id: notebookId, title: inbox ? "錄音收件匣" : "會議", pageCount: 1)
@@ -55,11 +66,8 @@ final class RecordingRenameSyncRoundTests: XCTestCase {
         await sync(ipad, ipadId)
         await sync(mac, macId)
 
-        // 使用者在 iPad 上把錄音改名（這是 `renameRecording` 做的事：清單改名 + 筆記本標成有修改）。
-        ipad.recordings[0].title = "週會錄音"
-        if let index = ipad.documents.firstIndex(where: { $0.id == notebookId }) {
-            ipad.documents[index].lastModifiedDate = Date()
-        }
+        // 使用者在 iPad 上把錄音改名。
+        rename(ipad, notebookId: notebookId, file: file, to: "週會錄音", device: ipadId)
         _ = await sync(ipad, ipadId)
         _ = await sync(mac, macId)
 
@@ -89,8 +97,7 @@ final class RecordingRenameSyncRoundTests: XCTestCase {
         await sync(mac, macId)
 
         for name in ["第一版名字", "第二版名字"] {
-            ipad.recordings[0].title = name
-            ipad.documents[0].lastModifiedDate = Date()
+            rename(ipad, notebookId: notebookId, file: file, to: name, device: ipadId)
             await sync(ipad, ipadId)
             await sync(mac, macId)
             XCTAssertTrue(mac.appliedTitles.contains { $0[file] == name }, "「\(name)」沒有到 Mac：\(mac.appliedTitles)")

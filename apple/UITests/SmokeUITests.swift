@@ -34,6 +34,28 @@ final class SmokeUITests: XCTestCase {
         XCTAssertEqual(app.state, .runningForeground, "App 在這一步之後不在前景：\(step)")
     }
 
+    /// 使用者回報：iPad 上點了語言，選單關掉，介面卻沒換。
+    ///
+    /// 原因是首頁在同步期間反覆重建（`isSyncing`、同步訊息、筆記清單），工具列跟著重建，
+    /// 選單裡 Button 的動作被丟掉。以每 0.2 秒強制重建首頁驗證過：舊的 Button 選單這個測試會失敗，
+    /// 改成綁定的 Picker 之後通過。（強制重建的鉤子沒有留在產品程式裡。）
+    func testTheLanguageMenuSwitchesTheInterface() {
+        let app = launch() // 測試模式起始為英文
+        let menu = app.descendants(matching: .any).matching(identifier: "home.language").firstMatch
+        XCTAssertTrue(menu.waitForExistence(timeout: 15), "首頁找不到語言選單")
+        menu.tap()
+        let zh = app.buttons["繁體中文"].firstMatch
+        XCTAssertTrue(zh.waitForExistence(timeout: 5), "語言選單沒有展開")
+        zh.tap()
+        // 換成中文後，首頁的「新增筆記」要變成中文。
+        let chineseLabel = app.staticTexts["新增筆記"].firstMatch
+        XCTAssertTrue(chineseLabel.waitForExistence(timeout: 5), "選了繁體中文，介面沒有換")
+        // 換回英文，免得影響其他測試的起始語言（測試模式每次啟動都會重設為英文）。
+        menu.tap()
+        let en = app.buttons["English"].firstMatch
+        if en.waitForExistence(timeout: 5) { en.tap() }
+    }
+
     func testOpenNotebookAndPageOperations() {
         let app = launch()
         XCTAssertTrue(app.wait(for: .runningForeground, timeout: 10))

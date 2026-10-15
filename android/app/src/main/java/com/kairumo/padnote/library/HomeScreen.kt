@@ -108,8 +108,6 @@ fun HomeScreen(
     /** **不分資料夾**的全部筆記本。搜尋要搜整個筆記庫，不是只搜眼前這一層。 */
     allEntries: List<NotebookLibrary.Entry>,
     folders: List<FolderTree.Folder>,
-    /** 從最上層到目前位置。空的表示人在最上層。 */
-    breadcrumb: List<FolderTree.Folder>,
     profileName: String,
     profileColorHex: String,
     appVersion: String,
@@ -200,6 +198,19 @@ fun HomeScreen(
         contentHits = withContext(Dispatchers.IO) {
             NotebookSearch.matchingIds(searchContext, allEntries, q, deviceId)
         }
+    }
+
+    // ── 資料夾樹的資料 ──
+    val treeContext = LocalContext.current
+    var collapsed by remember { mutableStateOf(setOf<String>()) }
+    val allFolders = remember(folders, allEntries) { FolderTree.all(treeContext) }
+    val allFolderKeys = remember(allFolders) { allFolders.map { it.id }.toSet() + UNFILED_KEY }
+    val allCollapsed = allFolderKeys.isNotEmpty() && collapsed.containsAll(allFolderKeys)
+    fun toggleFolder(key: String) {
+        collapsed = if (key in collapsed) collapsed - key else collapsed + key
+    }
+    val treeRows = remember(allFolders, allEntries, collapsed, sort) {
+        buildTreeRows(treeContext, allFolders, sortedForTree(allEntries, sort), collapsed)
     }
 
     val filtered = remember(entries, allEntries, query, contentHits) {
@@ -551,17 +562,13 @@ fun HomeScreen(
         }
 
         // ── 6. 麵包屑（只有不在最上層時才出現）─────────────────────
-        if (breadcrumb.isNotEmpty() && query.isBlank()) {
-            item { Breadcrumb(breadcrumb, l, onOpenFolder) }
-        }
-
         // ── 7. 全部筆記 ──────────────────────────────────────────
         item {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                SectionTitle("${l("all_notebooks")} (${entries.size})", Modifier.weight(1f))
+                SectionTitle("${l("all_notebooks")} (${allEntries.size})", Modifier.weight(1f))
                 // 格狀 / 清單檢視切換（對齊 iPad notebookViewModePicker）
                 Row(
                     modifier = Modifier
@@ -624,18 +631,22 @@ fun HomeScreen(
                 ) {
                     Text("🗂", fontSize = 16.sp, modifier = Modifier.padding(end = 8.dp))
                     Text(
-                        breadcrumb.lastOrNull()?.title
-                            ?: FolderTree.rootName(LocalContext.current, l("root_folder")),
-                        fontWeight = FontWeight.SemiBold,
-                        modifier = Modifier.weight(1f)
+                        FolderTree.rootName(LocalContext.current, l("default_root_folder")),
+                        fontWeight = FontWeight.SemiBold
                     )
-                    // 重新命名目前這一層，與 Apple 的「編輯最上層資料夾名稱」對應。
-                    // Android 原本只有在資料夾列上長按才改得到名字，最上層那一層
-                    // 根本沒有入口。
+                    // 重新命名最上層，與 Apple「我的筆記」旁的鉛筆對應。
                     TextButton(
                         onClick = onRenameRootFolder,
                         modifier = Modifier.testTag("home.notebooks.rename_root")
-                    ) { Text(l("edit_root_folder")) }
+                    ) { Text("✎") }
+                    Spacer(Modifier.weight(1f))
+                    // 全部收合／展開，與 Apple 相同。
+                    TextButton(
+                        onClick = {
+                            collapsed = if (allCollapsed) emptySet() else allFolderKeys
+                        },
+                        modifier = Modifier.testTag("home.notebooks.collapse_all")
+                    ) { Text(l(if (allCollapsed) "expand_all" else "collapse_all")) }
                     TextButton(
                         onClick = onCreateFolder,
                         modifier = Modifier.testTag("home.notebooks.new_folder")
@@ -644,49 +655,68 @@ fun HomeScreen(
             }
         }
 
-        // 筆記卡片格線的識別字掛在資料夾列上（它是這一區塊的第一個元素）——
-        // LazyColumn 的 items 沒有一個共同的容器可以掛。
-        if (folders.isNotEmpty() && query.isBlank()) {
-            items(folders, key = { "folder-${it.id}" }) { folder ->
-                FolderRow(
-                    folder, l, onOpenFolder, onRenameFolder, onDeleteFolder,
-                    onDropNotebook = { noteId -> onMoveNotebookToFolder(noteId, folder.id) }
-                )
+        // ── 資料夾樹（與 Apple 首頁完全相同的結構）──────────────────
+        //
+        // 「我的筆記」底下：每個資料夾一列（可展開，裡面是它的筆記與子資料夾），最後是「未分類檔案」。
+        // Android 原本是「點資料夾進入」的分層瀏覽，最上層把所有筆記攤成一片格子 —— 同一份資料夾結構
+        // 在 iPad 與 Android 上長得完全不一樣（使用者回報）。搜尋時照舊顯示扁平的結果。
+        if (query.isBlank()) {
+            if (treeRows.isEmpty()) {
+                item { EmptyHint(l("notebook_empty")) }
             }
-        }
-
-        if (filtered.isEmpty()) {
-            item {
-                EmptyHint(if (query.isBlank()) l("notebook_empty") else l("search_no_result"))
-            }
-        } else {
-            // 縮圖格狀或清單列（對齊 iPad）
-            val gridColumns = if (contentWidth > 640.dp) 3 else 2
-            if (!isGridView) {
-                items(filtered, key = { "list-" + it.id }) { entry ->
-                    Box(Modifier.fillMaxWidth().testTag("home.notebooks.list")) {
-                        NotebookListCard(
-                            entry, l, onOpen, onRename, onDelete, onMove, onCreateSnapshot
-                        )
+            items(treeRows, key = { it.key }) { row ->
+                when (row) {
+                    is TreeRow.FolderHeader -> FolderRow(
+                        row.folder, l, onOpenFolder, onRenameFolder, onDeleteFolder,
+                        onDropNotebook = { noteId -> onMoveNotebookToFolder(noteId, row.folder.id) },
+                        expanded = row.expanded, count = row.count, depth = row.depth,
+                        onToggle = { toggleFolder(row.folder.id) }
+                    )
+                    is TreeRow.UnfiledHeader -> UnfiledRow(
+                        l, row.count, row.expanded,
+                        onToggle = { toggleFolder(UNFILED_KEY) },
+                        onDropNotebook = { noteId -> onMoveNotebookToFolder(noteId, null) }
+                    )
+                    is TreeRow.Empty -> Text(
+                        l("empty_folder"),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(start = (row.depth * 20 + 36).dp, top = 2.dp, bottom = 6.dp)
+                    )
+                    is TreeRow.Notes -> {
+                        val gridColumns = if (contentWidth > 640.dp) 3 else 2
+                        Column(
+                            modifier = Modifier.fillMaxWidth().padding(start = (row.depth * 20 + 16).dp)
+                                .testTag("home.notebooks.list"),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            if (!isGridView) {
+                                for (entry in row.entries) {
+                                    NotebookListCard(entry, l, onOpen, onRename, onDelete, onMove, onCreateSnapshot)
+                                }
+                            } else {
+                                for (chunk in row.entries.chunked(gridColumns)) {
+                                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                        for (entry in chunk) {
+                                            NotebookGridCard(
+                                                entry, l, onOpen, onRename, onDelete, onMove, onCreateSnapshot,
+                                                modifier = Modifier.weight(1f)
+                                            )
+                                        }
+                                        repeat(gridColumns - chunk.size) { Box(Modifier.weight(1f)) }
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
-            } else {
-                items(filtered.chunked(gridColumns), key = { row -> "grid-" + row.first().id }) { row ->
-                    Row(
-                        modifier = Modifier.fillMaxWidth().testTag("home.notebooks.list"),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        for (entry in row) {
-                            NotebookGridCard(
-                                entry, l, onOpen, onRename, onDelete, onMove, onCreateSnapshot,
-                                modifier = Modifier.weight(1f)
-                            )
-                        }
-                        // 最後一排不足時補空位，卡片才不會被拉寬
-                        repeat(gridColumns - row.size) {
-                            Box(Modifier.weight(1f))
-                        }
-                    }
+            }
+        } else if (filtered.isEmpty()) {
+            item { EmptyHint(l("search_no_result")) }
+        } else {
+            items(filtered, key = { "list-" + it.id }) { entry ->
+                Box(Modifier.fillMaxWidth().testTag("home.notebooks.list")) {
+                    NotebookListCard(entry, l, onOpen, onRename, onDelete, onMove, onCreateSnapshot)
                 }
             }
         }
@@ -1138,35 +1168,6 @@ private fun formatDate(millis: Long): String =
 private fun parseHex(hex: String): Color? =
     com.kairumo.padnote.chart.ChartRenderer.parseColor(hex)?.let { Color(it) }
 
-/**
- * 麵包屑：最上層 → … → 現在這一層。
- *
- * 每一段都點得進去。只給一個「上一層」按鈕的話，在三層深的地方要回到
- * 最上層得按三次，而且中間每一次都會重新算一次清單。
- */
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun Breadcrumb(
-    path: List<FolderTree.Folder>,
-    l: (String) -> String,
-    onOpenFolder: (String?) -> Unit
-) {
-    FlowRow(
-        modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(0.dp)
-    ) {
-        TextButton(onClick = { onOpenFolder(null) }) { Text(l("root_folder")) }
-        path.forEachIndexed { index, folder ->
-            Text("›", modifier = Modifier.padding(top = 14.dp))
-            TextButton(
-                onClick = { onOpenFolder(folder.id) },
-                // 最後一段是「現在在這裡」，點它沒有意義。
-                enabled = index != path.lastIndex
-            ) { Text(folder.title, maxLines = 1) }
-        }
-    }
-}
-
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun FolderRow(
@@ -1176,7 +1177,14 @@ private fun FolderRow(
     onRename: (FolderTree.Folder) -> Unit,
     onDelete: (FolderTree.Folder) -> Unit,
     /** 把一本筆記拖進這個資料夾（S-88）。 */
-    onDropNotebook: (String) -> Unit = {}
+    onDropNotebook: (String) -> Unit = {},
+    /** 樹狀檢視（與 Apple 首頁相同）：這個資料夾展開了沒。`null` = 舊的「點了進入資料夾」。 */
+    expanded: Boolean? = null,
+    /** 樹狀檢視：裡面有幾本筆記（顯示在名字旁）。 */
+    count: Int? = null,
+    /** 樹狀檢視：子資料夾往右縮排。 */
+    depth: Int = 0,
+    onToggle: (() -> Unit)? = null
 ) {
     var menu by remember(folder.id) { mutableStateOf(false) }
     var targeted by remember(folder.id) { mutableStateOf(false) }
@@ -1205,11 +1213,12 @@ private fun FolderRow(
     Card(
         modifier = Modifier
             .fillMaxWidth()
+            .padding(start = (depth * 20).dp)
             .dragAndDropTarget(
                 shouldStartDragAndDrop = { true },
                 target = dropTarget
             )
-            .clickable { onOpen(folder.id) },
+            .clickable { onToggle?.invoke() ?: onOpen(folder.id) },
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant
@@ -1220,15 +1229,22 @@ private fun FolderRow(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
+            if (expanded != null) {
+                Text(if (expanded) "▾" else "▸", fontSize = 16.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
             // 📁 而不是 🗀 —— 後者不在 Android 的預設字型裡，模擬器上
             // 直接是一個豆腐方塊。
             Text("📁", fontSize = 18.sp)
             Text(
                 folder.title,
                 fontWeight = FontWeight.SemiBold,
-                fontSize = 16.sp,
-                modifier = Modifier.weight(1f)
+                fontSize = 16.sp
             )
+            count?.let {
+                Text("($it)", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp)
+            }
+            Spacer(Modifier.weight(1f))
             Box {
                 TextButton(onClick = { menu = true }) { Text("⋯") }
                 DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
@@ -1938,5 +1954,109 @@ private fun SyncDetailRow(label: String, value: String) {
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f)
         )
+    }
+}
+
+
+// ── 資料夾樹（與 Apple 首頁 `folderTree` 相同的結構）────────────────────
+
+private const val UNFILED_KEY = "#unfiled"
+
+/** 樹上的一列。 */
+private sealed class TreeRow(val key: String) {
+    class FolderHeader(val folder: FolderTree.Folder, val depth: Int, val count: Int, val expanded: Boolean) :
+        TreeRow("folder-${folder.id}")
+    class Notes(val owner: String, val depth: Int, val entries: List<NotebookLibrary.Entry>) : TreeRow("notes-$owner")
+    class Empty(val owner: String, val depth: Int) : TreeRow("empty-$owner")
+    class UnfiledHeader(val count: Int, val expanded: Boolean) : TreeRow("unfiled")
+}
+
+private fun sortedForTree(entries: List<NotebookLibrary.Entry>, sort: NotebookLibrary.Sort) = when (sort) {
+    NotebookLibrary.Sort.MODIFIED -> entries.sortedByDescending { it.modifiedAt }
+    NotebookLibrary.Sort.TITLE -> entries.sortedBy { it.title.lowercase() }
+    NotebookLibrary.Sort.PAGES -> entries.sortedByDescending { it.pageCount }
+}
+
+/**
+ * 攤平成一列一列：資料夾（依層級縮排，展開時接著它的筆記與子資料夾），最後是「未分類檔案」。
+ *
+ * 所屬資料夾以同步索引為準（與 Apple 相同）；指到不存在（或已刪除）資料夾的筆記歸到「未分類」，
+ * 不會憑空消失。
+ */
+private fun buildTreeRows(
+    context: android.content.Context,
+    folders: List<FolderTree.Folder>,
+    entries: List<NotebookLibrary.Entry>,
+    collapsed: Set<String>
+): List<TreeRow> {
+    val folderIds = folders.map { it.id }.toSet()
+    val byFolder = entries.groupBy { entry ->
+        FolderTree.parentOf(context, entry.id)?.takeIf { it in folderIds }
+    }
+    val children = folders.groupBy { it.parentId }
+    // 資料夾的筆記數：只算直接放在裡面的（與 Apple 的括號數字相同）。
+    val rows = mutableListOf<TreeRow>()
+    fun walk(parent: String?, depth: Int) {
+        if (depth > 32) return
+        for (folder in children[parent].orEmpty()) {
+            val notes = byFolder[folder.id].orEmpty()
+            val expanded = folder.id !in collapsed
+            rows += TreeRow.FolderHeader(folder, depth, notes.size, expanded)
+            if (!expanded) continue
+            val hasSub = children[folder.id].orEmpty().isNotEmpty()
+            if (notes.isNotEmpty()) rows += TreeRow.Notes(folder.id, depth + 1, notes)
+            else if (!hasSub) rows += TreeRow.Empty(folder.id, depth + 1)
+            walk(folder.id, depth + 1)
+        }
+    }
+    walk(null, 0)
+    val unfiled = byFolder[null].orEmpty()
+    if (unfiled.isNotEmpty()) {
+        val expanded = UNFILED_KEY !in collapsed
+        rows += TreeRow.UnfiledHeader(unfiled.size, expanded)
+        if (expanded) rows += TreeRow.Notes(UNFILED_KEY, 1, unfiled)
+    }
+    return rows
+}
+
+/** 「未分類檔案」那一列。筆記拖到這裡 = 移出資料夾。 */
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+@Composable
+private fun UnfiledRow(
+    l: (String) -> String,
+    count: Int,
+    expanded: Boolean,
+    onToggle: () -> Unit,
+    onDropNotebook: (String) -> Unit
+) {
+    val dropTarget = remember {
+        object : androidx.compose.ui.draganddrop.DragAndDropTarget {
+            override fun onDrop(event: androidx.compose.ui.draganddrop.DragAndDropEvent): Boolean {
+                val data = event.toAndroidDragEvent().clipData
+                val id = data?.takeIf { it.itemCount > 0 }?.getItemAt(0)?.text?.toString() ?: return false
+                onDropNotebook(id)
+                return true
+            }
+        }
+    }
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .dragAndDropTarget(shouldStartDragAndDrop = { true }, target = dropTarget)
+            .clickable(onClick = onToggle)
+            .testTag("home.notebooks.unfiled"),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Text(if (expanded) "▾" else "▸", fontSize = 16.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("📥", fontSize = 18.sp)
+            Text(l("unfiled_notes"), fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
+            Text("($count)", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp)
+        }
     }
 }

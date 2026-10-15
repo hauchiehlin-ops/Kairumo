@@ -2490,20 +2490,30 @@ public struct HomeWorkbenchView: View {
         .accessibilityIdentifier("home.diagnostics")
     }
 
+    /// 語言選單的內容。**用綁定的 Picker，不用一排 Button。**
+    ///
+    /// iPad 上首頁的工具列會因為同步狀態、錄音清單等更新而反覆重建；選單開著的時候工具列一重建，
+    /// Button 的動作就跟著舊的那一份一起被丟掉 —— 點了語言、選單關掉，語言卻沒換（使用者回報）。
+    /// Picker 透過綁定直接寫進 `LocalizationManager`，不依賴那個會被丟掉的閉包。
+    private var languagePicker: some View {
+        Picker(
+            selection: Binding(
+                get: { localizationManager.currentLanguage },
+                set: { localizationManager.setLanguage($0) }
+            )
+        ) {
+            ForEach(AppLanguage.allCases) { lang in
+                Text(lang.endonym).tag(lang)
+            }
+        } label: {
+            Text(localizationManager.localized("select_language"))
+        }
+        .pickerStyle(.inline)
+    }
+
     private var languageToolbarMenu: some View {
         Menu {
-            ForEach(AppLanguage.allCases) { lang in
-                Button {
-                    localizationManager.setLanguage(lang)
-                } label: {
-                    HStack {
-                        Text(lang.endonym)
-                        if localizationManager.currentLanguage == lang {
-                            Image(systemName: "checkmark")
-                        }
-                    }
-                }
-            }
+            languagePicker
         } label: {
             HStack(spacing: DS.Space.xxs) {
                 Image(systemName: "globe")
@@ -2519,18 +2529,7 @@ public struct HomeWorkbenchView: View {
 
     private var compactLanguageToolbarMenu: some View {
         Menu {
-            ForEach(AppLanguage.allCases) { lang in
-                Button {
-                    localizationManager.setLanguage(lang)
-                } label: {
-                    HStack {
-                        Text(lang.endonym)
-                        if localizationManager.currentLanguage == lang {
-                            Image(systemName: "checkmark")
-                        }
-                    }
-                }
-            }
+            languagePicker
         } label: {
             Image(systemName: "globe")
         }

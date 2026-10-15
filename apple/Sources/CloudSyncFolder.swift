@@ -201,6 +201,12 @@ enum CloudSyncFolder {
         for relative in plan.download {
             copy(relative, from: remotePackage, to: localPackage, into: &result, uploading: false)
         }
+        // 套用錄音墓碑（本機與資料夾兩邊）。逐檔對拷看到「一邊有、一邊沒有」就補過去 ——
+        // 不套的話，在一台刪掉的錄音會被另一邊的那一份補回來，永遠刪不掉。
+        // 墓碑檔本身已經在上面隨套件對拷到兩邊了。
+        let device = NotebookMigration.deviceId
+        _ = mediaApplyTombstones(packagePath: localPackage.path, deviceId: device)
+        _ = mediaApplyTombstones(packagePath: remotePackage.path, deviceId: device)
         return result
     }
 

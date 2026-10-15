@@ -434,7 +434,7 @@ private fun ContinuousPage(
         // 讀回這一頁已經存在的筆畫。見 InkEngine.load() 的說明。
         // **只讀一次**：引擎留在快取裡，再讀一次會把它的復原紀錄清掉。
         if (!runtime.inkLoaded) {
-            engine.load()
+            engine.loadAsync()
             runtime.inkLoaded = true
         }
     }
