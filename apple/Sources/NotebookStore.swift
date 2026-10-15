@@ -1458,7 +1458,10 @@ public final class NotebookStore: ObservableObject {
             let nid = deduped[i].id.lowercased()
             if let indexTitle = liveTitles[nid], !indexTitle.isEmpty, deduped[i].title != indexTitle {
                 deduped[i].title = indexTitle
-                deduped[i].titleKey = nil
+                // 預載範例必須維持系統 titleKey，否則將失去語系切換及自癒辨識能力
+                if !NotebookPackageBridge.isDeviceLocalSeed(nid) {
+                    deduped[i].titleKey = nil
+                }
             }
             if let indexParent = liveParents[nid], deduped[i].folderId?.lowercased() != indexParent {
                 deduped[i].folderId = indexParent
@@ -1482,6 +1485,10 @@ public final class NotebookStore: ObservableObject {
         }
 
         reconcileFoldersAndAssignmentsFromSync()
+
+        if healInflatedSeedNotebooksIfNeeded() {
+            markDirtyAndPersist(signalsLocalEdit: false)
+        }
     }
 
     /// 依據帳號同步索引（AccountSyncStore / LibraryIndex）收斂資料夾結構與筆記所屬資料夾
@@ -1741,61 +1748,15 @@ public final class NotebookStore: ObservableObject {
             changed = true
         }
 
-        // 自癒修復：若預載範例筆記因為跨裝置同步 CRDT 合併產生頁數或區塊膨脹，自動收斂重設回標準頁數
-        let seedStandards: [(id: String, key: String, standardCount: Int, heal: (inout NotebookDocument) -> Void)] = [
-            ("seed-feature-showcase-v1", "seed_feature_showcase_title", 4, { doc in
-                doc.pageCount = 4
-                SeedContent.fillFeatureShowcase(&doc, store: self)
-            }),
-            (SeedContent.kairumoManualId, "seed_manual_title", 4, { doc in
-                doc.pageCount = 4
-                SeedContent.fillKairumoManual(&doc, store: self)
-            }),
-            (Self.draftingExampleId, "seed_drafting_example_title", 6, { doc in
-                let fresh = self.makeDraftingExample()
-                doc = fresh
-            }),
-            ("seed-welcome-notebook-v1", "seed_welcome_title", SeedContent.welcomePageCount, { doc in
-                doc.pageCount = SeedContent.welcomePageCount
-                SeedContent.fillWelcome(&doc)
-            }),
-            ("seed-meeting-notebook-v1", "seed_meeting_title", SeedContent.meetingPageCount, { doc in
-                doc.pageCount = SeedContent.meetingPageCount
-                SeedContent.fillMeeting(&doc, store: self)
-            })
-        ]
-
         // 一次性清理：過去範例筆記本參與同步，各裝置各自生成的同一份內容（id 不同）被合併成兩份，
         // 每一頁的文字、圖形、筆跡都重複。範例現在不再同步（見 `isDeviceLocalSeed`），
-        // 這裡把本機每一本範例重設回乾淨的標準內容（它們身上的筆跡與物件只有「重複」，沒有值得保留的東西
-        // —— 使用者自己的筆記本不在這個名單裡）。
-        if ProfileDefaults.current.integer(forKey: Self.seedGenerationKey) < Self.seedGeneration {
-            for std in seedStandards {
-                guard let idx = notebooks.firstIndex(where: { $0.id == std.id || $0.titleKey == std.key }) else { continue }
-                resetSeedStorage(notebookId: notebooks[idx].id)
-                std.heal(&notebooks[idx])
-                changed = true
-            }
-            ProfileDefaults.current.set(Self.seedGeneration, forKey: Self.seedGenerationKey)
+        // 這裡把本機每一本範例重設回乾淨的標準內容。
+        let needsGenerationReset = ProfileDefaults.current.integer(forKey: Self.seedGenerationKey) < Self.seedGeneration
+        if healInflatedSeedNotebooksIfNeeded(force: needsGenerationReset) {
+            changed = true
         }
-
-        for std in seedStandards {
-            if let idx = notebooks.firstIndex(where: { $0.id == std.id || $0.titleKey == std.key }) {
-                if notebooks[idx].pageCount > std.standardCount || (notebooks[idx].textAttachments ?? []).count > 100 {
-                    std.heal(&notebooks[idx])
-                    let pkgDir = corePackagesDirectory.appending(path: "\(notebooks[idx].id.lowercased()).padnote")
-                    try? FileManager.default.removeItem(at: pkgDir)
-                    let doc = notebooks[idx]
-                    let drawings = (0..<doc.pageCount).map { self.loadDrawing(notebookId: doc.id, pageIndex: $0) }
-                    try? NotebookPackageBridge.export(
-                        document: doc,
-                        drawings: drawings,
-                        to: pkgDir,
-                        deviceId: NotebookMigration.deviceId
-                    )
-                    changed = true
-                }
-            }
+        if needsGenerationReset {
+            ProfileDefaults.current.set(Self.seedGeneration, forKey: Self.seedGenerationKey)
         }
 
         // 自癒修復：若現有示範筆記《Kairumo(功能範例)》尚未設定背景卡片 underInkObjectIds，自動補齊
@@ -2209,7 +2170,7 @@ public final class NotebookStore: ObservableObject {
         return img
     }
 
-    private func seedDefaultNotebooks() {
+    func seedDefaultNotebooks() {
         // title/previewSnippet 仍然寫入（供未安裝語系或外部讀取時 fallback），
         // 但顯示一律走 titleKey/snippetKey。
         var n1 = NotebookDocument(
@@ -2274,6 +2235,75 @@ public final class NotebookStore: ObservableObject {
     private static let seedGenerationKey = "seed.contentGeneration"
     private static let seedGeneration = 2
 
+    /// 自癒修復：若預載範例筆記因為跨裝置同步 CRDT 合併產生頁數或區塊膨脹，自動收斂重設回標準頁數並清理多餘頁面與繪圖檔
+    @discardableResult
+    public func healInflatedSeedNotebooksIfNeeded(force: Bool = false) -> Bool {
+        let seedStandards: [(id: String, key: String, standardCount: Int, heal: (inout NotebookDocument) -> Void)] = [
+            ("seed-feature-showcase-v1", "seed_feature_showcase_title", 4, { doc in
+                doc.pageCount = 4
+                SeedContent.fillFeatureShowcase(&doc, store: self)
+            }),
+            (SeedContent.kairumoManualId, "seed_manual_title", 4, { doc in
+                doc.pageCount = 4
+                SeedContent.fillKairumoManual(&doc, store: self)
+            }),
+            (Self.draftingExampleId, "seed_drafting_example_title", 6, { doc in
+                let fresh = self.makeDraftingExample()
+                doc = fresh
+            }),
+            ("seed-welcome-notebook-v1", "seed_welcome_title", SeedContent.welcomePageCount, { doc in
+                doc.pageCount = SeedContent.welcomePageCount
+                SeedContent.fillWelcome(&doc)
+            }),
+            ("seed-meeting-notebook-v1", "seed_meeting_title", SeedContent.meetingPageCount, { doc in
+                doc.pageCount = SeedContent.meetingPageCount
+                SeedContent.fillMeeting(&doc, store: self)
+            })
+        ]
+
+        var changed = false
+        for std in seedStandards {
+            if let idx = notebooks.firstIndex(where: {
+                $0.id.caseInsensitiveCompare(std.id) == .orderedSame || $0.titleKey == std.key
+            }) {
+                let docId = notebooks[idx].id
+                let currentCount = notebooks[idx].pageCount
+                let textCount = (notebooks[idx].textAttachments ?? []).count
+                let canonicalIds = NotebookPackageBridge.deterministicSeedPageIds(for: docId)
+                let pageIdsMismatch = canonicalIds != nil && notebooks[idx].pageIds != canonicalIds
+
+                if force || currentCount > std.standardCount || textCount > 100 || pageIdsMismatch {
+                    // 1. 保留前 standardCount 頁之手繪筆跡（保護使用者的真實手寫與簽名）
+                    let preservedDrawings = (0..<std.standardCount).map { self.loadDrawing(notebookId: docId, pageIndex: $0) }
+
+                    // 2. 徹底清理磁碟殘餘檔案（大於等於 standardCount 的幽靈繪圖檔、舊膨脹套件與快照）
+                    resetSeedStorage(notebookId: docId)
+
+                    // 3. 寫回保留的前 standardCount 頁手繪筆跡
+                    for (page, drawing) in preservedDrawings.enumerated() {
+                        self.saveDrawing(notebookId: docId, pageIndex: page, drawing: drawing)
+                    }
+
+                    // 4. 重建乾淨的文件規格（標準頁數、確定性頁面 ID、標準模板物件）
+                    notebooks[idx].pageCount = std.standardCount
+                    notebooks[idx].pageIds = canonicalIds
+                    std.heal(&notebooks[idx])
+
+                    // 5. 重新匯出乾淨的標準套件
+                    let pkgDir = corePackagesDirectory.appending(path: "\(docId.lowercased()).padnote")
+                    try? NotebookPackageBridge.export(
+                        document: notebooks[idx],
+                        drawings: preservedDrawings,
+                        to: pkgDir,
+                        deviceId: NotebookMigration.deviceId
+                    )
+                    changed = true
+                }
+            }
+        }
+        return changed
+    }
+
     /// 刪掉一本範例筆記本在磁碟上的衍生資料（核心套件、手繪與專業筆畫檔、同步基準），
     /// 讓重新產生的標準內容不會疊在舊的（含重複的）內容上。
     private func resetSeedStorage(notebookId: String) {
@@ -2281,11 +2311,14 @@ public final class NotebookStore: ObservableObject {
         for name in [notebookId, notebookId.lowercased()] {
             try? fm.removeItem(at: corePackagesDirectory.appending(path: "\(name).padnote"))
         }
-        let prefix = "\(notebookId)_p"
+        let prefixes = [notebookId, notebookId.lowercased()].map { "\($0)_p" }
         for directory in [drawingsDirectory, syncBaselineDirectory] {
             let files = (try? fm.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil)) ?? []
-            for file in files where file.lastPathComponent.hasPrefix(prefix) {
-                try? fm.removeItem(at: file)
+            for file in files {
+                let name = file.lastPathComponent
+                if prefixes.contains(where: { name.hasPrefix($0) }) {
+                    try? fm.removeItem(at: file)
+                }
             }
         }
     }

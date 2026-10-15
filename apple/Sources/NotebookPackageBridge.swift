@@ -40,7 +40,7 @@ enum NotebookPackageBridge {
 
     /// 預載範例筆記的標準頁數。不是範例筆記回傳 nil。
     static func seedStandardPageCount(for notebookId: String) -> Int? {
-        switch notebookId {
+        switch notebookId.lowercased() {
         case "seed-feature-showcase-v1": return 4
         case "seed-kairumo-manual-v1": return 4
         case "seed-drafting-example-v1": return 6
@@ -66,13 +66,14 @@ enum NotebookPackageBridge {
     /// 頁數**固定為標準頁數**，不吃呼叫端給的 `pageCount`：已經膨脹的工作副本
     /// 若照自己的頁數產生 ID，幽靈頁就被固化成「合法的確定性頁面」，永遠清不掉。
     static func deterministicSeedPageIds(for notebookId: String) -> [String]? {
-        guard let count = seedStandardPageCount(for: notebookId) else { return nil }
+        guard let count = seedStandardPageCount(for: notebookId.lowercased()) else { return nil }
         let prefix: String
-        switch notebookId {
+        switch notebookId.lowercased() {
         case "seed-feature-showcase-v1": prefix = "b0000001-0000-4000-8000"
         case "seed-kairumo-manual-v1": prefix = "b0000002-0000-4000-8000"
         case "seed-drafting-example-v1": prefix = "b0000003-0000-4000-8000"
         case "seed-welcome-notebook-v1": prefix = "b0000004-0000-4000-8000"
+        case "seed-meeting-notebook-v1": prefix = "b0000005-0000-4000-8000"
         default: prefix = "b0000005-0000-4000-8000"
         }
         return (1...count).map { String(format: "%@-0000000000%02x", prefix, $0) }
@@ -1173,6 +1174,10 @@ enum NotebookPackageBridge {
     /// 套件裡也沒有（從沒匯出過）才給新的。
     static func resolvedPageIds(for document: NotebookDocument, packagesDirectory: URL) -> [String] {
         let count = max(1, document.pageCount)
+        // 預載範例一律採用跨裝置、跨生命週期完全一致的確定性 ID，防止 CRDT 協同插入幽靈頁
+        if let seedIds = deterministicSeedPageIds(for: document.id) {
+            return Array(seedIds.prefix(count))
+        }
         if let ids = document.pageIds, ids.count == count { return ids }
         let package = packagesDirectory.appending(path: "\(document.id.lowercased()).padnote")
         var ids = (document.pageIds ?? existingPageIds(in: package, deviceId: NotebookMigration.deviceId) ?? [])
@@ -1270,11 +1275,10 @@ enum NotebookPackageBridge {
         var pageIds = try pageIds(of: session)
         // 範例筆記：只認標準頁。別台裝置遺留在雲端的舊 oplog 帶著隨機 id 的 AddPage，
         // 每次同步都會被 CRDT 聯集合併回來 —— 只在本機重設是治不了的，要在讀的這一端擋掉。
-        if let canonical = deterministicSeedPageIds(for: documentId ?? path.deletingPathExtension().lastPathComponent),
-           pageIds.count > canonical.count {
+        if let canonical = deterministicSeedPageIds(for: documentId ?? path.deletingPathExtension().lastPathComponent) {
             let wanted = Set(canonical)
             let kept = pageIds.filter { wanted.contains($0.lowercased()) }
-            pageIds = kept.isEmpty ? Array(pageIds.prefix(canonical.count)) : kept
+            pageIds = kept.isEmpty ? Array(pageIds.prefix(canonical.count)) : Array(kept.prefix(canonical.count))
         }
         guard !pageIds.isEmpty else { throw BridgeError.noPages }
 

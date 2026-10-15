@@ -154,6 +154,7 @@ object FocusSync {
     private suspend fun pushOne(
         context: Context, session: uniffi.padnote_core.FfiSyncSession, id: String
     ): Boolean {
+        if (com.kairumo.padnote.library.SeedNotebooks.isDeviceLocal(id)) return true
         // 焦點通道自己正在推這一本的話等它（最多 5 秒）。
         var lock = notebookLockTryEnter(id, "flush", nowMs())
         var waited = 0L
@@ -247,6 +248,7 @@ object FocusSync {
         if (holder.contains("wipe-cloud") || holder.contains("reclaim")) return FfiFocusOutcome.BUSY
         val session = CloudSync.makeSession(context) ?: return FfiFocusOutcome.NEEDS_REAUTH
         val id = run.notebookId
+        if (com.kairumo.padnote.library.SeedNotebooks.isDeviceLocal(id)) return FfiFocusOutcome.SUCCESS
         val lock = notebookLockTryEnter(id, "focus", nowMs())
         if (!lock.granted) return FfiFocusOutcome.BUSY
         try {

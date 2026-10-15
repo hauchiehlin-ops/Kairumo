@@ -935,6 +935,10 @@ enum NotebookSyncCoordinator {
                 cleanedCount += 1
                 continue
             }
+            // 預載範例各裝置自己產生，絕不參與 Google Drive 同步
+            if NotebookPackageBridge.isDeviceLocalSeed(id) {
+                continue
+            }
             if activeLocalIds.contains(id) {
                 packages.append(pkg)
                 continue
@@ -1316,6 +1320,10 @@ enum NotebookSyncCoordinator {
         afterExport: @escaping @Sendable () -> Void
     ) async -> FocusReport {
         var report = FocusReport()
+        // 預載範例由各裝置本機自己維護，不參與焦點通道推拉
+        guard !NotebookPackageBridge.isDeviceLocalSeed(notebookId) else {
+            return report
+        }
         guard let document = store.syncNotebooks.first(where: {
             $0.id.caseInsensitiveCompare(notebookId) == .orderedSame
         }) else {
@@ -1401,6 +1409,8 @@ enum NotebookSyncCoordinator {
     static func importReceived(
         store: SyncableNotebookStore, deviceId: UInt32, notebookId: String
     ) async -> Bool {
+        // 預載範例由各裝置本機自己維護，不接受區網對端匯入覆蓋
+        guard !NotebookPackageBridge.isDeviceLocalSeed(notebookId) else { return false }
         guard let document = store.syncNotebooks.first(where: {
             $0.id.caseInsensitiveCompare(notebookId) == .orderedSame
         }) else { return false }
