@@ -96,7 +96,10 @@ class DraftingEditTest {
         engine.onToolTouch = { phase, x, y -> DraftToolController.handle(phase, x, y, engine) }
     }
 
-    private fun persisted() = PadnoteSession.openExisting(path, 0xC1u).visibleStrokeDetails(pageId)
+    private fun persisted(): List<uniffi.padnote_core.StrokeDetail> {
+        assertTrue("筆畫寫入佇列應完成", InkPackageWriter.awaitIdleBlocking())
+        return PadnoteSession.openExisting(path, 0xC1u).visibleStrokeDetails(pageId)
+    }
 
     private fun xs(s: InkEngine.CompletedStroke) = s.points.map { it.x }
 
