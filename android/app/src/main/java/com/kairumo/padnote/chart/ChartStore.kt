@@ -121,4 +121,42 @@ class ChartStore(
         bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
         return out.toByteArray()
     }
+
+    /** 讓這一頁的圖表變成 [target] 那一份（全域復原用）。刪掉的用原 id 放回。 */
+    fun restoreTo(target: List<ChartObject>) {
+        val wanted = target.associateBy { it.id }
+        for (chart in all) if (chart.id !in wanted) remove(chart)
+        for (chart in target) {
+            val copy = chart.copy()
+            if (!charts.containsKey(chart.id)) {
+                val s = session
+                val page = pageId
+                if (s != null && page != null) {
+                    runCatching {
+                        val blob = s.putBlob(pngBytes(copy.spec, copy.width.toInt(), copy.height.toInt()))
+                        s.addImageWithId(page, copy.id, blob, copy.width, copy.height)
+                    }
+                }
+            }
+            persist(copy)
+        }
+    }
+
+    /** 協同：新增或更新一張圖表（新的用原本的 id 建立，圖檔就地算出）。 */
+    fun upsert(chart: ChartObject) {
+        if (!charts.containsKey(chart.id)) {
+            val s = session
+            val page = pageId
+            if (s != null && page != null) {
+                runCatching {
+                    val blob = s.putBlob(pngBytes(chart.spec, chart.width.toInt(), chart.height.toInt()))
+                    s.addImageWithId(page, chart.id, blob, chart.width, chart.height)
+                }
+            }
+        }
+        persist(chart)
+    }
+
+    fun find(id: String): ChartObject? = charts[id]
+
 }

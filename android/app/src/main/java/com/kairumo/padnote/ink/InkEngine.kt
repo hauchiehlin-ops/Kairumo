@@ -382,6 +382,12 @@ class InkEngine(
     private val undoStack = mutableListOf<CompletedStroke>()
     private val redoStack = mutableListOf<CompletedStroke>()
 
+    /**
+     * 多了一個可復原的筆跡動作。編輯器的全域復原（`CanvasHistory`）靠它把筆跡放進
+     * 與物件同一條時間軸 —— 先畫一筆、再搬一張圖，復原就照反過來的順序退。
+     */
+    var onUndoableAction: (() -> Unit)? = null
+
     val canUndo: Boolean get() = _strokes.isNotEmpty()
     val canRedo: Boolean get() = redoStack.isNotEmpty()
 
@@ -508,6 +514,7 @@ class InkEngine(
             redoStack.clear()
             redoActs.clear()
             acts += AddAct
+            onUndoableAction?.invoke()
             notifyContentCommittedAfterWrites()
         }
         return count
@@ -536,6 +543,31 @@ class InkEngine(
         val page = pageId
         val id = s.coreStrokeId
         if (target != null && page != null && id != null) queueCoreErase(target, page, id)
+    }
+
+    /**
+     * 協同：別人畫的筆畫（設計 §4.3）。
+     *
+     * **不進復原紀錄、不觸發 [onUndoableAction]** —— 進了的話，按復原會把別人的筆畫退掉，
+     * 而且這一筆會被當成自己畫的再廣播一次。回傳真正放進去的實例（核心發了 id）。
+     */
+    fun applyRemoteStrokes(strokes: List<CompletedStroke>): List<CompletedStroke> {
+        if (strokes.isEmpty()) return emptyList()
+        val added = strokes.map { coreAdd(it) }
+        _strokes += added
+        notifyContentCommittedAfterWrites()
+        return added
+    }
+
+    /** 協同：別人擦掉的筆畫。同樣不進復原紀錄。回傳移除了幾筆。 */
+    fun removeRemoteStrokes(predicate: (CompletedStroke) -> Boolean): Int {
+        val gone = _strokes.filter(predicate)
+        for (s in gone) {
+            _strokes.remove(s)
+            coreErase(s)
+        }
+        if (gone.isNotEmpty()) notifyContentCommittedAfterWrites()
+        return gone.size
     }
 
     /** 把 [remove]（以實例認）換成 [add]。回傳真正放進去的實例（核心重新發了 id）。 */
@@ -619,6 +651,7 @@ class InkEngine(
         redoStack.clear()
         redoActs.clear()
         acts += ReplaceAct(old, added)
+        onUndoableAction?.invoke()
         return true
     }
 
@@ -630,6 +663,7 @@ class InkEngine(
         redoStack.clear()
         redoActs.clear()
         acts += AddAct
+        onUndoableAction?.invoke()
         notifyContentCommittedAfterWrites()
         return copies.size
     }
@@ -693,6 +727,7 @@ class InkEngine(
         // 可復原：改圖層也進動作紀錄，與落筆、整組插入照時間順序一起復原／重做。
         acts += ReassignAct(old.pointerId, old.layer, targetLayer)
         redoActs.clear()
+        onUndoableAction?.invoke()
         return true
     }
 
@@ -1003,6 +1038,7 @@ class InkEngine(
         redoStack.clear()
         redoActs.clear()
         acts += AddAct
+        onUndoableAction?.invoke()
         if (coreId != null) committed[id] = coreId
         return stroke
     }

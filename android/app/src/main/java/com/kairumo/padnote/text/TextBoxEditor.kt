@@ -17,6 +17,7 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
@@ -30,6 +31,7 @@ import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -38,7 +40,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.input.OffsetMapping
+import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.input.TransformedText
+import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.kairumo.padnote.LocalizationStrings
@@ -61,6 +69,10 @@ fun TextBoxEditor(
     box: TextBox,
     languageTag: String,
     onReorder: ((com.kairumo.padnote.canvas.ObjectStacking.Reorder) -> Unit)? = null,
+    /** 即時協同：別人改了這個方塊就遞增（`box` 已是寫回後的那一份）。 */
+    remoteRevision: Int = 0,
+    /** 即時協同：同時在這個方塊打字的人（顯示提示，不鎖 —— 兩邊的字都會留下）。 */
+    typingPeerName: String? = null,
     onChanged: (TextBox) -> Unit,
     onDelete: () -> Unit,
     onDismiss: () -> Unit
@@ -70,6 +82,14 @@ fun TextBoxEditor(
     fun l(key: String) = LocalizationStrings.localized(key, languageTag)
 
     var text by remember(box.id) { mutableStateOf(box.text) }
+    // 帶選取範圍的輸入值：Word 式的「選幾個字、按粗體」要知道選了哪幾個字。
+    var field by remember(box.id) { mutableStateOf(TextFieldValue(box.text, TextRange(box.text.length))) }
+    // 使用者有沒有點進過輸入框。**不用「目前有沒有焦點」**：字級、顏色的下拉選單是彈出視窗，
+    // 一打開就把焦點從輸入框拿走 —— 等選單項目被按下時，選取範圍還在，焦點已經不在了，
+    // 結果選了幾個字改字級，卻改到整個方塊。
+    var fieldTouched by remember(box.id) { mutableStateOf(false) }
+    // 只有游標時按了格式：留給接下來打的字（Word 的行為）。
+    var caretStyle by remember(box.id) { mutableStateOf<Pair<Int, TextCharStyle>?>(null) }
     var revision by remember(box.id) { mutableStateOf(0) }
     var tab by remember(box.id) { mutableStateOf(0) }
     var symbolCategory by remember(box.id) { mutableStateOf(0) }
@@ -78,6 +98,40 @@ fun TextBoxEditor(
         change(box)
         revision++
         onChanged(box)
+    }
+
+    // 別人在同一個方塊打了字：換上新內容，游標跟著它原本旁邊的字走（變動在游標前面就平移）。
+    LaunchedEffect(remoteRevision) {
+        val incoming = box.text
+        if (incoming == text) return@LaunchedEffect
+        val old = text
+        var prefix = 0
+        while (prefix < old.length && prefix < incoming.length && old[prefix] == incoming[prefix]) prefix++
+        val delta = incoming.length - old.length
+        fun shift(i: Int) = (if (i <= prefix) i else maxOf(prefix, i + delta)).coerceIn(0, incoming.length)
+        text = incoming
+        field = TextFieldValue(incoming, TextRange(shift(field.selection.start), shift(field.selection.end)))
+        revision++
+    }
+
+    /** 這一次格式要套在哪：有選取 → 選取的字；游標在詞中 → 那個詞；只有游標 → 接下來打的字；沒在打字 → 整個方塊。 */
+    fun scope(): TextFormatScope {
+        val sel = field.selection
+        if (!sel.collapsed) {
+            return if (sel.min == 0 && sel.max == box.text.length) TextFormatScope.WholeBox
+            else TextFormatScope.Selection(sel.min, sel.max)
+        }
+        if (!fieldTouched) return TextFormatScope.WholeBox
+        RichText.wordRange(box.text, sel.start)?.let { return TextFormatScope.Selection(it.first, it.last + 1) }
+        return TextFormatScope.Caret(sel.start)
+    }
+
+    fun displayedStyle(): ResolvedCharStyle = when (val sc = scope()) {
+        is TextFormatScope.Selection -> RichText.resolvedStyleAt(box, sc.start, sc.end)
+        is TextFormatScope.Caret -> caretStyle?.takeIf { it.first == sc.location }
+            ?.let { RichText.resolve(it.second, RichText.base(box)) }
+            ?: RichText.resolvedStyleAt(box, sc.location, sc.location)
+        TextFormatScope.WholeBox -> RichText.base(box)
     }
 
     AlertDialog(
@@ -90,6 +144,13 @@ fun TextBoxEditor(
                 modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
+                typingPeerName?.let { name ->
+                    Text(
+                        l("collab_peer_typing").replace("%@", name),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
                 // 空的時候要看得出來這裡可以打字。原本是一個沒有邊框、
                 // 沒有提示字的 BasicTextField —— 畫面上就是一塊空白，
                 // 使用者不會知道那是輸入框（模擬器上實際看不出來）。
@@ -110,18 +171,83 @@ fun TextBoxEditor(
                         )
                     }
                     BasicTextField(
-                        value = text,
-                        onValueChange = {
-                            text = it
-                            mutate { b -> b.text = it }
+                        value = field,
+                        onValueChange = { next ->
+                            val old = box.text
+                            if (next.text != old) {
+                                val pending = caretStyle
+                                mutate { b ->
+                                    b.text = next.text
+                                    RichText.adjustRuns(b, old)
+                                    // 游標處留著的格式套在剛打出來的字上。
+                                    if (pending != null && next.selection.collapsed &&
+                                        next.selection.start > pending.first &&
+                                        next.text.length - old.length == next.selection.start - pending.first
+                                    ) {
+                                        RichText.apply(b, pending.second, pending.first, next.selection.start)
+                                        caretStyle = next.selection.start to pending.second
+                                    }
+                                }
+                                text = next.text
+                            } else if (caretStyle != null && (next.selection.start != caretStyle?.first || !next.selection.collapsed)) {
+                                caretStyle = null
+                            }
+                            field = next
+                        },
+                        // 編輯中就看得到逐字格式（字級、顏色、醒目提示），不是要關掉面板才知道套上了沒有。
+                        visualTransformation = { input ->
+                            TransformedText(
+                                if (input.text == box.text) RichText.annotated(box)
+                                else androidx.compose.ui.text.AnnotatedString(input.text),
+                                OffsetMapping.Identity
+                            )
                         },
                         textStyle = TextStyle(
-                            fontSize = 16.sp,
-                            color = MaterialTheme.colorScheme.onSurface
+                            fontSize = box.fontSize.coerceIn(10f, 32f).sp,
+                            fontWeight = if (box.bold) androidx.compose.ui.text.font.FontWeight.Bold else null,
+                            fontStyle = if (box.italic) androidx.compose.ui.text.font.FontStyle.Italic else null,
+                            fontFamily = resolveFontFamily(box.fontFamily),
+                            textDecoration = decoration(box),
+                            color = parseColor(box.textColorHex) ?: MaterialTheme.colorScheme.onSurface
                         ),
                         cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .onFocusChanged { if (it.isFocused) fieldTouched = true }
                     )
+                }
+
+                // Word 式的格式列：有選取時只改選到的字，否則改整個方塊。
+                if (revision >= 0) {
+                    // 手機上的對話框很窄：格式列收成一條左右捲的列，否則會折成好幾排，
+                    // 把下面可捲動的設定區擠到只剩一條縫。平板照樣換行。
+                    val compact = androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp < 600
+                    FlowRow(
+                        modifier = if (compact) Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())
+                        else Modifier.fillMaxWidth(),
+                        // 在左右捲動的容器裡寬度沒有上限，FlowRow 自然排成一列。
+                        horizontalArrangement = Arrangement.spacedBy(2.dp)
+                    ) {
+                        WordFormatControls(
+                            state = WordFormatState.of(box, displayedStyle()),
+                            l = { key -> l(key) },
+                            languageTag = languageTag,
+                            tagPrefix = "text_editor.format"
+                        ) { action ->
+                            val sc = scope()
+                            var pending: TextCharStyle? = null
+                            mutate { b -> pending = applyWordFormat(b, action, sc) }
+                            pending?.let { edit ->
+                                val loc = (sc as TextFormatScope.Caret).location
+                                val merged = caretStyle?.takeIf { it.first == loc }?.second?.overlaid(edit) ?: edit
+                                caretStyle = loc to merged
+                            }
+                            if (box.text != field.text) {
+                                text = box.text
+                                field = TextFieldValue(box.text, TextRange(box.text.length))
+                            }
+                        }
+                    }
                 }
 
                 Divider()
@@ -153,7 +279,8 @@ fun TextBoxEditor(
                             label(l("font_size"))
                             chipRow(listOf(12f, 16f, 20f, 28f, 36f).map { size ->
                                 ChipSpec("${size.toInt()}", box.fontSize == size && revision >= 0) {
-                                    mutate { it.fontSize = size }
+                                    // 這一頁是「整個方塊」的設定：同一項的逐字覆寫一併拿掉，否則看起來改不動。
+                                    mutate { RichText.applyToWholeBox(it, TextCharStyle(fontSize = size)) }
                                 }
                             })
                             label(l("alignment"))
@@ -164,10 +291,10 @@ fun TextBoxEditor(
                             })
                             label(l("font_style"))
                             chipRow(listOf(
-                                ChipSpec("B", box.bold && revision >= 0) { mutate { it.bold = !it.bold } },
-                                ChipSpec("I", box.italic && revision >= 0) { mutate { it.italic = !it.italic } },
-                                ChipSpec("U", box.underline && revision >= 0) { mutate { it.underline = !it.underline } },
-                                ChipSpec("S", box.strikethrough && revision >= 0) { mutate { it.strikethrough = !it.strikethrough } }
+                                ChipSpec("B", box.bold && revision >= 0) { mutate { RichText.applyToWholeBox(it, TextCharStyle(bold = !it.bold)) } },
+                                ChipSpec("I", box.italic && revision >= 0) { mutate { RichText.applyToWholeBox(it, TextCharStyle(italic = !it.italic)) } },
+                                ChipSpec("U", box.underline && revision >= 0) { mutate { RichText.applyToWholeBox(it, TextCharStyle(underline = !it.underline)) } },
+                                ChipSpec("S", box.strikethrough && revision >= 0) { mutate { RichText.applyToWholeBox(it, TextCharStyle(strikethrough = !it.strikethrough)) } }
                             ))
 
                             // 文字顏色。Android 原本完全沒有這一項 —— textColorHex
@@ -176,7 +303,7 @@ fun TextBoxEditor(
                             label(l("text_color"))
                             chipRow(borderColors().map { hex ->
                                 ChipSpec(hex, box.textColorHex == hex && revision >= 0) {
-                                    mutate { it.textColorHex = hex }
+                                    mutate { RichText.applyToWholeBox(it, TextCharStyle(textColorHex = hex)) }
                                 }
                             })
                         }
@@ -298,8 +425,13 @@ fun TextBoxEditor(
                             ) {
                                 items(SYMBOL_SETS[symbolCategory]) { symbol ->
                                     TextButton(onClick = {
+                                        val old = box.text
                                         text += symbol
-                                        mutate { it.text = text }
+                                        mutate {
+                                            it.text = text
+                                            RichText.adjustRuns(it, old)
+                                        }
+                                        field = TextFieldValue(text, TextRange(text.length))
                                     }) { Text(symbol) }
                                 }
                             }

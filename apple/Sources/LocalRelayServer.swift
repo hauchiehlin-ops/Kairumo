@@ -21,6 +21,10 @@ import UIKit
 /// 第一位加入者即房主、presence/oplog 轉發給房內其他人、oplog 保留最近
 /// 200 筆供斷線追趕、房空自動回收。
 public final class LocalRelayServer {
+    /// 暫存上限（與 Rust 版 `RECENT_MAX_COUNT`／`RECENT_MAX_BYTES` 相同）。
+    static let recentMaxCount = 2000
+    static let recentMaxBytes = 32 * 1024 * 1024
+
     // profile-scope: profile 每個設定檔各有一份狀態，切換時必須重設
     public static let shared = LocalRelayServer()
 
@@ -41,8 +45,27 @@ public final class LocalRelayServer {
         let id: String
         let ownerId: String
         var peers: [String: PeerConnection] = [:]
-        /// 最近的 oplog 環形快取（上限 200，與 Rust 版一致）
+        /// 最近的 oplog 暫存。上限（筆數與位元組數，先到者為準）與 Rust 版 `RECENT_MAX_*` 一致。
         var recentOplogs: [[String: Any]] = []
+        var recentSizes: [Int] = []
+        var recentBytes = 0
+        /// 下一個要配發的序號（與 Rust 版 `Room::next_seq` 相同語意）。
+        var nextSeq: UInt64 = 1
+
+        func remember(_ op: [String: Any], size: Int) {
+            recentOplogs.append(op)
+            recentSizes.append(size)
+            recentBytes += size
+            while recentOplogs.count > LocalRelayServer.recentMaxCount
+                || (recentBytes > LocalRelayServer.recentMaxBytes && recentOplogs.count > 1) {
+                recentOplogs.removeFirst()
+                recentBytes -= recentSizes.removeFirst()
+            }
+        }
+
+        var oldestSeq: UInt64 {
+            (recentOplogs.first?["seq"] as? NSNumber)?.uint64Value ?? nextSeq
+        }
 
         init(id: String, ownerId: String) {
             self.id = id
@@ -121,6 +144,8 @@ public final class LocalRelayServer {
         parameters.allowLocalEndpointReuse = true
         let wsOptions = NWProtocolWebSocket.Options()
         wsOptions.autoReplyPing = true
+        // 新圖片與整份狀態可能好幾 MB（與 Rust 版 tungstenite 的 64 MB 預設一致）。
+        wsOptions.maximumMessageSize = 64 * 1024 * 1024
         parameters.defaultProtocolStack.applicationProtocols.insert(wsOptions, at: 0)
 
         do {
@@ -275,16 +300,28 @@ public final class LocalRelayServer {
                   let userId = json["user_id"] as? String else { return }
             var forward = json
             forward["type"] = "peer_oplog"
-            if let room = rooms[roomId] {
-                room.recentOplogs.append(forward)
-                if room.recentOplogs.count > 200 {
-                    room.recentOplogs.removeFirst(room.recentOplogs.count - 200)
-                }
+            // 整份狀態的請求與回覆只轉送、不暫存、不配序號（與 Rust 版 `is_transient_kind` 相同）。
+            let transient = (json["kind"] as? String)?.hasPrefix("state_") ?? false
+            if let room = rooms[roomId], !transient {
+                forward["seq"] = room.nextSeq
+                room.nextSeq += 1
+                room.remember(forward, size: data.count)
             }
             broadcast(forward, in: roomId, except: userId)
 
         case "catchup":
             guard let roomId = json["room_id"] as? String else { return }
+            if let lastSeq = (json["last_seq"] as? NSNumber)?.uint64Value {
+                // 新版：以中繼的序號補發；要補的那一段被擠出暫存時告訴客戶端「不完整」。
+                guard let room = rooms[roomId] else {
+                    send(["type": "oplog_batch", "room_id": roomId, "oplogs": [], "truncated": false], to: connection)
+                    return
+                }
+                let missing = room.recentOplogs.filter { (($0["seq"] as? NSNumber)?.uint64Value ?? 0) > lastSeq }
+                send(["type": "oplog_batch", "room_id": roomId, "oplogs": missing,
+                      "truncated": room.oldestSeq > lastSeq + 1], to: connection)
+                return
+            }
             let lastLamport = ((json["last_lamport"] as? NSNumber)?.uint64Value) ?? 0
             let missing = (rooms[roomId]?.recentOplogs ?? []).filter {
                 (($0["lamport"] as? NSNumber)?.uint64Value ?? 0) > lastLamport
@@ -559,6 +596,8 @@ public final class LocalSyncDiscovery: ObservableObject {
         let parameters = NWParameters.tcp
         let wsOptions = NWProtocolWebSocket.Options()
         wsOptions.autoReplyPing = true
+        // 新圖片與整份狀態可能好幾 MB（與 Rust 版 tungstenite 的 64 MB 預設一致）。
+        wsOptions.maximumMessageSize = 64 * 1024 * 1024
         parameters.defaultProtocolStack.applicationProtocols.insert(wsOptions, at: 0)
         
         let connection = NWConnection(to: endpoint, using: parameters)

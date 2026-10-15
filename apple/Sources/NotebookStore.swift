@@ -343,6 +343,10 @@ public struct NotebookDocument: Identifiable, Codable, Hashable, @unchecked Send
     /// 陣列長度可以短於頁數（舊筆記根本沒有這個欄位），取不到的那幾頁
     /// 退回整本的 `template` —— 那正是它們原本的樣子。
     public var pagePaperIds: [String]?
+    /// 每一頁的穩定 id（核心的頁面 id）。即時協同以它指稱頁面（設計 §8.1）：頁碼會因為
+    /// 別人新增、刪除、搬動頁面而改變，id 不會。`nil` = 這本還沒需要過（舊檔沒有這個欄位）。
+    /// 有值時，每一個頁面操作都要讓它跟著走（見 `NotebookStore` 的 add/insert/delete/move/duplicate）。
+    public var pageIds: [String]?
 
     /// 版面的配色。nil 是預設那一組。
     ///
@@ -434,6 +438,14 @@ public struct NotebookDocument: Identifiable, Codable, Hashable, @unchecked Send
     ///
     /// 補的是整本的樣板，不是空字串：長度不足時取不到的那幾頁本來就是照
     /// 整本的樣板畫的，補一個空字串會讓它在某些路徑上變成「認不得的紙」。
+    /// 補齊或截斷頁面 id 到 `pageCount` 頁（只在已經有 `pageIds` 時才動）。
+    public nonisolated mutating func alignPageIds() {
+        guard var ids = pageIds else { return }
+        while ids.count < pageCount { ids.append(UUID().uuidString.lowercased()) }
+        if ids.count > pageCount { ids = Array(ids.prefix(pageCount)) }
+        pageIds = ids
+    }
+
     public nonisolated mutating func padPagePaperIds(to count: Int) {
         var ids = pagePaperIds ?? []
         while ids.count < count { ids.append(template.paperId) }
@@ -850,6 +862,9 @@ public struct NoteTextAttachment: Identifiable, Codable, Hashable, ObjectFrameSt
     public var firstLineIndent: CGFloat?
     /// 整段縮排（點）。
     public var paragraphIndent: CGFloat?
+
+    /// 逐字格式（見 `RichText`）。`nil` = 整個方塊同一種格式。舊檔沒有這個欄位。
+    public var runs: [TextStyleRun]? = nil
 
     public init(
         id: String = UUID().uuidString,
@@ -2869,11 +2884,15 @@ public final class NotebookStore: ObservableObject {
 
     /// 為指定筆記安全原子新增下一頁，回傳新頁碼 index
     @discardableResult
-    public func addPage(notebookId: String, paperId: String? = nil) -> Int {
+    public func addPage(notebookId: String, paperId: String? = nil, pageId: String? = nil) -> Int {
         guard let idx = notebooks.firstIndex(where: { $0.id == notebookId }) else { return 0 }
         let oldPageCount = max(1, notebooks[idx].pageCount)
         let newPageCount = oldPageCount + 1
+        notebooks[idx].alignPageIds()
         notebooks[idx].pageCount = newPageCount
+        if notebooks[idx].pageIds != nil {
+            notebooks[idx].pageIds?.append(pageId ?? UUID().uuidString.lowercased())
+        }
 
         // 確保 pageHeights 陣列長度對齊
         var heights = notebooks[idx].pageHeights ?? Array(repeating: 1800.0, count: oldPageCount)
@@ -2896,11 +2915,16 @@ public final class NotebookStore: ObservableObject {
 
     /// 在指定頁面後方插入新頁面，平移後續頁面並回傳新插入頁面之 pageIndex
     @discardableResult
-    public func insertPage(notebookId: String, afterIndex: Int, paperId: String? = nil) -> Int {
+    public func insertPage(notebookId: String, afterIndex: Int, paperId: String? = nil, pageId: String? = nil) -> Int {
         guard let idx = notebooks.firstIndex(where: { $0.id == notebookId }) else { return 0 }
         let oldPageCount = max(1, notebooks[idx].pageCount)
         let newPageCount = oldPageCount + 1
         let insertIndex = min(max(0, afterIndex + 1), oldPageCount)
+        notebooks[idx].alignPageIds()
+        if notebooks[idx].pageIds != nil {
+            notebooks[idx].pageIds?.insert(pageId ?? UUID().uuidString.lowercased(),
+                                           at: min(insertIndex, notebooks[idx].pageIds?.count ?? 0))
+        }
 
         // 從最後一頁往前平移圖檔
         var p = oldPageCount - 1
@@ -3028,6 +3052,11 @@ public final class NotebookStore: ObservableObject {
         if pageIndex < notebooks[idx].pagesData.count {
             notebooks[idx].pagesData.remove(at: pageIndex)
         }
+        notebooks[idx].alignPageIds()
+        if var ids = notebooks[idx].pageIds, pageIndex < ids.count {
+            ids.remove(at: pageIndex)
+            notebooks[idx].pageIds = ids
+        }
         if var ids = notebooks[idx].pagePaperIds, pageIndex < ids.count {
             ids.remove(at: pageIndex)
             notebooks[idx].pagePaperIds = ids
@@ -3131,6 +3160,11 @@ public final class NotebookStore: ObservableObject {
             notebooks[idx].pagesData.insert(d, at: to)
         }
         notebooks[idx].padPagePaperIds(to: total)
+        notebooks[idx].alignPageIds()
+        if var ids = notebooks[idx].pageIds, from < ids.count, to < ids.count {
+            ids.insert(ids.remove(at: from), at: to)
+            notebooks[idx].pageIds = ids
+        }
         if var ids = notebooks[idx].pagePaperIds, from < ids.count, to < ids.count {
             let moved = ids.remove(at: from)
             ids.insert(moved, at: to)
@@ -3224,6 +3258,11 @@ public final class NotebookStore: ObservableObject {
             // 紙張跟著頁走。不帶的話，一張四象限搬到別本之後會變成那本的
             // 預設紙 —— 使用者搬的是「那一頁」，不是「那一頁上的字」。
             let carried = notebooks[sourceIdx].paperId(forPage: from)
+            notebooks[targetIdx].alignPageIds()
+            if notebooks[targetIdx].pageIds != nil {
+                // 搬到另一本的頁是那一本的新頁：給新的 id，不沿用來源的。
+                notebooks[targetIdx].pageIds?.append(UUID().uuidString.lowercased())
+            }
             notebooks[targetIdx].padPagePaperIds(to: to)
             notebooks[targetIdx].pagePaperIds?.append(carried)
 
@@ -3344,6 +3383,12 @@ public final class NotebookStore: ObservableObject {
         notebooks[idx].padPagePaperIds(to: total)
         notebooks[idx].pagePaperIds?.insert(
             sourcePaper, at: min(pageIndex + 1, notebooks[idx].pagePaperIds?.count ?? 0))
+        // 複製出來的是新的一頁：給新的 id（與被複製的那頁不是同一頁）。
+        notebooks[idx].alignPageIds()
+        if notebooks[idx].pageIds != nil {
+            notebooks[idx].pageIds?.insert(
+                UUID().uuidString.lowercased(), at: min(pageIndex + 1, notebooks[idx].pageIds?.count ?? 0))
+        }
 
         // 附件的頁碼也要讓出一格。
         //
@@ -4384,6 +4429,8 @@ extension NoteAudioAttachment: PageIndexed {}
 extension NoteTableAttachment: PageIndexed {}
 extension NoteShapeAttachment: PageIndexed {}
 extension NoteConnectionAttachment: PageIndexed {}
+extension NoteTapeAttachment: PageIndexed {}
+extension StickyAnnotationAnchor: PageIndexed {}
 
 public struct NoteTapeAttachment: Identifiable, Codable, Hashable {
     public let id: String

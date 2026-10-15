@@ -199,6 +199,14 @@ import android.content.Intent
 import androidx.compose.foundation.gestures.detectTapGestures
 import com.kairumo.padnote.text.TextBoxLayer
 import com.kairumo.padnote.text.TextBoxStore
+import com.kairumo.padnote.canvas.CanvasHistory
+import com.kairumo.padnote.canvas.CanvasSnapshot
+import com.kairumo.padnote.canvas.ContinuousUndoController
+import com.kairumo.padnote.text.RichText
+import com.kairumo.padnote.text.TextFormatScope
+import com.kairumo.padnote.text.WordFormatControls
+import com.kairumo.padnote.text.WordFormatState
+import com.kairumo.padnote.text.applyWordFormat
 import androidx.compose.ui.platform.LocalDensity
 import androidx.documentfile.provider.DocumentFile
 import androidx.compose.runtime.rememberCoroutineScope
@@ -230,6 +238,11 @@ import uniffi.padnote_core.FfiImportSlot
 import uniffi.padnote_core.FfiPenOutcome
 import com.kairumo.padnote.asset.AssetLibrarySheet
 import com.kairumo.padnote.collab.CollaborationManager
+import com.kairumo.padnote.collab.AndroidCollabCanvas
+import com.kairumo.padnote.collab.AndroidCollabController
+import com.kairumo.padnote.collab.CollabPageStores
+import com.kairumo.padnote.collab.ContinuousCollabBridge
+import com.kairumo.padnote.collab.PeerSelectionLayer
 import com.kairumo.padnote.collab.CollaborationSheet
 import com.kairumo.padnote.asset.renderAssetPng
 import com.kairumo.padnote.model3d.Model3DLayer
@@ -248,6 +261,7 @@ import com.kairumo.padnote.ink.DraftingToolboxDialog
 import com.kairumo.padnote.ink.LowLatencyInkCanvas
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.zIndex
 import androidx.compose.ui.Modifier
@@ -1799,6 +1813,8 @@ private fun InkScreen(
     // 框選。與 Apple 同一套規則 —— 見 canvas/ObjectMarquee.kt 的說明。
     var marqueeActive by remember { mutableStateOf(false) }
     var marqueeSelection by remember { mutableStateOf(setOf<String>()) }
+    /** 連續框選（見 ObjectMarquee.combined）。 */
+    var marqueeAdditive by remember { mutableStateOf(false) }
     var renamingAudio by remember { mutableStateOf<AudioObject?>(null) }
     // 套件裡的錄音目錄。錄音檔就住在這裡（format-spec §5），
     // 播放與「插入錄音」的清單都看它。
@@ -2505,6 +2521,102 @@ private fun InkScreen(
         clearToken++   // 低延遲路徑的前緩衝也要重畫，否則讀回來的筆畫不會出現
     }
 
+    // ── 全域復原／重做（CanvasHistory）─────────────────────────────
+    //
+    // 筆跡與物件在同一條時間軸上：先畫一筆、再搬一張圖、再畫一筆，復原三次就是
+    // 反過來三步。原本只有筆跡能復原 —— 搬圖、刪表格、改形狀顏色、調圖層都退不回去。
+    // 以這一頁為單位：換頁或重新載入（含別台同步進來）就重新開始，別人的修改不會變成
+    // 這台的復原步驟。
+    // 換到連續頁面模式再換回來也重新開始：那段期間的修改由連續模式自己的時間軸記。
+    val canvasHistory = remember(notebook, pageId, pageDisplayMode) { CanvasHistory() }
+    // 連續頁面模式的復原由 ContinuousPagesView 處理（它自己的時間軸跨頁）；工具列的鈕照樣只有一組。
+    val continuousUndo = remember { ContinuousUndoController() }
+    fun canvasSnapshot() = CanvasSnapshot(
+        texts = textStore.all.map { it.copy() },
+        images = imageStore.all.map { it.copy() },
+        shapes = shapeStore.all.map { it.copy() },
+        connections = shapeStore.allConnections.map { it.copy() },
+        tables = tableStore.all.map { it.copyTable() },
+        charts = chartStore.all.map { it.copy() },
+        links = links.map { it.copy() },
+        models3D = models3D.map { it.copy() },
+        audio = audioCards.map { it.copy() },
+        order = meta.objectOrder(pageIndex)
+    )
+    fun applyCanvasSnapshot(snapshot: CanvasSnapshot) {
+        textStore.restoreTo(snapshot.texts)
+        imageStore.restoreTo(snapshot.images)
+        shapeStore.restoreTo(snapshot.shapes, snapshot.connections)
+        tableStore.restoreTo(snapshot.tables)
+        chartStore.restoreTo(snapshot.charts)
+        if (links != snapshot.links) {
+            links = snapshot.links.map { it.copy() }.toMutableList()
+            meta.setLinks(notebook?.first, links)
+        }
+        if (models3D != snapshot.models3D) {
+            models3D = snapshot.models3D.map { it.copy() }.toMutableList()
+            meta.setModels3D(notebook?.first, models3D)
+        }
+        if (audioCards != snapshot.audio) {
+            audioCards = snapshot.audio.map { it.copy() }.toMutableList()
+            meta.setAudioCards(notebook?.first, audioCards)
+        }
+        if (meta.objectOrder(pageIndex) != snapshot.order) {
+            meta.setObjectOrder(notebook?.first, pageIndex, snapshot.order)
+        }
+        // 指向已經不存在的物件的選取要清掉，否則工具列與把手對著一個空殼。
+        val alive = (snapshot.texts.map { it.id } + snapshot.images.map { it.id } + snapshot.shapes.map { it.id } +
+            snapshot.connections.map { it.id } + snapshot.tables.map { it.id } + snapshot.charts.map { it.id } +
+            snapshot.links.map { it.id } + snapshot.models3D.map { it.id } + snapshot.audio.map { it.id }).toSet()
+        if (selectedTextId != null && selectedTextId !in alive) selectedTextId = null
+        if (editingText != null && editingText?.id !in alive) editingText = null
+        if (selectedImageId != null && selectedImageId !in alive) selectedImageId = null
+        if (selectedTableId != null && selectedTableId !in alive) selectedTableId = null
+        if (selectedChartId != null && selectedChartId !in alive) selectedChartId = null
+        if (selectedConnectionId != null && selectedConnectionId !in alive) selectedConnectionId = null
+        if (selectedLinkId != null && selectedLinkId !in alive) selectedLinkId = null
+        if (selectedAudioId != null && selectedAudioId !in alive) selectedAudioId = null
+        if (selectedModel3DId != null && selectedModel3DId !in alive) selectedModel3DId = null
+        selectedShapeIds = selectedShapeIds.filter { it in alive }.toSet()
+        marqueeSelection = marqueeSelection.filter { it in alive }.toSet()
+        textRevision++; imageRevision++; shapeRevision++; tableRevision++; chartRevision++
+        linkRevision++; model3DRevision++; audioRevision++; stackRevision++
+    }
+    fun globalUndo() {
+        if (pageDisplayMode == PageDisplayMode.CONTINUOUS) {
+            continuousUndo.undo()
+            return
+        }
+        val did = canvasHistory.undo(::applyCanvasSnapshot) { engine.undo() }
+        // 這次開啟之後還沒做過任何事：沿用原本的行為，收回檔案裡最後一筆。
+        if (!did) engine.undo()
+        revision++
+        clearToken++
+    }
+    fun globalRedo() {
+        if (pageDisplayMode == PageDisplayMode.CONTINUOUS) {
+            continuousUndo.redo()
+            return
+        }
+        canvasHistory.redo(::applyCanvasSnapshot) { engine.redo() }
+        revision++
+        clearToken++
+    }
+    // 基準一定要在所有物件 load() 之後才取（效果依宣告順序執行，這一段在它們後面）——
+    // 先取的話，「讀進來」本身會被當成新增了所有物件，按一次復原整頁就空了。
+    LaunchedEffect(canvasHistory) { canvasHistory.reset(canvasSnapshot()) }
+    DisposableEffect(engine, canvasHistory) {
+        engine.onUndoableAction = { canvasHistory.inkCommitted() }
+        onDispose { engine.onUndoableAction = null }
+    }
+    // 物件有動就比對一次（各型別寫回之後都會遞增自己的 revision）。
+    LaunchedEffect(
+        canvasHistory, textRevision, imageRevision, shapeRevision, tableRevision, chartRevision,
+        stackRevision, linkRevision, model3DRevision, audioRevision, links, models3D, audioCards
+    ) {
+        canvasHistory.observe(canvasSnapshot())
+    }
+
     // 筆刷、顏色、筆寬。在此之前 Android 只有一支固定的黑色鋼筆，
     // 連橡皮擦都選不到 —— 核心一直支援，缺的只是 UI。
     var inkTool by remember { mutableStateOf(InkTool.FOUNTAIN_PEN) }
@@ -2843,6 +2955,178 @@ private fun InkScreen(
         }.orEmpty()
     }
     val collaboration = remember { CollaborationManager(activity) }
+
+    // ── 即時協同（設計 §8，協定 3）─────────────────────────────
+    //
+    // 與 Apple 端同一套線上格式：物件欄位合併（最後寫入者勝）、文字方塊的字元 CRDT、
+    // 逐筆的筆跡、頁面的增刪搬。iPad 與 Android 在同一個房間裡互相看得到對方的每一個修改。
+    val collab = remember(notebookId) { AndroidCollabController(collaboration) }
+    val continuousCollab = remember { ContinuousCollabBridge() }
+    val collabRoom = (collaboration.status as? CollaborationManager.Status.Connected)?.roomId
+    /** 以哪一個房間為基準 reset 過。斷線重連回同一個房間不算新的起點 —— 那段期間的本機修改還要送出去。 */
+    var collabBaseRoom by remember(collab) { mutableStateOf<String?>(null) }
+    /** 上一次要整份狀態的時間：加入時要過一次，緊接著的「補發不完整」就不必再要。 */
+    var collabLastStateRequest by remember(collab) { mutableStateOf(0L) }
+    /** 別人改了正在編輯的文字方塊：通知編輯框更新內容。 */
+    var collabTextRevision by remember { mutableIntStateOf(0) }
+    val collabActive = collabRoom != null && collabBaseRoom == collabRoom
+    fun collabCanvas(): AndroidCollabCanvas? {
+        val session = notebook?.first ?: return null
+        return if (pageDisplayMode == PageDisplayMode.CONTINUOUS) {
+            AndroidCollabCanvas(session, meta, continuousCollab.loadedPages(), continuousCollab.storesFor)
+        } else {
+            val live = CollabPageStores(textStore, imageStore, tableStore, chartStore, shapeStore)
+            AndroidCollabCanvas(session, meta, listOfNotNull(pageId)) { if (it == pageId) live else null }
+        }
+    }
+    fun collabEngineFor(page: String): InkEngine? =
+        if (pageDisplayMode == PageDisplayMode.CONTINUOUS) continuousCollab.engineFor(page)
+        else engine.takeIf { page == pageId }
+    fun publishCollab() {
+        if (!collabActive || collab.isApplyingRemote) return
+        val session = notebook?.first ?: return
+        collabCanvas()?.let { collab.publish(it, session) }
+        if (pageDisplayMode == PageDisplayMode.CONTINUOUS) {
+            for (page in continuousCollab.loadedPages()) continuousCollab.engineFor(page)?.let { collab.publishInk(page, it) }
+        } else {
+            pageId?.let { collab.publishInk(it, engine) }
+        }
+    }
+    LaunchedEffect(collab, collabRoom) {
+        val room = collabRoom ?: return@LaunchedEffect
+        if (room == collabBaseRoom) return@LaunchedEffect
+        val session = notebook?.first ?: return@LaunchedEffect
+        // 進入（或換）房間：以目前的內容為大家共同的起點，再向房間裡的人要整份狀態（設計 §7）——
+        // 這台的檔案可能比房間裡的舊。房間裡只有自己就不必要。
+        collabCanvas()?.let { collab.reset(it, session) }
+        collabBaseRoom = room
+        if (collaboration.peers.isNotEmpty()) {
+            collab.requestState()
+            collabLastStateRequest = System.currentTimeMillis()
+        }
+    }
+    // 本機的修改（各型別寫回之後都會遞增自己的 revision；頁面增刪搬會動 pageCount／revision）。
+    LaunchedEffect(
+        collabActive, textRevision, imageRevision, shapeRevision, tableRevision, chartRevision, stackRevision,
+        linkRevision, model3DRevision, audioRevision, pinRevision, links, models3D, audioCards, pins, pageCount, revision
+    ) { publishCollab() }
+    // 回呼註冊一次、活得比這一格畫面久：一律呼叫「最新的那一份」，否則拿到的是舊的頁面與儲存。
+    val latestPublishCollab by rememberUpdatedState<() -> Unit> { publishCollab() }
+    DisposableEffect(engine) {
+        val previous = engine.onContentCommitted
+        engine.onContentCommitted = { previous?.invoke(); latestPublishCollab() }
+        onDispose { engine.onContentCommitted = previous }
+    }
+    DisposableEffect(continuousCollab) {
+        continuousCollab.onLocalChange = { latestPublishCollab() }
+        onDispose { continuousCollab.onLocalChange = null }
+    }
+
+    /** 放開一個被別人鎖住的選取。 */
+    fun releaseSelection(id: String) {
+        if (selectedTextId == id) selectedTextId = null
+        if (editingText?.id == id) editingText = null
+        if (selectedImageId == id) selectedImageId = null
+        if (selectedTableId == id) selectedTableId = null
+        if (selectedChartId == id) selectedChartId = null
+        if (selectedConnectionId == id) selectedConnectionId = null
+        if (selectedLinkId == id) selectedLinkId = null
+        if (selectedAudioId == id) selectedAudioId = null
+        if (selectedModel3DId == id) selectedModel3DId = null
+        selectedShapeIds = selectedShapeIds - id
+        marqueeSelection = marqueeSelection - id
+    }
+
+    fun applyCollabOp(op: CollaborationManager.RemoteOplog) {
+        if (!collabActive) return
+        val session = notebook?.first ?: return
+        // 先把本機還沒送出的修改送出去（送出排在下一格畫面）：否則別人的字套進來時，
+        // 這台剛打、還沒進 CRDT 的字會被當成不存在而被蓋掉。
+        publishCollab()
+        val main = android.os.Handler(android.os.Looper.getMainLooper())
+        val result = collab.apply(op, session, meta, { collabCanvas()!! }, ::collabEngineFor) { delay, work ->
+            main.postDelayed({ if (collabActive) work() }, delay)
+        } ?: return
+        if (result.pages) {
+            // 留在原本那一頁（它的索引可能變了）；那一頁被刪了才退到最近的一頁。
+            val stay = pageId
+            pageCount = runCatching { session.pageCount().toInt() }.getOrDefault(pageCount)
+            val moved = (0 until pageCount).firstOrNull {
+                runCatching { session.pageIdAt(it.toUInt()) }.getOrNull() == stay
+            }
+            pageIndex = moved ?: pageIndex.coerceIn(0, maxOf(0, pageCount - 1))
+        }
+        if (result.objects) {
+            meta.refresh(session)
+            links = meta.links(); models3D = meta.models3D(); audioCards = meta.audioCards(); pins = meta.commentPins()
+            // 對方刪掉的物件，本機的選取與編輯狀態要清掉。
+            val alive = (textStore.all.map { it.id } + imageStore.all.map { it.id } + shapeStore.all.map { it.id } +
+                shapeStore.allConnections.map { it.id } + tableStore.all.map { it.id } + chartStore.all.map { it.id } +
+                links.map { it.id } + models3D.map { it.id } + audioCards.map { it.id }).toSet()
+            if (pageDisplayMode != PageDisplayMode.CONTINUOUS) {
+                listOfNotNull(selectedTextId, editingText?.id, selectedImageId, selectedTableId, selectedChartId,
+                    selectedConnectionId, selectedLinkId, selectedAudioId, selectedModel3DId)
+                    .plus(selectedShapeIds).filter { it !in alive }.forEach(::releaseSelection)
+            }
+            // 編輯框拿的是舊的那一份：換成寫回後的，之後的修改才不會把別人的改動蓋回去。
+            editingText?.let { open -> textStore.find(open.id)?.let { editingText = it } }
+            collabTextRevision++
+            // 別人的修改不是這台的復原步驟。
+            canvasHistory.reset(canvasSnapshot())
+            continuousCollab.remoteApplied()
+            textRevision++; imageRevision++; shapeRevision++; tableRevision++; chartRevision++
+            linkRevision++; model3DRevision++; audioRevision++; pinRevision++; stackRevision++
+        }
+        if (result.ink) {
+            continuousCollab.remoteApplied()
+            clearToken++
+        }
+        revision++
+        // 整份狀態套用完：只有這台有的物件補給房間。
+        if (result.needsPublish) main.post { latestPublishCollab() }
+    }
+    val latestStateSyncNeeded by rememberUpdatedState<() -> Unit> {
+        val now = System.currentTimeMillis()
+        if (collabActive && now - collabLastStateRequest > 5_000) {
+            collab.requestState()
+            collabLastStateRequest = now
+        }
+    }
+    val latestApplyCollabOp by rememberUpdatedState<(CollaborationManager.RemoteOplog) -> Unit> { applyCollabOp(it) }
+    DisposableEffect(collaboration, collab) {
+        val main = android.os.Handler(android.os.Looper.getMainLooper())
+        collaboration.onOplog = { op -> main.post { latestApplyCollabOp(op) } }
+        // 中繼補不回漏掉的那一段：向其他成員要整份狀態（剛要過就不重複）。
+        collaboration.onStateSyncNeeded = { main.post { latestStateSyncNeeded() } }
+        // 兩人同時選了同一個物件、對方勝出：本機放手（設計 §5.3）。
+        collaboration.onLeaseLost = { id, holder ->
+            main.post {
+                releaseSelection(id)
+                collaboration.broadcastSelection(null)
+                message = l10n("collab_object_locked").replace("%@", holder)
+            }
+        }
+        onDispose {
+            collaboration.onOplog = null; collaboration.onLeaseLost = null; collaboration.onStateSyncNeeded = null
+        }
+    }
+    // 選取就是編輯鎖（設計 §5）：選到別人正在編輯的物件時放手並說明；打字（`text:`）不獨佔。
+    val myCollabSelection = editingText?.let { CollaborationManager.TYPING_PREFIX + it.id }
+        ?: selectedTextId ?: selectedImageId ?: selectedTableId ?: selectedChartId ?: selectedConnectionId
+        ?: selectedShapeIds.firstOrNull() ?: selectedLinkId ?: selectedAudioId ?: selectedModel3DId
+    LaunchedEffect(myCollabSelection, collabActive) {
+        if (!collabActive) return@LaunchedEffect
+        val id = myCollabSelection
+        val holder = id?.takeUnless { it.startsWith(CollaborationManager.TYPING_PREFIX) }
+            ?.let { collaboration.leaseHolder(it) }
+        if (id != null && holder != null) {
+            releaseSelection(id)
+            collaboration.broadcastSelection(null)
+            message = l10n("collab_object_locked").replace("%@", holder.userName)
+            return@LaunchedEffect
+        }
+        collaboration.broadcastSelection(id)
+    }
     var goldenSpiral by remember { mutableStateOf(false) }
     var ruleOfThirds by remember { mutableStateOf(false) }
     /// 美化後按鈕的可用狀態要跟著變（engine 才是真相來源，這只是重繪訊號）。
@@ -3100,7 +3384,7 @@ private fun InkScreen(
                     ) {
                         if (toolShown("editor.ink.undo")) {
                             TextButton(
-                                onClick = { if (engine.undo()) { revision++; clearToken++ } },
+                                onClick = { globalUndo() },
                                 enabled = engine.canUndo,
                                 modifier = Modifier.size(32.dp).testTag(
                                     if (editorMode == EditorMode.DRAW) "editor.ink.undo" else "editor.text.undo"
@@ -3110,7 +3394,7 @@ private fun InkScreen(
                         }
                         if (toolShown("editor.ink.redo")) {
                             TextButton(
-                                onClick = { if (engine.redo()) { revision++; clearToken++ } },
+                                onClick = { globalRedo() },
                                 enabled = engine.canRedo,
                                 modifier = Modifier.size(32.dp).testTag(
                                     if (editorMode == EditorMode.DRAW) "editor.ink.redo" else "editor.text.redo"
@@ -3956,7 +4240,10 @@ private fun InkScreen(
                     selected = marqueeActive,
                     onClick = {
                         marqueeActive = !marqueeActive
-                        if (!marqueeActive) marqueeSelection = emptySet()
+                        if (!marqueeActive) {
+                            marqueeSelection = emptySet()
+                            marqueeAdditive = false
+                        }
                         // 框選選的是物件（圖片、貼紙、文字方塊…），筆跡用套索 ——
                         // 進入時說明怎麼操作，與 Apple 同一句。
                         else message = l10n("marquee_hint")
@@ -3971,6 +4258,27 @@ private fun InkScreen(
                         else l10n("marquee_selected").replace("%@", marqueeSelection.size.toString()),
                         style = MaterialTheme.typography.labelSmall
                     )
+                    // 連續框選：一框一框累積，或點物件逐一加入／移除。
+                    FilterChip(
+                        selected = marqueeAdditive,
+                        onClick = {
+                            marqueeAdditive = !marqueeAdditive
+                            if (marqueeAdditive) message = l10n("marquee_continuous_hint")
+                        },
+                        label = { Text(l10n("marquee_continuous")) },
+                        modifier = Modifier.testTag("editor.marquee.continuous")
+                    )
+                    // 全選：這一頁所有物件一次選起來。
+                    TextButton(
+                        onClick = { marqueeSelection = marqueeCandidates.map { it.id }.toSet() },
+                        enabled = marqueeCandidates.isNotEmpty(),
+                        modifier = Modifier.testTag("editor.marquee.select_all")
+                    ) { Text(l10n("select_all")) }
+                    TextButton(
+                        onClick = { marqueeSelection = emptySet() },
+                        enabled = marqueeSelection.isNotEmpty(),
+                        modifier = Modifier.testTag("editor.marquee.deselect_all")
+                    ) { Text(l10n("deselect_all")) }
                     TextButton(
                         onClick = { duplicateMarqueeSelection() },
                         enabled = marqueeSelection.isNotEmpty()
@@ -4005,85 +4313,38 @@ private fun InkScreen(
                     }
                 ) { Text(l10n("tool_text")) }
 
-                // 3. 粗體、斜體、底線快捷按鈕
-                TextButton(
-                    onClick = {
-                        selectedTextId?.let { id ->
-                            textStore.find(id)?.let { box ->
-                                box.bold = !box.bold
+                // 3. Word 式格式列（字型、字級、B/I/U/S、字型色彩、醒目提示、對齊、縮排、行距、清單、清除格式）。
+                //
+                // 打字工具列作用在**選取的整個方塊**；要只改幾個字，在文字面板裡選取那幾個字再按
+                // （面板用的是同一份 `WordFormatControls`）。沒有選取方塊時按鈕照樣顯示但不做事 ——
+                // 與 Apple 一致，不會憑空生出一個方塊。
+                val formatTarget = selectedTextId?.let { textStore.find(it) }
+                if (textRevision >= 0) {
+                    val formatControls: @Composable () -> Unit = {
+                        WordFormatControls(
+                            state = (formatTarget ?: TextBox(id = "")).let { WordFormatState.of(it, RichText.base(it)) },
+                            l = { key -> l10n(key) },
+                            languageTag = deviceLanguageTag()
+                        ) { action ->
+                            formatTarget?.let { box ->
+                                applyWordFormat(box, action, TextFormatScope.WholeBox)
                                 textStore.persist(box)
                                 textRevision++
                             }
                         }
-                    },
-                    modifier = Modifier.testTag("editor.text.bold")
-                ) { Text("B", fontWeight = androidx.compose.ui.text.font.FontWeight.Bold) }
-
-                TextButton(
-                    onClick = {
-                        selectedTextId?.let { id ->
-                            textStore.find(id)?.let { box ->
-                                box.italic = !box.italic
-                                textStore.persist(box)
-                                textRevision++
-                            }
-                        }
-                    },
-                    modifier = Modifier.testTag("editor.text.italic")
-                ) { Text("I", fontStyle = androidx.compose.ui.text.font.FontStyle.Italic) }
-
-                TextButton(
-                    onClick = {
-                        selectedTextId?.let { id ->
-                            textStore.find(id)?.let { box ->
-                                box.underline = !box.underline
-                                textStore.persist(box)
-                                textRevision++
-                            }
-                        }
-                    },
-                    modifier = Modifier.testTag("editor.text.underline")
-                ) { Text("U", textDecoration = androidx.compose.ui.text.style.TextDecoration.Underline) }
-
-                // 4. 段落對齊
-                TextButton(
-                    onClick = {
-                        selectedTextId?.let { id ->
-                            textStore.find(id)?.let { box ->
-                                box.alignment = "left"
-                                textStore.persist(box)
-                                textRevision++
-                            }
-                        }
-                    },
-                    modifier = Modifier.testTag("editor.text.align_left")
-                ) { Text(l10n("align_left")) }
-
-                TextButton(
-                    onClick = {
-                        selectedTextId?.let { id ->
-                            textStore.find(id)?.let { box ->
-                                box.alignment = "center"
-                                textStore.persist(box)
-                                textRevision++
-                            }
-                        }
-                    },
-                    modifier = Modifier.testTag("editor.text.align_center")
-                ) { Text(l10n("align_center_h")) }
-
-                TextButton(
-                    onClick = {
-                        selectedTextId?.let { id ->
-                            textStore.find(id)?.let { box ->
-                                box.alignment = "right"
-                                textStore.persist(box)
-                                textRevision++
-                            }
-                        }
-                    },
-                    modifier = Modifier.testTag("editor.text.align_right")
-                ) { Text(l10n("align_right")) }
+                    }
+                    // 手機寬度：格式列收成**一條可以左右捲的列**。直接放進會換行的工具列的話，
+                    // 二十幾顆按鈕會折成四、五排，把畫布擠掉一大塊（寫字的地方比工具列還小）。
+                    // 平板以上照樣跟著工具列換行 —— 空間夠，一眼看完比捲動好。
+                    if (layout.sizeClass == uniffi.padnote_core.FfiSizeClass.COMPACT) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) { formatControls() }
+                    } else {
+                        formatControls()
+                    }
+                }
 
                 // 5. 格線/方格吸附開關
                 TextButton(
@@ -4441,6 +4702,8 @@ private fun InkScreen(
                         reloadToken = textRevision + shapeRevision + tableRevision +
                             chartRevision + imageRevision + model3DRevision,
                         scrollRequest = continuousScrollRequest,
+                        undoController = continuousUndo,
+                        collabBridge = continuousCollab,
                         modifier = Modifier.weight(1f).fillMaxHeight()
                     )
                     if (sideToolbar && toolbarPlacement == uniffi.padnote_core.FfiPlacement.RIGHT) {
@@ -4596,9 +4859,9 @@ private fun InkScreen(
             when (action) {
                 uniffi.padnote_core.FfiMultiFingerAction.NONE -> Unit
                 uniffi.padnote_core.FfiMultiFingerAction.UNDO ->
-                    if (engine.undo()) { revision++; clearToken++ }
+                    globalUndo()
                 uniffi.padnote_core.FfiMultiFingerAction.REDO ->
-                    if (engine.redo()) { revision++; clearToken++ }
+                    globalRedo()
                 uniffi.padnote_core.FfiMultiFingerAction.PREV_PAGE ->
                     if (pageIndex > 0) pageIndex--
                 uniffi.padnote_core.FfiMultiFingerAction.NEXT_PAGE ->
@@ -5344,13 +5607,18 @@ private fun InkScreen(
             // 透明視圖，底下的物件就全部點不到了。
             if (marqueeActive && editorMode == EditorMode.TYPE) {
                 MarqueeLayer(
-                    candidates = marqueeCandidates,
+                    // 依堆疊順序由下到上，點選時才拿得到最上面那一個。
+                    candidates = marqueeCandidates.sortedBy { hit -> stackOrder.indexOf(hit.id) },
                     density = canvasDensity,
                     selectedIds = marqueeSelection,
+                    additive = marqueeAdditive,
                     onSelectionChange = { marqueeSelection = it },
                     onCommitMove = { dx, dy -> moveMarqueeSelection(dx, dy) }
                 )
             }
+
+            // 協同：別人正在編輯、打字的物件標上對方的顏色與名字（設計 §5）。
+            if (collabActive) PeerSelectionLayer(marqueeCandidates, collaboration, deviceLanguageTag())
 
             key(model3DRevision) {
                 Model3DLayer(
@@ -5539,10 +5807,10 @@ private fun InkScreen(
                             applyInkTool(InkTool.LASSO)
                         },
                         RadialMenuItem(id = "undo", icon = "↩️", label = l10n("undo"), color = Color(0xFF3B82F6)) {
-                            if (engine.undo()) { revision++; clearToken++ }
+                            globalUndo()
                         },
                         RadialMenuItem(id = "redo", icon = "↪️", label = l10n("redo"), color = Color(0xFF3B82F6)) {
-                            if (engine.redo()) { revision++; clearToken++ }
+                            globalRedo()
                         },
                         RadialMenuItem(id = "color", icon = "🎨", label = l10n("pro_color"), color = Color(0xFFEC4899)) {
                             showProColorWheel = true
@@ -5683,8 +5951,8 @@ private fun InkScreen(
                         }
                     }
                 },
-                onUndo = { if (engine.undo()) { revision++; clearToken++ } },
-                onRedo = { if (engine.redo()) { revision++; clearToken++ } },
+                onUndo = { globalUndo() },
+                onRedo = { globalRedo() },
                 onAddPage = {
                     val s = notebook?.first
                     if (s != null) {
@@ -6328,6 +6596,8 @@ private fun InkScreen(
             box = box,
             languageTag = deviceLanguageTag(),
             onReorder = { op -> objectReorder(box.id, op) },
+            remoteRevision = collabTextRevision,
+            typingPeerName = if (collabActive) collaboration.typingPeers(box.id).firstOrNull()?.userName else null,
             onChanged = { textStore.persist(it); textRevision++ },
             onDelete = {
                 textStore.remove(box)

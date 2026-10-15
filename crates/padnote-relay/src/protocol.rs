@@ -52,8 +52,16 @@ pub enum ClientMessage {
         encrypted: Option<bool>,
         payload: serde_json::Value,
     },
-    /// 請求補發指定 Lamport 時鐘之後的遺漏 Oplog（斷線重連自我修復）
-    Catchup { room_id: String, last_lamport: u64 },
+    /// 請求補發遺漏的 Oplog（斷線重連自我修復）。
+    ///
+    /// 新版帶 `last_seq`（中繼配發的序號，見 `PeerOplog::seq`）：序號是中繼收到的順序，
+    /// 以它過濾不會漏掉「時鐘較小但較晚到」的操作。舊版只帶 `last_lamport`。
+    Catchup {
+        room_id: String,
+        last_lamport: u64,
+        #[serde(default)]
+        last_seq: Option<u64>,
+    },
     /// 離開房間
     Leave { room_id: String, user_id: String },
     /// 房主關閉房間並結束協同會議
@@ -92,11 +100,17 @@ pub enum ServerMessage {
         #[serde(default)]
         encrypted: Option<bool>,
         payload: serde_json::Value,
+        /// 中繼配發的序號（每個房間從 1 遞增）。客戶端記住看過的最大值，重連時以它補發。
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        seq: Option<u64>,
     },
     /// 批次補發 Oplog（重連追趕）
     OplogBatch {
         room_id: String,
         oplogs: Vec<ServerMessage>,
+        /// 要補的那一段已經被擠出暫存：補發不完整，客戶端要向其他成員要整份狀態。
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        truncated: Option<bool>,
     },
     /// 成員離開或斷線廣播
     PeerLeft { room_id: String, user_id: String },

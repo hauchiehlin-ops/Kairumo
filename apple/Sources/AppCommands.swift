@@ -56,6 +56,16 @@ enum AppCommand {
     /// （只有 UI 測試的讀數會接）—— 所以側欄縮圖不更新、筆記本也沒被標成已修改，
     /// 使用者看到「預覽與畫布的筆跡不一樣」。
     static let proInkDidChange = Notification.Name("kairumo.proInkDidChange")
+    /// 打字模式的格式快捷鍵（`object` 是 `TextFormatCommand`）。
+    static let textFormat = Notification.Name("kairumo.command.textFormat")
+}
+
+/// Word 的格式快捷鍵。
+///
+/// ⌘B／⌘I／⌘U／⌘⇧X、⌘]／⌘[（字級 ±1）、⌘L／⌘R（對齊）、⌘⇧L（項目符號）—— 都照 Word for Mac。
+/// 置中（Word 的 ⌘E）例外：⌘E 在這個 App 早就是「切換手寫／打字」，不改既有習慣。
+enum TextFormatCommand: String {
+    case bold, italic, underline, strikethrough, growFont, shrinkFont, alignLeft, alignRight, bulletList
 }
 
 /// App delegate。存在的唯一理由就是註冊上面那些命令。
@@ -131,6 +141,31 @@ final class KairumoAppDelegate: UIResponder, UIApplicationDelegate {
                 UIMenu(title: "", options: .displayInline, children: editorChildren),
                 atEndOfMenu: .view)
         }
+
+        // 格式：取代系統「格式 ▸ 字體樣式」那一組。系統版的 ⌘B／⌘I／⌘U 對純文字欄位
+        // 沒有作用，而且同一組按鍵若再註冊一次，UIKit 只會留下其中一個 —— 所以是取代，不是新增。
+        let formatCommands: [UIMenuElement] = [
+            UIKeyCommand(title: string("font_bold"), action: #selector(commandBold), input: "b", modifierFlags: .command),
+            UIKeyCommand(title: string("font_italic"), action: #selector(commandItalic), input: "i", modifierFlags: .command),
+            UIKeyCommand(title: string("text_underline"), action: #selector(commandUnderline), input: "u", modifierFlags: .command),
+            UIKeyCommand(title: string("text_strikethrough"), action: #selector(commandStrikethrough), input: "x", modifierFlags: [.command, .shift]),
+            UIKeyCommand(title: string("wd_grow_font"), action: #selector(commandGrowFont), input: "]", modifierFlags: .command),
+            UIKeyCommand(title: string("wd_shrink_font"), action: #selector(commandShrinkFont), input: "[", modifierFlags: .command),
+            UIKeyCommand(title: string("align_left"), action: #selector(commandAlignLeft), input: "l", modifierFlags: .command),
+            UIKeyCommand(title: string("align_right"), action: #selector(commandAlignRight), input: "r", modifierFlags: .command),
+            UIKeyCommand(title: string("bullet_list"), action: #selector(commandBulletList), input: "l", modifierFlags: [.command, .shift]),
+        ]
+        if builder.menu(for: .textStyle) != nil {
+            builder.replaceChildren(ofMenu: .textStyle) { _ in formatCommands }
+        } else if builder.menu(for: .format) != nil {
+            builder.insertChild(
+                UIMenu(title: "", options: .displayInline, children: formatCommands),
+                atStartOfMenu: .format)
+        } else if builder.menu(for: .view) != nil {
+            builder.insertChild(
+                UIMenu(title: "", options: .displayInline, children: formatCommands),
+                atEndOfMenu: .view)
+        }
     }
 
     // MARK: - 命令
@@ -153,4 +188,18 @@ final class KairumoAppDelegate: UIResponder, UIApplicationDelegate {
     @objc private func commandTool8() { postTool(7) }
     @objc private func commandTool9() { postTool(8) }
     @objc private func commandTool10() { postTool(9) }
+
+    private func postFormat(_ command: TextFormatCommand) {
+        NotificationCenter.default.post(name: AppCommand.textFormat, object: command)
+    }
+
+    @objc private func commandBold() { postFormat(.bold) }
+    @objc private func commandItalic() { postFormat(.italic) }
+    @objc private func commandUnderline() { postFormat(.underline) }
+    @objc private func commandStrikethrough() { postFormat(.strikethrough) }
+    @objc private func commandGrowFont() { postFormat(.growFont) }
+    @objc private func commandShrinkFont() { postFormat(.shrinkFont) }
+    @objc private func commandAlignLeft() { postFormat(.alignLeft) }
+    @objc private func commandAlignRight() { postFormat(.alignRight) }
+    @objc private func commandBulletList() { postFormat(.bulletList) }
 }

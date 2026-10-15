@@ -65,6 +65,28 @@ object ObjectMarquee {
         return rects.drop(1).fold(rects.first()) { acc, r -> acc.expandToInclude(r) }
     }
 
+    /**
+     * 這一次拉框之後的選取。**連續框選**（[additive]）時新框到的加進原本的選取，不取代 ——
+     * 散在頁面各處的物件可以一框一框累積起來。與 Apple 端 `ObjectMarquee.combined` 相同。
+     */
+    fun combined(existing: Set<String>, hits: Set<String>, additive: Boolean): Set<String> =
+        if (additive) existing + hits else hits
+
+    /**
+     * 點一下的結果。點到物件：連續框選時切換它在不在選取裡；一般模式只選它。
+     * 點到空白：一般模式取消選取；連續框選時保留（累積的選取不能因為手滑就沒了）。
+     */
+    fun tapped(id: String?, existing: Set<String>, additive: Boolean): Set<String> = when {
+        id == null -> if (additive) existing else emptySet()
+        !additive -> setOf(id)
+        id in existing -> existing - id
+        else -> existing + id
+    }
+
+    /** 點的位置上最上層的物件。候選依堆疊順序（由下到上）排列，所以從後面找。 */
+    fun topmostHit(point: Offset, candidates: List<MarqueeHit>): String? =
+        candidates.lastOrNull { it.rect.contains(point) }?.id
+
     /** 貼上／建立副本的位移。貼在原位的話使用者會以為沒成功。 */
     const val PASTE_OFFSET = 24f
 
@@ -87,6 +109,8 @@ fun MarqueeLayer(
     candidates: List<MarqueeHit>,
     density: Float,
     selectedIds: Set<String>,
+    /** 連續框選：新框到、點到的物件加進選取，不取代。 */
+    additive: Boolean = false,
     onSelectionChange: (Set<String>) -> Unit,
     onCommitMove: (Float, Float) -> Unit,
     modifier: Modifier = Modifier
@@ -100,7 +124,7 @@ fun MarqueeLayer(
         Box(
             Modifier
                 .fillMaxSize()
-                .pointerInput(candidates, selectedIds) {
+                .pointerInput(candidates, selectedIds, additive) {
                     detectDragGestures(
                         onDragStart = { offset ->
                             // 座標進來是像素，物件是頁面點 —— 差一個 density。
@@ -127,7 +151,11 @@ fun MarqueeLayer(
                             val c = current
                             if (s != null && c != null) {
                                 onSelectionChange(
-                                    ObjectMarquee.hits(ObjectMarquee.rect(s, c), candidates)
+                                    ObjectMarquee.combined(
+                                        selectedIds,
+                                        ObjectMarquee.hits(ObjectMarquee.rect(s, c), candidates),
+                                        additive
+                                    )
                                 )
                             } else if (groupDrag != Offset.Zero) {
                                 onCommitMove(groupDrag.x, groupDrag.y)
@@ -141,9 +169,14 @@ fun MarqueeLayer(
                         }
                     )
                 }
-                .pointerInput(Unit) {
-                    // 點空白處＝取消選取。所有繪圖工具的共同慣例。
-                    detectTapGestures { onSelectionChange(emptySet()) }
+                .pointerInput(candidates, selectedIds, additive) {
+                    // 點物件＝選它（連續框選時切換加入／移除）；點空白＝取消選取（連續框選時保留）。
+                    detectTapGestures { offset ->
+                        val page = Offset(offset.x / density, offset.y / density)
+                        onSelectionChange(
+                            ObjectMarquee.tapped(ObjectMarquee.topmostHit(page, candidates), selectedIds, additive)
+                        )
+                    }
                 }
         )
 

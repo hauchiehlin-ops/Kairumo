@@ -224,6 +224,35 @@ C1（筆跡↔錄音跳轉）、C4（詞級時間戳）、A10（筆跡重播）�
 | `paragraphSpacing` | number | 段落間距（點） |
 | `firstLineIndent` | number | 首行縮排（點） |
 | `paragraphIndent` | number | 整段縮排（點） |
+| `fontFamily` | string | 字型家族名稱。省略 = 系統字型 |
+| `runs` | array | 逐字格式（見下）。**省略 = 整個方塊同一種格式** |
+
+#### 逐字格式（`runs`）
+
+Word 式的「選幾個字、按粗體」。每一段只記**與方塊層級不同**的屬性，沒寫的一律沿用上表的值：
+
+```json
+"runs": [
+  { "start": 6, "length": 5, "bold": true, "fontSize": 24, "highlightHex": "#FFFF00" }
+]
+```
+
+| 鍵 | 型別 | 說明 |
+|---|---|---|
+| `start` / `length` | number | 位置與長度，以 **UTF-16 碼元**計（Apple 的 `NSRange`、Kotlin 字串索引都是這個單位）。用字元數的話，表情符號與某些泰文字會讓兩個平台套到不同的字 |
+| `bold` / `italic` / `underline` / `strikethrough` | bool | |
+| `fontSize` | number | 點 |
+| `fontFamily` | string | 空字串 = 系統字型 |
+| `textColorHex` | string | `#RRGGBB` |
+| `highlightHex` | string | 文字醒目提示（字的背景色）。方塊層級沒有這一項 |
+
+規則（兩個平台的 `RichText` 實作同一份）：
+
+- **鍵是扁平的**，不包成 `{"style": {...}}`。
+- 區段不重疊、依 `start` 排序、相鄰且相同的合併；與方塊層級相同的覆寫不寫。
+- 超出文字長度的部分**夾掉，不報錯**：舊版或別台改了文字卻沒改區段時會發生。
+- 收到的外觀 JSON **沒有 `runs` 鍵時，要清掉本機的區段**。別台把逐字格式全部移除時，送來的就是沒有這個鍵的 JSON；留著舊的區段會讓格式「刪不掉」。
+- 文字變動時區段跟著移動；插入的字沿用前一個字的格式（在開頭插入則沿用後一個字），與 Word 相同。
 
 物件的 `x` / `y` 是**未旋轉版面框的左上角**，與 `width` / `height` 同一個座標系。
 

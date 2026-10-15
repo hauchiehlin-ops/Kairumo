@@ -81,4 +81,46 @@ class TextBoxStore(
         boxes.remove(box.id)
         runCatching { session?.removeBlock(box.id) }
     }
+
+    /**
+     * 讓這一頁的文字方塊變成 [target] 那一份（全域復原用，見 `CanvasHistory`）。
+     *
+     * 被刪掉的方塊**用原本的 id 放回來**（`addTextWithId`）：換了 id 的話，
+     * 堆疊順序、錨定的筆跡與之後的重做都會對不上。核心不肯（例如那個 id 已有墓碑）時
+     * 才退回新建一個。
+     */
+    fun restoreTo(target: List<TextBox>) {
+        val wanted = target.associateBy { it.id }
+        for (box in all) if (box.id !in wanted) remove(box)
+        for (box in target) {
+            val copy = box.copy()
+            if (boxes.containsKey(box.id)) {
+                persist(copy)
+                continue
+            }
+            val s = session
+            val page = pageId
+            val revived = s != null && page != null &&
+                runCatching { s.addTextWithId(page, box.id, "", BlockStyle.BODY) }.getOrDefault(false)
+            if (revived || s == null) {
+                boxes[copy.id] = copy
+                persist(copy)
+            } else {
+                val fresh = create(copy.x, copy.y)
+                persist(copy.copy(id = fresh.id))
+            }
+        }
+    }
+
+    /** 協同：新增或更新一個方塊（新的用原本的 id 建立）。 */
+    fun upsert(box: TextBox) {
+        if (!boxes.containsKey(box.id)) {
+            val s = session
+            val page = pageId
+            if (s != null && page != null) runCatching { s.addTextWithId(page, box.id, "", BlockStyle.BODY) }
+        }
+        boxes[box.id] = box
+        persist(box)
+    }
+
 }
