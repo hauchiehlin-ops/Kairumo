@@ -4705,7 +4705,7 @@ extension NotebookStore {
 
 extension NotebookStore {
     /// 已經檢查過的筆記本（一本只修一次）。
-    static let phantomPagesRepairedKey = "sync.phantomPagesRepaired.v1"
+    static let phantomPagesRepairedKey = "sync.phantomPagesRepaired.v2"
 
     /// 一次性修復：清掉舊版同步膨脹出來的空白頁。
     ///
@@ -4715,8 +4715,8 @@ extension NotebookStore {
     ///
     /// 只刪**同時符合**下列條件的頁，寧可少刪：
     /// - 完全空白：沒有筆跡（含專業筆刷、別台的）、沒有任何物件；
-    /// - id 是核心隨機發的（UUID 第 7 版）—— 這台使用者自己加的頁是第 4 版，範例的是固定 id；
-    /// - 後面還有有內容的頁（結尾的空白頁可能是故意留的）；
+    /// - id 是核心隨機發的（UUID 第 7 版）或舊版升格重複產生的決定性 id —— 這台使用者自己加的頁是第 4 版；
+    /// - 夾在內容頁之間，或結尾連續膨脹出 2 頁以上的空白頁（單獨一頁結尾空白很可能是故意留的）；
     /// - 這樣的頁至少兩頁（單獨一頁空白很可能是故意的）。
     /// 刪除走 `deletePage`，所以會寫成 `RemovePage` 同步到別台。
     @discardableResult
@@ -4752,9 +4752,25 @@ extension NotebookStore {
         guard ids.count == count else { return [] }
         let empty = (0 ..< count).map { isBlankPage(notebook, index: $0) }
         guard let lastContent = empty.lastIndex(of: false) else { return [] }
-        return (0 ..< lastContent).filter { index in
+        var result = (0 ..< lastContent).filter { index in
             empty[index] && Self.isCoreMintedPageId(ids[index])
         }
+        // 若最後一個有內容頁面之後還拖著 2 頁以上的空白頁，且其頁面 ID 屬於同步產物
+        // （UUID v7 或 fallbackPageId UUID v5），一併納入清理（例如「課堂與會議記錄」膨脹到 48 頁）。
+        // 若結尾只有 1 頁空白（或使用者手動新增的 UUID v4 頁），則完整保留。
+        let trailingRange = (lastContent + 1) ..< count
+        if trailingRange.count >= 2 {
+            let trailingPhantoms = trailingRange.filter { index in
+                guard empty[index] else { return false }
+                let id = ids[index]
+                let fallback = NotebookPackageBridge.fallbackPageId(notebookId: notebook.id, index: index)
+                return Self.isCoreMintedPageId(id) || id.caseInsensitiveCompare(fallback) == .orderedSame
+            }
+            if trailingPhantoms.count >= 2 {
+                result.append(contentsOf: trailingPhantoms)
+            }
+        }
+        return result
     }
 
     /// 核心 `addPage` 發的 id 是 UUID 第 7 版（時間排序）。

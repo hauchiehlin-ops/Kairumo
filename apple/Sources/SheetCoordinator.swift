@@ -77,33 +77,25 @@ public final class SheetCoordinator: ObservableObject {
     // MARK: - Safe Presentation APIs
 
     /// 從選單安全執行彈窗展示閉包動作
-    /// 保證等待 UIMenu 收合動畫（0.25s）完全完成後才觸發呈現，避免 UIKit Attempt to present 警告與請求丟棄
+    /// 保證等待 UIMenu 收合動畫完全完成後才觸發呈現，避免 UIKit Attempt to present 警告與請求丟棄
     public func presentFromMenu(_ action: @escaping () -> Void) {
         isTransitioning = true
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { [weak self] in
-            action()
-            self?.isTransitioning = false
-        }
+        runWhenMenuDismissed(initialDelay: 0.25, action: action)
     }
 
     /// 從選單安全觸發檔案選取器閉包
     public func triggerFileImportFromMenu(_ action: @escaping () -> Void) {
         isTransitioning = true
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.28) { [weak self] in
-            action()
-            self?.isTransitioning = false
-        }
+        runWhenMenuDismissed(initialDelay: 0.28, action: action)
     }
 
     /// 從選單安全開啟次級視窗
-    /// 保證等待 UIMenu 收合動畫（0.25s）完全完成後才觸發呈現，避免 UIKit Attempt to present 警告與請求丟棄
+    /// 保證等待 UIMenu 收合動畫完全完成後才觸發呈現，避免 UIKit Attempt to present 警告與請求丟棄
     public func presentFromMenu(_ destination: SheetDestination) {
         isTransitioning = true
         activeImportSlot = nil
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { [weak self] in
-            guard let self = self else { return }
-            self.activeSheet = destination
-            self.isTransitioning = false
+        runWhenMenuDismissed(initialDelay: 0.25) { [weak self] in
+            self?.activeSheet = destination
         }
     }
 
@@ -112,11 +104,46 @@ public final class SheetCoordinator: ObservableObject {
         isTransitioning = true
         activeSheet = nil
         activeImportSlot = nil
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.28) { [weak self] in
-            guard let self = self else { return }
-            self.activeImportSlot = slot
-            self.isTransitioning = false
+        runWhenMenuDismissed(initialDelay: 0.28) { [weak self] in
+            self?.activeImportSlot = slot
         }
+    }
+
+    private func runWhenMenuDismissed(
+        initialDelay: TimeInterval,
+        attempt: Int = 0,
+        action: @escaping () -> Void
+    ) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + initialDelay) { [weak self] in
+            if attempt < 6, Self.isPresentationOrDismissalInFlight() {
+                self?.runWhenMenuDismissed(initialDelay: 0.1, attempt: attempt + 1, action: action)
+                return
+            }
+            action()
+            self?.isTransitioning = false
+        }
+    }
+
+    private static func isPresentationOrDismissalInFlight() -> Bool {
+        #if canImport(UIKit)
+        for scene in UIApplication.shared.connectedScenes {
+            guard let windowScene = scene as? UIWindowScene else { continue }
+            for window in windowScene.windows where window.isKeyWindow {
+                var current = window.rootViewController
+                while let vc = current {
+                    if vc.isBeingDismissed || vc.isBeingPresented {
+                        return true
+                    }
+                    let typeName = NSStringFromClass(type(of: vc))
+                    if typeName.contains("ContextMenu") {
+                        return true
+                    }
+                    current = vc.presentedViewController
+                }
+            }
+        }
+        #endif
+        return false
     }
 
     /// 直接開啟（非選單情境）

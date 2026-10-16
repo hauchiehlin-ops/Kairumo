@@ -472,8 +472,12 @@ fn dial(
     host: &str,
     port: u16,
 ) -> io::Result<(Arc<Peer>, TcpStream)> {
-    let addr = (host, port)
-        .to_socket_addrs()?
+    let clean_host = host.split('%').next().unwrap_or(host);
+    let mut addrs = (clean_host, port).to_socket_addrs()?.collect::<Vec<_>>();
+    // `LanNode::start` 綁定於 `0.0.0.0:0`（IPv4），優先挑選 IPv4 位址連線。
+    addrs.sort_by_key(|a| if a.is_ipv4() { 0 } else { 1 });
+    let addr = addrs
+        .into_iter()
         .next()
         .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "解析不到位址"))?;
     let mut stream = TcpStream::connect_timeout(&addr, CONNECT_TIMEOUT)?;

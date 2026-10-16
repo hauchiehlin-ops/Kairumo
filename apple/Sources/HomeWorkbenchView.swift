@@ -502,6 +502,18 @@ public struct HomeWorkbenchView: View {
                     MoveNotebookSheet(notebookId: id)
                 }
             } }
+            .sheet(isPresented: $showProfilePicker) { ProfilePickerSheet() }
+            .sheet(item: $insertingRecording) { rec in
+                resizableSheet {
+                    RecordingToNotebookSheet(recording: rec)
+                }
+            }
+            .sheet(item: Binding(
+                get: { shareRecordingURL.map { IdentifiableURL(url: $0) } },
+                set: { shareRecordingURL = $0?.url }
+            )) { item in
+                ShareSheet(items: [item.url])
+            }
             .alert(localizationManager.localized("mic_permission_title"), isPresented: $audioManager.showPermissionAlert) {
                 Button(localizationManager.localized("cancel"), role: .cancel) {
                     audioManager.showPermissionAlert = false
@@ -577,9 +589,6 @@ public struct HomeWorkbenchView: View {
                 }
             }
         }
-        // 切換使用者的選單。掛在橫幅這個小子樹上，而不是整個首頁那一長串修飾子 ——
-        // 後者再多一個編譯器就放棄型別推論。
-        .sheet(isPresented: $showProfilePicker) { ProfilePickerSheet() }
         .padding(12)
         .background(Color(uiColor: .secondarySystemGroupedBackground))
         .cornerRadius(12)
@@ -930,6 +939,178 @@ public struct HomeWorkbenchView: View {
         }
     }
 
+    private func notebookMenuSections(note: NotebookDocument) -> [[StableMenuAction]] {
+        [
+            [
+                StableMenuAction(
+                    id: "open_editor",
+                    title: localizationManager.localized("open_editor"),
+                    systemImage: "pencil.and.scribble"
+                ) {
+                    openNotebookFromMenu(note)
+                },
+                StableMenuAction(
+                    id: "hide_item",
+                    title: localizationManager.localized("hide_item"),
+                    systemImage: "eye.slash"
+                ) {
+                    hideNotebookFromMenu(note)
+                },
+                StableMenuAction(
+                    id: "rename_note",
+                    title: localizationManager.localized("rename_note"),
+                    systemImage: "pencil"
+                ) {
+                    renameNotebookFromMenu(note)
+                },
+                StableMenuAction(
+                    id: "move_to_folder",
+                    title: localizationManager.localized("move_to_folder"),
+                    systemImage: "folder"
+                ) {
+                    moveNotebookFromMenu(note)
+                },
+                StableMenuAction(
+                    id: "duplicate_note",
+                    title: localizationManager.localized("duplicate_note"),
+                    systemImage: "doc.on.doc"
+                ) {
+                    duplicateNotebookFromMenu(note)
+                },
+            ],
+            [
+                StableMenuAction(
+                    id: "delete_item",
+                    title: localizationManager.localized("delete_item"),
+                    systemImage: "trash",
+                    isDestructive: true
+                ) {
+                    deleteNotebookFromMenu(note)
+                },
+            ],
+        ]
+    }
+
+    private func recordingMenuSections(rec: AudioRecordingRecord, fileUrl: URL) -> [[StableMenuAction]] {
+        [
+            [
+                StableMenuAction(
+                    id: "insert_to_notebook",
+                    title: localizationManager.localized("insert_to_notebook"),
+                    systemImage: "text.badge.plus"
+                ) {
+                    insertRecordingFromMenu(rec)
+                },
+            ],
+            [
+                StableMenuAction(
+                    id: "hide_item",
+                    title: localizationManager.localized("hide_item"),
+                    systemImage: "eye.slash"
+                ) {
+                    hideRecordingFromMenu(rec)
+                },
+                StableMenuAction(
+                    id: "rename_audio_card",
+                    title: localizationManager.localized("rename_audio_card"),
+                    systemImage: "pencil"
+                ) {
+                    renameRecordingFromMenu(rec)
+                },
+                StableMenuAction(
+                    id: "show_in_folder",
+                    title: localizationManager.localized("show_in_folder"),
+                    systemImage: "folder"
+                ) {
+                    shareRecordingFromMenu(fileUrl)
+                },
+            ],
+            [
+                StableMenuAction(
+                    id: "delete_recording",
+                    title: localizationManager.localized("delete_recording"),
+                    systemImage: "trash",
+                    isDestructive: true
+                ) {
+                    deleteRecordingFromMenu(rec)
+                },
+            ],
+        ]
+    }
+
+    private func folderMenuSections(folder: FolderItem) -> [[StableMenuAction]] {
+        [
+            [
+                StableMenuAction(
+                    id: "new_subfolder",
+                    title: localizationManager.localized("new_subfolder"),
+                    systemImage: "folder.badge.plus"
+                ) {
+                    createSubfolderFromMenu(parentId: folder.id)
+                },
+                StableMenuAction(
+                    id: "rename_folder",
+                    title: localizationManager.localized("rename_folder"),
+                    systemImage: "pencil"
+                ) {
+                    renameFolderFromMenu(folder)
+                },
+            ],
+            [
+                StableMenuAction(
+                    id: "delete_folder",
+                    title: localizationManager.localized("delete_folder"),
+                    systemImage: "trash",
+                    isDestructive: true
+                ) {
+                    deleteFolderFromMenu(folder)
+                },
+            ],
+        ]
+    }
+
+    private func notebookMenuButton(
+        note: NotebookDocument,
+        icon: String = "ellipsis.circle",
+        fontSize: CGFloat = 16,
+        color: UIColor = .secondaryLabel,
+        hitSize: CGFloat = 44
+    ) -> some View {
+        StableMenuButton(
+            style: .rowIcon(icon: icon, fontSize: fontSize, color: color, hitSize: hitSize),
+            sections: notebookMenuSections(note: note),
+            accessibilityLabel: note.displayTitle(),
+            accessibilityIdentifier: "home.notebooks.menu.\(note.id)"
+        )
+        .frame(width: hitSize, height: hitSize)
+    }
+
+    private func recordingMenuButton(rec: AudioRecordingRecord, fileUrl: URL) -> some View {
+        StableMenuButton(
+            style: .rowIcon(icon: "ellipsis.circle", fontSize: 16, color: .secondaryLabel, hitSize: 44),
+            sections: recordingMenuSections(rec: rec, fileUrl: fileUrl),
+            accessibilityLabel: rec.title,
+            accessibilityIdentifier: "home.recordings.menu.\(rec.id)"
+        )
+        .frame(width: 44, height: 44)
+    }
+
+    private func folderMenuButton(
+        folder: FolderItem,
+        icon: String = "ellipsis",
+        fontSize: CGFloat = 13,
+        color: UIColor = .secondaryLabel,
+        hitSize: CGFloat = 28
+    ) -> some View {
+        StableMenuButton(
+            style: .rowIcon(icon: icon, fontSize: fontSize, color: color, hitSize: hitSize),
+            sections: folderMenuSections(folder: folder),
+            accessibilityLabel: folder.name,
+            accessibilityIdentifier: "home.folders.menu.\(folder.id)"
+        )
+        .frame(width: hitSize, height: hitSize)
+    }
+
     @ViewBuilder
     private func notebookCardContextMenuItems(note: NotebookDocument) -> some View {
         Button {
@@ -1168,16 +1349,7 @@ public struct HomeWorkbenchView: View {
                                 .buttonStyle(.plain)
 
                                 // 個別檔案功能選項（隱藏、重新命名、副本、刪除）
-                                Menu {
-                                    notebookCardContextMenuItems(note: note)
-                                } label: {
-                                    Image(systemName: "ellipsis.circle")
-                                        .font(.system(size: 16))
-                                        .foregroundColor(.secondary)
-                                        .frame(width: 44, height: 44)
-                                        .contentShape(Rectangle())
-                                }
-                                .buttonStyle(.plain)
+                                notebookMenuButton(note: note)
                             }
                             .background(Color(uiColor: .secondarySystemGroupedBackground))
                             .cornerRadius(14)
@@ -1418,16 +1590,7 @@ public struct HomeWorkbenchView: View {
                             }
 
                             // 個別檔案功能選項（插入筆記、隱藏、開啟資料夾、刪除）
-                            Menu {
-                                recordingContextMenuItems(rec: rec, fileUrl: fileUrl)
-                            } label: {
-                                Image(systemName: "ellipsis.circle")
-                                    .font(.system(size: 16))
-                                    .foregroundColor(.secondary)
-                                    .frame(width: 44, height: 44)
-                                    .contentShape(Rectangle())
-                            }
-                            .buttonStyle(.plain)
+                            recordingMenuButton(rec: rec, fileUrl: fileUrl)
                         }
                         .padding(12)
                         .background(Color(uiColor: .secondarySystemGroupedBackground))
@@ -1438,17 +1601,6 @@ public struct HomeWorkbenchView: View {
                     }
                 }
             }
-        }
-        .sheet(item: $insertingRecording) { rec in
-            resizableSheet {
-                RecordingToNotebookSheet(recording: rec)
-            }
-        }
-        .sheet(item: Binding(
-            get: { shareRecordingURL.map { IdentifiableURL(url: $0) } },
-            set: { shareRecordingURL = $0?.url }
-        )) { item in
-            ShareSheet(items: [item.url])
         }
     }
 
@@ -1889,62 +2041,43 @@ public struct HomeWorkbenchView: View {
                     }
                     .buttonStyle(.plain)
 
-                    // 資料夾圖示
-                    Image(systemName: folder.parentId == nil ? "folder.fill" : "folder.badge.gearshape")
-                        .font(.subheadline)
-                        .foregroundColor(.accentColor)
-
-                    // 資料夾名稱
-                    Text(folder.name)
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
-                        .foregroundColor(.primary)
-                        .lineLimit(1)
-
-                    // 筆記數量
-                    Text("(\(totalCount))")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-
-                    Spacer()
-
-                    // 功能選單
-                    Menu {
-                        Button {
-                            createSubfolderFromMenu(parentId: folder.id)
-                        } label: {
-                            Label(localizationManager.localized("new_subfolder"), systemImage: "folder.badge.plus")
-                        }
-                        Button {
-                            renameFolderFromMenu(folder)
-                        } label: {
-                            Label(localizationManager.localized("rename_folder"), systemImage: "pencil")
-                        }
-                        Divider()
-                        Button(role: .destructive) {
-                            deleteFolderFromMenu(folder)
-                        } label: {
-                            Label(localizationManager.localized("delete_folder"), systemImage: "trash")
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            toggleFolderExpanded(folder.id)
                         }
                     } label: {
-                        Image(systemName: "ellipsis")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                            .padding(6)
-                            .contentShape(Rectangle())
+                        HStack(spacing: 8) {
+                            // 資料夾圖示
+                            Image(systemName: folder.parentId == nil ? "folder.fill" : "folder.badge.gearshape")
+                                .font(.subheadline)
+                                .foregroundColor(.accentColor)
+
+                            // 資料夾名稱
+                            Text(folder.name)
+                                .font(.subheadline)
+                                .fontWeight(.semibold)
+                                .foregroundColor(.primary)
+                                .lineLimit(1)
+
+                            // 筆記數量
+                            Text("(\(totalCount))")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+
+                            Spacer()
+                        }
+                        .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
+
+                    // 功能選單（獨立於展開按鈕之外，避免 iPadOS 點擊被外層手勢吞掉）
+                    folderMenuButton(folder: folder)
                 }
                 .padding(.horizontal, 10)
                 .padding(.vertical, 8)
                 .background(Color(uiColor: .secondarySystemGroupedBackground))
                 .cornerRadius(8)
                 .contentShape(Rectangle())
-                .onTapGesture {
-                    withAnimation(.easeInOut(duration: 0.2)) {
-                        toggleFolderExpanded(folder.id)
-                    }
-                }
                 .dropDestination(for: String.self) { items, _ in
                     guard let noteId = items.first else { return false }
                     notebookStore.moveNotebook(id: noteId, toFolderId: folder.id)
@@ -1988,73 +2121,73 @@ public struct HomeWorkbenchView: View {
 
     @ViewBuilder
     private func compactNotebookRow(note: NotebookDocument, level: Int) -> some View {
-        Button {
-            selectedNotebookForEditing = note
-        } label: {
-            HStack(spacing: 8) {
-                // 階層縮排
-                if level > 0 {
-                    Color.clear
-                        .frame(width: CGFloat(level) * 20, height: 1)
-                }
+        HStack(spacing: 8) {
+            Button {
+                selectedNotebookForEditing = note
+            } label: {
+                HStack(spacing: 8) {
+                    // 階層縮排
+                    if level > 0 {
+                        Color.clear
+                            .frame(width: CGFloat(level) * 20, height: 1)
+                    }
 
-                // 筆記範本圖示
-                Image(systemName: note.template.iconName)
-                    .font(.body)
-                    .foregroundColor(.accentColor.opacity(0.85))
-                    .frame(width: 22, height: 22)
+                    // 筆記範本圖示
+                    Image(systemName: note.template.iconName)
+                        .font(.body)
+                        .foregroundColor(.accentColor.opacity(0.85))
+                        .frame(width: 22, height: 22)
 
-                // 標題
-                Text(note.displayTitle())
-                    .font(.subheadline)
-                    .fontWeight(.medium)
-                    .foregroundColor(.primary)
-                    .lineLimit(1)
-
-                // 標記與資訊
-                if note.isEncrypted {
-                    Image(systemName: "lock.fill")
-                        .font(.caption2)
-                        .foregroundColor(.orange)
-                }
-                if note.hasRecording {
-                    Image(systemName: "waveform")
-                        .font(.caption2)
-                        .foregroundColor(.blue)
-                }
-
-                Spacer()
-
-                // 頁數
-                Text("\(note.pageCount) \(localizationManager.localized("pages_count_suffix"))")
-                    .font(.caption2)
-                    .foregroundColor(.secondary)
-
-                // 修改日期
-                Text(note.lastModifiedDate, style: .date)
-                    .font(.caption2)
-                    .foregroundColor(.secondary)
-
-                // 功能選單
-                Menu {
-                    notebookCardContextMenuItems(note: note)
-                } label: {
-                    Image(systemName: "ellipsis.circle")
+                    // 標題
+                    Text(note.displayTitle())
                         .font(.subheadline)
-                        .foregroundColor(.secondary.opacity(0.8))
-                        .padding(6)
-                        .contentShape(Rectangle())
+                        .fontWeight(.medium)
+                        .foregroundColor(.primary)
+                        .lineLimit(1)
+
+                    // 標記與資訊
+                    if note.isEncrypted {
+                        Image(systemName: "lock.fill")
+                            .font(.caption2)
+                            .foregroundColor(.orange)
+                    }
+                    if note.hasRecording {
+                        Image(systemName: "waveform")
+                            .font(.caption2)
+                            .foregroundColor(.blue)
+                    }
+
+                    Spacer()
+
+                    // 頁數
+                    Text("\(note.pageCount) \(localizationManager.localized("pages_count_suffix"))")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+
+                    // 修改日期
+                    Text(note.lastModifiedDate, style: .date)
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
                 }
-                .buttonStyle(.plain)
+                .contentShape(Rectangle())
             }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 7)
-            .background(Color(uiColor: .tertiarySystemGroupedBackground).opacity(0.6))
-            .cornerRadius(8)
-            .contentShape(Rectangle())
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("home.notebooks.card.\(note.id)")
+
+            // 功能選單（與外層 Button 並列為兄弟節點，避免 iPadOS Menu 嵌在 Button label 內導致動作失效）
+            notebookMenuButton(
+                note: note,
+                icon: "ellipsis.circle",
+                fontSize: 15,
+                color: .secondaryLabel.withAlphaComponent(0.8),
+                hitSize: 32
+            )
         }
-        .buttonStyle(.plain)
-        .accessibilityIdentifier("home.notebooks.card.\(note.id)")
+        .padding(.horizontal, 10)
+        .padding(.vertical, 7)
+        .background(Color(uiColor: .tertiarySystemGroupedBackground).opacity(0.6))
+        .cornerRadius(8)
+        .contentShape(Rectangle())
         .contextMenu {
             notebookCardContextMenuItems(note: note)
         }
@@ -2140,7 +2273,35 @@ public struct HomeWorkbenchView: View {
                     ForEach(notebookStore.folders.filter { !notebookStore.isHiddenBySync($0.id) }) { folder in
                         let isSel = (selectedFolderId == folder.id)
                         let count = notebookStore.notebooks(in: folder.id).count
-                        Menu {
+                        HStack(spacing: 2) {
+                            Button {
+                                selectedFolderId = folder.id
+                            } label: {
+                                HStack(spacing: 4) {
+                                    Image(systemName: folder.parentId == nil ? "folder.fill" : "folder.badge.gearshape")
+                                    Text("\(folder.name) (\(count))")
+                                }
+                                .font(.caption)
+                                .fontWeight(isSel ? .bold : .regular)
+                                .padding(.leading, 10)
+                                .padding(.trailing, 2)
+                                .padding(.vertical, 5)
+                                .foregroundColor(isSel ? .white : .primary)
+                            }
+                            .buttonStyle(.plain)
+
+                            folderMenuButton(
+                                folder: folder,
+                                icon: "ellipsis",
+                                fontSize: 11,
+                                color: isSel ? .white : .secondaryLabel,
+                                hitSize: 24
+                            )
+                            .padding(.trailing, 4)
+                        }
+                        .background(isSel ? Color.accentColor : Color(uiColor: .tertiarySystemGroupedBackground))
+                        .cornerRadius(8)
+                        .contextMenu {
                             Button {
                                 createSubfolderFromMenu(parentId: folder.id)
                             } label: {
@@ -2157,22 +2318,7 @@ public struct HomeWorkbenchView: View {
                             } label: {
                                 Label(localizationManager.localized("delete_folder"), systemImage: "trash")
                             }
-                        } label: {
-                            HStack(spacing: 4) {
-                                Image(systemName: folder.parentId == nil ? "folder.fill" : "folder.badge.gearshape")
-                                Text("\(folder.name) (\(count))")
-                            }
-                            .font(.caption)
-                            .fontWeight(isSel ? .bold : .regular)
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 5)
-                            .background(isSel ? Color.accentColor : Color(uiColor: .tertiarySystemGroupedBackground))
-                            .foregroundColor(isSel ? .white : .primary)
-                            .cornerRadius(8)
-                        } primaryAction: {
-                            selectedFolderId = folder.id
                         }
-                        .buttonStyle(.plain)
                         .dropDestination(for: String.self) { items, _ in
                             guard let noteId = items.first else { return false }
                             notebookStore.moveNotebook(id: noteId, toFolderId: folder.id)
@@ -2219,16 +2365,13 @@ public struct HomeWorkbenchView: View {
                         .buttonStyle(.plain)
 
                         // 個別功能選項
-                        Menu {
-                            notebookCardContextMenuItems(note: note)
-                        } label: {
-                            Image(systemName: "ellipsis.circle.fill")
-                                .font(.system(size: 16))
-                                .foregroundColor(.secondary.opacity(0.8))
-                                .frame(width: 44, height: 44)
-                                .contentShape(Rectangle())
-                        }
-                        .buttonStyle(.plain)
+                        notebookMenuButton(
+                            note: note,
+                            icon: "ellipsis.circle.fill",
+                            fontSize: 16,
+                            color: .secondaryLabel.withAlphaComponent(0.8),
+                            hitSize: 44
+                        )
                     }
 
                     Button {
@@ -2283,32 +2426,29 @@ public struct HomeWorkbenchView: View {
     }
 
     private var allNotebooksSortMenuContent: some View {
-        Menu {
-            ForEach(SortOption.allCases) { opt in
-                Button {
-                    selectedSortOption = opt
-                } label: {
-                    HStack {
-                        Text(opt.localizedTitle(using: localizationManager))
-                        if selectedSortOption == opt {
-                            Image(systemName: "checkmark")
-                        }
+        StableMenuButton(
+            style: .pill(
+                title: selectedSortOption.localizedTitle(using: localizationManager),
+                trailingIcon: "line.3.horizontal.decrease.circle",
+                leadingIcon: nil,
+                backgroundColor: .tertiarySystemGroupedBackground,
+                foregroundColor: .secondaryLabel,
+                expandsHorizontally: false
+            ),
+            sections: [
+                SortOption.allCases.map { opt in
+                    StableMenuAction(
+                        id: opt.rawValue,
+                        title: opt.localizedTitle(using: localizationManager),
+                        isSelected: selectedSortOption == opt
+                    ) {
+                        selectedSortOption = opt
                     }
-                }
-            }
-        } label: {
-            HStack(spacing: 4) {
-                Text(selectedSortOption.localizedTitle(using: localizationManager))
-                    .font(.caption)
-                Image(systemName: "line.3.horizontal.decrease.circle")
-                    .font(.caption)
-            }
-            .foregroundColor(.secondary)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
-            .background(Color(uiColor: .tertiarySystemGroupedBackground))
-            .cornerRadius(8)
-        }
+                },
+            ],
+            accessibilityLabel: selectedSortOption.localizedTitle(using: localizationManager),
+            accessibilityIdentifier: "home.notebooks.sort"
+        )
         // 識別碼在 Menu 上，不在包著它的 AnyView 上 —— 型別抹除那一層不是
         // 無障礙元素，識別碼掛在那裡查不到。
         .accessibilityIdentifier("home.notebooks.sort")
@@ -2490,49 +2630,45 @@ public struct HomeWorkbenchView: View {
         .accessibilityIdentifier("home.diagnostics")
     }
 
-    /// 語言選單的內容。**用綁定的 Picker，不用一排 Button。**
-    ///
-    /// iPad 上首頁的工具列會因為同步狀態、錄音清單等更新而反覆重建；選單開著的時候工具列一重建，
-    /// Button 的動作就跟著舊的那一份一起被丟掉 —— 點了語言、選單關掉，語言卻沒換（使用者回報）。
-    /// Picker 透過綁定直接寫進 `LocalizationManager`，不依賴那個會被丟掉的閉包。
-    private var languagePicker: some View {
-        Picker(
-            selection: Binding(
-                get: { localizationManager.currentLanguage },
-                set: { localizationManager.setLanguage($0) }
-            )
-        ) {
-            ForEach(AppLanguage.allCases) { lang in
-                Text(lang.endonym).tag(lang)
-            }
-        } label: {
-            Text(localizationManager.localized("select_language"))
-        }
-        .pickerStyle(.inline)
+    /// 語言選單。使用原生 UIKit `UIButton`（`StableMenuButton`）封裝，
+    /// 展開期間鎖定已開啟的 `UIMenu` 不被 SwiftUI 背景同步重繪刷掉，
+    /// 動作閉包由持久 Coordinator 持有並直接寫入 `LocalizationManager.shared`。
+    private var languageMenuSections: [[StableMenuAction]] {
+        [
+            AppLanguage.allCases.map { lang in
+                StableMenuAction(
+                    id: lang.rawValue,
+                    title: lang.endonym,
+                    isSelected: localizationManager.currentLanguage == lang
+                ) {
+                    LocalizationManager.shared.setLanguage(lang)
+                }
+            },
+        ]
     }
 
     private var languageToolbarMenu: some View {
-        Menu {
-            languagePicker
-        } label: {
-            HStack(spacing: DS.Space.xxs) {
-                Image(systemName: "globe")
-                    .font(.system(size: DS.Icon.small, weight: .medium))
-                Text(localizationManager.localized("language"))
-                    .font(.subheadline)
-            }
-        }
+        StableMenuButton(
+            style: .toolbarLabel(
+                icon: "globe",
+                title: localizationManager.localized("language")
+            ),
+            sections: languageMenuSections,
+            accessibilityLabel: localizationManager.localized("select_language"),
+            accessibilityIdentifier: "home.language"
+        )
         .accessibilityLabel(localizationManager.localized("select_language"))
         .help(localizationManager.localized("select_language"))
         .accessibilityIdentifier("home.language")
     }
 
     private var compactLanguageToolbarMenu: some View {
-        Menu {
-            languagePicker
-        } label: {
-            Image(systemName: "globe")
-        }
+        StableMenuButton(
+            style: .toolbarIcon(icon: "globe"),
+            sections: languageMenuSections,
+            accessibilityLabel: localizationManager.localized("select_language"),
+            accessibilityIdentifier: "home.language"
+        )
         .accessibilityLabel(localizationManager.localized("select_language"))
         .help(localizationManager.localized("select_language"))
         .accessibilityIdentifier("home.language")
@@ -3648,17 +3784,42 @@ struct QuickAudioRecorderModal: View {
                         .font(.caption)
                         .foregroundColor(.secondary)
 
-                    Picker(localizationManager.localized("attach_picker_label"), selection: $targetNotebookId) {
-                        Text(localizationManager.localized("standalone_recording")).tag(nil as String?)
-                        ForEach(notebookStore.visibleNotebooks) { nb in
-                            Text(nb.displayTitle()).tag(nb.id as String?)
-                        }
-                    }
-                    .pickerStyle(.menu)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(8)
-                    .background(Color(uiColor: .tertiarySystemGroupedBackground))
-                    .cornerRadius(8)
+                    let selectedTitle = targetNotebookId.flatMap { id in
+                        notebookStore.visibleNotebooks.first(where: { $0.id == id })?.displayTitle()
+                    } ?? localizationManager.localized("standalone_recording")
+
+                    StableMenuButton(
+                        style: .pill(
+                            title: selectedTitle,
+                            trailingIcon: "chevron.up.chevron.down",
+                            leadingIcon: "book.closed",
+                            backgroundColor: .tertiarySystemGroupedBackground,
+                            foregroundColor: .label,
+                            expandsHorizontally: true
+                        ),
+                        sections: [
+                            [
+                                StableMenuAction(
+                                    id: "__standalone__",
+                                    title: localizationManager.localized("standalone_recording"),
+                                    isSelected: targetNotebookId == nil
+                                ) {
+                                    targetNotebookId = nil
+                                },
+                            ] + notebookStore.visibleNotebooks.map { nb in
+                                StableMenuAction(
+                                    id: nb.id,
+                                    title: nb.displayTitle(),
+                                    isSelected: targetNotebookId == nb.id
+                                ) {
+                                    targetNotebookId = nb.id
+                                }
+                            },
+                        ],
+                        accessibilityLabel: localizationManager.localized("attach_picker_label"),
+                        accessibilityIdentifier: "record.target_notebook"
+                    )
+                    .frame(maxWidth: .infinity, minHeight: 36, alignment: .leading)
                 }
                 .padding(.horizontal, 32)
 
@@ -4725,6 +4886,311 @@ struct NotebookEditorHost: View {
                 store.notebooks[idx] = updated
             }
         )
+    }
+}
+
+// MARK: - iPadOS 抗重繪原生選單按鈕（StableMenuButton）
+
+/// 為什麼不用 SwiftUI `Menu`：
+/// 在 iPadOS 上，當首頁（`HomeWorkbenchView`）或錄音視窗因背景同步進度、音訊電平、計時器等
+/// `@ObservedObject` 發送更新而重繪時，SwiftUI 的 `Menu` 會在每次 `body` 重新計算時對底層
+/// `UIButton` 呼叫 `setMenu:`，觸發 UIKit 的 `updateVisibleMenuWithBlock:` 重新刷洗開啟中的
+/// `_UIContextMenuView` 列表項目，並使舊的 SwiftUI action token 失效，導致使用者在 iPad 上
+/// 點擊任何選單項目只會收起選單卻完全不執行動作。
+///
+/// `StableMenuButton` 直接以原生 `UIButton`（`showsMenuAsPrimaryAction = true`）承載 `UIMenu`：
+/// 1. 選單項目閉包統一存放在持久的 `Coordinator.handlers` 字典中，每次 SwiftUI 更新只就地替換閉包；
+/// 2. 選單展開期間（`isPresentingMenu == true`）絕不替換 `button.menu`，且僅在選單結構簽章實際改變時才更新 `menu`；
+/// 3. 點擊項目時直接由 UIKit `UIAction` 同步在 MainActor 呼叫最新閉包。
+struct StableMenuAction {
+    let id: String
+    let title: String
+    let systemImage: String?
+    let isDestructive: Bool
+    let isSelected: Bool
+    let handler: @MainActor () -> Void
+
+    init(
+        id: String,
+        title: String,
+        systemImage: String? = nil,
+        isDestructive: Bool = false,
+        isSelected: Bool = false,
+        handler: @escaping @MainActor () -> Void
+    ) {
+        self.id = id
+        self.title = title
+        self.systemImage = systemImage
+        self.isDestructive = isDestructive
+        self.isSelected = isSelected
+        self.handler = handler
+    }
+}
+
+final class StableMenuUIButton: UIButton {
+    private(set) var isPresentingMenu = false
+    var currentMenuSignature: String = ""
+    var currentStyleSignature: String = ""
+    private var pendingMenu: (menu: UIMenu, signature: String)?
+
+    func applyMenu(_ newMenu: UIMenu, signature: String) {
+        if isPresentingMenu, self.menu != nil {
+            pendingMenu = (newMenu, signature)
+            return
+        }
+        pendingMenu = nil
+        currentMenuSignature = signature
+        self.menu = newMenu
+    }
+
+    private func flushPendingMenuIfNeeded() {
+        guard !isPresentingMenu, let pending = pendingMenu else { return }
+        pendingMenu = nil
+        currentMenuSignature = pending.signature
+        self.menu = pending.menu
+    }
+
+    override func contextMenuInteraction(
+        _ interaction: UIContextMenuInteraction,
+        willDisplayMenuFor configuration: UIContextMenuConfiguration,
+        animator: (any UIContextMenuInteractionAnimating)?
+    ) {
+        isPresentingMenu = true
+        super.contextMenuInteraction(interaction, willDisplayMenuFor: configuration, animator: animator)
+    }
+
+    override func contextMenuInteraction(
+        _ interaction: UIContextMenuInteraction,
+        willEndFor configuration: UIContextMenuConfiguration,
+        animator: (any UIContextMenuInteractionAnimating)?
+    ) {
+        super.contextMenuInteraction(interaction, willEndFor: configuration, animator: animator)
+        if let animator {
+            animator.addCompletion { [weak self] in
+                self?.isPresentingMenu = false
+                self?.flushPendingMenuIfNeeded()
+            }
+        } else {
+            isPresentingMenu = false
+            flushPendingMenuIfNeeded()
+        }
+    }
+
+    override func didMoveToWindow() {
+        super.didMoveToWindow()
+        if window == nil {
+            isPresentingMenu = false
+            flushPendingMenuIfNeeded()
+        }
+    }
+}
+
+struct StableMenuButton: UIViewRepresentable {
+    enum Style {
+        case toolbarLabel(icon: String, title: String)
+        case toolbarIcon(icon: String)
+        case rowIcon(icon: String, fontSize: CGFloat, color: UIColor, hitSize: CGFloat)
+        case pill(
+            title: String,
+            trailingIcon: String?,
+            leadingIcon: String?,
+            backgroundColor: UIColor,
+            foregroundColor: UIColor,
+            expandsHorizontally: Bool
+        )
+
+        var signature: String {
+            switch self {
+            case let .toolbarLabel(icon, title):
+                return "toolbarLabel|\(icon)|\(title)"
+            case let .toolbarIcon(icon):
+                return "toolbarIcon|\(icon)"
+            case let .rowIcon(icon, fontSize, _, hitSize):
+                return "rowIcon|\(icon)|\(fontSize)|\(hitSize)"
+            case let .pill(title, trailingIcon, leadingIcon, _, _, expands):
+                return "pill|\(title)|\(trailingIcon ?? "")|\(leadingIcon ?? "")|\(expands)"
+            }
+        }
+    }
+
+    let style: Style
+    let sections: [[StableMenuAction]]
+    var accessibilityLabel: String? = nil
+    var accessibilityIdentifier: String? = nil
+
+    final class Coordinator {
+        var handlers: [String: @MainActor () -> Void] = [:]
+
+        func updateHandlers(from sections: [[StableMenuAction]]) {
+            var next: [String: @MainActor () -> Void] = [:]
+            for section in sections {
+                for item in section {
+                    next[item.id] = item.handler
+                }
+            }
+            handlers = next
+        }
+
+        @MainActor
+        func invoke(id: String) {
+            handlers[id]?()
+        }
+    }
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator()
+    }
+
+    func makeUIView(context: Context) -> StableMenuUIButton {
+        let button = StableMenuUIButton(type: .system)
+        button.showsMenuAsPrimaryAction = true
+        button.changesSelectionAsPrimaryAction = false
+        button.setContentHuggingPriority(.required, for: .horizontal)
+        button.setContentHuggingPriority(.required, for: .vertical)
+        button.setContentCompressionResistancePriority(.required, for: .horizontal)
+        button.setContentCompressionResistancePriority(.required, for: .vertical)
+        configure(button, context: context)
+        return button
+    }
+
+    func updateUIView(_ uiView: StableMenuUIButton, context: Context) {
+        configure(uiView, context: context)
+    }
+
+    func sizeThatFits(
+        _ proposal: ProposedViewSize,
+        uiView: StableMenuUIButton,
+        context _: Context
+    ) -> CGSize? {
+        switch style {
+        case let .rowIcon(_, _, _, hitSize):
+            return CGSize(width: hitSize, height: hitSize)
+        case .toolbarIcon:
+            let s = uiView.intrinsicContentSize
+            return CGSize(width: max(s.width, 32), height: max(s.height, 32))
+        case .toolbarLabel:
+            let s = uiView.intrinsicContentSize
+            return CGSize(width: max(s.width, 44), height: max(s.height, 32))
+        case let .pill(_, _, _, _, _, expandsHorizontally):
+            let s = uiView.intrinsicContentSize
+            if expandsHorizontally, let w = proposal.width, w.isFinite {
+                return CGSize(width: w, height: max(s.height, 36))
+            }
+            return CGSize(width: max(s.width, 44), height: max(s.height, 28))
+        }
+    }
+
+    private func configure(_ button: StableMenuUIButton, context: Context) {
+        let coordinator = context.coordinator
+        coordinator.updateHandlers(from: sections)
+
+        button.accessibilityLabel = accessibilityLabel
+        button.accessibilityIdentifier = accessibilityIdentifier
+
+        let styleSig = style.signature
+        if button.currentStyleSignature != styleSig {
+            button.currentStyleSignature = styleSig
+            applyStyle(to: button)
+        }
+
+        let menuSig = sections.map { group in
+            group.map { item in
+                "\(item.id)|\(item.title)|\(item.systemImage ?? "")|\(item.isDestructive)|\(item.isSelected)"
+            }.joined(separator: ";")
+        }.joined(separator: "||")
+
+        if button.currentMenuSignature != menuSig || button.menu == nil {
+            let builtMenu = buildUIMenu(from: sections, coordinator: coordinator)
+            button.applyMenu(builtMenu, signature: menuSig)
+        }
+    }
+
+    private func applyStyle(to button: StableMenuUIButton) {
+        switch style {
+        case let .toolbarLabel(icon, title):
+            var config = UIButton.Configuration.plain()
+            let symConfig = UIImage.SymbolConfiguration(pointSize: DS.Icon.small, weight: .medium)
+            config.image = UIImage(systemName: icon, withConfiguration: symConfig)
+            config.imagePlacement = .leading
+            config.imagePadding = DS.Space.xxs
+            config.contentInsets = NSDirectionalEdgeInsets(top: 4, leading: 6, bottom: 4, trailing: 6)
+            var attr = AttributeContainer()
+            attr.font = UIFont.preferredFont(forTextStyle: .subheadline)
+            config.attributedTitle = AttributedString(title, attributes: attr)
+            button.configuration = config
+            button.tintColor = .label
+
+        case let .toolbarIcon(icon):
+            var config = UIButton.Configuration.plain()
+            let symConfig = UIImage.SymbolConfiguration(pointSize: 16, weight: .medium)
+            config.image = UIImage(systemName: icon, withConfiguration: symConfig)
+            config.contentInsets = NSDirectionalEdgeInsets(top: 6, leading: 6, bottom: 6, trailing: 6)
+            button.configuration = config
+            button.tintColor = .label
+
+        case let .rowIcon(icon, fontSize, color, _):
+            var config = UIButton.Configuration.plain()
+            let symConfig = UIImage.SymbolConfiguration(pointSize: fontSize, weight: .regular)
+            config.image = UIImage(systemName: icon, withConfiguration: symConfig)
+            config.baseForegroundColor = color
+            config.contentInsets = .zero
+            button.configuration = config
+            button.tintColor = color
+
+        case let .pill(title, trailingIcon, leadingIcon, backgroundColor, foregroundColor, expandsHorizontally):
+            var config = UIButton.Configuration.filled()
+            config.baseBackgroundColor = backgroundColor
+            config.baseForegroundColor = foregroundColor
+            config.cornerStyle = .medium
+            if let trailingIcon {
+                let symConfig = UIImage.SymbolConfiguration(pointSize: 12, weight: .regular)
+                config.image = UIImage(systemName: trailingIcon, withConfiguration: symConfig)
+                config.imagePlacement = .trailing
+                config.imagePadding = 4
+            } else if let leadingIcon {
+                let symConfig = UIImage.SymbolConfiguration(pointSize: 12, weight: .regular)
+                config.image = UIImage(systemName: leadingIcon, withConfiguration: symConfig)
+                config.imagePlacement = .leading
+                config.imagePadding = 6
+            }
+            config.contentInsets = NSDirectionalEdgeInsets(
+                top: expandsHorizontally ? 8 : 5,
+                leading: expandsHorizontally ? 12 : 8,
+                bottom: expandsHorizontally ? 8 : 5,
+                trailing: expandsHorizontally ? 12 : 8
+            )
+            var attr = AttributeContainer()
+            attr.font = UIFont.preferredFont(forTextStyle: expandsHorizontally ? .subheadline : .caption1)
+            config.attributedTitle = AttributedString(title, attributes: attr)
+            button.configuration = config
+            button.contentHorizontalAlignment = expandsHorizontally ? .leading : .center
+        }
+    }
+
+    private func buildUIMenu(from sections: [[StableMenuAction]], coordinator: Coordinator) -> UIMenu {
+        if sections.count == 1, let single = sections.first {
+            return UIMenu(title: "", children: single.map { makeUIAction($0, coordinator: coordinator) })
+        }
+        let submenus: [UIMenuElement] = sections.compactMap { group in
+            guard !group.isEmpty else { return nil }
+            let actions = group.map { makeUIAction($0, coordinator: coordinator) }
+            return UIMenu(title: "", options: .displayInline, children: actions)
+        }
+        return UIMenu(title: "", children: submenus)
+    }
+
+    private func makeUIAction(_ item: StableMenuAction, coordinator: Coordinator) -> UIAction {
+        let actionId = item.id
+        return UIAction(
+            title: item.title,
+            image: item.systemImage.flatMap { UIImage(systemName: $0) },
+            attributes: item.isDestructive ? [.destructive] : [],
+            state: item.isSelected ? .on : .off
+        ) { [weak coordinator] _ in
+            Task { @MainActor in
+                coordinator?.invoke(id: actionId)
+            }
+        }
     }
 }
 

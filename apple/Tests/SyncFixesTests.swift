@@ -851,6 +851,22 @@ final class ErasedInkLedgerTests: XCTestCase {
         XCTAssertEqual(store.notebooks[0].pageCount, 3)
     }
 
+    @MainActor
+    func testTrailingInflatedPhantomPagesAreRemoved() {
+        let store = isolatedNotebookStore()
+        let ids = [v7(0), v7(1), v7(2), v7(3), v7(4), v7(5)]
+        let doc = inflatedNotebook(ids, content: [0, 1])
+        store.notebooks = [doc]
+        defer {
+            ProfileDefaults.current.removeObject(forKey: NotebookStore.phantomPagesRepairedKey)
+            SyncDeletedPages.setPending([], doc.id)
+        }
+        XCTAssertTrue(store.repairPhantomPagesIfNeeded())
+        let repaired = store.notebooks[0]
+        XCTAssertEqual(repaired.pageIds, [v7(0), v7(1)])
+        XCTAssertEqual(repaired.pageCount, 2)
+    }
+
     func testMissingPageIdsAreTheSameOnEveryDevice() {
         // 沒有記頁面 id 的筆記，各台補出來的 id 必須一樣，合併時才是同一頁。
         var doc = NotebookDocument(title: "舊筆記", pageCount: 3)
