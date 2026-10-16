@@ -1645,7 +1645,7 @@ enum NotebookSyncCoordinator {
                 ledger.foreignTombstones = plan.foreignTombstones
                 ledger.pkRetiredOwn = []
                 ledger.pkGen = [:]
-                ledger.schema = 2
+                if hasInk { ledger.schema = 2 }
             }
             PKInkSnapshotStore.save(
                 snapshot.own, in: inputs.drawingsDirectory, notebookId: document.id, page: page)
