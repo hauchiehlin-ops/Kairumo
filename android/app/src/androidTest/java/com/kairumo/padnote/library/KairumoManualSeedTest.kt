@@ -26,9 +26,18 @@ class KairumoManualSeedTest {
     fun clean() {
         File(context.filesDir, "Notebooks").deleteRecursively()
         context.getSharedPreferences("kairumo.seed", android.content.Context.MODE_PRIVATE).edit().clear().commit()
+        // 清單快取以套件路徑與修改時間為鍵：同一秒內刪掉重建同一本，會拿到上一輪（別的語言）的名字。
+        NotebookLibrary.invalidateCache()
     }
 
-    private fun manual() = NotebookLibrary.all(context, device).firstOrNull { it.title == "Kairumo手冊" }
+    /**
+     * 找手冊：清單上的範例名稱後面會標「（唯讀）」（依介面語言，見 `SeedNotebooks.displayTitle`），
+     * 所以比對名稱的開頭，不比整串。
+     */
+    private fun manualTitled(title: String) =
+        NotebookLibrary.all(context, device).firstOrNull { it.title.startsWith(title) }
+
+    private fun manual() = manualTitled("Kairumo手冊")
 
     @Test
     fun aFreshInstallGetsTheManualMadeOfInkOnly() {
@@ -53,7 +62,7 @@ class KairumoManualSeedTest {
     @Test
     fun simplifiedChineseGetsAHandwrittenManualToo() {
         SeedNotebooks.seedIfEmpty(context, device, "zh-Hans")
-        val entry = NotebookLibrary.all(context, device).firstOrNull { it.title == "Kairumo手册" }
+        val entry = manualTitled("Kairumo手册")
         assertNotNull(entry)
         val (session, _) = NotebookLibrary.open(context, entry!!.id, device)!!
         assertEquals(4, session.pageCount().toInt())
@@ -72,8 +81,8 @@ class KairumoManualSeedTest {
         )) {
             clean()
             SeedNotebooks.seedIfEmpty(context, device, tag)
-            val entry = NotebookLibrary.all(context, device).firstOrNull { it.title == title }
-            assertNotNull("$tag：找不到名為「$title」的手冊", entry)
+            val entry = manualTitled(title)
+            assertNotNull("$tag：找不到名為「$title」的手冊；清單上有：${NotebookLibrary.all(context, device).map { it.id + "=" + it.title }}", entry)
             val (session, _) = NotebookLibrary.open(context, entry!!.id, device)!!
             assertEquals(4, session.pageCount().toInt())
             for (index in 0 until 4) {
