@@ -441,10 +441,10 @@ public struct NotebookDocument: Identifiable, Codable, Hashable, @unchecked Send
     /// 整本的樣板畫的，補一個空字串會讓它在某些路徑上變成「認不得的紙」。
     /// 補齊或截斷頁面 id 到 `pageCount` 頁（只在已經有 `pageIds` 時才動）。
     public nonisolated mutating func alignPageIds() {
-        guard var ids = pageIds else { return }
-        while ids.count < pageCount { ids.append(UUID().uuidString.lowercased()) }
-        if ids.count > pageCount { ids = Array(ids.prefix(pageCount)) }
-        pageIds = ids
+        guard let ids = pageIds else { return }
+        // 補的頁用確定性的 id（見 `NotebookPackageBridge.fallbackPageId`）：隨機的話每台裝置補出不同的頁。
+        pageIds = NotebookPackageBridge.alignedPageIds(
+            ids, count: pageCount, package: nil, notebookId: id)
     }
 
     public nonisolated mutating func padPagePaperIds(to count: Int) {
@@ -1490,6 +1490,9 @@ public final class NotebookStore: ObservableObject {
         if healInflatedSeedNotebooksIfNeeded() {
             markDirtyAndPersist(signalsLocalEdit: false)
         }
+        if repairPhantomPagesIfNeeded() {
+            markDirtyAndPersist(signalsLocalEdit: true)
+        }
     }
 
     /// 依據帳號同步索引（AccountSyncStore / LibraryIndex）收斂資料夾結構與筆記所屬資料夾
@@ -1757,6 +1760,9 @@ public final class NotebookStore: ObservableObject {
         // 這裡把本機每一本範例重設回乾淨的標準內容。
         let needsGenerationReset = ProfileDefaults.current.integer(forKey: Self.seedGenerationKey) < Self.seedGeneration
         if healInflatedSeedNotebooksIfNeeded(force: needsGenerationReset) {
+            changed = true
+        }
+        if repairPhantomPagesIfNeeded() {
             changed = true
         }
         if needsGenerationReset {
@@ -3060,6 +3066,16 @@ public final class NotebookStore: ObservableObject {
         guard let idx = notebooks.firstIndex(where: { $0.id == notebookId }) else { return 0 }
         let total = notebooks[idx].pageCount
         guard total > 1, pageIndex >= 0, pageIndex < total else { return currentIndex }
+
+        // 記下刪掉的是哪一頁（id），同步時寫成 `RemovePage` —— 不寫的話別台的 oplog 會把它加回來。
+        // 沒記頁面 id 的舊筆記先採用套件裡的那批，刪的才是同步那邊的同一頁。
+        if notebooks[idx].pageIds == nil {
+            notebooks[idx].pageIds = NotebookPackageBridge.resolvedPageIds(
+                for: notebooks[idx], packagesDirectory: corePackagesDirectory)
+        }
+        if let ids = notebooks[idx].pageIds, pageIndex < ids.count {
+            SyncDeletedPages.record([ids[pageIndex]], notebookId)
+        }
 
         // 平移磁碟圖檔
         var p = pageIndex
@@ -4641,6 +4657,10 @@ extension NotebookStore {
         guard let data = try? JSONSerialization.data(withJSONObject: json),
               var copy = try? JSONDecoder().decode(NotebookDocument.self, from: data) else { return nil }
         copy.lastModifiedDate = Date()
+        // 頁面 id 要明確寫進新的那一本：留空的話匯出時才補，各台補的不一樣。
+        copy.pageIds = NotebookPackageBridge.alignedPageIds(
+            original.pageIds ?? NotebookPackageBridge.deterministicSeedPageIds(for: original.id),
+            count: max(1, copy.pageCount), package: nil, notebookId: newId)
 
         // 2. 筆跡（含專業筆刷檔）：`<id>_p…` 全部搬一份到新 id 底下。
         let fm = FileManager.default
@@ -4680,3 +4700,81 @@ extension NotebookStore {
         return newId
     }
 }
+
+// MARK: - 同步膨脹出來的空白頁
+
+extension NotebookStore {
+    /// 已經檢查過的筆記本（一本只修一次）。
+    static let phantomPagesRepairedKey = "sync.phantomPagesRepaired.v1"
+
+    /// 一次性修復：清掉舊版同步膨脹出來的空白頁。
+    ///
+    /// 舊版匯出時，筆記沒有記頁面 id 的話由核心隨機發 id，每台裝置、每一輪各發一批；
+    /// 合併後頁數是各台的總和（使用者回報：3 頁的筆記變 30、48 頁）。根因已經修掉
+    /// （`NotebookPackageBridge.fallbackPageId`），這裡清理已經長出來的那些。
+    ///
+    /// 只刪**同時符合**下列條件的頁，寧可少刪：
+    /// - 完全空白：沒有筆跡（含專業筆刷、別台的）、沒有任何物件；
+    /// - id 是核心隨機發的（UUID 第 7 版）—— 這台使用者自己加的頁是第 4 版，範例的是固定 id；
+    /// - 後面還有有內容的頁（結尾的空白頁可能是故意留的）；
+    /// - 這樣的頁至少兩頁（單獨一頁空白很可能是故意的）。
+    /// 刪除走 `deletePage`，所以會寫成 `RemovePage` 同步到別台。
+    @discardableResult
+    func repairPhantomPagesIfNeeded() -> Bool {
+        var repaired = Set(ProfileDefaults.current.stringArray(forKey: Self.phantomPagesRepairedKey) ?? [])
+        let inbox = recordingInboxNotebookId()
+        var changed = false
+        for notebook in notebooks {
+            let key = notebook.id.lowercased()
+            guard !repaired.contains(key) else { continue }
+            repaired.insert(key)
+            guard !NotebookPackageBridge.isDeviceLocalSeed(notebook.id),
+                  notebook.id.caseInsensitiveCompare(inbox) != .orderedSame,
+                  notebook.pageCount > 2
+            else { continue }
+            let phantoms = phantomPageIndexes(of: notebook)
+            guard phantoms.count >= 2 else { continue }
+            for index in phantoms.sorted(by: >) {
+                _ = deletePage(notebookId: notebook.id, pageIndex: index, currentIndex: 0)
+            }
+            changed = true
+        }
+        ProfileDefaults.current.set(Array(repaired).sorted(), forKey: Self.phantomPagesRepairedKey)
+        return changed
+    }
+
+    /// 符合 `repairPhantomPagesIfNeeded` 條件的頁次。
+    func phantomPageIndexes(of notebook: NotebookDocument) -> [Int] {
+        let count = notebook.pageCount
+        let ids = notebook.pageIds?.count == count
+            ? notebook.pageIds!
+            : NotebookPackageBridge.resolvedPageIds(for: notebook, packagesDirectory: corePackagesDirectory)
+        guard ids.count == count else { return [] }
+        let empty = (0 ..< count).map { isBlankPage(notebook, index: $0) }
+        guard let lastContent = empty.lastIndex(of: false) else { return [] }
+        return (0 ..< lastContent).filter { index in
+            empty[index] && Self.isCoreMintedPageId(ids[index])
+        }
+    }
+
+    /// 核心 `addPage` 發的 id 是 UUID 第 7 版（時間排序）。
+    static func isCoreMintedPageId(_ id: String) -> Bool {
+        let chars = Array(id.lowercased())
+        return chars.count == 36 && chars[14] == "7"
+    }
+
+    private func isBlankPage(_ notebook: NotebookDocument, index: Int) -> Bool {
+        func none<T: PageIndexed>(_ items: [T]?) -> Bool {
+            !(items ?? []).contains { $0.pageIndex == index }
+        }
+        guard none(notebook.attachments), none(notebook.textAttachments), none(notebook.linkAttachments),
+              none(notebook.model3DAttachments), none(notebook.commentPins), none(notebook.audioAttachments),
+              none(notebook.tableAttachments), none(notebook.shapeAttachments),
+              none(notebook.connectionAttachments), none(notebook.tapeAttachments), none(notebook.stickyAnchors)
+        else { return false }
+        guard loadDrawing(notebookId: notebook.id, pageIndex: index).strokes.isEmpty else { return false }
+        return ProInkStore.load(in: drawingsDirectory, notebookId: notebook.id, page: index).isEmpty
+            && ProInkStore.load(in: drawingsDirectory, notebookId: notebook.id, page: index, foreign: true).isEmpty
+    }
+}
+

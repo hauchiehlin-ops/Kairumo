@@ -104,3 +104,102 @@ final class RecordingRenameSyncRoundTests: XCTestCase {
         }
     }
 }
+
+/// 使用者回報：「每同步一次，頁數就一直擴增」（課堂與會議記錄 18 → 36 → 48 頁）。
+/// 三台裝置輪流編輯、同步同一本筆記好幾輪，頁數必須一直是原本那幾頁。
+@MainActor
+final class PageCountStabilityTests: XCTestCase {
+    private var workDir: URL!
+    private var cloud: URL!
+    private var devices: [(store: FakeStore, id: UInt32)] = []
+
+    override func setUpWithError() throws {
+        workDir = FileManager.default.temporaryDirectory.resolvingSymlinksInPath()
+            .appendingPathComponent("kairumo-pages-\(UUID().uuidString)", isDirectory: true)
+        cloud = workDir.appendingPathComponent("Cloud", isDirectory: true)
+        try FileManager.default.createDirectory(at: cloud, withIntermediateDirectories: true)
+        devices = [("iPad", 0xA1), ("Mac", 0xB2), ("iPhone", 0xC3)].map { name, id in
+            (FakeStore(root: workDir.appendingPathComponent(name, isDirectory: true)), UInt32(id))
+        }
+    }
+
+    override func tearDownWithError() throws { try? FileManager.default.removeItem(at: workDir) }
+
+    private func stroke(_ x: CGFloat) -> PKStroke {
+        let points = (0..<4).map {
+            PKStrokePoint(location: CGPoint(x: x + CGFloat($0) * 10, y: 50), timeOffset: TimeInterval($0) * 0.01,
+                          size: CGSize(width: 3, height: 3), opacity: 1, force: 1, azimuth: 0, altitude: .pi / 2)
+        }
+        return PKStroke(ink: PKInk(.pen, color: .black), path: PKStrokePath(controlPoints: points, creationDate: Date()))
+    }
+
+    private func pageCounts(_ id: String) -> [Int] {
+        devices.map { $0.store.documents.first { $0.id == id }?.pageCount ?? -1 }
+    }
+
+    private func run(document: NotebookDocument, everyoneHasItFromTheStart: Bool) async throws {
+        let id = document.id
+        devices[0].store.documents = [document]
+        if everyoneHasItFromTheStart {
+            for d in devices.dropFirst() { d.store.documents = [document] }
+        }
+        for round in 0..<5 {
+            for (i, d) in devices.enumerated() {
+                if let index = d.store.documents.firstIndex(where: { $0.id == id }) {
+                    var ink = d.store.syncLoadDrawing(notebookId: id, pageIndex: 0)
+                    ink.strokes.append(stroke(CGFloat(round * 40 + i * 10)))
+                    d.store.syncSaveDrawing(notebookId: id, pageIndex: 0, drawing: ink)
+                    d.store.documents[index].lastModifiedDate = Date()
+                }
+                _ = await NotebookSyncCoordinator.run(store: d.store, folder: cloud, deviceId: d.id)
+            }
+            let counts = pageCounts(id)
+            XCTAssertEqual(counts, [3, 3, 3], "第 \(round + 1) 輪之後頁數：\(counts)")
+        }
+    }
+
+    func testANotebookCreatedOnOneDeviceKeepsItsPages() async throws {
+        let doc = NotebookDocument(title: "會議", pageCount: 3)
+        try await run(document: doc, everyoneHasItFromTheStart: false)
+    }
+
+    /// 舊版的筆記沒有記頁面 id（`pageIds == nil`），而且每台都有同一本（例如舊版同步過的範例）。
+    func testALegacyNotebookEveryDeviceAlreadyHasKeepsItsPages() async throws {
+        var doc = NotebookDocument(title: "課堂與會議記錄", pageCount: 3)
+        doc.pageIds = nil
+        try await run(document: doc, everyoneHasItFromTheStart: true)
+    }
+
+    /// 刪掉的頁要在每一台都刪掉，而且之後幾輪不會被別台的 oplog 加回來。
+    /// 以前 Apple 刪頁只是「重建的 oplog 裡沒有這一頁」，別台檔案裡的 `AddPage` 一合併就把它帶回來；
+    /// 而且套件比工作副本多頁時根本不匯出，下一次匯入直接把刪掉的頁蓋回來。
+    func testADeletedPageStaysDeletedOnEveryDevice() async throws {
+        let doc = NotebookDocument(title: "刪頁", pageCount: 3)
+        let id = doc.id
+        devices[0].store.documents = [doc]
+        for _ in 0..<2 {
+            for d in devices { _ = await NotebookSyncCoordinator.run(store: d.store, folder: cloud, deviceId: d.id) }
+        }
+        XCTAssertEqual(pageCounts(id), [3, 3, 3])
+
+        // 和 `NotebookStore.deletePage` 一樣：沒記頁面 id 的先採用套件裡的那批。
+        var mine = devices[0].store.documents[0]
+        var ids = try XCTUnwrap(devices[1].store.documents.first?.pageIds)
+        let removed = ids.remove(at: 1)
+        mine.pageIds = ids
+        mine.pageCount = 2
+        mine.lastModifiedDate = Date()
+        devices[0].store.documents[0] = mine
+        SyncDeletedPages.record([removed], id)
+        defer { SyncDeletedPages.setPending([], id) }
+
+        for round in 0..<4 {
+            for d in devices { _ = await NotebookSyncCoordinator.run(store: d.store, folder: cloud, deviceId: d.id) }
+            XCTAssertEqual(pageCounts(id), [2, 2, 2], "第 \(round + 1) 輪之後頁數：\(pageCounts(id))")
+        }
+        for d in devices {
+            XCTAssertFalse(d.store.documents[0].pageIds?.contains(removed) ?? true)
+        }
+    }
+}
+

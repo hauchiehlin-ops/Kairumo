@@ -802,4 +802,68 @@ final class ErasedInkLedgerTests: XCTestCase {
         let baseline = PKDrawing(strokes: [stroke(10), stroke(200)])
         XCTAssertEqual(StrokeDelta.removed(in: PKDrawing(), since: baseline).count, 2)
     }
+
+    // MARK: - 同步膨脹出來的空白頁
+
+    private func inflatedNotebook(_ ids: [String], content: Set<Int>) -> NotebookDocument {
+        var doc = NotebookDocument(title: "膨脹", pageCount: ids.count)
+        doc.pageIds = ids
+        doc.textAttachments = content.sorted().map { NoteTextAttachment(pageIndex: $0, text: "第 \($0) 頁") }
+        return doc
+    }
+
+    private func v7(_ n: Int) -> String { String(format: "01a13faf-f7c1-7197-aac6-%012x", n) }
+
+    @MainActor
+    func testPhantomPagesLeftBySyncAreRemovedOnce() {
+        let store = isolatedNotebookStore()
+        let mineAdded = UUID().uuidString.lowercased() // 這台使用者自己加的空白頁（第 4 版）
+        let ids = [v7(0), v7(1), v7(2), mineAdded, v7(4), v7(5), v7(6)]
+        let doc = inflatedNotebook(ids, content: [1, 5])
+        store.notebooks = [doc]
+        defer {
+            ProfileDefaults.current.removeObject(forKey: NotebookStore.phantomPagesRepairedKey)
+            SyncDeletedPages.setPending([], doc.id)
+        }
+
+        XCTAssertTrue(store.repairPhantomPagesIfNeeded())
+        let repaired = store.notebooks[0]
+        // 0、2、4：空白、核心發的 id、後面還有內容 → 刪；3 是使用者自己加的、6 在結尾 → 留。
+        XCTAssertEqual(repaired.pageIds, [v7(1), mineAdded, v7(5), v7(6)])
+        XCTAssertEqual(repaired.pageCount, 4)
+        XCTAssertEqual(repaired.textAttachments?.map(\.pageIndex).sorted(), [0, 2], "內容跟著頁走")
+        XCTAssertEqual(SyncDeletedPages.pending(doc.id), [v7(0), v7(2), v7(4)], "刪除要同步到別台")
+
+        // 只修一次：之後使用者自己留的空白頁不會再被動。
+        store.notebooks[0].pageIds?.insert(v7(9), at: 0)
+        store.notebooks[0].pageIds?.insert(v7(8), at: 0)
+        store.notebooks[0].pageCount = 6
+        XCTAssertFalse(store.repairPhantomPagesIfNeeded())
+    }
+
+    @MainActor
+    func testASingleBlankPageIsLeftAlone() {
+        let store = isolatedNotebookStore()
+        let doc = inflatedNotebook([v7(0), v7(1), v7(2)], content: [0, 2])
+        store.notebooks = [doc]
+        defer { ProfileDefaults.current.removeObject(forKey: NotebookStore.phantomPagesRepairedKey) }
+        XCTAssertFalse(store.repairPhantomPagesIfNeeded())
+        XCTAssertEqual(store.notebooks[0].pageCount, 3)
+    }
+
+    func testMissingPageIdsAreTheSameOnEveryDevice() {
+        // 沒有記頁面 id 的筆記，各台補出來的 id 必須一樣，合併時才是同一頁。
+        var doc = NotebookDocument(title: "舊筆記", pageCount: 3)
+        doc.pageIds = nil
+        let a = NotebookPackageBridge.alignedPageIds(nil, count: 3, package: nil, notebookId: doc.id)
+        let b = NotebookPackageBridge.alignedPageIds(nil, count: 3, package: nil, notebookId: doc.id)
+        XCTAssertEqual(a, b)
+        XCTAssertEqual(Set(a).count, 3)
+        // 套件裡已經有的 id 一定先用，不另外生一批。
+        let existing = ["aaaaaaaa-0000-4000-8000-000000000001"]
+        XCTAssertEqual(
+            NotebookPackageBridge.alignedPageIds(nil, count: 3, package: existing, notebookId: doc.id).first,
+            existing[0])
+    }
 }
+

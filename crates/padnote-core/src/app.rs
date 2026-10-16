@@ -131,6 +131,12 @@ pub struct NotebookSession {
     /// 那一頁的 `AddPage` 一到就掛上去。物件樹沒有這個問題 ——
     /// 它用 `entry().or_default()`，本來就與順序無關。
     pending_blocks: std::collections::HashMap<Uuid, Vec<Block>>,
+    /// 被 `RemovePage` 刪掉的頁面 id：之後再看到同一頁的 `AddPage` 一律忽略（刪除優先）。
+    ///
+    /// 頁面 id 只發一次、不會重用。可是平台每次匯出都把自己的 oplog 整批重建，
+    /// 還沒收到刪除的裝置重建時會再寫一次那一頁的 `AddPage`（檔名較新）—— 照重播順序的話
+    /// 兩台就一個刪、一個加，來回拉鋸；刪頁刪不掉，同步膨脹出來的重複頁也永遠清不掉。
+    removed_pages: std::collections::HashSet<Uuid>,
 }
 
 impl NotebookSession {
@@ -187,6 +193,7 @@ impl NotebookSession {
             vad_model: None,
             objects: Default::default(),
             pending_blocks: Default::default(),
+            removed_pages: Default::default(),
         };
         Ok(session)
     }
@@ -216,6 +223,7 @@ impl NotebookSession {
             vad_model: None,
             objects: Default::default(),
             pending_blocks: Default::default(),
+            removed_pages: Default::default(),
         };
 
         // **計數器要從磁碟接續，不能從 0 重來。**
@@ -316,6 +324,12 @@ impl NotebookSession {
                 // 兩台裝置同步之後，雙方的 oplog 都可能帶著同一頁的 AddPage
                 // （各自建立時都寫了一筆）。不去重的話合併後會變成兩頁 ——
                 // 使用者看到的是一本頁數莫名變兩倍的筆記，而且內容各半。
+                //
+                // 刪過的頁不再加回來（見 `removed_pages`）。
+                if self.removed_pages.contains(id) {
+                    self.pending_blocks.remove(id);
+                    return;
+                }
                 if self.notebook.page(*id).is_none() {
                     self.notebook
                         .insert_page(*index as usize, Page::new(*id, template.clone()));
@@ -326,6 +340,7 @@ impl NotebookSession {
                 }
             }
             DocOp::RemovePage { id } => {
+                self.removed_pages.insert(*id);
                 self.notebook.remove_page(*id);
                 self.index
                     .remove_page(&self.notebook.id.to_string(), &id.to_string());
@@ -2690,6 +2705,32 @@ mod tests {
         };
         s.apply_remote(&[op.clone(), op]);
         assert_eq!(s.notebook().page_count(), before + 1);
+    }
+
+    /// **刪掉的頁不會被較晚的 `AddPage` 加回來。**
+    ///
+    /// 平台每次匯出都重建自己的 oplog；還沒收到刪除的裝置重建時又寫一次同一頁的 `AddPage`，
+    /// 檔名比刪除那一筆新。照重播順序的話那一頁就回來了，兩台一刪一加永遠收斂不了 ——
+    /// 使用者看到的是刪頁刪不掉、同步膨脹出來的重複頁清不掉。順序反過來也一樣要刪得掉。
+    #[test]
+    fn a_removed_page_stays_removed_whatever_the_order() {
+        let id = Uuid::now_v7();
+        let add = DocOp::AddPage {
+            id,
+            template: PageTemplate::Blank,
+            index: 0,
+        };
+        let remove = DocOp::RemovePage { id };
+
+        let mut later_add = session("removed-page-later-add");
+        let before = later_add.notebook().page_count();
+        later_add.apply_remote(&[add.clone(), remove.clone(), add.clone()]);
+        assert_eq!(later_add.notebook().page_count(), before);
+
+        let mut remove_first = session("removed-page-remove-first");
+        remove_first.apply_remote(&[remove, add]);
+        assert_eq!(remove_first.notebook().page_count(), before);
+        assert!(remove_first.notebook.page(id).is_none());
     }
 
     /// 去重是依 id，不是依位置 —— 不同 id 的頁當然各自成頁。

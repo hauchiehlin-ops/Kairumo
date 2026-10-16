@@ -1705,7 +1705,10 @@ enum NotebookSyncCoordinator {
         // **只在「本來要匯出」時才問。** 問頁數要把整本筆記的操作記錄重播一遍
         // （`PadnoteSession.openExisting`），放在最前面等於每一輪對每一本都重播一次 ——
         // 使用者看到的就是「什麼都沒改，卻每次都全部重新掃描」。
+        // 這台**刪了頁**的話，套件比工作副本多頁正是要匯出去的改動（`RemovePage`），不能因此略過 ——
+        // 略過的話下一次匯入把那幾頁整份帶回來：刪頁刪不掉，膨脹出來的重複頁也清不掉。
         if needs,
+           SyncDeletedPages.pending(inputs.document.id).isEmpty,
            let pkgPages = NotebookPackageBridge.packagePageCount(
                at: inputs.package, deviceId: inputs.deviceId, notebookId: inputs.document.id),
            pkgPages > inputs.document.pageCount {

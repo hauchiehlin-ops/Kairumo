@@ -169,8 +169,13 @@ enum NotebookPackageBridge {
                     try session.addPageWithId(pageId: id, style: style)
                     pageIds.append(id)
                 }
+                // 缺的頁用「筆記 id＋頁次」決定的 id，**不能讓核心隨機發**：
+                // 隨機發的話每台裝置、每一次匯出各給一批不同的 id，合併後頁數是各台的總和，
+                // 而且每同步一輪再多一批（使用者回報：3 頁的筆記同步幾次後變 30、48 頁）。
                 while pageIds.count < pageCount {
-                    try pageIds.append(session.addPage(style: style))
+                    let id = fallbackPageId(notebookId: document.id, index: pageIds.count)
+                    try session.addPageWithId(pageId: id, style: style)
+                    pageIds.append(id)
                 }
             }
 
@@ -646,8 +651,9 @@ enum NotebookPackageBridge {
         // 筆記自己記得頁面 id 時以它為準：頁面搬動之後，id 要跟著那一頁走，
         // 不能再照「套件裡第幾頁」重新配對（那會讓搬過的頁在另一台換了身分）。
         let pageIds = knownPageIds
-            ?? document.pageIds.flatMap { $0.count == max(1, document.pageCount) ? $0 : nil }
-            ?? existingPageIds(in: destination, deviceId: deviceId)
+            ?? alignedPageIds(document.pageIds, count: max(1, document.pageCount),
+                              package: existingPageIds(in: destination, deviceId: deviceId),
+                              notebookId: document.id)
 
         // 目的地還不存在時就是一般的匯出，沒有別人的東西要保護。
         guard fm.fileExists(atPath: destination.path) else {
@@ -764,6 +770,10 @@ enum NotebookPackageBridge {
         // 5. 使用者刪掉的、別台裝置寫的物件：把「刪除」寫成這台的操作。
         try? applyForeignDeletions(
             document: document, foreign: foreign, to: destination, deviceId: deviceId)
+        // 6. 這台刪掉的頁：同上，別台的 oplog 裡還有它的 `AddPage`，不寫 `RemovePage` 就刪不掉。
+        try? applyPageDeletions(
+            notebookId: document.id, keeping: Set((pageIds ?? []).map { $0.lowercased() }),
+            to: destination, deviceId: deviceId)
         return summary
     }
 
@@ -846,6 +856,35 @@ enum NotebookPackageBridge {
         for id in pending {
             try? session.removeBlock(blockId: id)
             try? session.removeObject(objectId: id)
+        }
+    }
+
+    /// 把這台刪掉的頁寫成 `RemovePage`。
+    ///
+    /// 這台的 oplog 每次匯出都整批重建，重建的結果只是「沒有這一頁的 `AddPage`」；
+    /// 別台的 oplog（或雲端上這台舊版的 oplog）裡那一筆 `AddPage` 還在，合併後那一頁就回來了 ——
+    /// 刪頁刪不掉，同步多幾輪的重複頁也永遠清不掉。核心對頁面是「刪除優先」：
+    /// 有一筆 `RemovePage`，同一頁之後再怎麼 `AddPage` 都不會回來。
+    ///
+    /// **只認使用者在這台明確刪掉的頁**（`SyncDeletedPages`，由 `deletePage` 與重複頁修復記錄），
+    /// 不用「上次有、這次沒有」去猜：工作副本若因為別的錯誤少了一頁，猜的話會把那一頁從每台裝置上刪掉。
+    ///
+    /// 每次匯出都要再寫一次（自己的 oplog 下一次匯出會被整批換掉），不能看本機套件裡沒有那一頁就不寫：
+    /// 帶著那一頁的舊檔案可能還在雲端，下載回來之後才合併得到。
+    private static func applyPageDeletions(
+        notebookId: String, keeping current: Set<String>, to destination: URL, deviceId: UInt32
+    ) throws {
+        var pending = SyncDeletedPages.pending(notebookId)
+        guard !pending.isEmpty else { return }
+        // 又出現在這台的清單裡（復原）就不再刪。
+        if !pending.isDisjoint(with: current) {
+            pending.subtract(current)
+            SyncDeletedPages.setPending(pending, notebookId)
+        }
+        guard !pending.isEmpty else { return }
+        let session = try PadnoteSession.openExisting(path: destination.path, deviceId: deviceId)
+        for id in pending.sorted() {
+            try? session.removePage(pageId: id)
         }
     }
 
@@ -1138,8 +1177,11 @@ enum NotebookPackageBridge {
 
         let style = pageStyle(for: document.template)
         let targetPageCount = max(document.pageCount, pageIndex + 1)
-        while Int(session.pageCount()) < targetPageCount {
-            _ = try session.addPage(style: style)
+        let known = (try? pageIds(of: session)) ?? []
+        let wanted = alignedPageIds(document.pageIds, count: targetPageCount, package: known,
+                                    notebookId: document.id)
+        for id in wanted where !known.contains(id) && Int(session.pageCount()) < targetPageCount {
+            try session.addPageWithId(pageId: id, style: style)
         }
 
         let ids = try pageIds(of: session)
@@ -1180,10 +1222,45 @@ enum NotebookPackageBridge {
         }
         if let ids = document.pageIds, ids.count == count { return ids }
         let package = packagesDirectory.appending(path: "\(document.id.lowercased()).padnote")
-        var ids = (document.pageIds ?? existingPageIds(in: package, deviceId: NotebookMigration.deviceId) ?? [])
-            .map { $0.lowercased() }
-        if ids.count > count { ids = Array(ids.prefix(count)) }
-        while ids.count < count { ids.append(UUID().uuidString.lowercased()) }
+        return alignedPageIds(document.pageIds, count: count,
+                              package: existingPageIds(in: package, deviceId: NotebookMigration.deviceId),
+                              notebookId: document.id)
+    }
+
+    /// 某一頁沒有任何人給過 id 時用的 id：只由筆記 id 與頁次決定。
+    ///
+    /// 每台裝置對同一本、同一頁算出來的都一樣，所以各自補出來的頁在合併時是同一頁。
+    /// 以前這裡是隨機 UUID（或核心 `addPage` 發的隨機 id）—— 舊筆記沒有記頁面 id，
+    /// 每台裝置匯出時各補一批，合併後頁數就是各台的總和，同步幾輪就從 3 頁長成 30 頁。
+    nonisolated static func fallbackPageId(notebookId: String, index: Int) -> String {
+        stableBlockId("page:\(notebookId.lowercased()):\(index)")
+    }
+
+    /// 把一份頁面 id 清單對齊到 `count` 頁。
+    ///
+    /// 筆記自己記的優先；不夠的先用套件裡已經有、清單裡還沒有的（照套件順序），
+    /// 再不夠才用 `fallbackPageId`。**套件裡現成的 id 一定先用** —— 直接換成另一批 id，
+    /// 等於把同一頁分裂成兩頁。
+    nonisolated static func alignedPageIds(
+        _ own: [String]?, count: Int, package: [String]?, notebookId: String
+    ) -> [String] {
+        var ids = (own ?? []).map { $0.lowercased() }
+        if ids.count > count { return Array(ids.prefix(count)) }
+        var have = Set(ids)
+        for id in (package ?? []).map({ $0.lowercased() }) where ids.count < count && !have.contains(id) {
+            ids.append(id)
+            have.insert(id)
+        }
+        while ids.count < count {
+            var id = fallbackPageId(notebookId: notebookId, index: ids.count)
+            var salt = 0
+            while have.contains(id) {
+                salt += 1
+                id = stableBlockId("page:\(notebookId.lowercased()):\(ids.count):\(salt)")
+            }
+            ids.append(id)
+            have.insert(id)
+        }
         return ids
     }
 
@@ -1732,5 +1809,30 @@ enum SyncKnownObjects {
     /// 匯入完成後：使用者現在看得到的就是合併後的文件。
     static func recordVisible(_ document: NotebookDocument) {
         setKnown(NotebookPackageBridge.objectBlockIds(of: document), document.id)
+    }
+}
+
+/// 這台裝置刪掉、而合併結果裡可能還在的頁面 id（見 `NotebookPackageBridge.applyPageDeletions`）。
+enum SyncDeletedPages {
+    private static func key(_ notebook: String) -> String {
+        "kairumo.sync.deletedPages.\(notebook.lowercased())"
+    }
+
+    nonisolated static func pending(_ notebook: String) -> Set<String> {
+        Set(ProfileDefaults.current.stringArray(forKey: key(notebook)) ?? [])
+    }
+
+    nonisolated static func setPending(_ ids: Set<String>, _ notebook: String) {
+        if ids.isEmpty {
+            ProfileDefaults.current.removeObject(forKey: key(notebook))
+        } else {
+            ProfileDefaults.current.set(Array(ids).sorted(), forKey: key(notebook))
+        }
+    }
+
+    nonisolated static func record(_ ids: [String], _ notebook: String) {
+        let wanted = ids.map { $0.lowercased() }.filter { !$0.isEmpty }
+        guard !wanted.isEmpty else { return }
+        setPending(pending(notebook).union(wanted), notebook)
     }
 }
