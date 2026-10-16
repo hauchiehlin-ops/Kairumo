@@ -64,7 +64,7 @@ object SeedNotebooks {
         if (buildKairumoManual(context, deviceId, languageTag, ::l)) created++
         if (buildDraftingExample(context, deviceId, ::l)) created++
         ProfileContext.prefs(context, PREFS)
-            .edit().putBoolean(KEY_MANUAL, true).putBoolean(KEY_DRAFT_EXAMPLE, true)
+            .edit().putBoolean(KEY_MANUAL, true).putBoolean(KEY_DRAFT_EXAMPLE, true).putBoolean(KEY_SHOWCASE, true)
             .putInt(KEY_CONTENT_GENERATION, CONTENT_GENERATION).apply()
         return created
     }
@@ -102,21 +102,47 @@ object SeedNotebooks {
             val isBloated = resetAll || opFiles.size > 8 || totalOpsSize > 250_000L
 
             if (isBloated) {
-                dir.deleteRecursively()
-                NotebookLibrary.invalidateCache(id)
-                when (id) {
-                    SHOWCASE_ID -> buildFeatureShowcase(context, deviceId, l)
-                    MANUAL_ID -> buildKairumoManual(context, deviceId, languageTag, l)
-                    DRAFT_EXAMPLE_ID -> buildDraftingExample(context, deviceId, l)
-                    WELCOME_ID -> buildWelcome(context, deviceId, l)
-                    MEETING_ID -> buildMeeting(context, deviceId, l)
-                }
+                // 重設之前，範例裡若有使用者的內容（舊版範例可以直接編輯），先另存成一般筆記本 ——
+                // 更新程式不能清掉使用者的東西（見 SampleFork.restorePreservingUserContent）。
+                SampleFork.restorePreservingUserContent(context, id, deviceId, languageTag)
                 healed++
             }
         }
         if (resetAll) prefs.edit().putInt(KEY_CONTENT_GENERATION, CONTENT_GENERATION).apply()
         return healed
     }
+
+    internal fun build(context: Context, id: String, deviceId: UInt, languageTag: String, l: (String) -> String) {
+        when (id) {
+            SHOWCASE_ID -> buildFeatureShowcase(context, deviceId, l)
+            MANUAL_ID -> buildKairumoManual(context, deviceId, languageTag, l)
+            DRAFT_EXAMPLE_ID -> buildDraftingExample(context, deviceId, l)
+            WELCOME_ID -> buildWelcome(context, deviceId, l)
+            MEETING_ID -> buildMeeting(context, deviceId, l)
+        }
+    }
+
+    /**
+     * 把一本範例重設回乾淨的標準內容（整個套件刪掉重建）。範例是唯讀的：使用者一編輯，
+     * 改動另存成一本一般筆記本（[SampleFork]），範例本身回到這裡。
+     */
+    fun restore(context: Context, id: String, deviceId: UInt, languageTag: String) {
+        if (!isDeviceLocal(id)) return
+        fun l(key: String) = LocalizationStrings.localized(key, languageTag)
+        java.io.File(NotebookLibrary.directory(context), "${id.lowercase()}.${NotebookLibrary.EXTENSION}")
+            .deleteRecursively()
+        NotebookLibrary.invalidateCache(id)
+        build(context, id.lowercase(), deviceId, languageTag, ::l)
+        NotebookLibrary.invalidateCache(id)
+    }
+
+    /** 清單上顯示的名字：範例後面標「（唯讀）」。 */
+    fun displayTitle(id: String, title: String, languageTag: String): String =
+        if (isDeviceLocal(id)) title + LocalizationStrings.localized("sample_readonly_suffix", languageTag) else title
+
+    /** 去掉「（唯讀）」。由範例另存出來的筆記本以它命名。 */
+    fun baseTitle(title: String, languageTag: String): String =
+        title.removeSuffix(LocalizationStrings.localized("sample_readonly_suffix", languageTag))
 
     /**
      * 補上「有名字、沒內容」的範例筆記。
@@ -150,8 +176,11 @@ object SeedNotebooks {
         val prefs = ProfileContext.prefs(context, PREFS)
         val showcaseTitle = l("seed_feature_showcase_title")
         val hasShowcase = existing.any { it.title == showcaseTitle || it.id == SHOWCASE_ID }
-        // 已經轉成一般筆記的範例不再補回（見 SamplePromotion）。
-        if (!hasShowcase && SHOWCASE_ID !in SamplePromotion.retired(context)) {
+        // 已經轉成一般筆記的範例不再補回（見 SampleFork）。**只補一次**（旗標）：
+        // 以前每次啟動都補，使用者刪掉之後它每次更新、每次開 App 都長回來。與 Apple 相同。
+        val showcaseChecked = prefs.getBoolean(KEY_SHOWCASE, false)
+        prefs.edit().putBoolean(KEY_SHOWCASE, true).apply()
+        if (!showcaseChecked && !hasShowcase && SHOWCASE_ID !in SampleFork.retired(context)) {
             buildFeatureShowcase(context, deviceId, l)
         }
 
@@ -175,7 +204,9 @@ object SeedNotebooks {
 
         val welcomeTitle = l("seed_welcome_title")
         val meetingTitle = l("seed_meeting_title")
-        val hasSamples = existing.any { it.title == welcomeTitle || it.title == meetingTitle }
+        val hasSamples = existing.any {
+            it.id == WELCOME_ID || it.id == MEETING_ID || it.title == welcomeTitle || it.title == meetingTitle
+        }
         if (hasSamples) return 0
         if (!existing.all { isBlank(context, it.id, deviceId) }) return 0
 
@@ -218,10 +249,14 @@ object SeedNotebooks {
 
     /** 範例內容的世代。提高它，下次啟動所有範例重設回標準內容一次。 */
     private const val KEY_CONTENT_GENERATION = "seed_content_generation"
-    private const val CONTENT_GENERATION = 2
+    // 3：範例改為唯讀（一編輯就另存一本），現有的範例重設一次（裡面有使用者內容的先另存）。
+    // 被刪掉或退役的範例**不補回**：更新程式不重新安裝範例。與 Apple 相同。
+    // 提高這個數字 = 下次更新時重設所有範例一次，非必要不要動。
+    private const val CONTENT_GENERATION = 3
 
     private const val PREFS = "kairumo.seed"
     private const val KEY_MANUAL = "kairumo_manual_added"
+    private const val KEY_SHOWCASE = "feature_showcase_added"
     private const val KEY_DRAFT_EXAMPLE = "drafting_example_added"
     private const val DRAFT_EXAMPLE_ID = "seed-drafting-example-v1"
     private const val MANUAL_ID = "seed-kairumo-manual-v1"

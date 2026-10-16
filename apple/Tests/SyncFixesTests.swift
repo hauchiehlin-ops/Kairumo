@@ -361,7 +361,7 @@ final class RecordingTitleInPackageTests: XCTestCase {
         XCTAssertEqual(merged.recordingTitles["a.opus"], "T1", "iPad 後改的名字要贏過 Mac 重匯出的舊名字")
     }
 
-    // MARK: 改過的範例轉成一般筆記
+    // MARK: 唯讀範例：一編輯就另存一本
 
     private func sampleStore() -> (NotebookStore, String) {
         let store = isolatedNotebookStore()
@@ -379,33 +379,75 @@ final class RecordingTitleInPackageTests: XCTestCase {
         return (store, id)
     }
 
-    func testAnEditedSampleBecomesANormalSyncedNotebook() {
+    func testEditingASampleForksAnEditableCopyAndKeepsTheSampleClean() {
         let (store, id) = sampleStore()
-        defer { ProfileDefaults.current.removeObject(forKey: NotebookStore.retiredSamplesKey) }
         store.noteSampleOpened(id)
         store.notebooks[0].textAttachments = [NoteTextAttachment(pageIndex: 0, text: "我加的字")]
-        // 範例的名字隨介面語言翻譯（CI 是英文）：轉換後固定成「轉換當下看到的那個名字」。
-        let shownTitle = store.notebooks[0].displayTitle()
-        store.promoteSampleIfEdited(id)
+        XCTAssertTrue(store.sampleWasEdited(id))
+        let base = store.notebooks[0].baseDisplayTitle()
 
-        let promoted = store.notebooks.first
-        XCTAssertNotNil(promoted)
-        XCTAssertFalse(NotebookPackageBridge.isDeviceLocalSeed(promoted?.id ?? id), "要換成會同步的一般 id")
-        XCTAssertEqual(promoted?.title, shownTitle)
-        XCTAssertNil(promoted?.titleKey, "名字固定下來，不再被當成範例翻譯／重設")
-        XCTAssertEqual(promoted?.folderId, "folder-intro", "資料夾不變")
-        XCTAssertEqual(promoted?.textAttachments?.first?.text, "我加的字")
-        XCTAssertEqual(store.loadDrawing(notebookId: promoted!.id, pageIndex: 0).strokes.count, 1, "筆跡一起搬過去")
-        XCTAssertFalse(store.notebooks.contains { $0.id == id }, "原本的範例在這台退役")
-        XCTAssertTrue(NotebookStore.retiredSamples.contains(id))
-        XCTAssertNotNil(syncItem(indexJson: AccountSyncStore.shared.indexJSON, itemId: promoted!.id), "記進同步索引")
+        let copy = store.forkEditedSample(id)
+
+        XCTAssertNotNil(copy)
+        XCTAssertFalse(NotebookPackageBridge.isDeviceLocalSeed(copy?.id ?? id), "另存的那一本是會同步的一般筆記")
+        XCTAssertTrue(copy?.title.hasPrefix(base + " ") ?? false, "名字是「範例名 日期時間」")
+        XCTAssertNil(copy?.titleKey)
+        XCTAssertEqual(copy?.folderId, "folder-intro", "資料夾與範例相同")
+        XCTAssertEqual(copy?.textAttachments?.first?.text, "我加的字", "使用者的改動在另存的那一本裡")
+        XCTAssertEqual(store.loadDrawing(notebookId: copy!.id, pageIndex: 0).strokes.count, 1, "筆跡一起帶過去")
+        XCTAssertNotNil(syncItem(indexJson: AccountSyncStore.shared.indexJSON, itemId: copy!.id), "記進同步索引")
+
+        let sample = store.notebooks.first { $0.id == id }
+        XCTAssertNotNil(sample, "範例留著")
+        XCTAssertFalse(sample?.textAttachments?.contains { $0.text == "我加的字" } ?? true, "範例回到標準內容")
+        XCTAssertEqual(sample?.folderId, "folder-intro")
+        XCTAssertFalse(NotebookStore.retiredSamples.contains(id), "範例不再退役")
     }
 
-    func testOpeningASampleWithoutChangingItKeepsItASample() {
+    func testOpeningASampleWithoutChangingItDoesNotFork() {
         let (store, id) = sampleStore()
         store.noteSampleOpened(id)
-        store.promoteSampleIfEdited(id)
-        XCTAssertEqual(store.notebooks.first?.id, id)
+        XCTAssertFalse(store.sampleWasEdited(id))
+        store.forkSampleIfEdited(id)
+        XCTAssertEqual(store.notebooks.map(\.id), [id])
+    }
+
+    func testSamplesShowAsReadOnlyAndCannotBeRenamed() {
+        let (store, id) = sampleStore()
+        let shown = store.notebooks[0].displayTitle()
+        XCTAssertTrue(shown.hasSuffix(LocalizationManager.shared.localized("sample_readonly_suffix")))
+        store.renameNotebook(id: id, newTitle: "改名")
+        XCTAssertEqual(store.notebooks[0].displayTitle(), shown)
+    }
+
+    func testUpdatingKeepsUserContentFromAnOldEditableSample() {
+        // 舊版的範例可以直接編輯：更新後重設範例之前，使用者寫的東西要另存成一般筆記本。
+        let (store, id) = sampleStore()
+        store.notebooks[0].textAttachments = [NoteTextAttachment(pageIndex: 0, text: "舊版時寫的")]
+        store.restoreSamplePreservingUserContent(id)
+        let kept = store.notebooks.first { !NotebookPackageBridge.isDeviceLocalSeed($0.id) }
+        XCTAssertEqual(kept?.textAttachments?.first?.text, "舊版時寫的")
+        XCTAssertEqual(kept?.folderId, "folder-intro", "資料夾結構不變")
+        XCTAssertNotNil(store.notebooks.first { $0.id == id }, "範例還在")
+    }
+
+    func testUpdatingAnUntouchedSampleDoesNotAddACopy() {
+        let (store, id) = sampleStore()
+        store.restoreSampleToStandard(id)
+        store.restoreSamplePreservingUserContent(id)
+        XCTAssertEqual(store.notebooks.map(\.id), [id], "沒動過的範例重設後不多出一本")
+    }
+
+    func testRestoringASampleNeverTouchesUserNotebooks() {
+        let (store, id) = sampleStore()
+        var mine = NotebookDocument(title: "我的筆記", pageCount: 1)
+        mine.folderId = "folder-mine"
+        mine.textAttachments = [NoteTextAttachment(pageIndex: 0, text: "內容")]
+        store.notebooks.append(mine)
+        store.restoreSamplePreservingUserContent(id)
+        let after = store.notebooks.first { $0.id == mine.id }
+        XCTAssertEqual(after?.textAttachments?.first?.text, "內容")
+        XCTAssertEqual(after?.folderId, "folder-mine")
     }
 
     func testImportedTitlesAreTheAnswer() {
@@ -881,5 +923,54 @@ final class ErasedInkLedgerTests: XCTestCase {
             NotebookPackageBridge.alignedPageIds(nil, count: 3, package: existing, notebookId: doc.id).first,
             existing[0])
     }
-}
 
+    // MARK: 錄音名字被預設名稱蓋掉（iPad 取的名字到 Mac 變成「語音錄音與對齊 日期時間」）
+
+    func testAutoPlaceholderTitlesAreNotExported() {
+        let titles = NotebookSyncCoordinator.mergedExportTitles(
+            list: ["a.opus": "語音錄音與對齊 2026/10/16 晚上8:29"], packaged: [:])
+        XCTAssertNil(titles["a.opus"], "這台只能替別台的錄音取預設名稱 —— 寫出去會蓋掉別台取的名字")
+    }
+
+    func testUserTitleRepairsAPlaceholderInThePackage() {
+        let titles = NotebookSyncCoordinator.mergedExportTitles(
+            list: ["a.opus": "週會"], packaged: ["a.opus": "語音錄音與對齊 2026/10/16 晚上8:29"])
+        XCTAssertEqual(titles["a.opus"], "週會")
+    }
+
+    func testPackagedUserTitleWinsOverTheList() {
+        let titles = NotebookSyncCoordinator.mergedExportTitles(
+            list: ["a.opus": "舊名字"], packaged: ["a.opus": "別台剛改的"])
+        XCTAssertEqual(titles["a.opus"], "別台剛改的")
+    }
+
+    func testAPlaceholderNeverReplacesAUserTitle() {
+        XCTAssertTrue(NotebookStore.downgradesTitle(from: "週會", to: "語音錄音與對齊 2026/10/16 晚上8:29"))
+        XCTAssertFalse(NotebookStore.downgradesTitle(from: "語音錄音與對齊 2026/10/16 晚上8:29", to: "週會"))
+    }
+
+    // MARK: 圖層調整一同步就跳回去
+
+    func testUnderInkLayeringRoundTripsThroughPackageMeta() {
+        var doc = NotebookDocument(title: "t")
+        doc.setUnderInkObjectIds(["b", "a"], forPage: 1)
+        var restored = NotebookDocument(title: "t")
+        NotebookMeta.decode(from: NotebookMeta(from: doc).encodedJSON())?.apply(to: &restored)
+        XCTAssertEqual(restored.underInkObjectIds(forPage: 1), ["a", "b"])
+    }
+
+    @MainActor
+    func testLayerEditsAfterExportSurviveImport() {
+        var exported = NotebookDocument(title: "t")
+        exported.setObjectOrder(["a", "b"], forPage: 0)
+        let prints = ExportedObjectIds.fingerprints(of: exported)
+        var local = exported
+        local.setObjectOrder(["b", "a"], forPage: 0)
+        local.setUnderInkObjectIds(["a"], forPage: 0)
+        let (merged, preserved) = NotebookSyncCoordinator.preservingLocalChanges(
+            exported, local: local, exported: prints)
+        XCTAssertTrue(preserved)
+        XCTAssertEqual(merged.objectOrder(forPage: 0), ["b", "a"])
+        XCTAssertEqual(merged.underInkObjectIds(forPage: 0), ["a"])
+    }
+}

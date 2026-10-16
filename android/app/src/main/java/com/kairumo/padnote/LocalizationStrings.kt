@@ -18571,6 +18571,30 @@ object LocalizationStrings {
             "ko" to "할 일|담당|기한\n중급 안드로이드 지연 측정|치엔|9/22\n설명서 “녹음 삽입” 장 추가|원|9/20\n정식 서명 키 신청|페이|9/19",
             "th" to "สิ่งที่ต้องทำ|ผู้รับผิดชอบ|กำหนด\nวัดความหน่วงบน Android รุ่นกลาง|เชียน|22 ก.ย.\nเขียนบท “แทรกเสียงบันทึก” ในคู่มือ|เหวิน|20 ก.ย.\nขอคีย์เซ็นชื่อจริง|เผย|19 ก.ย."
         ),
+        "sample_readonly_forked" to mapOf(
+            "zh-Hant" to "此範本為唯讀檔案，系統已自動增加可編輯筆記本",
+            "en" to "This sample is read-only. An editable copy has been created for you.",
+            "zh-Hans" to "此范本为只读文件，系统已自动增加可编辑笔记本",
+            "ja" to "このサンプルは読み取り専用です。編集できるノートを自動的に作成しました。",
+            "ko" to "이 샘플은 읽기 전용입니다. 편집 가능한 노트를 자동으로 추가했습니다.",
+            "th" to "ตัวอย่างนี้เป็นแบบอ่านอย่างเดียว ระบบได้สร้างสมุดโน้ตที่แก้ไขได้ให้โดยอัตโนมัติแล้ว"
+        ),
+        "sample_readonly_suffix" to mapOf(
+            "zh-Hant" to "（唯讀）",
+            "en" to " (read-only)",
+            "zh-Hans" to "（只读）",
+            "ja" to "（読み取り専用）",
+            "ko" to " (읽기 전용)",
+            "th" to " (อ่านอย่างเดียว)"
+        ),
+        "sample_readonly_title" to mapOf(
+            "zh-Hant" to "唯讀範本",
+            "en" to "Read-only sample",
+            "zh-Hans" to "只读范本",
+            "ja" to "読み取り専用のサンプル",
+            "ko" to "읽기 전용 샘플",
+            "th" to "ตัวอย่างแบบอ่านอย่างเดียว"
+        ),
         "sample_showcase_audio_title" to mapOf(
             "zh-Hant" to "語音導覽：Kairumo 設計理念與核心架構",
             "en" to "Audio Guide: Kairumo Design Philosophy and Core Architecture",
@@ -18674,7 +18698,10 @@ object LocalizationStrings {
             "ja" to "★ 本物の手描き筆跡：\n以下のリストと装飾文字は、本物のベクター筆跡（鉛筆の質感、万年筆の筆圧応答、毛筆の緩急）で描かれています。",
             "ko" to "★ 진정한 벡터 손글씨:\n아래의 목록 및 캘리그래피는 연필의 질감, 만년필의 필압, 붓의 강약 조절이 적용된 실제 벡터 획으로 생성되었습니다.",
             "th" to "★ ลายมือหมึกเวกเตอร์แท้:\nรายการและลายเส้นด้านล่างถูกวาดด้วยเส้นเวกเตอร์จริง (ดินสอ, ปากกาหมึกซึมปรับแรงกด, พู่กันตัวเขียน)"
-        ),
+        )
+    )
+
+    private fun part29(): Map<String, Map<String, String>> = mapOf(
         "sample_showcase_math_ink_title" to mapOf(
             "zh-Hant" to "【 手繪積分真跡 】",
             "en" to "[ Hand-drawn Integral ]",
@@ -18698,10 +18725,7 @@ object LocalizationStrings {
             "ja" to "市販のノートアプリは定期購読や独自クラウドによる囲い込み、固定された枠組みで自由な思考を制限してきました。Kairumoはデジタルペーパーを一から再定義します。超低遅延ベクター筆記、高度なタイピング組版、動的グラフ、空間議論ピン、そして完全オープンなデータ主権を統合しました。",
             "ko" to "기존 상용 필기 앱들은 강제 구독료, 폐쇄적인 클라우드 종속, 경직된 서식으로 자유로운 발상을 가두어 왔습니다. Kairumo는 디지털 노트를 근본부터 다시 설계했습니다. 초저지연 벡터 잉크, 데스크톱급 타이핑 조판, 동적 인터랙티브 차트, 공간 토론 핀, 완전한 오픈 포맷 데이터 주권을 제공합니다.",
             "th" to "แอปจดบันทึกทั่วไปมักผูกมัดผู้ใช้ด้วยค่าบริการรายเดือนและระบบคลาวด์แบบปิด Kairumo กำหนดนิยามใหม่ของกระดาษดิจิทัล: หมึกเวกเตอร์ความหน่วงต่ำเป็นศูนย์, การจัดวางข้อความระดับมืออาชีพ, แผนภูมิข้อมูลแบบโต้ตอบได้, หมุดอภิปรายเชิงพื้นที่ และความเป็นส่วนตัวอย่างแท้จริง"
-        )
-    )
-
-    private fun part29(): Map<String, Map<String, String>> = mapOf(
+        ),
         "sample_showcase_p1_mission_title" to mapOf(
             "zh-Hant" to "為什麼打造 Kairumo：打破傳統筆記桎梏",
             "en" to "Why Kairumo was Created",
@@ -19317,7 +19341,10 @@ object LocalizationStrings {
             "ja" to "ノートのタイトル、下書き、内容を検索…",
             "ko" to "노트 제목, 초안 또는 내용 검색…",
             "th" to "ค้นหาชื่อบันทึก ร่าง หรือเนื้อหา…"
-        ),
+        )
+    )
+
+    private fun part30(): Map<String, Map<String, String>> = mapOf(
         "security" to mapOf(
             "zh-Hant" to "帳號與安全",
             "en" to "Account & Security",
@@ -19341,10 +19368,7 @@ object LocalizationStrings {
             "ja" to "編集できるグラフ",
             "ko" to "편집 가능한 차트",
             "th" to "แผนภูมิแก้ไขได้"
-        )
-    )
-
-    private fun part30(): Map<String, Map<String, String>> = mapOf(
+        ),
         "seed_chart_cat_3" to mapOf(
             "zh-Hant" to "空間圖釘協作",
             "en" to "Pin collaboration",
@@ -19960,7 +19984,10 @@ object LocalizationStrings {
             "ja" to "半球",
             "ko" to "반구",
             "th" to "ซีกโลก"
-        ),
+        )
+    )
+
+    private fun part31(): Map<String, Map<String, String>> = mapOf(
         "shape_kind_heptagon" to mapOf(
             "zh-Hant" to "七邊形",
             "en" to "Heptagon",
@@ -19984,10 +20011,7 @@ object LocalizationStrings {
             "ja" to "内部記憶",
             "ko" to "내부 저장소",
             "th" to "ที่เก็บภายใน"
-        )
-    )
-
-    private fun part31(): Map<String, Map<String, String>> = mapOf(
+        ),
         "shape_kind_line" to mapOf(
             "zh-Hant" to "直線",
             "en" to "Line",
@@ -20603,7 +20627,10 @@ object LocalizationStrings {
             "ja" to "フォルダで表示",
             "ko" to "폴더에서 보기",
             "th" to "แสดงในโฟลเดอร์"
-        ),
+        )
+    )
+
+    private fun part32(): Map<String, Map<String, String>> = mapOf(
         "sign_in_google" to mapOf(
             "zh-Hant" to "連結 Google 雲端硬碟",
             "en" to "Connect Google Drive",
@@ -20627,10 +20654,7 @@ object LocalizationStrings {
             "ja" to "ログイン済み",
             "ko" to "로그인됨",
             "th" to "ลงชื่อเข้าใช้แล้ว"
-        )
-    )
-
-    private fun part32(): Map<String, Map<String, String>> = mapOf(
+        ),
         "snap_to_grid" to mapOf(
             "zh-Hant" to "吸附格線",
             "en" to "Snap to Grid",
@@ -21246,7 +21270,10 @@ object LocalizationStrings {
             "ja" to "特殊記号",
             "ko" to "특수 기호",
             "th" to "สัญลักษณ์พิเศษ"
-        ),
+        )
+    )
+
+    private fun part33(): Map<String, Map<String, String>> = mapOf(
         "specs_info" to mapOf(
             "zh-Hant" to "實體規格與材料建議",
             "en" to "Specs & Material Suggestions",
@@ -21270,10 +21297,7 @@ object LocalizationStrings {
             "ja" to "弱い手ブレ補正",
             "ko" to "약한 손떨림 보정",
             "th" to "กันสั่นเบา"
-        )
-    )
-
-    private fun part33(): Map<String, Map<String, String>> = mapOf(
+        ),
         "stab_medium" to mapOf(
             "zh-Hant" to "中度防抖",
             "en" to "Medium stabiliser",
@@ -21889,7 +21913,10 @@ object LocalizationStrings {
             "ja" to "%@ にはすでに別の Kairumo ライブラリがあります。既存のドキュメントが上書きされないよう、空のフォルダを選んでください。",
             "ko" to "%@에 이미 다른 Kairumo 라이브러리가 있습니다. 기존 문서를 덮어쓰지 않도록 빈 폴더를 선택하세요.",
             "th" to "%@ มีคลัง Kairumo อื่นอยู่แล้ว โปรดเลือกโฟลเดอร์ว่างเพื่อไม่ให้เอกสารเดิมถูกเขียนทับ"
-        ),
+        )
+    )
+
+    private fun part34(): Map<String, Map<String, String>> = mapOf(
         "storage_icloud_continue" to mapOf(
             "zh-Hant" to "仍要使用",
             "en" to "Use it anyway",
@@ -21913,10 +21940,7 @@ object LocalizationStrings {
             "ja" to "Kairumo のライブラリは数千の小さなファイルでできており、すでに Google Drive または同期フォルダで同期されます。iCloud Drive でも同期すると、削除したファイルが復元されたり、競合が起きたりすることがあります。iCloud で同期されないフォルダを選ぶか、そのまま続行してください。",
             "ko" to "Kairumo 라이브러리는 수천 개의 작은 파일로 이루어져 있으며 이미 Google Drive 또는 동기화 폴더로 동기화됩니다. iCloud Drive로도 동기화하면 삭제한 파일이 복원되거나 충돌이 생길 수 있습니다. iCloud가 동기화하지 않는 폴더를 선택하거나 그대로 계속하세요.",
             "th" to "คลังของ Kairumo ประกอบด้วยไฟล์เล็กๆ หลายพันไฟล์ และซิงก์ผ่าน Google Drive หรือโฟลเดอร์ซิงก์อยู่แล้ว หาก iCloud Drive ซิงก์ด้วย ไฟล์ที่ลบไปอาจกลับมาและอาจเกิดความขัดแย้งได้ ควรเลือกโฟลเดอร์ที่ iCloud ไม่ซิงก์ หรือดำเนินการต่อ"
-        )
-    )
-
-    private fun part34(): Map<String, Map<String, String>> = mapOf(
+        ),
         "storage_icloud_title" to mapOf(
             "zh-Hant" to "這個資料夾會被 iCloud 雲碟同步",
             "en" to "This folder is synced by iCloud Drive",
@@ -22532,7 +22556,10 @@ object LocalizationStrings {
             "ja" to "同期に失敗しました：%@",
             "ko" to "동기화 실패: %@",
             "th" to "ซิงค์ไม่สำเร็จ: %@"
-        ),
+        )
+    )
+
+    private fun part35(): Map<String, Map<String, String>> = mapOf(
         "sync_folder_cancel_setting" to mapOf(
             "zh-Hant" to "取消已設定的資料夾",
             "en" to "Unlink Configured Folder",
@@ -22556,10 +22583,7 @@ object LocalizationStrings {
             "ja" to "iCloud／フォルダ",
             "ko" to "iCloud/폴더",
             "th" to "iCloud / โฟลเดอร์"
-        )
-    )
-
-    private fun part35(): Map<String, Map<String, String>> = mapOf(
+        ),
         "sync_folder_manual_while_drive" to mapOf(
             "zh-Hant" to "自動同步由 Google Drive 負責。這個資料夾是手動備份 —— 按「立即同步」才會更新。",
             "en" to "Automatic sync is handled by Google Drive. This folder is a manual backup — tap Sync now to update it.",
@@ -23175,7 +23199,10 @@ object LocalizationStrings {
             "ja" to "キャンバスをタップして文字を入力",
             "ko" to "캔버스를 탭하여 텍스트 입력",
             "th" to "แตะที่ใดก็ได้บนผืนผ้าใบเพื่อพิมพ์"
-        ),
+        )
+    )
+
+    private fun part36(): Map<String, Map<String, String>> = mapOf(
         "tape_delete" to mapOf(
             "zh-Hant" to "刪除膠帶",
             "en" to "Delete tape",
@@ -23199,10 +23226,7 @@ object LocalizationStrings {
             "ja" to "太字",
             "ko" to "굵게",
             "th" to "ตัวหนา"
-        )
-    )
-
-    private fun part36(): Map<String, Map<String, String>> = mapOf(
+        ),
         "text_color" to mapOf(
             "zh-Hant" to "文字顏色",
             "en" to "Text color",
@@ -23818,7 +23842,10 @@ object LocalizationStrings {
             "ja" to "プロジェクト工程",
             "ko" to "프로젝트 일정",
             "th" to "หมุดหมายโครงการ"
-        ),
+        )
+    )
+
+    private fun part37(): Map<String, Map<String, String>> = mapOf(
         "tmpl_project_timeline_desc" to mapOf(
             "zh-Hant" to "里程碑、負責人、期限三欄",
             "en" to "Milestone, owner and due date in three columns",
@@ -23842,10 +23869,7 @@ object LocalizationStrings {
             "ja" to "6組の問答。先に問い、あとで思い出して答える",
             "ko" to "6개 문답 블록. 질문 먼저, 답은 나중에",
             "th" to "หกบล็อกถามตอบ"
-        )
-    )
-
-    private fun part37(): Map<String, Map<String, String>> = mapOf(
+        ),
         "tmpl_quadrant" to mapOf(
             "zh-Hant" to "四象限筆記",
             "en" to "Quadrant Method",
@@ -24461,7 +24485,10 @@ object LocalizationStrings {
             "ja" to "カウントダウンは次回の同期後に始まります",
             "ko" to "다음 동기화 후 카운트다운이 시작됩니다",
             "th" to "การนับถอยหลังจะเริ่มหลังการซิงค์ครั้งถัดไป"
-        ),
+        )
+    )
+
+    private fun part38(): Map<String, Map<String, String>> = mapOf(
         "trash_days_left" to mapOf(
             "zh-Hant" to "還剩 %@ 天",
             "en" to "%@ days left",
@@ -24485,10 +24512,7 @@ object LocalizationStrings {
             "ja" to "「%@」はこのデバイスから削除され、元に戻せません。",
             "ko" to "“%@”이(가) 이 기기에서 삭제되며 복구할 수 없습니다.",
             "th" to "“%@” จะถูกลบออกจากอุปกรณ์นี้และไม่สามารถกู้คืนได้"
-        )
-    )
-
-    private fun part38(): Map<String, Map<String, String>> = mapOf(
+        ),
         "trash_delete_forever_confirm_title" to mapOf(
             "zh-Hant" to "要永久刪除嗎？",
             "en" to "Delete permanently?",
@@ -25104,7 +25128,10 @@ object LocalizationStrings {
             "ja" to "フォントの色",
             "ko" to "글꼴 색",
             "th" to "สีฟอนต์"
-        ),
+        )
+    )
+
+    private fun part39(): Map<String, Map<String, String>> = mapOf(
         "wd_font_family" to mapOf(
             "zh-Hant" to "字型",
             "en" to "Font",
@@ -25128,10 +25155,7 @@ object LocalizationStrings {
             "ja" to "蛍光色",
             "ko" to "형광색",
             "th" to "สีไฮไลต์"
-        )
-    )
-
-    private fun part39(): Map<String, Map<String, String>> = mapOf(
+        ),
         "wd_increase_indent" to mapOf(
             "zh-Hant" to "增加縮排",
             "en" to "Increase Indent",

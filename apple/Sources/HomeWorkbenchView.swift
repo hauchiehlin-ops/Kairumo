@@ -940,6 +940,15 @@ public struct HomeWorkbenchView: View {
     }
 
     private func notebookMenuSections(note: NotebookDocument) -> [[StableMenuAction]] {
+        var sections = notebookMenuSectionsAll(note: note)
+        // 唯讀範例不能改名（見 `NotebookStore.renameNotebook`）。
+        if note.isReadOnlySample {
+            sections = sections.map { $0.filter { $0.id != "rename_note" } }
+        }
+        return sections
+    }
+
+    private func notebookMenuSectionsAll(note: NotebookDocument) -> [[StableMenuAction]] {
         [
             [
                 StableMenuAction(
@@ -1337,7 +1346,7 @@ public struct HomeWorkbenchView: View {
                                                 .font(.caption2)
                                                 .foregroundColor(.secondary)
                                             Spacer()
-                                            Text(note.lastModifiedDate, style: .time)
+                                            Text(LocalizationManager.formatted(note.lastModifiedDate, date: .long, time: .standard))
                                                 .font(.caption2)
                                                 .foregroundColor(.secondary)
                                         }
@@ -2165,7 +2174,7 @@ public struct HomeWorkbenchView: View {
                         .foregroundColor(.secondary)
 
                     // 修改日期
-                    Text(note.lastModifiedDate, style: .date)
+                    Text(LocalizationManager.formatted(note.lastModifiedDate, date: .long, time: .standard))
                         .font(.caption2)
                         .foregroundColor(.secondary)
                 }
@@ -2389,7 +2398,7 @@ public struct HomeWorkbenchView: View {
                                     .font(.caption2)
                                     .foregroundColor(.secondary)
                                 Spacer()
-                                Text(note.lastModifiedDate, style: .date)
+                                Text(LocalizationManager.formatted(note.lastModifiedDate, date: .long, time: .standard))
                                     .font(.caption2)
                                     .foregroundColor(.secondary)
                             }
@@ -4861,13 +4870,27 @@ struct NotebookEditorHost: View {
     }
 
     var body: some View {
-        if let current = store.notebooks.first(where: { $0.id == currentNotebookId }) {
-            NotebookEditorView(
-                notebook: binding(fallback: current),
-                onRequestSwitch: { target in
-                    currentNotebookId = target.id
-                }
-            )
+        Group {
+            if let current = store.notebooks.first(where: { $0.id == currentNotebookId }) {
+                NotebookEditorView(
+                    notebook: binding(fallback: current),
+                    onRequestSwitch: { target in
+                        currentNotebookId = target.id
+                    }
+                )
+            }
+        }
+        // 唯讀範例被編輯 → 已另存成一本一般筆記本，編輯器換到那一本（見 `NotebookStore.forkEditedSample`）。
+        .alert(
+            LocalizationManager.shared.localized("sample_readonly_title"),
+            isPresented: Binding(
+                get: { store.sampleForkNotice != nil },
+                set: { if !$0 { store.sampleForkNotice = nil } })
+        ) {
+            Button(LocalizationManager.shared.localized("confirm")) { store.sampleForkNotice = nil }
+        } message: {
+            Text(LocalizationManager.shared.localized("sample_readonly_forked")
+                + "\n" + (store.sampleForkNotice ?? ""))
         }
     }
 

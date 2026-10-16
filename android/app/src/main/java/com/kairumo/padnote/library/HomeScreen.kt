@@ -134,6 +134,7 @@ fun HomeScreen(
     onCreateFolder: () -> Unit,
     onRenameFolder: (FolderTree.Folder) -> Unit,
     onDeleteFolder: (FolderTree.Folder) -> Unit,
+    onCreateSubfolder: (FolderTree.Folder) -> Unit = {},
     /** 素材圖庫。與 Apple 首頁的第三張動作卡對應。 */
     onAssetLibrary: () -> Unit,
     /** 選同步資料夾。原本只在編輯器的「⋯」裡，使用者要先開一本筆記才找得到。 */
@@ -151,6 +152,8 @@ fun HomeScreen(
     /** 把一段錄音插進某一本筆記的某一頁（工作項 S-41）。 */
     onInsertRecording: (RecordingIndex.Recording) -> Unit,
     onRenameRecording: (RecordingIndex.Recording) -> Unit,
+    onDeleteRecording: (RecordingIndex.Recording) -> Unit = {},
+    onDuplicateNotebook: (NotebookLibrary.Entry) -> Unit = {},
     /** 重新命名目前所在的資料夾（最上層也算）。與 Apple 的 `edit_root_folder` 對應。 */
     onRenameRootFolder: () -> Unit,
     /** 系統診斷頁。Apple 在首頁頁尾的版本號上，Android 原本只在編輯器選單裡。 */
@@ -166,6 +169,11 @@ fun HomeScreen(
     // 狀態名字不一樣的話下一個人得重新對一次。
     var showAllContinue by remember { mutableStateOf(false) }
     var showAllRecordings by remember { mutableStateOf(false) }
+    // 隱藏的錄音（只在這次開啟期間，與 Apple 的 `hiddenRecordingIds` 相同）。
+    var hiddenRecordings by remember { mutableStateOf(setOf<String>()) }
+    // 隱藏的筆記本（只在這次開啟期間，與 Apple 的 `hiddenNoteIds` 相同）：「繼續編輯」與「全部筆記」都不列。
+    var hiddenNotes by remember { mutableStateOf(setOf<String>()) }
+    val hideNotebook: (NotebookLibrary.Entry) -> Unit = { hiddenNotes = hiddenNotes + it.id }
     var isGridView by remember { mutableStateOf(true) }
     // Ctrl+F 把游標送進搜尋框（見 ui/AppCommands.kt）。
     val searchFocus = remember { FocusRequester() }
@@ -209,15 +217,15 @@ fun HomeScreen(
     fun toggleFolder(key: String) {
         collapsed = if (key in collapsed) collapsed - key else collapsed + key
     }
-    val treeRows = remember(allFolders, allEntries, collapsed, sort) {
-        buildTreeRows(treeContext, allFolders, sortedForTree(allEntries, sort), collapsed)
+    val treeRows = remember(allFolders, allEntries, collapsed, sort, hiddenNotes) {
+        buildTreeRows(treeContext, allFolders, sortedForTree(allEntries.filter { it.id !in hiddenNotes }, sort), collapsed)
     }
 
-    val filtered = remember(entries, allEntries, query, contentHits) {
-        if (query.isBlank()) entries
+    val filtered = remember(entries, allEntries, query, contentHits, hiddenNotes) {
+        (if (query.isBlank()) entries
         else allEntries.filter {
             it.title.contains(query.trim(), ignoreCase = true) || contentHits.contains(it.id)
-        }
+        }).filter { it.id !in hiddenNotes }
     }
 
     // 內容置中並限制最大寬度（工作項 S-62）。
@@ -426,7 +434,16 @@ fun HomeScreen(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    SectionTitle(l("continue_working"), Modifier.weight(1f))
+                    SectionTitle(l("continue_working"))
+                    if (hiddenNotes.isNotEmpty()) {
+                        TextButton(
+                            onClick = { hiddenNotes = emptySet() },
+                            modifier = Modifier.testTag("home.continue.unhide")
+                        ) {
+                            Text(l("unhide_items"), style = MaterialTheme.typography.labelSmall)
+                        }
+                    }
+                    Spacer(Modifier.weight(1f))
                     // 「顯示全部／收合」。Apple 的每一區塊都有，Android 原本
                     // 硬性只顯示前六筆 —— 第七本之後的筆記在首頁上等於不存在。
                     TextButton(
@@ -462,7 +479,17 @@ fun HomeScreen(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                SectionTitle(l("recent_recordings"), Modifier.weight(1f))
+                SectionTitle(l("recent_recordings"))
+                // 與 Apple 一致：有隱藏的錄音時，標題旁出現「重置隱藏項目」。
+                if (hiddenRecordings.isNotEmpty()) {
+                    TextButton(
+                        onClick = { hiddenRecordings = emptySet() },
+                        modifier = Modifier.testTag("home.recordings.unhide")
+                    ) {
+                        Text(l("unhide_items"), style = MaterialTheme.typography.labelSmall)
+                    }
+                }
+                Spacer(Modifier.weight(1f))
                 TextButton(
                     onClick = {
                         val folder = java.io.File(ProfileContext.dataDir(searchContext), "notebooks")
@@ -479,7 +506,7 @@ fun HomeScreen(
                 ) {
                     Text(
                         if (showAllRecordings) l("collapse")
-                        else "${l("show_all")} (${recordings.size})",
+                        else "${l("show_all")} (${recordings.count { it.file.absolutePath !in hiddenRecordings }})",
                         style = MaterialTheme.typography.labelMedium
                     )
                 }
@@ -546,17 +573,22 @@ fun HomeScreen(
         //
         // Apple 端本來就是這樣做的：區塊永遠在，沒有內容時裡面放一句提示。
         // 兩端對齊之後，這一項就是真的被守住了。
-        if (recordings.isEmpty()) {
+        val visibleRecordings = recordings.filter { it.file.absolutePath !in hiddenRecordings }
+        if (visibleRecordings.isEmpty()) {
             item {
                 Box(Modifier.testTag("home.recordings.list")) {
                     EmptyHint(l("no_recordings_hint"))
                 }
             }
         } else {
-            val shownRecordings = if (showAllRecordings) recordings else recordings.take(5)
+            val shownRecordings = if (showAllRecordings) visibleRecordings else visibleRecordings.take(5)
             items(shownRecordings, key = { "rec-${it.file.absolutePath}" }) { recording ->
                 Box(Modifier.testTag("home.recordings.list")) {
-                    RecordingRow(recording, l, onOpen, onInsertRecording, onRenameRecording)
+                    RecordingRow(
+                        recording, l, onOpen, onInsertRecording, onRenameRecording,
+                        onHide = { hiddenRecordings = hiddenRecordings + it.file.absolutePath },
+                        onDelete = onDeleteRecording
+                    )
                 }
             }
         }
@@ -639,6 +671,14 @@ fun HomeScreen(
                         onClick = onRenameRootFolder,
                         modifier = Modifier.testTag("home.notebooks.rename_root")
                     ) { Text("✎") }
+                    if (hiddenNotes.isNotEmpty()) {
+                        TextButton(
+                            onClick = { hiddenNotes = emptySet() },
+                            modifier = Modifier.testTag("home.notebooks.unhide")
+                        ) {
+                            Text(l("unhide_items"), style = MaterialTheme.typography.labelSmall)
+                        }
+                    }
                     Spacer(Modifier.weight(1f))
                     // 全部收合／展開，與 Apple 相同。
                     TextButton(
@@ -670,7 +710,8 @@ fun HomeScreen(
                         row.folder, l, onOpenFolder, onRenameFolder, onDeleteFolder,
                         onDropNotebook = { noteId -> onMoveNotebookToFolder(noteId, row.folder.id) },
                         expanded = row.expanded, count = row.count, depth = row.depth,
-                        onToggle = { toggleFolder(row.folder.id) }
+                        onToggle = { toggleFolder(row.folder.id) },
+                        onCreateSubfolder = onCreateSubfolder
                     )
                     is TreeRow.UnfiledHeader -> UnfiledRow(
                         l, row.count, row.expanded,
@@ -692,7 +733,10 @@ fun HomeScreen(
                         ) {
                             if (!isGridView) {
                                 for (entry in row.entries) {
-                                    NotebookListCard(entry, l, onOpen, onRename, onDelete, onMove, onCreateSnapshot)
+                                    NotebookListCard(
+                        entry, l, onOpen, onRename, onDelete, onMove, onCreateSnapshot,
+                        onHide = hideNotebook, onDuplicate = onDuplicateNotebook
+                    )
                                 }
                             } else {
                                 for (chunk in row.entries.chunked(gridColumns)) {
@@ -700,7 +744,8 @@ fun HomeScreen(
                                         for (entry in chunk) {
                                             NotebookGridCard(
                                                 entry, l, onOpen, onRename, onDelete, onMove, onCreateSnapshot,
-                                                modifier = Modifier.weight(1f)
+                                                modifier = Modifier.weight(1f),
+                                                onHide = hideNotebook, onDuplicate = onDuplicateNotebook
                                             )
                                         }
                                         repeat(gridColumns - chunk.size) { Box(Modifier.weight(1f)) }
@@ -716,7 +761,10 @@ fun HomeScreen(
         } else {
             items(filtered, key = { "list-" + it.id }) { entry ->
                 Box(Modifier.fillMaxWidth().testTag("home.notebooks.list")) {
-                    NotebookListCard(entry, l, onOpen, onRename, onDelete, onMove, onCreateSnapshot)
+                    NotebookListCard(
+                        entry, l, onOpen, onRename, onDelete, onMove, onCreateSnapshot,
+                        onHide = hideNotebook, onDuplicate = onDuplicateNotebook
+                    )
                 }
             }
         }
@@ -969,6 +1017,52 @@ private fun ActionCard(
  * 顯示的是**那一頁長什麼樣子**，不是一行標題 —— 使用者記得的是畫面，
  * 不是名字。與 Apple 的「全部筆記」一致。
  */
+/**
+ * 筆記本的「⋯」選單，格狀與清單兩種卡片共用。順序與 Apple `notebookMenuSections` 相同：
+ * 開啟、隱藏、重新命名、移動、複製｜刪除。備份快照是 Android 才有的，放在複製之後。
+ */
+@Composable
+private fun NotebookMenuItems(
+    entry: NotebookLibrary.Entry,
+    l: (String) -> String,
+    onOpen: (String) -> Unit,
+    onRename: (NotebookLibrary.Entry) -> Unit,
+    onDelete: (NotebookLibrary.Entry) -> Unit,
+    onMove: (NotebookLibrary.Entry) -> Unit,
+    onCreateSnapshot: (NotebookLibrary.Entry?) -> Unit,
+    onHide: (NotebookLibrary.Entry) -> Unit,
+    onDuplicate: (NotebookLibrary.Entry) -> Unit,
+    dismiss: () -> Unit
+) {
+    val context = LocalContext.current
+    val encrypted = remember(entry.id) { NotebookLibrary.isEncrypted(context, entry.id) }
+    DropdownMenuItem(text = { Text(l("open_editor")) }, onClick = { dismiss(); onOpen(entry.id) })
+    DropdownMenuItem(
+        text = { Text(l("hide_item")) },
+        onClick = { dismiss(); onHide(entry) },
+        modifier = Modifier.testTag("home.notebooks.menu.hide")
+    )
+    // 唯讀範例不能改名（要自己的名字請先編輯，另存出來的那一本可以改名）。
+    if (!SeedNotebooks.isDeviceLocal(entry.id)) {
+        DropdownMenuItem(text = { Text(l("rename_note")) }, onClick = { dismiss(); onRename(entry) })
+    }
+    DropdownMenuItem(text = { Text(l("move_to_folder")) }, onClick = { dismiss(); onMove(entry) })
+    // 加密的筆記不能複製（見 `NotebookLibrary.duplicate`）。
+    if (!encrypted) {
+        DropdownMenuItem(
+            text = { Text(l("duplicate_note")) },
+            onClick = { dismiss(); onDuplicate(entry) },
+            modifier = Modifier.testTag("home.notebooks.menu.duplicate")
+        )
+    }
+    DropdownMenuItem(text = { Text(l("backup_snapshot")) }, onClick = { dismiss(); onCreateSnapshot(entry) })
+    HorizontalDivider()
+    DropdownMenuItem(
+        text = { Text(l("delete_item"), color = MaterialTheme.colorScheme.error) },
+        onClick = { dismiss(); onDelete(entry) }
+    )
+}
+
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun NotebookGridCard(
@@ -979,7 +1073,9 @@ private fun NotebookGridCard(
     onDelete: (NotebookLibrary.Entry) -> Unit,
     onMove: (NotebookLibrary.Entry) -> Unit,
     onCreateSnapshot: (NotebookLibrary.Entry?) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onHide: (NotebookLibrary.Entry) -> Unit = {},
+    onDuplicate: (NotebookLibrary.Entry) -> Unit = {}
 ) {
     var menu by remember(entry.id) { mutableStateOf(false) }
     Card(
@@ -1039,26 +1135,9 @@ private fun NotebookGridCard(
                 Box(Modifier.align(Alignment.TopEnd)) {
                     TextButton(onClick = { menu = true }) { Text("⋯") }
                     DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-                        DropdownMenuItem(
-                            text = { Text(l("open_note")) },
-                            onClick = { menu = false; onOpen(entry.id) }
-                        )
-                        DropdownMenuItem(
-                            text = { Text(l("rename_note")) },
-                            onClick = { menu = false; onRename(entry) }
-                        )
-                        DropdownMenuItem(
-                            text = { Text(l("move_to_folder")) },
-                            onClick = { menu = false; onMove(entry) }
-                        )
-                        DropdownMenuItem(
-                            text = { Text(l("backup_snapshot")) },
-                            onClick = { menu = false; onCreateSnapshot(entry) }
-                        )
-                        DropdownMenuItem(
-                            text = { Text(l("delete")) },
-                            onClick = { menu = false; onDelete(entry) }
-                        )
+                        NotebookMenuItems(entry, l, onOpen, onRename, onDelete, onMove, onCreateSnapshot, onHide, onDuplicate) {
+                            menu = false
+                        }
                     }
                 }
             }
@@ -1161,9 +1240,30 @@ fun DeleteNotebookDialog(
     )
 }
 
+/** 最後修改時間：日期＋時、分、秒（與 Apple 首頁一致），同一天改了幾次也分得出先後。 */
 private fun formatDate(millis: Long): String =
     if (millis <= 0) "—"
-    else DateFormat.getDateInstance(DateFormat.MEDIUM).format(Date(millis))
+    else DateFormat.getDateTimeInstance(DateFormat.LONG, DateFormat.MEDIUM).format(Date(millis))
+
+/**
+ * 錄音的「在資料夾中顯示」：Android 沒有 Finder，與 iPad 一樣改用分享面板。
+ * 檔案先複製到 cache/exports（FileProvider 只開放那裡），用錄音名字當檔名。
+ */
+private fun shareRecording(context: android.content.Context, recording: RecordingIndex.Recording) {
+    runCatching {
+        val dir = java.io.File(context.cacheDir, "exports").apply { mkdirs() }
+        val safe = recording.displayTitle.replace(Regex("[\\\\/:*?\"<>|]"), "_").take(80).ifBlank { "recording" }
+        val out = java.io.File(dir, "$safe.${recording.file.extension}")
+        recording.file.copyTo(out, overwrite = true)
+        val uri = androidx.core.content.FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", out)
+        val send = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+            type = "audio/ogg"
+            putExtra(android.content.Intent.EXTRA_STREAM, uri)
+            addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        context.startActivity(android.content.Intent.createChooser(send, recording.displayTitle))
+    }
+}
 
 private fun parseHex(hex: String): Color? =
     com.kairumo.padnote.chart.ChartRenderer.parseColor(hex)?.let { Color(it) }
@@ -1184,7 +1284,9 @@ private fun FolderRow(
     count: Int? = null,
     /** 樹狀檢視：子資料夾往右縮排。 */
     depth: Int = 0,
-    onToggle: (() -> Unit)? = null
+    onToggle: (() -> Unit)? = null,
+    /** 「新增子資料夾」（Apple `folderMenuSections` 的第一項）。 */
+    onCreateSubfolder: (FolderTree.Folder) -> Unit = {}
 ) {
     var menu by remember(folder.id) { mutableStateOf(false) }
     var targeted by remember(folder.id) { mutableStateOf(false) }
@@ -1249,11 +1351,17 @@ private fun FolderRow(
                 TextButton(onClick = { menu = true }) { Text("⋯") }
                 DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
                     DropdownMenuItem(
+                        text = { Text(l("new_subfolder")) },
+                        onClick = { menu = false; onCreateSubfolder(folder) },
+                        modifier = Modifier.testTag("home.folders.menu.new_subfolder")
+                    )
+                    DropdownMenuItem(
                         text = { Text(l("rename_folder")) },
                         onClick = { menu = false; onRename(folder) }
                     )
+                    HorizontalDivider()
                     DropdownMenuItem(
-                        text = { Text(l("delete_folder")) },
+                        text = { Text(l("delete_folder"), color = MaterialTheme.colorScheme.error) },
                         onClick = { menu = false; onDelete(folder) }
                     )
                 }
@@ -1468,9 +1576,12 @@ private fun RecordingRow(
     l: (String) -> String,
     onOpen: (String) -> Unit,
     onInsert: (RecordingIndex.Recording) -> Unit,
-    onRename: (RecordingIndex.Recording) -> Unit
+    onRename: (RecordingIndex.Recording) -> Unit,
+    onHide: (RecordingIndex.Recording) -> Unit,
+    onDelete: (RecordingIndex.Recording) -> Unit
 ) {
     var menu by remember(recording.file.absolutePath) { mutableStateOf(false) }
+    val context = androidx.compose.ui.platform.LocalContext.current
     val playing = AudioPlayback.playingId == recording.file.absolutePath
     var tick by remember { mutableStateOf(0) }
 
@@ -1565,6 +1676,24 @@ private fun RecordingRow(
                             onClick = { menu = false; onOpen(recording.notebookId) }
                         )
                     }
+                    // 以下與 Apple 的錄音選單同序：隱藏、改名（上面）、在資料夾中顯示（行動裝置為分享）、刪除。
+                    HorizontalDivider()
+                    DropdownMenuItem(
+                        text = { Text(l("hide_item")) },
+                        onClick = { menu = false; onHide(recording) },
+                        modifier = Modifier.testTag("home.recordings.menu.hide")
+                    )
+                    DropdownMenuItem(
+                        text = { Text(l("show_in_folder")) },
+                        onClick = { menu = false; shareRecording(context, recording) },
+                        modifier = Modifier.testTag("home.recordings.menu.share")
+                    )
+                    HorizontalDivider()
+                    DropdownMenuItem(
+                        text = { Text(l("delete_recording"), color = MaterialTheme.colorScheme.error) },
+                        onClick = { menu = false; onDelete(recording) },
+                        modifier = Modifier.testTag("home.recordings.menu.delete")
+                    )
                 }
             }
         }
@@ -1583,7 +1712,9 @@ private fun NotebookListCard(
     onDelete: (NotebookLibrary.Entry) -> Unit,
     onMove: (NotebookLibrary.Entry) -> Unit,
     onCreateSnapshot: (NotebookLibrary.Entry?) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onHide: (NotebookLibrary.Entry) -> Unit = {},
+    onDuplicate: (NotebookLibrary.Entry) -> Unit = {}
 ) {
     var menu by remember(entry.id) { mutableStateOf(false) }
     Card(
@@ -1613,11 +1744,9 @@ private fun NotebookListCard(
             Box {
                 TextButton(onClick = { menu = true }) { Text("⋯", fontSize = 18.sp) }
                 DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-                    DropdownMenuItem(text = { Text(l("open_note")) }, onClick = { menu = false; onOpen(entry.id) })
-                    DropdownMenuItem(text = { Text(l("rename_note")) }, onClick = { menu = false; onRename(entry) })
-                    DropdownMenuItem(text = { Text(l("move_to_folder")) }, onClick = { menu = false; onMove(entry) })
-                    DropdownMenuItem(text = { Text(l("backup_snapshot")) }, onClick = { menu = false; onCreateSnapshot(entry) })
-                    DropdownMenuItem(text = { Text(l("delete"), color = MaterialTheme.colorScheme.error) }, onClick = { menu = false; onDelete(entry) })
+                    NotebookMenuItems(entry, l, onOpen, onRename, onDelete, onMove, onCreateSnapshot, onHide, onDuplicate) {
+                        menu = false
+                    }
                 }
             }
         }

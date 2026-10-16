@@ -408,7 +408,8 @@ public struct NotebookDocument: Identifiable, Codable, Hashable, @unchecked Send
 
     public mutating func setUnderInkObjectIds(_ ids: Set<String>, forPage page: Int) {
         var map = underInkObjectIdsByPage ?? [:]
-        map[String(page)] = Array(ids)
+        // 排序：同一組物件每次都寫出同一份內容，同步才不會誤判「有變動」。
+        map[String(page)] = ids.sorted()
         underInkObjectIdsByPage = map
     }
 
@@ -454,11 +455,24 @@ public struct NotebookDocument: Identifiable, Codable, Hashable, @unchecked Send
     }
 
     /// 顯示用標題：系統預設標題會跟著介面語言走。
+    ///
+    /// 預載範例是唯讀的，名字後面標「（唯讀）」（見 `NotebookStore.forkEditedSample`）。
     @MainActor
     public func displayTitle(_ l10n: LocalizationManager = .shared) -> String {
+        let base = baseDisplayTitle(l10n)
+        guard isReadOnlySample else { return base }
+        return base + l10n.localized("sample_readonly_suffix")
+    }
+
+    /// 不含「（唯讀）」的標題。由範例複製出的筆記本以它命名。
+    @MainActor
+    public func baseDisplayTitle(_ l10n: LocalizationManager = .shared) -> String {
         guard let key = titleKey else { return title }
         return l10n.localized(key)
     }
+
+    /// 預載範例（每台裝置自己產生、不同步）。唯讀：一編輯就另存成一般筆記本，範例本身保持乾淨。
+    public var isReadOnlySample: Bool { NotebookPackageBridge.isDeviceLocalSeed(id) }
 
     /// 六種語言的 `created_on` 前綴（`%@` 之前的字），用來認出舊筆記存下的「建立於 …」。
     @MainActor private static let createdOnPrefixes: [String] = {
@@ -1245,6 +1259,8 @@ public final class NotebookStore: ObservableObject {
     @Published public var notebooks: [NotebookDocument] = []
     @Published public var recordings: [AudioRecordingRecord] = []
     @Published public var folders: [FolderItem] = []
+    /// 剛從唯讀範例另存出來的筆記本名稱。編輯器宿主看到就提示使用者（見 `forkEditedSample`）。
+    @Published var sampleForkNotice: String?
     /// 根資料夾名稱。空字串代表「使用者沒有自訂」，顯示時走語系預設值。
     @Published public var rootFolderName: String = ""
     /// 目前正在檢視／編輯的作用中筆記本 ID（供雙軌同步優先排程使用）
@@ -1665,7 +1681,7 @@ public final class NotebookStore: ObservableObject {
     ]
 
     private func migrateSeedTitles(_ doc: NotebookDocument) -> NotebookDocument {
-        // UUID 的筆記不是舊範例：改過而轉成一般筆記的範例（`promoteEditedSample`）名字一樣，
+        // UUID 的筆記不是舊範例：由範例另存出來的筆記本（`forkEditedSample`）名字相近，
         // 被認回範例的話會被範例的自癒修復整本重設。
         guard doc.titleKey == nil, UUID(uuidString: doc.id) == nil,
               let keys = Self.legacySeedTitles[doc.title] else { return doc }
@@ -1733,11 +1749,14 @@ public final class NotebookStore: ObservableObject {
             changed = true
         }
 
-        // 若現有使用者庫中尚未有功能實戰範例筆記，自動補入
+        // 若現有使用者庫中尚未有功能實戰範例筆記，自動補入 —— **只補一次**（旗標）。
+        // 以前每次啟動都補，使用者刪掉之後它每次更新、每次開 App 都長回來。
+        let showcaseChecked = ProfileDefaults.current.bool(forKey: Self.showcaseSeededKey)
+        ProfileDefaults.current.set(true, forKey: Self.showcaseSeededKey)
         let hasShowcase = notebooks.contains {
             $0.id == "seed-feature-showcase-v1" || $0.titleKey == "seed_feature_showcase_title"
         }
-        if !hasShowcase, !Self.retiredSamples.contains("seed-feature-showcase-v1") {
+        if !showcaseChecked, !hasShowcase, !Self.retiredSamples.contains("seed-feature-showcase-v1") {
             var n3 = NotebookDocument(
                 id: "seed-feature-showcase-v1",
                 title: LocalizationManager.shared.localized("seed_feature_showcase_title"),
@@ -1769,10 +1788,12 @@ public final class NotebookStore: ObservableObject {
             ProfileDefaults.current.set(Self.seedGeneration, forKey: Self.seedGenerationKey)
         }
 
-        // 自癒修復：若現有示範筆記《Kairumo(功能範例)》尚未設定背景卡片 underInkObjectIds，自動補齊
+        // 自癒修復：若現有示範筆記《Kairumo(功能範例)》**從來沒有**設定背景卡片 underInkObjectIds，自動補齊。
+        // 只看「有沒有設定過」，不看「是不是空的」：使用者把卡片移回筆跡上方之後是空的，
+        // 那是使用者的選擇 —— 看空的話每次啟動都會被改回去（使用者回報：圖層調整後又恢復原狀）。
         for index in notebooks.indices {
             if notebooks[index].id == "seed-feature-showcase-v1" || notebooks[index].titleKey == "seed_feature_showcase_title" {
-                if notebooks[index].underInkObjectIds(forPage: 1).isEmpty {
+                if notebooks[index].underInkObjectIdsByPage == nil {
                     for p in 0..<notebooks[index].pageCount {
                         let bgCardIds = (notebooks[index].shapeAttachments ?? []).filter {
                             $0.pageIndex == p && $0.kindName == "rectangle" && $0.label.isEmpty
@@ -2248,6 +2269,7 @@ public final class NotebookStore: ObservableObject {
         var n4 = Self.makeKairumoManual()
         SeedContent.fillKairumoManual(&n4, store: self)
         ProfileDefaults.current.set(true, forKey: Self.manualSeededKey)
+        ProfileDefaults.current.set(true, forKey: Self.showcaseSeededKey)
 
         let n5 = makeDraftingExample()
         ProfileDefaults.current.set(true, forKey: Self.draftingExampleSeededKey)
@@ -2258,7 +2280,9 @@ public final class NotebookStore: ObservableObject {
 
     /// 《Kairumo手冊》：全手繪的預載筆記本。名稱是固定的，不走語系表。
     private static let manualSeededKey = "seed.kairumoManual.added"
-    /// 已經「轉成一般筆記」的範例 id：不再自動補回（見 `promoteEditedSample`）。
+    /// 《Kairumo(功能範例)》：舊使用者只補一次，之後刪掉就不再長回來。
+    private static let showcaseSeededKey = "seed.featureShowcase.added"
+    /// 舊版「轉成一般筆記」而退役的範例 id：不再自動補回（範例改成唯讀後不再寫入）。
     static let retiredSamplesKey = "seed.retiredSamples"
 
     static var retiredSamples: Set<String> {
@@ -2266,76 +2290,94 @@ public final class NotebookStore: ObservableObject {
     }
     /// 範例筆記本內容的「世代」。提高它，下次啟動時所有範例會重設回標準內容一次。
     private static let seedGenerationKey = "seed.contentGeneration"
-    private static let seedGeneration = 2
+    // 3：範例改為唯讀（一編輯就另存一本），現有的範例重設一次（裡面有使用者內容的先另存，見
+    // `restoreSamplePreservingUserContent`）。被刪掉或退役的範例**不補回**：更新程式不重新安裝範例。
+    // 提高這個數字 = 下次更新時重設所有範例一次，非必要不要動。
+    private static let seedGeneration = 3
 
     /// 自癒修復：若預載範例筆記因為跨裝置同步 CRDT 合併產生頁數或區塊膨脹，自動收斂重設回標準頁數並清理多餘頁面與繪圖檔
     @discardableResult
     public func healInflatedSeedNotebooksIfNeeded(force: Bool = false) -> Bool {
-        let seedStandards: [(id: String, key: String, standardCount: Int, heal: (inout NotebookDocument) -> Void)] = [
-            ("seed-feature-showcase-v1", "seed_feature_showcase_title", 4, { doc in
-                doc.pageCount = 4
-                SeedContent.fillFeatureShowcase(&doc, store: self)
-            }),
-            (SeedContent.kairumoManualId, "seed_manual_title", 4, { doc in
-                doc.pageCount = 4
-                SeedContent.fillKairumoManual(&doc, store: self)
-            }),
-            (Self.draftingExampleId, "seed_drafting_example_title", 6, { doc in
-                // 重建內容，但使用者放的資料夾要留著（整份換掉的話它就回到「未分類」）。
-                let folder = doc.folderId
-                doc = self.makeDraftingExample()
-                doc.folderId = folder
-            }),
-            ("seed-welcome-notebook-v1", "seed_welcome_title", SeedContent.welcomePageCount, { doc in
-                doc.pageCount = SeedContent.welcomePageCount
-                SeedContent.fillWelcome(&doc)
-            }),
-            ("seed-meeting-notebook-v1", "seed_meeting_title", SeedContent.meetingPageCount, { doc in
-                doc.pageCount = SeedContent.meetingPageCount
-                SeedContent.fillMeeting(&doc, store: self)
-            })
-        ]
-
         var changed = false
-        for std in seedStandards {
-            // 只認範例自己的 id。以名字認的話，改過而轉成一般筆記的那一本（名字相同）會被整本重設。
-            if let idx = notebooks.firstIndex(where: { $0.id.caseInsensitiveCompare(std.id) == .orderedSame }) {
-                let docId = notebooks[idx].id
-                let currentCount = notebooks[idx].pageCount
-                let textCount = (notebooks[idx].textAttachments ?? []).count
-                let canonicalIds = NotebookPackageBridge.deterministicSeedPageIds(for: docId)
-                let pageIdsMismatch = canonicalIds != nil && notebooks[idx].pageIds != canonicalIds
-
-                if force || currentCount > std.standardCount || textCount > 100 || pageIdsMismatch {
-                    // 1. 保留前 standardCount 頁之手繪筆跡（保護使用者的真實手寫與簽名）
-                    let preservedDrawings = (0..<std.standardCount).map { self.loadDrawing(notebookId: docId, pageIndex: $0) }
-
-                    // 2. 徹底清理磁碟殘餘檔案（大於等於 standardCount 的幽靈繪圖檔、舊膨脹套件與快照）
-                    resetSeedStorage(notebookId: docId)
-
-                    // 3. 寫回保留的前 standardCount 頁手繪筆跡
-                    for (page, drawing) in preservedDrawings.enumerated() {
-                        self.saveDrawing(notebookId: docId, pageIndex: page, drawing: drawing)
-                    }
-
-                    // 4. 重建乾淨的文件規格（標準頁數、確定性頁面 ID、標準模板物件）
-                    notebooks[idx].pageCount = std.standardCount
-                    notebooks[idx].pageIds = canonicalIds
-                    std.heal(&notebooks[idx])
-
-                    // 5. 重新匯出乾淨的標準套件
-                    let pkgDir = corePackagesDirectory.appending(path: "\(docId.lowercased()).padnote")
-                    try? NotebookPackageBridge.export(
-                        document: notebooks[idx],
-                        drawings: preservedDrawings,
-                        to: pkgDir,
-                        deviceId: NotebookMigration.deviceId
-                    )
-                    changed = true
-                }
+        for index in notebooks.indices.reversed() {
+            let doc = notebooks[index]
+            // 只認範例自己的 id。以名字認的話，由範例另存出來的筆記本（名字相近）會被整本重設。
+            guard let standardCount = NotebookPackageBridge.seedStandardPageCount(for: doc.id) else { continue }
+            let canonicalIds = NotebookPackageBridge.deterministicSeedPageIds(for: doc.id)
+            let pageIdsMismatch = canonicalIds != nil && doc.pageIds != canonicalIds
+            if force || doc.pageCount > standardCount || (doc.textAttachments ?? []).count > 100 || pageIdsMismatch {
+                // 重設之前，範例裡若有使用者的內容（舊版範例可以直接編輯），先另存成一般筆記本 —— 更新程式不能清掉使用者的東西。
+                restoreSamplePreservingUserContent(doc.id)
+                changed = true
             }
         }
         return changed
+    }
+
+    /// 一本範例的標準內容（全新產生；會把標準筆跡寫進這台的筆跡檔）。不是範例回 nil。
+    private func standardSample(id: String) -> NotebookDocument? {
+        let l = LocalizationManager.shared
+        switch id.lowercased() {
+        case "seed-welcome-notebook-v1":
+            var doc = NotebookDocument(
+                id: "seed-welcome-notebook-v1", title: l.localized("sample_welcome"),
+                pageCount: SeedContent.welcomePageCount, hasRecording: false,
+                previewSnippet: "點擊進入畫布即可隨心手寫、繪製圖形、插入錄音並導出 PDF", template: .blank)
+            doc.titleKey = "seed_welcome_title"
+            doc.snippetKey = "seed_welcome_snippet"
+            SeedContent.fillWelcome(&doc)
+            return doc
+        case "seed-meeting-notebook-v1":
+            var doc = NotebookDocument(
+                id: "seed-meeting-notebook-v1", title: l.localized("sample_lectures"),
+                pageCount: SeedContent.meetingPageCount, hasRecording: true,
+                previewSnippet: "支援麥克風即時收音，聲音與筆跡精確對齊", template: .cornell)
+            doc.titleKey = "seed_meeting_title"
+            doc.snippetKey = "seed_meeting_snippet"
+            SeedContent.fillMeeting(&doc, store: self)
+            return doc
+        case "seed-feature-showcase-v1":
+            var doc = NotebookDocument(
+                id: "seed-feature-showcase-v1", title: l.localized("seed_feature_showcase_title"),
+                pageCount: 4, hasRecording: false,
+                previewSnippet: l.localized("seed_feature_showcase_snippet"), template: .grid)
+            doc.titleKey = "seed_feature_showcase_title"
+            doc.snippetKey = "seed_feature_showcase_snippet"
+            SeedContent.fillFeatureShowcase(&doc, store: self)
+            return doc
+        case SeedContent.kairumoManualId.lowercased():
+            var doc = Self.makeKairumoManual()
+            doc.pageCount = 4
+            SeedContent.fillKairumoManual(&doc, store: self)
+            return doc
+        case Self.draftingExampleId.lowercased():
+            return makeDraftingExample()
+        default:
+            return nil
+        }
+    }
+
+    /// 把一本範例重設回乾淨的標準內容：磁碟上的套件、筆跡、同步基準全部清掉重建。
+    /// 只保留使用者放的資料夾與建立時間。
+    func restoreSampleToStandard(_ id: String) {
+        guard let index = notebooks.firstIndex(where: { $0.id.caseInsensitiveCompare(id) == .orderedSame }) else { return }
+        let old = notebooks[index]
+        // 先清再產生：標準內容的筆跡在產生時就寫進筆跡檔，順序反了會被清掉。
+        resetSeedStorage(notebookId: old.id)
+        guard var fresh = standardSample(id: old.id) else { return }
+        fresh.folderId = old.folderId
+        fresh.createdAt = old.createdAt
+        fresh.lastModifiedDate = old.createdAt
+        if let canonical = NotebookPackageBridge.deterministicSeedPageIds(for: fresh.id) {
+            fresh.pageIds = Array(canonical.prefix(max(fresh.pageCount, 1)))
+        }
+        let drawings = (0..<max(fresh.pageCount, 1)).map { loadDrawing(notebookId: fresh.id, pageIndex: $0) }
+        try? NotebookPackageBridge.export(
+            document: fresh, drawings: drawings,
+            to: corePackagesDirectory.appending(path: "\(fresh.id.lowercased()).padnote"),
+            deviceId: NotebookMigration.deviceId)
+        notebooks[index] = fresh
+        PageThumbnailRenderer.invalidateAll()
     }
 
     /// 刪掉一本範例筆記本在磁碟上的衍生資料（核心套件、手繪與專業筆畫檔、同步基準），
@@ -2750,6 +2792,8 @@ public final class NotebookStore: ObservableObject {
 
     public func renameNotebook(id: String, newTitle: String) {
         guard let idx = notebooks.firstIndex(where: { $0.id.caseInsensitiveCompare(id) == .orderedSame }) else { return }
+        // 範例是唯讀的，名字也不改（要自己的名字請先編輯，另存出來的那一本可以改名）。
+        guard !notebooks[idx].isReadOnlySample else { return }
         let clean = newTitle.trimmingCharacters(in: .whitespacesAndNewlines)
         if !clean.isEmpty {
             notebooks[idx].title = clean
@@ -3542,6 +3586,22 @@ public final class NotebookStore: ObservableObject {
             // 名字要跟著這本筆記本的套件同步出去 —— 算作這本有修改。
             notebooks[idx].lastModifiedDate = Date()
         }
+        // 使用者取的名字當下就寫進套件（與改名同一條路，見 `writeRecordingTitle`）。
+        // 只靠下一輪匯出的話，音檔可能先到別台，別台就只看得到預設名稱。
+        if !Self.isGenericOrQuickRecordTitle(safeTitle) {
+            let notebookId = (linkedNotebookId ?? recordingInboxNotebookId()).lowercased()
+            let packagePath = corePackagesDirectory.appending(path: "\(notebookId).padnote").path
+            let file = fileName.lowercased()
+            let device = NotebookMigration.deviceId
+            pendingTitleWrites[file] = safeTitle
+            Task.detached(priority: .userInitiated) { [weak self] in
+                NotebookPackageBridge.writeRecordingTitle(
+                    packagePath: packagePath, fileName: file, title: safeTitle, deviceId: device)
+                await MainActor.run {
+                    if self?.pendingTitleWrites[file] == safeTitle { self?.pendingTitleWrites.removeValue(forKey: file) }
+                }
+            }
+        }
         persistData()
         return rec
     }
@@ -3792,7 +3852,8 @@ public final class NotebookStore: ObservableObject {
             let key = recordings[index].fileName.lowercased()
             guard pendingTitleWrites[key] == nil,
                   let incoming = titles[key]?.trimmingCharacters(in: .whitespacesAndNewlines),
-                  !incoming.isEmpty, incoming != recordings[index].title else { continue }
+                  !incoming.isEmpty, incoming != recordings[index].title,
+                  !Self.downgradesTitle(from: recordings[index].title, to: incoming) else { continue }
             recordings[index].title = incoming
             changed = true
         }
@@ -3805,7 +3866,8 @@ public final class NotebookStore: ObservableObject {
                 guard var cards = notebooks[notebookIndex].audioAttachments else { continue }
                 var cardChanged = false
                 for cardIndex in cards.indices where cards[cardIndex].fileName.lowercased() == key {
-                    if cards[cardIndex].title != clean {
+                    if cards[cardIndex].title != clean,
+                       !Self.downgradesTitle(from: cards[cardIndex].title, to: clean) {
                         cards[cardIndex].title = clean
                         cardChanged = true
                     }
@@ -3836,6 +3898,14 @@ public final class NotebookStore: ObservableObject {
             return fallback
         }
         return date
+    }
+
+    /// 套件裡的名字只是自動產生的預設名稱，清單裡卻是使用者取的名字：不採用。
+    ///
+    /// 那個預設名稱是舊版從別台蓋過來的（見 `NotebookSyncCoordinator.mergedExportTitles`），
+    /// 採用的話使用者取的名字就沒了；保留下來，下一輪匯出會把它寫回套件。
+    nonisolated static func downgradesTitle(from current: String, to incoming: String) -> Bool {
+        isGenericOrQuickRecordTitle(incoming) && !isGenericOrQuickRecordTitle(current)
     }
 
     /// 這個名字是 App 依時間自動產生的預設名稱（而不是使用者取的）。
@@ -4028,7 +4098,8 @@ public final class NotebookStore: ObservableObject {
                         //   套件裡有名字：**一律採用**（套件是唯一的真相來源，改名會直接寫進去，見 `writeRecordingTitle`）。
                         if let pending = pendingTitles[lowerName] {
                             updated.title = pending // 剛改、套件還沒寫完
-                        } else if let named = packageTitles[lowerName], !named.isEmpty, named != updated.title {
+                        } else if let named = packageTitles[lowerName], !named.isEmpty, named != updated.title,
+                                  !Self.downgradesTitle(from: updated.title, to: named) {
                             updated.title = named
                         } else if let named = candidateTitle, !named.isEmpty, named != updated.title,
                                   Self.isAutoPlaceholderTitle(updated.title, recordedDate: updated.recordedDate) {
@@ -4590,17 +4661,16 @@ extension NotebookStore: ProfileScoped {
 }
 
 
-// MARK: - 改過的範例轉成一般筆記
+// MARK: - 唯讀範例：一編輯就另存成一般筆記本
 
-/// 範例筆記本（歡迎使用、手冊、功能範例…）是**每台裝置自己產生、不同步**的 ——
-/// 各裝置各自生成同一份內容，若參與同步會被合併成兩份（見 `isDeviceLocalSeed`）。
+/// 範例筆記本（歡迎使用、手冊、功能範例…）是**唯讀**的，在任何安裝狀態下都保持乾淨的標準內容。
 ///
-/// 代價是使用者在範例裡寫的東西永遠只在那一台（使用者回報：Android 上的範例停在舊版本、
-/// iPad 上加的內容過不去）。所以：**使用者一改過範例，它就轉成一本一般的筆記** ——
-/// 換一個新的 id、內容（文件、筆跡、錄音）整本搬過去、所在資料夾不變，從此跟其他筆記一樣同步；
-/// 原本的範例在這台退役，不再自動補回。
+/// 使用者一動到範例（有意或無意），編輯器就把目前的樣子另存成一本一般的（會同步的）筆記本，
+/// 名字是「範例名 日期 時:分:秒」，編輯器換到那一本繼續，範例本身立刻重設回標準內容，
+/// 並提示「此範本為唯讀檔案，系統已自動增加可編輯筆記本」（`sample_readonly_forked`）。
+/// 與 Android `SampleFork` 同一套規則。
 ///
-/// 「改過」以開啟時與關閉後的指紋比對（文件內容 + 每頁筆跡），只是打開看看不會轉。
+/// 「改過」以開啟時與現在的指紋比對（文件內容 + 每頁筆跡），只是打開看看不算。
 extension NotebookStore {
 
     /// 編輯器打開一本範例時記下它的樣子。
@@ -4609,18 +4679,24 @@ extension NotebookStore {
         sampleBaselines[id.lowercased()] = sampleFingerprint(id)
     }
 
-    /// 編輯器關掉之後稍等一下（筆跡由背景寫入，要等它落盤）再比對；改過就轉成一般筆記。
-    func promoteSampleIfEditedSoon(_ id: String) {
+    /// 打開之後有沒有被改過。
+    func sampleWasEdited(_ id: String) -> Bool {
+        guard let baseline = sampleBaselines[id.lowercased()] else { return false }
+        return sampleFingerprint(id) != baseline
+    }
+
+    /// 編輯器關掉之後的後備：即時偵測沒抓到的改動（筆跡由背景寫入，要等它落盤）也要另存，
+    /// 範例才不會帶著改動留下來。
+    func forkSampleIfEditedSoon(_ id: String) {
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { [weak self] in
-            self?.promoteSampleIfEdited(id)
+            self?.forkSampleIfEdited(id)
         }
     }
 
-    func promoteSampleIfEdited(_ id: String) {
-        let key = id.lowercased()
-        guard let baseline = sampleBaselines.removeValue(forKey: key) else { return }
-        guard sampleFingerprint(id) != baseline else { return }
-        promoteEditedSample(id)
+    func forkSampleIfEdited(_ id: String) {
+        defer { sampleBaselines.removeValue(forKey: id.lowercased()) }
+        guard sampleWasEdited(id) else { return }
+        forkEditedSample(id)
     }
 
     /// 文件內容（不含修改時間）+ 每一頁筆跡檔的位元組。
@@ -4641,28 +4717,90 @@ extension NotebookStore {
         return SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
     }
 
-    /// 把一本範例整本轉成一般的（會同步的）筆記本。回傳新的 id。
+    /// 由範例另存出來的筆記本名稱：「範例名 日期 時:分:秒」。
+    static func sampleCopyTitle(base: String, at date: Date = Date()) -> String {
+        "\(base) \(LocalizationManager.formatted(date, date: .numeric, time: .standard))"
+    }
+
+    /// 把範例目前（含使用者剛做的改動）另存成一本一般筆記本，範例重設回標準內容。回傳新的那一本。
     @discardableResult
-    func promoteEditedSample(_ id: String) -> String? {
-        guard let index = notebooks.firstIndex(where: { $0.id.caseInsensitiveCompare(id) == .orderedSame }) else { return nil }
-        let original = notebooks[index]
+    func forkEditedSample(_ id: String) -> NotebookDocument? {
+        guard let original = notebooks.first(where: { $0.id.caseInsensitiveCompare(id) == .orderedSame }),
+              original.isReadOnlySample,
+              let copy = copySample(original) else { return nil }
+        sampleBaselines.removeValue(forKey: original.id.lowercased())
+        restoreSampleToStandard(original.id)
+        adoptSampleCopy(copy, from: original.id)
+        markDirtyAndPersist(signalsLocalEdit: true)
+        return copy
+    }
+
+    /// 更新程式或修復時重設範例：範例裡若有使用者的內容（舊版範例可以直接編輯），先另存成一般筆記本，
+    /// 範例才重設。跟標準內容一樣（使用者沒動過）的就不另存。只動範例自己，使用者的筆記本與資料夾一律不碰。
+    func restoreSamplePreservingUserContent(_ id: String) {
+        guard let original = notebooks.first(where: { $0.id.caseInsensitiveCompare(id) == .orderedSame }),
+              original.isReadOnlySample else { return }
+        let hadRecordings = recordings.contains {
+            $0.linkedNotebookId?.caseInsensitiveCompare(original.id) == .orderedSame
+        }
+        let copy = copySample(original)
+        restoreSampleToStandard(original.id)
+        guard let copy else { return }
+        let fresh = notebooks.first { $0.id.caseInsensitiveCompare(id) == .orderedSame }
+        if !hadRecordings, let fresh, sampleContentSignature(copy) == sampleContentSignature(fresh) {
+            discardSampleCopy(copy.id)
+        } else {
+            adoptSampleCopy(copy, from: original.id)
+        }
+    }
+
+    /// 比對「有沒有使用者的內容」用的摘要：頁數、各種物件的數量、所有文字、每頁筆畫數。
+    /// 物件 id 每次產生都不同，所以不比 id、只比內容。
+    func sampleContentSignature(_ doc: NotebookDocument) -> String {
+        var parts = ["pages:\(doc.pageCount)"]
+        var counts: [Int] = []
+        counts.append(doc.attachments?.count ?? 0)
+        counts.append(doc.textAttachments?.count ?? 0)
+        counts.append(doc.tableAttachments?.count ?? 0)
+        counts.append(doc.shapeAttachments?.count ?? 0)
+        counts.append(doc.connectionAttachments?.count ?? 0)
+        counts.append(doc.linkAttachments?.count ?? 0)
+        counts.append(doc.model3DAttachments?.count ?? 0)
+        counts.append(doc.audioAttachments?.count ?? 0)
+        counts.append(doc.commentPins?.count ?? 0)
+        counts.append(doc.tapeAttachments?.count ?? 0)
+        counts.append(doc.stickyAnchors?.count ?? 0)
+        parts.append("counts:" + counts.map(String.init).joined(separator: ","))
+        parts.append("texts:" + (doc.textAttachments ?? []).map(\.text).sorted().joined(separator: "\u{1F}"))
+        parts.append("labels:" + (doc.shapeAttachments ?? []).map(\.label).sorted().joined(separator: "\u{1F}"))
+        for page in 0 ..< max(doc.pageCount, 1) {
+            let ink = loadDrawing(notebookId: doc.id, pageIndex: page).strokes.count
+            let pro = ProInkStore.load(in: drawingsDirectory, notebookId: doc.id, page: page).count
+            parts.append("ink\(page):\(ink)+\(pro)")
+        }
+        return parts.joined(separator: "|")
+    }
+
+    /// 把範例目前的樣子複製成一本新的（文件、筆跡、套件、錄音）。還沒放進清單、也還沒記進同步索引。
+    private func copySample(_ original: NotebookDocument) -> NotebookDocument? {
         let newId = UUID().uuidString.lowercased()
 
-        // 1. 文件：所有欄位照抄，只換 id；名字固定成目前看到的那一個（不再隨語系翻譯）。
+        // 1. 文件：所有欄位照抄，只換 id 與名字（名字固定下來，不再隨語系翻譯）。
         guard var json = (try? JSONSerialization.jsonObject(with: JSONEncoder().encode(original))) as? [String: Any]
         else { return nil }
         json["id"] = newId
-        json["title"] = original.displayTitle()
+        json["title"] = Self.sampleCopyTitle(base: original.baseDisplayTitle())
         json.removeValue(forKey: "titleKey")
         guard let data = try? JSONSerialization.data(withJSONObject: json),
               var copy = try? JSONDecoder().decode(NotebookDocument.self, from: data) else { return nil }
+        copy.createdAt = Date()
         copy.lastModifiedDate = Date()
         // 頁面 id 要明確寫進新的那一本：留空的話匯出時才補，各台補的不一樣。
         copy.pageIds = NotebookPackageBridge.alignedPageIds(
             original.pageIds ?? NotebookPackageBridge.deterministicSeedPageIds(for: original.id),
             count: max(1, copy.pageCount), package: nil, notebookId: newId)
 
-        // 2. 筆跡（含專業筆刷檔）：`<id>_p…` 全部搬一份到新 id 底下。
+        // 2. 筆跡（含專業筆刷檔）：`<id>_p…` 全部複製一份到新 id 底下。
         let fm = FileManager.default
         let prefix = "\(original.id)_p"
         for file in (try? fm.contentsOfDirectory(at: drawingsDirectory, includingPropertiesForKeys: nil)) ?? []
@@ -4671,7 +4809,7 @@ extension NotebookStore {
             try? fm.copyItem(at: file, to: drawingsDirectory.appending(path: renamed))
         }
 
-        // 3. 套件：以工作副本匯出一份新的；範例套件裡的錄音一起搬過去。
+        // 3. 套件：以工作副本匯出一份新的；範例套件裡的錄音（使用者在範例裡錄的）一起帶過去。
         let newPackage = corePackagesDirectory.appending(path: "\(newId).padnote")
         let drawings = (0..<max(copy.pageCount, 1)).map { loadDrawing(notebookId: newId, pageIndex: $0) }
         try? NotebookPackageBridge.export(
@@ -4685,19 +4823,26 @@ extension NotebookStore {
                 try? fm.copyItem(at: file, to: target.appending(path: file.lastPathComponent))
             }
         }
-        for r in recordings.indices where recordings[r].linkedNotebookId?.caseInsensitiveCompare(original.id) == .orderedSame {
-            recordings[r].linkedNotebookId = newId
-        }
+        return copy
+    }
 
-        // 4. 換上新的那一本、記進同步索引（資料夾不變）；範例在這台退役。
-        notebooks[index] = copy
-        AccountSyncStore.shared.record(id: newId, title: copy.title, parentId: copy.folderId, isFolder: false)
-        resetSeedStorage(notebookId: original.id)
-        var retired = Self.retiredSamples
-        retired.insert(original.id.lowercased())
-        ProfileDefaults.current.set(Array(retired).sorted(), forKey: Self.retiredSamplesKey)
-        markDirtyAndPersist(signalsLocalEdit: true)
-        return newId
+    /// 複本正式成為一本一般筆記本：放在最前面、記進同步索引（資料夾與範例相同）、錄音改指到它。
+    private func adoptSampleCopy(_ copy: NotebookDocument, from sampleId: String) {
+        for r in recordings.indices where recordings[r].linkedNotebookId?.caseInsensitiveCompare(sampleId) == .orderedSame {
+            recordings[r].linkedNotebookId = copy.id
+        }
+        notebooks.insert(copy, at: 0)
+        AccountSyncStore.shared.record(id: copy.id, title: copy.title, parentId: copy.folderId, isFolder: false)
+    }
+
+    /// 用不到的複本（範例本來就是標準內容）：磁碟上的檔案清掉。
+    private func discardSampleCopy(_ id: String) {
+        let fm = FileManager.default
+        try? fm.removeItem(at: corePackagesDirectory.appending(path: "\(id.lowercased()).padnote"))
+        for file in (try? fm.contentsOfDirectory(at: drawingsDirectory, includingPropertiesForKeys: nil)) ?? []
+        where file.lastPathComponent.hasPrefix("\(id)_p") {
+            try? fm.removeItem(at: file)
+        }
     }
 }
 
