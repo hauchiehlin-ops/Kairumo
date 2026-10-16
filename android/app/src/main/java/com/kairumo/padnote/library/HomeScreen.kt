@@ -1251,6 +1251,7 @@ private fun formatDate(millis: Long): String =
  */
 private fun shareRecording(context: android.content.Context, recording: RecordingIndex.Recording) {
     runCatching {
+        // profile-scope: device 匯出的暫存
         val dir = java.io.File(context.cacheDir, "exports").apply { mkdirs() }
         val safe = recording.displayTitle.replace(Regex("[\\\\/:*?\"<>|]"), "_").take(80).ifBlank { "recording" }
         val out = java.io.File(dir, "$safe.${recording.file.extension}")
