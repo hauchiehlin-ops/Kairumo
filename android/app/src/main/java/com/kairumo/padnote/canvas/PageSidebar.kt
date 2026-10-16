@@ -103,6 +103,8 @@ fun PageSidebar(
     onMovePage: (Int, Int) -> Unit = { _, _ -> },
     /** 把第幾頁複製（false）或搬移（true）到別本筆記（S-91）。 */
     onTransferPage: (Int, Boolean) -> Unit = { _, _ -> },
+    /** 在同一本筆記裡複製第幾頁，新頁放在它正後方（核心 `duplicatePage`）。 */
+    onDuplicatePage: (Int) -> Unit = {},
     /** 從「資料夾目錄」分頁切到另一本筆記（S-96）。 */
     onOpenNotebook: (String) -> Unit = {},
     /** 這台裝置的識別碼。資料夾分頁要用它列出筆記。 */
@@ -247,7 +249,8 @@ fun PageSidebar(
                     onMovePage = onMovePage,
                     onTransferPage = onTransferPage,
                     onInsertPageAfter = onInsertPageAfter,
-                    onDeletePage = onDeletePage
+                    onDeletePage = onDeletePage,
+                    onDuplicatePage = onDuplicatePage
                 )
             }
         }
@@ -274,7 +277,8 @@ private fun PageSidebarRow(
     onMovePage: (Int, Int) -> Unit,
     onTransferPage: (Int, Boolean) -> Unit,
     onInsertPageAfter: (Int, String?) -> Unit,
-    onDeletePage: (Int) -> Unit
+    onDeletePage: (Int) -> Unit,
+    onDuplicatePage: (Int) -> Unit
 ) {
     val context = LocalContext.current
     val appLanguage = LocalAppLanguage.current
@@ -411,6 +415,12 @@ private fun PageSidebarRow(
             DropdownMenuItem(
                 text = { Text(l("insert_page_with_template")) },
                 onClick = { menu = false; showTemplatePicker = true }
+            )
+            // 與 Apple 頁面選單同一個位置（插入頁面之後）。
+            DropdownMenuItem(
+                text = { Text(l("duplicate_page")) },
+                onClick = { menu = false; onDuplicatePage(index) },
+                modifier = Modifier.testTag("page.menu.duplicate")
             )
             HorizontalDivider()
             DropdownMenuItem(

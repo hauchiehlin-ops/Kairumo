@@ -2488,6 +2488,36 @@ private fun InkScreen(
     }
 
     /**
+     * 複製一頁，新頁放在它正後方（與 Apple 頁面選單的「複製頁面」相同）。
+     *
+     * 核心在**同一個 session** 裡複製區塊、筆畫、形狀與連接線（`duplicatePage`）。
+     * 平台這一層按頁碼或物件 id 存的東西（紙張、堆疊順序、筆跡下方名單、形狀樣式）
+     * 用它回傳的 id 對照表跟著複製。
+     */
+    fun duplicatePage(index: Int) {
+        val s = notebook?.first ?: return
+        val sourceId = runCatching { s.pageIdAt(index.toUInt()) }.getOrNull() ?: return
+        val result = runCatching { s.duplicatePage(sourceId) }.getOrNull() ?: return
+        val newCount = runCatching { s.pageCount().toInt() }.getOrDefault(pageCount + 1)
+        val target = (index + 1).coerceAtMost(newCount - 1)
+        val ids = result.idMap
+        // 紙張：在新頁的位置插入同一張紙（後面的頁跟著往後挪）。
+        meta.insertPageTemplate(s, target, meta.paperId(index), newCount - 1)
+        // 以頁碼為鍵的東西：先把後面的頁往後挪一格，再填新頁。
+        meta.shiftPageKeyedData(s, fromIndex = target, totalPagesBefore = newCount - 1)
+        meta.objectOrder(index).mapNotNull { ids[it] }.takeIf { it.isNotEmpty() }
+            ?.let { meta.setObjectOrder(s, target, it) }
+        meta.underInkObjectIds(index).mapNotNull { ids[it] }.toSet().takeIf { it.isNotEmpty() }
+            ?.let { meta.setUnderInkObjectIds(s, target, it) }
+        val shapeStyles = meta.shapeStyles().mapNotNull { (old, style) -> ids[old]?.let { it to style } }.toMap()
+        val linkStyles = meta.connectionStyles().mapNotNull { (old, style) -> ids[old]?.let { it to style } }.toMap()
+        meta.updateStyles(s, shapeUpserts = shapeStyles, connectionUpserts = linkStyles)
+        pageCount = newCount
+        pageIndex = target
+        revision++
+    }
+
+    /**
      * 在指定頁面後插入新頁（S-93／S-86）。
      * 若 paperId != null 則套用指定樣板，否則為空白頁。
      */
@@ -2506,6 +2536,8 @@ private fun InkScreen(
         if (paperId != null) {
             meta.insertPageTemplate(s, targetIndex, paperId, newCount)
         }
+        // 後面的頁往後挪了一格，以頁碼為鍵的圖層設定也要跟著挪。
+        if (targetIndex < newCount - 1) meta.shiftPageKeyedData(s, targetIndex, newCount - 1)
         pageCount = newCount
         pageIndex = targetIndex
         revision++
@@ -4746,6 +4778,7 @@ private fun InkScreen(
                         },
                         onMovePage = { from, to -> movePage(from, to) },
                         onInsertPageAfter = { idx, pid -> insertPageAfter(idx, pid) },
+                        onDuplicatePage = { idx -> duplicatePage(idx) },
                         onDeletePage = { idx -> deletePageAt(idx) },
                         onTransferPage = { index, moveOut -> transferringPage = index to moveOut },
                         onOpenNotebook = { id -> showPageSidebar = false; onOpenNotebook?.invoke(id) },
@@ -4904,6 +4937,7 @@ private fun InkScreen(
                     },
                     onMovePage = { from, to -> movePage(from, to) },
                     onInsertPageAfter = { idx, pid -> insertPageAfter(idx, pid) },
+                        onDuplicatePage = { idx -> duplicatePage(idx) },
                     onDeletePage = { idx -> deletePageAt(idx) },
                     onTransferPage = { index, moveOut -> transferringPage = index to moveOut },
                     onOpenNotebook = { id -> showPageSidebar = false; onOpenNotebook?.invoke(id) },
@@ -6085,6 +6119,7 @@ private fun InkScreen(
                     },
                     onMovePage = { from, to -> movePage(from, to) },
                     onInsertPageAfter = { idx, pid -> insertPageAfter(idx, pid) },
+                        onDuplicatePage = { idx -> duplicatePage(idx) },
                     onDeletePage = { idx -> deletePageAt(idx) },
                     onTransferPage = { index, moveOut -> transferringPage = index to moveOut },
                     onOpenNotebook = { id -> showPageSidebar = false; onOpenNotebook?.invoke(id) },

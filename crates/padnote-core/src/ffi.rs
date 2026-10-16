@@ -274,6 +274,16 @@ pub struct SearchResult {
     pub snippet: String,
 }
 
+/// [`PadnoteSession::duplicate_page`] 的回傳值。
+#[derive(Clone, Debug, uniffi::Record)]
+pub struct DuplicatedPage {
+    /// 新頁的 id（已經放在來源頁的正後方）。
+    pub page_id: String,
+    /// 來源物件 id → 新物件 id。平台以物件 id 為鍵存的東西（堆疊順序、筆跡下方名單、
+    /// 形狀樣式）用它跟著複製。
+    pub id_map: std::collections::HashMap<String, String>,
+}
+
 /// 功能 C1 的回傳值：某個時刻對應的錄音位置。
 #[derive(Clone, Debug, uniffi::Record)]
 pub struct PlaybackPosition {
@@ -786,6 +796,21 @@ impl PadnoteSession {
     pub fn move_page(&self, page_id: String, index: u32) -> Result<(), FfiError> {
         self.lock().move_page(parse_uuid(&page_id)?, index)?;
         Ok(())
+    }
+
+    /// 在**同一本**筆記裡複製一頁，新頁放在來源頁的正後方。
+    ///
+    /// 不要用 [`Self::transfer_pages`] 搬給自己：那一支另開一個 session 寫同一個套件，
+    /// 兩邊互相看不到對方剛寫的內容。這一支在同一個 session 裡做完。
+    pub fn duplicate_page(&self, page_id: String) -> Result<DuplicatedPage, FfiError> {
+        let (page, ids) = self.lock().duplicate_page(parse_uuid(&page_id)?)?;
+        Ok(DuplicatedPage {
+            page_id: page.to_string(),
+            id_map: ids
+                .into_iter()
+                .map(|(old, new)| (old.to_string(), new.to_string()))
+                .collect(),
+        })
     }
 
     /// 用指定的 id 新增一頁；已經有同 id 的頁時什麼也不做。
