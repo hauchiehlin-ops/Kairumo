@@ -278,7 +278,7 @@ final class InsertToolsAudit: XCTestCase {
             if button.waitForExistence(timeout: 5) && button.isHittable {
                 button.tap()
                 _ = button.waitForNonExistence(timeout: 8)
-                Thread.sleep(forTimeInterval: 0.8)
+                Thread.sleep(forTimeInterval: 1.2)
                 return
             }
         }
@@ -288,12 +288,12 @@ final class InsertToolsAudit: XCTestCase {
             if button.exists && button.isHittable {
                 button.tap()
                 _ = button.waitForNonExistence(timeout: 8)
-                Thread.sleep(forTimeInterval: 0.8)
+                Thread.sleep(forTimeInterval: 1.2)
                 return
             }
         }
         app.swipeDown()
-        Thread.sleep(forTimeInterval: 0.8)
+        Thread.sleep(forTimeInterval: 1.2)
     }
 
     private func openEditor(_ app: XCUIApplication) -> Bool {
