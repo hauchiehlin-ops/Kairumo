@@ -550,8 +550,9 @@ object CloudSync {
             // 日誌停在哪一本，就是哪一本。
             val startedAt = android.os.SystemClock.elapsedRealtime()
             val rt = Runtime.getRuntime()
+            val opsCount = java.io.File(pkg, "doc/ops").list()?.size ?: 0
             SyncLogger.log(
-                "開始同步筆記本 $id（${pkg.walkTopDown().count { it.isFile }} 個檔案，" +
+                "開始同步筆記本 $id（$opsCount 個檔案，" +
                     "堆積 ${(rt.totalMemory() - rt.freeMemory()) / 1048576}/${rt.maxMemory() / 1048576} MB）",
                 SyncSource.GOOGLE_DRIVE
             )

@@ -99,6 +99,7 @@ object FocusSync {
     fun start(context: Context, deviceId: UInt) {
         this.deviceId = deviceId
         appContext = context.applicationContext
+        ensureLan()
     }
 
     /** 打開／離開一本筆記時呼叫。`null` = 回到首頁。 */
@@ -314,6 +315,7 @@ object FocusSync {
 
     /** 通知編輯器與首頁：這一本的內容變了。 */
     internal fun publishRemote(notebookId: String) {
+        com.kairumo.padnote.library.NotebookLibrary.invalidateCache(notebookId)
         _remoteChange.value = RemoteChange(notebookId, _remoteChange.value.serial + 1)
         AutoSync.publishChanged(listOf(notebookId))
     }

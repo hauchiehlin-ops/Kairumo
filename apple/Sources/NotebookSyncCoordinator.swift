@@ -1347,13 +1347,15 @@ enum NotebookSyncCoordinator {
                 if workingCopyNeedsExport(inputs) {
                     return (try exportOne(inputs), true, "")
                 }
-                return (try snapshotOwnStrokes(inputs), false, "")
+                // 未修改時不在每秒輪詢都反序列化全部頁面的 PKDrawing；
+                // 等步驟 3 真的有下載遠端變更時再補算 ownStrokes。
+                return (nil, false, "")
             } catch {
                 return (nil, false, error.localizedDescription)
             }
         }.value
         report.exportMs = Self.millis(since: exportStart, clock: clock)
-        guard let own = exported.own else {
+        if !exported.error.isEmpty {
             report.ok = false
             report.error = String(format: LocalizationManager.shared.localized("export_failed"), L10n.coreText(exported.error))
             return report
@@ -1387,6 +1389,14 @@ enum NotebookSyncCoordinator {
             let importStart = clock.now
             defer { report.importMs = Self.millis(since: importStart, clock: clock) }
             do {
+                let own: OwnStrokes
+                if let existingOwn = exported.own {
+                    own = existingOwn
+                } else {
+                    own = try await Task.detached(priority: .userInitiated) {
+                        try snapshotOwnStrokes(inputs)
+                    }.value
+                }
                 try await importOne(inputs.package, into: store, deviceId: deviceId, ownStrokes: own)
                 NotificationCenter.default.post(
                     name: AppCommand.notebookPackageChanged, object: id
@@ -1635,7 +1645,7 @@ enum NotebookSyncCoordinator {
                 ledger.foreignTombstones = plan.foreignTombstones
                 ledger.pkRetiredOwn = []
                 ledger.pkGen = [:]
-                if hasInk { ledger.schema = 2 }
+                ledger.schema = 2
             }
             PKInkSnapshotStore.save(
                 snapshot.own, in: inputs.drawingsDirectory, notebookId: document.id, page: page)
@@ -1741,12 +1751,15 @@ enum NotebookSyncCoordinator {
         if ObjectLedger.hasUnsynced(inputs.document, in: inputs.baselineDirectory) { return true }
         // 升級前的筆記：這一頁的筆畫還沒用穩定身分寫出過（帳本版本 < 2）。要重寫一次，
         // 雲端那份舊身分的檔案才會被換掉 —— 別台對舊身分寫的墓碑才不會落空。
+        // 先看輕量的帳本版本（JSON 小檔），確定 < 2 時才反序列化 PKDrawing / ProInk，
+        // 避免每一輪同步都把每一本、每一頁的 PKDrawing 整份讀進記憶體。
         for page in 0 ..< max(inputs.document.pageCount, 1) {
+            guard ProInkStore.loadLedger(
+                in: inputs.drawingsDirectory, notebookId: inputs.document.id, page: page
+            ).schema < 2 else { continue }
             let hasProInk = !ProInkStore.load(in: inputs.drawingsDirectory, notebookId: inputs.document.id, page: page).isEmpty
             let hasDrawingInk = !inputs.loadDrawing(inputs.document.id, page).strokes.isEmpty
-            let hasInk = hasProInk || hasDrawingInk
-            if hasInk,
-               ProInkStore.loadLedger(in: inputs.drawingsDirectory, notebookId: inputs.document.id, page: page).schema < 2 {
+            if hasProInk || hasDrawingInk {
                 return true
             }
         }

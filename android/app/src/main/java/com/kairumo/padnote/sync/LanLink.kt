@@ -160,7 +160,17 @@ class LanLink(
         if (tag != node.tagHex() || peer == deviceId) return
         // 只有裝置 id 較小的一方主動連（見核心 `should_initiate`）。
         if (!lanShouldInitiate(deviceId, peer)) return
-        val host = resolved.host?.hostAddress ?: return
+        // 核心 `LanNode` 監聽於 `0.0.0.0`（IPv4）。Android NSD 若同時回傳 IPv6 link-local
+        // （`fe80::...%wlan0`）與 IPv4，優先挑選 IPv4 位址並剝除 `%interface` 尾綴。
+        val rawHost = if (android.os.Build.VERSION.SDK_INT >= 34) {
+            val addrs = resolved.hostAddresses
+            (addrs.firstOrNull { it is java.net.Inet4Address } ?: addrs.firstOrNull())?.hostAddress
+        } else {
+            @Suppress("DEPRECATION")
+            resolved.host?.hostAddress
+        } ?: return
+        val host = rawHost.substringBefore('%')
+        if (host.contains(':')) return
         val port = resolved.port.toUShort()
         known[peer] = host to port
         node.connect(peer, host, port)

@@ -545,16 +545,24 @@ final class LanLink: FfiLanHost, @unchecked Sendable {
         lock.unlock()
         if busy { return }
 
-        let connection = NWConnection(to: endpoint, using: .tcp)
+        let params = NWParameters.tcp
+        params.includePeerToPeer = true
+        if let ipOptions = params.defaultProtocolStack.internetProtocol as? NWProtocolIP.Options {
+            // 核心的 `LanNode` 監聽於 `0.0.0.0`（IPv4）。iPadOS 解析 Bonjour 時常優先走
+            // IPv6 link-local（`fe80::...%awdl0` / `%en0`），導致連線被拒或帶入 `%` 介面尾綴
+            // 而使區網直連無效、退回較慢的雲端輪詢。強制走 IPv4 以確保 iPad 秒同步。
+            ipOptions.version = .v4
+        }
+        let connection = NWConnection(to: endpoint, using: params)
         connection.stateUpdateHandler = { [weak self, weak connection] state in
             guard let self, let connection else { return }
             switch state {
             case .ready:
                 if case let .hostPort(host, port)? = connection.currentPath?.remoteEndpoint {
                     var address = "\(host)"
-                    // 系統會在位址後面附介面名（`192.168.1.5%en0`）。IPv4 不需要它，
-                    // 而 `getaddrinfo` 對它的處理各平台不一。
-                    if case .ipv4 = host, let cut = address.firstIndex(of: "%") {
+                    // 系統會在位址後面附介面名（`192.168.1.5%en0`），`getaddrinfo` / Rust `to_socket_addrs`
+                    // 不接受 IPv4 或未正規化的 `%interface` 尾綴，一律剝除。
+                    if let cut = address.firstIndex(of: "%") {
                         address = String(address[..<cut])
                     }
                     self.remember(peer: peer, host: address, port: port.rawValue)
