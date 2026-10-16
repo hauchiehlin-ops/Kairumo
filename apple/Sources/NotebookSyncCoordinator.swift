@@ -286,6 +286,9 @@ enum ObjectLedger {
         if let order = d.objectOrderByPage, let data = try? encoder.encode(order) {
             out["__doc.order"] = SHA256.hash(data: data).prefix(8).map { String(format: "%02x", $0) }.joined()
         }
+        if let under = d.underInkObjectIdsByPage, let data = try? encoder.encode(under) {
+            out["__doc.underInk"] = SHA256.hash(data: data).prefix(8).map { String(format: "%02x", $0) }.joined()
+        }
         return out
     }
 
@@ -391,8 +394,16 @@ final class ExportedObjectIds: @unchecked Sendable {
         add(d.attachments); add(d.textAttachments); add(d.tableAttachments); add(d.shapeAttachments)
         add(d.connectionAttachments); add(d.linkAttachments); add(d.model3DAttachments)
         add(d.audioAttachments); add(d.commentPins); add(d.tapeAttachments); add(d.stickyAnchors)
+        // 圖層順序與「移到筆跡下方」不是物件，但同樣會在匯出與匯入之間被使用者改掉（見 `preservingLocalChanges`）。
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        out[layerOrderKey] = (try? encoder.encode(d.objectOrderByPage ?? [:])).map { Data($0).hashValue } ?? 0
+        out[underInkKey] = (try? encoder.encode(d.underInkObjectIdsByPage ?? [:])).map { Data($0).hashValue } ?? 0
         return out
     }
+
+    static let layerOrderKey = "__doc.order"
+    static let underInkKey = "__doc.underInk"
 }
 
 @MainActor
@@ -1511,6 +1522,27 @@ enum NotebookSyncCoordinator {
     /// CRDT 套件，是整個同步最貴的一段。留在 MainActor 上的話，筆記本一多
     /// 主執行緒就被連續佔住十秒以上 —— iOS 的 scene-update 看門狗會直接
     /// SIGKILL（0x8BADF00D），實機上就是「按下同步之後整個 App 消失」。
+    /// 匯出時要寫進套件的錄音名字。
+    ///
+    /// `rectitle` 區塊的 id 由檔名決定，每台裝置寫的都是**同一個區塊**、後寫的贏。
+    /// 別台剛錄的音（使用者在那台取了名字）同步過來時，這台掃描只能先替它取一個依時間產生的預設名稱；
+    /// 以前這個預設名稱也會被匯出 —— 時戳比那台的晚，於是使用者取的名字被預設名稱永久蓋掉
+    /// （使用者回報：iPad 錄的音到 Mac 變成「語音錄音與對齊 日期時間」）。
+    ///
+    /// - 預設名稱一律不寫：每台都能從檔名（UUIDv7）算出同一個時間，不需要同步。
+    /// - 套件裡已有的名字為準（改名會直接寫進套件），清單只補套件還沒有的。
+    /// - 例外：套件裡只是預設名稱、清單有使用者取的名字 —— 那是被上面那個舊問題蓋掉的，寫回去修復。
+    nonisolated static func mergedExportTitles(
+        list: [String: String], packaged: [String: String]
+    ) -> [String: String] {
+        var out = packaged
+        for (key, title) in list where !NotebookStore.isGenericOrQuickRecordTitle(title) {
+            if let existing = packaged[key], !NotebookStore.isGenericOrQuickRecordTitle(existing) { continue }
+            out[key] = title
+        }
+        return out
+    }
+
     @discardableResult
     nonisolated static func exportOne(_ inputs: ExportInputs) throws -> OwnStrokes {
         let document = inputs.document
@@ -1607,9 +1639,9 @@ enum NotebookSyncCoordinator {
         // 別台只看得到掃描時取的預設名稱（單元測試直接呼叫橋接層、有帶這個參數，所以測不出來）。
         // 錄音名字：套件裡已經有的以套件為準（改名會直接寫進套件）；清單只補套件還沒有的。
         // 以清單為準的話，清單若還是舊名字，匯出就會以新的時戳把舊名字寫回去，蓋掉別台剛改的。
-        let titles = inputs.recordingTitles.merging(
-            NotebookStore.packageRecordingTitles(packageURL: inputs.package, deviceId: inputs.deviceId)
-        ) { _, packaged in packaged }
+        let titles = mergedExportTitles(
+            list: inputs.recordingTitles,
+            packaged: NotebookStore.packageRecordingTitles(packageURL: inputs.package, deviceId: inputs.deviceId))
         try NotebookPackageBridge.exportPreservingOtherDevices(
             document: document, drawings: drawings, imageData: images,
             to: inputs.package, deviceId: inputs.deviceId, proStrokes: pro, proLedgers: exportLedgers,
@@ -1927,6 +1959,13 @@ enum NotebookSyncCoordinator {
         }
     }
 
+    /// 舊版 Apple 寫的套件沒有「移到筆跡下方」（`NotebookMeta.underInkObjectIdsByPage`）——
+    /// 匯入結果是空的，不代表別台清掉了，保留這台的。
+    static func keepLayeringUnknownToPackage(_ merged: inout NotebookDocument, local: NotebookDocument) {
+        if merged.underInkObjectIdsByPage == nil { merged.underInkObjectIdsByPage = local.underInkObjectIdsByPage }
+        if merged.objectOrderByPage == nil { merged.objectOrderByPage = local.objectOrderByPage }
+    }
+
     /// 匯出之後、匯入之前，使用者**新增或動過**的物件不能被匯入的結果蓋掉。
     ///
     /// 一輪同步是「匯出 → 等網路 → 匯入」，匯入是**整份取代**工作副本。等網路的那幾秒裡使用者
@@ -1946,7 +1985,11 @@ enum NotebookSyncCoordinator {
             // 這一輪**沒有匯出**就匯入（例如套件時間較新）。沒有名單分不出新增／刪除，
             // 所以不補、不刪；但兩邊都有的物件若工作副本比較新，**保留工作副本的版本** ——
             // 否則第二次移動／旋轉後一同步，物件會跳回第一次移動的位置（使用者回報 iPad 定位失效）。
-            guard local.lastModifiedDate > imported.lastModifiedDate else { return (imported, false) }
+            guard local.lastModifiedDate > imported.lastModifiedDate else {
+                var merged = imported
+                keepLayeringUnknownToPackage(&merged, local: local)
+                return (merged, false)
+            }
             return keepNewerLocalObjects(imported, local: local)
         }
         var merged = imported
@@ -1987,6 +2030,17 @@ enum NotebookSyncCoordinator {
         keep(\.shapeAttachments); keep(\.connectionAttachments); keep(\.linkAttachments)
         keep(\.model3DAttachments); keep(\.audioAttachments); keep(\.commentPins)
         keep(\.tapeAttachments); keep(\.stickyAnchors)
+        // 圖層順序、移到筆跡下方：匯出之後使用者又調整過 → 用工作副本的（不然一同步就跳回原本的層級）。
+        let layerOrderKey = ExportedObjectIds.layerOrderKey, underInkKey = ExportedObjectIds.underInkKey
+        if exported[layerOrderKey] != nil, current[layerOrderKey] != exported[layerOrderKey] {
+            merged.objectOrderByPage = local.objectOrderByPage
+            preserved = true
+        }
+        if exported[underInkKey] != nil, current[underInkKey] != exported[underInkKey] {
+            merged.underInkObjectIdsByPage = local.underInkObjectIdsByPage
+            preserved = true
+        }
+        keepLayeringUnknownToPackage(&merged, local: local)
 
         // 形狀與連接線的外觀不在核心的物件模型裡 —— 匯入的版本只有幾何。
         // 沒被上面「使用者剛改過」那條路保住的，也要把本機的外觀帶回來。
@@ -2042,6 +2096,15 @@ enum NotebookSyncCoordinator {
         keep(\.shapeAttachments); keep(\.connectionAttachments); keep(\.linkAttachments)
         keep(\.model3DAttachments); keep(\.audioAttachments); keep(\.commentPins)
         keep(\.tapeAttachments); keep(\.stickyAnchors)
+        if local.objectOrderByPage != imported.objectOrderByPage {
+            merged.objectOrderByPage = local.objectOrderByPage
+            preserved = true
+        }
+        if local.underInkObjectIdsByPage != imported.underInkObjectIdsByPage {
+            merged.underInkObjectIdsByPage = local.underInkObjectIdsByPage
+            preserved = true
+        }
+        keepLayeringUnknownToPackage(&merged, local: local)
         return (merged, preserved)
     }
 

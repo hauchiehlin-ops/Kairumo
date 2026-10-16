@@ -69,6 +69,12 @@ struct NotebookMeta: Codable, Hashable {
     /// 鍵是頁次的字串（JSON 的物件鍵只能是字串）。
     var objectOrderByPage: [String: [String]]?
 
+    /// 移到筆跡下方的物件：`["頁次": [物件 id]]`。與 Android `NotebookMeta.KEY_UNDER_INK_BY_PAGE` 同一個鍵。
+    ///
+    /// 原本 Apple 沒有寫這個欄位：同步匯入整份取代工作副本時，「移到筆跡下方」就被清掉，
+    /// 使用者看到的是把蓋住筆跡的物件移下去之後，過一下又跳回上面（使用者回報）。
+    var underInkObjectIdsByPage: [String: [String]]?
+
     /// 核心沒有對應區塊型別的物件，原樣保存。
     var linkAttachments: [NoteLinkAttachment]?
     var model3DAttachments: [Note3DAttachment]?
@@ -147,6 +153,7 @@ struct NotebookMeta: Codable, Hashable {
         commentPins = document.commentPins
         tapeAttachments = document.tapeAttachments
         objectOrderByPage = document.objectOrderByPage
+        underInkObjectIdsByPage = document.underInkObjectIdsByPage
         stickyAnchors = document.stickyAnchors
         recognizedText = document.recognizedText
         objectEnvelopes = 1
@@ -210,6 +217,9 @@ struct NotebookMeta: Codable, Hashable {
         }
         if let objectOrderByPage {
             document.objectOrderByPage = objectOrderByPage
+        }
+        if let underInkObjectIdsByPage {
+            document.underInkObjectIdsByPage = underInkObjectIdsByPage
         }
         if let stickyAnchors {
             document.stickyAnchors = stickyAnchors

@@ -141,7 +141,14 @@ object NotebookLibrary {
         }
     }
 
-    private fun describe(path: File, deviceId: UInt, indexTitles: Map<String, String>): Entry? {
+    /** 清單上的一本。範例的名字標「（唯讀）」（見 [SeedNotebooks.displayTitle]）。 */
+    private fun describe(path: File, deviceId: UInt, indexTitles: Map<String, String>): Entry? =
+        describeRaw(path, deviceId, indexTitles)?.let { entry ->
+            if (!SeedNotebooks.isDeviceLocal(entry.id)) entry
+            else entry.copy(title = SeedNotebooks.displayTitle(entry.id, entry.title, com.kairumo.padnote.currentLanguageTag()))
+        }
+
+    private fun describeRaw(path: File, deviceId: UInt, indexTitles: Map<String, String>): Entry? {
         val id = path.nameWithoutExtension
         val manifestFile = File(path, "manifest.json")
         if (!manifestFile.exists()) return null
@@ -287,6 +294,45 @@ object NotebookLibrary {
     }.getOrNull()
 
     /** 這一頁是不是完全空的。換掉第一頁之前一定要確認。 */
+
+    /** 這本筆記有沒有加密（manifest 的 `encryption.scheme` 不是 `none`）。 */
+    fun isEncrypted(context: Context, id: String): Boolean = runCatching {
+        val manifest = File(directory(context), "$id.$EXTENSION/manifest.json")
+        val scheme = org.json.JSONObject(manifest.readText()).optJSONObject("encryption")?.optString("scheme")
+        !scheme.isNullOrEmpty() && scheme != "none"
+    }.getOrDefault(false)
+
+    /**
+     * 複製筆記本（Apple 首頁選單的「複製筆記本」）。回傳新的 id；加密的筆記不能複製，回 null。
+     *
+     * 整個套件複製一份、換一個新 id，放在原本那一本所在的資料夾。
+     * - manifest 的 `notebook_id` 一定要換：同步與里程碑都靠它分辨是哪一本。
+     * - `sync/` 是原本那一本的同步狀態，不帶過去 —— 新的一本要當成從沒上傳過。
+     * - 加密的不行：密文綁著原本的 `notebook_id`（`oplog_aad`），換了 id 就再也解不開。
+     */
+    fun duplicate(context: Context, id: String, title: String, deviceId: UInt): String? {
+        if (isEncrypted(context, id)) return null
+        val source = File(directory(context), "$id.$EXTENSION")
+        if (!source.exists()) return null
+        val newId = java.util.UUID.randomUUID().toString()
+        val target = File(directory(context), "$newId.$EXTENSION")
+        return runCatching {
+            source.copyRecursively(target, overwrite = false)
+            File(target, "sync").deleteRecursively()
+            File(target, "sync").mkdirs()
+            val manifestFile = File(target, "manifest.json")
+            val manifest = org.json.JSONObject(manifestFile.readText())
+            manifest.put("notebook_id", newId)
+            manifest.put("created_at_unix_ms", System.currentTimeMillis())
+            manifestFile.writeText(manifest.toString())
+            PadnoteSession.openExisting(target.absolutePath, deviceId).use { it.setTitle(title) }
+            AccountSyncStore.record(context, id = newId, title = title, parentId = FolderTree.parentOf(context, id))
+            newId
+        }.getOrElse {
+            target.deleteRecursively()
+            null
+        }
+    }
 
     /** 從外部 .padnote 封裝壓縮檔匯入整本筆記本。 */
     fun importArchive(context: Context, archiveFile: File, deviceId: UInt): Entry? = runCatching {

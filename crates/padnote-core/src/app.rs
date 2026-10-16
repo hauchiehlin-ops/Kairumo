@@ -1105,6 +1105,127 @@ impl NotebookSession {
         Ok(new_page)
     }
 
+    /// 在**同一本**筆記裡複製一頁，新頁放在來源頁的正後方（頁面選單的「複製頁面」）。
+    ///
+    /// # 為什麼不用 [`Self::copy_page_into`]
+    ///
+    /// 那一支是「複製到另一本」：目標要另外開一個 session。目標是自己的話，同一個套件
+    /// 同時被兩個 session 寫 —— 各自的記憶體狀態互相看不到對方剛寫的東西，oplog 也可能
+    /// 撞同一個檔名。這一支在同一個 session 裡做完，順序與內容都只有一份。
+    ///
+    /// 帶走：區塊（含位置、外觀）、筆畫、原生形狀與連接線（含變換）。群組結構不帶（成員
+    /// 以世界變換攤平），轉錄與 PDF 標註不帶（理由同 `copy_page_into`）。
+    ///
+    /// 回傳新頁的 id，以及「來源物件 id → 新物件 id」對照表 —— 平台以物件 id 為鍵存的
+    /// 東西（堆疊順序、筆跡下方名單、形狀樣式）要靠它跟著複製。
+    pub fn duplicate_page(&mut self, page_id: Uuid) -> Result<(Uuid, Vec<(Uuid, Uuid)>), AppError> {
+        let page = self
+            .notebook
+            .page(page_id)
+            .ok_or(AppError::PageNotFound(page_id))?;
+        let template = page.template.clone();
+        let blocks: Vec<padnote_doc::Block> = page.blocks().to_vec();
+        let source_index = self
+            .notebook
+            .pages()
+            .iter()
+            .position(|p| p.id == page_id)
+            .unwrap_or(0);
+        let strokes = self.visible_strokes(page_id)?;
+        // 形狀與連接線（葉節點、世界變換）。區塊與筆畫另外處理。
+        let objects: Vec<(Uuid, Affine2, padnote_doc::ObjectKind)> = self
+            .objects
+            .get(&page_id)
+            .map(|tree| {
+                tree.draw_order()
+                    .into_iter()
+                    .filter_map(|(id, world)| {
+                        let node = tree.get(id)?;
+                        matches!(
+                            node.kind,
+                            padnote_doc::ObjectKind::Shape(_)
+                                | padnote_doc::ObjectKind::Connection(_)
+                        )
+                        .then(|| (id, world, node.kind.clone()))
+                    })
+                    .collect()
+            })
+            .unwrap_or_default();
+
+        let new_page = self.add_page(template)?;
+        let mut ids: Vec<(Uuid, Uuid)> = Vec::new();
+
+        for block in blocks {
+            let new_id = match &block.kind {
+                padnote_doc::BlockKind::Text { content, style } => {
+                    Some(self.add_text_block(new_page, content, *style)?)
+                }
+                // 同一個套件，blob 已經在了，不必再存一次。
+                padnote_doc::BlockKind::Image {
+                    blob,
+                    width,
+                    height,
+                } => Some(self.add_image_block(new_page, blob, *width, *height)?),
+                padnote_doc::BlockKind::Table {
+                    rows,
+                    cols,
+                    cells,
+                    header_row,
+                    ..
+                } => Some(self.insert_table(new_page, *rows, *cols, cells.clone(), *header_row)?),
+                _ => None,
+            };
+            if let Some(id) = new_id {
+                if let Some((x, y)) = block.position {
+                    self.set_block_position(id, x, y)?;
+                }
+                if let Some(appearance) = &block.appearance {
+                    self.set_block_appearance(id, appearance)?;
+                }
+                ids.push((block.id, id));
+            }
+        }
+
+        // 筆畫換新 id：同一本筆記裡兩頁有同一個筆畫 id，平台以筆畫 id 記的帳（擦除、搬動）會認錯頁。
+        for mut stroke in strokes {
+            stroke.id = Uuid::now_v7();
+            self.add_stroke(new_page, stroke)?;
+        }
+
+        // 先形狀、後連接線：連接線的兩端要指到新頁上的新物件。
+        for (id, world, kind) in &objects {
+            if let padnote_doc::ObjectKind::Shape(shape) = kind {
+                let new_id = Uuid::now_v7();
+                self.insert_shape_with_id(new_page, new_id, shape.clone())?;
+                if *world != Affine2::IDENTITY {
+                    self.transform_object(new_id, *world)?;
+                }
+                ids.push((*id, new_id));
+            }
+        }
+        for (id, world, kind) in &objects {
+            if let padnote_doc::ObjectKind::Connection(connection) = kind {
+                let remap = |old: Uuid| ids.iter().find(|(o, _)| *o == old).map(|(_, n)| *n);
+                // 兩端有一端沒帶過來（例如接在轉錄區塊上）就不畫一條指向別頁的線。
+                let (Some(from), Some(to)) = (remap(connection.from), remap(connection.to)) else {
+                    continue;
+                };
+                let mut connection = connection.clone();
+                connection.from = from;
+                connection.to = to;
+                let new_id = Uuid::now_v7();
+                self.insert_connection_with_id(new_page, new_id, connection)?;
+                if *world != Affine2::IDENTITY {
+                    self.transform_object(new_id, *world)?;
+                }
+                ids.push((*id, new_id));
+            }
+        }
+
+        self.move_page(new_page, source_index as u32 + 1)?;
+        Ok((new_page, ids))
+    }
+
     /// 把某一頁搬到 `index`（S-87）。
     ///
     /// 頁不存在就什麼也不做 —— 不記一筆搬動不存在的頁的操作，
@@ -2635,6 +2756,89 @@ mod tests {
             "筆畫沒有被帶過去"
         );
 
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn duplicate_page_copies_everything_right_after_the_source() {
+        let dir = tmp("duplicate-page");
+        let rect = |x: f32| ShapeObject {
+            kind: padnote_doc::ShapeKind::Rectangle,
+            bounds: padnote_doc::ObjectRect {
+                min_x: x,
+                min_y: 0.0,
+                max_x: x + 10.0,
+                max_y: 10.0,
+            },
+            corner_radius: 0.0,
+            text: "框".into(),
+        };
+        let (a, b, shape_a, shape_b, link) = {
+            let mut s = NotebookSession::create(&dir, "筆記", 0, 1).unwrap();
+            let a = s.add_page(PageTemplate::Blank).unwrap();
+            let b = s.add_page(PageTemplate::Blank).unwrap();
+            let text = s.add_text_block(a, "原本的字", TextStyle::Body).unwrap();
+            s.set_block_position(text, 12.0, 34.0).unwrap();
+            s.add_stroke(a, stroke()).unwrap();
+            let shape_a = s.insert_shape(a, rect(0.0)).unwrap();
+            let shape_b = s.insert_shape(a, rect(50.0)).unwrap();
+            let link = s
+                .insert_connection(
+                    a,
+                    ConnectionObject {
+                        from: shape_a,
+                        to: shape_b,
+                        from_anchor: padnote_doc::Anchor::Right,
+                        to_anchor: padnote_doc::Anchor::Left,
+                        route: padnote_doc::RouteStyle::Straight,
+                        start_cap: padnote_doc::EndCap::None,
+                        end_cap: padnote_doc::EndCap::Arrow,
+                        label: String::new(),
+                    },
+                )
+                .unwrap();
+            (a, b, shape_a, shape_b, link)
+        };
+
+        let mut s = NotebookSession::open(&dir, 1).unwrap();
+        let (copy, ids) = s.duplicate_page(a).unwrap();
+        let order: Vec<Uuid> = s.notebook().pages().iter().map(|p| p.id).collect();
+        let at = order.iter().position(|p| *p == a).unwrap();
+        assert_eq!(order[at + 1], copy, "新頁緊接在來源頁後面");
+        assert_eq!(order[at + 2], b, "後面的頁往後挪一頁");
+
+        let page = s.notebook().page(copy).unwrap();
+        assert_eq!(page.blocks().len(), 1);
+        assert_eq!(page.blocks()[0].position, Some((12.0, 34.0)));
+        let copied_strokes = s.visible_strokes(copy).unwrap();
+        assert_eq!(copied_strokes.len(), 1);
+        assert_ne!(
+            copied_strokes[0].id,
+            s.visible_strokes(a).unwrap()[0].id,
+            "筆畫要換新 id"
+        );
+
+        let map: std::collections::HashMap<Uuid, Uuid> = ids.into_iter().collect();
+        let tree = s.objects(copy).expect("新頁有物件");
+        match &tree.get(map[&link]).unwrap().kind {
+            padnote_doc::ObjectKind::Connection(c) => {
+                assert_eq!(
+                    (c.from, c.to),
+                    (map[&shape_a], map[&shape_b]),
+                    "連接線接到新的形狀"
+                );
+            }
+            other => panic!("不是連接線：{other:?}"),
+        }
+        // 來源頁原封不動。
+        assert_eq!(s.notebook().page(a).unwrap().blocks().len(), 1);
+        assert!(s.objects(a).unwrap().get(shape_a).is_some());
+
+        // 重新打開還在（真的寫進了 oplog）。
+        drop(s);
+        let s = NotebookSession::open(&dir, 1).unwrap();
+        assert_eq!(s.notebook().page(copy).unwrap().blocks().len(), 1);
+        assert!(s.objects(copy).unwrap().get(map[&shape_a]).is_some());
         let _ = std::fs::remove_dir_all(&dir);
     }
 

@@ -18447,6 +18447,30 @@ extension LocalizationManager {
             .ko: "할 일|담당|기한\n중급 안드로이드 지연 측정|치엔|9/22\n설명서 “녹음 삽입” 장 추가|원|9/20\n정식 서명 키 신청|페이|9/19",
             .th: "สิ่งที่ต้องทำ|ผู้รับผิดชอบ|กำหนด\nวัดความหน่วงบน Android รุ่นกลาง|เชียน|22 ก.ย.\nเขียนบท “แทรกเสียงบันทึก” ในคู่มือ|เหวิน|20 ก.ย.\nขอคีย์เซ็นชื่อจริง|เผย|19 ก.ย."
         ],
+        "sample_readonly_forked": [
+            .zhHant: "此範本為唯讀檔案，系統已自動增加可編輯筆記本",
+            .en: "This sample is read-only. An editable copy has been created for you.",
+            .zhHans: "此范本为只读文件，系统已自动增加可编辑笔记本",
+            .ja: "このサンプルは読み取り専用です。編集できるノートを自動的に作成しました。",
+            .ko: "이 샘플은 읽기 전용입니다. 편집 가능한 노트를 자동으로 추가했습니다.",
+            .th: "ตัวอย่างนี้เป็นแบบอ่านอย่างเดียว ระบบได้สร้างสมุดโน้ตที่แก้ไขได้ให้โดยอัตโนมัติแล้ว"
+        ],
+        "sample_readonly_suffix": [
+            .zhHant: "（唯讀）",
+            .en: " (read-only)",
+            .zhHans: "（只读）",
+            .ja: "（読み取り専用）",
+            .ko: " (읽기 전용)",
+            .th: " (อ่านอย่างเดียว)"
+        ],
+        "sample_readonly_title": [
+            .zhHant: "唯讀範本",
+            .en: "Read-only sample",
+            .zhHans: "只读范本",
+            .ja: "読み取り専用のサンプル",
+            .ko: "읽기 전용 샘플",
+            .th: "ตัวอย่างแบบอ่านอย่างเดียว"
+        ],
         "sample_showcase_audio_title": [
             .zhHant: "語音導覽：Kairumo 設計理念與核心架構",
             .en: "Audio Guide: Kairumo Design Philosophy and Core Architecture",

@@ -15567,6 +15567,30 @@
     "zhHans": "待办|负责|期限\n量测 Android 中阶机延迟|建豪|9/22\n补手册「插入录音」章节|文萱|9/20\n申请正式签章金钥|佩宜|9/19",
     "zhHant": "待辦|負責|期限\n量測 Android 中階機延遲|建豪|9/22\n補手冊「插入錄音」章節|文萱|9/20\n申請正式簽章金鑰|佩宜|9/19"
   },
+  "sample_readonly_forked": {
+    "en": "This sample is read-only. An editable copy has been created for you.",
+    "ja": "このサンプルは読み取り専用です。編集できるノートを自動的に作成しました。",
+    "ko": "이 샘플은 읽기 전용입니다. 편집 가능한 노트를 자동으로 추가했습니다.",
+    "th": "ตัวอย่างนี้เป็นแบบอ่านอย่างเดียว ระบบได้สร้างสมุดโน้ตที่แก้ไขได้ให้โดยอัตโนมัติแล้ว",
+    "zhHans": "此范本为只读文件，系统已自动增加可编辑笔记本",
+    "zhHant": "此範本為唯讀檔案，系統已自動增加可編輯筆記本"
+  },
+  "sample_readonly_suffix": {
+    "en": " (read-only)",
+    "ja": "（読み取り専用）",
+    "ko": " (읽기 전용)",
+    "th": " (อ่านอย่างเดียว)",
+    "zhHans": "（只读）",
+    "zhHant": "（唯讀）"
+  },
+  "sample_readonly_title": {
+    "en": "Read-only sample",
+    "ja": "読み取り専用のサンプル",
+    "ko": "읽기 전용 샘플",
+    "th": "ตัวอย่างแบบอ่านอย่างเดียว",
+    "zhHans": "只读范本",
+    "zhHant": "唯讀範本"
+  },
   "sample_showcase_audio_title": {
     "en": "Audio Guide: Kairumo Design Philosophy and Core Architecture",
     "ja": "音声ガイド：Kairumoの設計思想とコアアーキテクチャ",

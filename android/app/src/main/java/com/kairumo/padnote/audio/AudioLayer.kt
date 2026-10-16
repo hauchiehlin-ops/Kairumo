@@ -16,9 +16,16 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -62,7 +69,7 @@ fun AudioLayer(
     onRename: (AudioObject) -> Unit,
     onDelete: (AudioObject) -> Unit,
     onChanged: (AudioObject) -> Unit,
-    onTranscribe: ((AudioObject) -> Unit)? = null,
+    onTranscribe: ((AudioObject, String?) -> Unit)? = null,
     zIndexOf: (String) -> Float
 ) {
     // 不包一層自己的 Box —— zIndex 只在同一個父容器的兄弟之間有效。
@@ -101,7 +108,7 @@ private fun AudioCardView(
     onRename: (AudioObject) -> Unit,
     onDelete: (AudioObject) -> Unit,
     onChanged: (AudioObject) -> Unit,
-    onTranscribe: ((AudioObject) -> Unit)? = null
+    onTranscribe: ((AudioObject, String?) -> Unit)? = null
 ) {
     Box(
         modifier = Modifier
@@ -218,18 +225,38 @@ private fun AudioCardView(
 
         if (isSelected) {
             // 語音轉文字（左上）。點擊後轉錄音訊並自動在卡片下方建立文字方塊。
+            // 與 Apple 卡片選單的「轉錄音訊」相同：先選語言（自動偵測或指定）。
             if (onTranscribe != null && exists) {
+                var languageMenu by remember { mutableStateOf(false) }
                 Box(
-                    Modifier
-                        .offset {
-                            IntOffset((-12f * density).toInt(), (-12f * density).toInt())
+                    Modifier.offset {
+                        IntOffset((-12f * density).toInt(), (-12f * density).toInt())
+                    }
+                ) {
+                    Box(
+                        Modifier
+                            .size(26.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFF2563EB))
+                            .testTag("audio.card.transcribe")
+                            .semantics { contentDescription = l("transcribe_audio") }
+                            .clickable { languageMenu = true },
+                        contentAlignment = Alignment.Center
+                    ) { Text("📝", fontSize = 11.sp) }
+                    DropdownMenu(expanded = languageMenu, onDismissRequest = { languageMenu = false }) {
+                        DropdownMenuItem(
+                            text = { Text(l("transcribe_language_auto")) },
+                            onClick = { languageMenu = false; onTranscribe(item, null) }
+                        )
+                        HorizontalDivider()
+                        for ((key, tag) in TRANSCRIBE_LANGUAGES) {
+                            DropdownMenuItem(
+                                text = { Text(l(key)) },
+                                onClick = { languageMenu = false; onTranscribe(item, tag) }
+                            )
                         }
-                        .size(26.dp)
-                        .clip(CircleShape)
-                        .background(Color(0xFF2563EB))
-                        .clickable { onTranscribe(item) },
-                    contentAlignment = Alignment.Center
-                ) { Text("📝", fontSize = 11.sp) }
+                    }
+                }
             }
 
             // 刪除（右上）。與其他圖層的把手位置一致。
@@ -289,3 +316,13 @@ private fun AudioCardView(
 
 /** 與 Apple 端錄音卡片同一個強調色。兩邊不一致會看起來像兩種東西。 */
 private val AUDIO_ACCENT = Color(0xFFD9453C)
+
+/** 轉錄可指定的語言（字串鍵 → 語言標籤），順序與 Apple `AudioAttachment` 的選單相同。 */
+private val TRANSCRIBE_LANGUAGES = listOf(
+    "transcribe_lang_zh_tw" to "zh-Hant",
+    "transcribe_lang_en" to "en",
+    "transcribe_lang_ja" to "ja",
+    "transcribe_lang_ko" to "ko",
+    "transcribe_lang_th" to "th",
+    "transcribe_lang_zh_cn" to "zh-Hans"
+)

@@ -391,6 +391,50 @@ private fun KairumoApp() {
         return
     }
 
+    // 唯讀範例（見 SampleFork）：開著範例時每秒比對一次，一被編輯就另存一本、編輯器換過去、範例重設、提示使用者。
+    // 另存與重設用這個 scope：它活過 openedId 的切換（LaunchedEffect 換 key 就被取消了）。
+    val sampleScope = rememberCoroutineScope()
+    var sampleForkNotice by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(openedId) {
+        val sampleId = openedId ?: return@LaunchedEffect
+        if (!com.kairumo.padnote.library.SeedNotebooks.isDeviceLocal(sampleId)) return@LaunchedEffect
+        val device = deviceId(activity)
+        val lang = deviceLanguageTag()
+        while (true) {
+            kotlinx.coroutines.delay(1_000L)
+            val edited = withContext(Dispatchers.IO) {
+                com.kairumo.padnote.library.SampleFork.wasEdited(activity, sampleId)
+            }
+            if (!edited) continue
+            sampleScope.launch {
+                val forked = withContext(Dispatchers.IO) {
+                    com.kairumo.padnote.library.SampleFork.forkIfEdited(activity, sampleId, device, lang)
+                } ?: return@launch
+                if (openedId == sampleId) openedId = forked.first
+                sampleForkNotice = forked.second
+                withContext(Dispatchers.IO) {
+                    com.kairumo.padnote.library.SampleFork.restore(activity, sampleId, device, lang)
+                }
+                com.kairumo.padnote.library.SampleFork.noteForked()
+            }
+            break
+        }
+    }
+    sampleForkNotice?.let { title ->
+        AlertDialog(
+            onDismissRequest = { sampleForkNotice = null },
+            title = { Text(LocalizationStrings.localized("sample_readonly_title", deviceLanguageTag())) },
+            text = {
+                Text(LocalizationStrings.localized("sample_readonly_forked", deviceLanguageTag()) + "\n" + title)
+            },
+            confirmButton = {
+                TextButton(onClick = { sampleForkNotice = null }) {
+                    Text(LocalizationStrings.localized("confirm", deviceLanguageTag()))
+                }
+            }
+        )
+    }
+
     val id = openedId
     if (id == null) {
         NotebookHome(
@@ -398,8 +442,8 @@ private fun KairumoApp() {
             onFolderChange = { folderId = it },
             onOpen = {
                 if (!it.equals(uniffi.padnote_core.recordingInboxNotebookId(), ignoreCase = true)) {
-                    // 範例：記下打開時的樣子，關掉後改過就轉成會同步的一般筆記（見 SamplePromotion）。
-                    com.kairumo.padnote.library.SamplePromotion.noteOpened(activity, it)
+                    // 範例（唯讀）：記下打開時的樣子，一編輯就另存一本（見 SampleFork）。
+                    com.kairumo.padnote.library.SampleFork.noteOpened(activity, it)
                     openedId = it
                 }
             }
@@ -409,12 +453,12 @@ private fun KairumoApp() {
             notebookId = id,
             onBack = {
                 openedId = null
-                com.kairumo.padnote.library.SamplePromotion.promoteIfEditedSoon(activity, id, deviceId(activity))
+                com.kairumo.padnote.library.SampleFork.forkIfEditedSoon(activity, id, deviceId(activity), deviceLanguageTag())
             },
             onOpenNotebook = {
                 if (!it.equals(uniffi.padnote_core.recordingInboxNotebookId(), ignoreCase = true)) {
-                    com.kairumo.padnote.library.SamplePromotion.promoteIfEditedSoon(activity, id, deviceId(activity))
-                    com.kairumo.padnote.library.SamplePromotion.noteOpened(activity, it)
+                    com.kairumo.padnote.library.SampleFork.forkIfEditedSoon(activity, id, deviceId(activity), deviceLanguageTag())
+                    com.kairumo.padnote.library.SampleFork.noteOpened(activity, it)
                     openedId = it
                 }
             }
@@ -458,6 +502,8 @@ private fun NotebookHome(
     var deleting by remember { mutableStateOf<NotebookLibrary.Entry?>(null) }
     var moving by remember { mutableStateOf<NotebookLibrary.Entry?>(null) }
     var creatingFolder by remember { mutableStateOf(false) }
+    // 從資料夾的「⋯ → 新增子資料夾」建立時，新資料夾的上層；null = 目前所在的這一層。
+    var newFolderParent by remember { mutableStateOf<String?>(null) }
     var renamingFolder by remember { mutableStateOf<FolderTree.Folder?>(null) }
     // 最上層那一層沒有對應的資料夾物件，所以要一個自己的狀態。
     var renamingRoot by remember { mutableStateOf(false) }
@@ -657,9 +703,9 @@ private fun NotebookHome(
 
     // 同步把別台的 oplog 寫進套件之後，清單要重讀 —— 不重讀的話，
     // 畫面上還是同步前的樣子，使用者會以為同步沒作用。
-    // 範例轉成一般筆記之後（背景完成），清單要重讀。
-    val samplePromotions by com.kairumo.padnote.library.SamplePromotion.promotions.collectAsState()
-    LaunchedEffect(samplePromotions) { if (samplePromotions > 0) revision++ }
+    // 範例另存成一般筆記本、範例重設之後（背景完成），清單要重讀。
+    val sampleForks by com.kairumo.padnote.library.SampleFork.forks.collectAsState()
+    LaunchedEffect(sampleForks) { if (sampleForks > 0) revision++ }
     val changedNotebooks by com.kairumo.padnote.sync.AutoSync.changedNotebooks.collectAsState()
     LaunchedEffect(changedNotebooks) {
         if (changedNotebooks.isNotEmpty()) {
@@ -788,7 +834,8 @@ private fun NotebookHome(
                 onOpenDetail = { showCloudSyncDialog = true }
             ),
             onOpenFolder = onFolderChange,
-            onCreateFolder = { creatingFolder = true },
+            onCreateFolder = { newFolderParent = null; creatingFolder = true },
+            onCreateSubfolder = { newFolderParent = it.id; creatingFolder = true },
             onRenameFolder = { renamingFolder = it },
             onDeleteFolder = { deletingFolder = it },
             onAssetLibrary = { homeAssets = true },
@@ -798,6 +845,34 @@ private fun NotebookHome(
             onOpenPrivacy = { homeDocs = "legal/privacy.html" },
             onInsertRecording = { insertingRecording = it },
             onRenameRecording = { renamingRecording = it },
+            onDuplicateNotebook = { entry ->
+                autoSyncScope.launch {
+                    val title = l("copy_suffix").replace(
+                        "%@", com.kairumo.padnote.library.SeedNotebooks.baseTitle(entry.title, lang))
+                    val newId = withContext(Dispatchers.IO) {
+                        NotebookLibrary.duplicate(activity, entry.id, title, device)
+                    }
+                    if (newId != null) {
+                        AutoSync.noteLocalEdit(activity)
+                        revision++
+                    }
+                }
+            },
+            onDeleteRecording = { rec ->
+                // 與 Apple `deleteRecording` 同一條路：核心刪檔並留下帶裝置 id 的媒體墓碑，別台同步後也會消失。
+                autoSyncScope.launch {
+                    withContext(Dispatchers.IO) {
+                        val pkg = java.io.File(
+                            NotebookLibrary.directory(activity), "${rec.notebookId}.${NotebookLibrary.EXTENSION}")
+                        val error = uniffi.padnote_core.mediaDeleteAudio(pkg.absolutePath, rec.file.name, device)
+                        if (error.isNotEmpty()) android.util.Log.w("Kairumo", "刪除錄音：$error")
+                        if (rec.file.exists()) rec.file.delete()
+                    }
+                    if (AudioPlayback.playingId == rec.file.absolutePath) AudioPlayback.stop()
+                    AutoSync.noteLocalEdit(activity)
+                    revision++
+                }
+            },
             onRenameRootFolder = {
                 // 人在某個資料夾裡就是改那一個；在最上層就是改最上層的顯示名稱。
                 val here = breadcrumb.lastOrNull()
@@ -1251,10 +1326,11 @@ private fun NotebookHome(
             title = l("new_subfolder"),
             initial = "",
             l = ::l,
-            onDismiss = { creatingFolder = false },
+            onDismiss = { creatingFolder = false; newFolderParent = null },
             onConfirm = { title ->
-                FolderTree.create(activity, title, folderId)
+                FolderTree.create(activity, title, newFolderParent ?: folderId)
                 creatingFolder = false
+                newFolderParent = null
                 revision++
             }
         )
@@ -2412,6 +2488,36 @@ private fun InkScreen(
     }
 
     /**
+     * 複製一頁，新頁放在它正後方（與 Apple 頁面選單的「複製頁面」相同）。
+     *
+     * 核心在**同一個 session** 裡複製區塊、筆畫、形狀與連接線（`duplicatePage`）。
+     * 平台這一層按頁碼或物件 id 存的東西（紙張、堆疊順序、筆跡下方名單、形狀樣式）
+     * 用它回傳的 id 對照表跟著複製。
+     */
+    fun duplicatePage(index: Int) {
+        val s = notebook?.first ?: return
+        val sourceId = runCatching { s.pageIdAt(index.toUInt()) }.getOrNull() ?: return
+        val result = runCatching { s.duplicatePage(sourceId) }.getOrNull() ?: return
+        val newCount = runCatching { s.pageCount().toInt() }.getOrDefault(pageCount + 1)
+        val target = (index + 1).coerceAtMost(newCount - 1)
+        val ids = result.idMap
+        // 紙張：在新頁的位置插入同一張紙（後面的頁跟著往後挪）。
+        meta.insertPageTemplate(s, target, meta.paperId(index), newCount - 1)
+        // 以頁碼為鍵的東西：先把後面的頁往後挪一格，再填新頁。
+        meta.shiftPageKeyedData(s, fromIndex = target, totalPagesBefore = newCount - 1)
+        meta.objectOrder(index).mapNotNull { ids[it] }.takeIf { it.isNotEmpty() }
+            ?.let { meta.setObjectOrder(s, target, it) }
+        meta.underInkObjectIds(index).mapNotNull { ids[it] }.toSet().takeIf { it.isNotEmpty() }
+            ?.let { meta.setUnderInkObjectIds(s, target, it) }
+        val shapeStyles = meta.shapeStyles().mapNotNull { (old, style) -> ids[old]?.let { it to style } }.toMap()
+        val linkStyles = meta.connectionStyles().mapNotNull { (old, style) -> ids[old]?.let { it to style } }.toMap()
+        meta.updateStyles(s, shapeUpserts = shapeStyles, connectionUpserts = linkStyles)
+        pageCount = newCount
+        pageIndex = target
+        revision++
+    }
+
+    /**
      * 在指定頁面後插入新頁（S-93／S-86）。
      * 若 paperId != null 則套用指定樣板，否則為空白頁。
      */
@@ -2430,6 +2536,8 @@ private fun InkScreen(
         if (paperId != null) {
             meta.insertPageTemplate(s, targetIndex, paperId, newCount)
         }
+        // 後面的頁往後挪了一格，以頁碼為鍵的圖層設定也要跟著挪。
+        if (targetIndex < newCount - 1) meta.shiftPageKeyedData(s, targetIndex, newCount - 1)
         pageCount = newCount
         pageIndex = targetIndex
         revision++
@@ -4670,6 +4778,7 @@ private fun InkScreen(
                         },
                         onMovePage = { from, to -> movePage(from, to) },
                         onInsertPageAfter = { idx, pid -> insertPageAfter(idx, pid) },
+                        onDuplicatePage = { idx -> duplicatePage(idx) },
                         onDeletePage = { idx -> deletePageAt(idx) },
                         onTransferPage = { index, moveOut -> transferringPage = index to moveOut },
                         onOpenNotebook = { id -> showPageSidebar = false; onOpenNotebook?.invoke(id) },
@@ -4828,6 +4937,7 @@ private fun InkScreen(
                     },
                     onMovePage = { from, to -> movePage(from, to) },
                     onInsertPageAfter = { idx, pid -> insertPageAfter(idx, pid) },
+                        onDuplicatePage = { idx -> duplicatePage(idx) },
                     onDeletePage = { idx -> deletePageAt(idx) },
                     onTransferPage = { index, moveOut -> transferringPage = index to moveOut },
                     onOpenNotebook = { id -> showPageSidebar = false; onOpenNotebook?.invoke(id) },
@@ -5524,7 +5634,7 @@ private fun InkScreen(
                         meta.setAudioCards(notebook?.first, audioCards)
                         audioRevision++
                     },
-                    onTranscribe = { card ->
+                    onTranscribe = { card, language ->
                         scope.launch {
                             val file = audioDirectory?.let { java.io.File(it, card.fileName) }
                             if (file == null || !file.isFile) {
@@ -5534,7 +5644,7 @@ private fun InkScreen(
                             message = l10n("recognizing")
                             val outcome = withContext(Dispatchers.IO) {
                                 com.kairumo.padnote.audio.AudioTranscriber.transcribe(
-                                    activity, file, deviceLanguageTag())
+                                    activity, file, language, scriptTag = language ?: deviceLanguageTag())
                             }
                             // **每一種拿不到都要講清楚原因。** 混成一句
                             // 「轉錄失敗」的話，使用者會一直按重試，
@@ -6009,6 +6119,7 @@ private fun InkScreen(
                     },
                     onMovePage = { from, to -> movePage(from, to) },
                     onInsertPageAfter = { idx, pid -> insertPageAfter(idx, pid) },
+                        onDuplicatePage = { idx -> duplicatePage(idx) },
                     onDeletePage = { idx -> deletePageAt(idx) },
                     onTransferPage = { index, moveOut -> transferringPage = index to moveOut },
                     onOpenNotebook = { id -> showPageSidebar = false; onOpenNotebook?.invoke(id) },

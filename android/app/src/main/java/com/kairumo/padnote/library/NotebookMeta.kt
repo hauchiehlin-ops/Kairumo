@@ -293,6 +293,26 @@ class NotebookMeta private constructor(private var root: JSONObject) {
         flush(session)
     }
 
+    /**
+     * 在 `fromIndex` 插入一頁之前：以頁碼為鍵的物件堆疊順序與筆跡下方名單，`fromIndex` 以後的頁都往後挪一格。
+     * 紙張樣板由 [insertPageTemplate] 自己挪。不挪的話，插入一頁之後，後面每一頁的圖層設定都錯位一頁。
+     */
+    fun shiftPageKeyedData(session: PadnoteSession?, fromIndex: Int, totalPagesBefore: Int) {
+        for (key in listOf(KEY_ORDER_BY_PAGE, KEY_UNDER_INK_BY_PAGE)) {
+            val map = root.optJSONObject(key) ?: continue
+            val shifted = JSONObject()
+            val keys = map.keys()
+            while (keys.hasNext()) {
+                val k = keys.next()
+                val index = k.toIntOrNull()
+                val dest = if (index != null && index in fromIndex until totalPagesBefore) index + 1 else index
+                shifted.put(dest?.toString() ?: k, map.get(k))
+            }
+            root.put(key, shifted)
+        }
+        flush(session)
+    }
+
     /** 設定某一頁的紙張（協同：別人換了那一頁的紙）。 */
     fun setPagePaperId(session: PadnoteSession?, pageIndex: Int, paperId: String, totalPages: Int) {
         val arr = root.optJSONArray(KEY_PAGE_TEMPLATES)

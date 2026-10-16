@@ -62,7 +62,13 @@ object AudioTranscriber {
      *
      * @param languageTag BCP-47；null 表示讓模型自己偵測。
      */
-    fun transcribe(context: Context, audioFile: File, languageTag: String? = null): Outcome {
+    /**
+     * @param languageTag 要辨識的語言；null = 由 Whisper 自動偵測（Apple「自動偵測」同義）。
+     * @param scriptTag 繁／簡字體跟著哪個語言標籤走；預設與 [languageTag] 相同。自動偵測時傳介面語言。
+     */
+    fun transcribe(
+        context: Context, audioFile: File, languageTag: String? = null, scriptTag: String? = languageTag
+    ): Outcome {
         val modelPath = ModelDownloadManager.modelPath(context, WHISPER_MODEL_ID)
         if (!whisperIsModelAvailable(modelPath)) {
             return Outcome.ModelMissing
@@ -73,7 +79,7 @@ object AudioTranscriber {
         return try {
             val result = whisperTranscribePcm(modelPath, pcm.toList(), languageTag)
             // 字體跟著介面語言（繁體介面 → 正體），規則在核心，與 Apple 同一份。
-            val text = localizeTranscriptScript(result.text.trim(), languageTag ?: "")
+            val text = localizeTranscriptScript(result.text.trim(), scriptTag ?: "")
             if (text.isEmpty()) Outcome.NoSpeech else Outcome.Text(text)
         } catch (t: Throwable) {
             val message = t.message ?: ""
