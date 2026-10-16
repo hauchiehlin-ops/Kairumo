@@ -2299,8 +2299,10 @@ public final class NotebookStore: ObservableObject {
     @discardableResult
     public func healInflatedSeedNotebooksIfNeeded(force: Bool = false) -> Bool {
         var changed = false
-        for index in notebooks.indices.reversed() {
-            let doc = notebooks[index]
+        // 先抓好範例的 id 再逐本處理：另存出來的筆記本會插在清單最前面，邊走索引邊插入會跳過下一本。
+        let sampleIds = notebooks.map(\.id).filter { NotebookPackageBridge.seedStandardPageCount(for: $0) != nil }
+        for id in sampleIds {
+            guard let doc = notebooks.first(where: { $0.id == id }) else { continue }
             // 只認範例自己的 id。以名字認的話，由範例另存出來的筆記本（名字相近）會被整本重設。
             guard let standardCount = NotebookPackageBridge.seedStandardPageCount(for: doc.id) else { continue }
             let canonicalIds = NotebookPackageBridge.deterministicSeedPageIds(for: doc.id)
