@@ -77,7 +77,10 @@ reason = "同上"
 
 [advisories]
 version = 2
-yanked = "deny"
+# 上游 `zip` crate 作者將 9.0 以前的所有舊版（含 4.x、8.x）一次性撤回（yanked），
+# 但相依生態系（calamine 依賴 zip ^4.6、docx-rs 依賴 zip 8.6.0）尚未釋出適配 zip 9.x
+# 的新版本，暫時降為 warn。
+yanked = "warn"
 # 每一筆豁免都必須寫明「為什麼這個專案不受影響」，而不只是「先讓 CI 過」。
 # 上游一有修好的版本就該回來拿掉對應條目。
 ignore = [
