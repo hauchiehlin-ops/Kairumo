@@ -296,7 +296,7 @@ enum ScreenAudit {
     ) -> XCUIElement? {
         let window = app.windows.firstMatch.frame
 
-        for attempt in 0...7 {
+        for attempt in 0...12 {
             let menuCollection = app.collectionViews.firstMatch
             let viewport = (menuCollection.exists && menuCollection.frame.width > 0 && menuCollection.frame.height > 0)
                 ? window.intersection(menuCollection.frame)
@@ -305,7 +305,7 @@ enum ScreenAudit {
             // 每次捲動後重建 query：原生選單會回收離開畫面的 row。
             let matches = app.descendants(matching: .any)
                 .matching(NSPredicate(format: "label == %@", label))
-            _ = matches.firstMatch.waitForExistence(timeout: 2.5)
+            _ = matches.firstMatch.waitForExistence(timeout: 2.0)
             let candidates = matches.allElementsBoundByIndex.compactMap {
                 element -> (element: XCUIElement, frame: CGRect)? in
                 guard element.exists else { return nil }
@@ -319,20 +319,30 @@ enum ScreenAudit {
             }.sorted { $0.frame.width > $1.frame.width }
 
             if let (element, _) = candidates.first { return element }
-            guard attempt < 7 else { break }
+            guard attempt < 12 else { break }
 
             if menuCollection.exists {
-                // 原生選單每列高約 44pt。swipeUp() 帶有慣性會一次滑過 10-15 項（約 500pt），
-                // 容易直接越過位於初始邊界附近的項目（如 Math Calculator）。
-                // 改用受控短距拖曳（每次約 2-3 項），若已知目標相對於視窗的方位則朝目標方向拖曳。
-                let isAbove = matches.allElementsBoundByIndex.contains { $0.exists && $0.frame.midY < viewport.minY }
-                let isBelow = matches.allElementsBoundByIndex.contains { $0.exists && $0.frame.midY > viewport.maxY }
-                let scrollUp = isAbove ? false : (isBelow ? true : attempt < 4)
-                let startY = scrollUp ? 0.62 : 0.38
-                let endY = scrollUp ? 0.38 : 0.62
-                let startCoord = menuCollection.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: startY))
-                let endCoord = menuCollection.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: endY))
-                startCoord.press(forDuration: 0.05, thenDragTo: endCoord)
+                // 如果目標已具現化出現在樹中但超出視窗，使用精準短距拖曳移入視窗；
+                // 若尚未具現化，則一路向下 swipeUp() 瀏覽整張選單，末期才回頭向上尋找。
+                let hasMatch = matches.firstMatch.exists
+                let isAbove = hasMatch && matches.firstMatch.frame.maxY <= viewport.minY + 10
+                let isBelow = hasMatch && matches.firstMatch.frame.minY >= viewport.maxY - 10
+
+                if isAbove {
+                    let start = menuCollection.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.35))
+                    let end = menuCollection.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.65))
+                    start.press(forDuration: 0.05, thenDragTo: end)
+                } else if isBelow {
+                    let start = menuCollection.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.65))
+                    let end = menuCollection.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.35))
+                    start.press(forDuration: 0.05, thenDragTo: end)
+                } else {
+                    if attempt < 8 {
+                        menuCollection.swipeUp()
+                    } else {
+                        menuCollection.swipeDown()
+                    }
+                }
                 Thread.sleep(forTimeInterval: 0.25)
             } else {
                 let scroll = app.scrollViews.firstMatch
