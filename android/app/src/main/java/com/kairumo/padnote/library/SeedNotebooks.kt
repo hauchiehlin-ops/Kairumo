@@ -50,7 +50,7 @@ object SeedNotebooks {
 
         // 🌟 在讀取 NotebookLibrary.all() 之前先執行磁碟層級自癒，
         // 避免主線程在 describe() 內對膨脹套件進行昂貴重播造成 ANR 卡死。
-        healBloatedSeeds(context, deviceId, languageTag, ::l)
+        healBloatedSeeds(context, deviceId, languageTag)
 
         val existing = NotebookLibrary.all(context, deviceId)
         if (existing.isNotEmpty()) {
@@ -76,8 +76,7 @@ object SeedNotebooks {
     fun healBloatedSeeds(
         context: Context,
         deviceId: UInt,
-        languageTag: String,
-        l: (String) -> String
+        languageTag: String
     ): Int {
         val baseDir = NotebookLibrary.directory(context)
         val seeds = listOf(

@@ -174,15 +174,11 @@ object SampleFork {
         return newId to title
     }
 
-    // ---- 舊版「轉成一般筆記」留下的退役名單（範例改成唯讀之後不再寫入，第 3 代重設時清掉）----
+    // ---- 舊版「轉成一般筆記」留下的退役名單（範例改成唯讀之後不再寫入；退役的範例不補回）----
 
     private const val PREFS = "kairumo.seed"
     private const val KEY_RETIRED = "retired_samples"
 
     fun retired(context: Context): Set<String> =
         ProfileContext.prefs(context, PREFS).getStringSet(KEY_RETIRED, emptySet()) ?: emptySet()
-
-    fun clearRetired(context: Context) {
-        ProfileContext.prefs(context, PREFS).edit().remove(KEY_RETIRED).apply()
-    }
 }
