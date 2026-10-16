@@ -296,7 +296,7 @@ enum ScreenAudit {
     ) -> XCUIElement? {
         let window = app.windows.firstMatch.frame
 
-        for attempt in 0...6 {
+        for attempt in 0...7 {
             let menuCollection = app.collectionViews.firstMatch
             let viewport = (menuCollection.exists && menuCollection.frame.width > 0 && menuCollection.frame.height > 0)
                 ? window.intersection(menuCollection.frame)
@@ -312,22 +312,28 @@ enum ScreenAudit {
                 let frame = element.frame
                 guard frame.width > 0, frame.height > 0,
                       frame.midX >= viewport.minX, frame.midX <= viewport.maxX,
-                      frame.midY >= viewport.minY + 5, frame.midY <= viewport.maxY - 5,
-                      viewport.intersects(frame)
+                      viewport.intersects(frame),
+                      frame.maxY > viewport.minY + 5, frame.minY < viewport.maxY - 5
                 else { return nil }
                 return (element, frame)
             }.sorted { $0.frame.width > $1.frame.width }
 
             if let (element, _) = candidates.first { return element }
-            guard attempt < 6 else { break }
+            guard attempt < 7 else { break }
 
             if menuCollection.exists {
-                if attempt >= 4 {
-                    menuCollection.swipeDown()
-                } else {
-                    menuCollection.swipeUp()
-                }
-                Thread.sleep(forTimeInterval: 0.3)
+                // 原生選單每列高約 44pt。swipeUp() 帶有慣性會一次滑過 10-15 項（約 500pt），
+                // 容易直接越過位於初始邊界附近的項目（如 Math Calculator）。
+                // 改用受控短距拖曳（每次約 2-3 項），若已知目標相對於視窗的方位則朝目標方向拖曳。
+                let isAbove = matches.allElementsBoundByIndex.contains { $0.exists && $0.frame.midY < viewport.minY }
+                let isBelow = matches.allElementsBoundByIndex.contains { $0.exists && $0.frame.midY > viewport.maxY }
+                let scrollUp = isAbove ? false : (isBelow ? true : attempt < 4)
+                let startY = scrollUp ? 0.62 : 0.38
+                let endY = scrollUp ? 0.38 : 0.62
+                let startCoord = menuCollection.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: startY))
+                let endCoord = menuCollection.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: endY))
+                startCoord.press(forDuration: 0.05, thenDragTo: endCoord)
+                Thread.sleep(forTimeInterval: 0.25)
             } else {
                 let scroll = app.scrollViews.firstMatch
                 if scroll.exists {
