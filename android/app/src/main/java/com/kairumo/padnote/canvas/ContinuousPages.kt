@@ -80,8 +80,8 @@ enum class PageDisplayMode(val wire: String) {
     CONTINUOUS("continuous");
 
     companion object {
-        fun fromWire(value: String?): PageDisplayMode =
-            entries.firstOrNull { it.wire == value } ?: SINGLE
+        fun fromWire(value: String?, isTablet: Boolean = false): PageDisplayMode =
+            entries.firstOrNull { it.wire == value } ?: if (isTablet) CONTINUOUS else SINGLE
     }
 }
 

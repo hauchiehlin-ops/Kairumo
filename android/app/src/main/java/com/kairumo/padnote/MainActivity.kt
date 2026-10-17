@@ -303,6 +303,11 @@ class MainActivity : FragmentActivity() {
         Thread {
             runCatching { com.kairumo.padnote.platform.StorageSweeper.sweepAtLaunch(applicationContext) }
         }.start()
+        val isTabletDevice = (resources.configuration.screenLayout and android.content.res.Configuration.SCREENLAYOUT_SIZE_MASK) >= android.content.res.Configuration.SCREENLAYOUT_SIZE_LARGE
+        if (isTabletDevice) {
+            // 平板開啟時預設自動展開全螢幕
+            androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
+        }
         setContent {
             // 用自己的主題，不用 MaterialTheme 的預設值（工作項 S-62）。
             // 預設值是 Material 的基準紫，而且**不跟隨深色模式** ——
@@ -1760,11 +1765,15 @@ private fun InkScreen(
     /// 習慣連續捲動的人每次都要再按一次。與 Apple 端的 AppStorage 對應。
     // 側欄點了縮圖就遞增：連續模式據此再捲到目前頁（點的正好是目前頁時頁碼不變，只靠頁碼不會捲）。
     var continuousScrollRequest by remember { mutableIntStateOf(0) }
+    val isTablet = remember(activity) {
+        (activity.resources.configuration.screenLayout and android.content.res.Configuration.SCREENLAYOUT_SIZE_MASK) >= android.content.res.Configuration.SCREENLAYOUT_SIZE_LARGE
+    }
     var pageDisplayMode by remember {
         mutableStateOf(
             PageDisplayMode.fromWire(
                 ProfileContext.prefs(activity, "kairumo_editor")
-                    .getString("pageDisplayMode", null)
+                    .getString("pageDisplayMode", null),
+                isTablet = isTablet
             )
         )
     }
@@ -3342,11 +3351,10 @@ private fun InkScreen(
         androidx.activity.compose.BackHandler { onBack() }
     }
     var showMenu by remember { mutableStateOf(false) }
-    // 頁面結構欄。與 Apple 端一樣預設收起來 —— 手機上它會吃掉大半個畫布。
-    var showPageSidebar by remember { mutableStateOf(false) }
-    // 畫布的縮放與平移。換頁時歸位 —— 上一頁放大到 3 倍之後翻頁，
-    // 新的一頁還停在同一個放大位置，使用者會以為翻頁沒成功。
-    var canvasScale by remember(pageId) { mutableFloatStateOf(1f) }
+    // 頁面結構欄。平板預設展開，手機預設收起。
+    var showPageSidebar by remember { mutableStateOf(isTablet) }
+    // 畫布的縮放與平移。平板預設 200% (2.0f)，手機預設 100% (1.0f)。換頁時歸位。
+    var canvasScale by remember(pageId) { mutableFloatStateOf(if (isTablet) 2f else 1f) }
     var canvasOffset by remember(pageId) { mutableStateOf(Offset.Zero) }
     var canvasViewport by remember { mutableStateOf(Size.Zero) }
     // 「顯示全頁」等整頁縮放（與捏合不同：捏合看某個區域，這個看整頁）。

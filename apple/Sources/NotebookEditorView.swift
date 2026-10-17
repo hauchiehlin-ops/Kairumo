@@ -1994,15 +1994,23 @@ public struct NotebookEditorView: View {
     // 頁面狀態
     @State private var currentPageIndex: Int = 0
 
-    /// 頁面顯示模式。**預設整頁**；使用者切過之後記住他的選擇。
+    public static var isTabletOrDesktopDevice: Bool {
+        #if targetEnvironment(macCatalyst) || os(macOS)
+        return true
+        #else
+        return UIDevice.current.userInterfaceIdiom == .pad || UIDevice.current.userInterfaceIdiom == .mac
+        #endif
+    }
+
+    /// 頁面顯示模式。平板與桌機預設連續模式；手機預設整頁；使用者切過之後記住他的選擇。
     ///
     /// 存在 AppStorage 而不是筆記裡：它是「怎麼看」而不是「內容是什麼」，
     /// 跟著人走比跟著筆記走合理 —— 跟著筆記的話，同一個人在不同本筆記裡
     /// 會拿到不同的捲動方式。
     @AppStorage(ProfileContext.scopedKey("kairumo.editor.pageDisplayMode"))
-    private var pageDisplayModeRaw: String = PageDisplayMode.single.rawValue
+    private var pageDisplayModeRaw: String = (NotebookEditorView.isTabletOrDesktopDevice ? PageDisplayMode.continuous : PageDisplayMode.single).rawValue
     private var pageDisplayMode: PageDisplayMode {
-        PageDisplayMode(rawValue: pageDisplayModeRaw) ?? .single
+        PageDisplayMode(rawValue: pageDisplayModeRaw) ?? (Self.isTabletOrDesktopDevice ? .continuous : .single)
     }
     @State private var currentDrawing: PKDrawing = PKDrawing()
     /// 最近一次真的寫進磁碟的筆跡（頁次 + 內容）。切換模式時用來判斷「這一頁其實沒變」，
@@ -2211,7 +2219,7 @@ public struct NotebookEditorView: View {
         case fitPage
     }
     @State private var singlePageFitMode: SinglePageFitMode = .fitWidth
-    @State private var singlePageManualZoom: CGFloat = 1.0
+    @State private var singlePageManualZoom: CGFloat = NotebookEditorView.isTabletOrDesktopDevice ? 2.0 : 1.0
 
     @State private var snapToGrid: Bool = true
     @State private var newTextDraft: NoteTextAttachment = NoteTextAttachment()
@@ -2315,9 +2323,8 @@ public struct NotebookEditorView: View {
     }
 
     // 筆記結構欄（側邊頁面縮圖大綱目錄欄）
-    // 開啟筆記時預設展開，否則使用者每次進入新筆記都要先自己按一次才看得到
-    // 資料夾目錄，等於把「這則筆記放在哪裡」藏起來。
-    @State private var showStructureSidebar: Bool = false
+    // 平板與桌機開啟筆記時預設展開，且預設顯示「頁面結構」。
+    @State private var showStructureSidebar: Bool = NotebookEditorView.isTabletOrDesktopDevice
     /// 畫布目前的實際內容寬度。縮圖要用同一個寬度算，物件位置與比例才會對得上。
     @State private var canvasContentWidth: CGFloat = PageThumbnailRenderer.minPageWidth
     // 自訂捲軸狀態：iOS 原生捲動指示器不接受互動，Mac 上使用者會想用游標拖它
@@ -2325,16 +2332,16 @@ public struct NotebookEditorView: View {
     @State private var canvasScrollFraction: CGFloat = 0
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var didAutoOpenSidebar: Bool = false
-    @AppStorage(ProfileContext.scopedKey("kairumo_editor_sidebar_tab")) private var sidebarTabRaw: String = SidebarTabMode.folders.rawValue
+    @AppStorage(ProfileContext.scopedKey("kairumo_editor_sidebar_tab")) private var sidebarTabRaw: String = SidebarTabMode.pages.rawValue
 
     private var sidebarTab: SidebarTabMode {
-        get { SidebarTabMode(rawValue: sidebarTabRaw) ?? .folders }
+        get { SidebarTabMode(rawValue: sidebarTabRaw) ?? .pages }
         nonmutating set { sidebarTabRaw = newValue.rawValue }
     }
 
     private var sidebarTabBinding: Binding<SidebarTabMode> {
         Binding(
-            get: { SidebarTabMode(rawValue: sidebarTabRaw) ?? .folders },
+            get: { SidebarTabMode(rawValue: sidebarTabRaw) ?? .pages },
             set: { sidebarTabRaw = $0.rawValue }
         )
     }
@@ -4366,7 +4373,7 @@ public struct NotebookEditorView: View {
     private func autoOpenSidebarIfWideEnough(width: CGFloat) {
         guard !didAutoOpenSidebar else { return }
         didAutoOpenSidebar = true
-        if width >= 700 {
+        if width >= 700 || Self.isTabletOrDesktopDevice {
             showStructureSidebar = true
         }
     }
@@ -4423,6 +4430,47 @@ public struct NotebookEditorView: View {
         )
     }
 
+    /// 徑向飛輪快捷工具盤（螢幕座標，不隨頁面縮放，蓋在畫布之上）。
+    @ViewBuilder
+    private var radialMenuLayer: some View {
+        if showRadialMenu {
+            GeometryReader { geo in
+                RadialMarkMenuView(
+                    isPresented: $showRadialMenu,
+                    centerPoint: CGPoint(x: geo.size.width / 2, y: min(geo.size.height / 2, max(170, geo.size.height * 0.42))),
+                    items: [
+                        RadialMenuItem(id: "pen", icon: "pencil.tip", labelKey: "tool_pen", color: .accentColor) {
+                            selectedTool = .pen
+                        },
+                        RadialMenuItem(id: "highlighter", icon: "highlighter", labelKey: "tool_highlighter", color: .orange) {
+                            selectedTool = .highlighter
+                        },
+                        RadialMenuItem(id: "eraser", icon: "eraser", labelKey: "tool_eraser", color: .red) {
+                            selectedTool = .eraser
+                        },
+                        RadialMenuItem(id: "lasso", icon: "lasso", labelKey: "tool_lasso", color: .purple) {
+                            selectedTool = .lasso
+                        },
+                        RadialMenuItem(id: "undo", icon: "arrow.uturn.backward", labelKey: "undo", color: .blue) {
+                            performUndo()
+                        },
+                        RadialMenuItem(id: "redo", icon: "arrow.uturn.forward", labelKey: "redo", color: .blue) {
+                            performRedo()
+                        },
+                        RadialMenuItem(id: "color", icon: "paintpalette.fill", labelKey: "pro_color", color: .pink) {
+                            // 色相環是掛在工具列按鈕上的 popover，從這裡開不一定有錨點；改開完整調色面板。
+                            showProColorPicker = true
+                        },
+                        RadialMenuItem(id: "stabilizer", icon: "waveform.path.ecg", labelKey: "stab_title", color: .green) {
+                            strokeStabilizer = (strokeStabilizer > 0) ? 0.0 : 0.5
+                        }
+                    ]
+                )
+            }
+            .transition(.opacity)
+        }
+    }
+
     /// 畫布工作區。抽出來並加上 AnyView 邊界 —— 這一塊（畫布 + 附件圖層 +
     /// 圖釘 + 浮動列）原本整棵樹的型別都被編進 body 的 mangled 名稱裡。
     private var canvasWorkArea: AnyView {
@@ -4446,6 +4494,7 @@ public struct NotebookEditorView: View {
                 }
             }
             .overlay { objectEditPanels }
+            .overlay { radialMenuLayer }
             .overlay(alignment: .top) {
                 // 🌟 草圖智慧修飾浮動控制面板（兩種頁面模式共用）
                 if showSketchRefineBar {
@@ -4938,13 +4987,13 @@ public struct NotebookEditorView: View {
                     return min(max(whole * value, 0.3), 4)
                 }
                 return PageViewportLayout.zoomScale(for: target, viewport: viewport, page: pageSize)
-            } ?? fitWidth
+            } ?? (Self.isTabletOrDesktopDevice ? min(max(PageViewportLayout.zoomScale(for: .fitPage, viewport: viewport, page: pageSize) * 2.0, 0.3), 4.0) : fitWidth)
             continuousPages(scale: scale)
         }
     }
 
-    /// 連續模式的縮放設定。`nil` = 預設（貼合頁寬）。
-    @State private var continuousZoomTarget: PageViewportLayout.ZoomTarget?
+    /// 連續模式的縮放設定。平板與桌機預設 200%（.ratio(2.0)）；手機預設貼合頁寬。
+    @State private var continuousZoomTarget: PageViewportLayout.ZoomTarget? = NotebookEditorView.isTabletOrDesktopDevice ? .ratio(2.0) : nil
 
     /// 整頁的顯示比例。單頁模式沿用既有的 `singlePageFitMode` / `singlePageManualZoom`（畫布右下角的 −／全頁／＋
     /// 也是它們），連續模式用 `continuousZoomTarget`。倍率一律**相對於「整頁剛好放進視窗」**：100% = 全頁。
@@ -6203,39 +6252,9 @@ public struct NotebookEditorView: View {
                 .transition(.opacity)
             }
 
-            // 🌟 徑向飛輪快捷工具盤 (Radial Pie Menu)
-            if showRadialMenu {
-                RadialMarkMenuView(
-                    isPresented: $showRadialMenu,
-                    centerPoint: radialMenuCenter,
-                    items: [
-                        RadialMenuItem(id: "pen", icon: "pencil.tip", labelKey: "tool_pen", color: .accentColor) {
-                            selectedTool = .pen
-                        },
-                        RadialMenuItem(id: "highlighter", icon: "highlighter", labelKey: "tool_highlighter", color: .orange) {
-                            selectedTool = .highlighter
-                        },
-                        RadialMenuItem(id: "eraser", icon: "eraser", labelKey: "tool_eraser", color: .red) {
-                            selectedTool = .eraser
-                        },
-                        RadialMenuItem(id: "lasso", icon: "lasso", labelKey: "tool_lasso", color: .purple) {
-                            selectedTool = .lasso
-                        },
-                        RadialMenuItem(id: "undo", icon: "arrow.uturn.backward", labelKey: "undo", color: .blue) {
-                            performUndo()
-                        },
-                        RadialMenuItem(id: "redo", icon: "arrow.uturn.forward", labelKey: "redo", color: .blue) {
-                            performRedo()
-                        },
-                        RadialMenuItem(id: "color", icon: "paintpalette.fill", labelKey: "pro_color", color: .pink) {
-                            showProColorWheel = true
-                        },
-                        RadialMenuItem(id: "stabilizer", icon: "waveform.path.ecg", labelKey: "refine_sketch", color: .green) {
-                            strokeStabilizer = (strokeStabilizer > 0) ? 0.0 : 0.5
-                        }
-                    ]
-                )
-            }
+            // 徑向飛輪快捷工具盤不放在這裡：見 `canvasWorkArea` 的 `radialMenuLayer`。
+            // 這一層會跟著頁面縮放，而且沒有 zIndex（預設 0）—— 被畫布（zIndex 2）壓住，
+            // 點按鈕其實都點到畫布上變成筆跡，工具盤完全沒反應。
         }
         .frame(width: PageGeometry.width, height: currentPageHeight)
         .contentShape(Rectangle())

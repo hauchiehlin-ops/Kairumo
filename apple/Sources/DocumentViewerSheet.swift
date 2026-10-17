@@ -87,6 +87,7 @@ struct DocumentWebView: UIViewRepresentable {
     func makeUIView(context: Context) -> WKWebView {
         let config = WKWebViewConfiguration()
         config.defaultWebpagePreferences.allowsContentJavaScript = true
+        config.userContentController.add(context.coordinator, name: "kairumoPrint")
         let webView = WKWebView(frame: CGRect(x: 0, y: 0, width: 320, height: 480), configuration: config)
         webView.navigationDelegate = context.coordinator
         webView.isOpaque = false
@@ -94,6 +95,7 @@ struct DocumentWebView: UIViewRepresentable {
         webView.scrollView.backgroundColor = .systemBackground
         webView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
         context.coordinator.webView = webView
+        context.coordinator.handle = handle
         handle?.webView = webView
         return webView
     }
@@ -112,16 +114,24 @@ struct DocumentWebView: UIViewRepresentable {
         context.coordinator.loadIfReady(uiView)
     }
 
-    final class Coordinator: NSObject, WKNavigationDelegate {
+    final class Coordinator: NSObject, WKNavigationDelegate, WKScriptMessageHandler {
         let url: URL
         let languageCode: String
         weak var webView: WKWebView?
+        weak var handle: DocumentWebHandle?
         private(set) var hasStartedLoading = false
         private var retried = false
 
         init(url: URL, languageCode: String) {
             self.url = url
             self.languageCode = languageCode
+        }
+
+        func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
+            if message.name == "kairumoPrint" {
+                let jobName = LocalizationManager.shared.localized("user_manual")
+                handle?.printDocument(jobName: jobName)
+            }
         }
 
         /// 檔案網址加上 `?lang=`。

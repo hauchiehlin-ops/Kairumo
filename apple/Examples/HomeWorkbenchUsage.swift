@@ -170,7 +170,10 @@ struct KairumoApp: App {
                 // 實測：視窗縮到 500pt 時，浮動面板的關閉鈕與最後一個分頁
                 // 整個被切在視窗外，使用者連把面板關掉都做不到。
                 // Catalyst 要限制視窗得走 windowScene.sizeRestrictions。
-                .onAppear { applyMacWindowMinimumSize() }
+                .onAppear {
+                    applyMacWindowMinimumSize()
+                    autoExpandFullScreenOnMac()
+                }
             #endif
         }
         // ⌘N 與 ⌘F 只能走這裡，不能走 delegate 的 `buildMenu`。
@@ -225,6 +228,23 @@ struct KairumoApp: App {
         for scene in UIApplication.shared.connectedScenes {
             guard let windowScene = scene as? UIWindowScene else { continue }
             windowScene.sizeRestrictions?.minimumSize = minimum
+        }
+    }
+
+    /// 桌機（Mac）開啟時預設自動展開全螢幕。
+    private func autoExpandFullScreenOnMac() {
+        if ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil ||
+           ProcessInfo.processInfo.arguments.contains("-ui-testing") {
+            return
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            guard let nsAppClass = NSClassFromString("NSApplication") as? NSObject.Type,
+                  let sharedApp = nsAppClass.perform(NSSelectorFromString("sharedApplication"))?.takeUnretainedValue() as? NSObject else {
+                return
+            }
+            let keyWindow = (sharedApp.perform(NSSelectorFromString("keyWindow"))?.takeUnretainedValue() as? NSObject)
+                ?? (sharedApp.perform(NSSelectorFromString("mainWindow"))?.takeUnretainedValue() as? NSObject)
+            _ = keyWindow?.perform(NSSelectorFromString("toggleFullScreen:"), with: nil)
         }
     }
 #endif

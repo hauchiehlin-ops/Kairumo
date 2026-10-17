@@ -130,7 +130,16 @@
   }
   @media (min-width: 1000px) {
     .layout { grid-template-columns: 250px minmax(0, 1fr); gap: 56px; align-items: start; }
-    .toc { position: sticky; top: 24px; }
+    .toc {
+      position: sticky;
+      top: 24px;
+      max-height: calc(100vh - 48px);
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      padding-right: 8px;
+    }
+    .toc::-webkit-scrollbar { width: 4px; }
+    .toc::-webkit-scrollbar-thumb { background: var(--rule); border-radius: 4px; }
   }
 
   /* ---------- 目錄 ---------- */
@@ -284,7 +293,7 @@
   }
 
 
-  /* 手把手：每一步一張卡片，文字在上、截圖在下 */
+  /* 零基礎：每一步一張卡片，文字在上、截圖在下 */
   .walk { display: flex; flex-direction: column; gap: 18px; margin: 0 0 22px; }
   .walk-step {
     background: var(--surface);
@@ -333,12 +342,63 @@
   @media (prefers-reduced-motion: no-preference) {
     html { scroll-behavior: smooth; }
   }
+  .header-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin: 0 0 10px;
+  }
+  .header-top .eyebrow { margin: 0; }
+  .header-actions { display: flex; align-items: center; gap: 8px; }
+  .action-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 500;
+    padding: 6px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--rule);
+    background: var(--surface);
+    color: var(--ink);
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .action-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: var(--accent-soft);
+  }
+  .action-btn svg { width: 15px; height: 15px; }
+
+  @media print {
+    body { background: #fff !important; color: #000 !important; }
+    .masthead { border-bottom: none; padding: 20px 0 10px; }
+    .header-actions, .langbar, .toc, .back, footer.page-foot { display: none !important; }
+    .layout { display: block; padding: 0; }
+    .step-section { break-inside: avoid; page-break-inside: avoid; border-bottom: 1px solid var(--rule); }
+    figure { break-inside: avoid; page-break-inside: avoid; }
+  }
 </style>
 </head>
 <body>
 <header class="masthead">
   <div class="shell">
-    <p class="eyebrow">Kairumo</p>
+    <div class="header-top">
+      <p class="eyebrow">Kairumo</p>
+      <div class="header-actions">
+        <button type="button" class="action-btn" id="print-btn" onclick="triggerPrintOrExport()" title="Print / Export PDF">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="6 9 6 2 18 2 18 9"></polyline>
+            <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+            <rect x="6" y="14" width="12" height="8"></rect>
+          </svg>
+          <span id="print-label">列印 / 匯出 PDF</span>
+        </button>
+      </div>
+    </div>
     <h1 id="doc-title"></h1>
     <p class="tagline" id="doc-tagline"></p>
     <p class="version" id="doc-version"></p>
@@ -357,6 +417,16 @@
   const ORDER = ["zh-Hant", "en", "zh-Hans", "ja", "ko", "th"];
   const STORE_KEY = "kairumo.manual.lang";
   const M = window.KAIRUMO_MANUAL;
+
+  function triggerPrintOrExport() {
+    if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.kairumoPrint) {
+      window.webkit.messageHandlers.kairumoPrint.postMessage("print");
+    } else if (window.kairumoAndroid && window.kairumoAndroid.print) {
+      window.kairumoAndroid.print();
+    } else {
+      window.print();
+    }
+  }
 
   const pad = n => String(n).padStart(2, "0");
   const el = (tag, cls) => { const e = document.createElement(tag); if (cls) e.className = cls; return e; };
@@ -406,6 +476,8 @@
     document.getElementById("doc-title").textContent = ui.docTitle;
     document.getElementById("doc-tagline").textContent = ui.tagline;
     document.getElementById("doc-version").textContent = ui.version;
+    const printLabel = document.getElementById("print-label");
+    if (printLabel && ui.exportPdfPrint) printLabel.textContent = ui.exportPdfPrint;
 
     // 目錄
     const toc = document.getElementById("toc");

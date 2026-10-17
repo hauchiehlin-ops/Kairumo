@@ -33,7 +33,8 @@ window.KAIRUMO_MANUAL = {
       "figNote": "截圖為繁體中文介面",
       "backToTop": "回到目錄",
       "langLabel": "語言",
-      "privacyLink": "隱私權政策"
+      "privacyLink": "隱私權政策",
+      "exportPdfPrint": "列印 / 匯出 PDF"
     },
     "sections": [
       {
@@ -299,7 +300,7 @@ window.KAIRUMO_MANUAL = {
       },
       {
         "id": "collab",
-        "title": "線上協同（手把手）",
+        "title": "線上協同（零基礎教學）",
         "lead": "多人即時共筆。沒有雲端伺服器 —— 中繼永遠是你自己掌握的那一台。分成兩種情況：大家在同一個網路，或散在不同網域。兩種都可以，只是設定的那一行不一樣。",
         "buttons": [
           "線上協同",
@@ -495,7 +496,8 @@ window.KAIRUMO_MANUAL = {
       "figNote": "Screenshots show the English interface",
       "backToTop": "Back to contents",
       "langLabel": "Language",
-      "privacyLink": "Privacy Policy"
+      "privacyLink": "Privacy Policy",
+      "exportPdfPrint": "Print / Export PDF"
     },
     "sections": [
       {
@@ -761,7 +763,7 @@ window.KAIRUMO_MANUAL = {
       },
       {
         "id": "collab",
-        "title": "Real-time collaboration (step by step)",
+        "title": "Real-time collaboration (beginner tutorial)",
         "lead": "Write together in real time. There is no cloud server — the relay is always one you control. There are two situations: everyone on one network, or people spread across different ones. Both work; only one line of setup differs.",
         "buttons": [
           "Collaborate",
@@ -953,7 +955,8 @@ window.KAIRUMO_MANUAL = {
       "figNote": "截图为繁体中文界面",
       "backToTop": "回到目录",
       "langLabel": "语言",
-      "privacyLink": "隐私政策"
+      "privacyLink": "隐私政策",
+      "exportPdfPrint": "打印 / 导出 PDF"
     },
     "sections": [
       {
@@ -1216,7 +1219,7 @@ window.KAIRUMO_MANUAL = {
       },
       {
         "id": "collab",
-        "title": "在线协作（手把手）",
+        "title": "在线协作（零基础教学）",
         "lead": "多人实时共笔。没有云端服务器 —— 中继永远是你自己掌握的那一台。分成两种情况：大家在同一个网络，或散在不同网域。两种都可以，只是设定的那一行不一样。",
         "buttons": [
           "在线协作",
@@ -1408,7 +1411,8 @@ window.KAIRUMO_MANUAL = {
       "figNote": "スクリーンショットは英語表示です",
       "backToTop": "目次へ戻る",
       "langLabel": "言語",
-      "privacyLink": "プライバシーポリシー"
+      "privacyLink": "プライバシーポリシー",
+      "exportPdfPrint": "印刷 / PDFとして書き出し"
     },
     "sections": [
       {
@@ -1863,7 +1867,8 @@ window.KAIRUMO_MANUAL = {
       "figNote": "스크린샷은 영어 화면입니다",
       "backToTop": "목차로",
       "langLabel": "언어",
-      "privacyLink": "개인정보 처리방침"
+      "privacyLink": "개인정보 처리방침",
+      "exportPdfPrint": "인쇄 / PDF로 내보내기"
     },
     "sections": [
       {
@@ -2318,7 +2323,8 @@ window.KAIRUMO_MANUAL = {
       "figNote": "ภาพหน้าจอเป็นภาษาอังกฤษ",
       "backToTop": "กลับไปที่สารบัญ",
       "langLabel": "ภาษา",
-      "privacyLink": "นโยบายความเป็นส่วนตัว"
+      "privacyLink": "นโยบายความเป็นส่วนตัว",
+      "exportPdfPrint": "พิมพ์ / ส่งออกเป็น PDF"
     },
     "sections": [
       {
@@ -2581,7 +2587,7 @@ window.KAIRUMO_MANUAL = {
       },
       {
         "id": "collab",
-        "title": "ทำงานร่วมกันแบบเรียลไทม์ (ทีละขั้น)",
+        "title": "ทำงานร่วมกันแบบเรียลไทม์ (บทเรียนสำหรับผู้เริ่มต้น)",
         "lead": "เขียนพร้อมกันหลายคนแบบเรียลไทม์ ไม่มีเซิร์ฟเวอร์คลาวด์ —— ตัวส่งต่อเป็นเครื่องที่คุณดูแลเองเสมอ มีสองกรณี: ทุกคนอยู่เครือข่ายเดียวกัน หรืออยู่คนละเครือข่าย ใช้ได้ทั้งคู่ ต่างกันแค่การตั้งค่าบรรทัดเดียว",
         "buttons": [
           "การทำงานร่วมกัน",

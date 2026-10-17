@@ -216,6 +216,39 @@ final class SeedNotebookSyncTests: XCTestCase {
         XCTAssertEqual(healedMeeting.pagesData.count, 3)
         XCTAssertEqual(healedMeeting.pageIds, NotebookPackageBridge.deterministicSeedPageIds(for: "seed-meeting-notebook-v1"))
     }
+
+    /// 驗證範例筆記（如圖學範例）在「另存可編輯副本」後，專業筆刷、原題題目線、輔助線及文字物件皆完整保留
+    func testSaveCopyPreservesDraftingExampleStrokesAndObjects() throws {
+        let store = makeStore()
+        let id = "seed-drafting-example-v1"
+        guard let original = store.notebooks.first(where: { $0.id == id }) else {
+            XCTFail("Drafting example missing")
+            return
+        }
+        let originalProCount = ProInkStore.load(in: store.drawingsDirectory, notebookId: id, page: 0).count
+        XCTAssertGreaterThan(originalProCount, 0, "Page 0 should have drafted strokes")
+        let originalTextCount = original.textAttachments?.count ?? 0
+        XCTAssertGreaterThan(originalTextCount, 0, "Drafting example should have text attachments")
+
+        store.beginSampleSession(id)
+        let copy = store.finishSampleSession(id, choice: .saveCopy)
+        XCTAssertNotNil(copy)
+        guard let copy else { return }
+
+        // 驗證複本有在清單第一位
+        XCTAssertEqual(store.notebooks.first?.id, copy.id)
+
+        // 驗證新筆記的磁碟筆跡檔有被正確複製並可載入
+        let copyProCount = ProInkStore.load(in: store.drawingsDirectory, notebookId: copy.id, page: 0).count
+        XCTAssertEqual(copyProCount, originalProCount, "Copy must preserve pro ink strokes")
+
+        // 驗證文字與物件完整繼承
+        XCTAssertEqual(copy.textAttachments?.count, originalTextCount, "Copy must preserve text attachments")
+
+        // 驗證核心套件成功產生
+        let packageURL = store.corePackagesDirectory.appending(path: "\(copy.id).padnote")
+        XCTAssertTrue(FileManager.default.fileExists(atPath: packageURL.path), "Package should exist")
+    }
 }
 
 /// 打開（讀取）範例筆記本的套件不能慢：編輯器在主執行緒上做這件事（切換畫筆時會存檔並讀基準），

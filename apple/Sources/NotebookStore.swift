@@ -5060,7 +5060,7 @@ extension NotebookStore {
             return nil
         case .saveCopy:
             guard let current = notebooks.first(where: { $0.id == id }), let copy = copySample(current) else { return nil }
-            restoreSampleSession(id)
+            restoreSampleSession(id, persist: false)
             adoptSampleCopy(copy, from: id)
             markDirtyAndPersist(signalsLocalEdit: true)
             return copy
@@ -5068,7 +5068,7 @@ extension NotebookStore {
     }
 
     /// 把範例放回打開前的樣子（文件、筆跡檔、同步基準、核心套件）。
-    private func restoreSampleSession(_ id: String) {
+    private func restoreSampleSession(_ id: String, persist: Bool = true) {
         let fm = FileManager.default
         let dir = sampleSessionDirectory(id)
         guard let data = try? Data(contentsOf: dir.appending(path: "doc.json")),
@@ -5089,7 +5089,9 @@ extension NotebookStore {
             notebooks[index] = saved
         }
         PageThumbnailRenderer.invalidateAll()
-        persistData(signalsLocalEdit: false)
+        if persist {
+            persistData(signalsLocalEdit: false)
+        }
     }
 
     /// 一本筆記在某個目錄裡的逐頁檔案（`<id>_p…`）。
@@ -5229,25 +5231,75 @@ extension NotebookStore {
               var copy = try? JSONDecoder().decode(NotebookDocument.self, from: data) else { return nil }
         copy.createdAt = Date()
         copy.lastModifiedDate = Date()
+        let pageCount = max(copy.pageCount, 1)
         // 頁面 id 要明確寫進新的那一本：留空的話匯出時才補，各台補的不一樣。
         copy.pageIds = NotebookPackageBridge.alignedPageIds(
             original.pageIds ?? NotebookPackageBridge.deterministicSeedPageIds(for: original.id),
-            count: max(1, copy.pageCount), package: nil, notebookId: newId)
+            count: pageCount, package: nil, notebookId: newId)
 
         // 2. 筆跡（含專業筆刷檔）：`<id>_p…` 全部複製一份到新 id 底下。
         let fm = FileManager.default
-        let prefix = "\(original.id)_p"
-        for file in (try? fm.contentsOfDirectory(at: drawingsDirectory, includingPropertiesForKeys: nil)) ?? []
-        where file.lastPathComponent.hasPrefix(prefix) {
-            let renamed = "\(newId)_p" + file.lastPathComponent.dropFirst(prefix.count)
-            try? fm.copyItem(at: file, to: drawingsDirectory.appending(path: renamed))
+        let prefixes = Set([original.id, original.id.lowercased()].map { "\($0)_p" })
+        for file in (try? fm.contentsOfDirectory(at: drawingsDirectory, includingPropertiesForKeys: nil)) ?? [] {
+            let name = file.lastPathComponent
+            for prefix in prefixes where name.hasPrefix(prefix) {
+                let remainder = name.dropFirst(prefix.count)
+                let renamed = "\(newId)_p" + remainder
+                try? fm.copyItem(at: file, to: drawingsDirectory.appending(path: renamed))
+                break
+            }
         }
 
-        // 3. 套件：以工作副本匯出一份新的；範例套件裡的錄音（使用者在範例裡錄的）一起帶過去。
+        // 複本為使用者本地獨立筆記本：若原範例有外來專業筆畫（.proink-foreign），
+        // 在新筆記中一律合併為本機自己的筆畫，避免因「外來筆畫」在同步或匯出時被濾除。
+        for page in 0..<pageCount {
+            let own = ProInkStore.load(in: drawingsDirectory, notebookId: newId, page: page)
+            let foreign = ProInkStore.load(in: drawingsDirectory, notebookId: newId, page: page, foreign: true)
+            if !foreign.isEmpty {
+                ProInkStore.save(own + foreign, in: drawingsDirectory, notebookId: newId, page: page)
+                try? fm.removeItem(at: drawingsDirectory.appending(path: "\(newId)_p\(page).proink-foreign.json"))
+            }
+        }
+
+        // 讀取筆跡資料與附件圖片以供完整匯出
+        let drawings = (0..<pageCount).map { loadDrawing(notebookId: newId, pageIndex: $0) }
+        let pro = (0..<pageCount).map { ProInkStore.load(in: drawingsDirectory, notebookId: newId, page: $0) }
+        let ledgers = (0..<pageCount).map { ProInkStore.loadLedger(in: drawingsDirectory, notebookId: newId, page: $0) }
+        copy.pagesData = drawings.map { $0.dataRepresentation() }
+
+        var images: [String: Data] = [:]
+        for attachment in copy.attachments ?? [] {
+            let url = attachmentsDirectory.appending(path: attachment.fileName)
+            if let bytes = try? Data(contentsOf: url) {
+                images[attachment.fileName] = bytes
+            }
+        }
+
+        // 讀取原範例中的錄音標題（若有）
+        var recTitles: [String: String] = [:]
+        for name in [original.id, original.id.lowercased()] {
+            let pkg = corePackagesDirectory.appending(path: "\(name).padnote")
+            if fm.fileExists(atPath: pkg.path) {
+                recTitles = Self.packageRecordingTitles(packageURL: pkg, deviceId: NotebookMigration.deviceId)
+                if !recTitles.isEmpty { break }
+            }
+        }
+
+        // 3. 套件：以工作副本匯出一份完整的核心套件（包含向量手繪、專業筆刷、圖片與物件中繼）。
         let newPackage = corePackagesDirectory.appending(path: "\(newId).padnote")
-        let drawings = (0..<max(copy.pageCount, 1)).map { loadDrawing(notebookId: newId, pageIndex: $0) }
         try? NotebookPackageBridge.export(
-            document: copy, drawings: drawings, to: newPackage, deviceId: NotebookMigration.deviceId)
+            document: copy,
+            drawings: drawings,
+            imageData: images,
+            to: newPackage,
+            deviceId: NotebookMigration.deviceId,
+            pageIds: copy.pageIds,
+            proStrokes: pro,
+            proLedgers: ledgers,
+            recordingTitles: recTitles
+        )
+
+        // 範例套件裡的錄音（使用者在範例裡錄的）一起帶過去。
         for name in [original.id, original.id.lowercased()] {
             let audio = corePackagesDirectory.appending(path: "\(name).padnote/media/audio")
             guard let files = try? fm.contentsOfDirectory(at: audio, includingPropertiesForKeys: nil) else { continue }
@@ -5257,6 +5309,18 @@ extension NotebookStore {
                 try? fm.copyItem(at: file, to: target.appending(path: file.lastPathComponent))
             }
         }
+
+        // 建立同步基準與快照，保證工作副本與套件一致，避免同步誤判為需要反向覆蓋。
+        ObjectLedger.save(copy, in: syncBaselineDirectory)
+        for page in 0..<pageCount {
+            PKInkSnapshotStore.save(drawings[page], in: drawingsDirectory, notebookId: newId, page: page)
+        }
+        let now = Date()
+        copy.lastModifiedDate = now
+        let manifestUrl = newPackage.appending(path: "manifest.json")
+        try? fm.setAttributes([.modificationDate: now], ofItemAtPath: manifestUrl.path)
+        try? fm.setAttributes([.modificationDate: now], ofItemAtPath: newPackage.path)
+
         return copy
     }
 
@@ -5273,10 +5337,8 @@ extension NotebookStore {
     private func discardSampleCopy(_ id: String) {
         let fm = FileManager.default
         try? fm.removeItem(at: corePackagesDirectory.appending(path: "\(id.lowercased()).padnote"))
-        for file in (try? fm.contentsOfDirectory(at: drawingsDirectory, includingPropertiesForKeys: nil)) ?? []
-        where file.lastPathComponent.hasPrefix("\(id)_p") {
-            try? fm.removeItem(at: file)
-        }
+        for file in sessionFiles(of: id, in: drawingsDirectory) { try? fm.removeItem(at: file) }
+        for file in sessionFiles(of: id, in: syncBaselineDirectory) { try? fm.removeItem(at: file) }
     }
 }
 
