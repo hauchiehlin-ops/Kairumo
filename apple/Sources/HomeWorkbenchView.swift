@@ -48,6 +48,8 @@ public struct HomeWorkbenchView: View {
     @State private var showEncryptedNotebookSheet: Bool = false
     @State private var showQuickRecordSheet: Bool = false
     @State private var showImportPicker: Bool = false
+    /// 匯入筆記本快照的結果（成功的名字或失敗的原因）。
+    @State private var importResultMessage: String?
     @State private var selectedSortOption: SortOption = .byDate
     #if os(iOS)
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
@@ -416,7 +418,23 @@ public struct HomeWorkbenchView: View {
                 allowsMultipleSelection: false
             ) { result in
                 guard let urls = try? result.get(), let url = urls.first else { return }
-                _ = try? notebookStore.importNotebookArchive(from: url)
+                // 成功或失敗都要講：原本失敗時什麼也不說，使用者只覺得「按了沒反應」。
+                do {
+                    let doc = try notebookStore.importNotebookArchive(from: url)
+                    importResultMessage = String(
+                        format: localizationManager.localized("import_success"), doc.displayTitle())
+                } catch {
+                    importResultMessage = String(
+                        format: localizationManager.localized("import_failed"), error.localizedDescription)
+                }
+            }
+            .alert(
+                importResultMessage ?? "",
+                isPresented: Binding(
+                    get: { importResultMessage != nil },
+                    set: { if !$0 { importResultMessage = nil } })
+            ) {
+                Button(localizationManager.localized("confirm")) { importResultMessage = nil }
             }
             .fullScreenCover(item: $selectedNotebookForEditing) { doc in erasedView {
                 NotebookEditorHost(store: notebookStore, initialNotebookId: doc.id)
@@ -2708,6 +2726,19 @@ public struct HomeWorkbenchView: View {
 
                 Divider()
 
+                // 備份快照的另一半：匯出的 .padnote 要能匯回來（使用者回報：只看得到匯出，找不到匯入）。
+                backupActionRow(
+                    icon: "square.and.arrow.down.on.square",
+                    iconColor: .purple,
+                    titleKey: "import_snapshot",
+                    descKey: "import_snapshot_desc",
+                    identifier: "home.data.import_snapshot"
+                ) {
+                    showImportPicker = true
+                }
+
+                Divider()
+
                 backupActionRow(
                     icon: "externaldrive.badge.timemachine",
                     iconColor: .blue,
@@ -3126,6 +3157,7 @@ public struct HomeWorkbenchView: View {
     private func dataCardIdentifier(_ titleKey: String) -> String {
         switch titleKey {
         case "backup_snapshot": return "home.data.snapshot"
+        case "import_snapshot": return "home.data.import_snapshot"
         case "backup_create": return "home.data.backup"
         case "backup_restore": return "home.data.restore"
         case "sync_choose_folder": return "home.data.folder"

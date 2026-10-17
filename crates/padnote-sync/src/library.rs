@@ -22,6 +22,27 @@ use std::collections::BTreeMap;
 /// 雲端上放索引的路徑（`format-spec.md` §7.0）。
 pub const INDEX_PATH: &str = "notebooks/index.json";
 
+/// 預載範例筆記本的 id。範例是**每台裝置自己產生、不同步**的（Apple `isDeviceLocalSeed`、
+/// Android `SeedNotebooks.isDeviceLocal` 是同一份名單）。
+///
+/// 索引**完全不收**這些 id：讀進來就丟掉、寫入一律略過。範例不跟著同步，它在索引裡的任何紀錄
+/// 都只會造成傷害 —— 某台裝置刪過一次範例，墓碑就留在雲端索引裡，之後每一台新裝置、每一次重新
+/// 安裝，剛產生的範例都會被這筆墓碑藏起來或丟進回收桶（使用者回報：重新安裝後「我的筆記」是空的）。
+pub const DEVICE_LOCAL_SEED_IDS: [&str; 5] = [
+    "seed-welcome-notebook-v1",
+    "seed-meeting-notebook-v1",
+    "seed-feature-showcase-v1",
+    "seed-kairumo-manual-v1",
+    "seed-drafting-example-v1",
+];
+
+/// 這個 id 是不是預載範例（不分大小寫）。
+pub fn is_device_local_seed(id: &str) -> bool {
+    DEVICE_LOCAL_SEED_IDS
+        .iter()
+        .any(|seed| seed.eq_ignore_ascii_case(id))
+}
+
 /// 一個項目是筆記本還是資料夾。
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -122,6 +143,9 @@ fn field_wins<T: Ord>(
 
 impl LibraryIndex {
     pub fn upsert(&mut self, mut item: LibraryItem) {
+        if is_device_local_seed(&item.id) {
+            return;
+        }
         item.id = item.id.to_lowercase();
         if let Some(ref mut parent) = item.parent_id {
             *parent = parent.to_lowercase();
@@ -238,6 +262,9 @@ impl LibraryIndex {
     }
 
     fn tombstone_with(&mut self, id: &str, lamport: u64, device: &str, deleted_at: Option<u64>) {
+        if is_device_local_seed(id) {
+            return;
+        }
         let norm_id = id.to_lowercase();
         let base = self.items.get(&norm_id).cloned();
         let item = LibraryItem {
@@ -304,6 +331,9 @@ impl LibraryIndex {
     /// 合併另一台裝置的索引。可交換、冪等。
     pub fn merge(&mut self, other: &LibraryIndex) {
         for (id, incoming) in &other.items {
+            if is_device_local_seed(id) {
+                continue;
+            }
             let Some(current) = self.items.get(id).cloned() else {
                 self.upsert(incoming.clone());
                 if let Some(clocks) = other.field_clocks.get(id) {
@@ -492,8 +522,10 @@ impl LibraryIndex {
     pub fn canonicalize(&mut self) {
         let old = std::mem::take(&mut self.items);
         for (_, item) in old {
+            // 預載範例在 `upsert` 裡就被丟掉（見 [`DEVICE_LOCAL_SEED_IDS`]）。
             self.upsert(item);
         }
+        self.field_clocks.retain(|id, _| !is_device_local_seed(id));
     }
 
     /// 壞掉的 JSON 回空索引而不是錯誤 —— 雲端上一份壞檔案不該讓使用者
@@ -975,5 +1007,51 @@ mod tests {
         assert!(idx.items[lower_id].deleted);
         assert!(idx.is_hidden_by_deletion(upper_id));
         assert!(idx.is_hidden_by_deletion(lower_id));
+    }
+
+    /// 使用者回報：重新安裝後「我的筆記」是空的。某台裝置刪過一次範例，墓碑留在雲端索引裡，
+    /// 新裝置剛產生的範例被它藏起來、丟進回收桶。範例不同步，索引不該記得它們。
+    #[test]
+    fn sample_notebooks_never_enter_the_index() {
+        let seed = "seed-feature-showcase-v1";
+        let mut idx = LibraryIndex::default();
+        idx.upsert(LibraryItem {
+            id: seed.into(),
+            kind: ItemKind::Notebook,
+            title: "範例".into(),
+            parent_id: None,
+            lamport: 1,
+            device: "a".into(),
+            deleted: false,
+            deleted_at: None,
+            purge_at: None,
+        });
+        idx.tombstone_at(seed, 2, "a", 100);
+        assert!(idx.items.is_empty(), "範例的新增與刪除都不寫進索引");
+        assert!(!idx.is_hidden_by_deletion(seed));
+
+        // 舊版留在雲端的墓碑：讀進來就丟掉，合併也帶不進來。
+        let legacy = format!(
+            r#"{{"items":{{"{seed}":{{"id":"{seed}","kind":"notebook","title":"範例","parentId":null,
+            "lamport":5,"device":"b","deleted":true,"deletedAt":100}},
+            "SEED-WELCOME-NOTEBOOK-V1":{{"id":"SEED-WELCOME-NOTEBOOK-V1","kind":"notebook","title":"x",
+            "parentId":null,"lamport":5,"device":"b","deleted":true}}}}}}"#
+        );
+        let cloud = LibraryIndex::from_json(&legacy);
+        assert!(cloud.items.is_empty(), "舊墓碑讀進來就被丟掉（不分大小寫）");
+        let mut raw: LibraryIndex = serde_json::from_str(&legacy).unwrap();
+        let mut local = LibraryIndex::default();
+        local.merge(&raw);
+        assert!(local.items.is_empty(), "合併不會把範例的墓碑帶進來");
+        raw.canonicalize();
+        assert!(!raw.to_json().contains("seed-"), "寫回雲端的索引裡沒有範例");
+    }
+
+    /// 一般筆記本照舊：只有範例被排除。
+    #[test]
+    fn ordinary_notebooks_are_still_tracked() {
+        let mut idx = LibraryIndex::default();
+        idx.tombstone_at("0193c0de-0000-7000-8000-000000000001", 1, "a", 100);
+        assert!(idx.is_hidden_by_deletion("0193c0de-0000-7000-8000-000000000001"));
     }
 }

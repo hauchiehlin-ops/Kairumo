@@ -33,6 +33,19 @@ final class SeedNotebookSyncTests: XCTestCase {
         XCTAssertFalse(synced.contains { NotebookPackageBridge.isDeviceLocalSeed($0) }, "範例進了同步清單：\(synced)")
     }
 
+    /// 使用者回報：重新安裝後「我的筆記」是空的。某台裝置刪過範例，墓碑留在雲端索引裡，
+    /// 新裝置剛產生的範例被它藏起來、丟進回收桶。範例不同步，索引的刪除紀錄不能碰到它。
+    func testADeletionRecordInTheSyncIndexNeverHidesOrTrashesASample() {
+        let store = makeStore()
+        let id = "seed-feature-showcase-v1"
+        AccountSyncStore.shared.recordDeletion(id: id)
+        XCTAssertFalse(AccountSyncStore.shared.isDeleted(id: id), "範例的刪除不寫進同步索引")
+        XCTAssertFalse(store.isHiddenBySync(id), "範例不會被同步索引藏起來")
+        XCTAssertTrue(store.visibleNotebooks.contains { $0.id == id }, "首頁看得到範例")
+        store.syncPurgeDeletedNotebooks([id])
+        XCTAssertTrue(store.notebooks.contains { $0.id == id }, "同步不會把範例丟進回收桶")
+    }
+
     func testAnOrdinaryNotebookStillSyncs() {
         let store = makeStore()
         let mine = NotebookDocument(title: "我的筆記", pageCount: 1)

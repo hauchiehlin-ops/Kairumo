@@ -10231,6 +10231,22 @@
     "zhHans": "将 .padnote 文件导入至笔记本列表",
     "zhHant": "將 .padnote 筆記檔匯入至筆記清單"
   },
+  "import_snapshot": {
+    "en": "Import Notebook Snapshot",
+    "ja": "ノートのスナップショットを読み込む",
+    "ko": "노트 스냅샷 가져오기",
+    "th": "นำเข้าสแนปช็อตสมุดโน้ต",
+    "zhHans": "导入笔记本快照",
+    "zhHant": "匯入筆記本快照"
+  },
+  "import_snapshot_desc": {
+    "en": "Bring a .padnote snapshot back as a notebook. Your existing notebooks are not replaced.",
+    "ja": ".padnote スナップショットをノートとして読み込みます。既存のノートは上書きされません。",
+    "ko": ".padnote 스냅샷을 노트로 가져옵니다. 기존 노트는 덮어쓰지 않습니다.",
+    "th": "นำสแนปช็อต .padnote กลับมาเป็นสมุดโน้ต สมุดโน้ตที่มีอยู่จะไม่ถูกแทนที่",
+    "zhHans": "把 .padnote 快照文件导入成一本笔记本，不会覆盖现有的笔记",
+    "zhHant": "把 .padnote 快照檔匯入成一本筆記本，不會覆蓋現有的筆記"
+  },
   "import_success": {
     "en": "Imported: %@",
     "ja": "読み込みました：%@",

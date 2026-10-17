@@ -798,6 +798,9 @@ fun HomeScreen(
                     Text(l("backup_section"), fontWeight = FontWeight.SemiBold)
                     SettingRow("📦", l("backup_snapshot"), l("backup_snapshot_desc"),
                         Modifier.testTag("home.data.snapshot")) { onCreateSnapshot(null) }
+                    // 備份快照的另一半：匯出的 .padnote 要能匯回來（與 Apple 同一個位置）。
+                    SettingRow("📥", l("import_snapshot"), l("import_snapshot_desc"),
+                        Modifier.testTag("home.data.import_snapshot"), onImportNotebook)
                     SettingRow("💾", l("backup_create"), l("backup_explainer"),
                         Modifier.testTag("home.data.backup"), onBackup)
                     SettingRow("↺", l("backup_restore"), l("backup_restore_desc"),

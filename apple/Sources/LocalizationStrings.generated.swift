@@ -12599,6 +12599,22 @@ extension LocalizationManager {
             .ko: ".padnote 파일을 보관함으로 가져옵니다",
             .th: "นำเข้าไฟล์ .padnote เข้าสู่คลังบันทึก"
         ],
+        "import_snapshot": [
+            .zhHant: "匯入筆記本快照",
+            .en: "Import Notebook Snapshot",
+            .zhHans: "导入笔记本快照",
+            .ja: "ノートのスナップショットを読み込む",
+            .ko: "노트 스냅샷 가져오기",
+            .th: "นำเข้าสแนปช็อตสมุดโน้ต"
+        ],
+        "import_snapshot_desc": [
+            .zhHant: "把 .padnote 快照檔匯入成一本筆記本，不會覆蓋現有的筆記",
+            .en: "Bring a .padnote snapshot back as a notebook. Your existing notebooks are not replaced.",
+            .zhHans: "把 .padnote 快照文件导入成一本笔记本，不会覆盖现有的笔记",
+            .ja: ".padnote スナップショットをノートとして読み込みます。既存のノートは上書きされません。",
+            .ko: ".padnote 스냅샷을 노트로 가져옵니다. 기존 노트는 덮어쓰지 않습니다.",
+            .th: "นำสแนปช็อต .padnote กลับมาเป็นสมุดโน้ต สมุดโน้ตที่มีอยู่จะไม่ถูกแทนที่"
+        ],
         "import_success": [
             .zhHant: "已匯入：%@",
             .en: "Imported: %@",

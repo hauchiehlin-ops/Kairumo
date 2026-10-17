@@ -350,13 +350,23 @@ object NotebookLibrary {
                 java.util.UUID.randomUUID().toString()
             }
 
-            var targetDir = File(directory(context), "$id.$EXTENSION")
+            // 範例的快照：匯回來的是使用者的一本筆記，不能再頂著範例的 id（範例不同步、會被重設）。
+            // 換一個新 id 並寫進 manifest（範例不會加密，換 id 不影響解密）。
+            val fromSample = SeedNotebooks.isDeviceLocal(id)
+            var targetDir = File(directory(context), "${if (fromSample) java.util.UUID.randomUUID() else id}.$EXTENSION")
             if (targetDir.exists()) {
                 val uniqueId = "$id-${java.util.UUID.randomUUID().toString().take(6)}"
                 targetDir = File(directory(context), "$uniqueId.$EXTENSION")
             }
             targetDir.mkdirs()
             tempDir.copyRecursively(targetDir, overwrite = true)
+            if (fromSample) {
+                runCatching {
+                    val manifest = File(targetDir, "manifest.json")
+                    manifest.writeText(
+                        org.json.JSONObject(manifest.readText()).put("notebook_id", targetDir.nameWithoutExtension).toString())
+                }
+            }
 
             // 匯入的是一個外來的檔：索引裡還沒有它，標題只能取自套件。
             describe(targetDir, deviceId, emptyMap())?.also { entry ->
