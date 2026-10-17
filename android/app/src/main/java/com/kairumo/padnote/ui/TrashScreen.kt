@@ -14,6 +14,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -129,6 +130,16 @@ fun TrashDialog(onDismiss: () -> Unit) {
                 if (rows.isEmpty()) {
                     Text(l("trash_empty"), modifier = Modifier.testTag("trash.empty"))
                 } else {
+                    // 一鍵全部永久刪除：放在清單最上方，一眼看得到（與 Apple 相同）。
+                    OutlinedButton(
+                        onClick = { confirmEmpty = true },
+                        modifier = Modifier.fillMaxWidth().testTag("trash.deleteAll")
+                    ) {
+                        Text(
+                            l("trash_delete_all").replace("%@", "${rows.size}"),
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
                     // 一般的 Column 加捲動，不用 `LazyColumn`：回收桶通常很短，不需要惰性載入。
                     //
                     // （這不是「LazyColumn 在 AlertDialog 裡會壞」的修法 —— 一度這樣懷疑過，
@@ -241,7 +252,7 @@ fun TrashDialog(onDismiss: () -> Unit) {
                         if (result != null) waitingDevices = result.waitingDevices
                     }
                 }) {
-                    Text(l("trash_empty_action"), color = MaterialTheme.colorScheme.error)
+                    Text(l("trash_delete_all").replace("%@", "${rows.size}"), color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = { TextButton(onClick = { confirmEmpty = false }) { Text(l("cancel")) } }

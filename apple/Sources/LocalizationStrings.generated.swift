@@ -24399,6 +24399,14 @@ extension LocalizationManager {
             .ko: "%@일 남음",
             .th: "เหลืออีก %@ วัน"
         ],
+        "trash_delete_all": [
+            .zhHant: "全部永久刪除（%@ 本）",
+            .en: "Delete All Permanently (%@)",
+            .zhHans: "全部永久删除（%@ 本）",
+            .ja: "すべて完全に削除（%@ 冊）",
+            .ko: "모두 영구 삭제 (%@개)",
+            .th: "ลบทั้งหมดถาวร (%@ เล่ม)"
+        ],
         "trash_delete_forever": [
             .zhHant: "永久刪除",
             .en: "Delete Permanently",

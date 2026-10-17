@@ -21519,6 +21519,14 @@
     "zhHans": "还剩 %@ 天",
     "zhHant": "還剩 %@ 天"
   },
+  "trash_delete_all": {
+    "en": "Delete All Permanently (%@)",
+    "ja": "すべて完全に削除（%@ 冊）",
+    "ko": "모두 영구 삭제 (%@개)",
+    "th": "ลบทั้งหมดถาวร (%@ เล่ม)",
+    "zhHans": "全部永久删除（%@ 本）",
+    "zhHant": "全部永久刪除（%@ 本）"
+  },
   "trash_delete_forever": {
     "en": "Delete Permanently",
     "ja": "完全に削除",

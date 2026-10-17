@@ -65,6 +65,16 @@ public struct TrashView: View {
                             .foregroundColor(.secondary)
                             .accessibilityIdentifier("trash.empty")
                     } else {
+                        // 一鍵全部永久刪除：放在清單最上方，一眼看得到（工具列的「清空回收桶」不好找）。
+                        Button(role: .destructive) {
+                            confirmEmpty = true
+                        } label: {
+                            Label(
+                                L("trash_delete_all").replacingFirst("%@", with: "\(rows.count)"),
+                                systemImage: "trash.slash")
+                                .foregroundColor(.red)
+                        }
+                        .accessibilityIdentifier("trash.deleteAll")
                         ForEach(rows, id: \.document.id) { row in
                             trashRow(row.document, entry: row.entry)
                         }
@@ -113,8 +123,12 @@ public struct TrashView: View {
                     L("trash_delete_forever_confirm_message")
                         .replacingFirst("%@", with: displayTitle(document)))
             }
-            .alert(L("trash_empty_confirm_title"), isPresented: $confirmEmpty) {
-                Button(L("trash_empty_action"), role: .destructive) { emptyTrash() }
+            // 用 confirmationDialog 而不是第二個 `.alert`：同一個畫面掛兩個 alert，有些系統版本只會出現其中一個，
+            // 按了「清空」卻沒有任何反應。
+            .confirmationDialog(
+                L("trash_empty_confirm_title"), isPresented: $confirmEmpty, titleVisibility: .visible
+            ) {
+                Button(L("trash_delete_all").replacingFirst("%@", with: "\(rows.count)"), role: .destructive) { emptyTrash() }
                 Button(L("cancel"), role: .cancel) {}
             } message: {
                 Text(L("trash_empty_confirm_message"))

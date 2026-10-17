@@ -24553,6 +24553,14 @@ object LocalizationStrings {
             "ko" to "%@일 남음",
             "th" to "เหลืออีก %@ วัน"
         ),
+        "trash_delete_all" to mapOf(
+            "zh-Hant" to "全部永久刪除（%@ 本）",
+            "en" to "Delete All Permanently (%@)",
+            "zh-Hans" to "全部永久删除（%@ 本）",
+            "ja" to "すべて完全に削除（%@ 冊）",
+            "ko" to "모두 영구 삭제 (%@개)",
+            "th" to "ลบทั้งหมดถาวร (%@ เล่ม)"
+        ),
         "trash_delete_forever" to mapOf(
             "zh-Hant" to "永久刪除",
             "en" to "Delete Permanently",
@@ -25120,7 +25128,10 @@ object LocalizationStrings {
             "ja" to "バイオレット",
             "ko" to "보라색",
             "th" to "ม่วงไวโอเล็ต"
-        ),
+        )
+    )
+
+    private fun part39(): Map<String, Map<String, String>> = mapOf(
         "wd_c_white" to mapOf(
             "zh-Hant" to "白色",
             "en" to "White",
@@ -25128,10 +25139,7 @@ object LocalizationStrings {
             "ja" to "白",
             "ko" to "흰색",
             "th" to "ขาว"
-        )
-    )
-
-    private fun part39(): Map<String, Map<String, String>> = mapOf(
+        ),
         "wd_c_yellow" to mapOf(
             "zh-Hant" to "黃色",
             "en" to "Yellow",
