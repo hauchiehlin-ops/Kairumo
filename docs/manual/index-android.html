@@ -421,8 +421,8 @@
   function triggerPrintOrExport() {
     if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.kairumoPrint) {
       window.webkit.messageHandlers.kairumoPrint.postMessage("print");
-    } else if (window.kairumoAndroid && window.kairumoAndroid.print) {
-      window.kairumoAndroid.print();
+    } else if (window.kairumoBridge && window.kairumoBridge.print) {
+      window.kairumoBridge.print();
     } else {
       window.print();
     }
