@@ -43,7 +43,9 @@ object NotebookLibrary {
         val pageCount: Int,
         val path: File,
         /** 最後修改時間（毫秒）。首頁要依此排序與顯示「最近」。 */
-        val modifiedAt: Long = 0L
+        val modifiedAt: Long = 0L,
+        /** 是不是「範例」（見 [SampleFork.isSample]）。 */
+        val isSample: Boolean = false
     )
 
     /** 清單排序方式。與 Apple 端的「全部筆記」排序選單同一組。 */
@@ -144,8 +146,8 @@ object NotebookLibrary {
     /** 清單上的一本。範例的名字標「（唯讀）」（見 [SeedNotebooks.displayTitle]）。 */
     private fun describe(path: File, deviceId: UInt, indexTitles: Map<String, String>): Entry? =
         describeRaw(path, deviceId, indexTitles)?.let { entry ->
-            if (!SeedNotebooks.isDeviceLocal(entry.id)) entry
-            else entry.copy(title = SeedNotebooks.displayTitle(entry.id, entry.title, com.kairumo.padnote.currentLanguageTag()))
+            if (!entry.isSample) entry
+            else entry.copy(title = SeedNotebooks.displayTitle(entry.title, com.kairumo.padnote.currentLanguageTag()))
         }
 
     private fun describeRaw(path: File, deviceId: UInt, indexTitles: Map<String, String>): Entry? {
@@ -182,7 +184,8 @@ object NotebookLibrary {
                 ?: runCatching { session.title() }.getOrDefault(id),
             pageCount = runCatching { session.pageCount().toInt() }.getOrDefault(0),
             path = path,
-            modifiedAt = currentMtime
+            modifiedAt = currentMtime,
+            isSample = NotebookMeta.load(session).isSample() ?: SeedNotebooks.isDeviceLocal(id)
         )
         entryCache[path.absolutePath] = CachedEntry(currentMtime, entry)
         return entry
@@ -325,7 +328,11 @@ object NotebookLibrary {
             manifest.put("notebook_id", newId)
             manifest.put("created_at_unix_ms", System.currentTimeMillis())
             manifestFile.writeText(manifest.toString())
-            PadnoteSession.openExisting(target.absolutePath, deviceId).use { it.setTitle(title) }
+            PadnoteSession.openExisting(target.absolutePath, deviceId).use {
+                it.setTitle(title)
+                // 副本是一般筆記本：不繼承「範例」標記（與 Apple `duplicateNotebook` 相同）。
+                NotebookMeta.load(it).setSample(it, false)
+            }
             AccountSyncStore.record(context, id = newId, title = title, parentId = FolderTree.parentOf(context, id))
             newId
         }.getOrElse {

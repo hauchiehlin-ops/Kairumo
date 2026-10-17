@@ -2131,10 +2131,10 @@ public struct NotebookEditorView: View {
     @State private var activeSelectedObjectId: String? = nil
     /// 一鍵恢復初始狀態（捨棄進入編輯器後的所有修改）
     @State private var initialNotebookSnapshot: NotebookDocument? = nil
-    /// 範例唯讀：編輯後稍等一下再比對（見 `noteSampleEdit`）。
-    @State private var sampleEditCheck: DispatchWorkItem?
-    /// 從範例另存出來之後，新的那一本要停在原本那一頁（換綁預設回第 0 頁）。
-    @State private var pageAfterSampleFork: Int?
+    /// 範例有改動、使用者要離開時：問要存檔、另存還是放棄（見 `requestLeave`）。
+    @State private var showSampleLeaveDialog = false
+    /// 使用者選完之後要做的事（回首頁或切換到另一本）。
+    @State private var afterSampleLeave: (() -> Void)?
     @State private var initialPageDrawings: [Int: PKDrawing] = [:]
     /// 每一頁第一次載入時的專業筆畫（圖學筆畫、專業筆刷）與「已擦除」名單 ——
     /// 「恢復初始狀態」要連它們一起還原，不然圖學筆記本裡畫的線一條都不會少。
@@ -2683,14 +2683,23 @@ public struct NotebookEditorView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: AppCommand.proInkDidChange), perform: handleProInkDidChange)
         .onReceive(NotificationCenter.default.publisher(for: AppCommand.notebookPackageChanged), perform: handleNotebookPackageChanged)
-        .onChange(of: notebook) { _ in
-            // 範例唯讀：文件內容（物件、文字、圖層…）有變就檢查一次（筆跡走 `noteInkEdited`）。
-            noteSampleEdit()
+        // 範例有改動、使用者要離開（見 `requestLeave`）。
+        .alert(
+            localizationManager.localized("sample_leave_title"),
+            isPresented: $showSampleLeaveDialog
+        ) {
+            Button(localizationManager.localized("sample_leave_keep")) { finishSampleLeave(.keep) }
+            Button(localizationManager.localized("sample_leave_copy")) { finishSampleLeave(.saveCopy) }
+            Button(localizationManager.localized("sample_leave_discard"), role: .destructive) { finishSampleLeave(.discard) }
+            Button(localizationManager.localized("cancel"), role: .cancel) { afterSampleLeave = nil }
+        } message: {
+            Text(localizationManager.localized("sample_leave_message"))
         }
         .onChange(of: notebook.id) { _ in
             // 外層換綁之後才會走到這裡，這時 notebook 已經是新的那一則。
-            currentPageIndex = min(pageAfterSampleFork ?? 0, max(notebook.pageCount - 1, 0))
-            pageAfterSampleFork = nil
+            currentPageIndex = 0
+            // 換到的這一本若是範例，同樣先備份到暫存區。
+            store.beginSampleSession(notebook.id)
             MainThreadStallMonitor.shared.breadcrumb("open notebook \(notebook.id.prefix(8))")
             FocusSyncController.shared.setFocus(notebook.id)
             coreInkBaselines.removeAll()
@@ -2714,10 +2723,13 @@ public struct NotebookEditorView: View {
         )
         .onAppear {
             lasso.proHost = { (canvasView as? AdaptiveCanvasView)?.proLayer }
-            store.activeNotebookId = notebook.id
-            // 開著的這一本走焦點通道（秒同步）與區網直連。
             sanitizeTextAttachments()
             sanitizeUnderInkObjects()
+            // 範例：打開時的內容先備份到暫存區，改動等離開時再決定（見 `requestLeave`）。
+            // 在上面的整理之後（整理不算使用者的改動）、設焦點之前（暫存期間不走焦點通道）。
+            store.beginSampleSession(notebook.id)
+            // 開著的這一本走焦點通道（秒同步）與區網直連。
+            store.activeNotebookId = notebook.id
             if let targetPageStr = ProcessInfo.processInfo.environment["KAIRUMO_AUTO_OPEN_PAGE"],
                let targetPage = Int(targetPageStr), targetPage >= 0 && targetPage < notebook.pageCount {
                 currentPageIndex = targetPage
@@ -2738,8 +2750,6 @@ public struct NotebookEditorView: View {
             }
             // 進到編輯器時也亮一次：第一次開的人要知道自己在哪個模式。
             flashModeBadge()
-            // 範例筆記本（唯讀）：記下打開時的樣子，一編輯就另存成一般筆記本（見 `noteSampleEdit`）。
-            store.noteSampleOpened(notebook.id)
         }
         .onDisappear {
             // **先存檔、再放掉焦點。** 顛倒的話，存檔通知到達時已經沒有焦點筆記本，
@@ -2755,7 +2765,6 @@ public struct NotebookEditorView: View {
                     FocusSyncController.shared.setFocus(nil)
                 }
             }
-            store.forkSampleIfEditedSoon(notebook.id)
         }
         .onChange(of: scenePhase) { phase in
             if phase == .background || phase == .inactive {
@@ -3303,8 +3312,7 @@ public struct NotebookEditorView: View {
         HStack(spacing: 10) {
             // 回到首頁按鈕（明顯、易見、帶底色）
             Button {
-                saveCurrentPageDrawing()
-                dismiss()
+                requestLeave { dismiss() }
             } label: {
                 HStack(spacing: 5) {
                     Image(systemName: "chevron.left")
@@ -3847,8 +3855,7 @@ public struct NotebookEditorView: View {
     private var compactEditorTopBarItems: some View {
         // 回到首頁按鈕（緊湊模式）
         Button {
-            saveCurrentPageDrawing()
-            dismiss()
+            requestLeave { dismiss() }
         } label: {
             HStack(spacing: 3) {
                 Image(systemName: "chevron.left")
@@ -10215,36 +10222,7 @@ public struct NotebookEditorView: View {
     /// 1.2 秒與同步排程器的去抖動（1.5 秒）刻意錯開：先把本機狀態定下來，
     /// 再讓同步那一輪去看已經穩定的內容。反過來的話，同步會拿到寫到一半的
     /// 那個瞬間，然後下一輪再傳一次。
-    /// 範例筆記本是唯讀的：使用者一動到它（有意或無意），就把目前的樣子另存成一本一般筆記本、
-    /// 編輯器換到那一本繼續，範例本身重設回標準內容，並提示使用者（見 `NotebookStore.forkEditedSample`）。
-    ///
-    /// 稍等一下再做、而且用指紋比對確認真的改了：打開時的整理、捲動、切換頁面都會碰到文件，
-    /// 那些不算編輯，不能因此複製出一本。
-    private func noteSampleEdit() {
-        guard notebook.isReadOnlySample else { return }
-        sampleEditCheck?.cancel()
-        let work = DispatchWorkItem { forkSampleIfEdited() }
-        sampleEditCheck = work
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4, execute: work)
-    }
-
-    private func forkSampleIfEdited() {
-        let sampleId = notebook.id
-        guard notebook.isReadOnlySample else { return }
-        // 先把畫布上的筆跡寫下來，指紋與複本才看得到最後一筆。
-        saveCurrentPageDrawing()
-        let page = currentPageIndex
-        afterCoreInkWrites {
-            guard notebook.id == sampleId, store.sampleWasEdited(sampleId),
-                  let copy = store.forkEditedSample(sampleId) else { return }
-            pageAfterSampleFork = page
-            onRequestSwitch?(copy)
-            store.sampleForkNotice = copy.title
-        }
-    }
-
     private func noteInkEdited() {
-        noteSampleEdit()
         inkTouchWork?.cancel()
         let work = DispatchWorkItem {
             // `updateNotebook` 自己會蓋上現在的時間，並在 `persistData()`
@@ -11118,9 +11096,35 @@ public struct NotebookEditorView: View {
 
     private func switchToNotebook(_ target: NotebookDocument) {
         guard target.id != notebook.id else { return }
-        saveCurrentPageDrawing()
         // 由外層換掉 Binding 指向的索引；這裡自己寫會覆蓋掉目前這則筆記。
-        onRequestSwitch?(target)
+        requestLeave { onRequestSwitch?(target) }
+    }
+
+    /// 離開這本筆記（回首頁或切換到另一本）。
+    ///
+    /// 範例且內容真的有改：先問使用者要存檔（保留在此範例）、另存可編輯副本，還是放棄修改；
+    /// 沒改或不是範例：直接離開（範例的暫存跟著收掉）。
+    private func requestLeave(_ leave: @escaping () -> Void) {
+        saveCurrentPageDrawing()
+        let id = notebook.id
+        guard store.hasSampleSession(id) else { leave(); return }
+        // 筆跡在背景佇列寫入：等寫完再比對，最後一筆才算得進去。
+        afterCoreInkWrites {
+            if store.sampleSessionHasChanges(id) {
+                afterSampleLeave = leave
+                showSampleLeaveDialog = true
+            } else {
+                store.finishSampleSession(id, choice: .keep)
+                leave()
+            }
+        }
+    }
+
+    private func finishSampleLeave(_ choice: SampleLeaveChoice) {
+        store.finishSampleSession(notebook.id, choice: choice)
+        let leave = afterSampleLeave
+        afterSampleLeave = nil
+        leave?()
     }
 
     /// 頁面規格選單。

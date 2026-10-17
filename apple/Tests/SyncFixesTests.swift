@@ -361,7 +361,7 @@ final class RecordingTitleInPackageTests: XCTestCase {
         XCTAssertEqual(merged.recordingTitles["a.opus"], "T1", "iPad 後改的名字要贏過 Mac 重匯出的舊名字")
     }
 
-    // MARK: 唯讀範例：一編輯就另存一本
+    // MARK: 範例：編輯先暫存，離開時再決定
 
     private func sampleStore() -> (NotebookStore, String) {
         let store = isolatedNotebookStore()
@@ -379,37 +379,93 @@ final class RecordingTitleInPackageTests: XCTestCase {
         return (store, id)
     }
 
-    func testEditingASampleForksAnEditableCopyAndKeepsTheSampleClean() {
+    /// 使用者回報：只是打開範例、翻頁瀏覽，就被另存出好幾本副本。現在打開時只備份到暫存區，
+    /// 系統自己寫的東西（背景手寫辨識、舊版頁面資料、頁面 id）不算修改。
+    func testBrowsingASampleIsNotAnEdit() {
         let (store, id) = sampleStore()
-        store.noteSampleOpened(id)
+        store.beginSampleSession(id)
+        XCTAssertTrue(store.hasSampleSession(id))
+        store.notebooks[0].recognizedText = ["0": "背景辨識的手寫"]
+        store.notebooks[0].pageIds = [UUID().uuidString.lowercased()]
+        store.notebooks[0].lastModifiedDate = Date()
+        XCTAssertFalse(store.sampleSessionHasChanges(id), "只是瀏覽不算修改")
+        store.finishSampleSession(id, choice: .keep)
+        XCTAssertEqual(store.notebooks.map(\.id), [id], "沒有多出副本")
+        XCTAssertFalse(store.hasSampleSession(id))
+    }
+
+    func testSavingAsACopyLeavesTheSampleAsItWas() {
+        let (store, id) = sampleStore()
+        store.beginSampleSession(id)
         store.notebooks[0].textAttachments = [NoteTextAttachment(pageIndex: 0, text: "我加的字")]
-        XCTAssertTrue(store.sampleWasEdited(id))
+        store.saveDrawing(notebookId: id, pageIndex: 0, drawing: PKDrawing())
+        XCTAssertTrue(store.sampleSessionHasChanges(id))
         let base = store.notebooks[0].baseDisplayTitle()
 
-        let copy = store.forkEditedSample(id)
+        let copy = store.finishSampleSession(id, choice: .saveCopy)
 
         XCTAssertNotNil(copy)
-        XCTAssertFalse(NotebookPackageBridge.isDeviceLocalSeed(copy?.id ?? id), "另存的那一本是會同步的一般筆記")
         XCTAssertTrue(copy?.title.hasPrefix(base + " ") ?? false, "名字是「範例名 日期時間」")
-        XCTAssertNil(copy?.titleKey)
+        XCTAssertFalse(copy?.isReadOnlySample ?? true, "副本是一般筆記本")
         XCTAssertEqual(copy?.folderId, "folder-intro", "資料夾與範例相同")
-        XCTAssertEqual(copy?.textAttachments?.first?.text, "我加的字", "使用者的改動在另存的那一本裡")
-        XCTAssertEqual(store.loadDrawing(notebookId: copy!.id, pageIndex: 0).strokes.count, 1, "筆跡一起帶過去")
+        XCTAssertEqual(copy?.textAttachments?.first?.text, "我加的字", "修改在副本裡")
+        XCTAssertEqual(store.loadDrawing(notebookId: copy!.id, pageIndex: 0).strokes.count, 0, "副本是修改後的樣子")
         XCTAssertNotNil(syncItem(indexJson: AccountSyncStore.shared.indexJSON, itemId: copy!.id), "記進同步索引")
 
         let sample = store.notebooks.first { $0.id == id }
-        XCTAssertNotNil(sample, "範例留著")
-        XCTAssertFalse(sample?.textAttachments?.contains { $0.text == "我加的字" } ?? true, "範例回到標準內容")
-        XCTAssertEqual(sample?.folderId, "folder-intro")
-        XCTAssertFalse(NotebookStore.retiredSamples.contains(id), "範例不再退役")
+        XCTAssertNil(sample?.textAttachments?.first, "範例回到打開前的樣子")
+        XCTAssertEqual(store.loadDrawing(notebookId: id, pageIndex: 0).strokes.count, 1, "範例的筆跡也回來")
+        XCTAssertFalse(store.hasSampleSession(id))
     }
 
-    func testOpeningASampleWithoutChangingItDoesNotFork() {
+    func testKeepingTheChangesSavesThemIntoTheSample() {
         let (store, id) = sampleStore()
-        store.noteSampleOpened(id)
-        XCTAssertFalse(store.sampleWasEdited(id))
-        store.forkSampleIfEdited(id)
+        store.beginSampleSession(id)
+        store.notebooks[0].textAttachments = [NoteTextAttachment(pageIndex: 0, text: "留在範例")]
+        store.finishSampleSession(id, choice: .keep)
         XCTAssertEqual(store.notebooks.map(\.id), [id])
+        XCTAssertEqual(store.notebooks[0].textAttachments?.first?.text, "留在範例")
+        XCTAssertFalse(store.hasSampleSession(id))
+    }
+
+    func testDiscardingPutsTheSampleBack() {
+        let (store, id) = sampleStore()
+        store.beginSampleSession(id)
+        store.notebooks[0].textAttachments = [NoteTextAttachment(pageIndex: 0, text: "不要了")]
+        store.saveDrawing(notebookId: id, pageIndex: 0, drawing: PKDrawing())
+        store.finishSampleSession(id, choice: .discard)
+        XCTAssertEqual(store.notebooks.map(\.id), [id])
+        XCTAssertNil(store.notebooks[0].textAttachments?.first)
+        XCTAssertEqual(store.loadDrawing(notebookId: id, pageIndex: 0).strokes.count, 1)
+    }
+
+    /// 任何一本都能設為／解除範例；範例暫存期間不同步。
+    func testAnyNotebookCanBeMarkedAsASample() {
+        let (store, _) = sampleStore()
+        let mine = NotebookDocument(title: "我的筆記", pageCount: 1)
+        store.notebooks.append(mine)
+        XCTAssertFalse(store.notebooks.first { $0.id == mine.id }!.isReadOnlySample)
+
+        store.setSampleFlag(mine.id, isSample: true)
+        XCTAssertTrue(store.notebooks.first { $0.id == mine.id }!.isReadOnlySample)
+        store.beginSampleSession(mine.id)
+        XCTAssertTrue(store.hasSampleSession(mine.id))
+        XCTAssertFalse(store.syncNotebooks.contains { $0.id == mine.id }, "範例暫存期間不同步")
+        store.finishSampleSession(mine.id, choice: .keep)
+        XCTAssertTrue(store.syncNotebooks.contains { $0.id == mine.id }, "決定之後照常同步")
+
+        store.setSampleFlag(mine.id, isSample: false)
+        store.beginSampleSession(mine.id)
+        XCTAssertFalse(store.hasSampleSession(mine.id), "解除範例之後就是一般筆記本")
+    }
+
+    /// 「範例」標記寫進套件的中繼資料，跟著同步（Android 讀同一個鍵）。
+    func testTheSampleMarkTravelsInThePackageMeta() {
+        var doc = NotebookDocument(title: "t")
+        doc.sampleFlag = true
+        var restored = NotebookDocument(title: "t")
+        NotebookMeta.decode(from: NotebookMeta(from: doc).encodedJSON())?.apply(to: &restored)
+        XCTAssertEqual(restored.sampleFlag, true)
     }
 
     func testSamplesShowAsReadOnlyAndCannotBeRenamed() {

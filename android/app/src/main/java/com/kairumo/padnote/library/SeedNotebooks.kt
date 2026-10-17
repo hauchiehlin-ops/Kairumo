@@ -121,23 +121,9 @@ object SeedNotebooks {
         }
     }
 
-    /**
-     * 把一本範例重設回乾淨的標準內容（整個套件刪掉重建）。範例是唯讀的：使用者一編輯，
-     * 改動另存成一本一般筆記本（[SampleFork]），範例本身回到這裡。
-     */
-    fun restore(context: Context, id: String, deviceId: UInt, languageTag: String) {
-        if (!isDeviceLocal(id)) return
-        fun l(key: String) = LocalizationStrings.localized(key, languageTag)
-        java.io.File(NotebookLibrary.directory(context), "${id.lowercase()}.${NotebookLibrary.EXTENSION}")
-            .deleteRecursively()
-        NotebookLibrary.invalidateCache(id)
-        build(context, id.lowercase(), deviceId, languageTag, ::l)
-        NotebookLibrary.invalidateCache(id)
-    }
-
-    /** 清單上顯示的名字：範例後面標「（唯讀）」。 */
-    fun displayTitle(id: String, title: String, languageTag: String): String =
-        if (isDeviceLocal(id)) title + LocalizationStrings.localized("sample_readonly_suffix", languageTag) else title
+    /** 清單上顯示的範例名字：後面標「（唯讀）」。 */
+    fun displayTitle(title: String, languageTag: String): String =
+        title + LocalizationStrings.localized("sample_readonly_suffix", languageTag)
 
     /** 去掉「（唯讀）」。由範例另存出來的筆記本以它命名。 */
     fun baseTitle(title: String, languageTag: String): String =

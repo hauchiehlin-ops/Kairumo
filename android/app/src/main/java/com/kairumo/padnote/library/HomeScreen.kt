@@ -154,6 +154,7 @@ fun HomeScreen(
     onRenameRecording: (RecordingIndex.Recording) -> Unit,
     onDeleteRecording: (RecordingIndex.Recording) -> Unit = {},
     onDuplicateNotebook: (NotebookLibrary.Entry) -> Unit = {},
+    onToggleSample: (NotebookLibrary.Entry) -> Unit = {},
     /** 重新命名目前所在的資料夾（最上層也算）。與 Apple 的 `edit_root_folder` 對應。 */
     onRenameRootFolder: () -> Unit,
     /** 系統診斷頁。Apple 在首頁頁尾的版本號上，Android 原本只在編輯器選單裡。 */
@@ -735,7 +736,7 @@ fun HomeScreen(
                                 for (entry in row.entries) {
                                     NotebookListCard(
                         entry, l, onOpen, onRename, onDelete, onMove, onCreateSnapshot,
-                        onHide = hideNotebook, onDuplicate = onDuplicateNotebook
+                        onHide = hideNotebook, onDuplicate = onDuplicateNotebook, onToggleSample = onToggleSample
                     )
                                 }
                             } else {
@@ -745,7 +746,7 @@ fun HomeScreen(
                                             NotebookGridCard(
                                                 entry, l, onOpen, onRename, onDelete, onMove, onCreateSnapshot,
                                                 modifier = Modifier.weight(1f),
-                                                onHide = hideNotebook, onDuplicate = onDuplicateNotebook
+                                                onHide = hideNotebook, onDuplicate = onDuplicateNotebook, onToggleSample = onToggleSample
                                             )
                                         }
                                         repeat(gridColumns - chunk.size) { Box(Modifier.weight(1f)) }
@@ -763,7 +764,7 @@ fun HomeScreen(
                 Box(Modifier.fillMaxWidth().testTag("home.notebooks.list")) {
                     NotebookListCard(
                         entry, l, onOpen, onRename, onDelete, onMove, onCreateSnapshot,
-                        onHide = hideNotebook, onDuplicate = onDuplicateNotebook
+                        onHide = hideNotebook, onDuplicate = onDuplicateNotebook, onToggleSample = onToggleSample
                     )
                 }
             }
@@ -1035,6 +1036,7 @@ private fun NotebookMenuItems(
     onCreateSnapshot: (NotebookLibrary.Entry?) -> Unit,
     onHide: (NotebookLibrary.Entry) -> Unit,
     onDuplicate: (NotebookLibrary.Entry) -> Unit,
+    onToggleSample: (NotebookLibrary.Entry) -> Unit,
     dismiss: () -> Unit
 ) {
     val context = LocalContext.current
@@ -1045,8 +1047,8 @@ private fun NotebookMenuItems(
         onClick = { dismiss(); onHide(entry) },
         modifier = Modifier.testTag("home.notebooks.menu.hide")
     )
-    // 唯讀範例不能改名（要自己的名字請先編輯，另存出來的那一本可以改名）。
-    if (!SeedNotebooks.isDeviceLocal(entry.id)) {
+    // 範例不能改名（解除範例或另存出來的那一本可以改名）。
+    if (!entry.isSample) {
         DropdownMenuItem(text = { Text(l("rename_note")) }, onClick = { dismiss(); onRename(entry) })
     }
     DropdownMenuItem(text = { Text(l("move_to_folder")) }, onClick = { dismiss(); onMove(entry) })
@@ -1058,6 +1060,12 @@ private fun NotebookMenuItems(
             modifier = Modifier.testTag("home.notebooks.menu.duplicate")
         )
     }
+    // 任何一本都能設為／解除「範例」（範例的改動先暫存、離開時再決定，見 SampleFork）。
+    DropdownMenuItem(
+        text = { Text(l(if (entry.isSample) "sample_unmark" else "sample_mark")) },
+        onClick = { dismiss(); onToggleSample(entry) },
+        modifier = Modifier.testTag("home.notebooks.menu.sample")
+    )
     DropdownMenuItem(text = { Text(l("backup_snapshot")) }, onClick = { dismiss(); onCreateSnapshot(entry) })
     HorizontalDivider()
     DropdownMenuItem(
@@ -1078,7 +1086,8 @@ private fun NotebookGridCard(
     onCreateSnapshot: (NotebookLibrary.Entry?) -> Unit,
     modifier: Modifier = Modifier,
     onHide: (NotebookLibrary.Entry) -> Unit = {},
-    onDuplicate: (NotebookLibrary.Entry) -> Unit = {}
+    onDuplicate: (NotebookLibrary.Entry) -> Unit = {},
+    onToggleSample: (NotebookLibrary.Entry) -> Unit = {}
 ) {
     var menu by remember(entry.id) { mutableStateOf(false) }
     Card(
@@ -1138,7 +1147,7 @@ private fun NotebookGridCard(
                 Box(Modifier.align(Alignment.TopEnd)) {
                     TextButton(onClick = { menu = true }) { Text("⋯") }
                     DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-                        NotebookMenuItems(entry, l, onOpen, onRename, onDelete, onMove, onCreateSnapshot, onHide, onDuplicate) {
+                        NotebookMenuItems(entry, l, onOpen, onRename, onDelete, onMove, onCreateSnapshot, onHide, onDuplicate, onToggleSample) {
                             menu = false
                         }
                     }
@@ -1718,7 +1727,8 @@ private fun NotebookListCard(
     onCreateSnapshot: (NotebookLibrary.Entry?) -> Unit,
     modifier: Modifier = Modifier,
     onHide: (NotebookLibrary.Entry) -> Unit = {},
-    onDuplicate: (NotebookLibrary.Entry) -> Unit = {}
+    onDuplicate: (NotebookLibrary.Entry) -> Unit = {},
+    onToggleSample: (NotebookLibrary.Entry) -> Unit = {}
 ) {
     var menu by remember(entry.id) { mutableStateOf(false) }
     Card(
@@ -1748,7 +1758,7 @@ private fun NotebookListCard(
             Box {
                 TextButton(onClick = { menu = true }) { Text("⋯", fontSize = 18.sp) }
                 DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-                    NotebookMenuItems(entry, l, onOpen, onRename, onDelete, onMove, onCreateSnapshot, onHide, onDuplicate) {
+                    NotebookMenuItems(entry, l, onOpen, onRename, onDelete, onMove, onCreateSnapshot, onHide, onDuplicate, onToggleSample) {
                         menu = false
                     }
                 }

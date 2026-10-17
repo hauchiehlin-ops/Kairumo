@@ -282,6 +282,8 @@ public struct NotebookDocument: Identifiable, Codable, Hashable, @unchecked Send
     /// **必須是 Optional**：舊的 `notebooks.json` 沒有這個欄位，
     /// 不給預設值的話整份清單都解不開，而症狀是「所有筆記都不見了」。
     public var isEncryptedFlag: Bool?
+    /// 使用者設定的「範例」標記（`nil` = 沒設定過，見 `isReadOnlySample`）。存進套件的中繼資料，跟著同步。
+    public var sampleFlag: Bool?
     /// 加密狀態。真相在套件的 `manifest.json`，這個欄位只是清單顯示用的快取。
     public var isEncrypted: Bool {
         get { isEncryptedFlag ?? false }
@@ -456,7 +458,7 @@ public struct NotebookDocument: Identifiable, Codable, Hashable, @unchecked Send
 
     /// 顯示用標題：系統預設標題會跟著介面語言走。
     ///
-    /// 預載範例是唯讀的，名字後面標「（唯讀）」（見 `NotebookStore.forkEditedSample`）。
+    /// 範例的名字後面標「（唯讀）」（見 `isReadOnlySample`）。
     @MainActor
     public func displayTitle(_ l10n: LocalizationManager = .shared) -> String {
         let base = baseDisplayTitle(l10n)
@@ -471,8 +473,9 @@ public struct NotebookDocument: Identifiable, Codable, Hashable, @unchecked Send
         return l10n.localized(key)
     }
 
-    /// 預載範例（每台裝置自己產生、不同步）。唯讀：一編輯就另存成一般筆記本，範例本身保持乾淨。
-    public var isReadOnlySample: Bool { NotebookPackageBridge.isDeviceLocalSeed(id) }
+    /// 這本是不是「範例」：打開後的改動先放暫存區、離開時再決定（見 `NotebookStore.beginSampleSession`）。
+    /// 使用者設定過就照設定（`sampleFlag`），沒設定過的話內建範例是、其他不是。
+    public var isReadOnlySample: Bool { sampleFlag ?? NotebookPackageBridge.isDeviceLocalSeed(id) }
 
     /// 六種語言的 `created_on` 前綴（`%@` 之前的字），用來認出舊筆記存下的「建立於 …」。
     @MainActor private static let createdOnPrefixes: [String] = {
@@ -1259,8 +1262,6 @@ public final class NotebookStore: ObservableObject {
     @Published public var notebooks: [NotebookDocument] = []
     @Published public var recordings: [AudioRecordingRecord] = []
     @Published public var folders: [FolderItem] = []
-    /// 剛從唯讀範例另存出來的筆記本名稱。編輯器宿主看到就提示使用者（見 `forkEditedSample`）。
-    @Published var sampleForkNotice: String?
     /// 根資料夾名稱。空字串代表「使用者沒有自訂」，顯示時走語系預設值。
     @Published public var rootFolderName: String = ""
     /// 目前正在檢視／編輯的作用中筆記本 ID（供雙軌同步優先排程使用）
@@ -1681,7 +1682,7 @@ public final class NotebookStore: ObservableObject {
     ]
 
     private func migrateSeedTitles(_ doc: NotebookDocument) -> NotebookDocument {
-        // UUID 的筆記不是舊範例：由範例另存出來的筆記本（`forkEditedSample`）名字相近，
+        // UUID 的筆記不是舊範例：由範例另存出來的筆記本（`finishSampleSession`）名字相近，
         // 被認回範例的話會被範例的自癒修復整本重設。
         guard doc.titleKey == nil, UUID(uuidString: doc.id) == nil,
               let keys = Self.legacySeedTitles[doc.title] else { return doc }
@@ -3834,8 +3835,6 @@ public final class NotebookStore: ObservableObject {
     /// 別台取的錄音名字，但這台的清單裡還沒有那段錄音（檔名小寫 → 名字）。
     private var unmatchedIncomingTitles: [String: String] = [:]
 
-    /// 編輯器打開範例時的指紋（id 小寫 → 指紋），見 `noteSampleOpened`。
-    var sampleBaselines: [String: String] = [:]
 
     /// 剛改、還在寫進套件的錄音名字（檔名小寫 → 名字）。寫完之前套件裡還是舊名字 ——
     /// 這段期間的重掃與匯入不能拿套件的舊名字蓋回去，否則改完名字會先跳回去一下。
@@ -4670,60 +4669,199 @@ extension NotebookStore: ProfileScoped {
 }
 
 
-// MARK: - 唯讀範例：一編輯就另存成一般筆記本
+// MARK: - 範例筆記本：編輯先放暫存區，離開時再決定
 
-/// 範例筆記本（歡迎使用、手冊、功能範例…）是**唯讀**的，在任何安裝狀態下都保持乾淨的標準內容。
+/// 被設為「範例」的筆記本（內建範例預設是，任何一本都能設定／解除，見 `NotebookDocument.isReadOnlySample`）。
 ///
-/// 使用者一動到範例（有意或無意），編輯器就把目前的樣子另存成一本一般的（會同步的）筆記本，
-/// 名字是「範例名 日期 時:分:秒」，編輯器換到那一本繼續，範例本身立刻重設回標準內容，
-/// 並提示「此範本為唯讀檔案，系統已自動增加可編輯筆記本」（`sample_readonly_forked`）。
-/// 與 Android `SampleFork` 同一套規則。
+/// 打開範例之後，所有操作照常在畫面上進行，但**不提示、不同步**：開啟那一刻的完整內容先備份到暫存區
+/// （`SampleSessions/<id>/`：文件、筆跡檔、同步基準、核心套件）。使用者離開筆記本時，若內容真的有變，
+/// 再問要「存檔（保留在此範例）」、「另存可編輯副本」或「放棄修改」，照選擇處理（`finishSampleSession`）。
 ///
-/// 「改過」以開啟時與現在的指紋比對（文件內容 + 每頁筆跡），只是打開看看不算。
+/// App 被關掉時沒辦法問（行動平台不允許擋住關閉）：暫存區留在磁碟上，下次回到首頁再問
+/// （`pendingSampleSessionIds`）。與 Android `SampleSession` 同一套規則。
+///
+/// 「有沒有變」只比使用者會改的內容（`sampleContentFingerprint`）。原本比的是整份文件與筆跡檔的位元組，
+/// 翻頁時背景的手寫辨識寫回 `recognizedText`、整理頁面 id 都會讓它變 —— 只是瀏覽就被當成編輯（使用者回報）。
+enum SampleLeaveChoice {
+    /// 改動留在這本範例裡。
+    case keep
+    /// 改動另存成一本一般筆記本，範例回到打開前的樣子。
+    case saveCopy
+    /// 改動丟掉，範例回到打開前的樣子。
+    case discard
+}
+
 extension NotebookStore {
 
-    /// 編輯器打開一本範例時記下它的樣子。
-    func noteSampleOpened(_ id: String) {
-        guard NotebookPackageBridge.isDeviceLocalSeed(id), sampleBaselines[id.lowercased()] == nil else { return }
-        sampleBaselines[id.lowercased()] = sampleFingerprint(id)
+    var sampleSessionsDirectory: URL { documentsDir.appending(path: "SampleSessions") }
+
+    private func sampleSessionDirectory(_ id: String) -> URL {
+        sampleSessionsDirectory.appending(path: id.lowercased())
     }
 
-    /// 打開之後有沒有被改過。
-    func sampleWasEdited(_ id: String) -> Bool {
-        guard let baseline = sampleBaselines[id.lowercased()] else { return false }
-        return sampleFingerprint(id) != baseline
+    /// 這本是不是正在範例暫存期間（打開了、還沒決定怎麼處理改動）。暫存期間不同步。
+    func hasSampleSession(_ id: String) -> Bool {
+        FileManager.default.fileExists(atPath: sampleSessionDirectory(id).appending(path: "doc.json").path)
     }
 
-    /// 編輯器關掉之後的後備：即時偵測沒抓到的改動（筆跡由背景寫入，要等它落盤）也要另存，
-    /// 範例才不會帶著改動留下來。
-    func forkSampleIfEditedSoon(_ id: String) {
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { [weak self] in
-            self?.forkSampleIfEdited(id)
+    /// 還沒決定怎麼處理的範例暫存（例如 App 在範例開著時被關掉）。
+    var pendingSampleSessionIds: [String] {
+        let dirs = (try? FileManager.default.contentsOfDirectory(
+            at: sampleSessionsDirectory, includingPropertiesForKeys: nil)) ?? []
+        return dirs.map(\.lastPathComponent).compactMap { name in
+            notebooks.first { $0.id.lowercased() == name }?.id
+        }.filter { hasSampleSession($0) }
+    }
+
+    /// 打開範例時：把現在的完整內容備份到暫存區。已經有暫存（上次還沒決定）就沿用，不覆蓋。
+    func beginSampleSession(_ id: String) {
+        guard let doc = notebooks.first(where: { $0.id == id }), doc.isReadOnlySample, !hasSampleSession(id) else { return }
+        let fm = FileManager.default
+        let dir = sampleSessionDirectory(id)
+        try? fm.removeItem(at: dir)
+        do {
+            try fm.createDirectory(at: dir.appending(path: "drawings"), withIntermediateDirectories: true)
+            try fm.createDirectory(at: dir.appending(path: "baseline"), withIntermediateDirectories: true)
+            for (source, target) in [(drawingsDirectory, "drawings"), (syncBaselineDirectory, "baseline")] {
+                for file in sessionFiles(of: doc.id, in: source) {
+                    try fm.copyItem(at: file, to: dir.appending(path: target).appending(path: file.lastPathComponent))
+                }
+            }
+            let package = corePackagesDirectory.appending(path: "\(doc.id.lowercased()).padnote")
+            if fm.fileExists(atPath: package.path) {
+                try fm.copyItem(at: package, to: dir.appending(path: "package.padnote"))
+            }
+            try Data(sampleContentFingerprint(doc).utf8).write(to: dir.appending(path: "fingerprint"))
+            // doc.json 最後寫：它在不在就代表暫存是否完整（`hasSampleSession`）。
+            try JSONEncoder().encode(doc).write(to: dir.appending(path: "doc.json"), options: .atomic)
+        } catch {
+            try? fm.removeItem(at: dir)
         }
     }
 
-    func forkSampleIfEdited(_ id: String) {
-        defer { sampleBaselines.removeValue(forKey: id.lowercased()) }
-        guard sampleWasEdited(id) else { return }
-        forkEditedSample(id)
+    /// 打開之後內容有沒有真的改過。
+    func sampleSessionHasChanges(_ id: String) -> Bool {
+        guard hasSampleSession(id),
+              let doc = notebooks.first(where: { $0.id == id }),
+              let data = try? Data(contentsOf: sampleSessionDirectory(id).appending(path: "fingerprint")),
+              let before = String(data: data, encoding: .utf8) else { return false }
+        return sampleContentFingerprint(doc) != before
     }
 
-    /// 文件內容（不含修改時間）+ 每一頁筆跡檔的位元組。
-    private func sampleFingerprint(_ id: String) -> String {
-        guard var doc = notebooks.first(where: { $0.id.caseInsensitiveCompare(id) == .orderedSame }) else { return "" }
-        doc.lastModifiedDate = Date(timeIntervalSince1970: 0)
+    /// 照使用者的選擇處理範例的改動，結束暫存。選「另存可編輯副本」時回傳新的那一本。
+    @discardableResult
+    func finishSampleSession(_ id: String, choice: SampleLeaveChoice) -> NotebookDocument? {
+        guard hasSampleSession(id) else { return nil }
+        defer { try? FileManager.default.removeItem(at: sampleSessionDirectory(id)) }
+        switch choice {
+        case .keep:
+            markDirtyAndPersist(signalsLocalEdit: true)
+            return nil
+        case .discard:
+            restoreSampleSession(id)
+            return nil
+        case .saveCopy:
+            guard let current = notebooks.first(where: { $0.id == id }), let copy = copySample(current) else { return nil }
+            restoreSampleSession(id)
+            adoptSampleCopy(copy, from: id)
+            markDirtyAndPersist(signalsLocalEdit: true)
+            return copy
+        }
+    }
+
+    /// 把範例放回打開前的樣子（文件、筆跡檔、同步基準、核心套件）。
+    private func restoreSampleSession(_ id: String) {
+        let fm = FileManager.default
+        let dir = sampleSessionDirectory(id)
+        guard let data = try? Data(contentsOf: dir.appending(path: "doc.json")),
+              let saved = try? JSONDecoder().decode(NotebookDocument.self, from: data) else { return }
+        for (target, source) in [(drawingsDirectory, "drawings"), (syncBaselineDirectory, "baseline")] {
+            for file in sessionFiles(of: saved.id, in: target) { try? fm.removeItem(at: file) }
+            for file in (try? fm.contentsOfDirectory(at: dir.appending(path: source), includingPropertiesForKeys: nil)) ?? [] {
+                try? fm.copyItem(at: file, to: target.appending(path: file.lastPathComponent))
+            }
+        }
+        let package = corePackagesDirectory.appending(path: "\(saved.id.lowercased()).padnote")
+        let savedPackage = dir.appending(path: "package.padnote")
+        if fm.fileExists(atPath: savedPackage.path) {
+            try? fm.removeItem(at: package)
+            try? fm.copyItem(at: savedPackage, to: package)
+        }
+        if let index = notebooks.firstIndex(where: { $0.id == id }) {
+            notebooks[index] = saved
+        }
+        PageThumbnailRenderer.invalidateAll()
+        persistData(signalsLocalEdit: false)
+    }
+
+    /// 一本筆記在某個目錄裡的逐頁檔案（`<id>_p…`）。
+    private func sessionFiles(of id: String, in directory: URL) -> [URL] {
+        let prefixes = Set([id, id.lowercased()].map { "\($0)_p" })
+        return ((try? FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil)) ?? [])
+            .filter { file in prefixes.contains { file.lastPathComponent.hasPrefix($0) } }
+    }
+
+    /// 使用者會改的內容的指紋：物件、文字、紙張、圖層、勾選項，以及每一頁筆畫的身分。
+    ///
+    /// **不比**修改時間、背景手寫辨識（`recognizedText`）、頁面 id 與舊版的頁面資料 ——
+    /// 那些只是瀏覽就會被系統寫入。筆畫比身分而不是檔案位元組：同一份筆跡重新存檔，位元組可能不同。
+    func sampleContentFingerprint(_ doc: NotebookDocument) -> String {
+        struct Content: Encodable {
+            let title: String
+            let pageCount: Int
+            let template: String
+            let pagePaperIds: [String]?
+            let pageFormatId: String?
+            let guidePaletteId: String?
+            let attachments: [NoteImageAttachment]?
+            let textAttachments: [NoteTextAttachment]?
+            let linkAttachments: [NoteLinkAttachment]?
+            let model3DAttachments: [Note3DAttachment]?
+            let commentPins: [NoteCommentPin]?
+            let shapeAttachments: [NoteShapeAttachment]?
+            let connectionAttachments: [NoteConnectionAttachment]?
+            let tableAttachments: [NoteTableAttachment]?
+            let audioAttachments: [NoteAudioAttachment]?
+            let tapeAttachments: [NoteTapeAttachment]?
+            let stickyAnchors: [StickyAnnotationAnchor]?
+            let checkedGuideItems: [String: Bool]?
+            let objectOrderByPage: [String: [String]]?
+            let underInkObjectIdsByPage: [String: [String]]?
+            let ink: [String]
+        }
+        var ink: [String] = []
+        for page in 0 ..< max(doc.pageCount, 1) {
+            let strokes = loadDrawing(notebookId: doc.id, pageIndex: page).strokes
+                .map { StrokeDelta.Identity($0).key }.sorted()
+            let pro = (ProInkStore.load(in: drawingsDirectory, notebookId: doc.id, page: page)
+                + ProInkStore.load(in: drawingsDirectory, notebookId: doc.id, page: page, foreign: true))
+                .map(\.contentKey).sorted()
+            ink.append("\(page):" + strokes.joined(separator: ",") + "|" + pro.joined(separator: ","))
+        }
+        let content = Content(
+            title: doc.title, pageCount: doc.pageCount, template: doc.template.rawValue,
+            pagePaperIds: doc.pagePaperIds, pageFormatId: doc.pageFormatId, guidePaletteId: doc.guidePaletteId,
+            attachments: doc.attachments, textAttachments: doc.textAttachments, linkAttachments: doc.linkAttachments,
+            model3DAttachments: doc.model3DAttachments, commentPins: doc.commentPins,
+            shapeAttachments: doc.shapeAttachments, connectionAttachments: doc.connectionAttachments,
+            tableAttachments: doc.tableAttachments, audioAttachments: doc.audioAttachments,
+            tapeAttachments: doc.tapeAttachments, stickyAnchors: doc.stickyAnchors,
+            checkedGuideItems: doc.checkedGuideItems, objectOrderByPage: doc.objectOrderByPage,
+            underInkObjectIdsByPage: doc.underInkObjectIdsByPage, ink: ink)
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.sortedKeys]
-        var data = (try? encoder.encode(doc)) ?? Data()
-        let fm = FileManager.default
-        let files = ((try? fm.contentsOfDirectory(at: drawingsDirectory, includingPropertiesForKeys: nil)) ?? [])
-            .filter { $0.lastPathComponent.hasPrefix("\(doc.id)_p") }
-            .sorted { $0.lastPathComponent < $1.lastPathComponent }
-        for file in files {
-            data.append(Data(file.lastPathComponent.utf8))
-            data.append((try? Data(contentsOf: file)) ?? Data())
-        }
+        let data = (try? encoder.encode(content)) ?? Data()
         return SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
+    }
+
+    /// 設定或解除「範例」。解除之後就是一般筆記本（照常編輯、照常同步）。
+    func setSampleFlag(_ id: String, isSample: Bool) {
+        guard let index = notebooks.firstIndex(where: { $0.id == id }) else { return }
+        // 解除時若正好還有暫存（理論上不會：範例開著時無法從首頁操作），保留目前內容。
+        if !isSample, hasSampleSession(id) { finishSampleSession(id, choice: .keep) }
+        notebooks[index].sampleFlag = isSample
+        notebooks[index].lastModifiedDate = Date()
+        markDirtyAndPersist(signalsLocalEdit: true)
     }
 
     /// 由範例另存出來的筆記本名稱：「範例名 日期 時:分:秒」。
@@ -4731,24 +4869,11 @@ extension NotebookStore {
         "\(base) \(LocalizationManager.formatted(date, date: .numeric, time: .standard))"
     }
 
-    /// 把範例目前（含使用者剛做的改動）另存成一本一般筆記本，範例重設回標準內容。回傳新的那一本。
-    @discardableResult
-    func forkEditedSample(_ id: String) -> NotebookDocument? {
-        guard let original = notebooks.first(where: { $0.id.caseInsensitiveCompare(id) == .orderedSame }),
-              original.isReadOnlySample,
-              let copy = copySample(original) else { return nil }
-        sampleBaselines.removeValue(forKey: original.id.lowercased())
-        restoreSampleToStandard(original.id)
-        adoptSampleCopy(copy, from: original.id)
-        markDirtyAndPersist(signalsLocalEdit: true)
-        return copy
-    }
-
     /// 更新程式或修復時重設範例：範例裡若有使用者的內容（舊版範例可以直接編輯），先另存成一般筆記本，
     /// 範例才重設。跟標準內容一樣（使用者沒動過）的就不另存。只動範例自己，使用者的筆記本與資料夾一律不碰。
     func restoreSamplePreservingUserContent(_ id: String) {
         guard let original = notebooks.first(where: { $0.id.caseInsensitiveCompare(id) == .orderedSame }),
-              original.isReadOnlySample else { return }
+              NotebookPackageBridge.isDeviceLocalSeed(original.id) else { return }
         let hadRecordings = recordings.contains {
             $0.linkedNotebookId?.caseInsensitiveCompare(original.id) == .orderedSame
         }
@@ -4800,6 +4925,8 @@ extension NotebookStore {
         json["id"] = newId
         json["title"] = Self.sampleCopyTitle(base: original.baseDisplayTitle())
         json.removeValue(forKey: "titleKey")
+        // 另存出來的是一般筆記本：不繼承「範例」標記（新 id 不是內建範例，沒有標記就不是範例）。
+        json.removeValue(forKey: "sampleFlag")
         guard let data = try? JSONSerialization.data(withJSONObject: json),
               var copy = try? JSONDecoder().decode(NotebookDocument.self, from: data) else { return nil }
         copy.createdAt = Date()

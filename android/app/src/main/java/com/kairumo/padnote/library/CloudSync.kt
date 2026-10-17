@@ -506,6 +506,8 @@ object CloudSync {
             val id = pkg.name.removeSuffix(".padnote")
             // 預載範例由各裝置自己產生，不同步（見 `SeedNotebooks.isDeviceLocal`）。
             if (SeedNotebooks.isDeviceLocal(id)) continue
+            // 範例暫存期間不同步：改動要等使用者離開時決定存檔、另存或放棄（見 SampleFork）。
+            if (SampleFork.hasSession(context, id)) continue
             // 判定 1：本機現存活躍的筆記本擁有最高本機權威（絕不刪除）
             if (activeLocalIds.contains(id)) {
                 deletedNotebookIds.remove(id)
