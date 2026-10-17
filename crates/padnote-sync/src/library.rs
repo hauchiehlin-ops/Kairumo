@@ -336,9 +336,7 @@ impl LibraryIndex {
             purge_at: None,
             ..base
         });
-        if parent_invalid
-            && let Some(clocks) = self.field_clocks.get_mut(&norm_id)
-        {
+        if parent_invalid && let Some(clocks) = self.field_clocks.get_mut(&norm_id) {
             clocks.parent = Some((lamport, device.to_string()));
         }
         true

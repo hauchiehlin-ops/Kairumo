@@ -403,7 +403,10 @@ impl<H: DriveHttp> GDriveProvider<H> {
                     .map(parse_rfc3339_secs)
                     .unwrap_or(0);
                 let norm_key = name.to_lowercase();
-                if best_modified.get(&norm_key).is_none_or(|&prev| modified >= prev) {
+                if best_modified
+                    .get(&norm_key)
+                    .is_none_or(|&prev| modified >= prev)
+                {
                     best_modified.insert(norm_key.clone(), modified);
                     cache.insert(name.to_string(), id.to_string());
                     cache.insert(norm_key, id.to_string());
