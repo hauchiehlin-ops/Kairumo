@@ -344,6 +344,7 @@ object AccountSyncStore {
 
     private fun setIndex(context: Context, json: String) {
         prefs(context).edit().putString(KEY_INDEX, json).apply()
+        FolderTree.notifyChanged()
     }
 
     private fun setSettings(context: Context, json: String) {

@@ -3177,10 +3177,13 @@ public struct NotebookEditorView: View {
         })
         .background(Color.clear.alert(localizationManager.localized("new_subfolder"), isPresented: $showNewFolderAlert) {
             TextField(localizationManager.localized("folder_name"), text: $newFolderNameText)
-            Button(localizationManager.localized("cancel"), role: .cancel) {}
+            Button(localizationManager.localized("cancel"), role: .cancel) {
+                newFolderParentId = nil
+            }
             Button(localizationManager.localized("confirm")) {
                 _ = store.createFolder(name: newFolderNameText, parentId: newFolderParentId)
                 newFolderNameText = ""
+                newFolderParentId = nil
             }
         })
         .alert(localizationManager.localized("rename_folder"), isPresented: Binding(

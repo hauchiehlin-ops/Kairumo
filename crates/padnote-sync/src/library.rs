@@ -317,14 +317,30 @@ impl LibraryIndex {
         if !base.deleted {
             return false;
         }
+        let parent_invalid = self.has_deleted_ancestor(&base)
+            || base
+                .parent_id
+                .as_ref()
+                .is_some_and(|p| !self.items.get(p).is_some_and(|i| !i.deleted));
+        let restored_parent = if parent_invalid {
+            None
+        } else {
+            base.parent_id.clone()
+        };
         self.upsert(LibraryItem {
             lamport,
             device: device.to_string(),
+            parent_id: restored_parent,
             deleted: false,
             deleted_at: None,
             purge_at: None,
             ..base
         });
+        if parent_invalid
+            && let Some(clocks) = self.field_clocks.get_mut(&norm_id)
+        {
+            clocks.parent = Some((lamport, device.to_string()));
+        }
         true
     }
 
@@ -1053,5 +1069,37 @@ mod tests {
         let mut idx = LibraryIndex::default();
         idx.tombstone_at("0193c0de-0000-7000-8000-000000000001", 1, "a", 100);
         assert!(idx.is_hidden_by_deletion("0193c0de-0000-7000-8000-000000000001"));
+    }
+
+    #[test]
+    fn restored_notebook_under_deleted_folder_returns_to_root() {
+        let mut idx = LibraryIndex::default();
+        idx.upsert(LibraryItem {
+            id: "folder-1".into(),
+            kind: ItemKind::Folder,
+            title: "舊資料夾".into(),
+            parent_id: None,
+            lamport: 1,
+            device: "a".into(),
+            deleted: false,
+            deleted_at: None,
+            purge_at: None,
+        });
+        idx.upsert(item("nb-1", "圖學範例", Some("folder-1"), 2, "a"));
+        idx.tombstone_at("nb-1", 3, "a", 100);
+        idx.tombstone_at("folder-1", 4, "a", 110);
+
+        let remote_snapshot = idx.clone();
+
+        assert!(idx.restore("nb-1", 5, "a"));
+        assert!(!idx.is_hidden_by_deletion("nb-1"));
+        assert_eq!(idx.items["nb-1"].parent_id, None);
+        assert_eq!(idx.live_notebooks().len(), 1);
+
+        // 與仍帶有舊 parent_id 的雲端索引合併後，也不得退回已刪除的資料夾底下
+        idx.merge(&remote_snapshot);
+        assert!(!idx.is_hidden_by_deletion("nb-1"));
+        assert_eq!(idx.items["nb-1"].parent_id, None);
+        assert_eq!(idx.live_notebooks().len(), 1);
     }
 }

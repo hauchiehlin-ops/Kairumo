@@ -163,11 +163,19 @@ impl RemoteIndex {
     }
 
     /// 全量重建時用：整份換掉，但保留游標。
+    /// 若雲端因競態存在同名檔案，保留修改時間最新的一份（與 `find_file_id` 一致）。
     pub fn replace_files(&mut self, files: Vec<RemoteFile>) {
-        self.files = files
-            .into_iter()
-            .map(|f| (crate::paths::canonical_path(&f.name), f))
-            .collect();
+        self.files.clear();
+        for f in files {
+            let key = crate::paths::canonical_path(&f.name);
+            let replace = self
+                .files
+                .get(&key)
+                .is_none_or(|prev| (f.modified, &f.id) >= (prev.modified, &prev.id));
+            if replace {
+                self.files.insert(key, f);
+            }
+        }
     }
 
     /// 某個路徑的檔案。傳進來的路徑會先正規化。

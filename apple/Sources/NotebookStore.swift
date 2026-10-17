@@ -1528,10 +1528,16 @@ public final class NotebookStore: ObservableObject {
         var updatedFolders: [FolderItem] = []
         for var folder in self.folders {
             let fId = folder.id.lowercased()
-            // 若在同步索引中被標記刪除或因祖先刪除而隱藏，予以移除
-            if AccountSyncStore.shared.isDeleted(id: folder.id) || isHiddenBySync(folder.id) {
+            // 若資料夾本身在同步索引中被標記刪除，予以移除
+            if AccountSyncStore.shared.isDeleted(id: folder.id) {
                 foldersChanged = true
                 continue
+            }
+            // 若資料夾本身未被刪除，僅因上層資料夾被刪而呈隱藏，將其提升回最上層而非刪除
+            if isHiddenBySync(folder.id) {
+                folder.parentId = nil
+                AccountSyncStore.shared.recordParent(id: folder.id, parentId: nil)
+                foldersChanged = true
             }
             // 若同步索引中有最新中繼資料，更新名稱與 parentId
             if let syncItem = syncFolderMap[fId] {
@@ -1541,11 +1547,29 @@ public final class NotebookStore: ObservableObject {
                     foldersChanged = true
                 }
                 let newParent = syncItem.parentId.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-                let targetParent = newParent.isEmpty ? nil : newParent
+                let targetParent: String? = (newParent.isEmpty || AccountSyncStore.shared.isDeleted(id: newParent) || isHiddenBySync(newParent)) ? nil : newParent
                 if folder.parentId?.lowercased() != targetParent {
                     folder.parentId = targetParent
                     foldersChanged = true
                 }
+            } else {
+                // 本機新建但尚未進 liveFolders（例如上層已不存在或剛建立）的資料夾：確保寫入同步索引
+                let rawParent = folder.parentId?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+                let validParent: String? = {
+                    guard let p = rawParent, !p.isEmpty else { return nil }
+                    if AccountSyncStore.shared.isDeleted(id: p) || isHiddenBySync(p) { return nil }
+                    return p
+                }()
+                if folder.parentId?.lowercased() != validParent {
+                    folder.parentId = validParent
+                    foldersChanged = true
+                }
+                AccountSyncStore.shared.record(
+                    id: folder.id,
+                    title: folder.name,
+                    parentId: validParent,
+                    isFolder: true
+                )
             }
             updatedFolders.append(folder)
         }
@@ -1592,12 +1616,22 @@ public final class NotebookStore: ObservableObject {
         // 同步索引具備最新時戳權威：比對 liveNotebooks 取得正確的 parentId
         let liveNotebooksList = syncLiveNotebooks(indexJson: indexJSON)
         let liveNotebookMap = Dictionary(liveNotebooksList.map { ($0.id.lowercased(), $0) }, uniquingKeysWith: { first, _ in first })
+        let validFolderIds = Set(self.folders.map { $0.id.lowercased() })
 
         for i in self.notebooks.indices {
             let nid = self.notebooks[i].id.lowercased()
+            if !NotebookPackageBridge.isDeviceLocalSeed(nid),
+               !AccountSyncStore.shared.isDeleted(id: nid),
+               isHiddenBySync(nid) {
+                // 筆記本本身未被刪除，僅因舊父資料夾被刪而在索引中呈 hidden：重置回未分類以確保顯示於「全部筆記」
+                self.notebooks[i].folderId = nil
+                AccountSyncStore.shared.recordParent(id: nid, parentId: nil)
+                notebooksChanged = true
+                continue
+            }
             if let item = liveNotebookMap[nid] {
                 let indexParent = item.parentId.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-                let targetFolderId = indexParent.isEmpty ? nil : indexParent
+                let targetFolderId = (indexParent.isEmpty || !validFolderIds.contains(indexParent)) ? nil : indexParent
                 if self.notebooks[i].folderId?.lowercased() != targetFolderId {
                     self.notebooks[i].folderId = targetFolderId
                     notebooksChanged = true
@@ -1823,8 +1857,35 @@ public final class NotebookStore: ObservableObject {
         // 《圖學範例》：舊使用者只補一次（旗標），之後刪掉就不再長回來。
         if !ProfileDefaults.current.bool(forKey: Self.draftingExampleSeededKey) {
             ProfileDefaults.current.set(true, forKey: Self.draftingExampleSeededKey)
-            if !notebooks.contains(where: { $0.id == Self.draftingExampleId }) {
+            if !Self.retiredSamples.contains(Self.draftingExampleId),
+               !notebooks.contains(where: { $0.id == Self.draftingExampleId }) {
                 notebooks.append(makeDraftingExample())
+                changed = true
+            }
+        }
+
+        // 《歡迎使用 Kairumo》与《課堂與會議記錄》：若裝置先前在非空狀態啟動而漏建這兩本範例，只補一次（旗標）。
+        if !ProfileDefaults.current.bool(forKey: Self.welcomeSeededKey) {
+            ProfileDefaults.current.set(true, forKey: Self.welcomeSeededKey)
+            let hasWelcome = notebooks.contains {
+                $0.id.caseInsensitiveCompare("seed-welcome-notebook-v1") == .orderedSame || $0.titleKey == "seed_welcome_title"
+            }
+            if !hasWelcome, !Self.retiredSamples.contains("seed-welcome-notebook-v1"),
+               let welcome = standardSample(id: "seed-welcome-notebook-v1") {
+                notebooks.insert(welcome, at: 0)
+                changed = true
+            }
+        }
+
+        if !ProfileDefaults.current.bool(forKey: Self.meetingSeededKey) {
+            ProfileDefaults.current.set(true, forKey: Self.meetingSeededKey)
+            let hasMeeting = notebooks.contains {
+                $0.id.caseInsensitiveCompare("seed-meeting-notebook-v1") == .orderedSame || $0.titleKey == "seed_meeting_title"
+            }
+            if !hasMeeting, !Self.retiredSamples.contains("seed-meeting-notebook-v1"),
+               let meeting = standardSample(id: "seed-meeting-notebook-v1") {
+                let insertIdx = min(1, notebooks.count)
+                notebooks.insert(meeting, at: insertIdx)
                 changed = true
             }
         }
@@ -1879,7 +1940,10 @@ public final class NotebookStore: ObservableObject {
         // 切換發生在中間的話，舊設定檔的資料夾名稱就寫進了新設定檔。檔案路徑上面已經是當下取定的。
         let defaults = ProfileDefaults.current
 
-        guard !pendingWrite else { return }
+        guard !pendingWrite else {
+            needsAnotherWrite = true
+            return
+        }
         pendingWrite = true
 
         Self.ioQueue.async { [weak self] in
@@ -2269,6 +2333,8 @@ public final class NotebookStore: ObservableObject {
 
         var n4 = Self.makeKairumoManual()
         SeedContent.fillKairumoManual(&n4, store: self)
+        ProfileDefaults.current.set(true, forKey: Self.welcomeSeededKey)
+        ProfileDefaults.current.set(true, forKey: Self.meetingSeededKey)
         ProfileDefaults.current.set(true, forKey: Self.manualSeededKey)
         ProfileDefaults.current.set(true, forKey: Self.showcaseSeededKey)
 
@@ -2279,6 +2345,8 @@ public final class NotebookStore: ObservableObject {
         persistData()
     }
 
+    private static let welcomeSeededKey = "seed.welcome.added"
+    private static let meetingSeededKey = "seed.meeting.added"
     /// 《Kairumo手冊》：全手繪的預載筆記本。名稱是固定的，不走語系表。
     private static let manualSeededKey = "seed.kairumoManual.added"
     /// 《Kairumo(功能範例)》：舊使用者只補一次，之後刪掉就不再長回來。
@@ -2712,9 +2780,13 @@ public final class NotebookStore: ObservableObject {
     /// 從回收桶還原並記下還原（別的裝置也會看到它回來）。
     @discardableResult
     public func restoreNotebook(id: String) -> Bool {
-        guard restoreLocally(id: id) else { return false }
         AccountSyncStore.shared.recordRestore(id: id)
-        persistData()
+        guard restoreLocally(id: id) else { return false }
+        if let restored = notebooks.first(where: { $0.id.caseInsensitiveCompare(id) == .orderedSame }),
+           restored.folderId == nil {
+            AccountSyncStore.shared.recordParent(id: restored.id, parentId: nil)
+        }
+        markDirtyAndPersist(signalsLocalEdit: true)
         return true
     }
 
@@ -2832,12 +2904,17 @@ public final class NotebookStore: ObservableObject {
     @discardableResult
     public func createFolder(name: String, parentId: String? = nil, colorHex: String? = nil) -> FolderItem {
         let cleanName = name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? L10n.t("folder_new_default") : name
-        let folder = FolderItem(name: cleanName, parentId: parentId, colorHex: colorHex)
+        let validParentId: String? = {
+            guard let p = parentId?.trimmingCharacters(in: .whitespacesAndNewlines), !p.isEmpty else { return nil }
+            if AccountSyncStore.shared.isDeleted(id: p) || isHiddenBySync(p) { return nil }
+            return p
+        }()
+        let folder = FolderItem(name: cleanName, parentId: validParentId, colorHex: colorHex)
         folders.append(folder)
         AccountSyncStore.shared.record(
             id: folder.id,
             title: cleanName,
-            parentId: parentId,
+            parentId: validParentId,
             isFolder: true
         )
         markDirtyAndPersist(signalsLocalEdit: true)
@@ -2845,36 +2922,36 @@ public final class NotebookStore: ObservableObject {
     }
 
     public func renameFolder(id: String, newName: String) {
-        guard let idx = folders.firstIndex(where: { $0.id == id }) else { return }
+        guard let idx = folders.firstIndex(where: { $0.id.caseInsensitiveCompare(id) == .orderedSame }) else { return }
         let clean = newName.trimmingCharacters(in: .whitespacesAndNewlines)
         if !clean.isEmpty {
             folders[idx].name = clean
-            AccountSyncStore.shared.recordTitle(id: id, title: clean)
+            AccountSyncStore.shared.recordTitle(id: folders[idx].id, title: clean)
             markDirtyAndPersist(signalsLocalEdit: true)
         }
     }
 
     public func deleteFolder(id: String) {
         // 將該資料夾內的筆記安全移回其父資料夾（若無父資料夾則移回根目錄 nil）
-        let targetFolder = folders.first(where: { $0.id == id })
+        let targetFolder = folders.first(where: { $0.id.caseInsensitiveCompare(id) == .orderedSame })
         let fallbackParentId = targetFolder?.parentId
         // 每一個被搬出來的項目都要記進索引 —— 只記「資料夾刪了」的話，
         // 另一台裝置合併之後會依照核心的規則把裡面的東西一起隱藏
         // （已刪資料夾底下的項目不顯示），而它們在這台其實已經搬到外面了。
         for i in 0..<notebooks.count {
-            if notebooks[i].folderId == id {
+            if notebooks[i].folderId?.caseInsensitiveCompare(id) == .orderedSame {
                 notebooks[i].folderId = fallbackParentId
                 AccountSyncStore.shared.recordParent(id: notebooks[i].id, parentId: fallbackParentId)
             }
         }
         // 將該資料夾底下的子資料夾提升至父資料夾
         for i in 0..<folders.count {
-            if folders[i].parentId == id {
+            if folders[i].parentId?.caseInsensitiveCompare(id) == .orderedSame {
                 folders[i].parentId = fallbackParentId
                 AccountSyncStore.shared.recordParent(id: folders[i].id, parentId: fallbackParentId)
             }
         }
-        folders.removeAll { $0.id == id }
+        folders.removeAll { $0.id.caseInsensitiveCompare(id) == .orderedSame }
         AccountSyncStore.shared.recordDeletion(id: id)
         markDirtyAndPersist(signalsLocalEdit: true)
     }
@@ -2888,11 +2965,11 @@ public final class NotebookStore: ObservableObject {
     }
 
     public func moveNotebook(id: String, toFolderId: String?) {
-        guard let idx = notebooks.firstIndex(where: { $0.id == id }) else { return }
+        guard let idx = notebooks.firstIndex(where: { $0.id.caseInsensitiveCompare(id) == .orderedSame }) else { return }
         notebooks[idx].folderId = toFolderId
         notebooks[idx].lastModifiedDate = Date()
-        AccountSyncStore.shared.recordParent(id: id, parentId: toFolderId)
-        persistData()
+        AccountSyncStore.shared.recordParent(id: notebooks[idx].id, parentId: toFolderId)
+        markDirtyAndPersist(signalsLocalEdit: true)
     }
 
     /// 另一台裝置刪掉的東西，這台要跟著藏起來。

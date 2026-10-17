@@ -376,6 +376,8 @@ impl<H: DriveHttp> GDriveProvider<H> {
             "id, name, size, modifiedTime",
         )?;
         let mut out = Vec::new();
+        let mut best_modified: std::collections::HashMap<String, u64> =
+            std::collections::HashMap::new();
         let mut cache = self.id_cache.lock().unwrap();
         for page in &pages {
             for f in page
@@ -400,8 +402,12 @@ impl<H: DriveHttp> GDriveProvider<H> {
                     .and_then(Value::as_str)
                     .map(parse_rfc3339_secs)
                     .unwrap_or(0);
-                cache.insert(name.to_string(), id.to_string());
-                cache.insert(name.to_lowercase(), id.to_string());
+                let norm_key = name.to_lowercase();
+                if best_modified.get(&norm_key).is_none_or(|&prev| modified >= prev) {
+                    best_modified.insert(norm_key.clone(), modified);
+                    cache.insert(name.to_string(), id.to_string());
+                    cache.insert(norm_key, id.to_string());
+                }
                 out.push(crate::remote_index::RemoteFile {
                     id: id.to_string(),
                     name: name.to_string(),

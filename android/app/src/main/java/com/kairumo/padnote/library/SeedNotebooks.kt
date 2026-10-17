@@ -64,8 +64,15 @@ object SeedNotebooks {
         if (buildKairumoManual(context, deviceId, languageTag, ::l)) created++
         if (buildDraftingExample(context, deviceId, ::l)) created++
         ProfileContext.prefs(context, PREFS)
-            .edit().putBoolean(KEY_MANUAL, true).putBoolean(KEY_DRAFT_EXAMPLE, true).putBoolean(KEY_SHOWCASE, true)
-            .putInt(KEY_CONTENT_GENERATION, CONTENT_GENERATION).apply()
+            .edit()
+            .putBoolean(KEY_MANUAL, true)
+            .putBoolean(KEY_DRAFT_EXAMPLE, true)
+            .putBoolean(KEY_SHOWCASE, true)
+            .putBoolean(KEY_WELCOME, true)
+            .putBoolean(KEY_MEETING, true)
+            .putBoolean(KEY_BACKFILLED, true)
+            .putInt(KEY_CONTENT_GENERATION, CONTENT_GENERATION)
+            .apply()
         return created
     }
 
@@ -130,23 +137,10 @@ object SeedNotebooks {
         title.removeSuffix(LocalizationStrings.localized("sample_readonly_suffix", languageTag))
 
     /**
-     * 補上「有名字、沒內容」的範例筆記。
+     * 補上「有名字、沒內容」或尚未建立的五本預載範例筆記。
      *
-     * # 為什麼需要這一步
-     *
-     * 上面那段只在筆記庫**空的時候**跑。而範例筆記的內容是後來才加的 ——
-     * 在那之前裝過這個 App 的人，庫裡早就有東西（Android 舊版會自動建一本
-     * 叫 Kairumo 的空白筆記），於是那個補內容的分支一輩子不會執行。
-     * 使用者看到的是：範例筆記打開來一片白，而它的名字承諾的是說明。
-     *
-     * # 為什麼不直接重建
-     *
-     * 種子跑完，那些字就是**使用者自己的內容**了。所以只在「整個筆記庫
-     * 沒有任何一筆內容」時才補 —— 只要他寫過一個字、畫過一筆，就一律不動。
-     * 補內容補掉使用者的筆記，比一片空白嚴重得多。
-     *
-     * 補過就記一個旗標。沒有它的話，使用者把範例刪掉（庫裡剩下的仍然是
-     * 空的），下次開 App 它們就自己長回來。
+     * 每本範例各自獨立記錄一次旗標，若先前因非空啟動而漏建其中幾本，
+     * 會在首次檢查時補齊五本；使用者主動刪除或另存退役後不會再補回。
      */
     private fun backfill(
         context: Context,
@@ -159,45 +153,65 @@ object SeedNotebooks {
         NotebookLibrary.delete(context, LEGACY_FEATURED_ID)
 
         val prefs = ProfileContext.prefs(context, PREFS)
+        val retired = SampleFork.retired(context)
+        var created = 0
+
         val showcaseTitle = l("seed_feature_showcase_title")
         val hasShowcase = existing.any { it.title == showcaseTitle || it.id == SHOWCASE_ID }
         // 已經轉成一般筆記的範例不再補回（見 SampleFork）。**只補一次**（旗標）：
         // 以前每次啟動都補，使用者刪掉之後它每次更新、每次開 App 都長回來。與 Apple 相同。
         val showcaseChecked = prefs.getBoolean(KEY_SHOWCASE, false)
         prefs.edit().putBoolean(KEY_SHOWCASE, true).apply()
-        if (!showcaseChecked && !hasShowcase && SHOWCASE_ID !in SampleFork.retired(context)) {
-            buildFeatureShowcase(context, deviceId, l)
+        if (!showcaseChecked && !hasShowcase && SHOWCASE_ID !in retired) {
+            if (buildFeatureShowcase(context, deviceId, l)) created++
         }
 
         // 《Kairumo手冊》：舊使用者只補一次（旗標），之後刪掉就不再長回來。
         if (!prefs.getBoolean(KEY_MANUAL, false)) {
             prefs.edit().putBoolean(KEY_MANUAL, true).apply()
-            if (existing.none { it.id == MANUAL_ID || it.title == MANUAL_TITLE || it.title == l("seed_manual_title") }) {
-                buildKairumoManual(context, deviceId, languageTag, l)
+            if (MANUAL_ID !in retired && existing.none { it.id == MANUAL_ID || it.title == MANUAL_TITLE || it.title == l("seed_manual_title") }) {
+                if (buildKairumoManual(context, deviceId, languageTag, l)) created++
             }
         }
 
         // 《圖學範例》：舊使用者只補一次（旗標），之後刪掉就不再長回來。
         if (!prefs.getBoolean(KEY_DRAFT_EXAMPLE, false)) {
             prefs.edit().putBoolean(KEY_DRAFT_EXAMPLE, true).apply()
-            if (existing.none { it.id == DRAFT_EXAMPLE_ID }) {
-                buildDraftingExample(context, deviceId, l)
+            if (DRAFT_EXAMPLE_ID !in retired && existing.none { it.id == DRAFT_EXAMPLE_ID }) {
+                if (buildDraftingExample(context, deviceId, l)) created++
             }
         }
 
-        if (prefs.getBoolean(KEY_BACKFILLED, false)) return 0
-
         val welcomeTitle = l("seed_welcome_title")
         val meetingTitle = l("seed_meeting_title")
-        val hasSamples = existing.any {
-            it.id == WELCOME_ID || it.id == MEETING_ID || it.title == welcomeTitle || it.title == meetingTitle
+        val hasWelcome = existing.any {
+            it.id == WELCOME_ID || it.title == welcomeTitle || it.title == displayTitle(welcomeTitle, languageTag)
         }
-        if (hasSamples) return 0
-        if (!existing.all { isBlank(context, it.id, deviceId) }) return 0
+        val hasMeeting = existing.any {
+            it.id == MEETING_ID || it.title == meetingTitle || it.title == displayTitle(meetingTitle, languageTag)
+        }
 
-        var created = 0
-        if (buildWelcome(context, deviceId, l)) created++
-        if (buildMeeting(context, deviceId, l)) created++
+        // 舊版若只剩全空白筆記本（尚未補齊歡迎與會議記錄），或尚未建立過這兩本範例：
+        // 只在「尚未記錄過對應旗標」且「其他既有筆記皆為空白或屬於內建範例」時補齊，
+        // 確保安裝後五本唯讀範例完整，且不覆寫使用者自建的非空筆記。
+        val onlySamplesOrBlank = existing.all {
+            isDeviceLocal(it.id) || isBlank(context, it.id, deviceId)
+        }
+
+        if (!prefs.getBoolean(KEY_WELCOME, false)) {
+            prefs.edit().putBoolean(KEY_WELCOME, true).apply()
+            if (!hasWelcome && WELCOME_ID !in retired && (!prefs.getBoolean(KEY_BACKFILLED, false) || onlySamplesOrBlank)) {
+                if (buildWelcome(context, deviceId, l)) created++
+            }
+        }
+
+        if (!prefs.getBoolean(KEY_MEETING, false)) {
+            prefs.edit().putBoolean(KEY_MEETING, true).apply()
+            if (!hasMeeting && MEETING_ID !in retired && (!prefs.getBoolean(KEY_BACKFILLED, false) || onlySamplesOrBlank)) {
+                if (buildMeeting(context, deviceId, l)) created++
+            }
+        }
+
         prefs.edit().putBoolean(KEY_BACKFILLED, true).apply()
         return created
     }
@@ -243,6 +257,8 @@ object SeedNotebooks {
     private const val KEY_MANUAL = "kairumo_manual_added"
     private const val KEY_SHOWCASE = "feature_showcase_added"
     private const val KEY_DRAFT_EXAMPLE = "drafting_example_added"
+    private const val KEY_WELCOME = "welcome_notebook_added"
+    private const val KEY_MEETING = "meeting_notebook_added"
     private const val DRAFT_EXAMPLE_ID = "seed-drafting-example-v1"
     private const val MANUAL_ID = "seed-kairumo-manual-v1"
     /** 舊版寫死的名稱（辨認升級上來的舊筆記用）；新建的手冊名稱走語系表 `seed_manual_title`。 */

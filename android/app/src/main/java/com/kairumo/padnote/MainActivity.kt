@@ -619,22 +619,23 @@ private fun NotebookHome(
         recordings = loaded.second
     }
     // 搬移對話框要列出**全部**資料夾，不是只有這一層的。
-    val allFolders = remember(revision) { FolderTree.all(activity) }
+    val treeVer = FolderTree.treeVersion
+    val allFolders = remember(revision, treeVer) { FolderTree.all(activity) }
     // revision 是重讀的觸發器。清單來自檔案系統，沒有觀察者可以訂閱 ——
     // 新增或刪除之後不主動重讀的話，畫面會停在舊的內容。
-    val entries = remember(allEntries, folderId, allFolders) {
+    val entries = remember(revision, treeVer, allEntries, folderId, allFolders) {
         if (folderId == NotebookLibrary.ANY_FOLDER) allEntries
         else allEntries.filter {
             val parent = FolderTree.parentOf(activity, it.id)
             if (folderId == null) {
-                parent == null || allFolders.none { f -> f.id == parent }
+                parent == null || allFolders.none { f -> f.id.equals(parent, ignoreCase = true) }
             } else {
-                parent == folderId
+                parent != null && parent.equals(folderId, ignoreCase = true)
             }
         }
     }
-    val folders = remember(revision, folderId) { FolderTree.subfolders(activity, folderId) }
-    val breadcrumb = remember(revision, folderId) { FolderTree.pathTo(activity, folderId) }
+    val folders = remember(revision, treeVer, folderId) { FolderTree.subfolders(activity, folderId) }
+    val breadcrumb = remember(revision, treeVer, folderId) { FolderTree.pathTo(activity, folderId) }
     // 同步都在背景執行緒跑，共用同一個 scope。宣告要在第一個使用點之前 ——
     // Compose 的函式本體是由上往下讀的。
     val autoSyncScope = rememberCoroutineScope()
