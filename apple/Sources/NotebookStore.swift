@@ -2548,13 +2548,20 @@ public final class NotebookStore: ObservableObject {
         try fm.moveItem(at: pkgDir, to: destination)
 
         // `importDocument` 已經用 `documentId` 建好文件，id 是常數。
-        var document = imported.document
+        upsertNotebook(imported.document)
+        // 筆跡、專業筆刷、圖片也要寫回這台的工作副本。原本只存了文件本身，
+        // 編輯器打開時讀的是本機的筆跡檔 —— 全手寫的筆記匯回來每一頁都是空白，圖片也不見
+        // （使用者回報：匯出再匯回是空白頁）。這裡走與同步還原同一條路，全部內容算成「已在套件裡」。
+        try NotebookSyncCoordinator.applyPackageToWorkingCopy(
+            notebookId: newId, store: self, deviceId: NotebookMigration.deviceId)
+        guard var document = notebooks.first(where: { $0.id == newId }) else { return imported.document }
         if !rawFileName.isEmpty && (document.title.isEmpty || document.title == "未命名筆記" || document.title == "Untitled Note" || document.title == "notebook") {
             document.title = rawFileName
+            upsertNotebook(document)
         }
-        upsertNotebook(document)
         AccountSyncStore.shared.record(
             id: newId, title: document.title, parentId: document.folderId, isFolder: false)
+        PageThumbnailRenderer.invalidateAll()
         return document
     }
 

@@ -67,6 +67,8 @@ fun AppDiagnosticsDialog(
     var copiedStartupLogs by remember { mutableStateOf(false) }
     var copiedCrashLog by remember { mutableStateOf(false) }
     var crashLogContent by remember { mutableStateOf<String?>(null) }
+    // 執行時期日誌（含當機時寫入的完整錯誤）。清除後要能跟著變空，所以是可變狀態。
+    var runtimeLogs by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
     var selfCheck by remember { mutableStateOf<List<SelfCheckResult>>(emptyList()) }
     var selfCheckRunning by remember { mutableStateOf(false) }
@@ -75,7 +77,10 @@ fun AppDiagnosticsDialog(
     var cleanedMessage by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(selectedTab) {
         if (selectedTab == 3) usage = withContext(Dispatchers.IO) { StorageSweeper.usage(context) }
-        if (selectedTab == 4) crashLogContent = withContext(Dispatchers.IO) { com.kairumo.padnote.platform.CrashLogger.lastCrashLog(context) }
+        if (selectedTab == 4) {
+            crashLogContent = withContext(Dispatchers.IO) { com.kairumo.padnote.platform.CrashLogger.lastCrashLog(context) }
+            runtimeLogs = withContext(Dispatchers.IO) { com.kairumo.padnote.platform.CrashLogger.runtimeLog(context) }
+        }
     }
 
     LaunchedEffect(copiedStartupLogs) {
@@ -162,7 +167,8 @@ fun AppDiagnosticsDialog(
 
                             Spacer(modifier = Modifier.width(4.dp))
 
-                            val hasCrash = !crashLogContent.isNullOrBlank()
+                            // 當機檔或執行時期日誌任一有內容就能清（畫面顯示的就是這兩者之一）。
+                            val hasCrash = !crashLogContent.isNullOrBlank() || runtimeLogs.isNotBlank()
                             TextButton(
                                 onClick = {
                                     crashLogContent?.let {
@@ -185,6 +191,7 @@ fun AppDiagnosticsDialog(
                                 onClick = {
                                     com.kairumo.padnote.platform.CrashLogger.clearCrashLog(context)
                                     crashLogContent = null
+                                    runtimeLogs = ""
                                 },
                                 enabled = hasCrash
                             ) {
@@ -195,7 +202,6 @@ fun AppDiagnosticsDialog(
                         HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
 
                         if (crashLogContent.isNullOrBlank()) {
-                            val runtimeLogs = remember { com.kairumo.padnote.platform.CrashLogger.runtimeLog(context) }
                             if (runtimeLogs.isNotBlank()) {
                                 Column(
                                     modifier = Modifier

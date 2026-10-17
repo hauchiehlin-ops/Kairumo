@@ -46,6 +46,19 @@ final class SeedNotebookSyncTests: XCTestCase {
         XCTAssertTrue(store.notebooks.contains { $0.id == id }, "同步不會把範例丟進回收桶")
     }
 
+    /// 只有 Apple 失效的那一種：範例在舊索引裡掛在某個資料夾底下，那個資料夾後來被刪了。
+    /// Apple 首頁會藏起「祖先被刪」的項目（Android 首頁不看索引，所以 Android 看得到）。
+    func testASampleUnderADeletedFolderInTheIndexStaysVisible() {
+        let store = makeStore()
+        let id = "seed-kairumo-manual-v1"
+        let folder = UUID().uuidString.lowercased()
+        AccountSyncStore.shared.record(id: folder, title: "舊資料夾", parentId: nil, isFolder: true)
+        AccountSyncStore.shared.record(id: id, title: "手冊", parentId: folder, isFolder: false)
+        AccountSyncStore.shared.recordDeletion(id: folder)
+        XCTAssertFalse(store.isHiddenBySync(id), "範例不會因為索引裡的資料夾被刪而被藏起來")
+        XCTAssertTrue(store.visibleNotebooks.contains { $0.id == id })
+    }
+
     func testAnOrdinaryNotebookStillSyncs() {
         let store = makeStore()
         let mine = NotebookDocument(title: "我的筆記", pageCount: 1)
