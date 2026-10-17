@@ -1888,7 +1888,8 @@ public struct HomeWorkbenchView: View {
     // MARK: - 階層式樹狀資料夾與筆記本檢視（Hierarchical Tree View）
     private func hierarchicalNotebooksTreeView(visibleNotes: [NotebookDocument]) -> AnyView {
         let topFolders = notebookStore.subfolders(of: nil)
-        let unfiledNotes = visibleNotes.filter { $0.folderId == nil || $0.folderId?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == true }
+        // 「未分類」也收資料夾已經不存在的筆記本（例如從回收桶還原、原資料夾已刪），否則它們在樹上無處可去。
+        let unfiledNotes = visibleNotes.filter { notebookStore.treeFolderId(of: $0) == nil }
 
         return AnyView(
             VStack(alignment: .leading, spacing: 10) {

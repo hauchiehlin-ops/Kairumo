@@ -2648,7 +2648,7 @@ public final class NotebookStore: ObservableObject {
         guard let index = trashedNotebooks.firstIndex(where: {
             $0.id.caseInsensitiveCompare(id) == .orderedSame
         }) else { return false }
-        let document = trashedNotebooks.remove(at: index)
+        var document = trashedNotebooks.remove(at: index)
 
         for name in packageDirectoryNames(for: id) {
             moveIfExists(
@@ -2657,6 +2657,11 @@ public final class NotebookStore: ObservableObject {
             moveIfExists(
                 trashPackagesDirectory.appending(path: "SyncBaseline/\(name)"),
                 to: documentsDirectory.appending(path: "SyncBaseline/\(name)"))
+        }
+        // 刪除前的資料夾已經不在了：放回「未分類」，並記進同步索引（別台也放到同一個地方）。
+        if document.folderId != nil, treeFolderId(of: document) == nil {
+            document.folderId = nil
+            AccountSyncStore.shared.recordParent(id: document.id, parentId: nil)
         }
         // 已經有同 id 的（不該發生）就不要再塞一份，否則 ForEach 的識別會壞。
         if !notebooks.contains(where: { $0.id.caseInsensitiveCompare(id) == .orderedSame }) {
@@ -2973,13 +2978,32 @@ public final class NotebookStore: ObservableObject {
                 return pId == target && fId != target && !isHiddenBySync($0.id)
             }
         } else {
+            // 最上層：沒有上層的，**以及上層已經不存在的**。後者不放這裡的話，它和裡面的筆記本
+            // 在樹上無處可去 —— 首頁「全部筆記」看不到、卻還算在其他地方的數字裡。
+            let liveFolderIds = Set(folders.filter { !isHiddenBySync($0.id) }.map {
+                $0.id.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            })
             return folders.filter {
                 let fId = $0.id.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
                 let pId = $0.parentId?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-                return (pId == nil || pId?.isEmpty == true || pId == fId)
+                let orphan = pId.map { !$0.isEmpty && !liveFolderIds.contains($0) } ?? false
+                return (pId == nil || pId?.isEmpty == true || pId == fId || orphan)
                     && !isHiddenBySync($0.id)
             }
         }
+    }
+
+    /// 這本筆記本在首頁樹上該放在哪個資料夾：它的資料夾還在就是那個，否則是「未分類」（nil）。
+    ///
+    /// 從回收桶還原的筆記本帶著刪除前的資料夾；那個資料夾之後被刪掉的話，它在樹上就無處可去 ——
+    /// 「繼續」看得到、「全部筆記」看不到（使用者回報）。
+    public func treeFolderId(of notebook: NotebookDocument) -> String? {
+        guard let folder = notebook.folderId?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased(),
+              !folder.isEmpty else { return nil }
+        let exists = folders.contains {
+            $0.id.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == folder && !isHiddenBySync($0.id)
+        }
+        return exists ? folder : nil
     }
 
     public func notebooks(in folderId: String?) -> [NotebookDocument] {
@@ -2990,10 +3014,7 @@ public final class NotebookStore: ObservableObject {
                 && !isHiddenBySync($0.id)
             }
         } else {
-            return notebooks.filter {
-                ($0.folderId == nil || $0.folderId?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == true)
-                && !isHiddenBySync($0.id)
-            }
+            return notebooks.filter { treeFolderId(of: $0) == nil && !isHiddenBySync($0.id) }
         }
     }
 

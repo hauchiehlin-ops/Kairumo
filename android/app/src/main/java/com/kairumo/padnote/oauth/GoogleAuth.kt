@@ -230,7 +230,48 @@ object GoogleAuth {
     }
 
     /**
-     * 登出並**撤銷**授權。
+     * 換證的結果。`fatal` 為 true 才代表**授權真的失效了**（沒有更新用的權杖、Google 回 `invalid_grant`）；
+     * 離線、逾時都是 `token == null && fatal == false`，呼叫端不能因此讓使用者被登出。
+     */
+    data class RefreshOutcome(val token: String?, val fatal: Boolean)
+
+    /** 強制換一次證（[DriveHttpClient] 收到 401 時用）。Google 明確拒絕時順便清掉本機登入。 */
+    fun refresh(context: Context): RefreshOutcome {
+        if (FakeDrive.enabled) return RefreshOutcome(FakeDrive.ACCESS_TOKEN, false)
+        val current = tokens(context)
+        if (current.refreshToken.isEmpty()) return RefreshOutcome(null, true)
+        val json = post(oauthRefreshBody(FfiOAuthPlatform.ANDROID, current.refreshToken)).getOrNull()
+            ?: return RefreshOutcome(null, false)
+        val refreshed = oauthParseTokenResponse(json, nowSeconds())
+        if (refreshed.error.isNotEmpty()) {
+            val fatal = oauthNeedsReauth(refreshed.error)
+            if (fatal) signOutLocally(context)
+            return RefreshOutcome(null, fatal)
+        }
+        save(context, refreshed, previousRefresh = current.refreshToken)
+        return RefreshOutcome(refreshed.accessToken, false)
+    }
+
+    /**
+     * 同步回報「需要重新授權」時呼叫，**取代直接清掉登入**。
+     *
+     * 使用者回報「不知什麼情況下會被自動登出」。同步只要碰到 401／403 就清掉登入，但那多半不是授權失效：
+     * 存取權杖一小時到期、被限流、雲端硬碟空間滿了、某一個檔案沒有權限。這裡先強制換一次證來驗證：
+     * 換得到就不動（這一輪失敗，下一輪重試）；Google 明確拒絕或沒有更新用的權杖，才清掉本機登入。
+     * 與 Apple `GoogleAuth.handleAuthFailure()` 相同。在背景執行緒呼叫。
+     */
+    fun handleAuthFailure(context: Context) {
+        if (FakeDrive.enabled) return
+        if (tokens(context).refreshToken.isEmpty()) {
+            signOutLocally(context)
+            return
+        }
+        // `refresh` 碰到 invalid_grant 會自己 signOutLocally。
+        refresh(context)
+    }
+
+    /**
+     * 登出並**撤銷**授權。**只給使用者自己按「登出」用**；同步失敗請用 [handleAuthFailure]。
      *
      * 只清本機權杖是不夠的：授權還留在使用者的 Google 帳號裡，
      * 他在帳號設定裡看得到一個「已授權但我明明登出了」的項目。

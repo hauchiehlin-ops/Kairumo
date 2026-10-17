@@ -873,7 +873,7 @@ enum NotebookSyncCoordinator {
             SyncLogger.logAsync("雲端快照更新失敗：\(message)", source: .googleDrive)
             report.failures["cloud"] = L10n.coreText(message)
             if refreshed?.needsReauth == true {
-                await GoogleAuth.shared.signOut()
+                await GoogleAuth.shared.handleAuthFailure()
             }
             return report
         }
@@ -898,7 +898,7 @@ enum NotebookSyncCoordinator {
             SyncLogger.logAsync("元資料同步失敗：\(meta.error)", source: .googleDrive)
             report.failures["cloud"] = L10n.coreText(meta.error)
             if meta.needsReauth {
-                await GoogleAuth.shared.signOut()
+                await GoogleAuth.shared.handleAuthFailure()
             }
             await CloudSync.persist(session)
             return report
@@ -1041,7 +1041,7 @@ enum NotebookSyncCoordinator {
                 SyncLogger.logAsync("筆記本 \(id.prefix(8))… 同步失敗：\(result.error)", source: .googleDrive)
                 report.failures[id] = L10n.coreText(result.error)
                 if result.needsReauth {
-                    await GoogleAuth.shared.signOut()
+                    await GoogleAuth.shared.handleAuthFailure()
                     break
                 }
             }

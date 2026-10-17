@@ -178,7 +178,7 @@ object FocusSync {
             val elapsed = SystemClock.elapsedRealtime() - started
             if (!round.ok) {
                 SyncLogger.log("【立即推送】${id.take(8)}… 失敗：${round.error}", SyncSource.GOOGLE_DRIVE)
-                if (round.needsReauth) GoogleAuth.signOutLocally(context)
+                if (round.needsReauth) GoogleAuth.handleAuthFailure(context)
                 return false
             }
             SyncLogger.log(
@@ -274,7 +274,7 @@ object FocusSync {
                     SyncSource.GOOGLE_DRIVE
                 )
                 if (round.needsReauth) {
-                    GoogleAuth.signOutLocally(context)
+                    GoogleAuth.handleAuthFailure(context)
                     return FfiFocusOutcome.NEEDS_REAUTH
                 }
                 return FfiFocusOutcome.TRANSIENT
