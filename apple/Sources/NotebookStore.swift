@@ -1332,6 +1332,11 @@ public final class NotebookStore: ObservableObject {
     /// 讀目前設定檔的資料；是空的就放範例筆記。`init` 與切換設定檔共用。
     private func loadAndSeed() {
         loadData()
+        if ProcessInfo.processInfo.environment["KAIRUMO_UITEST"] == "1" {
+            for id in pendingSampleSessionIds {
+                finishSampleSession(id, choice: .discard)
+            }
+        }
         let nonInbox = notebooks.filter {
             $0.id.caseInsensitiveCompare(recordingInboxNotebookId()) != .orderedSame
         }
@@ -2448,6 +2453,7 @@ public final class NotebookStore: ObservableObject {
             to: corePackagesDirectory.appending(path: "\(fresh.id.lowercased()).padnote"),
             deviceId: NotebookMigration.deviceId)
         notebooks[index] = fresh
+        try? FileManager.default.removeItem(at: sampleSessionDirectory(old.id))
         PageThumbnailRenderer.invalidateAll()
     }
 

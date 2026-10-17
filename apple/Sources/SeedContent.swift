@@ -287,7 +287,9 @@ enum SeedContent {
         if let papers = doc.pagePaperIds, papers.count > count {
             doc.pagePaperIds = Array(papers.prefix(count))
         }
-        if let pids = doc.pageIds, pids.count > count {
+        if let canonical = NotebookPackageBridge.deterministicSeedPageIds(for: doc.id) {
+            doc.pageIds = Array(canonical.prefix(max(count, 1)))
+        } else if let pids = doc.pageIds, pids.count > count {
             doc.pageIds = Array(pids.prefix(count))
         }
         doc.pageCount = count
