@@ -24,9 +24,18 @@ import com.kairumo.padnote.profile.ProfileContext
  * 就是它在索引裡那一筆的 `parentId`。索引裡**沒有**的筆記本算在最上層：
  * 那是「還沒被記錄過」，不是「被丟出資料夾」。
  */
+// profile-scope: device treeVersion 僅為觸發 Compose 重算的單調計數器，資料皆經 ProfileContext 讀取
 object FolderTree {
 
     data class Folder(val id: String, val title: String, val parentId: String?)
+
+    private val _treeVersion = androidx.compose.runtime.mutableIntStateOf(0)
+    val treeVersion: Int
+        get() = _treeVersion.intValue
+
+    fun notifyChanged() {
+        _treeVersion.intValue++
+    }
 
     /**
      * 最上層那一層的顯示名稱。
@@ -36,6 +45,9 @@ object FolderTree {
      * 空的就用語系表裡的「最上層」。
      */
     private const val ROOT_NAME_PREF = "kairumo.root_folder_name"
+    private const val SEED_PARENT_PREFIX = "seed_parent_"
+
+    private fun seedParentKey(id: String): String = SEED_PARENT_PREFIX + id.lowercase()
 
     fun rootName(context: Context, fallback: String): String =
         ProfileContext.prefs(context, "kairumo")
@@ -50,6 +62,7 @@ object FolderTree {
             .edit()
             .putString(ROOT_NAME_PREF, clean)
             .apply()
+        notifyChanged()
     }
 
     /** 某個資料夾底下的子資料夾。`parentId` 傳 null 表示最上層。 */
@@ -59,8 +72,22 @@ object FolderTree {
             .map { Folder(it.id, it.title, it.parentId.takeIf { p -> p.isNotEmpty() }) }
 
     /** 這個筆記本或資料夾在哪個資料夾底下。null 表示最上層。 */
-    fun parentOf(context: Context, id: String): String? =
-        AccountSyncStore.item(context, id)?.parentId?.takeIf { it.isNotEmpty() }
+    fun parentOf(context: Context, id: String): String? {
+        if (SeedNotebooks.isDeviceLocal(id)) {
+            val raw = ProfileContext.prefs(context, "kairumo")
+                .getString(seedParentKey(id), null)
+                ?.takeIf { it.isNotEmpty() }
+                ?: return null
+            val folderItem = AccountSyncStore.item(context, raw)
+            if (folderItem == null || !folderItem.isFolder || AccountSyncStore.isHidden(context, raw)) {
+                return null
+            }
+            return folderItem.id
+        }
+        val raw = AccountSyncStore.item(context, id)?.parentId?.takeIf { it.isNotEmpty() } ?: return null
+        if (AccountSyncStore.isHidden(context, raw)) return null
+        return raw
+    }
 
     fun titleOf(context: Context, id: String): String? =
         AccountSyncStore.item(context, id)?.title
@@ -107,25 +134,47 @@ object FolderTree {
     /** 建一個資料夾，回傳它的 id。 */
     fun create(context: Context, title: String, parentId: String?): String {
         val id = UUID.randomUUID().toString()
+        val validParent = parentId?.takeIf {
+            val p = AccountSyncStore.item(context, it)
+            p != null && p.isFolder && !AccountSyncStore.isHidden(context, it)
+        }
         AccountSyncStore.record(
-            context, id = id, title = title, parentId = parentId, isFolder = true
+            context, id = id, title = title, parentId = validParent, isFolder = true
         )
+        com.kairumo.padnote.sync.AutoSync.noteLocalEdit(context)
+        notifyChanged()
         return id
     }
 
     fun rename(context: Context, id: String, title: String) {
         AccountSyncStore.recordTitle(context, id, title)
+        com.kairumo.padnote.sync.AutoSync.noteLocalEdit(context)
+        notifyChanged()
     }
 
     /**
-     * 刪除資料夾。**只留一個墓碑，裡面的東西不動。**
-     *
-     * 裡面的筆記本會因為祖先被刪而一起從清單上消失（核心的
-     * `sync_is_hidden` 會走祖先鏈），但檔案還在。逐一刪掉裡面每一本的話，
-     * 使用者在另一台裝置上把資料夾救回來時，內容已經沒了。
+     * 刪除資料夾，並將其直接子資料夾與筆記本提升至上層（與 Apple 端 `NotebookStore.deleteFolder` 一致）。
      */
     fun delete(context: Context, id: String) {
+        val fallbackParent = parentOf(context, id)
+        for (child in AccountSyncStore.children(context, id)) {
+            AccountSyncStore.recordParent(context, child.id, fallbackParent)
+        }
+        val prefs = ProfileContext.prefs(context, "kairumo")
+        val editor = prefs.edit()
+        for ((key, value) in prefs.all) {
+            if (key.startsWith(SEED_PARENT_PREFIX) && (value as? String)?.equals(id, ignoreCase = true) == true) {
+                if (fallbackParent.isNullOrEmpty()) {
+                    editor.remove(key)
+                } else {
+                    editor.putString(key, fallbackParent)
+                }
+            }
+        }
+        editor.apply()
         AccountSyncStore.recordDeletion(context, id)
+        com.kairumo.padnote.sync.AutoSync.noteLocalEdit(context)
+        notifyChanged()
     }
 
     /**
@@ -135,10 +184,37 @@ object FolderTree {
      * 整個斷開，而且刪不掉也救不回來。
      */
     fun move(context: Context, id: String, isFolder: Boolean, toParent: String?): Boolean {
-        if (isFolder && syncWouldCreateCycle(AccountSyncStore.indexJson(context), id, toParent ?: "")) {
+        val normalizedTarget = toParent?.takeIf { it.isNotEmpty() }
+        if (!isFolder && SeedNotebooks.isDeviceLocal(id)) {
+            val editor = ProfileContext.prefs(context, "kairumo").edit()
+            if (normalizedTarget == null) {
+                editor.remove(seedParentKey(id))
+            } else {
+                editor.putString(seedParentKey(id), normalizedTarget)
+            }
+            editor.apply()
+            notifyChanged()
+            return true
+        }
+        if (isFolder && syncWouldCreateCycle(AccountSyncStore.indexJson(context), id, normalizedTarget ?: "")) {
             return false
         }
-        AccountSyncStore.recordParent(context, id, toParent)
+        if (!isFolder && AccountSyncStore.item(context, id) == null) {
+            val diskTitle = runCatching {
+                val path = java.io.File(NotebookLibrary.directory(context), "$id.${NotebookLibrary.EXTENSION}")
+                uniffi.padnote_core.PadnoteSession.openExisting(
+                    path.absolutePath,
+                    1u
+                ).title()
+            }.getOrDefault(id)
+            AccountSyncStore.record(
+                context, id = id, title = diskTitle, parentId = normalizedTarget, isFolder = false
+            )
+        } else {
+            AccountSyncStore.recordParent(context, id, normalizedTarget)
+        }
+        com.kairumo.padnote.sync.AutoSync.noteLocalEdit(context)
+        notifyChanged()
         return true
     }
 }

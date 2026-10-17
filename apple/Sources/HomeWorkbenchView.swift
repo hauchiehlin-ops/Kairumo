@@ -494,10 +494,19 @@ public struct HomeWorkbenchView: View {
             }
             .alert(localizationManager.localized("new_subfolder"), isPresented: $showNewFolderAlert) {
                 TextField(localizationManager.localized("folder_name"), text: $newFolderNameText)
-                Button(localizationManager.localized("cancel"), role: .cancel) {}
+                Button(localizationManager.localized("cancel"), role: .cancel) {
+                    newFolderParentId = nil
+                }
                 Button(localizationManager.localized("confirm")) {
-                    _ = notebookStore.createFolder(name: newFolderNameText, parentId: newFolderParentId)
+                    let created = notebookStore.createFolder(name: newFolderNameText, parentId: newFolderParentId)
+                    if hasExpandedFoldersInit {
+                        expandedFolderIds.insert(created.id.lowercased())
+                        if let p = newFolderParentId {
+                            expandedFolderIds.insert(p.lowercased())
+                        }
+                    }
                     newFolderNameText = ""
+                    newFolderParentId = nil
                 }
             }
             .alert(localizationManager.localized("rename_folder"), isPresented: Binding(
@@ -1740,7 +1749,9 @@ public struct HomeWorkbenchView: View {
     private var allNotebooksSectionContent: some View {
         let baseList = filteredNotebooks.filter { !hiddenNoteIds.contains($0.id) }
         let visibleList: [NotebookDocument] = {
-            if let fId = selectedFolderId {
+            if notebookDisplayModeRaw != "hierarchy",
+               let fId = selectedFolderId,
+               notebookStore.folders.contains(where: { $0.id.caseInsensitiveCompare(fId) == .orderedSame }) {
                 return baseList.filter { $0.folderId?.caseInsensitiveCompare(fId) == .orderedSame }
             } else {
                 return baseList
@@ -1852,30 +1863,33 @@ public struct HomeWorkbenchView: View {
 
     private var areAllFoldersExpanded: Bool {
         if !hasExpandedFoldersInit { return true }
-        let allIds = Set(notebookStore.folders.map { $0.id })
-        return allIds.isSubset(of: expandedFolderIds) && isRootUnfiledExpanded
+        let allIds = Set(notebookStore.folders.map { $0.id.lowercased() })
+        let expandedLower = Set(expandedFolderIds.map { $0.lowercased() })
+        return allIds.isSubset(of: expandedLower) && isRootUnfiledExpanded
     }
 
     private func isFolderExpanded(_ folderId: String) -> Bool {
         if !hasExpandedFoldersInit { return true }
-        return expandedFolderIds.contains(folderId)
+        let lower = folderId.lowercased()
+        return expandedFolderIds.contains { $0.lowercased() == lower }
     }
 
     private func toggleFolderExpanded(_ folderId: String) {
         if !hasExpandedFoldersInit {
-            expandedFolderIds = Set(notebookStore.folders.map { $0.id })
+            expandedFolderIds = Set(notebookStore.folders.map { $0.id.lowercased() })
             hasExpandedFoldersInit = true
         }
-        if expandedFolderIds.contains(folderId) {
-            expandedFolderIds.remove(folderId)
+        let lower = folderId.lowercased()
+        if expandedFolderIds.contains(where: { $0.lowercased() == lower }) {
+            expandedFolderIds = Set(expandedFolderIds.filter { $0.lowercased() != lower })
         } else {
-            expandedFolderIds.insert(folderId)
+            expandedFolderIds.insert(lower)
         }
     }
 
     private func expandAllFolders() {
         hasExpandedFoldersInit = true
-        expandedFolderIds = Set(notebookStore.folders.map { $0.id })
+        expandedFolderIds = Set(notebookStore.folders.map { $0.id.lowercased() })
         isRootUnfiledExpanded = true
     }
 

@@ -81,6 +81,40 @@ final class SeedNotebookSyncTests: XCTestCase {
         XCTAssertTrue(store.subfolders(of: nil).contains { $0.id == orphan.id })
     }
 
+    func testRestoredNotebookAndNewFolderSurviveSyncReconciliation() {
+        let store = makeStore()
+        let syncStore = AccountSyncStore.shared
+        defer { syncStore.resetLocalSyncState(account: "test") }
+
+        let oldFolder = store.createFolder(name: "舊圖學資料夾")
+        var note = NotebookDocument(title: "圖學範例副本", pageCount: 1)
+        note.folderId = oldFolder.id
+        store.notebooks.append(note)
+        syncStore.record(id: note.id, title: note.title, parentId: oldFolder.id, isFolder: false)
+
+        // 先刪筆記本進回收桶，再刪舊資料夾
+        store.deleteNotebook(id: note.id)
+        store.deleteFolder(id: oldFolder.id)
+
+        // 從回收桶還原後，必須立刻出現在 visibleNotebooks（「全部筆記」）
+        XCTAssertTrue(store.restoreNotebook(id: note.id))
+        XCTAssertFalse(store.isHiddenBySync(note.id))
+        XCTAssertTrue(store.visibleNotebooks.contains { $0.id == note.id })
+
+        // 重新建立新資料夾並將圖學範例加進去，經過多輪同步收斂後資料夾與範例都不得消失
+        let newFolder = store.createFolder(name: "圖學資料夾", parentId: oldFolder.id)
+        store.moveNotebook(id: "seed-drafting-example-v1", toFolderId: newFolder.id)
+        store.moveNotebook(id: note.id, toFolderId: newFolder.id)
+
+        store.reconcileFoldersAndAssignmentsFromSync()
+        store.reconcileFoldersAndAssignmentsFromSync()
+
+        XCTAssertTrue(store.folders.contains { $0.id.caseInsensitiveCompare(newFolder.id) == .orderedSame }, "新資料夾在同步收斂後不得消失")
+        let drafting = store.visibleNotebooks.first { $0.id == "seed-drafting-example-v1" }
+        XCTAssertNotNil(drafting)
+        XCTAssertEqual(drafting?.folderId?.lowercased(), newFolder.id.lowercased())
+    }
+
     func testAnOrdinaryNotebookStillSyncs() {
         let store = makeStore()
         let mine = NotebookDocument(title: "我的筆記", pageCount: 1)

@@ -211,14 +211,15 @@ fun HomeScreen(
 
     // ── 資料夾樹的資料 ──
     val treeContext = LocalContext.current
+    val treeVer = FolderTree.treeVersion
     var collapsed by remember { mutableStateOf(setOf<String>()) }
-    val allFolders = remember(folders, allEntries) { FolderTree.all(treeContext) }
+    val allFolders = remember(treeVer, folders, allEntries) { FolderTree.all(treeContext) }
     val allFolderKeys = remember(allFolders) { allFolders.map { it.id }.toSet() + UNFILED_KEY }
     val allCollapsed = allFolderKeys.isNotEmpty() && collapsed.containsAll(allFolderKeys)
     fun toggleFolder(key: String) {
         collapsed = if (key in collapsed) collapsed - key else collapsed + key
     }
-    val treeRows = remember(allFolders, allEntries, collapsed, sort, hiddenNotes) {
+    val treeRows = remember(treeVer, allFolders, allEntries, collapsed, sort, hiddenNotes) {
         buildTreeRows(treeContext, allFolders, sortedForTree(allEntries.filter { it.id !in hiddenNotes }, sort), collapsed)
     }
 
@@ -2132,12 +2133,14 @@ private fun buildTreeRows(
     entries: List<NotebookLibrary.Entry>,
     collapsed: Set<String>
 ): List<TreeRow> {
-    val folderIds = folders.map { it.id }.toSet()
+    val folderIdMap = folders.associate { it.id.lowercase() to it.id }
     val byFolder = entries.groupBy { entry ->
-        FolderTree.parentOf(context, entry.id)?.takeIf { it in folderIds }
+        FolderTree.parentOf(context, entry.id)?.let { folderIdMap[it.lowercase()] }
     }
     // 上層已經不存在的資料夾放到最上層：不然它和裡面的筆記本在樹上無處可去（與 Apple `subfolders(of: nil)` 相同）。
-    val children = folders.groupBy { folder -> folder.parentId?.takeIf { it in folderIds && it != folder.id } }
+    val children = folders.groupBy { folder ->
+        folder.parentId?.let { folderIdMap[it.lowercase()] }?.takeIf { it != folder.id }
+    }
     // 資料夾的筆記數：只算直接放在裡面的（與 Apple 的括號數字相同）。
     val rows = mutableListOf<TreeRow>()
     fun walk(parent: String?, depth: Int) {
