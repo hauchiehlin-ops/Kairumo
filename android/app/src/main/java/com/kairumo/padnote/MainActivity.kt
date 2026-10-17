@@ -391,45 +391,94 @@ private fun KairumoApp() {
         return
     }
 
-    // 唯讀範例（見 SampleFork）：開著範例時每秒比對一次，一被編輯就另存一本、編輯器換過去、範例重設、提示使用者。
-    // 另存與重設用這個 scope：它活過 openedId 的切換（LaunchedEffect 換 key 就被取消了）。
+    // 範例（見 SampleFork）：打開時先把套件備份到暫存區，期間不提示、不同步；
+    // 離開或切換時內容真的有改，才問要存檔（保留在此範例）、另存可編輯副本或放棄修改。
+    // 用這個 scope：它活過 openedId 的切換。
     val sampleScope = rememberCoroutineScope()
-    var sampleForkNotice by remember { mutableStateOf<String?>(null) }
-    LaunchedEffect(openedId) {
-        val sampleId = openedId ?: return@LaunchedEffect
-        if (!com.kairumo.padnote.library.SeedNotebooks.isDeviceLocal(sampleId)) return@LaunchedEffect
-        val device = deviceId(activity)
-        val lang = deviceLanguageTag()
-        while (true) {
-            kotlinx.coroutines.delay(1_000L)
-            val edited = withContext(Dispatchers.IO) {
-                com.kairumo.padnote.library.SampleFork.wasEdited(activity, sampleId)
-            }
-            if (!edited) continue
-            sampleScope.launch {
-                val forked = withContext(Dispatchers.IO) {
-                    com.kairumo.padnote.library.SampleFork.forkIfEdited(activity, sampleId, device, lang)
-                } ?: return@launch
-                if (openedId == sampleId) openedId = forked.first
-                sampleForkNotice = forked.second
-                withContext(Dispatchers.IO) {
-                    com.kairumo.padnote.library.SampleFork.restore(activity, sampleId, device, lang)
-                }
-                com.kairumo.padnote.library.SampleFork.noteForked()
-            }
-            break
+    val sampleDevice = remember { deviceId(activity) }
+    var sampleAskId by remember { mutableStateOf<String?>(null) }
+    var afterSampleLeave by remember { mutableStateOf<(() -> Unit)?>(null) }
+    fun openNotebook(target: String) {
+        sampleScope.launch {
+            withContext(Dispatchers.IO) { com.kairumo.padnote.library.SampleFork.begin(activity, target, sampleDevice) }
+            openedId = target
         }
     }
-    sampleForkNotice?.let { title ->
+    fun leaveNotebook(current: String, then: () -> Unit) {
+        sampleScope.launch {
+            val changed = withContext(Dispatchers.IO) {
+                com.kairumo.padnote.library.SampleFork.hasChanges(activity, current, sampleDevice)
+            }
+            if (changed) {
+                afterSampleLeave = then
+                sampleAskId = current
+            } else {
+                withContext(Dispatchers.IO) {
+                    com.kairumo.padnote.library.SampleFork.finish(
+                        activity, current, sampleDevice, deviceLanguageTag(),
+                        com.kairumo.padnote.library.SampleFork.Choice.KEEP)
+                }
+                then()
+            }
+        }
+    }
+    fun resolveSample(choice: com.kairumo.padnote.library.SampleFork.Choice) {
+        val sampleId = sampleAskId ?: return
+        val then = afterSampleLeave
+        sampleAskId = null
+        afterSampleLeave = null
+        sampleScope.launch {
+            withContext(Dispatchers.IO) {
+                com.kairumo.padnote.library.SampleFork.finish(activity, sampleId, sampleDevice, deviceLanguageTag(), choice)
+            }
+            then?.invoke()
+        }
+    }
+    // 回到首頁時補問：上次離開範例時沒機會問的（App 被關掉）。沒改的直接收掉。
+    LaunchedEffect(openedId, sampleAskId) {
+        if (openedId != null || sampleAskId != null) return@LaunchedEffect
+        sampleAskId = withContext(Dispatchers.IO) {
+            var changedId: String? = null
+            for (pending in com.kairumo.padnote.library.SampleFork.pendingIds(activity)) {
+                if (com.kairumo.padnote.library.SampleFork.hasChanges(activity, pending, sampleDevice)) {
+                    changedId = pending
+                    break
+                }
+                com.kairumo.padnote.library.SampleFork.finish(
+                    activity, pending, sampleDevice, deviceLanguageTag(),
+                    com.kairumo.padnote.library.SampleFork.Choice.KEEP)
+            }
+            changedId
+        }
+    }
+    sampleAskId?.let { _ ->
+        val lang = deviceLanguageTag()
         AlertDialog(
-            onDismissRequest = { sampleForkNotice = null },
-            title = { Text(LocalizationStrings.localized("sample_readonly_title", deviceLanguageTag())) },
-            text = {
-                Text(LocalizationStrings.localized("sample_readonly_forked", deviceLanguageTag()) + "\n" + title)
-            },
+            onDismissRequest = { /* 一定要選一個；按外面不關 */ },
+            title = { Text(LocalizationStrings.localized("sample_leave_title", lang)) },
+            text = { Text(LocalizationStrings.localized("sample_leave_message", lang)) },
             confirmButton = {
-                TextButton(onClick = { sampleForkNotice = null }) {
-                    Text(LocalizationStrings.localized("confirm", deviceLanguageTag()))
+                Column(horizontalAlignment = Alignment.End) {
+                    TextButton(
+                        onClick = { resolveSample(com.kairumo.padnote.library.SampleFork.Choice.KEEP) },
+                        modifier = Modifier.testTag("sample.leave.keep")
+                    ) { Text(LocalizationStrings.localized("sample_leave_keep", lang)) }
+                    TextButton(
+                        onClick = { resolveSample(com.kairumo.padnote.library.SampleFork.Choice.SAVE_COPY) },
+                        modifier = Modifier.testTag("sample.leave.copy")
+                    ) { Text(LocalizationStrings.localized("sample_leave_copy", lang)) }
+                    TextButton(
+                        onClick = { resolveSample(com.kairumo.padnote.library.SampleFork.Choice.DISCARD) },
+                        modifier = Modifier.testTag("sample.leave.discard")
+                    ) {
+                        Text(LocalizationStrings.localized("sample_leave_discard", lang), color = MaterialTheme.colorScheme.error)
+                    }
+                    // 從編輯器離開時可以取消、回到範例繼續；回首頁補問的沒有「取消」（範例已經關了）。
+                    if (afterSampleLeave != null) {
+                        TextButton(onClick = { sampleAskId = null; afterSampleLeave = null }) {
+                            Text(LocalizationStrings.localized("cancel", lang))
+                        }
+                    }
                 }
             }
         )
@@ -442,24 +491,17 @@ private fun KairumoApp() {
             onFolderChange = { folderId = it },
             onOpen = {
                 if (!it.equals(uniffi.padnote_core.recordingInboxNotebookId(), ignoreCase = true)) {
-                    // 範例（唯讀）：記下打開時的樣子，一編輯就另存一本（見 SampleFork）。
-                    com.kairumo.padnote.library.SampleFork.noteOpened(activity, it)
-                    openedId = it
+                    openNotebook(it)
                 }
             }
         )
     } else {
         InkScreen(
             notebookId = id,
-            onBack = {
-                openedId = null
-                com.kairumo.padnote.library.SampleFork.forkIfEditedSoon(activity, id, deviceId(activity), deviceLanguageTag())
-            },
-            onOpenNotebook = {
-                if (!it.equals(uniffi.padnote_core.recordingInboxNotebookId(), ignoreCase = true)) {
-                    com.kairumo.padnote.library.SampleFork.forkIfEditedSoon(activity, id, deviceId(activity), deviceLanguageTag())
-                    com.kairumo.padnote.library.SampleFork.noteOpened(activity, it)
-                    openedId = it
+            onBack = { leaveNotebook(id) { openedId = null } },
+            onOpenNotebook = { target ->
+                if (!target.equals(uniffi.padnote_core.recordingInboxNotebookId(), ignoreCase = true)) {
+                    leaveNotebook(id) { openNotebook(target) }
                 }
             }
         )
@@ -845,6 +887,15 @@ private fun NotebookHome(
             onOpenPrivacy = { homeDocs = "legal/privacy.html" },
             onInsertRecording = { insertingRecording = it },
             onRenameRecording = { renamingRecording = it },
+            onToggleSample = { entry ->
+                autoSyncScope.launch {
+                    withContext(Dispatchers.IO) {
+                        com.kairumo.padnote.library.SampleFork.setSample(activity, entry.id, device, !entry.isSample)
+                    }
+                    AutoSync.noteLocalEdit(activity)
+                    revision++
+                }
+            },
             onDuplicateNotebook = { entry ->
                 autoSyncScope.launch {
                     val title = l("copy_suffix").replace(

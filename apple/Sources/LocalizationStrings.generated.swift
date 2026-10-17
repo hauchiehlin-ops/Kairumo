@@ -12599,6 +12599,22 @@ extension LocalizationManager {
             .ko: ".padnote 파일을 보관함으로 가져옵니다",
             .th: "นำเข้าไฟล์ .padnote เข้าสู่คลังบันทึก"
         ],
+        "import_snapshot": [
+            .zhHant: "匯入筆記本快照",
+            .en: "Import Notebook Snapshot",
+            .zhHans: "导入笔记本快照",
+            .ja: "ノートのスナップショットを読み込む",
+            .ko: "노트 스냅샷 가져오기",
+            .th: "นำเข้าสแนปช็อตสมุดโน้ต"
+        ],
+        "import_snapshot_desc": [
+            .zhHant: "把 .padnote 快照檔匯入成一本筆記本，不會覆蓋現有的筆記",
+            .en: "Bring a .padnote snapshot back as a notebook. Your existing notebooks are not replaced.",
+            .zhHans: "把 .padnote 快照文件导入成一本笔记本，不会覆盖现有的笔记",
+            .ja: ".padnote スナップショットをノートとして読み込みます。既存のノートは上書きされません。",
+            .ko: ".padnote 스냅샷을 노트로 가져옵니다. 기존 노트는 덮어쓰지 않습니다.",
+            .th: "นำสแนปช็อต .padnote กลับมาเป็นสมุดโน้ต สมุดโน้ตที่มีอยู่จะไม่ถูกแทนที่"
+        ],
         "import_success": [
             .zhHant: "已匯入：%@",
             .en: "Imported: %@",
@@ -18327,6 +18343,46 @@ extension LocalizationManager {
             .ko: "샘플 불러오기",
             .th: "โหลดข้อมูลตัวอย่าง"
         ],
+        "sample_leave_copy": [
+            .zhHant: "另存可編輯副本",
+            .en: "Save as Editable Copy",
+            .zhHans: "另存可编辑副本",
+            .ja: "編集可能なコピーとして保存",
+            .ko: "편집 가능한 사본으로 저장",
+            .th: "บันทึกเป็นสำเนาที่แก้ไขได้"
+        ],
+        "sample_leave_discard": [
+            .zhHant: "放棄修改",
+            .en: "Discard Changes",
+            .zhHans: "放弃修改",
+            .ja: "変更を破棄",
+            .ko: "변경 내용 버리기",
+            .th: "ละทิ้งการแก้ไข"
+        ],
+        "sample_leave_keep": [
+            .zhHant: "存檔（保留在此範例）",
+            .en: "Save to This Sample",
+            .zhHans: "保存（保留在此范例）",
+            .ja: "保存（このサンプルに残す）",
+            .ko: "저장 (이 샘플에 유지)",
+            .th: "บันทึก (เก็บไว้ในตัวอย่างนี้)"
+        ],
+        "sample_leave_message": [
+            .zhHant: "這本是唯讀範例，剛才的修改要怎麼處理？",
+            .en: "This notebook is a read-only sample. What should happen to your changes?",
+            .zhHans: "这本是只读范例，刚才的修改要怎么处理？",
+            .ja: "このノートは読み取り専用のサンプルです。変更をどうしますか？",
+            .ko: "이 노트는 읽기 전용 샘플입니다. 변경 내용을 어떻게 할까요?",
+            .th: "สมุดโน้ตนี้เป็นตัวอย่างแบบอ่านอย่างเดียว ต้องการจัดการการแก้ไขอย่างไร"
+        ],
+        "sample_leave_title": [
+            .zhHant: "範例筆記本有修改",
+            .en: "This Sample Has Changes",
+            .zhHans: "范例笔记本有修改",
+            .ja: "サンプルが変更されています",
+            .ko: "샘플이 변경되었습니다",
+            .th: "ตัวอย่างนี้มีการแก้ไข"
+        ],
         "sample_lectures": [
             .zhHant: "課堂與會議記錄",
             .en: "Lectures & Meetings",
@@ -18334,6 +18390,14 @@ extension LocalizationManager {
             .ja: "講義と会議のノート",
             .ko: "강의 및 회의",
             .th: "การบรรยายและการประชุม"
+        ],
+        "sample_mark": [
+            .zhHant: "設為範例",
+            .en: "Mark as Sample",
+            .zhHans: "设为范例",
+            .ja: "サンプルに設定",
+            .ko: "샘플로 지정",
+            .th: "ตั้งเป็นตัวอย่าง"
         ],
         "sample_meeting_agenda_table": [
             .zhHant: "時間|議題|負責\n10:00|上週進度回顧|文萱\n10:15|手寫延遲量測結果|建豪\n10:35|上架時程與待補項目|佩宜\n10:50|下週分工|全員",
@@ -18447,14 +18511,6 @@ extension LocalizationManager {
             .ko: "할 일|담당|기한\n중급 안드로이드 지연 측정|치엔|9/22\n설명서 “녹음 삽입” 장 추가|원|9/20\n정식 서명 키 신청|페이|9/19",
             .th: "สิ่งที่ต้องทำ|ผู้รับผิดชอบ|กำหนด\nวัดความหน่วงบน Android รุ่นกลาง|เชียน|22 ก.ย.\nเขียนบท “แทรกเสียงบันทึก” ในคู่มือ|เหวิน|20 ก.ย.\nขอคีย์เซ็นชื่อจริง|เผย|19 ก.ย."
         ],
-        "sample_readonly_forked": [
-            .zhHant: "此範本為唯讀檔案，系統已自動增加可編輯筆記本",
-            .en: "This sample is read-only. An editable copy has been created for you.",
-            .zhHans: "此范本为只读文件，系统已自动增加可编辑笔记本",
-            .ja: "このサンプルは読み取り専用です。編集できるノートを自動的に作成しました。",
-            .ko: "이 샘플은 읽기 전용입니다. 편집 가능한 노트를 자동으로 추가했습니다.",
-            .th: "ตัวอย่างนี้เป็นแบบอ่านอย่างเดียว ระบบได้สร้างสมุดโน้ตที่แก้ไขได้ให้โดยอัตโนมัติแล้ว"
-        ],
         "sample_readonly_suffix": [
             .zhHant: "（唯讀）",
             .en: " (read-only)",
@@ -18462,14 +18518,6 @@ extension LocalizationManager {
             .ja: "（読み取り専用）",
             .ko: " (읽기 전용)",
             .th: " (อ่านอย่างเดียว)"
-        ],
-        "sample_readonly_title": [
-            .zhHant: "唯讀範本",
-            .en: "Read-only sample",
-            .zhHans: "只读范本",
-            .ja: "読み取り専用のサンプル",
-            .ko: "읽기 전용 샘플",
-            .th: "ตัวอย่างแบบอ่านอย่างเดียว"
         ],
         "sample_showcase_audio_title": [
             .zhHant: "語音導覽：Kairumo 設計理念與核心架構",
@@ -19078,6 +19126,14 @@ extension LocalizationManager {
             .ja: "9. Airbrush (エアブラシ):",
             .ko: "9. Airbrush (에어브러시):",
             .th: "9. Airbrush (แอร์บรัช):"
+        ],
+        "sample_unmark": [
+            .zhHant: "解除範例",
+            .en: "Remove Sample Mark",
+            .zhHans: "取消范例",
+            .ja: "サンプルを解除",
+            .ko: "샘플 해제",
+            .th: "เลิกเป็นตัวอย่าง"
         ],
         "sample_welcome": [
             .zhHant: "歡迎使用 Kairumo",
@@ -24342,6 +24398,14 @@ extension LocalizationManager {
             .ja: "残り%@日",
             .ko: "%@일 남음",
             .th: "เหลืออีก %@ วัน"
+        ],
+        "trash_delete_all": [
+            .zhHant: "全部永久刪除（%@ 本）",
+            .en: "Delete All Permanently (%@)",
+            .zhHans: "全部永久删除（%@ 本）",
+            .ja: "すべて完全に削除（%@ 冊）",
+            .ko: "모두 영구 삭제 (%@개)",
+            .th: "ลบทั้งหมดถาวร (%@ เล่ม)"
         ],
         "trash_delete_forever": [
             .zhHant: "永久刪除",

@@ -33,6 +33,32 @@ final class SeedNotebookSyncTests: XCTestCase {
         XCTAssertFalse(synced.contains { NotebookPackageBridge.isDeviceLocalSeed($0) }, "範例進了同步清單：\(synced)")
     }
 
+    /// 使用者回報：重新安裝後「我的筆記」是空的。某台裝置刪過範例，墓碑留在雲端索引裡，
+    /// 新裝置剛產生的範例被它藏起來、丟進回收桶。範例不同步，索引的刪除紀錄不能碰到它。
+    func testADeletionRecordInTheSyncIndexNeverHidesOrTrashesASample() {
+        let store = makeStore()
+        let id = "seed-feature-showcase-v1"
+        AccountSyncStore.shared.recordDeletion(id: id)
+        XCTAssertFalse(AccountSyncStore.shared.isDeleted(id: id), "範例的刪除不寫進同步索引")
+        XCTAssertFalse(store.isHiddenBySync(id), "範例不會被同步索引藏起來")
+        XCTAssertTrue(store.visibleNotebooks.contains { $0.id == id }, "首頁看得到範例")
+        store.syncPurgeDeletedNotebooks([id])
+        XCTAssertTrue(store.notebooks.contains { $0.id == id }, "同步不會把範例丟進回收桶")
+    }
+
+    /// 只有 Apple 失效的那一種：範例在舊索引裡掛在某個資料夾底下，那個資料夾後來被刪了。
+    /// Apple 首頁會藏起「祖先被刪」的項目（Android 首頁不看索引，所以 Android 看得到）。
+    func testASampleUnderADeletedFolderInTheIndexStaysVisible() {
+        let store = makeStore()
+        let id = "seed-kairumo-manual-v1"
+        let folder = UUID().uuidString.lowercased()
+        AccountSyncStore.shared.record(id: folder, title: "舊資料夾", parentId: nil, isFolder: true)
+        AccountSyncStore.shared.record(id: id, title: "手冊", parentId: folder, isFolder: false)
+        AccountSyncStore.shared.recordDeletion(id: folder)
+        XCTAssertFalse(store.isHiddenBySync(id), "範例不會因為索引裡的資料夾被刪而被藏起來")
+        XCTAssertTrue(store.visibleNotebooks.contains { $0.id == id })
+    }
+
     func testAnOrdinaryNotebookStillSyncs() {
         let store = makeStore()
         let mine = NotebookDocument(title: "我的筆記", pageCount: 1)

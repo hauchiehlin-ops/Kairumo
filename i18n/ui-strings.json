@@ -10231,6 +10231,22 @@
     "zhHans": "将 .padnote 文件导入至笔记本列表",
     "zhHant": "將 .padnote 筆記檔匯入至筆記清單"
   },
+  "import_snapshot": {
+    "en": "Import Notebook Snapshot",
+    "ja": "ノートのスナップショットを読み込む",
+    "ko": "노트 스냅샷 가져오기",
+    "th": "นำเข้าสแนปช็อตสมุดโน้ต",
+    "zhHans": "导入笔记本快照",
+    "zhHant": "匯入筆記本快照"
+  },
+  "import_snapshot_desc": {
+    "en": "Bring a .padnote snapshot back as a notebook. Your existing notebooks are not replaced.",
+    "ja": ".padnote スナップショットをノートとして読み込みます。既存のノートは上書きされません。",
+    "ko": ".padnote 스냅샷을 노트로 가져옵니다. 기존 노트는 덮어쓰지 않습니다.",
+    "th": "นำสแนปช็อต .padnote กลับมาเป็นสมุดโน้ต สมุดโน้ตที่มีอยู่จะไม่ถูกแทนที่",
+    "zhHans": "把 .padnote 快照文件导入成一本笔记本，不会覆盖现有的笔记",
+    "zhHant": "把 .padnote 快照檔匯入成一本筆記本，不會覆蓋現有的筆記"
+  },
   "import_success": {
     "en": "Imported: %@",
     "ja": "読み込みました：%@",
@@ -15447,6 +15463,46 @@
     "zhHans": "载入范例数据",
     "zhHant": "載入範例數據"
   },
+  "sample_leave_copy": {
+    "en": "Save as Editable Copy",
+    "ja": "編集可能なコピーとして保存",
+    "ko": "편집 가능한 사본으로 저장",
+    "th": "บันทึกเป็นสำเนาที่แก้ไขได้",
+    "zhHans": "另存可编辑副本",
+    "zhHant": "另存可編輯副本"
+  },
+  "sample_leave_discard": {
+    "en": "Discard Changes",
+    "ja": "変更を破棄",
+    "ko": "변경 내용 버리기",
+    "th": "ละทิ้งการแก้ไข",
+    "zhHans": "放弃修改",
+    "zhHant": "放棄修改"
+  },
+  "sample_leave_keep": {
+    "en": "Save to This Sample",
+    "ja": "保存（このサンプルに残す）",
+    "ko": "저장 (이 샘플에 유지)",
+    "th": "บันทึก (เก็บไว้ในตัวอย่างนี้)",
+    "zhHans": "保存（保留在此范例）",
+    "zhHant": "存檔（保留在此範例）"
+  },
+  "sample_leave_message": {
+    "en": "This notebook is a read-only sample. What should happen to your changes?",
+    "ja": "このノートは読み取り専用のサンプルです。変更をどうしますか？",
+    "ko": "이 노트는 읽기 전용 샘플입니다. 변경 내용을 어떻게 할까요?",
+    "th": "สมุดโน้ตนี้เป็นตัวอย่างแบบอ่านอย่างเดียว ต้องการจัดการการแก้ไขอย่างไร",
+    "zhHans": "这本是只读范例，刚才的修改要怎么处理？",
+    "zhHant": "這本是唯讀範例，剛才的修改要怎麼處理？"
+  },
+  "sample_leave_title": {
+    "en": "This Sample Has Changes",
+    "ja": "サンプルが変更されています",
+    "ko": "샘플이 변경되었습니다",
+    "th": "ตัวอย่างนี้มีการแก้ไข",
+    "zhHans": "范例笔记本有修改",
+    "zhHant": "範例筆記本有修改"
+  },
   "sample_lectures": {
     "en": "Lectures & Meetings",
     "ja": "講義と会議のノート",
@@ -15454,6 +15510,14 @@
     "th": "การบรรยายและการประชุม",
     "zhHans": "课堂与会议记录",
     "zhHant": "課堂與會議記錄"
+  },
+  "sample_mark": {
+    "en": "Mark as Sample",
+    "ja": "サンプルに設定",
+    "ko": "샘플로 지정",
+    "th": "ตั้งเป็นตัวอย่าง",
+    "zhHans": "设为范例",
+    "zhHant": "設為範例"
   },
   "sample_meeting_agenda_table": {
     "en": "Time|Topic|Owner\n10:00|Last week in review|Wen\n10:15|Ink latency measurements|Chien\n10:35|Release timeline and gaps|Pei\n10:50|Next week's split|Everyone",
@@ -15567,14 +15631,6 @@
     "zhHans": "待办|负责|期限\n量测 Android 中阶机延迟|建豪|9/22\n补手册「插入录音」章节|文萱|9/20\n申请正式签章金钥|佩宜|9/19",
     "zhHant": "待辦|負責|期限\n量測 Android 中階機延遲|建豪|9/22\n補手冊「插入錄音」章節|文萱|9/20\n申請正式簽章金鑰|佩宜|9/19"
   },
-  "sample_readonly_forked": {
-    "en": "This sample is read-only. An editable copy has been created for you.",
-    "ja": "このサンプルは読み取り専用です。編集できるノートを自動的に作成しました。",
-    "ko": "이 샘플은 읽기 전용입니다. 편집 가능한 노트를 자동으로 추가했습니다.",
-    "th": "ตัวอย่างนี้เป็นแบบอ่านอย่างเดียว ระบบได้สร้างสมุดโน้ตที่แก้ไขได้ให้โดยอัตโนมัติแล้ว",
-    "zhHans": "此范本为只读文件，系统已自动增加可编辑笔记本",
-    "zhHant": "此範本為唯讀檔案，系統已自動增加可編輯筆記本"
-  },
   "sample_readonly_suffix": {
     "en": " (read-only)",
     "ja": "（読み取り専用）",
@@ -15582,14 +15638,6 @@
     "th": " (อ่านอย่างเดียว)",
     "zhHans": "（只读）",
     "zhHant": "（唯讀）"
-  },
-  "sample_readonly_title": {
-    "en": "Read-only sample",
-    "ja": "読み取り専用のサンプル",
-    "ko": "읽기 전용 샘플",
-    "th": "ตัวอย่างแบบอ่านอย่างเดียว",
-    "zhHans": "只读范本",
-    "zhHant": "唯讀範本"
   },
   "sample_showcase_audio_title": {
     "en": "Audio Guide: Kairumo Design Philosophy and Core Architecture",
@@ -16198,6 +16246,14 @@
     "th": "9. Airbrush (แอร์บรัช):",
     "zhHans": "9. Airbrush (喷枪):",
     "zhHant": "9. Airbrush (噴槍):"
+  },
+  "sample_unmark": {
+    "en": "Remove Sample Mark",
+    "ja": "サンプルを解除",
+    "ko": "샘플 해제",
+    "th": "เลิกเป็นตัวอย่าง",
+    "zhHans": "取消范例",
+    "zhHant": "解除範例"
   },
   "sample_welcome": {
     "en": "Welcome to Kairumo",
@@ -21462,6 +21518,14 @@
     "th": "เหลืออีก %@ วัน",
     "zhHans": "还剩 %@ 天",
     "zhHant": "還剩 %@ 天"
+  },
+  "trash_delete_all": {
+    "en": "Delete All Permanently (%@)",
+    "ja": "すべて完全に削除（%@ 冊）",
+    "ko": "모두 영구 삭제 (%@개)",
+    "th": "ลบทั้งหมดถาวร (%@ เล่ม)",
+    "zhHans": "全部永久删除（%@ 本）",
+    "zhHant": "全部永久刪除（%@ 本）"
   },
   "trash_delete_forever": {
     "en": "Delete Permanently",

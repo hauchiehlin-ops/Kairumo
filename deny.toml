@@ -77,9 +77,9 @@ reason = "同上"
 
 [advisories]
 version = 2
-# 上游 `zip` crate 作者將 9.0 以前的所有舊版（含 4.x、8.x）一次性撤回（yanked），
-# 但相依生態系（calamine 依賴 zip ^4.6、docx-rs 依賴 zip 8.6.0）尚未釋出適配 zip 9.x
-# 的新版本，暫時降為 warn。
+# 上游 `zip` crate 作者將 9.0 以前的所有舊版（含 8.x）一次性撤回（yanked），
+# 但相依生態系（calamine 0.36 與 docx-rs 0.4 都依賴 zip ^8.6）尚未釋出適配 zip 9.x
+# 的新版本，暫時降為 warn。這個專案自己直接用的 zip 已經是 9.x。
 yanked = "warn"
 # 每一筆豁免都必須寫明「為什麼這個專案不受影響」，而不只是「先讓 CI 過」。
 # 上游一有修好的版本就該回來拿掉對應條目。
@@ -108,6 +108,17 @@ ignore = [
     # 的資料進到解碼器。也不是記憶體安全問題（公告自己寫明只有 DoS）。
     # 待辦：zhconv 放行 ruzstd >= 0.9.1 後就回來移除這一條。
     "RUSTSEC-2026-0344",
+
+    # zip < 9 的三筆解壓縮漏洞（SUID/SGID 位元、指到目的地外的符號連結、透過符號連結套用權限）。
+    # 這個專案自己的解壓縮（padnote-storage）已經升到 zip 9。剩下的 zip 8.6 來自 calamine 0.36
+    # （讀 xlsx）與 docx-rs 0.4（寫 docx），兩者都要求 zip ^8.6、尚無支援 zip 9 的版本。
+    # 這個專案不受影響：三筆都只發生在 `ZipArchive::extract()` / `ZipStreamReader::extract()`
+    # 把封存檔解到磁碟上時；calamine 只在記憶體裡逐項讀 xlsx 的 XML，docx-rs 只負責寫出 docx，
+    # 都不會把任何檔案解到磁碟、不建符號連結、也不套用權限位元。
+    # 待辦：calamine / docx-rs 放行 zip >= 9 後就回來移除這三條。
+    "RUSTSEC-2026-0367",
+    "RUSTSEC-2026-0368",
+    "RUSTSEC-2026-0369",
 ]
 
 [sources]

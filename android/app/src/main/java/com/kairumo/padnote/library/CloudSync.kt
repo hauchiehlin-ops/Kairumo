@@ -417,7 +417,14 @@ object CloudSync {
         // 真正的新增、改名與搬移入口本來就會 record；同步只能合併事件，
         // 不能把「本機還有舊檔」解讀成使用者剛做了一次編輯。
         val allLocalEntries = NotebookLibrary.all(context, deviceId)
-        val activeLocalIds = allLocalEntries.map { it.id }.toSet()
+        // 錄音收件匣不在筆記清單裡（首頁不顯示它），但它是一般的同步筆記本：快速錄音都在裡面。
+        // 漏掉它的話，收件匣只在第一次整本下載，之後別台新錄的音、改的名字永遠過不來
+        // （使用者回報：iPad 錄的音 Mac 收得到、Android 收不到）。Apple 的同步清單也會把它加回去。
+        val inboxPackage = NotebookLibrary.directory(context)
+            .listFiles { f -> f.isDirectory && f.name.equals("${uniffi.padnote_core.recordingInboxNotebookId()}.padnote", ignoreCase = true) }
+            ?.firstOrNull()
+        val activeLocalIds = allLocalEntries.map { it.id }.toSet() +
+            listOfNotNull(inboxPackage?.name?.removeSuffix(".padnote"))
         // (A) 從舊版本機條目補索引；明確墓碑絕不復活。
         for (entry in allLocalEntries) {
             if (AccountSyncStore.item(context, entry.id) == null) {
@@ -499,6 +506,8 @@ object CloudSync {
             val id = pkg.name.removeSuffix(".padnote")
             // 預載範例由各裝置自己產生，不同步（見 `SeedNotebooks.isDeviceLocal`）。
             if (SeedNotebooks.isDeviceLocal(id)) continue
+            // 範例暫存期間不同步：改動要等使用者離開時決定存檔、另存或放棄（見 SampleFork）。
+            if (SampleFork.hasSession(context, id)) continue
             // 判定 1：本機現存活躍的筆記本擁有最高本機權威（絕不刪除）
             if (activeLocalIds.contains(id)) {
                 deletedNotebookIds.remove(id)

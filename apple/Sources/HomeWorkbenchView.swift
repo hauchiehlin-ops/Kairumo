@@ -48,6 +48,8 @@ public struct HomeWorkbenchView: View {
     @State private var showEncryptedNotebookSheet: Bool = false
     @State private var showQuickRecordSheet: Bool = false
     @State private var showImportPicker: Bool = false
+    /// 匯入筆記本快照的結果（成功的名字或失敗的原因）。
+    @State private var importResultMessage: String?
     @State private var selectedSortOption: SortOption = .byDate
     #if os(iOS)
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
@@ -416,11 +418,29 @@ public struct HomeWorkbenchView: View {
                 allowsMultipleSelection: false
             ) { result in
                 guard let urls = try? result.get(), let url = urls.first else { return }
-                _ = try? notebookStore.importNotebookArchive(from: url)
+                // 成功或失敗都要講：原本失敗時什麼也不說，使用者只覺得「按了沒反應」。
+                do {
+                    let doc = try notebookStore.importNotebookArchive(from: url)
+                    importResultMessage = String(
+                        format: localizationManager.localized("import_success"), doc.displayTitle())
+                } catch {
+                    importResultMessage = String(
+                        format: localizationManager.localized("import_failed"), error.localizedDescription)
+                }
+            }
+            .alert(
+                importResultMessage ?? "",
+                isPresented: Binding(
+                    get: { importResultMessage != nil },
+                    set: { if !$0 { importResultMessage = nil } })
+            ) {
+                Button(localizationManager.localized("confirm")) { importResultMessage = nil }
             }
             .fullScreenCover(item: $selectedNotebookForEditing) { doc in erasedView {
                 NotebookEditorHost(store: notebookStore, initialNotebookId: doc.id)
             } }
+            // 範例的改動還沒決定怎麼處理（例如 App 在範例開著時被關掉）：回到首頁時補問。
+            .modifier(PendingSampleSessionPrompt(store: notebookStore, editorOpen: selectedNotebookForEditing != nil))
             .alert(localizationManager.localized("rename_note"), isPresented: Binding(
                 get: { renamingNotebookId != nil },
                 set: {
@@ -985,6 +1005,16 @@ public struct HomeWorkbenchView: View {
                     systemImage: "doc.on.doc"
                 ) {
                     duplicateNotebookFromMenu(note)
+                },
+                // 任何一本都能設為／解除「範例」（範例的改動先暫存、離開時再決定，見 `beginSampleSession`）。
+                StableMenuAction(
+                    id: note.isReadOnlySample ? "sample_unmark" : "sample_mark",
+                    title: localizationManager.localized(note.isReadOnlySample ? "sample_unmark" : "sample_mark"),
+                    systemImage: note.isReadOnlySample ? "lock.open" : "lock"
+                ) {
+                    SheetCoordinator.shared.presentFromMenu {
+                        notebookStore.setSampleFlag(note.id, isSample: !note.isReadOnlySample)
+                    }
                 },
             ],
             [
@@ -2708,6 +2738,19 @@ public struct HomeWorkbenchView: View {
 
                 Divider()
 
+                // 備份快照的另一半：匯出的 .padnote 要能匯回來（使用者回報：只看得到匯出，找不到匯入）。
+                backupActionRow(
+                    icon: "square.and.arrow.down.on.square",
+                    iconColor: .purple,
+                    titleKey: "import_snapshot",
+                    descKey: "import_snapshot_desc",
+                    identifier: "home.data.import_snapshot"
+                ) {
+                    showImportPicker = true
+                }
+
+                Divider()
+
                 backupActionRow(
                     icon: "externaldrive.badge.timemachine",
                     iconColor: .blue,
@@ -3126,6 +3169,7 @@ public struct HomeWorkbenchView: View {
     private func dataCardIdentifier(_ titleKey: String) -> String {
         switch titleKey {
         case "backup_snapshot": return "home.data.snapshot"
+        case "import_snapshot": return "home.data.import_snapshot"
         case "backup_create": return "home.data.backup"
         case "backup_restore": return "home.data.restore"
         case "sync_choose_folder": return "home.data.folder"
@@ -4853,6 +4897,53 @@ extension String {
     HomeWorkbenchView()
 }
 
+/// 回到首頁時補問：上次離開範例時沒機會問（App 被關掉、畫面被系統收起）的範例改動，現在問。
+/// 沒改的直接收掉。獨立成一個修飾器：首頁的修飾器串太長，寫在裡面編譯器會型別檢查逾時。
+struct PendingSampleSessionPrompt: ViewModifier {
+    @ObservedObject var store: NotebookStore
+    @ObservedObject private var localizationManager = LocalizationManager.shared
+    let editorOpen: Bool
+    @State private var pendingId: String?
+
+    func body(content: Content) -> some View {
+        content
+            .onAppear { check() }
+            .onChange(of: editorOpen) { open in
+                if !open { check() }
+            }
+            .alert(
+                localizationManager.localized("sample_leave_title"),
+                isPresented: Binding(get: { pendingId != nil }, set: { if !$0 { pendingId = nil } })
+            ) {
+                Button(localizationManager.localized("sample_leave_keep")) { resolve(.keep) }
+                Button(localizationManager.localized("sample_leave_copy")) { resolve(.saveCopy) }
+                Button(localizationManager.localized("sample_leave_discard"), role: .destructive) { resolve(.discard) }
+            } message: {
+                Text(localizationManager.localized("sample_leave_message") + "\n"
+                    + (store.notebooks.first { $0.id == pendingId }?.displayTitle() ?? ""))
+            }
+    }
+
+    private func check() {
+        guard !editorOpen, pendingId == nil else { return }
+        for id in store.pendingSampleSessionIds {
+            if store.sampleSessionHasChanges(id) {
+                pendingId = id
+                return
+            }
+            store.finishSampleSession(id, choice: .keep)
+        }
+    }
+
+    private func resolve(_ choice: SampleLeaveChoice) {
+        guard let id = pendingId else { return }
+        store.finishSampleSession(id, choice: choice)
+        pendingId = nil
+        // 可能還有別本在等（一次問一本）。
+        DispatchQueue.main.async { check() }
+    }
+}
+
 /// 編輯器的宿主視圖。
 ///
 /// 為什麼需要它：`fullScreenCover` 原本直接把 `$store.notebooks[index]` 傳進
@@ -4879,18 +4970,6 @@ struct NotebookEditorHost: View {
                     }
                 )
             }
-        }
-        // 唯讀範例被編輯 → 已另存成一本一般筆記本，編輯器換到那一本（見 `NotebookStore.forkEditedSample`）。
-        .alert(
-            LocalizationManager.shared.localized("sample_readonly_title"),
-            isPresented: Binding(
-                get: { store.sampleForkNotice != nil },
-                set: { if !$0 { store.sampleForkNotice = nil } })
-        ) {
-            Button(LocalizationManager.shared.localized("confirm")) { store.sampleForkNotice = nil }
-        } message: {
-            Text(LocalizationManager.shared.localized("sample_readonly_forked")
-                + "\n" + (store.sampleForkNotice ?? ""))
         }
     }
 

@@ -167,11 +167,19 @@ object CrashLogger {
         LogExportUtility.shareTextFile(context, text, filename)
     }
 
+    /**
+     * 清除當機紀錄：最後一次當機檔，**以及執行時期日誌**。
+     *
+     * 當機時完整的錯誤也會寫進執行時期日誌（`recordCrash`），診斷頁在沒有當機檔時顯示的就是它。
+     * 只刪當機檔的話，使用者按了「清除」，畫面上的當機內容還在（使用者回報：清除不了當機紀錄）。
+     */
     fun clearCrashLog(context: Context) {
-        // profile-scope: device
-        val file = File(context.filesDir, CRASH_FILE_NAME)
-        if (file.exists()) {
-            file.delete()
+        synchronized(lock) {
+            for (name in listOf(CRASH_FILE_NAME, RUNTIME_LOG_NAME, RUNTIME_LOG_OLD_NAME)) {
+                // profile-scope: device
+                val file = File(context.filesDir, name)
+                if (file.exists()) file.delete()
+            }
         }
     }
 }

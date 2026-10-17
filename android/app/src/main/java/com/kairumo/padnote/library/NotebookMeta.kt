@@ -64,6 +64,8 @@ class NotebookMeta private constructor(private var root: JSONObject) {
     companion object {
         const val KEY_ORDER_BY_PAGE = "objectOrderByPage"
         const val KEY_UNDER_INK_BY_PAGE = "underInkObjectIdsByPage"
+        /** 「範例」標記（與 Apple `NotebookMeta.isSample` 同一個鍵）。沒有這個鍵 = 沒設定過。 */
+        const val KEY_IS_SAMPLE = "isSample"
         /** v3.8.0 的舊欄位：整本一份。只讀不寫，見 format-spec §6.2.1。 */
         private const val KEY_LEGACY_ORDER = "objectOrder"
         private const val KEY_COMMENT_PINS = "commentPins"
@@ -167,6 +169,14 @@ class NotebookMeta private constructor(private var root: JSONObject) {
         }
         if (raw.isNotEmpty()) return uniffi.padnote_core.paperIdFromStored(raw)
         return paperId()
+    }
+
+    /** 使用者設定的「範例」標記；沒設定過回 null（內建範例預設是，見 [SampleFork.isSample]）。 */
+    fun isSample(): Boolean? = if (root.has(KEY_IS_SAMPLE)) root.optBoolean(KEY_IS_SAMPLE) else null
+
+    fun setSample(session: PadnoteSession?, isSample: Boolean) {
+        root.put(KEY_IS_SAMPLE, isSample)
+        flush(session)
     }
 
     /** 版面配色。認不得或沒有時，核心會回第一組。 */

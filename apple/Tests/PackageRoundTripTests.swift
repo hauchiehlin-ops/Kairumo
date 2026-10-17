@@ -312,6 +312,29 @@ final class PackageRoundTripTests: XCTestCase {
             NotebookMeta(from: doc).encodedJSON(), NotebookMeta(from: doc).encodedJSON())
     }
 
+    // MARK: - 備份快照：匯出再匯回
+
+    /// 使用者回報：Mac 匯出快照再匯回，內容是空白頁。匯入只存了文件本身，筆跡與圖片被丟掉。
+    @MainActor
+    func testASnapshotImportedBackKeepsTheInk() throws {
+        let store = NotebookStore(testDocumentsRoot: workDir.appendingPathComponent("store", isDirectory: true))
+        let doc = NotebookDocument(title: "手寫筆記", pageCount: 2)
+        store.notebooks = [doc]
+        store.saveDrawing(notebookId: doc.id, pageIndex: 0, drawing: PKDrawing(strokes: [stroke(at: 5, color: .black)]))
+        store.saveDrawing(notebookId: doc.id, pageIndex: 1,
+                          drawing: PKDrawing(strokes: [stroke(at: 5, color: .black), stroke(at: 40, color: .red)]))
+
+        let package = try NotebookSyncCoordinator.mirrorWorkingCopyIntoPackage(
+            doc, store: store, deviceId: NotebookMigration.deviceId)
+        let archive = workDir.appendingPathComponent("snapshot.padnote")
+        try archiveNotebook(packageDir: package.path, outFile: archive.path)
+
+        let imported = try store.importNotebookArchive(from: archive)
+        XCTAssertNotEqual(imported.id, doc.id, "匯入一律是新的一本")
+        XCTAssertEqual(store.loadDrawing(notebookId: imported.id, pageIndex: 0).strokes.count, 1, "第 1 頁的筆跡要跟著回來")
+        XCTAssertEqual(store.loadDrawing(notebookId: imported.id, pageIndex: 1).strokes.count, 2, "第 2 頁的筆跡要跟著回來")
+    }
+
     // MARK: - 壞掉的輸入
 
     func testImportingANonPackageFailsCleanly() throws {

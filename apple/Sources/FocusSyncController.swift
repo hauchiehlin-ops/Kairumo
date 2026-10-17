@@ -106,6 +106,9 @@ public final class FocusSyncController: ObservableObject {
 
     /// 打開／離開一本筆記時呼叫。`nil` = 回到首頁。
     public func setFocus(_ notebookId: String?) {
+        // 範例暫存期間不同步：改動要等使用者離開時決定（見 `NotebookStore.beginSampleSession`）。
+        var notebookId = notebookId
+        if let id = notebookId, NotebookStore.shared.hasSampleSession(id) { notebookId = nil }
         let next = notebookId?.lowercased()
         // 離開一本有未推寫入的筆記：立刻推。核心換焦點時會把 dirty 清掉，
         // 不在這裡接手的話，最後那一筆只能等整庫那一輪（慢，而且進背景會被凍結）。

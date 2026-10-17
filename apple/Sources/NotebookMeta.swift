@@ -75,6 +75,9 @@ struct NotebookMeta: Codable, Hashable {
     /// 使用者看到的是把蓋住筆跡的物件移下去之後，過一下又跳回上面（使用者回報）。
     var underInkObjectIdsByPage: [String: [String]]?
 
+    /// 「範例」標記（`NotebookDocument.sampleFlag`）。與 Android `NotebookMeta.KEY_IS_SAMPLE` 同一個鍵。
+    var isSample: Bool?
+
     /// 核心沒有對應區塊型別的物件，原樣保存。
     var linkAttachments: [NoteLinkAttachment]?
     var model3DAttachments: [Note3DAttachment]?
@@ -154,6 +157,7 @@ struct NotebookMeta: Codable, Hashable {
         tapeAttachments = document.tapeAttachments
         objectOrderByPage = document.objectOrderByPage
         underInkObjectIdsByPage = document.underInkObjectIdsByPage
+        isSample = document.sampleFlag
         stickyAnchors = document.stickyAnchors
         recognizedText = document.recognizedText
         objectEnvelopes = 1
@@ -220,6 +224,9 @@ struct NotebookMeta: Codable, Hashable {
         }
         if let underInkObjectIdsByPage {
             document.underInkObjectIdsByPage = underInkObjectIdsByPage
+        }
+        if let isSample {
+            document.sampleFlag = isSample
         }
         if let stickyAnchors {
             document.stickyAnchors = stickyAnchors

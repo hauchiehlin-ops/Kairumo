@@ -169,7 +169,8 @@ extension NotebookStore: SyncableNotebookStore {
 
     var syncNotebooks: [NotebookDocument] {
         // 預載範例由各裝置自己產生，不同步（見 `NotebookPackageBridge.isDeviceLocalSeed`）。
-        var list = visibleNotebooks.filter { !NotebookPackageBridge.isDeviceLocalSeed($0.id) }
+        // 範例暫存期間也不同步：改動要等使用者離開時決定存檔、另存或放棄（見 `beginSampleSession`）。
+        var list = visibleNotebooks.filter { !NotebookPackageBridge.isDeviceLocalSeed($0.id) && !hasSampleSession($0.id) }
         let inbox = recordingInbox()
         if !list.contains(where: { $0.id.caseInsensitiveCompare(inbox.id) == .orderedSame }) {
             list.append(inbox)
@@ -1429,8 +1430,9 @@ enum NotebookSyncCoordinator {
     static func importReceived(
         store: SyncableNotebookStore, deviceId: UInt32, notebookId: String
     ) async -> Bool {
-        // 預載範例由各裝置本機自己維護，不接受區網對端匯入覆蓋
-        guard !NotebookPackageBridge.isDeviceLocalSeed(notebookId) else { return false }
+        // 預載範例由各裝置本機自己維護，不接受區網對端匯入覆蓋；範例暫存期間也不匯入。
+        guard !NotebookPackageBridge.isDeviceLocalSeed(notebookId),
+              !NotebookStore.shared.hasSampleSession(notebookId) else { return false }
         guard let document = store.syncNotebooks.first(where: {
             $0.id.caseInsensitiveCompare(notebookId) == .orderedSame
         }) else { return false }
