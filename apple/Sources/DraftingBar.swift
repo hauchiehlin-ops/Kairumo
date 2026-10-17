@@ -31,7 +31,9 @@ struct DraftingBar: View {
                         Divider()
                         optionRow
                     }
+                    .frame(maxWidth: .infinity, alignment: .leading)
                     barButtons
+                        .fixedSize()
                 }
             }
         }
@@ -39,7 +41,8 @@ struct DraftingBar: View {
         .overlay(alignment: .bottom) { toolHint }
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
         .shadow(color: .black.opacity(0.18), radius: 8, y: 3)
-        .frame(maxWidth: 560)
+        // 原本 560：七支製圖筆＋三個圖層塞不下，被裁掉看不到全貌。放寬，真的不夠寬時各列自動換行。
+        .frame(maxWidth: 780)
         .padding(.horizontal, 12)
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("draft.bar")
@@ -144,43 +147,44 @@ struct DraftingBar: View {
 
     // MARK: 製圖筆
 
+    /// **換行，不橫向捲動。** 原本是 `ScrollView(.horizontal)`：七支筆約 600pt，
+    /// 列寬只有 ~470pt，後面幾支被裁掉（Mac 上最後一支還壓到 ?／收合鈕底下），
+    /// 而且沒有捲軸，使用者不知道右邊還有東西。
     private var penRow: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
-                ForEach(state.pens, id: \.id) { pen in
-                    let selected = pen.id == state.activePenId
-                    Button {
-                        state.activePenId = pen.id
-                        // 換筆就回到「跟著筆走」的圖層，不然上一支筆的圖層設定會莫名其妙留著。
-                        state.layerOverride = nil
-                    } label: {
-                        VStack(spacing: 3) {
-                            DraftLinePreview(pen: pen, selected: selected)
-                                .frame(width: 54, height: 14)
-                            Text(localizationManager.localized(pen.nameKey))
-                                .font(.caption2.weight(selected ? .semibold : .regular))
-                                .foregroundColor(selected ? .primary : .secondary)
-                                .lineLimit(1)
-                        }
-                        .padding(.horizontal, 6).padding(.vertical, 4)
-                        .background(selected ? Color.accentColor.opacity(0.16) : Color.clear,
-                                    in: RoundedRectangle(cornerRadius: 8))
+        WrapLayout(spacing: 6, lineSpacing: 6) {
+            ForEach(state.pens, id: \.id) { pen in
+                let selected = pen.id == state.activePenId
+                Button {
+                    state.activePenId = pen.id
+                    // 換筆就回到「跟著筆走」的圖層，不然上一支筆的圖層設定會莫名其妙留著。
+                    state.layerOverride = nil
+                } label: {
+                    VStack(spacing: 3) {
+                        DraftLinePreview(pen: pen, selected: selected)
+                            .frame(width: 54, height: 14)
+                        Text(localizationManager.localized(pen.nameKey))
+                            .font(.caption.weight(selected ? .semibold : .regular))
+                            .foregroundColor(selected ? .primary : .secondary)
+                            .lineLimit(1)
+                            .fixedSize()
                     }
-                    .buttonStyle(.plain)
-                    .accessibilityIdentifier("draft.pen.\(pen.id)")
-                    .accessibilityAddTraits(selected ? .isSelected : [])
+                    .padding(.horizontal, 6).padding(.vertical, 4)
+                    .background(selected ? Color.accentColor.opacity(0.16) : Color.clear,
+                                in: RoundedRectangle(cornerRadius: 8))
                 }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("draft.pen.\(pen.id)")
+                .accessibilityAddTraits(selected ? .isSelected : [])
             }
         }
     }
 
     // MARK: 圖層
 
+    /// 同 `penRow`：換行，不裁切。
     private var layerRow: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
-                ForEach(state.layers.reversed(), id: \.id) { layer in layerChip(layer) }
-            }
+        WrapLayout(spacing: 8, lineSpacing: 6) {
+            ForEach(state.layers.reversed(), id: \.id) { layer in layerChip(layer) }
         }
     }
 
@@ -202,6 +206,8 @@ struct DraftingBar: View {
                         .font(.caption.weight(target ? .semibold : .regular))
                         .foregroundColor(hidden ? .secondary : .primary)
                         .strikethrough(hidden)
+                        .lineLimit(1)
+                        .fixedSize()
                 }
             }
             .buttonStyle(.plain)

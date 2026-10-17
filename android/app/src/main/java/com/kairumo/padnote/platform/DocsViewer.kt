@@ -51,6 +51,15 @@ fun DocsViewer(
             WebView(context).apply {
                 onWebView(this)
                 settings.javaScriptEnabled = true
+                addJavascriptInterface(object {
+                    @android.webkit.JavascriptInterface
+                    fun print() {
+                        post {
+                            val jobName = if (assetPath.startsWith("legal/")) L10n.t("privacy_policy") else L10n.t("user_manual")
+                            printDocument(context, this@apply, jobName)
+                        }
+                    }
+                }, "kairumoAndroid")
                 // 手冊用相對路徑引用 manual.js 與 img/，要允許同目錄的檔案存取。
                 settings.allowFileAccess = true
                 settings.cacheMode = WebSettings.LOAD_NO_CACHE

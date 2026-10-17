@@ -36,8 +36,10 @@ public struct RadialMarkMenuView: View {
     @State private var hoveredItemId: String? = nil
     @State private var currentDragOffset: CGSize = .zero
 
-    private let radius: CGFloat = 88.0
-    private let itemSize: CGFloat = 46.0
+    // 這個工具盤畫在**螢幕座標**（不隨頁面縮放）。原本 46pt 的按鈕 + 8pt 的字
+    // 放在被縮放的頁面裡，實際只剩 30pt 左右、字約 5pt，看不清楚是什麼工具。
+    private let radius: CGFloat = 118.0
+    private let itemSize: CGFloat = 72.0
 
     public init(
         isPresented: Binding<Bool>,
@@ -86,15 +88,18 @@ public struct RadialMarkMenuView: View {
                         item.action()
                         dismissMenu()
                     } label: {
-                        VStack(spacing: 2) {
+                        VStack(spacing: 3) {
                             Image(systemName: item.icon)
-                                .font(.system(size: isHovered ? 18 : 15, weight: isHovered ? .bold : .semibold))
+                                .font(.system(size: isHovered ? 24 : 22, weight: .semibold))
                                 .foregroundColor(isHovered ? .white : item.color)
 
                             Text(localizationManager.localized(item.labelKey))
-                                .font(.system(size: 8, weight: .bold))
-                                .foregroundColor(isHovered ? .white : .secondary)
-                                .lineLimit(1)
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundColor(isHovered ? .white : .primary)
+                                .multilineTextAlignment(.center)
+                                .lineLimit(2)
+                                .minimumScaleFactor(0.75)
+                                .padding(.horizontal, 4)
                         }
                         .frame(width: itemSize, height: itemSize)
                         .background {
@@ -108,8 +113,12 @@ public struct RadialMarkMenuView: View {
                         }
                         .scaleEffect(isHovered ? 1.15 : 1.0)
                         .animation(.spring(response: 0.25, dampingFraction: 0.7), value: isHovered)
+                        .contentShape(Circle())
                     }
                     .buttonStyle(.plain)
+                    .onHover { inside in
+                        hoveredItemId = inside ? item.id : (hoveredItemId == item.id ? nil : hoveredItemId)
+                    }
                     .position(x: centerPoint.x + position.x, y: centerPoint.y + position.y)
                     .accessibilityLabel(localizationManager.localized(item.labelKey))
                 }

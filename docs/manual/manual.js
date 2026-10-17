@@ -26,7 +26,8 @@ window.KAIRUMO_MANUAL = {
       "figNote": "截圖為繁體中文介面",
       "backToTop": "回到目錄",
       "langLabel": "語言",
-      "privacyLink": "隱私權政策"
+      "privacyLink": "隱私權政策",
+      "exportPdfPrint": "列印 / 匯出 PDF"
     },
     "sections": [
       {
@@ -581,7 +582,7 @@ window.KAIRUMO_MANUAL = {
       },
       {
         "id": "collab",
-        "title": "線上協同（手把手教學）",
+        "title": "線上協同（零基礎教學）",
         "lead": "多人即時共筆。沒有雲端伺服器 —— 零知識 AES-256-GCM 端對端加密，中繼永遠是你自己的裝置。支援「同一個 Wi-Fi 區網自動探索」與「Tailscale / 虛擬網跨網段遠端連線」，零基礎按步即可完成。",
         "buttons": [
           "線上協同",
@@ -601,7 +602,7 @@ window.KAIRUMO_MANUAL = {
           "**A3｜方式二：使用邀請連結。** 房主點擊「複製區網連結 (Wi-Fi)」（或「複製加密邀請連結」），連結內已自動包含房主區網 IP 與解密金鑰；隊友只要在「加入協同房間」貼上整串連結並按下加入，即可連線，完全不需手動設定伺服器 IP！",
           "── **情況 B：跨網段／不同網路（遠端、異地、行動網路）** ──",
           "**協同完全支援跨網段！** 遠端協作推薦兩種安全連線方式：",
-          "**B1｜方式一：Tailscale 私有虛擬網（最推薦，零伺服器、手把手操作）：**\n① 雙方裝置（手機、平板或電腦皆可）安裝免費的 Tailscale App 並登入同一個帳號（或同一個 Tailnet 私有網路）。\n② 房主在筆記中點擊「開始多人協同」，Kairumo 會自動偵測到系統的 Tailscale 虛擬網位址（100.x.y.z:9002）。\n③ 房主畫面上會出現藍色按鈕「複製跨網段連結 (Tailscale)」；房主點擊複製並透過訊息傳給隊友。\n④ 遠端隊友在「加入協同房間」貼上該連結並按加入，雙方立即透過 Tailscale 建立點對端安全直連，完全不需路由器開 Port 或公網 IP！",
+          "**B1｜方式一：Tailscale 私有虛擬網（最推薦，零伺服器、零基礎操作）：**\n① 雙方裝置（手機、平板或電腦皆可）安裝免費的 Tailscale App 並登入同一個帳號（或同一個 Tailnet 私有網路）。\n② 房主在筆記中點擊「開始多人協同」，Kairumo 會自動偵測到系統的 Tailscale 虛擬網位址（100.x.y.z:9002）。\n③ 房主畫面上會出現藍色按鈕「複製跨網段連結 (Tailscale)」；房主點擊複製並透過訊息傳給隊友。\n④ 遠端隊友在「加入協同房間」貼上該連結並按加入，雙方立即透過 Tailscale 建立點對端安全直連，完全不需路由器開 Port 或公網 IP！",
           "**B2｜方式二：自建或公共安全中繼伺服器（WSS 加密）：**\n① 若團隊架設有 padnote-relay 並綁定 TLS 網域名稱（例如 wss://relay.yourdomain.com），雙方展開面板底部的「協同伺服器位址」並填入該 wss:// 位址。\n② 房主點「開始多人協同」後，複製產生的邀請連結傳給隊友，隊友貼上加入即可。公開網路強制要求 wss://，確保房號與傳輸完全受到 TLS 加密保護。",
           "── **連線成功與共筆操作** ──",
           "**步驟 1｜確認在線成員。** 兩台裝置的「在線成員」都會即時列出對方的名字，房主會標記為「房主（擁有者）」。若在多裝置登錄同一個 Google 帳號測試，系統會自動在名稱旁加上裝置後綴（例如「您的名字 (裝置 1)」與「您的名字 (裝置 2)」），彼此各自擁有專屬辨識色與游標，清晰區分互不衝突！",
@@ -882,7 +883,8 @@ window.KAIRUMO_MANUAL = {
       "figNote": "Screenshots show the English interface",
       "backToTop": "Back to contents",
       "langLabel": "Language",
-      "privacyLink": "Privacy Policy"
+      "privacyLink": "Privacy Policy",
+      "exportPdfPrint": "Print / Export PDF"
     },
     "sections": [
       {
@@ -1437,7 +1439,7 @@ window.KAIRUMO_MANUAL = {
       },
       {
         "id": "collab",
-        "title": "Real-time collaboration (step by step)",
+        "title": "Real-time collaboration (beginner tutorial)",
         "lead": "Write together in real time. There is no cloud server — zero-knowledge AES-256-GCM end-to-end encrypted, and the relay is always your own device. Supports automatic LAN room discovery over the same Wi-Fi as well as cross-network remote collaboration via Tailscale or custom relays.",
         "buttons": [
           "Collaborate",
@@ -1733,7 +1735,8 @@ window.KAIRUMO_MANUAL = {
       "figNote": "截图为繁体中文界面",
       "backToTop": "回到目录",
       "langLabel": "语言",
-      "privacyLink": "隐私政策"
+      "privacyLink": "隐私政策",
+      "exportPdfPrint": "打印 / 导出 PDF"
     },
     "sections": [
       {
@@ -2288,7 +2291,7 @@ window.KAIRUMO_MANUAL = {
       },
       {
         "id": "collab",
-        "title": "在线协作（手把手教学）",
+        "title": "在线协作（零基础教学）",
         "lead": "多人实时共笔。没有云端服务器 —— 零知识 AES-256-GCM 端对端加密，中继永远是你自己的设备。支持“同一个 Wi-Fi 局域网自动发现”与“Tailscale / 虚拟网跨网段远程直连”，零基础按步即可完成。",
         "buttons": [
           "在线协作",
@@ -2308,7 +2311,7 @@ window.KAIRUMO_MANUAL = {
           "**A3｜方式二：使用邀请链接。** 房主点击“复制局域网链接 (Wi-Fi)”（或“复制加密邀请链接”），链接内已自动包含房主局域网 IP 与解密密钥；队友只要在“加入协作房间”粘贴整串链接并按加入，即可连接，完全不需要手动配置服务器 IP！",
           "── **情况 B：跨网段／不同网络（远程、异地、移动网络）** ──",
           "**协作完全支持跨网段！** 远程协作推荐两种安全连接方式：",
-          "**B1｜方式一：Tailscale 私有虚拟网（最推荐，零服务器、手把手操作）：**\n① 双方设备（手机、平板或电脑皆可）安装免费的 Tailscale App 并登录同一个账号（或同一个 Tailnet 私有网络）。\n② 房主在笔记中点击“开始多人协作”，Kairumo 会自动检测到系统的 Tailscale 虚拟网地址（100.x.y.z:9002）。\n③ 房主画面上会出现蓝色按钮“复制跨网段链接 (Tailscale)”；房主点击复制并通过消息发给队友。\n④ 远程队友在“加入协作房间”粘贴该链接并按加入，双方立即通过 Tailscale 建立点对端安全直连，完全不需要路由器端口映射或公网 IP！",
+          "**B1｜方式一：Tailscale 私有虚拟网（最推荐，零服务器、零基础操作）：**\n① 双方设备（手机、平板或电脑皆可）安装免费的 Tailscale App 并登录同一个账号（或同一个 Tailnet 私有网络）。\n② 房主在笔记中点击“开始多人协作”，Kairumo 会自动检测到系统的 Tailscale 虚拟网地址（100.x.y.z:9002）。\n③ 房主画面上会出现蓝色按钮“复制跨网段链接 (Tailscale)”；房主点击复制并通过消息发给队友。\n④ 远程队友在“加入协作房间”粘贴该链接并按加入，双方立即通过 Tailscale 建立点对端安全直连，完全不需要路由器端口映射或公网 IP！",
           "**B2｜方式二：自建或公共安全中继服务器（WSS 加密）：**\n① 若团队架设有 padnote-relay 并绑定 TLS 域名（例如 wss://relay.yourdomain.com），双方展开面板底部的“协作服务器地址”并填入该 wss:// 地址。\n② 房主点“开始多人协作”后，复制生成的邀请链接发给队友，队友粘贴加入即可。公开网络强制要求 wss://，确保房号与传输完全受到 TLS 加密保护。",
           "── **连接成功与共笔操作** ──",
           "**步骤 1｜确认在线成员。** 两台设备的“在线成员”都会实时列出对方的名字，房主会标记为“房主（拥有者）”。若在多设备登录同一个 Google 账号测试，系统会自动在名称旁加上设备后缀（例如“您的名字 (设备 1)”与“您的名字 (设备 2)”），彼此各自拥有专属辨识色与光标，清晰区分互不冲突！",
@@ -2584,7 +2587,8 @@ window.KAIRUMO_MANUAL = {
       "figNote": "スクリーンショットは英語表示です",
       "backToTop": "目次へ戻る",
       "langLabel": "言語",
-      "privacyLink": "プライバシーポリシー"
+      "privacyLink": "プライバシーポリシー",
+      "exportPdfPrint": "印刷 / PDFとして書き出し"
     },
     "sections": [
       {
@@ -3139,7 +3143,7 @@ window.KAIRUMO_MANUAL = {
       },
       {
         "id": "collab",
-        "title": "リアルタイム共同編集（ステップ解説）",
+        "title": "リアルタイム共同編集（ゼロ基礎チュートリアル）",
         "lead": "複数人で同時に書けます。クラウドサーバーはありません —— ゼロ知識 AES-256-GCM エンドツーエンド暗号化で、中継は常にあなたの手元の端末です。「同一 Wi-Fi の自動探索」および「Tailscale / 仮想網による遠隔直連」に対応し、初心者でも迷わず接続できます。",
         "buttons": [
           "共同編集",
@@ -3435,7 +3439,8 @@ window.KAIRUMO_MANUAL = {
       "figNote": "스크린샷은 영어 화면입니다",
       "backToTop": "목차로",
       "langLabel": "언어",
-      "privacyLink": "개인정보 처리방침"
+      "privacyLink": "개인정보 처리방침",
+      "exportPdfPrint": "인쇄 / PDF로 내보내기"
     },
     "sections": [
       {
@@ -3990,7 +3995,7 @@ window.KAIRUMO_MANUAL = {
       },
       {
         "id": "collab",
-        "title": "실시간 협업 (단계별 가이드)",
+        "title": "실시간 협업 (초보자 튜토리얼)",
         "lead": "여러 사람이 동시에 필기합니다. 클라우드 서버는 없습니다 —— 영지식 AES-256-GCM 종단 간 암호화가 적용되며, 중계는 언제나 사용자 본인의 기기입니다. “동일 Wi-Fi 로컬 방 자동 검색”과 “Tailscale / 가상망 원격 직접 연결”을 지원하여 초보자도 쉽게 사용할 수 있습니다.",
         "buttons": [
           "공동 편집",
@@ -4286,7 +4291,8 @@ window.KAIRUMO_MANUAL = {
       "figNote": "ภาพหน้าจอเป็นภาษาอังกฤษ",
       "backToTop": "กลับไปที่สารบัญ",
       "langLabel": "ภาษา",
-      "privacyLink": "นโยบายความเป็นส่วนตัว"
+      "privacyLink": "นโยบายความเป็นส่วนตัว",
+      "exportPdfPrint": "พิมพ์ / ส่งออกเป็น PDF"
     },
     "sections": [
       {
@@ -4836,7 +4842,7 @@ window.KAIRUMO_MANUAL = {
       },
       {
         "id": "collab",
-        "title": "ทำงานร่วมกันแบบเรียลไทม์ (ทีละขั้น)",
+        "title": "ทำงานร่วมกันแบบเรียลไทม์ (บทเรียนสำหรับผู้เริ่มต้น)",
         "lead": "เขียนพร้อมกันหลายคนแบบเรียลไทม์ ไม่มีเซิร์ฟเวอร์คลาวด์ —— เข้ารหัสแบบ Zero-Knowledge AES-256-GCM End-to-End โดยตัวส่งต่อเป็นเครื่องของคุณเองเสมอ รองรับทั้ง “การค้นหาห้องอัตโนมัติบน Wi-Fi เดียวกัน” และ “การเชื่อมต่อระยะไกลข้ามเครือข่ายผ่าน Tailscale” ใช้งานง่ายตามขั้นตอน",
         "buttons": [
           "การทำงานร่วมกัน",
