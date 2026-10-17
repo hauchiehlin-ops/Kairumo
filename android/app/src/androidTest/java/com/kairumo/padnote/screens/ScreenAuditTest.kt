@@ -236,6 +236,13 @@ class ScreenAuditTest {
                 "現場的 tag：" + presentTags().take(20).joinToString(", "),
             nodes.isNotEmpty())
         cards[0].performClick()
+        // 開範例時先在背景把它備份到暫存區（SampleFork.begin），備份完才換到編輯器 ——
+        // waitForIdle 等不到背景執行緒，要等編輯器真的出現。
+        compose.waitUntil(timeoutMillis = 30_000) {
+            listOf("editor.more", "editor.share", "editor.sidebar_toggle").any {
+                compose.onAllNodesWithTag(it).fetchSemanticsNodes().isNotEmpty()
+            }
+        }
         compose.waitForIdle()
         // 第一張（最近改過的）是種子的「圖學範例」，開啟時會自動選「圖學」筆組；製圖筆的粗細由筆組決定，
         // 刻意不顯示粗細滑桿（`editor.ink.width`）。稽核要的是一般筆的控制項，所以改選一般的筆。
