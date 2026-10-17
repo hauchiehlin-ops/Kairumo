@@ -296,6 +296,15 @@ object CloudSync {
             // 權杖救不回來了。清掉本機那份，讓 UI 顯示「未登入」——
             // 留著一個永遠失敗的權杖，背景會一直重試而使用者不知道要去登入。
             GoogleAuth.handleAuthFailure(context)
+            if (GoogleAuth.isSignedIn(context)) {
+                return FfiCloudSyncResult(
+                    ok = false,
+                    settingsJson = result.settingsJson,
+                    indexJson = result.indexJson,
+                    error = result.error,
+                    needsReauth = false
+                )
+            }
         }
         return result
     }
@@ -405,8 +414,8 @@ object CloudSync {
 
     private fun runFullBody(context: Context, deviceId: UInt, activeNotebookId: String? = null): FullResult {
         SyncLogger.log("【Google Drive 同步】開始執行", SyncSource.GOOGLE_DRIVE)
-        if (SyncHistory.accountName(context) == null) {
-            accountEmail(context)
+        if (SyncHistory.accountName(context) == null || AccountSyncStore.lastAccount(context).isEmpty()) {
+            runCatching { accountEmail(context) }
         }
         SyncLogger.log("步驟 1：同步中繼資料與索引 (連線中)...", SyncSource.GOOGLE_DRIVE)
 
@@ -452,13 +461,33 @@ object CloudSync {
         val session = makeSession(context)
         if (session == null) {
             SyncLogger.log("無法取得有效權杖，Google Drive 同步中止", SyncSource.GOOGLE_DRIVE)
-            return FullResult(null, 0, 0, emptyList())
+            val signedIn = GoogleAuth.isSignedIn(context)
+            return FullResult(
+                if (signedIn) FfiCloudSyncResult(
+                    ok = false,
+                    settingsJson = "",
+                    indexJson = "",
+                    error = com.kairumo.padnote.L10n.t("drive_cred_refresh_failed"),
+                    needsReauth = false
+                ) else null,
+                0, 0, emptyList()
+            )
         }
         val refreshed = session.refresh()
         if (!refreshed.ok) {
             SyncLogger.log("雲端快照更新失敗：${refreshed.error}", SyncSource.GOOGLE_DRIVE)
             if (refreshed.needsReauth) GoogleAuth.handleAuthFailure(context)
-            return FullResult(null, 0, 0, emptyList())
+            val stillSignedIn = GoogleAuth.isSignedIn(context)
+            return FullResult(
+                FfiCloudSyncResult(
+                    ok = false,
+                    settingsJson = "",
+                    indexJson = "",
+                    error = refreshed.error,
+                    needsReauth = refreshed.needsReauth && !stillSignedIn
+                ),
+                0, 0, emptyList()
+            )
         }
         SyncLogger.log(
             if (refreshed.fullRebuild) {

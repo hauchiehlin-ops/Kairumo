@@ -503,6 +503,9 @@ extension NotebookStore {
         doc.snippetKey = "drafting_example_p1_sub"
         doc.pageFormatId = ex.pageFormatId
         doc.pagePaperIds = Array(repeating: ex.paperId, count: pages)
+        if let canonical = NotebookPackageBridge.deterministicSeedPageIds(for: doc.id) {
+            doc.pageIds = Array(canonical.prefix(max(pages, 1)))
+        }
         let empty = PKDrawing().dataRepresentation()
         doc.pagesData = Array(repeating: empty, count: pages)
 

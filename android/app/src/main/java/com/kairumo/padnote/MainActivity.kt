@@ -644,9 +644,11 @@ private fun NotebookHome(
     var cloudBusy by remember { mutableStateOf(false) }
     var cloudMessage by remember { mutableStateOf<String?>(null) }
     val authRevision by com.kairumo.padnote.oauth.GoogleAuth.authRevision.collectAsState()
+    val lastAuthError by com.kairumo.padnote.oauth.GoogleAuth.lastAuthError.collectAsState()
+    val autoSyncRunning by com.kairumo.padnote.sync.AutoSync.isSyncing.collectAsState()
     // `revision` 與 `authRevision` 也當成重讀的觸發器：登入是跳出去系統瀏覽器再回來的，
     // 回來時要重新問一次「現在登入了沒」。
-    val signedIn = remember(revision, cloudBusy, authRevision) {
+    val signedIn = remember(revision, cloudBusy, authRevision, autoSyncRunning) {
         com.kairumo.padnote.oauth.GoogleAuth.isSignedIn(activity)
     }
 
@@ -655,27 +657,42 @@ private fun NotebookHome(
         cloudBusy = true
         cloudMessage = l("syncing")
         autoSyncScope.launch {
-            val result = withContext(Dispatchers.IO) {
+            var result = withContext(Dispatchers.IO) {
                 com.kairumo.padnote.library.CloudSync.runFull(activity, device)
+            }
+            // 若剛剛好撞上 AutoSync 正在跑的那一輪（skipped = true），等那一輪結束後再補跑一次，
+            // 絕不能把 skipped 的 meta == null 誤判成「尚未登入」。
+            if (result.skipped && com.kairumo.padnote.oauth.GoogleAuth.isSignedIn(activity)) {
+                kotlinx.coroutines.delay(1200)
+                result = withContext(Dispatchers.IO) {
+                    com.kairumo.padnote.library.CloudSync.runFull(activity, device)
+                }
             }
             val meta = result.meta
             cloudBusy = false
+            if (result.skipped) {
+                // 另一輪仍在同步中，不顯示假錯誤，交由該輪完成時更新畫面。
+                revision++
+                return@launch
+            }
             // 成功才記時間 —— 失敗也記的話，「上次同步」會變成
             // 「上次按下按鈕」，那正好是使用者想分辨的兩件事。
             if (meta != null && meta.ok && !meta.needsReauth) {
                 com.kairumo.padnote.library.SyncHistory.markGoogleSynced(activity)
-                // 順便問一次「這是誰的帳號」。不必新增授權範圍：
-                // Drive 的 about.get 在 drive.appdata 底下就讀得到。
+                // 順便問一次「這是誰的帳號」。`accountEmail` 內部會分別寫入 email 與顯示名稱，
+                // 切勿把回傳的顯示名稱再塞回 `setAccount`，否則會把 email 蓋掉。
                 withContext(Dispatchers.IO) {
-                    com.kairumo.padnote.library.SyncHistory.setAccount(
-                        activity,
-                        com.kairumo.padnote.library.CloudSync.accountEmail(activity)
-                    )
+                    com.kairumo.padnote.library.CloudSync.accountEmail(activity)
                 }
                 profile = AccountManager.load(activity, l("default_user_name"))
             }
             cloudMessage = when {
-                meta == null -> l("not_signed_in")
+                meta == null ->
+                    if (com.kairumo.padnote.oauth.GoogleAuth.isSignedIn(activity)) {
+                        l("sync_failed").replace("%@", L10n.t("drive_cred_refresh_failed"))
+                    } else {
+                        l("not_signed_in")
+                    }
                 meta.needsReauth -> l("sync_needs_reauth")
                 !meta.ok -> l("sync_failed").replace("%@", L10n.coreText(meta.error))
                 // 講出上傳與下載的數量，與 Apple 一致。只說「完成」的話，
@@ -688,19 +705,21 @@ private fun NotebookHome(
         }
     }
 
-    LaunchedEffect(authRevision, signedIn) {
+    LaunchedEffect(authRevision, signedIn, lastAuthError) {
         if (signedIn) {
             withContext(Dispatchers.IO) {
-                if (com.kairumo.padnote.library.SyncHistory.accountName(activity) == null) {
+                if (com.kairumo.padnote.library.SyncHistory.accountName(activity) == null ||
+                    com.kairumo.padnote.library.AccountSyncStore.lastAccount(activity).isEmpty()
+                ) {
                     com.kairumo.padnote.library.CloudSync.accountEmail(activity)
                 }
             }
         }
         profile = AccountManager.load(activity, l("default_user_name"))
-        if (authRevision > 0 && com.kairumo.padnote.oauth.GoogleAuth.isSignedIn(activity)) {
+        if (lastAuthError != null && !signedIn) {
+            cloudMessage = l("sync_failed").replace("%@", L10n.coreText(lastAuthError ?: ""))
+        } else if (authRevision > 0 && com.kairumo.padnote.oauth.GoogleAuth.isSignedIn(activity)) {
             cloudMessage = l("sync_google_authorized")
-            com.kairumo.padnote.sync.AutoSync.request(
-                activity, uniffi.padnote_core.FfiSyncTrigger.SIGNED_IN)
             runCloudSync()
         }
     }
@@ -754,6 +773,13 @@ private fun NotebookHome(
         if (changedNotebooks.isNotEmpty()) {
             revision++
             com.kairumo.padnote.sync.AutoSync.consumeChanged()
+        }
+    }
+    val syncCompletedRev by com.kairumo.padnote.sync.AutoSync.syncCompletedRevision.collectAsState()
+    LaunchedEffect(syncCompletedRev) {
+        if (syncCompletedRev > 0) {
+            profile = AccountManager.load(activity, l("default_user_name"))
+            revision++
         }
     }
 

@@ -1,6 +1,7 @@
 package com.kairumo.padnote.library
 
 import android.content.Context
+import com.kairumo.padnote.profile.ProfileContext
 import org.json.JSONObject
 import uniffi.padnote_core.PadnoteSession
 import java.io.File
@@ -130,11 +131,60 @@ object RecordingIndex {
             .filterNotNull()
             .distinct()
             .associateWith { titlesIn(it, deviceId) }
-        return found.map { rec ->
+        val mapped = found.map { rec ->
             val pkg = rec.file.parentFile?.parentFile?.parentFile
             val title = pkg?.let { titlesByPackage[it] }?.get(rec.file.name.lowercase())
             if (title != null) rec.copy(title = title) else rec
         }
+        runCatching { syncExportFolder(context, mapped) }
+        return mapped
+    }
+
+    /** 「Kairumo Record」錄音匯出資料夾（與 Apple `recordingsDirectory` 命名及行為對齊）。 */
+    fun recordingsExportDirectory(context: Context): File =
+        File(ProfileContext.dataDir(context), "Kairumo Record").apply { mkdirs() }
+
+    /**
+     * 將目前所有套件內的錄音同步鏡射至 `Kairumo Record` 資料夾，並移除已刪除的舊檔，
+     * 確保使用者開啟錄音資料夾時看到的內容與 App 清單完全一致。
+     */
+    fun syncExportFolder(context: Context, recordings: List<Recording>): List<File> {
+        val exportDir = recordingsExportDirectory(context)
+        val usedNames = HashSet<String>()
+        val exportedFiles = ArrayList<File>(recordings.size)
+
+        for (rec in recordings) {
+            if (!rec.file.exists() || !rec.file.isFile) continue
+            val ext = rec.file.extension.ifBlank { "opus" }
+            val base = rec.displayTitle
+                .replace(Regex("[\\\\/:*?\"<>|\\u0000-\\u001F]"), "-")
+                .trim('.', ' ')
+                .take(80)
+                .ifBlank { rec.file.nameWithoutExtension }
+
+            var exportName = "$base.$ext"
+            var suffix = 2
+            while (!usedNames.add(exportName.lowercase())) {
+                exportName = "$base ($suffix).$ext"
+                suffix++
+            }
+
+            val target = File(exportDir, exportName)
+            if (!target.exists() || target.length() != rec.file.length()) {
+                runCatching {
+                    rec.file.copyTo(target, overwrite = true)
+                    target.setLastModified(rec.recordedAt)
+                }
+            }
+            exportedFiles.add(target)
+        }
+
+        exportDir.listFiles()?.forEach { file ->
+            if (file.isFile && file.name.lowercase() !in usedNames) {
+                runCatching { file.delete() }
+            }
+        }
+        return exportedFiles
     }
 
     /** 一個套件裡的錄音名字：檔名（小寫）→ 名字。讀不到就是空的。 */

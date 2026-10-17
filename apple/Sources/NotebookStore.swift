@@ -1332,6 +1332,11 @@ public final class NotebookStore: ObservableObject {
     /// 讀目前設定檔的資料；是空的就放範例筆記。`init` 與切換設定檔共用。
     private func loadAndSeed() {
         loadData()
+        if ProcessInfo.processInfo.environment["KAIRUMO_UITEST"] == "1" {
+            for id in pendingSampleSessionIds {
+                finishSampleSession(id, choice: .discard)
+            }
+        }
         let nonInbox = notebooks.filter {
             $0.id.caseInsensitiveCompare(recordingInboxNotebookId()) != .orderedSame
         }
@@ -2448,6 +2453,7 @@ public final class NotebookStore: ObservableObject {
             to: corePackagesDirectory.appending(path: "\(fresh.id.lowercased()).padnote"),
             deviceId: NotebookMigration.deviceId)
         notebooks[index] = fresh
+        try? FileManager.default.removeItem(at: sampleSessionDirectory(old.id))
         PageThumbnailRenderer.invalidateAll()
     }
 
@@ -3711,6 +3717,7 @@ public final class NotebookStore: ObservableObject {
             }
         }
         persistData()
+        syncRecordingsExportFolder()
         return rec
     }
 
@@ -3985,7 +3992,10 @@ public final class NotebookStore: ObservableObject {
             }
         }
 
-        if changed { persistData(signalsLocalEdit: false) }
+        if changed {
+            persistData(signalsLocalEdit: false)
+            syncRecordingsExportFolder()
+        }
     }
 
     /// 錄音檔名（`<UUIDv7>.opus`）裡的建立時間。不是 v7 或不合理就回 `fallback`。
@@ -4145,6 +4155,7 @@ public final class NotebookStore: ObservableObject {
             targets.append(TargetInfo(id: inboxId, displayTitle: LocalizationManager.shared.localized("recording_inbox")))
         }
 
+        let docsDir = self.documentsDir
         let work: () -> ([AudioRecordingRecord], Set<String>) = {
             var byFileName: [String: AudioRecordingRecord] = [:]
             for rec in currentRecordings {
@@ -4243,12 +4254,25 @@ public final class NotebookStore: ObservableObject {
                 }
             }
 
+            let mirroredManifest = Self.readMirroredRecordingsManifest(in: legacyDir)
+            let mirroredNames = Set(mirroredManifest.values.map { $0.lowercased() })
+                .union(mirroredManifest.keys.map { $0.lowercased() })
             let legacy = byFileName.values.filter {
-                fm.fileExists(atPath: legacyDir.appending(path: $0.fileName).path)
+                let lower = $0.fileName.lowercased()
+                guard !mirroredNames.contains(lower),
+                      ($0.fileName as NSString).pathExtension.lowercased() != "opus" else {
+                    return false
+                }
+                return fm.fileExists(atPath: legacyDir.appending(path: $0.fileName).path)
             }
 
             // 不再以卡片名稱覆蓋清單：卡片跟著錄音的名字走，兩邊互相覆蓋就是名字來回跳的原因之一。
             let refreshed = (scanned + legacy).sorted { $0.recordedDate > $1.recordedDate }
+            _ = Self.syncRecordingsExportFolder(
+                recordings: refreshed,
+                packagesDir: pkgDir,
+                documentsDir: docsDir,
+                exportDir: legacyDir)
 
             return (refreshed, consumedUnmatchedKeys)
         }
@@ -4276,6 +4300,180 @@ public final class NotebookStore: ObservableObject {
                 applyResult(refreshed, consumedKeys)
             }
         }
+    }
+
+    private nonisolated static let mirroredManifestFileName = ".kairumo-mirrored.json"
+
+    private nonisolated static func readMirroredRecordingsManifest(in exportDir: URL) -> [String: String] {
+        let url = exportDir.appending(path: mirroredManifestFileName)
+        guard let data = try? Data(contentsOf: url),
+              let dict = try? JSONDecoder().decode([String: String].self, from: data) else {
+            return [:]
+        }
+        return dict
+    }
+
+    private nonisolated static func writeMirroredRecordingsManifest(_ manifest: [String: String], in exportDir: URL) {
+        let url = exportDir.appending(path: mirroredManifestFileName)
+        guard let data = try? JSONEncoder().encode(manifest) else { return }
+        try? data.write(to: url, options: .atomic)
+    }
+
+    private nonisolated static func sanitizeExportedRecordingTitle(_ rawTitle: String, fallbackStem: String) -> String {
+        let forbidden = CharacterSet(charactersIn: "/:\\\0\n\r\t")
+        let replaced = rawTitle.unicodeScalars.map { forbidden.contains($0) ? "-" : String($0) }.joined()
+        let trimmed = replaced.trimmingCharacters(in: CharacterSet(charactersIn: ". \t\n\r"))
+        return trimmed.isEmpty ? fallbackStem : trimmed
+    }
+
+    /// 將所有套件內的真實錄音檔（`*.padnote/media/audio/*.opus`）同步鏡射至 `Kairumo Record` 資料夾，
+    /// 使 Finder／「檔案」App 打開 `Kairumo Record` 時能看到與 App 錄音清單一致的音訊檔案。
+    /// 回傳 `rec.fileName.lowercased() -> Kairumo Record 內對應檔案 URL` 的對照表。
+    @discardableResult
+    public func syncRecordingsExportFolder() -> [String: URL] {
+        Self.syncRecordingsExportFolder(
+            recordings: recordings,
+            packagesDir: corePackagesDirectory,
+            documentsDir: documentsDir,
+            exportDir: AudioRecorderManager.shared.recordingsDirectory)
+    }
+
+    /// 取得錄音在 `Kairumo Record` 匯出資料夾中的對應檔案 URL（供分享與 Finder 顯示）。
+    public func exportedRecordingFileURL(for rawURL: URL) -> URL {
+        let map = syncRecordingsExportFolder()
+        let key = rawURL.lastPathComponent.lowercased()
+        if let mapped = map[key], FileManager.default.fileExists(atPath: mapped.path) {
+            return mapped
+        }
+        return rawURL
+    }
+
+    @discardableResult
+    nonisolated static func syncRecordingsExportFolder(
+        recordings: [AudioRecordingRecord],
+        packagesDir: URL,
+        documentsDir: URL,
+        exportDir: URL
+    ) -> [String: URL] {
+        let fm = FileManager.default
+        if !fm.fileExists(atPath: exportDir.path) {
+            try? fm.createDirectory(at: exportDir, withIntermediateDirectories: true)
+        }
+
+        let isUITest = ProcessInfo.processInfo.environment["KAIRUMO_UITEST"] == "1"
+        if !isUITest {
+            let fixture = exportDir.appending(path: "uitest-fixture.opus")
+            if fm.fileExists(atPath: fixture.path) {
+                try? fm.removeItem(at: fixture)
+            }
+        }
+
+        let previousManifest = readMirroredRecordingsManifest(in: exportDir)
+        var newManifest: [String: String] = [:]
+        var resultURLs: [String: URL] = [:]
+        var usedExportNames: Set<String> = []
+        let inboxId = recordingInboxNotebookId().lowercased()
+
+        let allPackageDirs: [URL] = {
+            var dirs: [URL] = []
+            if let pkgs = try? fm.contentsOfDirectory(at: packagesDir, includingPropertiesForKeys: nil) {
+                dirs.append(contentsOf: pkgs.filter { $0.pathExtension == "padnote" })
+            }
+            if let docPkgs = try? fm.contentsOfDirectory(at: documentsDir, includingPropertiesForKeys: nil) {
+                dirs.append(contentsOf: docPkgs.filter { $0.pathExtension == "padnote" })
+            }
+            return dirs
+        }()
+
+        func findSourceAudio(for rec: AudioRecordingRecord) -> URL? {
+            let clean = (rec.fileName as NSString).lastPathComponent
+            guard !clean.isEmpty else { return nil }
+            if let linked = rec.linkedNotebookId?.lowercased(), !linked.isEmpty {
+                let candidate = packagesDir.appending(path: "\(linked).padnote/media/audio/\(clean)")
+                if fm.fileExists(atPath: candidate.path) { return candidate }
+            }
+            let inInbox = packagesDir.appending(path: "\(inboxId).padnote/media/audio/\(clean)")
+            if fm.fileExists(atPath: inInbox.path) { return inInbox }
+            for pkg in allPackageDirs {
+                let candidate = pkg.appending(path: "media/audio/\(clean)")
+                if fm.fileExists(atPath: candidate.path) { return candidate }
+            }
+            return nil
+        }
+
+        for rec in recordings {
+            let key = (rec.fileName as NSString).lastPathComponent.lowercased()
+            guard !key.isEmpty else { continue }
+
+            guard let sourceURL = findSourceAudio(for: rec) else {
+                let looseURL = exportDir.appending(path: rec.fileName)
+                if fm.fileExists(atPath: looseURL.path) {
+                    usedExportNames.insert(rec.fileName.lowercased())
+                    resultURLs[key] = looseURL
+                }
+                continue
+            }
+
+            let stem = (rec.fileName as NSString).deletingPathExtension
+            let ext = (rec.fileName as NSString).pathExtension.isEmpty
+                ? "opus"
+                : (rec.fileName as NSString).pathExtension
+            let baseTitle = sanitizeExportedRecordingTitle(rec.title, fallbackStem: stem)
+
+            var exportName = "\(baseTitle).\(ext)"
+            var suffix = 2
+            while usedExportNames.contains(exportName.lowercased()) {
+                exportName = "\(baseTitle) (\(suffix)).\(ext)"
+                suffix += 1
+            }
+            usedExportNames.insert(exportName.lowercased())
+
+            let targetURL = exportDir.appending(path: exportName)
+            if let oldName = previousManifest[key],
+               oldName.caseInsensitiveCompare(exportName) != .orderedSame {
+                let oldURL = exportDir.appending(path: oldName)
+                if fm.fileExists(atPath: oldURL.path) && !fm.fileExists(atPath: targetURL.path) {
+                    try? fm.moveItem(at: oldURL, to: targetURL)
+                }
+            }
+
+            let sourceSize = (try? fm.attributesOfItem(atPath: sourceURL.path)[.size] as? UInt64) ?? 0
+            let targetSize = (try? fm.attributesOfItem(atPath: targetURL.path)[.size] as? UInt64)
+            if targetSize != sourceSize {
+                if fm.fileExists(atPath: targetURL.path) {
+                    try? fm.removeItem(at: targetURL)
+                }
+                try? fm.copyItem(at: sourceURL, to: targetURL)
+                try? fm.setAttributes([.modificationDate: rec.recordedDate], ofItemAtPath: targetURL.path)
+            }
+
+            newManifest[key] = exportName
+            resultURLs[key] = targetURL
+        }
+
+        for (_, oldExportName) in previousManifest {
+            if !usedExportNames.contains(oldExportName.lowercased()) {
+                let staleURL = exportDir.appending(path: oldExportName)
+                if fm.fileExists(atPath: staleURL.path) {
+                    try? fm.removeItem(at: staleURL)
+                }
+            }
+        }
+
+        if let files = try? fm.contentsOfDirectory(at: exportDir, includingPropertiesForKeys: nil) {
+            for file in files where file.pathExtension.lowercased() == "opus" {
+                let name = file.lastPathComponent
+                if isUITest && name.caseInsensitiveCompare("uitest-fixture.opus") == .orderedSame {
+                    continue
+                }
+                if !usedExportNames.contains(name.lowercased()) {
+                    try? fm.removeItem(at: file)
+                }
+            }
+        }
+
+        writeMirroredRecordingsManifest(newManifest, in: exportDir)
+        return resultURLs
     }
 
     /// 遷移之後改指到套件裡的新檔案。
@@ -4372,6 +4570,7 @@ public final class NotebookStore: ObservableObject {
             }
         }
         markDirtyAndPersist(signalsLocalEdit: true)
+        syncRecordingsExportFolder()
     }
 
     public func deleteRecording(id: String) {
@@ -4411,6 +4610,7 @@ public final class NotebookStore: ObservableObject {
             recordings.removeAll { $0.id == id }
         }
         persistData()
+        syncRecordingsExportFolder()
     }
 
     // MARK: - 核心格式遷移（工作包 WP4c）

@@ -70,6 +70,10 @@ object AutoSync {
     private val _changedNotebooks = MutableStateFlow<List<String>>(emptyList())
     val changedNotebooks: StateFlow<List<String>> = _changedNotebooks
 
+    /** 每完成一輪雲端同步就遞增一次，供首頁更新上次同步時間、資料夾結構與筆記清單。 */
+    private val _syncCompletedRevision = MutableStateFlow(0)
+    val syncCompletedRevision: StateFlow<Int> = _syncCompletedRevision
+
     private var started = false
 
     private var appContext: Context? = null
@@ -254,11 +258,16 @@ object AutoSync {
                 // 照 null 那一條走會回 NEEDS_REAUTH —— 一次跳過就把自動
                 // 同步停掉、叫使用者去重新登入，而他根本沒有登出。
                 result.skipped -> FfiSyncOutcome.TRANSIENT
-                meta == null -> FfiSyncOutcome.NEEDS_REAUTH
-                meta.needsReauth -> FfiSyncOutcome.NEEDS_REAUTH
+                meta == null ->
+                    if (GoogleAuth.isSignedIn(context)) FfiSyncOutcome.TRANSIENT
+                    else FfiSyncOutcome.NEEDS_REAUTH
+                meta.needsReauth ->
+                    if (GoogleAuth.isSignedIn(context)) FfiSyncOutcome.TRANSIENT
+                    else FfiSyncOutcome.NEEDS_REAUTH
                 !meta.ok -> FfiSyncOutcome.TRANSIENT
                 else -> {
                     SyncHistory.markGoogleSynced(context)
+                    _syncCompletedRevision.value += 1
                     roundChanged = result.uploaded > 0 || result.downloaded > 0 ||
                         result.changed.isNotEmpty()
                     if (result.changed.isNotEmpty()) {

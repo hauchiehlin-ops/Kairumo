@@ -9051,7 +9051,7 @@ public struct NotebookEditorView: View {
                 .frame(height: 18)
 
             Button {
-                audioManager.openRecordingsFolderInFinder()
+                audioManager.openRecordingsFolderInFinder(selectingFileURL: fileUrl)
             } label: {
                 Image(systemName: "folder")
                     .font(.caption)
@@ -11113,7 +11113,10 @@ public struct NotebookEditorView: View {
         guard store.hasSampleSession(id) else { leave(); return }
         // 筆跡在背景佇列寫入：等寫完再比對，最後一筆才算得進去。
         afterCoreInkWrites {
-            if store.sampleSessionHasChanges(id) {
+            if ProcessInfo.processInfo.environment["KAIRUMO_UITEST"] == "1" {
+                store.finishSampleSession(id, choice: .keep)
+                leave()
+            } else if store.sampleSessionHasChanges(id) {
                 afterSampleLeave = leave
                 showSampleLeaveDialog = true
             } else {

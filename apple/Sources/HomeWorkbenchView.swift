@@ -922,11 +922,12 @@ public struct HomeWorkbenchView: View {
 
     private func shareRecordingFromMenu(_ fileUrl: URL) {
         #if targetEnvironment(macCatalyst) || os(macOS)
-        audioManager.openRecordingsFolderInFinder()
+        audioManager.openRecordingsFolderInFinder(selectingFileURL: fileUrl)
         #else
+        let exportedUrl = notebookStore.exportedRecordingFileURL(for: fileUrl)
         shareRecordingURL = nil
         SheetCoordinator.shared.presentFromMenu {
-            shareRecordingURL = fileUrl
+            shareRecordingURL = exportedUrl
         }
         #endif
     }
@@ -4941,7 +4942,12 @@ struct PendingSampleSessionPrompt: ViewModifier {
 
     private func check() {
         guard !editorOpen, pendingId == nil else { return }
+        let isUITest = ProcessInfo.processInfo.environment["KAIRUMO_UITEST"] == "1"
         for id in store.pendingSampleSessionIds {
+            if isUITest {
+                store.finishSampleSession(id, choice: .discard)
+                continue
+            }
             if store.sampleSessionHasChanges(id) {
                 pendingId = id
                 return

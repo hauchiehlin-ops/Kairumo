@@ -104,12 +104,31 @@ public final class AudioRecorderManager: NSObject, ObservableObject, AVAudioReco
         return components?.url
     }
 
-    public func openRecordingsFolderInFinder(onFailure: (() -> Void)? = nil) {
-        // 先確保它存在（getter 本身會建立）。
+    public func openRecordingsFolderInFinder(
+        selectingFileURL: URL? = nil,
+        onFailure: (() -> Void)? = nil
+    ) {
+        // 先把套件內的錄音同步鏡射到「Kairumo Record」，確保打開資料夾時與 App 清單完全一致。
+        let mirrored = NotebookStore.shared.syncRecordingsExportFolder()
         let folderUrl = recordingsDirectory
+        let resolvedSelection: URL? = selectingFileURL.flatMap { raw in
+            let key = raw.lastPathComponent.lowercased()
+            if let mapped = mirrored[key], FileManager.default.fileExists(atPath: mapped.path) {
+                return mapped
+            }
+            if FileManager.default.fileExists(atPath: raw.path) {
+                return raw
+            }
+            return nil
+        }
         #if targetEnvironment(macCatalyst) || os(macOS)
         if let wsClass = NSClassFromString("NSWorkspace") as? NSObjectProtocol,
            let shared = wsClass.perform(NSSelectorFromString("sharedWorkspace"))?.takeUnretainedValue() {
+            let selectSel = NSSelectorFromString("activateFileViewerSelectingURLs:")
+            if let targetFile = resolvedSelection, shared.responds(to: selectSel) {
+                _ = shared.perform(selectSel, with: [targetFile])
+                return
+            }
             _ = shared.perform(NSSelectorFromString("openURL:"), with: folderUrl)
             return
         }
