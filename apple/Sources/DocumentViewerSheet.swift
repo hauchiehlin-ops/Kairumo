@@ -127,6 +127,7 @@ struct DocumentWebView: UIViewRepresentable {
             self.languageCode = languageCode
         }
 
+        // unused-param-ok: 簽名由 WKScriptMessageHandler 規定
         func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
             if message.name == "kairumoPrint" {
                 let jobName = LocalizationManager.shared.localized("user_manual")
