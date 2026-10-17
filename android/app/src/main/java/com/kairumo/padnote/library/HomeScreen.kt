@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -170,6 +171,7 @@ fun HomeScreen(
     // 狀態名字不一樣的話下一個人得重新對一次。
     var showAllContinue by remember { mutableStateOf(false) }
     var showAllRecordings by remember { mutableStateOf(false) }
+    var showRecordingsFolderDialog by remember { mutableStateOf(false) }
     // 隱藏的錄音（只在這次開啟期間，與 Apple 的 `hiddenRecordingIds` 相同）。
     var hiddenRecordings by remember { mutableStateOf(setOf<String>()) }
     // 隱藏的筆記本（只在這次開啟期間，與 Apple 的 `hiddenNoteIds` 相同）：「繼續編輯」與「全部筆記」都不列。
@@ -494,9 +496,8 @@ fun HomeScreen(
                 Spacer(Modifier.weight(1f))
                 TextButton(
                     onClick = {
-                        val folder = java.io.File(ProfileContext.dataDir(searchContext), "notebooks")
-                        val toastText = "${l("open_record_folder")}: ${folder.absolutePath}"
-                        android.widget.Toast.makeText(searchContext, toastText, android.widget.Toast.LENGTH_SHORT).show()
+                        runCatching { RecordingIndex.syncExportFolder(searchContext, recordings) }
+                        showRecordingsFolderDialog = true
                     },
                     modifier = Modifier.testTag("home.recordings.open_folder")
                 ) {
@@ -841,6 +842,77 @@ fun HomeScreen(
             }
         }
         }
+    }
+
+    if (showRecordingsFolderDialog) {
+        val exportFolder = remember(searchContext, recordings) {
+            runCatching { RecordingIndex.syncExportFolder(searchContext, recordings) }
+            RecordingIndex.recordingsExportDirectory(searchContext)
+        }
+        AlertDialog(
+            onDismissRequest = { showRecordingsFolderDialog = false },
+            title = { Text("📁 ${l("open_record_folder")}") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        exportFolder.absolutePath,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    if (recordings.isEmpty()) {
+                        Text(l("no_recordings_hint"), style = MaterialTheme.typography.bodySmall)
+                    } else {
+                        LazyColumn(
+                            modifier = Modifier.heightIn(max = 320.dp),
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            items(recordings, key = { "folder-rec-${it.file.absolutePath}" }) { rec ->
+                                Card(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable { shareRecording(searchContext, rec) },
+                                    shape = RoundedCornerShape(8.dp),
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = MaterialTheme.colorScheme.surfaceVariant
+                                    )
+                                ) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth().padding(10.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        Text("🎙️", fontSize = 15.sp)
+                                        Column(Modifier.weight(1f)) {
+                                            Text(
+                                                "${rec.displayTitle}.${rec.file.extension.ifBlank { "opus" }}",
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                fontWeight = FontWeight.Medium,
+                                                maxLines = 1
+                                            )
+                                            Text(
+                                                formatDate(rec.recordedAt),
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+                                        Text(
+                                            l("show_in_folder"),
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.primary
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showRecordingsFolderDialog = false }) {
+                    Text(l("confirm"))
+                }
+            }
+        )
     }
 }
 

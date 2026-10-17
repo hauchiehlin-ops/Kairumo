@@ -154,4 +154,80 @@ final class PlatformContractTests: XCTestCase {
         UserDefaults.standard.removeObject(forKey: "kairumo.account.cloudProviderPreference")
         XCTAssertEqual(accountManager.cloudProviderPreference, .iCloud)
     }
+
+    /// 驗證 `Kairumo Record` 資料夾與套件內真實錄音檔的同步鏡射（新增、改名、刪除、移除殘留檔）
+    func testSyncRecordingsExportFolderMirrorsRenamesAndDeletes() throws {
+        let fm = FileManager.default
+        let tempRoot = fm.temporaryDirectory.appendingPathComponent("kairumo-rec-export-\(UUID().uuidString)", isDirectory: true)
+        defer { try? fm.removeItem(at: tempRoot) }
+
+        let packagesDir = tempRoot.appendingPathComponent("Packages", isDirectory: true)
+        let docsDir = tempRoot.appendingPathComponent("Documents", isDirectory: true)
+        let exportDir = tempRoot.appendingPathComponent("Kairumo Record", isDirectory: true)
+        let pkgAudioDir = packagesDir.appendingPathComponent("nb1.padnote/media/audio", isDirectory: true)
+        try fm.createDirectory(at: pkgAudioDir, withIntermediateDirectories: true)
+        try fm.createDirectory(at: docsDir, withIntermediateDirectories: true)
+        try fm.createDirectory(at: exportDir, withIntermediateDirectories: true)
+
+        let audioFile1 = pkgAudioDir.appendingPathComponent("rec-001.opus")
+        let audioFile2 = pkgAudioDir.appendingPathComponent("rec-002.opus")
+        try Data("opus-bytes-1".utf8).write(to: audioFile1)
+        try Data("opus-bytes-22".utf8).write(to: audioFile2)
+        // 放一個孤立的舊 .opus，確認同步後會被清掉
+        let orphanFile = exportDir.appendingPathComponent("orphan.opus")
+        try Data("orphan".utf8).write(to: orphanFile)
+
+        let rec1 = AudioRecordingRecord(
+            id: "r1",
+            title: "測試一 1",
+            durationSeconds: 5,
+            recordedDate: Date(timeIntervalSince1970: 1_700_000_000),
+            fileName: "rec-001.opus",
+            linkedNotebookId: "nb1"
+        )
+        let rec2 = AudioRecordingRecord(
+            id: "r2",
+            title: "語音錄音與對齊 2026/10/17 下午3:21",
+            durationSeconds: 12,
+            recordedDate: Date(timeIntervalSince1970: 1_700_000_100),
+            fileName: "rec-002.opus",
+            linkedNotebookId: "nb1"
+        )
+
+        // 1. 初次同步：兩個錄音檔都出現在 Kairumo Record，孤立檔被移除
+        let mapped1 = NotebookStore.syncRecordingsExportFolder(
+            recordings: [rec1, rec2],
+            packagesDir: packagesDir,
+            documentsDir: docsDir,
+            exportDir: exportDir
+        )
+        XCTAssertEqual(mapped1["rec-001.opus"]?.lastPathComponent, "測試一 1.opus")
+        XCTAssertEqual(mapped1["rec-002.opus"]?.lastPathComponent, "語音錄音與對齊 2026-10-17 下午3-21.opus")
+        XCTAssertTrue(fm.fileExists(atPath: exportDir.appendingPathComponent("測試一 1.opus").path))
+        XCTAssertTrue(fm.fileExists(atPath: exportDir.appendingPathComponent("語音錄音與對齊 2026-10-17 下午3-21.opus").path))
+        XCTAssertFalse(fm.fileExists(atPath: orphanFile.path), "孤立的 .opus 應該被清理")
+
+        // 2. 改名同步：舊檔名消失、新檔名出現
+        var rec1Renamed = rec1
+        rec1Renamed.title = "測試一（已改名）"
+        let mapped2 = NotebookStore.syncRecordingsExportFolder(
+            recordings: [rec1Renamed, rec2],
+            packagesDir: packagesDir,
+            documentsDir: docsDir,
+            exportDir: exportDir
+        )
+        XCTAssertEqual(mapped2["rec-001.opus"]?.lastPathComponent, "測試一（已改名）.opus")
+        XCTAssertTrue(fm.fileExists(atPath: exportDir.appendingPathComponent("測試一（已改名）.opus").path))
+        XCTAssertFalse(fm.fileExists(atPath: exportDir.appendingPathComponent("測試一 1.opus").path))
+
+        // 3. 刪除同步：刪除後 Kairumo Record 內對應檔案也一併移除
+        _ = NotebookStore.syncRecordingsExportFolder(
+            recordings: [rec2],
+            packagesDir: packagesDir,
+            documentsDir: docsDir,
+            exportDir: exportDir
+        )
+        XCTAssertFalse(fm.fileExists(atPath: exportDir.appendingPathComponent("測試一（已改名）.opus").path))
+        XCTAssertTrue(fm.fileExists(atPath: exportDir.appendingPathComponent("語音錄音與對齊 2026-10-17 下午3-21.opus").path))
+    }
 }

@@ -9051,7 +9051,7 @@ public struct NotebookEditorView: View {
                 .frame(height: 18)
 
             Button {
-                audioManager.openRecordingsFolderInFinder()
+                audioManager.openRecordingsFolderInFinder(selectingFileURL: fileUrl)
             } label: {
                 Image(systemName: "folder")
                     .font(.caption)

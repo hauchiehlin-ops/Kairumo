@@ -922,11 +922,12 @@ public struct HomeWorkbenchView: View {
 
     private func shareRecordingFromMenu(_ fileUrl: URL) {
         #if targetEnvironment(macCatalyst) || os(macOS)
-        audioManager.openRecordingsFolderInFinder()
+        audioManager.openRecordingsFolderInFinder(selectingFileURL: fileUrl)
         #else
+        let exportedUrl = notebookStore.exportedRecordingFileURL(for: fileUrl)
         shareRecordingURL = nil
         SheetCoordinator.shared.presentFromMenu {
-            shareRecordingURL = fileUrl
+            shareRecordingURL = exportedUrl
         }
         #endif
     }

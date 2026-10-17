@@ -65,6 +65,9 @@ object GoogleAuth {
     private val _authState = kotlinx.coroutines.flow.MutableStateFlow(false)
     val authState: kotlinx.coroutines.flow.StateFlow<Boolean> = _authState
 
+    private val _lastAuthError = kotlinx.coroutines.flow.MutableStateFlow<String?>(null)
+    val lastAuthError: kotlinx.coroutines.flow.StateFlow<String?> = _lastAuthError
+
     fun notifyAuthChanged(context: Context) {
         _authState.value = isSignedIn(context)
         _authRevision.value += 1
@@ -134,10 +137,11 @@ object GoogleAuth {
         val pkce = oauthNewPkce()
         if (pkce.verifier.isEmpty()) return  // 亂數失敗，寧可不授權
 
+        _lastAuthError.value = null
         store(activity)?.edit()
             ?.putString(KEY_VERIFIER, pkce.verifier)
             ?.putString(KEY_STATE, pkce.state)
-            ?.apply()
+            ?.commit()
 
         val url = oauthAuthorizeUrl(
             FfiOAuthPlatform.ANDROID,
@@ -148,7 +152,6 @@ object GoogleAuth {
         val customTabsIntent = CustomTabsIntent.Builder()
             .setShowTitle(true)
             .build()
-        customTabsIntent.intent.addFlags(Intent.FLAG_ACTIVITY_NO_HISTORY)
         customTabsIntent.launchUrl(activity, Uri.parse(url))
     }
 
@@ -162,6 +165,8 @@ object GoogleAuth {
         val data = intent.data
         if (data == null) {
             com.kairumo.padnote.sync.SyncLogger.log("授權失敗：未收到重導向資料", com.kairumo.padnote.sync.SyncSource.GOOGLE_DRIVE)
+            _lastAuthError.value = "no_redirect_data"
+            notifyAuthChanged(context)
             return Result.failure(IllegalStateException("no_redirect_data"))
         }
         val callback = oauthParseCallback(data.toString())
@@ -170,18 +175,24 @@ object GoogleAuth {
         val expectedState = p?.getString(KEY_STATE, "") ?: ""
         val verifier = p?.getString(KEY_VERIFIER, "") ?: ""
         // 用完就清掉，不管成功失敗 —— 一組 PKCE 只能用一次。
-        p?.edit()?.remove(KEY_STATE)?.remove(KEY_VERIFIER)?.apply()
+        p?.edit()?.remove(KEY_STATE)?.remove(KEY_VERIFIER)?.commit()
 
         if (callback.error.isNotEmpty()) {
             com.kairumo.padnote.sync.SyncLogger.log("Google 授權取消或失敗：${callback.error}", com.kairumo.padnote.sync.SyncSource.GOOGLE_DRIVE)
+            _lastAuthError.value = callback.error
+            notifyAuthChanged(context)
             return Result.failure(IllegalStateException(callback.error))
         }
         if (expectedState.isEmpty() || callback.state != expectedState) {
             com.kairumo.padnote.sync.SyncLogger.log("Google 授權驗證失敗：State 不符合", com.kairumo.padnote.sync.SyncSource.GOOGLE_DRIVE)
+            _lastAuthError.value = "state_mismatch"
+            notifyAuthChanged(context)
             return Result.failure(IllegalStateException("state_mismatch"))
         }
         if (callback.code.isEmpty() || verifier.isEmpty()) {
             com.kairumo.padnote.sync.SyncLogger.log("Google 授權失敗：缺少 Code 或 Verifier", com.kairumo.padnote.sync.SyncSource.GOOGLE_DRIVE)
+            _lastAuthError.value = "missing_code"
+            notifyAuthChanged(context)
             return Result.failure(IllegalStateException("missing_code"))
         }
 
@@ -191,13 +202,16 @@ object GoogleAuth {
             val tokens = oauthParseTokenResponse(json, nowSeconds())
             if (tokens.error.isNotEmpty()) throw IllegalStateException(tokens.error)
             save(context, tokens, previousRefresh = "")
+            _lastAuthError.value = null
+            com.kairumo.padnote.library.CloudSync.invalidateSession()
+            // 先查出帳號 email 並綁定設定檔，再通知 UI 與 AutoSync 啟動第一輪同步，
+            // 避免第一輪同步用空帳號建立 session 後又被中途換掉。
+            runCatching { com.kairumo.padnote.library.CloudSync.accountEmail(context) }
             notifyAuthChanged(context)
-            kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
-                com.kairumo.padnote.library.CloudSync.accountEmail(context)
-                notifyAuthChanged(context)
-            }
             com.kairumo.padnote.sync.SyncLogger.log("Google 帳號授權成功！已儲存憑證。", com.kairumo.padnote.sync.SyncSource.GOOGLE_DRIVE)
         }.onFailure { err ->
+            _lastAuthError.value = err.message ?: "token_exchange_failed"
+            notifyAuthChanged(context)
             com.kairumo.padnote.sync.SyncLogger.log("交換權杖失敗：${err.message}", com.kairumo.padnote.sync.SyncSource.GOOGLE_DRIVE)
         }
     }
@@ -262,6 +276,7 @@ object GoogleAuth {
      */
     fun handleAuthFailure(context: Context) {
         if (FakeDrive.enabled) return
+        com.kairumo.padnote.library.CloudSync.invalidateSession()
         if (tokens(context).refreshToken.isEmpty()) {
             signOutLocally(context)
             return

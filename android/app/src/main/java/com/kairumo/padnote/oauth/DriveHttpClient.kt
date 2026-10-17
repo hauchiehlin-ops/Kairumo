@@ -127,8 +127,12 @@ class DriveHttpClient(
         while (attempt < maxRetries) {
             try {
                 val response = http.newCall(request).execute()
-                // 伺服器回 429 (Too Many Requests) 或 5xx (Server Error) 退避重試
-                if (response.code == 429 || response.code >= 500) {
+                // 伺服器回 429 (Too Many Requests)、5xx (Server Error) 或 403 速率限制時退避重試
+                val isRateLimited403 = response.code == 403 && runCatching {
+                    val snippet = response.peekBody(4096).string()
+                    NON_AUTH_403_REASONS.any { snippet.contains(it) }
+                }.getOrDefault(false)
+                if (response.code == 429 || response.code >= 500 || isRateLimited403) {
                     response.close()
                     attempt++
                     if (attempt < maxRetries) {
