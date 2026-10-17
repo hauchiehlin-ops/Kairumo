@@ -376,7 +376,12 @@ final class MultiDeviceUITests: XCTestCase {
         let empty = app.buttons["trash.emptyAction"].firstMatch
         XCTAssertTrue(empty.isEnabled, "回收桶裡應該有剛刪的那一本")
         empty.tap()
-        app.alerts.buttons["Empty Trash"].firstMatch.tap()
+        // 確認視窗是 confirmationDialog（iPhone 是動作表、iPad 是浮出視窗），按鈕文字是「全部永久刪除（N）」；
+        // 清單最上方也有一顆同名的按鈕（`trash.deleteAll`），要排除它。
+        let confirm = app.buttons.matching(NSPredicate(
+            format: "label BEGINSWITH 'Delete All Permanently' AND identifier != 'trash.deleteAll'")).firstMatch
+        XCTAssertTrue(confirm.waitForExistence(timeout: 5), "沒有出現清空的確認")
+        confirm.tap()
 
         // 本機那一半：回收桶空了。
         XCTAssertTrue(
