@@ -59,7 +59,7 @@ fun DocsViewer(
                             printDocument(context, this@apply, jobName)
                         }
                     }
-                }, "kairumoAndroid")
+                }, "kairumoBridge")
                 // 手冊用相對路徑引用 manual.js 與 img/，要允許同目錄的檔案存取。
                 settings.allowFileAccess = true
                 settings.cacheMode = WebSettings.LOAD_NO_CACHE
