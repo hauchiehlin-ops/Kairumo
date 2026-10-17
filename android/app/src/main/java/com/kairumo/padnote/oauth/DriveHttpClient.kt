@@ -33,7 +33,15 @@ import uniffi.padnote_core.FfiQueryParam
  */
 class DriveHttpClient(
     initialToken: String,
-    private val http: OkHttpClient = shared
+    private val http: OkHttpClient = shared,
+    /**
+     * 收到 401 時換證（見 [GoogleAuth.refresh]）。沒有的話 401 直接回報。
+     *
+     * 存取權杖一小時就到期，而這個 client 跟著共用的工作階段活很久 —— 原本收到 401 就回報
+     * `PermissionDenied`，上層據此清掉登入：同步途中剛好跨過那一小時，使用者就被登出（使用者回報）。
+     * 與 Apple `DriveHttpClient` 收到 401 自動換證並重試一次相同。
+     */
+    private val refresher: (() -> GoogleAuth.RefreshOutcome)? = null
 ) : FfiDriveHttp {
 
     /**
@@ -91,12 +99,10 @@ class DriveHttpClient(
     override fun startResumable(url: String, bodyJson: String): String {
         val isUpdate = url.contains("/files/")
         val method = if (isUpdate) "PATCH" else "POST"
-        val request = Request.Builder()
+        val builder = Request.Builder()
             .url(FakeDrive.rewrite(url))
             .method(method, bodyJson.toRequestBody(JSON))
-            .header("Authorization", "Bearer $accessToken")
-            .build()
-        val response = executeWithRetry(request)
+        val (request, response) = authorized(builder)
         response.use {
             if (!it.isSuccessful) {
                 throw classify(it.code, request.url.encodedPath, it.body?.string() ?: "")
@@ -144,9 +150,31 @@ class DriveHttpClient(
         throw FfiDriveException.Backend(lastException?.message ?: "network_error")
     }
 
+    /**
+     * 帶著權杖送出；收到 401 就換證、用新權杖重試一次。
+     *
+     * 換證失敗分兩種：Google 明確拒絕（`fatal`，授權真的失效）才回報 `PermissionDenied`；
+     * 離線、逾時只是這一輪失敗（`Backend`），不能因此讓使用者被登出。
+     */
+    private fun authorized(builder: Request.Builder): Pair<Request, okhttp3.Response> {
+        val first = builder.header("Authorization", "Bearer $accessToken").build()
+        val response = executeWithRetry(first)
+        val refresh = refresher
+        if (response.code != 401 || refresh == null) return first to response
+        response.close()
+        val outcome = refresh()
+        val token = outcome.token ?: if (outcome.fatal) {
+            throw FfiDriveException.PermissionDenied("HTTP 401 ${com.kairumo.padnote.L10n.t("drive_auth_expired")}")
+        } else {
+            throw FfiDriveException.Backend(com.kairumo.padnote.L10n.t("drive_cred_refresh_failed"))
+        }
+        accessToken = token
+        val retry = builder.header("Authorization", "Bearer $token").build()
+        return retry to executeWithRetry(retry)
+    }
+
     private fun bytes(builder: Request.Builder): ByteArray {
-        val request = builder.header("Authorization", "Bearer $accessToken").build()
-        val response = executeWithRetry(request)
+        val (request, response) = authorized(builder)
         response.use {
             val body = it.body?.bytes() ?: ByteArray(0)
             if (it.isSuccessful) return body
@@ -154,13 +182,26 @@ class DriveHttpClient(
         }
     }
 
-    private fun classify(code: Int, path: String, detail: String): FfiDriveException = when (code) {
+    private fun classify(code: Int, path: String, detail: String): FfiDriveException = when {
+        // 403 帶著速率限制或空間已滿的原因：**不是授權問題**，下一輪再試（與核心、Apple 同一份清單）。
+        // 原本 Android 把所有 403 都當成授權失效 —— 同步得勤一點被 Google 限流，就被登出。
+        code == 403 && NON_AUTH_403_REASONS.any { detail.contains(it) } ->
+            FfiDriveException.Backend("HTTP $code $detail")
+        else -> classifyStatus(code, path, detail)
+    }
+
+    private fun classifyStatus(code: Int, path: String, detail: String): FfiDriveException = when (code) {
         401, 403 -> FfiDriveException.PermissionDenied("HTTP $code $detail")
         404 -> FfiDriveException.NotFound(path)
         else -> FfiDriveException.Backend("HTTP $code $detail")
     }
 
     companion object {
+        /** Drive 的 403 裡**不是授權問題**的原因：速率限制、配額、雲端硬碟空間已滿。 */
+        val NON_AUTH_403_REASONS = listOf(
+            "rateLimitExceeded", "userRateLimitExceeded", "sharingRateLimitExceeded",
+            "quotaExceeded", "dailyLimitExceeded", "storageQuotaExceeded"
+        )
         private val JSON = "application/json".toMediaType()
         private val OCTET_STREAM = "application/octet-stream".toMediaType()
 

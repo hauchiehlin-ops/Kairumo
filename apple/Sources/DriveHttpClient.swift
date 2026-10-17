@@ -362,7 +362,7 @@ final class DriveHttpClient: FfiDriveHttp {
     /// 就被踢出帳號、要重新走一次 Google 登入（實測：兩台開著一段時間後雙雙被登出）。
     private static let rateLimitReasons = [
         "rateLimitExceeded", "userRateLimitExceeded", "sharingRateLimitExceeded",
-        "quotaExceeded", "dailyLimitExceeded",
+        "quotaExceeded", "dailyLimitExceeded", "storageQuotaExceeded",
     ]
 
     static func isRateLimit(body: Data) -> Bool {
@@ -562,7 +562,7 @@ public enum CloudSync {
             await AccountSyncStore.shared.mergeSettings(result.settingsJson)
             await AccountSyncStore.shared.mergeIndex(result.indexJson)
         } else if result.needsReauth {
-            await GoogleAuth.shared.signOut()
+            await GoogleAuth.shared.handleAuthFailure()
         }
         return result
     }
@@ -585,7 +585,7 @@ public enum CloudSync {
         }
         let result = await detached.value
         if result.needsReauth {
-            await GoogleAuth.shared.signOut()
+            await GoogleAuth.shared.handleAuthFailure()
         }
         return result
     }
@@ -607,7 +607,7 @@ public enum CloudSync {
         }
         let result = await detached.value
         if result.needsReauth {
-            await GoogleAuth.shared.signOut()
+            await GoogleAuth.shared.handleAuthFailure()
         }
         return result
     }

@@ -246,7 +246,7 @@ public final class FocusSyncController: ObservableObject {
                 source: .googleDrive
             )
             if report.needsReauth {
-                await GoogleAuth.shared.signOut()
+                await GoogleAuth.shared.handleAuthFailure()
                 return .needsReauth
             }
             return .transient

@@ -59,6 +59,28 @@ final class SeedNotebookSyncTests: XCTestCase {
         XCTAssertTrue(store.visibleNotebooks.contains { $0.id == id })
     }
 
+    /// 使用者回報：從回收桶還原的筆記本出現在「繼續」，卻不在「全部筆記」。它帶著刪除前的資料夾，
+    /// 那個資料夾已經不在了，樹上無處可放。
+    func testANotebookWhoseFolderIsGoneShowsAsUnfiled() {
+        let store = makeStore()
+        var mine = NotebookDocument(title: "還原的筆記", pageCount: 1)
+        mine.folderId = "folder-that-was-deleted"
+        store.notebooks.append(mine)
+        XCTAssertNil(store.treeFolderId(of: mine))
+        XCTAssertTrue(store.notebooks(in: nil).contains { $0.id == mine.id }, "放在「未分類」")
+
+        // 從回收桶還原時直接放回「未分類」。
+        store.deleteNotebook(id: mine.id)
+        XCTAssertTrue(store.restoreNotebook(id: mine.id))
+        XCTAssertNil(store.notebooks.first { $0.id == mine.id }?.folderId)
+    }
+
+    func testAFolderWhoseParentIsGoneShowsAtTheTop() {
+        let store = makeStore()
+        let orphan = store.createFolder(name: "孤兒資料夾", parentId: "parent-that-was-deleted")
+        XCTAssertTrue(store.subfolders(of: nil).contains { $0.id == orphan.id })
+    }
+
     func testAnOrdinaryNotebookStillSyncs() {
         let store = makeStore()
         let mine = NotebookDocument(title: "我的筆記", pageCount: 1)

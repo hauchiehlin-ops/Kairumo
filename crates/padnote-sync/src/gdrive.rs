@@ -719,12 +719,15 @@ impl<H: DriveHttp> CloudProvider for GDriveProvider<H> {
 /// 把它們當成 `PermissionDenied` 的後果很重：上層看到 `PermissionDenied` 就判定要重新登入，
 /// 平台會登出並**撤銷**授權 —— 使用者只是同步得太勤，就被踢出帳號，要重新走一次 Google 登入。
 /// 實際發生過：兩台裝置開著一段時間之後雙雙被登出。
-const DRIVE_RATE_LIMIT_REASONS: [&str; 5] = [
+///
+/// `storageQuotaExceeded`（雲端硬碟空間已滿）同理：使用者要的是清出空間，不是重新登入。
+const DRIVE_RATE_LIMIT_REASONS: [&str; 6] = [
     "rateLimitExceeded",
     "userRateLimitExceeded",
     "sharingRateLimitExceeded",
     "quotaExceeded",
     "dailyLimitExceeded",
+    "storageQuotaExceeded",
 ];
 
 /// HTTP 狀態與回應內容 → `SyncError`。

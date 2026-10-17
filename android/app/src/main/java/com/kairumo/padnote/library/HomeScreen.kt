@@ -2136,7 +2136,8 @@ private fun buildTreeRows(
     val byFolder = entries.groupBy { entry ->
         FolderTree.parentOf(context, entry.id)?.takeIf { it in folderIds }
     }
-    val children = folders.groupBy { it.parentId }
+    // 上層已經不存在的資料夾放到最上層：不然它和裡面的筆記本在樹上無處可去（與 Apple `subfolders(of: nil)` 相同）。
+    val children = folders.groupBy { folder -> folder.parentId?.takeIf { it in folderIds && it != folder.id } }
     // 資料夾的筆記數：只算直接放在裡面的（與 Apple 的括號數字相同）。
     val rows = mutableListOf<TreeRow>()
     fun walk(parent: String?, depth: Int) {

@@ -111,7 +111,7 @@ object CloudSync {
             } catch (e: com.kairumo.padnote.profile.ProfileException) {
                 if (e.kind == com.kairumo.padnote.profile.ProfileException.Kind.GOOGLE_ALREADY_BOUND) {
                     com.kairumo.padnote.profile.ProfileManager.googleConflict.value = e.profileName
-                    GoogleAuth.signOutLocally(context)
+                    GoogleAuth.handleAuthFailure(context)
                     return@runCatching null
                 }
             }
@@ -159,7 +159,8 @@ object CloudSync {
             }
         }
         val saved = AccountSyncStore.remoteIndexJson(context, account)
-        val http = DriveHttpClient(token)
+        val app = context.applicationContext
+        val http = DriveHttpClient(token, refresher = { GoogleAuth.refresh(app) })
         val session = uniffi.padnote_core.FfiSyncSession.create(http, saved)
         shared = Shared(session, http, account)
         return session
@@ -294,7 +295,7 @@ object CloudSync {
         } else if (result.needsReauth) {
             // 權杖救不回來了。清掉本機那份，讓 UI 顯示「未登入」——
             // 留著一個永遠失敗的權杖，背景會一直重試而使用者不知道要去登入。
-            GoogleAuth.signOutLocally(context)
+            GoogleAuth.handleAuthFailure(context)
         }
         return result
     }
@@ -456,7 +457,7 @@ object CloudSync {
         val refreshed = session.refresh()
         if (!refreshed.ok) {
             SyncLogger.log("雲端快照更新失敗：${refreshed.error}", SyncSource.GOOGLE_DRIVE)
-            if (refreshed.needsReauth) GoogleAuth.signOutLocally(context)
+            if (refreshed.needsReauth) GoogleAuth.handleAuthFailure(context)
             return FullResult(null, 0, 0, emptyList())
         }
         SyncLogger.log(
@@ -590,7 +591,7 @@ object CloudSync {
             } else {
                 SyncLogger.log("筆記本 $id 同步失敗：${result.error}", SyncSource.GOOGLE_DRIVE)
                 if (result.needsReauth) {
-                    GoogleAuth.signOutLocally(context)
+                    GoogleAuth.handleAuthFailure(context)
                     break
                 }
             }

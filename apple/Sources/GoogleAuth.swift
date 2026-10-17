@@ -412,7 +412,30 @@ public final class GoogleAuth: NSObject, ObservableObject {
         }
     }
 
-    /// 登出並**撤銷**授權。
+    /// 同步回報「需要重新授權」（Drive 回了 401／403）時呼叫，**取代直接登出**。
+    ///
+    /// 使用者回報「不知什麼情況下會被自動登出」。原因是同步只要碰到授權類錯誤就呼叫 `signOut()`，
+    /// 而那會**撤銷**整個 Google 授權。但這類錯誤多半不是授權失效：
+    /// - 401：存取權杖一小時就到期，長時間的同步、背景的焦點同步都會碰到；
+    /// - 403：雲端硬碟空間滿了（`storageQuotaExceeded`）、某一個檔案沒有權限，都不是帳號問題。
+    ///
+    /// 所以這裡**先強制換一次證**來驗證：
+    /// - 換得到 → 授權仍然有效，不登出（這一輪同步失敗，下一輪重試）；
+    /// - Google 明確拒絕（`invalid_grant` 等）或根本沒有更新用的權杖 → 清掉本機憑證，請使用者重新登入；
+    /// - 網路問題 → 什麼都不動。
+    /// 自動流程**永遠不撤銷**授權：撤銷只在使用者自己按「登出」時做（`signOut()`）。
+    public func handleAuthFailure() async {
+        if FakeDrive.isEnabled { return }
+        guard !KeychainTokens.load().refreshToken.isEmpty else {
+            await markNeedsReauth()
+            return
+        }
+        // `validAccessToken(forceRefresh:)` 碰到 invalid_grant 會自己 `markNeedsReauth()`。
+        _ = await validAccessToken(forceRefresh: true)
+        CloudSync.invalidateSession()
+    }
+
+    /// 登出並**撤銷**授權。**只給使用者自己按「登出」用**；同步失敗請用 `handleAuthFailure()`。
     ///
     /// 只清本機權杖是不夠的：授權還留在使用者的 Google 帳號裡，
     /// 他在帳號設定裡看得到一個「已授權但我明明登出了」的項目。
