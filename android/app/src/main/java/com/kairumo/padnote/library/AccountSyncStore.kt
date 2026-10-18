@@ -85,6 +85,12 @@ object AccountSyncStore {
         prefs(context).edit().putString(KEY_LAST_ACCOUNT, account).apply()
     }
 
+    /** 僅供測試清理本機同步索引與設定 */
+    fun clearForTesting(context: Context) {
+        prefs(context).edit().clear().commit()
+        runCatching { java.io.File(ProfileContext.dataDir(context), "sync").deleteRecursively() }
+    }
+
     // ── 雲端快照（P1）────────────────────────────────────────────
     //
     // 存檔案不存 SharedPreferences：它會長到幾百 KB（每個雲端檔案一筆），
