@@ -1790,6 +1790,7 @@ private fun RecordingRow(
 /**
  * 「全部筆記」的清單檢視卡片（對齊 iPad hierarchy/list 模式）。
  */
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 private fun NotebookListCard(
     entry: NotebookLibrary.Entry,
