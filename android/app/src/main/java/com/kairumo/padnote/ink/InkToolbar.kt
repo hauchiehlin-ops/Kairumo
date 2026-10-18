@@ -187,7 +187,8 @@ fun InkToolbar(
     onColorChange: (String) -> Unit,
     onWidthChange: (Float) -> Unit,
     modifier: Modifier = Modifier,
-    onOpenColorWheel: (() -> Unit)? = null
+    onOpenColorWheel: (() -> Unit)? = null,
+    onAddTextBox: (() -> Unit)? = null
 ) {
     // FlowRow 而不是水平捲動的 Row。
     //
@@ -224,6 +225,30 @@ fun InkToolbar(
                 onClick = { onToolChange(option) }
             )
             if (family == null) previousFamily = null
+        }
+
+        // 對齊 Apple 端的 plus.bubble 按鈕：在工具列直接插入文字方塊並切換編輯
+        if (onAddTextBox != null) {
+            BrushFamilyDivider()
+            Box(
+                modifier = Modifier
+                    .clip(androidx.compose.foundation.shape.RoundedCornerShape(6.dp))
+                    .clickable { onAddTextBox() }
+                    .padding(horizontal = 6.dp, vertical = 6.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Text("💬", fontSize = 13.sp)
+                    Text(
+                        LocalizationStrings.localized("add_text_box", languageTag),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
         }
 
         // 擦除與套索都不需要顏色 —— 留著只會讓使用者以為可以擦成某個顏色，

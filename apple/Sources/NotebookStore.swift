@@ -250,19 +250,31 @@ public enum NoteTemplate: String, Codable, CaseIterable, Identifiable {
 public struct FolderItem: Identifiable, Codable, Hashable, Sendable {
     public let id: String
     public var name: String
+    public var nameKey: String?
     public var parentId: String? // nil 代表位於最上層根目錄下
     public var createdAt: Date
     public var colorHex: String?
 
+    @MainActor
+    public var displayName: String {
+        if let key = nameKey {
+            let l = LocalizationManager.shared.localized(key)
+            if !l.isEmpty && l != key { return l }
+        }
+        return name
+    }
+
     public init(
         id: String = UUID().uuidString.lowercased(),
         name: String,
+        nameKey: String? = nil,
         parentId: String? = nil,
         createdAt: Date = Date(),
         colorHex: String? = nil
     ) {
         self.id = id
         self.name = name
+        self.nameKey = nameKey
         self.parentId = parentId
         self.createdAt = createdAt
         self.colorHex = colorHex
@@ -1895,6 +1907,55 @@ public final class NotebookStore: ObservableObject {
             }
         }
 
+        // 預設兩個資料夾架構：初次初始化或升級時建立，並將相關範例預載分配到這兩個資料夾中
+        if !ProfileDefaults.current.bool(forKey: Self.seedFoldersInitializedKey) {
+            ProfileDefaults.current.set(true, forKey: Self.seedFoldersInitializedKey)
+            let hasF1 = folders.contains { $0.id.caseInsensitiveCompare(Self.seedFeaturesFolderId) == .orderedSame }
+            let f1Deleted = AccountSyncStore.shared.isDeleted(id: Self.seedFeaturesFolderId)
+            if !hasF1 && !f1Deleted {
+                let f1 = FolderItem(
+                    id: Self.seedFeaturesFolderId,
+                    name: LocalizationManager.shared.localized("seed_folder_features"),
+                    nameKey: "seed_folder_features"
+                )
+                folders.append(f1)
+                AccountSyncStore.shared.record(id: f1.id, title: f1.name, parentId: nil, isFolder: true)
+                changed = true
+            }
+
+            let hasF2 = folders.contains { $0.id.caseInsensitiveCompare(Self.seedDraftingFolderId) == .orderedSame }
+            let f2Deleted = AccountSyncStore.shared.isDeleted(id: Self.seedDraftingFolderId)
+            if !hasF2 && !f2Deleted {
+                let f2 = FolderItem(
+                    id: Self.seedDraftingFolderId,
+                    name: LocalizationManager.shared.localized("seed_folder_drafting"),
+                    nameKey: "seed_folder_drafting"
+                )
+                folders.append(f2)
+                AccountSyncStore.shared.record(id: f2.id, title: f2.name, parentId: nil, isFolder: true)
+                changed = true
+            }
+
+            let featuresIds = Set([
+                "seed-welcome-notebook-v1",
+                "seed-meeting-notebook-v1",
+                "seed-feature-showcase-v1",
+                SeedContent.kairumoManualId.lowercased()
+            ])
+            for i in notebooks.indices {
+                let lowerId = notebooks[i].id.lowercased()
+                if notebooks[i].folderId == nil {
+                    if featuresIds.contains(lowerId) && !f1Deleted {
+                        notebooks[i].folderId = Self.seedFeaturesFolderId
+                        changed = true
+                    } else if lowerId == "seed-drafting-example-v1" && !f2Deleted {
+                        notebooks[i].folderId = Self.seedDraftingFolderId
+                        changed = true
+                    }
+                }
+            }
+        }
+
         if changed { persistData() }
     }
 
@@ -2343,12 +2404,38 @@ public final class NotebookStore: ObservableObject {
         ProfileDefaults.current.set(true, forKey: Self.manualSeededKey)
         ProfileDefaults.current.set(true, forKey: Self.showcaseSeededKey)
 
-        let n5 = makeDraftingExample()
+        var n5 = makeDraftingExample()
         ProfileDefaults.current.set(true, forKey: Self.draftingExampleSeededKey)
+
+        // 預設建立兩個資料夾並將範例分配到這兩個資料夾中
+        let fFeatures = FolderItem(
+            id: Self.seedFeaturesFolderId,
+            name: LocalizationManager.shared.localized("seed_folder_features"),
+            nameKey: "seed_folder_features"
+        )
+        let fDrafting = FolderItem(
+            id: Self.seedDraftingFolderId,
+            name: LocalizationManager.shared.localized("seed_folder_drafting"),
+            nameKey: "seed_folder_drafting"
+        )
+        self.folders = [fFeatures, fDrafting]
+        AccountSyncStore.shared.record(id: fFeatures.id, title: fFeatures.name, parentId: nil, isFolder: true)
+        AccountSyncStore.shared.record(id: fDrafting.id, title: fDrafting.name, parentId: nil, isFolder: true)
+        ProfileDefaults.current.set(true, forKey: Self.seedFoldersInitializedKey)
+
+        n1.folderId = Self.seedFeaturesFolderId
+        n2.folderId = Self.seedFeaturesFolderId
+        n3.folderId = Self.seedFeaturesFolderId
+        n4.folderId = Self.seedFeaturesFolderId
+        n5.folderId = Self.seedDraftingFolderId
 
         self.notebooks = [n1, n2, n3, n4, n5]
         persistData()
     }
+
+    public static let seedFeaturesFolderId = "seed-folder-features-v1"
+    public static let seedDraftingFolderId = "seed-folder-drafting-v1"
+    private static let seedFoldersInitializedKey = "seed.folders.initialized.v1"
 
     private static let welcomeSeededKey = "seed.welcome.added"
     private static let meetingSeededKey = "seed.meeting.added"
@@ -2401,6 +2488,7 @@ public final class NotebookStore: ObservableObject {
                 previewSnippet: "點擊進入畫布即可隨心手寫、繪製圖形、插入錄音並導出 PDF", template: .blank)
             doc.titleKey = "seed_welcome_title"
             doc.snippetKey = "seed_welcome_snippet"
+            doc.folderId = Self.seedFeaturesFolderId
             SeedContent.fillWelcome(&doc)
             return doc
         case "seed-meeting-notebook-v1":
@@ -2410,6 +2498,7 @@ public final class NotebookStore: ObservableObject {
                 previewSnippet: "支援麥克風即時收音，聲音與筆跡精確對齊", template: .cornell)
             doc.titleKey = "seed_meeting_title"
             doc.snippetKey = "seed_meeting_snippet"
+            doc.folderId = Self.seedFeaturesFolderId
             SeedContent.fillMeeting(&doc, store: self)
             return doc
         case "seed-feature-showcase-v1":
@@ -2419,15 +2508,19 @@ public final class NotebookStore: ObservableObject {
                 previewSnippet: l.localized("seed_feature_showcase_snippet"), template: .grid)
             doc.titleKey = "seed_feature_showcase_title"
             doc.snippetKey = "seed_feature_showcase_snippet"
+            doc.folderId = Self.seedFeaturesFolderId
             SeedContent.fillFeatureShowcase(&doc, store: self)
             return doc
         case SeedContent.kairumoManualId.lowercased():
             var doc = Self.makeKairumoManual()
             doc.pageCount = 4
+            doc.folderId = Self.seedFeaturesFolderId
             SeedContent.fillKairumoManual(&doc, store: self)
             return doc
         case Self.draftingExampleId.lowercased():
-            return makeDraftingExample()
+            var doc = makeDraftingExample()
+            doc.folderId = Self.seedDraftingFolderId
+            return doc
         default:
             return nil
         }
@@ -2441,7 +2534,8 @@ public final class NotebookStore: ObservableObject {
         // 先清再產生：標準內容的筆跡在產生時就寫進筆跡檔，順序反了會被清掉。
         resetSeedStorage(notebookId: old.id)
         guard var fresh = standardSample(id: old.id) else { return }
-        fresh.folderId = old.folderId
+        let defaultSeedFolder = old.id.lowercased() == Self.draftingExampleId.lowercased() ? Self.seedDraftingFolderId : Self.seedFeaturesFolderId
+        fresh.folderId = old.folderId ?? defaultSeedFolder
         fresh.createdAt = old.createdAt
         fresh.lastModifiedDate = old.createdAt
         if let canonical = NotebookPackageBridge.deterministicSeedPageIds(for: fresh.id) {
@@ -2932,6 +3026,7 @@ public final class NotebookStore: ObservableObject {
         let clean = newName.trimmingCharacters(in: .whitespacesAndNewlines)
         if !clean.isEmpty {
             folders[idx].name = clean
+            folders[idx].nameKey = nil
             AccountSyncStore.shared.recordTitle(id: folders[idx].id, title: clean)
             markDirtyAndPersist(signalsLocalEdit: true)
         }
@@ -5227,8 +5322,11 @@ extension NotebookStore {
         json.removeValue(forKey: "titleKey")
         // 另存出來的是一般筆記本：不繼承「範例」標記（新 id 不是內建範例，沒有標記就不是範例）。
         json.removeValue(forKey: "sampleFlag")
+        // 操作（編輯）範例後生成的副本，一律歸納於「未分類筆記」，不直接放在該範例的資料夾中
+        json.removeValue(forKey: "folderId")
         guard let data = try? JSONSerialization.data(withJSONObject: json),
               var copy = try? JSONDecoder().decode(NotebookDocument.self, from: data) else { return nil }
+        copy.folderId = nil
         copy.createdAt = Date()
         copy.lastModifiedDate = Date()
         let pageCount = max(copy.pageCount, 1)
@@ -5324,13 +5422,15 @@ extension NotebookStore {
         return copy
     }
 
-    /// 複本正式成為一本一般筆記本：放在最前面、記進同步索引（資料夾與範例相同）、錄音改指到它。
+    /// 複本正式成為一本一般筆記本：放在最前面、記進同步索引（一律歸納於「未分類筆記」）、錄音改指到它。
     private func adoptSampleCopy(_ copy: NotebookDocument, from sampleId: String) {
         for r in recordings.indices where recordings[r].linkedNotebookId?.caseInsensitiveCompare(sampleId) == .orderedSame {
             recordings[r].linkedNotebookId = copy.id
         }
-        notebooks.insert(copy, at: 0)
-        AccountSyncStore.shared.record(id: copy.id, title: copy.title, parentId: copy.folderId, isFolder: false)
+        var targetCopy = copy
+        targetCopy.folderId = nil
+        notebooks.insert(targetCopy, at: 0)
+        AccountSyncStore.shared.record(id: targetCopy.id, title: targetCopy.title, parentId: nil, isFolder: false)
     }
 
     /// 用不到的複本（範例本來就是標準內容）：磁碟上的檔案清掉。

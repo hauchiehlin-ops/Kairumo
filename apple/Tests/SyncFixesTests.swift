@@ -407,7 +407,7 @@ final class RecordingTitleInPackageTests: XCTestCase {
         XCTAssertNotNil(copy)
         XCTAssertTrue(copy?.title.hasPrefix(base + " ") ?? false, "名字是「範例名 日期時間」")
         XCTAssertFalse(copy?.isReadOnlySample ?? true, "副本是一般筆記本")
-        XCTAssertEqual(copy?.folderId, "folder-intro", "資料夾與範例相同")
+        XCTAssertNil(copy?.folderId, "副本一律歸入未分類筆記")
         XCTAssertEqual(copy?.textAttachments?.first?.text, "我加的字", "修改在副本裡")
         XCTAssertEqual(store.loadDrawing(notebookId: copy!.id, pageIndex: 0).strokes.count, 0, "副本是修改後的樣子")
         XCTAssertNotNil(syncItem(indexJson: AccountSyncStore.shared.indexJSON, itemId: copy!.id), "記進同步索引")

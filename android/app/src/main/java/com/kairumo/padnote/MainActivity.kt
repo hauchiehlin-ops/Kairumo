@@ -3353,10 +3353,11 @@ private fun InkScreen(
     var showMenu by remember { mutableStateOf(false) }
     // 頁面結構欄。平板預設展開，手機預設收起。
     var showPageSidebar by remember { mutableStateOf(isTablet) }
-    // 畫布的縮放與平移。平板預設 200% (2.0f)，手機預設 100% (1.0f)。換頁時歸位。
-    var canvasScale by remember(pageId) { mutableFloatStateOf(if (isTablet) 2f else 1f) }
+    // 畫布的縮放與平移。預設適應頁寬（響應式縮放，上限 200%）。換頁時歸位。
+    var canvasScale by remember(pageId) { mutableFloatStateOf(1f) }
     var canvasOffset by remember(pageId) { mutableStateOf(Offset.Zero) }
     var canvasViewport by remember { mutableStateOf(Size.Zero) }
+    var didInitialFit by remember(pageId) { mutableStateOf(false) }
     // 「顯示全頁」等整頁縮放（與捏合不同：捏合看某個區域，這個看整頁）。
     // 倍率與 Apple 端的 `PageViewportLayout.zoomScale` 同一套算法。
     val canvasDensityForFit = LocalDensity.current.density
@@ -3368,7 +3369,7 @@ private fun InkScreen(
         val ch = PageGeometry.height * canvasDensityForFit
         val raw = when (mode) {
             "page" -> minOf(vw / cw, vh / ch)
-            "width" -> vw / cw
+            "width" -> minOf(2f, vw / cw)
             else -> 1f
         }
         val scale = uniffi.padnote_core.clampZoom(raw)
@@ -3429,6 +3430,28 @@ private fun InkScreen(
                             fontWeight = FontWeight.SemiBold
                         )
                     }
+                }
+            }
+
+            // 筆記結構側邊欄切換鈕（對齊 Apple：緊接在首頁按鈕旁）
+            Surface(
+                shape = RoundedCornerShape(8.dp),
+                color = if (showPageSidebar) MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                        else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                modifier = Modifier.padding(vertical = 2.dp)
+            ) {
+                TextButton(
+                    onClick = { showPageSidebar = !showPageSidebar },
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp),
+                    modifier = Modifier.testTag("editor.sidebar_toggle")
+                ) {
+                    Text(
+                        "📑 ${l10n("structure_sidebar")}",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = if (showPageSidebar) FontWeight.SemiBold else FontWeight.Normal,
+                        color = if (showPageSidebar) MaterialTheme.colorScheme.primary
+                                else MaterialTheme.colorScheme.onSurface
+                    )
                 }
             }
             if (minimalistCanvasMode) {
@@ -3550,29 +3573,7 @@ private fun InkScreen(
                 }
             }
 
-            // 頁面結構欄的開關（對齊 iPad：帶側欄圖示與背景高亮）。
-            Surface(
-                shape = RoundedCornerShape(8.dp),
-                color = if (showPageSidebar) MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
-                        else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                modifier = Modifier.padding(vertical = 2.dp)
-            ) {
-                TextButton(
-                    onClick = { showPageSidebar = !showPageSidebar },
-                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
-                    modifier = Modifier.testTag("editor.sidebar_toggle")
-                ) {
-                    Text(
-                        "📑 ${l10n("structure_pages")}",
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = if (showPageSidebar) FontWeight.SemiBold else FontWeight.Normal,
-                        color = if (showPageSidebar) MaterialTheme.colorScheme.primary
-                                else MaterialTheme.colorScheme.onSurface
-                    )
-                }
-            }
-
-            // 復原／重做群組膠囊（Apple 與 Android 統一膠囊設計）
+            // 復原／重做／重設群組膠囊（對齊 Apple：Undo / Redo / Revert 統一設計）
             val hiddenTools = com.kairumo.padnote.ui.ToolbarSettings.hiddenIdentifiers
             fun toolShown(id: String) =
                 editorMode != EditorMode.DRAW || id !in hiddenTools
@@ -3607,7 +3608,53 @@ private fun InkScreen(
                                 contentPadding = PaddingValues(0.dp)
                             ) { Text("↷", style = MaterialTheme.typography.titleMedium) }
                         }
+                        TextButton(
+                            onClick = { showRevertConfirm = true },
+                            enabled = openMarkId != null,
+                            modifier = Modifier.size(32.dp).testTag("editor.revert_initial_state"),
+                            contentPadding = PaddingValues(0.dp)
+                        ) { Text("↺", style = MaterialTheme.typography.titleMedium) }
                     }
+                }
+            }
+
+            // 📦 素材圖庫快捷按鈕（對齊 Apple 端頂部列設計）
+            Surface(
+                shape = RoundedCornerShape(8.dp),
+                color = Color(0xFFF3E5F5),
+                modifier = Modifier.padding(vertical = 2.dp)
+            ) {
+                TextButton(
+                    onClick = { showAssetLibrary = true },
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                    modifier = Modifier.testTag("editor.insert.assets")
+                ) {
+                    Text(
+                        "📦 ${l10n("asset_library")}",
+                        color = Color(0xFF7B1FA2),
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+            }
+
+            // 💬 畫布討論圖釘快捷按鈕（對齊 Apple 端頂部列設計）
+            Surface(
+                shape = RoundedCornerShape(8.dp),
+                color = if (isPlacingCommentPin) Color(0xFFFFE0B2) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                modifier = Modifier.padding(vertical = 2.dp)
+            ) {
+                TextButton(
+                    onClick = { isPlacingCommentPin = !isPlacingCommentPin },
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                    modifier = Modifier.testTag("editor.insert.comment_pin")
+                ) {
+                    Text(
+                        "💬 ${l10n("comment_pin")}",
+                        color = if (isPlacingCommentPin) Color(0xFFE65100) else MaterialTheme.colorScheme.primary,
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.SemiBold
+                    )
                 }
             }
 
@@ -3910,16 +3957,23 @@ private fun InkScreen(
             var showShareMenu by remember { mutableStateOf(false) }
             Surface(
                 shape = RoundedCornerShape(8.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.padding(vertical = 2.dp)
             ) {
-                IconButton(
+                Button(
                     onClick = { showShareMenu = true },
-                    modifier = Modifier.size(36.dp).testTag("editor.share")
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
+                    ),
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.height(36.dp).testTag("editor.share")
                 ) {
                     Text(
-                        "⬆️",
-                        style = MaterialTheme.typography.titleMedium
+                        "⬆️ ${l10n("export_print")} ▾",
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.SemiBold
                     )
                 }
             }
@@ -4016,51 +4070,6 @@ private fun InkScreen(
                     }
                 )
                 }
-                Divider()
-                DropdownMenuItem(
-                    text = { Text(l10n("export_pdf")) },
-                    onClick = {
-                        showMenu = false
-                        exportNow(Exporter.Format.PDF)
-                    }
-                )
-                DropdownMenuItem(
-                    text = { Text(l10n("export_image")) },
-                    onClick = {
-                        showMenu = false
-                        exportNow(Exporter.Format.PNG)
-                    }
-                )
-                DropdownMenuItem(
-                    text = { Text(l10n("export_markdown")) },
-                    onClick = {
-                        showMenu = false
-                        exportToFile(activity, notebook?.first, Exporter.Format.MARKDOWN).fold(
-                            onSuccess = { pendingExport = it to Exporter.Format.MARKDOWN },
-                            onFailure = { message = exportFailureMessage(it) }
-                        )
-                    }
-                )
-                DropdownMenuItem(
-                    text = { Text(l10n("print_note")) },
-                    onClick = {
-                        showMenu = false
-                        val session = notebook?.first ?: return@DropdownMenuItem
-                        printNow(session)
-                    }
-                )
-                DropdownMenuItem(
-                    text = { Text(l10n("share_note")) },
-                    onClick = {
-                        showMenu = false
-                        val id = notebook?.second ?: notebookId
-                        if (id != null) {
-                            val dir = File(NotebookLibrary.directory(activity), "$id.${NotebookLibrary.EXTENSION}")
-                            val title = FolderTree.titleOf(activity, id) ?: "Notebook"
-                            message = shareNotebookPackage(activity, dir, title)
-                        }
-                    }
-                )
                 Divider()
                 DropdownMenuItem(
                     text = { Text(l10n("add_comment_pin")) },
@@ -4407,7 +4416,16 @@ private fun InkScreen(
                 inkWidth = value
                 engine.baseWidth = value
             },
-            onOpenColorWheel = { showProColorWheel = true }
+            onOpenColorWheel = { showProColorWheel = true },
+            onAddTextBox = {
+                val box = textStore.create(x = 100f, y = 150f)
+                selectedTextId = box.id
+                editingText = box
+                val updated = com.kairumo.padnote.canvas.ObjectStacking.bringToFront(setOf(box.id), stackOrder)
+                meta.setObjectOrder(notebook?.first, pageIndex, updated)
+                stackRevision++
+                textRevision++
+            }
         )
     }
     if (!minimalistCanvasMode) {
@@ -4895,10 +4913,10 @@ private fun InkScreen(
                         // 自然落在使用者正在看的那一頁。
                         onFocusChange = { pageIndex = it },
                         ink = InkSettings(
-                            tool = engine.tool,
-                            colorRgba = engine.colorRgba,
-                            baseWidth = engine.baseWidth,
-                            isErasing = engine.isErasing,
+                            tool = inkTool.kind ?: uniffi.padnote_core.ToolKind.FOUNTAIN_PEN,
+                            colorRgba = hexToRgba(inkColorHex),
+                            baseWidth = inkWidth,
+                            isErasing = inkTool.isEraser,
                             penOnly = penOnly
                         ),
                         editorMode = editorMode,
@@ -5234,6 +5252,10 @@ private fun InkScreen(
                 }
                 .onSizeChanged {
                     canvasViewport = Size(it.width.toFloat(), it.height.toFloat())
+                    if (!didInitialFit && it.width > 0 && it.height > 0) {
+                        didInitialFit = true
+                        fitCanvas("width")
+                    }
                 }
         ) {
         CompositionLocalProvider(com.kairumo.padnote.canvas.LocalObjectReorder provides objectReorder) {
