@@ -19457,6 +19457,22 @@ object LocalizationStrings {
             "ko" to "Kairumo (기능 예시)",
             "th" to "Kairumo (ตัวอย่างฟังก์ชัน)"
         ),
+        "seed_folder_drafting" to mapOf(
+            "zh-Hant" to "圖學",
+            "en" to "Drafting",
+            "zh-Hans" to "图学",
+            "ja" to "製図",
+            "ko" to "도면",
+            "th" to "การเขียนแบบ"
+        ),
+        "seed_folder_features" to mapOf(
+            "zh-Hant" to "Kairumo 功能介紹",
+            "en" to "Kairumo Feature Introduction",
+            "zh-Hans" to "Kairumo 功能介绍",
+            "ja" to "Kairumo 機能紹介",
+            "ko" to "Kairumo 기능 소개",
+            "th" to "การแนะนำฟีเจอร์ Kairumo"
+        ),
         "seed_manual_snippet" to mapOf(
             "zh-Hant" to "Kairumo 優勢：結構化、視覺化、多語言 —— 全部手繪",
             "en" to "Kairumo’s advantages: structured, visual and multilingual",
@@ -19968,7 +19984,10 @@ object LocalizationStrings {
             "ja" to "遅延",
             "ko" to "지연",
             "th" to "หน่วงเวลา"
-        ),
+        )
+    )
+
+    private fun part31(): Map<String, Map<String, String>> = mapOf(
         "shape_kind_diamond" to mapOf(
             "zh-Hant" to "菱形",
             "en" to "Diamond",
@@ -19984,10 +20003,7 @@ object LocalizationStrings {
             "ja" to "直接アクセス記憶",
             "ko" to "직접 접근 저장소",
             "th" to "ที่เก็บแบบเข้าถึงโดยตรง"
-        )
-    )
-
-    private fun part31(): Map<String, Map<String, String>> = mapOf(
+        ),
         "shape_kind_display" to mapOf(
             "zh-Hant" to "顯示",
             "en" to "Display",
@@ -20611,7 +20627,10 @@ object LocalizationStrings {
             "ja" to "ループ",
             "ko" to "반복",
             "th" to "ลูป"
-        ),
+        )
+    )
+
+    private fun part32(): Map<String, Map<String, String>> = mapOf(
         "shape_template_flow_parallel" to mapOf(
             "zh-Hant" to "平行處理",
             "en" to "Parallel processing",
@@ -20627,10 +20646,7 @@ object LocalizationStrings {
             "ja" to "データパイプライン",
             "ko" to "데이터 파이프라인",
             "th" to "ไปป์ไลน์ข้อมูล"
-        )
-    )
-
-    private fun part32(): Map<String, Map<String, String>> = mapOf(
+        ),
         "shape_template_flow_retry" to mapOf(
             "zh-Hant" to "錯誤處理與重試",
             "en" to "Error handling & retry",
@@ -21254,7 +21270,10 @@ object LocalizationStrings {
             "ja" to "名前順",
             "ko" to "이름순",
             "th" to "เรียงตามชื่อ"
-        ),
+        )
+    )
+
+    private fun part33(): Map<String, Map<String, String>> = mapOf(
         "sort_date" to mapOf(
             "zh-Hant" to "依修改時間排序",
             "en" to "Sort by Date Modified",
@@ -21270,10 +21289,7 @@ object LocalizationStrings {
             "ja" to "録音付きのみ",
             "ko" to "녹음 포함만",
             "th" to "เฉพาะที่มีเสียงบันทึก"
-        )
-    )
-
-    private fun part33(): Map<String, Map<String, String>> = mapOf(
+        ),
         "sort_recordings" to mapOf(
             "zh-Hant" to "僅顯示含錄音筆記",
             "en" to "Only Notes with Audio",
@@ -21897,7 +21913,10 @@ object LocalizationStrings {
             "ja" to "録音停止",
             "ko" to "녹음 중지",
             "th" to "หยุดบันทึก"
-        ),
+        )
+    )
+
+    private fun part34(): Map<String, Map<String, String>> = mapOf(
         "storage_caches" to mapOf(
             "zh-Hant" to "快取",
             "en" to "Caches",
@@ -21913,10 +21932,7 @@ object LocalizationStrings {
             "ja" to "%@ に Kairumo のドキュメントフォルダを作成できません。",
             "ko" to "%@에 Kairumo 문서 폴더를 만들 수 없습니다.",
             "th" to "สร้างโฟลเดอร์เอกสาร Kairumo ที่ %@ ไม่ได้"
-        )
-    )
-
-    private fun part34(): Map<String, Map<String, String>> = mapOf(
+        ),
         "storage_cannot_move" to mapOf(
             "zh-Hant" to "Kairumo 無法移動文件庫：%@",
             "en" to "Kairumo could not move the document library: %@",
@@ -22540,7 +22556,10 @@ object LocalizationStrings {
             "ja" to "%@ を読み込めません",
             "ko" to "%@을(를) 읽을 수 없습니다",
             "th" to "อ่าน %@ ไม่ได้"
-        ),
+        )
+    )
+
+    private fun part35(): Map<String, Map<String, String>> = mapOf(
         "sync_fail_cannot_write" to mapOf(
             "zh-Hant" to "無法寫入 %@",
             "en" to "Cannot write %@",
@@ -22556,10 +22575,7 @@ object LocalizationStrings {
             "ja" to "削除に失敗しました：%@",
             "ko" to "삭제 실패: %@",
             "th" to "ลบไม่สำเร็จ: %@"
-        )
-    )
-
-    private fun part35(): Map<String, Map<String, String>> = mapOf(
+        ),
         "sync_fail_export" to mapOf(
             "zh-Hant" to "匯出失敗（%1@）：%2@",
             "en" to "Export failed (%1@): %2@",
@@ -23183,7 +23199,10 @@ object LocalizationStrings {
             "ja" to "プレビュー",
             "ko" to "미리보기",
             "th" to "ตัวอย่าง"
-        ),
+        )
+    )
+
+    private fun part36(): Map<String, Map<String, String>> = mapOf(
         "table_rows_cols" to mapOf(
             "zh-Hant" to "%@ 列 × %@ 欄",
             "en" to "%@ × %@",
@@ -23199,10 +23218,7 @@ object LocalizationStrings {
             "ja" to "表",
             "ko" to "표",
             "th" to "ตาราง"
-        )
-    )
-
-    private fun part36(): Map<String, Map<String, String>> = mapOf(
+        ),
         "table_unmerge" to mapOf(
             "zh-Hant" to "取消合併",
             "en" to "Unmerge",
@@ -23826,7 +23842,10 @@ object LocalizationStrings {
             "ja" to "デュアルスマホ枠と8ptグリッド内蔵",
             "ko" to "듀얼 스마트폰 프레임 및 8pt 픽셀 그리드",
             "th" to "กรอบมือถือคู่พร้อมกริด 8pt"
-        ),
+        )
+    )
+
+    private fun part37(): Map<String, Map<String, String>> = mapOf(
         "tmpl_monthly_grid" to mapOf(
             "zh-Hant" to "月計畫",
             "en" to "Month at a Glance",
@@ -23842,10 +23861,7 @@ object LocalizationStrings {
             "ja" to "日付欄つき2列。1か月が1ページに収まる",
             "ko" to "날짜 칸 2열. 한 달이 한 페이지에",
             "th" to "สองคอลัมน์พร้อมช่องวันที่"
-        )
-    )
-
-    private fun part37(): Map<String, Map<String, String>> = mapOf(
+        ),
         "tmpl_moodboard" to mapOf(
             "zh-Hant" to "情緒板與色卡矩陣",
             "en" to "Moodboard & Palette",
@@ -24469,7 +24485,10 @@ object LocalizationStrings {
             "ja" to "音声を認識中…",
             "ko" to "음성 인식 중…",
             "th" to "กำลังประมวลผลเสียงพูด…"
-        ),
+        )
+    )
+
+    private fun part38(): Map<String, Map<String, String>> = mapOf(
         "transcribe_success" to mapOf(
             "zh-Hant" to "轉錄完成，已插入文字方塊",
             "en" to "Transcription complete, text box added",
@@ -24485,10 +24504,7 @@ object LocalizationStrings {
             "ja" to "文字起こし中…",
             "ko" to "텍스트 변환 중…",
             "th" to "กำลังแปลงเสียง…"
-        )
-    )
-
-    private fun part38(): Map<String, Map<String, String>> = mapOf(
+        ),
         "transcription_done" to mapOf(
             "zh-Hant" to "已完成",
             "en" to "Done",
@@ -25112,7 +25128,10 @@ object LocalizationStrings {
             "ja" to "青緑",
             "ko" to "청록색",
             "th" to "เขียวหัวเป็ด"
-        ),
+        )
+    )
+
+    private fun part39(): Map<String, Map<String, String>> = mapOf(
         "wd_c_turquoise" to mapOf(
             "zh-Hant" to "青綠色",
             "en" to "Turquoise",
@@ -25128,10 +25147,7 @@ object LocalizationStrings {
             "ja" to "バイオレット",
             "ko" to "보라색",
             "th" to "ม่วงไวโอเล็ต"
-        )
-    )
-
-    private fun part39(): Map<String, Map<String, String>> = mapOf(
+        ),
         "wd_c_white" to mapOf(
             "zh-Hant" to "白色",
             "en" to "White",

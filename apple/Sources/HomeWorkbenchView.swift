@@ -953,7 +953,7 @@ public struct HomeWorkbenchView: View {
     private func renameFolderFromMenu(_ folder: FolderItem) {
         folderToRename = nil
         SheetCoordinator.shared.presentFromMenu {
-            folderRenameText = folder.name
+            folderRenameText = folder.displayName
             folderToRename = folder
         }
     }
@@ -1154,7 +1154,7 @@ public struct HomeWorkbenchView: View {
         StableMenuButton(
             style: .rowIcon(icon: icon, fontSize: fontSize, color: color, hitSize: hitSize),
             sections: folderMenuSections(folder: folder),
-            accessibilityLabel: folder.name,
+            accessibilityLabel: folder.displayName,
             accessibilityIdentifier: "home.folders.menu.\(folder.id)"
         )
         .frame(width: hitSize, height: hitSize)
@@ -2108,7 +2108,7 @@ public struct HomeWorkbenchView: View {
                                 .foregroundColor(.accentColor)
 
                             // 資料夾名稱
-                            Text(folder.name)
+                            Text(folder.displayName)
                                 .font(.subheadline)
                                 .fontWeight(.semibold)
                                 .foregroundColor(.primary)
@@ -2334,7 +2334,7 @@ public struct HomeWorkbenchView: View {
                             } label: {
                                 HStack(spacing: 4) {
                                     Image(systemName: folder.parentId == nil ? "folder.fill" : "folder.badge.gearshape")
-                                    Text("\(folder.name) (\(count))")
+                                    Text("\(folder.displayName) (\(count))")
                                 }
                                 .font(.caption)
                                 .fontWeight(isSel ? .bold : .regular)

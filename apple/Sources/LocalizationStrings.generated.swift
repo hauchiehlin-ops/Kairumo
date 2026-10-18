@@ -19327,6 +19327,22 @@ extension LocalizationManager {
             .ko: "Kairumo (기능 예시)",
             .th: "Kairumo (ตัวอย่างฟังก์ชัน)"
         ],
+        "seed_folder_drafting": [
+            .zhHant: "圖學",
+            .en: "Drafting",
+            .zhHans: "图学",
+            .ja: "製図",
+            .ko: "도면",
+            .th: "การเขียนแบบ"
+        ],
+        "seed_folder_features": [
+            .zhHant: "Kairumo 功能介紹",
+            .en: "Kairumo Feature Introduction",
+            .zhHans: "Kairumo 功能介绍",
+            .ja: "Kairumo 機能紹介",
+            .ko: "Kairumo 기능 소개",
+            .th: "การแนะนำฟีเจอร์ Kairumo"
+        ],
         "seed_manual_snippet": [
             .zhHant: "Kairumo 優勢：結構化、視覺化、多語言 —— 全部手繪",
             .en: "Kairumo’s advantages: structured, visual and multilingual",

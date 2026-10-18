@@ -227,10 +227,11 @@ object SampleFork {
         return adopt(context, id, newId, deviceId, languageTag)
     }
 
-    /** 一份範例套件（已放在 `newId` 底下）正式成為一般筆記本：換 id 與名字、放在範例所在的資料夾、記進同步索引。 */
+    /** 一份範例套件（已放在 `newId` 底下）正式成為一般筆記本：換 id 與名字、歸納於未分類筆記（最上層）、記進同步索引。 */
     private fun adopt(context: Context, sampleId: String, newId: String, deviceId: UInt, languageTag: String): Pair<String, String> {
         val target = packageDir(context, newId)
-        val parent = FolderTree.parentOf(context, sampleId)
+        // 操作（編輯）範例後生成的副本，一律歸納於「未分類筆記」（parentId = null），不直接放在該範例的資料夾中
+        val parent: String? = null
         // 範例的同步狀態不帶過去；套件自己記的 id 也換掉（同步與里程碑都靠它分辨是哪一本）。
         File(target, "sync").deleteRecursively()
         File(target, "sync").mkdirs()

@@ -16447,6 +16447,22 @@
     "zhHans": "Kairumo(功能范例)",
     "zhHant": "Kairumo(功能範例)"
   },
+  "seed_folder_drafting": {
+    "en": "Drafting",
+    "ja": "製図",
+    "ko": "도면",
+    "th": "การเขียนแบบ",
+    "zhHans": "图学",
+    "zhHant": "圖學"
+  },
+  "seed_folder_features": {
+    "en": "Kairumo Feature Introduction",
+    "ja": "Kairumo 機能紹介",
+    "ko": "Kairumo 기능 소개",
+    "th": "การแนะนำฟีเจอร์ Kairumo",
+    "zhHans": "Kairumo 功能介绍",
+    "zhHant": "Kairumo 功能介紹"
+  },
   "seed_manual_snippet": {
     "en": "Kairumo’s advantages: structured, visual and multilingual",
     "ja": "Kairumo の強み: 構造化・視覚化・多言語",

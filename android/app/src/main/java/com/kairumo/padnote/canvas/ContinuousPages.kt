@@ -66,6 +66,15 @@ import com.kairumo.padnote.text.TextBoxStore
 import uniffi.padnote_core.PadnoteSession
 import uniffi.padnote_core.ToolKind
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.withFrameNanos
+import androidx.compose.foundation.gestures.calculatePan
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.PointerType
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.util.VelocityTracker
+import com.kairumo.padnote.ink.PalmThresholdStore
+import com.kairumo.padnote.ink.PenSettingsStore
+import kotlin.math.pow
 import kotlinx.coroutines.launch
 
 /**
@@ -257,6 +266,7 @@ fun ContinuousPagesView(
     }
     val density = LocalDensity.current.density
     val scope = rememberCoroutineScope()
+    val context = androidx.compose.ui.platform.LocalContext.current
 
 
     // 畫面中央最近的那一頁 = 焦點頁。用 layoutInfo 而不是
@@ -313,9 +323,102 @@ fun ContinuousPagesView(
         // 否則兩側留下的灰邊看起來像畫布被框住。
         val available = (maxWidth.value - 32f).coerceAtLeast(1f)
         val scale = minOf(MAX_FIT_SCALE, available / PageGeometry.width)
+        var momentumJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
+
         LazyColumn(
             state = listState,
-            modifier = Modifier.fillMaxSize(),
+            userScrollEnabled = editorMode != EditorMode.DRAW,
+            modifier = Modifier
+                .fillMaxSize()
+                .pointerInput(editorMode, ink.penOnly) {
+                    if (editorMode != EditorMode.DRAW) return@pointerInput
+                    val canFingerDraw = !ink.penOnly
+                    awaitPointerEventScope {
+                        while (true) {
+                            val first = awaitPointerEvent(PointerEventPass.Initial)
+                            val pressedChanges = first.changes.filter { it.pressed }
+                            val hasStylus = pressedChanges.any { it.type == PointerType.Stylus }
+                            val fingerChanges = pressedChanges.filter { it.type != PointerType.Stylus }
+                            val fingerCount = fingerChanges.size
+
+                            // 繪圖模式下：觸控筆始終直接繪圖；手指可繪圖時僅在 2 指以上攔截捲動；僅限觸控筆時手指 1 指即可捲動
+                            val shouldIntercept = !hasStylus && (
+                                (canFingerDraw && fingerCount >= 2) ||
+                                (!canFingerDraw && fingerCount >= 1)
+                            )
+
+                            if (!shouldIntercept) continue
+
+                            momentumJob?.cancel()
+
+                            // 手勢接管前取消所有頁面進行中的未完成筆畫，避免雙指觸控時在畫布留下誤觸墨點
+                            runtimes.values.forEach { rt ->
+                                if (rt.engine.isDrawing) {
+                                    rt.engine.cancelInFlight()
+                                    rt.bump()
+                                }
+                            }
+
+                            val startPointers = fingerCount
+                            var maxPointers = fingerCount
+                            var totalPanY = 0f
+                            val velocityTracker = VelocityTracker()
+
+                            first.changes.forEach { change ->
+                                if (change.pressed) {
+                                    change.consume()
+                                    velocityTracker.addPosition(change.uptimeMillis, change.position)
+                                }
+                            }
+
+                            var event = first
+                            while (event.changes.any { it.pressed }) {
+                                val currentFingers = event.changes.count { it.pressed && it.type != PointerType.Stylus }
+                                maxPointers = maxOf(maxPointers, currentFingers)
+
+                                val panChange = event.calculatePan()
+                                totalPanY += panChange.y
+                                if (panChange.y != 0f) {
+                                    listState.dispatchRawDelta(-panChange.y)
+                                }
+
+                                event.changes.forEach { change ->
+                                    if (change.pressed) {
+                                        change.consume()
+                                        velocityTracker.addPosition(change.uptimeMillis, change.position)
+                                    }
+                                }
+                                event = awaitPointerEvent(PointerEventPass.Initial)
+                            }
+
+                            val isTap = kotlin.math.abs(totalPanY) < 24.dp.toPx()
+                            if (isTap && startPointers >= 2) {
+                                // 對齊 Apple：雙指點擊＝復原，三指點擊＝重做
+                                when (maxPointers) {
+                                    2 -> undoController?.undoHandler?.invoke()
+                                    3 -> undoController?.redoHandler?.invoke()
+                                }
+                            } else {
+                                // 慣性減速：採用與 Apple TwoFingerScrollForwarder 一致的 pow(0.998, dt * 1000) 衰減曲線
+                                val velocity = velocityTracker.calculateVelocity().y
+                                if (kotlin.math.abs(velocity) > 80f) {
+                                    momentumJob = scope.launch {
+                                        var vel = velocity
+                                        var lastTime = System.nanoTime()
+                                        while (kotlin.math.abs(vel) > 20f) {
+                                            withFrameNanos { now ->
+                                                val dt = minOf((now - lastTime) / 1_000_000_000f, 0.05f)
+                                                lastTime = now
+                                                vel *= 0.998.pow((dt * 1000f).toDouble()).toFloat()
+                                                listState.dispatchRawDelta(-vel * dt)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(20.dp),
             contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 20.dp)
@@ -327,7 +430,7 @@ fun ContinuousPagesView(
                         ContinuousPage(
                             session = session,
                             meta = meta,
-                            runtime = runtimes.getOrPut(pageId) { PageRuntime(session, pageId.ifEmpty { null }) },
+                            runtime = runtimes.getOrPut(pageId) { PageRuntime(session, pageId.ifEmpty { null }, context) },
                             history = history,
                             pageIndex = index,
                             isFocused = index == focusIndex,
@@ -427,6 +530,7 @@ private fun ContinuousPage(
     engine.colorRgba = ink.colorRgba
     engine.baseWidth = ink.baseWidth
     engine.isErasing = ink.isErasing
+    engine.setPenOnly(ink.penOnly)
     // 遵循使用者的 pen-only 設定（預設為 false，支援手指與筆；若使用者開啟僅限觸控筆則為 true）。
     LaunchedEffect(engine, ink.penOnly) {
         engine.setPenOnly(ink.penOnly)
@@ -537,7 +641,7 @@ private fun ContinuousPage(
         revision++
     }
 
-    val currentInkColor = remember(ink.colorRgba) {
+    val currentInkColor = remember(ink) {
         if (ink.colorRgba.size >= 4) {
             Color(
                 (ink.colorRgba[0].toInt() and 0xFF) / 255f,
@@ -837,8 +941,19 @@ private fun ContinuousPage(
  * 連續模式裡一頁的引擎與物件。放在 `ContinuousPagesView` 的快取裡，不隨清單項目拆掉 ——
  * 捲出畫面再捲回來，筆跡的復原紀錄與物件都還在（見 ContinuousPagesView 的復原說明）。
  */
-internal class PageRuntime(session: PadnoteSession?, val pageId: String?) {
-    val engine = InkEngine(session = session, pageId = pageId)
+internal class PageRuntime(session: PadnoteSession?, val pageId: String?, context: android.content.Context? = null) {
+    val engine = InkEngine(session = session, pageId = pageId).apply {
+        if (context != null) {
+            setPalmThresholds(
+                PalmThresholdStore.radius(context),
+                PalmThresholdStore.retractMs(context)
+            )
+            setPressureCurve(
+                PenSettingsStore.floor(context) ?: 0.1f,
+                PenSettingsStore.gamma(context) ?: 1.0f
+            )
+        }
+    }
     val textStore = TextBoxStore(session, pageId)
     val shapeStore = ShapeStore(session, pageId)
     val tableStore = TableStore(session, pageId)

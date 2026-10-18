@@ -63,6 +63,7 @@ object SeedNotebooks {
         if (buildFeatureShowcase(context, deviceId, ::l)) created++
         if (buildKairumoManual(context, deviceId, languageTag, ::l)) created++
         if (buildDraftingExample(context, deviceId, ::l)) created++
+        seedFoldersIfNeeded(context, ::l)
         ProfileContext.prefs(context, PREFS)
             .edit()
             .putBoolean(KEY_MANUAL, true)
@@ -162,7 +163,7 @@ object SeedNotebooks {
         // 《功能範例》
         val showcaseTitle = l("seed_feature_showcase_title")
         val hasShowcase = existing.any { it.title == showcaseTitle || it.id.equals(SHOWCASE_ID, ignoreCase = true) }
-        if (!hasShowcase && !pkgExists(SHOWCASE_ID) && SHOWCASE_ID !in retired) {
+        if (!hasShowcase && !pkgExists(SHOWCASE_ID) && SHOWCASE_ID !in retired && !prefs.getBoolean(KEY_SHOWCASE, false)) {
             if (buildFeatureShowcase(context, deviceId, l)) created++
         }
         prefs.edit().putBoolean(KEY_SHOWCASE, true).apply()
@@ -170,14 +171,14 @@ object SeedNotebooks {
         // 《Kairumo手冊》：舊使用者只補一次，之後刪掉就不再長回來。
         val manualTitle = l("seed_manual_title")
         val hasManual = existing.any { it.id.equals(MANUAL_ID, ignoreCase = true) || it.title == MANUAL_TITLE || it.title == manualTitle }
-        if (!hasManual && !pkgExists(MANUAL_ID) && MANUAL_ID !in retired) {
+        if (!hasManual && !pkgExists(MANUAL_ID) && MANUAL_ID !in retired && !prefs.getBoolean(KEY_MANUAL, false)) {
             if (buildKairumoManual(context, deviceId, languageTag, l)) created++
         }
         prefs.edit().putBoolean(KEY_MANUAL, true).apply()
 
         // 《圖學範例》：舊使用者只補一次，之後刪掉就不再長回來。
         val hasDrafting = existing.any { it.id.equals(DRAFT_EXAMPLE_ID, ignoreCase = true) }
-        if (!hasDrafting && !pkgExists(DRAFT_EXAMPLE_ID) && DRAFT_EXAMPLE_ID !in retired) {
+        if (!hasDrafting && !pkgExists(DRAFT_EXAMPLE_ID) && DRAFT_EXAMPLE_ID !in retired && !prefs.getBoolean(KEY_DRAFT_EXAMPLE, false)) {
             if (buildDraftingExample(context, deviceId, l)) created++
         }
         prefs.edit().putBoolean(KEY_DRAFT_EXAMPLE, true).apply()
@@ -187,7 +188,7 @@ object SeedNotebooks {
         val hasWelcome = existing.any {
             it.id.equals(WELCOME_ID, ignoreCase = true) || it.title == welcomeTitle || it.title == displayTitle(welcomeTitle, languageTag)
         }
-        if (!hasWelcome && !pkgExists(WELCOME_ID) && WELCOME_ID !in retired) {
+        if (!hasWelcome && !pkgExists(WELCOME_ID) && WELCOME_ID !in retired && !prefs.getBoolean(KEY_WELCOME, false)) {
             if (buildWelcome(context, deviceId, l)) created++
         }
         prefs.edit().putBoolean(KEY_WELCOME, true).apply()
@@ -197,11 +198,12 @@ object SeedNotebooks {
         val hasMeeting = existing.any {
             it.id.equals(MEETING_ID, ignoreCase = true) || it.title == meetingTitle || it.title == displayTitle(meetingTitle, languageTag)
         }
-        if (!hasMeeting && !pkgExists(MEETING_ID) && MEETING_ID !in retired) {
+        if (!hasMeeting && !pkgExists(MEETING_ID) && MEETING_ID !in retired && !prefs.getBoolean(KEY_MEETING, false)) {
             if (buildMeeting(context, deviceId, l)) created++
         }
         prefs.edit().putBoolean(KEY_MEETING, true).apply()
 
+        seedFoldersIfNeeded(context, l)
         prefs.edit().putBoolean(KEY_BACKFILLED, true).apply()
         return created
     }
@@ -242,6 +244,41 @@ object SeedNotebooks {
     // 被刪掉或退役的範例**不補回**：更新程式不重新安裝範例。與 Apple 相同。
     // 提高這個數字 = 下次更新時重設所有範例一次，非必要不要動。
     private const val CONTENT_GENERATION = 3
+
+    const val SEED_FOLDER_FEATURES_ID = "seed-folder-features-v1"
+    const val SEED_FOLDER_DRAFTING_ID = "seed-folder-drafting-v1"
+    private const val KEY_FOLDERS_SEEDED = "seed_folders_initialized_v1"
+
+    fun assignDefaultSeedFolder(context: Context, notebookId: String, folderId: String) {
+        val prefs = ProfileContext.prefs(context, "kairumo")
+        val key = "seed_parent_" + notebookId.lowercase()
+        if (prefs.getString(key, null).isNullOrEmpty() && !AccountSyncStore.isDeleted(context, folderId)) {
+            prefs.edit().putString(key, folderId).apply()
+            FolderTree.notifyChanged()
+        }
+    }
+
+    fun seedFoldersIfNeeded(context: Context, l: (String) -> String) {
+        val prefs = ProfileContext.prefs(context, PREFS)
+        if (prefs.getBoolean(KEY_FOLDERS_SEEDED, false)) return
+        prefs.edit().putBoolean(KEY_FOLDERS_SEEDED, true).apply()
+
+        val f1Title = l("seed_folder_features")
+        val f2Title = l("seed_folder_drafting")
+
+        if (!AccountSyncStore.isDeleted(context, SEED_FOLDER_FEATURES_ID) && AccountSyncStore.item(context, SEED_FOLDER_FEATURES_ID) == null) {
+            AccountSyncStore.record(context, id = SEED_FOLDER_FEATURES_ID, title = f1Title, parentId = null, isFolder = true)
+        }
+        if (!AccountSyncStore.isDeleted(context, SEED_FOLDER_DRAFTING_ID) && AccountSyncStore.item(context, SEED_FOLDER_DRAFTING_ID) == null) {
+            AccountSyncStore.record(context, id = SEED_FOLDER_DRAFTING_ID, title = f2Title, parentId = null, isFolder = true)
+        }
+
+        assignDefaultSeedFolder(context, MANUAL_ID, SEED_FOLDER_FEATURES_ID)
+        assignDefaultSeedFolder(context, SHOWCASE_ID, SEED_FOLDER_FEATURES_ID)
+        assignDefaultSeedFolder(context, WELCOME_ID, SEED_FOLDER_FEATURES_ID)
+        assignDefaultSeedFolder(context, MEETING_ID, SEED_FOLDER_FEATURES_ID)
+        assignDefaultSeedFolder(context, DRAFT_EXAMPLE_ID, SEED_FOLDER_DRAFTING_ID)
+    }
 
     private const val PREFS = "kairumo.seed"
     private const val KEY_MANUAL = "kairumo_manual_added"

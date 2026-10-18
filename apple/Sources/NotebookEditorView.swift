@@ -2219,7 +2219,7 @@ public struct NotebookEditorView: View {
         case fitPage
     }
     @State private var singlePageFitMode: SinglePageFitMode = .fitWidth
-    @State private var singlePageManualZoom: CGFloat = NotebookEditorView.isTabletOrDesktopDevice ? 2.0 : 1.0
+    @State private var singlePageManualZoom: CGFloat = 1.0
 
     @State private var snapToGrid: Bool = true
     @State private var newTextDraft: NoteTextAttachment = NoteTextAttachment()
@@ -4987,13 +4987,13 @@ public struct NotebookEditorView: View {
                     return min(max(whole * value, 0.3), 4)
                 }
                 return PageViewportLayout.zoomScale(for: target, viewport: viewport, page: pageSize)
-            } ?? (Self.isTabletOrDesktopDevice ? min(max(PageViewportLayout.zoomScale(for: .fitPage, viewport: viewport, page: pageSize) * 2.0, 0.3), 4.0) : fitWidth)
+            } ?? fitWidth
             continuousPages(scale: scale)
         }
     }
 
-    /// 連續模式的縮放設定。平板與桌機預設 200%（.ratio(2.0)）；手機預設貼合頁寬。
-    @State private var continuousZoomTarget: PageViewportLayout.ZoomTarget? = NotebookEditorView.isTabletOrDesktopDevice ? .ratio(2.0) : nil
+    /// 連續模式的縮放設定。預設貼合頁寬（依視窗寬度響應式縮放，放大上限 200%）。
+    @State private var continuousZoomTarget: PageViewportLayout.ZoomTarget? = nil
 
     /// 整頁的顯示比例。單頁模式沿用既有的 `singlePageFitMode` / `singlePageManualZoom`（畫布右下角的 −／全頁／＋
     /// 也是它們），連續模式用 `continuousZoomTarget`。倍率一律**相對於「整頁剛好放進視窗」**：100% = 全頁。
@@ -7384,7 +7384,7 @@ public struct NotebookEditorView: View {
                         .foregroundColor(.accentColor)
                         .font(.system(size: 13))
 
-                    Text(folder.name)
+                    Text(folder.displayName)
                         .font(.caption)
                         .fontWeight(.medium)
                         .lineLimit(1)
@@ -7425,7 +7425,7 @@ public struct NotebookEditorView: View {
 
                         Button {
                             presentFromMenu {
-                                folderRenameText = folder.name
+                                folderRenameText = folder.displayName
                                 folderToRename = folder
                             }
                         } label: {
@@ -15822,7 +15822,7 @@ public struct MoveNotebookSheet: View {
                             HStack {
                                 Image(systemName: folder.parentId == nil ? "folder.fill" : "folder.badge.gearshape")
                                     .foregroundColor(folder.parentId == nil ? .accentColor : .secondary)
-                                Text(folder.name)
+                                Text(folder.displayName)
                                     .foregroundColor(.primary)
                                     .padding(.leading, folder.parentId == nil ? 0 : 16)
                                 Spacer()

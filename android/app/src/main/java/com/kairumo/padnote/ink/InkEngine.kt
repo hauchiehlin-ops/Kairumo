@@ -1290,6 +1290,15 @@ class InkEngine(
         arbiter.reset()
     }
 
+    /** 取消進行中的未完成筆畫（手勢接管、雙指捲動觸發時使用）。 */
+    fun cancelInFlight() {
+        if (inFlight.isNotEmpty()) {
+            inFlight.clear()
+            arbiter.reset()
+            clearDraftPreview()
+        }
+    }
+
     /**
      * 這根指標目前是否被採納為墨跡。
      *

@@ -65,11 +65,28 @@ object FolderTree {
         notifyChanged()
     }
 
+    fun displayFolderTitle(id: String, rawTitle: String): String {
+        val key = when (id.lowercase()) {
+            "seed-folder-features-v1" -> "seed_folder_features"
+            "seed-folder-drafting-v1" -> "seed_folder_drafting"
+            else -> null
+        } ?: return rawTitle
+        val tag = com.kairumo.padnote.currentLanguageTag()
+        val allStandardNames = setOf(
+            "Kairumo 功能介紹", "Kairumo 功能介绍", "Kairumo Feature Introduction", "Kairumo 機能紹介", "Kairumo 기능 소개", "การแนะนำฟีเจอร์ Kairumo",
+            "圖學", "图学", "Drafting", "製図", "도면", "การเขียนแบบ"
+        )
+        if (rawTitle.isBlank() || rawTitle in allStandardNames) {
+            return com.kairumo.padnote.LocalizationStrings.localized(key, tag)
+        }
+        return rawTitle
+    }
+
     /** 某個資料夾底下的子資料夾。`parentId` 傳 null 表示最上層。 */
     fun subfolders(context: Context, parentId: String?): List<Folder> =
         syncChildrenOf(AccountSyncStore.indexJson(context), parentId ?: "")
             .filter { it.isFolder }
-            .map { Folder(it.id, it.title, it.parentId.takeIf { p -> p.isNotEmpty() }) }
+            .map { Folder(it.id, displayFolderTitle(it.id, it.title), it.parentId.takeIf { p -> p.isNotEmpty() }) }
 
     /** 這個筆記本或資料夾在哪個資料夾底下。null 表示最上層。 */
     fun parentOf(context: Context, id: String): String? {
@@ -90,7 +107,11 @@ object FolderTree {
     }
 
     fun titleOf(context: Context, id: String): String? {
-        val syncTitle = AccountSyncStore.item(context, id)?.title
+        val item = AccountSyncStore.item(context, id)
+        if (item != null && item.isFolder) {
+            return displayFolderTitle(item.id, item.title)
+        }
+        val syncTitle = item?.title
         if (!syncTitle.isNullOrBlank()) return syncTitle
 
         if (SeedNotebooks.isDeviceLocal(id)) {
@@ -130,7 +151,7 @@ object FolderTree {
             // 沒有這道保護的話麵包屑會無限長 —— App 直接凍住。
             if (!seen.add(cursor)) break
             val item = AccountSyncStore.item(context, cursor) ?: break
-            reversed += Folder(item.id, item.title, item.parentId.takeIf { it.isNotEmpty() })
+            reversed += Folder(item.id, displayFolderTitle(item.id, item.title), item.parentId.takeIf { it.isNotEmpty() })
             cursor = item.parentId.takeIf { it.isNotEmpty() }
         }
         return reversed.reversed()
@@ -151,7 +172,7 @@ object FolderTree {
             if (depth > 32) return
             for (item in syncChildrenOf(json, parent ?: "")) {
                 if (!item.isFolder) continue
-                out += Folder(item.id, item.title, parent)
+                out += Folder(item.id, displayFolderTitle(item.id, item.title), parent)
                 walk(item.id, depth + 1)
             }
         }
