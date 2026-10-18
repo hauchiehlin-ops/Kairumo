@@ -22,6 +22,7 @@
 
 import CoreGraphics
 import Foundation
+import SwiftUI
 
 public enum PageGeometry {
 
@@ -165,3 +166,41 @@ public enum PageViewportLayout {
         return min(max(raw, range.lowerBound), range.upperBound)
     }
 }
+
+/// 將固定尺寸（預設為 PageGeometry 800 × 1132）的頁面等比縮放進版面中，對齊 Android Compose `scaledPage` 的固定約束行為。
+///
+/// # 核心原理
+/// 1. `sizeThatFits`: 向父容器（如 LazyVStack / ScrollView）回報縮放後的精確尺寸 `(unscaledSize.width * scale, unscaledSize.height * scale)`，
+///    避免頁與頁之間留下 `(1 - scale) * height` 的空隙或破洞。
+/// 2. `placeSubviews`: 強制向子視圖提議標準未縮放尺寸 `(unscaledSize.width, unscaledSize.height)`，
+///    確保內部的 UIKit 視圖（如 `AdaptiveCanvasView`、`TemplateCanvasBackgroundView`）與 SwiftUI 物件層
+///    嚴格以 1:1 的頁面幾何進行佈局，絕不因父層提議的縮小尺寸而發生「二次縮放（double-scaling）」。
+/// 3. 子視圖圖層再以 `anchor: .topLeading` 進行一次性等比縮放，使筆跡、背景與附件 100% 幾何對齊。
+@available(iOS 16.0, macOS 13.0, *)
+public struct ScaledPageLayout: Layout {
+    public let scale: CGFloat
+    public let unscaledSize: CGSize
+
+    public init(scale: CGFloat, unscaledSize: CGSize = PageGeometry.size) {
+        self.scale = scale
+        self.unscaledSize = unscaledSize
+    }
+
+    public func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        CGSize(
+            width: unscaledSize.width * scale,
+            height: unscaledSize.height * scale
+        )
+    }
+
+    public func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        for subview in subviews {
+            subview.place(
+                at: CGPoint(x: bounds.minX, y: bounds.minY),
+                anchor: .topLeading,
+                proposal: ProposedViewSize(width: unscaledSize.width, height: unscaledSize.height)
+            )
+        }
+    }
+}
+

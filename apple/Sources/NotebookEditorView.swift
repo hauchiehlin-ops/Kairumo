@@ -4654,16 +4654,14 @@ public struct NotebookEditorView: View {
             let scaledH = PageGeometry.height * effectiveScale
 
             ScrollView([.vertical, .horizontal], showsIndicators: true) {
-                ZStack(alignment: .top) {
+                ScaledPageLayout(scale: effectiveScale, unscaledSize: CGSize(width: PageGeometry.width, height: PageGeometry.height)) {
                     canvasWorkAreaContent
-                        // 頁面用**它自己的尺寸**佈局，再等比縮放
                         .frame(width: PageGeometry.width, height: PageGeometry.height)
-                        .scaleEffect(effectiveScale, anchor: .top)
-                        .frame(width: scaledW, height: scaledH, alignment: .top)
-                        .padding(.bottom, inlineEditingTextId != nil ? keyboardHeight : 0)
-                        .accessibilityElement(children: .contain)
-                        .accessibilityIdentifier("editor.canvas")
+                        .scaleEffect(effectiveScale, anchor: .topLeading)
                 }
+                .padding(.bottom, inlineEditingTextId != nil ? keyboardHeight : 0)
+                .accessibilityElement(children: .contain)
+                .accessibilityIdentifier("editor.canvas")
                 .frame(
                     minWidth: outer.size.width,
                     minHeight: outer.size.height,
@@ -5073,106 +5071,102 @@ public struct NotebookEditorView: View {
             ScrollView(.vertical) {
                 LazyVStack(spacing: 20) {
                     ForEach(0..<max(1, notebook.pageCount), id: \.self) { index in
-                        ContinuousPageView(
-                            pageIndex: index,
-                            notebookId: notebook.id,
-                            paperId: notebook.paperId(forPage: index),
-                            paletteId: notebook.guidePaletteId,
-                            store: store,
-                            selectedTool: selectedTool,
-                            selectedColor: selectedColor,
-                            strokeWidth: strokeWidth,
-                            isRulerActive: isRulerActive,
-                            editorMode: editorMode,
-                            eraserMode: eraserMode,
-                            pixelEraserWidth: pixelEraserWidth,
-                            palmRejection: palmRejection,
-                            isObjectActive: (editorMode == .type || inlineEditingTextId != nil || editingTextId != nil || activeSelectedObjectId != nil || !selectedObjectIds.isEmpty || !selectedShapeIds.isEmpty) && !isInlineInkEditing,
-                            isFocused: index == currentPageIndex,
-                            objectLayer: { objectLayer(forPage: index) },
-                            underInkObjectLayer: { AnyView(objectLayer(forPage: index, filter: .underInkOnly)) },
-                            overInkObjectLayer: { AnyView(objectLayer(forPage: index, filter: .overInkOnly)) },
-                            isUnderInkPointPassThrough: { point, page, event in
-                                isUnderInkPointPassThrough(point: point, page: page, event: event)
-                            },
-                            onDrawingChanged: { page, updated in
-                                objectHistory.breakCoalescing()
-                                recordDrawingEdit(page: page, drawing: updated)
-                                broadcastDrawingChange(page: page, drawing: updated)
-                            },
-                            onSelectionChanged: { if !$0 { lasso.clear() } },
-                            onReachedPageBottom: { ensureNextPageExists() },
-                            // LazyVStack 會建立多頁畫布；不能讓最後建立的頁面覆蓋
-                            // `canvasView`，否則貼紙可能蓋到別頁且存檔頁碼也錯。
-                            canvasRef: { ref in
-                                // 同上：不在畫面更新途中改 @State，且只在真的換了才寫。
-                                guard index == currentPageIndex, canvasView !== ref else { return }
-                                DispatchQueue.main.async { canvasView = ref }
-                            },
-                            onCanvasTap: { location in
-                                currentPageIndex = index
-                                currentDrawing = drawingForPage(index)
-                                handleCanvasDirectTap(at: location, page: index)
-                            },
-                            onCanvasDoubleTap: { location in
-                                currentPageIndex = index
-                                currentDrawing = drawingForPage(index)
-                                handleCanvasDirectDoubleTap(at: location, page: index)
-                            },
-                            onPencilTouchBegan: {
-                                currentPageIndex = index
-                                currentDrawing = drawingForPage(index)
-                                handlePencilTouchBegan()
-                            },
-                            onPenControl: applyPenControl,
-                            onImageDropped: { page, providers, location in
-                                acceptImageDrop(providers, at: location, page: page)
-                            },
-                            onInitialLoaded: { page, loaded in
-                                captureInitialPageState(page: page, drawing: loaded)
-                            },
-                            reloadGeneration: continuousReloadGeneration,
-                            notebook: $notebook,
-                            onNotebookChanged: {
-                                commitNotebook()
-                                PageThumbnailRenderer.invalidateAll()
-                            },
-                            onLassoBegan: { pt in
-                                lasso.begin(at: pt)
-                            },
-                            onLassoMoved: { pt in
-                                if lasso.isDraggingSelection {
-                                    let lastPt = lasso.dragPoint ?? pt
-                                    let delta = CGSize(width: pt.x - lastPt.x, height: pt.y - lastPt.y)
-                                    lasso.updateDragPoint(pt)
-                                    if let updated = lasso.moveSelected(in: currentDrawing, by: delta) {
-                                        currentDrawing = updated
-                                        canvasView?.drawing = updated
-                                    }
-                                } else {
-                                    lasso.extend(to: pt)
-                                }
-                            },
-                            onLassoEnded: {
-                                let wasDragging = lasso.isDraggingSelection
-                                lasso.finish(in: currentDrawing)
-                                if wasDragging {
-                                    recordDrawingEdit(page: index, drawing: currentDrawing)
-                                    broadcastDrawingChange(page: index, drawing: currentDrawing)
+                        ScaledPageLayout(scale: scale, unscaledSize: CGSize(width: PageGeometry.width, height: PageGeometry.height)) {
+                            ContinuousPageView(
+                                pageIndex: index,
+                                notebookId: notebook.id,
+                                paperId: notebook.paperId(forPage: index),
+                                paletteId: notebook.guidePaletteId,
+                                store: store,
+                                selectedTool: selectedTool,
+                                selectedColor: selectedColor,
+                                strokeWidth: strokeWidth,
+                                isRulerActive: isRulerActive,
+                                editorMode: editorMode,
+                                eraserMode: eraserMode,
+                                pixelEraserWidth: pixelEraserWidth,
+                                palmRejection: palmRejection,
+                                isObjectActive: (editorMode == .type || inlineEditingTextId != nil || editingTextId != nil || activeSelectedObjectId != nil || !selectedObjectIds.isEmpty || !selectedShapeIds.isEmpty) && !isInlineInkEditing,
+                                isFocused: index == currentPageIndex,
+                                objectLayer: { objectLayer(forPage: index) },
+                                underInkObjectLayer: { AnyView(objectLayer(forPage: index, filter: .underInkOnly)) },
+                                overInkObjectLayer: { AnyView(objectLayer(forPage: index, filter: .overInkOnly)) },
+                                isUnderInkPointPassThrough: { point, page, event in
+                                    isUnderInkPointPassThrough(point: point, page: page, event: event)
+                                },
+                                onDrawingChanged: { page, updated in
+                                    objectHistory.breakCoalescing()
+                                    recordDrawingEdit(page: page, drawing: updated)
+                                    broadcastDrawingChange(page: page, drawing: updated)
+                                },
+                                onSelectionChanged: { if !$0 { lasso.clear() } },
+                                onReachedPageBottom: { ensureNextPageExists() },
+                                // LazyVStack 會建立多頁畫布；不能讓最後建立的頁面覆蓋
+                                // `canvasView`，否則貼紙可能蓋到別頁且存檔頁碼也錯。
+                                canvasRef: { ref in
+                                    // 同上：不在畫面更新途中改 @State，且只在真的換了才寫。
+                                    guard index == currentPageIndex, canvasView !== ref else { return }
+                                    DispatchQueue.main.async { canvasView = ref }
+                                },
+                                onCanvasTap: { location in
+                                    currentPageIndex = index
+                                    currentDrawing = drawingForPage(index)
+                                    handleCanvasDirectTap(at: location, page: index)
+                                },
+                                onCanvasDoubleTap: { location in
+                                    currentPageIndex = index
+                                    currentDrawing = drawingForPage(index)
+                                    handleCanvasDirectDoubleTap(at: location, page: index)
+                                },
+                                onPencilTouchBegan: {
+                                    currentPageIndex = index
+                                    currentDrawing = drawingForPage(index)
+                                    handlePencilTouchBegan()
+                                },
+                                onPenControl: applyPenControl,
+                                onImageDropped: { page, providers, location in
+                                    acceptImageDrop(providers, at: location, page: page)
+                                },
+                                onInitialLoaded: { page, loaded in
+                                    captureInitialPageState(page: page, drawing: loaded)
+                                },
+                                reloadGeneration: continuousReloadGeneration,
+                                notebook: $notebook,
+                                onNotebookChanged: {
+                                    commitNotebook()
                                     PageThumbnailRenderer.invalidateAll()
-                                }
-                            },
-                            lassoPath: lasso.path.isEmpty ? lasso.committed : lasso.path,
-                            isLassoCommitted: lasso.path.isEmpty
-                        )
-                        .scaleEffect(scale, anchor: .top)
-                        // 縮放後的實際高度要讓出來，否則每一頁之間會留下
-                        // (1 - scale) × 1132 的空白，看起來像頁與頁之間破了一個洞。
-                        .frame(
-                            width: PageGeometry.width * scale,
-                            height: PageGeometry.height * scale,
-                            alignment: .top
-                        )
+                                },
+                                onLassoBegan: { pt in
+                                    lasso.begin(at: pt)
+                                },
+                                onLassoMoved: { pt in
+                                    if lasso.isDraggingSelection {
+                                        let lastPt = lasso.dragPoint ?? pt
+                                        let delta = CGSize(width: pt.x - lastPt.x, height: pt.y - lastPt.y)
+                                        lasso.updateDragPoint(pt)
+                                        if let updated = lasso.moveSelected(in: currentDrawing, by: delta) {
+                                            currentDrawing = updated
+                                            canvasView?.drawing = updated
+                                        }
+                                    } else {
+                                        lasso.extend(to: pt)
+                                    }
+                                },
+                                onLassoEnded: {
+                                    let wasDragging = lasso.isDraggingSelection
+                                    lasso.finish(in: currentDrawing)
+                                    if wasDragging {
+                                        recordDrawingEdit(page: index, drawing: currentDrawing)
+                                        broadcastDrawingChange(page: index, drawing: currentDrawing)
+                                        PageThumbnailRenderer.invalidateAll()
+                                    }
+                                },
+                                lassoPath: lasso.path.isEmpty ? lasso.committed : lasso.path,
+                                isLassoCommitted: lasso.path.isEmpty
+                            )
+                            .frame(width: PageGeometry.width, height: PageGeometry.height)
+                            .scaleEffect(scale, anchor: .topLeading)
+                        }
                         .id(index)
                         .background(
                             // 哪一頁在畫面中央，哪一頁就是焦點頁。

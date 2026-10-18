@@ -2478,7 +2478,7 @@ public final class NotebookStore: ObservableObject {
     }
 
     /// 一本範例的標準內容（全新產生；會把標準筆跡寫進這台的筆跡檔）。不是範例回 nil。
-    private func standardSample(id: String) -> NotebookDocument? {
+    public func standardSample(id: String) -> NotebookDocument? {
         let l = LocalizationManager.shared
         switch id.lowercased() {
         case "seed-welcome-notebook-v1":
