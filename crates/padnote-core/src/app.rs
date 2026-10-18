@@ -1519,6 +1519,16 @@ impl NotebookSession {
         Ok(shifted_count)
     }
 
+    /// 最佳化此筆記本的儲存空間：壓實 oplog 碎檔、回收未引用 blob、排除被擦除筆畫。
+    pub fn optimize_storage(
+        &mut self,
+        deep_clean: bool,
+    ) -> Result<padnote_storage::StorageOptimizationReport, AppError> {
+        let referenced = self.notebook.referenced_blobs();
+        let report = self.package.optimize_storage(self.device, &referenced, deep_clean)?;
+        Ok(report)
+    }
+
     // ---- 文字 ----
 
     /// 建立文字區塊。內容透過 CRDT 操作寫入，因此一開始就是可協同編輯的。

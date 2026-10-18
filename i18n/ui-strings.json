@@ -18967,6 +18967,30 @@
     "zhHans": "选择文件文件夹…",
     "zhHant": "選擇文件資料夾…"
   },
+  "storage_optimize_notebooks": {
+    "en": "Optimize Notebook Storage",
+    "ja": "ノート保存容量を最適化",
+    "ko": "노트 저장 공간 최적화",
+    "th": "เพิ่มประสิทธิภาพพื้นที่จัดเก็บโน้ต",
+    "zhHans": "优化笔记存储空间",
+    "zhHant": "最佳化筆記儲存空間"
+  },
+  "storage_optimize_notebooks_explainer": {
+    "en": "Consolidate operation logs, reclaim deleted images and strokes, and free disk space. All active contents are preserved.",
+    "ja": "操作ログの統合、削除済み画像やペンの回収を行い、容量を解放します。現在の内容はすべて保持されます。",
+    "ko": "작업 로그를 정리하고 삭제된 이미지와 필기를 회수하여 용량을 확보합니다. 모든 활성 내용은 그대로 유지됩니다.",
+    "th": "รวมบันทึกการดำเนินการ กู้คืนรูปภาพและลายเส้นที่ลบ และเพิ่มพื้นที่ว่าง เนื้อหาปัจจุบันทั้งหมดจะยังคงอยู่",
+    "zhHans": "整理操作记录、回收已删除的图片与笔迹，释放磁盘空间。所有现有内容皆会完整保留。",
+    "zhHant": "整理操作記錄、回收已刪除的圖片與筆跡，釋放磁碟空間。所有現有內容皆會完整保留。"
+  },
+  "storage_optimized_report": {
+    "en": "Optimization complete: merged %@ log files, removed %@ unreferenced files, freed %@.",
+    "ja": "最適化が完了しました：%@ 個のログを統合、%@ 個の不要ファイルを削除し、%@ 解放しました。",
+    "ko": "최적화 완료: 로그 파일 %@개 병합, 미참조 파일 %@개 정리, %@ 공간을 확보했습니다.",
+    "th": "เพิ่มประสิทธิภาพเสร็จสมบูรณ์: รวมไฟล์บันทึก %@ ไฟล์ ลบไฟล์ที่ไม่ได้อ้างอิง %@ ไฟล์ คืนพื้นที่ %@",
+    "zhHans": "已完成优化：合并 %@ 个记录文件，清除 %@ 个未引用文件，释放 %@ 空间。",
+    "zhHant": "已完成最佳化：合併 %@ 個記錄檔，清除 %@ 個未引用檔案，釋放 %@ 空間。"
+  },
   "storage_clean_now": {
     "en": "Clean up now",
     "ja": "今すぐ整理",

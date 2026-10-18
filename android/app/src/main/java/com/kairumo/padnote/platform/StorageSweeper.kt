@@ -105,10 +105,11 @@ object StorageSweeper {
         return report
     }
 
-    /** 啟動時的完整清理：可丟棄的 + 回收桶期滿。 */
+    /** 啟動時的完整清理：可丟棄的 + 回收桶期滿 + 筆記本儲存空間最佳化。 */
     fun sweepAtLaunch(context: Context): Report {
         val report = sweepDisposables(context)
         report.trashPurged = runCatching { NotebookTrash.purgeExpired(context) }.getOrDefault(0)
+        runCatching { StorageJanitor.optimizeAllNotebooks(context, deepClean = false) }
         if (report.bytes > 0 || report.trashPurged > 0) {
             StartupLogger.logKey(
                 "log_sweep_android", report.files, "%.1f".format(report.bytes / 1_048_576.0), report.trashPurged
