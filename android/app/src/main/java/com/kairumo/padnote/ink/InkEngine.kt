@@ -58,7 +58,7 @@ class InkEngine(
     private var overrideRadiusDp: Float? = null
     private var overrideRetractMs: UInt? = null
 
-    private var lastPenOnly = false
+    private var lastPenOnly: Boolean? = null
 
     init {
         // 預設筆與手指皆可書寫，用比較鬆的門檻 ——
@@ -835,6 +835,7 @@ class InkEngine(
                 continue
             }
             val decision = arbiter.handle(sample.event)
+            android.util.Log.d("ARBITER_DEBUG", "sample.event: id=${sample.event.id} kind=${sample.event.kind} phase=${sample.event.phase} x=${sample.event.x} y=${sample.event.y} r=${sample.event.contactRadius} p=${sample.event.pressure} verdict=${decision.verdict} retract=${decision.retract}")
 
             // 先處理收回：被收回的筆畫不該再因為後續事件而復活。
             for (id in decision.retract) {
@@ -1362,6 +1363,8 @@ class InkEngine(
     fun liveSamples(): List<List<InkInput.Sample>> = inFlight.values.map { it.toList() }
 
     fun setPenOnly(penOnly: Boolean) {
+        if (lastPenOnly == penOnly) return
+        lastPenOnly = penOnly
         arbiter.setMode(
             if (penOnly) uniffi.padnote_core.FfiInputMode.PEN_ONLY
             else uniffi.padnote_core.FfiInputMode.PEN_AND_FINGER
@@ -1386,7 +1389,7 @@ class InkEngine(
     fun setPalmThresholds(palmRadiusDp: Float?, retractWindowMs: UInt?) {
         overrideRadiusDp = palmRadiusDp
         overrideRetractMs = retractWindowMs
-        applyPalmThresholds(lastPenOnly)
+        applyPalmThresholds(lastPenOnly ?: false)
     }
     
     fun setPressureCurve(floor: Float, gamma: Float) {

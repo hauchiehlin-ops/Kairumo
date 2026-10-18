@@ -380,7 +380,8 @@ class MainActivity : FragmentActivity() {
 @Composable
 private fun KairumoApp() {
     val activity = LocalContext.current as ComponentActivity
-    var openedId by remember { mutableStateOf<String?>(null) }
+    val initialOpenId = remember { activity.intent?.getStringExtra("open_notebook_id") }
+    var openedId by remember { mutableStateOf<String?>(initialOpenId) }
 
     // **資料夾位置放在這裡，不放在 NotebookHome 裡。**
     //
@@ -402,6 +403,13 @@ private fun KairumoApp() {
     // 用這個 scope：它活過 openedId 的切換。
     val sampleScope = rememberCoroutineScope()
     val sampleDevice = remember { deviceId(activity) }
+    LaunchedEffect(initialOpenId) {
+        if (initialOpenId != null) {
+            withContext(Dispatchers.IO) {
+                com.kairumo.padnote.library.SampleFork.begin(activity, initialOpenId, sampleDevice)
+            }
+        }
+    }
     var sampleAskId by remember { mutableStateOf<String?>(null) }
     var afterSampleLeave by remember { mutableStateOf<(() -> Unit)?>(null) }
     fun openNotebook(target: String) {
