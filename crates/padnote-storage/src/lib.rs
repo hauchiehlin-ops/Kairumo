@@ -10,9 +10,9 @@ pub mod package;
 pub mod sealed;
 
 pub use atomic::write_atomic;
-pub use blob::{BlobId, BlobStore};
+pub use blob::{BlobGcReport, BlobId, BlobStore};
 pub use manifest::{Encryption, Manifest};
 pub use package::{
-    CompactOutcome, CompactResult, NotebookPackage, StorageError, archive_package, extract_package,
-    parse_oplog_name,
+    CompactOutcome, CompactResult, NotebookPackage, StorageError, StorageOptimizationReport,
+    archive_package, extract_package, parse_oplog_name,
 };

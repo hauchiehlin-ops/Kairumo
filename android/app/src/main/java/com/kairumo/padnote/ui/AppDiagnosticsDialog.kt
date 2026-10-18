@@ -75,6 +75,8 @@ fun AppDiagnosticsDialog(
     var usage by remember { mutableStateOf<StorageSweeper.Usage?>(null) }
     var cleaning by remember { mutableStateOf(false) }
     var cleanedMessage by remember { mutableStateOf<String?>(null) }
+    var optimizing by remember { mutableStateOf(false) }
+    var optimizedMessage by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(selectedTab) {
         if (selectedTab == 3) usage = withContext(Dispatchers.IO) { StorageSweeper.usage(context) }
         if (selectedTab == 4) {
@@ -275,7 +277,7 @@ fun AppDiagnosticsDialog(
                             }
                         }
                         TextButton(
-                            enabled = !cleaning,
+                            enabled = !cleaning && !optimizing,
                             modifier = Modifier.testTag("diagnostics.storage.clean"),
                             onClick = {
                                 cleaning = true
@@ -294,6 +296,40 @@ fun AppDiagnosticsDialog(
                         ) { Text(l("storage_clean_now")) }
                         cleanedMessage?.let {
                             Text(it, style = MaterialTheme.typography.bodySmall, modifier = Modifier.testTag("diagnostics.storage.result"))
+                        }
+
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                        Text(
+                            text = l("storage_optimize_notebooks_explainer"),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        TextButton(
+                            enabled = !optimizing && !cleaning,
+                            modifier = Modifier.testTag("diagnostics.storage.optimize"),
+                            onClick = {
+                                optimizing = true
+                                scope.launch {
+                                    val report = withContext(Dispatchers.IO) {
+                                        com.kairumo.padnote.platform.StorageJanitor.optimizeAllNotebooks(context, deepClean = true)
+                                    }
+                                    val after = withContext(Dispatchers.IO) {
+                                        StorageSweeper.usage(context)
+                                    }
+                                    usage = after
+                                    val freed = (report.blobBytesReclaimed + report.inkBytesReclaimed).toLong()
+                                    optimizedMessage = l("storage_optimized_report")
+                                        .replaceFirst("%@", "${report.oplogFilesMerged}")
+                                        .replaceFirst("%@", "${report.blobsRemoved}")
+                                        .replaceFirst("%@", fmt(freed))
+                                    optimizing = false
+                                }
+                            }
+                        ) {
+                            Text(if (optimizing) "..." else l("storage_optimize_notebooks"))
+                        }
+                        optimizedMessage?.let {
+                            Text(it, style = MaterialTheme.typography.bodySmall, modifier = Modifier.testTag("diagnostics.storage.optimize_result"))
                         }
                     }
                 } else if (selectedTab == 2) {

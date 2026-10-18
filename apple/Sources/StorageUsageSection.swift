@@ -37,6 +37,17 @@ struct StorageUsageSection: View {
             }
             .disabled(busy)
             .accessibilityIdentifier("diagnostics.storage.clean")
+            Button {
+                Task { await optimizeNotebooksNow() }
+            } label: {
+                HStack {
+                    Image(systemName: "arrow.triangle.2.circlepath.circle")
+                    Text(loc.localized("storage_optimize_notebooks"))
+                    Spacer()
+                }
+            }
+            .disabled(busy)
+            .accessibilityIdentifier("diagnostics.storage.optimize")
             // 同步記錄（擦除墓碑、被擦掉的別台筆畫指紋）。平常會自動清理；這裡讓使用者看得到、也能自己動手。
             row("storage_ink_ledger", inkLedgerBytes)
             Button {
@@ -146,5 +157,21 @@ struct StorageUsageSection: View {
         message = String(
             format: loc.localized("storage_cleaned"),
             ByteCountFormatter.string(fromByteCount: freed, countStyle: .file))
+    }
+
+    @MainActor
+    private func optimizeNotebooksNow() async {
+        busy = true
+        defer { busy = false }
+        let report = await NotebookStore.shared.optimizeAllNotebooks(deepClean: true)
+        await refresh()
+        let freedBytes = Int64(report.blobBytesReclaimed + report.inkBytesReclaimed)
+        let freedStr = ByteCountFormatter.string(fromByteCount: freedBytes, countStyle: .file)
+        message = String(
+            format: loc.localized("storage_optimized_report"),
+            String(report.oplogFilesMerged),
+            String(report.blobsRemoved),
+            freedStr
+        )
     }
 }

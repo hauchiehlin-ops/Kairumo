@@ -623,6 +623,28 @@ pub fn app_info() -> AppInfo {
     }
 }
 
+/// 筆記本儲存空間最佳化統計報告。
+#[derive(Clone, Debug, uniffi::Record)]
+pub struct FfiStorageOptimizationReport {
+    pub oplog_files_merged: u32,
+    pub blobs_removed: u32,
+    pub blob_bytes_reclaimed: u64,
+    pub ink_pages_compacted: u32,
+    pub ink_bytes_reclaimed: u64,
+}
+
+impl From<padnote_storage::StorageOptimizationReport> for FfiStorageOptimizationReport {
+    fn from(r: padnote_storage::StorageOptimizationReport) -> Self {
+        Self {
+            oplog_files_merged: r.oplog_files_merged,
+            blobs_removed: r.blobs_removed,
+            blob_bytes_reclaimed: r.blob_bytes_reclaimed,
+            ink_pages_compacted: r.ink_pages_compacted,
+            ink_bytes_reclaimed: r.ink_bytes_reclaimed,
+        }
+    }
+}
+
 // ---- Session ----
 
 /// 一個開啟中的筆記本。各平台持有它的參照。
@@ -2302,6 +2324,28 @@ impl PadnoteSession {
             .expect("setup 鎖中毒")
             .total_download_bytes()
     }
+
+    /// 最佳化此筆記本的儲存空間：壓實 oplog 碎檔、回收未引用 blob、排除已被擦除的筆跡。
+    pub fn optimize_storage(
+        &self,
+        deep_clean: bool,
+    ) -> Result<FfiStorageOptimizationReport, FfiError> {
+        let mut session = self.lock();
+        let report = session.optimize_storage(deep_clean)?;
+        Ok(report.into())
+    }
+}
+
+/// 對未開啟的筆記本套件進行儲存空間最佳化（供背景維護、StorageJanitor 與批次整理使用）。
+#[uniffi::export]
+pub fn optimize_notebook_storage(
+    package_path: String,
+    device_id: u32,
+    deep_clean: bool,
+) -> Result<FfiStorageOptimizationReport, FfiError> {
+    let mut session = NotebookSession::open(std::path::Path::new(&package_path), device_id)?;
+    let report = session.optimize_storage(deep_clean)?;
+    Ok(report.into())
 }
 
 impl PadnoteSession {
@@ -2801,6 +2845,22 @@ mod tests {
 
     fn session(name: &str) -> PadnoteSession {
         PadnoteSession::create(tmp(name), "線性代數".into(), 1_757_635_200_000, 0xA1).unwrap()
+    }
+
+    #[test]
+    fn storage_optimization_via_ffi_session_and_standalone() {
+        let path = tmp("ffi-storage-opt");
+        let s = PadnoteSession::create(path.clone(), "儲存最佳化".into(), 1_757_635_200_000, 0xA1)
+            .unwrap();
+        s.set_title("標題變更1".into()).unwrap();
+        s.set_title("標題變更2".into()).unwrap();
+
+        let report = s.optimize_storage(false).unwrap();
+        assert!(report.oplog_files_merged >= 1);
+        drop(s);
+
+        let report2 = optimize_notebook_storage(path, 0xA1, true).unwrap();
+        assert_eq!(report2.oplog_files_merged, 0); // 已經壓實過，沒有更多可壓實
     }
 
     fn points() -> Vec<StrokePoint> {

@@ -3998,6 +3998,8 @@ public final class NotebookStore: ObservableObject {
         let drawings = drawingsDirectory
         let baseline = documentsDir.appendingPathComponent("SyncBaseline", isDirectory: true)
         let protectedIds = Self.notebookIds(inSyncIndex: AccountSyncStore.indexJSONSnapshot())
+        let pkgDir = corePackagesDirectory
+        let deviceId = NotebookMigration.deviceId
         ProfileDefaults.current.set(now, forKey: Self.janitorLastRunKey)
 
         Task.detached(priority: .background) {
@@ -4007,12 +4009,66 @@ public final class NotebookStore: ObservableObject {
                 notebooks: infos, protectedIds: protectedIds,
                 referencedAttachments: referenced, now: now)
             let done = StorageJanitor.execute(plan)
+            _ = Self.optimizePackages(in: pkgDir, deviceId: deviceId, deepClean: false)
             guard done.count > 0 || !plan.keptSuspicious.isEmpty else { return }
             let mb = String(format: "%.1f", Double(done.bytes) / 1_048_576)
             SyncLogger.logAsync(
                 "已清理 \(done.count) 個沒有用到的檔案（\(mb) MB）；留下 \(plan.keptSuspicious.count) 個超出頁數但有內容的筆跡",
                 source: .general)
         }
+    }
+
+    /// 最佳化所有筆記本套件的儲存空間（合併 Oplog、回收未引用 Blob、壓實筆跡）。
+    @discardableResult
+    public func optimizeAllNotebooks(deepClean: Bool = false) async -> FfiStorageOptimizationReport {
+        let deviceId = NotebookMigration.deviceId
+        let pkgDir = corePackagesDirectory
+        return await Task.detached(priority: .utility) {
+            Self.optimizePackages(in: pkgDir, deviceId: deviceId, deepClean: deepClean)
+        }.value
+    }
+
+    nonisolated static func optimizePackages(in pkgDir: URL, deviceId: UInt32, deepClean: Bool) -> FfiStorageOptimizationReport {
+        var totalOplogs: UInt32 = 0
+        var totalBlobs: UInt32 = 0
+        var totalBlobBytes: UInt64 = 0
+        var totalInkPages: UInt32 = 0
+        var totalInkBytes: UInt64 = 0
+
+        let fm = FileManager.default
+        guard let contents = try? fm.contentsOfDirectory(at: pkgDir, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles]) else {
+            return FfiStorageOptimizationReport(oplogFilesMerged: 0, blobsRemoved: 0, blobBytesReclaimed: 0, inkPagesCompacted: 0, inkBytesReclaimed: 0)
+        }
+
+        for url in contents where url.pathExtension == "padnote" {
+            do {
+                let report = try optimizeNotebookStorage(packagePath: url.path, deviceId: deviceId, deepClean: deepClean)
+                totalOplogs += report.oplogFilesMerged
+                totalBlobs += report.blobsRemoved
+                totalBlobBytes += report.blobBytesReclaimed
+                totalInkPages += report.inkPagesCompacted
+                totalInkBytes += report.inkBytesReclaimed
+            } catch {
+                SyncLogger.logAsync("optimizeNotebookStorage error for \(url.lastPathComponent): \(error)", source: .general)
+            }
+        }
+
+        let totalBytes = Int64(totalBlobBytes + totalInkBytes)
+        if totalOplogs > 0 || totalBlobs > 0 || totalInkPages > 0 {
+            let mb = ByteCountFormatter.string(fromByteCount: totalBytes, countStyle: .file)
+            SyncLogger.logAsync(
+                "已完成筆記儲存最佳化：合併 \(totalOplogs) 個記錄檔，清除 \(totalBlobs) 個未引用檔案，壓實 \(totalInkPages) 個筆跡頁，釋放 \(mb)",
+                source: .general
+            )
+        }
+
+        return FfiStorageOptimizationReport(
+            oplogFilesMerged: totalOplogs,
+            blobsRemoved: totalBlobs,
+            blobBytesReclaimed: totalBlobBytes,
+            inkPagesCompacted: totalInkPages,
+            inkBytesReclaimed: totalInkBytes
+        )
     }
 
     /// 同步索引裡記得的筆記本 id。

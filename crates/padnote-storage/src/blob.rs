@@ -197,21 +197,60 @@ impl BlobStore {
         out.sort();
         Ok(out)
     }
+}
 
-    /// 刪除未被引用的 blob。
+/// Blob 垃圾回收統計報告。
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub struct BlobGcReport {
+    pub removed_count: usize,
+    pub reclaimed_bytes: u64,
+}
+
+impl BlobStore {
+    /// 刪除未被引用的 blob，並可指定安全緩衝時間。
     ///
     /// ⚠️ `referenced` 必須是**完整**的引用集合。漏掉任何一個都會造成資料遺失，
     /// 因此呼叫端必須掃過所有頁面、所有版本歷史後才呼叫。
-    pub fn collect_garbage(&self, referenced: &[BlobId]) -> Result<usize, BlobError> {
+    ///
+    /// 若指定了 `min_age`，只有修改時間距離現在超過 `min_age` 的孤立檔案才會被刪除；
+    /// 剛寫入不久的檔案（可能來自進行中的匯入或復原）會被安全保留。
+    pub fn collect_garbage_with_safety(
+        &self,
+        referenced: &[BlobId],
+        min_age: Option<std::time::Duration>,
+    ) -> Result<BlobGcReport, BlobError> {
         let keep: std::collections::HashSet<BlobId> = referenced.iter().copied().collect();
-        let mut removed = 0;
+        let mut report = BlobGcReport::default();
+        let now = std::time::SystemTime::now();
+
         for id in self.list()? {
             if !keep.contains(&id) {
-                fs::remove_file(self.path_of(id))?;
-                removed += 1;
+                let path = self.path_of(id);
+                if let Ok(meta) = fs::metadata(&path) {
+                    if let Some(min_age) = min_age {
+                        if let Ok(modified) = meta.modified() {
+                            if let Ok(age) = now.duration_since(modified) {
+                                if age < min_age {
+                                    continue;
+                                }
+                            }
+                        }
+                    }
+                    let file_size = meta.len();
+                    if fs::remove_file(&path).is_ok() {
+                        report.removed_count += 1;
+                        report.reclaimed_bytes += file_size;
+                    }
+                }
             }
         }
-        Ok(removed)
+        Ok(report)
+    }
+
+    /// 刪除未被引用的 blob（不設安全年齡，直接清理）。
+    pub fn collect_garbage(&self, referenced: &[BlobId]) -> Result<usize, BlobError> {
+        self.collect_garbage_with_safety(referenced, None)
+            .map(|r| r.removed_count)
     }
 }
 
@@ -302,11 +341,25 @@ mod tests {
     }
 
     #[test]
-    fn gc_with_empty_reference_set_clears_all() {
-        // 這個行為很危險但正確 —— 測試存在是為了讓呼叫端看到後果。
-        let store = BlobStore::new(tmp("gc-all"));
-        store.put(b"a").unwrap();
-        store.put(b"b").unwrap();
-        assert_eq!(store.collect_garbage(&[]).unwrap(), 2);
+    fn gc_with_safety_window_protects_recent_blobs() {
+        let store = BlobStore::new(tmp("gc-safety"));
+        let keep = store.put(b"in-use").unwrap();
+        let orphan = store.put(b"newly-created-orphan").unwrap();
+
+        // 剛剛建立的 orphan blob，若設定安全年齡（例如 1 小時），絕不可被刪除
+        let report = store
+            .collect_garbage_with_safety(&[keep], Some(std::time::Duration::from_secs(3600)))
+            .unwrap();
+        assert_eq!(report.removed_count, 0);
+        assert_eq!(report.reclaimed_bytes, 0);
+        assert!(store.contains(orphan));
+        assert!(store.contains(keep));
+
+        // 若無安全視窗限制，立即刪除 orphan
+        let report_immediate = store.collect_garbage_with_safety(&[keep], None).unwrap();
+        assert_eq!(report_immediate.removed_count, 1);
+        assert!(report_immediate.reclaimed_bytes > 0);
+        assert!(!store.contains(orphan));
+        assert!(store.contains(keep));
     }
 }

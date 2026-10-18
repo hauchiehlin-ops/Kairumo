@@ -22149,6 +22149,30 @@ object LocalizationStrings {
             "ko" to "현재 Kairumo 문서 폴더 밖의 폴더를 선택하세요.",
             "th" to "เลือกโฟลเดอร์ที่อยู่นอกโฟลเดอร์เอกสาร Kairumo ปัจจุบัน"
         ),
+        "storage_optimize_notebooks" to mapOf(
+            "zh-Hant" to "最佳化筆記儲存空間",
+            "en" to "Optimize Notebook Storage",
+            "zh-Hans" to "优化笔记存储空间",
+            "ja" to "ノート保存容量を最適化",
+            "ko" to "노트 저장 공간 최적화",
+            "th" to "เพิ่มประสิทธิภาพพื้นที่จัดเก็บโน้ต"
+        ),
+        "storage_optimize_notebooks_explainer" to mapOf(
+            "zh-Hant" to "整理操作記錄、回收已刪除的圖片與筆跡，釋放磁碟空間。所有現有內容皆會完整保留。",
+            "en" to "Consolidate operation logs, reclaim deleted images and strokes, and free disk space. All active contents are preserved.",
+            "zh-Hans" to "整理操作记录、回收已删除的图片与笔迹，释放磁盘空间。所有现有内容皆会完整保留。",
+            "ja" to "操作ログの統合、削除済み画像やペンの回収を行い、容量を解放します。現在の内容はすべて保持されます。",
+            "ko" to "작업 로그를 정리하고 삭제된 이미지와 필기를 회수하여 용량을 확보합니다. 모든 활성 내용은 그대로 유지됩니다.",
+            "th" to "รวมบันทึกการดำเนินการ กู้คืนรูปภาพและลายเส้นที่ลบ และเพิ่มพื้นที่ว่าง เนื้อหาปัจจุบันทั้งหมดจะยังคงอยู่"
+        ),
+        "storage_optimized_report" to mapOf(
+            "zh-Hant" to "已完成最佳化：合併 %@ 個記錄檔，清除 %@ 個未引用檔案，釋放 %@ 空間。",
+            "en" to "Optimization complete: merged %@ log files, removed %@ unreferenced files, freed %@.",
+            "zh-Hans" to "已完成优化：合并 %@ 个记录文件，清除 %@ 个未引用文件，释放 %@ 空间。",
+            "ja" to "最適化が完了しました：%@ 個のログを統合、%@ 個の不要ファイルを削除し、%@ 解放しました。",
+            "ko" to "최적화 완료: 로그 파일 %@개 병합, 미참조 파일 %@개 정리, %@ 공간을 확보했습니다.",
+            "th" to "เพิ่มประสิทธิภาพเสร็จสมบูรณ์: รวมไฟล์บันทึก %@ ไฟล์ ลบไฟล์ที่ไม่ได้อ้างอิง %@ ไฟล์ คืนพื้นที่ %@"
+        ),
         "storage_progress_cleaning" to mapOf(
             "zh-Hant" to "移除舊的資料庫…",
             "en" to "Removing the old copy…",
@@ -22532,7 +22556,10 @@ object LocalizationStrings {
             "ja" to "同期はお使いのクラウドドライブ（iCloud Drive、Google Drive、Dropbox など）が行います。アカウントも当方のサーバーもありません。2 台の端末を同じフォルダに向けるだけで同期されます。",
             "ko" to "동기화는 사용자의 클라우드 드라이브(iCloud Drive, Google Drive, Dropbox 등)가 담당합니다. 계정도, 저희 서버도 없습니다. 두 기기를 같은 폴더로 지정하면 서로 동기화됩니다.",
             "th" to "การซิงก์ทำโดยคลาวด์ไดรฟ์ของคุณเอง (iCloud Drive, Google Drive, Dropbox ฯลฯ) ไม่มีบัญชีและไม่มีเซิร์ฟเวอร์ของเรา ตั้งให้สองอุปกรณ์ชี้ไปยังโฟลเดอร์เดียวกันก็ซิงก์กันได้"
-        ),
+        )
+    )
+
+    private fun part35(): Map<String, Map<String, String>> = mapOf(
         "sync_explainer_folder" to mapOf(
             "zh-Hant" to "透過你指定的 iCloud 或本機資料夾雙向同步筆記與手寫，內容不經過我們。",
             "en" to "Two-way sync of notes and handwriting through the iCloud or local folder you chose — nothing passes through us.",
@@ -22556,10 +22583,7 @@ object LocalizationStrings {
             "ja" to "%@ を読み込めません",
             "ko" to "%@을(를) 읽을 수 없습니다",
             "th" to "อ่าน %@ ไม่ได้"
-        )
-    )
-
-    private fun part35(): Map<String, Map<String, String>> = mapOf(
+        ),
         "sync_fail_cannot_write" to mapOf(
             "zh-Hant" to "無法寫入 %@",
             "en" to "Cannot write %@",
@@ -23175,7 +23199,10 @@ object LocalizationStrings {
             "ja" to "表を挿入",
             "ko" to "표 삽입",
             "th" to "แทรกตาราง"
-        ),
+        )
+    )
+
+    private fun part36(): Map<String, Map<String, String>> = mapOf(
         "table_merge_down" to mapOf(
             "zh-Hant" to "向下合併",
             "en" to "Merge Down",
@@ -23199,10 +23226,7 @@ object LocalizationStrings {
             "ja" to "プレビュー",
             "ko" to "미리보기",
             "th" to "ตัวอย่าง"
-        )
-    )
-
-    private fun part36(): Map<String, Map<String, String>> = mapOf(
+        ),
         "table_rows_cols" to mapOf(
             "zh-Hant" to "%@ 列 × %@ 欄",
             "en" to "%@ × %@",
@@ -23818,7 +23842,10 @@ object LocalizationStrings {
             "ja" to "マインドマップ",
             "ko" to "마인드맵",
             "th" to "ผังความคิด"
-        ),
+        )
+    )
+
+    private fun part37(): Map<String, Map<String, String>> = mapOf(
         "tmpl_mind_map_desc" to mapOf(
             "zh-Hant" to "中心方塊與四向分支起點，點陣底紋",
             "en" to "A centre box and four branch stubs on a dot grid",
@@ -23842,10 +23869,7 @@ object LocalizationStrings {
             "ja" to "デュアルスマホ枠と8ptグリッド内蔵",
             "ko" to "듀얼 스마트폰 프레임 및 8pt 픽셀 그리드",
             "th" to "กรอบมือถือคู่พร้อมกริด 8pt"
-        )
-    )
-
-    private fun part37(): Map<String, Map<String, String>> = mapOf(
+        ),
         "tmpl_monthly_grid" to mapOf(
             "zh-Hant" to "月計畫",
             "en" to "Month at a Glance",
@@ -24461,7 +24485,10 @@ object LocalizationStrings {
             "ja" to "明瞭な音声が検出されませんでした",
             "ko" to "선명한 음성이 감지되지 않았습니다",
             "th" to "ตรวจไม่พบเสียงพูดที่ชัดเจน"
-        ),
+        )
+    )
+
+    private fun part38(): Map<String, Map<String, String>> = mapOf(
         "transcribe_step_decode" to mapOf(
             "zh-Hant" to "正在解析音訊串流…",
             "en" to "Decoding audio stream…",
@@ -24485,10 +24512,7 @@ object LocalizationStrings {
             "ja" to "音声を認識中…",
             "ko" to "음성 인식 중…",
             "th" to "กำลังประมวลผลเสียงพูด…"
-        )
-    )
-
-    private fun part38(): Map<String, Map<String, String>> = mapOf(
+        ),
         "transcribe_success" to mapOf(
             "zh-Hant" to "轉錄完成，已插入文字方塊",
             "en" to "Transcription complete, text box added",
@@ -25104,7 +25128,10 @@ object LocalizationStrings {
             "ja" to "赤",
             "ko" to "빨강",
             "th" to "แดง"
-        ),
+        )
+    )
+
+    private fun part39(): Map<String, Map<String, String>> = mapOf(
         "wd_c_sky_blue" to mapOf(
             "zh-Hant" to "天藍色",
             "en" to "Sky Blue",
@@ -25128,10 +25155,7 @@ object LocalizationStrings {
             "ja" to "青緑",
             "ko" to "청록색",
             "th" to "เขียวหัวเป็ด"
-        )
-    )
-
-    private fun part39(): Map<String, Map<String, String>> = mapOf(
+        ),
         "wd_c_turquoise" to mapOf(
             "zh-Hant" to "青綠色",
             "en" to "Turquoise",

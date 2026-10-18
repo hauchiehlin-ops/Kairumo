@@ -80,6 +80,21 @@ pub struct CompactResult {
     pub merged_files: usize,
 }
 
+/// 套件儲存空間最佳化統計報告。
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct StorageOptimizationReport {
+    /// 被壓實合併的 oplog 操作日誌檔案數。
+    pub oplog_files_merged: u32,
+    /// 被清理刪除的未引用媒體 blob 數量。
+    pub blobs_removed: u32,
+    /// 清理 blob 所釋放的位元組數。
+    pub blob_bytes_reclaimed: u64,
+    /// 排除擦除筆跡與墓碑後壓實重寫的筆記頁數。
+    pub ink_pages_compacted: u32,
+    /// 筆跡壓實所釋放的位元組數。
+    pub ink_bytes_reclaimed: u64,
+}
+
 /// 一份開啟中的筆記本。
 #[derive(Debug)]
 pub struct NotebookPackage {
@@ -296,6 +311,11 @@ impl NotebookPackage {
     // （`wrap_with` 定義在檔案末端的自由函式區）
     pub fn is_encrypted(&self) -> bool {
         self.manifest.is_encrypted()
+    }
+
+    /// 套件是否處於解鎖狀態（未加密或已提供 DEK）。
+    pub fn is_unlocked(&self) -> bool {
+        !self.is_encrypted() || self.dek.is_some()
     }
 
     /// 帶上內容金鑰。**沒帶的話，加密套件的內容讀不出來**
@@ -1158,6 +1178,101 @@ impl NotebookPackage {
             });
         }
         Ok(outcomes)
+    }
+
+    /// 清理未引用的媒體 blob（遵守安全緩衝年齡）。
+    pub fn collect_blob_garbage(
+        &self,
+        referenced_blobs: &[String],
+        deep_clean: bool,
+    ) -> Result<crate::blob::BlobGcReport, StorageError> {
+        if self.is_encrypted() && !self.is_unlocked() {
+            // 加密筆記未解鎖時無法確定引用，跳過 GC 以防資料誤刪
+            return Ok(crate::blob::BlobGcReport::default());
+        }
+        let referenced_ids: Vec<crate::blob::BlobId> = referenced_blobs
+            .iter()
+            .filter_map(|s| crate::blob::BlobId::from_hex(s))
+            .collect();
+        let min_age = if deep_clean {
+            Some(std::time::Duration::from_secs(3600)) // 深度清理：1 小時安全視窗
+        } else {
+            Some(std::time::Duration::from_secs(24 * 3600)) // 日常維護：24 小時安全視窗
+        };
+        self.blobs()
+            .collect_garbage_with_safety(&referenced_ids, min_age)
+            .map_err(|e| StorageError::Io(std::io::Error::other(e.to_string())))
+    }
+
+    /// 執行筆記本儲存空間最佳化：
+    /// 1. 壓實 oplog 操作日誌碎檔，並寫入墓碑（compaction.tombstones）供雲端同步清理
+    /// 2. 清理未引用的媒體 blob（遵守安全年齡規則）
+    /// 3. 整理與壓實筆跡（過濾已刪除筆畫與 PAD 墓碑）
+    pub fn optimize_storage(
+        &self,
+        device: u32,
+        referenced_blobs: &[String],
+        deep_clean: bool,
+    ) -> Result<StorageOptimizationReport, StorageError> {
+        let mut report = StorageOptimizationReport::default();
+
+        // 1. Oplog 壓實
+        if device != 0 {
+            let outcomes = self.compact_own_doc_ops(2, device)?;
+            let mut all_absorbed = Vec::new();
+            for outcome in outcomes {
+                report.oplog_files_merged += outcome.absorbed.len() as u32;
+                all_absorbed.extend(outcome.absorbed);
+            }
+            if !all_absorbed.is_empty() {
+                let tombstone_file = self.root.join("doc/ops/compaction.tombstones");
+                let existing = fs::read_to_string(&tombstone_file).unwrap_or_default();
+                let new_lines = all_absorbed.join("\n") + "\n";
+                let _ = fs::write(&tombstone_file, format!("{existing}{new_lines}"));
+            }
+        } else {
+            let res = self.compact_doc_ops(2)?;
+            report.oplog_files_merged = res.merged_files as u32;
+        }
+
+        // 2. Blob 垃圾回收
+        let blob_res = self.collect_blob_garbage(referenced_blobs, deep_clean)?;
+        report.blobs_removed = blob_res.removed_count as u32;
+        report.blob_bytes_reclaimed = blob_res.reclaimed_bytes;
+
+        // 3. 筆跡壓實（排除已被擦除的筆畫與填充墓碑）
+        let resolved = self.resolve_milestones()?;
+        if resolved.milestones.is_empty() {
+            if let Ok(pages) = self.ink_pages() {
+                for page in pages {
+                    let paths = self.ink_read_paths(page);
+                    let old_bytes_len: u64 = paths
+                        .iter()
+                        .filter_map(|p| fs::metadata(p).ok().map(|m| m.len()))
+                        .sum();
+                    if let Ok(records) = self.read_ink_with(page, &resolved) {
+                        let materialized = padnote_ink::materialize(&records);
+                        if materialized.len() < records.len() {
+                            let new_records: Vec<InkRecord> =
+                                materialized.into_iter().map(InkRecord::Add).collect();
+                            if self.rewrite_ink_page(page, &new_records).is_ok() {
+                                let new_paths = self.ink_read_paths(page);
+                                let new_bytes_len: u64 = new_paths
+                                    .iter()
+                                    .filter_map(|p| fs::metadata(p).ok().map(|m| m.len()))
+                                    .sum();
+                                if old_bytes_len > new_bytes_len {
+                                    report.ink_bytes_reclaimed += old_bytes_len - new_bytes_len;
+                                }
+                                report.ink_pages_compacted += 1;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        Ok(report)
     }
 
     /// 把一台裝置的 oplog 檔切成幾段，**段與段之間隔著里程碑的界線**。
@@ -2628,5 +2743,82 @@ mod tests {
         let files = reopened.doc_op_files().unwrap();
         assert_eq!(files.len(), 1);
         assert_eq!(files[0].0, "0000000000000006-00000042.oplog");
+    }
+
+    #[test]
+    fn optimize_storage_compacts_oplog_gc_blobs_and_ink() {
+        use padnote_doc::ops::DocOp;
+        let root = tmp("optimize-storage-all");
+        let pkg = NotebookPackage::create(&root, "全方位最佳化", 1).unwrap();
+        let device = 0x123u32;
+        let mut pkg = pkg.with_device(device);
+
+        // 1. 產生 3 個 oplog 檔
+        for i in 1..=3u64 {
+            pkg.append_doc_ops(
+                i,
+                device,
+                &[DocOp::SetTitle {
+                    title: format!("Title {i}"),
+                }],
+            )
+            .unwrap();
+        }
+
+        // 2. 寫入 2 個 media blob（1 個被引用，1 個孤立）
+        let keep_blob = pkg.blobs().put(b"keep-this-image").unwrap();
+        let orphan_blob = pkg.blobs().put(b"orphan-image-to-gc").unwrap();
+
+        // 3. 寫入筆記頁墨跡：新增 stroke 1 與 stroke 2，隨後追加 Remove(stroke 2)
+        let page_id = Uuid::now_v7();
+        let stroke1 = stroke(1);
+        let stroke2 = stroke(2);
+        pkg.append_ink(
+            page_id,
+            &[
+                InkRecord::Add(stroke1.clone()),
+                InkRecord::Add(stroke2.clone()),
+            ],
+        )
+        .unwrap();
+        pkg.append_ink(page_id, &[InkRecord::Remove(stroke2.id)])
+            .unwrap();
+
+        let ink_before = pkg.read_ink(page_id).unwrap();
+        assert_eq!(ink_before.len(), 3); // 2 Add + 1 Remove
+
+        // 4. 執行 optimize_storage (deep_clean = false 測試安全視窗：剛產生的 orphan 不被刪除)
+        let report_safe = pkg
+            .optimize_storage(device, &[keep_blob.to_string()], false)
+            .unwrap();
+        assert_eq!(report_safe.oplog_files_merged, 2); // 2 個舊碎檔被吸收合併
+        assert_eq!(report_safe.blobs_removed, 0); // 剛建立未滿 24 小時安全保留
+        assert_eq!(report_safe.ink_pages_compacted, 1);
+        assert!(report_safe.ink_bytes_reclaimed > 0);
+
+        // 筆跡已壓實為只剩 1 筆 Add(stroke1)
+        let ink_after = pkg.read_ink(page_id).unwrap();
+        assert_eq!(ink_after.len(), 1);
+        if let InkRecord::Add(s) = &ink_after[0] {
+            assert_eq!(s.id, stroke1.id);
+        } else {
+            panic!("Expected InkRecord::Add");
+        }
+
+        // 驗證 compaction.tombstones 有紀錄被吃掉的 oplog
+        let tombstones_path = root.join("doc/ops/compaction.tombstones");
+        assert!(tombstones_path.exists());
+        let tombstones_text = fs::read_to_string(&tombstones_path).unwrap();
+        assert!(tombstones_text.contains("0000000000000001-00000123.oplog"));
+        assert!(tombstones_text.contains("0000000000000002-00000123.oplog"));
+
+        // 5. 測試直接清理孤立 blob（使用 collect_garbage_with_safety 設 min_age = None 或刪除 orphan）
+        let gc_report = pkg
+            .blobs()
+            .collect_garbage_with_safety(&[keep_blob], None)
+            .unwrap();
+        assert_eq!(gc_report.removed_count, 1);
+        assert!(pkg.blobs().contains(keep_blob));
+        assert!(!pkg.blobs().contains(orphan_blob));
     }
 }
