@@ -156,61 +156,51 @@ object SeedNotebooks {
         val retired = SampleFork.retired(context)
         var created = 0
 
+        val baseDir = NotebookLibrary.directory(context)
+        fun pkgExists(id: String) = java.io.File(baseDir, "$id.${NotebookLibrary.EXTENSION}").isDirectory
+
+        // 《功能範例》
         val showcaseTitle = l("seed_feature_showcase_title")
-        val hasShowcase = existing.any { it.title == showcaseTitle || it.id == SHOWCASE_ID }
-        // 已經轉成一般筆記的範例不再補回（見 SampleFork）。**只補一次**（旗標）：
-        // 以前每次啟動都補，使用者刪掉之後它每次更新、每次開 App 都長回來。與 Apple 相同。
-        val showcaseChecked = prefs.getBoolean(KEY_SHOWCASE, false)
-        prefs.edit().putBoolean(KEY_SHOWCASE, true).apply()
-        if (!showcaseChecked && !hasShowcase && SHOWCASE_ID !in retired) {
+        val hasShowcase = existing.any { it.title == showcaseTitle || it.id.equals(SHOWCASE_ID, ignoreCase = true) }
+        if (!hasShowcase && !pkgExists(SHOWCASE_ID) && SHOWCASE_ID !in retired) {
             if (buildFeatureShowcase(context, deviceId, l)) created++
         }
+        prefs.edit().putBoolean(KEY_SHOWCASE, true).apply()
 
-        // 《Kairumo手冊》：舊使用者只補一次（旗標），之後刪掉就不再長回來。
-        if (!prefs.getBoolean(KEY_MANUAL, false)) {
-            prefs.edit().putBoolean(KEY_MANUAL, true).apply()
-            if (MANUAL_ID !in retired && existing.none { it.id == MANUAL_ID || it.title == MANUAL_TITLE || it.title == l("seed_manual_title") }) {
-                if (buildKairumoManual(context, deviceId, languageTag, l)) created++
-            }
+        // 《Kairumo手冊》：舊使用者只補一次，之後刪掉就不再長回來。
+        val manualTitle = l("seed_manual_title")
+        val hasManual = existing.any { it.id.equals(MANUAL_ID, ignoreCase = true) || it.title == MANUAL_TITLE || it.title == manualTitle }
+        if (!hasManual && !pkgExists(MANUAL_ID) && MANUAL_ID !in retired) {
+            if (buildKairumoManual(context, deviceId, languageTag, l)) created++
         }
+        prefs.edit().putBoolean(KEY_MANUAL, true).apply()
 
-        // 《圖學範例》：舊使用者只補一次（旗標），之後刪掉就不再長回來。
-        if (!prefs.getBoolean(KEY_DRAFT_EXAMPLE, false)) {
-            prefs.edit().putBoolean(KEY_DRAFT_EXAMPLE, true).apply()
-            if (DRAFT_EXAMPLE_ID !in retired && existing.none { it.id == DRAFT_EXAMPLE_ID }) {
-                if (buildDraftingExample(context, deviceId, l)) created++
-            }
+        // 《圖學範例》：舊使用者只補一次，之後刪掉就不再長回來。
+        val hasDrafting = existing.any { it.id.equals(DRAFT_EXAMPLE_ID, ignoreCase = true) }
+        if (!hasDrafting && !pkgExists(DRAFT_EXAMPLE_ID) && DRAFT_EXAMPLE_ID !in retired) {
+            if (buildDraftingExample(context, deviceId, l)) created++
         }
+        prefs.edit().putBoolean(KEY_DRAFT_EXAMPLE, true).apply()
 
+        // 《歡迎使用 Kairumo》
         val welcomeTitle = l("seed_welcome_title")
-        val meetingTitle = l("seed_meeting_title")
         val hasWelcome = existing.any {
-            it.id == WELCOME_ID || it.title == welcomeTitle || it.title == displayTitle(welcomeTitle, languageTag)
+            it.id.equals(WELCOME_ID, ignoreCase = true) || it.title == welcomeTitle || it.title == displayTitle(welcomeTitle, languageTag)
         }
+        if (!hasWelcome && !pkgExists(WELCOME_ID) && WELCOME_ID !in retired) {
+            if (buildWelcome(context, deviceId, l)) created++
+        }
+        prefs.edit().putBoolean(KEY_WELCOME, true).apply()
+
+        // 《課堂與會議記錄》
+        val meetingTitle = l("seed_meeting_title")
         val hasMeeting = existing.any {
-            it.id == MEETING_ID || it.title == meetingTitle || it.title == displayTitle(meetingTitle, languageTag)
+            it.id.equals(MEETING_ID, ignoreCase = true) || it.title == meetingTitle || it.title == displayTitle(meetingTitle, languageTag)
         }
-
-        // 舊版若只剩全空白筆記本（尚未補齊歡迎與會議記錄），或尚未建立過這兩本範例：
-        // 只在「尚未記錄過對應旗標」且「其他既有筆記皆為空白或屬於內建範例」時補齊，
-        // 確保安裝後五本唯讀範例完整，且不覆寫使用者自建的非空筆記。
-        val onlySamplesOrBlank = existing.all {
-            isDeviceLocal(it.id) || isBlank(context, it.id, deviceId)
+        if (!hasMeeting && !pkgExists(MEETING_ID) && MEETING_ID !in retired) {
+            if (buildMeeting(context, deviceId, l)) created++
         }
-
-        if (!prefs.getBoolean(KEY_WELCOME, false)) {
-            prefs.edit().putBoolean(KEY_WELCOME, true).apply()
-            if (!hasWelcome && WELCOME_ID !in retired && (!prefs.getBoolean(KEY_BACKFILLED, false) || onlySamplesOrBlank)) {
-                if (buildWelcome(context, deviceId, l)) created++
-            }
-        }
-
-        if (!prefs.getBoolean(KEY_MEETING, false)) {
-            prefs.edit().putBoolean(KEY_MEETING, true).apply()
-            if (!hasMeeting && MEETING_ID !in retired && (!prefs.getBoolean(KEY_BACKFILLED, false) || onlySamplesOrBlank)) {
-                if (buildMeeting(context, deviceId, l)) created++
-            }
-        }
+        prefs.edit().putBoolean(KEY_MEETING, true).apply()
 
         prefs.edit().putBoolean(KEY_BACKFILLED, true).apply()
         return created

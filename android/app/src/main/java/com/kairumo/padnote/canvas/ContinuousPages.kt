@@ -427,15 +427,16 @@ private fun ContinuousPage(
     engine.colorRgba = ink.colorRgba
     engine.baseWidth = ink.baseWidth
     engine.isErasing = ink.isErasing
-    // **一律 pen-only**，不理會外層的設定。理由見 ContinuousPagesView 的說明：
-    // 手指要留給捲動，否則畫布會跟 LazyColumn 搶事件，兩邊都做不成。
-    LaunchedEffect(engine) {
-        engine.setPenOnly(true)
+    // 遵循使用者的 pen-only 設定（預設為 false，支援手指與筆；若使用者開啟僅限觸控筆則為 true）。
+    LaunchedEffect(engine, ink.penOnly) {
+        engine.setPenOnly(ink.penOnly)
         // 讀回這一頁已經存在的筆畫。見 InkEngine.load() 的說明。
         // **只讀一次**：引擎留在快取裡，再讀一次會把它的復原紀錄清掉。
         if (!runtime.inkLoaded) {
             engine.loadAsync()
             runtime.inkLoaded = true
+            runtime.bump()
+            revision++
         }
     }
     DisposableEffect(engine, collabBridge) {
@@ -548,6 +549,15 @@ private fun ContinuousPage(
         } else Color.Black
     }
 
+    val pageStyle = remember(pageId, revision) {
+        runCatching {
+            session?.pageStyle(pageId ?: return@runCatching null)
+        }.getOrNull() ?: uniffi.padnote_core.PageStyle.BLANK
+    }
+    val paperId = remember(meta, pageIndex, revision) { meta.paperId(pageIndex) }
+    val guidePaletteId = remember(meta) { meta.paletteId() }
+    val guideMeasurer = androidx.compose.ui.text.rememberTextMeasurer()
+
     Box(
         Modifier
             .fillMaxSize()
@@ -563,6 +573,11 @@ private fun ContinuousPage(
             engine = engine,
             modifier = Modifier.fillMaxSize().zIndex(100f),
             backgroundColor = Color.Transparent,
+            pageStyle = pageStyle,
+            paperId = paperId,
+            guidePaletteId = guidePaletteId,
+            localizeGuide = { key -> com.kairumo.padnote.LocalizationStrings.localized(key, com.kairumo.padnote.currentLanguageTag()) },
+            guideMeasurer = guideMeasurer,
             inkColor = currentInkColor,
             onInkChanged = { revision++ },
             onStylusDetected = {

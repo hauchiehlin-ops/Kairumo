@@ -89,8 +89,37 @@ object FolderTree {
         return raw
     }
 
-    fun titleOf(context: Context, id: String): String? =
-        AccountSyncStore.item(context, id)?.title
+    fun titleOf(context: Context, id: String): String? {
+        val syncTitle = AccountSyncStore.item(context, id)?.title
+        if (!syncTitle.isNullOrBlank()) return syncTitle
+
+        if (SeedNotebooks.isDeviceLocal(id)) {
+            val key = when (id.lowercase()) {
+                "seed-welcome-notebook-v1" -> "seed_welcome_title"
+                "seed-meeting-notebook-v1" -> "seed_meeting_title"
+                "seed-feature-showcase-v1" -> "seed_feature_showcase_title"
+                "seed-kairumo-manual-v1" -> "seed_manual_title"
+                "seed-drafting-example-v1" -> "seed_drafting_example_title"
+                else -> null
+            }
+            if (key != null) {
+                val tag = com.kairumo.padnote.currentLanguageTag()
+                val raw = com.kairumo.padnote.LocalizationStrings.localized(key, tag)
+                return SeedNotebooks.displayTitle(raw, tag)
+            }
+        }
+
+        val pkg = java.io.File(NotebookLibrary.directory(context), "$id.${NotebookLibrary.EXTENSION}")
+        if (pkg.isDirectory) {
+            val fromPkg = runCatching {
+                val devId = com.kairumo.padnote.deviceId(context)
+                uniffi.padnote_core.PadnoteSession.openExisting(pkg.absolutePath, devId).use { it.title() }
+            }.getOrNull()
+            if (!fromPkg.isNullOrBlank()) return fromPkg
+        }
+
+        return null
+    }
 
     /** 從某個資料夾往上到最上層的路徑，最上層在前。麵包屑用。 */
     fun pathTo(context: Context, folderId: String?): List<Folder> {
