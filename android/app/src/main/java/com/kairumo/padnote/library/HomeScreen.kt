@@ -1173,11 +1173,12 @@ private fun NotebookGridCard(
                     onDragStart = {
                         startTransfer(
                             androidx.compose.ui.draganddrop.DragAndDropTransferData(
-                                android.content.ClipData.newPlainText("kairumo.notebook", entry.id)
+                                clipData = android.content.ClipData.newPlainText("kairumo.notebook", entry.id),
+                                localState = entry.id
                             )
                         )
                     },
-                    onDrag = { _, _ -> }
+                    onDrag = { change, _ -> change.consume() }
                 )
             }
             .clickable { onOpen(entry.id) }
@@ -1389,9 +1390,9 @@ private fun FolderRow(
 
             override fun onDrop(event: androidx.compose.ui.draganddrop.DragAndDropEvent): Boolean {
                 targeted = false
-                val data = event.toAndroidDragEvent().clipData
-                val id = data?.takeIf { it.itemCount > 0 }
-                    ?.getItemAt(0)?.text?.toString()
+                val androidEvent = event.toAndroidDragEvent()
+                val id = (androidEvent.localState as? String)
+                    ?: androidEvent.clipData?.takeIf { it.itemCount > 0 }?.getItemAt(0)?.text?.toString()
                     ?: return false
                 onDropNotebook(id)
                 return true
@@ -1807,6 +1808,19 @@ private fun NotebookListCard(
     Card(
         modifier = modifier
             .fillMaxWidth()
+            .dragAndDropSource {
+                detectDragGesturesAfterLongPress(
+                    onDragStart = {
+                        startTransfer(
+                            androidx.compose.ui.draganddrop.DragAndDropTransferData(
+                                clipData = android.content.ClipData.newPlainText("kairumo.notebook", entry.id),
+                                localState = entry.id
+                            )
+                        )
+                    },
+                    onDrag = { change, _ -> change.consume() }
+                )
+            }
             .clickable { onOpen(entry.id) }
             .testTag("home.notebooks.card.${entry.id}"),
         shape = RoundedCornerShape(12.dp),
@@ -2251,8 +2265,10 @@ private fun UnfiledRow(
     val dropTarget = remember {
         object : androidx.compose.ui.draganddrop.DragAndDropTarget {
             override fun onDrop(event: androidx.compose.ui.draganddrop.DragAndDropEvent): Boolean {
-                val data = event.toAndroidDragEvent().clipData
-                val id = data?.takeIf { it.itemCount > 0 }?.getItemAt(0)?.text?.toString() ?: return false
+                val androidEvent = event.toAndroidDragEvent()
+                val id = (androidEvent.localState as? String)
+                    ?: androidEvent.clipData?.takeIf { it.itemCount > 0 }?.getItemAt(0)?.text?.toString()
+                    ?: return false
                 onDropNotebook(id)
                 return true
             }

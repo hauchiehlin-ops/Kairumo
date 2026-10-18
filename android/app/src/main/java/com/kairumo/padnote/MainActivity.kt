@@ -3447,8 +3447,9 @@ private fun InkScreen(
 
                 // 筆記標題（極簡模式下保留以辨識當前筆記）
                 run {
-                    val title = remember(notebookId, revision) {
-                        notebookId?.let { FolderTree.titleOf(activity, it) }
+                    val title = remember(notebookId, revision, notebook) {
+                        notebook?.first?.let { runCatching { it.title() }.getOrNull() }?.takeIf { it.isNotBlank() }
+                            ?: notebookId?.let { FolderTree.titleOf(activity, it) }
                             ?: l10n("untitled_note")
                     }
                     TextButton(
@@ -3532,8 +3533,9 @@ private fun InkScreen(
             // 筆記標題。Apple 的頂列一直有，點一下就能改名；Android 原本
             // **完全沒有顯示筆記名稱** —— 開了三本筆記之後分不出自己在哪一本。
             run {
-                val title = remember(notebookId, revision) {
-                    notebookId?.let { FolderTree.titleOf(activity, it) }
+                val title = remember(notebookId, revision, notebook) {
+                    notebook?.first?.let { runCatching { it.title() }.getOrNull() }?.takeIf { it.isNotBlank() }
+                        ?: notebookId?.let { FolderTree.titleOf(activity, it) }
                         ?: l10n("untitled_note")
                 }
                 TextButton(

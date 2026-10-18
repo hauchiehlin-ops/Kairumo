@@ -300,6 +300,17 @@ private fun PageSidebarRow(
             return@LaunchedEffect
         }
 
+        val act = context as? ComponentActivity
+        if (act != null) {
+            val bmp = PageSnapshot.render(act, s, index, 0.22f, appLanguage)
+            if (bmp != null) {
+                val imageBitmap = bmp.asImageBitmap()
+                pageThumbnailCache.put(cacheKey, imageBitmap)
+                thumb = imageBitmap
+                return@LaunchedEffect
+            }
+        }
+
         val cachedBmp = withContext(Dispatchers.IO) {
             runCatching {
                 // profile-scope: device 算繪的暫存
@@ -313,17 +324,6 @@ private fun PageSidebarRow(
             pageThumbnailCache.put(cacheKey, cachedBmp)
             thumb = cachedBmp
             return@LaunchedEffect
-        }
-
-        val act = context as? ComponentActivity
-        if (act != null) {
-            val bmp = PageSnapshot.render(act, s, index, 0.22f, appLanguage)
-            if (bmp != null) {
-                val imageBitmap = bmp.asImageBitmap()
-                pageThumbnailCache.put(cacheKey, imageBitmap)
-                thumb = imageBitmap
-                return@LaunchedEffect
-            }
         }
     }
 
