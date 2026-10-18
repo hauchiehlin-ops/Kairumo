@@ -225,6 +225,10 @@ fun HomeScreen(
         buildTreeRows(treeContext, allFolders, sortedForTree(allEntries.filter { it.id !in hiddenNotes }, sort), collapsed)
     }
 
+    val continueEntries = remember(allEntries, hiddenNotes) {
+        allEntries.filter { it.id !in hiddenNotes }
+    }
+
     val filtered = remember(entries, allEntries, query, contentHits, hiddenNotes) {
         (if (query.isBlank()) entries
         else allEntries.filter {
@@ -432,7 +436,7 @@ fun HomeScreen(
         }
 
         // ── 4. 繼續（橫向捲動，與 Apple 一致）─────────────────────
-        if (filtered.isNotEmpty() && query.isBlank()) {
+        if (query.isBlank()) {
             item {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -456,20 +460,28 @@ fun HomeScreen(
                     ) {
                         Text(
                             if (showAllContinue) l("collapse")
-                            else "${l("show_all")} (${filtered.size})",
+                            else "${l("show_all")} (${continueEntries.size})",
                             style = MaterialTheme.typography.labelMedium
                         )
                     }
                 }
             }
-            item {
-                LazyRow(
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    modifier = Modifier.testTag("home.continue.list")
-                ) {
-                    val shown = if (showAllContinue) filtered else filtered.take(6)
-                    items(shown, key = { "recent-${it.id}" }) { entry ->
-                        ContinueCard(entry, l, onOpen)
+            if (continueEntries.isEmpty()) {
+                item {
+                    Box(Modifier.fillMaxWidth().testTag("home.continue.list")) {
+                        EmptyHint(l("notebook_empty"))
+                    }
+                }
+            } else {
+                item {
+                    LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        modifier = Modifier.testTag("home.continue.list")
+                    ) {
+                        val shown = if (showAllContinue) continueEntries else continueEntries.take(6)
+                        items(shown, key = { "recent-${it.id}" }) { entry ->
+                            ContinueCard(entry, l, onOpen)
+                        }
                     }
                 }
             }
