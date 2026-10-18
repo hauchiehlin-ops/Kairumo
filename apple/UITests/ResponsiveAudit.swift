@@ -231,10 +231,9 @@ final class ResponsiveAudit: XCTestCase {
         attachment.name = "\(UIDevice.current.name)-\(name)"
         attachment.lifetime = .keepAlways
         add(attachment)
-        // 結果包存不下來時（Xcode 有時寫不出 xcresult）也要看得到截圖：
-        // 以 `TEST_RUNNER_KAIRUMO_SHOT_DIR` 指定一個資料夾，直接寫成 PNG。
+        let safe = "\(UIDevice.current.name)-\(name)".replacingOccurrences(of: " ", with: "_")
+        try? screenshot.pngRepresentation.write(to: URL(fileURLWithPath: "/tmp/\(safe).png"))
         if let dir = ProcessInfo.processInfo.environment["KAIRUMO_SHOT_DIR"] {
-            let safe = "\(UIDevice.current.name)-\(name)".replacingOccurrences(of: " ", with: "_")
             try? screenshot.pngRepresentation.write(to: URL(fileURLWithPath: dir).appendingPathComponent("\(safe).png"))
         }
     }
@@ -267,4 +266,71 @@ final class ResponsiveAudit: XCTestCase {
         }
         app.swipeDown()
     }
+
+    func testVisualCanvasParityAudit() {
+        let app = XCUIApplication()
+        app.launchEnvironment["KAIRUMO_UITEST"] = "1"
+        app.launchEnvironment["KAIRUMO_AUTO_OPEN_NOTEBOOK"] = "seed-meeting-notebook-v1"
+        app.launch()
+        XCTAssertTrue(app.wait(for: .runningForeground, timeout: 20))
+        XCUIDevice.shared.orientation = .portrait
+        sleep(1)
+        
+        let diagClose = app.buttons["diagnostics.close"]
+        if diagClose.waitForExistence(timeout: 2) && diagClose.isHittable {
+            diagClose.tap()
+            sleep(1)
+        }
+        
+        let discardBtn = app.buttons["Discard Changes"]
+        if discardBtn.waitForExistence(timeout: 2) {
+            discardBtn.tap()
+            sleep(1)
+        }
+        
+        let editorMore = app.descendants(matching: .any).matching(identifier: "editor.more").firstMatch
+        if !editorMore.waitForExistence(timeout: 8) {
+            let meetingCardId = "home.notebooks.card.seed-meeting-notebook-v1"
+            for _ in 0..<12 {
+                let card = app.descendants(matching: .any).matching(identifier: meetingCardId).firstMatch
+                if card.exists && card.isHittable {
+                    card.tap()
+                    break
+                }
+                app.swipeUp()
+            }
+        }
+        XCTAssertTrue(editorMore.waitForExistence(timeout: 10), "進不到編輯器")
+        sleep(2)
+        
+        // Navigate to Page 2
+        let nextBtn = app.buttons["editor.page.next"]
+        if nextBtn.waitForExistence(timeout: 5) {
+            nextBtn.tap()
+            sleep(2)
+        }
+        
+        // Capture Portrait
+        shot(app, "meeting-p2-portrait")
+        
+        // Rotate to Landscape
+        XCUIDevice.shared.orientation = .landscapeLeft
+        sleep(3)
+        shot(app, "meeting-p2-landscape-sidebar-open")
+        
+        // Toggle sidebar closed if available (iPad)
+        let sidebarToggle = app.buttons["editor.sidebar_toggle"]
+        if sidebarToggle.waitForExistence(timeout: 3) && sidebarToggle.isHittable {
+            sidebarToggle.tap()
+            sleep(2)
+            shot(app, "meeting-p2-landscape-sidebar-closed")
+            sidebarToggle.tap()
+            sleep(1)
+        }
+        
+        // Restore to Portrait
+        XCUIDevice.shared.orientation = .portrait
+        sleep(2)
+    }
+
 }

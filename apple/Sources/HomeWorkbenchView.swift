@@ -564,12 +564,18 @@ public struct HomeWorkbenchView: View {
                     autoSync.start(store: notebookStore, deviceId: NotebookMigration.deviceId)
                 }
 
-                if let autoOpenId = ProcessInfo.processInfo.environment["KAIRUMO_AUTO_OPEN_NOTEBOOK"],
-                   let target = notebookStore.notebooks.first(where: { $0.id == autoOpenId }) {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                        self.selectedNotebookForEditing = target
-                    }
-                }
+                checkAutoOpenNotebook()
+            }
+        }
+    }
+
+    private func checkAutoOpenNotebook() {
+        guard let autoOpenId = ProcessInfo.processInfo.environment["KAIRUMO_AUTO_OPEN_NOTEBOOK"] else { return }
+        let fromStore = notebookStore.notebooks.first { $0.id.caseInsensitiveCompare(autoOpenId) == .orderedSame }
+        let target = fromStore ?? notebookStore.standardSample(id: autoOpenId)
+        if let target = target {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                self.selectedNotebookForEditing = target
             }
         }
     }
