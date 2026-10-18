@@ -1243,29 +1243,27 @@ impl NotebookPackage {
         // 3. 筆跡壓實（排除已被擦除的筆畫與填充墓碑）
         let resolved = self.resolve_milestones()?;
         if resolved.milestones.is_empty() {
-            if let Ok(pages) = self.ink_pages() {
-                for page in pages {
-                    let paths = self.ink_read_paths(page);
-                    let old_bytes_len: u64 = paths
-                        .iter()
-                        .filter_map(|p| fs::metadata(p).ok().map(|m| m.len()))
-                        .sum();
-                    if let Ok(records) = self.read_ink_with(page, &resolved) {
-                        let materialized = padnote_ink::materialize(&records);
-                        if materialized.len() < records.len() {
-                            let new_records: Vec<InkRecord> =
-                                materialized.into_iter().map(InkRecord::Add).collect();
-                            if self.rewrite_ink_page(page, &new_records).is_ok() {
-                                let new_paths = self.ink_read_paths(page);
-                                let new_bytes_len: u64 = new_paths
-                                    .iter()
-                                    .filter_map(|p| fs::metadata(p).ok().map(|m| m.len()))
-                                    .sum();
-                                if old_bytes_len > new_bytes_len {
-                                    report.ink_bytes_reclaimed += old_bytes_len - new_bytes_len;
-                                }
-                                report.ink_pages_compacted += 1;
+            for page in self.ink_pages().unwrap_or_default() {
+                let paths = self.ink_read_paths(page);
+                let old_bytes_len: u64 = paths
+                    .iter()
+                    .filter_map(|p| fs::metadata(p).ok().map(|m| m.len()))
+                    .sum();
+                if let Ok(records) = self.read_ink_with(page, &resolved) {
+                    let materialized = padnote_ink::materialize(&records);
+                    if materialized.len() < records.len() {
+                        let new_records: Vec<InkRecord> =
+                            materialized.into_iter().map(InkRecord::Add).collect();
+                        if self.rewrite_ink_page(page, &new_records).is_ok() {
+                            let new_paths = self.ink_read_paths(page);
+                            let new_bytes_len: u64 = new_paths
+                                .iter()
+                                .filter_map(|p| fs::metadata(p).ok().map(|m| m.len()))
+                                .sum();
+                            if old_bytes_len > new_bytes_len {
+                                report.ink_bytes_reclaimed += old_bytes_len - new_bytes_len;
                             }
+                            report.ink_pages_compacted += 1;
                         }
                     }
                 }

@@ -226,21 +226,24 @@ impl BlobStore {
         for id in self.list()? {
             if !keep.contains(&id) {
                 let path = self.path_of(id);
-                if let Ok(meta) = fs::metadata(&path) {
-                    if let Some(min_age) = min_age {
-                        if let Ok(modified) = meta.modified() {
-                            if let Ok(age) = now.duration_since(modified) {
-                                if age < min_age {
-                                    continue;
-                                }
-                            }
-                        }
+                let Ok(meta) = fs::metadata(&path) else {
+                    continue;
+                };
+                if let Some(min_age) = min_age {
+                    let is_too_young = meta
+                        .modified()
+                        .ok()
+                        .and_then(|m| now.duration_since(m).ok())
+                        .map(|age| age < min_age)
+                        .unwrap_or(false);
+                    if is_too_young {
+                        continue;
                     }
-                    let file_size = meta.len();
-                    if fs::remove_file(&path).is_ok() {
-                        report.removed_count += 1;
-                        report.reclaimed_bytes += file_size;
-                    }
+                }
+                let file_size = meta.len();
+                if fs::remove_file(&path).is_ok() {
+                    report.removed_count += 1;
+                    report.reclaimed_bytes += file_size;
                 }
             }
         }
