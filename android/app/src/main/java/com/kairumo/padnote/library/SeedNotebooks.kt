@@ -116,6 +116,38 @@ object SeedNotebooks {
             }
         }
         if (resetAll) prefs.edit().putInt(KEY_CONTENT_GENERATION, CONTENT_GENERATION).apply()
+
+        // 自癒修復：若現有示範筆記《Kairumo(功能範例)》尚未設定背景卡片 underInkObjectIds，自動補齊
+        val showcaseDir = java.io.File(baseDir, "$SHOWCASE_ID.${NotebookLibrary.EXTENSION}")
+        if (showcaseDir.exists() && showcaseDir.isDirectory) {
+            val opened = NotebookLibrary.open(context, SHOWCASE_ID, deviceId)
+            if (opened != null) {
+                val (session, _) = opened
+                val meta = NotebookMeta.load(session)
+                if (meta.underInkObjectIds(1).isEmpty()) {
+                    val count = runCatching { session.pageCount().toInt() }.getOrDefault(0)
+                    for (p in 0 until count) {
+                        val pid = runCatching { session.pageIdAt(p.toUInt()) }.getOrNull() ?: continue
+                        val shapeStore = ShapeStore(session, pid)
+                        val bgCardIds = shapeStore.all.filter { it.kindName == "rectangle" && it.label.isEmpty() }.map { it.id }.toSet()
+                        if (bgCardIds.isNotEmpty()) {
+                            meta.setUnderInkObjectIds(session, p, bgCardIds)
+                        }
+                    }
+                }
+            }
+        }
+
+        // 自癒修復：若《歡迎使用 Kairumo》未曾落地且未被使用者刪除，自動補建
+        val welcomeDir = java.io.File(baseDir, "$WELCOME_ID.${NotebookLibrary.EXTENSION}")
+        val retired = SampleFork.retired(context)
+        val trashed = NotebookTrash.trashedIds(context)
+        if (!welcomeDir.exists() && WELCOME_ID !in retired && !AccountSyncStore.isDeleted(context, WELCOME_ID) && WELCOME_ID !in trashed) {
+            fun l(key: String) = LocalizationStrings.localized(key, languageTag)
+            buildWelcome(context, deviceId, ::l)
+            assignDefaultSeedFolder(context, WELCOME_ID, SEED_FOLDER_FEATURES_ID)
+        }
+
         return healed
     }
 
@@ -159,11 +191,13 @@ object SeedNotebooks {
 
         val baseDir = NotebookLibrary.directory(context)
         fun pkgExists(id: String) = java.io.File(baseDir, "$id.${NotebookLibrary.EXTENSION}").isDirectory
+        val trashed = NotebookTrash.trashedIds(context)
+        fun isTrulyDeleted(id: String) = id in retired || AccountSyncStore.isDeleted(context, id) || id in trashed
 
         // 《功能範例》
         val showcaseTitle = l("seed_feature_showcase_title")
         val hasShowcase = existing.any { it.title == showcaseTitle || it.id.equals(SHOWCASE_ID, ignoreCase = true) }
-        if (!hasShowcase && !pkgExists(SHOWCASE_ID) && SHOWCASE_ID !in retired && !prefs.getBoolean(KEY_SHOWCASE, false)) {
+        if (!hasShowcase && !pkgExists(SHOWCASE_ID) && !isTrulyDeleted(SHOWCASE_ID)) {
             if (buildFeatureShowcase(context, deviceId, l)) created++
         }
         prefs.edit().putBoolean(KEY_SHOWCASE, true).apply()
@@ -171,14 +205,14 @@ object SeedNotebooks {
         // 《Kairumo手冊》：舊使用者只補一次，之後刪掉就不再長回來。
         val manualTitle = l("seed_manual_title")
         val hasManual = existing.any { it.id.equals(MANUAL_ID, ignoreCase = true) || it.title == MANUAL_TITLE || it.title == manualTitle }
-        if (!hasManual && !pkgExists(MANUAL_ID) && MANUAL_ID !in retired && !prefs.getBoolean(KEY_MANUAL, false)) {
+        if (!hasManual && !pkgExists(MANUAL_ID) && !isTrulyDeleted(MANUAL_ID)) {
             if (buildKairumoManual(context, deviceId, languageTag, l)) created++
         }
         prefs.edit().putBoolean(KEY_MANUAL, true).apply()
 
         // 《圖學範例》：舊使用者只補一次，之後刪掉就不再長回來。
         val hasDrafting = existing.any { it.id.equals(DRAFT_EXAMPLE_ID, ignoreCase = true) }
-        if (!hasDrafting && !pkgExists(DRAFT_EXAMPLE_ID) && DRAFT_EXAMPLE_ID !in retired && !prefs.getBoolean(KEY_DRAFT_EXAMPLE, false)) {
+        if (!hasDrafting && !pkgExists(DRAFT_EXAMPLE_ID) && !isTrulyDeleted(DRAFT_EXAMPLE_ID)) {
             if (buildDraftingExample(context, deviceId, l)) created++
         }
         prefs.edit().putBoolean(KEY_DRAFT_EXAMPLE, true).apply()
@@ -188,7 +222,7 @@ object SeedNotebooks {
         val hasWelcome = existing.any {
             it.id.equals(WELCOME_ID, ignoreCase = true) || it.title == welcomeTitle || it.title == displayTitle(welcomeTitle, languageTag)
         }
-        if (!hasWelcome && !pkgExists(WELCOME_ID) && WELCOME_ID !in retired && !prefs.getBoolean(KEY_WELCOME, false)) {
+        if (!hasWelcome && !pkgExists(WELCOME_ID) && !isTrulyDeleted(WELCOME_ID)) {
             if (buildWelcome(context, deviceId, l)) created++
         }
         prefs.edit().putBoolean(KEY_WELCOME, true).apply()
@@ -198,7 +232,7 @@ object SeedNotebooks {
         val hasMeeting = existing.any {
             it.id.equals(MEETING_ID, ignoreCase = true) || it.title == meetingTitle || it.title == displayTitle(meetingTitle, languageTag)
         }
-        if (!hasMeeting && !pkgExists(MEETING_ID) && MEETING_ID !in retired && !prefs.getBoolean(KEY_MEETING, false)) {
+        if (!hasMeeting && !pkgExists(MEETING_ID) && !isTrulyDeleted(MEETING_ID)) {
             if (buildMeeting(context, deviceId, l)) created++
         }
         prefs.edit().putBoolean(KEY_MEETING, true).apply()
@@ -259,10 +293,6 @@ object SeedNotebooks {
     }
 
     fun seedFoldersIfNeeded(context: Context, l: (String) -> String) {
-        val prefs = ProfileContext.prefs(context, PREFS)
-        if (prefs.getBoolean(KEY_FOLDERS_SEEDED, false)) return
-        prefs.edit().putBoolean(KEY_FOLDERS_SEEDED, true).apply()
-
         val f1Title = l("seed_folder_features")
         val f2Title = l("seed_folder_drafting")
 
@@ -899,6 +929,16 @@ private fun buildFeatureShowcase(context: Context, deviceId: UInt, l: (String) -
         shapes3.create(pill(l("seed_pill_14"), MARGIN + 175f, pillY3, "#EBF8FF"))
         shapes3.create(pill(l("seed_pill_15"), MARGIN + 350f, pillY3, "#F0FFF4"))
         shapes3.create(pill(l("seed_pill_16"), MARGIN + 525f, pillY3, "#FFFAF0"))
+
+        // 所有背景大卡片（矩形、無文字標籤）置於筆跡下方圖層（underInkObjectIds），
+        // 確保手寫與示範筆畫在卡片上方清晰可見（與 Apple 端 SeedContent.swift 對齊）
+        val allShapeStores = listOf(shapes0, shapes1, shapes2, shapes3)
+        for ((p, store) in allShapeStores.withIndex()) {
+            val bgCardIds = store.all.filter { it.kindName == "rectangle" && it.label.isEmpty() }.map { it.id }.toSet()
+            if (bgCardIds.isNotEmpty()) {
+                meta.setUnderInkObjectIds(session, p, bgCardIds)
+            }
+        }
 
         return true
     }

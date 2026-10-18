@@ -2,6 +2,7 @@ package com.kairumo.padnote.canvas
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -27,6 +28,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.zIndex
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
@@ -180,6 +182,10 @@ fun ContinuousPagesView(
     modifier: Modifier = Modifier
 ) {
     val listState = rememberLazyListState()
+
+    LaunchedEffect(meta) {
+        com.kairumo.padnote.ink.PageGeometry.use(meta.pageFormatId())
+    }
 
     // ── 復原／重做 ─────────────────────────────────────────────
     //
@@ -530,7 +536,6 @@ private fun ContinuousPage(
     engine.colorRgba = ink.colorRgba
     engine.baseWidth = ink.baseWidth
     engine.isErasing = ink.isErasing
-    engine.setPenOnly(ink.penOnly)
     // 遵循使用者的 pen-only 設定（預設為 false，支援手指與筆；若使用者開啟僅限觸控筆則為 true）。
     LaunchedEffect(engine, ink.penOnly) {
         engine.setPenOnly(ink.penOnly)
@@ -670,6 +675,37 @@ private fun ContinuousPage(
                 // 焦點頁描一圈，使用者才知道現在插入的東西會落在哪一頁。
                 if (isFocused) MaterialTheme.colorScheme.primary.copy(alpha = 0.45f)
                 else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.18f)
+            )
+            .then(
+                if (editorMode == EditorMode.TYPE) {
+                    Modifier.pointerInput(pageIndex) {
+                        detectTapGestures { offset: Offset ->
+                            val tapX = offset.x / density
+                            val tapY = offset.y / density
+                            val hitExisting = textStore.all.firstOrNull { box ->
+                                tapX >= (box.x - 10f) && tapX <= (box.x + box.width + 10f) &&
+                                tapY >= (box.y - 10f) && tapY <= (box.y + box.height + 10f)
+                            }
+                            if (hitExisting != null) {
+                                selectedId = hitExisting.id
+                                editingText = hitExisting
+                            } else {
+                                val newBox = textStore.create(
+                                    x = maxOf(20f, minOf(tapX, 700f)),
+                                    y = maxOf(20f, minOf(tapY, 1000f))
+                                )
+                                val currentOrder = meta.objectOrder(pageIndex)
+                                val updatedOrder = com.kairumo.padnote.canvas.ObjectStacking.bringToFront(setOf(newBox.id), currentOrder)
+                                meta.setObjectOrder(session, pageIndex, updatedOrder)
+                                revision++
+                                selectedId = newBox.id
+                                editingText = newBox
+                            }
+                        }
+                    }
+                } else {
+                    Modifier
+                }
             )
     ) {
         InkCanvas(
