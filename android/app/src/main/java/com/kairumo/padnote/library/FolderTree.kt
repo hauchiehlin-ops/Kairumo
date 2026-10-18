@@ -112,8 +112,7 @@ object FolderTree {
         val pkg = java.io.File(NotebookLibrary.directory(context), "$id.${NotebookLibrary.EXTENSION}")
         if (pkg.isDirectory) {
             val fromPkg = runCatching {
-                val devId = com.kairumo.padnote.deviceId(context)
-                uniffi.padnote_core.PadnoteSession.openExisting(pkg.absolutePath, devId).use { it.title() }
+                uniffi.padnote_core.PadnoteSession.openExisting(pkg.absolutePath, 0u).use { it.title() }
             }.getOrNull()
             if (!fromPkg.isNullOrBlank()) return fromPkg
         }

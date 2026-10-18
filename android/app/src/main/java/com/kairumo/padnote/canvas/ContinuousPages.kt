@@ -436,7 +436,6 @@ private fun ContinuousPage(
             engine.loadAsync()
             runtime.inkLoaded = true
             runtime.bump()
-            revision++
         }
     }
     DisposableEffect(engine, collabBridge) {
