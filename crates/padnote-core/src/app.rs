@@ -1525,7 +1525,9 @@ impl NotebookSession {
         deep_clean: bool,
     ) -> Result<padnote_storage::StorageOptimizationReport, AppError> {
         let referenced = self.notebook.referenced_blobs();
-        let report = self.package.optimize_storage(self.device, &referenced, deep_clean)?;
+        let report = self
+            .package
+            .optimize_storage(self.device, &referenced, deep_clean)?;
         Ok(report)
     }
 
