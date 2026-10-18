@@ -20,6 +20,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Box
 import com.kairumo.padnote.canvas.SmartMagneticSnap
 import com.kairumo.padnote.library.StickyAnnotationAnchor
+import com.kairumo.padnote.text.WordFormatAction
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
@@ -1676,6 +1677,64 @@ private fun ColumnScope.EditorWorkArea(
             VerticalDivider()
         }
         canvas()
+    }
+}
+
+private class InkBarState(
+    val tool: InkTool,
+    val colorHex: String,
+    val width: Float,
+    val languageTag: String,
+    val onToolChange: (InkTool) -> Unit,
+    val onColorChange: (String) -> Unit,
+    val onWidthChange: (Float) -> Unit,
+    val onOpenColorWheel: () -> Unit,
+    val onAddTextBox: () -> Unit
+)
+
+@Composable
+private fun RenderInkBar(state: InkBarState, modifier: Modifier = Modifier) {
+    InkToolbar(
+        tool = state.tool,
+        colorHex = state.colorHex,
+        width = state.width,
+        languageTag = state.languageTag,
+        onToolChange = state.onToolChange,
+        onColorChange = state.onColorChange,
+        onWidthChange = state.onWidthChange,
+        onOpenColorWheel = state.onOpenColorWheel,
+        onAddTextBox = state.onAddTextBox,
+        modifier = modifier
+    )
+}
+
+@Composable
+private fun FormatControlsBar(
+    isCompact: Boolean,
+    formatTarget: TextBox?,
+    languageTag: String,
+    l10n: (String) -> String,
+    onFormatAction: (WordFormatAction) -> Unit
+) {
+    if (isCompact) {
+        Row(
+            modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            WordFormatControls(
+                state = (formatTarget ?: TextBox(id = "")).let { WordFormatState.of(it, RichText.base(it)) },
+                l = { key -> l10n(key) },
+                languageTag = languageTag,
+                onAction = onFormatAction
+            )
+        }
+    } else {
+        WordFormatControls(
+            state = (formatTarget ?: TextBox(id = "")).let { WordFormatState.of(it, RichText.base(it)) },
+            l = { key -> l10n(key) },
+            languageTag = languageTag,
+            onAction = onFormatAction
+        )
     }
 }
 
@@ -4399,35 +4458,31 @@ private fun InkScreen(
     }
 
     val toolbarPlacement = com.kairumo.padnote.ui.ToolbarSettings.placement
-    // 同一份工具列，四個位置共用 —— 各寫一份的話，之後加一支筆就得改
-    // 四個地方，而漏掉的那個位置會安靜地少一顆按鈕。
-    val inkBar: @Composable () -> Unit = {
-        InkToolbar(
-            tool = inkTool,
-            colorHex = inkColorHex,
-            width = inkWidth,
-            languageTag = deviceLanguageTag(),
-            onToolChange = { picked -> applyInkTool(picked) },
-            onColorChange = { hex ->
-                inkColorHex = hex
-                engine.colorRgba = hexToRgba(hex)
-            },
-            onWidthChange = { value ->
-                inkWidth = value
-                engine.baseWidth = value
-            },
-            onOpenColorWheel = { showProColorWheel = true },
-            onAddTextBox = {
-                val box = textStore.create(x = 100f, y = 150f)
-                selectedTextId = box.id
-                editingText = box
-                val updated = com.kairumo.padnote.canvas.ObjectStacking.bringToFront(setOf(box.id), stackOrder)
-                meta.setObjectOrder(notebook?.first, pageIndex, updated)
-                stackRevision++
-                textRevision++
-            }
-        )
-    }
+    val inkBarState = InkBarState(
+        tool = inkTool,
+        colorHex = inkColorHex,
+        width = inkWidth,
+        languageTag = deviceLanguageTag(),
+        onToolChange = { picked -> applyInkTool(picked) },
+        onColorChange = { hex ->
+            inkColorHex = hex
+            engine.colorRgba = hexToRgba(hex)
+        },
+        onWidthChange = { value ->
+            inkWidth = value
+            engine.baseWidth = value
+        },
+        onOpenColorWheel = { showProColorWheel = true },
+        onAddTextBox = {
+            val box = textStore.create(x = 100f, y = 150f)
+            selectedTextId = box.id
+            editingText = box
+            val updated = com.kairumo.padnote.canvas.ObjectStacking.bringToFront(setOf(box.id), stackOrder)
+            meta.setObjectOrder(notebook?.first, pageIndex, updated)
+            stackRevision++
+            textRevision++
+        }
+    )
     if (!minimalistCanvasMode) {
         // ── 第二排：目前模式的工具 ────────────────────────────────
         //
@@ -4543,30 +4598,19 @@ private fun InkScreen(
                 // 與 Apple 一致，不會憑空生出一個方塊。
                 val formatTarget = selectedTextId?.let { textStore.find(it) }
                 if (textRevision >= 0) {
-                    val formatControls: @Composable () -> Unit = {
-                        WordFormatControls(
-                            state = (formatTarget ?: TextBox(id = "")).let { WordFormatState.of(it, RichText.base(it)) },
-                            l = { key -> l10n(key) },
-                            languageTag = deviceLanguageTag()
-                        ) { action ->
+                    FormatControlsBar(
+                        isCompact = layout.sizeClass == uniffi.padnote_core.FfiSizeClass.COMPACT,
+                        formatTarget = formatTarget,
+                        languageTag = deviceLanguageTag(),
+                        l10n = { l10n(it) },
+                        onFormatAction = { action ->
                             formatTarget?.let { box ->
                                 applyWordFormat(box, action, TextFormatScope.WholeBox)
                                 textStore.persist(box)
                                 textRevision++
                             }
                         }
-                    }
-                    // 手機寬度：格式列收成**一條可以左右捲的列**。直接放進會換行的工具列的話，
-                    // 二十幾顆按鈕會折成四、五排，把畫布擠掉一大塊（寫字的地方比工具列還小）。
-                    // 平板以上照樣跟著工具列換行 —— 空間夠，一眼看完比捲動好。
-                    if (layout.sizeClass == uniffi.padnote_core.FfiSizeClass.COMPACT) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) { formatControls() }
-                    } else {
-                        formatControls()
-                    }
+                    )
                 }
 
                 // 5. 格線/方格吸附開關
@@ -4640,7 +4684,7 @@ private fun InkScreen(
         if (effectiveToolbarMode == EditorMode.DRAW &&
             toolbarPlacement == uniffi.padnote_core.FfiPlacement.TOP
         ) {
-            inkBar()
+            RenderInkBar(inkBarState)
         }
     }
 
@@ -4902,7 +4946,7 @@ private fun InkScreen(
                                 .width(110.dp)
                                 .fillMaxHeight()
                                 .verticalScroll(rememberScrollState())
-                        ) { inkBar() }
+                        ) { RenderInkBar(inkBarState) }
                     }
                     ContinuousPagesView(
                         session = notebook?.first,
@@ -4936,14 +4980,14 @@ private fun InkScreen(
                                 .width(110.dp)
                                 .fillMaxHeight()
                                 .verticalScroll(rememberScrollState())
-                        ) { inkBar() }
+                        ) { RenderInkBar(inkBarState) }
                     }
                 }
             }
             if (effectiveToolbarMode == EditorMode.DRAW &&
                 toolbarPlacement == uniffi.padnote_core.FfiPlacement.BOTTOM
             ) {
-                inkBar()
+                RenderInkBar(inkBarState)
             }
             return@Column
         }
@@ -5114,7 +5158,7 @@ private fun InkScreen(
                     .width(110.dp)
                     .fillMaxHeight()
                     .verticalScroll(rememberScrollState())
-            ) { inkBar() }
+            ) { RenderInkBar(inkBarState) }
         }
         // 圖學列佔用版面，不浮在畫布上：疊在頁面最上方會蓋住頁首標題與題目文字。
         // 與 Apple 的 `safeAreaInset(edge: .top)` 一致。
@@ -6097,7 +6141,7 @@ private fun InkScreen(
                     .width(110.dp)
                     .fillMaxHeight()
                     .verticalScroll(rememberScrollState())
-            ) { inkBar() }
+            ) { RenderInkBar(inkBarState) }
         }
         }
 
@@ -6121,7 +6165,7 @@ private fun InkScreen(
         if (effectiveToolbarMode == EditorMode.DRAW &&
             toolbarPlacement == uniffi.padnote_core.FfiPlacement.BOTTOM
         ) {
-            inkBar()
+            RenderInkBar(inkBarState)
         }
 
         // 次世代 UI/UX Phase 5: 折疊立起雙屏創作工作盤 (Tabletop Studio Control Deck)
