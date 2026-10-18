@@ -483,7 +483,7 @@ final class RecordingTitleInPackageTests: XCTestCase {
         store.restoreSamplePreservingUserContent(id)
         let kept = store.notebooks.first { !NotebookPackageBridge.isDeviceLocalSeed($0.id) }
         XCTAssertEqual(kept?.textAttachments?.first?.text, "舊版時寫的")
-        XCTAssertEqual(kept?.folderId, "folder-intro", "資料夾結構不變")
+        XCTAssertNil(kept?.folderId, "範例生成的副本一律歸入未分類筆記")
         XCTAssertNotNil(store.notebooks.first { $0.id == id }, "範例還在")
     }
 
