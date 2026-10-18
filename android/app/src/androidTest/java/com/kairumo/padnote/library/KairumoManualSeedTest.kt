@@ -2,6 +2,7 @@ package com.kairumo.padnote.library
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import com.kairumo.padnote.profile.ProfileContext
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -24,7 +25,12 @@ class KairumoManualSeedTest {
     @Before
     @After
     fun clean() {
+        NotebookLibrary.directory(context).deleteRecursively()
+        NotebookTrash.directory(context).deleteRecursively()
         File(context.filesDir, "Notebooks").deleteRecursively()
+        File(context.filesDir, "notebook.padnote").deleteRecursively()
+        AccountSyncStore.clearForTesting(context)
+        ProfileContext.prefs(context, "kairumo.seed").edit().clear().commit()
         context.getSharedPreferences("kairumo.seed", android.content.Context.MODE_PRIVATE).edit().clear().commit()
         // 清單快取以套件路徑與修改時間為鍵：同一秒內刪掉重建同一本，會拿到上一輪（別的語言）的名字。
         NotebookLibrary.invalidateCache()
