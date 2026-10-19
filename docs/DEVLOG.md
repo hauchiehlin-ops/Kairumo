@@ -3,6 +3,34 @@
 > 反序排列（最新在上）。每個開發階段結束時追加一筆。
 > 記錄**為什麼**這樣做，而不只是做了什麼 —— 「做了什麼」看 git log 就好。
 
+## 2026-10-20 · commit / push 前自動清除 macOS `._*` 附屬檔
+
+專案放在 exFAT 外接碟（`/Volumes/Mobil`）。exFAT 不存擴充屬性，macOS 寫入任何檔案
+都會在旁邊生出 `._<檔名>`（AppleDouble），資料夾也會被丟 `.DS_Store`。
+一次手動清理就在工作目錄與 `target/` 掃到大量這類檔案；清完之後它們還會隨每次編輯、建置繼續長出來。
+
+### 原本只清 `.git`
+
+`scripts/clean-git-appledouble.sh` 只處理 `.git` 內部（`._pack-*.idx` 會讓 git 報
+`non-monotonic index`）。工作目錄裡的 `._*` 雖然被 `.gitignore` 擋住，但
+`git add -f`、或從別處複製進來的設定都可能讓它們進 commit；Gradle / codesign
+也會誤收（`lib-exfat.sh` 已針對 Android 原始碼目錄另外清，那是建置時的防線）。
+
+### 改成 `scripts/clean-appledouble.sh`，由 pre-commit 與 pre-push 開頭呼叫
+
+- **範圍：** `.git` 內部 + 整個工作目錄的 `._*` 與 `.DS_Store`。
+- **略過大型建置目錄**（`target`、`.build`、`build`、Gradle 產物）：hook 每次 commit 都跑，
+  要壓在一秒內（實測約 0.15 秒）。要連建置目錄一起掃，手動跑 `scripts/clean-appledouble.sh --all`。
+- **已追蹤的檔案不刪，且「已追蹤」以 HEAD 為準而非 index。** 第一版用 `git ls-files`，
+  結果剛被誤加進暫存區的 `._*` 被當成「已追蹤」而留在工作目錄 —— 正好漏掉最該處理的情況。
+- **誤加進暫存區的會自動 `git rm --cached`**，commit 不會帶出去，也不必使用者重來。
+- hook 內以 `|| true` 呼叫：清理失敗不擋 commit / push，它只是衛生工作，不是門禁。
+
+### 已知限制
+
+git 自己每個指令都會在 `.git` 裡重新生出 `._index` 之類的檔案，所以每次都會清到一兩個，這是預期行為。
+根治需要把 repo 放在 APFS 磁碟上。
+
 ## 2026-09-30 · 回收桶與過期資料的完整清除
 
 使用者要求應用程式能完整刪除雲端與本機的過期資料。設計全文 `docs/plans/expiry-purge.md`。

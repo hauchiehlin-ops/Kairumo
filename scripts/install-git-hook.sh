@@ -62,6 +62,7 @@ git config core.hooksPath "${REPO_ROOT}/.githooks"
 chmod +x "${REPO_ROOT}/.githooks/pre-commit" "${REPO_ROOT}/.githooks/pre-push"
 
 echo "✅ Git hooks 已成功啟用（指向 .githooks/）："
+echo "   - 兩者開頭：scripts/clean-appledouble.sh 清掉 exFAT 上的 ._* 與 .DS_Store"
 echo "   - pre-commit: 自動偵測手冊、隱私權政策與範本變更並重新產生衍生平台檔案"
 echo "   - pre-push:   執行介面字串、手冊一致性與版本號檢查"
 echo "👉 升版與發版請用：./scripts/release.sh [patch|minor|major]"
