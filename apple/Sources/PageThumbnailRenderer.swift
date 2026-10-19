@@ -468,14 +468,7 @@ public enum PageThumbnailRenderer {
     /// `item.height` 只是最後一次調整時的值。匯出時直接用存下來的高度，
     /// 文字一多就會被截掉或溢出框外壓到旁邊的東西 —— 那正是「方框重疊」的來源。
     static func measuredHeight(for item: NoteTextAttachment) -> CGFloat {
-        let pad = textBoxPadding(for: item)
-        let inner = max(item.width - pad * 2, 1)
-        let bounds = attributedText(for: item).boundingRect(
-            with: CGSize(width: inner, height: .greatestFiniteMagnitude),
-            options: [.usesLineFragmentOrigin, .usesFontLeading],
-            context: nil
-        )
-        return max(item.height, ceil(bounds.height) + pad * 2)
+        max(item.height, RichText.boxHeight(for: item))
     }
 
     /// 與畫布編輯器同一份排版（含字型、逐字格式與醒目提示），見 `RichText`。

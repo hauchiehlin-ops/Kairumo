@@ -2220,6 +2220,7 @@ public struct NotebookEditorView: View {
     }
     @State private var singlePageFitMode: SinglePageFitMode = .fitWidth
     @State private var singlePageManualZoom: CGFloat = 1.0
+    @State private var singlePagePinchBaseZoom: CGFloat? = nil
 
     @State private var snapToGrid: Bool = true
     @State private var newTextDraft: NoteTextAttachment = NoteTextAttachment()
@@ -4686,6 +4687,17 @@ public struct NotebookEditorView: View {
                 )
             }
             .frame(width: outer.size.width, height: outer.size.height)
+            .simultaneousGesture(
+                MagnificationGesture()
+                    .onChanged { mag in
+                        let base = singlePagePinchBaseZoom ?? singlePageManualZoom
+                        if singlePagePinchBaseZoom == nil { singlePagePinchBaseZoom = base }
+                        singlePageManualZoom = max(0.3, min(4.0, base * mag))
+                    }
+                    .onEnded { _ in
+                        singlePagePinchBaseZoom = nil
+                    }
+            )
             .overlay(alignment: .bottomTrailing) {
                 HStack(spacing: 6) {
                     Button {
@@ -5009,6 +5021,7 @@ public struct NotebookEditorView: View {
 
     /// 連續模式的縮放設定。預設貼合頁寬（依視窗寬度響應式縮放，放大上限 200%）。
     @State private var continuousZoomTarget: PageViewportLayout.ZoomTarget? = nil
+    @State private var continuousPinchBaseZoom: CGFloat? = nil
 
     /// 整頁的顯示比例。單頁模式沿用既有的 `singlePageFitMode` / `singlePageManualZoom`（畫布右下角的 −／全頁／＋
     /// 也是它們），連續模式用 `continuousZoomTarget`。倍率一律**相對於「整頁剛好放進視窗」**：100% = 全頁。
@@ -5203,6 +5216,24 @@ public struct NotebookEditorView: View {
             }
             .coordinateSpace(name: ContinuousPagesSpace.name)
             .environment(\.objectReorder, { id, op in reorderObject(id, op) })
+            .simultaneousGesture(
+                MagnificationGesture()
+                    .onChanged { mag in
+                        let currentRatio: CGFloat
+                        if let target = continuousZoomTarget, case .ratio(let val) = target {
+                            currentRatio = val
+                        } else {
+                            currentRatio = 1.0
+                        }
+                        let base = continuousPinchBaseZoom ?? currentRatio
+                        if continuousPinchBaseZoom == nil { continuousPinchBaseZoom = base }
+                        let newRatio = max(0.4, min(3.0, base * mag))
+                        continuousZoomTarget = .ratio(newRatio)
+                    }
+                    .onEnded { _ in
+                        continuousPinchBaseZoom = nil
+                    }
+            )
             .background(
                 GeometryReader { geo in
                     Color.clear
@@ -5714,6 +5745,7 @@ public struct NotebookEditorView: View {
                 hitPassThroughCheck: { point, event in
                     isUnderInkPointPassThrough(point: point, page: currentPageIndex, event: event)
                 },
+                isScrollEnabled: false,
                 onDrawingChanged: { rawDrawing -> PKDrawing? in
                     // 筆跡登記了自己的復原項：之後的物件變更不能併進前一個物件步驟。
                     objectHistory.breakCoalescing()
@@ -14907,6 +14939,7 @@ struct TextAttachmentItemView: View {
                         .lineSpacing(textItem.lineSpacing ?? 0)
                         .padding(.leading, textItem.paragraphIndent ?? 0)
                         .frame(maxWidth: .infinity, alignment: resolveFrameAlignment(textItem.alignmentRaw))
+                        .fixedSize(horizontal: false, vertical: true)
                 } else {
                     Text(textItem.text)
                         .font(resolvedFont(size: textItem.fontSize, bold: textItem.isBold, italic: textItem.isItalic, family: textItem.fontFamily))
@@ -14918,6 +14951,7 @@ struct TextAttachmentItemView: View {
                         .lineSpacing(textItem.lineSpacing ?? 0)
                         .padding(.leading, textItem.paragraphIndent ?? 0)
                         .frame(maxWidth: .infinity, alignment: resolveFrameAlignment(textItem.alignmentRaw))
+                        .fixedSize(horizontal: false, vertical: true)
                 }
             }
             // 內距隨方塊大小縮（見 TextBoxMetrics）。小到一格週計畫的格子時，
@@ -15068,9 +15102,10 @@ struct TextAttachmentItemView: View {
                                 let landed = PrintableArea.clampOrigin(
                                     x: textItem.x + value.translation.width,
                                     y: textItem.y + value.translation.height,
-                                    width: textItem.width, height: textItem.height)
+                                    width: textItem.width, height: calculatedContentHeight)
                                 textItem.x = landed.x
                                 textItem.y = (snapToGrid && snapY != nil) ? snapY!(landed.y) : landed.y
+                                textItem.height = calculatedContentHeight
                                 dragOffset = .zero
                                 isDragging = false
                             }
@@ -15241,7 +15276,7 @@ struct TextAttachmentItemView: View {
         }
         .objectProbe("text")
         .padding(20)
-        .position(x: currentX + displayWidth / 2, y: currentY + displayHeight / 2)
+        .position(x: currentX + displayWidth / 2, y: currentY + calculatedContentHeight / 2)
         .animation(nil, value: dragOffset)
         // 方塊跟著內容長高（Word 的行為）。隨點即書的方塊一開始只有一行高，
         // 打到第二行時不長高的話，後面的字被方塊裁掉、看起來像「打了字沒出現」。

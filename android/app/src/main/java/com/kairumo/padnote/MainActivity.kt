@@ -5233,15 +5233,13 @@ private fun InkScreen(
                             val stylus = first.changes.any {
                                 it.type == PointerType.Stylus
                             }
-                            // 一指平移**只在放大之後**才接管。
-                            //
-                            // 沒放大時頁面剛好是一個畫面寬，一指拖曳會把整頁
-                            // 拉出畫布範圍（實機上看到工具列被蓋掉），而且那
-                            // 不是使用者要的 —— 想看下面就用連續模式或翻頁。
-                            // 放大之後就不一樣了：畫面裝不下整頁，不給拖就
-                            // 永遠看不到右下角。
+                            val contentW = PageGeometry.width * canvasDensity
+                            val contentH = PageGeometry.height * canvasDensity
+                            val scaledW = contentW * canvasScale
+                            val scaledH = contentH * canvasScale
+                            val contentExceedsViewport = scaledW > canvasViewport.width || scaledH > canvasViewport.height || canvasScale > 1f
                             val takeIt = pointers >= 2 ||
-                                (onePanFinger && !stylus && canvasScale > 1f)
+                                (onePanFinger && !stylus && contentExceedsViewport)
                             if (!takeIt) continue
 
                             // **多指手勢（S-GESTURE）。**
