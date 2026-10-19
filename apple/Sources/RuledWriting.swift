@@ -148,11 +148,13 @@ enum RuledWriting {
 
     /// 內容需要的方塊高度（含上下內距，不小於 `fullPaddingHeight`）。
     static func boxHeight(
-        text: String, width: CGFloat, fontSize: CGFloat, bold: Bool, lineSpacing: CGFloat
+        text: String, width: CGFloat, fontSize: CGFloat, bold: Bool, lineSpacing: CGFloat,
+        paragraphSpacing: CGFloat = 0
     ) -> CGFloat {
         let font = font(fontSize, bold: bold)
         let paragraph = NSMutableParagraphStyle()
         paragraph.lineSpacing = lineSpacing
+        paragraph.paragraphSpacing = paragraphSpacing
         // 空字串也算一行 —— 剛點下去、還沒打字的方塊要有一行的高度。
         let sample = text.isEmpty ? " " : text
         let rect = (sample as NSString).boundingRect(
@@ -162,6 +164,6 @@ enum RuledWriting {
             context: nil)
         // 結尾是換行時，最後一行是空的但游標在那裡 —— 要算進去。
         let trailingNewline = text.hasSuffix("\n") ? font.lineHeight + lineSpacing : 0
-        return max(fullPaddingHeight, ceil(rect.height + trailingNewline) + 2 * padding)
+        return max(fullPaddingHeight, ceil(rect.height + trailingNewline) + 2 * padding + 8)
     }
 }

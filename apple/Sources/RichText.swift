@@ -430,14 +430,15 @@ extension RichText {
         guard let runs = item.runs, !runs.isEmpty else {
             return RuledWriting.boxHeight(
                 text: item.text.isEmpty ? " " : item.text, width: item.width,
-                fontSize: item.fontSize, bold: item.isBold, lineSpacing: item.lineSpacing ?? 0)
+                fontSize: item.fontSize, bold: item.isBold, lineSpacing: item.lineSpacing ?? 0,
+                paragraphSpacing: item.paragraphSpacing ?? 0)
         }
         let padding = RuledWriting.padding
         let measured = attributedString(for: item).boundingRect(
             with: CGSize(width: max(1, item.width - 2 * padding), height: .greatestFiniteMagnitude),
             options: [.usesLineFragmentOrigin, .usesFontLeading], context: nil)
         let trailing = item.text.hasSuffix("\n") ? uiFont(base(of: item)).lineHeight : 0
-        return max(RuledWriting.fullPaddingHeight, ceil(measured.height + trailing) + 2 * padding)
+        return max(RuledWriting.fullPaddingHeight, ceil(measured.height + trailing) + 2 * padding + 8)
     }
 
     /// SwiftUI 顯示用。每一段都把屬性寫滿，不依賴外層 `.font` 等修飾（那些只套在沒寫屬性的字上）。
