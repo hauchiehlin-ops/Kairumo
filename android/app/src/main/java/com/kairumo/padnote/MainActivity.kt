@@ -2834,7 +2834,9 @@ private fun InkScreen(
         audio = audioCards.map { it.copy() },
         order = meta.objectOrder(pageIndex)
     )
+    var isRestoringHistory by remember { mutableStateOf(false) }
     fun applyCanvasSnapshot(snapshot: CanvasSnapshot) {
+        isRestoringHistory = true
         textStore.restoreTo(snapshot.texts)
         imageStore.restoreTo(snapshot.images)
         shapeStore.restoreTo(snapshot.shapes, snapshot.connections)
@@ -2889,7 +2891,8 @@ private fun InkScreen(
             continuousUndo.redo()
             return
         }
-        canvasHistory.redo(::applyCanvasSnapshot) { engine.redo() }
+        val did = canvasHistory.redo(::applyCanvasSnapshot) { engine.redo() }
+        if (!did) engine.redo()
         revision++
         clearToken++
     }
@@ -2905,6 +2908,11 @@ private fun InkScreen(
         canvasHistory, textRevision, imageRevision, shapeRevision, tableRevision, chartRevision,
         stackRevision, linkRevision, model3DRevision, audioRevision, links, models3D, audioCards
     ) {
+        if (isRestoringHistory) {
+            isRestoringHistory = false
+            canvasHistory.reset(canvasSnapshot())
+            return@LaunchedEffect
+        }
         canvasHistory.observe(canvasSnapshot())
     }
 
@@ -3678,7 +3686,6 @@ private fun InkScreen(
                         if (toolShown("editor.ink.undo")) {
                             TextButton(
                                 onClick = { globalUndo() },
-                                enabled = engine.canUndo,
                                 modifier = Modifier.size(32.dp).testTag(
                                     if (editorMode == EditorMode.DRAW) "editor.ink.undo" else "editor.text.undo"
                                 ),
@@ -3688,7 +3695,6 @@ private fun InkScreen(
                         if (toolShown("editor.ink.redo")) {
                             TextButton(
                                 onClick = { globalRedo() },
-                                enabled = engine.canRedo,
                                 modifier = Modifier.size(32.dp).testTag(
                                     if (editorMode == EditorMode.DRAW) "editor.ink.redo" else "editor.text.redo"
                                 ),

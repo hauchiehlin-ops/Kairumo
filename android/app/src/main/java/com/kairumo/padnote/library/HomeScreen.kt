@@ -400,14 +400,12 @@ fun HomeScreen(
                 Triple(l(if (recording) "stop_recording" else "start_recording"),
                     l("start_recording_desc"), MaterialTheme.colorScheme.error to false),
                 Triple(l("asset_library"), l("asset_library_desc"),
-                    MaterialTheme.colorScheme.primary to false),
-                Triple(l("import_note"), l("import_note_desc"),
                     MaterialTheme.colorScheme.primary to false)
             )
-            val clicks = listOf(onCreate, onToggleRecording, onAssetLibrary, onImportNotebook)
-            // 對照閘門的識別字，順序與 Apple 首頁那四張卡一致。
-            val tags = listOf("home.action.new_note", "home.action.record", "home.action.assets", "home.action.import")
-            val icons = listOf(Icons.Filled.Add, KairumoIcons.Mic, KairumoIcons.Cube, KairumoIcons.Import)
+            val clicks = listOf(onCreate, onToggleRecording, onAssetLibrary)
+            // 對照閘門的識別字，順序與 Apple 首頁那三張卡一致。
+            val tags = listOf("home.action.new_note", "home.action.record", "home.action.assets")
+            val icons = listOf(Icons.Filled.Add, KairumoIcons.Mic, KairumoIcons.Cube)
 
             Column(verticalArrangement = Arrangement.spacedBy(DS.Space.xs)) {
                 actions.indices.chunked(perRow).forEach { rowIndices ->

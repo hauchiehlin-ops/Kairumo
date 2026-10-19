@@ -252,7 +252,7 @@ fun ContinuousPagesView(
             did || runtimes[pageIdAt(currentFocus)]?.let { rt -> rt.engine.undo().also { if (it) rt.bump() } } == true
         }
         undoController?.redoHandler = {
-            history.redoAcrossPages(
+            val did = history.redoAcrossPages(
                 applyObjects = { page, snapshot ->
                     runtimes[page]?.restore(snapshot, meta, session, indexOfPage(page))
                     reveal(page)
@@ -264,6 +264,7 @@ fun ContinuousPagesView(
                     redone
                 }
             )
+            did || runtimes[pageIdAt(currentFocus)]?.let { rt -> rt.engine.redo().also { if (it) rt.bump() } } == true
         }
         onDispose {
             undoController?.undoHandler = null
@@ -579,6 +580,11 @@ private fun ContinuousPage(
     }
     // 物件有動（各個 onChanged 都會遞增 revision）就比對一次；筆跡的變動比對不出差異，不會多記一步。
     LaunchedEffect(revision) {
+        if (runtime.isRestoring) {
+            runtime.isRestoring = false
+            history.reset(runtime.snapshot(meta, pageIndex), historyKey)
+            return@LaunchedEffect
+        }
         if (history.hasBaseline(historyKey)) history.observe(runtime.snapshot(meta, pageIndex), historyKey)
         collabBridge?.onLocalChange?.invoke()
     }
@@ -1013,6 +1019,7 @@ internal class PageRuntime(session: PadnoteSession?, val pageId: String?, contex
     )
 
     fun restore(snapshot: CanvasSnapshot, meta: NotebookMeta, session: PadnoteSession?, pageIndex: Int?) {
+        isRestoring = true
         textStore.restoreTo(snapshot.texts)
         imageStore.restoreTo(snapshot.images)
         shapeStore.restoreTo(snapshot.shapes, snapshot.connections)
@@ -1023,4 +1030,5 @@ internal class PageRuntime(session: PadnoteSession?, val pageId: String?, contex
         }
         bump()
     }
+    var isRestoring = false
 }

@@ -791,17 +791,6 @@ public struct HomeWorkbenchView: View {
             ) {
                 showAssetLibrarySheet = true
             }
-
-            actionCard(
-                icon: "square.and.arrow.down.fill",
-                title: localizationManager.localized("import_note"),
-                identifier: "home.action.import",
-                subtitle: localizationManager.localized("import_note_desc"),
-                tint: DS.Color.accent,
-                prominent: false
-            ) {
-                showImportPicker = true
-            }
         }
     }
 

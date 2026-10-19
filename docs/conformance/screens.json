@@ -680,7 +680,6 @@
       "home.action.new_note",
       "home.action.record",
       "home.action.assets",
-      "home.action.import",
       "home.continue.show_all",
       "home.continue.list",
       "home.recordings.show_all",
@@ -710,7 +709,6 @@
       "home.action.new_note",
       "home.action.record",
       "home.action.assets",
-      "home.action.import",
       "home.continue.show_all",
       "home.continue.list",
       "home.recordings.show_all",
@@ -779,12 +777,6 @@
         "id": "home.action.assets",
         "label_en": "Asset Library",
         "label_key": "asset_library",
-        "reveal": "always"
-      },
-      {
-        "id": "home.action.import",
-        "label_en": "Import Note",
-        "label_key": "import_note",
         "reveal": "always"
       },
       {

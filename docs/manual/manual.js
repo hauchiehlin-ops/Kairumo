@@ -73,14 +73,12 @@ window.KAIRUMO_MANUAL = {
           "編輯身分",
           "新增筆記",
           "開始錄音",
-          "素材圖庫",
-          "匯入筆記"
+          "素材圖庫"
         ],
         "steps": [
           "最上方是你的顯示身分 —— 協同時隊友看到的就是這個名字，點右邊的「編輯身分」可以修改。",
           "搜尋列可以同時搜尋筆記標題、打字內容與錄音轉錄出來的文字。",
-          "中間四張大卡片是主要動作：新增筆記、開始錄音、素材圖庫、匯入筆記。",
-          "「匯入筆記」可以選一個 .padnote 檔，把別人分享給你的原始筆記放進筆記庫。",
+          "中間三張大卡片是主要動作：新增筆記、開始錄音、素材圖庫。",
           "「繼續」列出最近開過的筆記，點一下就回到上次的位置。",
           "「全部筆記」依資料夾分類顯示；右上角可以切換排序方式。",
           "首頁往下捲到底有「操作說明」與「隱私權政策」兩張卡片 —— 你現在看的就是前者。",
@@ -89,7 +87,7 @@ window.KAIRUMO_MANUAL = {
         ],
         "tip": "每張筆記卡片右上角的「⋯」裡有重新命名、移動到資料夾與刪除。",
         "fig": "home",
-        "cap": "首頁：身分、搜尋、四個主要動作、繼續、全部筆記"
+        "cap": "首頁：身分、搜尋、三個主要動作、繼續、全部筆記"
       },
       {
         "id": "newnote",
@@ -930,14 +928,12 @@ window.KAIRUMO_MANUAL = {
           "Edit Identity",
           "New Note",
           "Start Recording",
-          "Asset Library",
-          "Import Note"
+          "Asset Library"
         ],
         "steps": [
           "At the top is your display identity — the name teammates see while collaborating. Tap “Edit Identity” to change it.",
           "The search field searches note titles, typed text and transcribed speech at the same time.",
-          "The four large cards are the main actions: New Note, Start Recording, Asset Library and Import Note.",
-          "“Import Note” lets you choose a .padnote file and add a shared original note to your library.",
+          "The three large cards are the main actions: New Note, Start Recording and Asset Library.",
           "“Continue” lists the notes you opened recently; one tap returns you to where you left off.",
           "“All Notebooks” groups everything by folder; the control on the right changes the sort order.",
           "Scroll to the bottom of the home screen for the “User Manual” and “Privacy Policy” cards — this document is the former.",
@@ -946,7 +942,7 @@ window.KAIRUMO_MANUAL = {
         ],
         "tip": "The “⋯” on each note card holds Rename, Move to folder and Delete.",
         "fig": "home",
-        "cap": "Home: identity, search, four main actions, Continue, All Notebooks"
+        "cap": "Home: identity, search, three main actions, Continue, All Notebooks"
       },
       {
         "id": "newnote",
@@ -1782,14 +1778,12 @@ window.KAIRUMO_MANUAL = {
           "编辑身份",
           "新增笔记",
           "开始录音",
-          "素材图库",
-          "导入笔记"
+          "素材图库"
         ],
         "steps": [
           "最上方是你的显示身份 —— 协作时队友看到的就是这个名字，点右边的“编辑身份”可以修改。",
           "搜索栏可以同时搜索笔记标题、打字内容与录音转写出来的文字。",
-          "中间四张大卡片是主要操作：新增笔记、开始录音、素材图库、导入笔记。",
-          "“导入笔记”可以选择一个 .padnote 文件，把别人分享给你的原始笔记放进笔记库。",
+          "中间三张大卡片是主要操作：新增笔记、开始录音、素材图库。",
           "“继续”列出最近打开过的笔记，点一下就回到上次的位置。",
           "“全部笔记”按文件夹分类显示；右上角可以切换排序方式。",
           "首页往下滚到底有「操作说明」与「隐私权政策」两张卡片 —— 你现在看的就是前者。",
@@ -1798,7 +1792,7 @@ window.KAIRUMO_MANUAL = {
         ],
         "tip": "每张笔记卡片右上角的“⋯”里有重命名、移动到文件夹与删除。",
         "fig": "home",
-        "cap": "首页：身份、搜索、四个主要操作、继续、全部笔记"
+        "cap": "首页：身份、搜索、三个主要操作、继续、全部笔记"
       },
       {
         "id": "newnote",
@@ -2634,14 +2628,12 @@ window.KAIRUMO_MANUAL = {
           "表示名を編集",
           "新規ノート",
           "録音開始",
-          "アセットライブラリ",
-          "ノートを読み込む"
+          "アセットライブラリ"
         ],
         "steps": [
           "上部は表示名です。共同編集中に相手に見える名前で、「表示名を編集」から変更できます。",
           "検索欄はノートのタイトル・入力した文字・文字起こしをまとめて検索します。",
-          "大きな4つのカードが主な操作です：新規ノート、録音開始、素材ライブラリ、ノートを読み込む。",
-          "「ノートを読み込む」は .padnote ファイルを選び、共有された元のノートをライブラリに追加します。",
+          "大きな3つのカードが主な操作です：新規ノート、録音開始、素材ライブラリ。",
           "「続きから」には最近開いたノートが並び、タップすると続きから再開します。",
           "「すべてのノート」はフォルダ別の一覧です。右上で並び順を変えられます。",
           "ホーム画面を一番下までスクロールすると「操作マニュアル」と「プライバシーポリシー」のカードがあります。いま読んでいるのが前者です。",
@@ -2650,7 +2642,7 @@ window.KAIRUMO_MANUAL = {
         ],
         "tip": "各ノートカード右上の「⋯」に、名前の変更・フォルダへ移動・削除があります。",
         "fig": "home",
-        "cap": "ホーム：表示名、検索、4つの主要操作、Continue、All Notebooks"
+        "cap": "ホーム：表示名、検索、3つの主要操作、Continue、All Notebooks"
       },
       {
         "id": "newnote",
@@ -3486,14 +3478,12 @@ window.KAIRUMO_MANUAL = {
           "표시 정보 편집",
           "새 노트",
           "녹음 시작",
-          "에셋 라이브러리",
-          "노트 가져오기"
+          "에셋 라이브러리"
         ],
         "steps": [
           "맨 위는 표시 이름입니다. 협업 중 상대에게 보이는 이름이며 “표시 정보 편집”에서 바꿀 수 있습니다.",
           "검색창은 노트 제목, 입력한 글자, 녹음 전사 결과를 함께 찾습니다.",
-          "가운데 큰 카드 네 개가 주요 동작입니다: 새 노트, 녹음 시작, 에셋 라이브러리, 노트 가져오기.",
-          "“노트 가져오기”로 .padnote 파일을 골라 공유받은 원본 노트를 라이브러리에 추가합니다.",
+          "가운데 큰 카드 세 개가 주요 동작입니다: 새 노트, 녹음 시작, 에셋 라이브러리.",
           "“이어서”에는 최근 연 노트가 있고, 누르면 이어서 작업합니다.",
           "“모든 노트”는 폴더별 목록이며, 오른쪽에서 정렬 방식을 바꿉니다.",
           "홈 화면을 맨 아래로 내리면 “사용 설명서”와 “개인정보 처리방침” 카드가 있습니다. 지금 보고 있는 것이 전자입니다.",
@@ -3502,7 +3492,7 @@ window.KAIRUMO_MANUAL = {
         ],
         "tip": "각 노트 카드 오른쪽 위 “⋯”에 이름 변경·폴더로 이동·삭제가 있습니다.",
         "fig": "home",
-        "cap": "홈: 표시 이름, 검색, 주요 동작 4개, Continue, All Notebooks"
+        "cap": "홈: 표시 이름, 검색, 주요 동작 3개, Continue, All Notebooks"
       },
       {
         "id": "newnote",
@@ -4338,14 +4328,12 @@ window.KAIRUMO_MANUAL = {
           "แก้ไขตัวตน",
           "สร้างบันทึกใหม่",
           "เริ่มบันทึกเสียง",
-          "คลังแอสเซท",
-          "นำเข้าโน้ต"
+          "คลังแอสเซท"
         ],
         "steps": [
           "ด้านบนคือชื่อที่แสดง ซึ่งเพื่อนร่วมงานจะเห็นตอนทำงานร่วมกัน แตะ “แก้ไขตัวตน” เพื่อแก้ไข",
           "ช่องค้นหาจะค้นทั้งชื่อโน้ต ข้อความที่พิมพ์ และข้อความที่ถอดจากเสียง",
-          "การ์ดใหญ่สี่ใบคือการทำงานหลัก: สร้างโน้ต อัดเสียง คลังวัสดุ และนำเข้าโน้ต",
-          "“นำเข้าโน้ต” ให้เลือกไฟล์ .padnote แล้วเพิ่มโน้ตต้นฉบับที่ผู้อื่นแชร์เข้าคลังของคุณ",
+          "การ์ดใหญ่สามใบคือการทำงานหลัก: สร้างโน้ต อัดเสียง และคลังวัสดุ",
           "“ทำต่อ” แสดงโน้ตที่เพิ่งเปิด แตะครั้งเดียวก็กลับไปทำต่อได้",
           "“บันทึกทั้งหมด” จัดกลุ่มตามโฟลเดอร์ และเปลี่ยนการเรียงลำดับได้ทางขวา",
           "เลื่อนหน้าแรกลงจนสุดจะพบการ์ด “คู่มือการใช้งาน” และ “นโยบายความเป็นส่วนตัว” เอกสารที่คุณอ่านอยู่คืออันแรก",
@@ -4354,7 +4342,7 @@ window.KAIRUMO_MANUAL = {
         ],
         "tip": "ปุ่ม “⋯” บนการ์ดแต่ละใบมีเปลี่ยนชื่อ ย้ายโฟลเดอร์ และลบ",
         "fig": "home",
-        "cap": "หน้าแรก: ชื่อที่แสดง ค้นหา การทำงานหลักสี่อย่าง Continue และ All Notebooks"
+        "cap": "หน้าแรก: ชื่อที่แสดง ค้นหา การทำงานหลักสามอย่าง Continue และ All Notebooks"
       },
       {
         "id": "newnote",

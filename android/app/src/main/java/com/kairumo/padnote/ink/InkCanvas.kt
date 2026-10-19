@@ -310,6 +310,7 @@ fun LowLatencyInkCanvas(
     acceptsInk: Boolean = true
 ) {
     val density = LocalDensity.current.density
+    var lastClearToken by remember { mutableIntStateOf(clearToken) }
     androidx.compose.ui.viewinterop.AndroidView(
         modifier = modifier,
         factory = { context ->
@@ -324,7 +325,10 @@ fun LowLatencyInkCanvas(
             // 那個 view 會被重用，筆照樣畫得出來。
             view.acceptsInk = acceptsInk
             view.onStylusDetected = onStylusDetected
-            if (clearToken > 0 && engine.strokes.isEmpty()) view.clearAll()
+            if (clearToken != lastClearToken) {
+                lastClearToken = clearToken
+                view.clearAll()
+            }
         },
         onRelease = { it.stop() }
     )
