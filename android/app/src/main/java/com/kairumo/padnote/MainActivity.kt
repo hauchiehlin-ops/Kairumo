@@ -2202,6 +2202,26 @@ private fun InkScreen(
         ActivityResultContracts.OpenDocument()
     ) { uri -> if (uri != null) onImagePicked(uri) }
 
+    val pasteClipboardImageOrScreenshot: () -> Unit = {
+        val clipboard = activity.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as? android.content.ClipboardManager
+        val clip = clipboard?.primaryClip
+        var pasted = false
+        if (clip != null && clip.itemCount > 0) {
+            val item = clip.getItemAt(0)
+            val uri = item.uri
+            if (uri != null) {
+                val mime = activity.contentResolver.getType(uri)
+                if (mime?.startsWith("image/") == true || uri.toString().contains("image")) {
+                    onImagePicked(uri)
+                    pasted = true
+                }
+            }
+        }
+        if (!pasted) {
+            message = l10n("clipboard_no_image")
+        }
+    }
+
     // 插入 PDF 頁面。收進來的那份 PDF 與挑到第幾頁 —— 兩個一起才有意義，
     // 所以放在同一個狀態裡。
     var pdfToInsert by remember { mutableStateOf<java.io.File?>(null) }
@@ -4307,6 +4327,14 @@ private fun InkScreen(
                     // 過濾條件來自核心 —— 「這個檔案在 iPad 上挑得到、在
                     // Android 手機上挑不到」是使用者完全無法理解的行為。
                     onClick = { showMenu = false; imagePicker.launch(imageMimeTypes) }
+                )
+                DropdownMenuItem(
+                    text = { Text(l10n("paste_screenshot")) },
+                    modifier = Modifier.testTag("editor.insert.paste_screenshot"),
+                    onClick = {
+                        showMenu = false
+                        pasteClipboardImageOrScreenshot()
+                    }
                 )
                 DropdownMenuItem(
                     text = { Text(l10n("insert_link")) },

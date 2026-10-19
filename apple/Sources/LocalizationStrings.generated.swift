@@ -4383,6 +4383,14 @@ extension LocalizationManager {
             .ko: "이 작업은 현재 페이지의 모든 필기 획을 지웁니다.",
             .th: "การดำเนินการนี้จะลบลายเส้นการเขียนทั้งหมดในหน้านี้"
         ],
+        "clipboard_no_image": [
+            .zhHant: "剪貼簿中未找到圖片或螢幕截圖",
+            .en: "No image or screenshot found on clipboard",
+            .zhHans: "剪贴板中未找到图片或屏幕截图",
+            .ja: "クリップボードに画像またはスクリーンショットが見つかりません",
+            .ko: "클립보드에 이미지 또는 스크린샷이 없습니다",
+            .th: "ไม่พบรูปภาพหรือภาพหน้าจอบนคลิปบอร์ด"
+        ],
         "close": [
             .zhHant: "關閉",
             .en: "Close",
@@ -16759,6 +16767,14 @@ extension LocalizationManager {
             .ko: "단락",
             .th: "ย่อหน้า"
         ],
+        "paste_screenshot": [
+            .zhHant: "貼上螢幕截圖／圖片",
+            .en: "Paste Screenshot / Image",
+            .zhHans: "粘贴屏幕截图／图片",
+            .ja: "スクリーンショット／画像を貼り付け",
+            .ko: "스크린샷 / 이미지 붙여넣기",
+            .th: "วางภาพหน้าจอ / รูปภาพ"
+        ],
         "paste_strokes": [
             .zhHant: "貼上",
             .en: "Paste",
@@ -19238,6 +19254,14 @@ extension LocalizationManager {
             .ja: "ステッカーとして保存",
             .ko: "스티커로 저장",
             .th: "บันทึกเป็นสติกเกอร์"
+        ],
+        "screenshot_pasted": [
+            .zhHant: "已貼上圖片",
+            .en: "Image pasted",
+            .zhHans: "已粘贴图片",
+            .ja: "画像を貼り付けました",
+            .ko: "이미지를 붙여넣었습니다",
+            .th: "วางรูปภาพแล้ว"
         ],
         "sd_loading": [
             .zhHant: "讀取中…",

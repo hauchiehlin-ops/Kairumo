@@ -2595,6 +2595,11 @@ public struct NotebookEditorView: View {
                         deleteSelectedStrokes()
                     }
                     .keyboardShortcut(.deleteForward, modifiers: [])
+
+                    Button("") {
+                        pasteClipboard()
+                    }
+                    .keyboardShortcut("v", modifiers: .command)
                 }
                 .opacity(0)
                 .allowsHitTesting(false)
@@ -3576,6 +3581,12 @@ public struct NotebookEditorView: View {
                     }
 
                     Button {
+                        pasteScreenshotOrClipboardImage()
+                    } label: {
+                        Label(localizationManager.localized("paste_screenshot"), systemImage: "doc.on.clipboard")
+                    }
+
+                    Button {
                         presentFromMenu { showAudioPicker = true }
                     } label: {
                         Label(localizationManager.localized("insert_audio"), systemImage: "waveform.badge.plus")
@@ -4135,6 +4146,10 @@ public struct NotebookEditorView: View {
                 } label: { Label(localizationManager.localized("import_from_files"), systemImage: "folder.badge.plus") }
                     .accessibilityIdentifier("editor.insert.image_file")
                 Button {
+                    pasteScreenshotOrClipboardImage()
+                } label: { Label(localizationManager.localized("paste_screenshot"), systemImage: "doc.on.clipboard") }
+                    .accessibilityIdentifier("editor.insert.paste_screenshot")
+                Button {
                     triggerFileImport(.pdf)
                 } label: { Label(localizationManager.localized("insert_pdf"), systemImage: "doc.richtext") }
                     .accessibilityIdentifier("editor.insert.pdf")
@@ -4426,7 +4441,9 @@ public struct NotebookEditorView: View {
                     collaborationManager.broadcastAttachmentUpsert(type: "table", itemDict: dict)
                 }
             },
-            onInsertImage: { showPhotoPicker = true }
+            onInsertImage: { showPhotoPicker = true },
+            onInsertImageFile: { triggerFileImport(.image) },
+            onPasteClipboardImage: { pasteScreenshotOrClipboardImage() }
         )
     }
 
@@ -7696,6 +7713,8 @@ public struct NotebookEditorView: View {
                     showCanvasNotice(String(format: localizationManager.localized("table_rows_cols"), "\(rows)", "\(cols)"))
                 },
                 onInsertImage: { showPhotoPicker = true },
+                onInsertImageFile: { triggerFileImport(.image) },
+                onPasteClipboardImage: { pasteScreenshotOrClipboardImage() },
                 onInsertDrawingBlock: {
                     withAnimation {
                         activeInlineInkBlockId = "page-\(currentPageIndex)-ink"
@@ -12809,6 +12828,56 @@ public struct NotebookEditorView: View {
         }
     }
 
+    /// 從系統剪貼簿讀取圖片（含螢幕截圖、剪下／拷貝的圖片、或是剪貼簿裡的原始圖檔資料）。
+    private func getClipboardImage() -> UIImage? {
+        if let image = UIPasteboard.general.image {
+            return image
+        }
+        if let images = UIPasteboard.general.images, let first = images.first {
+            return first
+        }
+        let supportedTypes = [
+            "public.png",
+            "public.jpeg",
+            "public.tiff",
+            "com.compuserve.gif",
+            "public.image"
+        ]
+        for type in supportedTypes {
+            if let data = UIPasteboard.general.data(forPasteboardType: type),
+               let image = UIImage(data: data) {
+                return image
+            }
+        }
+        return nil
+    }
+
+    /// 貼上螢幕截圖或剪貼簿中的圖片到目前畫布。
+    @discardableResult
+    private func pasteScreenshotOrClipboardImage() -> Bool {
+        if let image = getClipboardImage() {
+            insertImageAttachment(image)
+            showNoticeToast(name: localizationManager.localized("screenshot_pasted"), icon: "checkmark.circle.fill")
+            return true
+        } else {
+            showNoticeToast(name: localizationManager.localized("clipboard_no_image"), icon: "exclamationmark.triangle.fill")
+            return false
+        }
+    }
+
+    private func showNoticeToast(name: String, icon: String) {
+        withAnimation(.easeInOut(duration: 0.15)) {
+            activeToolToast = (name: name, icon: icon)
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+            withAnimation(.easeInOut(duration: 0.15)) {
+                if self.activeToolToast?.name == name {
+                    self.activeToolToast = nil
+                }
+            }
+        }
+    }
+
     /// 「匯入文件」：把檔案解析成原生物件，合併進**這本筆記**的目前頁面。
     ///
     /// 解析在暫存套件裡由核心做（見 `DocumentImport`）；這裡負責合併：
@@ -13382,7 +13451,7 @@ public struct NotebookEditorView: View {
             } label: {
                 Label(localizationManager.localized("action_paste"), systemImage: "doc.on.clipboard")
             }
-            .disabled(objectClipboard.isEmpty)
+            .disabled(objectClipboard.isEmpty && getClipboardImage() == nil)
 
             Button {
                 duplicateSelection()
@@ -13436,7 +13505,12 @@ public struct NotebookEditorView: View {
     }
 
     private func pasteClipboard() {
-        paste(objectClipboard)
+        if !objectClipboard.isEmpty {
+            paste(objectClipboard)
+        } else if let image = getClipboardImage() {
+            insertImageAttachment(image)
+            showNoticeToast(name: localizationManager.localized("screenshot_pasted"), icon: "checkmark.circle.fill")
+        }
     }
 
     /// 貼上一組物件。**每一個都給新的 id** —— 沿用原 id 的話，兩份物件
