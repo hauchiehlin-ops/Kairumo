@@ -246,28 +246,42 @@ public struct WordTextStudioView: View {
     }
 
     private var spacingGrid: some View {
-        let columns = [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)]
-        return LazyVGrid(columns: columns, alignment: .leading, spacing: 10) {
-            stepperControl(
-                label: localizationManager.localized("line_spacing"),
-                value: Binding(get: { attachment.lineSpacing ?? 0 },
-                               set: { attachment.lineSpacing = $0 }),
-                range: 0...24, step: 2)
-            stepperControl(
-                label: localizationManager.localized("paragraph_spacing"),
-                value: Binding(get: { attachment.paragraphSpacing ?? 0 },
-                               set: { attachment.paragraphSpacing = $0 }),
-                range: 0...40, step: 4)
-            stepperControl(
-                label: localizationManager.localized("first_line_indent"),
-                value: Binding(get: { attachment.firstLineIndent ?? 0 },
-                               set: { attachment.firstLineIndent = $0 }),
-                range: 0...64, step: 8)
-            stepperControl(
-                label: localizationManager.localized("paragraph_indent"),
-                value: Binding(get: { attachment.paragraphIndent ?? 0 },
-                               set: { attachment.paragraphIndent = $0 }),
-                range: 0...64, step: 8)
+        VStack(spacing: 10) {
+            HStack(spacing: 10) {
+                StudioStepperControl(
+                    label: localizationManager.localized("line_spacing"),
+                    value: Binding(get: { attachment.lineSpacing ?? 0 },
+                                   set: { attachment.lineSpacing = $0 }),
+                    range: 0...24, step: 2
+                )
+                .frame(maxWidth: .infinity)
+
+                StudioStepperControl(
+                    label: localizationManager.localized("paragraph_spacing"),
+                    value: Binding(get: { attachment.paragraphSpacing ?? 0 },
+                                   set: { attachment.paragraphSpacing = $0 }),
+                    range: 0...40, step: 4
+                )
+                .frame(maxWidth: .infinity)
+            }
+
+            HStack(spacing: 10) {
+                StudioStepperControl(
+                    label: localizationManager.localized("first_line_indent"),
+                    value: Binding(get: { attachment.firstLineIndent ?? 0 },
+                                   set: { attachment.firstLineIndent = $0 }),
+                    range: 0...64, step: 8
+                )
+                .frame(maxWidth: .infinity)
+
+                StudioStepperControl(
+                    label: localizationManager.localized("paragraph_indent"),
+                    value: Binding(get: { attachment.paragraphIndent ?? 0 },
+                                   set: { attachment.paragraphIndent = $0 }),
+                    range: 0...64, step: 8
+                )
+                .frame(maxWidth: .infinity)
+            }
         }
     }
 
@@ -601,47 +615,6 @@ public struct WordTextStudioView: View {
         .frame(minHeight: 220)
     }
 
-    /// 一個「標籤 + 減 / 數值 / 加」的小控制項。
-    ///
-    /// 用按鈕而不是滑桿：這些值的合理範圍很小（行距 0–24pt），滑桿在這種
-    /// 範圍下很難精準，而且看不到目前是多少。
-    private func stepperControl(
-        label: String,
-        value: Binding<CGFloat>,
-        range: ClosedRange<CGFloat>,
-        step: CGFloat
-    ) -> some View {
-        HStack(spacing: 4) {
-            Text(label)
-                .font(.system(size: 11))
-                .foregroundColor(.secondary)
-            Button {
-                value.wrappedValue = max(range.lowerBound, value.wrappedValue - step)
-            } label: {
-                Image(systemName: "minus").font(.system(size: 10, weight: .bold))
-            }
-            .buttonStyle(.plain)
-            .disabled(value.wrappedValue <= range.lowerBound)
-
-            Text("\(Int(value.wrappedValue))")
-                .font(.system(size: 11, weight: .semibold))
-                .frame(width: 22)
-                .monospacedDigit()
-
-            Button {
-                value.wrappedValue = min(range.upperBound, value.wrappedValue + step)
-            } label: {
-                Image(systemName: "plus").font(.system(size: 10, weight: .bold))
-            }
-            .buttonStyle(.plain)
-            .disabled(value.wrappedValue >= range.upperBound)
-        }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 4)
-        .background(Color.secondary.opacity(0.08))
-        .cornerRadius(8)
-    }
-
     /// 邊框顏色。來源同樣是核心 —— 見 `cardBackgroundOptions` 的說明。
     private var borderColorOptions: [String] { borderPalette().map(\.hex) }
 
@@ -672,6 +645,63 @@ public struct WordTextStudioView: View {
         case "right": return .trailing
         default: return .leading
         }
+    }
+}
+
+/// 獨立的段落數值微調控制項。
+///
+/// 以前是 LazyVGrid 裡的輔助函式，當初始值在下限（0）時，按鈕的 `.disabled` 被評為 true，
+/// 點加號增加後，LazyVGrid 快取了 cell 結構而未重新觸發按鈕的 disabled 狀態，導致「只可增加、無法減少」；
+/// 切換分頁重建視圖後才恢復正常。
+/// 獨立成 struct View 並改用非 Lazy 排版後，狀態與綁定保證即時響應，且加上 26x26pt 的熱區與 contentShape。
+private struct StudioStepperControl: View {
+    let label: String
+    @Binding var value: CGFloat
+    let range: ClosedRange<CGFloat>
+    let step: CGFloat
+
+    var body: some View {
+        HStack(spacing: 4) {
+            Text(label)
+                .font(.system(size: 11))
+                .foregroundColor(.secondary)
+                .frame(minWidth: 24, alignment: .leading)
+
+            Button {
+                value = max(range.lowerBound, value - step)
+            } label: {
+                Image(systemName: "minus")
+                    .font(.system(size: 10, weight: .bold))
+                    .frame(width: 26, height: 26)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .disabled(value <= range.lowerBound)
+            .opacity(value <= range.lowerBound ? 0.35 : 1.0)
+            .hoverHighlight()
+
+            Text("\(Int(value))")
+                .font(.system(size: 11, weight: .semibold))
+                .frame(width: 22)
+                .monospacedDigit()
+
+            Button {
+                value = min(range.upperBound, value + step)
+            } label: {
+                Image(systemName: "plus")
+                    .font(.system(size: 10, weight: .bold))
+                    .frame(width: 26, height: 26)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .disabled(value >= range.upperBound)
+            .opacity(value >= range.upperBound ? 0.35 : 1.0)
+            .hoverHighlight()
+        }
+        .padding(.horizontal, 6)
+        .padding(.vertical, 4)
+        .background(Color.secondary.opacity(0.08))
+        .cornerRadius(8)
     }
 }
 

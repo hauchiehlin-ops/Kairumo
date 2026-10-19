@@ -367,6 +367,8 @@ public struct WordToolbarView: View {
     let onRedo: () -> Void
     let onInsertTable: (Int, Int) -> Void
     let onInsertImage: () -> Void
+    var onInsertImageFile: (() -> Void)? = nil
+    var onPasteClipboardImage: (() -> Void)? = nil
     var onInsertDrawingBlock: (() -> Void)? = nil
     let onInsertLink: () -> Void
     let onInsertDivider: () -> Void
@@ -680,19 +682,52 @@ public struct WordToolbarView: View {
                     }
                     .buttonStyle(.plain)
 
-                    Button(action: onInsertImage) {
-                        HStack(spacing: 3) {
-                            Image(systemName: "photo")
-                                .font(.system(size: 12))
-                            Text(l("image"))
-                                .font(.system(size: 11))
+                    if onInsertImageFile != nil || onPasteClipboardImage != nil {
+                        Menu {
+                            Button(action: onInsertImage) {
+                                Label(l("import_from_photos"), systemImage: "photo.on.rectangle")
+                            }
+                            if let onFile = onInsertImageFile {
+                                Button(action: onFile) {
+                                    Label(l("import_from_files"), systemImage: "folder")
+                                }
+                            }
+                            if let onPaste = onPasteClipboardImage {
+                                Button(action: onPaste) {
+                                    Label(l("paste_screenshot"), systemImage: "doc.on.clipboard")
+                                }
+                            }
+                        } label: {
+                            HStack(spacing: 3) {
+                                Image(systemName: "photo")
+                                    .font(.system(size: 12))
+                                Text(l("image"))
+                                    .font(.system(size: 11))
+                                Image(systemName: "chevron.down")
+                                    .font(.system(size: 8))
+                                    .foregroundColor(.secondary)
+                            }
+                            .padding(.horizontal, 7)
+                            .frame(height: 28)
+                            .background(Color.secondary.opacity(0.12))
+                            .cornerRadius(6)
                         }
-                        .padding(.horizontal, 7)
-                        .frame(height: 28)
-                        .background(Color.secondary.opacity(0.12))
-                        .cornerRadius(6)
+                        .buttonStyle(.plain)
+                    } else {
+                        Button(action: onInsertImage) {
+                            HStack(spacing: 3) {
+                                Image(systemName: "photo")
+                                    .font(.system(size: 12))
+                                Text(l("image"))
+                                    .font(.system(size: 11))
+                            }
+                            .padding(.horizontal, 7)
+                            .frame(height: 28)
+                            .background(Color.secondary.opacity(0.12))
+                            .cornerRadius(6)
+                        }
+                        .buttonStyle(.plain)
                     }
-                    .buttonStyle(.plain)
 
                     if let onDraw = onInsertDrawingBlock {
                         Button(action: onDraw) {
@@ -1050,6 +1085,8 @@ public struct WordDocumentEditorView: View {
     let onCommit: () -> Void
     let onInsertTable: () -> Void
     let onInsertImage: () -> Void
+    var onInsertImageFile: (() -> Void)? = nil
+    var onPasteClipboardImage: (() -> Void)? = nil
 
     @FocusState private var isDocumentBodyFocused: Bool
     @ObservedObject var localizationManager = LocalizationManager.shared
@@ -1061,7 +1098,9 @@ public struct WordDocumentEditorView: View {
         activeInlineInkBlockId: Binding<String?>? = nil,
         onCommit: @escaping () -> Void,
         onInsertTable: @escaping () -> Void,
-        onInsertImage: @escaping () -> Void
+        onInsertImage: @escaping () -> Void,
+        onInsertImageFile: (() -> Void)? = nil,
+        onPasteClipboardImage: (() -> Void)? = nil
     ) {
         self._notebook = notebook
         self.pageIndex = pageIndex
@@ -1070,6 +1109,8 @@ public struct WordDocumentEditorView: View {
         self.onCommit = onCommit
         self.onInsertTable = onInsertTable
         self.onInsertImage = onInsertImage
+        self.onInsertImageFile = onInsertImageFile
+        self.onPasteClipboardImage = onPasteClipboardImage
     }
 
     // 取得當前頁面的主要文字物件（若無則自動在點擊時建立）
