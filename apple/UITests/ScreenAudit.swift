@@ -329,13 +329,9 @@ enum ScreenAudit {
                 let isBelow = hasMatch && matches.firstMatch.frame.minY >= viewport.maxY - 10
 
                 if isAbove {
-                    let start = menuCollection.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.35))
-                    let end = menuCollection.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.65))
-                    start.press(forDuration: 0.05, thenDragTo: end)
+                    menuCollection.swipeDown()
                 } else if isBelow {
-                    let start = menuCollection.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.65))
-                    let end = menuCollection.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.35))
-                    start.press(forDuration: 0.05, thenDragTo: end)
+                    menuCollection.swipeUp()
                 } else {
                     if attempt < 8 {
                         menuCollection.swipeUp()
@@ -343,7 +339,7 @@ enum ScreenAudit {
                         menuCollection.swipeDown()
                     }
                 }
-                Thread.sleep(forTimeInterval: 0.25)
+                Thread.sleep(forTimeInterval: 0.3)
             } else {
                 let scroll = app.scrollViews.firstMatch
                 if scroll.exists {
