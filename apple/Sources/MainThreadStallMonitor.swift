@@ -78,7 +78,7 @@ final class MainThreadStallMonitor: @unchecked Sendable {
     private var lastSampleAt: TimeInterval = 0
     private var lastTick: TimeInterval?
     /// 監看器自己兩次巡查間隔超過這麼久，就是整個 App 被系統暫停過（進背景、鎖屏）。
-    private let suspendGap: TimeInterval = 2
+    private let suspendGap: TimeInterval = 10
 
     /// 記下最近一件事（任何執行緒都可以呼叫）。
     func breadcrumb(_ text: String) {
@@ -87,10 +87,16 @@ final class MainThreadStallMonitor: @unchecked Sendable {
 
     /// 在**主執行緒**上呼叫（要記下主執行緒的身分）。
     func start() {
+        lock.lock()
+        defer { lock.unlock() }
         guard timer == nil else { return }
         StackSampler.install()
-        let source = DispatchSource.makeTimerSource(queue: DispatchQueue(label: "kairumo.stall-monitor", qos: .utility))
-        source.schedule(deadline: .now() + 1, repeating: 0.25)
+        let now = ProcessInfo.processInfo.systemUptime
+        lastPong = now
+        lastTick = nil
+        stallStarted = nil
+        let source = DispatchSource.makeTimerSource(queue: DispatchQueue(label: "kairumo.stall-monitor", qos: .userInitiated))
+        source.schedule(deadline: .now(), repeating: 0.25)
         source.setEventHandler { [weak self] in self?.tick() }
         source.resume()
         timer = source
