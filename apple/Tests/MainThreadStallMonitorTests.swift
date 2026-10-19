@@ -8,6 +8,8 @@ final class MainThreadStallMonitorTests: XCTestCase {
         let monitor = MainThreadStallMonitor.shared
         monitor.start()
         monitor.breadcrumb("unit-test-crumb")
+        // 讓背景計時器先跑過至少一輪 ping-pong，確立基線
+        RunLoop.current.run(until: Date().addingTimeInterval(0.3))
         let before = StartupLogger.shared.entries.count
 
         Thread.sleep(forTimeInterval: 2.2) // 故意卡住主執行緒
@@ -26,6 +28,8 @@ final class MainThreadStallMonitorTests: XCTestCase {
     func testAStallAlsoLogsAStackSample() {
         let monitor = MainThreadStallMonitor.shared
         monitor.start()
+        // 讓背景計時器先跑過至少一輪 ping-pong，確立基線
+        RunLoop.current.run(until: Date().addingTimeInterval(0.3))
         let before = StartupLogger.shared.entries.count
 
         Thread.sleep(forTimeInterval: 2.6) // 卡過門檻 + 取樣

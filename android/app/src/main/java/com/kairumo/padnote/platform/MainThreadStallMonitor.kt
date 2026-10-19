@@ -20,7 +20,7 @@ object MainThreadStallMonitor {
     private const val MAX_SAMPLES = 3
     private const val MAX_FRAMES = 30
     /** 監看器自己兩次巡查間隔超過這麼久，就是整個程序被凍結過（深度休眠、背景凍結）。 */
-    private const val SUSPEND_GAP_MS = 2_000L
+    private const val SUSPEND_GAP_MS = 10_000L
 
     @Volatile private var lastPong = SystemClock.elapsedRealtime()
     @Volatile private var started = false
