@@ -8,8 +8,9 @@ export PYTHONIOENCODING=utf-8
 
 REPO_ROOT="$(git rev-parse --show-toplevel)"
 
-# exFAT 上 macOS 會在 .git 裡生出 `._*`，先清掉避免 git 報 non-monotonic index
-"${REPO_ROOT}/scripts/clean-git-appledouble.sh" || true
+# exFAT 上 macOS 會到處生出 `._*`／`.DS_Store`：.git 裡的會讓 git 報 non-monotonic index，
+# 工作目錄裡的會被 codesign / Gradle 誤收。push 前一律先清。
+"${REPO_ROOT}/scripts/clean-appledouble.sh" || true
 
 # 0. 介面上絕對不准有硬寫死的文字（CJK 門禁）
 if [[ -f "${REPO_ROOT}/scripts/check-hardcoded-strings.py" ]]; then
