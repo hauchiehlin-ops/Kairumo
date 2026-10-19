@@ -132,13 +132,14 @@ class DraftingEngineTest {
             stroke(engine, 20f to 100f + i * 60, 220f to 100f + i * 60, t0 = 1_000L + i * 5_000)
         }
         assertEquals(2, engine.strokes.size)
+        // 圖層與線型非同步寫進檔案與核心，匯出前必須先確保佇列寫入完成。
+        assertTrue("筆畫寫入佇列應完成", InkPackageWriter.awaitIdleBlocking())
         val both = session.exportPagePdf(page).size
         session.setExportHiddenLayers(byteArrayOf(2))
         val topOnly = session.exportPagePdf(page).size
         assertTrue("隱藏中層之後 PDF 少一筆（$both → $topOnly）", topOnly < both)
         session.setExportHiddenLayers(byteArrayOf())
         // 圖層與線型寫進檔案，重開還在。
-        assertTrue("筆畫寫入佇列應完成", InkPackageWriter.awaitIdleBlocking())
         val reopened = uniffi.padnote_core.PadnoteSession.openExisting(path, 0xB7u)
         val details = reopened.visibleStrokeDetails(page)
         assertEquals(setOf(2 to 0, 3 to 1), details.map { it.layer.toInt() to it.lineType.toInt() }.toSet())
