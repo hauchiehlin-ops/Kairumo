@@ -18,7 +18,9 @@ final class StorageJanitorTests: XCTestCase {
     private let now = Date()
 
     override func setUpWithError() throws {
-        root = FileManager.default.temporaryDirectory
+        var buf = [CChar](repeating: 0, count: 1024)
+        let tempPath = realpath(NSTemporaryDirectory(), &buf) != nil ? String(cString: buf) : NSTemporaryDirectory()
+        root = URL(fileURLWithPath: tempPath, isDirectory: true)
             .appendingPathComponent("kairumo-janitor-\(UUID().uuidString)", isDirectory: true)
         attachments = root.appendingPathComponent("Attachments")
         drawings = root.appendingPathComponent("Drawings")

@@ -28,6 +28,14 @@
 	<true/>
 
 	<!--
+	  列印與匯出 PDF（操作手冊、筆記與工程圖面）。
+	  沒有這一條，UIPrintInteractionController 在沙盒中無法與系統列印服務通訊，
+	  會彈出「此應用程式不支援列印」錯誤對話框。
+	-->
+	<key>com.apple.security.print</key>
+	<true/>
+
+	<!--
 	  線上協同：發起的那台裝置自己擔任中繼點，所以兩個方向都要。
 	  只開 client 的話，別人連不進來；只開 server 的話，自己加入不了別人的房間。
 

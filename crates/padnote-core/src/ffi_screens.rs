@@ -293,7 +293,6 @@ fn home_spec() -> FfiScreenSpec {
                     c("home.action.new_note", Card, "new_note"),
                     c("home.action.record", Card, "start_recording"),
                     c("home.action.assets", Card, "asset_library"),
-                    c("home.action.import", Card, "import_note"),
                 ],
             ),
             section(

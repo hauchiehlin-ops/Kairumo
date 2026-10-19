@@ -32,7 +32,12 @@ final class DocumentWebHandle: ObservableObject {
         controller.printInfo = info
         controller.printFormatter = webView.viewPrintFormatter()
         controller.showsNumberOfCopies = true
-        controller.present(animated: true, completionHandler: nil)
+        if UIDevice.current.userInterfaceIdiom == .pad {
+            let rect = CGRect(x: webView.bounds.midX, y: webView.bounds.midY, width: 0, height: 0)
+            controller.present(from: rect, in: webView, animated: true, completionHandler: nil)
+        } else {
+            controller.present(animated: true, completionHandler: nil)
+        }
     }
 
     /// 以 A4（72 dpi 下 595 × 842）排版，四周留 36 點邊界。

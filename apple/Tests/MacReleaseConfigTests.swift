@@ -34,7 +34,16 @@ final class MacReleaseConfigTests: XCTestCase {
     }
 
     private func read(_ relativePath: String) throws -> String {
-        try String(contentsOf: appleDirectory.appendingPathComponent(relativePath), encoding: .utf8)
+        let url = appleDirectory.appendingPathComponent(relativePath)
+        for _ in 0..<5 {
+            do {
+                return try String(contentsOf: url, encoding: .utf8)
+            } catch let error as NSError where (error.userInfo[NSUnderlyingErrorKey] as? NSError)?.code == 4 {
+                Thread.sleep(forTimeInterval: 0.05)
+                continue
+            }
+        }
+        return try String(contentsOf: url, encoding: .utf8)
     }
 
     // MARK: - 90296：沙盒
@@ -74,6 +83,7 @@ final class MacReleaseConfigTests: XCTestCase {
         XCTAssertTrue(entitlements.contains("com.apple.security.device.audio-input"), "錄不到音")
         XCTAssertTrue(entitlements.contains("com.apple.security.network.server"), "別人連不進來")
         XCTAssertTrue(entitlements.contains("com.apple.security.network.client"), "自己加入不了房間")
+        XCTAssertTrue(entitlements.contains("com.apple.security.print"), "無法使用系統列印或匯出 PDF，會彈出此應用程式不支援列印")
     }
 
     /// **每一個權限都要指得出是誰在用它。**
