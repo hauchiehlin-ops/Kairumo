@@ -86,8 +86,10 @@ struct ContinuousPageView<ObjectLayer: View>: View {
     var onLassoBegan: ((CGPoint) -> Void)? = nil
     var onLassoMoved: ((CGPoint) -> Void)? = nil
     var onLassoEnded: (() -> Void)? = nil
-    var lassoPath: [CGPoint] = []
-    var isLassoCommitted: Bool = true
+    /// 長按叫出飛梭工具盤（window 座標）。回傳 true 表示已處理。
+    var onPressAndHold: ((CGPoint) -> Bool)? = nil
+    /// 套索的圈、選取框與快顯工具列（頁面座標，由呼叫端畫）。只畫在焦點頁。
+    var lassoDecoration: (() -> AnyView)? = nil
 
     @State private var drawing = PKDrawing()
     @State private var loaded = false
@@ -141,9 +143,11 @@ struct ContinuousPageView<ObjectLayer: View>: View {
                 onSelectionChanged: { hasSelection in
                     if isFocused { onSelectionChanged(hasSelection) }
                 },
-                onLassoBegan: { pt in if isFocused { onLassoBegan?(pt) } },
-                onLassoMoved: { pt in if isFocused { onLassoMoved?(pt) } },
-                onLassoEnded: { if isFocused { onLassoEnded?() } },
+                // 套索不限焦點頁：在哪一頁圈就圈哪一頁，由呼叫端在 began 時把焦點切過來。
+                // 以前只收焦點頁的，在別頁圈下去完全沒有反應，也不會出工具列。
+                onLassoBegan: { pt in onLassoBegan?(pt) },
+                onLassoMoved: { pt in onLassoMoved?(pt) },
+                onLassoEnded: { onLassoEnded?() },
                 canvasRef: { canvas in if isFocused { canvasRef(canvas) } },
                 palmRejection: palmRejection,
                 onPenControl: { control, pressed in
@@ -160,7 +164,8 @@ struct ContinuousPageView<ObjectLayer: View>: View {
                 },
                 onPencilTapInTypeMode: { location in
                     onCanvasTap?(location)
-                }
+                },
+                onPressAndHold: onPressAndHold
             )
             .id(reloadGeneration)
             .frame(width: PageGeometry.width, height: PageGeometry.height, alignment: .topLeading)
@@ -181,12 +186,8 @@ struct ContinuousPageView<ObjectLayer: View>: View {
                 }
             }
             .overlay(alignment: .topLeading) {
-                if selectedTool == .lasso && isFocused && !lassoPath.isEmpty {
-                    LassoPathOverlay(
-                        path: lassoPath,
-                        isCommitted: isLassoCommitted
-                    )
-                    .allowsHitTesting(false)
+                if selectedTool == .lasso && isFocused, let lassoDecoration {
+                    lassoDecoration()
                 }
             }
 

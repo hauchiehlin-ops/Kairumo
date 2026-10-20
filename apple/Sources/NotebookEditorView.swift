@@ -396,6 +396,8 @@ final class AdaptiveCanvasView: PKCanvasView {
         pencilDwellWorkItem?.cancel()
         let work = DispatchWorkItem { [weak self] in
             guard let self else { return }
+            // 落筆後還沒畫就停住 —— 那是「長按叫飛梭工具盤」，不是畫完停住要轉正。
+            guard self.pressHoldTouch == nil else { return }
             self.lastStrokeHadHoldDwell = true
             self.onHoldDwellTriggered?()
             #if os(iOS)
@@ -407,6 +409,70 @@ final class AdaptiveCanvasView: PKCanvasView {
             deadline: .now() + EditorCanvasInputPolicy.holdToSnapMinDuration,
             execute: work
         )
+    }
+
+    // MARK: - 長按叫出飛梭工具盤
+    //
+    // 筆尖或單指落在畫布上、**還沒移動**就停住 `pressHoldDuration` 秒，於落點彈出飛梭工具盤。
+    // 與 Hold-to-Snap 不衝突：那個是「畫了一段之後停住」，這個是「落下就停住」，
+    // 以「落下後有沒有移動過」區分；時間也刻意比 Hold-to-Snap 長，避免誤觸。
+
+    /// 回傳 true 表示呼叫端已打開工具盤（座標是 window 座標）。
+    var onPressAndHold: ((CGPoint) -> Bool)?
+    static let pressHoldDuration: TimeInterval = 0.55
+    private static let pressHoldMaxJitter: CGFloat = 8
+    private weak var pressHoldTouch: UITouch?
+    private var pressHoldOrigin: CGPoint = .zero
+    private var pressHoldWorkItem: DispatchWorkItem?
+
+    private func beginPressHold(_ touches: Set<UITouch>) {
+        // 只看單一觸控從零開始的那一下；第二根手指落下（捏合、雙指捲動）就作廢。
+        guard onPressAndHold != nil, activeTouchesCount == 0, touches.count == 1, let touch = touches.first else {
+            cancelPressHold()
+            return
+        }
+        pressHoldTouch = touch
+        pressHoldOrigin = touch.location(in: self)
+        pressHoldWorkItem?.cancel()
+        let work = DispatchWorkItem { [weak self] in self?.firePressHold() }
+        pressHoldWorkItem = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + Self.pressHoldDuration, execute: work)
+    }
+
+    private func trackPressHold(_ touches: Set<UITouch>) {
+        guard let touch = pressHoldTouch, touches.contains(touch) else { return }
+        let loc = touch.location(in: self)
+        if hypot(loc.x - pressHoldOrigin.x, loc.y - pressHoldOrigin.y) > Self.pressHoldMaxJitter {
+            cancelPressHold()
+        }
+    }
+
+    private func cancelPressHold() {
+        pressHoldWorkItem?.cancel()
+        pressHoldWorkItem = nil
+        pressHoldTouch = nil
+    }
+
+    private func firePressHold() {
+        guard let touch = pressHoldTouch, let handler = onPressAndHold else { return }
+        let windowPoint = touch.location(in: nil)
+        cancelPressHold()
+        guard handler(windowPoint) else { return }
+        pencilDwellWorkItem?.cancel()
+        lastStrokeHadHoldDwell = false
+        cancelLassoTracking()
+        // 把落下那一點收掉：停用再啟用手勢辨識器會取消進行中的那一筆，不留下一個點。
+        if drawingGestureRecognizer.isEnabled {
+            drawingGestureRecognizer.isEnabled = false
+            drawingGestureRecognizer.isEnabled = true
+        }
+        if let gesture = proGesture, gesture.isEnabled {
+            gesture.isEnabled = false
+            gesture.isEnabled = true
+        }
+        #if os(iOS)
+        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+        #endif
     }
 
     /// 這一頁的高度（由 SwiftUI 端更新）
@@ -697,16 +763,33 @@ final class AdaptiveCanvasView: PKCanvasView {
         if state == .began {
             guard lassoTouch == nil, let first = touches.first else { return }
             lassoTouch = first
-            handler(.began, first.location(in: self))
+            handler(.began, lassoPageLocation(of: first))
             return
         }
         guard let tracked = lassoTouch, touches.contains(tracked) else { return }
-        handler(state, tracked.location(in: self))
+        handler(state, lassoPageLocation(of: tracked))
         if state != .changed { lassoTouch = nil }
+    }
+
+    /// 套索點要用**頁面座標**（與 `PKDrawing` 的筆畫同一套）。scroll view 自己的座標是
+    /// 放大後的，直接拿來比對的話，縮放不是 1 時圈到的是別的位置 —— 有的筆畫選得到、
+    /// 有的選不到，拖曳的位移也跟手指對不上。
+    private func lassoPageLocation(of touch: UITouch) -> CGPoint {
+        let loc = touch.location(in: self)
+        let scale = max(zoomScale, 0.01)
+        return CGPoint(x: loc.x / scale, y: loc.y / scale)
+    }
+
+    /// 中止進行中的套索追蹤（長按叫出飛梭工具盤時）。
+    func cancelLassoTracking() {
+        guard lassoTouch != nil else { return }
+        lassoTouch = nil
+        lassoTouchHandler?(.cancelled, .zero)
     }
 
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
         forwardLasso(touches, .began)
+        beginPressHold(touches)
         activeTouchesCount += touches.count
         for touch in touches {
             if touch.type == .pencil {
@@ -727,6 +810,7 @@ final class AdaptiveCanvasView: PKCanvasView {
 
     override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
         forwardLasso(touches, .changed)
+        trackPressHold(touches)
         if let pTouch = touches.first(where: { $0.type == .pencil }) {
             let loc = pTouch.location(in: self)
             let dist = hypot(loc.x - lastPencilLocation.x, loc.y - lastPencilLocation.y)
@@ -744,6 +828,7 @@ final class AdaptiveCanvasView: PKCanvasView {
 
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
         forwardLasso(touches, .ended)
+        if let touch = pressHoldTouch, touches.contains(touch) { cancelPressHold() }
         if touches.contains(where: { $0.type == .pencil }) {
             pencilDwellWorkItem?.cancel()
         }
@@ -760,6 +845,7 @@ final class AdaptiveCanvasView: PKCanvasView {
 
     override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
         forwardLasso(touches, .cancelled)
+        if let touch = pressHoldTouch, touches.contains(touch) { cancelPressHold() }
         if touches.contains(where: { $0.type == .pencil }) {
             pencilDwellWorkItem?.cancel()
             lastStrokeHadHoldDwell = false
@@ -995,6 +1081,8 @@ struct CanvasRepresentable: UIViewRepresentable {
     var onCanvasDirectDoubleTap: ((CGPoint) -> Void)? = nil
     /// 打字模式下 Pencil 輕點一下（頁面座標）。沒接的話就當成手指點擊。
     var onPencilTapInTypeMode: ((CGPoint) -> Void)? = nil
+    /// 筆尖或單指落下停住不動：叫出飛梭工具盤（window 座標）。回傳 true 表示已處理。
+    var onPressAndHold: ((CGPoint) -> Bool)? = nil
 
     /// 目前該用哪個輸入政策。
     ///
@@ -1208,6 +1296,9 @@ struct CanvasRepresentable: UIViewRepresentable {
                 ? { [weak coordinator = context.coordinator] state, point in
                     coordinator?.handleLassoTouch(state, point)
                 } : nil
+            adaptive.onPressAndHold = onPressAndHold == nil ? nil : { [weak coordinator = context.coordinator] point in
+                coordinator?.parent.onPressAndHold?(point) ?? false
+            }
         }
         // 模式切換時要跟著改 —— 只在 makeUIView 設的話，從連續切回整頁
         // 會得到一個捲不動的畫布（SwiftUI 會重用同一個 UIView）。
@@ -1443,7 +1534,7 @@ struct CanvasRepresentable: UIViewRepresentable {
 
         @objc func handleLassoPan(_ gesture: UIPanGestureRecognizer) {
             guard let canvas = gesture.view as? PKCanvasView else { return }
-            let point = gesture.location(in: canvas)
+            let point = Self.pageLocation(of: gesture, in: canvas)
             switch gesture.state {
             case .began:
                 parent.onLassoBegan?(point)
@@ -2235,7 +2326,8 @@ public struct NotebookEditorView: View {
     @State private var isMinimalistCanvasActive: Bool = false
     @State private var isFloatingPillExpanded: Bool = false
     @State private var showRadialMenu: Bool = false
-    @State private var radialMenuCenter: CGPoint = CGPoint(x: 200, y: 200)
+    /// 飛梭工具盤的落點（window 座標）。`nil` = 從工具列按鈕叫出，放在畫面中央。
+    @State private var radialMenuAnchor: CGPoint? = nil
     @State private var magneticGuideActive: Bool = false
     @State private var magneticGuideStart: CGPoint = .zero
     @State private var magneticGuideEnd: CGPoint = .zero
@@ -4448,6 +4540,36 @@ public struct NotebookEditorView: View {
         )
     }
 
+    /// 飛梭工具盤的中心：長按叫出的放在落點（往內收，整圈都要在畫面裡），
+    /// 工具列按鈕叫出的放在畫面中央。
+    private func radialMenuCenter(in geo: GeometryProxy) -> CGPoint {
+        let size = geo.size
+        guard let anchor = radialMenuAnchor else {
+            return CGPoint(x: size.width / 2, y: min(size.height / 2, max(170, size.height * 0.42)))
+        }
+        let frame = geo.frame(in: .global)
+        let margin: CGFloat = 160  // 半徑 118 + 按鈕半徑 36 + 一點邊
+        let local = CGPoint(x: anchor.x - frame.minX, y: anchor.y - frame.minY)
+        return CGPoint(
+            x: min(max(local.x, margin), max(margin, size.width - margin)),
+            y: min(max(local.y, margin), max(margin, size.height - margin)))
+    }
+
+    /// 畫布上長按（筆尖或單指落下停住不動）叫出飛梭工具盤。
+    ///
+    /// 飛梭的意義就在「不用把手移到工具列」：手在哪裡，工具盤就開在哪裡。
+    /// 正在拖曳套索選取、打字或行內編輯時不攔，讓原本的操作繼續。
+    private func openRadialMenuFromPress(at windowPoint: CGPoint) -> Bool {
+        guard isCanvasInkActive, editorMode == .draw, !showRadialMenu else { return false }
+        if selectedTool == .lasso && (lasso.isDraggingSelection || lasso.hasSelection) { return false }
+        if selectedTool == .maskingTape { return false }
+        radialMenuAnchor = windowPoint
+        withAnimation(.spring(response: 0.28, dampingFraction: 0.76)) {
+            showRadialMenu = true
+        }
+        return true
+    }
+
     /// 徑向飛輪快捷工具盤（螢幕座標，不隨頁面縮放，蓋在畫布之上）。
     @ViewBuilder
     private var radialMenuLayer: some View {
@@ -4455,7 +4577,7 @@ public struct NotebookEditorView: View {
             GeometryReader { geo in
                 RadialMarkMenuView(
                     isPresented: $showRadialMenu,
-                    centerPoint: CGPoint(x: geo.size.width / 2, y: min(geo.size.height / 2, max(170, geo.size.height * 0.42))),
+                    centerPoint: radialMenuCenter(in: geo),
                     items: [
                         RadialMenuItem(id: "pen", icon: "pencil.tip", labelKey: "tool_pen", color: .accentColor) {
                             selectedTool = .pen
@@ -4512,6 +4634,7 @@ public struct NotebookEditorView: View {
                 }
             }
             .overlay { objectEditPanels }
+            .overlay(alignment: .top) { lassoPastePill }
             .overlay { radialMenuLayer }
             .overlay(alignment: .top) {
                 // 🌟 草圖智慧修飾浮動控制面板（兩種頁面模式共用）
@@ -4861,7 +4984,7 @@ public struct NotebookEditorView: View {
 
                     // 徑向飛輪工具盤喚醒 (Radial Menu)
                     Button {
-                        radialMenuCenter = CGPoint(x: 200, y: 300)
+                        radialMenuAnchor = nil
                         showRadialMenu = true
                     } label: {
                         VStack(spacing: 3) {
@@ -5167,9 +5290,17 @@ public struct NotebookEditorView: View {
                                     PageThumbnailRenderer.invalidateAll()
                                 },
                                 onLassoBegan: { pt in
+                                    // 在非焦點頁圈：先把焦點（與 currentDrawing）切到這一頁，
+                                    // 選取的索引才會對到這一頁的筆畫。
+                                    if currentPageIndex != index {
+                                        lasso.clear()
+                                        currentPageIndex = index
+                                        currentDrawing = drawingForPage(index)
+                                    }
                                     lasso.begin(at: pt)
                                 },
                                 onLassoMoved: { pt in
+                                    guard index == currentPageIndex else { return }
                                     if lasso.isDraggingSelection {
                                         let lastPt = lasso.dragPoint ?? pt
                                         let delta = CGSize(width: pt.x - lastPt.x, height: pt.y - lastPt.y)
@@ -5183,6 +5314,7 @@ public struct NotebookEditorView: View {
                                     }
                                 },
                                 onLassoEnded: {
+                                    guard index == currentPageIndex else { return }
                                     let wasDragging = lasso.isDraggingSelection
                                     lasso.finish(in: currentDrawing)
                                     if wasDragging {
@@ -5191,8 +5323,20 @@ public struct NotebookEditorView: View {
                                         PageThumbnailRenderer.invalidateAll()
                                     }
                                 },
-                                lassoPath: lasso.path.isEmpty ? lasso.committed : lasso.path,
-                                isLassoCommitted: lasso.path.isEmpty
+                                onPressAndHold: { point in
+                                    guard openRadialMenuFromPress(at: point) else { return false }
+                                    if currentPageIndex != index {
+                                        currentPageIndex = index
+                                        currentDrawing = drawingForPage(index)
+                                    }
+                                    return true
+                                },
+                                lassoDecoration: {
+                                    AnyView(lassoSelectionDecoration(
+                                        zoom: 1, offset: .zero,
+                                        viewSize: CGSize(width: PageGeometry.width, height: PageGeometry.height),
+                                        barScale: 1 / max(scale, 0.01)))
+                                }
                             )
                             .frame(width: PageGeometry.width, height: PageGeometry.height)
                             .scaleEffect(scale, anchor: .topLeading)
@@ -5906,39 +6050,16 @@ public struct NotebookEditorView: View {
                 onPencilTapInTypeMode: { location in
                     guard !isInlineInkEditing else { return }
                     handlePencilTapInTypeMode(at: location)
-                }
+                },
+                onPressAndHold: { openRadialMenuFromPress(at: $0) }
             )
             .accessibilityIdentifier("editor.canvas")
             .overlay(alignment: .topLeading) {
-                if selectedTool == .lasso && (!lasso.path.isEmpty || !lasso.committed.isEmpty) {
-                    LassoPathOverlay(
-                        path: lasso.path.isEmpty ? lasso.committed : lasso.path,
-                        isCommitted: lasso.path.isEmpty
-                    )
-                    .allowsHitTesting(false)
-                }
-
-                // 🌟 當套索圈選完成且有選中筆劃時，在選取範圍上方浮現動作面板與拖曳邊框提示
-                if selectedTool == .lasso && lasso.hasSelection, let rect = lasso.boundingRect {
-                    RoundedRectangle(cornerRadius: 8)
-                        .stroke(Color.accentColor.opacity(0.35), style: StrokeStyle(lineWidth: 1.2, dash: [5, 4]))
-                        .frame(width: rect.width + 16, height: rect.height + 16)
-                        .position(x: rect.midX, y: rect.midY)
-                        .allowsHitTesting(false)
-
-                    lassoFloatingActionBar
-                        .position(
-                            x: min(max(rect.midX, 220), PageGeometry.width - 220),
-                            y: max(32, rect.minY - 26)
-                        )
-                        .zIndex(100)
-                        .onAppear {
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
-                                if selectedTool == .lasso && lasso.hasSelection {
-                                    watchdog.notifyLassoSelectionStalled()
-                                }
-                            }
-                        }
+                // 套索的圈、選取框與快顯工具列。套索點是頁面座標，畫在這一層要換回
+                // 畫布可視範圍的座標（乘縮放、扣捲動）。
+                GeometryReader { geo in
+                    lassoSelectionDecoration(
+                        zoom: canvasZoomScale, offset: canvasContentOffset, viewSize: geo.size)
                 }
             }
             // 從別的 App 把圖拖進來（工作項 S-68）。
@@ -8471,7 +8592,7 @@ public struct NotebookEditorView: View {
                 // 🌟 徑向飛輪快捷工具盤 (Radial Pie Menu) 手動喚醒按鈕
                 Button {
                     withAnimation(.spring(response: 0.28, dampingFraction: 0.76)) {
-                        radialMenuCenter = CGPoint(x: 200, y: 180)
+                        radialMenuAnchor = nil
                         showRadialMenu.toggle()
                     }
                 } label: {
@@ -9134,6 +9255,85 @@ public struct NotebookEditorView: View {
     // MARK: - 7. 🌟 套索選取浮動工具列（圈選筆跡後隨選隨刪、隨選隨複製）
     /// 型別邊界：SwiftUI 會把整棵子樹的型別編進 body 的 mangled 名稱，
     /// 名稱一長，裝置端（主執行緒只有 1MB 堆疊）解析時就會遞迴爆堆疊。
+    /// 套索的圈、選取框與快顯工具列（兩種頁面模式共用）。
+    ///
+    /// - `zoom`/`offset`：頁面座標換成這一層座標的方式（整頁模式是畫布的縮放與捲動；
+    ///   連續模式畫在頁面裡面，是 1 與 0）。
+    /// - `barScale`：工具列本身要乘的倍率。連續模式整頁被 `scaleEffect` 縮過，
+    ///   工具列要反向放大回螢幕上的原尺寸，不然縮小時按鈕小到按不到。
+    @ViewBuilder
+    func lassoSelectionDecoration(zoom: CGFloat, offset: CGPoint, viewSize: CGSize, barScale: CGFloat = 1) -> some View {
+        let toView = { (p: CGPoint) -> CGPoint in
+            CGPoint(x: p.x * zoom - offset.x, y: p.y * zoom - offset.y)
+        }
+        let loop = lasso.path.isEmpty ? lasso.committed : lasso.path
+        if selectedTool == .lasso && !loop.isEmpty {
+            LassoPathOverlay(path: loop.map(toView), isCommitted: lasso.path.isEmpty)
+                .allowsHitTesting(false)
+        }
+        // 圈完、有選到東西才出工具列。選取框用「圈 ∪ 選中筆畫的外框」，
+        // 露出圈外的筆畫也在框內，拖那一段一樣拖得動。
+        if selectedTool == .lasso && lasso.hasSelection && lasso.path.isEmpty, let page = lasso.boundingRect {
+            let origin = toView(page.origin)
+            let rect = CGRect(x: origin.x, y: origin.y, width: page.width * zoom, height: page.height * zoom)
+            let barHalfWidth = 230 * barScale
+            let barGap = 30 * barScale
+            // 上方放不下（貼著可視範圍頂端）就改放在選取框下方。
+            let barY = rect.minY - barGap >= barGap ? rect.minY - barGap : rect.maxY + barGap
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(Color.accentColor.opacity(0.35), style: StrokeStyle(lineWidth: 1.2, dash: [5, 4]))
+                .frame(width: rect.width + 16, height: rect.height + 16)
+                .position(x: rect.midX, y: rect.midY)
+                .allowsHitTesting(false)
+
+            lassoFloatingActionBar
+                .scaleEffect(barScale)
+                .position(
+                    x: min(max(rect.midX, barHalfWidth), max(barHalfWidth, viewSize.width - barHalfWidth)),
+                    y: min(max(barY, barGap), max(barGap, viewSize.height - barGap))
+                )
+                .zIndex(100)
+                .onAppear {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
+                        if selectedTool == .lasso && lasso.hasSelection {
+                            watchdog.notifyLassoSelectionStalled()
+                        }
+                    }
+                }
+        }
+    }
+
+    /// 套索模式、沒有選取、剪貼簿有筆跡時的「貼上」入口。
+    ///
+    /// 快顯工具列只在有選取時出現；剪下之後選取就清空了，不另外給入口的話
+    /// 剪下來的東西就再也貼不回去。
+    @ViewBuilder
+    private var lassoPastePill: some View {
+        if selectedTool == .lasso && !lasso.hasSelection && lasso.path.isEmpty && lasso.canPaste {
+            Button {
+                pasteStrokes()
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "doc.on.clipboard")
+                    Text(localizationManager.localized("paste_strokes"))
+                        .fontWeight(.semibold)
+                }
+                .font(.subheadline)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 8)
+                .background(.ultraThinMaterial, in: Capsule())
+                .overlay(Capsule().stroke(Color.accentColor.opacity(0.4), lineWidth: 1))
+                .shadow(color: Color.black.opacity(0.12), radius: 5, y: 2)
+            }
+            .buttonStyle(.plain)
+            .foregroundColor(.accentColor)
+            .accessibilityIdentifier("editor.lasso.paste")
+            .help(localizationManager.localized("paste_strokes_hint"))
+            .padding(.top, 12)
+            .transition(.opacity)
+        }
+    }
+
     private var lassoFloatingActionBar: AnyView {
         AnyView(
             ViewThatFits(in: .horizontal) {
@@ -9201,8 +9401,10 @@ public struct NotebookEditorView: View {
         lassoActionButton("plus.square.on.square", "duplicate_selected", "duplicate_selected_hint", showLabel: showLabels) {
             duplicateSelectedStrokes()
         }
-        lassoActionButton("doc.on.clipboard", "paste_strokes", "paste_strokes_hint", showLabel: showLabels) {
-            pasteStrokes()
+        if lasso.canPaste {
+            lassoActionButton("doc.on.clipboard", "paste_strokes", "paste_strokes_hint", showLabel: showLabels) {
+                pasteStrokes()
+            }
         }
         lassoRecolorButton
         lassoActionButton("text.viewfinder", "recognize_handwriting", "recognize_handwriting", showLabel: showLabels) {
@@ -13537,7 +13739,9 @@ public struct NotebookEditorView: View {
     }
 
     private func pasteClipboard() {
-        if !objectClipboard.isEmpty {
+        if selectedTool == .lasso && lasso.canPaste {
+            pasteStrokes()
+        } else if !objectClipboard.isEmpty {
             paste(objectClipboard)
         } else if let image = getClipboardImage() {
             insertImageAttachment(image)
