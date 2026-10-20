@@ -47,12 +47,14 @@ fun Model3DLayer(
 ) {
     // 不包一層自己的 Box —— zIndex 只在同一個父容器的兄弟之間有效，
     // 包起來的話 3D 模型永遠只能跟 3D 模型比順序（見 ChartLayer 的說明）。
+    // 鎖定在畫布上的物件不接收觸控（見 canvas/ObjectLock.kt）。
+    val lockedIds = com.kairumo.padnote.canvas.LocalLockedObjectIds.current
     for (model in models) {
         Model3DView(
             model = model,
             density = density,
             isSelected = model.id == selectedId,
-            interactive = interactive,
+            interactive = interactive && model.id !in lockedIds,
             zIndex = zIndexOf(model.id),
             onSelect = onSelect,
             onEdit = onEdit,

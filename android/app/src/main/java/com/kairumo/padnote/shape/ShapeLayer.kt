@@ -171,6 +171,8 @@ fun ShapeLayer(
         }
     }
 
+    // 鎖定在畫布上的物件不接收觸控（見 canvas/ObjectLock.kt）。
+    val lockedIds = com.kairumo.padnote.canvas.LocalLockedObjectIds.current
     for (shape in shapes) {
         ShapeObjectView(
             zIndex = zIndexOf(shape.id),
@@ -179,7 +181,7 @@ fun ShapeLayer(
             isSoleSelection = selectedIds.size <= 1,
             onSelect = onSelect, onEdit = onEdit, onDelete = onDelete,
             onChanged = onChanged, onConnectDrag = onConnectDrag,
-            interactive = interactive
+            interactive = interactive && shape.id !in lockedIds
         )
     }
 }

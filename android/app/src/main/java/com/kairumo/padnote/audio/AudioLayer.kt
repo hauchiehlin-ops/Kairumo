@@ -73,6 +73,8 @@ fun AudioLayer(
     zIndexOf: (String) -> Float
 ) {
     // 不包一層自己的 Box —— zIndex 只在同一個父容器的兄弟之間有效。
+    // 鎖定在畫布上的物件不接收觸控（見 canvas/ObjectLock.kt）。
+    val lockedIds = com.kairumo.padnote.canvas.LocalLockedObjectIds.current
     for (item in items) {
         AudioCardView(
             item = item,
@@ -80,7 +82,7 @@ fun AudioLayer(
             exists = audioDirectory?.let { File(it, item.fileName).isFile } ?: false,
             isSelected = item.id == selectedId,
             isPlaying = item.id == playingId,
-            interactive = interactive,
+            interactive = interactive && item.id !in lockedIds,
             zIndex = zIndexOf(item.id),
             l = l,
             onSelect = onSelect,

@@ -44,6 +44,7 @@ struct CanvasObjectState: Equatable {
     var objectOrderByPage: [String: [String]]?
     var objectOrder: [String]?
     var underInkObjectIdsByPage: [String: [String]]?
+    var lockedObjectIdsByPage: [String: [String]]?
 
     init(_ doc: NotebookDocument) {
         attachments = doc.attachments
@@ -63,6 +64,7 @@ struct CanvasObjectState: Equatable {
         objectOrderByPage = doc.objectOrderByPage
         objectOrder = doc.objectOrder
         underInkObjectIdsByPage = doc.underInkObjectIdsByPage
+        lockedObjectIdsByPage = doc.lockedObjectIdsByPage
     }
 
     func apply(to doc: inout NotebookDocument) {
@@ -83,6 +85,7 @@ struct CanvasObjectState: Equatable {
         doc.objectOrderByPage = objectOrderByPage
         doc.objectOrder = objectOrder
         doc.underInkObjectIdsByPage = underInkObjectIdsByPage
+        doc.lockedObjectIdsByPage = lockedObjectIdsByPage
     }
 
     /// 這一次動到了哪些物件（新增、刪除或內容改變）。用來判斷「同一個東西的連續小變動」。
@@ -110,6 +113,7 @@ struct CanvasObjectState: Equatable {
         if pagePaperIds != other.pagePaperIds || guidePaletteId != other.guidePaletteId { keys.insert("#paper") }
         if objectOrderByPage != other.objectOrderByPage || objectOrder != other.objectOrder
             || underInkObjectIdsByPage != other.underInkObjectIdsByPage { keys.insert("#order") }
+        if lockedObjectIdsByPage != other.lockedObjectIdsByPage { keys.insert("#locked") }
         return keys
     }
 

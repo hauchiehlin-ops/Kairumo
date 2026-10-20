@@ -59,6 +59,8 @@ fun ImageLayer(
     // 的話，圖片的 zIndex 只跟圖片比、文字的只跟文字比 —— 跨型別永遠是
     // 「圖片一定在文字下面」，圖層面板就排不動。
     // 直接把物件發到呼叫端的 Box 裡，它們才是彼此的兄弟。
+        // 鎖定在畫布上的物件不接收觸控（見 canvas/ObjectLock.kt）。
+        val lockedIds = com.kairumo.padnote.canvas.LocalLockedObjectIds.current
         for (image in images) {
             ImageObjectView(
                 zIndex = zIndexOf(image.id),
@@ -66,7 +68,7 @@ fun ImageLayer(
                 bitmapProvider = { store.bitmap(image) },
                 density = density,
                 isSelected = image.id == selectedId,
-                interactive = interactive,
+                interactive = interactive && image.id !in lockedIds,
                 onSelect = { onSelect(image.id) },
                 onEditStyle = { onEditStyle(image) },
                 onChanged = onChanged

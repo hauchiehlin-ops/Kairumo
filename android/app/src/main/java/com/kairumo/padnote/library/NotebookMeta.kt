@@ -64,6 +64,8 @@ class NotebookMeta private constructor(private var root: JSONObject) {
     companion object {
         const val KEY_ORDER_BY_PAGE = "objectOrderByPage"
         const val KEY_UNDER_INK_BY_PAGE = "underInkObjectIdsByPage"
+        /** 鎖定在畫布上的物件（`{"頁次": [id]}`）。與 Apple `NotebookMeta.lockedObjectIdsByPage` 同一個鍵。 */
+        const val KEY_LOCKED_BY_PAGE = "lockedObjectIdsByPage"
         /** 「範例」標記（與 Apple `NotebookMeta.isSample` 同一個鍵）。沒有這個鍵 = 沒設定過。 */
         const val KEY_IS_SAMPLE = "isSample"
         /** v3.8.0 的舊欄位：整本一份。只讀不寫，見 format-spec §6.2.1。 */
@@ -308,7 +310,7 @@ class NotebookMeta private constructor(private var root: JSONObject) {
      * 紙張樣板由 [insertPageTemplate] 自己挪。不挪的話，插入一頁之後，後面每一頁的圖層設定都錯位一頁。
      */
     fun shiftPageKeyedData(session: PadnoteSession?, fromIndex: Int, totalPagesBefore: Int) {
-        for (key in listOf(KEY_ORDER_BY_PAGE, KEY_UNDER_INK_BY_PAGE)) {
+        for (key in listOf(KEY_ORDER_BY_PAGE, KEY_UNDER_INK_BY_PAGE, KEY_LOCKED_BY_PAGE)) {
             val map = root.optJSONObject(key) ?: continue
             val shifted = JSONObject()
             val keys = map.keys()
@@ -379,6 +381,35 @@ class NotebookMeta private constructor(private var root: JSONObject) {
         val map = root.optJSONObject(KEY_UNDER_INK_BY_PAGE) ?: return emptySet()
         val arr = map.optJSONArray(pageIndex.toString()) ?: return emptySet()
         return arr.toStringList().toSet()
+    }
+
+    /**
+     * 所有頁面鎖定在畫布上的物件（不分頁）。物件 id 全域唯一，不分頁查的話
+     * 頁面搬移、插頁之後頁次鍵對不上也不會鎖錯或漏鎖。見 canvas/ObjectLock.kt。
+     */
+    fun lockedObjectIds(): Set<String> {
+        val map = root.optJSONObject(KEY_LOCKED_BY_PAGE) ?: return emptySet()
+        val out = HashSet<String>()
+        val keys = map.keys()
+        while (keys.hasNext()) out += map.optJSONArray(keys.next())?.toStringList().orEmpty()
+        return out
+    }
+
+    /** 鎖定／解除鎖定一個物件並落盤。解除時每一頁都拿掉（它記在哪個頁次鍵底下不一定是現在這一頁）。 */
+    fun setObjectLocked(session: PadnoteSession?, pageIndex: Int, id: String, locked: Boolean) {
+        val map = root.optJSONObject(KEY_LOCKED_BY_PAGE) ?: JSONObject()
+        if (locked) {
+            val current = map.optJSONArray(pageIndex.toString())?.toStringList().orEmpty().toSortedSet()
+            current += id
+            map.put(pageIndex.toString(), JSONArray(current.toList()))
+        } else {
+            for (key in map.keys().asSequence().toList()) {
+                val remaining = map.optJSONArray(key)?.toStringList().orEmpty().filter { it != id }.sorted()
+                if (remaining.isEmpty()) map.remove(key) else map.put(key, JSONArray(remaining))
+            }
+        }
+        if (map.length() == 0) root.remove(KEY_LOCKED_BY_PAGE) else root.put(KEY_LOCKED_BY_PAGE, map)
+        flush(session)
     }
 
     /** 寫入某一頁位於筆跡下方的物件清單並落盤。 */
