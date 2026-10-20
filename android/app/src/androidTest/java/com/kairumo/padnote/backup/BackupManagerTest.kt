@@ -69,6 +69,18 @@ class BackupManagerTest {
     }
 
     @Test
+    fun diagnosticLogsStayOutOfTheBackup() {
+        // 日誌由背景執行緒隨時寫入；放在預設設定檔的資料根目錄（filesDir）裡的話，
+        // 每份備份都會夾帶它，CI 上這條測試的檔案數也跟著不定（期望 4、實際 5）。
+        val log = com.kairumo.padnote.platform.CrashLogger.logFile(context, "kairumo_runtime.log")
+        val source = com.kairumo.padnote.profile.ProfileContext.dataDir(context)
+        assertTrue(
+            "日誌不該放在備份來源裡：$log",
+            !log.canonicalPath.startsWith(source.canonicalPath + File.separator)
+        )
+    }
+
+    @Test
     fun theBackupFileIsSelfDescribing() {
         seedEverything()
         val date = Date(1_757_635_200_000)

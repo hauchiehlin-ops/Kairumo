@@ -14,8 +14,8 @@ import java.util.Locale
 /**
  * Android 崩潰與持續運作日誌記錄器 (Crash & Runtime Logger)。
  *
- * 1. 捕捉全域 Uncaught Exception 並寫入本機 filesDir/kairumo_last_crash.log。
- * 2. 同步及執行時期關鍵日誌自動滾動寫入 filesDir/kairumo_runtime.log。
+ * 1. 捕捉全域 Uncaught Exception 並寫入本機 noBackupFilesDir/kairumo_last_crash.log。
+ * 2. 同步及執行時期關鍵日誌自動滾動寫入 noBackupFilesDir/kairumo_runtime.log。
  * 3. 提供一鍵匯出完整診斷日誌，讓使用者精確回報當機或 ANR 問題。
  */
 // profile-scope: device 崩潰與診斷日誌是整台裝置的
@@ -35,6 +35,28 @@ object CrashLogger {
         Thread(r, "kairumo-runtime-log").apply { isDaemon = true }
     }
 
+    /**
+     * 日誌放 `noBackupFilesDir`，**不放 `filesDir`**。
+     *
+     * 預設設定檔的資料根目錄就是整個 `filesDir`，個人資料備份會把裡面每個檔都包進去。
+     * 日誌放在那裡的話，每份備份都夾帶這台裝置的診斷紀錄，復原到另一台時還會蓋掉
+     * 那台自己的日誌；背景執行緒隨時可能寫一行，備份的內容也就跟著不確定。
+     */
+    internal fun logFile(context: Context, name: String): File =
+        // profile-scope: device 崩潰與診斷日誌是整台裝置的
+        File(context.noBackupFilesDir, name)
+
+    /** 舊版把日誌寫在 `filesDir`：搬過來，免得它們繼續留在備份裡。 */
+    private fun migrateLegacyLogs(context: Context) {
+        for (name in listOf(CRASH_FILE_NAME, RUNTIME_LOG_NAME, RUNTIME_LOG_OLD_NAME)) {
+            // profile-scope: device 舊版日誌位置
+            val legacy = File(context.filesDir, name)
+            if (!legacy.exists()) continue
+            val target = logFile(context, name)
+            if (target.exists() || !legacy.renameTo(target)) legacy.delete()
+        }
+    }
+
     // SimpleDateFormat 不是執行緒安全的，每次新建。
     private fun now(): String =
         SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.US).format(Date())
@@ -43,6 +65,7 @@ object CrashLogger {
         if (installed) return
         installed = true
         appContext = context.applicationContext
+        synchronized(lock) { runCatching { migrateLegacyLogs(context.applicationContext) } }
         defaultHandler = Thread.getDefaultUncaughtExceptionHandler()
 
         Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
@@ -67,11 +90,9 @@ object CrashLogger {
     private fun appendLine(ctx: Context, line: String) {
         synchronized(lock) {
             try {
-                // profile-scope: device 崩潰與診斷日誌是整台裝置的
-                val file = File(ctx.filesDir, RUNTIME_LOG_NAME)
+                val file = logFile(ctx, RUNTIME_LOG_NAME)
                 if (file.exists() && file.length() > MAX_LOG_SIZE) {
-                    // profile-scope: device
-                    val oldFile = File(ctx.filesDir, RUNTIME_LOG_OLD_NAME)
+                    val oldFile = logFile(ctx, RUNTIME_LOG_OLD_NAME)
                     if (oldFile.exists()) oldFile.delete()
                     file.renameTo(oldFile)
                 }
@@ -104,8 +125,7 @@ object CrashLogger {
         }
 
         try {
-            // profile-scope: device
-            val file = File(context.filesDir, CRASH_FILE_NAME)
+            val file = logFile(context, CRASH_FILE_NAME)
             file.writeText(report)
             Log.e(TAG, "Crash logged to ${file.absolutePath}")
             appendLine(context, "[${now()}] FATAL EXCEPTION:\n$report\n") // 行程將結束，同步寫
@@ -115,8 +135,7 @@ object CrashLogger {
     }
 
     fun lastCrashLog(context: Context): String? {
-        // profile-scope: device
-        val file = File(context.filesDir, CRASH_FILE_NAME)
+        val file = logFile(context, CRASH_FILE_NAME)
         return if (file.exists() && file.length() > 0) {
             runCatching { file.readText() }.getOrNull()
         } else {
@@ -126,10 +145,8 @@ object CrashLogger {
 
     fun runtimeLog(context: Context): String {
         return synchronized(lock) {
-            // profile-scope: device
-            val oldFile = File(context.filesDir, RUNTIME_LOG_OLD_NAME)
-            // profile-scope: device
-            val file = File(context.filesDir, RUNTIME_LOG_NAME)
+            val oldFile = logFile(context, RUNTIME_LOG_OLD_NAME)
+            val file = logFile(context, RUNTIME_LOG_NAME)
             buildString {
                 if (oldFile.exists()) {
                     append(runCatching { oldFile.readText() }.getOrDefault(""))
@@ -176,8 +193,7 @@ object CrashLogger {
     fun clearCrashLog(context: Context) {
         synchronized(lock) {
             for (name in listOf(CRASH_FILE_NAME, RUNTIME_LOG_NAME, RUNTIME_LOG_OLD_NAME)) {
-                // profile-scope: device
-                val file = File(context.filesDir, name)
+                val file = logFile(context, name)
                 if (file.exists()) file.delete()
             }
         }
