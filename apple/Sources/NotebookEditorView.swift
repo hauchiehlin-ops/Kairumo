@@ -9353,6 +9353,7 @@ public struct NotebookEditorView: View {
             .buttonStyle(.plain)
             .foregroundColor(.accentColor)
             .accessibilityIdentifier("editor.lasso.paste")
+            .accessibilityLabel(localizationManager.localized("paste_strokes"))
             .help(localizationManager.localized("paste_strokes_hint"))
             .padding(.top, 12)
             .transition(.opacity)
