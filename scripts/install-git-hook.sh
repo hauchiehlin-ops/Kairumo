@@ -59,10 +59,12 @@ HOOK_EOF
 
 # 設定 git hooks 目錄為 repo 內的 .githooks
 git config core.hooksPath "${REPO_ROOT}/.githooks"
-chmod +x "${REPO_ROOT}/.githooks/pre-commit" "${REPO_ROOT}/.githooks/pre-push"
+chmod +x "${REPO_ROOT}/.githooks/"{pre-commit,pre-push,post-checkout,post-merge,post-rewrite,post-commit,reference-transaction}
 
 echo "✅ Git hooks 已成功啟用（指向 .githooks/）："
 echo "   - 兩者開頭：scripts/clean-appledouble.sh 清掉 exFAT 上的 ._* 與 .DS_Store"
 echo "   - pre-commit: 自動偵測手冊、隱私權政策與範本變更並重新產生衍生平台檔案"
 echo "   - pre-push:   執行介面字串、手冊一致性與版本號檢查"
+echo "   - post-checkout／post-merge／post-rewrite／post-commit／reference-transaction："
+echo "                 git 寫完 .git 就清掉 exFAT 生出的 ._*（免得下一個指令噴 non-monotonic index）"
 echo "👉 升版與發版請用：./scripts/release.sh [patch|minor|major]"

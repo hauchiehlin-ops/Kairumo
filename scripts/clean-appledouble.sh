@@ -8,19 +8,38 @@
 # 也不碰被 git 追蹤的檔案。大型建置目錄（target、.build、Gradle 產物）略過不掃，
 # 讓 hook 保持在一兩秒內；那些目錄要清請手動跑 `--all`。
 #
-# 由 .githooks/pre-commit、pre-push 在 commit / push 前呼叫，也可手動執行：
-#   scripts/clean-appledouble.sh         # .git + 工作目錄（略過建置目錄）
-#   scripts/clean-appledouble.sh --all   # 連建置目錄一起掃
+# 由 .githooks/pre-commit、pre-push 在 commit / push 前呼叫；.git 內部另外由
+# post-checkout／post-merge／post-rewrite／post-commit／reference-transaction 以
+# `--git-only` 清（git 每寫一次 pack 或索引，exFAT 就在旁邊生一個 `._*`，
+# 下一個 git 指令就噴 non-monotonic index —— 寫完當下就清掉）。也可手動執行：
+#   scripts/clean-appledouble.sh            # .git + 工作目錄（略過建置目錄）
+#   scripts/clean-appledouble.sh --all      # 連建置目錄一起掃
+#   scripts/clean-appledouble.sh --git-only # 只清 .git 內部（hook 用，安靜、快）
 set -euo pipefail
 
 REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)" || exit 0
 GIT_DIR="$(git rev-parse --absolute-git-dir)"
+# worktree 的 GIT_DIR 是 .git/worktrees/<名稱>，objects/pack 在共用的 .git 裡 ——
+# 只清 GIT_DIR 的話，在 worktree 裡 commit 永遠清不到 `._pack-*.idx`。
+COMMON_DIR="$(cd "$REPO_ROOT" && cd "$(git rev-parse --git-common-dir)" && pwd)"
 
 PRUNE=(target .build build apple/.build android/.gradle android/.kotlin android/app/build)
 [[ "${1:-}" == "--all" ]] && PRUNE=()
 
-# 1. .git 內部
-n_git=$(find "$GIT_DIR" -name '._*' -type f -print -delete 2>/dev/null | wc -l | tr -d ' ')
+# `--git-only`（hook 每次改 ref 都會跑）只看 git 真的會去讀的那幾處：頂層（index、HEAD…）、
+# objects/pack 與 objects/info（non-monotonic index 就是 `._*.idx` 被當成 pack 索引）、
+# 各 worktree 的目錄。不掃幾萬個 loose object 目錄，一次在百分之一秒內。
+if [[ "${1:-}" == "--git-only" ]]; then
+    {
+        find "$COMMON_DIR" "$GIT_DIR" -maxdepth 1 -name '._*' -type f -delete
+        find "$COMMON_DIR/objects/pack" "$COMMON_DIR/objects/info" "$COMMON_DIR/worktrees" \
+            -maxdepth 2 -name '._*' -type f -delete
+    } 2>/dev/null || true
+    exit 0
+fi
+
+# 1. .git 內部（共用目錄已含各 worktree 的 GIT_DIR）
+n_git=$(find "$COMMON_DIR" "$GIT_DIR" -name '._*' -type f -print -delete 2>/dev/null | wc -l | tr -d ' ')
 
 # 2. 工作目錄（略過 .git 與建置目錄）
 prune_args=(-path "$REPO_ROOT/.git")
