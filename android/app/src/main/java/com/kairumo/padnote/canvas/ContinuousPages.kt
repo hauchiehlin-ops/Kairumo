@@ -780,6 +780,19 @@ private fun ContinuousPage(
                 if (isFocused) MaterialTheme.colorScheme.primary.copy(alpha = 0.45f)
                 else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.18f)
             )
+            // 手寫模式下手指點鎖定的物件：切到打字模式並給「解除鎖定」鈕（見 ObjectLock.kt）。
+            .fingerTapOnLockedObject(
+                listOf(editorMode, lasso != null),
+                hitAt = { p ->
+                    if (editorMode != EditorMode.DRAW || lasso != null) null
+                    else lockedObjectHit(p.x / density, p.y / density, lockFramesLatest, lockedIdsLatest)
+                },
+                onCancelInk = { engine.cancelInFlight(); revision++ },
+                onTap = { id ->
+                    onModeChange(EditorMode.TYPE)
+                    lockPromptId = id
+                }
+            )
             .then(
                 if (editorMode == EditorMode.TYPE) {
                     Modifier.pointerInput(pageIndex) {
@@ -1028,12 +1041,14 @@ private fun ContinuousPage(
             }
         }
 
-        if (interactive && lockedIds.isNotEmpty()) {
+        if (lockedIds.isNotEmpty()) {
             val localize = { key: String -> com.kairumo.padnote.LocalizationStrings.localized(key, com.kairumo.padnote.currentLanguageTag()) }
-            LockBadges(lockFrames, lockedIds, localize("object_locked")) { id ->
-                lockPromptId = if (lockPromptId == id) null else id
-            }
-            lockFrames.firstOrNull { it.id == lockPromptId && it.id in lockedIds }?.let { frame ->
+            // 兩種模式都畫；手寫模式下只顯示，入口是手指點物件（上面的 fingerTapOnLockedObject）。
+            LockBadges(
+                lockFrames, lockedIds, localize("object_locked"),
+                if (interactive) { id -> lockPromptId = if (lockPromptId == id) null else id } else null
+            )
+            if (interactive) lockFrames.firstOrNull { it.id == lockPromptId && it.id in lockedIds }?.let { frame ->
                 UnlockPrompt(frame, localize("object_unlock")) { objectLock.setLocked(frame.id, false) }
             }
         }
