@@ -26,6 +26,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.composed
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
@@ -35,6 +36,7 @@ import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -235,4 +237,68 @@ fun clampRadialCenter(point: Offset, viewportWidth: Float, viewportHeight: Float
         point.x.coerceIn(margin, maxOf(margin, viewportWidth - margin)),
         point.y.coerceIn(margin, maxOf(margin, viewportHeight - margin))
     )
+}
+
+/**
+ * 編輯器的飛梭工具盤：八個項目的外觀在這裡，動作由呼叫端依 id 處理。
+ *
+ * 從編輯器畫面搬出來的原因：整頁與連續兩種模式都要用，而編輯器那個 Composable 已經大到
+ * ART 驗證器的上限 —— 在裡面多寫一份就 VerifyError 閃退。
+ */
+@Composable
+fun EditorRadialMenu(
+    center: Offset,
+    l: (String) -> String,
+    /** 項目的 id；點選單外面是 [RADIAL_DISMISS]。 */
+    onAction: (String) -> Unit
+) {
+    RadialMarkMenu(
+        visible = true,
+        centerOffset = center,
+        items = listOf(
+            RadialMenuItem(id = "pen", icon = "✏️", label = l("tool_pen"), color = MaterialTheme.colorScheme.primary) { onAction("pen") },
+            RadialMenuItem(id = "highlighter", icon = "🖍️", label = l("tool_highlighter"), color = Color(0xFFF59E0B)) { onAction("highlighter") },
+            RadialMenuItem(id = "eraser", icon = "🧹", label = l("tool_eraser"), color = Color(0xFFEF4444)) { onAction("eraser") },
+            RadialMenuItem(id = "lasso", icon = "➰", label = l("tool_lasso"), color = Color(0xFF8B5CF6)) { onAction("lasso") },
+            RadialMenuItem(id = "undo", icon = "↩️", label = l("undo"), color = Color(0xFF3B82F6)) { onAction("undo") },
+            RadialMenuItem(id = "redo", icon = "↪️", label = l("redo"), color = Color(0xFF3B82F6)) { onAction("redo") },
+            RadialMenuItem(id = "color", icon = "🎨", label = l("pro_color"), color = Color(0xFFEC4899)) { onAction("color") },
+            RadialMenuItem(id = "stabilizer", icon = "〰️", label = l("refine_sketch"), color = Color(0xFF10B981)) { onAction("stabilizer") }
+        ),
+        onDismiss = { onAction(RADIAL_DISMISS) }
+    )
+}
+
+/** [EditorRadialMenu] 點選單外面時送出的動作 id。 */
+const val RADIAL_DISMISS = "dismiss"
+
+/**
+ * 「長按叫出飛梭工具盤」的區域（連續頁面模式用；整頁模式直接掛 [pressAndHoldForRadialMenu]）。
+ *
+ * 自己量區域大小、算往內收的中心（[clampRadialCenter]）並給觸覺回饋；`canOpen` 回 false 時
+ * 這一次長按不攔，底下照常畫。`onOpen` 拿到的是這塊區域裡的座標，選單也要疊在同一塊區域裡。
+ */
+fun Modifier.radialHoldArea(
+    /** 這一刻能不能叫出（繪圖模式、選單沒開著、不是放圖釘或遮蔽膠帶）。 */
+    enabled: Boolean,
+    /** 套索模式時的選取：正在拖曳或已有選取就不叫出（長按是要搬它）。不是套索模式傳 null。 */
+    lasso: com.kairumo.padnote.canvas.LassoSelection?,
+    /** 打開：中心點（這塊區域裡的座標，已往內收）。 */
+    onOpen: (Offset) -> Unit
+): Modifier = composed {
+    val haptic = LocalHapticFeedback.current
+    val density = LocalDensity.current.density
+    val canOpen by androidx.compose.runtime.rememberUpdatedState(enabled)
+    var size by remember { mutableStateOf(androidx.compose.ui.unit.IntSize.Zero) }
+    onSizeChanged { size = it }
+        .pressAndHoldForRadialMenu(lasso) { point ->
+            if (!canOpen || (lasso != null && (lasso.isDragging || lasso.hasSelection))) {
+                return@pressAndHoldForRadialMenu false
+            }
+            // 落下的那一點：這之後手勢把事件全部消費掉，畫布收到 ACTION_CANCEL 就丟掉它。
+            lasso?.cancelGesture()
+            onOpen(clampRadialCenter(point, size.width.toFloat(), size.height.toFloat(), density))
+            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+            true
+        }
 }

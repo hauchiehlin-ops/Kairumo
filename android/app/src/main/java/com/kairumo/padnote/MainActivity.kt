@@ -150,9 +150,8 @@ import com.kairumo.padnote.canvas.EditorMode
 import com.kairumo.padnote.ui.DynamicPortalIsland
 import com.kairumo.padnote.ui.ContextualPortalState
 import com.kairumo.padnote.ui.FloatingToolPill
-import com.kairumo.padnote.ui.RadialMarkMenu
-import com.kairumo.padnote.ui.RadialMenuItem
 import com.kairumo.padnote.ui.pressAndHoldForRadialMenu
+import com.kairumo.padnote.ui.radialHoldArea
 import com.kairumo.padnote.account.IdentityDialog
 import com.kairumo.padnote.library.HomeScreen
 import com.kairumo.padnote.library.DocumentTemplateCatalog
@@ -1296,12 +1295,7 @@ private fun NotebookHome(
 
     if (homeStatus) {
         val rows = remember { readCoreStatus(activity) }
-        val packageInfo = remember {
-            runCatching {
-                activity.packageManager.getPackageInfo(activity.packageName, 0)
-            }.getOrNull()
-        }
-        val ver = packageInfo?.versionName ?: "1.0.0"
+        val ver = remember { appVersionName(activity) }
         AppDiagnosticsDialog(
             versionString = ver,
             coreStatusRows = rows,
@@ -3320,6 +3314,11 @@ private fun InkScreen(
     // 逐筆的筆跡、頁面的增刪搬。iPad 與 Android 在同一個房間裡互相看得到對方的每一個修改。
     val collab = remember(notebookId) { AndroidCollabController(collaboration) }
     val continuousCollab = remember { ContinuousCollabBridge() }
+    /**
+     * 連續模式裡任何一頁有變動就遞增（只給側欄縮圖用）。整頁模式的側欄也要加上它：
+     * 縮圖快取以 revision 的總和為鍵，換回整頁模式時總和若退回舊值，會拿到搬動之前的快取圖。
+     */
+    var continuousContentRevision by remember { mutableIntStateOf(0) }
     val collabRoom = (collaboration.status as? CollaborationManager.Status.Connected)?.roomId
     /** 以哪一個房間為基準 reset 過。斷線重連回同一個房間不算新的起點 —— 那段期間的本機修改還要送出去。 */
     var collabBaseRoom by remember(collab) { mutableStateOf<String?>(null) }
@@ -3376,7 +3375,12 @@ private fun InkScreen(
         onDispose { engine.onContentCommitted = previous }
     }
     DisposableEffect(continuousCollab) {
-        continuousCollab.onLocalChange = { latestPublishCollab() }
+        continuousCollab.onLocalChange = {
+            latestPublishCollab()
+            // 側欄縮圖跟著重畫。連續模式的變動不經過外層的 revision，不接的話縮圖
+            // 要等重開筆記才更新（套索搬過的筆跡在縮圖上還在原位）。
+            continuousContentRevision++
+        }
         onDispose { continuousCollab.onLocalChange = null }
     }
 
@@ -3864,6 +3868,12 @@ private fun InkScreen(
                         contentPadding = PaddingValues(horizontal = 6.dp),
                         onClick = {
                             pageDisplayMode = if (pageDisplayMode == PageDisplayMode.CONTINUOUS) {
+                                // 整頁模式的引擎在連續模式期間一直留著舊的筆畫：在連續模式用套索搬過、
+                                // 剪下的筆跡，換回來會出現在原位（看起來像「跳回去了」）。換回來時重讀核心。
+                                // 用 load() 不用 loadAsync()：後者會把「核心裡已經沒有的筆畫」當成還沒存檔的留下來。
+                                engine.load()
+                                revision++
+                                clearToken++
                                 PageDisplayMode.SINGLE
                             } else {
                                 PageDisplayMode.CONTINUOUS
@@ -4912,6 +4922,23 @@ private fun InkScreen(
 
 
 
+        // 飛梭工具盤（長按叫出）。整頁與連續兩種模式共用，各自疊在自己的畫布區上面。
+        // 項目與外觀在 `EditorRadialMenu`；這裡只接動作。**不要把整份選單寫回這個函式裡**：
+        // 這個 Composable 已經大到 ART 驗證器的上限，多一個區域函式或幾個 lambda 就 VerifyError 閃退（實測）。
+        val radialAction: (String) -> Unit = { id ->
+            when (id) {
+                com.kairumo.padnote.ui.RADIAL_DISMISS -> showRadialMenu = false
+                "pen" -> applyInkTool(InkTool.FOUNTAIN_PEN)
+                "highlighter" -> applyInkTool(InkTool.HIGHLIGHTER)
+                "eraser" -> applyInkTool(InkTool.ERASER)
+                "lasso" -> applyInkTool(InkTool.LASSO)
+                "undo" -> globalUndo()
+                "redo" -> globalRedo()
+                "color" -> showProColorWheel = true
+                "stabilizer" -> strokeStabilizer = if (strokeStabilizer > 0f) 0f else 50f
+            }
+        }
+
         // 兩條完全獨立的路。連續模式不碰整頁模式的任何一行 ——
         // 那一段綁著存檔、物件層、掌拒與模式切換，是最沒本錢壞掉的地方。
         if (pageDisplayMode == PageDisplayMode.CONTINUOUS) {
@@ -4927,7 +4954,7 @@ private fun InkScreen(
                         pageCount = pageCount,
                         pageIndex = pageIndex,
                         revision = revision + textRevision + shapeRevision + tableRevision +
-                            chartRevision + imageRevision + model3DRevision,
+                            chartRevision + imageRevision + model3DRevision + continuousContentRevision,
                         l = { key -> l10n(key) },
                         onSelectPage = { pageIndex = it; continuousScrollRequest++ },
                         onAddPage = {
@@ -4987,7 +5014,18 @@ private fun InkScreen(
                         lasso = if (inkTool.isLasso) continuousLasso else null,
                         undoController = continuousUndo,
                         collabBridge = continuousCollab,
-                        modifier = Modifier.weight(1f).fillMaxHeight()
+                        // 長按叫出飛梭工具盤：與整頁模式同一個手勢與條件（見整頁模式的畫布區）。
+                        // 原本連續模式完全沒接 —— 長按只會在頁面上留下一個墨點。
+                        // 這裡刻意少寫 lambda、不在外面包一層 Box：`InkScreen` 已經在 ART 驗證器的
+                        // 上限邊緣，多兩三個 lambda 就啟動即 VerifyError（實測）。選單的動作走 `radialAction`。
+                        modifier = Modifier.weight(1f).fillMaxHeight().radialHoldArea(
+                            enabled = editorMode == EditorMode.DRAW && !showRadialMenu &&
+                                !isPlacingCommentPin && !inkTool.isMaskingTape,
+                            lasso = continuousLasso.takeIf { inkTool.isLasso },
+                            onOpen = { center -> radialMenuCenter = center; showRadialMenu = true }
+                        ),
+                        radialMenuCenter = if (showRadialMenu) radialMenuCenter else null,
+                        onRadialAction = radialAction
                     )
                     if (sideToolbar && toolbarPlacement == uniffi.padnote_core.FfiPlacement.RIGHT) {
                         androidx.compose.foundation.layout.Column(
@@ -5089,7 +5127,7 @@ private fun InkScreen(
                     pageCount = pageCount,
                     pageIndex = pageIndex,
                     revision = revision + textRevision + shapeRevision + tableRevision +
-                        chartRevision + imageRevision + model3DRevision,
+                        chartRevision + imageRevision + model3DRevision + continuousContentRevision,
                     l = { key -> l10n(key) },
                     onSelectPage = { pageIndex = it },
                     onAddPage = {
@@ -5498,6 +5536,7 @@ private fun InkScreen(
                         }
                     },
                     contentVersion = revision,
+                    lassoDrag = { if (inkTool.isLasso) lasso.dragPreview() else null },
                     // 底紋要畫在**畫布自己的白底之上、筆跡之下**。
                     // 疊一層 Composable 在外面是不行的：`InkCanvas` 會用
                     // `Color.White` 把整塊塗掉，底紋就消失了（實機看過）。
@@ -5553,6 +5592,9 @@ private fun InkScreen(
                 LassoOverlay(
                     lasso = lasso,
                     engine = engine,
+                    // 低延遲畫布（SurfaceView）畫不了拖曳中的位移。圖學筆畫時其實走的是一般畫布，
+                    // 預覽會疊在已經位移的筆畫上 —— 同一個位置，看不出來，不值得在這裡多算一次。
+                    drawDragPreview = lowLatency && !lowLatencyUnavailable && canvasScale == 1f,
                     onChanged = { revision++ },
                     modifier = Modifier.fillMaxSize()
                 )
@@ -6121,10 +6163,16 @@ private fun InkScreen(
                     }
                 }
             }
+        }
+        }
 
             // 套索的快顯動作列：浮在選取框上方（放不下就放下方），畫面座標 ——
-            // 選取框是頁面點，乘 density、縮放再加捲動。放在 graphicsLayer 外面，
-            // 工具列不跟著頁面縮放，按鈕維持原尺寸。與 Apple 的 lassoSelectionDecoration 一致。
+            // 選取框是頁面點，乘 density、縮放再加捲動。工具列不跟著頁面縮放，按鈕維持原尺寸。
+            // 與 Apple 的 lassoSelectionDecoration 一致。
+            //
+            // 它、貼上鈕與飛梭工具盤都必須在縮放層（上面那個 graphicsLayer）**外面**。原本寫在裡面：
+            // 位置被再縮放、平移一次而偏掉，飛梭盤被放大，還被 clip 裁掉、壓到底部工具列的
+            // 那幾格按不到（模擬器上實測）。
             val lassoBox = lasso.boundingRect
             if (inkTool.isLasso && lassoBox != null) {
                 LassoActionBar(
@@ -6232,42 +6280,10 @@ private fun InkScreen(
                 )
             }
 
-            // 🌟 徑向飛輪快捷工具盤 (Radial Pie / Mark Menu)
             if (showRadialMenu) {
-                RadialMarkMenu(
-                    visible = showRadialMenu,
-                    centerOffset = radialMenuCenter,
-                    items = listOf(
-                        RadialMenuItem(id = "pen", icon = "✏️", label = l10n("tool_pen"), color = MaterialTheme.colorScheme.primary) {
-                            applyInkTool(InkTool.FOUNTAIN_PEN)
-                        },
-                        RadialMenuItem(id = "highlighter", icon = "🖍️", label = l10n("tool_highlighter"), color = Color(0xFFF59E0B)) {
-                            applyInkTool(InkTool.HIGHLIGHTER)
-                        },
-                        RadialMenuItem(id = "eraser", icon = "🧹", label = l10n("tool_eraser"), color = Color(0xFFEF4444)) {
-                            applyInkTool(InkTool.ERASER)
-                        },
-                        RadialMenuItem(id = "lasso", icon = "➰", label = l10n("tool_lasso"), color = Color(0xFF8B5CF6)) {
-                            applyInkTool(InkTool.LASSO)
-                        },
-                        RadialMenuItem(id = "undo", icon = "↩️", label = l10n("undo"), color = Color(0xFF3B82F6)) {
-                            globalUndo()
-                        },
-                        RadialMenuItem(id = "redo", icon = "↪️", label = l10n("redo"), color = Color(0xFF3B82F6)) {
-                            globalRedo()
-                        },
-                        RadialMenuItem(id = "color", icon = "🎨", label = l10n("pro_color"), color = Color(0xFFEC4899)) {
-                            showProColorWheel = true
-                        },
-                        RadialMenuItem(id = "stabilizer", icon = "〰️", label = l10n("refine_sketch"), color = Color(0xFF10B981)) {
-                            strokeStabilizer = if (strokeStabilizer > 0f) 0f else 50f
-                        }
-                    ),
-                    onDismiss = { showRadialMenu = false }
-                )
+                com.kairumo.padnote.ui.EditorRadialMenu(radialMenuCenter, l10n, radialAction)
             }
-        }
-        }
+
             // 放置討論圖釘：點哪裡就放哪裡（與 Apple 端同一個模式）。
             //
             // 疊在最上面，只在放置模式時存在 —— 常駐的話它會把畫布的
@@ -6429,7 +6445,7 @@ private fun InkScreen(
                     pageCount = pageCount,
                     pageIndex = pageIndex,
                     revision = revision + textRevision + shapeRevision + tableRevision +
-                        chartRevision + imageRevision + model3DRevision,
+                        chartRevision + imageRevision + model3DRevision + continuousContentRevision,
                     l = { key -> l10n(key) },
                     onSelectPage = { pageIndex = it; showPageSidebar = false },
                     onAddPage = {
@@ -7269,12 +7285,7 @@ private fun InkScreen(
 
     if (showStatus) {
         val rows = remember { readCoreStatus(activity) }
-        val packageInfo = remember {
-            runCatching {
-                activity.packageManager.getPackageInfo(activity.packageName, 0)
-            }.getOrNull()
-        }
-        val ver = packageInfo?.versionName ?: "1.0.0"
+        val ver = remember { appVersionName(activity) }
         AppDiagnosticsDialog(
             versionString = ver,
             coreStatusRows = rows,
@@ -8587,6 +8598,17 @@ private fun DialogGuideStep(step: String, title: String, desc: String) {
         }
     }
 }
+
+/**
+ * 這支 App 的版本字串（系統診斷對話框用）。
+ *
+ * 獨立成頂層函式的理由同 [placeSolidSheet]：寫在 `InkScreen` 裡，`remember { runCatching { … } }`
+ * 會整段內聯進那個四百多個暫存器的函式，D8 在這一段配出型別衝突的暫存器，啟動即 `VerifyError`
+ * （2026-10 改連續模式飛梭盤時實際踩到）。
+ */
+private fun appVersionName(activity: android.app.Activity): String =
+    runCatching { activity.packageManager.getPackageInfo(activity.packageName, 0).versionName }
+        .getOrNull() ?: "1.0.0"
 
 /**
  * 把立體輔助排好的圖紙放在「目前看得到的範圍正中央」（不是固定貼頂，那會壓在既有的圖上），
