@@ -24,6 +24,7 @@ import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.input.pointer.pointerInteropFilter
 import androidx.compose.ui.platform.LocalDensity
 import uniffi.padnote_core.StrokePoint
@@ -78,7 +79,14 @@ fun InkCanvas(
      *
      * 打字模式下如果偵測到硬體觸控筆，會自動切換為手繪模式並接收筆劃。
      */
-    acceptsInk: Boolean = true
+    acceptsInk: Boolean = true,
+    /**
+     * 套索拖曳中：選中的筆畫畫在手指帶過去的位置（見 `LassoSelection.dragPreview`）。
+     *
+     * **在繪製階段讀**，拖曳時只重畫這張畫布、不重組外層。只畫預覽、原筆畫留在原位的話，
+     * 畫面上同時有兩份，使用者看起來是「拖不動、放開又跳過去」。
+     */
+    lassoDrag: () -> com.kairumo.padnote.canvas.LassoDragPreview? = { null }
 ) {
     val density = LocalDensity.current.density
     // 筆畫存在 engine 裡（它才是真相來源）。這個計數器只是用來觸發重繪 ——
@@ -165,6 +173,7 @@ fun InkCanvas(
 
         @Suppress("UNUSED_EXPRESSION") DraftingState.version
         // 未分層 → 底 → 中 → 頂；隱藏的圖層不畫。
+        val drag = lassoDrag()
         for (stroke in DraftingState.drawOrder(engine.strokes) { it.layer }) {
             val strokeColor = if (stroke.colorRgba.size >= 4) {
                 Color(
@@ -174,7 +183,13 @@ fun InkCanvas(
                     (stroke.colorRgba[3].toInt() and 0xFF) / 255f
                 )
             } else inkColor
-            drawInkStroke(stroke.points, stroke.tool, stroke.baseWidth, strokeColor, density, stroke.lineType)
+            if (drag != null && stroke.coreStrokeId in drag.ids) {
+                translate(drag.offset.x * density, drag.offset.y * density) {
+                    drawInkStroke(stroke.points, stroke.tool, stroke.baseWidth, strokeColor, density, stroke.lineType)
+                }
+            } else {
+                drawInkStroke(stroke.points, stroke.tool, stroke.baseWidth, strokeColor, density, stroke.lineType)
+            }
         }
         // 尚未抬筆的那一段也要即時畫出來，否則寫字時要等抬筆才看得到。
         val snapped = engine.snapPreview ?: engine.draftPreview
