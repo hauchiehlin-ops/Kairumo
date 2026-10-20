@@ -93,13 +93,12 @@ ignore = [
     # Opus 本身（BSD-3）仍在維護，缺的是 Rust 綁定層的維護者。
     "RUSTSEC-2026-0150",
 
-    # quick-xml 的兩筆 DoS：惡意 XML 可造成二次方時間或記憶體耗盡。
-    # 來源是 calamine（讀 xlsx）與 docx-rs（讀 docx），兩者都把 quick-xml
-    # 的版本鎖死，無法單獨更新。影響面是「使用者自己開啟一個惡意文件時，
-    # App 佔用過多資源」—— 沒有遠端攻擊面，資料也不會外洩。
-    # 待辦：calamine / docx-rs 放行修補版後就回來移除這兩條。
-    "RUSTSEC-2026-0194",
-    "RUSTSEC-2026-0195",
+    # basic-toml：標記為 unmaintained（倉庫已封存），並非已知漏洞，上游也沒有可升級的版本。
+    # 來源是 uniffi 0.29（cli feature）→ uniffi_bindgen → askama → askama_derive。
+    # askama_derive 是 proc-macro，basic-toml 只在**編譯期**讀 askama 的設定檔，
+    # 不會進到 App 裡；uniffi_bindgen 本身也只用在產生 Swift/Kotlin 綁定的 uniffi-bindgen 工具。
+    # 待辦：uniffi 換掉 askama 版本（或 askama 改用 toml）後就回來移除這一條。
+    "RUSTSEC-2026-0374",
 
     # ruzstd 0.8.x 的解壓炸彈（RUSTSEC-2026-0344）：精心製作的 .zst 輸入可以讓解碼器一次配置數 GB 記憶體。
     # 來源是 zhconv 0.4.2（繁簡轉換，padnote-search 與 padnote-text 用它），它把 ruzstd 鎖在 0.8，
