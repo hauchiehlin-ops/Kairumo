@@ -1431,6 +1431,10 @@ public final class NotebookStore: ObservableObject {
         doc.shapeAttachments = [NoteShapeAttachment(
             id: "00000000-0000-4000-8000-0000000000a5", pageIndex: 0, kindName: "process",
             x: 60, y: 360, width: 160, height: 80, label: "Fixture shape")]
+        // `KAIRUMO_UITEST_SEED_LOCKED=1`：圖片一開始就鎖定在畫布上（`ObjectLockUITests` 測解鎖的入口）。
+        if env["KAIRUMO_UITEST_SEED_LOCKED"] == "1" {
+            doc.setLockedObjectIds(["00000000-0000-4000-8000-0000000000a2"], forPage: 0)
+        }
         notebooks.append(doc)
         persistData(signalsLocalEdit: false)
     }
