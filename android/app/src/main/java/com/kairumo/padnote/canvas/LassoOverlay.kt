@@ -63,6 +63,11 @@ fun LassoOverlay(
     onGestureStart: () -> Unit = {},
     /** 圈、選取框與拖曳預覽要不要畫在這一層（連續模式只畫在選取所屬的那一頁）。 */
     showDecoration: Boolean = true,
+    /**
+     * 拖曳中在這一層另外畫一份選中筆畫。一般畫布不需要：它自己會把選中的筆畫畫在新位置
+     * （`InkCanvas` 的 `lassoDrag`）。低延遲畫布畫在另一個 SurfaceView 上做不到，才靠這一份。
+     */
+    drawDragPreview: Boolean = false,
     onChanged: () -> Unit
 ) {
     val density = LocalDensity.current.density
@@ -96,8 +101,8 @@ fun LassoOverlay(
         val drag = lasso.dragOffset
         val points = lasso.path.ifEmpty { lasso.committed.map { it + drag } }
 
-        // 拖曳中：選中的筆畫跟著手指畫一份預覽。放開才真的搬（見 LassoSelection.dragOffset）。
-        if (lasso.isDragging && drag != Offset.Zero) {
+        // 拖曳中：選中的筆畫跟著手指畫一份預覽（只有畫布自己畫不了位移時）。放開才真的搬（見 LassoSelection.dragOffset）。
+        if (drawDragPreview && lasso.isDragging && drag != Offset.Zero) {
             val ids = lasso.selected.toSet()
             for (stroke in engine.strokes) {
                 if (stroke.coreStrokeId !in ids || stroke.points.size < 2) continue

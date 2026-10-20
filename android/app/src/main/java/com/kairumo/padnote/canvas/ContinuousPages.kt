@@ -181,7 +181,14 @@ fun ContinuousPagesView(
     undoController: ContinuousUndoController? = null,
     /** 即時協同讀寫每一頁的引擎與物件（見 `ContinuousCollabBridge`）。 */
     collabBridge: com.kairumo.padnote.collab.ContinuousCollabBridge? = null,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    /**
+     * 飛梭工具盤的中心（null = 沒開）。疊在整個清單上面，與 `modifier` 收到的長按同一套座標
+     * （長按掛在 `modifier` 上，見 `radialHoldArea`）。
+     */
+    radialMenuCenter: Offset? = null,
+    /** 飛梭工具盤的動作（項目 id，或 `RADIAL_DISMISS`）。 */
+    onRadialAction: (String) -> Unit = {}
 ) {
     val listState = rememberLazyListState()
     /** 套索選取屬於哪一頁。只有那一頁畫圈、選取框與工具列，動作也只作用在那一頁的引擎。 */
@@ -530,6 +537,14 @@ fun ContinuousPagesView(
                 scope.launch { listState.scrollToItem(index, offset) }
             }
         }
+
+        radialMenuCenter?.let { center ->
+            com.kairumo.padnote.ui.EditorRadialMenu(
+                center,
+                { key -> com.kairumo.padnote.LocalizationStrings.localized(key, com.kairumo.padnote.currentLanguageTag()) },
+                onRadialAction
+            )
+        }
     }
 }
 
@@ -822,7 +837,9 @@ private fun ContinuousPage(
                 }
             },
             contentVersion = revision,
-            acceptsInk = editorMode == EditorMode.DRAW
+            acceptsInk = editorMode == EditorMode.DRAW,
+            // 選取只屬於一頁：只有那一頁把選中的筆畫畫在拖曳後的位置。
+            lassoDrag = { if (ownsLasso) lasso?.dragPreview() else null }
         )
 
         // 選取與編輯。

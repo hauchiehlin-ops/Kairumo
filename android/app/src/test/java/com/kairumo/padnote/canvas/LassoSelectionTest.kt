@@ -157,4 +157,55 @@ class LassoSelectionTest {
         assertFalse(lasso.isDragging)
         assertFalse(lasso.hasSelection)
     }
+
+    // ── 拖曳中筆跡本身跟著走（模擬器實測：原本只有一份藍色預覽在動，原筆跡留在原位）──
+
+    @Test fun dragPreviewFollowsFingerThenClearsOnRelease() {
+        val backend = sample()
+        val lasso = LassoSelection()
+        lassoRect(lasso, Rect(80f, 80f, 220f, 120f), backend)
+        val before = lasso.selected.toSet()
+
+        lasso.begin(Offset(150f, 100f))
+        lasso.extend(Offset(200f, 130f))
+        val preview = lasso.dragPreview()
+        // 畫布拿這一份把選中的筆畫畫在位移後的位置；核心此時還沒搬。
+        assertEquals(before, preview?.ids)
+        assertEquals(Offset(50f, 30f), preview?.offset)
+        assertEquals(Line(100f, 100f, 200f, 100f), backend.strokes.values.first())
+
+        assertTrue(lasso.finish(backend))
+        // 放開之後核心已經搬好：不能再畫一次位移，否則筆跡會跳到兩倍遠。
+        assertEquals(null, lasso.dragPreview())
+        assertEquals(Line(150f, 130f, 250f, 130f), backend.strokes.getValue(lasso.selected.single()))
+    }
+
+    @Test fun noDragPreviewWhileDrawingTheLoopOrBeforeMoving() {
+        val backend = sample()
+        val lasso = LassoSelection()
+        lasso.begin(Offset(80f, 80f))
+        lasso.extend(Offset(220f, 80f))
+        assertEquals(null, lasso.dragPreview())
+        lasso.extend(Offset(220f, 120f))
+        lasso.extend(Offset(80f, 120f))
+        lasso.finish(backend)
+
+        // 按在選取上但還沒動：沒有位移，不必讓畫布走預覽那條路。
+        lasso.begin(Offset(150f, 100f))
+        assertTrue(lasso.isDragging)
+        assertEquals(null, lasso.dragPreview())
+    }
+
+    @Test fun cancelledDragLeavesStrokesWhereTheyWere() {
+        val backend = sample()
+        val lasso = LassoSelection()
+        lassoRect(lasso, Rect(80f, 80f, 220f, 120f), backend)
+        lasso.begin(Offset(150f, 100f))
+        lasso.extend(Offset(300f, 300f))
+        // 長按叫出飛梭工具盤等情況會取消手勢：預覽要收掉，筆跡不能被搬。
+        lasso.cancelGesture()
+        assertEquals(null, lasso.dragPreview())
+        assertTrue(lasso.hasSelection)
+        assertEquals(Line(100f, 100f, 200f, 100f), backend.strokes.values.first())
+    }
 }

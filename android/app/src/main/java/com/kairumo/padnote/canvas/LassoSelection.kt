@@ -76,6 +76,20 @@ class LassoSelection {
     private var clipboardFromCut = false
 
     val hasSelection: Boolean get() = selected.isNotEmpty()
+
+    /**
+     * 拖曳中要畫在新位置的筆畫與位移（頁面點）；沒在拖曳回 null。
+     *
+     * 畫布在繪製階段讀它，讓**筆跡本身**跟著選取框走（與 iPad 一致）。核心要等放開才搬
+     * （見 [dragOffset]），所以拖曳中畫面靠這個；放開之後核心已經搬好，這裡回 null，
+     * 不會畫兩次位移。
+     */
+    fun dragPreview(): LassoDragPreview? {
+        if (!isDragging) return null
+        val offset = dragOffset
+        if (offset == Offset.Zero || selected.isEmpty()) return null
+        return LassoDragPreview(selected.toSet(), offset)
+    }
     val canPaste: Boolean get() = clipboard.isNotEmpty()
 
     /** 選取框（頁面點）＝ 圈 ∪ 選中筆畫的外框。 */
@@ -294,6 +308,9 @@ class LassoSelection {
         const val HIT_SLOP = 16f
     }
 }
+
+/** 拖曳中的筆畫（核心 id）與位移（頁面點）。 */
+data class LassoDragPreview(val ids: Set<String>, val offset: Offset)
 
 /** 套索動作實際改的是誰。正式環境是核心（[EngineLassoBackend]），測試用記憶體裡的假筆畫。 */
 interface LassoBackend {
