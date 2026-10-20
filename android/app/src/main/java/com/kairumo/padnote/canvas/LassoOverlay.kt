@@ -15,6 +15,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -54,10 +56,19 @@ fun LassoOverlay(
     lasso: LassoSelection,
     engine: InkEngine,
     modifier: Modifier = Modifier,
+    /**
+     * 這一層開始一次圈選或拖曳之前呼叫。連續頁面模式每一頁各一層、共用一份選取：
+     * 在別頁圈下去時，呼叫端在這裡把選取清掉、把「選取屬於哪一頁」換成這一頁。
+     */
+    onGestureStart: () -> Unit = {},
+    /** 圈、選取框與拖曳預覽要不要畫在這一層（連續模式只畫在選取所屬的那一頁）。 */
+    showDecoration: Boolean = true,
     onChanged: () -> Unit
 ) {
     val density = LocalDensity.current.density
     val accent = MaterialTheme.colorScheme.primary
+    // 不拿它當 pointerInput 的 key：每次重組都是新的 lambda，當 key 會把進行中的手勢拆掉。
+    val gestureStart by rememberUpdatedState(onGestureStart)
 
     Canvas(
         modifier = modifier
@@ -66,7 +77,7 @@ fun LassoOverlay(
                 // 這一層在畫布的 `graphicsLayer` 裡面，收到的位置已經扣掉縮放與捲動，
                 // 只差一個 density 就是頁面點（與核心筆畫同一套）。
                 detectDragGestures(
-                    onDragStart = { lasso.begin(it / density) },
+                    onDragStart = { gestureStart(); lasso.begin(it / density) },
                     onDrag = { change, _ ->
                         lasso.extend(change.position / density)
                         // 消費掉，底下的東西不要再看到這一筆。
@@ -81,6 +92,7 @@ fun LassoOverlay(
                 )
             }
     ) {
+        if (!showDecoration) return@Canvas
         val drag = lasso.dragOffset
         val points = lasso.path.ifEmpty { lasso.committed.map { it + drag } }
 

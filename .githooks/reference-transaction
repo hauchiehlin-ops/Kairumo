@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# exFAT：fetch、commit、branch、reset… 任何改到 ref 的指令都會寫 .git，macOS 在旁邊生出
+# `._*`，下一個 git 指令就噴 non-monotonic index。ref 更新確定後（committed）順手清掉
+# .git 內部的 `._*`。只在 committed 階段做，而且永遠回 0 —— 這支 hook 在 prepared 階段
+# 回非 0 會讓整個 ref 更新失敗。
+[[ "${1:-}" == "committed" ]] || exit 0
+cat >/dev/null  # 吃掉 stdin 上的 ref 清單，git 不會因為管線斷掉而警告
+REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)" || exit 0
+"${REPO_ROOT}/scripts/clean-appledouble.sh" --git-only >/dev/null 2>&1 || true
+exit 0

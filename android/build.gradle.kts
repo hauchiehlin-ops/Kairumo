@@ -8,10 +8,11 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose") version "2.0.21" apply false
 }
 
-// 專案在 exFAT 外接碟時，由 scripts/lib-exfat.sh 設定這個環境變數，
-// 把各模組的 build 目錄放到本機磁碟。exFAT 上 Gradle 的中介產物旁會生出
-// `._*`，造成 "… is not a directory" 之類的錯誤。未設定時行為不變。
-System.getenv("KAIRUMO_GRADLE_BUILD_ROOT")?.takeIf { it.isNotBlank() }?.let { root ->
+// 專案在 exFAT 外接碟時，把各模組的 build 目錄放到本機磁碟。exFAT 上 Gradle 的中介產物旁
+// 會生出 `._*`，造成 "… is not a directory" 之類的錯誤。路徑由 settings.gradle.kts 決定
+// （scripts/lib-exfat.sh 設的 KAIRUMO_GRADLE_BUILD_ROOT 優先，否則非 APFS 磁碟自動導到本機）；
+// APFS 上沒有這個值，行為不變。
+(gradle.extensions.extraProperties.properties["kairumoBuildRoot"] as String?)?.let { root ->
     allprojects {
         layout.buildDirectory.set(file("$root/${project.name}"))
     }

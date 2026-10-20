@@ -1894,6 +1894,9 @@ private fun InkScreen(
     // 套索選取。換頁就換一個 —— 選取的是「這一頁的筆畫 id」，
     // 留著會指到另一頁不相干的東西。
     val lasso = remember(notebook, pageId) { LassoSelection() }
+    // 連續頁面模式的套索另外一份：焦點頁一換 pageId 就變，跟著 pageId 重建的話
+    // 捲一下選取與剪貼簿就不見了。選取屬於哪一頁由 ContinuousPagesView 記。
+    val continuousLasso = remember(notebook) { LassoSelection() }
     val latency = remember { InkLatencyMeter() }
     val audio = remember { AudioCapture(activity) }
     var recording by remember { mutableStateOf(false) }
@@ -2962,7 +2965,10 @@ private fun InkScreen(
         picked.kind?.let { engine.tool = it }
         // 離開套索就清掉選取。留著的話，畫面上會浮著一個虛線框與
         // 一排按鈕，而它們作用的對象使用者早就看不出是什麼了。
-        if (!picked.isLasso) lasso.clear()
+        if (!picked.isLasso) {
+            lasso.clear()
+            continuousLasso.clear()
+        }
     }
 
     // 使用者把正在用的那一支關掉時要換一支，否則畫面上沒有任何晶片是亮的，
@@ -3054,6 +3060,21 @@ private fun InkScreen(
                     }
                 else -> Unit
             }
+        }
+    }
+    // Ctrl+X／C／V：套索模式剪下／複製／貼上筆跡（對齊 Apple 的 ⌘V）。
+    // 連續頁面模式由 ContinuousPagesView 自己接（筆跡在它每一頁自己的引擎裡）。
+    LaunchedEffect(lasso, engine, pageDisplayMode) {
+        if (pageDisplayMode == PageDisplayMode.CONTINUOUS) return@LaunchedEffect
+        AppCommands.events.collect { command ->
+            if (!inkTool.isLasso) return@collect
+            val changed = when (command) {
+                AppCommand.Cut -> lasso.cut(engine)
+                AppCommand.Copy -> lasso.copy(engine)
+                AppCommand.Paste -> lasso.paste(engine)
+                else -> return@collect
+            }
+            if (changed) revision++
         }
     }
     var inkColorHex by remember { mutableStateOf("#000000") }
@@ -4927,6 +4948,8 @@ private fun InkScreen(
                         reloadToken = textRevision + shapeRevision + tableRevision +
                             chartRevision + imageRevision + model3DRevision,
                         scrollRequest = continuousScrollRequest,
+                        // 套索不限焦點頁：在哪一頁圈就圈哪一頁（與 Apple 連續模式一致）。
+                        lasso = if (inkTool.isLasso) continuousLasso else null,
                         undoController = continuousUndo,
                         collabBridge = continuousCollab,
                         modifier = Modifier.weight(1f).fillMaxHeight()
