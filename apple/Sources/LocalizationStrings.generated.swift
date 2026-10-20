@@ -15943,6 +15943,22 @@ extension LocalizationManager {
             .ko: "테두리 및 배경",
             .th: "กรอบและพื้นหลัง"
         ],
+        "object_lock": [
+            .zhHant: "鎖定在畫布上",
+            .en: "Lock to Canvas",
+            .zhHans: "锁定在画布上",
+            .ja: "キャンバスに固定",
+            .ko: "캔버스에 고정",
+            .th: "ล็อกไว้บนผืนผ้าใบ"
+        ],
+        "object_locked": [
+            .zhHant: "已鎖定：點一下物件或鎖頭即可解除",
+            .en: "Locked — tap the object or the lock to unlock",
+            .zhHans: "已锁定：点一下对象或锁头即可解除",
+            .ja: "固定中 — オブジェクトか鍵をタップで解除",
+            .ko: "고정됨 — 개체나 자물쇠를 탭하면 해제",
+            .th: "ล็อกแล้ว — แตะวัตถุหรือแม่กุญแจเพื่อปลดล็อก"
+        ],
         "object_locked_by": [
             .zhHant: "正在編輯中",
             .en: "is editing",
@@ -15958,6 +15974,14 @@ extension LocalizationManager {
             .ja: "枠線を表示",
             .ko: "테두리 표시",
             .th: "แสดงเส้นขอบ"
+        ],
+        "object_unlock": [
+            .zhHant: "解除鎖定",
+            .en: "Unlock",
+            .zhHans: "解除锁定",
+            .ja: "固定を解除",
+            .ko: "고정 해제",
+            .th: "ปลดล็อก"
         ],
         "object_use_default": [
             .zhHant: "回復預設",

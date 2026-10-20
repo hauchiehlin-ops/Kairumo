@@ -113,10 +113,12 @@ fun TextBoxLayer(
     // 的話，圖片的 zIndex 只跟圖片比、文字的只跟文字比 —— 跨型別永遠是
     // 「圖片一定在文字下面」，圖層面板就排不動。
     // 直接把物件發到呼叫端的 Box 裡，它們才是彼此的兄弟。
+        // 鎖定在畫布上的物件不接收觸控（見 canvas/ObjectLock.kt）。
+        val lockedIds = com.kairumo.padnote.canvas.LocalLockedObjectIds.current
         for (box in boxes) {
             TextBoxView(
                 zIndex = zIndexOf(box.id),
-                interactive = interactive,
+                interactive = interactive && box.id !in lockedIds,
                 box = box,
                 density = density,
                 isSelected = box.id == selectedId,

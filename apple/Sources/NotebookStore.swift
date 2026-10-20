@@ -427,6 +427,27 @@ public struct NotebookDocument: Identifiable, Codable, Hashable, @unchecked Send
         underInkObjectIdsByPage = map
     }
 
+    /// 某一頁「鎖定在畫布上」的物件 ID。鎖定的物件不接收任何觸控（點選、拖曳、長按都穿透到頁面），
+    /// 雙指縮放或捲動頁面時就不會誤點到手指底下的物件、讓它進入編輯狀態。
+    /// 解除鎖定走圖層面板或物件選單（見 `ObjectLockMenuItem`）。與 Android `NotebookMeta.KEY_LOCKED_BY_PAGE` 同一個鍵。
+    public var lockedObjectIdsByPage: [String: [String]]?
+
+    public func lockedObjectIds(forPage page: Int) -> Set<String> {
+        Set(lockedObjectIdsByPage?[String(page)] ?? [])
+    }
+
+    /// 所有頁面鎖定的物件（不分頁）。物件 id 全域唯一，查「這個物件鎖了沒」不必先知道頁次。
+    public var allLockedObjectIds: Set<String> {
+        Set((lockedObjectIdsByPage ?? [:]).values.flatMap { $0 })
+    }
+
+    public mutating func setLockedObjectIds(_ ids: Set<String>, forPage page: Int) {
+        var map = lockedObjectIdsByPage ?? [:]
+        // 排序：同一組物件每次都寫出同一份內容，同步才不會誤判「有變動」。空的整頁拿掉。
+        map[String(page)] = ids.isEmpty ? nil : ids.sorted()
+        lockedObjectIdsByPage = map.isEmpty ? nil : map
+    }
+
     /// 系統預設標題的語系鍵。
     ///
     /// 內建的示範筆記若把中文標題直接寫死存進 JSON，切換介面語言時檔名不會跟著變
@@ -5278,6 +5299,7 @@ extension NotebookStore {
             let checkedGuideItems: [String: Bool]?
             let objectOrderByPage: [String: [String]]?
             let underInkObjectIdsByPage: [String: [String]]?
+            let lockedObjectIdsByPage: [String: [String]]?
             let ink: [String]
         }
         var ink: [String] = []
@@ -5298,7 +5320,8 @@ extension NotebookStore {
             tableAttachments: doc.tableAttachments, audioAttachments: doc.audioAttachments,
             tapeAttachments: doc.tapeAttachments, stickyAnchors: doc.stickyAnchors,
             checkedGuideItems: doc.checkedGuideItems, objectOrderByPage: doc.objectOrderByPage,
-            underInkObjectIdsByPage: doc.underInkObjectIdsByPage, ink: ink)
+            underInkObjectIdsByPage: doc.underInkObjectIdsByPage,
+            lockedObjectIdsByPage: doc.lockedObjectIdsByPage, ink: ink)
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.sortedKeys]
         let data = (try? encoder.encode(content)) ?? Data()

@@ -290,6 +290,9 @@ enum ObjectLedger {
         if let under = d.underInkObjectIdsByPage, let data = try? encoder.encode(under) {
             out["__doc.underInk"] = SHA256.hash(data: data).prefix(8).map { String(format: "%02x", $0) }.joined()
         }
+        if let locked = d.lockedObjectIdsByPage, let data = try? encoder.encode(locked) {
+            out["__doc.locked"] = SHA256.hash(data: data).prefix(8).map { String(format: "%02x", $0) }.joined()
+        }
         return out
     }
 
@@ -400,11 +403,13 @@ final class ExportedObjectIds: @unchecked Sendable {
         encoder.outputFormatting = [.sortedKeys]
         out[layerOrderKey] = (try? encoder.encode(d.objectOrderByPage ?? [:])).map { Data($0).hashValue } ?? 0
         out[underInkKey] = (try? encoder.encode(d.underInkObjectIdsByPage ?? [:])).map { Data($0).hashValue } ?? 0
+        out[lockedKey] = (try? encoder.encode(d.lockedObjectIdsByPage ?? [:])).map { Data($0).hashValue } ?? 0
         return out
     }
 
     static let layerOrderKey = "__doc.order"
     static let underInkKey = "__doc.underInk"
+    static let lockedKey = "__doc.locked"
 }
 
 @MainActor
@@ -1966,6 +1971,7 @@ enum NotebookSyncCoordinator {
     static func keepLayeringUnknownToPackage(_ merged: inout NotebookDocument, local: NotebookDocument) {
         if merged.underInkObjectIdsByPage == nil { merged.underInkObjectIdsByPage = local.underInkObjectIdsByPage }
         if merged.objectOrderByPage == nil { merged.objectOrderByPage = local.objectOrderByPage }
+        if merged.lockedObjectIdsByPage == nil { merged.lockedObjectIdsByPage = local.lockedObjectIdsByPage }
     }
 
     /// 匯出之後、匯入之前，使用者**新增或動過**的物件不能被匯入的結果蓋掉。
@@ -2042,6 +2048,11 @@ enum NotebookSyncCoordinator {
             merged.underInkObjectIdsByPage = local.underInkObjectIdsByPage
             preserved = true
         }
+        let lockedKey = ExportedObjectIds.lockedKey
+        if exported[lockedKey] != nil, current[lockedKey] != exported[lockedKey] {
+            merged.lockedObjectIdsByPage = local.lockedObjectIdsByPage
+            preserved = true
+        }
         keepLayeringUnknownToPackage(&merged, local: local)
 
         // 形狀與連接線的外觀不在核心的物件模型裡 —— 匯入的版本只有幾何。
@@ -2104,6 +2115,10 @@ enum NotebookSyncCoordinator {
         }
         if local.underInkObjectIdsByPage != imported.underInkObjectIdsByPage {
             merged.underInkObjectIdsByPage = local.underInkObjectIdsByPage
+            preserved = true
+        }
+        if local.lockedObjectIdsByPage != imported.lockedObjectIdsByPage {
+            merged.lockedObjectIdsByPage = local.lockedObjectIdsByPage
             preserved = true
         }
         keepLayeringUnknownToPackage(&merged, local: local)

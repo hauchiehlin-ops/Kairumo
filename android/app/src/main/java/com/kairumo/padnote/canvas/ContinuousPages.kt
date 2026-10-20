@@ -665,6 +665,7 @@ private fun ContinuousPage(
     }
 
     val interactive = editorMode == EditorMode.TYPE
+    val lockedIds = remember(meta, revision) { meta.lockedObjectIds() }
 
     // 這一頁的選取（單選，圖片／表格／圖表／文字／形狀共用一個 id —— id 在整頁內唯一）。
     var selectedId by remember(pageId) { mutableStateOf<String?>(null) }
@@ -676,6 +677,31 @@ private fun ContinuousPage(
     var editingTable by remember(pageId) { mutableStateOf<NoteTable?>(null) }
     var editingChart by remember(pageId) { mutableStateOf<ChartObject?>(null) }
     var editingText by remember(pageId) { mutableStateOf<TextBox?>(null) }
+    /** 正在顯示「解除鎖定」鈕的鎖定物件。 */
+    var lockPromptId by remember(pageId) { mutableStateOf<String?>(null) }
+    /** 這一頁物件的位置與大小（鎖頭、解除鎖定鈕、點擊判定用），由下到上排。 */
+    val lockFrames = remember(revision, order) {
+        buildList {
+            imageStore.all.forEach { add(MarqueeHit(it.id, it.x, it.y, it.width, it.height)) }
+            shapeStore.all.forEach { add(MarqueeHit(it.id, it.x, it.y, it.width, it.height)) }
+            tableStore.all.forEach { add(MarqueeHit(it.id, it.x, it.y, it.width, it.layout().height.toFloat())) }
+            chartStore.all.forEach { add(MarqueeHit(it.id, it.x, it.y, it.width, it.height)) }
+            textStore.all.forEach { add(MarqueeHit(it.id, it.x, it.y, it.width, it.height)) }
+        }.sortedBy { order.indexOf(it.id) }
+    }
+    val lockFramesLatest by androidx.compose.runtime.rememberUpdatedState(lockFrames)
+    val lockedIdsLatest by androidx.compose.runtime.rememberUpdatedState(lockedIds)
+    val objectLock = remember(meta, pageIndex) {
+        com.kairumo.padnote.canvas.ObjectLockActions(
+            isLocked = { id -> id in meta.lockedObjectIds() },
+            setLocked = { id, locked ->
+                meta.setObjectLocked(session, pageIndex, id, locked)
+                if (locked && selectedId == id) selectedId = null
+                if (lockPromptId == id) lockPromptId = null
+                revision++
+            }
+        )
+    }
     // 切到手寫模式時清掉選取 —— 手寫模式下物件不吃觸控，留著把手只會擋住筆。
     LaunchedEffect(editorMode) {
         if (editorMode != EditorMode.TYPE) { selectedId = null; selectedConnectionId = null }
@@ -745,6 +771,13 @@ private fun ContinuousPage(
                         detectTapGestures { offset: Offset ->
                             val tapX = offset.x / density
                             val tapY = offset.y / density
+                            // 點到鎖定的物件：給「解除鎖定」鈕，不開新文字方塊（見 ObjectLock.kt）。
+                            val lockedHit = lockedObjectHit(tapX, tapY, lockFramesLatest, lockedIdsLatest)
+                            if (lockedHit != null) {
+                                lockPromptId = if (lockPromptId == lockedHit) null else lockedHit
+                                return@detectTapGestures
+                            }
+                            lockPromptId = null
                             val hitExisting = textStore.all.firstOrNull { box ->
                                 tapX >= (box.x - 10f) && tapX <= (box.x + box.width + 10f) &&
                                 tapY >= (box.y - 10f) && tapY <= (box.y + box.height + 10f)
@@ -843,7 +876,10 @@ private fun ContinuousPage(
                         revision++
                     }
                 }
-            }
+            },
+            // 鎖定在畫布上（見 ObjectLock.kt）：與單頁模式同一份中繼資料。
+            com.kairumo.padnote.canvas.LocalObjectLock provides objectLock,
+            com.kairumo.padnote.canvas.LocalLockedObjectIds provides lockedIds
         ) {
             key(revision) {
                 ImageLayer(
@@ -972,6 +1008,16 @@ private fun ContinuousPage(
                         .lassoBarPlacement(box, density, 1f, Offset.Zero, 12f * density / pageScale)
                         .graphicsLayer(scaleX = 1f / pageScale, scaleY = 1f / pageScale)
                 )
+            }
+        }
+
+        if (interactive && lockedIds.isNotEmpty()) {
+            val localize = { key: String -> com.kairumo.padnote.LocalizationStrings.localized(key, com.kairumo.padnote.currentLanguageTag()) }
+            LockBadges(lockFrames, lockedIds, localize("object_locked")) { id ->
+                lockPromptId = if (lockPromptId == id) null else id
+            }
+            lockFrames.firstOrNull { it.id == lockPromptId && it.id in lockedIds }?.let { frame ->
+                UnlockPrompt(frame, localize("object_unlock")) { objectLock.setLocked(frame.id, false) }
             }
         }
 

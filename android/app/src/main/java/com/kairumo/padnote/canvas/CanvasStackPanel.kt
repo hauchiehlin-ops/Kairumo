@@ -29,6 +29,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.kairumo.padnote.LocalizationStrings
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 
 /**
  * 畫布上**所有**物件的堆疊面板（Android）。
@@ -45,6 +47,9 @@ fun CanvasStackPanel(
     items: List<ObjectStacking.Item>,
     order: List<String>,
     underInkIds: Set<String> = emptySet(),
+    /** 鎖定在畫布上的物件（見 ObjectLock.kt）。鎖定的物件在畫布上點不到，解除鎖定就靠這個面板。 */
+    lockedIds: Set<String> = emptySet(),
+    onLockChange: ((String, Boolean) -> Unit)? = null,
     languageTag: String,
     onOrderChange: (List<String>) -> Unit,
     onUnderInkChange: ((Set<String>) -> Unit)? = null,
@@ -149,6 +154,19 @@ fun CanvasStackPanel(
                                     )
                                 }
                                 if (picked) Text("✓", fontWeight = FontWeight.Bold)
+                                if (onLockChange != null) {
+                                    val locked = item.id in lockedIds
+                                    Text(
+                                        if (locked) "🔒" else "🔓",
+                                        color = if (locked) Color(0xFFF59E0B) else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                                        modifier = Modifier
+                                            .clickable { onLockChange(item.id, !locked) }
+                                            .padding(horizontal = 4.dp)
+                                            .semantics {
+                                                contentDescription = l(if (locked) "object_unlock" else "object_lock")
+                                            }
+                                    )
+                                }
                             }
                         }
                     }

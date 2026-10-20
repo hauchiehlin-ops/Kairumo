@@ -66,12 +66,14 @@ fun LinkLayer(
 ) {
     // 不包一層自己的 Box —— zIndex 只在同一個父容器的兄弟之間有效，
     // 包起來的話連結卡片永遠只能跟連結卡片比順序。
+    // 鎖定在畫布上的物件不接收觸控（見 canvas/ObjectLock.kt）。
+    val lockedIds = com.kairumo.padnote.canvas.LocalLockedObjectIds.current
     for (link in links) {
         LinkCardView(
             link = link,
             density = density,
             isSelected = link.id == selectedId,
-            interactive = interactive,
+            interactive = interactive && link.id !in lockedIds,
             zIndex = zIndexOf(link.id),
             onSelect = onSelect,
             onOpen = onOpen,

@@ -78,11 +78,14 @@ class AndroidCollabCanvas(
         val out = LinkedHashMap<String, CollabEntry>()
         val ids = pageIds
         val under = underIds(ids)
+        val locked = lockedIds()
         fun add(type: String, id: String, dict: Map<String, Any>) {
             val canonical = canonicalId(id)
             val full = dict.toMutableMap()
             // 堆疊順序與「在筆跡下方」是每個物件自己的欄位：兩人同時調不同物件的層級，兩邊都留下（設計 §8.7）。
             full["under"] = canonical in under
+            // 「鎖定在畫布上」比照辦理：鎖定 / 解除各是那個物件自己的一個欄位。
+            full["locked"] = canonical in locked
             zPositions[canonical]?.let { full["z"] = it }
             out["$type:$canonical"] = CollabEntry(type, canonical, full)
         }
@@ -172,25 +175,43 @@ class AndroidCollabCanvas(
     private fun underIds(ids: List<String>): Set<String> =
         pageKeyedLists(NotebookMeta.KEY_UNDER_INK_BY_PAGE, ids).values.flatten().toSet()
 
+    /** 鎖定的物件（不分頁，與 [NotebookMeta.lockedObjectIds] 一樣）。頁次鍵對不上現有頁面的也算。 */
+    private fun lockedIds(): Set<String> {
+        val byPage = meta.raw(NotebookMeta.KEY_LOCKED_BY_PAGE) as? JSONObject ?: return emptySet()
+        val out = HashSet<String>()
+        for (pageKey in byPage.keys()) {
+            val list = byPage.optJSONArray(pageKey) ?: continue
+            for (i in 0 until list.length()) list.optString(i).ifEmpty { null }?.let { out += canonicalId(it) }
+        }
+        return out
+    }
+
     override fun objectOrders(): Map<String, List<String>> {
         meta.refresh(session)
         return pageKeyedLists(NotebookMeta.KEY_ORDER_BY_PAGE, pageIds)
     }
 
-    override fun writeStacking(orders: Map<String, List<String>>, under: Map<String, List<String>>) {
+    override fun writeStacking(
+        orders: Map<String, List<String>>, under: Map<String, List<String>>, locked: Map<String, List<String>>
+    ) {
         val ids = pageIds
         val local = localIds()
-        fun encode(lists: Map<String, List<String>>): JSONObject? {
+        fun encode(lists: Map<String, List<String>>, sorted: Boolean = false): JSONObject? {
             val byPage = JSONObject()
             for ((page, list) in lists) {
                 val index = ids.indexOf(page)
                 if (index < 0 || list.isEmpty()) continue
-                byPage.put(index.toString(), JSONArray(list.map { local[it] ?: it }))
+                val localList = list.map { local[it] ?: it }
+                byPage.put(index.toString(), JSONArray(if (sorted) localList.sorted() else localList))
             }
             return if (byPage.length() == 0) null else byPage
         }
-        for ((key, lists) in listOf(NotebookMeta.KEY_ORDER_BY_PAGE to orders, NotebookMeta.KEY_UNDER_INK_BY_PAGE to under)) {
-            val wanted = encode(lists)
+        // 鎖定名單在檔案裡是排序過的本機 id（`NotebookMeta.setObjectLocked`）。
+        for ((key, wanted) in listOf(
+            NotebookMeta.KEY_ORDER_BY_PAGE to encode(orders),
+            NotebookMeta.KEY_UNDER_INK_BY_PAGE to encode(under),
+            NotebookMeta.KEY_LOCKED_BY_PAGE to encode(locked, sorted = true),
+        )) {
             if ((meta.raw(key)?.toString() ?: "") != (wanted?.toString() ?: "")) meta.setRaw(session, key, wanted)
         }
     }

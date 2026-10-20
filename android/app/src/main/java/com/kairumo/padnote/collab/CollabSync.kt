@@ -21,15 +21,15 @@ interface CollabCanvas {
     /**
      * 這次要比對的物件（`type:id` → 欄位）。頁面與頁面設定也在裡面。
      *
-     * 每個物件帶 `under`（是否在筆跡下方），在堆疊順序裡的帶 `z`（取自 [zPositions]，設計 §8.7）。
+     * 每個物件帶 `under`（是否在筆跡下方）與 `locked`（是否鎖定在畫布上），在堆疊順序裡的帶 `z`（取自 [zPositions]，設計 §8.7）。
      */
     fun maps(pagePositions: Map<String, String>, zPositions: Map<String, String>, allPages: Boolean): Map<String, CollabEntry>
 
     /** 每一頁的堆疊順序（由後到前，正規 id）。只列使用者排過的物件 —— 沒排過的照預設畫法。 */
     fun objectOrders(): Map<String, List<String>>
 
-    /** 寫回合併後的堆疊順序與「在筆跡下方」名單（頁面 id → 正規 id）。 */
-    fun writeStacking(orders: Map<String, List<String>>, under: Map<String, List<String>>)
+    /** 寫回合併後的堆疊順序、「在筆跡下方」與「鎖定在畫布上」名單（頁面 id → 正規 id）。 */
+    fun writeStacking(orders: Map<String, List<String>>, under: Map<String, List<String>>, locked: Map<String, List<String>>)
 
     /** 這一筆 shadow 裡的物件是不是「這次比對的範圍內」—— 範圍外的不見了不代表被刪除。 */
     fun inScope(type: String, dict: Map<String, Any>): Boolean
@@ -162,19 +162,24 @@ class CollabObjectSync {
         zPositions.keys.retainAll(listed)
     }
 
-    /** 依合併狀態算出每一頁的堆疊順序與「在筆跡下方」名單（已刪除的不算）。 */
-    fun desiredStacking(): Pair<Map<String, List<String>>, Map<String, List<String>>> {
+    /** 依合併狀態算出每一頁的堆疊順序、「在筆跡下方」與「鎖定在畫布上」名單（已刪除的不算）。 */
+    fun desiredStacking(): CollabStacking {
         val ordered = HashMap<String, MutableList<Pair<String, String>>>()
         val under = HashMap<String, MutableList<String>>()
+        val locked = HashMap<String, MutableList<String>>()
         for ((key, dict) in shadow) {
             if (dict[ObjectPatch.DELETED] != false) continue
             val page = dict["page"] as? String ?: continue
             val id = key.substringAfter(':')
             (dict["z"] as? String)?.let { ordered.getOrPut(page) { mutableListOf() } += it to id }
             if (dict["under"] == true) under.getOrPut(page) { mutableListOf() } += id
+            if (dict["locked"] == true) locked.getOrPut(page) { mutableListOf() } += id
         }
-        return ordered.mapValues { (_, list) -> list.sortedWith(compareBy({ it.first }, { it.second })).map { it.second } } to
-            under.mapValues { (_, list) -> list.sorted() }
+        return CollabStacking(
+            orders = ordered.mapValues { (_, list) -> list.sortedWith(compareBy({ it.first }, { it.second })).map { it.second } },
+            under = under.mapValues { (_, list) -> list.sorted() },
+            locked = locked.mapValues { (_, list) -> list.sorted() },
+        )
     }
 
     fun apply(patch: ObjectPatch, stamp: LamportStamp, canvas: CollabCanvas): Boolean {
@@ -366,3 +371,10 @@ class CollabInkLedger {
         known.clear(); wireForLocal.clear(); localForWire.clear(); sessionAdded.clear(); sessionRemoved.clear()
     }
 }
+
+/** 合併後每一頁的堆疊順序、「在筆跡下方」與「鎖定在畫布上」名單（頁面 id → 正規 id）。 */
+data class CollabStacking(
+    val orders: Map<String, List<String>>,
+    val under: Map<String, List<String>>,
+    val locked: Map<String, List<String>>,
+)

@@ -179,6 +179,17 @@ fun OrderHandle(
                         onClick = { open = false; reorder(objectId, op) }
                     )
                 }
+                // 鎖定在畫布上（見 ObjectLock.kt）。鎖上之後這顆鈕就點不到了，解除鎖定在圖層面板。
+                LocalObjectLock.current?.let { lock ->
+                    val locked = lock.isLocked(objectId)
+                    androidx.compose.material3.HorizontalDivider()
+                    androidx.compose.material3.DropdownMenuItem(
+                        text = { androidx.compose.material3.Text(
+                            (if (locked) "🔓 " else "🔒 ") + LocalizationStrings.localized(
+                                if (locked) "object_unlock" else "object_lock", language)) },
+                        onClick = { open = false; lock.setLocked(objectId, !locked) }
+                    )
+                }
             }
         }
     }

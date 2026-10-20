@@ -209,6 +209,7 @@ public struct CanvasStackPanel: View {
     /// 用 `Set` 的迭代順序的話，同樣的操作每次得到的結果會不一樣。
     let onAlign: (FfiAlignMode, [String]) -> Void
 
+    @Environment(\.objectLock) private var lock
     @ObservedObject private var localizationManager = LocalizationManager.shared
 
     public init(
@@ -295,6 +296,30 @@ public struct CanvasStackPanel: View {
     }
 
     private func rowView(_ object: StackableObject) -> some View {
+        HStack(spacing: 4) {
+            selectableRow(object)
+            // 鎖定在畫布上。鎖定的物件在畫布上點不到，解除鎖定就靠這一顆。
+            if let lock {
+                let locked = lock.isLocked(object.id)
+                let key = locked ? "object_unlock" : "object_lock"
+                Button {
+                    lock.setLocked(object.id, !locked)
+                } label: {
+                    Image(systemName: locked ? "lock.fill" : "lock.open")
+                        .font(.caption)
+                        .foregroundStyle(locked ? Color.orange : Color.secondary.opacity(0.6))
+                        .frame(width: 24, height: 24)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .help(localizationManager.localized(key))
+                .accessibilityLabel(localizationManager.localized(key))
+                .accessibilityIdentifier("layers.lock.\(object.id)")
+            }
+        }
+    }
+
+    private func selectableRow(_ object: StackableObject) -> some View {
         let isSelected = selection.contains(object.id)
         return Button {
             if isSelected { selection.remove(object.id) } else { selection.insert(object.id) }
@@ -423,6 +448,87 @@ extension EnvironmentValues {
     }
 }
 
+// MARK: - 鎖定在畫布上
+
+/// 「鎖定在畫布上」的讀寫能力，與 `objectReorder` 一樣由物件層注入。
+///
+/// 鎖定的物件**完全不接收觸控**（點選、拖曳、長按都穿透到頁面）：雙指縮放或捲動頁面時，
+/// 第一根手指落在物件上也不會把它選起來、拖走或打開編輯。
+///
+/// 解除鎖定有三個入口，都不必先「點中」物件本身：打字模式下點物件角落的鎖頭、
+/// 或單指點一下鎖定的物件（穿透到頁面的那一下由編輯器接住），物件上方會出現「解除鎖定」鈕；
+/// 另外圖層面板每一列都有鎖頭開關。
+struct ObjectLockActions {
+    var isLocked: (String) -> Bool
+    var setLocked: (String, Bool) -> Void
+}
+
+private struct ObjectLockKey: EnvironmentKey {
+    static let defaultValue: ObjectLockActions? = nil
+}
+
+extension EnvironmentValues {
+    var objectLock: ObjectLockActions? {
+        get { self[ObjectLockKey.self] }
+        set { self[ObjectLockKey.self] = newValue }
+    }
+}
+
+/// 物件選單裡的「鎖定在畫布上／解除鎖定」。
+struct ObjectLockMenuItem: View {
+    let id: String
+    @Environment(\.objectLock) private var lock
+    @ObservedObject private var localizationManager = LocalizationManager.shared
+
+    var body: some View {
+        if let lock {
+            let locked = lock.isLocked(id)
+            Button {
+                lock.setLocked(id, !locked)
+            } label: {
+                Label(
+                    localizationManager.localized(locked ? "object_unlock" : "object_lock"),
+                    systemImage: locked ? "lock.open" : "lock")
+            }
+        }
+    }
+}
+
+extension View {
+    /// 套在畫布上每一個物件外面：鎖定時物件本身不接收觸控（雙指縮放、捲動都穿透到頁面），
+    /// 角落放一個**點得到**的小鎖頭（只在 `showBadge` 時，也就是打字／物件模式 —— 手寫模式下
+    /// 物件本來就不接觸控）。點鎖頭呼叫 `onBadgeTap`，由編輯器在物件上方給「解除鎖定」鈕：
+    /// 看得到的鎖定物件，一定要就地點得到解鎖的入口。
+    @ViewBuilder
+    func canvasLocked(_ locked: Bool, showBadge: Bool, onBadgeTap: @escaping () -> Void = {}) -> some View {
+        if locked {
+            self
+                .allowsHitTesting(false)
+                .overlay(alignment: .topTrailing) {
+                    if showBadge {
+                        Button(action: onBadgeTap) {
+                            Image(systemName: "lock.fill")
+                                .font(.system(size: 10, weight: .bold))
+                                .foregroundStyle(.white)
+                                .padding(5)
+                                .background(Circle().fill(Color.orange.opacity(0.9)))
+                                // 圖示小、觸控範圍要夠大（44pt 是 Apple 的最小觸控目標）。
+                                .frame(width: 32, height: 32)
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .offset(x: 14, y: -14)
+                        .help(LocalizationManager.shared.localized("object_locked"))
+                        .accessibilityLabel(LocalizationManager.shared.localized("object_locked"))
+                        .accessibilityIdentifier("object.lock.badge")
+                    }
+                }
+        } else {
+            self
+        }
+    }
+}
+
 /// 放進物件右鍵／長按選單的排列動作。
 struct ObjectOrderMenu: View {
     let id: String
@@ -465,6 +571,10 @@ struct ObjectOrderMenu: View {
                 } label: {
                     Label(localizationManager.localized("layer_send_below_ink"), systemImage: "square.2.layers.3d.bottom.filled")
                 }
+
+                Divider()
+
+                ObjectLockMenuItem(id: id)
             } label: {
                 Label(localizationManager.localized("layers_panel"), systemImage: "square.3.layers.3d")
             }
@@ -476,6 +586,7 @@ struct ObjectOrderMenu: View {
 struct ObjectOrderBar: View {
     let id: String
     @Environment(\.objectReorder) private var reorder
+    @Environment(\.objectLock) private var lock
     @ObservedObject private var localizationManager = LocalizationManager.shared
 
     var body: some View {
@@ -491,6 +602,22 @@ struct ObjectOrderBar: View {
                     .controlSize(.small)
                     .help(localizationManager.localized(op.key))
                     .accessibilityLabel(localizationManager.localized(op.key))
+                }
+                // 鎖定在畫布上：編輯面板裡按下去就鎖，面板跟著關（鎖定的物件不再能被選取）。
+                if let lock {
+                    let locked = lock.isLocked(id)
+                    let key = locked ? "object_unlock" : "object_lock"
+                    Button {
+                        lock.setLocked(id, !locked)
+                    } label: {
+                        Image(systemName: locked ? "lock.open" : "lock").frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                    .tint(locked ? .orange : nil)
+                    .help(localizationManager.localized(key))
+                    .accessibilityLabel(localizationManager.localized(key))
+                    .accessibilityIdentifier("object.lock")
                 }
             }
         }

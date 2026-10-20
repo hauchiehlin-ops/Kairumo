@@ -2483,6 +2483,41 @@ private fun InkScreen(
         if (underInkIds.contains(id)) 10f + baseZ else 200f + baseZ
     }
 
+    // 鎖定在畫布上（見 canvas/ObjectLock.kt）：鎖定的物件不接收觸控，雙指縮放、捲動頁面時
+    // 碰到它也不會被選起來或進入編輯。不分頁查（物件 id 全域唯一）。
+    var lockRevision by remember { mutableIntStateOf(0) }
+    /** 正在顯示「解除鎖定」鈕的鎖定物件（點了鎖頭或點了鎖定的物件）。 */
+    var lockPromptId by remember(pageId) { mutableStateOf<String?>(null) }
+    val lockedIds = remember(meta, lockRevision, stackRevision) { meta.lockedObjectIds() }
+    val objectLock = remember(meta, pageIndex) {
+        com.kairumo.padnote.canvas.ObjectLockActions(
+            isLocked = { id -> id in meta.lockedObjectIds() },
+            setLocked = { id, locked ->
+                meta.setObjectLocked(notebook?.first, pageIndex, id, locked)
+                if (locked) {
+                    // 鎖上就收掉它的選取：鎖定的物件點不到，留著選取外框的話是一組拖不動的把手。
+                    if (selectedTextId == id) selectedTextId = null
+                    if (selectedImageId == id) selectedImageId = null
+                    if (selectedChartId == id) selectedChartId = null
+                    if (selectedTableId == id) selectedTableId = null
+                    if (selectedLinkId == id) selectedLinkId = null
+                    if (selectedAudioId == id) selectedAudioId = null
+                    if (selectedModel3DId == id) selectedModel3DId = null
+                    selectedShapeIds = selectedShapeIds - id
+                    marqueeSelection = marqueeSelection - id
+                }
+                if (lockPromptId == id) lockPromptId = null
+                lockRevision++
+                AutoSync.noteLocalEdit(activity)
+            }
+        )
+    }
+
+    // pointerInput 的區塊只在 key 變時重建，裡面要讀最新的名單。
+    val marqueeCandidatesLatest by androidx.compose.runtime.rememberUpdatedState(marqueeCandidates)
+    val lockedIdsLatest by androidx.compose.runtime.rememberUpdatedState(lockedIds)
+    val stackOrderLatest by androidx.compose.runtime.rememberUpdatedState(stackOrder)
+
     // 調整單一物件的層級（每個物件的把手、編輯面板共用，支援移至筆跡下方/上方）。
     val objectReorder: (String, ObjectStacking.Reorder) -> Unit = { id, op ->
         when (op) {
@@ -4614,7 +4649,7 @@ private fun InkScreen(
                     )
                     // 全選：這一頁所有物件一次選起來。
                     TextButton(
-                        onClick = { marqueeSelection = marqueeCandidates.map { it.id }.toSet() },
+                        onClick = { marqueeSelection = marqueeCandidates.filter { it.id !in lockedIds }.map { it.id }.toSet() },
                         enabled = marqueeCandidates.isNotEmpty(),
                         modifier = Modifier.testTag("editor.marquee.select_all")
                     ) { Text(l10n("select_all")) }
@@ -5298,7 +5333,11 @@ private fun InkScreen(
                     }
                 }
         ) {
-        CompositionLocalProvider(com.kairumo.padnote.canvas.LocalObjectReorder provides objectReorder) {
+        CompositionLocalProvider(
+            com.kairumo.padnote.canvas.LocalObjectReorder provides objectReorder,
+            com.kairumo.padnote.canvas.LocalObjectLock provides objectLock,
+            com.kairumo.padnote.canvas.LocalLockedObjectIds provides lockedIds
+        ) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -5319,6 +5358,17 @@ private fun InkScreen(
                             detectTapGestures { offset: Offset ->
                                 val tapX = offset.x / canvasDensity
                                 val tapY = offset.y / canvasDensity
+                                // 點到鎖定在畫布上的物件（它不接觸控，這一下穿透到頁面來了）：
+                                // 不開新文字方塊、不就地編輯它，而是在它上方給「解除鎖定」鈕。
+                                val lockedHit = com.kairumo.padnote.canvas.lockedObjectHit(
+                                    tapX, tapY,
+                                    marqueeCandidatesLatest.sortedBy { stackOrderLatest.indexOf(it.id) },
+                                    lockedIdsLatest)
+                                if (lockedHit != null) {
+                                    lockPromptId = if (lockPromptId == lockedHit) null else lockedHit
+                                    return@detectTapGestures
+                                }
+                                lockPromptId = null
                                 val hitExisting = textStore.all.firstOrNull { box ->
                                     tapX >= (box.x - 10f) && tapX <= (box.x + box.width + 10f) &&
                                     tapY >= (box.y - 10f) && tapY <= (box.y + box.height + 10f)
@@ -5601,6 +5651,19 @@ private fun InkScreen(
                 )
             }
 
+            // 鎖定物件右上角的小鎖頭（打字／物件模式才畫）。
+            if (editorMode == EditorMode.TYPE && lockedIds.isNotEmpty()) {
+                com.kairumo.padnote.canvas.LockBadges(marqueeCandidates, lockedIds, l10n("object_locked")) { id ->
+                    lockPromptId = if (lockPromptId == id) null else id
+                }
+                val promptFrame = lockPromptId?.let { id -> marqueeCandidates.firstOrNull { it.id == id } }
+                if (promptFrame != null && promptFrame.id in lockedIds) {
+                    com.kairumo.padnote.canvas.UnlockPrompt(promptFrame, l10n("object_unlock")) {
+                        objectLock.setLocked(promptFrame.id, false)
+                    }
+                }
+            }
+
             // 形狀與連接線。
             //
             // **不再用 `key(shapeRevision)` 整層重建。** 重建會把進行中的手勢拆掉 ——
@@ -5877,7 +5940,9 @@ private fun InkScreen(
             if (marqueeActive && editorMode == EditorMode.TYPE) {
                 MarqueeLayer(
                     // 依堆疊順序由下到上，點選時才拿得到最上面那一個。
-                    candidates = marqueeCandidates.sortedBy { hit -> stackOrder.indexOf(hit.id) },
+                    // 鎖定在畫布上的物件不框：框選帶著它一起搬，就不叫鎖定了。
+                    candidates = marqueeCandidates.filter { it.id !in lockedIds }
+                        .sortedBy { hit -> stackOrder.indexOf(hit.id) },
                     density = canvasDensity,
                     selectedIds = marqueeSelection,
                     additive = marqueeAdditive,
@@ -6899,6 +6964,8 @@ private fun InkScreen(
             items = stackItems,
             order = stackOrder,
             underInkIds = underInkIds,
+            lockedIds = lockedIds,
+            onLockChange = { id, locked -> objectLock.setLocked(id, locked) },
             languageTag = deviceLanguageTag(),
             onOrderChange = { updated ->
                 // 只寫這一頁，其餘頁面與其餘中繼資料欄位原封不動。

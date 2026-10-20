@@ -2228,6 +2228,8 @@ public struct NotebookEditorView: View {
     @State private var showLayerPanel: Bool = false
     /// 畫布中單一選取物件的唯一識別碼（互斥單選：同一時間最多只有一個物件處於編輯/選取狀態）
     @State private var activeSelectedObjectId: String? = nil
+    /// 正在顯示「解除鎖定」鈕的鎖定物件（點了鎖頭或點了鎖定的物件）。見 `lockedObjectPrompt`。
+    @State private var lockPromptId: String? = nil
     /// 一鍵恢復初始狀態（捨棄進入編輯器後的所有修改）
     @State private var initialNotebookSnapshot: NotebookDocument? = nil
     /// 範例有改動、使用者要離開時：問要存檔、另存還是放棄（見 `requestLeave`）。
@@ -5360,6 +5362,7 @@ public struct NotebookEditorView: View {
             }
             .coordinateSpace(name: ContinuousPagesSpace.name)
             .environment(\.objectReorder, { id, op in reorderObject(id, op) })
+            .environment(\.objectLock, objectLockActions)
             .simultaneousGesture(
                 MagnificationGesture()
                     .onChanged { mag in
@@ -5519,6 +5522,9 @@ public struct NotebookEditorView: View {
     @ViewBuilder
     private func objectLayer(forPage page: Int, filter: ObjectInkLayerFilter = .all) -> some View {
         let underInkSet = notebook.underInkObjectIds(forPage: page)
+        // 鎖定在畫布上的物件：不接收觸控（見 `canvasLocked`）。不分頁查：物件 id 全域唯一，
+        // 頁面搬移、插頁之後頁次鍵對不上也不會鎖錯或漏鎖。
+        let lockedSet = notebook.allLockedObjectIds
         // 堆疊順序的索引表：一次算繪只建一次，不要每個物件各掃一遍
         // （見 `ObjectStacking.Lookup`）。
         let stacking = ObjectStacking.Lookup(order: notebook.objectOrder(forPage: page))
@@ -5546,6 +5552,8 @@ public struct NotebookEditorView: View {
                                 collaborationManager.broadcastSelection(selectedId: nil)
                             }
                         )
+                        .canvasLocked(lockedSet.contains(item.id), showBadge: editorMode == .type) { lockPromptId = item.id }
+
                         .zIndex(stacking.zIndex(for: item.id, kind: .image))
                     }
                 }
@@ -5604,6 +5612,8 @@ public struct NotebookEditorView: View {
                                     current: current, finished: finished)
                             }
                         )
+                        .canvasLocked(lockedSet.contains(item.id), showBadge: editorMode == .type) { lockPromptId = item.id }
+
                         .zIndex(stacking.zIndex(for: item.id, kind: .shape))
                     }
                 }
@@ -5675,6 +5685,8 @@ public struct NotebookEditorView: View {
                                 collaborationManager.broadcastAttachmentDelete(id: id, type: "table")
                             }
                         )
+                        .canvasLocked(lockedSet.contains(item.id), showBadge: editorMode == .type) { lockPromptId = item.id }
+
                         .zIndex(stacking.zIndex(for: item.id, kind: .table))
                     }
                 }
@@ -5728,6 +5740,8 @@ public struct NotebookEditorView: View {
                             },
                             selectionTracker: textSelectionTracker
                         )
+                        .canvasLocked(lockedSet.contains(item.id), showBadge: editorMode == .type) { lockPromptId = item.id }
+
                         .zIndex(stacking.zIndex(for: item.id, kind: .text))
                     }
                 }
@@ -5744,6 +5758,8 @@ public struct NotebookEditorView: View {
                                 commitNotebook()
                             }
                         )
+                        .canvasLocked(lockedSet.contains(item.id), showBadge: editorMode == .type) { lockPromptId = item.id }
+
                         .zIndex(stacking.zIndex(for: item.id, kind: .link))
                     }
                 }
@@ -5764,6 +5780,8 @@ public struct NotebookEditorView: View {
                                 insertTranscriptText(transcribedText, for: item)
                             }
                         )
+                        .canvasLocked(lockedSet.contains(item.id), showBadge: editorMode == .type) { lockPromptId = item.id }
+
                         .zIndex(stacking.zIndex(for: item.id, kind: .audio))
                     }
                 }
@@ -5783,6 +5801,8 @@ public struct NotebookEditorView: View {
                                 collaborationManager.broadcastSelection(selectedId: nil)
                             }
                         )
+                        .canvasLocked(lockedSet.contains(item.id), showBadge: editorMode == .type) { lockPromptId = item.id }
+
                         .zIndex(stacking.zIndex(for: item.id, kind: .model3D))
                     }
                 }
@@ -5811,12 +5831,16 @@ public struct NotebookEditorView: View {
                             }
                         )
                         .position(x: pin.x, y: pin.y)
+                        .canvasLocked(lockedSet.contains(pin.id), showBadge: editorMode == .type) { lockPromptId = pin.id }
+
                         .zIndex(stacking.zIndex(for: pin.id, kind: .pin))
                     }
                 }
 
                 // 🌟 特殊樣板智慧互動元件層（核取清單 Checkbox、選項切換與進度管控）
                 if filter != .underInkOnly {
+                    lockedObjectPrompt(forPage: page)
+
                     ForEach(interactiveGuideCheckboxes(forPage: page)) { item in
                         InteractiveGuideCheckboxView(
                             isChecked: notebook.checkedGuideItems?[item.key] ?? false,
@@ -5844,6 +5868,7 @@ public struct NotebookEditorView: View {
 
         }
         .environment(\.objectReorder, { id, op in reorderObject(id, op) })
+            .environment(\.objectLock, objectLockActions)
         .coordinateSpace(name: CanvasCoordinateSpace.name)
     }
 
@@ -9789,7 +9814,7 @@ public struct NotebookEditorView: View {
         var withDeferred = notebook
         collabSync.retryDeferred(into: &withDeferred)
         let stacking = collabSync.desiredStacking()
-        CollabCanonical.writeStacking(orders: stacking.orders, under: stacking.under, into: &withDeferred)
+        CollabCanonical.writeStacking(orders: stacking.orders, under: stacking.under, locked: stacking.locked, into: &withDeferred)
         for item in anchored { resolveRunAnchors(id: item.id, anchors: item.anchors, in: &withDeferred) }
         notebook = withDeferred
         // 寫回後的編碼要成為新的同步基準，否則下一次本機修改會把這些欄位當成「我改的」再送一次。
@@ -10030,7 +10055,7 @@ public struct NotebookEditorView: View {
         var withDeferred = notebook
         collabSync.retryDeferred(into: &withDeferred)
         let stacking = collabSync.desiredStacking()
-        CollabCanonical.writeStacking(orders: stacking.orders, under: stacking.under, into: &withDeferred)
+        CollabCanonical.writeStacking(orders: stacking.orders, under: stacking.under, locked: stacking.locked, into: &withDeferred)
         for override in result.textOverrides {
             collabTextHub.rebase(override.id, text: override.text, site: me)
             if let index = withDeferred.textAttachments?.firstIndex(where: { CollabCanonical.canonicalId($0.id) == override.id }) {
@@ -12284,7 +12309,9 @@ public struct NotebookEditorView: View {
     /// 智慧穿透判定：當觸控點落在筆跡下方的物件時，決定是否讓畫布返回 nil 使得觸控能直達下層物件
     // unused-param-ok: 依 UIKit hitTest(_:with:) 簽章保留 event 參數供擴充使用，穿透邏輯以座標與物件狀態裁決
     private func isUnderInkPointPassThrough(point: CGPoint, page: Int, event: UIEvent? = nil) -> Bool {
+        // 鎖定的物件不接觸控：落在它上面的筆照樣畫在畫布上，不穿透下去。
         let underInkSet = notebook.underInkObjectIds(forPage: page)
+            .subtracting(notebook.allLockedObjectIds)
         guard !underInkSet.isEmpty else { return false }
 
         var hitSelected = false
@@ -12608,6 +12635,15 @@ public struct NotebookEditorView: View {
             toggleGuideCheckbox(key: key)
             return
         }
+        // 0b. 點到鎖定在畫布上的物件：鎖定的物件不接觸控，這一下穿透到頁面來了。
+        // 不當成「點空白」（會在這裡開新文字方塊、或就地編輯它），而是在它上方給「解除鎖定」鈕 ——
+        // 看得到的物件就要點得到解鎖的入口。只有單指點一下才會到這裡，雙指縮放、捲動照樣穿透。
+        if let lockedId = lockedObjectHit(at: location, page: targetPage) {
+            lockPromptId = (lockPromptId == lockedId) ? nil : lockedId
+            return
+        }
+        lockPromptId = nil
+
         // 1. 若先前有就地編輯但未打任何字的空方塊，先自動清理
         if let activeId = inlineEditingTextId,
            let activeItem = notebook.textAttachments?.first(where: { $0.id == activeId }),
@@ -13511,9 +13547,12 @@ public struct NotebookEditorView: View {
     /// 點選時才拿得到最上面那一個。
     private var marqueeCandidates: [MarqueeHit] {
         let stacking = ObjectStacking.Lookup(order: notebook.objectOrder(forPage: currentPageIndex))
+        let lockedIds = notebook.allLockedObjectIds
         return pageStackableObjects.compactMap { object -> MarqueeHit? in
             // 別人正在編輯的物件不能被框選帶著一起搬、一起刪（設計 §5.2）。
+            // 鎖定在畫布上的物件也不框：框選帶著它一起搬，就不叫鎖定了。
             guard collaborationManager.leaseHolder(for: object.id) == nil,
+                  !lockedIds.contains(object.id),
                   let frame = frameOfObject(id: object.id) else { return nil }
             return MarqueeHit(id: object.id, kind: object.kind, frame: frame)
         }
@@ -14128,6 +14167,7 @@ public struct NotebookEditorView: View {
 
         }
         .environment(\.objectReorder, { id, op in reorderObject(id, op) })
+            .environment(\.objectLock, objectLockActions)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
         .zIndex(10_000)
     }
@@ -14143,6 +14183,81 @@ public struct NotebookEditorView: View {
         if let v = notebook.audioAttachments?.first(where: { $0.id == id }) { return v.pageIndex }
         if let v = notebook.commentPins?.first(where: { $0.id == id }) { return v.pageIndex }
         return nil
+    }
+
+    /// 物件選單、編輯面板、圖層面板共用的「鎖定在畫布上」。
+    private var objectLockActions: ObjectLockActions {
+        ObjectLockActions(
+            isLocked: { id in notebook.allLockedObjectIds.contains(id) },
+            setLocked: { id, locked in setObjectLocked(id, locked) })
+    }
+
+    /// 點在哪一個鎖定物件上（最上層的那一個）。沒有回 nil。
+    private func lockedObjectHit(at point: CGPoint, page: Int) -> String? {
+        let locked = notebook.allLockedObjectIds
+        guard !locked.isEmpty else { return nil }
+        let stacking = ObjectStacking.Lookup(order: notebook.objectOrder(forPage: page))
+        return stackableObjects(forPage: page)
+            .filter { locked.contains($0.id) }
+            .sorted { stacking.zIndex(for: $0.id, kind: $0.kind) > stacking.zIndex(for: $1.id, kind: $1.kind) }
+            // 放寬 20pt：角落的鎖頭露在物件外面，點鎖頭也要算點到它。
+            .first { frameOfObject(id: $0.id)?.insetBy(dx: -20, dy: -20).contains(point) == true }?
+            .id
+    }
+
+    /// 鎖定物件上方的「解除鎖定」鈕（頁面座標，畫在物件層裡）。
+    @ViewBuilder
+    private func lockedObjectPrompt(forPage page: Int) -> some View {
+        if editorMode == .type, let id = lockPromptId, pageOfObject(id) == page,
+           notebook.allLockedObjectIds.contains(id), let frame = frameOfObject(id: id) {
+            Button {
+                setObjectLocked(id, false)
+                lockPromptId = nil
+            } label: {
+                Label(localizationManager.localized("object_unlock"), systemImage: "lock.open.fill")
+                    .font(.caption.weight(.semibold))
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(Capsule().fill(Color.orange))
+                    .foregroundStyle(.white)
+                    .shadow(color: .black.opacity(0.18), radius: 4, y: 2)
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("object.unlock.prompt")
+            .position(x: frame.midX, y: max(16, frame.minY - 20))
+            .zIndex(9_800)
+        }
+    }
+
+    /// 鎖定／解除鎖定一個物件。鎖定時一併收掉它的選取與編輯面板 ——
+    /// 鎖定的物件點不到，留著選取外框的話，使用者看到的是一組拖不動的把手。
+    private func setObjectLocked(_ id: String, _ locked: Bool) {
+        guard notebook.allLockedObjectIds.contains(id) != locked else { return }
+        if locked {
+            guard let page = pageOfObject(id) else { return }
+            notebook.setLockedObjectIds(notebook.lockedObjectIds(forPage: page).union([id]), forPage: page)
+        } else {
+            // 解除時每一頁都拿掉：頁面搬移過的話，它記在哪個頁次鍵底下不一定是現在這一頁。
+            for key in (notebook.lockedObjectIdsByPage ?? [:]).keys {
+                guard let page = Int(key) else { continue }
+                notebook.setLockedObjectIds(notebook.lockedObjectIds(forPage: page).subtracting([id]), forPage: page)
+            }
+        }
+        if locked {
+            if activeSelectedObjectId == id {
+                activeSelectedObjectId = nil
+                collaborationManager.broadcastSelection(selectedId: nil)
+            }
+            selectedObjectIds.remove(id)
+            selectedShapeIds.remove(id)
+            if inlineEditingTextId == id { inlineEditingTextId = nil }
+            if editingTextId == id { editingTextId = nil }
+            if editingShapeId == id { editingShapeId = nil }
+            if editingAttachmentId == id { editingAttachmentId = nil }
+        }
+        if lockPromptId == id { lockPromptId = nil }
+        commitNotebook()
+        continuousReloadGeneration += 1
     }
 
     /// 調整單一物件的層級（選單、編輯面板共用，支援移至筆跡下方/上方）。

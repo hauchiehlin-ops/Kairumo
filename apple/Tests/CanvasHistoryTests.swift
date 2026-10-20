@@ -153,6 +153,37 @@ final class CanvasHistoryTests: XCTestCase {
         commit { $0.attachments?[0].y = 2 }
         XCTAssertFalse(manager.canRedo)
     }
+    // MARK: - 鎖定在畫布上
+
+    func testObjectLockIsGlobalLookupAndUnlockClearsEveryPage() {
+        var d = NotebookDocument(title: "lock")
+        d.setLockedObjectIds(["b", "a"], forPage: 2)
+        d.setLockedObjectIds(["x"], forPage: 0)
+        XCTAssertEqual(d.lockedObjectIdsByPage?["2"], ["a", "b"], "排序寫出，與 Android 同一份內容")
+        XCTAssertEqual(d.allLockedObjectIds, ["a", "b", "x"])
+        d.setLockedObjectIds([], forPage: 0)
+        XCTAssertNil(d.lockedObjectIdsByPage?["0"], "空的那一頁要拿掉")
+        d.setLockedObjectIds([], forPage: 2)
+        XCTAssertNil(d.lockedObjectIdsByPage, "全部解除之後跟沒鎖過一樣")
+    }
+
+    func testObjectLockRoundTripsThroughPackageMeta() {
+        var d = NotebookDocument(title: "lock")
+        d.setLockedObjectIds(["t1"], forPage: 0)
+        var restored = NotebookDocument(title: "lock")
+        NotebookMeta.decode(from: NotebookMeta(from: d).encodedJSON())?.apply(to: &restored)
+        XCTAssertEqual(restored.allLockedObjectIds, ["t1"])
+        XCTAssertTrue(NotebookMeta(from: d).encodedJSON().contains("\"lockedObjectIdsByPage\""),
+                      "鍵名要與 Android NotebookMeta.KEY_LOCKED_BY_PAGE 一致")
+    }
+
+    func testLockingIsOneUndoStep() {
+        commit { $0.setLockedObjectIds(["t1"], forPage: 0) }
+        XCTAssertEqual(doc.allLockedObjectIds, ["t1"])
+        stepUndo()
+        XCTAssertTrue(doc.allLockedObjectIds.isEmpty, "復原要能把鎖定退回")
+    }
+
 }
 
 /// 框選的選取規則：一般／連續框選、點選切換、最上層命中。與 Android 端 `MarqueeSelectionTest` 對應。
