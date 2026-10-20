@@ -175,6 +175,8 @@ fun ContinuousPagesView(
     reloadToken: Int,
     /** 遞增就代表「再捲到目前頁一次」（點了目前這一頁的縮圖：頁碼沒變，但要回到頁頂）。 */
     scrollRequest: Int = 0,
+    /** 套索模式時的選取（null = 不是套索模式）。所有頁面共用一份，選取屬於哪一頁見 `lassoPageId`。 */
+    lasso: LassoSelection? = null,
     /** 外層工具列的復原／重做按鈕接到這裡（見 `ContinuousUndoController`）。 */
     undoController: ContinuousUndoController? = null,
     /** 即時協同讀寫每一頁的引擎與物件（見 `ContinuousCollabBridge`）。 */
@@ -182,6 +184,8 @@ fun ContinuousPagesView(
     modifier: Modifier = Modifier
 ) {
     val listState = rememberLazyListState()
+    /** 套索選取屬於哪一頁。只有那一頁畫圈、選取框與工具列，動作也只作用在那一頁的引擎。 */
+    var lassoPageId by remember(session) { mutableStateOf<String?>(null) }
 
     LaunchedEffect(meta) {
         com.kairumo.padnote.ink.PageGeometry.use(meta.pageFormatId())
@@ -206,6 +210,26 @@ fun ContinuousPagesView(
     fun reveal(page: String) {
         val index = indexOfPage(page) ?: return
         if (index != currentFocus) currentOnFocusChange(index)
+    }
+
+    // Ctrl+X／C／V（對齊 Apple 的 ⌘V）：作用在選取所屬的頁，沒有就是焦點頁。
+    LaunchedEffect(lasso, runtimes) {
+        val selection = lasso ?: return@LaunchedEffect
+        com.kairumo.padnote.ui.AppCommands.events.collect { command ->
+            val target = lassoPageId ?: pageIdAt(currentFocus)
+            val rt = runtimes[target] ?: return@collect
+            val changed = when (command) {
+                com.kairumo.padnote.ui.AppCommand.Cut -> selection.cut(rt.engine)
+                com.kairumo.padnote.ui.AppCommand.Copy -> selection.copy(rt.engine)
+                com.kairumo.padnote.ui.AppCommand.Paste -> selection.paste(rt.engine)
+                else -> return@collect
+            }
+            if (changed) {
+                lassoPageId = target
+                rt.bump()
+                collabBridge?.onLocalChange?.invoke()
+            }
+        }
     }
     DisposableEffect(collabBridge, runtimes, history) {
         val bridge = collabBridge
@@ -441,6 +465,17 @@ fun ContinuousPagesView(
                             history = history,
                             pageIndex = index,
                             isFocused = index == focusIndex,
+                            lasso = lasso,
+                            ownsLasso = lasso != null && lassoPageId == pageId,
+                            onLassoClaim = {
+                                // 在別頁圈下去：先把選取清掉（索引對的是那一頁的筆畫），焦點跟過來。
+                                if (lassoPageId != pageId) {
+                                    lasso?.clear()
+                                    lassoPageId = pageId
+                                }
+                                if (index != currentFocus) currentOnFocusChange(index)
+                            },
+                            pageScale = scale,
                             ink = ink,
                             editorMode = editorMode,
                             onModeChange = onModeChange,
@@ -450,6 +485,24 @@ fun ContinuousPagesView(
                         )
                     }
                 }
+            }
+        }
+
+        // 套索模式、沒有選取、剪貼簿有筆跡時的「貼上」入口：貼到選取所屬的頁，沒有就貼到焦點頁。
+        if (lasso != null && editorMode == EditorMode.DRAW) {
+            val target = lassoPageId ?: pageIdAt(focusIndex)
+            runtimes[target]?.let { rt ->
+                LassoPastePill(
+                    lasso = lasso,
+                    engine = rt.engine,
+                    l = { key -> com.kairumo.padnote.LocalizationStrings.localized(key, com.kairumo.padnote.currentLanguageTag()) },
+                    onChanged = {
+                        lassoPageId = target
+                        rt.bump()
+                        collabBridge?.onLocalChange?.invoke()
+                    },
+                    modifier = Modifier.align(Alignment.TopCenter).padding(top = 12.dp).zIndex(10f)
+                )
             }
         }
 
@@ -520,6 +573,10 @@ private fun ContinuousPage(
     history: CanvasHistory,
     pageIndex: Int,
     isFocused: Boolean,
+    lasso: LassoSelection?,
+    ownsLasso: Boolean,
+    onLassoClaim: () -> Unit,
+    pageScale: Float,
     ink: InkSettings,
     editorMode: EditorMode,
     onModeChange: (EditorMode) -> Unit,
@@ -883,6 +940,39 @@ private fun ContinuousPage(
                     }
                 }
             )
+        }
+
+        // 套索層：疊在這一頁上面。每一頁各一層、共用一份選取 —— 圈、選取框與快顯工具列
+        // 只畫在選取所屬的那一頁（ownsLasso）。頁面被 `scaledPage` 縮過，工具列反向放大回
+        // 螢幕上的原尺寸，不然縮小時按鈕小到按不到（與 Apple 的 barScale 同一個道理）。
+        if (lasso != null && editorMode == EditorMode.DRAW) {
+            val lassoChanged = {
+                revision++
+                runtime.bump()
+                collabBridge?.onLocalChange?.invoke()
+                Unit
+            }
+            LassoOverlay(
+                lasso = lasso,
+                engine = engine,
+                onGestureStart = onLassoClaim,
+                showDecoration = ownsLasso,
+                onChanged = lassoChanged,
+                modifier = Modifier.fillMaxSize().zIndex(200f)
+            )
+            val box = lasso.boundingRect
+            if (ownsLasso && box != null) {
+                LassoActionBar(
+                    lasso = lasso,
+                    engine = engine,
+                    l = { key -> com.kairumo.padnote.LocalizationStrings.localized(key, com.kairumo.padnote.currentLanguageTag()) },
+                    onChanged = lassoChanged,
+                    modifier = Modifier
+                        .zIndex(300f)
+                        .lassoBarPlacement(box, density, 1f, Offset.Zero, 12f * density / pageScale)
+                        .graphicsLayer(scaleX = 1f / pageScale, scaleY = 1f / pageScale)
+                )
+            }
         }
 
         Text(

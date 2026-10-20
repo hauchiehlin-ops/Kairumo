@@ -23,6 +23,7 @@ import kotlinx.coroutines.flow.asSharedFlow
  * | 新增筆記 | ⇧⌘N | Ctrl+Shift+N |
  * | 搜尋 | ⌘F | Ctrl+F |
  * | 選工具 | ⌘1–⌘9 | Ctrl+1–Ctrl+6 |
+ * | 套索：剪下／複製／貼上筆跡 | ⌘X／⌘C／⌘V | Ctrl+X／Ctrl+C／Ctrl+V |
  *
  * 新增筆記跟著 Apple 用**加 Shift** 的組合：Apple 端 ⌘N 被系統的
  * 「新增視窗」佔走（搶同一組鍵會讓 UIKit 直接丟例外），兩邊用同一組
@@ -49,6 +50,14 @@ sealed interface AppCommand {
 
     /** 選第 [index] 個工具（從 0 起算）。 */
     data class SelectTool(val index: Int) : AppCommand
+
+    /**
+     * 套索模式的剪下／複製／貼上筆跡。只有套索模式會接；文字框裡的 Ctrl+C／V
+     * 由文字框自己處理，輪不到這裡（見 MainActivity.onKeyDown）。
+     */
+    data object Cut : AppCommand
+    data object Copy : AppCommand
+    data object Paste : AppCommand
 }
 
 object AppCommands {
@@ -81,6 +90,9 @@ object AppCommands {
             KeyEvent.KEYCODE_F -> if (shiftPressed) null else AppCommand.FocusSearch
             KeyEvent.KEYCODE_E -> if (shiftPressed) null else AppCommand.ToggleEditorMode
             KeyEvent.KEYCODE_0 -> if (shiftPressed) null else AppCommand.SelectTool(9)
+            KeyEvent.KEYCODE_X -> if (shiftPressed) null else AppCommand.Cut
+            KeyEvent.KEYCODE_C -> if (shiftPressed) null else AppCommand.Copy
+            KeyEvent.KEYCODE_V -> if (shiftPressed) null else AppCommand.Paste
             else -> {
                 if (shiftPressed) return null
                 val digit = keyCode - KeyEvent.KEYCODE_1
