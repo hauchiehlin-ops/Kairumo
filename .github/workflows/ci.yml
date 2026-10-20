@@ -161,6 +161,13 @@ jobs:
           # CoreSimulator 405，所以把那個預期錯誤安靜忽略。
           xcrun simctl shutdown "$sim_id" >/dev/null 2>&1 || true
           xcrun simctl erase "$sim_id"
+          # erase 之後裝置是關機的，冷開機（重建資料、首次 SpringBoard）交給
+          # xcodebuild 自己開的話，會算進**第一條測試**的 app 啟動時間裡 ——
+          # XCUITest 的啟動逾時是 60 秒，在 runner 上被吃光就是
+          # "Timed out while launching application via Xcode"，紅的永遠是
+          # 字母序第一條（InsertToolsAudit/testEveryInsertToolOpensSomething），
+          # 其他九條全綠。先開機並等到真正可用，再開始跑測試。
+          xcrun simctl bootstatus "$sim_id" -b
           xcodebuild test -project apple/Kairumo.xcodeproj -scheme Kairumo \
             -destination "id=$sim_id" \
             -only-testing:KairumoUITests/SmokeUITests/testHomeScreenControlsAreReachable \
