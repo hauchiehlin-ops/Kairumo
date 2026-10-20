@@ -8,6 +8,7 @@
 #   ./scripts/apple-release.sh --validate-only  # 僅驗證不真正上傳
 #   ./scripts/apple-release.sh --skip-rust      # 略過 Rust XCFramework 編譯以節省時間
 #   ./scripts/apple-release.sh --ios-only       # 只做 iOS 版（不產 Mac 版）
+#   ./scripts/apple-release.sh --mac-only       # 只做 Mac 版（iOS 已經上傳過、只差 Mac 時用）
 #
 # ⚠️ Mac 版是**另一個組建**，不是同一個。
 #
@@ -37,6 +38,7 @@ VALIDATE_ONLY=0
 SKIP_RUST=0
 # 預設兩個平台都做。使用者在 Mac 上裝不到 App 的那次，就是因為只有 iOS 組建。
 BUILD_MAC=1
+BUILD_IOS=1
 
 for arg in "$@"; do
     case "$arg" in
@@ -49,8 +51,11 @@ for arg in "$@"; do
         --ios-only)
             BUILD_MAC=0
             ;;
+        --mac-only)
+            BUILD_IOS=0
+            ;;
         -h|--help)
-            echo "用法: $0 [--validate-only] [--skip-rust] [--ios-only]"
+            echo "用法: $0 [--validate-only] [--skip-rust] [--ios-only | --mac-only]"
             exit 0
             ;;
         *)
@@ -58,11 +63,16 @@ for arg in "$@"; do
             # 踩過一次：想跑 --validate-app（那是 altool 的動作名，不是本腳本的旗標），
             # 結果整包送上 App Store Connect。寧可在這裡停下來。
             echo "❌ 未知參數：$arg" >&2
-            echo "   用法: $0 [--validate-only] [--skip-rust] [--ios-only]" >&2
+            echo "   用法: $0 [--validate-only] [--skip-rust] [--ios-only | --mac-only]" >&2
             exit 2
             ;;
     esac
 done
+
+if [[ "$BUILD_IOS" -eq 0 && "$BUILD_MAC" -eq 0 ]]; then
+    echo "❌ --ios-only 與 --mac-only 不能同時使用：那等於什麼都不做。" >&2
+    exit 2
+fi
 
 echo "=================================================="
 echo "🍎 Kairumo Apple 通用應用程式（iOS / iPadOS / Mac）一鍵打包與上傳"
@@ -171,6 +181,42 @@ echo "📦 [3/4] 封裝 (版本: v${APP_VER}, Bundle: ${BUNDLE_VER})..."
 ACTION_NAME="上傳"
 ALTOOL_ACTION="--upload-app"
 
+# App Store Connect 還在處理上一個上傳時，會先回 500、再回
+# 409 STATE_ERROR.UPDATING（「An update initiated by another request is still in progress」）。
+# 實際踩過：iOS 的 .ipa 剛送出，緊接著上傳 Mac 的 .pkg 就被這樣擋下 ——
+# 兩個組建屬於同一筆 App 紀錄，ASC 一次只處理一個。這是暫時性的，等一下再送就會過。
+#
+# 只有這類暫時性錯誤才重試；憑證錯、組建號重複之類的錯誤重試也不會好，直接失敗。
+UPLOAD_RETRY_DELAYS="${UPLOAD_RETRY_DELAYS:-60 120 240 480}"
+
+upload_with_retry() {
+    local label="$1"; shift
+    local log status delay attempt=1
+    log="$(mktemp -t kairumo-altool)"
+    for delay in $UPLOAD_RETRY_DELAYS ""; do
+        status=0
+        "$@" 2>&1 | tee "$log" || status=$?
+        if [[ "$status" -eq 0 ]]; then
+            rm -f "$log"
+            return 0
+        fi
+        if [[ -z "$delay" ]] || ! grep -qE 'STATE_ERROR\.UPDATING|status code 5[0-9]{2}|\(5[0-9]{2}\)|\(409\)' "$log"; then
+            break
+        fi
+        echo "⏳ ${label}：App Store Connect 還在處理上一個請求（暫時性錯誤），${delay} 秒後重試（第 $((attempt + 1)) 次）..." >&2
+        sleep "$delay"
+        attempt=$((attempt + 1))
+    done
+    # 前一次「失敗」的上傳有時其實已經進到 ASC 了，重試就會回報組建號重複。
+    # 這時不能當成功（不確定那份有沒有完整處理），但要讓人知道該去 ASC 確認，而不是再打包一次。
+    if grep -qiE 'already been uploaded|DUPLICATE|bundle version.*(already|must be higher)' "$log"; then
+        echo "⚠️  ${label}：ASC 回報這個組建號已經存在 —— 先前那次上傳可能其實已經送達。" >&2
+        echo "   請到 App Store Connect →「TestFlight」確認 ${label} 組建是否在處理中，再決定要不要遞增 build 號重送。" >&2
+    fi
+    rm -f "$log"
+    return 1
+}
+
 # 把「封裝 → 匯出 → 上傳」抽成一段，兩個平台走同一條路。
 #
 # $1 = 人看的名稱、$2 = xcodebuild 的 destination、$3 = altool 的平台代號
@@ -264,7 +310,7 @@ archive_export_upload() {
         if [[ "$(cd "$(dirname "$APP_STORE_CONNECT_KEY_PATH")" && pwd)/$(basename "$APP_STORE_CONNECT_KEY_PATH")" != "$key_dest" ]]; then
             cp -f "$APP_STORE_CONNECT_KEY_PATH" "$key_dest"
         fi
-        xcrun altool "$ALTOOL_ACTION" \
+        upload_with_retry "$label" xcrun altool "$ALTOOL_ACTION" \
             -f "$package" \
             -t "$altool_platform" \
             --apiKey "$APP_STORE_CONNECT_API_KEY_ID" \
@@ -275,7 +321,7 @@ archive_export_upload() {
             echo "   $package 已打包完成，填好之後即可上傳，或用 Transporter App 手動上傳。" >&2
             return 1
         fi
-        xcrun altool "$ALTOOL_ACTION" \
+        upload_with_retry "$label" xcrun altool "$ALTOOL_ACTION" \
             -f "$package" \
             -t "$altool_platform" \
             -u "$APPLE_ID" \
@@ -293,7 +339,11 @@ if [[ "$VALIDATE_ONLY" -eq 1 ]]; then
 else
     echo "🚀 [4/4] ${ACTION_NAME}至 App Store Connect"
 fi
-archive_export_upload "iPhone / iPad" "generic/platform=iOS" "ios"
+if [[ "$BUILD_IOS" -eq 1 ]]; then
+    archive_export_upload "iPhone / iPad" "generic/platform=iOS" "ios"
+else
+    echo "⏩ 略過 iOS 版（--mac-only）。"
+fi
 
 if [[ "$BUILD_MAC" -eq 1 ]]; then
     # Mac 版必須另外封裝。只上傳 iOS 的話，Mac 的 TestFlight 會顯示
@@ -305,7 +355,9 @@ fi
 
 echo "=================================================="
 echo "🎉 Kairumo 已成功${ACTION_NAME}至 App Store Connect。"
-if [[ "$BUILD_MAC" -eq 1 ]]; then
+if [[ "$BUILD_IOS" -eq 0 ]]; then
+    echo "   只送出了 Mac 組建。"
+elif [[ "$BUILD_MAC" -eq 1 ]]; then
     echo "   iPhone / iPad 與 Mac 兩個組建都已送出 —— 兩邊的 TestFlight 都會看到。"
 else
     echo "   只送出了 iPhone / iPad 組建。"
