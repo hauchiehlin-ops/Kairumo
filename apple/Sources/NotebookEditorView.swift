@@ -397,7 +397,7 @@ final class AdaptiveCanvasView: PKCanvasView {
         let work = DispatchWorkItem { [weak self] in
             guard let self else { return }
             // 落筆後還沒畫就停住 —— 那是「長按叫飛梭工具盤」，不是畫完停住要轉正。
-            guard self.pressHoldTouch == nil else { return }
+            guard self.pencilMovedSinceDown else { return }
             self.lastStrokeHadHoldDwell = true
             self.onHoldDwellTriggered?()
             #if os(iOS)
@@ -416,48 +416,48 @@ final class AdaptiveCanvasView: PKCanvasView {
     // 筆尖或單指落在畫布上、**還沒移動**就停住 `pressHoldDuration` 秒，於落點彈出飛梭工具盤。
     // 與 Hold-to-Snap 不衝突：那個是「畫了一段之後停住」，這個是「落下就停住」，
     // 以「落下後有沒有移動過」區分；時間也刻意比 Hold-to-Snap 長，避免誤觸。
+    //
+    // 用手勢辨識器、不用 touchesBegan 計時：PencilKit 的繪圖手勢一辨識，畫布本身就會收到
+    // touchesCancelled，計時跟著作廢 —— 實測長按只留下一個點，工具盤從來沒出現過。
+    // 辨識器設成與繪圖手勢同時辨識，兩邊都拿得到這一下觸控。
 
     /// 回傳 true 表示呼叫端已打開工具盤（座標是 window 座標）。
-    var onPressAndHold: ((CGPoint) -> Bool)?
+    var onPressAndHold: ((CGPoint) -> Bool)? {
+        didSet {
+            if onPressAndHold != nil, pressHoldRecognizer.view == nil {
+                addGestureRecognizer(pressHoldRecognizer)
+            }
+            pressHoldRecognizer.isEnabled = onPressAndHold != nil
+        }
+    }
     static let pressHoldDuration: TimeInterval = 0.55
     private static let pressHoldMaxJitter: CGFloat = 8
-    private weak var pressHoldTouch: UITouch?
-    private var pressHoldOrigin: CGPoint = .zero
-    private var pressHoldWorkItem: DispatchWorkItem?
+    /// 筆尖落下後動過沒有（Hold-to-Snap 只在畫過一段之後才算）。
+    private var pencilMovedSinceDown = false
 
-    private func beginPressHold(_ touches: Set<UITouch>) {
-        // 只看單一觸控從零開始的那一下；第二根手指落下（捏合、雙指捲動）就作廢。
-        guard onPressAndHold != nil, activeTouchesCount == 0, touches.count == 1, let touch = touches.first else {
-            cancelPressHold()
-            return
-        }
-        pressHoldTouch = touch
-        pressHoldOrigin = touch.location(in: self)
-        pressHoldWorkItem?.cancel()
-        let work = DispatchWorkItem { [weak self] in self?.firePressHold() }
-        pressHoldWorkItem = work
-        DispatchQueue.main.asyncAfter(deadline: .now() + Self.pressHoldDuration, execute: work)
+    private final class PressHoldDelegate: NSObject, UIGestureRecognizerDelegate {
+        func gestureRecognizer(
+            _ gestureRecognizer: UIGestureRecognizer,
+            shouldRecognizeSimultaneouslyWith other: UIGestureRecognizer
+        ) -> Bool { true }
     }
+    private let pressHoldDelegate = PressHoldDelegate()
 
-    private func trackPressHold(_ touches: Set<UITouch>) {
-        guard let touch = pressHoldTouch, touches.contains(touch) else { return }
-        let loc = touch.location(in: self)
-        if hypot(loc.x - pressHoldOrigin.x, loc.y - pressHoldOrigin.y) > Self.pressHoldMaxJitter {
-            cancelPressHold()
-        }
-    }
+    private lazy var pressHoldRecognizer: UILongPressGestureRecognizer = {
+        let gesture = UILongPressGestureRecognizer(target: self, action: #selector(handlePressHold(_:)))
+        gesture.minimumPressDuration = Self.pressHoldDuration
+        gesture.allowableMovement = Self.pressHoldMaxJitter
+        gesture.numberOfTouchesRequired = 1
+        gesture.cancelsTouchesInView = false
+        gesture.delaysTouchesBegan = false
+        gesture.delaysTouchesEnded = false
+        gesture.delegate = pressHoldDelegate
+        return gesture
+    }()
 
-    private func cancelPressHold() {
-        pressHoldWorkItem?.cancel()
-        pressHoldWorkItem = nil
-        pressHoldTouch = nil
-    }
-
-    private func firePressHold() {
-        guard let touch = pressHoldTouch, let handler = onPressAndHold else { return }
-        let windowPoint = touch.location(in: nil)
-        cancelPressHold()
-        guard handler(windowPoint) else { return }
+    @objc private func handlePressHold(_ gesture: UILongPressGestureRecognizer) {
+        guard gesture.state == .began, let handler = onPressAndHold else { return }
+        guard handler(gesture.location(in: nil)) else { return }
         pencilDwellWorkItem?.cancel()
         lastStrokeHadHoldDwell = false
         cancelLassoTracking()
@@ -466,9 +466,9 @@ final class AdaptiveCanvasView: PKCanvasView {
             drawingGestureRecognizer.isEnabled = false
             drawingGestureRecognizer.isEnabled = true
         }
-        if let gesture = proGesture, gesture.isEnabled {
-            gesture.isEnabled = false
-            gesture.isEnabled = true
+        if let pro = proGesture, pro.isEnabled {
+            pro.isEnabled = false
+            pro.isEnabled = true
         }
         #if os(iOS)
         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
@@ -789,12 +789,12 @@ final class AdaptiveCanvasView: PKCanvasView {
 
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
         forwardLasso(touches, .began)
-        beginPressHold(touches)
         activeTouchesCount += touches.count
         for touch in touches {
             if touch.type == .pencil {
                 lastPencilLocation = touch.location(in: self)
                 lastStrokeHadHoldDwell = false
+                pencilMovedSinceDown = false
                 schedulePencilDwellTimer()
                 if !deferPencilIntent {
                     onPencilTouchBegan?()
@@ -810,13 +810,13 @@ final class AdaptiveCanvasView: PKCanvasView {
 
     override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
         forwardLasso(touches, .changed)
-        trackPressHold(touches)
         if let pTouch = touches.first(where: { $0.type == .pencil }) {
             let loc = pTouch.location(in: self)
             let dist = hypot(loc.x - lastPencilLocation.x, loc.y - lastPencilLocation.y)
             if dist > EditorCanvasInputPolicy.holdToSnapMaxJitter {
                 lastPencilLocation = loc
                 lastStrokeHadHoldDwell = false
+                pencilMovedSinceDown = true
                 schedulePencilDwellTimer()
             }
         }
@@ -828,7 +828,6 @@ final class AdaptiveCanvasView: PKCanvasView {
 
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
         forwardLasso(touches, .ended)
-        if let touch = pressHoldTouch, touches.contains(touch) { cancelPressHold() }
         if touches.contains(where: { $0.type == .pencil }) {
             pencilDwellWorkItem?.cancel()
         }
@@ -845,7 +844,6 @@ final class AdaptiveCanvasView: PKCanvasView {
 
     override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
         forwardLasso(touches, .cancelled)
-        if let touch = pressHoldTouch, touches.contains(touch) { cancelPressHold() }
         if touches.contains(where: { $0.type == .pencil }) {
             pencilDwellWorkItem?.cancel()
             lastStrokeHadHoldDwell = false
@@ -895,6 +893,24 @@ final class AdaptiveCanvasView: PKCanvasView {
     /// 畫布第一次有了視窗與尺寸之後，把同一份 `drawing` 再指派一次，強迫它重畫。
     /// 要包在 `isProgrammaticUpdate` 裡：不然 delegate 會把這份當成使用者的編輯存回去。
     private var didInitialRefresh = false
+
+    /// 套索動作（拖曳、再製、貼上、刪除）改完筆跡後換上畫布。
+    ///
+    /// 直接 `canvas.drawing = x` 有兩個問題：delegate 會把每一次拖曳位移當成一次使用者
+    /// 編輯（存檔、協同廣播、可列印範圍檢查全部跑一遍）；而且 PencilKit 在連續快速換
+    /// `drawing` 時會漏掉重畫 —— 選取框跟著手指走，畫面上的筆跡卻停在半路，
+    /// 看起來就是「拖不動」。這裡包在 `isProgrammaticUpdate` 裡換上，並強迫重畫。
+    func showEditedDrawing(_ newDrawing: PKDrawing) {
+        let coordinator = delegate as? CanvasRepresentable.Coordinator
+        coordinator?.isProgrammaticUpdate = true
+        self.drawing = newDrawing
+        coordinator?.isProgrammaticUpdate = false
+        // 畫布綁定的那一份也要一起換。連續頁面模式每一頁有自己的 `@State drawing`，
+        // 不換的話下一次 `updateUIView` 會用舊的那份把畫布蓋回去 —— 筆跡跳回原位。
+        coordinator?.parent.drawing = newDrawing
+        setNeedsDisplay()
+        for subview in subviews { subview.setNeedsDisplay() }
+    }
 
     /// 強制畫布立即重新刷出指定筆跡（若無傳入則取畫布既有 drawing），無需使用者落筆點擊觸發
     func forceDisplayRefresh(with newDrawing: PKDrawing? = nil) {
@@ -5298,6 +5314,8 @@ public struct NotebookEditorView: View {
                                         lasso.clear()
                                         currentPageIndex = index
                                         currentDrawing = drawingForPage(index)
+                                    } else {
+                                        syncDrawingFromCanvas()
                                     }
                                     lasso.begin(at: pt)
                                 },
@@ -5309,7 +5327,7 @@ public struct NotebookEditorView: View {
                                         lasso.updateDragPoint(pt)
                                         if let updated = lasso.moveSelected(in: currentDrawing, by: delta) {
                                             currentDrawing = updated
-                                            canvasView?.drawing = updated
+                                            showLassoEdit(updated)
                                         }
                                     } else {
                                         lasso.extend(to: pt)
@@ -5973,6 +5991,7 @@ public struct NotebookEditorView: View {
                     if !hasSel { lasso.clear() }
                 },
                 onLassoBegan: { pt in
+                    syncDrawingFromCanvas()
                     lasso.begin(at: pt)
                 },
                 onLassoMoved: { pt in
@@ -5982,7 +6001,7 @@ public struct NotebookEditorView: View {
                         lasso.updateDragPoint(pt)
                         if let updated = lasso.moveSelected(in: currentDrawing, by: delta) {
                             currentDrawing = updated
-                            canvasView?.drawing = updated
+                            showLassoEdit(updated)
                         }
                     } else {
                         lasso.extend(to: pt)
@@ -10722,11 +10741,32 @@ public struct NotebookEditorView: View {
         }
     }
 
-    private func applyLassoResult(_ newDrawing: PKDrawing) {
-        currentDrawing = newDrawing
-        if let canvas = canvasView {
-            canvas.drawing = newDrawing
+    /// 套索以畫布上**看得到的那一份**為準。`currentDrawing` 是經 delegate 回寫的副本，
+    /// 剛落下的筆畫、別的路徑換過的筆跡可能還沒寫回來；拿舊副本算出的選取索引
+    /// 對不到畫面上的筆畫 —— 有的拖得動、有的拖不動。
+    private func syncDrawingFromCanvas() {
+        // 連續模式剛換焦點頁時 `canvasView` 可能還是上一頁的畫布（非同步才換過來），不能拿它當這一頁。
+        if let coordinator = canvasView?.delegate as? CanvasRepresentable.Coordinator,
+           let page = coordinator.parent.proInk?.pageIndex, page != currentPageIndex {
+            return
         }
+        if let live = canvasView?.drawing, live != currentDrawing {
+            currentDrawing = live
+        }
+    }
+
+    /// 把套索改過的筆跡換上目前的畫布（不經 delegate，見 `showEditedDrawing`）。
+    private func showLassoEdit(_ newDrawing: PKDrawing) {
+        currentDrawing = newDrawing
+        if let adaptive = canvasView as? AdaptiveCanvasView {
+            adaptive.showEditedDrawing(newDrawing)
+        } else {
+            canvasView?.drawing = newDrawing
+        }
+    }
+
+    private func applyLassoResult(_ newDrawing: PKDrawing) {
+        showLassoEdit(newDrawing)
         recordDrawingEdit(page: currentPageIndex, drawing: newDrawing)
         broadcastDrawingChange(page: currentPageIndex, drawing: newDrawing)
         saveCurrentPageDrawing()
@@ -10736,6 +10776,7 @@ public struct NotebookEditorView: View {
     }
 
     private func deleteSelectedStrokes() {
+        syncDrawingFromCanvas()
         guard lasso.hasSelection else {
             showCanvasNotice(localizationManager.localized("lasso_active_hint"))
             return
@@ -10745,6 +10786,7 @@ public struct NotebookEditorView: View {
     }
 
     private func cutSelectedStrokes() {
+        syncDrawingFromCanvas()
         guard lasso.hasSelection else {
             showCanvasNotice(localizationManager.localized("lasso_active_hint"))
             return
@@ -11061,6 +11103,7 @@ public struct NotebookEditorView: View {
 
     /// 貼上剪貼簿中的筆劃。
     private func pasteStrokes() {
+        syncDrawingFromCanvas()
         guard lasso.canPaste else {
             showCanvasNotice(localizationManager.localized("lasso_active_hint"))
             return
@@ -11072,6 +11115,7 @@ public struct NotebookEditorView: View {
     /// 就地複製選取的筆劃並稍微偏移（不經過剪貼簿）—— 這就是「再製」與「複製」的差別：
     /// 「複製」把東西放進剪貼簿等你貼上，「再製」直接在旁邊多一份。
     private func duplicateSelectedStrokes() {
+        syncDrawingFromCanvas()
         guard lasso.hasSelection else {
             showCanvasNotice(localizationManager.localized("lasso_active_hint"))
             return
@@ -11160,6 +11204,7 @@ public struct NotebookEditorView: View {
     }
 
     private func copySelectedStrokes() {
+        syncDrawingFromCanvas()
         guard lasso.hasSelection else {
             showCanvasNotice(localizationManager.localized("lasso_active_hint"))
             return

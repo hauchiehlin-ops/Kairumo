@@ -367,11 +367,16 @@ final class LassoSelection: ObservableObject {
 
     private static let duplicateOffset = CGSize(width: 24, height: 24)
 
+    /// 位移一筆。**要建一筆新的 `PKStroke`**，不能在原本那筆上改 `transform`：
+    /// PencilKit 以筆畫身分比對哪些區塊要重畫，同一身分只改 transform 時，畫布只重畫
+    /// 一部分區塊（甚至不重畫）—— 選取框跟著手指走，畫面上的筆跡卻留在原地或斷成幾截，
+    /// 而資料（縮圖）其實已經移過去了。
     private static func offset(_ stroke: PKStroke, by delta: CGSize) -> PKStroke {
-        var moved = stroke
-        moved.transform = stroke.transform.concatenating(
-            CGAffineTransform(translationX: delta.width, y: delta.height))
-        return moved
+        PKStroke(
+            ink: stroke.ink, path: stroke.path,
+            transform: stroke.transform.concatenating(
+                CGAffineTransform(translationX: delta.width, y: delta.height)),
+            mask: stroke.mask)
     }
 }
 
