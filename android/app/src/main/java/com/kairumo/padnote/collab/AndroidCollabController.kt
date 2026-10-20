@@ -295,8 +295,8 @@ class AndroidCollabController(private val manager: CollaborationManager) {
     ): AndroidCollabCanvas {
         val fresh = if (pagesChanged && reconcilePages(session, meta)) canvas() else view
         sync.retryDeferred(fresh)
-        val (orders, under) = sync.desiredStacking()
-        fresh.writeStacking(orders, under)
+        val (orders, under, locked) = sync.desiredStacking()
+        fresh.writeStacking(orders, under, locked)
         // 寫回後的編碼要成為新的同步基準，否則下一次本機修改會把這些欄位當成「我改的」再送一次。
         sync.refreshShadow(fresh)
         return fresh

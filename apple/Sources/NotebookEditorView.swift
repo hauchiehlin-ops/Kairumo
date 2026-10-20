@@ -9814,7 +9814,7 @@ public struct NotebookEditorView: View {
         var withDeferred = notebook
         collabSync.retryDeferred(into: &withDeferred)
         let stacking = collabSync.desiredStacking()
-        CollabCanonical.writeStacking(orders: stacking.orders, under: stacking.under, into: &withDeferred)
+        CollabCanonical.writeStacking(orders: stacking.orders, under: stacking.under, locked: stacking.locked, into: &withDeferred)
         for item in anchored { resolveRunAnchors(id: item.id, anchors: item.anchors, in: &withDeferred) }
         notebook = withDeferred
         // 寫回後的編碼要成為新的同步基準，否則下一次本機修改會把這些欄位當成「我改的」再送一次。
@@ -10055,7 +10055,7 @@ public struct NotebookEditorView: View {
         var withDeferred = notebook
         collabSync.retryDeferred(into: &withDeferred)
         let stacking = collabSync.desiredStacking()
-        CollabCanonical.writeStacking(orders: stacking.orders, under: stacking.under, into: &withDeferred)
+        CollabCanonical.writeStacking(orders: stacking.orders, under: stacking.under, locked: stacking.locked, into: &withDeferred)
         for override in result.textOverrides {
             collabTextHub.rebase(override.id, text: override.text, site: me)
             if let index = withDeferred.textAttachments?.firstIndex(where: { CollabCanonical.canonicalId($0.id) == override.id }) {

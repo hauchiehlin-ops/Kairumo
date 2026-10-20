@@ -258,18 +258,21 @@ final class CollabObjectSync {
         }
     }
 
-    /// 依合併狀態算出每一頁的堆疊順序與「在筆跡下方」名單（頁面 id → 正規 id；已刪除的不算）。
-    func desiredStacking() -> (orders: [String: [String]], under: [String: [String]]) {
+    /// 依合併狀態算出每一頁的堆疊順序、「在筆跡下方」與「鎖定在畫布上」名單（頁面 id → 正規 id；已刪除的不算）。
+    func desiredStacking() -> (orders: [String: [String]], under: [String: [String]], locked: [String: [String]]) {
         var ordered: [String: [(String, String)]] = [:]
         var under: [String: [String]] = [:]
+        var locked: [String: [String]] = [:]
         for (key, dict) in shadow where (dict[ObjectPatch.deletedField] as? Bool) == false {
             guard let page = dict["page"] as? String else { continue }
             let id = String(key.split(separator: ":", maxSplits: 1).last ?? "")
             if let z = dict["z"] as? String { ordered[page, default: []].append((z, id)) }
             if (dict["under"] as? Bool) == true { under[page, default: []].append(id) }
+            if (dict["locked"] as? Bool) == true { locked[page, default: []].append(id) }
         }
         return (ordered.mapValues { $0.sorted { $0.0 != $1.0 ? $0.0 < $1.0 : $0.1 < $1.1 }.map(\.1) },
-                under.mapValues { $0.sorted() })
+                under.mapValues { $0.sorted() },
+                locked.mapValues { $0.sorted() })
     }
 
     // MARK: 收到
@@ -536,11 +539,14 @@ enum CollabCanonical {
         func page(_ index: Int) -> String? { index >= 0 && index < pageIds.count ? pageIds[index] : nil }
         var out: [String: Entry] = [:]
         let under = Set((doc.underInkObjectIdsByPage ?? [:]).values.flatMap { $0.map(canonicalId) })
+        let locked = Set((doc.lockedObjectIdsByPage ?? [:]).values.flatMap { $0.map(canonicalId) })
         func add(_ type: String, _ localId: String, _ dict: [String: Any]) {
             let id = canonicalId(localId)
             var full = dict
             // 堆疊順序與「在筆跡下方」是每個物件自己的欄位：兩人同時調不同物件的層級，兩邊都留下（設計 §8.7）。
             full["under"] = under.contains(id)
+            // 「鎖定在畫布上」比照辦理：鎖定 / 解除各是那個物件自己的一個欄位。
+            full["locked"] = locked.contains(id)
             if let z = zPositions[id] { full["z"] = z }
             out["\(type):\(id)"] = (type, id, full)
         }
@@ -781,8 +787,9 @@ enum CollabCanonical {
         return out
     }
 
-    /// 寫回合併後的堆疊順序與「在筆跡下方」名單（頁面 id → 正規 id）。
-    static func writeStacking(orders: [String: [String]], under: [String: [String]], into doc: inout NotebookDocument) {
+    /// 寫回合併後的堆疊順序、「在筆跡下方」與「鎖定在畫布上」名單（頁面 id → 正規 id）。
+    static func writeStacking(orders: [String: [String]], under: [String: [String]], locked: [String: [String]],
+                              into doc: inout NotebookDocument) {
         let pageIds = doc.pageIds ?? []
         // 正規 id → 本機 id（Apple 的附件 id 可能是大寫 UUID）。
         var local: [String: String] = [:]
@@ -804,6 +811,9 @@ enum CollabCanonical {
         let underInk = byIndex(under)
         if doc.objectOrderByPage != order { doc.objectOrderByPage = order }
         if doc.underInkObjectIdsByPage != underInk { doc.underInkObjectIdsByPage = underInk }
+        // 鎖定名單在檔案裡是排序過的 id（`NotebookDocument.setLockedObjectIds`）。
+        let lockedIds = byIndex(locked).map { $0.mapValues { $0.sorted() } }
+        if doc.lockedObjectIdsByPage != lockedIds { doc.lockedObjectIdsByPage = lockedIds }
     }
 }
 

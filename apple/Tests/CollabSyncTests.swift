@@ -49,7 +49,7 @@ private final class Replica {
         }
         sync.retryDeferred(into: &doc)
         let stacking = sync.desiredStacking()
-        CollabCanonical.writeStacking(orders: stacking.orders, under: stacking.under, into: &doc)
+        CollabCanonical.writeStacking(orders: stacking.orders, under: stacking.under, locked: stacking.locked, into: &doc)
         sync.refreshShadow(from: doc)
     }
 
@@ -248,6 +248,22 @@ final class CollabSyncTests: XCTestCase {
         let a = Replica(stacked(), user: "A")
         let m = a.edit { $0.objectOrderByPage = ["0": [self.idA, self.idC, self.idB]] }
         XCTAssertEqual(m.patches.map(\.key), ["image:\(idB)"])
+    }
+
+    func testLockingDifferentObjectsAtTheSameTimeKeepsBoth() {
+        // 「鎖定在畫布上」與 `under` 一樣是每個物件自己的欄位：兩人各鎖一個，兩個都鎖住。
+        let a = Replica(stacked(), user: "A"), b = Replica(stacked(), user: "B")
+        let ma = a.edit { $0.setLockedObjectIds([self.idA], forPage: 0) }
+        let mb = b.edit { $0.setLockedObjectIds([self.idB], forPage: 0) }
+        XCTAssertEqual(ma.patches.map(\.key), ["image:\(idA)"])
+        XCTAssertEqual(ma.patches.first?.fields["locked"] as? Bool, true)
+        a.receive(mb)
+        b.receive(ma)
+        XCTAssertEqual(a.doc.lockedObjectIdsByPage, ["0": [idA, idB]])
+        XCTAssertEqual(a.doc.lockedObjectIdsByPage, b.doc.lockedObjectIdsByPage)
+        // 解除鎖定也傳得過去。
+        b.receive(a.edit { $0.setLockedObjectIds([self.idB], forPage: 0) })
+        XCTAssertEqual(b.doc.lockedObjectIdsByPage, ["0": [idB]])
     }
 
     func testAJoinerAdoptsTheRoomsStateAndPushesWhatOnlyItHas() {

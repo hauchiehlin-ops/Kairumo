@@ -129,9 +129,16 @@ private class FakeCanvas(var pages: MutableList<String>) : CollabCanvas {
 
     override fun objectOrders(): Map<String, List<String>> = orders
 
-    override fun writeStacking(orders: Map<String, List<String>>, under: Map<String, List<String>>) {
+    /** 頁面 → 鎖定在畫布上的物件 id。 */
+    val locked = LinkedHashMap<String, List<String>>()
+
+    override fun writeStacking(
+        orders: Map<String, List<String>>, under: Map<String, List<String>>, locked: Map<String, List<String>>
+    ) {
         this.orders.clear()
         orders.forEach { (p, l) -> this.orders[p] = l.toMutableList() }
+        this.locked.clear()
+        this.locked.putAll(locked)
     }
 
     override fun maps(pagePositions: Map<String, String>, zPositions: Map<String, String>, allPages: Boolean): Map<String, CollabEntry> {
@@ -179,8 +186,8 @@ private class Replica(
         val order = sync.desiredPageOrder()
         if (order.isNotEmpty()) canvas.pages = order.toMutableList()
         sync.retryDeferred(canvas)
-        val (orders, under) = sync.desiredStacking()
-        canvas.writeStacking(orders, under)
+        val (orders, under, locked) = sync.desiredStacking()
+        canvas.writeStacking(orders, under, locked)
         sync.refreshShadow(canvas)
     }
 
@@ -316,6 +323,21 @@ class CollabSyncTest {
         val a = stacked("A")
         val out = a.edit { orders["p1"] = mutableListOf("a", "c", "b") }.first
         assertEquals(listOf("image:b"), out.patches.map { it.key })
+    }
+
+    @Test fun lockingDifferentObjectsAtTheSameTimeKeepsBoth() {
+        // 「鎖定在畫布上」與 `under` 一樣是每個物件自己的欄位：兩人各鎖一個，兩個都鎖住。
+        val a = stacked("A")
+        val b = stacked("B")
+        val ma = a.edit { set("image:a", "locked", true) }
+        val mb = b.edit { set("image:b", "locked", true) }
+        assertEquals(listOf("image:a"), ma.first.patches.map { it.key })
+        a.receive(mb); b.receive(ma)
+        assertEquals(mapOf("p1" to listOf("a", "b")), a.canvas.locked)
+        assertEquals(a.canvas.locked, b.canvas.locked)
+        // 解除鎖定也傳得過去。
+        b.receive(a.edit { set("image:a", "locked", false) })
+        assertEquals(mapOf("p1" to listOf("b")), b.canvas.locked)
     }
 
     @Test fun aJoinerAdoptsTheRoomsStateAndPushesWhatOnlyItHas() {
