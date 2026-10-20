@@ -31,6 +31,9 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalDensity
@@ -170,4 +173,66 @@ private fun angleForIndex(index: Int, total: Int): Double {
     val step = (2.0 * Math.PI) / total.toDouble()
     // 從正上方 (-90度) 起始
     return - (Math.PI / 2.0) + (index.toDouble() * step)
+}
+
+/** 長按叫出飛梭工具盤的等待時間。與 Apple 的 `AdaptiveCanvasView.pressHoldDuration` 一致。 */
+const val PRESS_HOLD_MILLIS = 550L
+/** 落下後移動超過這個距離（dp）就不算長按。與 Apple 的 `pressHoldMaxJitter` 一致。 */
+private const val PRESS_HOLD_SLOP_DP = 8f
+
+/**
+ * 筆尖或單指落在畫布上、**還沒移動**就停住 [PRESS_HOLD_MILLIS]，於落點呼叫 [onHold]。
+ *
+ * 與 Hold-to-Snap 不衝突：那個是「畫了一段之後停住」，這個是「落下就停住」，
+ * 以「落下後有沒有移動過」區分；時間也比 Hold-to-Snap 長，避免誤觸。
+ *
+ * 看的是 `Initial` 階段、不消費 —— 底下的畫布照常收到落筆。`onHold` 回傳 true（已打開工具盤）
+ * 之後才把這一次觸控剩下的事件全部消費掉：畫布的 `pointerInteropFilter` 看到被消費會收到
+ * ACTION_CANCEL，落下的那一點就不會留在頁面上（呼叫端也要 `cancelInFlight`）。
+ * 第二根手指落下（捏合、雙指捲動）就作廢。
+ */
+fun Modifier.pressAndHoldForRadialMenu(
+    key: Any?,
+    onHold: (Offset) -> Boolean
+): Modifier = pointerInput(key) {
+    val slop = PRESS_HOLD_SLOP_DP * density
+    awaitEachGesture {
+        val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+        val origin = down.position
+        var aborted = false
+        val stillHeld = withTimeoutOrNull(PRESS_HOLD_MILLIS) {
+            while (true) {
+                val event = awaitPointerEvent(PointerEventPass.Initial)
+                val pressed = event.changes.filter { it.pressed }
+                val tracked = event.changes.firstOrNull { it.id == down.id }
+                if (pressed.size != 1 || tracked == null || !tracked.pressed ||
+                    (tracked.position - origin).getDistance() > slop
+                ) {
+                    aborted = true
+                    break
+                }
+            }
+        }
+        // withTimeoutOrNull 逾時回 null：手還按著、沒動過 → 長按成立。
+        if (stillHeld != null || aborted) return@awaitEachGesture
+        if (!onHold(origin)) return@awaitEachGesture
+        // 收掉這一次觸控剩下的事件，直到所有手指離開。
+        while (true) {
+            val event = awaitPointerEvent(PointerEventPass.Initial)
+            event.changes.forEach { it.consume() }
+            if (event.changes.none { it.pressed }) break
+        }
+    }
+}
+
+/**
+ * 飛梭工具盤的中心：往內收，整圈都要在畫面裡。
+ * 半徑 88dp + 按鈕半徑 23dp + 一點邊。
+ */
+fun clampRadialCenter(point: Offset, viewportWidth: Float, viewportHeight: Float, density: Float): Offset {
+    val margin = 120f * density
+    return Offset(
+        point.x.coerceIn(margin, maxOf(margin, viewportWidth - margin)),
+        point.y.coerceIn(margin, maxOf(margin, viewportHeight - margin))
+    )
 }

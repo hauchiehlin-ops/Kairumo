@@ -137,6 +137,8 @@ import com.kairumo.padnote.canvas.PageSidebar
 import com.kairumo.padnote.canvas.LassoSelection
 import com.kairumo.padnote.canvas.LassoOverlay
 import com.kairumo.padnote.canvas.LassoActionBar
+import com.kairumo.padnote.canvas.LassoPastePill
+import com.kairumo.padnote.canvas.lassoBarPlacement
 import com.kairumo.padnote.canvas.ContinuousPagesView
 import com.kairumo.padnote.canvas.InkSettings
 import com.kairumo.padnote.canvas.PageDisplayMode
@@ -150,6 +152,7 @@ import com.kairumo.padnote.ui.ContextualPortalState
 import com.kairumo.padnote.ui.FloatingToolPill
 import com.kairumo.padnote.ui.RadialMarkMenu
 import com.kairumo.padnote.ui.RadialMenuItem
+import com.kairumo.padnote.ui.pressAndHoldForRadialMenu
 import com.kairumo.padnote.account.IdentityDialog
 import com.kairumo.padnote.library.HomeScreen
 import com.kairumo.padnote.library.DocumentTemplateCatalog
@@ -3103,7 +3106,7 @@ private fun InkScreen(
                 message = l10n("solid_place_hint")
                 // 插入後直接用套索選住它，使用者拖一下就能搬（與 Apple 一致）。
                 applyInkTool(InkTool.LASSO)
-                lasso.select(placed.first, placed.second)
+                lasso.select(placed.first, placed.second.map { it / density })
             },
             onDismiss = { showSolidStudio = false }
         )
@@ -3148,7 +3151,7 @@ private fun InkScreen(
                 message = l10n("draft_symbol_placed")
                 if (placed != null) {
                     applyInkTool(InkTool.LASSO)
-                    lasso.select(placed.first, placed.second)
+                    lasso.select(placed.first, placed.second.map { it / density })
                 }
             },
             onInsertFrame = { thirdAngle ->
@@ -4730,94 +4733,6 @@ private fun InkScreen(
         }
     }
 
-        // 套索的動作列。只在真的有東西可以做的時候出現 —— 一選了套索就
-        // 跳出來的話，那時候每一顆按鈕都是空操作。
-        if (inkTool.isLasso) {
-            LassoActionBar(
-                lasso = lasso,
-                engine = engine,
-                l = { key -> l10n(key) },
-                onChanged = { revision++ },
-                onRecognizeToText = {
-                    val selIds = lasso.selected
-                    val strokes = engine.strokes.filter { it.coreStrokeId in selIds }
-                    if (strokes.isNotEmpty()) {
-                        message = l10n("recognizing")
-                        scope.launch {
-                            val recognized = StringBuilder()
-                            val groups = Handwriting.group(
-                                strokeIds = strokes.map { it.coreStrokeId ?: "" },
-                                strokes = strokes.map { it.points },
-                                strokeTimesMs = strokes.map { it.startedAtMs }
-                            )
-                            for (group in groups) {
-                                val res = Handwriting.recognize(group.strokes, deviceLanguageTag())
-                                val txt = res.getOrNull().orEmpty()
-                                if (txt.isNotBlank()) recognized.append(txt).append("\n")
-                            }
-                            val finalStr = recognized.toString().trim()
-                            if (finalStr.isNotEmpty()) {
-                                val minX = strokes.flatMap { it.points }.minOfOrNull { it.x } ?: 100f
-                                val maxY = strokes.flatMap { it.points }.maxOfOrNull { it.y } ?: 200f
-                                val box = textStore.create(minX, maxY + 20f)
-                                box.text = finalStr
-                                box.width = 320f
-                                box.height = 120f
-                                box.backgroundColorHex = "#FFFFFF"
-                                box.hasBorder = true
-                                textStore.persist(box)
-                                selectedTextId = box.id
-                                textRevision++
-                                message = l10n("recognized_result").replace("%1@", "${strokes.size}").replace("%2@", finalStr.take(20))
-                            } else {
-                                message = l10n("no_recognition_result")
-                            }
-                        }
-                    }
-                },
-                onAnchorToText = {
-                    val session = notebook?.first
-                    val handles = engine.coreHandles()
-                    val pageBoxes = textStore.all.filter { it.pageIndex == pageIndex }
-                    val targetBox = pageBoxes.firstOrNull()
-                    if (session != null && handles != null && targetBox != null) {
-                        val (_, pageId) = handles
-                        var selIds = lasso.selected
-                        if (selIds.isEmpty()) {
-                            val poly = listOf(
-                                targetBox.x - 10f, targetBox.y - 10f,
-                                targetBox.x + targetBox.width + 10f, targetBox.y - 10f,
-                                targetBox.x + targetBox.width + 10f, targetBox.y + targetBox.height + 10f,
-                                targetBox.x - 10f, targetBox.y + targetBox.height + 10f
-                            )
-                            selIds = runCatching { session.lassoSelect(pageId, poly) }.getOrDefault(emptyList())
-                        }
-                        if (selIds.isNotEmpty()) {
-                            val meta = NotebookMeta.load(session)
-                            val anchors = meta.stickyAnchors()
-                            anchors.removeAll { it.targetId == targetBox.id }
-                            anchors.add(
-                                com.kairumo.padnote.library.StickyAnnotationAnchor(
-                                    pageIndex = pageIndex,
-                                    targetId = targetBox.id,
-                                    strokeIds = selIds,
-                                    anchorOriginX = targetBox.x,
-                                    anchorOriginY = targetBox.y
-                                )
-                            )
-                            meta.setStickyAnchors(session, anchors)
-                            lasso.clear()
-                            revision++
-                            clearToken++
-                            message = l10n("sticky_anchored_hint")
-                        } else {
-                            message = l10n("sticky_anchor_ink")
-                        }
-                    }
-                },
-                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
-            )
-        }
 
         // 讀一下 revision 讓筆畫數會跟著重繪；真相來源仍是 engine。
         val strokeCount = remember(revision) { engine.strokes.size }
@@ -5042,6 +4957,7 @@ private fun InkScreen(
         // 落點與尺寸的計算走 `ImageDropPlacement`，與 Apple 端同一份規則 ——
         // 同一張圖拖到同一個位置，兩台裝置上要落在同一個地方。
         val canvasDensity = LocalDensity.current.density
+        val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
 
         val imageDropTarget = remember(pageId, canvasDensity) {
             object : DragAndDropTarget {
@@ -5231,6 +5147,23 @@ private fun InkScreen(
                 // 全部攔下來的話筆就畫不了了；完全不攔的話，`InkCanvas` 的
                 // `pointerInteropFilter` 會把每一個觸控都吃掉。所以逐點判斷：
                 // 兩指以上一律是平移縮放，一指只有在「手指本來就不能畫」時才攔。
+                // 筆尖或單指落下停住不動 ~0.55 秒：在落點彈出飛梭工具盤，並取消落下的那一點。
+                // 正在拖曳套索選取、已有選取、打字、遮蔽膠帶、放圖釘時不攔（與 Apple 的
+                // openRadialMenuFromPress 同一組條件）。
+                .pressAndHoldForRadialMenu(lasso) { point ->
+                    val blocked = editorMode != EditorMode.DRAW || showRadialMenu ||
+                        isPlacingCommentPin || inkTool.isMaskingTape ||
+                        (inkTool.isLasso && (lasso.isDragging || lasso.hasSelection))
+                    if (blocked) return@pressAndHoldForRadialMenu false
+                    engine.cancelInFlight()
+                    lasso.cancelGesture()
+                    radialMenuCenter = com.kairumo.padnote.ui.clampRadialCenter(
+                        point, canvasViewport.width, canvasViewport.height, canvasDensity)
+                    showRadialMenu = true
+                    haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+                    revision++
+                    true
+                }
                 .pointerInput(onePanFinger, canvasViewport) {
                     awaitPointerEventScope {
                         while (true) {
@@ -6099,6 +6032,116 @@ private fun InkScreen(
                         )
                     }
                 }
+            }
+
+            // 套索的快顯動作列：浮在選取框上方（放不下就放下方），畫面座標 ——
+            // 選取框是頁面點，乘 density、縮放再加捲動。放在 graphicsLayer 外面，
+            // 工具列不跟著頁面縮放，按鈕維持原尺寸。與 Apple 的 lassoSelectionDecoration 一致。
+            val lassoBox = lasso.boundingRect
+            if (inkTool.isLasso && lassoBox != null) {
+                LassoActionBar(
+                    lasso = lasso,
+                    engine = engine,
+                    l = { key -> l10n(key) },
+                    onChanged = { revision++ },
+                    onRecognizeToText = {
+                        val selIds = lasso.selected
+                        val strokes = engine.strokes.filter { it.coreStrokeId in selIds }
+                        if (strokes.isNotEmpty()) {
+                            message = l10n("recognizing")
+                            scope.launch {
+                                val recognized = StringBuilder()
+                                val groups = Handwriting.group(
+                                    strokeIds = strokes.map { it.coreStrokeId ?: "" },
+                                    strokes = strokes.map { it.points },
+                                    strokeTimesMs = strokes.map { it.startedAtMs }
+                                )
+                                for (group in groups) {
+                                    val res = Handwriting.recognize(group.strokes, deviceLanguageTag())
+                                    val txt = res.getOrNull().orEmpty()
+                                    if (txt.isNotBlank()) recognized.append(txt).append("\n")
+                                }
+                                val finalStr = recognized.toString().trim()
+                                if (finalStr.isNotEmpty()) {
+                                    val minX = strokes.flatMap { it.points }.minOfOrNull { it.x } ?: 100f
+                                    val maxY = strokes.flatMap { it.points }.maxOfOrNull { it.y } ?: 200f
+                                    val box = textStore.create(minX, maxY + 20f)
+                                    box.text = finalStr
+                                    box.width = 320f
+                                    box.height = 120f
+                                    box.backgroundColorHex = "#FFFFFF"
+                                    box.hasBorder = true
+                                    textStore.persist(box)
+                                    selectedTextId = box.id
+                                    textRevision++
+                                    message = l10n("recognized_result").replace("%1@", "${strokes.size}").replace("%2@", finalStr.take(20))
+                                } else {
+                                    message = l10n("no_recognition_result")
+                                }
+                            }
+                        }
+                    },
+                    onAnchorToText = {
+                        val session = notebook?.first
+                        val handles = engine.coreHandles()
+                        val pageBoxes = textStore.all.filter { it.pageIndex == pageIndex }
+                        val targetBox = pageBoxes.firstOrNull()
+                        if (session != null && handles != null && targetBox != null) {
+                            val (_, pageId) = handles
+                            var selIds = lasso.selected
+                            if (selIds.isEmpty()) {
+                                val poly = listOf(
+                                    targetBox.x - 10f, targetBox.y - 10f,
+                                    targetBox.x + targetBox.width + 10f, targetBox.y - 10f,
+                                    targetBox.x + targetBox.width + 10f, targetBox.y + targetBox.height + 10f,
+                                    targetBox.x - 10f, targetBox.y + targetBox.height + 10f
+                                )
+                                selIds = runCatching { session.lassoSelect(pageId, poly) }.getOrDefault(emptyList())
+                            }
+                            if (selIds.isNotEmpty()) {
+                                val meta = NotebookMeta.load(session)
+                                val anchors = meta.stickyAnchors()
+                                anchors.removeAll { it.targetId == targetBox.id }
+                                anchors.add(
+                                    com.kairumo.padnote.library.StickyAnnotationAnchor(
+                                        pageIndex = pageIndex,
+                                        targetId = targetBox.id,
+                                        strokeIds = selIds,
+                                        anchorOriginX = targetBox.x,
+                                        anchorOriginY = targetBox.y
+                                    )
+                                )
+                                meta.setStickyAnchors(session, anchors)
+                                lasso.clear()
+                                revision++
+                                clearToken++
+                                message = l10n("sticky_anchored_hint")
+                            } else {
+                                message = l10n("sticky_anchor_ink")
+                            }
+                        }
+                    },
+                    modifier = Modifier
+                        .zIndex(9_000f)
+                        .lassoBarPlacement(
+                            box = lassoBox,
+                            density = canvasDensity,
+                            scale = canvasScale,
+                            offset = canvasOffset,
+                            gapPx = 12f * canvasDensity
+                        )
+                        .padding(horizontal = 8.dp)
+                )
+            }
+            // 沒有選取、剪貼簿有筆跡時的「貼上」入口（剪下之後就靠它貼回去）。
+            if (inkTool.isLasso) {
+                LassoPastePill(
+                    lasso = lasso,
+                    engine = engine,
+                    l = { key -> l10n(key) },
+                    onChanged = { revision++ },
+                    modifier = Modifier.zIndex(9_000f).align(Alignment.TopCenter).padding(top = 12.dp)
+                )
             }
 
             // 🌟 徑向飛輪快捷工具盤 (Radial Pie / Mark Menu)

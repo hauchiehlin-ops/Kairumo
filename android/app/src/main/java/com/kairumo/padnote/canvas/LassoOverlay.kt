@@ -6,7 +6,6 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -19,12 +18,15 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.kairumo.padnote.ink.InkEngine
@@ -61,27 +63,63 @@ fun LassoOverlay(
         modifier = modifier
             .fillMaxSize()
             .pointerInput(engine) {
+                // 這一層在畫布的 `graphicsLayer` 裡面，收到的位置已經扣掉縮放與捲動，
+                // 只差一個 density 就是頁面點（與核心筆畫同一套）。
                 detectDragGestures(
-                    onDragStart = { lasso.begin(it) },
+                    onDragStart = { lasso.begin(it / density) },
                     onDrag = { change, _ ->
-                        lasso.extend(change.position)
+                        lasso.extend(change.position / density)
                         // 消費掉，底下的東西不要再看到這一筆。
                         change.consume()
                     },
                     onDragEnd = {
-                        lasso.finish(engine, density)
+                        lasso.finish(engine)
                         onChanged()
                     },
-                    onDragCancel = { lasso.clear(); onChanged() }
+                    // 被取消（例如長按叫出飛梭工具盤）：只收掉這一圈／這一次拖曳，已有的選取留著。
+                    onDragCancel = { lasso.cancelGesture(); onChanged() }
                 )
             }
     ) {
-        val points = lasso.path.ifEmpty { lasso.committed }
+        val drag = lasso.dragOffset
+        val points = lasso.path.ifEmpty { lasso.committed.map { it + drag } }
+
+        // 拖曳中：選中的筆畫跟著手指畫一份預覽。放開才真的搬（見 LassoSelection.dragOffset）。
+        if (lasso.isDragging && drag != Offset.Zero) {
+            val ids = lasso.selected.toSet()
+            for (stroke in engine.strokes) {
+                if (stroke.coreStrokeId !in ids || stroke.points.size < 2) continue
+                val p = Path().apply {
+                    moveTo((stroke.points[0].x + drag.x) * density, (stroke.points[0].y + drag.y) * density)
+                    for (pt in stroke.points.drop(1)) lineTo((pt.x + drag.x) * density, (pt.y + drag.y) * density)
+                }
+                drawPath(p, color = accent.copy(alpha = 0.55f),
+                    style = Stroke(width = stroke.baseWidth * density))
+            }
+        }
+
+        // 選取框 ＝ 圈 ∪ 選中筆畫的外框：露出圈外的筆畫也在框內，拖那一段一樣拖得動。
+        if (lasso.hasSelection && lasso.path.isEmpty()) {
+            lasso.boundingRect?.let { box ->
+                val r = box.translate(drag).inflate(8f)
+                drawRoundRect(
+                    color = accent.copy(alpha = 0.35f),
+                    topLeft = Offset(r.left * density, r.top * density),
+                    size = androidx.compose.ui.geometry.Size(r.width * density, r.height * density),
+                    cornerRadius = androidx.compose.ui.geometry.CornerRadius(8f * density),
+                    style = Stroke(
+                        width = 1.2f * density,
+                        pathEffect = PathEffect.dashPathEffect(floatArrayOf(5f * density, 4f * density))
+                    )
+                )
+            }
+        }
+
         if (points.size < 2) return@Canvas
 
         val path = Path().apply {
-            moveTo(points.first().x, points.first().y)
-            points.drop(1).forEach { lineTo(it.x, it.y) }
+            moveTo(points.first().x * density, points.first().y * density)
+            points.drop(1).forEach { lineTo(it.x * density, it.y * density) }
             // 圈完之後才封閉：畫的當下封起來，使用者看到的是一個
             // 隨著手指亂跳的三角形，而不是他正在畫的那一條線。
             if (lasso.path.isEmpty()) close()
@@ -100,11 +138,61 @@ fun LassoOverlay(
 }
 
 /**
- * 選取之後的動作列。
+ * 選取工具列在畫面上的位置（像素，畫布可視範圍的座標）：選取框上方置中，
+ * 上方放不下（貼著可視範圍頂端）就改放在下方。與 Apple 的 `lassoSelectionDecoration` 同一個規則。
  *
- * **只在真的有東西可以做的時候出現**（有選取，或剪貼簿裡有東西可以貼）。
- * 一選了套索就跳出來的話，那時候每一顆按鈕都是空操作 —— 使用者按下去
- * 什麼也不會發生，而畫面上也沒有任何提示說明為什麼。
+ * 頁面點 → 畫面：乘 density 與縮放、加上捲動位移。
+ */
+fun lassoBarAnchor(
+    box: Rect,
+    density: Float,
+    scale: Float,
+    offset: Offset,
+    barHeightPx: Float,
+    gapPx: Float
+): Offset {
+    val k = density * scale
+    val left = box.left * k + offset.x
+    val top = box.top * k + offset.y
+    val right = box.right * k + offset.x
+    val bottom = box.bottom * k + offset.y
+    val above = top - gapPx - barHeightPx
+    val y = if (above >= gapPx) above else bottom + gapPx
+    return Offset((left + right) / 2f, y)
+}
+
+/**
+ * 套索模式、沒有選取、剪貼簿有筆跡時的「貼上」入口（畫面上方）。
+ *
+ * 選取工具列只在有選取時出現；剪下之後選取就清空了，不另外給入口的話
+ * 剪下來的東西就再也貼不回去。
+ */
+@Composable
+fun LassoPastePill(
+    lasso: LassoSelection,
+    engine: InkEngine,
+    l: (String) -> String,
+    onChanged: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    if (lasso.hasSelection || lasso.path.isNotEmpty() || !lasso.canPaste) return
+    Card(
+        modifier = modifier.testTag("editor.lasso.paste"),
+        shape = RoundedCornerShape(50),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+    ) {
+        TextButton(onClick = { if (lasso.paste(engine)) onChanged() }) {
+            Text("📋 " + l("paste_strokes"), fontSize = 13.sp, color = MaterialTheme.colorScheme.primary)
+        }
+    }
+}
+
+/**
+ * 選取之後的快顯動作列（浮在選取框旁邊，位置見 [lassoBarAnchor]）。
+ *
+ * **只在有選取時出現**；沒有選取但剪貼簿有東西時由 [LassoPastePill] 給貼上入口。
+ * 貼上鈕只在剪貼簿有東西時出現 —— 空的貼上鈕按下去什麼也不會發生。
  */
 @Composable
 fun LassoActionBar(
@@ -116,10 +204,10 @@ fun LassoActionBar(
     onAnchorToText: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
-    if (!lasso.hasSelection && !lasso.canPaste) return
+    if (!lasso.hasSelection || lasso.path.isNotEmpty() || lasso.isDragging) return
 
     Card(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier,
         shape = RoundedCornerShape(14.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant
@@ -127,7 +215,6 @@ fun LassoActionBar(
     ) {
         Row(
             modifier = Modifier
-                .fillMaxWidth()
                 .horizontalScroll(rememberScrollState())
                 .padding(horizontal = 8.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -184,5 +271,27 @@ fun LassoActionBar(
                 )
             }
         }
+    }
+}
+
+/**
+ * 把選取工具列放到 [lassoBarAnchor] 算出的位置，並夾在父層範圍內（左右不出界、上下不出界）。
+ * 放在畫布 `graphicsLayer` **外面**那一層用：工具列不跟著頁面縮放，按鈕維持原尺寸。
+ */
+fun Modifier.lassoBarPlacement(
+    box: Rect,
+    density: Float,
+    scale: Float,
+    offset: Offset,
+    gapPx: Float
+): Modifier = layout { measurable, constraints ->
+    val placeable = measurable.measure(constraints.copy(minWidth = 0, minHeight = 0))
+    val w = constraints.maxWidth
+    val h = constraints.maxHeight
+    layout(w, h) {
+        val anchor = lassoBarAnchor(box, density, scale, offset, placeable.height.toFloat(), gapPx)
+        val x = (anchor.x - placeable.width / 2f).coerceIn(0f, maxOf(0f, (w - placeable.width).toFloat()))
+        val y = anchor.y.coerceIn(0f, maxOf(0f, (h - placeable.height).toFloat()))
+        placeable.place(x.toInt(), y.toInt())
     }
 }
