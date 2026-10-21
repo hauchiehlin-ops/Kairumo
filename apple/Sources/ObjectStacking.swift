@@ -495,41 +495,37 @@ struct ObjectLockMenuItem: View {
 }
 
 extension View {
-    /// 套在畫布上每一個物件外面：鎖定時物件本身不接收觸控（雙指縮放、捲動都穿透到頁面）。
-    ///
-    /// 角落的鎖頭**不在這裡畫**：物件層在手寫模式下整層不接觸控，鎖頭畫在物件層裡的話，
-    /// 手寫模式看得到鎖定的物件卻點不到解鎖的入口。鎖頭與「解除鎖定」鈕由編輯器畫在
-    /// 物件層之上、不分模式都接觸控的那一層（見 `CanvasLockBadge`）。
+    /// 套在畫布上每一個物件外面：鎖定時物件本身不接收觸控（雙指縮放、捲動都穿透到頁面），
+    /// 角落放一個**點得到**的小鎖頭（只在 `showBadge` 時，也就是打字／物件模式 —— 手寫模式下
+    /// 物件本來就不接觸控）。點鎖頭呼叫 `onBadgeTap`，由編輯器在物件上方給「解除鎖定」鈕：
+    /// 看得到的鎖定物件，一定要就地點得到解鎖的入口。
     @ViewBuilder
-    func canvasLocked(_ locked: Bool) -> some View {
+    func canvasLocked(_ locked: Bool, showBadge: Bool, onBadgeTap: @escaping () -> Void = {}) -> some View {
         if locked {
-            self.allowsHitTesting(false)
+            self
+                .allowsHitTesting(false)
+                .overlay(alignment: .topTrailing) {
+                    if showBadge {
+                        Button(action: onBadgeTap) {
+                            Image(systemName: "lock.fill")
+                                .font(.system(size: 10, weight: .bold))
+                                .foregroundStyle(.white)
+                                .padding(5)
+                                .background(Circle().fill(Color.orange.opacity(0.9)))
+                                // 圖示小、觸控範圍要夠大（44pt 是 Apple 的最小觸控目標）。
+                                .frame(width: 32, height: 32)
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .offset(x: 14, y: -14)
+                        .help(LocalizationManager.shared.localized("object_locked"))
+                        .accessibilityLabel(LocalizationManager.shared.localized("object_locked"))
+                        .accessibilityIdentifier("object.lock.badge")
+                    }
+                }
         } else {
             self
         }
-    }
-}
-
-/// 鎖定物件右上角**點得到**的小鎖頭。點下去由編輯器在物件上方給「解除鎖定」鈕：
-/// 看得到的鎖定物件，一定要就地點得到解鎖的入口 —— 手寫模式也一樣。
-struct CanvasLockBadge: View {
-    let onTap: () -> Void
-
-    var body: some View {
-        Button(action: onTap) {
-            Image(systemName: "lock.fill")
-                .font(.system(size: 10, weight: .bold))
-                .foregroundStyle(.white)
-                .padding(5)
-                .background(Circle().fill(Color.orange.opacity(0.9)))
-                // 圖示小、觸控範圍要夠大。
-                .frame(width: 32, height: 32)
-                .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .help(LocalizationManager.shared.localized("object_locked"))
-        .accessibilityLabel(LocalizationManager.shared.localized("object_locked"))
-        .accessibilityIdentifier("object.lock.badge")
     }
 }
 

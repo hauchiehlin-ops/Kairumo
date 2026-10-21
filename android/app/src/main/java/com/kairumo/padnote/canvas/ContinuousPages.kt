@@ -1028,8 +1028,7 @@ private fun ContinuousPage(
             }
         }
 
-        // 不分模式：手寫模式下物件層不接觸控，鎖頭若也跟著藏起來，就沒有地方解鎖了。
-        if (lockedIds.isNotEmpty()) {
+        if (interactive && lockedIds.isNotEmpty()) {
             val localize = { key: String -> com.kairumo.padnote.LocalizationStrings.localized(key, com.kairumo.padnote.currentLanguageTag()) }
             LockBadges(lockFrames, lockedIds, localize("object_locked")) { id ->
                 lockPromptId = if (lockPromptId == id) null else id
