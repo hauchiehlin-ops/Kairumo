@@ -12,6 +12,20 @@ TARGETS=(
   aarch64-apple-ios-macabi   # Mac Catalyst (Mac 通用)
 )
 
+# 最低系統版本，要與 apple/project.yml 的 deploymentTarget 一致。
+#
+# 沒設的話，相依套件裡的 C/C++（ring、whisper.cpp / ggml）會預設用**目前 SDK**
+# 的版本編譯 —— 實際踩過：三個切片各有 49 個目的檔標成 27.0，連結時 ld 警告
+# 「built for newer version (27.0) than being linked (16.0)」，
+# 在比 27 舊的 iOS / macOS 上就可能呼叫到不存在的系統函式。
+# Mac Catalyst 也讀 IPHONEOS_DEPLOYMENT_TARGET（Catalyst 的版本號就是 iOS 的版本號）。
+export IPHONEOS_DEPLOYMENT_TARGET="16.0"
+# whisper.cpp / ggml 走 CMake（whisper-rs-sys），不看上面那個變數，只看 CMake 自己的；
+# whisper-rs-sys 會把所有 CMAKE_* 環境變數原樣轉成 -D 傳給 CMake。
+# 注意：它的 build.rs 不會因為這個值改變而重跑，改了版本要先
+# `cargo clean -p whisper-rs-sys --release --target <t>`。
+export CMAKE_OSX_DEPLOYMENT_TARGET="$IPHONEOS_DEPLOYMENT_TARGET"
+
 echo "==> 確認 target 已安裝"
 for t in "${TARGETS[@]}"; do
   rustup target add "$t" >/dev/null 2>&1 || true
