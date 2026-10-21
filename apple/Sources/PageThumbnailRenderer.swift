@@ -26,10 +26,13 @@ public enum PageThumbnailRenderer {
     /// 畫布上看到的是橫的，匯出的 PDF 卻是直的，而且右半邊被裁掉。
     public static var minPageWidth: CGFloat { PageGeometry.width }
 
-    /// 縮圖最多畫到「寬度的幾倍高」。頁面預設 1800pt 高，若整頁塞進側邊欄，
-    /// 卡片不是變成細長一條、就是要縮到物件看不清 —— 超過的部分裁掉，
-    /// 底部畫漸層提示還有內容。
-    public static let maxHeightRatio: CGFloat = 1.25
+    /// 縮圖最多畫到「寬度的幾倍高」，超過的部分裁掉、底部畫漸層提示還有內容 ——
+    /// 只為了極端細長的自訂頁面，免得側欄卡片變成細長一條。
+    ///
+    /// 原本是 1.25（頁面還是 1800pt 長條的年代）。頁面改成標準規格之後，A4 直式是
+    /// 1.415、Letter 1.29、Legal 1.65，**每一種直式頁面的底部都被裁掉**：放在頁面下方
+    /// 的物件在畫布上看得到、側欄縮圖卻淡出不見。標準規格一律整頁顯示。
+    public static let maxHeightRatio: CGFloat = 1.7
 
     /// 縮圖快取。側邊欄每次重繪都重新合成整頁會很慢，而內容沒變時結果是一樣的。
     private static let cache = NSCache<NSString, UIImage>()
@@ -73,12 +76,10 @@ public enum PageThumbnailRenderer {
         drawing: PKDrawing,
         store: NotebookStore,
         canvasWidth: CGFloat,
-        scale: CGFloat = 0.4,
-        inkOnTop: Bool = true
+        scale: CGFloat = 0.4
     ) -> UIImage {
         compose(notebook: notebook, pageIndex: pageIndex, drawing: drawing, store: store,
-                canvasWidth: canvasWidth, scale: scale, cropToPreviewRatio: true, useCache: true,
-                inkOnTop: inkOnTop)
+                canvasWidth: canvasWidth, scale: scale, cropToPreviewRatio: true, useCache: true)
     }
 
     /// 整頁算繪（不裁切、不取快取），給匯出 PDF / 圖片與列印用。
@@ -94,12 +95,11 @@ public enum PageThumbnailRenderer {
         drawing: PKDrawing,
         store: NotebookStore,
         canvasWidth: CGFloat,
-        scale: CGFloat = 2.0,
-        inkOnTop: Bool = true
+        scale: CGFloat = 2.0
     ) -> UIImage {
         compose(notebook: notebook, pageIndex: pageIndex, drawing: drawing, store: store,
                 canvasWidth: canvasWidth, scale: scale, cropToPreviewRatio: false,
-                useCache: false, quality: .export, inkOnTop: inkOnTop)
+                useCache: false, quality: .export)
     }
 
     @MainActor
@@ -124,8 +124,7 @@ public enum PageThumbnailRenderer {
         scale: CGFloat,
         cropToPreviewRatio: Bool,
         useCache: Bool,
-        quality: Quality = .preview,
-        inkOnTop: Bool = true
+        quality: Quality = .preview
     ) -> UIImage {
         // 匯出與縮圖一律以**頁面**為準，不是以當下的畫布寬度為準。
         // 以畫布寬度取圖的話，同一則筆記在 Mac 與 iPhone 上匯出的結果不一樣 ——
@@ -139,7 +138,7 @@ public enum PageThumbnailRenderer {
             .timeIntervalSince1970 ?? 0
         let key = (cacheKey(notebook: notebook, pageIndex: pageIndex, drawing: drawing, canvasWidth: width) as String
             + "|\(pro.count)|\(proStamp)|\(DraftingState.shared.hiddenStamp(notebookId: notebook.id))"
-            + "|\(inkOnTop ? 1 : 0)|\(notebook.objectOrder(forPage: pageIndex)?.joined(separator: ",").hashValue ?? 0)") as NSString
+            + "|\(notebook.underInkObjectIds(forPage: pageIndex).sorted().joined(separator: ",").hashValue)|\(notebook.objectOrder(forPage: pageIndex)?.joined(separator: ",").hashValue ?? 0)") as NSString
         if useCache, let cached = cache.object(forKey: key) { return cached }
 
         let pageHeight = PageGeometry.height
@@ -246,24 +245,15 @@ public enum PageThumbnailRenderer {
                 entry.element.draw()
             }
 
-            // 2. 墨跡與其餘物件誰在上面，跟著模式與層級配置：
-            let remainingLayers = sortedLayers.filter { !underInkIds.contains($0.element.id) }
-            if inkOnTop {
-                // 手寫繪圖模式：圖片預設在墨跡之下（在照片上圈劃重點），其餘物件（文字方塊、圖釘等）保持在墨跡之上
-                for entry in remainingLayers where entry.element.kind == .image {
-                    entry.element.draw()
-                }
-                drawInk()
-                drawTapes()
-                for entry in remainingLayers where entry.element.kind != .image {
-                    entry.element.draw()
-                }
-            } else {
-                drawInk()
-                drawTapes()
-                for entry in remainingLayers {
-                    entry.element.draw()
-                }
+            // 2. 墨跡與紙膠帶，再來其餘物件（筆跡上方層）。跟畫布的疊法一模一樣：畫布上
+            //    「移至筆跡下方」的物件在 PKCanvasView 底下，其他物件**不分模式**都在它上面
+            //    （見 `NotebookEditorView.objectLayer(forPage:filter:)` 與 `ContinuousPageView`）。
+            //    原本手寫模式時把圖片硬塞到墨跡下面，畫布上圖片蓋著線、側欄縮圖卻是線蓋著圖片，
+            //    而且一切換模式縮圖就變 —— 要讓線畫在圖上，是把圖片「移至筆跡下方」，不是看模式。
+            drawInk()
+            drawTapes()
+            for entry in sortedLayers where !underInkIds.contains(entry.element.id) {
+                entry.element.draw()
             }
 
             // 有被裁掉的內容時，底部畫一道漸層，讓使用者知道這不是整頁。

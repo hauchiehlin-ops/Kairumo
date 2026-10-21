@@ -46,11 +46,11 @@ final class ExportParityTests: XCTestCase {
     }
 
     private func render(
-        _ notebook: NotebookDocument, drawing: PKDrawing = PKDrawing(), inkOnTop: Bool = true
+        _ notebook: NotebookDocument, drawing: PKDrawing = PKDrawing()
     ) -> UIImage {
         PageThumbnailRenderer.renderFullPage(
             notebook: notebook, pageIndex: 0, drawing: drawing, store: NotebookStore.shared,
-            canvasWidth: PageGeometry.width, scale: 1.0, inkOnTop: inkOnTop)
+            canvasWidth: PageGeometry.width, scale: 1.0)
     }
 
     private func pixel(_ image: UIImage, _ x: Int, _ y: Int) -> (r: Int, g: Int, b: Int) {
@@ -83,15 +83,19 @@ final class ExportParityTests: XCTestCase {
 
     // MARK: 墨跡與物件誰在上面
 
-    func testInkIsAboveTheImageInDrawModeAndBelowItInTypeMode() {
-        let book = notebook(with: [image(solidImage(.red))])
+    func testInkStacksLikeTheCanvasRegardlessOfEditorMode() {
+        var book = notebook(with: [image(solidImage(.red))])
         let drawing = PKDrawing(strokes: [thickStroke()])
         // (200, 200) 同時在圖片裡、也在墨跡的線上。
-        let drawMode = pixel(render(book, drawing: drawing, inkOnTop: true), 200, 200)
-        XCTAssertLessThan(drawMode.r, 80, "手寫模式：墨跡在圖片之上（在圖上圈重點），匯出要看得到黑線")
-        let typeMode = pixel(render(book, drawing: drawing, inkOnTop: false), 200, 200)
-        XCTAssertGreaterThan(typeMode.r, 200, "打字模式：物件在墨跡之上，圖片蓋住線")
-        XCTAssertLessThan(typeMode.g, 60)
+        // 畫布上：沒有「移至筆跡下方」的物件不分模式都在墨跡上面 —— 圖片蓋住線。
+        // 以前縮圖在手寫模式把圖片硬畫到墨跡下面，側欄與畫布看起來不一樣。
+        let overInk = pixel(render(book, drawing: drawing), 200, 200)
+        XCTAssertGreaterThan(overInk.r, 200, "筆跡上方的圖片蓋住線，與畫布一致")
+        XCTAssertLessThan(overInk.g, 60)
+        // 移至筆跡下方：線畫在圖上。
+        book.setUnderInkObjectIds([book.attachments![0].id], forPage: 0)
+        let underInk = pixel(render(book, drawing: drawing), 200, 200)
+        XCTAssertLessThan(underInk.r, 80, "移至筆跡下方的圖片，線要畫在它上面")
     }
 
     func testObjectOrderDecidesWhichOverlappingObjectIsOnTop() {
