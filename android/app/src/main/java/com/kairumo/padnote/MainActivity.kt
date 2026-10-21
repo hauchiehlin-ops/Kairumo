@@ -1,5 +1,6 @@
 package com.kairumo.padnote
 
+import com.kairumo.padnote.canvas.fingerTapOnLockedObject
 import android.os.Bundle
 import java.io.File
 import android.view.KeyEvent
@@ -5390,6 +5391,23 @@ private fun InkScreen(
                     // 就不見了」。
                     clip = true
                 )
+                // 手寫模式下手指點鎖定的物件：切到打字模式並給「解除鎖定」鈕（見 ObjectLock.kt）。
+                .fingerTapOnLockedObject(
+                    listOf(editorMode, inkTool.isLasso, inkTool.isMaskingTape, isPlacingCommentPin),
+                    hitAt = { p ->
+                        if (editorMode != EditorMode.DRAW || inkTool.isLasso || inkTool.isMaskingTape ||
+                            isPlacingCommentPin) null
+                        else com.kairumo.padnote.canvas.lockedObjectHit(
+                            p.x / canvasDensity, p.y / canvasDensity,
+                            marqueeCandidatesLatest.sortedBy { stackOrderLatest.indexOf(it.id) },
+                            lockedIdsLatest)
+                    },
+                    onCancelInk = { engine.cancelInFlight(); revision++ },
+                    onTap = { id ->
+                        editorMode = EditorMode.TYPE
+                        lockPromptId = id
+                    }
+                )
                 .then(
                     if (editorMode == EditorMode.TYPE) {
                         Modifier.pointerInput(pageIndex, snapToGrid) {
@@ -5693,11 +5711,14 @@ private fun InkScreen(
                 )
             }
 
-            // 鎖定物件右上角的小鎖頭（打字／物件模式才畫）。
+            // 鎖定物件右上角的小鎖頭。兩種模式都畫；手寫模式下只顯示，入口是手指點物件。
+            if (lockedIds.isNotEmpty()) {
+                com.kairumo.padnote.canvas.LockBadges(
+                    marqueeCandidates, lockedIds, l10n("object_locked"),
+                    if (editorMode == EditorMode.TYPE) { id -> lockPromptId = if (lockPromptId == id) null else id } else null
+                )
+            }
             if (editorMode == EditorMode.TYPE && lockedIds.isNotEmpty()) {
-                com.kairumo.padnote.canvas.LockBadges(marqueeCandidates, lockedIds, l10n("object_locked")) { id ->
-                    lockPromptId = if (lockPromptId == id) null else id
-                }
                 val promptFrame = lockPromptId?.let { id -> marqueeCandidates.firstOrNull { it.id == id } }
                 if (promptFrame != null && promptFrame.id in lockedIds) {
                     com.kairumo.padnote.canvas.UnlockPrompt(promptFrame, l10n("object_unlock")) {

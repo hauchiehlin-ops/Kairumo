@@ -21,6 +21,13 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.PointerInputChange
+import androidx.compose.ui.input.pointer.PointerType
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 
 /**
  * 鎖定在畫布上（與 Apple 的 `ObjectLockActions`／`canvasLocked` 同一套規則）。
@@ -42,7 +49,8 @@ import androidx.compose.ui.zIndex
  * 鎖定的物件本身不接觸控，它自己的選單也就打不開，所以另外給三個入口：
  * 打字模式下點物件角落的鎖頭（[LockBadges]）、或單指點一下鎖定的物件（穿透到頁面的那一下由
  * 編輯器用 [lockedObjectHit] 接住，不會在那裡開新文字方塊），物件上方就出現「解除鎖定」鈕
- * （[UnlockPrompt]）；另外圖層面板每一列都有鎖頭開關。鎖上則從物件的層級選單或圖層面板。
+ * （[UnlockPrompt]）；手寫模式下鎖頭照樣畫，手指點一下鎖定的物件（[fingerTapOnLockedObject]）
+ * 就切到打字模式並給出同一顆鈕；另外圖層面板每一列都有鎖頭開關。鎖上則從物件的層級選單或圖層面板。
  */
 data class ObjectLockActions(
     val isLocked: (String) -> Boolean,
@@ -66,18 +74,21 @@ fun lockedObjectHit(x: Float, y: Float, frames: List<MarqueeHit>, lockedIds: Set
 }
 
 /**
- * 鎖定物件右上角的鎖頭（打字／物件模式才畫 —— 手寫模式下物件本來就不接觸控）。
+ * 鎖定物件右上角的鎖頭。兩種模式都畫：手寫模式下看不出物件鎖住了，使用者只會以為它壞了。
  *
- * **點得到**：看得到的鎖定物件一定要就地點得到解鎖的入口。點鎖頭呼叫 [onTap]，由編輯器在
+ * **點得到**：看得到的鎖定物件一定要就地點得到解鎖的入口。打字模式下點鎖頭呼叫 [onTap]，由編輯器在
  * 物件上方放「解除鎖定」鈕（[UnlockPrompt]）。鎖頭只吃單指點擊；雙指縮放、捲動由外層在
  * Initial 階段先接走，碰到鎖頭也照樣縮放。座標是頁面點（＝dp）。
+ *
+ * 手寫模式傳 `onTap = null`：鎖頭只顯示、不接觸控，筆從鎖頭上落下照樣寫得出來。
+ * 那時的入口是 [fingerTapOnLockedObject]（它的判定範圍放寬 20dp，涵蓋鎖頭）。
  */
 @Composable
 fun LockBadges(
     frames: List<MarqueeHit>,
     lockedIds: Set<String>,
     label: String,
-    onTap: (String) -> Unit
+    onTap: ((String) -> Unit)?
 ) {
     for (frame in frames) {
         if (frame.id !in lockedIds) continue
@@ -86,7 +97,7 @@ fun LockBadges(
                 .zIndex(9_500f)
                 .offset((frame.x + frame.width - 16f).dp, (frame.y - 16f).dp)
                 .size(32.dp)
-                .clickable { onTap(frame.id) }
+                .then(if (onTap != null) Modifier.clickable { onTap(frame.id) } else Modifier)
                 .semantics { contentDescription = label },
             contentAlignment = Alignment.Center
         ) {
@@ -94,6 +105,52 @@ fun LockBadges(
                 modifier = Modifier.background(Color(0xE6F59E0B), CircleShape).padding(horizontal = 5.dp, vertical = 3.dp)
             ) { Text("🔒", fontSize = 10.sp) }
         }
+    }
+}
+
+/** 手指點擊的時間上限：比飛梭工具盤的長按（0.55 秒）短，兩者不會同時成立。 */
+private const val LOCK_TAP_MILLIS = 400L
+
+/**
+ * 手寫模式下的解鎖入口：**手指**單擊鎖定的物件（或它的鎖頭），呼叫 [onTap] 帶物件 id。
+ * 編輯器據此切到打字模式並放出「解除鎖定」鈕 —— 與 Apple 端 `handleCanvasDirectTap`
+ * 手寫分支一致。
+ *
+ * 掛在畫布（[InkCanvas] 的父層）上，在 Initial 階段旁觀，不擋其他手勢：
+ * - 只看手指；筆尖一律照常書寫。
+ * - 落點不在鎖定物件上、第二指落下、移動超過觸控門檻、按太久，就放手不管 ——
+ *   一指畫線、雙指縮放捲動、長按飛梭工具盤都照舊。
+ * - 成立時（手指在原處抬起）先 [onCancelInk] 取消正在進行的那一筆，再把抬起事件吃掉，
+ *   畫布收到的是取消而不是收筆，紙上不會留下墨點。
+ *
+ * [hitAt] 收的是這個 Modifier 所在節點的本地座標（px），回傳鎖定物件 id 或 null；
+ * 手寫模式以外請讓它回 null。
+ */
+fun Modifier.fingerTapOnLockedObject(
+    key: Any?,
+    hitAt: (Offset) -> String?,
+    onCancelInk: () -> Unit,
+    onTap: (String) -> Unit
+): Modifier = pointerInput(key) {
+    awaitEachGesture {
+        val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+        if (down.type != PointerType.Touch) return@awaitEachGesture
+        val hit = hitAt(down.position) ?: return@awaitEachGesture
+        val slop = viewConfiguration.touchSlop
+        var released: PointerInputChange? = null
+        withTimeoutOrNull(LOCK_TAP_MILLIS) {
+            while (released == null) {
+                val event = awaitPointerEvent(PointerEventPass.Initial)
+                val tracked = event.changes.firstOrNull { it.id == down.id } ?: break
+                if (event.changes.count { it.pressed } > 1) break
+                if ((tracked.position - down.position).getDistance() > slop) break
+                if (!tracked.pressed) released = tracked
+            }
+        }
+        val up = released ?: return@awaitEachGesture
+        onCancelInk()
+        up.consume()
+        onTap(hit)
     }
 }
 

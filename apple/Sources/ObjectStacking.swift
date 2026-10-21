@@ -455,9 +455,9 @@ extension EnvironmentValues {
 /// 鎖定的物件**完全不接收觸控**（點選、拖曳、長按都穿透到頁面）：雙指縮放或捲動頁面時，
 /// 第一根手指落在物件上也不會把它選起來、拖走或打開編輯。
 ///
-/// 解除鎖定有三個入口，都不必先「點中」物件本身：打字模式下點物件角落的鎖頭、
-/// 或單指點一下鎖定的物件（穿透到頁面的那一下由編輯器接住），物件上方會出現「解除鎖定」鈕；
-/// 另外圖層面板每一列都有鎖頭開關。
+/// 解除鎖定有三個入口，都不必先「點中」物件本身：點物件角落的鎖頭、
+/// 或單指點一下鎖定的物件（穿透到頁面的那一下由編輯器接住；手寫模式下會先切到打字模式），
+/// 物件上方會出現「解除鎖定」鈕；另外圖層面板每一列都有鎖頭開關。
 struct ObjectLockActions {
     var isLocked: (String) -> Bool
     var setLocked: (String, Bool) -> Void
@@ -495,37 +495,42 @@ struct ObjectLockMenuItem: View {
 }
 
 extension View {
-    /// 套在畫布上每一個物件外面：鎖定時物件本身不接收觸控（雙指縮放、捲動都穿透到頁面），
-    /// 角落放一個**點得到**的小鎖頭（只在 `showBadge` 時，也就是打字／物件模式 —— 手寫模式下
-    /// 物件本來就不接觸控）。點鎖頭呼叫 `onBadgeTap`，由編輯器在物件上方給「解除鎖定」鈕：
-    /// 看得到的鎖定物件，一定要就地點得到解鎖的入口。
+    /// 套在畫布上每一個物件外面：鎖定時物件本身不接收觸控（雙指縮放、捲動都穿透到頁面）。
+    ///
+    /// 角落的鎖頭**不**掛在這裡：多數物件在這之前已經 `.position(...)` 過，
+    /// 那時的外框是整個頁面，`overlay(alignment: .topTrailing)` 會把鎖頭放到頁面右上角
+    /// （常常在畫面外），使用者就看不到解鎖的入口。鎖頭改由編輯器依物件的實際外框畫
+    /// （見 `LockedObjectBadge`）。
     @ViewBuilder
-    func canvasLocked(_ locked: Bool, showBadge: Bool, onBadgeTap: @escaping () -> Void = {}) -> some View {
+    func canvasLocked(_ locked: Bool) -> some View {
         if locked {
-            self
-                .allowsHitTesting(false)
-                .overlay(alignment: .topTrailing) {
-                    if showBadge {
-                        Button(action: onBadgeTap) {
-                            Image(systemName: "lock.fill")
-                                .font(.system(size: 10, weight: .bold))
-                                .foregroundStyle(.white)
-                                .padding(5)
-                                .background(Circle().fill(Color.orange.opacity(0.9)))
-                                // 圖示小、觸控範圍要夠大（44pt 是 Apple 的最小觸控目標）。
-                                .frame(width: 32, height: 32)
-                                .contentShape(Rectangle())
-                        }
-                        .buttonStyle(.plain)
-                        .offset(x: 14, y: -14)
-                        .help(LocalizationManager.shared.localized("object_locked"))
-                        .accessibilityLabel(LocalizationManager.shared.localized("object_locked"))
-                        .accessibilityIdentifier("object.lock.badge")
-                    }
-                }
+            self.allowsHitTesting(false)
         } else {
             self
         }
+    }
+}
+
+/// 鎖定物件右上角的鎖頭。編輯器依物件外框把它放在角落（頁面座標）；
+/// 點它呼叫 `onTap`，由編輯器在物件上方給「解除鎖定」鈕。
+struct LockedObjectBadge: View {
+    let onTap: () -> Void
+
+    var body: some View {
+        Button(action: onTap) {
+            Image(systemName: "lock.fill")
+                .font(.system(size: 10, weight: .bold))
+                .foregroundStyle(.white)
+                .padding(5)
+                .background(Circle().fill(Color.orange.opacity(0.9)))
+                // 圖示小、觸控範圍要夠大。
+                .frame(width: 32, height: 32)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .help(LocalizationManager.shared.localized("object_locked"))
+        .accessibilityLabel(LocalizationManager.shared.localized("object_locked"))
+        .accessibilityIdentifier("object.lock.badge")
     }
 }
 

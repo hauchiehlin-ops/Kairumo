@@ -5570,7 +5570,7 @@ public struct NotebookEditorView: View {
                                 collaborationManager.broadcastSelection(selectedId: nil)
                             }
                         )
-                        .canvasLocked(lockedSet.contains(item.id), showBadge: editorMode == .type) { lockPromptId = item.id }
+                        .canvasLocked(lockedSet.contains(item.id))
 
                         .zIndex(stacking.zIndex(for: item.id, kind: .image))
                     }
@@ -5630,7 +5630,7 @@ public struct NotebookEditorView: View {
                                     current: current, finished: finished)
                             }
                         )
-                        .canvasLocked(lockedSet.contains(item.id), showBadge: editorMode == .type) { lockPromptId = item.id }
+                        .canvasLocked(lockedSet.contains(item.id))
 
                         .zIndex(stacking.zIndex(for: item.id, kind: .shape))
                     }
@@ -5703,7 +5703,7 @@ public struct NotebookEditorView: View {
                                 collaborationManager.broadcastAttachmentDelete(id: id, type: "table")
                             }
                         )
-                        .canvasLocked(lockedSet.contains(item.id), showBadge: editorMode == .type) { lockPromptId = item.id }
+                        .canvasLocked(lockedSet.contains(item.id))
 
                         .zIndex(stacking.zIndex(for: item.id, kind: .table))
                     }
@@ -5758,7 +5758,7 @@ public struct NotebookEditorView: View {
                             },
                             selectionTracker: textSelectionTracker
                         )
-                        .canvasLocked(lockedSet.contains(item.id), showBadge: editorMode == .type) { lockPromptId = item.id }
+                        .canvasLocked(lockedSet.contains(item.id))
 
                         .zIndex(stacking.zIndex(for: item.id, kind: .text))
                     }
@@ -5776,7 +5776,7 @@ public struct NotebookEditorView: View {
                                 commitNotebook()
                             }
                         )
-                        .canvasLocked(lockedSet.contains(item.id), showBadge: editorMode == .type) { lockPromptId = item.id }
+                        .canvasLocked(lockedSet.contains(item.id))
 
                         .zIndex(stacking.zIndex(for: item.id, kind: .link))
                     }
@@ -5798,7 +5798,7 @@ public struct NotebookEditorView: View {
                                 insertTranscriptText(transcribedText, for: item)
                             }
                         )
-                        .canvasLocked(lockedSet.contains(item.id), showBadge: editorMode == .type) { lockPromptId = item.id }
+                        .canvasLocked(lockedSet.contains(item.id))
 
                         .zIndex(stacking.zIndex(for: item.id, kind: .audio))
                     }
@@ -5819,7 +5819,7 @@ public struct NotebookEditorView: View {
                                 collaborationManager.broadcastSelection(selectedId: nil)
                             }
                         )
-                        .canvasLocked(lockedSet.contains(item.id), showBadge: editorMode == .type) { lockPromptId = item.id }
+                        .canvasLocked(lockedSet.contains(item.id))
 
                         .zIndex(stacking.zIndex(for: item.id, kind: .model3D))
                     }
@@ -5849,7 +5849,7 @@ public struct NotebookEditorView: View {
                             }
                         )
                         .position(x: pin.x, y: pin.y)
-                        .canvasLocked(lockedSet.contains(pin.id), showBadge: editorMode == .type) { lockPromptId = pin.id }
+                        .canvasLocked(lockedSet.contains(pin.id))
 
                         .zIndex(stacking.zIndex(for: pin.id, kind: .pin))
                     }
@@ -5857,6 +5857,7 @@ public struct NotebookEditorView: View {
 
                 // 🌟 特殊樣板智慧互動元件層（核取清單 Checkbox、選項切換與進度管控）
                 if filter != .underInkOnly {
+                    lockedObjectBadges(forPage: page)
                     lockedObjectPrompt(forPage: page)
 
                     ForEach(interactiveGuideCheckboxes(forPage: page)) { item in
@@ -12572,6 +12573,18 @@ public struct NotebookEditorView: View {
         if editorMode == .type {
             handleCanvasTapInTypeMode(at: location, page: targetPage)
         } else {
+            // 手寫模式下手指點到鎖定的物件（或它角落的鎖頭）：鎖定的物件不接觸控，
+            // 也不能被選起來 —— 這一下就是要找解鎖的入口。手寫模式下物件層不吃觸控、
+            // 解鎖鈕按不到，所以切到打字模式再給解鎖鈕（與放置貼紙同一個做法）。
+            if let lockedId = lockedObjectHit(at: location, page: targetPage) {
+                removeTapDotStroke(near: location)
+                withAnimation(.easeInOut(duration: 0.15)) {
+                    editorMode = .type
+                    lockPromptId = lockedId
+                }
+                return
+            }
+
             // 手寫模式下單擊：優先檢查是否點擊在既有文字方塊範圍內
             if let existing = notebook.textAttachments?.first(where: { item in
                 item.pageIndex == targetPage &&
@@ -14243,6 +14256,25 @@ public struct NotebookEditorView: View {
             // 放寬 20pt：角落的鎖頭露在物件外面，點鎖頭也要算點到它。
             .first { frameOfObject(id: $0.id)?.insetBy(dx: -20, dy: -20).contains(point) == true }?
             .id
+    }
+
+    /// 每個鎖定物件右上角的鎖頭（頁面座標，依物件的實際外框放）。不分模式都畫：
+    /// 看得到的鎖定物件，一定要看得出它鎖住了、也知道從哪裡解。
+    /// 手寫模式下物件層不吃觸控，手指點鎖頭會落到畫布上，由 `handleCanvasDirectTap` 接住（同樣給解鎖鈕）。
+    @ViewBuilder
+    private func lockedObjectBadges(forPage page: Int) -> some View {
+        let locked = notebook.allLockedObjectIds
+        if !locked.isEmpty {
+            ForEach(stackableObjects(forPage: page).filter { locked.contains($0.id) }, id: \.id) { object in
+                if let frame = frameOfObject(id: object.id) {
+                    LockedObjectBadge {
+                        lockPromptId = (lockPromptId == object.id) ? nil : object.id
+                    }
+                    .position(x: frame.maxX, y: frame.minY)
+                    .zIndex(9_700)
+                }
+            }
+        }
     }
 
     /// 鎖定物件上方的「解除鎖定」鈕（頁面座標，畫在物件層裡）。
