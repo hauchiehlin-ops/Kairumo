@@ -7110,8 +7110,7 @@ public struct NotebookEditorView: View {
                     pageIndex: idx,
                     drawing: pageDrawing,
                     store: store,
-                    canvasWidth: canvasContentWidth,
-                    inkOnTop: inkDrawnOnTop
+                    canvasWidth: canvasContentWidth
                 )
                 Image(uiImage: img)
                     .resizable()
@@ -11237,10 +11236,6 @@ public struct NotebookEditorView: View {
     /// 舊版寫死 612×792（信紙尺寸）並且只畫 `PKDrawing` —— 但畫布座標是
     /// 「視圖寬度 × 頁面高度」，通常遠大於這個框，所以只截到左上角一小塊，
     /// 匯出檔看起來就是空白；文字方塊、圖片、3D、圖釘也全都沒畫進去。
-    /// 墨跡在物件之上嗎？跟著畫布目前的模式：手寫模式墨跡在上（在圖上圈重點），打字模式物件在上。
-    /// 匯出、列印、縮圖都用這個答案，「所見即所得」。
-    private var inkDrawnOnTop: Bool { editorMode == .draw }
-
     /// 把某一頁算繪成圖（與縮圖、PNG 匯出是同一份繪圖程式碼）。
     private func composedPageImage(_ index: Int, scale: CGFloat) -> UIImage {
         PageThumbnailRenderer.renderFullPage(
@@ -11249,8 +11244,7 @@ public struct NotebookEditorView: View {
             drawing: drawingForPage(index),
             store: store,
             canvasWidth: max(canvasContentWidth, PageThumbnailRenderer.minPageWidth),
-            scale: scale,
-            inkOnTop: inkDrawnOnTop
+            scale: scale
         )
     }
 
