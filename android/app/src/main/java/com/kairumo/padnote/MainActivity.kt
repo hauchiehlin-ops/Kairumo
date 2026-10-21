@@ -5693,8 +5693,10 @@ private fun InkScreen(
                 )
             }
 
-            // 鎖定物件右上角的小鎖頭（打字／物件模式才畫）。
-            if (editorMode == EditorMode.TYPE && lockedIds.isNotEmpty()) {
+            // 鎖定物件右上角的小鎖頭與「解除鎖定」鈕：**不分模式**都畫、都點得到。
+            // 以前只在打字模式畫，手寫模式下鎖定的物件看得到卻沒有任何解鎖的入口。
+            // 疊在筆跡層之上（zIndex 9_500），只有鎖頭本身吃觸控，其餘地方筆照畫。
+            if (lockedIds.isNotEmpty()) {
                 com.kairumo.padnote.canvas.LockBadges(marqueeCandidates, lockedIds, l10n("object_locked")) { id ->
                     lockPromptId = if (lockPromptId == id) null else id
                 }

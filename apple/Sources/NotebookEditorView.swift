@@ -2244,7 +2244,7 @@ public struct NotebookEditorView: View {
     @State private var showLayerPanel: Bool = false
     /// 畫布中單一選取物件的唯一識別碼（互斥單選：同一時間最多只有一個物件處於編輯/選取狀態）
     @State private var activeSelectedObjectId: String? = nil
-    /// 正在顯示「解除鎖定」鈕的鎖定物件（點了鎖頭或點了鎖定的物件）。見 `lockedObjectPrompt`。
+    /// 正在顯示「解除鎖定」鈕的鎖定物件（點了鎖頭或點了鎖定的物件）。見 `lockControlsLayer`。
     @State private var lockPromptId: String? = nil
     /// 一鍵恢復初始狀態（捨棄進入編輯器後的所有修改）
     @State private var initialNotebookSnapshot: NotebookDocument? = nil
@@ -5262,6 +5262,7 @@ public struct NotebookEditorView: View {
                                 objectLayer: { objectLayer(forPage: index) },
                                 underInkObjectLayer: { AnyView(objectLayer(forPage: index, filter: .underInkOnly)) },
                                 overInkObjectLayer: { AnyView(objectLayer(forPage: index, filter: .overInkOnly)) },
+                                lockControlsLayer: { AnyView(lockControlsLayer(forPage: index)) },
                                 isUnderInkPointPassThrough: { point, page, event in
                                     isUnderInkPointPassThrough(point: point, page: page, event: event)
                                 },
@@ -5570,8 +5571,7 @@ public struct NotebookEditorView: View {
                                 collaborationManager.broadcastSelection(selectedId: nil)
                             }
                         )
-                        .canvasLocked(lockedSet.contains(item.id), showBadge: editorMode == .type) { lockPromptId = item.id }
-
+                        .canvasLocked(lockedSet.contains(item.id))
                         .zIndex(stacking.zIndex(for: item.id, kind: .image))
                     }
                 }
@@ -5630,8 +5630,7 @@ public struct NotebookEditorView: View {
                                     current: current, finished: finished)
                             }
                         )
-                        .canvasLocked(lockedSet.contains(item.id), showBadge: editorMode == .type) { lockPromptId = item.id }
-
+                        .canvasLocked(lockedSet.contains(item.id))
                         .zIndex(stacking.zIndex(for: item.id, kind: .shape))
                     }
                 }
@@ -5703,8 +5702,7 @@ public struct NotebookEditorView: View {
                                 collaborationManager.broadcastAttachmentDelete(id: id, type: "table")
                             }
                         )
-                        .canvasLocked(lockedSet.contains(item.id), showBadge: editorMode == .type) { lockPromptId = item.id }
-
+                        .canvasLocked(lockedSet.contains(item.id))
                         .zIndex(stacking.zIndex(for: item.id, kind: .table))
                     }
                 }
@@ -5758,8 +5756,7 @@ public struct NotebookEditorView: View {
                             },
                             selectionTracker: textSelectionTracker
                         )
-                        .canvasLocked(lockedSet.contains(item.id), showBadge: editorMode == .type) { lockPromptId = item.id }
-
+                        .canvasLocked(lockedSet.contains(item.id))
                         .zIndex(stacking.zIndex(for: item.id, kind: .text))
                     }
                 }
@@ -5776,8 +5773,7 @@ public struct NotebookEditorView: View {
                                 commitNotebook()
                             }
                         )
-                        .canvasLocked(lockedSet.contains(item.id), showBadge: editorMode == .type) { lockPromptId = item.id }
-
+                        .canvasLocked(lockedSet.contains(item.id))
                         .zIndex(stacking.zIndex(for: item.id, kind: .link))
                     }
                 }
@@ -5798,8 +5794,7 @@ public struct NotebookEditorView: View {
                                 insertTranscriptText(transcribedText, for: item)
                             }
                         )
-                        .canvasLocked(lockedSet.contains(item.id), showBadge: editorMode == .type) { lockPromptId = item.id }
-
+                        .canvasLocked(lockedSet.contains(item.id))
                         .zIndex(stacking.zIndex(for: item.id, kind: .audio))
                     }
                 }
@@ -5819,8 +5814,7 @@ public struct NotebookEditorView: View {
                                 collaborationManager.broadcastSelection(selectedId: nil)
                             }
                         )
-                        .canvasLocked(lockedSet.contains(item.id), showBadge: editorMode == .type) { lockPromptId = item.id }
-
+                        .canvasLocked(lockedSet.contains(item.id))
                         .zIndex(stacking.zIndex(for: item.id, kind: .model3D))
                     }
                 }
@@ -5849,16 +5843,13 @@ public struct NotebookEditorView: View {
                             }
                         )
                         .position(x: pin.x, y: pin.y)
-                        .canvasLocked(lockedSet.contains(pin.id), showBadge: editorMode == .type) { lockPromptId = pin.id }
-
+                        .canvasLocked(lockedSet.contains(pin.id))
                         .zIndex(stacking.zIndex(for: pin.id, kind: .pin))
                     }
                 }
 
                 // 🌟 特殊樣板智慧互動元件層（核取清單 Checkbox、選項切換與進度管控）
                 if filter != .underInkOnly {
-                    lockedObjectPrompt(forPage: page)
-
                     ForEach(interactiveGuideCheckboxes(forPage: page)) { item in
                         InteractiveGuideCheckboxView(
                             isChecked: notebook.checkedGuideItems?[item.key] ?? false,
@@ -6156,6 +6147,13 @@ public struct NotebookEditorView: View {
                         && (editorMode == .type || inlineEditingTextId != nil || editingTextId != nil || activeSelectedObjectId != nil || !selectedObjectIds.isEmpty || !selectedShapeIds.isEmpty)
                 )
                 .zIndex(3)
+
+            // 鎖定物件的鎖頭與解鎖鈕：不分模式都點得到（見 `lockControlsLayer`）。
+            lockControlsLayer(forPage: currentPageIndex)
+                .frame(width: PageGeometry.width, height: currentPageHeight, alignment: .topLeading)
+                .scaleEffect(canvasZoomScale, anchor: .topLeading)
+                .offset(x: -canvasContentOffset.x, y: -canvasContentOffset.y)
+                .zIndex(3.1)
 
             // 🌟 專業鏡像對稱尺規視覺參考線
             if isSymmetryActive && editorMode == .draw {
@@ -12572,6 +12570,16 @@ public struct NotebookEditorView: View {
         if editorMode == .type {
             handleCanvasTapInTypeMode(at: location, page: targetPage)
         } else {
+            // 點到鎖定在畫布上的物件：跟打字模式一樣給「解除鎖定」鈕，不選取它 ——
+            // 下面的文字方塊與 `findObjectAt` 都是照座標找物件，不看鎖定，
+            // 不先攔下來的話，鎖定的物件在手寫模式下一點就被選起來、出現把手。
+            if let lockedId = lockedObjectHit(at: location, page: targetPage) {
+                removeTapDotStroke(near: location)
+                lockPromptId = (lockPromptId == lockedId) ? nil : lockedId
+                return
+            }
+            lockPromptId = nil
+
             // 手寫模式下單擊：優先檢查是否點擊在既有文字方塊範圍內
             if let existing = notebook.textAttachments?.first(where: { item in
                 item.pageIndex == targetPage &&
@@ -14245,27 +14253,45 @@ public struct NotebookEditorView: View {
             .id
     }
 
-    /// 鎖定物件上方的「解除鎖定」鈕（頁面座標，畫在物件層裡）。
+    /// 鎖定物件的鎖頭與「解除鎖定」鈕（頁面座標）。
+    ///
+    /// 不畫在物件層裡：物件層在手寫模式下整層不接觸控（`allowsHitTesting`），畫在裡面的話
+    /// 手寫模式看得到鎖頭卻按不到 —— 鎖定的物件在手寫模式下就沒有任何解鎖的入口了。
+    /// 這一層疊在筆跡上方物件層之上、**不分模式都接觸控**；層本身沒有底，只有鎖頭與按鈕
+    /// 吃得到觸控，其餘地方照樣穿透到畫布（筆照畫）。
     @ViewBuilder
-    private func lockedObjectPrompt(forPage page: Int) -> some View {
-        if editorMode == .type, let id = lockPromptId, pageOfObject(id) == page,
-           notebook.allLockedObjectIds.contains(id), let frame = frameOfObject(id: id) {
-            Button {
-                setObjectLocked(id, false)
-                lockPromptId = nil
-            } label: {
-                Label(localizationManager.localized("object_unlock"), systemImage: "lock.open.fill")
-                    .font(.caption.weight(.semibold))
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
-                    .background(Capsule().fill(Color.orange))
-                    .foregroundStyle(.white)
-                    .shadow(color: .black.opacity(0.18), radius: 4, y: 2)
+    private func lockControlsLayer(forPage page: Int) -> some View {
+        let locked = notebook.allLockedObjectIds
+        if !locked.isEmpty {
+            ZStack(alignment: .topLeading) {
+                ForEach(stackableObjects(forPage: page).filter { locked.contains($0.id) }, id: \.id) { object in
+                    if let frame = frameOfObject(id: object.id) {
+                        CanvasLockBadge {
+                            lockPromptId = (lockPromptId == object.id) ? nil : object.id
+                        }
+                        // 鎖頭的中心落在物件右上角。
+                        .position(x: frame.maxX - 2, y: frame.minY + 2)
+                    }
+                }
+                if let id = lockPromptId, pageOfObject(id) == page,
+                   locked.contains(id), let frame = frameOfObject(id: id) {
+                    Button {
+                        setObjectLocked(id, false)
+                        lockPromptId = nil
+                    } label: {
+                        Label(localizationManager.localized("object_unlock"), systemImage: "lock.open.fill")
+                            .font(.caption.weight(.semibold))
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .background(Capsule().fill(Color.orange))
+                            .foregroundStyle(.white)
+                            .shadow(color: .black.opacity(0.18), radius: 4, y: 2)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("object.unlock.prompt")
+                    .position(x: frame.midX, y: max(16, frame.minY - 20))
+                }
             }
-            .buttonStyle(.plain)
-            .accessibilityIdentifier("object.unlock.prompt")
-            .position(x: frame.midX, y: max(16, frame.minY - 20))
-            .zIndex(9_800)
         }
     }
 

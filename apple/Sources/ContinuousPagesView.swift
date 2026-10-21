@@ -57,6 +57,9 @@ struct ContinuousPageView<ObjectLayer: View>: View {
     let objectLayer: () -> ObjectLayer
     var underInkObjectLayer: (() -> AnyView)? = nil
     var overInkObjectLayer: (() -> AnyView)? = nil
+    /// 鎖定物件的鎖頭與解鎖鈕。疊在物件層之上、不分模式都接觸控 ——
+    /// 物件層在手寫模式下不接觸控，鎖頭放在裡面的話手寫模式就解不了鎖。
+    var lockControlsLayer: (() -> AnyView)? = nil
     var isUnderInkPointPassThrough: ((_ point: CGPoint, _ page: Int, _ event: UIEvent?) -> Bool)? = nil
     /// 筆跡有變動時通知呼叫端（協同廣播用）。
     let onDrawingChanged: (Int, PKDrawing) -> Void
@@ -189,6 +192,12 @@ struct ContinuousPageView<ObjectLayer: View>: View {
                 if selectedTool == .lasso && isFocused, let lassoDecoration {
                     lassoDecoration()
                 }
+            }
+
+            if let lockControlsLayer {
+                lockControlsLayer()
+                    .frame(width: PageGeometry.width, height: PageGeometry.height, alignment: .topLeading)
+                    .zIndex(3.1)
             }
 
             MaskingTapeOverlayView(
