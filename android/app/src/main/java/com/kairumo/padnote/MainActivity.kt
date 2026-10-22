@@ -4190,7 +4190,8 @@ private fun InkScreen(
                     modifier = Modifier.testTag("editor.export.save_as"),
                     onClick = {
                         showShareMenu = false
-                        val id = notebook?.second ?: notebookId
+                        // 套件與標題都以**筆記本** id 為名；`notebook.second` 是第一頁的 id。
+                        val id = notebookId
                         if (id != null) {
                             val dir = File(
                                 NotebookLibrary.directory(activity),
@@ -4216,7 +4217,8 @@ private fun InkScreen(
                     modifier = Modifier.testTag("editor.export.share"),
                     onClick = {
                         showShareMenu = false
-                        val id = notebook?.second ?: notebookId
+                        // 套件與標題都以**筆記本** id 為名；`notebook.second` 是第一頁的 id。
+                        val id = notebookId
                         if (id != null) {
                             val dir = File(NotebookLibrary.directory(activity), "$id.${NotebookLibrary.EXTENSION}")
                             val title = FolderTree.titleOf(activity, id) ?: "Notebook"
@@ -4516,7 +4518,8 @@ private fun InkScreen(
                     onClick = {
                         showMenu = false
                         val session = notebook?.first
-                        val page = notebook?.second
+                        // 辨識**目前這一頁**：`engine` 畫的就是 `pageId`，`notebook.second` 只是第一頁。
+                        val page = pageId
                         if (session == null || page == null) {
                             message = uiString("err_core_not_ready")
                         } else {
@@ -6905,7 +6908,8 @@ private fun InkScreen(
                     modifier = Modifier.testTag("editor.revert_confirm"),
                     onClick = {
                         showRevertConfirm = false
-                        val id = notebook?.second
+                        // `restoreMilestone` 要的是筆記本 id（拿來找套件），不是第一頁的 id。
+                        val id = notebookId
                         val mark = openMarkId
                         if (id != null && mark != null) {
                             val safety = NotebookLibrary.restoreMilestone(
