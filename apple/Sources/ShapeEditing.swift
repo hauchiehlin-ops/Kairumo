@@ -188,6 +188,7 @@ struct ShapeAttachmentItemView: View {
     var onConnectDrag: (ShapeAnchorName, CGPoint, CGPoint, Bool) -> Void = { _, _, _, _ in }
 
     @ObservedObject private var localizationManager = LocalizationManager.shared
+    @Environment(\.pageCrossing) private var pageCrossing
     @State private var dragOffset: CGSize = .zero
     @State private var isEditingLabel: Bool = false
 
@@ -295,6 +296,7 @@ struct ShapeAttachmentItemView: View {
     private var moveGesture: some Gesture {
         DragGesture(minimumDistance: 5, coordinateSpace: .named(CanvasCoordinateSpace.name))
             .onChanged { value in
+                if dragOffset == .zero { pageCrossing?.began() }
                 var transaction = Transaction()
                 transaction.animation = nil
                 withTransaction(transaction) { dragOffset = value.translation }
@@ -302,7 +304,9 @@ struct ShapeAttachmentItemView: View {
             .onEnded { value in
                 if hypot(value.translation.width, value.translation.height) < 4 {
                     onSelect()
+                    pageCrossing?.ended(nil, nil)
                 } else {
+                    // 換不換頁由編輯器決定（整組一起算），它會結束這次拖曳。
                     onMove(dragOffset)
                 }
                 dragOffset = .zero

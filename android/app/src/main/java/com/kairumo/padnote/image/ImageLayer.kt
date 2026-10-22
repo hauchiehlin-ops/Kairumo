@@ -1,5 +1,6 @@
 package com.kairumo.padnote.image
 
+import androidx.compose.runtime.getValue
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -91,6 +92,8 @@ private fun ImageObjectView(
 ) {
     val rotation = CanvasRotation.normalized(image.rotationDegrees)
     val shape = RoundedCornerShape(image.cornerRadius.dp)
+    // 連續模式：拖到哪一頁就歸哪一頁（單頁模式為 null，照舊夾在本頁）。
+    val crossing by androidx.compose.runtime.rememberUpdatedState(com.kairumo.padnote.canvas.LocalPageCrossing.current)
 
     // 外層只定位、不旋轉 —— 旋轉把手掛在這一層。包進旋轉裡的話，拖曳算出的
     // 角度會疊加自身旋轉，物件會失控加速。
@@ -127,7 +130,7 @@ private fun ImageObjectView(
                 .gesturesIf(interactive) {
                     pointerInput(image.id) {
                         detectDragGestures(
-                            onDragStart = { onSelect() },
+                            onDragStart = { onSelect(); crossing?.began?.invoke() },
                             onDrag = { change, drag ->
                                 change.consume()
                                 // 位移要換回 dp：座標存的是與螢幕密度無關的頁面座標。
@@ -135,13 +138,15 @@ private fun ImageObjectView(
                                 image.y += drag.y / density
                             },
                             onDragEnd = {
-                            // 拖出可列印範圍的物件推回邊界（S-85）。規則在核心，
-                            // 與 Apple 的 PrintableArea.clampOrigin 同一份。
-                            val landed = com.kairumo.padnote.ink.PageGeometry
-                                .clampOrigin(image.x, image.y, image.width, image.height)
-                            image.x = landed.first
-                            image.y = landed.second
-                            onChanged(image) }
+                            // 拖出可列印範圍的物件推回邊界（S-85）；連續模式下中心拖到哪一頁就歸哪一頁。
+                            // 規則在核心，與 Apple 的 PrintableArea.land 同一份。
+                            val landed = com.kairumo.padnote.canvas.landObject(
+                                image.id, image.x, image.y, image.width, image.height, crossing)
+                            image.x = landed.x
+                            image.y = landed.y
+                            onChanged(image)
+                            landed.page?.let { crossing?.moved?.invoke(image.id, it) }
+                            crossing?.ended?.invoke() }
                         )
                     }
                 }

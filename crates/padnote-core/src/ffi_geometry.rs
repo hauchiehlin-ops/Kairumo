@@ -193,6 +193,148 @@ pub fn clamp_to_printable(rect: FfiRect, page_width: f32, page_height: f32, inse
     }
 }
 
+/// 物件拖曳放開後的落點：落在第幾頁、頁內的左上角。
+#[derive(uniffi::Record, Clone, Copy, Debug, PartialEq)]
+pub struct FfiPageLanding {
+    pub page_index: u32,
+    pub min_x: f32,
+    pub min_y: f32,
+}
+
+/// 連續頁面模式下，把拖曳放開的物件放到它**中心點所在的那一頁**，再夾進那一頁的可列印區域。
+///
+/// `rect` 是相對於原頁 `page_index` 的座標，可以超出原頁（往下拖進下一頁時 `min_y` 會大於頁高）。
+/// 頁與頁之間有 `page_gap` 的間隔（頁面座標），所以第 `k` 頁的頂端在 `k × (頁高 + 間隔)`。
+/// 中心點落在間隔裡時歸給比較近的那一頁。結果夾在 `0..page_count` 之內 ——
+/// 拖過最後一頁就停在最後一頁，不會憑空多出一頁。
+///
+/// 只靠夾回原頁（`clamp_to_printable`）的話，物件永遠出不了它出生的那一頁：
+/// 拖到下一頁、一放開又彈回原頁底邊。
+#[uniffi::export]
+pub fn land_on_page(
+    rect: FfiRect,
+    page_index: u32,
+    page_count: u32,
+    page_width: f32,
+    page_height: f32,
+    page_gap: f32,
+    inset: f32,
+) -> FfiPageLanding {
+    let stride = page_height + page_gap.max(0.0);
+    let last = page_count.max(1) - 1;
+    let from = page_index.min(last) as i64;
+    let center_y = (rect.min_y + rect.max_y) / 2.0;
+    let shift = if stride > 0.0 && center_y.is_finite() {
+        // 以「頁 + 半個間隔」為界：間隔上半歸上一頁，下半歸下一頁。
+        ((center_y + page_gap.max(0.0) / 2.0) / stride).floor() as i64
+    } else {
+        0
+    };
+    let target = (from + shift).clamp(0, last as i64);
+    let dy = (target - from) as f32 * stride;
+    let moved = FfiRect {
+        min_x: rect.min_x,
+        min_y: rect.min_y - dy,
+        max_x: rect.max_x,
+        max_y: rect.max_y - dy,
+    };
+    let clamped = clamp_to_printable(moved, page_width, page_height, inset);
+    FfiPageLanding {
+        page_index: target as u32,
+        min_x: clamped.min_x,
+        min_y: clamped.min_y,
+    }
+}
+
+#[cfg(test)]
+mod landing_tests {
+    use super::*;
+
+    const W: f32 = 800.0;
+    const H: f32 = 1132.0;
+    const GAP: f32 = 20.0;
+    const INSET: f32 = 24.0;
+
+    fn rect(x: f32, y: f32, w: f32, h: f32) -> FfiRect {
+        FfiRect {
+            min_x: x,
+            min_y: y,
+            max_x: x + w,
+            max_y: y + h,
+        }
+    }
+
+    #[test]
+    fn staying_on_the_page_is_the_old_clamp() {
+        let r = rect(100.0, 1050.0, 200.0, 100.0);
+        let landing = land_on_page(r, 0, 3, W, H, GAP, INSET);
+        assert_eq!(landing.page_index, 0);
+        let clamped = clamp_to_printable(r, W, H, INSET);
+        assert_eq!(
+            (landing.min_x, landing.min_y),
+            (clamped.min_x, clamped.min_y)
+        );
+    }
+
+    #[test]
+    fn dragging_the_center_onto_the_next_page_moves_it_there() {
+        // 中心在 1132 + 20 + 100 = 第 2 頁頂端往下 100。
+        let landing = land_on_page(
+            rect(100.0, H + GAP + 50.0, 200.0, 100.0),
+            0,
+            3,
+            W,
+            H,
+            GAP,
+            INSET,
+        );
+        assert_eq!(landing.page_index, 1);
+        assert_eq!(landing.min_x, 100.0);
+        assert_eq!(landing.min_y, 50.0);
+    }
+
+    #[test]
+    fn dragging_up_moves_it_to_the_previous_page() {
+        let landing = land_on_page(rect(100.0, -400.0, 200.0, 100.0), 2, 3, W, H, GAP, INSET);
+        assert_eq!(landing.page_index, 1);
+        assert_eq!(landing.min_y, H + GAP - 400.0);
+    }
+
+    #[test]
+    fn past_the_last_page_it_stays_on_the_last_page() {
+        let landing = land_on_page(rect(100.0, 5.0 * H, 200.0, 100.0), 1, 2, W, H, GAP, INSET);
+        assert_eq!(landing.page_index, 1);
+        assert_eq!(landing.min_y, H - INSET - 100.0);
+        let up = land_on_page(rect(100.0, -5.0 * H, 200.0, 100.0), 0, 2, W, H, GAP, INSET);
+        assert_eq!(up.page_index, 0);
+        assert_eq!(up.min_y, INSET);
+    }
+
+    #[test]
+    fn a_center_in_the_gap_goes_to_the_nearer_page() {
+        let upper = land_on_page(
+            rect(0.0, H + 4.0 - 50.0, 100.0, 100.0),
+            0,
+            2,
+            W,
+            H,
+            GAP,
+            INSET,
+        );
+        assert_eq!(upper.page_index, 0);
+        let lower = land_on_page(
+            rect(0.0, H + 16.0 - 50.0, 100.0, 100.0),
+            0,
+            2,
+            W,
+            H,
+            GAP,
+            INSET,
+        );
+        assert_eq!(lower.page_index, 1);
+    }
+}
+
 #[cfg(test)]
 mod printable_tests {
     use super::*;

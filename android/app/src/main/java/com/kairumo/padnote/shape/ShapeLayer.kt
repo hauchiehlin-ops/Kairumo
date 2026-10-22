@@ -337,6 +337,8 @@ private fun ShapeObjectView(
     /** 見同檔案公開版本的說明。 */
     interactive: Boolean = true
 ) {
+    // 連續模式：拖到哪一頁就歸哪一頁（單頁模式為 null，照舊夾在本頁）。
+    val crossing by androidx.compose.runtime.rememberUpdatedState(com.kairumo.padnote.canvas.LocalPageCrossing.current)
     // **手勢區塊裡一律讀 `current`，不要讀參數 `shape`。** `pointerInput` 的區塊只在 key 變了
     // 才重啟，拖曳進行中形狀每一幀都換成新的物件 —— 區塊裡抓到的若是第一幀的舊物件，
     // 每一幀都從同一個起點算起，結果是「拖了沒動」或「越拖越歪」。
@@ -405,7 +407,7 @@ private fun ShapeObjectView(
                         var accX = 0f
                         var accY = 0f
                         detectDragGestures(
-                            onDragStart = { base = current; accX = 0f; accY = 0f },
+                            onDragStart = { base = current; accX = 0f; accY = 0f; crossing?.began?.invoke() },
                             onDrag = { change, drag ->
                                 change.consume()
                                 val s0 = base ?: return@detectDragGestures
@@ -421,11 +423,14 @@ private fun ShapeObjectView(
                             },
                             onDragEnd = {
                                 val s0 = current
-                                val landed = com.kairumo.padnote.ink.PageGeometry
-                                    .clampOrigin(s0.x, s0.y, s0.width, s0.height)
-                                if (landed.first != s0.x || landed.second != s0.y) {
-                                    onChanged(s0.copyShape().apply { x = landed.first; y = landed.second })
+                                // 連續模式下中心拖到哪一頁就歸哪一頁（有連接線或在群組裡的不換，見 canMove）。
+                                val landed = com.kairumo.padnote.canvas.landObject(
+                                    s0.id, s0.x, s0.y, s0.width, s0.height, crossing)
+                                if (landed.x != s0.x || landed.y != s0.y) {
+                                    onChanged(s0.copyShape().apply { x = landed.x; y = landed.y })
                                 }
+                                landed.page?.let { crossing?.moved?.invoke(s0.id, it) }
+                                crossing?.ended?.invoke()
                             }
                         )
                     }

@@ -558,6 +558,10 @@ impl NotebookSession {
                 }
             }
 
+            DocOp::MoveToPage { id, page } => {
+                self.apply_move_to_page(*id, *page);
+            }
+
             DocOp::TextEdit { block, op } => {
                 // 讓本地時鐘追上遠端，避免重連後產生撞號的 OpId。
                 self.editor.observe(op.id());
@@ -719,6 +723,59 @@ impl NotebookSession {
             //
             // 部分同步（只下載了一半的檔）與壓實都會造成這個順序。
             self.pending_blocks.entry(page).or_default().push(block);
+        }
+    }
+
+    /// 把區塊或根層的單一物件換到另一頁（見 `DocOp::MoveToPage`）。
+    ///
+    /// 群組與有成員的物件不搬：成員散在同一棵物件樹裡，只搬根會把群組拆成兩半。
+    fn apply_move_to_page(&mut self, id: Uuid, target: Uuid) {
+        if self.notebook.page(target).is_none() {
+            return;
+        }
+        if let Some(from) = self.page_of_block(id) {
+            if from == target {
+                return;
+            }
+            let Some(block) = self
+                .notebook
+                .page_mut(from)
+                .and_then(|p| p.remove_block(id))
+            else {
+                return;
+            };
+            let doc = DocId::new(
+                &self.notebook.id.to_string(),
+                &from.to_string(),
+                &id.to_string(),
+            );
+            self.index.remove(&doc);
+            let source = if matches!(block.kind, BlockKind::Transcript { .. }) {
+                Source::Transcript
+            } else {
+                Source::Text
+            };
+            let text = block
+                .searchable_text()
+                .map(str::to_string)
+                .or_else(|| block.table_text());
+            if let Some(p) = self.notebook.page_mut(target) {
+                p.add_block(block);
+            }
+            if let Some(text) = text {
+                self.reindex_block(target, id, &text, source);
+            }
+            return;
+        }
+        let from = self.objects.iter().find_map(|(page, tree)| {
+            let node = tree.get(id)?;
+            (tree.parent_of(id).is_none() && node.members().is_empty()).then_some(*page)
+        });
+        if let Some(from) = from
+            && from != target
+            && let Some(node) = self.objects.get_mut(&from).and_then(|t| t.remove(id))
+        {
+            self.objects.entry(target).or_default().insert(node);
         }
     }
 
@@ -1694,6 +1751,18 @@ impl NotebookSession {
             return Err(AppError::BlockNotFound(block));
         }
         self.record(vec![DocOp::SetBlockPosition { id: block, x, y }])
+    }
+
+    /// 把區塊（或根層的單一物件）搬到另一頁。內容、外觀與頁內座標不變。
+    pub fn move_to_page(&mut self, id: Uuid, page: Uuid) -> Result<(), AppError> {
+        if self.notebook.page(page).is_none() {
+            return Err(AppError::PageNotFound(page));
+        }
+        let is_object = self.objects.values().any(|t| t.get(id).is_some());
+        if self.page_of_block(id).is_none() && !is_object {
+            return Err(AppError::BlockNotFound(id));
+        }
+        self.record(vec![DocOp::MoveToPage { id, page }])
     }
 
     pub fn remove_block(&mut self, block: Uuid) -> Result<(), AppError> {
@@ -3760,5 +3829,52 @@ mod tests {
         assert!(md.contains("# 線性代數"));
         assert!(md.contains("## 重點整理"));
         assert!(md.contains("手寫內容"), "手寫不可被靜默省略");
+    }
+
+    #[test]
+    fn moving_a_block_or_shape_to_another_page_keeps_it_there_after_reopening() {
+        let dir = tmp("move-to-page");
+        let shape = ShapeObject {
+            kind: padnote_doc::ShapeKind::Rectangle,
+            bounds: padnote_doc::ObjectRect {
+                min_x: 0.0,
+                min_y: 0.0,
+                max_x: 10.0,
+                max_y: 10.0,
+            },
+            corner_radius: 0.0,
+            text: String::new(),
+        };
+        let (a, b, text, rect) = {
+            let mut s = NotebookSession::create(&dir, "筆記", 0, 1).unwrap();
+            let a = s.add_page(PageTemplate::Blank).unwrap();
+            let b = s.add_page(PageTemplate::Blank).unwrap();
+            let text = s.add_text_block(a, "跨頁的字", TextStyle::Body).unwrap();
+            s.set_block_position(text, 40.0, 60.0).unwrap();
+            let rect = s.insert_shape(a, shape).unwrap();
+            s.move_to_page(text, b).unwrap();
+            s.move_to_page(rect, b).unwrap();
+            (a, b, text, rect)
+        };
+
+        let s = NotebookSession::open(&dir, 1).unwrap();
+        assert!(s.notebook().page(a).unwrap().blocks().is_empty());
+        let moved = &s.notebook().page(b).unwrap().blocks()[0];
+        assert_eq!(moved.id, text);
+        assert_eq!(moved.position, Some((40.0, 60.0)), "頁內座標不變");
+        assert!(s.objects(a).is_none_or(|t| t.get(rect).is_none()));
+        assert!(s.objects(b).unwrap().get(rect).is_some());
+        let hits = s.search("跨頁", 10);
+        assert_eq!(hits.len(), 1);
+        assert_eq!(hits[0].doc.page, b.to_string(), "搜尋結果指向新的那一頁");
+    }
+
+    #[test]
+    fn moving_to_a_missing_page_is_refused() {
+        let mut s = session("move-to-missing-page");
+        let page = s.notebook().pages()[0].id;
+        let text = s.add_text_block(page, "字", TextStyle::Body).unwrap();
+        assert!(s.move_to_page(text, Uuid::now_v7()).is_err());
+        assert!(s.move_to_page(Uuid::now_v7(), page).is_err());
     }
 }

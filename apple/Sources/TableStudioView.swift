@@ -554,6 +554,7 @@ struct TableAttachmentItemView: View {
     let onDelete: () -> Void
 
     @ObservedObject private var localizationManager = LocalizationManager.shared
+    @Environment(\.pageCrossing) private var pageCrossing
     @State private var dragOffset: CGSize = .zero
     @State private var isDragging: Bool = false
     @State private var editingCell: TableCellCoordinate? = nil
@@ -587,13 +588,17 @@ struct TableAttachmentItemView: View {
                             editingCell = nil
                         }
                         if editingCell == nil {
+                            if !isDragging { pageCrossing?.began() }
                             isDragging = true
                             dragOffset = value.translation
                         }
                     }
                     .onEnded { value in
                         if editingCell == nil {
-                            if hypot(value.translation.width, value.translation.height) >= 3 {
+                            if hypot(value.translation.width, value.translation.height) < 3 {
+                                pageCrossing?.ended(nil, nil)
+                            } else {
+                                // 換不換頁由編輯器決定，它會結束這次拖曳。
                                 if let onMove = onMove {
                                     onMove(dragOffset)
                                 } else {
@@ -627,10 +632,14 @@ struct TableAttachmentItemView: View {
                         .gesture(
                             DragGesture(minimumDistance: 2, coordinateSpace: .named(CanvasCoordinateSpace.name))
                                 .onChanged { value in
+                                    if !isDragging { pageCrossing?.began() }
                                     isDragging = true
                                     dragOffset = value.translation
                                 }
                                 .onEnded { value in
+                                    if hypot(value.translation.width, value.translation.height) < 2 {
+                                        pageCrossing?.ended(nil, nil)
+                                    }
                                     if hypot(value.translation.width, value.translation.height) >= 2 {
                                         if let onMove = onMove {
                                             onMove(dragOffset)

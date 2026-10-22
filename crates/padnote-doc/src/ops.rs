@@ -225,6 +225,18 @@ pub enum DocOp {
         id: Uuid,
         json: String,
     },
+    /// 把區塊（或根層的單一物件）搬到另一頁。
+    ///
+    /// 區塊住在頁面底下，`SetBlockPosition` 只改得了頁內座標 —— 沒有這個操作，
+    /// 物件就永遠留在它出生的那一頁：拖到下一頁、放開後又被夾回原頁，
+    /// 別台裝置寫的物件就算這台改了頁，下一輪同步也會被拉回去。
+    ///
+    /// 內容、外觀、座標原封不動，只換頁。找不到這個 id、或目標頁不存在時不做事
+    /// （較新版本的物件、已刪掉的頁 —— 靜默略過比中斷整份重播好）。
+    MoveToPage {
+        id: Uuid,
+        page: Uuid,
+    },
     /// 筆記本層級的平台中繼資料（平台自訂的 JSON）。
     ///
     /// 與 [`DocOp::SetBlockAppearance`] 同一個契約：**核心不解讀內容**。
@@ -329,6 +341,8 @@ const OP_MARK_MILESTONE: u8 = 35;
 const OP_BATCH_ORIGIN: u8 = 37;
 const OP_RESTORE_MILESTONE: u8 = 36;
 const OP_TITLE_EDIT: u8 = 38;
+/// 與 `OP_MOVE_PAGE` 同一個前提：舊版讀到會整份拒絕，兩端要同版本發布。
+const OP_MOVE_TO_PAGE: u8 = 39;
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum DocCodecError {
@@ -1125,6 +1139,9 @@ pub fn encode(ops: &[DocOp]) -> Vec<u8> {
             DocOp::SetBlockAppearance { id, json } => {
                 w.u8(OP_SET_BLOCK_APPEARANCE).uuid(*id).str(json);
             }
+            DocOp::MoveToPage { id, page } => {
+                w.u8(OP_MOVE_TO_PAGE).uuid(*id).uuid(*page);
+            }
             DocOp::SetNotebookMeta { json } => {
                 w.u8(OP_SET_NOTEBOOK_META).str(json);
             }
@@ -1358,6 +1375,10 @@ pub fn decode(data: &[u8]) -> Result<Vec<DocOp>, DocCodecError> {
                 id: r.uuid()?,
                 json: r.str()?,
             },
+            OP_MOVE_TO_PAGE => DocOp::MoveToPage {
+                id: r.uuid()?,
+                page: r.uuid()?,
+            },
             OP_SET_NOTEBOOK_META => DocOp::SetNotebookMeta { json: r.str()? },
             OP_REMOVE_OBJECT => DocOp::RemoveObject { id: r.uuid()? },
             OP_SET_OBJECT_TRANSFORM => DocOp::SetObjectTransform {
@@ -1578,6 +1599,10 @@ mod tests {
             DocOp::SetNotebookMeta {
                 json: "{\"template\":\"cornell\",\"folderId\":\"abc\"}".into(),
             },
+            DocOp::MoveToPage {
+                id: uid(61),
+                page: uid(2),
+            },
             DocOp::AddShapeObject {
                 page: uid(1),
                 id: uid(70),
@@ -1641,8 +1666,8 @@ mod tests {
             .collect();
         assert_eq!(
             tags.len(),
-            34,
-            "34 種操作標籤都要被測到，實得 {}",
+            35,
+            "35 種操作標籤都要被測到，實得 {}",
             tags.len()
         );
     }
