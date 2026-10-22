@@ -7352,20 +7352,56 @@ public struct NotebookEditorView: View {
         else { return false }
         let target = min(max(0, to), total - 1)
 
-        // 目前這一頁的筆跡還在記憶體裡，先落盤 —— 不落盤的話搬動會去讀
-        // 磁碟上的舊版本，剛剛寫的那幾筆就沒了。
+        // 目前這一頁的筆跡還在記憶體裡，先存 —— 不存的話搬動會去讀磁碟上的舊版本。
+        //
+        // **存檔在連續模式是非同步的**（背景序列佇列寫 `.drawing`）。原本存完就馬上搬：
+        // 搬動讀到的是還沒寫好的舊檔，之後佇列再把這一頁寫回**搬動前的頁碼** ——
+        // 結果是字跡跑到隔壁頁、別的東西留在原地，空白頁看起來像沒搬。
+        // 所以排在佇列後面，等前面的寫入都落盤再搬。
         saveCurrentPageDrawing()
+        afterCoreInkWrites {
+            performPageMove(from: from, to: target)
+        }
+        return true
+    }
+
+    private func performPageMove(from: Int, to target: Int) {
+        guard pageMoveIsValid(count: UInt32(max(0, notebook.pageCount)),
+                              from: UInt32(max(0, from)),
+                              to: UInt32(max(0, target)))
+        else { return }
+        let movedIndex = { (page: Int) -> Int in
+            Int(pageIndexAfterMove(index: UInt32(max(0, page)), from: UInt32(from), to: UInt32(target)))
+        }
+
+        // 等待期間又落了筆（連續模式各頁的畫布）：同步寫下去，搬動才讀得到。
+        let stillPending = pendingCoreInk
+        for (page, drawing) in stillPending {
+            store.saveDrawing(notebookId: notebook.id, pageIndex: page, drawing: drawing)
+        }
 
         let landed = store.movePage(notebookId: notebook.id, from: from, to: target)
+
+        // 以頁碼為鍵的編輯器暫存全部跟著頁走；留著舊頁碼的話，下一次存檔會把這一頁的
+        // 筆跡寫到別頁、或拿別頁的內容當「套件裡這一頁原本的樣子」算增量。
+        pendingCoreInk = Dictionary(
+            stillPending.map { (movedIndex($0.key), $0.value) }, uniquingKeysWith: { a, _ in a })
+        var baselines: [Int: PKDrawing] = [:]
+        for (page, drawing) in coreInkBaselines { baselines[movedIndex(page)] = drawing }
+        // 沒有快取的頁要從套件讀基準，而套件的頁序在下一次匯出前還是舊的 —— 直接以搬好的內容為準。
+        let touched = pageMoveTouchedRange(from: UInt32(from), to: UInt32(target)).map { Int($0) }
+        for page in touched where baselines[page] == nil {
+            baselines[page] = store.loadDrawing(notebookId: notebook.id, pageIndex: page)
+        }
+        coreInkBaselines = baselines
+        lastPersistedInk = nil
 
         // 游標跟著走：搬的如果是目前這一頁，人應該還停在同一頁的內容上；
         // 搬的是別頁時，目前這一頁的頁碼可能被推移了。
         if currentPageIndex == from {
             currentPageIndex = landed
         } else {
-            currentPageIndex = Int(pageIndexAfterMove(index: UInt32(max(0, currentPageIndex)),
-                                                      from: UInt32(from),
-                                                      to: UInt32(target)))
+            currentPageIndex = movedIndex(currentPageIndex)
         }
         if let updated = store.notebooks.first(where: { $0.id == notebook.id }) {
             notebook = updated
@@ -7373,7 +7409,13 @@ public struct NotebookEditorView: View {
         // 頁面搬了位置，舊的物件復原紀錄裡的頁次全部對不上 —— 作廢（見 CanvasObjectHistory）。
         objectHistory.pageStructureChanged(notebook, manager: historyUndoManager)
         loadCurrentPage()
-        return true
+        // 專業筆畫層只在頁碼變了才重讀；頁碼沒變、內容換了的時候要叫它重讀。
+        (canvasView as? AdaptiveCanvasView)?.proLayer?.reload()
+        // 連續模式每一頁的畫布各自記著載入時的筆跡（以頁碼為準）。不重載的話，畫面上仍是搬動前的
+        // 內容，下一次落筆再把它存回去 —— 搬動就被蓋掉了。
+        continuousReloadGeneration += 1
+        thumbnailRevision += 1
+        PageThumbnailRenderer.invalidateAll()
     }
 
     /// 側欄目前的實際寬度。與版面那一層畫出來的是同一個算式。
@@ -10797,21 +10839,34 @@ public struct NotebookEditorView: View {
 
     // MARK: - 🌟 次世代專業筆刷與手寫轉換 (CSP 防抖、對稱尺規、套索 OCR 轉文字)
     private func recognizeHandwritingToTextBox() {
+        // 與刪除／剪下一樣先以畫布上看得到的那一份為準：選取索引是對著它算的。
+        syncDrawingFromCanvas()
         let fullDrawing = currentDrawing
-        let selectedStrokes = lasso.hasSelection ? lasso.extractSelectedStrokes(from: fullDrawing) : fullDrawing.strokes
+        let hasSelection = lasso.hasSelection
+        let pkStrokes = hasSelection ? lasso.extractSelectedStrokes(from: fullDrawing) : fullDrawing.strokes
+        // 專業筆刷（炭筆、蠟筆、書法筆…）寫的字不在 PKDrawing 裡；轉成 PencilKit 筆畫一起送辨識。
+        let proStrokes = hasSelection ? lasso.extractSelectedProStrokes() : []
+        let selectedStrokes = pkStrokes + proStrokes.compactMap(Self.recognitionStroke(from:))
         guard !selectedStrokes.isEmpty else {
-            showCanvasNotice(localizationManager.localized("lasso_active_hint"))
+            showCanvasNotice("請先用套索圈選要辨識的手寫筆跡")
             return
         }
         
         // 計算筆跡包圍盒與平均色彩（原地轉化：沿用位置、寬度、筆色）
         var strokeBounds: CGRect = .null
         var strokeColorHex: String = "#000000"
-        for stroke in selectedStrokes {
+        for stroke in pkStrokes {
             strokeBounds = strokeBounds.union(stroke.renderBounds)
             var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
             if stroke.ink.color.getRed(&r, green: &g, blue: &b, alpha: &a) {
                 strokeColorHex = String(format: "#%02X%02X%02X", Int(r * 255), Int(g * 255), Int(b * 255))
+            }
+        }
+        for stroke in proStrokes {
+            strokeBounds = strokeBounds.union(stroke.bounds)
+            let c = stroke.colorRGBA
+            if c.count >= 3 {
+                strokeColorHex = String(format: "#%02X%02X%02X", Int(c[0]), Int(c[1]), Int(c[2]))
             }
         }
         if strokeBounds.isNull || !strokeBounds.width.isFinite || !strokeBounds.height.isFinite {
@@ -10819,7 +10874,6 @@ public struct NotebookEditorView: View {
         }
         
         let language = localizationManager.currentLanguage.rawValue
-        let hasSelection = lasso.hasSelection
         showCanvasNotice("正在辨識手寫文字…")
 
         Task { @MainActor in
@@ -10851,8 +10905,11 @@ public struct NotebookEditorView: View {
                 notebook.textAttachments?.append(draft)
                 
                 // 清除選中的筆劃（若有套索選取則只刪被選筆劃，否則清空整頁）
-                if hasSelection, let updated = lasso.deleteSelected(from: currentDrawing) {
-                    applyLassoResult(updated)
+                // 辨識是非同步的：等待期間選取可能已被清掉，這時只保留原筆跡，絕不能退回「清空整頁」。
+                if hasSelection {
+                    if let updated = lasso.deleteSelected(from: currentDrawing) {
+                        applyLassoResult(updated)
+                    }
                 } else {
                     currentDrawing = PKDrawing()
                     canvasView?.drawing = PKDrawing()
@@ -10874,6 +10931,26 @@ public struct NotebookEditorView: View {
                 showCanvasNotice("手寫辨識未完成：請確認圈選內容包含清晰文字")
             }
         }
+    }
+
+    /// 專業筆畫只取路徑給辨識用（辨識只看形狀，不看筆刷質感）。少於兩點的不算一筆。
+    private static func recognitionStroke(from pro: ProStroke) -> PKStroke? {
+        guard pro.points.count >= 2 else { return nil }
+        let width = CGFloat(max(1, pro.baseWidth))
+        let points = pro.points.map { p in
+            PKStrokePoint(
+                location: CGPoint(x: CGFloat(p.x), y: CGFloat(p.y)),
+                timeOffset: 0,
+                size: CGSize(width: width, height: width),
+                opacity: 1,
+                force: CGFloat(max(0.1, p.pressure)),
+                azimuth: 0,
+                altitude: .pi / 2
+            )
+        }
+        return PKStroke(
+            ink: PKInk(.pen, color: .black),
+            path: PKStrokePath(controlPoints: points, creationDate: Date()))
     }
 
     // MARK: - 🌟 文字與手寫動態流式錨定系統 (Fluid Sticky Annotations)

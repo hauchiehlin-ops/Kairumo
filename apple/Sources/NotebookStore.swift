@@ -3498,15 +3498,12 @@ public final class NotebookStore: ObservableObject {
                               from: UInt32(from),
                               to: UInt32(to)) else { return from }
 
-        // 1. 筆跡檔案。先把受影響那一段整段讀進來，再照新的順序寫回去 ——
-        //    邊讀邊寫會把還沒讀到的那一頁覆蓋掉。
+        // 1. 每一頁在磁碟上的檔案：不只 `.drawing`，專業筆畫（`.proink*.json`）、擦除帳本、
+        //    同步基準與上次匯出的快照也都以頁碼命名。只搬 `.drawing` 的結果是 PencilKit 的字跡
+        //    搬過去了，炭筆／蠟筆寫的字、同步記帳留在原頁 —— 下一輪同步再把舊的帶回來。
         let touched = pageMoveTouchedRange(from: UInt32(from), to: UInt32(to)).map { Int($0) }
-        let loaded = touched.map { loadDrawing(notebookId: notebookId, pageIndex: $0) }
-        for (offset, page) in touched.enumerated() {
-            let destination = Int(pageIndexAfterMove(index: UInt32(page),
-                                                     from: UInt32(from),
-                                                     to: UInt32(to)))
-            saveDrawing(notebookId: notebookId, pageIndex: destination, drawing: loaded[offset])
+        permutePageFiles(notebookId: notebookId, pages: Set(touched)) { page in
+            Int(pageIndexAfterMove(index: UInt32(page), from: UInt32(from), to: UInt32(to)))
         }
 
         // 2. 高度與內嵌筆跡陣列：單純的搬一格。
@@ -3550,10 +3547,76 @@ public final class NotebookStore: ObservableObject {
             notebooks[idx].connectionAttachments, movingFrom: from, to: to)
         notebooks[idx].audioAttachments = Self.shiftPages(
             notebooks[idx].audioAttachments, movingFrom: from, to: to)
+        notebooks[idx].tapeAttachments = Self.shiftPages(
+            notebooks[idx].tapeAttachments, movingFrom: from, to: to)
+        notebooks[idx].stickyAnchors = Self.shiftPages(
+            notebooks[idx].stickyAnchors, movingFrom: from, to: to)
+
+        // 4. 以頁碼為鍵的逐頁資料（堆疊順序、筆跡下方的物件、鎖定、辨識文字、版面勾選）。
+        let movedKey = { (page: Int) -> Int in
+            Int(pageIndexAfterMove(index: UInt32(max(0, page)), from: UInt32(from), to: UInt32(to)))
+        }
+        func remap<V>(_ map: [String: V]?) -> [String: V]? {
+            guard let map else { return nil }
+            var out: [String: V] = [:]
+            for (key, value) in map {
+                if let page = Int(key) { out[String(movedKey(page))] = value } else { out[key] = value }
+            }
+            return out
+        }
+        notebooks[idx].objectOrderByPage = remap(notebooks[idx].objectOrderByPage)
+        notebooks[idx].underInkObjectIdsByPage = remap(notebooks[idx].underInkObjectIdsByPage)
+        notebooks[idx].lockedObjectIdsByPage = remap(notebooks[idx].lockedObjectIdsByPage)
+        notebooks[idx].recognizedText = remap(notebooks[idx].recognizedText)
+        if let guides = notebooks[idx].checkedGuideItems {
+            // 鍵是 "頁次_x_y"。
+            var out: [String: Bool] = [:]
+            for (key, value) in guides {
+                var parts = key.split(separator: "_", maxSplits: 1, omittingEmptySubsequences: false)
+                if parts.count == 2, let page = Int(parts[0]) {
+                    parts[0] = Substring(String(movedKey(page)))
+                    out[parts.joined(separator: "_")] = value
+                } else {
+                    out[key] = value
+                }
+            }
+            notebooks[idx].checkedGuideItems = out
+        }
 
         notebooks[idx].lastModifiedDate = Date()
         persistData()
         return to
+    }
+
+    /// 把 `pages` 這幾頁的所有逐頁檔案改名到 `destination(頁次)`。
+    ///
+    /// 逐頁檔案的命名一律是 `{筆記 id}_p{頁次}.{種類}`，散在筆跡與同步基準兩個資料夾。
+    /// 用目錄列舉而不是一份副檔名清單：新增一種逐頁檔案時不必回來這裡補（漏補的症狀是
+    /// 那一種東西搬頁之後留在原頁）。
+    ///
+    /// 先全部改成暫存名再改成目標名 —— 直接改名會把還沒搬走的那一頁蓋掉。
+    private func permutePageFiles(notebookId: String, pages: Set<Int>, destination: (Int) -> Int) {
+        guard !pages.isEmpty else { return }
+        let fm = FileManager.default
+        let prefix = "\(notebookId)_p"
+        for dir in [drawingsDirectory, syncBaselineDirectory] {
+            guard let names = try? fm.contentsOfDirectory(atPath: dir.path) else { continue }
+            var staged: [(temp: URL, target: URL)] = []
+            for name in names where name.hasPrefix(prefix) {
+                let rest = name.dropFirst(prefix.count)
+                guard let dot = rest.firstIndex(of: "."),
+                      let page = Int(rest[rest.startIndex..<dot]),
+                      pages.contains(page) else { continue }
+                let target = dir.appending(path: "\(prefix)\(destination(page))\(rest[dot...])")
+                let temp = dir.appending(path: ".moving-\(UUID().uuidString)-\(name)")
+                guard (try? fm.moveItem(at: dir.appending(path: name), to: temp)) != nil else { continue }
+                staged.append((temp, target))
+            }
+            for item in staged {
+                try? fm.removeItem(at: item.target)
+                try? fm.moveItem(at: item.temp, to: item.target)
+            }
+        }
     }
 
     /// 把幾頁複製（或搬）到另一本筆記本，回傳實際處理的頁數。

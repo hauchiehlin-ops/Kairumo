@@ -1184,7 +1184,7 @@ enum NotebookPackageBridge {
             try session.addPageWithId(pageId: id, style: style)
         }
 
-        let ids = try pageIds(of: session)
+        let ids = Self.orderedLikeDocument(try pageIds(of: session), document: document)
         guard pageIndex < ids.count else { throw BridgeError.noPages }
         let pageId = ids[pageIndex]
         try session.setPageSize(
@@ -1207,6 +1207,18 @@ enum NotebookPackageBridge {
                 points: draft.points
             )
         }
+    }
+
+    /// 套件的頁面 id 改照筆記自己的頁序排。
+    ///
+    /// 本機搬過頁之後、下一次完整匯出之前，套件裡的頁序還是搬動前的；照套件的第幾頁去對，
+    /// 剛寫的筆畫會落在「搬走之前在這個位置」的那一頁上（同步回來就跑到別頁）。
+    /// 兩邊是同一批頁面時才換順序；不是同一批（別台加了頁、還沒合併）就照套件原樣。
+    static func orderedLikeDocument(_ ids: [String], document: NotebookDocument) -> [String] {
+        guard let own = document.pageIds, own.count == ids.count else { return ids }
+        let byKey = Dictionary(ids.map { ($0.lowercased(), $0) }, uniquingKeysWith: { a, _ in a })
+        let ordered = own.compactMap { byKey[$0.lowercased()] }
+        return ordered.count == ids.count && Set(ordered) == Set(ids) ? ordered : ids
     }
 
     /// 套件裡現有的頁面 id，依頁次。開不起來時回 `nil`。
