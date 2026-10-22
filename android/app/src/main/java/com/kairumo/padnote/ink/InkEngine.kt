@@ -42,6 +42,10 @@ class InkEngine(
      */
     val isDrawing: Boolean get() = inFlight.isNotEmpty()
 
+    init {
+        live[this] = Unit
+    }
+
     /** 已經寫進核心、但仍在可收回時間窗內的筆畫：指標 id → 核心筆畫 id。 */
     private val committed = LinkedHashMap<ULong, String>()
 
@@ -1127,7 +1131,7 @@ class InkEngine(
         val target = session ?: return
         val page = pageId ?: return
         val loaded = runCatching { target.visibleStrokeDetails(page) }.getOrNull() ?: return
-        applyLoaded(loaded, keepUnsaved = false)
+        applyLoaded(loaded)
     }
 
     /**
@@ -1143,18 +1147,32 @@ class InkEngine(
         val loaded = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
             runCatching { target.visibleStrokeDetails(page) }.getOrNull()
         } ?: return
-        applyLoaded(loaded, keepUnsaved = true)
+        applyLoaded(loaded)
     }
 
-    private fun applyLoaded(loaded: List<uniffi.padnote_core.FullStroke>, keepUnsaved: Boolean) {
+    /**
+     * 換上讀回來的筆畫，**但不讓還在寫入佇列裡的變動閃掉**。
+     *
+     * 讀回來的是套件「寫入之前」的樣子：剛畫完、還沒寫進去的那幾筆不在裡面；剛擦掉、還沒寫進去的
+     * 那幾筆還在裡面。原本 `load()` 直接照讀回來的換上 —— 剛寫的字消失，等寫入完成、下一次重讀
+     * 才又出現；`loadAsync()` 則保留所有「讀回來沒有」的筆畫 —— 別台擦掉的筆畫在這台永遠擦不掉。
+     *
+     * 現在逐筆問寫入佇列（[InkPackageWriter.isAddPending] / [InkPackageWriter.isErasePending]）：
+     * 還在路上的新增保留、還在路上的擦除照擦，其餘一律以套件為準。
+     */
+    private fun applyLoaded(loaded: List<uniffi.padnote_core.FullStroke>) {
         val loadedIds = loaded.map { it.id }.toHashSet()
-        val unsaved = if (keepUnsaved) _strokes.filter { it.coreStrokeId == null || it.coreStrokeId !in loadedIds } else emptyList()
+        val unsaved = _strokes.filter { stroke ->
+            val id = stroke.coreStrokeId
+            id == null || (id !in loadedIds && InkPackageWriter.isAddPending(id))
+        }
         _strokes.clear()
         acts.clear()
         redoActs.clear()
         committed.clear()
         var syntheticId = ULong.MAX_VALUE
         for (stroke in loaded) {
+            if (InkPackageWriter.isErasePending(stroke.id)) continue
             _strokes += CompletedStroke(
                 pointerId = syntheticId,
                 coreStrokeId = stroke.id,
@@ -1171,6 +1189,18 @@ class InkEngine(
         _strokes += unsaved
         // 讀回來的筆畫不在「可收回時間窗」內 —— 它們是上次寫的，
         // 掌拒不該把它們收回去。所以刻意不填 committed。
+    }
+
+    /**
+     * 重開 session（別台同步進來）時，先把舊引擎畫面上的筆畫搬過來當成**暫時的畫面**。
+     *
+     * 新引擎一開始是空的，要等 [loadAsync] 在背景讀完才有筆畫 —— 那段時間整頁是白的，
+     * 使用者看到的是「字跡閃一下不見、過一會兒又出現」。先搬過來，讀完再由 [applyLoaded]
+     * 以套件為準換掉（還在寫入佇列裡的照樣保留）。不搬復原紀錄：新 session 的復原從頭算。
+     */
+    fun seedDisplayFrom(previous: InkEngine?) {
+        if (previous == null || previous === this || _strokes.isNotEmpty()) return
+        _strokes += previous.strokes
     }
 
     // ── 草圖美化 ──────────────────────────────────────────────
@@ -1404,11 +1434,22 @@ class InkEngine(
         return kotlin.math.hypot(px - (a.x + dx * t), py - (a.y + dy * t))
     }
 
-    private companion object {
+    companion object {
         /** 抬筆前在終點停多久才算「長按吸附」。與 Apple 的 0.55 秒一致。 */
-        const val SNAP_DWELL_MS = 550L
+        private const val SNAP_DWELL_MS = 550L
         /** 停留期間允許的抖動（頁面單位）。 */
-        const val SNAP_SLOP = 4f
+        private const val SNAP_SLOP = 4f
+
+        /** 目前活著的引擎（連續模式每一頁一個）。弱參照：引擎被丟掉就自己消失。 */
+        private val live = java.util.WeakHashMap<InkEngine, Unit>()
+
+        /**
+         * 任何一個引擎有筆正在畫。
+         *
+         * 重開 session 前要等的是**所有**頁面 —— 連續模式下使用者是在某一頁的引擎上寫，
+         * 只看單頁模式那一個引擎的話，在連續模式寫到一半的那一筆照樣被換掉。主執行緒專用。
+         */
+        val anyDrawing: Boolean get() = live.keys.any { it.isDrawing }
     }
 }
 

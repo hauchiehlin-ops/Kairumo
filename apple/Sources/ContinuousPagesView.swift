@@ -81,6 +81,15 @@ struct ContinuousPageView<ObjectLayer: View>: View {
     var onInitialLoaded: ((Int, PKDrawing) -> Void)? = nil
     /// 呼叫端要求整頁重讀（恢復初始狀態之後）。數字一變，畫布連同專業筆畫層重建、筆跡重新從磁碟載入。
     var reloadGeneration: Int = 0
+    /// 別台同步進來：只把磁碟上的新內容**合併**進這一頁的筆跡，不重建畫布（見 `mergeReloaded`）。
+    /// 重建畫布會整頁白一下，寫到一半的那一筆也跟著不見 —— 同步每幾秒就一次，不能這樣做。
+    var inkReloadGeneration: Int = 0
+    /// 物件（文字、圖片、形狀……）改了：只重建物件層，不碰畫布。
+    var objectGeneration: Int = 0
+    /// 同步重讀：給這一頁畫面上的筆跡，回傳與磁碟合併後的結果。沒給就直接讀磁碟。
+    var mergeReloaded: ((Int, PKDrawing) -> PKDrawing)? = nil
+    /// 第一次載入用的筆跡（還沒寫出去的那一份優先）。沒給就直接讀磁碟。
+    var initialDrawing: ((Int) -> PKDrawing)? = nil
     @Binding var notebook: NotebookDocument
     var onNotebookChanged: (() -> Void)? = nil
     var onLassoBegan: ((CGPoint) -> Void)? = nil
@@ -111,6 +120,7 @@ struct ContinuousPageView<ObjectLayer: View>: View {
                 underInk()
                     .frame(width: PageGeometry.width, height: PageGeometry.height, alignment: .topLeading)
                     .allowsHitTesting(editorMode == .type || isObjectActive)
+                    .id(objectGeneration)
                     .zIndex(1)
             }
 
@@ -165,7 +175,8 @@ struct ContinuousPageView<ObjectLayer: View>: View {
                 onPencilTapInTypeMode: { location in
                     onCanvasTap?(location)
                 },
-                onPressAndHold: onPressAndHold
+                onPressAndHold: onPressAndHold,
+                proReloadToken: inkReloadGeneration
             )
             .id(reloadGeneration)
             .frame(width: PageGeometry.width, height: PageGeometry.height, alignment: .topLeading)
@@ -185,6 +196,7 @@ struct ContinuousPageView<ObjectLayer: View>: View {
                         .zIndex(3)
                 }
             }
+            .id(objectGeneration)
             .overlay(alignment: .topLeading) {
                 if selectedTool == .lasso && isFocused, let lassoDecoration {
                     lassoDecoration()
@@ -242,12 +254,17 @@ struct ContinuousPageView<ObjectLayer: View>: View {
         .task(id: loaded) {
             // 只載一次。每次重繪都載的話，正在寫的那一頁會被硬碟上的舊版覆蓋。
             guard !loaded else { return }
-            drawing = store.loadDrawing(notebookId: notebookId, pageIndex: pageIndex)
+            drawing = initialDrawing?(pageIndex) ?? store.loadDrawing(notebookId: notebookId, pageIndex: pageIndex)
             loaded = true
             onInitialLoaded?(pageIndex, drawing)
         }
         .onChange(of: reloadGeneration) { _ in
             drawing = store.loadDrawing(notebookId: notebookId, pageIndex: pageIndex)
+        }
+        .onChange(of: inkReloadGeneration) { _ in
+            guard loaded else { return }
+            drawing = mergeReloaded?(pageIndex, drawing)
+                ?? store.loadDrawing(notebookId: notebookId, pageIndex: pageIndex)
         }
     }
 }
