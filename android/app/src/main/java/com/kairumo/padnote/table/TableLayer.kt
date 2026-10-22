@@ -1,5 +1,6 @@
 package com.kairumo.padnote.table
 
+import androidx.compose.runtime.getValue
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectDragGestures
@@ -87,6 +88,8 @@ private fun TableObjectView(
     /** 見同檔案公開版本的說明。 */
     interactive: Boolean = true
 ) {
+    // 連續模式：拖到哪一頁就歸哪一頁（單頁模式為 null，照舊夾在本頁）。
+    val crossing by androidx.compose.runtime.rememberUpdatedState(com.kairumo.padnote.canvas.LocalPageCrossing.current)
     val layout = table.layout()
     val foreground = MaterialTheme.colorScheme.onSurface
     val ruleColor = table.ruleColorHex
@@ -126,6 +129,7 @@ private fun TableObjectView(
             } }
             .gesturesIf(interactive) { pointerInput(table.id) {
                 detectDragGestures(
+                    onDragStart = { crossing?.began?.invoke() },
                     onDrag = { change, drag ->
                         change.consume()
                         onChanged(
@@ -136,11 +140,14 @@ private fun TableObjectView(
                         )
                     },
                     onDragEnd = {
-                        val landed = com.kairumo.padnote.ink.PageGeometry
-                            .clampOrigin(table.x, table.y, layout.width.toFloat(), layout.height.toFloat())
-                        table.x = landed.first
-                        table.y = landed.second
+                        // 連續模式下中心拖到哪一頁就歸哪一頁（規則在核心，與 Apple 同一份）。
+                        val landed = com.kairumo.padnote.canvas.landObject(
+                            table.id, table.x, table.y, layout.width.toFloat(), layout.height.toFloat(), crossing)
+                        table.x = landed.x
+                        table.y = landed.y
                         onChanged(table)
+                        landed.page?.let { crossing?.moved?.invoke(table.id, it) }
+                        crossing?.ended?.invoke()
                     }
                 )
             } }

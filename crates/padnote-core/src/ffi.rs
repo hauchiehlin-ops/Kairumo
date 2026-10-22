@@ -1570,6 +1570,14 @@ impl PadnoteSession {
         Ok(())
     }
 
+    /// 把區塊（文字、圖片、表格、信封物件）或根層的單一形狀搬到另一頁。
+    /// 頁內座標不變 —— 呼叫端先 `set_block_position` 換成新頁的座標。
+    pub fn move_to_page(&self, object_id: String, page_id: String) -> Result<(), FfiError> {
+        self.lock()
+            .move_to_page(parse_uuid(&object_id)?, parse_uuid(&page_id)?)?;
+        Ok(())
+    }
+
     /// 插入圖片。`blob` 為內容定址雜湊。
     pub fn add_image(
         &self,

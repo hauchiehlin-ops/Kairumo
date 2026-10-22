@@ -228,6 +228,52 @@ fun ContinuousPagesView(
     fun pageIdAt(index: Int): String =
         runCatching { session?.pageIdAt(index.toUInt()) }.getOrNull() ?: ""
     fun indexOfPage(id: String): Int? = (0 until maxOf(1, pageCount)).firstOrNull { pageIdAt(it) == id }
+    // ── 物件拖到別頁 ───────────────────────────────────────────
+    //
+    // 拖曳中的那一頁畫在相鄰頁之上：物件拖過頁界時才不會被下一頁的紙蓋住、看起來像消失了。
+    var draggingPage by remember { mutableStateOf<Int?>(null) }
+
+    /** 這個物件能不能換頁。連接線只畫得出同一頁的兩端；群組成員要整組一起動（核心也只搬根層的單一物件）。 */
+    fun canMoveAcrossPages(pageId: String, id: String): Boolean {
+        val shapes = runtimes[pageId]?.shapeStore ?: return true
+        val shape = shapes.all.firstOrNull { it.id == id } ?: return true
+        if (shape.groupId != null) return false
+        return shapes.allConnections.none { it.fromShapeId == id || it.toShapeId == id }
+    }
+
+    /**
+     * 物件 `id` 已經停在新位置（座標相對於第 `to` 頁、也存進核心了），把它換到那一頁。
+     * 以頁碼為鍵的名單（堆疊順序、筆跡下方）跟著搬；兩頁的物件重讀。
+     */
+    fun moveObjectToPage(id: String, from: Int, to: Int) {
+        val s = session ?: return
+        val fromId = pageIdAt(from)
+        val toId = pageIdAt(to)
+        if (toId.isEmpty() || fromId == toId) return
+        if (runCatching { s.moveToPage(id, toId) }.isFailure) return
+        val order = meta.objectOrder(from)
+        if (id in order) {
+            meta.setObjectOrder(s, from, order - id)
+            meta.setObjectOrder(s, to, meta.objectOrder(to) - id + id)
+        }
+        val under = meta.underInkObjectIds(from)
+        if (id in under) {
+            meta.setUnderInkObjectIds(s, from, under - id)
+            meta.setUnderInkObjectIds(s, to, meta.underInkObjectIds(to) + id)
+        }
+        // 兩頁各自重讀，並把復原基準換成新的樣子：換頁不是「這一頁刪掉一個、那一頁多一個」，
+        // 當成兩步記下來的話，只復原其中一頁會讓物件兩頁都有或兩頁都沒有。
+        for (pid in listOf(fromId, toId)) {
+            runtimes[pid]?.let { rt ->
+                rt.reloadObjects()
+                rt.isRestoring = true
+                rt.bump()
+            }
+        }
+        if (to != currentFocus) currentOnFocusChange(to)
+        collabBridge?.onLocalChange?.invoke()
+    }
+
     /** 復原到別頁的步驟時把那一頁捲到眼前 —— 不然使用者按了復原卻看不到哪裡變了。 */
     fun reveal(page: String) {
         val index = indexOfPage(page) ?: return
@@ -477,10 +523,24 @@ fun ContinuousPagesView(
             contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 20.dp)
         ) {
             items(maxOf(1, pageCount)) { index ->
-                Box(Modifier.scaledPage(scale)) {
+                Box(Modifier.scaledPage(scale).zIndex(if (draggingPage == index) 1f else 0f)) {
                     key(index) {
                         val pageId = remember(session, index, pageCount) { pageIdAt(index) }
+                        val crossing = PageCrossing(
+                            page = index,
+                            pageCount = maxOf(1, pageCount),
+                            // 頁與頁之間 20dp（螢幕上）換成頁面座標。
+                            gap = 20f / scale.coerceAtLeast(0.01f),
+                            began = {
+                                draggingPage = index
+                                if (index != currentFocus) currentOnFocusChange(index)
+                            },
+                            canMove = { id -> canMoveAcrossPages(pageId, id) },
+                            moved = { id, to -> moveObjectToPage(id, index, to) },
+                            ended = { draggingPage = null }
+                        )
                         ContinuousPage(
+                            crossing = crossing,
                             session = session,
                             meta = meta,
                             runtime = runtimes.getOrPut(pageId) { PageRuntime(session, pageId.ifEmpty { null }, context) },
@@ -597,6 +657,8 @@ private fun Modifier.scaledPage(scale: Float): Modifier = this
 
 @Composable
 private fun ContinuousPage(
+    /** 這一頁的物件可以拖到相鄰的頁（見 PageCrossing）。 */
+    crossing: PageCrossing,
     session: PadnoteSession?,
     meta: NotebookMeta,
     runtime: PageRuntime,
@@ -924,7 +986,8 @@ private fun ContinuousPage(
             },
             // 鎖定在畫布上（見 ObjectLock.kt）：與單頁模式同一份中繼資料。
             com.kairumo.padnote.canvas.LocalObjectLock provides objectLock,
-            com.kairumo.padnote.canvas.LocalLockedObjectIds provides lockedIds
+            com.kairumo.padnote.canvas.LocalLockedObjectIds provides lockedIds,
+            LocalPageCrossing provides crossing
         ) {
             key(revision) {
                 ImageLayer(
@@ -1189,6 +1252,15 @@ internal class PageRuntime(session: PadnoteSession?, val pageId: String?, contex
     var inkLoaded = false
 
     fun bump() { revision.intValue++ }
+
+    /** 從核心重讀這一頁的物件（物件被換到別頁、或從別頁換過來之後）。 */
+    fun reloadObjects() {
+        textStore.load()
+        shapeStore.load()
+        tableStore.load()
+        chartStore.load()
+        imageStore.load()
+    }
 
     /** 這一頁物件的快照（連續模式沒有連結卡、3D、錄音卡，那些只在單頁模式出現）。 */
     fun snapshot(meta: NotebookMeta, pageIndex: Int) = CanvasSnapshot(

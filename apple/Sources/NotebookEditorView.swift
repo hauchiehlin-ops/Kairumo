@@ -3038,6 +3038,8 @@ public struct NotebookEditorView: View {
             lasso.proHost = { (canvasView as? AdaptiveCanvasView)?.proLayer }
             sanitizeTextAttachments()
             sanitizeUnderInkObjects()
+            // 舊版同步留下的錯位名單（堆疊順序、鎖定記在別頁的頁碼下）就地修好。
+            if notebook.realignPageKeyedObjectLists() { commitNotebook() }
             // 範例：打開時的內容先備份到暫存區，改動等離開時再決定（見 `requestLeave`）。
             // 在上面的整理之後（整理不算使用者的改動）、設焦點之前（暫存期間不走焦點通道）。
             store.beginSampleSession(notebook.id)
@@ -5442,6 +5444,8 @@ public struct NotebookEditorView: View {
                 return PageViewportLayout.zoomScale(for: target, viewport: viewport, page: pageSize)
             } ?? fitWidth
             continuousPages(scale: scale)
+                .onAppear { continuousScale = scale }
+                .onChange(of: scale) { continuousScale = $0 }
         }
     }
 
@@ -5522,12 +5526,19 @@ public struct NotebookEditorView: View {
     /// 程式捲動進行中。這段時間內捲動中途經過的頁面不算焦點，否則
     /// 「點縮圖跳到第 3 頁」會在途中被第 7 頁的焦點判定打斷，最後停在半路。
     @State private var continuousProgrammaticScrollUntil: Date = .distantPast
+    /// 連續模式：正在拖曳物件的那一頁。這一頁畫在相鄰頁之上 —— 物件拖過頁界時
+    /// 才不會被下一頁的紙蓋住、看起來像消失了。
+    @State private var continuousDragPage: Int?
+    /// 連續模式目前的縮放。頁與頁之間的間隔（螢幕上 `continuousPageSpacing` 點）
+    /// 換算成頁面座標要用它，物件換頁時才落在手指放開的地方。
+    @State private var continuousScale: CGFloat = 1
+    private static let continuousPageSpacing: CGFloat = 20
 
     @ViewBuilder
     private func continuousPages(scale: CGFloat) -> some View {
         ScrollViewReader { proxy in
             ScrollView(.vertical) {
-                LazyVStack(spacing: 20) {
+                LazyVStack(spacing: Self.continuousPageSpacing) {
                     ForEach(0..<max(1, notebook.pageCount), id: \.self) { index in
                         ScaledPageLayout(scale: scale, unscaledSize: CGSize(width: PageGeometry.width, height: PageGeometry.height)) {
                             ContinuousPageView(
@@ -5649,8 +5660,11 @@ public struct NotebookEditorView: View {
                             )
                             .frame(width: PageGeometry.width, height: PageGeometry.height)
                             .scaleEffect(scale, anchor: .topLeading)
+                            // 連續模式的物件可以拖到相鄰的頁（單頁模式照舊夾在本頁）。
+                            .environment(\.pageCrossing, pageCrossing(for: index))
                         }
                         .id(index)
+                        .zIndex(continuousDragPage == index ? 1 : 0)
                         .background(
                             // 哪一頁在畫面中央，哪一頁就是焦點頁。
                             // 插入物件要落在使用者正在看的那一頁，不是他上次
@@ -5737,6 +5751,42 @@ public struct NotebookEditorView: View {
     /// 在半露出來的下一頁落筆，整個畫面就帶著動畫滑走，筆尖底下的紙換了位置，
     /// 使用者看到的是「一碰就跳、空白一下」。先把回報頁設成同一頁，捲動那邊就知道不必動。
     /// 也只在真的換頁時才讀那一頁的筆跡：每一次落筆都讀檔解碼，筆尖一碰就卡一下。
+    /// 第 `page` 頁的物件層拿到的跨頁資訊。只有連續模式才有。
+    private func pageCrossing(for page: Int) -> PageCrossing? {
+        guard pageDisplayMode == .continuous else { return nil }
+        return PageCrossing(
+            page: page,
+            pageCount: max(1, notebook.pageCount),
+            gap: Self.continuousPageSpacing / max(continuousScale, 0.01),
+            began: {
+                continuousDragPage = page
+                focusContinuousPage(page)
+            },
+            ended: { id, to in finishPageCrossing(ids: id.map { [$0] } ?? [], to: to) })
+    }
+
+    /// 拖曳結束。物件換了頁（`pageIndex` 已經寫好）的話，以頁碼為鍵的名單跟著搬、焦點換到新頁。
+    private func finishPageCrossing(ids: [String], to page: Int?) {
+        continuousDragPage = nil
+        guard let page, !ids.isEmpty else { return }
+        notebook.realignPageKeyedObjectLists()
+        focusContinuousPage(page)
+        commitNotebook()
+        continuousObjectGeneration += 1
+        thumbnailRevision += 1
+        PageThumbnailRenderer.invalidateAll()
+    }
+
+    /// 編輯器自己搬的物件（形狀、表格、多選）在連續模式下的落點：`frame` 整組的外框，
+    /// 在第 `page` 頁的座標裡。回傳 `nil` 表示不換頁（單頁模式、或中心還在本頁）。
+    private func crossingLanding(for frame: CGRect, page: Int) -> (page: Int, offset: CGSize)? {
+        guard let crossing = pageCrossing(for: page) else { return nil }
+        let landed = PrintableArea.land(
+            x: frame.minX, y: frame.minY, width: frame.width, height: frame.height, crossing: crossing)
+        guard let target = landed.page else { return nil }
+        return (target, CGSize(width: landed.origin.x - frame.minX, height: landed.origin.y - frame.minY))
+    }
+
     private func focusContinuousPage(_ index: Int) {
         guard index != currentPageIndex else { return }
         continuousReportedPage = index
@@ -14961,14 +15011,48 @@ public struct NotebookEditorView: View {
     ///
     /// 不跟的話，群組起來的流程圖一拖就散開了。
     private func moveShapeGroup(_ id: String, by delta: CGSize) {
-        let mates = ObjectLayerOps.groupMates(of: id, in: pageShapes)
-        guard var all = notebook.shapeAttachments else { return }
+        guard var all = notebook.shapeAttachments,
+              let page = all.first(where: { $0.id == id })?.pageIndex else { return }
+        // 同組成員以**這個形狀所在的頁**來找：連續模式下它不一定在焦點頁上。
+        let mates = ObjectLayerOps.groupMates(of: id, in: all.filter { $0.pageIndex == page })
         for index in all.indices where mates.contains(all[index].id) {
             all[index].x += delta.width
             all[index].y += delta.height
         }
+        // 連續模式：整組的中心拖到別頁就整組換頁。連到組外形狀的連接線會被拆到兩頁上，
+        // 那種組合留在本頁（連接線只畫得出同一頁的兩端）。
+        var crossedTo: Int?
+        let frames = all.filter { mates.contains($0.id) }.map { CGRect(x: $0.x, y: $0.y, width: $0.width, height: $0.height) }
+        let links = (notebook.connectionAttachments ?? []).filter { mates.contains($0.fromShapeId) || mates.contains($0.toShapeId) }
+        if let union = frames.dropFirst().reduce(frames.first, { $0?.union($1) }),
+           links.allSatisfy({ mates.contains($0.fromShapeId) && mates.contains($0.toShapeId) }),
+           let landing = crossingLanding(for: union, page: page) {
+            for index in all.indices where mates.contains(all[index].id) {
+                all[index].x += landing.offset.width
+                all[index].y += landing.offset.height
+                all[index].pageIndex = landing.page
+            }
+            if var connections = notebook.connectionAttachments {
+                for index in connections.indices
+                where mates.contains(connections[index].fromShapeId) {
+                    connections[index].pageIndex = landing.page
+                }
+                notebook.connectionAttachments = connections
+            }
+            crossedTo = landing.page
+        } else if let union = frames.dropFirst().reduce(frames.first, { $0?.union($1) }) {
+            // 留在本頁：與其他物件一樣推回可列印範圍（S-85）。原本形狀拖出頁外就留在頁外，
+            // 畫面與縮圖上都看不到、也點不到。
+            let landed = PrintableArea.clampOrigin(
+                x: union.minX, y: union.minY, width: union.width, height: union.height)
+            for index in all.indices where mates.contains(all[index].id) {
+                all[index].x += landed.x - union.minX
+                all[index].y += landed.y - union.minY
+            }
+        }
         notebook.shapeAttachments = all
         commitNotebook()
+        finishPageCrossing(ids: crossedTo == nil ? [] : Array(mates), to: crossedTo)
     }
 
     private func shapeBinding(for id: String) -> Binding<NoteShapeAttachment> {
@@ -14987,16 +15071,44 @@ public struct NotebookEditorView: View {
     }
 
     private func moveTable(_ id: String, by delta: CGSize) {
-        guard hypot(delta.width, delta.height) >= 1 else { return }
+        guard hypot(delta.width, delta.height) >= 1 else {
+            finishPageCrossing(ids: [], to: nil)
+            return
+        }
         guard var all = notebook.tableAttachments,
               let index = all.firstIndex(where: { $0.id == id }) else { return }
         let previous = all[index]
         all[index].x += delta.width
         all[index].y += delta.height
+        // 連續模式：拖到別頁就換頁。表格裡寫了字的不換 —— 筆跡屬於頁面，跟不過去，
+        // 表格換頁而字留在原頁，等於把內容拆散。
+        if let frame = frameOfObject(id: id),
+           let landing = crossingLanding(
+               for: frame.offsetBy(dx: delta.width, dy: delta.height), page: previous.pageIndex),
+           !drawingForPage(previous.pageIndex).strokes.contains(where: previous.containsStroke) {
+            all[index].x += landing.offset.width
+            all[index].y += landing.offset.height
+            all[index].pageIndex = landing.page
+            notebook.tableAttachments = all
+            commitNotebook()
+            finishPageCrossing(ids: [id], to: landing.page)
+            return
+        }
+        // 留在本頁：與其他物件一樣推回可列印範圍（S-85）。原本表格拖出頁外就留在頁外，看不到也點不到。
+        var applied = delta
+        if let frame = frameOfObject(id: id) {
+            let moved = frame.offsetBy(dx: delta.width, dy: delta.height)
+            let landed = PrintableArea.clampOrigin(
+                x: moved.minX, y: moved.minY, width: moved.width, height: moved.height)
+            all[index].x += landed.x - moved.minX
+            all[index].y += landed.y - moved.minY
+            applied = CGSize(width: all[index].x - previous.x, height: all[index].y - previous.y)
+        }
         notebook.tableAttachments = all
         commitNotebook()
+        finishPageCrossing(ids: [], to: nil)
 
-        moveStrokesInsideTable(previous, by: delta)
+        moveStrokesInsideTable(previous, by: applied)
     }
 
     private func tableBinding(for id: String) -> Binding<NoteTableAttachment> {
@@ -15283,6 +15395,7 @@ struct AttachmentItemView: View {
     @ObservedObject var store = NotebookStore.shared
     @ObservedObject var localizationManager = LocalizationManager.shared
     @ObservedObject var collaborationManager = CollaborationManager.shared
+    @Environment(\.pageCrossing) private var pageCrossing
     @State private var dragOffset: CGSize = .zero
     @State private var isDragging: Bool = false
     /// 縮放期間的本地預覽尺寸。
@@ -15367,6 +15480,7 @@ struct AttachmentItemView: View {
                 DragGesture(minimumDistance: 5, coordinateSpace: .named(CanvasCoordinateSpace.name))
                     .onChanged { value in
                         guard lockedByPeer == nil else { return }
+                        if !isDragging { pageCrossing?.began() }
                         isDragging = true
                         var transaction = Transaction()
                         transaction.animation = nil
@@ -15376,19 +15490,23 @@ struct AttachmentItemView: View {
                     }
                     .onEnded { value in
                         guard lockedByPeer == nil else { return }
+                        var crossedTo: Int?
                         if hypot(value.translation.width, value.translation.height) < 4 {
                             onSelect?()
                         } else {
                             var transaction = Transaction()
                             transaction.animation = nil
                             withTransaction(transaction) {
-                                // 拖出可列印範圍的物件推回邊界（S-85）。
-                                let landed = PrintableArea.clampOrigin(
+                                // 拖出可列印範圍的物件推回邊界（S-85）；連續模式下拖到哪一頁就歸哪一頁。
+                                let landed = PrintableArea.land(
                                     x: attachment.x + value.translation.width,
                                     y: attachment.y + value.translation.height,
-                                    width: attachment.width, height: attachment.height)
-                                attachment.x = landed.x
-                                attachment.y = landed.y
+                                    width: attachment.width, height: attachment.height,
+                                    crossing: pageCrossing)
+                                attachment.x = landed.origin.x
+                                attachment.y = landed.origin.y
+                                if let page = landed.page { attachment.pageIndex = page }
+                                crossedTo = landed.page
                                 dragOffset = .zero
                                 isDragging = false
                             }
@@ -15400,6 +15518,7 @@ struct AttachmentItemView: View {
                         }
                         dragOffset = .zero
                         isDragging = false
+                        pageCrossing?.ended(crossedTo == nil ? nil : attachment.id, crossedTo)
                     }
             )
 
@@ -15566,6 +15685,7 @@ struct TextAttachmentItemView: View {
 
     @ObservedObject var localizationManager = LocalizationManager.shared
     @ObservedObject var collaborationManager = CollaborationManager.shared
+    @Environment(\.pageCrossing) private var pageCrossing
     @State private var dragOffset: CGSize = .zero
     /// 縮放期間的本地預覽寬度（理由同 `AttachmentItemView.liveSize`）。
     @State private var liveWidth: CGFloat? = nil
@@ -15899,11 +16019,14 @@ struct TextAttachmentItemView: View {
                     afterContextMenuDismisses(onDelete)
                 } label: { Label(localizationManager.localized("delete"), systemImage: "trash") }
             }
-            .gesture(
+            // 高優先：方塊身上還有「點兩下」，它會先等第二下，等的這段時間連續模式的捲動就把
+            // 拖曳搶走了（方塊拖不動、畫面反而捲動）。拖曳至少要移動 5 點，點一下、點兩下照常有效。
+            .highPriorityGesture(
                 isEditingInline ? nil :
                 DragGesture(minimumDistance: 5, coordinateSpace: .named(CanvasCoordinateSpace.name))
                     .onChanged { value in
                         guard lockedByPeer == nil else { return }
+                        if !isDragging { pageCrossing?.began() }
                         isDragging = true
                         var transaction = Transaction()
                         transaction.animation = nil
@@ -15913,6 +16036,7 @@ struct TextAttachmentItemView: View {
                     }
                     .onEnded { value in
                         guard lockedByPeer == nil else { return }
+                        var crossedTo: Int?
                         if hypot(value.translation.width, value.translation.height) < 4 {
                             beginInlineEditing()
                         } else {
@@ -15921,20 +16045,24 @@ struct TextAttachmentItemView: View {
                             var transaction = Transaction()
                             transaction.animation = nil
                             withTransaction(transaction) {
-                                // 拖出可列印範圍的物件推回邊界（S-85）。
-                                let landed = PrintableArea.clampOrigin(
+                                // 拖出可列印範圍的物件推回邊界（S-85）；連續模式下拖到哪一頁就歸哪一頁。
+                                let landed = PrintableArea.land(
                                     x: textItem.x + value.translation.width,
                                     y: textItem.y + value.translation.height,
-                                    width: textItem.width, height: calculatedContentHeight)
-                                textItem.x = landed.x
-                                textItem.y = (snapToGrid && snapY != nil) ? snapY!(landed.y) : landed.y
+                                    width: textItem.width, height: calculatedContentHeight,
+                                    crossing: pageCrossing)
+                                textItem.x = landed.origin.x
+                                textItem.y = (snapToGrid && snapY != nil) ? snapY!(landed.origin.y) : landed.origin.y
                                 textItem.height = calculatedContentHeight
+                                if let page = landed.page { textItem.pageIndex = page }
+                                crossedTo = landed.page
                                 dragOffset = .zero
                                 isDragging = false
                             }
+                            // 換頁時不算「在這一頁上平移」：跟著方塊走的東西（便利貼錨點）留在原頁。
                             let deltaX = textItem.x - oldX
                             let deltaY = textItem.y - oldY
-                            if deltaX != 0 || deltaY != 0 {
+                            if crossedTo == nil, deltaX != 0 || deltaY != 0 {
                                 onMoved?(CGSize(width: deltaX, height: deltaY))
                             }
                             onSelect?()
@@ -15945,6 +16073,7 @@ struct TextAttachmentItemView: View {
                         }
                         dragOffset = .zero
                         isDragging = false
+                        pageCrossing?.ended(crossedTo == nil ? nil : textItem.id, crossedTo)
                     }
             )
 
@@ -16059,6 +16188,7 @@ struct TextAttachmentItemView: View {
                         DragGesture(minimumDistance: 1, coordinateSpace: .named(CanvasCoordinateSpace.name))
                             .onChanged { value in
                                 guard lockedByPeer == nil else { return }
+                                if !isDragging { pageCrossing?.began() }
                                 isDragging = true
                                 var transaction = Transaction()
                                 transaction.animation = nil
@@ -16070,25 +16200,30 @@ struct TextAttachmentItemView: View {
                                 guard lockedByPeer == nil else { return }
                                 let oldX = textItem.x
                                 let oldY = textItem.y
+                                var crossedTo: Int?
                                 var transaction = Transaction()
                                 transaction.animation = nil
                                 withTransaction(transaction) {
-                                    let landed = PrintableArea.clampOrigin(
+                                    let landed = PrintableArea.land(
                                         x: textItem.x + value.translation.width,
                                         y: textItem.y + value.translation.height,
-                                        width: textItem.width, height: textItem.height)
-                                    textItem.x = landed.x
-                                    textItem.y = (snapToGrid && snapY != nil) ? snapY!(landed.y) : landed.y
+                                        width: textItem.width, height: textItem.height,
+                                        crossing: pageCrossing)
+                                    textItem.x = landed.origin.x
+                                    textItem.y = (snapToGrid && snapY != nil) ? snapY!(landed.origin.y) : landed.origin.y
+                                    if let page = landed.page { textItem.pageIndex = page }
+                                    crossedTo = landed.page
                                     dragOffset = .zero
                                     isDragging = false
                                 }
                                 let deltaX = textItem.x - oldX
                                 let deltaY = textItem.y - oldY
-                                if deltaX != 0 || deltaY != 0 {
+                                if crossedTo == nil, deltaX != 0 || deltaY != 0 {
                                     onMoved?(CGSize(width: deltaX, height: deltaY))
                                 }
                                 onSelect?()
                                 broadcastTextChange()
+                                pageCrossing?.ended(crossedTo == nil ? nil : textItem.id, crossedTo)
                             }
                     )
                     Spacer()
@@ -16237,6 +16372,7 @@ struct LinkAttachmentItemView: View {
     var onSelect: (() -> Void)? = nil
     let onDelete: () -> Void
 
+    @Environment(\.pageCrossing) private var pageCrossing
     @State private var dragOffset: CGSize = .zero
     /// 縮放拖曳中的即時尺寸。直接改 linkItem.width 會每一幀都寫回筆記。
     @State private var liveSize: CGSize? = nil
@@ -16307,22 +16443,28 @@ struct LinkAttachmentItemView: View {
             .gesture(
                 DragGesture(minimumDistance: 5, coordinateSpace: .named(CanvasCoordinateSpace.name))
                     .onChanged { value in
+                        if dragOffset == .zero { pageCrossing?.began() }
                         dragOffset = value.translation
                     }
                     .onEnded { value in
+                        var crossedTo: Int?
                         if hypot(value.translation.width, value.translation.height) < 4 {
                             onSelect?()
                         } else {
-                            // 拖出可列印範圍的物件推回邊界（S-85）。
-                            let landed = PrintableArea.clampOrigin(
+                            // 拖出可列印範圍的物件推回邊界（S-85）；連續模式下拖到哪一頁就歸哪一頁。
+                            let landed = PrintableArea.land(
                                 x: linkItem.x + value.translation.width,
                                 y: linkItem.y + value.translation.height,
-                                width: linkItem.width, height: linkItem.height)
-                            linkItem.x = landed.x
-                            linkItem.y = landed.y
+                                width: linkItem.width, height: linkItem.height,
+                                crossing: pageCrossing)
+                            linkItem.x = landed.origin.x
+                            linkItem.y = landed.origin.y
+                            if let page = landed.page { linkItem.pageIndex = page }
+                            crossedTo = landed.page
                             onSelect?()
                         }
                         dragOffset = .zero
+                        pageCrossing?.ended(crossedTo == nil ? nil : linkItem.id, crossedTo)
                     }
             )
             .onTapGesture { onSelect?() }
@@ -16529,6 +16671,7 @@ struct Model3DCanvasItemView: View {
     var onSelect: (() -> Void)? = nil
     let onDelete: () -> Void
 
+    @Environment(\.pageCrossing) private var pageCrossing
     @State private var dragOffset: CGSize = .zero
 
     private var lockedByPeer: CollaboratorPeer? {
@@ -16576,18 +16719,22 @@ struct Model3DCanvasItemView: View {
                 DragGesture(minimumDistance: 5, coordinateSpace: .named(CanvasCoordinateSpace.name))
                     .onChanged { value in
                         guard lockedByPeer == nil else { return }
+                        if dragOffset == .zero { pageCrossing?.began() }
                         dragOffset = value.translation
                     }
                     .onEnded { value in
                         guard lockedByPeer == nil else { return }
-                        // 拖出可列印範圍的物件推回邊界（S-85）。
-                        let landed = PrintableArea.clampOrigin(
+                        // 拖出可列印範圍的物件推回邊界（S-85）；連續模式下拖到哪一頁就歸哪一頁。
+                        let landed = PrintableArea.land(
                             x: item.x + value.translation.width,
                             y: item.y + value.translation.height,
-                            width: item.width, height: item.height)
-                        item.x = landed.x
-                        item.y = landed.y
+                            width: item.width, height: item.height,
+                            crossing: pageCrossing)
+                        item.x = landed.origin.x
+                        item.y = landed.origin.y
+                        if let page = landed.page { item.pageIndex = page }
                         dragOffset = .zero
+                        pageCrossing?.ended(landed.page == nil ? nil : item.id, landed.page)
                         onSelect?()
                         if let data = try? JSONEncoder().encode(item),
                            let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
@@ -16602,17 +16749,21 @@ struct Model3DCanvasItemView: View {
                 // 拖卡片本體 = 移動，與畫布上其他每一種物件一致。
                 // （旋轉改成卡片右上角那顆鈕先開啟。）
                 onMove: { translation in
+                    if dragOffset == .zero { pageCrossing?.began() }
                     dragOffset = translation
                 },
                 onMoveEnded: {
-                    // 與頂部手把那條路同一個夾擠（S-85：拖出可列印範圍要推回）。
-                    let landed = PrintableArea.clampOrigin(
+                    // 與頂部手把那條路同一個落點規則（S-85：拖出可列印範圍要推回；連續模式可換頁）。
+                    let landed = PrintableArea.land(
                         x: item.x + dragOffset.width,
                         y: item.y + dragOffset.height,
-                        width: item.width, height: item.height)
-                    item.x = landed.x
-                    item.y = landed.y
+                        width: item.width, height: item.height,
+                        crossing: pageCrossing)
+                    item.x = landed.origin.x
+                    item.y = landed.origin.y
+                    if let page = landed.page { item.pageIndex = page }
                     dragOffset = .zero
+                    pageCrossing?.ended(landed.page == nil ? nil : item.id, landed.page)
                     onSelect?()
                     if let data = try? JSONEncoder().encode(item),
                        let dict = try? JSONSerialization.jsonObject(with: data)

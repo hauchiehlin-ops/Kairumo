@@ -1,5 +1,6 @@
 package com.kairumo.padnote.chart
 
+import androidx.compose.runtime.getValue
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectDragGestures
@@ -82,6 +83,10 @@ private fun ChartObjectView(
     /** 堆疊 z 值，見 ObjectStacking。 */
     zIndex: Float = 0f
 ) {
+    // 連續模式：拖到哪一頁就歸哪一頁（單頁模式為 null，照舊夾在本頁）。
+    val crossing by androidx.compose.runtime.rememberUpdatedState(com.kairumo.padnote.canvas.LocalPageCrossing.current)
+    // 拖曳手勢以 id 為鍵，不會跟著重組重建：放開時要讀**目前**的位置，不是手勢開始時的。
+    val currentChart by androidx.compose.runtime.rememberUpdatedState(chart)
     val foreground = MaterialTheme.colorScheme.onSurface
     val grid = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.14f)
 
@@ -108,7 +113,20 @@ private fun ChartObjectView(
                     )
                 } }
                 .gesturesIf(interactive) { pointerInput(chart.id) {
-                    detectDragGestures { change, drag ->
+                    detectDragGestures(
+                        onDragStart = { crossing?.began?.invoke() },
+                        onDragEnd = {
+                            // 推回可列印範圍（與其他物件一致）；連續模式下拖到哪一頁就歸哪一頁。
+                            val c = currentChart
+                            val landed = com.kairumo.padnote.canvas.landObject(
+                                c.id, c.x, c.y, c.width, c.height, crossing)
+                            if (landed.x != c.x || landed.y != c.y) {
+                                onChanged(c.copy(x = landed.x, y = landed.y))
+                            }
+                            landed.page?.let { crossing?.moved?.invoke(c.id, it) }
+                            crossing?.ended?.invoke()
+                        }
+                    ) { change, drag ->
                         change.consume()
                         onChanged(
                             chart.copy(

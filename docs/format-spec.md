@@ -174,7 +174,7 @@ C1（筆跡↔錄音跳轉）、C4（詞級時間戳）、A10（筆跡重播）�
 [1B 操作類型][操作內容…]
 ```
 
-34 種操作：
+39 種操作（另見 §6.3 的 `BatchOrigin` 與里程碑）：
 
 **文件結構**：`SetTitle` / `AddPage` / `RemovePage` / `MovePage`（op 34，S-87）/
 `SetPageSize`
@@ -184,7 +184,8 @@ C1（筆跡↔錄音跳轉）、C4（詞級時間戳）、A10（筆跡重播）�
 > 不用「刪掉再加回去」表示搬動：那樣會連同那一頁的區塊一起丟掉，
 > 而且在協同時會與別人的編輯打架。
 **內容區塊**：`AddTextBlock` / `AddTranscriptBlock` / `AddImageBlock` /
-`RemoveBlock` / `SetBlockStyle` / `SetBlockPosition` / `SetBlockAppearance` / `TextEdit`
+`RemoveBlock` / `SetBlockStyle` / `SetBlockPosition` / `SetBlockAppearance` / `TextEdit` /
+`MoveToPage`（op 39）
 **錄音**：`StartAudio` / `EndAudio` / `AddWord`
 **物件**（ADR-0010）：`AddObject` / `RemoveObject` / `SetObjectTransform` /
 `Group` / `Ungroup` / `SetZIndex`
@@ -320,6 +321,12 @@ id 清單。不在清單裡的 id 排在最後（最上層），順序照型別�
 `SetBlockPosition` 記錄區塊在頁面上的絕對座標。沒有這個操作時 `Block.position`
 永遠是 `None`，所有絕對定位的物件（文字方塊、圖片）跨平台開啟後會擠在一起 ——
 而且在原本的平台上看不出來，因為位置是另外存的。
+
+`MoveToPage { id, page }`（op 39）把區塊、或根層的單一物件換到另一頁；內容、外觀與
+頁內座標不變（呼叫端先用 `SetBlockPosition` 寫好新頁的座標）。找不到物件、目標頁
+不存在、或物件是群組／群組成員時不做事。沒有它的話，物件永遠留在它出生的那一頁：
+連續頁面模式拖到下一頁，別台寫的物件一同步又被拉回原頁。**舊版讀到 op 39 會整份拒絕**，
+與 `MovePage` 相同，兩端要同版本發布。
 
 ### 堆疊順序
 

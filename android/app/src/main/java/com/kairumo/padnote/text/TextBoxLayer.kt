@@ -144,6 +144,8 @@ private fun TextBoxView(
     onChanged: (TextBox) -> Unit,
     onMoved: ((box: TextBox, dx: Float, dy: Float) -> Unit)? = null
 ) {
+    // 連續模式：拖到哪一頁就歸哪一頁（單頁模式為 null，照舊夾在本頁）。
+    val crossing by androidx.compose.runtime.rememberUpdatedState(com.kairumo.padnote.canvas.LocalPageCrossing.current)
     val shape = RoundedCornerShape(box.cornerRadius.dp)
     val rotation = CanvasRotation.normalized(box.rotationDegrees ?: 0f)
     var startX by remember { mutableFloatStateOf(box.x) }
@@ -189,6 +191,7 @@ private fun TextBoxView(
                         startX = box.x
                         startY = box.y
                         onSelect()
+                        crossing?.began?.invoke()
                     },
                     onDrag = { change, drag ->
                         change.consume()
@@ -197,18 +200,21 @@ private fun TextBoxView(
                         box.y += drag.y / density
                     },
                     onDragEnd = {
-                        // 拖出可列印範圍的物件推回邊界（S-85）。規則在核心，
-                        // 與 Apple 的 PrintableArea.clampOrigin 同一份。
-                        val landed = com.kairumo.padnote.ink.PageGeometry
-                            .clampOrigin(box.x, box.y, box.width, box.height)
-                        box.x = landed.first
-                        box.y = landed.second
+                        // 拖出可列印範圍的物件推回邊界（S-85）；連續模式下中心拖到哪一頁就歸哪一頁。
+                        // 規則在核心，與 Apple 的 PrintableArea.land 同一份。
+                        val landed = com.kairumo.padnote.canvas.landObject(
+                            box.id, box.x, box.y, box.width, box.height, crossing)
+                        box.x = landed.x
+                        box.y = landed.y
+                        // 換頁時不算「在這一頁上平移」：跟著方塊走的東西留在原頁。
                         val dx = box.x - startX
                         val dy = box.y - startY
-                        if (dx != 0f || dy != 0f) {
+                        if (landed.page == null && (dx != 0f || dy != 0f)) {
                             onMoved?.invoke(box, dx, dy)
                         }
                         onChanged(box)
+                        landed.page?.let { crossing?.moved?.invoke(box.id, it) }
+                        crossing?.ended?.invoke()
                     }
                 )
             } }

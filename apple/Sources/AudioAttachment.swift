@@ -42,6 +42,7 @@ struct AudioAttachmentItemView: View {
     let onDelete: () -> Void
     var onTranscribe: ((String) -> Void)? = nil
 
+    @Environment(\.pageCrossing) private var pageCrossing
     @State private var dragOffset: CGSize = .zero
     /// 縮放拖曳中的即時尺寸。直接改 item.width 會每一幀都寫回筆記。
     @State private var liveSize: CGSize? = nil
@@ -86,12 +87,21 @@ struct AudioAttachmentItemView: View {
             .simultaneousGesture(
                 DragGesture(minimumDistance: 8, coordinateSpace: .named(CanvasCoordinateSpace.name))
                     .onChanged { value in
+                        if dragOffset == .zero { pageCrossing?.began() }
                         dragOffset = value.translation
                     }
                     .onEnded { value in
-                        item.x += value.translation.width
-                        item.y += value.translation.height
+                        // 推回可列印範圍（S-85，與其他物件一致）；連續模式下拖到哪一頁就歸哪一頁。
+                        let landed = PrintableArea.land(
+                            x: item.x + value.translation.width,
+                            y: item.y + value.translation.height,
+                            width: item.width, height: item.height,
+                            crossing: pageCrossing)
+                        item.x = landed.origin.x
+                        item.y = landed.origin.y
+                        if let page = landed.page { item.pageIndex = page }
                         dragOffset = .zero
+                        pageCrossing?.ended(landed.page == nil ? nil : item.id, landed.page)
                         onSelect?()
                     }
             )

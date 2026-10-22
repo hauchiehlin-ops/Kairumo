@@ -7,6 +7,7 @@
 //
 
 import CoreGraphics
+import SwiftUI
 
 /// 文字方塊的尺寸規則。
 ///
@@ -75,5 +76,55 @@ enum PrintableArea {
             pageHeight: Float(page.height),
             inset: Float(PageGeometry.printableInset))
         return CGPoint(x: CGFloat(clamped.minX), y: CGFloat(clamped.minY))
+    }
+
+    /// 拖曳放開的落點。連續模式（`crossing` 有值）下物件可以落到別頁：中心點在哪一頁就歸哪一頁，
+    /// 再夾進那一頁的可列印範圍；`page` 是新頁碼，沒換頁時為 `nil`。單頁模式等同 `clampOrigin`。
+    ///
+    /// 規則在核心（`landOnPage`），與 Android 同一份。
+    static func land(
+        x: CGFloat, y: CGFloat, width: CGFloat, height: CGFloat, crossing: PageCrossing?
+    ) -> (page: Int?, origin: CGPoint) {
+        guard let crossing else {
+            return (nil, clampOrigin(x: x, y: y, width: width, height: height))
+        }
+        let page = PageGeometry.size
+        let landing = landOnPage(
+            rect: FfiRect(minX: Float(x), minY: Float(y), maxX: Float(x + width), maxY: Float(y + height)),
+            pageIndex: UInt32(max(0, crossing.page)),
+            pageCount: UInt32(max(1, crossing.pageCount)),
+            pageWidth: Float(page.width),
+            pageHeight: Float(page.height),
+            pageGap: Float(crossing.gap),
+            inset: Float(PageGeometry.printableInset))
+        let target = Int(landing.pageIndex)
+        return (target == crossing.page ? nil : target,
+                CGPoint(x: CGFloat(landing.minX), y: CGFloat(landing.minY)))
+    }
+}
+
+/// 連續模式裡，一頁的物件層拿到的「可以拖到別頁」資訊（單頁模式沒有，拖曳照舊夾在本頁）。
+///
+/// 只靠夾回本頁的話，物件出不了它出生的那一頁：拖到下一頁、一放開又彈回原頁底邊。
+struct PageCrossing {
+    /// 這一層是第幾頁。
+    let page: Int
+    let pageCount: Int
+    /// 頁與頁之間的間隔（頁面座標）。
+    let gap: CGFloat
+    /// 開始拖曳：這一頁要畫在相鄰頁之上，拖過頁界時物件才不會被下一頁的紙蓋住。
+    let began: () -> Void
+    /// 物件 `id` 已經改到第 `to` 頁（呼叫前物件的 `pageIndex` 已寫好；換頁沒發生時傳 `nil`，只結束拖曳）。
+    let ended: (_ id: String?, _ to: Int?) -> Void
+}
+
+private struct PageCrossingKey: EnvironmentKey {
+    static let defaultValue: PageCrossing? = nil
+}
+
+extension EnvironmentValues {
+    var pageCrossing: PageCrossing? {
+        get { self[PageCrossingKey.self] }
+        set { self[PageCrossingKey.self] = newValue }
     }
 }

@@ -785,7 +785,7 @@ enum NotebookPackageBridge {
         //    失敗不影響這次匯出 —— 下一輪會再試。
         try? applyForeignEdits(
             document: document, foreign: foreign, to: destination, deviceId: deviceId,
-            recordingTitles: recordingTitles)
+            pageIds: pageIds, recordingTitles: recordingTitles)
         // 5. 使用者刪掉的、別台裝置寫的物件：把「刪除」寫成這台的操作。
         try? applyForeignDeletions(
             document: document, foreign: foreign, to: destination, deviceId: deviceId)
@@ -972,6 +972,8 @@ enum NotebookPackageBridge {
         var ids = Set<String>()
         var positions: [String: CGPoint] = [:]
         var appearances: [String: String] = [:]
+        /// 物件 id → 它在別台那份裡所在的頁面 id（小寫）。
+        var pages: [String: String] = [:]
     }
 
     /// 讀出**別台裝置**寫的方塊與物件。
@@ -1012,6 +1014,7 @@ enum NotebookPackageBridge {
                 for blockId in blockIds {
                     let id = blockId.lowercased()
                     result.ids.insert(id)
+                    result.pages[id] = pageId.lowercased()
                     if let position = try session.blockPosition(blockId: blockId), position.count >= 2 {
                         result.positions[id] = CGPoint(x: CGFloat(position[0]), y: CGFloat(position[1]))
                     }
@@ -1024,6 +1027,7 @@ enum NotebookPackageBridge {
                 while let object = pending.first {
                     pending.removeFirst()
                     result.ids.insert(object.id.lowercased())
+                    result.pages[object.id.lowercased()] = pageId.lowercased()
                     for memberId in object.members {
                         if let member = try session.objectNode(pageId: pageId, objectId: memberId) {
                             pending.append(member)
@@ -1043,8 +1047,32 @@ enum NotebookPackageBridge {
     /// 都會多寫一批操作，而別台下一輪又下載它們。
     private static func applyForeignEdits(
         document: NotebookDocument, foreign: ForeignBlocks, to destination: URL, deviceId: UInt32,
-        recordingTitles: [String: String] = [:]
+        pageIds: [String]? = nil, recordingTitles: [String: String] = [:]
     ) throws {
+        // 別台寫的物件，這台把它換到別頁（連續模式拖過頁界）：寫一筆「搬到那一頁」。
+        // 只改位置的話，物件在套件裡還掛在原頁，下一輪同步就被拉回去。
+        var pageMoves: [(id: String, page: String)] = []
+        let ownPages = (pageIds ?? document.pageIds ?? []).map { $0.lowercased() }
+        func notePage<T: Identifiable & PageIndexed>(_ items: [T]?, id: (T) -> String) where T.ID == String {
+            for item in items ?? [] {
+                let key = id(item)
+                guard let was = foreign.pages[key], item.pageIndex >= 0, item.pageIndex < ownPages.count,
+                      ownPages[item.pageIndex] != was else { continue }
+                pageMoves.append((key, ownPages[item.pageIndex]))
+            }
+        }
+        notePage(document.textAttachments) { stableBlockId($0.id) }
+        notePage(document.tableAttachments) { stableBlockId($0.id) }
+        notePage(document.attachments) { stableBlockId($0.id) }
+        notePage(document.linkAttachments) { stableBlockId($0.id) }
+        notePage(document.model3DAttachments) { stableBlockId($0.id) }
+        notePage(document.audioAttachments) { stableBlockId($0.id) }
+        notePage(document.shapeAttachments) { stableBlockId($0.id) }
+        // 形狀的樣式信封是另一個區塊（id 見 `writeEnvelope` 的 "style:" 前綴），要一起換頁。
+        notePage(document.shapeAttachments) { stableBlockId("style:" + stableBlockId($0.id)) }
+        notePage(document.connectionAttachments) { stableBlockId($0.id) }
+        notePage(document.connectionAttachments) { stableBlockId("style:" + stableBlockId($0.id)) }
+
         struct Edit {
             var id: String
             var position: CGPoint?
@@ -1150,9 +1178,13 @@ enum NotebookPackageBridge {
                 kind: "rectitle", id: recordingTitleBlockId(fileName),
                 payload: RecordingTitle(fileName: fileName, title: title), x: 0, y: 0)
         }
-        guard !edits.isEmpty else { return }
+        guard !edits.isEmpty || !pageMoves.isEmpty else { return }
 
         let session = try PadnoteSession.openExisting(path: destination.path, deviceId: deviceId)
+        for move in pageMoves {
+            // 失敗（物件是群組成員之類核心不搬的）不影響其他修改。
+            try? session.moveToPage(objectId: move.id, pageId: move.page)
+        }
         for edit in edits {
             if let position = edit.position {
                 try session.setBlockPosition(
