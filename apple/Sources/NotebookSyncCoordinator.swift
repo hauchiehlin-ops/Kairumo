@@ -386,6 +386,13 @@ final class ExportedObjectIds: @unchecked Sendable {
     }
 
     /// 每個物件的內容指紋。位置、大小、文字、外觀任何一項變了，指紋就不同。
+    /// 單一物件的指紋，與 `fingerprints(of:)` 裡的算法相同。
+    static func fingerprint<T: Encodable>(of item: T) -> Int {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        return (try? encoder.encode(item)).map { Data($0).hashValue } ?? 0
+    }
+
     static func fingerprints(of d: NotebookDocument) -> [String: Int] {
         var out: [String: Int] = [:]
         func add<T: Identifiable & Encodable>(_ items: [T]?) where T.ID == String {
@@ -1940,6 +1947,7 @@ enum NotebookSyncCoordinator {
         // 所屬資料夾**一律以同步索引為準**（它帶 Lamport 時戳，最後一次搬動的贏）。
         // 套件裡的 folderId 只是匯出那台當時看到的樣子，可能早就過期 —— 原本只在本機與套件都沒有時
         // 才問索引，於是別台的舊套件會把筆記本搬回它以前的資料夾、或搬回「未分類」。
+        merged.realignPageKeyedObjectLists()
         if let item = syncItem(indexJson: AccountSyncStore.shared.indexJSON, itemId: documentId) {
             let pid = item.parentId.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
             merged.folderId = pid.isEmpty ? nil : pid
@@ -1969,9 +1977,65 @@ enum NotebookSyncCoordinator {
     /// 舊版 Apple 寫的套件沒有「移到筆跡下方」（`NotebookMeta.underInkObjectIdsByPage`）——
     /// 匯入結果是空的，不代表別台清掉了，保留這台的。
     static func keepLayeringUnknownToPackage(_ merged: inout NotebookDocument, local: NotebookDocument) {
-        if merged.underInkObjectIdsByPage == nil { merged.underInkObjectIdsByPage = local.underInkObjectIdsByPage }
-        if merged.objectOrderByPage == nil { merged.objectOrderByPage = local.objectOrderByPage }
-        if merged.lockedObjectIdsByPage == nil { merged.lockedObjectIdsByPage = local.lockedObjectIdsByPage }
+        let pages = LocalPages(local: local, imported: merged)
+        if merged.underInkObjectIdsByPage == nil { merged.underInkObjectIdsByPage = pages.rekey(local.underInkObjectIdsByPage) }
+        if merged.objectOrderByPage == nil { merged.objectOrderByPage = pages.rekey(local.objectOrderByPage) }
+        if merged.lockedObjectIdsByPage == nil { merged.lockedObjectIdsByPage = pages.rekey(local.lockedObjectIdsByPage) }
+    }
+
+    /// 本機的頁碼 → 匯入結果的頁碼，靠**頁面 id** 對。
+    ///
+    /// 工作副本上物件的 `pageIndex` 與以頁碼為鍵的名單（堆疊順序、筆跡下方、鎖定）都是照
+    /// **本機的頁序**算的。另一台搬過、刪過頁之後，同一頁在匯入結果裡換了位置 —— 保留本機版本時
+    /// 原封不動沿用那個數字，物件就落到別頁上（使用者回報：第 2 頁的物件一開啟全跑到第 1 頁，
+    /// 而且拖不回去），名單也套到隔壁頁的物件上。
+    ///
+    /// 兩邊有一邊沒記頁面 id（舊資料）時沒有依據可換，照原數字。
+    struct LocalPages {
+        private let map: [Int: Int]?
+
+        init(local: NotebookDocument, imported: NotebookDocument) {
+            guard let mine = local.pageIds, let theirs = imported.pageIds, !mine.isEmpty, !theirs.isEmpty else {
+                map = nil
+                return
+            }
+            let position = Dictionary(
+                theirs.enumerated().map { ($1.lowercased(), $0) }, uniquingKeysWith: { first, _ in first })
+            var out: [Int: Int] = [:]
+            for (index, id) in mine.enumerated() {
+                if let moved = position[id.lowercased()] { out[index] = moved }
+            }
+            map = out
+        }
+
+        /// 本機第 `page` 頁在匯入結果裡是第幾頁；那一頁已經被刪掉時回 `nil`。
+        func page(_ page: Int) -> Int? {
+            guard let map else { return page }
+            return map[page]
+        }
+
+        /// 本機版本的物件，頁碼換成匯入結果的頁序。那一頁不在了就用匯入結果裡的頁碼
+        /// （`fallback`，物件被別台搬走或那一頁被刪掉時才有），再不然留在原數字。
+        func rebased<T: PageIndexed>(_ item: T, fallback: Int?) -> T {
+            var out = item
+            if let moved = page(item.pageIndex) {
+                out.pageIndex = moved
+            } else if let fallback {
+                out.pageIndex = fallback
+            }
+            return out
+        }
+
+        /// 以頁碼為鍵的名單照新頁序換鍵；頁已經不在的整筆丟掉。
+        func rekey<V>(_ byPage: [String: V]?) -> [String: V]? {
+            guard let byPage, map != nil else { return byPage }
+            var out: [String: V] = [:]
+            for (key, value) in byPage {
+                guard let index = Int(key) else { out[key] = value; continue }
+                if let moved = page(index) { out[String(moved)] = value }
+            }
+            return out
+        }
     }
 
     /// 匯出之後、匯入之前，使用者**新增或動過**的物件不能被匯入的結果蓋掉。
@@ -2003,7 +2067,8 @@ enum NotebookSyncCoordinator {
         var merged = imported
         var preserved = false
         let current = ExportedObjectIds.fingerprints(of: local)
-        func keep<T: Identifiable>(_ keyPath: WritableKeyPath<NotebookDocument, [T]?>) where T.ID == String {
+        let pages = LocalPages(local: local, imported: imported)
+        func keep<T: Identifiable & PageIndexed>(_ keyPath: WritableKeyPath<NotebookDocument, [T]?>) where T.ID == String {
             let localItems = Dictionary(
                 (local[keyPath: keyPath] ?? []).map { ($0.id.lowercased(), $0) },
                 uniquingKeysWith: { first, _ in first })
@@ -2019,7 +2084,7 @@ enum NotebookSyncCoordinator {
                     continue
                 }
                 if let mine = localItems[id], let was = exported[id], current[id] != was {
-                    result.append(mine)
+                    result.append(pages.rebased(mine, fallback: item.pageIndex))
                     preserved = true
                 } else {
                     result.append(item)
@@ -2027,7 +2092,7 @@ enum NotebookSyncCoordinator {
             }
             let added = (local[keyPath: keyPath] ?? []).filter {
                 exported[$0.id.lowercased()] == nil && !have.contains($0.id.lowercased())
-            }
+            }.map { pages.rebased($0, fallback: nil) }
             if !added.isEmpty { preserved = true }
             result.append(contentsOf: added)
             if !result.isEmpty || imported[keyPath: keyPath] != nil {
@@ -2041,16 +2106,16 @@ enum NotebookSyncCoordinator {
         // 圖層順序、移到筆跡下方：匯出之後使用者又調整過 → 用工作副本的（不然一同步就跳回原本的層級）。
         let layerOrderKey = ExportedObjectIds.layerOrderKey, underInkKey = ExportedObjectIds.underInkKey
         if exported[layerOrderKey] != nil, current[layerOrderKey] != exported[layerOrderKey] {
-            merged.objectOrderByPage = local.objectOrderByPage
+            merged.objectOrderByPage = pages.rekey(local.objectOrderByPage)
             preserved = true
         }
         if exported[underInkKey] != nil, current[underInkKey] != exported[underInkKey] {
-            merged.underInkObjectIdsByPage = local.underInkObjectIdsByPage
+            merged.underInkObjectIdsByPage = pages.rekey(local.underInkObjectIdsByPage)
             preserved = true
         }
         let lockedKey = ExportedObjectIds.lockedKey
         if exported[lockedKey] != nil, current[lockedKey] != exported[lockedKey] {
-            merged.lockedObjectIdsByPage = local.lockedObjectIdsByPage
+            merged.lockedObjectIdsByPage = pages.rekey(local.lockedObjectIdsByPage)
             preserved = true
         }
         keepLayeringUnknownToPackage(&merged, local: local)
@@ -2089,16 +2154,19 @@ enum NotebookSyncCoordinator {
             merged.folderId = lf
             preserved = true
         }
-        let mine = ExportedObjectIds.fingerprints(of: local)
+        let pages = LocalPages(local: local, imported: imported)
         let theirs = ExportedObjectIds.fingerprints(of: imported)
-        func keep<T: Identifiable>(_ keyPath: WritableKeyPath<NotebookDocument, [T]?>) where T.ID == String {
+        func keep<T: Identifiable & PageIndexed & Encodable>(_ keyPath: WritableKeyPath<NotebookDocument, [T]?>) where T.ID == String {
             guard var items = merged[keyPath: keyPath] else { return }
             let localItems = Dictionary(
                 (local[keyPath: keyPath] ?? []).map { ($0.id.lowercased(), $0) },
                 uniquingKeysWith: { first, _ in first })
             for i in items.indices {
                 let id = items[i].id.lowercased()
-                if let m = localItems[id], mine[id] != theirs[id] {
+                // 比之前先把頁碼換成匯入結果的頁序：只是頁被別台搬過的話，內容其實一樣，
+                // 不該當成「本機比較新」整個留下（留下的是舊頁碼）。
+                if let m = localItems[id].map({ pages.rebased($0, fallback: items[i].pageIndex) }),
+                   ExportedObjectIds.fingerprint(of: m) != theirs[id] {
                     items[i] = m
                     preserved = true
                 }
@@ -2109,16 +2177,19 @@ enum NotebookSyncCoordinator {
         keep(\.shapeAttachments); keep(\.connectionAttachments); keep(\.linkAttachments)
         keep(\.model3DAttachments); keep(\.audioAttachments); keep(\.commentPins)
         keep(\.tapeAttachments); keep(\.stickyAnchors)
-        if local.objectOrderByPage != imported.objectOrderByPage {
-            merged.objectOrderByPage = local.objectOrderByPage
+        let localOrder = pages.rekey(local.objectOrderByPage)
+        if localOrder != imported.objectOrderByPage {
+            merged.objectOrderByPage = localOrder
             preserved = true
         }
-        if local.underInkObjectIdsByPage != imported.underInkObjectIdsByPage {
-            merged.underInkObjectIdsByPage = local.underInkObjectIdsByPage
+        let localUnderInk = pages.rekey(local.underInkObjectIdsByPage)
+        if localUnderInk != imported.underInkObjectIdsByPage {
+            merged.underInkObjectIdsByPage = localUnderInk
             preserved = true
         }
-        if local.lockedObjectIdsByPage != imported.lockedObjectIdsByPage {
-            merged.lockedObjectIdsByPage = local.lockedObjectIdsByPage
+        let localLocked = pages.rekey(local.lockedObjectIdsByPage)
+        if localLocked != imported.lockedObjectIdsByPage {
+            merged.lockedObjectIdsByPage = localLocked
             preserved = true
         }
         keepLayeringUnknownToPackage(&merged, local: local)

@@ -3038,6 +3038,8 @@ public struct NotebookEditorView: View {
             lasso.proHost = { (canvasView as? AdaptiveCanvasView)?.proLayer }
             sanitizeTextAttachments()
             sanitizeUnderInkObjects()
+            // 舊版同步留下的錯位名單（堆疊順序、鎖定記在別頁的頁碼下）就地修好。
+            if notebook.realignPageKeyedObjectLists() { commitNotebook() }
             // 範例：打開時的內容先備份到暫存區，改動等離開時再決定（見 `requestLeave`）。
             // 在上面的整理之後（整理不算使用者的改動）、設焦點之前（暫存期間不走焦點通道）。
             store.beginSampleSession(notebook.id)

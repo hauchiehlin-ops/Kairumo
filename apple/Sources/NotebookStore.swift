@@ -448,6 +448,47 @@ public struct NotebookDocument: Identifiable, Codable, Hashable, @unchecked Send
         lockedObjectIdsByPage = map.isEmpty ? nil : map
     }
 
+    /// 以頁碼為鍵的名單（堆疊順序、筆跡下方、鎖定）照每個物件**現在所在的頁**重新歸位。
+    ///
+    /// 舊版同步在另一台搬頁、刪頁之後把本機的舊名單原封不動留下來，名單的頁碼與物件的頁碼
+    /// 從此對不上：第 1 頁的堆疊順序列的是第 2 頁的物件、第 3 頁（已不存在）的鎖定名單鎖著
+    /// 第 1 頁的方塊。這裡把每個 id 搬到它的物件實際所在的那一頁；找不到物件的 id 原地留著
+    /// （可能是還沒同步到的物件，丟掉會讓它到的時候失去層級）。回傳有沒有動到。
+    @discardableResult
+    public mutating func realignPageKeyedObjectLists() -> Bool {
+        var pageOf: [String: Int] = [:]
+        func index<T: Identifiable & PageIndexed>(_ items: [T]?) where T.ID == String {
+            for item in items ?? [] { pageOf[item.id.lowercased()] = item.pageIndex }
+        }
+        index(attachments); index(textAttachments); index(tableAttachments); index(shapeAttachments)
+        index(connectionAttachments); index(linkAttachments); index(model3DAttachments)
+        index(audioAttachments); index(commentPins); index(tapeAttachments); index(stickyAnchors)
+
+        func realign(_ map: [String: [String]]?, sorted: Bool) -> [String: [String]]? {
+            guard let map else { return nil }
+            var out: [String: [String]] = [:]
+            // 頁碼小的先放，同一頁裡維持原本的先後（堆疊順序要保住）。
+            for key in map.keys.sorted(by: { (Int($0) ?? .max, $0) < (Int($1) ?? .max, $1) }) {
+                for id in map[key] ?? [] {
+                    let target = pageOf[id.lowercased()].map(String.init) ?? key
+                    if out[target]?.contains(id) == true { continue }
+                    out[target, default: []].append(id)
+                }
+            }
+            if sorted { out = out.mapValues { $0.sorted() } }
+            return out
+        }
+        let order = realign(objectOrderByPage, sorted: false)
+        let underInk = realign(underInkObjectIdsByPage, sorted: true)
+        let locked = realign(lockedObjectIdsByPage, sorted: true).flatMap { $0.isEmpty ? nil : $0 }
+        let changed = order != objectOrderByPage || underInk != underInkObjectIdsByPage
+            || locked != lockedObjectIdsByPage
+        objectOrderByPage = order
+        underInkObjectIdsByPage = underInk
+        lockedObjectIdsByPage = locked
+        return changed
+    }
+
     /// 系統預設標題的語系鍵。
     ///
     /// 內建的示範筆記若把中文標題直接寫死存進 JSON，切換介面語言時檔名不會跟著變

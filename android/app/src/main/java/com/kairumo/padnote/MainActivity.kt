@@ -1845,8 +1845,10 @@ private fun InkScreen(
 
 
     val pageId = remember(notebook, pageIndex, pageCount) {
+        // 退回第一頁只在**本來就是第一頁**時才對。別頁查不到 id（頁數剛變、session 正在換）時
+        // 退回第一頁的話，這一頁新增的物件與筆畫全寫進第 1 頁 —— 寧可這一瞬間寫不進去。
         runCatching { notebook?.first?.pageIdAt(pageIndex.toUInt()) }.getOrNull()
-            ?: notebook?.second
+            ?: notebook?.second?.takeIf { pageIndex == 0 }
     }
 
     // 上一個引擎。別台同步進來要重開 session 時，新引擎先借它的筆畫當畫面（見 `seedDisplayFrom`），
