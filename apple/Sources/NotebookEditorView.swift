@@ -2263,6 +2263,10 @@ public struct NotebookEditorView: View {
         var suppressed: Set<String>
         var erasedPencilKit: Set<String>
     }
+    /// 「目前第幾頁原本是第幾頁」（`nil` = 這次新增的頁）。第一次調整頁面結構時才建立 ——
+    /// 在那之前頁碼就是原本的頁碼。還原到初始狀態要靠它把頁序與逐頁檔案排回去：
+    /// 原本照頁碼還原，搬過、刪過、插過頁之後，還原寫回去的內容落在別頁上。
+    @State private var pageOrigins: [Int?]? = nil
     @State private var showRevertConfirmAlert: Bool = false
     /// 圖層面板裡選取的形狀。多選才群組得起來。
     @State private var selectedShapeIds: Set<String> = []
@@ -2833,6 +2837,7 @@ public struct NotebookEditorView: View {
             initialNotebookSnapshot = notebook
             initialPageDrawings.removeAll()
             initialPageInk.removeAll()
+            pageOrigins = nil
             captureInitialPageState(page: 0, drawing: currentDrawing)
             PageThumbnailRenderer.invalidateAll()
         }
@@ -3370,7 +3375,44 @@ public struct NotebookEditorView: View {
             .alert(localizationManager.localized("revert_to_initial_state"), isPresented: $showRevertConfirmAlert) {
                 Button(localizationManager.localized("cancel"), role: .cancel) {}
                 Button(localizationManager.localized("revert_confirm_action"), role: .destructive) {
-                    if let snapshot = initialNotebookSnapshot {
+                    // 丟掉還沒寫的筆跡，並等背景佇列裡已排的寫入做完 —— 不然它們在還原之後才落盤，
+                    // 把還原好的頁又蓋回編輯過的樣子。
+                    coreInkWork?.cancel()
+                    coreInkWork = nil
+                    pendingCoreInk.removeAll()
+                    afterCoreInkWrites { revertToInitialState() }
+                }
+            } message: {
+                Text(localizationManager.localized("revert_to_initial_state_confirm"))
+            }
+    }
+
+    /// 還原到剛打開這本筆記時的樣子（頁序、每一頁的內容與物件）。
+    private func revertToInitialState() {
+                    if var snapshot = initialNotebookSnapshot {
+                        if let origins = pageOrigins {
+                            // 調整過頁面結構：先把逐頁檔案（筆跡、專業筆畫、同步記帳）排回原本的頁碼，
+                            // 這次新增的頁拿掉；刪掉的頁由下面的初始狀態寫回。
+                            let current = notebook
+                            let padded = origins + [Int?](repeating: nil, count: max(0, current.pageCount - origins.count))
+                            store.restorePageFiles(notebookId: current.id, origins: padded)
+                            // 頁面 id 跟著頁走：還在的頁沿用目前的 id；被刪過又還原的頁換新 id ——
+                            // 刪除可能已經同步出去（`RemovePage` 寫了就撤不回），沿用舊 id 會再被刪一次。
+                            if let currentIds = current.pageIds {
+                                snapshot.pageIds = (0..<snapshot.pageCount).map { original in
+                                    padded.firstIndex(of: original).flatMap { $0 < currentIds.count ? currentIds[$0] : nil }
+                                        ?? UUID().uuidString.lowercased()
+                                }
+                                // 這次新增的頁：同步那邊可能已經有它了，記成刪除。
+                                SyncDeletedPages.record(
+                                    padded.indices.filter { padded[$0] == nil && $0 < currentIds.count }.map { currentIds[$0] },
+                                    current.id)
+                            }
+                            pageOrigins = nil
+                            objectHistory.pageStructureChanged(snapshot, manager: historyUndoManager)
+                        }
+                        currentPageIndex = min(currentPageIndex, max(0, snapshot.pageCount - 1))
+                        coreInkBaselines.removeAll()
                         notebook = snapshot
                         restoreInitialPages()
                         currentDrawing = initialPageDrawings[currentPageIndex] ?? store.loadDrawing(notebookId: notebook.id, pageIndex: currentPageIndex)
@@ -3393,10 +3435,6 @@ public struct NotebookEditorView: View {
                         selectedObjectIds = []
                         PageThumbnailRenderer.invalidateAll()
                     }
-                }
-            } message: {
-                Text(localizationManager.localized("revert_to_initial_state_confirm"))
-            }
     }
 
     // MARK: - 1. 頂部自訂主工作列（自適應寬窄螢幕模式）
@@ -7405,7 +7443,17 @@ public struct NotebookEditorView: View {
             for (page, drawing) in stillPending {
                 store.saveDrawing(notebookId: notebook.id, pageIndex: page, drawing: drawing)
             }
+            // 第一次調整頁面結構：先把每一頁的初始狀態記下來（之後頁碼就對不上了），
+            // 並開始追蹤每一頁原本的頁碼，「還原到初始狀態」才排得回去。
+            if pageOrigins == nil, let snapshot = initialNotebookSnapshot {
+                for page in 0..<min(notebook.pageCount, snapshot.pageCount) where initialPageDrawings[page] == nil {
+                    captureInitialPageState(
+                        page: page, drawing: store.loadDrawing(notebookId: notebook.id, pageIndex: page))
+                }
+                pageOrigins = (0..<notebook.pageCount).map { $0 < snapshot.pageCount ? $0 : nil }
+            }
             let idsBefore = notebook.pageIds
+            let countBefore = notebook.pageCount
             guard let landing = change() else { return }
             let idsAfter = store.notebooks.first(where: { $0.id == notebook.id })?.pageIds
             let pageMap: (Int) -> Int? = explicitMap ?? { page in
@@ -7421,6 +7469,15 @@ public struct NotebookEditorView: View {
             pendingCoreInk = remapped(stillPending)
             coreInkBaselines = remapped(coreInkBaselines)
             lastPersistedInk = nil
+            if let origins = pageOrigins {
+                let countAfter = store.notebooks.first(where: { $0.id == notebook.id })?.pageCount ?? countBefore
+                var next = [Int?](repeating: nil, count: countAfter)
+                for page in 0..<countBefore {
+                    guard let moved = pageMap(page), moved < countAfter else { continue }
+                    next[moved] = page < origins.count ? origins[page] : nil
+                }
+                pageOrigins = next
+            }
 
             if let updated = store.notebooks.first(where: { $0.id == notebook.id }) {
                 notebook = updated
@@ -9731,6 +9788,8 @@ public struct NotebookEditorView: View {
     /// 這一頁第一次載入時的狀態（只記一次）：筆畫、專業筆畫與已擦除名單。
     /// 第一次載入一定早於這頁的任何編輯，所以它就是「初始狀態」。
     private func captureInitialPageState(page: Int, drawing: PKDrawing) {
+        // 調整過頁面結構之後頁碼不再是原本的頁碼；所有頁的初始狀態在那之前已經整批記好了。
+        guard pageOrigins == nil else { return }
         if initialPageDrawings[page] == nil { initialPageDrawings[page] = drawing }
         if initialPageInk[page] == nil {
             let dir = store.drawingsDirectory

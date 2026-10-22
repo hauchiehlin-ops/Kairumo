@@ -218,16 +218,7 @@ class NotebookMeta private constructor(private var root: JSONObject) {
 
     /** 插入某一頁的樣板（S-93）。 */
     fun insertPageTemplate(session: PadnoteSession?, atIndex: Int, paperId: String, totalPages: Int) {
-        val currentTemplates = mutableListOf<String>()
-        val arr = root.optJSONArray(KEY_PAGE_TEMPLATES)
-        val defaultPaper = paperId()
-        for (i in 0 until totalPages) {
-            val p = if (arr != null && i < arr.length()) arr.optString(i, defaultPaper) else defaultPaper
-            currentTemplates.add(p)
-        }
-        val safeIndex = atIndex.coerceIn(0, currentTemplates.size)
-        currentTemplates.add(safeIndex, paperId)
-        root.put(KEY_PAGE_TEMPLATES, JSONArray(currentTemplates))
+        insertPageTemplateInMemory(atIndex, paperId, totalPages)
         flush(session)
     }
 
@@ -327,6 +318,108 @@ class NotebookMeta private constructor(private var root: JSONObject) {
         }
         // 清單改了：Apple 端的「以逐物件區塊為準」旗標要清掉，不然它把清單的新內容當成舊的（見 KEY_OBJECT_ENVELOPES）。
         if (listsChanged) root.remove(KEY_OBJECT_ENVELOPES)
+    }
+
+    /**
+     * 另一本筆記的第 `sourcePage` 頁剛被複製（或搬）進這本、成了第 `targetPage` 頁
+     * （核心的 `transferPagesMapped`）：把那一頁存在**中繼資料**裡的東西跟著帶過來。
+     *
+     * 核心只搬得動它自己的東西（區塊、筆畫、形狀、連接線）。紙張、連結卡片、錄音卡片、
+     * 膠帶、圖釘、3D 模型、錨定、堆疊順序、筆跡下方名單、鎖定、形狀樣式、辨識文字住在
+     * 這份中繼資料裡 —— 不帶的話，搬過去的頁只剩筆跡與文字，其餘整組不見
+     * （與 Apple `NotebookStore.transferPages` 帶的是同一批）。
+     *
+     * `idMap`：來源物件 id → 這本的物件 id（核心回傳）。清單裡的項目在這裡換新 id，
+     * 也併進同一張對照表，堆疊順序與錨定才指得到新的那一份。
+     */
+    fun receivePage(
+        session: PadnoteSession?,
+        source: NotebookMeta,
+        sourcePage: Int,
+        targetPage: Int,
+        idMap: Map<String, String>
+    ) {
+        val ids = HashMap<String, String>()
+        idMap.forEach { (k, v) -> ids[k.lowercase()] = v }
+
+        // 紙張：新頁在最後，前面有 targetPage 頁。
+        insertPageTemplateInMemory(targetPage, source.paperId(sourcePage), targetPage)
+
+        // 帶 pageIndex 的清單：換新 id、換頁碼。錨定最後做（要用到前面換出來的 id）。
+        var listsChanged = false
+        for (key in PAGE_INDEXED_LISTS) {
+            if (key == KEY_STICKY_ANCHORS) continue
+            val from = source.root.optJSONArray(key) ?: continue
+            val into = root.optJSONArray(key) ?: JSONArray()
+            for (i in 0 until from.length()) {
+                val item = from.optJSONObject(i) ?: continue
+                if (item.optInt("pageIndex", -1) != sourcePage) continue
+                val copy = JSONObject(item.toString()).put("pageIndex", targetPage)
+                item.optString("id").takeIf { it.isNotEmpty() }?.let { old ->
+                    val fresh = java.util.UUID.randomUUID().toString()
+                    ids[old.lowercase()] = fresh
+                    copy.put("id", fresh)
+                }
+                into.put(copy)
+                listsChanged = true
+            }
+            root.put(key, into)
+        }
+        source.root.optJSONArray(KEY_STICKY_ANCHORS)?.let { from ->
+            val into = root.optJSONArray(KEY_STICKY_ANCHORS) ?: JSONArray()
+            for (i in 0 until from.length()) {
+                val item = from.optJSONObject(i) ?: continue
+                if (item.optInt("pageIndex", -1) != sourcePage) continue
+                // 錨在沒帶過來的東西上就不帶 —— 指向不存在物件的錨定只會讓筆跡莫名其妙跟著別人動。
+                val target = ids[item.optString("targetId").lowercase()] ?: continue
+                into.put(
+                    JSONObject(item.toString())
+                        .put("id", java.util.UUID.randomUUID().toString())
+                        .put("pageIndex", targetPage)
+                        .put("targetId", target)
+                )
+                listsChanged = true
+            }
+            root.put(KEY_STICKY_ANCHORS, into)
+        }
+
+        // 以頁碼為鍵、內容是物件 id 的清單：換成這本的 id，沒帶過來的丟掉。
+        for (key in listOf(KEY_ORDER_BY_PAGE, KEY_UNDER_INK_BY_PAGE, KEY_LOCKED_BY_PAGE)) {
+            val list = source.root.optJSONObject(key)?.optJSONArray(sourcePage.toString()) ?: continue
+            val mapped = list.toStringList().mapNotNull { ids[it.lowercase()] }
+            if (mapped.isEmpty()) continue
+            val map = root.optJSONObject(key) ?: JSONObject()
+            map.put(targetPage.toString(), JSONArray(if (key == KEY_ORDER_BY_PAGE) mapped else mapped.sorted()))
+            root.put(key, map)
+        }
+        source.root.optJSONObject(KEY_RECOGNIZED_TEXT)?.optString(sourcePage.toString())
+            ?.takeIf { it.isNotEmpty() }
+            ?.let { text ->
+                val map = root.optJSONObject(KEY_RECOGNIZED_TEXT) ?: JSONObject()
+                root.put(KEY_RECOGNIZED_TEXT, map.put(targetPage.toString(), text))
+            }
+
+        // 形狀與連接線的樣式（以物件 id 為鍵）。
+        for (key in listOf(KEY_SHAPE_STYLES, KEY_CONNECTION_STYLES)) {
+            val upserts = source.styleMap(key).mapNotNull { (old, style) -> ids[old]?.let { it to style } }
+            if (upserts.isEmpty()) continue
+            val obj = root.optJSONObject(key) ?: JSONObject()
+            upserts.forEach { (k, v) -> obj.put(k, v) }
+            root.put(key, obj)
+        }
+
+        if (listsChanged) root.remove(KEY_OBJECT_ENVELOPES)
+        flush(session)
+    }
+
+    private fun insertPageTemplateInMemory(atIndex: Int, paperId: String, totalPages: Int) {
+        val arr = root.optJSONArray(KEY_PAGE_TEMPLATES)
+        val defaultPaper = paperId()
+        val current = MutableList(totalPages) { i ->
+            if (arr != null && i < arr.length()) arr.optString(i, defaultPaper) else defaultPaper
+        }
+        current.add(atIndex.coerceIn(0, current.size), paperId)
+        root.put(KEY_PAGE_TEMPLATES, JSONArray(current))
     }
 
     /** 設定某一頁的紙張（協同：別人換了那一頁的紙）。 */

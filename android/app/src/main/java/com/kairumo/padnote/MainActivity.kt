@@ -7285,13 +7285,32 @@ private fun InkScreen(
                 val moved = if (session == null) {
                     0u
                 } else {
-                    runCatching {
-                        session.transferPages(
+                    val pages = runCatching {
+                        session.transferPagesMapped(
                             listOf(pageIdx.toUInt()),
                             target.path.absolutePath,
                             moveOut
                         )
-                    }.getOrDefault(0u)
+                    }.getOrDefault(emptyList())
+                    // 核心只帶得動區塊、筆畫、形狀與連接線；紙張、卡片、膠帶、錨定、樣式這些
+                    // 住在中繼資料裡，照核心回傳的頁碼與物件 id 對照表帶進目標那一本。
+                    if (pages.isNotEmpty()) {
+                        runCatching {
+                            PadnoteSession.openExisting(target.path.absolutePath, deviceId(activity))
+                                .use { targetSession ->
+                                    val targetMeta = NotebookMeta.load(targetSession)
+                                    for (page in pages) {
+                                        targetMeta.receivePage(
+                                            targetSession, source = meta,
+                                            sourcePage = page.sourceIndex.toInt(),
+                                            targetPage = page.targetIndex.toInt(),
+                                            idMap = page.idMap
+                                        )
+                                    }
+                                }
+                        }
+                    }
+                    pages.size.toUInt()
                 }
                 transferringPage = null
                 message = if (moved > 0u) {

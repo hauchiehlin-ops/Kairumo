@@ -386,4 +386,24 @@ final class PageOrderTests: XCTestCase {
         let copy = ProInkStore.load(in: store.drawingsDirectory, notebookId: doc.id, page: 1).map(\.id)
         XCTAssertTrue(Set(original).isDisjoint(with: copy), "複本沿用原本的 id 的話，擦掉一筆另一筆也跟著消失")
     }
+
+    /// 還原到初始狀態：搬過、插過頁之後，逐頁檔案要排回原本的頁碼，這次新增的頁的檔案拿掉。
+    func testRestoringPageFilesUndoesMovesAndDropsAddedPages() {
+        let store = Self.isolatedStore()
+        let doc = makeNotebook(pages: 3)
+        store.notebooks.insert(doc, at: 0)
+        seedProInk(store, doc)
+
+        // 0 搬到 2，再在最前面後插一頁：目前是 [1, 新, 2, 0]（記號 2, -, 3, 1）。
+        store.movePage(notebookId: doc.id, from: 0, to: 2)
+        _ = store.insertPage(notebookId: doc.id, afterIndex: 0)
+        XCTAssertEqual(proMarker(store, doc, page: 3), [1])
+
+        store.restorePageFiles(notebookId: doc.id, origins: [1, nil, 2, 0])
+
+        XCTAssertEqual(proMarker(store, doc, page: 0), [1])
+        XCTAssertEqual(proMarker(store, doc, page: 1), [2])
+        XCTAssertEqual(proMarker(store, doc, page: 2), [3])
+        XCTAssertEqual(proMarker(store, doc, page: 3), [], "這次新增的頁的檔案要拿掉")
+    }
 }

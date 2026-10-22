@@ -3598,6 +3598,16 @@ public final class NotebookStore: ObservableObject {
         }
     }
 
+    /// 把逐頁檔案排回原本的頁碼（「還原到初始狀態」）。`origins[目前頁碼]` = 原本的頁碼；
+    /// `nil` 是這次才新增的頁，它的檔案刪掉。原本有、現在沒有的頁（刪掉了）沒有檔案，由呼叫端寫回初始內容。
+    public func restorePageFiles(notebookId: String, origins: [Int?]) {
+        for (page, origin) in origins.enumerated() where origin == nil {
+            removePageFiles(notebookId: notebookId, page: page)
+        }
+        let kept = Set(origins.indices.filter { origins[$0] != nil })
+        permutePageFiles(notebookId: notebookId, pages: kept) { origins[$0] ?? $0 }
+    }
+
     /// 刪掉某一頁的所有逐頁檔案（見 `permutePageFiles`）。只刪 `.drawing` 的話，
     /// 那一頁的專業筆畫與同步記帳留在磁碟上，之後新增到同一個頁碼的頁會把它們撿回來。
     private func removePageFiles(notebookId: String, page: Int) {
