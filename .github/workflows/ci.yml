@@ -168,7 +168,21 @@ jobs:
           # 字母序第一條（InsertToolsAudit/testEveryInsertToolOpensSomething），
           # 其他九條全綠。先開機並等到真正可用，再開始跑測試。
           xcrun simctl bootstatus "$sim_id" -b
-          xcodebuild test -project apple/Kairumo.xcodeproj -scheme Kairumo \
+          # 先建好再測：中間要拿建好的 App 預熱模擬器。
+          xcodebuild build-for-testing -project apple/Kairumo.xcodeproj -scheme Kairumo \
+            -destination "id=$sim_id" > "$RUNNER_TEMP/apple-ui-build.log" 2>&1 || rc=$?
+          if [ $rc -ne 0 ]; then
+            echo "=== 建置失敗 ==="
+            grep -A8 -E "error:" "$RUNNER_TEMP/apple-ui-build.log" | head -120 || true
+            exit $rc
+          fi
+          # 剛抹掉的模擬器第一次啟動 App 之後，backboardd 會崩一次、SpringBoard 跟著重啟，
+          # 把正在跑的第一條測試一起殺掉（見腳本說明）。先自己啟動一次、等它過去再測。
+          app_path="$(xcodebuild -project apple/Kairumo.xcodeproj -scheme Kairumo \
+            -destination "id=$sim_id" -showBuildSettings 2>/dev/null \
+            | awk -F' = ' '/^ *CODESIGNING_FOLDER_PATH = .*\/Kairumo\.app$/ {print $2; exit}')"
+          python3 scripts/warm-ios-simulator.py "$sim_id" "$app_path"
+          xcodebuild test-without-building -project apple/Kairumo.xcodeproj -scheme Kairumo \
             -destination "id=$sim_id" \
             -only-testing:KairumoUITests/SmokeUITests/testHomeScreenControlsAreReachable \
             -only-testing:KairumoUITests/SmokeUITests/testEditorScreenControlsAreReachable \
