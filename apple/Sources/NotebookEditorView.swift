@@ -2263,6 +2263,10 @@ public struct NotebookEditorView: View {
         var suppressed: Set<String>
         var erasedPencilKit: Set<String>
     }
+    /// 「目前第幾頁原本是第幾頁」（`nil` = 這次新增的頁）。第一次調整頁面結構時才建立 ——
+    /// 在那之前頁碼就是原本的頁碼。還原到初始狀態要靠它把頁序與逐頁檔案排回去：
+    /// 原本照頁碼還原，搬過、刪過、插過頁之後，還原寫回去的內容落在別頁上。
+    @State private var pageOrigins: [Int?]? = nil
     @State private var showRevertConfirmAlert: Bool = false
     /// 圖層面板裡選取的形狀。多選才群組得起來。
     @State private var selectedShapeIds: Set<String> = []
@@ -2833,6 +2837,7 @@ public struct NotebookEditorView: View {
             initialNotebookSnapshot = notebook
             initialPageDrawings.removeAll()
             initialPageInk.removeAll()
+            pageOrigins = nil
             captureInitialPageState(page: 0, drawing: currentDrawing)
             PageThumbnailRenderer.invalidateAll()
         }
@@ -3370,7 +3375,44 @@ public struct NotebookEditorView: View {
             .alert(localizationManager.localized("revert_to_initial_state"), isPresented: $showRevertConfirmAlert) {
                 Button(localizationManager.localized("cancel"), role: .cancel) {}
                 Button(localizationManager.localized("revert_confirm_action"), role: .destructive) {
-                    if let snapshot = initialNotebookSnapshot {
+                    // 丟掉還沒寫的筆跡，並等背景佇列裡已排的寫入做完 —— 不然它們在還原之後才落盤，
+                    // 把還原好的頁又蓋回編輯過的樣子。
+                    coreInkWork?.cancel()
+                    coreInkWork = nil
+                    pendingCoreInk.removeAll()
+                    afterCoreInkWrites { revertToInitialState() }
+                }
+            } message: {
+                Text(localizationManager.localized("revert_to_initial_state_confirm"))
+            }
+    }
+
+    /// 還原到剛打開這本筆記時的樣子（頁序、每一頁的內容與物件）。
+    private func revertToInitialState() {
+                    if var snapshot = initialNotebookSnapshot {
+                        if let origins = pageOrigins {
+                            // 調整過頁面結構：先把逐頁檔案（筆跡、專業筆畫、同步記帳）排回原本的頁碼，
+                            // 這次新增的頁拿掉；刪掉的頁由下面的初始狀態寫回。
+                            let current = notebook
+                            let padded = origins + [Int?](repeating: nil, count: max(0, current.pageCount - origins.count))
+                            store.restorePageFiles(notebookId: current.id, origins: padded)
+                            // 頁面 id 跟著頁走：還在的頁沿用目前的 id；被刪過又還原的頁換新 id ——
+                            // 刪除可能已經同步出去（`RemovePage` 寫了就撤不回），沿用舊 id 會再被刪一次。
+                            if let currentIds = current.pageIds {
+                                snapshot.pageIds = (0..<snapshot.pageCount).map { original in
+                                    padded.firstIndex(of: original).flatMap { $0 < currentIds.count ? currentIds[$0] : nil }
+                                        ?? UUID().uuidString.lowercased()
+                                }
+                                // 這次新增的頁：同步那邊可能已經有它了，記成刪除。
+                                SyncDeletedPages.record(
+                                    padded.indices.filter { padded[$0] == nil && $0 < currentIds.count }.map { currentIds[$0] },
+                                    current.id)
+                            }
+                            pageOrigins = nil
+                            objectHistory.pageStructureChanged(snapshot, manager: historyUndoManager)
+                        }
+                        currentPageIndex = min(currentPageIndex, max(0, snapshot.pageCount - 1))
+                        coreInkBaselines.removeAll()
                         notebook = snapshot
                         restoreInitialPages()
                         currentDrawing = initialPageDrawings[currentPageIndex] ?? store.loadDrawing(notebookId: notebook.id, pageIndex: currentPageIndex)
@@ -3393,10 +3435,6 @@ public struct NotebookEditorView: View {
                         selectedObjectIds = []
                         PageThumbnailRenderer.invalidateAll()
                     }
-                }
-            } message: {
-                Text(localizationManager.localized("revert_to_initial_state_confirm"))
-            }
     }
 
     // MARK: - 1. 頂部自訂主工作列（自適應寬窄螢幕模式）
@@ -7011,35 +7049,38 @@ public struct NotebookEditorView: View {
 
     /// 執行轉移，然後把畫面收拾乾淨。
     private func performTransfer(to target: NotebookDocument, copy: Bool) {
-        // 目前這一頁的筆跡還在記憶體裡，先落盤 —— 不落盤的話複製過去的是
-        // 磁碟上的舊版本，剛剛寫的那幾筆不會跟著走。
-        saveCurrentPageDrawing()
-
+        // 目前這一頁的筆跡還在記憶體裡，先落盤（`changePageStructure` 會等背景寫入做完）——
+        // 不落盤的話複製過去的是磁碟上的舊版本，剛剛寫的那幾筆不會跟著走。
         let pages = pageSelection.sorted()
-        let moved = store.transferPages(
-            from: notebook.id, pageIndexes: pages, to: target.id, move: !copy)
-
+        let selected = Set(pages)
         transferIsCopy = nil
         isSelectingPages = false
         pageSelection.removeAll()
 
-        guard moved > 0 else {
-            showCanvasNotice(localizationManager.localized("transfer_failed"))
-            return
+        let sameNotebook = target.id == notebook.id
+        // 搬走的頁不在這本了；留下來的往前補位。複製（或搬到同一本的後面）不動既有頁碼。
+        let pageMap = { (page: Int) -> Int? in
+            guard !copy, !sameNotebook else { return page }
+            if selected.contains(page) { return nil }
+            return page - pages.filter { $0 < page }.count
         }
-
-        if let updated = store.notebooks.first(where: { $0.id == notebook.id }) {
-            notebook = updated
+        var moved = 0
+        changePageStructure(pageMap: pageMap) {
+            moved = store.transferPages(
+                from: notebook.id, pageIndexes: pages, to: target.id, move: !copy)
+            guard moved > 0 else {
+                showCanvasNotice(localizationManager.localized("transfer_failed"))
+                return nil
+            }
+            showCanvasNotice(
+                String(
+                    format: localizationManager.localized(copy ? "pages_copied" : "pages_moved"),
+                    String(moved), target.displayTitle())
+            )
+            // 目前這一頁被搬走的話，停在它原本位置上的那一頁（由 `changePageStructure` 夾回範圍內）。
+            return pageMap(currentPageIndex)
+                ?? (currentPageIndex - pages.filter { $0 < currentPageIndex }.count)
         }
-        // 搬走之後目前的頁碼可能已經不存在。
-        currentPageIndex = min(currentPageIndex, max(0, notebook.pageCount - 1))
-        loadCurrentPage()
-
-        showCanvasNotice(
-            String(
-                format: localizationManager.localized(copy ? "pages_copied" : "pages_moved"),
-                String(moved), target.displayTitle())
-        )
     }
 
     /// 單一頁面卡片。
@@ -7352,28 +7393,105 @@ public struct NotebookEditorView: View {
         else { return false }
         let target = min(max(0, to), total - 1)
 
-        // 目前這一頁的筆跡還在記憶體裡，先落盤 —— 不落盤的話搬動會去讀
-        // 磁碟上的舊版本，剛剛寫的那幾筆就沒了。
-        saveCurrentPageDrawing()
-
-        let landed = store.movePage(notebookId: notebook.id, from: from, to: target)
-
-        // 游標跟著走：搬的如果是目前這一頁，人應該還停在同一頁的內容上；
-        // 搬的是別頁時，目前這一頁的頁碼可能被推移了。
-        if currentPageIndex == from {
-            currentPageIndex = landed
-        } else {
-            currentPageIndex = Int(pageIndexAfterMove(index: UInt32(max(0, currentPageIndex)),
-                                                      from: UInt32(from),
-                                                      to: UInt32(target)))
+        // 目前這一頁的筆跡還在記憶體裡，先存 —— 不存的話搬動會去讀磁碟上的舊版本。
+        //
+        // **存檔在連續模式是非同步的**（背景序列佇列寫 `.drawing`）。原本存完就馬上搬：
+        // 搬動讀到的是還沒寫好的舊檔，之後佇列再把這一頁寫回**搬動前的頁碼** ——
+        // 結果是字跡跑到隔壁頁、別的東西留在原地，空白頁看起來像沒搬。
+        // 所以排在佇列後面，等前面的寫入都落盤再搬。
+        changePageStructure(pageMap: { page in
+            Int(pageIndexAfterMove(index: UInt32(max(0, page)), from: UInt32(from), to: UInt32(target)))
+        }) {
+            // 等待期間頁數可能已經變了（別台同步、協同）—— 重新檢查一次。
+            guard pageMoveIsValid(count: UInt32(max(0, notebook.pageCount)),
+                                  from: UInt32(max(0, from)),
+                                  to: UInt32(max(0, target)))
+            else { return nil }
+            let landed = store.movePage(notebookId: notebook.id, from: from, to: target)
+            // 游標跟著走：搬的如果是目前這一頁，人應該還停在同一頁的內容上；
+            // 搬的是別頁時，目前這一頁的頁碼可能被推移了。
+            if currentPageIndex == from { return landed }
+            return Int(pageIndexAfterMove(index: UInt32(max(0, currentPageIndex)),
+                                          from: UInt32(from), to: UInt32(target)))
         }
-        if let updated = store.notebooks.first(where: { $0.id == notebook.id }) {
-            notebook = updated
-        }
-        // 頁面搬了位置，舊的物件復原紀錄裡的頁次全部對不上 —— 作廢（見 CanvasObjectHistory）。
-        objectHistory.pageStructureChanged(notebook, manager: historyUndoManager)
-        loadCurrentPage()
         return true
+    }
+
+    /// 頁面結構變動（新增、插入、複製、刪除、搬動）的共用流程。
+    ///
+    /// - `pageMap`：舊頁碼 → 新頁碼；`nil` 表示那一頁被刪掉了。整個不給的話照頁面 id 對
+    ///   （協同、匯入這種一次做好幾步的）；這本沒有頁面 id 時，以頁碼為鍵的暫存直接作廢。
+    /// - `change`：真正改 store 的那一步，回傳改完之後要停在哪一頁；回 `nil` 表示不改了。
+    ///
+    /// # 為什麼要等背景佇列
+    ///
+    /// 存檔在連續模式（單頁模式的核心套件增量也是）是排進背景序列佇列寫 `.drawing` 的。
+    /// 原本存完就馬上改頁：store 平移頁面時讀到的是還沒寫好的舊檔，之後佇列再把那一頁寫回
+    /// **變動前的頁碼** —— 字跡跑到隔壁頁、別的東西留在原地，空白頁看起來像沒搬、
+    /// 刪掉一頁之後剛寫的字出現在下一頁。所以排在佇列後面，等前面的寫入都落盤再改。
+    ///
+    /// # 為什麼要重新對齊編輯器的暫存
+    ///
+    /// 待寫的筆跡、套件基準都以頁碼為鍵；留著舊頁碼的話，下一次存檔會把這一頁的筆跡寫到別頁，
+    /// 或拿別頁的內容當「套件裡這一頁原本的樣子」算增量（整頁被當成擦掉）。
+    /// 連續模式每一頁的畫布各自記著載入時的筆跡，也要重載 —— 不然下一筆落下去又把舊內容存回來。
+    private func changePageStructure(pageMap explicitMap: ((Int) -> Int?)? = nil, _ change: @escaping () -> Int?) {
+        saveCurrentPageDrawing()
+        afterCoreInkWrites {
+            // 等待期間又落了筆（連續模式各頁的畫布）：先同步寫下去，store 平移時才讀得到。
+            let stillPending = pendingCoreInk
+            for (page, drawing) in stillPending {
+                store.saveDrawing(notebookId: notebook.id, pageIndex: page, drawing: drawing)
+            }
+            // 第一次調整頁面結構：先把每一頁的初始狀態記下來（之後頁碼就對不上了），
+            // 並開始追蹤每一頁原本的頁碼，「還原到初始狀態」才排得回去。
+            if pageOrigins == nil, let snapshot = initialNotebookSnapshot {
+                for page in 0..<min(notebook.pageCount, snapshot.pageCount) where initialPageDrawings[page] == nil {
+                    captureInitialPageState(
+                        page: page, drawing: store.loadDrawing(notebookId: notebook.id, pageIndex: page))
+                }
+                pageOrigins = (0..<notebook.pageCount).map { $0 < snapshot.pageCount ? $0 : nil }
+            }
+            let idsBefore = notebook.pageIds
+            let countBefore = notebook.pageCount
+            guard let landing = change() else { return }
+            let idsAfter = store.notebooks.first(where: { $0.id == notebook.id })?.pageIds
+            let pageMap: (Int) -> Int? = explicitMap ?? { page in
+                guard let before = idsBefore, page < before.count, let after = idsAfter else { return nil }
+                return after.firstIndex(of: before[page])
+            }
+
+            func remapped<V>(_ map: [Int: V]) -> [Int: V] {
+                var out: [Int: V] = [:]
+                for (page, value) in map { if let moved = pageMap(page) { out[moved] = value } }
+                return out
+            }
+            pendingCoreInk = remapped(stillPending)
+            coreInkBaselines = remapped(coreInkBaselines)
+            lastPersistedInk = nil
+            if let origins = pageOrigins {
+                let countAfter = store.notebooks.first(where: { $0.id == notebook.id })?.pageCount ?? countBefore
+                var next = [Int?](repeating: nil, count: countAfter)
+                for page in 0..<countBefore {
+                    guard let moved = pageMap(page), moved < countAfter else { continue }
+                    next[moved] = page < origins.count ? origins[page] : nil
+                }
+                pageOrigins = next
+            }
+
+            if let updated = store.notebooks.first(where: { $0.id == notebook.id }) {
+                notebook = updated
+            }
+            currentPageIndex = min(max(0, landing), max(0, notebook.pageCount - 1))
+            // 頁面變了，舊的物件復原紀錄裡的頁次全部對不上 —— 作廢（見 CanvasObjectHistory）。
+            objectHistory.pageStructureChanged(notebook, manager: historyUndoManager)
+            loadCurrentPage()
+            // 專業筆畫層只在頁碼變了才重讀；頁碼沒變、內容換了的時候要叫它重讀。
+            (canvasView as? AdaptiveCanvasView)?.proLayer?.reload()
+            continuousReloadGeneration += 1
+            thumbnailRevision += 1
+            PageThumbnailRenderer.invalidateAll()
+        }
     }
 
     /// 側欄目前的實際寬度。與版面那一層畫出來的是同一個算式。
@@ -9670,6 +9788,8 @@ public struct NotebookEditorView: View {
     /// 這一頁第一次載入時的狀態（只記一次）：筆畫、專業筆畫與已擦除名單。
     /// 第一次載入一定早於這頁的任何編輯，所以它就是「初始狀態」。
     private func captureInitialPageState(page: Int, drawing: PKDrawing) {
+        // 調整過頁面結構之後頁碼不再是原本的頁碼；所有頁的初始狀態在那之前已經整批記好了。
+        guard pageOrigins == nil else { return }
         if initialPageDrawings[page] == nil { initialPageDrawings[page] = drawing }
         if initialPageInk[page] == nil {
             let dir = store.drawingsDirectory
@@ -9885,33 +10005,33 @@ public struct NotebookEditorView: View {
         func reload() {
             if let updated = store.notebooks.first(where: { $0.id == notebook.id }) { notebook = updated }
         }
-        saveCurrentPageDrawing()
-        var current = notebook.pageIds ?? []
-        let wanted = Set(desired)
-        for (index, id) in current.enumerated().reversed() where !wanted.contains(id) && notebook.pageCount > 1 {
-            currentPageIndex = store.deletePage(notebookId: notebook.id, pageIndex: index, currentIndex: currentPageIndex)
-            reload()
-        }
-        current = notebook.pageIds ?? []
-        for (target, id) in desired.enumerated() where !current.contains(id) {
-            let paper = collabSync.shadow["page:\(id)"]?["paper"] as? String
-            _ = store.insertPage(notebookId: notebook.id, afterIndex: min(target, current.count) - 1,
-                                 paperId: paper, pageId: id)
-            reload()
+        // 與本機的頁面操作同一條路：等背景寫入落盤、頁碼暫存照頁面 id 重新對齊、畫布重載。
+        changePageStructure {
+            var current = notebook.pageIds ?? []
+            let wanted = Set(desired)
+            let focusedId = currentPageIndex < current.count ? current[currentPageIndex] : nil
+            var landing = currentPageIndex
+            for (index, id) in current.enumerated().reversed() where !wanted.contains(id) && notebook.pageCount > 1 {
+                landing = store.deletePage(notebookId: notebook.id, pageIndex: index, currentIndex: landing)
+                reload()
+            }
             current = notebook.pageIds ?? []
+            for (target, id) in desired.enumerated() where !current.contains(id) {
+                let paper = collabSync.shadow["page:\(id)"]?["paper"] as? String
+                _ = store.insertPage(notebookId: notebook.id, afterIndex: min(target, current.count) - 1,
+                                     paperId: paper, pageId: id)
+                reload()
+                current = notebook.pageIds ?? []
+            }
+            for (target, id) in desired.enumerated() {
+                guard let from = current.firstIndex(of: id), from != target, target < current.count else { continue }
+                _ = store.movePage(notebookId: notebook.id, from: from, to: target)
+                reload()
+                current = notebook.pageIds ?? []
+            }
+            // 停在同一頁的內容上（照頁面 id 找）；那一頁被刪掉了才退回刪除後的頁碼。
+            return focusedId.flatMap { current.firstIndex(of: $0) } ?? landing
         }
-        for (target, id) in desired.enumerated() {
-            guard let from = current.firstIndex(of: id), from != target, target < current.count else { continue }
-            _ = store.movePage(notebookId: notebook.id, from: from, to: target)
-            reload()
-            current = notebook.pageIds ?? []
-        }
-        currentPageIndex = min(currentPageIndex, max(0, notebook.pageCount - 1))
-        // 頁面變了，舊的物件復原紀錄裡的頁次對不上（見 CanvasObjectHistory）。
-        objectHistory.pageStructureChanged(notebook, manager: historyUndoManager)
-        loadCurrentPage()
-        continuousReloadGeneration += 1
-        thumbnailRevision += 1
     }
 
     /// 套用別人在同一個文字方塊打的字（設計 §8.3）。
@@ -10797,21 +10917,34 @@ public struct NotebookEditorView: View {
 
     // MARK: - 🌟 次世代專業筆刷與手寫轉換 (CSP 防抖、對稱尺規、套索 OCR 轉文字)
     private func recognizeHandwritingToTextBox() {
+        // 與刪除／剪下一樣先以畫布上看得到的那一份為準：選取索引是對著它算的。
+        syncDrawingFromCanvas()
         let fullDrawing = currentDrawing
-        let selectedStrokes = lasso.hasSelection ? lasso.extractSelectedStrokes(from: fullDrawing) : fullDrawing.strokes
+        let hasSelection = lasso.hasSelection
+        let pkStrokes = hasSelection ? lasso.extractSelectedStrokes(from: fullDrawing) : fullDrawing.strokes
+        // 專業筆刷（炭筆、蠟筆、書法筆…）寫的字不在 PKDrawing 裡；轉成 PencilKit 筆畫一起送辨識。
+        let proStrokes = hasSelection ? lasso.extractSelectedProStrokes() : []
+        let selectedStrokes = pkStrokes + proStrokes.compactMap(Self.recognitionStroke(from:))
         guard !selectedStrokes.isEmpty else {
-            showCanvasNotice(localizationManager.localized("lasso_active_hint"))
+            showCanvasNotice(localizationManager.localized("lasso_recognize_select_first"))
             return
         }
         
         // 計算筆跡包圍盒與平均色彩（原地轉化：沿用位置、寬度、筆色）
         var strokeBounds: CGRect = .null
         var strokeColorHex: String = "#000000"
-        for stroke in selectedStrokes {
+        for stroke in pkStrokes {
             strokeBounds = strokeBounds.union(stroke.renderBounds)
             var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
             if stroke.ink.color.getRed(&r, green: &g, blue: &b, alpha: &a) {
                 strokeColorHex = String(format: "#%02X%02X%02X", Int(r * 255), Int(g * 255), Int(b * 255))
+            }
+        }
+        for stroke in proStrokes {
+            strokeBounds = strokeBounds.union(stroke.bounds)
+            let c = stroke.colorRGBA
+            if c.count >= 3 {
+                strokeColorHex = String(format: "#%02X%02X%02X", Int(c[0]), Int(c[1]), Int(c[2]))
             }
         }
         if strokeBounds.isNull || !strokeBounds.width.isFinite || !strokeBounds.height.isFinite {
@@ -10819,15 +10952,14 @@ public struct NotebookEditorView: View {
         }
         
         let language = localizationManager.currentLanguage.rawValue
-        let hasSelection = lasso.hasSelection
-        showCanvasNotice("正在辨識手寫文字…")
+        showCanvasNotice(localizationManager.localized("recognizing"))
 
         Task { @MainActor in
             switch await HandwritingRecognizer.recognize(strokes: selectedStrokes, languageTag: language) {
             case .success(let recognizedText):
                 let trimmed = recognizedText.trimmingCharacters(in: .whitespacesAndNewlines)
                 guard !trimmed.isEmpty else {
-                    showCanvasNotice("未能在圈選筆劃中辨識出文字，請嘗試圈選更清晰的手寫筆跡")
+                    showCanvasNotice(localizationManager.localized("lasso_recognize_none"))
                     return
                 }
                 
@@ -10851,8 +10983,11 @@ public struct NotebookEditorView: View {
                 notebook.textAttachments?.append(draft)
                 
                 // 清除選中的筆劃（若有套索選取則只刪被選筆劃，否則清空整頁）
-                if hasSelection, let updated = lasso.deleteSelected(from: currentDrawing) {
-                    applyLassoResult(updated)
+                // 辨識是非同步的：等待期間選取可能已被清掉，這時只保留原筆跡，絕不能退回「清空整頁」。
+                if hasSelection {
+                    if let updated = lasso.deleteSelected(from: currentDrawing) {
+                        applyLassoResult(updated)
+                    }
                 } else {
                     currentDrawing = PKDrawing()
                     canvasView?.drawing = PKDrawing()
@@ -10866,14 +11001,40 @@ public struct NotebookEditorView: View {
                 }
                 commitNotebook()
                 PageThumbnailRenderer.invalidateAll()
-                showCanvasNotice("已成功將手寫轉換為文字")
+                showCanvasNotice(localizationManager.localized("lasso_recognize_done"))
                 #if os(iOS)
                 UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                 #endif
-            case .failure:
-                showCanvasNotice("手寫辨識未完成：請確認圈選內容包含清晰文字")
+            case .failure(let failure):
+                // 說出真正的原因（語言不支援、系統沒有辨識能力…）—— 「辨識失敗」幫不了使用者。
+                let detail: String
+                switch failure {
+                case .unsupported(let d), .noModel(let d), .recognitionFailed(let d): detail = d
+                }
+                showCanvasNotice(localizationManager.localized("err_hwr_failed")
+                    .replacingOccurrences(of: "%@", with: detail))
             }
         }
+    }
+
+    /// 專業筆畫只取路徑給辨識用（辨識只看形狀，不看筆刷質感）。少於兩點的不算一筆。
+    private static func recognitionStroke(from pro: ProStroke) -> PKStroke? {
+        guard pro.points.count >= 2 else { return nil }
+        let width = CGFloat(max(1, pro.baseWidth))
+        let points = pro.points.map { p in
+            PKStrokePoint(
+                location: CGPoint(x: CGFloat(p.x), y: CGFloat(p.y)),
+                timeOffset: 0,
+                size: CGSize(width: width, height: width),
+                opacity: 1,
+                force: CGFloat(max(0.1, p.pressure)),
+                azimuth: 0,
+                altitude: .pi / 2
+            )
+        }
+        return PKStroke(
+            ink: PKInk(.pen, color: .black),
+            path: PKStrokePath(controlPoints: points, creationDate: Date()))
     }
 
     // MARK: - 🌟 文字與手寫動態流式錨定系統 (Fluid Sticky Annotations)
@@ -11382,13 +11543,10 @@ public struct NotebookEditorView: View {
     }
 
     private func addNewPage() {
-        saveCurrentPageDrawing()
-        let newIndex = store.addPage(notebookId: notebook.id, paperId: notebook.paperId(forPage: currentPageIndex))
-        if let updated = store.notebooks.first(where: { $0.id == notebook.id }) {
-            self.notebook = updated
+        let paperId = notebook.paperId(forPage: currentPageIndex)
+        changePageStructure(pageMap: { $0 }) {
+            store.addPage(notebookId: notebook.id, paperId: paperId)
         }
-        self.currentPageIndex = newIndex
-        self.loadCurrentPage()
     }
 
     /// 在某一頁後面插入新的一頁。
@@ -11396,37 +11554,31 @@ public struct NotebookEditorView: View {
     /// `paperId` 為 nil 時沿用整本的樣板；指定時這一頁自己用那一種
     /// （見 `NotebookDocument.pagePaperIds`）。
     private func insertPageAfter(_ index: Int, paperId: String? = nil) {
-        saveCurrentPageDrawing()
-        let newIndex = store.insertPage(
-            notebookId: notebook.id, afterIndex: index, paperId: paperId)
-        if let updated = store.notebooks.first(where: { $0.id == notebook.id }) {
-            self.notebook = updated
+        let insertIndex = min(max(0, index + 1), max(1, notebook.pageCount))
+        changePageStructure(pageMap: { $0 >= insertIndex ? $0 + 1 : $0 }) {
+            store.insertPage(notebookId: notebook.id, afterIndex: index, paperId: paperId)
         }
-        self.currentPageIndex = newIndex
-        self.loadCurrentPage()
         if let paperId, let paper = NoteTemplate(paperId: paperId) {
             showCanvasNotice(localizationManager.localized(paper.localizationKey))
         }
     }
 
     private func duplicatePage(at index: Int) {
-        saveCurrentPageDrawing()
-        let newIndex = store.duplicatePage(notebookId: notebook.id, pageIndex: index)
-        if let updated = store.notebooks.first(where: { $0.id == notebook.id }) {
-            self.notebook = updated
+        changePageStructure(pageMap: { $0 > index ? $0 + 1 : $0 }) {
+            store.duplicatePage(notebookId: notebook.id, pageIndex: index)
         }
-        self.currentPageIndex = newIndex
-        self.loadCurrentPage()
     }
 
     private func deletePage(at index: Int) {
         guard notebook.pageCount > 1 else { return }
-        let safeIndex = store.deletePage(notebookId: notebook.id, pageIndex: index, currentIndex: currentPageIndex)
-        if let updated = store.notebooks.first(where: { $0.id == notebook.id }) {
-            self.notebook = updated
+        // 原本刪除前不存檔：目前這一頁剛寫的字還在記憶體裡，稍後的去抖動存檔把它寫到
+        // 刪除前的頁碼 —— 也就是現在的下一頁。
+        changePageStructure(pageMap: { page in
+            page == index ? nil : (page > index ? page - 1 : page)
+        }) {
+            guard notebook.pageCount > 1 else { return nil }
+            return store.deletePage(notebookId: notebook.id, pageIndex: index, currentIndex: currentPageIndex)
         }
-        self.currentPageIndex = safeIndex
-        self.loadCurrentPage()
     }
 
     private func switchToNotebook(_ target: NotebookDocument) {
@@ -13223,7 +13375,6 @@ public struct NotebookEditorView: View {
             return
         }
 
-        saveCurrentPageDrawing()
         let base = currentPageIndex
         let doc = imported.document
 
@@ -13279,35 +13430,40 @@ public struct NotebookEditorView: View {
             case .image(let i): images[i].y = place.y; images[i].pageIndex = place.pageOffset
             }
         }
-        for k in 0..<maxOffset {
-            _ = store.insertPage(
-                notebookId: notebook.id, afterIndex: base + k,
-                paperId: notebook.paperId(forPage: base))
-        }
-        if maxOffset > 0, let updated = store.notebooks.first(where: { $0.id == notebook.id }) {
-            notebook = updated
-        }
+        // 新頁插在目前這一頁後面：走頁面結構變動的共用流程（等背景寫入落盤、頁碼暫存與畫布跟著對齊）。
+        let insertedPages = maxOffset
+        changePageStructure(pageMap: { $0 > base ? $0 + insertedPages : $0 }) {
+            for k in 0..<maxOffset {
+                _ = store.insertPage(
+                    notebookId: notebook.id, afterIndex: base + k,
+                    paperId: notebook.paperId(forPage: base))
+            }
+            if maxOffset > 0, let updated = store.notebooks.first(where: { $0.id == notebook.id }) {
+                notebook = updated
+            }
 
-        // id 沿用暫存套件給的：每次匯入都是全新的暫存套件，所以同一個檔案
-        // 匯入兩次得到的是兩份獨立的物件，不會撞 id。
-        for var item in texts {
-            item.pageIndex = base + item.pageIndex
-            notebook.textAttachments = (notebook.textAttachments ?? []) + [item]
+            // id 沿用暫存套件給的：每次匯入都是全新的暫存套件，所以同一個檔案
+            // 匯入兩次得到的是兩份獨立的物件，不會撞 id。
+            for var item in texts {
+                item.pageIndex = base + item.pageIndex
+                notebook.textAttachments = (notebook.textAttachments ?? []) + [item]
+            }
+            for var item in tables {
+                item.pageIndex = base + item.pageIndex
+                notebook.tableAttachments = (notebook.tableAttachments ?? []) + [item]
+            }
+            for var item in images {
+                guard let bytes = imported.imageData[item.fileName],
+                      let saved = store.saveImportedFile(data: bytes, extension: "png") else { continue }
+                item.fileName = saved
+                item.pageIndex = base + item.pageIndex
+                notebook.attachments = (notebook.attachments ?? []) + [item]
+            }
+            commitNotebook()
+            PageThumbnailRenderer.invalidateAll()
+            showCanvasNotice(localizationManager.localized("import_document_done"))
+            return base
         }
-        for var item in tables {
-            item.pageIndex = base + item.pageIndex
-            notebook.tableAttachments = (notebook.tableAttachments ?? []) + [item]
-        }
-        for var item in images {
-            guard let bytes = imported.imageData[item.fileName],
-                  let saved = store.saveImportedFile(data: bytes, extension: "png") else { continue }
-            item.fileName = saved
-            item.pageIndex = base + item.pageIndex
-            notebook.attachments = (notebook.attachments ?? []) + [item]
-        }
-        commitNotebook()
-        PageThumbnailRenderer.invalidateAll()
-        showCanvasNotice(localizationManager.localized("import_document_done"))
     }
 
     /// 把一段既有的錄音插到目前這一頁。

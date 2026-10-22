@@ -1040,20 +1040,26 @@ impl NotebookSession {
     /// 不在那個套件裡** —— 不複製的話，搬過去的那一頁在別台裝置上打開
     /// 會是一個破圖。
     ///
-    /// 回傳目標筆記本裡新那一頁的 id。
+    /// 形狀與連接線也要帶：原本只帶區塊與筆畫，搬過去的頁上的圖形整組不見。
+    ///
+    /// 回傳目標筆記本裡新那一頁的 id，以及「來源物件 id → 目標物件 id」對照表
+    /// （區塊、形狀、連接線）。平台以物件 id 記的東西（堆疊順序、筆跡下方名單、
+    /// 形狀樣式、錨定）用它跟著複製過去。
     pub fn copy_page_into(
         &self,
         target: &mut NotebookSession,
         page_id: Uuid,
-    ) -> Result<Uuid, AppError> {
+    ) -> Result<(Uuid, Vec<(Uuid, Uuid)>), AppError> {
         let page = self
             .notebook
             .page(page_id)
             .ok_or(AppError::PageNotFound(page_id))?;
         let template = page.template.clone();
         let blocks: Vec<padnote_doc::Block> = page.blocks().to_vec();
+        let objects = self.shape_and_connection_objects(page_id);
 
         let new_page = target.add_page(template)?;
+        let mut ids: Vec<(Uuid, Uuid)> = Vec::new();
 
         for block in blocks {
             let new_id = match &block.kind {
@@ -1095,14 +1101,82 @@ impl NotebookSession {
                 if let Some(appearance) = &block.appearance {
                     target.set_block_appearance(id, appearance)?;
                 }
+                ids.push((block.id, id));
             }
         }
 
+        // 筆畫沿用原本的 id：換了一本筆記，不會與同一本裡的筆畫撞身分；
+        // 錨定（以筆畫 id 記）也因此不必另外換算。
         for stroke in self.visible_strokes(page_id)? {
             target.add_stroke(new_page, stroke)?;
         }
 
-        Ok(new_page)
+        target.insert_copied_objects(new_page, &objects, &mut ids)?;
+
+        Ok((new_page, ids))
+    }
+
+    /// 這一頁的形狀與連接線（葉節點、世界變換）。區塊與筆畫另外處理。
+    fn shape_and_connection_objects(
+        &self,
+        page_id: Uuid,
+    ) -> Vec<(Uuid, Affine2, padnote_doc::ObjectKind)> {
+        self.objects
+            .get(&page_id)
+            .map(|tree| {
+                tree.draw_order()
+                    .into_iter()
+                    .filter_map(|(id, world)| {
+                        let node = tree.get(id)?;
+                        matches!(
+                            node.kind,
+                            padnote_doc::ObjectKind::Shape(_) | padnote_doc::ObjectKind::Connection(_)
+                        )
+                        .then(|| (id, world, node.kind.clone()))
+                    })
+                    .collect()
+            })
+            .unwrap_or_default()
+    }
+
+    /// 把複製來的形狀與連接線放到 `new_page`，新 id 記進 `ids`。
+    ///
+    /// 先形狀、後連接線：連接線的兩端要指到新頁上的新物件。兩端有一端沒帶過來
+    /// （例如接在轉錄區塊上）就不畫一條指向別頁的線。
+    fn insert_copied_objects(
+        &mut self,
+        new_page: Uuid,
+        objects: &[(Uuid, Affine2, padnote_doc::ObjectKind)],
+        ids: &mut Vec<(Uuid, Uuid)>,
+    ) -> Result<(), AppError> {
+        for (id, world, kind) in objects {
+            if let padnote_doc::ObjectKind::Shape(shape) = kind {
+                let new_id = Uuid::now_v7();
+                self.insert_shape_with_id(new_page, new_id, shape.clone())?;
+                if *world != Affine2::IDENTITY {
+                    self.transform_object(new_id, *world)?;
+                }
+                ids.push((*id, new_id));
+            }
+        }
+        for (id, world, kind) in objects {
+            if let padnote_doc::ObjectKind::Connection(connection) = kind {
+                let remap = |old: Uuid| ids.iter().find(|(o, _)| *o == old).map(|(_, n)| *n);
+                let (Some(from), Some(to)) = (remap(connection.from), remap(connection.to)) else {
+                    continue;
+                };
+                let mut connection = connection.clone();
+                connection.from = from;
+                connection.to = to;
+                let new_id = Uuid::now_v7();
+                self.insert_connection_with_id(new_page, new_id, connection)?;
+                if *world != Affine2::IDENTITY {
+                    self.transform_object(new_id, *world)?;
+                }
+                ids.push((*id, new_id));
+            }
+        }
+        Ok(())
     }
 
     /// 在**同一本**筆記裡複製一頁，新頁放在來源頁的正後方（頁面選單的「複製頁面」）。
@@ -1132,25 +1206,7 @@ impl NotebookSession {
             .position(|p| p.id == page_id)
             .unwrap_or(0);
         let strokes = self.visible_strokes(page_id)?;
-        // 形狀與連接線（葉節點、世界變換）。區塊與筆畫另外處理。
-        let objects: Vec<(Uuid, Affine2, padnote_doc::ObjectKind)> = self
-            .objects
-            .get(&page_id)
-            .map(|tree| {
-                tree.draw_order()
-                    .into_iter()
-                    .filter_map(|(id, world)| {
-                        let node = tree.get(id)?;
-                        matches!(
-                            node.kind,
-                            padnote_doc::ObjectKind::Shape(_)
-                                | padnote_doc::ObjectKind::Connection(_)
-                        )
-                        .then(|| (id, world, node.kind.clone()))
-                    })
-                    .collect()
-            })
-            .unwrap_or_default();
+        let objects = self.shape_and_connection_objects(page_id);
 
         let new_page = self.add_page(template)?;
         let mut ids: Vec<(Uuid, Uuid)> = Vec::new();
@@ -1192,35 +1248,7 @@ impl NotebookSession {
             self.add_stroke(new_page, stroke)?;
         }
 
-        // 先形狀、後連接線：連接線的兩端要指到新頁上的新物件。
-        for (id, world, kind) in &objects {
-            if let padnote_doc::ObjectKind::Shape(shape) = kind {
-                let new_id = Uuid::now_v7();
-                self.insert_shape_with_id(new_page, new_id, shape.clone())?;
-                if *world != Affine2::IDENTITY {
-                    self.transform_object(new_id, *world)?;
-                }
-                ids.push((*id, new_id));
-            }
-        }
-        for (id, world, kind) in &objects {
-            if let padnote_doc::ObjectKind::Connection(connection) = kind {
-                let remap = |old: Uuid| ids.iter().find(|(o, _)| *o == old).map(|(_, n)| *n);
-                // 兩端有一端沒帶過來（例如接在轉錄區塊上）就不畫一條指向別頁的線。
-                let (Some(from), Some(to)) = (remap(connection.from), remap(connection.to)) else {
-                    continue;
-                };
-                let mut connection = connection.clone();
-                connection.from = from;
-                connection.to = to;
-                let new_id = Uuid::now_v7();
-                self.insert_connection_with_id(new_page, new_id, connection)?;
-                if *world != Affine2::IDENTITY {
-                    self.transform_object(new_id, *world)?;
-                }
-                ids.push((*id, new_id));
-            }
-        }
+        self.insert_copied_objects(new_page, &objects, &mut ids)?;
 
         self.move_page(new_page, source_index as u32 + 1)?;
         Ok((new_page, ids))
@@ -2742,6 +2770,52 @@ mod tests {
     ///
     /// 症狀：在 Android 上新增討論圖釘，存檔回報成功、當下讀得回來，
     /// 離開再進來就不見了 —— 而磁碟上明明有那筆資料。
+    /// 複製到另一本時形狀與連接線也要帶過去，而且回傳對照表 —— 原本只帶區塊與筆畫，
+    /// 搬過去的頁上的圖形整組不見；平台也沒有對照表可以把形狀樣式、堆疊順序跟著帶。
+    #[test]
+    fn copy_page_into_carries_shapes_and_reports_the_id_map() {
+        let dir = std::env::temp_dir().join(format!("padnote_copy_shapes_{}", Uuid::now_v7()));
+        let rect = |x: f32| ShapeObject {
+            kind: padnote_doc::ShapeKind::Rectangle,
+            bounds: padnote_doc::ObjectRect { min_x: x, min_y: 0.0, max_x: x + 10.0, max_y: 10.0 },
+            corner_radius: 0.0,
+            text: "框".into(),
+        };
+        let mut src = NotebookSession::create(&dir.join("a.padnote"), "來源", 0, 1).unwrap();
+        let mut dst = NotebookSession::create(&dir.join("b.padnote"), "目標", 0, 1).unwrap();
+        let page = src.add_page(PageTemplate::Blank).unwrap();
+        let text = src.add_text_block(page, "字", TextStyle::Body).unwrap();
+        let shape_a = src.insert_shape(page, rect(0.0)).unwrap();
+        let shape_b = src.insert_shape(page, rect(50.0)).unwrap();
+        let link = src
+            .insert_connection(
+                page,
+                ConnectionObject {
+                    from: shape_a,
+                    to: shape_b,
+                    from_anchor: padnote_doc::Anchor::Right,
+                    to_anchor: padnote_doc::Anchor::Left,
+                    route: padnote_doc::RouteStyle::Straight,
+                    start_cap: padnote_doc::EndCap::None,
+                    end_cap: padnote_doc::EndCap::Arrow,
+                    label: String::new(),
+                },
+            )
+            .unwrap();
+
+        let (new_page, ids) = src.copy_page_into(&mut dst, page).unwrap();
+        let map: std::collections::HashMap<Uuid, Uuid> = ids.into_iter().collect();
+        assert!(map.contains_key(&text), "區塊要在對照表裡");
+        let tree = dst.objects(new_page).expect("目標頁有物件");
+        assert!(tree.get(map[&shape_a]).is_some() && tree.get(map[&shape_b]).is_some());
+        match &tree.get(map[&link]).unwrap().kind {
+            padnote_doc::ObjectKind::Connection(c) => {
+                assert_eq!((c.from, c.to), (map[&shape_a], map[&shape_b]), "連接線接到新的形狀");
+            }
+            other => panic!("不是連接線：{other:?}"),
+        }
+    }
+
     /// S-91：複製一頁要把**內容**帶過去，不是只多一張白紙。
     #[test]
     fn copy_page_into_carries_blocks_and_strokes() {
@@ -2757,7 +2831,7 @@ mod tests {
         src.add_stroke(page, stroke()).unwrap();
 
         let before = dst.notebook().page_count();
-        let new_page = src.copy_page_into(&mut dst, page).unwrap();
+        let (new_page, _) = src.copy_page_into(&mut dst, page).unwrap();
 
         assert_eq!(dst.notebook().page_count(), before + 1, "目標應該多一頁");
         let copied = dst.notebook().page(new_page).expect("新頁面");

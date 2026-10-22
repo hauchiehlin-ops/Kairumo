@@ -563,6 +563,25 @@ enum NotebookPackageBridge {
         return result
     }
 
+    /// 套件裡**筆記這一頁**的筆跡（照筆記自己的頁面 id 找，不是套件的第幾頁）。
+    ///
+    /// 本機插入、刪除、搬動頁之後、下一次完整匯出之前，套件的頁序還是舊的：照第幾頁去拿，
+    /// 拿到的是別頁的筆跡，拿它當基準算增量會把整頁當成「擦掉了」記進帳本。
+    /// 筆記沒記頁面 id 時退回套件的頁序；套件裡還沒有這一頁（剛插入）回空白。
+    static func drawing(fromPackageAt path: URL, deviceId: UInt32, document: NotebookDocument, pageIndex: Int) throws -> PKDrawing {
+        let session = try PadnoteSession.openExisting(path: path.path, deviceId: deviceId)
+        let ids = try pageIds(of: session)
+        let pageId: String?
+        if let own = document.pageIds, pageIndex < own.count {
+            let wanted = own[pageIndex].lowercased()
+            pageId = ids.first { $0.lowercased() == wanted }
+        } else {
+            pageId = pageIndex < ids.count ? ids[pageIndex] : nil
+        }
+        guard let pageId else { return PKDrawing() }
+        return InkInterop.drawing(from: try session.visibleStrokeDetails(pageId: pageId))
+    }
+
     /// 套件內每一頁的高度（點）。
     static func pageHeights(fromPackageAt path: URL, deviceId: UInt32) throws -> [CGFloat] {
         let session = try PadnoteSession.openExisting(path: path.path, deviceId: deviceId)
@@ -1184,7 +1203,7 @@ enum NotebookPackageBridge {
             try session.addPageWithId(pageId: id, style: style)
         }
 
-        let ids = try pageIds(of: session)
+        let ids = Self.orderedLikeDocument(try pageIds(of: session), document: document)
         guard pageIndex < ids.count else { throw BridgeError.noPages }
         let pageId = ids[pageIndex]
         try session.setPageSize(
@@ -1207,6 +1226,18 @@ enum NotebookPackageBridge {
                 points: draft.points
             )
         }
+    }
+
+    /// 套件的頁面 id 改照筆記自己的頁序排。
+    ///
+    /// 本機搬過頁之後、下一次完整匯出之前，套件裡的頁序還是搬動前的；照套件的第幾頁去對，
+    /// 剛寫的筆畫會落在「搬走之前在這個位置」的那一頁上（同步回來就跑到別頁）。
+    /// 兩邊是同一批頁面時才換順序；不是同一批（別台加了頁、還沒合併）就照套件原樣。
+    static func orderedLikeDocument(_ ids: [String], document: NotebookDocument) -> [String] {
+        guard let own = document.pageIds, own.count == ids.count else { return ids }
+        let byKey = Dictionary(ids.map { ($0.lowercased(), $0) }, uniquingKeysWith: { a, _ in a })
+        let ordered = own.compactMap { byKey[$0.lowercased()] }
+        return ordered.count == ids.count && Set(ordered) == Set(ids) ? ordered : ids
     }
 
     /// 套件裡現有的頁面 id，依頁次。開不起來時回 `nil`。

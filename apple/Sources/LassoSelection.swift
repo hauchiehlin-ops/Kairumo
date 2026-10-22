@@ -365,6 +365,13 @@ final class LassoSelection: ObservableObject {
         }
     }
 
+    /// 選到的專業筆畫（炭筆、蠟筆、書法筆…）。它們不在 `PKDrawing` 裡，
+    /// 辨識手寫只看 `extractSelectedStrokes` 的話，用這幾支筆寫的字會被當成「什麼都沒選」。
+    func extractSelectedProStrokes() -> [ProStroke] {
+        guard !proIds.isEmpty else { return [] }
+        return proHost()?.strokes(ids: proIds) ?? []
+    }
+
     private static let duplicateOffset = CGSize(width: 24, height: 24)
 
     /// 位移一筆。**要建一筆新的 `PKStroke`**，不能在原本那筆上改 `transform`：

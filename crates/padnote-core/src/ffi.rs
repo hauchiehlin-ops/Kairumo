@@ -284,6 +284,20 @@ pub struct DuplicatedPage {
     pub id_map: std::collections::HashMap<String, String>,
 }
 
+/// [`PadnoteSession::transfer_pages_mapped`] 裡的一頁。
+#[derive(Clone, Debug, uniffi::Record)]
+pub struct TransferredPage {
+    /// 來源筆記裡的頁碼（搬移之前）。
+    pub source_index: u32,
+    /// 目標筆記裡的頁碼。
+    pub target_index: u32,
+    /// 目標筆記裡新那一頁的 id。
+    pub target_page_id: String,
+    /// 來源物件 id → 目標物件 id（區塊、形狀、連接線）。平台以物件 id 記的東西
+    /// （堆疊順序、筆跡下方名單、形狀樣式、錨定）用它跟著帶過去。
+    pub id_map: std::collections::HashMap<String, String>,
+}
+
 /// 功能 C1 的回傳值：某個時刻對應的錄音位置。
 #[derive(Clone, Debug, uniffi::Record)]
 pub struct PlaybackPosition {
@@ -767,6 +781,22 @@ impl PadnoteSession {
         target_path: String,
         move_out: bool,
     ) -> Result<u32, FfiError> {
+        Ok(self
+            .transfer_pages_mapped(page_indexes, target_path, move_out)?
+            .len() as u32)
+    }
+
+    /// 同 [`Self::transfer_pages`]，但逐頁回傳目標頁碼與物件 id 對照表。
+    ///
+    /// 平台這一層按頁碼或物件 id 存在中繼資料裡的東西（紙張、連結卡片、錄音卡片、膠帶、
+    /// 圖釘、3D 模型、堆疊順序、形狀樣式…）核心搬不動 —— 沒有對照表，平台只知道
+    /// 「搬了幾頁」，搬過去的頁上那些東西就整組不見。不被允許時回空陣列。
+    pub fn transfer_pages_mapped(
+        &self,
+        page_indexes: Vec<u32>,
+        target_path: String,
+        move_out: bool,
+    ) -> Result<Vec<TransferredPage>, FfiError> {
         let mut app = self.lock();
         let source_count = app.notebook().page_count() as u32;
         let same_notebook = app.package_root() == std::path::Path::new(&target_path);
@@ -781,30 +811,44 @@ impl PadnoteSession {
             same_notebook,
         );
         if !plan.allowed {
-            return Ok(0);
+            return Ok(Vec::new());
         }
 
         // 來源的頁 id 先取好 —— 搬移時會邊複製邊刪，索引會變。
-        let source_ids: Vec<padnote_doc::Uuid> = plan
+        let sources: Vec<(u32, padnote_doc::Uuid)> = plan
             .sources
             .iter()
-            .filter_map(|i| app.notebook().pages().get(*i as usize).map(|p| p.id))
+            .filter_map(|i| app.notebook().pages().get(*i as usize).map(|p| (*i, p.id)))
             .collect();
 
-        let mut copied = 0u32;
-        for id in &source_ids {
-            app.copy_page_into(&mut target, *id)?;
-            copied += 1;
+        let mut out = Vec::with_capacity(sources.len());
+        for (source_index, id) in &sources {
+            let (new_page, ids) = app.copy_page_into(&mut target, *id)?;
+            let target_index = target
+                .notebook()
+                .pages()
+                .iter()
+                .position(|p| p.id == new_page)
+                .unwrap_or(0) as u32;
+            out.push(TransferredPage {
+                source_index: *source_index,
+                target_index,
+                target_page_id: new_page.to_string(),
+                id_map: ids
+                    .into_iter()
+                    .map(|(old, new)| (old.to_string(), new.to_string()))
+                    .collect(),
+            });
         }
 
         if move_out {
             // 由大到小刪，否則刪掉前面那頁之後，後面的索引全部往前移一格。
-            for id in source_ids.iter().rev() {
+            for (_, id) in sources.iter().rev() {
                 app.remove_page(*id)?;
             }
         }
 
-        Ok(copied)
+        Ok(out)
     }
 
     /// 把某一頁搬到 `index`（S-87）。

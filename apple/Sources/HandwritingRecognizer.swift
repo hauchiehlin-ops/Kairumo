@@ -177,8 +177,12 @@ public enum HandwritingRecognizer {
             for stroke in strokes {
                 let path = stroke.path
                 guard path.count > 0 else { continue }
-                let place = { (location: CGPoint) -> CGPoint in
-                    CGPoint(
+                // `renderBounds` 含 transform，路徑點不含：被套索搬過的筆畫要先套上 transform，
+                // 不然畫到圖外面，辨識出來是空的。
+                let transform = stroke.transform
+                let place = { (raw: CGPoint) -> CGPoint in
+                    let location = raw.applying(transform)
+                    return CGPoint(
                         x: (location.x - minX) * scale + padding,
                         y: (location.y - minY) * scale + padding
                     )

@@ -30,9 +30,9 @@ enum CoreInkFlush {
             let baseline: PKDrawing
             if let cached = job.cachedBaseline {
                 baseline = cached
-            } else if let all = try? NotebookPackageBridge.drawings(fromPackageAt: package, deviceId: deviceId),
-                      all.indices.contains(job.page) {
-                baseline = all[job.page]
+            } else if let packaged = try? NotebookPackageBridge.drawing(
+                fromPackageAt: package, deviceId: deviceId, document: document, pageIndex: job.page) {
+                baseline = packaged
             } else {
                 baseline = PKDrawing()
             }

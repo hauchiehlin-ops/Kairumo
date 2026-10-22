@@ -306,4 +306,104 @@ final class PageOrderTests: XCTestCase {
         XCTAssertEqual(store.notebooks.count, 1)
         XCTAssertEqual(store.notebooks.first?.id, newer.id)
     }
+
+    // MARK: - 逐頁檔案與逐頁欄位跟著頁走
+
+    /// 每一頁放一筆專業筆畫，用筆寬當「這是第幾頁」的記號。
+    private func seedProInk(_ store: NotebookStore, _ doc: NotebookDocument) {
+        for page in 0..<doc.pageCount {
+            let stroke = ProStroke(tool: "charcoal", colorRGBA: [0, 0, 0, 255], baseWidth: Float(page + 1),
+                                   points: [ProPoint(x: 0, y: 0, pressure: 1, tilt: 0, azimuth: 0, dtUs: 0),
+                                            ProPoint(x: 10, y: 10, pressure: 1, tilt: 0, azimuth: 0, dtUs: 0)])
+            ProInkStore.save([stroke], in: store.drawingsDirectory, notebookId: doc.id, page: page)
+        }
+    }
+
+    private func proMarker(_ store: NotebookStore, _ doc: NotebookDocument, page: Int) -> [Float] {
+        ProInkStore.load(in: store.drawingsDirectory, notebookId: doc.id, page: page).map(\.baseWidth)
+    }
+
+    /// 搬頁時專業筆畫（炭筆、蠟筆…）要跟著走。原本只搬 `.drawing`：PencilKit 的字搬過去了，炭筆字留在原頁。
+    func testMovingAPageCarriesProInkAndPageKeyedFields() {
+        let store = Self.isolatedStore()
+        var doc = makeNotebook(pages: 3)
+        doc.lockedObjectIdsByPage = ["0": ["locked-on-0"]]
+        doc.tapeAttachments = [NoteTapeAttachment(pageIndex: 0, rect: .zero)]
+        store.notebooks.insert(doc, at: 0)
+        seedProInk(store, doc)
+
+        store.movePage(notebookId: doc.id, from: 0, to: 2)
+
+        XCTAssertEqual(proMarker(store, doc, page: 0), [2])
+        XCTAssertEqual(proMarker(store, doc, page: 1), [3])
+        XCTAssertEqual(proMarker(store, doc, page: 2), [1], "被搬的那一頁的專業筆畫要跟著到第 3 頁")
+        let updated = store.notebooks.first { $0.id == doc.id }
+        XCTAssertEqual(updated?.lockedObjectIdsByPage, ["2": ["locked-on-0"]])
+        XCTAssertEqual(updated?.tapeAttachments?.first?.pageIndex, 2)
+    }
+
+    /// 刪頁：那一頁的專業筆畫一起刪掉，後面的往前補；原本留在磁碟上，跑到下一頁或被新頁撿回來。
+    func testDeletingAPageDropsItsProInkAndShiftsTheRest() {
+        let store = Self.isolatedStore()
+        let doc = makeNotebook(pages: 3)
+        store.notebooks.insert(doc, at: 0)
+        seedProInk(store, doc)
+
+        _ = store.deletePage(notebookId: doc.id, pageIndex: 0, currentIndex: 0)
+
+        XCTAssertEqual(proMarker(store, doc, page: 0), [2])
+        XCTAssertEqual(proMarker(store, doc, page: 1), [3])
+        XCTAssertEqual(proMarker(store, doc, page: 2), [], "最後一頁的檔案要清掉，不然下一次新增的頁會撿到它")
+    }
+
+    /// 插頁：新頁是空白的，後面的專業筆畫往後讓一格。
+    func testInsertingAPageShiftsProInk() {
+        let store = Self.isolatedStore()
+        let doc = makeNotebook(pages: 2)
+        store.notebooks.insert(doc, at: 0)
+        seedProInk(store, doc)
+
+        _ = store.insertPage(notebookId: doc.id, afterIndex: 0)
+
+        XCTAssertEqual(proMarker(store, doc, page: 0), [1])
+        XCTAssertEqual(proMarker(store, doc, page: 1), [], "新插入的頁是空白的")
+        XCTAssertEqual(proMarker(store, doc, page: 2), [2])
+    }
+
+    /// 複製頁：專業筆畫也要複製（換新 id），後面的往後讓一格。
+    func testDuplicatingAPageCopiesProInkWithFreshIds() {
+        let store = Self.isolatedStore()
+        let doc = makeNotebook(pages: 2)
+        store.notebooks.insert(doc, at: 0)
+        seedProInk(store, doc)
+
+        _ = store.duplicatePage(notebookId: doc.id, pageIndex: 0)
+
+        XCTAssertEqual(proMarker(store, doc, page: 0), [1])
+        XCTAssertEqual(proMarker(store, doc, page: 1), [1], "複本帶著原頁的專業筆畫")
+        XCTAssertEqual(proMarker(store, doc, page: 2), [2])
+        let original = ProInkStore.load(in: store.drawingsDirectory, notebookId: doc.id, page: 0).map(\.id)
+        let copy = ProInkStore.load(in: store.drawingsDirectory, notebookId: doc.id, page: 1).map(\.id)
+        XCTAssertTrue(Set(original).isDisjoint(with: copy), "複本沿用原本的 id 的話，擦掉一筆另一筆也跟著消失")
+    }
+
+    /// 還原到初始狀態：搬過、插過頁之後，逐頁檔案要排回原本的頁碼，這次新增的頁的檔案拿掉。
+    func testRestoringPageFilesUndoesMovesAndDropsAddedPages() {
+        let store = Self.isolatedStore()
+        let doc = makeNotebook(pages: 3)
+        store.notebooks.insert(doc, at: 0)
+        seedProInk(store, doc)
+
+        // 0 搬到 2，再在最前面後插一頁：目前是 [1, 新, 2, 0]（記號 2, -, 3, 1）。
+        store.movePage(notebookId: doc.id, from: 0, to: 2)
+        _ = store.insertPage(notebookId: doc.id, afterIndex: 0)
+        XCTAssertEqual(proMarker(store, doc, page: 3), [1])
+
+        store.restorePageFiles(notebookId: doc.id, origins: [1, nil, 2, 0])
+
+        XCTAssertEqual(proMarker(store, doc, page: 0), [1])
+        XCTAssertEqual(proMarker(store, doc, page: 1), [2])
+        XCTAssertEqual(proMarker(store, doc, page: 2), [3])
+        XCTAssertEqual(proMarker(store, doc, page: 3), [], "這次新增的頁的檔案要拿掉")
+    }
 }

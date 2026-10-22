@@ -3257,6 +3257,9 @@ public final class NotebookStore: ObservableObject {
         notebooks[idx].lastModifiedDate = Date()
 
         let newPageIndex = newPageCount - 1
+        // 新的一頁從空白開始：舊版刪頁留下的專業筆畫、同步記帳不能被它撿回來。
+        removePageFiles(notebookId: notebookId, page: newPageIndex)
+        remapPageKeyedFields(at: idx) { $0 == newPageIndex ? nil : $0 }
         // 儲存空白筆跡至磁碟
         saveDrawing(notebookId: notebookId, pageIndex: newPageIndex, drawing: PKDrawing())
         persistData()
@@ -3276,15 +3279,12 @@ public final class NotebookStore: ObservableObject {
                                            at: min(insertIndex, notebooks[idx].pageIds?.count ?? 0))
         }
 
-        // 從最後一頁往前平移圖檔
-        var p = oldPageCount - 1
-        while p >= insertIndex {
-            let existingDrawing = loadDrawing(notebookId: notebookId, pageIndex: p)
-            saveDrawing(notebookId: notebookId, pageIndex: p + 1, drawing: existingDrawing)
-            p -= 1
-        }
+        // 插入點之後每一頁的所有逐頁檔案往後挪一頁（不只 `.drawing`：專業筆畫、同步記帳也是以頁碼命名）。
+        removePageFiles(notebookId: notebookId, page: oldPageCount)
+        shiftPageFiles(notebookId: notebookId, from: insertIndex, through: oldPageCount - 1, by: 1)
         // 將新插入的一頁設為空白
         saveDrawing(notebookId: notebookId, pageIndex: insertIndex, drawing: PKDrawing())
+        remapPageKeyedFields(at: idx) { $0 >= insertIndex ? $0 + 1 : $0 }
 
         // 更新 pageHeights
         var heights = notebooks[idx].pageHeights ?? Array(repeating: 1800.0, count: oldPageCount)
@@ -3325,6 +3325,10 @@ public final class NotebookStore: ObservableObject {
             notebooks[idx].connectionAttachments, inserting: insertIndex)
         notebooks[idx].audioAttachments = Self.shiftPages(
             notebooks[idx].audioAttachments, inserting: insertIndex)
+        notebooks[idx].tapeAttachments = Self.shiftPages(
+            notebooks[idx].tapeAttachments, inserting: insertIndex)
+        notebooks[idx].stickyAnchors = Self.shiftPages(
+            notebooks[idx].stickyAnchors, inserting: insertIndex)
 
         // 內嵌筆跡陣列也要跟著長一頁，否則 pagesData 與 pageCount 會錯開，
         // 而匯出是看前者的 —— 插入的那一頁在 PDF 裡不存在。
@@ -3355,16 +3359,13 @@ public final class NotebookStore: ObservableObject {
             SyncDeletedPages.record([ids[pageIndex]], notebookId)
         }
 
-        // 平移磁碟圖檔
-        var p = pageIndex
-        while p < total - 1 {
-            let nextDrawing = loadDrawing(notebookId: notebookId, pageIndex: p + 1)
-            saveDrawing(notebookId: notebookId, pageIndex: p, drawing: nextDrawing)
-            p += 1
+        // 刪掉這一頁的所有逐頁檔案，後面每一頁往前挪一頁。只平移 `.drawing` 的話，
+        // 專業筆畫與同步記帳留在原頁碼 —— 刪掉的那一頁的炭筆字跑到下一頁上。
+        removePageFiles(notebookId: notebookId, page: pageIndex)
+        shiftPageFiles(notebookId: notebookId, from: pageIndex + 1, through: total - 1, by: -1)
+        remapPageKeyedFields(at: idx) { page in
+            page == pageIndex ? nil : (page > pageIndex ? page - 1 : page)
         }
-        // 移除最後一頁檔案
-        let lastFileUrl = drawingsDirectory.appending(path: "\(notebookId)_p\(total - 1).drawing")
-        try? FileManager.default.removeItem(at: lastFileUrl)
 
         // 平移高度陣列
         if var heights = notebooks[idx].pageHeights, heights.count >= total {
@@ -3403,6 +3404,10 @@ public final class NotebookStore: ObservableObject {
             notebooks[idx].connectionAttachments, removing: pageIndex)
         notebooks[idx].audioAttachments = Self.shiftPages(
             notebooks[idx].audioAttachments, removing: pageIndex)
+        notebooks[idx].tapeAttachments = Self.shiftPages(
+            notebooks[idx].tapeAttachments, removing: pageIndex)
+        notebooks[idx].stickyAnchors = Self.shiftPages(
+            notebooks[idx].stickyAnchors, removing: pageIndex)
 
         // 內嵌的筆跡陣列也要跟著縮短。
         //
@@ -3498,15 +3503,12 @@ public final class NotebookStore: ObservableObject {
                               from: UInt32(from),
                               to: UInt32(to)) else { return from }
 
-        // 1. 筆跡檔案。先把受影響那一段整段讀進來，再照新的順序寫回去 ——
-        //    邊讀邊寫會把還沒讀到的那一頁覆蓋掉。
+        // 1. 每一頁在磁碟上的檔案：不只 `.drawing`，專業筆畫（`.proink*.json`）、擦除帳本、
+        //    同步基準與上次匯出的快照也都以頁碼命名。只搬 `.drawing` 的結果是 PencilKit 的字跡
+        //    搬過去了，炭筆／蠟筆寫的字、同步記帳留在原頁 —— 下一輪同步再把舊的帶回來。
         let touched = pageMoveTouchedRange(from: UInt32(from), to: UInt32(to)).map { Int($0) }
-        let loaded = touched.map { loadDrawing(notebookId: notebookId, pageIndex: $0) }
-        for (offset, page) in touched.enumerated() {
-            let destination = Int(pageIndexAfterMove(index: UInt32(page),
-                                                     from: UInt32(from),
-                                                     to: UInt32(to)))
-            saveDrawing(notebookId: notebookId, pageIndex: destination, drawing: loaded[offset])
+        permutePageFiles(notebookId: notebookId, pages: Set(touched)) { page in
+            Int(pageIndexAfterMove(index: UInt32(page), from: UInt32(from), to: UInt32(to)))
         }
 
         // 2. 高度與內嵌筆跡陣列：單純的搬一格。
@@ -3550,10 +3552,135 @@ public final class NotebookStore: ObservableObject {
             notebooks[idx].connectionAttachments, movingFrom: from, to: to)
         notebooks[idx].audioAttachments = Self.shiftPages(
             notebooks[idx].audioAttachments, movingFrom: from, to: to)
+        notebooks[idx].tapeAttachments = Self.shiftPages(
+            notebooks[idx].tapeAttachments, movingFrom: from, to: to)
+        notebooks[idx].stickyAnchors = Self.shiftPages(
+            notebooks[idx].stickyAnchors, movingFrom: from, to: to)
+
+        // 4. 以頁碼為鍵的逐頁資料（堆疊順序、筆跡下方的物件、鎖定、辨識文字、版面勾選）。
+        remapPageKeyedFields(at: idx) { page in
+            Int(pageIndexAfterMove(index: UInt32(max(0, page)), from: UInt32(from), to: UInt32(to)))
+        }
 
         notebooks[idx].lastModifiedDate = Date()
         persistData()
         return to
+    }
+
+    /// 把 `pages` 這幾頁的所有逐頁檔案改名到 `destination(頁次)`。
+    ///
+    /// 逐頁檔案的命名一律是 `{筆記 id}_p{頁次}.{種類}`，散在筆跡與同步基準兩個資料夾。
+    /// 用目錄列舉而不是一份副檔名清單：新增一種逐頁檔案時不必回來這裡補（漏補的症狀是
+    /// 那一種東西搬頁之後留在原頁）。
+    ///
+    /// 先全部改成暫存名再改成目標名 —— 直接改名會把還沒搬走的那一頁蓋掉。
+    private func permutePageFiles(notebookId: String, pages: Set<Int>, destination: (Int) -> Int) {
+        guard !pages.isEmpty else { return }
+        let fm = FileManager.default
+        let prefix = "\(notebookId)_p"
+        for dir in [drawingsDirectory, syncBaselineDirectory] {
+            guard let names = try? fm.contentsOfDirectory(atPath: dir.path) else { continue }
+            var staged: [(temp: URL, target: URL)] = []
+            for name in names where name.hasPrefix(prefix) {
+                let rest = name.dropFirst(prefix.count)
+                guard let dot = rest.firstIndex(of: "."),
+                      let page = Int(rest[rest.startIndex..<dot]),
+                      pages.contains(page) else { continue }
+                let target = dir.appending(path: "\(prefix)\(destination(page))\(rest[dot...])")
+                let temp = dir.appending(path: ".moving-\(UUID().uuidString)-\(name)")
+                guard (try? fm.moveItem(at: dir.appending(path: name), to: temp)) != nil else { continue }
+                staged.append((temp, target))
+            }
+            for item in staged {
+                try? fm.removeItem(at: item.target)
+                try? fm.moveItem(at: item.temp, to: item.target)
+            }
+        }
+    }
+
+    /// 把逐頁檔案排回原本的頁碼（「還原到初始狀態」）。`origins[目前頁碼]` = 原本的頁碼；
+    /// `nil` 是這次才新增的頁，它的檔案刪掉。原本有、現在沒有的頁（刪掉了）沒有檔案，由呼叫端寫回初始內容。
+    public func restorePageFiles(notebookId: String, origins: [Int?]) {
+        for (page, origin) in origins.enumerated() where origin == nil {
+            removePageFiles(notebookId: notebookId, page: page)
+        }
+        let kept = Set(origins.indices.filter { origins[$0] != nil })
+        permutePageFiles(notebookId: notebookId, pages: kept) { origins[$0] ?? $0 }
+    }
+
+    /// 刪掉某一頁的所有逐頁檔案（見 `permutePageFiles`）。只刪 `.drawing` 的話，
+    /// 那一頁的專業筆畫與同步記帳留在磁碟上，之後新增到同一個頁碼的頁會把它們撿回來。
+    private func removePageFiles(notebookId: String, page: Int) {
+        let fm = FileManager.default
+        let prefix = "\(notebookId)_p\(page)."
+        for dir in [drawingsDirectory, syncBaselineDirectory] {
+            guard let names = try? fm.contentsOfDirectory(atPath: dir.path) else { continue }
+            for name in names where name.hasPrefix(prefix) {
+                try? fm.removeItem(at: dir.appending(path: name))
+            }
+        }
+    }
+
+    /// 把 `pages` 這幾頁的逐頁檔案往後挪 `by` 頁（插入、複製頁時讓出位置）。由後往前挪不會互相覆蓋，
+    /// 但 `permutePageFiles` 本來就先改暫存名，順序無所謂。
+    private func shiftPageFiles(notebookId: String, from first: Int, through last: Int, by offset: Int) {
+        guard first <= last else { return }
+        permutePageFiles(notebookId: notebookId, pages: Set(first...last)) { $0 + offset }
+    }
+
+    /// 以頁碼為鍵的逐頁欄位，照 `transform` 換頁碼；回傳 `nil` 的那一頁整個丟掉（刪除頁）。
+    ///
+    /// 這幾個欄位是字典而不是帶 `pageIndex` 的陣列，`shiftPages` 管不到 —— 原本插入、刪除、
+    /// 搬動都沒有處理，症狀是堆疊順序、鎖定、筆跡下方的物件留在原頁碼，套到了隔壁頁的物件上。
+    private func remapPageKeyedFields(at idx: Int, _ transform: (Int) -> Int?) {
+        func remap<V>(_ map: [String: V]?) -> [String: V]? {
+            guard let map else { return nil }
+            var out: [String: V] = [:]
+            for (key, value) in map {
+                guard let page = Int(key) else { out[key] = value; continue }
+                if let moved = transform(page) { out[String(moved)] = value }
+            }
+            return out
+        }
+        notebooks[idx].objectOrderByPage = remap(notebooks[idx].objectOrderByPage)
+        notebooks[idx].underInkObjectIdsByPage = remap(notebooks[idx].underInkObjectIdsByPage)
+        let locked = remap(notebooks[idx].lockedObjectIdsByPage)
+        notebooks[idx].lockedObjectIdsByPage = (locked?.isEmpty ?? true) ? nil : locked
+        notebooks[idx].recognizedText = remap(notebooks[idx].recognizedText)
+        if let guides = notebooks[idx].checkedGuideItems {
+            // 鍵是 "頁次_x_y"。
+            var out: [String: Bool] = [:]
+            for (key, value) in guides {
+                var parts = key.split(separator: "_", maxSplits: 1, omittingEmptySubsequences: false)
+                guard parts.count == 2, let page = Int(parts[0]) else { out[key] = value; continue }
+                guard let moved = transform(page) else { continue }
+                parts[0] = Substring(String(moved))
+                out[parts.joined(separator: "_")] = value
+            }
+            notebooks[idx].checkedGuideItems = out
+        }
+    }
+
+    /// 複製一頁的筆跡檔（PencilKit 與專業筆畫）到另一個頁碼。
+    ///
+    /// 專業筆畫要換新的 id：複本若沿用原本的身分，擦掉其中一筆另一筆也跟著消失（見 `ProStroke.id`）。
+    /// 別台寫的那一份在複本上就是這台新寫的，併進自己的。同步記帳與基準不複製 —— 新的一頁從來沒同步過。
+    private func copyPageInk(notebookId: String, from source: Int, to destination: Int,
+                             targetNotebookId: String? = nil) {
+        let targetId = targetNotebookId ?? notebookId
+        saveDrawing(notebookId: targetId, pageIndex: destination,
+                    drawing: loadDrawing(notebookId: notebookId, pageIndex: source))
+        let dir = drawingsDirectory
+        let strokes = ProInkStore.load(in: dir, notebookId: notebookId, page: source, foreign: true)
+            + ProInkStore.load(in: dir, notebookId: notebookId, page: source)
+        let copies = strokes.map { stroke -> ProStroke in
+            var copy = stroke
+            copy.id = UUID().uuidString
+            return copy
+        }
+        if !copies.isEmpty {
+            ProInkStore.save(copies, in: dir, notebookId: targetId, page: destination)
+        }
     }
 
     /// 把幾頁複製（或搬）到另一本筆記本，回傳實際處理的頁數。
@@ -3596,9 +3723,11 @@ public final class NotebookStore: ObservableObject {
             let from = Int(source)
             let to = Int(plan.destinations[offset])
 
-            // 1. 筆跡。整頁複製，不是只複製看得見的那一段。
-            let drawing = loadDrawing(notebookId: sourceId, pageIndex: from)
-            saveDrawing(notebookId: targetId, pageIndex: to, drawing: drawing)
+            // 1. 筆跡。整頁複製，不是只複製看得見的那一段 —— 專業筆畫（炭筆、蠟筆…）也算，
+            //    原本只複製 `.drawing`，用那幾支筆寫的字留在原本那一本。
+            //    目的頁碼上可能留著舊版刪頁遺留的檔案，先清掉。
+            removePageFiles(notebookId: targetId, page: to)
+            copyPageInk(notebookId: sourceId, from: from, to: to, targetNotebookId: targetId)
 
             // 2. 頁高與內嵌筆跡陣列。
             let sourceHeights = notebooks[sourceIdx].pageHeights
@@ -3654,6 +3783,9 @@ public final class NotebookStore: ObservableObject {
             notebooks[targetIdx].audioAttachments = Self.appendCopies(
                 of: notebooks[sourceIdx].audioAttachments, page: from,
                 into: notebooks[targetIdx].audioAttachments, newPage: to)
+            notebooks[targetIdx].tapeAttachments = Self.appendCopies(
+                of: notebooks[sourceIdx].tapeAttachments, page: from,
+                into: notebooks[targetIdx].tapeAttachments, newPage: to)
 
             notebooks[targetIdx].pageCount = to + 1
         }
@@ -3718,17 +3850,11 @@ public final class NotebookStore: ObservableObject {
         let total = notebooks[idx].pageCount
         guard pageIndex >= 0, pageIndex < total else { return pageIndex }
 
-        let drawingToCopy = loadDrawing(notebookId: notebookId, pageIndex: pageIndex)
-
-        // 後續頁面往後移動一格
-        var p = total
-        while p > pageIndex + 1 {
-            let prev = loadDrawing(notebookId: notebookId, pageIndex: p - 1)
-            saveDrawing(notebookId: notebookId, pageIndex: p, drawing: prev)
-            p -= 1
-        }
-        // 寫入複製內容至 pageIndex + 1
-        saveDrawing(notebookId: notebookId, pageIndex: pageIndex + 1, drawing: drawingToCopy)
+        // 後續頁面的所有逐頁檔案往後挪一頁，再把這一頁的筆跡（含專業筆畫）複製到 pageIndex + 1。
+        removePageFiles(notebookId: notebookId, page: total)
+        shiftPageFiles(notebookId: notebookId, from: pageIndex + 1, through: total - 1, by: 1)
+        copyPageInk(notebookId: notebookId, from: pageIndex, to: pageIndex + 1)
+        remapPageKeyedFields(at: idx) { $0 > pageIndex ? $0 + 1 : $0 }
 
         // 複製高度
         var heights = notebooks[idx].pageHeights ?? Array(repeating: 1800.0, count: total)
@@ -3774,6 +3900,10 @@ public final class NotebookStore: ObservableObject {
             notebooks[idx].connectionAttachments, inserting: insertIndex)
         notebooks[idx].audioAttachments = Self.shiftPages(
             notebooks[idx].audioAttachments, inserting: insertIndex)
+        notebooks[idx].tapeAttachments = Self.shiftPages(
+            notebooks[idx].tapeAttachments, inserting: insertIndex)
+        notebooks[idx].stickyAnchors = Self.shiftPages(
+            notebooks[idx].stickyAnchors, inserting: insertIndex)
 
         if insertIndex <= notebooks[idx].pagesData.count {
             let copied = insertIndex - 1 < notebooks[idx].pagesData.count
