@@ -1849,8 +1849,13 @@ private fun InkScreen(
             ?: notebook?.second
     }
 
+    // 上一個引擎。別台同步進來要重開 session 時，新引擎先借它的筆畫當畫面（見 `seedDisplayFrom`），
+    // 不然背景讀檔那段時間整頁是白的。只在同一頁才借 —— 換頁不能把上一頁的字帶過來。
+    val previousEngine = remember(notebookId) { arrayOfNulls<InkEngine>(1) }
     val engine = remember(notebook, pageId) {
         InkEngine(session = notebook?.first, pageId = pageId).apply {
+            previousEngine[0]?.takeIf { it.pageKey == (pageId ?: "") }?.let { seedDisplayFrom(it) }
+            previousEngine[0] = this
             // 一筆畫完就通知同步。**會去抖動** —— 使用者還在寫字時
             // 每一筆都推只是浪費電，而且會拖慢正在編輯的這一本。
             onContentCommitted = { com.kairumo.padnote.sync.AutoSync.noteLocalEdit(activity) }
@@ -1882,7 +1887,7 @@ private fun InkScreen(
             notebookId != null &&
             remoteChange.notebookId.equals(notebookId, ignoreCase = true)
         ) {
-            while (engine.isDrawing) kotlinx.coroutines.delay(50)
+            while (engine.isDrawing || InkEngine.anyDrawing) kotlinx.coroutines.delay(50)
             sessionRevision++
         }
     }
@@ -3871,7 +3876,7 @@ private fun InkScreen(
                             pageDisplayMode = if (pageDisplayMode == PageDisplayMode.CONTINUOUS) {
                                 // 整頁模式的引擎在連續模式期間一直留著舊的筆畫：在連續模式用套索搬過、
                                 // 剪下的筆跡，換回來會出現在原位（看起來像「跳回去了」）。換回來時重讀核心。
-                                // 用 load() 不用 loadAsync()：後者會把「核心裡已經沒有的筆畫」當成還沒存檔的留下來。
+                                // 同步讀：換回來的第一幀就要是對的。還在寫入佇列裡的筆畫照樣保留（見 InkEngine.applyLoaded）。
                                 engine.load()
                                 revision++
                                 clearToken++

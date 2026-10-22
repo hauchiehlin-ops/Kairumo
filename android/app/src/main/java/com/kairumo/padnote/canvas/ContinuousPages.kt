@@ -206,7 +206,22 @@ fun ContinuousPagesView(
     //
     // 每一頁的引擎與物件放在這裡的快取，不放在清單項目裡：捲出畫面的頁面會被
     // `LazyColumn` 拆掉，引擎裡的復原紀錄跟著消失，回頭復原那一頁的筆畫就退錯東西。
-    val runtimes = remember(session) { HashMap<String, PageRuntime>() }
+    // 重開 session（別台同步進來）會換一份新的快取。舊的那份留一個參照：新頁面的引擎先借舊引擎的筆畫
+    // 當畫面，背景讀完再換成套件的內容 —— 不然每一頁都會白一下（見 InkEngine.seedDisplayFrom）。
+    val runtimeContext = androidx.compose.ui.platform.LocalContext.current
+    val previousRuntimes = remember { arrayOfNulls<HashMap<String, PageRuntime>>(1) }
+    val runtimes = remember(session) {
+        HashMap<String, PageRuntime>().also { fresh ->
+            val old = previousRuntimes[0]
+            previousRuntimes[0] = fresh
+            if (old != null) {
+                for ((id, runtime) in old) {
+                    if (id.isEmpty()) continue
+                    fresh[id] = PageRuntime(session, id, runtimeContext).also { it.engine.seedDisplayFrom(runtime.engine) }
+                }
+            }
+        }
+    }
     val history = remember(session, pageCount) { CanvasHistory() }
     val currentFocus by androidx.compose.runtime.rememberUpdatedState(focusIndex)
     val currentOnFocusChange by androidx.compose.runtime.rememberUpdatedState(onFocusChange)

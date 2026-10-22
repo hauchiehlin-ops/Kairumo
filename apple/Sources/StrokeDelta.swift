@@ -99,6 +99,51 @@ enum StrokeDelta {
 }
 
 
+/// 三方合併一頁筆跡：別台同步進來之後，磁碟上是新的內容，畫面上還有這台沒寫出去的筆畫。
+///
+/// 以磁碟為準，補回 `local` 比 `base` 多寫的、拿掉 `local` 比 `base` 少的（這台擦掉的）。
+/// 不知道基準（`base == nil`）時只補不拿：寧可留著一筆別台擦掉的，也不能吞掉使用者剛寫的字。
+enum InkMerge {
+    static func merged(disk: PKDrawing, local: PKDrawing, base: PKDrawing?) -> PKDrawing {
+        let written: [PKStroke]
+        var erased: [StrokeDelta.Identity: Int] = [:]
+        if let base {
+            written = StrokeDelta.added(in: local, since: base)
+            for stroke in StrokeDelta.removed(in: local, since: base) {
+                erased[StrokeDelta.Identity(stroke), default: 0] += 1
+            }
+        } else {
+            written = local.strokes
+        }
+        let fresh = StrokeDelta.added(in: PKDrawing(strokes: written), since: disk)
+        guard !fresh.isEmpty || !erased.isEmpty else { return disk }
+        var kept: [PKStroke] = []
+        kept.reserveCapacity(disk.strokes.count + fresh.count)
+        var removedAny = false
+        for stroke in disk.strokes {
+            let identity = StrokeDelta.Identity(stroke)
+            if let count = erased[identity], count > 0 {
+                erased[identity] = count - 1
+                removedAny = true
+            } else {
+                kept.append(stroke)
+            }
+        }
+        guard !fresh.isEmpty || removedAny else { return disk }
+        return PKDrawing(strokes: kept + fresh)
+    }
+}
+
+/// 每一頁「最後一次與磁碟一致」的筆跡。參照型別：更新它不必重算畫面。
+final class InkDiskBaselines {
+    private var pages: [Int: PKDrawing] = [:]
+    subscript(page: Int) -> PKDrawing? {
+        get { pages[page] }
+        set { pages[page] = newValue }
+    }
+    func removeAll() { pages.removeAll() }
+}
+
 /// 使用者在這台擦掉的 PencilKit 筆畫的身分，每頁一份。
 ///
 /// # 為什麼需要

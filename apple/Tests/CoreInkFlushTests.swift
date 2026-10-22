@@ -76,3 +76,59 @@ final class CoreInkFlushTests: XCTestCase {
         XCTAssertEqual(failed.map(\.page), [0])
     }
 }
+
+/// 同步重讀時的三方合併：磁碟上是別台合併過的新內容，畫面上有這台還沒寫出去的筆畫。
+/// 做錯的後果就是使用者回報的「寫好的字消失、過一會兒又出現」或「別台的筆畫被蓋掉」。
+final class InkMergeTests: XCTestCase {
+    private func stroke(_ seed: Int) -> PKStroke {
+        var points: [PKStrokePoint] = []
+        for i in 0..<6 {
+            points.append(PKStrokePoint(
+                location: CGPoint(x: 10 + CGFloat(seed) * 25 + CGFloat(i) * 4, y: 30 + CGFloat(i * i)),
+                timeOffset: TimeInterval(i) * 0.01, size: CGSize(width: 3, height: 3),
+                opacity: 1, force: 0.5, azimuth: 0, altitude: CGFloat.pi / 2))
+        }
+        return PKStroke(ink: PKInk(.pen, color: .black),
+                        path: PKStrokePath(controlPoints: points, creationDate: Date(timeIntervalSince1970: 1_700_000_000)))
+    }
+
+    private func keys(_ drawing: PKDrawing) -> [String] {
+        drawing.strokes.map { StrokeDelta.Identity($0).key }.sorted()
+    }
+
+    func testStrokesWrittenBeforeTheImportSurviveAndRemoteStrokesAppear() {
+        let base = PKDrawing(strokes: [stroke(0)])
+        let local = PKDrawing(strokes: [stroke(0), stroke(1)])          // 這台剛寫了 1，還沒寫出去
+        let disk = PKDrawing(strokes: [stroke(0), stroke(2)])           // 別台寫了 2
+        let merged = InkMerge.merged(disk: disk, local: local, base: base)
+        XCTAssertEqual(keys(merged), keys(PKDrawing(strokes: [stroke(0), stroke(1), stroke(2)])))
+    }
+
+    func testStrokesErasedHereStayErasedAndRemoteErasuresAreKept() {
+        let base = PKDrawing(strokes: [stroke(0), stroke(1), stroke(2)])
+        let local = PKDrawing(strokes: [stroke(0), stroke(2)])          // 這台擦了 1
+        let disk = PKDrawing(strokes: [stroke(1), stroke(2)])           // 別台擦了 0
+        let merged = InkMerge.merged(disk: disk, local: local, base: base)
+        XCTAssertEqual(keys(merged), keys(PKDrawing(strokes: [stroke(2)])))
+    }
+
+    func testNothingLocalMeansTheDiskWins() {
+        let base = PKDrawing(strokes: [stroke(0)])
+        let disk = PKDrawing(strokes: [stroke(0), stroke(3)])
+        XCTAssertEqual(InkMerge.merged(disk: disk, local: base, base: base), disk)
+    }
+
+    func testStrokesAlreadyOnDiskAreNotDuplicated() {
+        let base = PKDrawing(strokes: [stroke(0)])
+        let local = PKDrawing(strokes: [stroke(0), stroke(1)])
+        let disk = PKDrawing(strokes: [stroke(0), stroke(1)])           // 匯出時已經帶出去了
+        XCTAssertEqual(InkMerge.merged(disk: disk, local: local, base: base).strokes.count, 2)
+    }
+
+    func testUnknownBaselineNeverDropsLocalStrokes() {
+        let local = PKDrawing(strokes: [stroke(0), stroke(1)])
+        let disk = PKDrawing(strokes: [stroke(2)])
+        let merged = InkMerge.merged(disk: disk, local: local, base: nil)
+        XCTAssertEqual(keys(merged), keys(PKDrawing(strokes: [stroke(0), stroke(1), stroke(2)])))
+    }
+}

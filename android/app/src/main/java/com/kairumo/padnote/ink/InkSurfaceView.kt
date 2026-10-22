@@ -86,9 +86,14 @@ class InkSurfaceView(
             canvas.drawColor(Color.WHITE)
             // 這一層每次 commit 都是全新的緩衝，所以要重畫全部內容 ——
             // 只畫增量的話，抬筆瞬間先前的筆畫會整片消失。
+            // 每一筆用**它自己的**顏色與粗細。原本全部用畫筆目前的設定（而且一律黑色）：
+            // 抬筆那一刻整頁重畫，先前寫的彩色字全變成黑的、粗細也跟著現在的筆走 ——
+            // 看起來就是「筆跡閃一下、變了樣」。
             for (stroke in engine.strokes) {
-                canvas.drawStroke(stroke.points, stroke.tool)
+                paint.color = argbOf(stroke.colorRgba)
+                canvas.drawStroke(stroke.points, stroke.tool, stroke.baseWidth)
             }
+            paint.color = argbOf(engine.colorRgba)
             // 預測線不進這一層 —— 它不是使用者寫的東西，抬筆後就該消失。
         }
     }
@@ -236,11 +241,22 @@ class InkSurfaceView(
 
     private fun Canvas.drawSegment(s: Segment) {
         val p = if (s.predicted) predictedPaint else paint
+        // 落筆當下畫的就要是這支筆的顏色，不然抬筆換成真正顏色時會跳色。
+        val color = argbOf(engine.colorRgba)
+        p.color = color
+        if (s.predicted) p.alpha = (android.graphics.Color.alpha(color) * 140) / 255
         p.strokeWidth = s.width
         drawLine(s.x1, s.y1, s.x2, s.y2, p)
     }
 
-    private fun Canvas.drawStroke(points: List<StrokePoint>, tool: ToolKind) {
-        InkBrushRenderer.drawStrokeOnCanvas(this, paint, points, tool, engine.baseWidth, pxPerDp)
+    private fun Canvas.drawStroke(points: List<StrokePoint>, tool: ToolKind, baseWidth: Float) {
+        InkBrushRenderer.drawStrokeOnCanvas(this, paint, points, tool, baseWidth, pxPerDp)
     }
+
+    private fun argbOf(rgba: ByteArray): Int =
+        if (rgba.size >= 4) {
+            android.graphics.Color.argb(
+                rgba[3].toInt() and 0xFF, rgba[0].toInt() and 0xFF,
+                rgba[1].toInt() and 0xFF, rgba[2].toInt() and 0xFF)
+        } else Color.BLACK
 }

@@ -13,6 +13,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock
 import java.util.ArrayDeque
 
 /** Serializes ink package mutations away from the UI thread. */
+// profile-scope: device 只記寫入佇列裡還在路上的筆畫 id；切換設定檔時行程重啟，佇列跟著清空
 internal object InkPackageWriter {
     private val executor = Executors.newSingleThreadExecutor { task ->
         Thread(task, "kairumo-ink-package-writer").apply { isDaemon = true }
@@ -23,6 +24,21 @@ internal object InkPackageWriter {
     // Accessed only on [executor]. Keep a failed operation at the head so a later
     // erase cannot overtake its add, and sync cannot pass an unfinished mutation.
     private val pendingMutations = ArrayDeque<() -> Unit>()
+
+    // 已排進佇列、還沒寫進套件的筆畫 id。呼叫端（主執行緒）排入時登記，寫入成功後才拿掉。
+    //
+    // 重讀核心（換 session、套索之後、切回整頁）讀到的是**寫入之前**的套件：剛畫完的那幾筆
+    // 不在裡面，剛擦掉的那幾筆還在裡面。不知道哪些還在路上的話，只能二選一 —— 全部照讀回來的
+    // （剛寫的字消失、過一會兒再出現），或全部保留記憶體裡的（別台擦掉的筆畫永遠擦不掉）。
+    // 有這兩份名單就能逐筆判斷，見 `InkEngine.applyLoaded`。
+    private val pendingAdds: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()
+    private val pendingErases: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()
+
+    /** 這一筆的新增還沒寫進套件。 */
+    fun isAddPending(strokeId: String): Boolean = strokeId in pendingAdds
+
+    /** 這一筆的擦除還沒寫進套件。 */
+    fun isErasePending(strokeId: String): Boolean = strokeId in pendingErases
 
     fun add(
         session: PadnoteSession,
@@ -37,6 +53,7 @@ internal object InkPackageWriter {
     ) {
         val color = colorRgba.copyOf()
         val snapshot = points.toList()
+        pendingAdds += strokeId
         enqueueMutation {
             packageGate.readLock().lock()
             try {
@@ -46,10 +63,12 @@ internal object InkPackageWriter {
             } finally {
                 packageGate.readLock().unlock()
             }
+            pendingAdds -= strokeId
         }
     }
 
     fun erase(session: PadnoteSession, pageId: String, strokeId: String) {
+        pendingErases += strokeId
         enqueueMutation {
             packageGate.readLock().lock()
             try {
@@ -57,6 +76,7 @@ internal object InkPackageWriter {
             } finally {
                 packageGate.readLock().unlock()
             }
+            pendingErases -= strokeId
         }
     }
 

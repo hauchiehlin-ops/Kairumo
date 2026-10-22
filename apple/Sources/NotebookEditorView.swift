@@ -748,6 +748,74 @@ final class AdaptiveCanvasView: PKCanvasView {
 
     private(set) var activeTouchesCount: Int = 0
     var pendingRetractDate: Date? = nil
+
+    // MARK: 落筆中不換筆跡
+
+    /// PencilKit 正在收一筆（落筆到抬筆），由 delegate 的 `canvasViewDidBegin/EndUsingTool` 維護。
+    ///
+    /// 這段期間任何程式指派 `drawing` 都會把**正在寫的那一筆**取消掉 —— 使用者看到的是
+    /// 「筆尖碰到紙、畫出來的線不見了」或「整頁空白一下」。同步重讀、換頁讀檔、補畫……
+    /// 這些都得等這一筆抬起來再做（見 `whenInkIdle`）。
+    ///
+    /// 不能用 `activeTouchesCount` 判斷：繪圖手勢一辨識就把觸控從這個 view 取消
+    /// （`touchesCancelled`），計數歸零的時候筆其實還在紙上。
+    private var isInkingActive = false
+    private var inkingBeganAt = Date.distantPast
+    private var inkIdleWork: [() -> Void] = []
+    private var inkIdleRecheckScheduled = false
+
+    /// 一筆畫最長算多久。超過就當成「結束的通知漏掉了」—— 卡在「落筆中」的話，
+    /// 換頁、同步進來的筆跡會一直等下去，畫布停在舊的內容上，之後存檔就存錯頁。
+    private static let maxStrokeDuration: TimeInterval = 8
+
+    var isInking: Bool {
+        let state = drawingGestureRecognizer.state
+        if state == .began || state == .changed { return true }
+        return isInkingActive && Date().timeIntervalSince(inkingBeganAt) < Self.maxStrokeDuration
+    }
+
+    func inkingBegan() {
+        isInkingActive = true
+        inkingBeganAt = Date()
+    }
+
+    func inkingEnded() {
+        isInkingActive = false
+        runInkIdleWork()
+    }
+
+    /// 不在落筆就馬上做；在落筆就等這一筆抬起來。
+    func whenInkIdle(_ work: @escaping () -> Void) {
+        if isInking {
+            inkIdleWork.append(work)
+            scheduleInkIdleRecheck()
+        } else {
+            work()
+        }
+    }
+
+    /// 保險：不只靠「結束」的通知。等著的事每一小段時間再看一次，筆一離開就做。
+    private func scheduleInkIdleRecheck() {
+        guard !inkIdleRecheckScheduled else { return }
+        inkIdleRecheckScheduled = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
+            guard let self else { return }
+            self.inkIdleRecheckScheduled = false
+            if self.isInking {
+                self.scheduleInkIdleRecheck()
+            } else {
+                self.isInkingActive = false
+                self.runInkIdleWork()
+            }
+        }
+    }
+
+    private func runInkIdleWork() {
+        guard !isInking, !inkIdleWork.isEmpty else { return }
+        let work = inkIdleWork
+        inkIdleWork.removeAll()
+        work.forEach { $0() }
+    }
     var onPendingRetractNeeded: ((Date) -> Void)? = nil
 
     /// 套索圈選：直接收觸控，不靠 `UIPanGestureRecognizer`。
@@ -854,6 +922,16 @@ final class AdaptiveCanvasView: PKCanvasView {
     }
 
     private func checkPendingRetract() {
+        // 保險：萬一沒收到 `canvasViewDidEndUsingTool`（被別的手勢取消時），手放開之後也要把等著的事做完。
+        if activeTouchesCount == 0, !inkIdleWork.isEmpty {
+            DispatchQueue.main.async { [weak self] in
+                guard let self, self.activeTouchesCount == 0 else { return }
+                if self.drawingGestureRecognizer.state != .began && self.drawingGestureRecognizer.state != .changed {
+                    self.isInkingActive = false
+                }
+                self.runInkIdleWork()
+            }
+        }
         if activeTouchesCount == 0, let date = pendingRetractDate {
             pendingRetractDate = nil
             onPendingRetractNeeded?(date)
@@ -907,27 +985,34 @@ final class AdaptiveCanvasView: PKCanvasView {
         coordinator?.isProgrammaticUpdate = false
         // 畫布綁定的那一份也要一起換。連續頁面模式每一頁有自己的 `@State drawing`，
         // 不換的話下一次 `updateUIView` 會用舊的那份把畫布蓋回去 —— 筆跡跳回原位。
-        coordinator?.parent.drawing = newDrawing
+        coordinator?.publish(newDrawing)
         setNeedsDisplay()
         for subview in subviews { subview.setNeedsDisplay() }
     }
 
     /// 強制畫布立即重新刷出指定筆跡（若無傳入則取畫布既有 drawing），無需使用者落筆點擊觸發
+    ///
+    /// **落筆中不做**：這時指派會把正在寫的那一筆取消。綁定那一份由 `updateUIView` 等抬筆後再換上。
+    /// 下一輪補畫時只在**畫布內容沒變**的情況下重新指派同一份 —— 原本是無條件把當時抓的那一份
+    /// 再指派一次：這中間使用者剛好寫完一筆的話，那一筆就被舊的快照蓋掉（看起來是「寫好的字
+    /// 消失，過一會兒又出現」：綁定裡還有它，下一次 `updateUIView` 又把它放回來）。
     func forceDisplayRefresh(with newDrawing: PKDrawing? = nil) {
+        guard !isInking else { return }
         let coordinator = delegate as? CanvasRepresentable.Coordinator
         let target = newDrawing ?? self.drawing
         guard target.strokes.count > 0 else { return }
-        coordinator?.isProgrammaticUpdate = true
-        self.drawing = target
-        coordinator?.isProgrammaticUpdate = false
-        self.setNeedsLayout()
-        self.layoutIfNeeded()
+        if self.drawing != target {
+            coordinator?.isProgrammaticUpdate = true
+            self.drawing = target
+            coordinator?.isProgrammaticUpdate = false
+            coordinator?.noteCanvasShows(target)
+        }
         self.setNeedsDisplay()
         for subview in self.subviews {
             subview.setNeedsDisplay()
         }
         DispatchQueue.main.async { [weak self] in
-            guard let self, self.window != nil, self.activeTouchesCount == 0 else { return }
+            guard let self, self.window != nil, !self.isInking, self.drawing == target else { return }
             let coord = self.delegate as? CanvasRepresentable.Coordinator
             coord?.isProgrammaticUpdate = true
             self.drawing = target
@@ -971,11 +1056,11 @@ final class AdaptiveCanvasView: PKCanvasView {
         let strokeCount = max(drawing.strokes.count, initialLoadedStrokeCount)
         guard strokeCount > 0 else { return }
         didInitialRefresh = true
-        guard activeTouchesCount == 0 else { return }
+        guard activeTouchesCount == 0, !isInking else { return }
         if self.undoManager?.canUndo == true { return }
 
         DispatchQueue.main.async { [weak self] in
-            guard let self, self.window != nil, self.activeTouchesCount == 0 else { return }
+            guard let self, self.window != nil, self.activeTouchesCount == 0, !self.isInking else { return }
             if self.undoManager?.canUndo == true {
                 self.setNeedsDisplay()
                 return
@@ -1099,6 +1184,8 @@ struct CanvasRepresentable: UIViewRepresentable {
     var onPencilTapInTypeMode: ((CGPoint) -> Void)? = nil
     /// 筆尖或單指落下停住不動：叫出飛梭工具盤（window 座標）。回傳 true 表示已處理。
     var onPressAndHold: ((CGPoint) -> Bool)? = nil
+    /// 外面要求專業筆畫層從磁碟重讀（別台同步進來）時加一。只重讀那一層，不重建畫布。
+    var proReloadToken: Int = 0
 
     /// 目前該用哪個輸入政策。
     ///
@@ -1192,6 +1279,8 @@ struct CanvasRepresentable: UIViewRepresentable {
         canvas.drawing = drawing
         canvas.initialLoadedStrokeCount = drawing.strokes.count
         context.coordinator.isProgrammaticUpdate = false
+        context.coordinator.lastSyncedDrawing = drawing
+        context.coordinator.lastProReloadToken = proReloadToken
 
         // 給自動化測試一個穩定的抓取點（畫面上有多個 scroll view）
         canvas.accessibilityIdentifier = "editor.canvas"
@@ -1368,14 +1457,18 @@ struct CanvasRepresentable: UIViewRepresentable {
             adaptive.refreshPointer(for: selectedTool, strokeWidth: strokeWidth)
         }
 
-        if uiView.drawing != drawing {
-            CanvasDiag.log("updateUIView 重新指派 drawing：畫布 \(uiView.drawing.strokes.count) 筆 → \(drawing.strokes.count) 筆，復原項 \(uiView.undoManager?.canUndo == true ? "有" : "無")")
-            context.coordinator.isProgrammaticUpdate = true
-            uiView.drawing = drawing
-            context.coordinator.isProgrammaticUpdate = false
-            if let adaptive = uiView as? AdaptiveCanvasView {
-                adaptive.initialLoadedStrokeCount = drawing.strokes.count
-                adaptive.forceDisplayRefresh(with: drawing)
+        // 綁定被外面換過（換頁、讀檔、同步、套索、復原……）才動畫布；見 `lastSyncedDrawing`。
+        let coordinator = context.coordinator
+        if drawing != coordinator.lastSyncedDrawing {
+            if uiView.drawing == drawing {
+                coordinator.lastSyncedDrawing = drawing
+            } else if let adaptive = uiView as? AdaptiveCanvasView, adaptive.isInking {
+                // 正在寫：現在換會把寫到一半的那一筆取消。抬筆再換，並補上這一筆。
+                CanvasDiag.log("落筆中收到外部筆跡（\(drawing.strokes.count) 筆），延後到抬筆")
+                coordinator.deferExternal(drawing, on: adaptive)
+            } else {
+                CanvasDiag.log("updateUIView 換上外部筆跡：畫布 \(uiView.drawing.strokes.count) 筆 → \(drawing.strokes.count) 筆")
+                coordinator.applyExternal(drawing, to: uiView)
             }
             // 讀數要跟著更新。
             //
@@ -1386,6 +1479,13 @@ struct CanvasRepresentable: UIViewRepresentable {
             // 儀器沒動**的假象。實際被這個騙過一次。
             if ProcessInfo.processInfo.environment["KAIRUMO_UITEST"] == "1" {
                 uiView.accessibilityValue = CanvasRepresentable.testReadout(uiView)
+            }
+        }
+        // 專業筆畫層：外面要求重讀（別台同步進來）時重讀，落筆中等抬筆。
+        if proReloadToken != coordinator.lastProReloadToken {
+            coordinator.lastProReloadToken = proReloadToken
+            if let adaptive = uiView as? AdaptiveCanvasView {
+                adaptive.whenInkIdle { [weak adaptive] in adaptive?.proLayer?.reload() }
             }
         }
         uiView.isRulerActive = isRulerActive
@@ -1612,6 +1712,82 @@ struct CanvasRepresentable: UIViewRepresentable {
         var parent: CanvasRepresentable
         weak var backgroundView: TemplateCanvasBackgroundView?
         var isProgrammaticUpdate: Bool = false
+
+        // MARK: 畫布與綁定之間誰是新的
+
+        /// 畫布與綁定上一次「講好」的那一份筆跡：畫布發布出去的，或從綁定換上畫布的。
+        ///
+        /// `updateUIView` 原本只比「畫布 ≠ 綁定」就把綁定那份換上畫布。可是綁定常常只是**比較舊**
+        /// —— 剛寫完的那一筆還沒經過 delegate 寫回去、或是別的狀態先觸發了一輪更新 ——
+        /// 於是剛寫好的字被舊快照蓋掉，等下一次回寫才又出現（「筆跡先消失再出現」）。
+        ///
+        /// 現在只有**綁定真的被外面換過**（≠ 這一份）才動畫布；綁定還是這一份、畫布卻不一樣，
+        /// 代表畫布比較新（使用者剛寫的），什麼都不做，等 delegate 發布。
+        var lastSyncedDrawing: PKDrawing?
+        var lastProReloadToken = 0
+        /// 落筆中收到的外部筆跡（同步、讀檔……），等抬筆再換上，見 `deferExternal`。
+        private var deferredExternal: PKDrawing?
+        private var deferredBase: PKDrawing?
+
+        /// 把畫布的內容寫回綁定。
+        func publish(_ drawing: PKDrawing) {
+            lastSyncedDrawing = drawing
+            parent.drawing = drawing
+        }
+
+        /// 畫布已經顯示這一份（程式直接指派過的）。
+        func noteCanvasShows(_ drawing: PKDrawing) {
+            if parent.drawing == drawing { lastSyncedDrawing = drawing }
+        }
+
+        /// 把外面給的筆跡換上畫布（不經 delegate、不當成使用者的編輯）。
+        func applyExternal(_ drawing: PKDrawing, to canvas: PKCanvasView) {
+            isProgrammaticUpdate = true
+            canvas.drawing = drawing
+            isProgrammaticUpdate = false
+            lastSyncedDrawing = drawing
+            if let adaptive = canvas as? AdaptiveCanvasView {
+                adaptive.initialLoadedStrokeCount = drawing.strokes.count
+                adaptive.forceDisplayRefresh(with: drawing)
+            }
+        }
+
+        /// 落筆中收到外部筆跡：記下來，抬筆後換上，**並把這段期間寫的筆畫補進去**。
+        ///
+        /// 外面那一份是在這一筆之前算出來的，直接換上會把剛寫的字蓋掉。基準是落筆前講好的那一份：
+        /// 畫布比它多出來的就是使用者這段期間寫的。
+        func deferExternal(_ drawing: PKDrawing, on canvas: AdaptiveCanvasView) {
+            if deferredExternal == nil { deferredBase = lastSyncedDrawing ?? PKDrawing() }
+            deferredExternal = drawing
+            let page = parent.proInk?.pageIndex
+            canvas.whenInkIdle { [weak self, weak canvas] in
+                guard let self, let canvas, let external = self.deferredExternal else { return }
+                let base = self.deferredBase ?? PKDrawing()
+                self.deferredExternal = nil
+                self.deferredBase = nil
+                // 等的這段期間換了頁：那一份已經不是這張畫布的了，新頁的由 `updateUIView` 換上。
+                guard self.parent.proInk?.pageIndex == page else { return }
+                let written = StrokeDelta.added(in: canvas.drawing, since: base)
+                let fresh = StrokeDelta.added(in: PKDrawing(strokes: written), since: external)
+                let merged = fresh.isEmpty ? external : PKDrawing(strokes: external.strokes + fresh)
+                CanvasDiag.log("抬筆後換上延後的外部筆跡：\(external.strokes.count) 筆＋這段期間寫的 \(fresh.count) 筆")
+                self.applyExternal(merged, to: canvas)
+                self.publish(merged)
+                if !fresh.isEmpty { _ = self.parent.onDrawingChanged?(merged) }
+            }
+        }
+
+        func canvasViewDidBeginUsingTool(_ canvasView: PKCanvasView) {
+            (canvasView as? AdaptiveCanvasView)?.inkingBegan()
+        }
+
+        func canvasViewDidEndUsingTool(_ canvasView: PKCanvasView) {
+            // `canvasViewDrawingDidChange` 可能在這之後才到：排到下一輪，確保這一筆已經發布。
+            DispatchQueue.main.async { [weak canvasView] in
+                (canvasView as? AdaptiveCanvasView)?.inkingEnded()
+            }
+        }
+
         var shapeRefineTimer: DispatchWorkItem? = nil
         var lastStrokeCountBeforeRefine: Int = 0
 
@@ -1727,7 +1903,7 @@ struct CanvasRepresentable: UIViewRepresentable {
                 coordinator.isProgrammaticUpdate = true
                 canvas.drawing = target
                 coordinator.isProgrammaticUpdate = false
-                coordinator.parent.drawing = target
+                coordinator.publish(target)
                 _ = coordinator.parent.onDrawingChanged?(target)
                 coordinator.registerDrawingSwap(on: canvas, to: back, back: target)
             }
@@ -1772,7 +1948,7 @@ struct CanvasRepresentable: UIViewRepresentable {
                 (canvasView as? AdaptiveCanvasView)?.dropDeadUndoEntries(max: max(0, effective.strokes.count - corrected.strokes.count))
                 effective = corrected
             }
-            parent.drawing = effective
+            publish(effective)
 
             // 筆畫數也要跟著更新 —— 只在建立時寫一次的話，測試讀到的
             // 永遠是 0，而「畫了沒存」與「根本沒畫進去」看起來一模一樣。
@@ -1797,7 +1973,7 @@ struct CanvasRepresentable: UIViewRepresentable {
                     var strokes = drawing.strokes
                     strokes[strokes.count - 1] = refined
                     self.replaceLastStroke(in: canvasView, resulting: PKDrawing(strokes: strokes))
-                    self.parent.drawing = canvasView.drawing
+                    self.publish(canvasView.drawing)
                     _ = self.parent.onDrawingChanged?(canvasView.drawing)
                     #if os(iOS)
                     UIImpactFeedbackGenerator(style: .medium).impactOccurred()
@@ -2144,6 +2320,15 @@ public struct NotebookEditorView: View {
     /// 是 append-only；若每次回報都 append，會把同一筆的半成品寫成好幾筆。
     /// 因此畫布仍即時寫 `.drawing`，核心套件則停筆後用這個基準線只補新增筆畫。
     @State private var coreInkBaselines: [Int: PKDrawing] = [:]
+    /// 每一頁「最後一次與磁碟一致」的筆跡（讀進來的、或寫出去的）。同步重讀時用它分辨
+    /// 哪些筆畫是這台還沒寫出去的（見 `mergedWithDisk`）。放在參照型別裡：每一筆都會更新，
+    /// 寫 `@State` 的話整個編輯器每一筆重算一次。
+    @State private var inkDiskBaselines = InkDiskBaselines()
+    /// 連續模式「只重讀筆跡、不重建畫布」的世代（別台同步進來時加一）。
+    /// `continuousReloadGeneration` 會整個重建每一頁的畫布 —— 只留給還原、頁面結構改變這種真的要重來的情況。
+    @State private var continuousInkReloadGeneration = 0
+    /// 連續模式「只重建物件層」的世代（刪除、調整物件圖層之後）。
+    @State private var continuousObjectGeneration = 0
     @State private var pendingCoreInk: [Int: PKDrawing] = [:]
     @State private var coreInkWork: DispatchWorkItem? = nil
     /// 這一批待寫筆畫最早的那一筆的時間。見 `scheduleCoreInkFlush` 的上限說明。
@@ -3344,17 +3529,79 @@ public struct NotebookEditorView: View {
 
     private func handleNotebookPackageChanged(_ note: Notification) {
         let changedId = note.object as? String
-        if changedId == nil || changedId?.caseInsensitiveCompare(notebook.id) == .orderedSame {
-            coreInkBaselines.removeAll()
-            loadCurrentPage()
-            // 整份從套件重新讀進來（別台同步）：以新內容為復原基準，不登記成這台的一步；
-            // 也不是這台的修改，不能當成協同修改送出去。
-            objectHistory.reset(to: notebook)
-            collabSync.refreshShadow(from: notebook)
-            continuousReloadGeneration += 1
-            thumbnailRevision += 1
-            PageThumbnailRenderer.invalidateAll()
+        guard changedId == nil || changedId?.caseInsensitiveCompare(notebook.id) == .orderedSame else { return }
+        // 排好但還沒開始的寫入先停下：它手上的是同步之前的筆跡，現在寫出去會把剛匯入的合併結果蓋掉
+        // （別台的筆畫還會被當成「這台擦掉的」記進帳本）。等已經在背景佇列裡跑的寫入做完、
+        // 磁碟定下來，再合併重讀。
+        coreInkWork?.cancel()
+        coreInkWork = nil
+        afterCoreInkWrites { reloadAfterExternalChange() }
+    }
+
+    /// 別台同步進來之後重讀，**但不丟掉這台還沒寫出去的筆跡**。
+    ///
+    /// 原本直接 `loadCurrentPage()`：磁碟上是匯入當下的樣子，使用者在那之前零點幾秒寫的字還在
+    /// 待寫名單裡 —— 畫面先被換成沒有那幾筆的版本（字消失），待寫名單接著把舊版寫回磁碟，
+    /// 下一輪同步再讀回來（字又出現），別台剛同步過來的筆畫反而被蓋掉。連續模式更糟：
+    /// 每一頁的畫布整個重建，整片空白一下、寫到一半的那一筆直接不見。
+    private func reloadAfterExternalChange() {
+        coreInkBaselines.removeAll()
+        if let updated = store.notebooks.first(where: { $0.id == notebook.id }) {
+            self.notebook = updated
         }
+        PageGeometry.use(format: notebook.pageFormatId)
+        // 還沒寫出去的頁：以磁碟（已含別台的內容）為底，補回這台寫的、拿掉這台擦的。
+        for (page, pending) in pendingCoreInk {
+            if pageDisplayMode == .single && page == currentPageIndex { continue }
+            _ = mergedWithDisk(page: page, local: pending, updateBaseline: false)
+        }
+        if pageDisplayMode == .single {
+            // 畫布上的才是最新的 —— 但只在它顯示的**就是這一頁**時。剛換頁（新增頁、翻頁）那一瞬間
+            // 畫布可能還是上一頁：拿它來合併，上一頁的字會被當成這一頁「還沒寫出去的筆畫」寫進這一頁。
+            let live = canvasShowsCurrentPage ? (canvasView?.drawing ?? currentDrawing) : currentDrawing
+            let merged = mergedWithDisk(page: currentPageIndex, local: live, updateBaseline: true)
+            // 只換綁定：畫布由 `updateUIView` 換上（正在寫的話等抬筆，並補上那一筆）。
+            currentDrawing = merged
+            lastStrokeCount = merged.strokes.count
+            currentPageHeight = notebook.height(forPage: currentPageIndex)
+            (canvasView as? AdaptiveCanvasView)?.whenInkIdle { [weak canvas = canvasView as? AdaptiveCanvasView] in
+                canvas?.proLayer?.reload()
+            }
+        }
+        if !pendingCoreInk.isEmpty { scheduleCoreInkFlush() }
+        // 整份從套件重新讀進來（別台同步）：以新內容為復原基準，不登記成這台的一步；
+        // 也不是這台的修改，不能當成協同修改送出去。
+        objectHistory.reset(to: notebook)
+        collabSync.refreshShadow(from: notebook)
+        continuousInkReloadGeneration += 1
+        continuousObjectGeneration += 1
+        thumbnailRevision += 1
+        PageThumbnailRenderer.invalidateAll()
+    }
+
+    /// 目前的畫布顯示的是不是 `currentPageIndex` 那一頁（畫布換頁要等下一輪 `updateUIView`）。
+    private var canvasShowsCurrentPage: Bool {
+        guard let coordinator = canvasView?.delegate as? CanvasRepresentable.Coordinator else { return false }
+        return coordinator.parent.proInk?.pageIndex == currentPageIndex
+    }
+
+    /// 磁碟上的這一頁，加上 `local` 比基準多寫的、減去 `local` 比基準少的（這台寫了／擦了、還沒寫出去的）。
+    ///
+    /// 結果與磁碟不同時登記成待寫，讓合併結果落盤並追加進套件。`updateBaseline` 為 true 時把基準推到
+    /// 這一次讀到的磁碟內容；同一頁在同一輪會被算兩次的（連續模式：先算待寫、頁面自己再算一次畫面）
+    /// 第一次不要推，兩次才會用同一個基準、得到同一個結果。
+    private func mergedWithDisk(page: Int, local: PKDrawing, updateBaseline: Bool) -> PKDrawing {
+        let disk = store.loadDrawing(notebookId: notebook.id, pageIndex: page)
+        let merged = InkMerge.merged(disk: disk, local: local, base: inkDiskBaselines[page])
+        if updateBaseline { inkDiskBaselines[page] = disk }
+        if merged != disk {
+            if updateBaseline || pendingCoreInk[page] != nil {
+                pendingCoreInk[page] = merged
+            }
+        } else if pendingCoreInk[page] != nil {
+            pendingCoreInk[page] = nil
+        }
+        return merged
     }
 
     @ViewBuilder
@@ -5262,6 +5509,8 @@ public struct NotebookEditorView: View {
     /// （點側欄縮圖、上一頁／下一頁、新增頁面…）。後者才要捲過去；
     /// 前者再捲一次會跟使用者的手指打架。
     @State private var continuousReportedPage: Int = -1
+    /// Pencil 落筆把打字模式切成手繪的時間（那一次切換不捲動，見 `onChange(of: editorMode)`）。
+    @State private var pencilModeSwitchAt: Date?
     /// 專業筆畫有未標記的變動（見 `AppCommand.proInkDidChange`）。存檔時不能當成「沒變」略過。
     @State private var proInkDirty = false
     /// 「恢復初始狀態」之後遞增，讓連續模式的每一頁重讀磁碟（見 `ContinuousPageView.reloadGeneration`）。
@@ -5318,18 +5567,15 @@ public struct NotebookEditorView: View {
                                     DispatchQueue.main.async { canvasView = ref }
                                 },
                                 onCanvasTap: { location in
-                                    currentPageIndex = index
-                                    currentDrawing = drawingForPage(index)
+                                    focusContinuousPage(index)
                                     handleCanvasDirectTap(at: location, page: index)
                                 },
                                 onCanvasDoubleTap: { location in
-                                    currentPageIndex = index
-                                    currentDrawing = drawingForPage(index)
+                                    focusContinuousPage(index)
                                     handleCanvasDirectDoubleTap(at: location, page: index)
                                 },
                                 onPencilTouchBegan: {
-                                    currentPageIndex = index
-                                    currentDrawing = drawingForPage(index)
+                                    focusContinuousPage(index)
                                     handlePencilTouchBegan()
                                 },
                                 onPenControl: applyPenControl,
@@ -5337,9 +5583,18 @@ public struct NotebookEditorView: View {
                                     acceptImageDrop(providers, at: location, page: page)
                                 },
                                 onInitialLoaded: { page, loaded in
+                                    if pendingCoreInk[page] == nil { inkDiskBaselines[page] = loaded }
                                     captureInitialPageState(page: page, drawing: loaded)
                                 },
                                 reloadGeneration: continuousReloadGeneration,
+                                inkReloadGeneration: continuousInkReloadGeneration,
+                                objectGeneration: continuousObjectGeneration,
+                                mergeReloaded: { page, live in
+                                    let merged = mergedWithDisk(page: page, local: live, updateBaseline: true)
+                                    if !pendingCoreInk.isEmpty { scheduleCoreInkFlush() }
+                                    return merged
+                                },
+                                initialDrawing: { page in drawingForPage(page) },
                                 notebook: $notebook,
                                 onNotebookChanged: {
                                     commitNotebook()
@@ -5350,8 +5605,7 @@ public struct NotebookEditorView: View {
                                     // 選取的索引才會對到這一頁的筆畫。
                                     if currentPageIndex != index {
                                         lasso.clear()
-                                        currentPageIndex = index
-                                        currentDrawing = drawingForPage(index)
+                                        focusContinuousPage(index)
                                     } else {
                                         syncDrawingFromCanvas()
                                     }
@@ -5383,10 +5637,7 @@ public struct NotebookEditorView: View {
                                 },
                                 onPressAndHold: { point in
                                     guard openRadialMenuFromPress(at: point) else { return false }
-                                    if currentPageIndex != index {
-                                        currentPageIndex = index
-                                        currentDrawing = drawingForPage(index)
-                                    }
+                                    focusContinuousPage(index)
                                     return true
                                 },
                                 lassoDecoration: {
@@ -5461,6 +5712,9 @@ public struct NotebookEditorView: View {
                 scrollContinuous(to: currentPageIndex, proxy: proxy, animated: false)
             }
             .onChange(of: editorMode) { _ in
+                // 打字模式下 Pencil 一落筆就切回手繪：使用者正在某個位置寫字，這時捲到頁首
+                // 等於把紙從筆尖底下抽走。這種切換不捲。
+                if let at = pencilModeSwitchAt, Date().timeIntervalSince(at) < 0.5 { return }
                 // 切換手繪/打字模式時，鎖定焦點頁面並維持捲動位置，避免跳回第 1 頁
                 continuousProgrammaticScrollUntil = Date().addingTimeInterval(0.8)
                 scrollContinuous(to: currentPageIndex, proxy: proxy, animated: false)
@@ -5475,6 +5729,19 @@ public struct NotebookEditorView: View {
                 }
             }
         }
+    }
+
+    /// 連續模式：使用者在某一頁上落筆／點擊，焦點換到那一頁。
+    ///
+    /// **不捲動。** 改 `currentPageIndex` 會觸發「捲到焦點頁頂端」（給翻頁鈕、縮圖用的）——
+    /// 在半露出來的下一頁落筆，整個畫面就帶著動畫滑走，筆尖底下的紙換了位置，
+    /// 使用者看到的是「一碰就跳、空白一下」。先把回報頁設成同一頁，捲動那邊就知道不必動。
+    /// 也只在真的換頁時才讀那一頁的筆跡：每一次落筆都讀檔解碼，筆尖一碰就卡一下。
+    private func focusContinuousPage(_ index: Int) {
+        guard index != currentPageIndex else { return }
+        continuousReportedPage = index
+        currentPageIndex = index
+        currentDrawing = drawingForPage(index)
     }
 
     private func scrollContinuous(to page: Int, proxy: ScrollViewProxy, animated: Bool) {
@@ -9833,7 +10100,9 @@ public struct NotebookEditorView: View {
         // 這一本用的是哪一種紙。畫布、分頁、縮圖與匯出都讀這個值 ——
         // 忘了設的話，換到另一本不同規格的筆記時會沿用上一本的尺寸。
         PageGeometry.use(format: notebook.pageFormatId)
-        let loaded = store.loadDrawing(notebookId: notebook.id, pageIndex: currentPageIndex)
+        let loaded = pendingCoreInk[currentPageIndex]
+            ?? store.loadDrawing(notebookId: notebook.id, pageIndex: currentPageIndex)
+        if pendingCoreInk[currentPageIndex] == nil { inkDiskBaselines[currentPageIndex] = loaded }
         self.currentDrawing = loaded
         if let canvas = canvasView as? AdaptiveCanvasView {
             canvas.initialLoadedStrokeCount = loaded.strokes.count
@@ -10773,6 +11042,7 @@ public struct NotebookEditorView: View {
                 page: page, drawing: drawing, drawingFileURL: drawingURL,
                 cachedBaseline: coreInkBaselines[page]))
             coreInkBaselines[page] = drawing
+            inkDiskBaselines[page] = drawing
         }
 
         let document = notebook
@@ -10819,7 +11089,8 @@ public struct NotebookEditorView: View {
         // 排在同一個 run loop 後面。此時若拿 `currentDrawing` 存檔並回灌 UI，
         // 會把畫布上剛完成的多筆筆跡換成較舊的快照，看起來像切到打字模式後
         // 大部分筆跡消失。可見的 PKCanvasView 才是切換瞬間的權威快照。
-        if let liveDrawing = canvasView?.drawing, liveDrawing != currentDrawing {
+        // 但只在它顯示的就是這一頁時：剛換頁那一瞬間畫布還是上一頁，拿它存會把上一頁的字存進這一頁。
+        if canvasShowsCurrentPage, let liveDrawing = canvasView?.drawing, liveDrawing != currentDrawing {
             currentDrawing = liveDrawing
         }
         // 筆跡沒變就不重寫：模式切換、點物件前後都會呼叫這裡，而序列化＋寫檔＋推進核心是整頁的成本。
@@ -12595,9 +12866,9 @@ public struct NotebookEditorView: View {
     private func handlePencilTouchBegan() {
         // 手繪區塊已經取得墨跡輸入權，不要再把頂層文件模式改成 `.draw`。
         if editorMode != .draw && !isInlineInkEditing {
-            withAnimation(.easeInOut(duration: 0.2)) {
-                editorMode = .draw
-            }
+            pencilModeSwitchAt = Date()
+            // 不加動畫：筆尖已經在紙上，0.2 秒的過場期間整個編輯器在重排，第一筆會卡在那段時間裡。
+            editorMode = .draw
         }
         if let activeId = inlineEditingTextId {
             if let activeItem = notebook.textAttachments?.first(where: { $0.id == activeId }),
@@ -14485,7 +14756,8 @@ public struct NotebookEditorView: View {
         }
         if lockPromptId == id { lockPromptId = nil }
         commitNotebook()
-        continuousReloadGeneration += 1
+        // 只重建物件層：重建畫布會整頁白一下，寫到一半的筆畫也會不見。
+        continuousObjectGeneration += 1
     }
 
     /// 調整單一物件的層級（選單、編輯面板共用，支援移至筆跡下方/上方）。
@@ -14540,7 +14812,7 @@ public struct NotebookEditorView: View {
             commitNotebook()
             PageThumbnailRenderer.invalidateAll()
         }
-        continuousReloadGeneration += 1
+        continuousObjectGeneration += 1
         thumbnailRevision += 1
     }
 
@@ -14776,7 +15048,11 @@ public struct NotebookEditorView: View {
             broadcastDrawingChange(page: page, drawing: updatedDrawing)
             PageThumbnailRenderer.invalidateAll()
             if pageDisplayMode == .continuous {
-                continuousReloadGeneration += 1
+                // 筆跡已經寫進磁碟：讓那一頁合併重讀，不重建畫布。基準設成搬動前的那一份 ——
+                // 畫面上的就是它，合併結果才會整份換成搬過的，不會把舊位置當成「這台剛寫的」留下來。
+                inkDiskBaselines[page] = drawing
+                continuousInkReloadGeneration += 1
+                continuousObjectGeneration += 1
             }
         }
 
