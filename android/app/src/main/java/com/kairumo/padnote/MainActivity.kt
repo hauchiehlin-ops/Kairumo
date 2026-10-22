@@ -6202,38 +6202,68 @@ private fun InkScreen(
                     l = { key -> l10n(key) },
                     onChanged = { revision++ },
                     onRecognizeToText = {
-                        val selIds = lasso.selected
-                        val strokes = engine.strokes.filter { it.coreStrokeId in selIds }
-                        if (strokes.isNotEmpty()) {
+                        val selIds = lasso.selected.toSet()
+                        val strokes = engine.strokes.filter { it.coreStrokeId in selIds && it.points.isNotEmpty() }
+                        if (strokes.isEmpty()) {
+                            // 原本什麼都不做：按了沒反應，使用者不知道是沒圈到還是壞了。
+                            message = l10n("lasso_recognize_select_first")
+                        } else {
                             message = l10n("recognizing")
                             scope.launch {
-                                val recognized = StringBuilder()
-                                val groups = Handwriting.group(
-                                    strokeIds = strokes.map { it.coreStrokeId ?: "" },
-                                    strokes = strokes.map { it.points },
-                                    strokeTimesMs = strokes.map { it.startedAtMs }
-                                )
-                                for (group in groups) {
-                                    val res = Handwriting.recognize(group.strokes, deviceLanguageTag())
-                                    val txt = res.getOrNull().orEmpty()
-                                    if (txt.isNotBlank()) recognized.append(txt).append("\n")
+                                val language = deviceLanguageTag()
+                                // 先把整組圈選當成一份筆跡辨識（與 iPad 一致）：依書寫停頓分組會把
+                                // 寫到一半停一下的同一個字（例如「林」的兩個木）拆成兩組，各自都認不出來。
+                                var failure: Throwable? = null
+                                val whole = Handwriting.recognize(strokes.map { it.points }, language)
+                                var finalStr = whole.getOrNull().orEmpty().trim()
+                                whole.exceptionOrNull()?.let { failure = it }
+                                if (finalStr.isEmpty() && failure == null) {
+                                    val recognized = StringBuilder()
+                                    val groups = Handwriting.group(
+                                        strokeIds = strokes.map { it.coreStrokeId ?: "" },
+                                        strokes = strokes.map { it.points },
+                                        strokeTimesMs = strokes.map { it.startedAtMs }
+                                    )
+                                    for (group in groups) {
+                                        val res = Handwriting.recognize(group.strokes, language)
+                                        res.exceptionOrNull()?.let { failure = it }
+                                        val txt = res.getOrNull().orEmpty()
+                                        if (txt.isNotBlank()) recognized.append(txt).append("\n")
+                                    }
+                                    finalStr = recognized.toString().trim()
                                 }
-                                val finalStr = recognized.toString().trim()
                                 if (finalStr.isNotEmpty()) {
-                                    val minX = strokes.flatMap { it.points }.minOfOrNull { it.x } ?: 100f
-                                    val maxY = strokes.flatMap { it.points }.maxOfOrNull { it.y } ?: 200f
-                                    val box = textStore.create(minX, maxY + 20f)
+                                    // 原地轉換（與 iPad 一致）：文字方塊放在原本筆跡的位置、沿用筆色，圈選的筆跡換成文字。
+                                    val points = strokes.flatMap { it.points }
+                                    val pad = 8f
+                                    val minX = points.minOf { it.x }
+                                    val minY = points.minOf { it.y }
+                                    val maxX = points.maxOf { it.x }
+                                    val maxY = points.maxOf { it.y }
+                                    val box = textStore.create(maxOf(0f, minX - pad), maxOf(0f, minY - pad))
                                     box.text = finalStr
-                                    box.width = 320f
-                                    box.height = 120f
+                                    box.width = maxOf(120f, maxX - minX + pad * 2)
+                                    box.height = maxOf(44f, maxY - minY + pad * 2)
+                                    box.fontSize = ((maxY - minY) * 0.7f).coerceIn(16f, 32f)
+                                    val rgba = strokes.last().colorRgba
+                                    box.textColorHex = String.format(
+                                        "#%02X%02X%02X",
+                                        rgba[0].toInt() and 0xFF, rgba[1].toInt() and 0xFF, rgba[2].toInt() and 0xFF
+                                    )
                                     box.backgroundColorHex = "#FFFFFF"
-                                    box.hasBorder = true
+                                    box.hasBorder = false
                                     textStore.persist(box)
+                                    // 等待辨識期間選取可能已被清掉：那就保留原筆跡，只加文字。
+                                    if (lasso.selected.toSet() == selIds && lasso.delete(engine)) revision++
                                     selectedTextId = box.id
                                     textRevision++
-                                    message = l10n("recognized_result").replace("%1@", "${strokes.size}").replace("%2@", finalStr.take(20))
+                                    message = l10n("lasso_recognize_done")
                                 } else {
-                                    message = l10n("no_recognition_result")
+                                    message = failure?.let { err ->
+                                        (err as? Handwriting.HandwritingError)?.let {
+                                            Handwriting.describe(it.failure, language)
+                                        } ?: err.message
+                                    } ?: l10n("lasso_recognize_none")
                                 }
                             }
                         }
@@ -6500,16 +6530,9 @@ private fun InkScreen(
             confirmButton = {
                 TextButton(onClick = {
                     deletingPage = false
-                    val session = notebook?.first
-                    val target = pageId
-                    if (session != null && target != null && pageCount > 1) {
-                        runCatching { session.removePage(target) }
-                        pageCount = runCatching { session.pageCount().toInt() }
-                            .getOrDefault(maxOf(1, pageCount - 1))
-                        // 刪的是最後一頁的話，索引要往回收 —— 不收的話
-                        // pageIdAt 拿不到東西，畫面會變成一片空白。
-                        pageIndex = pageIndex.coerceIn(0, maxOf(0, pageCount - 1))
-                    }
+                    // 與側欄的刪除同一支：原本這裡只刪核心的頁，紙張與以頁碼記位置的物件
+                    // （卡片、膠帶、錨定…）留在原頁碼，落到下一頁上。
+                    if (pageId != null) deletePageAt(pageIndex)
                 }) { Text(l10n("delete")) }
             },
             dismissButton = {
@@ -7258,6 +7281,7 @@ private fun InkScreen(
             onDismiss = { transferringPage = null },
             onPick = { target ->
                 val session = notebook?.first
+                val countBefore = pageCount
                 val moved = if (session == null) {
                     0u
                 } else {
@@ -7277,7 +7301,9 @@ private fun InkScreen(
                 } else {
                     l10n("transfer_failed")
                 }
-                // 搬移會少一頁，頁碼要夾回範圍內。
+                // 搬移會少一頁：這本以頁碼記位置的東西（紙張、卡片、膠帶…）跟刪頁一樣往前補位，
+                // 不然後面那幾頁的東西錯位一頁。
+                if (moveOut && moved > 0u) meta.removePageTemplate(session, pageIdx, countBefore)
                 pageCount = runCatching { session?.pageCount()?.toInt() }.getOrNull() ?: pageCount
                 pageIndex = pageIndex.coerceIn(0, maxOf(0, pageCount - 1))
                 revision++

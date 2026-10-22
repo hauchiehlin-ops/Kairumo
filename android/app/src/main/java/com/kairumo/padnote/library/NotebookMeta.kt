@@ -138,6 +138,14 @@ class NotebookMeta private constructor(private var root: JSONObject) {
         private const val KEY_SHAPE_STYLES = "shapeStyles"
         private const val KEY_CONNECTION_STYLES = "connectionStyles"
 
+        /** 手寫辨識文字（`{"頁次": "文字"}`）。與 Apple `NotebookMeta.recognizedText` 同一個鍵。 */
+        private const val KEY_RECOGNIZED_TEXT = "recognizedText"
+
+        /** 每個項目帶 `pageIndex` 的物件清單 —— 頁面結構變動時要跟著換頁碼（見 [remapPageIndexes]）。 */
+        private val PAGE_INDEXED_LISTS = listOf(
+            KEY_LINKS, KEY_AUDIO, KEY_STICKY_ANCHORS, KEY_TAPES, KEY_COMMENT_PINS, KEY_MODELS_3D
+        )
+
         /** 頁面物件清單的鍵（協同的 `link`、`model3d`…對應到這裡）。 */
         val PAYLOAD_KEYS: Map<String, String> = linkedMapOf(
             "link" to KEY_LINKS, "model3d" to KEY_MODELS_3D, "audio" to KEY_AUDIO,
@@ -262,44 +270,10 @@ class NotebookMeta private constructor(private var root: JSONObject) {
         }
         root.put(KEY_PAGE_TEMPLATES, JSONArray(movedTemplates.map { it ?: defaultPaper }))
 
-        // 物件堆疊順序（鍵就是頁碼）
-        val order = root.optJSONObject(KEY_ORDER_BY_PAGE)
-        if (order != null) {
-            val remapped = JSONObject()
-            val keys = order.keys()
-            while (keys.hasNext()) {
-                val key = keys.next()
-                val index = key.toIntOrNull()
-                if (index == null || index >= totalPages) {
-                    remapped.put(key, order.get(key))
-                    continue
-                }
-                val dest = uniffi.padnote_core.pageIndexAfterMove(
-                    index.toUInt(), from.toUInt(), to.toUInt()
-                ).toInt()
-                remapped.put(dest.toString(), order.get(key))
-            }
-            root.put(KEY_ORDER_BY_PAGE, remapped)
-        }
-
-        // 筆跡下方物件名單（鍵就是頁碼）
-        val under = root.optJSONObject(KEY_UNDER_INK_BY_PAGE)
-        if (under != null) {
-            val remapped = JSONObject()
-            val keys = under.keys()
-            while (keys.hasNext()) {
-                val key = keys.next()
-                val index = key.toIntOrNull()
-                if (index == null || index >= totalPages) {
-                    remapped.put(key, under.get(key))
-                    continue
-                }
-                val dest = uniffi.padnote_core.pageIndexAfterMove(
-                    index.toUInt(), from.toUInt(), to.toUInt()
-                ).toInt()
-                remapped.put(dest.toString(), under.get(key))
-            }
-            root.put(KEY_UNDER_INK_BY_PAGE, remapped)
+        // 其餘以頁碼為鍵的資料（堆疊順序、筆跡下方、鎖定、辨識文字）與帶頁碼的物件清單。
+        remapPageIndexes { index ->
+            if (index >= totalPages) index
+            else uniffi.padnote_core.pageIndexAfterMove(index.toUInt(), from.toUInt(), to.toUInt()).toInt()
         }
 
         flush(session)
@@ -310,19 +284,49 @@ class NotebookMeta private constructor(private var root: JSONObject) {
      * 紙張樣板由 [insertPageTemplate] 自己挪。不挪的話，插入一頁之後，後面每一頁的圖層設定都錯位一頁。
      */
     fun shiftPageKeyedData(session: PadnoteSession?, fromIndex: Int, totalPagesBefore: Int) {
-        for (key in listOf(KEY_ORDER_BY_PAGE, KEY_UNDER_INK_BY_PAGE, KEY_LOCKED_BY_PAGE)) {
+        remapPageIndexes { index -> if (index in fromIndex until totalPagesBefore) index + 1 else index }
+        flush(session)
+    }
+
+    /**
+     * 以頁碼記位置的所有東西照 `transform` 換頁碼；回 `null` 的那一頁整個丟掉（刪除頁）。
+     *
+     * 兩種形狀：以頁碼為鍵的字典（堆疊順序、筆跡下方、鎖定、辨識文字），以及每個項目帶
+     * `pageIndex` 的物件清單（連結卡片、錄音卡片、膠帶、錨定、圖釘、3D 模型）。
+     * 原本只挪了前兩個字典：搬頁、插頁、刪頁之後，清單裡的物件留在原本的頁碼上 ——
+     * 使用者看到的是「筆跡搬過去了，卡片、膠帶留在原地」，刪掉的頁上的卡片跑到下一頁。
+     */
+    /** `internal`：單元測試直接驗它（主機上的 JVM 載不到核心，`movePageData` 要問核心頁碼規則）。 */
+    internal fun remapPageIndexes(transform: (Int) -> Int?) {
+        for (key in listOf(KEY_ORDER_BY_PAGE, KEY_UNDER_INK_BY_PAGE, KEY_LOCKED_BY_PAGE, KEY_RECOGNIZED_TEXT)) {
             val map = root.optJSONObject(key) ?: continue
             val shifted = JSONObject()
             val keys = map.keys()
             while (keys.hasNext()) {
                 val k = keys.next()
                 val index = k.toIntOrNull()
-                val dest = if (index != null && index in fromIndex until totalPagesBefore) index + 1 else index
-                shifted.put(dest?.toString() ?: k, map.get(k))
+                if (index == null) { shifted.put(k, map.get(k)); continue }
+                transform(index)?.let { shifted.put(it.toString(), map.get(k)) }
             }
             root.put(key, shifted)
         }
-        flush(session)
+        var listsChanged = false
+        for (key in PAGE_INDEXED_LISTS) {
+            val arr = root.optJSONArray(key) ?: continue
+            val out = JSONArray()
+            for (i in 0 until arr.length()) {
+                val item = arr.optJSONObject(i)
+                if (item == null || !item.has("pageIndex")) { out.put(arr.opt(i)); continue }
+                val before = item.optInt("pageIndex", 0)
+                val after = transform(before)
+                if (after != before) listsChanged = true
+                if (after == null) continue
+                out.put(JSONObject(item.toString()).put("pageIndex", after))
+            }
+            root.put(key, out)
+        }
+        // 清單改了：Apple 端的「以逐物件區塊為準」旗標要清掉，不然它把清單的新內容當成舊的（見 KEY_OBJECT_ENVELOPES）。
+        if (listsChanged) root.remove(KEY_OBJECT_ENVELOPES)
     }
 
     /** 設定某一頁的紙張（協同：別人換了那一頁的紙）。 */
@@ -371,6 +375,8 @@ class NotebookMeta private constructor(private var root: JSONObject) {
             currentTemplates.removeAt(atIndex)
         }
         root.put(KEY_PAGE_TEMPLATES, JSONArray(currentTemplates))
+        // 被刪的那一頁上的東西一起丟掉，後面每一頁往前補一格。
+        remapPageIndexes { index -> when { index == atIndex -> null; index > atIndex -> index - 1; else -> index } }
         flush(session)
     }
 

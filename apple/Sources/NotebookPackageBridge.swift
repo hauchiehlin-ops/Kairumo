@@ -563,6 +563,25 @@ enum NotebookPackageBridge {
         return result
     }
 
+    /// 套件裡**筆記這一頁**的筆跡（照筆記自己的頁面 id 找，不是套件的第幾頁）。
+    ///
+    /// 本機插入、刪除、搬動頁之後、下一次完整匯出之前，套件的頁序還是舊的：照第幾頁去拿，
+    /// 拿到的是別頁的筆跡，拿它當基準算增量會把整頁當成「擦掉了」記進帳本。
+    /// 筆記沒記頁面 id 時退回套件的頁序；套件裡還沒有這一頁（剛插入）回空白。
+    static func drawing(fromPackageAt path: URL, deviceId: UInt32, document: NotebookDocument, pageIndex: Int) throws -> PKDrawing {
+        let session = try PadnoteSession.openExisting(path: path.path, deviceId: deviceId)
+        let ids = try pageIds(of: session)
+        let pageId: String?
+        if let own = document.pageIds, pageIndex < own.count {
+            let wanted = own[pageIndex].lowercased()
+            pageId = ids.first { $0.lowercased() == wanted }
+        } else {
+            pageId = pageIndex < ids.count ? ids[pageIndex] : nil
+        }
+        guard let pageId else { return PKDrawing() }
+        return InkInterop.drawing(from: try session.visibleStrokeDetails(pageId: pageId))
+    }
+
     /// 套件內每一頁的高度（點）。
     static func pageHeights(fromPackageAt path: URL, deviceId: UInt32) throws -> [CGFloat] {
         let session = try PadnoteSession.openExisting(path: path.path, deviceId: deviceId)

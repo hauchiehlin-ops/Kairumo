@@ -349,7 +349,11 @@ class AndroidCollabController(private val manager: CollaborationManager) {
             if (runCatching { session.addPageWithId(id, style) }.isFailure) continue
             val before = current.size
             val index = minOf(target, before)
-            if (index < before) runCatching { session.movePage(id, index.toUInt()) }
+            if (index < before) {
+                runCatching { session.movePage(id, index.toUInt()) }
+                // 插在中間：後面每一頁以頁碼記位置的東西往後讓一格（與本機插頁同一支）。
+                meta.shiftPageKeyedData(session, index, before)
+            }
             meta.insertPageTemplate(session, index, paper ?: meta.paperId(), before)
             current = ids()
             changed = true
