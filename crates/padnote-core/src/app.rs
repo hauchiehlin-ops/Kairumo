@@ -1130,7 +1130,8 @@ impl NotebookSession {
                         let node = tree.get(id)?;
                         matches!(
                             node.kind,
-                            padnote_doc::ObjectKind::Shape(_) | padnote_doc::ObjectKind::Connection(_)
+                            padnote_doc::ObjectKind::Shape(_)
+                                | padnote_doc::ObjectKind::Connection(_)
                         )
                         .then(|| (id, world, node.kind.clone()))
                     })
@@ -2777,12 +2778,17 @@ mod tests {
         let dir = std::env::temp_dir().join(format!("padnote_copy_shapes_{}", Uuid::now_v7()));
         let rect = |x: f32| ShapeObject {
             kind: padnote_doc::ShapeKind::Rectangle,
-            bounds: padnote_doc::ObjectRect { min_x: x, min_y: 0.0, max_x: x + 10.0, max_y: 10.0 },
+            bounds: padnote_doc::ObjectRect {
+                min_x: x,
+                min_y: 0.0,
+                max_x: x + 10.0,
+                max_y: 10.0,
+            },
             corner_radius: 0.0,
             text: "框".into(),
         };
-        let mut src = NotebookSession::create(&dir.join("a.padnote"), "來源", 0, 1).unwrap();
-        let mut dst = NotebookSession::create(&dir.join("b.padnote"), "目標", 0, 1).unwrap();
+        let mut src = NotebookSession::create(dir.join("a.padnote"), "來源", 0, 1).unwrap();
+        let mut dst = NotebookSession::create(dir.join("b.padnote"), "目標", 0, 1).unwrap();
         let page = src.add_page(PageTemplate::Blank).unwrap();
         let text = src.add_text_block(page, "字", TextStyle::Body).unwrap();
         let shape_a = src.insert_shape(page, rect(0.0)).unwrap();
@@ -2810,7 +2816,11 @@ mod tests {
         assert!(tree.get(map[&shape_a]).is_some() && tree.get(map[&shape_b]).is_some());
         match &tree.get(map[&link]).unwrap().kind {
             padnote_doc::ObjectKind::Connection(c) => {
-                assert_eq!((c.from, c.to), (map[&shape_a], map[&shape_b]), "連接線接到新的形狀");
+                assert_eq!(
+                    (c.from, c.to),
+                    (map[&shape_a], map[&shape_b]),
+                    "連接線接到新的形狀"
+                );
             }
             other => panic!("不是連接線：{other:?}"),
         }
