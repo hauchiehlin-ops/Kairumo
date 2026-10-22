@@ -15040,6 +15040,15 @@ public struct NotebookEditorView: View {
                 notebook.connectionAttachments = connections
             }
             crossedTo = landing.page
+        } else if let union = frames.dropFirst().reduce(frames.first, { $0?.union($1) }) {
+            // 留在本頁：與其他物件一樣推回可列印範圍（S-85）。原本形狀拖出頁外就留在頁外，
+            // 畫面與縮圖上都看不到、也點不到。
+            let landed = PrintableArea.clampOrigin(
+                x: union.minX, y: union.minY, width: union.width, height: union.height)
+            for index in all.indices where mates.contains(all[index].id) {
+                all[index].x += landed.x - union.minX
+                all[index].y += landed.y - union.minY
+            }
         }
         notebook.shapeAttachments = all
         commitNotebook()
@@ -15085,11 +15094,21 @@ public struct NotebookEditorView: View {
             finishPageCrossing(ids: [id], to: landing.page)
             return
         }
+        // 留在本頁：與其他物件一樣推回可列印範圍（S-85）。原本表格拖出頁外就留在頁外，看不到也點不到。
+        var applied = delta
+        if let frame = frameOfObject(id: id) {
+            let moved = frame.offsetBy(dx: delta.width, dy: delta.height)
+            let landed = PrintableArea.clampOrigin(
+                x: moved.minX, y: moved.minY, width: moved.width, height: moved.height)
+            all[index].x += landed.x - moved.minX
+            all[index].y += landed.y - moved.minY
+            applied = CGSize(width: all[index].x - previous.x, height: all[index].y - previous.y)
+        }
         notebook.tableAttachments = all
         commitNotebook()
         finishPageCrossing(ids: [], to: nil)
 
-        moveStrokesInsideTable(previous, by: delta)
+        moveStrokesInsideTable(previous, by: applied)
     }
 
     private func tableBinding(for id: String) -> Binding<NoteTableAttachment> {
@@ -16000,7 +16019,9 @@ struct TextAttachmentItemView: View {
                     afterContextMenuDismisses(onDelete)
                 } label: { Label(localizationManager.localized("delete"), systemImage: "trash") }
             }
-            .gesture(
+            // 高優先：方塊身上還有「點兩下」，它會先等第二下，等的這段時間連續模式的捲動就把
+            // 拖曳搶走了（方塊拖不動、畫面反而捲動）。拖曳至少要移動 5 點，點一下、點兩下照常有效。
+            .highPriorityGesture(
                 isEditingInline ? nil :
                 DragGesture(minimumDistance: 5, coordinateSpace: .named(CanvasCoordinateSpace.name))
                     .onChanged { value in

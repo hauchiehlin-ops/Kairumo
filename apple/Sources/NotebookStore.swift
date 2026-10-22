@@ -1472,6 +1472,13 @@ public final class NotebookStore: ObservableObject {
         doc.shapeAttachments = [NoteShapeAttachment(
             id: "00000000-0000-4000-8000-0000000000a5", pageIndex: 0, kindName: "process",
             x: 60, y: 360, width: 160, height: 80, label: "Fixture shape")]
+        // `KAIRUMO_UITEST_SEED_TWO_PAGES=1`：兩頁，第 1 頁多一個表格（測連續模式把物件拖到下一頁）。
+        if env["KAIRUMO_UITEST_SEED_TWO_PAGES"] == "1" {
+            doc.pageCount = 2
+            doc.tableAttachments = [NoteTableAttachment(
+                id: "00000000-0000-4000-8000-0000000000a6", pageIndex: 0,
+                x: 440, y: 360, width: 240, rows: 2, cols: 2, cells: ["A", "B", "C", "D"])]
+        }
         // `KAIRUMO_UITEST_SEED_LOCKED=1`：圖片一開始就鎖定在畫布上（`ObjectLockUITests` 測解鎖的入口）。
         if env["KAIRUMO_UITEST_SEED_LOCKED"] == "1" {
             doc.setLockedObjectIds(["00000000-0000-4000-8000-0000000000a2"], forPage: 0)
