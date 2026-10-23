@@ -809,30 +809,42 @@ enum NotebookPackageBridge {
     /// 舊檔名由後面的步驟刪掉並記成墓碑，別台從頭讀新檔（區塊 id 相同、重放是冪等的）。
     private static func bumpOwnOplogNamesIfChanged(old: URL, fresh: URL, suffix: String) throws {
         let fm = FileManager.default
-        func ownOps(_ root: URL) -> [String: URL] {
-            let dir = root.appending(path: "doc/ops")
-            let names = (try? fm.contentsOfDirectory(atPath: dir.path)) ?? []
-            return Dictionary(uniqueKeysWithValues: names
-                .filter { $0.hasSuffix("\(suffix).oplog") }
-                .map { ($0, dir.appending(path: $0)) })
+        let oldOpsDir = old.appending(path: "doc/ops")
+        let allOldNames = (try? fm.contentsOfDirectory(atPath: oldOpsDir.path)) ?? []
+        let allOldOplogs = allOldNames.filter { $0.hasSuffix(".oplog") }
+
+        func lamport(_ name: String) -> UInt64 {
+            UInt64(name.split(separator: "-").first ?? "", radix: 16) ?? 0
         }
-        let oldOps = ownOps(old)
-        let freshOps = ownOps(fresh)
-        guard !oldOps.isEmpty, !freshOps.isEmpty else { return }
-        if Set(oldOps.keys) == Set(freshOps.keys),
+
+        let freshDir = fresh.appending(path: "doc/ops")
+        let freshNames = (try? fm.contentsOfDirectory(atPath: freshDir.path)) ?? []
+        let freshOps = Dictionary(uniqueKeysWithValues: freshNames
+            .filter { $0.hasSuffix("\(suffix).oplog") }
+            .map { ($0, freshDir.appending(path: $0)) })
+
+        guard !freshOps.isEmpty else { return }
+
+        let oldOps = Dictionary(uniqueKeysWithValues: allOldNames
+            .filter { $0.hasSuffix("\(suffix).oplog") }
+            .map { ($0, oldOpsDir.appending(path: $0)) })
+
+        // 若這台原本已有 oplog，且內容完全一樣，表示這台沒有任何新變更，不需 bump
+        if !oldOps.isEmpty,
+           Set(oldOps.keys) == Set(freshOps.keys),
            oldOps.allSatisfy({ name, url in
                (try? Data(contentsOf: url)) == (try? Data(contentsOf: freshOps[name]!))
            }) {
             return
         }
-        func lamport(_ name: String) -> UInt64 {
-            UInt64(name.split(separator: "-").first ?? "", radix: 16) ?? 0
-        }
-        let offset = oldOps.keys.map(lamport).max() ?? 0
-        guard offset > 0 else { return }
+
+        // 取整個套件（含所有其他裝置與本裝置既有）的最大 Lamport 時戳
+        let maxExistingLamport = allOldOplogs.map(lamport).max() ?? 0
+        guard maxExistingLamport > 0 else { return }
+
         // 由大到小搬：新名字可能剛好等於另一個還沒搬的新檔名。
         for (name, url) in freshOps.sorted(by: { lamport($0.key) > lamport($1.key) }) {
-            let bumped = String(format: "%016llx", lamport(name) + offset) + suffix + ".oplog"
+            let bumped = String(format: "%016llx", lamport(name) + maxExistingLamport) + suffix + ".oplog"
             try fm.moveItem(at: url, to: url.deletingLastPathComponent().appending(path: bumped))
         }
     }
@@ -1701,6 +1713,9 @@ enum NotebookPackageBridge {
             pageCount: pageIds.count,
             template: .blank
         )
+        let pkgAttributes = try? FileManager.default.attributesOfItem(atPath: path.path)
+        let pkgMtime = (pkgAttributes?[.modificationDate] as? Date) ?? Date(timeIntervalSince1970: 0)
+        document.lastModifiedDate = pkgMtime
         document.textAttachments = texts.isEmpty ? nil : texts
         // 頁面 id 跟著筆記走（即時協同以它指稱頁面，設計 §8.1）。
         document.pageIds = pageIds.map { $0.lowercased() }

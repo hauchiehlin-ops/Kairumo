@@ -379,11 +379,26 @@ final class LassoSelection: ObservableObject {
     /// 一部分區塊（甚至不重畫）—— 選取框跟著手指走，畫面上的筆跡卻留在原地或斷成幾截，
     /// 而資料（縮圖）其實已經移過去了。
     private static func offset(_ stroke: PKStroke, by delta: CGSize) -> PKStroke {
-        PKStroke(
-            ink: stroke.ink, path: stroke.path,
-            transform: stroke.transform.concatenating(
-                CGAffineTransform(translationX: delta.width, y: delta.height)),
-            mask: stroke.mask)
+        let t = stroke.transform.concatenating(
+            CGAffineTransform(translationX: delta.width, y: delta.height))
+        let controlPoints = stroke.path.map { pt in
+            PKStrokePoint(
+                location: pt.location.applying(t),
+                timeOffset: pt.timeOffset,
+                size: pt.size,
+                opacity: pt.opacity,
+                force: pt.force,
+                azimuth: pt.azimuth,
+                altitude: pt.altitude
+            )
+        }
+        let newPath = PKStrokePath(controlPoints: controlPoints, creationDate: stroke.path.creationDate)
+        var newMask: UIBezierPath? = nil
+        if let mask = stroke.mask?.copy() as? UIBezierPath {
+            mask.apply(t)
+            newMask = mask
+        }
+        return PKStroke(ink: stroke.ink, path: newPath, transform: .identity, mask: newMask)
     }
 }
 

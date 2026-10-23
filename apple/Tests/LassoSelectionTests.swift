@@ -95,6 +95,54 @@ final class LassoSelectionTests: XCTestCase {
         lasso.begin(at: CGPoint(x: 295, y: 100))
         XCTAssertTrue(lasso.isDraggingSelection)
     }
+
+    func testMoveSelectedBakesTranslationAndUpdatesStrokeDelta() throws {
+        let lasso = LassoSelection()
+        let drawing = sampleDrawing()
+        lassoRect(lasso, CGRect(x: 80, y: 80, width: 140, height: 40), in: drawing)
+        XCTAssertEqual(lasso.selected, IndexSet(integer: 0))
+
+        let originalFirst = drawing.strokes[0]
+        let originalIdentity = StrokeDelta.Identity(originalFirst)
+
+        let movedDrawing = try XCTUnwrap(lasso.moveSelected(in: drawing, by: CGSize(width: 50, height: 80)))
+        XCTAssertEqual(movedDrawing.strokes.count, 2)
+
+        let movedFirst = movedDrawing.strokes[0]
+        let movedIdentity = StrokeDelta.Identity(movedFirst)
+
+        // 1. 移動後筆畫之路徑點與 renderBounds 應確實位移
+        XCTAssertEqual(movedFirst.renderBounds.minX, originalFirst.renderBounds.minX + 50, accuracy: 1.0)
+        XCTAssertEqual(movedFirst.renderBounds.minY, originalFirst.renderBounds.minY + 80, accuracy: 1.0)
+        XCTAssertEqual(movedFirst.transform, .identity, "位移應直接烘焙至 controlPoints 形成新 PKStrokePath")
+
+        // 2. StrokeDelta.Identity 必須反映位移，不可因忽略 transform 或未烘焙而重複
+        XCTAssertNotEqual(movedIdentity, originalIdentity, "位移後的身分識別值必須不同")
+
+        // 3. StrokeDelta 比對：原筆畫應被視為 removed，位移後筆畫應被視為 added
+        let added = StrokeDelta.added(in: movedDrawing, since: drawing)
+        XCTAssertEqual(added.count, 1)
+        XCTAssertEqual(added[0].renderBounds.minX, movedFirst.renderBounds.minX, accuracy: 0.5)
+
+        let removed = StrokeDelta.removed(in: movedDrawing, since: drawing)
+        XCTAssertEqual(removed.count, 1)
+        XCTAssertEqual(removed[0].renderBounds.minX, originalFirst.renderBounds.minX, accuracy: 0.5)
+
+        // 4. InkMerge 三方合併：以移動前原稿為 base，位移後筆畫應被保留，原位筆畫被移除
+        let diskWithOnlyUnmoved = drawing
+        let merged = InkMerge.merged(disk: diskWithOnlyUnmoved, local: movedDrawing, base: drawing)
+        XCTAssertEqual(merged.strokes.count, 2)
+        XCTAssertTrue(merged.strokes.contains(where: { abs($0.renderBounds.minX - movedFirst.renderBounds.minX) < 1.0 }),
+                      "合併後必須包含位移後的筆畫")
+        XCTAssertFalse(merged.strokes.contains(where: { abs($0.renderBounds.minX - originalFirst.renderBounds.minX) < 1.0 }),
+                       "合併後不可保留位移前的原筆畫")
+
+        // 5. 驗證防消失機制：若本地畫了新字，即使 base 樂觀超前設為 local，未落盤之新筆畫仍應完整保留而不被舊 disk 吞噬
+        let newStroke = line(from: CGPoint(x: 300, y: 300), to: CGPoint(x: 400, y: 300))
+        let drawingWithNew = PKDrawing(strokes: drawing.strokes + [newStroke])
+        let mergedNew = InkMerge.merged(disk: drawing, local: drawingWithNew, base: drawingWithNew)
+        XCTAssertEqual(mergedNew.strokes.count, 3, "本地新寫的筆畫絕不可被舊 disk 吞噬")
+    }
 }
 
 private extension CGRect {

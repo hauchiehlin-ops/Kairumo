@@ -3538,6 +3538,7 @@ public struct NotebookEditorView: View {
     /// 每一頁的畫布整個重建，整片空白一下、寫到一半的那一筆直接不見。
     private func reloadAfterExternalChange() {
         coreInkBaselines.removeAll()
+        inkDiskBaselines.removeAll()
         if let updated = store.notebooks.first(where: { $0.id == notebook.id }) {
             self.notebook = updated
         }
@@ -5503,6 +5504,8 @@ public struct NotebookEditorView: View {
     /// （點側欄縮圖、上一頁／下一頁、新增頁面…）。後者才要捲過去；
     /// 前者再捲一次會跟使用者的手指打架。
     @State private var continuousReportedPage: Int = -1
+    /// 連續模式下已建立的各頁畫布參照，供套索與存檔即時存取焦點頁畫布
+    @State private var continuousCanvases: [Int: PKCanvasView] = [:]
     /// Pencil 落筆把打字模式切成手繪的時間（那一次切換不捲動，見 `onChange(of: editorMode)`）。
     @State private var pencilModeSwitchAt: Date?
     /// 專業筆畫有未標記的變動（見 `AppCommand.proInkDidChange`）。存檔時不能當成「沒變」略過。
@@ -5563,6 +5566,7 @@ public struct NotebookEditorView: View {
                                 // LazyVStack 會建立多頁畫布；不能讓最後建立的頁面覆蓋
                                 // `canvasView`，否則貼紙可能蓋到別頁且存檔頁碼也錯。
                                 canvasRef: { ref in
+                                    continuousCanvases[index] = ref
                                     // 同上：不在畫面更新途中改 @State，且只在真的換了才寫。
                                     guard index == currentPageIndex, canvasView !== ref else { return }
                                     DispatchQueue.main.async { canvasView = ref }
@@ -5776,6 +5780,9 @@ public struct NotebookEditorView: View {
         guard index != currentPageIndex else { return }
         continuousReportedPage = index
         currentPageIndex = index
+        if let canvas = continuousCanvases[index] {
+            canvasView = canvas
+        }
         currentDrawing = drawingForPage(index)
     }
 
@@ -5846,6 +5853,9 @@ public struct NotebookEditorView: View {
         guard let page = nearest?.key, page != currentPageIndex else { return }
         continuousReportedPage = page
         currentPageIndex = page
+        if let canvas = continuousCanvases[page] {
+            canvasView = canvas
+        }
         currentDrawing = drawingForPage(page)
     }
 
@@ -11347,12 +11357,13 @@ public struct NotebookEditorView: View {
     /// 剛落下的筆畫、別的路徑換過的筆跡可能還沒寫回來；拿舊副本算出的選取索引
     /// 對不到畫面上的筆畫 —— 有的拖得動、有的拖不動。
     private func syncDrawingFromCanvas() {
+        let targetCanvas = (pageDisplayMode == .continuous ? continuousCanvases[currentPageIndex] : nil) ?? canvasView
         // 連續模式剛換焦點頁時 `canvasView` 可能還是上一頁的畫布（非同步才換過來），不能拿它當這一頁。
-        if let coordinator = canvasView?.delegate as? CanvasRepresentable.Coordinator,
+        if let coordinator = targetCanvas?.delegate as? CanvasRepresentable.Coordinator,
            let page = coordinator.parent.proInk?.pageIndex, page != currentPageIndex {
             return
         }
-        if let live = canvasView?.drawing, live != currentDrawing {
+        if let live = targetCanvas?.drawing, live != currentDrawing {
             currentDrawing = live
         }
     }
@@ -11360,10 +11371,11 @@ public struct NotebookEditorView: View {
     /// 把套索改過的筆跡換上目前的畫布（不經 delegate，見 `showEditedDrawing`）。
     private func showLassoEdit(_ newDrawing: PKDrawing) {
         currentDrawing = newDrawing
-        if let adaptive = canvasView as? AdaptiveCanvasView {
+        let targetCanvas = (pageDisplayMode == .continuous ? continuousCanvases[currentPageIndex] : nil) ?? canvasView
+        if let adaptive = targetCanvas as? AdaptiveCanvasView {
             adaptive.showEditedDrawing(newDrawing)
         } else {
-            canvasView?.drawing = newDrawing
+            targetCanvas?.drawing = newDrawing
         }
     }
 
@@ -15830,9 +15842,11 @@ struct AttachmentItemView: View {
                                     y: attachment.y + value.translation.height,
                                     width: attachment.width, height: attachment.height,
                                     crossing: pageCrossing)
-                                attachment.x = landed.origin.x
-                                attachment.y = landed.origin.y
-                                if let page = landed.page { attachment.pageIndex = page }
+                                var updated = attachment
+                                updated.x = landed.origin.x
+                                updated.y = landed.origin.y
+                                if let page = landed.page { updated.pageIndex = page }
+                                attachment = updated
                                 crossedTo = landed.page
                                 dragOffset = .zero
                                 isDragging = false
@@ -16409,10 +16423,12 @@ struct TextAttachmentItemView: View {
                                     y: textItem.y + value.translation.height,
                                     width: textItem.width, height: calculatedContentHeight,
                                     crossing: pageCrossing)
-                                textItem.x = landed.origin.x
-                                textItem.y = (snapToGrid && snapY != nil) ? snapY!(landed.origin.y) : landed.origin.y
-                                textItem.height = calculatedContentHeight
-                                if let page = landed.page { textItem.pageIndex = page }
+                                var updated = textItem
+                                updated.x = landed.origin.x
+                                updated.y = (snapToGrid && snapY != nil) ? snapY!(landed.origin.y) : landed.origin.y
+                                updated.height = calculatedContentHeight
+                                if let page = landed.page { updated.pageIndex = page }
+                                textItem = updated
                                 crossedTo = landed.page
                                 dragOffset = .zero
                                 isDragging = false
@@ -16822,9 +16838,11 @@ struct LinkAttachmentItemView: View {
                                 y: linkItem.y + value.translation.height,
                                 width: linkItem.width, height: linkItem.height,
                                 crossing: pageCrossing)
-                            linkItem.x = landed.origin.x
-                            linkItem.y = landed.origin.y
-                            if let page = landed.page { linkItem.pageIndex = page }
+                            var updated = linkItem
+                            updated.x = landed.origin.x
+                            updated.y = landed.origin.y
+                            if let page = landed.page { updated.pageIndex = page }
+                            linkItem = updated
                             crossedTo = landed.page
                             onSelect?()
                         }
@@ -17095,9 +17113,11 @@ struct Model3DCanvasItemView: View {
                             y: item.y + value.translation.height,
                             width: item.width, height: item.height,
                             crossing: pageCrossing)
-                        item.x = landed.origin.x
-                        item.y = landed.origin.y
-                        if let page = landed.page { item.pageIndex = page }
+                        var updated = item
+                        updated.x = landed.origin.x
+                        updated.y = landed.origin.y
+                        if let page = landed.page { updated.pageIndex = page }
+                        item = updated
                         dragOffset = .zero
                         pageCrossing?.ended(landed.page == nil ? nil : item.id, landed.page)
                         onSelect?()
@@ -17124,9 +17144,11 @@ struct Model3DCanvasItemView: View {
                         y: item.y + dragOffset.height,
                         width: item.width, height: item.height,
                         crossing: pageCrossing)
-                    item.x = landed.origin.x
-                    item.y = landed.origin.y
-                    if let page = landed.page { item.pageIndex = page }
+                    var updated = item
+                    updated.x = landed.origin.x
+                    updated.y = landed.origin.y
+                    if let page = landed.page { updated.pageIndex = page }
+                    item = updated
                     dragOffset = .zero
                     pageCrossing?.ended(landed.page == nil ? nil : item.id, landed.page)
                     onSelect?()
