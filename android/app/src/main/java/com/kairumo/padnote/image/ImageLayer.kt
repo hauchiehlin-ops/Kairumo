@@ -144,6 +144,18 @@ private fun ImageObjectView(
                         var startY = 0f
                         var accX = 0f
                         var accY = 0f
+                        val finishDrag: () -> Unit = {
+                            val img = currentImage
+                            val landed = com.kairumo.padnote.canvas.landObject(
+                                img.id, liveX, liveY, liveWidth, liveHeight, crossing)
+                            liveX = landed.x
+                            liveY = landed.y
+                            img.x = landed.x
+                            img.y = landed.y
+                            onChanged(img)
+                            landed.page?.let { crossing?.moved?.invoke(img.id, it) }
+                            crossing?.ended?.invoke()
+                        }
                         detectDragGestures(
                             onDragStart = {
                                 val img = currentImage
@@ -156,7 +168,7 @@ private fun ImageObjectView(
                                 onSelect()
                                 crossing?.began?.invoke()
                             },
-                            onDragCancel = { crossing?.ended?.invoke() },
+                            onDragCancel = finishDrag,
                             onDrag = { change, drag ->
                                 change.consume()
                                 accX += drag.x
@@ -170,20 +182,7 @@ private fun ImageObjectView(
                                 currentImage.x = liveX
                                 currentImage.y = liveY
                             },
-                            onDragEnd = {
-                                val img = currentImage
-                                // 拖出可列印範圍的物件推回邊界（S-85）；連續模式下中心拖到哪一頁就歸哪一頁。
-                                // 規則在核心，與 Apple 的 PrintableArea.land 同一份。
-                                val landed = com.kairumo.padnote.canvas.landObject(
-                                    img.id, liveX, liveY, liveWidth, liveHeight, crossing)
-                                liveX = landed.x
-                                liveY = landed.y
-                                img.x = landed.x
-                                img.y = landed.y
-                                onChanged(img)
-                                landed.page?.let { crossing?.moved?.invoke(img.id, it) }
-                                crossing?.ended?.invoke()
-                            }
+                            onDragEnd = finishDrag
                         )
                     }
                 }

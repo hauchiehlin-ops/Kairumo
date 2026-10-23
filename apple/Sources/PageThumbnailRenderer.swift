@@ -37,9 +37,52 @@ public enum PageThumbnailRenderer {
     /// 縮圖快取。側邊欄每次重繪都重新合成整頁會很慢，而內容沒變時結果是一樣的。
     private static let cache = NSCache<NSString, UIImage>()
 
+    /// 計算單一頁面內所有物件的位置與內容特徵值。
+    /// 只有在該頁物件真的變動時才使該頁快取失效，避免全本 lastModifiedDate 變更時導致所有頁面縮圖同時重新算繪與高度抖動。
+    private static func pageObjectsSignature(notebook: NotebookDocument, pageIndex: Int) -> Int {
+        var hasher = Hasher()
+        if let texts = notebook.textAttachments {
+            for t in texts where t.pageIndex == pageIndex {
+                hasher.combine(t.id)
+                hasher.combine(Int(t.x))
+                hasher.combine(Int(t.y))
+                hasher.combine(Int(t.width))
+                hasher.combine(Int(t.height))
+                hasher.combine(t.text.hashValue)
+            }
+        }
+        if let imgs = notebook.attachments {
+            for m in imgs where m.pageIndex == pageIndex {
+                hasher.combine(m.id)
+                hasher.combine(Int(m.x))
+                hasher.combine(Int(m.y))
+                hasher.combine(Int(m.width))
+                hasher.combine(Int(m.height))
+            }
+        }
+        if let tables = notebook.tableAttachments {
+            for tbl in tables where tbl.pageIndex == pageIndex {
+                hasher.combine(tbl.id)
+                hasher.combine(Int(tbl.x))
+                hasher.combine(Int(tbl.y))
+                hasher.combine(Int(tbl.width))
+                hasher.combine(Int(tbl.height))
+            }
+        }
+        if let shapes = notebook.shapeAttachments {
+            for s in shapes where s.pageIndex == pageIndex {
+                hasher.combine(s.id)
+                hasher.combine(Int(s.x))
+                hasher.combine(Int(s.y))
+                hasher.combine(Int(s.width))
+                hasher.combine(Int(s.height))
+            }
+        }
+        return hasher.finalize()
+    }
+
     /// 快取鍵必須涵蓋所有會改變畫面的東西：
-    /// `lastModifiedDate` 反映附件變動，`strokes.count` 反映手繪變動
-    /// （手繪是存到獨立的 .drawing 檔，不會更新 lastModifiedDate）。
+    /// 該頁物件簽章反映該頁附件變動，`strokes.count` 反映手繪變動。
     private static func cacheKey(
         notebook: NotebookDocument,
         pageIndex: Int,
@@ -48,7 +91,9 @@ public enum PageThumbnailRenderer {
     ) -> NSString {
         // 紙張與配色也要進快取鍵：改的是「這一頁用哪張紙」時，筆跡沒動、
         // 物件沒動，只有版面變了 —— 沒有這兩個欄位的話側欄縮圖不會更新。
-        "\(notebook.id)|\(pageIndex)|\(notebook.lastModifiedDate.timeIntervalSince1970)|\(drawing.strokes.count)|\(notebook.tapeAttachments?.count ?? 0)|\(Int(canvasWidth))|\(notebook.paperId(forPage: pageIndex))|\(notebook.guidePaletteId ?? "-")" as NSString
+        let sig = pageObjectsSignature(notebook: notebook, pageIndex: pageIndex)
+        let tapesCount = notebook.tapeAttachments?.filter({ $0.pageIndex == pageIndex }).count ?? 0
+        return "\(notebook.id)|\(pageIndex)|\(sig)|\(drawing.strokes.count)|\(tapesCount)|\(Int(canvasWidth))|\(notebook.paperId(forPage: pageIndex))|\(notebook.guidePaletteId ?? "-")" as NSString
     }
 
     /// 這一頁要畫的專業筆畫（自己的＋別台同步來的），已依圖層排好、隱藏的圖層已濾掉。

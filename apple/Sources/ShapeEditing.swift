@@ -259,7 +259,7 @@ struct ShapeAttachmentItemView: View {
                     if shown.acceptsText { isEditingLabel = true } else { onEdit() }
                 }
                 .onTapGesture { onSelect() }
-                .gesture(moveGesture)
+                .highPriorityGesture(moveGesture)
 
             // 縮放把手掛在旋轉那一層裡面 —— 它們要貼著轉過的邊。
             // 位移的換算（畫布 → 本地軸）在 `ShapeFrameMath.resized`。

@@ -5545,7 +5545,7 @@ public struct NotebookEditorView: View {
                                 eraserMode: eraserMode,
                                 pixelEraserWidth: pixelEraserWidth,
                                 palmRejection: palmRejection,
-                                isObjectActive: (editorMode == .type || inlineEditingTextId != nil || editingTextId != nil || activeSelectedObjectId != nil || !selectedObjectIds.isEmpty || !selectedShapeIds.isEmpty || isPlacingPasteObject) && !isInlineInkEditing,
+                                isObjectActive: (editorMode == .type || inlineEditingTextId != nil || editingTextId != nil || activeSelectedObjectId != nil || !selectedObjectIds.isEmpty || !selectedShapeIds.isEmpty || isPlacingPasteObject || lockPromptId != nil) && !isInlineInkEditing,
                                 isFocused: index == currentPageIndex,
                                 objectLayer: { objectLayer(forPage: index) },
                                 underInkObjectLayer: { AnyView(objectLayer(forPage: index, filter: .underInkOnly)) },
@@ -5765,7 +5765,6 @@ public struct NotebookEditorView: View {
         commitNotebook()
         continuousObjectGeneration += 1
         thumbnailRevision += 1
-        PageThumbnailRenderer.invalidateAll()
     }
 
     /// 編輯器自己搬的物件（形狀、表格、多選）在連續模式下的落點：`frame` 整組的外框，
@@ -7185,7 +7184,7 @@ public struct NotebookEditorView: View {
     private var pagesStructureViewContent: some View {
         VStack(spacing: 0) {
             ScrollView {
-                LazyVStack(spacing: 10) {
+                VStack(spacing: 10) {
                     ForEach(Array(0..<max(1, notebook.pageCount)), id: \.self) { idx in
                         pageStructureCard(idx: idx)
                     }
@@ -7487,9 +7486,10 @@ public struct NotebookEditorView: View {
                     store: store,
                     canvasWidth: canvasContentWidth
                 )
+                let pageRatio = PageGeometry.width / max(1, PageGeometry.height)
                 Image(uiImage: img)
                     .resizable()
-                    .aspectRatio(img.size.width / max(img.size.height, 1), contentMode: .fit)
+                    .aspectRatio(pageRatio, contentMode: .fit)
                     .frame(maxWidth: .infinity)
                     .clipShape(RoundedRectangle(cornerRadius: 6))
                     .overlay(
@@ -7823,7 +7823,10 @@ public struct NotebookEditorView: View {
             (canvasView as? AdaptiveCanvasView)?.proLayer?.reload()
             continuousReloadGeneration += 1
             thumbnailRevision += 1
-            PageThumbnailRenderer.invalidateAll()
+            if pageDisplayMode == .continuous {
+                continuousProgrammaticScrollUntil = Date().addingTimeInterval(1.0)
+                continuousScrollRequest += 1
+            }
         }
     }
 
@@ -10315,9 +10318,11 @@ public struct NotebookEditorView: View {
             ?? store.loadDrawing(notebookId: notebook.id, pageIndex: currentPageIndex)
         if pendingCoreInk[currentPageIndex] == nil { inkDiskBaselines[currentPageIndex] = loaded }
         self.currentDrawing = loaded
-        if let canvas = canvasView as? AdaptiveCanvasView {
-            canvas.initialLoadedStrokeCount = loaded.strokes.count
-            canvas.forceDisplayRefresh(with: loaded)
+        if pageDisplayMode == .single {
+            if let canvas = canvasView as? AdaptiveCanvasView {
+                canvas.initialLoadedStrokeCount = loaded.strokes.count
+                canvas.forceDisplayRefresh(with: loaded)
+            }
         }
         captureInitialPageState(page: currentPageIndex, drawing: loaded)
         self.lastStrokeCount = loaded.strokes.count
@@ -14707,7 +14712,6 @@ public struct NotebookEditorView: View {
         commitNotebook()
         continuousObjectGeneration += 1
         thumbnailRevision += 1
-        PageThumbnailRenderer.invalidateAll()
 
         // 貼上之後選取新的那一份，接著就能直接再拖一次（手繪與打字模式下皆生效）。
         selectedObjectIds = pastedIds
@@ -14768,7 +14772,6 @@ public struct NotebookEditorView: View {
         commitNotebook()
         continuousObjectGeneration += 1
         thumbnailRevision += 1
-        PageThumbnailRenderer.invalidateAll()
     }
 
     private func clipboardObject(forId id: String) -> ClipboardObject? {
@@ -15070,7 +15073,7 @@ public struct NotebookEditorView: View {
     /// 鎖定物件上方的「解除鎖定」鈕（頁面座標，畫在物件層裡）。
     @ViewBuilder
     private func lockedObjectPrompt(forPage page: Int) -> some View {
-        if editorMode == .type, let id = lockPromptId, pageOfObject(id) == page,
+        if let id = lockPromptId, pageOfObject(id) == page,
            notebook.allLockedObjectIds.contains(id), let frame = frameOfObject(id: id) {
             Button {
                 setObjectLocked(id, false)
@@ -15790,8 +15793,8 @@ struct AttachmentItemView: View {
                 guard lockedByPeer == nil else { return }
                 onSelect?()
             }
-            .gesture(
-                DragGesture(minimumDistance: 5, coordinateSpace: .named(CanvasCoordinateSpace.name))
+            .highPriorityGesture(
+                DragGesture(minimumDistance: 4, coordinateSpace: .named(CanvasCoordinateSpace.name))
                     .onChanged { value in
                         guard lockedByPeer == nil else { return }
                         if !isDragging { pageCrossing?.began() }
@@ -16792,8 +16795,8 @@ struct LinkAttachmentItemView: View {
                     .help(localizationManager.localized("link_edit"))
                 }
             }
-            .gesture(
-                DragGesture(minimumDistance: 5, coordinateSpace: .named(CanvasCoordinateSpace.name))
+            .highPriorityGesture(
+                DragGesture(minimumDistance: 4, coordinateSpace: .named(CanvasCoordinateSpace.name))
                     .onChanged { value in
                         if dragOffset == .zero { pageCrossing?.began() }
                         dragOffset = value.translation
@@ -17067,8 +17070,8 @@ struct Model3DCanvasItemView: View {
             .background(Color(UIColor.tertiarySystemBackground))
             .cornerRadius(8)
             .contentShape(Rectangle())
-            .gesture(
-                DragGesture(minimumDistance: 5, coordinateSpace: .named(CanvasCoordinateSpace.name))
+            .highPriorityGesture(
+                DragGesture(minimumDistance: 4, coordinateSpace: .named(CanvasCoordinateSpace.name))
                     .onChanged { value in
                         guard lockedByPeer == nil else { return }
                         if dragOffset == .zero { pageCrossing?.began() }

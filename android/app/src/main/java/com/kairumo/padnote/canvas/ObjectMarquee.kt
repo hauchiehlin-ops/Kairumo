@@ -394,6 +394,24 @@ fun MarqueeLayer(
             Modifier
                 .fillMaxSize()
                 .pointerInput(candidates, selectedIds, additive) {
+                    val finishDrag: () -> Unit = {
+                        val s = start
+                        val c = current
+                        if (s != null && c != null) {
+                            onSelectionChange(
+                                ObjectMarquee.combined(
+                                    selectedIds,
+                                    ObjectMarquee.hits(ObjectMarquee.rect(s, c), candidates),
+                                    additive
+                                )
+                            )
+                        } else if (groupDrag != Offset.Zero) {
+                            onCommitMove(groupDrag.x, groupDrag.y)
+                        }
+                        start = null
+                        current = null
+                        groupDrag = Offset.Zero
+                    }
                     detectDragGestures(
                         onDragStart = { offset ->
                             // 座標進來是像素，物件是頁面點 —— 差一個 density。
@@ -415,27 +433,8 @@ fun MarqueeLayer(
                                 current = (current ?: start!!) + d
                             }
                         },
-                        onDragEnd = {
-                            val s = start
-                            val c = current
-                            if (s != null && c != null) {
-                                onSelectionChange(
-                                    ObjectMarquee.combined(
-                                        selectedIds,
-                                        ObjectMarquee.hits(ObjectMarquee.rect(s, c), candidates),
-                                        additive
-                                    )
-                                )
-                            } else if (groupDrag != Offset.Zero) {
-                                onCommitMove(groupDrag.x, groupDrag.y)
-                            }
-                            start = null
-                            current = null
-                            groupDrag = Offset.Zero
-                        },
-                        onDragCancel = {
-                            start = null; current = null; groupDrag = Offset.Zero
-                        }
+                        onDragEnd = finishDrag,
+                        onDragCancel = finishDrag
                     )
                 }
                 .pointerInput(candidates, selectedIds, additive) {

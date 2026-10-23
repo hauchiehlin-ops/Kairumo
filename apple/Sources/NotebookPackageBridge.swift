@@ -793,6 +793,8 @@ enum NotebookPackageBridge {
         try? applyPageDeletions(
             notebookId: document.id, keeping: Set((pageIds ?? []).map { $0.lowercased() }),
             to: destination, deviceId: deviceId)
+        // 7. 這台搬動過的頁面順序：如果不寫 MovePage，別台或重新匯入時仍維持原建立順序。
+        try? applyPageReordering(pageIds: pageIds, to: destination, deviceId: deviceId)
         return summary
     }
 
@@ -904,6 +906,26 @@ enum NotebookPackageBridge {
         let session = try PadnoteSession.openExisting(path: destination.path, deviceId: deviceId)
         for id in pending.sorted() {
             try? session.removePage(pageId: id)
+        }
+    }
+
+    /// 把這台調整過的頁面順序同步寫入核心的 `MovePage` 操作。
+    /// 否則核心 session 在下次重新開啟時依然按最初的 AddPage 順序排列，導致重新載入或同步後頁面順序跳回。
+    private static func applyPageReordering(
+        pageIds: [String], to destination: URL, deviceId: UInt32
+    ) throws {
+        guard !pageIds.isEmpty else { return }
+        let session = try PadnoteSession.openExisting(path: destination.path, deviceId: deviceId)
+        let count = Int(session.pageCount())
+        let currentIds = (0..<count).compactMap { try? session.pageIdAt(index: UInt32($0))?.lowercased() }
+        let targetIds = pageIds.map { $0.lowercased() }.filter { currentIds.contains($0) }
+        guard targetIds != currentIds else { return }
+        for (targetIndex, id) in targetIds.enumerated() {
+            let nowCount = Int(session.pageCount())
+            let nowIds = (0..<nowCount).compactMap { try? session.pageIdAt(index: UInt32($0))?.lowercased() }
+            if let currentIndex = nowIds.firstIndex(of: id), currentIndex != targetIndex {
+                try? session.movePage(pageId: id, index: UInt32(targetIndex))
+            }
         }
     }
 

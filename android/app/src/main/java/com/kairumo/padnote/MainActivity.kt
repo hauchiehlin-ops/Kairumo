@@ -3982,6 +3982,9 @@ private fun InkScreen(
                                 runCatching { session.addPage(uniffi.padnote_core.PageStyle.BLANK) }
                                 pageCount = runCatching { session.pageCount().toInt() }.getOrDefault(pageCount + 1)
                                 pageIndex = pageCount - 1
+                                revision++
+                                continuousContentRevision++
+                                continuousScrollRequest++
                             }
                         }
                     ) { Text("+", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary) }
@@ -5110,6 +5113,9 @@ private fun InkScreen(
                                 pageCount = runCatching { s.pageCount().toInt() }
                                     .getOrDefault(pageCount + 1)
                                 pageIndex = pageCount - 1
+                                revision++
+                                continuousContentRevision++
+                                continuousScrollRequest++
                             }
                         },
                         onMovePage = { from, to -> movePage(from, to) },
@@ -5291,6 +5297,9 @@ private fun InkScreen(
                             pageCount = runCatching { s.pageCount().toInt() }
                                 .getOrDefault(pageCount + 1)
                             pageIndex = pageCount - 1
+                            revision++
+                            continuousContentRevision++
+                            continuousScrollRequest++
                         }
                     },
                     onMovePage = { from, to -> movePage(from, to) },
@@ -6664,6 +6673,9 @@ private fun InkScreen(
                         runCatching { s.addPage(uniffi.padnote_core.PageStyle.BLANK) }
                         pageCount = runCatching { s.pageCount().toInt() }.getOrDefault(pageCount + 1)
                         pageIndex = pageCount - 1
+                        revision++
+                        continuousContentRevision++
+                        continuousScrollRequest++
                     }
                 },
                 onColorPick = { hex -> engine.colorRgba = hexToRgba(hex) },
@@ -6700,6 +6712,9 @@ private fun InkScreen(
                             pageCount = runCatching { s.pageCount().toInt() }
                                 .getOrDefault(pageCount + 1)
                             pageIndex = pageCount - 1
+                            revision++
+                            continuousContentRevision++
+                            continuousScrollRequest++
                         }
                         showPageSidebar = false
                     },

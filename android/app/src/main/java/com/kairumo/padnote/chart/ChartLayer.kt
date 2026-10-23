@@ -125,6 +125,16 @@ private fun ChartObjectView(
                     var base: ChartObject? = null
                     var accX = 0f
                     var accY = 0f
+                    val finishDrag: () -> Unit = {
+                        val c = currentChart
+                        val landed = com.kairumo.padnote.canvas.landObject(
+                            c.id, liveX, liveY, liveWidth, liveHeight, crossing)
+                        liveX = landed.x
+                        liveY = landed.y
+                        onChanged(c.copy(x = landed.x, y = landed.y, width = liveWidth, height = liveHeight))
+                        landed.page?.let { crossing?.moved?.invoke(c.id, it) }
+                        crossing?.ended?.invoke()
+                    }
                     detectDragGestures(
                         onDragStart = {
                             val c = currentChart
@@ -136,18 +146,8 @@ private fun ChartObjectView(
                             onSelect(c.id)
                             crossing?.began?.invoke()
                         },
-                        onDragCancel = { crossing?.ended?.invoke() },
-                        onDragEnd = {
-                            // 推回可列印範圍（與其他物件一致）；連續模式下拖到哪一頁就歸哪一頁。
-                            val c = currentChart
-                            val landed = com.kairumo.padnote.canvas.landObject(
-                                c.id, liveX, liveY, liveWidth, liveHeight, crossing)
-                            liveX = landed.x
-                            liveY = landed.y
-                            onChanged(c.copy(x = landed.x, y = landed.y, width = liveWidth, height = liveHeight))
-                            landed.page?.let { crossing?.moved?.invoke(c.id, it) }
-                            crossing?.ended?.invoke()
-                        }
+                        onDragCancel = finishDrag,
+                        onDragEnd = finishDrag
                     ) { change, drag ->
                         change.consume()
                         val c0 = base ?: return@detectDragGestures

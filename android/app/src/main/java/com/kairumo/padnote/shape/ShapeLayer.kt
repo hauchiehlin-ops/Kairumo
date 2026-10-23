@@ -408,9 +408,19 @@ private fun ShapeObjectView(
                         var base: NoteShape? = null
                         var accX = 0f
                         var accY = 0f
+                        val finishDrag: () -> Unit = {
+                            val s0 = current
+                            val landed = com.kairumo.padnote.canvas.landObject(
+                                s0.id, s0.x, s0.y, s0.width, s0.height, crossing)
+                            if (landed.x != s0.x || landed.y != s0.y) {
+                                onChanged(s0.copyShape().apply { x = landed.x; y = landed.y })
+                            }
+                            landed.page?.let { crossing?.moved?.invoke(s0.id, it) }
+                            crossing?.ended?.invoke()
+                        }
                         detectDragGestures(
                             onDragStart = { base = current; accX = 0f; accY = 0f; crossing?.began?.invoke() },
-                            onDragCancel = { crossing?.ended?.invoke() },
+                            onDragCancel = finishDrag,
                             onDrag = { change, drag ->
                                 change.consume()
                                 val s0 = base ?: return@detectDragGestures
@@ -424,17 +434,7 @@ private fun ShapeObjectView(
                                 val dy = (accX * sn + accY * c) / density
                                 onChanged(s0.copyShape().apply { x = s0.x + dx; y = s0.y + dy })
                             },
-                            onDragEnd = {
-                                val s0 = current
-                                // 連續模式下中心拖到哪一頁就歸哪一頁（有連接線或在群組裡的不換，見 canMove）。
-                                val landed = com.kairumo.padnote.canvas.landObject(
-                                    s0.id, s0.x, s0.y, s0.width, s0.height, crossing)
-                                if (landed.x != s0.x || landed.y != s0.y) {
-                                    onChanged(s0.copyShape().apply { x = landed.x; y = landed.y })
-                                }
-                                landed.page?.let { crossing?.moved?.invoke(s0.id, it) }
-                                crossing?.ended?.invoke()
-                            }
+                            onDragEnd = finishDrag
                         )
                     }
                 },

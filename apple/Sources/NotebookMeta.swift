@@ -241,5 +241,8 @@ struct NotebookMeta: Codable, Hashable {
         if let recognizedText {
             document.recognizedText = recognizedText
         }
+        if let pageIds {
+            document.pageIds = pageIds
+        }
     }
 }

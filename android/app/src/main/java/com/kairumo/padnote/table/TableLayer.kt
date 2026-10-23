@@ -140,6 +140,19 @@ private fun TableObjectView(
                 var base: NoteTable? = null
                 var accX = 0f
                 var accY = 0f
+                val finishDrag: () -> Unit = {
+                    val t = currentTable
+                    val l = t.layout()
+                    val landed = com.kairumo.padnote.canvas.landObject(
+                        t.id, liveX, liveY, l.width.toFloat(), l.height.toFloat(), crossing)
+                    liveX = landed.x
+                    liveY = landed.y
+                    t.x = landed.x
+                    t.y = landed.y
+                    onChanged(t)
+                    landed.page?.let { crossing?.moved?.invoke(t.id, it) }
+                    crossing?.ended?.invoke()
+                }
                 detectDragGestures(
                     onDragStart = {
                         val t = currentTable
@@ -151,7 +164,7 @@ private fun TableObjectView(
                         onSelect(t.id)
                         crossing?.began?.invoke()
                     },
-                    onDragCancel = { crossing?.ended?.invoke() },
+                    onDragCancel = finishDrag,
                     onDrag = { change, drag ->
                         change.consume()
                         val t0 = base ?: return@detectDragGestures
@@ -163,20 +176,7 @@ private fun TableObjectView(
                         liveX = t0.x + (accX * c - accY * sn) / density
                         liveY = t0.y + (accX * sn + accY * c) / density
                     },
-                    onDragEnd = {
-                        val t = currentTable
-                        val l = t.layout()
-                        // 連續模式下中心拖到哪一頁就歸哪一頁（規則在核心，與 Apple 同一份）。
-                        val landed = com.kairumo.padnote.canvas.landObject(
-                            t.id, liveX, liveY, l.width.toFloat(), l.height.toFloat(), crossing)
-                        liveX = landed.x
-                        liveY = landed.y
-                        t.x = landed.x
-                        t.y = landed.y
-                        onChanged(t)
-                        landed.page?.let { crossing?.moved?.invoke(t.id, it) }
-                        crossing?.ended?.invoke()
-                    }
+                    onDragEnd = finishDrag
                 )
             } }
     ) {
