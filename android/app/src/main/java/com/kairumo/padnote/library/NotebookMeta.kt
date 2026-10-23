@@ -490,20 +490,21 @@ class NotebookMeta private constructor(private var root: JSONObject) {
         val map = root.optJSONObject(KEY_LOCKED_BY_PAGE) ?: return emptySet()
         val out = HashSet<String>()
         val keys = map.keys()
-        while (keys.hasNext()) out += map.optJSONArray(keys.next())?.toStringList().orEmpty()
+        while (keys.hasNext()) out += map.optJSONArray(keys.next())?.toStringList().orEmpty().map { it.lowercase() }
         return out
     }
 
     /** 鎖定／解除鎖定一個物件並落盤。解除時每一頁都拿掉（它記在哪個頁次鍵底下不一定是現在這一頁）。 */
     fun setObjectLocked(session: PadnoteSession?, pageIndex: Int, id: String, locked: Boolean) {
         val map = root.optJSONObject(KEY_LOCKED_BY_PAGE) ?: JSONObject()
+        val lowerId = id.lowercase()
         if (locked) {
-            val current = map.optJSONArray(pageIndex.toString())?.toStringList().orEmpty().toSortedSet()
-            current += id
+            val current = map.optJSONArray(pageIndex.toString())?.toStringList().orEmpty().map { it.lowercase() }.toSortedSet()
+            current += lowerId
             map.put(pageIndex.toString(), JSONArray(current.toList()))
         } else {
             for (key in map.keys().asSequence().toList()) {
-                val remaining = map.optJSONArray(key)?.toStringList().orEmpty().filter { it != id }.sorted()
+                val remaining = map.optJSONArray(key)?.toStringList().orEmpty().filter { it.lowercase() != lowerId }.sorted()
                 if (remaining.isEmpty()) map.remove(key) else map.put(key, JSONArray(remaining))
             }
         }
