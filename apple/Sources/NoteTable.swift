@@ -60,7 +60,7 @@ public struct NoteTableAttachment: Identifiable, Codable, Hashable {
     public var headerBackgroundHex: String?
 
     public init(
-        id: String = UUID().uuidString,
+        id: String = UUID().uuidString.lowercased(),
         pageIndex: Int = 0,
         x: CGFloat = 60,
         y: CGFloat = 120,

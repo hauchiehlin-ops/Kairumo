@@ -3538,6 +3538,7 @@ public struct NotebookEditorView: View {
     /// 每一頁的畫布整個重建，整片空白一下、寫到一半的那一筆直接不見。
     private func reloadAfterExternalChange() {
         coreInkBaselines.removeAll()
+        inkDiskBaselines.removeAll()
         if let updated = store.notebooks.first(where: { $0.id == notebook.id }) {
             self.notebook = updated
         }
@@ -5503,6 +5504,8 @@ public struct NotebookEditorView: View {
     /// （點側欄縮圖、上一頁／下一頁、新增頁面…）。後者才要捲過去；
     /// 前者再捲一次會跟使用者的手指打架。
     @State private var continuousReportedPage: Int = -1
+    /// 連續模式下已建立的各頁畫布參照，供套索與存檔即時存取焦點頁畫布
+    @State private var continuousCanvases: [Int: PKCanvasView] = [:]
     /// Pencil 落筆把打字模式切成手繪的時間（那一次切換不捲動，見 `onChange(of: editorMode)`）。
     @State private var pencilModeSwitchAt: Date?
     /// 專業筆畫有未標記的變動（見 `AppCommand.proInkDidChange`）。存檔時不能當成「沒變」略過。
@@ -5563,6 +5566,7 @@ public struct NotebookEditorView: View {
                                 // LazyVStack 會建立多頁畫布；不能讓最後建立的頁面覆蓋
                                 // `canvasView`，否則貼紙可能蓋到別頁且存檔頁碼也錯。
                                 canvasRef: { ref in
+                                    continuousCanvases[index] = ref
                                     // 同上：不在畫面更新途中改 @State，且只在真的換了才寫。
                                     guard index == currentPageIndex, canvasView !== ref else { return }
                                     DispatchQueue.main.async { canvasView = ref }
@@ -5717,12 +5721,7 @@ public struct NotebookEditorView: View {
                 scrollContinuous(to: currentPageIndex, proxy: proxy, animated: false)
             }
             .onChange(of: editorMode) { _ in
-                // 打字模式下 Pencil 一落筆就切回手繪：使用者正在某個位置寫字，這時捲到頁首
-                // 等於把紙從筆尖底下抽走。這種切換不捲。
-                if let at = pencilModeSwitchAt, Date().timeIntervalSince(at) < 0.5 { return }
-                // 切換手繪/打字模式時，鎖定焦點頁面並維持捲動位置，避免跳回第 1 頁
-                continuousProgrammaticScrollUntil = Date().addingTimeInterval(0.8)
-                scrollContinuous(to: currentPageIndex, proxy: proxy, animated: false)
+                // 切換手繪/打字模式時維持使用者原本的捲動位置與閱讀視角，不強制捲動頁面。
             }
             .onAppear {
                 // 從整頁模式切過來時，停在原本那一頁而不是回到第 1 頁。
@@ -5781,6 +5780,9 @@ public struct NotebookEditorView: View {
         guard index != currentPageIndex else { return }
         continuousReportedPage = index
         currentPageIndex = index
+        if let canvas = continuousCanvases[index] {
+            canvasView = canvas
+        }
         currentDrawing = drawingForPage(index)
     }
 
@@ -5851,6 +5853,9 @@ public struct NotebookEditorView: View {
         guard let page = nearest?.key, page != currentPageIndex else { return }
         continuousReportedPage = page
         currentPageIndex = page
+        if let canvas = continuousCanvases[page] {
+            canvasView = canvas
+        }
         currentDrawing = drawingForPage(page)
     }
 
@@ -5915,7 +5920,7 @@ public struct NotebookEditorView: View {
                                 collaborationManager.broadcastSelection(selectedId: nil)
                             }
                         )
-                        .canvasLocked(lockedSet.contains(item.id))
+                        .canvasLocked(lockedSet.contains(item.id.lowercased()))
 
                         .zIndex(stacking.zIndex(for: item.id, kind: .image))
                     }
@@ -5975,7 +5980,7 @@ public struct NotebookEditorView: View {
                                     current: current, finished: finished)
                             }
                         )
-                        .canvasLocked(lockedSet.contains(item.id))
+                        .canvasLocked(lockedSet.contains(item.id.lowercased()))
 
                         .zIndex(stacking.zIndex(for: item.id, kind: .shape))
                     }
@@ -6048,7 +6053,7 @@ public struct NotebookEditorView: View {
                                 collaborationManager.broadcastAttachmentDelete(id: id, type: "table")
                             }
                         )
-                        .canvasLocked(lockedSet.contains(item.id))
+                        .canvasLocked(lockedSet.contains(item.id.lowercased()))
 
                         .zIndex(stacking.zIndex(for: item.id, kind: .table))
                     }
@@ -6103,7 +6108,7 @@ public struct NotebookEditorView: View {
                             },
                             selectionTracker: textSelectionTracker
                         )
-                        .canvasLocked(lockedSet.contains(item.id))
+                        .canvasLocked(lockedSet.contains(item.id.lowercased()))
 
                         .zIndex(stacking.zIndex(for: item.id, kind: .text))
                     }
@@ -6121,7 +6126,7 @@ public struct NotebookEditorView: View {
                                 commitNotebook()
                             }
                         )
-                        .canvasLocked(lockedSet.contains(item.id))
+                        .canvasLocked(lockedSet.contains(item.id.lowercased()))
 
                         .zIndex(stacking.zIndex(for: item.id, kind: .link))
                     }
@@ -6143,7 +6148,7 @@ public struct NotebookEditorView: View {
                                 insertTranscriptText(transcribedText, for: item)
                             }
                         )
-                        .canvasLocked(lockedSet.contains(item.id))
+                        .canvasLocked(lockedSet.contains(item.id.lowercased()))
 
                         .zIndex(stacking.zIndex(for: item.id, kind: .audio))
                     }
@@ -6164,7 +6169,7 @@ public struct NotebookEditorView: View {
                                 collaborationManager.broadcastSelection(selectedId: nil)
                             }
                         )
-                        .canvasLocked(lockedSet.contains(item.id))
+                        .canvasLocked(lockedSet.contains(item.id.lowercased()))
 
                         .zIndex(stacking.zIndex(for: item.id, kind: .model3D))
                     }
@@ -6194,7 +6199,7 @@ public struct NotebookEditorView: View {
                             }
                         )
                         .position(x: pin.x, y: pin.y)
-                        .canvasLocked(lockedSet.contains(pin.id))
+                        .canvasLocked(lockedSet.contains(pin.id.lowercased()))
 
                         .zIndex(stacking.zIndex(for: pin.id, kind: .pin))
                     }
@@ -11352,12 +11357,13 @@ public struct NotebookEditorView: View {
     /// 剛落下的筆畫、別的路徑換過的筆跡可能還沒寫回來；拿舊副本算出的選取索引
     /// 對不到畫面上的筆畫 —— 有的拖得動、有的拖不動。
     private func syncDrawingFromCanvas() {
+        let targetCanvas = (pageDisplayMode == .continuous ? continuousCanvases[currentPageIndex] : nil) ?? canvasView
         // 連續模式剛換焦點頁時 `canvasView` 可能還是上一頁的畫布（非同步才換過來），不能拿它當這一頁。
-        if let coordinator = canvasView?.delegate as? CanvasRepresentable.Coordinator,
+        if let coordinator = targetCanvas?.delegate as? CanvasRepresentable.Coordinator,
            let page = coordinator.parent.proInk?.pageIndex, page != currentPageIndex {
             return
         }
-        if let live = canvasView?.drawing, live != currentDrawing {
+        if let live = targetCanvas?.drawing, live != currentDrawing {
             currentDrawing = live
         }
     }
@@ -11365,10 +11371,11 @@ public struct NotebookEditorView: View {
     /// 把套索改過的筆跡換上目前的畫布（不經 delegate，見 `showEditedDrawing`）。
     private func showLassoEdit(_ newDrawing: PKDrawing) {
         currentDrawing = newDrawing
-        if let adaptive = canvasView as? AdaptiveCanvasView {
+        let targetCanvas = (pageDisplayMode == .continuous ? continuousCanvases[currentPageIndex] : nil) ?? canvasView
+        if let adaptive = targetCanvas as? AdaptiveCanvasView {
             adaptive.showEditedDrawing(newDrawing)
         } else {
-            canvasView?.drawing = newDrawing
+            targetCanvas?.drawing = newDrawing
         }
     }
 
@@ -14091,14 +14098,15 @@ public struct NotebookEditorView: View {
     }
 
     private func connectionBinding(for id: String) -> Binding<NoteConnectionAttachment> {
-        Binding(
+        let normId = id.lowercased()
+        return Binding(
             get: {
-                notebook.connectionAttachments?.first(where: { $0.id == id })
+                notebook.connectionAttachments?.first(where: { $0.id.lowercased() == normId })
                     ?? NoteConnectionAttachment(id: id, fromShapeId: "", toShapeId: "")
             },
             set: { updated in
                 guard let index = notebook.connectionAttachments?
-                    .firstIndex(where: { $0.id == id }) else { return }
+                    .firstIndex(where: { $0.id.lowercased() == normId }) else { return }
                 notebook.connectionAttachments?[index] = updated
                 commitNotebook()
                 PageThumbnailRenderer.invalidateAll()
@@ -14177,25 +14185,26 @@ public struct NotebookEditorView: View {
 
     /// 某個物件目前的版面框（頁面座標）。
     private func frameOfObject(id: String) -> CGRect? {
-        if let i = notebook.attachments?.first(where: { $0.id == id }) {
+        let norm = id.lowercased()
+        if let i = notebook.attachments?.first(where: { $0.id.lowercased() == norm }) {
             return CGRect(x: i.x, y: i.y, width: i.width, height: i.height)
         }
-        if let i = notebook.shapeAttachments?.first(where: { $0.id == id }) {
+        if let i = notebook.shapeAttachments?.first(where: { $0.id.lowercased() == norm }) {
             return CGRect(x: i.x, y: i.y, width: i.width, height: i.height)
         }
-        if let i = notebook.tableAttachments?.first(where: { $0.id == id }) {
+        if let i = notebook.tableAttachments?.first(where: { $0.id.lowercased() == norm }) {
             return CGRect(x: i.x, y: i.y, width: i.width, height: i.height)
         }
-        if let i = notebook.textAttachments?.first(where: { $0.id == id }) {
+        if let i = notebook.textAttachments?.first(where: { $0.id.lowercased() == norm }) {
             return CGRect(x: i.x, y: i.y, width: i.width, height: i.height)
         }
-        if let i = notebook.linkAttachments?.first(where: { $0.id == id }) {
+        if let i = notebook.linkAttachments?.first(where: { $0.id.lowercased() == norm }) {
             return CGRect(x: i.x, y: i.y, width: i.width, height: i.height)
         }
-        if let i = notebook.model3DAttachments?.first(where: { $0.id == id }) {
+        if let i = notebook.model3DAttachments?.first(where: { $0.id.lowercased() == norm }) {
             return CGRect(x: i.x, y: i.y, width: i.width, height: i.height)
         }
-        if let i = notebook.audioAttachments?.first(where: { $0.id == id }) {
+        if let i = notebook.audioAttachments?.first(where: { $0.id.lowercased() == norm }) {
             return CGRect(x: i.x, y: i.y, width: i.width, height: i.height)
         }
         return nil
@@ -14212,38 +14221,39 @@ public struct NotebookEditorView: View {
                 maxX: Float(rawOrigin.x + size.width), maxY: Float(rawOrigin.y + size.height)),
             pageWidth: Float(page.width), pageHeight: Float(page.height), inset: inset)
         let origin = CGPoint(x: CGFloat(clamped.minX), y: CGFloat(clamped.minY))
+        let norm = id.lowercased()
 
-        if let index = notebook.attachments?.firstIndex(where: { $0.id == id }) {
+        if let index = notebook.attachments?.firstIndex(where: { $0.id.lowercased() == norm }) {
             notebook.attachments?[index].x = origin.x
             notebook.attachments?[index].y = origin.y
             return
         }
-        if let index = notebook.shapeAttachments?.firstIndex(where: { $0.id == id }) {
+        if let index = notebook.shapeAttachments?.firstIndex(where: { $0.id.lowercased() == norm }) {
             notebook.shapeAttachments?[index].x = origin.x
             notebook.shapeAttachments?[index].y = origin.y
             return
         }
-        if let index = notebook.tableAttachments?.firstIndex(where: { $0.id == id }) {
+        if let index = notebook.tableAttachments?.firstIndex(where: { $0.id.lowercased() == norm }) {
             notebook.tableAttachments?[index].x = origin.x
             notebook.tableAttachments?[index].y = origin.y
             return
         }
-        if let index = notebook.textAttachments?.firstIndex(where: { $0.id == id }) {
+        if let index = notebook.textAttachments?.firstIndex(where: { $0.id.lowercased() == norm }) {
             notebook.textAttachments?[index].x = origin.x
             notebook.textAttachments?[index].y = origin.y
             return
         }
-        if let index = notebook.linkAttachments?.firstIndex(where: { $0.id == id }) {
+        if let index = notebook.linkAttachments?.firstIndex(where: { $0.id.lowercased() == norm }) {
             notebook.linkAttachments?[index].x = origin.x
             notebook.linkAttachments?[index].y = origin.y
             return
         }
-        if let index = notebook.model3DAttachments?.firstIndex(where: { $0.id == id }) {
+        if let index = notebook.model3DAttachments?.firstIndex(where: { $0.id.lowercased() == norm }) {
             notebook.model3DAttachments?[index].x = origin.x
             notebook.model3DAttachments?[index].y = origin.y
             return
         }
-        if let index = notebook.audioAttachments?.firstIndex(where: { $0.id == id }) {
+        if let index = notebook.audioAttachments?.firstIndex(where: { $0.id.lowercased() == norm }) {
             notebook.audioAttachments?[index].x = origin.x
             notebook.audioAttachments?[index].y = origin.y
         }
@@ -15020,21 +15030,22 @@ public struct NotebookEditorView: View {
 
     /// 物件所在的頁面。找不到（已刪除）回傳 nil。
     private func pageOfObject(_ id: String) -> Int? {
-        if let v = notebook.attachments?.first(where: { $0.id == id }) { return v.pageIndex }
-        if let v = notebook.shapeAttachments?.first(where: { $0.id == id }) { return v.pageIndex }
-        if let v = notebook.tableAttachments?.first(where: { $0.id == id }) { return v.pageIndex }
-        if let v = notebook.textAttachments?.first(where: { $0.id == id }) { return v.pageIndex }
-        if let v = notebook.linkAttachments?.first(where: { $0.id == id }) { return v.pageIndex }
-        if let v = notebook.model3DAttachments?.first(where: { $0.id == id }) { return v.pageIndex }
-        if let v = notebook.audioAttachments?.first(where: { $0.id == id }) { return v.pageIndex }
-        if let v = notebook.commentPins?.first(where: { $0.id == id }) { return v.pageIndex }
+        let norm = id.lowercased()
+        if let v = notebook.attachments?.first(where: { $0.id.lowercased() == norm }) { return v.pageIndex }
+        if let v = notebook.shapeAttachments?.first(where: { $0.id.lowercased() == norm }) { return v.pageIndex }
+        if let v = notebook.tableAttachments?.first(where: { $0.id.lowercased() == norm }) { return v.pageIndex }
+        if let v = notebook.textAttachments?.first(where: { $0.id.lowercased() == norm }) { return v.pageIndex }
+        if let v = notebook.linkAttachments?.first(where: { $0.id.lowercased() == norm }) { return v.pageIndex }
+        if let v = notebook.model3DAttachments?.first(where: { $0.id.lowercased() == norm }) { return v.pageIndex }
+        if let v = notebook.audioAttachments?.first(where: { $0.id.lowercased() == norm }) { return v.pageIndex }
+        if let v = notebook.commentPins?.first(where: { $0.id.lowercased() == norm }) { return v.pageIndex }
         return nil
     }
 
     /// 物件選單、編輯面板、圖層面板共用的「鎖定在畫布上」。
     private var objectLockActions: ObjectLockActions {
         ObjectLockActions(
-            isLocked: { id in notebook.allLockedObjectIds.contains(id) },
+            isLocked: { id in notebook.allLockedObjectIds.contains(id.lowercased()) },
             setLocked: { id, locked in setObjectLocked(id, locked) })
     }
 
@@ -15044,7 +15055,7 @@ public struct NotebookEditorView: View {
         guard !locked.isEmpty else { return nil }
         let stacking = ObjectStacking.Lookup(order: notebook.objectOrder(forPage: page))
         return stackableObjects(forPage: page)
-            .filter { locked.contains($0.id) }
+            .filter { locked.contains($0.id.lowercased()) }
             .sorted { stacking.zIndex(for: $0.id, kind: $0.kind) > stacking.zIndex(for: $1.id, kind: $1.kind) }
             // 放寬 20pt：角落的鎖頭露在物件外面，點鎖頭也要算點到它。
             .first { frameOfObject(id: $0.id)?.insetBy(dx: -20, dy: -20).contains(point) == true }?
@@ -15058,10 +15069,10 @@ public struct NotebookEditorView: View {
     private func lockedObjectBadges(forPage page: Int) -> some View {
         let locked = notebook.allLockedObjectIds
         if !locked.isEmpty {
-            ForEach(stackableObjects(forPage: page).filter { locked.contains($0.id) }, id: \.id) { object in
+            ForEach(stackableObjects(forPage: page).filter { locked.contains($0.id.lowercased()) }, id: \.id) { object in
                 if let frame = frameOfObject(id: object.id) {
                     LockedObjectBadge {
-                        lockPromptId = (lockPromptId == object.id) ? nil : object.id
+                        lockPromptId = (lockPromptId?.caseInsensitiveCompare(object.id) == .orderedSame) ? nil : object.id
                     }
                     .position(x: frame.maxX, y: frame.minY)
                     .zIndex(9_700)
@@ -15074,7 +15085,7 @@ public struct NotebookEditorView: View {
     @ViewBuilder
     private func lockedObjectPrompt(forPage page: Int) -> some View {
         if let id = lockPromptId, pageOfObject(id) == page,
-           notebook.allLockedObjectIds.contains(id), let frame = frameOfObject(id: id) {
+           notebook.allLockedObjectIds.contains(id.lowercased()), let frame = frameOfObject(id: id) {
             Button {
                 setObjectLocked(id, false)
                 lockPromptId = nil
@@ -15097,30 +15108,33 @@ public struct NotebookEditorView: View {
     /// 鎖定／解除鎖定一個物件。鎖定時一併收掉它的選取與編輯面板 ——
     /// 鎖定的物件點不到，留著選取外框的話，使用者看到的是一組拖不動的把手。
     private func setObjectLocked(_ id: String, _ locked: Bool) {
-        guard notebook.allLockedObjectIds.contains(id) != locked else { return }
+        let normId = id.lowercased()
+        guard notebook.allLockedObjectIds.contains(normId) != locked else { return }
         if locked {
-            guard let page = pageOfObject(id) else { return }
-            notebook.setLockedObjectIds(notebook.lockedObjectIds(forPage: page).union([id]), forPage: page)
+            guard let page = pageOfObject(normId) else { return }
+            notebook.setLockedObjectIds(notebook.lockedObjectIds(forPage: page).union([normId]), forPage: page)
         } else {
             // 解除時每一頁都拿掉：頁面搬移過的話，它記在哪個頁次鍵底下不一定是現在這一頁。
             for key in (notebook.lockedObjectIdsByPage ?? [:]).keys {
                 guard let page = Int(key) else { continue }
-                notebook.setLockedObjectIds(notebook.lockedObjectIds(forPage: page).subtracting([id]), forPage: page)
+                notebook.setLockedObjectIds(notebook.lockedObjectIds(forPage: page).subtracting([normId]), forPage: page)
             }
         }
         if locked {
-            if activeSelectedObjectId == id {
+            if activeSelectedObjectId?.lowercased() == normId {
                 activeSelectedObjectId = nil
                 collaborationManager.broadcastSelection(selectedId: nil)
             }
             selectedObjectIds.remove(id)
+            selectedObjectIds.remove(normId)
             selectedShapeIds.remove(id)
-            if inlineEditingTextId == id { inlineEditingTextId = nil }
-            if editingTextId == id { editingTextId = nil }
-            if editingShapeId == id { editingShapeId = nil }
-            if editingAttachmentId == id { editingAttachmentId = nil }
+            selectedShapeIds.remove(normId)
+            if inlineEditingTextId?.lowercased() == normId { inlineEditingTextId = nil }
+            if editingTextId?.lowercased() == normId { editingTextId = nil }
+            if editingShapeId?.lowercased() == normId { editingShapeId = nil }
+            if editingAttachmentId?.lowercased() == normId { editingAttachmentId = nil }
         }
-        if lockPromptId == id { lockPromptId = nil }
+        if lockPromptId?.lowercased() == normId { lockPromptId = nil }
         commitNotebook()
         // 只重建物件層：重建畫布會整頁白一下，寫到一半的筆畫也會不見。
         continuousObjectGeneration += 1
@@ -15372,14 +15386,15 @@ public struct NotebookEditorView: View {
     }
 
     private func shapeBinding(for id: String) -> Binding<NoteShapeAttachment> {
-        Binding(
+        let normId = id.lowercased()
+        return Binding(
             get: {
-                notebook.shapeAttachments?.first(where: { $0.id == id })
+                notebook.shapeAttachments?.first(where: { $0.id.lowercased() == normId })
                     ?? NoteShapeAttachment(id: id)
             },
             set: { updated in
                 guard let index = notebook.shapeAttachments?
-                    .firstIndex(where: { $0.id == id }) else { return }
+                    .firstIndex(where: { $0.id.lowercased() == normId }) else { return }
                 notebook.shapeAttachments?[index] = updated
                 commitNotebook()
             }
@@ -15391,8 +15406,9 @@ public struct NotebookEditorView: View {
             finishPageCrossing(ids: [], to: nil)
             return
         }
+        let normId = id.lowercased()
         guard var all = notebook.tableAttachments,
-              let index = all.firstIndex(where: { $0.id == id }) else { return }
+              let index = all.firstIndex(where: { $0.id.lowercased() == normId }) else { return }
         let previous = all[index]
         all[index].x += delta.width
         all[index].y += delta.height
@@ -15428,14 +15444,15 @@ public struct NotebookEditorView: View {
     }
 
     private func tableBinding(for id: String) -> Binding<NoteTableAttachment> {
-        Binding(
+        let normId = id.lowercased()
+        return Binding(
             get: {
-                notebook.tableAttachments?.first(where: { $0.id == id })
+                notebook.tableAttachments?.first(where: { $0.id.lowercased() == normId })
                     ?? NoteTableAttachment(id: id)
             },
             set: { updated in
                 guard let index = notebook.tableAttachments?
-                    .firstIndex(where: { $0.id == id }) else { return }
+                    .firstIndex(where: { $0.id.lowercased() == normId }) else { return }
                 let previous = notebook.tableAttachments![index]
                 notebook.tableAttachments?[index] = updated
                 commitNotebook()
@@ -15513,12 +15530,13 @@ public struct NotebookEditorView: View {
     }
 
     private func binding(for id: String) -> Binding<NoteImageAttachment> {
-        Binding(
+        let norm = id.lowercased()
+        return Binding(
             get: {
-                notebook.attachments?.first(where: { $0.id == id }) ?? NoteImageAttachment(fileName: "")
+                notebook.attachments?.first(where: { $0.id.lowercased() == norm }) ?? NoteImageAttachment(fileName: "")
             },
             set: { updated in
-                if let idx = notebook.attachments?.firstIndex(where: { $0.id == id }) {
+                if let idx = notebook.attachments?.firstIndex(where: { $0.id.lowercased() == norm }) {
                     notebook.attachments?[idx] = updated
                     commitNotebook()
                 }
@@ -15535,10 +15553,11 @@ public struct NotebookEditorView: View {
     /// （`0x8BADF00D`）在背景把 App 殺掉 —— 崩潰報告的主執行緒堆疊停在
     /// 這個閉包裡的 `_stringCompareInternal`。
     private func binding(forTextId id: String, hint: Int? = nil) -> Binding<NoteTextAttachment> {
+        let norm = id.lowercased()
         func index(in items: [NoteTextAttachment]?) -> Int? {
             guard let items else { return nil }
-            if let hint, items.indices.contains(hint), items[hint].id == id { return hint }
-            return items.firstIndex(where: { $0.id == id })
+            if let hint, items.indices.contains(hint), items[hint].id.lowercased() == norm { return hint }
+            return items.firstIndex(where: { $0.id.lowercased() == norm })
         }
         return Binding(
             get: {
@@ -15583,12 +15602,13 @@ public struct NotebookEditorView: View {
     }
 
     private func binding(forLinkId id: String) -> Binding<NoteLinkAttachment> {
-        Binding(
+        let norm = id.lowercased()
+        return Binding(
             get: {
-                notebook.linkAttachments?.first(where: { $0.id == id }) ?? NoteLinkAttachment(urlString: "")
+                notebook.linkAttachments?.first(where: { $0.id.lowercased() == norm }) ?? NoteLinkAttachment(urlString: "")
             },
             set: { updated in
-                if let idx = notebook.linkAttachments?.firstIndex(where: { $0.id == id }) {
+                if let idx = notebook.linkAttachments?.firstIndex(where: { $0.id.lowercased() == norm }) {
                     notebook.linkAttachments?[idx] = updated
                     commitNotebook()
                 }
@@ -15597,13 +15617,14 @@ public struct NotebookEditorView: View {
     }
 
     private func binding(forAudioId id: String) -> Binding<NoteAudioAttachment> {
-        Binding(
+        let norm = id.lowercased()
+        return Binding(
             get: {
-                notebook.audioAttachments?.first(where: { $0.id == id })
+                notebook.audioAttachments?.first(where: { $0.id.lowercased() == norm })
                     ?? NoteAudioAttachment(fileName: "")
             },
             set: { updated in
-                if let idx = notebook.audioAttachments?.firstIndex(where: { $0.id == id }) {
+                if let idx = notebook.audioAttachments?.firstIndex(where: { $0.id.lowercased() == norm }) {
                     notebook.audioAttachments?[idx] = updated
                     commitNotebook()
                 }
@@ -15612,12 +15633,13 @@ public struct NotebookEditorView: View {
     }
 
     private func binding(forModel3DId id: String) -> Binding<Note3DAttachment> {
-        Binding(
+        let norm = id.lowercased()
+        return Binding(
             get: {
-                notebook.model3DAttachments?.first(where: { $0.id == id }) ?? Note3DAttachment()
+                notebook.model3DAttachments?.first(where: { $0.id.lowercased() == norm }) ?? Note3DAttachment()
             },
             set: { updated in
-                if let idx = notebook.model3DAttachments?.firstIndex(where: { $0.id == id }) {
+                if let idx = notebook.model3DAttachments?.firstIndex(where: { $0.id.lowercased() == norm }) {
                     notebook.model3DAttachments?[idx] = updated
                     commitNotebook()
                 }
@@ -15820,9 +15842,11 @@ struct AttachmentItemView: View {
                                     y: attachment.y + value.translation.height,
                                     width: attachment.width, height: attachment.height,
                                     crossing: pageCrossing)
-                                attachment.x = landed.origin.x
-                                attachment.y = landed.origin.y
-                                if let page = landed.page { attachment.pageIndex = page }
+                                var updated = attachment
+                                updated.x = landed.origin.x
+                                updated.y = landed.origin.y
+                                if let page = landed.page { updated.pageIndex = page }
+                                attachment = updated
                                 crossedTo = landed.page
                                 dragOffset = .zero
                                 isDragging = false
@@ -16399,10 +16423,12 @@ struct TextAttachmentItemView: View {
                                     y: textItem.y + value.translation.height,
                                     width: textItem.width, height: calculatedContentHeight,
                                     crossing: pageCrossing)
-                                textItem.x = landed.origin.x
-                                textItem.y = (snapToGrid && snapY != nil) ? snapY!(landed.origin.y) : landed.origin.y
-                                textItem.height = calculatedContentHeight
-                                if let page = landed.page { textItem.pageIndex = page }
+                                var updated = textItem
+                                updated.x = landed.origin.x
+                                updated.y = (snapToGrid && snapY != nil) ? snapY!(landed.origin.y) : landed.origin.y
+                                updated.height = calculatedContentHeight
+                                if let page = landed.page { updated.pageIndex = page }
+                                textItem = updated
                                 crossedTo = landed.page
                                 dragOffset = .zero
                                 isDragging = false
@@ -16812,9 +16838,11 @@ struct LinkAttachmentItemView: View {
                                 y: linkItem.y + value.translation.height,
                                 width: linkItem.width, height: linkItem.height,
                                 crossing: pageCrossing)
-                            linkItem.x = landed.origin.x
-                            linkItem.y = landed.origin.y
-                            if let page = landed.page { linkItem.pageIndex = page }
+                            var updated = linkItem
+                            updated.x = landed.origin.x
+                            updated.y = landed.origin.y
+                            if let page = landed.page { updated.pageIndex = page }
+                            linkItem = updated
                             crossedTo = landed.page
                             onSelect?()
                         }
@@ -17085,9 +17113,11 @@ struct Model3DCanvasItemView: View {
                             y: item.y + value.translation.height,
                             width: item.width, height: item.height,
                             crossing: pageCrossing)
-                        item.x = landed.origin.x
-                        item.y = landed.origin.y
-                        if let page = landed.page { item.pageIndex = page }
+                        var updated = item
+                        updated.x = landed.origin.x
+                        updated.y = landed.origin.y
+                        if let page = landed.page { updated.pageIndex = page }
+                        item = updated
                         dragOffset = .zero
                         pageCrossing?.ended(landed.page == nil ? nil : item.id, landed.page)
                         onSelect?()
@@ -17114,9 +17144,11 @@ struct Model3DCanvasItemView: View {
                         y: item.y + dragOffset.height,
                         width: item.width, height: item.height,
                         crossing: pageCrossing)
-                    item.x = landed.origin.x
-                    item.y = landed.origin.y
-                    if let page = landed.page { item.pageIndex = page }
+                    var updated = item
+                    updated.x = landed.origin.x
+                    updated.y = landed.origin.y
+                    if let page = landed.page { updated.pageIndex = page }
+                    item = updated
                     dragOffset = .zero
                     pageCrossing?.ended(landed.page == nil ? nil : item.id, landed.page)
                     onSelect?()

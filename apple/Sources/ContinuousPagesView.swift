@@ -158,7 +158,7 @@ struct ContinuousPageView<ObjectLayer: View>: View {
                 onLassoBegan: { pt in onLassoBegan?(pt) },
                 onLassoMoved: { pt in onLassoMoved?(pt) },
                 onLassoEnded: { onLassoEnded?() },
-                canvasRef: { canvas in if isFocused { canvasRef(canvas) } },
+                canvasRef: { canvas in canvasRef(canvas) },
                 palmRejection: palmRejection,
                 onPenControl: { control, pressed in
                     if isFocused { onPenControl?(control, pressed) }

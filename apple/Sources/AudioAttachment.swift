@@ -97,9 +97,11 @@ struct AudioAttachmentItemView: View {
                             y: item.y + value.translation.height,
                             width: item.width, height: item.height,
                             crossing: pageCrossing)
-                        item.x = landed.origin.x
-                        item.y = landed.origin.y
-                        if let page = landed.page { item.pageIndex = page }
+                        var updated = item
+                        updated.x = landed.origin.x
+                        updated.y = landed.origin.y
+                        if let page = landed.page { updated.pageIndex = page }
+                        item = updated
                         dragOffset = .zero
                         pageCrossing?.ended(landed.page == nil ? nil : item.id, landed.page)
                         onSelect?()

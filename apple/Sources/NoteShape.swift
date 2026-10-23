@@ -68,7 +68,7 @@ public struct NoteShapeAttachment: Identifiable, Codable, Hashable {
     public var opacity: Double?
 
     public init(
-        id: String = UUID().uuidString,
+        id: String = UUID().uuidString.lowercased(),
         pageIndex: Int = 0,
         kindName: String = "process",
         x: CGFloat = 80,
@@ -225,7 +225,7 @@ public struct NoteConnectionAttachment: Identifiable, Codable, Hashable {
     public var dashStyle: String?
 
     public init(
-        id: String = UUID().uuidString,
+        id: String = UUID().uuidString.lowercased(),
         pageIndex: Int = 0,
         fromShapeId: String,
         toShapeId: String,

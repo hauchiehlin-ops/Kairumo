@@ -2057,7 +2057,9 @@ enum NotebookSyncCoordinator {
             // 這一輪**沒有匯出**就匯入（例如套件時間較新）。沒有名單分不出新增／刪除，
             // 所以不補、不刪；但兩邊都有的物件若工作副本比較新，**保留工作副本的版本** ——
             // 否則第二次移動／旋轉後一同步，物件會跳回第一次移動的位置（使用者回報 iPad 定位失效）。
-            guard local.lastModifiedDate > imported.lastModifiedDate else {
+            let localChanged = local.lastModifiedDate >= imported.lastModifiedDate
+                || ExportedObjectIds.fingerprints(of: local) != ExportedObjectIds.fingerprints(of: imported)
+            guard localChanged else {
                 var merged = imported
                 keepLayeringUnknownToPackage(&merged, local: local)
                 return (merged, false)

@@ -433,18 +433,19 @@ public struct NotebookDocument: Identifiable, Codable, Hashable, @unchecked Send
     public var lockedObjectIdsByPage: [String: [String]]?
 
     public func lockedObjectIds(forPage page: Int) -> Set<String> {
-        Set(lockedObjectIdsByPage?[String(page)] ?? [])
+        Set((lockedObjectIdsByPage?[String(page)] ?? []).map { $0.lowercased() })
     }
 
     /// 所有頁面鎖定的物件（不分頁）。物件 id 全域唯一，查「這個物件鎖了沒」不必先知道頁次。
     public var allLockedObjectIds: Set<String> {
-        Set((lockedObjectIdsByPage ?? [:]).values.flatMap { $0 })
+        Set((lockedObjectIdsByPage ?? [:]).values.flatMap { $0 }.map { $0.lowercased() })
     }
 
     public mutating func setLockedObjectIds(_ ids: Set<String>, forPage page: Int) {
         var map = lockedObjectIdsByPage ?? [:]
         // 排序：同一組物件每次都寫出同一份內容，同步才不會誤判「有變動」。空的整頁拿掉。
-        map[String(page)] = ids.isEmpty ? nil : ids.sorted()
+        let normalized = ids.map { $0.lowercased() }
+        map[String(page)] = normalized.isEmpty ? nil : normalized.sorted()
         lockedObjectIdsByPage = map.isEmpty ? nil : map
     }
 
@@ -470,8 +471,9 @@ public struct NotebookDocument: Identifiable, Codable, Hashable, @unchecked Send
             // 頁碼小的先放，同一頁裡維持原本的先後（堆疊順序要保住）。
             for key in map.keys.sorted(by: { (Int($0) ?? .max, $0) < (Int($1) ?? .max, $1) }) {
                 for id in map[key] ?? [] {
-                    let target = pageOf[id.lowercased()].map(String.init) ?? key
-                    if out[target]?.contains(id) == true { continue }
+                    let normId = id.lowercased()
+                    let target = pageOf[normId].map(String.init) ?? key
+                    if out[target]?.contains(where: { $0.caseInsensitiveCompare(normId) == .orderedSame }) == true { continue }
                     out[target, default: []].append(id)
                 }
             }
@@ -772,7 +774,7 @@ public struct NoteImageAttachment: Identifiable, Codable, Hashable, ObjectFrameS
     public var mathFormula: String?
 
     public init(
-        id: String = UUID().uuidString,
+        id: String = UUID().uuidString.lowercased(),
         fileName: String,
         pageIndex: Int = 0,
         x: CGFloat = 80,
@@ -864,7 +866,7 @@ public struct Note3DAttachment: Identifiable, Codable, Hashable, ObjectFrameStyl
     public var cornerRadius: CGFloat
 
     public init(
-        id: String = UUID().uuidString,
+        id: String = UUID().uuidString.lowercased(),
         pageIndex: Int = 0,
         title: String = L10n.t("model3d_default_title"),
         modelTypeRaw: String = "sphere",
@@ -959,7 +961,7 @@ public struct NoteTextAttachment: Identifiable, Codable, Hashable, ObjectFrameSt
     public var runs: [TextStyleRun]? = nil
 
     public init(
-        id: String = UUID().uuidString,
+        id: String = UUID().uuidString.lowercased(),
         pageIndex: Int = 0,
         text: String = L10n.t("text_default_content"),
         fontSize: CGFloat = 16,
@@ -1021,7 +1023,7 @@ public struct StickyAnnotationAnchor: Identifiable, Codable, Hashable {
     public var createdAtMs: Int64
 
     public init(
-        id: String = UUID().uuidString,
+        id: String = UUID().uuidString.lowercased(),
         pageIndex: Int = 0,
         targetId: String,
         strokeIndices: [Int]? = nil,
@@ -1071,7 +1073,7 @@ public struct NoteLinkAttachment: Identifiable, Codable, Hashable, ObjectFrameSt
     public var cornerRadius: CGFloat
 
     public init(
-        id: String = UUID().uuidString,
+        id: String = UUID().uuidString.lowercased(),
         pageIndex: Int = 0,
         urlString: String,
         title: String = "",
@@ -1115,7 +1117,7 @@ public struct NoteCommentMessage: Identifiable, Codable, Hashable {
     public let createdAt: Date
 
     public init(
-        id: String = UUID().uuidString,
+        id: String = UUID().uuidString.lowercased(),
         authorId: String,
         authorName: String,
         authorColor: String,
@@ -1145,7 +1147,7 @@ public struct NoteCommentPin: Identifiable, Codable, Hashable {
     public var messages: [NoteCommentMessage]
 
     public init(
-        id: String = UUID().uuidString,
+        id: String = UUID().uuidString.lowercased(),
         pageIndex: Int = 0,
         x: CGFloat,
         y: CGFloat,
@@ -1224,7 +1226,7 @@ public struct AudioRecordingRecord: Identifiable, Codable, Hashable, Sendable {
     public var linkedNotebookId: String?
 
     public init(
-        id: String = UUID().uuidString,
+        id: String = UUID().uuidString.lowercased(),
         title: String,
         durationSeconds: Int,
         recordedDate: Date = Date(),
@@ -1287,7 +1289,7 @@ public struct NoteAudioAttachment: Identifiable, Codable, Hashable, ObjectFrameS
     public var transcriptTextId: String?
 
     public init(
-        id: String = UUID().uuidString,
+        id: String = UUID().uuidString.lowercased(),
         pageIndex: Int = 0,
         recordingId: String = "",
         fileName: String,
@@ -5226,7 +5228,7 @@ public struct NoteTapeAttachment: Identifiable, Codable, Hashable {
     public var colorHex: String?
     public var rotation: Double
     
-    public init(id: String = UUID().uuidString, pageIndex: Int, rect: CGRect, isRevealed: Bool = false, colorHex: String? = nil, rotation: Double = 0.0) {
+    public init(id: String = UUID().uuidString.lowercased(), pageIndex: Int, rect: CGRect, isRevealed: Bool = false, colorHex: String? = nil, rotation: Double = 0.0) {
         self.id = id
         self.pageIndex = pageIndex
         self.rect = rect
