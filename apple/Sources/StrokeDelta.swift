@@ -109,19 +109,7 @@ enum InkMerge {
         let written: [PKStroke]
         var erased: [StrokeDelta.Identity: Int] = [:]
         if let base {
-            let newSinceBase = StrokeDelta.added(in: local, since: base)
-            let localNotInDisk = StrokeDelta.added(in: local, since: disk)
-            // 當 base 超前磁碟時（例如存檔排程中），本地尚未落盤的筆畫不能因 base == local 而遺失；去重合併
-            var combined = newSinceBase
-            var existing = Set(newSinceBase.map(StrokeDelta.Identity.init))
-            for stroke in localNotInDisk {
-                let id = StrokeDelta.Identity(stroke)
-                if !existing.contains(id) {
-                    existing.insert(id)
-                    combined.append(stroke)
-                }
-            }
-            written = combined
+            written = StrokeDelta.added(in: local, since: base)
             for stroke in StrokeDelta.removed(in: local, since: base) {
                 erased[StrokeDelta.Identity(stroke), default: 0] += 1
             }
