@@ -60,6 +60,32 @@ data class TextBox(
     var runs: List<TextStyleRun>? = null
 ) {
     val isBackgroundClear: Boolean get() = backgroundColorHex == "clear"
+
+    /** 將來源文字方塊的文字內容、字型、段落、邊框、旋轉與逐字格式完整複製到本方塊。 */
+    fun copyFieldsFrom(source: TextBox) {
+        text = source.text
+        width = source.width
+        height = source.height
+        fontSize = source.fontSize
+        bold = source.bold
+        italic = source.italic
+        underline = source.underline
+        strikethrough = source.strikethrough
+        alignment = source.alignment
+        textColorHex = source.textColorHex
+        backgroundColorHex = source.backgroundColorHex
+        hasBorder = source.hasBorder
+        rotationDegrees = source.rotationDegrees
+        borderColorHex = source.borderColorHex
+        borderWidth = source.borderWidth
+        cornerRadius = source.cornerRadius
+        fontFamily = source.fontFamily
+        lineSpacing = source.lineSpacing
+        paragraphSpacing = source.paragraphSpacing
+        firstLineIndent = source.firstLineIndent
+        paragraphIndent = source.paragraphIndent
+        runs = source.runs?.map { it.copy() }
+    }
 }
 
 /**

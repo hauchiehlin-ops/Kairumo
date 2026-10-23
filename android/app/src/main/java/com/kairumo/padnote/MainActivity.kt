@@ -1924,7 +1924,7 @@ private fun InkScreen(
     var textRevision by remember { mutableIntStateOf(0) }
     var selectedTextId by remember { mutableStateOf<String?>(null) }
     var editingText by remember { mutableStateOf<TextBox?>(null) }
-    LaunchedEffect(notebook, pageId) { textStore.load(); textRevision++ }
+    LaunchedEffect(notebook, pageId, pageDisplayMode) { textStore.load(); textRevision++ }
 
     // 數字製圖。設定存進區塊外觀，所以插進去之後還改得動 ——
     // 與 Apple 端同一份 ChartSpec 與同一個核心版面引擎。
@@ -1933,7 +1933,7 @@ private fun InkScreen(
     var selectedChartId by remember { mutableStateOf<String?>(null) }
     var editingChart by remember { mutableStateOf<ChartObject?>(null) }
     var insertingChart by remember { mutableStateOf(false) }
-    LaunchedEffect(notebook, pageId) { chartStore.load(); chartRevision++ }
+    LaunchedEffect(notebook, pageId, pageDisplayMode) { chartStore.load(); chartRevision++ }
 
     // 表格。內容走核心原生的表格區塊，樣式走區塊外觀 ——
     // 與 Apple 端同一組操作，所以表格互相打得開。
@@ -1951,7 +1951,7 @@ private fun InkScreen(
     var connectionDraft by remember { mutableStateOf<ConnectionDraft?>(null) }
     var insertingTable by remember { mutableStateOf(false) }
     val maskingTapes = remember { mutableStateListOf<com.kairumo.padnote.canvas.NoteTape>() }
-    LaunchedEffect(notebook, pageId) {
+    LaunchedEffect(notebook, pageId, pageDisplayMode) {
         tableStore.load(); tableRevision++
         val session = notebook?.first
         if (session != null) {
@@ -2062,6 +2062,11 @@ private fun InkScreen(
     var marqueeSelection by remember { mutableStateOf(setOf<String>()) }
     /** 連續框選（見 ObjectMarquee.combined）。 */
     var marqueeAdditive by remember { mutableStateOf(false) }
+    /** 跨頁物件剪貼簿（支援單頁與連續模式在任一模式下剪下、複製、點選任意位置貼上）。 */
+    var objectClipboard by remember(notebook) {
+        mutableStateOf<List<com.kairumo.padnote.canvas.ClipboardObject>>(emptyList())
+    }
+    var isPlacingPasteObject by remember(notebook) { mutableStateOf(false) }
     var renamingAudio by remember { mutableStateOf<AudioObject?>(null) }
     // 套件裡的錄音目錄。錄音檔就住在這裡（format-spec §5），
     // 播放與「插入錄音」的清單都看它。
@@ -2143,7 +2148,7 @@ private fun InkScreen(
     var imageRevision by remember { mutableIntStateOf(0) }
     var selectedImageId by remember { mutableStateOf<String?>(null) }
     var editingImage by remember { mutableStateOf<NoteImage?>(null) }
-    LaunchedEffect(notebook, pageId) { imageStore.load(); imageRevision++ }
+    LaunchedEffect(notebook, pageId, pageDisplayMode) { imageStore.load(); imageRevision++ }
 
     // 把打包好的筆記存到**使用者自己選的位置**（SAF）。
     //
@@ -2284,7 +2289,17 @@ private fun InkScreen(
     var selectedShapeIds by remember { mutableStateOf(setOf<String>()) }
     var insertingShape by remember { mutableStateOf(false) }
     var showLayerPanel by remember { mutableStateOf(false) }
-    LaunchedEffect(notebook, pageId) { shapeStore.load(); shapeRevision++ }
+    LaunchedEffect(notebook, pageId, pageDisplayMode) { shapeStore.load(); shapeRevision++ }
+    LaunchedEffect(notebook, pageId) {
+        selectedTextId = null; editingText = null
+        selectedImageId = null; editingImage = null
+        selectedShapeIds = emptySet(); editingShape = null; selectedConnectionId = null
+        selectedTableId = null; editingTable = null
+        selectedChartId = null; editingChart = null
+        selectedLinkId = null; editingLink = null
+        selectedAudioId = null
+        marqueeSelection = emptySet()
+    }
 
     // 這一頁所有可堆疊的物件，跨五種型別收成同一份清單。
     // 名字取得出來就用內容，取不出來就用型別名 —— 面板上一整排「未命名」
@@ -2550,6 +2565,97 @@ private fun InkScreen(
                 stackRevision++
             }
         }
+    }
+
+    val currentSelectedObjectIds: () -> Set<String> = {
+        if (marqueeActive && marqueeSelection.isNotEmpty()) marqueeSelection
+        else setOfNotNull(
+            selectedTextId, selectedImageId, selectedTableId, selectedChartId,
+            selectedLinkId, selectedAudioId, selectedModel3DId
+        ) + selectedShapeIds
+    }
+    val applySinglePageClipboardSelection: (Set<String>) -> Unit = { created ->
+        if (marqueeActive && created.size > 1) {
+            marqueeSelection = created
+        } else {
+            val firstId = created.firstOrNull()
+            selectedTextId = firstId?.takeIf { textStore.find(it) != null }
+            if (editingText != null && editingText?.id != selectedTextId) editingText = null
+            selectedImageId = firstId?.takeIf { id -> imageStore.all.any { it.id == id } }
+            selectedTableId = firstId?.takeIf { id -> tableStore.all.any { it.id == id } }
+            selectedChartId = firstId?.takeIf { id -> chartStore.all.any { it.id == id } }
+            selectedShapeIds = if (firstId != null && shapeStore.all.any { it.id == firstId }) setOf(firstId) else emptySet()
+            selectedLinkId = firstId?.takeIf { id -> links.any { it.id == id } }
+            selectedModel3DId = firstId?.takeIf { id -> models3D.any { it.id == id } }
+            selectedAudioId = firstId?.takeIf { id -> audioCards.any { it.id == id } }
+            if (marqueeActive) marqueeSelection = created
+        }
+    }
+    val pasteSinglePageClipboard: (Offset?) -> Boolean = { targetPoint ->
+        val created = com.kairumo.padnote.canvas.ObjectMarquee.pasteToStores(
+            objectClipboard, targetPoint, pageIndex, notebook?.first, meta,
+            imageStore, textStore, tableStore, chartStore, shapeStore
+        )
+        if (created.isNotEmpty()) {
+            links = meta.links(); models3D = meta.models3D(); audioCards = meta.audioCards()
+            isPlacingPasteObject = false
+            applySinglePageClipboardSelection(created)
+            imageRevision++; shapeRevision++; tableRevision++; chartRevision++
+            textRevision++; linkRevision++; model3DRevision++; audioRevision++; stackRevision++
+            AutoSync.noteLocalEdit(activity)
+            true
+        } else false
+    }
+    val objectClipboardActions = remember(pageIndex, pageId) {
+        com.kairumo.padnote.canvas.ObjectClipboardActions(
+            cut = { id ->
+                val ids = if (marqueeActive && id in marqueeSelection) marqueeSelection else setOf(id)
+                val captured = com.kairumo.padnote.canvas.ObjectMarquee.captureFromStores(
+                    ids, true, pageIndex, notebook?.first, meta,
+                    imageStore, textStore, tableStore, chartStore, shapeStore
+                )
+                if (captured.isNotEmpty()) {
+                    objectClipboard = captured
+                    isPlacingPasteObject = false
+                    links = meta.links(); models3D = meta.models3D(); audioCards = meta.audioCards()
+                    applySinglePageClipboardSelection(emptySet())
+                    imageRevision++; shapeRevision++; tableRevision++; chartRevision++
+                    textRevision++; linkRevision++; model3DRevision++; audioRevision++; stackRevision++
+                    message = l10n("object_cut_hint")
+                    AutoSync.noteLocalEdit(activity)
+                }
+            },
+            copy = { id ->
+                val ids = if (marqueeActive && id in marqueeSelection) marqueeSelection else setOf(id)
+                val captured = com.kairumo.padnote.canvas.ObjectMarquee.captureFromStores(
+                    ids, false, pageIndex, notebook?.first, meta,
+                    imageStore, textStore, tableStore, chartStore, shapeStore
+                )
+                if (captured.isNotEmpty()) {
+                    objectClipboard = captured
+                    isPlacingPasteObject = false
+                    message = l10n("object_copied_hint")
+                }
+            },
+            duplicate = { id ->
+                val ids = if (marqueeActive && id in marqueeSelection) marqueeSelection else setOf(id)
+                val captured = com.kairumo.padnote.canvas.ObjectMarquee.captureFromStores(
+                    ids, false, pageIndex, notebook?.first, meta,
+                    imageStore, textStore, tableStore, chartStore, shapeStore
+                )
+                if (captured.isNotEmpty()) {
+                    val created = com.kairumo.padnote.canvas.ObjectMarquee.pasteToStores(
+                        captured, null, pageIndex, notebook?.first, meta,
+                        imageStore, textStore, tableStore, chartStore, shapeStore
+                    )
+                    links = meta.links(); models3D = meta.models3D(); audioCards = meta.audioCards()
+                    applySinglePageClipboardSelection(created)
+                    imageRevision++; shapeRevision++; tableRevision++; chartRevision++
+                    textRevision++; linkRevision++; model3DRevision++; audioRevision++; stackRevision++
+                    AutoSync.noteLocalEdit(activity)
+                }
+            }
+        )
     }
 
     // **新插入的物件一律放在最上層。**
@@ -3099,19 +3205,28 @@ private fun InkScreen(
             }
         }
     }
-    // Ctrl+X／C／V：套索模式剪下／複製／貼上筆跡（對齊 Apple 的 ⌘V）。
-    // 連續頁面模式由 ContinuousPagesView 自己接（筆跡在它每一頁自己的引擎裡）。
+    // Ctrl+X／C／V：套索模式剪下／複製／貼上筆跡，或剪下／複製／貼上畫布物件（對齊 Apple 的 ⌘X/C/V）。
+    // 連續頁面模式由 ContinuousPagesView 自己接。
     LaunchedEffect(lasso, engine, pageDisplayMode) {
         if (pageDisplayMode == PageDisplayMode.CONTINUOUS) return@LaunchedEffect
         AppCommands.events.collect { command ->
-            if (!inkTool.isLasso) return@collect
-            val changed = when (command) {
-                AppCommand.Cut -> lasso.cut(engine)
-                AppCommand.Copy -> lasso.copy(engine)
-                AppCommand.Paste -> lasso.paste(engine)
-                else -> return@collect
+            if (inkTool.isLasso) {
+                val changed = when (command) {
+                    AppCommand.Cut -> lasso.cut(engine)
+                    AppCommand.Copy -> lasso.copy(engine)
+                    AppCommand.Paste -> lasso.paste(engine)
+                    else -> return@collect
+                }
+                if (changed) revision++
+            } else {
+                val ids = currentSelectedObjectIds()
+                when (command) {
+                    AppCommand.Cut -> ids.firstOrNull()?.let { objectClipboardActions.cut(it) }
+                    AppCommand.Copy -> ids.firstOrNull()?.let { objectClipboardActions.copy(it) }
+                    AppCommand.Paste -> pasteSinglePageClipboard(null)
+                    else -> Unit
+                }
             }
-            if (changed) revision++
         }
     }
     var inkColorHex by remember { mutableStateOf("#000000") }
@@ -3876,10 +3991,14 @@ private fun InkScreen(
                         contentPadding = PaddingValues(horizontal = 6.dp),
                         onClick = {
                             pageDisplayMode = if (pageDisplayMode == PageDisplayMode.CONTINUOUS) {
-                                // 整頁模式的引擎在連續模式期間一直留著舊的筆畫：在連續模式用套索搬過、
-                                // 剪下的筆跡，換回來會出現在原位（看起來像「跳回去了」）。換回來時重讀核心。
-                                // 同步讀：換回來的第一幀就要是對的。還在寫入佇列裡的筆畫照樣保留（見 InkEngine.applyLoaded）。
+                                // 整頁模式的引擎與各物件 Store 在連續模式期間留著舊狀態：在連續模式搬過、
+                                // 剪下或貼上的筆跡與物件，換回來時重讀核心才能在第一幀就同步呈現。
                                 engine.load()
+                                textStore.load(); textRevision++
+                                imageStore.load(); imageRevision++
+                                shapeStore.load(); shapeRevision++
+                                tableStore.load(); tableRevision++
+                                chartStore.load(); chartRevision++
                                 revision++
                                 clearToken++
                                 PageDisplayMode.SINGLE
@@ -4680,6 +4799,22 @@ private fun InkScreen(
                         modifier = Modifier.testTag("editor.marquee.deselect_all")
                     ) { Text(l10n("deselect_all")) }
                     TextButton(
+                        onClick = { marqueeSelection.firstOrNull()?.let { objectClipboardActions.cut(it) } },
+                        enabled = marqueeSelection.isNotEmpty()
+                    ) { Text(l10n("action_cut")) }
+                    TextButton(
+                        onClick = { marqueeSelection.firstOrNull()?.let { objectClipboardActions.copy(it) } },
+                        enabled = marqueeSelection.isNotEmpty()
+                    ) { Text(l10n("action_copy")) }
+                    if (objectClipboard.isNotEmpty()) {
+                        TextButton(
+                            onClick = { pasteSinglePageClipboard(null) }
+                        ) { Text(l10n("action_paste")) }
+                        TextButton(
+                            onClick = { isPlacingPasteObject = true }
+                        ) { Text(l10n("paste_at_location")) }
+                    }
+                    TextButton(
                         onClick = { duplicateMarqueeSelection() },
                         enabled = marqueeSelection.isNotEmpty()
                     ) { Text(l10n("action_duplicate")) }
@@ -5019,12 +5154,20 @@ private fun InkScreen(
                         // 任何一種物件有變動就讓連續模式重讀。逐項接 callback 的話，
                         // 之後新增一種物件很容易忘記接上，而症狀是「插進去看不到」。
                         reloadToken = textRevision + shapeRevision + tableRevision +
-                            chartRevision + imageRevision + model3DRevision,
+                            chartRevision + imageRevision + model3DRevision + linkRevision + audioRevision,
                         scrollRequest = continuousScrollRequest,
                         // 套索不限焦點頁：在哪一頁圈就圈哪一頁（與 Apple 連續模式一致）。
                         lasso = if (inkTool.isLasso) continuousLasso else null,
                         undoController = continuousUndo,
                         collabBridge = continuousCollab,
+                        objectClipboard = objectClipboard,
+                        onObjectClipboardChange = { objectClipboard = it },
+                        isPlacingPasteObject = isPlacingPasteObject,
+                        onPlacingPasteObjectChange = { isPlacingPasteObject = it },
+                        onMetaObjectsChanged = {
+                            links = meta.links(); models3D = meta.models3D(); audioCards = meta.audioCards()
+                            linkRevision++; model3DRevision++; audioRevision++
+                        },
                         // 長按叫出飛梭工具盤：與整頁模式同一個手勢與條件（見整頁模式的畫布區）。
                         // 原本連續模式完全沒接 —— 長按只會在頁面上留下一個墨點。
                         // 這裡刻意少寫 lambda、不在外面包一層 Box：`InkScreen` 已經在 ART 驗證器的
@@ -5385,7 +5528,8 @@ private fun InkScreen(
         CompositionLocalProvider(
             com.kairumo.padnote.canvas.LocalObjectReorder provides objectReorder,
             com.kairumo.padnote.canvas.LocalObjectLock provides objectLock,
-            com.kairumo.padnote.canvas.LocalLockedObjectIds provides lockedIds
+            com.kairumo.padnote.canvas.LocalLockedObjectIds provides lockedIds,
+            com.kairumo.padnote.canvas.LocalObjectClipboard provides objectClipboardActions
         ) {
         Box(
             modifier = Modifier
@@ -5401,21 +5545,28 @@ private fun InkScreen(
                     // 就不見了」。
                     clip = true
                 )
-                // 手寫模式下手指點鎖定的物件：切到打字模式並給「解除鎖定」鈕（見 ObjectLock.kt）。
+                // 手寫模式下手指點物件：鎖定物件給「解除鎖定」鈕；未鎖定物件直接選取它以供剪下、複製、搬移。
                 .fingerTapOnLockedObject(
-                    listOf(editorMode, inkTool.isLasso, inkTool.isMaskingTape, isPlacingCommentPin),
+                    listOf(editorMode, inkTool.isLasso, inkTool.isMaskingTape, isPlacingCommentPin, isPlacingPasteObject),
                     hitAt = { p ->
                         if (editorMode != EditorMode.DRAW || inkTool.isLasso || inkTool.isMaskingTape ||
-                            isPlacingCommentPin) null
-                        else com.kairumo.padnote.canvas.lockedObjectHit(
-                            p.x / canvasDensity, p.y / canvasDensity,
-                            marqueeCandidatesLatest.sortedBy { stackOrderLatest.indexOf(it.id) },
-                            lockedIdsLatest)
+                            isPlacingCommentPin || isPlacingPasteObject) null
+                        else {
+                            val sorted = marqueeCandidatesLatest.sortedBy { stackOrderLatest.indexOf(it.id) }
+                            val pt = Offset(p.x / canvasDensity, p.y / canvasDensity)
+                            com.kairumo.padnote.canvas.lockedObjectHit(
+                                pt.x, pt.y, sorted, lockedIdsLatest
+                            ) ?: com.kairumo.padnote.canvas.ObjectMarquee.topmostHit(pt, sorted)
+                        }
                     },
                     onCancelInk = { engine.cancelInFlight(); revision++ },
                     onTap = { id ->
-                        editorMode = EditorMode.TYPE
-                        lockPromptId = id
+                        if (id in lockedIdsLatest) {
+                            editorMode = EditorMode.TYPE
+                            lockPromptId = id
+                        } else {
+                            applySinglePageClipboardSelection(setOf(id))
+                        }
                     }
                 )
                 .then(
@@ -5654,72 +5805,70 @@ private fun InkScreen(
 
             // 圖片疊在墨跡之上、文字方塊之下 —— 與 Apple 端的預設層級一致
             // （ObjectStacking.Kind.defaultLayer：image=0、text=6）。
-            key(imageRevision) {
-                ImageLayer(
-                    zIndexOf = zIndexOf,
-                    images = imageStore.all,
-                    store = imageStore,
-                    density = canvasDensity,
-                    selectedId = selectedImageId,
-                    interactive = editorMode == EditorMode.TYPE,
-                    onSelect = { selectedImageId = it },
-                    onEditStyle = { editingImage = it },
-                    onChanged = { imageStore.persist(it); imageRevision++ },
-                    modifier = Modifier.fillMaxSize()
-                )
-            }
+            @Suppress("UNUSED_VARIABLE") val imageRevisionRead = imageRevision
+            ImageLayer(
+                zIndexOf = zIndexOf,
+                images = imageStore.all,
+                store = imageStore,
+                density = canvasDensity,
+                selectedId = selectedImageId,
+                interactive = editorMode == EditorMode.TYPE,
+                onSelect = { selectedImageId = it },
+                onEditStyle = { editingImage = it },
+                onChanged = { imageStore.persist(it); imageRevision++ },
+                modifier = Modifier.fillMaxSize()
+            )
 
             // 文字方塊疊在墨跡之上 —— 與 Apple 端的疊放順序一致。
-            key(textRevision) {
-                TextBoxLayer(
-                    zIndexOf = zIndexOf,
-                    interactive = true,
-                    boxes = textStore.all,
-                    density = canvasDensity,
-                    selectedId = selectedTextId,
-                    onSelect = { id ->
-                        selectedTextId = id
-                        if (id != null && editorMode != EditorMode.TYPE) {
-                            editorMode = EditorMode.TYPE
-                        }
-                    },
-                    onEditStyle = { editingText = it },
-                    onChanged = { box -> textStore.persist(box); textRevision++ },
-                    onMoved = { box, dx, dy ->
-                        val session = notebook?.first
-                        val handles = engine.coreHandles()
-                        if (session != null && handles != null) {
-                            val (_, pageId) = handles
-                            val meta = NotebookMeta.load(session)
-                            val anchors = meta.stickyAnchors()
-                            val matched = anchors.filter { it.targetId == box.id && it.pageIndex == pageIndex }
-                            if (matched.isNotEmpty()) {
-                                var changedAny = false
-                                for (anchor in matched) {
-                                    if (anchor.strokeIds.isNotEmpty()) {
-                                        val newIds = runCatching {
-                                            session.lassoTranslate(pageId, anchor.strokeIds, dx, dy)
-                                        }.getOrNull()
-                                        if (newIds != null) {
-                                            anchor.strokeIds = newIds
-                                            anchor.anchorOriginX += dx
-                                            anchor.anchorOriginY += dy
-                                            changedAny = true
-                                        }
+            @Suppress("UNUSED_VARIABLE") val textRevisionRead = textRevision
+            TextBoxLayer(
+                zIndexOf = zIndexOf,
+                interactive = true,
+                boxes = textStore.all,
+                density = canvasDensity,
+                selectedId = selectedTextId,
+                onSelect = { id ->
+                    selectedTextId = id
+                    if (id != null && editorMode != EditorMode.TYPE) {
+                        editorMode = EditorMode.TYPE
+                    }
+                },
+                onEditStyle = { editingText = it },
+                onChanged = { box -> textStore.persist(box); textRevision++ },
+                onMoved = { box, dx, dy ->
+                    val session = notebook?.first
+                    val handles = engine.coreHandles()
+                    if (session != null && handles != null) {
+                        val (_, pageId) = handles
+                        val meta = NotebookMeta.load(session)
+                        val anchors = meta.stickyAnchors()
+                        val matched = anchors.filter { it.targetId == box.id && it.pageIndex == pageIndex }
+                        if (matched.isNotEmpty()) {
+                            var changedAny = false
+                            for (anchor in matched) {
+                                if (anchor.strokeIds.isNotEmpty()) {
+                                    val newIds = runCatching {
+                                        session.lassoTranslate(pageId, anchor.strokeIds, dx, dy)
+                                    }.getOrNull()
+                                    if (newIds != null) {
+                                        anchor.strokeIds = newIds
+                                        anchor.anchorOriginX += dx
+                                        anchor.anchorOriginY += dy
+                                        changedAny = true
                                     }
                                 }
-                                if (changedAny) {
-                                    meta.setStickyAnchors(session, anchors)
-                                    engine.load()
-                                    revision++
-                                    clearToken++
-                                }
+                            }
+                            if (changedAny) {
+                                meta.setStickyAnchors(session, anchors)
+                                engine.load()
+                                revision++
+                                clearToken++
                             }
                         }
-                    },
-                    modifier = Modifier.fillMaxSize()
-                )
-            }
+                    }
+                },
+                modifier = Modifier.fillMaxSize()
+            )
 
             // 鎖定物件右上角的小鎖頭。兩種模式都畫；手寫模式下只顯示，入口是手指點物件。
             if (lockedIds.isNotEmpty()) {
@@ -5823,34 +5972,32 @@ private fun InkScreen(
             )
 
             // 表格疊在文字方塊之上。
-            key(tableRevision) {
-                TableLayer(
-                    zIndexOf = zIndexOf,
-                    interactive = editorMode == EditorMode.TYPE,
-                    tables = tableStore.all,
-                    density = canvasDensity,
-                    selectedId = selectedTableId,
-                    onSelect = { selectedTableId = it },
-                    onEdit = { editingTable = it },
-                    onChanged = { table -> tableStore.persist(table); tableRevision++ },
-                    modifier = Modifier.fillMaxSize()
-                )
-            }
+            @Suppress("UNUSED_VARIABLE") val tableRevisionRead = tableRevision
+            TableLayer(
+                zIndexOf = zIndexOf,
+                interactive = editorMode == EditorMode.TYPE,
+                tables = tableStore.all,
+                density = canvasDensity,
+                selectedId = selectedTableId,
+                onSelect = { selectedTableId = it },
+                onEdit = { editingTable = it },
+                onChanged = { table -> tableStore.persist(table); tableRevision++ },
+                modifier = Modifier.fillMaxSize()
+            )
 
             // 圖表疊在文字方塊之上 —— 與 Apple 端的疊放順序一致。
-            key(chartRevision) {
-                ChartLayer(
-                    zIndexOf = zIndexOf,
-                    interactive = editorMode == EditorMode.TYPE,
-                    charts = chartStore.all,
-                    density = canvasDensity,
-                    selectedId = selectedChartId,
-                    onSelect = { selectedChartId = it },
-                    onEdit = { editingChart = it },
-                    onChanged = { chart -> chartStore.persist(chart); chartRevision++ },
-                    modifier = Modifier.fillMaxSize()
-                )
-            }
+            @Suppress("UNUSED_VARIABLE") val chartRevisionRead = chartRevision
+            ChartLayer(
+                zIndexOf = zIndexOf,
+                interactive = editorMode == EditorMode.TYPE,
+                charts = chartStore.all,
+                density = canvasDensity,
+                selectedId = selectedChartId,
+                onSelect = { selectedChartId = it },
+                onEdit = { editingChart = it },
+                onChanged = { chart -> chartStore.persist(chart); chartRevision++ },
+                modifier = Modifier.fillMaxSize()
+            )
 
             // 3D 模型。位置與大小是頁面座標，與其他圖層同一套規則。
             key(linkRevision) {
@@ -6130,6 +6277,23 @@ private fun InkScreen(
                 }
             }
 
+            // 點選位置貼上物件：不論手繪或打字模式，點一下頁面任意座標就將剪貼簿物件中心對齊貼在該處。
+            if (isPlacingPasteObject && objectClipboard.isNotEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .zIndex(9_500f)
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.04f))
+                        .testTag("editor.object.paste.target_layer")
+                        .pointerInput(pageIndex, objectClipboard) {
+                            detectTapGestures { offset ->
+                                val target = Offset(offset.x / canvasDensity, offset.y / canvasDensity)
+                                pasteSinglePageClipboard(target)
+                            }
+                        }
+                )
+            }
+
             if (showRefineBar) {
                 // 讀一下 revision，按鈕的 enabled 才會跟著美化結果更新。
                 @Suppress("UNUSED_EXPRESSION") refineRevision
@@ -6338,6 +6502,26 @@ private fun InkScreen(
                     l = { key -> l10n(key) },
                     onChanged = { revision++ },
                     modifier = Modifier.zIndex(9_000f).align(Alignment.TopCenter).padding(top = 12.dp)
+                )
+            }
+            // 物件剪貼簿與選取的浮動工具丸（支援手繪／打字兩種模式與跨頁貼上／點選位置貼上）。
+            val activeSingleObjectIds = currentSelectedObjectIds()
+            if (activeSingleObjectIds.isNotEmpty() || objectClipboard.isNotEmpty()) {
+                com.kairumo.padnote.canvas.ObjectPastePill(
+                    hasSelection = activeSingleObjectIds.isNotEmpty(),
+                    hasClipboard = objectClipboard.isNotEmpty(),
+                    isPlacingPaste = isPlacingPasteObject,
+                    l = { key -> l10n(key) },
+                    onCut = { activeSingleObjectIds.firstOrNull()?.let { objectClipboardActions.cut(it) } },
+                    onCopy = { activeSingleObjectIds.firstOrNull()?.let { objectClipboardActions.copy(it) } },
+                    onPasteDefault = { pasteSinglePageClipboard(null) },
+                    onStartPlacePaste = { isPlacingPasteObject = true },
+                    onCancelPlacePaste = { isPlacingPasteObject = false },
+                    onClearClipboard = { objectClipboard = emptyList(); isPlacingPasteObject = false },
+                    modifier = Modifier
+                        .zIndex(9_100f)
+                        .align(Alignment.TopCenter)
+                        .padding(top = if (inkTool.isLasso && lasso.canPaste) 56.dp else 12.dp)
                 )
             }
 

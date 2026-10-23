@@ -208,6 +208,13 @@ private fun LinkCardView(
         // 會疊加自身旋轉，卡片會失控。與 Apple 端同一個做法。
         if (interactive && isSelected) {
             val deleteDescription = LocalizationStrings.localized("action_delete", LocalAppLanguage.current)
+            // 層級與剪貼簿選單（左上）。
+            com.kairumo.padnote.canvas.OrderHandle(
+                objectId = link.id,
+                widthDp = link.width,
+                heightDp = link.height,
+                modifier = Modifier.offset(x = (-link.width).dp, y = 0.dp)
+            )
             // 刪除（右上）。在此之前 Android 的連結卡片**刪不掉** ——
             // 插錯一張就只能整頁清掉。
             Box(

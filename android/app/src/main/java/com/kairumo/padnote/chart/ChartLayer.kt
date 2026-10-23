@@ -1,6 +1,9 @@
 package com.kairumo.padnote.chart
 
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectDragGestures
@@ -64,9 +67,11 @@ fun ChartLayer(
         // 鎖定在畫布上的物件不接收觸控（見 canvas/ObjectLock.kt）。
         val lockedIds = com.kairumo.padnote.canvas.LocalLockedObjectIds.current
         for (chart in charts) {
-            ChartObjectView(
-                chart, density, chart.id == selectedId, onSelect, onEdit, onChanged,
-                interactive = interactive && chart.id !in lockedIds, zIndex = zIndexOf(chart.id))
+            androidx.compose.runtime.key(chart.id) {
+                ChartObjectView(
+                    chart, density, chart.id == selectedId, onSelect, onEdit, onChanged,
+                    interactive = interactive && chart.id !in lockedIds, zIndex = zIndexOf(chart.id))
+            }
         }
 }
 
@@ -87,6 +92,10 @@ private fun ChartObjectView(
     val crossing by androidx.compose.runtime.rememberUpdatedState(com.kairumo.padnote.canvas.LocalPageCrossing.current)
     // 拖曳手勢以 id 為鍵，不會跟著重組重建：放開時要讀**目前**的位置，不是手勢開始時的。
     val currentChart by androidx.compose.runtime.rememberUpdatedState(chart)
+    var liveX by remember(chart.id, chart.x) { mutableFloatStateOf(chart.x) }
+    var liveY by remember(chart.id, chart.y) { mutableFloatStateOf(chart.y) }
+    var liveWidth by remember(chart.id, chart.width) { mutableFloatStateOf(chart.width) }
+    var liveHeight by remember(chart.id, chart.height) { mutableFloatStateOf(chart.height) }
     val foreground = MaterialTheme.colorScheme.onSurface
     val grid = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.14f)
 
@@ -96,10 +105,10 @@ private fun ChartObjectView(
     // 於是樣式（編輯）鈕永遠畫在畫布左上角附近，離圖表很遠，
     // 使用者按右下／左下的編輯鈕「沒有作用」，其實是根本沒按到那顆鈕。
     // 圖片、表格、文字方塊都是「外層定位、內層畫內容、把手在外層裡」，圖表跟上同一個結構。
-    Box(Modifier.offset(chart.x.dp, chart.y.dp).zIndex(zIndex)) {
+    Box(Modifier.offset(liveX.dp, liveY.dp).zIndex(zIndex)) {
         Box(
             Modifier
-                .size(chart.width.dp, chart.height.dp)
+                .size(liveWidth.dp, liveHeight.dp)
                 .border(
                     if (isSelected) 1.5.dp else 0.dp,
                     MaterialTheme.colorScheme.primary,
@@ -107,37 +116,49 @@ private fun ChartObjectView(
                 )
                 .gesturesIf(interactive) { pointerInput(chart.id) {
                     detectTapGestures(
-                        onTap = { onSelect(chart.id) },
+                        onTap = { onSelect(currentChart.id) },
                         // 點兩下進編輯器 —— 這就是「可重新編修」在畫布上的入口。
-                        onDoubleTap = { onEdit(chart) }
+                        onDoubleTap = { onEdit(currentChart) }
                     )
                 } }
                 .gesturesIf(interactive) { pointerInput(chart.id) {
+                    var base: ChartObject? = null
+                    var accX = 0f
+                    var accY = 0f
                     detectDragGestures(
-                        onDragStart = { crossing?.began?.invoke() },
+                        onDragStart = {
+                            val c = currentChart
+                            base = c
+                            accX = 0f
+                            accY = 0f
+                            liveX = c.x
+                            liveY = c.y
+                            onSelect(c.id)
+                            crossing?.began?.invoke()
+                        },
+                        onDragCancel = { crossing?.ended?.invoke() },
                         onDragEnd = {
                             // 推回可列印範圍（與其他物件一致）；連續模式下拖到哪一頁就歸哪一頁。
                             val c = currentChart
                             val landed = com.kairumo.padnote.canvas.landObject(
-                                c.id, c.x, c.y, c.width, c.height, crossing)
-                            if (landed.x != c.x || landed.y != c.y) {
-                                onChanged(c.copy(x = landed.x, y = landed.y))
-                            }
+                                c.id, liveX, liveY, liveWidth, liveHeight, crossing)
+                            liveX = landed.x
+                            liveY = landed.y
+                            onChanged(c.copy(x = landed.x, y = landed.y, width = liveWidth, height = liveHeight))
                             landed.page?.let { crossing?.moved?.invoke(c.id, it) }
                             crossing?.ended?.invoke()
                         }
                     ) { change, drag ->
                         change.consume()
-                        onChanged(
-                            chart.copy(
-                                x = chart.x + drag.x / density,
-                                y = chart.y + drag.y / density
-                            )
-                        )
+                        val c0 = base ?: return@detectDragGestures
+                        accX += drag.x
+                        accY += drag.y
+                        liveX = c0.x + accX / density
+                        liveY = c0.y + accY / density
                     }
                 } }
         ) {
-            Canvas(Modifier.size(chart.width.dp, chart.height.dp)) {
+            Canvas(Modifier.size(liveWidth.dp, liveHeight.dp)) {
                 val layout = ChartRenderer.layout(chart.spec, size.width, size.height) ?: return@Canvas
                 drawIntoCanvas { canvas ->
                     ChartRenderer.draw(
@@ -151,25 +172,24 @@ private fun ChartObjectView(
 
         if (isSelected && interactive) {
             StyleHandle(
-                widthDp = chart.width,
-                heightDp = chart.height,
-                onTap = { onEdit(chart) },
+                widthDp = liveWidth,
+                heightDp = liveHeight,
+                onTap = { onEdit(currentChart) },
                 objectId = chart.id
             )
             // 縮放把手。圖表原本只能搬、不能縮放（Apple 端的圖表是圖片物件，有四角把手）。
             ResizeHandle(
-                widthDp = chart.width,
-                heightDp = chart.height,
+                widthDp = liveWidth,
+                heightDp = liveHeight,
                 density = density,
                 onResize = { dw, dh ->
-                    onChanged(
-                        chart.copy(
-                            width = maxOf(MIN_OBJECT_WIDTH_DP, chart.width + dw),
-                            height = maxOf(MIN_OBJECT_HEIGHT_DP, chart.height + dh)
-                        )
-                    )
+                    liveWidth = maxOf(MIN_OBJECT_WIDTH_DP, liveWidth + dw)
+                    liveHeight = maxOf(MIN_OBJECT_HEIGHT_DP, liveHeight + dh)
                 },
-                onCommit = {}
+                onCommit = {
+                    val c = currentChart
+                    onChanged(c.copy(width = liveWidth, height = liveHeight))
+                }
             )
         }
     }

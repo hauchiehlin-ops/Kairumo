@@ -534,13 +534,52 @@ struct LockedObjectBadge: View {
     }
 }
 
-/// 放進物件右鍵／長按選單的排列動作。
+// MARK: - 物件剪下／複製／建立副本
+
+/// 單一物件的剪貼簿動作，與 `objectReorder`、`objectLock` 一樣由物件層透過 Environment 注入。
+/// 如此七種物件的右鍵／長按選單與編輯面板都不必各自牽三條 callback。
+struct ObjectClipboardActions {
+    var cut: (String) -> Void
+    var copy: (String) -> Void
+    var duplicate: (String) -> Void
+}
+
+private struct ObjectClipboardKey: EnvironmentKey {
+    static let defaultValue: ObjectClipboardActions? = nil
+}
+
+extension EnvironmentValues {
+    var objectClipboard: ObjectClipboardActions? {
+        get { self[ObjectClipboardKey.self] }
+        set { self[ObjectClipboardKey.self] = newValue }
+    }
+}
+
+/// 放進物件右鍵／長按選單的排列與剪貼簿動作。
 struct ObjectOrderMenu: View {
     let id: String
     @Environment(\.objectReorder) private var reorder
+    @Environment(\.objectClipboard) private var clipboard
     @ObservedObject private var localizationManager = LocalizationManager.shared
 
     var body: some View {
+        if let clipboard {
+            Button {
+                clipboard.cut(id)
+            } label: {
+                Label(localizationManager.localized("action_cut"), systemImage: "scissors")
+            }
+            Button {
+                clipboard.copy(id)
+            } label: {
+                Label(localizationManager.localized("action_copy"), systemImage: "doc.on.doc")
+            }
+            Button {
+                clipboard.duplicate(id)
+            } label: {
+                Label(localizationManager.localized("action_duplicate"), systemImage: "plus.square.on.square")
+            }
+        }
         if let reorder {
             Menu {
                 Button {
@@ -592,37 +631,68 @@ struct ObjectOrderBar: View {
     let id: String
     @Environment(\.objectReorder) private var reorder
     @Environment(\.objectLock) private var lock
+    @Environment(\.objectClipboard) private var clipboard
     @ObservedObject private var localizationManager = LocalizationManager.shared
 
     var body: some View {
         if let reorder {
-            HStack(spacing: 6) {
-                ForEach(ObjectReorderOp.allCases, id: \.key) { op in
-                    Button {
-                        reorder(id, op)
-                    } label: {
-                        Image(systemName: op.symbol).frame(maxWidth: .infinity)
+            VStack(spacing: 6) {
+                HStack(spacing: 6) {
+                    ForEach(ObjectReorderOp.allCases, id: \.key) { op in
+                        Button {
+                            reorder(id, op)
+                        } label: {
+                            Image(systemName: op.symbol).frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+                        .help(localizationManager.localized(op.key))
+                        .accessibilityLabel(localizationManager.localized(op.key))
                     }
-                    .buttonStyle(.bordered)
-                    .controlSize(.small)
-                    .help(localizationManager.localized(op.key))
-                    .accessibilityLabel(localizationManager.localized(op.key))
+                    // 鎖定在畫布上：編輯面板裡按下去就鎖，面板跟著關（鎖定的物件不再能被選取）。
+                    if let lock {
+                        let locked = lock.isLocked(id)
+                        let key = locked ? "object_unlock" : "object_lock"
+                        Button {
+                            lock.setLocked(id, !locked)
+                        } label: {
+                            Image(systemName: locked ? "lock.open" : "lock").frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+                        .tint(locked ? .orange : nil)
+                        .help(localizationManager.localized(key))
+                        .accessibilityLabel(localizationManager.localized(key))
+                        .accessibilityIdentifier("object.lock")
+                    }
                 }
-                // 鎖定在畫布上：編輯面板裡按下去就鎖，面板跟著關（鎖定的物件不再能被選取）。
-                if let lock {
-                    let locked = lock.isLocked(id)
-                    let key = locked ? "object_unlock" : "object_lock"
-                    Button {
-                        lock.setLocked(id, !locked)
-                    } label: {
-                        Image(systemName: locked ? "lock.open" : "lock").frame(maxWidth: .infinity)
+                if let clipboard {
+                    HStack(spacing: 6) {
+                        Button {
+                            clipboard.cut(id)
+                        } label: {
+                            Label(localizationManager.localized("action_cut"), systemImage: "scissors")
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+                        Button {
+                            clipboard.copy(id)
+                        } label: {
+                            Label(localizationManager.localized("action_copy"), systemImage: "doc.on.doc")
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+                        Button {
+                            clipboard.duplicate(id)
+                        } label: {
+                            Label(localizationManager.localized("action_duplicate"), systemImage: "plus.square.on.square")
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
                     }
-                    .buttonStyle(.bordered)
-                    .controlSize(.small)
-                    .tint(locked ? .orange : nil)
-                    .help(localizationManager.localized(key))
-                    .accessibilityLabel(localizationManager.localized(key))
-                    .accessibilityIdentifier("object.lock")
                 }
             }
         }

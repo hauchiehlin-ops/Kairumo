@@ -218,4 +218,80 @@ final class MarqueeSelectionTests: XCTestCase {
         XCTAssertEqual(ObjectMarquee.topmostHit(at: CGPoint(x: 10, y: 10), among: [below, above]), "below")
         XCTAssertNil(ObjectMarquee.topmostHit(at: CGPoint(x: 500, y: 500), among: [below, above]))
     }
+
+    func testPasteOriginsDefaultOffsetAndArbitraryTargetPoint() {
+        let f1 = CGRect(x: 100, y: 120, width: 160, height: 80)
+        let f2 = CGRect(x: 300, y: 200, width: 140, height: 100)
+
+        let defaultOrigins = ObjectMarquee.pasteOrigins(frames: [f1, f2], targetPoint: nil)
+        XCTAssertEqual(defaultOrigins.count, 2)
+        XCTAssertEqual(defaultOrigins[0], CGPoint(x: 124, y: 144))
+        XCTAssertEqual(defaultOrigins[1], CGPoint(x: 324, y: 224))
+
+        // 單一物件貼到任意座標 (400, 600)：中心對齊 (400, 600) → 左上角 (320, 560)
+        let singleAtTarget = ObjectMarquee.pasteOrigins(frames: [f1], targetPoint: CGPoint(x: 400, y: 600))
+        XCTAssertEqual(singleAtTarget, [CGPoint(x: 320, y: 560)])
+
+        // 多物件整組貼到任意座標 (420, 510)：聯集 (100..440, 120..300) 中心為 (270, 210)，平移 (+150, +300)
+        let groupAtTarget = ObjectMarquee.pasteOrigins(frames: [f1, f2], targetPoint: CGPoint(x: 420, y: 510))
+        XCTAssertEqual(groupAtTarget[0], CGPoint(x: 250, y: 420))
+        XCTAssertEqual(groupAtTarget[1], CGPoint(x: 450, y: 500))
+    }
+
+    func testPastedInstantiatesAcrossPagesAndPreservesAllFields() {
+        var text = NoteTextAttachment(
+            id: "orig-text",
+            pageIndex: 0,
+            text: "跨頁貼上測試",
+            fontSize: 20,
+            isBold: true,
+            isItalic: true,
+            x: 80,
+            y: 100,
+            width: 200,
+            height: 80
+        )
+        text.fontFamily = "Georgia"
+        text.rotationDegrees = 15
+
+        var shape = NoteShapeAttachment(
+            id: "orig-shape",
+            pageIndex: 0,
+            kindName: "decision",
+            x: 120,
+            y: 260,
+            width: 140,
+            height: 90,
+            label: "流程",
+            strokeColorHex: "#FF5722",
+            fillColorHex: "#FFF3E0",
+            lineWidth: 3,
+            groupId: "g1"
+        )
+        shape.dashStyle = "dashed"
+        shape.opacity = 0.8
+
+        let pasted = ObjectMarquee.pasted(
+            [.text(text), .shape(shape)],
+            onPage: 2,
+            at: CGPoint(x: 400, y: 500)
+        )
+        XCTAssertEqual(pasted.count, 2)
+        guard case .text(let pastedText) = pasted[0],
+              case .shape(let pastedShape) = pasted[1] else {
+            return XCTFail("Expected text and shape")
+        }
+        XCTAssertNotEqual(pastedText.id, text.id)
+        XCTAssertEqual(pastedText.pageIndex, 2)
+        XCTAssertEqual(pastedText.text, "跨頁貼上測試")
+        XCTAssertEqual(pastedText.fontFamily, "Georgia")
+        XCTAssertEqual(pastedText.rotationDegrees, 15)
+
+        XCTAssertNotEqual(pastedShape.id, shape.id)
+        XCTAssertEqual(pastedShape.pageIndex, 2)
+        XCTAssertEqual(pastedShape.kindName, "decision")
+        XCTAssertEqual(pastedShape.dashStyle, "dashed")
+        XCTAssertEqual(pastedShape.opacity, 0.8)
+        XCTAssertNil(pastedShape.groupId)
+    }
 }

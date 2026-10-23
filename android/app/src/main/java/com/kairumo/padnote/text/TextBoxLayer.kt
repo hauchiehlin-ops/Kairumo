@@ -116,17 +116,19 @@ fun TextBoxLayer(
         // 鎖定在畫布上的物件不接收觸控（見 canvas/ObjectLock.kt）。
         val lockedIds = com.kairumo.padnote.canvas.LocalLockedObjectIds.current
         for (box in boxes) {
-            TextBoxView(
-                zIndex = zIndexOf(box.id),
-                interactive = interactive && box.id !in lockedIds,
-                box = box,
-                density = density,
-                isSelected = box.id == selectedId,
-                onSelect = { onSelect(box.id) },
-                onEditStyle = { onEditStyle(box) },
-                onChanged = onChanged,
-                onMoved = onMoved
-            )
+            androidx.compose.runtime.key(box.id) {
+                TextBoxView(
+                    zIndex = zIndexOf(box.id),
+                    interactive = interactive && box.id !in lockedIds,
+                    box = box,
+                    density = density,
+                    isSelected = box.id == selectedId,
+                    onSelect = { onSelect(box.id) },
+                    onEditStyle = { onEditStyle(box) },
+                    onChanged = onChanged,
+                    onMoved = onMoved
+                )
+            }
         }
 }
 
@@ -146,16 +148,20 @@ private fun TextBoxView(
 ) {
     // 連續模式：拖到哪一頁就歸哪一頁（單頁模式為 null，照舊夾在本頁）。
     val crossing by androidx.compose.runtime.rememberUpdatedState(com.kairumo.padnote.canvas.LocalPageCrossing.current)
+    val currentBox by androidx.compose.runtime.rememberUpdatedState(box)
     val shape = RoundedCornerShape(box.cornerRadius.dp)
-    val rotation = CanvasRotation.normalized(box.rotationDegrees ?: 0f)
     var startX by remember { mutableFloatStateOf(box.x) }
     var startY by remember { mutableFloatStateOf(box.y) }
+    var liveX by remember(box.id, box.x) { mutableFloatStateOf(box.x) }
+    var liveY by remember(box.id, box.y) { mutableFloatStateOf(box.y) }
     var liveWidth by remember(box.id, box.width) { mutableFloatStateOf(box.width) }
     var liveHeight by remember(box.id, box.height) { mutableFloatStateOf(box.height) }
+    var liveRotation by remember(box.id, box.rotationDegrees) { mutableFloatStateOf(box.rotationDegrees ?: 0f) }
+    val rotation = CanvasRotation.normalized(liveRotation)
 
     // 外層只負責定位，**不旋轉** —— 旋轉把手要掛在這一層，
     // 放進旋轉裡的話拖曳算出的角度會疊加自身旋轉，物件會失控加速。
-    Box(modifier = Modifier.offset(x = box.x.dp, y = box.y.dp).zIndex(zIndex)) {
+    Box(modifier = Modifier.offset(x = liveX.dp, y = liveY.dp).zIndex(zIndex)) {
 
     Box(
         modifier = Modifier
@@ -186,34 +192,52 @@ private fun TextBoxView(
                 )
             } }
             .gesturesIf(interactive) { pointerInput(box.id) {
+                var accX = 0f
+                var accY = 0f
                 detectDragGestures(
                     onDragStart = {
-                        startX = box.x
-                        startY = box.y
+                        val b = currentBox
+                        startX = b.x
+                        startY = b.y
+                        accX = 0f
+                        accY = 0f
+                        liveX = b.x
+                        liveY = b.y
                         onSelect()
                         crossing?.began?.invoke()
                     },
+                    onDragCancel = { crossing?.ended?.invoke() },
                     onDrag = { change, drag ->
                         change.consume()
+                        accX += drag.x
+                        accY += drag.y
+                        val rad = liveRotation * kotlin.math.PI / 180.0
+                        val c = kotlin.math.cos(rad).toFloat()
+                        val sn = kotlin.math.sin(rad).toFloat()
                         // 位移要換回 dp：座標存的是與螢幕密度無關的頁面座標。
-                        box.x += drag.x / density
-                        box.y += drag.y / density
+                        liveX = startX + (accX * c - accY * sn) / density
+                        liveY = startY + (accX * sn + accY * c) / density
+                        currentBox.x = liveX
+                        currentBox.y = liveY
                     },
                     onDragEnd = {
+                        val b = currentBox
                         // 拖出可列印範圍的物件推回邊界（S-85）；連續模式下中心拖到哪一頁就歸哪一頁。
                         // 規則在核心，與 Apple 的 PrintableArea.land 同一份。
                         val landed = com.kairumo.padnote.canvas.landObject(
-                            box.id, box.x, box.y, box.width, box.height, crossing)
-                        box.x = landed.x
-                        box.y = landed.y
+                            b.id, liveX, liveY, liveWidth, liveHeight, crossing)
+                        liveX = landed.x
+                        liveY = landed.y
+                        b.x = landed.x
+                        b.y = landed.y
                         // 換頁時不算「在這一頁上平移」：跟著方塊走的東西留在原頁。
-                        val dx = box.x - startX
-                        val dy = box.y - startY
+                        val dx = b.x - startX
+                        val dy = b.y - startY
                         if (landed.page == null && (dx != 0f || dy != 0f)) {
-                            onMoved?.invoke(box, dx, dy)
+                            onMoved?.invoke(b, dx, dy)
                         }
-                        onChanged(box)
-                        landed.page?.let { crossing?.moved?.invoke(box.id, it) }
+                        onChanged(b)
+                        landed.page?.let { crossing?.moved?.invoke(b.id, it) }
                         crossing?.ended?.invoke()
                     }
                 )
@@ -263,13 +287,13 @@ private fun TextBoxView(
                 onResize = { dw, dh ->
                     liveWidth = maxOf(MIN_TEXT_BOX_WIDTH_DP, liveWidth + dw)
                     liveHeight = maxOf(MIN_TEXT_BOX_HEIGHT_DP, liveHeight + dh)
-                    box.width = liveWidth
-                    box.height = liveHeight
+                    currentBox.width = liveWidth
+                    currentBox.height = liveHeight
                 },
                 onCommit = {
-                    box.width = liveWidth
-                    box.height = liveHeight
-                    onChanged(box)
+                    currentBox.width = liveWidth
+                    currentBox.height = liveHeight
+                    onChanged(currentBox)
                 }
             )
 
@@ -278,8 +302,14 @@ private fun TextBoxView(
                 widthDp = liveWidth,
                 heightDp = liveHeight,
                 density = density,
-                onRotate = { box.rotationDegrees = it },
-                onCommit = { onChanged(box) }
+                onRotate = {
+                    liveRotation = it
+                    currentBox.rotationDegrees = it
+                },
+                onCommit = {
+                    currentBox.rotationDegrees = liveRotation
+                    onChanged(currentBox)
+                }
             )
         }
     }

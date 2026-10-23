@@ -174,15 +174,17 @@ fun ShapeLayer(
     // 鎖定在畫布上的物件不接收觸控（見 canvas/ObjectLock.kt）。
     val lockedIds = com.kairumo.padnote.canvas.LocalLockedObjectIds.current
     for (shape in shapes) {
-        ShapeObjectView(
-            zIndex = zIndexOf(shape.id),
-            shape = shape, density = density,
-            isSelected = selectedIds.contains(shape.id),
-            isSoleSelection = selectedIds.size <= 1,
-            onSelect = onSelect, onEdit = onEdit, onDelete = onDelete,
-            onChanged = onChanged, onConnectDrag = onConnectDrag,
-            interactive = interactive && shape.id !in lockedIds
-        )
+        androidx.compose.runtime.key(shape.id) {
+            ShapeObjectView(
+                zIndex = zIndexOf(shape.id),
+                shape = shape, density = density,
+                isSelected = selectedIds.contains(shape.id),
+                isSoleSelection = selectedIds.size <= 1,
+                onSelect = onSelect, onEdit = onEdit, onDelete = onDelete,
+                onChanged = onChanged, onConnectDrag = onConnectDrag,
+                interactive = interactive && shape.id !in lockedIds
+            )
+        }
     }
 }
 
@@ -408,6 +410,7 @@ private fun ShapeObjectView(
                         var accY = 0f
                         detectDragGestures(
                             onDragStart = { base = current; accX = 0f; accY = 0f; crossing?.began?.invoke() },
+                            onDragCancel = { crossing?.ended?.invoke() },
                             onDrag = { change, drag ->
                                 change.consume()
                                 val s0 = base ?: return@detectDragGestures
@@ -540,13 +543,14 @@ private fun RoundHandle(
     }
 }
 
-/** 編輯、層級、刪除。放在物件框的右上角外側。 */
+/** 編輯、層級、剪貼簿、刪除。放在物件框的右上角外側。 */
 @Composable
 private fun ActionHandles(
     shape: NoteShape, m: Float, onEdit: (NoteShape) -> Unit, onDelete: (NoteShape) -> Unit
 ) {
     val language = LocalAppLanguage.current
     val reorder = LocalObjectReorder.current
+    val clipboard = com.kairumo.padnote.canvas.LocalObjectClipboard.current
     var menu by remember(shape.id) { mutableStateOf(false) }
     val top = m - HANDLE_SIZE - 2f
     val right = m + shape.width
@@ -559,16 +563,35 @@ private fun ActionHandles(
         RoundHandle(Icons.Filled.Close, MaterialTheme.colorScheme.error,
             LocalizationStrings.localized("delete", language), { onDelete(shape) })
     }
-    if (reorder != null) {
+    if (reorder != null || clipboard != null) {
         Box(Modifier.offset((right - HANDLE_SIZE * 3f).dp, top.dp)) {
             RoundHandle(Icons.Filled.List, MaterialTheme.colorScheme.tertiary,
                 LocalizationStrings.localized("layers_panel", language), { menu = true })
             DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-                for (op in ObjectStacking.Reorder.entries) {
+                if (clipboard != null) {
                     DropdownMenuItem(
-                        text = { Text(LocalizationStrings.localized(op.labelKey, language)) },
-                        onClick = { menu = false; reorder(shape.id, op) }
+                        text = { Text("✂ " + LocalizationStrings.localized("action_cut", language)) },
+                        onClick = { menu = false; clipboard.cut(shape.id) }
                     )
+                    DropdownMenuItem(
+                        text = { Text("📋 " + LocalizationStrings.localized("action_copy", language)) },
+                        onClick = { menu = false; clipboard.copy(shape.id) }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("➕ " + LocalizationStrings.localized("action_duplicate", language)) },
+                        onClick = { menu = false; clipboard.duplicate(shape.id) }
+                    )
+                    if (reorder != null) {
+                        androidx.compose.material3.HorizontalDivider()
+                    }
+                }
+                if (reorder != null) {
+                    for (op in ObjectStacking.Reorder.entries) {
+                        DropdownMenuItem(
+                            text = { Text(LocalizationStrings.localized(op.labelKey, language)) },
+                            onClick = { menu = false; reorder(shape.id, op) }
+                        )
+                    }
                 }
             }
         }

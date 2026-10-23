@@ -3293,9 +3293,10 @@ public final class NotebookStore: ObservableObject {
         }
 
         // 確保 pageHeights 陣列長度對齊
-        var heights = notebooks[idx].pageHeights ?? Array(repeating: 1800.0, count: oldPageCount)
+        let defaultHeight = notebooks[idx].pageSize.height
+        var heights = notebooks[idx].pageHeights ?? Array(repeating: defaultHeight, count: oldPageCount)
         while heights.count < newPageCount {
-            heights.append(1800.0)
+            heights.append(defaultHeight)
         }
         notebooks[idx].pageHeights = heights
         // 逐頁樣板也要跟著長一格，否則新頁在陣列裡取不到、退回整本的樣板 ——
@@ -3335,11 +3336,12 @@ public final class NotebookStore: ObservableObject {
         remapPageKeyedFields(at: idx) { $0 >= insertIndex ? $0 + 1 : $0 }
 
         // 更新 pageHeights
-        var heights = notebooks[idx].pageHeights ?? Array(repeating: 1800.0, count: oldPageCount)
+        let defaultHeight = notebooks[idx].pageSize.height
+        var heights = notebooks[idx].pageHeights ?? Array(repeating: defaultHeight, count: oldPageCount)
         while heights.count < oldPageCount {
-            heights.append(1800.0)
+            heights.append(defaultHeight)
         }
-        heights.insert(1800.0, at: insertIndex)
+        heights.insert(defaultHeight, at: insertIndex)
         notebooks[idx].pageHeights = heights
 
         notebooks[idx].padPagePaperIds(to: oldPageCount)
@@ -3778,12 +3780,13 @@ public final class NotebookStore: ObservableObject {
             copyPageInk(notebookId: sourceId, from: from, to: to, targetNotebookId: targetId)
 
             // 2. 頁高與內嵌筆跡陣列。
+            let defaultHeight = notebooks[targetIdx].pageSize.height
             let sourceHeights = notebooks[sourceIdx].pageHeights
             var heights = notebooks[targetIdx].pageHeights
-                ?? Array(repeating: 1800.0, count: max(0, notebooks[targetIdx].pageCount))
-            while heights.count < to { heights.append(1800.0) }
+                ?? Array(repeating: defaultHeight, count: max(0, notebooks[targetIdx].pageCount))
+            while heights.count < to { heights.append(defaultHeight) }
             heights.append(
-                (from < (sourceHeights?.count ?? 0)) ? sourceHeights![from] : 1800.0)
+                (from < (sourceHeights?.count ?? 0)) ? sourceHeights![from] : notebooks[sourceIdx].pageSize.height)
             notebooks[targetIdx].pageHeights = heights
 
             if from < notebooks[sourceIdx].pagesData.count {
@@ -3905,8 +3908,9 @@ public final class NotebookStore: ObservableObject {
         remapPageKeyedFields(at: idx) { $0 > pageIndex ? $0 + 1 : $0 }
 
         // 複製高度
-        var heights = notebooks[idx].pageHeights ?? Array(repeating: 1800.0, count: total)
-        while heights.count < total { heights.append(1800.0) }
+        let defaultHeight = notebooks[idx].pageSize.height
+        var heights = notebooks[idx].pageHeights ?? Array(repeating: defaultHeight, count: total)
+        while heights.count < total { heights.append(defaultHeight) }
         let copyHeight = heights[pageIndex]
         heights.insert(copyHeight, at: pageIndex + 1)
         notebooks[idx].pageHeights = heights

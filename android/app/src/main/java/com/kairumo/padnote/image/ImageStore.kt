@@ -135,4 +135,37 @@ class ImageStore(
 
     fun find(id: String): NoteImage? = images[id]
 
+    /** 讀出圖片原始位元組（供剪下／複製到剪貼簿保存，避免剪下刪除原區塊後貼不回來）。 */
+    fun blobBytes(image: NoteImage): ByteArray? {
+        val s = session ?: return null
+        return runCatching { s.blobBytes(image.blobId) }.getOrNull()
+    }
+
+    /**
+     * 以新區塊 ID 建立一份圖片副本（貼上到本頁或其他頁指定座標 [x], [y]）。
+     * 完整保留原圖尺寸、旋轉、圓角、陰影、邊框、濾鏡、材質與算式欄位。
+     */
+    fun createCopy(source: NoteImage, blobBytes: ByteArray?, x: Float, y: Float): NoteImage? {
+        val s = session ?: return null
+        val page = pageId ?: return null
+        return runCatching {
+            val blob = if (blobBytes != null && blobBytes.isNotEmpty()) {
+                s.putBlob(blobBytes)
+            } else {
+                source.blobId
+            }
+            val blockId = s.addImage(page, blob, source.width, source.height)
+            val copy = source.copy(
+                id = blockId,
+                blobId = blob,
+                x = x,
+                y = y
+            )
+            s.setBlockPosition(blockId, copy.x, copy.y)
+            s.setBlockAppearance(blockId, ImageAppearance.encode(copy))
+            images[blockId] = copy
+            copy
+        }.getOrNull()
+    }
+
 }

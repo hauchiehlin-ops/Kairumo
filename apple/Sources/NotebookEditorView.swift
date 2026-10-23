@@ -2569,6 +2569,10 @@ public struct NotebookEditorView: View {
     /// 整組拖曳時的即時位移。每一幀都寫回筆記的話，拖一次會存幾十次檔。
     @State private var groupDragOffset: CGSize = .zero
     @State private var objectClipboard: [ClipboardObject] = []
+    /// 點選位置貼上模式：開啟後，在任一模式（手繪／打字）、任一頁面型態（單頁／連續）點一下任意頁面的任意位置，即把 `objectClipboard` 貼到該處。
+    @State private var isPlacingPasteObject: Bool = false
+    /// 剛透過 `pasteTargetLayer` 完成點選貼上的時間戳，避免底層 `directSingleTap` 在同一拍重複觸發。
+    @State private var lastPastePlacementAt: Date = .distantPast
     /// 手寫辨識的結果或錯誤，顯示在浮動提示上。
     @State private var recognitionMessage: String?
     /// 辨識手寫剛被按下 —— 只給提示用。
@@ -2807,6 +2811,11 @@ public struct NotebookEditorView: View {
                 liveRecordingBar
             }
 
+            // 5b. 套索貼上膠囊與物件剪下／複製／貼上工具列：
+            // 排在頂部工具列下方、畫布滾動視圖上方，不覆蓋畫布頂端內容，也避免觸控被底層 PKCanvasView 攔截。
+            lassoPastePill
+            objectPastePill
+
             // 6. 核心編輯工作區（包含左側筆記結構欄與右側畫布區）
             GeometryReader { geo in
                 let metrics = layoutMetrics(width: Float(geo.size.width))
@@ -2884,26 +2893,7 @@ public struct NotebookEditorView: View {
                     }
                 }
             }
-            .background {
-                Group {
-                    Button("") {
-                        deleteSelectedStrokes()
-                    }
-                    .keyboardShortcut(.delete, modifiers: [])
-
-                    Button("") {
-                        deleteSelectedStrokes()
-                    }
-                    .keyboardShortcut(.deleteForward, modifiers: [])
-
-                    Button("") {
-                        pasteClipboard()
-                    }
-                    .keyboardShortcut("v", modifiers: .command)
-                }
-                .opacity(0)
-                .allowsHitTesting(false)
-            }
+            .background { editorKeyboardShortcuts }
             // 實體鍵盤快捷鍵（見 AppCommands.swift）。
             .onReceive(NotificationCenter.default.publisher(for: AppCommand.toggleEditorMode)) { _ in
                 let next: EditorMode = (editorMode == .draw) ? .type : .draw
@@ -4462,6 +4452,7 @@ public struct NotebookEditorView: View {
                 pageDisplayMode == .continuous ? "page_mode_continuous" : "page_mode_single"))
             .accessibilityLabel(localizationManager.localized("page_mode"))
             .accessibilityIdentifier("editor.page.display_mode")
+            .accessibilityValue(pageDisplayMode.rawValue)
 
             zoomMenu
         }
@@ -4939,7 +4930,6 @@ public struct NotebookEditorView: View {
                 }
             }
             .overlay { objectEditPanels }
-            .overlay(alignment: .top) { lassoPastePill }
             .overlay { radialMenuLayer }
             .overlay(alignment: .top) {
                 // 🌟 草圖智慧修飾浮動控制面板（兩種頁面模式共用）
@@ -5555,7 +5545,7 @@ public struct NotebookEditorView: View {
                                 eraserMode: eraserMode,
                                 pixelEraserWidth: pixelEraserWidth,
                                 palmRejection: palmRejection,
-                                isObjectActive: (editorMode == .type || inlineEditingTextId != nil || editingTextId != nil || activeSelectedObjectId != nil || !selectedObjectIds.isEmpty || !selectedShapeIds.isEmpty) && !isInlineInkEditing,
+                                isObjectActive: (editorMode == .type || inlineEditingTextId != nil || editingTextId != nil || activeSelectedObjectId != nil || !selectedObjectIds.isEmpty || !selectedShapeIds.isEmpty || isPlacingPasteObject) && !isInlineInkEditing,
                                 isFocused: index == currentPageIndex,
                                 objectLayer: { objectLayer(forPage: index) },
                                 underInkObjectLayer: { AnyView(objectLayer(forPage: index, filter: .underInkOnly)) },
@@ -5684,6 +5674,7 @@ public struct NotebookEditorView: View {
             .coordinateSpace(name: ContinuousPagesSpace.name)
             .environment(\.objectReorder, { id, op in reorderObject(id, op) })
             .environment(\.objectLock, objectLockActions)
+            .environment(\.objectClipboard, objectClipboardActions)
             .simultaneousGesture(
                 MagnificationGesture()
                     .onChanged { mag in
@@ -6238,11 +6229,22 @@ public struct NotebookEditorView: View {
                         )
                         .zIndex(10)
                     }
+                    if pageDisplayMode == .continuous {
+                        if isMarqueeActive && editorMode == .type {
+                            marqueeLayer(forPage: page)
+                                .zIndex(1000)
+                        }
+                        if isPlacingPasteObject && !objectClipboard.isEmpty {
+                            pasteTargetLayer(forPage: page)
+                                .zIndex(1001)
+                        }
+                    }
                 }
 
         }
         .environment(\.objectReorder, { id, op in reorderObject(id, op) })
-            .environment(\.objectLock, objectLockActions)
+        .environment(\.objectLock, objectLockActions)
+        .environment(\.objectClipboard, objectClipboardActions)
         .coordinateSpace(name: CanvasCoordinateSpace.name)
     }
 
@@ -6509,7 +6511,7 @@ public struct NotebookEditorView: View {
                 .offset(x: -canvasContentOffset.x, y: -canvasContentOffset.y)
                 .allowsHitTesting(
                     !isInlineInkEditing
-                        && (editorMode == .type || inlineEditingTextId != nil || editingTextId != nil || activeSelectedObjectId != nil || !selectedObjectIds.isEmpty || !selectedShapeIds.isEmpty)
+                        && (editorMode == .type || inlineEditingTextId != nil || editingTextId != nil || activeSelectedObjectId != nil || !selectedObjectIds.isEmpty || !selectedShapeIds.isEmpty || isPlacingPasteObject)
                 )
                 .zIndex(3)
 
@@ -6588,7 +6590,21 @@ public struct NotebookEditorView: View {
             // 框選層。只有在框選模式下才存在 —— 平常掛一層可命中的
             // 透明視圖，底下的物件就全部點不到了。
             if isMarqueeActive && editorMode == .type {
-                marqueeLayer
+                marqueeLayer(forPage: currentPageIndex)
+                    .frame(width: PageGeometry.width, height: currentPageHeight, alignment: .topLeading)
+                    .scaleEffect(canvasZoomScale, anchor: .topLeading)
+                    .offset(x: -canvasContentOffset.x, y: -canvasContentOffset.y)
+                    .coordinateSpace(name: CanvasCoordinateSpace.name)
+                    .zIndex(4)
+            }
+
+            if isPlacingPasteObject && !objectClipboard.isEmpty {
+                pasteTargetLayer(forPage: currentPageIndex)
+                    .frame(width: PageGeometry.width, height: currentPageHeight, alignment: .topLeading)
+                    .scaleEffect(canvasZoomScale, anchor: .topLeading)
+                    .offset(x: -canvasContentOffset.x, y: -canvasContentOffset.y)
+                    .coordinateSpace(name: CanvasCoordinateSpace.name)
+                    .zIndex(4)
             }
 
             // 展開的討論圖釘詳細對話框
@@ -9814,6 +9830,151 @@ public struct NotebookEditorView: View {
         }
     }
 
+    /// 物件剪下／複製／貼上浮動膠囊：
+    /// - 選取任一物件時（手繪或打字模式、單頁或連續模式）：顯示「剪下」、「複製」按鈕。
+    /// - 物件剪貼簿有內容時：顯示「貼上」（貼到目前焦點頁）與「點選位置貼上」（點擊任意頁面任意座標貼上）。
+    @ViewBuilder
+    private var objectPastePill: some View {
+        let hasSelection = !effectiveSelectedObjectIds.isEmpty && inlineEditingTextId == nil && !isMarqueeActive
+        let hasClipboard = !objectClipboard.isEmpty
+        if isPlacingPasteObject && hasClipboard {
+            HStack(spacing: 8) {
+                Image(systemName: "scope")
+                    .foregroundColor(.accentColor)
+                Text(localizationManager.localized("tap_to_paste_object"))
+                    .font(.caption)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.primary)
+                Button {
+                    isPlacingPasteObject = false
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundColor(.secondary)
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("editor.object.paste.cancel_place")
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 6)
+            .background(.ultraThinMaterial, in: Capsule())
+            .overlay(Capsule().stroke(Color.accentColor.opacity(0.45), lineWidth: 1))
+            .shadow(color: Color.black.opacity(0.10), radius: 4, y: 1)
+            .padding(.vertical, 6)
+            .frame(maxWidth: .infinity)
+            .background(Color(uiColor: .secondarySystemGroupedBackground))
+            .transition(.opacity)
+        } else if hasSelection || hasClipboard {
+            HStack(spacing: 8) {
+                if hasSelection {
+                    Button {
+                        cutSelection()
+                    } label: {
+                        HStack(spacing: 5) {
+                            Image(systemName: "scissors")
+                            Text(localizationManager.localized("action_cut"))
+                                .fontWeight(.semibold)
+                        }
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundColor(.orange)
+                    .accessibilityIdentifier("editor.object.cut")
+
+                    Divider().frame(height: 16)
+
+                    Button {
+                        copySelection()
+                    } label: {
+                        HStack(spacing: 5) {
+                            Image(systemName: "doc.on.doc")
+                            Text(localizationManager.localized("action_copy"))
+                                .fontWeight(.semibold)
+                        }
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundColor(.accentColor)
+                    .accessibilityIdentifier("editor.object.copy")
+                }
+
+                if hasSelection && hasClipboard {
+                    Divider().frame(height: 16)
+                }
+
+                if hasClipboard {
+                    Button {
+                        paste(objectClipboard, onPage: currentPageIndex, at: nil)
+                    } label: {
+                        HStack(spacing: 5) {
+                            Image(systemName: "doc.on.clipboard")
+                            Text(localizationManager.localized("action_paste"))
+                                .fontWeight(.semibold)
+                        }
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundColor(.accentColor)
+                    .accessibilityIdentifier("editor.object.paste")
+
+                    Divider().frame(height: 16)
+
+                    Button {
+                        isPlacingPasteObject = true
+                    } label: {
+                        HStack(spacing: 5) {
+                            Image(systemName: "hand.point.up.left.fill")
+                            Text(localizationManager.localized("paste_at_location"))
+                                .fontWeight(.semibold)
+                        }
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundColor(.primary)
+                    .accessibilityIdentifier("editor.object.paste_at_location")
+
+                    Divider().frame(height: 16)
+
+                    Button {
+                        objectClipboard = []
+                        isPlacingPasteObject = false
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundColor(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("editor.object.paste.clear")
+                }
+            }
+            .font(.caption)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 6)
+            .background(.ultraThinMaterial, in: Capsule())
+            .overlay(Capsule().stroke(Color.accentColor.opacity(0.4), lineWidth: 1))
+            .shadow(color: Color.black.opacity(0.10), radius: 4, y: 1)
+            .padding(.vertical, 6)
+            .frame(maxWidth: .infinity)
+            .background(Color(uiColor: .secondarySystemGroupedBackground))
+            .transition(.opacity)
+        }
+    }
+
+    /// 「點選位置貼上」時覆蓋在每一頁上的透明點擊層：無論手繪或打字、單頁或連續模式，
+    /// 點擊該頁任意座標 `(x, y)` 即將 `objectClipboard` 對齊該座標貼到第 `page` 頁。
+    private func pasteTargetLayer(forPage page: Int) -> some View {
+        Color.accentColor.opacity(0.001)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .contentShape(Rectangle())
+            .highPriorityGesture(
+                SpatialTapGesture(coordinateSpace: .named(CanvasCoordinateSpace.name))
+                    .onEnded { value in
+                        lastPastePlacementAt = Date()
+                        if pageDisplayMode == .continuous {
+                            focusContinuousPage(page)
+                        } else {
+                            currentPageIndex = page
+                        }
+                        paste(objectClipboard, onPage: page, at: value.location)
+                        isPlacingPasteObject = false
+                    }
+            )
+    }
+
     private var lassoFloatingActionBar: AnyView {
         AnyView(
             ViewThatFits(in: .horizontal) {
@@ -12832,7 +12993,7 @@ public struct NotebookEditorView: View {
         var hitUnselected = false
 
         let checkHit: (CGRect, Double, Bool) -> Void = { baseRect, rot, isSel in
-            let padding: CGFloat = isSel ? 36 : 8
+            let padding: CGFloat = isSel ? 48 : 8
             if rectContainsPoint(baseRect, rotation: rot, touchPadding: padding, point: point) {
                 if isSel {
                     hitSelected = true
@@ -13032,9 +13193,21 @@ public struct NotebookEditorView: View {
 
     /// 🌟 方案 A+B：手指或游標在畫布上的單擊事件
     private func handleCanvasDirectTap(at location: CGPoint, page: Int? = nil) {
+        if Date().timeIntervalSince(lastPastePlacementAt) < 0.35 {
+            removeTapDotStroke(near: location)
+            return
+        }
         endTextFormatSession()
         let targetPage = page ?? currentPageIndex
         currentPageIndex = targetPage
+
+        if isPlacingPasteObject && !objectClipboard.isEmpty {
+            lastPastePlacementAt = Date()
+            removeTapDotStroke(near: location)
+            paste(objectClipboard, onPage: targetPage, at: location)
+            isPlacingPasteObject = false
+            return
+        }
 
         // 🌟 優先檢查是否點擊在特殊樣板引導線互動元件上（例如核取方塊 Checkbox）
         if let (_, key) = hitTestGuideCheckbox(at: location, page: targetPage) {
@@ -14076,9 +14249,13 @@ public struct NotebookEditorView: View {
     /// 這一頁上每一個物件的位置與大小，給框選判定用。依堆疊順序由下到上排，
     /// 點選時才拿得到最上面那一個。
     private var marqueeCandidates: [MarqueeHit] {
-        let stacking = ObjectStacking.Lookup(order: notebook.objectOrder(forPage: currentPageIndex))
+        marqueeCandidates(forPage: currentPageIndex)
+    }
+
+    private func marqueeCandidates(forPage page: Int) -> [MarqueeHit] {
+        let stacking = ObjectStacking.Lookup(order: notebook.objectOrder(forPage: page))
         let lockedIds = notebook.allLockedObjectIds
-        return pageStackableObjects.compactMap { object -> MarqueeHit? in
+        return stackableObjects(forPage: page).compactMap { object -> MarqueeHit? in
             // 別人正在編輯的物件不能被框選帶著一起搬、一起刪（設計 §5.2）。
             // 鎖定在畫布上的物件也不框：框選帶著它一起搬，就不叫鎖定了。
             guard collaborationManager.leaseHolder(for: object.id) == nil,
@@ -14089,9 +14266,9 @@ public struct NotebookEditorView: View {
         .sorted { stacking.zIndex(for: $0.id, kind: $0.kind) < stacking.zIndex(for: $1.id, kind: $1.kind) }
     }
 
-    /// 框選層：拉框、顯示選取外框、整組拖曳。
-    private var marqueeLayer: some View {
-        let candidates = marqueeCandidates
+    /// 框選層：拉框、顯示選取外框、整組拖曳（支援單頁模式與連續頁面模式）。
+    private func marqueeLayer(forPage page: Int) -> some View {
+        let candidates = marqueeCandidates(forPage: page)
         let selectionBounds = ObjectMarquee.bounds(of: selectedObjectIds, among: candidates)
         return ZStack(alignment: .topLeading) {
             // 這一層要吃掉觸控 —— 框選模式下畫布不捲、物件不動，
@@ -14103,6 +14280,7 @@ public struct NotebookEditorView: View {
                     DragGesture(minimumDistance: 2,
                                 coordinateSpace: .named(CanvasCoordinateSpace.name))
                         .onChanged { value in
+                            if pageDisplayMode == .continuous { focusContinuousPage(page) }
                             if let bounds = selectionBounds,
                                bounds.contains(value.startLocation) {
                                 // 從選取範圍裡面開始拖＝搬整組。
@@ -14131,6 +14309,7 @@ public struct NotebookEditorView: View {
                 .simultaneousGesture(
                     SpatialTapGesture(coordinateSpace: .named(CanvasCoordinateSpace.name))
                         .onEnded { value in
+                            if pageDisplayMode == .continuous { focusContinuousPage(page) }
                             selectedObjectIds = ObjectMarquee.tapped(
                                 ObjectMarquee.topmostHit(at: value.location, among: candidates),
                                 existing: selectedObjectIds,
@@ -14150,7 +14329,7 @@ public struct NotebookEditorView: View {
             }
 
             // 拉框中的橡皮筋
-            if let start = marqueeStart, let current = marqueeCurrent {
+            if page == currentPageIndex, let start = marqueeStart, let current = marqueeCurrent {
                 let rect = ObjectMarquee.rect(from: start, to: current)
                 Rectangle()
                     .fill(Color.accentColor.opacity(0.10))
@@ -14243,6 +14422,14 @@ public struct NotebookEditorView: View {
             Divider().frame(height: 18)
 
             Button {
+                cutSelection()
+            } label: {
+                Label(localizationManager.localized("action_cut"), systemImage: "scissors")
+            }
+            .disabled(selectedObjectIds.isEmpty)
+            .accessibilityIdentifier("editor.marquee.cut")
+
+            Button {
                 copySelection()
             } label: {
                 Label(localizationManager.localized("action_copy"), systemImage: "doc.on.doc")
@@ -14255,6 +14442,14 @@ public struct NotebookEditorView: View {
                 Label(localizationManager.localized("action_paste"), systemImage: "doc.on.clipboard")
             }
             .disabled(objectClipboard.isEmpty && getClipboardImage() == nil)
+
+            Button {
+                isPlacingPasteObject = true
+            } label: {
+                Label(localizationManager.localized("paste_at_location"), systemImage: "hand.point.up.left.fill")
+            }
+            .disabled(objectClipboard.isEmpty)
+            .accessibilityIdentifier("editor.marquee.paste_at_location")
 
             Button {
                 duplicateSelection()
@@ -14286,7 +14481,78 @@ public struct NotebookEditorView: View {
         .background(Color(uiColor: .tertiarySystemGroupedBackground))
     }
 
-    // MARK: - 框選的批次操作
+    // MARK: - 框選與單一物件剪貼簿批次操作
+
+    @ViewBuilder
+    private var editorKeyboardShortcuts: some View {
+        Group {
+            Button("") {
+                if !effectiveSelectedObjectIds.isEmpty && inlineEditingTextId == nil {
+                    deleteSelection()
+                } else {
+                    deleteSelectedStrokes()
+                }
+            }
+            .keyboardShortcut(.delete, modifiers: [])
+
+            Button("") {
+                if !effectiveSelectedObjectIds.isEmpty && inlineEditingTextId == nil {
+                    deleteSelection()
+                } else {
+                    deleteSelectedStrokes()
+                }
+            }
+            .keyboardShortcut(.deleteForward, modifiers: [])
+
+            Button("") {
+                guard inlineEditingTextId == nil else { return }
+                if selectedTool == .lasso && lasso.hasSelection {
+                    cutSelectedStrokes()
+                } else if !effectiveSelectedObjectIds.isEmpty {
+                    cutSelection()
+                }
+            }
+            .keyboardShortcut("x", modifiers: .command)
+
+            Button("") {
+                guard inlineEditingTextId == nil else { return }
+                if selectedTool == .lasso && lasso.hasSelection {
+                    copySelectedStrokes()
+                } else if !effectiveSelectedObjectIds.isEmpty {
+                    copySelection()
+                }
+            }
+            .keyboardShortcut("c", modifiers: .command)
+
+            Button("") {
+                pasteClipboard()
+            }
+            .keyboardShortcut("v", modifiers: .command)
+        }
+        .opacity(0)
+        .allowsHitTesting(false)
+    }
+
+    /// 目前被選取的物件 ID 集合（涵蓋框選、多選形狀、單點選取或開啟屬性面板的物件）。
+    private var effectiveSelectedObjectIds: Set<String> {
+        if !selectedObjectIds.isEmpty { return selectedObjectIds }
+        if !selectedShapeIds.isEmpty { return selectedShapeIds }
+        if let active = activeSelectedObjectId { return [active] }
+        if let table = editingTable { return [table.id] }
+        if let shapeId = editingShapeId { return [shapeId] }
+        if let attId = editingAttachmentId { return [attId] }
+        if let textId = editingTextId { return [textId] }
+        return []
+    }
+
+    /// 供所有物件右鍵／長按選單與屬性面板使用的剪下、複製、建立副本動作。
+    private var objectClipboardActions: ObjectClipboardActions {
+        ObjectClipboardActions(
+            cut: { id in cutObject(id: id) },
+            copy: { id in copyObject(id: id) },
+            duplicate: { id in duplicateObject(id: id) }
+        )
+    }
 
     private func moveSelection(by delta: CGSize) {
         guard !selectedObjectIds.isEmpty, delta != .zero else { return }
@@ -14296,137 +14562,174 @@ public struct NotebookEditorView: View {
                                            y: frame.minY + delta.height))
         }
         commitNotebook()
+        continuousObjectGeneration += 1
     }
 
     private func copySelection() {
-        objectClipboard = selectedObjectIds.compactMap(clipboardObject(forId:))
+        let ids = effectiveSelectedObjectIds
+        guard !ids.isEmpty else { return }
+        objectClipboard = ids.compactMap(clipboardObject(forId:))
+        isPlacingPasteObject = false
+        showCanvasNotice(localizationManager.localized("object_copied_hint"))
+    }
+
+    private func cutSelection() {
+        let ids = effectiveSelectedObjectIds
+        guard !ids.isEmpty else { return }
+        objectClipboard = ids.compactMap(clipboardObject(forId:))
+        isPlacingPasteObject = false
+        deleteObjects(ids: ids)
+        showCanvasNotice(localizationManager.localized("object_cut_hint"))
+    }
+
+    private func copyObject(id: String) {
+        if selectedObjectIds.contains(id) && selectedObjectIds.count > 1 {
+            copySelection()
+            return
+        }
+        guard let obj = clipboardObject(forId: id) else { return }
+        objectClipboard = [obj]
+        isPlacingPasteObject = false
+        showCanvasNotice(localizationManager.localized("object_copied_hint"))
+    }
+
+    private func cutObject(id: String) {
+        if selectedObjectIds.contains(id) && selectedObjectIds.count > 1 {
+            cutSelection()
+            return
+        }
+        guard let obj = clipboardObject(forId: id) else { return }
+        objectClipboard = [obj]
+        isPlacingPasteObject = false
+        deleteObjects(ids: [id])
+        showCanvasNotice(localizationManager.localized("object_cut_hint"))
+    }
+
+    private func duplicateObject(id: String) {
+        if selectedObjectIds.contains(id) && selectedObjectIds.count > 1 {
+            duplicateSelection()
+            return
+        }
+        guard let obj = clipboardObject(forId: id) else { return }
+        let targetPage = pageOfObject(id) ?? currentPageIndex
+        paste([obj], onPage: targetPage, at: nil)
     }
 
     private func duplicateSelection() {
-        let copies = selectedObjectIds.compactMap(clipboardObject(forId:))
-        paste(copies)
+        let ids = effectiveSelectedObjectIds
+        let copies = ids.compactMap(clipboardObject(forId:))
+        paste(copies, onPage: currentPageIndex, at: nil)
     }
 
     private func pasteClipboard() {
         if selectedTool == .lasso && lasso.canPaste {
             pasteStrokes()
         } else if !objectClipboard.isEmpty {
-            paste(objectClipboard)
+            paste(objectClipboard, onPage: currentPageIndex, at: nil)
         } else if let image = getClipboardImage() {
             insertImageAttachment(image)
             showNoticeToast(name: localizationManager.localized("screenshot_pasted"), icon: "checkmark.circle.fill")
         }
     }
 
-    /// 貼上一組物件。**每一個都給新的 id** —— 沿用原 id 的話，兩份物件
-    /// 會共用同一筆資料，拖其中一個另一個也會跟著動。
-    private func paste(_ objects: [ClipboardObject]) {
+    /// 貼上一組物件到指定頁面與指定座標（`targetPoint == nil` 為預設偏移貼上，有值則將物件中心對齊該座標）。
+    /// **每一個都給新的 id** —— 沿用原 id 的話，兩份物件會共用同一筆資料，拖其中一個另一個也會跟著動。
+    private func paste(
+        _ objects: [ClipboardObject],
+        onPage targetPage: Int? = nil,
+        at targetPoint: CGPoint? = nil
+    ) {
         guard !objects.isEmpty else { return }
-        let offset = ObjectMarquee.pasteOffset
+        let page = targetPage ?? currentPageIndex
+        let instantiated = ObjectMarquee.pasted(objects, onPage: page, at: targetPoint)
         var pastedIds: Set<String> = []
+        var singleShapeId: String? = nil
+        var singleNonShapeId: String? = nil
 
-        for object in objects {
+        for object in instantiated {
             switch object {
-            case .image(let item):
-                var copy = NoteImageAttachment(
-                    fileName: item.fileName, pageIndex: currentPageIndex,
-                    x: item.x + offset.width, y: item.y + offset.height,
-                    width: item.width, height: item.height,
-                    rotationDegrees: item.rotationDegrees, cornerRadius: item.cornerRadius,
-                    hasShadow: item.hasShadow, hasBorder: item.hasBorder,
-                    filterStyle: item.filterStyle, materialType: item.materialType,
-                    borderColorHex: item.borderColorHex, borderWidth: item.borderWidth,
-                    backgroundColorHex: item.backgroundColorHex,
-                    chartSpecJSON: item.chartSpecJSON)
-                copy.pageIndex = currentPageIndex
+            case .image(let copy):
                 notebook.attachments = (notebook.attachments ?? []) + [copy]
                 pastedIds.insert(copy.id)
-            case .text(let item):
-                var copy = item
-                copy = NoteTextAttachment(
-                    pageIndex: currentPageIndex, text: item.text, fontSize: item.fontSize,
-                    isBold: item.isBold, isItalic: item.isItalic, isUnderline: item.isUnderline,
-                    isStrikethrough: item.isStrikethrough, alignmentRaw: item.alignmentRaw,
-                    textColorHex: item.textColorHex,
-                    backgroundColorHex: item.backgroundColorHex ?? "#FFFFFF",
-                    hasBorder: item.hasBorder, cornerRadius: item.cornerRadius,
-                    borderColorHex: item.borderColorHex, borderWidth: item.borderWidth,
-                    x: item.x + offset.width, y: item.y + offset.height,
-                    width: item.width, height: item.height,
-                    lineSpacing: item.lineSpacing, paragraphSpacing: item.paragraphSpacing,
-                    firstLineIndent: item.firstLineIndent, paragraphIndent: item.paragraphIndent)
-                copy.rotationDegrees = item.rotationDegrees
+                singleNonShapeId = copy.id
+                if let data = try? JSONEncoder().encode(copy),
+                   let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                    collaborationManager.broadcastAttachmentUpsert(type: "image", itemDict: dict)
+                }
+            case .text(let copy):
                 notebook.textAttachments = (notebook.textAttachments ?? []) + [copy]
                 pastedIds.insert(copy.id)
-            case .table(let item):
-                var copy = NoteTableAttachment(
-                    pageIndex: currentPageIndex,
-                    x: item.x + offset.width, y: item.y + offset.height,
-                    width: item.width, rows: item.rows, cols: item.cols,
-                    cells: item.cells, headerRow: item.headerRow,
-                    mergedCells: item.mergedCells, fontSize: item.fontSize,
-                    ruleColorHex: item.ruleColorHex,
-                    headerBackgroundHex: item.headerBackgroundHex)
-                copy.rotationDegrees = item.rotationDegrees
+                singleNonShapeId = copy.id
+                if let data = try? JSONEncoder().encode(copy),
+                   let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                    collaborationManager.broadcastAttachmentUpsert(type: "text", itemDict: dict)
+                }
+            case .table(let copy):
                 notebook.tableAttachments = (notebook.tableAttachments ?? []) + [copy]
                 pastedIds.insert(copy.id)
-            case .shape(let item):
-                var copy = NoteShapeAttachment(
-                    pageIndex: currentPageIndex, kindName: item.kindName,
-                    x: item.x + offset.width, y: item.y + offset.height,
-                    width: item.width, height: item.height,
-                    cornerRadius: item.cornerRadius, label: item.label,
-                    strokeColorHex: item.strokeColorHex, fillColorHex: item.fillColorHex,
-                    lineWidth: item.lineWidth)
-                copy.rotationDegrees = item.rotationDegrees
+                singleNonShapeId = copy.id
+                if let data = try? JSONEncoder().encode(copy),
+                   let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                    collaborationManager.broadcastAttachmentUpsert(type: "table", itemDict: dict)
+                }
+            case .shape(let copy):
                 notebook.shapeAttachments = (notebook.shapeAttachments ?? []) + [copy]
                 pastedIds.insert(copy.id)
-            case .link(let item):
-                var copy = NoteLinkAttachment(
-                    pageIndex: currentPageIndex, urlString: item.urlString,
-                    title: item.title, descriptionText: item.descriptionText,
-                    siteName: item.siteName,
-                    x: item.x + offset.width, y: item.y + offset.height,
-                    width: item.width, height: item.height)
-                copy.rotationDegrees = item.rotationDegrees
-                copy.hasBorder = item.hasBorder
-                copy.cornerRadius = item.cornerRadius
+                singleShapeId = copy.id
+                if let data = try? JSONEncoder().encode(copy),
+                   let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                    collaborationManager.broadcastAttachmentUpsert(type: "shape", itemDict: dict)
+                }
+            case .link(let copy):
                 notebook.linkAttachments = (notebook.linkAttachments ?? []) + [copy]
                 pastedIds.insert(copy.id)
-            case .model3D(let item):
-                var copy = item
-                copy = Note3DAttachment()
-                copy.pageIndex = currentPageIndex
-                copy.x = item.x + offset.width
-                copy.y = item.y + offset.height
-                copy.width = item.width
-                copy.height = item.height
+                singleNonShapeId = copy.id
+            case .model3D(let copy):
                 notebook.model3DAttachments = (notebook.model3DAttachments ?? []) + [copy]
                 pastedIds.insert(copy.id)
-            case .audio(let item):
-                let copy = NoteAudioAttachment(
-                    pageIndex: currentPageIndex, recordingId: item.recordingId,
-                    fileName: item.fileName, title: item.title,
-                    durationSeconds: item.durationSeconds,
-                    x: item.x + offset.width, y: item.y + offset.height,
-                    width: item.width, height: item.height,
-                    rotationDegrees: item.rotationDegrees,
-                    hasBorder: item.hasBorder, cornerRadius: item.cornerRadius,
-                    borderColorHex: item.borderColorHex, borderWidth: item.borderWidth,
-                    backgroundColorHex: item.backgroundColorHex)
+                singleNonShapeId = copy.id
+                if let data = try? JSONEncoder().encode(copy),
+                   let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                    collaborationManager.broadcastAttachmentUpsert(type: "3d", itemDict: dict)
+                }
+            case .audio(let copy):
                 notebook.audioAttachments = (notebook.audioAttachments ?? []) + [copy]
                 pastedIds.insert(copy.id)
+                singleNonShapeId = copy.id
             }
         }
 
+        if pageDisplayMode == .continuous {
+            focusContinuousPage(page)
+        } else {
+            currentPageIndex = page
+        }
         commitNotebook()
-        // 貼上之後選取新的那一份，接著就能直接再拖一次。
+        continuousObjectGeneration += 1
+        thumbnailRevision += 1
+        PageThumbnailRenderer.invalidateAll()
+
+        // 貼上之後選取新的那一份，接著就能直接再拖一次（手繪與打字模式下皆生效）。
         selectedObjectIds = pastedIds
+        if pastedIds.count == 1 {
+            if let sid = singleShapeId {
+                selectedShapeIds = [sid]
+                activeSelectedObjectId = nil
+            } else if let oid = singleNonShapeId {
+                selectedShapeIds = []
+                activeSelectedObjectId = oid
+            }
+        }
     }
 
     private func deleteSelection() {
-        guard !selectedObjectIds.isEmpty else { return }
-        let ids = selectedObjectIds
+        let ids = effectiveSelectedObjectIds
+        guard !ids.isEmpty else { return }
+        deleteObjects(ids: ids)
+    }
+
+    private func deleteObjects(ids: Set<String>) {
+        guard !ids.isEmpty else { return }
         for id in ids {
             if (notebook.attachments ?? []).contains(where: { $0.id == id }) {
                 collaborationManager.broadcastAttachmentDelete(id: id, type: "image")
@@ -14454,8 +14757,17 @@ public struct NotebookEditorView: View {
         notebook.connectionAttachments?.removeAll {
             ids.contains($0.fromShapeId) || ids.contains($0.toShapeId)
         }
-        selectedObjectIds = []
+        selectedObjectIds.subtract(ids)
+        selectedShapeIds.subtract(ids)
+        if let active = activeSelectedObjectId, ids.contains(active) { activeSelectedObjectId = nil }
+        if let editing = editingAttachmentId, ids.contains(editing) { editingAttachmentId = nil }
+        if let editing = editingTextId, ids.contains(editing) { editingTextId = nil }
+        if let editing = inlineEditingTextId, ids.contains(editing) { inlineEditingTextId = nil }
+        if let editing = editingShapeId, ids.contains(editing) { editingShapeId = nil }
+        if let editing = editingTable?.id, ids.contains(editing) { editingTable = nil }
         commitNotebook()
+        continuousObjectGeneration += 1
+        thumbnailRevision += 1
         PageThumbnailRenderer.invalidateAll()
     }
 
@@ -14697,7 +15009,8 @@ public struct NotebookEditorView: View {
 
         }
         .environment(\.objectReorder, { id, op in reorderObject(id, op) })
-            .environment(\.objectLock, objectLockActions)
+        .environment(\.objectLock, objectLockActions)
+        .environment(\.objectClipboard, objectClipboardActions)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
         .zIndex(10_000)
     }
@@ -15396,6 +15709,7 @@ struct AttachmentItemView: View {
     @ObservedObject var localizationManager = LocalizationManager.shared
     @ObservedObject var collaborationManager = CollaborationManager.shared
     @Environment(\.pageCrossing) private var pageCrossing
+    @Environment(\.objectClipboard) private var clipboard
     @State private var dragOffset: CGSize = .zero
     @State private var isDragging: Bool = false
     /// 縮放期間的本地預覽尺寸。
@@ -15560,6 +15874,36 @@ struct AttachmentItemView: View {
                     // 「保留邊框」）。原本兩個地方都能改同一個值，畫布上那顆
                     // 又只有顏色會變、沒有標示，使用者不知道自己按了什麼。
 
+                    if let clipboard {
+                        Button {
+                            clipboard.cut(attachment.id)
+                        } label: {
+                            Image(systemName: "scissors")
+                                .font(.system(size: 11, weight: .bold))
+                                .foregroundColor(.white)
+                                .padding(5)
+                                .background(Color.orange)
+                                .clipShape(Circle())
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel(localizationManager.localized("action_cut"))
+                        .accessibilityIdentifier("object.action.cut")
+
+                        Button {
+                            clipboard.copy(attachment.id)
+                        } label: {
+                            Image(systemName: "doc.on.doc")
+                                .font(.system(size: 11, weight: .bold))
+                                .foregroundColor(.white)
+                                .padding(5)
+                                .background(Color.teal)
+                                .clipShape(Circle())
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel(localizationManager.localized("action_copy"))
+                        .accessibilityIdentifier("object.action.copy")
+                    }
+
                     Button {
                         onDelete()
                     } label: {
@@ -15682,6 +16026,7 @@ struct TextAttachmentItemView: View {
     var selectionTracker: TextSelectionTracker? = nil
 
     @Environment(\.objectReorder) private var reorder
+    @Environment(\.objectClipboard) private var clipboard
 
     @ObservedObject var localizationManager = LocalizationManager.shared
     @ObservedObject var collaborationManager = CollaborationManager.shared
@@ -16152,6 +16497,13 @@ struct TextAttachmentItemView: View {
                             .background(isUnderInk ? Color.orange : Color.purple)
                             .cornerRadius(7)
                         }
+                    }
+
+                    if let clipboard {
+                        textActionButton("scissors", "action_cut", .orange) { clipboard.cut(textItem.id) }
+                            .accessibilityIdentifier("object.action.cut")
+                        textActionButton("doc.on.doc", "action_copy", .teal) { clipboard.copy(textItem.id) }
+                            .accessibilityIdentifier("object.action.copy")
                     }
 
                     // 邊框開關已移進「文字排版」面板的「樣式」分頁。

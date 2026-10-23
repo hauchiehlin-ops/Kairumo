@@ -188,11 +188,21 @@ fun ContinuousPagesView(
      */
     radialMenuCenter: Offset? = null,
     /** 飛梭工具盤的動作（項目 id，或 `RADIAL_DISMISS`）。 */
-    onRadialAction: (String) -> Unit = {}
+    onRadialAction: (String) -> Unit = {},
+    /** 物件剪貼簿（與單頁模式共用，切換顯示模式不會丟失已複製／剪下的物件）。 */
+    objectClipboard: List<ClipboardObject> = emptyList(),
+    onObjectClipboardChange: (List<ClipboardObject>) -> Unit = {},
+    /** 是否正在點選頁面任意位置準備貼上物件。 */
+    isPlacingPasteObject: Boolean = false,
+    onPlacingPasteObjectChange: (Boolean) -> Unit = {},
+    /** 貼上卡片型物件（連結卡、3D、錄音卡）時通知外層同步更新。 */
+    onMetaObjectsChanged: () -> Unit = {}
 ) {
     val listState = rememberLazyListState()
     /** 套索選取屬於哪一頁。只有那一頁畫圈、選取框與工具列，動作也只作用在那一頁的引擎。 */
     var lassoPageId by remember(session) { mutableStateOf<String?>(null) }
+    /** 連續模式目前被選取的物件（所屬頁索引 to 物件 ID）。 */
+    var activeObjectSelection by remember(session) { mutableStateOf<Pair<Int, String>?>(null) }
 
     LaunchedEffect(meta) {
         com.kairumo.padnote.ink.PageGeometry.use(meta.pageFormatId())
@@ -232,6 +242,9 @@ fun ContinuousPagesView(
     //
     // 拖曳中的那一頁畫在相鄰頁之上：物件拖過頁界時才不會被下一頁的紙蓋住、看起來像消失了。
     var draggingPage by remember { mutableStateOf<Int?>(null) }
+    // 記住最後一次由內部（捲動、拖曳換頁、點選頁面物件）回報出去的頁碼，
+    // 只有外層主動跳頁（點縮圖、上下頁按鈕）時才觸發 animateScrollToItem。
+    var lastReported by remember { mutableIntStateOf(-1) }
 
     /** 這個物件能不能換頁。連接線只畫得出同一頁的兩端；群組成員要整組一起動（核心也只搬根層的單一物件）。 */
     fun canMoveAcrossPages(pageId: String, id: String): Boolean {
@@ -251,6 +264,8 @@ fun ContinuousPagesView(
         val toId = pageIdAt(to)
         if (toId.isEmpty() || fromId == toId) return
         if (runCatching { s.moveToPage(id, toId) }.isFailure) return
+        // 形狀的延伸樣式（線條粗細、箭頭、群組…）存在獨立的 shapestyle 信封區塊裡，換頁時要一起搬。
+        runCatching { s.moveToPage(ShapeStore.stableBlockId("style:${id.lowercase()}"), toId) }
         val order = meta.objectOrder(from)
         if (id in order) {
             meta.setObjectOrder(s, from, order - id)
@@ -270,7 +285,10 @@ fun ContinuousPagesView(
                 rt.bump()
             }
         }
-        if (to != currentFocus) currentOnFocusChange(to)
+        if (to != currentFocus) {
+            lastReported = to
+            currentOnFocusChange(to)
+        }
         collabBridge?.onLocalChange?.invoke()
     }
 
@@ -280,22 +298,168 @@ fun ContinuousPagesView(
         if (index != currentFocus) currentOnFocusChange(index)
     }
 
-    // Ctrl+X／C／V（對齊 Apple 的 ⌘V）：作用在選取所屬的頁，沒有就是焦點頁。
-    LaunchedEffect(lasso, runtimes) {
-        val selection = lasso ?: return@LaunchedEffect
-        com.kairumo.padnote.ui.AppCommands.events.collect { command ->
-            val target = lassoPageId ?: pageIdAt(currentFocus)
-            val rt = runtimes[target] ?: return@collect
-            val changed = when (command) {
-                com.kairumo.padnote.ui.AppCommand.Cut -> selection.cut(rt.engine)
-                com.kairumo.padnote.ui.AppCommand.Copy -> selection.copy(rt.engine)
-                com.kairumo.padnote.ui.AppCommand.Paste -> selection.paste(rt.engine)
-                else -> return@collect
+    /** 擷取指定頁面上某個物件並視需要將其從原頁刪除（剪下／複製共用）。 */
+    fun capturePageObject(pageIdx: Int, id: String, removeSource: Boolean): ClipboardObject? {
+        val pid = pageIdAt(pageIdx)
+        val rt = runtimes.getOrPut(pid) { PageRuntime(session, pid.ifEmpty { null }, runtimeContext) }
+        val result: ClipboardObject? = rt.imageStore.all.firstOrNull { it.id == id }?.let { img ->
+            val bytes = rt.imageStore.blobBytes(img)
+            if (removeSource) rt.imageStore.remove(img)
+            ClipboardObject.Image(img.copy(), bytes)
+        } ?: rt.textStore.all.firstOrNull { it.id == id }?.let { box ->
+            val copy = box.copy()
+            if (removeSource) rt.textStore.remove(box)
+            ClipboardObject.Text(copy)
+        } ?: rt.tableStore.all.firstOrNull { it.id == id }?.let { tbl ->
+            val copy = tbl.copyTable()
+            if (removeSource) rt.tableStore.remove(tbl)
+            ClipboardObject.Table(copy)
+        } ?: rt.chartStore.all.firstOrNull { it.id == id }?.let { ch ->
+            val copy = ch.copy()
+            if (removeSource) rt.chartStore.remove(ch)
+            ClipboardObject.Chart(copy)
+        } ?: rt.shapeStore.all.firstOrNull { it.id == id }?.let { sh ->
+            val copy = sh.copyShape()
+            if (removeSource) rt.shapeStore.remove(sh)
+            ClipboardObject.Shape(copy)
+        }
+        if (result != null && removeSource) {
+            if (activeObjectSelection?.second == id) activeObjectSelection = null
+            rt.bump()
+            collabBridge?.onLocalChange?.invoke()
+        }
+        return result
+    }
+
+    /** 將一組剪貼簿物件貼到第 [targetPage] 頁的指定位置（null 為預設右下偏移 24pt）。 */
+    fun pasteObjectsToPage(items: List<ClipboardObject>, targetPage: Int, targetPoint: Offset? = null): List<String> {
+        if (items.isEmpty()) return emptyList()
+        val pid = pageIdAt(targetPage)
+        val rt = runtimes.getOrPut(pid) { PageRuntime(session, pid.ifEmpty { null }, runtimeContext) }
+        val origins = ObjectMarquee.pasteOrigins(items.map { it.frame }, targetPoint)
+        val createdIds = mutableListOf<String>()
+        var metaChanged = false
+        for ((item, origin) in items.zip(origins)) {
+            when (item) {
+                is ClipboardObject.Image -> {
+                    rt.imageStore.createCopy(item.item, item.blobBytes, origin.x, origin.y)?.let { createdIds += it.id }
+                }
+                is ClipboardObject.Text -> {
+                    val created = rt.textStore.create(origin.x, origin.y)
+                    created.copyFieldsFrom(item.item)
+                    created.x = origin.x
+                    created.y = origin.y
+                    rt.textStore.persist(created)
+                    createdIds += created.id
+                }
+                is ClipboardObject.Table -> {
+                    val created = rt.tableStore.create(item.item.copyTable().apply { x = origin.x; y = origin.y })
+                    createdIds += created.id
+                }
+                is ClipboardObject.Chart -> {
+                    val created = rt.chartStore.createCopy(item.item, origin.x, origin.y)
+                    createdIds += created.id
+                }
+                is ClipboardObject.Shape -> {
+                    val created = rt.shapeStore.create(item.item.copyShape().apply {
+                        x = origin.x
+                        y = origin.y
+                        groupId = null
+                    })
+                    createdIds += created.id
+                }
+                is ClipboardObject.Link -> {
+                    val copy = item.item.copy(
+                        id = java.util.UUID.randomUUID().toString(),
+                        pageIndex = targetPage,
+                        x = origin.x,
+                        y = origin.y
+                    )
+                    meta.setLinks(session, meta.links() + copy)
+                    createdIds += copy.id
+                    metaChanged = true
+                }
+                is ClipboardObject.Model3D -> {
+                    val copy = item.item.copy(
+                        id = java.util.UUID.randomUUID().toString(),
+                        pageIndex = targetPage,
+                        x = origin.x,
+                        y = origin.y
+                    )
+                    meta.setModels3D(session, meta.models3D() + copy)
+                    createdIds += copy.id
+                    metaChanged = true
+                }
+                is ClipboardObject.Audio -> {
+                    val copy = item.item.copy(
+                        id = java.util.UUID.randomUUID().toString(),
+                        pageIndex = targetPage,
+                        x = origin.x,
+                        y = origin.y
+                    )
+                    meta.setAudioCards(session, meta.audioCards() + copy)
+                    createdIds += copy.id
+                    metaChanged = true
+                }
             }
-            if (changed) {
-                lassoPageId = target
-                rt.bump()
-                collabBridge?.onLocalChange?.invoke()
+        }
+        if (createdIds.isNotEmpty()) {
+            val currentOrder = meta.objectOrder(targetPage)
+            meta.setObjectOrder(session, targetPage, ObjectStacking.bringToFront(createdIds.toSet(), currentOrder))
+            activeObjectSelection = targetPage to createdIds.last()
+            if (targetPage != currentFocus) {
+                lastReported = targetPage
+                currentOnFocusChange(targetPage)
+            }
+            rt.bump()
+            if (metaChanged) onMetaObjectsChanged()
+            collabBridge?.onLocalChange?.invoke()
+        }
+        return createdIds
+    }
+
+    // Ctrl+X／C／V（對齊 Apple 的 ⌘V）：套索模式作用在筆跡；非套索模式作用在畫布物件。
+    LaunchedEffect(lasso, runtimes, activeObjectSelection, objectClipboard) {
+        com.kairumo.padnote.ui.AppCommands.events.collect { command ->
+            val selection = lasso
+            if (selection != null) {
+                val target = lassoPageId ?: pageIdAt(currentFocus)
+                val rt = runtimes[target] ?: return@collect
+                val changed = when (command) {
+                    com.kairumo.padnote.ui.AppCommand.Cut -> selection.cut(rt.engine)
+                    com.kairumo.padnote.ui.AppCommand.Copy -> selection.copy(rt.engine)
+                    com.kairumo.padnote.ui.AppCommand.Paste -> selection.paste(rt.engine)
+                    else -> return@collect
+                }
+                if (changed) {
+                    lassoPageId = target
+                    rt.bump()
+                    collabBridge?.onLocalChange?.invoke()
+                }
+            } else {
+                when (command) {
+                    com.kairumo.padnote.ui.AppCommand.Cut -> {
+                        val sel = activeObjectSelection ?: return@collect
+                        capturePageObject(sel.first, sel.second, removeSource = true)?.let {
+                            onObjectClipboardChange(listOf(it))
+                            onPlacingPasteObjectChange(false)
+                        }
+                    }
+                    com.kairumo.padnote.ui.AppCommand.Copy -> {
+                        val sel = activeObjectSelection ?: return@collect
+                        capturePageObject(sel.first, sel.second, removeSource = false)?.let {
+                            onObjectClipboardChange(listOf(it))
+                            onPlacingPasteObjectChange(false)
+                        }
+                    }
+                    com.kairumo.padnote.ui.AppCommand.Paste -> {
+                        if (objectClipboard.isNotEmpty()) {
+                            pasteObjectsToPage(objectClipboard, currentFocus, targetPoint = null)
+                            onPlacingPasteObjectChange(false)
+                        }
+                    }
+                    else -> return@collect
+                }
             }
         }
     }
@@ -373,9 +537,9 @@ fun ContinuousPagesView(
     // 捲過半頁焦點也不會變。
     // 外層改了頁碼（按了上一頁／下一頁、新增頁面）就捲過去。
     //
-    // 記住「最後一次由捲動回報出去的頁碼」，只有在外層的值與它不同時才捲 ——
-    // 不這樣分的話，捲動→回報→外層更新→再捲回去，會自己跟自己打架。
-    var lastReported by remember { mutableIntStateOf(-1) }
+    // 記住「最後一次由捲動回報出去的頁碼」（`lastReported` 宣告在上面供換頁拖曳共用），
+    // 只有在外層的值與它不同時才捲 —— 不這樣分的話，捲動／拖曳→回報→外層更新→再捲回去，
+    // 會自己跟自己打架。
     // 程式捲動進行中。這段時間內捲動「途中」經過的頁面不算焦點。
     //
     // 原本沒有這個旗標：點縮圖從第 12 頁跳到第 9 頁，動畫才開始，途中第 11 頁
@@ -533,11 +697,33 @@ fun ContinuousPagesView(
                             gap = 20f / scale.coerceAtLeast(0.01f),
                             began = {
                                 draggingPage = index
-                                if (index != currentFocus) currentOnFocusChange(index)
+                                if (index != currentFocus) {
+                                    lastReported = index
+                                    currentOnFocusChange(index)
+                                }
                             },
                             canMove = { id -> canMoveAcrossPages(pageId, id) },
                             moved = { id, to -> moveObjectToPage(id, index, to) },
                             ended = { draggingPage = null }
+                        )
+                        val objectClipboardActions = ObjectClipboardActions(
+                            cut = { id ->
+                                capturePageObject(index, id, removeSource = true)?.let {
+                                    onObjectClipboardChange(listOf(it))
+                                    onPlacingPasteObjectChange(false)
+                                }
+                            },
+                            copy = { id ->
+                                capturePageObject(index, id, removeSource = false)?.let {
+                                    onObjectClipboardChange(listOf(it))
+                                    onPlacingPasteObjectChange(false)
+                                }
+                            },
+                            duplicate = { id ->
+                                capturePageObject(index, id, removeSource = false)?.let {
+                                    pasteObjectsToPage(listOf(it), index, targetPoint = null)
+                                }
+                            }
                         )
                         ContinuousPage(
                             crossing = crossing,
@@ -555,7 +741,10 @@ fun ContinuousPagesView(
                                     lasso?.clear()
                                     lassoPageId = pageId
                                 }
-                                if (index != currentFocus) currentOnFocusChange(index)
+                                if (index != currentFocus) {
+                                    lastReported = index
+                                    currentOnFocusChange(index)
+                                }
                             },
                             pageScale = scale,
                             ink = ink,
@@ -563,11 +752,68 @@ fun ContinuousPagesView(
                             onModeChange = onModeChange,
                             density = density,
                             reloadToken = reloadToken,
-                            collabBridge = collabBridge
+                            collabBridge = collabBridge,
+                            externalSelectedId = activeObjectSelection?.takeIf { it.first == index }?.second,
+                            onExternalSelect = { selId ->
+                                if (selId != null) {
+                                    activeObjectSelection = index to selId
+                                    if (index != currentFocus) {
+                                        lastReported = index
+                                        currentOnFocusChange(index)
+                                    }
+                                } else if (activeObjectSelection?.first == index) {
+                                    activeObjectSelection = null
+                                }
+                            },
+                            objectClipboardActions = objectClipboardActions,
+                            isPlacingPasteObject = isPlacingPasteObject && objectClipboard.isNotEmpty(),
+                            onTapToPaste = { point ->
+                                pasteObjectsToPage(objectClipboard, index, point)
+                                onPlacingPasteObjectChange(false)
+                            }
                         )
                     }
                 }
             }
+        }
+
+        // 畫布物件剪下／複製／貼上浮動工具丸（在手繪與打字模式下皆可使用）。
+        if (activeObjectSelection != null || objectClipboard.isNotEmpty()) {
+            val l = { key: String -> com.kairumo.padnote.LocalizationStrings.localized(key, com.kairumo.padnote.currentLanguageTag()) }
+            ObjectPastePill(
+                hasSelection = activeObjectSelection != null,
+                hasClipboard = objectClipboard.isNotEmpty(),
+                isPlacingPaste = isPlacingPasteObject,
+                l = l,
+                onCut = {
+                    val sel = activeObjectSelection ?: return@ObjectPastePill
+                    capturePageObject(sel.first, sel.second, removeSource = true)?.let {
+                        onObjectClipboardChange(listOf(it))
+                        onPlacingPasteObjectChange(false)
+                    }
+                },
+                onCopy = {
+                    val sel = activeObjectSelection ?: return@ObjectPastePill
+                    capturePageObject(sel.first, sel.second, removeSource = false)?.let {
+                        onObjectClipboardChange(listOf(it))
+                        onPlacingPasteObjectChange(false)
+                    }
+                },
+                onPasteDefault = {
+                    pasteObjectsToPage(objectClipboard, focusIndex, targetPoint = null)
+                    onPlacingPasteObjectChange(false)
+                },
+                onStartPlacePaste = { onPlacingPasteObjectChange(true) },
+                onCancelPlacePaste = { onPlacingPasteObjectChange(false) },
+                onClearClipboard = {
+                    onObjectClipboardChange(emptyList())
+                    onPlacingPasteObjectChange(false)
+                },
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = if (lasso != null && editorMode == EditorMode.DRAW && lasso.canPaste) 58.dp else 12.dp)
+                    .zIndex(12f)
+            )
         }
 
         // 套索模式、沒有選取、剪貼簿有筆跡時的「貼上」入口：貼到選取所屬的頁，沒有就貼到焦點頁。
@@ -674,7 +920,12 @@ private fun ContinuousPage(
     onModeChange: (EditorMode) -> Unit,
     density: Float,
     reloadToken: Int,
-    collabBridge: com.kairumo.padnote.collab.ContinuousCollabBridge?
+    collabBridge: com.kairumo.padnote.collab.ContinuousCollabBridge?,
+    externalSelectedId: String? = null,
+    onExternalSelect: (String?) -> Unit = {},
+    objectClipboardActions: ObjectClipboardActions? = null,
+    isPlacingPasteObject: Boolean = false,
+    onTapToPaste: (Offset) -> Unit = {}
 ) {
     val pageId = runtime.pageId
     val historyKey = pageId ?: ""
@@ -756,11 +1007,20 @@ private fun ContinuousPage(
         if (underInkIds.contains(id)) 10f + baseZ else 200f + baseZ
     }
 
-    val interactive = editorMode == EditorMode.TYPE
     val lockedIds = remember(meta, revision) { meta.lockedObjectIds() }
 
     // 這一頁的選取（單選，圖片／表格／圖表／文字／形狀共用一個 id —— id 在整頁內唯一）。
     var selectedId by remember(pageId) { mutableStateOf<String?>(null) }
+    val updateSelectedId: (String?) -> Unit = { next ->
+        selectedId = next
+        onExternalSelect(next)
+    }
+    LaunchedEffect(externalSelectedId) {
+        if (selectedId != externalSelectedId) {
+            selectedId = externalSelectedId
+        }
+    }
+    val interactive = editorMode == EditorMode.TYPE || selectedId != null
     var selectedConnectionId by remember(pageId) { mutableStateOf<String?>(null) }
     var connectionDraft by remember(pageId) { mutableStateOf<ConnectionDraft?>(null) }
     var editingImage by remember(pageId) { mutableStateOf<NoteImage?>(null) }
@@ -788,15 +1048,15 @@ private fun ContinuousPage(
             isLocked = { id -> id in meta.lockedObjectIds() },
             setLocked = { id, locked ->
                 meta.setObjectLocked(session, pageIndex, id, locked)
-                if (locked && selectedId == id) selectedId = null
+                if (locked && selectedId == id) updateSelectedId(null)
                 if (lockPromptId == id) lockPromptId = null
                 revision++
             }
         )
     }
-    // 切到手寫模式時清掉選取 —— 手寫模式下物件不吃觸控，留著把手只會擋住筆。
+    // 切到手寫模式時清掉連接線選取；物件選取可在手寫模式下透過單指點物件觸發（供剪下／複製）。
     LaunchedEffect(editorMode) {
-        if (editorMode != EditorMode.TYPE) { selectedId = null; selectedConnectionId = null }
+        if (editorMode != EditorMode.TYPE) { selectedConnectionId = null }
     }
 
     // **新插入的物件一律放在最上層**（理由與基準的算法見 MainActivity 裡同一段）。
@@ -857,17 +1117,31 @@ private fun ContinuousPage(
                 if (isFocused) MaterialTheme.colorScheme.primary.copy(alpha = 0.45f)
                 else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.18f)
             )
-            // 手寫模式下手指點鎖定的物件：切到打字模式並給「解除鎖定」鈕（見 ObjectLock.kt）。
+            // 手寫模式下手指點物件：若為鎖定物件則切到打字模式並顯示「解除鎖定」鈕；
+            // 若為未鎖定物件則直接選取（在手寫模式下即可執行剪下／複製）。
             .fingerTapOnLockedObject(
-                listOf(editorMode, lasso != null),
+                listOf(editorMode, lasso != null, isPlacingPasteObject),
                 hitAt = { p ->
-                    if (editorMode != EditorMode.DRAW || lasso != null) null
-                    else lockedObjectHit(p.x / density, p.y / density, lockFramesLatest, lockedIdsLatest)
+                    if (editorMode != EditorMode.DRAW || lasso != null || isPlacingPasteObject) null
+                    else {
+                        val px = p.x / density
+                        val py = p.y / density
+                        lockedObjectHit(px, py, lockFramesLatest, lockedIdsLatest)
+                            ?: ObjectMarquee.topmostHit(
+                                Offset(px, py),
+                                lockFramesLatest.filter { it.id !in lockedIdsLatest }
+                            )
+                    }
                 },
                 onCancelInk = { engine.cancelInFlight(); revision++ },
                 onTap = { id ->
-                    onModeChange(EditorMode.TYPE)
-                    lockPromptId = id
+                    if (id in lockedIdsLatest) {
+                        onModeChange(EditorMode.TYPE)
+                        lockPromptId = id
+                    } else {
+                        updateSelectedId(if (selectedId == id) null else id)
+                        selectedConnectionId = null
+                    }
                 }
             )
             .then(
@@ -888,7 +1162,7 @@ private fun ContinuousPage(
                                 tapY >= (box.y - 10f) && tapY <= (box.y + box.height + 10f)
                             }
                             if (hitExisting != null) {
-                                selectedId = hitExisting.id
+                                updateSelectedId(hitExisting.id)
                                 editingText = hitExisting
                             } else {
                                 val newBox = textStore.create(
@@ -899,7 +1173,7 @@ private fun ContinuousPage(
                                 val updatedOrder = com.kairumo.padnote.canvas.ObjectStacking.bringToFront(setOf(newBox.id), currentOrder)
                                 meta.setObjectOrder(session, pageIndex, updatedOrder)
                                 revision++
-                                selectedId = newBox.id
+                                updateSelectedId(newBox.id)
                                 editingText = newBox
                             }
                         }
@@ -987,59 +1261,57 @@ private fun ContinuousPage(
             // 鎖定在畫布上（見 ObjectLock.kt）：與單頁模式同一份中繼資料。
             com.kairumo.padnote.canvas.LocalObjectLock provides objectLock,
             com.kairumo.padnote.canvas.LocalLockedObjectIds provides lockedIds,
+            com.kairumo.padnote.canvas.LocalObjectClipboard provides objectClipboardActions,
             LocalPageCrossing provides crossing
         ) {
-            key(revision) {
-                ImageLayer(
-                    images = imageStore.all,
-                    store = imageStore,
-                    density = density,
-                    selectedId = selectedId,
-                    interactive = interactive,
-                    onSelect = { selectedId = it; selectedConnectionId = null },
-                    onEditStyle = { editingImage = it },
-                    onChanged = { imageStore.persist(it); revision++ },
-                    zIndexOf = zIndexOf,
-                    modifier = Modifier.fillMaxSize()
-                )
-                TableLayer(
-                    interactive = interactive,
-                    tables = tableStore.all,
-                    density = density,
-                    selectedId = selectedId,
-                    onSelect = { selectedId = it; selectedConnectionId = null },
-                    onEdit = { editingTable = it },
-                    onChanged = { tableStore.persist(it); revision++ },
-                    zIndexOf = zIndexOf,
-                    modifier = Modifier.fillMaxSize()
-                )
-                ChartLayer(
-                    interactive = interactive,
-                    charts = chartStore.all,
-                    density = density,
-                    selectedId = selectedId,
-                    onSelect = { selectedId = it; selectedConnectionId = null },
-                    onEdit = { editingChart = it },
-                    onChanged = { chartStore.persist(it); revision++ },
-                    zIndexOf = zIndexOf,
-                    modifier = Modifier.fillMaxSize()
-                )
-                TextBoxLayer(
-                    interactive = interactive,
-                    boxes = textStore.all,
-                    density = density,
-                    selectedId = selectedId,
-                    onSelect = { selectedId = it; selectedConnectionId = null },
-                    onEditStyle = { editingText = it },
-                    onChanged = { textStore.persist(it); revision++ },
-                    zIndexOf = zIndexOf,
-                    modifier = Modifier.fillMaxSize()
-                )
-            }
-
-            // 形狀不放進 `key(revision)`：整層重建會把進行中的拖曳、縮放、拉線拆掉
+            // 物件圖層不放進 `key(revision)`：整層重建會把進行中的拖曳、縮放、旋轉、拉線拆掉
             // （理由見 MainActivity 裡同一段）。只讀版本號訂閱重組。
             @Suppress("UNUSED_VARIABLE") val revisionRead = revision
+            ImageLayer(
+                images = imageStore.all,
+                store = imageStore,
+                density = density,
+                selectedId = selectedId,
+                interactive = interactive,
+                onSelect = { updateSelectedId(it); selectedConnectionId = null },
+                onEditStyle = { editingImage = it },
+                onChanged = { imageStore.persist(it); revision++ },
+                zIndexOf = zIndexOf,
+                modifier = Modifier.fillMaxSize()
+            )
+            TableLayer(
+                interactive = interactive,
+                tables = tableStore.all,
+                density = density,
+                selectedId = selectedId,
+                onSelect = { updateSelectedId(it); selectedConnectionId = null },
+                onEdit = { editingTable = it },
+                onChanged = { tableStore.persist(it); revision++ },
+                zIndexOf = zIndexOf,
+                modifier = Modifier.fillMaxSize()
+            )
+            ChartLayer(
+                interactive = interactive,
+                charts = chartStore.all,
+                density = density,
+                selectedId = selectedId,
+                onSelect = { updateSelectedId(it); selectedConnectionId = null },
+                onEdit = { editingChart = it },
+                onChanged = { chartStore.persist(it); revision++ },
+                zIndexOf = zIndexOf,
+                modifier = Modifier.fillMaxSize()
+            )
+            TextBoxLayer(
+                interactive = interactive,
+                boxes = textStore.all,
+                density = density,
+                selectedId = selectedId,
+                onSelect = { updateSelectedId(it); selectedConnectionId = null },
+                onEditStyle = { editingText = it },
+                onChanged = { textStore.persist(it); revision++ },
+                zIndexOf = zIndexOf,
+                modifier = Modifier.fillMaxSize()
+            )
             ShapeLayer(
                 interactive = interactive,
                 shapes = shapeStore.all,
@@ -1050,12 +1322,12 @@ private fun ContinuousPage(
                 connectionDraft = connectionDraft,
                 onSelect = { id ->
                     selectedConnectionId = null
-                    selectedId = if (selectedId == id) null else id
+                    updateSelectedId(if (selectedId == id) null else id)
                 },
-                onEdit = { shape -> selectedId = shape.id; editingShape = shape },
+                onEdit = { shape -> updateSelectedId(shape.id); editingShape = shape },
                 onDelete = { shape ->
                     shapeStore.remove(shape)
-                    if (selectedId == shape.id) selectedId = null
+                    if (selectedId == shape.id) updateSelectedId(null)
                     revision++
                 },
                 onChanged = { shapeStore.persist(it); revision++ },
@@ -1063,7 +1335,7 @@ private fun ContinuousPage(
                 modifier = Modifier.fillMaxSize(),
                 onSelectConnection = { id ->
                     selectedConnectionId = id
-                    if (id != null) selectedId = null
+                    if (id != null) updateSelectedId(null)
                 },
                 onEditConnection = { link -> selectedConnectionId = link.id; editingConnection = link },
                 onDeleteConnection = { link ->
@@ -1077,12 +1349,26 @@ private fun ContinuousPage(
                     } else {
                         connectionDraft = null
                         shapeStore.connectByDrag(from, anchor, current.x, current.y)?.let {
-                            selectedId = null
+                            updateSelectedId(null)
                             selectedConnectionId = it.id
                             revision++
                         }
                     }
                 }
+            )
+        }
+
+        // 點選位置貼上：全頁透明攔截層（支援手繪與打字兩種模式，點哪裡就貼在哪一頁的哪個位置）。
+        if (isPlacingPasteObject) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .zIndex(9_500f)
+                    .pointerInput(pageIndex) {
+                        detectTapGestures { offset ->
+                            onTapToPaste(Offset(offset.x / density, offset.y / density))
+                        }
+                    }
             )
         }
 
@@ -1149,7 +1435,7 @@ private fun ContinuousPage(
             image = image,
             languageTag = languageTag,
             onChanged = { imageStore.persist(it); revision++ },
-            onDelete = { imageStore.remove(image); selectedId = null; revision++ },
+            onDelete = { imageStore.remove(image); updateSelectedId(null); revision++ },
             onDismiss = { editingImage = null }
         )
     }
@@ -1160,11 +1446,11 @@ private fun ContinuousPage(
             onApply = { shapeStore.persist(it); revision++ },
             onDuplicate = { source ->
                 val copy = shapeStore.create(source.copyShape().apply { x += 24f; y += 24f; groupId = null })
-                selectedId = copy.id
+                updateSelectedId(copy.id)
                 editingShape = copy
                 revision++
             },
-            onDelete = { target -> shapeStore.remove(target); selectedId = null; revision++ },
+            onDelete = { target -> shapeStore.remove(target); updateSelectedId(null); revision++ },
             onReorder = { op ->
                 val current = ObjectStacking.normalized(currentItems, meta.objectOrder(pageIndex))
                 meta.setObjectOrder(session, pageIndex, op.apply(shape.id, current))
@@ -1193,7 +1479,7 @@ private fun ContinuousPage(
                 revision++
                 editingTable = null
             },
-            onDelete = { tableStore.remove(table); selectedId = null; revision++; editingTable = null },
+            onDelete = { tableStore.remove(table); updateSelectedId(null); revision++; editingTable = null },
             onDismiss = { editingTable = null }
         )
     }

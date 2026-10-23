@@ -87,4 +87,110 @@ final class ObjectLockUITests: XCTestCase {
         expectation(for: gone, evaluatedWith: badge)
         waitForExpectations(timeout: 4)
     }
+
+    /// 物件剪下／複製／貼上：手繪與打字兩種模式、單頁與連續兩種頁面型態，
+    /// 貼到同一頁或其他頁的任意位置都要成立。
+    func testCutCopyPasteObjectAcrossModesAndPages() throws {
+        let app = XCUIApplication()
+        app.launchEnvironment["KAIRUMO_UITEST"] = "1"
+        app.launchEnvironment["KAIRUMO_UITEST_SEED_OBJECTS"] = "1"
+        app.launch()
+        openMatrixNotebook(app)
+
+        func saveShot(_ name: String) {
+            let data = XCUIScreen.main.screenshot().pngRepresentation
+            try? data.write(to: URL(fileURLWithPath: "/tmp/\(name).png"))
+        }
+        let images = app.descendants(matching: .any).matching(identifier: "object.image")
+        let workspace = app.descendants(matching: .any).matching(identifier: "editor.workspace").firstMatch
+        let typing = find(app, "portal.type")
+        let drawMode = find(app, "portal.draw")
+        let displayModeBtn = find(app, "editor.page.display_mode")
+        let cutBtn = app.buttons["editor.object.cut"]
+        let copyBtn = app.buttons["editor.object.copy"]
+        let pasteBtn = app.buttons["editor.object.paste"]
+        let pasteAtTapBtn = app.buttons["editor.object.paste_at_location"]
+        let cancelPlaceBtn = app.buttons["editor.object.paste.cancel_place"]
+
+        func setDisplayMode(_ mode: String) {
+            XCTAssertTrue(displayModeBtn.waitForExistence(timeout: 4))
+            if (displayModeBtn.value as? String) != mode { displayModeBtn.tap() }
+            XCTAssertEqual(displayModeBtn.value as? String, mode)
+        }
+        func waitForCount(_ expected: Int, _ message: String) {
+            let predicate = NSPredicate(format: "count == %d", expected)
+            let exp = XCTNSPredicateExpectation(predicate: predicate, object: images)
+            XCTAssertEqual(XCTWaiter().wait(for: [exp], timeout: 4), .completed,
+                           "\(message)（預期 \(expected)，實際 \(images.count)）")
+        }
+        func pasteAtTap(_ offset: CGVector) {
+            XCTAssertTrue(pasteAtTapBtn.waitForExistence(timeout: 3), "剪貼簿有內容時應顯示「點選位置貼上」")
+            pasteAtTapBtn.tap()
+            XCTAssertTrue(cancelPlaceBtn.waitForExistence(timeout: 3), "應進入點選位置貼上狀態")
+            workspace.coordinate(withNormalizedOffset: offset).tap()
+            XCTAssertTrue(cancelPlaceBtn.waitForNonExistence(timeout: 3), "點一下之後應結束點選位置貼上狀態")
+        }
+
+        // 1. 單頁 + 打字：選取圖片 → 複製 → 點選位置貼到同一頁
+        setDisplayMode("single")
+        XCTAssertTrue(typing.waitForExistence(timeout: 8))
+        typing.tap()
+        let image = find(app, "object.image")
+        XCTAssertTrue(image.waitForExistence(timeout: 8))
+        waitForCount(1, "第 1 頁一開始應只有 1 張圖片")
+        image.tap()
+        XCTAssertTrue(cutBtn.waitForExistence(timeout: 3), "選取物件後應顯示「剪下」")
+        XCTAssertTrue(copyBtn.waitForExistence(timeout: 3), "選取物件後應顯示「複製」")
+        copyBtn.tap()
+        XCTAssertTrue(pasteBtn.waitForExistence(timeout: 3), "複製後應顯示「貼上」")
+        pasteAtTap(CGVector(dx: 0.65, dy: 0.65))
+        saveShot("ipad_1_single_type_pasted_same_page")
+        waitForCount(2, "單頁打字模式：點選位置貼到同一頁")
+
+        // 2. 單頁 + 手繪：剪下剛貼上的那份 → 換到第 2 頁 → 點選位置貼上
+        XCTAssertTrue(drawMode.waitForExistence(timeout: 3))
+        drawMode.tap()
+        XCTAssertTrue(cutBtn.waitForExistence(timeout: 3), "手繪模式下選取中的物件也要能剪下")
+        cutBtn.tap()
+        waitForCount(1, "剪下之後第 1 頁應少一張圖片")
+        find(app, "editor.page.add").tap()
+        let next = find(app, "editor.page.next")
+        XCTAssertTrue(next.waitForExistence(timeout: 3))
+        next.tap()
+        waitForCount(0, "第 2 頁一開始是空白的")
+        drawMode.tap()
+        pasteAtTap(CGVector(dx: 0.5, dy: 0.45))
+        saveShot("ipad_2_single_draw_pasted_page2")
+        waitForCount(1, "單頁手繪模式：剪下後貼到第 2 頁任意位置")
+
+        // 3. 單頁 + 手繪：「貼上」直接貼到目前頁（第 2 頁）
+        drawMode.tap()
+        pasteBtn.tap()
+        waitForCount(2, "單頁手繪模式：「貼上」到目前頁")
+
+        // 4. 連續 + 打字：點選位置貼上
+        setDisplayMode("continuous")
+        typing.tap()
+        let beforeContinuousType = images.count
+        pasteAtTap(CGVector(dx: 0.3, dy: 0.8))
+        saveShot("ipad_3_continuous_type_pasted")
+        waitForCount(beforeContinuousType + 1, "連續頁面打字模式：點選位置貼上")
+
+        // 5. 連續 + 手繪：點選位置貼上（手繪模式下的點擊不能被畫成墨點、也不能漏接）
+        drawMode.tap()
+        let beforeContinuousDraw = images.count
+        pasteAtTap(CGVector(dx: 0.7, dy: 0.3))
+        saveShot("ipad_4_continuous_draw_pasted")
+        waitForCount(beforeContinuousDraw + 1, "連續頁面手繪模式：點選位置貼上")
+
+        // 6. 連續 + 手繪：剪下 → 貼上（剪貼後數量不變）
+        XCTAssertTrue(cutBtn.waitForExistence(timeout: 3))
+        cutBtn.tap()
+        waitForCount(beforeContinuousDraw, "連續頁面手繪模式：剪下")
+        pasteBtn.tap()
+        waitForCount(beforeContinuousDraw + 1, "連續頁面手繪模式：剪下後貼上")
+        saveShot("ipad_5_continuous_draw_cut_paste")
+
+        setDisplayMode("single")
+    }
 }

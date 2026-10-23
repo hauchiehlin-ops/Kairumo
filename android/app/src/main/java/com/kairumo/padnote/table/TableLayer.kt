@@ -1,6 +1,9 @@
 package com.kairumo.padnote.table
 
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectDragGestures
@@ -68,10 +71,12 @@ fun TableLayer(
         // 鎖定在畫布上的物件不接收觸控（見 canvas/ObjectLock.kt）。
         val lockedIds = com.kairumo.padnote.canvas.LocalLockedObjectIds.current
         for (table in tables) {
-            TableObjectView(
-                zIndex = zIndexOf(table.id),
-                table, density, table.id == selectedId, onSelect, onEdit, onChanged,
-                interactive = interactive && table.id !in lockedIds)
+            androidx.compose.runtime.key(table.id) {
+                TableObjectView(
+                    zIndex = zIndexOf(table.id),
+                    table, density, table.id == selectedId, onSelect, onEdit, onChanged,
+                    interactive = interactive && table.id !in lockedIds)
+            }
         }
 }
 
@@ -90,7 +95,11 @@ private fun TableObjectView(
 ) {
     // 連續模式：拖到哪一頁就歸哪一頁（單頁模式為 null，照舊夾在本頁）。
     val crossing by androidx.compose.runtime.rememberUpdatedState(com.kairumo.padnote.canvas.LocalPageCrossing.current)
+    val currentTable by androidx.compose.runtime.rememberUpdatedState(table)
     val layout = table.layout()
+    var liveX by remember(table.id, table.x) { mutableFloatStateOf(table.x) }
+    var liveY by remember(table.id, table.y) { mutableFloatStateOf(table.y) }
+    var liveRotation by remember(table.id, table.rotationDegrees) { mutableFloatStateOf(table.rotationDegrees ?: 0f) }
     val foreground = MaterialTheme.colorScheme.onSurface
     val ruleColor = table.ruleColorHex
         ?.let { hex -> ChartColorOrNull(hex) }
@@ -102,13 +111,13 @@ private fun TableObjectView(
         else -> ChartColorOrNull(hex) ?: foreground.copy(alpha = 0.06f)
     }
 
-    val rotation = CanvasRotation.normalized(table.rotationDegrees ?: 0f)
+    val rotation = CanvasRotation.normalized(liveRotation)
 
     // 外層只定位、不旋轉 —— 旋轉把手掛在這一層。
         // 座標的單位是**頁面點**（＝dp），與 Apple 端和 format-spec 一致。
     // 原本當成像素在用，在 density = 1.0 的模擬器上看不出來，真實手機
     // （2～3.5 倍）上會縮到三分之一並擠向左上角。詳見 ShapeLayer 的說明。
-    Box(Modifier.offset(table.x.dp, table.y.dp).zIndex(zIndex)) {
+    Box(Modifier.offset(liveX.dp, liveY.dp).zIndex(zIndex)) {
 
     Box(
         Modifier
@@ -122,31 +131,50 @@ private fun TableObjectView(
             )
             .gesturesIf(interactive) { pointerInput(table.id) {
                 detectTapGestures(
-                    onTap = { onSelect(table.id) },
+                    onTap = { onSelect(currentTable.id) },
                     // 點兩下進編輯面板 —— 與 Apple 端一致。
-                    onDoubleTap = { onEdit(table) }
+                    onDoubleTap = { onEdit(currentTable) }
                 )
             } }
             .gesturesIf(interactive) { pointerInput(table.id) {
+                var base: NoteTable? = null
+                var accX = 0f
+                var accY = 0f
                 detectDragGestures(
-                    onDragStart = { crossing?.began?.invoke() },
+                    onDragStart = {
+                        val t = currentTable
+                        base = t
+                        accX = 0f
+                        accY = 0f
+                        liveX = t.x
+                        liveY = t.y
+                        onSelect(t.id)
+                        crossing?.began?.invoke()
+                    },
+                    onDragCancel = { crossing?.ended?.invoke() },
                     onDrag = { change, drag ->
                         change.consume()
-                        onChanged(
-                            table.copyTable().apply {
-                                x = table.x + drag.x / density
-                                y = table.y + drag.y / density
-                            }
-                        )
+                        val t0 = base ?: return@detectDragGestures
+                        accX += drag.x
+                        accY += drag.y
+                        val rad = (t0.rotationDegrees ?: 0f) * kotlin.math.PI / 180.0
+                        val c = kotlin.math.cos(rad).toFloat()
+                        val sn = kotlin.math.sin(rad).toFloat()
+                        liveX = t0.x + (accX * c - accY * sn) / density
+                        liveY = t0.y + (accX * sn + accY * c) / density
                     },
                     onDragEnd = {
+                        val t = currentTable
+                        val l = t.layout()
                         // 連續模式下中心拖到哪一頁就歸哪一頁（規則在核心，與 Apple 同一份）。
                         val landed = com.kairumo.padnote.canvas.landObject(
-                            table.id, table.x, table.y, layout.width.toFloat(), layout.height.toFloat(), crossing)
-                        table.x = landed.x
-                        table.y = landed.y
-                        onChanged(table)
-                        landed.page?.let { crossing?.moved?.invoke(table.id, it) }
+                            t.id, liveX, liveY, l.width.toFloat(), l.height.toFloat(), crossing)
+                        liveX = landed.x
+                        liveY = landed.y
+                        t.x = landed.x
+                        t.y = landed.y
+                        onChanged(t)
+                        landed.page?.let { crossing?.moved?.invoke(t.id, it) }
                         crossing?.ended?.invoke()
                     }
                 )
@@ -159,7 +187,7 @@ private fun TableObjectView(
             StyleHandle(
                 widthDp = layout.width.toFloat(),
                 heightDp = layout.height.toFloat(),
-                onTap = { onEdit(table) },
+                onTap = { onEdit(currentTable) },
                 objectId = table.id
             )
 
@@ -169,9 +197,13 @@ private fun TableObjectView(
                 heightDp = layout.height.toFloat(),
                 density = density,
                 onRotate = { deg ->
-                    onChanged(table.copyTable().apply { rotationDegrees = deg })
+                    liveRotation = deg
+                    currentTable.rotationDegrees = deg
                 },
-                onCommit = { onChanged(table) }
+                onCommit = {
+                    currentTable.rotationDegrees = liveRotation
+                    onChanged(currentTable)
+                }
             )
         }
     }
