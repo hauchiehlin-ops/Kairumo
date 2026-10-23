@@ -581,7 +581,7 @@ struct TableAttachmentItemView: View {
                 if !selected { editingCell = nil }
             }
             .shadow(color: isDragging ? .clear : Color.black.opacity(0.08), radius: 6, y: 3)
-            .gesture(
+            .highPriorityGesture(
                 DragGesture(minimumDistance: 4, coordinateSpace: .named(CanvasCoordinateSpace.name))
                     .onChanged { value in
                         if editingCell != nil && hypot(value.translation.width, value.translation.height) > 8 {
@@ -629,7 +629,7 @@ struct TableAttachmentItemView: View {
                         .background(Color(uiColor: .secondarySystemBackground))
                         .cornerRadius(12)
                         .contentShape(Rectangle())
-                        .gesture(
+                        .highPriorityGesture(
                             DragGesture(minimumDistance: 2, coordinateSpace: .named(CanvasCoordinateSpace.name))
                                 .onChanged { value in
                                     if !isDragging { pageCrossing?.began() }

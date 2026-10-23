@@ -224,12 +224,28 @@ pub fn land_on_page(
     let last = page_count.max(1) - 1;
     let from = page_index.min(last) as i64;
     let center_y = (rect.min_y + rect.max_y) / 2.0;
-    let shift = if stride > 0.0 && center_y.is_finite() {
+    let mut shift = if stride > 0.0 && center_y.is_finite() {
         // 以「頁 + 半個間隔」為界：間隔上半歸上一頁，下半歸下一頁。
         ((center_y + page_gap.max(0.0) / 2.0) / stride).floor() as i64
     } else {
         0
     };
+
+    // 提升跨頁移動靈敏度：
+    // 對於較高或大型物件，中心點可能尚未跨過 stride，但物件已經顯著深入相鄰頁。
+    // 如果 shift == 0（尚未判定換頁），但物件底部深入下一頁超過 35% 物件高度或超過 50pt，
+    // 且中心點已經在目前頁下半部（center_y > page_height * 0.55），則判定落入下一頁。
+    // 向上拖曳同理：若頂部進入上一頁超過 35% 或超過 50pt，且中心在目前頁上半部（center_y < page_height * 0.45），判定落入上一頁。
+    if shift == 0 && stride > 0.0 {
+        let height = (rect.max_y - rect.min_y).max(1.0);
+        let threshold = (height * 0.35).min(50.0);
+        let gap = page_gap.max(0.0);
+        if rect.max_y >= stride + threshold && center_y > page_height * 0.55 {
+            shift = 1;
+        } else if rect.min_y <= -gap - threshold && center_y < page_height * 0.45 {
+            shift = -1;
+        }
+    }
     let target = (from + shift).clamp(0, last as i64);
     let dy = (target - from) as f32 * stride;
     let moved = FfiRect {
@@ -332,6 +348,16 @@ mod landing_tests {
             INSET,
         );
         assert_eq!(lower.page_index, 1);
+    }
+
+    #[test]
+    fn tall_object_crossing_edge_lands_on_next_page_sensitively() {
+        // 物件高 300，從 y=950 拖到 y=1250。
+        // stride = 1152。rect.max_y = 1250 >= 1152 + 50 = 1202。
+        // center_y = 1100 > 1132 * 0.55 = 622.6。
+        // 原本演算法中心 1100 尚未跨過 1152 會算成留在 page 0，現在靈敏判定會直接進入 page 1。
+        let tall = land_on_page(rect(100.0, 950.0, 200.0, 300.0), 0, 2, W, H, GAP, INSET);
+        assert_eq!(tall.page_index, 1);
     }
 }
 

@@ -194,6 +194,23 @@ private fun TextBoxView(
             .gesturesIf(interactive) { pointerInput(box.id) {
                 var accX = 0f
                 var accY = 0f
+                val finishDrag: () -> Unit = {
+                    val b = currentBox
+                    val landed = com.kairumo.padnote.canvas.landObject(
+                        b.id, liveX, liveY, liveWidth, liveHeight, crossing)
+                    liveX = landed.x
+                    liveY = landed.y
+                    b.x = landed.x
+                    b.y = landed.y
+                    val dx = b.x - startX
+                    val dy = b.y - startY
+                    if (landed.page == null && (dx != 0f || dy != 0f)) {
+                        onMoved?.invoke(b, dx, dy)
+                    }
+                    onChanged(b)
+                    landed.page?.let { crossing?.moved?.invoke(b.id, it) }
+                    crossing?.ended?.invoke()
+                }
                 detectDragGestures(
                     onDragStart = {
                         val b = currentBox
@@ -206,7 +223,7 @@ private fun TextBoxView(
                         onSelect()
                         crossing?.began?.invoke()
                     },
-                    onDragCancel = { crossing?.ended?.invoke() },
+                    onDragCancel = finishDrag,
                     onDrag = { change, drag ->
                         change.consume()
                         accX += drag.x
@@ -220,26 +237,7 @@ private fun TextBoxView(
                         currentBox.x = liveX
                         currentBox.y = liveY
                     },
-                    onDragEnd = {
-                        val b = currentBox
-                        // 拖出可列印範圍的物件推回邊界（S-85）；連續模式下中心拖到哪一頁就歸哪一頁。
-                        // 規則在核心，與 Apple 的 PrintableArea.land 同一份。
-                        val landed = com.kairumo.padnote.canvas.landObject(
-                            b.id, liveX, liveY, liveWidth, liveHeight, crossing)
-                        liveX = landed.x
-                        liveY = landed.y
-                        b.x = landed.x
-                        b.y = landed.y
-                        // 換頁時不算「在這一頁上平移」：跟著方塊走的東西留在原頁。
-                        val dx = b.x - startX
-                        val dy = b.y - startY
-                        if (landed.page == null && (dx != 0f || dy != 0f)) {
-                            onMoved?.invoke(b, dx, dy)
-                        }
-                        onChanged(b)
-                        landed.page?.let { crossing?.moved?.invoke(b.id, it) }
-                        crossing?.ended?.invoke()
-                    }
+                    onDragEnd = finishDrag
                 )
             } }
             .padding(textBoxPadding(liveWidth, liveHeight).dp)
