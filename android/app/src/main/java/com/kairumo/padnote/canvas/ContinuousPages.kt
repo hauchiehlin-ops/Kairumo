@@ -232,6 +232,9 @@ fun ContinuousPagesView(
     //
     // 拖曳中的那一頁畫在相鄰頁之上：物件拖過頁界時才不會被下一頁的紙蓋住、看起來像消失了。
     var draggingPage by remember { mutableStateOf<Int?>(null) }
+    // 記住最後一次由內部（捲動、拖曳換頁、點選頁面物件）回報出去的頁碼，
+    // 只有外層主動跳頁（點縮圖、上下頁按鈕）時才觸發 animateScrollToItem。
+    var lastReported by remember { mutableIntStateOf(-1) }
 
     /** 這個物件能不能換頁。連接線只畫得出同一頁的兩端；群組成員要整組一起動（核心也只搬根層的單一物件）。 */
     fun canMoveAcrossPages(pageId: String, id: String): Boolean {
@@ -251,6 +254,8 @@ fun ContinuousPagesView(
         val toId = pageIdAt(to)
         if (toId.isEmpty() || fromId == toId) return
         if (runCatching { s.moveToPage(id, toId) }.isFailure) return
+        // 形狀的延伸樣式（線條粗細、箭頭、群組…）存在獨立的 shapestyle 信封區塊裡，換頁時要一起搬。
+        runCatching { s.moveToPage(ShapeStore.stableBlockId("style:${id.lowercase()}"), toId) }
         val order = meta.objectOrder(from)
         if (id in order) {
             meta.setObjectOrder(s, from, order - id)
@@ -270,7 +275,10 @@ fun ContinuousPagesView(
                 rt.bump()
             }
         }
-        if (to != currentFocus) currentOnFocusChange(to)
+        if (to != currentFocus) {
+            lastReported = to
+            currentOnFocusChange(to)
+        }
         collabBridge?.onLocalChange?.invoke()
     }
 
@@ -373,9 +381,9 @@ fun ContinuousPagesView(
     // 捲過半頁焦點也不會變。
     // 外層改了頁碼（按了上一頁／下一頁、新增頁面）就捲過去。
     //
-    // 記住「最後一次由捲動回報出去的頁碼」，只有在外層的值與它不同時才捲 ——
-    // 不這樣分的話，捲動→回報→外層更新→再捲回去，會自己跟自己打架。
-    var lastReported by remember { mutableIntStateOf(-1) }
+    // 記住「最後一次由捲動回報出去的頁碼」（`lastReported` 宣告在上面供換頁拖曳共用），
+    // 只有在外層的值與它不同時才捲 —— 不這樣分的話，捲動／拖曳→回報→外層更新→再捲回去，
+    // 會自己跟自己打架。
     // 程式捲動進行中。這段時間內捲動「途中」經過的頁面不算焦點。
     //
     // 原本沒有這個旗標：點縮圖從第 12 頁跳到第 9 頁，動畫才開始，途中第 11 頁
@@ -533,7 +541,10 @@ fun ContinuousPagesView(
                             gap = 20f / scale.coerceAtLeast(0.01f),
                             began = {
                                 draggingPage = index
-                                if (index != currentFocus) currentOnFocusChange(index)
+                                if (index != currentFocus) {
+                                    lastReported = index
+                                    currentOnFocusChange(index)
+                                }
                             },
                             canMove = { id -> canMoveAcrossPages(pageId, id) },
                             moved = { id, to -> moveObjectToPage(id, index, to) },
@@ -555,7 +566,10 @@ fun ContinuousPagesView(
                                     lasso?.clear()
                                     lassoPageId = pageId
                                 }
-                                if (index != currentFocus) currentOnFocusChange(index)
+                                if (index != currentFocus) {
+                                    lastReported = index
+                                    currentOnFocusChange(index)
+                                }
                             },
                             pageScale = scale,
                             ink = ink,
@@ -989,57 +1003,54 @@ private fun ContinuousPage(
             com.kairumo.padnote.canvas.LocalLockedObjectIds provides lockedIds,
             LocalPageCrossing provides crossing
         ) {
-            key(revision) {
-                ImageLayer(
-                    images = imageStore.all,
-                    store = imageStore,
-                    density = density,
-                    selectedId = selectedId,
-                    interactive = interactive,
-                    onSelect = { selectedId = it; selectedConnectionId = null },
-                    onEditStyle = { editingImage = it },
-                    onChanged = { imageStore.persist(it); revision++ },
-                    zIndexOf = zIndexOf,
-                    modifier = Modifier.fillMaxSize()
-                )
-                TableLayer(
-                    interactive = interactive,
-                    tables = tableStore.all,
-                    density = density,
-                    selectedId = selectedId,
-                    onSelect = { selectedId = it; selectedConnectionId = null },
-                    onEdit = { editingTable = it },
-                    onChanged = { tableStore.persist(it); revision++ },
-                    zIndexOf = zIndexOf,
-                    modifier = Modifier.fillMaxSize()
-                )
-                ChartLayer(
-                    interactive = interactive,
-                    charts = chartStore.all,
-                    density = density,
-                    selectedId = selectedId,
-                    onSelect = { selectedId = it; selectedConnectionId = null },
-                    onEdit = { editingChart = it },
-                    onChanged = { chartStore.persist(it); revision++ },
-                    zIndexOf = zIndexOf,
-                    modifier = Modifier.fillMaxSize()
-                )
-                TextBoxLayer(
-                    interactive = interactive,
-                    boxes = textStore.all,
-                    density = density,
-                    selectedId = selectedId,
-                    onSelect = { selectedId = it; selectedConnectionId = null },
-                    onEditStyle = { editingText = it },
-                    onChanged = { textStore.persist(it); revision++ },
-                    zIndexOf = zIndexOf,
-                    modifier = Modifier.fillMaxSize()
-                )
-            }
-
-            // 形狀不放進 `key(revision)`：整層重建會把進行中的拖曳、縮放、拉線拆掉
+            // 物件圖層不放進 `key(revision)`：整層重建會把進行中的拖曳、縮放、旋轉、拉線拆掉
             // （理由見 MainActivity 裡同一段）。只讀版本號訂閱重組。
             @Suppress("UNUSED_VARIABLE") val revisionRead = revision
+            ImageLayer(
+                images = imageStore.all,
+                store = imageStore,
+                density = density,
+                selectedId = selectedId,
+                interactive = interactive,
+                onSelect = { selectedId = it; selectedConnectionId = null },
+                onEditStyle = { editingImage = it },
+                onChanged = { imageStore.persist(it); revision++ },
+                zIndexOf = zIndexOf,
+                modifier = Modifier.fillMaxSize()
+            )
+            TableLayer(
+                interactive = interactive,
+                tables = tableStore.all,
+                density = density,
+                selectedId = selectedId,
+                onSelect = { selectedId = it; selectedConnectionId = null },
+                onEdit = { editingTable = it },
+                onChanged = { tableStore.persist(it); revision++ },
+                zIndexOf = zIndexOf,
+                modifier = Modifier.fillMaxSize()
+            )
+            ChartLayer(
+                interactive = interactive,
+                charts = chartStore.all,
+                density = density,
+                selectedId = selectedId,
+                onSelect = { selectedId = it; selectedConnectionId = null },
+                onEdit = { editingChart = it },
+                onChanged = { chartStore.persist(it); revision++ },
+                zIndexOf = zIndexOf,
+                modifier = Modifier.fillMaxSize()
+            )
+            TextBoxLayer(
+                interactive = interactive,
+                boxes = textStore.all,
+                density = density,
+                selectedId = selectedId,
+                onSelect = { selectedId = it; selectedConnectionId = null },
+                onEditStyle = { editingText = it },
+                onChanged = { textStore.persist(it); revision++ },
+                zIndexOf = zIndexOf,
+                modifier = Modifier.fillMaxSize()
+            )
             ShapeLayer(
                 interactive = interactive,
                 shapes = shapeStore.all,

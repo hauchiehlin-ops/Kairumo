@@ -406,4 +406,23 @@ final class PageOrderTests: XCTestCase {
         XCTAssertEqual(proMarker(store, doc, page: 2), [3])
         XCTAssertEqual(proMarker(store, doc, page: 3), [], "這次新增的頁的檔案要拿掉")
     }
+
+    /// 新增、插入、複製頁面時，pageHeights 應填入該筆記的標準頁高（1132），而非舊版 1800，
+    /// 否則設定頁會誤判需要「重新分頁」（needsRepagination == true）。
+    func testAddingInsertingAndDuplicatingPagesUseStandardPageHeight() {
+        let store = Self.isolatedStore()
+        let doc = makeNotebook(pages: 1)
+        store.notebooks.insert(doc, at: 0)
+        defer { store.notebooks.removeAll { $0.id == doc.id } }
+
+        _ = store.addPage(notebookId: doc.id)
+        _ = store.insertPage(notebookId: doc.id, afterIndex: 0)
+        _ = store.duplicatePage(notebookId: doc.id, pageIndex: 0)
+
+        guard let updated = store.notebooks.first(where: { $0.id == doc.id }) else {
+            return XCTFail("筆記不見了")
+        }
+        XCTAssertEqual(updated.pageHeights, Array(repeating: updated.pageSize.height, count: 4))
+        XCTAssertFalse(PageRepagination.needsRepagination(updated))
+    }
 }

@@ -1,6 +1,9 @@
 package com.kairumo.padnote.image
 
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -63,17 +66,19 @@ fun ImageLayer(
         // 鎖定在畫布上的物件不接收觸控（見 canvas/ObjectLock.kt）。
         val lockedIds = com.kairumo.padnote.canvas.LocalLockedObjectIds.current
         for (image in images) {
-            ImageObjectView(
-                zIndex = zIndexOf(image.id),
-                image = image,
-                bitmapProvider = { store.bitmap(image) },
-                density = density,
-                isSelected = image.id == selectedId,
-                interactive = interactive && image.id !in lockedIds,
-                onSelect = { onSelect(image.id) },
-                onEditStyle = { onEditStyle(image) },
-                onChanged = onChanged
-            )
+            androidx.compose.runtime.key(image.id) {
+                ImageObjectView(
+                    zIndex = zIndexOf(image.id),
+                    image = image,
+                    bitmapProvider = { store.bitmap(image) },
+                    density = density,
+                    isSelected = image.id == selectedId,
+                    interactive = interactive && image.id !in lockedIds,
+                    onSelect = { onSelect(image.id) },
+                    onEditStyle = { onEditStyle(image) },
+                    onChanged = onChanged
+                )
+            }
         }
 }
 
@@ -90,7 +95,13 @@ private fun ImageObjectView(
     onEditStyle: () -> Unit,
     onChanged: (NoteImage) -> Unit
 ) {
-    val rotation = CanvasRotation.normalized(image.rotationDegrees)
+    val currentImage by androidx.compose.runtime.rememberUpdatedState(image)
+    var liveX by remember(image.id, image.x) { mutableFloatStateOf(image.x) }
+    var liveY by remember(image.id, image.y) { mutableFloatStateOf(image.y) }
+    var liveWidth by remember(image.id, image.width) { mutableFloatStateOf(image.width) }
+    var liveHeight by remember(image.id, image.height) { mutableFloatStateOf(image.height) }
+    var liveRotation by remember(image.id, image.rotationDegrees) { mutableFloatStateOf(image.rotationDegrees) }
+    val rotation = CanvasRotation.normalized(liveRotation)
     val shape = RoundedCornerShape(image.cornerRadius.dp)
     // 連續模式：拖到哪一頁就歸哪一頁（單頁模式為 null，照舊夾在本頁）。
     val crossing by androidx.compose.runtime.rememberUpdatedState(com.kairumo.padnote.canvas.LocalPageCrossing.current)
@@ -98,11 +109,11 @@ private fun ImageObjectView(
     // 外層只定位、不旋轉 —— 旋轉把手掛在這一層。包進旋轉裡的話，拖曳算出的
     // 角度會疊加自身旋轉，物件會失控加速。
     // 座標的單位是**頁面點**（＝dp），與 Apple 端和 format-spec 一致。
-    Box(modifier = Modifier.offset(image.x.dp, image.y.dp).zIndex(zIndex)) {
+    Box(modifier = Modifier.offset(liveX.dp, liveY.dp).zIndex(zIndex)) {
 
         Box(
             modifier = Modifier
-                .size(image.width.dp, image.height.dp)
+                .size(liveWidth.dp, liveHeight.dp)
                 .graphicsLayer { rotationZ = rotation }
                 .then(
                     if (image.hasShadow) Modifier.shadow(4.dp, shape) else Modifier
@@ -129,24 +140,50 @@ private fun ImageObjectView(
                 }
                 .gesturesIf(interactive) {
                     pointerInput(image.id) {
+                        var startX = 0f
+                        var startY = 0f
+                        var accX = 0f
+                        var accY = 0f
                         detectDragGestures(
-                            onDragStart = { onSelect(); crossing?.began?.invoke() },
+                            onDragStart = {
+                                val img = currentImage
+                                startX = img.x
+                                startY = img.y
+                                accX = 0f
+                                accY = 0f
+                                liveX = img.x
+                                liveY = img.y
+                                onSelect()
+                                crossing?.began?.invoke()
+                            },
+                            onDragCancel = { crossing?.ended?.invoke() },
                             onDrag = { change, drag ->
                                 change.consume()
+                                accX += drag.x
+                                accY += drag.y
+                                val rad = liveRotation * kotlin.math.PI / 180.0
+                                val c = kotlin.math.cos(rad).toFloat()
+                                val sn = kotlin.math.sin(rad).toFloat()
                                 // 位移要換回 dp：座標存的是與螢幕密度無關的頁面座標。
-                                image.x += drag.x / density
-                                image.y += drag.y / density
+                                liveX = startX + (accX * c - accY * sn) / density
+                                liveY = startY + (accX * sn + accY * c) / density
+                                currentImage.x = liveX
+                                currentImage.y = liveY
                             },
                             onDragEnd = {
-                            // 拖出可列印範圍的物件推回邊界（S-85）；連續模式下中心拖到哪一頁就歸哪一頁。
-                            // 規則在核心，與 Apple 的 PrintableArea.land 同一份。
-                            val landed = com.kairumo.padnote.canvas.landObject(
-                                image.id, image.x, image.y, image.width, image.height, crossing)
-                            image.x = landed.x
-                            image.y = landed.y
-                            onChanged(image)
-                            landed.page?.let { crossing?.moved?.invoke(image.id, it) }
-                            crossing?.ended?.invoke() }
+                                val img = currentImage
+                                // 拖出可列印範圍的物件推回邊界（S-85）；連續模式下中心拖到哪一頁就歸哪一頁。
+                                // 規則在核心，與 Apple 的 PrintableArea.land 同一份。
+                                val landed = com.kairumo.padnote.canvas.landObject(
+                                    img.id, liveX, liveY, liveWidth, liveHeight, crossing)
+                                liveX = landed.x
+                                liveY = landed.y
+                                img.x = landed.x
+                                img.y = landed.y
+                                onChanged(img)
+                                landed.page?.let { crossing?.moved?.invoke(img.id, it) }
+                                crossing?.ended?.invoke()
+                            }
                         )
                     }
                 }
@@ -167,28 +204,40 @@ private fun ImageObjectView(
 
         if (isSelected && interactive) {
             StyleHandle(
-                widthDp = image.width,
-                heightDp = image.height,
+                widthDp = liveWidth,
+                heightDp = liveHeight,
                 onTap = onEditStyle,
                 objectId = image.id
             )
             ResizeHandle(
-                widthDp = image.width,
-                heightDp = image.height,
+                widthDp = liveWidth,
+                heightDp = liveHeight,
                 density = density,
                 onResize = { dw, dh ->
-                    image.width = maxOf(MIN_OBJECT_WIDTH_DP, image.width + dw)
-                    image.height = maxOf(MIN_OBJECT_HEIGHT_DP, image.height + dh)
+                    liveWidth = maxOf(MIN_OBJECT_WIDTH_DP, liveWidth + dw)
+                    liveHeight = maxOf(MIN_OBJECT_HEIGHT_DP, liveHeight + dh)
+                    currentImage.width = liveWidth
+                    currentImage.height = liveHeight
                 },
-                onCommit = { onChanged(image) }
+                onCommit = {
+                    currentImage.width = liveWidth
+                    currentImage.height = liveHeight
+                    onChanged(currentImage)
+                }
             )
             RotationHandle(
                 degrees = rotation,
-                widthDp = image.width,
-                heightDp = image.height,
+                widthDp = liveWidth,
+                heightDp = liveHeight,
                 density = density,
-                onRotate = { image.rotationDegrees = it },
-                onCommit = { onChanged(image) }
+                onRotate = {
+                    liveRotation = it
+                    currentImage.rotationDegrees = it
+                },
+                onCommit = {
+                    currentImage.rotationDegrees = liveRotation
+                    onChanged(currentImage)
+                }
             )
         }
     }

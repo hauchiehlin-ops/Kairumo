@@ -5654,72 +5654,70 @@ private fun InkScreen(
 
             // 圖片疊在墨跡之上、文字方塊之下 —— 與 Apple 端的預設層級一致
             // （ObjectStacking.Kind.defaultLayer：image=0、text=6）。
-            key(imageRevision) {
-                ImageLayer(
-                    zIndexOf = zIndexOf,
-                    images = imageStore.all,
-                    store = imageStore,
-                    density = canvasDensity,
-                    selectedId = selectedImageId,
-                    interactive = editorMode == EditorMode.TYPE,
-                    onSelect = { selectedImageId = it },
-                    onEditStyle = { editingImage = it },
-                    onChanged = { imageStore.persist(it); imageRevision++ },
-                    modifier = Modifier.fillMaxSize()
-                )
-            }
+            @Suppress("UNUSED_VARIABLE") val imageRevisionRead = imageRevision
+            ImageLayer(
+                zIndexOf = zIndexOf,
+                images = imageStore.all,
+                store = imageStore,
+                density = canvasDensity,
+                selectedId = selectedImageId,
+                interactive = editorMode == EditorMode.TYPE,
+                onSelect = { selectedImageId = it },
+                onEditStyle = { editingImage = it },
+                onChanged = { imageStore.persist(it); imageRevision++ },
+                modifier = Modifier.fillMaxSize()
+            )
 
             // 文字方塊疊在墨跡之上 —— 與 Apple 端的疊放順序一致。
-            key(textRevision) {
-                TextBoxLayer(
-                    zIndexOf = zIndexOf,
-                    interactive = true,
-                    boxes = textStore.all,
-                    density = canvasDensity,
-                    selectedId = selectedTextId,
-                    onSelect = { id ->
-                        selectedTextId = id
-                        if (id != null && editorMode != EditorMode.TYPE) {
-                            editorMode = EditorMode.TYPE
-                        }
-                    },
-                    onEditStyle = { editingText = it },
-                    onChanged = { box -> textStore.persist(box); textRevision++ },
-                    onMoved = { box, dx, dy ->
-                        val session = notebook?.first
-                        val handles = engine.coreHandles()
-                        if (session != null && handles != null) {
-                            val (_, pageId) = handles
-                            val meta = NotebookMeta.load(session)
-                            val anchors = meta.stickyAnchors()
-                            val matched = anchors.filter { it.targetId == box.id && it.pageIndex == pageIndex }
-                            if (matched.isNotEmpty()) {
-                                var changedAny = false
-                                for (anchor in matched) {
-                                    if (anchor.strokeIds.isNotEmpty()) {
-                                        val newIds = runCatching {
-                                            session.lassoTranslate(pageId, anchor.strokeIds, dx, dy)
-                                        }.getOrNull()
-                                        if (newIds != null) {
-                                            anchor.strokeIds = newIds
-                                            anchor.anchorOriginX += dx
-                                            anchor.anchorOriginY += dy
-                                            changedAny = true
-                                        }
+            @Suppress("UNUSED_VARIABLE") val textRevisionRead = textRevision
+            TextBoxLayer(
+                zIndexOf = zIndexOf,
+                interactive = true,
+                boxes = textStore.all,
+                density = canvasDensity,
+                selectedId = selectedTextId,
+                onSelect = { id ->
+                    selectedTextId = id
+                    if (id != null && editorMode != EditorMode.TYPE) {
+                        editorMode = EditorMode.TYPE
+                    }
+                },
+                onEditStyle = { editingText = it },
+                onChanged = { box -> textStore.persist(box); textRevision++ },
+                onMoved = { box, dx, dy ->
+                    val session = notebook?.first
+                    val handles = engine.coreHandles()
+                    if (session != null && handles != null) {
+                        val (_, pageId) = handles
+                        val meta = NotebookMeta.load(session)
+                        val anchors = meta.stickyAnchors()
+                        val matched = anchors.filter { it.targetId == box.id && it.pageIndex == pageIndex }
+                        if (matched.isNotEmpty()) {
+                            var changedAny = false
+                            for (anchor in matched) {
+                                if (anchor.strokeIds.isNotEmpty()) {
+                                    val newIds = runCatching {
+                                        session.lassoTranslate(pageId, anchor.strokeIds, dx, dy)
+                                    }.getOrNull()
+                                    if (newIds != null) {
+                                        anchor.strokeIds = newIds
+                                        anchor.anchorOriginX += dx
+                                        anchor.anchorOriginY += dy
+                                        changedAny = true
                                     }
                                 }
-                                if (changedAny) {
-                                    meta.setStickyAnchors(session, anchors)
-                                    engine.load()
-                                    revision++
-                                    clearToken++
-                                }
+                            }
+                            if (changedAny) {
+                                meta.setStickyAnchors(session, anchors)
+                                engine.load()
+                                revision++
+                                clearToken++
                             }
                         }
-                    },
-                    modifier = Modifier.fillMaxSize()
-                )
-            }
+                    }
+                },
+                modifier = Modifier.fillMaxSize()
+            )
 
             // 鎖定物件右上角的小鎖頭。兩種模式都畫；手寫模式下只顯示，入口是手指點物件。
             if (lockedIds.isNotEmpty()) {
@@ -5823,34 +5821,32 @@ private fun InkScreen(
             )
 
             // 表格疊在文字方塊之上。
-            key(tableRevision) {
-                TableLayer(
-                    zIndexOf = zIndexOf,
-                    interactive = editorMode == EditorMode.TYPE,
-                    tables = tableStore.all,
-                    density = canvasDensity,
-                    selectedId = selectedTableId,
-                    onSelect = { selectedTableId = it },
-                    onEdit = { editingTable = it },
-                    onChanged = { table -> tableStore.persist(table); tableRevision++ },
-                    modifier = Modifier.fillMaxSize()
-                )
-            }
+            @Suppress("UNUSED_VARIABLE") val tableRevisionRead = tableRevision
+            TableLayer(
+                zIndexOf = zIndexOf,
+                interactive = editorMode == EditorMode.TYPE,
+                tables = tableStore.all,
+                density = canvasDensity,
+                selectedId = selectedTableId,
+                onSelect = { selectedTableId = it },
+                onEdit = { editingTable = it },
+                onChanged = { table -> tableStore.persist(table); tableRevision++ },
+                modifier = Modifier.fillMaxSize()
+            )
 
             // 圖表疊在文字方塊之上 —— 與 Apple 端的疊放順序一致。
-            key(chartRevision) {
-                ChartLayer(
-                    zIndexOf = zIndexOf,
-                    interactive = editorMode == EditorMode.TYPE,
-                    charts = chartStore.all,
-                    density = canvasDensity,
-                    selectedId = selectedChartId,
-                    onSelect = { selectedChartId = it },
-                    onEdit = { editingChart = it },
-                    onChanged = { chart -> chartStore.persist(chart); chartRevision++ },
-                    modifier = Modifier.fillMaxSize()
-                )
-            }
+            @Suppress("UNUSED_VARIABLE") val chartRevisionRead = chartRevision
+            ChartLayer(
+                zIndexOf = zIndexOf,
+                interactive = editorMode == EditorMode.TYPE,
+                charts = chartStore.all,
+                density = canvasDensity,
+                selectedId = selectedChartId,
+                onSelect = { selectedChartId = it },
+                onEdit = { editingChart = it },
+                onChanged = { chart -> chartStore.persist(chart); chartRevision++ },
+                modifier = Modifier.fillMaxSize()
+            )
 
             // 3D 模型。位置與大小是頁面座標，與其他圖層同一套規則。
             key(linkRevision) {
