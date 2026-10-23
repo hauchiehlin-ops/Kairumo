@@ -11259,6 +11259,7 @@ public struct NotebookEditorView: View {
         for (page, drawing) in pending {
             MainThreadStallMonitor.shared.breadcrumb("flush p\(page) saveDrawing (\(drawing.strokes.count) strokes)")
             let drawingURL = store.drawingsDirectory.appending(path: "\(notebook.id)_p\(page).drawing")
+            NotebookStore.writeDrawing(drawing, to: drawingURL)
             jobs.append(CoreInkFlush.Job(
                 page: page, drawing: drawing, drawingFileURL: drawingURL,
                 cachedBaseline: coreInkBaselines[page]))

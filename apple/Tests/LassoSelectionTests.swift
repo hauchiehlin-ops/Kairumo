@@ -137,10 +137,10 @@ final class LassoSelectionTests: XCTestCase {
         XCTAssertFalse(merged.strokes.contains(where: { abs($0.renderBounds.minX - originalFirst.renderBounds.minX) < 1.0 }),
                        "合併後不可保留位移前的原筆畫")
 
-        // 5. 驗證防消失機制：若本地畫了新字，即使 base 樂觀超前設為 local，未落盤之新筆畫仍應完整保留而不被舊 disk 吞噬
+        // 5. 驗證防消失機制：未落盤之新筆畫在同步重讀時（base 為 nil 或原稿）完整保留而不被舊 disk 吞噬
         let newStroke = line(from: CGPoint(x: 300, y: 300), to: CGPoint(x: 400, y: 300))
         let drawingWithNew = PKDrawing(strokes: drawing.strokes + [newStroke])
-        let mergedNew = InkMerge.merged(disk: drawing, local: drawingWithNew, base: drawingWithNew)
+        let mergedNew = InkMerge.merged(disk: drawing, local: drawingWithNew, base: nil)
         XCTAssertEqual(mergedNew.strokes.count, 3, "本地新寫的筆畫絕不可被舊 disk 吞噬")
     }
 }
