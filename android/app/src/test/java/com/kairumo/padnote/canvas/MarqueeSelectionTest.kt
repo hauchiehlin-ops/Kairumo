@@ -1,6 +1,7 @@
 package com.kairumo.padnote.canvas
 
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -36,5 +37,29 @@ class MarqueeSelectionTest {
         assertEquals("above", ObjectMarquee.topmostHit(Offset(60f, 60f), listOf(below, above)))
         assertEquals("below", ObjectMarquee.topmostHit(Offset(10f, 10f), listOf(below, above)))
         assertNull(ObjectMarquee.topmostHit(Offset(500f, 500f), listOf(below, above)))
+    }
+
+    @Test fun pasteOriginsDefaultOffsetAndArbitraryTargetPoint() {
+        val frames = listOf(
+            Rect(100f, 100f, 200f, 160f),
+            Rect(220f, 140f, 300f, 220f)
+        )
+        // 1. Default paste: offset by (24, 24)
+        val defaultOrigins = ObjectMarquee.pasteOrigins(frames, targetPoint = null)
+        assertEquals(2, defaultOrigins.size)
+        assertEquals(124f, defaultOrigins[0].x, 0.01f)
+        assertEquals(124f, defaultOrigins[0].y, 0.01f)
+        assertEquals(244f, defaultOrigins[1].x, 0.01f)
+        assertEquals(164f, defaultOrigins[1].y, 0.01f)
+
+        // 2. Arbitrary target point: union bounds is [100..300, 100..220] -> center (200, 160)
+        // Pasting at (400, 500) shifts both by (+200, +340) while preserving relative offset (120, 40)
+        val targetedOrigins = ObjectMarquee.pasteOrigins(frames, targetPoint = Offset(400f, 500f))
+        assertEquals(300f, targetedOrigins[0].x, 0.01f)
+        assertEquals(440f, targetedOrigins[0].y, 0.01f)
+        assertEquals(420f, targetedOrigins[1].x, 0.01f)
+        assertEquals(480f, targetedOrigins[1].y, 0.01f)
+        assertEquals(120f, targetedOrigins[1].x - targetedOrigins[0].x, 0.01f)
+        assertEquals(40f, targetedOrigins[1].y - targetedOrigins[0].y, 0.01f)
     }
 }

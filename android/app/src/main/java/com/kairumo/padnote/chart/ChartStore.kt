@@ -159,4 +159,30 @@ class ChartStore(
 
     fun find(id: String): ChartObject? = charts[id]
 
+    /** 建立一張完整保留原圖表尺寸與規格的新圖表副本，落點在 (x, y)。 */
+    fun createCopy(source: ChartObject, x: Float, y: Float): ChartObject {
+        val chart = source.copy(
+            id = UUID.randomUUID().toString(),
+            spec = source.spec.copy(),
+            x = x,
+            y = y
+        )
+        val s = session
+        val page = pageId
+        if (s != null && page != null) {
+            val id = runCatching {
+                val blob = s.putBlob(pngBytes(chart.spec, chart.width.toInt(), chart.height.toInt()))
+                s.addImage(page, blob, chart.width, chart.height)
+            }.getOrNull()
+            if (id != null) {
+                val created = chart.copy(id = id)
+                charts[id] = created
+                persist(created)
+                return created
+            }
+        }
+        charts[chart.id] = chart
+        return chart
+    }
+
 }

@@ -103,6 +103,14 @@ extension LocalizationManager {
             .ko: "복사",
             .th: "คัดลอก"
         ],
+        "action_cut": [
+            .zhHant: "剪下",
+            .en: "Cut",
+            .zhHans: "剪切",
+            .ja: "切り取り",
+            .ko: "잘라내기",
+            .th: "ตัด"
+        ],
         "action_delete": [
             .zhHant: "刪除",
             .en: "Delete",
@@ -15943,6 +15951,14 @@ extension LocalizationManager {
             .ko: "테두리 두께",
             .th: "ความหนาเส้นขอบ"
         ],
+        "object_copied_hint": [
+            .zhHant: "已複製物件，可貼上至本頁或其他頁任意位置",
+            .en: "Object copied — paste on this or any page",
+            .zhHans: "已复制对象，可粘贴至本页或其他页任意位置",
+            .ja: "オブジェクトをコピーしました — 任意のページ・位置に貼り付け可能",
+            .ko: "개체 복사됨 — 현재 또는 다른 페이지의 원하는 위치에 붙여넣기 가능",
+            .th: "คัดลอกวัตถุแล้ว — วางในหน้านี้หรือหน้าอื่นได้ทุกตำแหน่ง"
+        ],
         "object_corner_radius": [
             .zhHant: "圓角",
             .en: "Corner Radius",
@@ -15958,6 +15974,14 @@ extension LocalizationManager {
             .ja: "直角",
             .ko: "직각",
             .th: "มุมฉาก"
+        ],
+        "object_cut_hint": [
+            .zhHant: "已剪下物件，可貼上至本頁或其他頁任意位置",
+            .en: "Object cut — paste on this or any page",
+            .zhHans: "已剪切对象，可粘贴至本页或其他页任意位置",
+            .ja: "オブジェクトを切り取りました — 任意のページ・位置に貼り付け可能",
+            .ko: "개체 잘라냄 — 현재 또는 다른 페이지의 원하는 위치에 붙여넣기 가능",
+            .th: "ตัดวัตถุแล้ว — วางในหน้านี้หรือหน้าอื่นได้ทุกตำแหน่ง"
         ],
         "object_frame_style": [
             .zhHant: "外框與底色",
@@ -16814,6 +16838,14 @@ extension LocalizationManager {
             .ja: "段落",
             .ko: "단락",
             .th: "ย่อหน้า"
+        ],
+        "paste_at_location": [
+            .zhHant: "點選位置貼上",
+            .en: "Paste at Tap",
+            .zhHans: "点选位置粘贴",
+            .ja: "タップ位置に貼り付け",
+            .ko: "탭 위치에 붙여넣기",
+            .th: "วางที่ตำแหน่งแตะ"
         ],
         "paste_screenshot": [
             .zhHant: "貼上螢幕截圖／圖片",
@@ -23206,6 +23238,14 @@ extension LocalizationManager {
             .ja: "Tailscale 直結準備完了 (%@)",
             .ko: "Tailscale P2P 준비됨 (%@)",
             .th: "Tailscale P2P พร้อมใช้งาน (%@)"
+        ],
+        "tap_to_paste_object": [
+            .zhHant: "請在目標頁面任意位置點一下以貼上物件",
+            .en: "Tap anywhere on the target page to paste",
+            .zhHans: "请在目标页面任意位置点一下以粘贴对象",
+            .ja: "貼り付けたいページの任意の位置をタップしてください",
+            .ko: "붙여넣을 페이지의 원하는 위치를 탭하세요",
+            .th: "แตะตำแหน่งใดก็ได้บนหน้าที่ต้องการเพื่อวาง"
         ],
         "tap_to_place_pin": [
             .zhHant: "請在畫布上輕點以放置圖釘",

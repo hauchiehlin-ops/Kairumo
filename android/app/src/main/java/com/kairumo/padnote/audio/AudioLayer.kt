@@ -289,7 +289,7 @@ private fun AudioCardView(
                 contentAlignment = Alignment.Center
             ) { Text("✎", fontSize = 11.sp, color = Color.White) }
 
-            // 縮放（右下）。沒有它，卡片只能用插入時的尺寸。
+                // 縮放（右下）。沒有它，卡片只能用插入時的尺寸。
             Box(
                 Modifier
                     .offset {
@@ -312,6 +312,14 @@ private fun AudioCardView(
                     },
                 contentAlignment = Alignment.Center
             ) { Text("⤡", fontSize = 11.sp, color = Color.White) }
+
+            // 剪貼簿與層級選單（上方中央）。
+            com.kairumo.padnote.canvas.OrderHandle(
+                objectId = item.id,
+                widthDp = item.width,
+                heightDp = item.height,
+                modifier = Modifier.offset(x = (-item.width / 2f).dp, y = 0.dp)
+            )
         }
     }
 }

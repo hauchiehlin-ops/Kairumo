@@ -132,10 +132,22 @@ val LocalObjectReorder =
     androidx.compose.runtime.compositionLocalOf<((String, ObjectStacking.Reorder) -> Unit)?> { null }
 
 /**
- * 物件右上角的「層級」鈕：點開選單選「移到最上層／上移一層／下移一層／移到最下層」。
+ * 單一物件的剪下、複製、建立副本動作，由編輯器透過 CompositionLocal 提供。
+ */
+data class ObjectClipboardActions(
+    val cut: (String) -> Unit,
+    val copy: (String) -> Unit,
+    val duplicate: (String) -> Unit
+)
+
+val LocalObjectClipboard =
+    androidx.compose.runtime.compositionLocalOf<ObjectClipboardActions?> { null }
+
+/**
+ * 物件右上角的「層級與剪貼簿」鈕：點開選單選「剪下／複製／建立副本」與「移到最上層／上移一層／下移一層／移到最下層」。
  *
  * 每個物件都要有 —— 圖層面板是整頁的總覽，而使用者想改的常常只是
- * 「這一張被蓋住了，拉到前面來」，不該要他先去開面板、再找到那一列。
+ * 「這一張被蓋住了，拉到前面來」或「把這一個物件剪下／複製貼到別處」。
  */
 @Composable
 fun OrderHandle(
@@ -144,7 +156,9 @@ fun OrderHandle(
     heightDp: Float,
     modifier: Modifier = Modifier
 ) {
-    val reorder = LocalObjectReorder.current ?: return
+    val reorder = LocalObjectReorder.current
+    val clipboard = LocalObjectClipboard.current
+    if (reorder == null && clipboard == null) return
     var open by androidx.compose.runtime.remember(objectId) {
         androidx.compose.runtime.mutableStateOf(false)
     }
@@ -172,12 +186,34 @@ fun OrderHandle(
                 expanded = open,
                 onDismissRequest = { open = false }
             ) {
-                for (op in ObjectStacking.Reorder.entries) {
+                if (clipboard != null) {
                     androidx.compose.material3.DropdownMenuItem(
                         text = { androidx.compose.material3.Text(
-                            LocalizationStrings.localized(op.labelKey, language)) },
-                        onClick = { open = false; reorder(objectId, op) }
+                            "✂ " + LocalizationStrings.localized("action_cut", language)) },
+                        onClick = { open = false; clipboard.cut(objectId) }
                     )
+                    androidx.compose.material3.DropdownMenuItem(
+                        text = { androidx.compose.material3.Text(
+                            "📋 " + LocalizationStrings.localized("action_copy", language)) },
+                        onClick = { open = false; clipboard.copy(objectId) }
+                    )
+                    androidx.compose.material3.DropdownMenuItem(
+                        text = { androidx.compose.material3.Text(
+                            "➕ " + LocalizationStrings.localized("action_duplicate", language)) },
+                        onClick = { open = false; clipboard.duplicate(objectId) }
+                    )
+                    if (reorder != null) {
+                        androidx.compose.material3.HorizontalDivider()
+                    }
+                }
+                if (reorder != null) {
+                    for (op in ObjectStacking.Reorder.entries) {
+                        androidx.compose.material3.DropdownMenuItem(
+                            text = { androidx.compose.material3.Text(
+                                LocalizationStrings.localized(op.labelKey, language)) },
+                            onClick = { open = false; reorder(objectId, op) }
+                        )
+                    }
                 }
                 // 鎖定在畫布上（見 ObjectLock.kt）。鎖上之後這顆鈕就點不到了，解除鎖定在圖層面板。
                 LocalObjectLock.current?.let { lock ->
