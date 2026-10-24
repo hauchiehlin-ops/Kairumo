@@ -85,12 +85,23 @@ struct AudioAttachmentItemView: View {
 
         card
             .simultaneousGesture(
+                (!isSelected || !CanvasTouchState.canDragObject) ? nil :
                 DragGesture(minimumDistance: 8, coordinateSpace: .named(CanvasCoordinateSpace.name))
                     .onChanged { value in
+                        guard CanvasTouchState.canDragObject else {
+                            dragOffset = .zero
+                            pageCrossing?.ended(nil, nil)
+                            return
+                        }
                         if dragOffset == .zero { pageCrossing?.began() }
                         dragOffset = value.translation
                     }
                     .onEnded { value in
+                        guard CanvasTouchState.canDragObject else {
+                            dragOffset = .zero
+                            pageCrossing?.ended(nil, nil)
+                            return
+                        }
                         // 推回可列印範圍（S-85，與其他物件一致）；連續模式下拖到哪一頁就歸哪一頁。
                         let landed = PrintableArea.land(
                             x: item.x + value.translation.width,

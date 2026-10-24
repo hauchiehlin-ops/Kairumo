@@ -95,6 +95,9 @@ private fun TableObjectView(
 ) {
     // 連續模式：拖到哪一頁就歸哪一頁（單頁模式為 null，照舊夾在本頁）。
     val crossing by androidx.compose.runtime.rememberUpdatedState(com.kairumo.padnote.canvas.LocalPageCrossing.current)
+    val editorMode = com.kairumo.padnote.canvas.LocalEditorMode.current
+    val isCanvasNavigating = com.kairumo.padnote.canvas.LocalCanvasNavigating.current
+    val isTypeMode = editorMode == com.kairumo.padnote.canvas.EditorMode.TYPE
     val currentTable by androidx.compose.runtime.rememberUpdatedState(table)
     val layout = table.layout()
     var liveX by remember(table.id, table.x) { mutableFloatStateOf(table.x) }
@@ -136,7 +139,7 @@ private fun TableObjectView(
                     onDoubleTap = { onEdit(currentTable) }
                 )
             } }
-            .gesturesIf(interactive) { pointerInput(table.id) {
+            .gesturesIf(interactive && (isSelected || isTypeMode) && !isCanvasNavigating) { pointerInput(table.id, isSelected, isTypeMode, isCanvasNavigating) {
                 var base: NoteTable? = null
                 var accX = 0f
                 var accY = 0f
@@ -155,6 +158,7 @@ private fun TableObjectView(
                 }
                 detectDragGestures(
                     onDragStart = {
+                        if (isCanvasNavigating) return@detectDragGestures
                         val t = currentTable
                         base = t
                         accX = 0f
@@ -166,6 +170,11 @@ private fun TableObjectView(
                     },
                     onDragCancel = finishDrag,
                     onDrag = { change, drag ->
+                        if (isCanvasNavigating) {
+                            base?.let { liveX = it.x; liveY = it.y }
+                            crossing?.ended?.invoke()
+                            return@detectDragGestures
+                        }
                         change.consume()
                         val t0 = base ?: return@detectDragGestures
                         accX += drag.x

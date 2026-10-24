@@ -5398,6 +5398,7 @@ private fun InkScreen(
                 modifier = Modifier.padding(top = 8.dp, bottom = 2.dp, start = 8.dp, end = 8.dp)
             )
         }
+        var isCanvasNavigating by remember { mutableStateOf(false) }
         Box(
             modifier = Modifier.weight(1f).fillMaxWidth().padding(8.dp)
                 .dragAndDropTarget(
@@ -5444,6 +5445,7 @@ private fun InkScreen(
                             val takeIt = pointers >= 2 ||
                                 (onePanFinger && !stylus && contentExceedsViewport)
                             if (!takeIt) continue
+                            isCanvasNavigating = true
 
                             // **多指手勢（S-GESTURE）。**
                             //
@@ -5509,6 +5511,7 @@ private fun InkScreen(
                                 event.changes.forEach { it.consume() }
                                 event = awaitPointerEvent(PointerEventPass.Initial)
                             }
+                            isCanvasNavigating = false
 
                             // 手指全部離開了 —— 現在才判這是點擊、滑動，
                             // 還是一次縮放／平移。
@@ -5543,7 +5546,9 @@ private fun InkScreen(
             com.kairumo.padnote.canvas.LocalObjectReorder provides objectReorder,
             com.kairumo.padnote.canvas.LocalObjectLock provides objectLock,
             com.kairumo.padnote.canvas.LocalLockedObjectIds provides lockedIds,
-            com.kairumo.padnote.canvas.LocalObjectClipboard provides objectClipboardActions
+            com.kairumo.padnote.canvas.LocalObjectClipboard provides objectClipboardActions,
+            com.kairumo.padnote.canvas.LocalCanvasNavigating provides isCanvasNavigating,
+            com.kairumo.padnote.canvas.LocalEditorMode provides editorMode
         ) {
         Box(
             modifier = Modifier

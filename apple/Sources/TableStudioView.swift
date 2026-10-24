@@ -582,8 +582,17 @@ struct TableAttachmentItemView: View {
             }
             .shadow(color: isDragging ? .clear : Color.black.opacity(0.08), radius: 6, y: 3)
             .highPriorityGesture(
+                (!isSelected || editingCell != nil || !CanvasTouchState.canDragObject) ? nil :
                 DragGesture(minimumDistance: 4, coordinateSpace: .named(CanvasCoordinateSpace.name))
                     .onChanged { value in
+                        guard CanvasTouchState.canDragObject else {
+                            if isDragging {
+                                dragOffset = .zero
+                                isDragging = false
+                                pageCrossing?.ended(nil, nil)
+                            }
+                            return
+                        }
                         if editingCell != nil && hypot(value.translation.width, value.translation.height) > 8 {
                             editingCell = nil
                         }
@@ -594,6 +603,12 @@ struct TableAttachmentItemView: View {
                         }
                     }
                     .onEnded { value in
+                        guard CanvasTouchState.canDragObject else {
+                            dragOffset = .zero
+                            isDragging = false
+                            pageCrossing?.ended(nil, nil)
+                            return
+                        }
                         if editingCell == nil {
                             if hypot(value.translation.width, value.translation.height) < 3 {
                                 pageCrossing?.ended(nil, nil)

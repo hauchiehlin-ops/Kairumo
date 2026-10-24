@@ -259,7 +259,7 @@ struct ShapeAttachmentItemView: View {
                     if shown.acceptsText { isEditingLabel = true } else { onEdit() }
                 }
                 .onTapGesture { onSelect() }
-                .highPriorityGesture(moveGesture)
+                .highPriorityGesture((isSelected && CanvasTouchState.canDragObject) ? moveGesture : nil)
 
             // 縮放把手掛在旋轉那一層裡面 —— 它們要貼著轉過的邊。
             // 位移的換算（畫布 → 本地軸）在 `ShapeFrameMath.resized`。
@@ -296,12 +296,24 @@ struct ShapeAttachmentItemView: View {
     private var moveGesture: some Gesture {
         DragGesture(minimumDistance: 5, coordinateSpace: .named(CanvasCoordinateSpace.name))
             .onChanged { value in
+                guard CanvasTouchState.canDragObject else {
+                    if dragOffset != .zero {
+                        dragOffset = .zero
+                        pageCrossing?.ended(nil, nil)
+                    }
+                    return
+                }
                 if dragOffset == .zero { pageCrossing?.began() }
                 var transaction = Transaction()
                 transaction.animation = nil
                 withTransaction(transaction) { dragOffset = value.translation }
             }
             .onEnded { value in
+                guard CanvasTouchState.canDragObject else {
+                    dragOffset = .zero
+                    pageCrossing?.ended(nil, nil)
+                    return
+                }
                 if hypot(value.translation.width, value.translation.height) < 4 {
                     onSelect()
                     pageCrossing?.ended(nil, nil)

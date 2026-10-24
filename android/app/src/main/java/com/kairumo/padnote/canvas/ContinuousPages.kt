@@ -601,14 +601,18 @@ fun ContinuousPagesView(
         val available = (maxWidth.value - 32f).coerceAtLeast(1f)
         val scale = minOf(MAX_FIT_SCALE, available / PageGeometry.width)
         var momentumJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
+        var isCanvasNavigating by remember { mutableStateOf(false) }
 
+        CompositionLocalProvider(
+            LocalCanvasNavigating provides isCanvasNavigating,
+            LocalEditorMode provides editorMode
+        ) {
         LazyColumn(
             state = listState,
             userScrollEnabled = editorMode != EditorMode.DRAW,
             modifier = Modifier
                 .fillMaxSize()
                 .pointerInput(editorMode, ink.penOnly) {
-                    if (editorMode != EditorMode.DRAW) return@pointerInput
                     val canFingerDraw = !ink.penOnly
                     awaitPointerEventScope {
                         while (true) {
@@ -618,14 +622,16 @@ fun ContinuousPagesView(
                             val fingerChanges = pressedChanges.filter { it.type != PointerType.Stylus }
                             val fingerCount = fingerChanges.size
 
-                            // 繪圖模式下：觸控筆始終直接繪圖；手指可繪圖時僅在 2 指以上攔截捲動；僅限觸控筆時手指 1 指即可捲動
+                            // 繪圖模式下：觸控筆始終直接繪圖；手指可繪圖時僅在 2 指以上攔截捲動；僅限觸控筆時手指 1 指即可捲動。
+                            // 打字模式下：2 指以上一律攔截捲動，避免雙指碰觸畫布時誤拖曳底下的未鎖定物件。
                             val shouldIntercept = !hasStylus && (
-                                (canFingerDraw && fingerCount >= 2) ||
-                                (!canFingerDraw && fingerCount >= 1)
+                                fingerCount >= 2 ||
+                                (editorMode == EditorMode.DRAW && !canFingerDraw && fingerCount >= 1)
                             )
 
                             if (!shouldIntercept) continue
 
+                            isCanvasNavigating = true
                             momentumJob?.cancel()
 
                             // 手勢接管前取消所有頁面進行中的未完成筆畫，避免雙指觸控時在畫布留下誤觸墨點
@@ -667,6 +673,8 @@ fun ContinuousPagesView(
                                 }
                                 event = awaitPointerEvent(PointerEventPass.Initial)
                             }
+
+                            isCanvasNavigating = false
 
                             val isTap = kotlin.math.abs(totalPanY) < 24.dp.toPx()
                             if (isTap && startPointers >= 2) {
@@ -792,6 +800,7 @@ fun ContinuousPagesView(
                     }
                 }
             }
+        }
         }
 
         // 畫布物件剪下／複製／貼上浮動工具丸（在手繪與打字模式下皆可使用）。

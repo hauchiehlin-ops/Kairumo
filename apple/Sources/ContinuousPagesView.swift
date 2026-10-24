@@ -285,6 +285,28 @@ struct PageFocusPreferenceKey: PreferenceKey {
 }
 
 
+/// 畫布觸控與導航手勢狀態互斥鎖（Apple）。
+///
+/// # 為什麼要有
+///
+/// 在手繪或打字模式、固定或連續頁面下，使用者拿 Apple Pencil 移動頁面或使用雙指移動／縮放頁面時，
+/// 觸控點可能落在未鎖定的物件（文字方塊、形狀、圖片、表格等）上。
+/// 若沒有全域互斥鎖，物件身上的單指拖曳手勢會搶先辨識，導致物件跟著雙指移動或縮放而移位。
+/// 此鎖在雙指操作或頁面捲動期間，全面凍結所有未選取或非目標物件的拖曳手勢。
+// profile-scope: device 裝置共用手勢互斥鎖
+public final class CanvasTouchState {
+    // profile-scope: device 畫布導航（雙指平移或縮放）進行中旗標
+    public static var isCanvasNavigating: Bool = false
+
+    // profile-scope: device 畫面上活躍的直接觸控數量
+    public static var activeDirectTouches: Int = 0
+
+    /// 是否允許物件拖曳（當導航進行中或多指同時按住時嚴格禁止拖動物件）
+    public static var canDragObject: Bool {
+        !isCanvasNavigating && activeDirectTouches < 2
+    }
+}
+
 /// 連續模式下的兩指捲動。
 ///
 /// # 為什麼不能交給系統
@@ -311,7 +333,7 @@ final class TwoFingerScrollForwarder: NSObject, UIGestureRecognizerDelegate {
         let g = UIPanGestureRecognizer(target: self, action: #selector(handle(_:)))
         g.minimumNumberOfTouches = 2
         g.maximumNumberOfTouches = 2
-        g.cancelsTouchesInView = false
+        g.cancelsTouchesInView = true
         g.allowedTouchTypes = [NSNumber(value: UITouch.TouchType.direct.rawValue)]
         g.delegate = self
         return g
@@ -340,6 +362,7 @@ final class TwoFingerScrollForwarder: NSObject, UIGestureRecognizerDelegate {
     @objc private func handle(_ g: UIPanGestureRecognizer) {
         switch g.state {
         case .began:
+            CanvasTouchState.isCanvasNavigating = true
             stopMomentum()
             scrollView = enclosingScrollView()
             lastTranslationY = 0
@@ -353,6 +376,7 @@ final class TwoFingerScrollForwarder: NSObject, UIGestureRecognizerDelegate {
             scroll(by: -(y - lastTranslationY))
             lastTranslationY = y
         case .ended, .cancelled, .failed:
+            CanvasTouchState.isCanvasNavigating = false
             let v = -g.velocity(in: nil).y
             finish()
             if g.state == .ended { startMomentum(velocity: v) }
@@ -399,7 +423,16 @@ final class TwoFingerScrollForwarder: NSObject, UIGestureRecognizerDelegate {
     }
 
     // 與畫布自己的手勢同時辨識 —— 不然落筆手勢一開始，這個就永遠起不來。
+    // 但絕不與子視圖中的物件拖曳手勢同時辨識，避免雙指捲動時拖曳到底下的未鎖定物件。
     func gestureRecognizer(
         _ g: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith other: UIGestureRecognizer
-    ) -> Bool { true }
+    ) -> Bool {
+        if let canvas = canvas, other === canvas.drawingGestureRecognizer {
+            return true
+        }
+        if let sv = scrollView, other === sv.panGestureRecognizer {
+            return true
+        }
+        return false
+    }
 }

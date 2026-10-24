@@ -341,6 +341,9 @@ private fun ShapeObjectView(
 ) {
     // 連續模式：拖到哪一頁就歸哪一頁（單頁模式為 null，照舊夾在本頁）。
     val crossing by androidx.compose.runtime.rememberUpdatedState(com.kairumo.padnote.canvas.LocalPageCrossing.current)
+    val editorMode = com.kairumo.padnote.canvas.LocalEditorMode.current
+    val isCanvasNavigating = com.kairumo.padnote.canvas.LocalCanvasNavigating.current
+    val isTypeMode = editorMode == com.kairumo.padnote.canvas.EditorMode.TYPE
     // **手勢區塊裡一律讀 `current`，不要讀參數 `shape`。** `pointerInput` 的區塊只在 key 變了
     // 才重啟，拖曳進行中形狀每一幀都換成新的物件 —— 區塊裡抓到的若是第一幀的舊物件，
     // 每一幀都從同一個起點算起，結果是「拖了沒動」或「越拖越歪」。
@@ -400,8 +403,8 @@ private fun ShapeObjectView(
                         )
                     }
                 }
-                .gesturesIf(interactive) {
-                    pointerInput(shape.id) {
+                .gesturesIf(interactive && (isSelected || isTypeMode) && !isCanvasNavigating) {
+                    pointerInput(shape.id, isSelected, isTypeMode, isCanvasNavigating) {
                         // **從手勢開始時的形狀 ＋ 累計位移算起**，不要每一幀讀「目前」的形狀再加一小步：
                         // 兩幀之間若還沒重組，「目前」是舊的，每一步都從同一個起點算起，
                         // 結果只剩最後一步的位移（拖了沒動）。
@@ -419,9 +422,20 @@ private fun ShapeObjectView(
                             crossing?.ended?.invoke()
                         }
                         detectDragGestures(
-                            onDragStart = { base = current; accX = 0f; accY = 0f; crossing?.began?.invoke() },
+                            onDragStart = {
+                                if (isCanvasNavigating) return@detectDragGestures
+                                base = current
+                                accX = 0f
+                                accY = 0f
+                                crossing?.began?.invoke()
+                            },
                             onDragCancel = finishDrag,
                             onDrag = { change, drag ->
+                                if (isCanvasNavigating) {
+                                    base?.let { onChanged(it) }
+                                    crossing?.ended?.invoke()
+                                    return@detectDragGestures
+                                }
                                 change.consume()
                                 val s0 = base ?: return@detectDragGestures
                                 accX += drag.x
