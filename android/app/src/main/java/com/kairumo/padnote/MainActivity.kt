@@ -2784,6 +2784,11 @@ private fun InkScreen(
 
     var lowLatencyUnavailable by remember { mutableStateOf(false) }
     var revision by remember { mutableIntStateOf(0) }
+    /**
+     * 連續模式裡任何一頁有變動就遞增（只給側欄縮圖用）。整頁模式的側欄也要加上它：
+     * 縮圖快取以 revision 的總和為鍵，換回整頁模式時總和若退回舊值，會拿到搬動之前的快取圖。
+     */
+    var continuousContentRevision by remember { mutableIntStateOf(0) }
 
     /**
      * 把第 `from` 頁搬到 `to`（S-86／S-87）。
@@ -2807,6 +2812,7 @@ private fun InkScreen(
                 // 畫面卻跳到別頁」。
                 pageIndex = to.coerceIn(0, maxOf(0, pageCount - 1))
                 revision++
+                continuousContentRevision++
             }
     }
 
@@ -2838,6 +2844,7 @@ private fun InkScreen(
         pageCount = newCount
         pageIndex = target
         revision++
+        continuousContentRevision++
     }
 
     /**
@@ -2938,6 +2945,7 @@ private fun InkScreen(
             pageIndex = (pageCount - 1).coerceAtLeast(0)
         }
         revision++
+        continuousContentRevision++
     }
 
     var clearToken by remember { mutableIntStateOf(0) }
@@ -2985,44 +2993,46 @@ private fun InkScreen(
     )
     var isRestoringHistory by remember { mutableStateOf(false) }
     fun applyCanvasSnapshot(snapshot: CanvasSnapshot) {
-        isRestoringHistory = true
-        textStore.restoreTo(snapshot.texts)
-        imageStore.restoreTo(snapshot.images)
-        shapeStore.restoreTo(snapshot.shapes, snapshot.connections)
-        tableStore.restoreTo(snapshot.tables)
-        chartStore.restoreTo(snapshot.charts)
-        if (links != snapshot.links) {
-            links = snapshot.links.map { it.copy() }.toMutableList()
-            meta.setLinks(notebook?.first, links)
+        canvasHistory.withoutRecording {
+            isRestoringHistory = true
+            textStore.restoreTo(snapshot.texts)
+            imageStore.restoreTo(snapshot.images)
+            shapeStore.restoreTo(snapshot.shapes, snapshot.connections)
+            tableStore.restoreTo(snapshot.tables)
+            chartStore.restoreTo(snapshot.charts)
+            if (links != snapshot.links) {
+                links = snapshot.links.map { it.copy() }.toMutableList()
+                meta.setLinks(notebook?.first, links)
+            }
+            if (models3D != snapshot.models3D) {
+                models3D = snapshot.models3D.map { it.copy() }.toMutableList()
+                meta.setModels3D(notebook?.first, models3D)
+            }
+            if (audioCards != snapshot.audio) {
+                audioCards = snapshot.audio.map { it.copy() }.toMutableList()
+                meta.setAudioCards(notebook?.first, audioCards)
+            }
+            if (meta.objectOrder(pageIndex) != snapshot.order) {
+                meta.setObjectOrder(notebook?.first, pageIndex, snapshot.order)
+            }
+            // 指向已經不存在的物件的選取要清掉，否則工具列與把手對著一個空殼。
+            val alive = (snapshot.texts.map { it.id } + snapshot.images.map { it.id } + snapshot.shapes.map { it.id } +
+                snapshot.connections.map { it.id } + snapshot.tables.map { it.id } + snapshot.charts.map { it.id } +
+                snapshot.links.map { it.id } + snapshot.models3D.map { it.id } + snapshot.audio.map { it.id }).toSet()
+            if (selectedTextId != null && selectedTextId !in alive) selectedTextId = null
+            if (editingText != null && editingText?.id !in alive) editingText = null
+            if (selectedImageId != null && selectedImageId !in alive) selectedImageId = null
+            if (selectedTableId != null && selectedTableId !in alive) selectedTableId = null
+            if (selectedChartId != null && selectedChartId !in alive) selectedChartId = null
+            if (selectedConnectionId != null && selectedConnectionId !in alive) selectedConnectionId = null
+            if (selectedLinkId != null && selectedLinkId !in alive) selectedLinkId = null
+            if (selectedAudioId != null && selectedAudioId !in alive) selectedAudioId = null
+            if (selectedModel3DId != null && selectedModel3DId !in alive) selectedModel3DId = null
+            selectedShapeIds = selectedShapeIds.filter { it in alive }.toSet()
+            marqueeSelection = marqueeSelection.filter { it in alive }.toSet()
+            textRevision++; imageRevision++; shapeRevision++; tableRevision++; chartRevision++
+            linkRevision++; model3DRevision++; audioRevision++; stackRevision++
         }
-        if (models3D != snapshot.models3D) {
-            models3D = snapshot.models3D.map { it.copy() }.toMutableList()
-            meta.setModels3D(notebook?.first, models3D)
-        }
-        if (audioCards != snapshot.audio) {
-            audioCards = snapshot.audio.map { it.copy() }.toMutableList()
-            meta.setAudioCards(notebook?.first, audioCards)
-        }
-        if (meta.objectOrder(pageIndex) != snapshot.order) {
-            meta.setObjectOrder(notebook?.first, pageIndex, snapshot.order)
-        }
-        // 指向已經不存在的物件的選取要清掉，否則工具列與把手對著一個空殼。
-        val alive = (snapshot.texts.map { it.id } + snapshot.images.map { it.id } + snapshot.shapes.map { it.id } +
-            snapshot.connections.map { it.id } + snapshot.tables.map { it.id } + snapshot.charts.map { it.id } +
-            snapshot.links.map { it.id } + snapshot.models3D.map { it.id } + snapshot.audio.map { it.id }).toSet()
-        if (selectedTextId != null && selectedTextId !in alive) selectedTextId = null
-        if (editingText != null && editingText?.id !in alive) editingText = null
-        if (selectedImageId != null && selectedImageId !in alive) selectedImageId = null
-        if (selectedTableId != null && selectedTableId !in alive) selectedTableId = null
-        if (selectedChartId != null && selectedChartId !in alive) selectedChartId = null
-        if (selectedConnectionId != null && selectedConnectionId !in alive) selectedConnectionId = null
-        if (selectedLinkId != null && selectedLinkId !in alive) selectedLinkId = null
-        if (selectedAudioId != null && selectedAudioId !in alive) selectedAudioId = null
-        if (selectedModel3DId != null && selectedModel3DId !in alive) selectedModel3DId = null
-        selectedShapeIds = selectedShapeIds.filter { it in alive }.toSet()
-        marqueeSelection = marqueeSelection.filter { it in alive }.toSet()
-        textRevision++; imageRevision++; shapeRevision++; tableRevision++; chartRevision++
-        linkRevision++; model3DRevision++; audioRevision++; stackRevision++
     }
     fun globalUndo() {
         if (pageDisplayMode == PageDisplayMode.CONTINUOUS) {
@@ -3057,7 +3067,7 @@ private fun InkScreen(
         canvasHistory, textRevision, imageRevision, shapeRevision, tableRevision, chartRevision,
         stackRevision, linkRevision, model3DRevision, audioRevision, links, models3D, audioCards
     ) {
-        if (isRestoringHistory) {
+        if (isRestoringHistory || canvasHistory.isSuppressing) {
             isRestoringHistory = false
             canvasHistory.reset(canvasSnapshot())
             return@LaunchedEffect
@@ -3437,11 +3447,6 @@ private fun InkScreen(
     // 逐筆的筆跡、頁面的增刪搬。iPad 與 Android 在同一個房間裡互相看得到對方的每一個修改。
     val collab = remember(notebookId) { AndroidCollabController(collaboration) }
     val continuousCollab = remember { ContinuousCollabBridge() }
-    /**
-     * 連續模式裡任何一頁有變動就遞增（只給側欄縮圖用）。整頁模式的側欄也要加上它：
-     * 縮圖快取以 revision 的總和為鍵，換回整頁模式時總和若退回舊值，會拿到搬動之前的快取圖。
-     */
-    var continuousContentRevision by remember { mutableIntStateOf(0) }
     val collabRoom = (collaboration.status as? CollaborationManager.Status.Connected)?.roomId
     /** 以哪一個房間為基準 reset 過。斷線重連回同一個房間不算新的起點 —— 那段期間的本機修改還要送出去。 */
     var collabBaseRoom by remember(collab) { mutableStateOf<String?>(null) }
@@ -5821,8 +5826,13 @@ private fun InkScreen(
                 store = imageStore,
                 density = canvasDensity,
                 selectedId = selectedImageId,
-                interactive = editorMode == EditorMode.TYPE,
-                onSelect = { selectedImageId = it },
+                interactive = editorMode == EditorMode.TYPE || selectedImageId != null,
+                onSelect = { id ->
+                    selectedImageId = id
+                    if (id != null && editorMode != EditorMode.TYPE) {
+                        editorMode = EditorMode.TYPE
+                    }
+                },
                 onEditStyle = { editingImage = it },
                 onChanged = { imageStore.persist(it); imageRevision++ },
                 modifier = Modifier.fillMaxSize()
@@ -5832,10 +5842,11 @@ private fun InkScreen(
             @Suppress("UNUSED_VARIABLE") val textRevisionRead = textRevision
             TextBoxLayer(
                 zIndexOf = zIndexOf,
-                interactive = true,
+                interactive = editorMode == EditorMode.TYPE || selectedTextId != null,
                 boxes = textStore.all,
                 density = canvasDensity,
                 selectedId = selectedTextId,
+                revision = textRevision,
                 onSelect = { id ->
                     selectedTextId = id
                     if (id != null && editorMode != EditorMode.TYPE) {
@@ -5844,6 +5855,12 @@ private fun InkScreen(
                 },
                 onEditStyle = { editingText = it },
                 onChanged = { box -> textStore.persist(box); textRevision++ },
+                onDelete = { box ->
+                    textStore.remove(box)
+                    if (selectedTextId == box.id) selectedTextId = null
+                    if (editingText?.id == box.id) editingText = null
+                    textRevision++
+                },
                 onMoved = { box, dx, dy ->
                     val session = notebook?.first
                     val handles = engine.coreHandles()
@@ -5904,7 +5921,7 @@ private fun InkScreen(
             @Suppress("UNUSED_VARIABLE") val shapeRevisionRead = shapeRevision
             ShapeLayer(
                 zIndexOf = zIndexOf,
-                interactive = editorMode == EditorMode.TYPE,
+                interactive = editorMode == EditorMode.TYPE || selectedShapeIds.isNotEmpty() || selectedConnectionId != null,
                 shapes = shapeStore.all,
                 connections = shapeStore.allConnections,
                 density = canvasDensity,
@@ -5922,6 +5939,9 @@ private fun InkScreen(
                         } else {
                             selectedShapeIds + mates
                         }
+                    if (selectedShapeIds.isNotEmpty() && editorMode != EditorMode.TYPE) {
+                        editorMode = EditorMode.TYPE
+                    }
                 },
                 onEdit = { shape ->
                     selectedShapeIds = setOf(shape.id)
@@ -5953,7 +5973,10 @@ private fun InkScreen(
                 },
                 onSelectConnection = { id ->
                     selectedConnectionId = id
-                    if (id != null) selectedShapeIds = emptySet()
+                    if (id != null) {
+                        selectedShapeIds = emptySet()
+                        if (editorMode != EditorMode.TYPE) editorMode = EditorMode.TYPE
+                    }
                 },
                 onEditConnection = { link ->
                     selectedConnectionId = link.id
@@ -5984,11 +6007,14 @@ private fun InkScreen(
             @Suppress("UNUSED_VARIABLE") val tableRevisionRead = tableRevision
             TableLayer(
                 zIndexOf = zIndexOf,
-                interactive = editorMode == EditorMode.TYPE,
+                interactive = editorMode == EditorMode.TYPE || selectedTableId != null,
                 tables = tableStore.all,
                 density = canvasDensity,
                 selectedId = selectedTableId,
-                onSelect = { selectedTableId = it },
+                onSelect = { id ->
+                    selectedTableId = id
+                    if (id != null && editorMode != EditorMode.TYPE) editorMode = EditorMode.TYPE
+                },
                 onEdit = { editingTable = it },
                 onChanged = { table -> tableStore.persist(table); tableRevision++ },
                 modifier = Modifier.fillMaxSize()
@@ -5998,11 +6024,14 @@ private fun InkScreen(
             @Suppress("UNUSED_VARIABLE") val chartRevisionRead = chartRevision
             ChartLayer(
                 zIndexOf = zIndexOf,
-                interactive = editorMode == EditorMode.TYPE,
+                interactive = editorMode == EditorMode.TYPE || selectedChartId != null,
                 charts = chartStore.all,
                 density = canvasDensity,
                 selectedId = selectedChartId,
-                onSelect = { selectedChartId = it },
+                onSelect = { id ->
+                    selectedChartId = id
+                    if (id != null && editorMode != EditorMode.TYPE) editorMode = EditorMode.TYPE
+                },
                 onEdit = { editingChart = it },
                 onChanged = { chart -> chartStore.persist(chart); chartRevision++ },
                 modifier = Modifier.fillMaxSize()
@@ -7315,7 +7344,11 @@ private fun InkScreen(
             onReorder = { op -> objectReorder(box.id, op) },
             remoteRevision = collabTextRevision,
             typingPeerName = if (collabActive) collaboration.typingPeers(box.id).firstOrNull()?.userName else null,
-            onChanged = { textStore.persist(it); textRevision++ },
+            onChanged = { updated ->
+                textStore.persist(updated)
+                editingText = updated
+                textRevision++
+            },
             onDelete = {
                 textStore.remove(box)
                 editingText = null

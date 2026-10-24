@@ -82,9 +82,21 @@ class CanvasHistory(
     private var lastPage: String? = null
     private var lastTime = 0L
     private var coalescingBroken = true
+    @PublishedApi internal var suppressDepth = 0
 
     val canUndo: Boolean get() = undoSteps.isNotEmpty()
     val canRedo: Boolean get() = redoSteps.isNotEmpty()
+    val isSuppressing: Boolean get() = suppressDepth > 0
+
+    /** 在 [body] 執行期間的變更不登記（套用復原、重新載入等）。 */
+    inline fun <T> withoutRecording(body: () -> T): T {
+        suppressDepth++
+        try {
+            return body()
+        } finally {
+            suppressDepth--
+        }
+    }
 
     /** 以目前的內容為基準重新開始（開頁、或內容被整份換掉）。 */
     fun reset(snapshot: CanvasSnapshot, page: String = "") {
@@ -112,6 +124,7 @@ class CanvasHistory(
         val before = baselines[page] ?: run { reset(snapshot, page); return }
         if (snapshot == before) return
         baselines[page] = snapshot
+        if (suppressDepth > 0) return
         val keys = snapshot.changedKeys(before)
         val now = clock()
         val last = undoSteps.lastOrNull()
@@ -149,11 +162,13 @@ class CanvasHistory(
         undoInk: (page: String) -> Boolean
     ): Boolean {
         val step = undoSteps.removeLastOrNull() ?: return false
-        when (step) {
-            is Step.Ink -> if (!undoInk(step.page)) return undoAcrossPages(applyObjects, undoInk)
-            is Step.Objects -> {
-                applyObjects(step.page, step.before)
-                baselines[step.page] = step.before
+        withoutRecording {
+            when (step) {
+                is Step.Ink -> if (!undoInk(step.page)) return undoAcrossPages(applyObjects, undoInk)
+                is Step.Objects -> {
+                    applyObjects(step.page, step.before)
+                    baselines[step.page] = step.before
+                }
             }
         }
         redoSteps.addLast(step)
@@ -166,11 +181,13 @@ class CanvasHistory(
         redoInk: (page: String) -> Boolean
     ): Boolean {
         val step = redoSteps.removeLastOrNull() ?: return false
-        when (step) {
-            is Step.Ink -> if (!redoInk(step.page)) return redoAcrossPages(applyObjects, redoInk)
-            is Step.Objects -> {
-                applyObjects(step.page, step.after)
-                baselines[step.page] = step.after
+        withoutRecording {
+            when (step) {
+                is Step.Ink -> if (!redoInk(step.page)) return redoAcrossPages(applyObjects, redoInk)
+                is Step.Objects -> {
+                    applyObjects(step.page, step.after)
+                    baselines[step.page] = step.after
+                }
             }
         }
         undoSteps.addLast(step)

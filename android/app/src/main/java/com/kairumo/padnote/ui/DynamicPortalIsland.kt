@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -69,9 +70,9 @@ fun DynamicPortalIsland(
                 horizontalArrangement = Arrangement.spacedBy(3.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // 手繪工作室按鈕
+                // 手繪工作室按鈕 (對齊 iPad: handwriting_mode)
                 ModePillButton(
-                    title = l("mode_draw"),
+                    title = l("handwriting_mode"),
                     icon = "✏️",
                     isSelected = currentMode == EditorMode.DRAW,
                     activeColor = MaterialTheme.colorScheme.primary,
@@ -82,10 +83,18 @@ fun DynamicPortalIsland(
                     }
                 )
 
-                // 文字智庫按鈕
+                // 中央微型分隔點 (對齊 iPad)
+                Box(
+                    modifier = Modifier
+                        .padding(horizontal = 2.dp)
+                        .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f), CircleShape)
+                        .size(3.dp)
+                )
+
+                // 專業文字智庫按鈕 (對齊 iPad: typing_mode)
                 ModePillButton(
-                    title = l("mode_type"),
-                    icon = "📑",
+                    title = l("typing_mode"),
+                    icon = "📄",
                     isSelected = currentMode == EditorMode.TYPE,
                     activeColor = Color(0xFF6366F1), // 智庫經典靛藍
                     testTag = "portal.type",
