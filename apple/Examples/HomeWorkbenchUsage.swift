@@ -71,6 +71,9 @@ struct KairumoApp: App {
     @UIApplicationDelegateAdaptor(KairumoAppDelegate.self) private var appDelegate
 
     init() {
+        #if canImport(UIKit)
+        UIKitCrashGuard.install()
+        #endif
         // **必須在任何單例被碰到之前**：單例的 init 會依 `ProfileContext.activeId` 讀資料，
         // 它若還是舊的，整個 App 就載入錯的設定檔。
         ProfileManager.resetForUITestsIfRequested()
@@ -232,19 +235,43 @@ struct KairumoApp: App {
     }
 
     /// 桌機（Mac）開啟時預設自動展開全螢幕。
+    /// 確保只在初次啟動、視窗未處於全螢幕狀態且視窗佈局已穩定時才安全展開，避免觸發 Catalyst 的狀態解凍斷言崩潰。
+    nonisolated(unsafe) private var hasAttemptedInitialFullScreen = false
+
     private func autoExpandFullScreenOnMac() {
         if ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil ||
            ProcessInfo.processInfo.arguments.contains("-ui-testing") {
             return
         }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+        guard !hasAttemptedInitialFullScreen else { return }
+        hasAttemptedInitialFullScreen = true
+
+        // 給予 UI 與 Catalyst 視窗追蹤哨兵 1.5 秒寬限期，確保視窗場景完全達到 foregroundActive 且佈局就緒
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
             guard let nsAppClass = NSClassFromString("NSApplication") as? NSObject.Type,
                   let sharedApp = nsAppClass.perform(NSSelectorFromString("sharedApplication"))?.takeUnretainedValue() as? NSObject else {
                 return
             }
-            let keyWindow = (sharedApp.perform(NSSelectorFromString("keyWindow"))?.takeUnretainedValue() as? NSObject)
-                ?? (sharedApp.perform(NSSelectorFromString("mainWindow"))?.takeUnretainedValue() as? NSObject)
-            _ = keyWindow?.perform(NSSelectorFromString("toggleFullScreen:"), with: nil)
+            guard let keyWindow = (sharedApp.perform(NSSelectorFromString("keyWindow"))?.takeUnretainedValue() as? NSObject)
+                ?? (sharedApp.perform(NSSelectorFromString("mainWindow"))?.takeUnretainedValue() as? NSObject) else {
+                return
+            }
+
+            // 檢查視窗是否已經處於全螢幕或正在全螢幕過渡中（例如系統 savedState 自動還原）
+            let styleMask = (keyWindow.value(forKey: "styleMask") as? UInt) ?? 0
+            let isAlreadyFullScreen = (styleMask & (1 << 14)) != 0 // NSWindowStyleMaskFullScreen
+            let inFullScreen = (keyWindow.perform(NSSelectorFromString("_inFullScreen"))?.takeUnretainedValue() as? Bool) ?? false
+
+            if isAlreadyFullScreen || inFullScreen {
+                // 已處於全螢幕模式，切勿重複調用 toggleFullScreen: 以免退出全螢幕或擾亂過渡狀態
+                return
+            }
+
+            // 檢查該視窗是否支援全螢幕模式
+            let canEnter = (keyWindow.perform(NSSelectorFromString("_canEnterFullScreenOrTileMode"))?.takeUnretainedValue() as? Bool) ?? true
+            if canEnter {
+                _ = keyWindow.perform(NSSelectorFromString("toggleFullScreen:"), with: nil)
+            }
         }
     }
 #endif
