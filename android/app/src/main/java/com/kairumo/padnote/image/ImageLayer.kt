@@ -105,6 +105,9 @@ private fun ImageObjectView(
     val shape = RoundedCornerShape(image.cornerRadius.dp)
     // 連續模式：拖到哪一頁就歸哪一頁（單頁模式為 null，照舊夾在本頁）。
     val crossing by androidx.compose.runtime.rememberUpdatedState(com.kairumo.padnote.canvas.LocalPageCrossing.current)
+    val editorMode = com.kairumo.padnote.canvas.LocalEditorMode.current
+    val isCanvasNavigating = com.kairumo.padnote.canvas.LocalCanvasNavigating.current
+    val isTypeMode = editorMode == com.kairumo.padnote.canvas.EditorMode.TYPE
 
     // 外層只定位、不旋轉 —— 旋轉把手掛在這一層。包進旋轉裡的話，拖曳算出的
     // 角度會疊加自身旋轉，物件會失控加速。
@@ -138,8 +141,8 @@ private fun ImageObjectView(
                         detectTapGestures(onTap = { onSelect() })
                     }
                 }
-                .gesturesIf(interactive) {
-                    pointerInput(image.id) {
+                .gesturesIf(interactive && (isSelected || isTypeMode) && !isCanvasNavigating) {
+                    pointerInput(image.id, isSelected, isTypeMode, isCanvasNavigating) {
                         var startX = 0f
                         var startY = 0f
                         var accX = 0f
@@ -158,6 +161,7 @@ private fun ImageObjectView(
                         }
                         detectDragGestures(
                             onDragStart = {
+                                if (isCanvasNavigating) return@detectDragGestures
                                 val img = currentImage
                                 startX = img.x
                                 startY = img.y
@@ -170,6 +174,15 @@ private fun ImageObjectView(
                             },
                             onDragCancel = finishDrag,
                             onDrag = { change, drag ->
+                                if (isCanvasNavigating) {
+                                    val img = currentImage
+                                    liveX = startX
+                                    liveY = startY
+                                    img.x = startX
+                                    img.y = startY
+                                    crossing?.ended?.invoke()
+                                    return@detectDragGestures
+                                }
                                 change.consume()
                                 accX += drag.x
                                 accY += drag.y

@@ -1,5 +1,6 @@
 package com.kairumo.padnote.canvas
 
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.Modifier
 
 /**
@@ -15,6 +16,18 @@ import androidx.compose.ui.Modifier
 enum class EditorMode { DRAW, TYPE }
 
 /**
+ * 畫布是否正在進行多指導航（雙指平移或雙指縮放）。
+ * 為真時，畫布上的所有物件必須凍結所有拖曳手勢，防止物件隨手指移動或縮放。
+ */
+val LocalCanvasNavigating = compositionLocalOf { false }
+
+/**
+ * 目前畫布的編輯模式（DRAW 或 TYPE）。
+ */
+val LocalEditorMode = compositionLocalOf { EditorMode.TYPE }
+
+
+/**
  * 只在 [enabled] 為真時套用手勢修飾子。
  *
  * Compose 沒有 `allowsHitTesting` 這種一翻就關掉整個子樹的開關；要讓一層
@@ -23,3 +36,4 @@ enum class EditorMode { DRAW, TYPE }
  */
 inline fun Modifier.gesturesIf(enabled: Boolean, block: Modifier.() -> Modifier): Modifier =
     if (enabled) this.block() else this
+

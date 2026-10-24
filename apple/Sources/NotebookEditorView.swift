@@ -858,6 +858,7 @@ final class AdaptiveCanvasView: PKCanvasView {
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
         forwardLasso(touches, .began)
         activeTouchesCount += touches.count
+        CanvasTouchState.activeDirectTouches = activeTouchesCount
         for touch in touches {
             if touch.type == .pencil {
                 lastPencilLocation = touch.location(in: self)
@@ -900,6 +901,7 @@ final class AdaptiveCanvasView: PKCanvasView {
             pencilDwellWorkItem?.cancel()
         }
         activeTouchesCount = max(0, activeTouchesCount - touches.count)
+        CanvasTouchState.activeDirectTouches = activeTouchesCount
         touches.forEach {
             onTouchObserved?($0)
             if InkInputDiagnostics.isEnabled || ProcessInfo.processInfo.environment["KAIRUMO_UITEST"] == "1" {
@@ -917,6 +919,7 @@ final class AdaptiveCanvasView: PKCanvasView {
             lastStrokeHadHoldDwell = false
         }
         activeTouchesCount = max(0, activeTouchesCount - touches.count)
+        CanvasTouchState.activeDirectTouches = activeTouchesCount
         super.touchesCancelled(touches, with: event)
         checkPendingRetract()
     }
@@ -1685,6 +1688,30 @@ struct CanvasRepresentable: UIViewRepresentable {
             } else {
                 scrollView.accessibilityValue = String(format: "zoom:%.3f", scrollView.zoomScale)
             }
+        }
+
+        func scrollViewWillBeginZooming(_ scrollView: UIScrollView, with view: UIView?) {
+            CanvasTouchState.isCanvasNavigating = true
+        }
+
+        func scrollViewDidEndZooming(_ scrollView: UIScrollView, with view: UIView?, atScale scale: CGFloat) {
+            CanvasTouchState.isCanvasNavigating = false
+        }
+
+        func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
+            if scrollView.panGestureRecognizer.numberOfTouches >= 2 {
+                CanvasTouchState.isCanvasNavigating = true
+            }
+        }
+
+        func scrollViewDidEndDragging(_ scrollView: UIScrollView, decelerate: Bool) {
+            if !decelerate {
+                CanvasTouchState.isCanvasNavigating = false
+            }
+        }
+
+        func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
+            CanvasTouchState.isCanvasNavigating = false
         }
 
         func scrollViewDidZoom(_ scrollView: UIScrollView) {
@@ -5902,6 +5929,7 @@ public struct NotebookEditorView: View {
                         AttachmentItemView(
                             attachment: binding(for: item.id),
                             isSelected: activeSelectedObjectId == item.id,
+                            isTypeMode: editorMode == .type,
                             onSelect: { selectSingleObject(item.id) },
                             onEdit: {
                                 if let formula = item.mathFormula {
@@ -15727,6 +15755,7 @@ enum CanvasCoordinateSpace {
 struct AttachmentItemView: View {
     @Binding var attachment: NoteImageAttachment
     var isSelected: Bool = false
+    var isTypeMode: Bool = false
     var onSelect: (() -> Void)? = nil
     let onEdit: () -> Void
     let onDelete: () -> Void
@@ -15817,9 +15846,18 @@ struct AttachmentItemView: View {
                 onSelect?()
             }
             .highPriorityGesture(
+                ((!isTypeMode && !isSelected) || !CanvasTouchState.canDragObject) ? nil :
                 DragGesture(minimumDistance: 4, coordinateSpace: .named(CanvasCoordinateSpace.name))
                     .onChanged { value in
                         guard lockedByPeer == nil else { return }
+                        guard CanvasTouchState.canDragObject else {
+                            if isDragging {
+                                dragOffset = .zero
+                                isDragging = false
+                                pageCrossing?.ended(nil, nil)
+                            }
+                            return
+                        }
                         if !isDragging { pageCrossing?.began() }
                         isDragging = true
                         var transaction = Transaction()
@@ -15830,6 +15868,12 @@ struct AttachmentItemView: View {
                     }
                     .onEnded { value in
                         guard lockedByPeer == nil else { return }
+                        guard CanvasTouchState.canDragObject else {
+                            dragOffset = .zero
+                            isDragging = false
+                            pageCrossing?.ended(nil, nil)
+                            return
+                        }
                         var crossedTo: Int?
                         if hypot(value.translation.width, value.translation.height) < 4 {
                             onSelect?()
@@ -16395,10 +16439,18 @@ struct TextAttachmentItemView: View {
             // 高優先：方塊身上還有「點兩下」，它會先等第二下，等的這段時間連續模式的捲動就把
             // 拖曳搶走了（方塊拖不動、畫面反而捲動）。拖曳至少要移動 5 點，點一下、點兩下照常有效。
             .highPriorityGesture(
-                isEditingInline ? nil :
+                (isEditingInline || (!isTypeMode && !isSelected) || !CanvasTouchState.canDragObject) ? nil :
                 DragGesture(minimumDistance: 5, coordinateSpace: .named(CanvasCoordinateSpace.name))
                     .onChanged { value in
                         guard lockedByPeer == nil else { return }
+                        guard CanvasTouchState.canDragObject else {
+                            if isDragging {
+                                dragOffset = .zero
+                                isDragging = false
+                                pageCrossing?.ended(nil, nil)
+                            }
+                            return
+                        }
                         if !isDragging { pageCrossing?.began() }
                         isDragging = true
                         var transaction = Transaction()
@@ -16409,6 +16461,12 @@ struct TextAttachmentItemView: View {
                     }
                     .onEnded { value in
                         guard lockedByPeer == nil else { return }
+                        guard CanvasTouchState.canDragObject else {
+                            dragOffset = .zero
+                            isDragging = false
+                            pageCrossing?.ended(nil, nil)
+                            return
+                        }
                         var crossedTo: Int?
                         if hypot(value.translation.width, value.translation.height) < 4 {
                             beginInlineEditing()
@@ -16567,9 +16625,18 @@ struct TextAttachmentItemView: View {
                     .shadow(color: Color.black.opacity(0.12), radius: 3, y: 1)
                     .contentShape(Rectangle())
                     .highPriorityGesture(
+                        !CanvasTouchState.canDragObject ? nil :
                         DragGesture(minimumDistance: 1, coordinateSpace: .named(CanvasCoordinateSpace.name))
                             .onChanged { value in
                                 guard lockedByPeer == nil else { return }
+                                guard CanvasTouchState.canDragObject else {
+                                    if isDragging {
+                                        dragOffset = .zero
+                                        isDragging = false
+                                        pageCrossing?.ended(nil, nil)
+                                    }
+                                    return
+                                }
                                 if !isDragging { pageCrossing?.began() }
                                 isDragging = true
                                 var transaction = Transaction()
@@ -16580,6 +16647,12 @@ struct TextAttachmentItemView: View {
                             }
                             .onEnded { value in
                                 guard lockedByPeer == nil else { return }
+                                guard CanvasTouchState.canDragObject else {
+                                    dragOffset = .zero
+                                    isDragging = false
+                                    pageCrossing?.ended(nil, nil)
+                                    return
+                                }
                                 let oldX = textItem.x
                                 let oldY = textItem.y
                                 var crossedTo: Int?
@@ -16823,12 +16896,23 @@ struct LinkAttachmentItemView: View {
                 }
             }
             .highPriorityGesture(
+                (!isSelected || !CanvasTouchState.canDragObject) ? nil :
                 DragGesture(minimumDistance: 4, coordinateSpace: .named(CanvasCoordinateSpace.name))
                     .onChanged { value in
+                        guard CanvasTouchState.canDragObject else {
+                            dragOffset = .zero
+                            pageCrossing?.ended(nil, nil)
+                            return
+                        }
                         if dragOffset == .zero { pageCrossing?.began() }
                         dragOffset = value.translation
                     }
                     .onEnded { value in
+                        guard CanvasTouchState.canDragObject else {
+                            dragOffset = .zero
+                            pageCrossing?.ended(nil, nil)
+                            return
+                        }
                         var crossedTo: Int?
                         if hypot(value.translation.width, value.translation.height) < 4 {
                             onSelect?()
@@ -17100,14 +17184,23 @@ struct Model3DCanvasItemView: View {
             .cornerRadius(8)
             .contentShape(Rectangle())
             .highPriorityGesture(
+                (!isSelected || !CanvasTouchState.canDragObject) ? nil :
                 DragGesture(minimumDistance: 4, coordinateSpace: .named(CanvasCoordinateSpace.name))
                     .onChanged { value in
-                        guard lockedByPeer == nil else { return }
+                        guard lockedByPeer == nil, CanvasTouchState.canDragObject else {
+                            dragOffset = .zero
+                            pageCrossing?.ended(nil, nil)
+                            return
+                        }
                         if dragOffset == .zero { pageCrossing?.began() }
                         dragOffset = value.translation
                     }
                     .onEnded { value in
-                        guard lockedByPeer == nil else { return }
+                        guard lockedByPeer == nil, CanvasTouchState.canDragObject else {
+                            dragOffset = .zero
+                            pageCrossing?.ended(nil, nil)
+                            return
+                        }
                         // 拖出可列印範圍的物件推回邊界（S-85）；連續模式下拖到哪一頁就歸哪一頁。
                         let landed = PrintableArea.land(
                             x: item.x + value.translation.width,

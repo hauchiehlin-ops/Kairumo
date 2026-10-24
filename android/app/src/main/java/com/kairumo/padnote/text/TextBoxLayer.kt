@@ -5,6 +5,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.awaitTouchSlopOrCancellation
@@ -205,6 +206,9 @@ private fun TextBoxView(
     val language = LocalAppLanguage.current
     val reorder = LocalObjectReorder.current
     val clipboard = LocalObjectClipboard.current
+    val editorMode = com.kairumo.padnote.canvas.LocalEditorMode.current
+    val isCanvasNavigating = com.kairumo.padnote.canvas.LocalCanvasNavigating.current
+    val isTypeMode = editorMode == com.kairumo.padnote.canvas.EditorMode.TYPE
     var contextMenuOpen by remember(box.id) { mutableStateOf(false) }
     var orderMenuOpen by remember(box.id) { mutableStateOf(false) }
     val shape = RoundedCornerShape(box.cornerRadius.dp)
@@ -271,10 +275,23 @@ private fun TextBoxView(
                 }
             )
             // 點一下＝選取，拖曳＝搬移（完全對齊 iPad）
-            .gesturesIf(interactive) {
-                pointerInput(box.id) {
+            .gesturesIf(interactive && !isCanvasNavigating) {
+                pointerInput(box.id, isSelected, isTypeMode, isCanvasNavigating) {
                     awaitEachGesture {
                         val down = awaitFirstDown(requireUnconsumed = false)
+                        if (isCanvasNavigating) return@awaitEachGesture
+                        // 手繪模式下觸控筆直接繪圖，不拖曳方塊
+                        if (down.type == androidx.compose.ui.input.pointer.PointerType.Stylus && !isTypeMode) return@awaitEachGesture
+
+                        // 手繪模式下未選取時：點擊僅選取，不直接拖曳，防止手繪或雙指導航時誤移動背景方塊
+                        if (!isTypeMode && !isSelected) {
+                            val up = waitForUpOrCancellation()
+                            if (up != null) {
+                                onSelect()
+                            }
+                            return@awaitEachGesture
+                        }
+
                         var accDragX = 0f
                         var accDragY = 0f
                         val dragChange = awaitTouchSlopOrCancellation(down.id) { change, over ->
@@ -300,7 +317,12 @@ private fun TextBoxView(
                             b.x = liveX
                             b.y = liveY
 
+                            var cancelled = false
                             drag(dragChange.id) { change ->
+                                if (isCanvasNavigating) {
+                                    cancelled = true
+                                    return@drag
+                                }
                                 change.consume()
                                 accX += change.positionChange().x
                                 accY += change.positionChange().y
@@ -309,7 +331,15 @@ private fun TextBoxView(
                                 b.x = liveX
                                 b.y = liveY
                             }
-                            finishDrag()
+                            if (cancelled) {
+                                liveX = startX
+                                liveY = startY
+                                b.x = startX
+                                b.y = startY
+                                crossing?.ended?.invoke()
+                            } else {
+                                finishDrag()
+                            }
                         } else {
                             onSelect()
                         }
@@ -351,10 +381,11 @@ private fun TextBoxView(
                     .shadow(2.dp, RoundedCornerShape(8.dp))
                     .clip(RoundedCornerShape(8.dp))
                     .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.9f))
-                    .gesturesIf(interactive) {
-                        pointerInput(box.id) {
+                    .gesturesIf(interactive && !isCanvasNavigating) {
+                        pointerInput(box.id, isCanvasNavigating) {
                             detectDragGestures(
                                 onDragStart = {
+                                    if (isCanvasNavigating) return@detectDragGestures
                                     val b = currentBox
                                     startX = b.x
                                     startY = b.y
@@ -365,8 +396,22 @@ private fun TextBoxView(
                                     onSelect()
                                     crossing?.began?.invoke()
                                 },
-                                onDragCancel = finishDrag,
+                                onDragCancel = {
+                                    liveX = startX
+                                    liveY = startY
+                                    currentBox.x = startX
+                                    currentBox.y = startY
+                                    crossing?.ended?.invoke()
+                                },
                                 onDrag = { change, drag ->
+                                    if (isCanvasNavigating) {
+                                        liveX = startX
+                                        liveY = startY
+                                        currentBox.x = startX
+                                        currentBox.y = startY
+                                        crossing?.ended?.invoke()
+                                        return@detectDragGestures
+                                    }
                                     change.consume()
                                     accX += drag.x
                                     accY += drag.y
