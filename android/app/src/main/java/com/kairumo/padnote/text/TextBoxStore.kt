@@ -196,6 +196,7 @@ class TextBoxStore(
  * 放成全域狀態：工具列（外層）建立方塊、頁面內點一下建立方塊，都只要設這一個值，
  * 方塊畫出來時就會自動取得焦點，不必逐層傳 callback。
  */
+// profile-scope: device 只是畫面上的暫態編輯焦點；切換設定檔時行程重啟，狀態跟著清空
 object InlineTextEditing {
     var activeId: String? by androidx.compose.runtime.mutableStateOf<String?>(null)
 }
