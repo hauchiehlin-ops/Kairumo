@@ -32,6 +32,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.zIndex
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.unit.Constraints
@@ -196,7 +197,9 @@ fun ContinuousPagesView(
     isPlacingPasteObject: Boolean = false,
     onPlacingPasteObjectChange: (Boolean) -> Unit = {},
     /** 貼上卡片型物件（連結卡、3D、錄音卡）時通知外層同步更新。 */
-    onMetaObjectsChanged: () -> Unit = {}
+    onMetaObjectsChanged: () -> Unit = {},
+    /** 吸附格線：即點即書時文字坐在橫線紙的格線上（對齊 Apple）。 */
+    snapToGrid: Boolean = true
 ) {
     val listState = rememberLazyListState()
     /** 套索選取屬於哪一頁。只有那一頁畫圈、選取框與工具列，動作也只作用在那一頁的引擎。 */
@@ -612,6 +615,8 @@ fun ContinuousPagesView(
             userScrollEnabled = editorMode != EditorMode.DRAW,
             modifier = Modifier
                 .fillMaxSize()
+                // 縮放後的頁面不可畫到捲動區外（否則會蓋住工具列）。
+                .clipToBounds()
                 .pointerInput(editorMode, ink.penOnly) {
                     val canFingerDraw = !ink.penOnly
                     awaitPointerEventScope {
@@ -791,6 +796,7 @@ fun ContinuousPagesView(
                                 }
                             },
                             objectClipboardActions = objectClipboardActions,
+                            snapToGrid = snapToGrid,
                             isPlacingPasteObject = isPlacingPasteObject && objectClipboard.isNotEmpty(),
                             onTapToPaste = { point ->
                                 pasteObjectsToPage(objectClipboard, index, point)
@@ -953,7 +959,8 @@ private fun ContinuousPage(
     onExternalSelect: (String?) -> Unit = {},
     objectClipboardActions: ObjectClipboardActions? = null,
     isPlacingPasteObject: Boolean = false,
-    onTapToPaste: (Offset) -> Unit = {}
+    onTapToPaste: (Offset) -> Unit = {},
+    snapToGrid: Boolean = true
 ) {
     val pageId = runtime.pageId
     val historyKey = pageId ?: ""
@@ -1136,9 +1143,22 @@ private fun ContinuousPage(
     val guidePaletteId = remember(meta) { meta.paletteId() }
     val guideMeasurer = androidx.compose.ui.text.rememberTextMeasurer()
 
+    // 即點即書：在頁面座標 (tapX, tapY) 建立文字方塊並立即進入就地編輯（打字模式點空白、手繪模式雙擊共用）。
+    val writeAt: (Float, Float) -> Unit = { tapX, tapY ->
+        val newBox = textStore.createTapToWrite(tapX, tapY, textStore.pageRules(paperId), snapToGrid)
+        val currentOrder = meta.objectOrder(pageIndex)
+        val updatedOrder = com.kairumo.padnote.canvas.ObjectStacking.bringToFront(setOf(newBox.id), currentOrder)
+        meta.setObjectOrder(session, pageIndex, updatedOrder)
+        revision++
+        updateSelectedId(newBox.id)
+        com.kairumo.padnote.text.InlineTextEditing.activeId = newBox.id
+    }
+
     Box(
         Modifier
             .fillMaxSize()
+            // 物件超出頁面的部分一律裁掉，不畫到頁外。
+            .clipToBounds()
             .background(Color.White)
             .border(
                 if (isFocused) 1.5.dp else 1.dp,
@@ -1173,6 +1193,19 @@ private fun ContinuousPage(
                     }
                 }
             )
+            // 手繪模式下手指雙擊空白處：建立文字方塊並切到打字模式（對齊 Apple `handleCanvasDirectDoubleTap`）。
+            .fingerDoubleTap(
+                listOf(editorMode, lasso != null, isPlacingPasteObject, snapToGrid),
+                hitAt = { p ->
+                    if (editorMode != EditorMode.DRAW || lasso != null || isPlacingPasteObject) false
+                    else ObjectMarquee.topmostHit(Offset(p.x / density, p.y / density), lockFramesLatest) == null
+                },
+                onCancelInk = { engine.cancelInFlight(); revision++ },
+                onDoubleTap = { p ->
+                    onModeChange(EditorMode.TYPE)
+                    writeAt(p.x / density, p.y / density)
+                }
+            )
             .then(
                 if (editorMode == EditorMode.TYPE) {
                     Modifier.pointerInput(pageIndex) {
@@ -1192,18 +1225,11 @@ private fun ContinuousPage(
                             }
                             if (hitExisting != null) {
                                 updateSelectedId(hitExisting.id)
-                                editingText = hitExisting
+                                com.kairumo.padnote.text.InlineTextEditing.activeId = hitExisting.id
                             } else {
-                                val newBox = textStore.create(
-                                    x = maxOf(20f, minOf(tapX, 700f)),
-                                    y = maxOf(20f, minOf(tapY, 1000f))
-                                )
-                                val currentOrder = meta.objectOrder(pageIndex)
-                                val updatedOrder = com.kairumo.padnote.canvas.ObjectStacking.bringToFront(setOf(newBox.id), currentOrder)
-                                meta.setObjectOrder(session, pageIndex, updatedOrder)
-                                revision++
-                                updateSelectedId(newBox.id)
-                                editingText = newBox
+                                // 即點即書（對齊 Apple `insertTextBox(tapToWrite: true)`）：
+                                // 透明、無框、單行高，文字從點下去的地方開始，立刻可以打字。
+                                writeAt(tapX, tapY)
                             }
                         }
                     }
@@ -1338,6 +1364,17 @@ private fun ContinuousPage(
                 revision = revision,
                 onSelect = { updateSelectedId(it); selectedConnectionId = null },
                 onEditStyle = { editingText = it },
+                inlineEditingId = com.kairumo.padnote.text.InlineTextEditing.activeId,
+                onInlineEditStart = { id -> com.kairumo.padnote.text.InlineTextEditing.activeId = id },
+                onInlineEditEnd = { box ->
+                    // 失焦：空白方塊直接移除（對齊 Apple），其餘結束編輯。
+                    if (com.kairumo.padnote.text.InlineTextEditing.activeId == box.id) com.kairumo.padnote.text.InlineTextEditing.activeId = null
+                    if (box.text.isBlank() && editingText?.id != box.id) {
+                        textStore.remove(box)
+                        if (selectedId == box.id) updateSelectedId(null)
+                        revision++
+                    }
+                },
                 onChanged = { textStore.persist(it); revision++ },
                 onDelete = { box ->
                     textStore.remove(box)

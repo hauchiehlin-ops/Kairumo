@@ -1,5 +1,7 @@
 package com.kairumo.padnote.text
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import uniffi.padnote_core.BlockStyle
 import uniffi.padnote_core.PadnoteSession
 import java.util.UUID
@@ -12,8 +14,8 @@ import java.util.UUID
  * 互相打得開，連顏色、邊框與段落設定都跨得過去。
  */
 class TextBoxStore(
-    private val session: PadnoteSession?,
-    private val pageId: String?
+    val session: PadnoteSession?,
+    val pageId: String?
 ) {
 
     private val boxes = LinkedHashMap<String, TextBox>()
@@ -55,6 +57,69 @@ class TextBoxStore(
         }
         val box = TextBox(id = id, x = x, y = y)
         boxes[id] = box.copy()
+        persist(box)
+        return box
+    }
+
+    /** 這一頁的水平格線（吸附格線用）。 */
+    fun pageRules(paperId: String): List<Float> {
+        val style = runCatching { pageId?.let { session?.pageStyle(it) } }.getOrNull()
+            ?: uniffi.padnote_core.PageStyle.BLANK
+        return RuledWriting.pageRules(
+            paperId, style,
+            com.kairumo.padnote.ink.PageGeometry.width, com.kairumo.padnote.ink.PageGeometry.height)
+    }
+
+    /**
+     * 即點即書（對齊 Apple `insertTextBox(tapToWrite: true)`）：透明、無框、單行高，
+     * 文字從點下去的地方開始。橫線紙（[snapToGrid] 且 [rules] 像橫線紙）上，文字坐在格線上。
+     */
+    fun createTapToWrite(
+        tapX: Float, tapY: Float,
+        rules: List<Float> = emptyList(),
+        snapToGrid: Boolean = true,
+        fontSize: Float = 16f
+    ): TextBox {
+        val inset = RuledWriting.PRINTABLE_INSET
+        val pageW = com.kairumo.padnote.ink.PageGeometry.width
+        val pageH = com.kairumo.padnote.ink.PageGeometry.height
+        val placement = (if (snapToGrid) RuledWriting.placement(tapY, rules, fontSize, inset) else null)
+            ?: RuledWriting.freePlacement(tapY, fontSize, inset)
+        val startX = minOf(maxOf(inset, tapX - RuledWriting.padding), pageW - inset - 60f)
+        val width = RuledWriting.availableWidth(startX, pageW, 60f)
+        val height = RuledWriting.boxHeight(RuledWriting.lineHeight(placement.fontSize))
+        val box = create(x = startX, y = RuledWriting.clampTop(placement.top, height, pageH, true))
+        box.width = width
+        box.height = height
+        box.fontSize = placement.fontSize
+        if (placement.lineSpacing > 0f) box.lineSpacing = placement.lineSpacing
+        box.backgroundColorHex = "clear"
+        box.hasBorder = false
+        persist(box)
+        return box
+    }
+
+    /**
+     * 工具列「新增文字方塊」（對齊 Apple `insertTextBox(tapToWrite: false)`）：
+     * 有框線的獨立方塊，建好就進入就地編輯。
+     */
+    fun createBoxed(
+        x: Float, y: Float,
+        rules: List<Float> = emptyList(),
+        snapToGrid: Boolean = true,
+        fontSize: Float = 16f
+    ): TextBox {
+        val inset = RuledWriting.PRINTABLE_INSET
+        val pageW = com.kairumo.padnote.ink.PageGeometry.width
+        val pageH = com.kairumo.padnote.ink.PageGeometry.height
+        val targetX = if (snapToGrid) kotlin.math.round(x / 20f) * 20f else x
+        val targetY = if (snapToGrid) RuledWriting.snapY(y, rules, fontSize) else y
+        val startX = maxOf(inset, targetX)
+        val box = create(x = startX, y = RuledWriting.clampTop(targetY, 40f, pageH, false))
+        box.width = RuledWriting.availableWidth(startX, pageW, 180f)
+        box.height = 40f
+        box.backgroundColorHex = "clear"
+        box.hasBorder = true
         persist(box)
         return box
     }
@@ -123,4 +188,14 @@ class TextBoxStore(
         persist(box)
     }
 
+}
+
+/**
+ * 目前就地編輯（即點即書）的文字方塊 id。對齊 Apple 的 `inlineEditingTextId`。
+ *
+ * 放成全域狀態：工具列（外層）建立方塊、頁面內點一下建立方塊，都只要設這一個值，
+ * 方塊畫出來時就會自動取得焦點，不必逐層傳 callback。
+ */
+object InlineTextEditing {
+    var activeId: String? by androidx.compose.runtime.mutableStateOf<String?>(null)
 }
