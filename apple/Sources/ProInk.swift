@@ -516,8 +516,10 @@ final class ProInkLayerView: UIView {
         isOpaque = false
         backgroundColor = .clear
         isUserInteractionEnabled = false
-        // 互動手繪時必須同步光柵化並於當前 CATransaction 呈現，若設為 true 會推入背景繪圖隊列而增加 1~2 幀的起筆與連筆延遲。
-        layer.drawsAsynchronously = false
+        // 必須保持非同步繪製（drawsAsynchronously = true）：
+        // 自繪圖層包含頁面上所有筆劃（含柔邊高斯印章與紋理），當筆跡較多或 App 切換至背景進行 scene-update 縮圖快照時，
+        // 若在主執行緒同步光柵化會耗時數秒乃至超過 10 秒，觸發 iOS Watchdog 0x8BADF00D (scene-update timeout) 強殺。
+        layer.drawsAsynchronously = true
         NotificationCenter.default.addObserver(
             self, selector: #selector(diskChanged(_:)),
             name: .kairumoProInkChangedOnDisk, object: nil)
