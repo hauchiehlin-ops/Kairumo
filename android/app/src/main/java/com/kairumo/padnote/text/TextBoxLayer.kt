@@ -28,6 +28,18 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import kotlin.math.abs
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
@@ -124,6 +136,12 @@ fun TextBoxLayer(
     onChanged: (TextBox) -> Unit,
     onMoved: ((box: TextBox, dx: Float, dy: Float) -> Unit)? = null,
     onDelete: ((TextBox) -> Unit)? = null,
+    /** 目前就地編輯（即點即書）的方塊 id；與 Apple 的 `inlineEditingTextId` 同義。 */
+    inlineEditingId: String? = null,
+    /** 點選方塊（打字模式）時開始就地編輯。 */
+    onInlineEditStart: (String) -> Unit = {},
+    /** 失去焦點時結束就地編輯；空白方塊由呼叫端移除。 */
+    onInlineEditEnd: (TextBox) -> Unit = {},
     /**
      * 這個物件的堆疊 z 值。跨型別共用同一份順序（見 ObjectStacking）。
      */
@@ -152,7 +170,10 @@ fun TextBoxLayer(
                     onEditStyle = { onEditStyle(box) },
                     onChanged = onChanged,
                     onMoved = onMoved,
-                    onDelete = onDelete
+                    onDelete = onDelete,
+                    isEditing = box.id == inlineEditingId,
+                    onStartEdit = { onInlineEditStart(box.id) },
+                    onEndEdit = onInlineEditEnd
                 )
             }
         }
@@ -198,7 +219,10 @@ private fun TextBoxView(
     onEditStyle: () -> Unit,
     onChanged: (TextBox) -> Unit,
     onMoved: ((box: TextBox, dx: Float, dy: Float) -> Unit)? = null,
-    onDelete: ((TextBox) -> Unit)? = null
+    onDelete: ((TextBox) -> Unit)? = null,
+    isEditing: Boolean = false,
+    onStartEdit: () -> Unit = {},
+    onEndEdit: (TextBox) -> Unit = {}
 ) {
     // 連續模式：拖到哪一頁就歸哪一頁（單頁模式為 null，照舊夾在本頁）。
     val crossing by androidx.compose.runtime.rememberUpdatedState(com.kairumo.padnote.canvas.LocalPageCrossing.current)
@@ -342,6 +366,8 @@ private fun TextBoxView(
                             }
                         } else {
                             onSelect()
+                            // 打字模式點方塊＝就地編輯（對齊 Apple）。
+                            if (isTypeMode) onStartEdit()
                         }
                     }
                 }
@@ -350,26 +376,72 @@ private fun TextBoxView(
     ) {
         // 有逐字格式時，每一段的字級、字型、顏色與醒目提示寫在 AnnotatedString 裡，
         // 底下的 TextStyle 是方塊層級的預設。
+        val inlineStyle = TextStyle(
+            fontSize = box.fontSize.sp,
+            fontFamily = resolveFontFamily(box.fontFamily),
+            fontWeight = if (box.bold) FontWeight.Bold else FontWeight.Normal,
+            fontStyle = if (box.italic) FontStyle.Italic else FontStyle.Normal,
+            textDecoration = decoration(box),
+            color = parseColor(box.textColorHex) ?: Color.Black,
+            textAlign = alignment(box.alignment),
+            // 行距在 Compose 是 lineHeight（行高），Apple 的是「額外間距」。
+            //
+            // 沒設額外間距時**不指定行高**，讓字型自己的行高生效：之前一律 = 字級（1.0 倍），
+            // 西文勉強夠用，泰文的上下母音與聲調符號會疊到上一行、韓文與日文的行也擠在一起。
+            // 設了額外間距就是「字型自然行高 + 額外間距」，與 Apple 同義（自然行高以 1.2 倍估）。
+            lineHeight = box.lineSpacing
+                ?.let { (box.fontSize * 1.2f + it).sp }
+                ?: androidx.compose.ui.unit.TextUnit.Unspecified
+        )
+        if (isEditing && interactive) {
+            val focusRequester = remember(box.id) { FocusRequester() }
+            val keyboard = LocalSoftwareKeyboardController.current
+            var field by remember(box.id) {
+                mutableStateOf(TextFieldValue(box.text, TextRange(box.text.length)))
+            }
+            var hadFocus by remember(box.id) { mutableStateOf(false) }
+            LaunchedEffect(box.id) {
+                focusRequester.requestFocus()
+                keyboard?.show()
+            }
+            BasicTextField(
+                value = field,
+                onValueChange = { next ->
+                    val b = currentBox
+                    val old = b.text
+                    field = next
+                    if (next.text != old) {
+                        b.text = next.text
+                        RichText.adjustRuns(b, old)
+                        onChanged(b)
+                    }
+                },
+                textStyle = inlineStyle,
+                // 方塊跟著內容長高（對齊 Apple）：無框的即點即書方塊也會縮回，其餘只增不減。
+                onTextLayout = { result ->
+                    val b = currentBox
+                    val needed = RuledWriting.boxHeight(result.size.height / density)
+                    val target = if (b.hasBorder) maxOf(b.height, needed) else needed
+                    if (abs(target - b.height) > 0.5f) {
+                        b.height = target
+                        onChanged(b)
+                    }
+                },
+                cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .focusRequester(focusRequester)
+                    .onFocusChanged { state ->
+                        if (state.isFocused) hadFocus = true
+                        else if (hadFocus) onEndEdit(currentBox)
+                    }
+            )
+        } else {
         Text(
             text = RichText.annotated(box),
-            style = TextStyle(
-                fontSize = box.fontSize.sp,
-                fontFamily = resolveFontFamily(box.fontFamily),
-                fontWeight = if (box.bold) FontWeight.Bold else FontWeight.Normal,
-                fontStyle = if (box.italic) FontStyle.Italic else FontStyle.Normal,
-                textDecoration = decoration(box),
-                color = parseColor(box.textColorHex) ?: Color.Black,
-                textAlign = alignment(box.alignment),
-                // 行距在 Compose 是 lineHeight（行高），Apple 的是「額外間距」。
-                //
-                // 沒設額外間距時**不指定行高**，讓字型自己的行高生效：之前一律 = 字級（1.0 倍），
-                // 西文勉強夠用，泰文的上下母音與聲調符號會疊到上一行、韓文與日文的行也擠在一起。
-                // 設了額外間距就是「字型自然行高 + 額外間距」，與 Apple 同義（自然行高以 1.2 倍估）。
-                lineHeight = box.lineSpacing
-                    ?.let { (box.fontSize * 1.2f + it).sp }
-                    ?: androidx.compose.ui.unit.TextUnit.Unspecified
-            )
+            style = inlineStyle
         )
+        }
     }
 
         if (isSelected && interactive) {

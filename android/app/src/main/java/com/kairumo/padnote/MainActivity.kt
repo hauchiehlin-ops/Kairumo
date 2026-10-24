@@ -1,6 +1,7 @@
 package com.kairumo.padnote
 
 import com.kairumo.padnote.canvas.fingerTapOnLockedObject
+import com.kairumo.padnote.text.doubleTapToWrite
 import android.os.Bundle
 import java.io.File
 import android.view.KeyEvent
@@ -4582,10 +4583,11 @@ private fun InkScreen(
                         showMenu = false
                         // 放在頁面左上一點的位置：使用者接著就會把它拖到想要的地方，
                         // 放在正中央反而會蓋住他剛寫的東西。
-                        val box = textStore.create(x = 60f, y = 80f)
+                        val box = textStore.createBoxed(200f, 200f, textStore.pageRules(meta.paperId(pageIndex)), snapToGrid)
                         textRevision++
                         selectedTextId = box.id
-                        editingText = box
+                        com.kairumo.padnote.text.InlineTextEditing.activeId = box.id
+                        editorMode = EditorMode.TYPE
                     }
                 )
                 DropdownMenuItem(
@@ -4723,9 +4725,10 @@ private fun InkScreen(
         },
         onOpenColorWheel = { showProColorWheel = true },
         onAddTextBox = {
-            val box = textStore.create(x = 100f, y = 150f)
+            val box = textStore.createBoxed(200f, 200f, textStore.pageRules(meta.paperId(pageIndex)), snapToGrid)
             selectedTextId = box.id
-            editingText = box
+            com.kairumo.padnote.text.InlineTextEditing.activeId = box.id
+            editorMode = EditorMode.TYPE
             val updated = com.kairumo.padnote.canvas.ObjectStacking.bringToFront(setOf(box.id), stackOrder)
             meta.setObjectOrder(notebook?.first, pageIndex, updated)
             stackRevision++
@@ -4834,9 +4837,10 @@ private fun InkScreen(
                 // 1. 新增文字方塊
                 TextButton(
                     onClick = {
-                        val box = textStore.create(x = 100f, y = 150f)
+                        val box = textStore.createBoxed(200f, 200f, textStore.pageRules(meta.paperId(pageIndex)), snapToGrid)
                         selectedTextId = box.id
-                        editingText = box
+                        com.kairumo.padnote.text.InlineTextEditing.activeId = box.id
+                        editorMode = EditorMode.TYPE
                         val updated = com.kairumo.padnote.canvas.ObjectStacking.bringToFront(setOf(box.id), stackOrder)
                         meta.setObjectOrder(notebook?.first, pageIndex, updated)
                         stackRevision++
@@ -5174,6 +5178,7 @@ private fun InkScreen(
                         objectClipboard = objectClipboard,
                         onObjectClipboardChange = { objectClipboard = it },
                         isPlacingPasteObject = isPlacingPasteObject,
+                        snapToGrid = snapToGrid,
                         onPlacingPasteObjectChange = { isPlacingPasteObject = it },
                         onMetaObjectsChanged = {
                             links = meta.links(); models3D = meta.models3D(); audioCards = meta.audioCards()
@@ -5588,6 +5593,26 @@ private fun InkScreen(
                         }
                     }
                 )
+                // 手繪模式下手指雙擊空白處：建立文字方塊並切到打字模式（對齊 Apple）。
+                .doubleTapToWrite(
+                    enabled = editorMode == EditorMode.DRAW && !inkTool.isLasso && !inkTool.isMaskingTape &&
+                        !isPlacingCommentPin && !isPlacingPasteObject,
+                    density = canvasDensity,
+                    engine = engine,
+                    textStore = textStore,
+                    meta = meta,
+                    session = notebook?.first,
+                    pageIndex = pageIndex,
+                    snapToGrid = snapToGrid,
+                    frames = marqueeCandidatesLatest.sortedBy { stackOrderLatest.indexOf(it.id) },
+                    stackOrder = stackOrderLatest,
+                    onWritten = { box ->
+                        selectedTextId = box.id
+                        editorMode = EditorMode.TYPE
+                        stackRevision++
+                        textRevision++
+                    }
+                )
                 .then(
                     if (editorMode == EditorMode.TYPE) {
                         Modifier.pointerInput(pageIndex, snapToGrid) {
@@ -5611,19 +5636,9 @@ private fun InkScreen(
                                 }
                                 if (hitExisting != null) {
                                     selectedTextId = hitExisting.id
-                                    editingText = hitExisting
+                                    com.kairumo.padnote.text.InlineTextEditing.activeId = hitExisting.id
                                 } else {
-                                    var targetX = tapX
-                                    var targetY = tapY
-                                    if (snapToGrid) {
-                                        val step = 20f
-                                        targetX = kotlin.math.round(targetX / step) * step
-                                        targetY = kotlin.math.round(targetY / step) * step
-                                    }
-                                    val newBox = textStore.create(
-                                        x = maxOf(20f, minOf(targetX, 700f)),
-                                        y = maxOf(20f, minOf(targetY, 1000f))
-                                    )
+                                    val newBox = textStore.createTapToWrite(tapX, tapY, textStore.pageRules(meta.paperId(pageIndex)), snapToGrid)
                                     val updatedOrder = com.kairumo.padnote.canvas.ObjectStacking.bringToFront(
                                         setOf(newBox.id),
                                         stackOrder
@@ -5632,7 +5647,7 @@ private fun InkScreen(
                                     stackRevision++
                                     textRevision++
                                     selectedTextId = newBox.id
-                                    editingText = newBox
+                                    com.kairumo.padnote.text.InlineTextEditing.activeId = newBox.id
                                 }
                             }
                         }
@@ -5859,6 +5874,16 @@ private fun InkScreen(
                     }
                 },
                 onEditStyle = { editingText = it },
+                inlineEditingId = com.kairumo.padnote.text.InlineTextEditing.activeId,
+                onInlineEditStart = { id -> com.kairumo.padnote.text.InlineTextEditing.activeId = id },
+                onInlineEditEnd = { box ->
+                    if (com.kairumo.padnote.text.InlineTextEditing.activeId == box.id) com.kairumo.padnote.text.InlineTextEditing.activeId = null
+                    if (box.text.isBlank() && editingText?.id != box.id) {
+                        textStore.remove(box)
+                        if (selectedTextId == box.id) selectedTextId = null
+                        textRevision++
+                    }
+                },
                 onChanged = { box -> textStore.persist(box); textRevision++ },
                 onDelete = { box ->
                     textStore.remove(box)

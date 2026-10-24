@@ -169,3 +169,58 @@ fun UnlockPrompt(frame: MarqueeHit, label: String, onUnlock: () -> Unit) {
         Text("🔓 $label", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
     }
 }
+
+/** 兩次輕點之間的最長間隔（毫秒）。 */
+private const val DOUBLE_TAP_MILLIS = 350L
+
+/**
+ * 手寫模式下**手指雙擊**空白處：呼叫 [onDoubleTap]（本地座標 px）。
+ *
+ * 和 [fingerTapOnLockedObject] 一樣在 Initial 階段旁觀、不擋其他手勢；只看手指，
+ * 筆尖照常書寫。成立時（第二下在原處抬起）先 [onCancelInk] 取消進行中的那一筆，
+ * 再把抬起事件吃掉。第一下輕點照舊是一般的點，不受影響。
+ */
+fun Modifier.fingerDoubleTap(
+    key: Any?,
+    hitAt: (Offset) -> Boolean,
+    onCancelInk: () -> Unit,
+    onDoubleTap: (Offset) -> Unit
+): Modifier = pointerInput(key) {
+    var lastTapTime = 0L
+    var lastTapPos = Offset.Zero
+    awaitEachGesture {
+        val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+        if (down.type != PointerType.Touch || !hitAt(down.position)) {
+            lastTapTime = 0L
+            return@awaitEachGesture
+        }
+        val slop = viewConfiguration.touchSlop
+        var released: PointerInputChange? = null
+        withTimeoutOrNull(LOCK_TAP_MILLIS) {
+            while (released == null) {
+                val event = awaitPointerEvent(PointerEventPass.Initial)
+                val tracked = event.changes.firstOrNull { it.id == down.id } ?: break
+                if (event.changes.count { it.pressed } > 1) break
+                if ((tracked.position - down.position).getDistance() > slop) break
+                if (!tracked.pressed) released = tracked
+            }
+        }
+        val up = released
+        if (up == null) {
+            lastTapTime = 0L
+            return@awaitEachGesture
+        }
+        val now = up.uptimeMillis
+        val isSecond = lastTapTime != 0L && now - lastTapTime <= DOUBLE_TAP_MILLIS &&
+            (up.position - lastTapPos).getDistance() <= slop * 6f
+        if (isSecond) {
+            lastTapTime = 0L
+            onCancelInk()
+            up.consume()
+            onDoubleTap(up.position)
+        } else {
+            lastTapTime = now
+            lastTapPos = up.position
+        }
+    }
+}
