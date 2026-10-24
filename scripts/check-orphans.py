@@ -82,6 +82,9 @@ FRAMEWORK_CALLBACKS = {
     "dismantleUIViewController", "sizeThatFits", "placeSubviews", "body",
     "presentationAnchor", "pointerInteraction", "pencilInteraction",
     "pencilInteractionDidTap", "scrollViewDidScroll", "scrollViewDidZoom",
+    "scrollViewWillBeginZooming", "scrollViewDidEndZooming",
+    "scrollViewWillBeginDragging", "scrollViewDidEndDragging",
+    "scrollViewDidEndDecelerating",
     "viewForZooming", "gestureRecognizer", "documentPicker", "connection",
     # PencilKit
     "canvasViewDrawingDidChange", "canvasViewSelectionDidChange",
