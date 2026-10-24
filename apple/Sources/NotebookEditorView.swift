@@ -1690,27 +1690,36 @@ struct CanvasRepresentable: UIViewRepresentable {
             }
         }
 
-        func scrollViewWillBeginZooming(_ scrollView: UIScrollView, with view: UIView?) {
+        // unused-param-ok: UIScrollViewDelegate 回呼協定簽章由 UIKit 定死
+        // orphan-ok: UIScrollViewDelegate 由系統 UIKit 呼叫的回呼
+        func scrollViewWillBeginZooming(_: UIScrollView, with _: UIView?) {
             CanvasTouchState.isCanvasNavigating = true
         }
 
-        func scrollViewDidEndZooming(_ scrollView: UIScrollView, with view: UIView?, atScale scale: CGFloat) {
+        // unused-param-ok: UIScrollViewDelegate 回呼協定簽章由 UIKit 定死
+        // orphan-ok: UIScrollViewDelegate 由系統 UIKit 呼叫的回呼
+        func scrollViewDidEndZooming(_: UIScrollView, with _: UIView?, atScale _: CGFloat) {
             CanvasTouchState.isCanvasNavigating = false
         }
 
+        // orphan-ok: UIScrollViewDelegate 由系統 UIKit 呼叫的回呼
         func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
             if scrollView.panGestureRecognizer.numberOfTouches >= 2 {
                 CanvasTouchState.isCanvasNavigating = true
             }
         }
 
-        func scrollViewDidEndDragging(_ scrollView: UIScrollView, decelerate: Bool) {
+        // unused-param-ok: UIScrollViewDelegate 回呼協定簽章由 UIKit 定死
+        // orphan-ok: UIScrollViewDelegate 由系統 UIKit 呼叫的回呼
+        func scrollViewDidEndDragging(_: UIScrollView, decelerate: Bool) {
             if !decelerate {
                 CanvasTouchState.isCanvasNavigating = false
             }
         }
 
-        func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
+        // unused-param-ok: UIScrollViewDelegate 回呼協定簽章由 UIKit 定死
+        // orphan-ok: UIScrollViewDelegate 由系統 UIKit 呼叫的回呼
+        func scrollViewDidEndDecelerating(_: UIScrollView) {
             CanvasTouchState.isCanvasNavigating = false
         }
 

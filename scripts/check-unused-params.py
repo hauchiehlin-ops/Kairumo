@@ -70,6 +70,9 @@ FRAMEWORK_CALLBACKS = {
     "sizeThatFits", "placeSubviews",
     # UIDocumentPickerDelegate / UIScrollViewDelegate 等常見回呼
     "documentPicker", "scrollViewDidScroll", "scrollViewDidZoom",
+    "scrollViewWillBeginZooming", "scrollViewDidEndZooming",
+    "scrollViewWillBeginDragging", "scrollViewDidEndDragging",
+    "scrollViewDidEndDecelerating",
     "viewForZooming", "gestureRecognizer", "connection",
 }
 
