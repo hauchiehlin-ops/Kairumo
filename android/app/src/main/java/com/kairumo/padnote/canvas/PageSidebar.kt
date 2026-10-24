@@ -231,12 +231,13 @@ fun PageSidebar(
             return@Column
         }
 
+        val actualCount = maxOf(1, maxOf(pageCount, session?.pageCount()?.toInt() ?: 1))
         LazyColumn(
             modifier = Modifier.weight(1f).fillMaxWidth().testTag("editor.sidebar.list"),
             contentPadding = androidx.compose.foundation.layout.PaddingValues(DS.Space.m),
             verticalArrangement = Arrangement.spacedBy(DS.Space.m)
         ) {
-            items((0 until maxOf(1, pageCount)).toList()) { index ->
+            items((0 until actualCount).toList(), key = { idx -> (session?.pageIdAt(idx.toUInt()) ?: "").ifEmpty { "page-$idx" } }) { index ->
                 PageSidebarRow(
                     session = session,
                     index = index,

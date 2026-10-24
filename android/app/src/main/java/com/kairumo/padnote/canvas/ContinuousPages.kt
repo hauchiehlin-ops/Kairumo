@@ -500,12 +500,19 @@ fun ContinuousPagesView(
                 undoInk = { page ->
                     val rt = runtimes[page]
                     val undone = rt?.engine?.undo() == true
-                    if (undone) { rt?.bump(); reveal(page) }
+                    if (undone) {
+                        rt?.isRestoring = true
+                        rt?.bump()
+                        reveal(page)
+                    }
                     undone
                 }
             )
             // 這次開啟之後還沒做過任何事：與單頁模式相同，收回焦點頁檔案裡的最後一筆。
-            did || runtimes[pageIdAt(currentFocus)]?.let { rt -> rt.engine.undo().also { if (it) rt.bump() } } == true
+            did || runtimes[pageIdAt(currentFocus)]?.let { rt ->
+                rt.isRestoring = true
+                rt.engine.undo().also { if (it) rt.bump() }
+            } == true
         }
         undoController?.redoHandler = {
             val did = history.redoAcrossPages(
@@ -516,11 +523,18 @@ fun ContinuousPagesView(
                 redoInk = { page ->
                     val rt = runtimes[page]
                     val redone = rt?.engine?.redo() == true
-                    if (redone) { rt?.bump(); reveal(page) }
+                    if (redone) {
+                        rt?.isRestoring = true
+                        rt?.bump()
+                        reveal(page)
+                    }
                     redone
                 }
             )
-            did || runtimes[pageIdAt(currentFocus)]?.let { rt -> rt.engine.redo().also { if (it) rt.bump() } } == true
+            did || runtimes[pageIdAt(currentFocus)]?.let { rt ->
+                rt.isRestoring = true
+                rt.engine.redo().also { if (it) rt.bump() }
+            } == true
         }
         onDispose {
             undoController?.undoHandler = null
@@ -686,10 +700,13 @@ fun ContinuousPagesView(
             verticalArrangement = Arrangement.spacedBy(20.dp),
             contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 20.dp)
         ) {
-            items(maxOf(1, pageCount)) { index ->
+            items(
+                count = maxOf(1, pageCount),
+                key = { idx -> pageIdAt(idx).ifEmpty { "page-$idx" } }
+            ) { index ->
                 Box(Modifier.scaledPage(scale).zIndex(if (draggingPage == index) 1f else 0f)) {
-                    key(index) {
-                        val pageId = remember(session, index, pageCount) { pageIdAt(index) }
+                    val pageId = remember(session, index, pageCount) { pageIdAt(index) }
+                    key(pageId.ifEmpty { index.toString() }) {
                         val crossing = PageCrossing(
                             page = index,
                             pageCount = maxOf(1, pageCount),
@@ -778,10 +795,12 @@ fun ContinuousPagesView(
         }
 
         // 畫布物件剪下／複製／貼上浮動工具丸（在手繪與打字模式下皆可使用）。
-        if (activeObjectSelection != null || objectClipboard.isNotEmpty()) {
+        // 文字方塊自帶 Apple 對齊動作列（內含剪下/複製/刪除），單選文字方塊時不重複顯示通用膠囊。
+        val isSingleTextSelected = editorMode == EditorMode.TYPE && activeObjectSelection != null
+        if ((activeObjectSelection != null && !isSingleTextSelected) || objectClipboard.isNotEmpty()) {
             val l = { key: String -> com.kairumo.padnote.LocalizationStrings.localized(key, com.kairumo.padnote.currentLanguageTag()) }
             ObjectPastePill(
-                hasSelection = activeObjectSelection != null,
+                hasSelection = activeObjectSelection != null && !isSingleTextSelected,
                 hasClipboard = objectClipboard.isNotEmpty(),
                 isPlacingPaste = isPlacingPasteObject,
                 l = l,
@@ -968,6 +987,7 @@ private fun ContinuousPage(
     // reloadToken 讓外層插入物件之後這一頁看得到新東西 ——
     // 不重讀的話，從選單插進去的文字方塊要等切換頁面才會出現。
     LaunchedEffect(session, pageId, reloadToken) {
+        if (history.isSuppressing || runtime.isRestoring) return@LaunchedEffect
         textStore.load()
         shapeStore.load()
         tableStore.load()
@@ -980,7 +1000,7 @@ private fun ContinuousPage(
     }
     // 物件有動（各個 onChanged 都會遞增 revision）就比對一次；筆跡的變動比對不出差異，不會多記一步。
     LaunchedEffect(revision) {
-        if (runtime.isRestoring) {
+        if (runtime.isRestoring || history.isSuppressing) {
             runtime.isRestoring = false
             history.reset(runtime.snapshot(meta, pageIndex), historyKey)
             return@LaunchedEffect
@@ -1306,9 +1326,16 @@ private fun ContinuousPage(
                 boxes = textStore.all,
                 density = density,
                 selectedId = selectedId,
+                revision = revision,
                 onSelect = { updateSelectedId(it); selectedConnectionId = null },
                 onEditStyle = { editingText = it },
                 onChanged = { textStore.persist(it); revision++ },
+                onDelete = { box ->
+                    textStore.remove(box)
+                    if (selectedId == box.id) selectedId = null
+                    if (editingText?.id == box.id) editingText = null
+                    revision++
+                },
                 zIndexOf = zIndexOf,
                 modifier = Modifier.fillMaxSize()
             )
@@ -1501,9 +1528,11 @@ private fun ContinuousPage(
         }
     }
     editingText?.let { box ->
+        val reorder = LocalObjectReorder.current
         TextBoxEditor(
             box = box,
             languageTag = languageTag,
+            onReorder = { op -> reorder?.invoke(box.id, op) },
             onChanged = { textStore.persist(it); revision++ },
             onDelete = { textStore.remove(box); selectedId = null; revision++; editingText = null },
             onDismiss = { editingText = null }

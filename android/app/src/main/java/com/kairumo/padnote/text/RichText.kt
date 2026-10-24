@@ -304,16 +304,51 @@ object RichText {
         val text = box.text
         val b = base(box)
         val runs = box.runs
-        if (runs.isNullOrEmpty()) return AnnotatedString(text)
-        val cells = expand(runs, text.length)
+        val paragraphSpacing = box.paragraphSpacing ?: 0f
+        val firstIndent = box.firstLineIndent ?: 0f
+        val restIndent = box.paragraphIndent ?: 0f
+        val hasIndent = firstIndent > 0f || restIndent > 0f
+
+        val cells = if (!runs.isNullOrEmpty()) expand(runs, text.length) else null
+
         return buildAnnotatedString {
             append(text)
-            var i = 0
-            while (i < text.length) {
-                var j = i + 1
-                while (j < text.length && cells[j] == cells[i]) j++
-                if (!cells[i].isEmpty) addStyle(spanStyle(resolve(cells[i], b)), i, j)
-                i = j
+            if (cells != null) {
+                var i = 0
+                while (i < text.length) {
+                    var j = i + 1
+                    while (j < text.length && cells[j] == cells[i]) j++
+                    if (!cells[i].isEmpty) addStyle(spanStyle(resolve(cells[i], b)), i, j)
+                    i = j
+                }
+            }
+            if (paragraphSpacing > 0f) {
+                for (idx in text.indices) {
+                    if (text[idx] == '\n') {
+                        addStyle(
+                            SpanStyle(fontSize = (box.fontSize + paragraphSpacing).sp),
+                            idx,
+                            idx + 1
+                        )
+                    }
+                }
+            }
+            if (hasIndent && text.isNotEmpty()) {
+                var pStart = 0
+                while (pStart < text.length) {
+                    val pEnd = text.indexOf('\n', pStart).let { if (it == -1) text.length else it + 1 }
+                    addStyle(
+                        androidx.compose.ui.text.ParagraphStyle(
+                            textIndent = androidx.compose.ui.text.style.TextIndent(
+                                firstLine = firstIndent.sp,
+                                restLine = restIndent.sp
+                            )
+                        ),
+                        pStart,
+                        pEnd
+                    )
+                    pStart = pEnd
+                }
             }
         }
     }

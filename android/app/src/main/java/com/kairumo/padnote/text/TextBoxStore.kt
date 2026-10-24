@@ -18,9 +18,9 @@ class TextBoxStore(
 
     private val boxes = LinkedHashMap<String, TextBox>()
 
-    val all: List<TextBox> get() = boxes.values.toList()
+    val all: List<TextBox> get() = boxes.values.map { it.copy() }
 
-    fun find(id: String): TextBox? = boxes[id]
+    fun find(id: String): TextBox? = boxes[id]?.copy()
 
     /** 從核心讀回這一頁的文字方塊。 */
     fun load() {
@@ -54,7 +54,7 @@ class TextBoxStore(
             UUID.randomUUID().toString()
         }
         val box = TextBox(id = id, x = x, y = y)
-        boxes[id] = box
+        boxes[id] = box.copy()
         persist(box)
         return box
     }
@@ -62,7 +62,7 @@ class TextBoxStore(
     /** 寫回核心。文字、位置、外觀三樣都要 —— 少一樣就會有東西跨不過平台。 */
     fun persist(box: TextBox) {
         val s = session ?: return
-        boxes[box.id] = box
+        boxes[box.id] = box.copy()
         runCatching {
             // 文字是 CRDT，整段換掉的做法是刪光再插入。
             val current = s.blockText(box.id) ?: ""

@@ -2,15 +2,28 @@ package com.kairumo.padnote.text
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.awaitTouchSlopOrCancellation
+import androidx.compose.foundation.gestures.drag
+import androidx.compose.ui.input.pointer.positionChange
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -18,7 +31,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.shadow
 import com.kairumo.padnote.canvas.gesturesIf
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -33,6 +49,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
+import com.kairumo.padnote.LocalizationStrings
+import com.kairumo.padnote.ui.LocalAppLanguage
+import com.kairumo.padnote.canvas.LocalObjectReorder
+import com.kairumo.padnote.canvas.LocalObjectClipboard
+import com.kairumo.padnote.canvas.ObjectStacking
 import com.kairumo.padnote.canvas.CanvasRotation
 import com.kairumo.padnote.canvas.ResizeHandle
 import com.kairumo.padnote.canvas.RotationHandle
@@ -101,10 +122,12 @@ fun TextBoxLayer(
     onEditStyle: (TextBox) -> Unit,
     onChanged: (TextBox) -> Unit,
     onMoved: ((box: TextBox, dx: Float, dy: Float) -> Unit)? = null,
+    onDelete: ((TextBox) -> Unit)? = null,
     /**
      * 這個物件的堆疊 z 值。跨型別共用同一份順序（見 ObjectStacking）。
      */
     zIndexOf: (String) -> Float,
+    revision: Int = 0,
     modifier: Modifier = Modifier
 ) {
     // **不包一層自己的 Box。**
@@ -123,13 +146,41 @@ fun TextBoxLayer(
                     box = box,
                     density = density,
                     isSelected = box.id == selectedId,
+                    revision = revision,
                     onSelect = { onSelect(box.id) },
                     onEditStyle = { onEditStyle(box) },
                     onChanged = onChanged,
-                    onMoved = onMoved
+                    onMoved = onMoved,
+                    onDelete = onDelete
                 )
             }
         }
+}
+
+@Composable
+private fun TextActionButton(
+    icon: String,
+    title: String,
+    backgroundColor: Color,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .clip(RoundedCornerShape(7.dp))
+            .background(backgroundColor)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 9.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        Text(icon, fontSize = 11.sp, color = Color.White)
+        Text(
+            title,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = Color.White
+        )
+    }
 }
 
 @Composable
@@ -141,30 +192,66 @@ private fun TextBoxView(
     box: TextBox,
     density: Float,
     isSelected: Boolean,
+    revision: Int = 0,
     onSelect: () -> Unit,
     onEditStyle: () -> Unit,
     onChanged: (TextBox) -> Unit,
-    onMoved: ((box: TextBox, dx: Float, dy: Float) -> Unit)? = null
+    onMoved: ((box: TextBox, dx: Float, dy: Float) -> Unit)? = null,
+    onDelete: ((TextBox) -> Unit)? = null
 ) {
     // 連續模式：拖到哪一頁就歸哪一頁（單頁模式為 null，照舊夾在本頁）。
     val crossing by androidx.compose.runtime.rememberUpdatedState(com.kairumo.padnote.canvas.LocalPageCrossing.current)
     val currentBox by androidx.compose.runtime.rememberUpdatedState(box)
+    val language = LocalAppLanguage.current
+    val reorder = LocalObjectReorder.current
+    val clipboard = LocalObjectClipboard.current
+    var contextMenuOpen by remember(box.id) { mutableStateOf(false) }
+    var orderMenuOpen by remember(box.id) { mutableStateOf(false) }
     val shape = RoundedCornerShape(box.cornerRadius.dp)
-    var startX by remember { mutableFloatStateOf(box.x) }
-    var startY by remember { mutableFloatStateOf(box.y) }
-    var liveX by remember(box.id, box.x) { mutableFloatStateOf(box.x) }
-    var liveY by remember(box.id, box.y) { mutableFloatStateOf(box.y) }
-    var liveWidth by remember(box.id, box.width) { mutableFloatStateOf(box.width) }
-    var liveHeight by remember(box.id, box.height) { mutableFloatStateOf(box.height) }
-    var liveRotation by remember(box.id, box.rotationDegrees) { mutableFloatStateOf(box.rotationDegrees ?: 0f) }
+    var startX by remember(box.id, box.x, revision) { mutableFloatStateOf(box.x) }
+    var startY by remember(box.id, box.y, revision) { mutableFloatStateOf(box.y) }
+    var liveX by remember(box.id, box.x, revision) { mutableFloatStateOf(box.x) }
+    var liveY by remember(box.id, box.y, revision) { mutableFloatStateOf(box.y) }
+    var liveWidth by remember(box.id, box.width, revision) { mutableFloatStateOf(box.width) }
+    var liveHeight by remember(box.id, box.height, revision) { mutableFloatStateOf(box.height) }
+    var liveRotation by remember(box.id, box.rotationDegrees, revision) { mutableFloatStateOf(box.rotationDegrees ?: 0f) }
     val rotation = CanvasRotation.normalized(liveRotation)
+    var accX by remember { mutableFloatStateOf(0f) }
+    var accY by remember { mutableFloatStateOf(0f) }
 
-    // 外層只負責定位，**不旋轉** —— 旋轉把手要掛在這一層，
-    // 放進旋轉裡的話拖曳算出的角度會疊加自身旋轉，物件會失控加速。
-    Box(modifier = Modifier.offset(x = liveX.dp, y = liveY.dp).zIndex(zIndex)) {
+    val finishDrag: () -> Unit = {
+        val b = currentBox
+        val landed = com.kairumo.padnote.canvas.landObject(
+            b.id, liveX, liveY, liveWidth, liveHeight, crossing)
+        liveX = landed.x
+        liveY = landed.y
+        b.x = landed.x
+        b.y = landed.y
+        val dx = b.x - startX
+        val dy = b.y - startY
+        if (landed.page == null && (dx != 0f || dy != 0f)) {
+            onMoved?.invoke(b, dx, dy)
+        }
+        onChanged(b)
+        landed.page?.let { crossing?.moved?.invoke(b.id, it) }
+        crossing?.ended?.invoke()
+    }
+
+    val topPadding = 56f
+    val horizontalPadding = 24f
+    val bottomPadding = 24f
+
+    // 外層自帶安全邊界，不用負的 offset，避免把手與動作列被 Compose 視圖邊界裁切裁掉
+    Box(
+        modifier = Modifier
+            .offset(x = (liveX - horizontalPadding).dp, y = (liveY - topPadding).dp)
+            .size((liveWidth + horizontalPadding * 2f).dp, (liveHeight + topPadding + bottomPadding).dp)
+            .zIndex(zIndex)
+    ) {
 
     Box(
         modifier = Modifier
+            .offset(x = horizontalPadding.dp, y = topPadding.dp)
             .width(liveWidth.dp)
             .heightIn(min = liveHeight.dp)
             .graphicsLayer { rotationZ = rotation }
@@ -183,63 +270,52 @@ private fun TextBoxView(
                     Modifier
                 }
             )
-            // 點一下＝選取。原本**只有拖曳**才會選到 —— 使用者點一下沒反應，
-            // 就以為這個方塊不能編輯（形狀與圖片都是點一下就選到）。
-            .gesturesIf(interactive) { pointerInput(box.id) {
-                detectTapGestures(
-                    onTap = { onSelect() },
-                    onDoubleTap = { onEditStyle() }
-                )
-            } }
-            .gesturesIf(interactive) { pointerInput(box.id) {
-                var accX = 0f
-                var accY = 0f
-                val finishDrag: () -> Unit = {
-                    val b = currentBox
-                    val landed = com.kairumo.padnote.canvas.landObject(
-                        b.id, liveX, liveY, liveWidth, liveHeight, crossing)
-                    liveX = landed.x
-                    liveY = landed.y
-                    b.x = landed.x
-                    b.y = landed.y
-                    val dx = b.x - startX
-                    val dy = b.y - startY
-                    if (landed.page == null && (dx != 0f || dy != 0f)) {
-                        onMoved?.invoke(b, dx, dy)
+            // 點一下＝選取，拖曳＝搬移（完全對齊 iPad）
+            .gesturesIf(interactive) {
+                pointerInput(box.id) {
+                    awaitEachGesture {
+                        val down = awaitFirstDown(requireUnconsumed = false)
+                        var accDragX = 0f
+                        var accDragY = 0f
+                        val dragChange = awaitTouchSlopOrCancellation(down.id) { change, over ->
+                            change.consume()
+                            accDragX = over.x
+                            accDragY = over.y
+                        }
+                        if (dragChange != null) {
+                            val b = currentBox
+                            startX = b.x
+                            startY = b.y
+                            accX = accDragX
+                            accY = accDragY
+                            liveX = b.x
+                            liveY = b.y
+                            onSelect()
+                            crossing?.began?.invoke()
+                            val rad = liveRotation * kotlin.math.PI / 180.0
+                            val c = kotlin.math.cos(rad).toFloat()
+                            val sn = kotlin.math.sin(rad).toFloat()
+                            liveX = startX + (accX * c - accY * sn) / density
+                            liveY = startY + (accX * sn + accY * c) / density
+                            b.x = liveX
+                            b.y = liveY
+
+                            drag(dragChange.id) { change ->
+                                change.consume()
+                                accX += change.positionChange().x
+                                accY += change.positionChange().y
+                                liveX = startX + (accX * c - accY * sn) / density
+                                liveY = startY + (accX * sn + accY * c) / density
+                                b.x = liveX
+                                b.y = liveY
+                            }
+                            finishDrag()
+                        } else {
+                            onSelect()
+                        }
                     }
-                    onChanged(b)
-                    landed.page?.let { crossing?.moved?.invoke(b.id, it) }
-                    crossing?.ended?.invoke()
                 }
-                detectDragGestures(
-                    onDragStart = {
-                        val b = currentBox
-                        startX = b.x
-                        startY = b.y
-                        accX = 0f
-                        accY = 0f
-                        liveX = b.x
-                        liveY = b.y
-                        onSelect()
-                        crossing?.began?.invoke()
-                    },
-                    onDragCancel = finishDrag,
-                    onDrag = { change, drag ->
-                        change.consume()
-                        accX += drag.x
-                        accY += drag.y
-                        val rad = liveRotation * kotlin.math.PI / 180.0
-                        val c = kotlin.math.cos(rad).toFloat()
-                        val sn = kotlin.math.sin(rad).toFloat()
-                        // 位移要換回 dp：座標存的是與螢幕密度無關的頁面座標。
-                        liveX = startX + (accX * c - accY * sn) / density
-                        liveY = startY + (accX * sn + accY * c) / density
-                        currentBox.x = liveX
-                        currentBox.y = liveY
-                    },
-                    onDragEnd = finishDrag
-                )
-            } }
+            }
             .padding(textBoxPadding(liveWidth, liveHeight).dp)
     ) {
         // 有逐字格式時，每一段的字級、字型、顏色與醒目提示寫在 AnnotatedString 裡，
@@ -262,18 +338,193 @@ private fun TextBoxView(
                 lineHeight = box.lineSpacing
                     ?.let { (box.fontSize * 1.2f + it).sp }
                     ?: androidx.compose.ui.unit.TextUnit.Unspecified
-            ),
-            modifier = Modifier.padding(start = (box.paragraphIndent ?: 0f).dp)
+            )
         )
     }
 
         if (isSelected && interactive) {
+            // 🌟 頂部精準拖曳把手（膠囊造型 ≡）
+            Box(
+                modifier = Modifier
+                    .offset(x = (horizontalPadding + liveWidth / 2f - 19f).dp, y = (topPadding - 20f).dp)
+                    .size(38.dp, 16.dp)
+                    .shadow(2.dp, RoundedCornerShape(8.dp))
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.9f))
+                    .gesturesIf(interactive) {
+                        pointerInput(box.id) {
+                            detectDragGestures(
+                                onDragStart = {
+                                    val b = currentBox
+                                    startX = b.x
+                                    startY = b.y
+                                    accX = 0f
+                                    accY = 0f
+                                    liveX = b.x
+                                    liveY = b.y
+                                    onSelect()
+                                    crossing?.began?.invoke()
+                                },
+                                onDragCancel = finishDrag,
+                                onDrag = { change, drag ->
+                                    change.consume()
+                                    accX += drag.x
+                                    accY += drag.y
+                                    val rad = liveRotation * kotlin.math.PI / 180.0
+                                    val c = kotlin.math.cos(rad).toFloat()
+                                    val sn = kotlin.math.sin(rad).toFloat()
+                                    liveX = startX + (accX * c - accY * sn) / density
+                                    liveY = startY + (accX * sn + accY * c) / density
+                                    currentBox.x = liveX
+                                    currentBox.y = liveY
+                                },
+                                onDragEnd = finishDrag
+                            )
+                        }
+                    },
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "≡",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            // 🌟 選取時的動作列：編輯、圖層順序、剪下、複製、刪除（完全對齊 iPad）
+            Row(
+                modifier = Modifier
+                    .offset(x = (horizontalPadding + 6f).dp, y = (topPadding - 54f).dp)
+                    .shadow(5.dp, RoundedCornerShape(10.dp))
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.95f))
+                    .border(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f), RoundedCornerShape(10.dp))
+                    .padding(4.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                TextActionButton("✏️", LocalizationStrings.localized("edit", language), Color(0xFF2980B9)) {
+                    onEditStyle()
+                }
+
+                if (reorder != null) {
+                    Box {
+                        Row(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(7.dp))
+                                .background(Color(0xFF8E44AD))
+                                .clickable { orderMenuOpen = true }
+                                .padding(horizontal = 9.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Text("≡", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                            Text(
+                                LocalizationStrings.localized("layer_bring_above_ink", language),
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = Color.White
+                            )
+                            Text("▾", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                        }
+                        DropdownMenu(
+                            expanded = orderMenuOpen,
+                            onDismissRequest = { orderMenuOpen = false }
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text(LocalizationStrings.localized("layer_bring_above_ink", language)) },
+                                onClick = { orderMenuOpen = false; reorder(box.id, ObjectStacking.Reorder.BRING_ABOVE_INK) }
+                            )
+                            DropdownMenuItem(
+                                text = { Text(LocalizationStrings.localized("layer_send_below_ink", language)) },
+                                onClick = { orderMenuOpen = false; reorder(box.id, ObjectStacking.Reorder.SEND_BELOW_INK) }
+                            )
+                            HorizontalDivider()
+                            DropdownMenuItem(
+                                text = { Text(LocalizationStrings.localized("layer_bring_front", language)) },
+                                onClick = { orderMenuOpen = false; reorder(box.id, ObjectStacking.Reorder.TO_FRONT) }
+                            )
+                            DropdownMenuItem(
+                                text = { Text(LocalizationStrings.localized("layer_send_back", language)) },
+                                onClick = { orderMenuOpen = false; reorder(box.id, ObjectStacking.Reorder.TO_BACK) }
+                            )
+                            DropdownMenuItem(
+                                text = { Text(LocalizationStrings.localized("layer_bring_forward", language)) },
+                                onClick = { orderMenuOpen = false; reorder(box.id, ObjectStacking.Reorder.FORWARD) }
+                            )
+                            DropdownMenuItem(
+                                text = { Text(LocalizationStrings.localized("layer_send_backward", language)) },
+                                onClick = { orderMenuOpen = false; reorder(box.id, ObjectStacking.Reorder.BACKWARD) }
+                            )
+                        }
+                    }
+                }
+
+                if (clipboard != null) {
+                    TextActionButton("✂", LocalizationStrings.localized("action_cut", language), Color(0xFFE67E22)) {
+                        clipboard.cut(box.id)
+                    }
+                    TextActionButton("📋", LocalizationStrings.localized("action_copy", language), Color(0xFF16A085)) {
+                        clipboard.copy(box.id)
+                    }
+                }
+
+                if (onDelete != null) {
+                    TextActionButton("🗑", LocalizationStrings.localized("delete", language), Color(0xFFE74C3C)) {
+                        onDelete(box)
+                    }
+                }
+            }
+
+            // 🌟 長按快顯功能表
+            DropdownMenu(
+                expanded = contextMenuOpen,
+                onDismissRequest = { contextMenuOpen = false }
+            ) {
+                DropdownMenuItem(
+                    text = { Text("✏️ " + LocalizationStrings.localized("edit_in_place", language)) },
+                    onClick = { contextMenuOpen = false; onEditStyle() }
+                )
+                DropdownMenuItem(
+                    text = { Text("🎨 " + LocalizationStrings.localized("text_studio", language)) },
+                    onClick = { contextMenuOpen = false; onEditStyle() }
+                )
+                if (reorder != null) {
+                    HorizontalDivider()
+                    DropdownMenuItem(
+                        text = { Text(LocalizationStrings.localized("layer_bring_above_ink", language)) },
+                        onClick = { contextMenuOpen = false; reorder(box.id, ObjectStacking.Reorder.BRING_ABOVE_INK) }
+                    )
+                    DropdownMenuItem(
+                        text = { Text(LocalizationStrings.localized("layer_send_below_ink", language)) },
+                        onClick = { contextMenuOpen = false; reorder(box.id, ObjectStacking.Reorder.SEND_BELOW_INK) }
+                    )
+                    DropdownMenuItem(
+                        text = { Text(LocalizationStrings.localized("layer_bring_front", language)) },
+                        onClick = { contextMenuOpen = false; reorder(box.id, ObjectStacking.Reorder.TO_FRONT) }
+                    )
+                    DropdownMenuItem(
+                        text = { Text(LocalizationStrings.localized("layer_send_back", language)) },
+                        onClick = { contextMenuOpen = false; reorder(box.id, ObjectStacking.Reorder.TO_BACK) }
+                    )
+                }
+                if (onDelete != null) {
+                    HorizontalDivider()
+                    DropdownMenuItem(
+                        text = { Text("🗑 " + LocalizationStrings.localized("delete", language), color = MaterialTheme.colorScheme.error) },
+                        onClick = { contextMenuOpen = false; onDelete(box) }
+                    )
+                }
+            }
+
             // 左下角的樣式鈕：字級、顏色、邊框、圓角、段落全部在那裡。
             StyleHandle(
                 widthDp = liveWidth,
                 heightDp = liveHeight,
                 onTap = onEditStyle,
-                objectId = box.id
+                objectId = box.id,
+                modifier = Modifier.offset(x = horizontalPadding.dp, y = topPadding.dp)
             )
 
             // 右下角的縮放把手。原本 Android 完全沒有 —— 文字方塊的大小
@@ -292,7 +543,8 @@ private fun TextBoxView(
                     currentBox.width = liveWidth
                     currentBox.height = liveHeight
                     onChanged(currentBox)
-                }
+                },
+                modifier = Modifier.offset(x = horizontalPadding.dp, y = topPadding.dp)
             )
 
             RotationHandle(
@@ -307,7 +559,8 @@ private fun TextBoxView(
                 onCommit = {
                     currentBox.rotationDegrees = liveRotation
                     onChanged(currentBox)
-                }
+                },
+                modifier = Modifier.offset(x = horizontalPadding.dp, y = topPadding.dp)
             )
         }
     }
@@ -330,6 +583,9 @@ internal fun resolveBackground(box: TextBox): Color = when {
 
 internal fun parseColor(hex: String?): Color? {
     val value = hex?.removePrefix("#") ?: return null
+    if (value.length == 8) {
+        return runCatching { Color(value.toLong(16)) }.getOrNull()
+    }
     if (value.length != 6) return null
     return runCatching { Color(value.toLong(16) or 0xFF000000L) }.getOrNull()
 }

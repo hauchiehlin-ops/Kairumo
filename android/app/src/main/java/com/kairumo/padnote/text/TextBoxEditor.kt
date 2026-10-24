@@ -1,11 +1,10 @@
 package com.kairumo.padnote.text
 
-import androidx.compose.foundation.layout.height
-import com.kairumo.padnote.ui.DialogResizeHandle
-import com.kairumo.padnote.ui.rememberDialogHeight
+import com.kairumo.padnote.ui.FloatingPanel
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -20,7 +19,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Divider
 import androidx.compose.material3.FilterChip
@@ -77,10 +75,9 @@ fun TextBoxEditor(
     onDelete: () -> Unit,
     onDismiss: () -> Unit
 ) {
-    val height = rememberDialogHeight("textBoxEditor", 280.dp)
-
     fun l(key: String) = LocalizationStrings.localized(key, languageTag)
 
+    var currentBox by remember(box.id) { mutableStateOf(box.copy()) }
     var text by remember(box.id) { mutableStateOf(box.text) }
     // 帶選取範圍的輸入值：Word 式的「選幾個字、按粗體」要知道選了哪幾個字。
     var field by remember(box.id) { mutableStateOf(TextFieldValue(box.text, TextRange(box.text.length))) }
@@ -94,15 +91,21 @@ fun TextBoxEditor(
     var tab by remember(box.id) { mutableStateOf(0) }
     var symbolCategory by remember(box.id) { mutableStateOf(0) }
 
+    LaunchedEffect(box) {
+        currentBox = box.copy()
+    }
+
     fun mutate(change: (TextBox) -> Unit) {
-        change(box)
+        val next = currentBox.copy()
+        change(next)
+        currentBox = next
         revision++
-        onChanged(box)
+        onChanged(next.copy())
     }
 
     // 別人在同一個方塊打了字：換上新內容，游標跟著它原本旁邊的字走（變動在游標前面就平移）。
     LaunchedEffect(remoteRevision) {
-        val incoming = box.text
+        val incoming = currentBox.text
         if (incoming == text) return@LaunchedEffect
         val old = text
         var prefix = 0
@@ -118,32 +121,30 @@ fun TextBoxEditor(
     fun scope(): TextFormatScope {
         val sel = field.selection
         if (!sel.collapsed) {
-            return if (sel.min == 0 && sel.max == box.text.length) TextFormatScope.WholeBox
+            return if (sel.min == 0 && sel.max == currentBox.text.length) TextFormatScope.WholeBox
             else TextFormatScope.Selection(sel.min, sel.max)
         }
         if (!fieldTouched) return TextFormatScope.WholeBox
-        RichText.wordRange(box.text, sel.start)?.let { return TextFormatScope.Selection(it.first, it.last + 1) }
+        RichText.wordRange(currentBox.text, sel.start)?.let { return TextFormatScope.Selection(it.first, it.last + 1) }
         return TextFormatScope.Caret(sel.start)
     }
 
     fun displayedStyle(): ResolvedCharStyle = when (val sc = scope()) {
-        is TextFormatScope.Selection -> RichText.resolvedStyleAt(box, sc.start, sc.end)
+        is TextFormatScope.Selection -> RichText.resolvedStyleAt(currentBox, sc.start, sc.end)
         is TextFormatScope.Caret -> caretStyle?.takeIf { it.first == sc.location }
-            ?.let { RichText.resolve(it.second, RichText.base(box)) }
-            ?: RichText.resolvedStyleAt(box, sc.location, sc.location)
-        TextFormatScope.WholeBox -> RichText.base(box)
+            ?.let { RichText.resolve(it.second, RichText.base(currentBox)) }
+            ?: RichText.resolvedStyleAt(currentBox, sc.location, sc.location)
+        TextFormatScope.WholeBox -> RichText.base(currentBox)
     }
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        confirmButton = { TextButton(onClick = onDismiss) { Text(l("close")) } },
-        dismissButton = { TextButton(onClick = onDelete) { Text(l("delete")) } },
-        title = { Text(l("text_studio")) },
-        text = {
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
+    FloatingPanel(
+        title = l("text_studio"),
+        onClose = onDismiss
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
                 typingPeerName?.let { name ->
                     Text(
                         l("collab_peer_typing").replace("%@", name),
@@ -173,7 +174,7 @@ fun TextBoxEditor(
                     BasicTextField(
                         value = field,
                         onValueChange = { next ->
-                            val old = box.text
+                            val old = currentBox.text
                             if (next.text != old) {
                                 val pending = caretStyle
                                 mutate { b ->
@@ -197,18 +198,20 @@ fun TextBoxEditor(
                         // 編輯中就看得到逐字格式（字級、顏色、醒目提示），不是要關掉面板才知道套上了沒有。
                         visualTransformation = { input ->
                             TransformedText(
-                                if (input.text == box.text) RichText.annotated(box)
+                                if (input.text == currentBox.text) RichText.annotated(currentBox)
                                 else androidx.compose.ui.text.AnnotatedString(input.text),
                                 OffsetMapping.Identity
                             )
                         },
                         textStyle = TextStyle(
-                            fontSize = box.fontSize.coerceIn(10f, 32f).sp,
-                            fontWeight = if (box.bold) androidx.compose.ui.text.font.FontWeight.Bold else null,
-                            fontStyle = if (box.italic) androidx.compose.ui.text.font.FontStyle.Italic else null,
-                            fontFamily = resolveFontFamily(box.fontFamily),
-                            textDecoration = decoration(box),
-                            color = parseColor(box.textColorHex) ?: MaterialTheme.colorScheme.onSurface
+                            fontSize = currentBox.fontSize.coerceIn(10f, 32f).sp,
+                            fontWeight = if (currentBox.bold) androidx.compose.ui.text.font.FontWeight.Bold else null,
+                            fontStyle = if (currentBox.italic) androidx.compose.ui.text.font.FontStyle.Italic else null,
+                            fontFamily = resolveFontFamily(currentBox.fontFamily),
+                            textDecoration = decoration(currentBox),
+                            color = parseColor(currentBox.textColorHex) ?: MaterialTheme.colorScheme.onSurface,
+                            textAlign = alignment(currentBox.alignment),
+                            lineHeight = (currentBox.fontSize.coerceIn(10f, 32f) * 1.2f + (currentBox.lineSpacing ?: 0f)).sp
                         ),
                         cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
                         modifier = Modifier
@@ -229,7 +232,7 @@ fun TextBoxEditor(
                         horizontalArrangement = Arrangement.spacedBy(2.dp)
                     ) {
                         WordFormatControls(
-                            state = WordFormatState.of(box, displayedStyle()),
+                            state = WordFormatState.of(currentBox, displayedStyle()),
                             l = { key -> l(key) },
                             languageTag = languageTag,
                             tagPrefix = "text_editor.format"
@@ -242,9 +245,9 @@ fun TextBoxEditor(
                                 val merged = caretStyle?.takeIf { it.first == loc }?.second?.overlaid(edit) ?: edit
                                 caretStyle = loc to merged
                             }
-                            if (box.text != field.text) {
-                                text = box.text
-                                field = TextFieldValue(box.text, TextRange(box.text.length))
+                            if (currentBox.text != field.text) {
+                                text = currentBox.text
+                                field = TextFieldValue(currentBox.text, TextRange(currentBox.text.length))
                             }
                         }
                     }
@@ -266,35 +269,31 @@ fun TextBoxEditor(
                         }
                 }
 
-                // 對話框高度有限，內容一律可捲 —— 被裁掉的控制項等於不存在。
                 Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(height.value)
-                        .verticalScroll(rememberScrollState()),
+                    modifier = Modifier.fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     when (tab) {
                         0 -> {
                             label(l("font_size"))
                             chipRow(listOf(12f, 16f, 20f, 28f, 36f).map { size ->
-                                ChipSpec("${size.toInt()}", box.fontSize == size && revision >= 0) {
+                                ChipSpec("${size.toInt()}", currentBox.fontSize == size && revision >= 0) {
                                     // 這一頁是「整個方塊」的設定：同一項的逐字覆寫一併拿掉，否則看起來改不動。
                                     mutate { RichText.applyToWholeBox(it, TextCharStyle(fontSize = size)) }
                                 }
                             })
                             label(l("alignment"))
                             chipRow(listOf("left", "center", "right", "justified").map { raw ->
-                                ChipSpec(raw.take(1).uppercase(), box.alignment == raw && revision >= 0) {
+                                ChipSpec(raw.take(1).uppercase(), currentBox.alignment == raw && revision >= 0) {
                                     mutate { it.alignment = raw }
                                 }
                             })
                             label(l("font_style"))
                             chipRow(listOf(
-                                ChipSpec("B", box.bold && revision >= 0) { mutate { RichText.applyToWholeBox(it, TextCharStyle(bold = !it.bold)) } },
-                                ChipSpec("I", box.italic && revision >= 0) { mutate { RichText.applyToWholeBox(it, TextCharStyle(italic = !it.italic)) } },
-                                ChipSpec("U", box.underline && revision >= 0) { mutate { RichText.applyToWholeBox(it, TextCharStyle(underline = !it.underline)) } },
-                                ChipSpec("S", box.strikethrough && revision >= 0) { mutate { RichText.applyToWholeBox(it, TextCharStyle(strikethrough = !it.strikethrough)) } }
+                                ChipSpec("B", currentBox.bold && revision >= 0) { mutate { RichText.applyToWholeBox(it, TextCharStyle(bold = !it.bold)) } },
+                                ChipSpec("I", currentBox.italic && revision >= 0) { mutate { RichText.applyToWholeBox(it, TextCharStyle(italic = !it.italic)) } },
+                                ChipSpec("U", currentBox.underline && revision >= 0) { mutate { RichText.applyToWholeBox(it, TextCharStyle(underline = !it.underline)) } },
+                                ChipSpec("S", currentBox.strikethrough && revision >= 0) { mutate { RichText.applyToWholeBox(it, TextCharStyle(strikethrough = !it.strikethrough)) } }
                             ))
 
                             // 文字顏色。Android 原本完全沒有這一項 —— textColorHex
@@ -302,23 +301,23 @@ fun TextBoxEditor(
                             // 在 iPad 上調成紅色的字，到 Android 上就再也變不回去。
                             label(l("text_color"))
                             chipRow(borderColors().map { hex ->
-                                ChipSpec(hex, box.textColorHex == hex && revision >= 0) {
+                                ChipSpec(hex, currentBox.textColorHex == hex && revision >= 0) {
                                     mutate { RichText.applyToWholeBox(it, TextCharStyle(textColorHex = hex)) }
                                 }
                             })
                         }
 
                         1 -> {
-                            stepperRow(l("line_spacing"), box.lineSpacing ?: 0f, 0f..24f, 2f) { v ->
+                            stepperRow(l("line_spacing"), currentBox.lineSpacing ?: 0f, 0f..24f, 2f) { v ->
                                 mutate { it.lineSpacing = v }
                             }
-                            stepperRow(l("paragraph_spacing"), box.paragraphSpacing ?: 0f, 0f..40f, 4f) { v ->
+                            stepperRow(l("paragraph_spacing"), currentBox.paragraphSpacing ?: 0f, 0f..40f, 4f) { v ->
                                 mutate { it.paragraphSpacing = v }
                             }
-                            stepperRow(l("first_line_indent"), box.firstLineIndent ?: 0f, 0f..64f, 8f) { v ->
+                            stepperRow(l("first_line_indent"), currentBox.firstLineIndent ?: 0f, 0f..64f, 8f) { v ->
                                 mutate { it.firstLineIndent = v }
                             }
-                            stepperRow(l("paragraph_indent"), box.paragraphIndent ?: 0f, 0f..64f, 8f) { v ->
+                            stepperRow(l("paragraph_indent"), currentBox.paragraphIndent ?: 0f, 0f..64f, 8f) { v ->
                                 mutate { it.paragraphIndent = v }
                             }
                         }
@@ -341,11 +340,11 @@ fun TextBoxEditor(
                             label(l("card_style"))
                             chipRow(
                                 listOf(
-                                    ChipSpec(l("color_transparent"), box.isBackgroundClear && revision >= 0) {
+                                    ChipSpec(l("color_transparent"), currentBox.isBackgroundClear && revision >= 0) {
                                         mutate { it.backgroundColorHex = "clear" }
                                     }
                                 ) + cardColors().map { (key, hex) ->
-                                    ChipSpec(l(key), box.backgroundColorHex == hex && revision >= 0) {
+                                    ChipSpec(l(key), currentBox.backgroundColorHex == hex && revision >= 0) {
                                         mutate { it.backgroundColorHex = hex }
                                     }
                                 }
@@ -353,26 +352,26 @@ fun TextBoxEditor(
 
                             // 邊框開關留在編輯面板裡，不放到畫布上當無標示的小圓鈕。
                             chipRow(listOf(
-                                ChipSpec(l("object_show_border"), box.hasBorder && revision >= 0) {
+                                ChipSpec(l("object_show_border"), currentBox.hasBorder && revision >= 0) {
                                     mutate { it.hasBorder = !it.hasBorder }
                                 }
                             ))
 
                             // 邊框顏色與粗細只在開了邊框時才有意義。
                             // 一直顯示的話，使用者會調了半天卻看不到任何變化。
-                            if (box.hasBorder) {
+                            if (currentBox.hasBorder) {
                                 label(l("border_color"))
                                 chipRow(borderColors().map { hex ->
                                     ChipSpec(
                                         hex,
-                                        (box.borderColorHex ?: "#8E8E93") == hex && revision >= 0
+                                        (currentBox.borderColorHex ?: "#8E8E93") == hex && revision >= 0
                                     ) { mutate { it.borderColorHex = hex } }
                                 })
                                 label(l("border_width"))
                                 chipRow(listOf(1f, 2f, 3.5f).map { w ->
                                     ChipSpec(
                                         if (w == 3.5f) "3.5" else w.toInt().toString(),
-                                        (box.borderWidth ?: 1.5f) == w && revision >= 0
+                                        (currentBox.borderWidth ?: 1.5f) == w && revision >= 0
                                     ) { mutate { it.borderWidth = w } }
                                 })
                             }
@@ -383,7 +382,7 @@ fun TextBoxEditor(
                             // 兩邊的可選值不同的話，同一個方塊換平台就調不回原樣。
                             label(l("corner_style"))
                             chipRow(listOf(0f, 8f, 18f).map { r ->
-                                ChipSpec(r.toInt().toString(), box.cornerRadius == r && revision >= 0) {
+                                ChipSpec(r.toInt().toString(), currentBox.cornerRadius == r && revision >= 0) {
                                     mutate { it.cornerRadius = r }
                                 }
                             })
@@ -392,9 +391,9 @@ fun TextBoxEditor(
                             // 還大，於是拉小到格子大小的方塊只要開一次這個面板，
                             // 滑桿就把它彈回 160：使用者看到的是「我調好的寬度
                             // 自己變回去了」。
-                            label("${l("box_width")}　${box.width.toInt()}")
+                            label("${l("box_width")}　${currentBox.width.toInt()}")
                             Slider(
-                                value = box.width.coerceIn(MIN_TEXT_BOX_WIDTH_DP, 900f),
+                                value = currentBox.width.coerceIn(MIN_TEXT_BOX_WIDTH_DP, 900f),
                                 onValueChange = { v -> mutate { it.width = v } },
                                 valueRange = MIN_TEXT_BOX_WIDTH_DP..900f
                             )
@@ -403,7 +402,7 @@ fun TextBoxEditor(
 
                             label(l("image_rotate"))
                             rotationRow(
-                                degrees = CanvasRotation.normalized(box.rotationDegrees ?: 0f),
+                                degrees = CanvasRotation.normalized(currentBox.rotationDegrees ?: 0f),
                                 resetLabel = l("reset")
                             ) { v -> mutate { it.rotationDegrees = v } }
                             Text(
@@ -425,7 +424,7 @@ fun TextBoxEditor(
                             ) {
                                 items(SYMBOL_SETS[symbolCategory]) { symbol ->
                                     TextButton(onClick = {
-                                        val old = box.text
+                                        val old = currentBox.text
                                         text += symbol
                                         mutate {
                                             it.text = text
@@ -438,11 +437,21 @@ fun TextBoxEditor(
                         }
                     }
                 }
-                // 底部的拖曳把手：往下拖變高（S-72）。
-                DialogResizeHandle(height, "textBoxEditor")
+                Divider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f), thickness = 0.5.dp)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+                ) {
+                    TextButton(onClick = onDelete) {
+                        Text(l("delete"), color = MaterialTheme.colorScheme.error)
+                    }
+                    TextButton(onClick = onDismiss) {
+                        Text(l("close"))
+                    }
+                }
             }
-        }
-    )
+    }
 }
 
 /**
