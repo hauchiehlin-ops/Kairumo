@@ -379,6 +379,17 @@ final class AdaptiveCanvasView: PKCanvasView {
     /// 連續模式下的兩指捲動（見 `TwoFingerScrollForwarder`）。
     let twoFingerScroll = TwoFingerScrollForwarder()
 
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        // 畫布自身為 UIScrollView，設為 false 可消除起筆 150ms 判定等待，實現即書即顯
+        delaysContentTouches = false
+    }
+
+    required init?(coder: NSCoder) {
+        super.init(coder: coder)
+        delaysContentTouches = false
+    }
+
     private let internalUndoManager = UndoManager()
     override var undoManager: UndoManager? {
         super.undoManager ?? internalUndoManager
@@ -713,6 +724,8 @@ final class AdaptiveCanvasView: PKCanvasView {
         proLayer = layer
 
         let gesture = ProStrokeGestureRecognizer()
+        gesture.delaysTouchesBegan = false
+        gesture.delaysTouchesEnded = false
         gesture.layerView = layer
         gesture.tool = { [weak self] in self?.proTool }
         gesture.color = { [weak self] in self?.proColor ?? [0, 0, 0, 255] }
@@ -956,8 +969,29 @@ final class AdaptiveCanvasView: PKCanvasView {
 
     override func didMoveToWindow() {
         super.didMoveToWindow()
+        delaysContentTouches = false
+        configureEnclosingScrollView()
         if window != nil {
             refreshInitialRenderIfNeeded()
+        }
+    }
+
+    override func didMoveToSuperview() {
+        super.didMoveToSuperview()
+        delaysContentTouches = false
+        configureEnclosingScrollView()
+    }
+
+    /// 外層 ScrollView（單頁模式或連續模式容器）預設 delaysContentTouches 為 true，
+    /// 會在落筆初期扣押觸控 150ms 判定捲動，造成「不是即書即顯示」的起筆遲滯感。
+    /// 設為 false 能直接消除此延遲，而 canCancelContentTouches 仍保持 true，不影響兩指或正常滑動捲動。
+    private func configureEnclosingScrollView() {
+        var parent = superview
+        while let p = parent {
+            if let sv = p as? UIScrollView, !(sv is PKCanvasView) {
+                sv.delaysContentTouches = false
+            }
+            parent = p.superview
         }
     }
 
@@ -1211,6 +1245,7 @@ struct CanvasRepresentable: UIViewRepresentable {
 
     func makeUIView(context: Context) -> PKCanvasView {
         let canvas = AdaptiveCanvasView()
+        canvas.delaysContentTouches = false
         canvas.hitPassThroughCheck = hitPassThroughCheck
         // 無限制復原/重做次數（0 代表 levelsOfUndo 無上限，直到記憶體或棧頂耗盡為止）
         canvas.undoManager?.levelsOfUndo = 0
@@ -3064,8 +3099,11 @@ public struct NotebookEditorView: View {
             lasso.proHost = { (canvasView as? AdaptiveCanvasView)?.proLayer }
             sanitizeTextAttachments()
             sanitizeUnderInkObjects()
-            // 舊版同步留下的錯位名單（堆疊順序、鎖定記在別頁的頁碼下）就地修好。
-            if notebook.realignPageKeyedObjectLists() { commitNotebook() }
+            // 舊版同步留下的錯位名單（堆疊順序、鎖定記在別頁的頁碼下）就地修好；
+            // 放置貼紙時跨頁拖曳未換頁留下的超出邊界幽靈物件自動歸入實際頁面。
+            let realigned = notebook.realignPageKeyedObjectLists()
+            let repaired = notebook.repairOutOfBoundsObjects()
+            if realigned || repaired { commitNotebook() }
             // 範例：打開時的內容先備份到暫存區，改動等離開時再決定（見 `requestLeave`）。
             // 在上面的整理之後（整理不算使用者的改動）、設焦點之前（暫存期間不走焦點通道）。
             store.beginSampleSession(notebook.id)
@@ -11870,11 +11908,22 @@ public struct NotebookEditorView: View {
         // 3 倍像素：貼紙是向量，但存成圖片後放大會糊，預留縮放的餘裕。
         let image = placement.drawing.image(from: b, scale: 3 * max(1, fit))
         guard let fileName = store.saveAttachmentImage(image) else { return }
+
+        // 連續模式下若將貼圖放置浮層拖曳至其他頁面確認，自動換算落點頁碼與頁內座標（S-85）。
+        let rawX = placement.center.x - size.width / 2
+        let rawY = placement.center.y - size.height / 2
+        let crossing = (pageDisplayMode == .continuous) ? pageCrossing(for: currentPageIndex) : nil
+        let landed = PrintableArea.land(
+            x: rawX, y: rawY, width: size.width, height: size.height, crossing: crossing)
+        let finalPage = landed.page ?? currentPageIndex
+        let finalX = landed.origin.x
+        let finalY = landed.origin.y
+
         let attachment = NoteImageAttachment(
             fileName: fileName,
-            pageIndex: currentPageIndex,
-            x: placement.center.x - size.width / 2,
-            y: placement.center.y - size.height / 2,
+            pageIndex: finalPage,
+            x: finalX,
+            y: finalY,
             width: size.width,
             height: size.height,
             rotationDegrees: placement.rotationDegrees,
@@ -11887,6 +11936,9 @@ public struct NotebookEditorView: View {
         if notebook.attachments == nil { notebook.attachments = [] }
         notebook.attachments?.append(attachment)
         commitNotebook()
+        if finalPage != currentPageIndex {
+            finishPageCrossing(ids: [attachment.id], to: finalPage)
+        }
         if var dict = (try? JSONSerialization.jsonObject(with: JSONEncoder().encode(attachment))) as? [String: Any] {
             if let imgData = image.pngData() {
                 dict["image_base64"] = imgData.base64EncodedString()
@@ -17500,8 +17552,10 @@ public struct StickerPlacementOverlayView: View {
     let onCommit: () -> Void
     let onCancel: () -> Void
     @ObservedObject private var localizationManager = LocalizationManager.shared
+    @Environment(\.pageCrossing) private var pageCrossing
 
     @State private var dragOffset: CGSize = .zero
+    @State private var isDragging: Bool = false
     @State private var resizeBaseScale: CGFloat? = nil
     @State private var pinchBaseScale: CGFloat? = nil
 
@@ -17526,6 +17580,7 @@ public struct StickerPlacementOverlayView: View {
             // 頂部控制把手列：取消、重設、完成放置
             HStack(spacing: 10) {
                 Button {
+                    if isDragging { pageCrossing?.ended(nil, nil) }
                     onCancel()
                 } label: {
                     Image(systemName: "xmark")
@@ -17584,12 +17639,18 @@ public struct StickerPlacementOverlayView: View {
                     .gesture(
                         DragGesture(minimumDistance: 3, coordinateSpace: .named(CanvasCoordinateSpace.name))
                             .onChanged { val in
+                                if !isDragging {
+                                    pageCrossing?.began()
+                                    isDragging = true
+                                }
                                 dragOffset = val.translation
                             }
                             .onEnded { val in
                                 placement.center.x += val.translation.width
                                 placement.center.y += val.translation.height
                                 dragOffset = .zero
+                                isDragging = false
+                                pageCrossing?.ended(nil, nil)
                             }
                     )
                     .simultaneousGesture(

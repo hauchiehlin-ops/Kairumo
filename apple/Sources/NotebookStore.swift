@@ -491,6 +491,57 @@ public struct NotebookDocument: Identifiable, Codable, Hashable, @unchecked Send
         return changed
     }
 
+    /// 檢查並修復座標超出所屬頁面邊界的物件（例如放置貼紙時跨頁拖曳但未換頁留下的幽靈物件）。
+    /// 將它們歸入實際視覺所在的頁面，並將座標換算為新頁面的內部相對座標。
+    @discardableResult
+    public mutating func repairOutOfBoundsObjects() -> Bool {
+        guard pageCount > 1 else { return false }
+        var changed = false
+        let totalPages = max(1, pageCount)
+        let pageH = Float(PageGeometry.height)
+        let pageW = Float(PageGeometry.width)
+        let gap: Float = 20.0
+        let inset = Float(PageGeometry.printableInset)
+
+        if let items = attachments {
+            var updatedItems = items
+            for i in 0..<updatedItems.count {
+                let item = updatedItems[i]
+                if item.y >= CGFloat(pageH) || (item.y + item.height) < 0 {
+                    let rect = FfiRect(
+                        minX: Float(item.x),
+                        minY: Float(item.y),
+                        maxX: Float(item.x + item.width),
+                        maxY: Float(item.y + item.height)
+                    )
+                    let landing = landOnPage(
+                        rect: rect,
+                        pageIndex: UInt32(max(0, item.pageIndex)),
+                        pageCount: UInt32(totalPages),
+                        pageWidth: pageW,
+                        pageHeight: pageH,
+                        pageGap: gap,
+                        inset: inset
+                    )
+                    let targetPage = Int(landing.pageIndex)
+                    if targetPage != item.pageIndex || CGFloat(landing.minY) != item.y {
+                        updatedItems[i].pageIndex = targetPage
+                        updatedItems[i].x = CGFloat(landing.minX)
+                        updatedItems[i].y = CGFloat(landing.minY)
+                        changed = true
+                    }
+                }
+            }
+            if changed {
+                attachments = updatedItems
+            }
+        }
+        if changed {
+            realignPageKeyedObjectLists()
+        }
+        return changed
+    }
+
     /// 系統預設標題的語系鍵。
     ///
     /// 內建的示範筆記若把中文標題直接寫死存進 JSON，切換介面語言時檔名不會跟著變

@@ -516,7 +516,8 @@ final class ProInkLayerView: UIView {
         isOpaque = false
         backgroundColor = .clear
         isUserInteractionEnabled = false
-        layer.drawsAsynchronously = true
+        // 互動手繪時必須同步光柵化並於當前 CATransaction 呈現，若設為 true 會推入背景繪圖隊列而增加 1~2 幀的起筆與連筆延遲。
+        layer.drawsAsynchronously = false
         NotificationCenter.default.addObserver(
             self, selector: #selector(diskChanged(_:)),
             name: .kairumoProInkChangedOnDisk, object: nil)
