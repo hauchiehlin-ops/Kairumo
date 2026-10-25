@@ -25,6 +25,7 @@ final class SmokeUITests: XCTestCase {
         // 就決定測試成敗 —— 拍完中文截圖之後整套就全紅了，而那跟程式對不對
         // 一點關係都沒有。間歇失敗的測試會在第三次紅的時候被關掉。
         app.launchEnvironment["KAIRUMO_UITEST"] = "1"
+        app.launchEnvironment["OS_ACTIVITY_MODE"] = "disable"
         app.launch()
         self.app = app
         return app
@@ -566,6 +567,7 @@ extension SmokeUITests {
     func testMigrationRunsFromTheDiagnosticsSheet() {
         let app = XCUIApplication()
         app.launchEnvironment["KAIRUMO_UITEST"] = "1"
+        app.launchEnvironment["OS_ACTIVITY_MODE"] = "disable"
         app.launch()
         XCTAssertTrue(app.wait(for: .runningForeground, timeout: 10))
 
@@ -634,6 +636,7 @@ final class AppStoreMacScreenshotsUITests: XCTestCase {
     private func launchApp() -> XCUIApplication {
         let app = XCUIApplication()
         app.launchEnvironment["KAIRUMO_UITEST"] = "1"
+        app.launchEnvironment["OS_ACTIVITY_MODE"] = "disable"
         app.launchArguments += [
             "-AppleLanguages", "(zh-Hant)",
             "-AppleLocale", "zh_TW",
