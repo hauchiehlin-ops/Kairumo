@@ -1925,7 +1925,11 @@ private fun InkScreen(
     var textRevision by remember { mutableIntStateOf(0) }
     var selectedTextId by remember { mutableStateOf<String?>(null) }
     var editingText by remember { mutableStateOf<TextBox?>(null) }
-    LaunchedEffect(notebook, pageId, pageDisplayMode) { textStore.load(); textRevision++ }
+    LaunchedEffect(notebook, pageId, pageDisplayMode) {
+        if (pageDisplayMode != PageDisplayMode.CONTINUOUS) {
+            textStore.load(); textRevision++
+        }
+    }
 
     // 數字製圖。設定存進區塊外觀，所以插進去之後還改得動 ——
     // 與 Apple 端同一份 ChartSpec 與同一個核心版面引擎。
@@ -1934,7 +1938,11 @@ private fun InkScreen(
     var selectedChartId by remember { mutableStateOf<String?>(null) }
     var editingChart by remember { mutableStateOf<ChartObject?>(null) }
     var insertingChart by remember { mutableStateOf(false) }
-    LaunchedEffect(notebook, pageId, pageDisplayMode) { chartStore.load(); chartRevision++ }
+    LaunchedEffect(notebook, pageId, pageDisplayMode) {
+        if (pageDisplayMode != PageDisplayMode.CONTINUOUS) {
+            chartStore.load(); chartRevision++
+        }
+    }
 
     // 表格。內容走核心原生的表格區塊，樣式走區塊外觀 ——
     // 與 Apple 端同一組操作，所以表格互相打得開。
@@ -1953,6 +1961,7 @@ private fun InkScreen(
     var insertingTable by remember { mutableStateOf(false) }
     val maskingTapes = remember { mutableStateListOf<com.kairumo.padnote.canvas.NoteTape>() }
     LaunchedEffect(notebook, pageId, pageDisplayMode) {
+        if (pageDisplayMode == PageDisplayMode.CONTINUOUS) return@LaunchedEffect
         tableStore.load(); tableRevision++
         val session = notebook?.first
         if (session != null) {
@@ -2149,7 +2158,11 @@ private fun InkScreen(
     var imageRevision by remember { mutableIntStateOf(0) }
     var selectedImageId by remember { mutableStateOf<String?>(null) }
     var editingImage by remember { mutableStateOf<NoteImage?>(null) }
-    LaunchedEffect(notebook, pageId, pageDisplayMode) { imageStore.load(); imageRevision++ }
+    LaunchedEffect(notebook, pageId, pageDisplayMode) {
+        if (pageDisplayMode != PageDisplayMode.CONTINUOUS) {
+            imageStore.load(); imageRevision++
+        }
+    }
 
     // 把打包好的筆記存到**使用者自己選的位置**（SAF）。
     //
@@ -2290,7 +2303,11 @@ private fun InkScreen(
     var selectedShapeIds by remember { mutableStateOf(setOf<String>()) }
     var insertingShape by remember { mutableStateOf(false) }
     var showLayerPanel by remember { mutableStateOf(false) }
-    LaunchedEffect(notebook, pageId, pageDisplayMode) { shapeStore.load(); shapeRevision++ }
+    LaunchedEffect(notebook, pageId, pageDisplayMode) {
+        if (pageDisplayMode != PageDisplayMode.CONTINUOUS) {
+            shapeStore.load(); shapeRevision++
+        }
+    }
     LaunchedEffect(notebook, pageId) {
         selectedTextId = null; editingText = null
         selectedImageId = null; editingImage = null
@@ -5695,7 +5712,7 @@ private fun InkScreen(
             //
             // 圖學筆畫也不能走低延遲路徑：它要依線型挖虛線、依圖層疊放與隱藏，
             // 前緩衝的簡化繪製做不到。
-            val draftingInk = inkTool.isDrafting || engine.strokes.any { it.layer != 0 || it.lineType != 0 }
+            val draftingInk = inkTool.isDrafting || inkTool.isLasso || engine.strokes.any { it.layer != 0 || it.lineType != 0 }
             if (lowLatency && !lowLatencyUnavailable && canvasScale == 1f && !draftingInk) {
                 LowLatencyInkCanvas(
                     engine = engine,
@@ -5805,11 +5822,20 @@ private fun InkScreen(
                 LassoOverlay(
                     lasso = lasso,
                     engine = engine,
-                    // 低延遲畫布（SurfaceView）畫不了拖曳中的位移。圖學筆畫時其實走的是一般畫布，
+                    // 低延遲畫布（SurfaceView）畫不了拖曳中的位移。圖學筆畫與套索模式走的是一般畫布，
                     // 預覽會疊在已經位移的筆畫上 —— 同一個位置，看不出來，不值得在這裡多算一次。
-                    drawDragPreview = lowLatency && !lowLatencyUnavailable && canvasScale == 1f,
-                    onChanged = { revision++ },
-                    modifier = Modifier.fillMaxSize()
+                    drawDragPreview = false,
+                    objectCandidates = marqueeCandidatesLatest,
+                    lockedObjectIds = lockedIdsLatest,
+                    imageStore = imageStore,
+                    textStore = textStore,
+                    tableStore = tableStore,
+                    chartStore = chartStore,
+                    shapeStore = shapeStore,
+                    onChanged = {
+                        imageRevision++; textRevision++; tableRevision++; chartRevision++; shapeRevision++; revision++
+                    },
+                    modifier = Modifier.fillMaxSize().zIndex(260f)
                 )
             }
 

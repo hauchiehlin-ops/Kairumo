@@ -36,6 +36,9 @@ public enum PageThumbnailRenderer {
 
     /// 縮圖快取。側邊欄每次重繪都重新合成整頁會很慢，而內容沒變時結果是一樣的。
     private static let cache = NSCache<NSString, UIImage>()
+    /// 各頁最近一次算繪完成的縮圖。在套索高速拖曳或雙指捲動途中直接回傳上一張縮圖，
+    /// 避免在 120Hz 觸控迴圈裡同步執行 UIGraphicsImageRenderer 造成主執行緒卡頓。
+    private static let latestPageCache = NSCache<NSString, UIImage>()
 
     /// 計算單一頁面內所有物件的位置與內容特徵值。
     /// 只有在該頁物件真的變動時才使該頁快取失效，避免全本 lastModifiedDate 變更時導致所有頁面縮圖同時重新算繪與高度抖動。
@@ -93,7 +96,9 @@ public enum PageThumbnailRenderer {
         // 物件沒動，只有版面變了 —— 沒有這兩個欄位的話側欄縮圖不會更新。
         let sig = pageObjectsSignature(notebook: notebook, pageIndex: pageIndex)
         let tapesCount = notebook.tapeAttachments?.filter({ $0.pageIndex == pageIndex }).count ?? 0
-        return "\(notebook.id)|\(pageIndex)|\(sig)|\(drawing.strokes.count)|\(tapesCount)|\(Int(canvasWidth))|\(notebook.paperId(forPage: pageIndex))|\(notebook.guidePaletteId ?? "-")" as NSString
+        let db = drawing.bounds
+        let boundsSig = db.isNull ? 0 : (Int(db.minX) &* 31 &+ Int(db.minY) &* 17 &+ Int(db.width) &* 13 &+ Int(db.height))
+        return "\(notebook.id)|\(pageIndex)|\(sig)|\(drawing.strokes.count)|\(boundsSig)|\(tapesCount)|\(Int(canvasWidth))|\(notebook.paperId(forPage: pageIndex))|\(notebook.guidePaletteId ?? "-")" as NSString
     }
 
     /// 這一頁要畫的專業筆畫（自己的＋別台同步來的），已依圖層排好、隱藏的圖層已濾掉。
@@ -121,10 +126,15 @@ public enum PageThumbnailRenderer {
         drawing: PKDrawing,
         store: NotebookStore,
         canvasWidth: CGFloat,
-        scale: CGFloat = 0.4
+        scale: CGFloat = 0.4,
+        deferRecomputation: Bool = false
     ) -> UIImage {
-        compose(notebook: notebook, pageIndex: pageIndex, drawing: drawing, store: store,
-                canvasWidth: canvasWidth, scale: scale, cropToPreviewRatio: true, useCache: true)
+        if deferRecomputation,
+           let latest = latestPageCache.object(forKey: "\(notebook.id)|\(pageIndex)" as NSString) {
+            return latest
+        }
+        return compose(notebook: notebook, pageIndex: pageIndex, drawing: drawing, store: store,
+                       canvasWidth: canvasWidth, scale: scale, cropToPreviewRatio: true, useCache: true)
     }
 
     /// 整頁算繪（不裁切、不取快取），給匯出 PDF / 圖片與列印用。
@@ -178,13 +188,14 @@ public enum PageThumbnailRenderer {
         let width = PageGeometry.width
         // 專業筆刷（含全部製圖線）存在自己的檔案裡，不在 PKDrawing：匯出、縮圖都要另外畫。
         // 檔案時間進快取鍵，畫了新的線縮圖才會更新。
-        let pro = proStrokes(notebook: notebook, pageIndex: pageIndex, store: store)
+        // 先查快取，命中時直接回傳，避免每次 SwiftUI body 重算都讀寫與解碼全部頁面的 .proink JSON。
         let proStamp = ProInkStore.modified(in: store.drawingsDirectory, notebookId: notebook.id, page: pageIndex)?
             .timeIntervalSince1970 ?? 0
         let key = (cacheKey(notebook: notebook, pageIndex: pageIndex, drawing: drawing, canvasWidth: width) as String
-            + "|\(pro.count)|\(proStamp)|\(DraftingState.shared.hiddenStamp(notebookId: notebook.id))"
+            + "|\(proStamp)|\(DraftingState.shared.hiddenStamp(notebookId: notebook.id))"
             + "|\(notebook.underInkObjectIds(forPage: pageIndex).sorted().joined(separator: ",").hashValue)|\(notebook.objectOrder(forPage: pageIndex)?.joined(separator: ",").hashValue ?? 0)") as NSString
         if useCache, let cached = cache.object(forKey: key) { return cached }
+        let pro = proStrokes(notebook: notebook, pageIndex: pageIndex, store: store)
 
         let pageHeight = PageGeometry.height
         let visibleHeight = cropToPreviewRatio ? min(pageHeight, width * maxHeightRatio) : pageHeight
@@ -330,7 +341,10 @@ public enum PageThumbnailRenderer {
           }
         }
 
-        if useCache { cache.setObject(image, forKey: key) }
+        if useCache {
+            cache.setObject(image, forKey: key)
+            latestPageCache.setObject(image, forKey: "\(notebook.id)|\(pageIndex)" as NSString)
+        }
         return image
     }
 

@@ -283,8 +283,8 @@ private fun PageSidebarRow(
 ) {
     val context = LocalContext.current
     val appLanguage = LocalAppLanguage.current
-    var thumb by remember(index, revision) { mutableStateOf<ImageBitmap?>(null) }
-    var ratio by remember(index, revision) { mutableFloatStateOf(800f / 1132f) }
+    var thumb by remember(index, session) { mutableStateOf<ImageBitmap?>(null) }
+    var ratio by remember(index, session) { mutableFloatStateOf(800f / 1132f) }
 
     LaunchedEffect(index, revision, session, appLanguage) {
         val s = session ?: return@LaunchedEffect
@@ -299,6 +299,10 @@ private fun PageSidebarRow(
         if (cached != null) {
             thumb = cached
             return@LaunchedEffect
+        }
+        // 已有舊縮圖時先保留畫面並去抖動 120ms，避免連續捲動或拖曳物件期間每一幀都在主執行緒同步重繪縮圖造成卡頓
+        if (thumb != null) {
+            kotlinx.coroutines.delay(120)
         }
 
         val act = context as? ComponentActivity

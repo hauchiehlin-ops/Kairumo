@@ -264,6 +264,22 @@ enum ProInkStore {
     private nonisolated static let ledgerLock = NSLock()
     // profile-scope: profile 以完整檔案路徑（含設定檔專屬目錄）為鍵，不同設定檔不會共用同一項目
     private nonisolated(unsafe) static var strokesCache: [String: (modDate: Date?, strokes: [ProStroke])] = [:]
+    // profile-scope: profile 以完整檔案路徑前綴為鍵，快取修改時間避免每次 SwiftUI body 重算都觸發磁碟 stat 系統呼叫
+    private nonisolated(unsafe) static var modifiedCache: [String: Date?] = [:]
+
+    private nonisolated static func pageCacheKey(_ directory: URL, _ notebookId: String, _ page: Int) -> String {
+        "\(directory.path)/\(notebookId.lowercased())_p\(page)"
+    }
+
+    nonisolated static func invalidateModifiedCache(notebookId: String? = nil) {
+        ledgerLock.lock()
+        if let id = notebookId?.lowercased() {
+            modifiedCache = modifiedCache.filter { !$0.key.contains("/\(id)_p") }
+        } else {
+            modifiedCache.removeAll()
+        }
+        ledgerLock.unlock()
+    }
 
     private nonisolated static func ledgerURL(_ directory: URL, _ notebookId: String, _ page: Int) -> URL {
         directory.appending(path: "\(notebookId)_p\(page).proink-ledger.json")
@@ -297,6 +313,7 @@ enum ProInkStore {
             } else if let data = try? JSONEncoder().encode(ledger) {
                 try? data.write(to: file, options: .atomic)
             }
+            modifiedCache.removeValue(forKey: pageCacheKey(directory, notebookId, page))
         }
         return result
     }
@@ -341,6 +358,7 @@ enum ProInkStore {
             try? FileManager.default.removeItem(at: file)
             ledgerLock.lock()
             strokesCache.removeValue(forKey: key)
+            modifiedCache.removeValue(forKey: pageCacheKey(directory, notebookId, page))
             ledgerLock.unlock()
             return
         }
@@ -349,6 +367,7 @@ enum ProInkStore {
         let modDate = (try? file.resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate
         ledgerLock.lock()
         strokesCache[key] = (modDate, strokes)
+        modifiedCache.removeValue(forKey: pageCacheKey(directory, notebookId, page))
         ledgerLock.unlock()
     }
 
@@ -376,17 +395,29 @@ enum ProInkStore {
 
     /// 檔案時間，同步用來判斷「工作副本是不是比套件新」。
     nonisolated static func modified(in directory: URL, notebookId: String, page: Int) -> Date? {
+        let pKey = pageCacheKey(directory, notebookId, page)
+        ledgerLock.lock()
+        if let hit = modifiedCache[pKey] {
+            ledgerLock.unlock()
+            return hit
+        }
+        ledgerLock.unlock()
         let own = (try? url(directory, notebookId, page, foreign: false)
             .resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate
         // 帳本也算：筆畫全擦光時自己的檔案被刪掉，只剩帳本記得「有墓碑要寫」。
         let ledger = (try? ledgerURL(directory, notebookId, page)
             .resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate
+        let result: Date?
         switch (own, ledger) {
-        case let (a?, b?): return max(a, b)
-        case let (a?, nil): return a
-        case let (nil, b?): return b
-        default: return nil
+        case let (a?, b?): result = max(a, b)
+        case let (a?, nil): result = a
+        case let (nil, b?): result = b
+        default: result = nil
         }
+        ledgerLock.lock()
+        modifiedCache[pKey] = result
+        ledgerLock.unlock()
+        return result
     }
 }
 
@@ -397,6 +428,25 @@ enum ProInkRenderer {
     struct Cached {
         let dabs: [FfiDab]
         let bounds: CGRect
+
+        /// 套索拖曳時直接平移快取筆點與邊界，避免在 60-240Hz 拖曳幀中反覆呼叫 Rust FFI 重算千萬個高斯筆點。
+        func translated(by delta: CGSize) -> Cached {
+            let dx = Float(delta.width)
+            let dy = Float(delta.height)
+            let moved = dabs.map { dab in
+                FfiDab(
+                    x: dab.x + dx,
+                    y: dab.y + dy,
+                    rx: dab.rx,
+                    ry: dab.ry,
+                    angle: dab.angle,
+                    alpha: dab.alpha,
+                    softness: dab.softness,
+                    shade: dab.shade
+                )
+            }
+            return Cached(dabs: moved, bounds: bounds.offsetBy(dx: delta.width, dy: delta.height))
+        }
     }
 
     static func cache(for stroke: ProStroke) -> Cached? {
@@ -661,6 +711,7 @@ final class ProInkLayerView: UIView {
     /// 從磁碟重讀（換頁、同步匯入、清除頁面之後）。
     func reload() {
         guard let directory else { return }
+        ProInkStore.invalidateModifiedCache(notebookId: notebookId)
         ownStrokes = ProInkStore.load(in: directory, notebookId: notebookId, page: pageIndex)
         foreignStrokes = ProInkStore.load(in: directory, notebookId: notebookId, page: pageIndex, foreign: true)
         strokeSnapshot = Dictionary(ownStrokes.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
@@ -1314,15 +1365,76 @@ final class ProInkLayerView: UIView {
 
     // MARK: 套索（製圖線都是專業筆畫，套索要能選、搬、刪、複製）
 
-    /// 完全被多邊形圈住、而且圖層動得了（沒隱藏沒鎖定）的自己的筆畫。
+    /// 被多邊形圈住（含寬容度判定）、而且圖層動得了（沒隱藏沒鎖定）的筆畫（含本機與外來同步筆畫）。
     func strokeIds(enclosedBy polygon: [Float]) -> Set<String> {
         let drafting = DraftingState.shared
+        var polyPoints: [CGPoint] = []
+        polyPoints.reserveCapacity(polygon.count / 2)
+        var idx = 0
+        while idx + 1 < polygon.count {
+            polyPoints.append(CGPoint(x: CGFloat(polygon[idx]), y: CGFloat(polygon[idx + 1])))
+            idx += 2
+        }
         var ids = Set<String>()
-        for s in ownStrokes where drafting.canEdit(layer: s.layerId, notebookId: notebookId) {
+        for s in allStrokes where drafting.canEdit(layer: s.layerId, notebookId: notebookId) {
             let flat = s.points.flatMap { [$0.x, $0.y] }
-            if lassoEncloses(polygon: polygon, points: flat) { ids.insert(s.id) }
+            if lassoEncloses(polygon: polygon, points: flat) || Self.isProStrokeEnclosedTolerant(s, in: polyPoints) {
+                ids.insert(s.id)
+            }
         }
         return ids
+    }
+
+    private static func isProStrokeEnclosedTolerant(_ stroke: ProStroke, in polygon: [CGPoint]) -> Bool {
+        guard polygon.count >= 3, !stroke.points.isEmpty else { return false }
+        let totalCount = stroke.points.count
+        let step = max(1, totalCount / 30)
+        var insideCount = 0
+        var sampledCount = 0
+        for i in stride(from: 0, to: totalCount, by: step) {
+            let pt = CGPoint(x: CGFloat(stroke.points[i].x), y: CGFloat(stroke.points[i].y))
+            sampledCount += 1
+            if isPointInPolygon(pt, polygon: polygon) {
+                insideCount += 1
+            }
+        }
+        guard sampledCount > 0 else { return false }
+        let ratio = Double(insideCount) / Double(sampledCount)
+        if ratio >= 0.55 { return true }
+        let b = stroke.bounds
+        let center = CGPoint(x: b.midX, y: b.midY)
+        if isPointInPolygon(center, polygon: polygon) && ratio >= 0.35 {
+            return true
+        }
+        return false
+    }
+
+    private static func isPointInPolygon(_ p: CGPoint, polygon: [CGPoint]) -> Bool {
+        guard polygon.count >= 3 else { return false }
+        var inside = false
+        var j = polygon.count - 1
+        for i in 0..<polygon.count {
+            let pi = polygon[i]
+            let pj = polygon[j]
+            if ((pi.y > p.y) != (pj.y > p.y)) &&
+               (p.x < (pj.x - pi.x) * (p.y - pi.y) / (pj.y - pi.y) + pi.x) {
+                inside.toggle()
+            }
+            j = i
+        }
+        return inside
+    }
+
+    /// 若套索搬動到外來同步筆畫，先收編為本機筆畫（移除外來區並附加新套件身分），確保搬動與存檔一致。
+    private func promoteForeignIfNeeded(ids: Set<String>) {
+        let foreignHit = foreignStrokes.filter { ids.contains($0.id) }
+        guard !foreignHit.isEmpty else { return }
+        removeForeign(foreignHit, registersUndo: false)
+        for s in foreignHit {
+            var copy = s
+            copy.coreId = UUID().uuidString.lowercased()
+            ownStrokes.append(copy)
+        }
     }
 
     private var moveIds: Set<String> = []
@@ -1330,17 +1442,27 @@ final class ProInkLayerView: UIView {
 
     /// 拖曳搬移：過程中只改記憶體與畫面，放手（`endMove`）才存檔、登記一次復原。
     func move(ids: Set<String>, by delta: CGSize) {
+        guard delta != .zero else { return }
+        promoteForeignIfNeeded(ids: ids)
         moveIds = ids
         moveTotal.width += delta.width
         moveTotal.height += delta.height
+        var dirtyRect = CGRect.null
         for i in ownStrokes.indices where ids.contains(ownStrokes[i].id) {
-            setNeedsDisplay(ownStrokes[i].bounds)
+            let strokeId = ownStrokes[i].id
+            let oldBounds = ownStrokes[i].bounds
+            dirtyRect = dirtyRect.union(oldBounds)
             for k in ownStrokes[i].points.indices {
                 ownStrokes[i].points[k].x += Float(delta.width)
                 ownStrokes[i].points[k].y += Float(delta.height)
             }
-            cache[ownStrokes[i].id] = nil
-            setNeedsDisplay(ownStrokes[i].bounds)
+            if let existing = cache[strokeId] {
+                cache[strokeId] = existing.translated(by: delta)
+            }
+            dirtyRect = dirtyRect.union(ownStrokes[i].bounds)
+        }
+        if !dirtyRect.isNull {
+            setNeedsDisplay(dirtyRect.insetBy(dx: -8, dy: -8))
         }
     }
 
@@ -1368,6 +1490,10 @@ final class ProInkLayerView: UIView {
     }
 
     func delete(ids: Set<String>) {
+        let foreignHit = foreignStrokes.filter { ids.contains($0.id) }
+        if !foreignHit.isEmpty {
+            removeForeign(foreignHit)
+        }
         let hit = ownStrokes.filter { ids.contains($0.id) }
         guard !hit.isEmpty else { return }
         ownStrokes.removeAll { ids.contains($0.id) }
@@ -1376,7 +1502,7 @@ final class ProInkLayerView: UIView {
         registerUndo(restoring: hit)
     }
 
-    func strokes(ids: Set<String>) -> [ProStroke] { ownStrokes.filter { ids.contains($0.id) } }
+    func strokes(ids: Set<String>) -> [ProStroke] { allStrokes.filter { ids.contains($0.id) } }
 
     /// 把一組筆畫（新 id）偏移後加進這一頁，一次復原。回傳新筆畫的 id。
     @discardableResult

@@ -481,10 +481,18 @@ final class AdaptiveCanvasView: PKCanvasView {
     @objc private func handlePressHold(_ gesture: UILongPressGestureRecognizer) {
         guard gesture.state == .began, let handler = onPressAndHold else { return }
         guard handler(gesture.location(in: nil)) else { return }
+        cancelInFlightStrokesForNavigation()
+        #if os(iOS)
+        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+        #endif
+    }
+
+    /// 兩指捲動或長按選單啟動時，立即取消進行中的單指落筆、套索追蹤與停頓計時，
+    /// 避免捲動頁面時手勢互鎖或殘留墨點。
+    func cancelInFlightStrokesForNavigation() {
         pencilDwellWorkItem?.cancel()
         lastStrokeHadHoldDwell = false
         cancelLassoTracking()
-        // 把落下那一點收掉：停用再啟用手勢辨識器會取消進行中的那一筆，不留下一個點。
         if drawingGestureRecognizer.isEnabled {
             drawingGestureRecognizer.isEnabled = false
             drawingGestureRecognizer.isEnabled = true
@@ -493,9 +501,6 @@ final class AdaptiveCanvasView: PKCanvasView {
             pro.isEnabled = false
             pro.isEnabled = true
         }
-        #if os(iOS)
-        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-        #endif
     }
 
     /// 這一頁的高度（由 SwiftUI 端更新）
@@ -619,7 +624,8 @@ final class AdaptiveCanvasView: PKCanvasView {
     /// - `.erase`：選了橡皮擦。兩邊同時收：PencilKit 擦它的、我們擦專業筆畫。
     /// - `.off`：其他工具。我們的手勢不收任何東西。
     func configurePro(
-        mode: ProMode, directory: URL?, notebookId: String, pageIndex: Int, pencilOnly: Bool = false
+        mode: ProMode, directory: URL?, notebookId: String, pageIndex: Int,
+        pencilOnly: Bool = false, allowsPencilKitDrawing: Bool = true, claimsSingleTouch: Bool = false
     ) {
         let layer = installProLayerIfNeeded()
         if let directory {
@@ -630,8 +636,8 @@ final class AdaptiveCanvasView: PKCanvasView {
         case .off:
             gesture.isEnabled = false
             gesture.deferUntilMoved = false
-            drawingGestureRecognizer.isEnabled = true
-            restorePan()
+            drawingGestureRecognizer.isEnabled = allowsPencilKitDrawing
+            if claimsSingleTouch { overridePan() } else { restorePan() }
         case .draw:
             gesture.mode = .draw
             gesture.cancelsTouchesInView = true
@@ -646,7 +652,8 @@ final class AdaptiveCanvasView: PKCanvasView {
             gesture.cancelsTouchesInView = false
             gesture.deferUntilMoved = false
             gesture.isEnabled = true
-            restorePan()
+            drawingGestureRecognizer.isEnabled = allowsPencilKitDrawing
+            if claimsSingleTouch { overridePan() } else { restorePan() }
         case .reassign, .marker, .tool:
             // 點一下筆畫改圖層／點一下放步驟編號／圖學工具（標註…）：PencilKit 的筆畫不管，單指拿來點。
             gesture.mode = mode == .marker ? .marker : (mode == .tool ? .tool : .reassign)
@@ -1041,6 +1048,10 @@ final class AdaptiveCanvasView: PKCanvasView {
     /// `drawing` 時會漏掉重畫 —— 選取框跟著手指走，畫面上的筆跡卻停在半路，
     /// 看起來就是「拖不動」。這裡包在 `isProgrammaticUpdate` 裡換上，並強迫重畫。
     func showEditedDrawing(_ newDrawing: PKDrawing) {
+        if drawingGestureRecognizer.isEnabled && lassoTouchHandler != nil {
+            drawingGestureRecognizer.isEnabled = false
+        }
+        isInkingActive = false
         let coordinator = delegate as? CanvasRepresentable.Coordinator
         coordinator?.isProgrammaticUpdate = true
         self.drawing = newDrawing
@@ -1048,8 +1059,15 @@ final class AdaptiveCanvasView: PKCanvasView {
         // 畫布綁定的那一份也要一起換。連續頁面模式每一頁有自己的 `@State drawing`，
         // 不換的話下一次 `updateUIView` 會用舊的那份把畫布蓋回去 —— 筆跡跳回原位。
         coordinator?.publish(newDrawing)
-        setNeedsDisplay()
-        for subview in subviews { subview.setNeedsDisplay() }
+        Self.invalidateCanvasTiles(in: self)
+    }
+
+    private static func invalidateCanvasTiles(in view: UIView) {
+        view.setNeedsDisplay()
+        view.layer.setNeedsDisplay()
+        for subview in view.subviews {
+            invalidateCanvasTiles(in: subview)
+        }
     }
 
     /// 強制畫布立即重新刷出指定筆跡（若無傳入則取畫布既有 drawing），無需使用者落筆點擊觸發
@@ -1507,7 +1525,7 @@ struct CanvasRepresentable: UIViewRepresentable {
         // `.pencilOnly` 時手指不畫，外層捲動單指就能動，不必（也不該）再轉發。
         if let adaptive = uiView as? AdaptiveCanvasView {
             adaptive.twoFingerScroll.setEnabled(
-                !isScrollEnabled && targetPolicy == .anyInput && selectedTool != .lasso && selectedTool != .maskingTape, on: adaptive)
+                !isScrollEnabled && (targetPolicy == .anyInput || selectedTool == .lasso || selectedTool == .maskingTape), on: adaptive)
         }
         if let adaptive = uiView as? AdaptiveCanvasView {
             let defer_ = EditorCanvasInputPolicy.defersPencilIntent(effectiveMode: editorMode)
@@ -1645,10 +1663,15 @@ struct CanvasRepresentable: UIViewRepresentable {
             if fingerRule == false { return false }
             return (palmRejection?.drawingPolicy(now: Date()) ?? .anyInput) == .anyInput
         }
+        let allowsPencilKitDrawing = EditorCanvasInputPolicy.drawingGestureEnabled(effectiveMode: editorMode)
+            && (selectedTool != .lasso)
+            && (selectedTool != .maskingTape)
         adaptive.configurePro(
             mode: mode, directory: proInk?.directory,
             notebookId: proInk?.notebookId ?? "", pageIndex: proInk?.pageIndex ?? 0,
-            pencilOnly: fingerRule == false)
+            pencilOnly: fingerRule == false,
+            allowsPencilKitDrawing: allowsPencilKitDrawing,
+            claimsSingleTouch: selectedTool == .lasso)
     }
 
     /// 測試用讀數：縮放倍率**與筆畫數**。
@@ -3118,6 +3141,7 @@ public struct NotebookEditorView: View {
             FocusSyncController.shared.setFocus(notebook.id)
             coreInkBaselines.removeAll()
             pendingCoreInk.removeAll()
+            continuousCanvases.invalidateCachedDrawings()
             coreInkWork?.cancel()
             coreInkWork = nil
             loadCurrentPage()
@@ -3137,7 +3161,7 @@ public struct NotebookEditorView: View {
             }
         )
         .onAppear {
-            lasso.proHost = { (canvasView as? AdaptiveCanvasView)?.proLayer }
+            configureLassoCallbacks(forPage: currentPageIndex)
             sanitizeTextAttachments()
             sanitizeUnderInkObjects()
             // 舊版同步留下的錯位名單（堆疊順序、鎖定記在別頁的頁碼下）就地修好；
@@ -3654,6 +3678,7 @@ public struct NotebookEditorView: View {
     private func reloadAfterExternalChange() {
         coreInkBaselines.removeAll()
         inkDiskBaselines.removeAll()
+        continuousCanvases.invalidateCachedDrawings()
         if let updated = store.notebooks.first(where: { $0.id == notebook.id }) {
             self.notebook = updated
         }
@@ -3768,6 +3793,7 @@ public struct NotebookEditorView: View {
                         }
                         currentPageIndex = min(currentPageIndex, max(0, snapshot.pageCount - 1))
                         coreInkBaselines.removeAll()
+                        continuousCanvases.invalidateCachedDrawings()
                         notebook = snapshot
                         restoreInitialPages()
                         currentDrawing = initialPageDrawings[currentPageIndex] ?? store.loadDrawing(notebookId: notebook.id, pageIndex: currentPageIndex)
@@ -5619,8 +5645,8 @@ public struct NotebookEditorView: View {
     /// （點側欄縮圖、上一頁／下一頁、新增頁面…）。後者才要捲過去；
     /// 前者再捲一次會跟使用者的手指打架。
     @State private var continuousReportedPage: Int = -1
-    /// 連續模式下已建立的各頁畫布參照，供套索與存檔即時存取焦點頁畫布
-    @State private var continuousCanvases: [Int: PKCanvasView] = [:]
+    /// 連續模式下已建立的各頁畫布參照與快取，供套索與存檔即時存取焦點頁畫布（Class 包裝避免視圖更新中改 @State 失效）
+    @State private var continuousCanvases = ContinuousCanvasRegistry()
     /// Pencil 落筆把打字模式切成手繪的時間（那一次切換不捲動，見 `onChange(of: editorMode)`）。
     @State private var pencilModeSwitchAt: Date?
     /// 專業筆畫有未標記的變動（見 `AppCommand.proInkDidChange`）。存檔時不能當成「沒變」略過。
@@ -5682,6 +5708,9 @@ public struct NotebookEditorView: View {
                                 // `canvasView`，否則貼紙可能蓋到別頁且存檔頁碼也錯。
                                 canvasRef: { ref in
                                     continuousCanvases[index] = ref
+                                    if index == currentPageIndex {
+                                        continuousCanvases.activeCanvas = ref
+                                    }
                                     // 同上：不在畫面更新途中改 @State，且只在真的換了才寫。
                                     guard index == currentPageIndex, canvasView !== ref else { return }
                                     DispatchQueue.main.async { canvasView = ref }
@@ -5729,6 +5758,7 @@ public struct NotebookEditorView: View {
                                     } else {
                                         syncDrawingFromCanvas()
                                     }
+                                    configureLassoCallbacks(forPage: index)
                                     lasso.begin(at: pt)
                                 },
                                 onLassoMoved: { pt in
@@ -5896,9 +5926,11 @@ public struct NotebookEditorView: View {
         continuousReportedPage = index
         currentPageIndex = index
         if let canvas = continuousCanvases[index] {
+            continuousCanvases.activeCanvas = canvas
             canvasView = canvas
         }
         currentDrawing = drawingForPage(index)
+        configureLassoCallbacks(forPage: index)
     }
 
     private func scrollContinuous(to page: Int, proxy: ScrollViewProxy, animated: Bool) {
@@ -5969,9 +6001,11 @@ public struct NotebookEditorView: View {
         continuousReportedPage = page
         currentPageIndex = page
         if let canvas = continuousCanvases[page] {
+            continuousCanvases.activeCanvas = canvas
             canvasView = canvas
         }
         currentDrawing = drawingForPage(page)
+        configureLassoCallbacks(forPage: page)
     }
 
 
@@ -6470,6 +6504,7 @@ public struct NotebookEditorView: View {
                 },
                 onLassoBegan: { pt in
                     syncDrawingFromCanvas()
+                    configureLassoCallbacks(forPage: currentPageIndex)
                     lasso.begin(at: pt)
                 },
                 onLassoMoved: { pt in
@@ -6495,6 +6530,7 @@ public struct NotebookEditorView: View {
                     }
                 },
                 canvasRef: { ref in
+                    continuousCanvases.activeCanvas = ref
                     // `updateUIView` 每次更新都會叫到這裡；直接寫 @State 就是在畫面更新途中改狀態
                     // （SwiftUI 的 runtime issue「Modifying state during view update」，每個工作階段
                     // 好幾十次），而且同一個物件重複指派也會再觸發一輪更新。
@@ -7609,7 +7645,8 @@ public struct NotebookEditorView: View {
                     pageIndex: idx,
                     drawing: pageDrawing,
                     store: store,
-                    canvasWidth: canvasContentWidth
+                    canvasWidth: canvasContentWidth,
+                    deferRecomputation: lasso.isDraggingSelection || !lasso.path.isEmpty || CanvasTouchState.isCanvasNavigating
                 )
                 let pageRatio = PageGeometry.width / max(1, PageGeometry.height)
                 Image(uiImage: img)
@@ -7926,6 +7963,7 @@ public struct NotebookEditorView: View {
             }
             pendingCoreInk = remapped(stillPending)
             coreInkBaselines = remapped(coreInkBaselines)
+            continuousCanvases.invalidateCachedDrawings()
             lastPersistedInk = nil
             if let origins = pageOrigins {
                 let countAfter = store.notebooks.first(where: { $0.id == notebook.id })?.pageCount ?? countBefore
@@ -10453,6 +10491,7 @@ public struct NotebookEditorView: View {
         self.lastStrokeCount = loaded.strokes.count
         self.currentPageHeight = notebook.height(forPage: currentPageIndex)
         self.lasso.clear()
+        configureLassoCallbacks(forPage: currentPageIndex)
         self.originalSketchBackup = nil
         self.refinedSketchCache = nil
     }
@@ -11283,7 +11322,7 @@ public struct NotebookEditorView: View {
         store.corePackagesDirectory.appending(path: "\(notebook.id.lowercased()).padnote")
     }
 
-    /// 取得指定頁面的手寫筆跡（優先取待存核心筆跡、當前單頁模式中正在編輯的筆跡、最後取磁碟存檔）
+    /// 取得指定頁面的手寫筆跡（優先取待存核心筆跡、當前單頁模式中正在編輯的筆跡、連續模式已載入畫布或記憶體快取、最後取磁碟存檔）
     private func drawingForPage(_ page: Int) -> PKDrawing {
         if let pending = pendingCoreInk[page] {
             return pending
@@ -11291,13 +11330,22 @@ public struct NotebookEditorView: View {
         if pageDisplayMode == .single && page == currentPageIndex {
             return currentDrawing
         }
-        return store.loadDrawing(notebookId: notebook.id, pageIndex: page)
+        if pageDisplayMode == .continuous, let live = continuousCanvases[page]?.drawing {
+            return live
+        }
+        if let cached = continuousCanvases.cachedDrawing(forPage: page) {
+            return cached
+        }
+        let loaded = store.loadDrawing(notebookId: notebook.id, pageIndex: page)
+        continuousCanvases.setCachedDrawing(loaded, forPage: page)
+        return loaded
     }
 
     private func recordDrawingEdit(page: Int, drawing: PKDrawing) {
         if page == currentPageIndex {
             currentDrawing = drawing
         }
+        continuousCanvases.setCachedDrawing(drawing, forPage: page)
         pendingCoreInk[page] = drawing
         scheduleCoreInkFlush()
         noteInkEdited()
@@ -11379,7 +11427,10 @@ public struct NotebookEditorView: View {
         for (page, drawing) in pending {
             MainThreadStallMonitor.shared.breadcrumb("flush p\(page) saveDrawing (\(drawing.strokes.count) strokes)")
             let drawingURL = store.drawingsDirectory.appending(path: "\(notebook.id)_p\(page).drawing")
-            NotebookStore.writeDrawing(drawing, to: drawingURL)
+            // 僅先更新記憶體快取，實際序列化與磁碟寫入統一交由背景 coreInkQueue 的 CoreInkFlush.apply 執行，
+            // 避免切換模式或落筆存檔時在主執行緒上同步阻塞。
+            NotebookStore.primeDrawingCache(drawing, for: drawingURL)
+            continuousCanvases.setCachedDrawing(drawing, forPage: page)
             jobs.append(CoreInkFlush.Job(
                 page: page, drawing: drawing, drawingFileURL: drawingURL,
                 cachedBaseline: coreInkBaselines[page]))
@@ -11438,7 +11489,8 @@ public struct NotebookEditorView: View {
         // 筆跡沒變就不重寫：模式切換、點物件前後都會呼叫這裡，而序列化＋寫檔＋推進核心是整頁的成本。
         let unchanged = lastPersistedInk.map { $0.page == currentPageIndex && $0.drawing == currentDrawing } ?? false
         if !unchanged {
-            store.saveDrawing(notebookId: notebook.id, pageIndex: currentPageIndex, drawing: currentDrawing)
+            // 透過 pendingCoreInk + flushPendingCoreInk 先更新記憶體快取並排入 coreInkQueue 背景寫檔，
+            // 不在主執行緒重複執行同步 store.saveDrawing，消除切換「手繪／打字」模式時的卡頓。
             pendingCoreInk[currentPageIndex] = currentDrawing
             flushPendingCoreInk()
             lastPersistedInk = (currentPageIndex, currentDrawing)
@@ -11478,7 +11530,9 @@ public struct NotebookEditorView: View {
     /// 剛落下的筆畫、別的路徑換過的筆跡可能還沒寫回來；拿舊副本算出的選取索引
     /// 對不到畫面上的筆畫 —— 有的拖得動、有的拖不動。
     private func syncDrawingFromCanvas() {
-        let targetCanvas = (pageDisplayMode == .continuous ? continuousCanvases[currentPageIndex] : nil) ?? canvasView
+        let targetCanvas = (pageDisplayMode == .continuous ? continuousCanvases[currentPageIndex] : nil)
+            ?? continuousCanvases.activeCanvas
+            ?? canvasView
         // 連續模式剛換焦點頁時 `canvasView` 可能還是上一頁的畫布（非同步才換過來），不能拿它當這一頁。
         if let coordinator = targetCanvas?.delegate as? CanvasRepresentable.Coordinator,
            let page = coordinator.parent.proInk?.pageIndex, page != currentPageIndex {
@@ -11492,11 +11546,94 @@ public struct NotebookEditorView: View {
     /// 把套索改過的筆跡換上目前的畫布（不經 delegate，見 `showEditedDrawing`）。
     private func showLassoEdit(_ newDrawing: PKDrawing) {
         currentDrawing = newDrawing
-        let targetCanvas = (pageDisplayMode == .continuous ? continuousCanvases[currentPageIndex] : nil) ?? canvasView
+        continuousCanvases.setCachedDrawing(newDrawing, forPage: currentPageIndex)
+        let targetCanvas = (pageDisplayMode == .continuous ? continuousCanvases[currentPageIndex] : nil)
+            ?? continuousCanvases.activeCanvas
+            ?? canvasView
         if let adaptive = targetCanvas as? AdaptiveCanvasView {
             adaptive.showEditedDrawing(newDrawing)
         } else {
             targetCanvas?.drawing = newDrawing
+        }
+    }
+
+    /// 綁定套索與當前頁面之專業筆畫層（`ProInkLayerView`）及畫布插入物件（貼紙、形狀、圖片、文字方塊等），
+    /// 使套索圈選與拖曳能同時選取並移動 PencilKit 筆畫、專業筆畫與未鎖定的頁面物件。
+    private func configureLassoCallbacks(forPage page: Int) {
+        let registry = continuousCanvases
+        let isContinuous = (pageDisplayMode == .continuous)
+        lasso.proHost = {
+            let target = (isContinuous ? registry[page] : nil) ?? registry.activeCanvas
+            return (target as? AdaptiveCanvasView)?.proLayer
+        }
+        lasso.objectCandidates = {
+            marqueeCandidates(forPage: page).map { (id: $0.id, frame: $0.frame) }
+        }
+        lasso.onMoveObjects = { ids, delta in
+            guard !ids.isEmpty, delta != .zero else { return }
+            for id in ids {
+                if let frame = frameOfObject(id: id) {
+                    moveObject(id: id, to: CGPoint(x: frame.minX + delta.width, y: frame.minY + delta.height))
+                }
+            }
+            if isContinuous {
+                continuousObjectGeneration += 1
+            }
+        }
+        lasso.onCommitMoveObjects = { ids in
+            guard !ids.isEmpty else { return }
+            commitNotebook()
+            if isContinuous {
+                continuousObjectGeneration += 1
+            }
+            PageThumbnailRenderer.invalidateAll()
+            thumbnailRevision += 1
+        }
+        lasso.onDeleteObjects = { ids in
+            guard !ids.isEmpty else { return }
+            deleteObjects(ids: ids)
+            if isContinuous {
+                continuousObjectGeneration += 1
+            }
+            PageThumbnailRenderer.invalidateAll()
+            thumbnailRevision += 1
+        }
+        lasso.onCopyObjects = { ids in
+            guard !ids.isEmpty else { return }
+            objectClipboard = ids.compactMap(clipboardObject(forId:))
+            isPlacingPasteObject = false
+        }
+        lasso.onCutObjects = { ids in
+            guard !ids.isEmpty else { return }
+            objectClipboard = ids.compactMap(clipboardObject(forId:))
+            isPlacingPasteObject = false
+            deleteObjects(ids: ids)
+            if isContinuous {
+                continuousObjectGeneration += 1
+            }
+            PageThumbnailRenderer.invalidateAll()
+            thumbnailRevision += 1
+        }
+        lasso.onDuplicateObjects = { ids in
+            let copies = ids.compactMap(clipboardObject(forId:))
+            guard !copies.isEmpty else { return [] }
+            paste(copies, onPage: page, at: nil)
+            if isContinuous {
+                continuousObjectGeneration += 1
+            }
+            return selectedObjectIds.compactMap { id in
+                frameOfObject(id: id).map { (id: id, frame: $0) }
+            }
+        }
+        lasso.onPasteObjects = {
+            guard !objectClipboard.isEmpty else { return [] }
+            paste(objectClipboard, onPage: page, at: nil)
+            if isContinuous {
+                continuousObjectGeneration += 1
+            }
+            return selectedObjectIds.compactMap { id in
+                frameOfObject(id: id).map { (id: id, frame: $0) }
+            }
         }
     }
 

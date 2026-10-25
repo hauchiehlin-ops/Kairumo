@@ -1458,10 +1458,28 @@ private fun ContinuousPage(
             LassoOverlay(
                 lasso = lasso,
                 engine = engine,
-                onGestureStart = onLassoClaim,
+                onGestureStart = {
+                    onLassoClaim()
+                    lasso.objectCandidates = {
+                        lockFramesLatest.filter { it.id !in lockedIdsLatest }
+                    }
+                    lasso.onMoveObjects = { ids, delta ->
+                        runtime.moveObjectsBy(ids, delta.x, delta.y)
+                        revision++
+                        runtime.bump()
+                    }
+                    lasso.onDeleteObjects = { ids ->
+                        val removed = runtime.deleteObjects(ids)
+                        if (removed) {
+                            revision++
+                            runtime.bump()
+                        }
+                        removed
+                    }
+                },
                 showDecoration = ownsLasso,
                 onChanged = lassoChanged,
-                modifier = Modifier.fillMaxSize().zIndex(200f)
+                modifier = Modifier.fillMaxSize().zIndex(260f)
             )
             val box = lasso.boundingRect
             if (ownsLasso && box != null) {
@@ -1621,6 +1639,49 @@ internal class PageRuntime(session: PadnoteSession?, val pageId: String?, contex
         tableStore.load()
         chartStore.load()
         imageStore.load()
+    }
+
+    /** 套索圈中頁面物件後，將指定物件依 (dx, dy) 平移並存回核心。 */
+    fun moveObjectsBy(ids: Set<String>, dx: Float, dy: Float) {
+        if (ids.isEmpty() || (kotlin.math.abs(dx) < 0.5f && kotlin.math.abs(dy) < 0.5f)) return
+        imageStore.all.filter { it.id in ids }.forEach { img ->
+            val (nx, ny) = PageGeometry.clampOrigin(img.x + dx, img.y + dy, img.width, img.height)
+            img.x = nx
+            img.y = ny
+            imageStore.persist(img)
+        }
+        textStore.all.filter { it.id in ids }.forEach { box ->
+            val (nx, ny) = PageGeometry.clampOrigin(box.x + dx, box.y + dy, box.width, box.height)
+            box.x = nx
+            box.y = ny
+            textStore.persist(box)
+        }
+        tableStore.all.filter { it.id in ids }.forEach { tbl ->
+            val (nx, ny) = PageGeometry.clampOrigin(tbl.x + dx, tbl.y + dy, tbl.width, tbl.layout().height.toFloat())
+            tbl.x = nx
+            tbl.y = ny
+            tableStore.persist(tbl)
+        }
+        chartStore.all.filter { it.id in ids }.forEach { ch ->
+            val (nx, ny) = PageGeometry.clampOrigin(ch.x + dx, ch.y + dy, ch.width, ch.height)
+            chartStore.persist(ch.copy(x = nx, y = ny))
+        }
+        shapeStore.all.filter { it.id in ids }.forEach { sh ->
+            val (nx, ny) = PageGeometry.clampOrigin(sh.x + dx, sh.y + dy, sh.width, sh.height)
+            shapeStore.persist(sh.copyShape().apply { x = nx; y = ny })
+        }
+    }
+
+    /** 套索刪除選中的頁面物件。 */
+    fun deleteObjects(ids: Set<String>): Boolean {
+        if (ids.isEmpty()) return false
+        var changed = false
+        imageStore.all.filter { it.id in ids }.forEach { imageStore.remove(it); changed = true }
+        textStore.all.filter { it.id in ids }.forEach { textStore.remove(it); changed = true }
+        tableStore.all.filter { it.id in ids }.forEach { tableStore.remove(it); changed = true }
+        chartStore.all.filter { it.id in ids }.forEach { chartStore.remove(it); changed = true }
+        shapeStore.all.filter { it.id in ids }.forEach { shapeStore.remove(it); changed = true }
+        return changed
     }
 
     /** 這一頁物件的快照（連續模式沒有連結卡、3D、錄音卡，那些只在單頁模式出現）。 */
