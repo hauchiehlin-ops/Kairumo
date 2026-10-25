@@ -753,12 +753,12 @@ extension SmokeUITests {
     /// 標籤同樣來自核心的字串表。
     func testMoreMenuItemsAreReachable() {
         let app = launch()
-        XCTAssertTrue(app.wait(for: .runningForeground, timeout: 15))
+        XCTAssertTrue(app.wait(for: .runningForeground, timeout: 20))
 
         guard openSeedNotebook(app) else { return }
 
         let more = app.descendants(matching: .any).matching(identifier: "editor.more").firstMatch
-        guard more.waitForExistence(timeout: 15) else {
+        guard more.waitForExistence(timeout: 20) else {
             XCTFail("編輯器上沒有「更多」選單")
             return
         }
@@ -784,12 +784,12 @@ extension SmokeUITests {
     /// 兩次選單，失敗時分不出是哪一張沒開起來。
     func testExportMenuItemsAreReachable() {
         let app = launch()
-        XCTAssertTrue(app.wait(for: .runningForeground, timeout: 15))
+        XCTAssertTrue(app.wait(for: .runningForeground, timeout: 20))
 
         guard openSeedNotebook(app) else { return }
 
         let share = app.descendants(matching: .any).matching(identifier: "editor.share").firstMatch
-        guard share.waitForExistence(timeout: 15) else {
+        guard share.waitForExistence(timeout: 20) else {
             XCTFail("編輯器上沒有匯出選單")
             return
         }

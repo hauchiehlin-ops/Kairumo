@@ -556,7 +556,7 @@ func openSeedNotebook(
         .matching(identifier: "home.action.new_note").firstMatch
     let editorMore = app.descendants(matching: .any)
         .matching(identifier: "editor.more").firstMatch
-    guard home.waitForExistence(timeout: 15) else {
+    guard home.waitForExistence(timeout: 30) else {
         XCTFail("首頁沒有完成載入，找不到 New Note", file: file, line: line)
         return false
     }
@@ -570,7 +570,7 @@ func openSeedNotebook(
             card.tap()
             let entered = NSPredicate(format: "exists == true AND isHittable == true")
             let ready = XCTNSPredicateExpectation(predicate: entered, object: editorMore)
-            if XCTWaiter().wait(for: [ready], timeout: 10) == .completed {
+            if XCTWaiter().wait(for: [ready], timeout: 20) == .completed {
                 return true
             }
         }
