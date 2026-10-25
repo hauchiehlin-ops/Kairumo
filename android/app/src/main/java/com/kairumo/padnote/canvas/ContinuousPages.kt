@@ -1299,6 +1299,22 @@ private fun ContinuousPage(
                         meta.setObjectOrder(session, pageIndex, op.apply(id, currentOrder))
                         revision++
                     }
+                    com.kairumo.padnote.canvas.ObjectStacking.Reorder.TO_BACK -> {
+                        val current = meta.underInkObjectIds(pageIndex).toMutableSet()
+                        if (current.add(id)) {
+                            meta.setUnderInkObjectIds(session, pageIndex, current)
+                        }
+                        val items = buildList {
+                            imageStore.all.forEach { add(ObjectStacking.Item(it.id, ObjectStacking.Kind.IMAGE, "")) }
+                            shapeStore.all.forEach { add(ObjectStacking.Item(it.id, ObjectStacking.Kind.SHAPE, "")) }
+                            tableStore.all.forEach { add(ObjectStacking.Item(it.id, ObjectStacking.Kind.TABLE, "")) }
+                            chartStore.all.forEach { add(ObjectStacking.Item(it.id, ObjectStacking.Kind.CHART, "")) }
+                            textStore.all.forEach { add(ObjectStacking.Item(it.id, ObjectStacking.Kind.TEXT, "")) }
+                        }
+                        val currentOrder = ObjectStacking.normalized(items, meta.objectOrder(pageIndex))
+                        meta.setObjectOrder(session, pageIndex, op.apply(id, currentOrder))
+                        revision++
+                    }
                     else -> {
                         val items = buildList {
                             imageStore.all.forEach { add(ObjectStacking.Item(it.id, ObjectStacking.Kind.IMAGE, "")) }

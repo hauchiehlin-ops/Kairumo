@@ -1970,8 +1970,8 @@ public final class NotebookStore: ObservableObject {
         // 只看「有沒有設定過」，不看「是不是空的」：使用者把卡片移回筆跡上方之後是空的，
         // 那是使用者的選擇 —— 看空的話每次啟動都會被改回去（使用者回報：圖層調整後又恢復原狀）。
         for index in notebooks.indices {
-            if notebooks[index].id == "seed-feature-showcase-v1" || notebooks[index].titleKey == "seed_feature_showcase_title" {
-                if notebooks[index].underInkObjectIdsByPage == nil {
+            if notebooks[index].id.caseInsensitiveCompare("seed-feature-showcase-v1") == .orderedSame || notebooks[index].titleKey == "seed_feature_showcase_title" {
+                if notebooks[index].underInkObjectIds(forPage: 1).isEmpty {
                     for p in 0..<notebooks[index].pageCount {
                         let bgCardIds = (notebooks[index].shapeAttachments ?? []).filter {
                             $0.pageIndex == p && $0.kindName == "rectangle" && $0.label.isEmpty
