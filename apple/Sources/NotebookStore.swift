@@ -2309,9 +2309,14 @@ public final class NotebookStore: ObservableObject {
         AutoSyncController.shared.request(.localEdit)
     }
 
+    private struct CachedDrawing {
+        let modDate: Date?
+        let drawing: PKDrawing
+        let isPendingWrite: Bool
+    }
     private nonisolated static let drawingCacheLock = NSLock()
     // profile-scope: profile 以完整檔案路徑（含設定檔專屬目錄）為鍵，快取已解碼的 PKDrawing 避免在主執行緒反覆重讀與反序列化
-    private nonisolated(unsafe) static var drawingCache: [String: (modDate: Date?, drawing: PKDrawing)] = [:]
+    private nonisolated(unsafe) static var drawingCache: [String: CachedDrawing] = [:]
     private var cachedDrawingsDirPath: String?
 
     /// 專屬畫布筆畫向量二進位儲存目錄
@@ -2333,12 +2338,22 @@ public final class NotebookStore: ObservableObject {
         Self.writeDrawing(drawing, to: fileUrl)
     }
 
+    /// 清除記憶體中的筆跡快取
+    nonisolated static func invalidateDrawingCache(notebookId: String? = nil) {
+        drawingCacheLock.lock()
+        if let id = notebookId?.lowercased() {
+            drawingCache = drawingCache.filter { !$0.key.contains("/\(id)_p") }
+        } else {
+            drawingCache.removeAll()
+        }
+        drawingCacheLock.unlock()
+    }
+
     /// 先把最新筆跡寫入記憶體快取（供主執行緒立即讀取，零磁碟等待），實際序列化與寫檔可交由背景序列佇列完成。
     nonisolated static func primeDrawingCache(_ drawing: PKDrawing, for fileURL: URL) {
         let key = fileURL.path
         drawingCacheLock.lock()
-        let prevMod = drawingCache[key]?.modDate
-        drawingCache[key] = (prevMod, drawing)
+        drawingCache[key] = CachedDrawing(modDate: nil, drawing: drawing, isPendingWrite: true)
         drawingCacheLock.unlock()
     }
 
@@ -2351,7 +2366,7 @@ public final class NotebookStore: ObservableObject {
         try? data.write(to: fileURL, options: .atomic)
         let modDate = (try? fileURL.resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate
         drawingCacheLock.lock()
-        drawingCache[key] = (modDate, drawing)
+        drawingCache[key] = CachedDrawing(modDate: modDate, drawing: drawing, isPendingWrite: false)
         drawingCacheLock.unlock()
     }
 
@@ -2361,27 +2376,30 @@ public final class NotebookStore: ObservableObject {
         let key = fileUrl.path
         let modDate = (try? fileUrl.resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate
         Self.drawingCacheLock.lock()
-        if let cached = Self.drawingCache[key] {
-            if cached.modDate == modDate {
+        if modDate == nil {
+            if let cached = Self.drawingCache[key], cached.isPendingWrite {
                 Self.drawingCacheLock.unlock()
                 return cached.drawing
-            }
-        }
-        Self.drawingCacheLock.unlock()
-        guard modDate != nil,
-              let data = try? Data(contentsOf: fileUrl),
-              let d = try? PKDrawing(data: data) else {
-            Self.drawingCacheLock.lock()
-            if let primed = Self.drawingCache[key], modDate == nil {
-                Self.drawingCacheLock.unlock()
-                return primed.drawing
             }
             Self.drawingCache.removeValue(forKey: key)
             Self.drawingCacheLock.unlock()
             return PKDrawing()
         }
+        if let cached = Self.drawingCache[key], cached.modDate == modDate, !cached.isPendingWrite {
+            Self.drawingCacheLock.unlock()
+            return cached.drawing
+        }
+        Self.drawingCacheLock.unlock()
+
+        guard let data = try? Data(contentsOf: fileUrl),
+              let d = try? PKDrawing(data: data) else {
+            Self.drawingCacheLock.lock()
+            Self.drawingCache.removeValue(forKey: key)
+            Self.drawingCacheLock.unlock()
+            return PKDrawing()
+        }
         Self.drawingCacheLock.lock()
-        Self.drawingCache[key] = (modDate, d)
+        Self.drawingCache[key] = CachedDrawing(modDate: modDate, drawing: d, isPendingWrite: false)
         Self.drawingCacheLock.unlock()
         return d
     }
@@ -2724,6 +2742,7 @@ public final class NotebookStore: ObservableObject {
     /// 刪掉一本範例筆記本在磁碟上的衍生資料（核心套件、手繪與專業筆畫檔、同步基準），
     /// 讓重新產生的標準內容不會疊在舊的（含重複的）內容上。
     private func resetSeedStorage(notebookId: String) {
+        Self.invalidateDrawingCache(notebookId: notebookId)
         let fm = FileManager.default
         for name in [notebookId, notebookId.lowercased()] {
             try? fm.removeItem(at: corePackagesDirectory.appending(path: "\(name).padnote"))
