@@ -1355,6 +1355,7 @@ class InkEngine(
     var onSnapPreviewChanged: (() -> Unit)? = null
 
     private fun resetHold(x: Float, y: Float) {
+        if (snapStepDeg == null && snapPreview == null) return
         holdAnchorX = x
         holdAnchorY = y
         val token = ++holdToken

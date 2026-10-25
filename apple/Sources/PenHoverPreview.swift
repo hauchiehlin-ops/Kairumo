@@ -93,6 +93,10 @@ final class PenHoverPreviewView: UIView {
         transformed.apply(t)
         transformed.apply(CGAffineTransform(translationX: point.x, y: point.y))
 
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        defer { CATransaction.commit() }
+
         shape.path = transformed.cgPath
         // 只描邊、不填滿：填滿的預覽會把它自己要對齊的那個字蓋住。
         shape.strokeColor = color.withAlphaComponent(0.55).cgColor
@@ -119,8 +123,12 @@ final class PenHoverPreviewView: UIView {
     }
 
     func hide() {
+        guard !isHidden || !reticleLayer.isHidden else { return }
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
         isHidden = true
         reticleLayer.isHidden = true
+        CATransaction.commit()
     }
 }
 
@@ -140,6 +148,9 @@ final class PenHoverCoordinator: NSObject {
     func attach(to canvas: UIView, preview: PenHoverPreviewView) {
         self.preview = preview
         let hover = UIHoverGestureRecognizer(target: self, action: #selector(handleHover(_:)))
+        hover.cancelsTouchesInView = false
+        hover.delaysTouchesBegan = false
+        hover.delaysTouchesEnded = false
         // **這一行不能少。** 預設 `UIHoverGestureRecognizer` 只認滑鼠指標；
         // 少了它，觸控筆懸在螢幕上方時這個 recognizer 完全不會被呼叫，
         // 而且不會有任何錯誤 —— 看起來就只是「懸停沒有做」。

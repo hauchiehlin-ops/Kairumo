@@ -8,9 +8,9 @@ export PYTHONIOENCODING=utf-8
 
 REPO_ROOT="$(git rev-parse --show-toplevel)"
 
-# exFAT 上 macOS 會到處生出 `._*`／`.DS_Store`：.git 裡的會讓 git 報 non-monotonic index，
-# 工作目錄裡的可能被誤加進 commit。commit 前一律先清（也會從暫存區拿掉誤加的）。
-"${REPO_ROOT}/scripts/clean-appledouble.sh" || true
+# exFAT 上 macOS 會到處生出 `._*`／`.DS_Store`：.git 裡的會讓 git 報 non-monotonic index。
+# commit 前用 `--git-only` 快速清理 .git 關鍵目錄，避免在 exFAT 外接碟上全庫 find 卡住。
+"${REPO_ROOT}/scripts/clean-appledouble.sh" --git-only || true
 
 # 檢查暫存區中是否包含來源手冊、法規、範本或版本檔案
 STAGED_SOURCES=$(git diff --cached --name-only | grep -E '^(docs/manual/manual\.js|docs/legal/privacy\.html|Cargo\.toml|templates/src/)' || true)
@@ -33,11 +33,15 @@ if [[ -n "$STAGED_SOURCES" ]]; then
     echo "✅ 衍生平台檔案已自動同步並納入暫存區。"
 fi
 
-# 檢查暫存區中是否包含介面程式碼（Swift / Kotlin），若有則檢查是否有硬寫死文字
-STAGED_UI_FILES=$(git diff --cached --name-only | grep -E '\.(swift|kt)$' || true)
-if [[ -n "$STAGED_UI_FILES" ]]; then
+# 檢查暫存區中是否包含介面程式碼（Swift / Kotlin），若有則僅針對暫存區變更檔案檢查是否有硬寫死文字（避免在 exFAT 外接碟上全庫 rglob 掃描數百個檔案造成數分鐘卡頓）
+STAGED_UI_FILES=()
+while IFS= read -r line; do
+    [[ -n "$line" ]] && STAGED_UI_FILES+=("$line")
+done < <(git diff --cached --name-only --diff-filter=ACMR | grep -E '\.(swift|kt)$' || true)
+
+if [[ ${#STAGED_UI_FILES[@]} -gt 0 ]]; then
     if [[ -f "${REPO_ROOT}/scripts/check-hardcoded-strings.py" ]]; then
-        if ! python3 "${REPO_ROOT}/scripts/check-hardcoded-strings.py"; then
+        if ! python3 "${REPO_ROOT}/scripts/check-hardcoded-strings.py" "${STAGED_UI_FILES[@]}"; then
             echo "" >&2
             echo "❌ [Pre-Commit 阻擋] 介面上發現硬寫死的文字，提交已被阻止！" >&2
             echo "💡 永久解決辦法：" >&2

@@ -94,12 +94,29 @@ TARGETS = [
 ]
 
 
-def main() -> int:
-    hits = []
+def iter_target_files(cli_args: list[str]):
+    all_skips = set()
+    for _, _, skip in TARGETS:
+        all_skips.update(skip)
+    if cli_args:
+        for arg in cli_args:
+            p = (ROOT / arg).resolve() if not Path(arg).is_absolute() else Path(arg).resolve()
+            if not p.is_file() or p.name.startswith("._") or p.name in all_skips:
+                continue
+            if p.suffix in (".swift", ".kt"):
+                yield p
+        return
     for base, pattern, skip in TARGETS:
         for path in sorted(base.rglob(pattern)):
             if path.name.startswith("._") or path.name in skip:
                 continue
+            yield path
+
+
+def main() -> int:
+    hits = []
+    for path in iter_target_files(sys.argv[1:]):
+        if True:
             for n, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
                 if line.strip().startswith(("//", "*", "///")):
                     continue  # 這個 repo 的註解本來就是中文的
