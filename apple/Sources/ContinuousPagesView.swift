@@ -372,6 +372,7 @@ final class TwoFingerScrollForwarder: NSObject, UIGestureRecognizerDelegate {
             if let canvas {
                 drawingWasEnabled = canvas.drawingGestureRecognizer.isEnabled
                 canvas.drawingGestureRecognizer.isEnabled = false
+                (canvas as? AdaptiveCanvasView)?.cancelInFlightStrokesForNavigation()
             }
             scrollView?.panGestureRecognizer.isEnabled = false
         case .changed:
@@ -425,15 +426,19 @@ final class TwoFingerScrollForwarder: NSObject, UIGestureRecognizerDelegate {
         displayLink = nil
     }
 
-    // 與畫布自己的手勢同時辨識 —— 不然落筆手勢一開始，這個就永遠起不來。
+    // 與畫布自己的手勢同時辨識 —— 不然落筆手勢（含 PencilKit 與專業筆刷 ProStrokeGestureRecognizer）一開始，這個就永遠起不來。
     // 但絕不與子視圖中的物件拖曳手勢同時辨識，避免雙指捲動時拖曳到底下的未鎖定物件。
     func gestureRecognizer(
         _ g: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith other: UIGestureRecognizer
     ) -> Bool {
-        if let canvas = canvas, other === canvas.drawingGestureRecognizer {
-            return true
+        if let canvas = canvas {
+            if other === canvas.drawingGestureRecognizer || other.view === canvas {
+                return true
+            }
         }
-        if let sv = scrollView, other === sv.panGestureRecognizer {
+        let sv = scrollView ?? enclosingScrollView()
+        if let sv, other === sv.panGestureRecognizer {
+            scrollView = sv
             return true
         }
         return false

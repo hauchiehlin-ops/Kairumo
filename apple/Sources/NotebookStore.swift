@@ -2309,11 +2309,20 @@ public final class NotebookStore: ObservableObject {
         AutoSyncController.shared.request(.localEdit)
     }
 
+    private nonisolated static let drawingCacheLock = NSLock()
+    // profile-scope: profile 以完整檔案路徑（含設定檔專屬目錄）為鍵，快取已解碼的 PKDrawing 避免在主執行緒反覆重讀與反序列化
+    private nonisolated(unsafe) static var drawingCache: [String: (modDate: Date?, drawing: PKDrawing)] = [:]
+    private var cachedDrawingsDirPath: String?
+
     /// 專屬畫布筆畫向量二進位儲存目錄
     public var drawingsDirectory: URL {
         let dir = documentsDir.appendingPathComponent("Drawings", isDirectory: true)
-        if !FileManager.default.fileExists(atPath: dir.path) {
-            try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        let path = dir.path
+        if cachedDrawingsDirPath != path {
+            if !FileManager.default.fileExists(atPath: path) {
+                try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+            }
+            cachedDrawingsDirPath = path
         }
         return dir
     }
@@ -2321,25 +2330,60 @@ public final class NotebookStore: ObservableObject {
     /// 即時自動儲存單頁手繪內容
     public func saveDrawing(notebookId: String, pageIndex: Int, drawing: PKDrawing) {
         let fileUrl = drawingsDirectory.appending(path: "\(notebookId)_p\(pageIndex).drawing")
-        let data = drawing.dataRepresentation()
-        try? data.write(to: fileUrl, options: .atomic)
+        Self.writeDrawing(drawing, to: fileUrl)
+    }
+
+    /// 先把最新筆跡寫入記憶體快取（供主執行緒立即讀取，零磁碟等待），實際序列化與寫檔可交由背景序列佇列完成。
+    nonisolated static func primeDrawingCache(_ drawing: PKDrawing, for fileURL: URL) {
+        let key = fileURL.path
+        drawingCacheLock.lock()
+        let prevMod = drawingCache[key]?.modDate
+        drawingCache[key] = (prevMod, drawing)
+        drawingCacheLock.unlock()
     }
 
     /// Background counterpart used by the editor's serialized ink writer.
     /// The caller resolves the URL on the main actor; serialization and disk I/O
     /// happen on the writer queue.
     nonisolated static func writeDrawing(_ drawing: PKDrawing, to fileURL: URL) {
+        let key = fileURL.path
         let data = drawing.dataRepresentation()
         try? data.write(to: fileURL, options: .atomic)
+        let modDate = (try? fileURL.resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate
+        drawingCacheLock.lock()
+        drawingCache[key] = (modDate, drawing)
+        drawingCacheLock.unlock()
     }
 
-    /// 讀取單頁手繪內容
+    /// 讀取單頁手繪內容（具記憶體快取，檔案修改時間未變時直接回傳已解碼的 PKDrawing）
     public func loadDrawing(notebookId: String, pageIndex: Int) -> PKDrawing {
         let fileUrl = drawingsDirectory.appending(path: "\(notebookId)_p\(pageIndex).drawing")
-        if let data = try? Data(contentsOf: fileUrl), let d = try? PKDrawing(data: data) {
-            return d
+        let key = fileUrl.path
+        let modDate = (try? fileUrl.resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate
+        Self.drawingCacheLock.lock()
+        if let cached = Self.drawingCache[key] {
+            if cached.modDate == modDate {
+                Self.drawingCacheLock.unlock()
+                return cached.drawing
+            }
         }
-        return PKDrawing()
+        Self.drawingCacheLock.unlock()
+        guard modDate != nil,
+              let data = try? Data(contentsOf: fileUrl),
+              let d = try? PKDrawing(data: data) else {
+            Self.drawingCacheLock.lock()
+            if let primed = Self.drawingCache[key], modDate == nil {
+                Self.drawingCacheLock.unlock()
+                return primed.drawing
+            }
+            Self.drawingCache.removeValue(forKey: key)
+            Self.drawingCacheLock.unlock()
+            return PKDrawing()
+        }
+        Self.drawingCacheLock.lock()
+        Self.drawingCache[key] = (modDate, d)
+        Self.drawingCacheLock.unlock()
+        return d
     }
 
     // MARK: - 錄音套件（R2）

@@ -145,6 +145,40 @@ final class InkDiskBaselines {
     func removeAll() { pages.removeAll() }
 }
 
+/// 連續模式下各頁畫布與已載入筆跡的參照型別快取。
+///
+/// 不可將 `[Int: PKCanvasView]` 宣告為 `@State` 值型別字典並在 `makeUIView`/`updateUIView` 內寫入：
+/// SwiftUI 會在視圖更新期間直接丟棄對 `@State` 的同步修改，導致第 2 頁之後的畫布參照永遠為 `nil`，
+/// 套索搬移時找不到目標頁畫布而誤寫入第 1 頁畫布，造成「只有套索框移動、筆跡停在原地且印到第 1 頁」。
+final class ContinuousCanvasRegistry {
+    private var canvases: [Int: PKCanvasView] = [:]
+    private var cachedDrawings: [Int: PKDrawing] = [:]
+    weak var activeCanvas: PKCanvasView?
+
+    subscript(page: Int) -> PKCanvasView? {
+        get { canvases[page] }
+        set { canvases[page] = newValue }
+    }
+
+    func cachedDrawing(forPage page: Int) -> PKDrawing? {
+        cachedDrawings[page]
+    }
+
+    func setCachedDrawing(_ drawing: PKDrawing?, forPage page: Int) {
+        cachedDrawings[page] = drawing
+    }
+
+    func invalidateCachedDrawings() {
+        cachedDrawings.removeAll()
+    }
+
+    func removeAll() {
+        canvases.removeAll()
+        cachedDrawings.removeAll()
+        activeCanvas = nil
+    }
+}
+
 /// 使用者在這台擦掉的 PencilKit 筆畫的身分，每頁一份。
 ///
 /// # 為什麼需要

@@ -68,12 +68,22 @@ fun LassoOverlay(
      * （`InkCanvas` 的 `lassoDrag`）。低延遲畫布畫在另一個 SurfaceView 上做不到，才靠這一份。
      */
     drawDragPreview: Boolean = false,
+    objectCandidates: List<MarqueeHit> = emptyList(),
+    lockedObjectIds: Set<String> = emptySet(),
+    imageStore: com.kairumo.padnote.image.ImageStore? = null,
+    textStore: com.kairumo.padnote.text.TextBoxStore? = null,
+    tableStore: com.kairumo.padnote.table.TableStore? = null,
+    chartStore: com.kairumo.padnote.chart.ChartStore? = null,
+    shapeStore: com.kairumo.padnote.shape.ShapeStore? = null,
     onChanged: () -> Unit
 ) {
     val density = LocalDensity.current.density
     val accent = MaterialTheme.colorScheme.primary
     // 不拿它當 pointerInput 的 key：每次重組都是新的 lambda，當 key 會把進行中的手勢拆掉。
     val gestureStart by rememberUpdatedState(onGestureStart)
+    val candidatesLatest by rememberUpdatedState(objectCandidates)
+    val lockedLatest by rememberUpdatedState(lockedObjectIds)
+    val changedLatest by rememberUpdatedState(onChanged)
 
     Canvas(
         modifier = modifier
@@ -82,7 +92,17 @@ fun LassoOverlay(
                 // 這一層在畫布的 `graphicsLayer` 裡面，收到的位置已經扣掉縮放與捲動，
                 // 只差一個 density 就是頁面點（與核心筆畫同一套）。
                 detectDragGestures(
-                    onDragStart = { gestureStart(); lasso.begin(it / density) },
+                    onDragStart = {
+                        gestureStart()
+                        if (imageStore != null && textStore != null && tableStore != null && chartStore != null && shapeStore != null) {
+                            lasso.bindPageObjects(
+                                candidatesLatest, lockedLatest,
+                                imageStore, textStore, tableStore, chartStore, shapeStore,
+                                onMutated = changedLatest
+                            )
+                        }
+                        lasso.begin(it / density)
+                    },
                     onDrag = { change, _ ->
                         lasso.extend(change.position / density)
                         // 消費掉，底下的東西不要再看到這一筆。
