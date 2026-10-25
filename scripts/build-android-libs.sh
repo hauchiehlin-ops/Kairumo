@@ -25,6 +25,14 @@ export PYTHONIOENCODING=utf-8
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO_ROOT"
 
+# 若專案位於外接磁碟（如 exFAT），預設將 CARGO_TARGET_DIR 導向內建高速磁碟以避免 I/O 阻塞
+if [[ -z "${CARGO_TARGET_DIR:-}" ]]; then
+    if [[ "$REPO_ROOT" == /Volumes/* ]]; then
+        export CARGO_TARGET_DIR="${HOME}/.cargo-target/kairumo"
+    fi
+fi
+TARGET_DIR="${CARGO_TARGET_DIR:-${REPO_ROOT}/target}"
+
 PROFILE="${1:-release}"
 ABIS=(arm64-v8a x86_64)
 OUT_DIR="android/app/src/main/jniLibs"
@@ -158,7 +166,7 @@ for abi in "${ABIS[@]}"; do
     # 而錯誤訊息指向 `target/debug/`，看起來完全不像是這裡的問題。
     ANDROID_API="${KAIRUMO_ANDROID_API:-24}"
 
-    BLAS_STUB_DIR="$REPO_ROOT/target/android-blas-stub/$abi"
+    BLAS_STUB_DIR="$TARGET_DIR/android-blas-stub/$abi"
     if [[ ! -f "$BLAS_STUB_DIR/libggml-blas.a" ]]; then
         mkdir -p "$BLAS_STUB_DIR"
         NDK_BIN=""
@@ -288,8 +296,8 @@ echo "==> 產生 Kotlin 綁定 → android/app/src/main/java"
 # 用預設 feature 產出的綁定會少掉 relay 之類只在 Android 開啟的型別，
 # Kotlin 端就會出現 Unresolved reference。
 cargo build -p padnote-core "${FEATURE_ARGS[@]}" >/dev/null
-LIB="target/debug/libpadnote_core.dylib"
-[[ -f "$LIB" ]] || LIB="target/debug/libpadnote_core.so"
+LIB="${TARGET_DIR}/debug/libpadnote_core.dylib"
+[[ -f "$LIB" ]] || LIB="${TARGET_DIR}/debug/libpadnote_core.so"
 mkdir -p android/app/src/main/java
 cargo run -q -p padnote-core --bin uniffi-bindgen -- generate \
   --library "$LIB" --language kotlin --out-dir android/app/src/main/java

@@ -36,6 +36,15 @@ export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 
+# 若專案位於外接磁碟（如 exFAT），預設將 CARGO_TARGET_DIR 導向內建高速磁碟以避免 I/O 阻塞
+if [[ -z "${CARGO_TARGET_DIR:-}" ]]; then
+  if [[ "$REPO_ROOT" == /Volumes/* ]]; then
+    export CARGO_TARGET_DIR="${HOME}/.cargo-target/kairumo"
+  fi
+fi
+TARGET_DIR="${CARGO_TARGET_DIR:-${REPO_ROOT}/target}"
+mkdir -p "$TARGET_DIR"
+
 AUDIOPUS_SYS_MANIFEST="$(cargo metadata --format-version 1 | python3 -c "import json, sys; d=json.load(sys.stdin); print([p['manifest_path'] for p in d['packages'] if p['name'] == 'audiopus_sys'][0])" 2>/dev/null || true)"
 if [[ -n "$AUDIOPUS_SYS_MANIFEST" && -f "$AUDIOPUS_SYS_MANIFEST" ]]; then
   OPUS_SRC="$(dirname "$AUDIOPUS_SYS_MANIFEST")/opus"
@@ -68,7 +77,7 @@ for t in "${TARGETS[@]}"; do
       ;;
   esac
 
-  STUB_DIR="${REPO_ROOT}/target/stubs/$t"
+  STUB_DIR="${TARGET_DIR}/stubs/$t"
   mkdir -p "$STUB_DIR"
   SDK_PATH="$(xcrun --sdk "$SDK" --show-sdk-path 2>/dev/null || true)"
   if [[ ! -f "${STUB_DIR}/libonnxruntime.a" ]]; then
@@ -80,7 +89,7 @@ for t in "${TARGETS[@]}"; do
     ar cr "${STUB_DIR}/libonnxruntime.a" "${STUB_DIR}/dummy.o" 2>/dev/null || true
   fi
 
-  OPUS_DIR="${REPO_ROOT}/target/opus/$t"
+  OPUS_DIR="${TARGET_DIR}/opus/$t"
   if [[ ! -f "${OPUS_DIR}/lib/libopus.a" && -n "$OPUS_SRC" && -d "$OPUS_SRC" ]]; then
     echo "  --> 為 $t 建置原生 libopus.a"
     mkdir -p "${OPUS_DIR}/build"
@@ -126,7 +135,7 @@ for t in "${TARGETS[@]}"; do
   #    所以匯出的 PNG 上看不到字（工作項 S-60）。兩個平台現在都改走
   #    `PageImageRenderer`（核心產 PDF、系統算繪），與 pdf feature 無關 ——
   #    Apple 不帶 PDFium 的判斷仍然成立，但理由要算在那裡，不是算在這裡。
-  rm -f "${REPO_ROOT}/target/$t/release/libpadnote_core.a"
+  rm -f "${TARGET_DIR}/$t/release/libpadnote_core.a"
   OPUS_LIB_DIR="${OPUS_DIR}/lib" \
   ORT_LIB_LOCATION="$STUB_DIR" \
     cargo rustc -p padnote-core --lib --release --target "$t" \
@@ -141,16 +150,16 @@ OUT="apple/PadnoteCore.xcframework"
 rm -rf "$OUT"
 
 # UniFFI 產生的 modulemap 要改名為 module.modulemap 才能被 Xcode 當成模組
-HEADERS="target/xcf-headers"
+HEADERS="${TARGET_DIR}/xcf-headers"
 rm -rf "$HEADERS" && mkdir -p "$HEADERS"
 cp apple/Generated/padnote_coreFFI.h "$HEADERS/"
 cp apple/Generated/padnote_coreFFI.modulemap "$HEADERS/module.modulemap"
 
 echo "==> 組裝 XCFramework"
 xcodebuild -create-xcframework \
-  -library "target/aarch64-apple-ios/release/libpadnote_core.a"        -headers "$HEADERS" \
-  -library "target/aarch64-apple-ios-sim/release/libpadnote_core.a"    -headers "$HEADERS" \
-  -library "target/aarch64-apple-ios-macabi/release/libpadnote_core.a" -headers "$HEADERS" \
+  -library "${TARGET_DIR}/aarch64-apple-ios/release/libpadnote_core.a"        -headers "$HEADERS" \
+  -library "${TARGET_DIR}/aarch64-apple-ios-sim/release/libpadnote_core.a"    -headers "$HEADERS" \
+  -library "${TARGET_DIR}/aarch64-apple-ios-macabi/release/libpadnote_core.a" -headers "$HEADERS" \
   -output "$OUT"
 
 # 留下這份 XCFramework **是用哪一版綁定建的**的指紋。

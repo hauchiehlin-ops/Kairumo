@@ -35,6 +35,15 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 cd "$REPO_ROOT"
 
+# 若專案位於外接磁碟（如 exFAT），預設將 CARGO_TARGET_DIR 導向內建高速磁碟以避免 I/O 阻塞
+if [[ -z "${CARGO_TARGET_DIR:-}" ]]; then
+    if [[ "$REPO_ROOT" == /Volumes/* ]]; then
+        export CARGO_TARGET_DIR="${HOME}/.cargo-target/kairumo"
+        mkdir -p "$CARGO_TARGET_DIR"
+        echo "💡 偵測到專案位於外接磁碟，自動設定 CARGO_TARGET_DIR=${CARGO_TARGET_DIR} 以加速編譯"
+    fi
+fi
+
 DRY_RUN=0
 TARGET=""          # apple | android | all | bump
 BUMP_ARGS=()

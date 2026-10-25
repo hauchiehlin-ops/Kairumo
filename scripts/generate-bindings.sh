@@ -5,13 +5,23 @@
 # 修改 crates/padnote-core/src/ffi.rs 之後重跑這支腳本。
 set -euo pipefail
 
-cd "$(dirname "$0")/.."
+REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+cd "$REPO_ROOT"
+
+# 若專案位於外接磁碟（如 exFAT），預設將 CARGO_TARGET_DIR 導向內建高速磁碟以避免 I/O 阻塞
+if [[ -z "${CARGO_TARGET_DIR:-}" ]]; then
+  if [[ "$REPO_ROOT" == /Volumes/* ]]; then
+    export CARGO_TARGET_DIR="${HOME}/.cargo-target/kairumo"
+  fi
+fi
+TARGET_DIR="${CARGO_TARGET_DIR:-${REPO_ROOT}/target}"
+mkdir -p "$TARGET_DIR"
 
 echo "==> 編譯 padnote-core"
 cargo build -p padnote-core
 
-LIB="target/debug/libpadnote_core.dylib"
-[[ -f "$LIB" ]] || LIB="target/debug/libpadnote_core.so"
+LIB="${TARGET_DIR}/debug/libpadnote_core.dylib"
+[[ -f "$LIB" ]] || LIB="${TARGET_DIR}/debug/libpadnote_core.so"
 
 echo "==> 產生 Swift 綁定 → apple/Generated"
 mkdir -p apple/Generated
@@ -50,10 +60,10 @@ echo "==> 產生 Android App 用的 Kotlin 綁定（Android feature 組合）"
 # 重編 padnote-core，把剛產好的 relay 版 dylib 蓋掉 —— 接著 bindgen
 # 讀到的是預設 feature 的符號，產出一份看起來正常、但少了東西的綁定。
 cargo build -q -p padnote-core --bin uniffi-bindgen
-BINDGEN="target/debug/uniffi-bindgen"
+BINDGEN="${TARGET_DIR}/debug/uniffi-bindgen"
 cargo build -p padnote-core --no-default-features --features relay >/dev/null 2>&1
-ANDROID_LIB="target/debug/libpadnote_core.dylib"
-[[ -f "$ANDROID_LIB" ]] || ANDROID_LIB="target/debug/libpadnote_core.so"
+ANDROID_LIB="${TARGET_DIR}/debug/libpadnote_core.dylib"
+[[ -f "$ANDROID_LIB" ]] || ANDROID_LIB="${TARGET_DIR}/debug/libpadnote_core.so"
 if [[ -f "$ANDROID_LIB" && -x "$BINDGEN" ]]; then
     "$BINDGEN" generate \
         --library "$ANDROID_LIB" --language kotlin \
