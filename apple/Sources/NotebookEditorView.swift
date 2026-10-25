@@ -3913,6 +3913,7 @@ public struct NotebookEditorView: View {
             .buttonStyle(.plain)
             .accessibilityLabel(localizationManager.localized("home"))
             .help(localizationManager.localized("home"))
+            .accessibilityIdentifier("editor.home")
 
             // 筆記結構側邊欄切換鈕
             Button {
@@ -3935,11 +3936,13 @@ public struct NotebookEditorView: View {
             .buttonStyle(.plain)
             .accessibilityLabel(localizationManager.localized("structure_sidebar"))
             .help(localizationManager.localized("structure_sidebar_desc"))
+            .accessibilityIdentifier("editor.sidebar_toggle")
 
             Spacer()
 
             // 手繪與打字模式切換器
             editorModeSwitcher()
+                .accessibilityIdentifier("editor.mode")
 
             // 🌟 畫布極簡模式恢復按鈕（讓使用者一秒找到退出鍵）
             if isMinimalistCanvasActive {
@@ -3981,6 +3984,7 @@ public struct NotebookEditorView: View {
                 }
             }
             .buttonStyle(.plain)
+            .accessibilityIdentifier("editor.title")
 
             Spacer()
 
@@ -3996,11 +4000,13 @@ public struct NotebookEditorView: View {
                     Image(systemName: "chevron.left.circle")
                 }
                 .disabled(currentPageIndex <= 0)
+                .accessibilityIdentifier("editor.page.prev")
 
                 Text("P.\(currentPageIndex + 1)/\(max(1, notebook.pageCount))")
                     .font(.caption)
                     .fontWeight(.medium)
                     .foregroundColor(.secondary)
+                    .accessibilityIdentifier("editor.page.indicator")
 
                 Button {
                     if currentPageIndex < notebook.pageCount - 1 {
@@ -4012,6 +4018,7 @@ public struct NotebookEditorView: View {
                     Image(systemName: "chevron.right.circle")
                 }
                 .disabled(currentPageIndex >= notebook.pageCount - 1)
+                .accessibilityIdentifier("editor.page.next")
 
                 // 新增頁面
                 Button {
@@ -4022,6 +4029,7 @@ public struct NotebookEditorView: View {
                 }
                 .accessibilityLabel(localizationManager.localized("add_page"))
                 .help(localizationManager.localized("add_page_desc"))
+                .accessibilityIdentifier("editor.page.add")
             }
 
             Divider()
@@ -4071,6 +4079,7 @@ public struct NotebookEditorView: View {
                 }
                 .accessibilityLabel(localizationManager.localized("undo"))
                 .help(localizationManager.localized("undo_desc"))
+                .accessibilityIdentifier("editor.compact.undo")
 
                 Button {
                     performRedo()
@@ -4086,6 +4095,7 @@ public struct NotebookEditorView: View {
                 }
                 .accessibilityLabel(localizationManager.localized("redo"))
                 .help(localizationManager.localized("redo_desc"))
+                .accessibilityIdentifier("editor.compact.redo")
 
                 Divider().frame(height: 20)
 
@@ -4103,6 +4113,7 @@ public struct NotebookEditorView: View {
                 }
                 .accessibilityLabel(localizationManager.localized("revert_to_initial_state"))
                 .help(localizationManager.localized("revert_to_initial_state"))
+                .accessibilityIdentifier("editor.compact.revert")
             }
 
             // 📦 素材圖庫快捷按鈕（與 iOS 首頁一致）
@@ -4267,6 +4278,7 @@ public struct NotebookEditorView: View {
             .buttonStyle(.plain)
             .accessibilityLabel(localizationManager.localized("insert_object"))
             .help(localizationManager.localized("insert_object"))
+            .accessibilityIdentifier("editor.more")
 
             // 💬 畫布討論圖釘快捷按鈕
             Button {
@@ -4353,6 +4365,7 @@ public struct NotebookEditorView: View {
                     .background((audioManager.status == .recording ? Color.red : Color.orange).opacity(0.12))
                     .cornerRadius(6)
                 }
+                .accessibilityIdentifier("editor.record")
             } else {
                 Button {
                     Task {
@@ -4377,6 +4390,7 @@ public struct NotebookEditorView: View {
                     .background(Color(uiColor: .tertiarySystemGroupedBackground))
                     .cornerRadius(6)
                 }
+                .accessibilityIdentifier("editor.record")
             }
 
             // 匯出與列印選單（解決「看不到匯出相關工具列」問題）
@@ -4433,6 +4447,7 @@ public struct NotebookEditorView: View {
             .buttonStyle(.plain)
             .accessibilityLabel(localizationManager.localized("export_print"))
             .help(localizationManager.localized("export_print"))
+            .accessibilityIdentifier("editor.share")
         }
     }
 
