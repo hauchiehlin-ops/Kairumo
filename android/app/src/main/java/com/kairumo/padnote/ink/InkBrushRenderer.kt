@@ -33,6 +33,7 @@ import kotlin.math.sin
  * 6. 鉛筆 (PENCIL)：石墨摩擦紙張纖維微噪感 (Graphite Grain)、半透炭筆質地。
  * 7. 水彩筆 (WATERCOLOR)：雙層水痕暈染 (Wet Bleed & Core Wash)。
  */
+// profile-scope: device 純筆點與線段幾何快取（以筆畫點列物件識別與幾何參數為鍵），不含跨設定檔持久狀態
 object InkBrushRenderer {
 
     data class SegmentSpec(
@@ -182,6 +183,89 @@ object InkBrushRenderer {
     private fun avgWidth(segments: List<SegmentSpec>) = segments.sumOf { it.width.toDouble() }.toFloat() / segments.size
     private fun avgAlpha(segments: List<SegmentSpec>) = segments.sumOf { it.alpha.toDouble() }.toFloat() / segments.size
 
+    private data class DabCacheKey(
+        val pointsIdentity: Int,
+        val size: Int,
+        val firstX: Float,
+        val lastX: Float,
+        val lastY: Float,
+        val tool: ToolKind,
+        val baseWidth: Float,
+        val lineType: Int
+    )
+
+    private data class SegmentCacheKey(
+        val pointsIdentity: Int,
+        val size: Int,
+        val firstX: Float,
+        val lastX: Float,
+        val lastY: Float,
+        val tool: ToolKind,
+        val baseWidth: Float,
+        val density: Float
+    )
+
+    private val dabsCache = android.util.LruCache<DabCacheKey, List<FfiDab>>(512)
+    private val segmentsCache = android.util.LruCache<SegmentCacheKey, List<SegmentSpec>>(512)
+
+    private fun cachedDabs(
+        points: List<StrokePoint>,
+        tool: ToolKind,
+        baseWidth: Float,
+        lineType: Int
+    ): List<FfiDab> {
+        if (points.isEmpty()) return emptyList()
+        val key = DabCacheKey(
+            pointsIdentity = System.identityHashCode(points),
+            size = points.size,
+            firstX = points.first().x,
+            lastX = points.last().x,
+            lastY = points.last().y,
+            tool = tool,
+            baseWidth = baseWidth,
+            lineType = lineType
+        )
+        synchronized(dabsCache) {
+            dabsCache.get(key)?.let { return it }
+        }
+        val computed = if (lineType != 0) {
+            uniffi.padnote_core.brushDabsStyled(tool, baseWidth, points, lineType.toUByte())
+        } else {
+            brushDabs(tool, baseWidth, points)
+        }
+        synchronized(dabsCache) {
+            dabsCache.put(key, computed)
+        }
+        return computed
+    }
+
+    private fun cachedSegments(
+        points: List<StrokePoint>,
+        tool: ToolKind,
+        baseWidth: Float,
+        density: Float
+    ): List<SegmentSpec> {
+        if (points.size < 2) return emptyList()
+        val key = SegmentCacheKey(
+            pointsIdentity = System.identityHashCode(points),
+            size = points.size,
+            firstX = points.first().x,
+            lastX = points.last().x,
+            lastY = points.last().y,
+            tool = tool,
+            baseWidth = baseWidth,
+            density = density
+        )
+        synchronized(segmentsCache) {
+            segmentsCache.get(key)?.let { return it }
+        }
+        val computed = computeSegments(points, tool, baseWidth, density)
+        synchronized(segmentsCache) {
+            segmentsCache.put(key, computed)
+        }
+        return computed
+    }
+
     /**
      * 在 Compose DrawScope 上繪製筆畫
      */
@@ -196,15 +280,11 @@ object InkBrushRenderer {
     ) {
         if (brushIsCustom(tool)) {
             // 虛線／點線：核心依線型把間隔挖掉，兩個平台畫出同樣的線。
-            val dabs = if (lineType != 0) {
-                uniffi.padnote_core.brushDabsStyled(tool, baseWidth, points, lineType.toUByte())
-            } else {
-                brushDabs(tool, baseWidth, points)
-            }
+            val dabs = cachedDabs(points, tool, baseWidth, lineType)
             drawDabsOnDrawScope(drawScope, dabs, baseColor, density)
             return
         }
-        val segments = computeSegments(points, tool, baseWidth, density)
+        val segments = cachedSegments(points, tool, baseWidth, density)
         if (segments.isEmpty()) return
 
         val isHighlighter = tool == ToolKind.HIGHLIGHTER
@@ -285,10 +365,10 @@ object InkBrushRenderer {
         pxPerDp: Float
     ) {
         if (brushIsCustom(tool)) {
-            drawDabsOnCanvas(canvas, paint, brushDabs(tool, baseWidth, points), pxPerDp)
+            drawDabsOnCanvas(canvas, paint, cachedDabs(points, tool, baseWidth, 0), pxPerDp)
             return
         }
-        val segments = computeSegments(points, tool, baseWidth, pxPerDp)
+        val segments = cachedSegments(points, tool, baseWidth, pxPerDp)
         if (segments.isEmpty()) return
 
         val origAlpha = paint.alpha

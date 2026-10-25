@@ -232,7 +232,11 @@ struct ContinuousPageView<ObjectLayer: View>: View {
             }
         }
         .frame(width: PageGeometry.width, height: PageGeometry.height)
-        .background(Color(uiColor: .systemBackground))
+        .background(
+            Rectangle()
+                .fill(Color(uiColor: .systemBackground))
+                .shadow(color: Color.black.opacity(0.08), radius: 4, y: 2)
+        )
         .overlay(
             // 焦點頁描一圈，使用者才知道現在插入的東西會落在哪一頁。
             Rectangle()
@@ -241,7 +245,6 @@ struct ContinuousPageView<ObjectLayer: View>: View {
                     lineWidth: isFocused ? 1.5 : 1
                 )
         )
-        .shadow(color: Color.black.opacity(0.08), radius: 4, y: 2)
         .overlay(alignment: .bottomTrailing) {
             Text("\(pageIndex + 1)")
                 .font(.system(size: 10, weight: .medium))

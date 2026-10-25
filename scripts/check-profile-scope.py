@@ -74,8 +74,9 @@ def code_part(line: str) -> str:
     return line
 
 
-def check_apple(problems: list[str]) -> None:
-    for path in sorted(APPLE.glob("*.swift")):
+def check_apple(problems: list[str], only_files: list[Path] | None = None) -> None:
+    paths = [p for p in only_files if p.suffix == ".swift" and APPLE in p.parents] if only_files is not None else sorted(APPLE.glob("*.swift"))
+    for path in paths:
         name = path.name
         # `._*` 是 macOS 在 exFAT 上生出來的 AppleDouble 附屬檔，不是原始碼。
         if name.startswith("._") or name.startswith("Profile") or name.endswith(".generated.swift"):
@@ -119,8 +120,9 @@ def check_apple(problems: list[str]) -> None:
                         f"{where}  A4 標成 profile 的單例必須實作 resetForProfileSwitch()（切換設定檔時重設）")
 
 
-def check_android(problems: list[str]) -> None:
-    for path in sorted(ANDROID.rglob("*.kt")):
+def check_android(problems: list[str], only_files: list[Path] | None = None) -> None:
+    paths = [p for p in only_files if p.suffix == ".kt" and ANDROID in p.parents] if only_files is not None else sorted(ANDROID.rglob("*.kt"))
+    for path in paths:
         rel = path.relative_to(ANDROID)
         if path.name.startswith("._") or rel.parts[0] == "profile" or path.name in ("LocalizationStrings.kt", "CoreMessagePatterns.kt"):
             continue
@@ -165,8 +167,15 @@ def check_android(problems: list[str]) -> None:
 
 def main() -> int:
     problems: list[str] = []
-    check_apple(problems)
-    check_android(problems)
+    only_files: list[Path] | None = None
+    if sys.argv[1:]:
+        only_files = []
+        for arg in sys.argv[1:]:
+            p = (ROOT / arg).resolve() if not Path(arg).is_absolute() else Path(arg).resolve()
+            if p.is_file():
+                only_files.append(p)
+    check_apple(problems, only_files)
+    check_android(problems, only_files)
     if problems:
         print(f"❌ 多設定檔分類：{len(problems)} 處沒有處理好\n")
         for p in problems:

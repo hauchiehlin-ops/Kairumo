@@ -8,71 +8,88 @@ export PYTHONIOENCODING=utf-8
 
 REPO_ROOT="$(git rev-parse --show-toplevel)"
 
-# exFAT 上 macOS 會到處生出 `._*`／`.DS_Store`：.git 裡的會讓 git 報 non-monotonic index，
-# 工作目錄裡的會被 codesign / Gradle 誤收。push 前一律先清。
-"${REPO_ROOT}/scripts/clean-appledouble.sh" || true
+# exFAT 上 macOS 會到處生出 `._*`／`.DS_Store`：.git 裡的會讓 git 報 non-monotonic index。
+# push 前用 `--git-only` 快速清理 .git 關鍵目錄，避免在 exFAT 外接碟上全庫 find 卡住。
+"${REPO_ROOT}/scripts/clean-appledouble.sh" --git-only || true
 
-# 0. 介面上絕對不准有硬寫死的文字（CJK 門禁）
-if [[ -f "${REPO_ROOT}/scripts/check-hardcoded-strings.py" ]]; then
-    if ! python3 "${REPO_ROOT}/scripts/check-hardcoded-strings.py"; then
+# 取得本次推送涉及的變更檔案清單（若無 upstream 則取最近一次 commit，空清單時才退回全庫檢查）
+CHANGED_FILES="$(git diff --name-only --diff-filter=ACMR @{upstream}..HEAD 2>/dev/null || git diff --name-only --diff-filter=ACMR HEAD~1..HEAD 2>/dev/null || true)"
+CHANGED_UI_FILES=()
+while IFS= read -r line; do
+    [[ -n "$line" ]] && CHANGED_UI_FILES+=("$line")
+done < <(grep -E '\.(swift|kt)$' <<<"$CHANGED_FILES" || true)
+
+# 0. 介面上絕對不准有硬寫死的文字（CJK 門禁：僅掃描本次變更的 Swift/Kotlin 檔）
+if [[ ${#CHANGED_UI_FILES[@]} -gt 0 && -f "${REPO_ROOT}/scripts/check-hardcoded-strings.py" ]]; then
+    if ! python3 "${REPO_ROOT}/scripts/check-hardcoded-strings.py" "${CHANGED_UI_FILES[@]}"; then
         echo "❌ [Pre-Push 阻擋] 介面上發現硬寫死的文字，推播被阻擋！" >&2
         echo "💡 請跑 python3 scripts/i18n_tool.py add <鍵名> \"<中文>\" [\"英文\"]，改用 localized 後再推。" >&2
         exit 1
     fi
 fi
 
-# 0b. 多設定檔：每一份使用者狀態都必須經過設定檔層（見 scripts/check-profile-scope.py 檔頭）
-if [[ -f "${REPO_ROOT}/scripts/check-profile-scope.py" ]]; then
-    if ! python3 "${REPO_ROOT}/scripts/check-profile-scope.py"; then
+# 0b. 多設定檔：每一份使用者狀態都必須經過設定檔層（僅掃描本次變更的 Swift/Kotlin 檔）
+if [[ ${#CHANGED_UI_FILES[@]} -gt 0 && -f "${REPO_ROOT}/scripts/check-profile-scope.py" ]]; then
+    if ! python3 "${REPO_ROOT}/scripts/check-profile-scope.py" "${CHANGED_UI_FILES[@]}"; then
         echo "❌ [Pre-Push 阻擋] 有使用者狀態沒有經過設定檔層，切換設定檔之後會漏給下一個使用者。" >&2
         exit 1
     fi
 fi
 
-# 1. 介面字串必須與 catalog 一致
-if [[ -f "${REPO_ROOT}/scripts/i18n_tool.py" ]]; then
-    if ! python3 "${REPO_ROOT}/scripts/i18n_tool.py" verify; then
-        echo "❌ 介面字串表與 i18n/ui-strings.json 不一致，請改 catalog 後重跑 generate。" >&2
-        exit 1
+# 1. 介面字串必須與 catalog 一致（僅在 i18n/ 或產生字串表有變更時執行）
+if grep -qE '^(i18n/|apple/Sources/LocalizationStrings|android/.*/LocalizationStrings\.kt)' <<<"$CHANGED_FILES"; then
+    if [[ -f "${REPO_ROOT}/scripts/i18n_tool.py" ]]; then
+        if ! python3 "${REPO_ROOT}/scripts/i18n_tool.py" verify; then
+            echo "❌ 介面字串表與 i18n/ui-strings.json 不一致，請改 catalog 後重跑 generate。" >&2
+            exit 1
+        fi
+    fi
+    if [[ -f "${REPO_ROOT}/scripts/i18n_review.py" ]]; then
+        if ! python3 "${REPO_ROOT}/scripts/i18n_review.py" lint; then
+            exit 1
+        fi
     fi
 fi
 
-# 1b. 核心訊息與譯文審查
-if [[ -f "${REPO_ROOT}/scripts/core_messages.py" ]]; then
-    if ! python3 "${REPO_ROOT}/scripts/core_messages.py" check; then
-        exit 1
-    fi
-fi
-if [[ -f "${REPO_ROOT}/scripts/i18n_review.py" ]]; then
-    if ! python3 "${REPO_ROOT}/scripts/i18n_review.py" lint; then
-        exit 1
+# 1b. 核心訊息與譯文審查（僅在 crates/、i18n/ 或同步日誌來源檔有變更時執行）
+if grep -qE '^(crates/|i18n/|apple/Sources/(NotebookSyncCoordinator|DriveHttpClient|FocusSyncController|StorageSweeper|GoogleAuth)\.swift|android/.*/(CloudSync|FolderSync|FocusSync|StorageSweeper|GoogleAuth)\.kt)' <<<"$CHANGED_FILES"; then
+    if [[ -f "${REPO_ROOT}/scripts/core_messages.py" ]]; then
+        if ! python3 "${REPO_ROOT}/scripts/core_messages.py" check; then
+            exit 1
+        fi
     fi
 fi
 
-# 2. 檢查各平台操作手冊與來源一致
-if [[ -f "${REPO_ROOT}/scripts/build-platform-docs.py" ]]; then
-    if ! python3 "${REPO_ROOT}/scripts/build-platform-docs.py" --check >/dev/null 2>&1; then
-        echo "⚠️ 偵測到操作手冊平台版與來源不一致，自動修復中..." >&2
-        python3 "${REPO_ROOT}/scripts/build-platform-docs.py"
-        echo "❌ 請將重新產生後的 docs/manual/ 檔案加入 commit 後再推（已為您自動重新產生）。" >&2
-        exit 1
+# 2. 檢查各平台操作手冊與來源一致（僅在 docs/manual/ 或 Cargo.toml 有變更時執行）
+if grep -qE '^(docs/manual/|Cargo\.toml)' <<<"$CHANGED_FILES"; then
+    if [[ -f "${REPO_ROOT}/scripts/build-platform-docs.py" ]]; then
+        if ! python3 "${REPO_ROOT}/scripts/build-platform-docs.py" --check >/dev/null 2>&1; then
+            echo "⚠️ 偵測到操作手冊平台版與來源不一致，自動修復中..." >&2
+            python3 "${REPO_ROOT}/scripts/build-platform-docs.py"
+            echo "❌ 請將重新產生後的 docs/manual/ 檔案加入 commit 後再推（已為您自動重新產生）。" >&2
+            exit 1
+        fi
     fi
 fi
 
-# 3. 檢查隱私權政策與來源一致
-if [[ -f "${REPO_ROOT}/scripts/build-privacy-docs.py" ]]; then
-    if ! python3 "${REPO_ROOT}/scripts/build-privacy-docs.py" --check >/dev/null 2>&1; then
-        echo "⚠️ 偵測到隱私權政策各平台版與來源不一致，自動修復中..." >&2
-        python3 "${REPO_ROOT}/scripts/build-privacy-docs.py"
-        echo "❌ 請將重新產生後的 docs/legal/ 檔案加入 commit 後再推（已為您自動重新產生）。" >&2
-        exit 1
+# 3. 檢查隱私權政策與來源一致（僅在 docs/legal/ 或 Cargo.toml 有變更時執行）
+if grep -qE '^(docs/legal/|Cargo\.toml)' <<<"$CHANGED_FILES"; then
+    if [[ -f "${REPO_ROOT}/scripts/build-privacy-docs.py" ]]; then
+        if ! python3 "${REPO_ROOT}/scripts/build-privacy-docs.py" --check >/dev/null 2>&1; then
+            echo "⚠️ 偵測到隱私權政策各平台版與來源不一致，自動修復中..." >&2
+            python3 "${REPO_ROOT}/scripts/build-privacy-docs.py"
+            echo "❌ 請將重新產生後的 docs/legal/ 檔案加入 commit 後再推（已為您自動重新產生）。" >&2
+            exit 1
+        fi
     fi
 fi
 
-# 4. 只在 UTF-8 終端機才發作的 shell 寫法
-if [[ -x "${REPO_ROOT}/scripts/check-shell-cjk-vars.sh" ]]; then
-    if ! "${REPO_ROOT}/scripts/check-shell-cjk-vars.sh"; then
-        exit 1
+# 4. 只在 UTF-8 終端機才發作的 shell 寫法（僅在 scripts/*.sh 有變更時執行）
+if grep -qE '^scripts/.*\.sh$' <<<"$CHANGED_FILES"; then
+    if [[ -x "${REPO_ROOT}/scripts/check-shell-cjk-vars.sh" ]]; then
+        if ! "${REPO_ROOT}/scripts/check-shell-cjk-vars.sh"; then
+            exit 1
+        fi
     fi
 fi
 

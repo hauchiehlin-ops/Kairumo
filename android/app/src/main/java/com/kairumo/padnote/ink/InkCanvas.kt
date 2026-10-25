@@ -89,6 +89,11 @@ fun InkCanvas(
     lassoDrag: () -> com.kairumo.padnote.canvas.LassoDragPreview? = { null }
 ) {
     val density = LocalDensity.current.density
+    val view = androidx.compose.ui.platform.LocalView.current
+    val predictor = remember(view) {
+        runCatching { androidx.input.motionprediction.MotionEventPredictor.newInstance(view) }.getOrNull()
+    }
+    var predictedPoints by remember { mutableStateOf<List<StrokePoint>>(emptyList()) }
     // 筆畫存在 engine 裡（它才是真相來源）。這個計數器只是用來觸發重繪 ——
     // 把整份筆畫複製進 Compose state，一筆一次複製整個清單會很慢。
     var revision by remember { mutableIntStateOf(0) }
@@ -143,12 +148,34 @@ fun InkCanvas(
                 }
                 // 不收筆畫且不是硬體觸控筆時把事件原樣讓出去，外層照常捲動與選取。
                 if (!acceptsInk && !isStylus) return@pointerInteropFilter false
+                hoverPoint = null
+                predictor?.record(event)
                 val outcome = engine.onMotionEvent(event, density)
+                predictedPoints = if (event.actionMasked == MotionEvent.ACTION_MOVE && !engine.isErasing) {
+                    val predEvent = predictor?.predict()
+                    if (predEvent != null) {
+                        val pts = InkInput.strokePoints(InkInput.samples(predEvent, density)).take(3)
+                        predEvent.recycle()
+                        pts
+                    } else {
+                        emptyList()
+                    }
+                } else {
+                    emptyList()
+                }
                 revision++
                 liveVersion = System.nanoTime()
-                // 每個事件都通知：被「拒絕」的那些才是需要診斷的，
-                // 只在畫得出東西時回報，等於看不到問題發生的那一刻。
-                onInkChanged()
+                // 避免在 ACTION_MOVE 120Hz/240Hz 取樣過程中無條件觸發父層 Compose 狀態更新與儲存排程；
+                // 僅於落筆／抬筆、筆畫完成或撤回、拒絕／手勢攔截或橡皮擦擦除時通知外層。
+                if (event.actionMasked != MotionEvent.ACTION_MOVE ||
+                    engine.isErasing ||
+                    outcome.completed.isNotEmpty() ||
+                    outcome.retracted.isNotEmpty() ||
+                    outcome.rejectedSamples > 0 ||
+                    outcome.gestureSamples > 0
+                ) {
+                    onInkChanged()
+                }
                 if (outcome.gestureSamples > 0 && event.getToolType(0) == MotionEvent.TOOL_TYPE_FINGER) {
                     onFingerIgnored()
                 }
@@ -195,8 +222,9 @@ fun InkCanvas(
         val snapped = engine.snapPreview ?: engine.draftPreview
         for (live in engine.liveSamples()) {
             // 長按吸附的預覽：按住不動時直接畫出吸附後的圖形；製圖線則畫出靠邊／對齊之後的樣子。
+            val livePts = snapped ?: (InkInput.strokePoints(live) + predictedPoints)
             drawInkStroke(
-                snapped ?: InkInput.strokePoints(live), engine.tool, engine.baseWidth, inkColor, density,
+                livePts, engine.tool, engine.baseWidth, inkColor, density,
                 engine.lineType)
         }
         drawDraftingAids(engine, density, false)

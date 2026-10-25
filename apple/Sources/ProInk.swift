@@ -260,8 +260,10 @@ struct ProInkLedger: Codable, Equatable, Sendable {
 }
 
 enum ProInkStore {
-    /// 帳本的讀改寫要互斥：編輯器（主執行緒）與匯出（背景）都會改它。
+    /// 帳本與筆畫快取的讀改寫要互斥：編輯器（主執行緒）與匯出（背景）都會改它。
     private nonisolated static let ledgerLock = NSLock()
+    // profile-scope: profile 以完整檔案路徑（含設定檔專屬目錄）為鍵，不同設定檔不會共用同一項目
+    private nonisolated(unsafe) static var strokesCache: [String: (modDate: Date?, strokes: [ProStroke])] = [:]
 
     private nonisolated static func ledgerURL(_ directory: URL, _ notebookId: String, _ page: Int) -> URL {
         directory.appending(path: "\(notebookId)_p\(page).proink-ledger.json")
@@ -309,20 +311,45 @@ enum ProInkStore {
     }
 
     nonisolated static func load(in directory: URL, notebookId: String, page: Int, foreign: Bool = false) -> [ProStroke] {
-        guard let data = try? Data(contentsOf: url(directory, notebookId, page, foreign: foreign)),
+        let file = url(directory, notebookId, page, foreign: foreign)
+        let key = file.path
+        let modDate = (try? file.resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate
+        ledgerLock.lock()
+        if modDate == nil {
+            strokesCache.removeValue(forKey: key)
+            ledgerLock.unlock()
+            return []
+        }
+        if let cached = strokesCache[key], cached.modDate == modDate {
+            ledgerLock.unlock()
+            return cached.strokes
+        }
+        ledgerLock.unlock()
+        guard let data = try? Data(contentsOf: file),
               let strokes = try? JSONDecoder().decode([ProStroke].self, from: data)
         else { return [] }
+        ledgerLock.lock()
+        strokesCache[key] = (modDate, strokes)
+        ledgerLock.unlock()
         return strokes
     }
 
     nonisolated static func save(_ strokes: [ProStroke], in directory: URL, notebookId: String, page: Int, foreign: Bool = false) {
         let file = url(directory, notebookId, page, foreign: foreign)
+        let key = file.path
         if strokes.isEmpty {
             try? FileManager.default.removeItem(at: file)
+            ledgerLock.lock()
+            strokesCache.removeValue(forKey: key)
+            ledgerLock.unlock()
             return
         }
         guard let data = try? JSONEncoder().encode(strokes) else { return }
         try? data.write(to: file, options: .atomic)
+        let modDate = (try? file.resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate
+        ledgerLock.lock()
+        strokesCache[key] = (modDate, strokes)
+        ledgerLock.unlock()
     }
 
     /// 使用者在這台擦掉的「別台的筆畫」的內容指紋。
@@ -387,6 +414,8 @@ enum ProInkRenderer {
 
     // MARK: - 紋理快取（由 padnote-core FFI 提供）
     private static let grainSize: Int = 128
+    private static let sRGBSpace: CGColorSpace = CGColorSpace(name: CGColorSpace.sRGB) ?? CGColorSpaceCreateDeviceRGB()
+    private static let softGradientLocations: [CGFloat] = [0.0, 0.45, 1.0]
     private static let grainCGImage: CGImage? = {
         let bytes = brushPaperGrainTexture(width: UInt32(grainSize), height: UInt32(grainSize), scale: 4.0)
         guard bytes.count == grainSize * grainSize else { return nil }
@@ -420,6 +449,8 @@ enum ProInkRenderer {
         let base = (r: CGFloat(rgba[0]) / 255, g: CGFloat(rgba[1]) / 255, b: CGFloat(rgba[2]) / 255)
         let strokeAlpha = CGFloat(rgba[3]) / 255
         let needsGrain = (toolName == "charcoal" || toolName == "crayon") && grainCGImage != nil
+        var lastGradientKey: UInt32 = .max
+        var lastGradient: CGGradient?
 
         for dab in cached.dabs {
             let rx = CGFloat(dab.rx), ry = CGFloat(dab.ry)
@@ -448,14 +479,27 @@ enum ProInkRenderer {
 
             if dab.softness > 0.3 {
                 // Stamp 筆刷紋理引擎：高斯漸層柔邊印章（Gaussian Stamp）
-                let colors = [
-                    UIColor(red: r, green: g, blue: b, alpha: alpha).cgColor,
-                    UIColor(red: r, green: g, blue: b, alpha: alpha * 0.55).cgColor,
-                    UIColor(red: r, green: g, blue: b, alpha: 0.0).cgColor,
-                ] as CFArray
-                let locations: [CGFloat] = [0.0, 0.45, 1.0]
-                if let space = CGColorSpace(name: CGColorSpace.sRGB),
-                   let gradient = CGGradient(colorsSpace: space, colors: colors, locations: locations) {
+                // 快取相同 RGBA 的 CGGradient，避免在 120Hz/240Hz 筆點迴圈內重複配置 CGColorSpace 與 CGGradient。
+                let qr = UInt32(max(0, min(255, (r * 255).rounded())))
+                let qg = UInt32(max(0, min(255, (g * 255).rounded())))
+                let qb = UInt32(max(0, min(255, (b * 255).rounded())))
+                let qa = UInt32(max(0, min(255, (alpha * 255).rounded())))
+                let gradKey = (qr << 24) | (qg << 16) | (qb << 8) | qa
+                let gradient: CGGradient?
+                if gradKey == lastGradientKey, let existing = lastGradient {
+                    gradient = existing
+                } else {
+                    let colors = [
+                        UIColor(red: r, green: g, blue: b, alpha: alpha).cgColor,
+                        UIColor(red: r, green: g, blue: b, alpha: alpha * 0.55).cgColor,
+                        UIColor(red: r, green: g, blue: b, alpha: 0.0).cgColor,
+                    ] as CFArray
+                    let created = CGGradient(colorsSpace: sRGBSpace, colors: colors, locations: softGradientLocations)
+                    lastGradientKey = gradKey
+                    lastGradient = created
+                    gradient = created
+                }
+                if let gradient {
                     ctx.scaleBy(x: 1.0, y: ry / max(rx, 0.001))
                     ctx.drawRadialGradient(
                         gradient,
@@ -480,6 +524,58 @@ enum ProInkRenderer {
 
 // MARK: - 畫布上的一層
 
+/// 專責即時繪製當前這一筆（含預測觸控點與對齊導引線）的輕量頂層視圖。
+/// 與承載整頁歷史筆畫的 `ProInkLayerView` 分離，確保手指／Apple Pencil 移動時不必重繪整頁既有筆畫，
+/// 並以同步呈現（`drawsAsynchronously = false`）達到零延遲跟手性。
+private final class LiveProStrokeOverlayView: UIView {
+    var liveStroke: ProStroke?
+    var liveCache: ProInkRenderer.Cached?
+    var alignGuides: [[CGPoint]] = []
+
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        isOpaque = false
+        backgroundColor = .clear
+        isUserInteractionEnabled = false
+        layer.drawsAsynchronously = false
+    }
+
+    required init?(coder: NSCoder) { fatalError("init(coder:) is not supported") }
+
+    override func draw(_ rect: CGRect) {
+        guard let ctx = UIGraphicsGetCurrentContext() else { return }
+        if !alignGuides.isEmpty {
+            ctx.saveGState()
+            ctx.setStrokeColor(UIColor.systemBlue.withAlphaComponent(0.85).cgColor)
+            ctx.setLineWidth(1)
+            ctx.setLineDash(phase: 0, lengths: [6, 4])
+            for line in alignGuides where line.count >= 2 {
+                ctx.beginPath()
+                ctx.move(to: line[0])
+                for q in line.dropFirst() { ctx.addLine(to: q) }
+                ctx.strokePath()
+            }
+            ctx.restoreGState()
+        }
+        if let live = liveStroke, let liveCache {
+            ctx.saveGState()
+            if live.blendMode == "multiply" {
+                ctx.setBlendMode(.multiply)
+            } else if live.blendMode == "screen" {
+                ctx.setBlendMode(.screen)
+            } else {
+                ctx.setBlendMode(.normal)
+            }
+            let rgba = ProInkRenderer.displayColor(
+                live.colorRGBA,
+                dark: traitCollection.userInterfaceStyle == .dark
+            )
+            ProInkRenderer.draw(liveCache, toolName: live.tool, color: rgba, in: ctx, clip: rect)
+            ctx.restoreGState()
+        }
+    }
+}
+
 /// 疊在 `PKCanvasView` 上的專業筆畫層。
 ///
 /// 座標系與 PencilKit 的筆畫相同（頁面座標）。縮放由 `AdaptiveCanvasView` 設 `transform`，
@@ -497,6 +593,8 @@ final class ProInkLayerView: UIView {
     /// 正在畫的那一筆。
     private var live: ProStroke?
     private var liveCache: ProInkRenderer.Cached?
+    private var lastPredictedArea: CGRect = .null
+    private let liveOverlayView = LiveProStrokeOverlayView()
 
     /// 工具的預覽（標註畫到一半的樣子）與已選的點。不存檔、不進復原；每次更新整組換掉。
     private var overlayStrokes: [ProStroke] = []
@@ -520,6 +618,9 @@ final class ProInkLayerView: UIView {
         // 自繪圖層包含頁面上所有筆劃（含柔邊高斯印章與紋理），當筆跡較多或 App 切換至背景進行 scene-update 縮圖快照時，
         // 若在主執行緒同步光柵化會耗時數秒乃至超過 10 秒，觸發 iOS Watchdog 0x8BADF00D (scene-update timeout) 強殺。
         layer.drawsAsynchronously = true
+        liveOverlayView.frame = bounds
+        liveOverlayView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        addSubview(liveOverlayView)
         NotificationCenter.default.addObserver(
             self, selector: #selector(diskChanged(_:)),
             name: .kairumoProInkChangedOnDisk, object: nil)
@@ -683,30 +784,16 @@ final class ProInkLayerView: UIView {
         if let model = drafting2.instrument, model.bounds.intersects(rect) {
             model.draw(in: ctx, dark: traitCollection.userInterfaceStyle == .dark)
         }
-        if !alignGuides.isEmpty {
-            ctx.saveGState()
-            ctx.setStrokeColor(UIColor.systemBlue.withAlphaComponent(0.85).cgColor)
-            ctx.setLineWidth(1)
-            ctx.setLineDash(phase: 0, lengths: [6, 4])
-            for line in alignGuides where line.count >= 2 {
-                ctx.beginPath()
-                ctx.move(to: line[0])
-                for q in line.dropFirst() { ctx.addLine(to: q) }
-                ctx.strokePath()
-            }
-            ctx.restoreGState()
-        }
-        if let live, let liveCache {
-            ctx.saveGState()
-            if live.blendMode == "multiply" {
-                ctx.setBlendMode(.multiply)
-            } else if live.blendMode == "screen" {
-                ctx.setBlendMode(.screen)
-            } else {
-                ctx.setBlendMode(.normal)
-            }
-            ProInkRenderer.draw(liveCache, toolName: live.tool, color: displayColor(live.colorRGBA), in: ctx, clip: rect)
-            ctx.restoreGState()
+    }
+
+    private func syncLiveOverlay(invalidating rect: CGRect? = nil) {
+        liveOverlayView.liveStroke = live
+        liveOverlayView.liveCache = liveCache
+        liveOverlayView.alignGuides = alignGuides
+        if let rect, !rect.isNull {
+            liveOverlayView.setNeedsDisplay(rect)
+        } else {
+            liveOverlayView.setNeedsDisplay()
         }
     }
 
@@ -798,7 +885,11 @@ final class ProInkLayerView: UIView {
         var dirty = CGRect.null
         for line in alignGuides + lines { for q in line { dirty = dirty.union(CGRect(origin: q, size: .zero)) } }
         alignGuides = lines
-        if !dirty.isNull { setNeedsDisplay(dirty.insetBy(dx: -6, dy: -6)) }
+        if !dirty.isNull {
+            syncLiveOverlay(invalidating: dirty.insetBy(dx: -6, dy: -6))
+        } else {
+            syncLiveOverlay()
+        }
     }
 
     /// `point` 附近的圓形筆畫（首尾相接、擬合殘差小）：回傳圓心與半徑。
@@ -886,10 +977,11 @@ final class ProInkLayerView: UIView {
         live = ProStroke(tool: name, colorRGBA: color, baseWidth: width, points: [point],
                          layer: layer == 0 ? nil : layer, lineType: lineType == 0 ? nil : lineType)
         snapState = nil
+        lastPredictedArea = .null
         refreshLive(dirtyAround: [point])
     }
 
-    func extendStroke(with points: [ProPoint]) {
+    func extendStroke(with points: [ProPoint], predicted: [ProPoint] = []) {
         guard var stroke = live, !points.isEmpty else { return }
         // 吸附之後：直線跟著手指的終點走（角度鎖定照樣生效）；其他圖形定型，不再變。
         if let snap = snapState {
@@ -898,8 +990,8 @@ final class ProInkLayerView: UIView {
             let (dx, dy) = Self.snapped(dx: end.x - snap.origin.x, dy: end.y - snap.origin.y, step: snap.angleStep)
             stroke.points = Self.lineSamples(from: snap.origin, toX: snap.origin.x + dx, y: snap.origin.y + dy, count: snap.count)
             live = stroke
-            setNeedsDisplay(area.union(stroke.bounds))
             liveCache = ProInkRenderer.cache(for: stroke)
+            syncLiveOverlay(invalidating: area.union(stroke.bounds))
             return
         }
         if let lock = edgeLock, let first = stroke.points.first, var end = points.last {
@@ -908,8 +1000,8 @@ final class ProInkLayerView: UIView {
             let area = stroke.bounds
             stroke.points = Self.lineSamples(from: first, toX: end.x, y: end.y, count: 24)
             live = stroke
-            setNeedsDisplay(area.union(stroke.bounds))
             liveCache = ProInkRenderer.cache(for: stroke)
+            syncLiveOverlay(invalidating: area.union(stroke.bounds))
             return
         }
         var points = points
@@ -925,7 +1017,7 @@ final class ProInkLayerView: UIView {
         }
         stroke.points.append(contentsOf: points)
         live = stroke
-        refreshLive(dirtyAround: points)
+        refreshLive(dirtyAround: points, predicted: stroke.layerId == 0 ? predicted : [])
     }
 
     // MARK: 長按吸附
@@ -946,7 +1038,8 @@ final class ProInkLayerView: UIView {
         let input = stroke.points.map { FfiPoint(x: $0.x, y: $0.y) }
         let result = draftSnapStroke(points: input, angleStepDeg: angleStep)
         guard result.kind != .none, result.points.count == stroke.points.count else { return nil }
-        let area = stroke.bounds
+        let area = stroke.bounds.union(lastPredictedArea)
+        lastPredictedArea = .null
         for (i, p) in result.points.enumerated() {
             stroke.points[i].x = p.x
             stroke.points[i].y = p.y
@@ -955,7 +1048,7 @@ final class ProInkLayerView: UIView {
         snapState = SnapState(kind: result.kind, origin: stroke.points[0], angleStep: angleStep,
                               count: stroke.points.count)
         liveCache = ProInkRenderer.cache(for: stroke)
-        setNeedsDisplay(area.union(stroke.bounds))
+        syncLiveOverlay(invalidating: area.union(stroke.bounds))
         return result.kind
     }
 
@@ -982,6 +1075,8 @@ final class ProInkLayerView: UIView {
 
     func endStroke() {
         guard var stroke = live else { return }
+        let liveArea = stroke.bounds.union(lastPredictedArea)
+        lastPredictedArea = .null
         live = nil
         liveCache = nil
         // 製圖線要的是等寬、不收尖、不圓角：不做平滑。
@@ -998,6 +1093,7 @@ final class ProInkLayerView: UIView {
         edgeLock = nil
         tailSnapped = false
         setGuides([])
+        syncLiveOverlay(invalidating: liveArea)
         ownStrokes.append(stroke)
         setNeedsDisplay(stroke.bounds)
         persist()
@@ -1005,25 +1101,38 @@ final class ProInkLayerView: UIView {
     }
 
     func cancelStroke() {
-        let area = live?.bounds
+        let area = live?.bounds.union(lastPredictedArea)
+        lastPredictedArea = .null
         snapState = nil
         edgeLock = nil
         tailSnapped = false
         setGuides([])
         live = nil
         liveCache = nil
-        if let area { setNeedsDisplay(area) }
+        syncLiveOverlay(invalidating: area)
     }
 
-    private func refreshLive(dirtyAround points: [ProPoint]) {
+    private func refreshLive(dirtyAround points: [ProPoint], predicted: [ProPoint] = []) {
         guard let stroke = live else { return }
-        liveCache = ProInkRenderer.cache(for: stroke)
-        // 噴槍與油畫筆的筆點比基準寬度大，髒矩形要外擴；新舊點都要涵蓋，
-        // 否則新筆點蓋住的舊筆點邊緣會留下殘影。
-        let tail = Array(stroke.points.suffix(points.count + 2))
-        let area = ProStroke(tool: stroke.tool, colorRGBA: stroke.colorRGBA,
-                             baseWidth: stroke.baseWidth, points: tail).bounds
-        setNeedsDisplay(area)
+        var displayStroke = stroke
+        if !predicted.isEmpty {
+            displayStroke.points.append(contentsOf: predicted)
+        }
+        liveCache = ProInkRenderer.cache(for: displayStroke)
+        // 噴槍與油畫筆的筆點比基準寬度大，髒矩形要外擴；新舊點與預測點都要涵蓋，
+        // 否則新筆點蓋住的舊筆點邊緣或上一幀預測尾端會留下殘影。
+        let tail = Array(stroke.points.suffix(points.count + 2)) + predicted
+        let newArea = ProStroke(tool: stroke.tool, colorRGBA: stroke.colorRGBA,
+                                baseWidth: stroke.baseWidth, points: tail).bounds
+        let dirtyArea = newArea.union(lastPredictedArea)
+        if !predicted.isEmpty {
+            let predTail = Array(stroke.points.suffix(2)) + predicted
+            lastPredictedArea = ProStroke(tool: stroke.tool, colorRGBA: stroke.colorRGBA,
+                                          baseWidth: stroke.baseWidth, points: predTail).bounds
+        } else {
+            lastPredictedArea = .null
+        }
+        syncLiveOverlay(invalidating: dirtyArea)
     }
 
     // MARK: 擦除
@@ -1676,7 +1785,7 @@ final class ProStrokeGestureRecognizer: UIGestureRecognizer {
             pendingBegin = nil
             state = .began
         }
-        // 合併觸控（coalesced）才有完整的取樣率；預測觸控不收 —— 那是視覺補償，不是真實輸入。
+        // 合併觸控（coalesced）才有完整的取樣率；預測觸控（predicted）僅供當幀畫面前端視覺補償，不寫入真實筆畫點列。
         let samples = event.coalescedTouches(for: touch) ?? [touch]
         var points: [ProPoint] = []
         for sample in samples {
@@ -1686,7 +1795,16 @@ final class ProStrokeGestureRecognizer: UIGestureRecognizer {
         }
         switch mode {
         case .draw:
-            layerView.extendStroke(with: points)
+            var predictedPoints: [ProPoint] = []
+            if let predicted = event.predictedTouches(for: touch), !predicted.isEmpty {
+                var predTime = lastTimestamp
+                for pTouch in predicted.prefix(3) {
+                    let dt = UInt32(max(0, (pTouch.timestamp - predTime) * 1_000_000))
+                    predTime = max(predTime, pTouch.timestamp)
+                    predictedPoints.append(makePoint(pTouch, in: layerView, dt: dt))
+                }
+            }
+            layerView.extendStroke(with: points, predicted: predictedPoints)
             if let last = points.last { rearmHold(at: CGPoint(x: CGFloat(last.x), y: CGFloat(last.y))) }
         case .erase:
             let path = points.map { CGPoint(x: CGFloat($0.x), y: CGFloat($0.y)) }

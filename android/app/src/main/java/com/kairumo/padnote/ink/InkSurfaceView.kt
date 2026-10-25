@@ -175,7 +175,15 @@ class InkSurfaceView(
             lastPoint.clear()
             active.commit()
         }
-        onInkChanged()
+        if (event.actionMasked != MotionEvent.ACTION_MOVE ||
+            engine.isErasing ||
+            outcome.completed.isNotEmpty() ||
+            outcome.retracted.isNotEmpty() ||
+            outcome.rejectedSamples > 0 ||
+            outcome.gestureSamples > 0
+        ) {
+            onInkChanged()
+        }
         return true
     }
 

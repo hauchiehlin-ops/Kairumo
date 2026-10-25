@@ -289,6 +289,9 @@ final class ProGestureDelegate: NSObject, UIGestureRecognizerDelegate {
         shouldRecognizeSimultaneouslyWith other: UIGestureRecognizer
     ) -> Bool {
         guard let pro = gestureRecognizer as? ProStrokeGestureRecognizer else { return false }
+        if other is PencilIntentObserver || other.name == CanvasRepresentable.Coordinator.directTapName {
+            return true
+        }
         // 橡皮擦：PencilKit 與我們同時收。畫筆：PencilKit 的落筆手勢已經關掉，沒有要並存的。
         return pro.mode == .erase
     }
@@ -400,13 +403,22 @@ final class AdaptiveCanvasView: PKCanvasView {
     // MARK: - Hold-to-Snap 筆尖停留成形監測（第二階段：幾何停頓轉正）
     private var pencilDwellWorkItem: DispatchWorkItem?
     private var lastPencilLocation: CGPoint = .zero
+    private var lastPencilMoveUptime: TimeInterval = 0
     var lastStrokeHadHoldDwell: Bool = false
     var onHoldDwellTriggered: (() -> Void)?
 
-    private func schedulePencilDwellTimer() {
+    private func schedulePencilDwellTimer(after delay: TimeInterval = EditorCanvasInputPolicy.holdToSnapMinDuration) {
         pencilDwellWorkItem?.cancel()
         let work = DispatchWorkItem { [weak self] in
             guard let self else { return }
+            self.pencilDwellWorkItem = nil
+            // 若在計時期間筆尖仍有移動，僅依剩餘時間補排一次，避免在 240Hz touchesMoved 中每幀取消並重建 DispatchWorkItem。
+            let elapsed = ProcessInfo.processInfo.systemUptime - self.lastPencilMoveUptime
+            let remaining = EditorCanvasInputPolicy.holdToSnapMinDuration - elapsed
+            if remaining > 0.02 {
+                self.schedulePencilDwellTimer(after: remaining)
+                return
+            }
             // 落筆後還沒畫就停住 —— 那是「長按叫飛梭工具盤」，不是畫完停住要轉正。
             guard self.pencilMovedSinceDown else { return }
             self.lastStrokeHadHoldDwell = true
@@ -417,7 +429,7 @@ final class AdaptiveCanvasView: PKCanvasView {
         }
         pencilDwellWorkItem = work
         DispatchQueue.main.asyncAfter(
-            deadline: .now() + EditorCanvasInputPolicy.holdToSnapMinDuration,
+            deadline: .now() + delay,
             execute: work
         )
     }
@@ -869,12 +881,14 @@ final class AdaptiveCanvasView: PKCanvasView {
     }
 
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
+        hoverPreview?.hide()
         forwardLasso(touches, .began)
         activeTouchesCount += touches.count
         CanvasTouchState.activeDirectTouches = activeTouchesCount
         for touch in touches {
             if touch.type == .pencil {
                 lastPencilLocation = touch.location(in: self)
+                lastPencilMoveUptime = ProcessInfo.processInfo.systemUptime
                 lastStrokeHadHoldDwell = false
                 pencilMovedSinceDown = false
                 schedulePencilDwellTimer()
@@ -897,9 +911,12 @@ final class AdaptiveCanvasView: PKCanvasView {
             let dist = hypot(loc.x - lastPencilLocation.x, loc.y - lastPencilLocation.y)
             if dist > EditorCanvasInputPolicy.holdToSnapMaxJitter {
                 lastPencilLocation = loc
+                lastPencilMoveUptime = ProcessInfo.processInfo.systemUptime
                 lastStrokeHadHoldDwell = false
                 pencilMovedSinceDown = true
-                schedulePencilDwellTimer()
+                if pencilDwellWorkItem == nil {
+                    schedulePencilDwellTimer()
+                }
             }
         }
         if InkInputDiagnostics.isEnabled || ProcessInfo.processInfo.environment["KAIRUMO_UITEST"] == "1" {
@@ -912,6 +929,7 @@ final class AdaptiveCanvasView: PKCanvasView {
         forwardLasso(touches, .ended)
         if touches.contains(where: { $0.type == .pencil }) {
             pencilDwellWorkItem?.cancel()
+            pencilDwellWorkItem = nil
         }
         activeTouchesCount = max(0, activeTouchesCount - touches.count)
         CanvasTouchState.activeDirectTouches = activeTouchesCount
@@ -929,6 +947,7 @@ final class AdaptiveCanvasView: PKCanvasView {
         forwardLasso(touches, .cancelled)
         if touches.contains(where: { $0.type == .pencil }) {
             pencilDwellWorkItem?.cancel()
+            pencilDwellWorkItem = nil
             lastStrokeHadHoldDwell = false
         }
         activeTouchesCount = max(0, activeTouchesCount - touches.count)
@@ -986,10 +1005,16 @@ final class AdaptiveCanvasView: PKCanvasView {
     /// 會在落筆初期扣押觸控 150ms 判定捲動，造成「不是即書即顯示」的起筆遲滯感。
     /// 設為 false 能直接消除此延遲，而 canCancelContentTouches 仍保持 true，不影響兩指或正常滑動捲動。
     private func configureEnclosingScrollView() {
+        panGestureRecognizer.delaysTouchesBegan = false
+        panGestureRecognizer.delaysTouchesEnded = false
+        drawingGestureRecognizer.delaysTouchesBegan = false
+        drawingGestureRecognizer.delaysTouchesEnded = false
         var parent = superview
         while let p = parent {
             if let sv = p as? UIScrollView, !(sv is PKCanvasView) {
                 sv.delaysContentTouches = false
+                sv.panGestureRecognizer.delaysTouchesBegan = false
+                sv.panGestureRecognizer.delaysTouchesEnded = false
             }
             parent = p.superview
         }
@@ -1358,20 +1383,32 @@ struct CanvasRepresentable: UIViewRepresentable {
         // 🌟 新增手勢：雙指點擊復原、三指點擊重做、三指上下滑動換頁
         let twoFingerTap = UITapGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.handleTwoFingerTap(_:)))
         twoFingerTap.numberOfTouchesRequired = 2
+        twoFingerTap.delaysTouchesBegan = false
+        twoFingerTap.delaysTouchesEnded = false
+        twoFingerTap.cancelsTouchesInView = false
         canvas.addGestureRecognizer(twoFingerTap)
         
         let threeFingerTap = UITapGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.handleThreeFingerTap(_:)))
         threeFingerTap.numberOfTouchesRequired = 3
+        threeFingerTap.delaysTouchesBegan = false
+        threeFingerTap.delaysTouchesEnded = false
+        threeFingerTap.cancelsTouchesInView = false
         canvas.addGestureRecognizer(threeFingerTap)
         
         let swipeUp = UISwipeGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.handleThreeFingerSwipeUp(_:)))
         swipeUp.numberOfTouchesRequired = 3
         swipeUp.direction = .up
+        swipeUp.delaysTouchesBegan = false
+        swipeUp.delaysTouchesEnded = false
+        swipeUp.cancelsTouchesInView = false
         canvas.addGestureRecognizer(swipeUp)
         
         let swipeDown = UISwipeGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.handleThreeFingerSwipeDown(_:)))
         swipeDown.numberOfTouchesRequired = 3
         swipeDown.direction = .down
+        swipeDown.delaysTouchesBegan = false
+        swipeDown.delaysTouchesEnded = false
+        swipeDown.cancelsTouchesInView = false
         canvas.addGestureRecognizer(swipeDown)
 
         canvas.onPendingRetractNeeded = { [weak canvas] landedAt in
@@ -1395,6 +1432,8 @@ struct CanvasRepresentable: UIViewRepresentable {
             NSNumber(value: UITouch.TouchType.indirectPointer.rawValue)
         ]
         directSingleTap.cancelsTouchesInView = false
+        directSingleTap.delaysTouchesBegan = false
+        directSingleTap.delaysTouchesEnded = false
         directSingleTap.name = Coordinator.directTapName
         directSingleTap.delegate = context.coordinator
 
@@ -1405,6 +1444,8 @@ struct CanvasRepresentable: UIViewRepresentable {
             NSNumber(value: UITouch.TouchType.indirectPointer.rawValue)
         ]
         directDoubleTap.cancelsTouchesInView = false
+        directDoubleTap.delaysTouchesBegan = false
+        directDoubleTap.delaysTouchesEnded = false
         directDoubleTap.name = Coordinator.directTapName
         directDoubleTap.delegate = context.coordinator
         directSingleTap.require(toFail: directDoubleTap)
@@ -6933,6 +6974,7 @@ public struct NotebookEditorView: View {
         }
         .coordinateSpace(name: CanvasCoordinateSpace.name)
         .onContinuousHover { phase in
+            guard isCollaborating else { return }
             switch phase {
             case .active(let location):
                 collaborationManager.broadcastCursor(
@@ -6945,8 +6987,11 @@ public struct NotebookEditorView: View {
                 break
             }
         }
-        .clipShape(RoundedRectangle(cornerRadius: 12))
-        .shadow(color: Color.black.opacity(0.06), radius: 8, y: 4)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color(uiColor: .systemBackground))
+                .shadow(color: Color.black.opacity(0.06), radius: 8, y: 4)
+        )
         .padding(.horizontal, 16)
         .padding(.bottom, 12)
     }
@@ -7264,7 +7309,7 @@ public struct NotebookEditorView: View {
     private var pagesStructureViewContent: some View {
         VStack(spacing: 0) {
             ScrollView {
-                VStack(spacing: 10) {
+                LazyVStack(spacing: 10) {
                     ForEach(Array(0..<max(1, notebook.pageCount)), id: \.self) { idx in
                         pageStructureCard(idx: idx)
                     }
@@ -13086,6 +13131,15 @@ public struct NotebookEditorView: View {
     /// 智慧穿透判定：當觸控點落在筆跡下方的物件時，決定是否讓畫布返回 nil 使得觸控能直達下層物件
     // unused-param-ok: 依 UIKit hitTest(_:with:) 簽章保留 event 參數供擴充使用，穿透邏輯以座標與物件狀態裁決
     private func isUnderInkPointPassThrough(point: CGPoint, page: Int, event: UIEvent? = nil) -> Bool {
+        // 手寫模式下，若沒有任何物件處於選取或編輯狀態，所有觸控一律留在畫布上（O(1) 快速返回，避免每次 hitTest 配置集合與掃描附件陣列）。
+        if editorMode == .draw,
+           activeSelectedObjectId == nil,
+           selectedObjectIds.isEmpty,
+           selectedShapeIds.isEmpty,
+           inlineEditingTextId == nil,
+           editingTextId == nil {
+            return false
+        }
         // 鎖定的物件不接觸控：落在它上面的筆照樣畫在畫布上，不穿透下去。
         let underInkSet = notebook.underInkObjectIds(forPage: page)
             .subtracting(notebook.allLockedObjectIds)

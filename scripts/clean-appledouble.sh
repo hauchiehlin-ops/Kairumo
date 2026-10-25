@@ -23,23 +23,27 @@ GIT_DIR="$(git rev-parse --absolute-git-dir)"
 # 只清 GIT_DIR 的話，在 worktree 裡 commit 永遠清不到 `._pack-*.idx`。
 COMMON_DIR="$(cd "$REPO_ROOT" && cd "$(git rev-parse --git-common-dir)" && pwd)"
 
-PRUNE=(target .build build apple/.build android/.gradle android/.kotlin android/app/build)
+PRUNE=(target .target-obsolete .build build apple/.build android/.gradle android/.kotlin android/build android/.build-obsolete android/app/build android/app/.build-obsolete node_modules)
 [[ "${1:-}" == "--all" ]] && PRUNE=()
 
-# `--git-only`（hook 每次改 ref 都會跑）只看 git 真的會去讀的那幾處：頂層（index、HEAD…）、
+# `--git-only`（hook 每次改 ref / commit / push 都會跑）只看 git 真的會去讀的那幾處：頂層（index、HEAD…）、
 # objects/pack 與 objects/info（non-monotonic index 就是 `._*.idx` 被當成 pack 索引）、
-# 各 worktree 的目錄。不掃幾萬個 loose object 目錄，一次在百分之一秒內。
+# 各 worktree 的目錄。用 bash nullglob 直接比對 `._*`，完全不啟動 `find` 逐檔 stat，避免在 exFAT (UVFSService) 上排隊卡頓。
 if [[ "${1:-}" == "--git-only" ]]; then
-    {
-        find "$COMMON_DIR" "$GIT_DIR" -maxdepth 1 -name '._*' -type f -delete
-        find "$COMMON_DIR/objects/pack" "$COMMON_DIR/objects/info" "$COMMON_DIR/worktrees" \
-            -maxdepth 2 -name '._*' -type f -delete
-    } 2>/dev/null || true
+    shopt -s nullglob
+    rm -f "$COMMON_DIR"/._* "$GIT_DIR"/._* \
+          "$COMMON_DIR"/objects/pack/._* "$COMMON_DIR"/objects/info/._* \
+          "$COMMON_DIR"/refs/heads/._* "$COMMON_DIR"/refs/tags/._* \
+          "$COMMON_DIR"/worktrees/*/._* 2>/dev/null || true
     exit 0
 fi
 
-# 1. .git 內部（共用目錄已含各 worktree 的 GIT_DIR）
-n_git=$(find "$COMMON_DIR" "$GIT_DIR" -name '._*' -type f -print -delete 2>/dev/null | wc -l | tr -d ' ')
+# 1. .git 內部（略過 objects/00..ff 數萬個 loose object 子目錄，只掃 pack/info/refs/logs/worktrees 與頂層，避免 exFAT 卡頓數十分鐘）
+n_git=$({
+    find "$COMMON_DIR" "$GIT_DIR" -maxdepth 2 -name '._*' -type f -print -delete
+    find "$COMMON_DIR/objects/pack" "$COMMON_DIR/objects/info" "$COMMON_DIR/refs" "$COMMON_DIR/logs" "$COMMON_DIR/worktrees" \
+        -maxdepth 4 -name '._*' -type f -print -delete
+} 2>/dev/null | wc -l | tr -d ' ')
 
 # 2. 工作目錄（略過 .git 與建置目錄）
 prune_args=(-path "$REPO_ROOT/.git")
