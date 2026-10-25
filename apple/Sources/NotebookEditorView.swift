@@ -11621,9 +11621,7 @@ public struct NotebookEditorView: View {
             if isContinuous {
                 continuousObjectGeneration += 1
             }
-            return selectedObjectIds.compactMap { id in
-                frameOfObject(id: id).map { (id: id, frame: $0) }
-            }
+            return selectedObjectIds
         }
         lasso.onPasteObjects = {
             guard !objectClipboard.isEmpty else { return [] }
@@ -11631,9 +11629,7 @@ public struct NotebookEditorView: View {
             if isContinuous {
                 continuousObjectGeneration += 1
             }
-            return selectedObjectIds.compactMap { id in
-                frameOfObject(id: id).map { (id: id, frame: $0) }
-            }
+            return selectedObjectIds
         }
     }
 
@@ -15847,7 +15843,6 @@ public struct NotebookEditorView: View {
             },
             set: { updated in
                 if let idx = index(in: notebook.textAttachments) {
-                    let oldItem = notebook.textAttachments?[idx]
                     notebook.textAttachments?[idx] = updated
                     commitNotebook()
                 }
