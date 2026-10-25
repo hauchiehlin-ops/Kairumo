@@ -704,12 +704,23 @@ final class AdaptiveCanvasView: PKCanvasView {
         savedMinimumPanTouches = nil
     }
 
+    func enclosingScrollView() -> UIScrollView? {
+        var view = self.superview
+        while let v = view {
+            if let sv = v as? UIScrollView, !(sv is PKCanvasView) { return sv }
+            view = v.superview
+        }
+        return nil
+    }
+
     /// 套索模式下，一根手指要拿來圈選，捲動改成兩指。
     ///
-    /// 畫布本身是 UIScrollView，單頁模式下它的捲動手勢（單指）與套索的拖曳手勢互搶，
-    /// 先開始辨識的是捲動 —— 套索的手勢一個事件都收不到，使用者看到的是「套索選不到任何東西」。
-    /// （連續模式裡層畫布不捲，所以那邊本來就能用。）
+    /// 畫布本身是 UIScrollView，單頁模式下它的捲動手勢（單指）與套索的拖曳手勢互搶；
+    /// 連續模式下外層的 ScrollView 也由單指驅動，若不限制外層捲動為雙指，
+    /// 單指／Apple Pencil 畫圈拖曳時外層 ScrollView 會立即搶先開始捲動並送出 touchesCancelled 取消套索。
     private var savedPanTouchesForLasso: Int?
+    private weak var savedEnclosingScrollViewForLasso: UIScrollView?
+    private var savedEnclosingPanTouchesForLasso: Int?
 
     func setLassoClaimsSingleTouch(_ on: Bool) {
         if on {
@@ -717,9 +728,24 @@ final class AdaptiveCanvasView: PKCanvasView {
                 savedPanTouchesForLasso = panGestureRecognizer.minimumNumberOfTouches
             }
             panGestureRecognizer.minimumNumberOfTouches = 2
-        } else if let saved = savedPanTouchesForLasso {
-            panGestureRecognizer.minimumNumberOfTouches = saved
-            savedPanTouchesForLasso = nil
+            if let sv = enclosingScrollView() {
+                if savedEnclosingPanTouchesForLasso == nil {
+                    savedEnclosingPanTouchesForLasso = sv.panGestureRecognizer.minimumNumberOfTouches
+                    savedEnclosingScrollViewForLasso = sv
+                }
+                sv.panGestureRecognizer.minimumNumberOfTouches = 2
+            }
+        } else {
+            if let saved = savedPanTouchesForLasso {
+                panGestureRecognizer.minimumNumberOfTouches = saved
+                savedPanTouchesForLasso = nil
+            }
+            if let sv = savedEnclosingScrollViewForLasso ?? enclosingScrollView(),
+               let saved = savedEnclosingPanTouchesForLasso {
+                sv.panGestureRecognizer.minimumNumberOfTouches = saved
+                savedEnclosingScrollViewForLasso = nil
+                savedEnclosingPanTouchesForLasso = nil
+            }
         }
     }
 
@@ -889,6 +915,15 @@ final class AdaptiveCanvasView: PKCanvasView {
 
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
         hoverPreview?.hide()
+        if lassoTouchHandler != nil {
+            if let sv = enclosingScrollView(), sv.panGestureRecognizer.minimumNumberOfTouches < 2 {
+                if savedEnclosingPanTouchesForLasso == nil {
+                    savedEnclosingPanTouchesForLasso = sv.panGestureRecognizer.minimumNumberOfTouches
+                    savedEnclosingScrollViewForLasso = sv
+                }
+                sv.panGestureRecognizer.minimumNumberOfTouches = 2
+            }
+        }
         forwardLasso(touches, .began)
         activeTouchesCount += touches.count
         CanvasTouchState.activeDirectTouches = activeTouchesCount
@@ -3145,6 +3180,7 @@ public struct NotebookEditorView: View {
             coreInkWork?.cancel()
             coreInkWork = nil
             loadCurrentPage()
+            sanitizeUnderInkObjects()
             initialNotebookSnapshot = notebook
             initialPageDrawings.removeAll()
             initialPageInk.removeAll()
@@ -5743,7 +5779,7 @@ public struct NotebookEditorView: View {
                                     if !pendingCoreInk.isEmpty { scheduleCoreInkFlush() }
                                     return merged
                                 },
-                                initialDrawing: { page in drawingForPage(page) },
+                                initialDrawing: { page in pendingCoreInk[page] ?? store.loadDrawing(notebookId: notebook.id, pageIndex: page) },
                                 notebook: $notebook,
                                 onNotebookChanged: {
                                     commitNotebook()
@@ -10492,6 +10528,7 @@ public struct NotebookEditorView: View {
         self.currentPageHeight = notebook.height(forPage: currentPageIndex)
         self.lasso.clear()
         configureLassoCallbacks(forPage: currentPageIndex)
+        sanitizeUnderInkObjects()
         self.originalSketchBackup = nil
         self.refinedSketchCache = nil
     }
@@ -11330,14 +11367,26 @@ public struct NotebookEditorView: View {
         if pageDisplayMode == .single && page == currentPageIndex {
             return currentDrawing
         }
-        if pageDisplayMode == .continuous, let live = continuousCanvases[page]?.drawing {
+        if pageDisplayMode == .continuous,
+           let live = continuousCanvases[page]?.drawing,
+           !live.strokes.isEmpty {
+            return live
+        }
+        if let cached = continuousCanvases.cachedDrawing(forPage: page),
+           !cached.strokes.isEmpty {
+            return cached
+        }
+        let loaded = store.loadDrawing(notebookId: notebook.id, pageIndex: page)
+        if !loaded.strokes.isEmpty {
+            continuousCanvases.setCachedDrawing(loaded, forPage: page)
+            return loaded
+        }
+        if let live = continuousCanvases[page]?.drawing {
             return live
         }
         if let cached = continuousCanvases.cachedDrawing(forPage: page) {
             return cached
         }
-        let loaded = store.loadDrawing(notebookId: notebook.id, pageIndex: page)
-        continuousCanvases.setCachedDrawing(loaded, forPage: page)
         return loaded
     }
 
@@ -11563,7 +11612,7 @@ public struct NotebookEditorView: View {
         let registry = continuousCanvases
         let isContinuous = (pageDisplayMode == .continuous)
         lasso.proHost = {
-            let target = (isContinuous ? registry[page] : nil) ?? registry.activeCanvas
+            let target = (isContinuous ? registry[page] : nil) ?? registry.activeCanvas ?? canvasView
             return (target as? AdaptiveCanvasView)?.proLayer
         }
         lasso.objectCandidates = {
@@ -12815,7 +12864,8 @@ public struct NotebookEditorView: View {
 
     /// 自動自癒示範筆記《Kairumo(功能範例)》：將背景大卡片移至筆跡下方圖層，使筆跡可見且不干擾手繪與打字。
     private func sanitizeUnderInkObjects() {
-        if notebook.id == "seed-feature-showcase-v1" || notebook.titleKey == "seed_feature_showcase_title" {
+        let isShowcase = notebook.id.caseInsensitiveCompare("seed-feature-showcase-v1") == .orderedSame || notebook.titleKey == "seed_feature_showcase_title"
+        if isShowcase {
             if notebook.underInkObjectIds(forPage: 1).isEmpty {
                 for p in 0..<notebook.pageCount {
                     let bgCardIds = (notebook.shapeAttachments ?? []).filter {

@@ -2578,6 +2578,14 @@ private fun InkScreen(
                 meta.setObjectOrder(notebook?.first, pageIndex, op.apply(id, stackOrder))
                 stackRevision++
             }
+            ObjectStacking.Reorder.TO_BACK -> {
+                val current = meta.underInkObjectIds(pageIndex).toMutableSet()
+                if (current.add(id)) {
+                    meta.setUnderInkObjectIds(notebook?.first, pageIndex, current)
+                }
+                meta.setObjectOrder(notebook?.first, pageIndex, op.apply(id, stackOrder))
+                stackRevision++
+            }
             else -> {
                 meta.setObjectOrder(notebook?.first, pageIndex, op.apply(id, stackOrder))
                 stackRevision++

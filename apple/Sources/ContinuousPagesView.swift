@@ -100,9 +100,99 @@ struct ContinuousPageView<ObjectLayer: View>: View {
     /// 套索的圈、選取框與快顯工具列（頁面座標，由呼叫端畫）。只畫在焦點頁。
     var lassoDecoration: (() -> AnyView)? = nil
 
-    @State private var drawing = PKDrawing()
-    @State private var loaded = false
+    @State private var drawing: PKDrawing
+    @State private var loaded: Bool
     @State private var isDropTargeted = false
+
+    init(
+        pageIndex: Int,
+        notebookId: String,
+        paperId: String,
+        paletteId: String?,
+        store: NotebookStore,
+        selectedTool: EditorToolType,
+        selectedColor: Color,
+        strokeWidth: CGFloat,
+        isRulerActive: Bool,
+        editorMode: EditorMode,
+        eraserMode: EraserMode = .stroke,
+        pixelEraserWidth: CGFloat = 20.0,
+        palmRejection: PalmRejectionCoordinator?,
+        isObjectActive: Bool = false,
+        isFocused: Bool,
+        @ViewBuilder objectLayer: @escaping () -> ObjectLayer,
+        underInkObjectLayer: (() -> AnyView)? = nil,
+        overInkObjectLayer: (() -> AnyView)? = nil,
+        isUnderInkPointPassThrough: ((_ point: CGPoint, _ page: Int, _ event: UIEvent?) -> Bool)? = nil,
+        onDrawingChanged: @escaping (Int, PKDrawing) -> Void,
+        onSelectionChanged: @escaping (Bool) -> Void,
+        onReachedPageBottom: @escaping () -> Void,
+        canvasRef: @escaping (PKCanvasView) -> Void,
+        onCanvasTap: ((CGPoint) -> Void)? = nil,
+        onCanvasDoubleTap: ((CGPoint) -> Void)? = nil,
+        onPencilTouchBegan: (() -> Void)? = nil,
+        onPenControl: ((FfiPenControl, Bool) -> Void)? = nil,
+        onImageDropped: ((Int, [NSItemProvider], CGPoint) -> Bool)? = nil,
+        onInitialLoaded: ((Int, PKDrawing) -> Void)? = nil,
+        reloadGeneration: Int = 0,
+        inkReloadGeneration: Int = 0,
+        objectGeneration: Int = 0,
+        mergeReloaded: ((Int, PKDrawing) -> PKDrawing)? = nil,
+        initialDrawing: ((Int) -> PKDrawing)? = nil,
+        notebook: Binding<NotebookDocument>,
+        onNotebookChanged: (() -> Void)? = nil,
+        onLassoBegan: ((CGPoint) -> Void)? = nil,
+        onLassoMoved: ((CGPoint) -> Void)? = nil,
+        onLassoEnded: (() -> Void)? = nil,
+        onPressAndHold: ((CGPoint) -> Bool)? = nil,
+        lassoDecoration: (() -> AnyView)? = nil
+    ) {
+        self.pageIndex = pageIndex
+        self.notebookId = notebookId
+        self.paperId = paperId
+        self.paletteId = paletteId
+        self.store = store
+        self.selectedTool = selectedTool
+        self.selectedColor = selectedColor
+        self.strokeWidth = strokeWidth
+        self.isRulerActive = isRulerActive
+        self.editorMode = editorMode
+        self.eraserMode = eraserMode
+        self.pixelEraserWidth = pixelEraserWidth
+        self.palmRejection = palmRejection
+        self.isObjectActive = isObjectActive
+        self.isFocused = isFocused
+        self.objectLayer = objectLayer
+        self.underInkObjectLayer = underInkObjectLayer
+        self.overInkObjectLayer = overInkObjectLayer
+        self.isUnderInkPointPassThrough = isUnderInkPointPassThrough
+        self.onDrawingChanged = onDrawingChanged
+        self.onSelectionChanged = onSelectionChanged
+        self.onReachedPageBottom = onReachedPageBottom
+        self.canvasRef = canvasRef
+        self.onCanvasTap = onCanvasTap
+        self.onCanvasDoubleTap = onCanvasDoubleTap
+        self.onPencilTouchBegan = onPencilTouchBegan
+        self.onPenControl = onPenControl
+        self.onImageDropped = onImageDropped
+        self.onInitialLoaded = onInitialLoaded
+        self.reloadGeneration = reloadGeneration
+        self.inkReloadGeneration = inkReloadGeneration
+        self.objectGeneration = objectGeneration
+        self.mergeReloaded = mergeReloaded
+        self.initialDrawing = initialDrawing
+        self._notebook = notebook
+        self.onNotebookChanged = onNotebookChanged
+        self.onLassoBegan = onLassoBegan
+        self.onLassoMoved = onLassoMoved
+        self.onLassoEnded = onLassoEnded
+        self.onPressAndHold = onPressAndHold
+        self.lassoDecoration = lassoDecoration
+
+        let initDrawing = initialDrawing?(pageIndex) ?? store.loadDrawing(notebookId: notebookId, pageIndex: pageIndex)
+        self._drawing = State(initialValue: initDrawing)
+        self._loaded = State(initialValue: true)
+    }
 
     var body: some View {
         ZStack(alignment: .topLeading) {
@@ -254,9 +344,17 @@ struct ContinuousPageView<ObjectLayer: View>: View {
                 .background(.ultraThinMaterial, in: Capsule())
                 .padding(6)
         }
+        .onAppear {
+            if loaded {
+                onInitialLoaded?(pageIndex, drawing)
+            }
+        }
         .task(id: loaded) {
             // 只載一次。每次重繪都載的話，正在寫的那一頁會被硬碟上的舊版覆蓋。
-            guard !loaded else { return }
+            guard !loaded else {
+                onInitialLoaded?(pageIndex, drawing)
+                return
+            }
             drawing = initialDrawing?(pageIndex) ?? store.loadDrawing(notebookId: notebookId, pageIndex: pageIndex)
             loaded = true
             onInitialLoaded?(pageIndex, drawing)
