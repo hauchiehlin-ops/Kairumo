@@ -43,6 +43,11 @@ public final class StartupLogger: ObservableObject, @unchecked Sendable {
 
     private init() {}
 
+    private static var isConsoleLoggingSuppressed: Bool = {
+        let env = ProcessInfo.processInfo.environment
+        return env["KAIRUMO_UITEST"] == "1" || env["OS_ACTIVITY_MODE"] == "disable"
+    }()
+
     public static func log(_ message: String) {
         let now = Date()
         let elapsed = String(format: "+%.3fs", now.timeIntervalSince(startTime))
@@ -50,7 +55,9 @@ public final class StartupLogger: ObservableObject, @unchecked Sendable {
         let threadName = Thread.isMainThread ? "Main" : "Bg"
         let fullMessage = "[\(timeStr)] [\(elapsed)] [\(threadName)] \(message)"
         
-        print("⏱️ \(fullMessage)")
+        if !isConsoleLoggingSuppressed {
+            print("⏱️ \(fullMessage)")
+        }
 
         append(LogEntry(elapsed: elapsed, rawMessage: message, key: nil, args: [], thread: threadName))
     }
@@ -61,7 +68,9 @@ public final class StartupLogger: ObservableObject, @unchecked Sendable {
         let elapsed = String(format: "+%.3fs", now.timeIntervalSince(startTime))
         let threadName = Thread.isMainThread ? "Main" : "Bg"
         let values = args.map { "\($0)" }
-        print("⏱️ [\(timeFormatter.string(from: now))] [\(elapsed)] [\(threadName)] \(key) \(values)")
+        if !isConsoleLoggingSuppressed {
+            print("⏱️ [\(timeFormatter.string(from: now))] [\(elapsed)] [\(threadName)] \(key) \(values)")
+        }
         append(LogEntry(elapsed: elapsed, rawMessage: key, key: key, args: values, thread: threadName))
     }
 

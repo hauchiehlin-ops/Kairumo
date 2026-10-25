@@ -79,7 +79,13 @@ struct KairumoApp: App {
         ProfileManager.resetForUITestsIfRequested()
         ProfileManager.reconcileContextBeforeLaunch()
         StartupLogger.logKey("log_app_init")
-        MainThreadStallMonitor.shared.start()
+        // UI 測試期間停用主執行緒卡頓監控：
+        // XCTest 查詢無障礙樹或遍歷控制項時會自然佔用主執行緒，
+        // 若啟用 StallMonitor 會誤判為卡頓並高頻發送信號與採樣日誌，
+        // 與 XCTest 的無障礙日誌疊加會引發 libsystem_trace firehose buffer 溢出與崩潰。
+        if ProcessInfo.processInfo.environment["KAIRUMO_UITEST"] != "1" {
+            MainThreadStallMonitor.shared.start()
+        }
         KairumoAppDelegate.configureInstantToolTips()
         // 啟動時確認 Rust Core 與版本狀態
         #if canImport(PadnoteCore)
