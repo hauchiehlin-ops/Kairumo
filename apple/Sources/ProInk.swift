@@ -261,7 +261,8 @@ struct ProInkLedger: Codable, Equatable, Sendable {
 
 enum ProInkStore {
     /// 帳本與筆畫快取的讀改寫要互斥：編輯器（主執行緒）與匯出（背景）都會改它。
-    private nonisolated static let ledgerLock = NSLock()
+    /// 使用 NSRecursiveLock 避免 updateLedger 閉包內部再次呼叫 load 等方法時發生同一執行緒死鎖。
+    private nonisolated static let ledgerLock = NSRecursiveLock()
     // profile-scope: profile 以完整檔案路徑（含設定檔專屬目錄）為鍵，不同設定檔不會共用同一項目
     private nonisolated(unsafe) static var strokesCache: [String: (modDate: Date?, strokes: [ProStroke])] = [:]
     // profile-scope: profile 以完整檔案路徑前綴為鍵，快取修改時間避免每次 SwiftUI body 重算都觸發磁碟 stat 系統呼叫
