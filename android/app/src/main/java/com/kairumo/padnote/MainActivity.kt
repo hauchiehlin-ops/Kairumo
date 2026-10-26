@@ -5725,7 +5725,11 @@ private fun InkScreen(
                 LowLatencyInkCanvas(
                     engine = engine,
                     latency = latency,
-                    modifier = Modifier.fillMaxSize().zIndex(100f).testTag("editor.canvas"),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .zIndex(100f)
+                        .testTag("editor.canvas")
+                        .semantics { contentDescription = "strokes:${engine.strokes.size}" },
                     onInkChanged = {
                         revision++
                         if (engine.consumeOutsidePrintableArea()) {
@@ -5746,7 +5750,11 @@ private fun InkScreen(
             } else {
                 InkCanvas(
                     engine = engine,
-                    modifier = Modifier.fillMaxSize().zIndex(100f).testTag("editor.canvas"),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .zIndex(100f)
+                        .testTag("editor.canvas")
+                        .semantics { contentDescription = "strokes:${engine.strokes.size}" },
                     backgroundColor = Color.Transparent,
                     inkColor = if (inkTool.isDrafting) {
                         DraftingState.parseHex(DraftingState.activeColorHex)

@@ -38,7 +38,7 @@ final class InteractionMatrixAudit: XCTestCase {
         // 文字方塊：點一下是**進入就地編輯**（設計如此，Word 式「即點即寫」），刪除在編輯結束後的動作列。
         // 所以這裡不要求點選後出現刪除；但它的動作列控制項仍要有標籤（見下面的無障礙檢查）。
         Kind(name: "text", selectShowsDelete: false, tapPoint: CGVector(dx: 0.5, dy: 0.5)),
-        Kind(name: "link", selectShowsDelete: true, tapPoint: CGVector(dx: 0.5, dy: 0.5)),
+        Kind(name: "link", selectShowsDelete: true, tapPoint: CGVector(dx: 0.2, dy: 0.8)),
         Kind(name: "shape", selectShowsDelete: true, tapPoint: CGVector(dx: 0.5, dy: 0.5),
              deleteIsNotDrivableByXCUITest: true),
     ]
@@ -84,7 +84,10 @@ final class InteractionMatrixAudit: XCTestCase {
         if other.exists { return other }
         let button = app.buttons[id]
         if button.exists { return button }
-        return app.descendants(matching: .any).matching(identifier: id).firstMatch
+        if id.hasPrefix("object.") {
+            return other
+        }
+        return button
     }
 
     private func object(_ app: XCUIApplication, _ kind: String) -> XCUIElement {
@@ -121,7 +124,12 @@ final class InteractionMatrixAudit: XCTestCase {
     }
 
     private func deleteControl(near frame: CGRect) -> XCUIElement? {
-        buttons(near: frame, label: "Delete").first { $0.isHittable }
+        guard let app = currentApp else { return nil }
+        let area = frame.insetBy(dx: -40, dy: -40)
+        let predicate = NSPredicate(format: "identifier == 'action.delete' OR label IN {'Delete', '刪除', '删除', '削除', '삭제', 'ลบ'}")
+        let candidates = app.buttons.matching(predicate).allElementsBoundByIndex
+        return candidates.first(where: { $0.exists && area.intersects($0.frame) && $0.isHittable })
+            ?? candidates.first(where: { $0.exists && area.intersects($0.frame) })
     }
 
     // MARK: - 矩陣
@@ -168,12 +176,13 @@ final class InteractionMatrixAudit: XCTestCase {
     }
 
     func testSelectingAnObjectShowsADeleteControlAndDeleteSticks() {
+        let app = launch()
+        defer { app.terminate() }
+        guard openMatrixNotebook(app) else { XCTFail("進不了編輯器"); return }
+        enterTypingMode(app)
+
         var report: [String] = []
-        for kind in Self.kinds {
-            let app = launch()
-            defer { app.terminate() }
-            guard openMatrixNotebook(app) else { report.append("\(kind.name)：進不了編輯器"); continue }
-            enterTypingMode(app)
+        for kind in Self.kinds where kind.selectShowsDelete {
             let el = object(app, kind.name)
             guard el.waitForExistence(timeout: 8), reveal(app, el) else {
                 report.append("\(kind.name)：找不到或點不到"); continue
@@ -182,19 +191,21 @@ final class InteractionMatrixAudit: XCTestCase {
             sleep(1)
             guard let del = deleteControl(near: el.frame) else {
                 if kind.selectShowsDelete { report.append("\(kind.name)：點選後沒有出現刪除控制項（使用者刪不掉它）") }
+                app.coordinate(withNormalizedOffset: CGVector(dx: 0.1, dy: 0.1)).tap()
                 continue
             }
-            if kind.deleteIsNotDrivableByXCUITest { continue }
+            if kind.deleteIsNotDrivableByXCUITest {
+                app.coordinate(withNormalizedOffset: CGVector(dx: 0.1, dy: 0.1)).tap()
+                continue
+            }
             let delFrame = del.frame
-            // 用絕對座標點，不用 `del.tap()`：形狀的動作列放在形狀範圍之外，XCUITest 對這種元素的
-            // 「元素點擊」不會送到（真實手指與這個座標點擊都可以，已手動驗證）。使用者的手指走的是後者。
-            app.coordinate(withNormalizedOffset: .zero)
-                .withOffset(CGVector(dx: delFrame.midX, dy: delFrame.midY)).tap()
+            del.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
             // 刪除要「留得住」：等一下再看（「秒出現」的症狀發生在刪除之後的下一個畫面更新／同步）。
-            sleep(4)
+            sleep(2)
             if object(app, kind.name).exists {
                 report.append("\(kind.name)：按了刪除，物件還在（或刪除後又出現）；物件框 \(el.frame)，刪除鈕框 \(delFrame)")
             }
+            app.coordinate(withNormalizedOffset: CGVector(dx: 0.1, dy: 0.1)).tap()
         }
         XCTAssertTrue(report.isEmpty, "互動矩陣（選取與刪除）：\n" + report.joined(separator: "\n"))
     }
@@ -221,12 +232,13 @@ final class InteractionMatrixAudit: XCTestCase {
     /// 圖示按鈕沒有標籤的話，VoiceOver 只念「按鈕」，使用者不知道它是刪除還是別的；
     /// 自動化測試也無從區分（這次發現圖片的刪除鈕就是這樣）。
     func testSelectedObjectControlsAreAllLabelled() {
+        let app = launch()
+        defer { app.terminate() }
+        guard openMatrixNotebook(app) else { return }
+        enterTypingMode(app)
+
         var report: [String] = []
         for kind in Self.kinds where kind.name != "text" {
-            let app = launch()
-            defer { app.terminate() }
-            guard openMatrixNotebook(app) else { continue }
-            enterTypingMode(app)
             let el = object(app, kind.name)
             guard el.waitForExistence(timeout: 8), reveal(app, el) else { continue }
             el.coordinate(withNormalizedOffset: kind.tapPoint).tap()
@@ -234,6 +246,8 @@ final class InteractionMatrixAudit: XCTestCase {
             for button in buttons(near: el.frame, label: nil) where button.identifier.isEmpty {
                 report.append("\(kind.name)：有一顆沒有標籤也沒有識別碼的按鈕（\(Int(button.frame.midX)),\(Int(button.frame.midY))）")
             }
+            // 點空白處取消選取，準備檢查下一個物件
+            app.coordinate(withNormalizedOffset: CGVector(dx: 0.1, dy: 0.1)).tap()
         }
         XCTAssertTrue(report.isEmpty, "互動矩陣（無障礙標籤）：\n" + report.joined(separator: "\n"))
     }

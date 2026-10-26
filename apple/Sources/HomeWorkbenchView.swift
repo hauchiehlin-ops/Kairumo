@@ -555,7 +555,9 @@ public struct HomeWorkbenchView: View {
             }
             .onAppear {
                 StartupLogger.logKey("log_home_appear")
-                accountManager.refreshDisplayName()
+                DispatchQueue.main.async {
+                    accountManager.refreshDisplayName()
+                }
                 // 不限定 macCatalyst：使用者在 Mac 上跑的是 iOS 版（Designed for iPad）
                 MacWindowTitle.apply()
                 // 啟動首頁時先讓主執行緒完成初始視圖佈局與手勢響應，
@@ -4918,9 +4920,9 @@ struct PendingSampleSessionPrompt: ViewModifier {
 
     func body(content: Content) -> some View {
         content
-            .onAppear { check() }
+            .onAppear { DispatchQueue.main.async { check() } }
             .onChange(of: editorOpen) { open in
-                if !open { check() }
+                if !open { DispatchQueue.main.async { check() } }
             }
             .alert(
                 localizationManager.localized("sample_leave_title"),

@@ -40,6 +40,22 @@ public final class PageInkStore: ObservableObject {
     /// 待寫入核心套件的頁面 Key 集合
     private var pendingCoreFlushKeys: Set<String> = []
 
+    private static var activeStores: [String: PageInkStore] = [:]
+
+    public static func store(for notebook: NotebookDocument, store: NotebookStore) -> PageInkStore {
+        if let existing = activeStores[notebook.id] {
+            return existing
+        }
+        let created = PageInkStore(notebookId: notebook.id, store: store)
+        created.primeAllPages(notebook: notebook)
+        activeStores[notebook.id] = created
+        return created
+    }
+
+    public static func purge(notebookId: String) {
+        activeStores.removeValue(forKey: notebookId)
+    }
+
     public init(notebookId: String, store: NotebookStore) {
         self.notebookId = notebookId
         self.store = store

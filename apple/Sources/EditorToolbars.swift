@@ -1669,11 +1669,13 @@ extension NotebookEditorView {
         // 但寫出來還是原本那支」。換成哪一支由核心決定（S-261），
         // Android 走同一條規則。
         .onChange(of: toolbarSettings.hiddenIdentifiers) { _ in
-            let next = toolbarSettings.identifierAfterHiding(selectedTool.parityIdentifier)
-            guard next != selectedTool.parityIdentifier,
-                  let tool = EditorToolType.allCases.first(where: { $0.parityIdentifier == next })
-            else { return }
-            selectEditorTool(tool)
+            DispatchQueue.main.async {
+                let next = toolbarSettings.identifierAfterHiding(selectedTool.parityIdentifier)
+                guard next != selectedTool.parityIdentifier,
+                      let tool = EditorToolType.allCases.first(where: { $0.parityIdentifier == next })
+                else { return }
+                selectEditorTool(tool)
+            }
         }
     }
 

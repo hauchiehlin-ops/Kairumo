@@ -410,6 +410,7 @@ private fun PageSidebarRow(
         modifier = Modifier
             .fillMaxWidth()
             .width(thumbWidth.dp)
+            .testTag("sidebar.page.$index")
             .combinedClickable(onClick = onClick, onLongClick = { menu = true })
     ) {
         DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {

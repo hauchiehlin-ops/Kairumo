@@ -33,11 +33,14 @@ final class InkInvariantMatrixAudit: XCTestCase {
     }
 
     private func find(_ app: XCUIApplication, _ id: String) -> XCUIElement {
-        let other = app.otherElements[id]
-        if other.exists { return other }
         let button = app.buttons[id]
         if button.exists { return button }
-        return app.descendants(matching: .any).matching(identifier: id).firstMatch
+        let other = app.otherElements[id]
+        if other.exists { return other }
+        if id == "editor.canvas" {
+            return other
+        }
+        return button
     }
 
     private func openInkNotebook(_ app: XCUIApplication) -> Bool {

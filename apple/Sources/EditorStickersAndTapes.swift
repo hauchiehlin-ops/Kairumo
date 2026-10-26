@@ -981,37 +981,35 @@ struct ImportPickersModifier: ViewModifier {
     let onPdf: (FileImport.Outcome) -> Void
     let onDocument: (FileImport.Outcome) -> Void
 
-    @State private var currentSlot: FfiImportSlot? = nil
-
     func body(content: Content) -> some View {
         content
             // 命令式呈現，見 `DocumentPickerPresenter` 的說明（`.fileImporter` 第二次起會被吞掉）。
             .onChange(of: activeImportSlot) { slot in
                 guard let slot else { return }
-                currentSlot = slot
-                let presented = DocumentPickerPresenter.present(
-                    types: FileImport.allowedTypes(for: slot)
-                ) { result in
-                    currentSlot = nil
-                    activeImportSlot = nil
-                    guard let result else { return }
-                    let destination: FileImport.Destination = (slot == .audio) ? .recordings : .attachments
-                    guard let outcome = FileImport.take(result: result, slot: slot, into: destination)
-                    else { return }
-                    if outcome.succeeded {
-                        switch slot {
-                        case .image: onImage(outcome)
-                        case .audio: onAudio(outcome)
-                        case .pdf: onPdf(outcome)
-                        case .document: onDocument(outcome)
-                        default: break
+                DispatchQueue.main.async {
+                    let presented = DocumentPickerPresenter.present(
+                        types: FileImport.allowedTypes(for: slot)
+                    ) { result in
+                        activeImportSlot = nil
+                        guard let result else { return }
+                        let destination: FileImport.Destination = (slot == .audio) ? .recordings : .attachments
+                        guard let outcome = FileImport.take(result: result, slot: slot, into: destination)
+                        else { return }
+                        if outcome.succeeded {
+                            switch slot {
+                            case .image: onImage(outcome)
+                            case .audio: onAudio(outcome)
+                            case .pdf: onPdf(outcome)
+                            case .document: onDocument(outcome)
+                            default: break
+                            }
+                        } else {
+                            importErrorKey = outcome.errorKey
                         }
-                    } else {
-                        importErrorKey = outcome.errorKey
                     }
+                    // 呈現不出去也要把槽位放掉，不然下一次要求是「nil → 同一個值」之外的卡死狀態。
+                    if !presented { activeImportSlot = nil }
                 }
-                // 呈現不出去也要把槽位放掉，不然下一次要求是「nil → 同一個值」之外的卡死狀態。
-                if !presented { activeImportSlot = nil; currentSlot = nil }
             }
             .alert(
                 localizationManager.localized("import_failed_read"),

@@ -91,15 +91,8 @@ public struct NotebookEditorView: View {
     @State var thumbnailRevision = 0
     @State var continuousProgrammaticScrollUntil: Date = .distantPast
     /// 筆跡單一擁有者（架構審視 P1）：以 pageId 識別，消除多份副本與空白覆蓋。
-    @State private var inkStore: PageInkStore? = nil
     var activeInkStore: PageInkStore {
-        if let inkStore, inkStore.notebookId == notebook.id {
-            return inkStore
-        }
-        let created = PageInkStore(notebookId: notebook.id, store: store)
-        created.primeAllPages(notebook: notebook)
-        inkStore = created
-        return created
+        PageInkStore.store(for: notebook, store: store)
     }
     @State var coreInkWork: DispatchWorkItem? = nil
     /// 這一批待寫筆畫最早的那一筆的時間。見 `scheduleCoreInkFlush` 的上限說明。
@@ -636,9 +629,11 @@ public struct NotebookEditorView: View {
                             .accessibilityElement(children: .contain)
                             .accessibilityIdentifier("editor.workspace")
                     }
-                    .onAppear { editorAvailableWidth = geo.size.width }
+                    .onAppear {
+                        DispatchQueue.main.async { editorAvailableWidth = geo.size.width }
+                    }
                     .onChange(of: geo.size.width) { newValue in
-                        editorAvailableWidth = newValue
+                        DispatchQueue.main.async { editorAvailableWidth = newValue }
                     }
                     .sheet(isPresented: Binding(
                         get: { showStructureSidebar && !metrics.sidebarIsInline },
@@ -729,11 +724,13 @@ public struct NotebookEditorView: View {
         // Apple Pencil 雙擊要切回「最後用過的筆刷」（工作項 S-67），
         // 所以每次換工具都要把筆刷記下來。橡皮擦與套索不算筆刷。
         .onChange(of: selectedTool) { tool in
-            if tool == .lasso, lastObservedTool != .lasso {
-                previousTool = lastObservedTool
+            DispatchQueue.main.async {
+                if tool == .lasso, lastObservedTool != .lasso {
+                    previousTool = lastObservedTool
+                }
+                if tool.isBrush { lastBrushTool = tool }
+                lastObservedTool = tool
             }
-            if tool.isBrush { lastBrushTool = tool }
-            lastObservedTool = tool
         }
         .onReceive(NotificationCenter.default.publisher(for: AppCommand.proInkDidChange), perform: handleProInkDidChange)
         .onReceive(NotificationCenter.default.publisher(for: AppCommand.notebookPackageChanged), perform: handleNotebookPackageChanged)
@@ -750,31 +747,35 @@ public struct NotebookEditorView: View {
             Text(localizationManager.localized("sample_leave_message"))
         }
         .onChange(of: notebook.id) { _ in
-            // 外層換綁之後才會走到這裡，這時 notebook 已經是新的那一則。
-            currentPageIndex = 0
-            // 換到的這一本若是範例，同樣先備份到暫存區。
-            store.beginSampleSession(notebook.id)
-            MainThreadStallMonitor.shared.breadcrumb("open notebook \(notebook.id.prefix(8))")
-            FocusSyncController.shared.setFocus(notebook.id)
-            activeInkStore.clearAllCoreBaselines()
-            activeInkStore.clearAllPendingCoreFlush()
-            continuousCanvases.invalidateCachedDrawings()
-            coreInkWork?.cancel()
-            coreInkWork = nil
-            loadCurrentPage()
-            sanitizeUnderInkObjects()
-            initialNotebookSnapshot = notebook
-            initialPageInk.removeAll()
-            pageOrigins = nil
-            captureInitialPageState(page: 0, drawing: currentDrawing)
-            PageThumbnailRenderer.invalidateAll()
+            DispatchQueue.main.async {
+                // 外層換綁之後才會走到這裡，這時 notebook 已經是新的那一則。
+                currentPageIndex = 0
+                // 換到的這一本若是範例，同樣先備份到暫存區。
+                store.beginSampleSession(notebook.id)
+                MainThreadStallMonitor.shared.breadcrumb("open notebook \(notebook.id.prefix(8))")
+                FocusSyncController.shared.setFocus(notebook.id)
+                activeInkStore.clearAllCoreBaselines()
+                activeInkStore.clearAllPendingCoreFlush()
+                continuousCanvases.invalidateCachedDrawings()
+                coreInkWork?.cancel()
+                coreInkWork = nil
+                loadCurrentPage()
+                sanitizeUnderInkObjects()
+                initialNotebookSnapshot = notebook
+                initialPageInk.removeAll()
+                pageOrigins = nil
+                captureInitialPageState(page: 0, drawing: currentDrawing)
+                PageThumbnailRenderer.invalidateAll()
+            }
         }
         .background(
             // 用實際量到的寬度決定要不要展開結構欄。
             // 原本看 horizontalSizeClass，但在 fullScreenCover 剛推上來的那一瞬間
             // 它可能還回報 compact，於是 iPad 上時開時不開。
             GeometryReader { geo in
-                Color.clear.onAppear { autoOpenSidebarIfWideEnough(width: geo.size.width) }
+                Color.clear.onAppear {
+                    DispatchQueue.main.async { autoOpenSidebarIfWideEnough(width: geo.size.width) }
+                }
             }
         )
         .onAppear {
@@ -1453,7 +1454,9 @@ public struct NotebookEditorView: View {
         // 與 AdaptiveCanvasView 一致：畫布內容寬度就是視圖寬度
         let width = max(viewWidth, 320)
         guard abs(width - canvasContentWidth) > 0.5 else { return }
-        canvasContentWidth = width
+        DispatchQueue.main.async {
+            self.canvasContentWidth = width
+        }
     }
 
     // MARK: - 次世代動態模式傳送門 (The Dynamic Mode Portal)

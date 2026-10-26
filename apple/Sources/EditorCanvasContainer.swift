@@ -229,8 +229,16 @@ extension NotebookEditorView {
                         .transition(.opacity.combined(with: .move(edge: .top)))
                 }
             }
-            .onAppear { if knownObjectIds == nil { knownObjectIds = Set(allObjectIds) } }
-            .onChange(of: allObjectIds.count) { _ in placeNewObjectsOnTop() }
+            .onAppear {
+                DispatchQueue.main.async {
+                    if knownObjectIds == nil { knownObjectIds = Set(allObjectIds) }
+                }
+            }
+            .onChange(of: allObjectIds.count) { _ in
+                DispatchQueue.main.async {
+                    placeNewObjectsOnTop()
+                }
+            }
             .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { note in
                 if let frame = (note.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? NSValue)?.cgRectValue {
                     withAnimation(.easeOut(duration: 0.25)) {
@@ -656,8 +664,12 @@ extension NotebookEditorView {
                 return PageViewportLayout.zoomScale(for: target, viewport: viewport, page: pageSize)
             } ?? fitWidth
             continuousPages(scale: scale)
-                .onAppear { continuousScale = scale }
-                .onChange(of: scale) { continuousScale = $0 }
+                .onAppear {
+                    DispatchQueue.main.async { continuousScale = scale }
+                }
+                .onChange(of: scale) { newScale in
+                    DispatchQueue.main.async { continuousScale = newScale }
+                }
         }
     }
 
@@ -782,9 +794,11 @@ extension NotebookEditorView {
                                     acceptImageDrop(providers, at: location, page: page)
                                 },
                                 onInitialLoaded: { page, loaded in
-                                    let pid = (notebook.pageIds != nil && page < (notebook.pageIds?.count ?? 0)) ? notebook.pageIds?[page] : nil
-                                    if !activeInkStore.isPendingCoreFlush(for: page, pageId: pid) { inkDiskBaselines[page] = loaded }
-                                    captureInitialPageState(page: page, drawing: loaded)
+                                    DispatchQueue.main.async {
+                                        let pid = (notebook.pageIds != nil && page < (notebook.pageIds?.count ?? 0)) ? notebook.pageIds?[page] : nil
+                                        if !activeInkStore.isPendingCoreFlush(for: page, pageId: pid) { inkDiskBaselines[page] = loaded }
+                                        captureInitialPageState(page: page, drawing: loaded)
+                                    }
                                 },
                                 reloadGeneration: continuousReloadGeneration,
                                 inkReloadGeneration: continuousInkReloadGeneration,
@@ -899,25 +913,37 @@ extension NotebookEditorView {
             .background(
                 GeometryReader { geo in
                     Color.clear
-                        .onAppear { continuousViewportHeight = geo.size.height }
-                        .onChange(of: geo.size.height) { h in continuousViewportHeight = h }
+                        .onAppear {
+                            DispatchQueue.main.async { continuousViewportHeight = geo.size.height }
+                        }
+                        .onChange(of: geo.size.height) { h in
+                            DispatchQueue.main.async { continuousViewportHeight = h }
+                        }
                 }
             )
             .onPreferenceChange(PageFocusPreferenceKey.self) { mids in
-                updateFocusedPage(from: mids)
+                DispatchQueue.main.async {
+                    updateFocusedPage(from: mids)
+                }
             }
             .onChange(of: currentPageIndex) { page in
                 // 捲動自己帶來的變動不用再捲。
                 guard page != continuousReportedPage else { return }
-                continuousReportedPage = page
-                scrollContinuous(to: page, proxy: proxy, animated: true)
+                DispatchQueue.main.async {
+                    continuousReportedPage = page
+                    scrollContinuous(to: page, proxy: proxy, animated: true)
+                }
             }
             .onChange(of: continuousScrollRequest) { _ in
-                scrollContinuous(to: currentPageIndex, proxy: proxy, animated: true)
+                DispatchQueue.main.async {
+                    scrollContinuous(to: currentPageIndex, proxy: proxy, animated: true)
+                }
             }
             .onChange(of: notebook.pageCount) { _ in
                 // 新增／刪除頁面之後頁碼可能沒變但內容換了，確保焦點頁在畫面上。
-                scrollContinuous(to: currentPageIndex, proxy: proxy, animated: false)
+                DispatchQueue.main.async {
+                    scrollContinuous(to: currentPageIndex, proxy: proxy, animated: false)
+                }
             }
             .onChange(of: editorMode) { _ in
                 // 切換手繪/打字模式時維持使用者原本的捲動位置與閱讀視角，不強制捲動頁面。
@@ -925,9 +951,8 @@ extension NotebookEditorView {
             .onAppear {
                 // 從整頁模式切過來時，停在原本那一頁而不是回到第 1 頁。
                 // LazyVStack 第一輪排版還沒完成時 scrollTo 會落空，下一輪 run loop 補一次。
-                continuousReportedPage = currentPageIndex
-                scrollContinuous(to: currentPageIndex, proxy: proxy, animated: false)
                 DispatchQueue.main.async {
+                    continuousReportedPage = currentPageIndex
                     scrollContinuous(to: currentPageIndex, proxy: proxy, animated: false)
                 }
             }
@@ -1124,7 +1149,7 @@ extension NotebookEditorView {
                         )
                         .canvasLocked(lockedSet.contains(item.id.lowercased()))
 
-                        .zIndex(stacking.zIndex(for: item.id, kind: .image))
+                        .zIndex(activeSelectedObjectId == item.id ? 999 : stacking.zIndex(for: item.id, kind: .image))
                     }
                 }
 
@@ -1184,7 +1209,7 @@ extension NotebookEditorView {
                         )
                         .canvasLocked(lockedSet.contains(item.id.lowercased()))
 
-                        .zIndex(stacking.zIndex(for: item.id, kind: .shape))
+                        .zIndex(activeSelectedObjectId == item.id ? 999 : stacking.zIndex(for: item.id, kind: .shape))
                     }
                 }
 
@@ -1257,7 +1282,7 @@ extension NotebookEditorView {
                         )
                         .canvasLocked(lockedSet.contains(item.id.lowercased()))
 
-                        .zIndex(stacking.zIndex(for: item.id, kind: .table))
+                        .zIndex(activeSelectedObjectId == item.id ? 999 : stacking.zIndex(for: item.id, kind: .table))
                     }
                 }
 
@@ -1312,7 +1337,7 @@ extension NotebookEditorView {
                         )
                         .canvasLocked(lockedSet.contains(item.id.lowercased()))
 
-                        .zIndex(stacking.zIndex(for: item.id, kind: .text))
+                        .zIndex(activeSelectedObjectId == item.id ? 999 : stacking.zIndex(for: item.id, kind: .text))
                     }
                 }
 
@@ -1325,12 +1350,13 @@ extension NotebookEditorView {
                             onSelect: { selectSingleObject(item.id) },
                             onDelete: {
                                 notebook.linkAttachments?.removeAll { $0.id == item.id }
+                                if activeSelectedObjectId == item.id { activeSelectedObjectId = nil }
                                 commitNotebook()
                             }
                         )
                         .canvasLocked(lockedSet.contains(item.id.lowercased()))
 
-                        .zIndex(stacking.zIndex(for: item.id, kind: .link))
+                        .zIndex(activeSelectedObjectId == item.id ? 999 : stacking.zIndex(for: item.id, kind: .link))
                     }
                 }
 
@@ -1352,7 +1378,7 @@ extension NotebookEditorView {
                         )
                         .canvasLocked(lockedSet.contains(item.id.lowercased()))
 
-                        .zIndex(stacking.zIndex(for: item.id, kind: .audio))
+                        .zIndex(activeSelectedObjectId == item.id ? 999 : stacking.zIndex(for: item.id, kind: .audio))
                     }
                 }
 
@@ -1373,7 +1399,7 @@ extension NotebookEditorView {
                         )
                         .canvasLocked(lockedSet.contains(item.id.lowercased()))
 
-                        .zIndex(stacking.zIndex(for: item.id, kind: .model3D))
+                        .zIndex(activeSelectedObjectId == item.id ? 999 : stacking.zIndex(for: item.id, kind: .model3D))
                     }
                 }
 
@@ -1680,9 +1706,11 @@ extension NotebookEditorView {
             .background(
                 GeometryReader { geo in
                     Color.clear
-                        .onAppear { updateCanvasContentWidth(geo.size.width) }
+                        .onAppear {
+                            DispatchQueue.main.async { updateCanvasContentWidth(geo.size.width) }
+                        }
                         .onChange(of: geo.size.width) { newWidth in
-                            updateCanvasContentWidth(newWidth)
+                            DispatchQueue.main.async { updateCanvasContentWidth(newWidth) }
                         }
                 }
             )
