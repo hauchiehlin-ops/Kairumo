@@ -160,6 +160,7 @@ final class ContinuousCanvasRegistry {
         set { canvases[page] = newValue }
     }
 
+    // orphan-ok: 連續模式畫布快取查詢，供單元測試與畫布狀態檢測
     func cachedDrawing(forPage page: Int) -> PKDrawing? {
         cachedDrawings[page]
     }

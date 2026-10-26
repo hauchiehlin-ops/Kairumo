@@ -14,6 +14,7 @@ extension NotebookEditorView {
     // MARK: - 儲存、延伸與套索編輯核心
     /// 這一頁第一次載入時的狀態（只記一次）：筆畫、專業筆畫與已擦除名單。
     /// 第一次載入一定早於這頁的任何編輯，所以它就是「初始狀態」。
+    // unused-param-ok: drawing 改由 PageInkStore.primeAllPages 全本統一建檔，保留參數相容既有呼叫端
     func captureInitialPageState(page: Int, drawing: PKDrawing) {
         // 調整過頁面結構之後頁碼不再是原本的頁碼；所有頁的初始狀態在那之前已經整批記好了。
         guard pageOrigins == nil else { return }
