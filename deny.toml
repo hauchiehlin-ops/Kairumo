@@ -108,6 +108,14 @@ ignore = [
     # 待辦：zhconv 放行 ruzstd >= 0.9.1 後就回來移除這一條。
     "RUSTSEC-2026-0344",
 
+    # zstd 0.13 / zstd-safe 7.3（RUSTSEC-2026-0391、RUSTSEC-2026-0398、RUSTSEC-2026-0403）：
+    # 來源為 zhconv 0.4.2 的 [build-dependencies]，僅在編譯期（build.rs）用於壓縮內建 OpenCC 詞庫常數，
+    # 執行期完全不連結 zstd/zstd-safe（執行期解壓走純 Rust 的 ruzstd），因此不會處理任何網路或使用者未受信任輸入。
+    # 待辦：zhconv 升級 build-dependencies 的 zstd 至 >= 0.14.3 後移除。
+    "RUSTSEC-2026-0391",
+    "RUSTSEC-2026-0398",
+    "RUSTSEC-2026-0403",
+
     # zip < 9 的三筆解壓縮漏洞（SUID/SGID 位元、指到目的地外的符號連結、透過符號連結套用權限）。
     # 這個專案自己的解壓縮（padnote-storage）已經升到 zip 9。剩下的 zip 8.6 來自 calamine 0.36
     # （讀 xlsx）與 docx-rs 0.4（寫 docx），兩者都要求 zip ^8.6、尚無支援 zip 9 的版本。
