@@ -322,6 +322,7 @@ struct ContinuousPageView<ObjectLayer: View>: View {
             }
         }
         .frame(width: PageGeometry.width, height: PageGeometry.height)
+        .clipped()
         .background(
             Rectangle()
                 .fill(Color(uiColor: .systemBackground))

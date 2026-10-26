@@ -323,6 +323,7 @@ extension NotebookEditorView {
                 ScaledPageLayout(scale: effectiveScale, unscaledSize: CGSize(width: PageGeometry.width, height: PageGeometry.height)) {
                     canvasWorkAreaContent
                         .frame(width: PageGeometry.width, height: PageGeometry.height)
+                        .clipped()
                         .scaleEffect(effectiveScale, anchor: .topLeading)
                 }
                 .padding(.bottom, inlineEditingTextId != nil ? keyboardHeight : 0)
@@ -951,6 +952,7 @@ extension NotebookEditorView {
                                 }
                             )
                             .frame(width: PageGeometry.width, height: PageGeometry.height)
+                            .clipped()
                             .scaleEffect(scale, anchor: .topLeading)
                             // 連續模式的物件可以拖到相鄰的頁（單頁模式照舊夾在本頁）。
                             .environment(\.pageCrossing, pageCrossing(for: index))
