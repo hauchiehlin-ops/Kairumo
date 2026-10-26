@@ -171,6 +171,7 @@ public final class PageInkStore: ObservableObject {
 
     // MARK: - 核心套件寫入與基準線管理（取代舊有的 coreInkBaselines 與 pendingCoreInk）
 
+    // orphan-ok: 供除錯與測試檢視指定頁面之核心基準線筆跡
     public func coreBaseline(for pageIndex: Int, pageId: String? = nil) -> PKDrawing? {
         let k = key(for: pageIndex, pageId: pageId)
         return coreBaselines[k]

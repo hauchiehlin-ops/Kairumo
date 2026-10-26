@@ -143,7 +143,9 @@ fn points(seq: u32) -> Vec<StrokePoint> {
 }
 
 /// 足以涵蓋整頁的套索多邊形。
-const WHOLE_PAGE: [f32; 8] = [-10_000.0, -10_000.0, 10_000.0, -10_000.0, 10_000.0, 10_000.0, -10_000.0, 10_000.0];
+const WHOLE_PAGE: [f32; 8] = [
+    -10_000.0, -10_000.0, 10_000.0, -10_000.0, 10_000.0, 10_000.0, -10_000.0, 10_000.0,
+];
 
 // ────────────────────────────── 執行 ──────────────────────────────
 
@@ -182,9 +184,19 @@ fn run_inner(actions: &[Action], dir: PathBuf, verbose: bool) -> Result<(), Stri
                 let page = shadow.pages[p % n].clone();
                 seq += 1;
                 let id = s
-                    .add_stroke(page.clone(), ToolKind::BallPoint, vec![20, 20, 20, 255], 2.0, points(seq))
+                    .add_stroke(
+                        page.clone(),
+                        ToolKind::BallPoint,
+                        vec![20, 20, 20, 255],
+                        2.0,
+                        points(seq),
+                    )
                     .map_err(|e| fail(format!("add_stroke: {e:?}")))?;
-                shadow.strokes.get_mut(&page).unwrap().insert(id.to_lowercase());
+                shadow
+                    .strokes
+                    .get_mut(&page)
+                    .unwrap()
+                    .insert(id.to_lowercase());
             }
             Action::Erase(p, k) => {
                 let page = shadow.pages[p % n].clone();
@@ -267,11 +279,15 @@ fn run_inner(actions: &[Action], dir: PathBuf, verbose: bool) -> Result<(), Stri
                     .lasso_translate(page.clone(), selected, 4.0, 4.0)
                     .map_err(|e| fail(format!("lasso_translate: {e:?}")))?;
                 if new_ids.len() != before {
-                    return Err(fail(format!("I5 套索搬移後筆數 {} != {before}", new_ids.len())));
+                    return Err(fail(format!(
+                        "I5 套索搬移後筆數 {} != {before}",
+                        new_ids.len()
+                    )));
                 }
-                shadow
-                    .strokes
-                    .insert(page, new_ids.into_iter().map(|i| i.to_lowercase()).collect());
+                shadow.strokes.insert(
+                    page,
+                    new_ids.into_iter().map(|i| i.to_lowercase()).collect(),
+                );
             }
             Action::ReadOnlyBurst => {
                 let before = observe(s);
@@ -287,7 +303,9 @@ fn run_inner(actions: &[Action], dir: PathBuf, verbose: bool) -> Result<(), Stri
                 let _ = s.milestones();
                 let after = observe(s);
                 if before != after {
-                    return Err(fail(format!("I3 唯讀操作改變了狀態\n前：{before:?}\n後：{after:?}")));
+                    return Err(fail(format!(
+                        "I3 唯讀操作改變了狀態\n前：{before:?}\n後：{after:?}"
+                    )));
                 }
             }
             Action::Reopen => {
@@ -299,7 +317,9 @@ fn run_inner(actions: &[Action], dir: PathBuf, verbose: bool) -> Result<(), Stri
                 let after = observe(&reopened);
                 session = Some(reopened);
                 if before != after {
-                    return Err(fail(format!("I4 重開之後狀態不同\n前：{before:?}\n後：{after:?}")));
+                    return Err(fail(format!(
+                        "I4 重開之後狀態不同\n前：{before:?}\n後：{after:?}"
+                    )));
                 }
             }
             Action::Milestone => {
@@ -309,7 +329,9 @@ fn run_inner(actions: &[Action], dir: PathBuf, verbose: bool) -> Result<(), Stri
                 milestone = Some((m.id, shadow.clone()));
             }
             Action::Restore => {
-                let Some((id, snap)) = milestone.clone() else { continue };
+                let Some((id, snap)) = milestone.clone() else {
+                    continue;
+                };
                 s.restore_milestone(id, wall_ms, "safety".into())
                     .map_err(|e| fail(format!("restore_milestone: {e:?}")))?;
                 shadow = snap;
@@ -326,7 +348,10 @@ fn run_inner(actions: &[Action], dir: PathBuf, verbose: bool) -> Result<(), Stri
         if actual.strokes != shadow.strokes {
             let mut diff = String::new();
             for p in &shadow.pages {
-                let (want, got) = (&shadow.strokes[p], actual.strokes.get(p).cloned().unwrap_or_default());
+                let (want, got) = (
+                    &shadow.strokes[p],
+                    actual.strokes.get(p).cloned().unwrap_or_default(),
+                );
                 if *want != got {
                     diff += &format!(
                         "\n  頁 {p}: 少了 {:?} / 多了 {:?}",
@@ -375,7 +400,9 @@ fn check_seed(seed: u64, steps: usize) {
     let actions = generate(seed, steps);
     if let Err(first) = run(&actions, dir.join("run")) {
         let min = shrink(&actions, &dir);
-        let detail = run_inner(&min, dir.join("min"), true).err().unwrap_or_default();
+        let detail = run_inner(&min, dir.join("min"), true)
+            .err()
+            .unwrap_or_default();
         panic!(
             "種子 {seed} 失敗：{first}\n\n縮小後 {} 步：{min:?}\n{detail}\n\n修好之後把種子加進 REGRESSION_SEEDS。",
             min.len()
@@ -387,7 +414,10 @@ fn check_seed(seed: u64, steps: usize) {
 // ────────────────────────────── 測試 ──────────────────────────────
 
 fn tmp(name: &str) -> PathBuf {
-    std::env::temp_dir().join(format!("padnote-editor-model-{name}-{}", std::process::id()))
+    std::env::temp_dir().join(format!(
+        "padnote-editor-model-{name}-{}",
+        std::process::id()
+    ))
 }
 
 /// 曾經找到過失敗的種子。**永遠重跑。**
@@ -406,17 +436,69 @@ fn reported_scenarios_keep_ink() {
     use Action::*;
     let scenarios: &[(&str, &[Action])] = &[
         // iPad：開筆記 → 切打字 → 切回手繪，第一頁內容消失。
-        ("切換模式不改筆跡", &[Draw(0), Draw(0), ReadOnlyBurst, ReadOnlyBurst, Reopen, ReadOnlyBurst]),
+        (
+            "切換模式不改筆跡",
+            &[
+                Draw(0),
+                Draw(0),
+                ReadOnlyBurst,
+                ReadOnlyBurst,
+                Reopen,
+                ReadOnlyBurst,
+            ],
+        ),
         // iPad：點任一縮圖，該頁內容消失。
-        ("點縮圖不改筆跡", &[Draw(0), AddPage, Draw(1), Draw(1), ReadOnlyBurst, ReadOnlyBurst]),
+        (
+            "點縮圖不改筆跡",
+            &[
+                Draw(0),
+                AddPage,
+                Draw(1),
+                Draw(1),
+                ReadOnlyBurst,
+                ReadOnlyBurst,
+            ],
+        ),
         // 插頁、搬頁之後，筆跡要跟著頁面身分走（Apple 端曾以頁序號為 key）。
-        ("搬頁筆跡跟著走", &[Draw(0), AddPage, Draw(1), AddPage, Draw(2), MovePage(2, 0), MovePage(0, 2), Reopen]),
-        ("刪頁不波及他頁", &[Draw(0), AddPage, Draw(1), AddPage, Draw(2), RemovePage(1), Reopen]),
-        ("複製頁獨立", &[Draw(0), Draw(0), DuplicatePage(0), Erase(1, 0), Reopen]),
+        (
+            "搬頁筆跡跟著走",
+            &[
+                Draw(0),
+                AddPage,
+                Draw(1),
+                AddPage,
+                Draw(2),
+                MovePage(2, 0),
+                MovePage(0, 2),
+                Reopen,
+            ],
+        ),
+        (
+            "刪頁不波及他頁",
+            &[
+                Draw(0),
+                AddPage,
+                Draw(1),
+                AddPage,
+                Draw(2),
+                RemovePage(1),
+                Reopen,
+            ],
+        ),
+        (
+            "複製頁獨立",
+            &[Draw(0), Draw(0), DuplicatePage(0), Erase(1, 0), Reopen],
+        ),
         // 一鍵恢復初始狀態。
-        ("一鍵恢復", &[Draw(0), Milestone, Draw(0), Draw(0), Restore, Reopen]),
+        (
+            "一鍵恢復",
+            &[Draw(0), Milestone, Draw(0), Draw(0), Restore, Reopen],
+        ),
         // 套索。
-        ("套索搬移", &[Draw(0), Draw(0), Draw(0), LassoMoveAll(0), Reopen]),
+        (
+            "套索搬移",
+            &[Draw(0), Draw(0), Draw(0), LassoMoveAll(0), Reopen],
+        ),
     ];
     for (name, seq) in scenarios {
         let dir = tmp(&format!("scenario-{}", name.len()));
@@ -441,5 +523,3 @@ fn a_long_soak() {
         check_seed(seed.wrapping_mul(0xD1B5_4A32_D192_ED03), 300);
     }
 }
-
-
