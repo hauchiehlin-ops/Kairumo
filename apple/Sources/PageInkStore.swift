@@ -60,8 +60,6 @@ public final class PageInkStore: ObservableObject {
     public static func purgeAll() {
         activeStores.removeAll()
     }
-        activeStores.removeValue(forKey: notebookId)
-    }
 
     public init(notebookId: String, store: NotebookStore) {
         self.notebookId = notebookId
