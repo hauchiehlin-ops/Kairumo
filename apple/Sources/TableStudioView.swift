@@ -738,6 +738,7 @@ struct TableAttachmentItemView: View {
                         }
                         .buttonStyle(.plain)
                         .accessibilityLabel(localizationManager.localized("action_delete"))
+                        .accessibilityIdentifier("action.delete")
                     }
                     .offset(x: 10, y: -10)
                 }

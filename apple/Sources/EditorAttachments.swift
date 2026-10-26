@@ -328,6 +328,7 @@ struct AttachmentItemView: View {
                     // 圖示按鈕一定要有標籤：沒有的話 VoiceOver 念「按鈕」，
                     // 互動矩陣（`InteractionMatrixAudit`）也找不到它。
                     .accessibilityLabel(localizationManager.localized("action_delete"))
+                    .accessibilityIdentifier("action.delete")
                 }
                 .offset(x: 10, y: -10)
 
@@ -517,14 +518,14 @@ struct TextAttachmentItemView: View {
             collaborationManager.broadcastSelection(selectedId: CollaborationManager.typingPrefix + textItem.id)
         }
         if afterContextMenu {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.12, execute: activate)
+            DispatchQueue.main.async(execute: activate)
         } else {
             activate()
         }
     }
 
     private func afterContextMenuDismisses(_ action: @escaping () -> Void) {
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.12, execute: action)
+        DispatchQueue.main.async(execute: action)
     }
 
     private func slashMenuItem(title: String, icon: String, action: @escaping () -> Void) -> some View {
@@ -736,9 +737,9 @@ struct TextAttachmentItemView: View {
                 beginInlineEditing()
             }
             .onTapGesture {
-                // 點一下：若已選取或已在就地編輯則維持/進入編輯；未選取時先選取方塊
+                // 點一下：若在打字模式、已選取或已在就地編輯則進入編輯；未選取時先選取方塊
                 guard lockedByPeer == nil else { return }
-                if isSelected || isEditingInline {
+                if isTypeMode || isSelected || isEditingInline {
                     beginInlineEditing()
                 } else {
                     onSelect?()
@@ -1180,60 +1181,7 @@ struct LinkAttachmentItemView: View {
         let currentY = linkItem.y + dragOffset.height
 
         card
-            // 卡片本體跟著轉；把手掛在旋轉**外面**的 overlay ——
-            // 包進去的話拖曳算出的角度會疊加自身旋轉，卡片會失控加速。
-            .rotationEffect(.degrees(linkItem.canvasRotation))
-            .contextMenu {
-                ObjectOrderMenu(id: linkItem.id)
-                Divider()
-                Button(role: .destructive, action: onDelete) {
-                    Label(localizationManager.localized("delete"), systemImage: "trash")
-                }
-            }
-            .overlay {
-                if isSelected {
-                    GeometryReader { geo in
-                        ObjectRotationHandle(degrees: $linkItem.canvasRotation, size: geo.size)
-                    }
-                }
-            }
-            .overlay(alignment: .topTrailing) {
-                if isSelected {
-                    Button(role: .destructive, action: onDelete) {
-                        Image(systemName: "trash.circle.fill")
-                            .font(.title3)
-                            .symbolRenderingMode(.palette)
-                            .foregroundStyle(.white, Color.red)
-                    }
-                    .buttonStyle(.plain)
-                    .offset(x: 10, y: -10)
-                    .accessibilityLabel(localizationManager.localized("action_delete"))
-                }
-            }
-            // 右下角縮放把手。卡片原本只能用插入時的寬度，標題長一點就被截掉。
-            .overlay(alignment: .bottomTrailing) {
-                if isSelected { resizeHandle }
-            }
-            // 左下角編修鈕：網址、標題與說明都存在模型裡，但在這一版之前
-            // 沒有任何介面改得到 —— 打錯一個字只能刪掉重插。
-            .overlay(alignment: .bottomLeading) {
-                if isSelected {
-                    Button { isEditing = true } label: {
-                        Image(systemName: "square.and.pencil")
-                            .font(.system(size: 11, weight: .bold))
-                            .foregroundColor(.white)
-                            .frame(width: 30, height: 30)
-                            .background(Color.accentColor)
-                            .clipShape(Circle())
-                    }
-                    .buttonStyle(.plain)
-                    .contentShape(Circle())
-                    .offset(x: -10, y: 10)
-                    .accessibilityLabel(localizationManager.localized("link_edit"))
-                    .help(localizationManager.localized("link_edit"))
-                }
-            }
-            .highPriorityGesture(
+            .simultaneousGesture(
                 (!isSelected || !CanvasTouchState.canDragObject) ? nil :
                 DragGesture(minimumDistance: 4, coordinateSpace: .named(CanvasCoordinateSpace.name))
                     .onChanged { value in
@@ -1273,11 +1221,73 @@ struct LinkAttachmentItemView: View {
                         pageCrossing?.ended(crossedTo == nil ? nil : linkItem.id, crossedTo)
                     }
             )
-            .onTapGesture { onSelect?() }
+            // 卡片本體跟著轉；把手掛在旋轉**外面**的 overlay ——
+            // 包進去的話拖曳算出的角度會疊加自身旋轉，卡片會失控加速。
+            .rotationEffect(.degrees(linkItem.canvasRotation))
+            .contextMenu {
+                ObjectOrderMenu(id: linkItem.id)
+                Divider()
+                Button(role: .destructive, action: onDelete) {
+                    Label(localizationManager.localized("delete"), systemImage: "trash")
+                }
+            }
+            .overlay {
+                if isSelected {
+                    GeometryReader { geo in
+                        ObjectRotationHandle(degrees: $linkItem.canvasRotation, size: geo.size)
+                    }
+                }
+            }
+            .overlay(alignment: .topTrailing) {
+                if isSelected {
+                    Button(role: .destructive) {
+                        onDelete()
+                    } label: {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundColor(.white)
+                            .padding(6)
+                            .background(Color.red)
+                            .clipShape(Circle())
+                            .shadow(color: Color.black.opacity(0.2), radius: 3, x: 0, y: 1)
+                    }
+                    .buttonStyle(.plain)
+                    .contentShape(Circle())
+                    .offset(x: 10, y: -10)
+                    .accessibilityLabel(localizationManager.localized("action_delete"))
+                    .accessibilityIdentifier("action.delete")
+                    .help(localizationManager.localized("action_delete"))
+                }
+            }
+            .overlay(alignment: .bottomTrailing) {
+                if isSelected {
+                    resizeHandle
+                }
+            }
+            .overlay(alignment: .bottomLeading) {
+                if isSelected {
+                    Button {
+                        isEditing = true
+                    } label: {
+                        Image(systemName: "square.and.pencil")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundColor(.white)
+                            .frame(width: 28, height: 28)
+                            .background(Color.accentColor)
+                            .clipShape(Circle())
+                            .shadow(color: Color.black.opacity(0.18), radius: 3, x: 0, y: 1)
+                    }
+                    .buttonStyle(.plain)
+                    .contentShape(Circle())
+                    .offset(x: -10, y: 10)
+                    .accessibilityLabel(localizationManager.localized("link_edit"))
+                    .help(localizationManager.localized("link_edit"))
+                }
+            }
             .objectProbe("link")
             .padding(20)
-        .position(x: currentX + displayWidth / 2, y: currentY + displayHeight / 2)
-        .animation(nil, value: dragOffset)
+            .position(x: currentX + displayWidth / 2, y: currentY + displayHeight / 2)
+            .animation(nil, value: dragOffset)
             .sheet(isPresented: $isEditing) { resizableSheet {
                 LinkAttachmentEditSheet(linkItem: $linkItem)
             } }
@@ -1315,19 +1325,25 @@ struct LinkAttachmentItemView: View {
                 .buttonStyle(.plain)
             }
 
-            Text(linkItem.title)
-                .font(.system(size: 14, weight: .semibold))
-                .lineLimit(2)
-                .foregroundColor(.primary)
+            VStack(alignment: .leading, spacing: 6) {
+                Text(linkItem.title)
+                    .font(.system(size: 14, weight: .semibold))
+                    .lineLimit(2)
+                    .foregroundColor(.primary)
 
-            if !linkItem.descriptionText.isEmpty {
-                Text(linkItem.descriptionText)
-                    .font(.system(size: 11))
-                    .foregroundColor(.secondary)
-                    .lineLimit(3)
+                if !linkItem.descriptionText.isEmpty {
+                    Text(linkItem.descriptionText)
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary)
+                        .lineLimit(3)
+                }
+
+                Spacer(minLength: 0)
             }
-
-            Spacer(minLength: 0)
+            .contentShape(Rectangle())
+            .onTapGesture {
+                onSelect?()
+            }
         }
         .padding(12)
         // 高度也照模型走。原本只綁寬度、位置用寫死的 +50 推算中心 ——
@@ -1345,7 +1361,6 @@ struct LinkAttachmentItemView: View {
                 )
         )
         .shadow(color: Color.black.opacity(0.08), radius: 6, y: 3)
-        .contentShape(Rectangle())
     }
 
     private var resizeHandle: some View {

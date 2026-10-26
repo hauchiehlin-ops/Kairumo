@@ -47,7 +47,7 @@ enum AppCommand {
     /// 某個 `.padnote` 套件因同步下載而有了新內容。
     ///
     /// `object` 是 `String`（筆記本 id，小寫）。
-    /// 接到這個通知的編輯器，如果打開的是這本，就丟掉舊的 coreInkBaselines
+    /// 接到這個通知的編輯器，如果打開的是這本，就重置 coreBaselines
     /// 並重新讀取套件，讓畫面顯示最新的跨裝置筆跡。
     static let notebookPackageChanged = Notification.Name("kairumo.notebookPackageChanged")
     /// 專業筆畫（製圖線、專業筆刷）存檔了。object 是小寫的筆記本 id。

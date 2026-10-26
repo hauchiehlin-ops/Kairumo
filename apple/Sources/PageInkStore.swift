@@ -34,6 +34,35 @@ public final class PageInkStore: ObservableObject {
     /// 防止空白畫布意外覆蓋磁碟上既有筆跡的安全閥
     private var knownDiskStrokeCounts: [String: Int] = [:]
 
+    /// 已經寫進核心 .padnote 的筆跡基準線（key: pageKey，架構審視 P1 單一擁有者）
+    private var coreBaselines: [String: PKDrawing] = [:]
+
+    /// 待寫入核心套件的頁面 Key 集合
+    private var pendingCoreFlushKeys: Set<String> = []
+
+    // profile-scope: profile 記憶體中開啟過的筆記本筆跡快取；切換時由 purgeAll 清空
+    private static var activeStores: [String: PageInkStore] = [:]
+
+    public static func store(for notebook: NotebookDocument, store: NotebookStore) -> PageInkStore {
+        if let existing = activeStores[notebook.id] {
+            return existing
+        }
+        let created = PageInkStore(notebookId: notebook.id, store: store)
+        created.primeAllPages(notebook: notebook)
+        activeStores[notebook.id] = created
+        return created
+    }
+
+    public static func purge(notebookId: String) {
+        activeStores.removeValue(forKey: notebookId)
+    }
+
+    public static func purgeAll() {
+        activeStores.removeAll()
+    }
+        activeStores.removeValue(forKey: notebookId)
+    }
+
     public init(notebookId: String, store: NotebookStore) {
         self.notebookId = notebookId
         self.store = store
@@ -138,5 +167,71 @@ public final class PageInkStore: ObservableObject {
                 knownDiskStrokeCounts[k] = drawing.strokes.count
             }
         }
+    }
+
+    // MARK: - 核心套件寫入與基準線管理（取代舊有的 coreInkBaselines 與 pendingCoreInk）
+
+    public func coreBaseline(for pageIndex: Int, pageId: String? = nil) -> PKDrawing? {
+        let k = key(for: pageIndex, pageId: pageId)
+        return coreBaselines[k]
+    }
+
+    public func setCoreBaseline(_ drawing: PKDrawing, for pageIndex: Int, pageId: String? = nil) {
+        let k = key(for: pageIndex, pageId: pageId)
+        coreBaselines[k] = drawing
+    }
+
+    public func clearCoreBaseline(for pageIndex: Int, pageId: String? = nil) {
+        let k = key(for: pageIndex, pageId: pageId)
+        coreBaselines.removeValue(forKey: k)
+    }
+
+    public func clearAllCoreBaselines() {
+        coreBaselines.removeAll()
+    }
+
+    public func markPendingCoreFlush(for pageIndex: Int, pageId: String? = nil) {
+        let k = key(for: pageIndex, pageId: pageId)
+        pendingCoreFlushKeys.insert(k)
+    }
+
+    public func clearPendingCoreFlush(for pageIndex: Int, pageId: String? = nil) {
+        let k = key(for: pageIndex, pageId: pageId)
+        pendingCoreFlushKeys.remove(k)
+    }
+
+    public func clearAllPendingCoreFlush() {
+        pendingCoreFlushKeys.removeAll()
+    }
+
+    public var hasPendingCoreFlush: Bool {
+        return !pendingCoreFlushKeys.isEmpty
+    }
+
+    public func isPendingCoreFlush(for pageIndex: Int, pageId: String? = nil) -> Bool {
+        let k = key(for: pageIndex, pageId: pageId)
+        return pendingCoreFlushKeys.contains(k)
+    }
+
+    /// 取得所有等待寫入核心套件的 (pageIndex, pageId, drawing, cachedBaseline) 任務清單
+    public func pendingCoreFlushJobs(notebook: NotebookDocument) -> [(pageIndex: Int, pageId: String?, drawing: PKDrawing, cachedBaseline: PKDrawing?)] {
+        guard !pendingCoreFlushKeys.isEmpty else { return [] }
+        var jobs: [(pageIndex: Int, pageId: String?, drawing: PKDrawing, cachedBaseline: PKDrawing?)] = []
+        let count = max(1, notebook.pageCount)
+        for idx in 0..<count {
+            let pid = (notebook.pageIds != nil && idx < (notebook.pageIds?.count ?? 0)) ? notebook.pageIds?[idx] : nil
+            let k = key(for: idx, pageId: pid)
+            if pendingCoreFlushKeys.contains(k), let d = inMemoryDrawings[k] {
+                jobs.append((pageIndex: idx, pageId: pid, drawing: d, cachedBaseline: coreBaselines[k]))
+            }
+        }
+        return jobs
+    }
+
+    /// 檢查某頁筆跡是否相較已儲存快取無變更（取代舊有的 lastPersistedInk 副本）
+    public func isUnchanged(for pageIndex: Int, pageId: String? = nil, drawing: PKDrawing) -> Bool {
+        let k = key(for: pageIndex, pageId: pageId)
+        guard let cached = inMemoryDrawings[k] else { return false }
+        return cached == drawing && !dirtyPages.contains(k) && !pendingCoreFlushKeys.contains(k)
     }
 }

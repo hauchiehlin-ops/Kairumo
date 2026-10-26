@@ -18,6 +18,9 @@ HARD=(
   "category option 'defaultToSpeaker' is only applicable"
   "Modifying state during view update"
   "No symbol named"
+  "Simultaneous accesses to"
+  "Fatal error"
+  "log_main_stall"
 )
 SOFT=(
   "Accessing FocusState's value outside of the body of a View"

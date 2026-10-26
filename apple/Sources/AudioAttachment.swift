@@ -145,6 +145,7 @@ struct AudioAttachmentItemView: View {
                     .contentShape(Circle())
                     .offset(x: 10, y: -10)
                     .accessibilityLabel(localizationManager.localized("action_delete"))
+                    .accessibilityIdentifier("action.delete")
                     .help(localizationManager.localized("action_delete"))
                 }
             }

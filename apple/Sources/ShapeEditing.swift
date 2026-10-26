@@ -496,6 +496,7 @@ struct ShapeAttachmentItemView: View {
             }
             .buttonStyle(.plain)
             .accessibilityLabel(localizationManager.localized("action_delete"))
+            .accessibilityIdentifier("action.delete")
         }
         .position(x: frame.width + 4, y: -14)
     }

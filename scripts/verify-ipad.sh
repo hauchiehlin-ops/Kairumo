@@ -8,6 +8,12 @@ UDID="${1:-$(xcrun simctl list devices booted | grep -m1 iPad | sed -E 's/.*\(([
 [ -n "$UDID" ] || { echo "找不到已開機的 iPad 模擬器，請先開一台或把 UDID 當參數傳進來" >&2; exit 2; }
 echo "==> iPad 模擬器：$UDID"
 
+# 模擬器無實體麥克風時若觸發 CoreAudio HAL 警告，CoreSimulator 會在背景啟動 simctl diagnose 並等待最多 10 分鐘。
+# 啟動輕量背景監控即時中止無效的 diagnose，避免測試被拖延。
+( while true; do pkill -9 -f "simctl diagnose" 2>/dev/null || true; sleep 2; done ) &
+WATCHDOG_PID=$!
+trap 'kill "$WATCHDOG_PID" 2>/dev/null || true' EXIT INT TERM
+
 echo "==> 1/6 規則檢查（字串、畫面對照）"
 python3 scripts/i18n_tool.py verify
 python3 scripts/check-screen-parity.py
@@ -27,8 +33,10 @@ echo "==> 3/6 L3 平台能力契約（播放兩次、錄完立刻播、失敗不
 
 echo "==> 4/6 L2 互動矩陣 + L3 UI 契約（檔案選擇器連開三次）+ 筆跡不變式矩陣 + L4 自檢"
 (cd apple && xcodebuild test -scheme Kairumo -destination "platform=iOS Simulator,id=$UDID" \
-  -only-testing:KairumoUITests/InteractionMatrixAudit \
-  -only-testing:KairumoUITests/PlatformContractUITests \
+  -only-testing:KairumoUITests/InteractionMatrixAudit -quiet)
+(cd apple && xcodebuild test -scheme Kairumo -destination "platform=iOS Simulator,id=$UDID" \
+  -only-testing:KairumoUITests/PlatformContractUITests -quiet)
+(cd apple && xcodebuild test -scheme Kairumo -destination "platform=iOS Simulator,id=$UDID" \
   -only-testing:KairumoUITests/InkInvariantMatrixAudit -quiet)
 
 echo "==> 5/6 執行期日誌閘門（硬規則出現一次就失敗）"

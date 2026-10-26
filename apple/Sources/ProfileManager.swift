@@ -303,6 +303,7 @@ public final class ProfileManager: ObservableObject {
             { ImportedModelCache.resetForProfileSwitch() },
             { PageGeometry.use(format: nil) },
             { CollabCanonical.resetForProfileSwitch() },
+            { PageInkStore.purgeAll() },
         ]
     }
 
