@@ -924,10 +924,10 @@ extension NotebookEditorView {
             }
             .onAppear {
                 // 從整頁模式切過來時，停在原本那一頁而不是回到第 1 頁。
-                // LazyVStack 第一輪排版還沒完成時 scrollTo 會落空，所以下一輪與稍後再各補一次。
+                // LazyVStack 第一輪排版還沒完成時 scrollTo 會落空，下一輪 run loop 補一次。
                 continuousReportedPage = currentPageIndex
                 scrollContinuous(to: currentPageIndex, proxy: proxy, animated: false)
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                DispatchQueue.main.async {
                     scrollContinuous(to: currentPageIndex, proxy: proxy, animated: false)
                 }
             }

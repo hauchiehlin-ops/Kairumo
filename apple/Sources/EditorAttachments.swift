@@ -517,14 +517,14 @@ struct TextAttachmentItemView: View {
             collaborationManager.broadcastSelection(selectedId: CollaborationManager.typingPrefix + textItem.id)
         }
         if afterContextMenu {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.12, execute: activate)
+            DispatchQueue.main.async(execute: activate)
         } else {
             activate()
         }
     }
 
     private func afterContextMenuDismisses(_ action: @escaping () -> Void) {
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.12, execute: action)
+        DispatchQueue.main.async(execute: action)
     }
 
     private func slashMenuItem(title: String, icon: String, action: @escaping () -> Void) -> some View {

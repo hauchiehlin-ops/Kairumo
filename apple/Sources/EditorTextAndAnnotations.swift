@@ -742,8 +742,8 @@ extension NotebookEditorView {
             showCanvasNotice(localizationManager.localized("draft_export_failed"))
             return
         }
-        // 工具箱剛關：等它收起來再開分享表，兩個 sheet 同時換手會被系統吃掉。
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { draftExportShare = SharedFile(url: url) }
+        // 工具箱剛關：在下一輪 runloop 開啟分享表，確保前一個 sheet 已經解除。
+        DispatchQueue.main.async { draftExportShare = SharedFile(url: url) }
     }
 
     /// 開始一題練習：把題目線放進目前這一頁（頁面大小由核心依它排版）。
