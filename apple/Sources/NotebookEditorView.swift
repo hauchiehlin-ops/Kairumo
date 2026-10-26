@@ -664,10 +664,7 @@ public struct NotebookEditorView: View {
             .background { editorKeyboardShortcuts }
             // 實體鍵盤快捷鍵（見 AppCommands.swift）。
             .onReceive(NotificationCenter.default.publisher(for: AppCommand.toggleEditorMode)) { _ in
-                let next: EditorMode = (editorMode == .draw) ? .type : .draw
-                saveCurrentPageDrawing()
-                withAnimation(.easeInOut(duration: 0.18)) { editorMode = next }
-                flashModeBadge()
+                transitionToMode((editorMode == .draw) ? .type : .draw)
             }
             .onReceive(NotificationCenter.default.publisher(for: AppCommand.selectTool)) { note in
                 guard let index = note.object as? Int,
@@ -884,9 +881,7 @@ public struct NotebookEditorView: View {
                 // 物件層不吃觸控**（見 `objectLayer(forPage:)`）。原本這裡切到手寫模式，
                 // 於是浮層上的「放置」按鈕根本按不到 —— 點下去變成在畫布上畫了一個點。
                 // 要切就切到打字模式，浮層才碰得到；確認後貼紙也是物件，同樣要在這個模式下才能動。
-                if editorMode != .type {
-                    editorMode = .type
-                }
+                transitionToMode(.type)
 
                 // 計算貼紙置中位置：若拿得到 canvasView 則以可視區為準，否則以紙張中心為準
                 let targetCenter: CGPoint
@@ -3341,7 +3336,7 @@ public struct NotebookEditorView: View {
                                 eraserMode: eraserMode,
                                 pixelEraserWidth: pixelEraserWidth,
                                 palmRejection: palmRejection,
-                                isObjectActive: (editorMode == .type || inlineEditingTextId != nil || editingTextId != nil || activeSelectedObjectId != nil || !selectedObjectIds.isEmpty || !selectedShapeIds.isEmpty || isPlacingPasteObject || lockPromptId != nil) && !isInlineInkEditing,
+                                isObjectActive: isObjectInteractionActive,
                                 isFocused: index == currentPageIndex,
                                 objectLayer: { objectLayer(forPage: index) },
                                 underInkObjectLayer: { AnyView(objectLayer(forPage: index, filter: .underInkOnly)) },
@@ -3810,7 +3805,7 @@ public struct NotebookEditorView: View {
                                 self.pendingStickerPlacement = nil
                                 // 手寫模式下物件不吃觸控，貼紙放完卻點不動等於又回到
                                 // 原本的問題。圖片拖放後也是切到打字模式。
-                                editorMode = .type
+                                transitionToMode(.type)
                                 showCanvasNotice(localizationManager.localized("sticker_placed_hint"))
                             }
                         },
@@ -4076,10 +4071,7 @@ public struct NotebookEditorView: View {
                 .frame(width: PageGeometry.width, height: currentPageHeight, alignment: .topLeading)
                 .scaleEffect(canvasZoomScale, anchor: .topLeading)
                 .offset(x: -canvasContentOffset.x, y: -canvasContentOffset.y)
-                .allowsHitTesting(
-                    !isInlineInkEditing
-                        && (editorMode == .type || inlineEditingTextId != nil || editingTextId != nil || activeSelectedObjectId != nil || !selectedObjectIds.isEmpty || !selectedShapeIds.isEmpty)
-                )
+                .allowsHitTesting(isObjectInteractionActive)
                 .zIndex(1)
 
             CanvasRepresentable(
@@ -4320,10 +4312,7 @@ public struct NotebookEditorView: View {
                 .frame(width: PageGeometry.width, height: currentPageHeight, alignment: .topLeading)
                 .scaleEffect(canvasZoomScale, anchor: .topLeading)
                 .offset(x: -canvasContentOffset.x, y: -canvasContentOffset.y)
-                .allowsHitTesting(
-                    !isInlineInkEditing
-                        && (editorMode == .type || inlineEditingTextId != nil || editingTextId != nil || activeSelectedObjectId != nil || !selectedObjectIds.isEmpty || !selectedShapeIds.isEmpty || isPlacingPasteObject)
-                )
+                .allowsHitTesting(isObjectInteractionActive)
                 .zIndex(3)
 
             // 🌟 專業鏡像對稱尺規視覺參考線
@@ -4740,21 +4729,9 @@ public struct NotebookEditorView: View {
             onModeChange: { mode in
                 let targetPage = currentPageIndex
                 continuousProgrammaticScrollUntil = Date().addingTimeInterval(0.8)
-                saveCurrentPageDrawing()
-                // PencilKit 可能仍握有 first responder。先交還鍵盤焦點，否則
-                // 新建立的 TextEditor 在同一個 run loop 內無法成為第一回應者。
-                if mode == .type {
-                    canvasView?.resignFirstResponder()
-                }
-                endTextFormatSession()
-                withAnimation(.easeInOut(duration: 0.18)) {
-                    editorMode = mode
-                    inlineEditingTextId = nil
-                    activeInlineInkBlockId = nil
-                }
+                transitionToMode(mode)
                 currentPageIndex = targetPage
                 continuousReportedPage = targetPage
-                flashModeBadge()
             },
             onExitContextual: {
                 endTextFormatSession()
@@ -4829,6 +4806,46 @@ public struct NotebookEditorView: View {
             return .drawingInTextMode(title: "\(localizationManager.localized("handwriting_mode")) • \(localizationManager.localized("edit"))")
         }
         return nil
+    }
+
+    /// 物件層當前是否處於可互動或活躍狀態（對齊 Android EditorStateManager 之統一職責守衛）。
+    private var isObjectInteractionActive: Bool {
+        guard !isInlineInkEditing else { return false }
+        if editorMode == .type { return true }
+        return inlineEditingTextId != nil
+            || editingTextId != nil
+            || activeSelectedObjectId != nil
+            || !selectedObjectIds.isEmpty
+            || !selectedShapeIds.isEmpty
+            || isPlacingPasteObject
+            || lockPromptId != nil
+    }
+
+    /// 統一編輯器主模式切換狀態機（對齊 Android EditorStateManager 零回退守衛）。
+    private func transitionToMode(_ targetMode: EditorMode, animated: Bool = true) {
+        guard editorMode != targetMode else { return }
+        saveCurrentPageDrawing()
+        if targetMode == .type {
+            canvasView?.resignFirstResponder()
+        } else {
+            // 切換回手繪模式時，自動收合打字與物件焦點（對齊 Android EditorStateManager 零回退守衛）
+            inlineEditingTextId = nil
+            activeInlineInkBlockId = nil
+            editingTextId = nil
+            activeSelectedObjectId = nil
+            selectedObjectIds.removeAll()
+            selectedShapeIds.removeAll()
+            selectedConnectionId = nil
+        }
+        endTextFormatSession()
+        if animated {
+            withAnimation(.easeInOut(duration: 0.18)) {
+                editorMode = targetMode
+            }
+        } else {
+            editorMode = targetMode
+        }
+        flashModeBadge()
     }
 
     // MARK: - 側欄與畫布之間的界線
@@ -6196,10 +6213,8 @@ public struct NotebookEditorView: View {
                 onInsertSnippet: { insertQuickTextSnippet($0) },
                 onAddTextBox: {
                     let draft = insertTextBox(at: CGPoint(x: 200, y: 200))
-                    withAnimation(.easeInOut(duration: 0.18)) {
-                        editorMode = .type
-                        inlineEditingTextId = draft.id
-                    }
+                    transitionToMode(.type)
+                    inlineEditingTextId = draft.id
                 },
                 isSnapToGrid: snapToGrid,
                 onToggleSnapToGrid: {
@@ -6235,8 +6250,7 @@ public struct NotebookEditorView: View {
         // 在文件內的手繪區塊換筆，只換工具；不可順手把整份文件的主模式
         // 改成手繪，否則「完成、回到文件」的情境會被拆掉。
         if editorMode != .draw && !isInlineInkEditing {
-            editorMode = .draw
-            inlineEditingTextId = nil
+            transitionToMode(.draw)
         }
         if tool == .lasso, selectedTool == .lasso {
             exitLassoMode()
@@ -6493,10 +6507,8 @@ public struct NotebookEditorView: View {
                     // 文字方塊快捷按鈕
                     Button {
                         let draft = insertTextBox(at: CGPoint(x: 200, y: 200))
-                        withAnimation(.easeInOut(duration: 0.18)) {
-                            editorMode = .type
-                            inlineEditingTextId = draft.id
-                        }
+                        transitionToMode(.type)
+                        inlineEditingTextId = draft.id
                     } label: {
                         Image(systemName: "plus.bubble")
                             .font(.system(size: 14, weight: .regular))
@@ -6725,10 +6737,8 @@ public struct NotebookEditorView: View {
 
                 Button {
                     let draft = insertTextBox(at: CGPoint(x: 200, y: 200))
-                    withAnimation(.easeInOut(duration: 0.18)) {
-                        editorMode = .type
-                        inlineEditingTextId = draft.id
-                    }
+                    transitionToMode(.type)
+                    inlineEditingTextId = draft.id
                 } label: {
                     VStack(spacing: 3) {
                         Image(systemName: "plus.bubble")
@@ -7020,10 +7030,8 @@ public struct NotebookEditorView: View {
         // 1. 新增文字方塊按鈕
         Button {
             let draft = insertTextBox(at: CGPoint(x: 200, y: 200))
-            withAnimation(.easeInOut(duration: 0.18)) {
-                editorMode = .type
-                inlineEditingTextId = draft.id
-            }
+            transitionToMode(.type)
+            inlineEditingTextId = draft.id
         } label: {
             HStack(spacing: 5) {
                 Image(systemName: "plus.bubble")
@@ -8875,7 +8883,7 @@ public struct NotebookEditorView: View {
             insertImageAttachment(image, at: location, page: page)
             // 插進來之後切到打字模式：手寫模式下物件不吃觸控，使用者剛拖
             // 進來的圖會拖不動，看起來像插壞了。Android 端也是這樣做。
-            editorMode = .type
+            transitionToMode(.type)
         }
         return true
     }
@@ -9398,11 +9406,9 @@ public struct NotebookEditorView: View {
                     saveCurrentPageDrawing()
                 }
                 
-                withAnimation(.easeInOut(duration: 0.2)) {
-                    editorMode = .type
-                    inlineEditingTextId = draft.id
-                    editingTextId = nil
-                }
+                transitionToMode(.type)
+                inlineEditingTextId = draft.id
+                editingTextId = nil
                 commitNotebook()
                 PageThumbnailRenderer.invalidateAll()
                 showCanvasNotice(localizationManager.localized("lasso_recognize_done"))
@@ -11025,7 +11031,7 @@ public struct NotebookEditorView: View {
         if editorMode != .draw && !isInlineInkEditing {
             pencilModeSwitchAt = Date()
             // 不加動畫：筆尖已經在紙上，0.2 秒的過場期間整個編輯器在重排，第一筆會卡在那段時間裡。
-            editorMode = .draw
+            transitionToMode(.draw, animated: false)
         }
         if let activeId = inlineEditingTextId {
             if let activeItem = notebook.textAttachments?.first(where: { $0.id == activeId }),
@@ -11170,10 +11176,8 @@ public struct NotebookEditorView: View {
             // 解鎖鈕按不到，所以切到打字模式再給解鎖鈕（與放置貼紙同一個做法）。
             if let lockedId = lockedObjectHit(at: location, page: targetPage) {
                 removeTapDotStroke(near: location)
-                withAnimation(.easeInOut(duration: 0.15)) {
-                    editorMode = .type
-                    lockPromptId = lockedId
-                }
+                transitionToMode(.type)
+                lockPromptId = lockedId
                 return
             }
 
@@ -11232,7 +11236,7 @@ public struct NotebookEditorView: View {
                     commitNotebook()
                     PageThumbnailRenderer.invalidateAll()
                     watchdog.notifyEmptyTextBoxDismissedQuickly(isStylusActive: true) {
-                        withAnimation { editorMode = .draw }
+                        transitionToMode(.draw)
                     }
                 }
                 inlineEditingTextId = nil
@@ -11259,15 +11263,13 @@ public struct NotebookEditorView: View {
             PageThumbnailRenderer.invalidateAll()
         }
         let draft = insertTextBox(at: location, page: targetPage, tapToWrite: true)
-        withAnimation(.easeInOut(duration: 0.18)) {
-            editorMode = .type
-            activeSelectedObjectId = nil
-            inlineEditingTextId = draft.id
-            editingTextId = nil
-            selectedShapeIds = []
-            selectedConnectionId = nil
-            selectedObjectIds = []
-        }
+        transitionToMode(.type)
+        activeSelectedObjectId = nil
+        inlineEditingTextId = draft.id
+        editingTextId = nil
+        selectedShapeIds = []
+        selectedConnectionId = nil
+        selectedObjectIds = []
     }
 
     private func handleCanvasTapInTypeMode(at location: CGPoint, page: Int? = nil) {
@@ -11301,7 +11303,7 @@ public struct NotebookEditorView: View {
             }
             PageThumbnailRenderer.invalidateAll()
             watchdog.notifyEmptyTextBoxDismissedQuickly(isStylusActive: true) {
-                withAnimation { editorMode = .draw }
+                transitionToMode(.draw)
             }
         }
 
@@ -11590,7 +11592,7 @@ public struct NotebookEditorView: View {
            let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
             collaborationManager.broadcastAttachmentUpsert(type: "text", itemDict: dict)
         }
-        editorMode = .type
+        transitionToMode(.type)
         DispatchQueue.main.async {
             inlineEditingTextId = mathBox.id
             editingTextId = mathBox.id
@@ -11676,7 +11678,7 @@ public struct NotebookEditorView: View {
            let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
             collaborationManager.broadcastAttachmentUpsert(type: "text", itemDict: dict)
         }
-        editorMode = .type
+        transitionToMode(.type)
         activeSelectedObjectId = transcriptBox.id
         selectedObjectIds = [transcriptBox.id]
         // 文字框先進入視圖樹，再要求就地編輯。和同一個動畫 transaction 一起
@@ -12305,7 +12307,7 @@ public struct NotebookEditorView: View {
     private func setMarqueeActive(_ on: Bool) {
         isMarqueeActive = on
         if on {
-            if editorMode != .type { editorMode = .type }
+            transitionToMode(.type)
             showCanvasNotice(localizationManager.localized("marquee_hint"))
         } else {
             selectedObjectIds = []
@@ -13175,7 +13177,7 @@ public struct NotebookEditorView: View {
         // 本機插入就切到打字模式，與 Android 同一條規則；遠端協同寫進來的不切，
         // 別人插東西不該把我的筆搶走。
         if editorMode == .draw && !isApplyingRemoteUpdate && !isCollaborating {
-            editorMode = .type
+            transitionToMode(.type)
         }
     }
 
