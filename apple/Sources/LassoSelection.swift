@@ -228,6 +228,16 @@ final class LassoSelection: ObservableObject {
         }
     }
 
+    /// 跨頁搬移完成後，更新套索在目標頁的選取狀態
+    func finishCrossPageMove(
+        newIndices: IndexSet,
+        newPro: Set<String> = [],
+        newObj: Set<String> = [],
+        in strokes: [PKStroke]
+    ) {
+        selectNew(indices: newIndices, proIds: newPro, objectIds: newObj, in: strokes)
+    }
+
     /// 判定畫布物件（貼紙、形狀、圖片、文字方塊等）外框是否被套索圈中。
     private static func isRectEnclosed(_ rect: CGRect, in polygon: [CGPoint]) -> Bool {
         guard polygon.count >= 3, rect.width > 0, rect.height > 0 else { return false }
@@ -499,7 +509,7 @@ final class LassoSelection: ObservableObject {
     /// PencilKit 以筆畫身分比對哪些區塊要重畫，同一身分只改 transform 時，畫布只重畫
     /// 一部分區塊（甚至不重畫）—— 選取框跟著手指走，畫面上的筆跡卻留在原地或斷成幾截，
     /// 而資料（縮圖）其實已經移過去了。
-    private static func offset(_ stroke: PKStroke, by delta: CGSize) -> PKStroke {
+    static func offset(_ stroke: PKStroke, by delta: CGSize) -> PKStroke {
         let t = stroke.transform.concatenating(
             CGAffineTransform(translationX: delta.width, y: delta.height))
         let controlPoints = stroke.path.map { pt in

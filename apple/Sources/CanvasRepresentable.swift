@@ -974,23 +974,23 @@ final class AdaptiveCanvasView: PKCanvasView {
         let coordinator = delegate as? CanvasRepresentable.Coordinator
         let target = newDrawing ?? self.drawing
         guard target.strokes.count > 0 else { return }
-        if self.drawing != target {
-            coordinator?.isProgrammaticUpdate = true
-            self.drawing = target
-            coordinator?.isProgrammaticUpdate = false
-            coordinator?.noteCanvasShows(target)
-            if ProcessInfo.processInfo.environment["KAIRUMO_UITEST"] == "1" {
-                self.accessibilityValue = CanvasRepresentable.testReadout(self)
-            }
+        coordinator?.isProgrammaticUpdate = true
+        self.drawing = PKDrawing()
+        self.drawing = target
+        coordinator?.isProgrammaticUpdate = false
+        coordinator?.noteCanvasShows(target)
+        if ProcessInfo.processInfo.environment["KAIRUMO_UITEST"] == "1" {
+            self.accessibilityValue = CanvasRepresentable.testReadout(self)
         }
         self.setNeedsDisplay()
         for subview in self.subviews {
             subview.setNeedsDisplay()
         }
         DispatchQueue.main.async { [weak self] in
-            guard let self, self.window != nil, !self.isInking, self.drawing == target else { return }
+            guard let self, self.window != nil, !self.isInking else { return }
             let coord = self.delegate as? CanvasRepresentable.Coordinator
             coord?.isProgrammaticUpdate = true
+            self.drawing = PKDrawing()
             self.drawing = target
             coord?.isProgrammaticUpdate = false
             self.setNeedsDisplay()
@@ -1030,29 +1030,33 @@ final class AdaptiveCanvasView: PKCanvasView {
         return dropped
     }
 
+    func resetInitialRefreshFlag() {
+        didInitialRefresh = false
+    }
+
     private func refreshInitialRenderIfNeeded() {
         guard !didInitialRefresh, window != nil, bounds.width > 1, bounds.height > 1 else { return }
         let strokeCount = max(drawing.strokes.count, initialLoadedStrokeCount)
         guard strokeCount > 0 else { return }
         didInitialRefresh = true
         guard activeTouchesCount == 0, !isInking else { return }
-        if self.undoManager?.canUndo == true { return }
 
         DispatchQueue.main.async { [weak self] in
             guard let self, self.window != nil, self.activeTouchesCount == 0, !self.isInking else { return }
-            if self.undoManager?.canUndo == true {
-                self.setNeedsDisplay()
-                return
-            }
             CanvasDiag.log("初次補畫重新指派 drawing（\(self.drawing.strokes.count) 筆）")
             let coordinator = self.delegate as? CanvasRepresentable.Coordinator
             let current = self.drawing
+            guard current.strokes.count > 0 else { return }
             coordinator?.isProgrammaticUpdate = true
+            self.drawing = PKDrawing()
             self.drawing = current
             coordinator?.isProgrammaticUpdate = false
             self.setNeedsDisplay()
             for subview in self.subviews {
                 subview.setNeedsDisplay()
+            }
+            if ProcessInfo.processInfo.environment["KAIRUMO_UITEST"] == "1" {
+                self.accessibilityValue = CanvasRepresentable.testReadout(self)
             }
         }
     }
@@ -1187,6 +1191,7 @@ struct CanvasRepresentable: UIViewRepresentable {
 
     func makeUIView(context: Context) -> PKCanvasView {
         let canvas = AdaptiveCanvasView()
+        canvas.clipsToBounds = false
         canvas.delaysContentTouches = false
         canvas.hitPassThroughCheck = hitPassThroughCheck
         // 無限制復原/重做次數（0 代表 levelsOfUndo 無上限，直到記憶體或棧頂耗盡為止）

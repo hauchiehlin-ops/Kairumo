@@ -110,6 +110,8 @@ public struct NotebookEditorView: View {
     var hasLassoSelection: Bool {
         lasso.hasSelection
     }
+    @State var lassoDragStartPage: Int? = nil
+    @State var lassoDragInitialDrawing: PKDrawing? = nil
     @State var showExtendedBanner: Bool = false
 
     @State var canvasZoomScale: CGFloat = 1.0

@@ -659,6 +659,26 @@ class InkEngine(
         return true
     }
 
+    /** 平移指定的一批核心筆畫，記錄為 [ReplaceAct]，支援一次復原。回傳新筆畫的核心 ID。 */
+    fun translateStrokes(coreStrokeIds: Set<String>, dx: Float, dy: Float): List<String>? {
+        if (coreStrokeIds.isEmpty()) return null
+        val toMove = _strokes.filter { it.coreStrokeId in coreStrokeIds }
+        if (toMove.isEmpty()) return null
+        val moved = toMove.map { s ->
+            s.copy(
+                pointerId = nextSyntheticId(),
+                coreStrokeId = null,
+                points = s.points.map { it.copy(x = it.x + dx, y = it.y + dy) }
+            )
+        }
+        val added = swapStrokes(remove = toMove, add = moved)
+        redoStack.clear()
+        redoActs.clear()
+        acts += ReplaceAct(toMove, added)
+        onUndoableAction?.invoke()
+        return added.mapNotNull { it.coreStrokeId }
+    }
+
     /** 加一組做好的複本（偏移、鏡射、陣列），一次復原。回傳數量。 */
     fun insertCopies(copies: List<CompletedStroke>): Int {
         if (copies.isEmpty()) return 0

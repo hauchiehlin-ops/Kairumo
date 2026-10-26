@@ -556,6 +556,8 @@ class EngineLassoBackend(private val engine: InkEngine) : LassoBackend {
     }
 
     override fun translate(ids: List<String>, dx: Float, dy: Float): List<String>? {
+        val translated = engine.translateStrokes(ids.toSet(), dx, dy)
+        if (translated != null) return translated
         val (session, pageId) = engine.coreHandles() ?: return null
         return session.lassoTranslate(pageId, ids, dx, dy)
     }
