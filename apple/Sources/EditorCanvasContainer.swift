@@ -828,10 +828,20 @@ extension NotebookEditorView {
                                     }
                                     configureLassoCallbacks(forPage: index)
                                     lasso.begin(at: pt)
+                                    if lasso.isDraggingSelection {
+                                        lassoDragStartPage = index
+                                        lassoDragInitialDrawing = currentDrawing
+                                        continuousDragPage = index
+                                    }
                                 },
                                 onLassoMoved: { pt in
                                     guard index == currentPageIndex else { return }
                                     if lasso.isDraggingSelection {
+                                        if lassoDragStartPage == nil {
+                                            lassoDragStartPage = index
+                                            lassoDragInitialDrawing = currentDrawing
+                                            continuousDragPage = index
+                                        }
                                         let lastPt = lasso.dragPoint ?? pt
                                         let delta = CGSize(width: pt.x - lastPt.x, height: pt.y - lastPt.y)
                                         lasso.updateDragPoint(pt)
@@ -846,11 +856,86 @@ extension NotebookEditorView {
                                 onLassoEnded: {
                                     guard index == currentPageIndex else { return }
                                     let wasDragging = lasso.isDraggingSelection
-                                    lasso.finish(in: currentDrawing)
+                                    continuousDragPage = nil
+                                    let fromPage = lassoDragStartPage ?? index
+                                    let drawingBefore = lassoDragInitialDrawing ?? currentDrawing
+                                    lassoDragStartPage = nil
+                                    lassoDragInitialDrawing = nil
+
                                     if wasDragging {
-                                        recordDrawingEdit(page: index, drawing: currentDrawing)
-                                        broadcastDrawingChange(page: index, drawing: currentDrawing)
-                                        PageThumbnailRenderer.invalidateAll()
+                                        if let box = lasso.boundingRect,
+                                           let landing = crossingLanding(for: box, page: index),
+                                           landing.page != index {
+                                            let targetPage = landing.page
+                                            let targetOffset = landing.offset
+                                            let selectedIndices = lasso.selected
+                                            let movedStrokes = selectedIndices.compactMap { idx in
+                                                currentDrawing.strokes.indices.contains(idx) ? currentDrawing.strokes[idx] : nil
+                                            }
+
+                                            var fromStrokes = currentDrawing.strokes
+                                            for idx in selectedIndices.sorted(by: >) where fromStrokes.indices.contains(idx) {
+                                                fromStrokes.remove(at: idx)
+                                            }
+                                            let finalFromDrawing = PKDrawing(strokes: fromStrokes)
+
+                                            let pidTarget = (notebook.pageIds != nil && targetPage < (notebook.pageIds?.count ?? 0)) ? notebook.pageIds?[targetPage] : nil
+                                            let initialTargetDrawing = activeInkStore.drawing(for: targetPage, pageId: pidTarget)
+                                            let targetStrokes = movedStrokes.map { LassoSelection.offset($0, by: targetOffset) }
+                                            let finalTargetDrawing = PKDrawing(strokes: initialTargetDrawing.strokes + targetStrokes)
+
+                                            recordDrawingEdit(page: fromPage, drawing: finalFromDrawing)
+                                            updateCanvasDrawing(forPage: fromPage, drawing: finalFromDrawing)
+                                            broadcastDrawingChange(page: fromPage, drawing: finalFromDrawing)
+
+                                            recordDrawingEdit(page: targetPage, drawing: finalTargetDrawing)
+                                            updateCanvasDrawing(forPage: targetPage, drawing: finalTargetDrawing)
+                                            broadcastDrawingChange(page: targetPage, drawing: finalTargetDrawing)
+
+                                            if !lasso.objectIds.isEmpty {
+                                                for id in lasso.objectIds {
+                                                    if let idx = notebook.textAttachments?.firstIndex(where: { $0.id == id }) {
+                                                        notebook.textAttachments?[idx].pageIndex = targetPage
+                                                        notebook.textAttachments?[idx].x += targetOffset.width
+                                                        notebook.textAttachments?[idx].y += targetOffset.height
+                                                    } else if let idx = notebook.shapeAttachments?.firstIndex(where: { $0.id == id }) {
+                                                        notebook.shapeAttachments?[idx].pageIndex = targetPage
+                                                        notebook.shapeAttachments?[idx].x += targetOffset.width
+                                                        notebook.shapeAttachments?[idx].y += targetOffset.height
+                                                    } else if let idx = notebook.attachments?.firstIndex(where: { $0.id == id }) {
+                                                        notebook.attachments?[idx].pageIndex = targetPage
+                                                        notebook.attachments?[idx].x += targetOffset.width
+                                                        notebook.attachments?[idx].y += targetOffset.height
+                                                    } else if let idx = notebook.tableAttachments?.firstIndex(where: { $0.id == id }) {
+                                                        notebook.tableAttachments?[idx].pageIndex = targetPage
+                                                        notebook.tableAttachments?[idx].x += targetOffset.width
+                                                        notebook.tableAttachments?[idx].y += targetOffset.height
+                                                    }
+                                                }
+                                                finishPageCrossing(ids: Array(lasso.objectIds), to: targetPage)
+                                            }
+
+                                            focusContinuousPage(targetPage)
+                                            let newIndices = IndexSet(initialTargetDrawing.strokes.count..<finalTargetDrawing.strokes.count)
+                                            lasso.finishCrossPageMove(newIndices: newIndices, in: finalTargetDrawing.strokes)
+                                            lasso.finish(in: finalTargetDrawing)
+
+                                            registerLassoCrossPageUndo(
+                                                fromPage: fromPage, fromBefore: drawingBefore, fromAfter: finalFromDrawing,
+                                                targetPage: targetPage, targetBefore: initialTargetDrawing, targetAfter: finalTargetDrawing
+                                            )
+                                            PageThumbnailRenderer.invalidateAll()
+                                        } else {
+                                            lasso.finish(in: currentDrawing)
+                                            recordDrawingEdit(page: index, drawing: currentDrawing)
+                                            broadcastDrawingChange(page: index, drawing: currentDrawing)
+                                            PageThumbnailRenderer.invalidateAll()
+                                            if currentDrawing != drawingBefore {
+                                                registerLassoSamePageUndo(page: index, before: drawingBefore, after: currentDrawing)
+                                            }
+                                        }
+                                    } else {
+                                        lasso.finish(in: currentDrawing)
                                     }
                                 },
                                 onPressAndHold: { point in
@@ -1581,9 +1666,15 @@ extension NotebookEditorView {
                     syncDrawingFromCanvas()
                     configureLassoCallbacks(forPage: currentPageIndex)
                     lasso.begin(at: pt)
+                    if lasso.isDraggingSelection {
+                        lassoDragInitialDrawing = currentDrawing
+                    }
                 },
                 onLassoMoved: { pt in
                     if lasso.isDraggingSelection {
+                        if lassoDragInitialDrawing == nil {
+                            lassoDragInitialDrawing = currentDrawing
+                        }
                         let lastPt = lasso.dragPoint ?? pt
                         let delta = CGSize(width: pt.x - lastPt.x, height: pt.y - lastPt.y)
                         lasso.updateDragPoint(pt)
@@ -1597,11 +1688,16 @@ extension NotebookEditorView {
                 },
                 onLassoEnded: {
                     let wasDragging = lasso.isDraggingSelection
+                    let drawingBefore = lassoDragInitialDrawing ?? currentDrawing
+                    lassoDragInitialDrawing = nil
                     lasso.finish(in: currentDrawing)
                     if wasDragging {
                         recordDrawingEdit(page: currentPageIndex, drawing: currentDrawing)
                         broadcastDrawingChange(page: currentPageIndex, drawing: currentDrawing)
                         PageThumbnailRenderer.invalidateAll()
+                        if currentDrawing != drawingBefore {
+                            registerLassoSamePageUndo(page: currentPageIndex, before: drawingBefore, after: currentDrawing)
+                        }
                     }
                 },
                 canvasRef: { ref in
@@ -1714,6 +1810,7 @@ extension NotebookEditorView {
                         }
                 }
             )
+            .frame(width: PageGeometry.width, height: currentPageHeight, alignment: .topLeading)
             .zIndex(2)
 
             modeBadge

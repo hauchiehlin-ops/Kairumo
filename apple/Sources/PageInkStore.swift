@@ -233,4 +233,47 @@ public final class PageInkStore: ObservableObject {
         guard let cached = inMemoryDrawings[k] else { return false }
         return cached == drawing && !dirtyPages.contains(k) && !pendingCoreFlushKeys.contains(k)
     }
+
+    // MARK: - 筆跡復原/重做登記（套索搬移、刪除、剪下、貼上、跨頁搬移）
+
+    public func registerSamePageUndo(
+        pageIndex: Int,
+        pageId: String?,
+        before: PKDrawing,
+        after: PKDrawing,
+        manager: UndoManager,
+        onApplied: @escaping (Int, PKDrawing) -> Void
+    ) {
+        guard before != after else { return }
+        manager.registerUndo(withTarget: self) { store in
+            store.updateDrawing(before, for: pageIndex, pageId: pageId, allowBlank: true)
+            store.markPendingCoreFlush(for: pageIndex, pageId: pageId)
+            onApplied(pageIndex, before)
+            store.registerSamePageUndo(
+                pageIndex: pageIndex, pageId: pageId,
+                before: after, after: before,
+                manager: manager, onApplied: onApplied
+            )
+        }
+    }
+
+    public func registerCrossPageUndo(
+        fromPageIndex: Int, fromPageId: String?, fromBefore: PKDrawing, fromAfter: PKDrawing,
+        targetPageIndex: Int, targetPageId: String?, targetBefore: PKDrawing, targetAfter: PKDrawing,
+        manager: UndoManager,
+        onApplied: @escaping (Int, PKDrawing, Int, PKDrawing) -> Void
+    ) {
+        manager.registerUndo(withTarget: self) { store in
+            store.updateDrawing(fromBefore, for: fromPageIndex, pageId: fromPageId, allowBlank: true)
+            store.markPendingCoreFlush(for: fromPageIndex, pageId: fromPageId)
+            store.updateDrawing(targetBefore, for: targetPageIndex, pageId: targetPageId, allowBlank: true)
+            store.markPendingCoreFlush(for: targetPageIndex, pageId: targetPageId)
+            onApplied(fromPageIndex, fromBefore, targetPageIndex, targetBefore)
+            store.registerCrossPageUndo(
+                fromPageIndex: fromPageIndex, fromPageId: fromPageId, fromBefore: fromAfter, fromAfter: fromBefore,
+                targetPageIndex: targetPageIndex, targetPageId: targetPageId, targetBefore: targetAfter, targetAfter: targetBefore,
+                manager: manager, onApplied: onApplied
+            )
+        }
+    }
 }

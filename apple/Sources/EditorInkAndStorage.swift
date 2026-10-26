@@ -74,6 +74,7 @@ extension NotebookEditorView {
         self.currentDrawing = loaded
         if pageDisplayMode == .single {
             if let canvas = canvasView as? AdaptiveCanvasView {
+                canvas.resetInitialRefreshFlag()
                 canvas.initialLoadedStrokeCount = loaded.strokes.count
                 canvas.forceDisplayRefresh(with: loaded)
                 if ProcessInfo.processInfo.environment["KAIRUMO_UITEST"] == "1" {
@@ -1131,15 +1132,21 @@ extension NotebookEditorView {
 
     /// 把套索改過的筆跡換上目前的畫布（不經 delegate，見 `showEditedDrawing`）。
     func showLassoEdit(_ newDrawing: PKDrawing) {
-        currentDrawing = newDrawing
-        continuousCanvases.setCachedDrawing(newDrawing, forPage: currentPageIndex)
-        let targetCanvas = (pageDisplayMode == .continuous ? continuousCanvases[currentPageIndex] : nil)
-            ?? continuousCanvases.activeCanvas
-            ?? canvasView
+        updateCanvasDrawing(forPage: currentPageIndex, drawing: newDrawing)
+    }
+
+    /// 更新特定頁面的畫布視圖筆跡（相容 AdaptiveCanvasView 與標準 PKCanvasView）
+    func updateCanvasDrawing(forPage page: Int, drawing: PKDrawing) {
+        if page == currentPageIndex {
+            currentDrawing = drawing
+        }
+        continuousCanvases.setCachedDrawing(drawing, forPage: page)
+        let targetCanvas = (pageDisplayMode == .continuous ? continuousCanvases[page] : nil)
+            ?? (page == currentPageIndex ? (continuousCanvases.activeCanvas ?? canvasView) : nil)
         if let adaptive = targetCanvas as? AdaptiveCanvasView {
-            adaptive.showEditedDrawing(newDrawing)
+            adaptive.showEditedDrawing(drawing)
         } else {
-            targetCanvas?.drawing = newDrawing
+            targetCanvas?.drawing = drawing
         }
     }
 
@@ -1219,11 +1226,59 @@ extension NotebookEditorView {
         }
     }
 
+    /// 跨頁套索搬移之復原/重做登記
+    func registerLassoCrossPageUndo(
+        fromPage: Int, fromBefore: PKDrawing, fromAfter: PKDrawing,
+        targetPage: Int, targetBefore: PKDrawing, targetAfter: PKDrawing
+    ) {
+        let pidFrom = (notebook.pageIds != nil && fromPage < (notebook.pageIds?.count ?? 0)) ? notebook.pageIds?[fromPage] : nil
+        let pidTarget = (notebook.pageIds != nil && targetPage < (notebook.pageIds?.count ?? 0)) ? notebook.pageIds?[targetPage] : nil
+        activeInkStore.registerCrossPageUndo(
+            fromPageIndex: fromPage, fromPageId: pidFrom, fromBefore: fromBefore, fromAfter: fromAfter,
+            targetPageIndex: targetPage, targetPageId: pidTarget, targetBefore: targetBefore, targetAfter: targetAfter,
+            manager: historyUndoManager
+        ) { [weak store] fIdx, fDraw, tIdx, tDraw in
+            _ = store
+            DispatchQueue.main.async {
+                self.updateCanvasDrawing(forPage: fIdx, drawing: fDraw)
+                self.broadcastDrawingChange(page: fIdx, drawing: fDraw)
+                self.updateCanvasDrawing(forPage: tIdx, drawing: tDraw)
+                self.broadcastDrawingChange(page: tIdx, drawing: tDraw)
+                self.focusContinuousPage(fIdx)
+                self.lasso.clear()
+                self.commitNotebook()
+                PageThumbnailRenderer.invalidateAll()
+            }
+        }
+    }
+
+    /// 同頁套索動作（搬移、刪除、剪下、再製、貼上）之復原/重做登記
+    func registerLassoSamePageUndo(page: Int, before: PKDrawing, after: PKDrawing) {
+        guard before != after else { return }
+        let pid = (notebook.pageIds != nil && page < (notebook.pageIds?.count ?? 0)) ? notebook.pageIds?[page] : nil
+        activeInkStore.registerSamePageUndo(
+            pageIndex: page, pageId: pid, before: before, after: after,
+            manager: historyUndoManager
+        ) { [weak store] pIdx, d in
+            _ = store
+            DispatchQueue.main.async {
+                self.updateCanvasDrawing(forPage: pIdx, drawing: d)
+                self.broadcastDrawingChange(page: pIdx, drawing: d)
+                self.lasso.clear()
+                self.commitNotebook()
+                PageThumbnailRenderer.invalidateAll()
+            }
+        }
+    }
+
     func applyLassoResult(_ newDrawing: PKDrawing) {
+        let before = currentDrawing
+        let page = currentPageIndex
         showLassoEdit(newDrawing)
-        recordDrawingEdit(page: currentPageIndex, drawing: newDrawing)
-        broadcastDrawingChange(page: currentPageIndex, drawing: newDrawing)
+        recordDrawingEdit(page: page, drawing: newDrawing)
+        broadcastDrawingChange(page: page, drawing: newDrawing)
         saveCurrentPageDrawing()
+        registerLassoSamePageUndo(page: page, before: before, after: newDrawing)
         #if os(iOS)
         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
         #endif

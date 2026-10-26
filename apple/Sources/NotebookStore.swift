@@ -2427,6 +2427,12 @@ public final class NotebookStore: ObservableObject {
             }
             Self.drawingCache.removeValue(forKey: key)
             Self.drawingCacheLock.unlock()
+
+            // 🌟 容錯與自癒：若磁碟筆跡檔不存在，嘗試自文件 pagesData 或範例筆記本種子資料重建
+            if let recovered = recoverDrawingFromDocumentOrSeed(notebookId: notebookId, pageIndex: pageIndex) {
+                saveDrawing(notebookId: notebookId, pageIndex: pageIndex, drawing: recovered)
+                return recovered
+            }
             return PKDrawing()
         }
         if let cached = Self.drawingCache[key], cached.modDate == modDate, !cached.isPendingWrite {
@@ -2440,12 +2446,47 @@ public final class NotebookStore: ObservableObject {
             Self.drawingCacheLock.lock()
             Self.drawingCache.removeValue(forKey: key)
             Self.drawingCacheLock.unlock()
+
+            // 🌟 容錯與自癒：若磁碟筆跡檔損毀或為空，嘗試自文件 pagesData 或範例筆記本種子資料重建
+            if let recovered = recoverDrawingFromDocumentOrSeed(notebookId: notebookId, pageIndex: pageIndex) {
+                saveDrawing(notebookId: notebookId, pageIndex: pageIndex, drawing: recovered)
+                return recovered
+            }
             return PKDrawing()
         }
         Self.drawingCacheLock.lock()
         Self.drawingCache[key] = CachedDrawing(modDate: modDate, drawing: d, isPendingWrite: false)
         Self.drawingCacheLock.unlock()
         return d
+    }
+
+    /// 容錯與自癒：若磁碟筆跡檔不存在或損毀，嘗試自文件 pagesData 或範例筆記本種子資料重建
+    private func recoverDrawingFromDocumentOrSeed(notebookId: String, pageIndex: Int) -> PKDrawing? {
+        if let doc = notebooks.first(where: { $0.id.caseInsensitiveCompare(notebookId) == .orderedSame }) {
+            if pageIndex < doc.pagesData.count {
+                let data = doc.pagesData[pageIndex]
+                if !data.isEmpty, let d = try? PKDrawing(data: data), d.strokes.count > 0 {
+                    return d
+                }
+            }
+        }
+        let idLower = notebookId.lowercased()
+        if idLower == SeedContent.kairumoManualId.lowercased() {
+            let drawings = SeedContent.kairumoManualDrawings(language: LocalizationManager.snapshotLanguage)
+            if pageIndex < drawings.count {
+                return drawings[pageIndex]
+            }
+        } else if idLower == "seed-feature-showcase-v1" {
+            var temp = NotebookDocument(id: "seed-feature-showcase-v1", title: "", pageCount: 4)
+            SeedContent.fillFeatureShowcase(&temp, store: nil)
+            if pageIndex < temp.pagesData.count {
+                let data = temp.pagesData[pageIndex]
+                if !data.isEmpty, let d = try? PKDrawing(data: data), d.strokes.count > 0 {
+                    return d
+                }
+            }
+        }
+        return nil
     }
 
     // MARK: - 錄音套件（R2）
