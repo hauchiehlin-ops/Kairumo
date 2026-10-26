@@ -40,6 +40,7 @@ public final class PageInkStore: ObservableObject {
     /// 待寫入核心套件的頁面 Key 集合
     private var pendingCoreFlushKeys: Set<String> = []
 
+    // profile-scope: profile 記憶體中開啟過的筆記本筆跡快取；切換時由 purgeAll 清空
     private static var activeStores: [String: PageInkStore] = [:]
 
     public static func store(for notebook: NotebookDocument, store: NotebookStore) -> PageInkStore {
@@ -53,6 +54,12 @@ public final class PageInkStore: ObservableObject {
     }
 
     public static func purge(notebookId: String) {
+        activeStores.removeValue(forKey: notebookId)
+    }
+
+    public static func purgeAll() {
+        activeStores.removeAll()
+    }
         activeStores.removeValue(forKey: notebookId)
     }
 
