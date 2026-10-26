@@ -204,6 +204,7 @@
 		C1A7C585E17B35EF60632C65 /* AccountManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 76577BBB3DC564A4B287380C /* AccountManager.swift */; };
 		C34690FFBB66886888B843B0 /* MainThreadStallMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 763889FACCE55D3EE95998D2 /* MainThreadStallMonitor.swift */; };
 		C36BFAF3FE04CD8474F55984 /* MacReleaseConfigTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 621C052FCB25E32FBB633BE3 /* MacReleaseConfigTests.swift */; };
+		C48EB23368B74903DFA208DF /* EditorFloatingPanels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8D532C92A0EFAC4B0C55DC71 /* EditorFloatingPanels.swift */; };
 		C54CB75E7D13D0F98B966CC0 /* ChartStudioView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 86EC0F8038D34C787D2A729D /* ChartStudioView.swift */; };
 		C55F400179E7174C52F3821F /* NotebookSearchIndex.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB1466C3AB0C78C44ED34AB8 /* NotebookSearchIndex.swift */; };
 		C5671A19EAB4341D97B24DED /* ImageDropPlacementTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D92F2373941302ED5F5C66CD /* ImageDropPlacementTests.swift */; };
@@ -465,6 +466,7 @@
 		8B26672440D33436E89CFF78 /* DraftingPracticeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DraftingPracticeTests.swift; sourceTree = "<group>"; };
 		8C72D6725F62578D0DDD6EFB /* CollaborationCryptoTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CollaborationCryptoTests.swift; sourceTree = "<group>"; };
 		8CDA20E9C287F58F4315EA3C /* ChartSpec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChartSpec.swift; sourceTree = "<group>"; };
+		8D532C92A0EFAC4B0C55DC71 /* EditorFloatingPanels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditorFloatingPanels.swift; sourceTree = "<group>"; };
 		8D5E17BFDAA4C24704903AF0 /* NotebookMigrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotebookMigrationTests.swift; sourceTree = "<group>"; };
 		8E2366585C08FE826ADFEB01 /* PageDeletionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PageDeletionTests.swift; sourceTree = "<group>"; };
 		8E824B2D4C00682C282AEF8E /* TableAppearance.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TableAppearance.swift; sourceTree = "<group>"; };
@@ -814,6 +816,7 @@
 				5B73641F0EA64C1F1B559616 /* DriveHttpClient.swift */,
 				5A7C268EF0A001760D3A7C02 /* DynamicPortalIsland.swift */,
 				B4B474625AA69EB48CA86346 /* EditorAttachments.swift */,
+				8D532C92A0EFAC4B0C55DC71 /* EditorFloatingPanels.swift */,
 				92CB1D8025BADA92AE19BA59 /* EditorSidebars.swift */,
 				EA02348946BB281EFAFD082E /* EditorStateMachine.swift */,
 				305D7BB131613FCCC89BD3A4 /* EditorStickersAndTapes.swift */,
@@ -1227,6 +1230,7 @@
 				1DDFAAA370E83E55EEE5AF28 /* DriveHttpClient.swift in Sources */,
 				D6CF28F060E9D4456754E70D /* DynamicPortalIsland.swift in Sources */,
 				405CAD76A71000B19B3F16F5 /* EditorAttachments.swift in Sources */,
+				C48EB23368B74903DFA208DF /* EditorFloatingPanels.swift in Sources */,
 				68A27DB3A24C8DAA379E6E24 /* EditorSidebars.swift in Sources */,
 				F2D819B6D4518C51C8235CCB /* EditorStateMachine.swift in Sources */,
 				D27392096B8FB503D74F8277 /* EditorStickersAndTapes.swift in Sources */,
