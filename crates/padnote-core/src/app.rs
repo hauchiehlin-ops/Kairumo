@@ -1454,6 +1454,7 @@ impl NotebookSession {
         self.texts = Default::default();
         self.objects = Default::default();
         self.pending_blocks = Default::default();
+        self.removed_pages = Default::default();
         let ops = self.package.read_doc_ops()?;
         self.replay(&ops);
         Ok(())

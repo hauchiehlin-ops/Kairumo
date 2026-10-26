@@ -1477,6 +1477,50 @@ public final class NotebookStore: ObservableObject {
             backfillEmptySeedNotebooks()
         }
         injectInteractionFixturesIfRequested()
+        injectInkInvariantFixtureIfRequested()
+    }
+
+    /// 筆跡不變式矩陣專用筆記本的 id（`InkInvariantMatrix` 靠它從首頁找到這本）。
+    static let inkInvariantFixtureNotebookId = "uitest-ink-notebook"
+
+    /// 筆跡不變式矩陣每一頁預先放的筆畫數。**彼此都不同**：
+    /// 筆跡跑到別頁（以頁序號當 key 的 bug）時，數字一定對不上。
+    static let inkInvariantFixtureStrokeCounts = [3, 5, 2]
+
+    /// UI 測試專用（`KAIRUMO_UITEST_SEED_INK=1`）：建立一本三頁、每頁筆畫數不同的筆記。
+    ///
+    /// 架構審視 P0：使用者回報「切模式／點縮圖之後整頁變白」。矩陣測試在每個操作之後
+    /// 讀畫布的 `strokes:N`，跟這裡寫的數字比 —— 不靠截圖、不靠人眼。
+    /// 每次啟動都重建，上一輪測試畫上去的筆畫不會讓這一輪的預期值失準。
+    private func injectInkInvariantFixtureIfRequested() {
+        let env = ProcessInfo.processInfo.environment
+        guard env["KAIRUMO_UITEST"] == "1", env["KAIRUMO_UITEST_SEED_INK"] == "1" else { return }
+        let nbId = Self.inkInvariantFixtureNotebookId
+        let counts = Self.inkInvariantFixtureStrokeCounts
+        notebooks.removeAll { $0.id == nbId }
+        // 清掉上一輪留下的頁面檔案（含專業筆畫與核心套件），只留這一輪寫的。
+        if let files = try? FileManager.default.contentsOfDirectory(atPath: drawingsDirectory.path) {
+            for f in files where f.hasPrefix("\(nbId)_") {
+                try? FileManager.default.removeItem(at: drawingsDirectory.appending(path: f))
+            }
+        }
+        let doc = NotebookDocument(id: nbId, title: "Ink Invariants", pageCount: counts.count)
+        for (page, n) in counts.enumerated() {
+            let ink = PKInk(.pen, color: .black)
+            let strokes: [PKStroke] = (0..<n).map { k in
+                let y = CGFloat(120 + k * 60)
+                let pts = (0..<8).map { i in
+                    PKStrokePoint(
+                        location: CGPoint(x: 80 + CGFloat(i) * 30, y: y + CGFloat(i % 2) * 6),
+                        timeOffset: TimeInterval(i) * 0.01, size: CGSize(width: 3, height: 3),
+                        opacity: 1, force: 1, azimuth: 0, altitude: .pi / 2)
+                }
+                return PKStroke(ink: ink, path: PKStrokePath(controlPoints: pts, creationDate: Date()))
+            }
+            saveDrawing(notebookId: nbId, pageIndex: page, drawing: PKDrawing(strokes: strokes))
+        }
+        notebooks.append(doc)
+        persistData(signalsLocalEdit: false)
     }
 
     /// 互動矩陣專用筆記本的 id（`InteractionMatrixAudit` 靠它從首頁找到這本）。

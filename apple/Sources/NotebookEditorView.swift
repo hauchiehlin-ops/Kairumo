@@ -1121,6 +1121,9 @@ final class AdaptiveCanvasView: PKCanvasView {
             self.drawing = target
             coordinator?.isProgrammaticUpdate = false
             coordinator?.noteCanvasShows(target)
+            if ProcessInfo.processInfo.environment["KAIRUMO_UITEST"] == "1" {
+                self.accessibilityValue = CanvasRepresentable.testReadout(self)
+            }
         }
         self.setNeedsDisplay()
         for subview in self.subviews {
@@ -1135,6 +1138,9 @@ final class AdaptiveCanvasView: PKCanvasView {
             self.setNeedsDisplay()
             for subview in self.subviews {
                 subview.setNeedsDisplay()
+            }
+            if ProcessInfo.processInfo.environment["KAIRUMO_UITEST"] == "1" {
+                self.accessibilityValue = CanvasRepresentable.testReadout(self)
             }
         }
     }
@@ -7712,6 +7718,8 @@ public struct NotebookEditorView: View {
                     .shadow(color: Color.black.opacity(isSelected ? 0.15 : 0.04), radius: isSelected ? 4 : 2, y: 1)
             }
             .buttonStyle(.plain)
+            // 筆跡不變式矩陣（InkInvariantMatrix）靠它點縮圖換頁。
+            .accessibilityIdentifier("sidebar.page.\(idx)")
             .frame(width: effectiveThumbnailWidth)
             .frame(maxWidth: .infinity, alignment: .center)
         }
@@ -10536,6 +10544,9 @@ public struct NotebookEditorView: View {
             if let canvas = canvasView as? AdaptiveCanvasView {
                 canvas.initialLoadedStrokeCount = loaded.strokes.count
                 canvas.forceDisplayRefresh(with: loaded)
+                if ProcessInfo.processInfo.environment["KAIRUMO_UITEST"] == "1" {
+                    canvas.accessibilityValue = CanvasRepresentable.testReadout(canvas)
+                }
             }
         }
         captureInitialPageState(page: currentPageIndex, drawing: loaded)
