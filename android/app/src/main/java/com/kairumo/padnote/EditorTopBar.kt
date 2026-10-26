@@ -307,8 +307,8 @@ internal fun EditorTopBar(
                 contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
             ) {
                 Text(
-                    if (state.minimalistCanvasMode) "⤢ " + l10n("minimalist_exit")
-                    else "⤡ " + l10n("minimalist_enter"),
+                    if (state.minimalistCanvasMode) "⤢ " + l10n("exit_canvas_minimal_mode")
+                    else "⤡ " + l10n("enter_canvas_minimal_mode"),
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = if (state.minimalistCanvasMode) FontWeight.SemiBold else FontWeight.Normal,
                     color = if (state.minimalistCanvasMode) MaterialTheme.colorScheme.primary
@@ -513,7 +513,7 @@ internal fun EditorTopBar(
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 InstantTooltip(
-                    text = l10n("prev_page"),
+                    text = l10n("previous_page"),
                     modifier = Modifier.testTag("editor.page.prev")
                 ) {
                     IconButton(
@@ -745,7 +745,7 @@ internal fun EditorTopBar(
                 modifier = Modifier.testTag("editor.share")
             ) {
                 Text(
-                    "⇪  " + l10n("share"),
+                    "⇪  " + l10n("export_print"),
                     style = MaterialTheme.typography.labelLarge,
                     fontWeight = FontWeight.Bold
                 )
@@ -771,7 +771,7 @@ internal fun EditorTopBar(
                     }
                 )
                 DropdownMenuItem(
-                    text = { Text(l10n("export_images")) },
+                    text = { Text(l10n("export_image")) },
                     modifier = Modifier.testTag("editor.export.image"),
                     onClick = {
                         showShareMenu = false
@@ -896,7 +896,7 @@ internal fun EditorTopBar(
                 )
                 HorizontalDivider()
                 DropdownMenuItem(
-                    text = { Text(l10n("model3d_insert")) },
+                    text = { Text(l10n("insert_3d")) },
                     modifier = Modifier.testTag("editor.insert.model3d"),
                     onClick = { showMenu = false; actions.onInsertModel3D() }
                 )
@@ -906,7 +906,7 @@ internal fun EditorTopBar(
                     onClick = { showMenu = false; actions.onOpenCollaboration() }
                 )
                 DropdownMenuItem(
-                    text = { Text(l10n("stickers_and_tapes")) },
+                    text = { Text(l10n("sticker_library")) },
                     modifier = Modifier.testTag("editor.insert.stickers"),
                     onClick = { showMenu = false; actions.onInsertStickers() }
                 )
@@ -916,7 +916,7 @@ internal fun EditorTopBar(
                     onClick = { showMenu = false; actions.onInsertImage() }
                 )
                 DropdownMenuItem(
-                    text = { Text(l10n("insert_doc")) },
+                    text = { Text(l10n("import_document")) },
                     modifier = Modifier.testTag("editor.insert.document"),
                     onClick = { showMenu = false; actions.onInsertDocument() }
                 )
@@ -926,7 +926,7 @@ internal fun EditorTopBar(
                     onClick = { showMenu = false; actions.onInsertPdf() }
                 )
                 DropdownMenuItem(
-                    text = { Text(l10n("import_image")) },
+                    text = { Text(l10n("import_from_files")) },
                     modifier = Modifier.testTag("editor.insert.image_file"),
                     onClick = { showMenu = false; actions.onImportImageFile() }
                 )
@@ -941,7 +941,7 @@ internal fun EditorTopBar(
                     onClick = { showMenu = false; actions.onInsertAudio() }
                 )
                 DropdownMenuItem(
-                    text = { Text(l10n("insert_audio_file")) },
+                    text = { Text(l10n("import_audio_from_files")) },
                     modifier = Modifier.testTag("editor.insert.audio_file"),
                     onClick = { showMenu = false; actions.onInsertAudioFile() }
                 )
