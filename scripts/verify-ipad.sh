@@ -25,10 +25,11 @@ echo "==> 3/6 L3 平台能力契約（播放兩次、錄完立刻播、失敗不
   -only-testing:KairumoTests/AudioPlaybackTests \
   -only-testing:KairumoTests/TranscriptLocalizationTests -quiet)
 
-echo "==> 4/6 L2 互動矩陣 + L3 UI 契約（檔案選擇器連開三次）+ L4 自檢"
+echo "==> 4/6 L2 互動矩陣 + L3 UI 契約（檔案選擇器連開三次）+ 筆跡不變式矩陣 + L4 自檢"
 (cd apple && xcodebuild test -scheme Kairumo -destination "platform=iOS Simulator,id=$UDID" \
   -only-testing:KairumoUITests/InteractionMatrixAudit \
-  -only-testing:KairumoUITests/PlatformContractUITests -quiet)
+  -only-testing:KairumoUITests/PlatformContractUITests \
+  -only-testing:KairumoUITests/InkInvariantMatrixAudit -quiet)
 
 echo "==> 5/6 執行期日誌閘門（硬規則出現一次就失敗）"
 ./scripts/runtime-log-gate.sh "$UDID" "$START"

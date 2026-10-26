@@ -190,6 +190,7 @@ jobs:
             -only-testing:KairumoUITests/SmokeUITests/testExportMenuItemsAreReachable \
             -only-testing:KairumoUITests/SmokeUITests/testToolbarCustomizationControlsAreReachable \
             -only-testing:KairumoUITests/InsertToolsAudit \
+            -only-testing:KairumoUITests/InkInvariantMatrixAudit \
             > "$RUNNER_TEMP/apple-ui.log" 2>&1 || rc=$?
           # `-quiet` 會把**斷言訊息整段吃掉**：紅燈只剩 "Failing tests: <名字>"，
           # 說不出為什麼紅。訊息又常常是多行的，只抓 error: 那一行還是會漏
