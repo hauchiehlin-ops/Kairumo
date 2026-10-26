@@ -337,27 +337,14 @@ internal fun EditorTopBar(
             }
         }
 
-        // 模式切換：手繪 vs 打字
-        Surface(
-            shape = RoundedCornerShape(8.dp),
-            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-            modifier = Modifier.padding(vertical = 2.dp)
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                FilterChip(
-                    selected = state.editorMode == EditorMode.DRAW,
-                    onClick = { actions.onModeChange(EditorMode.DRAW) },
-                    label = { Text("✏️ " + l10n("mode_draw")) },
-                    modifier = Modifier.testTag("editor.mode_draw")
-                )
-                FilterChip(
-                    selected = state.editorMode == EditorMode.TYPE,
-                    onClick = { actions.onModeChange(EditorMode.TYPE) },
-                    label = { Text("⌨️ " + l10n("mode_type")) },
-                    modifier = Modifier.testTag("editor.mode_type")
-                )
-            }
-        }
+        // 流體動態傳送門 (Dynamic Portal Island)。
+        // 決定畫布模式並支援即時情境展開（如手繪模式中編輯文字方塊）。
+        DynamicPortalIsland(
+            currentMode = state.editorMode,
+            contextualState = contextualState,
+            languageTag = state.languageTag,
+            onModeChange = actions.onModeChange
+        )
 
         // 快速輪盤開關
         Surface(
@@ -1038,14 +1025,6 @@ internal fun EditorTopBar(
         }
     }
 
-    if (contextualState != null) {
-        DynamicPortalIsland(
-            currentMode = state.editorMode,
-            contextualState = contextualState,
-            languageTag = state.languageTag,
-            onModeChange = actions.onModeChange
-        )
-    }
 
     if (!state.minimalistCanvasMode) {
         // ── 第二排：目前模式的工具 ────────────────────────────────
