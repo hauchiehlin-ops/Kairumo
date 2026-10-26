@@ -342,8 +342,8 @@ jobs:
           # 標成 deprecated。`software` 在這台 runner 上仍會於第一個 audit case
           # 卡住整個 qemu（logcat 同時停止，並非測試 assertion）；這一步改釘官方
           # 支援的 Mesa 3D `lavapipe`，避開自動選到的 renderer。Vulkan 仍關掉，
-          # 避免把 guest Vulkan 暴露給 App；其餘 284 條已在 `software` 全數通過，
-          # 所以下一步維持原設定。
+          # 避免把 guest Vulkan 暴露給 App；兩步均釘 `lavapipe`，
+          # 避免 UI 渲染測試（如 InkInvariantMatrixAuditTest）在 `software` 下使 qemu 崩潰。
           ram-size: 4096M
           heap-size: 576M
           emulator-options: -no-window -gpu lavapipe -feature -Vulkan -no-snapshot -noaudio -no-boot-anim -no-metrics
@@ -380,7 +380,7 @@ jobs:
           working-directory: android
           ram-size: 4096M
           heap-size: 576M
-          emulator-options: -no-window -gpu software -feature -Vulkan -no-snapshot -noaudio -no-boot-anim -no-metrics
+          emulator-options: -no-window -gpu lavapipe -feature -Vulkan -no-snapshot -noaudio -no-boot-anim -no-metrics
           # emulator-runner 把 script 的**每一行**各丟給一個獨立的 `sh -c`：
           # 變數（`$?`、`$!`）、`set +e`、subshell 都帶不到下一行。上一版靠
           # `test_status=$?` 再 `exit "$test_status"`，結果是 `exit: Illegal number:`

@@ -1855,7 +1855,7 @@ private fun DialogGuideStep(step: String, title: String, desc: String) {
 }
 
 
-private fun shareNotebookPackage(
+internal fun shareNotebookPackage(
     activity: ComponentActivity,
     notebookDir: File,
     title: String
@@ -1881,7 +1881,7 @@ private fun shareNotebookPackage(
 
 
 
-private fun runFolderSync(activity: ComponentActivity, session: PadnoteSession?): String {
+internal fun runFolderSync(activity: ComponentActivity, session: PadnoteSession?): String {
     val tree = FolderSync.folderUri(activity)
         ?: return LocalizationStrings.localized("sync_not_configured", deviceLanguageTag())
     val remote = DocumentFile.fromTreeUri(activity, tree)
@@ -1910,7 +1910,7 @@ private fun runFolderSync(activity: ComponentActivity, session: PadnoteSession?)
 /**
  * 建立備份檔並寫入使用者選擇的位置。
  */
-private fun runBackupToUri(activity: ComponentActivity, uri: android.net.Uri): String {
+internal fun runBackupToUri(activity: ComponentActivity, uri: android.net.Uri): String {
     val lang = deviceLanguageTag()
     return runCatching {
         val (file, info) = BackupManager.create(activity, BuildConfig.VERSION_NAME)
@@ -1928,7 +1928,7 @@ private fun runBackupToUri(activity: ComponentActivity, uri: android.net.Uri): S
 }
 
 /** 從使用者選的備份檔一鍵復原。 */
-private fun runRestore(activity: ComponentActivity, uri: android.net.Uri): String {
+internal fun runRestore(activity: ComponentActivity, uri: android.net.Uri): String {
     val lang = deviceLanguageTag()
     return runCatching {
         val staged = BackupManager.stage(activity, uri)
