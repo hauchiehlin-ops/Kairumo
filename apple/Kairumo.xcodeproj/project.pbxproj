@@ -57,6 +57,7 @@
 		3140AB52CEC3E3C01E27BECF /* Drafting.swift in Sources */ = {isa = PBXBuildFile; fileRef = F646239F772A80D0EE6368D6 /* Drafting.swift */; };
 		33C06FCCD5F5DF767E8DCA25 /* PalmThresholdSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD3609DAFC6CD0A448F250C1 /* PalmThresholdSheet.swift */; };
 		37A288C34C733057D95EDE7F /* InkPressureProbe.swift in Sources */ = {isa = PBXBuildFile; fileRef = 718DB1EDB838390CB0201711 /* InkPressureProbe.swift */; };
+		38C25B9AF4A4C074D31F083B /* EditorInkAndStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA314BD09595D32A72F4CE02 /* EditorInkAndStorage.swift */; };
 		39916E65586F35AEE4628E71 /* PageObjectsReopenTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D546443BCCC9FD83EAC3221 /* PageObjectsReopenTests.swift */; };
 		3BEC80A3A881AE41FE7109EC /* EditorTextAndAnnotations.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7545087BEB4E869F0361DDD3 /* EditorTextAndAnnotations.swift */; };
 		3BFD4D389E0973A423DBDBD0 /* ShapeEditingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15867EB19A9148EC69D47FC5 /* ShapeEditingTests.swift */; };
@@ -546,6 +547,7 @@
 		D92F2373941302ED5F5C66CD /* ImageDropPlacementTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageDropPlacementTests.swift; sourceTree = "<group>"; };
 		DA14AB7B6F3436E39B58DAA1 /* ObjectStacking.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ObjectStacking.swift; sourceTree = "<group>"; };
 		DA24513DE1A6A5996FB190AC /* AssetLibraryManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssetLibraryManager.swift; sourceTree = "<group>"; };
+		DA314BD09595D32A72F4CE02 /* EditorInkAndStorage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditorInkAndStorage.swift; sourceTree = "<group>"; };
 		DA433D8C879AB448C248E561 /* ContextGuidanceHUD.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContextGuidanceHUD.swift; sourceTree = "<group>"; };
 		DBEA4CFB130D285D67B343EC /* NoteShape.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NoteShape.swift; sourceTree = "<group>"; };
 		DC162947E9D0CD0579D7848B /* ToolbarCustomization.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolbarCustomization.swift; sourceTree = "<group>"; };
@@ -823,6 +825,7 @@
 				5A7C268EF0A001760D3A7C02 /* DynamicPortalIsland.swift */,
 				B4B474625AA69EB48CA86346 /* EditorAttachments.swift */,
 				8D532C92A0EFAC4B0C55DC71 /* EditorFloatingPanels.swift */,
+				DA314BD09595D32A72F4CE02 /* EditorInkAndStorage.swift */,
 				D734E97D7D68DB40B46600B5 /* EditorInteractiveTemplates.swift */,
 				8CADC1C412F39A20E555D660 /* EditorObjectsAndCanvas.swift */,
 				92CB1D8025BADA92AE19BA59 /* EditorSidebars.swift */,
@@ -1240,6 +1243,7 @@
 				D6CF28F060E9D4456754E70D /* DynamicPortalIsland.swift in Sources */,
 				405CAD76A71000B19B3F16F5 /* EditorAttachments.swift in Sources */,
 				C48EB23368B74903DFA208DF /* EditorFloatingPanels.swift in Sources */,
+				38C25B9AF4A4C074D31F083B /* EditorInkAndStorage.swift in Sources */,
 				49D9DBC6C42BF9F473E5D182 /* EditorInteractiveTemplates.swift in Sources */,
 				98D309F820BD3CAF42201FB5 /* EditorObjectsAndCanvas.swift in Sources */,
 				68A27DB3A24C8DAA379E6E24 /* EditorSidebars.swift in Sources */,
