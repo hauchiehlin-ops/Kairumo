@@ -128,6 +128,7 @@
 		7CD26610B793C018800B8B49 /* FeatureHint.swift in Sources */ = {isa = PBXBuildFile; fileRef = F165F09A8FEE2E882FD9107C /* FeatureHint.swift */; };
 		7D6DE78DB8869CDC8006E534 /* PageImageRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE6B5FAD884A88C837DD9BF2 /* PageImageRenderer.swift */; };
 		7DB76F0C390DA40B48AC10F9 /* AudioRecorderManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8FEF2B249C62AD4AE2E3C246 /* AudioRecorderManager.swift */; };
+		854BFB7D7055767D6F518055 /* EditorToolbars.swift in Sources */ = {isa = PBXBuildFile; fileRef = DFCA52E20CC208FAFEEBE9CF /* EditorToolbars.swift */; };
 		8677E2062758DE5EA2EEE87F /* TextBoxAppearance.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7418A9EE9E549FC11AB793EF /* TextBoxAppearance.swift */; };
 		879124F0C755B79F15C42FE5 /* ProColorWheelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74F41D2B41DD153EEA524BBC /* ProColorWheelView.swift */; };
 		880DCFF8C76BF936EADB63DF /* NotebookEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E0D4938AD7ED09F531105A2 /* NotebookEditorView.swift */; };
@@ -546,6 +547,7 @@
 		DC7046379C24B0D590B6F0E8 /* ToolbarSeparator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolbarSeparator.swift; sourceTree = "<group>"; };
 		DE6B5FAD884A88C837DD9BF2 /* PageImageRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PageImageRenderer.swift; sourceTree = "<group>"; };
 		DFB782C4FBD863E4DD9CC1D7 /* TextBoxEditingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextBoxEditingTests.swift; sourceTree = "<group>"; };
+		DFCA52E20CC208FAFEEBE9CF /* EditorToolbars.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditorToolbars.swift; sourceTree = "<group>"; };
 		DFCDD31E1D415BEFE8FB47D5 /* ImageAppearance.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageAppearance.swift; sourceTree = "<group>"; };
 		E2053B49C63EE5DCAE804DAA /* DraftingBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DraftingBar.swift; sourceTree = "<group>"; };
 		E6A2A119D757D992BD181DEE /* BackupManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackupManager.swift; sourceTree = "<group>"; };
@@ -815,6 +817,7 @@
 				92CB1D8025BADA92AE19BA59 /* EditorSidebars.swift */,
 				EA02348946BB281EFAFD082E /* EditorStateMachine.swift */,
 				305D7BB131613FCCC89BD3A4 /* EditorStickersAndTapes.swift */,
+				DFCA52E20CC208FAFEEBE9CF /* EditorToolbars.swift */,
 				3887355C6A39B8DC62DC1F61 /* EditorToolType.swift */,
 				C0957AAFF21A2EF4C121E63E /* ExportPreviewSheet.swift */,
 				E7BBB164B4ED22BB56939A40 /* ExportPrintManager.swift */,
@@ -1228,6 +1231,7 @@
 				F2D819B6D4518C51C8235CCB /* EditorStateMachine.swift in Sources */,
 				D27392096B8FB503D74F8277 /* EditorStickersAndTapes.swift in Sources */,
 				700F255D03DEC90FA741E743 /* EditorToolType.swift in Sources */,
+				854BFB7D7055767D6F518055 /* EditorToolbars.swift in Sources */,
 				B427747146A395C471480C6C /* ExportPreviewSheet.swift in Sources */,
 				643674D7CEE546261D15F308 /* ExportPrintManager.swift in Sources */,
 				9F727B63D45200CC82EDCB2A /* FakeDriveHook.swift in Sources */,
