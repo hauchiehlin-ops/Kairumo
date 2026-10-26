@@ -32,7 +32,7 @@ public struct NotebookEditorView: View {
     private func L(_ key: String) -> String { localizationManager.localized(key) }
 
     // 頁面狀態
-    @State private var currentPageIndex: Int = 0
+    @State var currentPageIndex: Int = 0
 
     public static var isTabletOrDesktopDevice: Bool {
         #if targetEnvironment(macCatalyst) || os(macOS)
@@ -48,14 +48,14 @@ public struct NotebookEditorView: View {
     /// 跟著人走比跟著筆記走合理 —— 跟著筆記的話，同一個人在不同本筆記裡
     /// 會拿到不同的捲動方式。
     @AppStorage(ProfileContext.scopedKey("kairumo.editor.pageDisplayMode"))
-    private var pageDisplayModeRaw: String = (NotebookEditorView.isTabletOrDesktopDevice ? PageDisplayMode.continuous : PageDisplayMode.single).rawValue
-    private var pageDisplayMode: PageDisplayMode {
+    var pageDisplayModeRaw: String = (NotebookEditorView.isTabletOrDesktopDevice ? PageDisplayMode.continuous : PageDisplayMode.single).rawValue
+    var pageDisplayMode: PageDisplayMode {
         PageDisplayMode(rawValue: pageDisplayModeRaw) ?? (Self.isTabletOrDesktopDevice ? .continuous : .single)
     }
     @State private var currentDrawing: PKDrawing = PKDrawing()
     /// 最近一次真的寫進磁碟的筆跡（頁次 + 內容）。切換模式時用來判斷「這一頁其實沒變」，
     /// 不必每次都同步序列化整頁筆跡（筆跡多的頁面，那一下就是點物件時的卡頓）。
-    @State private var lastPersistedInk: (page: Int, drawing: PKDrawing)? = nil
+    @State var lastPersistedInk: (page: Int, drawing: PKDrawing)? = nil
     /// 筆跡改動後「把這本筆記標記為剛改過」的去抖動計時器。
     ///
     /// 筆畫本身是**每次變動就落盤**的（見 `onDrawingChanged` 裡的
@@ -76,7 +76,7 @@ public struct NotebookEditorView: View {
     /// `PKCanvasView` 在一筆畫尚未離筆時就會連續回報 drawing 變更。核心的 ink log
     /// 是 append-only；若每次回報都 append，會把同一筆的半成品寫成好幾筆。
     /// 因此畫布仍即時寫 `.drawing`，核心套件則停筆後用這個基準線只補新增筆畫。
-    @State private var coreInkBaselines: [Int: PKDrawing] = [:]
+    @State var coreInkBaselines: [Int: PKDrawing] = [:]
     /// 每一頁「最後一次與磁碟一致」的筆跡（讀進來的、或寫出去的）。同步重讀時用它分辨
     /// 哪些筆畫是這台還沒寫出去的（見 `mergedWithDisk`）。放在參照型別裡：每一筆都會更新，
     /// 寫 `@State` 的話整個編輯器每一筆重算一次。
@@ -86,7 +86,7 @@ public struct NotebookEditorView: View {
     @State private var continuousInkReloadGeneration = 0
     /// 連續模式「只重建物件層」的世代（刪除、調整物件圖層之後）。
     @State private var continuousObjectGeneration = 0
-    @State private var pendingCoreInk: [Int: PKDrawing] = [:]
+    @State var pendingCoreInk: [Int: PKDrawing] = [:]
     /// 筆跡單一擁有者（架構審視 P1）：以 pageId 識別，消除多份副本與空白覆蓋。
     @State private var inkStore: PageInkStore? = nil
     private var activeInkStore: PageInkStore {
@@ -101,7 +101,7 @@ public struct NotebookEditorView: View {
     @State private var coreInkWork: DispatchWorkItem? = nil
     /// 這一批待寫筆畫最早的那一筆的時間。見 `scheduleCoreInkFlush` 的上限說明。
     @State private var coreInkFirstPendingAt: Date? = nil
-    @State private var canvasView: PKCanvasView? = nil
+    @State var canvasView: PKCanvasView? = nil
     @State private var currentPageHeight: CGFloat = PageGeometry.height
     /// 掌拒（工作項 S-45）。判定規則走核心，與 Android 同一份。
     @State private var palmRejection = PalmRejectionCoordinator()
@@ -165,8 +165,8 @@ public struct NotebookEditorView: View {
     @State private var showLassoColorPicker: Bool = false
 
     // 彈窗與輔助狀態
-    @State private var showRenameAlert: Bool = false
-    @State private var renameText: String = ""
+    @State var showRenameAlert: Bool = false
+    @State var renameText: String = ""
     @State private var showShareSheet: Bool = false
     /// 匯出之後要開的是**儲存對話框**（而不是分享面板）。
     @State private var showSaveDialog: Bool = false
@@ -200,12 +200,12 @@ public struct NotebookEditorView: View {
     /// 正在顯示「解除鎖定」鈕的鎖定物件（點了鎖頭或點了鎖定的物件）。見 `lockedObjectPrompt`。
     @State private var lockPromptId: String? = nil
     /// 一鍵恢復初始狀態（捨棄進入編輯器後的所有修改）
-    @State private var initialNotebookSnapshot: NotebookDocument? = nil
+    @State var initialNotebookSnapshot: NotebookDocument? = nil
     /// 範例有改動、使用者要離開時：問要存檔、另存還是放棄（見 `requestLeave`）。
     @State private var showSampleLeaveDialog = false
     /// 使用者選完之後要做的事（回首頁或切換到另一本）。
     @State private var afterSampleLeave: (() -> Void)?
-    @State private var initialPageDrawings: [Int: PKDrawing] = [:]
+    @State var initialPageDrawings: [Int: PKDrawing] = [:]
     /// 每一頁第一次載入時的專業筆畫（圖學筆畫、專業筆刷）與「已擦除」名單 ——
     /// 「恢復初始狀態」要連它們一起還原，不然圖學筆記本裡畫的線一條都不會少。
     @State private var initialPageInk: [Int: InitialPageInk] = [:]
@@ -219,7 +219,7 @@ public struct NotebookEditorView: View {
     /// 「目前第幾頁原本是第幾頁」（`nil` = 這次新增的頁）。第一次調整頁面結構時才建立 ——
     /// 在那之前頁碼就是原本的頁碼。還原到初始狀態要靠它把頁序與逐頁檔案排回去：
     /// 原本照頁碼還原，搬過、刪過、插過頁之後，還原寫回去的內容落在別頁上。
-    @State private var pageOrigins: [Int?]? = nil
+    @State var pageOrigins: [Int?]? = nil
     @State private var showRevertConfirmAlert: Bool = false
     /// 圖層面板裡選取的形狀。多選才群組得起來。
     @State private var selectedShapeIds: Set<String> = []
@@ -265,7 +265,7 @@ public struct NotebookEditorView: View {
     // 文字復原/重做堆疊（供文字模式與文字框使用）
     /// 畫布物件（圖片、文字方塊、形狀、表格…）的復原紀錄，與筆跡登記在同一個 `UndoManager`
     /// 上 —— 一次復原就照發生的先後退回，不分是筆跡還是物件（見 `CanvasHistory.swift`）。
-    @State private var objectHistory = CanvasObjectHistory()
+    @State var objectHistory = CanvasObjectHistory()
     /// 即時協同的物件合併（欄位層級 LWW，見 `CollabSync.swift`）。參考型別、不訂閱。
     @State private var collabSync = CollabObjectSync()
     /// 每一頁已經同步過的筆畫 id（逐筆增刪的比對基準）。
@@ -396,22 +396,22 @@ public struct NotebookEditorView: View {
 
     // 筆記結構欄（側邊頁面縮圖大綱目錄欄）
     // 平板與桌機開啟筆記時預設展開，且預設顯示「頁面結構」。
-    @State private var showStructureSidebar: Bool = NotebookEditorView.isTabletOrDesktopDevice
+    @State var showStructureSidebar: Bool = NotebookEditorView.isTabletOrDesktopDevice
     /// 畫布目前的實際內容寬度。縮圖要用同一個寬度算，物件位置與比例才會對得上。
-    @State private var canvasContentWidth: CGFloat = PageThumbnailRenderer.minPageWidth
+    @State var canvasContentWidth: CGFloat = PageThumbnailRenderer.minPageWidth
     // 自訂捲軸狀態：iOS 原生捲動指示器不接受互動，Mac 上使用者會想用游標拖它
-    @State private var canvasVisibleFraction: CGFloat = 1
-    @State private var canvasScrollFraction: CGFloat = 0
-    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
-    @State private var didAutoOpenSidebar: Bool = false
-    @AppStorage(ProfileContext.scopedKey("kairumo_editor_sidebar_tab")) private var sidebarTabRaw: String = SidebarTabMode.pages.rawValue
+    @State var canvasVisibleFraction: CGFloat = 1
+    @State var canvasScrollFraction: CGFloat = 0
+    @Environment(\.horizontalSizeClass) var horizontalSizeClass
+    @State var didAutoOpenSidebar: Bool = false
+    @AppStorage(ProfileContext.scopedKey("kairumo_editor_sidebar_tab")) var sidebarTabRaw: String = SidebarTabMode.pages.rawValue
 
-    private var sidebarTab: SidebarTabMode {
+    var sidebarTab: SidebarTabMode {
         get { SidebarTabMode(rawValue: sidebarTabRaw) ?? .pages }
         nonmutating set { sidebarTabRaw = newValue.rawValue }
     }
 
-    private var sidebarTabBinding: Binding<SidebarTabMode> {
+    var sidebarTabBinding: Binding<SidebarTabMode> {
         Binding(
             get: { SidebarTabMode(rawValue: sidebarTabRaw) ?? .pages },
             set: { sidebarTabRaw = $0.rawValue }
@@ -419,60 +419,45 @@ public struct NotebookEditorView: View {
     }
 
     // 資料夾管理狀態
-    @State private var showRenameRootFolderAlert: Bool = false
-    @State private var rootFolderRenameText: String = ""
-    @State private var showNewFolderAlert: Bool = false
-    @State private var newFolderNameText: String = ""
-    @State private var newFolderParentId: String? = nil
-    @State private var folderToRename: FolderItem? = nil
-    @State private var folderRenameText: String = ""
-    @State private var showMoveNotebookSheet: Bool = false
-    @State private var notebookToMoveId: String? = nil
-    @State private var expandedFolderIds: Set<String> = []
+    @State var showRenameRootFolderAlert: Bool = false
+    @State var rootFolderRenameText: String = ""
+    @State var showNewFolderAlert: Bool = false
+    @State var newFolderNameText: String = ""
+    @State var newFolderParentId: String? = nil
+    @State var folderToRename: FolderItem? = nil
+    @State var folderRenameText: String = ""
+    @State var showMoveNotebookSheet: Bool = false
+    @State var notebookToMoveId: String? = nil
+    @State var expandedFolderIds: Set<String> = []
     /// 目前被拖曳懸停的資料夾（nil 代表「未分類」區）
-    @State private var dropTargetFolderId: String? = nil
-    @State private var isUnfiledDropTargeted: Bool = false
+    @State var dropTargetFolderId: String? = nil
+    @State var isUnfiledDropTargeted: Bool = false
     /// `dropTargetFolderId` 用 nil 代表「沒有任何東西懸停」，所以「懸停在
     /// 未分類區」需要另一個值，不能也用 nil。
-    private let unfiledDropKey = "__kairumo_unfiled__" 
+    let unfiledDropKey = "__kairumo_unfiled__" 
     /// 拖曳中的筆記本落在「根目錄」上。根目錄那一列一直都在，
     /// 而「未分類檔案」那一段在沒有未分類筆記時整段不存在 ——
     /// 於是把最後一本筆記歸檔之後，就再也沒有地方可以把它拖回來。
-    @State private var isRootDropTargeted: Bool = false
+    @State var isRootDropTargeted: Bool = false
 
     // MARK: - 頁面結構欄的拖曳與縮放
     /// 拖曳懸停中的頁碼（畫插入指示線用）。
-    @State private var dropTargetPageIndex: Int? = nil
+    @State var dropTargetPageIndex: Int? = nil
     /// 多選模式下已選取的頁碼。
-    ///
-    /// 空集合**不等於**沒有進入多選模式 —— 進了模式還沒選是正常狀態，
-    /// 用集合是否為空判斷的話，取消勾選最後一頁時整排操作會突然消失。
-    @State private var pageSelection: Set<Int> = []
-    @State private var isSelectingPages: Bool = false
+    @State var pageSelection: Set<Int> = []
+    @State var isSelectingPages: Bool = false
     /// 目的筆記本選擇器：nil 代表沒開；true 是複製、false 是搬移。
-    @State private var transferIsCopy: Bool? = nil
+    @State var transferIsCopy: Bool? = nil
     /// 使用者要的縮圖寬度（pt）。落盤。
-    ///
-    /// 存絕對寬度而不是倍率：倍率的基準是側欄寬度，而側欄寬度也是使用者
-    /// 在調的 —— 兩個都在動的話，拉寬側欄會讓縮圖跟著跳一次，
-    /// 而使用者只是想把欄位拉寬一點看資料夾名稱。
-    @AppStorage(ProfileContext.scopedKey("kairumo_editor_page_thumb_width")) private var pageThumbnailWidth: Double = 240
+    @AppStorage(ProfileContext.scopedKey("kairumo_editor_page_thumb_width")) var pageThumbnailWidth: Double = 240
     /// 編輯工作區目前可用的總寬度。夾側欄寬度要用到它。
-    ///
-    /// # 為什麼是 @State 而不是 Environment
-    ///
-    /// 側欄的內容（縮圖卡片、底部的大小控制）與套用 `.environment` 的那一層
-    /// 是**同一個 View 結構**的兩個 computed property —— 而 `@Environment`
-    /// 讀的是這個結構自己收到的環境，不是它加到子樹上的那一份。
-    /// 第一次寫成 Environment 的版本編得過、跑起來縮圖永遠停在 248pt，
-    /// 因為它讀到的一直是預設值 280。
-    @State private var editorAvailableWidth: CGFloat = 1024
+    @State var editorAvailableWidth: CGFloat = 1024
     /// 使用者拖動界線之後的側欄寬度。落盤 —— 每次開筆記都要重調一次的設定
     /// 不算設定，只是每次都要做一遍的事。
-    @AppStorage(ProfileContext.scopedKey("kairumo_editor_sidebar_width")) private var storedSidebarWidth: Double = 280
+    @AppStorage(ProfileContext.scopedKey("kairumo_editor_sidebar_width")) var storedSidebarWidth: Double = 280
     /// 拖曳界線期間的暫時寬度。放開才落盤，拖曳中每一格都寫 UserDefaults
     /// 會在拖動時卡頓。
-    @State private var draggingSidebarWidth: CGFloat? = nil
+    @State var draggingSidebarWidth: CGFloat? = nil
 
     // 次世代 UI/UX Phase 5: 折疊立起雙屏模式 (Tabletop Mode / Stage Manager Posture)
     @State private var isTabletopMode: Bool = false
@@ -480,8 +465,8 @@ public struct NotebookEditorView: View {
     @State private var isMagneticSnapActive: Bool = false
 
     // 頁面刪除警告
-    @State private var pageToDeleteIndex: Int? = nil
-    @State private var showDeletePageAlert: Bool = false
+    @State var pageToDeleteIndex: Int? = nil
+    @State var showDeletePageAlert: Bool = false
 
     // 常用色彩盤
     /// 常用墨色。**來源是核心的 `inkPalette()`**（工作項 S-63）。
@@ -1480,7 +1465,7 @@ public struct NotebookEditorView: View {
         }
     }
 
-    private func presentFromMenu(_ action: @escaping () -> Void) {
+    func presentFromMenu(_ action: @escaping () -> Void) {
         SheetCoordinator.shared.presentFromMenu(action)
     }
 
@@ -3293,20 +3278,20 @@ public struct NotebookEditorView: View {
     /// 前者再捲一次會跟使用者的手指打架。
     @State private var continuousReportedPage: Int = -1
     /// 連續模式下已建立的各頁畫布參照與快取，供套索與存檔即時存取焦點頁畫布（Class 包裝避免視圖更新中改 @State 失效）
-    @State private var continuousCanvases = ContinuousCanvasRegistry()
+    @State var continuousCanvases = ContinuousCanvasRegistry()
     /// Pencil 落筆把打字模式切成手繪的時間（那一次切換不捲動，見 `onChange(of: editorMode)`）。
     @State private var pencilModeSwitchAt: Date?
     /// 專業筆畫有未標記的變動（見 `AppCommand.proInkDidChange`）。存檔時不能當成「沒變」略過。
     @State private var proInkDirty = false
     /// 「恢復初始狀態」之後遞增，讓連續模式的每一頁重讀磁碟（見 `ContinuousPageView.reloadGeneration`）。
-    @State private var continuousReloadGeneration = 0
+    @State var continuousReloadGeneration = 0
     /// 側欄縮圖的重繪計數：專業筆畫的變動不在任何 @State 裡，要靠它讓側欄重新算繪。
-    @State private var thumbnailRevision = 0
+    @State var thumbnailRevision = 0
     /// 要求連續模式再捲一次到目前頁（頁碼沒變但使用者點了同一頁的縮圖）。
-    @State private var continuousScrollRequest: Int = 0
+    @State var continuousScrollRequest: Int = 0
     /// 程式捲動進行中。這段時間內捲動中途經過的頁面不算焦點，否則
     /// 「點縮圖跳到第 3 頁」會在途中被第 7 頁的焦點判定打斷，最後停在半路。
-    @State private var continuousProgrammaticScrollUntil: Date = .distantPast
+    @State var continuousProgrammaticScrollUntil: Date = .distantPast
     /// 連續模式：正在拖曳物件的那一頁。這一頁畫在相鄰頁之上 —— 物件拖過頁界時
     /// 才不會被下一頁的紙蓋住、看起來像消失了。
     @State private var continuousDragPage: Int?
@@ -4846,1280 +4831,6 @@ public struct NotebookEditorView: View {
             editorMode = targetMode
         }
         flashModeBadge()
-    }
-
-    // MARK: - 側欄與畫布之間的界線
-    //
-    // 原本這裡是一條 1pt 的分隔線，側欄固定 280pt。280 對「翻頁找內容」
-    // 剛好夠，對「看清楚這一頁畫了什麼」不夠 —— 而使用者沒有任何辦法
-    // 調整它：畫面上唯一的操作是把整條側欄關掉。
-    //
-    // 界線改成可以拖。夾住兩端的規則在核心（`sidebarClampWidth`），
-    // 因為「畫布至少要留 480」這條線兩個平台是同一條。
-
-    /// 目前該用的側欄寬度：拖曳中用暫時值，否則用落盤值，兩者都要夾過。
-    private func resolvedSidebarWidth(total: CGFloat) -> CGFloat {
-        let desired = draggingSidebarWidth ?? CGFloat(storedSidebarWidth)
-        return CGFloat(sidebarClampWidth(desired: Float(desired), total: Float(total)))
-    }
-
-    /// 界線本身。視覺上是一條線，可以抓的範圍比線寬得多 ——
-    /// 1pt 的命中區域在觸控上等於抓不到，在游標上等於要瞄準。
-    private func sidebarResizeHandle(total: CGFloat, current: CGFloat) -> some View {
-        let isDragging = (draggingSidebarWidth != nil)
-        return ZStack {
-            Color(uiColor: .separator)
-                .frame(width: 1)
-            // 抓得到的提示：三顆點。沒有它，這條線看起來就只是一條線。
-            Capsule()
-                .fill(isDragging ? Color.accentColor : Color.secondary.opacity(0.35))
-                .frame(width: 4, height: 34)
-        }
-        .frame(width: 10)
-        .frame(maxHeight: .infinity)
-        .contentShape(Rectangle())
-        .background(isDragging ? Color.accentColor.opacity(0.12) : Color.clear)
-        .gesture(
-            DragGesture(minimumDistance: 1)
-                .onChanged { value in
-                    draggingSidebarWidth = CGFloat(
-                        sidebarClampWidth(desired: Float(current + value.translation.width),
-                                          total: Float(total)))
-                }
-                .onEnded { value in
-                    let final = CGFloat(
-                        sidebarClampWidth(desired: Float(current + value.translation.width),
-                                          total: Float(total)))
-                    storedSidebarWidth = Double(final)
-                    draggingSidebarWidth = nil
-                }
-        )
-        // 連點兩下回到預設寬度。拖過頭之後要靠手拖回「原本那樣」很難，
-        // 而「回到原本那樣」是使用者第二常想做的事。
-        .onTapGesture(count: 2) {
-            withAnimation(.easeInOut(duration: 0.2)) {
-                storedSidebarWidth = 280
-            }
-        }
-        .accessibilityLabel(localizationManager.localized("resize_sidebar"))
-        .help(localizationManager.localized("resize_sidebar"))
-    }
-
-    /// 型別邊界：SwiftUI 會把整棵子樹的型別編進 body 的 mangled 名稱，
-    /// 名稱一長，裝置端（主執行緒只有 1MB 堆疊）解析時就會遞迴爆堆疊。
-    private var notebookStructureSidebar: AnyView { AnyView(notebookStructureSidebarContent) }
-
-    private var notebookStructureSidebarContent: some View {
-        VStack(spacing: 0) {
-            // 頂部導覽列與分頁模式切換
-            VStack(spacing: 8) {
-                HStack {
-                    HStack(spacing: 6) {
-                        Image(systemName: sidebarTab == .pages ? "sidebar.left" : "folder.fill")
-                            .foregroundColor(.accentColor)
-                        Text(sidebarTab == .pages ? localizationManager.localized("structure_pages") : localizationManager.localized("structure_folders"))
-                            .font(.subheadline)
-                            .fontWeight(.semibold)
-                    }
-
-                    Spacer()
-
-                    if sidebarTab == .pages {
-                        Button {
-                            withAnimation(.easeInOut(duration: 0.15)) {
-                                isSelectingPages.toggle()
-                                if !isSelectingPages { pageSelection.removeAll() }
-                            }
-                        } label: {
-                            Image(systemName: isSelectingPages
-                                ? "checkmark.circle.fill" : "checkmark.circle")
-                                .font(.system(size: 17))
-                                .foregroundColor(.accentColor)
-                                .frame(width: 30, height: 30)
-                                .contentShape(Rectangle())
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityLabel(localizationManager.localized("select_pages"))
-                        .help(localizationManager.localized("select_pages"))
-
-                        Button {
-                            addNewPage()
-                        } label: {
-                            Image(systemName: "plus.circle.fill")
-                                .font(.system(size: 20))
-                                .foregroundColor(.accentColor)
-                                .frame(width: 32, height: 32)
-                                .contentShape(Rectangle())
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityLabel(localizationManager.localized("add_page"))
-                        .help(localizationManager.localized("add_page"))
-                    } else {
-                        Button {
-                            newFolderParentId = nil
-                            newFolderNameText = ""
-                            showNewFolderAlert = true
-                        } label: {
-                            Image(systemName: "folder.badge.plus")
-                                .font(.system(size: 16))
-                                .foregroundColor(.accentColor)
-                                .frame(width: 32, height: 32)
-                                .contentShape(Rectangle())
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityLabel(localizationManager.localized("new_subfolder"))
-                        .help(localizationManager.localized("new_subfolder"))
-                    }
-
-                    Button {
-                        withAnimation {
-                            showStructureSidebar = false
-                        }
-                    } label: {
-                        Image(systemName: "xmark.circle.fill")
-                            .foregroundColor(.secondary)
-                    }
-                    .buttonStyle(.plain)
-                }
-
-                Picker("", selection: sidebarTabBinding) {
-                    Text(localizationManager.localized("structure_pages"))
-                        .tag(SidebarTabMode.pages)
-                        .accessibilityIdentifier("editor.sidebar.tab.pages")
-                    Text(localizationManager.localized("structure_folders"))
-                        .tag(SidebarTabMode.folders)
-                        .accessibilityIdentifier("editor.sidebar.tab.folders")
-                }
-                .pickerStyle(.segmented)
-            }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
-            .background(Color(uiColor: .secondarySystemGroupedBackground))
-
-            Divider()
-
-            if sidebarTab == .pages {
-                pagesStructureView
-                    .accessibilityIdentifier("editor.sidebar.list")
-            } else {
-                foldersStructureView
-                    .accessibilityIdentifier("editor.sidebar.list")
-            }
-        }
-        .background(Color(uiColor: .secondarySystemGroupedBackground))
-    }
-
-    // MARK: - 頁面結構縮圖清單
-    /// 型別邊界：SwiftUI 會把整棵子樹的型別編進 body 的 mangled 名稱，
-    /// 名稱一長，裝置端（主執行緒只有 1MB 堆疊）解析時就會遞迴爆堆疊。
-    private var pagesStructureView: AnyView { AnyView(pagesStructureViewContent) }
-
-    private var pagesStructureViewContent: some View {
-        VStack(spacing: 0) {
-            ScrollView {
-                LazyVStack(spacing: 10) {
-                    ForEach(Array(0..<max(1, notebook.pageCount)), id: \.self) { idx in
-                        pageStructureCard(idx: idx)
-                    }
-
-                    // 🌟 顯著的新增頁面大按鈕卡片
-                    Button {
-                        addNewPage()
-                    } label: {
-                        HStack(spacing: 8) {
-                            Image(systemName: "plus.circle.fill")
-                                .font(.system(size: 15, weight: .bold))
-                            Text(localizationManager.localized("add_page_large"))
-                                .font(.subheadline)
-                                .fontWeight(.semibold)
-                        }
-                        .foregroundColor(.accentColor)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 12)
-                        .background(Color.accentColor.opacity(0.08))
-                        .cornerRadius(10)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 10)
-                                .stroke(Color.accentColor.opacity(0.3), style: StrokeStyle(lineWidth: 1.5, dash: [4]))
-                        )
-                    }
-                    .buttonStyle(.plain)
-                    .padding(.horizontal, 8)
-                    .padding(.top, 4)
-                }
-                .id(notebook.pageCount)
-                .padding(.vertical, 8)
-            }
-
-            Divider()
-
-            if isSelectingPages {
-                pageSelectionBar
-                Divider()
-            }
-
-            // 結構摘要統計與縮圖大小
-            pagesStructureFooter
-        }
-        .sheet(isPresented: Binding(
-            get: { transferIsCopy != nil },
-            set: { if !$0 { transferIsCopy = nil } }
-        )) {
-            transferDestinationSheet
-        }
-    }
-
-    /// 多選模式下的那一排操作。
-    ///
-    /// 放在清單底下而不是最上面：勾選是從上往下做的，手指停在下半部，
-    /// 而「做完了要按的那顆」不該在滑到看不見的地方。
-    private var pageSelectionBar: some View {
-        VStack(spacing: 6) {
-            HStack {
-                Text(
-                    String(
-                        format: localizationManager.localized("pages_selected"),
-                        String(pageSelection.count))
-                )
-                .font(.system(size: 12 * sidebarScale))
-                .foregroundColor(.secondary)
-
-                Spacer()
-
-                Button {
-                    if pageSelection.count == notebook.pageCount {
-                        pageSelection.removeAll()
-                    } else {
-                        pageSelection = Set(0..<max(1, notebook.pageCount))
-                    }
-                } label: {
-                    Text(localizationManager.localized(
-                        pageSelection.count == notebook.pageCount
-                            ? "deselect_all" : "select_all"))
-                        .font(.system(size: 12))
-                        .padding(.vertical, 4)
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .foregroundColor(.accentColor)
-            }
-
-            HStack(spacing: 8) {
-                Button {
-                    transferIsCopy = true
-                } label: {
-                    Label(
-                        localizationManager.localized("copy_to"),
-                        systemImage: "doc.on.doc")
-                        .font(.system(size: 12, weight: .medium))
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 7)
-                        .background(Color.accentColor.opacity(0.12))
-                        .cornerRadius(8)
-                        // **`.buttonStyle(.plain)` 的命中範圍是標籤自己的形狀。**
-                        // 沒有這一行的話，可以按的只有「文字與圖示的筆畫」，
-                        // 那一圈底色是純裝飾 —— 實機上按下去完全沒有反應，
-                        // 而畫面上它看起來就是一顆按鈕。
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .disabled(pageSelection.isEmpty)
-
-                Button {
-                    transferIsCopy = false
-                } label: {
-                    Label(
-                        localizationManager.localized("move_to"),
-                        systemImage: "arrow.right.doc.on.clipboard")
-                        .font(.system(size: 12, weight: .medium))
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 7)
-                        .background(Color.accentColor.opacity(0.12))
-                        .cornerRadius(8)
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                // 整本搬空是不允許的（核心的 `pageTransferPlan` 會擋），
-                // 但按鈕直接停用比按下去才被拒絕清楚。
-                .disabled(pageSelection.isEmpty || pageSelection.count >= notebook.pageCount)
-            }
-            .foregroundColor(.accentColor)
-        }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 8)
-        .background(Color(uiColor: .secondarySystemGroupedBackground))
-    }
-
-    /// 目的筆記本選擇器。
-    ///
-    /// 列出全部筆記本（含目前這一本）—— 複製到同一本是合理的動作
-    /// （把某一頁再來一份接在最後）。搬移到同一本沒有意義，那一項會被擋下。
-    private var transferDestinationSheet: some View {
-        let isCopy = (transferIsCopy ?? true)
-        return NavigationView {
-            List {
-                Section {
-                    ForEach(store.visibleNotebooks) { target in
-                        let isSelf = (target.id == notebook.id)
-                        Button {
-                            performTransfer(to: target, copy: isCopy)
-                        } label: {
-                            HStack(spacing: 10) {
-                                Image(systemName: isSelf ? "doc.fill" : "doc.plaintext")
-                                    .foregroundColor(isSelf ? .accentColor : .secondary)
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(target.displayTitle())
-                                        .font(.subheadline)
-                                        .foregroundColor(.primary)
-                                    Text("\(target.pageCount) \(localizationManager.localized("pages_count_suffix"))")
-                                        .font(.caption2)
-                                        .foregroundColor(.secondary)
-                                }
-                                Spacer()
-                                if isSelf {
-                                    Text(localizationManager.localized("current_notebook"))
-                                        .font(.caption2)
-                                        .foregroundColor(.secondary)
-                                }
-                            }
-                            .contentShape(Rectangle())
-                        }
-                        .buttonStyle(.plain)
-                        // 搬到自己身上要的是換順序，不是轉移 —— 那件事在
-                        // 同一份選單裡有「上移／下移／移到最前」。
-                        .disabled(!isCopy && isSelf)
-                        .opacity(!isCopy && isSelf ? 0.4 : 1)
-                    }
-                } header: {
-                    Text(localizationManager.localized(
-                        isCopy ? "copy_pages_to_title" : "move_pages_to_title"))
-                } footer: {
-                    Text(
-                        String(
-                            format: localizationManager.localized("pages_selected"),
-                            String(pageSelection.count))
-                    )
-                }
-            }
-            .navigationTitle(localizationManager.localized("choose_destination_notebook"))
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button(localizationManager.localized("cancel")) { transferIsCopy = nil }
-                }
-            }
-        }
-        .navigationViewStyle(.stack)
-    }
-
-    /// 執行轉移，然後把畫面收拾乾淨。
-    private func performTransfer(to target: NotebookDocument, copy: Bool) {
-        // 目前這一頁的筆跡還在記憶體裡，先落盤（`changePageStructure` 會等背景寫入做完）——
-        // 不落盤的話複製過去的是磁碟上的舊版本，剛剛寫的那幾筆不會跟著走。
-        let pages = pageSelection.sorted()
-        let selected = Set(pages)
-        transferIsCopy = nil
-        isSelectingPages = false
-        pageSelection.removeAll()
-
-        let sameNotebook = target.id == notebook.id
-        // 搬走的頁不在這本了；留下來的往前補位。複製（或搬到同一本的後面）不動既有頁碼。
-        let pageMap = { (page: Int) -> Int? in
-            guard !copy, !sameNotebook else { return page }
-            if selected.contains(page) { return nil }
-            return page - pages.filter { $0 < page }.count
-        }
-        var moved = 0
-        changePageStructure(pageMap: pageMap) {
-            moved = store.transferPages(
-                from: notebook.id, pageIndexes: pages, to: target.id, move: !copy)
-            guard moved > 0 else {
-                showCanvasNotice(localizationManager.localized("transfer_failed"))
-                return nil
-            }
-            showCanvasNotice(
-                String(
-                    format: localizationManager.localized(copy ? "pages_copied" : "pages_moved"),
-                    String(moved), target.displayTitle())
-            )
-            // 目前這一頁被搬走的話，停在它原本位置上的那一頁（由 `changePageStructure` 夾回範圍內）。
-            return pageMap(currentPageIndex)
-                ?? (currentPageIndex - pages.filter { $0 < currentPageIndex }.count)
-        }
-    }
-
-    /// 單一頁面卡片。
-    ///
-    /// # 為什麼拆成一個函式
-    ///
-    /// 這張卡片上現在有四種操作：點選、拖曳換位、右上角選單、右鍵（或長按）
-    /// 快顯。全部塞在 `LazyVStack` 的閉包裡的話，那個閉包的型別會長到
-    /// 裝置端解析時爆堆疊 —— 這個檔案裡其他幾處 AnyView 邊界都是同一個理由。
-    private func pageStructureCard(idx: Int) -> some View {
-        let isSelected = (idx == currentPageIndex)
-        let isDropTarget = (dropTargetPageIndex == idx)
-        return VStack(spacing: 4) {
-            HStack {
-                if isSelectingPages {
-                    Image(systemName: pageSelection.contains(idx)
-                        ? "checkmark.circle.fill" : "circle")
-                        .font(.system(size: 14))
-                        .foregroundColor(pageSelection.contains(idx) ? .accentColor : .secondary)
-                }
-
-                Text("P.\(idx + 1)")
-                    .font(.system(size: 12 * sidebarScale))
-                    .fontWeight(isSelected ? .bold : .medium)
-                    .foregroundColor(isSelected ? .accentColor : .primary)
-
-                Spacer()
-
-                Menu {
-                    pageActionMenuItems(idx: idx)
-                } label: {
-                    Image(systemName: "ellipsis")
-                        .font(.caption)
-                        .padding(4)
-                        .foregroundColor(.secondary)
-                }
-                .buttonStyle(.plain)
-            }
-            .padding(.horizontal, 6)
-
-            // 縮圖預覽卡片
-            Button {
-                // 多選模式下，點縮圖是「勾選／取消」而不是跳頁 ——
-                // 要勾選卻跳走一頁，等於每勾一次就換一次畫面。
-                if isSelectingPages {
-                    if pageSelection.contains(idx) {
-                        pageSelection.remove(idx)
-                    } else {
-                        pageSelection.insert(idx)
-                    }
-                    return
-                }
-                if currentPageIndex != idx {
-                    saveCurrentPageDrawing()
-                    currentPageIndex = idx
-                    loadCurrentPage()
-                } else if pageDisplayMode == .continuous {
-                    // 焦點頁本來就是這一頁（它可能只露出一角），點縮圖也要把它捲到最上面。
-                    continuousScrollRequest += 1
-                }
-            } label: {
-                // 縮圖用畫布的實際寬度算繪，並讓卡片維持同樣的長寬比 ——
-                // 舊版固定 800 寬、卡片固定 130 高，一張 800x1800 的頁面
-                // scaledToFit 之後只剩 50pt 寬，物件小到看不出是什麼。
-                let pageDrawing = drawingForPage(idx)
-                let _ = thumbnailRevision  // 專業筆畫變動時讓這張縮圖重算
-                let img = PageThumbnailRenderer.render(
-                    notebook: notebook,
-                    pageIndex: idx,
-                    drawing: pageDrawing,
-                    store: store,
-                    canvasWidth: canvasContentWidth,
-                    deferRecomputation: lasso.isDraggingSelection || !lasso.path.isEmpty || CanvasTouchState.isCanvasNavigating
-                )
-                let pageRatio = PageGeometry.width / max(1, PageGeometry.height)
-                Image(uiImage: img)
-                    .resizable()
-                    .aspectRatio(pageRatio, contentMode: .fit)
-                    .frame(maxWidth: .infinity)
-                    .clipShape(RoundedRectangle(cornerRadius: 6))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 6)
-                            .stroke(isSelected ? Color.accentColor : Color.secondary.opacity(0.2), lineWidth: isSelected ? 2.5 : 1)
-                    )
-                    .shadow(color: Color.black.opacity(isSelected ? 0.15 : 0.04), radius: isSelected ? 4 : 2, y: 1)
-            }
-            .buttonStyle(.plain)
-            // 筆跡不變式矩陣（InkInvariantMatrix）靠它點縮圖換頁。
-            .accessibilityIdentifier("sidebar.page.\(idx)")
-            .frame(width: effectiveThumbnailWidth)
-            .frame(maxWidth: .infinity, alignment: .center)
-        }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 6)
-        .background(isSelected ? Color.accentColor.opacity(0.08) : Color.clear)
-        .cornerRadius(8)
-        // 拖曳中的落點指示。沒有它，拖到一半完全看不出會插在哪裡。
-        .overlay(alignment: .top) {
-            if isDropTarget {
-                Capsule()
-                    .fill(Color.accentColor)
-                    .frame(height: 3)
-                    .padding(.horizontal, 8)
-            }
-        }
-        // 右鍵（Mac 與觸控板）、長按（手指與觸控筆）都會叫出同一份選單。
-        //
-        // 原本這些操作只藏在卡片右上角那顆 `...` 裡 —— 那顆按鈕在縮圖縮小時
-        // 只有十幾點寬，而且它看起來像裝飾。真正會被嘗試的手勢是長按與右鍵。
-        .contextMenu {
-            pageActionMenuItems(idx: idx)
-        }
-        .draggable(PageDragPayload(index: idx)) {
-            // 拖曳時跟著手指走的東西。
-            Label("P.\(idx + 1)", systemImage: "doc.on.doc")
-                .font(.caption)
-                .padding(8)
-                .background(Color(uiColor: .secondarySystemGroupedBackground))
-                .cornerRadius(8)
-        }
-        .dropDestination(for: PageDragPayload.self) { items, _ in
-            dropTargetPageIndex = nil
-            guard let from = items.first?.index else { return false }
-            return reorderPage(from: from, to: idx)
-        } isTargeted: { hovering in
-            dropTargetPageIndex = hovering ? idx : (dropTargetPageIndex == idx ? nil : dropTargetPageIndex)
-        }
-    }
-
-    /// 一頁能做的事。右上角的選單與右鍵快顯共用同一份 ——
-    /// 各寫一份的結果是其中一邊少了一項，而使用者會以為那一項不存在。
-    @ViewBuilder
-    private func pageActionMenuItems(idx: Int) -> some View {
-        Button {
-            insertPageAfter(idx)
-        } label: {
-            Label(localizationManager.localized("insert_page_after"), systemImage: "plus.square")
-        }
-
-        // 插入**別種格式**的一頁。
-        //
-        // # 為什麼需要這個
-        //
-        // 樣板原本是「開筆記本時選一次，整本就定了」。而一本會議紀錄的
-        // 第一頁想用四象限、後面幾頁想用橫線 —— 那件事以前做不到，
-        // 使用者只能為了一頁不同的格式另外開一本筆記。
-        Menu {
-            ForEach(Array(paperThemes().enumerated()), id: \.offset) { _, theme in
-                Menu {
-                    ForEach(paperTemplatesForTheme(theme: theme), id: \.id) { paper in
-                        Button {
-                            insertPageAfter(idx, paperId: paper.id)
-                        } label: {
-                            Label(
-                                localizationManager.localized(paper.titleKey),
-                                systemImage: paper.iconApple)
-                        }
-                    }
-                } label: {
-                    Label(
-                        localizationManager.localized(paperThemeKey(theme: theme)),
-                        systemImage: paperThemeIcons(theme: theme).first ?? "doc.text")
-                }
-            }
-        } label: {
-            Label(
-                localizationManager.localized("insert_page_with_template"),
-                systemImage: "rectangle.stack.badge.plus")
-        }
-
-        Button {
-            duplicatePage(at: idx)
-        } label: {
-            Label(localizationManager.localized("duplicate_page"), systemImage: "plus.square.on.square")
-        }
-
-        ToolbarSeparator()
-
-        // 單頁的快路徑。多選那一排在下面的工具列裡，但「就這一頁」是最常見的
-        // 情況，不該為了它先進多選模式再勾一格。
-        Button {
-            pageSelection = [idx]
-            isSelectingPages = true
-            transferIsCopy = true
-        } label: {
-            Label(localizationManager.localized("copy_to_notebook"), systemImage: "doc.on.doc")
-        }
-
-        if notebook.pageCount > 1 {
-            Button {
-                pageSelection = [idx]
-                isSelectingPages = true
-                transferIsCopy = false
-            } label: {
-                Label(
-                    localizationManager.localized("move_to_notebook"),
-                    systemImage: "arrow.right.doc.on.clipboard")
-            }
-        }
-
-        if notebook.pageCount > 1 {
-            ToolbarSeparator()
-
-            Button {
-                _ = reorderPage(from: idx, to: idx - 1)
-            } label: {
-                Label(localizationManager.localized("move_page_up"), systemImage: "arrow.up")
-            }
-            .disabled(idx == 0)
-
-            Button {
-                _ = reorderPage(from: idx, to: idx + 1)
-            } label: {
-                Label(localizationManager.localized("move_page_down"), systemImage: "arrow.down")
-            }
-            .disabled(idx >= notebook.pageCount - 1)
-
-            Button {
-                _ = reorderPage(from: idx, to: 0)
-            } label: {
-                Label(localizationManager.localized("move_page_to_top"), systemImage: "arrow.up.to.line")
-            }
-            .disabled(idx == 0)
-
-            Button {
-                _ = reorderPage(from: idx, to: notebook.pageCount - 1)
-            } label: {
-                Label(localizationManager.localized("move_page_to_bottom"), systemImage: "arrow.down.to.line")
-            }
-            .disabled(idx >= notebook.pageCount - 1)
-
-            ToolbarSeparator()
-            Button(role: .destructive) {
-                presentFromMenu {
-                    pageToDeleteIndex = idx
-                    showDeletePageAlert = true
-                }
-            } label: {
-                Label(localizationManager.localized("delete_page"), systemImage: "trash")
-            }
-        }
-    }
-
-    /// 側欄底部：統計與縮圖大小。
-    ///
-    /// 縮圖大小放在這裡而不是標題列：標題列已經有三顆按鈕，再擠一顆會讓
-    /// 每一顆都變小。而調整大小是「看一眼、調一次」的操作，不需要在最上面。
-    private var pagesStructureFooter: some View {
-        HStack(spacing: 8) {
-            Text("\(localizationManager.localized("all_pages")): \(notebook.pageCount)")
-                .font(.system(size: 11 * sidebarScale))
-                .foregroundColor(.secondary)
-
-            Spacer(minLength: 4)
-
-            Button {
-                pageThumbnailWidth = max(120, pageThumbnailWidth - 40)
-            } label: {
-                Image(systemName: "minus.magnifyingglass")
-                    .font(.system(size: 13))
-                    .frame(width: 26, height: 26)
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .disabled(pageThumbnailWidth <= 120)
-            .accessibilityLabel(localizationManager.localized("thumbnail_smaller"))
-            .help(localizationManager.localized("thumbnail_smaller"))
-            .accessibilityIdentifier("editor.sidebar.thumb_smaller")
-
-            Text("\(Int(effectiveThumbnailWidth))")
-                .font(.system(size: 10))
-                .monospacedDigit()
-                .foregroundColor(.secondary)
-
-            Button {
-                pageThumbnailWidth = min(480, pageThumbnailWidth + 40)
-                // 放大到比側欄還寬時，把側欄一起拉開。
-                //
-                // 不這樣做的話「＋」在到達側欄寬度之後就沒有反應了 ——
-                // 而使用者按它的理由正是「我要看得更清楚」。真正的上限由
-                // 核心夾（畫布至少要留 480），這裡只是提出要求。
-                if pageThumbnailWidth + 32 > storedSidebarWidth {
-                    withAnimation(.easeInOut(duration: 0.18)) {
-                        storedSidebarWidth = pageThumbnailWidth + 32
-                    }
-                }
-            } label: {
-                Image(systemName: "plus.magnifyingglass")
-                    .font(.system(size: 13))
-                    .frame(width: 26, height: 26)
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .disabled(pageThumbnailWidth >= 480)
-            .accessibilityLabel(localizationManager.localized("thumbnail_larger"))
-            .help(localizationManager.localized("thumbnail_larger"))
-            .accessibilityIdentifier("editor.sidebar.thumb_larger")
-        }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 6)
-        .background(Color(uiColor: .secondarySystemGroupedBackground))
-    }
-
-    /// 把一頁搬到另一個位置。
-    ///
-    /// 回傳值是「有沒有真的搬」—— 拖到自己身上、拖到範圍外都回 false，
-    /// 呼叫端不必各自再判斷一次。
-    @discardableResult
-    private func reorderPage(from: Int, to: Int) -> Bool {
-        let total = notebook.pageCount
-        guard pageMoveIsValid(count: UInt32(max(0, total)),
-                              from: UInt32(max(0, from)),
-                              to: UInt32(max(0, min(to, max(0, total - 1)))))
-        else { return false }
-        let target = min(max(0, to), total - 1)
-
-        // 目前這一頁的筆跡還在記憶體裡，先存 —— 不存的話搬動會去讀磁碟上的舊版本。
-        //
-        // **存檔在連續模式是非同步的**（背景序列佇列寫 `.drawing`）。原本存完就馬上搬：
-        // 搬動讀到的是還沒寫好的舊檔，之後佇列再把這一頁寫回**搬動前的頁碼** ——
-        // 結果是字跡跑到隔壁頁、別的東西留在原地，空白頁看起來像沒搬。
-        // 所以排在佇列後面，等前面的寫入都落盤再搬。
-        changePageStructure(pageMap: { page in
-            Int(pageIndexAfterMove(index: UInt32(max(0, page)), from: UInt32(from), to: UInt32(target)))
-        }) {
-            // 等待期間頁數可能已經變了（別台同步、協同）—— 重新檢查一次。
-            guard pageMoveIsValid(count: UInt32(max(0, notebook.pageCount)),
-                                  from: UInt32(max(0, from)),
-                                  to: UInt32(max(0, target)))
-            else { return nil }
-            let landed = store.movePage(notebookId: notebook.id, from: from, to: target)
-            // 游標跟著走：搬的如果是目前這一頁，人應該還停在同一頁的內容上；
-            // 搬的是別頁時，目前這一頁的頁碼可能被推移了。
-            if currentPageIndex == from { return landed }
-            return Int(pageIndexAfterMove(index: UInt32(max(0, currentPageIndex)),
-                                          from: UInt32(from), to: UInt32(target)))
-        }
-        return true
-    }
-
-    /// 頁面結構變動（新增、插入、複製、刪除、搬動）的共用流程。
-    ///
-    /// - `pageMap`：舊頁碼 → 新頁碼；`nil` 表示那一頁被刪掉了。整個不給的話照頁面 id 對
-    ///   （協同、匯入這種一次做好幾步的）；這本沒有頁面 id 時，以頁碼為鍵的暫存直接作廢。
-    /// - `change`：真正改 store 的那一步，回傳改完之後要停在哪一頁；回 `nil` 表示不改了。
-    ///
-    /// # 為什麼要等背景佇列
-    ///
-    /// 存檔在連續模式（單頁模式的核心套件增量也是）是排進背景序列佇列寫 `.drawing` 的。
-    /// 原本存完就馬上改頁：store 平移頁面時讀到的是還沒寫好的舊檔，之後佇列再把那一頁寫回
-    /// **變動前的頁碼** —— 字跡跑到隔壁頁、別的東西留在原地，空白頁看起來像沒搬、
-    /// 刪掉一頁之後剛寫的字出現在下一頁。所以排在佇列後面，等前面的寫入都落盤再改。
-    ///
-    /// # 為什麼要重新對齊編輯器的暫存
-    ///
-    /// 待寫的筆跡、套件基準都以頁碼為鍵；留著舊頁碼的話，下一次存檔會把這一頁的筆跡寫到別頁，
-    /// 或拿別頁的內容當「套件裡這一頁原本的樣子」算增量（整頁被當成擦掉）。
-    /// 連續模式每一頁的畫布各自記著載入時的筆跡，也要重載 —— 不然下一筆落下去又把舊內容存回來。
-    private func changePageStructure(pageMap explicitMap: ((Int) -> Int?)? = nil, _ change: @escaping () -> Int?) {
-        saveCurrentPageDrawing()
-        afterCoreInkWrites {
-            // 等待期間又落了筆（連續模式各頁的畫布）：先同步寫下去，store 平移時才讀得到。
-            let stillPending = pendingCoreInk
-            for (page, drawing) in stillPending {
-                store.saveDrawing(notebookId: notebook.id, pageIndex: page, drawing: drawing)
-            }
-            // 第一次調整頁面結構：先把每一頁的初始狀態記下來（之後頁碼就對不上了），
-            // 並開始追蹤每一頁原本的頁碼，「還原到初始狀態」才排得回去。
-            if pageOrigins == nil, let snapshot = initialNotebookSnapshot {
-                for page in 0..<min(notebook.pageCount, snapshot.pageCount) where initialPageDrawings[page] == nil {
-                    captureInitialPageState(
-                        page: page, drawing: store.loadDrawing(notebookId: notebook.id, pageIndex: page))
-                }
-                pageOrigins = (0..<notebook.pageCount).map { $0 < snapshot.pageCount ? $0 : nil }
-            }
-            let idsBefore = notebook.pageIds
-            let countBefore = notebook.pageCount
-            guard let landing = change() else { return }
-            let idsAfter = store.notebooks.first(where: { $0.id == notebook.id })?.pageIds
-            let pageMap: (Int) -> Int? = explicitMap ?? { page in
-                guard let before = idsBefore, page < before.count, let after = idsAfter else { return nil }
-                return after.firstIndex(of: before[page])
-            }
-
-            func remapped<V>(_ map: [Int: V]) -> [Int: V] {
-                var out: [Int: V] = [:]
-                for (page, value) in map { if let moved = pageMap(page) { out[moved] = value } }
-                return out
-            }
-            pendingCoreInk = remapped(stillPending)
-            coreInkBaselines = remapped(coreInkBaselines)
-            continuousCanvases.invalidateCachedDrawings()
-            lastPersistedInk = nil
-            if let origins = pageOrigins {
-                let countAfter = store.notebooks.first(where: { $0.id == notebook.id })?.pageCount ?? countBefore
-                var next = [Int?](repeating: nil, count: countAfter)
-                for page in 0..<countBefore {
-                    guard let moved = pageMap(page), moved < countAfter else { continue }
-                    next[moved] = page < origins.count ? origins[page] : nil
-                }
-                pageOrigins = next
-            }
-
-            if let updated = store.notebooks.first(where: { $0.id == notebook.id }) {
-                notebook = updated
-            }
-            currentPageIndex = min(max(0, landing), max(0, notebook.pageCount - 1))
-            // 頁面變了，舊的物件復原紀錄裡的頁次全部對不上 —— 作廢（見 CanvasObjectHistory）。
-            objectHistory.pageStructureChanged(notebook, manager: historyUndoManager)
-            loadCurrentPage()
-            // 專業筆畫層只在頁碼變了才重讀；頁碼沒變、內容換了的時候要叫它重讀。
-            (canvasView as? AdaptiveCanvasView)?.proLayer?.reload()
-            continuousReloadGeneration += 1
-            thumbnailRevision += 1
-            if pageDisplayMode == .continuous {
-                continuousProgrammaticScrollUntil = Date().addingTimeInterval(1.0)
-                continuousScrollRequest += 1
-            }
-        }
-    }
-
-    /// 側欄目前的實際寬度。與版面那一層畫出來的是同一個算式。
-    private var currentSidebarWidth: CGFloat {
-        resolvedSidebarWidth(total: editorAvailableWidth)
-    }
-
-    /// 側欄內字級的倍率。規則在核心（`sidebarContentScale`），
-    /// 因為「側欄變寬字要不要跟著大、大到哪裡停」兩個平台是同一個答案。
-    private var sidebarScale: CGFloat {
-        CGFloat(sidebarContentScale(width: Float(currentSidebarWidth)))
-    }
-
-    /// 縮圖實際會畫多寬：使用者要的寬度，被側欄目前的內寬夾住。
-    ///
-    /// 夾住而不是溢出：溢出的縮圖會被裁掉右半邊，而使用者是為了「看清楚
-    /// 這一頁」才把它放大的，看到一半的頁面比小張還糟。
-    private var effectiveThumbnailWidth: CGFloat {
-        min(CGFloat(pageThumbnailWidth), max(80, currentSidebarWidth - 32))
-    }
-
-    // MARK: - 資料夾階層結構目錄
-    /// 型別邊界：SwiftUI 會把整棵子樹的型別編進 body 的 mangled 名稱，
-    /// 名稱一長，裝置端（主執行緒只有 1MB 堆疊）解析時就會遞迴爆堆疊。
-    private var foldersStructureView: AnyView { AnyView(foldersStructureViewContent) }
-
-    private var foldersStructureViewContent: some View {
-        VStack(spacing: 0) {
-            // 最上層根資料夾標題（可自訂與重命名）
-            HStack(spacing: 8) {
-                Image(systemName: "tray.2.fill")
-                    .font(.system(size: 15))
-                    .foregroundColor(.accentColor)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(store.displayRootFolderName)
-                        .font(.subheadline)
-                        .fontWeight(.bold)
-                        .foregroundColor(.primary)
-                        .lineLimit(1)
-                    Text(localizationManager.localized("root_folder"))
-                        .font(.system(size: 10))
-                        .foregroundColor(.secondary)
-                }
-                Spacer()
-                Button {
-                    rootFolderRenameText = store.displayRootFolderName
-                    showRenameRootFolderAlert = true
-                } label: {
-                    Image(systemName: "pencil.circle.fill")
-                        .font(.system(size: 17))
-                        .foregroundColor(.secondary)
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel(localizationManager.localized("edit_root_folder"))
-                .help(localizationManager.localized("edit_root_folder"))
-            }
-            .padding(8)
-            .background(
-                isRootDropTargeted
-                    ? Color.accentColor.opacity(0.22)
-                    : Color(uiColor: .tertiarySystemGroupedBackground)
-            )
-            .cornerRadius(8)
-            .overlay(
-                RoundedRectangle(cornerRadius: 8)
-                    .stroke(Color.accentColor, lineWidth: isRootDropTargeted ? 2 : 0)
-            )
-            .padding(.horizontal, 10)
-            .padding(.top, 8)
-            // 把筆記拖到這裡就是「移出資料夾」。
-            //
-            // # 為什麼要多這個落點
-            //
-            // 原本唯一能移出去的地方是下面「未分類檔案」那一段的**標題列**，
-            // 而那一段在沒有未分類筆記時整段不存在 —— 也就是說，把最後一本
-            // 筆記歸檔之後，就再也沒有任何地方可以把它拖回來了。
-            // 使用者看到的是「拖得進去，拖不出來」。
-            //
-            // 根目錄這一列一直都在，而且它在最上面：往上拖是「拿出來」的
-            // 直覺方向。
-            .dropDestination(for: String.self) { items, _ in
-                guard let noteId = items.first else { return false }
-                store.moveNotebook(id: noteId, toFolderId: nil)
-                return true
-            } isTargeted: { isRootDropTargeted = $0 }
-
-            // 「新增子資料夾」已移除：側欄標題列右上角那顆 folder.badge.plus
-            // 做的是同一件事。同一個動作給兩個入口，只是讓側欄變窄、讓使用者
-            // 多想一秒「這兩個一樣嗎」。
-
-            Divider()
-
-            ScrollView {
-                LazyVStack(alignment: .leading, spacing: 4) {
-                    // 最上層子資料夾
-                    ForEach(store.folders.filter { $0.parentId == nil }) { folder in
-                        folderRowView(folder: folder, level: 0)
-                    }
-
-                    // 最上層未分類筆記。
-                    //
-                    // **這一段就算是空的也要畫出來。** 它是拖曳「移出資料夾」的
-                    // 落點，而原本的寫法是 `if !rootNotes.isEmpty` —— 於是
-                    // 把所有筆記都歸檔之後，落點跟著消失，使用者再也拖不出來。
-                    // 空的時候顯示一句提示，順便告訴他這裡可以放東西。
-                    let rootNotes = store.notebooks(in: nil)
-                    Group {
-                        VStack(alignment: .leading, spacing: 3) {
-                            HStack {
-                                Image(systemName: "tray.fill")
-                                    .font(.caption2)
-                                    .foregroundColor(.secondary)
-                                Text(localizationManager.localized("unfiled_notes"))
-                                    .font(.caption)
-                                    .fontWeight(.bold)
-                                    .foregroundColor(.secondary)
-                                Spacer()
-                                Text("\(rootNotes.count)")
-                                    .font(.caption2)
-                                    .foregroundColor(.secondary)
-                                    .padding(.horizontal, 6)
-                                    .padding(.vertical, 1)
-                                    .background(Color(uiColor: .tertiarySystemGroupedBackground))
-                                    .clipShape(Capsule())
-                            }
-                            .padding(.horizontal, 10)
-                            .padding(.top, 8)
-                            .padding(.vertical, 4)
-
-                            if rootNotes.isEmpty {
-                                Text(localizationManager.localized("drop_here_to_unfile"))
-                                    .font(.system(size: 10 * sidebarScale))
-                                    .foregroundColor(.secondary)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                    .padding(.horizontal, 14)
-                                    .padding(.vertical, 10)
-                                    .background(
-                                        RoundedRectangle(cornerRadius: 6)
-                                            .stroke(Color.secondary.opacity(0.3),
-                                                    style: StrokeStyle(lineWidth: 1, dash: [4]))
-                                    )
-                                    .padding(.horizontal, 10)
-                            } else {
-                                ForEach(rootNotes) { note in
-                                    notebookItemRow(note: note, indent: 8)
-                                }
-                            }
-                        }
-                        // 落點是**整段**，不是那一條標題列。
-                        //
-                        // 原本掛在標題列上，那是一條約 26pt 高的細長條 ——
-                        // 用手指拖著一本筆記去瞄準它，瞄不中的次數比瞄中的多，
-                        // 而瞄不中的表現就是「放開之後什麼也沒發生」。
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .contentShape(Rectangle())
-                        .background(isUnfiledDropTargeted ? Color.accentColor.opacity(0.18) : Color.clear)
-                        .cornerRadius(6)
-                        .dropDestination(for: String.self) { items, _ in
-                            guard let noteId = items.first else { return false }
-                            store.moveNotebook(id: noteId, toFolderId: nil)
-                            return true
-                        } isTargeted: { isUnfiledDropTargeted = $0 }
-                    }
-                }
-                .padding(.vertical, 6)
-            }
-
-            Divider()
-
-            // 目錄統計（工作項 S-62）。
-            //
-            // 原本是「Folders: 0」與「All Files: 2」分列左右兩端 ——
-            // `標籤: 數字` 是程式在印偵錯訊息的格式，不是給人看的句子。
-            // 改成一句自然語言，並靠左排（貼在兩端會讓人以為是兩個欄位）。
-            Text(
-                String(
-                    format: localizationManager.localized("structure_summary"),
-                    String(store.folders.count), String(store.visibleNotebooks.count))
-            )
-            .font(DS.Font.caption)
-            .foregroundStyle(DS.Color.tertiaryText)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, DS.Space.s)
-            .padding(.vertical, DS.Space.xs)
-        }
-    }
-
-    // 單一資料夾列視圖（支援遞迴子資料夾與展開）
-    private func folderRowView(folder: FolderItem, level: Int) -> AnyView {
-        let isExpanded = expandedFolderIds.contains(folder.id)
-        let subfolders = store.subfolders(of: folder.id)
-        let folderNotes = store.notebooks(in: folder.id)
-
-        return AnyView(
-            VStack(alignment: .leading, spacing: 2) {
-                HStack(spacing: 4) {
-                    // 展開箭頭
-                    Button {
-                        withAnimation(.easeInOut(duration: 0.2)) {
-                            if isExpanded {
-                                expandedFolderIds.remove(folder.id)
-                            } else {
-                                expandedFolderIds.insert(folder.id)
-                            }
-                        }
-                    } label: {
-                        Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
-                            .font(.system(size: 11, weight: .bold))
-                            .foregroundColor(.secondary)
-                            .frame(width: 16, height: 16)
-                    }
-                    .buttonStyle(.plain)
-
-                    // 資料夾圖示與名稱
-                    Image(systemName: isExpanded ? "folder.fill" : "folder")
-                        .foregroundColor(.accentColor)
-                        .font(.system(size: 13))
-
-                    Text(folder.displayName)
-                        .font(.caption)
-                        .fontWeight(.medium)
-                        .lineLimit(1)
-
-                    Spacer()
-
-                    // 筆記件數徽章
-                    Text("\(folderNotes.count)")
-                        .font(.system(size: 10))
-                        .foregroundColor(.secondary)
-                        .padding(.horizontal, 5)
-                        .padding(.vertical, 1)
-                        .background(Color(uiColor: .tertiarySystemGroupedBackground))
-                        .clipShape(Capsule())
-
-                    // 功能選單
-                    Menu {
-                        Button {
-                            presentFromMenu {
-                                newFolderParentId = folder.id
-                                newFolderNameText = ""
-                                showNewFolderAlert = true
-                            }
-                        } label: {
-                            Label(localizationManager.localized("new_subfolder"), systemImage: "folder.badge.plus")
-                        }
-
-                        Button {
-                            let created = store.createNotebook(
-                                title: localizationManager.localized("new_notebook"),
-                                template: notebook.template,
-                                folderId: folder.id
-                            )
-                            switchToNotebook(created)
-                        } label: {
-                            Label(localizationManager.localized("add_note_to_folder"), systemImage: "plus.square")
-                        }
-
-                        Button {
-                            presentFromMenu {
-                                folderRenameText = folder.displayName
-                                folderToRename = folder
-                            }
-                        } label: {
-                            Label(localizationManager.localized("rename_folder"), systemImage: "pencil")
-                        }
-
-                        ToolbarSeparator()
-
-                        Button(role: .destructive) {
-                            store.deleteFolder(id: folder.id)
-                        } label: {
-                            Label(localizationManager.localized("delete_folder"), systemImage: "trash")
-                        }
-                    } label: {
-                        Image(systemName: "ellipsis")
-                            .font(.system(size: 11))
-                            .foregroundColor(.secondary)
-                            .padding(4)
-                    }
-                    .buttonStyle(.plain)
-                }
-                .padding(.leading, CGFloat(level * 14 + 6))
-                .padding(.trailing, 8)
-                .padding(.vertical, 4)
-                .background(
-                    (dropTargetFolderId == folder.id ? Color.accentColor.opacity(0.22)
-                                                     : Color(uiColor: .tertiarySystemGroupedBackground).opacity(0.5))
-                )
-                .cornerRadius(6)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 6)
-                        .stroke(Color.accentColor, lineWidth: dropTargetFolderId == folder.id ? 2 : 0)
-                )
-                // 把筆記拖到資料夾上即完成分類
-                .dropDestination(for: String.self) { items, _ in
-                    guard let noteId = items.first else { return false }
-                    store.moveNotebook(id: noteId, toFolderId: folder.id)
-                    expandedFolderIds.insert(folder.id)
-                    return true
-                } isTargeted: { hovering in
-                    dropTargetFolderId = hovering ? folder.id : (dropTargetFolderId == folder.id ? nil : dropTargetFolderId)
-                }
-
-                // 若展開，渲染子資料夾與內部筆記檔案
-                if isExpanded {
-                    // 子資料夾
-                    ForEach(subfolders) { sub in
-                        folderRowView(folder: sub, level: level + 1)
-                    }
-
-                    // 該資料夾所屬筆記檔案
-                    ForEach(folderNotes) { note in
-                        notebookItemRow(note: note, indent: CGFloat((level + 1) * 14 + 6))
-                    }
-                }
-            }
-            .padding(.horizontal, 6)
-        )
-    }
-
-    // 單一筆記檔案列視圖（支援快速點選切換編輯）
-    @ViewBuilder
-    private func notebookItemRow(note: NotebookDocument, indent: CGFloat) -> some View {
-        let isCurrent = (note.id == notebook.id)
-        HStack(spacing: 6) {
-            Image(systemName: isCurrent ? "doc.fill" : "doc.plaintext")
-                .foregroundColor(isCurrent ? .accentColor : .secondary)
-                .font(.system(size: 12))
-
-            VStack(alignment: .leading, spacing: 1) {
-                Text(note.displayTitle())
-                    .font(.caption)
-                    .fontWeight(isCurrent ? .bold : .regular)
-                    .foregroundColor(isCurrent ? .accentColor : .primary)
-                    .lineLimit(1)
-                Text("\(note.pageCount) \(localizationManager.localized("pages_count_suffix"))")
-                    .font(.system(size: 9))
-                    .foregroundColor(.secondary)
-            }
-
-            Spacer()
-
-            if isCurrent {
-                Circle()
-                    .fill(Color.accentColor)
-                    .frame(width: 6, height: 6)
-            }
-
-            Menu {
-                if note.folderId != nil {
-                    Button {
-                        store.moveNotebook(id: note.id, toFolderId: nil)
-                    } label: {
-                        Label(localizationManager.localized("move_out_of_folder"), systemImage: "arrow.up.left.square")
-                    }
-                }
-
-                Button {
-                    notebookToMoveId = note.id
-                    showMoveNotebookSheet = true
-                } label: {
-                    Label(localizationManager.localized("move_to_folder"), systemImage: "folder")
-                }
-
-                Button {
-                    renameText = note.title
-                    showRenameAlert = true
-                } label: {
-                    Label(localizationManager.localized("rename_note"), systemImage: "pencil")
-                }
-
-                ToolbarSeparator()
-
-                Button(role: .destructive) {
-                    store.deleteNotebook(id: note.id)
-                    if note.id == notebook.id {
-                        if let first = store.notebooks.first {
-                            switchToNotebook(first)
-                        } else {
-                            let created = store.createNotebook(title: localizationManager.localized("untitled_note"), template: .blank)
-                            switchToNotebook(created)
-                        }
-                    }
-                } label: {
-                    Label(localizationManager.localized("delete"), systemImage: "trash")
-                }
-            } label: {
-                Image(systemName: "ellipsis")
-                    .font(.system(size: 10))
-                    .foregroundColor(.secondary)
-                    .padding(3)
-            }
-            .buttonStyle(.plain)
-        }
-        .padding(.leading, indent)
-        .padding(.trailing, 8)
-        .padding(.vertical, 4)
-        .background(isCurrent ? Color.accentColor.opacity(0.12) : Color.clear)
-        .cornerRadius(6)
-        .contentShape(Rectangle())
-        .onTapGesture {
-            switchToNotebook(note)
-        }
-        // 落到另一本筆記上 = 落到那本筆記所在的資料夾。
-        //
-        // 使用者要把 A 搬到「範例」裡時，最自然的動作是把它拖到「範例」
-        // 底下那幾本筆記中間 —— 而那一片區域原本完全不接受落下，
-        // 只有資料夾那一列（一條細長條）才算數。
-        .dropDestination(for: String.self) { items, _ in
-            guard let draggedId = items.first, draggedId != note.id else { return false }
-            store.moveNotebook(id: draggedId, toFolderId: note.folderId)
-            return true
-        } isTargeted: { hovering in
-            let key = note.folderId ?? unfiledDropKey
-            if hovering {
-                dropTargetFolderId = key
-            } else if dropTargetFolderId == key {
-                dropTargetFolderId = nil
-            }
-        }
-        // 右鍵或長按。拖曳失敗時要有一條不靠瞄準的路 ——
-        // 而「移出資料夾」原本連選單裡都沒有：`移至資料夾` 那張表只列得出
-        // 資料夾，列不出「不在任何資料夾裡」。
-        .contextMenu {
-            if note.folderId != nil {
-                Button {
-                    store.moveNotebook(id: note.id, toFolderId: nil)
-                } label: {
-                    Label(localizationManager.localized("move_out_of_folder"), systemImage: "arrow.up.left.square")
-                }
-            }
-            Button {
-                notebookToMoveId = note.id
-                showMoveNotebookSheet = true
-            } label: {
-                Label(localizationManager.localized("move_to_folder"), systemImage: "folder")
-            }
-            Button {
-                renameText = note.title
-                showRenameAlert = true
-            } label: {
-                Label(localizationManager.localized("rename_note"), systemImage: "pencil")
-            }
-        }
-        // 拖到資料夾列上即可分類；拖到根目錄或「未分類檔案」可移出資料夾
-        .draggable(note.id) {
-            HStack(spacing: 6) {
-                Image(systemName: "doc.fill")
-                Text(note.displayTitle()).lineLimit(1)
-            }
-            .font(.caption)
-            .padding(8)
-            .background(Color(uiColor: .secondarySystemGroupedBackground))
-            .cornerRadius(8)
-        }
     }
 
     // MARK: - 2-1. 🌟 Office Word / Google Docs 專屬打字排版工具列
@@ -8096,7 +6807,7 @@ public struct NotebookEditorView: View {
     // MARK: - 儲存、延伸與套索編輯核心
     /// 這一頁第一次載入時的狀態（只記一次）：筆畫、專業筆畫與已擦除名單。
     /// 第一次載入一定早於這頁的任何編輯，所以它就是「初始狀態」。
-    private func captureInitialPageState(page: Int, drawing: PKDrawing) {
+    func captureInitialPageState(page: Int, drawing: PKDrawing) {
         // 調整過頁面結構之後頁碼不再是原本的頁碼；所有頁的初始狀態在那之前已經整批記好了。
         guard pageOrigins == nil else { return }
         if initialPageDrawings[page] == nil { initialPageDrawings[page] = drawing }
@@ -8139,7 +6850,7 @@ public struct NotebookEditorView: View {
         pendingCoreInk.removeAll()
     }
 
-    private func loadCurrentPage() {
+    func loadCurrentPage() {
         if let updated = store.notebooks.first(where: { $0.id == notebook.id }) {
             self.notebook = updated
         }
@@ -8719,7 +7430,7 @@ public struct NotebookEditorView: View {
     }
 
     /// 全域復原用的 manager：畫布的（與 PencilKit、專業筆畫共用）。
-    private var historyUndoManager: UndoManager {
+    var historyUndoManager: UndoManager {
         canvasView?.undoManager ?? fallbackUndoManager
     }
 
@@ -8996,7 +7707,7 @@ public struct NotebookEditorView: View {
     }
 
     /// 取得指定頁面的手寫筆跡（統一自 PageInkStore 讀取，單一真相）
-    private func drawingForPage(_ page: Int) -> PKDrawing {
+    func drawingForPage(_ page: Int) -> PKDrawing {
         let pid = (notebook.pageIds != nil && page < (notebook.pageIds?.count ?? 0)) ? notebook.pageIds?[page] : nil
         return activeInkStore.drawing(for: page, pageId: pid)
     }
@@ -9045,7 +7756,7 @@ public struct NotebookEditorView: View {
 
     /// 等背景佇列把已排進去的寫入做完，再在主執行緒上做 `work`。**不阻塞主執行緒。**
     /// 佇列是序列的，所以排在它後面就保證前面的寫入都完成了。
-    private func afterCoreInkWrites(_ work: @escaping @MainActor () -> Void) {
+    func afterCoreInkWrites(_ work: @escaping @MainActor () -> Void) {
         Self.coreInkQueue.async {
             Task { @MainActor in work() }
         }
@@ -9122,7 +7833,7 @@ public struct NotebookEditorView: View {
         }
     }
 
-    private func saveCurrentPageDrawing() {
+    func saveCurrentPageDrawing() {
         // 明確存檔就把待辦的去抖動取消掉 —— 留著的話 1.2 秒後會再寫一次
         // 一模一樣的內容。
         inkTouchWork?.cancel()
@@ -9966,7 +8677,7 @@ public struct NotebookEditorView: View {
         }
     }
 
-    private func addNewPage() {
+    func addNewPage() {
         let paperId = notebook.paperId(forPage: currentPageIndex)
         changePageStructure(pageMap: { $0 }) {
             store.addPage(notebookId: notebook.id, paperId: paperId)
@@ -9977,7 +8688,7 @@ public struct NotebookEditorView: View {
     ///
     /// `paperId` 為 nil 時沿用整本的樣板；指定時這一頁自己用那一種
     /// （見 `NotebookDocument.pagePaperIds`）。
-    private func insertPageAfter(_ index: Int, paperId: String? = nil) {
+    func insertPageAfter(_ index: Int, paperId: String? = nil) {
         let insertIndex = min(max(0, index + 1), max(1, notebook.pageCount))
         changePageStructure(pageMap: { $0 >= insertIndex ? $0 + 1 : $0 }) {
             store.insertPage(notebookId: notebook.id, afterIndex: index, paperId: paperId)
@@ -9987,13 +8698,13 @@ public struct NotebookEditorView: View {
         }
     }
 
-    private func duplicatePage(at index: Int) {
+    func duplicatePage(at index: Int) {
         changePageStructure(pageMap: { $0 > index ? $0 + 1 : $0 }) {
             store.duplicatePage(notebookId: notebook.id, pageIndex: index)
         }
     }
 
-    private func deletePage(at index: Int) {
+    func deletePage(at index: Int) {
         guard notebook.pageCount > 1 else { return }
         // 原本刪除前不存檔：目前這一頁剛寫的字還在記憶體裡，稍後的去抖動存檔把它寫到
         // 刪除前的頁碼 —— 也就是現在的下一頁。
@@ -10005,7 +8716,7 @@ public struct NotebookEditorView: View {
         }
     }
 
-    private func switchToNotebook(_ target: NotebookDocument) {
+    func switchToNotebook(_ target: NotebookDocument) {
         guard target.id != notebook.id else { return }
         // 由外層換掉 Binding 指向的索引；這裡自己寫會覆蓋掉目前這則筆記。
         requestLeave { onRequestSwitch?(target) }
@@ -10434,7 +9145,7 @@ public struct NotebookEditorView: View {
     }
 
     /// 在畫布上顯示一則提示，幾秒後自己淡掉。
-    private func showCanvasNotice(_ text: String) {
+    func showCanvasNotice(_ text: String) {
         canvasNoticeToken += 1
         let token = canvasNoticeToken
         withAnimation(.easeInOut(duration: 0.2)) { canvasNotice = text }

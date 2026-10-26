@@ -106,6 +106,7 @@
 		67CF9DE54436AC7DD3FF5065 /* NotebookMigration.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C19329463E6F6E313A0F1DB /* NotebookMigration.swift */; };
 		6849D8D81A0F512DCC4FC8E8 /* InsertToolsAudit.swift in Sources */ = {isa = PBXBuildFile; fileRef = 831C71226B45B48B268CE8F6 /* InsertToolsAudit.swift */; };
 		688302BABBE0B7B3219D48B6 /* PageInkStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B40097B06DD9682C368D48FA /* PageInkStore.swift */; };
+		68A27DB3A24C8DAA379E6E24 /* EditorSidebars.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92CB1D8025BADA92AE19BA59 /* EditorSidebars.swift */; };
 		68C1811CB88877353FF14D31 /* CStubs.c in Sources */ = {isa = PBXBuildFile; fileRef = 26F09C378F9F1B6835D9ECB2 /* CStubs.c */; };
 		6BDE3F2A5024AEB583155A74 /* DraftingToolsUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8017652429ACEAA19596C471 /* DraftingToolsUITests.swift */; };
 		6DED8BDB86F23CFA30A39F62 /* InkSyncLedger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97DB4F3259D65E723C51FD97 /* InkSyncLedger.swift */; };
@@ -469,6 +470,7 @@
 		8FEF2B249C62AD4AE2E3C246 /* AudioRecorderManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioRecorderManager.swift; sourceTree = "<group>"; };
 		900F0369B6CEBCB75A18CD4F /* StorageLocationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageLocationView.swift; sourceTree = "<group>"; };
 		91804A73FCFF6A2274703954 /* LocalizedMessages.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalizedMessages.swift; sourceTree = "<group>"; };
+		92CB1D8025BADA92AE19BA59 /* EditorSidebars.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditorSidebars.swift; sourceTree = "<group>"; };
 		94384F7616936803E2A4DAB3 /* ObjectLayerPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ObjectLayerPanel.swift; sourceTree = "<group>"; };
 		97DB4F3259D65E723C51FD97 /* InkSyncLedger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InkSyncLedger.swift; sourceTree = "<group>"; };
 		986CB61F2AC8670798186BC6 /* ZoomAndDocumentShareUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ZoomAndDocumentShareUITests.swift; sourceTree = "<group>"; };
@@ -810,6 +812,7 @@
 				5B73641F0EA64C1F1B559616 /* DriveHttpClient.swift */,
 				5A7C268EF0A001760D3A7C02 /* DynamicPortalIsland.swift */,
 				B4B474625AA69EB48CA86346 /* EditorAttachments.swift */,
+				92CB1D8025BADA92AE19BA59 /* EditorSidebars.swift */,
 				EA02348946BB281EFAFD082E /* EditorStateMachine.swift */,
 				305D7BB131613FCCC89BD3A4 /* EditorStickersAndTapes.swift */,
 				3887355C6A39B8DC62DC1F61 /* EditorToolType.swift */,
@@ -1221,6 +1224,7 @@
 				1DDFAAA370E83E55EEE5AF28 /* DriveHttpClient.swift in Sources */,
 				D6CF28F060E9D4456754E70D /* DynamicPortalIsland.swift in Sources */,
 				405CAD76A71000B19B3F16F5 /* EditorAttachments.swift in Sources */,
+				68A27DB3A24C8DAA379E6E24 /* EditorSidebars.swift in Sources */,
 				F2D819B6D4518C51C8235CCB /* EditorStateMachine.swift in Sources */,
 				D27392096B8FB503D74F8277 /* EditorStickersAndTapes.swift in Sources */,
 				700F255D03DEC90FA741E743 /* EditorToolType.swift in Sources */,
