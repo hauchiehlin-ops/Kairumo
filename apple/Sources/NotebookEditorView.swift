@@ -2506,6 +2506,17 @@ public struct NotebookEditorView: View {
     /// 連續模式「只重建物件層」的世代（刪除、調整物件圖層之後）。
     @State private var continuousObjectGeneration = 0
     @State private var pendingCoreInk: [Int: PKDrawing] = [:]
+    /// 筆跡單一擁有者（架構審視 P1）：以 pageId 識別，消除多份副本與空白覆蓋。
+    @State private var inkStore: PageInkStore? = nil
+    private var activeInkStore: PageInkStore {
+        if let inkStore, inkStore.notebookId == notebook.id {
+            return inkStore
+        }
+        let created = PageInkStore(notebookId: notebook.id, store: store)
+        created.primeAllPages(notebook: notebook)
+        inkStore = created
+        return created
+    }
     @State private var coreInkWork: DispatchWorkItem? = nil
     /// 這一批待寫筆畫最早的那一筆的時間。見 `scheduleCoreInkFlush` 的上限說明。
     @State private var coreInkFirstPendingAt: Date? = nil
@@ -3626,6 +3637,8 @@ public struct NotebookEditorView: View {
             Button(localizationManager.localized("cancel"), role: .cancel) {}
             Button(localizationManager.localized("clear_confirm"), role: .destructive) {
                 currentDrawing = PKDrawing()
+                let pid = (notebook.pageIds != nil && currentPageIndex < (notebook.pageIds?.count ?? 0)) ? notebook.pageIds?[currentPageIndex] : nil
+                activeInkStore.forceSetDrawing(currentDrawing, for: currentPageIndex, pageId: pid)
                 store.saveDrawing(notebookId: notebook.id, pageIndex: currentPageIndex, drawing: currentDrawing)
                 // 專業筆刷的筆畫另存，一起清掉。
                 ProInkStore.save([], in: store.drawingsDirectory, notebookId: notebook.id, page: currentPageIndex)
@@ -3838,7 +3851,8 @@ public struct NotebookEditorView: View {
                         continuousCanvases.invalidateCachedDrawings()
                         notebook = snapshot
                         restoreInitialPages()
-                        currentDrawing = initialPageDrawings[currentPageIndex] ?? store.loadDrawing(notebookId: notebook.id, pageIndex: currentPageIndex)
+                        let pid = (notebook.pageIds != nil && currentPageIndex < (notebook.pageIds?.count ?? 0)) ? notebook.pageIds?[currentPageIndex] : nil
+                        currentDrawing = activeInkStore.drawing(for: currentPageIndex, pageId: pid)
                         if let canvas = canvasView {
                             // 程式指派 drawing 會讓復原堆疊裡的項目全部失效：整個清掉，
                             // 免得按復原吃掉點擊、什麼都沒發生。
@@ -5800,7 +5814,10 @@ public struct NotebookEditorView: View {
                                     if !pendingCoreInk.isEmpty { scheduleCoreInkFlush() }
                                     return merged
                                 },
-                                initialDrawing: { page in pendingCoreInk[page] ?? store.loadDrawing(notebookId: notebook.id, pageIndex: page) },
+                                initialDrawing: { page in
+                                    let pid = (notebook.pageIds != nil && page < (notebook.pageIds?.count ?? 0)) ? notebook.pageIds?[page] : nil
+                                    return activeInkStore.drawing(for: page, pageId: pid)
+                                },
                                 notebook: $notebook,
                                 onNotebookChanged: {
                                     commitNotebook()
@@ -10505,11 +10522,15 @@ public struct NotebookEditorView: View {
         }
     }
 
-    /// 把所有看過的頁面還原成第一次載入時的樣子。
+    /// 把所有頁面還原成第一次載入時的樣子（架構審視 P1：由 PageInkStore 統一回復全本快照）。
     private func restoreInitialPages() {
         let dir = store.drawingsDirectory
         let baselineDir = store.syncBaselineDirectory
-        for (page, initial) in initialPageDrawings {
+        activeInkStore.revertAllPagesToInitialSnapshot(notebook: notebook)
+        let count = max(1, notebook.pageCount)
+        for page in 0..<count {
+            let pid = (notebook.pageIds != nil && page < (notebook.pageIds?.count ?? 0)) ? notebook.pageIds?[page] : nil
+            guard let initial = activeInkStore.initialSnapshot(for: page, pageId: pid) ?? initialPageDrawings[page] else { continue }
             // 這一頁現在的筆畫 → 被還原拿掉的要記進「已擦除」名單，不然同步會把雲端的舊檔帶回來。
             let now = store.loadDrawing(notebookId: notebook.id, pageIndex: page)
             let state = initialPageInk[page]
@@ -10536,8 +10557,8 @@ public struct NotebookEditorView: View {
         // 這一本用的是哪一種紙。畫布、分頁、縮圖與匯出都讀這個值 ——
         // 忘了設的話，換到另一本不同規格的筆記時會沿用上一本的尺寸。
         PageGeometry.use(format: notebook.pageFormatId)
-        let loaded = pendingCoreInk[currentPageIndex]
-            ?? store.loadDrawing(notebookId: notebook.id, pageIndex: currentPageIndex)
+        let pid = (notebook.pageIds != nil && currentPageIndex < (notebook.pageIds?.count ?? 0)) ? notebook.pageIds?[currentPageIndex] : nil
+        let loaded = activeInkStore.drawing(for: currentPageIndex, pageId: pid)
         if pendingCoreInk[currentPageIndex] == nil { inkDiskBaselines[currentPageIndex] = loaded }
         self.currentDrawing = loaded
         if pageDisplayMode == .single {
@@ -11385,41 +11406,18 @@ public struct NotebookEditorView: View {
         store.corePackagesDirectory.appending(path: "\(notebook.id.lowercased()).padnote")
     }
 
-    /// 取得指定頁面的手寫筆跡（優先取待存核心筆跡、當前單頁模式中正在編輯的筆跡、連續模式已載入畫布或記憶體快取、最後取磁碟存檔）
+    /// 取得指定頁面的手寫筆跡（統一自 PageInkStore 讀取，單一真相）
     private func drawingForPage(_ page: Int) -> PKDrawing {
-        if let pending = pendingCoreInk[page] {
-            return pending
-        }
-        if pageDisplayMode == .single && page == currentPageIndex {
-            return currentDrawing
-        }
-        if pageDisplayMode == .continuous,
-           let live = continuousCanvases[page]?.drawing,
-           !live.strokes.isEmpty {
-            return live
-        }
-        if let cached = continuousCanvases.cachedDrawing(forPage: page),
-           !cached.strokes.isEmpty {
-            return cached
-        }
-        let loaded = store.loadDrawing(notebookId: notebook.id, pageIndex: page)
-        if !loaded.strokes.isEmpty {
-            continuousCanvases.setCachedDrawing(loaded, forPage: page)
-            return loaded
-        }
-        if let live = continuousCanvases[page]?.drawing {
-            return live
-        }
-        if let cached = continuousCanvases.cachedDrawing(forPage: page) {
-            return cached
-        }
-        return loaded
+        let pid = (notebook.pageIds != nil && page < (notebook.pageIds?.count ?? 0)) ? notebook.pageIds?[page] : nil
+        return activeInkStore.drawing(for: page, pageId: pid)
     }
 
     private func recordDrawingEdit(page: Int, drawing: PKDrawing) {
         if page == currentPageIndex {
             currentDrawing = drawing
         }
+        let pid = (notebook.pageIds != nil && page < (notebook.pageIds?.count ?? 0)) ? notebook.pageIds?[page] : nil
+        activeInkStore.updateDrawing(drawing, for: page, pageId: pid)
         continuousCanvases.setCachedDrawing(drawing, forPage: page)
         pendingCoreInk[page] = drawing
         scheduleCoreInkFlush()
@@ -11564,6 +11562,8 @@ public struct NotebookEditorView: View {
         // 筆跡沒變就不重寫：模式切換、點物件前後都會呼叫這裡，而序列化＋寫檔＋推進核心是整頁的成本。
         let unchanged = lastPersistedInk.map { $0.page == currentPageIndex && $0.drawing == currentDrawing } ?? false
         if !unchanged {
+            let pid = (notebook.pageIds != nil && currentPageIndex < (notebook.pageIds?.count ?? 0)) ? notebook.pageIds?[currentPageIndex] : nil
+            activeInkStore.updateDrawing(currentDrawing, for: currentPageIndex, pageId: pid)
             // 透過 pendingCoreInk + flushPendingCoreInk 先更新記憶體快取並排入 coreInkQueue 背景寫檔，
             // 不在主執行緒重複執行同步 store.saveDrawing，消除切換「手繪／打字」模式時的卡頓。
             pendingCoreInk[currentPageIndex] = currentDrawing
