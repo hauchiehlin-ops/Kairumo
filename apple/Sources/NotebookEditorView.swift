@@ -53,9 +53,6 @@ public struct NotebookEditorView: View {
         PageDisplayMode(rawValue: pageDisplayModeRaw) ?? (Self.isTabletOrDesktopDevice ? .continuous : .single)
     }
     @State var currentDrawing: PKDrawing = PKDrawing()
-    /// 最近一次真的寫進磁碟的筆跡（頁次 + 內容）。切換模式時用來判斷「這一頁其實沒變」，
-    /// 不必每次都同步序列化整頁筆跡（筆跡多的頁面，那一下就是點物件時的卡頓）。
-    @State var lastPersistedInk: (page: Int, drawing: PKDrawing)? = nil
     /// 筆跡改動後「把這本筆記標記為剛改過」的去抖動計時器。
     ///
     /// 筆畫本身是**每次變動就落盤**的（見 `onDrawingChanged` 裡的
@@ -71,12 +68,6 @@ public struct NotebookEditorView: View {
     /// 為什麼要去抖動：`onDrawingChanged` 在**一筆畫的途中**就會被叫很多次，
     /// 每次都寫 `notebooks.json` 並觸發整棵畫面重算的話，寫字會頓。
     @State var inkTouchWork: DispatchWorkItem? = nil
-    /// 已經寫進核心 `.padnote` 的筆跡基準線，依頁次保存。
-    ///
-    /// `PKCanvasView` 在一筆畫尚未離筆時就會連續回報 drawing 變更。核心的 ink log
-    /// 是 append-only；若每次回報都 append，會把同一筆的半成品寫成好幾筆。
-    /// 因此畫布仍即時寫 `.drawing`，核心套件則停筆後用這個基準線只補新增筆畫。
-    @State var coreInkBaselines: [Int: PKDrawing] = [:]
     /// 每一頁「最後一次與磁碟一致」的筆跡（讀進來的、或寫出去的）。同步重讀時用它分辨
     /// 哪些筆畫是這台還沒寫出去的（見 `mergedWithDisk`）。放在參照型別裡：每一筆都會更新，
     /// 寫 `@State` 的話整個編輯器每一筆重算一次。
@@ -99,7 +90,6 @@ public struct NotebookEditorView: View {
     @State var continuousReloadGeneration = 0
     @State var thumbnailRevision = 0
     @State var continuousProgrammaticScrollUntil: Date = .distantPast
-    @State var pendingCoreInk: [Int: PKDrawing] = [:]
     /// 筆跡單一擁有者（架構審視 P1）：以 pageId 識別，消除多份副本與空白覆蓋。
     @State private var inkStore: PageInkStore? = nil
     var activeInkStore: PageInkStore {
@@ -218,7 +208,6 @@ public struct NotebookEditorView: View {
     @State var showSampleLeaveDialog = false
     /// 使用者選完之後要做的事（回首頁或切換到另一本）。
     @State var afterSampleLeave: (() -> Void)?
-    @State var initialPageDrawings: [Int: PKDrawing] = [:]
     /// 每一頁第一次載入時的專業筆畫（圖學筆畫、專業筆刷）與「已擦除」名單 ——
     /// 「恢復初始狀態」要連它們一起還原，不然圖學筆記本裡畫的線一條都不會少。
     @State var initialPageInk: [Int: InitialPageInk] = [:]
@@ -767,15 +756,14 @@ public struct NotebookEditorView: View {
             store.beginSampleSession(notebook.id)
             MainThreadStallMonitor.shared.breadcrumb("open notebook \(notebook.id.prefix(8))")
             FocusSyncController.shared.setFocus(notebook.id)
-            coreInkBaselines.removeAll()
-            pendingCoreInk.removeAll()
+            activeInkStore.clearAllCoreBaselines()
+            activeInkStore.clearAllPendingCoreFlush()
             continuousCanvases.invalidateCachedDrawings()
             coreInkWork?.cancel()
             coreInkWork = nil
             loadCurrentPage()
             sanitizeUnderInkObjects()
             initialNotebookSnapshot = notebook
-            initialPageDrawings.removeAll()
             initialPageInk.removeAll()
             pageOrigins = nil
             captureInitialPageState(page: 0, drawing: currentDrawing)
@@ -846,7 +834,7 @@ public struct NotebookEditorView: View {
                 finishCoreInkInBackground()
             } else if phase == .active {
                 // 從背景切回前景時，檢查同步是否已更新這本筆記
-                coreInkBaselines.removeAll()
+                activeInkStore.clearAllCoreBaselines()
                 loadCurrentPage()
                 PageThumbnailRenderer.invalidateAll()
             }
@@ -1305,7 +1293,7 @@ public struct NotebookEditorView: View {
     /// 下一輪同步再讀回來（字又出現），別台剛同步過來的筆畫反而被蓋掉。連續模式更糟：
     /// 每一頁的畫布整個重建，整片空白一下、寫到一半的那一筆直接不見。
     private func reloadAfterExternalChange() {
-        coreInkBaselines.removeAll()
+        activeInkStore.clearAllCoreBaselines()
         inkDiskBaselines.removeAll()
         continuousCanvases.invalidateCachedDrawings()
         if let updated = store.notebooks.first(where: { $0.id == notebook.id }) {
@@ -1313,9 +1301,9 @@ public struct NotebookEditorView: View {
         }
         PageGeometry.use(format: notebook.pageFormatId)
         // 還沒寫出去的頁：以磁碟（已含別台的內容）為底，補回這台寫的、拿掉這台擦的。
-        for (page, pending) in pendingCoreInk {
-            if pageDisplayMode == .single && page == currentPageIndex { continue }
-            _ = mergedWithDisk(page: page, local: pending, updateBaseline: false)
+        for item in activeInkStore.pendingCoreFlushJobs(notebook: notebook) {
+            if pageDisplayMode == .single && item.pageIndex == currentPageIndex { continue }
+            _ = mergedWithDisk(page: item.pageIndex, local: item.drawing, updateBaseline: false)
         }
         if pageDisplayMode == .single {
             // 畫布上的才是最新的 —— 但只在它顯示的**就是這一頁**時。剛換頁（新增頁、翻頁）那一瞬間
@@ -1330,7 +1318,7 @@ public struct NotebookEditorView: View {
                 canvas?.proLayer?.reload()
             }
         }
-        if !pendingCoreInk.isEmpty { scheduleCoreInkFlush() }
+        if activeInkStore.hasPendingCoreFlush { scheduleCoreInkFlush() }
         // 整份從套件重新讀進來（別台同步）：以新內容為復原基準，不登記成這台的一步；
         // 也不是這台的修改，不能當成協同修改送出去。
         objectHistory.reset(to: notebook)
@@ -1355,13 +1343,15 @@ public struct NotebookEditorView: View {
     func mergedWithDisk(page: Int, local: PKDrawing, updateBaseline: Bool) -> PKDrawing {
         let disk = store.loadDrawing(notebookId: notebook.id, pageIndex: page)
         let merged = InkMerge.merged(disk: disk, local: local, base: inkDiskBaselines[page])
+        let pid = (notebook.pageIds != nil && page < (notebook.pageIds?.count ?? 0)) ? notebook.pageIds?[page] : nil
         if updateBaseline { inkDiskBaselines[page] = disk }
         if merged != disk {
-            if updateBaseline || pendingCoreInk[page] != nil {
-                pendingCoreInk[page] = merged
+            if updateBaseline || activeInkStore.isPendingCoreFlush(for: page, pageId: pid) {
+                activeInkStore.updateDrawing(merged, for: page, pageId: pid)
+                activeInkStore.markPendingCoreFlush(for: page, pageId: pid)
             }
-        } else if pendingCoreInk[page] != nil {
-            pendingCoreInk[page] = nil
+        } else if activeInkStore.isPendingCoreFlush(for: page, pageId: pid) {
+            activeInkStore.clearPendingCoreFlush(for: page, pageId: pid)
         }
         return merged
     }
@@ -1388,7 +1378,7 @@ public struct NotebookEditorView: View {
                     // 把還原好的頁又蓋回編輯過的樣子。
                     coreInkWork?.cancel()
                     coreInkWork = nil
-                    pendingCoreInk.removeAll()
+                    activeInkStore.clearAllPendingCoreFlush()
                     afterCoreInkWrites { revertToInitialState() }
                 }
             } message: {
@@ -1421,7 +1411,7 @@ public struct NotebookEditorView: View {
                             objectHistory.pageStructureChanged(snapshot, manager: historyUndoManager)
                         }
                         currentPageIndex = min(currentPageIndex, max(0, snapshot.pageCount - 1))
-                        coreInkBaselines.removeAll()
+                        activeInkStore.clearAllCoreBaselines()
                         continuousCanvases.invalidateCachedDrawings()
                         notebook = snapshot
                         restoreInitialPages()

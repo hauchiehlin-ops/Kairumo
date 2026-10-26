@@ -782,7 +782,8 @@ extension NotebookEditorView {
                                     acceptImageDrop(providers, at: location, page: page)
                                 },
                                 onInitialLoaded: { page, loaded in
-                                    if pendingCoreInk[page] == nil { inkDiskBaselines[page] = loaded }
+                                    let pid = (notebook.pageIds != nil && page < (notebook.pageIds?.count ?? 0)) ? notebook.pageIds?[page] : nil
+                                    if !activeInkStore.isPendingCoreFlush(for: page, pageId: pid) { inkDiskBaselines[page] = loaded }
                                     captureInitialPageState(page: page, drawing: loaded)
                                 },
                                 reloadGeneration: continuousReloadGeneration,
@@ -790,7 +791,7 @@ extension NotebookEditorView {
                                 objectGeneration: continuousObjectGeneration,
                                 mergeReloaded: { page, live in
                                     let merged = mergedWithDisk(page: page, local: live, updateBaseline: true)
-                                    if !pendingCoreInk.isEmpty { scheduleCoreInkFlush() }
+                                    if activeInkStore.hasPendingCoreFlush { scheduleCoreInkFlush() }
                                     return merged
                                 },
                                 initialDrawing: { page in

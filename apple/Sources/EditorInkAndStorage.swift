@@ -17,7 +17,10 @@ extension NotebookEditorView {
     func captureInitialPageState(page: Int, drawing: PKDrawing) {
         // 調整過頁面結構之後頁碼不再是原本的頁碼；所有頁的初始狀態在那之前已經整批記好了。
         guard pageOrigins == nil else { return }
-        if initialPageDrawings[page] == nil { initialPageDrawings[page] = drawing }
+        let pid = (notebook.pageIds != nil && page < (notebook.pageIds?.count ?? 0)) ? notebook.pageIds?[page] : nil
+        if activeInkStore.initialSnapshot(for: page, pageId: pid) == nil {
+            activeInkStore.primeAllPages(notebook: notebook)
+        }
         if initialPageInk[page] == nil {
             let dir = store.drawingsDirectory
             initialPageInk[page] = InitialPageInk(
@@ -37,7 +40,7 @@ extension NotebookEditorView {
         let count = max(1, notebook.pageCount)
         for page in 0..<count {
             let pid = (notebook.pageIds != nil && page < (notebook.pageIds?.count ?? 0)) ? notebook.pageIds?[page] : nil
-            guard let initial = activeInkStore.initialSnapshot(for: page, pageId: pid) ?? initialPageDrawings[page] else { continue }
+            guard let initial = activeInkStore.initialSnapshot(for: page, pageId: pid) else { continue }
             // 這一頁現在的筆畫 → 被還原拿掉的要記進「已擦除」名單，不然同步會把雲端的舊檔帶回來。
             let now = store.loadDrawing(notebookId: notebook.id, pageIndex: page)
             let state = initialPageInk[page]
@@ -47,14 +50,14 @@ extension NotebookEditorView {
             ErasedInkLedger.save(erased, in: baselineDir, notebookId: notebook.id, page: page)
 
             store.saveDrawing(notebookId: notebook.id, pageIndex: page, drawing: initial)
-            coreInkBaselines[page] = initial
+            activeInkStore.setCoreBaseline(initial, for: page, pageId: pid)
             if let state {
                 ProInkStore.save(state.own, in: dir, notebookId: notebook.id, page: page)
                 ProInkStore.save(state.foreign, in: dir, notebookId: notebook.id, page: page, foreign: true)
                 ProInkStore.saveSuppressed(state.suppressed, in: dir, notebookId: notebook.id, page: page)
             }
         }
-        pendingCoreInk.removeAll()
+        activeInkStore.clearAllPendingCoreFlush()
     }
 
     func loadCurrentPage() {
@@ -66,7 +69,7 @@ extension NotebookEditorView {
         PageGeometry.use(format: notebook.pageFormatId)
         let pid = (notebook.pageIds != nil && currentPageIndex < (notebook.pageIds?.count ?? 0)) ? notebook.pageIds?[currentPageIndex] : nil
         let loaded = activeInkStore.drawing(for: currentPageIndex, pageId: pid)
-        if pendingCoreInk[currentPageIndex] == nil { inkDiskBaselines[currentPageIndex] = loaded }
+        if !activeInkStore.isPendingCoreFlush(for: currentPageIndex, pageId: pid) { inkDiskBaselines[currentPageIndex] = loaded }
         self.currentDrawing = loaded
         if pageDisplayMode == .single {
             if let canvas = canvasView as? AdaptiveCanvasView {
@@ -925,8 +928,8 @@ extension NotebookEditorView {
         }
         let pid = (notebook.pageIds != nil && page < (notebook.pageIds?.count ?? 0)) ? notebook.pageIds?[page] : nil
         activeInkStore.updateDrawing(drawing, for: page, pageId: pid)
+        activeInkStore.markPendingCoreFlush(for: page, pageId: pid)
         continuousCanvases.setCachedDrawing(drawing, forPage: page)
-        pendingCoreInk[page] = drawing
         scheduleCoreInkFlush()
         noteInkEdited()
     }
@@ -999,23 +1002,23 @@ extension NotebookEditorView {
         coreInkWork?.cancel()
         coreInkWork = nil
         coreInkFirstPendingAt = nil
-        let pending = pendingCoreInk
-        pendingCoreInk.removeAll()
-        guard !pending.isEmpty else { return }
+        let rawJobs = activeInkStore.pendingCoreFlushJobs(notebook: notebook)
+        activeInkStore.clearAllPendingCoreFlush()
+        guard !rawJobs.isEmpty else { return }
 
         var jobs: [CoreInkFlush.Job] = []
-        for (page, drawing) in pending {
-            MainThreadStallMonitor.shared.breadcrumb("flush p\(page) saveDrawing (\(drawing.strokes.count) strokes)")
-            let drawingURL = store.drawingsDirectory.appending(path: "\(notebook.id)_p\(page).drawing")
+        for item in rawJobs {
+            MainThreadStallMonitor.shared.breadcrumb("flush p\(item.pageIndex) saveDrawing (\(item.drawing.strokes.count) strokes)")
+            let drawingURL = store.drawingsDirectory.appending(path: "\(notebook.id)_p\(item.pageIndex).drawing")
             // 僅先更新記憶體快取，實際序列化與磁碟寫入統一交由背景 coreInkQueue 的 CoreInkFlush.apply 執行，
             // 避免切換模式或落筆存檔時在主執行緒上同步阻塞。
-            NotebookStore.primeDrawingCache(drawing, for: drawingURL)
-            continuousCanvases.setCachedDrawing(drawing, forPage: page)
+            NotebookStore.primeDrawingCache(item.drawing, for: drawingURL)
+            continuousCanvases.setCachedDrawing(item.drawing, forPage: item.pageIndex)
             jobs.append(CoreInkFlush.Job(
-                page: page, drawing: drawing, drawingFileURL: drawingURL,
-                cachedBaseline: coreInkBaselines[page]))
-            coreInkBaselines[page] = drawing
-            inkDiskBaselines[page] = drawing
+                page: item.pageIndex, drawing: item.drawing, drawingFileURL: drawingURL,
+                cachedBaseline: item.cachedBaseline))
+            activeInkStore.setCoreBaseline(item.drawing, for: item.pageIndex, pageId: item.pageId)
+            inkDiskBaselines[item.pageIndex] = item.drawing
         }
 
         let document = notebook
@@ -1031,8 +1034,9 @@ extension NotebookEditorView {
             DispatchQueue.main.async {
                 // 保留下一輪再試；不要因為核心套件暫時寫不進去而丟掉 Apple 端的即時 `.drawing` 自動存檔。
                 for item in failedCopy {
-                    pendingCoreInk[item.page] = item.drawing
-                    coreInkBaselines[item.page] = nil
+                    let pid = (document.pageIds != nil && item.page < (document.pageIds?.count ?? 0)) ? document.pageIds?[item.page] : nil
+                    activeInkStore.markPendingCoreFlush(for: item.page, pageId: pid)
+                    activeInkStore.clearCoreBaseline(for: item.page, pageId: pid)
                 }
                 // 增量寫進套件**之後**才通知焦點通道 —— 先通知的話，它可能推到還沒寫完的檔案。
                 FocusSyncController.shared.noteLocalEdit()
@@ -1046,7 +1050,7 @@ extension NotebookEditorView {
         inkTouchWork?.cancel()
         inkTouchWork = nil
         if pageDisplayMode == .continuous {
-            let hadPendingInk = !pendingCoreInk.isEmpty
+            let hadPendingInk = activeInkStore.hasPendingCoreFlush
             flushPendingCoreInk()
             // 沒有待寫的墨跡、文件也跟 store 裡一樣，就不要「碰」這本筆記。
             // 每次碰都會把修改時間往前推並通知同步「本機有編輯」，於是只是切換模式、
@@ -1067,15 +1071,14 @@ extension NotebookEditorView {
             currentDrawing = liveDrawing
         }
         // 筆跡沒變就不重寫：模式切換、點物件前後都會呼叫這裡，而序列化＋寫檔＋推進核心是整頁的成本。
-        let unchanged = lastPersistedInk.map { $0.page == currentPageIndex && $0.drawing == currentDrawing } ?? false
+        let pid = (notebook.pageIds != nil && currentPageIndex < (notebook.pageIds?.count ?? 0)) ? notebook.pageIds?[currentPageIndex] : nil
+        let unchanged = activeInkStore.isUnchanged(for: currentPageIndex, pageId: pid, drawing: currentDrawing)
         if !unchanged {
-            let pid = (notebook.pageIds != nil && currentPageIndex < (notebook.pageIds?.count ?? 0)) ? notebook.pageIds?[currentPageIndex] : nil
             activeInkStore.updateDrawing(currentDrawing, for: currentPageIndex, pageId: pid)
-            // 透過 pendingCoreInk + flushPendingCoreInk 先更新記憶體快取並排入 coreInkQueue 背景寫檔，
+            // 透過 activeInkStore + flushPendingCoreInk 先更新記憶體快取並排入 coreInkQueue 背景寫檔，
             // 不在主執行緒重複執行同步 store.saveDrawing，消除切換「手繪／打字」模式時的卡頓。
-            pendingCoreInk[currentPageIndex] = currentDrawing
+            activeInkStore.markPendingCoreFlush(for: currentPageIndex, pageId: pid)
             flushPendingCoreInk()
-            lastPersistedInk = (currentPageIndex, currentDrawing)
         }
         // 同上：筆跡沒變、文件也與 store 一致就不碰。
         if unchanged && !proInkDirty && store.notebookMatchesStored(notebook) { return }

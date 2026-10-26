@@ -736,12 +736,9 @@ extension NotebookEditorView {
     func changePageStructure(pageMap explicitMap: ((Int) -> Int?)? = nil, _ change: @escaping () -> Int?) {
         saveCurrentPageDrawing()
         afterCoreInkWrites {
-            let stillPending = pendingCoreInk
-            for (page, drawing) in stillPending {
-                store.saveDrawing(notebookId: notebook.id, pageIndex: page, drawing: drawing)
-            }
+            activeInkStore.flushDirtyPages(notebook: notebook)
             if pageOrigins == nil, let snapshot = initialNotebookSnapshot {
-                for page in 0..<min(notebook.pageCount, snapshot.pageCount) where initialPageDrawings[page] == nil {
+                for page in 0..<min(notebook.pageCount, snapshot.pageCount) {
                     captureInitialPageState(
                         page: page, drawing: store.loadDrawing(notebookId: notebook.id, pageIndex: page))
                 }
@@ -756,15 +753,7 @@ extension NotebookEditorView {
                 return after.firstIndex(of: before[page])
             }
 
-            func remapped<V>(_ map: [Int: V]) -> [Int: V] {
-                var out: [Int: V] = [:]
-                for (page, value) in map { if let moved = pageMap(page) { out[moved] = value } }
-                return out
-            }
-            pendingCoreInk = remapped(stillPending)
-            coreInkBaselines = remapped(coreInkBaselines)
             continuousCanvases.invalidateCachedDrawings()
-            lastPersistedInk = nil
             if let origins = pageOrigins {
                 let countAfter = store.notebooks.first(where: { $0.id == notebook.id })?.pageCount ?? countBefore
                 var next = [Int?](repeating: nil, count: countAfter)
