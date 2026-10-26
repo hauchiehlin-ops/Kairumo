@@ -190,6 +190,7 @@ jobs:
             -only-testing:KairumoUITests/SmokeUITests/testExportMenuItemsAreReachable \
             -only-testing:KairumoUITests/SmokeUITests/testToolbarCustomizationControlsAreReachable \
             -only-testing:KairumoUITests/InsertToolsAudit \
+            -only-testing:KairumoUITests/InkInvariantMatrixAudit \
             > "$RUNNER_TEMP/apple-ui.log" 2>&1 || rc=$?
           # `-quiet` 會把**斷言訊息整段吃掉**：紅燈只剩 "Failing tests: <名字>"，
           # 說不出為什麼紅。訊息又常常是多行的，只抓 error: 那一行還是會漏
@@ -460,6 +461,8 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y libasound2-dev pkg-config
       - name: 隨機歷史與回歸種子
         run: cargo test -p padnote-core --no-default-features --test model_multi_device
+      - name: 編輯器筆跡不變式模型檢查（架構審視 P0）
+        run: cargo test -p padnote-core --no-default-features --test model_editor_ink
       # 一致性閘門 1：向量必須與核心目前的行為一致。
       # 兩端各有一支測試讀同一份向量（Apple 在 Test (macOS)，
       # Android 在 android-instrumented），所以向量一動，兩邊都會跟著動。

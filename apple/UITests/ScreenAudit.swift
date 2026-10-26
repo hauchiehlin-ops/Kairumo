@@ -552,18 +552,23 @@ func openSeedNotebook(
     file: StaticString = #filePath, line: UInt = #line
 ) -> Bool {
     let seedCardId = "home.notebooks.card.seed-welcome-notebook-v1"
-    let home = app.descendants(matching: .any)
-        .matching(identifier: "home.action.new_note").firstMatch
     let editorMore = app.descendants(matching: .any)
         .matching(identifier: "editor.more").firstMatch
-    guard home.waitForExistence(timeout: 30) else {
-        XCTFail("首頁沒有完成載入，找不到 New Note", file: file, line: line)
+    if editorMore.exists && editorMore.isHittable {
+        return true
+    }
+
+    let homeMarker = app.descendants(matching: .any)
+        .matching(NSPredicate(format: "identifier IN {'home.action.new_note', 'home.diagnostics', 'home.title', 'home.docs.manual', 'home.notebooks.card.seed-welcome-notebook-v1'}"))
+        .firstMatch
+    guard homeMarker.waitForExistence(timeout: 30) else {
+        XCTFail("首頁沒有完成載入，找不到導覽列或 New Note", file: file, line: line)
         return false
     }
 
     // 每次捲動後重建 query：LazyVGrid 會回收畫面外的節點，保留舊 snapshot
     // 可能讓 exists/isHittable 一直停在捲動前的值。
-    for _ in 0..<12 {
+    for attempt in 0..<12 {
         let card = app.descendants(matching: .any)
             .matching(identifier: seedCardId).firstMatch
         if card.exists && card.isHittable {
@@ -574,7 +579,11 @@ func openSeedNotebook(
                 return true
             }
         }
-        app.swipeUp()
+        if attempt < 2 {
+            app.swipeDown()
+        } else {
+            app.swipeUp()
+        }
     }
 
     XCTFail(

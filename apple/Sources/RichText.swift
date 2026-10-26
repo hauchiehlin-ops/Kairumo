@@ -615,6 +615,11 @@ extension RichText {
 final class InlineTextView: UITextView {
     private let typingUndoManager = UndoManager()
     override var undoManager: UndoManager? { typingUndoManager }
+
+    override var accessibilityValue: String? {
+        get { text }
+        set { super.accessibilityValue = newValue }
+    }
 }
 
 /// 文字方塊的就地編輯器（`UITextView`）。
