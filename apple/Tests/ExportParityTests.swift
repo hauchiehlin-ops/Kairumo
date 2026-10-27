@@ -87,15 +87,14 @@ final class ExportParityTests: XCTestCase {
         var book = notebook(with: [image(solidImage(.red))])
         let drawing = PKDrawing(strokes: [thickStroke()])
         // (200, 200) 同時在圖片裡、也在墨跡的線上。
-        // 畫布上：沒有「移至筆跡下方」的物件不分模式都在墨跡上面 —— 圖片蓋住線。
-        // 以前縮圖在手寫模式把圖片硬畫到墨跡下面，側欄與畫布看起來不一樣。
+        // 圖片預設在筆跡下方（核心 `ffi_layering`）：線畫在圖上 —— 在插入的 PDF 頁面上寫字看得到。
+        let underInk = pixel(render(book, drawing: drawing), 200, 200)
+        XCTAssertLessThan(underInk.r, 80, "預設在筆跡下方的圖片，線要畫在它上面")
+        // 使用者把它搬到筆跡上方：圖片蓋住線，縮圖與畫布一致、不分模式。
+        book.moveObjects([book.attachments![0].id], to: .aboveInk, forPage: 0)
         let overInk = pixel(render(book, drawing: drawing), 200, 200)
         XCTAssertGreaterThan(overInk.r, 200, "筆跡上方的圖片蓋住線，與畫布一致")
         XCTAssertLessThan(overInk.g, 60)
-        // 移至筆跡下方：線畫在圖上。
-        book.setUnderInkObjectIds([book.attachments![0].id], forPage: 0)
-        let underInk = pixel(render(book, drawing: drawing), 200, 200)
-        XCTAssertLessThan(underInk.r, 80, "移至筆跡下方的圖片，線要畫在它上面")
     }
 
     func testObjectOrderDecidesWhichOverlappingObjectIsOnTop() {

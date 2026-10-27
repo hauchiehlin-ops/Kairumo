@@ -124,7 +124,7 @@ object SeedNotebooks {
             if (opened != null) {
                 val (session, _) = opened
                 val meta = NotebookMeta.load(session)
-                if (meta.underInkObjectIds(1).isEmpty()) {
+                if (meta.explicitUnderInkObjectIds(1).isEmpty()) {
                     val count = runCatching { session.pageCount().toInt() }.getOrDefault(0)
                     for (p in 0 until count) {
                         val pid = runCatching { session.pageIdAt(p.toUInt()) }.getOrNull() ?: continue

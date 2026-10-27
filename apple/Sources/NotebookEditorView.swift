@@ -934,9 +934,13 @@ public struct NotebookEditorView: View {
             set: { if $0 == nil { pdfToInsert = nil } })
         ) { wrapped in
             resizableSheet {
-                PdfPageInsertSheet(fileURL: wrapped.url) { image in
-                    insertImageAttachment(image)
-                }
+                PdfPageInsertSheet(
+                    fileURL: wrapped.url,
+                    pageSize: notebook.pageSize,
+                    attachmentsDirectory: store.attachmentsDirectory,
+                    onImportAll: { pages, skipped in insertPdfPagesAsNotebookPages(pages, skipped: skipped) },
+                    onPickSingle: { image in insertImageAttachment(image) }
+                )
             }
         }
         .onChange(of: selectedPhotoItem) { newItem in

@@ -298,7 +298,7 @@
       },
       {
         "id": "editor.insert.pdf",
-        "label_en": "Insert PDF Page",
+        "label_en": "Import PDF",
         "label_key": "insert_pdf",
         "reveal": "more_menu"
       },

@@ -34,6 +34,7 @@ pub mod ffi_hints;
 pub mod ffi_hwr;
 pub mod ffi_import;
 pub mod ffi_input;
+pub mod ffi_layering;
 pub mod ffi_interop;
 pub mod ffi_layout;
 pub mod ffi_link;
@@ -44,6 +45,7 @@ pub mod ffi_models;
 pub mod ffi_oauth;
 pub mod ffi_pages;
 pub mod ffi_paper;
+pub mod ffi_pdf_import;
 #[cfg(feature = "relay")]
 pub mod ffi_relay;
 pub mod ffi_scheduler;

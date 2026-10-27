@@ -1012,7 +1012,16 @@ final class ErasedInkLedgerTests: XCTestCase {
         doc.setUnderInkObjectIds(["b", "a"], forPage: 1)
         var restored = NotebookDocument(title: "t")
         NotebookMeta.decode(from: NotebookMeta(from: doc).encodedJSON())?.apply(to: &restored)
-        XCTAssertEqual(restored.underInkObjectIds(forPage: 1), ["a", "b"])
+        XCTAssertEqual(restored.explicitUnderInkObjectIds(forPage: 1), ["a", "b"])
+    }
+
+    /// 「搬到筆跡上方」也要跨得過套件（Android 讀同一個鍵）。
+    func testOverInkLayeringRoundTripsThroughPackageMeta() {
+        var doc = NotebookDocument(title: "t")
+        doc.overInkObjectIdsByPage = ["0": ["img"]]
+        var restored = NotebookDocument(title: "t")
+        NotebookMeta.decode(from: NotebookMeta(from: doc).encodedJSON())?.apply(to: &restored)
+        XCTAssertEqual(restored.explicitOverInkObjectIds(forPage: 0), ["img"])
     }
 
     @MainActor
@@ -1027,6 +1036,6 @@ final class ErasedInkLedgerTests: XCTestCase {
             exported, local: local, exported: prints)
         XCTAssertTrue(preserved)
         XCTAssertEqual(merged.objectOrder(forPage: 0), ["b", "a"])
-        XCTAssertEqual(merged.underInkObjectIds(forPage: 0), ["a"])
+        XCTAssertEqual(merged.explicitUnderInkObjectIds(forPage: 0), ["a"])
     }
 }

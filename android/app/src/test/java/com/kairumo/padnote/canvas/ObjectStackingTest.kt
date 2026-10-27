@@ -70,4 +70,12 @@ class ObjectStackingTest {
         assertEquals(order, ObjectStacking.Reorder.BRING_ABOVE_INK.apply("b", order))
         assertEquals(order, ObjectStacking.Reorder.SEND_BELOW_INK.apply("b", order))
     }
+
+    /** 被標註的素材在下、標註（文字、圖釘）在上；錄音卡片也是素材。與核心 `objectDefaultStackRank` 同序。 */
+    @Test fun defaultLayersPutAnnotationsOnTop() {
+        val kinds = ObjectStacking.Kind.entries
+        assertEquals(
+            listOf("IMAGE", "SHAPE", "TABLE", "CHART", "MODEL3D", "LINK", "AUDIO", "TEXT", "PIN"),
+            kinds.sortedBy { it.defaultLayer }.map { it.name })
+    }
 }

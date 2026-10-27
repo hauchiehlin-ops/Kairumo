@@ -90,6 +90,28 @@ class ImageStore(
         }.getOrNull()
     }
 
+    /**
+     * 放一張已知大小與位置的圖（整份匯入 PDF 用）。不解碼點陣圖 —— 尺寸呼叫端已經知道了，
+     * 為了量大小把一張整頁的圖解出來是白做工（而且在記憶體裡多一份 14 MB）。
+     * PDF 頁面是底稿：沒有圓角、沒有陰影。
+     */
+    fun insertPlaced(bytes: ByteArray, fileName: String, x: Float, y: Float, width: Float, height: Float): NoteImage? {
+        val s = session ?: return null
+        val page = pageId ?: return null
+        return runCatching {
+            val blob = s.putBlob(bytes)
+            val blockId = s.addImage(page, blob, width, height)
+            val image = NoteImage(
+                id = blockId, blobId = blob, x = x, y = y, width = width, height = height,
+                cornerRadius = 0f, hasShadow = false, fileName = fileName
+            )
+            s.setBlockPosition(blockId, image.x, image.y)
+            s.setBlockAppearance(blockId, ImageAppearance.encode(image))
+            images[blockId] = image
+            image
+        }.getOrNull()
+    }
+
     /** 寫回位置與外觀。 */
     fun persist(image: NoteImage) {
         images[image.id] = image

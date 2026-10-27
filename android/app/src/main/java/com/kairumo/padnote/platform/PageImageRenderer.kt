@@ -97,36 +97,70 @@ object PageImageRenderer {
     }.getOrDefault(0)
 
     /**
-     * 把**外來** PDF 的某一頁算繪成 PNG，給「插入 PDF 頁面」用。
+     * 把**外來** PDF 的某一頁算繪成 PNG，給「插入 PDF」的預覽與「只插入這一頁」用。
      *
      * 與上面那條路的差別只有來源：那邊畫的是我們自己匯出的一頁，這邊畫的
      * 是使用者挑進來的檔案。所以這裡**沒有退回核心那條路** —— 核心畫不出
      * 別人的 PDF，失敗就是失敗，要讓使用者看到「這一頁畫不出來」，
      * 而不是一張空白。
      *
+     * 像素大小夾在核心的上限內（`pdfPagePlacement`）：掃描器輸出的 PDF 常把頁面
+     * 寫成像素大小，原本「點數 × 2」一頁就是 4960×7016、一張 139 MB 的點陣圖。
+     *
+     * **會做 I/O 與大量運算，不要在主執行緒呼叫。**
+     *
      * @param pageIndex 從 0 起算。
-     * @param scale 相對於頁面點數的倍率（2.0 約等於 Retina 級）。原尺寸插
-     *   進來的話，在畫布上放大一點就糊掉了。
+     * @param scale 相對於頁面點數的倍率（2.0 約等於 Retina 級）。
      */
     fun renderPdfPage(file: File, pageIndex: Int, scale: Float = 2.0f): ByteArray? = runCatching {
         ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY).use { fd ->
             PdfRenderer(fd).use { renderer ->
                 if (pageIndex !in 0 until renderer.pageCount) return@runCatching null
                 renderer.openPage(pageIndex).use { page ->
-                    val w = (page.width * scale).toInt().coerceAtLeast(1)
-                    val h = (page.height * scale).toInt().coerceAtLeast(1)
-                    val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
-                    // **底色一定要填白。** PdfRenderer 不會畫頁面背景，留透明
-                    // 的話插進畫布看起來像一張空白頁（同上面那條路的理由）。
-                    bmp.eraseColor(Color.WHITE)
-                    page.render(bmp, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
-                    ByteArrayOutputStream().use { out ->
-                        bmp.compress(Bitmap.CompressFormat.PNG, 100, out)
-                        bmp.recycle()
-                        out.toByteArray()
-                    }
+                    val w = page.width.toFloat()
+                    val h = page.height.toFloat()
+                    val placement = uniffi.padnote_core.pdfPagePlacement(w, h, w, h, scale)
+                        ?: return@runCatching null
+                    renderToPng(page, placement.pixelWidth.toInt(), placement.pixelHeight.toInt())
                 }
             }
         }
     }.getOrNull()
+
+    /** 整份匯入時，一頁 PDF 算繪好的結果與它在內頁上的位置（內頁座標，點）。 */
+    class PdfImportedPage(val png: ByteArray, val x: Float, val y: Float, val width: Float, val height: Float)
+
+    /**
+     * 整份匯入：把 [renderer] 的第 [pageIndex] 頁依內頁大小（[pageWidth]×[pageHeight]）
+     * 縮放、算繪成 PNG。位置與像素大小由核心決定（`pdfPagePlacement`，Apple 同一支）。
+     *
+     * [PdfRenderer] 一次只能開一頁，所以由呼叫端持有它、一頁一頁叫。**不要在主執行緒呼叫。**
+     */
+    fun renderPdfPageForImport(
+        renderer: PdfRenderer, pageIndex: Int, pageWidth: Float, pageHeight: Float
+    ): PdfImportedPage? = runCatching {
+        if (pageIndex !in 0 until renderer.pageCount) return@runCatching null
+        renderer.openPage(pageIndex).use { page ->
+            val placement = uniffi.padnote_core.pdfPagePlacement(
+                page.width.toFloat(), page.height.toFloat(), pageWidth, pageHeight, 2.0f
+            ) ?: return@runCatching null
+            val png = renderToPng(page, placement.pixelWidth.toInt(), placement.pixelHeight.toInt())
+                ?: return@runCatching null
+            PdfImportedPage(png, placement.x, placement.y, placement.width, placement.height)
+        }
+    }.getOrNull()
+
+    private fun renderToPng(page: PdfRenderer.Page, width: Int, height: Int): ByteArray? {
+        val bmp = Bitmap.createBitmap(width.coerceAtLeast(1), height.coerceAtLeast(1), Bitmap.Config.ARGB_8888)
+        // **底色一定要填白。** PdfRenderer 不會畫頁面背景，留透明
+        // 的話插進畫布看起來像一張空白頁（同上面那條路的理由）。
+        bmp.eraseColor(Color.WHITE)
+        // 不給 destClip/transform 時 PdfRenderer 會把整頁縮放到點陣圖大小。
+        page.render(bmp, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+        return ByteArrayOutputStream().use { out ->
+            bmp.compress(Bitmap.CompressFormat.PNG, 100, out)
+            bmp.recycle()
+            out.toByteArray()
+        }
+    }
 }

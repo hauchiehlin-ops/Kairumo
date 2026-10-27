@@ -274,10 +274,15 @@ fun ContinuousPagesView(
             meta.setObjectOrder(s, from, order - id)
             meta.setObjectOrder(s, to, meta.objectOrder(to) - id + id)
         }
-        val under = meta.underInkObjectIds(from)
+        val under = meta.explicitUnderInkObjectIds(from)
         if (id in under) {
             meta.setUnderInkObjectIds(s, from, under - id)
-            meta.setUnderInkObjectIds(s, to, meta.underInkObjectIds(to) + id)
+            meta.setUnderInkObjectIds(s, to, meta.explicitUnderInkObjectIds(to) + id)
+        }
+        val over = meta.explicitOverInkObjectIds(from)
+        if (id in over) {
+            meta.setOverInkObjectIds(s, from, over - id)
+            meta.setOverInkObjectIds(s, to, meta.explicitOverInkObjectIds(to) + id)
         }
         // 兩頁各自重讀，並把復原基準換成新的樣子：換頁不是「這一頁刪掉一個、那一頁多一個」，
         // 當成兩步記下來的話，只復原其中一頁會讓物件兩頁都有或兩頁都沒有。
@@ -1035,12 +1040,12 @@ private fun ContinuousPage(
             textStore.all.forEach { put(it.id, ObjectStacking.Kind.TEXT) }
         }
     }
-    val underInkIds = remember(meta, pageIndex, revision) {
-        meta.underInkObjectIds(pageIndex)
+    val underInkIds = remember(meta, pageIndex, revision, kindOf) {
+        meta.underInkObjectIds(pageIndex, kindOf)
     }
     val zIndexOf: (String) -> Float = { id ->
         val baseZ = ObjectStacking.zIndex(id, kindOf[id] ?: ObjectStacking.Kind.TEXT, order)
-        if (underInkIds.contains(id)) 10f + baseZ else 200f + baseZ
+        ObjectStacking.inkAwareZ(baseZ, underInkIds.contains(id))
     }
 
     val lockedIds = remember(meta, revision) { meta.lockedObjectIds() }
@@ -1270,23 +1275,23 @@ private fun ContinuousPage(
             com.kairumo.padnote.canvas.LocalObjectReorder provides { id, op ->
                 when (op) {
                     com.kairumo.padnote.canvas.ObjectStacking.Reorder.SEND_BELOW_INK -> {
-                        val current = meta.underInkObjectIds(pageIndex).toMutableSet()
-                        if (current.add(id)) {
-                            meta.setUnderInkObjectIds(session, pageIndex, current)
+                        if (id !in underInkIds) {
+                            meta.moveObjectsToInkPlane(session, pageIndex, kindOf.filterKeys { it == id },
+                                uniffi.padnote_core.FfiInkPlane.BELOW_INK)
                             revision++
                         }
                     }
                     com.kairumo.padnote.canvas.ObjectStacking.Reorder.BRING_ABOVE_INK -> {
-                        val current = meta.underInkObjectIds(pageIndex).toMutableSet()
-                        if (current.remove(id)) {
-                            meta.setUnderInkObjectIds(session, pageIndex, current)
+                        if (id in underInkIds) {
+                            meta.moveObjectsToInkPlane(session, pageIndex, kindOf.filterKeys { it == id },
+                                uniffi.padnote_core.FfiInkPlane.ABOVE_INK)
                             revision++
                         }
                     }
                     com.kairumo.padnote.canvas.ObjectStacking.Reorder.TO_FRONT -> {
-                        val current = meta.underInkObjectIds(pageIndex).toMutableSet()
-                        if (current.remove(id)) {
-                            meta.setUnderInkObjectIds(session, pageIndex, current)
+                        if (id in underInkIds) {
+                            meta.moveObjectsToInkPlane(session, pageIndex, kindOf.filterKeys { it == id },
+                                uniffi.padnote_core.FfiInkPlane.ABOVE_INK)
                         }
                         val items = buildList {
                             imageStore.all.forEach { add(ObjectStacking.Item(it.id, ObjectStacking.Kind.IMAGE, "")) }
@@ -1300,9 +1305,9 @@ private fun ContinuousPage(
                         revision++
                     }
                     com.kairumo.padnote.canvas.ObjectStacking.Reorder.TO_BACK -> {
-                        val current = meta.underInkObjectIds(pageIndex).toMutableSet()
-                        if (current.add(id)) {
-                            meta.setUnderInkObjectIds(session, pageIndex, current)
+                        if (id !in underInkIds) {
+                            meta.moveObjectsToInkPlane(session, pageIndex, kindOf.filterKeys { it == id },
+                                uniffi.padnote_core.FfiInkPlane.BELOW_INK)
                         }
                         val items = buildList {
                             imageStore.all.forEach { add(ObjectStacking.Item(it.id, ObjectStacking.Kind.IMAGE, "")) }

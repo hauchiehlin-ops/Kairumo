@@ -46,17 +46,48 @@ object ObjectStacking {
         fresh: List<String>
     ): List<String> = normalized(existing, order) + fresh
 
-    /** 物件型別。`defaultLayer` 是沒有明確順序時的層級。 */
-    enum class Kind(val defaultLayer: Int) {
-        IMAGE(0),
-        SHAPE(1),
-        TABLE(2),
-        CHART(3),
-        MODEL3D(4),
-        LINK(5),
-        TEXT(6),
-        PIN(7)
+    /**
+     * 物件型別，以及它對應到核心圖層規則的種類（`padnote-core::ffi_layering`）。
+     *
+     * 宣告順序就是核心 `objectDefaultStackRank` 的順序 —— 主機上的單元測試載不到核心，
+     * 那時 [defaultLayer] 退回這個順序；兩者不一致會被 `ObjectStackingTest` 抓到。
+     */
+    enum class Kind(val layerKind: uniffi.padnote_core.FfiLayerKind) {
+        IMAGE(uniffi.padnote_core.FfiLayerKind.IMAGE),
+        SHAPE(uniffi.padnote_core.FfiLayerKind.SHAPE),
+        TABLE(uniffi.padnote_core.FfiLayerKind.TABLE),
+        CHART(uniffi.padnote_core.FfiLayerKind.CHART),
+        MODEL3D(uniffi.padnote_core.FfiLayerKind.MODEL3D),
+        LINK(uniffi.padnote_core.FfiLayerKind.LINK),
+        AUDIO(uniffi.padnote_core.FfiLayerKind.AUDIO),
+        TEXT(uniffi.padnote_core.FfiLayerKind.TEXT),
+        PIN(uniffi.padnote_core.FfiLayerKind.PIN);
+
+        /** 沒有明確順序時的層級（核心決定：被標註的素材在下、標註在上）。 */
+        val defaultLayer: Int get() = defaultRanks.getValue(this)
     }
+
+    private val defaultRanks: Map<Kind, Int> by lazy {
+        runCatching {
+            Kind.entries.associateWith { uniffi.padnote_core.objectDefaultStackRank(it.layerKind).toInt() }
+        }.getOrElse { Kind.entries.associateWith { it.ordinal } }
+    }
+
+    /** 物件 id → 種類，給核心的圖層規則用。 */
+    fun layerObjects(kinds: Map<String, Kind>): List<uniffi.padnote_core.FfiLayerObject> =
+        kinds.map { (id, kind) -> uniffi.padnote_core.FfiLayerObject(id, kind.layerKind) }
+
+    /**
+     * 這一頁**實際**在筆跡下方的物件：核心規則加上兩份明確清單。
+     *
+     * 插入的素材（PDF 頁面、圖片、圖表、表格、形狀…）預設在筆跡下方，文字與圖釘在上方。
+     * 畫布、縮圖、連續頁面都只問這裡 —— 不再各自寫死「只有清單裡的才在下面」。
+     */
+    fun belowInk(kinds: Map<String, Kind>, explicitUnder: Set<String>, explicitOver: Set<String>): Set<String> =
+        uniffi.padnote_core.objectsBelowInk(layerObjects(kinds), explicitUnder.toList(), explicitOver.toList()).toSet()
+
+    /** 筆跡下方的物件在 10 起跳、上方的在 200 起跳；筆跡畫布本身是 100。 */
+    fun inkAwareZ(baseZ: Float, belowInk: Boolean): Float = if (belowInk) 10f + baseZ else 200f + baseZ
 
     /** 面板上的一列。 */
     data class Item(val id: String, val kind: Kind, val title: String)

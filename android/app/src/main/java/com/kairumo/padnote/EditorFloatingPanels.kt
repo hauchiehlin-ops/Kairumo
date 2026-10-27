@@ -317,6 +317,15 @@ internal fun EditorFloatingPanels(ctx: EditorCanvasContext) = with(ctx) {
                     message = l10n("pdf_render_failed")
                 }
                 pdfToInsert = null
+            },
+            onImportAll = { onProgress ->
+                val (done, skipped) = importPdfAsPages(pdfFile, onProgress)
+                message = when {
+                    done == 0 -> l10n("pdf_render_failed")
+                    skipped > 0 -> l10n("pdf_import_partial").replace("%1@", done.toString()).replace("%2@", skipped.toString())
+                    else -> l10n("pdf_import_done").replace("%@", done.toString())
+                }
+                pdfToInsert = null
             }
         )
     }
@@ -631,7 +640,11 @@ internal fun EditorFloatingPanels(ctx: EditorCanvasContext) = with(ctx) {
                 stackRevision++
             },
             onUnderInkChange = { updatedUnder ->
-                meta.setUnderInkObjectIds(notebook?.first, pageIndex, updatedUnder)
+                // 面板給的是「搬完之後實際在下方的整組」；兩份明確清單怎麼改交給核心。
+                val sunk = kindOf.filterKeys { it in updatedUnder && it !in underInkIds }
+                val lifted = kindOf.filterKeys { it in underInkIds && it !in updatedUnder }
+                meta.moveObjectsToInkPlane(notebook?.first, pageIndex, sunk, uniffi.padnote_core.FfiInkPlane.BELOW_INK)
+                meta.moveObjectsToInkPlane(notebook?.first, pageIndex, lifted, uniffi.padnote_core.FfiInkPlane.ABOVE_INK)
                 stackRevision++
             },
             onAlign = { mode, ids -> alignObjects(mode, ids) },

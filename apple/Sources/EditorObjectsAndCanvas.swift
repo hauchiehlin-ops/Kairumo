@@ -55,12 +55,51 @@ extension NotebookEditorView {
         }
         notebook.attachments?.append(newAttachment)
         commitNotebook()
-        if var dict = (try? JSONSerialization.jsonObject(with: JSONEncoder().encode(newAttachment))) as? [String: Any] {
-            if let imgData = image.pngData() {
-                dict["image_base64"] = imgData.base64EncodedString()
-            }
+        // 不再附上 `image_base64`：這個廣播已經停用（`CollaborationManager.broadcastAttachmentUpsert`
+        // 是空的），而那一次 `pngData()` 是在主執行緒上把整張圖再編碼一次 —— 插一頁大 PDF 時
+        // 實測佔了按下確定之後一半的卡頓。協作送圖走 `publishCollabChanges` 讀檔案那條路。
+        if let dict = (try? JSONSerialization.jsonObject(with: JSONEncoder().encode(newAttachment))) as? [String: Any] {
             collaborationManager.broadcastAttachmentUpsert(type: "image", itemDict: dict)
         }
+    }
+
+    /// 整份 PDF 匯入完成：每一頁 PDF 成為一頁筆記內頁。
+    ///
+    /// 從目前這一頁後面開始插；目前這一頁完全空白（剛建好的筆記）的話，第一頁就放在它上面，
+    /// 不留一張多餘的白紙。所有頁面一次插入（`insertPages`）、一次寫回。
+    func insertPdfPagesAsNotebookPages(_ pages: [PdfImportedPage], skipped: Int) {
+        guard !pages.isEmpty else {
+            showNoticeToast(name: localizationManager.localized("pdf_render_failed"), icon: "exclamationmark.triangle.fill")
+            return
+        }
+        saveCurrentPageDrawing()
+        let notebookId = notebook.id
+        let anchor = currentPageIndex
+        let reuseCurrent = store.isBlankPage(notebook, index: anchor)
+        let firstPage = reuseCurrent ? anchor : anchor + 1
+        let extra = reuseCurrent ? pages.count - 1 : pages.count
+        let paperId = notebook.paperId(forPage: anchor)
+        let notice = skipped > 0
+            ? String(format: localizationManager.localized("pdf_import_partial"), "\(pages.count)", "\(skipped)")
+            : String(format: localizationManager.localized("pdf_import_done"), "\(pages.count)")
+        if extra > 0 {
+            let insertIndex = anchor + 1
+            changePageStructure(pageMap: { $0 >= insertIndex ? $0 + extra : $0 }) {
+                store.insertPages(notebookId: notebookId, afterIndex: anchor, count: extra, paperId: paperId)
+                store.placePdfPages(notebookId: notebookId, pages: pages, firstPage: firstPage)
+                return firstPage
+            }
+        } else {
+            store.placePdfPages(notebookId: notebookId, pages: pages, firstPage: firstPage)
+            if let updated = store.notebooks.first(where: { $0.id == notebookId }) { notebook = updated }
+            objectHistory.record(notebook, manager: historyUndoManager) { state in applyHistoryState(state) }
+            continuousObjectGeneration += 1
+        }
+        PageThumbnailRenderer.invalidateAll()
+        // 匯入 PDF 是為了在上面寫字：停在手寫模式。PDF 頁面是鎖定的底稿，不需要切到打字模式去拖它
+        // （插入一般圖片時才切，見 `acceptImageDrop`）。
+        transitionToMode(.draw)
+        showNoticeToast(name: notice, icon: "checkmark.circle.fill")
     }
 
     /// 從系統剪貼簿讀取圖片（含螢幕截圖、剪下／拷貝的圖片、或是剪貼簿裡的原始圖檔資料）。
@@ -1399,26 +1438,20 @@ extension NotebookEditorView {
         guard let page = pageOfObject(id) else { return }
         switch op {
         case .sendBelowInk:
-            var current = notebook.underInkObjectIds(forPage: page)
-            if !current.contains(id) {
-                current.insert(id)
-                notebook.setUnderInkObjectIds(current, forPage: page)
+            if !notebook.underInkObjectIds(forPage: page).contains(id) {
+                notebook.moveObjects([id], to: .belowInk, forPage: page)
                 commitNotebook()
                 PageThumbnailRenderer.invalidateAll()
             }
         case .bringAboveInk:
-            var current = notebook.underInkObjectIds(forPage: page)
-            if current.contains(id) {
-                current.remove(id)
-                notebook.setUnderInkObjectIds(current, forPage: page)
+            if notebook.underInkObjectIds(forPage: page).contains(id) {
+                notebook.moveObjects([id], to: .aboveInk, forPage: page)
                 commitNotebook()
                 PageThumbnailRenderer.invalidateAll()
             }
         case .toFront:
-            var current = notebook.underInkObjectIds(forPage: page)
-            if current.contains(id) {
-                current.remove(id)
-                notebook.setUnderInkObjectIds(current, forPage: page)
+            if notebook.underInkObjectIds(forPage: page).contains(id) {
+                notebook.moveObjects([id], to: .aboveInk, forPage: page)
             }
             let order = ObjectStacking.normalized(
                 objects: stackableObjects(forPage: page),
@@ -1427,10 +1460,8 @@ extension NotebookEditorView {
             commitNotebook()
             PageThumbnailRenderer.invalidateAll()
         case .toBack:
-            var current = notebook.underInkObjectIds(forPage: page)
-            if !current.contains(id) {
-                current.insert(id)
-                notebook.setUnderInkObjectIds(current, forPage: page)
+            if !notebook.underInkObjectIds(forPage: page).contains(id) {
+                notebook.moveObjects([id], to: .belowInk, forPage: page)
             }
             let order = ObjectStacking.normalized(
                 objects: stackableObjects(forPage: page),

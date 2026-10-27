@@ -22,21 +22,22 @@ public struct StackableObject: Identifiable, Hashable {
 
         /// 沒有明確順序時的預設層級。
         ///
-        /// 數值就是原本視圖樹裡的排列次序 —— 舊筆記沒有 `objectOrder`，
-        /// 走這條路得到的疊放結果與過去完全相同。
-        var defaultLayer: Int {
+        /// 由核心決定（`objectDefaultStackRank`）：被標註的素材在下、標註（文字、圖釘）在上，
+        /// Android 走同一支。
+        var defaultLayer: Int { Int(objectDefaultStackRank(kind: layerKind)) }
+
+        /// 對應到核心圖層規則的種類。
+        var layerKind: FfiLayerKind {
             switch self {
-            case .image: return 0
-            case .shape: return 1
-            case .table: return 2
-            case .chart: return 3
-            case .model3D: return 4
-            case .link: return 5
-            case .text: return 6
-            case .pin: return 7
-            // 錄音卡片是這一版才有的型別，排在最後 —— 既有筆記的疊放
-            // 順序因此完全不受影響。
-            case .audio: return 8
+            case .image: return .image
+            case .text: return .text
+            case .table: return .table
+            case .chart: return .chart
+            case .model3D: return .model3d
+            case .link: return .link
+            case .shape: return .shape
+            case .pin: return .pin
+            case .audio: return .audio
             }
         }
     }

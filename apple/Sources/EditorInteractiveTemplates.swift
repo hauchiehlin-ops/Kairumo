@@ -617,10 +617,8 @@ extension NotebookEditorView {
         notebook.setObjectOrder(order, forPage: audio.pageIndex)
 
         // 確保轉錄文字預設位於筆跡上方（前景層）
-        var under = notebook.underInkObjectIds(forPage: audio.pageIndex)
-        if under.contains(transcriptBox.id) {
-            under.remove(transcriptBox.id)
-            notebook.setUnderInkObjectIds(under, forPage: audio.pageIndex)
+        if notebook.underInkObjectIds(forPage: audio.pageIndex).contains(transcriptBox.id) {
+            notebook.moveObjects([transcriptBox.id], to: .aboveInk, forPage: audio.pageIndex)
         }
 
         commitNotebook()
