@@ -57,7 +57,11 @@ pub fn pdf_page_placement(
     if !valid(source_width) || !valid(source_height) || !valid(page_width) || !valid(page_height) {
         return None;
     }
-    let scale = if valid(render_scale) { render_scale } else { 1.0 };
+    let scale = if valid(render_scale) {
+        render_scale
+    } else {
+        1.0
+    };
 
     let fit = (page_width / source_width).min(page_height / source_height);
     let width = source_width * fit;
