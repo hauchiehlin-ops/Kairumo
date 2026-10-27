@@ -139,7 +139,7 @@ for t in "${TARGETS[@]}"; do
   OPUS_LIB_DIR="${OPUS_DIR}/lib" \
   ORT_LIB_LOCATION="$STUB_DIR" \
     cargo rustc -p padnote-core --lib --release --target "$t" \
-    --no-default-features --features asr --crate-type staticlib
+    --no-default-features --features asr,asr-whisper-metal --crate-type staticlib
 done
 
 echo "==> 產生綁定"

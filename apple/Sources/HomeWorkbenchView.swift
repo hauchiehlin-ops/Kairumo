@@ -4055,7 +4055,7 @@ struct QuickAudioRecorderModal: View {
             notebookTitle: target.displayTitle(),
             title: recordingTitle,
             pageIndex: 0,
-            languageTag: LocalizationManager.shared.currentLanguage.rawValue
+            languageTag: AudioTranscriber.shared.sourceLanguageTag
         )
     }
 
@@ -4472,6 +4472,45 @@ extension AppDiagnosticsSheet {
                 ForEach(AudioTranscriber.EnginePreference.allCases) { pref in
                     Text(pref.localizedTitle).tag(pref)
                 }
+            }
+
+            Toggle(isOn: $transcriber.denoiseBeforeRecognition) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(localizationManager.localized("hw_asr_denoise"))
+                    Text(localizationManager.localized("hw_asr_denoise_hint"))
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+            }
+
+            Picker(localizationManager.localized("hw_asr_source_language"), selection: $transcriber.sourceLanguagePreference) {
+                Text(localizationManager.localized("hw_asr_source_follow_ui")).tag("")
+                ForEach(AppLanguage.allCases) { lang in
+                    Text(lang.endonym).tag(lang.rawValue)
+                }
+            }
+            .accessibilityIdentifier("settings.asr.source_language")
+
+            if TranscriptTranslation.isSupported {
+                Picker(localizationManager.localized("hw_asr_output_language"), selection: $transcriber.outputLanguagePreference) {
+                    Text(localizationManager.localized("hw_asr_output_same")).tag("")
+                    ForEach(AppLanguage.allCases) { lang in
+                        Text(lang.endonym).tag(lang.rawValue)
+                    }
+                }
+                .accessibilityIdentifier("settings.asr.output_language")
+
+                if #available(iOS 26.0, macCatalyst 26.0, *),
+                   transcriptNeedsTranslation(source: transcriber.sourceLanguageTag, output: transcriber.outputLanguagePreference) {
+                    TranslationPackRow(source: transcriber.sourceLanguageTag, output: transcriber.outputLanguageTag)
+                }
+                Text(localizationManager.localized("hw_asr_translate_hint"))
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            } else {
+                Text(localizationManager.localized("hw_asr_translate_unsupported_os"))
+                    .font(.caption)
+                    .foregroundColor(.secondary)
             }
 
             if transcriber.isWhisperAvailable {

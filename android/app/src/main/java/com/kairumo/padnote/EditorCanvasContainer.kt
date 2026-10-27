@@ -1155,15 +1155,19 @@ internal fun ColumnScope.EditorCanvasContainer(ctx: EditorCanvasContext) = with(
                             }
                             message = l10n("recognizing")
                             val outcome = withContext(Dispatchers.IO) {
-                                com.kairumo.padnote.audio.AudioTranscriber.transcribe(
-                                    activity, file, language, scriptTag = language ?: deviceLanguageTag())
+                                com.kairumo.padnote.audio.AudioTranscriber.transcribe(activity, file, language)
                             }
                             // **每一種拿不到都要講清楚原因。** 混成一句
                             // 「轉錄失敗」的話，使用者會一直按重試，
                             // 而其中兩種重試一百次也一樣。
                             val text = when (outcome) {
-                                is com.kairumo.padnote.audio.AudioTranscriber.Outcome.Text ->
+                                is com.kairumo.padnote.audio.AudioTranscriber.Outcome.Text -> {
+                                    // 翻譯失敗時文字是原文 —— 要說，不然使用者會以為「轉出文字語言」沒作用。
+                                    outcome.translationError?.let {
+                                        message = l10n("hw_asr_translate_failed").replace("%@", it)
+                                    }
                                     outcome.value
+                                }
                                 com.kairumo.padnote.audio.AudioTranscriber.Outcome.ModelMissing -> {
                                     message = l10n("transcribe_needs_model")
                                     return@launch

@@ -182,6 +182,9 @@ dependencies {
     // 手寫辨識。ML Kit 是既有架構決策 D2 已接受的例外（需要 Google Play 服務），
     // 沒有服務的裝置要明確降級，不能靜默失敗。
     implementation("com.google.mlkit:digital-ink-recognition:18.1.0")
+    // 逐字稿翻譯（音訊語言 ≠ 轉出文字語言時）。同屬決策 D2 的 ML Kit 例外；
+    // 語言模型由使用者在「語音轉錄」設定裡下載，見 audio/TranscriptTranslator.kt。
+    implementation("com.google.mlkit:translate:17.0.3")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.9.0")
 
     // 摘要與待辦的裝置端後端（S-20）。Apple 那邊用系統的 Foundation Models，

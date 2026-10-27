@@ -16,16 +16,33 @@ final class TranscriptLocalizationTests: XCTestCase {
         XCTAssertEqual(AudioTranscriber.speechLocale(forUILanguage: "ja").identifier, "ja")
     }
 
-    func testTraditionalInterfaceTurnsSimplifiedTranscriptIntoTraditional() {
-        let saved = LocalizationManager.shared.currentLanguage
-        defer { LocalizationManager.shared.currentLanguage = saved }
+    func testOutputLanguageDecidesTheScript() {
+        // 轉出文字語言（預設＝音訊語言＝介面語言）決定字體，規則在核心。
+        let simplified = "线性代数的语音识别"
+        let traditional = "線性代數的語音識別"
+        XCTAssertEqual(localizeTranscriptScript(text: simplified, uiLanguage: "zh-Hant"), traditional)
+        XCTAssertEqual(localizeTranscriptScript(text: traditional, uiLanguage: "zh-Hans"), simplified)
+        XCTAssertEqual(localizeTranscriptScript(text: simplified, uiLanguage: "zh-Hans"), simplified)
+    }
 
-        LocalizationManager.shared.currentLanguage = .zhHant
-        XCTAssertEqual(AudioTranscriber.localizedScript("线性代数的语音识别"), "線性代數的語音識別")
+    func testSameLanguageNeverGoesThroughTranslation() {
+        XCTAssertFalse(transcriptNeedsTranslation(source: "zh-Hant", output: ""))
+        XCTAssertFalse(transcriptNeedsTranslation(source: "zh-Hant", output: "zh-Hans"))
+        XCTAssertTrue(transcriptNeedsTranslation(source: "zh-Hant", output: "en"))
+    }
 
-        LocalizationManager.shared.currentLanguage = .zhHans
-        XCTAssertEqual(
-            AudioTranscriber.localizedScript("线性代数的语音识别"), "线性代数的语音识别",
-            "簡體介面不該被轉成繁體")
+    func testTranslationLanguagesUseRegionsForChinese() {
+        XCTAssertEqual(TranscriptTranslation.language(for: "zh-Hant").maximalIdentifier,
+                       Locale.Language(identifier: "zh-TW").maximalIdentifier)
+        XCTAssertEqual(TranscriptTranslation.language(for: "en").languageCode?.identifier, "en")
+    }
+
+    func testLongTranscriptIsSplitIntoSentenceChunksWithoutLosingText() {
+        let sentence = "這是一個用來測試切段的句子。"
+        let text = String(repeating: sentence, count: 80) + "\n\n第二段"
+        let chunks = TranscriptTranslation.chunks(of: text, maxLength: 100)
+        XCTAssertTrue(chunks.allSatisfy { $0.count <= 100 })
+        XCTAssertEqual(chunks.last, "第二段")
+        XCTAssertEqual(chunks.joined(), text.replacingOccurrences(of: "\n", with: ""))
     }
 }

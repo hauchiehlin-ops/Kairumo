@@ -532,7 +532,7 @@ extension NotebookEditorView {
                             notebookTitle: notebook.displayTitle(),
                             title: NotebookStore.defaultRecordingTitle(),
                             pageIndex: currentPageIndex,
-                            languageTag: LocalizationManager.shared.currentLanguage.rawValue)
+                            languageTag: AudioTranscriber.shared.sourceLanguageTag)
                     }
                 } label: {
                     HStack(spacing: 4) {
@@ -1055,7 +1055,7 @@ extension NotebookEditorView {
                             notebookTitle: notebook.displayTitle(),
                             title: NotebookStore.defaultRecordingTitle(),
                             pageIndex: currentPageIndex,
-                            languageTag: LocalizationManager.shared.currentLanguage.rawValue)
+                            languageTag: AudioTranscriber.shared.sourceLanguageTag)
                         if !started && !audioManager.showPermissionAlert {
                             showCanvasNotice(localizationManager.localized("recording_failed"))
                         }
