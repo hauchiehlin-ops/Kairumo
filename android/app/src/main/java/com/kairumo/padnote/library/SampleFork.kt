@@ -174,7 +174,7 @@ object SampleFork {
             for (index in 0u until session.pageCount()) {
                 val page = session.pageIdAt(index) ?: continue
                 val texts = session.textBlockIds(page).map { session.blockText(it).orEmpty() }.sorted()
-                parts += "p$index:${session.drawOrder(page).size}:${session.tableBlockIds(page).size}:" +
+                parts += "p$index:${session.visibleStrokes(page).size}:${session.drawOrder(page).size}:${session.tableBlockIds(page).size}:" +
                     "${session.imageBlockIds(page).size}:" + texts.joinToString("\u001F")
             }
             parts.joinToString("|")
@@ -191,7 +191,11 @@ object SampleFork {
             val parts = mutableListOf("pages:${session.pageCount()}")
             for (index in 0u until session.pageCount()) {
                 val page = session.pageIdAt(index) ?: continue
-                parts += "p$index:" + session.drawOrder(page).joinToString(",") {
+                val strokes = session.visibleStrokes(page).map {
+                    "${it.id}@${it.bounds.joinToString(" ")}"
+                }.sorted()
+                parts += "p$index:strokes:" + strokes.joinToString(",")
+                parts += "p$index:shapes:" + session.drawOrder(page).joinToString(",") {
                     it.objectId + "@" + it.transform.joinToString(" ")
                 }
                 val blocks = session.textBlockIds(page) + session.imageBlockIds(page) + session.tableBlockIds(page)

@@ -29,7 +29,7 @@ final class CoreInkFlushTests: XCTestCase {
         return PKStroke(ink: PKInk(.pen, color: .black), path: path)
     }
 
-    private var document: NotebookDocument { NotebookDocument(title: "測試", pageCount: 1) }
+    private var document: NotebookDocument { NotebookDocument(title: "Test", pageCount: 1) }
 
     func testTheFirstFlushWritesTheWholePageAndALaterOneOnlyTheNewStrokes() throws {
         let package = dir.appendingPathComponent("a.padnote")
@@ -130,5 +130,62 @@ final class InkMergeTests: XCTestCase {
         let disk = PKDrawing(strokes: [stroke(2)])
         let merged = InkMerge.merged(disk: disk, local: local, base: nil)
         XCTAssertEqual(keys(merged), keys(PKDrawing(strokes: [stroke(0), stroke(1), stroke(2)])))
+    }
+}
+
+@MainActor
+final class PageInkStoreTests: XCTestCase {
+    private var tempDir: URL!
+    private var store: NotebookStore!
+
+    override func setUpWithError() throws {
+        tempDir = FileManager.default.temporaryDirectory.appendingPathComponent("page-ink-store-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
+        store = NotebookStore(testDocumentsRoot: tempDir)
+    }
+
+    override func tearDownWithError() throws {
+        PageInkStore.purgeAll()
+        try? FileManager.default.removeItem(at: tempDir)
+    }
+
+    private func makeStroke(_ seed: Int) -> PKStroke {
+        var points: [PKStrokePoint] = []
+        for i in 0..<6 {
+            points.append(PKStrokePoint(
+                location: CGPoint(x: 10 + CGFloat(seed) * 20 + CGFloat(i) * 4, y: 30 + CGFloat(i * i)),
+                timeOffset: TimeInterval(i) * 0.01, size: CGSize(width: 3, height: 3),
+                opacity: 1, force: 0.5, azimuth: 0, altitude: CGFloat.pi / 2))
+        }
+        let path = PKStrokePath(controlPoints: points, creationDate: Date(timeIntervalSince1970: 1_700_000_000))
+        return PKStroke(ink: PKInk(.pen, color: .black), path: path)
+    }
+
+    /// 使用者以橡皮擦或全選刪除清空某一頁所有筆跡時，PageInkStore 必須確實更新為空畫布，
+    /// 絕不可因防空安全閥將空畫布丟棄，導致存檔後重新開啟筆記本時筆跡仍在。
+    func testErasingAllStrokesUpdatesInMemoryDrawingAndPermitsEmptyDrawing() {
+        let doc = NotebookDocument(id: "test-ink-erase", title: "Test Erase", pageCount: 1)
+        store.notebooks = [doc]
+        let inkStore = PageInkStore.store(for: doc, store: store)
+
+        // 模擬落筆：寫入一筆手寫字
+        let drawn = PKDrawing(strokes: [makeStroke(1)])
+        inkStore.updateDrawing(drawn, for: 0)
+        XCTAssertEqual(inkStore.drawing(for: 0).strokes.count, 1)
+
+        // 模擬橡皮擦將手繪筆跡全部擦除（0 筆劃）
+        let erased = PKDrawing()
+        inkStore.updateDrawing(erased, for: 0)
+
+        // 驗證記憶體快取已確實更新為 0 筆劃，未被誤判拒收
+        XCTAssertEqual(inkStore.drawing(for: 0).strokes.count, 0,
+                       "橡皮擦擦掉所有筆跡後，drawing(for:) 必須是 0 筆劃的空畫布")
+
+        // 登記待寫入核心套件，確認 pendingCoreFlushJobs 回傳的是空畫布而非舊筆畫
+        inkStore.markPendingCoreFlush(for: 0)
+        let jobs = inkStore.pendingCoreFlushJobs(notebook: doc)
+        XCTAssertEqual(jobs.count, 1)
+        XCTAssertEqual(jobs.first?.drawing.strokes.count, 0,
+                       "flush 任務傳遞的必須是擦拭後的 0 筆畫畫布")
     }
 }
