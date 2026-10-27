@@ -900,7 +900,7 @@ public struct HomeWorkbenchView: View {
     private func duplicateNotebookFromMenu(_ note: NotebookDocument) {
         SheetCoordinator.shared.presentFromMenu {
             withAnimation {
-                notebookStore.duplicateNotebook(id: note.id)
+                _ = notebookStore.duplicateNotebook(id: note.id)
             }
         }
     }

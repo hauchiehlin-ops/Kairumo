@@ -43,13 +43,31 @@ import com.kairumo.padnote.profile.ProfileContext
  * 這是介面偏好，不是內容 —— 存進同步的設定就要動格式，而那件事有相容性
  * 代價（見 H-OPLOG-COMPAT）。代價與收益不成比例。
  */
+// profile-scope: device 提示看過與否是本機偏好，測試開關只在測試行程有效
 object FeatureHintStore {
 
     private const val PREFS = "kairumo_hints"
     private const val KEY = "dismissed_v1"
 
-    fun isDismissed(context: Context, id: String): Boolean =
-        dismissed(context).contains(id)
+    /** 測試模式下可手動抑制所有提示，預設在 androidTest 環境下自動啟用 */
+    @Volatile
+    var forceDismissAllForTesting: Boolean? = null
+
+    private val isRunningInTest: Boolean by lazy {
+        if (System.getProperty("kairumo.uitest") == "1") return@lazy true
+        runCatching {
+            val registryClass = Class.forName("androidx.test.platform.app.InstrumentationRegistry")
+            registryClass.getMethod("getInstrumentation").invoke(null) != null
+        }.getOrDefault(false)
+    }
+
+    fun isDismissed(context: Context, id: String): Boolean {
+        // UI 測試一律當成看過了，避免彈出 AlertDialog 遮擋旅程測試元件
+        if (forceDismissAllForTesting == true) return true
+        if (forceDismissAllForTesting == false) return dismissed(context).contains(id)
+        if (isRunningInTest) return true
+        return dismissed(context).contains(id)
+    }
 
     fun dismiss(context: Context, id: String) {
         val all = dismissed(context).toMutableSet()
