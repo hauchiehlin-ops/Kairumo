@@ -76,7 +76,7 @@ public struct RadialMarkMenuView: View {
                             .stroke(Color.accentColor.opacity(0.5), lineWidth: 2)
                     )
                     .shadow(color: Color.black.opacity(0.15), radius: 6, y: 2)
-                    .position(centerPoint)
+                    .position(x: 190, y: 190)
 
                 // 環形分佈之快捷按鈕
                 ForEach(0..<items.count, id: \.self) { index in
@@ -123,12 +123,16 @@ public struct RadialMarkMenuView: View {
                     .onHover { inside in
                         hoveredItemId = inside ? item.id : (hoveredItemId == item.id ? nil : hoveredItemId)
                     }
-                    .position(x: centerPoint.x + position.x, y: centerPoint.y + position.y)
+                    .frame(width: itemSize, height: itemSize)
+                    .contentShape(Circle())
+                    .position(x: 190 + position.x, y: 190 + position.y)
                     .accessibilityLabel(localizationManager.localized(item.labelKey))
                     // 槽位 id（`radial.pen`…，與 Android 同一組）：旅程測試與 VoiceOver 認得出是哪一格。
                     .accessibilityIdentifier(item.id)
                 }
             }
+            .frame(width: 380, height: 380)
+            .position(centerPoint)
             .transition(.scale(scale: 0.6).combined(with: .opacity))
         }
         .animation(.spring(response: 0.28, dampingFraction: 0.76), value: isPresented)

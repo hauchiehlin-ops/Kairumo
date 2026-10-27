@@ -925,6 +925,10 @@ extension NotebookEditorView {
     }
 
     func recordDrawingEdit(page: Int, drawing: PKDrawing) {
+        if notebook.isReadOnlySample && !hasWarnedSampleReadOnly {
+            hasWarnedSampleReadOnly = true
+            showSampleReadOnlyAlert = true
+        }
         if page == currentPageIndex {
             currentDrawing = drawing
         }

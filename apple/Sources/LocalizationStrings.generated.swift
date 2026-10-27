@@ -10031,6 +10031,14 @@ extension LocalizationManager {
             .ko: "클립보드를 거치지 않고 바로 옆에 하나 더 만듭니다",
             .th: "สร้างสำเนาอีกชุดไว้ข้าง ๆ ทันที โดยไม่ผ่านคลิปบอร์ด"
         ],
+        "duplicate_to_edit": [
+            .zhHant: "複製一份來編輯",
+            .en: "Make a copy to edit",
+            .zhHans: "复制一份来编辑",
+            .ja: "コピーして編集",
+            .ko: "사본을 만들어 편집",
+            .th: "ทำสำเนาเพื่อแก้ไข"
+        ],
         "e2ee_protected": [
             .zhHant: "端對端加密保護",
             .en: "End-to-End Encrypted",
@@ -11671,6 +11679,14 @@ extension LocalizationManager {
             .ko: "알겠습니다",
             .th: "เข้าใจแล้ว"
         ],
+        "hint_lasso_body": [
+            .zhHant: "在筆跡或物件周圍圈一圈即可選取，可自由拖曳、縮放或變更顏色。",
+            .en: "Circle around strokes or objects to select them. You can move, resize, or recolor them freely.",
+            .zhHans: "在笔迹或对象周围圈一圈即可选中，可自由拖拽、缩放或变更颜色。",
+            .ja: "筆跡やオブジェクトの周りを囲んで選択します。自由に移動・拡大縮小・色の変更ができます。",
+            .ko: "획이나 개체 주변을 둘러싸서 선택하세요. 자유롭게 이동, 크기 조절, 색상 변경이 가능합니다。",
+            .th: "วาดวงรอบลายเส้นหรือวัตถุเพื่อเลือก สามารถลากย้าย ปรับขนาด หรือเปลี่ยนสีได้อย่างอิสระ"
+        ],
         "hint_lasso_drag_guide": [
             .zhHant: "已圈選筆劃：直接按住藍色選取框內部即可拖曳搬移。",
             .en: "Strokes selected: Touch and drag inside the selection box to move them.",
@@ -11678,6 +11694,14 @@ extension LocalizationManager {
             .ja: "ストロークが選択されました。青い枠内をドラッグすると移動できます。",
             .ko: "획이 선택되었습니다. 파란색 선택 상자 내부를 드래그하여 이동하세요.",
             .th: "เลือกเส้นแล้ว: แตะค้างแล้วลากภายในกล่องเพื่อย้ายตำแหน่ง"
+        ],
+        "hint_lasso_title": [
+            .zhHant: "套索工具",
+            .en: "Lasso Tool",
+            .zhHans: "套索工具",
+            .ja: "投げ縄ツール",
+            .ko: "올가미 도구",
+            .th: "เครื่องมือบ่วงบาศ"
         ],
         "hint_mode_switch_guide": [
             .zhHant: "若要在畫布任意處隨點即書，請使用打字模式；若要手寫繪圖，請使用手繪筆刷。",
@@ -11687,6 +11711,22 @@ extension LocalizationManager {
             .ko: "캔버스 어디서나 텍스트를 입력하려면 입력 모드를 사용하세요. 손글씨나 그리기는 브러시 도구를 사용하세요.",
             .th: "หากต้องการพิมพ์ข้อความที่ใดก็ได้บนผืนผ้าใบ โปรดใช้โหมดพิมพ์ สำหรับลายมือหรือการวาดภาพ โปรดใช้แปรง"
         ],
+        "hint_object_lock_body": [
+            .zhHant: "已鎖定的物件不會被誤觸拖動，如需調整可在圖層面板解除鎖定。",
+            .en: "Locked objects cannot be accidentally moved. Unlock them in the layers panel to adjust.",
+            .zhHans: "已锁定的对象不会被误触拖动，如需调整可在图层面板解除锁定。",
+            .ja: "ロックされたオブジェクトは誤操作で移動しません。調整する場合はレイヤーパネルでロックを解除してください。",
+            .ko: "잠긴 개체는 실수로 이동되지 않습니다. 조정하려면 레이어 패널에서 잠금을 해제하세요。",
+            .th: "วัตถุที่ล็อกไว้จะไม่ถูกเลื่อนโดยไม่ตั้งใจ หากต้องการปรับแต่งสามารถปลดล็อกได้ในแผงเลเยอร์"
+        ],
+        "hint_object_lock_title": [
+            .zhHant: "物件鎖定",
+            .en: "Locked Objects",
+            .zhHans: "对象锁定",
+            .ja: "オブジェクトのロック",
+            .ko: "개체 잠금",
+            .th: "การล็อกวัตถุ"
+        ],
         "hint_palm_rest_detected": [
             .zhHant: "偵測到手寫筆接觸：已自動切換為手繪模式，避免手掌誤觸產生文字框。",
             .en: "Stylus contact detected: Automatically switched to drawing mode to prevent accidental text boxes from palm rest.",
@@ -11694,6 +11734,38 @@ extension LocalizationManager {
             .ja: "スタイラスの接触を検出しました。手のひらの誤タッチによるテキストボックス生成を防ぐため、手書きモードに切り替えました。",
             .ko: "스타일러스 터치가 감지되었습니다. 손바닥 오작동으로 인한 텍스트 상자 생성을 방지하기 위해 그리기 모드로 전환했습니다.",
             .th: "ตรวจพบการสัมผัสของปากกา: สลับไปใช้โหมดวาดรูปโดยอัตโนมัติ เพื่อป้องกันการสร้างกล่องข้อความจากฝ่ามือ"
+        ],
+        "hint_pdf_underlay_body": [
+            .zhHant: "PDF 是鎖定的底稿、筆跡直接寫在上面、匯出可得到帶註記的 PDF。",
+            .en: "The PDF is a locked underlay. Your handwriting writes right over it, and exporting produces an annotated PDF.",
+            .zhHans: "PDF 是锁定的底稿、笔迹直接写在上面、导出可得到带注释的 PDF。",
+            .ja: "PDF はロックされた下敷きです。手書き文字は直接その上に書かれ、書き出すと注釈付き PDF になります。",
+            .ko: "PDF는 잠긴 밑바탕입니다. 손글씨는 그 위에 바로 작성되며, 내보내면 주석이 포함된 PDF가 됩니다。",
+            .th: "PDF เป็นพื้นหลังที่ถูกล็อก ลายมือจะเขียนลงบนนั้นโดยตรง และการส่งออกจะได้ PDF พร้อมโน้ตกำกับ"
+        ],
+        "hint_pdf_underlay_title": [
+            .zhHant: "PDF 底稿",
+            .en: "PDF Underlay",
+            .zhHans: "PDF 底稿",
+            .ja: "PDF 下敷き",
+            .ko: "PDF 밑바탕",
+            .th: "พื้นหลัง PDF"
+        ],
+        "hint_radial_menu_body": [
+            .zhHant: "在畫布上按住不動半秒即可喚出飛梭工具盤，向外輕揮快速切換工具。",
+            .en: "Press and hold still on the canvas for half a second to summon the Radial Menu; flick outward to switch tools.",
+            .zhHans: "在画布上按住不动半秒即可唤出飞梭工具盘，向外轻挥快速切换工具。",
+            .ja: "キャンバス上を約半秒長押しするとラジアルメニューが表示され、外側へフリックして素早くツールを切り替えられます。",
+            .ko: "캔버스를 약 0.5초 동안 길게 누르면 래디얼 메뉴가 나타나며, 바깥쪽으로 튕겨 도구를 빠르게 전환할 수 있습니다。",
+            .th: "กดค้างบนผืนผ้าใบราวครึ่งวินาทีเพื่อเปิดเมนูวงกลม ตวัดออกด้านนอกเพื่อสลับเครื่องมืออย่างรวดเร็ว"
+        ],
+        "hint_radial_menu_title": [
+            .zhHant: "飛梭工具盤",
+            .en: "Radial Menu",
+            .zhHans: "飞梭工具盘",
+            .ja: "ラジアルメニュー",
+            .ko: "래디얼 메뉴",
+            .th: "เมนูวงกลม"
         ],
         "hint_recognize_body": [
             .zhHant: "這會讀**目前這一頁**的手寫字並轉成文字。空白頁不會有結果 —— 先寫一點東西。",
@@ -15855,6 +15927,22 @@ extension LocalizationManager {
             .ko: "빈 용지, 모눈, 코넬",
             .th: "กระดาษเปล่า, ตาราง, คอร์เนลล์"
         ],
+        "new_note_from_pdf": [
+            .zhHant: "從 PDF 開始",
+            .en: "Start from PDF",
+            .zhHans: "从 PDF 开始",
+            .ja: "PDF から開始",
+            .ko: "PDF에서 시작",
+            .th: "เริ่มจาก PDF"
+        ],
+        "new_note_from_pdf_desc": [
+            .zhHant: "匯入 PDF 並自動配合頁面尺寸建立筆記",
+            .en: "Import a PDF and create a notebook matching its page size",
+            .zhHans: "导入 PDF 并自动配合页面尺寸建立笔记",
+            .ja: "PDF をインポートし、ページサイズに合わせてノートを作成",
+            .ko: "PDF를 가져와 페이지 크기에 맞춰 노트를 생성",
+            .th: "นำเข้า PDF และสร้างสมุดบันทึกตามขนาดหน้า"
+        ],
         "new_notebook": [
             .zhHant: "新增筆記本",
             .en: "New Notebook",
@@ -18894,6 +18982,22 @@ extension LocalizationManager {
             .ja: "タスク|担当|期限\nミドルレンジ Android の遅延計測|チェン|9/22\nマニュアルに「録音の挿入」章を追加|ウェン|9/20\n本番署名鍵の申請|ペイ|9/19",
             .ko: "할 일|담당|기한\n중급 안드로이드 지연 측정|치엔|9/22\n설명서 “녹음 삽입” 장 추가|원|9/20\n정식 서명 키 신청|페이|9/19",
             .th: "สิ่งที่ต้องทำ|ผู้รับผิดชอบ|กำหนด\nวัดความหน่วงบน Android รุ่นกลาง|เชียน|22 ก.ย.\nเขียนบท “แทรกเสียงบันทึก” ในคู่มือ|เหวิน|20 ก.ย.\nขอคีย์เซ็นชื่อจริง|เผย|19 ก.ย."
+        ],
+        "sample_readonly_hint_body": [
+            .zhHant: "這是一本示範筆記。複製一份即可自由書寫與編輯！",
+            .en: "This is a demonstration notebook. Make a copy to edit freely!",
+            .zhHans: "这是一本示范笔记。复制一份即可自由书写与编辑！",
+            .ja: "これはサンプルノートです。コピーを作成すると自由に編集できます！",
+            .ko: "이것은 시연용 노트입니다. 사본을 복사하여 자유롭게 편집하세요!",
+            .th: "นี่คือสมุดบันทึกตัวอย่าง ทำสำเนาเพื่อเขียนและแก้ไขได้อย่างอิสระ!"
+        ],
+        "sample_readonly_hint_title": [
+            .zhHant: "範例筆記唯讀",
+            .en: "Sample Notebook is Read-Only",
+            .zhHans: "示例笔记只读",
+            .ja: "サンプルノートは読み取り専用です",
+            .ko: "샘플 노트는 읽기 전용입니다",
+            .th: "สมุดบันทึกตัวอย่างอ่านได้อย่างเดียว"
         ],
         "sample_readonly_suffix": [
             .zhHant: "（唯讀）",

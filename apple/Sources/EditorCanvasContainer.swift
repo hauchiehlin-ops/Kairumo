@@ -151,7 +151,6 @@ extension NotebookEditorView {
                 }
             }
             .overlay { objectEditPanels }
-            .overlay { radialMenuLayer }
             .overlay(alignment: .top) {
                 // 🌟 草圖智慧修飾浮動控制面板（兩種頁面模式共用）
                 if showSketchRefineBar {

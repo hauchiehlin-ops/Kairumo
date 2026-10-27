@@ -89,6 +89,8 @@ fun NewNotebookDialog(
      * 紙張、規格、頁數都在核心的 `notebookKits()`，Apple 讀同一份。
      */
     onCreateKit: (uniffi.padnote_core.FfiNotebookKit) -> Unit = {},
+    /** 從 PDF 開始建立筆記。 */
+    onStartFromPdf: () -> Unit = {},
     onConfirm: (
         title: String,
         templateId: String?,
@@ -163,6 +165,19 @@ fun NewNotebookDialog(
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth().testTag("new_notebook.title.field")
                         )
+                    }
+
+                    // ── 從 PDF 開始建立筆記 ─────────────────────────
+                    item {
+                        androidx.compose.material3.OutlinedButton(
+                            onClick = onStartFromPdf,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp)
+                                .testTag("new_notebook.from_pdf")
+                        ) {
+                            Text("📄 " + l("new_note_from_pdf"))
+                        }
                     }
 
                     // ── 套件：一次建出一組筆記本 ─────────────────────────

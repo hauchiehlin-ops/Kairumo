@@ -9439,6 +9439,110 @@
     "zhHans": "立起悬停模式",
     "zhHant": "立起懸停模式"
   },
+  "hint_pdf_underlay_body": {
+    "en": "The PDF is a locked underlay. Your handwriting writes right over it, and exporting produces an annotated PDF.",
+    "ja": "PDF はロックされた下敷きです。手書き文字は直接その上に書かれ、書き出すと注釈付き PDF になります。",
+    "ko": "PDF는 잠긴 밑바탕입니다. 손글씨는 그 위에 바로 작성되며, 내보내면 주석이 포함된 PDF가 됩니다。",
+    "th": "PDF เป็นพื้นหลังที่ถูกล็อก ลายมือจะเขียนลงบนนั้นโดยตรง และการส่งออกจะได้ PDF พร้อมโน้ตกำกับ",
+    "zhHans": "PDF 是锁定的底稿、笔迹直接写在上面、导出可得到带注释的 PDF。",
+    "zhHant": "PDF 是鎖定的底稿、筆跡直接寫在上面、匯出可得到帶註記的 PDF。"
+  },
+  "hint_pdf_underlay_title": {
+    "en": "PDF Underlay",
+    "ja": "PDF 下敷き",
+    "ko": "PDF 밑바탕",
+    "th": "พื้นหลัง PDF",
+    "zhHans": "PDF 底稿",
+    "zhHant": "PDF 底稿"
+  },
+  "hint_object_lock_body": {
+    "en": "Locked objects cannot be accidentally moved. Unlock them in the layers panel to adjust.",
+    "ja": "ロックされたオブジェクトは誤操作で移動しません。調整する場合はレイヤーパネルでロックを解除してください。",
+    "ko": "잠긴 개체는 실수로 이동되지 않습니다. 조정하려면 레이어 패널에서 잠금을 해제하세요。",
+    "th": "วัตถุที่ล็อกไว้จะไม่ถูกเลื่อนโดยไม่ตั้งใจ หากต้องการปรับแต่งสามารถปลดล็อกได้ในแผงเลเยอร์",
+    "zhHans": "已锁定的对象不会被误触拖动，如需调整可在图层面板解除锁定。",
+    "zhHant": "已鎖定的物件不會被誤觸拖動，如需調整可在圖層面板解除鎖定。"
+  },
+  "hint_object_lock_title": {
+    "en": "Locked Objects",
+    "ja": "オブジェクトのロック",
+    "ko": "개체 잠금",
+    "th": "การล็อกวัตถุ",
+    "zhHans": "对象锁定",
+    "zhHant": "物件鎖定"
+  },
+  "hint_lasso_body": {
+    "en": "Circle around strokes or objects to select them. You can move, resize, or recolor them freely.",
+    "ja": "筆跡やオブジェクトの周りを囲んで選択します。自由に移動・拡大縮小・色の変更ができます。",
+    "ko": "획이나 개체 주변을 둘러싸서 선택하세요. 자유롭게 이동, 크기 조절, 색상 변경이 가능합니다。",
+    "th": "วาดวงรอบลายเส้นหรือวัตถุเพื่อเลือก สามารถลากย้าย ปรับขนาด หรือเปลี่ยนสีได้อย่างอิสระ",
+    "zhHans": "在笔迹或对象周围圈一圈即可选中，可自由拖拽、缩放或变更颜色。",
+    "zhHant": "在筆跡或物件周圍圈一圈即可選取，可自由拖曳、縮放或變更顏色。"
+  },
+  "hint_lasso_title": {
+    "en": "Lasso Tool",
+    "ja": "投げ縄ツール",
+    "ko": "올가미 도구",
+    "th": "เครื่องมือบ่วงบาศ",
+    "zhHans": "套索工具",
+    "zhHant": "套索工具"
+  },
+  "hint_radial_menu_body": {
+    "en": "Press and hold still on the canvas for half a second to summon the Radial Menu; flick outward to switch tools.",
+    "ja": "キャンバス上を約半秒長押しするとラジアルメニューが表示され、外側へフリックして素早くツールを切り替えられます。",
+    "ko": "캔버스를 약 0.5초 동안 길게 누르면 래디얼 메뉴가 나타나며, 바깥쪽으로 튕겨 도구를 빠르게 전환할 수 있습니다。",
+    "th": "กดค้างบนผืนผ้าใบราวครึ่งวินาทีเพื่อเปิดเมนูวงกลม ตวัดออกด้านนอกเพื่อสลับเครื่องมืออย่างรวดเร็ว",
+    "zhHans": "在画布上按住不动半秒即可唤出飞梭工具盘，向外轻挥快速切换工具。",
+    "zhHant": "在畫布上按住不動半秒即可喚出飛梭工具盤，向外輕揮快速切換工具。"
+  },
+  "hint_radial_menu_title": {
+    "en": "Radial Menu",
+    "ja": "ラジアルメニュー",
+    "ko": "래디얼 메뉴",
+    "th": "เมนูวงกลม",
+    "zhHans": "飞梭工具盘",
+    "zhHant": "飛梭工具盤"
+  },
+  "new_note_from_pdf": {
+    "en": "Start from PDF",
+    "ja": "PDF から開始",
+    "ko": "PDF에서 시작",
+    "th": "เริ่มจาก PDF",
+    "zhHans": "从 PDF 开始",
+    "zhHant": "從 PDF 開始"
+  },
+  "new_note_from_pdf_desc": {
+    "en": "Import a PDF and create a notebook matching its page size",
+    "ja": "PDF をインポートし、ページサイズに合わせてノートを作成",
+    "ko": "PDF를 가져와 페이지 크기에 맞춰 노트를 생성",
+    "th": "นำเข้า PDF และสร้างสมุดบันทึกตามขนาดหน้า",
+    "zhHans": "导入 PDF 并自动配合页面尺寸建立笔记",
+    "zhHant": "匯入 PDF 並自動配合頁面尺寸建立筆記"
+  },
+  "sample_readonly_hint_title": {
+    "en": "Sample Notebook is Read-Only",
+    "ja": "サンプルノートは読み取り専用です",
+    "ko": "샘플 노트는 읽기 전용입니다",
+    "th": "สมุดบันทึกตัวอย่างอ่านได้อย่างเดียว",
+    "zhHans": "示例笔记只读",
+    "zhHant": "範例筆記唯讀"
+  },
+  "sample_readonly_hint_body": {
+    "en": "This is a demonstration notebook. Make a copy to edit freely!",
+    "ja": "これはサンプルノートです。コピーを作成すると自由に編集できます！",
+    "ko": "이것은 시연용 노트입니다. 사본을 복사하여 자유롭게 편집하세요!",
+    "th": "นี่คือสมุดบันทึกตัวอย่าง ทำสำเนาเพื่อเขียนและแก้ไขได้อย่างอิสระ!",
+    "zhHans": "这是一本示范笔记。复制一份即可自由书写与编辑！",
+    "zhHant": "這是一本示範筆記。複製一份即可自由書寫與編輯！"
+  },
+  "duplicate_to_edit": {
+    "en": "Make a copy to edit",
+    "ja": "コピーして編集",
+    "ko": "사본을 만들어 편집",
+    "th": "ทำสำเนาเพื่อแก้ไข",
+    "zhHans": "复制一份来编辑",
+    "zhHant": "複製一份來編輯"
+  },
   "home": {
     "en": "Home",
     "ja": "ホーム",

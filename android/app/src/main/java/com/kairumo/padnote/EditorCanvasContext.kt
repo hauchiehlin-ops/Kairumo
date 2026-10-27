@@ -551,6 +551,10 @@ internal class EditorCanvasContext {
     var showCollaboration: Boolean
         get() = showCollaborationState.value
         set(v) { showCollaborationState.value = v }
+    lateinit var showSampleReadOnlyAlertState: MutableState<Boolean>
+    var showSampleReadOnlyAlert: Boolean
+        get() = showSampleReadOnlyAlertState.value
+        set(v) { showSampleReadOnlyAlertState.value = v }
     lateinit var showLanguagePickerState: MutableState<Boolean>
     var showLanguagePicker: Boolean
         get() = showLanguagePickerState.value
@@ -818,13 +822,24 @@ internal fun rememberEditorCanvasContext(
     // 上一個引擎。別台同步進來要重開 session 時，新引擎先借它的筆畫當畫面（見 `seedDisplayFrom`），
     // 不然背景讀檔那段時間整頁是白的。只在同一頁才借 —— 換頁不能把上一頁的字帶過來。
     val previousEngine = remember(notebookId) { arrayOfNulls<InkEngine>(1) }
+    val isSampleNotebook = remember(notebookId) {
+        notebookId != null && com.kairumo.padnote.library.SampleFork.isSample(activity, notebookId, deviceId(activity))
+    }
+    var hasWarnedSampleReadOnly by remember(notebookId) { mutableStateOf(false) }
+    val showSampleReadOnlyAlertState = remember { mutableStateOf(false) }
     val engine = remember(notebook, pageId) {
         InkEngine(session = notebook?.first, pageId = pageId).apply {
             previousEngine[0]?.takeIf { it.pageKey == (pageId ?: "") }?.let { seedDisplayFrom(it) }
             previousEngine[0] = this
             // 一筆畫完就通知同步。**會去抖動** —— 使用者還在寫字時
             // 每一筆都推只是浪費電，而且會拖慢正在編輯的這一本。
-            onContentCommitted = { com.kairumo.padnote.sync.AutoSync.noteLocalEdit(activity) }
+            onContentCommitted = {
+                if (isSampleNotebook && !hasWarnedSampleReadOnly) {
+                    hasWarnedSampleReadOnly = true
+                    showSampleReadOnlyAlertState.value = true
+                }
+                com.kairumo.padnote.sync.AutoSync.noteLocalEdit(activity)
+            }
             // 使用者調過的掌拒門檻要在**每次開新引擎時**套回去。
             // 只在設定當下套的話，換一頁就變回預設值，而使用者會以為
             // 設定沒有存到。
@@ -3049,6 +3064,7 @@ internal fun rememberEditorCanvasContext(
     ctx.showToolbarCustomizationState = showToolbarCustomizationState
     ctx.showAssetLibraryState = showAssetLibraryState
     ctx.showCollaborationState = showCollaborationState
+    ctx.showSampleReadOnlyAlertState = showSampleReadOnlyAlertState
     ctx.showLanguagePickerState = showLanguagePickerState
     ctx.showNoteIntelligenceState = showNoteIntelligenceState
     ctx.collabBaseRoomState = collabBaseRoomState

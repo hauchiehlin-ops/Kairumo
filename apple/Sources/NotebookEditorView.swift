@@ -318,6 +318,8 @@ public struct NotebookEditorView: View {
     @State var showAssetLibrarySheet: Bool = false
     /// 「插入錄音」的挑選面板。
     @State var showAudioPicker: Bool = false
+    @State var showSampleReadOnlyAlert: Bool = false
+    @State var hasWarnedSampleReadOnly: Bool = false
 
     // MARK: - 框選
     //
@@ -515,6 +517,13 @@ public struct NotebookEditorView: View {
     }
 
     public var body: some View {
+        ZStack {
+            editorMainContent
+            radialMenuLayer
+        }
+    }
+
+    private var editorMainContent: some View {
         VStack(spacing: 0) {
             // 設定檔即將切換：這一刻 `ProfileContext` 還是舊的，存下去的位置才對（見 `ProfileManager`）。
             // 放在這裡而不是接在下面那串修飾子後面：那一串已經長到再加一個編譯器就放棄型別推論。
@@ -1159,6 +1168,21 @@ public struct NotebookEditorView: View {
         .featureHint("hint.refine_sketch", trigger: showSketchRefineBar)
         .featureHint("hint.tabletop", trigger: isTabletopMode)
         .featureHint("hint.recognize", trigger: isRecognisingHandwriting)
+        .featureHint("hint.pdf_underlay", trigger: !(notebook.attachments?.filter { $0.fileName.hasSuffix(".png") }.isEmpty ?? true))
+        .featureHint("hint.object_lock", trigger: !(notebook.lockedObjectIds(forPage: currentPageIndex).isEmpty))
+        .featureHint("hint.lasso", trigger: selectedTool == .lasso)
+        .featureHint("hint.radial_menu", trigger: showRadialMenu)
+        .alert(localizationManager.localized("sample_readonly_hint_title"), isPresented: $showSampleReadOnlyAlert) {
+            Button(localizationManager.localized("duplicate_to_edit")) {
+                if let copy = store.duplicateNotebook(id: notebook.id) {
+                    notebook = copy
+                    showNoticeToast(name: localizationManager.localized("done"), icon: "checkmark.circle.fill")
+                }
+            }
+            Button(localizationManager.localized("cancel"), role: .cancel) {}
+        } message: {
+            Text(localizationManager.localized("sample_readonly_hint_body"))
+        }
         .sheet(isPresented: $showToolbarCustomization) {
             NavigationStack { ToolbarCustomizationView() }
         }

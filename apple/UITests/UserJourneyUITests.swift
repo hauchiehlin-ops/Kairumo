@@ -32,7 +32,42 @@ final class UserJourneyUITests: XCTestCase {
     }
 
     private func element(_ id: String) -> XCUIElement {
-        app.descendants(matching: .any).matching(identifier: id).firstMatch
+        // SwiftUI Menu 項目由 UIKit 的 UIAction 算繪，.accessibilityIdentifier 會被剝離，
+        // 只能用標籤查詢（見 ScreenAudit 與 InsertToolsAudit 的說明）。
+        let labelMap: [String: String] = [
+            "editor.customize_toolbar": "Customize Toolbar"
+        ]
+        func findElement() -> XCUIElement? {
+            if let label = labelMap[id] {
+                let btn = app.buttons[label].firstMatch
+                if btn.exists { return btn }
+                let byLabel = app.descendants(matching: .any).matching(NSPredicate(format: "label == %@", label)).firstMatch
+                if byLabel.exists { return byLabel }
+            }
+            let query = app.descendants(matching: .any).matching(identifier: id)
+            for i in 0..<query.count {
+                let el = query.element(boundBy: i)
+                if el.exists && el.isHittable { return el }
+            }
+            if query.firstMatch.exists { return query.firstMatch }
+            return nil
+        }
+
+        if let found = findElement() { return found }
+
+        // 如果在選單裡（UIMenu 是 UICollectionView 算繪），向下捲動尋找摺線下的項目（同 ScreenAudit.exists）
+        if app.collectionViews.firstMatch.exists {
+            for _ in 0..<3 {
+                app.collectionViews.firstMatch.swipeUp()
+                Thread.sleep(forTimeInterval: 0.3)
+                if let found = findElement() { return found }
+            }
+        }
+
+        if let label = labelMap[id] {
+            return app.buttons[label].firstMatch
+        }
+        return app.descendants(matching: .any).matching(identifier: id).firstMatch
     }
 
     private func tap(_ id: String, _ why: String, timeout: TimeInterval = 10) {
@@ -188,8 +223,10 @@ final class UserJourneyUITests: XCTestCase {
         XCTAssertFalse(pen.exists, "拿掉的鋼筆不該再出現在工具盤上")
 
         // 選工具盤上的橡皮擦：與工具列同一條路，真的會擦。
-        element("radial.eraser").tap()
-        sleep(1)
+        let eraser = element("radial.eraser")
+        XCTAssertTrue(eraser.waitForExistence(timeout: 5), "飛梭工具盤上找不到橡皮擦")
+        eraser.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+        Thread.sleep(forTimeInterval: 1.5)
         stroke(atHeight: 0.58)
         XCTAssertLessThanOrEqual(strokes(), before, "從飛梭工具盤選了橡皮擦，畫過那一筆應該擦掉它")
 

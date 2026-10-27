@@ -90,6 +90,20 @@
                 <data android:pathPattern=".*\\.padnote" />
                 <data android:host="*" />
             </intent-filter>
+            <!-- 外部點擊或分享 PDF 直接以此 App 開啟並建立筆記 -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="file" />
+                <data android:scheme="content" />
+                <data android:mimeType="application/pdf" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="application/pdf" />
+            </intent-filter>
         </activity>
 
         <!--

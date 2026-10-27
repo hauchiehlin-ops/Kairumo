@@ -58,6 +58,8 @@ enum AppCommand {
     static let proInkDidChange = Notification.Name("kairumo.proInkDidChange")
     /// 打字模式的格式快捷鍵（`object` 是 `TextFormatCommand`）。
     static let textFormat = Notification.Name("kairumo.command.textFormat")
+    /// 開啟指定筆記本（`object` 是 `String` 筆記本 id）。
+    static let openNotebook = Notification.Name("kairumo.command.openNotebook")
 }
 
 /// Word 的格式快捷鍵。

@@ -1687,6 +1687,14 @@ internal fun ColumnScope.EditorCanvasContainer(ctx: EditorCanvasContext) = with(
             activity, "hint.tabletop", isTabletopManual, deviceLanguageTag())
         com.kairumo.padnote.ui.FeatureHintHost(
             activity, "hint.recognize", isRecognisingHandwriting, deviceLanguageTag())
+        com.kairumo.padnote.ui.FeatureHintHost(
+            activity, "hint.pdf_underlay", imageStore.all.isNotEmpty(), deviceLanguageTag())
+        com.kairumo.padnote.ui.FeatureHintHost(
+            activity, "hint.object_lock", lockedIds.isNotEmpty(), deviceLanguageTag())
+        com.kairumo.padnote.ui.FeatureHintHost(
+            activity, "hint.lasso", inkTool == InkTool.LASSO, deviceLanguageTag())
+        com.kairumo.padnote.ui.FeatureHintHost(
+            activity, "hint.radial_menu", showRadialMenu, deviceLanguageTag())
         }
 
         // 工具列在「下」：要放在 `EditorWorkArea` **外面**（Column 的下一個子項）。
@@ -1769,6 +1777,34 @@ internal fun ColumnScope.EditorCanvasContainer(ctx: EditorCanvasContext) = with(
                 onColorPick = { hex -> engine.colorRgba = hexToRgba(hex) },
                 onExitTabletop = { isTabletopManual = false },
                 modifier = Modifier.fillMaxWidth().weight(0.42f)
+            )
+        }
+
+        if (showSampleReadOnlyAlert) {
+            AlertDialog(
+                onDismissRequest = { showSampleReadOnlyAlert = false },
+                title = { Text(l10n("sample_readonly_hint_title")) },
+                text = { Text(l10n("sample_readonly_hint_body")) },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            showSampleReadOnlyAlert = false
+                            val currentId = notebookId ?: return@TextButton
+                            val copyTitle = l10n("copy_suffix").replace("%@", noteTitle)
+                            val newId = com.kairumo.padnote.library.NotebookLibrary.duplicate(activity, currentId, copyTitle, deviceId(activity))
+                            if (newId != null) {
+                                onOpenNotebook?.invoke(newId)
+                            }
+                        }
+                    ) {
+                        Text(l10n("duplicate_to_edit"))
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showSampleReadOnlyAlert = false }) {
+                        Text(l10n("cancel"))
+                    }
+                }
             )
         }
 }

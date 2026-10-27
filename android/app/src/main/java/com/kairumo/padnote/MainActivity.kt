@@ -386,6 +386,11 @@ class MainActivity : FragmentActivity() {
         }
         return super.onKeyDown(keyCode, event)
     }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+    }
 }
 
 /**

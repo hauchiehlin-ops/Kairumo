@@ -93,9 +93,86 @@ pub fn pdf_page_placement(
     })
 }
 
+/// 由 PDF 建立筆記時的推薦頁面規格 id。
+///
+/// 橫式投影片或橫式文件自動對齊橫式規格（例如 16:9 簡報或 A4 橫式）；
+/// 若非標準比例，則產生精確貼合該 PDF 尺寸的自訂規格（`custom_<寬>x<高>`），
+/// 確保每頁底稿 1:1 滿版放置，不被縮進 A4 直式留白。
+#[uniffi::export]
+pub fn pdf_recommended_page_format(source_width: f32, source_height: f32) -> String {
+    let valid = |v: f32| v.is_finite() && v > 0.0;
+    if !valid(source_width) || !valid(source_height) {
+        return crate::ffi_paper::default_page_format_id();
+    }
+
+    let ratio = source_width / source_height;
+
+    // 16:9 投影片 (約 1.778)
+    if (1.68..=1.88).contains(&ratio) {
+        return "slide_16_9".to_string();
+    }
+
+    // A4 橫式 (1132 / 800 ≈ 1.415)
+    if (1.35..=1.48).contains(&ratio) {
+        return "a4_landscape".to_string();
+    }
+
+    // A4 直式 (800 / 1132 ≈ 0.707)
+    if (0.65..=0.76).contains(&ratio) {
+        return "a4".to_string();
+    }
+
+    // 正方形 (1.0)
+    if (0.95..=1.05).contains(&ratio) {
+        return "square".to_string();
+    }
+
+    // 美國 Letter 直式 (8.5 / 11 ≈ 0.773)
+    if (0.76..=0.80).contains(&ratio) {
+        return "letter".to_string();
+    }
+    // 美國 Letter 橫式 (11 / 8.5 ≈ 1.294)
+    if (1.25..=1.34).contains(&ratio) {
+        return "letter_landscape".to_string();
+    }
+
+    // 非標準比例：按其比例建立貼合之自訂頁面
+    let (target_w, target_h) = if source_width >= source_height {
+        let w = 1280.0f32;
+        let h = (w / ratio).round();
+        (w as u32, h as u32)
+    } else {
+        let w = 800.0f32;
+        let h = (w / ratio).round();
+        (w as u32, h as u32)
+    };
+
+    crate::ffi_paper::custom_page_format_id(target_w, target_h)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn recommended_page_format_matches_pdf_proportions() {
+        // 16:9 投影片
+        assert_eq!(pdf_recommended_page_format(960.0, 540.0), "slide_16_9");
+        assert_eq!(pdf_recommended_page_format(1920.0, 1080.0), "slide_16_9");
+        // A4 橫式
+        assert_eq!(pdf_recommended_page_format(842.0, 595.0), "a4_landscape");
+        // A4 直式
+        assert_eq!(pdf_recommended_page_format(595.0, 842.0), "a4");
+        // 正方形
+        assert_eq!(pdf_recommended_page_format(500.0, 500.0), "square");
+        // Letter 直式
+        assert_eq!(pdf_recommended_page_format(612.0, 792.0), "letter");
+        // 寬幅自訂
+        assert_eq!(pdf_recommended_page_format(1200.0, 400.0), "custom_1280x427");
+        // 無效尺寸回預設 A4
+        assert_eq!(pdf_recommended_page_format(0.0, 500.0), "a4");
+        assert_eq!(pdf_recommended_page_format(-10.0, 500.0), "a4");
+    }
 
     #[test]
     fn a4_pdf_fills_an_a4_page() {

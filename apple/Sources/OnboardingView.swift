@@ -135,11 +135,7 @@ struct OnboardingView: View {
     /// 結束。**不會有「跳過權限」這條路** —— 那正是審查指南 5.1.1(iv)
     /// 不允許的。
     private func continueFromIntro() {
-        guard needsRequest else {
-            finish()
-            return
-        }
-        requestMicrophone(then: finish)
+        finish()
     }
 
     private func finish() {

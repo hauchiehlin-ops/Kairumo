@@ -21,7 +21,9 @@ extension NotebookEditorView {
         // 寬度夠就用單行完整版；放不下則切到緊湊版，把次要功能收進「更多」選單；
         // 都還塞不下才換行。優先維持單行，主要動作才會固定在同一個位置。
         ViewThatFits(in: .horizontal) {
-            expandedEditorTopBar
+            if horizontalSizeClass == .regular {
+                expandedEditorTopBar
+            }
             HStack(spacing: 6) {
                 compactEditorTopBarItems
             }
