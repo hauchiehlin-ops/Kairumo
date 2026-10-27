@@ -168,7 +168,10 @@ mod tests {
         // Letter 直式
         assert_eq!(pdf_recommended_page_format(612.0, 792.0), "letter");
         // 寬幅自訂
-        assert_eq!(pdf_recommended_page_format(1200.0, 400.0), "custom_1280x427");
+        assert_eq!(
+            pdf_recommended_page_format(1200.0, 400.0),
+            "custom_1280x427"
+        );
         // 無效尺寸回預設 A4
         assert_eq!(pdf_recommended_page_format(0.0, 500.0), "a4");
         assert_eq!(pdf_recommended_page_format(-10.0, 500.0), "a4");

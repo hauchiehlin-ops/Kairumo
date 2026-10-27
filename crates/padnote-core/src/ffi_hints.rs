@@ -50,13 +50,13 @@ pub fn feature_hints() -> Vec<FfiFeatureHint> {
         "lasso",
         "radial_menu",
     ]
-        .into_iter()
-        .map(|id| FfiFeatureHint {
-            id: format!("hint.{id}"),
-            title_key: format!("hint_{id}_title"),
-            body_key: format!("hint_{id}_body"),
-        })
-        .collect()
+    .into_iter()
+    .map(|id| FfiFeatureHint {
+        id: format!("hint.{id}"),
+        title_key: format!("hint_{id}_title"),
+        body_key: format!("hint_{id}_body"),
+    })
+    .collect()
 }
 
 /// 某個功能的提示。認不得的 id 回 `None` —— 沒有提示不是錯誤。
