@@ -217,15 +217,15 @@ final class ObjectLayerTests: XCTestCase {
 
     func testUnderInkObjectIdsStorage() {
         var doc = NotebookDocument(id: "test", title: "Test")
-        XCTAssertTrue(doc.underInkObjectIds(forPage: 0).isEmpty)
+        XCTAssertTrue(doc.explicitUnderInkObjectIds(forPage: 0).isEmpty)
 
         doc.setUnderInkObjectIds(["obj-1", "obj-2"], forPage: 0)
-        XCTAssertEqual(doc.underInkObjectIds(forPage: 0), ["obj-1", "obj-2"])
-        XCTAssertTrue(doc.underInkObjectIds(forPage: 1).isEmpty, "其他頁面不受影響")
+        XCTAssertEqual(doc.explicitUnderInkObjectIds(forPage: 0), ["obj-1", "obj-2"])
+        XCTAssertTrue(doc.explicitUnderInkObjectIds(forPage: 1).isEmpty, "其他頁面不受影響")
 
-        var page0 = doc.underInkObjectIds(forPage: 0)
+        var page0 = doc.explicitUnderInkObjectIds(forPage: 0)
         page0.remove("obj-1")
         doc.setUnderInkObjectIds(page0, forPage: 0)
-        XCTAssertEqual(doc.underInkObjectIds(forPage: 0), ["obj-2"])
+        XCTAssertEqual(doc.explicitUnderInkObjectIds(forPage: 0), ["obj-2"])
     }
 }

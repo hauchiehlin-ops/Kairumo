@@ -715,6 +715,10 @@ private fun InkScreen(
             onInsertImage = {
                 photoPicker.launch(androidx.activity.result.PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
             },
+            // 這三個原本沒接上（`EditorTopBarActions` 的預設是空的）：選單點下去什麼都不會發生。
+            onInsertPdf = { pdfPicker.launch(com.kairumo.padnote.platform.FileImport.mimeTypes(uniffi.padnote_core.FfiImportSlot.PDF)) },
+            onInsertDocument = { documentPicker.launch(com.kairumo.padnote.platform.FileImport.mimeTypes(uniffi.padnote_core.FfiImportSlot.DOCUMENT)) },
+            onImportImageFile = { imagePicker.launch(com.kairumo.padnote.platform.FileImport.mimeTypes(uniffi.padnote_core.FfiImportSlot.IMAGE)) },
             onInsertAudio = { insertingAudio = true },
             onInsertChart = { insertingChart = true },
             onInsertTable = { insertingTable = true },

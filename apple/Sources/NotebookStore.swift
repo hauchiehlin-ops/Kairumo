@@ -412,19 +412,77 @@ public struct NotebookDocument: Identifiable, Codable, Hashable, @unchecked Send
         objectOrderByPage = map
     }
 
-    /// 某一頁位於手寫筆跡（PKDrawing Ink）下方的物件 ID 清單（背景圖層）。
-    /// 預設為空（即物件位於筆跡上方的前景圖層）。
+    /// 某一頁**明確**放到手寫筆跡下方的物件 ID（使用者搬過，或插入時指定）。
+    ///
+    /// 沒有列在這裡的物件照型別的預設：插入的素材（PDF 頁面、圖片、圖表、表格、形狀…）在筆跡
+    /// 下方，文字、圖釘、紙膠帶在上方。規則在核心（`padnote-core::ffi_layering`），
+    /// 實際在哪一層一律問 `underInkObjectIds(forPage:)`。
     public var underInkObjectIdsByPage: [String: [String]]?
 
-    public func underInkObjectIds(forPage page: Int) -> Set<String> {
+    /// 某一頁**明確**放到手寫筆跡上方的物件 ID（預設在下方、被使用者搬上來的）。
+    /// 與 Android `NotebookMeta.KEY_OVER_INK_BY_PAGE` 同一個鍵。
+    public var overInkObjectIdsByPage: [String: [String]]?
+
+    public func explicitUnderInkObjectIds(forPage page: Int) -> Set<String> {
         Set(underInkObjectIdsByPage?[String(page)] ?? [])
     }
 
+    public func explicitOverInkObjectIds(forPage page: Int) -> Set<String> {
+        Set(overInkObjectIdsByPage?[String(page)] ?? [])
+    }
+
+    /// 這一頁**實際**在筆跡下方的物件（核心規則 + 兩份明確清單）。
+    public func underInkObjectIds(forPage page: Int) -> Set<String> {
+        Set(objectsBelowInk(
+            objects: layerObjects(forPage: page),
+            under: underInkObjectIdsByPage?[String(page)] ?? [],
+            over: overInkObjectIdsByPage?[String(page)] ?? []))
+    }
+
+    /// 只寫明確的「筆跡下方」清單（範例筆記的背景卡片）。一般的搬動走 `moveObjects(_:to:forPage:)`。
     public mutating func setUnderInkObjectIds(_ ids: Set<String>, forPage page: Int) {
         var map = underInkObjectIdsByPage ?? [:]
         // 排序：同一組物件每次都寫出同一份內容，同步才不會誤判「有變動」。
         map[String(page)] = ids.sorted()
         underInkObjectIdsByPage = map
+    }
+
+    /// 把物件搬到筆跡的上方或下方。兩份清單怎麼寫由核心決定（`moveObjectsToInkPlane`）。
+    public mutating func moveObjects(_ ids: Set<String>, to plane: FfiInkPlane, forPage page: Int) {
+        let keys = Set(ids.map { $0.lowercased() })
+        let moving = layerObjects(forPage: page).filter { keys.contains($0.id.lowercased()) }
+        guard !moving.isEmpty else { return }
+        let key = String(page)
+        let lists = moveObjectsToInkPlane(
+            moving: moving, plane: plane,
+            under: underInkObjectIdsByPage?[key] ?? [],
+            over: overInkObjectIdsByPage?[key] ?? [])
+        var under = underInkObjectIdsByPage ?? [:]
+        under[key] = lists.under
+        underInkObjectIdsByPage = under
+        var over = overInkObjectIdsByPage ?? [:]
+        over[key] = lists.over.isEmpty ? nil : lists.over
+        overInkObjectIdsByPage = over.isEmpty ? nil : over
+    }
+
+    /// 這一頁上可以疊放的物件（id 與種類），給核心的圖層規則用。
+    public func layerObjects(forPage page: Int) -> [FfiLayerObject] {
+        var out: [FfiLayerObject] = []
+        func add<T>(_ items: [T]?, _ kind: FfiLayerKind, _ id: (T) -> String, _ pageOf: (T) -> Int) {
+            for item in items ?? [] where pageOf(item) == page { out.append(FfiLayerObject(id: id(item), kind: kind)) }
+        }
+        add(attachments, .image, \.id, \.pageIndex)
+        add(shapeAttachments, .shape, \.id, \.pageIndex)
+        // 連接線跟著它連的形狀：形狀在筆跡下方，線也在下方。
+        add(connectionAttachments, .shape, \.id, \.pageIndex)
+        add(tableAttachments, .table, \.id, \.pageIndex)
+        add(textAttachments, .text, \.id, \.pageIndex)
+        add(linkAttachments, .link, \.id, \.pageIndex)
+        add(model3DAttachments, .model3d, \.id, \.pageIndex)
+        add(audioAttachments, .audio, \.id, \.pageIndex)
+        add(commentPins, .pin, \.id, \.pageIndex)
+        add(tapeAttachments, .tape, \.id, \.pageIndex)
+        return out
     }
 
     /// 某一頁「鎖定在畫布上」的物件 ID。鎖定的物件不接收任何觸控（點選、拖曳、長按都穿透到頁面），
@@ -482,11 +540,13 @@ public struct NotebookDocument: Identifiable, Codable, Hashable, @unchecked Send
         }
         let order = realign(objectOrderByPage, sorted: false)
         let underInk = realign(underInkObjectIdsByPage, sorted: true)
+        let overInk = realign(overInkObjectIdsByPage, sorted: true).flatMap { $0.isEmpty ? nil : $0 }
         let locked = realign(lockedObjectIdsByPage, sorted: true).flatMap { $0.isEmpty ? nil : $0 }
         let changed = order != objectOrderByPage || underInk != underInkObjectIdsByPage
-            || locked != lockedObjectIdsByPage
+            || overInk != overInkObjectIdsByPage || locked != lockedObjectIdsByPage
         objectOrderByPage = order
         underInkObjectIdsByPage = underInk
+        overInkObjectIdsByPage = overInk
         lockedObjectIdsByPage = locked
         return changed
     }
@@ -2015,7 +2075,7 @@ public final class NotebookStore: ObservableObject {
         // 那是使用者的選擇 —— 看空的話每次啟動都會被改回去（使用者回報：圖層調整後又恢復原狀）。
         for index in notebooks.indices {
             if notebooks[index].id.caseInsensitiveCompare("seed-feature-showcase-v1") == .orderedSame || notebooks[index].titleKey == "seed_feature_showcase_title" {
-                if notebooks[index].underInkObjectIds(forPage: 1).isEmpty {
+                if notebooks[index].explicitUnderInkObjectIds(forPage: 1).isEmpty {
                     for p in 0..<notebooks[index].pageCount {
                         let bgCardIds = (notebooks[index].shapeAttachments ?? []).filter {
                             $0.pageIndex == p && $0.kindName == "rectangle" && $0.label.isEmpty
@@ -3519,22 +3579,43 @@ public final class NotebookStore: ObservableObject {
     /// 在指定頁面後方插入新頁面，平移後續頁面並回傳新插入頁面之 pageIndex
     @discardableResult
     public func insertPage(notebookId: String, afterIndex: Int, paperId: String? = nil, pageId: String? = nil) -> Int {
+        insertPages(notebookId: notebookId, afterIndex: afterIndex, count: 1, paperId: paperId,
+                    pageIds: pageId.map { [$0] })
+    }
+
+    /// 在指定頁面後方一次插入 `count` 頁，回傳第一個新頁的 pageIndex。
+    ///
+    /// # 為什麼不是呼叫 `insertPage` 很多次
+    ///
+    /// 每插一頁都要把插入點之後**每一頁**的逐頁檔案（筆跡、專業筆畫、同步記帳）改名一次、
+    /// 再落盤一次中繼資料。匯入一份 30 頁的 PDF 就是 30 輪 —— 在主執行緒上、而且文件庫
+    /// 可能在外接磁碟上。這裡只挪一次、只寫一次。
+    @discardableResult
+    public func insertPages(
+        notebookId: String, afterIndex: Int, count: Int, paperId: String? = nil, pageIds newIds: [String]? = nil
+    ) -> Int {
         guard let idx = notebooks.firstIndex(where: { $0.id == notebookId }) else { return 0 }
+        let count = max(1, count)
         let oldPageCount = max(1, notebooks[idx].pageCount)
-        let newPageCount = oldPageCount + 1
+        let newPageCount = oldPageCount + count
         let insertIndex = min(max(0, afterIndex + 1), oldPageCount)
         notebooks[idx].alignPageIds()
         if notebooks[idx].pageIds != nil {
-            notebooks[idx].pageIds?.insert(pageId ?? UUID().uuidString.lowercased(),
+            let ids = (0 ..< count).map { i in
+                (newIds?.indices.contains(i) == true ? newIds?[i] : nil) ?? UUID().uuidString.lowercased()
+            }
+            notebooks[idx].pageIds?.insert(contentsOf: ids,
                                            at: min(insertIndex, notebooks[idx].pageIds?.count ?? 0))
         }
 
-        // 插入點之後每一頁的所有逐頁檔案往後挪一頁（不只 `.drawing`：專業筆畫、同步記帳也是以頁碼命名）。
-        removePageFiles(notebookId: notebookId, page: oldPageCount)
-        shiftPageFiles(notebookId: notebookId, from: insertIndex, through: oldPageCount - 1, by: 1)
-        // 將新插入的一頁設為空白
-        saveDrawing(notebookId: notebookId, pageIndex: insertIndex, drawing: PKDrawing())
-        remapPageKeyedFields(at: idx) { $0 >= insertIndex ? $0 + 1 : $0 }
+        // 插入點之後每一頁的所有逐頁檔案往後挪（不只 `.drawing`：專業筆畫、同步記帳也是以頁碼命名）。
+        removePageFiles(notebookId: notebookId, pages: Set(oldPageCount ..< newPageCount))
+        shiftPageFiles(notebookId: notebookId, from: insertIndex, through: oldPageCount - 1, by: count)
+        // 新插入的頁面設為空白
+        for page in insertIndex ..< insertIndex + count {
+            saveDrawing(notebookId: notebookId, pageIndex: page, drawing: PKDrawing())
+        }
+        remapPageKeyedFields(at: idx) { $0 >= insertIndex ? $0 + count : $0 }
 
         // 更新 pageHeights
         let defaultHeight = notebooks[idx].pageSize.height
@@ -3542,12 +3623,12 @@ public final class NotebookStore: ObservableObject {
         while heights.count < oldPageCount {
             heights.append(defaultHeight)
         }
-        heights.insert(defaultHeight, at: insertIndex)
+        heights.insert(contentsOf: Array(repeating: defaultHeight, count: count), at: insertIndex)
         notebooks[idx].pageHeights = heights
 
         notebooks[idx].padPagePaperIds(to: oldPageCount)
         notebooks[idx].pagePaperIds?.insert(
-            paperId ?? notebooks[idx].template.paperId,
+            contentsOf: Array(repeating: paperId ?? notebooks[idx].template.paperId, count: count),
             at: min(insertIndex, notebooks[idx].pagePaperIds?.count ?? 0))
 
         // 每一種附件都要重新對齊頁碼。
@@ -3558,39 +3639,73 @@ public final class NotebookStore: ObservableObject {
         // 留在原地，現在它落在那張新的空白頁上」。
         //
         // 算術在核心（`pageIndexAfterInsert`），這裡只負責把每一種餵進去。
-        notebooks[idx].attachments = Self.shiftPages(
-            notebooks[idx].attachments, inserting: insertIndex)
-        notebooks[idx].textAttachments = Self.shiftPages(
-            notebooks[idx].textAttachments, inserting: insertIndex)
-        notebooks[idx].linkAttachments = Self.shiftPages(
-            notebooks[idx].linkAttachments, inserting: insertIndex)
-        notebooks[idx].model3DAttachments = Self.shiftPages(
-            notebooks[idx].model3DAttachments, inserting: insertIndex)
-        notebooks[idx].commentPins = Self.shiftPages(
-            notebooks[idx].commentPins, inserting: insertIndex)
-        notebooks[idx].tableAttachments = Self.shiftPages(
-            notebooks[idx].tableAttachments, inserting: insertIndex)
-        notebooks[idx].shapeAttachments = Self.shiftPages(
-            notebooks[idx].shapeAttachments, inserting: insertIndex)
-        notebooks[idx].connectionAttachments = Self.shiftPages(
-            notebooks[idx].connectionAttachments, inserting: insertIndex)
-        notebooks[idx].audioAttachments = Self.shiftPages(
-            notebooks[idx].audioAttachments, inserting: insertIndex)
-        notebooks[idx].tapeAttachments = Self.shiftPages(
-            notebooks[idx].tapeAttachments, inserting: insertIndex)
-        notebooks[idx].stickyAnchors = Self.shiftPages(
-            notebooks[idx].stickyAnchors, inserting: insertIndex)
+        for _ in 0 ..< count {
+            notebooks[idx].attachments = Self.shiftPages(
+                notebooks[idx].attachments, inserting: insertIndex)
+            notebooks[idx].textAttachments = Self.shiftPages(
+                notebooks[idx].textAttachments, inserting: insertIndex)
+            notebooks[idx].linkAttachments = Self.shiftPages(
+                notebooks[idx].linkAttachments, inserting: insertIndex)
+            notebooks[idx].model3DAttachments = Self.shiftPages(
+                notebooks[idx].model3DAttachments, inserting: insertIndex)
+            notebooks[idx].commentPins = Self.shiftPages(
+                notebooks[idx].commentPins, inserting: insertIndex)
+            notebooks[idx].tableAttachments = Self.shiftPages(
+                notebooks[idx].tableAttachments, inserting: insertIndex)
+            notebooks[idx].shapeAttachments = Self.shiftPages(
+                notebooks[idx].shapeAttachments, inserting: insertIndex)
+            notebooks[idx].connectionAttachments = Self.shiftPages(
+                notebooks[idx].connectionAttachments, inserting: insertIndex)
+            notebooks[idx].audioAttachments = Self.shiftPages(
+                notebooks[idx].audioAttachments, inserting: insertIndex)
+            notebooks[idx].tapeAttachments = Self.shiftPages(
+                notebooks[idx].tapeAttachments, inserting: insertIndex)
+            notebooks[idx].stickyAnchors = Self.shiftPages(
+                notebooks[idx].stickyAnchors, inserting: insertIndex)
+        }
 
         // 內嵌筆跡陣列也要跟著長一頁，否則 pagesData 與 pageCount 會錯開，
         // 而匯出是看前者的 —— 插入的那一頁在 PDF 裡不存在。
         if insertIndex <= notebooks[idx].pagesData.count {
-            notebooks[idx].pagesData.insert(PKDrawing().dataRepresentation(), at: insertIndex)
+            notebooks[idx].pagesData.insert(
+                contentsOf: Array(repeating: PKDrawing().dataRepresentation(), count: count), at: insertIndex)
         }
 
         notebooks[idx].pageCount = newPageCount
         notebooks[idx].lastModifiedDate = Date()
         persistData()
         return insertIndex
+    }
+
+    /// 把整份匯入的 PDF 頁面放上內頁：第 `firstPage + i` 頁放第 `i` 張，整頁大小、鎖定在畫布上。
+    ///
+    /// **鎖定**：PDF 頁面是被標註的底稿。不鎖的話，打字模式下點頁面任何一處都會選到這張
+    /// 整頁的圖、開始拖它，而不是新增文字。要搬動或刪除時從圖層面板解除鎖定。
+    ///
+    /// 圖層不必另外設定：依核心規則，圖片本來就在筆跡下方。
+    func placePdfPages(notebookId: String, pages: [PdfImportedPage], firstPage: Int) {
+        guard let idx = notebooks.firstIndex(where: { $0.id == notebookId }), !pages.isEmpty else { return }
+        var doc = notebooks[idx]
+        if doc.attachments == nil { doc.attachments = [] }
+        for (offset, page) in pages.enumerated() {
+            let pageIndex = firstPage + offset
+            let attachment = NoteImageAttachment(
+                fileName: page.fileName,
+                pageIndex: pageIndex,
+                x: page.frame.minX, y: page.frame.minY,
+                width: page.frame.width, height: page.frame.height,
+                rotationDegrees: 0,
+                cornerRadius: 0,
+                hasShadow: false,
+                hasBorder: false,
+                filterStyle: .original)
+            doc.attachments?.append(attachment)
+            doc.setLockedObjectIds(doc.lockedObjectIds(forPage: pageIndex).union([attachment.id]), forPage: pageIndex)
+            // 堆疊順序：底稿放在這一頁最底下，之後插入的東西都在它上面。
+            let order = doc.objectOrder(forPage: pageIndex) ?? []
+            doc.setObjectOrder([attachment.id] + order.filter { $0 != attachment.id }, forPage: pageIndex)
+        }
+        updateNotebook(doc)
     }
 
     /// 刪除指定頁面，平移後續頁面並回傳安全之 currentPageIndex
@@ -3862,11 +3977,17 @@ public final class NotebookStore: ObservableObject {
     /// 刪掉某一頁的所有逐頁檔案（見 `permutePageFiles`）。只刪 `.drawing` 的話，
     /// 那一頁的專業筆畫與同步記帳留在磁碟上，之後新增到同一個頁碼的頁會把它們撿回來。
     private func removePageFiles(notebookId: String, page: Int) {
+        removePageFiles(notebookId: notebookId, pages: [page])
+    }
+
+    /// 一次清掉好幾頁的逐頁檔案：目錄只列一次（插入多頁時每頁各列一次是白做工）。
+    private func removePageFiles(notebookId: String, pages: Set<Int>) {
+        guard !pages.isEmpty else { return }
         let fm = FileManager.default
-        let prefix = "\(notebookId)_p\(page)."
+        let prefixes = pages.map { "\(notebookId)_p\($0)." }
         for dir in [drawingsDirectory, syncBaselineDirectory] {
             guard let names = try? fm.contentsOfDirectory(atPath: dir.path) else { continue }
-            for name in names where name.hasPrefix(prefix) {
+            for name in names where prefixes.contains(where: { name.hasPrefix($0) }) {
                 try? fm.removeItem(at: dir.appending(path: name))
             }
         }
@@ -3895,6 +4016,7 @@ public final class NotebookStore: ObservableObject {
         }
         notebooks[idx].objectOrderByPage = remap(notebooks[idx].objectOrderByPage)
         notebooks[idx].underInkObjectIdsByPage = remap(notebooks[idx].underInkObjectIdsByPage)
+        notebooks[idx].overInkObjectIdsByPage = remap(notebooks[idx].overInkObjectIdsByPage)
         let locked = remap(notebooks[idx].lockedObjectIdsByPage)
         notebooks[idx].lockedObjectIdsByPage = (locked?.isEmpty ?? true) ? nil : locked
         notebooks[idx].recognizedText = remap(notebooks[idx].recognizedText)
@@ -5686,6 +5808,7 @@ extension NotebookStore {
             let checkedGuideItems: [String: Bool]?
             let objectOrderByPage: [String: [String]]?
             let underInkObjectIdsByPage: [String: [String]]?
+            let overInkObjectIdsByPage: [String: [String]]?
             let lockedObjectIdsByPage: [String: [String]]?
             let ink: [String]
         }
@@ -5708,6 +5831,7 @@ extension NotebookStore {
             tapeAttachments: doc.tapeAttachments, stickyAnchors: doc.stickyAnchors,
             checkedGuideItems: doc.checkedGuideItems, objectOrderByPage: doc.objectOrderByPage,
             underInkObjectIdsByPage: doc.underInkObjectIdsByPage,
+            overInkObjectIdsByPage: doc.overInkObjectIdsByPage,
             lockedObjectIdsByPage: doc.lockedObjectIdsByPage, ink: ink)
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.sortedKeys]
@@ -5986,7 +6110,7 @@ extension NotebookStore {
         return chars.count == 36 && chars[14] == "7"
     }
 
-    private func isBlankPage(_ notebook: NotebookDocument, index: Int) -> Bool {
+    func isBlankPage(_ notebook: NotebookDocument, index: Int) -> Bool {
         func none<T: PageIndexed>(_ items: [T]?) -> Bool {
             !(items ?? []).contains { $0.pageIndex == index }
         }

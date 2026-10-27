@@ -202,12 +202,16 @@ object PageSnapshot {
                 textStore.all.forEach { add(ObjectStacking.Item(it.id, ObjectStacking.Kind.TEXT, "")) }
             }
             val order = ObjectStacking.normalized(items, meta.objectOrder(pageIndex))
-            order to items.associate { it.id to it.kind }
+            // 種類表也收連結、錄音、3D：它們不在堆疊清單裡，但在筆跡哪一側一樣照核心規則。
+            order to (items.associate { it.id to it.kind } +
+                links.associate { it.id to ObjectStacking.Kind.LINK } +
+                audioCards.associate { it.id to ObjectStacking.Kind.AUDIO } +
+                models.associate { it.id to ObjectStacking.Kind.MODEL3D })
         }
-        val underInkIds = meta.underInkObjectIds(pageIndex)
+        val underInkIds = meta.underInkObjectIds(pageIndex, stack.second)
         val zIndexOf: (String) -> Float = { id ->
             val baseZ = ObjectStacking.zIndex(id, stack.second[id] ?: ObjectStacking.Kind.TEXT, stack.first)
-            if (underInkIds.contains(id)) 10f + baseZ else 200f + baseZ
+            ObjectStacking.inkAwareZ(baseZ, underInkIds.contains(id))
         }
         val l10n: (String) -> String = { key -> LocalizationStrings.localized(key, languageTag) }
         val guideMeasurer = rememberTextMeasurer()

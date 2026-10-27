@@ -12960,12 +12960,12 @@ extension LocalizationManager {
             .th: "แทรกหน้าด้วยเทมเพลต…"
         ],
         "insert_pdf": [
-            .zhHant: "插入 PDF 頁面",
-            .en: "Insert PDF Page",
-            .zhHans: "插入 PDF 页面",
-            .ja: "PDF ページを挿入",
-            .ko: "PDF 페이지 삽입",
-            .th: "แทรกหน้า PDF"
+            .zhHant: "匯入 PDF",
+            .en: "Import PDF",
+            .zhHans: "导入 PDF",
+            .ja: "PDF を読み込む",
+            .ko: "PDF 가져오기",
+            .th: "นำเข้า PDF"
         ],
         "insert_swatch": [
             .zhHant: "插入色票卡",
@@ -17022,6 +17022,62 @@ extension LocalizationManager {
             .ja: "何ページ目を挿入しますか？",
             .ko: "몇 번째 페이지를 넣을까요?",
             .th: "หน้าไหน?"
+        ],
+        "pdf_import_all_pages": [
+            .zhHant: "匯入全部 %@ 頁",
+            .en: "Import all %@ pages",
+            .zhHans: "导入全部 %@ 页",
+            .ja: "全 %@ ページを読み込む",
+            .ko: "%@페이지 모두 가져오기",
+            .th: "นำเข้าทั้งหมด %@ หน้า"
+        ],
+        "pdf_import_done": [
+            .zhHant: "已匯入 %@ 頁",
+            .en: "Imported %@ pages",
+            .zhHans: "已导入 %@ 页",
+            .ja: "%@ ページを読み込みました",
+            .ko: "%@페이지를 가져왔습니다",
+            .th: "นำเข้าแล้ว %@ หน้า"
+        ],
+        "pdf_import_hint": [
+            .zhHant: "每一頁 PDF 會成為一頁筆記內頁，縮放到整頁大小；筆跡會畫在 PDF 上面。",
+            .en: "Each PDF page becomes a notebook page, scaled to fill it. Your ink goes on top of the PDF.",
+            .zhHans: "每一页 PDF 会成为一页笔记内页，缩放到整页大小；笔迹会画在 PDF 上面。",
+            .ja: "PDF の各ページがノートの 1 ページになり、ページ全体に合わせて拡大縮小されます。手書きは PDF の上に書けます。",
+            .ko: "PDF의 각 페이지가 노트 한 페이지가 되어 전체 크기로 맞춰집니다. 필기는 PDF 위에 그려집니다.",
+            .th: "แต่ละหน้าของ PDF จะกลายเป็นหนึ่งหน้าในสมุด ปรับขนาดให้เต็มหน้า และลายมือจะอยู่บน PDF"
+        ],
+        "pdf_import_partial": [
+            .zhHant: "已匯入 %1@ 頁，%2@ 頁畫不出來而略過",
+            .en: "Imported %1@ pages; skipped %2@ that could not be drawn",
+            .zhHans: "已导入 %1@ 页，%2@ 页无法绘制而略过",
+            .ja: "%1@ ページを読み込みました（描画できない %2@ ページはスキップ）",
+            .ko: "%1@페이지를 가져왔고 그릴 수 없는 %2@페이지는 건너뛰었습니다",
+            .th: "นำเข้าแล้ว %1@ หน้า ข้าม %2@ หน้าที่วาดไม่ได้"
+        ],
+        "pdf_import_progress": [
+            .zhHant: "正在匯入第 %1@ / %2@ 頁…",
+            .en: "Importing page %1@ of %2@…",
+            .zhHans: "正在导入第 %1@ / %2@ 页…",
+            .ja: "%2@ ページ中 %1@ ページ目を読み込み中…",
+            .ko: "%2@페이지 중 %1@페이지 가져오는 중…",
+            .th: "กำลังนำเข้าหน้า %1@ จาก %2@…"
+        ],
+        "pdf_import_this_page_only": [
+            .zhHant: "只插入這一頁",
+            .en: "Insert this page only",
+            .zhHans: "只插入这一页",
+            .ja: "このページだけ挿入",
+            .ko: "이 페이지만 넣기",
+            .th: "แทรกเฉพาะหน้านี้"
+        ],
+        "pdf_import_title": [
+            .zhHant: "匯入 PDF",
+            .en: "Import PDF",
+            .zhHans: "导入 PDF",
+            .ja: "PDF を読み込む",
+            .ko: "PDF 가져오기",
+            .th: "นำเข้า PDF"
         ],
         "pdf_not_a_pdf": [
             .zhHant: "這個檔案不是 PDF，或者已經損壞。",

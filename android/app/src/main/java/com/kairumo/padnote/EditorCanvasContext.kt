@@ -645,6 +645,7 @@ internal class EditorCanvasContext {
     lateinit var stackOrder: List<String>
     lateinit var stackOrderLatest: List<String>
     lateinit var underInkIds: Set<String>
+    lateinit var kindOf: Map<String, ObjectStacking.Kind>
     lateinit var zIndexOf: (String) -> Float
     lateinit var lockedIds: Set<String>
     lateinit var lockedIdsLatest: Set<String>
@@ -683,6 +684,7 @@ internal class EditorCanvasContext {
     lateinit var movePage: (Int, Int) -> Unit
     lateinit var duplicatePage: (Int) -> Unit
     lateinit var insertPageAfter: (Int, String?) -> Unit
+    lateinit var importPdfAsPages: suspend (java.io.File, (Int, Int) -> Unit) -> Pair<Int, Int>
     lateinit var deletePageAt: (Int) -> Unit
     lateinit var canvasSnapshot: () -> com.kairumo.padnote.canvas.CanvasSnapshot
     lateinit var applyCanvasSnapshot: (com.kairumo.padnote.canvas.CanvasSnapshot) -> Unit
@@ -1539,13 +1541,17 @@ internal fun rememberEditorCanvasContext(
     val stackOrder = remember(stackItems, stackRevision) {
         ObjectStacking.normalized(stackItems, meta.objectOrder(pageIndex))
     }
-    val kindOf = remember(stackItems) { stackItems.associate { it.id to it.kind } }
-    val underInkIds = remember(meta, pageIndex, stackRevision) {
-        meta.underInkObjectIds(pageIndex)
+    // 錄音卡片不在圖層面板裡，但一樣要照核心的圖層規則決定在筆跡哪一側。
+    val kindOf = remember(stackItems, audioCards, pageIndex) {
+        stackItems.associate { it.id to it.kind } +
+            audioCards.filter { it.pageIndex == pageIndex }.associate { it.id to ObjectStacking.Kind.AUDIO }
+    }
+    val underInkIds = remember(meta, pageIndex, stackRevision, kindOf) {
+        meta.underInkObjectIds(pageIndex, kindOf)
     }
     val zIndexOf: (String) -> Float = { id ->
         val baseZ = ObjectStacking.zIndex(id, kindOf[id] ?: ObjectStacking.Kind.TEXT, stackOrder)
-        if (underInkIds.contains(id)) 10f + baseZ else 200f + baseZ
+        ObjectStacking.inkAwareZ(baseZ, underInkIds.contains(id))
     }
 
     // 鎖定在畫布上（見 canvas/ObjectLock.kt）：鎖定的物件不接收觸控，雙指縮放、捲動頁面時
@@ -1589,31 +1595,31 @@ internal fun rememberEditorCanvasContext(
     val objectReorder: (String, ObjectStacking.Reorder) -> Unit = { id, op ->
         when (op) {
             ObjectStacking.Reorder.SEND_BELOW_INK -> {
-                val current = meta.underInkObjectIds(pageIndex).toMutableSet()
-                if (current.add(id)) {
-                    meta.setUnderInkObjectIds(notebook?.first, pageIndex, current)
+                if (id !in underInkIds) {
+                    meta.moveObjectsToInkPlane(notebook?.first, pageIndex, kindOf.filterKeys { it == id },
+                        uniffi.padnote_core.FfiInkPlane.BELOW_INK)
                     stackRevision++
                 }
             }
             ObjectStacking.Reorder.BRING_ABOVE_INK -> {
-                val current = meta.underInkObjectIds(pageIndex).toMutableSet()
-                if (current.remove(id)) {
-                    meta.setUnderInkObjectIds(notebook?.first, pageIndex, current)
+                if (id in underInkIds) {
+                    meta.moveObjectsToInkPlane(notebook?.first, pageIndex, kindOf.filterKeys { it == id },
+                        uniffi.padnote_core.FfiInkPlane.ABOVE_INK)
                     stackRevision++
                 }
             }
             ObjectStacking.Reorder.TO_FRONT -> {
-                val current = meta.underInkObjectIds(pageIndex).toMutableSet()
-                if (current.remove(id)) {
-                    meta.setUnderInkObjectIds(notebook?.first, pageIndex, current)
+                if (id in underInkIds) {
+                    meta.moveObjectsToInkPlane(notebook?.first, pageIndex, kindOf.filterKeys { it == id },
+                        uniffi.padnote_core.FfiInkPlane.ABOVE_INK)
                 }
                 meta.setObjectOrder(notebook?.first, pageIndex, op.apply(id, stackOrder))
                 stackRevision++
             }
             ObjectStacking.Reorder.TO_BACK -> {
-                val current = meta.underInkObjectIds(pageIndex).toMutableSet()
-                if (current.add(id)) {
-                    meta.setUnderInkObjectIds(notebook?.first, pageIndex, current)
+                if (id !in underInkIds) {
+                    meta.moveObjectsToInkPlane(notebook?.first, pageIndex, kindOf.filterKeys { it == id },
+                        uniffi.padnote_core.FfiInkPlane.BELOW_INK)
                 }
                 meta.setObjectOrder(notebook?.first, pageIndex, op.apply(id, stackOrder))
                 stackRevision++
@@ -1731,9 +1737,14 @@ internal fun rememberEditorCanvasContext(
     }
     LaunchedEffect(stackItems, knownObjectIds) {
         val known = knownObjectIds ?: return@LaunchedEffect
-        val fresh = stackItems.map { it.id }.filter { it !in known }
+        val appeared = stackItems.map { it.id }.filter { it !in known }
+        if (appeared.isEmpty()) return@LaunchedEffect
+        knownObjectIds = known + appeared
+        // 鎖定的新物件是匯入的 PDF 底稿（`NotebookMeta.placePdfPages`）：它要留在最底下，
+        // 也不該把使用者趕到打字模式 —— 匯入 PDF 就是為了接著在上面寫字。
+        val locked = meta.lockedObjectIds()
+        val fresh = appeared.filter { it.lowercase() !in locked }
         if (fresh.isEmpty()) return@LaunchedEffect
-        knownObjectIds = known + fresh
         val freshSet = fresh.toSet()
         meta.setObjectOrder(
             notebook?.first, pageIndex,
@@ -1906,8 +1917,10 @@ internal fun rememberEditorCanvasContext(
         meta.shiftPageKeyedData(s, fromIndex = target, totalPagesBefore = newCount - 1)
         meta.objectOrder(index).mapNotNull { ids[it] }.takeIf { it.isNotEmpty() }
             ?.let { meta.setObjectOrder(s, target, it) }
-        meta.underInkObjectIds(index).mapNotNull { ids[it] }.toSet().takeIf { it.isNotEmpty() }
+        meta.explicitUnderInkObjectIds(index).mapNotNull { ids[it] }.toSet().takeIf { it.isNotEmpty() }
             ?.let { meta.setUnderInkObjectIds(s, target, it) }
+        meta.explicitOverInkObjectIds(index).mapNotNull { ids[it] }.toSet().takeIf { it.isNotEmpty() }
+            ?.let { meta.setOverInkObjectIds(s, target, it) }
         val shapeStyles = meta.shapeStyles().mapNotNull { (old, style) -> ids[old]?.let { it to style } }.toMap()
         val linkStyles = meta.connectionStyles().mapNotNull { (old, style) -> ids[old]?.let { it to style } }.toMap()
         meta.updateStyles(s, shapeUpserts = shapeStyles, connectionUpserts = linkStyles)
@@ -1941,6 +1954,84 @@ internal fun rememberEditorCanvasContext(
         pageCount = newCount
         pageIndex = targetIndex
         revision++
+    }
+
+    /**
+     * 整份 PDF 匯入：每一頁 PDF 成為一頁筆記內頁，縮放到整頁大小。
+     *
+     * 從目前這一頁後面開始插；目前這一頁完全空白（剛建好的筆記）的話，第一頁就放在它上面。
+     *
+     * # 為什麼整條路都在背景
+     *
+     * 原本的對話框在 Compose 的組合階段（主執行緒）算繪並編碼整頁 PNG，大小是「PDF 點數
+     * × 2」—— 掃描版 PDF 一頁就是 4960×7016。現在算繪、編碼、寫進核心（`putBlob` 會寫檔）
+     * 都在 [Dispatchers.IO]，一頁做完就放掉那張點陣圖；主執行緒只回報進度、最後收尾一次。
+     * 以頁碼為鍵的中繼資料只挪一次、只落盤兩次（原本每插一頁就挪一次、寫一次）。
+     *
+     * @return 匯入的頁數與畫不出來而略過的頁數。
+     */
+    suspend fun importPdfAsPages(file: java.io.File, onProgress: (done: Int, total: Int) -> Unit): Pair<Int, Int> {
+        val s = notebook?.first ?: return 0 to 0
+        val anchor = pageIndex
+        val countBefore = runCatching { s.pageCount().toInt() }.getOrDefault(pageCount)
+        val reuseCurrent = stackItems.isEmpty() && engine.strokes.isEmpty() &&
+            audioCards.none { it.pageIndex == anchor } && links.none { it.pageIndex == anchor }
+        val pageWidth = PageGeometry.width
+        val pageHeight = PageGeometry.height
+        val placed = mutableListOf<Pair<Int, String>>()
+        var inserted = 0
+        var skipped = 0
+        try {
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                runCatching {
+                    android.os.ParcelFileDescriptor.open(file, android.os.ParcelFileDescriptor.MODE_READ_ONLY).use { fd ->
+                        android.graphics.pdf.PdfRenderer(fd).use { renderer ->
+                            val total = renderer.pageCount
+                            for (i in 0 until total) {
+                                kotlinx.coroutines.currentCoroutineContext().ensureActive()
+                                val page = PageImageRenderer.renderPdfPageForImport(renderer, i, pageWidth, pageHeight)
+                                if (page == null) {
+                                    skipped++
+                                } else {
+                                    val target = if (reuseCurrent && placed.isEmpty()) anchor else {
+                                        // 新頁一律接在上一張後面：第 k 張新頁的最終頁碼就是 anchor + 1 + k。
+                                        val newId = s.addPage(uniffi.padnote_core.PageStyle.BLANK)
+                                        val at = anchor + 1 + inserted
+                                        if (at < countBefore + inserted) s.movePage(newId, at.toUInt())
+                                        inserted++
+                                        at
+                                    }
+                                    val pid = s.pageIdAt(target.toUInt())
+                                    ImageStore(s, pid).insertPlaced(
+                                        page.png, file.nameWithoutExtension, page.x, page.y, page.width, page.height
+                                    )?.let { placed += target to it.id }
+                                }
+                                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) { onProgress(i + 1, total) }
+                            }
+                        }
+                    }
+                }.onFailure { if (it is kotlinx.coroutines.CancellationException) throw it }
+            }
+        } finally {
+            // 取消（使用者按了取消）時也要收尾：已經插進去的頁面要讓中繼資料對齊，不然後面的頁
+            // 的圖層設定、卡片會錯位。
+            kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable) {
+                // 後面的頁往後挪了 inserted 格：以頁碼為鍵的圖層設定、卡片、膠帶一次挪完。
+                if (inserted > 0 && anchor + 1 < countBefore) meta.shiftPageKeyedData(s, anchor + 1, countBefore, by = inserted)
+                meta.placePdfPages(s, placed)
+                pageCount = runCatching { s.pageCount().toInt() }.getOrDefault(countBefore + inserted)
+                placed.firstOrNull()?.let { pageIndex = it.first }
+                imageStore.load()
+                imageRevision++
+                stackRevision++
+                revision++
+                sessionRevision++
+                // 匯入 PDF 是為了在上面寫字：停在手寫模式。
+                editorMode = EditorMode.DRAW
+                com.kairumo.padnote.sync.AutoSync.noteLocalEdit(activity)
+            }
+        }
+        return placed.size to skipped
     }
 
     // 把解析好的文件排進**目前這一頁**：依文件順序由上往下，放不下的接到後面新插入的頁面。
@@ -2959,6 +3050,7 @@ internal fun rememberEditorCanvasContext(
     ctx.stackOrder = stackOrder
     ctx.stackOrderLatest = stackOrderLatest
     ctx.underInkIds = underInkIds
+    ctx.kindOf = kindOf
     ctx.zIndexOf = zIndexOf
     ctx.lockedIds = lockedIds
     ctx.lockedIdsLatest = lockedIdsLatest
@@ -2995,6 +3087,7 @@ internal fun rememberEditorCanvasContext(
     ctx.movePage = { from, to -> movePage(from, to) }
     ctx.duplicatePage = { index -> duplicatePage(index) }
     ctx.insertPageAfter = { afterIndex, paperId -> insertPageAfter(afterIndex, paperId) }
+    ctx.importPdfAsPages = { file, progress -> importPdfAsPages(file, progress) }
     ctx.deletePageAt = { atIndex -> deletePageAt(atIndex) }
     ctx.canvasSnapshot = { canvasSnapshot() }
     ctx.applyCanvasSnapshot = { snap -> applyCanvasSnapshot(snap) }

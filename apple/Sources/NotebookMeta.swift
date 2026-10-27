@@ -75,6 +75,9 @@ struct NotebookMeta: Codable, Hashable {
     /// 使用者看到的是把蓋住筆跡的物件移下去之後，過一下又跳回上面（使用者回報）。
     var underInkObjectIdsByPage: [String: [String]]?
 
+    /// 明確放到筆跡上方的物件（預設在下方的型別被搬上來）。與 Android `NotebookMeta.KEY_OVER_INK_BY_PAGE` 同一個鍵。
+    var overInkObjectIdsByPage: [String: [String]]?
+
     /// 鎖定在畫布上的物件：`["頁次": [物件 id]]`。與 Android `NotebookMeta.KEY_LOCKED_BY_PAGE` 同一個鍵。
     var lockedObjectIdsByPage: [String: [String]]?
 
@@ -160,6 +163,7 @@ struct NotebookMeta: Codable, Hashable {
         tapeAttachments = document.tapeAttachments
         objectOrderByPage = document.objectOrderByPage
         underInkObjectIdsByPage = document.underInkObjectIdsByPage
+        overInkObjectIdsByPage = document.overInkObjectIdsByPage
         lockedObjectIdsByPage = document.lockedObjectIdsByPage
         isSample = document.sampleFlag
         stickyAnchors = document.stickyAnchors
@@ -228,6 +232,9 @@ struct NotebookMeta: Codable, Hashable {
         }
         if let underInkObjectIdsByPage {
             document.underInkObjectIdsByPage = underInkObjectIdsByPage
+        }
+        if let overInkObjectIdsByPage {
+            document.overInkObjectIdsByPage = overInkObjectIdsByPage
         }
         if let lockedObjectIdsByPage {
             document.lockedObjectIdsByPage = lockedObjectIdsByPage

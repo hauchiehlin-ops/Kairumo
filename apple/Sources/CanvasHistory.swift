@@ -44,6 +44,7 @@ struct CanvasObjectState: Equatable {
     var objectOrderByPage: [String: [String]]?
     var objectOrder: [String]?
     var underInkObjectIdsByPage: [String: [String]]?
+    var overInkObjectIdsByPage: [String: [String]]?
     var lockedObjectIdsByPage: [String: [String]]?
 
     init(_ doc: NotebookDocument) {
@@ -64,6 +65,7 @@ struct CanvasObjectState: Equatable {
         objectOrderByPage = doc.objectOrderByPage
         objectOrder = doc.objectOrder
         underInkObjectIdsByPage = doc.underInkObjectIdsByPage
+        overInkObjectIdsByPage = doc.overInkObjectIdsByPage
         lockedObjectIdsByPage = doc.lockedObjectIdsByPage
     }
 
@@ -85,6 +87,7 @@ struct CanvasObjectState: Equatable {
         doc.objectOrderByPage = objectOrderByPage
         doc.objectOrder = objectOrder
         doc.underInkObjectIdsByPage = underInkObjectIdsByPage
+        doc.overInkObjectIdsByPage = overInkObjectIdsByPage
         doc.lockedObjectIdsByPage = lockedObjectIdsByPage
     }
 
@@ -112,7 +115,8 @@ struct CanvasObjectState: Equatable {
         if checkedGuideItems != other.checkedGuideItems { keys.insert("#checkedGuideItems") }
         if pagePaperIds != other.pagePaperIds || guidePaletteId != other.guidePaletteId { keys.insert("#paper") }
         if objectOrderByPage != other.objectOrderByPage || objectOrder != other.objectOrder
-            || underInkObjectIdsByPage != other.underInkObjectIdsByPage { keys.insert("#order") }
+            || underInkObjectIdsByPage != other.underInkObjectIdsByPage
+            || overInkObjectIdsByPage != other.overInkObjectIdsByPage { keys.insert("#order") }
         if lockedObjectIdsByPage != other.lockedObjectIdsByPage { keys.insert("#locked") }
         return keys
     }

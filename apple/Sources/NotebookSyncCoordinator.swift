@@ -290,6 +290,9 @@ enum ObjectLedger {
         if let under = d.underInkObjectIdsByPage, let data = try? encoder.encode(under) {
             out["__doc.underInk"] = SHA256.hash(data: data).prefix(8).map { String(format: "%02x", $0) }.joined()
         }
+        if let over = d.overInkObjectIdsByPage, let data = try? encoder.encode(over) {
+            out["__doc.overInk"] = SHA256.hash(data: data).prefix(8).map { String(format: "%02x", $0) }.joined()
+        }
         if let locked = d.lockedObjectIdsByPage, let data = try? encoder.encode(locked) {
             out["__doc.locked"] = SHA256.hash(data: data).prefix(8).map { String(format: "%02x", $0) }.joined()
         }
@@ -409,7 +412,9 @@ final class ExportedObjectIds: @unchecked Sendable {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.sortedKeys]
         out[layerOrderKey] = (try? encoder.encode(d.objectOrderByPage ?? [:])).map { Data($0).hashValue } ?? 0
-        out[underInkKey] = (try? encoder.encode(d.underInkObjectIdsByPage ?? [:])).map { Data($0).hashValue } ?? 0
+        // 上方、下方兩份清單合成一個指紋：兩者是同一個「放在筆跡哪一側」的設定，要一起保留或一起取代。
+        out[underInkKey] = (try? encoder.encode([d.underInkObjectIdsByPage ?? [:], d.overInkObjectIdsByPage ?? [:]]))
+            .map { Data($0).hashValue } ?? 0
         out[lockedKey] = (try? encoder.encode(d.lockedObjectIdsByPage ?? [:])).map { Data($0).hashValue } ?? 0
         return out
     }
@@ -1979,6 +1984,7 @@ enum NotebookSyncCoordinator {
     static func keepLayeringUnknownToPackage(_ merged: inout NotebookDocument, local: NotebookDocument) {
         let pages = LocalPages(local: local, imported: merged)
         if merged.underInkObjectIdsByPage == nil { merged.underInkObjectIdsByPage = pages.rekey(local.underInkObjectIdsByPage) }
+        if merged.overInkObjectIdsByPage == nil { merged.overInkObjectIdsByPage = pages.rekey(local.overInkObjectIdsByPage) }
         if merged.objectOrderByPage == nil { merged.objectOrderByPage = pages.rekey(local.objectOrderByPage) }
         if merged.lockedObjectIdsByPage == nil { merged.lockedObjectIdsByPage = pages.rekey(local.lockedObjectIdsByPage) }
     }
@@ -2113,6 +2119,7 @@ enum NotebookSyncCoordinator {
         }
         if exported[underInkKey] != nil, current[underInkKey] != exported[underInkKey] {
             merged.underInkObjectIdsByPage = pages.rekey(local.underInkObjectIdsByPage)
+            merged.overInkObjectIdsByPage = pages.rekey(local.overInkObjectIdsByPage)
             preserved = true
         }
         let lockedKey = ExportedObjectIds.lockedKey
@@ -2187,6 +2194,11 @@ enum NotebookSyncCoordinator {
         let localUnderInk = pages.rekey(local.underInkObjectIdsByPage)
         if localUnderInk != imported.underInkObjectIdsByPage {
             merged.underInkObjectIdsByPage = localUnderInk
+            preserved = true
+        }
+        let localOverInk = pages.rekey(local.overInkObjectIdsByPage)
+        if localOverInk != imported.overInkObjectIdsByPage {
+            merged.overInkObjectIdsByPage = localOverInk
             preserved = true
         }
         let localLocked = pages.rekey(local.lockedObjectIdsByPage)

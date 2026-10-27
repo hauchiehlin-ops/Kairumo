@@ -64,6 +64,8 @@ class NotebookMeta private constructor(private var root: JSONObject) {
     companion object {
         const val KEY_ORDER_BY_PAGE = "objectOrderByPage"
         const val KEY_UNDER_INK_BY_PAGE = "underInkObjectIdsByPage"
+        /** 明確放到筆跡上方的物件（預設在下方的型別被搬上來）。與 Apple `NotebookMeta.overInkObjectIdsByPage` 同一個鍵。 */
+        const val KEY_OVER_INK_BY_PAGE = "overInkObjectIdsByPage"
         /** 鎖定在畫布上的物件（`{"頁次": [id]}`）。與 Apple `NotebookMeta.lockedObjectIdsByPage` 同一個鍵。 */
         const val KEY_LOCKED_BY_PAGE = "lockedObjectIdsByPage"
         /** 「範例」標記（與 Apple `NotebookMeta.isSample` 同一個鍵）。沒有這個鍵 = 沒設定過。 */
@@ -274,8 +276,31 @@ class NotebookMeta private constructor(private var root: JSONObject) {
      * 在 `fromIndex` 插入一頁之前：以頁碼為鍵的物件堆疊順序與筆跡下方名單，`fromIndex` 以後的頁都往後挪一格。
      * 紙張樣板由 [insertPageTemplate] 自己挪。不挪的話，插入一頁之後，後面每一頁的圖層設定都錯位一頁。
      */
-    fun shiftPageKeyedData(session: PadnoteSession?, fromIndex: Int, totalPagesBefore: Int) {
-        remapPageIndexes { index -> if (index in fromIndex until totalPagesBefore) index + 1 else index }
+    fun shiftPageKeyedData(session: PadnoteSession?, fromIndex: Int, totalPagesBefore: Int, by: Int = 1) {
+        remapPageIndexes { index -> if (index in fromIndex until totalPagesBefore) index + by else index }
+        flush(session)
+    }
+
+    /**
+     * 整份匯入的 PDF 頁面：每一張鎖定在畫布上、放在那一頁堆疊的最底下，最後只落盤一次。
+     *
+     * **鎖定**：PDF 頁面是被標註的底稿。不鎖的話，打字模式下點頁面任何一處都會選到這張
+     * 整頁的圖。圖層不必另外設定：依核心規則，圖片本來就在筆跡下方。
+     */
+    fun placePdfPages(session: PadnoteSession?, placed: List<Pair<Int, String>>) {
+        if (placed.isEmpty()) return
+        val locked = root.optJSONObject(KEY_LOCKED_BY_PAGE) ?: JSONObject()
+        val orders = root.optJSONObject(KEY_ORDER_BY_PAGE) ?: JSONObject()
+        for ((pageIndex, id) in placed) {
+            val key = pageIndex.toString()
+            val current = locked.optJSONArray(key)?.toStringList().orEmpty().map { it.lowercase() }.toSortedSet()
+            current += id.lowercase()
+            locked.put(key, JSONArray(current.toList()))
+            val order = orders.optJSONArray(key)?.toStringList().orEmpty().filter { it != id }
+            orders.put(key, JSONArray(listOf(id) + order))
+        }
+        root.put(KEY_LOCKED_BY_PAGE, locked)
+        root.put(KEY_ORDER_BY_PAGE, orders)
         flush(session)
     }
 
@@ -289,7 +314,7 @@ class NotebookMeta private constructor(private var root: JSONObject) {
      */
     /** `internal`：單元測試直接驗它（主機上的 JVM 載不到核心，`movePageData` 要問核心頁碼規則）。 */
     internal fun remapPageIndexes(transform: (Int) -> Int?) {
-        for (key in listOf(KEY_ORDER_BY_PAGE, KEY_UNDER_INK_BY_PAGE, KEY_LOCKED_BY_PAGE, KEY_RECOGNIZED_TEXT)) {
+        for (key in listOf(KEY_ORDER_BY_PAGE, KEY_UNDER_INK_BY_PAGE, KEY_OVER_INK_BY_PAGE, KEY_LOCKED_BY_PAGE, KEY_RECOGNIZED_TEXT)) {
             val map = root.optJSONObject(key) ?: continue
             val shifted = JSONObject()
             val keys = map.keys()
@@ -384,7 +409,7 @@ class NotebookMeta private constructor(private var root: JSONObject) {
         }
 
         // 以頁碼為鍵、內容是物件 id 的清單：換成這本的 id，沒帶過來的丟掉。
-        for (key in listOf(KEY_ORDER_BY_PAGE, KEY_UNDER_INK_BY_PAGE, KEY_LOCKED_BY_PAGE)) {
+        for (key in listOf(KEY_ORDER_BY_PAGE, KEY_UNDER_INK_BY_PAGE, KEY_OVER_INK_BY_PAGE, KEY_LOCKED_BY_PAGE)) {
             val list = source.root.optJSONObject(key)?.optJSONArray(sourcePage.toString()) ?: continue
             val mapped = list.toStringList().mapNotNull { ids[it.lowercase()] }
             if (mapped.isEmpty()) continue
@@ -474,12 +499,56 @@ class NotebookMeta private constructor(private var root: JSONObject) {
     }
 
     /**
-     * 某一頁位於手寫筆跡下方的物件 ID 清單（背景層）。
+     * 某一頁**明確**放到手寫筆跡下方的物件 ID（使用者搬過，或範例筆記的背景卡片）。
+     *
+     * 沒列在這裡的物件照型別的預設（核心 `padnote-core::ffi_layering`）：插入的素材在筆跡
+     * 下方，文字與圖釘在上方。實際在哪一層一律問 [underInkObjectIds]（帶種類的那個）。
      */
-    fun underInkObjectIds(pageIndex: Int): Set<String> {
-        val map = root.optJSONObject(KEY_UNDER_INK_BY_PAGE) ?: return emptySet()
+    fun explicitUnderInkObjectIds(pageIndex: Int): Set<String> = pageIdSet(KEY_UNDER_INK_BY_PAGE, pageIndex)
+
+    /** 某一頁**明確**放到筆跡上方的物件 ID（預設在下方、被使用者搬上來的）。 */
+    fun explicitOverInkObjectIds(pageIndex: Int): Set<String> = pageIdSet(KEY_OVER_INK_BY_PAGE, pageIndex)
+
+    private fun pageIdSet(key: String, pageIndex: Int): Set<String> {
+        val map = root.optJSONObject(key) ?: return emptySet()
         val arr = map.optJSONArray(pageIndex.toString()) ?: return emptySet()
         return arr.toStringList().toSet()
+    }
+
+    /** 這一頁**實際**在筆跡下方的物件。[kinds] 是這一頁上每個物件的種類。 */
+    fun underInkObjectIds(pageIndex: Int, kinds: Map<String, com.kairumo.padnote.canvas.ObjectStacking.Kind>): Set<String> =
+        com.kairumo.padnote.canvas.ObjectStacking.belowInk(
+            kinds, explicitUnderInkObjectIds(pageIndex), explicitOverInkObjectIds(pageIndex))
+
+    /**
+     * 把物件搬到筆跡上方或下方並落盤。兩份清單怎麼寫由核心決定（`moveObjectsToInkPlane`）：
+     * 放到下方一定寫進舊版也認得的 `underInkObjectIdsByPage`。
+     */
+    fun moveObjectsToInkPlane(
+        session: PadnoteSession?,
+        pageIndex: Int,
+        moving: Map<String, com.kairumo.padnote.canvas.ObjectStacking.Kind>,
+        plane: uniffi.padnote_core.FfiInkPlane
+    ) {
+        if (moving.isEmpty()) return
+        val lists = uniffi.padnote_core.moveObjectsToInkPlane(
+            com.kairumo.padnote.canvas.ObjectStacking.layerObjects(moving), plane,
+            explicitUnderInkObjectIds(pageIndex).toList(), explicitOverInkObjectIds(pageIndex).toList())
+        putPageIds(KEY_UNDER_INK_BY_PAGE, pageIndex, lists.under)
+        putPageIds(KEY_OVER_INK_BY_PAGE, pageIndex, lists.over)
+        flush(session)
+    }
+
+    /** 寫入某一頁明確放在筆跡上方的物件清單並落盤（搬頁、複製頁時跟著搬）。 */
+    fun setOverInkObjectIds(session: PadnoteSession?, pageIndex: Int, ids: Set<String>) {
+        putPageIds(KEY_OVER_INK_BY_PAGE, pageIndex, ids.sorted())
+        flush(session)
+    }
+
+    private fun putPageIds(key: String, pageIndex: Int, ids: List<String>) {
+        val map = root.optJSONObject(key) ?: JSONObject()
+        if (ids.isEmpty()) map.remove(pageIndex.toString()) else map.put(pageIndex.toString(), JSONArray(ids))
+        if (map.length() == 0) root.remove(key) else root.put(key, map)
     }
 
     /**

@@ -103,6 +103,10 @@ def iter_target_files(cli_args: list[str]):
             p = (ROOT / arg).resolve() if not Path(arg).is_absolute() else Path(arg).resolve()
             if not p.is_file() or p.name.startswith("._") or p.name in all_skips:
                 continue
+            # 範圍要與全庫掃描一致（只看介面程式碼）：pre-commit 傳進來的暫存檔可能包含測試，
+            # 測試裡的中文是測試資料，全庫掃描本來就不看 —— 不擋的話，碰過一次測試檔就提交不了。
+            if not any(p.is_relative_to(base.resolve()) for base, _, _ in TARGETS):
+                continue
             if p.suffix in (".swift", ".kt"):
                 yield p
         return

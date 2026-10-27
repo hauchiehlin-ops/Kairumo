@@ -1043,7 +1043,7 @@ extension NotebookEditorView {
     func sanitizeUnderInkObjects() {
         let isShowcase = notebook.id.caseInsensitiveCompare("seed-feature-showcase-v1") == .orderedSame || notebook.titleKey == "seed_feature_showcase_title"
         if isShowcase {
-            if notebook.underInkObjectIds(forPage: 1).isEmpty {
+            if notebook.explicitUnderInkObjectIds(forPage: 1).isEmpty {
                 for p in 0..<notebook.pageCount {
                     let bgCardIds = (notebook.shapeAttachments ?? []).filter {
                         $0.pageIndex == p && $0.kindName == "rectangle" && $0.label.isEmpty

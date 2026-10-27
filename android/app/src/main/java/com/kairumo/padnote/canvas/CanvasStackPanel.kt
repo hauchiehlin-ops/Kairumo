@@ -253,6 +253,7 @@ private fun ObjectStacking.Kind.mark(): String = when (this) {
     ObjectStacking.Kind.CHART -> "▥"
     ObjectStacking.Kind.MODEL3D -> "◈"
     ObjectStacking.Kind.LINK -> "⛓"
+    ObjectStacking.Kind.AUDIO -> "♪"
     ObjectStacking.Kind.TEXT -> "T"
     ObjectStacking.Kind.PIN -> "◉"
 }

@@ -1217,9 +1217,11 @@ internal fun ColumnScope.EditorCanvasContainer(ctx: EditorCanvasContext) = with(
                             newBox.backgroundColorHex = "clear"
                             newBox.hasBorder = false
                             textStore.persist(newBox)
-                            val currentUnder = meta.underInkObjectIds(pageIndex).toMutableSet()
-                            if (currentUnder.remove(newBox.id)) {
-                                meta.setUnderInkObjectIds(notebook?.first, pageIndex, currentUnder)
+                            // 轉錄文字是標註：一定在筆跡上方（文字預設就在上方，這裡只清掉殘留的明確設定）。
+                            if (newBox.id in meta.explicitUnderInkObjectIds(pageIndex)) {
+                                meta.moveObjectsToInkPlane(notebook?.first, pageIndex,
+                                    mapOf(newBox.id to com.kairumo.padnote.canvas.ObjectStacking.Kind.TEXT),
+                                    uniffi.padnote_core.FfiInkPlane.ABOVE_INK)
                             }
                             val updatedOrder = com.kairumo.padnote.canvas.ObjectStacking.bringToFront(
                                 setOf(newBox.id),

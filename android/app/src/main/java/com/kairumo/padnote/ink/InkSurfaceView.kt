@@ -83,7 +83,10 @@ class InkSurfaceView(
         override fun onDrawMultiBufferedLayer(
             canvas: Canvas, bufferWidth: Int, bufferHeight: Int, params: Collection<Segment>
         ) {
-            canvas.drawColor(Color.WHITE)
+            // **清成透明，不是塗白。** 這個表面 `setZOrderOnTop(true)`，疊在整個視窗最上面：
+            // 塗白的話，抬筆那一刻底下的 PDF 頁面、圖片、文字方塊全部被一片白蓋掉，
+            // 只剩筆跡（圖層規則見 `padnote-core::ffi_layering`：物件在筆跡下方，但要看得到）。
+            canvas.drawColor(Color.TRANSPARENT, android.graphics.PorterDuff.Mode.CLEAR)
             // 這一層每次 commit 都是全新的緩衝，所以要重畫全部內容 ——
             // 只畫增量的話，抬筆瞬間先前的筆畫會整片消失。
             // 每一筆用**它自己的**顏色與粗細。原本全部用畫筆目前的設定（而且一律黑色）：
