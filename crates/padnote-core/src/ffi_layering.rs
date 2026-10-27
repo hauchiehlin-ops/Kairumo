@@ -201,7 +201,10 @@ mod tests {
     use super::*;
 
     fn obj(id: &str, kind: FfiLayerKind) -> FfiLayerObject {
-        FfiLayerObject { id: id.into(), kind }
+        FfiLayerObject {
+            id: id.into(),
+            kind,
+        }
     }
 
     #[test]
@@ -215,10 +218,18 @@ mod tests {
             FfiLayerKind::Link,
             FfiLayerKind::Audio,
         ] {
-            assert_eq!(object_default_ink_plane(kind), FfiInkPlane::BelowInk, "{kind:?}");
+            assert_eq!(
+                object_default_ink_plane(kind),
+                FfiInkPlane::BelowInk,
+                "{kind:?}"
+            );
         }
         for kind in [FfiLayerKind::Text, FfiLayerKind::Pin, FfiLayerKind::Tape] {
-            assert_eq!(object_default_ink_plane(kind), FfiInkPlane::AboveInk, "{kind:?}");
+            assert_eq!(
+                object_default_ink_plane(kind),
+                FfiInkPlane::AboveInk,
+                "{kind:?}"
+            );
         }
     }
 
@@ -252,7 +263,11 @@ mod tests {
             vec![],
         );
         assert_eq!(below, vec!["ABC".to_string()]);
-        let above = objects_below_ink(vec![obj("abc", FfiLayerKind::Image)], vec![], vec!["ABC".into()]);
+        let above = objects_below_ink(
+            vec![obj("abc", FfiLayerKind::Image)],
+            vec![],
+            vec!["ABC".into()],
+        );
         assert!(above.is_empty());
     }
 
@@ -264,20 +279,32 @@ mod tests {
             vec![],
             vec!["img".into()],
         );
-        assert_eq!(lists, FfiInkPlaneLists { under: vec!["img".into()], over: vec![] });
+        assert_eq!(
+            lists,
+            FfiInkPlaneLists {
+                under: vec!["img".into()],
+                over: vec![]
+            }
+        );
     }
 
     #[test]
     fn moving_above_only_records_over_when_the_default_is_below() {
         let lists = move_objects_to_ink_plane(
-            vec![obj("img", FfiLayerKind::Image), obj("txt", FfiLayerKind::Text)],
+            vec![
+                obj("img", FfiLayerKind::Image),
+                obj("txt", FfiLayerKind::Text),
+            ],
             FfiInkPlane::AboveInk,
             vec!["img".into(), "txt".into(), "other".into()],
             vec![],
         );
         assert_eq!(
             lists,
-            FfiInkPlaneLists { under: vec!["other".into()], over: vec!["img".into()] }
+            FfiInkPlaneLists {
+                under: vec!["other".into()],
+                over: vec!["img".into()]
+            }
         );
         // 搬回去之後兩份清單都回到原樣。
         let back = move_objects_to_ink_plane(
@@ -286,13 +313,28 @@ mod tests {
             vec![],
             vec![],
         );
-        assert_eq!(back, FfiInkPlaneLists { under: vec![], over: vec![] });
+        assert_eq!(
+            back,
+            FfiInkPlaneLists {
+                under: vec![],
+                over: vec![]
+            }
+        );
     }
 
     #[test]
     fn stack_rank_puts_material_under_annotations() {
-        assert!(object_default_stack_rank(FfiLayerKind::Image) < object_default_stack_rank(FfiLayerKind::Shape));
-        assert!(object_default_stack_rank(FfiLayerKind::Audio) < object_default_stack_rank(FfiLayerKind::Text));
-        assert!(object_default_stack_rank(FfiLayerKind::Text) < object_default_stack_rank(FfiLayerKind::Pin));
+        assert!(
+            object_default_stack_rank(FfiLayerKind::Image)
+                < object_default_stack_rank(FfiLayerKind::Shape)
+        );
+        assert!(
+            object_default_stack_rank(FfiLayerKind::Audio)
+                < object_default_stack_rank(FfiLayerKind::Text)
+        );
+        assert!(
+            object_default_stack_rank(FfiLayerKind::Text)
+                < object_default_stack_rank(FfiLayerKind::Pin)
+        );
     }
 }
