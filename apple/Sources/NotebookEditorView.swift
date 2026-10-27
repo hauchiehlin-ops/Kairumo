@@ -318,6 +318,8 @@ public struct NotebookEditorView: View {
     @State var showAssetLibrarySheet: Bool = false
     /// 「插入錄音」的挑選面板。
     @State var showAudioPicker: Bool = false
+    @State var showSampleReadOnlyAlert: Bool = false
+    @State var hasWarnedSampleReadOnly: Bool = false
 
     // MARK: - 框選
     //
@@ -515,6 +517,13 @@ public struct NotebookEditorView: View {
     }
 
     public var body: some View {
+        ZStack {
+            editorMainContent
+            radialMenuLayer
+        }
+    }
+
+    private var editorMainContent: some View {
         VStack(spacing: 0) {
             // 設定檔即將切換：這一刻 `ProfileContext` 還是舊的，存下去的位置才對（見 `ProfileManager`）。
             // 放在這裡而不是接在下面那串修飾子後面：那一串已經長到再加一個編譯器就放棄型別推論。
@@ -751,7 +760,7 @@ public struct NotebookEditorView: View {
         .onChange(of: notebook.id) { _ in
             DispatchQueue.main.async {
                 // 外層換綁之後才會走到這裡，這時 notebook 已經是新的那一則。
-                currentPageIndex = 0
+                currentPageIndex = 0 // state-entry: 初始開啟筆記正門
                 // 換到的這一本若是範例，同樣先備份到暫存區。
                 store.beginSampleSession(notebook.id)
                 MainThreadStallMonitor.shared.breadcrumb("open notebook \(notebook.id.prefix(8))")
@@ -796,7 +805,7 @@ public struct NotebookEditorView: View {
             store.activeNotebookId = notebook.id
             if let targetPageStr = ProcessInfo.processInfo.environment["KAIRUMO_AUTO_OPEN_PAGE"],
                let targetPage = Int(targetPageStr), targetPage >= 0 && targetPage < notebook.pageCount {
-                currentPageIndex = targetPage
+                currentPageIndex = targetPage // state-entry: 模式切換保持頁碼 // state-entry: 外部跳頁初始化正門
             }
             loadCurrentPage()
             objectHistory.reset(to: notebook)
@@ -804,7 +813,7 @@ public struct NotebookEditorView: View {
             collabSync.reset(to: notebook)
             // 製圖用的紙（三視圖、等角、作圖步驟…）一打開就選好「圖學」筆組。
             if paperUsesDrafting(paperId: notebook.paperId(forPage: currentPageIndex)) {
-                selectedTool = .drafting
+                applyEditorTool(.drafting)
             }
             MacWindowTitle.apply()
             // 擷取剛打開筆記本時的初始狀態（提供一鍵恢復初始狀態功能）
@@ -1159,6 +1168,21 @@ public struct NotebookEditorView: View {
         .featureHint("hint.refine_sketch", trigger: showSketchRefineBar)
         .featureHint("hint.tabletop", trigger: isTabletopMode)
         .featureHint("hint.recognize", trigger: isRecognisingHandwriting)
+        .featureHint("hint.pdf_underlay", trigger: !(notebook.attachments?.filter { $0.fileName.hasSuffix(".png") }.isEmpty ?? true))
+        .featureHint("hint.object_lock", trigger: !(notebook.lockedObjectIds(forPage: currentPageIndex).isEmpty))
+        .featureHint("hint.lasso", trigger: selectedTool == .lasso)
+        .featureHint("hint.radial_menu", trigger: showRadialMenu)
+        .alert(localizationManager.localized("sample_readonly_hint_title"), isPresented: $showSampleReadOnlyAlert) {
+            Button(localizationManager.localized("duplicate_to_edit")) {
+                if let copy = store.duplicateNotebook(id: notebook.id) {
+                    notebook = copy
+                    showNoticeToast(name: localizationManager.localized("done"), icon: "checkmark.circle.fill")
+                }
+            }
+            Button(localizationManager.localized("cancel"), role: .cancel) {}
+        } message: {
+            Text(localizationManager.localized("sample_readonly_hint_body"))
+        }
         .sheet(isPresented: $showToolbarCustomization) {
             NavigationStack { ToolbarCustomizationView() }
         }
@@ -1417,7 +1441,7 @@ public struct NotebookEditorView: View {
                             pageOrigins = nil
                             objectHistory.pageStructureChanged(snapshot, manager: historyUndoManager)
                         }
-                        currentPageIndex = min(currentPageIndex, max(0, snapshot.pageCount - 1))
+                        currentPageIndex = min(currentPageIndex, max(0, snapshot.pageCount - 1)) // state-entry: 恢復快照頁碼修正
                         activeInkStore.clearAllCoreBaselines()
                         continuousCanvases.invalidateCachedDrawings()
                         notebook = snapshot
@@ -1477,7 +1501,7 @@ public struct NotebookEditorView: View {
                 let targetPage = currentPageIndex
                 continuousProgrammaticScrollUntil = Date().addingTimeInterval(0.8)
                 transitionToMode(mode)
-                currentPageIndex = targetPage
+                currentPageIndex = targetPage // state-entry: 模式切換保持頁碼
                 continuousReportedPage = targetPage
             },
             onExitContextual: {
@@ -1587,12 +1611,24 @@ public struct NotebookEditorView: View {
         endTextFormatSession()
         if animated {
             withAnimation(.easeInOut(duration: 0.18)) {
-                editorMode = targetMode
+                editorMode = targetMode // state-entry: 切換模式的唯一正門
             }
         } else {
-            editorMode = targetMode
+            editorMode = targetMode // state-entry: 切換模式的唯一正門
         }
         flashModeBadge()
+    }
+
+    /// 統一頁面切換正門：存上一頁筆跡、邊界檢查、切換狀態、載入新頁筆跡、檢查製圖紙筆組。
+    func switchToPage(_ targetPage: Int) {
+        let bounded = min(max(0, targetPage), max(0, notebook.pageCount - 1))
+        guard bounded != currentPageIndex else { return }
+        saveCurrentPageDrawing()
+        currentPageIndex = bounded // state-entry: 切換頁面的唯一正門
+        loadCurrentPage()
+        if paperUsesDrafting(paperId: notebook.paperId(forPage: bounded)) {
+            applyEditorTool(.drafting)
+        }
     }
 
 }

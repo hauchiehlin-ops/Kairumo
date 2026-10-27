@@ -353,12 +353,55 @@ internal fun NotebookHome(
         }
     }
 
+    val importPdfPicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri != null) {
+            autoSyncScope.launch {
+                val createdId = withContext(Dispatchers.IO) {
+                    com.kairumo.padnote.library.NotebookLibrary.createNotebookFromPdf(activity, uri, device, folderId)
+                }
+                if (createdId != null) {
+                    revision++
+                    onOpen(createdId)
+                } else {
+                    message = l("import_failed_read")
+                }
+            }
+        }
+    }
+
     LaunchedEffect(Unit) {
-        val intent = activity.intent
-        val uri = intent?.data
-        if (intent?.action == Intent.ACTION_VIEW && uri != null) {
-            runImportNote(activity, uri, device)?.let { entry ->
-                onOpen(entry.id)
+        val intent = activity.intent ?: return@LaunchedEffect
+        val uri: Uri? = when (intent.action) {
+            Intent.ACTION_VIEW -> intent.data
+            Intent.ACTION_SEND -> {
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                    intent.getParcelableExtra(Intent.EXTRA_STREAM, Uri::class.java)
+                } else {
+                    @Suppress("DEPRECATION")
+                    intent.getParcelableExtra(Intent.EXTRA_STREAM) as? Uri
+                }
+            }
+            else -> null
+        }
+        if (uri != null) {
+            val mime = activity.contentResolver.getType(uri).orEmpty()
+            val isPdf = mime.equals("application/pdf", ignoreCase = true) ||
+                uri.toString().lowercase().endsWith(".pdf") ||
+                (intent.type?.equals("application/pdf", ignoreCase = true) == true)
+            if (isPdf) {
+                val createdId = withContext(Dispatchers.IO) {
+                    com.kairumo.padnote.library.NotebookLibrary.createNotebookFromPdf(activity, uri, device, folderId)
+                }
+                if (createdId != null) {
+                    revision++
+                    onOpen(createdId)
+                }
+            } else if (intent.action == Intent.ACTION_VIEW) {
+                runImportNote(activity, uri, device)?.let { entry ->
+                    onOpen(entry.id)
+                }
             }
         }
     }
@@ -1029,6 +1072,10 @@ internal fun NotebookHome(
             onCreateEncrypted = {
                 creatingNotebook = false
                 creatingEncryptedNotebook = true
+            },
+            onStartFromPdf = {
+                creatingNotebook = false
+                importPdfPicker.launch(arrayOf("application/pdf"))
             },
             onCreateKit = { kit ->
                 creatingNotebook = false

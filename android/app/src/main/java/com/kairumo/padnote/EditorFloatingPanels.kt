@@ -92,17 +92,16 @@ internal fun EditorFloatingPanels(ctx: EditorCanvasContext) = with(ctx) {
                     revision = revision + textRevision + shapeRevision + tableRevision +
                         chartRevision + imageRevision + model3DRevision + continuousContentRevision,
                     l = { key -> l10n(key) },
-                    onSelectPage = { pageIndex = it; showPageSidebar = false },
+                    onSelectPage = { switchToPage(it); showPageSidebar = false },
                     onAddPage = {
                         val s = notebook?.first
                         if (s != null) {
                             runCatching { s.addPage(uniffi.padnote_core.PageStyle.BLANK) }
                             pageCount = runCatching { s.pageCount().toInt() }
                                 .getOrDefault(pageCount + 1)
-                            pageIndex = pageCount - 1
+                            switchToPage(pageCount - 1)
                             revision++
                             continuousContentRevision++
-                            continuousScrollRequest++
                         }
                         showPageSidebar = false
                     },
@@ -308,7 +307,7 @@ internal fun EditorFloatingPanels(ctx: EditorCanvasContext) = with(ctx) {
             onPick = { png ->
                 val inserted = imageStore.insert(png, pdfFile.nameWithoutExtension)
                 imageRevision++
-                selectedImageId = inserted?.id
+                selectImage(inserted?.id)
                 if (inserted != null) {
                     // 插入後切到打字模式 —— 手寫模式下物件不吃觸控，
                     // 剛插進來的那一頁會拖不動，看起來像插壞了。
@@ -387,7 +386,7 @@ internal fun EditorFloatingPanels(ctx: EditorCanvasContext) = with(ctx) {
                 box.text = text
                 textStore.persist(box)
                 textRevision++
-                selectedTextId = box.id
+                selectText(box.id)
                 editorMode = EditorMode.TYPE
             },
             onDismiss = { showCalculator = false }
@@ -583,7 +582,7 @@ internal fun EditorFloatingPanels(ctx: EditorCanvasContext) = with(ctx) {
             inserted.hasShadow = false
             imageStore.persist(inserted)
             imageRevision++
-            selectedImageId = inserted.id
+            selectImage(inserted.id)
             // 手寫模式下物件不吃觸控，貼完卻點不動等於原本的問題。
             editorMode = EditorMode.TYPE
             message = l10n("sticker_placed_hint")
@@ -619,7 +618,7 @@ internal fun EditorFloatingPanels(ctx: EditorCanvasContext) = with(ctx) {
                 box.text = text
                 textStore.persist(box)
                 textRevision++
-                selectedTextId = box.id
+                selectText(box.id)
                 editorMode = EditorMode.TYPE
             },
             onDismiss = { showThemeTools = false }
@@ -660,7 +659,7 @@ internal fun EditorFloatingPanels(ctx: EditorCanvasContext) = with(ctx) {
             onChanged = { imageStore.persist(it); imageRevision++ },
             onDelete = {
                 imageStore.remove(image)
-                selectedImageId = null
+                selectImage(null)
                 imageRevision++
             },
             onDismiss = { editingImage = null }
@@ -724,7 +723,7 @@ internal fun EditorFloatingPanels(ctx: EditorCanvasContext) = with(ctx) {
             onDelete = {
                 textStore.remove(box)
                 editingText = null
-                selectedTextId = null
+                selectText(null)
                 textRevision++
             },
             onDismiss = { editingText = null }
@@ -878,7 +877,7 @@ internal fun EditorFloatingPanels(ctx: EditorCanvasContext) = with(ctx) {
                 box.height = 64f
                 textStore.persist(box)
                 textRevision++
-                selectedTextId = box.id
+                selectText(box.id)
                 editorMode = EditorMode.TYPE
             }
         )
@@ -939,7 +938,7 @@ internal fun EditorFloatingPanels(ctx: EditorCanvasContext) = with(ctx) {
                 // 不然後面那幾頁的東西錯位一頁。
                 if (moveOut && moved > 0u) meta.removePageTemplate(session, pageIdx, countBefore)
                 pageCount = runCatching { session?.pageCount()?.toInt() }.getOrNull() ?: pageCount
-                pageIndex = pageIndex.coerceIn(0, maxOf(0, pageCount - 1))
+                switchToPage(pageIndex.coerceIn(0, maxOf(0, pageCount - 1)))
                 revision++
             }
         )

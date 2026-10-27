@@ -121,6 +121,55 @@ def required(screens: dict, platform: str) -> list[tuple[str, str]]:
     return out
 
 
+def check_menu_ordering(screens: dict) -> list[str]:
+    """比對更多選單的分區與順序（P1）。
+    
+    規格中 `editor` 畫面的 `controls` 順序即為由上而下的資訊架構順序。
+    檢查 Apple 與 Android 原始碼中選單項目第一次出現的相對順序是否一致。
+    """
+    violations = []
+    more_spec_controls = [
+        c["id"] for c in screens.get("editor", {}).get("controls", [])
+        if c.get("section", "").startswith("editor.")
+    ]
+
+    apple_file = ROOT / "apple" / "Sources" / "EditorToolbars.swift"
+    if apple_file.exists():
+        apple_text = apple_file.read_text(encoding="utf-8", errors="ignore")
+        m = re.search(r'var insertMenuContent: some View \{.*?\n    // 寬螢幕', apple_text, re.DOTALL)
+        if m:
+            content = m.group(0)
+            apple_pos = {}
+            for no, line in enumerate(content.splitlines(), 1):
+                for hit in re.finditer(r'accessibilityIdentifier\(\s*"([^"]+)"\s*\)', line):
+                    cid = hit.group(1)
+                    if cid not in apple_pos:
+                        apple_pos[cid] = no
+            sub = [(cid, apple_pos[cid]) for cid in more_spec_controls if cid in apple_pos]
+            for idx in range(len(sub) - 1):
+                if sub[idx][1] > sub[idx + 1][1]:
+                    violations.append(f"Apple 選單順序違規：`{sub[idx][0]}` (line {sub[idx][1]}) 出現在 `{sub[idx + 1][0]}` (line {sub[idx + 1][1]}) 之後")
+
+    android_file = ROOT / "android" / "app" / "src" / "main" / "java" / "com" / "kairumo" / "padnote" / "EditorTopBar.kt"
+    if android_file.exists():
+        android_text = android_file.read_text(encoding="utf-8", errors="ignore")
+        m = re.search(r'DropdownMenu\(expanded = showMenu.*?\n            \}', android_text, re.DOTALL)
+        if m:
+            content = m.group(0)
+            android_pos = {}
+            for no, line in enumerate(content.splitlines(), 1):
+                for hit in re.finditer(r'testTag\(\s*"([^"]+)"\s*\)', line):
+                    cid = hit.group(1)
+                    if cid not in android_pos:
+                        android_pos[cid] = no
+            sub = [(cid, android_pos[cid]) for cid in more_spec_controls if cid in android_pos]
+            for idx in range(len(sub) - 1):
+                if sub[idx][1] > sub[idx + 1][1]:
+                    violations.append(f"Android 選單順序違規：`{sub[idx][0]}` (line {sub[idx][1]}) 出現在 `{sub[idx + 1][0]}` (line {sub[idx + 1][1]}) 之後")
+
+    return violations
+
+
 def load_baseline() -> dict[str, list[str]]:
     if not BASELINE.exists():
         return {"apple": [], "android": []}
@@ -135,6 +184,13 @@ def main() -> int:
     screens = spec()
     present = {"apple": apple_ids(), "android": android_ids()}
     base = load_baseline()
+
+    order_failures = check_menu_ordering(screens)
+    if order_failures:
+        print("❌ 選單分區與順序不符合核心規格（P1）：")
+        for line in order_failures:
+            print(f"   {line}")
+        return 1
 
     missing: dict[str, list[str]] = {}
     for platform in ("apple", "android"):

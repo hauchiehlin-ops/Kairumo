@@ -870,14 +870,14 @@ extension NotebookEditorView {
         case .nothing:
             return
         case .useEraser:
-            selectedTool = .eraser
+            applyEditorTool(.eraser)
         case .useLastBrush:
             // 放開時回到按下去之前那支，而不是「最後用過的筆刷」——
             // 兩者通常一樣，但使用者若在按著側鍵的期間又換過筆，
             // 他要的是回到他剛剛選的那一支。
-            selectedTool = penHeldTool ?? lastBrushTool
+            applyEditorTool(penHeldTool ?? lastBrushTool)
         case .useLasso:
-            selectedTool = .lasso
+            applyEditorTool(.lasso)
         case .showInkAttributes:
             showProColorPicker = true
         case .undo:
@@ -925,6 +925,10 @@ extension NotebookEditorView {
     }
 
     func recordDrawingEdit(page: Int, drawing: PKDrawing) {
+        if notebook.isReadOnlySample && !hasWarnedSampleReadOnly {
+            hasWarnedSampleReadOnly = true
+            showSampleReadOnlyAlert = true
+        }
         if page == currentPageIndex {
             currentDrawing = drawing
         }

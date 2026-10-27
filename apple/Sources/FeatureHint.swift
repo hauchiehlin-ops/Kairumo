@@ -30,7 +30,11 @@ public enum FeatureHintStore {
     private static let key = "kairumo.hints.dismissed.v1"
 
     public static func isDismissed(_ id: String) -> Bool {
-        dismissed().contains(id)
+        // UI 測試一律當成看過了，避免彈出 popover 遮擋旅程測試元件
+        if ProcessInfo.processInfo.environment["KAIRUMO_UITEST"] == "1" {
+            return true
+        }
+        return dismissed().contains(id)
     }
 
     public static func dismiss(_ id: String) {

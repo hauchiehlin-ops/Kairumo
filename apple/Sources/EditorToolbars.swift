@@ -21,7 +21,9 @@ extension NotebookEditorView {
         // 寬度夠就用單行完整版；放不下則切到緊湊版，把次要功能收進「更多」選單；
         // 都還塞不下才換行。優先維持單行，主要動作才會固定在同一個位置。
         ViewThatFits(in: .horizontal) {
-            expandedEditorTopBar
+            if horizontalSizeClass == .regular {
+                expandedEditorTopBar
+            }
             HStack(spacing: 6) {
                 compactEditorTopBarItems
             }
@@ -44,6 +46,161 @@ extension NotebookEditorView {
 
     func presentFromMenu(_ action: @escaping () -> Void) {
         SheetCoordinator.shared.presentFromMenu(action)
+    }
+
+    /// 「插入／更多」選單的內容。**兩種版面（iPad 全寬的 expandedEditorTopBar、窄版的工具列）共用這一份。**
+    ///
+    /// 以前兩個版面各寫一份，內容早就分岔：全寬版少了自訂工具列、框選、貼紙、辨識手寫、掌拒、
+    /// 筆設定與「回到初始狀態」，窄版又少了插入連結 —— 同一台 iPad 轉個方向，功能就不見了。
+    @ViewBuilder
+    var insertMenuContent: some View {
+        Section {
+            Button {
+                presentFromMenu { showAssetLibrarySheet = true }
+            } label: { Label(localizationManager.localized("asset_library"), systemImage: "shippingbox.fill") }
+                .accessibilityIdentifier("editor.insert.assets")
+            Button {
+                presentFromMenu { showStickerLibrary = true }
+            } label: { Label(localizationManager.localized("sticker_library"), systemImage: "photo.on.rectangle") }
+                .accessibilityIdentifier("editor.insert.stickers")
+            Button {
+                presentFromMenu { setMarqueeActive(!isMarqueeActive) }
+            } label: { Label(localizationManager.localized("marquee_select"), systemImage: "square.dashed") }
+                .accessibilityIdentifier("editor.insert.marquee")
+            Button {
+                presentFromMenu { showAudioPicker = true }
+            } label: { Label(localizationManager.localized("insert_audio"), systemImage: "waveform.badge.plus") }
+                .accessibilityIdentifier("editor.insert.audio")
+            Button {
+                triggerFileImport(.audio)
+            } label: { Label(localizationManager.localized("import_audio_from_files"), systemImage: "square.and.arrow.down.on.square") }
+                .accessibilityIdentifier("editor.insert.audio_file")
+            Button {
+                presentFromMenu { showPhotoPicker = true }
+            } label: { Label(localizationManager.localized("insert_image"), systemImage: "photo.badge.plus") }
+                .accessibilityIdentifier("editor.insert.image")
+            Button {
+                triggerFileImport(.image)
+            } label: { Label(localizationManager.localized("import_from_files"), systemImage: "folder.badge.plus") }
+                .accessibilityIdentifier("editor.insert.image_file")
+            Button {
+                pasteScreenshotOrClipboardImage()
+            } label: { Label(localizationManager.localized("paste_screenshot"), systemImage: "doc.on.clipboard") }
+                .accessibilityIdentifier("editor.insert.paste_screenshot")
+            Button {
+                triggerFileImport(.pdf)
+            } label: { Label(localizationManager.localized("insert_pdf"), systemImage: "doc.richtext") }
+                .accessibilityIdentifier("editor.insert.pdf")
+            Button {
+                triggerFileImport(.document)
+            } label: { Label(localizationManager.localized("import_document"), systemImage: "doc.text") }
+                .accessibilityIdentifier("editor.insert.document")
+            Button {
+                presentFromMenu { showMathCalculator = true }
+            } label: { Label(localizationManager.localized("math_calc"), systemImage: "plus.forwardslash.minus") }
+                .accessibilityIdentifier("editor.insert.math")
+            Button {
+                presentFromMenu { showChartStudio = true }
+            } label: { Label(localizationManager.localized("chart_studio"), systemImage: "chart.bar.xaxis") }
+                .accessibilityIdentifier("editor.insert.chart")
+            Button {
+                presentFromMenu { showTableStudio = true }
+            } label: { Label(localizationManager.localized("table_studio"), systemImage: "tablecells") }
+                .accessibilityIdentifier("editor.insert.table")
+            Button {
+                presentFromMenu { showShapeStudio = true }
+            } label: { Label(localizationManager.localized("shape_studio"), systemImage: "square.on.circle") }
+                .accessibilityIdentifier("editor.insert.shape")
+            Button {
+                presentFromMenu { show3DStudio = true }
+            } label: { Label(localizationManager.localized("insert_3d"), systemImage: "cube.transparent") }
+                .accessibilityIdentifier("editor.insert.model3d")
+            Button {
+                presentFromMenu { showThemeToolsSheet = true }
+            } label: { Label(localizationManager.localized("theme_tools"), systemImage: "paintpalette.fill") }
+                .accessibilityIdentifier("editor.insert.theme_tools")
+            Button {
+                presentFromMenu { showLinkPreviewSheet = true }
+            } label: { Label(localizationManager.localized("insert_link"), systemImage: "link") }
+                .accessibilityIdentifier("editor.insert.link")
+        } header: {
+            Text(localizationManager.localized("insert_object"))
+        }
+
+        Section {
+            Button {
+                withAnimation {
+                    insertSpaceDividerY = min(currentPageHeight - 100, max(150, canvasContentOffset.y + 300))
+                    isInsertSpaceActive.toggle()
+                }
+            } label: { Label(localizationManager.localized("insert_vertical_space"), systemImage: "arrow.up.and.down.square") }
+                .accessibilityIdentifier("editor.insert.space")
+            Button { withAnimation { showSketchRefineBar.toggle() } } label: { Label(localizationManager.localized("refine_sketch"), systemImage: "wand.and.stars") }
+                .accessibilityIdentifier("editor.insert.refine_sketch")
+            Button {
+                presentFromMenu { showNoteIntelligence = true }
+            } label: {
+                Label(localizationManager.localized("ai_summary"), systemImage: "sparkles")
+            }
+            .accessibilityIdentifier("editor.insert.ai_summary")
+            Button { recognizeHandwritingOnCurrentPage() } label: {
+                Label(localizationManager.localized("recognize_handwriting"), systemImage: "text.viewfinder")
+            }
+            .accessibilityIdentifier("editor.insert.recognize")
+            Button {
+                presentFromMenu { showCollaborationSheet = true }
+            } label: { Label(localizationManager.localized("collaborate"), systemImage: "person.2.fill") }
+                .accessibilityIdentifier("editor.insert.collaborate")
+            Button { withAnimation { isPlacingCommentPin.toggle() } } label: { Label(localizationManager.localized("add_comment_pin"), systemImage: "text.bubble.fill") }
+                .accessibilityIdentifier("editor.insert.comment_pin")
+        }
+
+        // 設定類：跟「插入什麼」「做什麼」分開放，使用者才不會在一長串插入項目裡找設定。
+        Section {
+            // 放在編輯器而不是設定頁：使用者想關掉某支筆的那一刻，
+            // 是他正看著那支筆的時候。
+            Button {
+                presentFromMenu { showToolbarCustomization = true }
+            } label: {
+                Label(localizationManager.localized("customize_toolbar"), systemImage: "slider.horizontal.3")
+            }
+            .accessibilityIdentifier("editor.customize_toolbar")
+            // 掌拒門檻（S-101）。判定一直都在核心，缺的只是「讓使用者調」——
+            // 握筆姿勢比較特別的人，手掌一放上去就是一道線，
+            // 而在此之前他完全沒有辦法處理。
+            Button {
+                presentFromMenu { showPalmThresholdSheet = true }
+            } label: {
+                Label(localizationManager.localized("palm_rejection_settings"), systemImage: "hand.raised.slash")
+            }
+            .accessibilityIdentifier("editor.insert.palm_thresholds")
+            Button {
+                presentFromMenu { showAdvancedPenSettingsSheet = true }
+            } label: {
+                Label(localizationManager.localized("pen_settings_title"), systemImage: "applepencil.and.scribble")
+            }
+            .accessibilityIdentifier("editor.insert.advanced_pen_settings")
+
+            Button {
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                    isTabletopMode.toggle()
+                }
+            } label: {
+                Label(L("posture_tabletop_mode"), systemImage: "laptopcomputer.and.ipad")
+            }
+            .accessibilityIdentifier("editor.tabletop_mode")
+
+        }
+
+        // 會丟掉變更的動作單獨一區，不跟一般項目擠在一起。
+        Section {
+            Button(role: .destructive) {
+                showRevertConfirmAlert = true
+            } label: {
+                Label(localizationManager.localized("revert_to_initial_state"), systemImage: "arrow.counterclockwise")
+            }
+            .accessibilityIdentifier("editor.revert_initial_state")
+        }
     }
 
     // 寬螢幕完整主工具列
@@ -149,11 +306,7 @@ extension NotebookEditorView {
             // 頁碼切換器
             HStack(spacing: 6) {
                 Button {
-                    if currentPageIndex > 0 {
-                        saveCurrentPageDrawing()
-                        currentPageIndex -= 1
-                        loadCurrentPage()
-                    }
+                    switchToPage(currentPageIndex - 1)
                 } label: {
                     Image(systemName: "chevron.left.circle")
                 }
@@ -167,11 +320,7 @@ extension NotebookEditorView {
                     .accessibilityIdentifier("editor.page.indicator")
 
                 Button {
-                    if currentPageIndex < notebook.pageCount - 1 {
-                        saveCurrentPageDrawing()
-                        currentPageIndex += 1
-                        loadCurrentPage()
-                    }
+                    switchToPage(currentPageIndex + 1)
                 } label: {
                     Image(systemName: "chevron.right.circle")
                 }
@@ -296,125 +445,7 @@ extension NotebookEditorView {
 
             // ➕ 插入物件下拉選單（整合圖片、算式、圖表、3D、主題工具）
             Menu {
-                Section {
-                    Button {
-                        presentFromMenu { showAssetLibrarySheet = true }
-                    } label: {
-                        Label(localizationManager.localized("asset_library"), systemImage: "shippingbox.fill")
-                    }
-
-                    Button {
-                        presentFromMenu { showPhotoPicker = true }
-                    } label: {
-                        Label(localizationManager.localized("insert_image"), systemImage: "photo.badge.plus")
-                    }
-
-                    Button {
-                        triggerFileImport(.image)
-                    } label: {
-                        Label(localizationManager.localized("import_from_files"), systemImage: "folder.badge.plus")
-                    }
-
-                    Button {
-                        pasteScreenshotOrClipboardImage()
-                    } label: {
-                        Label(localizationManager.localized("paste_screenshot"), systemImage: "doc.on.clipboard")
-                    }
-
-                    Button {
-                        presentFromMenu { showAudioPicker = true }
-                    } label: {
-                        Label(localizationManager.localized("insert_audio"), systemImage: "waveform.badge.plus")
-                    }
-
-                    Button {
-                        triggerFileImport(.audio)
-                    } label: {
-                        Label(localizationManager.localized("import_audio_from_files"), systemImage: "square.and.arrow.down.on.square")
-                    }
-
-                    Button {
-                        triggerFileImport(.pdf)
-                    } label: {
-                        Label(localizationManager.localized("insert_pdf"), systemImage: "doc.richtext")
-                    }
-
-                    Button {
-                        triggerFileImport(.document)
-                    } label: {
-                        Label(localizationManager.localized("import_document"), systemImage: "doc.text")
-                    }
-                }
-
-                Section {
-                    Button {
-                        presentFromMenu { showTableStudio = true }
-                    } label: {
-                        Label(localizationManager.localized("table_studio"), systemImage: "tablecells")
-                    }
-
-                    Button {
-                        presentFromMenu { showShapeStudio = true }
-                    } label: {
-                        Label(localizationManager.localized("shape_studio"), systemImage: "square.on.circle")
-                    }
-
-                    Button {
-                        presentFromMenu { showMathCalculator = true }
-                    } label: {
-                        Label(localizationManager.localized("math_calc"), systemImage: "plus.forwardslash.minus")
-                    }
-
-                    Button {
-                        presentFromMenu { showChartStudio = true }
-                    } label: {
-                        Label(localizationManager.localized("chart_studio"), systemImage: "chart.bar.xaxis")
-                    }
-
-                    Button {
-                        presentFromMenu { show3DStudio = true }
-                    } label: {
-                        Label(localizationManager.localized("insert_3d"), systemImage: "cube.transparent")
-                    }
-
-                    Button {
-                        presentFromMenu { showLinkPreviewSheet = true }
-                    } label: {
-                        Label(localizationManager.localized("insert_link"), systemImage: "link")
-                    }
-
-                    Button {
-                        presentFromMenu { showThemeToolsSheet = true }
-                    } label: {
-                        Label(localizationManager.localized("theme_tools"), systemImage: "paintpalette.fill")
-                    }
-
-                    Button {
-                        withAnimation {
-                            isPlacingCommentPin = true
-                        }
-                    } label: {
-                        Label(localizationManager.localized("add_comment_pin"), systemImage: "text.bubble.fill")
-                    }
-
-                    ToolbarSeparator()
-
-                    Button {
-                        withAnimation {
-                            showSketchRefineBar.toggle()
-                        }
-                    } label: {
-                        Label(localizationManager.localized("refine_sketch"), systemImage: "wand.and.stars")
-                    }
-
-                    Button {
-                        presentFromMenu { showNoteIntelligence = true }
-                    } label: {
-                        Label(
-                            localizationManager.localized("ai_summary"),
-                            systemImage: "sparkles")
-                    }
-                }
+                insertMenuContent
             } label: {
                 HStack(spacing: 4) {
                     Image(systemName: "plus.circle.fill")
@@ -737,11 +768,7 @@ extension NotebookEditorView {
         // 頁面導覽群組膠囊 (上一頁、頁碼指示、下一頁、新增頁面、連續/整頁切換)
         HStack(spacing: 2) {
             Button {
-                if currentPageIndex > 0 {
-                    saveCurrentPageDrawing()
-                    currentPageIndex -= 1
-                    loadCurrentPage()
-                }
+                switchToPage(currentPageIndex - 1)
             } label: {
                 Image(systemName: "chevron.left")
                     .font(.system(size: EditorToolbarMetrics.icon - 3, weight: .semibold))
@@ -757,11 +784,7 @@ extension NotebookEditorView {
                 .accessibilityIdentifier("editor.page.indicator")
 
             Button {
-                if currentPageIndex < notebook.pageCount - 1 {
-                    saveCurrentPageDrawing()
-                    currentPageIndex += 1
-                    loadCurrentPage()
-                }
+                switchToPage(currentPageIndex + 1)
             } label: {
                 Image(systemName: "chevron.right")
                     .font(.system(size: EditorToolbarMetrics.icon - 3, weight: .semibold))
@@ -856,141 +879,7 @@ extension NotebookEditorView {
 
         // ➕ 插入物件選單（藍色品牌主按鈕，在 iPad 上以醒目膠囊呈現，對齊 Mac 體驗）
         Menu {
-            Section {
-                Button {
-                    presentFromMenu { showAssetLibrarySheet = true }
-                } label: { Label(localizationManager.localized("asset_library"), systemImage: "shippingbox.fill") }
-                    .accessibilityIdentifier("editor.insert.assets")
-                Button {
-                    presentFromMenu { showStickerLibrary = true }
-                } label: { Label(localizationManager.localized("sticker_library"), systemImage: "photo.on.rectangle") }
-                    .accessibilityIdentifier("editor.insert.stickers")
-                Button {
-                    presentFromMenu { setMarqueeActive(!isMarqueeActive) }
-                } label: { Label(localizationManager.localized("marquee_select"), systemImage: "square.dashed") }
-                    .accessibilityIdentifier("editor.insert.marquee")
-                Button {
-                    presentFromMenu { showAudioPicker = true }
-                } label: { Label(localizationManager.localized("insert_audio"), systemImage: "waveform.badge.plus") }
-                    .accessibilityIdentifier("editor.insert.audio")
-                Button {
-                    triggerFileImport(.audio)
-                } label: { Label(localizationManager.localized("import_audio_from_files"), systemImage: "square.and.arrow.down.on.square") }
-                    .accessibilityIdentifier("editor.insert.audio_file")
-                Button {
-                    presentFromMenu { showPhotoPicker = true }
-                } label: { Label(localizationManager.localized("insert_image"), systemImage: "photo.badge.plus") }
-                    .accessibilityIdentifier("editor.insert.image")
-                Button {
-                    triggerFileImport(.image)
-                } label: { Label(localizationManager.localized("import_from_files"), systemImage: "folder.badge.plus") }
-                    .accessibilityIdentifier("editor.insert.image_file")
-                Button {
-                    pasteScreenshotOrClipboardImage()
-                } label: { Label(localizationManager.localized("paste_screenshot"), systemImage: "doc.on.clipboard") }
-                    .accessibilityIdentifier("editor.insert.paste_screenshot")
-                Button {
-                    triggerFileImport(.pdf)
-                } label: { Label(localizationManager.localized("insert_pdf"), systemImage: "doc.richtext") }
-                    .accessibilityIdentifier("editor.insert.pdf")
-                Button {
-                    triggerFileImport(.document)
-                } label: { Label(localizationManager.localized("import_document"), systemImage: "doc.text") }
-                    .accessibilityIdentifier("editor.insert.document")
-                Button {
-                    presentFromMenu { showMathCalculator = true }
-                } label: { Label(localizationManager.localized("math_calc"), systemImage: "plus.forwardslash.minus") }
-                    .accessibilityIdentifier("editor.insert.math")
-                Button {
-                    presentFromMenu { showChartStudio = true }
-                } label: { Label(localizationManager.localized("chart_studio"), systemImage: "chart.bar.xaxis") }
-                    .accessibilityIdentifier("editor.insert.chart")
-                Button {
-                    presentFromMenu { showTableStudio = true }
-                } label: { Label(localizationManager.localized("table_studio"), systemImage: "tablecells") }
-                    .accessibilityIdentifier("editor.insert.table")
-                Button {
-                    presentFromMenu { showShapeStudio = true }
-                } label: { Label(localizationManager.localized("shape_studio"), systemImage: "square.on.circle") }
-                    .accessibilityIdentifier("editor.insert.shape")
-                Button {
-                    presentFromMenu { show3DStudio = true }
-                } label: { Label(localizationManager.localized("insert_3d"), systemImage: "cube.transparent") }
-                    .accessibilityIdentifier("editor.insert.model3d")
-                Button {
-                    presentFromMenu { showThemeToolsSheet = true }
-                } label: { Label(localizationManager.localized("theme_tools"), systemImage: "paintpalette.fill") }
-                    .accessibilityIdentifier("editor.insert.theme_tools")
-            } header: {
-                Text(localizationManager.localized("insert_object"))
-            }
-
-            Section {
-                Button {
-                    withAnimation {
-                        insertSpaceDividerY = min(currentPageHeight - 100, max(150, canvasContentOffset.y + 300))
-                        isInsertSpaceActive.toggle()
-                    }
-                } label: { Label(localizationManager.localized("insert_vertical_space"), systemImage: "arrow.up.and.down.square") }
-                    .accessibilityIdentifier("editor.insert.space")
-                Button { withAnimation { showSketchRefineBar.toggle() } } label: { Label(localizationManager.localized("refine_sketch"), systemImage: "wand.and.stars") }
-                    .accessibilityIdentifier("editor.insert.refine_sketch")
-                Button {
-                    presentFromMenu { showNoteIntelligence = true }
-                } label: {
-                    Label(localizationManager.localized("ai_summary"), systemImage: "sparkles")
-                }
-                .accessibilityIdentifier("editor.insert.ai_summary")
-                Button { recognizeHandwritingOnCurrentPage() } label: {
-                    Label(localizationManager.localized("recognize_handwriting"), systemImage: "text.viewfinder")
-                }
-                .accessibilityIdentifier("editor.insert.recognize")
-                Button {
-                    presentFromMenu { showCollaborationSheet = true }
-                } label: { Label(localizationManager.localized("collaborate"), systemImage: "person.2.fill") }
-                    .accessibilityIdentifier("editor.insert.collaborate")
-                Button { withAnimation { isPlacingCommentPin.toggle() } } label: { Label(localizationManager.localized("add_comment_pin"), systemImage: "text.bubble.fill") }
-                    .accessibilityIdentifier("editor.insert.comment_pin")
-                // 放在編輯器而不是設定頁：使用者想關掉某支筆的那一刻，
-                // 是他正看著那支筆的時候。
-                Button {
-                    presentFromMenu { showToolbarCustomization = true }
-                } label: {
-                    Label(localizationManager.localized("customize_toolbar"), systemImage: "slider.horizontal.3")
-                }
-                .accessibilityIdentifier("editor.customize_toolbar")
-                // 掌拒門檻（S-101）。判定一直都在核心，缺的只是「讓使用者調」——
-                // 握筆姿勢比較特別的人，手掌一放上去就是一道線，
-                // 而在此之前他完全沒有辦法處理。
-                Button {
-                    presentFromMenu { showPalmThresholdSheet = true }
-                } label: {
-                    Label(localizationManager.localized("palm_rejection_settings"), systemImage: "hand.raised.slash")
-                }
-                .accessibilityIdentifier("editor.insert.palm_thresholds")
-                Button {
-                    presentFromMenu { showAdvancedPenSettingsSheet = true }
-                } label: {
-                    Label(localizationManager.localized("pen_settings_title"), systemImage: "applepencil.and.scribble")
-                }
-                .accessibilityIdentifier("editor.insert.advanced_pen_settings")
-
-                Button {
-                    withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-                        isTabletopMode.toggle()
-                    }
-                } label: {
-                    Label(L("posture_tabletop_mode"), systemImage: "laptopcomputer.and.ipad")
-                }
-                .accessibilityIdentifier("editor.tabletop_mode")
-
-                Button(role: .destructive) {
-                    showRevertConfirmAlert = true
-                } label: {
-                    Label(localizationManager.localized("revert_to_initial_state"), systemImage: "arrow.counterclockwise")
-                }
-                .accessibilityIdentifier("editor.revert_initial_state")
-            }
+            insertMenuContent
         } label: {
             HStack(spacing: 4) {
                 Image(systemName: "plus.circle.fill")
@@ -1247,19 +1136,29 @@ extension NotebookEditorView {
     /// 名稱一長，裝置端（主執行緒只有 1MB 堆疊）解析時就會遞迴爆堆疊。
     var drawingToolbar: AnyView { AnyView(drawingToolbarContent) }
 
+    /// 使用者選了一支工具（工具列、飛梭工具盤、⌘1… 快捷鍵）：換工具並在工具列旁閃一下名稱。
+    /// 再按一次套索是離開套索。
     func selectEditorTool(_ tool: EditorToolType) {
         MainThreadStallMonitor.shared.breadcrumb("select tool \(tool)")
+        if tool == .lasso, selectedTool == .lasso {
+            exitLassoMode()
+        } else {
+            applyEditorTool(tool)
+        }
+        flashToolToast(for: tool)
+    }
+
+    /// **換工具的唯一正門**（程式自己換：筆身側鍵、插入圖紙後選住、製圖工具箱…也走這裡）。
+    ///
+    /// 不在手寫模式時先切回手寫 —— 直接改 `selectedTool` 的話，打字模式下換成套索或製圖筆，
+    /// 工具列亮了、畫布卻不收筆。`scripts/check-state-entrypoints.py` 擋住其他地方直接改它。
+    func applyEditorTool(_ tool: EditorToolType) {
         // 在文件內的手繪區塊換筆，只換工具；不可順手把整份文件的主模式
         // 改成手繪，否則「完成、回到文件」的情境會被拆掉。
         if editorMode != .draw && !isInlineInkEditing {
             transitionToMode(.draw)
         }
-        if tool == .lasso, selectedTool == .lasso {
-            exitLassoMode()
-        } else {
-            selectedTool = tool
-        }
-        flashToolToast(for: tool)
+        selectedTool = tool // state-entry: 換工具的唯一正門
     }
 
     /// 點擊筆刷或繪圖工具時，在工具列緊鄰處顯示微型快顯提示，提示該工具名稱。
@@ -1311,7 +1210,7 @@ extension NotebookEditorView {
 
     func exitLassoMode() {
         lasso.clear()
-        selectedTool = previousTool ?? lastBrushTool
+        applyEditorTool(previousTool ?? lastBrushTool)
         previousTool = nil
     }
 
@@ -1938,6 +1837,8 @@ extension NotebookEditorView {
                 .buttonStyle(.plain)
                 .help(localizationManager.localized("radial_menu"))
                 .accessibilityLabel(localizationManager.localized("radial_menu"))
+                // 與 Android `editor.radial_toggle` 同一個識別字（旅程測試靠它叫出工具盤）。
+                .accessibilityIdentifier("editor.radial_toggle")
 
                 eraserModeControls
 

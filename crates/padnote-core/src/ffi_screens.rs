@@ -408,25 +408,19 @@ fn editor_spec() -> FfiScreenSpec {
                     c("editor.share", Button, "export_and_print"),
                 ],
             ),
-            // 插入選單。十三項在 TODO 的落差盤點裡已記為「兩端都有」，
-            // 這裡把它固定下來，之後誰多加一項都逃不過閘門。
+            // 「更多」選單四大分區：插入、工具、設定、危險動作。
+            // 兩端順序與項目一致（圖片 → PDF → 文件），防止工具或設定混入插入列表。
             section(
                 "editor.insert",
                 "insert_object",
                 vec![
                     behind(c("editor.insert.assets", Button, "asset_library"), MoreMenu),
-                    // 規格原本漏了這一項 —— Apple 有、Android 沒有，
-                    // 而對照閘門是綠的（它只檢查規格裡列出來的）。
-                    // 漏一項的代價就是一個平台少一整個功能，沒有人會發現。
                     behind(
                         c("editor.insert.stickers", Button, "sticker_library"),
                         MoreMenu,
                     ),
+                    behind(c("editor.insert.marquee", Button, "marquee_select"), MoreMenu),
                     behind(c("editor.insert.audio", Button, "insert_audio"), MoreMenu),
-                    // 「從本機檔案匯入」那兩項。與上面那兩項是**不同的入口**：
-                    // 上面挑的是 App 自己有的東西（錄好的音、相簿裡的圖），
-                    // 這兩項挑的是使用者手上那個檔案 —— 而那常常正是他想放
-                    // 進筆記的東西。規格裡列著，兩端才不會只有一邊做。
                     behind(
                         c(
                             "editor.insert.audio_file",
@@ -440,8 +434,15 @@ fn editor_spec() -> FfiScreenSpec {
                         c("editor.insert.image_file", Button, "import_from_files"),
                         MoreMenu,
                     ),
-                    // PDF 只有一個入口：它從來不會在相簿裡。
+                    behind(
+                        c("editor.insert.paste_screenshot", Button, "paste_screenshot"),
+                        MoreMenu,
+                    ),
                     behind(c("editor.insert.pdf", Button, "insert_pdf"), MoreMenu),
+                    behind(
+                        c("editor.insert.document", Button, "import_document"),
+                        MoreMenu,
+                    ),
                     behind(c("editor.insert.math", Button, "math_calc"), MoreMenu),
                     behind(c("editor.insert.chart", Button, "chart_studio"), MoreMenu),
                     behind(c("editor.insert.table", Button, "table_studio"), MoreMenu),
@@ -451,10 +452,12 @@ fn editor_spec() -> FfiScreenSpec {
                         c("editor.insert.theme_tools", Button, "theme_tools"),
                         MoreMenu,
                     ),
-                    // 「自訂工具列」的入口（S-261）。放在這一組是因為它
-                    // 與其他項目一樣住在「更多」選單裡 —— 而選單內容不會
-                    // 出現在 XCUITest 的無障礙樹裡，所以兩端的畫面稽核都
-                    // 看不到它，只有靜態的對照閘門掃得到。
+                ],
+            ),
+            section(
+                "editor.tools",
+                "tools",
+                vec![
                     behind(
                         c("editor.insert.refine_sketch", Button, "refine_sketch"),
                         MoreMenu,
@@ -475,8 +478,24 @@ fn editor_spec() -> FfiScreenSpec {
                         c("editor.insert.comment_pin", Button, "add_comment_pin"),
                         MoreMenu,
                     ),
+                ],
+            ),
+            section(
+                "editor.settings",
+                "settings",
+                vec![
                     behind(
                         c("editor.customize_toolbar", Button, "customize_toolbar"),
+                        MoreMenu,
+                    ),
+                ],
+            ),
+            section(
+                "editor.destructive",
+                "danger_zone",
+                vec![
+                    behind(
+                        c("editor.revert_initial_state", Button, "revert_to_initial_state"),
                         MoreMenu,
                     ),
                 ],

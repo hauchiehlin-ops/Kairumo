@@ -168,6 +168,10 @@ struct KairumoApp: App {
                     let ext = url.pathExtension.lowercased()
                     if ext == "padnote" || ext == "zip" {
                         _ = try? NotebookStore.shared.importNotebookArchive(from: url)
+                    } else if ext == "pdf" {
+                        if let created = NotebookStore.shared.createNotebookFromPdf(fileURL: url) {
+                            NotificationCenter.default.post(name: AppCommand.openNotebook, object: created.id)
+                        }
                     } else if GoogleAuth.shared.handleCallbackURL(url) {
                         // 成功截獲系統／瀏覽器回呼之 Google OAuth 跳轉
                     }

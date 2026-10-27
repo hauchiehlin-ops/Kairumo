@@ -102,7 +102,7 @@ extension NotebookEditorView {
         }
         endTextFormatSession()
         let targetPage = page ?? currentPageIndex
-        currentPageIndex = targetPage
+        switchToPage(targetPage)
 
         if isPlacingPasteObject && !objectClipboard.isEmpty {
             lastPastePlacementAt = Date()
@@ -199,7 +199,7 @@ extension NotebookEditorView {
     func handleCanvasDirectDoubleTap(at location: CGPoint, page: Int? = nil) {
         endTextFormatSession()
         let targetPage = page ?? currentPageIndex
-        currentPageIndex = targetPage
+        switchToPage(targetPage)
         if hitTestGuideCheckbox(at: location, page: targetPage) != nil { return }
         if isLocationInsideAnyObject(at: location, page: targetPage) { return }
         // 若先前有空白文字方塊先清理
@@ -226,7 +226,7 @@ extension NotebookEditorView {
     func handleCanvasTapInTypeMode(at location: CGPoint, page: Int? = nil) {
         endTextFormatSession()
         let targetPage = page ?? currentPageIndex
-        currentPageIndex = targetPage
+        switchToPage(targetPage)
 
         // 0. 特殊頁面智慧引導線元件（核取方塊 Checkbox 等）點擊判定
         if let (_, key) = hitTestGuideCheckbox(at: location, page: targetPage) {
@@ -312,7 +312,7 @@ extension NotebookEditorView {
     /// 打字模式下 Apple Pencil 輕點：移除可能產生的微小墨點，並轉由文字模式點擊處理（即點即書或聚焦文字/物件）
     func handlePencilTapInTypeMode(at location: CGPoint, page: Int? = nil) {
         let targetPage = page ?? currentPageIndex
-        currentPageIndex = targetPage
+        switchToPage(targetPage)
         removeTapDotStroke(near: location)
         handleCanvasTapInTypeMode(at: location, page: targetPage)
     }

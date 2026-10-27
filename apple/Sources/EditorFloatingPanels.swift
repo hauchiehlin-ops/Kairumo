@@ -436,7 +436,7 @@ extension NotebookEditorView {
                         if pageDisplayMode == .continuous {
                             focusContinuousPage(page)
                         } else {
-                            currentPageIndex = page
+                            switchToPage(page)
                         }
                         paste(objectClipboard, onPage: page, at: value.location)
                         isPlacingPasteObject = false

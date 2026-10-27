@@ -443,6 +443,89 @@ object NotebookLibrary {
     }
 
     /**
+     * 由一份外部 PDF 直接建立筆記本：頁面尺寸自動跟隨 PDF，並將各頁面作為鎖定底稿載入。
+     */
+    fun createNotebookFromPdf(
+        context: Context,
+        uri: android.net.Uri,
+        deviceId: UInt,
+        folderId: String? = null
+    ): String? {
+        val tempFile = File(ProfileContext.cacheDir(context), "import_pdf_${System.currentTimeMillis()}.pdf")
+        return try {
+            context.contentResolver.openInputStream(uri)?.use { input ->
+                tempFile.outputStream().use { output ->
+                    input.copyTo(output)
+                }
+            } ?: return null
+            var name = uri.lastPathSegment?.substringAfterLast('/')?.substringBeforeLast('.') ?: "Kairumo"
+            runCatching {
+                context.contentResolver.query(uri, null, null, null, null)?.use { c ->
+                    if (c.moveToFirst()) {
+                        val ni = c.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
+                        if (ni >= 0 && !c.isNull(ni)) {
+                            name = c.getString(ni).substringBeforeLast('.')
+                        }
+                    }
+                }
+            }
+            createFromPdf(context, tempFile, deviceId, folderId, titleOverride = name)
+        } catch (_: Exception) {
+            null
+        } finally {
+            tempFile.delete()
+        }
+    }
+
+    fun createFromPdf(
+        context: Context,
+        pdfFile: File,
+        deviceId: UInt,
+        folderId: String? = null,
+        titleOverride: String? = null
+    ): String? {
+        val rawTitle = titleOverride ?: pdfFile.nameWithoutExtension
+        val title = rawTitle.ifBlank { "Kairumo" }
+        return try {
+            android.os.ParcelFileDescriptor.open(pdfFile, android.os.ParcelFileDescriptor.MODE_READ_ONLY).use { fd ->
+                android.graphics.pdf.PdfRenderer(fd).use { renderer ->
+                    val total = renderer.pageCount
+                    if (total <= 0) return null
+                    val (srcW, srcH) = renderer.openPage(0).use { p ->
+                        p.width.toFloat() to p.height.toFloat()
+                    }
+                    val formatId = uniffi.padnote_core.pdfRecommendedPageFormat(srcW, srcH)
+                    val f = runCatching { uniffi.padnote_core.pageFormat(formatId) }.getOrNull()
+                    val pageWidth = f?.width ?: 800f
+                    val pageHeight = f?.height ?: 1132f
+
+                    val id = create(context, title, deviceId, folderId, style = uniffi.padnote_core.PageStyle.BLANK) ?: return null
+                    val opened = open(context, id, deviceId, title) ?: return null
+                    val (session, firstPageId) = opened
+                    val meta = NotebookMeta.load(session)
+                    meta.setPageFormatId(session, formatId)
+
+                    val placed = mutableListOf<Pair<Int, String>>()
+                    for (i in 0 until total) {
+                        val page = com.kairumo.padnote.platform.PageImageRenderer.renderPdfPageForImport(renderer, i, pageWidth, pageHeight) ?: continue
+                        val pageId = if (i == 0) firstPageId else session.addPage(uniffi.padnote_core.PageStyle.BLANK)
+                        val img = com.kairumo.padnote.image.ImageStore(session, pageId).insertPlaced(
+                            page.png, title, page.x, page.y, page.width, page.height
+                        )
+                        if (img != null) {
+                            placed += i to img.id
+                        }
+                    }
+                    meta.placePdfPages(session, placed)
+                    id
+                }
+            }
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    /**
      * 「錄音收件匣」筆記本，不存在就建立。回傳它的 id。
      *
      * # 為什麼首頁的快速錄音需要它

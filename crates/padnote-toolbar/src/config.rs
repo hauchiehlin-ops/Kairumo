@@ -1,5 +1,6 @@
 //! 工具列設定的持久化與還原。
 
+use crate::radial::{self, RadialAction};
 use crate::tools::{Tool, ToolGroup, all_tools};
 use serde::de::IgnoredAny;
 use serde::{Deserialize, Deserializer, Serialize};
@@ -35,6 +36,22 @@ fn lenient_groups<'de, D: Deserializer<'de>>(d: D) -> Result<Vec<ToolGroup>, D::
             Lenient::Unknown(_) => None,
         })
         .collect())
+}
+
+/// 飛梭工具盤的槽位：不認得的跳過（舊版讀到新版多的動作），收斂後不合法就回到出廠的八格。
+fn lenient_radial<'de, D: Deserializer<'de>>(d: D) -> Result<Vec<RadialAction>, D::Error> {
+    let known: Vec<RadialAction> = Vec::<Lenient<RadialAction>>::deserialize(d)?
+        .into_iter()
+        .filter_map(|e| match e {
+            Lenient::Known(a) => Some(a),
+            Lenient::Unknown(_) => None,
+        })
+        .collect();
+    Ok(radial::normalized(&known).unwrap_or_else(default_radial))
+}
+
+fn default_radial() -> Vec<RadialAction> {
+    RadialAction::DEFAULT.to_vec()
 }
 
 fn default_visible() -> BTreeSet<Tool> {
@@ -80,6 +97,9 @@ pub struct ToolbarConfig {
     /// 泰文與日文的字串常比英文長 30–50%，這些語言下預設關閉比較安全。
     #[serde(default)]
     pub show_labels: bool,
+    /// 飛梭工具盤的槽位（依順序，從正上方順時針）。見 [`crate::radial`]。
+    #[serde(default = "default_radial", deserialize_with = "lenient_radial")]
+    radial: Vec<RadialAction>,
 }
 
 impl Default for ToolbarConfig {
@@ -89,6 +109,7 @@ impl Default for ToolbarConfig {
             visible: default_visible(),
             group_order: default_group_order(),
             show_labels: false,
+            radial: default_radial(),
         }
     }
 }
@@ -163,6 +184,27 @@ impl ToolbarConfig {
             .find(|t| t.is_brush() == current.is_brush() && self.is_visible(*t))
             .or_else(|| all_tools().into_iter().find(|t| self.is_visible(*t)))
             .unwrap_or(current)
+    }
+
+    /// 飛梭工具盤的槽位。
+    pub fn radial(&self) -> &[RadialAction] {
+        &self.radial
+    }
+
+    /// 改飛梭工具盤的槽位。收斂規則見 [`radial::normalized`]；少於兩格時不改、回 `false`。
+    pub fn set_radial(&mut self, slots: &[RadialAction]) -> bool {
+        match radial::normalized(slots) {
+            Some(s) => {
+                self.radial = s;
+                true
+            }
+            None => false,
+        }
+    }
+
+    /// 只把飛梭工具盤還原成出廠的八格（工具列其餘設定不動）。
+    pub fn reset_radial(&mut self) {
+        self.radial = default_radial();
     }
 
     /// 還原為預設。**使用者改壞了要回得去。**
@@ -334,6 +376,49 @@ mod tests {
         assert_eq!(c.placement, Placement::Left, "整份設定被丟掉了");
         assert!(c.is_visible(Tool::Pen));
         assert!(!c.is_visible(Tool::Eraser), "不在清單上的工具不該冒出來");
+    }
+
+    #[test]
+    fn radial_slots_round_trip_and_old_configs_get_the_factory_eight() {
+        use RadialAction::*;
+        let mut c = ToolbarConfig::default();
+        assert!(c.set_radial(&[Pencil, Eraser, ToggleMode]));
+        let back = ToolbarConfig::from_json(&c.to_json());
+        assert_eq!(back.radial(), &[Pencil, Eraser, ToggleMode]);
+
+        // 自訂功能上線前存的設定沒有這個欄位：工具盤維持原本那八格。
+        let old =
+            r#"{"placement":"left","visible":["pen"],"group_order":["pens"],"show_labels":true}"#;
+        assert_eq!(
+            ToolbarConfig::from_json(old).radial(),
+            &RadialAction::DEFAULT
+        );
+    }
+
+    #[test]
+    fn radial_from_a_newer_app_keeps_what_this_version_knows() {
+        // 別台較新的 App 放了這一版不認得的動作：跳過那一格，其餘照舊。
+        let json = r#"{"radial":["pen","time_machine","eraser"]}"#;
+        assert_eq!(
+            ToolbarConfig::from_json(json).radial(),
+            &[RadialAction::Pen, RadialAction::Eraser]
+        );
+        // 只剩一格認得：不合法，回到出廠的八格，而不是一個只有一格的工具盤。
+        let json = r#"{"radial":["pen","time_machine"]}"#;
+        assert_eq!(
+            ToolbarConfig::from_json(json).radial(),
+            &RadialAction::DEFAULT
+        );
+    }
+
+    #[test]
+    fn too_few_radial_slots_are_refused_and_reset_restores_them() {
+        let mut c = ToolbarConfig::default();
+        assert!(!c.set_radial(&[RadialAction::Pen]));
+        assert_eq!(c.radial(), &RadialAction::DEFAULT, "被拒絕時不能動到原本的");
+        c.set_radial(&[RadialAction::Pen, RadialAction::Eraser]);
+        c.reset_radial();
+        assert_eq!(c.radial(), &RadialAction::DEFAULT);
     }
 
     #[test]

@@ -167,13 +167,7 @@ fun OnboardingScreen(onDone: () -> Unit) {
         Button(
             onClick = {
                 Onboarding.markSeen(context)
-                if (needsRequest) {
-                    // 問完不論給不給都往下走（結果由 micPermission 的回呼
-                    // 處理）—— 沒拿到麥克風，App 仍然是一個完整的手寫筆記本。
-                    micPermission.launch(Manifest.permission.RECORD_AUDIO)
-                } else {
-                    onDone()
-                }
+                onDone()
             },
             modifier = Modifier.fillMaxWidth().widthIn(max = DS.Content.readableMaxWidth)
         ) {

@@ -20,9 +20,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.kairumo.padnote.LocalizationStrings
 import com.kairumo.padnote.library.AccountSyncStore
+import uniffi.padnote_core.FfiRadialAction
+import uniffi.padnote_core.FfiRadialActionInfo
 import uniffi.padnote_core.FfiTool
 import uniffi.padnote_core.FfiToolGroupInfo
 import uniffi.padnote_core.FfiToolbar
@@ -119,6 +123,35 @@ object ToolbarSettings {
         persist(context, c)
     }
 
+    // ── 飛梭工具盤（規則在核心 `padnote_toolbar::radial`，與 Apple 同一份）──
+
+    /** 工具盤目前的槽位，依順序（從正上方順時針）。state：改完設定，下一次叫出的工具盤就是新的。 */
+    var radialActions by mutableStateOf<List<FfiRadialAction>>(emptyList())
+        private set
+
+    /** 讀槽位（確保已載入；編輯器叫出工具盤時用）。 */
+    fun radialActions(context: Context, languageTag: String): List<FfiRadialAction> {
+        core(context, languageTag)
+        return radialActions
+    }
+
+    fun allRadialActions(context: Context, languageTag: String): List<FfiRadialActionInfo> =
+        core(context, languageTag).allRadialActions()
+
+    /** 改槽位。少於兩格時核心拒絕、回 false。 */
+    fun setRadialActions(context: Context, languageTag: String, next: List<FfiRadialAction>): Boolean {
+        val c = core(context, languageTag)
+        val ok = c.setRadialActions(next)
+        if (ok) persist(context, c)
+        return ok
+    }
+
+    fun resetRadial(context: Context, languageTag: String) {
+        val c = core(context, languageTag)
+        c.resetRadial()
+        persist(context, c)
+    }
+
     /** 回到出廠設定。**使用者改壞了要回得去。** */
     fun reset(context: Context, languageTag: String) {
         val c = core(context, languageTag)
@@ -151,6 +184,7 @@ object ToolbarSettings {
     private fun refresh(c: FfiToolbar) {
         placement = c.placement()
         showLabels = c.showLabels()
+        radialActions = c.radialActions()
         hiddenIdentifiers = c.allGroups()
             .flatMap { it.tools }
             .filter { !it.visible }
@@ -315,6 +349,91 @@ fun ToolbarCustomizationSheet(
                             style = MaterialTheme.typography.bodySmall
                         )
                     }
+                    // 飛梭工具盤：槽位依順序（可前後移、移除），下面是還沒放上去的動作（點一下加入）。
+                    // 上下限的規則在核心：少於兩格核心會拒絕，這裡只是把按鈕停用、說明原因（與 Apple 一致）。
+                    item(key = "radial") {
+                        val slots = ToolbarSettings.radialActions(context, languageTag)
+                        val maxSlots = uniffi.padnote_core.radialMaxSlots().toInt()
+                        val minSlots = uniffi.padnote_core.radialMinSlots().toInt()
+                        HorizontalDivider()
+                        Text(
+                            l10n("radial_customize"),
+                            style = MaterialTheme.typography.labelMedium,
+                            modifier = Modifier.padding(top = 6.dp)
+                        )
+                        Text(l10n("radial_customize_hint"), style = MaterialTheme.typography.bodySmall)
+                        slots.forEachIndexed { index, action ->
+                            androidx.compose.foundation.layout.Row(
+                                modifier = Modifier.fillMaxWidth().testTag("radial.slot.$index"),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    "${index + 1}. ${RadialSlots.icon(action)} " +
+                                        l10n(RadialSlots.labelKey(action)),
+                                    modifier = Modifier.weight(1f)
+                                )
+                                TextButton(
+                                    enabled = index > 0,
+                                    onClick = {
+                                        val next = slots.toMutableList()
+                                        java.util.Collections.swap(next, index, index - 1)
+                                        ToolbarSettings.setRadialActions(context, languageTag, next)
+                                    }
+                                ) { Text("▲", modifier = Modifier.semantics { contentDescription = l10n("radial_move_up") }) }
+                                TextButton(
+                                    enabled = index < slots.size - 1,
+                                    onClick = {
+                                        val next = slots.toMutableList()
+                                        java.util.Collections.swap(next, index, index + 1)
+                                        ToolbarSettings.setRadialActions(context, languageTag, next)
+                                    }
+                                ) { Text("▼", modifier = Modifier.semantics { contentDescription = l10n("radial_move_down") }) }
+                                TextButton(
+                                    modifier = Modifier.testTag("radial.slot.$index.remove"),
+                                    enabled = slots.size > minSlots,
+                                    onClick = {
+                                        ToolbarSettings.setRadialActions(
+                                            context, languageTag, slots.filterIndexed { i, _ -> i != index })
+                                    }
+                                ) { Text(l10n("radial_remove"), color = MaterialTheme.colorScheme.error) }
+                            }
+                        }
+                        if (slots.size <= minSlots) {
+                            Text(l10n("radial_min_hint"), style = MaterialTheme.typography.bodySmall)
+                        }
+                        Text(
+                            l10n("radial_available"),
+                            style = MaterialTheme.typography.labelMedium,
+                            modifier = Modifier.padding(top = 6.dp)
+                        )
+                        if (slots.size >= maxSlots) {
+                            Text(l10n("radial_full"), style = MaterialTheme.typography.bodySmall)
+                        }
+                        androidx.compose.foundation.layout.FlowRow(
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            ToolbarSettings.allRadialActions(context, languageTag)
+                                .filter { !it.inMenu }
+                                .forEach { info ->
+                                    androidx.compose.material3.AssistChip(
+                                        enabled = slots.size < maxSlots,
+                                        onClick = {
+                                            ToolbarSettings.setRadialActions(
+                                                context, languageTag, slots + info.action)
+                                        },
+                                        label = {
+                                            Text("＋ ${RadialSlots.icon(info.action)} " +
+                                                l10n(RadialSlots.labelKey(info.action)))
+                                        },
+                                        modifier = Modifier.testTag(info.identifier)
+                                    )
+                                }
+                        }
+                        TextButton(
+                            onClick = { ToolbarSettings.resetRadial(context, languageTag) },
+                            modifier = Modifier.testTag("radial.reset")
+                        ) { Text(l10n("radial_reset")) }
+                    }
                     groups.forEach { group ->
                         item(key = group.label) {
                             HorizontalDivider()
@@ -351,7 +470,7 @@ fun ToolbarCustomizationSheet(
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) { Text(l10n("done")) }
+            TextButton(onClick = onDismiss, modifier = Modifier.testTag("toolbar.done")) { Text(l10n("done")) }
         },
         dismissButton = {
             TextButton(

@@ -584,6 +584,10 @@ jobs:
         run: cargo test -p padnote-core --lib ffi_screens
       - name: 兩端控制項對照
         run: python3 scripts/check-screen-parity.py
+      - name: 編輯器狀態的唯一正門（換工具、切模式不准繞過）
+        run: python3 scripts/check-state-entrypoints.py
+      - name: 介面名詞規範檢查（詞彙表一致性）
+        run: python3 scripts/check-glossary.py
 
   # S-12：FFI 綁定必須產得出來。core 的 API 改壞時在這裡就會爆，
   # 而不是等到 Xcode 編不過。

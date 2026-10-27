@@ -43,6 +43,7 @@ public struct HomeWorkbenchView: View {
     @State private var showAccountSheet: Bool = false
     @State private var showProfilePicker: Bool = false
     @State private var showNewNotebookSheet: Bool = false
+    @State private var showPdfPickerForNewNote: Bool = false
     /// 建立**加密**筆記本的流程（H-CRYPTO）。與一般新增分開：
     /// 它有三步而且不能跳（設密碼 → 抄復原碼 → 把復原碼輸回來）。
     @State private var showEncryptedNotebookSheet: Bool = false
@@ -305,6 +306,12 @@ public struct HomeWorkbenchView: View {
             .onReceive(NotificationCenter.default.publisher(for: AppCommand.focusSearch)) { _ in
                 searchFieldFocused = true
             }
+            .onReceive(NotificationCenter.default.publisher(for: AppCommand.openNotebook)) { note in
+                if let id = note.object as? String,
+                   let found = notebookStore.notebooks.first(where: { $0.id.lowercased() == id.lowercased() }) {
+                    selectedNotebookForEditing = found
+                }
+            }
             // 標題改由內容欄自己畫（見上面）。導覽列只留一個 inline 標題，
             // 捲動時仍然看得到自己在哪一頁。
             // 標題由內容欄自己畫，導覽列就不要再寫一次 —— 兩個「You」
@@ -426,6 +433,18 @@ public struct HomeWorkbenchView: View {
                 } catch {
                     importResultMessage = String(
                         format: localizationManager.localized("import_failed"), error.localizedDescription)
+                }
+            }
+            .fileImporter(
+                isPresented: $showPdfPickerForNewNote,
+                allowedContentTypes: [.pdf],
+                allowsMultipleSelection: false
+            ) { result in
+                guard let urls = try? result.get(), let url = urls.first else { return }
+                if let created = notebookStore.createNotebookFromPdf(fileURL: url) {
+                    selectedNotebookForEditing = created
+                } else {
+                    importResultMessage = localizationManager.localized("pdf_render_failed")
                 }
             }
             .alert(
@@ -3298,6 +3317,30 @@ public struct HomeWorkbenchView: View {
                 Section(localizationManager.localized("note_title")) {
                     TextField(localizationManager.localized("note_title"), text: $newNoteTitle)
                         .accessibilityIdentifier("new_notebook.title.field")
+                }
+
+                Section {
+                    Button {
+                        showNewNotebookSheet = false
+                        SheetCoordinator.shared.presentFromMenu {
+                            showPdfPickerForNewNote = true
+                        }
+                    } label: {
+                        HStack(spacing: DS.Space.s) {
+                            Image(systemName: "doc.richtext.fill")
+                                .foregroundStyle(Color.red)
+                                .font(.title3)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(localizationManager.localized("new_note_from_pdf"))
+                                    .font(.headline)
+                                Text(localizationManager.localized("new_note_from_pdf_desc"))
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                        .padding(.vertical, 4)
+                    }
+                    .accessibilityIdentifier("new_notebook.from_pdf")
                 }
 
                 kitSection

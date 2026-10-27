@@ -10,6 +10,7 @@ import SwiftUI
 import Combine
 import PencilKit
 import CryptoKit
+import PDFKit
 #if canImport(PadnoteCore)
 import PadnoteCore
 #endif
@@ -3280,8 +3281,9 @@ public final class NotebookStore: ObservableObject {
         }
     }
 
-    public func duplicateNotebook(id: String) {
-        guard let original = notebooks.first(where: { $0.id == id }) else { return }
+    @discardableResult
+    public func duplicateNotebook(id: String) -> NotebookDocument? {
+        guard let original = notebooks.first(where: { $0.id == id }) else { return nil }
         var copy = original
         copy = NotebookDocument(
             title: String(format: LocalizationManager.shared.localized("copy_suffix"), original.title),
@@ -3309,6 +3311,7 @@ public final class NotebookStore: ObservableObject {
             isFolder: false
         )
         persistData()
+        return copy
     }
 
     public func renameNotebook(id: String, newTitle: String) {
@@ -3706,6 +3709,46 @@ public final class NotebookStore: ObservableObject {
             doc.setObjectOrder([attachment.id] + order.filter { $0 != attachment.id }, forPage: pageIndex)
         }
         updateNotebook(doc)
+    }
+
+    /// 由一份外部 PDF 直接建立筆記本：頁面尺寸自動跟隨 PDF，並將各頁面作為鎖定底稿載入。
+    @discardableResult
+    public func createNotebookFromPdf(fileURL: URL) -> NotebookDocument? {
+        let isAccessing = fileURL.startAccessingSecurityScopedResource()
+        defer { if isAccessing { fileURL.stopAccessingSecurityScopedResource() } }
+
+        guard let doc = PDFDocument(url: fileURL), doc.pageCount > 0 else { return nil }
+
+        let page0 = doc.page(at: 0)
+        let box = page0?.bounds(for: .mediaBox) ?? CGRect(x: 0, y: 0, width: 800, height: 1132)
+        let formatId = pdfRecommendedPageFormat(sourceWidth: Float(box.width), sourceHeight: Float(box.height))
+
+        let titleRaw = fileURL.deletingPathExtension().lastPathComponent
+        let title = titleRaw.isEmpty ? LocalizationManager.shared.localizedUnsafe("new_notebook") : titleRaw
+        var created = createNotebook(title: title, template: .blank)
+        created.pageFormatId = formatId
+        updateNotebook(created)
+
+        let pageSize = PageGeometry.size(forFormat: formatId)
+        var importedPages: [PdfImportedPage] = []
+        for i in 0 ..< doc.pageCount {
+            if let imported = PdfPageRenderer.importPage(
+                document: doc, index: i, pageSize: pageSize, into: attachmentsDirectory
+            ) {
+                importedPages.append(imported)
+            }
+        }
+
+        guard !importedPages.isEmpty else { return nil }
+
+        let extraPages = importedPages.count - 1
+        if extraPages > 0 {
+            insertPages(notebookId: created.id, afterIndex: 0, count: extraPages, paperId: created.paperId(forPage: 0))
+        }
+
+        placePdfPages(notebookId: created.id, pages: importedPages, firstPage: 0)
+
+        return notebooks.first(where: { $0.id == created.id }) ?? created
     }
 
     /// 刪除指定頁面，平移後續頁面並回傳安全之 currentPageIndex

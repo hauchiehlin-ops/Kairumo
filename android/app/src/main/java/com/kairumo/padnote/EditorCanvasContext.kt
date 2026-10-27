@@ -551,6 +551,10 @@ internal class EditorCanvasContext {
     var showCollaboration: Boolean
         get() = showCollaborationState.value
         set(v) { showCollaborationState.value = v }
+    lateinit var showSampleReadOnlyAlertState: MutableState<Boolean>
+    var showSampleReadOnlyAlert: Boolean
+        get() = showSampleReadOnlyAlertState.value
+        set(v) { showSampleReadOnlyAlertState.value = v }
     lateinit var showLanguagePickerState: MutableState<Boolean>
     var showLanguagePicker: Boolean
         get() = showLanguagePickerState.value
@@ -678,6 +682,10 @@ internal class EditorCanvasContext {
     lateinit var globalRedo: () -> Unit
     lateinit var fitCanvas: (String) -> Unit
     lateinit var applyInkTool: (InkTool) -> Unit
+    lateinit var switchToPage: (Int) -> Unit
+    lateinit var selectText: (String?) -> Unit
+    lateinit var selectImage: (String?) -> Unit
+    lateinit var clearSelection: () -> Unit
     lateinit var moveMarqueeSelection: (Float, Float) -> Unit
     lateinit var deleteMarqueeSelection: () -> Unit
     lateinit var duplicateMarqueeSelection: () -> Unit
@@ -814,13 +822,24 @@ internal fun rememberEditorCanvasContext(
     // 上一個引擎。別台同步進來要重開 session 時，新引擎先借它的筆畫當畫面（見 `seedDisplayFrom`），
     // 不然背景讀檔那段時間整頁是白的。只在同一頁才借 —— 換頁不能把上一頁的字帶過來。
     val previousEngine = remember(notebookId) { arrayOfNulls<InkEngine>(1) }
+    val isSampleNotebook = remember(notebookId) {
+        notebookId != null && com.kairumo.padnote.library.SampleFork.isSample(activity, notebookId, deviceId(activity))
+    }
+    var hasWarnedSampleReadOnly by remember(notebookId) { mutableStateOf(false) }
+    val showSampleReadOnlyAlertState = remember { mutableStateOf(false) }
     val engine = remember(notebook, pageId) {
         InkEngine(session = notebook?.first, pageId = pageId).apply {
             previousEngine[0]?.takeIf { it.pageKey == (pageId ?: "") }?.let { seedDisplayFrom(it) }
             previousEngine[0] = this
             // 一筆畫完就通知同步。**會去抖動** —— 使用者還在寫字時
             // 每一筆都推只是浪費電，而且會拖慢正在編輯的這一本。
-            onContentCommitted = { com.kairumo.padnote.sync.AutoSync.noteLocalEdit(activity) }
+            onContentCommitted = {
+                if (isSampleNotebook && !hasWarnedSampleReadOnly) {
+                    hasWarnedSampleReadOnly = true
+                    showSampleReadOnlyAlertState.value = true
+                }
+                com.kairumo.padnote.sync.AutoSync.noteLocalEdit(activity)
+            }
             // 使用者調過的掌拒門檻要在**每次開新引擎時**套回去。
             // 只在設定當下套的話，換一頁就變回預設值，而使用者會以為
             // 設定沒有存到。
@@ -1189,6 +1208,30 @@ internal fun rememberEditorCanvasContext(
         }
     }
 
+    fun switchToPage(target: Int) {
+        val bounded = target.coerceIn(0, maxOf(0, pageCount - 1))
+        if (pageIndex == bounded) {
+            continuousScrollRequest++
+            return
+        }
+        pageIndex = bounded // state-entry: 頁面切換的唯一正門
+        continuousScrollRequest++
+    }
+
+    fun selectText(id: String?) {
+        selectedTextId = id // state-entry: 選取文字的唯一正門
+        if (id != null) {
+            selectedImageId = null // state-entry: 選取互斥清空
+        }
+    }
+
+    fun selectImage(id: String?) {
+        selectedImageId = id // state-entry: 選取圖片的唯一正門
+        if (id != null) {
+            selectedTextId = null // state-entry: 選取互斥清空
+        }
+    }
+
     // 把打包好的筆記存到**使用者自己選的位置**（SAF）。
     //
     // App 的資料在私有目錄裡，使用者碰不到 —— 分享可以把檔案送去別的 App，
@@ -1233,7 +1276,7 @@ internal fun rememberEditorCanvasContext(
             if (bytes != null) {
                 val inserted = imageStore.insert(bytes, outcome.displayName)
                 imageRevision++
-                selectedImageId = inserted?.id
+                selectImage(inserted?.id)
                 // 插入後自動切到打字模式 —— 手寫模式下物件不吃觸控，
                 // 使用者剛插進來的圖會拖不動，看起來像插壞了。
                 if (inserted != null) editorMode = EditorMode.TYPE
@@ -1335,20 +1378,42 @@ internal fun rememberEditorCanvasContext(
     var insertingShape by insertingShapeState
     val showLayerPanelState = remember { mutableStateOf(false) }
     var showLayerPanel by showLayerPanelState
+
+    fun clearSelection() {
+        selectedTextId = null // state-entry: 清空選取的唯一正門
+        selectedImageId = null // state-entry: 清空選取的唯一正門
+        selectedChartId = null
+        selectedTableId = null
+        selectedLinkId = null
+        selectedAudioId = null
+        selectedModel3DId = null
+        selectedShapeIds = emptySet()
+        selectedConnectionId = null
+        marqueeSelection = emptySet()
+    }
+    // 切回手寫模式時一律收掉物件選取（與 Apple `transitionToMode`、連續頁面模式同一組規則）。
+    //
+    // 模式有三十幾個地方會改（工具列、觸控筆落下、Ctrl+E、飛梭工具盤、插入物件…），以前靠每個
+    // 呼叫端自己記得清 —— 只有工具列那一條有清，其他路切回手寫，畫面上就留著一組在手寫模式下
+    // 拖不動的把手。改成看著模式本身：不管從哪條路切的，結果都一樣。
+    LaunchedEffect(editorMode) {
+        if (editorMode == EditorMode.DRAW) {
+            clearSelection()
+        }
+    }
     LaunchedEffect(notebook, pageId, pageDisplayMode) {
         if (pageDisplayMode != PageDisplayMode.CONTINUOUS) {
             shapeStore.load(); shapeRevision++
         }
     }
     LaunchedEffect(notebook, pageId) {
-        selectedTextId = null; editingText = null
-        selectedImageId = null; editingImage = null
-        selectedShapeIds = emptySet(); editingShape = null; selectedConnectionId = null
-        selectedTableId = null; editingTable = null
-        selectedChartId = null; editingChart = null
-        selectedLinkId = null; editingLink = null
-        selectedAudioId = null
-        marqueeSelection = emptySet()
+        clearSelection()
+        editingText = null
+        editingImage = null
+        editingShape = null; selectedConnectionId = null
+        editingTable = null
+        editingChart = null
+        editingLink = null
     }
 
     // 這一頁所有可堆疊的物件，跨五種型別收成同一份清單。
@@ -1569,8 +1634,8 @@ internal fun rememberEditorCanvasContext(
                 meta.setObjectLocked(notebook?.first, pageIndex, id, locked)
                 if (locked) {
                     // 鎖上就收掉它的選取：鎖定的物件點不到，留著選取外框的話是一組拖不動的把手。
-                    if (selectedTextId == id) selectedTextId = null
-                    if (selectedImageId == id) selectedImageId = null
+                    if (selectedTextId == id) selectText(null)
+                    if (selectedImageId == id) selectImage(null)
                     if (selectedChartId == id) selectedChartId = null
                     if (selectedTableId == id) selectedTableId = null
                     if (selectedLinkId == id) selectedLinkId = null
@@ -1643,9 +1708,9 @@ internal fun rememberEditorCanvasContext(
             marqueeSelection = created
         } else {
             val firstId = created.firstOrNull()
-            selectedTextId = firstId?.takeIf { textStore.find(it) != null }
+            selectText(firstId?.takeIf { textStore.find(it) != null })
             if (editingText != null && editingText?.id != selectedTextId) editingText = null
-            selectedImageId = firstId?.takeIf { id -> imageStore.all.any { it.id == id } }
+            selectImage(firstId?.takeIf { id -> imageStore.all.any { it.id == id } })
             selectedTableId = firstId?.takeIf { id -> tableStore.all.any { it.id == id } }
             selectedChartId = firstId?.takeIf { id -> chartStore.all.any { it.id == id } }
             selectedShapeIds = if (firstId != null && shapeStore.all.any { it.id == firstId }) setOf(firstId) else emptySet()
@@ -1891,7 +1956,7 @@ internal fun rememberEditorCanvasContext(
                 meta.movePageData(session, from, to, pageCount)
                 // 跟著搬過去 —— 停在原本的索引會變成「我搬了一頁，
                 // 畫面卻跳到別頁」。
-                pageIndex = to.coerceIn(0, maxOf(0, pageCount - 1))
+                switchToPage(to)
                 revision++
                 continuousContentRevision++
             }
@@ -1925,7 +1990,7 @@ internal fun rememberEditorCanvasContext(
         val linkStyles = meta.connectionStyles().mapNotNull { (old, style) -> ids[old]?.let { it to style } }.toMap()
         meta.updateStyles(s, shapeUpserts = shapeStyles, connectionUpserts = linkStyles)
         pageCount = newCount
-        pageIndex = target
+        switchToPage(target)
         revision++
         continuousContentRevision++
     }
@@ -1952,7 +2017,7 @@ internal fun rememberEditorCanvasContext(
         // 後面的頁往後挪了一格，以頁碼為鍵的圖層設定也要跟著挪。
         if (targetIndex < newCount - 1) meta.shiftPageKeyedData(s, targetIndex, newCount - 1)
         pageCount = newCount
-        pageIndex = targetIndex
+        switchToPage(targetIndex)
         revision++
     }
 
@@ -2020,7 +2085,7 @@ internal fun rememberEditorCanvasContext(
                 if (inserted > 0 && anchor + 1 < countBefore) meta.shiftPageKeyedData(s, anchor + 1, countBefore, by = inserted)
                 meta.placePdfPages(s, placed)
                 pageCount = runCatching { s.pageCount().toInt() }.getOrDefault(countBefore + inserted)
-                placed.firstOrNull()?.let { pageIndex = it.first }
+                placed.firstOrNull()?.let { switchToPage(it.first) }
                 imageStore.load()
                 imageRevision++
                 stackRevision++
@@ -2086,7 +2151,7 @@ internal fun rememberEditorCanvasContext(
                 }
             }
             importedDocument = null
-            pageIndex = base
+            switchToPage(base)
             sessionRevision++
             message = l10n("import_document_done")
         }
@@ -2103,7 +2168,7 @@ internal fun rememberEditorCanvasContext(
         meta.removePageTemplate(s, atIndex, pageCount)
         pageCount = runCatching { s.pageCount().toInt() }.getOrDefault(pageCount - 1)
         if (pageIndex >= pageCount) {
-            pageIndex = (pageCount - 1).coerceAtLeast(0)
+            switchToPage((pageCount - 1).coerceAtLeast(0))
         }
         revision++
         continuousContentRevision++
@@ -2185,9 +2250,9 @@ internal fun rememberEditorCanvasContext(
             val alive = (snapshot.texts.map { it.id } + snapshot.images.map { it.id } + snapshot.shapes.map { it.id } +
                 snapshot.connections.map { it.id } + snapshot.tables.map { it.id } + snapshot.charts.map { it.id } +
                 snapshot.links.map { it.id } + snapshot.models3D.map { it.id } + snapshot.audio.map { it.id }).toSet()
-            if (selectedTextId != null && selectedTextId !in alive) selectedTextId = null
+            if (selectedTextId != null && selectedTextId !in alive) selectText(null)
             if (editingText != null && editingText?.id !in alive) editingText = null
-            if (selectedImageId != null && selectedImageId !in alive) selectedImageId = null
+            if (selectedImageId != null && selectedImageId !in alive) selectImage(null)
             if (selectedTableId != null && selectedTableId !in alive) selectedTableId = null
             if (selectedChartId != null && selectedChartId !in alive) selectedChartId = null
             if (selectedConnectionId != null && selectedConnectionId !in alive) selectedConnectionId = null
@@ -2284,7 +2349,7 @@ internal fun rememberEditorCanvasContext(
     // 橡皮擦時 `engine.isErasing` 會忘了跟著改，症狀是「側鍵選到橡皮擦了，
     // 但畫下去還是墨跡」。
     fun applyInkTool(picked: InkTool) {
-        inkTool = picked
+        inkTool = picked // state-entry: 換工具的唯一正門
         engine.isErasing = picked.isEraser
         com.kairumo.padnote.platform.MainThreadStallMonitor.breadcrumb("select tool ${picked.kind}")
         picked.kind?.let { engine.tool = it }
@@ -2373,15 +2438,16 @@ internal fun rememberEditorCanvasContext(
         AppCommands.events.collect { command ->
             when (command) {
                 is AppCommand.SelectTool ->
-                    inkToolShortcutOrder.getOrNull(command.index)?.let { inkTool = it }
+                    // 與工具列同一條路（applyInkTool），快捷鍵選到橡皮擦才真的會擦。
+                    inkToolShortcutOrder.getOrNull(command.index)?.let { applyInkTool(it) }
                 // 切回手寫時要清掉選取 —— 與工具列上那顆按鈕做的事一樣。
                 // 只翻模式不清的話，畫面上會浮著一組在手寫模式下按不動的把手。
                 is AppCommand.ToggleEditorMode ->
                     if (editorMode == EditorMode.DRAW) {
-                        editorMode = EditorMode.TYPE
+                        editorMode = EditorMode.DRAW
                     } else {
                         editorMode = EditorMode.DRAW
-                        selectedTextId = null
+                        clearSelection()
                     }
                 else -> Unit
             }
@@ -2704,9 +2770,9 @@ internal fun rememberEditorCanvasContext(
 
     /** 放開一個被別人鎖住的選取。 */
     fun releaseSelection(id: String) {
-        if (selectedTextId == id) selectedTextId = null
+        if (selectedTextId == id) selectText(null)
         if (editingText?.id == id) editingText = null
-        if (selectedImageId == id) selectedImageId = null
+        if (selectedImageId == id) selectImage(null)
         if (selectedTableId == id) selectedTableId = null
         if (selectedChartId == id) selectedChartId = null
         if (selectedConnectionId == id) selectedConnectionId = null
@@ -2734,7 +2800,7 @@ internal fun rememberEditorCanvasContext(
             val moved = (0 until pageCount).firstOrNull {
                 runCatching { session.pageIdAt(it.toUInt()) }.getOrNull() == stay
             }
-            pageIndex = moved ?: pageIndex.coerceIn(0, maxOf(0, pageCount - 1))
+            pageIndex = moved ?: pageIndex.coerceIn(0, maxOf(0, pageCount - 1)) // state-entry: 協同刪頁重算頁碼
         }
         if (result.objects) {
             meta.refresh(session)
@@ -2998,6 +3064,7 @@ internal fun rememberEditorCanvasContext(
     ctx.showToolbarCustomizationState = showToolbarCustomizationState
     ctx.showAssetLibraryState = showAssetLibraryState
     ctx.showCollaborationState = showCollaborationState
+    ctx.showSampleReadOnlyAlertState = showSampleReadOnlyAlertState
     ctx.showLanguagePickerState = showLanguagePickerState
     ctx.showNoteIntelligenceState = showNoteIntelligenceState
     ctx.collabBaseRoomState = collabBaseRoomState
@@ -3081,6 +3148,10 @@ internal fun rememberEditorCanvasContext(
     ctx.globalRedo = { globalRedo() }
     ctx.fitCanvas = { mode -> fitCanvas(mode) }
     ctx.applyInkTool = { picked -> applyInkTool(picked) }
+    ctx.switchToPage = { target -> switchToPage(target) }
+    ctx.selectText = { id -> selectText(id) }
+    ctx.selectImage = { id -> selectImage(id) }
+    ctx.clearSelection = { clearSelection() }
     ctx.moveMarqueeSelection = { dx, dy -> moveMarqueeSelection(dx, dy) }
     ctx.deleteMarqueeSelection = { deleteMarqueeSelection() }
     ctx.duplicateMarqueeSelection = { duplicateMarqueeSelection() }

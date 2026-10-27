@@ -40,7 +40,16 @@ pub struct FfiFeatureHint {
 /// 使用者會學會直接關掉它們 —— 那時候真正需要提示的那個也一起沒了。
 #[uniffi::export]
 pub fn feature_hints() -> Vec<FfiFeatureHint> {
-    ["refine_sketch", "comment_pin", "recognize", "tabletop"]
+    [
+        "refine_sketch",
+        "comment_pin",
+        "recognize",
+        "tabletop",
+        "pdf_underlay",
+        "object_lock",
+        "lasso",
+        "radial_menu",
+    ]
         .into_iter()
         .map(|id| FfiFeatureHint {
             id: format!("hint.{id}"),

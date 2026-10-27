@@ -386,6 +386,11 @@ class MainActivity : FragmentActivity() {
         }
         return super.onKeyDown(keyCode, event)
     }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+    }
 }
 
 /**
@@ -575,7 +580,9 @@ private fun InkScreen(
         colorHex = ctx.inkColorHex,
         width = ctx.inkWidth,
         languageTag = deviceLanguageTag(),
-        onToolChange = { t -> ctx.inkTool = t },
+        // 一定要走 applyInkTool：只改 inkTool 的話 engine.isErasing／engine.tool 不會跟著改，
+        // 從工具列點橡皮擦畫下去還是墨跡、離開套索時選取框也不會收掉（拆檔時斷掉的那一條）。
+        onToolChange = { t -> ctx.applyInkTool(t) },
         onColorChange = { c -> ctx.inkColorHex = c },
         onWidthChange = { w -> ctx.inkWidth = w },
         onOpenColorWheel = { ctx.showProColorWheel = true },
@@ -583,7 +590,7 @@ private fun InkScreen(
             val box = ctx.textStore.createBoxed(200f, 200f, ctx.textStore.pageRules(ctx.meta.paperId(ctx.pageIndex)), ctx.snapToGrid)
             ctx.textStore.persist(box)
             ctx.editingText = box
-            ctx.selectedTextId = box.id
+            ctx.selectText(box.id)
             ctx.editorMode = EditorMode.TYPE
             ctx.textRevision++
             ctx.stackRevision++
@@ -643,28 +650,35 @@ private fun InkScreen(
             onModeChange = { newMode ->
                 editorMode = newMode
                 if (newMode == EditorMode.DRAW) {
-                    selectedTextId = null
+                    clearSelection()
                     editingText = null
                 }
             },
-            onToggleRadialMenu = { showRadialMenu = !showRadialMenu },
+            onToggleRadialMenu = {
+                // 從工具列叫出的放在畫布正中央（與 Apple 一致）。拆檔時這一段掉了，
+                // 工具盤會開在上一次長按的位置，甚至在畫面角落。
+                radialMenuCenter = androidx.compose.ui.geometry.Offset(
+                    if (canvasViewport.width > 0) canvasViewport.width / 2f else 300f,
+                    if (canvasViewport.height > 0) canvasViewport.height / 2f else 300f
+                )
+                showRadialMenu = !showRadialMenu
+            },
             onToggleTabletop = { isTabletopActive = !isTabletopActive },
             onUndo = { globalUndo() },
             onRedo = { globalRedo() },
             onRevertInitial = { showRevertConfirm = true },
             onOpenAssetLibrary = { showAssetLibrary = true },
             onToggleCommentPin = { isPlacingCommentPin = !isPlacingCommentPin },
-            onPrevPage = { if (pageIndex > 0) pageIndex-- },
-            onNextPage = { if (pageIndex < pageCount - 1) pageIndex++ },
+            onPrevPage = { switchToPage(pageIndex - 1) },
+            onNextPage = { switchToPage(pageIndex + 1) },
             onAddPage = {
                 val s = notebook?.first
                 if (s != null) {
                     runCatching { s.addPage(uniffi.padnote_core.PageStyle.BLANK) }
                     pageCount = runCatching { s.pageCount().toInt() }.getOrDefault(pageCount + 1)
-                    pageIndex = pageCount - 1
+                    switchToPage(pageCount - 1)
                     revision++
                     continuousContentRevision++
-                    continuousScrollRequest++
                 }
             },
             onTogglePageDisplayMode = {
@@ -737,7 +751,7 @@ private fun InkScreen(
                 val box = textStore.createBoxed(200f, 200f, textStore.pageRules(meta.paperId(pageIndex)), snapToGrid)
                 textStore.persist(box)
                 editingText = box
-                selectedTextId = box.id
+                selectText(box.id)
                 editorMode = EditorMode.TYPE
                 textRevision++
                 stackRevision++

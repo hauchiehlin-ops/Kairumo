@@ -18,11 +18,14 @@
       "editor.share",
       "editor.insert.assets",
       "editor.insert.stickers",
+      "editor.insert.marquee",
       "editor.insert.audio",
       "editor.insert.audio_file",
       "editor.insert.image",
       "editor.insert.image_file",
+      "editor.insert.paste_screenshot",
       "editor.insert.pdf",
+      "editor.insert.document",
       "editor.insert.math",
       "editor.insert.chart",
       "editor.insert.table",
@@ -35,6 +38,7 @@
       "editor.insert.collaborate",
       "editor.insert.comment_pin",
       "editor.customize_toolbar",
+      "editor.revert_initial_state",
       "editor.export.pdf",
       "editor.export.image",
       "editor.export.print",
@@ -102,11 +106,14 @@
       "editor.share",
       "editor.insert.assets",
       "editor.insert.stickers",
+      "editor.insert.marquee",
       "editor.insert.audio",
       "editor.insert.audio_file",
       "editor.insert.image",
       "editor.insert.image_file",
+      "editor.insert.paste_screenshot",
       "editor.insert.pdf",
+      "editor.insert.document",
       "editor.insert.math",
       "editor.insert.chart",
       "editor.insert.table",
@@ -119,6 +126,7 @@
       "editor.insert.collaborate",
       "editor.insert.comment_pin",
       "editor.customize_toolbar",
+      "editor.revert_initial_state",
       "editor.export.pdf",
       "editor.export.image",
       "editor.export.print",
@@ -273,6 +281,12 @@
         "reveal": "more_menu"
       },
       {
+        "id": "editor.insert.marquee",
+        "label_en": "Select",
+        "label_key": "marquee_select",
+        "reveal": "more_menu"
+      },
+      {
         "id": "editor.insert.audio",
         "label_en": "Insert Recording",
         "label_key": "insert_audio",
@@ -297,9 +311,21 @@
         "reveal": "more_menu"
       },
       {
+        "id": "editor.insert.paste_screenshot",
+        "label_en": "Paste Screenshot / Image",
+        "label_key": "paste_screenshot",
+        "reveal": "more_menu"
+      },
+      {
         "id": "editor.insert.pdf",
         "label_en": "Import PDF",
         "label_key": "insert_pdf",
+        "reveal": "more_menu"
+      },
+      {
+        "id": "editor.insert.document",
+        "label_en": "Import Word / Excel / Markdown",
+        "label_key": "import_document",
         "reveal": "more_menu"
       },
       {
@@ -372,6 +398,12 @@
         "id": "editor.customize_toolbar",
         "label_en": "Customize Toolbar",
         "label_key": "customize_toolbar",
+        "reveal": "more_menu"
+      },
+      {
+        "id": "editor.revert_initial_state",
+        "label_en": "Revert to Initial State",
+        "label_key": "revert_to_initial_state",
         "reveal": "more_menu"
       },
       {

@@ -14,6 +14,7 @@ import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.kairumo.padnote.MainActivity
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
@@ -29,6 +30,8 @@ import org.junit.runner.RunWith
  * 1. 模式切換（DRAW <-> TYPE）：切換模式不改變任何筆畫。
  * 2. 顯示模式切換（SINGLE <-> CONTINUOUS）：切換版面配置筆畫不准消失或歸零。
  * 3. 側欄縮圖切換頁面：每一頁的筆跡維持各自的數量，防止空頁面覆蓋與序號錯位。
+ *
+ * 測試入口找不到時直接失敗，不准 silently pass。
  */
 @RunWith(AndroidJUnit4::class)
 class InkInvariantMatrixAuditTest {
@@ -39,9 +42,31 @@ class InkInvariantMatrixAuditTest {
     private val context: Context
         get() = InstrumentationRegistry.getInstrumentation().targetContext
 
+    @After
+    fun cleanup() {
+        useDisplayMode(null)
+    }
+
     private fun skipOnboarding() {
         context.getSharedPreferences("kairumo_onboarding", Context.MODE_PRIVATE)
             .edit().putBoolean("seen_v1", true).commit()
+    }
+
+    private fun useDisplayMode(wire: String?) {
+        val prefs = com.kairumo.padnote.profile.ProfileContext.prefs(context, "kairumo_editor").edit()
+        if (wire == null) prefs.remove("pageDisplayMode") else prefs.putString("pageDisplayMode", wire)
+        prefs.commit()
+    }
+
+    private fun tap(tag: String, why: String, timeout: Long = 15_000) {
+        val ok = runCatching {
+            compose.waitUntil(timeoutMillis = timeout) {
+                compose.onAllNodesWithTag(tag).fetchSemanticsNodes().isNotEmpty()
+            }
+        }.isSuccess
+        assertTrue("$why（找不到標記 $tag）", ok)
+        compose.onNodeWithTag(tag).performClick()
+        compose.waitForIdle()
     }
 
     private fun openFirstNotebook() {
@@ -93,9 +118,7 @@ class InkInvariantMatrixAuditTest {
         return null
     }
 
-    @Test
-    fun modeSwitchingPreservesInk() {
-        skipOnboarding()
+    private fun modeSwitchingPreservesInkJourney() {
         ActivityScenario.launch(MainActivity::class.java).use {
             compose.waitForIdle()
             openFirstNotebook()
@@ -104,23 +127,29 @@ class InkInvariantMatrixAuditTest {
             assertNotNull("應能讀取到手繪畫布筆畫數", initialStrokes)
 
             // 切換到打字模式
-            if (compose.onAllNodesWithTag("portal.type").fetchSemanticsNodes().isNotEmpty()) {
-                compose.onNodeWithTag("portal.type").performClick()
-                compose.waitForIdle()
-
-                val typedStrokes = parseStrokeCount()
-                assertEquals("切換到打字模式後筆畫不准消失或改變", initialStrokes, typedStrokes)
-            }
+            tap("portal.type", "找不到切換到打字模式的入口")
+            val typedStrokes = parseStrokeCount()
+            assertEquals("切換到打字模式後筆畫不准消失或改變", initialStrokes, typedStrokes)
 
             // 切回手繪模式
-            if (compose.onAllNodesWithTag("portal.draw").fetchSemanticsNodes().isNotEmpty()) {
-                compose.onNodeWithTag("portal.draw").performClick()
-                compose.waitForIdle()
-
-                val backStrokes = parseStrokeCount()
-                assertEquals("切回手繪模式後筆畫必須完好留存", initialStrokes, backStrokes)
-            }
+            tap("portal.draw", "找不到切換到手繪模式的入口")
+            val backStrokes = parseStrokeCount()
+            assertEquals("切回手繪模式後筆畫必須完好留存", initialStrokes, backStrokes)
         }
+    }
+
+    @Test
+    fun modeSwitchingPreservesInk_singlePage() {
+        skipOnboarding()
+        useDisplayMode("single")
+        modeSwitchingPreservesInkJourney()
+    }
+
+    @Test
+    fun modeSwitchingPreservesInk_continuousPages() {
+        skipOnboarding()
+        useDisplayMode("continuous")
+        modeSwitchingPreservesInkJourney()
     }
 
     @Test
@@ -134,17 +163,13 @@ class InkInvariantMatrixAuditTest {
             assertNotNull("切換前應能讀取到筆畫數", initialStrokes)
 
             // 切換到連續頁面模式
-            if (compose.onAllNodesWithTag("editor.page.display_mode").fetchSemanticsNodes().isNotEmpty()) {
-                compose.onNodeWithTag("editor.page.display_mode").performClick()
-                compose.waitForIdle()
+            tap("editor.page.display_mode", "找不到版面切換按鈕")
 
-                // 切回單頁模式
-                compose.onNodeWithTag("editor.page.display_mode").performClick()
-                compose.waitForIdle()
+            // 切回單頁模式
+            tap("editor.page.display_mode", "找不到版面切換按鈕")
 
-                val restoredStrokes = parseStrokeCount()
-                assertEquals("版面切換往返後筆畫不應遺失", initialStrokes, restoredStrokes)
-            }
+            val restoredStrokes = parseStrokeCount()
+            assertEquals("版面切換往返後筆畫不應遺失", initialStrokes, restoredStrokes)
         }
     }
 
@@ -155,31 +180,23 @@ class InkInvariantMatrixAuditTest {
             compose.waitForIdle()
             openFirstNotebook()
 
-            // 展開側欄
-            if (compose.onAllNodesWithTag("editor.sidebar_toggle").fetchSemanticsNodes().isNotEmpty()) {
-                compose.onNodeWithTag("editor.sidebar_toggle").performClick()
-                compose.waitForIdle()
+            // 展開側欄（若尚未展開）
+            val page1Exists = compose.onAllNodesWithTag("sidebar.page.1").fetchSemanticsNodes().isNotEmpty()
+            if (!page1Exists) {
+                tap("editor.sidebar_toggle", "找不到側欄切換按鈕")
             }
 
             val p0Strokes = parseStrokeCount()
 
-            // 點第 1 頁縮圖（如果存在）
-            if (compose.onAllNodesWithTag("sidebar.page.1").fetchSemanticsNodes().isNotEmpty()) {
-                compose.onNodeWithTag("sidebar.page.1").performClick()
-                compose.waitForIdle()
+            // 點第 1 頁縮圖
+            tap("sidebar.page.1", "找不到第 1 頁縮圖")
+            val p1Strokes = parseStrokeCount()
+            assertNotNull("切換到第 1 頁後應有筆跡狀態", p1Strokes)
 
-                val p1Strokes = parseStrokeCount()
-                assertNotNull("切換到第 1 頁後應有筆跡狀態", p1Strokes)
-
-                // 切回第 0 頁
-                if (compose.onAllNodesWithTag("sidebar.page.0").fetchSemanticsNodes().isNotEmpty()) {
-                    compose.onNodeWithTag("sidebar.page.0").performClick()
-                    compose.waitForIdle()
-
-                    val p0Back = parseStrokeCount()
-                    assertEquals("切回第 0 頁後筆畫數應維持原樣，不可被空頁覆蓋", p0Strokes, p0Back)
-                }
-            }
+            // 切回第 0 頁
+            tap("sidebar.page.0", "找不到第 0 頁縮圖")
+            val p0Back = parseStrokeCount()
+            assertEquals("切回第 0 頁後筆畫數應維持原樣，不可被空頁覆蓋", p0Strokes, p0Back)
         }
     }
 }

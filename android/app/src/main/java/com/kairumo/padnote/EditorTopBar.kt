@@ -817,80 +817,11 @@ internal fun EditorTopBar(
             }
 
             DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
-                if (toolShown("editor.ink.clear")) {
-                    DropdownMenuItem(
-                        text = { Text(l10n("ink_clear")) },
-                        modifier = Modifier.testTag("editor.ink.clear"),
-                        onClick = { showMenu = false; actions.onClearInk() }
-                    )
-                }
-                HorizontalDivider()
+                // ── 1. 插入物件 ─────────────────────────────────────
                 DropdownMenuItem(
-                    text = { Text(l10n("add_comment_pin")) },
-                    modifier = Modifier.testTag("editor.insert.comment_pin"),
-                    onClick = {
-                        showMenu = false
-                        actions.onToggleCommentPin()
-                    }
-                )
-                DropdownMenuItem(
-                    text = { Text(l10n("pro_color")) },
-                    onClick = { showMenu = false; actions.onOpenProColors() }
-                )
-                DropdownMenuItem(
-                    text = { Text(l10n("math_calc")) },
-                    modifier = Modifier.testTag("editor.insert.math"),
-                    onClick = { showMenu = false; actions.onInsertMath() }
-                )
-                DropdownMenuItem(
-                    text = { Text(l10n("revert_to_initial_state")) },
-                    enabled = state.hasOpenMark,
-                    modifier = Modifier.testTag("editor.revert_initial_state"),
-                    onClick = { showMenu = false; actions.onRevertInitial() }
-                )
-                DropdownMenuItem(
-                    text = { Text(l10n("layers_panel")) },
-                    modifier = Modifier.testTag("editor.insert.layers"),
-                    onClick = { showMenu = false; actions.onManageGroups() }
-                )
-                DropdownMenuItem(
-                    text = { Text(l10n("refine_sketch")) },
-                    modifier = Modifier.testTag("editor.insert.refine_sketch"),
-                    onClick = { showMenu = false; actions.onRefineSketch() }
-                )
-                DropdownMenuItem(
-                    text = { Text(l10n("ai_summary")) },
-                    modifier = Modifier.testTag("editor.insert.ai_summary"),
-                    onClick = { showMenu = false; actions.onAiSummary() }
-                )
-                DropdownMenuItem(
-                    text = { Text(l10n("posture_tabletop_mode")) },
-                    modifier = Modifier.testTag("editor.tabletop_mode_menu"),
-                    onClick = {
-                        showMenu = false
-                        actions.onToggleTabletop()
-                    }
-                )
-                DropdownMenuItem(
-                    text = { Text(l10n("theme_tools")) },
-                    modifier = Modifier.testTag("editor.insert.theme_tools"),
-                    onClick = { showMenu = false; actions.onThemeTools() }
-                )
-                DropdownMenuItem(
-                    text = { Text(l10n("customize_toolbar")) },
-                    modifier = Modifier.testTag("editor.customize_toolbar"),
-                    onClick = { showMenu = false; actions.onCustomizeToolbar() }
-                )
-                HorizontalDivider()
-                DropdownMenuItem(
-                    text = { Text(l10n("insert_3d")) },
-                    modifier = Modifier.testTag("editor.insert.model3d"),
-                    onClick = { showMenu = false; actions.onInsertModel3D() }
-                )
-                DropdownMenuItem(
-                    text = { Text(l10n("collaborate")) },
-                    modifier = Modifier.testTag("editor.insert.collaborate"),
-                    onClick = { showMenu = false; actions.onOpenCollaboration() }
+                    text = { Text(l10n("asset_library")) },
+                    modifier = Modifier.testTag("editor.insert.assets"),
+                    onClick = { showMenu = false; actions.onOpenAssetLibrary() }
                 )
                 DropdownMenuItem(
                     text = { Text(l10n("sticker_library")) },
@@ -898,29 +829,9 @@ internal fun EditorTopBar(
                     onClick = { showMenu = false; actions.onInsertStickers() }
                 )
                 DropdownMenuItem(
-                    text = { Text(l10n("insert_image")) },
-                    modifier = Modifier.testTag("editor.insert.image"),
-                    onClick = { showMenu = false; actions.onInsertImage() }
-                )
-                DropdownMenuItem(
-                    text = { Text(l10n("import_document")) },
-                    modifier = Modifier.testTag("editor.insert.document"),
-                    onClick = { showMenu = false; actions.onInsertDocument() }
-                )
-                DropdownMenuItem(
-                    text = { Text(l10n("insert_pdf")) },
-                    modifier = Modifier.testTag("editor.insert.pdf"),
-                    onClick = { showMenu = false; actions.onInsertPdf() }
-                )
-                DropdownMenuItem(
-                    text = { Text(l10n("import_from_files")) },
-                    modifier = Modifier.testTag("editor.insert.image_file"),
-                    onClick = { showMenu = false; actions.onImportImageFile() }
-                )
-                DropdownMenuItem(
-                    text = { Text(l10n("paste_screenshot")) },
-                    modifier = Modifier.testTag("editor.insert.paste_screenshot"),
-                    onClick = { showMenu = false; actions.onPasteScreenshot() }
+                    text = { Text(l10n("marquee_select")) },
+                    modifier = Modifier.testTag("editor.insert.marquee"),
+                    onClick = { showMenu = false; actions.onToggleMarquee() }
                 )
                 DropdownMenuItem(
                     text = { Text(l10n("insert_audio")) },
@@ -933,8 +844,34 @@ internal fun EditorTopBar(
                     onClick = { showMenu = false; actions.onInsertAudioFile() }
                 )
                 DropdownMenuItem(
-                    text = { Text(l10n("add_text_box")) },
-                    onClick = { showMenu = false; actions.onAddTextBox() }
+                    text = { Text(l10n("insert_image")) },
+                    modifier = Modifier.testTag("editor.insert.image"),
+                    onClick = { showMenu = false; actions.onInsertImage() }
+                )
+                DropdownMenuItem(
+                    text = { Text(l10n("import_from_files")) },
+                    modifier = Modifier.testTag("editor.insert.image_file"),
+                    onClick = { showMenu = false; actions.onImportImageFile() }
+                )
+                DropdownMenuItem(
+                    text = { Text(l10n("paste_screenshot")) },
+                    modifier = Modifier.testTag("editor.insert.paste_screenshot"),
+                    onClick = { showMenu = false; actions.onPasteScreenshot() }
+                )
+                DropdownMenuItem(
+                    text = { Text(l10n("insert_pdf")) },
+                    modifier = Modifier.testTag("editor.insert.pdf"),
+                    onClick = { showMenu = false; actions.onInsertPdf() }
+                )
+                DropdownMenuItem(
+                    text = { Text(l10n("import_document")) },
+                    modifier = Modifier.testTag("editor.insert.document"),
+                    onClick = { showMenu = false; actions.onInsertDocument() }
+                )
+                DropdownMenuItem(
+                    text = { Text(l10n("math_calc")) },
+                    modifier = Modifier.testTag("editor.insert.math"),
+                    onClick = { showMenu = false; actions.onInsertMath() }
                 )
                 DropdownMenuItem(
                     text = { Text(l10n("chart_studio")) },
@@ -952,10 +889,86 @@ internal fun EditorTopBar(
                     onClick = { showMenu = false; actions.onInsertShape() }
                 )
                 DropdownMenuItem(
-                    text = { Text(l10n("layer_group")) },
-                    onClick = { showMenu = false; actions.onOpenLayers() }
+                    text = { Text(l10n("insert_3d")) },
+                    modifier = Modifier.testTag("editor.insert.model3d"),
+                    onClick = { showMenu = false; actions.onInsertModel3D() }
                 )
+                DropdownMenuItem(
+                    text = { Text(l10n("theme_tools")) },
+                    modifier = Modifier.testTag("editor.insert.theme_tools"),
+                    onClick = { showMenu = false; actions.onThemeTools() }
+                )
+                DropdownMenuItem(
+                    text = { Text(l10n("add_text_box")) },
+                    onClick = { showMenu = false; actions.onAddTextBox() }
+                )
+
                 HorizontalDivider()
+
+                // ── 2. 工具操作 ─────────────────────────────────────
+                DropdownMenuItem(
+                    text = { Text(l10n("refine_sketch")) },
+                    modifier = Modifier.testTag("editor.insert.refine_sketch"),
+                    onClick = { showMenu = false; actions.onRefineSketch() }
+                )
+                DropdownMenuItem(
+                    text = { Text(l10n("ai_summary")) },
+                    modifier = Modifier.testTag("editor.insert.ai_summary"),
+                    onClick = { showMenu = false; actions.onAiSummary() }
+                )
+                DropdownMenuItem(
+                    text = { Text(l10n("recognize_handwriting")) },
+                    modifier = Modifier.testTag("editor.insert.recognize"),
+                    onClick = { showMenu = false; actions.onRecognizeHandwriting() }
+                )
+                DropdownMenuItem(
+                    text = { Text(l10n("collaborate")) },
+                    modifier = Modifier.testTag("editor.insert.collaborate"),
+                    onClick = { showMenu = false; actions.onOpenCollaboration() }
+                )
+                DropdownMenuItem(
+                    text = { Text(l10n("add_comment_pin")) },
+                    modifier = Modifier.testTag("editor.insert.comment_pin"),
+                    onClick = { showMenu = false; actions.onToggleCommentPin() }
+                )
+                DropdownMenuItem(
+                    text = { Text(l10n("layers_panel")) },
+                    modifier = Modifier.testTag("editor.insert.layers"),
+                    onClick = { showMenu = false; actions.onManageGroups() }
+                )
+                DropdownMenuItem(
+                    text = { Text(l10n("pro_color")) },
+                    onClick = { showMenu = false; actions.onOpenProColors() }
+                )
+
+                HorizontalDivider()
+
+                // ── 3. 設定與檢視 ───────────────────────────────────
+                DropdownMenuItem(
+                    text = { Text(l10n("customize_toolbar")) },
+                    modifier = Modifier.testTag("editor.customize_toolbar"),
+                    onClick = { showMenu = false; actions.onCustomizeToolbar() }
+                )
+                DropdownMenuItem(
+                    text = { Text(l10n("posture_tabletop_mode")) },
+                    modifier = Modifier.testTag("editor.tabletop_mode_menu"),
+                    onClick = { showMenu = false; actions.onToggleTabletop() }
+                )
+                DropdownMenuItem(
+                    text = { Text(l10n("zoom_fit_page")) },
+                    modifier = Modifier.testTag("editor.zoom.fit_page"),
+                    onClick = { showMenu = false; actions.onZoomFit("page") }
+                )
+                DropdownMenuItem(
+                    text = { Text(l10n("zoom_fit_width")) },
+                    modifier = Modifier.testTag("editor.zoom.fit_width"),
+                    onClick = { showMenu = false; actions.onZoomFit("width") }
+                )
+                DropdownMenuItem(
+                    text = { Text(l10n("zoom_actual_size")) },
+                    modifier = Modifier.testTag("editor.zoom.actual"),
+                    onClick = { showMenu = false; actions.onZoomFit("actual") }
+                )
                 DropdownMenuItem(
                     text = { Text(l10n("backup_create")) },
                     onClick = { showMenu = false; actions.onBackupCreate() }
@@ -974,29 +987,6 @@ internal fun EditorTopBar(
                         onClick = { showMenu = false; actions.onFolderSyncNow() }
                     )
                 }
-                HorizontalDivider()
-                DropdownMenuItem(
-                    text = { Text(l10n("recognize_handwriting")) },
-                    modifier = Modifier.testTag("editor.insert.recognize"),
-                    onClick = { showMenu = false; actions.onRecognizeHandwriting() }
-                )
-                HorizontalDivider()
-                DropdownMenuItem(
-                    text = { Text(l10n("zoom_fit_page")) },
-                    modifier = Modifier.testTag("editor.zoom.fit_page"),
-                    onClick = { showMenu = false; actions.onZoomFit("page") }
-                )
-                DropdownMenuItem(
-                    text = { Text(l10n("zoom_fit_width")) },
-                    modifier = Modifier.testTag("editor.zoom.fit_width"),
-                    onClick = { showMenu = false; actions.onZoomFit("width") }
-                )
-                DropdownMenuItem(
-                    text = { Text(l10n("zoom_actual_size")) },
-                    modifier = Modifier.testTag("editor.zoom.actual"),
-                    onClick = { showMenu = false; actions.onZoomFit("actual") }
-                )
-                HorizontalDivider()
                 DropdownMenuItem(
                     text = { Text(l10n("user_manual")) },
                     onClick = { showMenu = false; actions.onOpenDoc("manual/index.html") }
@@ -1005,13 +995,6 @@ internal fun EditorTopBar(
                     text = { Text(l10n("privacy_policy")) },
                     onClick = { showMenu = false; actions.onOpenDoc("legal/privacy.html") }
                 )
-                HorizontalDivider()
-                DropdownMenuItem(
-                    text = { Text(l10n("delete_page")) },
-                    enabled = state.pageCount > 1,
-                    onClick = { showMenu = false; actions.onDeletePage() }
-                )
-                HorizontalDivider()
                 DropdownMenuItem(
                     text = { Text(l10n("system_diagnostics")) },
                     onClick = { showMenu = false; actions.onShowDiagnostics() }
@@ -1020,6 +1003,38 @@ internal fun EditorTopBar(
                     text = { Text(l10n("ink_input_debug")) },
                     trailingIcon = { if (state.showInkDebug) Text("✓") },
                     onClick = { showMenu = false; actions.onToggleInkDebug() }
+                )
+
+                HorizontalDivider()
+
+                // ── 4. 危險動作 ─────────────────────────────────────
+                DropdownMenuItem(
+                    text = {
+                        Text(
+                            l10n("revert_to_initial_state"),
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    },
+                    enabled = state.hasOpenMark,
+                    modifier = Modifier.testTag("editor.revert_initial_state"),
+                    onClick = { showMenu = false; actions.onRevertInitial() }
+                )
+                if (toolShown("editor.ink.clear")) {
+                    DropdownMenuItem(
+                        text = { Text(l10n("ink_clear"), color = MaterialTheme.colorScheme.error) },
+                        modifier = Modifier.testTag("editor.ink.clear"),
+                        onClick = { showMenu = false; actions.onClearInk() }
+                    )
+                }
+                DropdownMenuItem(
+                    text = {
+                        Text(
+                            l10n("delete_page"),
+                            color = if (state.pageCount > 1) MaterialTheme.colorScheme.error else Color.Unspecified
+                        )
+                    },
+                    enabled = state.pageCount > 1,
+                    onClick = { showMenu = false; actions.onDeletePage() }
                 )
             }
         }
