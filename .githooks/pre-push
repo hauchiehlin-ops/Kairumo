@@ -52,6 +52,11 @@ if grep -qE '^(i18n/|apple/Sources/LocalizationStrings|android/.*/LocalizationSt
             exit 1
         fi
     fi
+    if [[ -f "${REPO_ROOT}/scripts/check-glossary.py" ]]; then
+        if ! python3 "${REPO_ROOT}/scripts/check-glossary.py"; then
+            exit 1
+        fi
+    fi
     if [[ -f "${REPO_ROOT}/scripts/i18n_review.py" ]]; then
         if ! python3 "${REPO_ROOT}/scripts/i18n_review.py" lint; then
             exit 1

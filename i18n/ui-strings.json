@@ -10176,20 +10176,20 @@
     "zhHant": "內建形狀"
   },
   "import_document": {
-    "en": "Import Document",
-    "ja": "ドキュメントをインポート",
-    "ko": "문서 가져오기",
-    "th": "นำเข้าเอกสาร",
-    "zhHans": "导入文件",
-    "zhHant": "匯入文件"
+    "en": "Import Word / Excel / Markdown",
+    "ja": "Word／Excel／Markdown をインポート",
+    "ko": "Word/Excel/Markdown 가져오기",
+    "th": "นำเข้า Word/Excel/Markdown",
+    "zhHans": "导入 Word／Excel／Markdown",
+    "zhHant": "匯入 Word／Excel／Markdown"
   },
   "import_document_done": {
-    "en": "Document imported into this note",
-    "ja": "ドキュメントをこのノートに取り込みました",
-    "ko": "문서를 이 노트로 가져왔습니다",
-    "th": "นำเข้าเอกสารลงในโน้ตนี้แล้ว",
-    "zhHans": "已导入文档到这本笔记",
-    "zhHant": "已匯入文件到這本筆記"
+    "en": "Word / Excel / Markdown imported into this note",
+    "ja": "Word／Excel／Markdown をこのノートに取り込みました",
+    "ko": "Word/Excel/Markdown을 이 노트로 가져왔습니다",
+    "th": "นำเข้า Word/Excel/Markdown ลงในโน้ตนี้แล้ว",
+    "zhHans": "已导入 Word／Excel／Markdown 到这本笔记",
+    "zhHant": "已匯入 Word／Excel／Markdown 到這本筆記"
   },
   "import_empty_file": {
     "en": "That file is empty — it may still be downloading from your cloud",
@@ -10256,12 +10256,12 @@
     "zhHant": "我的檔案"
   },
   "import_note": {
-    "en": "Import Note",
-    "ja": "ノートを読み込む",
-    "ko": "노트 가져오기",
+    "en": "Import Notebook",
+    "ja": "ノートブックを読み込む",
+    "ko": "노트북 가져오기",
     "th": "นำเข้าสมุดบันทึก",
-    "zhHans": "导入笔记",
-    "zhHant": "匯入筆記"
+    "zhHans": "导入笔记本",
+    "zhHant": "匯入筆記本"
   },
   "import_note_desc": {
     "en": "Import a .padnote file into your library",
@@ -14705,11 +14705,11 @@
   },
   "radial_menu": {
     "en": "Radial tool menu",
-    "ja": "放射状ツールメニュー",
-    "ko": "방사형 도구 메뉴",
+    "ja": "ラジアルツールメニュー",
+    "ko": "래디얼 도구 메뉴",
     "th": "เมนูเครื่องมือแบบวงกลม",
-    "zhHans": "环形快捷工具盘",
-    "zhHant": "環形快捷工具盤"
+    "zhHans": "飞梭工具盘",
+    "zhHant": "飛梭工具盤"
   },
   "rec_err_convert": {
     "en": "Audio conversion failed: %@",

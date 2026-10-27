@@ -12738,20 +12738,20 @@ object LocalizationStrings {
             "th" to "รูปทรงในตัว"
         ),
         "import_document" to mapOf(
-            "zh-Hant" to "匯入文件",
-            "en" to "Import Document",
-            "zh-Hans" to "导入文件",
-            "ja" to "ドキュメントをインポート",
-            "ko" to "문서 가져오기",
-            "th" to "นำเข้าเอกสาร"
+            "zh-Hant" to "匯入 Word／Excel／Markdown",
+            "en" to "Import Word / Excel / Markdown",
+            "zh-Hans" to "导入 Word／Excel／Markdown",
+            "ja" to "Word／Excel／Markdown をインポート",
+            "ko" to "Word/Excel/Markdown 가져오기",
+            "th" to "นำเข้า Word/Excel/Markdown"
         ),
         "import_document_done" to mapOf(
-            "zh-Hant" to "已匯入文件到這本筆記",
-            "en" to "Document imported into this note",
-            "zh-Hans" to "已导入文档到这本笔记",
-            "ja" to "ドキュメントをこのノートに取り込みました",
-            "ko" to "문서를 이 노트로 가져왔습니다",
-            "th" to "นำเข้าเอกสารลงในโน้ตนี้แล้ว"
+            "zh-Hant" to "已匯入 Word／Excel／Markdown 到這本筆記",
+            "en" to "Word / Excel / Markdown imported into this note",
+            "zh-Hans" to "已导入 Word／Excel／Markdown 到这本笔记",
+            "ja" to "Word／Excel／Markdown をこのノートに取り込みました",
+            "ko" to "Word/Excel/Markdown을 이 노트로 가져왔습니다",
+            "th" to "นำเข้า Word/Excel/Markdown ลงในโน้ตนี้แล้ว"
         ),
         "import_empty_file" to mapOf(
             "zh-Hant" to "這個檔案是空的 —— 它可能還在從雲端下載",
@@ -12818,11 +12818,11 @@ object LocalizationStrings {
             "th" to "ไฟล์ของฉัน"
         ),
         "import_note" to mapOf(
-            "zh-Hant" to "匯入筆記",
-            "en" to "Import Note",
-            "zh-Hans" to "导入笔记",
-            "ja" to "ノートを読み込む",
-            "ko" to "노트 가져오기",
+            "zh-Hant" to "匯入筆記本",
+            "en" to "Import Notebook",
+            "zh-Hans" to "导入笔记本",
+            "ja" to "ノートブックを読み込む",
+            "ko" to "노트북 가져오기",
             "th" to "นำเข้าสมุดบันทึก"
         ),
         "import_note_desc" to mapOf(
@@ -17986,11 +17986,11 @@ object LocalizationStrings {
             "th" to "เต็ม 8 ช่องแล้ว ต้องเอาออกหนึ่งช่องก่อนจึงจะเพิ่มได้"
         ),
         "radial_menu" to mapOf(
-            "zh-Hant" to "環形快捷工具盤",
+            "zh-Hant" to "飛梭工具盤",
             "en" to "Radial tool menu",
-            "zh-Hans" to "环形快捷工具盘",
-            "ja" to "放射状ツールメニュー",
-            "ko" to "방사형 도구 메뉴",
+            "zh-Hans" to "飞梭工具盘",
+            "ja" to "ラジアルツールメニュー",
+            "ko" to "래디얼 도구 메뉴",
             "th" to "เมนูเครื่องมือแบบวงกลม"
         ),
         "radial_min_hint" to mapOf(

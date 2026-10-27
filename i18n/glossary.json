@@ -1,0 +1,117 @@
+{
+  "version": "1.0.0",
+  "description": "Kairumo 跨平台名詞統一規範詞彙表（i18n Single Source of Truth 補充指引）。用於消除 Apple／Android 介面、文件與多國語言字串間的同義詞分岔與歧義。",
+  "terms": [
+    {
+      "id": "radial_menu",
+      "name": "飛梭工具盤",
+      "primary_key": "radial_menu",
+      "canonical": {
+        "zhHant": "飛梭工具盤",
+        "zhHans": "飞梭工具盘",
+        "en": "Radial tool menu",
+        "ja": "ラジアルツールメニュー",
+        "ko": "래디얼 도구 메뉴",
+        "th": "เมนูเครื่องมือแบบวงกลม"
+      },
+      "deprecated_or_avoid": [
+        "徑向飛輪快捷盤",
+        "環形快捷工具盤",
+        "徑向快捷盤",
+        "徑向快捷工具盤",
+        "Radial Mark Menu",
+        "Radial Pie Menu"
+      ],
+      "definition": "長按畫布或點擊工具列飛梭按鈕彈出的 2~8 格圓形輪盤選單，供使用者快速切換常用筆刷、橡皮擦、復原等工具。",
+      "related_keys": [
+        "radial_menu",
+        "radial_customize"
+      ]
+    },
+    {
+      "id": "import_pdf",
+      "name": "匯入 PDF",
+      "primary_key": "pdf_import_title",
+      "canonical": {
+        "zhHant": "匯入 PDF",
+        "zhHans": "导入 PDF",
+        "en": "Import PDF",
+        "ja": "PDF を読み込む",
+        "ko": "PDF 가져오기",
+        "th": "นำเข้า PDF"
+      },
+      "deprecated_or_avoid": [],
+      "definition": "將 PDF 文件的各頁面作為鎖定底稿背景載入至筆記，筆跡繪製於其上，支援整頁縮放與帶註記匯出。",
+      "related_keys": [
+        "pdf_import_title",
+        "pdf_import_all_pages",
+        "pdf_import_done",
+        "pdf_import_hint"
+      ]
+    },
+    {
+      "id": "import_document",
+      "name": "匯入 Word／Excel／Markdown",
+      "primary_key": "import_document",
+      "canonical": {
+        "zhHant": "匯入 Word／Excel／Markdown",
+        "zhHans": "导入 Word／Excel／Markdown",
+        "en": "Import Word / Excel / Markdown",
+        "ja": "Word／Excel／Markdown をインポート",
+        "ko": "Word/Excel/Markdown 가져오기",
+        "th": "นำเข้า Word/Excel/Markdown"
+      },
+      "deprecated_or_avoid": [
+        "匯入文件",
+        "导入文档",
+        "Import Document"
+      ],
+      "definition": "將 Word (.docx)、Excel (.xlsx)、Markdown (.md) 解析成筆記內可編輯的原生物件（文字框、表格、圖形），與 PDF 底稿匯入嚴格區隔，避免使用者誤認能匯入 PDF 或整本筆記。",
+      "related_keys": [
+        "import_document",
+        "import_document_done"
+      ]
+    },
+    {
+      "id": "import_notebook",
+      "name": "匯入筆記本",
+      "primary_key": "import_note",
+      "canonical": {
+        "zhHant": "匯入筆記本",
+        "zhHans": "导入笔记本",
+        "en": "Import Notebook",
+        "ja": "ノートブックを読み込む",
+        "ko": "노트북 가져오기",
+        "th": "นำเข้าสมุดบันทึก"
+      },
+      "deprecated_or_avoid": [
+        "regex:匯入筆記(?!本)",
+        "regex:导入笔记(?!本)"
+      ],
+      "definition": "由外部檔案選取並載入單本完整的 .padnote / .kairumo 筆記本套件至書架列表。",
+      "related_keys": [
+        "import_note",
+        "import_note_desc"
+      ]
+    },
+    {
+      "id": "import_snapshot",
+      "name": "匯入筆記本快照",
+      "primary_key": "import_snapshot",
+      "canonical": {
+        "zhHant": "匯入筆記本快照",
+        "zhHans": "导入笔记本快照",
+        "en": "Import Notebook Snapshot",
+        "ja": "ノートのスナップショットを読み込む",
+        "ko": "노트 스냅샷 가져오기",
+        "th": "นำเข้าสแนปช็อตสมุดโน้ต"
+      },
+      "deprecated_or_avoid": [],
+      "definition": "由備份快照檔案（snapshot）還原或提取筆記本，不會覆蓋現有同名筆記本。",
+      "related_keys": [
+        "import_snapshot",
+        "import_snapshot_desc"
+      ]
+    }
+  ]
+}

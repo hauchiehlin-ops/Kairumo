@@ -12640,20 +12640,20 @@ extension LocalizationManager {
             .th: "รูปทรงในตัว"
         ],
         "import_document": [
-            .zhHant: "匯入文件",
-            .en: "Import Document",
-            .zhHans: "导入文件",
-            .ja: "ドキュメントをインポート",
-            .ko: "문서 가져오기",
-            .th: "นำเข้าเอกสาร"
+            .zhHant: "匯入 Word／Excel／Markdown",
+            .en: "Import Word / Excel / Markdown",
+            .zhHans: "导入 Word／Excel／Markdown",
+            .ja: "Word／Excel／Markdown をインポート",
+            .ko: "Word/Excel/Markdown 가져오기",
+            .th: "นำเข้า Word/Excel/Markdown"
         ],
         "import_document_done": [
-            .zhHant: "已匯入文件到這本筆記",
-            .en: "Document imported into this note",
-            .zhHans: "已导入文档到这本笔记",
-            .ja: "ドキュメントをこのノートに取り込みました",
-            .ko: "문서를 이 노트로 가져왔습니다",
-            .th: "นำเข้าเอกสารลงในโน้ตนี้แล้ว"
+            .zhHant: "已匯入 Word／Excel／Markdown 到這本筆記",
+            .en: "Word / Excel / Markdown imported into this note",
+            .zhHans: "已导入 Word／Excel／Markdown 到这本笔记",
+            .ja: "Word／Excel／Markdown をこのノートに取り込みました",
+            .ko: "Word/Excel/Markdown을 이 노트로 가져왔습니다",
+            .th: "นำเข้า Word/Excel/Markdown ลงในโน้ตนี้แล้ว"
         ],
         "import_empty_file": [
             .zhHant: "這個檔案是空的 —— 它可能還在從雲端下載",
@@ -12720,11 +12720,11 @@ extension LocalizationManager {
             .th: "ไฟล์ของฉัน"
         ],
         "import_note": [
-            .zhHant: "匯入筆記",
-            .en: "Import Note",
-            .zhHans: "导入笔记",
-            .ja: "ノートを読み込む",
-            .ko: "노트 가져오기",
+            .zhHant: "匯入筆記本",
+            .en: "Import Notebook",
+            .zhHans: "导入笔记本",
+            .ja: "ノートブックを読み込む",
+            .ko: "노트북 가져오기",
             .th: "นำเข้าสมุดบันทึก"
         ],
         "import_note_desc": [
@@ -17864,11 +17864,11 @@ extension LocalizationManager {
             .th: "เต็ม 8 ช่องแล้ว ต้องเอาออกหนึ่งช่องก่อนจึงจะเพิ่มได้"
         ],
         "radial_menu": [
-            .zhHant: "環形快捷工具盤",
+            .zhHant: "飛梭工具盤",
             .en: "Radial tool menu",
-            .zhHans: "环形快捷工具盘",
-            .ja: "放射状ツールメニュー",
-            .ko: "방사형 도구 메뉴",
+            .zhHans: "飞梭工具盘",
+            .ja: "ラジアルツールメニュー",
+            .ko: "래디얼 도구 메뉴",
             .th: "เมนูเครื่องมือแบบวงกลม"
         ],
         "radial_min_hint": [
