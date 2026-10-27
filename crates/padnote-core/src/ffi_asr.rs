@@ -47,8 +47,8 @@ pub fn whisper_is_model_available(model_path: String) -> bool {
 /// （`padnote-text`），只是單次轉錄沒有人去呼叫它 —— 兩個平台各自轉的話
 /// 遲早對不上，所以出口放在這裡。
 ///
-/// 規則：繁體介面（台灣／香港）轉成對應正體；其餘介面一律原樣回傳
-/// （簡體介面本來就是簡體，其他語言沒有中文可轉）。
+/// 規則：繁體（台灣／香港）轉成對應正體；簡體（`zh-Hans`／`zh-CN`）轉成簡體；
+/// 其餘語言一律原樣回傳（沒有中文可轉）。
 #[uniffi::export]
 pub fn localize_transcript_script(text: String, ui_language: String) -> String {
     use padnote_text::{ChineseConverter, Script};
@@ -57,13 +57,49 @@ pub fn localize_transcript_script(text: String, ui_language: String) -> String {
         Script::TraditionalHk
     } else if tag.starts_with("zh-hant") || tag.starts_with("zh-tw") {
         Script::TraditionalTw
+    } else if tag.starts_with("zh-hans") || tag.starts_with("zh-cn") || tag.starts_with("zh-sg") {
+        Script::Simplified
     } else {
         Script::None
     };
-    if script == Script::None || !ChineseConverter::looks_simplified(&text) {
+    let needs = match script {
+        Script::None => false,
+        Script::Simplified => ChineseConverter::looks_traditional(&text),
+        _ => ChineseConverter::looks_simplified(&text),
+    };
+    if !needs {
         return text;
     }
     ChineseConverter::new(script).convert(&text)
+}
+
+/// 轉出文字要用的語言：`output` 空字串代表「與音訊相同」。
+#[uniffi::export]
+pub fn transcript_output_language(source: String, output: String) -> String {
+    if output.trim().is_empty() {
+        source
+    } else {
+        output
+    }
+}
+
+/// 音訊語言與轉出文字語言是否不同、需要翻譯。
+///
+/// 只比主語言：`zh-Hant` 與 `zh-Hans` 同屬中文，**不翻譯**，只做簡繁轉換
+/// （[`localize_transcript_script`]）—— 翻譯引擎做簡繁轉換又慢又會改寫用詞。
+/// `output` 空字串代表「與音訊相同」。兩個平台都問這裡，規則才不會分岔。
+#[uniffi::export]
+pub fn transcript_needs_translation(source: String, output: String) -> bool {
+    fn primary(tag: &str) -> String {
+        tag.split(['-', '_'])
+            .next()
+            .unwrap_or_default()
+            .trim()
+            .to_ascii_lowercase()
+    }
+    let output = transcript_output_language(source.clone(), output);
+    let (a, b) = (primary(&source), primary(&output));
+    !a.is_empty() && !b.is_empty() && a != b
 }
 
 /// 事後轉錄的前處理選項。
@@ -109,6 +145,35 @@ impl FfiTranscribeOptions {
 #[uniffi::export]
 pub fn default_transcribe_options() -> FfiTranscribeOptions {
     FfiTranscribeOptions::default()
+}
+
+/// 即時轉錄（錄音中一段段送進來的語音段）用的前處理。
+///
+/// 錄音管線在切段之前已經做過高通與慢速 AGC（`padnote-recorder` 的 `AsrPrep`），
+/// 而且 AGC 要跨段累積才有意義 —— 每段 5 秒再各做一次，等於把慢速 AGC 變成快速的。
+/// 所以這裡只留 VAD 切段（去掉段頭段尾的靜音）；降噪由平台依使用者設定決定。
+#[uniffi::export]
+pub fn live_transcribe_options() -> FfiTranscribeOptions {
+    FfiTranscribeOptions {
+        high_pass: false,
+        agc: false,
+        ..FfiTranscribeOptions::default()
+    }
+}
+
+/// 放掉常駐的 Whisper 模型（約 574 MB）。
+///
+/// 刪除或匯入模型後、以及系統發出記憶體警告時呼叫。下次轉錄會自動重新載入。
+#[uniffi::export]
+pub fn whisper_release_model() -> bool {
+    #[cfg(feature = "asr-whisper")]
+    {
+        padnote_asr_whisper::release_shared()
+    }
+    #[cfg(not(feature = "asr-whisper"))]
+    {
+        false
+    }
 }
 
 /// 與引擎無關的轉錄流程：（可選）降噪 → 高通 → VAD 切段 → AGC → 逐段送進引擎。
@@ -186,7 +251,8 @@ pub fn whisper_transcribe_pcm_with(
             .map(str::to_ascii_lowercase)
             .unwrap_or_else(|| "auto".to_string());
 
-        let mut engine = padnote_asr_whisper::WhisperEngine::load(&model_path, &lang)
+        // 模型常駐：第一次載入之後，後面每一段都直接共用（見 `load_shared`）。
+        let mut engine = padnote_asr_whisper::WhisperEngine::load_shared(&model_path, &lang)
             .map_err(|e| FfiAsrError::ModelNotLoaded(e.to_string()))?;
         // 切段後每段 ≤ 28 秒；區塊設成 30 秒，一段就是一次完整的辨識，
         // 不會再被引擎自己的 3 秒區塊從句子中間切開。
@@ -268,6 +334,14 @@ mod prep_tests {
     }
 
     #[test]
+    fn live_options_skip_the_prep_the_recorder_already_did() {
+        let o = live_transcribe_options();
+        assert!(!o.high_pass && !o.agc, "錄音管線已做過高通與 AGC");
+        assert!(o.vad_segment);
+        assert!(!o.denoise);
+    }
+
+    #[test]
     fn silence_produces_no_text_instead_of_a_hallucination() {
         let pcm = vec![0.0_f32; 16_000 * 30];
         let mut engine = Fake::default();
@@ -332,6 +406,25 @@ mod script_tests {
     fn other_ui_languages_are_untouched() {
         assert_eq!(f("语音识别".into(), "zh-Hans".into()), "语音识别");
         assert_eq!(f("hello".into(), "en".into()), "hello");
+        assert_eq!(f("語音識別".into(), "en".into()), "語音識別");
+    }
+
+    #[test]
+    fn simplified_output_converts_traditional_transcript() {
+        assert_eq!(f("語音識別".into(), "zh-Hans".into()), "语音识别");
+        assert_eq!(f("語音識別".into(), "zh_CN".into()), "语音识别");
+    }
+
+    #[test]
+    fn translation_is_needed_only_across_primary_languages() {
+        use super::{transcript_needs_translation as t, transcript_output_language as o};
+        assert!(!t("zh-Hant".into(), "".into()), "空字串＝與音訊相同");
+        assert!(!t("zh-Hant".into(), "zh-Hans".into()), "簡繁只轉字體");
+        assert!(!t("en".into(), "en".into()));
+        assert!(t("zh-Hant".into(), "en".into()));
+        assert!(t("ja".into(), "zh-Hant".into()));
+        assert_eq!(o("ja".into(), "".into()), "ja");
+        assert_eq!(o("ja".into(), "ko".into()), "ko");
     }
 
     #[test]

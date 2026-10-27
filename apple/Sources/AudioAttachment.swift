@@ -519,6 +519,11 @@ struct AudioAttachmentItemView: View {
                         self.transcribeAlertMessage = localizationManager.localized("transcribe_no_speech")
                     } else {
                         self.onTranscribe?(trimmed)
+                        // 翻譯失敗時文字是原文 —— 要說，不然使用者會以為「轉出文字語言」沒作用。
+                        if let reason = AudioTranscriber.shared.lastTranslationError {
+                            self.transcribeAlertMessage = String(
+                                format: localizationManager.localized("hw_asr_translate_failed"), reason)
+                        }
                     }
                 }
             } catch {

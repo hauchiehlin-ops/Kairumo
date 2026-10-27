@@ -1779,7 +1779,7 @@ internal fun rememberEditorCanvasContext(
         if (granted && session != null) {
             recordSeconds = 0
             recordingPaused = false
-            message = audio.start(pageId ?: "", session, deviceLanguageTag()) { message = it }
+            message = audio.start(pageId ?: "", session, com.kairumo.padnote.audio.AudioTranscriber.sourceLanguageTag(activity)) { message = it }
             recording = audio.isRecording
         } else {
             // 被拒之後再按同一顆按鈕，系統**不會再跳對話框** —— 只會直接回

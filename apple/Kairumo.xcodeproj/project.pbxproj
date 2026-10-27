@@ -57,6 +57,7 @@
 		31303FA237927EC5B53EFE38 /* AssetLibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A351D8EB2219ECF83FF78645 /* AssetLibraryView.swift */; };
 		3140AB52CEC3E3C01E27BECF /* Drafting.swift in Sources */ = {isa = PBXBuildFile; fileRef = F646239F772A80D0EE6368D6 /* Drafting.swift */; };
 		33C06FCCD5F5DF767E8DCA25 /* PalmThresholdSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD3609DAFC6CD0A448F250C1 /* PalmThresholdSheet.swift */; };
+		34BC753372A3520275A4355C /* TranscriptTranslator.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8AB083E6173AABF6CAACDFE /* TranscriptTranslator.swift */; };
 		37A288C34C733057D95EDE7F /* InkPressureProbe.swift in Sources */ = {isa = PBXBuildFile; fileRef = 718DB1EDB838390CB0201711 /* InkPressureProbe.swift */; };
 		38C25B9AF4A4C074D31F083B /* EditorInkAndStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA314BD09595D32A72F4CE02 /* EditorInkAndStorage.swift */; };
 		39916E65586F35AEE4628E71 /* PageObjectsReopenTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D546443BCCC9FD83EAC3221 /* PageObjectsReopenTests.swift */; };
@@ -585,6 +586,7 @@
 		F65D4DD5D5DF9A56132D032E /* LocalizationStrings.generated.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalizationStrings.generated.swift; sourceTree = "<group>"; };
 		F780E53F154CBE85FE25785B /* ProfileManagerOperations.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileManagerOperations.swift; sourceTree = "<group>"; };
 		F85F010611BBEED2B2DF9AC3 /* PalmRejectionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PalmRejectionTests.swift; sourceTree = "<group>"; };
+		F8AB083E6173AABF6CAACDFE /* TranscriptTranslator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptTranslator.swift; sourceTree = "<group>"; };
 		F9BA3DC03F5BD38348D5D9DE /* PenHardware.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PenHardware.swift; sourceTree = "<group>"; };
 		FC9E514062C89FE97A8E8E89 /* ExportParityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExportParityTests.swift; sourceTree = "<group>"; };
 		FD3609DAFC6CD0A448F250C1 /* PalmThresholdSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PalmThresholdSheet.swift; sourceTree = "<group>"; };
@@ -953,6 +955,7 @@
 				DC2F0D7F265BF495CF6D7B79 /* ThemeSpecificToolsView.swift */,
 				DC162947E9D0CD0579D7848B /* ToolbarCustomization.swift */,
 				DC7046379C24B0D590B6F0E8 /* ToolbarSeparator.swift */,
+				F8AB083E6173AABF6CAACDFE /* TranscriptTranslator.swift */,
 				4E6EA1F2D0AF9DB9F4D3095B /* TrashRetention.swift */,
 				511C49E782DD9FA707534D02 /* TrashView.swift */,
 				3B128798EE5F6E8184D46DEF /* UIKitCrashGuard.swift */,
@@ -1374,6 +1377,7 @@
 				DA9086448B1E257FEC002D07 /* ThemeSpecificToolsView.swift in Sources */,
 				B93880F17A79F17C6474B133 /* ToolbarCustomization.swift in Sources */,
 				D259D790432BD38F30537209 /* ToolbarSeparator.swift in Sources */,
+				34BC753372A3520275A4355C /* TranscriptTranslator.swift in Sources */,
 				11DFABF681F24706F48B298E /* TrashRetention.swift in Sources */,
 				427CD086184ECF37CA2A5994 /* TrashView.swift in Sources */,
 				5B7C619D73BA1A95E21B9D69 /* UIKitCrashGuard.swift in Sources */,
@@ -1578,7 +1582,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = "Kairumo-Mac.entitlements";
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 134;
+				CURRENT_PROJECT_VERSION = 135;
 				DEVELOPMENT_TEAM = 6UJ8GS752W;
 				ENABLE_BITCODE = NO;
 				FRAMEWORK_SEARCH_PATHS = (
@@ -1589,8 +1593,8 @@
 				INFOPLIST_FILE = Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Kairumo;
 				INFOPLIST_KEY_CFBundleIconName = AppIcon;
-				INFOPLIST_KEY_CFBundleShortVersionString = 5.15.2;
-				INFOPLIST_KEY_CFBundleVersion = 134;
+				INFOPLIST_KEY_CFBundleShortVersionString = 5.15.3;
+				INFOPLIST_KEY_CFBundleVersion = 135;
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				INFOPLIST_KEY_NSFaceIDUsageDescription = "Kairumo uses Face ID to unlock your profile, so other people using this device cannot open your notes.";
@@ -1606,10 +1610,16 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 5.15.2;
+				MARKETING_VERSION = 5.15.3;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-lc++",
+					"-framework",
+					Metal,
+					"-framework",
+					MetalKit,
+					"-framework",
+					Accelerate,
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.kairumo.padnote;
 				PRODUCT_NAME = Kairumo;
@@ -1663,7 +1673,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = "Kairumo-Mac.entitlements";
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 134;
+				CURRENT_PROJECT_VERSION = 135;
 				DEVELOPMENT_TEAM = 6UJ8GS752W;
 				ENABLE_BITCODE = NO;
 				FRAMEWORK_SEARCH_PATHS = (
@@ -1674,8 +1684,8 @@
 				INFOPLIST_FILE = Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Kairumo;
 				INFOPLIST_KEY_CFBundleIconName = AppIcon;
-				INFOPLIST_KEY_CFBundleShortVersionString = 5.15.2;
-				INFOPLIST_KEY_CFBundleVersion = 134;
+				INFOPLIST_KEY_CFBundleShortVersionString = 5.15.3;
+				INFOPLIST_KEY_CFBundleVersion = 135;
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				INFOPLIST_KEY_NSFaceIDUsageDescription = "Kairumo uses Face ID to unlock your profile, so other people using this device cannot open your notes.";
@@ -1691,10 +1701,16 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 5.15.2;
+				MARKETING_VERSION = 5.15.3;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-lc++",
+					"-framework",
+					Metal,
+					"-framework",
+					MetalKit,
+					"-framework",
+					Accelerate,
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.kairumo.padnote;
 				PRODUCT_NAME = Kairumo;

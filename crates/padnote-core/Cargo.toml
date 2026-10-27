@@ -42,6 +42,8 @@ default = ["asr", "pdf"]
 # 綁在同一個 feature 的代價是：Android 為了一個它用不到的相依，
 # 連帶失去了整個語音轉錄，而那一側就長出了一個會回報成功的假轉錄。
 asr-whisper = ["dep:padnote-asr-whisper"]
+# Whisper 走 Metal（GPU）。只有 Apple 建置開；Android 沒有 Metal。
+asr-whisper-metal = ["asr-whisper", "padnote-asr-whisper/metal"]
 asr-onnx = ["dep:padnote-vad-silero", "dep:padnote-punct-ct"]
 asr = ["asr-whisper", "asr-onnx"]
 

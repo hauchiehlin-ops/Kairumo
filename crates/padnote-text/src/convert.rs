@@ -12,6 +12,8 @@ pub enum Script {
     TraditionalHk,
     /// 一般繁體（不套地區詞）
     Traditional,
+    /// 簡體（中國大陸用字）。給「音訊是繁體、要轉出簡體」用。
+    Simplified,
     /// 不轉換，保持原樣
     None,
 }
@@ -22,6 +24,7 @@ impl Script {
             Self::TraditionalTw => Some(Variant::ZhTW),
             Self::TraditionalHk => Some(Variant::ZhHK),
             Self::Traditional => Some(Variant::ZhHant),
+            Self::Simplified => Some(Variant::ZhCN),
             Self::None => None,
         }
     }
@@ -115,6 +118,11 @@ impl ChineseConverter {
     pub fn looks_simplified(text: &str) -> bool {
         text != zhconv(text, Variant::ZhHant)
     }
+
+    /// 是否含有繁體字元。[`Self::looks_simplified`] 的反方向。
+    pub fn looks_traditional(text: &str) -> bool {
+        text != zhconv(text, Variant::ZhHans)
+    }
 }
 
 #[cfg(test)]
@@ -189,6 +197,14 @@ mod tests {
         let c = tw();
         let text = "今天我們要講的是線性代數裡面的特徵值";
         assert_eq!(c.convert(text), text);
+    }
+
+    #[test]
+    fn simplified_script_converts_traditional_text() {
+        let c = ChineseConverter::new(Script::Simplified);
+        assert_eq!(c.convert("語音識別"), "语音识别");
+        assert!(ChineseConverter::looks_traditional("語音識別"));
+        assert!(!ChineseConverter::looks_traditional("语音识别"));
     }
 
     #[test]

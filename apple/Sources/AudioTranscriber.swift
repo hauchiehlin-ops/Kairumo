@@ -252,7 +252,65 @@ public final class AudioTranscriber: ObservableObject {
         }
     }
 
-    private init() {}
+    /// 辨識前先用 RNNoise 降噪（只影響 Whisper；錄音檔永遠是原音）。
+    ///
+    /// 預設關：降噪常讓 Whisper 錯字變多（見 `padnote-denoise`），只適合真的很吵的場合。
+    private static let denoisePrefKey = "kairumo_asr_denoise"
+    @Published public var denoiseBeforeRecognition: Bool = ProfileDefaults.current.bool(forKey: denoisePrefKey) {
+        didSet {
+            ProfileDefaults.current.set(denoiseBeforeRecognition, forKey: Self.denoisePrefKey)
+        }
+    }
+
+    /// 音訊語言（辨識用）。空字串＝跟隨介面語言。
+    private static let sourceLanguageKey = "kairumo_asr_source_language"
+    @Published public var sourceLanguagePreference: String = ProfileDefaults.current.string(forKey: sourceLanguageKey) ?? "" {
+        didSet { ProfileDefaults.current.set(sourceLanguagePreference, forKey: Self.sourceLanguageKey) }
+    }
+
+    /// 轉出文字語言。空字串＝與音訊相同（不翻譯，沿用原本的轉錄）。
+    private static let outputLanguageKey = "kairumo_asr_output_language"
+    @Published public var outputLanguagePreference: String = ProfileDefaults.current.string(forKey: outputLanguageKey) ?? "" {
+        didSet { ProfileDefaults.current.set(outputLanguagePreference, forKey: Self.outputLanguageKey) }
+    }
+
+    /// 最近一次轉錄的翻譯錯誤（語言包沒下載等）。有值時文字是原文，畫面要告訴使用者。
+    @Published public var lastTranslationError: String?
+
+    /// 實際的音訊語言標籤（`zh-Hant`、`en`…）。
+    public var sourceLanguageTag: String {
+        sourceLanguagePreference.isEmpty ? LocalizationManager.shared.currentLanguage.rawValue : sourceLanguagePreference
+    }
+
+    /// 實際的轉出文字語言標籤。
+    public var outputLanguageTag: String {
+        transcriptOutputLanguage(source: sourceLanguageTag, output: outputLanguagePreference)
+    }
+
+    /// 錄完之後整段轉錄用的前處理：核心的預設（高通 + VAD 切段 + AGC）加上降噪設定。
+    var fileTranscribeOptions: FfiTranscribeOptions {
+        var options = defaultTranscribeOptions()
+        options.denoise = denoiseBeforeRecognition
+        return options
+    }
+
+    /// 錄音中一段段轉錄用的前處理（錄音管線已做過高通與 AGC，見核心 `live_transcribe_options`）。
+    var liveTranscribeOptionsWithDenoise: FfiTranscribeOptions {
+        var options = liveTranscribeOptions()
+        options.denoise = denoiseBeforeRecognition
+        return options
+    }
+
+    private init() {
+        // 常駐的 Whisper 模型約 574 MB。系統喊記憶體不足時先放掉，下次轉錄會自動重新載入。
+        NotificationCenter.default.addObserver(
+            forName: UIApplication.didReceiveMemoryWarningNotification, object: nil, queue: nil
+        ) { _ in
+            if whisperReleaseModel() {
+                StartupLogger.logKey("log_whisper_released_memory")
+            }
+        }
+    }
 
     /// 本地 Whisper 模型檔案路徑
     /// 模型檔在哪裡。**由核心決定**（`padnote-models` 的 `Downloader`），
@@ -438,6 +496,7 @@ public final class AudioTranscriber: ObservableObject {
             try FileManager.default.removeItem(at: destUrl)
         }
         try FileManager.default.copyItem(at: sourceUrl, to: destUrl)
+        _ = whisperReleaseModel()
         StartupLogger.logKey("log_whisper_import_ok", size / 1_000_000)
         objectWillChange.send()
     }
@@ -447,6 +506,7 @@ public final class AudioTranscriber: ObservableObject {
         let destUrl = URL(fileURLWithPath: whisperModelPath)
         if FileManager.default.fileExists(atPath: destUrl.path) {
             try FileManager.default.removeItem(at: destUrl)
+            _ = whisperReleaseModel()
             StartupLogger.logKey("log_whisper_deleted")
             objectWillChange.send()
         }
@@ -467,6 +527,11 @@ public final class AudioTranscriber: ObservableObject {
     ///   - languageCode: 語言代碼（若為 nil 則啟用自動語言偵測）
     /// - Returns: 辨識出的文字稿字串
     public func transcribe(url: URL, languageCode: String? = nil) async throws -> String {
+        // 沒指定時用設定裡的音訊語言；設定是「跟隨介面語言」時維持原本的行為（nil：Whisper 自動偵測）。
+        let languageCode = languageCode ?? (sourceLanguagePreference.isEmpty ? nil : sourceLanguagePreference)
+        let source = languageCode ?? sourceLanguageTag
+        let output = transcriptOutputLanguage(source: source, output: outputLanguagePreference)
+        lastTranslationError = nil
         isTranscribing = true
         transcriptionProgress = 0.10
         transcriptionStatusText = LocalizationManager.shared.localized("transcribe_step_decode")
@@ -513,8 +578,8 @@ public final class AudioTranscriber: ObservableObject {
         if shouldUseWhisperFirst && isWhisperAvailable {
             do {
                 StartupLogger.logKey("log_whisper_start")
-                let result = try await Task.detached(priority: .userInitiated) { [path = self.whisperModelPath] () -> FfiTranscribeResult in
-                    try whisperTranscribePcm(modelPath: path, pcm16kMono: pcm, language: languageCode)
+                let result = try await Task.detached(priority: .userInitiated) { [path = self.whisperModelPath, options = self.fileTranscribeOptions] () -> FfiTranscribeResult in
+                    try whisperTranscribePcmWith(modelPath: path, pcm16kMono: pcm, language: languageCode, options: options)
                 }.value
 
                 lastUsedOnDevice = true
@@ -524,7 +589,7 @@ public final class AudioTranscriber: ObservableObject {
                 if !trimmed.isEmpty {
                     transcriptionProgress = 0.90
                     transcriptionStatusText = LocalizationManager.shared.localized("transcribe_step_postprocess")
-                    return Self.localizedScript(trimmed)
+                    return await finalizeTranscript(trimmed, source: source, output: output)
                 }
             } catch {
                 StartupLogger.logKey("log_whisper_error", error.localizedDescription)
@@ -541,15 +606,15 @@ public final class AudioTranscriber: ObservableObject {
             if !trimmed.isEmpty {
                 transcriptionProgress = 0.90
                 transcriptionStatusText = LocalizationManager.shared.localized("transcribe_step_postprocess")
-                return Self.localizedScript(trimmed)
+                return await finalizeTranscript(trimmed, source: source, output: output)
             }
         } catch {
             StartupLogger.logKey("log_apple_speech_fallback_whisper", error.localizedDescription)
             // 若 Apple Speech 失敗且尚未跑過 Whisper，且 Whisper 可用，降級備援
             if !shouldUseWhisperFirst && isWhisperAvailable {
                 StartupLogger.logKey("log_whisper_start")
-                let result = try await Task.detached(priority: .userInitiated) { [path = self.whisperModelPath] () -> FfiTranscribeResult in
-                    try whisperTranscribePcm(modelPath: path, pcm16kMono: pcm, language: languageCode)
+                let result = try await Task.detached(priority: .userInitiated) { [path = self.whisperModelPath, options = self.fileTranscribeOptions] () -> FfiTranscribeResult in
+                    try whisperTranscribePcmWith(modelPath: path, pcm16kMono: pcm, language: languageCode, options: options)
                 }.value
                 lastUsedOnDevice = true
                 lastEngineUsed = "Whisper (\(result.language))"
@@ -557,7 +622,7 @@ public final class AudioTranscriber: ObservableObject {
                 if !trimmed.isEmpty {
                     transcriptionProgress = 0.90
                     transcriptionStatusText = LocalizationManager.shared.localized("transcribe_step_postprocess")
-                    return Self.localizedScript(trimmed)
+                    return await finalizeTranscript(trimmed, source: source, output: output)
                 }
             }
             throw error
@@ -565,12 +630,22 @@ public final class AudioTranscriber: ObservableObject {
         return ""
     }
 
-    /// 轉錄結果的字體跟著介面語言（繁體介面 → 正體）。轉換在核心，
-    /// 與 Android 同一份規則；Whisper 與 Apple Speech 兩條路都要過這一關。
-    static func localizedScript(_ text: String) -> String {
-        localizeTranscriptScript(
-            text: text,
-            uiLanguage: LocalizationManager.shared.currentLanguage.rawValue)
+    /// 辨識結果 → 轉出文字語言。Whisper 與 Apple Speech 兩條路都要過這一關。
+    ///
+    /// 同語言只轉字體（轉換在核心，與 Android 同一份規則）；不同語言走系統翻譯，
+    /// 失敗時保留原文並記下錯誤。
+    private func finalizeTranscript(_ text: String, source: String, output: String) async -> String {
+        guard transcriptNeedsTranslation(source: source, output: output) else {
+            return localizeTranscriptScript(text: text, uiLanguage: output)
+        }
+        transcriptionProgress = 0.95
+        transcriptionStatusText = LocalizationManager.shared.localized("transcribe_step_translate")
+        let pieces = TranscriptTranslation.chunks(of: text)
+        let result = await TranscriptTranslation.finalize(pieces, source: source, output: output)
+        if let error = result.error {
+            lastTranslationError = error.localizedDescription
+        }
+        return result.texts.joined(separator: "\n")
     }
 
     /// 介面語言 → `SFSpeechRecognizer` 認得的 locale。
@@ -718,6 +793,10 @@ public class StreamingTranscriber {
         
         let modelPath = transcriber.whisperModelPath
         guard transcriber.isWhisperAvailable else { return }
+        // 錄音開始時決定一次，錄到一半改設定不影響這一段。
+        let options = transcriber.liveTranscribeOptionsWithDenoise
+        let source = languageTag ?? transcriber.sourceLanguageTag
+        let output = transcriptOutputLanguage(source: source, output: transcriber.outputLanguagePreference)
 
         transcribingTask = Task.detached(priority: .background) { [weak self] in
             while !Task.isCancelled {
@@ -733,15 +812,20 @@ public class StreamingTranscriber {
 
                 for seg in segments {
                     do {
-                        let result = try whisperTranscribePcm(
+                        let result = try whisperTranscribePcmWith(
                             modelPath: modelPath,
                             pcm16kMono: seg.samples,
-                            language: languageTag
+                            language: source,
+                            options: options
                         )
                         if !result.segments.isEmpty {
-                            let inputs = result.segments.map { w in
+                            // 同語言：只轉字體；不同語言：逐句翻譯（失敗時保留原文，轉錄不中斷）。
+                            let texts = await TranscriptTranslation.finalize(
+                                result.segments.map(\.text), source: source, output: output
+                            ).texts
+                            let inputs = zip(result.segments, texts).map { w, text in
                                 TranscriptWordInput(
-                                    text: w.text,
+                                    text: text,
                                     // 偏移量：從這段音訊在筆記本的時間點開始加
                                     startUs: seg.sessionStartUs + seg.startUs + UInt64(w.startMs * 1000),
                                     endUs: seg.sessionStartUs + seg.startUs + UInt64(w.endMs * 1000),
@@ -776,5 +860,9 @@ extension AudioTranscriber: ProfileScoped {
         transcriptionStatusText = ""
         let raw = ProfileDefaults.current.string(forKey: Self.enginePrefKey) ?? EnginePreference.auto.rawValue
         enginePreference = EnginePreference(rawValue: raw) ?? .auto
+        denoiseBeforeRecognition = ProfileDefaults.current.bool(forKey: Self.denoisePrefKey)
+        sourceLanguagePreference = ProfileDefaults.current.string(forKey: Self.sourceLanguageKey) ?? ""
+        outputLanguagePreference = ProfileDefaults.current.string(forKey: Self.outputLanguageKey) ?? ""
+        lastTranslationError = nil
     }
 }

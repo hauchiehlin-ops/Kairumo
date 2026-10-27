@@ -12119,6 +12119,22 @@ extension LocalizationManager {
             .ko: "웜 아몬드",
             .th: "อัลมอนด์อุ่น"
         ],
+        "hw_asr_denoise": [
+            .zhHant: "辨識前先降噪（實驗性）",
+            .en: "Reduce noise before recognition (experimental)",
+            .zhHans: "识别前先降噪（实验性）",
+            .ja: "認識前にノイズを低減（試験的）",
+            .ko: "인식 전 소음 줄이기 (실험적)",
+            .th: "ลดเสียงรบกวนก่อนรู้จำ (ทดลอง)"
+        ],
+        "hw_asr_denoise_hint": [
+            .zhHant: "適合吵雜的教室或會議室。錄音檔仍保留原音，只影響 Whisper 辨識；安靜環境下開啟可能讓錯字變多。",
+            .en: "For noisy classrooms or meeting rooms. The recording keeps the original sound; only Whisper recognition is affected. In quiet rooms it may add errors.",
+            .zhHans: "适合嘈杂的教室或会议室。录音文件仍保留原声，只影响 Whisper 识别；安静环境下开启可能让错字变多。",
+            .ja: "騒がしい教室や会議室向けです。録音ファイルは元の音のまま保存され、Whisper の認識だけに影響します。静かな環境では誤認識が増えることがあります。",
+            .ko: "시끄러운 교실이나 회의실에 적합합니다. 녹음 파일은 원음 그대로 보존되며 Whisper 인식에만 영향을 줍니다. 조용한 환경에서는 오류가 늘 수 있습니다.",
+            .th: "เหมาะกับห้องเรียนหรือห้องประชุมที่มีเสียงดัง ไฟล์บันทึกยังคงเสียงเดิม มีผลเฉพาะการรู้จำของ Whisper ในที่เงียบอาจทำให้ผิดพลาดมากขึ้น"
+        ],
         "hw_asr_download_failed": [
             .zhHant: "下載失敗：%@",
             .en: "Download failed: %@",
@@ -12207,6 +12223,22 @@ extension LocalizationManager {
             .ko: "기기 내 신경망 인식",
             .th: "การรู้จำด้วยโครงข่ายประสาทในเครื่อง"
         ],
+        "hw_asr_output_language": [
+            .zhHant: "轉出文字語言",
+            .en: "Transcript language",
+            .zhHans: "转出文字语言",
+            .ja: "書き起こしの言語",
+            .ko: "텍스트 변환 언어",
+            .th: "ภาษาของข้อความที่ถอด"
+        ],
+        "hw_asr_output_same": [
+            .zhHant: "與音訊相同",
+            .en: "Same as audio",
+            .zhHans: "与音频相同",
+            .ja: "音声と同じ",
+            .ko: "오디오와 동일",
+            .th: "เหมือนกับเสียง"
+        ],
         "hw_asr_retry_official": [
             .zhHant: "重試下載",
             .en: "Retry the download",
@@ -12214,6 +12246,38 @@ extension LocalizationManager {
             .ja: "ダウンロードを再試行",
             .ko: "다운로드 다시 시도",
             .th: "ลองดาวน์โหลดอีกครั้ง"
+        ],
+        "hw_asr_settings_desc": [
+            .zhHant: "音訊語言、轉出文字語言、降噪與 Whisper 模型",
+            .en: "Audio and transcript languages, noise reduction and the Whisper model",
+            .zhHans: "音频语言、转出文字语言、降噪与 Whisper 模型",
+            .ja: "音声と書き起こしの言語、ノイズ低減、Whisper モデル",
+            .ko: "오디오·텍스트 언어, 소음 감소, Whisper 모델",
+            .th: "ภาษาของเสียงและข้อความ การลดเสียงรบกวน และโมเดล Whisper"
+        ],
+        "hw_asr_settings_title": [
+            .zhHant: "語音轉錄",
+            .en: "Speech to text",
+            .zhHans: "语音转录",
+            .ja: "音声の書き起こし",
+            .ko: "음성 텍스트 변환",
+            .th: "แปลงเสียงเป็นข้อความ"
+        ],
+        "hw_asr_source_follow_ui": [
+            .zhHant: "跟隨介面語言",
+            .en: "Same as app language",
+            .zhHans: "跟随界面语言",
+            .ja: "アプリの言語と同じ",
+            .ko: "앱 언어와 동일",
+            .th: "ตามภาษาของแอป"
+        ],
+        "hw_asr_source_language": [
+            .zhHant: "音訊語言",
+            .en: "Audio language",
+            .zhHans: "音频语言",
+            .ja: "音声の言語",
+            .ko: "오디오 언어",
+            .th: "ภาษาของเสียง"
         ],
         "hw_asr_system_ready": [
             .zhHant: "系統聽寫就緒（免連網）",
@@ -12230,6 +12294,62 @@ extension LocalizationManager {
             .ja: "システム設定で「音声入力」を有効にし、オフライン言語パックをダウンロード",
             .ko: "시스템 설정에서 “받아쓰기”를 켜고 오프라인 언어 팩을 받으세요",
             .th: "เปิด “การพิมพ์ด้วยเสียง” ในการตั้งค่าระบบเพื่อดาวน์โหลดแพ็กภาษาออฟไลน์"
+        ],
+        "hw_asr_translate_failed": [
+            .zhHant: "翻譯失敗，已保留原文：%@",
+            .en: "Translation failed; the original text was kept: %@",
+            .zhHans: "翻译失败，已保留原文：%@",
+            .ja: "翻訳に失敗したため原文のままです：%@",
+            .ko: "번역에 실패하여 원문을 유지했습니다: %@",
+            .th: "แปลไม่สำเร็จ เก็บข้อความต้นฉบับไว้: %@"
+        ],
+        "hw_asr_translate_hint": [
+            .zhHant: "語言不同時，轉錄完會用裝置上的系統翻譯轉成目標語言（離線、免費，不經過伺服器）；相同時直接沿用原本的轉錄。",
+            .en: "When the languages differ, the transcript is translated on this device with the system translator (offline, free, no server). When they match, the original transcript is used as is.",
+            .zhHans: "语言不同时，转录完会用设备上的系统翻译转成目标语言（离线、免费，不经过服务器）；相同时直接沿用原本的转录。",
+            .ja: "言語が異なる場合、書き起こし後に端末内のシステム翻訳で目的の言語に変換します（オフライン・無料・サーバー不使用）。同じ場合は元の書き起こしをそのまま使います。",
+            .ko: "언어가 다르면 텍스트 변환 후 기기 내 시스템 번역으로 대상 언어로 바꿉니다(오프라인, 무료, 서버 미사용). 같으면 원래 변환 결과를 그대로 사용합니다.",
+            .th: "หากภาษาต่างกัน ข้อความที่ถอดจะถูกแปลด้วยตัวแปลของระบบในเครื่อง (ออฟไลน์ ฟรี ไม่ผ่านเซิร์ฟเวอร์) หากเหมือนกันจะใช้ข้อความที่ถอดเดิม"
+        ],
+        "hw_asr_translate_pack_download": [
+            .zhHant: "下載翻譯語言包",
+            .en: "Download translation languages",
+            .zhHans: "下载翻译语言包",
+            .ja: "翻訳用の言語データをダウンロード",
+            .ko: "번역 언어 팩 다운로드",
+            .th: "ดาวน์โหลดชุดภาษาสำหรับแปล"
+        ],
+        "hw_asr_translate_pack_downloading": [
+            .zhHant: "正在下載翻譯語言包…",
+            .en: "Downloading translation languages…",
+            .zhHans: "正在下载翻译语言包…",
+            .ja: "翻訳用の言語データをダウンロード中…",
+            .ko: "번역 언어 팩 다운로드 중…",
+            .th: "กำลังดาวน์โหลดชุดภาษาสำหรับแปล…"
+        ],
+        "hw_asr_translate_pack_ready": [
+            .zhHant: "翻譯語言包已就緒",
+            .en: "Translation languages ready",
+            .zhHans: "翻译语言包已就绪",
+            .ja: "翻訳用の言語データは準備済みです",
+            .ko: "번역 언어 팩 준비 완료",
+            .th: "ชุดภาษาสำหรับแปลพร้อมแล้ว"
+        ],
+        "hw_asr_translate_pack_unsupported": [
+            .zhHant: "這組語言目前無法在裝置上翻譯",
+            .en: "This language pair can't be translated on this device",
+            .zhHans: "这组语言目前无法在设备上翻译",
+            .ja: "この言語の組み合わせは端末内で翻訳できません",
+            .ko: "이 언어 조합은 기기에서 번역할 수 없습니다",
+            .th: "คู่ภาษานี้แปลในเครื่องไม่ได้"
+        ],
+        "hw_asr_translate_unsupported_os": [
+            .zhHant: "轉成其他語言需要 iOS 26 / macOS 26 以上",
+            .en: "Translating transcripts requires iOS 26 / macOS 26 or later",
+            .zhHans: "转成其他语言需要 iOS 26 / macOS 26 以上",
+            .ja: "他の言語への変換には iOS 26 / macOS 26 以降が必要です",
+            .ko: "다른 언어로 변환하려면 iOS 26 / macOS 26 이상이 필요합니다",
+            .th: "การแปลเป็นภาษาอื่นต้องใช้ iOS 26 / macOS 26 ขึ้นไป"
         ],
         "hw_asr_unsupported": [
             .zhHant: "這台裝置不支援",
@@ -14375,6 +14495,14 @@ extension LocalizationManager {
             .ko: "자동 정리: 임시 항목 %1@개, 모델 잔여 파일 %2@개 (총 %3@ MB), 휴지통 만료 %4@권",
             .th: "ล้างอัตโนมัติ: ไฟล์ชั่วคราว %1@ รายการ, ไฟล์โมเดลที่ค้าง %2@ รายการ (รวม %3@ MB), ถังขยะหมดอายุ %4@ เล่ม"
         ],
+        "log_transcript_translate_fail": [
+            .zhHant: "逐字稿翻譯失敗，保留原文",
+            .en: "Transcript translation failed; kept the original",
+            .zhHans: "逐字稿翻译失败，保留原文",
+            .ja: "書き起こしの翻訳に失敗、原文を保持",
+            .ko: "텍스트 번역 실패, 원문 유지",
+            .th: "แปลข้อความที่ถอดไม่สำเร็จ เก็บต้นฉบับไว้"
+        ],
         "log_whisper_deleted": [
             .zhHant: "🗑️ 已刪除本地 Whisper 模型以釋放空間",
             .en: "🗑️ Local Whisper model deleted to free up space",
@@ -14422,6 +14550,14 @@ extension LocalizationManager {
             .ja: "✅ Whisper オフラインモデルを読み込みました (%1@ MB)",
             .ko: "✅ Whisper 오프라인 모델을 가져왔습니다 (%1@ MB)",
             .th: "✅ นำเข้าโมเดล Whisper ออฟไลน์สำเร็จ (%1@ MB)"
+        ],
+        "log_whisper_released_memory": [
+            .zhHant: "記憶體不足，已釋放常駐的 Whisper 模型",
+            .en: "Low memory: released the resident Whisper model",
+            .zhHans: "内存不足，已释放常驻的 Whisper 模型",
+            .ja: "メモリ不足のため常駐中の Whisper モデルを解放しました",
+            .ko: "메모리 부족으로 상주 중인 Whisper 모델을 해제했습니다",
+            .th: "หน่วยความจำไม่พอ ปล่อยโมเดล Whisper ที่ค้างอยู่แล้ว"
         ],
         "log_whisper_start": [
             .zhHant: "🎙️ 開始使用端側 Whisper 模型轉錄（自動語言偵測）...",
@@ -24470,6 +24606,14 @@ extension LocalizationManager {
             .ja: "音声を認識中…",
             .ko: "음성 인식 중…",
             .th: "กำลังประมวลผลเสียงพูด…"
+        ],
+        "transcribe_step_translate": [
+            .zhHant: "正在翻譯…",
+            .en: "Translating…",
+            .zhHans: "正在翻译…",
+            .ja: "翻訳中…",
+            .ko: "번역 중…",
+            .th: "กำลังแปล…"
         ],
         "transcribe_success": [
             .zhHant: "轉錄完成，已插入文字方塊",

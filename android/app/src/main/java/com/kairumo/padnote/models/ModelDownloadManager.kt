@@ -14,6 +14,7 @@ import uniffi.padnote_core.modelDiskUsage
 import uniffi.padnote_core.modelDownload
 import uniffi.padnote_core.modelPath as coreModelPath
 import uniffi.padnote_core.modelRemove
+import uniffi.padnote_core.whisperReleaseModel
 
 /**
  * 按需下載端側模型（A2，決策 D4）。
@@ -52,7 +53,11 @@ object ModelDownloadManager {
 
     fun diskUsage(context: Context): ULong = modelDiskUsage(root(context))
 
-    fun remove(context: Context, id: String): Boolean = modelRemove(root(context), id)
+    fun remove(context: Context, id: String): Boolean {
+        // 常駐在記憶體裡的 Whisper 模型（約 574 MB）也一起放掉，否則檔案刪了記憶體還占著。
+        whisperReleaseModel()
+        return modelRemove(root(context), id)
+    }
 
     /**
      * 下載（或續傳）一個模型。**會阻塞，要在背景執行緒呼叫。**

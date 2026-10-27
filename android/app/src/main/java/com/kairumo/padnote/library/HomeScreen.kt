@@ -797,6 +797,11 @@ fun HomeScreen(
         }
         item { CloudSyncCard(cloud, l) }
         item {
+            Box(Modifier.padding(top = 8.dp)) {
+                com.kairumo.padnote.audio.SpeechSettingsCard(l)
+            }
+        }
+        item {
             Card(
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                 shape = RoundedCornerShape(12.dp),

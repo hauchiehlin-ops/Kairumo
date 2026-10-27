@@ -352,6 +352,22 @@ class MainActivity : FragmentActivity() {
     }
 
     /**
+     * 系統要求釋放記憶體時，先放掉常駐的 Whisper 模型（約 574 MB）。
+     * 下次轉錄會自動重新載入。
+     *
+     * 只是切到背景（`UI_HIDDEN`）不放：背景錄音時轉錄還在跑，放掉只會讓下一段重載好幾秒。
+     */
+    @Suppress("DEPRECATION") // TRIM_MEMORY_RUNNING_LOW 在 API 34 標為過時，但 minSdk 29 仍會收到
+    override fun onTrimMemory(level: Int) {
+        super.onTrimMemory(level)
+        if (level != android.content.ComponentCallbacks2.TRIM_MEMORY_UI_HIDDEN &&
+            level >= android.content.ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW
+        ) {
+            uniffi.padnote_core.whisperReleaseModel()
+        }
+    }
+
+    /**
      * 實體鍵盤快捷鍵（見 `ui/AppCommands.kt`）。
      *
      * 用 `onKeyDown` 而不是 `dispatchKeyEvent`：後者在畫面拿到按鍵**之前**

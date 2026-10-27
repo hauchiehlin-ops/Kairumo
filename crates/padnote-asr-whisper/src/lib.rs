@@ -13,11 +13,13 @@
 
 use padnote_asr::{AsrEngine, AsrError, AsrSegment};
 use std::path::{Path, PathBuf};
+use std::sync::{Arc, Mutex, PoisonError};
+use std::time::SystemTime;
 use whisper_rs::{FullParams, SamplingStrategy, WhisperContext, WhisperContextParameters};
 
 /// whisper.cpp 引擎。
 pub struct WhisperEngine {
-    ctx: WhisperContext,
+    ctx: Arc<WhisperContext>,
     language: String,
     /// 尚未送去辨識的音訊。
     pending: Vec<f32>,
@@ -46,22 +48,58 @@ impl std::fmt::Debug for WhisperEngine {
 
 impl WhisperEngine {
     /// 載入模型。`language` 用 ISO 639-1，例如 `"zh"`、`"en"`。
+    ///
+    /// 每次都從檔案重新載入。App 裡請用 [`Self::load_shared`]。
     pub fn load(model: impl AsRef<Path>, language: &str) -> Result<Self, AsrError> {
         let path = model.as_ref();
         // 先檢查檔案存在，給出比 C++ 層更有用的錯誤訊息。
         if !path.exists() {
             return Err(AsrError::ModelNotLoaded);
         }
-        let ctx = WhisperContext::new_with_params(path, WhisperContextParameters::default())
-            .map_err(|e| AsrError::Backend(e.to_string()))?;
+        Ok(Self::with_context(Arc::new(new_context(path)?), language))
+    }
 
-        Ok(Self {
+    /// 載入模型，**整個行程共用同一份**。
+    ///
+    /// 模型約 574 MB，載入要好幾秒。即時轉錄每 5 秒就有一段要辨識，
+    /// 每段都重新載入的話，時間全花在讀檔上，轉錄永遠追不上錄音。
+    ///
+    /// 換了檔案（路徑、大小或修改時間不同）會自動重新載入；
+    /// 刪除或匯入模型後請呼叫 [`release_shared`]，記憶體才會立刻放掉。
+    pub fn load_shared(model: impl AsRef<Path>, language: &str) -> Result<Self, AsrError> {
+        let path = model.as_ref();
+        let Ok(meta) = std::fs::metadata(path) else {
+            return Err(AsrError::ModelNotLoaded);
+        };
+        let key = ModelKey {
+            path: path.to_path_buf(),
+            len: meta.len(),
+            modified: meta.modified().ok(),
+        };
+        // 載入期間一直持有鎖：同時進來的第二個呼叫者等它載完直接共用，
+        // 而不是兩邊各載一份（手機上會直接被系統因記憶體不足砍掉）。
+        let mut slot = SHARED.lock().unwrap_or_else(PoisonError::into_inner);
+        let ctx = match slot.as_ref() {
+            Some((k, ctx)) if *k == key => Arc::clone(ctx),
+            _ => {
+                // 先放掉舊的再載新的，避免兩份同時在記憶體裡。
+                *slot = None;
+                let ctx = Arc::new(new_context(path)?);
+                *slot = Some((key, Arc::clone(&ctx)));
+                ctx
+            }
+        };
+        Ok(Self::with_context(ctx, language))
+    }
+
+    fn with_context(ctx: Arc<WhisperContext>, language: &str) -> Self {
+        Self {
             ctx,
             language: language.to_string(),
             pending: Vec::new(),
             processed_samples: 0,
             chunk_samples: (SAMPLE_RATE_HZ * 3) as usize,
-        })
+        }
     }
 
     /// 調整送進模型的區塊長度（秒）。較長品質較好、延遲較高。
@@ -158,6 +196,35 @@ impl AsrEngine for WhisperEngine {
     }
 }
 
+/// 共用模型的身分：同一個路徑但檔案換過（重新下載、匯入）就不算同一個。
+#[derive(Debug, PartialEq, Eq)]
+struct ModelKey {
+    path: PathBuf,
+    len: u64,
+    modified: Option<SystemTime>,
+}
+
+static SHARED: Mutex<Option<(ModelKey, Arc<WhisperContext>)>> = Mutex::new(None);
+
+fn new_context(path: &Path) -> Result<WhisperContext, AsrError> {
+    let mut params = WhisperContextParameters::default();
+    // 有 GPU 後端（Apple 的 Metal）時才開 flash attention：
+    // GPU 上明顯較快，CPU 上沒有好處。
+    params.flash_attn(cfg!(feature = "metal"));
+    WhisperContext::new_with_params(path, params).map_err(|e| AsrError::Backend(e.to_string()))
+}
+
+/// 放掉共用的模型。回傳原本是否有載入。
+///
+/// 正在辨識中的呼叫者手上還有一份參照，會跑完才真正釋放。
+pub fn release_shared() -> bool {
+    SHARED
+        .lock()
+        .unwrap_or_else(PoisonError::into_inner)
+        .take()
+        .is_some()
+}
+
 /// 從模型下載目錄找出 whisper 模型。
 pub fn default_model_path(models_dir: impl AsRef<Path>) -> PathBuf {
     models_dir.as_ref().join("whisper-large-v3-turbo-q5.model")
@@ -173,6 +240,13 @@ mod tests {
         let err = WhisperEngine::load("/definitely/not/here.bin", "zh").unwrap_err();
         assert!(matches!(err, AsrError::ModelNotLoaded));
         assert!(err.to_string().contains("模型"));
+    }
+
+    #[test]
+    fn shared_load_of_missing_model_fails_without_caching_anything() {
+        let err = WhisperEngine::load_shared("/definitely/not/here.bin", "zh").unwrap_err();
+        assert!(matches!(err, AsrError::ModelNotLoaded));
+        assert!(!release_shared(), "失敗的載入不該留下快取");
     }
 
     #[test]
