@@ -91,19 +91,8 @@ public final class PageInkStore: ObservableObject {
     }
 
     /// 更新某一頁的筆跡（落筆、擦除、套索搬移等）。
-    public func updateDrawing(_ newDrawing: PKDrawing, for pageIndex: Int, pageId: String? = nil, allowBlank: Bool = false) {
+    public func updateDrawing(_ newDrawing: PKDrawing, for pageIndex: Int, pageId: String? = nil, allowBlank: Bool = true) {
         let k = key(for: pageIndex, pageId: pageId)
-
-        // 安全守衛：如果磁碟/快取原本有筆畫（例如 5 筆），但傳入的是 0 筆空畫布，
-        // 且此時畫布剛完成初始化或被視圖重用，絕不允許空白悄悄抹除內容。
-        let currentCount = inMemoryDrawings[k]?.strokes.count ?? knownDiskStrokeCounts[k] ?? 0
-        if !allowBlank && currentCount > 0 && newDrawing.strokes.isEmpty {
-            #if DEBUG
-            print("[PageInkStore] Guarded against blank drawing overwriting \(currentCount) strokes for \(k)")
-            #endif
-            return
-        }
-
         inMemoryDrawings[k] = newDrawing
         dirtyPages.insert(k)
     }
