@@ -147,6 +147,7 @@ struct OnboardingView: View {
     ///
     /// `then` 一定會被呼叫 —— 使用者按「不允許」也一樣往下走。App 沒拿到
     /// 麥克風仍然是一個完整的手寫筆記本，把人卡在導覽裡沒有道理。
+    // orphan-ok: 第一次錄音才要權限，導覽頁保留備用
     private func requestMicrophone(then: (() -> Void)? = nil) {
         #if os(iOS) || targetEnvironment(macCatalyst)
         Task {
