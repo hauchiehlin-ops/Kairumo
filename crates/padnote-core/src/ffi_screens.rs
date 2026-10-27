@@ -419,7 +419,10 @@ fn editor_spec() -> FfiScreenSpec {
                         c("editor.insert.stickers", Button, "sticker_library"),
                         MoreMenu,
                     ),
-                    behind(c("editor.insert.marquee", Button, "marquee_select"), MoreMenu),
+                    behind(
+                        c("editor.insert.marquee", Button, "marquee_select"),
+                        MoreMenu,
+                    ),
                     behind(c("editor.insert.audio", Button, "insert_audio"), MoreMenu),
                     behind(
                         c(
@@ -483,22 +486,22 @@ fn editor_spec() -> FfiScreenSpec {
             section(
                 "editor.settings",
                 "settings",
-                vec![
-                    behind(
-                        c("editor.customize_toolbar", Button, "customize_toolbar"),
-                        MoreMenu,
-                    ),
-                ],
+                vec![behind(
+                    c("editor.customize_toolbar", Button, "customize_toolbar"),
+                    MoreMenu,
+                )],
             ),
             section(
                 "editor.destructive",
                 "danger_zone",
-                vec![
-                    behind(
-                        c("editor.revert_initial_state", Button, "revert_to_initial_state"),
-                        MoreMenu,
+                vec![behind(
+                    c(
+                        "editor.revert_initial_state",
+                        Button,
+                        "revert_to_initial_state",
                     ),
-                ],
+                    MoreMenu,
+                )],
             ),
             section(
                 "editor.export",
