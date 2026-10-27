@@ -30,6 +30,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.zIndex
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.draw.clipToBounds
@@ -1243,9 +1246,15 @@ private fun ContinuousPage(
                 }
             )
     ) {
+        val strokeReadout = remember(revision, engine) { "strokes:${engine.strokes.size}" }
         InkCanvas(
             engine = engine,
-            modifier = Modifier.fillMaxSize().zIndex(100f),
+            // 焦點頁掛 `editor.canvas` 與 `strokes:N`（與單頁模式、Apple 同一組讀數）。以前連續模式完全沒有，
+            // 而平板預設就是連續模式 —— 筆跡不變式與旅程測試在使用者實際拿到的模式下什麼都量不到。
+            modifier = Modifier.fillMaxSize().zIndex(100f)
+                .testTag(if (isFocused) "editor.canvas" else "editor.canvas.page.$pageIndex")
+                // 讀數隨 revision 在組合階段算好（理由見單頁模式的 strokeReadout）。
+                .semantics { contentDescription = strokeReadout },
             backgroundColor = Color.Transparent,
             pageStyle = pageStyle,
             paperId = paperId,

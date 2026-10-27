@@ -649,7 +649,15 @@ private fun InkScreen(
                     editingText = null
                 }
             },
-            onToggleRadialMenu = { showRadialMenu = !showRadialMenu },
+            onToggleRadialMenu = {
+                // 從工具列叫出的放在畫布正中央（與 Apple 一致）。拆檔時這一段掉了，
+                // 工具盤會開在上一次長按的位置，甚至在畫面角落。
+                radialMenuCenter = androidx.compose.ui.geometry.Offset(
+                    if (canvasViewport.width > 0) canvasViewport.width / 2f else 300f,
+                    if (canvasViewport.height > 0) canvasViewport.height / 2f else 300f
+                )
+                showRadialMenu = !showRadialMenu
+            },
             onToggleTabletop = { isTabletopActive = !isTabletopActive },
             onUndo = { globalUndo() },
             onRedo = { globalRedo() },

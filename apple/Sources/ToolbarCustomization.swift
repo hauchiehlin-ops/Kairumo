@@ -245,6 +245,13 @@ public struct ToolbarCustomizationView: View {
             }
         }
         .navigationTitle(L("customize_toolbar"))
+        // 明確的「完成」：iPad 的表單式 sheet 只能往下滑才關得掉，很多人不知道。
+        .toolbar {
+            ToolbarItem(placement: .confirmationAction) {
+                Button(L("done")) { dismiss() }
+                    .accessibilityIdentifier("toolbar.done")
+            }
+        }
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif
@@ -286,6 +293,7 @@ public struct ToolbarCustomizationView: View {
                         next.remove(at: index)
                         settings.setRadialActions(next)
                     }
+                    .accessibilityIdentifier("radial.slot.\(index).remove")
                 }
                 .accessibilityElement(children: .contain)
                 .accessibilityIdentifier("radial.slot.\(index)")

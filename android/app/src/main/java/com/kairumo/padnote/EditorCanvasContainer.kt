@@ -700,6 +700,10 @@ internal fun ColumnScope.EditorCanvasContainer(ctx: EditorCanvasContext) = with(
             // 圖學筆畫也不能走低延遲路徑：它要依線型挖虛線、依圖層疊放與隱藏，
             // 前緩衝的簡化繪製做不到。
             val draftingInk = inkTool.isDrafting || inkTool.isLasso || engine.strokes.any { it.layer != 0 || it.lineType != 0 }
+            // 筆畫數讀數（測試與無障礙用）。一定要在組合階段、隨 revision 算好再交給 semantics：
+            // 直接在 semantics 區塊裡讀 `engine.strokes` 的話，它不是 Compose 狀態，畫完一筆讀數照舊 ——
+            // 筆跡不變式測試因此一直只讀到開啟當下的數字，什麼回歸都抓不到。
+            val strokeReadout = remember(revision, engine) { "strokes:${engine.strokes.size}" }
             if (lowLatency && !lowLatencyUnavailable && canvasScale == 1f && !draftingInk) {
                 LowLatencyInkCanvas(
                     engine = engine,
@@ -708,7 +712,7 @@ internal fun ColumnScope.EditorCanvasContainer(ctx: EditorCanvasContext) = with(
                         .fillMaxSize()
                         .zIndex(100f)
                         .testTag("editor.canvas")
-                        .semantics { contentDescription = "strokes:${engine.strokes.size}" },
+                        .semantics { contentDescription = strokeReadout },
                     onInkChanged = {
                         revision++
                         if (engine.consumeOutsidePrintableArea()) {
@@ -733,7 +737,7 @@ internal fun ColumnScope.EditorCanvasContainer(ctx: EditorCanvasContext) = with(
                         .fillMaxSize()
                         .zIndex(100f)
                         .testTag("editor.canvas")
-                        .semantics { contentDescription = "strokes:${engine.strokes.size}" },
+                        .semantics { contentDescription = strokeReadout },
                     backgroundColor = Color.Transparent,
                     inkColor = if (inkTool.isDrafting) {
                         DraftingState.parseHex(DraftingState.activeColorHex)

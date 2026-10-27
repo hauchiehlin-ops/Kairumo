@@ -1335,6 +1335,25 @@ internal fun rememberEditorCanvasContext(
     var insertingShape by insertingShapeState
     val showLayerPanelState = remember { mutableStateOf(false) }
     var showLayerPanel by showLayerPanelState
+    // 切回手寫模式時一律收掉物件選取（與 Apple `transitionToMode`、連續頁面模式同一組規則）。
+    //
+    // 模式有三十幾個地方會改（工具列、觸控筆落下、Ctrl+E、飛梭工具盤、插入物件…），以前靠每個
+    // 呼叫端自己記得清 —— 只有工具列那一條有清，其他路切回手寫，畫面上就留著一組在手寫模式下
+    // 拖不動的把手。改成看著模式本身：不管從哪條路切的，結果都一樣。
+    LaunchedEffect(editorMode) {
+        if (editorMode == EditorMode.DRAW) {
+            selectedTextId = null
+            selectedImageId = null
+            selectedChartId = null
+            selectedTableId = null
+            selectedLinkId = null
+            selectedAudioId = null
+            selectedModel3DId = null
+            selectedShapeIds = emptySet()
+            selectedConnectionId = null
+            marqueeSelection = emptySet()
+        }
+    }
     LaunchedEffect(notebook, pageId, pageDisplayMode) {
         if (pageDisplayMode != PageDisplayMode.CONTINUOUS) {
             shapeStore.load(); shapeRevision++
@@ -2284,7 +2303,7 @@ internal fun rememberEditorCanvasContext(
     // 橡皮擦時 `engine.isErasing` 會忘了跟著改，症狀是「側鍵選到橡皮擦了，
     // 但畫下去還是墨跡」。
     fun applyInkTool(picked: InkTool) {
-        inkTool = picked
+        inkTool = picked // state-entry: 換工具的唯一正門
         engine.isErasing = picked.isEraser
         com.kairumo.padnote.platform.MainThreadStallMonitor.breadcrumb("select tool ${picked.kind}")
         picked.kind?.let { engine.tool = it }

@@ -45,6 +45,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
+import androidx.compose.ui.platform.testTag
 import uniffi.padnote_core.FfiRadialAction
 import kotlin.math.cos
 import kotlin.math.sin
@@ -141,6 +142,8 @@ fun RadialMarkMenu(
                             .clip(CircleShape)
                             .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.95f))
                             .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f), CircleShape)
+                            // 槽位 id（`radial.pen`…）：旅程測試與 TalkBack 認得出是哪一格。
+                            .testTag(item.id)
                             .clickable {
                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                 item.action()

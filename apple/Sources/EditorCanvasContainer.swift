@@ -118,7 +118,7 @@ extension NotebookEditorView {
                     // 槽位是使用者自訂的（設定 → 自訂工具列 → 飛梭工具盤），規則與 Android 同一份在核心。
                     items: ToolbarSettings.shared.radialActions.map { action in
                         RadialMenuItem(
-                            id: action.labelKey + "|" + action.symbol,
+                            id: action.parityIdentifier,
                             icon: action.symbol, labelKey: action.labelKey, color: action.tint
                         ) { performRadialAction(action) }
                     }
@@ -174,7 +174,7 @@ extension NotebookEditorView {
                             }
                             DraftingState.shared.editSelection = lasso.proIds
                         }
-                        selectedTool = .drafting
+                        applyEditorTool(.drafting)
                         DraftingState.shared.tool = tool
                         DraftToolController.shared.reset(layer: (canvasView as? AdaptiveCanvasView)?.proLayer)
                         DraftToolController.shared.refreshHint()
@@ -182,7 +182,7 @@ extension NotebookEditorView {
                     onInsertSymbol: { insertDraftKit($0) },
                     onInsertFrame: { insertDraftFrame(thirdAngle: $0) },
                     onPlaceInstrument: { kind in
-                        selectedTool = .drafting
+                        applyEditorTool(.drafting)
                         let center = draftViewportCenter()
                         DraftingState.shared.placeInstrument(kind: kind, center: center, pageWidth: PageGeometry.size.width)
                     },

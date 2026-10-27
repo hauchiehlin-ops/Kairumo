@@ -804,7 +804,7 @@ public struct NotebookEditorView: View {
             collabSync.reset(to: notebook)
             // 製圖用的紙（三視圖、等角、作圖步驟…）一打開就選好「圖學」筆組。
             if paperUsesDrafting(paperId: notebook.paperId(forPage: currentPageIndex)) {
-                selectedTool = .drafting
+                applyEditorTool(.drafting)
             }
             MacWindowTitle.apply()
             // 擷取剛打開筆記本時的初始狀態（提供一鍵恢復初始狀態功能）
@@ -1587,10 +1587,10 @@ public struct NotebookEditorView: View {
         endTextFormatSession()
         if animated {
             withAnimation(.easeInOut(duration: 0.18)) {
-                editorMode = targetMode
+                editorMode = targetMode // state-entry: 切換模式的唯一正門
             }
         } else {
-            editorMode = targetMode
+            editorMode = targetMode // state-entry: 切換模式的唯一正門
         }
         flashModeBadge()
     }

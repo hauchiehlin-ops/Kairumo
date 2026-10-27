@@ -281,7 +281,7 @@ extension NotebookEditorView {
         StickerManager.shared.saveSticker(stickerDrawing)
         
         lasso.clear()
-        selectedTool = previousTool ?? lastBrushTool
+        applyEditorTool(previousTool ?? lastBrushTool)
         showCanvasNotice("已儲存為貼紙！可於頂端「插入 > 貼紙 > 我的貼紙」中選用")
         #if os(iOS)
         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
@@ -683,7 +683,7 @@ extension NotebookEditorView {
         let made = layer.insertDrafted(sheet.strokes, origin: origin)
         showCanvasNotice(localizationManager.localized("solid_place_hint"))
         guard !made.isEmpty else { return }
-        selectedTool = .lasso
+        applyEditorTool(.lasso)
         // 換工具會清掉舊的選取；等下一個 runloop 再選，選取框才不會被清掉。
         let ids = Set(made.map(\.id))
         let box = made.map(\.bounds).reduce(CGRect.null) { $0.union($1) }
@@ -706,7 +706,7 @@ extension NotebookEditorView {
         let made = layer.insertDrafted(kit.strokes, origin: origin)
         showCanvasNotice(localizationManager.localized("draft_symbol_placed"))
         guard !made.isEmpty else { return }
-        selectedTool = .lasso
+        applyEditorTool(.lasso)
         let ids = Set(made.map(\.id))
         let box = made.map(\.bounds).reduce(CGRect.null) { $0.union($1) }
         DispatchQueue.main.async { lasso.select(proStrokeIds: ids, around: box) }
@@ -749,7 +749,7 @@ extension NotebookEditorView {
     /// 開始一題練習：把題目線放進目前這一頁（頁面大小由核心依它排版）。
     func startPractice(kind: String) {
         guard let canvas = canvasView as? AdaptiveCanvasView, let layer = canvas.proLayer else { return }
-        selectedTool = .drafting
+        applyEditorTool(.drafting)
         PracticeSession.shared.start(kind: kind, layer: layer, pageSize: PageGeometry.size)
     }
 

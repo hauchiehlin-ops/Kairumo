@@ -125,6 +125,8 @@ public struct RadialMarkMenuView: View {
                     }
                     .position(x: centerPoint.x + position.x, y: centerPoint.y + position.y)
                     .accessibilityLabel(localizationManager.localized(item.labelKey))
+                    // 槽位 id（`radial.pen`…，與 Android 同一組）：旅程測試與 VoiceOver 認得出是哪一格。
+                    .accessibilityIdentifier(item.id)
                 }
             }
             .transition(.scale(scale: 0.6).combined(with: .opacity))
@@ -179,6 +181,34 @@ extension FfiRadialAction {
         case .maskingTape: return .maskingTape
         case .drafting: return .drafting
         case .undo, .redo, .color, .stabilizer, .toggleMode: return nil
+        }
+    }
+
+    /// 跨平台識別字，與核心 `RadialAction::parity_identifier`、Android `RadialSlots.identifier` 逐字相同。
+    var parityIdentifier: String {
+        switch self {
+        case .pen: return "radial.pen"
+        case .ballPoint: return "radial.ballpoint"
+        case .fineliner: return "radial.fineliner"
+        case .brush: return "radial.brush"
+        case .calligraphy: return "radial.calligraphy"
+        case .pencil: return "radial.pencil"
+        case .charcoal: return "radial.charcoal"
+        case .crayon: return "radial.crayon"
+        case .airbrush: return "radial.airbrush"
+        case .oilPaint: return "radial.oilpaint"
+        case .watercolor: return "radial.watercolor"
+        case .marker: return "radial.marker"
+        case .highlighter: return "radial.highlighter"
+        case .eraser: return "radial.eraser"
+        case .lasso: return "radial.lasso"
+        case .maskingTape: return "radial.maskingTape"
+        case .drafting: return "radial.drafting"
+        case .undo: return "radial.undo"
+        case .redo: return "radial.redo"
+        case .color: return "radial.color"
+        case .stabilizer: return "radial.stabilizer"
+        case .toggleMode: return "radial.toggleMode"
         }
     }
 

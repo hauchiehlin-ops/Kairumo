@@ -389,6 +389,7 @@ fun ToolbarCustomizationSheet(
                                     }
                                 ) { Text("▼", modifier = Modifier.semantics { contentDescription = l10n("radial_move_down") }) }
                                 TextButton(
+                                    modifier = Modifier.testTag("radial.slot.$index.remove"),
                                     enabled = slots.size > minSlots,
                                     onClick = {
                                         ToolbarSettings.setRadialActions(
@@ -469,7 +470,7 @@ fun ToolbarCustomizationSheet(
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) { Text(l10n("done")) }
+            TextButton(onClick = onDismiss, modifier = Modifier.testTag("toolbar.done")) { Text(l10n("done")) }
         },
         dismissButton = {
             TextButton(
