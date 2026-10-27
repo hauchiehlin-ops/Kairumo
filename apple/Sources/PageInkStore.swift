@@ -91,7 +91,7 @@ public final class PageInkStore: ObservableObject {
     }
 
     /// 更新某一頁的筆跡（落筆、擦除、套索搬移等）。
-    public func updateDrawing(_ newDrawing: PKDrawing, for pageIndex: Int, pageId: String? = nil, allowBlank: Bool = true) {
+    public func updateDrawing(_ newDrawing: PKDrawing, for pageIndex: Int, pageId: String? = nil) {
         let k = key(for: pageIndex, pageId: pageId)
         inMemoryDrawings[k] = newDrawing
         dirtyPages.insert(k)
@@ -99,7 +99,7 @@ public final class PageInkStore: ObservableObject {
 
     /// 強制覆蓋某一頁（明確的清空或全選刪除）。
     public func forceSetDrawing(_ newDrawing: PKDrawing, for pageIndex: Int, pageId: String? = nil) {
-        updateDrawing(newDrawing, for: pageIndex, pageId: pageId, allowBlank: true)
+        updateDrawing(newDrawing, for: pageIndex, pageId: pageId)
     }
 
     /// 初始化時建立整本筆記本的初始狀態快照。
@@ -235,7 +235,7 @@ public final class PageInkStore: ObservableObject {
     ) {
         guard before != after else { return }
         manager.registerUndo(withTarget: self) { store in
-            store.updateDrawing(before, for: pageIndex, pageId: pageId, allowBlank: true)
+            store.updateDrawing(before, for: pageIndex, pageId: pageId)
             store.markPendingCoreFlush(for: pageIndex, pageId: pageId)
             onApplied(pageIndex, before)
             store.registerSamePageUndo(
@@ -253,9 +253,9 @@ public final class PageInkStore: ObservableObject {
         onApplied: @escaping (Int, PKDrawing, Int, PKDrawing) -> Void
     ) {
         manager.registerUndo(withTarget: self) { store in
-            store.updateDrawing(fromBefore, for: fromPageIndex, pageId: fromPageId, allowBlank: true)
+            store.updateDrawing(fromBefore, for: fromPageIndex, pageId: fromPageId)
             store.markPendingCoreFlush(for: fromPageIndex, pageId: fromPageId)
-            store.updateDrawing(targetBefore, for: targetPageIndex, pageId: targetPageId, allowBlank: true)
+            store.updateDrawing(targetBefore, for: targetPageIndex, pageId: targetPageId)
             store.markPendingCoreFlush(for: targetPageIndex, pageId: targetPageId)
             onApplied(fromPageIndex, fromBefore, targetPageIndex, targetBefore)
             store.registerCrossPageUndo(
