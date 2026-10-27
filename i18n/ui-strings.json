@@ -25694,5 +25694,101 @@
     "th": "นำเข้าแล้ว %1@ หน้า ข้าม %2@ หน้าที่วาดไม่ได้",
     "zhHans": "已导入 %1@ 页，%2@ 页无法绘制而略过",
     "zhHant": "已匯入 %1@ 頁，%2@ 頁畫不出來而略過"
+  },
+  "radial_toggle_mode": {
+    "en": "Handwriting / Typing",
+    "ja": "手書き／入力の切替",
+    "ko": "필기／입력 전환",
+    "th": "สลับเขียน／พิมพ์",
+    "zhHans": "手写／打字切换",
+    "zhHant": "手寫／打字切換"
+  },
+  "radial_customize_hint": {
+    "en": "The menu that opens when you press and hold on the canvas. Slots run clockwise from the top, 2 to 8 of them; this setting syncs with your account.",
+    "ja": "キャンバスを長押しすると開くメニューです。上から時計回りに並び、2〜8 個まで。設定はアカウントと同期されます。",
+    "ko": "캔버스를 길게 누르면 열리는 메뉴입니다. 위에서부터 시계 방향으로 2~8칸까지 배치되며, 이 설정은 계정과 동기화됩니다.",
+    "th": "เมนูที่เปิดเมื่อกดค้างบนผืนผ้าใบ เรียงตามเข็มนาฬิกาจากด้านบน 2–8 ช่อง การตั้งค่านี้ซิงค์กับบัญชี",
+    "zhHans": "画布上按住不动约半秒唤出的工具盘。依顺序从正上方顺时针排列，至少 2 格、最多 8 格；这份设置跟着账号同步。",
+    "zhHant": "畫布上按住不動約半秒叫出的工具盤。依順序從正上方順時針排列，至少 2 格、最多 8 格；這份設定跟著帳號同步。"
+  },
+  "radial_slots": {
+    "en": "On the menu",
+    "ja": "メニューの項目",
+    "ko": "메뉴 항목",
+    "th": "รายการในเมนู",
+    "zhHans": "工具盘上的项目",
+    "zhHant": "工具盤上的項目"
+  },
+  "radial_available": {
+    "en": "Available",
+    "ja": "追加できる項目",
+    "ko": "추가할 수 있는 항목",
+    "th": "รายการที่เพิ่มได้",
+    "zhHans": "可以加入的项目",
+    "zhHant": "可以加入的項目"
+  },
+  "radial_full": {
+    "en": "The menu is full (8). Remove one to add another.",
+    "ja": "8 個でいっぱいです。追加するには先に 1 つ外してください。",
+    "ko": "8칸이 꽉 찼습니다. 하나를 빼야 추가할 수 있습니다.",
+    "th": "เต็ม 8 ช่องแล้ว ต้องเอาออกหนึ่งช่องก่อนจึงจะเพิ่มได้",
+    "zhHans": "已经 8 格了，先移除一格才能再加入。",
+    "zhHant": "已經 8 格了，先移除一格才能再加入。"
+  },
+  "radial_min_hint": {
+    "en": "Keep at least 2.",
+    "ja": "最低 2 個は残してください。",
+    "ko": "최소 2칸은 남겨야 합니다.",
+    "th": "ต้องเหลืออย่างน้อย 2 ช่อง",
+    "zhHans": "至少要留 2 格。",
+    "zhHant": "至少要留 2 格。"
+  },
+  "radial_add": {
+    "en": "Add",
+    "ja": "追加",
+    "ko": "추가",
+    "th": "เพิ่ม",
+    "zhHans": "加入",
+    "zhHant": "加入"
+  },
+  "radial_remove": {
+    "en": "Remove",
+    "ja": "外す",
+    "ko": "빼기",
+    "th": "เอาออก",
+    "zhHans": "移除",
+    "zhHant": "移除"
+  },
+  "radial_move_up": {
+    "en": "Move earlier",
+    "ja": "前へ",
+    "ko": "앞으로",
+    "th": "เลื่อนขึ้น",
+    "zhHans": "往前移",
+    "zhHant": "往前移"
+  },
+  "radial_move_down": {
+    "en": "Move later",
+    "ja": "後ろへ",
+    "ko": "뒤로",
+    "th": "เลื่อนลง",
+    "zhHans": "往后移",
+    "zhHant": "往後移"
+  },
+  "radial_reset": {
+    "en": "Restore default menu",
+    "ja": "メニューを既定に戻す",
+    "ko": "메뉴 기본값으로 복원",
+    "th": "คืนค่าเมนูเริ่มต้น",
+    "zhHans": "还原工具盘默认",
+    "zhHant": "還原工具盤預設"
+  },
+  "radial_customize": {
+    "en": "Customize Radial Menu",
+    "ja": "ラジアルメニューをカスタマイズ",
+    "ko": "원형 메뉴 사용자 지정",
+    "th": "ปรับแต่งเมนูวงกลม",
+    "zhHans": "自定义飞梭工具盘",
+    "zhHant": "自訂飛梭工具盤"
   }
 }

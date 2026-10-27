@@ -88,6 +88,25 @@ extension NotebookEditorView {
         return true
     }
 
+    /// 飛梭工具盤的一格被選中。選工具走 `selectEditorTool` —— 與工具列、⌘1… 快捷鍵同一條路，
+    /// 切到製圖筆時的提示、離開套索時清掉選取等副作用才不會在這裡漏掉。
+    func performRadialAction(_ action: FfiRadialAction) {
+        if let tool = action.editorTool {
+            selectEditorTool(tool)
+            return
+        }
+        switch action {
+        case .undo: performUndo()
+        case .redo: performRedo()
+        case .color:
+            // 色相環是掛在工具列按鈕上的 popover，從這裡開不一定有錨點；改開完整調色面板。
+            showProColorPicker = true
+        case .stabilizer: strokeStabilizer = (strokeStabilizer > 0) ? 0.0 : 0.5
+        case .toggleMode: transitionToMode((editorMode == .draw) ? .type : .draw)
+        default: break
+        }
+    }
+
     /// 徑向飛輪快捷工具盤（螢幕座標，不隨頁面縮放，蓋在畫布之上）。
     @ViewBuilder
     var radialMenuLayer: some View {
@@ -96,33 +115,13 @@ extension NotebookEditorView {
                 RadialMarkMenuView(
                     isPresented: $showRadialMenu,
                     centerPoint: radialMenuCenter(in: geo),
-                    items: [
-                        RadialMenuItem(id: "pen", icon: "pencil.tip", labelKey: "tool_pen", color: .accentColor) {
-                            selectedTool = .pen
-                        },
-                        RadialMenuItem(id: "highlighter", icon: "highlighter", labelKey: "tool_highlighter", color: .orange) {
-                            selectedTool = .highlighter
-                        },
-                        RadialMenuItem(id: "eraser", icon: "eraser", labelKey: "tool_eraser", color: .red) {
-                            selectedTool = .eraser
-                        },
-                        RadialMenuItem(id: "lasso", icon: "lasso", labelKey: "tool_lasso", color: .purple) {
-                            selectedTool = .lasso
-                        },
-                        RadialMenuItem(id: "undo", icon: "arrow.uturn.backward", labelKey: "undo", color: .blue) {
-                            performUndo()
-                        },
-                        RadialMenuItem(id: "redo", icon: "arrow.uturn.forward", labelKey: "redo", color: .blue) {
-                            performRedo()
-                        },
-                        RadialMenuItem(id: "color", icon: "paintpalette.fill", labelKey: "pro_color", color: .pink) {
-                            // 色相環是掛在工具列按鈕上的 popover，從這裡開不一定有錨點；改開完整調色面板。
-                            showProColorPicker = true
-                        },
-                        RadialMenuItem(id: "stabilizer", icon: "waveform.path.ecg", labelKey: "stab_title", color: .green) {
-                            strokeStabilizer = (strokeStabilizer > 0) ? 0.0 : 0.5
-                        }
-                    ]
+                    // 槽位是使用者自訂的（設定 → 自訂工具列 → 飛梭工具盤），規則與 Android 同一份在核心。
+                    items: ToolbarSettings.shared.radialActions.map { action in
+                        RadialMenuItem(
+                            id: action.labelKey + "|" + action.symbol,
+                            icon: action.symbol, labelKey: action.labelKey, color: action.tint
+                        ) { performRadialAction(action) }
+                    }
                 )
             }
             .transition(.opacity)

@@ -17823,6 +17823,46 @@ extension LocalizationManager {
             .ko: "음성 녹음 및 동기화",
             .th: "การบันทึกเสียงและการซิงค์"
         ],
+        "radial_add": [
+            .zhHant: "加入",
+            .en: "Add",
+            .zhHans: "加入",
+            .ja: "追加",
+            .ko: "추가",
+            .th: "เพิ่ม"
+        ],
+        "radial_available": [
+            .zhHant: "可以加入的項目",
+            .en: "Available",
+            .zhHans: "可以加入的项目",
+            .ja: "追加できる項目",
+            .ko: "추가할 수 있는 항목",
+            .th: "รายการที่เพิ่มได้"
+        ],
+        "radial_customize": [
+            .zhHant: "自訂飛梭工具盤",
+            .en: "Customize Radial Menu",
+            .zhHans: "自定义飞梭工具盘",
+            .ja: "ラジアルメニューをカスタマイズ",
+            .ko: "원형 메뉴 사용자 지정",
+            .th: "ปรับแต่งเมนูวงกลม"
+        ],
+        "radial_customize_hint": [
+            .zhHant: "畫布上按住不動約半秒叫出的工具盤。依順序從正上方順時針排列，至少 2 格、最多 8 格；這份設定跟著帳號同步。",
+            .en: "The menu that opens when you press and hold on the canvas. Slots run clockwise from the top, 2 to 8 of them; this setting syncs with your account.",
+            .zhHans: "画布上按住不动约半秒唤出的工具盘。依顺序从正上方顺时针排列，至少 2 格、最多 8 格；这份设置跟着账号同步。",
+            .ja: "キャンバスを長押しすると開くメニューです。上から時計回りに並び、2〜8 個まで。設定はアカウントと同期されます。",
+            .ko: "캔버스를 길게 누르면 열리는 메뉴입니다. 위에서부터 시계 방향으로 2~8칸까지 배치되며, 이 설정은 계정과 동기화됩니다.",
+            .th: "เมนูที่เปิดเมื่อกดค้างบนผืนผ้าใบ เรียงตามเข็มนาฬิกาจากด้านบน 2–8 ช่อง การตั้งค่านี้ซิงค์กับบัญชี"
+        ],
+        "radial_full": [
+            .zhHant: "已經 8 格了，先移除一格才能再加入。",
+            .en: "The menu is full (8). Remove one to add another.",
+            .zhHans: "已经 8 格了，先移除一格才能再加入。",
+            .ja: "8 個でいっぱいです。追加するには先に 1 つ外してください。",
+            .ko: "8칸이 꽉 찼습니다. 하나를 빼야 추가할 수 있습니다.",
+            .th: "เต็ม 8 ช่องแล้ว ต้องเอาออกหนึ่งช่องก่อนจึงจะเพิ่มได้"
+        ],
         "radial_menu": [
             .zhHant: "環形快捷工具盤",
             .en: "Radial tool menu",
@@ -17830,6 +17870,62 @@ extension LocalizationManager {
             .ja: "放射状ツールメニュー",
             .ko: "방사형 도구 메뉴",
             .th: "เมนูเครื่องมือแบบวงกลม"
+        ],
+        "radial_min_hint": [
+            .zhHant: "至少要留 2 格。",
+            .en: "Keep at least 2.",
+            .zhHans: "至少要留 2 格。",
+            .ja: "最低 2 個は残してください。",
+            .ko: "최소 2칸은 남겨야 합니다.",
+            .th: "ต้องเหลืออย่างน้อย 2 ช่อง"
+        ],
+        "radial_move_down": [
+            .zhHant: "往後移",
+            .en: "Move later",
+            .zhHans: "往后移",
+            .ja: "後ろへ",
+            .ko: "뒤로",
+            .th: "เลื่อนลง"
+        ],
+        "radial_move_up": [
+            .zhHant: "往前移",
+            .en: "Move earlier",
+            .zhHans: "往前移",
+            .ja: "前へ",
+            .ko: "앞으로",
+            .th: "เลื่อนขึ้น"
+        ],
+        "radial_remove": [
+            .zhHant: "移除",
+            .en: "Remove",
+            .zhHans: "移除",
+            .ja: "外す",
+            .ko: "빼기",
+            .th: "เอาออก"
+        ],
+        "radial_reset": [
+            .zhHant: "還原工具盤預設",
+            .en: "Restore default menu",
+            .zhHans: "还原工具盘默认",
+            .ja: "メニューを既定に戻す",
+            .ko: "메뉴 기본값으로 복원",
+            .th: "คืนค่าเมนูเริ่มต้น"
+        ],
+        "radial_slots": [
+            .zhHant: "工具盤上的項目",
+            .en: "On the menu",
+            .zhHans: "工具盘上的项目",
+            .ja: "メニューの項目",
+            .ko: "메뉴 항목",
+            .th: "รายการในเมนู"
+        ],
+        "radial_toggle_mode": [
+            .zhHant: "手寫／打字切換",
+            .en: "Handwriting / Typing",
+            .zhHans: "手写／打字切换",
+            .ja: "手書き／入力の切替",
+            .ko: "필기／입력 전환",
+            .th: "สลับเขียน／พิมพ์"
         ],
         "rec_err_convert": [
             .zhHant: "音訊轉換失敗：%@",

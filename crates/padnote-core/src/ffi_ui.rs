@@ -12,7 +12,9 @@
 use std::sync::Mutex;
 
 use padnote_i18n::{Locale, catalog};
-use padnote_toolbar::{Placement, Tool, ToolGroup, ToolbarConfig};
+use padnote_toolbar::{
+    Placement, RADIAL_MAX, RADIAL_MIN, RadialAction, Tool, ToolGroup, ToolbarConfig,
+};
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug, uniffi::Enum)]
 pub enum FfiLocale {
@@ -270,6 +272,113 @@ impl From<Placement> for FfiPlacement {
     }
 }
 
+/// 飛梭工具盤的一格（見 `padnote_toolbar::radial`）。
+#[derive(Clone, Copy, PartialEq, Eq, Debug, uniffi::Enum)]
+pub enum FfiRadialAction {
+    Pen,
+    BallPoint,
+    Fineliner,
+    Brush,
+    Calligraphy,
+    Pencil,
+    Charcoal,
+    Crayon,
+    Airbrush,
+    OilPaint,
+    Watercolor,
+    Marker,
+    Highlighter,
+    Eraser,
+    Lasso,
+    MaskingTape,
+    Drafting,
+    Undo,
+    Redo,
+    Color,
+    Stabilizer,
+    ToggleMode,
+}
+
+impl From<FfiRadialAction> for RadialAction {
+    fn from(a: FfiRadialAction) -> Self {
+        match a {
+            FfiRadialAction::Pen => Self::Pen,
+            FfiRadialAction::BallPoint => Self::BallPoint,
+            FfiRadialAction::Fineliner => Self::Fineliner,
+            FfiRadialAction::Brush => Self::Brush,
+            FfiRadialAction::Calligraphy => Self::Calligraphy,
+            FfiRadialAction::Pencil => Self::Pencil,
+            FfiRadialAction::Charcoal => Self::Charcoal,
+            FfiRadialAction::Crayon => Self::Crayon,
+            FfiRadialAction::Airbrush => Self::Airbrush,
+            FfiRadialAction::OilPaint => Self::OilPaint,
+            FfiRadialAction::Watercolor => Self::Watercolor,
+            FfiRadialAction::Marker => Self::Marker,
+            FfiRadialAction::Highlighter => Self::Highlighter,
+            FfiRadialAction::Eraser => Self::Eraser,
+            FfiRadialAction::Lasso => Self::Lasso,
+            FfiRadialAction::MaskingTape => Self::MaskingTape,
+            FfiRadialAction::Drafting => Self::Drafting,
+            FfiRadialAction::Undo => Self::Undo,
+            FfiRadialAction::Redo => Self::Redo,
+            FfiRadialAction::Color => Self::Color,
+            FfiRadialAction::Stabilizer => Self::Stabilizer,
+            FfiRadialAction::ToggleMode => Self::ToggleMode,
+        }
+    }
+}
+
+impl From<RadialAction> for FfiRadialAction {
+    fn from(a: RadialAction) -> Self {
+        match a {
+            RadialAction::Pen => Self::Pen,
+            RadialAction::BallPoint => Self::BallPoint,
+            RadialAction::Fineliner => Self::Fineliner,
+            RadialAction::Brush => Self::Brush,
+            RadialAction::Calligraphy => Self::Calligraphy,
+            RadialAction::Pencil => Self::Pencil,
+            RadialAction::Charcoal => Self::Charcoal,
+            RadialAction::Crayon => Self::Crayon,
+            RadialAction::Airbrush => Self::Airbrush,
+            RadialAction::OilPaint => Self::OilPaint,
+            RadialAction::Watercolor => Self::Watercolor,
+            RadialAction::Marker => Self::Marker,
+            RadialAction::Highlighter => Self::Highlighter,
+            RadialAction::Eraser => Self::Eraser,
+            RadialAction::Lasso => Self::Lasso,
+            RadialAction::MaskingTape => Self::MaskingTape,
+            RadialAction::Drafting => Self::Drafting,
+            RadialAction::Undo => Self::Undo,
+            RadialAction::Redo => Self::Redo,
+            RadialAction::Color => Self::Color,
+            RadialAction::Stabilizer => Self::Stabilizer,
+            RadialAction::ToggleMode => Self::ToggleMode,
+        }
+    }
+}
+
+/// 設定畫面列出的一個可放進飛梭工具盤的動作。
+#[derive(Clone, Debug, uniffi::Record)]
+pub struct FfiRadialActionInfo {
+    pub action: FfiRadialAction,
+    /// 跨平台識別字（`radial.pen`…），設定畫面的無障礙識別字。
+    pub identifier: String,
+    /// 是否已在工具盤上。
+    pub in_menu: bool,
+}
+
+/// 飛梭工具盤最少幾格。
+#[uniffi::export]
+pub fn radial_min_slots() -> u32 {
+    RADIAL_MIN as u32
+}
+
+/// 飛梭工具盤最多幾格。
+#[uniffi::export]
+pub fn radial_max_slots() -> u32 {
+    RADIAL_MAX as u32
+}
+
 /// 工具列設定的 handle。
 ///
 /// 內含 `Mutex`：UniFFI 的物件可能被多執行緒觸及，
@@ -380,6 +489,41 @@ impl FfiToolbar {
         self.inner.lock().unwrap().reset();
     }
 
+    /// 飛梭工具盤目前的槽位（依順序，從正上方順時針）。
+    pub fn radial_actions(&self) -> Vec<FfiRadialAction> {
+        self.inner
+            .lock()
+            .unwrap()
+            .radial()
+            .iter()
+            .map(|a| (*a).into())
+            .collect()
+    }
+
+    /// 改飛梭工具盤的槽位。重複的去掉、超過八格截掉；少於兩格時不改、回 `false`。
+    pub fn set_radial_actions(&self, actions: Vec<FfiRadialAction>) -> bool {
+        let slots: Vec<RadialAction> = actions.into_iter().map(Into::into).collect();
+        self.inner.lock().unwrap().set_radial(&slots)
+    }
+
+    /// 只把飛梭工具盤還原成出廠的八格。
+    pub fn reset_radial(&self) {
+        self.inner.lock().unwrap().reset_radial();
+    }
+
+    /// 全部能放進飛梭工具盤的動作（設定畫面用），標出哪些已經在工具盤上。
+    pub fn all_radial_actions(&self) -> Vec<FfiRadialActionInfo> {
+        let cfg = self.inner.lock().unwrap();
+        RadialAction::ALL
+            .iter()
+            .map(|a| FfiRadialActionInfo {
+                action: (*a).into(),
+                identifier: a.parity_identifier().to_string(),
+                in_menu: cfg.radial().contains(a),
+            })
+            .collect()
+    }
+
     /// 序列化供平台端持久化。
     pub fn to_json(&self) -> String {
         self.inner.lock().unwrap().to_json()
@@ -421,6 +565,33 @@ mod tests {
         for l in &list {
             assert!(!l.endonym.is_empty(), "{} 缺母語名稱", l.tag);
         }
+    }
+
+    #[test]
+    fn every_radial_action_survives_the_round_trip() {
+        for a in RadialAction::ALL {
+            let there: FfiRadialAction = a.into();
+            assert_eq!(RadialAction::from(there), a, "{a:?} 轉換不對稱");
+        }
+        let tb = FfiToolbar::new(FfiLocale::English);
+        assert_eq!(tb.radial_actions().len(), 8, "出廠八格");
+        assert!(
+            !tb.set_radial_actions(vec![FfiRadialAction::Pen]),
+            "一格不算選單"
+        );
+        assert!(tb.set_radial_actions(vec![FfiRadialAction::ToggleMode, FfiRadialAction::Pencil]));
+        let back = FfiToolbar::from_json(FfiLocale::English, tb.to_json());
+        assert_eq!(
+            back.radial_actions(),
+            vec![FfiRadialAction::ToggleMode, FfiRadialAction::Pencil]
+        );
+        assert_eq!(
+            back.all_radial_actions()
+                .iter()
+                .filter(|i| i.in_menu)
+                .count(),
+            2
+        );
     }
 
     #[test]

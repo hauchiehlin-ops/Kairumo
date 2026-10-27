@@ -17,7 +17,9 @@
 //! —— 詳見 [`tools`] 的模組說明。
 
 pub mod config;
+pub mod radial;
 pub mod tools;
 
 pub use config::{Placement, ToolbarConfig};
+pub use radial::{RADIAL_MAX, RADIAL_MIN, RadialAction};
 pub use tools::{BrushFamily, Tool, ToolGroup, all_groups};

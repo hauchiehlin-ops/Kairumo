@@ -575,7 +575,9 @@ private fun InkScreen(
         colorHex = ctx.inkColorHex,
         width = ctx.inkWidth,
         languageTag = deviceLanguageTag(),
-        onToolChange = { t -> ctx.inkTool = t },
+        // 一定要走 applyInkTool：只改 inkTool 的話 engine.isErasing／engine.tool 不會跟著改，
+        // 從工具列點橡皮擦畫下去還是墨跡、離開套索時選取框也不會收掉（拆檔時斷掉的那一條）。
+        onToolChange = { t -> ctx.applyInkTool(t) },
         onColorChange = { c -> ctx.inkColorHex = c },
         onWidthChange = { w -> ctx.inkWidth = w },
         onOpenColorWheel = { ctx.showProColorWheel = true },

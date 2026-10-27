@@ -90,6 +90,27 @@ public final class ToolbarSettings: ObservableObject {
         persist()
     }
 
+    // MARK: 飛梭工具盤（規則在核心 `padnote_toolbar::radial`，與 Android 同一份）
+
+    /// 工具盤目前的槽位，依順序（從正上方順時針）。
+    @Published public private(set) var radialActions: [FfiRadialAction] = []
+
+    /// 全部能放進工具盤的動作（設定畫面用）。
+    public func allRadialActions() -> [FfiRadialActionInfo] { core.allRadialActions() }
+
+    /// 改槽位。少於兩格時核心拒絕、回 false（設定畫面據此不讓最後兩格被移除）。
+    @discardableResult
+    public func setRadialActions(_ next: [FfiRadialAction]) -> Bool {
+        let ok = core.setRadialActions(actions: next)
+        if ok { persist() }
+        return ok
+    }
+
+    public func resetRadial() {
+        core.resetRadial()
+        persist()
+    }
+
     /// 回到出廠設定。**使用者改壞了要回得去。**
     public func reset() {
         core.reset()
@@ -120,6 +141,7 @@ public final class ToolbarSettings: ObservableObject {
     private func refresh() {
         placement = core.placement()
         showLabels = core.showLabels()
+        radialActions = core.radialActions()
         hiddenIdentifiers = Set(
             core.allGroups()
                 .flatMap(\.tools)
@@ -203,6 +225,8 @@ public struct ToolbarCustomizationView: View {
                 .accessibilityIdentifier("settings.smart_guidance")
             }
 
+            radialSection
+
             ForEach(Array(settings.groups().enumerated()), id: \.offset) { _, group in
                 Section(group.label) {
                     ForEach(group.tools, id: \.identifier) { info in
@@ -224,6 +248,97 @@ public struct ToolbarCustomizationView: View {
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif
+    }
+
+    // MARK: 飛梭工具盤
+
+    /// 槽位依順序列出（可前後移、移除），下面是還沒放上去的動作（點一下加入）。
+    /// 上下限的規則在核心：少於兩格核心會拒絕，這裡只是把按鈕停用、說明原因。
+    @ViewBuilder
+    private var radialSection: some View {
+        let slots = settings.radialActions
+        let maxSlots = Int(radialMaxSlots())
+        let minSlots = Int(radialMinSlots())
+        Section(L("radial_customize")) {
+            Text(L("radial_customize_hint"))
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+
+            ForEach(Array(slots.enumerated()), id: \.offset) { index, action in
+                HStack(spacing: 10) {
+                    Image(systemName: action.symbol)
+                        .foregroundStyle(action.tint)
+                        .frame(width: 22)
+                    Text("\(index + 1). " + L(action.labelKey))
+                    Spacer()
+                    radialButton("chevron.up", "radial_move_up", enabled: index > 0) {
+                        var next = slots
+                        next.swapAt(index, index - 1)
+                        settings.setRadialActions(next)
+                    }
+                    radialButton("chevron.down", "radial_move_down", enabled: index < slots.count - 1) {
+                        var next = slots
+                        next.swapAt(index, index + 1)
+                        settings.setRadialActions(next)
+                    }
+                    radialButton("minus.circle.fill", "radial_remove", enabled: slots.count > minSlots, tint: .red) {
+                        var next = slots
+                        next.remove(at: index)
+                        settings.setRadialActions(next)
+                    }
+                }
+                .accessibilityElement(children: .contain)
+                .accessibilityIdentifier("radial.slot.\(index)")
+            }
+            if slots.count <= minSlots {
+                Text(L("radial_min_hint")).font(.footnote).foregroundStyle(.secondary)
+            }
+
+            DisclosureGroup(L("radial_available")) {
+                if slots.count >= maxSlots {
+                    Text(L("radial_full")).font(.footnote).foregroundStyle(.secondary)
+                }
+                ForEach(settings.allRadialActions().filter { !$0.inMenu }, id: \.identifier) { info in
+                    Button {
+                        settings.setRadialActions(slots + [info.action])
+                    } label: {
+                        HStack(spacing: 10) {
+                            Image(systemName: info.action.symbol)
+                                .foregroundStyle(info.action.tint)
+                                .frame(width: 22)
+                            Text(L(info.action.labelKey))
+                            Spacer()
+                            Image(systemName: "plus.circle.fill")
+                        }
+                    }
+                    .disabled(slots.count >= maxSlots)
+                    .accessibilityLabel(L("radial_add") + " " + L(info.action.labelKey))
+                    .accessibilityIdentifier(info.identifier)
+                }
+            }
+
+            Button {
+                settings.resetRadial()
+            } label: {
+                Text(L("radial_reset"))
+            }
+            .accessibilityIdentifier("radial.reset")
+        }
+    }
+
+    private func radialButton(
+        _ symbol: String, _ key: String, enabled: Bool, tint: Color = .accentColor,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            Image(systemName: symbol)
+                .foregroundStyle(enabled ? tint : Color.secondary.opacity(0.4))
+                .frame(width: 28, height: 28)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.borderless)
+        .disabled(!enabled)
+        .accessibilityLabel(L(key))
     }
 
     private var allToolCount: Int {

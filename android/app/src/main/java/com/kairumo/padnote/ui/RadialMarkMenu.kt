@@ -45,6 +45,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
+import uniffi.padnote_core.FfiRadialAction
 import kotlin.math.cos
 import kotlin.math.sin
 
@@ -240,7 +241,8 @@ fun clampRadialCenter(point: Offset, viewportWidth: Float, viewportHeight: Float
 }
 
 /**
- * 編輯器的飛梭工具盤：八個項目的外觀在這裡，動作由呼叫端依 id 處理。
+ * 編輯器的飛梭工具盤。槽位是使用者自訂的（自訂工具列 → 飛梭工具盤），規則與 Apple 同一份在核心；
+ * 每一格的外觀在 [RadialSlots]，動作由呼叫端依 id（`radial.pen`…，見 [RadialSlots.actionFor]）處理。
  *
  * 從編輯器畫面搬出來的原因：整頁與連續兩種模式都要用，而編輯器那個 Composable 已經大到
  * ART 驗證器的上限 —— 在裡面多寫一份就 VerifyError 閃退。
@@ -252,21 +254,120 @@ fun EditorRadialMenu(
     /** 項目的 id；點選單外面是 [RADIAL_DISMISS]。 */
     onAction: (String) -> Unit
 ) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val slots = ToolbarSettings.radialActions(context, com.kairumo.padnote.currentLanguageTag())
     RadialMarkMenu(
         visible = true,
         centerOffset = center,
-        items = listOf(
-            RadialMenuItem(id = "pen", icon = "✏️", label = l("tool_pen"), color = MaterialTheme.colorScheme.primary) { onAction("pen") },
-            RadialMenuItem(id = "highlighter", icon = "🖍️", label = l("tool_highlighter"), color = Color(0xFFF59E0B)) { onAction("highlighter") },
-            RadialMenuItem(id = "eraser", icon = "🧹", label = l("tool_eraser"), color = Color(0xFFEF4444)) { onAction("eraser") },
-            RadialMenuItem(id = "lasso", icon = "➰", label = l("tool_lasso"), color = Color(0xFF8B5CF6)) { onAction("lasso") },
-            RadialMenuItem(id = "undo", icon = "↩️", label = l("undo"), color = Color(0xFF3B82F6)) { onAction("undo") },
-            RadialMenuItem(id = "redo", icon = "↪️", label = l("redo"), color = Color(0xFF3B82F6)) { onAction("redo") },
-            RadialMenuItem(id = "color", icon = "🎨", label = l("pro_color"), color = Color(0xFFEC4899)) { onAction("color") },
-            RadialMenuItem(id = "stabilizer", icon = "〰️", label = l("refine_sketch"), color = Color(0xFF10B981)) { onAction("stabilizer") }
-        ),
+        items = slots.map { action ->
+            val id = RadialSlots.identifier(action)
+            RadialMenuItem(
+                id = id, icon = RadialSlots.icon(action), label = l(RadialSlots.labelKey(action)),
+                color = RadialSlots.color(action) ?: MaterialTheme.colorScheme.primary
+            ) { onAction(id) }
+        },
         onDismiss = { onAction(RADIAL_DISMISS) }
     )
+}
+
+/** 飛梭工具盤每一格的外觀與對應的工具（與 Apple `FfiRadialAction` 的擴充同一張表）。 */
+object RadialSlots {
+    fun identifier(a: FfiRadialAction): String = when (a) {
+        FfiRadialAction.PEN -> "radial.pen"
+        FfiRadialAction.BALL_POINT -> "radial.ballpoint"
+        FfiRadialAction.FINELINER -> "radial.fineliner"
+        FfiRadialAction.BRUSH -> "radial.brush"
+        FfiRadialAction.CALLIGRAPHY -> "radial.calligraphy"
+        FfiRadialAction.PENCIL -> "radial.pencil"
+        FfiRadialAction.CHARCOAL -> "radial.charcoal"
+        FfiRadialAction.CRAYON -> "radial.crayon"
+        FfiRadialAction.AIRBRUSH -> "radial.airbrush"
+        FfiRadialAction.OIL_PAINT -> "radial.oilpaint"
+        FfiRadialAction.WATERCOLOR -> "radial.watercolor"
+        FfiRadialAction.MARKER -> "radial.marker"
+        FfiRadialAction.HIGHLIGHTER -> "radial.highlighter"
+        FfiRadialAction.ERASER -> "radial.eraser"
+        FfiRadialAction.LASSO -> "radial.lasso"
+        FfiRadialAction.MASKING_TAPE -> "radial.maskingTape"
+        FfiRadialAction.DRAFTING -> "radial.drafting"
+        FfiRadialAction.UNDO -> "radial.undo"
+        FfiRadialAction.REDO -> "radial.redo"
+        FfiRadialAction.COLOR -> "radial.color"
+        FfiRadialAction.STABILIZER -> "radial.stabilizer"
+        FfiRadialAction.TOGGLE_MODE -> "radial.toggleMode"
+    }
+
+    fun actionFor(id: String): FfiRadialAction? = FfiRadialAction.entries.firstOrNull { identifier(it) == id }
+
+    /** 對應的繪圖工具（快捷動作沒有）。 */
+    fun inkTool(a: FfiRadialAction): com.kairumo.padnote.ink.InkTool? = when (a) {
+        FfiRadialAction.PEN -> com.kairumo.padnote.ink.InkTool.FOUNTAIN_PEN
+        FfiRadialAction.BALL_POINT -> com.kairumo.padnote.ink.InkTool.BALLPOINT
+        FfiRadialAction.FINELINER -> com.kairumo.padnote.ink.InkTool.FINELINER
+        FfiRadialAction.BRUSH -> com.kairumo.padnote.ink.InkTool.BRUSH
+        FfiRadialAction.CALLIGRAPHY -> com.kairumo.padnote.ink.InkTool.CALLIGRAPHY
+        FfiRadialAction.PENCIL -> com.kairumo.padnote.ink.InkTool.PENCIL
+        FfiRadialAction.CHARCOAL -> com.kairumo.padnote.ink.InkTool.CHARCOAL
+        FfiRadialAction.CRAYON -> com.kairumo.padnote.ink.InkTool.CRAYON
+        FfiRadialAction.AIRBRUSH -> com.kairumo.padnote.ink.InkTool.AIRBRUSH
+        FfiRadialAction.OIL_PAINT -> com.kairumo.padnote.ink.InkTool.OIL_PAINT
+        FfiRadialAction.WATERCOLOR -> com.kairumo.padnote.ink.InkTool.WATERCOLOR
+        FfiRadialAction.MARKER -> com.kairumo.padnote.ink.InkTool.MARKER
+        FfiRadialAction.HIGHLIGHTER -> com.kairumo.padnote.ink.InkTool.HIGHLIGHTER
+        FfiRadialAction.ERASER -> com.kairumo.padnote.ink.InkTool.ERASER
+        FfiRadialAction.LASSO -> com.kairumo.padnote.ink.InkTool.LASSO
+        FfiRadialAction.MASKING_TAPE -> com.kairumo.padnote.ink.InkTool.MASKING_TAPE
+        FfiRadialAction.DRAFTING -> com.kairumo.padnote.ink.InkTool.DRAFTING
+        else -> null
+    }
+
+    /** 字串表的鍵 —— 與工具列、設定畫面同一個字（Apple 同一張表）。 */
+    fun labelKey(a: FfiRadialAction): String = when (a) {
+        FfiRadialAction.UNDO -> "undo"
+        FfiRadialAction.REDO -> "redo"
+        FfiRadialAction.COLOR -> "pro_color"
+        // 以前這一格用的是 refine_sketch（草圖修飾）—— 那是另一個功能，按下去做的卻是平滑防抖。
+        FfiRadialAction.STABILIZER -> "stab_title"
+        FfiRadialAction.TOGGLE_MODE -> "radial_toggle_mode"
+        else -> inkTool(a)?.labelKey ?: "tool_pen"
+    }
+
+    fun icon(a: FfiRadialAction): String = when (a) {
+        FfiRadialAction.PEN -> "✏️"
+        FfiRadialAction.BALL_POINT -> "🖊️"
+        FfiRadialAction.FINELINER -> "🖋️"
+        FfiRadialAction.BRUSH -> "🖌️"
+        FfiRadialAction.CALLIGRAPHY -> "✒️"
+        FfiRadialAction.PENCIL -> "✏"
+        FfiRadialAction.CHARCOAL -> "◼️"
+        FfiRadialAction.CRAYON -> "🖍"
+        FfiRadialAction.AIRBRUSH -> "💨"
+        FfiRadialAction.OIL_PAINT -> "🎨"
+        FfiRadialAction.WATERCOLOR -> "💧"
+        FfiRadialAction.MARKER -> "🖍️"
+        FfiRadialAction.HIGHLIGHTER -> "🖍️"
+        FfiRadialAction.ERASER -> "🧹"
+        FfiRadialAction.LASSO -> "➰"
+        FfiRadialAction.MASKING_TAPE -> "🩹"
+        FfiRadialAction.DRAFTING -> "📐"
+        FfiRadialAction.UNDO -> "↩️"
+        FfiRadialAction.REDO -> "↪️"
+        FfiRadialAction.COLOR -> "🌈"
+        FfiRadialAction.STABILIZER -> "〰️"
+        FfiRadialAction.TOGGLE_MODE -> "⌨️"
+    }
+
+    fun color(a: FfiRadialAction): Color? = when (a) {
+        FfiRadialAction.ERASER -> Color(0xFFEF4444)
+        FfiRadialAction.LASSO -> Color(0xFF8B5CF6)
+        FfiRadialAction.UNDO, FfiRadialAction.REDO -> Color(0xFF3B82F6)
+        FfiRadialAction.COLOR -> Color(0xFFEC4899)
+        FfiRadialAction.STABILIZER -> Color(0xFF10B981)
+        FfiRadialAction.TOGGLE_MODE -> Color(0xFF14B8A6)
+        FfiRadialAction.HIGHLIGHTER, FfiRadialAction.MARKER -> Color(0xFFF59E0B)
+        FfiRadialAction.MASKING_TAPE, FfiRadialAction.DRAFTING -> Color(0xFF92400E)
+        else -> null
+    }
 }
 
 /** [EditorRadialMenu] 點選單外面時送出的動作 id。 */

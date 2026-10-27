@@ -2373,7 +2373,8 @@ internal fun rememberEditorCanvasContext(
         AppCommands.events.collect { command ->
             when (command) {
                 is AppCommand.SelectTool ->
-                    inkToolShortcutOrder.getOrNull(command.index)?.let { inkTool = it }
+                    // 與工具列同一條路（applyInkTool），快捷鍵選到橡皮擦才真的會擦。
+                    inkToolShortcutOrder.getOrNull(command.index)?.let { applyInkTool(it) }
                 // 切回手寫時要清掉選取 —— 與工具列上那顆按鈕做的事一樣。
                 // 只翻模式不清的話，畫面上會浮著一組在手寫模式下按不動的把手。
                 is AppCommand.ToggleEditorMode ->

@@ -9,6 +9,10 @@
 
 import SwiftUI
 
+#if canImport(PadnoteCore)
+import PadnoteCore
+#endif
+
 public struct RadialMenuItem: Identifiable {
     public let id: String
     public let icon: String
@@ -147,6 +151,88 @@ public struct RadialMarkMenuView: View {
         #endif
         withAnimation {
             isPresented = false
+        }
+    }
+}
+
+// MARK: - 可自訂的槽位（核心 `padnote_toolbar::radial`）
+
+extension FfiRadialAction {
+    /// 對應的繪圖工具（快捷動作沒有）。
+    var editorTool: EditorToolType? {
+        switch self {
+        case .pen: return .pen
+        case .ballPoint: return .ballpoint
+        case .fineliner: return .fineliner
+        case .brush: return .brush
+        case .calligraphy: return .calligraphy
+        case .pencil: return .pencil
+        case .charcoal: return .charcoal
+        case .crayon: return .crayon
+        case .airbrush: return .airbrush
+        case .oilPaint: return .oilpaint
+        case .watercolor: return .watercolor
+        case .marker: return .marker
+        case .highlighter: return .highlighter
+        case .eraser: return .eraser
+        case .lasso: return .lasso
+        case .maskingTape: return .maskingTape
+        case .drafting: return .drafting
+        case .undo, .redo, .color, .stabilizer, .toggleMode: return nil
+        }
+    }
+
+    /// 字串表的鍵 —— 與工具列、設定畫面同一個字，使用者才認得出是哪一支。
+    var labelKey: String {
+        switch self {
+        case .undo: return "undo"
+        case .redo: return "redo"
+        case .color: return "pro_color"
+        case .stabilizer: return "stab_title"
+        case .toggleMode: return "radial_toggle_mode"
+        default:
+            return editorTool.map { ToolbarCustomizationView.uiLabelKey($0.parityIdentifier) } ?? "tool_pen"
+        }
+    }
+
+    var symbol: String {
+        switch self {
+        case .pen: return "pencil.tip"
+        case .ballPoint: return "pencil"
+        case .fineliner: return "pencil.line"
+        case .brush: return "paintbrush.pointed"
+        case .calligraphy: return "signature"
+        case .pencil: return "pencil"
+        case .charcoal: return "scribble"
+        case .crayon: return "scribble.variable"
+        case .airbrush: return "aqi.medium"
+        case .oilPaint: return "paintbrush"
+        case .watercolor: return "drop"
+        case .marker: return "highlighter"
+        case .highlighter: return "highlighter"
+        case .eraser: return "eraser"
+        case .lasso: return "lasso"
+        case .maskingTape: return "bandage"
+        case .drafting: return "ruler"
+        case .undo: return "arrow.uturn.backward"
+        case .redo: return "arrow.uturn.forward"
+        case .color: return "paintpalette.fill"
+        case .stabilizer: return "waveform.path.ecg"
+        case .toggleMode: return "keyboard"
+        }
+    }
+
+    var tint: Color {
+        switch self {
+        case .eraser: return .red
+        case .lasso: return .purple
+        case .undo, .redo: return .blue
+        case .color: return .pink
+        case .stabilizer: return .green
+        case .toggleMode: return .teal
+        case .highlighter, .marker: return .orange
+        case .maskingTape, .drafting: return .brown
+        default: return .accentColor
         }
     }
 }

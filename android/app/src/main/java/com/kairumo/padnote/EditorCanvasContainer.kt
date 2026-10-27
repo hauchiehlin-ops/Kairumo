@@ -78,16 +78,26 @@ import java.io.File
 @Composable
 internal fun ColumnScope.EditorCanvasContainer(ctx: EditorCanvasContext) = with(ctx) {
         val radialAction: (String) -> Unit = { id ->
-            when (id) {
-                com.kairumo.padnote.ui.RADIAL_DISMISS -> showRadialMenu = false
-                "pen" -> applyInkTool(InkTool.FOUNTAIN_PEN)
-                "highlighter" -> applyInkTool(InkTool.HIGHLIGHTER)
-                "eraser" -> applyInkTool(InkTool.ERASER)
-                "lasso" -> applyInkTool(InkTool.LASSO)
-                "undo" -> globalUndo()
-                "redo" -> globalRedo()
-                "color" -> showProColorWheel = true
-                "stabilizer" -> strokeStabilizer = if (strokeStabilizer > 0f) 0f else 50f
+            // 槽位是使用者自訂的（見 ui/RadialMarkMenu.kt 的 RadialSlots），id 是 `radial.pen`…。
+            val action = com.kairumo.padnote.ui.RadialSlots.actionFor(id)
+            val tool = action?.let { com.kairumo.padnote.ui.RadialSlots.inkTool(it) }
+            when {
+                id == com.kairumo.padnote.ui.RADIAL_DISMISS -> showRadialMenu = false
+                // 選工具與工具列走同一條路（applyInkTool）：離開套索清選取、橡皮擦旗標等不會漏。
+                tool != null -> applyInkTool(tool)
+                action == uniffi.padnote_core.FfiRadialAction.UNDO -> globalUndo()
+                action == uniffi.padnote_core.FfiRadialAction.REDO -> globalRedo()
+                action == uniffi.padnote_core.FfiRadialAction.COLOR -> showProColorWheel = true
+                action == uniffi.padnote_core.FfiRadialAction.STABILIZER ->
+                    strokeStabilizer = if (strokeStabilizer > 0f) 0f else 50f
+                // 與 Ctrl+E 同一個做法：切回手寫時清掉文字選取。
+                action == uniffi.padnote_core.FfiRadialAction.TOGGLE_MODE ->
+                    if (editorMode == EditorMode.DRAW) {
+                        editorMode = EditorMode.TYPE
+                    } else {
+                        editorMode = EditorMode.DRAW
+                        selectedTextId = null
+                    }
             }
         }
 
