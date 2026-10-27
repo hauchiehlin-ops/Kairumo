@@ -20,6 +20,17 @@ import SwiftUI
 import PadnoteCore
 #endif
 
+private struct OptionalAccessibilityId: ViewModifier {
+    let identifier: String?
+    func body(content: Content) -> some View {
+        if let id = identifier {
+            content.accessibilityIdentifier(id)
+        } else {
+            content
+        }
+    }
+}
+
 /// 工具列設定的單一真相來源。
 ///
 /// `FfiToolbar` 是核心物件（內含 `Mutex`），本身沒有 `objectWillChange`，
@@ -41,7 +52,8 @@ public final class ToolbarSettings: ObservableObject {
 
     private init() {
         let locale = ToolbarSettings.coreLocale()
-        if let saved = AccountSyncStore.shared.syncedToolbarJSON {
+        if let saved = AccountSyncStore.shared.syncedToolbarJSON,
+           ProcessInfo.processInfo.environment["KAIRUMO_UITEST"] != "1" {
             core = FfiToolbar.fromJson(locale: locale, json: saved)
         } else {
             core = FfiToolbar(locale: locale)
@@ -244,6 +256,7 @@ public struct ToolbarCustomizationView: View {
                 }
             }
         }
+        .accessibilityIdentifier("toolbar.customization.list")
         .navigationTitle(L("customize_toolbar"))
         // 明確的「完成」：iPad 的表單式 sheet 只能往下滑才關得掉，很多人不知道。
         .toolbar {
@@ -288,15 +301,16 @@ public struct ToolbarCustomizationView: View {
                         next.swapAt(index, index + 1)
                         settings.setRadialActions(next)
                     }
-                    radialButton("minus.circle.fill", "radial_remove", enabled: slots.count > minSlots, tint: .red) {
+                    radialButton(
+                        "minus.circle.fill", "radial_remove",
+                        enabled: slots.count > minSlots, tint: .red,
+                        identifier: "radial.slot.\(index).remove"
+                    ) {
                         var next = slots
                         next.remove(at: index)
                         settings.setRadialActions(next)
                     }
-                    .accessibilityIdentifier("radial.slot.\(index).remove")
                 }
-                .accessibilityElement(children: .contain)
-                .accessibilityIdentifier("radial.slot.\(index)")
             }
             if slots.count <= minSlots {
                 Text(L("radial_min_hint")).font(.footnote).foregroundStyle(.secondary)
@@ -334,19 +348,23 @@ public struct ToolbarCustomizationView: View {
         }
     }
 
+    @ViewBuilder
     private func radialButton(
         _ symbol: String, _ key: String, enabled: Bool, tint: Color = .accentColor,
+        identifier: String? = nil,
         action: @escaping () -> Void
     ) -> some View {
         Button(action: action) {
             Image(systemName: symbol)
+                .font(.system(size: 16, weight: .semibold))
                 .foregroundStyle(enabled ? tint : Color.secondary.opacity(0.4))
-                .frame(width: 28, height: 28)
+                .frame(width: 36, height: 36)
                 .contentShape(Rectangle())
         }
-        .buttonStyle(.borderless)
+        .buttonStyle(.plain)
         .disabled(!enabled)
         .accessibilityLabel(L(key))
+        .modifier(OptionalAccessibilityId(identifier: identifier))
     }
 
     private var allToolCount: Int {

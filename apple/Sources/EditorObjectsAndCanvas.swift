@@ -1010,7 +1010,7 @@ extension NotebookEditorView {
         if pageDisplayMode == .continuous {
             focusContinuousPage(page)
         } else {
-            currentPageIndex = page
+            switchToPage(page)
         }
         commitNotebook()
         continuousObjectGeneration += 1

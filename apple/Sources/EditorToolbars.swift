@@ -304,11 +304,7 @@ extension NotebookEditorView {
             // 頁碼切換器
             HStack(spacing: 6) {
                 Button {
-                    if currentPageIndex > 0 {
-                        saveCurrentPageDrawing()
-                        currentPageIndex -= 1
-                        loadCurrentPage()
-                    }
+                    switchToPage(currentPageIndex - 1)
                 } label: {
                     Image(systemName: "chevron.left.circle")
                 }
@@ -322,11 +318,7 @@ extension NotebookEditorView {
                     .accessibilityIdentifier("editor.page.indicator")
 
                 Button {
-                    if currentPageIndex < notebook.pageCount - 1 {
-                        saveCurrentPageDrawing()
-                        currentPageIndex += 1
-                        loadCurrentPage()
-                    }
+                    switchToPage(currentPageIndex + 1)
                 } label: {
                     Image(systemName: "chevron.right.circle")
                 }
@@ -774,11 +766,7 @@ extension NotebookEditorView {
         // 頁面導覽群組膠囊 (上一頁、頁碼指示、下一頁、新增頁面、連續/整頁切換)
         HStack(spacing: 2) {
             Button {
-                if currentPageIndex > 0 {
-                    saveCurrentPageDrawing()
-                    currentPageIndex -= 1
-                    loadCurrentPage()
-                }
+                switchToPage(currentPageIndex - 1)
             } label: {
                 Image(systemName: "chevron.left")
                     .font(.system(size: EditorToolbarMetrics.icon - 3, weight: .semibold))
@@ -794,11 +782,7 @@ extension NotebookEditorView {
                 .accessibilityIdentifier("editor.page.indicator")
 
             Button {
-                if currentPageIndex < notebook.pageCount - 1 {
-                    saveCurrentPageDrawing()
-                    currentPageIndex += 1
-                    loadCurrentPage()
-                }
+                switchToPage(currentPageIndex + 1)
             } label: {
                 Image(systemName: "chevron.right")
                     .font(.system(size: EditorToolbarMetrics.icon - 3, weight: .semibold))

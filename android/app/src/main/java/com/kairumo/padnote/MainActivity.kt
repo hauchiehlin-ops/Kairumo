@@ -585,7 +585,7 @@ private fun InkScreen(
             val box = ctx.textStore.createBoxed(200f, 200f, ctx.textStore.pageRules(ctx.meta.paperId(ctx.pageIndex)), ctx.snapToGrid)
             ctx.textStore.persist(box)
             ctx.editingText = box
-            ctx.selectedTextId = box.id
+            ctx.selectText(box.id)
             ctx.editorMode = EditorMode.TYPE
             ctx.textRevision++
             ctx.stackRevision++
@@ -645,7 +645,7 @@ private fun InkScreen(
             onModeChange = { newMode ->
                 editorMode = newMode
                 if (newMode == EditorMode.DRAW) {
-                    selectedTextId = null
+                    clearSelection()
                     editingText = null
                 }
             },
@@ -664,17 +664,16 @@ private fun InkScreen(
             onRevertInitial = { showRevertConfirm = true },
             onOpenAssetLibrary = { showAssetLibrary = true },
             onToggleCommentPin = { isPlacingCommentPin = !isPlacingCommentPin },
-            onPrevPage = { if (pageIndex > 0) pageIndex-- },
-            onNextPage = { if (pageIndex < pageCount - 1) pageIndex++ },
+            onPrevPage = { switchToPage(pageIndex - 1) },
+            onNextPage = { switchToPage(pageIndex + 1) },
             onAddPage = {
                 val s = notebook?.first
                 if (s != null) {
                     runCatching { s.addPage(uniffi.padnote_core.PageStyle.BLANK) }
                     pageCount = runCatching { s.pageCount().toInt() }.getOrDefault(pageCount + 1)
-                    pageIndex = pageCount - 1
+                    switchToPage(pageCount - 1)
                     revision++
                     continuousContentRevision++
-                    continuousScrollRequest++
                 }
             },
             onTogglePageDisplayMode = {
@@ -747,7 +746,7 @@ private fun InkScreen(
                 val box = textStore.createBoxed(200f, 200f, textStore.pageRules(meta.paperId(pageIndex)), snapToGrid)
                 textStore.persist(box)
                 editingText = box
-                selectedTextId = box.id
+                selectText(box.id)
                 editorMode = EditorMode.TYPE
                 textRevision++
                 stackRevision++

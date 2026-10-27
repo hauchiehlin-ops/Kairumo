@@ -100,21 +100,19 @@ final class InkInvariantMatrixAudit: XCTestCase {
 
         // 切到打字模式
         let typeBtn = find(app, "portal.type")
-        if typeBtn.waitForExistence(timeout: 8) {
-            typeBtn.tap()
-            Thread.sleep(forTimeInterval: 0.5)
-            let typedStrokes = parseStrokeCount(app)
-            XCTAssertEqual(typedStrokes, 3, "切換到打字模式後筆畫不准消失或歸零")
-        }
+        XCTAssertTrue(typeBtn.waitForExistence(timeout: 8), "找不到切換打字模式按鈕（portal.type）")
+        typeBtn.tap()
+        Thread.sleep(forTimeInterval: 0.5)
+        let typedStrokes = parseStrokeCount(app)
+        XCTAssertEqual(typedStrokes, 3, "切換到打字模式後筆畫不准消失或歸零")
 
         // 切回手繪模式
         let drawBtn = find(app, "portal.draw")
-        if drawBtn.waitForExistence(timeout: 8) {
-            drawBtn.tap()
-            Thread.sleep(forTimeInterval: 0.5)
-            let backStrokes = parseStrokeCount(app)
-            XCTAssertEqual(backStrokes, 3, "切回手寫模式後筆畫必須完好留存")
-        }
+        XCTAssertTrue(drawBtn.waitForExistence(timeout: 8), "找不到切換手繪模式按鈕（portal.draw）")
+        drawBtn.tap()
+        Thread.sleep(forTimeInterval: 0.5)
+        let backStrokes = parseStrokeCount(app)
+        XCTAssertEqual(backStrokes, 3, "切回手寫模式後筆畫必須完好留存")
     }
 
     /// 不變式 I3：點擊側邊欄縮圖換頁，每一頁的筆跡都維持各自的數量（防序號錯位與覆蓋）。
@@ -123,37 +121,35 @@ final class InkInvariantMatrixAudit: XCTestCase {
         guard openInkNotebook(app) else { return }
 
         // 打開側邊欄（若尚未展開）
-        let sidebarToggle = find(app, "editor.sidebar_toggle")
-        if sidebarToggle.waitForExistence(timeout: 5) && sidebarToggle.isHittable {
+        let page1 = find(app, "sidebar.page.1")
+        if !page1.waitForExistence(timeout: 2) {
+            let sidebarToggle = find(app, "editor.sidebar_toggle")
+            XCTAssertTrue(sidebarToggle.waitForExistence(timeout: 5), "找不到側欄切換按鈕（editor.sidebar_toggle）")
             sidebarToggle.tap()
         }
 
         // 點第 1 頁縮圖（預期 5 筆）
-        let page1 = find(app, "sidebar.page.1")
-        if page1.waitForExistence(timeout: 8) {
-            page1.tap()
-            Thread.sleep(forTimeInterval: 0.6)
-            let p1Strokes = parseStrokeCount(app)
-            XCTAssertEqual(p1Strokes, 5, "切換到第 1 頁後筆畫數應為 5")
-        }
+        XCTAssertTrue(page1.waitForExistence(timeout: 8), "找不到第 1 頁縮圖（sidebar.page.1）")
+        page1.tap()
+        Thread.sleep(forTimeInterval: 0.6)
+        let p1Strokes = parseStrokeCount(app)
+        XCTAssertEqual(p1Strokes, 5, "切換到第 1 頁後筆畫數應為 5")
 
         // 點第 2 頁縮圖（預期 2 筆）
         let page2 = find(app, "sidebar.page.2")
-        if page2.waitForExistence(timeout: 8) {
-            page2.tap()
-            Thread.sleep(forTimeInterval: 0.6)
-            let p2Strokes = parseStrokeCount(app)
-            XCTAssertEqual(p2Strokes, 2, "切換到第 2 頁後筆畫數應為 2")
-        }
+        XCTAssertTrue(page2.waitForExistence(timeout: 8), "找不到第 2 頁縮圖（sidebar.page.2）")
+        page2.tap()
+        Thread.sleep(forTimeInterval: 0.6)
+        let p2Strokes = parseStrokeCount(app)
+        XCTAssertEqual(p2Strokes, 2, "切換到第 2 頁後筆畫數應為 2")
 
         // 回到第 0 頁（預期 3 筆，不能因為前面切換被空筆記蓋掉）
         let page0 = find(app, "sidebar.page.0")
-        if page0.waitForExistence(timeout: 8) {
-            page0.tap()
-            Thread.sleep(forTimeInterval: 0.6)
-            let p0Strokes = parseStrokeCount(app)
-            XCTAssertEqual(p0Strokes, 3, "切回第 0 頁後筆畫數必須仍為 3")
-        }
+        XCTAssertTrue(page0.waitForExistence(timeout: 8), "找不到第 0 頁縮圖（sidebar.page.0）")
+        page0.tap()
+        Thread.sleep(forTimeInterval: 0.6)
+        let p0Strokes = parseStrokeCount(app)
+        XCTAssertEqual(p0Strokes, 3, "切回第 0 頁後筆畫數必須仍為 3")
     }
 
     /// 不變式 I2：固定頁面與連續頁面切換後，筆跡完整性維持。
@@ -165,18 +161,18 @@ final class InkInvariantMatrixAudit: XCTestCase {
         XCTAssertEqual(initialStrokes, 3, "初始筆畫應為 3")
 
         let modeBtn = find(app, "editor.page.display_mode")
-        if modeBtn.waitForExistence(timeout: 8) && modeBtn.isHittable {
-            // 切換至連續模式
-            modeBtn.tap()
-            Thread.sleep(forTimeInterval: 0.8)
-            let contStrokes = parseStrokeCount(app)
-            XCTAssertEqual(contStrokes, 3, "切換至連續模式後第 0 頁筆畫數應為 3")
+        XCTAssertTrue(modeBtn.waitForExistence(timeout: 8), "找不到版面切換按鈕（editor.page.display_mode）")
+        XCTAssertTrue(modeBtn.isHittable, "版面切換按鈕不可被遮擋")
+        // 切換至連續模式
+        modeBtn.tap()
+        Thread.sleep(forTimeInterval: 0.8)
+        let contStrokes = parseStrokeCount(app)
+        XCTAssertEqual(contStrokes, 3, "切換至連續模式後第 0 頁筆畫數應為 3")
 
-            // 切回單頁模式
-            modeBtn.tap()
-            Thread.sleep(forTimeInterval: 0.8)
-            let singleStrokes = parseStrokeCount(app)
-            XCTAssertEqual(singleStrokes, 3, "切回單頁模式後第 0 頁筆畫數應為 3")
-        }
+        // 切回單頁模式
+        modeBtn.tap()
+        Thread.sleep(forTimeInterval: 0.8)
+        let singleStrokes = parseStrokeCount(app)
+        XCTAssertEqual(singleStrokes, 3, "切回單頁模式後第 0 頁筆畫數應為 3")
     }
 }

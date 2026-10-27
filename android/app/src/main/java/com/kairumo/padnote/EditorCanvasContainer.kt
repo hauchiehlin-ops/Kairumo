@@ -96,7 +96,7 @@ internal fun ColumnScope.EditorCanvasContainer(ctx: EditorCanvasContext) = with(
                         editorMode = EditorMode.TYPE
                     } else {
                         editorMode = EditorMode.DRAW
-                        selectedTextId = null
+                        clearSelection()
                     }
             }
         }
@@ -118,17 +118,16 @@ internal fun ColumnScope.EditorCanvasContainer(ctx: EditorCanvasContext) = with(
                         revision = revision + textRevision + shapeRevision + tableRevision +
                             chartRevision + imageRevision + model3DRevision + continuousContentRevision,
                         l = { key -> l10n(key) },
-                        onSelectPage = { pageIndex = it; continuousScrollRequest++ },
+                        onSelectPage = { switchToPage(it) },
                         onAddPage = {
                             val s = notebook?.first
                             if (s != null) {
                                 runCatching { s.addPage(uniffi.padnote_core.PageStyle.BLANK) }
                                 pageCount = runCatching { s.pageCount().toInt() }
                                     .getOrDefault(pageCount + 1)
-                                pageIndex = pageCount - 1
+                                switchToPage(pageCount - 1)
                                 revision++
                                 continuousContentRevision++
-                                continuousScrollRequest++
                             }
                         },
                         onMovePage = { from, to -> movePage(from, to) },
@@ -160,7 +159,8 @@ internal fun ColumnScope.EditorCanvasContainer(ctx: EditorCanvasContext) = with(
                         focusIndex = pageIndex,
                         // 焦點頁就是外層的 pageIndex，所以選單裡的插入動作
                         // 自然落在使用者正在看的那一頁。
-                        onFocusChange = { pageIndex = it },
+                        onFocusChange = { pageIndex = it // state-entry: 連續模式焦點正門
+                        },
                         ink = InkSettings(
                             tool = inkTool.kind ?: uniffi.padnote_core.ToolKind.FOUNTAIN_PEN,
                             colorRgba = hexToRgba(inkColorHex),
@@ -279,7 +279,7 @@ internal fun ColumnScope.EditorCanvasContainer(ctx: EditorCanvasContext) = with(
                         inserted.height = placed.height
                         imageStore.persist(inserted)
                         imageRevision++
-                        selectedImageId = inserted.id
+                        selectImage(inserted.id)
                         // 插進來之後切到打字模式：手寫模式下物件不吃觸控，
                         // 使用者剛拖進來的圖會拖不動，看起來像插壞了。
                         editorMode = EditorMode.TYPE
@@ -303,17 +303,16 @@ internal fun ColumnScope.EditorCanvasContainer(ctx: EditorCanvasContext) = with(
                     revision = revision + textRevision + shapeRevision + tableRevision +
                         chartRevision + imageRevision + model3DRevision + continuousContentRevision,
                     l = { key -> l10n(key) },
-                    onSelectPage = { pageIndex = it },
+                    onSelectPage = { switchToPage(it) },
                     onAddPage = {
                         val s = notebook?.first
                         if (s != null) {
                             runCatching { s.addPage(uniffi.padnote_core.PageStyle.BLANK) }
                             pageCount = runCatching { s.pageCount().toInt() }
                                 .getOrDefault(pageCount + 1)
-                            pageIndex = pageCount - 1
+                            switchToPage(pageCount - 1)
                             revision++
                             continuousContentRevision++
-                            continuousScrollRequest++
                         }
                     },
                     onMovePage = { from, to -> movePage(from, to) },
@@ -611,7 +610,7 @@ internal fun ColumnScope.EditorCanvasContainer(ctx: EditorCanvasContext) = with(
                     frames = marqueeCandidatesLatest.sortedBy { stackOrderLatest.indexOf(it.id) },
                     stackOrder = stackOrderLatest,
                     onWritten = { box ->
-                        selectedTextId = box.id
+                        selectText(box.id)
                         editorMode = EditorMode.TYPE
                         stackRevision++
                         textRevision++
@@ -639,7 +638,7 @@ internal fun ColumnScope.EditorCanvasContainer(ctx: EditorCanvasContext) = with(
                                     tapY >= (box.y - 10f) && tapY <= (box.y + box.height + 10f)
                                 }
                                 if (hitExisting != null) {
-                                    selectedTextId = hitExisting.id
+                                    selectText(hitExisting.id)
                                     com.kairumo.padnote.text.InlineTextEditing.activeId = hitExisting.id
                                 } else {
                                     val newBox = textStore.createTapToWrite(tapX, tapY, textStore.pageRules(meta.paperId(pageIndex)), snapToGrid)
@@ -650,7 +649,7 @@ internal fun ColumnScope.EditorCanvasContainer(ctx: EditorCanvasContext) = with(
                                     meta.setObjectOrder(notebook?.first, pageIndex, updatedOrder)
                                     stackRevision++
                                     textRevision++
-                                    selectedTextId = newBox.id
+                                    selectText(newBox.id)
                                     com.kairumo.padnote.text.InlineTextEditing.activeId = newBox.id
                                 }
                             }
@@ -725,7 +724,7 @@ internal fun ColumnScope.EditorCanvasContainer(ctx: EditorCanvasContext) = with(
                         // 全自動意圖感知：偵測到 Stylus 觸控筆下筆時，自動平滑切換回 DRAW 手繪模式
                         if (editorMode != EditorMode.DRAW) {
                             editorMode = EditorMode.DRAW
-                            selectedTextId = null
+                            clearSelection()
                         }
                     },
                     acceptsInk = editorMode == EditorMode.DRAW
@@ -761,7 +760,7 @@ internal fun ColumnScope.EditorCanvasContainer(ctx: EditorCanvasContext) = with(
                         // 全自動意圖感知：偵測到 Stylus 觸控筆下筆時，自動平滑切換回 DRAW 手繪模式
                         if (editorMode != EditorMode.DRAW) {
                             editorMode = EditorMode.DRAW
-                            selectedTextId = null
+                            clearSelection()
                         }
                     },
                     contentVersion = revision,
@@ -873,7 +872,7 @@ internal fun ColumnScope.EditorCanvasContainer(ctx: EditorCanvasContext) = with(
                 selectedId = selectedImageId,
                 interactive = editorMode == EditorMode.TYPE || selectedImageId != null,
                 onSelect = { id ->
-                    selectedImageId = id
+                    selectImage(id)
                     if (id != null && editorMode != EditorMode.TYPE) {
                         editorMode = EditorMode.TYPE
                     }
@@ -893,7 +892,7 @@ internal fun ColumnScope.EditorCanvasContainer(ctx: EditorCanvasContext) = with(
                 selectedId = selectedTextId,
                 revision = textRevision,
                 onSelect = { id ->
-                    selectedTextId = id
+                    selectText(id)
                     if (id != null && editorMode != EditorMode.TYPE) {
                         editorMode = EditorMode.TYPE
                     }
@@ -905,14 +904,14 @@ internal fun ColumnScope.EditorCanvasContainer(ctx: EditorCanvasContext) = with(
                     if (com.kairumo.padnote.text.InlineTextEditing.activeId == box.id) com.kairumo.padnote.text.InlineTextEditing.activeId = null
                     if (box.text.isBlank() && editingText?.id != box.id) {
                         textStore.remove(box)
-                        if (selectedTextId == box.id) selectedTextId = null
+                        if (selectedTextId == box.id) selectText(null)
                         textRevision++
                     }
                 },
                 onChanged = { box -> textStore.persist(box); textRevision++ },
                 onDelete = { box ->
                     textStore.remove(box)
-                    if (selectedTextId == box.id) selectedTextId = null
+                    if (selectedTextId == box.id) selectText(null)
                     if (editingText?.id == box.id) editingText = null
                     textRevision++
                 },
@@ -1242,7 +1241,7 @@ internal fun ColumnScope.EditorCanvasContainer(ctx: EditorCanvasContext) = with(
                                 meta.objectOrder(pageIndex)
                             )
                             meta.setObjectOrder(notebook?.first, pageIndex, updatedOrder)
-                            selectedTextId = newBox.id
+                            selectText(newBox.id)
                             editingText = newBox
                             editorMode = EditorMode.TYPE
                             stackRevision++
@@ -1528,7 +1527,7 @@ internal fun ColumnScope.EditorCanvasContainer(ctx: EditorCanvasContext) = with(
                                     textStore.persist(box)
                                     // 等待辨識期間選取可能已被清掉：那就保留原筆跡，只加文字。
                                     if (lasso.selected.toSet() == selIds && lasso.delete(engine)) revision++
-                                    selectedTextId = box.id
+                                    selectText(box.id)
                                     textRevision++
                                     message = l10n("lasso_recognize_done")
                                 } else {
@@ -1762,10 +1761,9 @@ internal fun ColumnScope.EditorCanvasContainer(ctx: EditorCanvasContext) = with(
                     if (s != null) {
                         runCatching { s.addPage(uniffi.padnote_core.PageStyle.BLANK) }
                         pageCount = runCatching { s.pageCount().toInt() }.getOrDefault(pageCount + 1)
-                        pageIndex = pageCount - 1
+                        switchToPage(pageCount - 1)
                         revision++
                         continuousContentRevision++
-                        continuousScrollRequest++
                     }
                 },
                 onColorPick = { hex -> engine.colorRgba = hexToRgba(hex) },

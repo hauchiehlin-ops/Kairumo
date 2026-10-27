@@ -751,7 +751,7 @@ public struct NotebookEditorView: View {
         .onChange(of: notebook.id) { _ in
             DispatchQueue.main.async {
                 // 外層換綁之後才會走到這裡，這時 notebook 已經是新的那一則。
-                currentPageIndex = 0
+                currentPageIndex = 0 // state-entry: 初始開啟筆記正門
                 // 換到的這一本若是範例，同樣先備份到暫存區。
                 store.beginSampleSession(notebook.id)
                 MainThreadStallMonitor.shared.breadcrumb("open notebook \(notebook.id.prefix(8))")
@@ -796,7 +796,7 @@ public struct NotebookEditorView: View {
             store.activeNotebookId = notebook.id
             if let targetPageStr = ProcessInfo.processInfo.environment["KAIRUMO_AUTO_OPEN_PAGE"],
                let targetPage = Int(targetPageStr), targetPage >= 0 && targetPage < notebook.pageCount {
-                currentPageIndex = targetPage
+                currentPageIndex = targetPage // state-entry: 模式切換保持頁碼 // state-entry: 外部跳頁初始化正門
             }
             loadCurrentPage()
             objectHistory.reset(to: notebook)
@@ -1417,7 +1417,7 @@ public struct NotebookEditorView: View {
                             pageOrigins = nil
                             objectHistory.pageStructureChanged(snapshot, manager: historyUndoManager)
                         }
-                        currentPageIndex = min(currentPageIndex, max(0, snapshot.pageCount - 1))
+                        currentPageIndex = min(currentPageIndex, max(0, snapshot.pageCount - 1)) // state-entry: 恢復快照頁碼修正
                         activeInkStore.clearAllCoreBaselines()
                         continuousCanvases.invalidateCachedDrawings()
                         notebook = snapshot
@@ -1477,7 +1477,7 @@ public struct NotebookEditorView: View {
                 let targetPage = currentPageIndex
                 continuousProgrammaticScrollUntil = Date().addingTimeInterval(0.8)
                 transitionToMode(mode)
-                currentPageIndex = targetPage
+                currentPageIndex = targetPage // state-entry: 模式切換保持頁碼
                 continuousReportedPage = targetPage
             },
             onExitContextual: {
@@ -1593,6 +1593,18 @@ public struct NotebookEditorView: View {
             editorMode = targetMode // state-entry: 切換模式的唯一正門
         }
         flashModeBadge()
+    }
+
+    /// 統一頁面切換正門：存上一頁筆跡、邊界檢查、切換狀態、載入新頁筆跡、檢查製圖紙筆組。
+    func switchToPage(_ targetPage: Int) {
+        let bounded = min(max(0, targetPage), max(0, notebook.pageCount - 1))
+        guard bounded != currentPageIndex else { return }
+        saveCurrentPageDrawing()
+        currentPageIndex = bounded // state-entry: 切換頁面的唯一正門
+        loadCurrentPage()
+        if paperUsesDrafting(paperId: notebook.paperId(forPage: bounded)) {
+            applyEditorTool(.drafting)
+        }
     }
 
 }

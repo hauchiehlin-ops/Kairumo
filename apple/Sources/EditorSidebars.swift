@@ -533,9 +533,7 @@ extension NotebookEditorView {
                     return
                 }
                 if currentPageIndex != idx {
-                    saveCurrentPageDrawing()
-                    currentPageIndex = idx
-                    loadCurrentPage()
+                    switchToPage(idx)
                 } else if pageDisplayMode == .continuous {
                     continuousScrollRequest += 1
                 }
@@ -767,7 +765,7 @@ extension NotebookEditorView {
             if let updated = store.notebooks.first(where: { $0.id == notebook.id }) {
                 notebook = updated
             }
-            currentPageIndex = min(max(0, landing), max(0, notebook.pageCount - 1))
+            currentPageIndex = min(max(0, landing), max(0, notebook.pageCount - 1)) // state-entry: 頁面結構變更 landing 頁碼
             objectHistory.pageStructureChanged(notebook, manager: historyUndoManager)
             loadCurrentPage()
             (canvasView as? AdaptiveCanvasView)?.proLayer?.reload()

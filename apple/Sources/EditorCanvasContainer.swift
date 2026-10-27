@@ -116,7 +116,7 @@ extension NotebookEditorView {
                     isPresented: $showRadialMenu,
                     centerPoint: radialMenuCenter(in: geo),
                     // 槽位是使用者自訂的（設定 → 自訂工具列 → 飛梭工具盤），規則與 Android 同一份在核心。
-                    items: ToolbarSettings.shared.radialActions.map { action in
+                    items: toolbarSettings.radialActions.map { action in
                         RadialMenuItem(
                             id: action.parityIdentifier,
                             icon: action.symbol, labelKey: action.labelKey, color: action.tint
@@ -1089,7 +1089,7 @@ extension NotebookEditorView {
     func focusContinuousPage(_ index: Int) {
         guard index != currentPageIndex else { return }
         continuousReportedPage = index
-        currentPageIndex = index
+        currentPageIndex = index // state-entry: 連續模式焦點頁切換正門
         if let canvas = continuousCanvases[index] {
             continuousCanvases.activeCanvas = canvas
             canvasView = canvas
@@ -1162,7 +1162,7 @@ extension NotebookEditorView {
         }
         guard let page = nearest?.key, page != currentPageIndex else { return }
         continuousReportedPage = page
-        currentPageIndex = page
+        currentPageIndex = page // state-entry: 連續模式視窗焦點頁切換正門
         if let canvas = continuousCanvases[page] {
             continuousCanvases.activeCanvas = canvas
             canvasView = canvas

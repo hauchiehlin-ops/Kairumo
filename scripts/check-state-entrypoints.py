@@ -23,7 +23,11 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 RULES = [
     ("Apple", "apple/Sources", ".swift", "selectedTool", "applyEditorTool / selectEditorTool"),
     ("Apple", "apple/Sources", ".swift", "editorMode", "transitionToMode"),
+    ("Apple", "apple/Sources", ".swift", "currentPageIndex", "switchToPage / focusContinuousPage"),
     ("Android", "android/app/src/main/java", ".kt", "inkTool", "applyInkTool"),
+    ("Android", "android/app/src/main/java", ".kt", "pageIndex", "switchToPage"),
+    ("Android", "android/app/src/main/java", ".kt", "selectedTextId", "selectText / clearSelection"),
+    ("Android", "android/app/src/main/java", ".kt", "selectedImageId", "selectImage / clearSelection"),
 ]
 
 MARKER = "state-entry:"
@@ -43,12 +47,22 @@ def violations():
                 m = write.search(code)
                 if not m or MARKER in line or decl.search(code):
                     continue
-                if m.group(1) in ("self.", "this."):
+                prefix = m.group(1)
+                if prefix in ("self.", "this."):
                     continue
-                # Kotlin 的具名參數（整行就是 `inkTool = x,`）不是寫入。只看行首：
+                # 非 context 前綴的物件屬性寫入（如 tape.pageIndex、view.pageIndex 等）非全域編輯器狀態
+                if prefix and prefix != "ctx.":
+                    continue
+                # 檢查是否為函式呼叫的具名引數（如 `copy(pageIndex = ...)` 或多參數呼叫）
+                start = m.start()
+                before = code[:start].rstrip()
+                if before.endswith("(") or before.endswith(","):
+                    if not re.search(r"->\s*$", before):
+                        continue
+                # Kotlin 的具名參數（如 `pageIndex = x,` 或 `pageIndex = x, foo = y`）不是寫入。只看行首：
                 # `onToolChange = { t -> ctx.inkTool = t },` 也以逗號結尾，但那是真的寫入
                 # （拆檔後 Android 主工具列就是這一行繞過了 applyInkTool）。
-                if ext == ".kt" and re.match(r"\s*" + name + r"\s*=", code) and code.rstrip().endswith(","):
+                if ext == ".kt" and re.match(r"\s*" + name + r"\s*=", code) and (code.rstrip().endswith(",") or "," in code):
                     continue
                 rel = path.relative_to(ROOT)
                 out.append(f"{platform}  {rel}:{no}  直接改 `{name}`，請改走 {entry}\n    {line.strip()}")
@@ -62,7 +76,7 @@ def main():
         for v in found:
             print("  " + v, file=sys.stderr)
         return 1
-    print("✅ 編輯器狀態都走正門（換工具、切模式）")
+    print("✅ 編輯器狀態都走正門（換工具、切模式、切頁面、選取）")
     return 0
 
 

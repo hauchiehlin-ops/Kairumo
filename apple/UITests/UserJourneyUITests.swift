@@ -39,16 +39,40 @@ final class UserJourneyUITests: XCTestCase {
         let el = element(id)
         XCTAssertTrue(el.waitForExistence(timeout: timeout), "\(why)（找不到 \(id)）")
         el.tap()
-        sleep(1)
+        Thread.sleep(forTimeInterval: 1.5)
     }
 
     /// 在清單裡往下捲到看得到為止再點（設定畫面的飛梭工具盤區段可能在摺線下）。
     private func scrollAndTap(_ id: String, _ why: String) {
+        // 先確定自訂工具列 sheet 已經開起來了，並等待過場動畫穩定
+        let sheetList = element("toolbar.customization.list")
+        XCTAssertTrue(sheetList.waitForExistence(timeout: 5), "自訂工具列未展開")
+        Thread.sleep(forTimeInterval: 1.0)
+
         let el = element(id)
-        for _ in 0..<8 where !(el.exists && el.isHittable) { app.swipeUp() }
-        XCTAssertTrue(el.exists && el.isHittable, "\(why)（找不到 \(id)）")
+        if el.waitForExistence(timeout: 2) && el.isHittable {
+            el.tap()
+            Thread.sleep(forTimeInterval: 1.5)
+            return
+        }
+
+        // 溫和向下滾動（每次只滑 25% 高度，避免整格飛出畫面外）
+        for _ in 0..<8 {
+            if sheetList.exists {
+                let start = sheetList.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.65))
+                let end = sheetList.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.35))
+                start.press(forDuration: 0.05, thenDragTo: end)
+            } else {
+                app.swipeUp()
+            }
+            Thread.sleep(forTimeInterval: 0.5)
+            if el.exists && el.isHittable {
+                break
+            }
+        }
+        XCTAssertTrue(el.waitForExistence(timeout: 5) && el.isHittable, "\(why)（找不到 \(id)）")
         el.tap()
-        sleep(1)
+        Thread.sleep(forTimeInterval: 1.5)
     }
 
     private func openInkNotebook() {
@@ -105,9 +129,12 @@ final class UserJourneyUITests: XCTestCase {
         tap("editor.more", "找不到「更多」選單")
         tap("editor.customize_toolbar", "「更多」選單裡找不到自訂工具列")
         scrollAndTap("radial.reset", "自訂工具列裡找不到「還原工具盤預設」")
+        tap("toolbar.done", "自訂工具列沒有完成鈕")
+        let sheet = element("toolbar.customization.list")
+        _ = sheet.waitForNonExistence(timeout: 5)
     }
 
-    func testEraserPickedFromTheToolbarReallyErases() throws {
+    private func eraserJourney() {
         openInkNotebook()
         tap("editor.ink.pen", "工具列上找不到鋼筆")
         let before = drawOneStroke(atHeight: 0.42)
@@ -117,20 +144,48 @@ final class UserJourneyUITests: XCTestCase {
         XCTAssertLessThanOrEqual(strokes(), before, "工具列選了橡皮擦，畫過那一筆應該擦掉它，而不是多畫一筆")
     }
 
+    func testEraserPickedFromTheToolbarReallyErases() throws {
+        eraserJourney()
+    }
+
+    /// P0: Apple 連續頁面模式也跑一條橡皮擦旅程（Android 已兩種模式都跑）。
+    func testEraserPickedFromTheToolbarReallyErases_continuousPages() throws {
+        openInkNotebook()
+        let modeBtn = element("editor.page.display_mode")
+        XCTAssertTrue(modeBtn.waitForExistence(timeout: 8), "找不到版面切換按鈕")
+        modeBtn.tap()
+        Thread.sleep(forTimeInterval: 1.0)
+
+        tap("editor.ink.pen", "工具列上找不到鋼筆")
+        let before = drawOneStroke(atHeight: 0.42)
+
+        tap("editor.ink.eraser", "工具列上找不到橡皮擦")
+        stroke(atHeight: 0.42)
+        XCTAssertLessThanOrEqual(strokes(), before, "連續模式下工具列選了橡皮擦，畫過那一筆應該擦掉它")
+
+        // 復原為單頁模式
+        modeBtn.tap()
+        Thread.sleep(forTimeInterval: 0.5)
+    }
+
     func testCustomizedRadialMenuIsWhatTheMenuShows() throws {
         openInkNotebook()
         tap("editor.ink.pen", "工具列上找不到鋼筆")
         let before = drawOneStroke(atHeight: 0.58)
 
-        // 設定：先還原成出廠的八格，再拿掉第一格（鋼筆）。
-        resetRadialFromSettings()
+        // 設定：拿掉第一格（鋼筆，出廠預設八格之首）。
+        tap("editor.more", "找不到「更多」選單")
+        tap("editor.customize_toolbar", "「更多」選單裡找不到自訂工具列")
         scrollAndTap("radial.slot.0.remove", "自訂工具列裡找不到飛梭工具盤的槽位")
         tap("toolbar.done", "自訂工具列沒有完成鈕")
+        let sheet = element("toolbar.customization.list")
+        _ = sheet.waitForNonExistence(timeout: 5)
 
         // 叫出工具盤：拿掉的那一格不在，其餘照舊。
         tap("editor.radial_toggle", "工具列上找不到飛梭工具盤按鈕")
         XCTAssertTrue(element("radial.eraser").waitForExistence(timeout: 5), "工具盤上應該還有橡皮擦")
-        XCTAssertFalse(element("radial.pen").exists, "拿掉的鋼筆不該再出現在工具盤上")
+        let pen = element("radial.pen")
+        XCTAssertFalse(pen.exists, "拿掉的鋼筆不該再出現在工具盤上")
 
         // 選工具盤上的橡皮擦：與工具列同一條路，真的會擦。
         element("radial.eraser").tap()
@@ -140,6 +195,5 @@ final class UserJourneyUITests: XCTestCase {
 
         // 設定跟著帳號跑：測完還原，不然下一個測試（或開發者自己的裝置）工具盤就少一格。
         resetRadialFromSettings()
-        tap("toolbar.done", "自訂工具列沒有完成鈕")
     }
 }
