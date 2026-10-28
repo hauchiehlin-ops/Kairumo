@@ -115,7 +115,6 @@ class UserJourneyTest {
         com.kairumo.padnote.library.NotebookLibrary.create(context, "User journey", device, id = JOURNEY_ID)!!
         val intent = android.content.Intent(context, MainActivity::class.java)
             .putExtra("open_notebook_id", JOURNEY_ID)
-            .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
         val scenario = ActivityScenario.launch<MainActivity>(intent)
         waitFor("editor.canvas", "打開筆記之後看不到畫布", 30_000)
         compose.waitForIdle()
@@ -143,64 +142,90 @@ class UserJourneyTest {
      * 走系統的輸入管線送**手指**事件，而不是 Compose 的 `performTouchInput`：後者送出的觸控類型是
      * UNKNOWN，核心的輸入仲裁不把它當成手指 —— 畫布一筆都不收，測不到使用者實際會遇到的事。
      */
-    private fun injectSwipe(x0: Float, y: Float, x1: Float, durationMs: Long = 300) {
+    private fun injectSwipe(
+        scenario: ActivityScenario<MainActivity>,
+        screenX0: Float,
+        screenY: Float,
+        screenX1: Float,
+        winX0: Float,
+        winY: Float,
+        winX1: Float,
+        durationMs: Long = 300
+    ) {
         val uiAutomation = InstrumentationRegistry.getInstrumentation().uiAutomation
         val downTime = SystemClock.uptimeMillis()
         val steps = 15
         val stepTime = durationMs / steps
 
-        fun sendEvent(action: Int, x: Float, eventTime: Long) {
+        var activityRef: MainActivity? = null
+        scenario.onActivity { activityRef = it }
+        val activity = activityRef
+
+        fun sendEvent(action: Int, currScreenX: Float, currWinX: Float, eventTime: Long) {
             val props = arrayOf(MotionEvent.PointerProperties().apply {
                 id = 0
                 toolType = MotionEvent.TOOL_TYPE_FINGER
             })
-            val coords = arrayOf(MotionEvent.PointerCoords().apply {
-                this.x = x
-                this.y = y
-                this.pressure = 1.0f
-                this.size = 1.0f
+            val screenCoords = arrayOf(MotionEvent.PointerCoords().apply {
+                x = currScreenX
+                y = screenY
+                pressure = 1.0f
+                size = 1.0f
             })
-            val event = MotionEvent.obtain(
-                downTime, eventTime, action, 1, props, coords,
+            val screenEvent = MotionEvent.obtain(
+                downTime, eventTime, action, 1, props, screenCoords,
                 0, 0, 1.0f, 1.0f, 0, 0,
                 InputDevice.SOURCE_TOUCHSCREEN, 0
             )
-            uiAutomation.injectInputEvent(event, true)
-            event.recycle()
+            val injected = runCatching {
+                uiAutomation.injectInputEvent(screenEvent, true)
+            }.getOrDefault(false)
+            screenEvent.recycle()
+
+            if (!injected && activity != null) {
+                val winCoords = arrayOf(MotionEvent.PointerCoords().apply {
+                    x = currWinX
+                    y = winY
+                    pressure = 1.0f
+                    size = 1.0f
+                })
+                val winEvent = MotionEvent.obtain(
+                    downTime, eventTime, action, 1, props, winCoords,
+                    0, 0, 1.0f, 1.0f, 0, 0,
+                    InputDevice.SOURCE_TOUCHSCREEN, 0
+                )
+                InstrumentationRegistry.getInstrumentation().runOnMainSync {
+                    activity.dispatchTouchEvent(winEvent)
+                }
+                winEvent.recycle()
+            }
         }
 
-        sendEvent(MotionEvent.ACTION_DOWN, x0, downTime)
+        sendEvent(MotionEvent.ACTION_DOWN, screenX0, winX0, downTime)
         for (i in 1..steps) {
-            val t = downTime + i * stepTime
-            val currX = x0 + (x1 - x0) * (i.toFloat() / steps)
-            sendEvent(MotionEvent.ACTION_MOVE, currX, t)
             Thread.sleep(stepTime)
+            val currTime = SystemClock.uptimeMillis()
+            val currScreenX = screenX0 + (screenX1 - screenX0) * (i.toFloat() / steps)
+            val currWinX = winX0 + (winX1 - winX0) * (i.toFloat() / steps)
+            sendEvent(MotionEvent.ACTION_MOVE, currScreenX, currWinX, currTime)
         }
-        sendEvent(MotionEvent.ACTION_UP, x1, downTime + durationMs)
+        sendEvent(MotionEvent.ACTION_UP, screenX1, winX1, SystemClock.uptimeMillis())
     }
 
-    private fun stroke(atHeight: Float) {
+    private fun stroke(scenario: ActivityScenario<MainActivity>, atHeight: Float) {
         val node = compose.onAllNodesWithTag("editor.canvas").onFirst().fetchSemanticsNode()
         // 用套用過縮放的邊界（連續模式的頁面被縮小過；`size` 是縮放前的版面尺寸，拿它算落點會畫到頁面外）。
         val box = node.boundsInWindow
         val window = node.positionOnScreen - node.positionInWindow
-        val y = window.y + box.top + box.height * atHeight
-        val x0 = window.x + box.left + box.width * 0.25f
-        val x1 = window.x + box.left + box.width * 0.75f
+        val screenY = window.y + box.top + box.height * atHeight
+        val screenX0 = window.x + box.left + box.width * 0.25f
+        val screenX1 = window.x + box.left + box.width * 0.75f
+        val winY = box.top + box.height * atHeight
+        val winX0 = box.left + box.width * 0.25f
+        val winX1 = box.left + box.width * 0.75f
 
-        val injected = runCatching {
-            injectSwipe(x0, y, x1)
-            true
-        }.getOrDefault(false)
+        injectSwipe(scenario, screenX0, screenY, screenX1, winX0, winY, winX1)
 
-        if (!injected) {
-            val cmd = "input swipe ${x0.toInt()} ${y.toInt()} ${x1.toInt()} ${y.toInt()} 300"
-            runCatching {
-                InstrumentationRegistry.getInstrumentation().uiAutomation.executeShellCommand(cmd).use { pfd ->
-                    java.io.FileInputStream(pfd.fileDescriptor).bufferedReader().readText()
-                }
-            }
-        }
         Thread.sleep(500)
         compose.waitForIdle()
     }
@@ -211,10 +236,10 @@ class UserJourneyTest {
     }
 
     /** 畫一筆並確認真的多了一筆：合成觸控偶爾整段被系統吞掉，那就再畫一次（與 Apple 同一個做法）。 */
-    private fun drawOneStroke(atHeight: Float): Int {
+    private fun drawOneStroke(scenario: ActivityScenario<MainActivity>, atHeight: Float): Int {
         val before = strokeCount()
         repeat(3) {
-            stroke(atHeight)
+            stroke(scenario, atHeight)
             val ok = runCatching { compose.waitUntil(timeoutMillis = 3_000) { strokeCount() > before } }.isSuccess
             if (ok) {
                 assertEquals("畫一筆應該只多一筆（$before → ${strokeCount()}）", before + 1, strokeCount())
@@ -237,12 +262,12 @@ class UserJourneyTest {
     }
 
     private fun eraserJourney() {
-        launchJourneyNotebook().use {
+        launchJourneyNotebook().use { scenario ->
             tap("editor.ink.pen", "工具列上找不到鋼筆")
-            val before = drawOneStroke(0.42f)
+            val before = drawOneStroke(scenario, 0.42f)
 
             tap("editor.ink.eraser", "工具列上找不到橡皮擦")
-            stroke(0.42f)
+            stroke(scenario, 0.42f)
             expectStrokes("工具列選了橡皮擦，畫過那一筆應該擦掉它，而不是多畫一筆") { it <= before }
         }
     }
@@ -265,9 +290,9 @@ class UserJourneyTest {
     fun customizedRadialMenuIsWhatTheMenuShows() {
         skipOnboarding()
         ToolbarSettings.resetRadial(context, tag)
-        launchJourneyNotebook().use {
+        launchJourneyNotebook().use { scenario ->
             tap("editor.ink.pen", "工具列上找不到鋼筆")
-            val before = drawOneStroke(0.58f)
+            val before = drawOneStroke(scenario, 0.58f)
 
             // 設定：拿掉工具盤的第一格（出廠是鋼筆）。
             tap("editor.more", "找不到「更多」選單")
@@ -285,7 +310,7 @@ class UserJourneyTest {
 
             // 選工具盤上的橡皮擦：與工具列同一條路，真的會擦。
             tap("radial.eraser", "點不到工具盤上的橡皮擦")
-            stroke(0.58f)
+            stroke(scenario, 0.58f)
             expectStrokes("從飛梭工具盤選了橡皮擦，畫過那一筆應該擦掉它") { it <= before }
         }
     }
