@@ -1,6 +1,9 @@
 package com.kairumo.padnote.screens
 
 import android.content.Context
+import android.os.SystemClock
+import android.view.InputDevice
+import android.view.MotionEvent
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
@@ -139,8 +142,43 @@ class UserJourneyTest {
      *
      * 走系統的輸入管線送**手指**事件，而不是 Compose 的 `performTouchInput`：後者送出的觸控類型是
      * UNKNOWN，核心的輸入仲裁不把它當成手指 —— 畫布一筆都不收，測不到使用者實際會遇到的事。
-     * 也不用 `Instrumentation.sendPointerSync`：畫面上有浮層視窗時系統會拒絕跨視窗注入。
      */
+    private fun injectSwipe(x0: Float, y: Float, x1: Float, durationMs: Long = 300) {
+        val uiAutomation = InstrumentationRegistry.getInstrumentation().uiAutomation
+        val downTime = SystemClock.uptimeMillis()
+        val steps = 15
+        val stepTime = durationMs / steps
+
+        fun sendEvent(action: Int, x: Float, eventTime: Long) {
+            val props = arrayOf(MotionEvent.PointerProperties().apply {
+                id = 0
+                toolType = MotionEvent.TOOL_TYPE_FINGER
+            })
+            val coords = arrayOf(MotionEvent.PointerCoords().apply {
+                this.x = x
+                this.y = y
+                this.pressure = 1.0f
+                this.size = 1.0f
+            })
+            val event = MotionEvent.obtain(
+                downTime, eventTime, action, 1, props, coords,
+                0, 0, 1.0f, 1.0f, 0, 0,
+                InputDevice.SOURCE_TOUCHSCREEN, 0
+            )
+            uiAutomation.injectInputEvent(event, true)
+            event.recycle()
+        }
+
+        sendEvent(MotionEvent.ACTION_DOWN, x0, downTime)
+        for (i in 1..steps) {
+            val t = downTime + i * stepTime
+            val currX = x0 + (x1 - x0) * (i.toFloat() / steps)
+            sendEvent(MotionEvent.ACTION_MOVE, currX, t)
+            Thread.sleep(stepTime)
+        }
+        sendEvent(MotionEvent.ACTION_UP, x1, downTime + durationMs)
+    }
+
     private fun stroke(atHeight: Float) {
         val node = compose.onAllNodesWithTag("editor.canvas").onFirst().fetchSemanticsNode()
         // 用套用過縮放的邊界（連續模式的頁面被縮小過；`size` 是縮放前的版面尺寸，拿它算落點會畫到頁面外）。
@@ -149,10 +187,21 @@ class UserJourneyTest {
         val y = window.y + box.top + box.height * atHeight
         val x0 = window.x + box.left + box.width * 0.25f
         val x1 = window.x + box.left + box.width * 0.75f
-        // `input swipe` 從系統的輸入管線送出真正的觸控（手指），與使用者的手一樣經過掌拒與仲裁。
-        val cmd = "input swipe ${x0.toInt()} ${y.toInt()} ${x1.toInt()} ${y.toInt()} 450"
-        InstrumentationRegistry.getInstrumentation().uiAutomation.executeShellCommand(cmd).close()
-        Thread.sleep(900)
+
+        val injected = runCatching {
+            injectSwipe(x0, y, x1)
+            true
+        }.getOrDefault(false)
+
+        if (!injected) {
+            val cmd = "input swipe ${x0.toInt()} ${y.toInt()} ${x1.toInt()} ${y.toInt()} 300"
+            runCatching {
+                InstrumentationRegistry.getInstrumentation().uiAutomation.executeShellCommand(cmd).use { pfd ->
+                    java.io.FileInputStream(pfd.fileDescriptor).bufferedReader().readText()
+                }
+            }
+        }
+        Thread.sleep(500)
         compose.waitForIdle()
     }
 
