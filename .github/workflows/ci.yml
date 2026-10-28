@@ -329,6 +329,7 @@ jobs:
           # 手寫辨識要 Google Play 服務，google_apis 映像才有。
           target: google_apis
           arch: x86_64
+          profile: pixel_tablet
           working-directory: android
           # 預設只給 2560MB；早期 CI 在第 189 個測試中斷時曾有 emulator renderer
           # crash，後來也重現過 qemu 存活、只有 UTP/ddmlib 掉線的版本。
@@ -377,6 +378,7 @@ jobs:
           api-level: 35
           target: google_apis
           arch: x86_64
+          profile: pixel_tablet
           working-directory: android
           ram-size: 4096M
           heap-size: 576M
