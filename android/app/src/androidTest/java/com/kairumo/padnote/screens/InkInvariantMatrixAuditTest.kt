@@ -218,7 +218,13 @@ class InkInvariantMatrixAuditTest {
             val p1Strokes = parseStrokeCount()
             assertNotNull("切換到第 1 頁後應有筆跡狀態", p1Strokes)
 
-            // 切回第 0 頁
+            // 切回第 0 頁（在手機或窄螢幕上點選頁面後浮動側欄會自動收合，若已關閉則重新打開）
+            if (compose.onAllNodesWithTag("sidebar.page.0").fetchSemanticsNodes().isEmpty()) {
+                tap("editor.sidebar_toggle", "找不到側欄切換按鈕")
+                compose.waitUntil(timeoutMillis = 5_000) {
+                    compose.onAllNodesWithTag("sidebar.page.0").fetchSemanticsNodes().isNotEmpty()
+                }
+            }
             tap("sidebar.page.0", "找不到第 0 頁縮圖")
             val p0Back = parseStrokeCount()
             assertEquals("切回第 0 頁後筆畫數應維持原樣，不可被空頁覆蓋", p0Strokes, p0Back)
