@@ -308,7 +308,7 @@ object NotebookLibrary {
     /**
      * 複製筆記本（Apple 首頁選單的「複製筆記本」）。回傳新的 id；加密的筆記不能複製，回 null。
      *
-     * 整個套件複製一份、換一個新 id，放在原本那一本所在的資料夾。
+     * 整個套件複製一份、換一個新 id，放在原本那一本所在的資料夾（範例的副本放在「未分類」）。
      * - manifest 的 `notebook_id` 一定要換：同步與里程碑都靠它分辨是哪一本。
      * - `sync/` 是原本那一本的同步狀態，不帶過去 —— 新的一本要當成從沒上傳過。
      * - 加密的不行：密文綁著原本的 `notebook_id`（`oplog_aad`），換了 id 就再也解不開。
@@ -317,6 +317,8 @@ object NotebookLibrary {
         if (isEncrypted(context, id)) return null
         val source = File(directory(context), "$id.$EXTENSION")
         if (!source.exists()) return null
+        // 唯讀範例複製出來的可編輯副本一律歸類於「未分類」（與 `SampleFork.adopt`、Apple `duplicateNotebook` 相同）。
+        val fromSample = SampleFork.isSample(context, id, deviceId)
         val newId = java.util.UUID.randomUUID().toString()
         val target = File(directory(context), "$newId.$EXTENSION")
         return runCatching {
@@ -333,7 +335,8 @@ object NotebookLibrary {
                 // 副本是一般筆記本：不繼承「範例」標記（與 Apple `duplicateNotebook` 相同）。
                 NotebookMeta.load(it).setSample(it, false)
             }
-            AccountSyncStore.record(context, id = newId, title = title, parentId = FolderTree.parentOf(context, id))
+            val parent = if (fromSample) null else FolderTree.parentOf(context, id)
+            AccountSyncStore.record(context, id = newId, title = title, parentId = parent)
             newId
         }.getOrElse {
             target.deleteRecursively()
