@@ -142,7 +142,8 @@ private fun ImageObjectView(
                     }
                 }
                 .gesturesIf(interactive && (isSelected || isTypeMode) && !isCanvasNavigating) {
-                    pointerInput(image.id, isSelected, isTypeMode, isCanvasNavigating) {
+                    // 不以 isSelected 當鍵：拖曳一開始就 onSelect()，選取狀態一變這段手勢就被重啟、拖到一半被取消（實機回報：方塊拖不動）。
+                    pointerInput(image.id, isTypeMode, isCanvasNavigating) {
                         var startX = 0f
                         var startY = 0f
                         var accX = 0f

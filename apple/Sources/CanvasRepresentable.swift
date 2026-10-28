@@ -1396,9 +1396,12 @@ struct CanvasRepresentable: UIViewRepresentable {
     func updateUIView(_ uiView: PKCanvasView, context: Context) {
         context.coordinator.parent = self
         context.coordinator.lassoPan?.isEnabled = false
+        // 套索只在手繪模式接管觸控。切到打字模式時工具還停在套索的話，原本照樣把單指觸控與
+        // 捲動搶走：即點即書、點選與單指捲動全部失效（Android 實機回報的同一個邏輯漏洞）。
+        let lassoOwnsTouches = selectedTool == .lasso && editorMode == .draw
         if let adaptive = uiView as? AdaptiveCanvasView {
-            adaptive.setLassoClaimsSingleTouch(selectedTool == .lasso)
-            adaptive.lassoTouchHandler = selectedTool == .lasso
+            adaptive.setLassoClaimsSingleTouch(lassoOwnsTouches)
+            adaptive.lassoTouchHandler = lassoOwnsTouches
                 ? { [weak coordinator = context.coordinator] state, point in
                     coordinator?.handleLassoTouch(state, point)
                 } : nil
@@ -1409,7 +1412,7 @@ struct CanvasRepresentable: UIViewRepresentable {
         // 模式切換時要跟著改 —— 只在 makeUIView 設的話，從連續切回整頁
         // 會得到一個捲不動的畫布（SwiftUI 會重用同一個 UIView）。
         // 套索模式下單頁畫布的捲動手勢要讓出來，否則套索的拖曳辨識不起來。
-        let wantsScroll = isScrollEnabled && selectedTool != .lasso
+        let wantsScroll = isScrollEnabled && !lassoOwnsTouches
         if uiView.isScrollEnabled != wantsScroll {
             uiView.isScrollEnabled = wantsScroll
             uiView.alwaysBounceVertical = wantsScroll
@@ -1429,7 +1432,7 @@ struct CanvasRepresentable: UIViewRepresentable {
         // `.pencilOnly` 時手指不畫，外層捲動單指就能動，不必（也不該）再轉發。
         if let adaptive = uiView as? AdaptiveCanvasView {
             adaptive.twoFingerScroll.setEnabled(
-                !isScrollEnabled && (targetPolicy == .anyInput || selectedTool == .lasso || selectedTool == .maskingTape), on: adaptive)
+                !isScrollEnabled && (targetPolicy == .anyInput || lassoOwnsTouches || selectedTool == .maskingTape), on: adaptive)
         }
         if let adaptive = uiView as? AdaptiveCanvasView {
             let defer_ = EditorCanvasInputPolicy.defersPencilIntent(effectiveMode: editorMode)
@@ -1575,7 +1578,7 @@ struct CanvasRepresentable: UIViewRepresentable {
             notebookId: proInk?.notebookId ?? "", pageIndex: proInk?.pageIndex ?? 0,
             pencilOnly: fingerRule == false,
             allowsPencilKitDrawing: allowsPencilKitDrawing,
-            claimsSingleTouch: selectedTool == .lasso)
+            claimsSingleTouch: selectedTool == .lasso && editorMode == .draw)
     }
 
     /// 測試用讀數：縮放倍率**與筆畫數**。

@@ -76,6 +76,12 @@ import java.io.File
 
 @OptIn(ExperimentalLayoutApi::class, ExperimentalFoundationApi::class)
 @Composable
+// **不能被跳過。** `ctx` 每次重組都是同一個物件，但它身上有一大批「普通欄位」（`engine`、`lasso`、
+// `textStore`、`marqueeCandidates`、`lockedIds`、`inkBarState`…）是 `rememberEditorCanvasContext` 在每次重組
+// 重新指派的，不是 State。Kotlin 2.0.20 起 Compose 預設開「強跳過」：參數同一個物件就整段跳過，
+// 這裡讀到的就是舊的引擎、舊的物件清單、舊的工具列狀態（實機回報：筆刷點了不亮、手繪與套索失效、
+// 文字方塊拖不動、飛梭工具盤點不了）。拆檔之前這些都在同一個函式裡，沒有這個問題。
+@androidx.compose.runtime.NonSkippableComposable
 internal fun ColumnScope.EditorCanvasContainer(ctx: EditorCanvasContext) = with(ctx) {
         val radialAction: (String) -> Unit = { id ->
             // 槽位是使用者自訂的（見 ui/RadialMarkMenu.kt 的 RadialSlots），id 是 `radial.pen`…。
@@ -449,10 +455,43 @@ internal fun ColumnScope.EditorCanvasContainer(ctx: EditorCanvasContext) = with(
                             val contentH = PageGeometry.height * canvasDensity
                             val scaledW = contentW * canvasScale
                             val scaledH = contentH * canvasScale
-                            val contentExceedsViewport = scaledW > canvasViewport.width || scaledH > canvasViewport.height || canvasScale > 1f
-                            val takeIt = pointers >= 2 ||
-                                (onePanFinger && !stylus && contentExceedsViewport)
-                            if (!takeIt) continue
+                            // 留 1px 容差：適應頁寬時 scaledW 與視窗寬只差浮點誤差，不該算「超出」。
+                            val contentExceedsViewport = scaledW > canvasViewport.width + 1f ||
+                                scaledH > canvasViewport.height + 1f || canvasScale > 1f
+                            // 單指平移只在「手指本來就不能畫」時才有（打字模式、只限觸控筆）。
+                            // 套索、膠帶、放圖釘／貼上、飛梭工具盤開著時，手指本身就是在操作它們，不能拿去平移
+                            // （實機回報：套索一框畫布就跟著跑、飛梭工具盤點不了）。
+                            val fingerOwnsGesture = showRadialMenu || isPlacingCommentPin || isPlacingPasteObject ||
+                                (editorMode == EditorMode.DRAW && (inkTool.isLasso || inkTool.isMaskingTape))
+                            val oneFingerPan = pointers == 1 && onePanFinger && !stylus &&
+                                contentExceedsViewport && !fingerOwnsGesture
+                            if (pointers < 2 && !oneFingerPan) continue
+                            var startEvent = first
+                            if (pointers < 2) {
+                                // 只從「剛按下」開始判斷；同一次觸控後續的移動事件不重新起算。
+                                val down = first.changes.firstOrNull { it.changedToDownIgnoreConsumed() } ?: continue
+                                // 打字模式手指落在物件上（文字方塊、圖片…）：交給物件本身點選、拖曳。
+                                if (editorMode == EditorMode.TYPE) {
+                                    val pagePoint = Offset(
+                                        (down.position.x - canvasOffset.x) / canvasScale / canvasDensity,
+                                        (down.position.y - canvasOffset.y) / canvasScale / canvasDensity)
+                                    val sorted = marqueeCandidatesLatest.sortedBy { stackOrderLatest.indexOf(it.id) }
+                                    if (com.kairumo.padnote.canvas.ObjectMarquee.topmostHit(pagePoint, sorted) != null) continue
+                                }
+                                // 移動超過觸控門檻才算平移。原本一按下就整段攔走，點一下也被吃掉：
+                                // 打字模式「即點即書」、點選文字方塊全都失效（頁面比畫布高時一定發生）。
+                                var becamePan = false
+                                while (true) {
+                                    val next = awaitPointerEvent(PointerEventPass.Initial)
+                                    if (next.changes.count { it.pressed } >= 2) { becamePan = true; startEvent = next; break }
+                                    val tracked = next.changes.firstOrNull { it.id == down.id }
+                                    if (tracked == null || !tracked.pressed) break
+                                    if ((tracked.position - down.position).getDistance() > viewConfiguration.touchSlop) {
+                                        becamePan = true; startEvent = next; break
+                                    }
+                                }
+                                if (!becamePan) continue
+                            }
                             isCanvasNavigating = true
 
                             // **多指手勢（S-GESTURE）。**
@@ -471,7 +510,7 @@ internal fun ColumnScope.EditorCanvasContainer(ctx: EditorCanvasContext) = with(
                             var totalPan = Offset.Zero
                             var totalZoom = 1f
 
-                            var event = first
+                            var event = startEvent
                             while (event.changes.any { it.pressed }) {
                                 maxFingers = maxOf(
                                     maxFingers, event.changes.count { it.pressed })
@@ -832,7 +871,9 @@ internal fun ColumnScope.EditorCanvasContainer(ctx: EditorCanvasContext) = with(
             // 套索層疊在畫布上面。套索模式下它吃掉所有觸控，畫布完全收不到 ——
             // 不必在 InkEngine 裡加「現在是不是套索模式」的分支，而那種分支
             // 正是墨跡路徑最不該有的東西。
-            if (inkTool.isLasso) {
+            // 只在手繪模式。切到打字模式時工具還停在套索的話，這一層原本照樣吃掉所有觸控，
+            // 即點即書、點選與拖曳文字方塊全部失效（實機回報）。
+            if (inkTool.isLasso && editorMode == EditorMode.DRAW) {
                 LassoOverlay(
                     lasso = lasso,
                     engine = engine,
@@ -856,7 +897,7 @@ internal fun ColumnScope.EditorCanvasContainer(ctx: EditorCanvasContext) = with(
             // 遮蔽膠帶覆蓋層（對齊 Apple MaskingTapeOverlayView）。
             com.kairumo.padnote.canvas.MaskingTapeOverlay(
                 pageIndex = pageIndex,
-                isActive = inkTool.isMaskingTape,
+                isActive = inkTool.isMaskingTape && editorMode == EditorMode.DRAW,
                 tapeColor = runCatching { Color(android.graphics.Color.parseColor(inkColorHex)) }.getOrDefault(Color(0xFFFCEEAC)),
                 currentInkHex = inkColorHex,
                 tapes = maskingTapes,
@@ -1483,7 +1524,7 @@ internal fun ColumnScope.EditorCanvasContainer(ctx: EditorCanvasContext) = with(
             // 位置被再縮放、平移一次而偏掉，飛梭盤被放大，還被 clip 裁掉、壓到底部工具列的
             // 那幾格按不到（模擬器上實測）。
             val lassoBox = lasso.boundingRect
-            if (inkTool.isLasso && lassoBox != null) {
+            if (inkTool.isLasso && editorMode == EditorMode.DRAW && lassoBox != null) {
                 LassoActionBar(
                     lasso = lasso,
                     engine = engine,
@@ -1609,7 +1650,7 @@ internal fun ColumnScope.EditorCanvasContainer(ctx: EditorCanvasContext) = with(
                 )
             }
             // 沒有選取、剪貼簿有筆跡時的「貼上」入口（剪下之後就靠它貼回去）。
-            if (inkTool.isLasso) {
+            if (inkTool.isLasso && editorMode == EditorMode.DRAW) {
                 LassoPastePill(
                     lasso = lasso,
                     engine = engine,

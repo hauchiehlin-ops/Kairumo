@@ -233,6 +233,10 @@ private fun TextBoxView(
     val editorMode = com.kairumo.padnote.canvas.LocalEditorMode.current
     val isCanvasNavigating = com.kairumo.padnote.canvas.LocalCanvasNavigating.current
     val isTypeMode = editorMode == com.kairumo.padnote.canvas.EditorMode.TYPE
+    val selectedNow by androidx.compose.runtime.rememberUpdatedState(isSelected)
+    val typeModeNow by androidx.compose.runtime.rememberUpdatedState(isTypeMode)
+    val onSelectNow by androidx.compose.runtime.rememberUpdatedState(onSelect)
+    val onStartEditNow by androidx.compose.runtime.rememberUpdatedState(onStartEdit)
     var contextMenuOpen by remember(box.id) { mutableStateOf(false) }
     var orderMenuOpen by remember(box.id) { mutableStateOf(false) }
     val shape = RoundedCornerShape(box.cornerRadius.dp)
@@ -300,9 +304,15 @@ private fun TextBoxView(
             )
             // 點一下＝選取，拖曳＝搬移（完全對齊 iPad）
             .gesturesIf(interactive && !isCanvasNavigating) {
-                pointerInput(box.id, isSelected, isTypeMode, isCanvasNavigating) {
+                // 不以 isSelected／isTypeMode 當鍵（改讀最新值）：拖曳一開始就 onSelect()，選取狀態一變
+                // 這段手勢就被重啟、拖到一半被取消 —— 打字模式下文字方塊完全拖不動（實機回報）。
+                pointerInput(box.id, isCanvasNavigating) {
                     awaitEachGesture {
                         val down = awaitFirstDown(requireUnconsumed = false)
+                        val isSelected = selectedNow
+                        val isTypeMode = typeModeNow
+                        val onSelect = onSelectNow
+                        val onStartEdit = onStartEditNow
                         if (isCanvasNavigating) return@awaitEachGesture
                         // 手繪模式下觸控筆直接繪圖，不拖曳方塊
                         if (down.type == androidx.compose.ui.input.pointer.PointerType.Stylus && !isTypeMode) return@awaitEachGesture
@@ -347,9 +357,11 @@ private fun TextBoxView(
                                     cancelled = true
                                     return@drag
                                 }
+                                // 先讀位移再 consume：consume 之後 positionChange() 一律回 0，方塊就拖不動。
+                                val delta = change.positionChange()
                                 change.consume()
-                                accX += change.positionChange().x
-                                accY += change.positionChange().y
+                                accX += delta.x
+                                accY += delta.y
                                 liveX = startX + (accX * c - accY * sn) / density
                                 liveY = startY + (accX * sn + accY * c) / density
                                 b.x = liveX

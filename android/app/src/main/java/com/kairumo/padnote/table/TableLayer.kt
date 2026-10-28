@@ -139,7 +139,9 @@ private fun TableObjectView(
                     onDoubleTap = { onEdit(currentTable) }
                 )
             } }
-            .gesturesIf(interactive && (isSelected || isTypeMode) && !isCanvasNavigating) { pointerInput(table.id, isSelected, isTypeMode, isCanvasNavigating) {
+            .gesturesIf(interactive && (isSelected || isTypeMode) && !isCanvasNavigating) {
+                // 不以 isSelected 當鍵：拖曳一開始就 onSelect()，選取狀態一變這段手勢就被重啟、拖到一半被取消（實機回報：方塊拖不動）。
+                pointerInput(table.id, isTypeMode, isCanvasNavigating) {
                 var base: NoteTable? = null
                 var accX = 0f
                 var accY = 0f

@@ -1821,7 +1821,8 @@ extension NotebookEditorView {
             MaskingTapeOverlayView(
                 notebook: $notebook,
                 pageIndex: currentPageIndex,
-                isActive: selectedTool == .maskingTape,
+                // 膠帶只在手繪模式接管觸控；打字模式下工具還停在膠帶時，整頁覆蓋層會擋掉即點即書。
+                isActive: selectedTool == .maskingTape && editorMode == .draw,
                 selectedColor: selectedColor,
                 onTapesChanged: {
                     commitNotebook()
@@ -1831,8 +1832,8 @@ extension NotebookEditorView {
             .frame(width: PageGeometry.width, height: currentPageHeight, alignment: .topLeading)
             .scaleEffect(canvasZoomScale, anchor: .topLeading)
             .offset(x: -canvasContentOffset.x, y: -canvasContentOffset.y)
-            .allowsHitTesting(selectedTool == .maskingTape || (editorMode != .draw && !(notebook.tapeAttachments?.filter { $0.pageIndex == currentPageIndex }.isEmpty ?? true)))
-            .zIndex(selectedTool == .maskingTape ? 4 : 2.5)
+            .allowsHitTesting((selectedTool == .maskingTape && editorMode == .draw) || (editorMode != .draw && !(notebook.tapeAttachments?.filter { $0.pageIndex == currentPageIndex }.isEmpty ?? true)))
+            .zIndex(selectedTool == .maskingTape && editorMode == .draw ? 4 : 2.5)
 
             // 筆跡上方層（Foreground / Over-ink objects）：在 CanvasRepresentable 之上，zIndex 3
             objectLayer(forPage: currentPageIndex, filter: .overInkOnly)
