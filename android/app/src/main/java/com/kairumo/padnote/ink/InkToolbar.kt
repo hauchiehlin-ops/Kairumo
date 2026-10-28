@@ -24,6 +24,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
@@ -253,7 +255,11 @@ fun InkToolbar(
 
         // 擦除與套索都不需要顏色 —— 留著只會讓使用者以為可以擦成某個顏色，
         // 或是以為選取會被染色。
-        if (!tool.isEraser && !tool.isLasso && !tool.isDrafting) {
+        //
+        // 但**位置要留著**（看不見、點不到、讀屏不念）：直接拿掉的話這一排變短、工具列跟著變矮，
+        // 畫布在選橡皮擦或套索的那一刻整個往下長，頁面跳一下，正要擦的那一筆也不在原位了。
+        val paletteHidden = tool.isEraser || tool.isLasso || tool.isDrafting
+        run {
             // 六顆色票包成**一個** FlowRow 子項（工作項 S-64）。
             //
             // 原本它們是與筆刷晶片並列的獨立子項，於是 FlowRow 會把前幾顆
@@ -261,7 +267,11 @@ fun InkToolbar(
             // 看起來不像一組。整組一起換行才讀得出「這是調色盤」。
             Row(
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
-                modifier = Modifier.testTag("editor.ink.palette")
+                modifier = if (paletteHidden) {
+                    Modifier.alpha(0f).clearAndSetSemantics {}
+                } else {
+                    Modifier.testTag("editor.ink.palette")
+                }
             ) {
             for ((hex, color, nameKey) in inkPalette) {
                 val selected = colorHex == hex
@@ -289,7 +299,7 @@ fun InkToolbar(
                             else MaterialTheme.colorScheme.outlineVariant,
                             shape = CircleShape
                         )
-                        .clickable { onColorChange(hex) }
+                        .clickable(enabled = !paletteHidden) { onColorChange(hex) }
                         // 純色點沒有文字，TalkBack 念出來只會是「按鈕」。
                         .semantics {
                             contentDescription = LocalizationStrings.localized(nameKey, languageTag)
@@ -308,7 +318,7 @@ fun InkToolbar(
                         .clip(CircleShape)
                         .background(MaterialTheme.colorScheme.surfaceVariant)
                         .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
-                        .clickable { onOpenColorWheel() }
+                        .clickable(enabled = !paletteHidden) { onOpenColorWheel() }
                         // 只有一個 🎨 emoji，TalkBack 念不出功能（對應 Apple 端
                         // 的 ink_pro_wheel 標籤）。
                         .semantics {
