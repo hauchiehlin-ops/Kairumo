@@ -500,13 +500,12 @@ internal fun EditorTopBar(
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 InstantTooltip(
-                    text = l10n("previous_page"),
-                    modifier = Modifier.testTag("editor.page.prev")
+                    text = l10n("previous_page")
                 ) {
                     IconButton(
                         onClick = actions.onPrevPage,
                         enabled = state.pageIndex > 0,
-                        modifier = Modifier.size(36.dp)
+                        modifier = Modifier.size(36.dp).testTag("editor.page.prev")
                     ) {
                         Text("‹", style = MaterialTheme.typography.titleMedium)
                     }
@@ -517,35 +516,32 @@ internal fun EditorTopBar(
                     modifier = Modifier.testTag("editor.page.indicator")
                 )
                 InstantTooltip(
-                    text = l10n("next_page"),
-                    modifier = Modifier.testTag("editor.page.next")
+                    text = l10n("next_page")
                 ) {
                     IconButton(
                         onClick = actions.onNextPage,
                         enabled = state.pageIndex < state.pageCount - 1,
-                        modifier = Modifier.size(36.dp)
+                        modifier = Modifier.size(36.dp).testTag("editor.page.next")
                     ) {
                         Text("›", style = MaterialTheme.typography.titleMedium)
                     }
                 }
                 InstantTooltip(
-                    text = l10n("add_page"),
-                    modifier = Modifier.testTag("editor.page.add")
+                    text = l10n("add_page")
                 ) {
                     IconButton(
                         onClick = actions.onAddPage,
-                        modifier = Modifier.size(36.dp)
+                        modifier = Modifier.size(36.dp).testTag("editor.page.add")
                     ) {
                         Text("+", style = MaterialTheme.typography.titleMedium)
                     }
                 }
                 InstantTooltip(
-                    text = l10n(if (state.pageDisplayMode == PageDisplayMode.SINGLE) "page_mode_single" else "page_mode_continuous"),
-                    modifier = Modifier.testTag("editor.page.display_mode")
+                    text = l10n(if (state.pageDisplayMode == PageDisplayMode.SINGLE) "page_mode_single" else "page_mode_continuous")
                 ) {
                     IconButton(
                         onClick = actions.onTogglePageDisplayMode,
-                        modifier = Modifier.size(36.dp)
+                        modifier = Modifier.size(36.dp).testTag("editor.page.display_mode")
                     ) {
                         Text(
                             if (state.pageDisplayMode == PageDisplayMode.SINGLE) "📄" else "📜",
