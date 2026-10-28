@@ -94,6 +94,16 @@ class RichTextTest {
         assertNull(RichText.wordRange("hello world", 11))
     }
 
+    // 醒目提示在行首、行尾只有游標時套整行（實機回報：游標在行首按醒目提示沒有反應）。
+    @Test fun lineUnderTheCaret() {
+        val text = "這是第一行。\n\n第三行"
+        assertEquals(0 until 6, RichText.lineRange(text, 0))
+        assertEquals(0 until 6, RichText.lineRange(text, 6))
+        assertNull("空行", RichText.lineRange(text, 7))
+        assertEquals(8 until 11, RichText.lineRange(text, 11))
+        assertNull(RichText.lineRange("", 0))
+    }
+
     @Test fun fontSizeStepsFollowWord() {
         assertEquals(12f, wordGrowFontSize(11f), 0.001f)
         assertEquals(10.5f, wordGrowFontSize(10f), 0.001f)

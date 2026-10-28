@@ -18,7 +18,6 @@ public struct DynamicPortalIsland: View {
     @Environment(\.colorScheme) private var colorScheme
 
     public enum ContextualPortalState: Equatable {
-        case editingTextInDrawMode(title: String)
         case drawingInTextMode(title: String)
     }
 
@@ -136,21 +135,6 @@ public struct DynamicPortalIsland: View {
     private func contextualBanner(_ contextual: ContextualPortalState) -> some View {
         HStack(spacing: 8) {
             switch contextual {
-            case .editingTextInDrawMode(let title):
-                HStack(spacing: 5) {
-                    Image(systemName: "pencil.tip")
-                        .font(.system(size: 11, weight: .bold))
-                        .foregroundColor(.secondary)
-                    Image(systemName: "arrow.right")
-                        .font(.system(size: 9, weight: .bold))
-                        .foregroundColor(.accentColor)
-                    Image(systemName: "character.textbox")
-                        .font(.system(size: 12, weight: .bold))
-                        .foregroundColor(.accentColor)
-                    Text(title)
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundColor(.primary)
-                }
             case .drawingInTextMode(let title):
                 HStack(spacing: 5) {
                     Image(systemName: "doc.text.fill")

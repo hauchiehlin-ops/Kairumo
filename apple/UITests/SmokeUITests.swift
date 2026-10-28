@@ -305,19 +305,19 @@ final class SmokeUITests: XCTestCase {
 
         // 4. 移動：拖曳只在「不在編輯中」時生效，所以先離開編輯狀態，再把方塊拖到別處。
         //
-        //    手繪模式下編輯文字時，模式島換成「編輯中」橫條，`portal.draw`／`portal.type`
-        //    不在畫面上 —— 用橫條上的「完成」離開。以前這裡點 `portal.draw`，
+        //    手繪模式下編輯文字時，用文字工具列頂端提示列上的「完成・回到手繪」離開
+        //    （模式島不再另外顯示一顆「完成」）。以前這裡點 `portal.draw`，
         //    能過只是因為舊的輸入框常常一下子就失焦、自己結束了編輯。
         let exitEditing = app.descendants(matching: .any)
-            .matching(identifier: "portal.exit_contextual").firstMatch
+            .matching(identifier: "editor.text.done_back_to_ink").firstMatch
         guard exitEditing.waitForExistence(timeout: 10) else {
-            return XCTFail("手繪模式編輯文字時，模式島上找不到「完成」（portal.exit_contextual）")
+            return XCTFail("手繪模式編輯文字時，找不到「完成・回到手繪」（editor.text.done_back_to_ink）")
         }
         exitEditing.tap()
         sleep(1)
         XCTAssertTrue(
             typeMode.waitForExistence(timeout: 10),
-            "按了「完成」之後模式島沒有回到手繪／文字兩個按鈕")
+            "按了「完成」之後找不到模式島的文字按鈕")
         typeMode.tap()
         sleep(1)
         let movable = app.staticTexts[sentinel].firstMatch

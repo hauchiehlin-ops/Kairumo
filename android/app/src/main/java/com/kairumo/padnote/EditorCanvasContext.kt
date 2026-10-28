@@ -3169,3 +3169,17 @@ internal fun rememberEditorCanvasContext(
     ctx.applyCollabOp = { op -> applyCollabOp(op) }
     return ctx
 }
+
+/**
+ * 把格式套在畫布上選中的文字方塊（整個方塊）。頂端格式列與飛梭工具盤的螢光筆共用這一條。
+ *
+ * 頂端格式列在拆檔（EditorTopBar／EditorCanvasContainer）時漏接了 `onFormatAction`，
+ * 落回預設的 `{}` —— 整排粗體、斜體、醒目提示按了都沒反應。回傳 false 表示沒有選中的方塊。
+ */
+internal fun EditorCanvasContext.applyFormatToSelectedText(action: com.kairumo.padnote.text.WordFormatAction): Boolean {
+    val box = selectedTextId?.let { textStore.find(it) } ?: return false
+    com.kairumo.padnote.text.applyWordFormat(box, action, com.kairumo.padnote.text.TextFormatScope.WholeBox)
+    textStore.persist(box)
+    textRevision++
+    return true
+}

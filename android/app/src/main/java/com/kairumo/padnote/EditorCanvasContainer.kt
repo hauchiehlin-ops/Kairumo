@@ -89,8 +89,23 @@ internal fun ColumnScope.EditorCanvasContainer(ctx: EditorCanvasContext) = with(
             val tool = action?.let { com.kairumo.padnote.ui.RadialSlots.inkTool(it) }
             when {
                 id == com.kairumo.padnote.ui.RADIAL_DISMISS -> showRadialMenu = false
+                // 打字模式選中了文字方塊時，螢光筆的意思是「標示這段字」：套文字醒目提示，
+                // 不切回手寫 —— 否則畫下去的是一道墨水，蓋在字上卻不屬於那個方塊。
+                tool == InkTool.HIGHLIGHTER && editorMode == EditorMode.TYPE &&
+                    applyFormatToSelectedText(
+                        com.kairumo.padnote.text.WordFormatAction.Char(
+                            com.kairumo.padnote.text.TextCharStyle(highlightHex = TEXT_HIGHLIGHT_DEFAULT_HEX)
+                        )
+                    ) -> Unit
                 // 選工具與工具列走同一條路（applyInkTool）：離開套索清選取、橡皮擦旗標等不會漏。
-                tool != null -> applyInkTool(tool)
+                // 打字模式下選筆要先回手寫，否則工具亮了、畫布卻不收筆（與 Apple applyEditorTool 同一條規則）。
+                tool != null -> {
+                    if (editorMode != EditorMode.DRAW) {
+                        editorMode = EditorMode.DRAW
+                        clearSelection()
+                    }
+                    applyInkTool(tool)
+                }
                 action == uniffi.padnote_core.FfiRadialAction.UNDO -> globalUndo()
                 action == uniffi.padnote_core.FfiRadialAction.REDO -> globalRedo()
                 action == uniffi.padnote_core.FfiRadialAction.COLOR -> showProColorWheel = true

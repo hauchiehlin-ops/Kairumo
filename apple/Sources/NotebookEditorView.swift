@@ -1566,9 +1566,10 @@ public struct NotebookEditorView: View {
     }
 
     private var contextualPortalState: DynamicPortalIsland.ContextualPortalState? {
-        if editorMode == .draw && inlineEditingTextId != nil {
-            return .editingTextInDrawMode(title: "\(localizationManager.localized("tool_text")) • \(localizationManager.localized("edit"))")
-        } else if editorMode == .type && activeInlineInkBlockId != nil {
+        // 手繪模式中就地編修文字方塊時不在這裡另外提示：文字工具列頂端的藍色提示列
+        // 已經寫著「正在編輯文字方塊」並有「完成・回到手繪」。兩處各一個「完成」，
+        // 使用者分不出該按哪一個（實機回報）。
+        if editorMode == .type && activeInlineInkBlockId != nil {
             return .drawingInTextMode(title: "\(localizationManager.localized("handwriting_mode")) • \(localizationManager.localized("edit"))")
         }
         return nil

@@ -121,6 +121,16 @@ final class RichTextTests: XCTestCase {
         XCTAssertNil(RichText.wordRange(around: 11, in: "hello world"), "行尾")
     }
 
+    /// 醒目提示在行首、行尾只有游標時套整行（實機回報：游標在行首按醒目提示沒有反應）。
+    func testLineUnderTheCaret() {
+        let text = "這是第一行。\n\n第三行"
+        XCTAssertEqual(RichText.lineRange(around: 0, in: text), NSRange(location: 0, length: 6))
+        XCTAssertEqual(RichText.lineRange(around: 6, in: text), NSRange(location: 0, length: 6))
+        XCTAssertNil(RichText.lineRange(around: 7, in: text), "空行")
+        XCTAssertEqual(RichText.lineRange(around: 11, in: text), NSRange(location: 8, length: 3))
+        XCTAssertNil(RichText.lineRange(around: 0, in: ""))
+    }
+
     // MARK: - 編輯器往返
 
     func testAttributedStringRoundTripsTheRuns() {

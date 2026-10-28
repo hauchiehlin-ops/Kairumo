@@ -91,6 +91,12 @@ extension NotebookEditorView {
     /// 飛梭工具盤的一格被選中。選工具走 `selectEditorTool` —— 與工具列、⌘1… 快捷鍵同一條路，
     /// 切到製圖筆時的提示、離開套索時清掉選取等副作用才不會在這裡漏掉。
     func performRadialAction(_ action: FfiRadialAction) {
+        // 正在編修文字方塊時，螢光筆的意思是「標示這段字」：套文字醒目提示（與工具列同一條路、
+        // 同一個上次用的顏色），不換成手繪螢光筆 —— 否則畫下去的是一道墨水，蓋在字上卻不屬於那個方塊。
+        if action.editorTool == .highlighter, effectiveToolbarMode == .type, activeTextAttachment != nil {
+            applyToolbarHighlight(ProfileDefaults.current.string(forKey: "kairumo.word.lastHighlight") ?? "#FFFF00")
+            return
+        }
         if let tool = action.editorTool {
             selectEditorTool(tool)
             return
