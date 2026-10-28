@@ -1,6 +1,7 @@
 package com.kairumo.padnote.screens
 
 import android.content.Context
+import android.os.SystemClock
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
@@ -214,27 +215,32 @@ class ScreenAuditTest {
                 ?.startsWith("home.notebooks.card.") == true
         }
         // CI 全新冷啟動時首個測試需在背景建立種子筆記包，寬限至 60 秒等待清單或卡片出現。
-        compose.waitUntil(timeoutMillis = 60_000) {
-            compose.onAllNodes(matcher).fetchSemanticsNodes().isNotEmpty() ||
-                compose.onAllNodes(listMatcher).fetchSemanticsNodes().isNotEmpty()
-        }
-        compose.waitForIdle()
-
-        // LazyColumn 只會組合視窗內可見項目；若種子筆記在折線下方，嘗試捲動至清單
-        if (compose.onAllNodes(matcher).fetchSemanticsNodes().isEmpty()) {
-            runCatching {
-                compose.onNodeWithTag("home.scroll")
-                    .performScrollToNode(listMatcher)
-                compose.waitForIdle()
+        // LazyColumn 只會組合視窗內可見項目；種子筆記在折線下方，必須在等待過程中嘗試捲動。
+        val deadline = SystemClock.uptimeMillis() + 60_000
+        var found = false
+        while (SystemClock.uptimeMillis() < deadline) {
+            compose.waitForIdle()
+            if (compose.onAllNodes(matcher).fetchSemanticsNodes().isNotEmpty()) {
+                found = true
+                break
             }
             runCatching {
-                compose.onNodeWithTag("home.scroll")
-                    .performScrollToNode(matcher)
-                compose.waitForIdle()
+                compose.onNodeWithTag("home.scroll").performScrollToNode(matcher)
             }
-        }
-        compose.waitUntil(timeoutMillis = 30_000) {
-            compose.onAllNodes(matcher).fetchSemanticsNodes().isNotEmpty()
+            compose.waitForIdle()
+            if (compose.onAllNodes(matcher).fetchSemanticsNodes().isNotEmpty()) {
+                found = true
+                break
+            }
+            runCatching {
+                compose.onNodeWithTag("home.scroll").performScrollToNode(listMatcher)
+            }
+            compose.waitForIdle()
+            if (compose.onAllNodes(matcher).fetchSemanticsNodes().isNotEmpty()) {
+                found = true
+                break
+            }
+            Thread.sleep(500)
         }
 
         val cards = compose.onAllNodes(matcher)
@@ -276,10 +282,25 @@ class ScreenAuditTest {
                 // waitForIdle only waits for Compose work, not that package creation.
                 // 捲動等待 LazyColumn 的項目組合完成。
                 val listMatcher = hasTestTag("home.notebooks.list")
-                compose.waitUntil(timeoutMillis = 60_000) {
-                    compose.onAllNodes(listMatcher, useUnmergedTree = true)
-                        .fetchSemanticsNodes().isNotEmpty()
+                val deadline = SystemClock.uptimeMillis() + 60_000
+                var found = false
+                while (SystemClock.uptimeMillis() < deadline) {
+                    compose.waitForIdle()
+                    if (compose.onAllNodes(listMatcher, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()) {
+                        found = true
+                        break
+                    }
+                    runCatching {
+                        compose.onNodeWithTag("home.scroll").performScrollToNode(listMatcher)
+                    }
+                    compose.waitForIdle()
+                    if (compose.onAllNodes(listMatcher, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()) {
+                        found = true
+                        break
+                    }
+                    Thread.sleep(500)
                 }
+                assertTrue("首頁找不到筆記清單 (home.notebooks.list)", found)
                 compose.waitForIdle()
                 // 捲回頂端，讓 findMissingWhileScrolling 能從頭逐一向下比對控制項
                 runCatching {
