@@ -561,6 +561,22 @@ internal fun ColumnScope.EditorCanvasContainer(ctx: EditorCanvasContext) = with(
         Box(
             modifier = Modifier
                 .fillMaxSize()
+                // 縮小（< 100%）時，縮放層的版面要放大成「視窗 ÷ 倍率」，縮完剛好鋪滿畫布。
+                // 原本縮放層就是視窗大小：下面的 `clip = true` 以縮放前的大小裁切，縮完只剩
+                // 視窗的倍率那麼大 —— 直式平板開側欄時適應頁寬約 62%，頁面右下被裁掉一大塊
+                // （使用者回報「畫布未呈現完整頁面」），右下那一塊也收不到觸控。
+                .layout { measurable, constraints ->
+                    val shrink = canvasScale.coerceIn(0.05f, 1f)
+                    val width = constraints.maxWidth
+                    val height = constraints.maxHeight
+                    val placeable = measurable.measure(
+                        androidx.compose.ui.unit.Constraints.fixed(
+                            kotlin.math.ceil(width / shrink).toInt(),
+                            kotlin.math.ceil(height / shrink).toInt()
+                        )
+                    )
+                    layout(width, height) { placeable.place(0, 0) }
+                }
                 .graphicsLayer(
                     scaleX = canvasScale,
                     scaleY = canvasScale,

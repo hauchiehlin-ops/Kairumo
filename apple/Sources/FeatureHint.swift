@@ -111,13 +111,21 @@ public extension View {
     }
 }
 
+/// 正在顯示的那一則提示。給 `popover(item:)` 用的身分。
+private struct PresentedFeatureHint: Identifiable {
+    let hint: FfiFeatureHint
+    var id: String { hint.id }
+}
+
 @MainActor
 private struct FeatureHintModifier: ViewModifier {
     let id: String
     let trigger: Bool
 
-    @State private var showing = false
-    @State private var hint: FfiFeatureHint?
+    /// 提示內容與「顯示中」綁在同一個狀態上。原本分成 `hint` 與 `showing` 兩個 `@State`，
+    /// 同一輪一起設定時，第一次彈出的 popover 會拿到還沒更新的 `hint == nil`，
+    /// 在 iPhone 上就是一個空白視窗（使用者回報：開啟筆記本後第一次點套索）。
+    @State private var presented: PresentedFeatureHint?
 
     func body(content: Content) -> some View {
         content
@@ -125,14 +133,11 @@ private struct FeatureHintModifier: ViewModifier {
                 // 只在「剛被打開」的那一刻跳。每次重繪都跳的話，
                 // 使用者會在放圖釘的途中被彈窗打斷。
                 guard newValue, !FeatureHintStore.isDismissed(id) else { return }
-                hint = featureHint(id: id)
-                showing = hint != nil
+                presented = featureHint(id: id).map(PresentedFeatureHint.init)
             }
-            .popover(isPresented: $showing) {
-                if let hint {
-                    FeatureHintView(hint: hint) { showing = false }
-                        .presentationCompactAdaptationIfAvailable()
-                }
+            .popover(item: $presented) { item in
+                FeatureHintView(hint: item.hint) { presented = nil }
+                    .presentationCompactAdaptationIfAvailable()
             }
     }
 }

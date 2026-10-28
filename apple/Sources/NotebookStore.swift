@@ -3284,6 +3284,13 @@ public final class NotebookStore: ObservableObject {
     @discardableResult
     public func duplicateNotebook(id: String) -> NotebookDocument? {
         guard let original = notebooks.first(where: { $0.id == id }) else { return nil }
+        // 唯讀範例複製出來的是可編輯副本：走跟「另存可編輯副本」同一條路（完整複製筆跡與套件），
+        // 一律歸類於「未分類」，不留在範例的資料夾裡。
+        if original.isReadOnlySample {
+            guard let copy = copySampleForDuplicate(original) else { return nil }
+            markDirtyAndPersist(signalsLocalEdit: true)
+            return copy
+        }
         var copy = original
         copy = NotebookDocument(
             title: String(format: LocalizationManager.shared.localized("copy_suffix"), original.title),
@@ -6053,6 +6060,16 @@ extension NotebookStore {
         try? fm.setAttributes([.modificationDate: now], ofItemAtPath: newPackage.path)
 
         return copy
+    }
+
+    /// 首頁選單「複製」一本範例：完整複製後收進「未分類」（筆跡、錄音仍留在範例上）。
+    func copySampleForDuplicate(_ original: NotebookDocument) -> NotebookDocument? {
+        guard let copy = copySample(original) else { return nil }
+        var targetCopy = copy
+        targetCopy.folderId = nil
+        notebooks.insert(targetCopy, at: 0)
+        AccountSyncStore.shared.record(id: targetCopy.id, title: targetCopy.title, parentId: nil, isFolder: false)
+        return targetCopy
     }
 
     /// 複本正式成為一本一般筆記本：放在最前面、記進同步索引（一律歸納於「未分類筆記」）、錄音改指到它。
