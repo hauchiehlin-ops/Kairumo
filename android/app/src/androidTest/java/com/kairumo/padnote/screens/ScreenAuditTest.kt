@@ -133,7 +133,10 @@ class ScreenAuditTest {
     fun sidebarItemsAreReachable() {
         auditSubset(controlIdsRevealedBy("editor", "sidebar"), scrollTag = null) {
             openFirstNotebook()
-            compose.onNodeWithTag("editor.sidebar_toggle").performClick()
+            val isAlreadyOpen = compose.onAllNodesWithTag("editor.sidebar.list").fetchSemanticsNodes().isNotEmpty()
+            if (!isAlreadyOpen) {
+                compose.onNodeWithTag("editor.sidebar_toggle").performClick()
+            }
         }
     }
 
