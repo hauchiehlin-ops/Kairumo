@@ -6,6 +6,7 @@ import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.hasTestTag
@@ -252,7 +253,10 @@ class ScreenAuditTest {
             "首頁一本筆記都沒有 —— 捲過之後仍然找不到 home.notebooks.card.*。" +
                 "現場的 tag：" + presentTags().take(20).joinToString(", "),
             nodes.isNotEmpty())
-        cards[0].performClick()
+        // 直接觸發卡片的點擊動作，不注入座標。首頁在種子建好、同步狀態更新時版面會位移，
+        // 先量位置再點的話會點到別的東西 —— CI 實測點到「連接 Google 雲端硬碟」，跳出登入頁，
+        // App 退到背景，編輯器永遠等不到（No compose hierarchies found）。
+        cards[0].performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick)
         // 開範例時先在背景把它備份到暫存區（SampleFork.begin），備份完才換到編輯器 ——
         // waitForIdle 等不到背景執行緒，要等編輯器真的出現。
         compose.waitUntil(timeoutMillis = 30_000) {
