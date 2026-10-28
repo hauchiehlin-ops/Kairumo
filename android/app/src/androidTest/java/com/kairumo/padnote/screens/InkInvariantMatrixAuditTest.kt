@@ -14,7 +14,10 @@ import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.kairumo.padnote.MainActivity
+import com.kairumo.padnote.ui.FeatureHintStore
+import com.kairumo.padnote.ui.Onboarding
 import org.junit.After
+import org.junit.Before
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
@@ -42,12 +45,20 @@ class InkInvariantMatrixAuditTest {
     private val context: Context
         get() = InstrumentationRegistry.getInstrumentation().targetContext
 
+    @Before
+    fun setup() {
+        FeatureHintStore.forceDismissAllForTesting = true
+        skipOnboarding()
+    }
+
     @After
     fun cleanup() {
         useDisplayMode(null)
     }
 
     private fun skipOnboarding() {
+        FeatureHintStore.forceDismissAllForTesting = true
+        Onboarding.markSeen(context)
         context.getSharedPreferences("kairumo_onboarding", Context.MODE_PRIVATE)
             .edit().putBoolean("seen_v1", true).commit()
     }
@@ -180,10 +191,24 @@ class InkInvariantMatrixAuditTest {
             compose.waitForIdle()
             openFirstNotebook()
 
-            // 展開側欄（若尚未展開）
-            val page1Exists = compose.onAllNodesWithTag("sidebar.page.1").fetchSemanticsNodes().isNotEmpty()
-            if (!page1Exists) {
+            // 展開側欄（若尚未展開，以 sidebar.page.0 判斷）
+            val sidebarOpen = compose.onAllNodesWithTag("sidebar.page.0").fetchSemanticsNodes().isNotEmpty()
+            if (!sidebarOpen) {
                 tap("editor.sidebar_toggle", "找不到側欄切換按鈕")
+                compose.waitUntil(timeoutMillis = 5_000) {
+                    compose.onAllNodesWithTag("sidebar.page.0").fetchSemanticsNodes().isNotEmpty()
+                }
+            }
+
+            // 若目前只有第 0 頁，點擊新增頁面以確保有第 1 頁
+            val hasPage1 = compose.onAllNodesWithTag("sidebar.page.1").fetchSemanticsNodes().isNotEmpty()
+            if (!hasPage1) {
+                if (compose.onAllNodesWithTag("editor.page.add").fetchSemanticsNodes().isNotEmpty()) {
+                    tap("editor.page.add", "找不到新增頁面按鈕")
+                    compose.waitUntil(timeoutMillis = 10_000) {
+                        compose.onAllNodesWithTag("sidebar.page.1").fetchSemanticsNodes().isNotEmpty()
+                    }
+                }
             }
 
             val p0Strokes = parseStrokeCount()

@@ -53,11 +53,27 @@ object FeatureHintStore {
     @Volatile
     var forceDismissAllForTesting: Boolean? = null
 
-    private val isRunningInTest: Boolean by lazy {
+    val isRunningInTest: Boolean by lazy {
         if (System.getProperty("kairumo.uitest") == "1") return@lazy true
-        runCatching {
-            val registryClass = Class.forName("androidx.test.platform.app.InstrumentationRegistry")
+        val fromThread = runCatching {
+            val activityThreadClass = Class.forName("android.app.ActivityThread")
+            val currentThread = activityThreadClass.getMethod("currentActivityThread").invoke(null)
+            val inst = activityThreadClass.getMethod("getInstrumentation").invoke(currentThread)
+            inst != null && (inst.javaClass.name != "android.app.Instrumentation" ||
+                inst.javaClass.name.contains("test", ignoreCase = true) ||
+                inst.javaClass.name.contains("runner", ignoreCase = true))
+        }.getOrDefault(false)
+        if (fromThread) return@lazy true
+
+        val fromRegistry = runCatching {
+            val cl = Thread.currentThread().contextClassLoader ?: FeatureHintStore::class.java.classLoader
+            val registryClass = Class.forName("androidx.test.platform.app.InstrumentationRegistry", true, cl)
             registryClass.getMethod("getInstrumentation").invoke(null) != null
+        }.getOrDefault(false)
+        if (fromRegistry) return@lazy true
+
+        runCatching {
+            android.app.ActivityManager.isRunningInUserTestHarness()
         }.getOrDefault(false)
     }
 

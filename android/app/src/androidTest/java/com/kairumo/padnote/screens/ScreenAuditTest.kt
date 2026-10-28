@@ -15,6 +15,8 @@ import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.kairumo.padnote.MainActivity
+import com.kairumo.padnote.ui.FeatureHintStore
+import com.kairumo.padnote.ui.Onboarding
 import org.json.JSONObject
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -319,6 +321,8 @@ class ScreenAuditTest {
 
     /** 導覽看過沒存在 SharedPreferences —— 不設的話起始畫面取決於這台裝置之前被怎麼玩過。 */
     private fun skipOnboarding() {
+        FeatureHintStore.forceDismissAllForTesting = true
+        Onboarding.markSeen(context)
         context.getSharedPreferences("kairumo_onboarding", Context.MODE_PRIVATE)
             .edit().putBoolean("seen_v1", true).commit()
     }
