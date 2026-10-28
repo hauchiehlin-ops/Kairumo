@@ -598,6 +598,23 @@ extension NotebookEditorView {
         }
     }
 
+    /// 唯讀範例提示的「複製一份來編輯」：剛寫的那筆跟著帶進副本，範例放回原樣，編輯器換到副本。
+    ///
+    /// 不能直接 `notebook = copy`：那會經由宿主的綁定把範例那一格覆寫成副本，
+    /// 宿主還在找範例的 id、找不到就什麼都不畫 —— 整個畫面空白、也沒有返回鍵。
+    func duplicateSampleToEdit() {
+        saveCurrentPageDrawing()
+        let id = notebook.id
+        afterCoreInkWrites {
+            let copy = store.hasSampleSession(id)
+                ? store.finishSampleSession(id, choice: .saveCopy)
+                : store.duplicateNotebook(id: id)
+            guard let copy else { return }
+            onRequestSwitch?(copy)
+            showNoticeToast(name: localizationManager.localized("done"), icon: "checkmark.circle.fill")
+        }
+    }
+
     func finishSampleLeave(_ choice: SampleLeaveChoice) {
         store.finishSampleSession(notebook.id, choice: choice)
         let leave = afterSampleLeave

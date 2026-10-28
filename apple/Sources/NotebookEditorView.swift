@@ -1173,12 +1173,7 @@ public struct NotebookEditorView: View {
         .featureHint("hint.lasso", trigger: selectedTool == .lasso)
         .featureHint("hint.radial_menu", trigger: showRadialMenu)
         .alert(localizationManager.localized("sample_readonly_hint_title"), isPresented: $showSampleReadOnlyAlert) {
-            Button(localizationManager.localized("duplicate_to_edit")) {
-                if let copy = store.duplicateNotebook(id: notebook.id) {
-                    notebook = copy
-                    showNoticeToast(name: localizationManager.localized("done"), icon: "checkmark.circle.fill")
-                }
-            }
+            Button(localizationManager.localized("duplicate_to_edit")) { duplicateSampleToEdit() }
             Button(localizationManager.localized("cancel"), role: .cancel) {}
         } message: {
             Text(localizationManager.localized("sample_readonly_hint_body"))

@@ -1847,10 +1847,24 @@ internal fun ColumnScope.EditorCanvasContainer(ctx: EditorCanvasContext) = with(
                         onClick = {
                             showSampleReadOnlyAlert = false
                             val currentId = notebookId ?: return@TextButton
-                            val copyTitle = l10n("copy_suffix").replace("%@", noteTitle)
-                            val newId = com.kairumo.padnote.library.NotebookLibrary.duplicate(activity, currentId, copyTitle, deviceId(activity))
-                            if (newId != null) {
-                                onOpenNotebook?.invoke(newId)
+                            // 走範例暫存的「另存可編輯副本」：剛寫的那筆帶進副本、範例放回原樣（與 Apple
+                            // `duplicateSampleToEdit` 相同）。直接複製套件的話暫存還在，切過去時又問一次
+                            // 「保留／另存／放棄」，選另存就多出第二本副本。
+                            scope.launch {
+                                val newId = withContext(Dispatchers.IO) {
+                                    val device = deviceId(activity)
+                                    if (com.kairumo.padnote.library.SampleFork.hasSession(activity, currentId)) {
+                                        com.kairumo.padnote.library.SampleFork.finish(
+                                            activity, currentId, device, deviceLanguageTag(),
+                                            com.kairumo.padnote.library.SampleFork.Choice.SAVE_COPY)?.first
+                                    } else {
+                                        val copyTitle = l10n("copy_suffix").replace("%@", noteTitle)
+                                        com.kairumo.padnote.library.NotebookLibrary.duplicate(activity, currentId, copyTitle, device)
+                                    }
+                                }
+                                if (newId != null) {
+                                    onOpenNotebook?.invoke(newId)
+                                }
                             }
                         }
                     ) {

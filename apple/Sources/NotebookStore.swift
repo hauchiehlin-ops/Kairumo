@@ -2060,6 +2060,10 @@ public final class NotebookStore: ObservableObject {
         // 一次性清理：過去範例筆記本參與同步，各裝置各自生成的同一份內容（id 不同）被合併成兩份，
         // 每一頁的文字、圖形、筆跡都重複。範例現在不再同步（見 `isDeviceLocalSeed`），
         // 這裡把本機每一本範例重設回乾淨的標準內容。
+        if recoverOverwrittenSamples() {
+            changed = true
+        }
+
         let needsGenerationReset = ProfileDefaults.current.integer(forKey: Self.seedGenerationKey) < Self.seedGeneration
         if healInflatedSeedNotebooksIfNeeded(force: needsGenerationReset) {
             changed = true
@@ -2807,6 +2811,30 @@ public final class NotebookStore: ObservableObject {
                 restoreSamplePreservingUserContent(doc.id)
                 changed = true
             }
+        }
+        return changed
+    }
+
+    /// 找回被舊版「複製一份來編輯」覆寫掉的範例。
+    ///
+    /// 舊版在編輯器裡把副本直接寫進範例那一格，範例就從清單上消失了，但套件還留在磁碟上。
+    /// 使用者刪掉的範例套件會搬進回收桶、記進刪除紀錄，退役的有退役清單 —— 三者都不是、
+    /// 套件卻還在的，就是被覆寫掉的那本：放回標準內容。
+    private func recoverOverwrittenSamples() -> Bool {
+        let fm = FileManager.default
+        var changed = false
+        let ids = ["seed-welcome-notebook-v1", "seed-meeting-notebook-v1", "seed-feature-showcase-v1",
+                   SeedContent.kairumoManualId, Self.draftingExampleId]
+        for id in ids {
+            let known = (notebooks + trashedNotebooks).contains { $0.id.caseInsensitiveCompare(id) == .orderedSame }
+            guard !known, !AccountSyncStore.shared.isDeleted(id: id), !Self.retiredSamples.contains(id),
+                  packageDirectoryNames(for: id).contains(where: {
+                      fm.fileExists(atPath: corePackagesDirectory.appending(path: $0).path)
+                  }),
+                  let placeholder = standardSample(id: id) else { continue }
+            notebooks.append(placeholder)
+            restoreSampleToStandard(id)
+            changed = true
         }
         return changed
     }
