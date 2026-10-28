@@ -10,13 +10,17 @@ import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performScrollToNode
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.kairumo.padnote.MainActivity
+import com.kairumo.padnote.ui.FeatureHintStore
+import com.kairumo.padnote.ui.Onboarding
 import com.kairumo.padnote.ui.ToolbarSettings
 import org.junit.After
+import org.junit.Before
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
@@ -50,6 +54,12 @@ class UserJourneyTest {
 
     private val tag: String get() = com.kairumo.padnote.currentLanguageTag()
 
+    @Before
+    fun setup() {
+        FeatureHintStore.forceDismissAllForTesting = true
+        skipOnboarding()
+    }
+
     @After
     fun restore() {
         // 設定跟著帳號跑：測完一定要還原，不然下一個測試（或開發者自己的裝置）工具盤就少一格。
@@ -63,6 +73,8 @@ class UserJourneyTest {
     }
 
     private fun skipOnboarding() {
+        FeatureHintStore.forceDismissAllForTesting = true
+        Onboarding.markSeen(context)
         context.getSharedPreferences("kairumo_onboarding", Context.MODE_PRIVATE)
             .edit().putBoolean("seen_v1", true).commit()
     }
@@ -83,7 +95,9 @@ class UserJourneyTest {
 
     private fun tap(tag: String, why: String) {
         waitFor(tag, why)
-        compose.onAllNodesWithTag(tag).onFirst().performClick()
+        val node = compose.onAllNodesWithTag(tag).onFirst()
+        runCatching { node.performScrollTo() }
+        node.performClick()
         compose.waitForIdle()
     }
 
@@ -136,7 +150,7 @@ class UserJourneyTest {
         val x0 = window.x + box.left + box.width * 0.25f
         val x1 = window.x + box.left + box.width * 0.75f
         // `input swipe` 從系統的輸入管線送出真正的觸控（手指），與使用者的手一樣經過掌拒與仲裁。
-        val cmd = "input touchscreen swipe ${x0.toInt()} ${y.toInt()} ${x1.toInt()} ${y.toInt()} 450"
+        val cmd = "input swipe ${x0.toInt()} ${y.toInt()} ${x1.toInt()} ${y.toInt()} 450"
         InstrumentationRegistry.getInstrumentation().uiAutomation.executeShellCommand(cmd).close()
         Thread.sleep(900)
         compose.waitForIdle()
@@ -208,6 +222,7 @@ class UserJourneyTest {
 
             // 設定：拿掉工具盤的第一格（出廠是鋼筆）。
             tap("editor.more", "找不到「更多」選單")
+            runCatching { compose.onNodeWithTag("editor.customize_toolbar").performScrollTo() }
             tap("editor.customize_toolbar", "「更多」選單裡找不到自訂工具列")
             compose.onNodeWithTag("toolbar.scroll").performScrollToNode(hasTestTag("radial.slot.0.remove"))
             tap("radial.slot.0.remove", "自訂工具列裡找不到飛梭工具盤的槽位")

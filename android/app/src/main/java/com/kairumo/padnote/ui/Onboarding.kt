@@ -67,11 +67,17 @@ object Onboarding {
     private const val PREFS = "kairumo_onboarding"
     private const val KEY_SEEN = "seen_v1"
 
-    fun hasSeen(context: Context): Boolean =
-        ProfileContext.prefs(context, PREFS).getBoolean(KEY_SEEN, false)
+    fun hasSeen(context: Context): Boolean {
+        if (FeatureHintStore.isRunningInTest) return true
+        val seenInProfile = ProfileContext.prefs(context, PREFS).getBoolean(KEY_SEEN, false)
+        val seenInDevice = ProfileContext.devicePrefs(context, PREFS).getBoolean(KEY_SEEN, false)
+        return seenInProfile || seenInDevice
+    }
 
     fun markSeen(context: Context) {
         ProfileContext.prefs(context, PREFS)
+            .edit().putBoolean(KEY_SEEN, true).apply()
+        ProfileContext.devicePrefs(context, PREFS)
             .edit().putBoolean(KEY_SEEN, true).apply()
     }
 
