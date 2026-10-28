@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
@@ -105,7 +106,10 @@ class InkInvariantMatrixAuditTest {
         val cards = compose.onAllNodes(matcher)
         val nodes = cards.fetchSemanticsNodes()
         assertTrue("首頁找不到任何筆記卡片", nodes.isNotEmpty())
-        cards[0].performClick()
+        // 直接觸發卡片的點擊動作，不注入座標。首頁在種子建好、同步狀態更新時版面會位移，
+        // 先量位置再點的話會點到別的東西 —— CI 實測點到「連接 Google 雲端硬碟」，跳出登入頁，
+        // App 退到背景，編輯器永遠等不到（No compose hierarchies found）。
+        cards[0].performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick)
 
         compose.waitUntil(timeoutMillis = 30_000) {
             listOf("editor.more", "editor.share", "editor.sidebar_toggle").any {

@@ -296,15 +296,15 @@ struct ContinuousPageView<ObjectLayer: View>: View {
             MaskingTapeOverlayView(
                 notebook: $notebook,
                 pageIndex: pageIndex,
-                isActive: isFocused && selectedTool == .maskingTape,
+                isActive: isFocused && selectedTool == .maskingTape && editorMode == .draw,
                 selectedColor: selectedColor,
                 onTapesChanged: {
                     onNotebookChanged?()
                 }
             )
             .frame(width: PageGeometry.width, height: PageGeometry.height, alignment: .topLeading)
-            .allowsHitTesting((isFocused && selectedTool == .maskingTape) || (editorMode != .draw && !(notebook.tapeAttachments?.filter { $0.pageIndex == pageIndex }.isEmpty ?? true)))
-            .zIndex((isFocused && selectedTool == .maskingTape) ? 4 : 2.5)
+            .allowsHitTesting((isFocused && selectedTool == .maskingTape && editorMode == .draw) || (editorMode != .draw && !(notebook.tapeAttachments?.filter { $0.pageIndex == pageIndex }.isEmpty ?? true)))
+            .zIndex((isFocused && selectedTool == .maskingTape && editorMode == .draw) ? 4 : 2.5)
         }
         .coordinateSpace(name: CanvasCoordinateSpace.name)
         .contentShape(Rectangle())

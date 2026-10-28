@@ -76,6 +76,12 @@ import java.io.File
 
 @OptIn(ExperimentalLayoutApi::class, ExperimentalFoundationApi::class)
 @Composable
+// **不能被跳過。** `ctx` 每次重組都是同一個物件，但它身上有一大批「普通欄位」（`engine`、`lasso`、
+// `textStore`、`marqueeCandidates`、`lockedIds`、`inkBarState`…）是 `rememberEditorCanvasContext` 在每次重組
+// 重新指派的，不是 State。Kotlin 2.0.20 起 Compose 預設開「強跳過」：參數同一個物件就整段跳過，
+// 這裡讀到的就是舊的引擎、舊的物件清單、舊的工具列狀態（實機回報：筆刷點了不亮、手繪與套索失效、
+// 文字方塊拖不動、飛梭工具盤點不了）。拆檔之前這些都在同一個函式裡，沒有這個問題。
+@androidx.compose.runtime.NonSkippableComposable
 internal fun EditorFloatingPanels(ctx: EditorCanvasContext) = with(ctx) {
     if (showPageSidebar && !layout.sidebarIsInline) {
         androidx.compose.ui.window.Dialog(
