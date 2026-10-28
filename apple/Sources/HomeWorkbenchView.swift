@@ -5054,6 +5054,7 @@ struct PendingSampleSessionPrompt: ViewModifier {
 struct NotebookEditorHost: View {
     @ObservedObject var store: NotebookStore
     @State private var currentNotebookId: String
+    @Environment(\.dismiss) private var dismiss
 
     init(store: NotebookStore, initialNotebookId: String) {
         self.store = store
@@ -5069,6 +5070,10 @@ struct NotebookEditorHost: View {
                         currentNotebookId = target.id
                     }
                 )
+            } else {
+                // 正在編輯的那本不見了（被刪、被同步收掉）：關掉浮層回首頁。
+                // 留著的話是一整片空白、沒有返回鍵，只能把 App 關掉。
+                Color.clear.onAppear { DispatchQueue.main.async { dismiss() } }
             }
         }
     }
