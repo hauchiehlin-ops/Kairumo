@@ -92,6 +92,9 @@ private fun ChartObjectView(
     val currentChart by androidx.compose.runtime.rememberUpdatedState(chart)
     // 鎖定在畫布上：不能拖曳、縮放；點選、點兩下編修照常（見 canvas/ObjectLock.kt）。
     val moveLocked = com.kairumo.padnote.canvas.isMoveLocked(chart.id)
+    // 壓到下方選取物件（表格等）的工具列時讓出觸控，鎖定鈕才點得到（見 canvas/ObjectLock.kt）。
+    @Suppress("NAME_SHADOWING") val interactive = interactive &&
+        !com.kairumo.padnote.canvas.yieldsToSelectedChrome(chart.id, chart.x, chart.y, chart.width, chart.height)
     var liveX by remember(chart.id, chart.x) { mutableFloatStateOf(chart.x) }
     var liveY by remember(chart.id, chart.y) { mutableFloatStateOf(chart.y) }
     var liveWidth by remember(chart.id, chart.width) { mutableFloatStateOf(chart.width) }

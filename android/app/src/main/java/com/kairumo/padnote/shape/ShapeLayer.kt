@@ -352,6 +352,9 @@ private fun ShapeObjectView(
     val isTypeMode = editorMode == com.kairumo.padnote.canvas.EditorMode.TYPE
     // 鎖定在畫布上：不能拖曳、縮放、旋轉、拉端點；點選、編修、拉連接線照常（見 canvas/ObjectLock.kt）。
     val moveLocked = com.kairumo.padnote.canvas.isMoveLocked(shape.id)
+    // 壓到下方選取物件（表格等）的工具列時讓出觸控，鎖定鈕才點得到（見 canvas/ObjectLock.kt）。
+    @Suppress("NAME_SHADOWING") val interactive = interactive &&
+        !com.kairumo.padnote.canvas.yieldsToSelectedChrome(shape.id, shape.x, shape.y, shape.width, shape.height)
     // **手勢區塊裡一律讀 `current`，不要讀參數 `shape`。** `pointerInput` 的區塊只在 key 變了
     // 才重啟，拖曳進行中形狀每一幀都換成新的物件 —— 區塊裡抓到的若是第一幀的舊物件，
     // 每一幀都從同一個起點算起，結果是「拖了沒動」或「越拖越歪」。

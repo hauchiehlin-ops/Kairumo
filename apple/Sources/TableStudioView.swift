@@ -113,8 +113,11 @@ public struct NoteTableView: View {
                         .font(.system(size: table.fontSize, weight: cell.isHeader ? .semibold : .regular))
                         .frame(width: max(10, cell.width - 12), alignment: .leading)
                         .padding(6)
-                        .offset(x: cell.x, y: cell.y)
+                        // 點擊範圍是**整格**，不是文字那一行：原本空白格只有上緣 12pt 點得到，
+                        // 打字模式下點表格其他地方沒有任何反應（選不起來、不出工具列、進不了儲存格）。
+                        .frame(width: max(10, cell.width), height: max(10, cell.height), alignment: .topLeading)
                         .contentShape(Rectangle())
+                        .offset(x: cell.x, y: cell.y)
                         .onTapGesture {
                             editingCell = TableCellCoordinate(row: r, col: c)
                         }
@@ -699,20 +702,7 @@ struct TableAttachmentItemView: View {
                             .accessibilityIdentifier("table.lock")
                         }
 
-                        Button(action: onEdit) {
-                            HStack(spacing: 3) {
-                                Image(systemName: "slider.horizontal.3")
-                                    .font(.system(size: 11))
-                                Text(localizationManager.localized("edit"))
-                                    .font(.system(size: 11, weight: .medium))
-                            }
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 6)
-                            .background(Color.accentColor.opacity(0.12))
-                            .foregroundColor(.accentColor)
-                            .cornerRadius(12)
-                        }
-                        .buttonStyle(.plain)
+                        // 「編修」只留右上角那顆（與圖片、形狀同一個位置），這裡不再重複一顆。
                     }
                     .padding(3)
                     .background(

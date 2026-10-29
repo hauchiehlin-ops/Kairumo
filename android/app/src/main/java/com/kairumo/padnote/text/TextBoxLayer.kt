@@ -233,6 +233,9 @@ private fun TextBoxView(
     val isTypeMode = editorMode == com.kairumo.padnote.canvas.EditorMode.TYPE
     // 鎖定在畫布上：不能拖曳、縮放、旋轉；點選、就地打字、樣式面板照常（見 canvas/ObjectLock.kt）。
     val moveLocked = com.kairumo.padnote.canvas.isMoveLocked(box.id)
+    // 壓到下方選取物件（表格等）的工具列時讓出觸控，鎖定鈕才點得到（見 canvas/ObjectLock.kt）。
+    @Suppress("NAME_SHADOWING") val interactive = interactive &&
+        !com.kairumo.padnote.canvas.yieldsToSelectedChrome(box.id, box.x, box.y, box.width, box.height)
     val moveLockedNow by androidx.compose.runtime.rememberUpdatedState(moveLocked)
     val selectedNow by androidx.compose.runtime.rememberUpdatedState(isSelected)
     val typeModeNow by androidx.compose.runtime.rememberUpdatedState(isTypeMode)

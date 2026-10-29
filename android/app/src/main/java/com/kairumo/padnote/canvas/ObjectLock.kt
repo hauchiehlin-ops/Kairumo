@@ -76,6 +76,34 @@ fun isMoveLocked(id: String): Boolean = id in LocalLockedObjectIds.current
  */
 val LocalUnderInkObjectIds = compositionLocalOf<Set<String>> { emptySet() }
 
+/**
+ * 選取中的「筆跡下方」物件，它的工具列與把手佔的範圍（頁面座標）。
+ *
+ * 表格、圖片、形狀等預設在筆跡下方（z 10 起跳），文字方塊在上方（z 200 起跳）——
+ * 表格上緣的「拖曳移動／鎖定／編修」列一旦跟上方的文字方塊重疊（透明底的標題框最常見），
+ * 點下去被文字方塊吃掉，鎖定鈕點不到。上方的物件壓到這塊範圍時暫時不接觸控
+ * （[yieldsToSelectedChrome]）；點空白處取消選取後就恢復。與 Apple 的
+ * `selectedUnderInkChrome` 同一條規則、同一組邊距。
+ */
+data class SelectedChrome(val selectedId: String, val left: Float, val top: Float, val right: Float, val bottom: Float)
+
+val LocalSelectedChrome = compositionLocalOf<SelectedChrome?> { null }
+
+fun selectedUnderInkChrome(selectedId: String?, frames: List<MarqueeHit>, underInkIds: Set<String>): SelectedChrome? {
+    if (selectedId == null || selectedId !in underInkIds) return null
+    val f = frames.firstOrNull { it.id == selectedId } ?: return null
+    // 上方留給工具列與旋轉鈕，其餘三邊留給角落的把手。旋轉過的物件以外框估算。
+    return SelectedChrome(selectedId, f.x - 40f, f.y - 96f, f.x + f.width + 40f, f.y + f.height + 40f)
+}
+
+/** 這個物件（在筆跡上方）壓到下方選取物件的工具列，要讓出觸控。 */
+@Composable
+fun yieldsToSelectedChrome(id: String, x: Float, y: Float, width: Float, height: Float): Boolean {
+    val chrome = LocalSelectedChrome.current ?: return false
+    if (id == chrome.selectedId || id in LocalUnderInkObjectIds.current) return false
+    return x < chrome.right && x + width > chrome.left && y < chrome.bottom && y + height > chrome.top
+}
+
 /** 點在哪一個鎖定物件上（`frames` 由下到上排，取最上面那一個）。放寬一圈，點角落的鎖頭也算。 */
 fun lockedObjectHit(x: Float, y: Float, frames: List<MarqueeHit>, lockedIds: Set<String>): String? {
     if (lockedIds.isEmpty()) return null

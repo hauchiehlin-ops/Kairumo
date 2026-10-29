@@ -75,6 +75,9 @@ private fun Model3DView(
     val context = androidx.compose.ui.platform.LocalContext.current
     // 鎖定在畫布上：不能拖曳、縮放；點選、點兩下編修照常（見 canvas/ObjectLock.kt）。
     val moveLocked = com.kairumo.padnote.canvas.isMoveLocked(model.id)
+    // 壓到下方選取物件（表格等）的工具列時讓出觸控，鎖定鈕才點得到（見 canvas/ObjectLock.kt）。
+    @Suppress("NAME_SHADOWING") val interactive = interactive &&
+        !com.kairumo.padnote.canvas.yieldsToSelectedChrome(model.id, model.x, model.y, model.width, model.height)
     Box(
         Modifier
             .offset(model.x.dp, model.y.dp)

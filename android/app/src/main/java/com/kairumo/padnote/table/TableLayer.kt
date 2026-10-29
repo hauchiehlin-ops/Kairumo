@@ -5,7 +5,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.platform.testTag
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
@@ -100,6 +104,9 @@ private fun TableObjectView(
     val moveLocked = com.kairumo.padnote.canvas.isMoveLocked(table.id)
     val currentTable by androidx.compose.runtime.rememberUpdatedState(table)
     val layout = table.layout()
+    // 壓到下方選取物件（表格等）的工具列時讓出觸控，鎖定鈕才點得到（見 canvas/ObjectLock.kt）。
+    @Suppress("NAME_SHADOWING") val interactive = interactive &&
+        !com.kairumo.padnote.canvas.yieldsToSelectedChrome(table.id, table.x, table.y, table.width, layout.height.toFloat())
     var liveX by remember(table.id, table.x) { mutableFloatStateOf(table.x) }
     var liveY by remember(table.id, table.y) { mutableFloatStateOf(table.y) }
     var liveRotation by remember(table.id, table.rotationDegrees) { mutableFloatStateOf(table.rotationDegrees ?: 0f) }
@@ -115,6 +122,11 @@ private fun TableObjectView(
     }
 
     val rotation = CanvasRotation.normalized(liveRotation)
+
+    // 就地編輯中的儲存格（列, 欄）。點一下儲存格就選取表格並進入編輯 —— 與 Apple 的
+    // `NoteTableView` 同一個行為；不必再點兩下開編修面板才改得了一個字。
+    var editingCell by remember(table.id) { androidx.compose.runtime.mutableStateOf<Pair<Int, Int>?>(null) }
+    androidx.compose.runtime.LaunchedEffect(isSelected) { if (!isSelected) editingCell = null }
 
     // 外層只定位、不旋轉 —— 旋轉把手掛在這一層。
         // 座標的單位是**頁面點**（＝dp），與 Apple 端和 format-spec 一致。
@@ -134,12 +146,21 @@ private fun TableObjectView(
             )
             .gesturesIf(interactive) { pointerInput(table.id) {
                 detectTapGestures(
-                    onTap = { onSelect(currentTable.id) },
+                    onTap = { pos ->
+                        onSelect(currentTable.id)
+                        // 點擊座標在旋轉前的本地座標系（graphicsLayer 之內），直接對版面找格子。
+                        val px = pos.x / density
+                        val py = pos.y / density
+                        editingCell = currentTable.layout().cells.firstOrNull { c ->
+                            px >= c.x && px < c.x + c.width && py >= c.y && py < c.y + c.height
+                        }?.let { it.row.toInt() to it.col.toInt() }
+                    },
                     // 點兩下進編輯面板 —— 與 Apple 端一致。
                     onDoubleTap = { onEdit(currentTable) }
                 )
             } }
-            .gesturesIf(interactive && !moveLocked && (isSelected || isTypeMode) && !isCanvasNavigating) {
+            // 正在編輯儲存格時不拖：手指在格子裡稍微滑動就把整張表拖走（Apple 端同一條規則）。
+            .gesturesIf(interactive && !moveLocked && editingCell == null && (isSelected || isTypeMode) && !isCanvasNavigating) {
                 // 不以 isSelected 當鍵：拖曳一開始就 onSelect()，選取狀態一變這段手勢就被重啟、拖到一半被取消（實機回報：方塊拖不動）。
                 pointerInput(table.id, isTypeMode, isCanvasNavigating) {
                 var base: NoteTable? = null
@@ -192,6 +213,29 @@ private fun TableObjectView(
             } }
     ) {
         TablePreview(table = table, density = density)
+
+        val editing = editingCell
+        if (interactive && isSelected && editing != null) {
+            layout.cells.firstOrNull { it.row.toInt() == editing.first && it.col.toInt() == editing.second }
+                ?.let { cell ->
+                    TableCellInlineEditor(
+                        table = table,
+                        cell = cell,
+                        onTextChange = { text ->
+                            currentTable.setCell(text, editing.first, editing.second)
+                            onChanged(currentTable)
+                        },
+                        onNext = {
+                            val t = currentTable
+                            editingCell = when {
+                                editing.second + 1 < t.cols -> editing.first to editing.second + 1
+                                editing.first + 1 < t.rows -> editing.first + 1 to 0
+                                else -> null
+                            }
+                        }
+                    )
+                }
+        }
     }
 
         if (isSelected) {
@@ -303,3 +347,52 @@ fun TablePreview(
 /** 解析 `#RRGGBB`，失敗時回 `null`（讓呼叫端自己挑 fallback）。 */
 private fun ChartColorOrNull(hex: String): Color? =
     com.kairumo.padnote.chart.ChartRenderer.parseColor(hex)?.let { Color(it) }
+
+/**
+ * 儲存格的就地輸入框，蓋在那一格上（跟著表格一起轉）。對照 Apple 的 `NoteTableInlineEditor`。
+ * 每打一個字就寫回表格；鍵盤的「下一個」跳到右邊一格，最後一欄換到下一列開頭。
+ */
+@Composable
+private fun TableCellInlineEditor(
+    table: NoteTable,
+    cell: uniffi.padnote_core.FfiTableCell,
+    onTextChange: (String) -> Unit,
+    onNext: () -> Unit
+) {
+    val row = cell.row.toInt()
+    val col = cell.col.toInt()
+    var value by remember(table.id, row, col) {
+        val text = table.cell(row, col)
+        androidx.compose.runtime.mutableStateOf(
+            androidx.compose.ui.text.input.TextFieldValue(text, androidx.compose.ui.text.TextRange(text.length)))
+    }
+    val focus = remember { androidx.compose.ui.focus.FocusRequester() }
+    androidx.compose.runtime.LaunchedEffect(row, col) { focus.requestFocus() }
+    val fontSize = with(androidx.compose.ui.platform.LocalDensity.current) { table.fontSize.dp.toSp() }
+    androidx.compose.foundation.text.BasicTextField(
+        value = value,
+        onValueChange = { next ->
+            val changed = next.text != value.text
+            value = next
+            if (changed) onTextChange(next.text)
+        },
+        textStyle = androidx.compose.ui.text.TextStyle(
+            fontSize = fontSize,
+            fontWeight = if (cell.isHeader) androidx.compose.ui.text.font.FontWeight.SemiBold else null,
+            color = MaterialTheme.colorScheme.onSurface
+        ),
+        cursorBrush = androidx.compose.ui.graphics.SolidColor(MaterialTheme.colorScheme.primary),
+        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+            imeAction = androidx.compose.ui.text.input.ImeAction.Next),
+        keyboardActions = androidx.compose.foundation.text.KeyboardActions(onNext = { onNext() }),
+        modifier = Modifier
+            .offset((cell.x + 3).toFloat().dp, (cell.y + 3).toFloat().dp)
+            .size(maxOf(20.0, cell.width - 6).toFloat().dp, maxOf(20.0, cell.height - 6).toFloat().dp)
+            .background(
+                MaterialTheme.colorScheme.surface.copy(alpha = 0.96f), RoundedCornerShape(4.dp))
+            .border(2.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(4.dp))
+            .padding(horizontal = 4.dp, vertical = 2.dp)
+            .focusRequester(focus)
+            .testTag("table.cell.editor")
+    )
+}
