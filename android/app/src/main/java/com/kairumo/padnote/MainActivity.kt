@@ -757,6 +757,7 @@ private fun InkScreen(
                 stackRevision++
             },
             onInsertSymbol = { showSymbolPicker = true },
+            onFormatAction = { action -> applyFormatToSelectedText(action) },
             onInsertLink = { insertingLink = true },
             onInsertModel3D = { insertingModel3D = true }
         )

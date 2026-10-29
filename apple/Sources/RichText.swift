@@ -559,6 +559,19 @@ extension RichText {
         return found
     }
 
+    /// 游標所在的那一行（不含換行符）。空行回 nil。與 Android `RichText.lineRange` 同一條規則。
+    static func lineRange(around location: Int, in text: String) -> NSRange? {
+        let ns = text as NSString
+        guard ns.length > 0 else { return nil }
+        let loc = min(max(0, location), ns.length)
+        let newline = UInt16(UInt8(ascii: "\n"))
+        var start = loc
+        while start > 0 && ns.character(at: start - 1) != newline { start -= 1 }
+        var end = loc
+        while end < ns.length && ns.character(at: end) != newline { end += 1 }
+        return end > start ? NSRange(location: start, length: end - start) : nil
+    }
+
     /// 把範圍內的覆寫全部拿掉（Word 的「清除格式設定」只作用在選取範圍）。
     static func clearOverrides(in range: NSRange, of item: inout NoteTextAttachment) {
         let length = utf16Length(item.text)

@@ -299,6 +299,15 @@ object RichText {
         return start until end
     }
 
+    /** 游標所在的那一行（不含換行符）。空行回 null。與 Apple `RichText.lineRange` 同一條規則。 */
+    fun lineRange(text: String, location: Int): IntRange? {
+        if (text.isEmpty()) return null
+        val loc = location.coerceIn(0, text.length)
+        val start = text.lastIndexOf('\n', loc - 1) + 1
+        val end = text.indexOf('\n', loc).let { if (it < 0) text.length else it }
+        return if (end > start) start until end else null
+    }
+
     /** 畫布與編輯面板共用的顯示字串。 */
     fun annotated(box: TextBox): AnnotatedString {
         val text = box.text

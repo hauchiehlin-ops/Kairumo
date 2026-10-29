@@ -1047,6 +1047,7 @@ extension NotebookEditorView {
                         .clipShape(Capsule())
                     }
                     .buttonStyle(.plain)
+                    .accessibilityIdentifier("editor.text.done_back_to_ink")
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 5)

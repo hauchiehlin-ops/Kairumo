@@ -237,7 +237,14 @@ fun TextBoxEditor(
                             languageTag = languageTag,
                             tagPrefix = "text_editor.format"
                         ) { action ->
-                            val sc = scope()
+                            // 只有游標、又不在詞中間（行首、行尾）時，醒目提示改套整行：套在「接下來要打的字」
+                            // 畫面上什麼都不會變，使用者只會覺得按鈕壞了。其他格式維持 Word 的游標行為。
+                            val sc = scope().let { sc ->
+                                if (sc is TextFormatScope.Caret && action is WordFormatAction.Char && action.edit.highlightHex != null) {
+                                    RichText.lineRange(currentBox.text, sc.location)
+                                        ?.let { TextFormatScope.Selection(it.first, it.last + 1) } ?: sc
+                                } else sc
+                            }
                             var pending: TextCharStyle? = null
                             mutate { b -> pending = applyWordFormat(b, action, sc) }
                             pending?.let { edit ->

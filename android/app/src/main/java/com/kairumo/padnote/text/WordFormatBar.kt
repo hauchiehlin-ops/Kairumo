@@ -161,6 +161,9 @@ enum class WordListKind(val marker: (Int) -> String) {
 }
 
 /** 工具列送出的動作。字元格式依範圍套用；段落格式（對齊、縮排、行距、清單）作用在整個方塊。 */
+/** 文字醒目提示的預設色（Word 的黃色）。飛梭工具盤的螢光筆對文字方塊套的也是這個色。 */
+const val TEXT_HIGHLIGHT_DEFAULT_HEX = "#FFFF00"
+
 sealed interface WordFormatAction {
     data class Char(val edit: TextCharStyle) : WordFormatAction
     data class Align(val raw: String) : WordFormatAction
@@ -257,7 +260,7 @@ fun WordFormatControls(
     onAction: (WordFormatAction) -> Unit
 ) {
     var lastFontColor by rememberSaveable { mutableStateOf("#C00000") }
-    var lastHighlight by rememberSaveable { mutableStateOf("#FFFF00") }
+    var lastHighlight by rememberSaveable { mutableStateOf(TEXT_HIGHLIGHT_DEFAULT_HEX) }
     var sizeMenu by remember { mutableStateOf(false) }
     var familyMenu by remember { mutableStateOf(false) }
     var colorMenu by remember { mutableStateOf(false) }

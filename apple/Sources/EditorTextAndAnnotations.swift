@@ -1262,6 +1262,12 @@ extension NotebookEditorView {
         case .selection(let range):
             RichText.apply(edit, range: range, to: &next)
         case .caret(let location):
+            // 只有游標、又不在詞中間（行首、行尾）時改套整行：套在「接下來要打的字」
+            // 畫面上什麼都不會變，使用者只會覺得按鈕壞了。其他格式維持 Word 的游標行為。
+            if let line = RichText.lineRange(around: location, in: target.text) {
+                RichText.apply(edit, range: line, to: &next)
+                break
+            }
             var caret = textSelectionTracker.caretStyle
             if caret?.textId != target.id || caret?.location != location {
                 caret = CaretStyle(textId: target.id, location: location, style: TextCharStyle())
