@@ -262,11 +262,26 @@ object SampleFork {
         return newId to title
     }
 
-    // ---- 舊版「轉成一般筆記」留下的退役名單（範例改成唯讀之後不再寫入；退役的範例不補回）----
+    // ---- 舊版「轉成一般筆記」留下的退役名單 ----
 
     private const val PREFS = "kairumo.seed"
     private const val KEY_RETIRED = "retired_samples"
 
-    fun retired(context: Context): Set<String> =
+    /**
+     * 清掉退役名單。範例改成唯讀之後就轉不了了，名單卻一直留著：被轉過的那本範例從此補不回來
+     * （使用者回報：Mac 永遠少一本《Kairumo(功能範例)》，Apple 端 `reinstateRetiredSamples` 同一件事）。
+     * 使用者刪掉的範例另有回收桶與同步索引擋著，不靠這份名單。
+     */
+    fun clearRetired(context: Context) {
+        val prefs = ProfileContext.prefs(context, PREFS)
+        if (prefs.contains(KEY_RETIRED)) prefs.edit().remove(KEY_RETIRED).apply()
+    }
+
+    /** 測試用：寫入舊版的退役名單。 */
+    internal fun retireForTesting(context: Context, id: String) {
+        ProfileContext.prefs(context, PREFS).edit().putStringSet(KEY_RETIRED, setOf(id.lowercase())).apply()
+    }
+
+    internal fun retiredForTesting(context: Context): Set<String> =
         ProfileContext.prefs(context, PREFS).getStringSet(KEY_RETIRED, emptySet()) ?: emptySet()
 }

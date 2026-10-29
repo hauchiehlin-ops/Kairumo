@@ -2032,6 +2032,10 @@ public final class NotebookStore: ObservableObject {
             changed = true
         }
 
+        if reinstateRetiredSamples() {
+            changed = true
+        }
+
         // 若現有使用者庫中尚未有功能實戰範例筆記，自動補入 —— **只補一次**（旗標）。
         // 以前每次啟動都補，使用者刪掉之後它每次更新、每次開 App 都長回來。
         let showcaseChecked = ProfileDefaults.current.bool(forKey: Self.showcaseSeededKey)
@@ -2836,6 +2840,29 @@ public final class NotebookStore: ObservableObject {
             restoreSampleToStandard(id)
             changed = true
         }
+        return changed
+    }
+
+    /// 把舊版「轉成一般筆記」退役掉的範例放回來，然後清掉退役名單。
+    ///
+    /// 範例改成唯讀之後就轉不了了，名單卻一直留著：被轉過的那本範例每一個補回的入口都會跳過，
+    /// 新安裝（資料庫在使用者選的資料夾、設定在容器裡，兩者都不會跟著 App 刪掉）、匯入、同步之後都一樣
+    /// 少那一本（使用者回報：Mac 永遠少一本《Kairumo(功能範例)》）。
+    /// 還在清單或回收桶裡、或在同步索引裡被刪除的，照樣不補。
+    private func reinstateRetiredSamples() -> Bool {
+        let retired = Self.retiredSamples
+        guard !retired.isEmpty else { return false }
+        var changed = false
+        for id in retired.sorted() {
+            let known = (notebooks + trashedNotebooks).contains { $0.id.caseInsensitiveCompare(id) == .orderedSame }
+            guard !known, !AccountSyncStore.shared.isDeleted(id: id),
+                  let placeholder = standardSample(id: id) else { continue }
+            notebooks.append(placeholder)
+            // 也清掉當年留下的範例暫存與套件，換成標準內容。
+            restoreSampleToStandard(placeholder.id)
+            changed = true
+        }
+        ProfileDefaults.current.removeObject(forKey: Self.retiredSamplesKey)
         return changed
     }
 
