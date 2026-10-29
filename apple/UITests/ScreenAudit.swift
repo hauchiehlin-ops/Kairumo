@@ -40,10 +40,14 @@ enum ScreenAudit {
     /// - Parameters:
     ///   - allowMissing: 還沒接上的控制項（棘輪）。只准縮小 —— 每接好一個
     ///     就從這裡拿掉。放著不管的話這道稽核會退化成裝飾。
+    ///   - scroller: 這個畫面自己那張清單的識別碼。浮層畫面一定要給 ——
+    ///     不給的話捲的是 `collectionViews.firstMatch`，那可能是浮層**後面**
+    ///     編輯器的頁面清單，捲了等於沒捲。
     static func check(
         _ app: XCUIApplication,
         screen: String,
         allowMissing: Set<String> = [],
+        scroller: String? = nil,
         file: StaticString = #filePath,
         line: UInt = #line
     ) {
@@ -101,9 +105,15 @@ enum ScreenAudit {
             guard element.isEnabled else { continue }
             // 沒有面積的東西本來就點不到，那是版面問題不是遮蔽問題。
             // 惰性清單裡還沒捲到的列也是 0 面積：先捲過去再量一次，仍是 0 才算。
+            //
+            // 「自訂工具列」最後一列（清除頁面）曾在 main 的 CI 上捲不到：
+            // 同一份程式碼 PR 上綠、main 上紅，最可能是捲到浮層後面那張清單。
+            let own = scroller.map { app.descendants(matching: .any).matching(identifier: $0).firstMatch }
+            let target: XCUIElement = own.flatMap { $0.exists ? $0 : nil }
+                ?? (app.collectionViews.firstMatch.exists ? app.collectionViews.firstMatch : app)
             var scrolls = 0
-            while (element.frame.width <= 0 || element.frame.height <= 0) && scrolls < 4 {
-                (app.collectionViews.firstMatch.exists ? app.collectionViews.firstMatch : app).swipeUp()
+            while (element.frame.width <= 0 || element.frame.height <= 0) && scrolls < 6 {
+                target.swipeUp()
                 scrolls += 1
             }
             guard element.frame.width > 0, element.frame.height > 0 else {
