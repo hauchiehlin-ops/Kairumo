@@ -1525,9 +1525,14 @@ extension NotebookEditorView {
            editingTextId == nil {
             return false
         }
-        // 鎖定的物件不接觸控：落在它上面的筆照樣畫在畫布上，不穿透下去。
+        // 鎖定在畫布上、又沒有選取的物件不穿透：落在它上面的筆照樣畫在畫布上，
+        // 打字模式下的點擊由畫布接住再選取它（`handleCanvasTapInTypeMode`）。選取之後才穿透，
+        // 鎖定的表格、文字照樣能就地編輯（鎖定只鎖位置）。
+        let selectedIds = Set(([activeSelectedObjectId, inlineEditingTextId, editingTextId].compactMap { $0 }
+            + Array(selectedObjectIds) + Array(selectedShapeIds)).map { $0.lowercased() })
+        let lockedIdle = notebook.allLockedObjectIds.subtracting(selectedIds)
         let underInkSet = notebook.underInkObjectIds(forPage: page)
-            .subtracting(notebook.allLockedObjectIds)
+            .filter { !lockedIdle.contains($0.lowercased()) }
         guard !underInkSet.isEmpty else { return false }
 
         var hitSelected = false

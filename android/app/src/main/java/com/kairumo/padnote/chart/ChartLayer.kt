@@ -64,13 +64,11 @@ fun ChartLayer(
     // 的話，圖片的 zIndex 只跟圖片比、文字的只跟文字比 —— 跨型別永遠是
     // 「圖片一定在文字下面」，圖層面板就排不動。
     // 直接把物件發到呼叫端的 Box 裡，它們才是彼此的兄弟。
-        // 鎖定在畫布上的物件不接收觸控（見 canvas/ObjectLock.kt）。
-        val lockedIds = com.kairumo.padnote.canvas.LocalLockedObjectIds.current
         for (chart in charts) {
             androidx.compose.runtime.key(chart.id) {
                 ChartObjectView(
                     chart, density, chart.id == selectedId, onSelect, onEdit, onChanged,
-                    interactive = interactive && chart.id !in lockedIds, zIndex = zIndexOf(chart.id))
+                    interactive = interactive, zIndex = zIndexOf(chart.id))
             }
         }
 }
@@ -92,6 +90,8 @@ private fun ChartObjectView(
     val crossing by androidx.compose.runtime.rememberUpdatedState(com.kairumo.padnote.canvas.LocalPageCrossing.current)
     // 拖曳手勢以 id 為鍵，不會跟著重組重建：放開時要讀**目前**的位置，不是手勢開始時的。
     val currentChart by androidx.compose.runtime.rememberUpdatedState(chart)
+    // 鎖定在畫布上：不能拖曳、縮放；點選、點兩下編修照常（見 canvas/ObjectLock.kt）。
+    val moveLocked = com.kairumo.padnote.canvas.isMoveLocked(chart.id)
     var liveX by remember(chart.id, chart.x) { mutableFloatStateOf(chart.x) }
     var liveY by remember(chart.id, chart.y) { mutableFloatStateOf(chart.y) }
     var liveWidth by remember(chart.id, chart.width) { mutableFloatStateOf(chart.width) }
@@ -121,7 +121,7 @@ private fun ChartObjectView(
                         onDoubleTap = { onEdit(currentChart) }
                     )
                 } }
-                .gesturesIf(interactive) { pointerInput(chart.id) {
+                .gesturesIf(interactive && !moveLocked) { pointerInput(chart.id) {
                     var base: ChartObject? = null
                     var accX = 0f
                     var accY = 0f
@@ -178,7 +178,7 @@ private fun ChartObjectView(
                 objectId = chart.id
             )
             // 縮放把手。圖表原本只能搬、不能縮放（Apple 端的圖表是圖片物件，有四角把手）。
-            ResizeHandle(
+            if (!moveLocked) ResizeHandle(
                 widthDp = liveWidth,
                 heightDp = liveHeight,
                 density = density,

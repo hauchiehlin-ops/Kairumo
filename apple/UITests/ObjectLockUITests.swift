@@ -88,6 +88,45 @@ final class ObjectLockUITests: XCTestCase {
         waitForExpectations(timeout: 4)
     }
 
+    /// 鎖定只鎖位置：鎖定的物件照樣點得到、選得起來（才能編輯、複製），但拖不動。
+    ///
+    /// 以前鎖定是整個不接觸控：表格的儲存格改不了，Mac 上表格也找不到解除鎖定的選單。
+    func testALockedObjectIsStillSelectableButCannotBeDragged() {
+        let app = XCUIApplication()
+        app.launchEnvironment["KAIRUMO_UITEST"] = "1"
+        app.launchEnvironment["KAIRUMO_UITEST_SEED_OBJECTS"] = "1"
+        app.launchEnvironment["KAIRUMO_UITEST_SEED_LOCKED"] = "1" // 圖片一開始就鎖住
+        app.launch()
+        openMatrixNotebook(app)
+
+        let typing = find(app, "portal.type")
+        XCTAssertTrue(typing.waitForExistence(timeout: 8))
+        typing.tap()
+
+        let image = find(app, "object.image")
+        XCTAssertTrue(image.waitForExistence(timeout: 8), "找不到圖片物件")
+        XCTAssertTrue(app.buttons["object.lock.badge"].waitForExistence(timeout: 4), "圖片應該是鎖定的")
+        // 量的是圖片相對於另一個（沒鎖的）物件的位置：拖過鎖定的物件會捲動頁面，兩者一起動。
+        let reference = find(app, "object.shape")
+        XCTAssertTrue(reference.waitForExistence(timeout: 4), "找不到作為參考的形狀")
+        func offset() -> CGPoint {
+            CGPoint(x: image.frame.minX - reference.frame.minX, y: image.frame.minY - reference.frame.minY)
+        }
+        let before = offset()
+
+        // 1. 點得到：選取之後出現物件動作（複製）。
+        image.tap()
+        XCTAssertTrue(app.buttons["object.action.copy"].waitForExistence(timeout: 3),
+                      "鎖定的物件也要能選取（選取後應出現「複製」）")
+
+        // 2. 拖不動。
+        let start = image.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+        start.press(forDuration: 0.2, thenDragTo: start.withOffset(CGVector(dx: 120, dy: 90)))
+        let after = offset()
+        XCTAssertEqual(after.x, before.x, accuracy: 2, "鎖定的物件被拖動了：\(before) → \(after)")
+        XCTAssertEqual(after.y, before.y, accuracy: 2, "鎖定的物件被拖動了：\(before) → \(after)")
+    }
+
     /// 物件剪下／複製／貼上：手繪與打字兩種模式、單頁與連續兩種頁面型態，
     /// 貼到同一頁或其他頁的任意位置都要成立。
     func testCutCopyPasteObjectAcrossModesAndPages() throws {

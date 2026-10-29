@@ -1207,7 +1207,7 @@ extension NotebookEditorView {
     @ViewBuilder
     func objectLayer(forPage page: Int, filter: ObjectInkLayerFilter = .all) -> some View {
         let underInkSet = notebook.underInkObjectIds(forPage: page)
-        // 鎖定在畫布上的物件：不接收觸控（見 `canvasLocked`）。不分頁查：物件 id 全域唯一，
+        // 鎖定在畫布上的物件：不能搬移、縮放、旋轉（見 `canvasLocked`）。不分頁查：物件 id 全域唯一，
         // 頁面搬移、插頁之後頁次鍵對不上也不會鎖錯或漏鎖。
         let lockedSet = notebook.allLockedObjectIds
         // 堆疊順序的索引表：一次算繪只建一次，不要每個物件各掃一遍

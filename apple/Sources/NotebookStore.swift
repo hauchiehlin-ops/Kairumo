@@ -486,8 +486,8 @@ public struct NotebookDocument: Identifiable, Codable, Hashable, @unchecked Send
         return out
     }
 
-    /// 某一頁「鎖定在畫布上」的物件 ID。鎖定的物件不接收任何觸控（點選、拖曳、長按都穿透到頁面），
-    /// 雙指縮放或捲動頁面時就不會誤點到手指底下的物件、讓它進入編輯狀態。
+    /// 某一頁「鎖定在畫布上」的物件 ID。鎖定的物件不能搬移、縮放、旋轉（拖過它就是捲動頁面），
+    /// 點選與編輯內容照常 —— 鎖定是為了不被誤觸搬走（見 `canvasLocked`）。
     /// 解除鎖定走圖層面板或物件選單（見 `ObjectLockMenuItem`）。與 Android `NotebookMeta.KEY_LOCKED_BY_PAGE` 同一個鍵。
     public var lockedObjectIdsByPage: [String: [String]]?
 

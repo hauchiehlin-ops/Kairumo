@@ -155,13 +155,11 @@ fun TextBoxLayer(
     // 的話，圖片的 zIndex 只跟圖片比、文字的只跟文字比 —— 跨型別永遠是
     // 「圖片一定在文字下面」，圖層面板就排不動。
     // 直接把物件發到呼叫端的 Box 裡，它們才是彼此的兄弟。
-        // 鎖定在畫布上的物件不接收觸控（見 canvas/ObjectLock.kt）。
-        val lockedIds = com.kairumo.padnote.canvas.LocalLockedObjectIds.current
         for (box in boxes) {
             androidx.compose.runtime.key(box.id) {
                 TextBoxView(
                     zIndex = zIndexOf(box.id),
-                    interactive = interactive && box.id !in lockedIds,
+                    interactive = interactive,
                     box = box,
                     density = density,
                     isSelected = box.id == selectedId,
@@ -233,6 +231,9 @@ private fun TextBoxView(
     val editorMode = com.kairumo.padnote.canvas.LocalEditorMode.current
     val isCanvasNavigating = com.kairumo.padnote.canvas.LocalCanvasNavigating.current
     val isTypeMode = editorMode == com.kairumo.padnote.canvas.EditorMode.TYPE
+    // 鎖定在畫布上：不能拖曳、縮放、旋轉；點選、就地打字、樣式面板照常（見 canvas/ObjectLock.kt）。
+    val moveLocked = com.kairumo.padnote.canvas.isMoveLocked(box.id)
+    val moveLockedNow by androidx.compose.runtime.rememberUpdatedState(moveLocked)
     val selectedNow by androidx.compose.runtime.rememberUpdatedState(isSelected)
     val typeModeNow by androidx.compose.runtime.rememberUpdatedState(isTypeMode)
     val onSelectNow by androidx.compose.runtime.rememberUpdatedState(onSelect)
@@ -318,6 +319,15 @@ private fun TextBoxView(
                         if (down.type == androidx.compose.ui.input.pointer.PointerType.Stylus && !isTypeMode) return@awaitEachGesture
 
                         // 手繪模式下未選取時：點擊僅選取，不直接拖曳，防止手繪或雙指導航時誤移動背景方塊
+                        // 鎖定在畫布上：只認點一下（選取／就地編輯），不認拖曳 —— 拖過它就是捲動頁面。
+                        if (moveLockedNow) {
+                            val up = waitForUpOrCancellation()
+                            if (up != null) {
+                                onSelect()
+                                if (isTypeMode) onStartEdit()
+                            }
+                            return@awaitEachGesture
+                        }
                         if (!isTypeMode && !isSelected) {
                             val up = waitForUpOrCancellation()
                             if (up != null) {
@@ -457,8 +467,8 @@ private fun TextBoxView(
     }
 
         if (isSelected && interactive) {
-            // 🌟 頂部精準拖曳把手（膠囊造型 ≡）
-            Box(
+            // 🌟 頂部精準拖曳把手（膠囊造型 ≡）。鎖定在畫布上時不給。
+            if (!moveLocked) Box(
                 modifier = Modifier
                     .offset(x = (horizontalPadding + liveWidth / 2f - 19f).dp, y = (topPadding - 20f).dp)
                     .size(38.dp, 16.dp)
@@ -658,7 +668,7 @@ private fun TextBoxView(
 
             // 右下角的縮放把手。原本 Android 完全沒有 —— 文字方塊的大小
             // 只能進編輯面板調，而 Apple 端畫布上就有把手。
-            ResizeHandle(
+            if (!moveLocked) ResizeHandle(
                 widthDp = liveWidth,
                 heightDp = liveHeight,
                 density = density,
@@ -676,7 +686,7 @@ private fun TextBoxView(
                 modifier = Modifier.offset(x = horizontalPadding.dp, y = topPadding.dp)
             )
 
-            RotationHandle(
+            if (!moveLocked) RotationHandle(
                 degrees = rotation,
                 widthDp = liveWidth,
                 heightDp = liveHeight,

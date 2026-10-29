@@ -122,9 +122,9 @@ extension NotebookEditorView {
         if editorMode == .type {
             handleCanvasTapInTypeMode(at: location, page: targetPage)
         } else {
-            // 手寫模式下手指點到鎖定的物件（或它角落的鎖頭）：鎖定的物件不接觸控，
-            // 也不能被選起來 —— 這一下就是要找解鎖的入口。手寫模式下物件層不吃觸控、
+            // 手寫模式下手指點到鎖定的物件（或它角落的鎖頭）：手寫模式下物件層不吃觸控、
             // 解鎖鈕按不到，所以切到打字模式再給解鎖鈕（與放置貼紙同一個做法）。
+            // 切到打字模式之後物件本身也能點選、編輯（鎖定只鎖位置）。
             if let lockedId = lockedObjectHit(at: location, page: targetPage) {
                 removeTapDotStroke(near: location)
                 transitionToMode(.type)
@@ -233,10 +233,10 @@ extension NotebookEditorView {
             toggleGuideCheckbox(key: key)
             return
         }
-        // 0b. 點到鎖定在畫布上的物件：鎖定的物件不接觸控，這一下穿透到頁面來了。
-        // 不當成「點空白」（會在這裡開新文字方塊、或就地編輯它），而是在它上方給「解除鎖定」鈕 ——
-        // 看得到的物件就要點得到解鎖的入口。只有單指點一下才會到這裡，雙指縮放、捲動照樣穿透。
-        if let lockedId = lockedObjectHit(at: location, page: targetPage) {
+        // 0b. 點到鎖定物件**外圍**（角落的鎖頭露在物件外面）：在它上方給「解除鎖定」鈕。
+        // 點在物件本身上照常往下走 —— 鎖定只鎖位置，選取、就地編輯文字都和沒鎖一樣。
+        if let lockedId = lockedObjectHit(at: location, page: targetPage),
+           frameOfObject(id: lockedId)?.contains(location) != true {
             lockPromptId = (lockPromptId == lockedId) ? nil : lockedId
             return
         }
@@ -275,7 +275,10 @@ extension NotebookEditorView {
         }
 
         // 3. 若點擊在其他畫布物件（圖片、表格、形狀、錄音卡片、3D等）上，選取該物件並展開操作把手
-        if let (hitId, hitKind) = findObjectAt(location: location, page: targetPage) {
+        //
+        // 例外：底稿（見 `isLockedBackdrop`）點它是要在上面打字，不是選取那張整頁的圖。
+        if let (hitId, hitKind) = findObjectAt(location: location, page: targetPage),
+           !(hitKind == "image" && isLockedBackdrop(hitId, page: targetPage)) {
             inlineEditingTextId = nil
             if hitKind == "shape" {
                 selectedShapeIds = [hitId]

@@ -66,14 +66,12 @@ fun LinkLayer(
 ) {
     // 不包一層自己的 Box —— zIndex 只在同一個父容器的兄弟之間有效，
     // 包起來的話連結卡片永遠只能跟連結卡片比順序。
-    // 鎖定在畫布上的物件不接收觸控（見 canvas/ObjectLock.kt）。
-    val lockedIds = com.kairumo.padnote.canvas.LocalLockedObjectIds.current
     for (link in links) {
         LinkCardView(
             link = link,
             density = density,
             isSelected = link.id == selectedId,
-            interactive = interactive && link.id !in lockedIds,
+            interactive = interactive,
             zIndex = zIndexOf(link.id),
             onSelect = onSelect,
             onOpen = onOpen,
@@ -97,6 +95,8 @@ private fun LinkCardView(
     onDelete: (LinkObject) -> Unit,
     onChanged: (LinkObject) -> Unit
 ) {
+    // 鎖定在畫布上：不能拖曳；點開連結、選取、編修照常（見 canvas/ObjectLock.kt）。
+    val moveLocked = com.kairumo.padnote.canvas.isMoveLocked(link.id)
     // 座標是**頁面點**，Compose 要的是像素 —— 差一個 density。
     // 不乘的話，在 3x 的手機上卡片會擠到左上角只剩三分之一的位置。
     Box(
@@ -148,7 +148,7 @@ private fun LinkCardView(
                     }
                 )
                 .then(
-                    if (interactive) {
+                    if (interactive && !moveLocked) {
                         Modifier.pointerInput(link.id) {
                             detectDragGestures(
                                 onDragStart = { onSelect(link.id) },
@@ -244,8 +244,8 @@ private fun LinkCardView(
                 contentAlignment = Alignment.Center
             ) { Text("\u270E", fontSize = 11.sp, color = Color.White) }
 
-            // 縮放（右下）。
-            Box(
+            // 縮放（右下）。鎖定在畫布上時不給。
+            if (!moveLocked) Box(
                 Modifier
                     .offset {
                         IntOffset(
@@ -269,8 +269,8 @@ private fun LinkCardView(
             ) { Text("\u2921", fontSize = 11.sp, color = Color.White) }
 
             // 旋轉（上方中央）。一次 15°，與 Apple 端旋轉盤的快捷角度同一套邏輯：
-            // 觸控上拖一個小圓把手很難停在整數角度，點一下加 15° 反而準。
-            Box(
+            // 觸控上拖一個小圓把手很難停在整數角度，點一下加 15° 反而準。鎖定在畫布上時不給。
+            if (!moveLocked) Box(
                 Modifier
                     .offset {
                         IntOffset(

@@ -1091,8 +1091,8 @@ private fun ContinuousPage(
         com.kairumo.padnote.canvas.ObjectLockActions(
             isLocked = { id -> id in meta.lockedObjectIds() },
             setLocked = { id, locked ->
+                // 選取留著：鎖定只鎖位置，內容照樣能改（拖曳與把手由物件自己收起來）。
                 meta.setObjectLocked(session, pageIndex, id, locked)
-                if (locked && selectedId == id) updateSelectedId(null)
                 if (lockPromptId == id) lockPromptId = null
                 revision++
             }
@@ -1220,8 +1220,9 @@ private fun ContinuousPage(
                         detectTapGestures { offset: Offset ->
                             val tapX = offset.x / density
                             val tapY = offset.y / density
-                            // 點到鎖定的物件：給「解除鎖定」鈕，不開新文字方塊（見 ObjectLock.kt）。
-                            val lockedHit = lockedObjectHit(tapX, tapY, lockFramesLatest, lockedIdsLatest)
+                            // 點到鎖定物件的外圍（角落的鎖頭）：給「解除鎖定」鈕（見 ObjectLock.kt）。
+                            // 點在物件本身上照常往下走（鎖定只鎖位置）。
+                            val lockedHit = lockedObjectRimHit(tapX, tapY, lockFramesLatest, lockedIdsLatest)
                             if (lockedHit != null) {
                                 lockPromptId = if (lockPromptId == lockedHit) null else lockedHit
                                 return@detectTapGestures
@@ -1346,6 +1347,7 @@ private fun ContinuousPage(
             // 鎖定在畫布上（見 ObjectLock.kt）：與單頁模式同一份中繼資料。
             com.kairumo.padnote.canvas.LocalObjectLock provides objectLock,
             com.kairumo.padnote.canvas.LocalLockedObjectIds provides lockedIds,
+            com.kairumo.padnote.canvas.LocalUnderInkObjectIds provides underInkIds,
             com.kairumo.padnote.canvas.LocalObjectClipboard provides objectClipboardActions,
             LocalPageCrossing provides crossing
         ) {

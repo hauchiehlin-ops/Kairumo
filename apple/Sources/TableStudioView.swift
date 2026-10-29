@@ -555,6 +555,9 @@ struct TableAttachmentItemView: View {
 
     @ObservedObject private var localizationManager = LocalizationManager.shared
     @Environment(\.pageCrossing) private var pageCrossing
+    @Environment(\.objectLock) private var lock
+    /// 鎖定在畫布上：不能搬移、旋轉，儲存格與編修面板照常（見 `canvasLocked`）。
+    @Environment(\.canvasObjectLocked) private var isCanvasLocked
     @State private var dragOffset: CGSize = .zero
     @State private var isDragging: Bool = false
     @State private var editingCell: TableCellCoordinate? = nil
@@ -582,7 +585,7 @@ struct TableAttachmentItemView: View {
             }
             .shadow(color: isDragging ? .clear : Color.black.opacity(0.08), radius: 6, y: 3)
             .highPriorityGesture(
-                (!isSelected || editingCell != nil || !CanvasTouchState.canDragObject) ? nil :
+                (!isSelected || editingCell != nil || isCanvasLocked || !CanvasTouchState.canDragObject) ? nil :
                 DragGesture(minimumDistance: 4, coordinateSpace: .named(CanvasCoordinateSpace.name))
                     .onChanged { value in
                         guard CanvasTouchState.canDragObject else {
@@ -632,6 +635,7 @@ struct TableAttachmentItemView: View {
             .overlay(alignment: .top) {
                 if isSelected {
                     HStack(spacing: 8) {
+                        if !isCanvasLocked {
                         HStack(spacing: 4) {
                             Image(systemName: "arrow.up.and.down.and.arrow.left.and.right")
                                 .font(.system(size: 11, weight: .semibold))
@@ -670,6 +674,30 @@ struct TableAttachmentItemView: View {
                                     isDragging = false
                                 }
                         )
+                        }
+
+                        // 鎖定／解除鎖定就放在選取列上。表格一點就進入儲存格編輯，
+                        // Mac 上右鍵落在儲存格的文字框裡只會出現系統的剪下／貼上選單，
+                        // 物件選單打不開 —— 那時唯一的鎖定入口就是這一顆。
+                        if let lock {
+                            let locked = lock.isLocked(table.id)
+                            let key = locked ? "object_unlock" : "object_lock"
+                            Button {
+                                lock.setLocked(table.id, !locked)
+                            } label: {
+                                Image(systemName: locked ? "lock.fill" : "lock.open")
+                                    .font(.system(size: 11, weight: .semibold))
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 6)
+                                    .background((locked ? Color.orange : Color.secondary).opacity(0.15))
+                                    .foregroundColor(locked ? .orange : .primary)
+                                    .cornerRadius(12)
+                            }
+                            .buttonStyle(.plain)
+                            .help(localizationManager.localized(key))
+                            .accessibilityLabel(localizationManager.localized(key))
+                            .accessibilityIdentifier("table.lock")
+                        }
 
                         Button(action: onEdit) {
                             HStack(spacing: 3) {
