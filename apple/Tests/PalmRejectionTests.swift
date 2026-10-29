@@ -123,4 +123,88 @@ final class PalmRejectionTests: XCTestCase {
         // 手掌馬上又畫得出東西。
         XCTAssertGreaterThanOrEqual(PalmRejectionCoordinator.pencilGrace, 10)
     }
+    // MARK: - 點選留下的墨點（TapDotRetraction）
+
+    /// 一筆以 `began` 開始、持續 `duration` 秒、取樣點從 `from` 移到 `to` 的筆畫。
+    private func stroke(
+        from: CGPoint, to: CGPoint, began: Date, duration: TimeInterval = 0.08,
+        width: CGFloat = 4
+    ) -> PKStroke {
+        let points = (0..<4).map { i -> PKStrokePoint in
+            let t = CGFloat(i) / 3
+            return PKStrokePoint(
+                location: CGPoint(x: from.x + (to.x - from.x) * t, y: from.y + (to.y - from.y) * t),
+                timeOffset: duration * Double(t),
+                size: CGSize(width: width, height: width),
+                opacity: 1, force: 1, azimuth: 1, altitude: 1.2)
+        }
+        return PKStroke(
+            ink: PKInk(.marker, color: .black),
+            path: PKStrokePath(controlPoints: points, creationDate: began))
+    }
+
+    func testATapDotFromAThickPenIsRetracted() {
+        // 原本看 renderBounds < 10pt：麥克筆點出來的點比這大，永遠收不掉。
+        let tapped = Date()
+        let tap = CGPoint(x: 200, y: 300)
+        let dot = stroke(from: tap, to: CGPoint(x: 201, y: 300), began: tapped.addingTimeInterval(-0.1), width: 30)
+        let cleaned = TapDotRetraction.retracting(PKDrawing(strokes: [dot]), near: tap, tappedAt: tapped)
+        XCTAssertTrue(cleaned.strokes.isEmpty)
+    }
+
+    func testARealStrokeUnderTheTapIsKept() {
+        // 手指點物件之前剛好畫過一條線：那是使用者寫的，不是墨點。
+        let tapped = Date()
+        let tap = CGPoint(x: 200, y: 300)
+        let line = stroke(from: CGPoint(x: 150, y: 300), to: CGPoint(x: 250, y: 300), began: tapped.addingTimeInterval(-0.1))
+        let cleaned = TapDotRetraction.retracting(PKDrawing(strokes: [line]), near: tap, tappedAt: tapped)
+        XCTAssertEqual(cleaned.strokes.count, 1)
+    }
+
+    func testAPeriodWrittenEarlierIsKept() {
+        // 一秒前用 Pencil 點的句號就在附近：結束得早，不是這一下留下的。
+        let tapped = Date()
+        let tap = CGPoint(x: 200, y: 300)
+        let period = stroke(from: tap, to: tap, began: tapped.addingTimeInterval(-1.2), duration: 0.05)
+        let cleaned = TapDotRetraction.retracting(PKDrawing(strokes: [period]), near: tap, tappedAt: tapped)
+        XCTAssertEqual(cleaned.strokes.count, 1)
+    }
+
+    func testADotFarFromTheTapIsKept() {
+        let tapped = Date()
+        let dot = stroke(from: CGPoint(x: 400, y: 300), to: CGPoint(x: 400, y: 300), began: tapped.addingTimeInterval(-0.1))
+        let cleaned = TapDotRetraction.retracting(PKDrawing(strokes: [dot]), near: CGPoint(x: 200, y: 300), tappedAt: tapped)
+        XCTAssertEqual(cleaned.strokes.count, 1)
+    }
+
+    func testAStrokeStartedAfterTheTapIsKept() {
+        // 收回會延後重試；重試期間 Pencil 新點下去的那一點不能被收掉。
+        let tapped = Date()
+        let tap = CGPoint(x: 200, y: 300)
+        let later = stroke(from: tap, to: tap, began: tapped.addingTimeInterval(0.05))
+        let cleaned = TapDotRetraction.retracting(PKDrawing(strokes: [later]), near: tap, tappedAt: tapped)
+        XCTAssertEqual(cleaned.strokes.count, 1)
+    }
+
+    func testADoubleTapRetractsBothDotsButNothingElse() {
+        let tapped = Date()
+        let tap = CGPoint(x: 200, y: 300)
+        let writing = stroke(from: CGPoint(x: 20, y: 20), to: CGPoint(x: 120, y: 60), began: tapped.addingTimeInterval(-3))
+        let first = stroke(from: tap, to: tap, began: tapped.addingTimeInterval(-0.4))
+        let second = stroke(from: CGPoint(x: 202, y: 301), to: CGPoint(x: 202, y: 301), began: tapped.addingTimeInterval(-0.08))
+        let cleaned = TapDotRetraction.retracting(
+            PKDrawing(strokes: [writing, first, second]), near: tap, tappedAt: tapped, maxCount: 2)
+        XCTAssertEqual(cleaned.strokes.count, 1)
+        XCTAssertEqual(cleaned.strokes.first?.path.creationDate, writing.path.creationDate)
+    }
+
+    func testASingleTapRetractsOnlyOneDot() {
+        let tapped = Date()
+        let tap = CGPoint(x: 200, y: 300)
+        let first = stroke(from: tap, to: tap, began: tapped.addingTimeInterval(-0.4))
+        let second = stroke(from: tap, to: tap, began: tapped.addingTimeInterval(-0.08))
+        let cleaned = TapDotRetraction.retracting(PKDrawing(strokes: [first, second]), near: tap, tappedAt: tapped)
+        XCTAssertEqual(cleaned.strokes.count, 1)
+        XCTAssertEqual(cleaned.strokes.first?.path.creationDate, first.path.creationDate)
+    }
 }
