@@ -73,8 +73,6 @@ fun AudioLayer(
     zIndexOf: (String) -> Float
 ) {
     // 不包一層自己的 Box —— zIndex 只在同一個父容器的兄弟之間有效。
-    // 鎖定在畫布上的物件不接收觸控（見 canvas/ObjectLock.kt）。
-    val lockedIds = com.kairumo.padnote.canvas.LocalLockedObjectIds.current
     for (item in items) {
         AudioCardView(
             item = item,
@@ -82,7 +80,7 @@ fun AudioLayer(
             exists = audioDirectory?.let { File(it, item.fileName).isFile } ?: false,
             isSelected = item.id == selectedId,
             isPlaying = item.id == playingId,
-            interactive = interactive && item.id !in lockedIds,
+            interactive = interactive,
             zIndex = zIndexOf(item.id),
             l = l,
             onSelect = onSelect,
@@ -112,6 +110,8 @@ private fun AudioCardView(
     onChanged: (AudioObject) -> Unit,
     onTranscribe: ((AudioObject, String?) -> Unit)? = null
 ) {
+    // 鎖定在畫布上：不能拖曳、縮放；播放、改名、轉文字照常（見 canvas/ObjectLock.kt）。
+    val moveLocked = com.kairumo.padnote.canvas.isMoveLocked(item.id)
     Box(
         modifier = Modifier
             .zIndex(zIndex)
@@ -154,7 +154,7 @@ private fun AudioCardView(
                     )
                 }
                 .then(
-                    if (interactive) {
+                    if (interactive && !moveLocked) {
                         Modifier.pointerInput(item.id) {
                             detectDragGestures(
                                 onDragStart = { onSelect(item.id) },
@@ -289,8 +289,8 @@ private fun AudioCardView(
                 contentAlignment = Alignment.Center
             ) { Text("✎", fontSize = 11.sp, color = Color.White) }
 
-                // 縮放（右下）。沒有它，卡片只能用插入時的尺寸。
-            Box(
+                // 縮放（右下）。沒有它，卡片只能用插入時的尺寸。鎖定在畫布上時不給。
+            if (!moveLocked) Box(
                 Modifier
                     .offset {
                         IntOffset(

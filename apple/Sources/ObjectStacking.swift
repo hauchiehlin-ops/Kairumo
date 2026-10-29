@@ -299,7 +299,7 @@ public struct CanvasStackPanel: View {
     private func rowView(_ object: StackableObject) -> some View {
         HStack(spacing: 4) {
             selectableRow(object)
-            // 鎖定在畫布上。鎖定的物件在畫布上點不到，解除鎖定就靠這一顆。
+            // 鎖定在畫布上（只鎖位置，內容照樣能編輯）。
             if let lock {
                 let locked = lock.isLocked(object.id)
                 let key = locked ? "object_unlock" : "object_lock"
@@ -453,12 +453,12 @@ extension EnvironmentValues {
 
 /// 「鎖定在畫布上」的讀寫能力，與 `objectReorder` 一樣由物件層注入。
 ///
-/// 鎖定的物件**完全不接收觸控**（點選、拖曳、長按都穿透到頁面）：雙指縮放或捲動頁面時，
-/// 第一根手指落在物件上也不會把它選起來、拖走或打開編輯。
+/// 鎖定只鎖**位置與外形**：不能拖曳、縮放、旋轉（單指拖過它就是捲動頁面）。
+/// 點選、編輯內容（文字、表格儲存格、圖表、樣式面板）、右鍵／長按選單都照常 ——
+/// 鎖定是為了不被誤觸搬走，不是把物件凍結起來。
 ///
-/// 解除鎖定有三個入口，都不必先「點中」物件本身：點物件角落的鎖頭、
-/// 或單指點一下鎖定的物件（穿透到頁面的那一下由編輯器接住；手寫模式下會先切到打字模式），
-/// 物件上方會出現「解除鎖定」鈕；另外圖層面板每一列都有鎖頭開關。
+/// 解除鎖定的入口：物件選單與編輯面板裡的鎖頭、物件角落的鎖頭（點了在上方給「解除鎖定」鈕）、
+/// 手寫模式下單指點一下鎖定的物件（切到打字模式並給同一顆鈕），以及圖層面板每一列的鎖頭開關。
 struct ObjectLockActions {
     var isLocked: (String) -> Bool
     var setLocked: (String, Bool) -> Void
@@ -472,6 +472,19 @@ extension EnvironmentValues {
     var objectLock: ObjectLockActions? {
         get { self[ObjectLockKey.self] }
         set { self[ObjectLockKey.self] = newValue }
+    }
+}
+
+private struct CanvasObjectLockedKey: EnvironmentKey {
+    static let defaultValue = false
+}
+
+extension EnvironmentValues {
+    /// 這個物件鎖定在畫布上（由 `canvasLocked` 注入）。物件自己據此關掉搬移、縮放與旋轉，
+    /// 其餘互動照常。
+    var canvasObjectLocked: Bool {
+        get { self[CanvasObjectLockedKey.self] }
+        set { self[CanvasObjectLockedKey.self] = newValue }
     }
 }
 
@@ -496,19 +509,19 @@ struct ObjectLockMenuItem: View {
 }
 
 extension View {
-    /// 套在畫布上每一個物件外面：鎖定時物件本身不接收觸控（雙指縮放、捲動都穿透到頁面）。
+    /// 套在畫布上每一個物件外面：鎖定時物件不能搬移、縮放、旋轉，**仍然可以點選與編輯**。
+    ///
+    /// 以前是 `allowsHitTesting(false)`，整個物件點不到：表格的儲存格改不了，
+    /// Mac 上表格也就找不到鎖定／解除鎖定的選單。現在只把鎖定狀態放進環境，
+    /// 各物件的搬移手勢、縮放與旋轉把手讀 `canvasObjectLocked` 自己關掉 ——
+    /// 搬移手勢關掉之後，單指拖過鎖定的物件會落到頁面上捲動，雙指縮放照常。
     ///
     /// 角落的鎖頭**不**掛在這裡：多數物件在這之前已經 `.position(...)` 過，
     /// 那時的外框是整個頁面，`overlay(alignment: .topTrailing)` 會把鎖頭放到頁面右上角
     /// （常常在畫面外），使用者就看不到解鎖的入口。鎖頭改由編輯器依物件的實際外框畫
     /// （見 `LockedObjectBadge`）。
-    @ViewBuilder
     func canvasLocked(_ locked: Bool) -> some View {
-        if locked {
-            self.allowsHitTesting(false)
-        } else {
-            self
-        }
+        environment(\.canvasObjectLocked, locked)
     }
 }
 
@@ -650,7 +663,7 @@ struct ObjectOrderBar: View {
                         .help(localizationManager.localized(op.key))
                         .accessibilityLabel(localizationManager.localized(op.key))
                     }
-                    // 鎖定在畫布上：編輯面板裡按下去就鎖，面板跟著關（鎖定的物件不再能被選取）。
+                    // 鎖定在畫布上：只鎖位置，面板留著，內容照樣能改。
                     if let lock {
                         let locked = lock.isLocked(id)
                         let key = locked ? "object_unlock" : "object_lock"

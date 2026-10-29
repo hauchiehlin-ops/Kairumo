@@ -200,6 +200,8 @@ struct ShapeAttachmentItemView: View {
     @State private var liveRotation: Double? = nil
     @State private var resizeBase: CGRect? = nil
     @State private var endpointBase: (start: CGPoint, end: CGPoint)? = nil
+    /// 鎖定在畫布上：不能搬移、縮放、旋轉、拉端點；點選、編輯、拉連接線照常（見 `canvasLocked`）。
+    @Environment(\.canvasObjectLocked) private var isCanvasLocked
 
     private var frame: CGRect {
         liveFrame ?? CGRect(x: shape.x, y: shape.y, width: shape.width, height: shape.height)
@@ -224,7 +226,7 @@ struct ShapeAttachmentItemView: View {
             rotatedBody(shown)
             if isSelected {
                 if shown.isLinear {
-                    if isSoleSelection { endpointHandles(shown) }
+                    if isSoleSelection && !isCanvasLocked { endpointHandles(shown) }
                 } else {
                     rotationHandle(shown)
                 }
@@ -259,11 +261,11 @@ struct ShapeAttachmentItemView: View {
                     if shown.acceptsText { isEditingLabel = true } else { onEdit() }
                 }
                 .onTapGesture { onSelect() }
-                .highPriorityGesture((isSelected && CanvasTouchState.canDragObject) ? moveGesture : nil)
+                .highPriorityGesture((isSelected && !isCanvasLocked && CanvasTouchState.canDragObject) ? moveGesture : nil)
 
             // 縮放把手掛在旋轉那一層裡面 —— 它們要貼著轉過的邊。
             // 位移的換算（畫布 → 本地軸）在 `ShapeFrameMath.resized`。
-            if isSelected && isSoleSelection && !shown.isLinear {
+            if isSelected && isSoleSelection && !shown.isLinear && !isCanvasLocked {
                 ForEach(ShapeHandle.allCases) { handle in
                     resizeHandle(handle, shown)
                 }

@@ -122,6 +122,8 @@ public struct ObjectRotationHandle: View {
     var onCommit: () -> Void
 
     @State private var isDragging = false
+    /// 鎖定在畫布上的物件不能旋轉（見 `canvasLocked`）：把手整個不畫。
+    @Environment(\.canvasObjectLocked) private var isCanvasLocked
 
     public init(degrees: Binding<Double>, size: CGSize, onCommit: @escaping () -> Void = {}) {
         self._degrees = degrees
@@ -137,6 +139,11 @@ public struct ObjectRotationHandle: View {
     private var radius: CGFloat { max(size.height, 40) / 2 + 52 }
 
     public var body: some View {
+        if !isCanvasLocked { handle }
+    }
+
+    @ViewBuilder
+    private var handle: some View {
         let angle = CanvasRotation.normalized(degrees) * .pi / 180
         // 把手在未旋轉座標系裡是正上方 (0, -radius)，隨物件角度繞中心轉。
         let dx = CGFloat(sin(angle)) * radius

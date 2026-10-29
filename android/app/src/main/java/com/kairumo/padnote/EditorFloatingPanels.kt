@@ -164,6 +164,8 @@ internal fun EditorFloatingPanels(ctx: EditorCanvasContext) = with(ctx) {
         val origins = uniffi.padnote_core.alignRects(rects, mode)
         if (origins.size != ids.size) return
         ids.forEachIndexed { i, id ->
+            // 鎖定在畫布上的物件留在原地，只當對齊的基準。
+            if (id in lockedIds) return@forEachIndexed
             ObjectGeometry.move(id, origins[i].x, origins[i].y,
                 textStore, imageStore, tableStore, chartStore, shapeStore)
         }

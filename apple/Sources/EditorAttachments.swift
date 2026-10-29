@@ -103,6 +103,8 @@ struct AttachmentItemView: View {
     @ObservedObject var collaborationManager = CollaborationManager.shared
     @Environment(\.pageCrossing) private var pageCrossing
     @Environment(\.objectClipboard) private var clipboard
+    /// 鎖定在畫布上：不能搬移、縮放、旋轉，點選與編輯照常（見 `canvasLocked`）。
+    @Environment(\.canvasObjectLocked) private var isCanvasLocked
     @State private var dragOffset: CGSize = .zero
     @State private var isDragging: Bool = false
     /// 縮放期間的本地預覽尺寸。
@@ -184,7 +186,7 @@ struct AttachmentItemView: View {
                 onSelect?()
             }
             .highPriorityGesture(
-                ((!isTypeMode && !isSelected) || !CanvasTouchState.canDragObject) ? nil :
+                ((!isTypeMode && !isSelected) || isCanvasLocked || !CanvasTouchState.canDragObject) ? nil :
                 DragGesture(minimumDistance: 4, coordinateSpace: .named(CanvasCoordinateSpace.name))
                     .onChanged { value in
                         guard lockedByPeer == nil else { return }
@@ -332,7 +334,8 @@ struct AttachmentItemView: View {
                 }
                 .offset(x: 10, y: -10)
 
-                // 右下角縮放把手
+                // 右下角縮放把手（鎖定在畫布上時不給）
+                if !isCanvasLocked {
                 VStack {
                     Spacer()
                     HStack {
@@ -369,6 +372,7 @@ struct AttachmentItemView: View {
                     }
                 }
                 .frame(width: displayWidth, height: displayHeight)
+                }
 
                 // 旋轉把手。與內容同層但**不參與** `.rotationEffect` ——
                 // 包進旋轉裡的話，拖曳算出的角度會疊加自身旋轉，物件會失控加速。
@@ -438,6 +442,8 @@ struct TextAttachmentItemView: View {
 
     @Environment(\.objectReorder) private var reorder
     @Environment(\.objectClipboard) private var clipboard
+    /// 鎖定在畫布上：不能搬移、縮放、旋轉，就地打字與排版照常（見 `canvasLocked`）。
+    @Environment(\.canvasObjectLocked) private var isCanvasLocked
 
     @ObservedObject var localizationManager = LocalizationManager.shared
     @ObservedObject var collaborationManager = CollaborationManager.shared
@@ -686,7 +692,7 @@ struct TextAttachmentItemView: View {
             .contentShape(Rectangle())
             .rotationEffect(.degrees(textItem.canvasRotation))
             .overlay(alignment: .bottomTrailing) {
-                if (isSelected || isEditingInline) && lockedByPeer == nil {
+                if (isSelected || isEditingInline) && lockedByPeer == nil && !isCanvasLocked {
                     Image(systemName: "arrow.up.left.and.down.right.and.arrow.up.right.and.down.left")
                         .font(.system(size: 10, weight: .bold))
                         .foregroundColor(.white)
@@ -778,7 +784,7 @@ struct TextAttachmentItemView: View {
             // 高優先：方塊身上還有「點兩下」，它會先等第二下，等的這段時間連續模式的捲動就把
             // 拖曳搶走了（方塊拖不動、畫面反而捲動）。拖曳至少要移動 5 點，點一下、點兩下照常有效。
             .highPriorityGesture(
-                (isEditingInline || (!isTypeMode && !isSelected) || !CanvasTouchState.canDragObject) ? nil :
+                (isEditingInline || (!isTypeMode && !isSelected) || isCanvasLocked || !CanvasTouchState.canDragObject) ? nil :
                 DragGesture(minimumDistance: 5, coordinateSpace: .named(CanvasCoordinateSpace.name))
                     .onChanged { value in
                         guard lockedByPeer == nil else { return }
@@ -949,7 +955,8 @@ struct TextAttachmentItemView: View {
             }
 
             // 🌟 頂部精準拖曳把手（膠囊造型 ≡），即使在就地打字中也能隨意拖拉換位排版
-            if isSelected || isEditingInline {
+            // （鎖定在畫布上時不給：鎖定就是不讓它被搬走）
+            if (isSelected || isEditingInline) && !isCanvasLocked {
                 HStack {
                     Spacer()
                     HStack(spacing: 3) {
@@ -1167,6 +1174,8 @@ struct LinkAttachmentItemView: View {
     let onDelete: () -> Void
 
     @Environment(\.pageCrossing) private var pageCrossing
+    /// 鎖定在畫布上：不能搬移、縮放、旋轉，點開連結與編輯照常（見 `canvasLocked`）。
+    @Environment(\.canvasObjectLocked) private var isCanvasLocked
     @State private var dragOffset: CGSize = .zero
     /// 縮放拖曳中的即時尺寸。直接改 linkItem.width 會每一幀都寫回筆記。
     @State private var liveSize: CGSize? = nil
@@ -1182,7 +1191,7 @@ struct LinkAttachmentItemView: View {
 
         card
             .simultaneousGesture(
-                (!isSelected || !CanvasTouchState.canDragObject) ? nil :
+                (!isSelected || isCanvasLocked || !CanvasTouchState.canDragObject) ? nil :
                 DragGesture(minimumDistance: 4, coordinateSpace: .named(CanvasCoordinateSpace.name))
                     .onChanged { value in
                         guard CanvasTouchState.canDragObject else {
@@ -1260,7 +1269,7 @@ struct LinkAttachmentItemView: View {
                 }
             }
             .overlay(alignment: .bottomTrailing) {
-                if isSelected {
+                if isSelected && !isCanvasLocked {
                     resizeHandle
                 }
             }
@@ -1493,6 +1502,8 @@ struct Model3DCanvasItemView: View {
     let onDelete: () -> Void
 
     @Environment(\.pageCrossing) private var pageCrossing
+    /// 鎖定在畫布上：不能搬移、縮放，轉動模型與編輯照常（見 `canvasLocked`）。
+    @Environment(\.canvasObjectLocked) private var isCanvasLocked
     @State private var dragOffset: CGSize = .zero
 
     private var lockedByPeer: CollaboratorPeer? {
@@ -1537,7 +1548,7 @@ struct Model3DCanvasItemView: View {
             .cornerRadius(8)
             .contentShape(Rectangle())
             .highPriorityGesture(
-                (!isSelected || !CanvasTouchState.canDragObject) ? nil :
+                (!isSelected || isCanvasLocked || !CanvasTouchState.canDragObject) ? nil :
                 DragGesture(minimumDistance: 4, coordinateSpace: .named(CanvasCoordinateSpace.name))
                     .onChanged { value in
                         guard lockedByPeer == nil, CanvasTouchState.canDragObject else {
@@ -1645,6 +1656,7 @@ struct Model3DCanvasItemView: View {
             // 使用者回報的「插入 3D 模型後無法改變大小」就是這一項 ——
             // 那不是他沒找到，是真的沒有。
             .overlay(alignment: .bottomTrailing) {
+                if !isCanvasLocked {
                 Image(systemName: "arrow.up.left.and.arrow.down.right")
                     .font(.system(size: 9, weight: .bold))
                     .foregroundColor(.white)
@@ -1681,6 +1693,7 @@ struct Model3DCanvasItemView: View {
                                 }
                             }
                     )
+                }
             }
         }
         .frame(width: max(200, item.width))

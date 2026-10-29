@@ -47,14 +47,12 @@ fun Model3DLayer(
 ) {
     // 不包一層自己的 Box —— zIndex 只在同一個父容器的兄弟之間有效，
     // 包起來的話 3D 模型永遠只能跟 3D 模型比順序（見 ChartLayer 的說明）。
-    // 鎖定在畫布上的物件不接收觸控（見 canvas/ObjectLock.kt）。
-    val lockedIds = com.kairumo.padnote.canvas.LocalLockedObjectIds.current
     for (model in models) {
         Model3DView(
             model = model,
             density = density,
             isSelected = model.id == selectedId,
-            interactive = interactive && model.id !in lockedIds,
+            interactive = interactive,
             zIndex = zIndexOf(model.id),
             onSelect = onSelect,
             onEdit = onEdit,
@@ -75,6 +73,8 @@ private fun Model3DView(
     onChanged: (Model3DObject) -> Unit
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
+    // 鎖定在畫布上：不能拖曳、縮放；點選、點兩下編修照常（見 canvas/ObjectLock.kt）。
+    val moveLocked = com.kairumo.padnote.canvas.isMoveLocked(model.id)
     Box(
         Modifier
             .offset(model.x.dp, model.y.dp)
@@ -93,7 +93,7 @@ private fun Model3DView(
                     )
                 }
             }
-            .gesturesIf(interactive) {
+            .gesturesIf(interactive && !moveLocked) {
                 pointerInput(model.id) {
                     detectDragGestures { change, drag ->
                         change.consume()
@@ -166,7 +166,7 @@ private fun Model3DView(
                 objectId = model.id
             )
 
-            ResizeHandle(
+            if (!moveLocked) ResizeHandle(
                 widthDp = model.width,
                 heightDp = model.height,
                 density = density,

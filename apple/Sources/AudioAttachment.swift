@@ -43,6 +43,8 @@ struct AudioAttachmentItemView: View {
     var onTranscribe: ((String) -> Void)? = nil
 
     @Environment(\.pageCrossing) private var pageCrossing
+    /// 鎖定在畫布上：不能搬移、縮放、旋轉，播放、改名、轉文字照常（見 `canvasLocked`）。
+    @Environment(\.canvasObjectLocked) private var isCanvasLocked
     @State private var dragOffset: CGSize = .zero
     /// 縮放拖曳中的即時尺寸。直接改 item.width 會每一幀都寫回筆記。
     @State private var liveSize: CGSize? = nil
@@ -85,7 +87,7 @@ struct AudioAttachmentItemView: View {
 
         card
             .simultaneousGesture(
-                (!isSelected || !CanvasTouchState.canDragObject) ? nil :
+                (!isSelected || isCanvasLocked || !CanvasTouchState.canDragObject) ? nil :
                 DragGesture(minimumDistance: 8, coordinateSpace: .named(CanvasCoordinateSpace.name))
                     .onChanged { value in
                         guard CanvasTouchState.canDragObject else {
@@ -180,7 +182,7 @@ struct AudioAttachmentItemView: View {
                 }
             }
             .overlay(alignment: .bottomTrailing) {
-                if isSelected { resizeHandle }
+                if isSelected && !isCanvasLocked { resizeHandle }
             }
             .overlay(alignment: .bottomLeading) {
                 if isSelected {

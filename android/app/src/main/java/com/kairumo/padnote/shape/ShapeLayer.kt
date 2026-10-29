@@ -171,8 +171,13 @@ fun ShapeLayer(
         }
     }
 
-    // 鎖定在畫布上的物件不接收觸控（見 canvas/ObjectLock.kt）。
+    // 群組裡有一個鎖定在畫布上，整組都搬不動：拖其他成員會帶著它一起走（見 onChanged 的群組跟隨）。
     val lockedIds = com.kairumo.padnote.canvas.LocalLockedObjectIds.current
+    val lockedGroups = shapes.filter { it.id in lockedIds }.mapNotNull { it.groupId }.toSet()
+    val moveLockedIds = lockedIds + shapes.filter { it.groupId != null && it.groupId in lockedGroups }.map { it.id }
+    androidx.compose.runtime.CompositionLocalProvider(
+        com.kairumo.padnote.canvas.LocalLockedObjectIds provides moveLockedIds
+    ) {
     for (shape in shapes) {
         androidx.compose.runtime.key(shape.id) {
             ShapeObjectView(
@@ -182,9 +187,10 @@ fun ShapeLayer(
                 isSoleSelection = selectedIds.size <= 1,
                 onSelect = onSelect, onEdit = onEdit, onDelete = onDelete,
                 onChanged = onChanged, onConnectDrag = onConnectDrag,
-                interactive = interactive && shape.id !in lockedIds
+                interactive = interactive
             )
         }
+    }
     }
 }
 
@@ -344,6 +350,8 @@ private fun ShapeObjectView(
     val editorMode = com.kairumo.padnote.canvas.LocalEditorMode.current
     val isCanvasNavigating = com.kairumo.padnote.canvas.LocalCanvasNavigating.current
     val isTypeMode = editorMode == com.kairumo.padnote.canvas.EditorMode.TYPE
+    // 鎖定在畫布上：不能拖曳、縮放、旋轉、拉端點；點選、編修、拉連接線照常（見 canvas/ObjectLock.kt）。
+    val moveLocked = com.kairumo.padnote.canvas.isMoveLocked(shape.id)
     // **手勢區塊裡一律讀 `current`，不要讀參數 `shape`。** `pointerInput` 的區塊只在 key 變了
     // 才重啟，拖曳進行中形狀每一幀都換成新的物件 —— 區塊裡抓到的若是第一幀的舊物件，
     // 每一幀都從同一個起點算起，結果是「拖了沒動」或「越拖越歪」。
@@ -403,7 +411,7 @@ private fun ShapeObjectView(
                         )
                     }
                 }
-                .gesturesIf(interactive && (isSelected || isTypeMode) && !isCanvasNavigating) {
+                .gesturesIf(interactive && !moveLocked && (isSelected || isTypeMode) && !isCanvasNavigating) {
                     pointerInput(shape.id, isSelected, isTypeMode, isCanvasNavigating) {
                         // **從手勢開始時的形狀 ＋ 累計位移算起**，不要每一幀讀「目前」的形狀再加一小步：
                         // 兩幀之間若還沒重組，「目前」是舊的，每一步都從同一個起點算起，
@@ -521,10 +529,10 @@ private fun ShapeObjectView(
 
         if (showHandles) {
             if (linear) {
-                if (isSoleSelection) EndpointHandles(shape, pad, m, density, onChanged)
+                if (isSoleSelection && !moveLocked) EndpointHandles(shape, pad, m, density, onChanged)
             } else {
-                if (isSoleSelection) ResizeHandles(shape, m, density, onChanged)
-                RotateHandle(shape, m, density, onChanged)
+                if (isSoleSelection && !moveLocked) ResizeHandles(shape, m, density, onChanged)
+                if (!moveLocked) RotateHandle(shape, m, density, onChanged)
                 if (isSoleSelection) ConnectHandles(shape, m, density, onConnectDrag)
             }
             ActionHandles(shape, m, onEdit, onDelete)
@@ -606,6 +614,16 @@ private fun ActionHandles(
                             onClick = { menu = false; reorder(shape.id, op) }
                         )
                     }
+                }
+                // 鎖定在畫布上（與其他物件的 OrderHandle 同一項）。形狀原本少了這一項。
+                com.kairumo.padnote.canvas.LocalObjectLock.current?.let { lock ->
+                    val locked = lock.isLocked(shape.id)
+                    androidx.compose.material3.HorizontalDivider()
+                    DropdownMenuItem(
+                        text = { Text((if (locked) "🔓 " else "🔒 ") + LocalizationStrings.localized(
+                            if (locked) "object_unlock" else "object_lock", language)) },
+                        onClick = { menu = false; lock.setLocked(shape.id, !locked) }
+                    )
                 }
             }
         }

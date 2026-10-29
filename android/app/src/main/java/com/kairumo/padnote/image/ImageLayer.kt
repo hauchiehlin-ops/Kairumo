@@ -63,8 +63,6 @@ fun ImageLayer(
     // 的話，圖片的 zIndex 只跟圖片比、文字的只跟文字比 —— 跨型別永遠是
     // 「圖片一定在文字下面」，圖層面板就排不動。
     // 直接把物件發到呼叫端的 Box 裡，它們才是彼此的兄弟。
-        // 鎖定在畫布上的物件不接收觸控（見 canvas/ObjectLock.kt）。
-        val lockedIds = com.kairumo.padnote.canvas.LocalLockedObjectIds.current
         for (image in images) {
             androidx.compose.runtime.key(image.id) {
                 ImageObjectView(
@@ -73,7 +71,7 @@ fun ImageLayer(
                     bitmapProvider = { store.bitmap(image) },
                     density = density,
                     isSelected = image.id == selectedId,
-                    interactive = interactive && image.id !in lockedIds,
+                    interactive = interactive,
                     onSelect = { onSelect(image.id) },
                     onEditStyle = { onEditStyle(image) },
                     onChanged = onChanged
@@ -95,6 +93,15 @@ private fun ImageObjectView(
     onEditStyle: () -> Unit,
     onChanged: (NoteImage) -> Unit
 ) {
+    // 鎖定在畫布上：不能拖曳、縮放、旋轉；點選、樣式面板照常（見 canvas/ObjectLock.kt）。
+    val moveLocked = com.kairumo.padnote.canvas.isMoveLocked(image.id)
+    // 底稿：鎖定、在筆跡下方、又撐滿頁寬或頁高（匯入的 PDF 頁面就是這樣放的）。照舊不接觸控，
+    // 點它就是在頁面上寫字。其餘鎖定的圖片照常點得到、選得起來。與 Apple `isLockedBackdrop` 同一條規則。
+    val isBackdrop = moveLocked &&
+        image.id in com.kairumo.padnote.canvas.LocalUnderInkObjectIds.current &&
+        (image.width >= com.kairumo.padnote.ink.PageGeometry.width * 0.9f ||
+            image.height >= com.kairumo.padnote.ink.PageGeometry.height * 0.9f)
+    @Suppress("NAME_SHADOWING") val interactive = interactive && !isBackdrop
     val currentImage by androidx.compose.runtime.rememberUpdatedState(image)
     var liveX by remember(image.id, image.x) { mutableFloatStateOf(image.x) }
     var liveY by remember(image.id, image.y) { mutableFloatStateOf(image.y) }
@@ -141,7 +148,7 @@ private fun ImageObjectView(
                         detectTapGestures(onTap = { onSelect() })
                     }
                 }
-                .gesturesIf(interactive && (isSelected || isTypeMode) && !isCanvasNavigating) {
+                .gesturesIf(interactive && !moveLocked && (isSelected || isTypeMode) && !isCanvasNavigating) {
                     // 不以 isSelected 當鍵：拖曳一開始就 onSelect()，選取狀態一變這段手勢就被重啟、拖到一半被取消（實機回報：方塊拖不動）。
                     pointerInput(image.id, isTypeMode, isCanvasNavigating) {
                         var startX = 0f
@@ -222,7 +229,7 @@ private fun ImageObjectView(
                 onTap = onEditStyle,
                 objectId = image.id
             )
-            ResizeHandle(
+            if (!moveLocked) ResizeHandle(
                 widthDp = liveWidth,
                 heightDp = liveHeight,
                 density = density,
@@ -238,7 +245,7 @@ private fun ImageObjectView(
                     onChanged(currentImage)
                 }
             )
-            RotationHandle(
+            if (!moveLocked) RotationHandle(
                 degrees = rotation,
                 widthDp = liveWidth,
                 heightDp = liveHeight,

@@ -608,6 +608,7 @@ internal fun ColumnScope.EditorCanvasContainer(ctx: EditorCanvasContext) = with(
             com.kairumo.padnote.canvas.LocalObjectReorder provides objectReorder,
             com.kairumo.padnote.canvas.LocalObjectLock provides objectLock,
             com.kairumo.padnote.canvas.LocalLockedObjectIds provides lockedIds,
+            com.kairumo.padnote.canvas.LocalUnderInkObjectIds provides underInkIds,
             com.kairumo.padnote.canvas.LocalObjectClipboard provides objectClipboardActions,
             com.kairumo.padnote.canvas.LocalCanvasNavigating provides isCanvasNavigating,
             com.kairumo.padnote.canvas.LocalEditorMode provides editorMode
@@ -698,9 +699,9 @@ internal fun ColumnScope.EditorCanvasContainer(ctx: EditorCanvasContext) = with(
                             detectTapGestures { offset: Offset ->
                                 val tapX = offset.x / canvasDensity
                                 val tapY = offset.y / canvasDensity
-                                // 點到鎖定在畫布上的物件（它不接觸控，這一下穿透到頁面來了）：
-                                // 不開新文字方塊、不就地編輯它，而是在它上方給「解除鎖定」鈕。
-                                val lockedHit = com.kairumo.padnote.canvas.lockedObjectHit(
+                                // 點到鎖定物件的外圍（角落的鎖頭）：在它上方給「解除鎖定」鈕。
+                                // 點在物件本身上照常往下走（鎖定只鎖位置）。
+                                val lockedHit = com.kairumo.padnote.canvas.lockedObjectRimHit(
                                     tapX, tapY,
                                     marqueeCandidatesLatest.sortedBy { stackOrderLatest.indexOf(it.id) },
                                     lockedIdsLatest)

@@ -1619,8 +1619,8 @@ internal fun rememberEditorCanvasContext(
         ObjectStacking.inkAwareZ(baseZ, underInkIds.contains(id))
     }
 
-    // 鎖定在畫布上（見 canvas/ObjectLock.kt）：鎖定的物件不接收觸控，雙指縮放、捲動頁面時
-    // 碰到它也不會被選起來或進入編輯。不分頁查（物件 id 全域唯一）。
+    // 鎖定在畫布上（見 canvas/ObjectLock.kt）：鎖定的物件不能搬移、縮放、旋轉，雙指縮放、
+    // 捲動頁面時碰到它也不會被拖走；點選與編輯照常。不分頁查（物件 id 全域唯一）。
     val lockRevisionState = remember { mutableIntStateOf(0) }
     var lockRevision by lockRevisionState
     /** 正在顯示「解除鎖定」鈕的鎖定物件（點了鎖頭或點了鎖定的物件）。 */
@@ -1633,15 +1633,8 @@ internal fun rememberEditorCanvasContext(
             setLocked = { id, locked ->
                 meta.setObjectLocked(notebook?.first, pageIndex, id, locked)
                 if (locked) {
-                    // 鎖上就收掉它的選取：鎖定的物件點不到，留著選取外框的話是一組拖不動的把手。
-                    if (selectedTextId == id) selectText(null)
-                    if (selectedImageId == id) selectImage(null)
-                    if (selectedChartId == id) selectedChartId = null
-                    if (selectedTableId == id) selectedTableId = null
-                    if (selectedLinkId == id) selectedLinkId = null
-                    if (selectedAudioId == id) selectedAudioId = null
-                    if (selectedModel3DId == id) selectedModel3DId = null
-                    selectedShapeIds = selectedShapeIds - id
+                    // 選取留著（鎖定只鎖位置，內容照樣能改；拖曳與把手由物件自己收起來）。
+                    // 只收框選：框選帶著它整組搬，就不叫鎖定了。
                     marqueeSelection = marqueeSelection - id
                 }
                 if (lockPromptId == id) lockPromptId = null

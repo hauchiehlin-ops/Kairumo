@@ -68,14 +68,12 @@ fun TableLayer(
     // 的話，圖片的 zIndex 只跟圖片比、文字的只跟文字比 —— 跨型別永遠是
     // 「圖片一定在文字下面」，圖層面板就排不動。
     // 直接把物件發到呼叫端的 Box 裡，它們才是彼此的兄弟。
-        // 鎖定在畫布上的物件不接收觸控（見 canvas/ObjectLock.kt）。
-        val lockedIds = com.kairumo.padnote.canvas.LocalLockedObjectIds.current
         for (table in tables) {
             androidx.compose.runtime.key(table.id) {
                 TableObjectView(
                     zIndex = zIndexOf(table.id),
                     table, density, table.id == selectedId, onSelect, onEdit, onChanged,
-                    interactive = interactive && table.id !in lockedIds)
+                    interactive = interactive)
             }
         }
 }
@@ -98,6 +96,8 @@ private fun TableObjectView(
     val editorMode = com.kairumo.padnote.canvas.LocalEditorMode.current
     val isCanvasNavigating = com.kairumo.padnote.canvas.LocalCanvasNavigating.current
     val isTypeMode = editorMode == com.kairumo.padnote.canvas.EditorMode.TYPE
+    // 鎖定在畫布上：不能拖曳、旋轉；點選、點兩下編修照常（見 canvas/ObjectLock.kt）。
+    val moveLocked = com.kairumo.padnote.canvas.isMoveLocked(table.id)
     val currentTable by androidx.compose.runtime.rememberUpdatedState(table)
     val layout = table.layout()
     var liveX by remember(table.id, table.x) { mutableFloatStateOf(table.x) }
@@ -139,7 +139,7 @@ private fun TableObjectView(
                     onDoubleTap = { onEdit(currentTable) }
                 )
             } }
-            .gesturesIf(interactive && (isSelected || isTypeMode) && !isCanvasNavigating) {
+            .gesturesIf(interactive && !moveLocked && (isSelected || isTypeMode) && !isCanvasNavigating) {
                 // 不以 isSelected 當鍵：拖曳一開始就 onSelect()，選取狀態一變這段手勢就被重啟、拖到一半被取消（實機回報：方塊拖不動）。
                 pointerInput(table.id, isTypeMode, isCanvasNavigating) {
                 var base: NoteTable? = null
@@ -202,7 +202,7 @@ private fun TableObjectView(
                 objectId = table.id
             )
 
-            RotationHandle(
+            if (!moveLocked) RotationHandle(
                 degrees = rotation,
                 widthDp = layout.width.toFloat(),
                 heightDp = layout.height.toFloat(),

@@ -215,7 +215,7 @@ fun OrderHandle(
                         )
                     }
                 }
-                // 鎖定在畫布上（見 ObjectLock.kt）。鎖上之後這顆鈕就點不到了，解除鎖定在圖層面板。
+                // 鎖定在畫布上（見 ObjectLock.kt）。只鎖位置：鎖上之後這顆鈕照樣點得到，解除鎖定也在這裡。
                 LocalObjectLock.current?.let { lock ->
                     val locked = lock.isLocked(objectId)
                     androidx.compose.material3.HorizontalDivider()

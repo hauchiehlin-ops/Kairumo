@@ -470,7 +470,9 @@ extension NotebookEditorView {
 
         let origins = ObjectAlignment.aligned(rects: rects, mode: mode)
         guard origins.count == ids.count else { return }
-        for (id, origin) in zip(ids, origins) {
+        // 鎖定在畫布上的物件留在原地，只當對齊的基準。
+        let locked = notebook.allLockedObjectIds
+        for (id, origin) in zip(ids, origins) where !locked.contains(id.lowercased()) {
             moveObject(id: id, to: origin)
         }
         commitNotebook()
@@ -1342,6 +1344,17 @@ extension NotebookEditorView {
             setLocked: { id, locked in setObjectLocked(id, locked) })
     }
 
+    /// 這張圖是不是「底稿」：鎖定、在筆跡下方、而且撐滿頁寬或頁高（匯入的 PDF 頁面就是這樣放的）。
+    ///
+    /// 打字模式點底稿是要在上面打字，不是選取那張整頁的圖；要編修它先從圖層面板解除鎖定。
+    /// 其餘鎖定的圖片照常點得到、選得起來（鎖定只鎖位置）。
+    func isLockedBackdrop(_ id: String, page: Int) -> Bool {
+        guard notebook.allLockedObjectIds.contains(id.lowercased()),
+              notebook.underInkObjectIds(forPage: page).contains(id),
+              let image = notebook.attachments?.first(where: { $0.id == id }) else { return false }
+        return image.width >= PageGeometry.width * 0.9 || image.height >= PageGeometry.height * 0.9
+    }
+
     /// 點在哪一個鎖定物件上（最上層的那一個）。沒有回 nil。
     func lockedObjectHit(at point: CGPoint, page: Int) -> String? {
         let locked = notebook.allLockedObjectIds
@@ -1398,8 +1411,10 @@ extension NotebookEditorView {
         }
     }
 
-    /// 鎖定／解除鎖定一個物件。鎖定時一併收掉它的選取與編輯面板 ——
-    /// 鎖定的物件點不到，留著選取外框的話，使用者看到的是一組拖不動的把手。
+    /// 鎖定／解除鎖定一個物件。
+    ///
+    /// 鎖定只鎖位置：選取與編輯面板都留著，內容照樣能改；搬移、縮放、旋轉的把手由物件自己
+    /// 依 `canvasObjectLocked` 收起來。唯一要收的是框選 —— 框選帶著它整組搬，就不叫鎖定了。
     func setObjectLocked(_ id: String, _ locked: Bool) {
         let normId = id.lowercased()
         guard notebook.allLockedObjectIds.contains(normId) != locked else { return }
@@ -1414,18 +1429,8 @@ extension NotebookEditorView {
             }
         }
         if locked {
-            if activeSelectedObjectId?.lowercased() == normId {
-                activeSelectedObjectId = nil
-                collaborationManager.broadcastSelection(selectedId: nil)
-            }
             selectedObjectIds.remove(id)
             selectedObjectIds.remove(normId)
-            selectedShapeIds.remove(id)
-            selectedShapeIds.remove(normId)
-            if inlineEditingTextId?.lowercased() == normId { inlineEditingTextId = nil }
-            if editingTextId?.lowercased() == normId { editingTextId = nil }
-            if editingShapeId?.lowercased() == normId { editingShapeId = nil }
-            if editingAttachmentId?.lowercased() == normId { editingAttachmentId = nil }
         }
         if lockPromptId?.lowercased() == normId { lockPromptId = nil }
         commitNotebook()
@@ -1630,6 +1635,12 @@ extension NotebookEditorView {
               let page = all.first(where: { $0.id == id })?.pageIndex else { return }
         // 同組成員以**這個形狀所在的頁**來找：連續模式下它不一定在焦點頁上。
         let mates = ObjectLayerOps.groupMates(of: id, in: all.filter { $0.pageIndex == page })
+        // 同組裡有鎖定在畫布上的形狀：整組都不動（只搬一半會把群組拆散）。
+        let locked = notebook.allLockedObjectIds
+        guard !mates.contains(where: { locked.contains($0.lowercased()) }) else {
+            finishPageCrossing(ids: [], to: nil)
+            return
+        }
         for index in all.indices where mates.contains(all[index].id) {
             all[index].x += delta.width
             all[index].y += delta.height
