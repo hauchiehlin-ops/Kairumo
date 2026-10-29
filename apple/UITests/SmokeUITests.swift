@@ -1056,7 +1056,8 @@ extension SmokeUITests {
             return
         }
 
-        ScreenAudit.check(app, screen: "toolbar", allowMissing: [])
+        ScreenAudit.check(app, screen: "toolbar", allowMissing: [],
+                          scroller: "toolbar.customization.list")
     }
 
     /// 棘輪：還沒接上識別碼的控制項。**只准縮小**。
