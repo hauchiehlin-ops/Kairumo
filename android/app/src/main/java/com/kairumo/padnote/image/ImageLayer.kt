@@ -101,7 +101,9 @@ private fun ImageObjectView(
         image.id in com.kairumo.padnote.canvas.LocalUnderInkObjectIds.current &&
         (image.width >= com.kairumo.padnote.ink.PageGeometry.width * 0.9f ||
             image.height >= com.kairumo.padnote.ink.PageGeometry.height * 0.9f)
-    @Suppress("NAME_SHADOWING") val interactive = interactive && !isBackdrop
+    // 壓到下方選取物件（表格等）的工具列時也讓出觸控，鎖定鈕才點得到（見 canvas/ObjectLock.kt）。
+    @Suppress("NAME_SHADOWING") val interactive = interactive && !isBackdrop &&
+        !com.kairumo.padnote.canvas.yieldsToSelectedChrome(image.id, image.x, image.y, image.width, image.height)
     val currentImage by androidx.compose.runtime.rememberUpdatedState(image)
     var liveX by remember(image.id, image.x) { mutableFloatStateOf(image.x) }
     var liveY by remember(image.id, image.y) { mutableFloatStateOf(image.y) }

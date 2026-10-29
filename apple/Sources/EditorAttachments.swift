@@ -102,7 +102,6 @@ struct AttachmentItemView: View {
     @ObservedObject var localizationManager = LocalizationManager.shared
     @ObservedObject var collaborationManager = CollaborationManager.shared
     @Environment(\.pageCrossing) private var pageCrossing
-    @Environment(\.objectClipboard) private var clipboard
     /// 鎖定在畫布上：不能搬移、縮放、旋轉，點選與編輯照常（見 `canvasLocked`）。
     @Environment(\.canvasObjectLocked) private var isCanvasLocked
     @State private var dragOffset: CGSize = .zero
@@ -286,35 +285,8 @@ struct AttachmentItemView: View {
                     // 「保留邊框」）。原本兩個地方都能改同一個值，畫布上那顆
                     // 又只有顏色會變、沒有標示，使用者不知道自己按了什麼。
 
-                    if let clipboard {
-                        Button {
-                            clipboard.cut(attachment.id)
-                        } label: {
-                            Image(systemName: "scissors")
-                                .font(.system(size: 11, weight: .bold))
-                                .foregroundColor(.white)
-                                .padding(5)
-                                .background(Color.orange)
-                                .clipShape(Circle())
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityLabel(localizationManager.localized("action_cut"))
-                        .accessibilityIdentifier("object.action.cut")
-
-                        Button {
-                            clipboard.copy(attachment.id)
-                        } label: {
-                            Image(systemName: "doc.on.doc")
-                                .font(.system(size: 11, weight: .bold))
-                                .foregroundColor(.white)
-                                .padding(5)
-                                .background(Color.teal)
-                                .clipShape(Circle())
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityLabel(localizationManager.localized("action_copy"))
-                        .accessibilityIdentifier("object.action.copy")
-                    }
+                    // 剪下／複製只留畫布上方的「剪下｜複製」列（任何物件、多選都適用），
+                    // 這裡不再重複兩顆。
 
                     Button {
                         onDelete()
@@ -932,7 +904,9 @@ struct TextAttachmentItemView: View {
                         }
                     }
 
-                    if let clipboard {
+                    // 剪下／複製平常由畫布上方的「剪下｜複製」列負責，這裡不重複；
+                    // 就地編輯文字時那一列會收起來（見 `objectPastePill`），才由這兩顆接手。
+                    if let clipboard, isEditingInline {
                         textActionButton("scissors", "action_cut", .orange) { clipboard.cut(textItem.id) }
                             .accessibilityIdentifier("object.action.cut")
                         textActionButton("doc.on.doc", "action_copy", .teal) { clipboard.copy(textItem.id) }

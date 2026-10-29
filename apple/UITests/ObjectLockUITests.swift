@@ -116,7 +116,7 @@ final class ObjectLockUITests: XCTestCase {
 
         // 1. 點得到：選取之後出現物件動作（複製）。
         image.tap()
-        XCTAssertTrue(app.buttons["object.action.copy"].waitForExistence(timeout: 3),
+        XCTAssertTrue(app.buttons["editor.object.copy"].waitForExistence(timeout: 3),
                       "鎖定的物件也要能選取（選取後應出現「複製」）")
 
         // 2. 拖不動。
@@ -231,5 +231,62 @@ final class ObjectLockUITests: XCTestCase {
         saveShot("ipad_5_continuous_draw_cut_paste")
 
         setDisplayMode("single")
+    }
+
+    /// 使用者回報：課堂與會議記錄第 1 頁的表格選起來後，工具列上的鎖定鈕點不到 ——
+    /// 表格在筆跡下方，上方的標題文字方塊（透明底、跨過表格上緣）把點擊吃掉了。
+    func testTheTableLockButtonIsReachableUnderAnOverlappingTextBox() {
+        let app = XCUIApplication()
+        app.launchEnvironment["KAIRUMO_UITEST"] = "1"
+        app.launchEnvironment["KAIRUMO_AUTO_OPEN_NOTEBOOK"] = "seed-meeting-notebook-v1"
+        app.launch()
+        let diagClose = app.buttons["diagnostics.close"]
+        if diagClose.waitForExistence(timeout: 3) && diagClose.isHittable { diagClose.tap() }
+        XCTAssertTrue(find(app, "editor.more").waitForExistence(timeout: 20), "會議記錄沒有開起來")
+
+        let typing = find(app, "portal.type")
+        XCTAssertTrue(typing.waitForExistence(timeout: 8))
+        typing.tap()
+
+        let cell = app.staticTexts["10:15"].firstMatch
+        XCTAssertTrue(cell.waitForExistence(timeout: 8), "找不到議程表格")
+        cell.tap()
+
+        let lock = app.buttons["table.lock"]
+        XCTAssertTrue(lock.waitForExistence(timeout: 4), "表格選起來後沒有鎖定鈕")
+        XCTAssertFalse(app.buttons["object.lock.badge"].exists, "表格一開始不該是鎖住的")
+        lock.tap()
+        XCTAssertTrue(app.buttons["object.lock.badge"].waitForExistence(timeout: 3),
+                      "按了鎖定鈕表格卻沒鎖上 —— 點擊被上方的文字方塊吃掉了")
+    }
+
+
+    /// 使用者回報：打字模式下點表格沒有工具列（也就沒有鎖定鈕），儲存格也打不了字；手繪模式正常。
+    /// 空白格原本只有上緣 12pt 點得到，表格其他地方的單擊沒有任何反應。
+    func testTypeModeTapOnABlankTableCellSelectsTheTableAndEditsTheCell() {
+        let app = XCUIApplication()
+        app.launchEnvironment["KAIRUMO_UITEST"] = "1"
+        app.launchEnvironment["KAIRUMO_UITEST_SEED_OBJECTS"] = "1"
+        app.launchEnvironment["KAIRUMO_UITEST_SEED_EMPTY_TABLE"] = "1"
+        app.launch()
+        openMatrixNotebook(app)
+
+        let typing = find(app, "portal.type")
+        XCTAssertTrue(typing.waitForExistence(timeout: 8))
+        typing.tap()
+
+        let table = find(app, "object.table")
+        XCTAssertTrue(table.waitForExistence(timeout: 8), "找不到表格")
+        // 第 2 列中間那一格的下半部：不在任何文字上。
+        let cell = table.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.62))
+        cell.tap()
+        XCTAssertTrue(app.buttons["table.lock"].waitForExistence(timeout: 3),
+                      "打字模式下點表格的空白格要選得起來（出現含鎖定鈕的工具列）")
+
+        let field = app.textFields.firstMatch
+        if !field.waitForExistence(timeout: 2) { cell.tap() }
+        XCTAssertTrue(field.waitForExistence(timeout: 3), "點儲存格要進入就地編輯")
+        field.typeText("Hi")
+        XCTAssertEqual(field.value as? String, "Hi", "儲存格要打得進字")
     }
 }

@@ -97,6 +97,9 @@ private fun LinkCardView(
 ) {
     // 鎖定在畫布上：不能拖曳；點開連結、選取、編修照常（見 canvas/ObjectLock.kt）。
     val moveLocked = com.kairumo.padnote.canvas.isMoveLocked(link.id)
+    // 壓到下方選取物件（表格等）的工具列時讓出觸控，鎖定鈕才點得到（見 canvas/ObjectLock.kt）。
+    @Suppress("NAME_SHADOWING") val interactive = interactive &&
+        !com.kairumo.padnote.canvas.yieldsToSelectedChrome(link.id, link.x, link.y, link.width, link.height)
     // 座標是**頁面點**，Compose 要的是像素 —— 差一個 density。
     // 不乘的話，在 3x 的手機上卡片會擠到左上角只剩三分之一的位置。
     Box(

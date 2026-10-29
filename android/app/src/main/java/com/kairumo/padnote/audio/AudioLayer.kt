@@ -112,6 +112,9 @@ private fun AudioCardView(
 ) {
     // 鎖定在畫布上：不能拖曳、縮放；播放、改名、轉文字照常（見 canvas/ObjectLock.kt）。
     val moveLocked = com.kairumo.padnote.canvas.isMoveLocked(item.id)
+    // 壓到下方選取物件（表格等）的工具列時讓出觸控，鎖定鈕才點得到（見 canvas/ObjectLock.kt）。
+    @Suppress("NAME_SHADOWING") val interactive = interactive &&
+        !com.kairumo.padnote.canvas.yieldsToSelectedChrome(item.id, item.x, item.y, item.width, item.height)
     Box(
         modifier = Modifier
             .zIndex(zIndex)

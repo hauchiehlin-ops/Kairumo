@@ -1198,6 +1198,32 @@ extension NotebookEditorView {
         }
     }
 
+    /// 選取中的「筆跡下方」物件，它的工具列與把手佔的範圍（頁面座標）。
+    ///
+    /// 表格、圖片、形狀等預設在筆跡下方，文字方塊與圖釘在上方 —— 兩層是
+    /// 不同的父容器，選取物件的 `zIndex(999)` 只在自己那一層有效。於是表格
+    /// 上緣的「拖曳移動 / 鎖定 / 編修」列一旦跟上方的文字方塊重疊（透明底的
+    /// 標題框最常見），點下去被文字方塊吃掉，鎖定鈕怎麼點都點不到。
+    ///
+    /// 不把選取物件搬到上方那一層：換父容器等於重建 View，表格正在編的
+    /// 儲存格、文字游標這些狀態會在選取的瞬間被清掉。改成讓上方那一層裡
+    /// 壓到這塊範圍的物件暫時不吃觸控（見 `yieldsToSelectedChrome`）。
+    func selectedUnderInkChrome(underInkSet: Set<String>) -> CGRect? {
+        let selected = activeSelectedObjectId ?? (selectedShapeIds.count == 1 ? selectedShapeIds.first : nil)
+        guard let id = selected, underInkSet.contains(id), let frame = frameOfObject(id: id) else { return nil }
+        // 上方留給工具列與旋轉鈕，其餘三邊留給角落的縮放／刪除把手。
+        // 旋轉過的物件以外框估算：寧可多讓一點，也不要讓把手被蓋住。
+        return CGRect(x: frame.minX - 40, y: frame.minY - 96,
+                      width: frame.width + 80, height: frame.height + 136)
+    }
+
+    /// 上方圖層的物件是否該讓出觸控給下方選取物件的工具列（見 `selectedUnderInkChrome`）。
+    /// 只在有選取時生效；點空白處取消選取後，這些物件又能點了。
+    func yieldsToSelectedChrome(_ id: String, chrome: CGRect?) -> Bool {
+        guard let chrome, id != activeSelectedObjectId, let frame = frameOfObject(id: id) else { return false }
+        return frame.intersects(chrome)
+    }
+
     /// 某一頁的插入物件層（圖片、形狀、表格、文字、連結、3D、討論圖釘）。
     ///
     /// 支援依筆跡上下圖層進行過濾：
@@ -1213,6 +1239,8 @@ extension NotebookEditorView {
         // 堆疊順序的索引表：一次算繪只建一次，不要每個物件各掃一遍
         // （見 `ObjectStacking.Lookup`）。
         let stacking = ObjectStacking.Lookup(order: notebook.objectOrder(forPage: page))
+        // 下方選取物件的工具列範圍：上方層壓到它的物件暫時讓出觸控（見 `selectedUnderInkChrome`）。
+        let chrome = filter == .overInkOnly ? selectedUnderInkChrome(underInkSet: underInkSet) : nil
         ZStack(alignment: .topLeading) {
             ForEach(notebook.attachments ?? []) { item in
                     if item.pageIndex == page && shouldIncludeInInkLayer(id: item.id, filter: filter, underInkSet: underInkSet) {
@@ -1239,7 +1267,7 @@ extension NotebookEditorView {
                             }
                         )
                         .canvasLocked(lockedSet.contains(item.id.lowercased()))
-
+                        .allowsHitTesting(!yieldsToSelectedChrome(item.id, chrome: chrome))
                         .zIndex(activeSelectedObjectId == item.id ? 999 : stacking.zIndex(for: item.id, kind: .image))
                     }
                 }
@@ -1299,7 +1327,7 @@ extension NotebookEditorView {
                             }
                         )
                         .canvasLocked(lockedSet.contains(item.id.lowercased()))
-
+                        .allowsHitTesting(!yieldsToSelectedChrome(item.id, chrome: chrome))
                         .zIndex(activeSelectedObjectId == item.id ? 999 : stacking.zIndex(for: item.id, kind: .shape))
                     }
                 }
@@ -1372,7 +1400,7 @@ extension NotebookEditorView {
                             }
                         )
                         .canvasLocked(lockedSet.contains(item.id.lowercased()))
-
+                        .allowsHitTesting(!yieldsToSelectedChrome(item.id, chrome: chrome))
                         .zIndex(activeSelectedObjectId == item.id ? 999 : stacking.zIndex(for: item.id, kind: .table))
                     }
                 }
@@ -1427,7 +1455,7 @@ extension NotebookEditorView {
                             selectionTracker: textSelectionTracker
                         )
                         .canvasLocked(lockedSet.contains(item.id.lowercased()))
-
+                        .allowsHitTesting(!yieldsToSelectedChrome(item.id, chrome: chrome))
                         .zIndex(activeSelectedObjectId == item.id ? 999 : stacking.zIndex(for: item.id, kind: .text))
                     }
                 }
@@ -1446,7 +1474,7 @@ extension NotebookEditorView {
                             }
                         )
                         .canvasLocked(lockedSet.contains(item.id.lowercased()))
-
+                        .allowsHitTesting(!yieldsToSelectedChrome(item.id, chrome: chrome))
                         .zIndex(activeSelectedObjectId == item.id ? 999 : stacking.zIndex(for: item.id, kind: .link))
                     }
                 }
@@ -1468,7 +1496,7 @@ extension NotebookEditorView {
                             }
                         )
                         .canvasLocked(lockedSet.contains(item.id.lowercased()))
-
+                        .allowsHitTesting(!yieldsToSelectedChrome(item.id, chrome: chrome))
                         .zIndex(activeSelectedObjectId == item.id ? 999 : stacking.zIndex(for: item.id, kind: .audio))
                     }
                 }
@@ -1489,7 +1517,7 @@ extension NotebookEditorView {
                             }
                         )
                         .canvasLocked(lockedSet.contains(item.id.lowercased()))
-
+                        .allowsHitTesting(!yieldsToSelectedChrome(item.id, chrome: chrome))
                         .zIndex(activeSelectedObjectId == item.id ? 999 : stacking.zIndex(for: item.id, kind: .model3D))
                     }
                 }
@@ -1519,6 +1547,7 @@ extension NotebookEditorView {
                         )
                         .position(x: pin.x, y: pin.y)
                         .canvasLocked(lockedSet.contains(pin.id.lowercased()))
+                        .allowsHitTesting(!(chrome?.contains(CGPoint(x: pin.x, y: pin.y)) ?? false))
 
                         .zIndex(stacking.zIndex(for: pin.id, kind: .pin))
                     }

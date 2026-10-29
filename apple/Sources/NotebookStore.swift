@@ -1637,6 +1637,12 @@ public final class NotebookStore: ObservableObject {
                 id: "00000000-0000-4000-8000-0000000000a6", pageIndex: 0,
                 x: 440, y: 360, width: 240, rows: 2, cols: 2, cells: ["A", "B", "C", "D"])]
         }
+        // `KAIRUMO_UITEST_SEED_EMPTY_TABLE=1`：第 1 頁多一個全空白的 3×3 表格（測打字模式點空白格選取、輸入）。
+        if env["KAIRUMO_UITEST_SEED_EMPTY_TABLE"] == "1" {
+            doc.tableAttachments = [NoteTableAttachment(
+                id: "00000000-0000-4000-8000-0000000000a7", pageIndex: 0,
+                x: 300, y: 520, width: 360, rows: 3, cols: 3)]
+        }
         // `KAIRUMO_UITEST_SEED_LOCKED=1`：圖片一開始就鎖定在畫布上（`ObjectLockUITests` 測解鎖的入口）。
         if env["KAIRUMO_UITEST_SEED_LOCKED"] == "1" {
             doc.setLockedObjectIds(["00000000-0000-4000-8000-0000000000a2"], forPage: 0)

@@ -1348,6 +1348,9 @@ private fun ContinuousPage(
             com.kairumo.padnote.canvas.LocalObjectLock provides objectLock,
             com.kairumo.padnote.canvas.LocalLockedObjectIds provides lockedIds,
             com.kairumo.padnote.canvas.LocalUnderInkObjectIds provides underInkIds,
+            // 選取中的筆跡下方物件的工具列：上方的文字方塊壓到它時讓出觸控（見 ObjectLock.kt）。
+            com.kairumo.padnote.canvas.LocalSelectedChrome provides
+                com.kairumo.padnote.canvas.selectedUnderInkChrome(selectedId, lockFrames, underInkIds),
             com.kairumo.padnote.canvas.LocalObjectClipboard provides objectClipboardActions,
             LocalPageCrossing provides crossing
         ) {

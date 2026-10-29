@@ -100,6 +100,9 @@ private fun TableObjectView(
     val moveLocked = com.kairumo.padnote.canvas.isMoveLocked(table.id)
     val currentTable by androidx.compose.runtime.rememberUpdatedState(table)
     val layout = table.layout()
+    // 壓到下方選取物件（表格等）的工具列時讓出觸控，鎖定鈕才點得到（見 canvas/ObjectLock.kt）。
+    @Suppress("NAME_SHADOWING") val interactive = interactive &&
+        !com.kairumo.padnote.canvas.yieldsToSelectedChrome(table.id, table.x, table.y, table.width, layout.height.toFloat())
     var liveX by remember(table.id, table.x) { mutableFloatStateOf(table.x) }
     var liveY by remember(table.id, table.y) { mutableFloatStateOf(table.y) }
     var liveRotation by remember(table.id, table.rotationDegrees) { mutableFloatStateOf(table.rotationDegrees ?: 0f) }
