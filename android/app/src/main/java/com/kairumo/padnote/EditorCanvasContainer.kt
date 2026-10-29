@@ -600,18 +600,24 @@ internal fun ColumnScope.EditorCanvasContainer(ctx: EditorCanvasContext) = with(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                // 縮小（< 100%）時，縮放層的版面要放大成「視窗 ÷ 倍率」，縮完剛好鋪滿畫布。
-                // 原本縮放層就是視窗大小：下面的 `clip = true` 以縮放前的大小裁切，縮完只剩
-                // 視窗的倍率那麼大 —— 直式平板開側欄時適應頁寬約 62%，頁面右下被裁掉一大塊
-                // （使用者回報「畫布未呈現完整頁面」），右下那一塊也收不到觸控。
+                // 裁在畫布視窗上。縮放層自己的 `clip` 是以它**平移後**的範圍裁切，
+                // 頁面往上、往左捲之後會畫到工具列與側欄上面。
+                .clipToBounds()
+                // 縮放層的版面要大到蓋住「能捲到的整個範圍」，不是只有視窗那麼大。
+                // 下面的 `clip = true` 以縮放層自己（平移、縮放前）的大小裁切，觸控也只送到這個範圍：
+                // 縮小時頁面右下被裁掉（使用者回報「畫布未呈現完整頁面」）；頁面往上捲之後，
+                // 視窗下半部同樣是空白、寫不上去。範圍與平移的上下限（邊距 80dp）一致。
                 .layout { measurable, constraints ->
-                    val shrink = canvasScale.coerceIn(0.05f, 1f)
+                    val scale = canvasScale.coerceAtLeast(0.05f)
                     val width = constraints.maxWidth
                     val height = constraints.maxHeight
+                    val margin = 80f * canvasDensity
+                    fun reach(viewport: Int, content: Float) =
+                        kotlin.math.ceil((maxOf(viewport.toFloat(), content * scale) + margin) / scale).toInt()
                     val placeable = measurable.measure(
                         androidx.compose.ui.unit.Constraints.fixed(
-                            kotlin.math.ceil(width / shrink).toInt(),
-                            kotlin.math.ceil(height / shrink).toInt()
+                            reach(width, PageGeometry.width * canvasDensity),
+                            reach(height, PageGeometry.height * canvasDensity)
                         )
                     )
                     layout(width, height) { placeable.place(0, 0) }
@@ -739,10 +745,14 @@ internal fun ColumnScope.EditorCanvasContainer(ctx: EditorCanvasContext) = with(
             val guidePaletteId = remember(notebookMeta) { notebookMeta.paletteId() }
             // 同步縮放與位移至筆跡引擎（S-80）。
             // 縮放時座標反變換，避免墨跡因手勢位移脫位。
-            LaunchedEffect(canvasScale, canvasOffset, canvasDensity) {
+            //
+            // **位移不交給引擎。** 畫布收觸控的元件在縮放層裡面，Compose 交給它的 MotionEvent
+            // 已經扣掉了縮放層的平移（只扣平移、不除倍率）。引擎再扣一次 `canvasOffset`，
+            // 畫面一平移，落筆與橡皮擦就差了整整一個平移量（實機回報：落筆處與筆跡位置不同）。
+            LaunchedEffect(canvasScale, canvasDensity) {
                 engine.zoom = canvasScale
-                engine.offsetX = canvasOffset.x / canvasDensity
-                engine.offsetY = canvasOffset.y / canvasDensity
+                engine.offsetX = 0f
+                engine.offsetY = 0f
             }
             val guideMeasurer = androidx.compose.ui.text.rememberTextMeasurer()
             // 縮放時不能走低延遲路徑。
