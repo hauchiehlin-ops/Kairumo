@@ -16,6 +16,32 @@ final class SeedNotebookSyncTests: XCTestCase {
         return store
     }
 
+    /// 使用者回報：Mac 上永遠少一本《Kairumo(功能範例)》—— 新安裝、手動加回、同步之後都一樣。
+    /// 走一次「新安裝 → 重開 App → 同步收尾」，五本範例都要還在。
+    func testAllFiveSamplesSurviveARelaunchAndASyncPass() async {
+        let dir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("kairumo-seed-tests-\(UUID().uuidString)")
+        let first = NotebookStore(testDocumentsRoot: dir)
+        first.loadData()
+        if first.notebooks.isEmpty { first.seedDefaultNotebooks() }
+        first.backfillEmptySeedNotebooks()
+        let ids = ["seed-welcome-notebook-v1", "seed-meeting-notebook-v1", "seed-feature-showcase-v1",
+                   "seed-kairumo-manual-v1", "seed-drafting-example-v1"]
+        for id in ids {
+            XCTAssertTrue(first.notebooks.contains { $0.id.lowercased() == id }, "新安裝就少了 \(id)")
+        }
+        await first.finishPreparingForProfileSwitch()
+
+        let relaunched = NotebookStore(testDocumentsRoot: dir)
+        relaunched.loadData()
+        relaunched.backfillEmptySeedNotebooks()
+        relaunched.repairSyncedSeedDuplicates()
+        relaunched.syncPurgeDeletedNotebooks(AccountSyncStore.shared.deletedNotebookIds)
+        for id in ids {
+            XCTAssertTrue(relaunched.visibleNotebooks.contains { $0.id.lowercased() == id }, "重開／同步之後少了 \(id)")
+        }
+    }
+
     func testEverySeedIsDeviceLocalAndUserNotebooksAreNot() {
         for id in ["seed-welcome-notebook-v1", "seed-feature-showcase-v1", "seed-kairumo-manual-v1",
                    "seed-drafting-example-v1", "seed-meeting-notebook-v1", "SEED-FEATURE-SHOWCASE-V1"] {

@@ -300,6 +300,36 @@ class InkEngineTest {
             0, reopened.visibleStrokeDetails(pageId).size
         )
     }
+
+    @Test
+    fun undoingALassoMoveThenUndoingAgainRemovesTheLaterStroke() {
+        // 先畫 A、再畫 B，套索把 A 搬走；連按兩次復原：第一次 A 回原位，第二次拿掉的必須是 B。
+        // 以前搬移把 A 挪到清單最後，第二次復原拿掉的是 A。
+        val path = File(workDir, "lasso-undo.padnote").absolutePath
+        val session = PadnoteSession.create(path, "套索復原", 1_757_635_200_000uL, 0xA2u)
+        val pageId = session.firstPageId()!!
+        val engine = InkEngine(session, pageId)
+        fun line(x0: Float, t0: Long, pointer: Int) = feed(
+            engine,
+            touch(MotionEvent.ACTION_DOWN, MotionEvent.TOOL_TYPE_STYLUS, x0, 4f, t0, pointer),
+            touch(MotionEvent.ACTION_MOVE, MotionEvent.TOOL_TYPE_STYLUS, x0 + 10f, 4f, t0 + 8, pointer),
+            touch(MotionEvent.ACTION_UP, MotionEvent.TOOL_TYPE_STYLUS, x0 + 20f, 4f, t0 + 16, pointer)
+        )
+        line(10f, 1_000L, 0)
+        line(300f, 2_000L, 1)
+        assertTrue(InkPackageWriter.awaitIdleBlocking())
+        val a = engine.strokes[0]
+        val b = engine.strokes[1]
+
+        engine.translateStrokes(setOf(a.coreStrokeId!!), 0f, 50f)
+        assertTrue(engine.undo())
+        assertTrue(engine.undo())
+
+        assertEquals(1, engine.strokes.size)
+        assertEquals("留下來的應該是先畫的 A", a.points.first().x, engine.strokes[0].points.first().x, 0.001f)
+        assertEquals(a.points.first().y, engine.strokes[0].points.first().y, 0.001f)
+        assertTrue(engine.strokes.none { it.points.first().x == b.points.first().x })
+    }
 }
 
 /**

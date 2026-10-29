@@ -576,12 +576,18 @@ class InkEngine(
 
     /** 把 [remove]（以實例認）換成 [add]。回傳真正放進去的實例（核心重新發了 id）。 */
     private fun swapStrokes(remove: List<CompletedStroke>, add: List<CompletedStroke>): List<CompletedStroke> {
-        for (s in remove) {
-            _strokes.removeAll { it === s }
-            coreErase(s)
-        }
+        // 一對一換掉（套索搬移、美化）時放回原本的位置，不要挪到清單最後面：
+        // 「加入筆畫」的復原拿的是清單最後一筆。先畫圈、再畫一筆、套索搬那個圈之後連按復原，
+        // 搬回來的圈若排在最後，第二次復原拿掉的就是圈，而不是後來畫的那一筆。
+        val slots = if (remove.size == add.size) remove.map { s -> _strokes.indexOfFirst { it === s } } else emptyList()
+        for (s in remove) coreErase(s)
         val added = add.map { coreAdd(it) }
-        _strokes += added
+        if (slots.isNotEmpty() && slots.all { it >= 0 }) {
+            slots.forEachIndexed { i, slot -> _strokes[slot] = added[i] }
+        } else {
+            for (s in remove) _strokes.removeAll { it === s }
+            _strokes += added
+        }
         notifyContentCommittedAfterWrites()
         return added
     }
