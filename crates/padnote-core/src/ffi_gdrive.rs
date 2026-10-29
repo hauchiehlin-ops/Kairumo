@@ -813,6 +813,24 @@ const AUDIO_SETTLE_PROBE: std::time::Duration = std::time::Duration::from_millis
 #[cfg(test)]
 const AUDIO_SETTLE_PROBE: std::time::Duration = std::time::Duration::from_millis(400);
 
+#[cfg(test)]
+thread_local! {
+    /// 測試用：取代「等一下再量」的那段等待，讓測試在兩次量測之間**確定地**改動檔案。
+    /// 原本測試靠背景執行緒在等待期間持續寫檔；CI 的磁碟一卡，等待期間一筆都沒寫完，
+    /// 檔案看起來就「穩定了」而被上傳 —— 測試時好時壞，跟被測的規則無關。
+    static AUDIO_SETTLE_HOOK: std::cell::RefCell<Option<Box<dyn Fn()>>> =
+        const { std::cell::RefCell::new(None) };
+}
+
+/// 錄音疑似還在成長：等一下再量一次。
+fn wait_for_audio_to_settle() {
+    #[cfg(test)]
+    if AUDIO_SETTLE_HOOK.with(|hook| hook.borrow().as_ref().map(|f| f()).is_some()) {
+        return;
+    }
+    std::thread::sleep(AUDIO_SETTLE_PROBE);
+}
+
 /// 上一輪看到的本機檔案長度，用來判斷「還在成長」還是「已經穩定」。
 type SeenSizes = std::collections::BTreeMap<String, u64>;
 
@@ -1048,7 +1066,7 @@ fn sync_notebook_media(
                 && (content.len() as u64).saturating_sub(previous.unwrap_or(0))
                     < AUDIO_GROWTH_THRESHOLD
             {
-                std::thread::sleep(AUDIO_SETTLE_PROBE);
+                wait_for_audio_to_settle();
                 let stable = local_name
                     .as_deref()
                     .and_then(|n| package.read_audio_file(n).ok())
@@ -4252,37 +4270,23 @@ mod tests {
             "第一次一定要傳"
         );
 
-        // 還在錄：每一輪都長一點點，但都不到門檻。
+        // 還在錄：每一輪都長一點點，但都不到門檻；同步量第二次之前檔案又長了一點。
         for extra in 1..=3usize {
             let base_len = 1000 + extra * 1000;
             pkg.write_audio_file(name, &vec![0u8; base_len]).unwrap();
-            // 真的還在錄：在同步期間持續微量增長，避免受排程延遲抖動影響。
-            let stop = Arc::new(std::sync::atomic::AtomicBool::new(false));
-            let started = Arc::new(std::sync::atomic::AtomicBool::new(false));
-            let still_recording = {
-                let root = root.clone();
-                let stop = stop.clone();
-                let started = started.clone();
-                std::thread::spawn(move || {
-                    let mut growth = 0usize;
-                    let p = padnote_storage::NotebookPackage::open(&root).unwrap();
-                    while !stop.load(std::sync::atomic::Ordering::Relaxed) {
-                        growth += 1;
-                        p.write_audio_file(name, &vec![0u8; base_len + growth])
-                            .unwrap();
-                        started.store(true, std::sync::atomic::Ordering::Relaxed);
-                        std::thread::yield_now();
-                    }
-                })
-            };
-            while !started.load(std::sync::atomic::Ordering::Relaxed) {
-                std::thread::yield_now();
-            }
+            let grow_root = root.clone();
+            AUDIO_SETTLE_HOOK.with(|hook| {
+                *hook.borrow_mut() = Some(Box::new(move || {
+                    padnote_storage::NotebookPackage::open(&grow_root)
+                        .unwrap()
+                        .write_audio_file(name, &vec![0u8; base_len + 1])
+                        .unwrap();
+                }));
+            });
             let uploaded_this_round = session
                 .sync_notebook(path.clone(), "nb1".into(), 0xAA)
                 .uploaded;
-            stop.store(true, std::sync::atomic::Ordering::Relaxed);
-            still_recording.join().unwrap();
+            AUDIO_SETTLE_HOOK.with(|hook| *hook.borrow_mut() = None);
             assert_eq!(uploaded_this_round, 0, "錄製中的小幅成長不該整檔重傳");
         }
 
