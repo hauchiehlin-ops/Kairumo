@@ -91,7 +91,11 @@ final class PlatformSelfCheck: ObservableObject {
         if let failure = manager.playbackFailure {
             return SelfCheckResult(id: "audio.playback", title: title, status: .fail, detail: failure)
         }
-        try? await Task.sleep(nanoseconds: 700_000_000)
+        // 輪詢到前進為止（最多 3 秒），不是固定等 700 ms 量一次：音訊輸出從待機醒來、
+        // 藍牙耳機、負載高的模擬器，開始出聲前都可能超過 700 ms（與 Android 同一條規則）。
+        for _ in 0..<30 where manager.currentPlaybackTime <= 0.05 {
+            try? await Task.sleep(nanoseconds: 100_000_000)
+        }
         let advanced = manager.currentPlaybackTime > 0.05
         let session = AVAudioSession.sharedInstance()
         return SelfCheckResult(
