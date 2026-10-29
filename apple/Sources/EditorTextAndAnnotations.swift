@@ -606,6 +606,7 @@ extension NotebookEditorView {
         saveCurrentPageDrawing()
         let id = notebook.id
         afterCoreInkWrites {
+            if store.hasSampleSession(id) { inkFrozenNotebookId = id }
             let copy = store.hasSampleSession(id)
                 ? store.finishSampleSession(id, choice: .saveCopy)
                 : store.duplicateNotebook(id: id)
@@ -616,6 +617,7 @@ extension NotebookEditorView {
     }
 
     func finishSampleLeave(_ choice: SampleLeaveChoice) {
+        if choice != .keep { inkFrozenNotebookId = notebook.id }
         store.finishSampleSession(notebook.id, choice: choice)
         let leave = afterSampleLeave
         afterSampleLeave = nil

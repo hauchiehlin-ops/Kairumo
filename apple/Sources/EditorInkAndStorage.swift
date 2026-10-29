@@ -1051,6 +1051,7 @@ extension NotebookEditorView {
     }
 
     func saveCurrentPageDrawing() {
+        guard inkFrozenNotebookId != notebook.id else { return }
         // 明確存檔就把待辦的去抖動取消掉 —— 留著的話 1.2 秒後會再寫一次
         // 一模一樣的內容。
         inkTouchWork?.cancel()

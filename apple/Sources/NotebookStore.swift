@@ -2917,6 +2917,9 @@ public final class NotebookStore: ObservableObject {
     /// 讓重新產生的標準內容不會疊在舊的（含重複的）內容上。
     private func resetSeedStorage(notebookId: String) {
         Self.invalidateDrawingCache(notebookId: notebookId)
+        // 範例的 id 是固定的：刪掉再長回來、重設成標準內容都還是同一個 id。不丟掉記憶體裡的
+        // 筆跡，重新產生的範例打開時拿到的會是舊的（例如重設那一刻還沒寫好的空白頁）。
+        PageInkStore.purge(notebookId: notebookId)
         let fm = FileManager.default
         for name in [notebookId, notebookId.lowercased()] {
             try? fm.removeItem(at: corePackagesDirectory.appending(path: "\(name).padnote"))
@@ -3104,6 +3107,7 @@ public final class NotebookStore: ObservableObject {
             // 不在清單裡（只剩一個孤立的套件目錄）：沒有東西可以進回收桶，直接清掉。
             purgeLocally(id: id)
         }
+        PageInkStore.purge(notebookId: id)
         AccountSyncStore.shared.recordDeletion(id: id)
         // 使用者資料夾裡的副本照舊立刻移除（那是匯出／備份用的資料夾，不是 App 的資料）。
         removeFolderSyncCopy(id: id)
@@ -5847,6 +5851,11 @@ extension NotebookStore {
         if let index = notebooks.firstIndex(where: { $0.id == id }) {
             notebooks[index] = saved
         }
+        // 檔案換回去了，記憶體裡的筆跡也要跟著丟掉。`PageInkStore` 以筆記 id 常駐、關掉筆記也不清，
+        // 不丟的話再打開時畫面拿的是快取：放棄修改後剛畫的筆跡還在、剛擦掉的字卻不見了（實機回報）。
+        Self.invalidateDrawingCache(notebookId: saved.id)
+        ProInkStore.invalidateModifiedCache(notebookId: saved.id)
+        PageInkStore.purge(notebookId: saved.id)
         PageThumbnailRenderer.invalidateAll()
         if persist {
             persistData(signalsLocalEdit: false)
