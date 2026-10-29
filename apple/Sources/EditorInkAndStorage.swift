@@ -1242,18 +1242,18 @@ extension NotebookEditorView {
             fromPageIndex: fromPage, fromPageId: pidFrom, fromBefore: fromBefore, fromAfter: fromAfter,
             targetPageIndex: targetPage, targetPageId: pidTarget, targetBefore: targetBefore, targetAfter: targetAfter,
             manager: historyUndoManager
-        ) { [weak store] fIdx, fDraw, tIdx, tDraw in
-            _ = store
-            DispatchQueue.main.async {
-                self.updateCanvasDrawing(forPage: fIdx, drawing: fDraw)
-                self.broadcastDrawingChange(page: fIdx, drawing: fDraw)
-                self.updateCanvasDrawing(forPage: tIdx, drawing: tDraw)
-                self.broadcastDrawingChange(page: tIdx, drawing: tDraw)
-                self.focusContinuousPage(fIdx)
-                self.lasso.clear()
-                self.commitNotebook()
-                PageThumbnailRenderer.invalidateAll()
-            }
+        ) { fIdx, fDraw, tIdx, tDraw in
+            // 當下就換上畫布，不可延到下一輪：`stepHistory` 在 `undo()` 一回來就比對畫面，
+            // 沒變的話會當成失效項、再多退一步 —— 把搬移之前畫的那一筆也一起退掉，
+            // 接著延後的這一段又把含那一筆的舊筆跡蓋回去，那一筆從此復原不掉。
+            self.updateCanvasDrawing(forPage: fIdx, drawing: fDraw)
+            self.broadcastDrawingChange(page: fIdx, drawing: fDraw)
+            self.updateCanvasDrawing(forPage: tIdx, drawing: tDraw)
+            self.broadcastDrawingChange(page: tIdx, drawing: tDraw)
+            self.focusContinuousPage(fIdx)
+            self.lasso.clear()
+            self.commitNotebook()
+            PageThumbnailRenderer.invalidateAll()
         }
     }
 
@@ -1264,15 +1264,13 @@ extension NotebookEditorView {
         activeInkStore.registerSamePageUndo(
             pageIndex: page, pageId: pid, before: before, after: after,
             manager: historyUndoManager
-        ) { [weak store] pIdx, d in
-            _ = store
-            DispatchQueue.main.async {
-                self.updateCanvasDrawing(forPage: pIdx, drawing: d)
-                self.broadcastDrawingChange(page: pIdx, drawing: d)
-                self.lasso.clear()
-                self.commitNotebook()
-                PageThumbnailRenderer.invalidateAll()
-            }
+        ) { pIdx, d in
+            // 同上：當下套用，`stepHistory` 才看得到這一步的效果。
+            self.updateCanvasDrawing(forPage: pIdx, drawing: d)
+            self.broadcastDrawingChange(page: pIdx, drawing: d)
+            self.lasso.clear()
+            self.commitNotebook()
+            PageThumbnailRenderer.invalidateAll()
         }
     }
 
