@@ -22,7 +22,15 @@ cd "$REPO_ROOT"
 
 OPUS_VERSION="1.5.2"
 TARBALL="opus-${OPUS_VERSION}.tar.gz"
-BASE_URL="https://downloads.xiph.org/releases/opus"
+# 官方 SHA256SUMS 裡 opus-1.5.2.tar.gz 的值。寫死在這裡，不在建置時另外下載清單：
+# 多抓一個檔就多一個會斷線的地方，而校驗和本來就該跟版本號一起被審過。
+OPUS_SHA256="65c1d2f78b9f2fb20082c38cbe47c951ad5839345876e46941612ee87f9a7ce1"
+# 第一個是官方站；GitHub 發行頁是同一個檔案（位元組相同），官方站連不上時用。
+# CI 曾經因為 downloads.xiph.org 的 TLS 連線中斷（curl 35）整個 Android build 失敗。
+SOURCE_URLS=(
+    "https://downloads.xiph.org/releases/opus/${TARBALL}"
+    "https://github.com/xiph/opus/releases/download/v${OPUS_VERSION}/${TARBALL}"
+)
 ABIS=(arm64-v8a x86_64)
 API_LEVEL=29          # 與 android/app 的 minSdk 一致
 OUT_ROOT="android/prebuilt/opus"
@@ -61,23 +69,29 @@ mkdir -p "$WORK_DIR"
 cd "$WORK_DIR"
 
 # --- 下載並驗證 ----------------------------------------------------------
-# 校驗和取自 xiph 官方的 SHA256SUMS，與 D4「下載一律驗 SHA-256」的規則一致。
+# 一律驗 SHA-256（D4）。每個來源重試幾次，都失敗才放棄。
+if [[ -f "$TARBALL" ]] && [[ "$(shasum -a 256 "$TARBALL" | awk '{print $1}')" != "$OPUS_SHA256" ]]; then
+    rm -f "$TARBALL"   # 上次下載中斷留下的殘檔
+fi
 if [[ ! -f "$TARBALL" ]]; then
     echo "==> 下載 libopus ${OPUS_VERSION}"
-    curl -fsSL -O "${BASE_URL}/${TARBALL}"
+    for url in "${SOURCE_URLS[@]}"; do
+        if curl -fsSL --retry 4 --retry-all-errors --retry-delay 3 --connect-timeout 20 \
+            -o "${TARBALL}.part" "$url"; then
+            mv "${TARBALL}.part" "$TARBALL"
+            break
+        fi
+        echo "   ⚠️ ${url} 下載失敗，換下一個來源" >&2
+        rm -f "${TARBALL}.part"
+    done
+    [[ -f "$TARBALL" ]] || { echo "❌ 所有來源都下載失敗" >&2; exit 1; }
 fi
 
 echo "==> 驗證 SHA-256"
-curl -fsSL "${BASE_URL}/SHA256SUMS.txt" -o SHA256SUMS.txt 2>/dev/null || \
-  curl -fsSL "${BASE_URL}/SHA256SUMS" -o SHA256SUMS.txt
-EXPECTED="$(grep -E "  ?opus-${OPUS_VERSION}\.tar\.gz$" SHA256SUMS.txt | awk '{print $1}' | head -1)"
 ACTUAL="$(shasum -a 256 "$TARBALL" | awk '{print $1}')"
-if [[ -z "$EXPECTED" ]]; then
-    echo "❌ 官方校驗和清單裡找不到 ${TARBALL}" >&2
-    exit 1
-fi
-if [[ "$EXPECTED" != "$ACTUAL" ]]; then
-    echo "❌ SHA-256 不符：預期 ${EXPECTED}，實得 $ACTUAL" >&2
+if [[ "$OPUS_SHA256" != "$ACTUAL" ]]; then
+    echo "❌ SHA-256 不符：預期 ${OPUS_SHA256}，實得 $ACTUAL" >&2
+    rm -f "$TARBALL"
     exit 1
 fi
 echo "   OK  $ACTUAL"
