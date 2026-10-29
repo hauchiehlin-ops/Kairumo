@@ -58,8 +58,15 @@ object PlatformSelfCheck {
             if (started == null) {
                 return SelfCheckResult("audio.playback", title, SelfCheckResult.Status.FAIL, "MediaPlayer did not start")
             }
-            delay(700)
-            val position = AudioPlayback.currentPositionMs
+            // 輪詢到前進為止（最多 3 秒），不是固定等 700 ms 量一次：音訊輸出從待機醒來、
+            // 藍牙耳機、負載高的模擬器，開始出聲前都可能超過 700 ms（CI 曾因此誤判失敗）。
+            var position = 0
+            var waited = 0
+            while (position <= 50 && waited < 3_000) {
+                delay(100)
+                waited += 100
+                position = AudioPlayback.currentPositionMs
+            }
             val ok = position > 50
             SelfCheckResult(
                 "audio.playback", title,
