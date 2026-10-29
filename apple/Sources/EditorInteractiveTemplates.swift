@@ -97,7 +97,7 @@ extension NotebookEditorView {
     /// 🌟 方案 A+B：手指或游標在畫布上的單擊事件
     func handleCanvasDirectTap(at location: CGPoint, page: Int? = nil) {
         if Date().timeIntervalSince(lastPastePlacementAt) < 0.35 {
-            removeTapDotStroke(near: location)
+            removeTapDotStroke(near: location, page: page)
             return
         }
         endTextFormatSession()
@@ -106,7 +106,7 @@ extension NotebookEditorView {
 
         if isPlacingPasteObject && !objectClipboard.isEmpty {
             lastPastePlacementAt = Date()
-            removeTapDotStroke(near: location)
+            removeTapDotStroke(near: location, page: targetPage)
             paste(objectClipboard, onPage: targetPage, at: location)
             isPlacingPasteObject = false
             return
@@ -114,7 +114,7 @@ extension NotebookEditorView {
 
         // 🌟 優先檢查是否點擊在特殊樣板引導線互動元件上（例如核取方塊 Checkbox）
         if let (_, key) = hitTestGuideCheckbox(at: location, page: targetPage) {
-            removeTapDotStroke(near: location)
+            removeTapDotStroke(near: location, page: targetPage)
             toggleGuideCheckbox(key: key)
             return
         }
@@ -126,7 +126,7 @@ extension NotebookEditorView {
             // 解鎖鈕按不到，所以切到打字模式再給解鎖鈕（與放置貼紙同一個做法）。
             // 切到打字模式之後物件本身也能點選、編輯（鎖定只鎖位置）。
             if let lockedId = lockedObjectHit(at: location, page: targetPage) {
-                removeTapDotStroke(near: location)
+                removeTapDotStroke(near: location, page: targetPage)
                 transitionToMode(.type)
                 lockPromptId = lockedId
                 return
@@ -140,7 +140,7 @@ extension NotebookEditorView {
                 // 單擊與 PencilKit 的繪圖手勢同時辨識（見 `Coordinator.gestureRecognizer`），
                 // 手指輕點會被畫成一個小點。這一下是「點文字方塊」，不是落筆 ——
                 // 把那個點拿掉，否則每次點方塊紙上都多一顆墨點。
-                removeTapDotStroke(near: location)
+                removeTapDotStroke(near: location, page: targetPage)
                 withAnimation(.easeInOut(duration: 0.15)) {
                     // 全自動意圖感知：手指點擊文字方塊，立即進入行內聚焦編輯並展開 Word 級文字工具列
                     inlineEditingTextId = existing.id
@@ -153,7 +153,7 @@ extension NotebookEditorView {
             // 手指輕點到文字以外的物件（圖片、形狀、表格、錄音卡…）：使用者要的是「選它」。
             // 手寫模式下手指點中物件，精準選中物件並顯示把手，同時維持手繪工具列就緒，不強迫進入打字模式。
             if let (hitId, hitKind) = findObjectAt(location: location, page: targetPage) {
-                removeTapDotStroke(near: location)
+                removeTapDotStroke(near: location, page: targetPage)
                 withAnimation(.easeInOut(duration: 0.15)) {
                     inlineEditingTextId = nil
                     if hitKind == "shape" {
@@ -200,6 +200,8 @@ extension NotebookEditorView {
         endTextFormatSession()
         let targetPage = page ?? currentPageIndex
         switchToPage(targetPage)
+        // 雙擊是「開文字框」（或什麼都不做），不是點兩顆點：兩下留下的墨點都收回。
+        removeTapDotStroke(near: location, page: targetPage, maxCount: 2)
         if hitTestGuideCheckbox(at: location, page: targetPage) != nil { return }
         if isLocationInsideAnyObject(at: location, page: targetPage) { return }
         // 若先前有空白文字方塊先清理
@@ -316,7 +318,7 @@ extension NotebookEditorView {
     func handlePencilTapInTypeMode(at location: CGPoint, page: Int? = nil) {
         let targetPage = page ?? currentPageIndex
         switchToPage(targetPage)
-        removeTapDotStroke(near: location)
+        removeTapDotStroke(near: location, page: targetPage)
         handleCanvasTapInTypeMode(at: location, page: targetPage)
     }
 

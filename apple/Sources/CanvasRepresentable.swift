@@ -955,6 +955,53 @@ final class AdaptiveCanvasView: PKCanvasView {
         Self.invalidateCanvasTiles(in: self)
     }
 
+    /// 收回「點選」順手畫下的墨點（判準見 `TapDotRetraction`），收掉了才呼叫 `onRetracted`。
+    ///
+    /// 直接改**這張畫布**：連續模式每頁有自己的畫布與 `@State drawing`，只改編輯器的
+    /// `currentDrawing` 碰不到它 —— 原本的做法在連續模式下點完墨點照樣留在紙上。
+    /// 點擊成立時墨點可能還沒交給畫布（PencilKit 稍後才收筆），所以等落筆結束再看，
+    /// 沒找到就隔一小段再試；`tappedAt` 固定，之後才寫下的筆畫不會被當成墨點。
+    func retractTapDots(
+        near location: CGPoint, tappedAt: Date = Date(), maxCount: Int = 1,
+        onRetracted: @escaping (PKDrawing) -> Void
+    ) {
+        attemptTapDotRetraction(location, tappedAt, maxCount, retriesLeft: 2, onRetracted)
+    }
+
+    private func attemptTapDotRetraction(
+        _ location: CGPoint, _ tappedAt: Date, _ maxCount: Int, retriesLeft: Int,
+        _ onRetracted: @escaping (PKDrawing) -> Void
+    ) {
+        whenInkIdle { [weak self] in
+            guard let self else { return }
+            let before = self.drawing
+            let cleaned = TapDotRetraction.retracting(
+                before, near: location, tappedAt: tappedAt, maxCount: maxCount)
+            let removed = before.strokes.count - cleaned.strokes.count
+            guard removed > 0 else {
+                guard retriesLeft > 0 else { return }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) { [weak self] in
+                    self?.attemptTapDotRetraction(
+                        location, tappedAt, maxCount, retriesLeft: retriesLeft - 1, onRetracted)
+                }
+                return
+            }
+            let coordinator = self.delegate as? CanvasRepresentable.Coordinator
+            coordinator?.isProgrammaticUpdate = true
+            self.drawing = cleaned
+            coordinator?.isProgrammaticUpdate = false
+            // 與掌拒收回同一個做法：PencilKit 為那顆點登記的復原項已經失效，拿掉，
+            // 否則按一次復原「什麼都沒變」。
+            self.dropDeadUndoEntries(max: removed)
+            coordinator?.publish(cleaned)
+            // 下一筆要照常判斷是不是新筆畫（磁吸、成形靠筆數變多來認）。
+            if let coordinator, coordinator.lastStrokeCountBeforeRefine > cleaned.strokes.count {
+                coordinator.lastStrokeCountBeforeRefine = cleaned.strokes.count
+            }
+            onRetracted(cleaned)
+        }
+    }
+
     private static func invalidateCanvasTiles(in view: UIView) {
         view.setNeedsDisplay()
         view.layer.setNeedsDisplay()

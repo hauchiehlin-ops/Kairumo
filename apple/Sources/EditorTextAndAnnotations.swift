@@ -1638,20 +1638,24 @@ extension NotebookEditorView {
         }
     }
 
-    /// 拿掉「手指輕點」留下的那個小點。
+    /// 拿掉「點選」留下的小點（手指輕點、雙擊、打字模式的 Pencil 輕點）。
     ///
-    /// 只動**最後一筆**，而且必須同時符合：夠小（近乎一個點）、就落在點擊位置、
-    /// 剛剛才畫下（不會誤刪使用者真正寫的東西）。
-    func removeTapDotStroke(near location: CGPoint) {
-        guard let last = currentDrawing.strokes.last else { return }
-        let bounds = last.renderBounds
-        let isDot = bounds.width < 10 && bounds.height < 10
-        let isHere = abs(bounds.midX - location.x) < 16 && abs(bounds.midY - location.y) < 16
-        let isFresh = Date().timeIntervalSince(last.path.creationDate) < 2
-        guard isDot, isHere, isFresh else { return }
-        var strokes = currentDrawing.strokes
-        strokes.removeLast()
-        currentDrawing = PKDrawing(strokes: strokes)
+    /// 判準見 `TapDotRetraction`：筆路幾乎不動、就落在點擊位置、而且就在這一下結束 ——
+    /// 稍早寫下的句號、i 上的點不會被收掉。改的是**那一頁的畫布**，連續模式也收得到。
+    func removeTapDotStroke(near location: CGPoint, page: Int? = nil, maxCount: Int = 1) {
+        let page = page ?? currentPageIndex
+        let target = (pageDisplayMode == .continuous ? continuousCanvases[page] : nil)
+            ?? (page == currentPageIndex ? (continuousCanvases.activeCanvas ?? canvasView) : nil)
+        guard let adaptive = target as? AdaptiveCanvasView else { return }
+        adaptive.retractTapDots(near: location, maxCount: maxCount) { cleaned in
+            // 走與每一筆相同的登記路徑（存檔、快取、同步），但不經畫布的 `onDrawingChanged`：
+            // 整頁模式那裡會套穩定器與對稱，拿一份少了一筆的筆跡去跑會再鏡射一次最後那筆。
+            recordDrawingEdit(page: page, drawing: cleaned)
+            broadcastDrawingChange(page: page, drawing: cleaned)
+            if page == currentPageIndex, !isApplyingRemoteUpdate {
+                lastStrokeCount = cleaned.strokes.count
+            }
+        }
     }
 
 

@@ -161,3 +161,61 @@ final class PalmRejectionCoordinator {
         )
     }
 }
+
+/// 「點選」順手畫下的墨點要收回。
+///
+/// 手寫模式下手指還能畫的時候（打開筆記本、Pencil 還沒用過），手指點物件、勾核取方塊、
+/// 雙擊開文字框，PencilKit 會和點擊手勢同時收到這一下，於是紙上多一顆點。
+///
+/// 原本的判準是「最後一筆、renderBounds 小於 10pt、兩秒內」：粗筆點出來的點超過 10pt
+/// 永遠收不掉，雙擊的兩顆只收得到一顆。這裡改看**筆路的取樣點**（與筆寬無關）
+/// 與**這一筆何時結束**（點擊在抬起時成立，墨點也在那一刻結束）：
+/// 稍早寫下的句號、i 上的點結束得早，不會被當成這一下的墨點。
+enum TapDotRetraction {
+    /// 取樣點的分布範圍上限（點）。點擊手勢容許的移動約 10pt。
+    static let maxSpread: CGFloat = 12
+    /// 墨點中心離點擊位置的上限（點）。
+    static let maxDistance: CGFloat = 24
+    /// 墨點結束時間要落在點擊成立前這段時間內（雙擊的第一下約早 0.35 秒）。
+    static let endWindow: TimeInterval = 0.6
+    /// 時鐘誤差的容許（墨點的結束時間可能比點擊成立稍晚記到）。
+    static let endTolerance: TimeInterval = 0.15
+
+    static func isTapDot(_ stroke: PKStroke, near location: CGPoint, tappedAt: Date) -> Bool {
+        let path = stroke.path
+        guard let first = path.first, let last = path.last else { return false }
+        let began = path.creationDate
+        guard began <= tappedAt else { return false }
+        let ended = began.addingTimeInterval(last.timeOffset - first.timeOffset)
+        guard ended >= tappedAt.addingTimeInterval(-endWindow),
+              ended <= tappedAt.addingTimeInterval(endTolerance) else { return false }
+        var minX = CGFloat.infinity, minY = CGFloat.infinity
+        var maxX = -CGFloat.infinity, maxY = -CGFloat.infinity
+        for point in path {
+            let p = point.location.applying(stroke.transform)
+            minX = min(minX, p.x); maxX = max(maxX, p.x)
+            minY = min(minY, p.y); maxY = max(maxY, p.y)
+        }
+        guard maxX - minX <= maxSpread, maxY - minY <= maxSpread else { return false }
+        return abs((minX + maxX) / 2 - location.x) <= maxDistance
+            && abs((minY + maxY) / 2 - location.y) <= maxDistance
+    }
+
+    /// 從最後幾筆往回找，收回至多 `maxCount` 顆符合的墨點。沒有符合的就原封不動回傳。
+    static func retracting(
+        _ drawing: PKDrawing, near location: CGPoint, tappedAt: Date, maxCount: Int = 1
+    ) -> PKDrawing {
+        var strokes = drawing.strokes
+        var removed = 0
+        var index = strokes.count - 1
+        let floor = max(0, strokes.count - 8)
+        while index >= floor, removed < maxCount {
+            if isTapDot(strokes[index], near: location, tappedAt: tappedAt) {
+                strokes.remove(at: index)
+                removed += 1
+            }
+            index -= 1
+        }
+        return removed == 0 ? drawing : PKDrawing(strokes: strokes)
+    }
+}
