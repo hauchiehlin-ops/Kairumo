@@ -439,6 +439,24 @@ final class RecordingTitleInPackageTests: XCTestCase {
         XCTAssertEqual(store.loadDrawing(notebookId: id, pageIndex: 0).strokes.count, 1)
     }
 
+    /// 實機回報：在範例上擦掉筆跡、選「放棄修改」，再打開時字跡不見了（畫上去的則還留著）。
+    /// 檔案已經還原，但編輯器讀的是常駐記憶體的 `PageInkStore`，它還是改過的樣子。
+    func testDiscardingAlsoDropsTheInMemoryInk() {
+        let (store, id) = sampleStore()
+        store.beginSampleSession(id)
+        let ink = PageInkStore.store(for: store.notebooks[0], store: store)
+        XCTAssertEqual(ink.drawing(for: 0).strokes.count, 1)
+        ink.updateDrawing(PKDrawing(), for: 0)   // 編輯器裡擦掉
+        store.saveDrawing(notebookId: id, pageIndex: 0, drawing: PKDrawing())
+        XCTAssertEqual(PageInkStore.store(for: store.notebooks[0], store: store).drawing(for: 0).strokes.count, 0)
+
+        store.finishSampleSession(id, choice: .discard)
+
+        let reopened = PageInkStore.store(for: store.notebooks[0], store: store)
+        XCTAssertEqual(reopened.drawing(for: 0).strokes.count, 1, "再打開時看到的是還原後的筆跡")
+        PageInkStore.purge(notebookId: id)
+    }
+
     /// 任何一本都能設為／解除範例；範例暫存期間不同步。
     func testAnyNotebookCanBeMarkedAsASample() {
         let (store, _) = sampleStore()

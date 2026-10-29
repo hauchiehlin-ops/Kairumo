@@ -203,6 +203,9 @@ public struct NotebookEditorView: View {
     @State var showSampleLeaveDialog = false
     /// 使用者選完之後要做的事（回首頁或切換到另一本）。
     @State var afterSampleLeave: (() -> Void)?
+    /// 範例的改動已經放棄或另存（檔案已還原）：這本不可再從畫布或記憶體寫回，
+    /// 否則離開時的存檔會把剛還原的範例又蓋成改過的樣子。
+    @State var inkFrozenNotebookId: String?
     /// 每一頁第一次載入時的專業筆畫（圖學筆畫、專業筆刷）與「已擦除」名單 ——
     /// 「恢復初始狀態」要連它們一起還原，不然圖學筆記本裡畫的線一條都不會少。
     @State var initialPageInk: [Int: InitialPageInk] = [:]
@@ -837,6 +840,9 @@ public struct NotebookEditorView: View {
                     store.activeNotebookId = nil
                     FocusSyncController.shared.setFocus(nil)
                 }
+                // 寫完了就放掉這本的筆跡快取：關著的時候同步、還原範例都可能換掉磁碟上的檔案，
+                // 下次打開要從磁碟讀，而不是沿用上一次開著時記憶體裡的樣子。
+                PageInkStore.purge(notebookId: leavingId)
             }
         }
         .onChange(of: scenePhase) { phase in
