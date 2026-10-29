@@ -140,9 +140,8 @@ object SeedNotebooks {
 
         // 自癒修復：若《歡迎使用 Kairumo》未曾落地且未被使用者刪除，自動補建
         val welcomeDir = java.io.File(baseDir, "$WELCOME_ID.${NotebookLibrary.EXTENSION}")
-        val retired = SampleFork.retired(context)
         val trashed = NotebookTrash.trashedIds(context)
-        if (!welcomeDir.exists() && WELCOME_ID !in retired && !AccountSyncStore.isDeleted(context, WELCOME_ID) && WELCOME_ID !in trashed) {
+        if (!welcomeDir.exists() && !AccountSyncStore.isDeleted(context, WELCOME_ID) && WELCOME_ID !in trashed) {
             fun l(key: String) = LocalizationStrings.localized(key, languageTag)
             buildWelcome(context, deviceId, ::l)
             assignDefaultSeedFolder(context, WELCOME_ID, SEED_FOLDER_FEATURES_ID)
@@ -186,17 +185,18 @@ object SeedNotebooks {
         NotebookLibrary.delete(context, LEGACY_FEATURED_ID)
 
         val prefs = ProfileContext.prefs(context, PREFS)
-        val retired = SampleFork.retired(context)
+        // 舊版「轉成一般筆記」留下的退役名單不再擋補建（見 `SampleFork.clearRetired`）。
+        SampleFork.clearRetired(context)
         var created = 0
 
         val baseDir = NotebookLibrary.directory(context)
         fun pkgExists(id: String) = java.io.File(baseDir, "$id.${NotebookLibrary.EXTENSION}").isDirectory
         val trashed = NotebookTrash.trashedIds(context)
-        fun isTrulyDeleted(id: String) = id in retired || AccountSyncStore.isDeleted(context, id) || id in trashed
+        fun isTrulyDeleted(id: String) = AccountSyncStore.isDeleted(context, id) || id in trashed
 
         // 《功能範例》
-        val showcaseTitle = l("seed_feature_showcase_title")
-        val hasShowcase = existing.any { it.title == showcaseTitle || it.id.equals(SHOWCASE_ID, ignoreCase = true) }
+        // 只認 id：舊版「轉成一般筆記」轉出來的那本沿用同一個名字，以名字認的話範例永遠補不回來。
+        val hasShowcase = existing.any { it.id.equals(SHOWCASE_ID, ignoreCase = true) }
         if (!hasShowcase && !pkgExists(SHOWCASE_ID) && !isTrulyDeleted(SHOWCASE_ID)) {
             if (buildFeatureShowcase(context, deviceId, l)) created++
         }

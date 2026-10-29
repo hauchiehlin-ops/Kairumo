@@ -42,6 +42,43 @@ final class SeedNotebookSyncTests: XCTestCase {
         }
     }
 
+    /// 使用者回報：Mac 永遠少一本《Kairumo(功能範例)》。舊版「轉成一般筆記」把它記進退役名單，
+    /// 範例改成唯讀後名單沒人清，每個補回的入口都跳過它 —— 重裝、匯入、同步都補不回來。
+    func testASampleRetiredByTheOldConvertFeatureComesBack() {
+        let key = NotebookStore.retiredSamplesKey
+        let saved = ProfileDefaults.current.stringArray(forKey: key)
+        defer { ProfileDefaults.current.set(saved, forKey: key) }
+
+        let store = makeStore()
+        let id = "seed-feature-showcase-v1"
+        store.notebooks.removeAll { $0.id == id }
+        ProfileDefaults.current.set([id], forKey: key)
+
+        store.backfillEmptySeedNotebooks()
+
+        XCTAssertTrue(store.visibleNotebooks.contains { $0.id == id }, "退役的範例沒有補回來")
+        XCTAssertTrue(NotebookStore.retiredSamples.isEmpty, "退役名單沒有清掉")
+        store.backfillEmptySeedNotebooks()
+        XCTAssertEqual(store.notebooks.filter { $0.id == id }.count, 1, "補回來的範例重複了")
+    }
+
+    /// 退役名單清掉之後，使用者自己刪掉（還在回收桶）的範例不能因此長回來。
+    func testARetiredSampleThatIsInTheTrashStaysThere() {
+        let key = NotebookStore.retiredSamplesKey
+        let saved = ProfileDefaults.current.stringArray(forKey: key)
+        defer { ProfileDefaults.current.set(saved, forKey: key) }
+
+        let store = makeStore()
+        let id = "seed-feature-showcase-v1"
+        XCTAssertTrue(store.trashLocally(id: id), "前提：範例移進回收桶")
+        ProfileDefaults.current.set([id], forKey: key)
+
+        store.backfillEmptySeedNotebooks()
+
+        XCTAssertFalse(store.notebooks.contains { $0.id == id }, "回收桶裡的範例被補回清單")
+        XCTAssertTrue(store.trashedNotebooks.contains { $0.id == id })
+    }
+
     func testEverySeedIsDeviceLocalAndUserNotebooksAreNot() {
         for id in ["seed-welcome-notebook-v1", "seed-feature-showcase-v1", "seed-kairumo-manual-v1",
                    "seed-drafting-example-v1", "seed-meeting-notebook-v1", "SEED-FEATURE-SHOWCASE-V1"] {
