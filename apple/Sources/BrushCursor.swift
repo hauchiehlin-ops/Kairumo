@@ -80,7 +80,7 @@ enum BrushCursor {
         case .marker: return 2.8
         case .highlighter: return 3.8
         case .eraser: return 3.0
-        case .lasso, .maskingTape: return 1
+        case .lasso, .maskingTape, .translationPen: return 1
         case .drafting: return 0.6
         }
     }

@@ -47,7 +47,7 @@ final class ProInkTests: XCTestCase {
     func testBrushFamiliesMatchTheCore() {
         let groups = FfiToolbar(locale: .english).allGroups()
         let infos = groups.flatMap(\.tools)
-        XCTAssertEqual(infos.count, 20, "核心的工具清單數量變了，兩端要一起改")
+        XCTAssertEqual(infos.count, 21, "核心的工具清單數量變了，兩端要一起改")
         for info in infos {
             guard let tool = EditorToolType.allCases.first(where: { $0.parityIdentifier == info.identifier }) else {
                 continue // 復原、重做、清除不是編輯器工具

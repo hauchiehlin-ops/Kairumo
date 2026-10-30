@@ -24623,6 +24623,14 @@ extension LocalizationManager {
             .ko: "텍스트 편집",
             .th: "สตูดิโอข้อความ"
         ],
+        "tool_translation_pen": [
+            .zhHant: "掃描翻譯筆",
+            .en: "Translation Pen",
+            .zhHans: "扫描翻译笔",
+            .ja: "翻訳ペン",
+            .ko: "스캔 번역펜",
+            .th: "ปากกาแปลภาษา"
+        ],
         "tool_watercolor": [
             .zhHant: "水彩筆",
             .en: "Watercolor",
@@ -24734,6 +24742,318 @@ extension LocalizationManager {
             .ja: "文字ラベルを表示",
             .ko: "텍스트 레이블 표시",
             .th: "แสดงป้ายข้อความ"
+        ],
+        "trans_pen_action_copy": [
+            .zhHant: "複製",
+            .en: "Copy",
+            .zhHans: "复制",
+            .ja: "コピー",
+            .ko: "복사",
+            .th: "คัดลอก"
+        ],
+        "trans_pen_action_highlight": [
+            .zhHant: "螢光標記",
+            .en: "Highlight",
+            .zhHans: "荧光标记",
+            .ja: "マーカー",
+            .ko: "형광 표시",
+            .th: "เน้นข้อความ"
+        ],
+        "trans_pen_action_pin": [
+            .zhHant: "轉為圖釘",
+            .en: "Pin",
+            .zhHans: "转为图钉",
+            .ja: "ピン留め",
+            .ko: "핀 고정",
+            .th: "ปักหมุด"
+        ],
+        "trans_pen_action_tape": [
+            .zhHant: "遮蔽膠帶",
+            .en: "Masking Tape",
+            .zhHans: "遮蔽胶带",
+            .ja: "暗記テープ",
+            .ko: "암기 테이프",
+            .th: "เทปปิดคำ"
+        ],
+        "trans_pen_action_textbox": [
+            .zhHant: "貼入註解",
+            .en: "Insert Note",
+            .zhHans: "贴入注解",
+            .ja: "注釈を挿入",
+            .ko: "주석 삽입",
+            .th: "แทรกคำอธิบาย"
+        ],
+        "trans_pen_blurry_warning": [
+            .zhHant: "目標文字模糊或難以辨識，為避免胡亂編造譯文已暫停輸出。請重新清晰掃過，或直接在下方修正原文後點擊「重新翻譯」。",
+            .en: "Target text is blurry or difficult to recognize. To avoid inaccurate translations, no output was generated — please rescan clearly or edit the source text below and tap Re-translate.",
+            .zhHans: "目标文字模糊或难以辨识，为避免胡乱编造译文已暂停输出。请重新清晰扫过，或直接在下方修正原文后点击「重新翻译」。",
+            .ja: "対象の文字が不鮮明で認識できません。誤訳を防ぐため翻訳出力を停止しました。もう一度はっきりなぞるか、下の原文を修正して「再翻訳」を押してください。",
+            .ko: "대상 글자가 흐리거나 판독하기 어렵습니다. 잘못된 번역을 방지하기 위해 번역을 생성하지 않았습니다. 다시 선명하게 스캔하거나 아래 원문을 수정한 뒤 '다시 번역'을 눌러주세요.",
+            .th: "ข้อความเป้าหมายไม่ชัดเจนหรืออ่านยาก เพื่อป้องกันการแปลที่คลาดเคลื่อน ระบบจึงไม่สร้างคำแปล กรุณาสแกนใหม่อีกครั้งหรือแก้ไขข้อความต้นฉบับด้านล่างแล้วแตะ 'แปลใหม่'"
+        ],
+        "trans_pen_clear_stitch": [
+            .zhHant: "重新起掃",
+            .en: "New Scan",
+            .zhHans: "重新起扫",
+            .ja: "新規スキャン",
+            .ko: "새로 스캔",
+            .th: "สแกนใหม่"
+        ],
+        "trans_pen_drag_hint": [
+            .zhHant: "拖曳掃過單字或句子即可即時翻譯",
+            .en: "Drag across words or sentences to scan & translate",
+            .zhHans: "拖曳扫过单字或句子即可即时翻译",
+            .ja: "単語や文をなぞってスキャン翻訳",
+            .ko: "단어나 문장을 드래그하여 스캔 번역",
+            .th: "ลากผ่านคำหรือประโยคเพื่อสแกนและแปล"
+        ],
+        "trans_pen_empty_scan": [
+            .zhHant: "掃描區域未偵測到文字，可直接於下方輸入或編輯。",
+            .en: "No text detected in the scanned area. You can type or edit the text below.",
+            .zhHans: "扫描区域未侦测到文字，可直接于下方输入或编辑。",
+            .ja: "スキャン範囲に文字が見つかりませんでした。下に直接入力または編集できます。",
+            .ko: "스캔한 영역에서 텍스트를 찾지 못했습니다. 아래에 직접 입력하거나 편집할 수 있습니다.",
+            .th: "ไม่พบข้อความในพื้นที่ที่สแกน คุณสามารถพิมพ์หรือแก้ไขข้อความด้านล่างได้"
+        ],
+        "trans_pen_hint_ed": [
+            .zhHant: "過去式／過去分詞 (-ed)",
+            .en: "Past / Past participle (-ed)",
+            .zhHans: "过去式／过去分词 (-ed)",
+            .ja: "過去形・過去分詞 (-ed)",
+            .ko: "과거형 / 과거분사 (-ed)",
+            .th: "กริยาช่อง 2/3 (-ed)"
+        ],
+        "trans_pen_hint_ing": [
+            .zhHant: "現在分詞／動名詞 (-ing)",
+            .en: "Present participle / Gerund (-ing)",
+            .zhHans: "现在分词／动名词 (-ing)",
+            .ja: "現在分詞・動名詞 (-ing)",
+            .ko: "현재분사 / 동명사 (-ing)",
+            .th: "กริยาเติม -ing"
+        ],
+        "trans_pen_hint_ly": [
+            .zhHant: "副詞／形容詞變化",
+            .en: "Adverb / Adjective suffix",
+            .zhHans: "副词／形容词变化",
+            .ja: "副詞・形容詞形",
+            .ko: "부사 / 형용사형",
+            .th: "คำกริยาวิเศษณ์"
+        ],
+        "trans_pen_hint_plural": [
+            .zhHant: "複數或第三人稱單數 (-s/-es)",
+            .en: "Plural / 3rd-person singular (-s/-es)",
+            .zhHans: "复数或第三人称单数 (-s/-es)",
+            .ja: "複数形・三単現 (-s/-es)",
+            .ko: "복수형 / 3인칭 단수 (-s/-es)",
+            .th: "พหูพจน์ / เอกพจน์บุรุษที่ 3 (-s/-es)"
+        ],
+        "trans_pen_hint_prefix": [
+            .zhHant: "字首／構詞拆解",
+            .en: "Affix / Compound",
+            .zhHans: "字首／构词拆解",
+            .ja: "接頭辞・派生語",
+            .ko: "접두사 / 파생어",
+            .th: "อุปสรรค / คำประสม"
+        ],
+        "trans_pen_hint_tion": [
+            .zhHant: "名詞字尾衍生",
+            .en: "Noun suffix",
+            .zhHans: "名词字尾衍生",
+            .ja: "名詞形",
+            .ko: "명사형",
+            .th: "คำนาม"
+        ],
+        "trans_pen_kind_phrase": [
+            .zhHant: "片語詞組",
+            .en: "Phrase",
+            .zhHans: "片语词组",
+            .ja: "フレーズ",
+            .ko: "구문",
+            .th: "วลี"
+        ],
+        "trans_pen_kind_sentence": [
+            .zhHant: "整句對照",
+            .en: "Sentence View",
+            .zhHans: "整句对照",
+            .ja: "全文対訳",
+            .ko: "문장 대조",
+            .th: "แปลทั้งประโยค"
+        ],
+        "trans_pen_kind_word": [
+            .zhHant: "單字精查",
+            .en: "Word Card",
+            .zhHans: "单字精查",
+            .ja: "単語カード",
+            .ko: "단어 카드",
+            .th: "การ์ดคำศัพท์"
+        ],
+        "trans_pen_lookup_dict": [
+            .zhHant: "系統字典",
+            .en: "Dictionary",
+            .zhHans: "系统字典",
+            .ja: "辞書を引く",
+            .ko: "사전 찾기",
+            .th: "พจนานุกรม"
+        ],
+        "trans_pen_multiline_desc": [
+            .zhHant: "開啟後，在快顯視窗保持開啟時繼續掃下一行，會自動修復行尾連字號並拼接成完整句子翻譯。",
+            .en: "When enabled, scanning the next line while a translation card is open automatically joins broken words and sentences.",
+            .zhHans: "开启后，在快显视窗保持开启时继续扫下一行，会自动修复行尾连字号并拼接成完整句子翻译。",
+            .ja: "オンにすると、翻訳カードを開いたまま次の行をなぞったときに、行末のハイフンや文を自動でつなぎます。",
+            .ko: "켜면 번역 카드가 열린 상태에서 다음 줄을 스캔할 때 줄바꿈 단어와 문장을 자동으로 이어붙입니다.",
+            .th: "เมื่อเปิดใช้งาน การสแกนบรรทัดถัดไปขณะที่การ์ดแปลเปิดอยู่จะเชื่อมคำและประโยคเข้าด้วยกันโดยอัตโนมัติ"
+        ],
+        "trans_pen_multiline_stitch": [
+            .zhHant: "跨行連掃自動拼接",
+            .en: "Multi-line Scan Auto-Stitch",
+            .zhHans: "跨行连扫自动拼接",
+            .ja: "複数行の連続スキャン結合",
+            .ko: "다중 행 연속 스캔 이어붙이기",
+            .th: "สแกนต่อเนื่องหลายบรรทัด"
+        ],
+        "trans_pen_normal_tts": [
+            .zhHant: "1.0× 正常語速",
+            .en: "1.0× Speed",
+            .zhHans: "1.0× 正常语速",
+            .ja: "1.0× 標準",
+            .ko: "1.0× 표준",
+            .th: "1.0× ปกติ"
+        ],
+        "trans_pen_note_label": [
+            .zhHant: "補充筆記／註解",
+            .en: "Study Note / Annotation",
+            .zhHans: "补充笔记／注解",
+            .ja: "学習メモ・注釈",
+            .ko: "학습 메모 / 주석",
+            .th: "บันทึกช่วยจำ / คำอธิบาย"
+        ],
+        "trans_pen_note_placeholder": [
+            .zhHant: "輸入補充批註或重點筆記…",
+            .en: "Add your own note or definition…",
+            .zhHans: "输入补充批注或重点笔记…",
+            .ja: "補足メモや語義を追加…",
+            .ko: "보충 메모나 뜻풀이 추가…",
+            .th: "เพิ่มบันทึกหรือคำจำกัดความของคุณ…"
+        ],
+        "trans_pen_retranslate": [
+            .zhHant: "重新翻譯",
+            .en: "Re-translate",
+            .zhHans: "重新翻译",
+            .ja: "再翻訳",
+            .ko: "다시 번역",
+            .th: "แปลใหม่"
+        ],
+        "trans_pen_scanning": [
+            .zhHant: "正在辨識與翻譯…",
+            .en: "Recognizing & translating…",
+            .zhHans: "正在辨识与翻译…",
+            .ja: "文字認識・翻訳中…",
+            .ko: "텍스트 인식 및 번역 중…",
+            .th: "กำลังรู้จำข้อความและแปล…"
+        ],
+        "trans_pen_setup_desc": [
+            .zhHant: "請選擇本筆記本要掃描的目標語系與翻譯輸出語系。在頁面上拖曳掃過單字或句子即可立即快顯翻譯。",
+            .en: "Choose the target scan language and output translation language for this notebook. Drag across any word or sentence on the page to translate immediately.",
+            .zhHans: "请选择本笔记本要扫描的目标语系与翻译输出语系。在页面上拖曳扫过单字或句子即可立即快显翻译。",
+            .ja: "このノートでスキャンする原語と翻訳先の出力言語を選択してください。ページ上の単語や文をなぞるとすぐに翻訳が表示されます。",
+            .ko: "이 노트에서 스캔할 원본 언어와 번역 출력 언어를 선택하세요. 페이지의 단어나 문장을 드래그하면 즉시 번역됩니다.",
+            .th: "เลือกภาษาต้นฉบับที่จะสแกนและภาษาแปลสำหรับสมุดบันทึกนี้ ลากผ่านคำหรือประโยคบนหน้าเพื่อแปลทันที"
+        ],
+        "trans_pen_setup_title": [
+            .zhHant: "掃描翻譯筆語系設定",
+            .en: "Translation Pen Language Setup",
+            .zhHans: "扫描翻译笔语系设置",
+            .ja: "翻訳ペンの言語設定",
+            .ko: "스캔 번역펜 언어 설정",
+            .th: "ตั้งค่าภาษาปากกาแปลภาษา"
+        ],
+        "trans_pen_slow_tts": [
+            .zhHant: "0.75× 慢速跟讀",
+            .en: "0.75× Slow",
+            .zhHans: "0.75× 慢速跟读",
+            .ja: "0.75× ゆっくり",
+            .ko: "0.75× 느리게",
+            .th: "0.75× ช้า"
+        ],
+        "trans_pen_source_label": [
+            .zhHant: "掃描原文（可修訂重翻）",
+            .en: "Scanned Text (Editable)",
+            .zhHans: "扫描原文（可修订重翻）",
+            .ja: "スキャン原文（編集可）",
+            .ko: "스캔 원문 (편집 가능)",
+            .th: "ข้อความที่สแกน (แก้ไขได้)"
+        ],
+        "trans_pen_source_lang": [
+            .zhHant: "掃描目標語系（原文）",
+            .en: "Scan Language (Source)",
+            .zhHans: "扫描目标语系（原文）",
+            .ja: "スキャン言語（原語）",
+            .ko: "스캔 언어 (원문)",
+            .th: "ภาษาที่สแกน (ต้นฉบับ)"
+        ],
+        "trans_pen_speak_source": [
+            .zhHant: "朗讀原文",
+            .en: "Read Source",
+            .zhHans: "朗读原文",
+            .ja: "原文を再生",
+            .ko: "원문 듣기",
+            .th: "อ่านต้นฉบับ"
+        ],
+        "trans_pen_speak_target": [
+            .zhHant: "朗讀譯文",
+            .en: "Read Translation",
+            .zhHans: "朗读译文",
+            .ja: "訳文を再生",
+            .ko: "번역 듣기",
+            .th: "อ่านคำแปล"
+        ],
+        "trans_pen_start": [
+            .zhHant: "開始掃描翻譯",
+            .en: "Start Scanning",
+            .zhHans: "开始扫描翻译",
+            .ja: "スキャンを開始",
+            .ko: "스캔 시작",
+            .th: "เริ่มสแกน"
+        ],
+        "trans_pen_stitch_active": [
+            .zhHant: "跨行連掃：開",
+            .en: "Multi-line Stitch ON",
+            .zhHans: "跨行连扫：开",
+            .ja: "連続スキャン ON",
+            .ko: "연속 스캔 켜짐",
+            .th: "สแกนต่อเนื่อง เปิด"
+        ],
+        "trans_pen_stitch_off": [
+            .zhHant: "單次掃描",
+            .en: "Single Scan",
+            .zhHans: "单次扫描",
+            .ja: "単発スキャン",
+            .ko: "단일 스캔",
+            .th: "สแกนเดี่ยว"
+        ],
+        "trans_pen_swap_lang": [
+            .zhHant: "對調語系",
+            .en: "Swap Languages",
+            .zhHans: "对调语系",
+            .ja: "言語を入れ替え",
+            .ko: "언어 바꾸기",
+            .th: "สลับภาษา"
+        ],
+        "trans_pen_target_label": [
+            .zhHant: "翻譯內容（可編輯修正）",
+            .en: "Translation (Editable)",
+            .zhHans: "翻译内容（可编辑修正）",
+            .ja: "翻訳結果（編集可）",
+            .ko: "번역 결과 (편집 가능)",
+            .th: "คำแปล (แก้ไขได้)"
+        ],
+        "trans_pen_target_lang": [
+            .zhHant: "翻譯輸出語系（譯文）",
+            .en: "Output Language (Translation)",
+            .zhHans: "翻译输出语系（译文）",
+            .ja: "出力言語（訳文）",
+            .ko: "출력 언어 (번역)",
+            .th: "ภาษาผลลัพธ์ (คำแปล)"
         ],
         "transcribe_audio": [
             .zhHant: "音訊轉文字",

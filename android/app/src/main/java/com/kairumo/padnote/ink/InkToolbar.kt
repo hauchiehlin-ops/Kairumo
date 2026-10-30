@@ -83,6 +83,11 @@ enum class InkTool(val kind: ToolKind?, val labelKey: String) {
     MASKING_TAPE(null, "tool_masking_tape"),
 
     /**
+     * 掃描翻譯筆。對齊 Apple 端的 `translationPen`。
+     */
+    TRANSLATION_PEN(null, "tool_translation_pen"),
+
+    /**
      * 圖學：製圖筆組、圖層、線型與吸附（對齊 Apple 的 `drafting`）。
      * 走針筆（`FINELINER`）落筆，圖層與線型由 [DraftingState] 決定。
      */
@@ -111,6 +116,7 @@ enum class InkTool(val kind: ToolKind?, val labelKey: String) {
             ERASER -> "editor.ink.eraser"
             LASSO -> "editor.ink.lasso"
             MASKING_TAPE -> "editor.ink.maskingTape"
+            TRANSLATION_PEN -> "editor.ink.translationPen"
             DRAFTING -> "editor.ink.drafting"
         }
 
@@ -123,7 +129,7 @@ enum class InkTool(val kind: ToolKind?, val labelKey: String) {
             FOUNTAIN_PEN, BALLPOINT, FINELINER, BRUSH, CALLIGRAPHY, PENCIL -> BrushFamily.WRITING
             CHARCOAL, CRAYON, AIRBRUSH, OIL_PAINT, WATERCOLOR -> BrushFamily.PAINTING
             MARKER, HIGHLIGHTER -> BrushFamily.MARKING
-            ERASER, LASSO, MASKING_TAPE, DRAFTING -> null
+            ERASER, LASSO, MASKING_TAPE, TRANSLATION_PEN, DRAFTING -> null
         }
 
     /** 擦除模式。**套索與遮蔽膠帶不算** —— 行為完全不同。 */
@@ -132,6 +138,8 @@ enum class InkTool(val kind: ToolKind?, val labelKey: String) {
     val isLasso: Boolean get() = this == LASSO
 
     val isMaskingTape: Boolean get() = this == MASKING_TAPE
+
+    val isTranslationPen: Boolean get() = this == TRANSLATION_PEN
 
     val isDrafting: Boolean get() = this == DRAFTING
 }
@@ -390,6 +398,7 @@ internal fun previewDiameter(tool: InkTool, width: Float): Float {
         // 套索不畫東西，預覽點沒有意義；給 1.0 讓它顯示成一個中性的點。
         InkTool.LASSO -> 1.0f
         InkTool.MASKING_TAPE -> 3.5f
+        InkTool.TRANSLATION_PEN -> 2.8f
         InkTool.DRAFTING -> 1.0f
     }
     return (width * scale).coerceIn(6f, 22f)

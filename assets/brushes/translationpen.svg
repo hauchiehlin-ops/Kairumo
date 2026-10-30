@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48">
+  <defs>
+    <linearGradient id="g1" gradientUnits="userSpaceOnUse" x1="14" y1="8" x2="36" y2="36">
+      <stop offset="0" stop-color="#2dd4bf"/>
+      <stop offset="0.5" stop-color="#0d9488"/>
+      <stop offset="1" stop-color="#115e59"/>
+    </linearGradient>
+    <linearGradient id="g2" gradientUnits="userSpaceOnUse" x1="6" y1="30" x2="20" y2="42">
+      <stop offset="0" stop-color="#67e8f9"/>
+      <stop offset="1" stop-color="#06b6d4"/>
+    </linearGradient>
+  </defs>
+  <polygon points="6,42 15,28 21,34" fill="url(#g2)" fill-opacity="0.38"/>
+  <line x1="6" y1="42" x2="17" y2="42" stroke="#06b6d4" stroke-width="2" stroke-linecap="round"/>
+  <polygon points="15,27 33,9 40,16 22,34" fill="url(#g1)" stroke="#134e4a" stroke-width="1" stroke-linejoin="round"/>
+  <polygon points="12,33 15,27 22,34 16,37" fill="#cbd5e1" stroke="#334155" stroke-width="0.9" stroke-linejoin="round"/>
+  <polygon points="9.5,38.5 12,33 16,37 11,40" fill="#22d3ee" stroke="#0891b2" stroke-width="0.8" stroke-linejoin="round"/>
+  <polygon points="22,22 30,14 34,18 26,26" fill="#ecfeff" fill-opacity="0.85" stroke="#0f766e" stroke-width="0.7" stroke-linejoin="round"/>
+  <line x1="24.5" y1="22" x2="30.5" y2="16" stroke="#0d9488" stroke-width="1.1" stroke-linecap="round"/>
+</svg>

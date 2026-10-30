@@ -292,6 +292,7 @@ object RadialSlots {
         FfiRadialAction.ERASER -> "radial.eraser"
         FfiRadialAction.LASSO -> "radial.lasso"
         FfiRadialAction.MASKING_TAPE -> "radial.maskingTape"
+        FfiRadialAction.TRANSLATION_PEN -> "radial.translationPen"
         FfiRadialAction.DRAFTING -> "radial.drafting"
         FfiRadialAction.UNDO -> "radial.undo"
         FfiRadialAction.REDO -> "radial.redo"
@@ -320,6 +321,7 @@ object RadialSlots {
         FfiRadialAction.ERASER -> com.kairumo.padnote.ink.InkTool.ERASER
         FfiRadialAction.LASSO -> com.kairumo.padnote.ink.InkTool.LASSO
         FfiRadialAction.MASKING_TAPE -> com.kairumo.padnote.ink.InkTool.MASKING_TAPE
+        FfiRadialAction.TRANSLATION_PEN -> com.kairumo.padnote.ink.InkTool.TRANSLATION_PEN
         FfiRadialAction.DRAFTING -> com.kairumo.padnote.ink.InkTool.DRAFTING
         else -> null
     }
@@ -352,6 +354,7 @@ object RadialSlots {
         FfiRadialAction.ERASER -> "🧹"
         FfiRadialAction.LASSO -> "➰"
         FfiRadialAction.MASKING_TAPE -> "🩹"
+        FfiRadialAction.TRANSLATION_PEN -> "🌐"
         FfiRadialAction.DRAFTING -> "📐"
         FfiRadialAction.UNDO -> "↩️"
         FfiRadialAction.REDO -> "↪️"
@@ -366,7 +369,7 @@ object RadialSlots {
         FfiRadialAction.UNDO, FfiRadialAction.REDO -> Color(0xFF3B82F6)
         FfiRadialAction.COLOR -> Color(0xFFEC4899)
         FfiRadialAction.STABILIZER -> Color(0xFF10B981)
-        FfiRadialAction.TOGGLE_MODE -> Color(0xFF14B8A6)
+        FfiRadialAction.TOGGLE_MODE, FfiRadialAction.TRANSLATION_PEN -> Color(0xFF14B8A6)
         FfiRadialAction.HIGHLIGHTER, FfiRadialAction.MARKER -> Color(0xFFF59E0B)
         FfiRadialAction.MASKING_TAPE, FfiRadialAction.DRAFTING -> Color(0xFF92400E)
         else -> null

@@ -24778,6 +24778,14 @@ object LocalizationStrings {
             "ko" to "텍스트 편집",
             "th" to "สตูดิโอข้อความ"
         ),
+        "tool_translation_pen" to mapOf(
+            "zh-Hant" to "掃描翻譯筆",
+            "en" to "Translation Pen",
+            "zh-Hans" to "扫描翻译笔",
+            "ja" to "翻訳ペン",
+            "ko" to "스캔 번역펜",
+            "th" to "ปากกาแปลภาษา"
+        ),
         "tool_watercolor" to mapOf(
             "zh-Hant" to "水彩筆",
             "en" to "Watercolor",
@@ -24889,6 +24897,321 @@ object LocalizationStrings {
             "ja" to "文字ラベルを表示",
             "ko" to "텍스트 레이블 표시",
             "th" to "แสดงป้ายข้อความ"
+        ),
+        "trans_pen_action_copy" to mapOf(
+            "zh-Hant" to "複製",
+            "en" to "Copy",
+            "zh-Hans" to "复制",
+            "ja" to "コピー",
+            "ko" to "복사",
+            "th" to "คัดลอก"
+        ),
+        "trans_pen_action_highlight" to mapOf(
+            "zh-Hant" to "螢光標記",
+            "en" to "Highlight",
+            "zh-Hans" to "荧光标记",
+            "ja" to "マーカー",
+            "ko" to "형광 표시",
+            "th" to "เน้นข้อความ"
+        ),
+        "trans_pen_action_pin" to mapOf(
+            "zh-Hant" to "轉為圖釘",
+            "en" to "Pin",
+            "zh-Hans" to "转为图钉",
+            "ja" to "ピン留め",
+            "ko" to "핀 고정",
+            "th" to "ปักหมุด"
+        ),
+        "trans_pen_action_tape" to mapOf(
+            "zh-Hant" to "遮蔽膠帶",
+            "en" to "Masking Tape",
+            "zh-Hans" to "遮蔽胶带",
+            "ja" to "暗記テープ",
+            "ko" to "암기 테이프",
+            "th" to "เทปปิดคำ"
+        ),
+        "trans_pen_action_textbox" to mapOf(
+            "zh-Hant" to "貼入註解",
+            "en" to "Insert Note",
+            "zh-Hans" to "贴入注解",
+            "ja" to "注釈を挿入",
+            "ko" to "주석 삽입",
+            "th" to "แทรกคำอธิบาย"
+        ),
+        "trans_pen_blurry_warning" to mapOf(
+            "zh-Hant" to "目標文字模糊或難以辨識，為避免胡亂編造譯文已暫停輸出。請重新清晰掃過，或直接在下方修正原文後點擊「重新翻譯」。",
+            "en" to "Target text is blurry or difficult to recognize. To avoid inaccurate translations, no output was generated — please rescan clearly or edit the source text below and tap Re-translate.",
+            "zh-Hans" to "目标文字模糊或难以辨识，为避免胡乱编造译文已暂停输出。请重新清晰扫过，或直接在下方修正原文后点击「重新翻译」。",
+            "ja" to "対象の文字が不鮮明で認識できません。誤訳を防ぐため翻訳出力を停止しました。もう一度はっきりなぞるか、下の原文を修正して「再翻訳」を押してください。",
+            "ko" to "대상 글자가 흐리거나 판독하기 어렵습니다. 잘못된 번역을 방지하기 위해 번역을 생성하지 않았습니다. 다시 선명하게 스캔하거나 아래 원문을 수정한 뒤 '다시 번역'을 눌러주세요.",
+            "th" to "ข้อความเป้าหมายไม่ชัดเจนหรืออ่านยาก เพื่อป้องกันการแปลที่คลาดเคลื่อน ระบบจึงไม่สร้างคำแปล กรุณาสแกนใหม่อีกครั้งหรือแก้ไขข้อความต้นฉบับด้านล่างแล้วแตะ 'แปลใหม่'"
+        ),
+        "trans_pen_clear_stitch" to mapOf(
+            "zh-Hant" to "重新起掃",
+            "en" to "New Scan",
+            "zh-Hans" to "重新起扫",
+            "ja" to "新規スキャン",
+            "ko" to "새로 스캔",
+            "th" to "สแกนใหม่"
+        ),
+        "trans_pen_drag_hint" to mapOf(
+            "zh-Hant" to "拖曳掃過單字或句子即可即時翻譯",
+            "en" to "Drag across words or sentences to scan & translate",
+            "zh-Hans" to "拖曳扫过单字或句子即可即时翻译",
+            "ja" to "単語や文をなぞってスキャン翻訳",
+            "ko" to "단어나 문장을 드래그하여 스캔 번역",
+            "th" to "ลากผ่านคำหรือประโยคเพื่อสแกนและแปล"
+        ),
+        "trans_pen_empty_scan" to mapOf(
+            "zh-Hant" to "掃描區域未偵測到文字，可直接於下方輸入或編輯。",
+            "en" to "No text detected in the scanned area. You can type or edit the text below.",
+            "zh-Hans" to "扫描区域未侦测到文字，可直接于下方输入或编辑。",
+            "ja" to "スキャン範囲に文字が見つかりませんでした。下に直接入力または編集できます。",
+            "ko" to "스캔한 영역에서 텍스트를 찾지 못했습니다. 아래에 직접 입력하거나 편집할 수 있습니다.",
+            "th" to "ไม่พบข้อความในพื้นที่ที่สแกน คุณสามารถพิมพ์หรือแก้ไขข้อความด้านล่างได้"
+        ),
+        "trans_pen_hint_ed" to mapOf(
+            "zh-Hant" to "過去式／過去分詞 (-ed)",
+            "en" to "Past / Past participle (-ed)",
+            "zh-Hans" to "过去式／过去分词 (-ed)",
+            "ja" to "過去形・過去分詞 (-ed)",
+            "ko" to "과거형 / 과거분사 (-ed)",
+            "th" to "กริยาช่อง 2/3 (-ed)"
+        ),
+        "trans_pen_hint_ing" to mapOf(
+            "zh-Hant" to "現在分詞／動名詞 (-ing)",
+            "en" to "Present participle / Gerund (-ing)",
+            "zh-Hans" to "现在分词／动名词 (-ing)",
+            "ja" to "現在分詞・動名詞 (-ing)",
+            "ko" to "현재분사 / 동명사 (-ing)",
+            "th" to "กริยาเติม -ing"
+        ),
+        "trans_pen_hint_ly" to mapOf(
+            "zh-Hant" to "副詞／形容詞變化",
+            "en" to "Adverb / Adjective suffix",
+            "zh-Hans" to "副词／形容词变化",
+            "ja" to "副詞・形容詞形",
+            "ko" to "부사 / 형용사형",
+            "th" to "คำกริยาวิเศษณ์"
+        ),
+        "trans_pen_hint_plural" to mapOf(
+            "zh-Hant" to "複數或第三人稱單數 (-s/-es)",
+            "en" to "Plural / 3rd-person singular (-s/-es)",
+            "zh-Hans" to "复数或第三人称单数 (-s/-es)",
+            "ja" to "複数形・三単現 (-s/-es)",
+            "ko" to "복수형 / 3인칭 단수 (-s/-es)",
+            "th" to "พหูพจน์ / เอกพจน์บุรุษที่ 3 (-s/-es)"
+        ),
+        "trans_pen_hint_prefix" to mapOf(
+            "zh-Hant" to "字首／構詞拆解",
+            "en" to "Affix / Compound",
+            "zh-Hans" to "字首／构词拆解",
+            "ja" to "接頭辞・派生語",
+            "ko" to "접두사 / 파생어",
+            "th" to "อุปสรรค / คำประสม"
+        ),
+        "trans_pen_hint_tion" to mapOf(
+            "zh-Hant" to "名詞字尾衍生",
+            "en" to "Noun suffix",
+            "zh-Hans" to "名词字尾衍生",
+            "ja" to "名詞形",
+            "ko" to "명사형",
+            "th" to "คำนาม"
+        ),
+        "trans_pen_kind_phrase" to mapOf(
+            "zh-Hant" to "片語詞組",
+            "en" to "Phrase",
+            "zh-Hans" to "片语词组",
+            "ja" to "フレーズ",
+            "ko" to "구문",
+            "th" to "วลี"
+        ),
+        "trans_pen_kind_sentence" to mapOf(
+            "zh-Hant" to "整句對照",
+            "en" to "Sentence View",
+            "zh-Hans" to "整句对照",
+            "ja" to "全文対訳",
+            "ko" to "문장 대조",
+            "th" to "แปลทั้งประโยค"
+        ),
+        "trans_pen_kind_word" to mapOf(
+            "zh-Hant" to "單字精查",
+            "en" to "Word Card",
+            "zh-Hans" to "单字精查",
+            "ja" to "単語カード",
+            "ko" to "단어 카드",
+            "th" to "การ์ดคำศัพท์"
+        ),
+        "trans_pen_lookup_dict" to mapOf(
+            "zh-Hant" to "系統字典",
+            "en" to "Dictionary",
+            "zh-Hans" to "系统字典",
+            "ja" to "辞書を引く",
+            "ko" to "사전 찾기",
+            "th" to "พจนานุกรม"
+        ),
+        "trans_pen_multiline_desc" to mapOf(
+            "zh-Hant" to "開啟後，在快顯視窗保持開啟時繼續掃下一行，會自動修復行尾連字號並拼接成完整句子翻譯。",
+            "en" to "When enabled, scanning the next line while a translation card is open automatically joins broken words and sentences.",
+            "zh-Hans" to "开启后，在快显视窗保持开启时继续扫下一行，会自动修复行尾连字号并拼接成完整句子翻译。",
+            "ja" to "オンにすると、翻訳カードを開いたまま次の行をなぞったときに、行末のハイフンや文を自動でつなぎます。",
+            "ko" to "켜면 번역 카드가 열린 상태에서 다음 줄을 스캔할 때 줄바꿈 단어와 문장을 자동으로 이어붙입니다.",
+            "th" to "เมื่อเปิดใช้งาน การสแกนบรรทัดถัดไปขณะที่การ์ดแปลเปิดอยู่จะเชื่อมคำและประโยคเข้าด้วยกันโดยอัตโนมัติ"
+        ),
+        "trans_pen_multiline_stitch" to mapOf(
+            "zh-Hant" to "跨行連掃自動拼接",
+            "en" to "Multi-line Scan Auto-Stitch",
+            "zh-Hans" to "跨行连扫自动拼接",
+            "ja" to "複数行の連続スキャン結合",
+            "ko" to "다중 행 연속 스캔 이어붙이기",
+            "th" to "สแกนต่อเนื่องหลายบรรทัด"
+        ),
+        "trans_pen_normal_tts" to mapOf(
+            "zh-Hant" to "1.0× 正常語速",
+            "en" to "1.0× Speed",
+            "zh-Hans" to "1.0× 正常语速",
+            "ja" to "1.0× 標準",
+            "ko" to "1.0× 표준",
+            "th" to "1.0× ปกติ"
+        ),
+        "trans_pen_note_label" to mapOf(
+            "zh-Hant" to "補充筆記／註解",
+            "en" to "Study Note / Annotation",
+            "zh-Hans" to "补充笔记／注解",
+            "ja" to "学習メモ・注釈",
+            "ko" to "학습 메모 / 주석",
+            "th" to "บันทึกช่วยจำ / คำอธิบาย"
+        ),
+        "trans_pen_note_placeholder" to mapOf(
+            "zh-Hant" to "輸入補充批註或重點筆記…",
+            "en" to "Add your own note or definition…",
+            "zh-Hans" to "输入补充批注或重点笔记…",
+            "ja" to "補足メモや語義を追加…",
+            "ko" to "보충 메모나 뜻풀이 추가…",
+            "th" to "เพิ่มบันทึกหรือคำจำกัดความของคุณ…"
+        ),
+        "trans_pen_retranslate" to mapOf(
+            "zh-Hant" to "重新翻譯",
+            "en" to "Re-translate",
+            "zh-Hans" to "重新翻译",
+            "ja" to "再翻訳",
+            "ko" to "다시 번역",
+            "th" to "แปลใหม่"
+        ),
+        "trans_pen_scanning" to mapOf(
+            "zh-Hant" to "正在辨識與翻譯…",
+            "en" to "Recognizing & translating…",
+            "zh-Hans" to "正在辨识与翻译…",
+            "ja" to "文字認識・翻訳中…",
+            "ko" to "텍스트 인식 및 번역 중…",
+            "th" to "กำลังรู้จำข้อความและแปล…"
+        ),
+        "trans_pen_setup_desc" to mapOf(
+            "zh-Hant" to "請選擇本筆記本要掃描的目標語系與翻譯輸出語系。在頁面上拖曳掃過單字或句子即可立即快顯翻譯。",
+            "en" to "Choose the target scan language and output translation language for this notebook. Drag across any word or sentence on the page to translate immediately.",
+            "zh-Hans" to "请选择本笔记本要扫描的目标语系与翻译输出语系。在页面上拖曳扫过单字或句子即可立即快显翻译。",
+            "ja" to "このノートでスキャンする原語と翻訳先の出力言語を選択してください。ページ上の単語や文をなぞるとすぐに翻訳が表示されます。",
+            "ko" to "이 노트에서 스캔할 원본 언어와 번역 출력 언어를 선택하세요. 페이지의 단어나 문장을 드래그하면 즉시 번역됩니다.",
+            "th" to "เลือกภาษาต้นฉบับที่จะสแกนและภาษาแปลสำหรับสมุดบันทึกนี้ ลากผ่านคำหรือประโยคบนหน้าเพื่อแปลทันที"
+        ),
+        "trans_pen_setup_title" to mapOf(
+            "zh-Hant" to "掃描翻譯筆語系設定",
+            "en" to "Translation Pen Language Setup",
+            "zh-Hans" to "扫描翻译笔语系设置",
+            "ja" to "翻訳ペンの言語設定",
+            "ko" to "스캔 번역펜 언어 설정",
+            "th" to "ตั้งค่าภาษาปากกาแปลภาษา"
+        ),
+        "trans_pen_slow_tts" to mapOf(
+            "zh-Hant" to "0.75× 慢速跟讀",
+            "en" to "0.75× Slow",
+            "zh-Hans" to "0.75× 慢速跟读",
+            "ja" to "0.75× ゆっくり",
+            "ko" to "0.75× 느리게",
+            "th" to "0.75× ช้า"
+        )
+    )
+
+    private fun part39(): Map<String, Map<String, String>> = mapOf(
+        "trans_pen_source_label" to mapOf(
+            "zh-Hant" to "掃描原文（可修訂重翻）",
+            "en" to "Scanned Text (Editable)",
+            "zh-Hans" to "扫描原文（可修订重翻）",
+            "ja" to "スキャン原文（編集可）",
+            "ko" to "스캔 원문 (편집 가능)",
+            "th" to "ข้อความที่สแกน (แก้ไขได้)"
+        ),
+        "trans_pen_source_lang" to mapOf(
+            "zh-Hant" to "掃描目標語系（原文）",
+            "en" to "Scan Language (Source)",
+            "zh-Hans" to "扫描目标语系（原文）",
+            "ja" to "スキャン言語（原語）",
+            "ko" to "스캔 언어 (원문)",
+            "th" to "ภาษาที่สแกน (ต้นฉบับ)"
+        ),
+        "trans_pen_speak_source" to mapOf(
+            "zh-Hant" to "朗讀原文",
+            "en" to "Read Source",
+            "zh-Hans" to "朗读原文",
+            "ja" to "原文を再生",
+            "ko" to "원문 듣기",
+            "th" to "อ่านต้นฉบับ"
+        ),
+        "trans_pen_speak_target" to mapOf(
+            "zh-Hant" to "朗讀譯文",
+            "en" to "Read Translation",
+            "zh-Hans" to "朗读译文",
+            "ja" to "訳文を再生",
+            "ko" to "번역 듣기",
+            "th" to "อ่านคำแปล"
+        ),
+        "trans_pen_start" to mapOf(
+            "zh-Hant" to "開始掃描翻譯",
+            "en" to "Start Scanning",
+            "zh-Hans" to "开始扫描翻译",
+            "ja" to "スキャンを開始",
+            "ko" to "스캔 시작",
+            "th" to "เริ่มสแกน"
+        ),
+        "trans_pen_stitch_active" to mapOf(
+            "zh-Hant" to "跨行連掃：開",
+            "en" to "Multi-line Stitch ON",
+            "zh-Hans" to "跨行连扫：开",
+            "ja" to "連続スキャン ON",
+            "ko" to "연속 스캔 켜짐",
+            "th" to "สแกนต่อเนื่อง เปิด"
+        ),
+        "trans_pen_stitch_off" to mapOf(
+            "zh-Hant" to "單次掃描",
+            "en" to "Single Scan",
+            "zh-Hans" to "单次扫描",
+            "ja" to "単発スキャン",
+            "ko" to "단일 스캔",
+            "th" to "สแกนเดี่ยว"
+        ),
+        "trans_pen_swap_lang" to mapOf(
+            "zh-Hant" to "對調語系",
+            "en" to "Swap Languages",
+            "zh-Hans" to "对调语系",
+            "ja" to "言語を入れ替え",
+            "ko" to "언어 바꾸기",
+            "th" to "สลับภาษา"
+        ),
+        "trans_pen_target_label" to mapOf(
+            "zh-Hant" to "翻譯內容（可編輯修正）",
+            "en" to "Translation (Editable)",
+            "zh-Hans" to "翻译内容（可编辑修正）",
+            "ja" to "翻訳結果（編集可）",
+            "ko" to "번역 결과 (편집 가능)",
+            "th" to "คำแปล (แก้ไขได้)"
+        ),
+        "trans_pen_target_lang" to mapOf(
+            "zh-Hant" to "翻譯輸出語系（譯文）",
+            "en" to "Output Language (Translation)",
+            "zh-Hans" to "翻译输出语系（译文）",
+            "ja" to "出力言語（訳文）",
+            "ko" to "출력 언어 (번역)",
+            "th" to "ภาษาผลลัพธ์ (คำแปล)"
         ),
         "transcribe_audio" to mapOf(
             "zh-Hant" to "音訊轉文字",
@@ -25129,10 +25452,7 @@ object LocalizationStrings {
             "ja" to "完全に削除",
             "ko" to "영구 삭제",
             "th" to "ลบถาวร"
-        )
-    )
-
-    private fun part39(): Map<String, Map<String, String>> = mapOf(
+        ),
         "trash_delete_forever_confirm_message" to mapOf(
             "zh-Hant" to "「%@」將從此裝置刪除，且無法復原。",
             "en" to "“%@” will be removed from this device and can’t be recovered.",
@@ -25452,7 +25772,10 @@ object LocalizationStrings {
             "ja" to "カードグリッド",
             "ko" to "카드 그리드",
             "th" to "ตารางการ์ด"
-        ),
+        )
+    )
+
+    private fun part40(): Map<String, Map<String, String>> = mapOf(
         "view_mode_hierarchy" to mapOf(
             "zh-Hant" to "階層列表",
             "en" to "Hierarchical List",
@@ -25772,10 +26095,7 @@ object LocalizationStrings {
             "ja" to "フォント サイズの拡大",
             "ko" to "글꼴 크기 크게",
             "th" to "เพิ่มขนาดฟอนต์"
-        )
-    )
-
-    private fun part40(): Map<String, Map<String, String>> = mapOf(
+        ),
         "wd_highlight_color" to mapOf(
             "zh-Hant" to "螢光色",
             "en" to "Highlight colour",

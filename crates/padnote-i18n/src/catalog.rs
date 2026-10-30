@@ -25,6 +25,7 @@ pub enum Key {
     ToolEraser,
     ToolLasso,
     ToolMaskingTape,
+    ToolTranslationPen,
     ToolDrafting,
     ToolText,
     ToolImage,
@@ -165,6 +166,14 @@ const fn entry(key: Key) -> [&'static str; LOCALE_COUNT] {
             "マスキングテープ",
             "마스킹 테이프",
             "เทปกาว",
+        ],
+        Key::ToolTranslationPen => [
+            "Translation Pen",
+            "掃描翻譯筆",
+            "扫描翻译笔",
+            "翻訳ペン",
+            "스캔 번역펜",
+            "ปากกาแปลภาษา",
         ],
         Key::ToolDrafting => [
             "Drafting",
@@ -404,6 +413,7 @@ pub const ALL_KEYS: &[Key] = &[
     Key::ToolEraser,
     Key::ToolLasso,
     Key::ToolMaskingTape,
+    Key::ToolTranslationPen,
     Key::ToolDrafting,
     Key::ToolText,
     Key::ToolImage,
@@ -542,7 +552,7 @@ mod tests {
         // 這裡以數量作為近似檢查。
         assert_eq!(
             ALL_KEYS.len(),
-            60,
+            61,
             "新增 Key 後請一併更新 ALL_KEYS 與此數字"
         );
     }

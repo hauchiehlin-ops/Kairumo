@@ -210,7 +210,7 @@ final class BundledDocumentTests: XCTestCase {
 
     /// 手冊應該有的每一節。新增一節時要一起加進來。
     private static let manualSectionIDs = [
-        "start", "firstrun", "home", "newnote", "editor", "write", "type",
+        "start", "firstrun", "home", "newnote", "editor", "write", "translationpen", "type",
         "pages", "insert", "data", "comment", "collab", "record", "export",
         "keys", "multi", "language", "faq"
     ]

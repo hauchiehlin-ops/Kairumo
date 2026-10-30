@@ -84,6 +84,18 @@ impl Locale {
         }
     }
 
+    /// 語言在緊湊膠囊按鈕上的簡稱（以其母語顯示）。
+    pub const fn short_label(self) -> &'static str {
+        match self {
+            Self::English => "EN",
+            Self::TraditionalChinese => "繁中",
+            Self::SimplifiedChinese => "簡中",
+            Self::Japanese => "日本語",
+            Self::Korean => "한국어",
+            Self::Thai => "ไทย",
+        }
+    }
+
     /// 從系統語言標籤解析。
     ///
     /// 比對由細到粗：先看完整標籤，再看語言子標籤。

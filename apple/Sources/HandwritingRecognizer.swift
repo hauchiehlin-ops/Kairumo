@@ -120,6 +120,66 @@ public enum HandwritingRecognizer {
         }
     }
 
+    /// 針對掃描翻譯筆提供的圖片 OCR 辨識（附帶 Vision 信心度檢查，防範模糊字跡硬湊成錯字）。
+    public static func recognizeForScanPen(
+        image: UIImage,
+        languageTag: String
+    ) async -> (text: String, isLowConfidence: Bool) {
+        guard let cgImage = image.cgImage else {
+            return ("", true)
+        }
+        return await withCheckedContinuation { continuation in
+            let request = VNRecognizeTextRequest { request, error in
+                if error != nil {
+                    continuation.resume(returning: ("", true))
+                    return
+                }
+                let observations = request.results as? [VNRecognizedTextObservation] ?? []
+                let candidates = observations.compactMap { $0.topCandidates(1).first }
+                guard !candidates.isEmpty else {
+                    continuation.resume(returning: ("", true))
+                    return
+                }
+                let text = candidates
+                    .map(\.string)
+                    .joined(separator: " ")
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                let avgConfidence = candidates.reduce(Float(0)) { $0 + $1.confidence } / Float(candidates.count)
+                let lowConf = text.isEmpty || avgConfidence < 0.45
+                continuation.resume(returning: (text, lowConf))
+            }
+            request.recognitionLevel = .accurate
+            request.usesLanguageCorrection = true
+            request.recognitionLanguages = languages(for: languageTag)
+            do {
+                try VNImageRequestHandler(cgImage: cgImage, options: [:]).perform([request])
+            } catch {
+                continuation.resume(returning: ("", true))
+            }
+        }
+    }
+
+    /// 針對掃描翻譯筆提供的手寫筆跡辨識（附帶 Vision 信心度檢查）。
+    public static func recognizeForScanPen(
+        strokes: [PKStroke],
+        languageTag: String
+    ) async -> (text: String, isLowConfidence: Bool) {
+        guard !strokes.isEmpty else { return ("", false) }
+        if let unifiedImage = render(strokes: strokes) {
+            let res = await recognizeForScanPen(image: unifiedImage, languageTag: languageTag)
+            if !res.text.isEmpty {
+                return res
+            }
+        }
+        switch await recognize(strokes: strokes, languageTag: languageTag) {
+        case .success(let text):
+            let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+            return (trimmed, trimmed.isEmpty)
+        case .failure:
+            return ("", true)
+        }
+    }
+
     /// 落筆時刻（毫秒）。
     ///
     /// `PKStrokePath.creationDate` 是這一筆開始的絕對時間；用它相減才知道

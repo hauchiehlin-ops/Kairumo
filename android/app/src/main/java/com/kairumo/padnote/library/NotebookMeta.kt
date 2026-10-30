@@ -130,6 +130,12 @@ class NotebookMeta private constructor(private var root: JSONObject) {
         private const val KEY_TAPES = "tapeAttachments"
 
         /**
+         * 掃描翻譯筆設定（Translation Pen Config）。
+         * 鍵名與 Apple 的 `NotebookMeta.translationPenConfig` 一致。
+         */
+        private const val KEY_TRANSLATION_PEN = "translationPenConfig"
+
+        /**
          * 形狀與連接線的樣式，以物件 id 為鍵。**鍵名與 Apple 的
          * `NotebookMeta.shapeStyles`／`connectionStyles` 一致。**
          *
@@ -698,6 +704,15 @@ class NotebookMeta private constructor(private var root: JSONObject) {
         flush(session)
     }
 
+    /** 掃描翻譯筆語系與連掃設定（跨平台與 Apple `translationPenConfig` 共用同一份 JSON）。 */
+    fun translationPenConfig(): TranslationPenConfig? =
+        root.optJSONObject(KEY_TRANSLATION_PEN)?.let { TranslationPenConfig.fromJsonObject(it) }
+
+    fun setTranslationPenConfig(session: PadnoteSession?, config: TranslationPenConfig) {
+        root.put(KEY_TRANSLATION_PEN, config.toJsonObject())
+        flush(session)
+    }
+
     /** 形狀樣式（物件 id → 樣式 JSON）。回傳的是副本，改了不會動到這份中繼資料。 */
     fun shapeStyles(): Map<String, JSONObject> = styleMap(KEY_SHAPE_STYLES)
 
@@ -779,6 +794,40 @@ data class StickyAnnotationAnchor(
             val anchorOriginY = obj.optDouble("anchorOriginY", 0.0).toFloat()
             val createdAtMs = obj.optLong("createdAtMs", System.currentTimeMillis())
             return StickyAnnotationAnchor(id, pageIndex, targetId, strokeIds, anchorOriginX, anchorOriginY, createdAtMs)
+        }
+    }
+}
+
+/**
+ * 筆記本層級的掃描翻譯筆設定，對齊 Apple 端的 `NoteTranslationPenConfig`。
+ */
+data class TranslationPenConfig(
+    var sourceLang: String,
+    var targetLang: String,
+    var multiLineStitch: Boolean = true,
+    var slowTts: Boolean = false,
+    var configured: Boolean = false
+) {
+    fun toJsonObject(): JSONObject = JSONObject().apply {
+        put("sourceLang", sourceLang)
+        put("targetLang", targetLang)
+        put("multiLineStitch", multiLineStitch)
+        put("slowTts", slowTts)
+        put("configured", configured)
+    }
+
+    companion object {
+        fun fromJsonObject(obj: JSONObject): TranslationPenConfig? {
+            val sourceLang = obj.optString("sourceLang", "")
+            val targetLang = obj.optString("targetLang", "")
+            if (sourceLang.isEmpty() || targetLang.isEmpty()) return null
+            return TranslationPenConfig(
+                sourceLang = sourceLang,
+                targetLang = targetLang,
+                multiLineStitch = obj.optBoolean("multiLineStitch", true),
+                slowTts = obj.optBoolean("slowTts", false),
+                configured = obj.optBoolean("configured", false)
+            )
         }
     }
 }

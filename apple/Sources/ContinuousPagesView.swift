@@ -305,6 +305,22 @@ struct ContinuousPageView<ObjectLayer: View>: View {
             .frame(width: PageGeometry.width, height: PageGeometry.height, alignment: .topLeading)
             .allowsHitTesting((isFocused && selectedTool == .maskingTape && editorMode == .draw) || (editorMode != .draw && !(notebook.tapeAttachments?.filter { $0.pageIndex == pageIndex }.isEmpty ?? true)))
             .zIndex((isFocused && selectedTool == .maskingTape && editorMode == .draw) ? 4 : 2.5)
+
+            TranslationPenOverlayView(
+                notebook: $notebook,
+                drawing: $drawing,
+                pageIndex: pageIndex,
+                isActive: isFocused && selectedTool == .translationPen && editorMode == .draw,
+                onNotebookChanged: {
+                    onNotebookChanged?()
+                },
+                onDrawingChanged: { updatedDrawing in
+                    onDrawingChanged(pageIndex, updatedDrawing)
+                }
+            )
+            .frame(width: PageGeometry.width, height: PageGeometry.height, alignment: .topLeading)
+            .allowsHitTesting(isFocused && selectedTool == .translationPen && editorMode == .draw)
+            .zIndex((isFocused && selectedTool == .translationPen && editorMode == .draw) ? 4.5 : 2.4)
         }
         .coordinateSpace(name: CanvasCoordinateSpace.name)
         .contentShape(Rectangle())

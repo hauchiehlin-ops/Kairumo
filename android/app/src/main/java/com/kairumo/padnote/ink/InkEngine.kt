@@ -525,6 +525,41 @@ class InkEngine(
         return count
     }
 
+    /** 插入一筆水平螢光標記筆畫（掃描翻譯筆一鍵螢光標記用），並納入復原歷史。 */
+    fun insertHighlightBeam(x1: Float, x2: Float, midY: Float, height: Float, colorRgba: ByteArray): String? {
+        val steps = 8
+        val pts = (0..steps).map { idx ->
+            val t = idx.toFloat() / steps.toFloat()
+            StrokePoint(
+                x = x1 + (x2 - x1) * t,
+                y = midY,
+                pressure = 0.65f,
+                tiltX = 0f,
+                tiltY = 0f,
+                dtUs = if (idx == 0) 0u else 8_000u
+            )
+        }
+        val width = height.coerceIn(14f, 36f)
+        val stroke = coreAdd(
+            CompletedStroke(
+                pointerId = nextSyntheticId(),
+                coreStrokeId = null,
+                points = pts,
+                tool = ToolKind.HIGHLIGHTER,
+                startedAtMs = System.currentTimeMillis(),
+                colorRgba = colorRgba,
+                baseWidth = width
+            )
+        )
+        _strokes += stroke
+        redoStack.clear()
+        redoActs.clear()
+        acts += AddAct
+        onUndoableAction?.invoke()
+        notifyContentCommittedAfterWrites()
+        return stroke.coreStrokeId
+    }
+
     // ── 編輯工具（修剪、延伸、圓角、偏移、鏡射、陣列）──
 
     private var syntheticId = 0uL

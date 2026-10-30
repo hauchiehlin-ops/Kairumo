@@ -80,7 +80,7 @@ extension NotebookEditorView {
     func openRadialMenuFromPress(at windowPoint: CGPoint) -> Bool {
         guard isCanvasInkActive, editorMode == .draw, !showRadialMenu else { return false }
         if selectedTool == .lasso && (lasso.isDraggingSelection || lasso.hasSelection) { return false }
-        if selectedTool == .maskingTape { return false }
+        if selectedTool == .maskingTape || selectedTool == .translationPen { return false }
         radialMenuAnchor = windowPoint
         withAnimation(.spring(response: 0.28, dampingFraction: 0.76)) {
             showRadialMenu = true
@@ -1877,6 +1877,27 @@ extension NotebookEditorView {
             .offset(x: -canvasContentOffset.x, y: -canvasContentOffset.y)
             .allowsHitTesting((selectedTool == .maskingTape && editorMode == .draw) || (editorMode != .draw && !(notebook.tapeAttachments?.filter { $0.pageIndex == currentPageIndex }.isEmpty ?? true)))
             .zIndex(selectedTool == .maskingTape && editorMode == .draw ? 4 : 2.5)
+
+            TranslationPenOverlayView(
+                notebook: $notebook,
+                drawing: $currentDrawing,
+                pageIndex: currentPageIndex,
+                isActive: selectedTool == .translationPen && editorMode == .draw,
+                onNotebookChanged: {
+                    commitNotebook()
+                    PageThumbnailRenderer.invalidateAll()
+                },
+                onDrawingChanged: { updatedDrawing in
+                    canvasView?.drawing = updatedDrawing
+                    recordDrawingEdit(page: currentPageIndex, drawing: updatedDrawing)
+                    saveCurrentPageDrawing()
+                }
+            )
+            .frame(width: PageGeometry.width, height: currentPageHeight, alignment: .topLeading)
+            .scaleEffect(canvasZoomScale, anchor: .topLeading)
+            .offset(x: -canvasContentOffset.x, y: -canvasContentOffset.y)
+            .allowsHitTesting(selectedTool == .translationPen && editorMode == .draw)
+            .zIndex(selectedTool == .translationPen && editorMode == .draw ? 4.5 : 2.4)
 
             // 筆跡上方層（Foreground / Over-ink objects）：在 CanvasRepresentable 之上，zIndex 3
             objectLayer(forPage: currentPageIndex, filter: .overInkOnly)

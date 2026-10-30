@@ -344,6 +344,8 @@ public struct NotebookDocument: Identifiable, Codable, Hashable, @unchecked Send
     /// 必須是 Optional：舊檔沒有這個欄位（見 `canvasRotation` 的說明）。
     public var audioAttachments: [NoteAudioAttachment]?
     public var tapeAttachments: [NoteTapeAttachment]?
+    /// 單本筆記本的掃描翻譯筆語系與模式設定（與 Android `NotebookMeta.KEY_TRANSLATION_PEN` 同一個鍵）
+    public var translationPenConfig: NoteTranslationPenConfig?
     /// 手寫與文字動態流式錨定 (Fluid Sticky Annotations)
     public var stickyAnchors: [StickyAnnotationAnchor]?
     /// 特殊版面互動引導線狀態（例如核取清單勾選、選項狀態），Key 格式為 "\(pageIndex)_\(Int(x))_\(Int(y))"
@@ -784,6 +786,29 @@ public struct NotebookDocument: Identifiable, Codable, Hashable, @unchecked Send
         } else {
             self.pagesData = pagesData
         }
+    }
+}
+
+/// 單本筆記本的掃描翻譯筆設定（跨平台同步於 `NotebookMeta.translationPenConfig`）。
+public struct NoteTranslationPenConfig: Codable, Hashable, Equatable, Sendable {
+    public var sourceLang: String
+    public var targetLang: String
+    public var multiLineStitch: Bool
+    public var slowTts: Bool
+    public var configured: Bool
+
+    public init(
+        sourceLang: String,
+        targetLang: String,
+        multiLineStitch: Bool = true,
+        slowTts: Bool = false,
+        configured: Bool = false
+    ) {
+        self.sourceLang = sourceLang
+        self.targetLang = targetLang
+        self.multiLineStitch = multiLineStitch
+        self.slowTts = slowTts
+        self.configured = configured
     }
 }
 

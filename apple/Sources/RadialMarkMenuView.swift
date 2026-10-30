@@ -183,6 +183,7 @@ extension FfiRadialAction {
         case .eraser: return .eraser
         case .lasso: return .lasso
         case .maskingTape: return .maskingTape
+        case .translationPen: return .translationPen
         case .drafting: return .drafting
         case .undo, .redo, .color, .stabilizer, .toggleMode: return nil
         }
@@ -207,6 +208,7 @@ extension FfiRadialAction {
         case .eraser: return "radial.eraser"
         case .lasso: return "radial.lasso"
         case .maskingTape: return "radial.maskingTape"
+        case .translationPen: return "radial.translationPen"
         case .drafting: return "radial.drafting"
         case .undo: return "radial.undo"
         case .redo: return "radial.redo"
@@ -247,6 +249,7 @@ extension FfiRadialAction {
         case .eraser: return "eraser"
         case .lasso: return "lasso"
         case .maskingTape: return "bandage"
+        case .translationPen: return "character.book.closed"
         case .drafting: return "ruler"
         case .undo: return "arrow.uturn.backward"
         case .redo: return "arrow.uturn.forward"
@@ -263,7 +266,7 @@ extension FfiRadialAction {
         case .undo, .redo: return .blue
         case .color: return .pink
         case .stabilizer: return .green
-        case .toggleMode: return .teal
+        case .toggleMode, .translationPen: return .teal
         case .highlighter, .marker: return .orange
         case .maskingTape, .drafting: return .brown
         default: return .accentColor
