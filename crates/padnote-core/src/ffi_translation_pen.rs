@@ -196,17 +196,10 @@ pub fn translation_pen_stitch_lines(
 
     // 檢查行尾連字號（例如 PDF 跨行斷字 "trans-" + "lation" -> "translation"）
     if (prev.ends_with('-') || prev.ends_with('\u{2010}'))
-        && next
-            .chars()
-            .next()
-            .is_some_and(|c| c.is_ascii_alphabetic())
+        && next.chars().next().is_some_and(|c| c.is_ascii_alphabetic())
     {
         let stem = prev.trim_end_matches(['-', '\u{2010}']).trim_end();
-        if stem
-            .chars()
-            .last()
-            .is_some_and(|c| c.is_ascii_alphabetic())
-        {
+        if stem.chars().last().is_some_and(|c| c.is_ascii_alphabetic()) {
             return format!("{stem}{next}");
         }
     }
@@ -376,9 +369,9 @@ fn is_text_blurry_or_garbled(cleaned: &str) -> bool {
             }
             // 純英文字母達 4 字以上卻完全沒有母音（a, e, i, o, u, y），多為塗鴉誤辨識出的子音串
             if trimmed.len() >= 4 && trimmed.chars().all(|c| c.is_ascii_alphabetic()) {
-                let has_vowel = trimmed.chars().any(|c| {
-                    matches!(c.to_ascii_lowercase(), 'a' | 'e' | 'i' | 'o' | 'u' | 'y')
-                });
+                let has_vowel = trimmed
+                    .chars()
+                    .any(|c| matches!(c.to_ascii_lowercase(), 'a' | 'e' | 'i' | 'o' | 'u' | 'y'));
                 if !has_vowel {
                     return true;
                 }
@@ -558,8 +551,7 @@ mod tests {
         assert_eq!(word.cleaned_text, "international");
         assert!(word.phonetic_or_stem_hint.contains("inter-"));
 
-        let phrase =
-            translation_pen_analyze_scan("machine learning".to_string(), "en".to_string());
+        let phrase = translation_pen_analyze_scan("machine learning".to_string(), "en".to_string());
         assert_eq!(phrase.kind, FfiScanKind::Phrase);
         assert_eq!(phrase.word_count, 2);
 
@@ -574,7 +566,9 @@ mod tests {
 
     #[test]
     fn analyze_scan_flags_blurry_or_garbled_noise_as_low_confidence() {
-        for noisy in ["", "   ", "---", "12345", "l", "| / \\", "h3ll0", "bcdfgh", "@#$%a"] {
+        for noisy in [
+            "", "   ", "---", "12345", "l", "| / \\", "h3ll0", "bcdfgh", "@#$%a",
+        ] {
             let res = translation_pen_analyze_scan(noisy.to_string(), "en".to_string());
             assert!(
                 res.is_low_confidence,
@@ -585,7 +579,8 @@ mod tests {
         let valid_en = translation_pen_analyze_scan("comprehension".to_string(), "en".to_string());
         assert!(!valid_en.is_low_confidence);
 
-        let valid_zh = translation_pen_analyze_scan("光學字元辨識".to_string(), "zh-Hant".to_string());
+        let valid_zh =
+            translation_pen_analyze_scan("光學字元辨識".to_string(), "zh-Hant".to_string());
         assert!(!valid_zh.is_low_confidence);
     }
 
