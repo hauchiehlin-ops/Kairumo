@@ -57,16 +57,22 @@ class MultilingualTextRenderTest {
             }
         }
         compose.waitForIdle()
-        val bitmap = compose.onRoot().captureToImage().asAndroidBitmap()
         // 存到共用的 Download 資料夾（走 MediaStore，不需要權限），測試結束 App 被移除後還拿得到。
-        val resolver = InstrumentationRegistry.getInstrumentation().targetContext.contentResolver
-        val values = android.content.ContentValues().apply {
-            put(android.provider.MediaStore.Downloads.DISPLAY_NAME, "lang-render.png")
-            put(android.provider.MediaStore.Downloads.MIME_TYPE, "image/png")
-            put(android.provider.MediaStore.Downloads.RELATIVE_PATH, "Download")
-        }
-        resolver.insert(android.provider.MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)?.let { uri ->
-            resolver.openOutputStream(uri)?.use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
+        // 在 CI 無頭環境／軟體 GPU 模擬器下，PixelCopy 可能會逾時；此圖檔僅供人眼檢視，
+        // 擷取失敗時不應影響文字排版的核心斷言。
+        try {
+            val bitmap = compose.onRoot().captureToImage().asAndroidBitmap()
+            val resolver = InstrumentationRegistry.getInstrumentation().targetContext.contentResolver
+            val values = android.content.ContentValues().apply {
+                put(android.provider.MediaStore.Downloads.DISPLAY_NAME, "lang-render.png")
+                put(android.provider.MediaStore.Downloads.MIME_TYPE, "image/png")
+                put(android.provider.MediaStore.Downloads.RELATIVE_PATH, "Download")
+            }
+            resolver.insert(android.provider.MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)?.let { uri ->
+                resolver.openOutputStream(uri)?.use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
+            }
+        } catch (_: Throwable) {
+            // CI 無頭模擬器 PixelCopy 逾時或無緩衝區屬預期，忽略以利持續完成斷言
         }
         assertTrue("自然行高 $naturalHeight 應該比固定 1.0 倍 $fixedHeight 高", naturalHeight > fixedHeight)
     }
