@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
@@ -32,6 +33,7 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.kairumo.padnote.LocalizationStrings
+import com.kairumo.padnote.ui.KairumoIcons
 import uniffi.padnote_core.ToolKind
 
 /**
@@ -251,7 +253,12 @@ fun InkToolbar(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    Text("💬", fontSize = 13.sp)
+                    Icon(
+                        imageVector = KairumoIcons.DocText,
+                        contentDescription = null,
+                        modifier = Modifier.size(14.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                     Text(
                         LocalizationStrings.localized("add_text_box", languageTag),
                         style = MaterialTheme.typography.labelSmall,
@@ -335,7 +342,12 @@ fun InkToolbar(
                         },
                     contentAlignment = Alignment.Center
                 ) {
-                    Text("🎨", fontSize = 12.sp)
+                    Icon(
+                        imageVector = KairumoIcons.Palette,
+                        contentDescription = null,
+                        modifier = Modifier.size(14.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             }
             }

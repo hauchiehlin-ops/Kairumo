@@ -26,6 +26,7 @@ import com.kairumo.padnote.text.*
 import com.kairumo.padnote.ui.ContextualPortalState
 import com.kairumo.padnote.ui.DynamicPortalIsland
 import com.kairumo.padnote.ui.InstantTooltip
+import com.kairumo.padnote.ui.KairumoIcons
 import uniffi.padnote_core.FfiPlacement
 
 internal class InkBarState(
@@ -260,12 +261,29 @@ internal fun EditorTopBar(
                     contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
                     modifier = Modifier.testTag("editor.home")
                 ) {
-                    Text(
-                        "‹  🏠 " + l10n("home"),
-                        color = MaterialTheme.colorScheme.onPrimary,
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.Bold
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Icon(
+                            imageVector = KairumoIcons.ChevronLeft,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onPrimary,
+                            modifier = Modifier.size(14.dp)
+                        )
+                        Icon(
+                            imageVector = KairumoIcons.Home,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onPrimary,
+                            modifier = Modifier.size(15.dp)
+                        )
+                        Text(
+                            l10n("home"),
+                            color = MaterialTheme.colorScheme.onPrimary,
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
             }
         }
@@ -282,12 +300,23 @@ internal fun EditorTopBar(
                 modifier = Modifier.testTag("editor.sidebar_toggle"),
                 contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
             ) {
-                Text(
-                    "📖 " + l10n("pages"),
-                    fontWeight = if (state.showPageSidebar) FontWeight.SemiBold else FontWeight.Normal,
-                    color = if (state.showPageSidebar) MaterialTheme.colorScheme.primary
-                    else MaterialTheme.colorScheme.onSurface
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(5.dp)
+                ) {
+                    Icon(
+                        imageVector = KairumoIcons.Sidebar,
+                        contentDescription = null,
+                        tint = if (state.showPageSidebar) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.size(15.dp)
+                    )
+                    Text(
+                        l10n("pages"),
+                        fontWeight = if (state.showPageSidebar) FontWeight.SemiBold else FontWeight.Normal,
+                        color = if (state.showPageSidebar) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.onSurface
+                    )
+                }
             }
         }
 
@@ -306,14 +335,25 @@ internal fun EditorTopBar(
                 modifier = Modifier.testTag("editor.minimalist_toggle"),
                 contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
             ) {
-                Text(
-                    if (state.minimalistCanvasMode) "⤢ " + l10n("exit_canvas_minimal_mode")
-                    else "⤡ " + l10n("enter_canvas_minimal_mode"),
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = if (state.minimalistCanvasMode) FontWeight.SemiBold else FontWeight.Normal,
-                    color = if (state.minimalistCanvasMode) MaterialTheme.colorScheme.primary
-                    else MaterialTheme.colorScheme.onSurface
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(5.dp)
+                ) {
+                    Icon(
+                        imageVector = if (state.minimalistCanvasMode) KairumoIcons.FullscreenExit else KairumoIcons.Fullscreen,
+                        contentDescription = null,
+                        tint = if (state.minimalistCanvasMode) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.size(15.dp)
+                    )
+                    Text(
+                        if (state.minimalistCanvasMode) l10n("exit_canvas_minimal_mode")
+                        else l10n("enter_canvas_minimal_mode"),
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = if (state.minimalistCanvasMode) FontWeight.SemiBold else FontWeight.Normal,
+                        color = if (state.minimalistCanvasMode) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.onSurface
+                    )
+                }
             }
         }
 
@@ -357,10 +397,11 @@ internal fun EditorTopBar(
                 onClick = actions.onToggleRadialMenu,
                 modifier = Modifier.size(36.dp).testTag("editor.radial_toggle")
             ) {
-                Text(
-                    "◎",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = if (state.showRadialMenu) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                Icon(
+                    imageVector = KairumoIcons.RadialMenu,
+                    contentDescription = l10n("tool_radial_short"),
+                    tint = if (state.showRadialMenu) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.size(18.dp)
                 )
             }
         }
@@ -380,10 +421,11 @@ internal fun EditorTopBar(
                     onClick = actions.onToggleTabletop,
                     modifier = Modifier.size(36.dp)
                 ) {
-                    Text(
-                        if (state.isTabletopActive) "💻" else "📱",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = if (state.isTabletopActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                    Icon(
+                        imageVector = if (state.isTabletopActive) KairumoIcons.TabletopLaptop else KairumoIcons.TabletopTablet,
+                        contentDescription = l10n("posture_tabletop_mode"),
+                        tint = if (state.isTabletopActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.size(18.dp)
                     )
                 }
             }
@@ -407,10 +449,11 @@ internal fun EditorTopBar(
                                 enabled = state.canUndo,
                                 modifier = Modifier.size(36.dp)
                             ) {
-                                Text(
-                                    "↶",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    color = if (state.canUndo) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                                Icon(
+                                    imageVector = KairumoIcons.Undo,
+                                    contentDescription = l10n("undo"),
+                                    tint = if (state.canUndo) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
+                                    modifier = Modifier.size(18.dp)
                                 )
                             }
                         }
@@ -425,10 +468,11 @@ internal fun EditorTopBar(
                                 enabled = state.canRedo,
                                 modifier = Modifier.size(36.dp)
                             ) {
-                                Text(
-                                    "↷",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    color = if (state.canRedo) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                                Icon(
+                                    imageVector = KairumoIcons.Redo,
+                                    contentDescription = l10n("redo"),
+                                    tint = if (state.canRedo) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
+                                    modifier = Modifier.size(18.dp)
                                 )
                             }
                         }
@@ -442,10 +486,11 @@ internal fun EditorTopBar(
                                 onClick = actions.onRevertInitial,
                                 modifier = Modifier.size(36.dp)
                             ) {
-                                Text(
-                                    "⏮",
-                                    style = MaterialTheme.typography.titleSmall,
-                                    color = MaterialTheme.colorScheme.onSurface
+                                Icon(
+                                    imageVector = KairumoIcons.Revert,
+                                    contentDescription = l10n("revert_to_initial_state"),
+                                    tint = MaterialTheme.colorScheme.onSurface,
+                                    modifier = Modifier.size(18.dp)
                                 )
                             }
                         }
@@ -464,7 +509,12 @@ internal fun EditorTopBar(
                 onClick = actions.onOpenAssetLibrary,
                 modifier = Modifier.size(36.dp).testTag("editor.insert.assets")
             ) {
-                Text("🎬", style = MaterialTheme.typography.titleMedium)
+                Icon(
+                    imageVector = KairumoIcons.Cube,
+                    contentDescription = l10n("asset_library"),
+                    tint = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.size(18.dp)
+                )
             }
         }
 
@@ -483,10 +533,11 @@ internal fun EditorTopBar(
                     onClick = actions.onToggleCommentPin,
                     modifier = Modifier.size(36.dp)
                 ) {
-                    Text(
-                        "📌",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = if (state.isPlacingCommentPin) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                    Icon(
+                        imageVector = KairumoIcons.PushPin,
+                        contentDescription = l10n("add_comment_pin"),
+                        tint = if (state.isPlacingCommentPin) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.size(18.dp)
                     )
                 }
             }
@@ -507,7 +558,12 @@ internal fun EditorTopBar(
                         enabled = state.pageIndex > 0,
                         modifier = Modifier.size(36.dp).testTag("editor.page.prev")
                     ) {
-                        Text("‹", style = MaterialTheme.typography.titleMedium)
+                        Icon(
+                            imageVector = KairumoIcons.ChevronLeft,
+                            contentDescription = l10n("previous_page"),
+                            tint = if (state.pageIndex > 0) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
+                            modifier = Modifier.size(16.dp)
+                        )
                     }
                 }
                 Text(
@@ -523,7 +579,12 @@ internal fun EditorTopBar(
                         enabled = state.pageIndex < state.pageCount - 1,
                         modifier = Modifier.size(36.dp).testTag("editor.page.next")
                     ) {
-                        Text("›", style = MaterialTheme.typography.titleMedium)
+                        Icon(
+                            imageVector = KairumoIcons.ChevronRight,
+                            contentDescription = l10n("next_page"),
+                            tint = if (state.pageIndex < state.pageCount - 1) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
+                            modifier = Modifier.size(16.dp)
+                        )
                     }
                 }
                 InstantTooltip(
@@ -533,7 +594,12 @@ internal fun EditorTopBar(
                         onClick = actions.onAddPage,
                         modifier = Modifier.size(36.dp).testTag("editor.page.add")
                     ) {
-                        Text("+", style = MaterialTheme.typography.titleMedium)
+                        Icon(
+                            imageVector = KairumoIcons.Plus,
+                            contentDescription = l10n("add_page"),
+                            tint = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.size(16.dp)
+                        )
                     }
                 }
                 InstantTooltip(
@@ -543,9 +609,11 @@ internal fun EditorTopBar(
                         onClick = actions.onTogglePageDisplayMode,
                         modifier = Modifier.size(36.dp).testTag("editor.page.display_mode")
                     ) {
-                        Text(
-                            if (state.pageDisplayMode == PageDisplayMode.SINGLE) "📄" else "📜",
-                            style = MaterialTheme.typography.titleMedium
+                        Icon(
+                            imageVector = if (state.pageDisplayMode == PageDisplayMode.SINGLE) KairumoIcons.PageSingle else KairumoIcons.PageContinuous,
+                            contentDescription = l10n(if (state.pageDisplayMode == PageDisplayMode.SINGLE) "page_mode_single" else "page_mode_continuous"),
+                            tint = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.size(16.dp)
                         )
                     }
                 }
@@ -685,10 +753,11 @@ internal fun EditorTopBar(
                 onClick = actions.onOpenCollaboration,
                 modifier = Modifier.size(36.dp).testTag("editor.collaborate")
             ) {
-                Text(
-                    "👥",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = if (state.isCollabConnected) Color(0xFF2E7D32) else MaterialTheme.colorScheme.onSurface
+                Icon(
+                    imageVector = KairumoIcons.Group,
+                    contentDescription = l10n("collaborate"),
+                    tint = if (state.isCollabConnected) Color(0xFF2E7D32) else MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.size(19.dp)
                 )
             }
         }
@@ -703,10 +772,11 @@ internal fun EditorTopBar(
                 onClick = actions.onToggleRecord,
                 modifier = Modifier.size(36.dp).testTag("editor.record")
             ) {
-                Text(
-                    if (state.recording) "⏹" else "🎙️",
-                    color = if (state.recording) Color.Red else MaterialTheme.colorScheme.onSurface,
-                    style = MaterialTheme.typography.titleMedium
+                Icon(
+                    imageVector = if (state.recording) KairumoIcons.Stop else KairumoIcons.Mic,
+                    contentDescription = l10n("record"),
+                    tint = if (state.recording) Color.Red else MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.size(19.dp)
                 )
             }
         }
@@ -727,11 +797,22 @@ internal fun EditorTopBar(
                 shape = RoundedCornerShape(8.dp),
                 modifier = Modifier.testTag("editor.share")
             ) {
-                Text(
-                    "⇪  " + l10n("export_print"),
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.Bold
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Icon(
+                        imageVector = KairumoIcons.Share,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onPrimary,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Text(
+                        l10n("export_print"),
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
         }
 
@@ -741,7 +822,12 @@ internal fun EditorTopBar(
                 onClick = { showMenu = true },
                 modifier = Modifier.testTag("editor.more")
             ) {
-                Text("⋮", style = MaterialTheme.typography.titleLarge)
+                Icon(
+                    imageVector = KairumoIcons.MoreVert,
+                    contentDescription = l10n("more_tools"),
+                    tint = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.size(20.dp)
+                )
             }
 
             DropdownMenu(expanded = showShareMenu, onDismissRequest = { showShareMenu = false }) {

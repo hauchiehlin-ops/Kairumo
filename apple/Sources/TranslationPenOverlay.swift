@@ -225,8 +225,7 @@ public struct TranslationPenOverlayView: View {
                     .zIndex(25)
             }
         }
-        .modifier(TranslationBridge.modifier())
-        .onChange(of: isActive) { _, active in
+        .onChange(of: isActive) { active in
             if active {
                 ensureFirstTimeLanguageSetupIfNeeded()
             } else {
@@ -445,13 +444,13 @@ public struct TranslationPenOverlayView: View {
                 return
             }
 
-            let translated = await TranscriptTranslation.finalize(
-                cleaned,
-                recognizedIn: cfg.sourceLang,
-                targetLanguage: cfg.targetLang
+            let result = await TranscriptTranslation.finalize(
+                [cleaned],
+                source: cfg.sourceLang,
+                output: cfg.targetLang
             )
             guard currentTask == translationTaskId else { return }
-            activeCard?.translatedText = translated
+            activeCard?.translatedText = result.texts.first ?? cleaned
             activeCard?.isTranslating = false
         }
     }
@@ -473,13 +472,13 @@ public struct TranslationPenOverlayView: View {
         let currentTask = translationTaskId
 
         Task { @MainActor in
-            let translated = await TranscriptTranslation.finalize(
-                cleaned,
-                recognizedIn: cfg.sourceLang,
-                targetLanguage: cfg.targetLang
+            let result = await TranscriptTranslation.finalize(
+                [cleaned],
+                source: cfg.sourceLang,
+                output: cfg.targetLang
             )
             guard currentTask == translationTaskId else { return }
-            activeCard?.translatedText = translated
+            activeCard?.translatedText = result.texts.first ?? cleaned
             activeCard?.isTranslating = false
         }
     }
@@ -715,11 +714,12 @@ public struct TranslationPenOverlayView: View {
         let messageText = formattedCardMessage()
         guard !messageText.isEmpty else { return }
 
-        let identity = UserIdentityStore.shared
+        let profile = AccountManager.shared.profile
+        let authorId = UIDevice.current.identifierForVendor?.uuidString ?? "local_user"
         let msg = NoteCommentMessage(
-            authorId: identity.userId,
-            authorName: identity.displayName,
-            authorColor: identity.colorHex,
+            authorId: authorId,
+            authorName: profile.displayName,
+            authorColor: profile.colorHex,
             text: messageText
         )
         let pinX = min(max(28, card.scanRect.maxX + 12), PageGeometry.width - 28)
@@ -728,9 +728,9 @@ public struct TranslationPenOverlayView: View {
             pageIndex: pageIndex,
             x: pinX,
             y: pinY,
-            authorId: identity.userId,
-            authorName: identity.displayName,
-            authorColor: identity.colorHex,
+            authorId: authorId,
+            authorName: profile.displayName,
+            authorColor: profile.colorHex,
             messages: [msg]
         )
         if notebook.commentPins == nil {
@@ -841,15 +841,18 @@ public struct TranslationPenOverlayView: View {
 
     private func maskCurrentScanAreaWithTape() {
         guard let card = activeCard else { return }
-        let tape = NoteTapeAttachment(
-            pageIndex: pageIndex,
+        let tapeRect = CGRect(
             x: card.scanRect.minX,
             y: card.scanRect.minY,
             width: max(48, card.scanRect.width),
-            height: max(24, card.scanRect.height),
+            height: max(24, card.scanRect.height)
+        )
+        let tape = NoteTapeAttachment(
+            pageIndex: pageIndex,
+            rect: tapeRect,
+            isRevealed: false,
             colorHex: "#0D9488",
-            patternRaw: TapePattern.striped.rawValue,
-            isRevealed: false
+            rotation: 0.0
         )
         if notebook.tapeAttachments == nil {
             notebook.tapeAttachments = []
@@ -1245,7 +1248,7 @@ private struct TranslationPenPopoverCard: View {
             topVC = presented
         }
         let dictVC = UIReferenceLibraryViewController(term: cleaned)
-        dictVC.modalPresentationStyle = .Automatic
+        dictVC.modalPresentationStyle = .automatic
         topVC.present(dictVC, animated: true)
         #endif
     }

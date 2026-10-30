@@ -38,16 +38,26 @@ enum BrushCursor {
     static func path(for tool: EditorToolType, strokeWidth: CGFloat) -> UIBezierPath? {
         guard tool != .lasso else { return nil }
 
-        // 筆寬直接決定筆頭大小，但要有上下限：1pt 的筆頭在螢幕上小到看不見，
-        // 太大的又會擋住自己正要畫（或正要擦）的地方。
-        let tip = min(max(strokeWidth * tipScale(for: tool), 8), maxSide)
+        // 筆寬直接決定筆頭大小，但要有上下限：1pt 的筆頭在螢幕上小到看不見；
+        // 橡皮擦依選取直徑顯示（最高可至 72pt），一般筆刷維持 44pt 避免遮蔽視線。
+        let maxLimit = tool == .eraser ? 72.0 : maxSide
+        let tip = min(max(strokeWidth * tipScale(for: tool), 8), maxLimit)
 
         switch tool {
         case .highlighter, .marker, .calligraphy:
             return chiselPath(width: tip)
+        case .eraser:
+            // 橡皮擦以對應大小之圓圈呈現，並在圓心加入微型準心，兼顧精準定位與大小視覺反饋
+            let path = UIBezierPath(ovalIn: CGRect(
+                x: -tip / 2, y: -tip / 2, width: tip, height: tip))
+            let crossLen: CGFloat = min(3.5, tip / 4)
+            path.move(to: CGPoint(x: -crossLen, y: 0))
+            path.addLine(to: CGPoint(x: crossLen, y: 0))
+            path.move(to: CGPoint(x: 0, y: -crossLen))
+            path.addLine(to: CGPoint(x: 0, y: crossLen))
+            return path
         default:
-            // 圓筆頭與橡皮擦都是圓的。差別在系統怎麼呈現它：
-            // 橡皮擦用比較大的圈，使用者才看得到圈內正要被擦掉的東西。
+            // 圓筆頭使用圓形
             return UIBezierPath(ovalIn: CGRect(
                 x: -tip / 2, y: -tip / 2, width: tip, height: tip))
         }
@@ -79,7 +89,7 @@ enum BrushCursor {
         case .brush, .watercolor: return 2.2
         case .marker: return 2.8
         case .highlighter: return 3.8
-        case .eraser: return 3.0
+        case .eraser: return 1.0 // 橡皮擦直徑直接對應選擇的擦除寬度 (pixelEraserWidth)
         case .lasso, .maskingTape, .translationPen: return 1
         case .drafting: return 0.6
         }
@@ -92,6 +102,7 @@ enum BrushCursor {
     /// 抽出來是為了讓測試能直接檢查「游標大小有沒有跟著筆寬變」，
     /// 而不必去量一條貝茲曲線的外框。
     static func tipDiameter(for tool: EditorToolType, strokeWidth: CGFloat) -> CGFloat {
-        min(max(strokeWidth * tipScale(for: tool), 8), maxSide)
+        let maxLimit = tool == .eraser ? 72.0 : maxSide
+        return min(max(strokeWidth * tipScale(for: tool), 8), maxLimit)
     }
 }

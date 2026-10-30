@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -24,6 +25,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.testTag
@@ -73,7 +75,7 @@ fun DynamicPortalIsland(
                 // 手繪工作室按鈕 (對齊 iPad: handwriting_mode)
                 ModePillButton(
                     title = l("handwriting_mode"),
-                    icon = "✏️",
+                    imageVector = KairumoIcons.PencilTip,
                     isSelected = currentMode == EditorMode.DRAW,
                     activeColor = MaterialTheme.colorScheme.primary,
                     testTag = "portal.draw",
@@ -94,7 +96,7 @@ fun DynamicPortalIsland(
                 // 專業文字智庫按鈕 (對齊 iPad: typing_mode)
                 ModePillButton(
                     title = l("typing_mode"),
-                    icon = "📄",
+                    imageVector = KairumoIcons.DocText,
                     isSelected = currentMode == EditorMode.TYPE,
                     activeColor = Color(0xFF6366F1), // 智庫經典靛藍
                     testTag = "portal.type",
@@ -149,7 +151,7 @@ fun DynamicPortalIsland(
 @Composable
 private fun ModePillButton(
     title: String,
-    icon: String,
+    imageVector: ImageVector,
     isSelected: Boolean,
     activeColor: Color,
     onClick: () -> Unit,
@@ -179,11 +181,13 @@ private fun ModePillButton(
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(4.dp)
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            Text(
-                text = icon,
-                fontSize = 13.sp
+            Icon(
+                imageVector = imageVector,
+                contentDescription = null,
+                tint = contentColor,
+                modifier = Modifier.size(15.dp)
             )
             Text(
                 text = title,

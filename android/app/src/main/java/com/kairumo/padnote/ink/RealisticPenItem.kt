@@ -76,8 +76,13 @@ fun RealisticPenItem(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = modifier
             .testTag(tool.parityIdentifier)
+            .androidx.compose.ui.draw.clip(androidx.compose.foundation.shape.RoundedCornerShape(8.dp))
+            .background(
+                if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+                else Color.Transparent
+            )
             .clickable(onClick = onClick)
-            .padding(horizontal = 3.dp, vertical = 2.dp)
+            .padding(horizontal = 4.dp, vertical = 2.dp)
             .semantics {
                 contentDescription = toolLabel
                 stateDescription = if (isSelected) "selected" else "unselected"
@@ -95,10 +100,21 @@ fun RealisticPenItem(
             Canvas(modifier = Modifier.size(44.dp)) { drawIcon(shapes, inkColor) }
         }
         if (tool.family != null) {
-            Canvas(modifier = Modifier.width(44.dp).height(14.dp)) {
+            Canvas(modifier = Modifier.width(44.dp).height(12.dp)) {
                 drawPreview(ffiTool, inkColor, size)
             }
         }
+        // 對齊 Apple 端的工具文字標籤（讓使用者一目了然選取的是哪一支筆／工具）
+        Text(
+            text = toolLabel,
+            style = MaterialTheme.typography.labelSmall.copy(
+                fontSize = 9.sp,
+                fontWeight = if (isSelected) androidx.compose.ui.text.font.FontWeight.SemiBold else androidx.compose.ui.text.font.FontWeight.Normal
+            ),
+            color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+            modifier = Modifier.padding(top = 1.dp)
+        )
     }
 }
 
