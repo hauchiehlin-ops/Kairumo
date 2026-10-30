@@ -257,6 +257,8 @@ final class AdaptiveCanvasView: PKCanvasView {
     }
     override var canBecomeFirstResponder: Bool { true }
     var initialLoadedStrokeCount: Int = 0
+    weak var directSingleTap: UITapGestureRecognizer?
+    weak var directDoubleTap: UITapGestureRecognizer?
 
     // MARK: - Hold-to-Snap 筆尖停留成形監測（第二階段：幾何停頓轉正）
     private var pencilDwellWorkItem: DispatchWorkItem?
@@ -1393,13 +1395,21 @@ struct CanvasRepresentable: UIViewRepresentable {
             _ = onDrawingChanged?(cleaned)
         }
 
-        // 🌟 方案 A+B：手指／游標單擊與雙擊手勢（限定 direct / indirectPointer，完全不阻礙 Apple Pencil 筆跡）
+        // 🌟 方案 A+B：手指／游標單擊與雙擊手勢（打字模式下加入 pencil，讓筆尖亦能即點即書；手繪模式限定 direct / indirectPointer，不阻礙 Apple Pencil 筆跡）
+        let initialTapTypes: [NSNumber] = (editorMode == .type)
+            ? [
+                NSNumber(value: UITouch.TouchType.direct.rawValue),
+                NSNumber(value: UITouch.TouchType.indirectPointer.rawValue),
+                NSNumber(value: UITouch.TouchType.pencil.rawValue)
+            ]
+            : [
+                NSNumber(value: UITouch.TouchType.direct.rawValue),
+                NSNumber(value: UITouch.TouchType.indirectPointer.rawValue)
+            ]
+
         let directSingleTap = UITapGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.handleDirectSingleTap(_:)))
         directSingleTap.numberOfTapsRequired = 1
-        directSingleTap.allowedTouchTypes = [
-            NSNumber(value: UITouch.TouchType.direct.rawValue),
-            NSNumber(value: UITouch.TouchType.indirectPointer.rawValue)
-        ]
+        directSingleTap.allowedTouchTypes = initialTapTypes
         directSingleTap.cancelsTouchesInView = false
         directSingleTap.delaysTouchesBegan = false
         directSingleTap.delaysTouchesEnded = false
@@ -1408,10 +1418,7 @@ struct CanvasRepresentable: UIViewRepresentable {
 
         let directDoubleTap = UITapGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.handleDirectDoubleTap(_:)))
         directDoubleTap.numberOfTapsRequired = 2
-        directDoubleTap.allowedTouchTypes = [
-            NSNumber(value: UITouch.TouchType.direct.rawValue),
-            NSNumber(value: UITouch.TouchType.indirectPointer.rawValue)
-        ]
+        directDoubleTap.allowedTouchTypes = initialTapTypes
         directDoubleTap.cancelsTouchesInView = false
         directDoubleTap.delaysTouchesBegan = false
         directDoubleTap.delaysTouchesEnded = false
@@ -1421,6 +1428,8 @@ struct CanvasRepresentable: UIViewRepresentable {
 
         canvas.addGestureRecognizer(directDoubleTap)
         canvas.addGestureRecognizer(directSingleTap)
+        canvas.directSingleTap = directSingleTap
+        canvas.directDoubleTap = directDoubleTap
 
         let lassoPan = UIPanGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.handleLassoPan(_:)))
         lassoPan.maximumNumberOfTouches = 1
@@ -1465,8 +1474,8 @@ struct CanvasRepresentable: UIViewRepresentable {
             uiView.alwaysBounceVertical = wantsScroll
             uiView.showsVerticalScrollIndicator = wantsScroll
         }
-        // 打字模式不再關掉落筆手勢：靠 `.pencilOnly` 擋手指，Pencil 第一筆就收得到。
-        // 套索與遮蔽膠帶模式下關閉繪圖手勢，確保所有碰觸皆由自定義物件層全權接收。
+        // 打字模式關閉落筆手勢（從根源杜絕留下墨點），手繪模式才開放。
+        // 套索與遮蔽膠帶模式下亦關閉繪圖手勢，確保所有碰觸皆由自定義物件層全權接收。
         let gestureOn = EditorCanvasInputPolicy.drawingGestureEnabled(effectiveMode: editorMode) && (selectedTool != .lasso) && (selectedTool != .maskingTape)
         if uiView.drawingGestureRecognizer.isEnabled != gestureOn {
             uiView.drawingGestureRecognizer.isEnabled = gestureOn
@@ -1474,6 +1483,20 @@ struct CanvasRepresentable: UIViewRepresentable {
         let targetPolicy = resolvedPolicy()
         if uiView.drawingPolicy != targetPolicy {
             uiView.drawingPolicy = targetPolicy
+        }
+        if let adaptive = uiView as? AdaptiveCanvasView {
+            let tapTypes: [NSNumber] = (editorMode == .type)
+                ? [
+                    NSNumber(value: UITouch.TouchType.direct.rawValue),
+                    NSNumber(value: UITouch.TouchType.indirectPointer.rawValue),
+                    NSNumber(value: UITouch.TouchType.pencil.rawValue)
+                ]
+                : [
+                    NSNumber(value: UITouch.TouchType.direct.rawValue),
+                    NSNumber(value: UITouch.TouchType.indirectPointer.rawValue)
+                ]
+            adaptive.directSingleTap?.allowedTouchTypes = tapTypes
+            adaptive.directDoubleTap?.allowedTouchTypes = tapTypes
         }
         // 連續模式（畫布自己不捲）且手指會畫圖時，兩指捲動由我們自己接管；
         // `.pencilOnly` 時手指不畫，外層捲動單指就能動，不必（也不該）再轉發。

@@ -147,15 +147,8 @@ fun InkCanvas(
                 }
             }
             .pointerInteropFilter { event ->
-                val isStylus = (0 until event.pointerCount).any {
-                    val tool = event.getToolType(it)
-                    tool == MotionEvent.TOOL_TYPE_STYLUS || tool == MotionEvent.TOOL_TYPE_ERASER
-                }
-                if (isStylus && !acceptsInk) {
-                    onStylusDetected()
-                }
-                // 不收筆畫且不是硬體觸控筆時把事件原樣讓出去，外層照常捲動與選取。
-                if (!acceptsInk && !isStylus) return@pointerInteropFilter false
+                // 打字模式等不收筆畫的狀態下，完全不攔截、不繪墨，將觸控原樣放行給文字、物件與即點即書手勢
+                if (!acceptsInk) return@pointerInteropFilter false
                 hoverPoint = null
                 predictor?.record(event)
                 val outcome = engine.onMotionEvent(event, density)

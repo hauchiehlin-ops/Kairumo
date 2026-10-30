@@ -54,16 +54,16 @@ final class EditorStateMachineTests: XCTestCase {
     }
 
     func testFusionInputPolicyInvariants() {
-        // 任何模式下繪圖手勢皆保持啟用，杜絕切換第一筆遺失問題
+        // 手繪模式開放繪圖；打字模式完全關閉繪圖手勢，從根源杜絕留下小墨點
         XCTAssertTrue(EditorCanvasInputPolicy.drawingGestureEnabled(effectiveMode: .draw))
-        XCTAssertTrue(EditorCanvasInputPolicy.drawingGestureEnabled(effectiveMode: .type))
+        XCTAssertFalse(EditorCanvasInputPolicy.drawingGestureEnabled(effectiveMode: .type))
 
         // 打字模式下手指不可繪圖（交由物件選取/捲動）
         XCTAssertEqual(EditorCanvasInputPolicy.fingerMayDraw(effectiveMode: .type), false)
         XCTAssertNil(EditorCanvasInputPolicy.fingerMayDraw(effectiveMode: .draw))
 
-        // 打字模式下延遲判定 Apple Pencil 意圖（區分點擊與書寫筆劃）
-        XCTAssertTrue(EditorCanvasInputPolicy.defersPencilIntent(effectiveMode: .type))
+        // 打字模式下不延遲判定 Apple Pencil 意圖（繪圖手勢已關閉，筆尖直接進行物件操作與即點即書）
+        XCTAssertFalse(EditorCanvasInputPolicy.defersPencilIntent(effectiveMode: .type))
         XCTAssertFalse(EditorCanvasInputPolicy.defersPencilIntent(effectiveMode: .draw))
 
         // 判定 Pencil 輕點 vs 筆畫
