@@ -87,33 +87,38 @@ object InkBrushRenderer {
 
             when (tool) {
                 ToolKind.FOUNTAIN_PEN -> {
-                    // 鋼筆：速度反比 (快細慢粗) + 筆尖微收鋒
-                    val speedFactor = (1.3f - 0.5f * (speed / 2.2f).coerceIn(0f, 1f))
-                    val pressFactor = if (b.pressure in 0.01f..0.99f) 0.5f + 0.6f * b.pressure else 1.0f
+                    // 鋼筆：彈性金屬筆尖（下壓劈開加粗 0.42x~1.35x）+ 速度反比（快細慢粗）+ 筆尖收鋒
+                    val speedFactor = (1.32f - 0.52f * (speed / 2.2f).coerceIn(0f, 1f))
+                    val pressFactor = if (b.pressure in 0.01f..0.99f) 0.42f + 0.88f * b.pressure else 1.0f
                     val w = baseWidth * 1.15f * speedFactor * pressFactor * tipTaper * density
-                    specs.add(SegmentSpec(x1, y1, x2, y2, width = w.coerceAtLeast(0.8f * density), alpha = 1.0f))
+                    val inkAlpha = (0.88f + 0.12f * b.pressure.coerceIn(0f, 1f)).coerceIn(0.82f, 1.0f)
+                    specs.add(SegmentSpec(x1, y1, x2, y2, width = w.coerceAtLeast(0.75f * density), alpha = inkAlpha))
                 }
 
                 ToolKind.BALL_POINT -> {
-                    // 原子筆：均勻等寬 (Monoline)，乾淨俐落
-                    val w = baseWidth * 0.68f * density
-                    specs.add(SegmentSpec(x1, y1, x2, y2, width = w.coerceAtLeast(0.6f * density), alpha = 0.98f))
+                    // 原子筆：均勻等寬 (Monoline)，僅極輕觸微淡、重壓微實，乾淨俐落
+                    val p = b.pressure.coerceIn(0.2f, 1.0f)
+                    val w = baseWidth * (0.62f + 0.10f * p) * density
+                    specs.add(SegmentSpec(x1, y1, x2, y2, width = w.coerceAtLeast(0.6f * density), alpha = 0.92f + 0.08f * p))
                 }
 
                 ToolKind.BRUSH -> {
-                    // 毛筆：極致書法提按，行筆飛白收尖 (0.35x)，轉折頓筆蓄墨 (2.2x)
-                    val speedMod = (2.2f - 1.55f * (speed / 2.5f).coerceIn(0f, 1f))
-                    val pressMod = if (b.pressure in 0.01f..0.99f) 0.35f + 1.1f * b.pressure else 1.0f
-                    val brushTaper = minOf(startTaper * startTaper, endTaper * endTaper).coerceAtLeast(0.18f)
-                    val w = baseWidth * 2.1f * speedMod * pressMod * brushTaper * density
-                    specs.add(SegmentSpec(x1, y1, x2, y2, width = w.coerceAtLeast(1.0f * density), alpha = 0.96f))
+                    // 毛筆線段備援：書法提按、起筆與收筆出鋒、快速飛白收尖与慢速頓筆蓄墨
+                    // （實際繪製時若啟用自繪引擎則優先走核心 `chinese_brush` 永字八法筆點陣）
+                    val speedMod = (2.25f - 1.60f * (speed / 2.5f).coerceIn(0f, 1f))
+                    val pressMod = if (b.pressure in 0.01f..0.99f) 0.18f + 1.55f * b.pressure else 1.0f
+                    val tiltMod = 1.0f + 0.65f * sin(b.tilt.coerceIn(0f, 1.57f))
+                    val brushTaper = minOf(startTaper * startTaper, endTaper * endTaper).coerceAtLeast(0.14f)
+                    val w = baseWidth * 2.1f * speedMod * pressMod * tiltMod * brushTaper * density
+                    specs.add(SegmentSpec(x1, y1, x2, y2, width = w.coerceAtLeast(0.7f * density), alpha = 0.96f))
                 }
 
                 ToolKind.MARKER -> {
-                    // 麥克筆：斜角扁頭 (Chisel)，切角角度決定線寬
+                    // 麥克筆：斜角扁頭 (Chisel)，切角角度與施壓決定線寬
                     val angle = atan2(dy, dx)
-                    val chisel = 0.65f + 0.65f * abs(sin(angle - 0.7853982f)) // 45 度角切面
-                    val w = baseWidth * 2.6f * chisel * density
+                    val chisel = 0.62f + 0.68f * abs(sin(angle - 0.7853982f)) // 45 度角切面
+                    val pressSpread = 0.85f + 0.28f * b.pressure.coerceIn(0f, 1f)
+                    val w = baseWidth * 2.6f * chisel * pressSpread * density
                     specs.add(SegmentSpec(x1, y1, x2, y2, width = w.coerceAtLeast(1.5f * density), alpha = 0.86f))
                 }
 
@@ -124,33 +129,39 @@ object InkBrushRenderer {
                 }
 
                 ToolKind.PENCIL -> {
-                    // 鉛筆：石墨微噪顆粒與紙面纖維
-                    val press = if (b.pressure in 0.01f..0.99f) 0.5f + 0.5f * b.pressure else 0.85f
-                    val w = baseWidth * 1.25f * press * density
+                    // 鉛筆：立鋒精細素描排線 vs 側鋒（tilt > 0.40 rad）大面積柔化鋪調子
+                    val press = if (b.pressure in 0.01f..0.99f) 0.38f + 0.68f * b.pressure else 0.85f
+                    val tiltSin = sin(b.tilt.coerceIn(0f, 1.57f))
+                    val isSideShading = b.tilt > 0.40f
+                    val tiltWidthBoost = if (isSideShading) 1.0f + 1.85f * tiltSin else 1.0f + 0.25f * tiltSin
+                    val tiltAlphaMod = if (isSideShading) (0.68f - 0.22f * tiltSin).coerceAtLeast(0.38f) else 0.82f
+                    val w = baseWidth * 1.25f * press * tiltWidthBoost * density
                     val hash = (i * 7919 + (dx * 100).toInt()) % 11 - 5
                     val jx = hash * 0.12f * density
                     val jy = ((i * 4909) % 11 - 5) * 0.12f * density
                     specs.add(
                         SegmentSpec(
                             x1 = x1, y1 = y1, x2 = x2, y2 = y2,
-                            width = w.coerceAtLeast(0.7f * density),
-                            alpha = 0.75f * press,
+                            width = w.coerceAtLeast(0.65f * density),
+                            alpha = (tiltAlphaMod * press).coerceIn(0.18f, 0.95f),
                             jitterX = jx, jitterY = jy
                         )
                     )
                 }
 
                 ToolKind.WATERCOLOR -> {
-                    // 水彩筆：雙層水痕渲染 (外層擴散水暈 + 內層主體水色)
-                    val outerW = baseWidth * 2.8f * density
-                    val innerW = baseWidth * 1.5f * density
+                    // 水彩筆：雙層水痕渲染（重壓與慢速駐留時外層水暈擴張，模擬宣紙／水彩紙溼畫法暈染）
+                    val p = b.pressure.coerceIn(0.15f, 1.0f)
+                    val dwellWetness = (1.28f - 0.35f * (speed / 2.0f).coerceIn(0f, 1f)).coerceIn(0.85f, 1.30f)
+                    val outerW = baseWidth * (2.2f + 1.1f * p) * dwellWetness * density
+                    val innerW = baseWidth * (1.15f + 0.65f * p) * density
                     specs.add(
                         SegmentSpec(
                             x1 = x1, y1 = y1, x2 = x2, y2 = y2,
                             width = outerW,
-                            alpha = 0.24f,
+                            alpha = (0.18f + 0.12f * p).coerceIn(0.15f, 0.36f),
                             secondaryWidth = innerW,
-                            secondaryAlpha = 0.46f
+                            secondaryAlpha = (0.34f + 0.22f * p).coerceIn(0.28f, 0.62f)
                         )
                     )
                 }

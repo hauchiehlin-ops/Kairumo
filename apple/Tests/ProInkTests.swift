@@ -74,7 +74,7 @@ final class ProInkTests: XCTestCase {
                 XCTAssertTrue(brushIsCustom(tool: kind), "\(tool) 不是自繪引擎筆刷")
             }
         }
-        XCTAssertEqual(EditorToolType.allCases.filter { $0.proToolKind != nil }.count, 6)
+        XCTAssertEqual(EditorToolType.allCases.filter { $0.proToolKind != nil }.count, 7)
     }
 
     // MARK: 儲存
@@ -91,7 +91,7 @@ final class ProInkTests: XCTestCase {
     // MARK: 算繪
 
     func testEveryProBrushPutsInkOnTheBitmap() throws {
-        for name in ["fineliner", "charcoal", "crayon", "airbrush", "oilpaint", "calligraphy"] {
+        for name in ["brush", "fineliner", "charcoal", "crayon", "airbrush", "oilpaint", "calligraphy"] {
             let s = stroke(name)
             let cached = try XCTUnwrap(ProInkRenderer.cache(for: s), "\(name) 算不出筆點")
             XCTAssertFalse(cached.dabs.isEmpty)

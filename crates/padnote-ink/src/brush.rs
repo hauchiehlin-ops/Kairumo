@@ -68,9 +68,13 @@ struct Sample {
     x: f32,
     y: f32,
     pressure: f32,
-    /// 筆桿傾角（弧度，0 = 垂直）。炭筆與蠟筆側著畫時筆觸變寬。
+    /// 筆桿傾角（弧度，0 = 垂直）。炭筆、蠟筆與毛筆側著畫時筆觸變寬（側鋒）。
     tilt: f32,
-    /// 行進速度（頁面單位／毫秒）。噴槍走得慢就噴得多。
+    /// 筆桿方位角（弧度）。
+    azimuth: f32,
+    /// 筆桿繞自身軸旋轉角（弧度）。
+    roll: f32,
+    /// 行進速度（頁面單位／毫秒）。噴槍走得慢就噴得多；毛筆疾細徐粗。
     speed: f32,
     /// 行進方向（弧度）。
     heading: f32,
@@ -94,6 +98,8 @@ fn point_sample(p: InkPoint, heading: f32, progress: f32) -> Sample {
         y: p.y,
         pressure: p.pressure,
         tilt: p.tilt,
+        azimuth: p.azimuth,
+        roll: p.roll,
         speed: 1.0,
         heading,
         progress,
@@ -147,6 +153,8 @@ fn resample(points: &[InkPoint], spacing: f32) -> Vec<Sample> {
                 y: a.y + (b.y - a.y) * t,
                 pressure: a.pressure + (b.pressure - a.pressure) * t,
                 tilt: a.tilt + (b.tilt - a.tilt) * t,
+                azimuth: a.azimuth + (b.azimuth - a.azimuth) * t,
+                roll: a.roll + (b.roll - a.roll) * t,
                 speed,
                 heading,
                 progress: ((walked + at) / total).clamp(0.0, 1.0),
@@ -229,6 +237,7 @@ pub fn dabs(tool: Tool, points: &[InkPoint], base_width: f32) -> Vec<Dab> {
     }
     let mut rng = Rng::new(seed_of(points));
     match tool {
+        Tool::Brush => chinese_brush(points, base_width, &mut rng),
         Tool::Fineliner => fineliner(points, base_width),
         Tool::Calligraphy => calligraphy(points, base_width),
         Tool::Charcoal => charcoal(points, base_width, &mut rng),
@@ -306,24 +315,196 @@ fn fineliner(points: &[InkPoint], width: f32) -> Vec<Dab> {
     out
 }
 
-/// 書法扁頭筆：固定 40° 的扁橢圓。筆畫方向與筆頭夾角越大越粗，所以橫細豎粗。起筆積墨。
+/// 東方軟毫毛筆（永字八法物理筆觸引擎：側、勒、努、趯、策、掠、啄、磔）。
+///
+/// - **側（瓜子點）**：單點輕觸或極短落筆時，自動由左上入鋒細尖向右下頓筆鋪毫收圓肚，形成水滴狀瓜子點；
+/// - **軟毫大跨度壓感（0.14x ~ 1.85x）**：非線性 S 曲線，輕觸游絲細鋒、重按筆肚飽滿鋪開；
+/// - **起筆藏鋒／頓筆與折釵股**：入筆微駐與轉折夾角處自動微頓蓄墨；
+/// - **行筆中鋒骨力（勒、努）與疾掠飛白（策、掠、啄）**：中速沉穩渾厚，高速疾掠時筆肚收勁並沿紙紋分岔出飛白絲紋；
+/// - **收筆出鋒 vs 垂露（趯、策、掠、磔）**：尾段加速掠出時指數收尖出鋒，慢速駐收則成圓潤垂露；
+/// - **側鋒鋪毫**：筆桿傾斜（`tilt`）時筆肚橫向鋪寬。
+fn chinese_brush(points: &[InkPoint], width: f32, rng: &mut Rng) -> Vec<Dab> {
+    let base = (width * 0.5).max(0.45);
+    let total_len: f32 = points
+        .windows(2)
+        .map(|w| ((w[1].x - w[0].x).powi(2) + (w[1].y - w[0].y).powi(2)).sqrt())
+        .sum();
+
+    // 「側」法（點）：單點或極短點觸，自動生成由尖入肚的 42° 瓜子點（水滴形筆觸）
+    if points.len() == 1 || total_len <= base * 0.35 {
+        let p0 = points[0];
+        let p = p0.pressure.clamp(0.15, 1.0);
+        let belly = base * (0.45 + 1.15 * p.powf(1.2));
+        let angle = if p0.azimuth.abs() > 0.01 {
+            p0.azimuth
+        } else {
+            42.0f32.to_radians()
+        };
+        let (dx, dy) = (angle.cos(), angle.sin());
+        let steps = [
+            (-0.32, 0.28, 0.24, 0.92, 0.06),
+            (-0.14, 0.55, 0.48, 0.96, 0.08),
+            (0.04, 0.88, 0.76, 1.00, 0.10),
+            (0.20, 1.05, 0.92, 0.98, 0.12),
+            (0.30, 0.78, 0.74, 0.90, 0.16),
+        ];
+        return steps
+            .into_iter()
+            .map(|(offset, rx_k, ry_k, alpha, softness)| Dab {
+                x: p0.x + dx * belly * offset,
+                y: p0.y + dy * belly * offset,
+                rx: (belly * rx_k).max(0.25),
+                ry: (belly * ry_k).max(0.25),
+                angle,
+                alpha,
+                softness,
+                shade: -0.08 * p,
+            })
+            .collect();
+    }
+
+    let spacing = (base * 0.18).max(0.35);
+    let samples = resample(points, spacing);
+    let mut out = Vec::with_capacity(samples.len() * 2);
+    let mut prev_heading = samples.first().map_or(0.0, |s| s.heading);
+
+    for (idx, s) in samples.iter().copied().enumerate() {
+        let p = s.pressure.clamp(0.0, 1.0);
+        // 軟毫非線性壓感：極輕觸 0.14x（毫尖游絲），重按 1.85x（筆肚徹底鋪開）
+        let pressure_belly = 0.14 + 1.71 * p.powf(1.32);
+
+        // 行筆速度骨力：慢速駐留渾厚（1.18x），高速疾掠勁瘦（0.68x）
+        let vel_factor = (1.16 - 0.11 * (s.speed - 1.0)).clamp(0.68, 1.18);
+
+        // 轉折頓挫（折釵股）：計算方向變化量，轉折處自動微頓加粗
+        let mut turn_diff = (s.heading - prev_heading).abs();
+        if turn_diff > std::f32::consts::PI {
+            turn_diff = std::f32::consts::TAU - turn_diff;
+        }
+        prev_heading = s.heading;
+        let corner_boost = if idx > 0 && turn_diff > 0.35 {
+            1.0 + (turn_diff / std::f32::consts::PI).clamp(0.0, 0.32)
+        } else {
+            1.0
+        };
+
+        // 起筆藏鋒／頓筆與收筆出鋒（趯、策、掠、啄、磔）或垂露
+        let envelope = if s.progress < 0.08 {
+            let t = (s.progress / 0.08).clamp(0.0, 1.0);
+            // 慢速入筆形成飽滿頓筆頭；快速露鋒由尖漸入
+            let entry_floor = if s.speed < 0.9 { 0.72 } else { 0.28 };
+            entry_floor + (1.0 - entry_floor) * smooth(t)
+        } else if s.progress > 0.78 {
+            let rem = ((1.0 - s.progress) / 0.22).clamp(0.0, 1.0);
+            // 尾段加速掠出或輕壓時指數出鋒（懸針／撇捺鋒芒）；慢速重按則收成圓潤垂露
+            if s.speed > 1.15 || p < 0.38 {
+                (rem.powf(1.65)).max(0.06)
+            } else {
+                0.52 + 0.48 * smooth(rem)
+            }
+        } else {
+            1.0
+        };
+
+        // 側鋒鋪毫：筆桿傾斜時橫向展開
+        let tilt_spread = side_of_stick(s.tilt, 0.85);
+        let r_core = (base * pressure_belly * vel_factor * corner_boost * envelope).max(0.22);
+        let rx = (r_core * (1.12 + 0.18 * p)).max(0.25);
+        let ry = (r_core * tilt_spread * 0.92).max(0.22);
+
+        // 疾掠飛白（高速或長筆尾段枯筆時，紙紋凸起處留白、凹谷留墨）
+        let dry_ness =
+            ((s.speed - 2.0) * 0.22 + (s.progress - 0.65).max(0.0) * 0.55).clamp(0.0, 0.75);
+        let grain = paper_grain(s.x, s.y);
+        let core_alpha = if dry_ness > 0.15 && grain > (1.05 - dry_ness * 0.55) {
+            (0.45 + 0.45 * p) * (1.0 - dry_ness * 0.65)
+        } else {
+            (0.84 + 0.16 * p).min(1.0)
+        };
+
+        // 主筆肚中鋒筆點（側鋒時結合筆桿方位角 `azimuth` 偏轉筆肚）
+        let dab_angle = if s.tilt > 0.25 && s.azimuth.abs() > 0.01 {
+            s.heading * 0.75 + s.azimuth * 0.25
+        } else {
+            s.heading
+        };
+        out.push(Dab {
+            x: s.x,
+            y: s.y,
+            rx,
+            ry,
+            angle: dab_angle,
+            alpha: core_alpha.clamp(0.08, 1.0),
+            softness: (0.08 + 0.08 * (1.0 - p)).clamp(0.04, 0.22),
+            shade: (-0.06 - 0.12 * p * corner_boost).clamp(-1.0, 1.0),
+        });
+
+        // 副毫與飛白絲紋：重壓鋪毫或高速飛白時，在筆肚兩側產生毫芒分縷質感
+        if p > 0.35 || dry_ness > 0.12 {
+            let (nx, ny) = (-s.heading.sin(), s.heading.cos());
+            for side in [-1.0f32, 1.0f32] {
+                let jitter = 0.55 + 0.25 * rng.unit();
+                let off = side * ry * jitter * 0.65;
+                let (bx, by) = (s.x + nx * off, s.y + ny * off);
+                let bg = paper_grain(bx, by);
+                if dry_ness > 0.12 && bg > (0.88 - dry_ness * 0.45) {
+                    continue;
+                }
+                let bristle_r = (ry * (0.28 + 0.18 * p)).max(0.18);
+                out.push(Dab {
+                    x: bx,
+                    y: by,
+                    rx: (rx * 0.75).max(0.22),
+                    ry: bristle_r,
+                    angle: s.heading,
+                    alpha: (core_alpha * (0.55 + 0.35 * (1.0 - dry_ness))).clamp(0.05, 1.0),
+                    softness: 0.14,
+                    shade: (0.06 - 0.14 * p).clamp(-1.0, 1.0),
+                });
+            }
+        }
+    }
+
+    // 起筆藏鋒蓄墨點（使起筆第一點更具立體墨韻）
+    if let Some(first) = out.first().copied() {
+        out.insert(
+            0,
+            Dab {
+                rx: first.rx * 1.14,
+                ry: first.ry * 1.14,
+                alpha: (first.alpha * 0.95).clamp(0.1, 1.0),
+                ..first
+            },
+        );
+    }
+    out
+}
+
+/// 書法扁頭筆：固定 40°（或隨筆桿旋轉角 `roll`）的扁橢圓。
+/// 筆畫方向與筆頭夾角越大越粗，所以橫細豎粗；施壓時彈性筆舌撐開，起筆積墨。
 fn calligraphy(points: &[InkPoint], width: f32) -> Vec<Dab> {
     let long = width * 0.5 * 1.4;
     let short = (width * 0.5 * 0.16).max(0.3);
-    let nib = 40.0f32.to_radians();
+    let default_nib = 40.0f32.to_radians();
     let mut out: Vec<Dab> = resample(points, short.max(0.4))
         .into_iter()
         .map(|s| {
-            let k = 0.75 + 0.25 * s.pressure.clamp(0.0, 1.0);
+            let p = s.pressure.clamp(0.0, 1.0);
+            let k = 0.58 + 0.58 * p.powf(0.85);
+            let nib = if s.roll.abs() > 0.01 {
+                s.roll
+            } else {
+                default_nib
+            };
             Dab {
                 x: s.x,
                 y: s.y,
                 rx: long * k,
-                ry: short,
+                ry: short * (0.85 + 0.30 * p),
                 angle: nib,
-                alpha: 1.0,
+                alpha: (0.88 + 0.12 * p).min(1.0),
                 softness: 0.0,
-                shade: 0.0,
+                shade: -0.08 * p,
             }
         })
         .collect();
@@ -580,7 +761,8 @@ mod tests {
             .collect()
     }
 
-    const CUSTOM: [Tool; 6] = [
+    const CUSTOM: [Tool; 7] = [
+        Tool::Brush,
         Tool::Fineliner,
         Tool::Charcoal,
         Tool::Crayon,
@@ -595,7 +777,6 @@ mod tests {
             Tool::FountainPen,
             Tool::BallPoint,
             Tool::Pencil,
-            Tool::Brush,
             Tool::Marker,
             Tool::Highlighter,
             Tool::Watercolor,
@@ -828,13 +1009,52 @@ mod tests {
 
     #[test]
     fn a_pen_that_starts_a_line_leaves_a_slightly_bigger_ink_pool() {
-        for tool in [Tool::Fineliner, Tool::Calligraphy] {
+        for tool in [Tool::Brush, Tool::Fineliner, Tool::Calligraphy] {
             let d = dabs(tool, &line(10, 0.8), 8.0);
             assert!(
                 d[0].rx > d[1].rx || d[0].ry > d[1].ry,
                 "{tool:?} 起筆沒有積墨"
             );
         }
+    }
+
+    #[test]
+    fn chinese_brush_models_eight_methods_of_yong() {
+        // 1. 「側」法（瓜子點）：單點落筆產生由細尖入圓肚的水滴點群，而非單一呆板圓點
+        let dot = dabs(Tool::Brush, &[InkPoint::new(30.0, 30.0, 0.75, 0)], 10.0);
+        assert!(dot.len() >= 4, "單點應展開為瓜子點筆群：{}", dot.len());
+        assert!(
+            dot[3].rx > dot[0].rx * 2.5,
+            "瓜子點應由細尖（{}）漸入飽滿筆肚（{}）",
+            dot[0].rx,
+            dot[3].rx
+        );
+
+        // 2. 軟毫大跨度壓感：重按與輕提的筆觸寬度跨度遠大於硬筆
+        let light = dabs(Tool::Brush, &line(16, 0.08), 10.0);
+        let heavy = dabs(Tool::Brush, &line(16, 0.95), 10.0);
+        let max_light = light.iter().map(|d| d.ry).fold(0.0f32, f32::max);
+        let max_heavy = heavy.iter().map(|d| d.ry).fold(0.0f32, f32::max);
+        assert!(
+            max_heavy > max_light * 4.5,
+            "軟毫毛筆重壓（{max_heavy}）應顯著寬於輕提游絲（{max_light}）"
+        );
+
+        // 3. 收筆出鋒（掠、策、趯）：快速收筆尾端指數收尖
+        let fast_flick: Vec<InkPoint> = (0..18)
+            .map(|i| {
+                let p = if i < 12 { 0.75 } else { 0.15 };
+                let dt = if i < 12 { 10_000 } else { 1_500 };
+                InkPoint::new(10.0 + i as f32 * 6.0, 40.0, p, dt)
+            })
+            .collect();
+        let flick_dabs = dabs(Tool::Brush, &fast_flick, 10.0);
+        let mid_rx = flick_dabs[flick_dabs.len() / 3].rx;
+        let tip_rx = flick_dabs.last().unwrap().rx;
+        assert!(
+            tip_rx < mid_rx * 0.45,
+            "出鋒尾端（{tip_rx}）應比行筆中段（{mid_rx}）銳利收尖"
+        );
     }
 }
 

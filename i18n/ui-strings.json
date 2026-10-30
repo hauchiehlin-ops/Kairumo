@@ -26222,5 +26222,45 @@
     "th": "พหูพจน์ / เอกพจน์บุรุษที่ 3 (-s/-es)",
     "zhHans": "复数或第三人称单数 (-s/-es)",
     "zhHant": "複數或第三人稱單數 (-s/-es)"
+  },
+  "settings_pen_preset_title": {
+    "en": "Quick Pressure Presets",
+    "ja": "筆圧プリセット（ワンタップ切替）",
+    "ko": "필압 프리셋 빠른 전환",
+    "th": "พรีเซ็ตแรงกดปากกา",
+    "zhHans": "笔感模式快速切换",
+    "zhHant": "筆感模式快速切換"
+  },
+  "settings_pen_preset_standard": {
+    "en": "Standard",
+    "ja": "標準",
+    "ko": "표준",
+    "th": "มาตรฐาน",
+    "zhHans": "标准手感",
+    "zhHant": "標準手感"
+  },
+  "settings_pen_preset_light": {
+    "en": "Light Touch",
+    "ja": "軽いタッチ",
+    "ko": "가벼운 필압",
+    "th": "สัมผัสบางเบา",
+    "zhHans": "轻手灵敏",
+    "zhHant": "輕手靈敏"
+  },
+  "settings_pen_preset_calligraphy": {
+    "en": "Calligraphy",
+    "ja": "書道・毛筆",
+    "ko": "서예·모필",
+    "th": "พู่กันวิจิตร",
+    "zhHans": "书法大师",
+    "zhHant": "書法大師"
+  },
+  "settings_pen_preset_steady": {
+    "en": "Steady Note",
+    "ja": "安定ノート",
+    "ko": "안정 필기",
+    "th": "จดโน้ตสม่ำเสมอ",
+    "zhHans": "稳健笔记",
+    "zhHant": "穩健筆記"
   }
 }

@@ -171,19 +171,58 @@ object InkInput {
      *
      * `dtUs` 是距前一點的微秒差。格式規格 §5.4 用 u16 存它，上限 65535µs；
      * 超過代表使用者中途停筆，時間差本來就不具意義，夾住即可。
+     *
+     * 針對手指觸控（`FfiPointerKind.FINGER`）或無壓感變化的電容筆，自動啟動
+     * **智慧力道模擬引擎（Smart Finger Dynamics）**：結合指腹接觸面積變化（`contactRadius`）、
+     * 行筆速度（疾細徐粗、駐筆頓挫）與入鋒包絡線，合成自然流暢的書法壓感層次。
      */
     fun strokePoints(samples: List<Sample>): List<StrokePoint> {
+        if (samples.isEmpty()) return emptyList()
         var previousUs: ULong? = null
-        return samples.map { s ->
+        val initialRadius = samples.first().event.contactRadius.coerceAtLeast(3.5f)
+        val minP = samples.minOf { it.event.pressure }
+        val maxP = samples.maxOf { it.event.pressure }
+        val hasFlatHardwarePressure = samples.size >= 2 && (maxP - minP) < 0.02f
+        var smoothedFingerP = 0.54f
+
+        return samples.mapIndexed { idx, s ->
             val dt = previousUs?.let { prev ->
                 val delta = if (s.event.timestampUs > prev) s.event.timestampUs - prev else 0uL
                 delta.coerceAtMost(65_535uL)
             } ?: 0uL
             previousUs = s.event.timestampUs
+
+            val isFingerLike = s.event.kind == FfiPointerKind.FINGER ||
+                (s.event.kind != FfiPointerKind.PEN && hasFlatHardwarePressure)
+
+            val effectivePressure = if (isFingerLike) {
+                val radiusRatio = (s.event.contactRadius / initialRadius).coerceIn(0.65f, 1.55f)
+                val areaDelta = (radiusRatio - 1.0f) * 0.48f
+                val velAdjust = if (idx > 0 && dt > 0uL) {
+                    val prev = samples[idx - 1].event
+                    val dist = kotlin.math.hypot(s.event.x - prev.x, s.event.y - prev.y)
+                    val dtMs = (dt.toFloat() / 1000f).coerceAtLeast(1.0f)
+                    val speed = dist / dtMs
+                    if (speed < 0.45f) {
+                        (0.45f - speed) * 0.42f
+                    } else {
+                        -((speed - 0.45f) * 0.15f).coerceAtMost(0.32f)
+                    }
+                } else {
+                    0.06f
+                }
+                val entryRamp = (0.78f + idx * 0.08f).coerceAtMost(1.0f)
+                val target = ((0.58f + areaDelta + velAdjust) * entryRamp).coerceIn(0.16f, 0.96f)
+                smoothedFingerP = smoothedFingerP * 0.42f + target * 0.58f
+                smoothedFingerP
+            } else {
+                s.event.pressure
+            }
+
             StrokePoint(
                 x = s.event.x,
                 y = s.event.y,
-                pressure = s.event.pressure,
+                pressure = effectivePressure,
                 tilt = s.tilt,
                 azimuth = s.azimuth,
                 dtUs = dt.toUInt()

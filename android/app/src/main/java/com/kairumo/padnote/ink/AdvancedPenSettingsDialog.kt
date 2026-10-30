@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
@@ -20,6 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.kairumo.padnote.profile.ProfileContext
+import kotlin.math.abs
 
 @Composable
 fun AdvancedPenSettingsDialog(
@@ -32,7 +34,7 @@ fun AdvancedPenSettingsDialog(
     // "Pressure Floor" (0.01f to 1.0f, default 0.1f)
     // "Pressure Gamma" (0.5f to 2.5f, default 1.0f)
     var floor by remember {
-        mutableFloatStateOf(PenSettingsStore.floor(context) ?: 0.1f)
+        mutableFloatStateOf(PenSettingsStore.floor(context) ?: 0.15f)
     }
     var gamma by remember {
         mutableFloatStateOf(PenSettingsStore.gamma(context) ?: 1.0f)
@@ -42,11 +44,42 @@ fun AdvancedPenSettingsDialog(
     // 一律走共用字串表。
     fun l(key: String): String = com.kairumo.padnote.LocalizationStrings.localized(key, languageTag)
 
+    val presets = listOf(
+        Triple("settings_pen_preset_standard", 0.15f, 1.00f),
+        Triple("settings_pen_preset_light", 0.22f, 0.65f),
+        Triple("settings_pen_preset_calligraphy", 0.04f, 1.25f),
+        Triple("settings_pen_preset_steady", 0.35f, 1.45f)
+    )
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(l("pen_settings_title")) },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    text = l("settings_pen_preset_title"),
+                    style = MaterialTheme.typography.labelLarge
+                )
+                for (rowPresets in presets.chunked(2)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        for ((labelKey, pFloor, pGamma) in rowPresets) {
+                            val selected = abs(floor - pFloor) < 0.03f && abs(gamma - pGamma) < 0.08f
+                            FilterChip(
+                                selected = selected,
+                                onClick = {
+                                    floor = pFloor
+                                    gamma = pGamma
+                                },
+                                label = { Text(l(labelKey), maxLines = 1) },
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                    }
+                }
+
                 Row(
                     Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
