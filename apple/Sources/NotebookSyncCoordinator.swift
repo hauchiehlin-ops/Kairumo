@@ -136,6 +136,8 @@ protocol SyncableNotebookStore: AnyObject {
     var syncRecordings: [AudioRecordingRecord] { get }
     /// 把套件裡的錄音名字套進清單（套件是名字唯一的真相來源）。
     func syncApplyRecordingTitles(_ titles: [String: String])
+    /// 這一本正在即時協同：這次不匯入，記下欠一次（見 `CollabImportHold`）。
+    func syncDefersImport(notebookId: String) -> Bool
 }
 
 extension SyncableNotebookStore {
@@ -152,6 +154,7 @@ extension SyncableNotebookStore {
     func syncReconcileFoldersAndHierarchy() {}
     var syncRecordings: [AudioRecordingRecord] { [] }
     func syncApplyRecordingTitles(_: [String: String]) {}
+    func syncDefersImport(notebookId: String) -> Bool { CollabImportHold.deferIfHeld(notebookId) }
 }
 
 extension NotebookStore: SyncableNotebookStore {
@@ -1624,6 +1627,7 @@ enum NotebookSyncCoordinator {
                 ledger: ledger, ownNow: snapshot.own,
                 prevOwn: PKInkSnapshotStore.load(in: inputs.drawingsDirectory, notebookId: document.id, page: page),
                 current: snapshot.current, others: snapshot.others, addedIds: added,
+                pinned: CollabInkIds.load(in: inputs.baselineDirectory, notebookId: document.id, page: page),
                 resolveForeign: { key, count, excluding in
                     resolver.pencilKitIds(page: page, key: key, count: count, excluding: excluding)
                 })
@@ -1865,6 +1869,13 @@ enum NotebookSyncCoordinator {
         ownStrokes: OwnStrokes
     ) async throws {
         let documentId = package.deletingPathExtension().lastPathComponent
+        // 正在即時協同的那一本先不匯入：房間裡的內容是即時的，這時用套件的合併結果換掉工作副本，
+        // 編輯器重讀之後會與房間分歧（協同影子也被重設，差異不會再送出）。自己的檔照常匯出上傳；
+        // 離開房間時再補一次匯入（`FocusSyncController.importAfterCollaboration`）。
+        if store.syncDefersImport(notebookId: documentId) {
+            SyncLogger.logAsync("筆記本 \(documentId.prefix(8))… 協同中，先不匯入", source: .googleDrive)
+            return
+        }
         // 在背景執行緒解碼 PKDrawing 與套件物件，避免佔住主執行緒超過看門狗限制
         let imported = try await Task.detached(priority: .utility) {
             try NotebookPackageBridge.importDocument(

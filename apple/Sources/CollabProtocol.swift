@@ -357,7 +357,14 @@ enum CollabJSON {
 /// 筆畫以核心的格式傳（設計 §8.2）：工具、RGBA、寬度、每點 7 個數字攤平。
 enum CollabStroke {
 
-    static func encode(_ stroke: PKStroke, id: String) -> [String: Any] {
+    /// 收到的筆畫在套件裡要用的 id：送出者附的核心 id（`cid`），沒有的話線上 id 本身是 UUID 就用它
+    /// （Android 的線上 id 就是核心 id）。都不是（舊版 Apple 的內容雜湊）回 `nil`，照內容算。
+    static func coreId(_ json: [String: Any]) -> String? {
+        CollabInkIds.usable(json["cid"] as? String) ?? CollabInkIds.usable(json["id"] as? String)
+    }
+
+    /// - Parameter coreId: 這一筆在送出者套件裡的 id。收到的人照它寫進自己的套件（設計 §8.1）。
+    static func encode(_ stroke: PKStroke, id: String, coreId: String? = nil) -> [String: Any] {
         let draft = InkInterop.draft(from: stroke)
         var points: [Double] = []
         points.reserveCapacity(draft.points.count * 7)
@@ -365,13 +372,15 @@ enum CollabStroke {
             points += [Double(p.x), Double(p.y), Double(p.pressure), Double(p.tilt),
                        Double(p.azimuth), Double(p.dtUs), Double(p.roll)]
         }
-        return [
+        var json: [String: Any] = [
             "id": id,
             "tool": toolName(draft.tool),
             "rgba": "#" + draft.colorRgba.map { String(format: "%02X", $0) }.joined(),
             "width": Double(draft.baseWidth),
             "points": points
         ]
+        if let coreId { json["cid"] = coreId }
+        return json
     }
 
     static func decode(_ json: [String: Any]) -> (id: String, stroke: PKStroke)? {

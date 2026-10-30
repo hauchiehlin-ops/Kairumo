@@ -50,7 +50,8 @@ enum CoreInkFlush {
             do {
                 try NotebookPackageBridge.appendInkDelta(
                     document: document, pageIndex: job.page, strokes: added,
-                    to: package, deviceId: deviceId)
+                    to: package, deviceId: deviceId,
+                    pinnedIds: CollabInkIds.load(in: baselineDirectory, notebookId: document.id, page: job.page))
             } catch {
                 failed.append((job.page, job.drawing))
                 print("[InkAutosave] Failed to append ink to package: \(error)")

@@ -155,6 +155,9 @@ extension NotebookEditorView {
                     requestCollabState()
                 }
             }
+            .onChange(of: isCollaborating) { collaborating in
+                if collaborating { CollabImportHold.hold(notebook.id) } else { endCollabImportHold() }
+            }
             .onReceive(collaborationManager.stateSyncNeeded) { _ in
                 // 中繼補不回漏掉的那一段：向其他成員要整份狀態（剛要過就不重複）。
                 if Date().timeIntervalSince(collabStateSync.lastRequest) > 5 { requestCollabState() }
@@ -322,9 +325,14 @@ extension NotebookEditorView {
     func applyRemoteInkAdd(pageId: String, strokes list: [[String: Any]]) {
         guard let pageIdx = notebook.pageIds?.firstIndex(of: pageId) else { return }
         let known = collabInkLedger.known[pageId] ?? []
-        let decoded = list.compactMap(CollabStroke.decode).filter { !known.contains($0.id) }
+        let decoded = list.compactMap { json in
+            CollabStroke.decode(json).map { (id: $0.id, stroke: $0.stroke, core: CollabStroke.coreId(json)) }
+        }.filter { !known.contains($0.id) }
         guard !decoded.isEmpty else { return }
         for item in decoded { collabInkLedger.remember(wire: item.id, local: CollabInk.strokeId(item.stroke)) }
+        // 先記下送出者的 id 再落盤：寫進套件時用它，同一筆在每一台的套件裡才是同一個 id。
+        CollabInkPersistence.remoteAdded(decoded.map { ($0.stroke, $0.core) }, in: store.syncBaselineDirectory,
+                                         notebookId: notebook.id, page: pageIdx)
         let base = drawingForCollab(page: pageIdx)
         let merged = CollabInk.adding(decoded.map(\.stroke), to: base)
         collabInkLedger.known[pageId, default: []].formUnion(decoded.map(\.id))
@@ -338,9 +346,12 @@ extension NotebookEditorView {
     func applyRemoteInkRemove(pageId: String, wires: [String]) {
         guard let pageIdx = notebook.pageIds?.firstIndex(of: pageId), !wires.isEmpty else { return }
         let base = drawingForCollab(page: pageIdx)
-        let merged = CollabInk.removing(Set(wires.map(collabInkLedger.localId(forWire:))), from: base)
+        let locals = Set(wires.map(collabInkLedger.localId(forWire:)))
+        let merged = CollabInk.removing(locals, from: base)
         collabInkLedger.known[pageId, default: []].subtract(wires)
         collabInkLedger.removed(page: pageId, wires: wires)
+        CollabInkPersistence.remoteRemoved(base.strokes.filter { locals.contains(CollabInk.strokeId($0)) },
+                                           in: store.syncBaselineDirectory, notebookId: notebook.id, page: pageIdx)
         if merged.strokes.count != base.strokes.count {
             applyRemoteDrawing(page: pageIdx, remote: merged, replace: true)
         }
@@ -380,9 +391,11 @@ extension NotebookEditorView {
             let wanted = collabInkLedger.sessionAdded[page] ?? []
             var strokes: [[String: Any]] = []
             if !wanted.isEmpty, let index = notebook.pageIds?.firstIndex(of: page) {
-                for stroke in drawingForCollab(page: index).strokes {
+                let drawing = drawingForCollab(page: index)
+                let cores = collabCoreIds(page: index, drawing: drawing)
+                for (i, stroke) in drawing.strokes.enumerated() {
                     let wire = collabInkLedger.wireId(for: stroke)
-                    if wanted.contains(wire) { strokes.append(CollabStroke.encode(stroke, id: wire)) }
+                    if wanted.contains(wire) { strokes.append(CollabStroke.encode(stroke, id: wire, coreId: cores[i])) }
                 }
             }
             items.append((true, ["page": page, "strokes": strokes,
