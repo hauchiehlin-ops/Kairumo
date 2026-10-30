@@ -974,3 +974,44 @@ final class CollabStateSync {
         snapshotKeys = []
     }
 }
+
+// MARK: - 與檔案同步的協調
+
+/// 正在即時協同的筆記：檔案同步**不匯入**它們（照常匯出、上傳）。
+///
+/// 匯入會用套件的合併結果換掉工作副本，編輯器接著重讀、把協同影子重設成匯入後的樣子 ——
+/// 這台從此與房間分歧，而且影子以為那些差異「大家都有」，不會再送出。房間裡的內容本來就是即時的，
+/// 檔案同步帶來的（不在房間裡的裝置寫的）等離開房間再匯入、合併一次。
+enum CollabImportHold {
+    private nonisolated static let lock = NSLock()
+    private nonisolated(unsafe) static var held: Set<String> = []
+    private nonisolated(unsafe) static var deferred: Set<String> = []
+
+    nonisolated static func hold(_ notebookId: String) {
+        _ = lock.withLock { held.insert(notebookId.lowercased()) }
+    }
+
+    /// 離開房間。回傳協同期間有沒有略過匯入（有的話呼叫端要補一次匯入）。
+    @discardableResult
+    nonisolated static func release(_ notebookId: String) -> Bool {
+        let id = notebookId.lowercased()
+        return lock.withLock {
+            held.remove(id)
+            return deferred.remove(id) != nil
+        }
+    }
+
+    nonisolated static func isHeld(_ notebookId: String) -> Bool {
+        lock.withLock { held.contains(notebookId.lowercased()) }
+    }
+
+    /// 同步要匯入這一本時問一下：在協同中就記下「欠一次匯入」並回 `true`（呼叫端略過匯入）。
+    nonisolated static func deferIfHeld(_ notebookId: String) -> Bool {
+        let id = notebookId.lowercased()
+        return lock.withLock {
+            guard held.contains(id) else { return false }
+            deferred.insert(id)
+            return true
+        }
+    }
+}

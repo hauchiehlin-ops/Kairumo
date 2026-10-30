@@ -129,7 +129,7 @@ class AndroidCollabController(private val manager: CollaborationManager) {
         val list = JSONArray()
         val wires = fresh.map { s ->
             val wire = ink.wireId(s.id)
-            list.put(CollabStroke.encode(wire, s.tool, s.colorRgba, s.baseWidth, s.points))
+            list.put(CollabStroke.encode(wire, s.tool, s.colorRgba, s.baseWidth, s.points, s.id))
             wire
         }
         known += wires
@@ -227,18 +227,26 @@ class AndroidCollabController(private val manager: CollaborationManager) {
     ): Boolean {
         val known = ink.known.getOrPut(page) { HashSet() }
         val now = System.currentTimeMillis()
-        val decoded = (0 until list.length()).mapNotNull { list.optJSONObject(it)?.let { j -> CollabStroke.decode(j, now) } }
-            .filter { (wire, _) -> wire !in known }
+        // （線上 id, 筆畫, 套件裡要用的 id）。用送出者的 id 寫進核心：同一筆在每一台的套件裡是同一個 id，
+        // 檔案同步把送出者的筆畫檔帶過來時核心會去重（`materialize`），不會多出一份。
+        val decoded = (0 until list.length()).mapNotNull { i ->
+            val j = list.optJSONObject(i) ?: return@mapNotNull null
+            CollabStroke.decode(j, now)?.let { (wire, s) -> Triple(wire, s, CollabStroke.coreId(j)) }
+        }.filter { it.first !in known }
         if (decoded.isEmpty() || page !in pageIds) return false
         val engine = engineFor(page)
         if (engine != null) {
-            val added = engine.applyRemoteStrokes(decoded.map { it.second })
+            val added = engine.applyRemoteStrokes(decoded.map { it.second }, decoded.map { it.third })
             decoded.zip(added).forEach { (d, s) -> s.coreStrokeId?.let { ink.remember(d.first, it) } }
         } else {
-            for ((wire, s) in decoded) {
-                val local = UUID.randomUUID().toString()
-                InkPackageWriter.add(session, page, local, s.tool, s.colorRgba, s.baseWidth, s.points,
-                    s.layer.toUByte(), s.lineType.toUByte())
+            val existing = runCatching { session.visibleStrokeDetails(page) }.getOrDefault(emptyList())
+                .map { it.id.lowercase() }.toHashSet()
+            for ((wire, s, core) in decoded) {
+                val local = core ?: UUID.randomUUID().toString()
+                if (local !in existing) {
+                    InkPackageWriter.add(session, page, local, s.tool, s.colorRgba, s.baseWidth, s.points,
+                        s.layer.toUByte(), s.lineType.toUByte())
+                }
                 ink.remember(wire, local)
             }
         }
@@ -441,7 +449,7 @@ class AndroidCollabController(private val manager: CollaborationManager) {
                 } else {
                     for (s in runCatching { session.visibleStrokeDetails(page) }.getOrDefault(emptyList())) {
                         val wire = ink.wireId(s.id)
-                        if (wire in wanted) strokes.put(CollabStroke.encode(wire, s.tool, s.colorRgba, s.baseWidth, s.points))
+                        if (wire in wanted) strokes.put(CollabStroke.encode(wire, s.tool, s.colorRgba, s.baseWidth, s.points, s.id))
                     }
                 }
             }

@@ -1129,7 +1129,7 @@ extension NotebookEditorView {
         ensureCollabPageIds()
         guard let ids = notebook.pageIds, page >= 0, page < ids.count else { return }
         let pageId = ids[page]
-        let current = drawing.strokes.map { (collabInkLedger.wireId(for: $0), $0) }
+        let current = drawing.strokes.enumerated().map { (collabInkLedger.wireId(for: $1), $1, $0) }
         let currentIds = Set(current.map(\.0))
         let known = collabInkLedger.known[pageId] ?? []
         let added = current.filter { !known.contains($0.0) }
@@ -1137,9 +1137,10 @@ extension NotebookEditorView {
         collabInkLedger.known[pageId] = currentIds
         if !added.isEmpty {
             collabInkLedger.added(page: pageId, wires: added.map(\.0))
+            let cores = collabCoreIds(page: page, drawing: drawing)
             collaborationManager.broadcastOplog(kind: "ink_add", payload: [
                 "proto": Self.collabProto, "page": pageId,
-                "strokes": added.map { CollabStroke.encode($0.1, id: $0.0) }
+                "strokes": added.map { CollabStroke.encode($0.1, id: $0.0, coreId: cores[$0.2]) }
             ])
         }
         if !removed.isEmpty {
@@ -1148,6 +1149,13 @@ extension NotebookEditorView {
                 "proto": Self.collabProto, "page": pageId, "ids": Array(removed)
             ])
         }
+    }
+
+    /// 一頁筆畫在這台套件裡的 id（與 `CoreInkFlush`、完整匯出同一套），隨筆畫送出，
+    /// 收到的人照它寫進自己的套件。
+    func collabCoreIds(page: Int, drawing: PKDrawing) -> [String] {
+        CollabInkIds.coreIds(of: drawing.strokes, pinned: CollabInkIds.load(
+            in: store.syncBaselineDirectory, notebookId: notebook.id, page: page))
     }
 
     /// 取畫面中央最近的那一頁當焦點頁。

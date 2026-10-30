@@ -357,8 +357,9 @@ class InkEngine(
         points: List<StrokePoint>,
         layer: UByte,
         lineType: UByte,
+        strokeId: String? = null,
     ): String {
-        val id = UUID.randomUUID().toString()
+        val id = strokeId ?: UUID.randomUUID().toString()
         InkPackageWriter.add(target, page, id, tool, color, width, points, layer, lineType)
         return id
     }
@@ -531,15 +532,16 @@ class InkEngine(
     /** 編輯工具做出來的筆畫沒有硬體指標：用一段不會與真指標撞號的編號（改圖層靠 pointerId 認筆畫）。 */
     private fun nextSyntheticId(): ULong = ULong.MAX_VALUE - 2_000_000uL - syntheticId++
 
-    private fun coreAdd(s: CompletedStroke): CompletedStroke {
+    /** @param id 指定的核心 id（協同收到的筆畫沿用送出者的）；`null` = 發新的。 */
+    private fun coreAdd(s: CompletedStroke, id: String? = null): CompletedStroke {
         val target = session
         val page = pageId
-        val id = if (target != null && page != null) {
+        val written = if (target != null && page != null) {
             queueCoreAdd(
                 target, page, s.tool, s.colorRgba, s.baseWidth, s.points,
-                s.layer.toUByte(), s.lineType.toUByte())
+                s.layer.toUByte(), s.lineType.toUByte(), id)
         } else null
-        return s.copy(coreStrokeId = id)
+        return s.copy(coreStrokeId = written)
     }
 
     private fun coreErase(s: CompletedStroke) {
@@ -553,13 +555,25 @@ class InkEngine(
      * 協同：別人畫的筆畫（設計 §4.3）。
      *
      * **不進復原紀錄、不觸發 [onUndoableAction]** —— 進了的話，按復原會把別人的筆畫退掉，
-     * 而且這一筆會被當成自己畫的再廣播一次。回傳真正放進去的實例（核心發了 id）。
+     * 而且這一筆會被當成自己畫的再廣播一次。回傳與 [strokes] 一一對應的實例（帶著核心 id）。
+     *
+     * @param ids 每一筆要用的核心 id（送出者的，見 `CollabStroke.coreId`）；`null` 或缺的發新的。
+     *   這一頁已經有同 id 的筆畫（例如檔案同步先帶進來了）就不再加，回傳原本那一筆。
      */
-    fun applyRemoteStrokes(strokes: List<CompletedStroke>): List<CompletedStroke> {
+    fun applyRemoteStrokes(strokes: List<CompletedStroke>, ids: List<String?> = emptyList()): List<CompletedStroke> {
         if (strokes.isEmpty()) return emptyList()
-        val added = strokes.map { coreAdd(it) }
-        _strokes += added
-        notifyContentCommittedAfterWrites()
+        val present = HashMap<String, CompletedStroke>()
+        for (s in _strokes) s.coreStrokeId?.let { present[it.lowercase()] = s }
+        var fresh = 0
+        val added = strokes.mapIndexed { i, s ->
+            val id = ids.getOrNull(i)?.lowercase()
+            id?.let { present[it] } ?: coreAdd(s, id).also { a ->
+                _strokes += a
+                fresh++
+                a.coreStrokeId?.let { present[it.lowercase()] = a }
+            }
+        }
+        if (fresh > 0) notifyContentCommittedAfterWrites()
         return added
     }
 

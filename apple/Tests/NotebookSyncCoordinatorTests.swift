@@ -78,6 +78,15 @@ final class FakeStore: SyncableNotebookStore {
         drawings["\(notebookId)_\(pageIndex)"] = drawing
     }
 
+    /// 正在即時協同的筆記（測試直接設；正式版走 `CollabImportHold`）。
+    var heldNotebookIds: Set<String> = []
+    private(set) var deferredImports: Set<String> = []
+    func syncDefersImport(notebookId: String) -> Bool {
+        guard heldNotebookIds.contains(notebookId.lowercased()) else { return false }
+        deferredImports.insert(notebookId.lowercased())
+        return true
+    }
+
     func syncUpsert(_ document: NotebookDocument) {
         if let index = documents.firstIndex(where: { $0.id == document.id }) {
             documents[index] = document
