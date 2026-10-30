@@ -787,6 +787,11 @@ final class AdaptiveCanvasView: PKCanvasView {
         forwardLasso(touches, .began)
         activeTouchesCount += touches.count
         CanvasTouchState.activeDirectTouches = activeTouchesCount
+        // 多指同時著地（例如雙指縮放或平移）時，第一指著地初期可能已向畫布起筆；
+        // 偵測到 >= 2 指時立即取消進行中的單指起筆，杜絕雙指手勢結束後留下一點小墨點。
+        if activeTouchesCount >= 2 {
+            cancelInFlightStrokesForNavigation()
+        }
         for touch in touches {
             if touch.type == .pencil {
                 lastPencilLocation = touch.location(in: self)
@@ -967,7 +972,7 @@ final class AdaptiveCanvasView: PKCanvasView {
         near location: CGPoint, tappedAt: Date = Date(), maxCount: Int = 1,
         onRetracted: @escaping (PKDrawing) -> Void
     ) {
-        attemptTapDotRetraction(location, tappedAt, maxCount, retriesLeft: 2, onRetracted)
+        attemptTapDotRetraction(location, tappedAt, maxCount, retriesLeft: 4, onRetracted)
     }
 
     private func attemptTapDotRetraction(
@@ -982,7 +987,7 @@ final class AdaptiveCanvasView: PKCanvasView {
             let removed = before.strokes.count - cleaned.strokes.count
             guard removed > 0 else {
                 guard retriesLeft > 0 else { return }
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) { [weak self] in
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.06) { [weak self] in
                     self?.attemptTapDotRetraction(
                         location, tappedAt, maxCount, retriesLeft: retriesLeft - 1, onRetracted)
                 }
@@ -1395,17 +1400,14 @@ struct CanvasRepresentable: UIViewRepresentable {
             _ = onDrawingChanged?(cleaned)
         }
 
-        // 🌟 方案 A+B：手指／游標單擊與雙擊手勢（打字模式下加入 pencil，讓筆尖亦能即點即書；手繪模式限定 direct / indirectPointer，不阻礙 Apple Pencil 筆跡）
-        let initialTapTypes: [NSNumber] = (editorMode == .type)
-            ? [
-                NSNumber(value: UITouch.TouchType.direct.rawValue),
-                NSNumber(value: UITouch.TouchType.indirectPointer.rawValue),
-                NSNumber(value: UITouch.TouchType.pencil.rawValue)
-            ]
-            : [
-                NSNumber(value: UITouch.TouchType.direct.rawValue),
-                NSNumber(value: UITouch.TouchType.indirectPointer.rawValue)
-            ]
+        // 🌟 方案 A+B：手指／游標／Pencil 單擊與雙擊手勢（支援 direct / indirectPointer / pencil 全輸入型態）
+        // 點擊事件由 handleCanvasDirectTap 依落點判斷：若落在物件上則選取物件並收回可能落下的墨點；
+        // 若手寫模式下落在空白處則正常視為筆跡（不收回），雙擊則就地開文字框。
+        let initialTapTypes: [NSNumber] = [
+            NSNumber(value: UITouch.TouchType.direct.rawValue),
+            NSNumber(value: UITouch.TouchType.indirectPointer.rawValue),
+            NSNumber(value: UITouch.TouchType.pencil.rawValue)
+        ]
 
         let directSingleTap = UITapGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.handleDirectSingleTap(_:)))
         directSingleTap.numberOfTapsRequired = 1
@@ -1485,16 +1487,11 @@ struct CanvasRepresentable: UIViewRepresentable {
             uiView.drawingPolicy = targetPolicy
         }
         if let adaptive = uiView as? AdaptiveCanvasView {
-            let tapTypes: [NSNumber] = (editorMode == .type)
-                ? [
-                    NSNumber(value: UITouch.TouchType.direct.rawValue),
-                    NSNumber(value: UITouch.TouchType.indirectPointer.rawValue),
-                    NSNumber(value: UITouch.TouchType.pencil.rawValue)
-                ]
-                : [
-                    NSNumber(value: UITouch.TouchType.direct.rawValue),
-                    NSNumber(value: UITouch.TouchType.indirectPointer.rawValue)
-                ]
+            let tapTypes: [NSNumber] = [
+                NSNumber(value: UITouch.TouchType.direct.rawValue),
+                NSNumber(value: UITouch.TouchType.indirectPointer.rawValue),
+                NSNumber(value: UITouch.TouchType.pencil.rawValue)
+            ]
             adaptive.directSingleTap?.allowedTouchTypes = tapTypes
             adaptive.directDoubleTap?.allowedTouchTypes = tapTypes
         }
