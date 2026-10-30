@@ -243,6 +243,9 @@ pub enum InkRecord {
 }
 
 /// 套用一串記錄，得到目前可見的筆畫。
+///
+/// 同一個 id 出現好幾次 `Add` 時只取第一個：整頁重寫（壓實、插入空白）會把別台的筆畫
+/// 連 id 抄進這台的檔案，兩份都畫出來的話，同一條線會變粗。
 pub fn materialize(records: &[InkRecord]) -> Vec<Stroke> {
     let tombstones: std::collections::HashSet<Uuid> = records
         .iter()
@@ -252,10 +255,13 @@ pub fn materialize(records: &[InkRecord]) -> Vec<Stroke> {
         })
         .collect();
 
+    let mut seen = std::collections::HashSet::new();
     records
         .iter()
         .filter_map(|r| match r {
-            InkRecord::Add(s) if !tombstones.contains(&s.id) => Some(s.clone()),
+            InkRecord::Add(s) if !tombstones.contains(&s.id) && seen.insert(s.id) => {
+                Some(s.clone())
+            }
             _ => None,
         })
         .collect()

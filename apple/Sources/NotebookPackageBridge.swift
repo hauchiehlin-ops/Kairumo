@@ -1282,15 +1282,19 @@ enum NotebookPackageBridge {
         meta.pageIds = ids
         try session.setNotebookMeta(json: meta.encodedJSON())
 
+        // 用與完整匯出相同的穩定身分（`PKInkSync.plan`）。讓核心每次發新 id 的話，同一條線在增量寫入與
+        // 下一次完整匯出各有一個 id：別台看到的是「舊的不見、新的出現」，對舊 id 寫的墓碑落空，
+        // 而合併回來的筆畫又被當成新寫的再追加一次 —— 套件裡同一組字留下好幾份不同 id 的副本。
+        var seen: [String: Int] = [:]
         for stroke in strokes {
             let draft = InkInterop.draft(from: stroke)
-            _ = try session.addStroke(
-                pageId: pageId,
-                tool: draft.tool,
-                colorRgba: draft.colorRgba,
-                baseWidth: draft.baseWidth,
-                points: draft.points
-            )
+            let key = StrokeDelta.Identity(stroke).key
+            let n = seen[key, default: 0]
+            seen[key] = n + 1
+            try session.addStrokeDraftedWithId(
+                pageId: pageId, strokeId: PKStrokeId.make(key: key, n: n, gen: 0), tool: draft.tool,
+                colorRgba: draft.colorRgba, baseWidth: draft.baseWidth,
+                points: draft.points, layer: 0, lineType: 0)
         }
     }
 

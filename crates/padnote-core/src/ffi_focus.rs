@@ -259,7 +259,7 @@ impl PackageLanStore {
 
 /// 筆跡檔名 `<頁>-<裝置 8 位十六進位>.strokes` 裡的裝置 id。舊版
 /// `<頁>.strokes` 沒有裝置，回 `None`。
-fn ink_device_of_name(name: &str) -> Option<u32> {
+pub(crate) fn ink_device_of_name(name: &str) -> Option<u32> {
     let stem = name.strip_suffix(".strokes")?;
     let (_, hex) = stem.rsplit_once('-')?;
     // 頁面 UUID 自己也有連字號，所以只認結尾剛好 8 位十六進位的。

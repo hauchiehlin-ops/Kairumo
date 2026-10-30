@@ -38,8 +38,13 @@ enum CoreInkFlush {
             }
             let added = StrokeDelta.added(in: job.drawing, since: baseline)
             // 擦掉的筆畫記下來，匯入時濾掉（不然同步會把雲端的舊檔下載回來、筆畫復活）。
+            //
+            // **只跟編輯器自己記的基準比。** 從套件讀出來的基準含有剛同步進來、畫面還沒合併的別台筆畫，
+            // 拿它比會把那些筆畫當成「這台擦掉的」：記進名單之後這台永遠看不到它們，
+            // 下一次匯出還替它們寫墓碑，別台也跟著消失（使用者回報：四台裝置的筆跡各不相同）。
+            let removed = job.cachedBaseline.map { StrokeDelta.removed(in: job.drawing, since: $0) } ?? []
             ErasedInkLedger.record(
-                removed: StrokeDelta.removed(in: job.drawing, since: baseline), added: added,
+                removed: removed, added: added,
                 in: baselineDirectory, notebookId: document.id, page: job.page)
             guard !added.isEmpty else { continue }
             do {

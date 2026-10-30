@@ -63,6 +63,51 @@ final class CoreInkFlushTests: XCTestCase {
         XCTAssertEqual(try NotebookPackageBridge.drawings(fromPackageAt: package, deviceId: 0xA1)[0].strokes.count, 2)
     }
 
+    func testStrokesSyncedIntoThePackageAreNotMistakenForErasures() throws {
+        // 使用者回報：四台裝置的同一本筆記筆跡各不相同。iPhone 剛同步進別台的字、畫面還沒合併就存檔，
+        // 基準從套件讀（含那些字）→ 被當成「這台擦掉的」記進名單，iPhone 從此看不到，還替它們寫墓碑。
+        let doc = document
+        let package = dir.appendingPathComponent("d.padnote")
+        let drawingFile = dir.appendingPathComponent("d_p0.drawing")
+        _ = CoreInkFlush.apply([.init(page: 0, drawing: PKDrawing(strokes: [stroke(0)]),
+                                      drawingFileURL: drawingFile, cachedBaseline: nil)],
+                               document: doc, package: package, baselineDirectory: dir, deviceId: 0xA1)
+        // 別台寫的字同步進套件。
+        try NotebookPackageBridge.appendInkDelta(
+            document: doc, pageIndex: 0, strokes: [stroke(5)], to: package, deviceId: 0xB2)
+
+        // 編輯器的基準被同步清掉，畫面上還是舊的那一版再加一筆。
+        _ = CoreInkFlush.apply([.init(page: 0, drawing: PKDrawing(strokes: [stroke(0), stroke(1)]),
+                                      drawingFileURL: drawingFile, cachedBaseline: nil)],
+                               document: doc, package: package, baselineDirectory: dir, deviceId: 0xA1)
+        XCTAssertTrue(ErasedInkLedger.load(in: dir, notebookId: doc.id, page: 0).isEmpty,
+                      "畫面沒看過的別台筆畫不是這台擦掉的")
+        XCTAssertEqual(try NotebookPackageBridge.drawings(fromPackageAt: package, deviceId: 0xA1)[0].strokes.count, 3)
+
+        // 有編輯器自己的基準時，真的擦掉的照樣記下來。
+        _ = CoreInkFlush.apply([.init(page: 0, drawing: PKDrawing(strokes: [stroke(0)]),
+                                      drawingFileURL: drawingFile,
+                                      cachedBaseline: PKDrawing(strokes: [stroke(0), stroke(1)]))],
+                               document: doc, package: package, baselineDirectory: dir, deviceId: 0xA1)
+        XCTAssertEqual(ErasedInkLedger.load(in: dir, notebookId: doc.id, page: 0),
+                       [StrokeDelta.Identity(stroke(1)).key])
+    }
+
+    func testIncrementalWritesUseTheSameStrokeIdsAsAFullExport() throws {
+        // 增量寫入若讓核心發新 id，同一條線在下一次完整匯出換一個 id —— 別台對舊 id 的墓碑落空，
+        // 套件裡留下同一組字好幾份不同 id 的副本（實際套件裡同一組「¿PAD」出現三份）。
+        let doc = document
+        let package = dir.appendingPathComponent("e.padnote")
+        try NotebookPackageBridge.appendInkDelta(
+            document: doc, pageIndex: 0, strokes: [stroke(0), stroke(1)], to: package, deviceId: 0xA1)
+        let session = try PadnoteSession.openExisting(path: package.path, deviceId: 0xA1)
+        let page = try XCTUnwrap(try session.firstPageId())
+        let ids = try session.visibleStrokeDetails(pageId: page).map { $0.id.lowercased() }
+        XCTAssertEqual(ids, [stroke(0), stroke(1)].map {
+            PKStrokeId.make(key: StrokeDelta.Identity($0).key, n: 0, gen: 0)
+        })
+    }
+
     func testAFailedWriteIsReportedSoTheCallerCanRetry() throws {
         // 套件路徑的上層是一個**檔案**，建立不了目錄 → 寫入必定失敗。
         let blocker = dir.appendingPathComponent("blocker")
