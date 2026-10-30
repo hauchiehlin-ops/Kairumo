@@ -341,6 +341,7 @@ fn icon_source(tool: FfiTool) -> Option<&'static str> {
         FfiTool::Eraser => svg!("eraser"),
         FfiTool::Lasso => svg!("lasso"),
         FfiTool::MaskingTape => svg!("maskingtape"),
+        FfiTool::TranslationPen => svg!("translationpen"),
         FfiTool::Drafting => svg!("drafting"),
         _ => return None,
     })

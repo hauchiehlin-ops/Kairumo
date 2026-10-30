@@ -39,6 +39,7 @@ pub enum RadialAction {
     Eraser,
     Lasso,
     MaskingTape,
+    TranslationPen,
     Drafting,
     Undo,
     Redo,
@@ -52,7 +53,7 @@ pub enum RadialAction {
 
 impl RadialAction {
     /// 全部能放的動作，依設定畫面的列出順序（先筆、再模式、再歷程、最後快捷動作）。
-    pub const ALL: [RadialAction; 22] = [
+    pub const ALL: [RadialAction; 23] = [
         Self::Pen,
         Self::BallPoint,
         Self::Fineliner,
@@ -69,6 +70,7 @@ impl RadialAction {
         Self::Eraser,
         Self::Lasso,
         Self::MaskingTape,
+        Self::TranslationPen,
         Self::Drafting,
         Self::Undo,
         Self::Redo,
@@ -109,6 +111,7 @@ impl RadialAction {
             Self::Eraser => Tool::Eraser,
             Self::Lasso => Tool::Lasso,
             Self::MaskingTape => Tool::MaskingTape,
+            Self::TranslationPen => Tool::TranslationPen,
             Self::Drafting => Tool::Drafting,
             Self::Undo => Tool::Undo,
             Self::Redo => Tool::Redo,
@@ -137,6 +140,7 @@ impl RadialAction {
             Self::Eraser => "radial.eraser",
             Self::Lasso => "radial.lasso",
             Self::MaskingTape => "radial.maskingTape",
+            Self::TranslationPen => "radial.translationPen",
             Self::Drafting => "radial.drafting",
             Self::Undo => "radial.undo",
             Self::Redo => "radial.redo",

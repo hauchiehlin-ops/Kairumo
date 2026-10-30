@@ -412,6 +412,8 @@ class InkToolbarTest {
                     assertTrue("套索不該對到某一種筆刷", tool.kind == null)
                 tool.isMaskingTape ->
                     assertTrue("遮蔽膠帶不該對到某一種筆刷", tool.kind == null)
+                tool.isTranslationPen ->
+                    assertTrue("掃描翻譯筆不該對到某一種筆刷", tool.kind == null)
                 else ->
                     assertTrue("${tool.name} 沒有對到核心的筆刷", tool.kind != null)
             }

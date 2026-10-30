@@ -106,7 +106,9 @@ data class InkSettings(
     val colorRgba: ByteArray,
     val baseWidth: Float,
     val isErasing: Boolean,
-    val penOnly: Boolean
+    val penOnly: Boolean,
+    val isMaskingTape: Boolean = false,
+    val isTranslationPen: Boolean = false
 ) {
     // data class 帶陣列欄位時自動產生的 equals 比的是參照，
     // 會讓 remember(settings) 每次重組都認為「變了」。手動比內容。
@@ -117,11 +119,13 @@ data class InkSettings(
             colorRgba.contentEquals(other.colorRgba) &&
             baseWidth == other.baseWidth &&
             isErasing == other.isErasing &&
-            penOnly == other.penOnly
+            penOnly == other.penOnly &&
+            isMaskingTape == other.isMaskingTape &&
+            isTranslationPen == other.isTranslationPen
     }
 
     override fun hashCode(): Int =
-        listOf(tool, colorRgba.contentHashCode(), baseWidth, isErasing, penOnly).hashCode()
+        listOf(tool, colorRgba.contentHashCode(), baseWidth, isErasing, penOnly, isMaskingTape, isTranslationPen).hashCode()
 }
 
 /**
@@ -625,7 +629,7 @@ fun ContinuousPagesView(
                 .fillMaxSize()
                 // 縮放後的頁面不可畫到捲動區外（否則會蓋住工具列）。
                 .clipToBounds()
-                .pointerInput(editorMode, ink.penOnly) {
+                .pointerInput(editorMode, ink.penOnly, ink.isMaskingTape, ink.isTranslationPen, lasso != null) {
                     val canFingerDraw = !ink.penOnly
                     awaitPointerEventScope {
                         while (true) {
@@ -636,10 +640,12 @@ fun ContinuousPagesView(
                             val fingerCount = fingerChanges.size
 
                             // 繪圖模式下：觸控筆始終直接繪圖；手指可繪圖時僅在 2 指以上攔截捲動；僅限觸控筆時手指 1 指即可捲動。
-                            // 打字模式下：2 指以上一律攔截捲動，避免雙指碰觸畫布時誤拖曳底下的未鎖定物件。
+                            // 若目前是套索、遮蔽膠帶或掃描翻譯筆，單指手勢屬於工具本身，不可攔去捲動。
+                            val fingerOwnsTool = editorMode == EditorMode.DRAW &&
+                                (ink.isMaskingTape || ink.isTranslationPen || lasso != null)
                             val shouldIntercept = !hasStylus && (
                                 fingerCount >= 2 ||
-                                (editorMode == EditorMode.DRAW && !canFingerDraw && fingerCount >= 1)
+                                (editorMode == EditorMode.DRAW && !canFingerDraw && !fingerOwnsTool && fingerCount >= 1)
                             )
 
                             if (!shouldIntercept) continue
@@ -1184,9 +1190,9 @@ private fun ContinuousPage(
             // 手寫模式下手指點物件：若為鎖定物件則切到打字模式並顯示「解除鎖定」鈕；
             // 若為未鎖定物件則直接選取（在手寫模式下即可執行剪下／複製）。
             .fingerTapOnLockedObject(
-                listOf(editorMode, lasso != null, isPlacingPasteObject),
+                listOf(editorMode, lasso != null, ink.isMaskingTape, ink.isTranslationPen, isPlacingPasteObject),
                 hitAt = { p ->
-                    if (editorMode != EditorMode.DRAW || lasso != null || isPlacingPasteObject) null
+                    if (editorMode != EditorMode.DRAW || lasso != null || ink.isMaskingTape || ink.isTranslationPen || isPlacingPasteObject) null
                     else {
                         val px = p.x / density
                         val py = p.y / density
@@ -1210,9 +1216,9 @@ private fun ContinuousPage(
             )
             // 手繪模式下手指雙擊空白處：建立文字方塊並切到打字模式（對齊 Apple `handleCanvasDirectDoubleTap`）。
             .fingerDoubleTap(
-                listOf(editorMode, lasso != null, isPlacingPasteObject, snapToGrid),
+                listOf(editorMode, lasso != null, ink.isMaskingTape, ink.isTranslationPen, isPlacingPasteObject, snapToGrid),
                 hitAt = { p ->
-                    if (editorMode != EditorMode.DRAW || lasso != null || isPlacingPasteObject) false
+                    if (editorMode != EditorMode.DRAW || lasso != null || ink.isMaskingTape || ink.isTranslationPen || isPlacingPasteObject) false
                     else ObjectMarquee.topmostHit(Offset(p.x / density, p.y / density), lockFramesLatest) == null
                 },
                 onCancelInk = { engine.cancelInFlight(); revision++ },
@@ -1278,7 +1284,7 @@ private fun ContinuousPage(
                 }
             },
             contentVersion = revision,
-            acceptsInk = editorMode == EditorMode.DRAW,
+            acceptsInk = editorMode == EditorMode.DRAW && !ink.isMaskingTape && !ink.isTranslationPen,
             // 選取只屬於一頁：只有那一頁把選中的筆畫畫在拖曳後的位置。
             lassoDrag = { if (ownsLasso) lasso?.dragPreview() else null }
         )
@@ -1536,6 +1542,40 @@ private fun ContinuousPage(
                         .graphicsLayer(scaleX = 1f / pageScale, scaleY = 1f / pageScale)
                 )
             }
+        }
+
+        if (isFocused && ink.isTranslationPen && editorMode == EditorMode.DRAW) {
+            val pageLinks = remember(meta, pageIndex, revision) {
+                meta.links().filter { it.pageIndex == pageIndex }
+            }
+            val pageTapes = remember(meta, pageIndex, revision) {
+                meta.tapes().filter { it.pageIndex == pageIndex }.toMutableList()
+            }
+            val pagePins = remember(meta, pageIndex, revision) {
+                meta.commentPins().toMutableList()
+            }
+            TranslationPenOverlay(
+                isActive = true,
+                pageIndex = pageIndex,
+                pageId = pageId,
+                density = density,
+                session = session,
+                engine = engine,
+                textStore = textStore,
+                tableStore = tableStore,
+                shapeStore = shapeStore,
+                links = pageLinks,
+                maskingTapes = pageTapes,
+                pins = pagePins,
+                onChanged = {
+                    revision++
+                    runtime.bump()
+                    onMetaObjectsChanged()
+                    collabBridge?.onLocalChange?.invoke()
+                },
+                onShowMessage = {},
+                modifier = Modifier.fillMaxSize().zIndex(320f)
+            )
         }
 
         if (lockedIds.isNotEmpty()) {

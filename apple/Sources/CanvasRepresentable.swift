@@ -1477,8 +1477,8 @@ struct CanvasRepresentable: UIViewRepresentable {
             uiView.showsVerticalScrollIndicator = wantsScroll
         }
         // 打字模式關閉落筆手勢（從根源杜絕留下墨點），手繪模式才開放。
-        // 套索與遮蔽膠帶模式下亦關閉繪圖手勢，確保所有碰觸皆由自定義物件層全權接收。
-        let gestureOn = EditorCanvasInputPolicy.drawingGestureEnabled(effectiveMode: editorMode) && (selectedTool != .lasso) && (selectedTool != .maskingTape)
+        // 套索、遮蔽膠帶與掃描翻譯筆模式下亦關閉繪圖手勢，確保所有碰觸皆由自定義物件層全權接收。
+        let gestureOn = EditorCanvasInputPolicy.drawingGestureEnabled(effectiveMode: editorMode) && (selectedTool != .lasso) && (selectedTool != .maskingTape) && (selectedTool != .translationPen)
         if uiView.drawingGestureRecognizer.isEnabled != gestureOn {
             uiView.drawingGestureRecognizer.isEnabled = gestureOn
         }
@@ -1499,7 +1499,7 @@ struct CanvasRepresentable: UIViewRepresentable {
         // `.pencilOnly` 時手指不畫，外層捲動單指就能動，不必（也不該）再轉發。
         if let adaptive = uiView as? AdaptiveCanvasView {
             adaptive.twoFingerScroll.setEnabled(
-                !isScrollEnabled && (targetPolicy == .anyInput || lassoOwnsTouches || selectedTool == .maskingTape), on: adaptive)
+                !isScrollEnabled && (targetPolicy == .anyInput || lassoOwnsTouches || selectedTool == .maskingTape || selectedTool == .translationPen), on: adaptive)
         }
         if let adaptive = uiView as? AdaptiveCanvasView {
             let defer_ = EditorCanvasInputPolicy.defersPencilIntent(effectiveMode: editorMode)
@@ -1640,6 +1640,7 @@ struct CanvasRepresentable: UIViewRepresentable {
         let allowsPencilKitDrawing = EditorCanvasInputPolicy.drawingGestureEnabled(effectiveMode: editorMode)
             && (selectedTool != .lasso)
             && (selectedTool != .maskingTape)
+            && (selectedTool != .translationPen)
         adaptive.configurePro(
             mode: mode, directory: proInk?.directory,
             notebookId: proInk?.notebookId ?? "", pageIndex: proInk?.pageIndex ?? 0,
@@ -2216,9 +2217,9 @@ struct CanvasRepresentable: UIViewRepresentable {
                 // 圖學筆畫走自繪引擎（ProInk），PencilKit 不收筆。
                 canvas.tool = PKInkingTool(.pen, color: .clear, width: 1)
 
-            case .maskingTape:
-                // 遮蔽膠帶（Masking Tape）：自定義覆蓋層物件，不應指派為 PKLassoTool，
-                // 以免與套索工具混淆。畫布在膠帶工具啟動時停用繪畫筆刷以確保手勢完全由膠帶層接收。
+            case .maskingTape, .translationPen:
+                // 遮蔽膠帶與掃描翻譯筆：自定義覆蓋層物件，不應指派為 PKLassoTool，
+                // 以免與套索工具混淆。畫布在工具啟動時停用繪畫筆刷以確保手勢完全由覆蓋層接收。
                 break
             }
         }

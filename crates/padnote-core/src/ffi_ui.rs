@@ -134,6 +134,7 @@ pub enum FfiTool {
     Eraser,
     Lasso,
     MaskingTape,
+    TranslationPen,
     Drafting,
     Undo,
     Redo,
@@ -159,6 +160,7 @@ impl From<FfiTool> for Tool {
             FfiTool::Eraser => Self::Eraser,
             FfiTool::Lasso => Self::Lasso,
             FfiTool::MaskingTape => Self::MaskingTape,
+            FfiTool::TranslationPen => Self::TranslationPen,
             FfiTool::Drafting => Self::Drafting,
             FfiTool::Undo => Self::Undo,
             FfiTool::Redo => Self::Redo,
@@ -186,6 +188,7 @@ impl From<Tool> for FfiTool {
             Tool::Eraser => Self::Eraser,
             Tool::Lasso => Self::Lasso,
             Tool::MaskingTape => Self::MaskingTape,
+            Tool::TranslationPen => Self::TranslationPen,
             Tool::Drafting => Self::Drafting,
             Tool::Undo => Self::Undo,
             Tool::Redo => Self::Redo,
@@ -291,6 +294,7 @@ pub enum FfiRadialAction {
     Eraser,
     Lasso,
     MaskingTape,
+    TranslationPen,
     Drafting,
     Undo,
     Redo,
@@ -318,6 +322,7 @@ impl From<FfiRadialAction> for RadialAction {
             FfiRadialAction::Eraser => Self::Eraser,
             FfiRadialAction::Lasso => Self::Lasso,
             FfiRadialAction::MaskingTape => Self::MaskingTape,
+            FfiRadialAction::TranslationPen => Self::TranslationPen,
             FfiRadialAction::Drafting => Self::Drafting,
             FfiRadialAction::Undo => Self::Undo,
             FfiRadialAction::Redo => Self::Redo,
@@ -347,6 +352,7 @@ impl From<RadialAction> for FfiRadialAction {
             RadialAction::Eraser => Self::Eraser,
             RadialAction::Lasso => Self::Lasso,
             RadialAction::MaskingTape => Self::MaskingTape,
+            RadialAction::TranslationPen => Self::TranslationPen,
             RadialAction::Drafting => Self::Drafting,
             RadialAction::Undo => Self::Undo,
             RadialAction::Redo => Self::Redo,
@@ -651,10 +657,11 @@ mod tests {
             .flat_map(|g| g.tools)
             .map(|t| t.identifier)
             .collect();
-        assert_eq!(ids.len(), 20);
+        assert_eq!(ids.len(), 21);
         assert!(ids.contains(&"editor.ink.drafting".to_string()));
         assert!(ids.contains(&"editor.ink.pen".to_string()));
         assert!(ids.contains(&"editor.ink.maskingTape".to_string()));
+        assert!(ids.contains(&"editor.ink.translationPen".to_string()));
         assert!(ids.iter().all(|s| s.starts_with("editor.ink.")), "{ids:?}");
     }
 

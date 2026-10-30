@@ -46,6 +46,7 @@ pub enum Tool {
     Eraser,
     Lasso,
     MaskingTape,
+    TranslationPen,
     // 圖學：製圖筆組、圖層與線型。
     Drafting,
     // 歷程。
@@ -74,6 +75,7 @@ impl Tool {
             Self::Eraser => Key::ToolEraser,
             Self::Lasso => Key::ToolLasso,
             Self::MaskingTape => Key::ToolMaskingTape,
+            Self::TranslationPen => Key::ToolTranslationPen,
             Self::Drafting => Key::ToolDrafting,
             Self::Undo => Key::ToolUndo,
             Self::Redo => Key::ToolRedo,
@@ -104,6 +106,7 @@ impl Tool {
             Self::Eraser => "editor.ink.eraser",
             Self::Lasso => "editor.ink.lasso",
             Self::MaskingTape => "editor.ink.maskingTape",
+            Self::TranslationPen => "editor.ink.translationPen",
             Self::Drafting => "editor.ink.drafting",
             Self::Undo => "editor.ink.undo",
             Self::Redo => "editor.ink.redo",
@@ -168,7 +171,11 @@ impl Tool {
             return ToolGroup::Pens;
         }
         match self {
-            Self::Eraser | Self::Lasso | Self::MaskingTape | Self::Drafting => ToolGroup::Edit,
+            Self::Eraser
+            | Self::Lasso
+            | Self::MaskingTape
+            | Self::TranslationPen
+            | Self::Drafting => ToolGroup::Edit,
             _ => ToolGroup::History,
         }
     }
@@ -256,6 +263,7 @@ pub fn all_tools() -> Vec<Tool> {
         Tool::Eraser,
         Tool::Lasso,
         Tool::MaskingTape,
+        Tool::TranslationPen,
         Tool::Drafting,
         Tool::Undo,
         Tool::Redo,
@@ -329,6 +337,7 @@ mod tests {
                 "editor.ink.eraser",
                 "editor.ink.lasso",
                 "editor.ink.maskingTape",
+                "editor.ink.translationPen",
                 "editor.ink.drafting",
                 "editor.ink.undo",
                 "editor.ink.redo",
@@ -400,7 +409,7 @@ mod tests {
     fn tool_order_is_stable() {
         // 順序改變會讓使用者的肌肉記憶失效。
         assert_eq!(all_tools()[0], Tool::Pen);
-        assert_eq!(all_tools().len(), 20);
+        assert_eq!(all_tools().len(), 21);
     }
 
     #[test]

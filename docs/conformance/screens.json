@@ -60,6 +60,7 @@
       "editor.ink.eraser",
       "editor.ink.lasso",
       "editor.ink.maskingTape",
+      "editor.ink.translationPen",
       "editor.ink.drafting",
       "editor.ink.width",
       "editor.ink.palette",
@@ -148,6 +149,7 @@
       "editor.ink.eraser",
       "editor.ink.lasso",
       "editor.ink.maskingTape",
+      "editor.ink.translationPen",
       "editor.ink.drafting",
       "editor.ink.width",
       "editor.ink.palette",
@@ -530,6 +532,12 @@
         "id": "editor.ink.maskingTape",
         "label_en": "Masking Tape",
         "label_key": "tool_masking_tape",
+        "reveal": "always"
+      },
+      {
+        "id": "editor.ink.translationPen",
+        "label_en": "Translation Pen",
+        "label_key": "tool_translation_pen",
         "reveal": "always"
       },
       {
@@ -1067,6 +1075,7 @@
       "toolbar.tool.eraser",
       "toolbar.tool.lasso",
       "toolbar.tool.maskingTape",
+      "toolbar.tool.translationPen",
       "toolbar.tool.drafting",
       "toolbar.tool.undo",
       "toolbar.tool.redo",
@@ -1091,6 +1100,7 @@
       "toolbar.tool.eraser",
       "toolbar.tool.lasso",
       "toolbar.tool.maskingTape",
+      "toolbar.tool.translationPen",
       "toolbar.tool.drafting",
       "toolbar.tool.undo",
       "toolbar.tool.redo",
@@ -1203,6 +1213,12 @@
         "id": "toolbar.tool.maskingTape",
         "label_en": "Masking Tape",
         "label_key": "tool_masking_tape",
+        "reveal": "always"
+      },
+      {
+        "id": "toolbar.tool.translationPen",
+        "label_en": "Translation Pen",
+        "label_key": "tool_translation_pen",
         "reveal": "always"
       },
       {

@@ -187,7 +187,9 @@ internal fun ColumnScope.EditorCanvasContainer(ctx: EditorCanvasContext) = with(
                             colorRgba = hexToRgba(inkColorHex),
                             baseWidth = inkWidth,
                             isErasing = inkTool.isEraser,
-                            penOnly = penOnly
+                            penOnly = penOnly,
+                            isMaskingTape = inkTool.isMaskingTape,
+                            isTranslationPen = inkTool.isTranslationPen
                         ),
                         editorMode = editorMode,
                         onModeChange = { editorMode = it },
@@ -215,7 +217,7 @@ internal fun ColumnScope.EditorCanvasContainer(ctx: EditorCanvasContext) = with(
                         // 上限邊緣，多兩三個 lambda 就啟動即 VerifyError（實測）。選單的動作走 `radialAction`。
                         modifier = Modifier.weight(1f).fillMaxHeight().radialHoldArea(
                             enabled = editorMode == EditorMode.DRAW && !showRadialMenu &&
-                                !isPlacingCommentPin && !inkTool.isMaskingTape,
+                                !isPlacingCommentPin && !inkTool.isMaskingTape && !inkTool.isTranslationPen,
                             lasso = continuousLasso.takeIf { inkTool.isLasso },
                             onOpen = { center -> radialMenuCenter = center; showRadialMenu = true }
                         ),
@@ -446,7 +448,7 @@ internal fun ColumnScope.EditorCanvasContainer(ctx: EditorCanvasContext) = with(
                 // openRadialMenuFromPress 同一組條件）。
                 .pressAndHoldForRadialMenu(lasso) { point ->
                     val blocked = editorMode != EditorMode.DRAW || showRadialMenu ||
-                        isPlacingCommentPin || inkTool.isMaskingTape ||
+                        isPlacingCommentPin || inkTool.isMaskingTape || inkTool.isTranslationPen ||
                         (inkTool.isLasso && (lasso.isDragging || lasso.hasSelection))
                     if (blocked) return@pressAndHoldForRadialMenu false
                     engine.cancelInFlight()
@@ -477,7 +479,7 @@ internal fun ColumnScope.EditorCanvasContainer(ctx: EditorCanvasContext) = with(
                             // 套索、膠帶、放圖釘／貼上、飛梭工具盤開著時，手指本身就是在操作它們，不能拿去平移
                             // （實機回報：套索一框畫布就跟著跑、飛梭工具盤點不了）。
                             val fingerOwnsGesture = showRadialMenu || isPlacingCommentPin || isPlacingPasteObject ||
-                                (editorMode == EditorMode.DRAW && (inkTool.isLasso || inkTool.isMaskingTape))
+                                (editorMode == EditorMode.DRAW && (inkTool.isLasso || inkTool.isMaskingTape || inkTool.isTranslationPen))
                             val oneFingerPan = pointers == 1 && onePanFinger && !stylus &&
                                 contentExceedsViewport && !fingerOwnsGesture
                             if (pointers < 2 && !oneFingerPan) continue
@@ -656,9 +658,9 @@ internal fun ColumnScope.EditorCanvasContainer(ctx: EditorCanvasContext) = with(
                 )
                 // 手寫模式下手指點物件：鎖定物件給「解除鎖定」鈕；未鎖定物件直接選取它以供剪下、複製、搬移。
                 .fingerTapOnLockedObject(
-                    listOf(editorMode, inkTool.isLasso, inkTool.isMaskingTape, isPlacingCommentPin, isPlacingPasteObject),
+                    listOf(editorMode, inkTool.isLasso, inkTool.isMaskingTape, inkTool.isTranslationPen, isPlacingCommentPin, isPlacingPasteObject),
                     hitAt = { p ->
-                        if (editorMode != EditorMode.DRAW || inkTool.isLasso || inkTool.isMaskingTape ||
+                        if (editorMode != EditorMode.DRAW || inkTool.isLasso || inkTool.isMaskingTape || inkTool.isTranslationPen ||
                             isPlacingCommentPin || isPlacingPasteObject) null
                         else {
                             val sorted = marqueeCandidatesLatest.sortedBy { stackOrderLatest.indexOf(it.id) }
@@ -680,7 +682,7 @@ internal fun ColumnScope.EditorCanvasContainer(ctx: EditorCanvasContext) = with(
                 )
                 // 手繪模式下手指雙擊空白處：建立文字方塊並切到打字模式（對齊 Apple）。
                 .doubleTapToWrite(
-                    enabled = editorMode == EditorMode.DRAW && !inkTool.isLasso && !inkTool.isMaskingTape &&
+                    enabled = editorMode == EditorMode.DRAW && !inkTool.isLasso && !inkTool.isMaskingTape && !inkTool.isTranslationPen &&
                         !isPlacingCommentPin && !isPlacingPasteObject,
                     density = canvasDensity,
                     engine = engine,
@@ -784,7 +786,10 @@ internal fun ColumnScope.EditorCanvasContainer(ctx: EditorCanvasContext) = with(
             //
             // 圖學筆畫也不能走低延遲路徑：它要依線型挖虛線、依圖層疊放與隱藏，
             // 前緩衝的簡化繪製做不到。
-            val draftingInk = inkTool.isDrafting || inkTool.isLasso || engine.strokes.any { it.layer != 0 || it.lineType != 0 }
+            val draftingInk = inkTool.isDrafting || inkTool.isLasso || inkTool.isMaskingTape || inkTool.isTranslationPen ||
+                engine.strokes.any { it.layer != 0 || it.lineType != 0 }
+            val acceptsCanvasInk = editorMode == EditorMode.DRAW && !inkTool.isLasso &&
+                !inkTool.isMaskingTape && !inkTool.isTranslationPen
             // 筆畫數讀數（測試與無障礙用）。一定要在組合階段、隨 revision 算好再交給 semantics：
             // 直接在 semantics 區塊裡讀 `engine.strokes` 的話，它不是 Compose 狀態，畫完一筆讀數照舊 ——
             // 筆跡不變式測試因此一直只讀到開啟當下的數字，什麼回歸都抓不到。
@@ -813,7 +818,7 @@ internal fun ColumnScope.EditorCanvasContainer(ctx: EditorCanvasContext) = with(
                             clearSelection()
                         }
                     },
-                    acceptsInk = editorMode == EditorMode.DRAW
+                    acceptsInk = acceptsCanvasInk
                 )
             } else {
                 InkCanvas(
@@ -859,7 +864,7 @@ internal fun ColumnScope.EditorCanvasContainer(ctx: EditorCanvasContext) = with(
                     localizeGuide = l10n,
                     guideMeasurer = guideMeasurer,
                     guidePaletteId = guidePaletteId,
-                    acceptsInk = editorMode == EditorMode.DRAW
+                    acceptsInk = acceptsCanvasInk
                 )
             }
 
@@ -947,6 +952,27 @@ internal fun ColumnScope.EditorCanvasContainer(ctx: EditorCanvasContext) = with(
                     revision++
                 },
                 modifier = Modifier.fillMaxSize().zIndex(150f)
+            )
+
+            // 掃描翻譯筆覆蓋層（對齊 Apple TranslationPenOverlayView）。
+            com.kairumo.padnote.canvas.TranslationPenOverlay(
+                isActive = inkTool.isTranslationPen && editorMode == EditorMode.DRAW,
+                pageIndex = pageIndex,
+                pageId = pageId,
+                density = canvasDensity,
+                session = notebook?.first,
+                engine = engine,
+                textStore = textStore,
+                tableStore = tableStore,
+                shapeStore = shapeStore,
+                links = links,
+                maskingTapes = maskingTapes,
+                pins = pins,
+                onChanged = {
+                    textRevision++; pinRevision++; stackRevision++; revision++; clearToken++
+                },
+                onShowMessage = { msg -> message = msg },
+                modifier = Modifier.fillMaxSize().zIndex(270f)
             )
 
             // 圖片疊在墨跡之上、文字方塊之下 —— 與 Apple 端的預設層級一致

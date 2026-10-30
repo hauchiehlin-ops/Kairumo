@@ -92,6 +92,8 @@ struct NotebookMeta: Codable, Hashable {
     var audioAttachments: [NoteAudioAttachment]?
     var commentPins: [NoteCommentPin]?
     var tapeAttachments: [NoteTapeAttachment]?
+    /// 單本筆記本的掃描翻譯筆設定（與 Android `NotebookMeta.KEY_TRANSLATION_PEN` 同一個鍵）。
+    var translationPenConfig: NoteTranslationPenConfig?
     /// 手寫與文字動態流式錨定 (Fluid Sticky Annotations)
     var stickyAnchors: [StickyAnnotationAnchor]?
     /// 手寫辨識出來的文字（`NotebookDocument.recognizedText`）。搜尋用 —— 沒有同步的話，
@@ -161,6 +163,7 @@ struct NotebookMeta: Codable, Hashable {
         audioAttachments = document.audioAttachments
         commentPins = document.commentPins
         tapeAttachments = document.tapeAttachments
+        translationPenConfig = document.translationPenConfig
         objectOrderByPage = document.objectOrderByPage
         underInkObjectIdsByPage = document.underInkObjectIdsByPage
         overInkObjectIdsByPage = document.overInkObjectIdsByPage
@@ -226,6 +229,9 @@ struct NotebookMeta: Codable, Hashable {
         }
         if let tapeAttachments {
             document.tapeAttachments = tapeAttachments
+        }
+        if let translationPenConfig {
+            document.translationPenConfig = translationPenConfig
         }
         if let objectOrderByPage {
             document.objectOrderByPage = objectOrderByPage

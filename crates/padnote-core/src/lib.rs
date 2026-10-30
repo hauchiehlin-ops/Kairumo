@@ -59,6 +59,7 @@ pub mod ffi_sync_gate;
 pub mod ffi_table;
 pub mod ffi_texture;
 pub mod ffi_theme_tools;
+pub mod ffi_translation_pen;
 pub mod ffi_ui;
 pub mod model3d_mesh;
 pub mod setup;

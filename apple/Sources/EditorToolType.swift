@@ -30,6 +30,7 @@ public enum EditorToolType: String, CaseIterable, Identifiable {
     case eraser = "eraser"
     case lasso = "lasso"
     case maskingTape = "masking_tape"
+    case translationPen = "translation_pen"
     /// 圖學：製圖筆組、圖層、線型與吸附（見 Drafting.swift）。
     case drafting = "drafting"
 
@@ -42,7 +43,7 @@ public enum EditorToolType: String, CaseIterable, Identifiable {
     /// 記圖案來分辨 —— 分組之後，形狀就說明了用途（工作項 S-62）。
     public var isBrush: Bool {
         switch self {
-        case .eraser, .lasso, .maskingTape, .drafting: return false
+        case .eraser, .lasso, .maskingTape, .translationPen, .drafting: return false
         default: return true
         }
     }
@@ -61,7 +62,7 @@ public enum EditorToolType: String, CaseIterable, Identifiable {
         case .pen, .ballpoint, .fineliner, .brush, .calligraphy, .pencil: return .writing
         case .charcoal, .crayon, .airbrush, .oilpaint, .watercolor: return .painting
         case .marker, .highlighter: return .marking
-        case .eraser, .lasso, .maskingTape, .drafting: return nil
+        case .eraser, .lasso, .maskingTape, .translationPen, .drafting: return nil
         }
     }
 
@@ -96,6 +97,7 @@ public enum EditorToolType: String, CaseIterable, Identifiable {
         case .eraser: return "eraser"
         case .lasso: return "lasso"
         case .maskingTape: return "bandage.fill"
+        case .translationPen: return "character.book.closed.fill"
         case .drafting: return "ruler"
         }
     }
@@ -122,6 +124,7 @@ public enum EditorToolType: String, CaseIterable, Identifiable {
         case .eraser: return "editor.ink.eraser"
         case .lasso: return "editor.ink.lasso"
         case .maskingTape: return "editor.ink.maskingTape"
+        case .translationPen: return "editor.ink.translationPen"
         case .drafting: return "editor.ink.drafting"
         }
     }
@@ -144,6 +147,7 @@ public enum EditorToolType: String, CaseIterable, Identifiable {
         case .eraser: return "tool_eraser"
         case .lasso: return "tool_lasso"
         case .maskingTape: return "tool_masking_tape"
+        case .translationPen: return "tool_translation_pen"
         case .drafting: return "tool_drafting"
         }
     }

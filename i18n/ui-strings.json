@@ -25902,5 +25902,325 @@
     "th": "สมุดโน้ต %1@… กำลังทำงานร่วมกันอยู่ จึงยังไม่นำเข้า",
     "zhHans": "笔记本 %1@… 协作中，先不导入",
     "zhHant": "筆記本 %1@… 協同中，先不匯入"
+  },
+  "tool_translation_pen": {
+    "en": "Translation Pen",
+    "ja": "翻訳ペン",
+    "ko": "스캔 번역펜",
+    "th": "ปากกาแปลภาษา",
+    "zhHans": "扫描翻译笔",
+    "zhHant": "掃描翻譯筆"
+  },
+  "trans_pen_setup_title": {
+    "en": "Translation Pen Language Setup",
+    "ja": "翻訳ペンの言語設定",
+    "ko": "스캔 번역펜 언어 설정",
+    "th": "ตั้งค่าภาษาปากกาแปลภาษา",
+    "zhHans": "扫描翻译笔语系设置",
+    "zhHant": "掃描翻譯筆語系設定"
+  },
+  "trans_pen_setup_desc": {
+    "en": "Choose the target scan language and output translation language for this notebook. Drag across any word or sentence on the page to translate immediately.",
+    "ja": "このノートでスキャンする原語と翻訳先の出力言語を選択してください。ページ上の単語や文をなぞるとすぐに翻訳が表示されます。",
+    "ko": "이 노트에서 스캔할 원본 언어와 번역 출력 언어를 선택하세요. 페이지의 단어나 문장을 드래그하면 즉시 번역됩니다.",
+    "th": "เลือกภาษาต้นฉบับที่จะสแกนและภาษาแปลสำหรับสมุดบันทึกนี้ ลากผ่านคำหรือประโยคบนหน้าเพื่อแปลทันที",
+    "zhHans": "请选择本笔记本要扫描的目标语系与翻译输出语系。在页面上拖曳扫过单字或句子即可立即快显翻译。",
+    "zhHant": "請選擇本筆記本要掃描的目標語系與翻譯輸出語系。在頁面上拖曳掃過單字或句子即可立即快顯翻譯。"
+  },
+  "trans_pen_source_lang": {
+    "en": "Scan Language (Source)",
+    "ja": "スキャン言語（原語）",
+    "ko": "스캔 언어 (원문)",
+    "th": "ภาษาที่สแกน (ต้นฉบับ)",
+    "zhHans": "扫描目标语系（原文）",
+    "zhHant": "掃描目標語系（原文）"
+  },
+  "trans_pen_target_lang": {
+    "en": "Output Language (Translation)",
+    "ja": "出力言語（訳文）",
+    "ko": "출력 언어 (번역)",
+    "th": "ภาษาผลลัพธ์ (คำแปล)",
+    "zhHans": "翻译输出语系（译文）",
+    "zhHant": "翻譯輸出語系（譯文）"
+  },
+  "trans_pen_swap_lang": {
+    "en": "Swap Languages",
+    "ja": "言語を入れ替え",
+    "ko": "언어 바꾸기",
+    "th": "สลับภาษา",
+    "zhHans": "对调语系",
+    "zhHant": "對調語系"
+  },
+  "trans_pen_multiline_stitch": {
+    "en": "Multi-line Scan Auto-Stitch",
+    "ja": "複数行の連続スキャン結合",
+    "ko": "다중 행 연속 스캔 이어붙이기",
+    "th": "สแกนต่อเนื่องหลายบรรทัด",
+    "zhHans": "跨行连扫自动拼接",
+    "zhHant": "跨行連掃自動拼接"
+  },
+  "trans_pen_multiline_desc": {
+    "en": "When enabled, scanning the next line while a translation card is open automatically joins broken words and sentences.",
+    "ja": "オンにすると、翻訳カードを開いたまま次の行をなぞったときに、行末のハイフンや文を自動でつなぎます。",
+    "ko": "켜면 번역 카드가 열린 상태에서 다음 줄을 스캔할 때 줄바꿈 단어와 문장을 자동으로 이어붙입니다.",
+    "th": "เมื่อเปิดใช้งาน การสแกนบรรทัดถัดไปขณะที่การ์ดแปลเปิดอยู่จะเชื่อมคำและประโยคเข้าด้วยกันโดยอัตโนมัติ",
+    "zhHans": "开启后，在快显视窗保持开启时继续扫下一行，会自动修复行尾连字号并拼接成完整句子翻译。",
+    "zhHant": "開啟後，在快顯視窗保持開啟時繼續掃下一行，會自動修復行尾連字號並拼接成完整句子翻譯。"
+  },
+  "trans_pen_start": {
+    "en": "Start Scanning",
+    "ja": "スキャンを開始",
+    "ko": "스캔 시작",
+    "th": "เริ่มสแกน",
+    "zhHans": "开始扫描翻译",
+    "zhHant": "開始掃描翻譯"
+  },
+  "trans_pen_drag_hint": {
+    "en": "Drag across words or sentences to scan & translate",
+    "ja": "単語や文をなぞってスキャン翻訳",
+    "ko": "단어나 문장을 드래그하여 스캔 번역",
+    "th": "ลากผ่านคำหรือประโยคเพื่อสแกนและแปล",
+    "zhHans": "拖曳扫过单字或句子即可即时翻译",
+    "zhHant": "拖曳掃過單字或句子即可即時翻譯"
+  },
+  "trans_pen_stitch_active": {
+    "en": "Multi-line Stitch ON",
+    "ja": "連続スキャン ON",
+    "ko": "연속 스캔 켜짐",
+    "th": "สแกนต่อเนื่อง เปิด",
+    "zhHans": "跨行连扫：开",
+    "zhHant": "跨行連掃：開"
+  },
+  "trans_pen_stitch_off": {
+    "en": "Single Scan",
+    "ja": "単発スキャン",
+    "ko": "단일 스캔",
+    "th": "สแกนเดี่ยว",
+    "zhHans": "单次扫描",
+    "zhHant": "單次掃描"
+  },
+  "trans_pen_clear_stitch": {
+    "en": "New Scan",
+    "ja": "新規スキャン",
+    "ko": "새로 스캔",
+    "th": "สแกนใหม่",
+    "zhHans": "重新起扫",
+    "zhHant": "重新起掃"
+  },
+  "trans_pen_scanning": {
+    "en": "Recognizing & translating…",
+    "ja": "文字認識・翻訳中…",
+    "ko": "텍스트 인식 및 번역 중…",
+    "th": "กำลังรู้จำข้อความและแปล…",
+    "zhHans": "正在辨识与翻译…",
+    "zhHant": "正在辨識與翻譯…"
+  },
+  "trans_pen_empty_scan": {
+    "en": "No text detected in the scanned area. You can type or edit the text below.",
+    "ja": "スキャン範囲に文字が見つかりませんでした。下に直接入力または編集できます。",
+    "ko": "스캔한 영역에서 텍스트를 찾지 못했습니다. 아래에 직접 입력하거나 편집할 수 있습니다.",
+    "th": "ไม่พบข้อความในพื้นที่ที่สแกน คุณสามารถพิมพ์หรือแก้ไขข้อความด้านล่างได้",
+    "zhHans": "扫描区域未侦测到文字，可直接于下方输入或编辑。",
+    "zhHant": "掃描區域未偵測到文字，可直接於下方輸入或編輯。"
+  },
+  "trans_pen_blurry_warning": {
+    "en": "Target text is blurry or difficult to recognize. To avoid inaccurate translations, no output was generated — please rescan clearly or edit the source text below and tap Re-translate.",
+    "ja": "対象の文字が不鮮明で認識できません。誤訳を防ぐため翻訳出力を停止しました。もう一度はっきりなぞるか、下の原文を修正して「再翻訳」を押してください。",
+    "ko": "대상 글자가 흐리거나 판독하기 어렵습니다. 잘못된 번역을 방지하기 위해 번역을 생성하지 않았습니다. 다시 선명하게 스캔하거나 아래 원문을 수정한 뒤 '다시 번역'을 눌러주세요.",
+    "th": "ข้อความเป้าหมายไม่ชัดเจนหรืออ่านยาก เพื่อป้องกันการแปลที่คลาดเคลื่อน ระบบจึงไม่สร้างคำแปล กรุณาสแกนใหม่อีกครั้งหรือแก้ไขข้อความต้นฉบับด้านล่างแล้วแตะ 'แปลใหม่'",
+    "zhHans": "目标文字模糊或难以辨识，为避免胡乱编造译文已暂停输出。请重新清晰扫过，或直接在下方修正原文后点击「重新翻译」。",
+    "zhHant": "目標文字模糊或難以辨識，為避免胡亂編造譯文已暫停輸出。請重新清晰掃過，或直接在下方修正原文後點擊「重新翻譯」。"
+  },
+  "trans_pen_source_label": {
+    "en": "Scanned Text (Editable)",
+    "ja": "スキャン原文（編集可）",
+    "ko": "스캔 원문 (편집 가능)",
+    "th": "ข้อความที่สแกน (แก้ไขได้)",
+    "zhHans": "扫描原文（可修订重翻）",
+    "zhHant": "掃描原文（可修訂重翻）"
+  },
+  "trans_pen_target_label": {
+    "en": "Translation (Editable)",
+    "ja": "翻訳結果（編集可）",
+    "ko": "번역 결과 (편집 가능)",
+    "th": "คำแปล (แก้ไขได้)",
+    "zhHans": "翻译内容（可编辑修正）",
+    "zhHant": "翻譯內容（可編輯修正）"
+  },
+  "trans_pen_note_label": {
+    "en": "Study Note / Annotation",
+    "ja": "学習メモ・注釈",
+    "ko": "학습 메모 / 주석",
+    "th": "บันทึกช่วยจำ / คำอธิบาย",
+    "zhHans": "补充笔记／注解",
+    "zhHant": "補充筆記／註解"
+  },
+  "trans_pen_note_placeholder": {
+    "en": "Add your own note or definition…",
+    "ja": "補足メモや語義を追加…",
+    "ko": "보충 메모나 뜻풀이 추가…",
+    "th": "เพิ่มบันทึกหรือคำจำกัดความของคุณ…",
+    "zhHans": "输入补充批注或重点笔记…",
+    "zhHant": "輸入補充批註或重點筆記…"
+  },
+  "trans_pen_retranslate": {
+    "en": "Re-translate",
+    "ja": "再翻訳",
+    "ko": "다시 번역",
+    "th": "แปลใหม่",
+    "zhHans": "重新翻译",
+    "zhHant": "重新翻譯"
+  },
+  "trans_pen_speak_source": {
+    "en": "Read Source",
+    "ja": "原文を再生",
+    "ko": "원문 듣기",
+    "th": "อ่านต้นฉบับ",
+    "zhHans": "朗读原文",
+    "zhHant": "朗讀原文"
+  },
+  "trans_pen_speak_target": {
+    "en": "Read Translation",
+    "ja": "訳文を再生",
+    "ko": "번역 듣기",
+    "th": "อ่านคำแปล",
+    "zhHans": "朗读译文",
+    "zhHant": "朗讀譯文"
+  },
+  "trans_pen_slow_tts": {
+    "en": "0.75× Slow",
+    "ja": "0.75× ゆっくり",
+    "ko": "0.75× 느리게",
+    "th": "0.75× ช้า",
+    "zhHans": "0.75× 慢速跟读",
+    "zhHant": "0.75× 慢速跟讀"
+  },
+  "trans_pen_normal_tts": {
+    "en": "1.0× Speed",
+    "ja": "1.0× 標準",
+    "ko": "1.0× 표준",
+    "th": "1.0× ปกติ",
+    "zhHans": "1.0× 正常语速",
+    "zhHant": "1.0× 正常語速"
+  },
+  "trans_pen_kind_word": {
+    "en": "Word Card",
+    "ja": "単語カード",
+    "ko": "단어 카드",
+    "th": "การ์ดคำศัพท์",
+    "zhHans": "单字精查",
+    "zhHant": "單字精查"
+  },
+  "trans_pen_kind_phrase": {
+    "en": "Phrase",
+    "ja": "フレーズ",
+    "ko": "구문",
+    "th": "วลี",
+    "zhHans": "片语词组",
+    "zhHant": "片語詞組"
+  },
+  "trans_pen_kind_sentence": {
+    "en": "Sentence View",
+    "ja": "全文対訳",
+    "ko": "문장 대조",
+    "th": "แปลทั้งประโยค",
+    "zhHans": "整句对照",
+    "zhHant": "整句對照"
+  },
+  "trans_pen_lookup_dict": {
+    "en": "Dictionary",
+    "ja": "辞書を引く",
+    "ko": "사전 찾기",
+    "th": "พจนานุกรม",
+    "zhHans": "系统字典",
+    "zhHant": "系統字典"
+  },
+  "trans_pen_action_pin": {
+    "en": "Pin",
+    "ja": "ピン留め",
+    "ko": "핀 고정",
+    "th": "ปักหมุด",
+    "zhHans": "转为图钉",
+    "zhHant": "轉為圖釘"
+  },
+  "trans_pen_action_textbox": {
+    "en": "Insert Note",
+    "ja": "注釈を挿入",
+    "ko": "주석 삽입",
+    "th": "แทรกคำอธิบาย",
+    "zhHans": "贴入注解",
+    "zhHant": "貼入註解"
+  },
+  "trans_pen_action_highlight": {
+    "en": "Highlight",
+    "ja": "マーカー",
+    "ko": "형광 표시",
+    "th": "เน้นข้อความ",
+    "zhHans": "荧光标记",
+    "zhHant": "螢光標記"
+  },
+  "trans_pen_action_tape": {
+    "en": "Masking Tape",
+    "ja": "暗記テープ",
+    "ko": "암기 테이프",
+    "th": "เทปปิดคำ",
+    "zhHans": "遮蔽胶带",
+    "zhHant": "遮蔽膠帶"
+  },
+  "trans_pen_action_copy": {
+    "en": "Copy",
+    "ja": "コピー",
+    "ko": "복사",
+    "th": "คัดลอก",
+    "zhHans": "复制",
+    "zhHant": "複製"
+  },
+  "trans_pen_hint_prefix": {
+    "en": "Affix / Compound",
+    "ja": "接頭辞・派生語",
+    "ko": "접두사 / 파생어",
+    "th": "อุปสรรค / คำประสม",
+    "zhHans": "字首／构词拆解",
+    "zhHant": "字首／構詞拆解"
+  },
+  "trans_pen_hint_tion": {
+    "en": "Noun suffix",
+    "ja": "名詞形",
+    "ko": "명사형",
+    "th": "คำนาม",
+    "zhHans": "名词字尾衍生",
+    "zhHant": "名詞字尾衍生"
+  },
+  "trans_pen_hint_ly": {
+    "en": "Adverb / Adjective suffix",
+    "ja": "副詞・形容詞形",
+    "ko": "부사 / 형용사형",
+    "th": "คำกริยาวิเศษณ์",
+    "zhHans": "副词／形容词变化",
+    "zhHant": "副詞／形容詞變化"
+  },
+  "trans_pen_hint_ing": {
+    "en": "Present participle / Gerund (-ing)",
+    "ja": "現在分詞・動名詞 (-ing)",
+    "ko": "현재분사 / 동명사 (-ing)",
+    "th": "กริยาเติม -ing",
+    "zhHans": "现在分词／动名词 (-ing)",
+    "zhHant": "現在分詞／動名詞 (-ing)"
+  },
+  "trans_pen_hint_ed": {
+    "en": "Past / Past participle (-ed)",
+    "ja": "過去形・過去分詞 (-ed)",
+    "ko": "과거형 / 과거분사 (-ed)",
+    "th": "กริยาช่อง 2/3 (-ed)",
+    "zhHans": "过去式／过去分词 (-ed)",
+    "zhHant": "過去式／過去分詞 (-ed)"
+  },
+  "trans_pen_hint_plural": {
+    "en": "Plural / 3rd-person singular (-s/-es)",
+    "ja": "複数形・三単現 (-s/-es)",
+    "ko": "복수형 / 3인칭 단수 (-s/-es)",
+    "th": "พหูพจน์ / เอกพจน์บุรุษที่ 3 (-s/-es)",
+    "zhHans": "复数或第三人称单数 (-s/-es)",
+    "zhHant": "複數或第三人稱單數 (-s/-es)"
   }
 }

@@ -66,8 +66,12 @@ public struct RealisticPenView: View {
             LassoStylusBody(isSelected: isSelected)
         case .maskingTape:
             MaskingTapeBody(isSelected: isSelected)
+        case .translationPen:
+            LassoStylusBody(isSelected: isSelected)
         case .drafting:
             LassoStylusBody(isSelected: isSelected)
+        default:
+            FountainPenBody(color: inkColor, isSelected: isSelected, strokeWidth: strokeWidth)
         }
     }
 }
