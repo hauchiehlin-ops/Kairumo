@@ -63,6 +63,7 @@ enum EditorCanvasInputPolicy {
 
     /// 打字模式下 Pencil 的意圖要不要延後判定。
     /// 當打字模式直接停用落筆繪圖手勢後，不再需要延後判定與事後收回墨點。
+    // unused-param-ok: 打字模式已改由關閉落筆手勢前置阻斷，保留 effectiveMode 參數以相容呼叫簽名
     static func defersPencilIntent(effectiveMode: EditorMode) -> Bool {
         false
     }
