@@ -146,16 +146,8 @@ class InkSurfaceView(
 
     @SuppressLint("ClickableViewAccessibility")
     override fun onTouchEvent(event: MotionEvent): Boolean {
-        val isStylus = (0 until event.pointerCount).any {
-            val tool = event.getToolType(it)
-            tool == MotionEvent.TOOL_TYPE_STYLUS || tool == MotionEvent.TOOL_TYPE_ERASER
-        }
-        if (isStylus && !acceptsInk) {
-            acceptsInk = true
-            onStylusDetected?.invoke()
-        }
-        // 不收筆畫且不是硬體觸控筆時把事件讓出去，外層照常捲動與選取。
-        if (!acceptsInk && !isStylus) return false
+        // 打字模式等不收筆畫的狀態下，完全不攔截、不繪墨，將觸控放行
+        if (!acceptsInk) return false
         val active = renderer ?: return false
         predictor?.record(event)
 

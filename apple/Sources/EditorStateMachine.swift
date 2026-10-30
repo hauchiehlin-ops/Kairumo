@@ -47,10 +47,13 @@ enum EditorCanvasInputPolicy {
     // 過去打字模式把 PencilKit 的落筆手勢整個關掉，落筆時才切回手繪 ——
     // 但進行中的觸控不會被中途啟用的手勢接手，於是**第一筆永遠遺失**。
 
-    /// 畫布在這個模式下要不要開著落筆手勢。答案永遠是「要」：
-    /// 打字模式靠 `fingerMayDraw == false` 擋住手指，而不是關掉整個手勢。
-    // unused-param-ok: 融合輸入規格規定任何模式皆啟用落筆手勢，保留 effectiveMode 參數供簽名對齊與調試
-    static func drawingGestureEnabled(effectiveMode: EditorMode) -> Bool { true }
+    /// 畫布在這個模式下要不要開著落筆手勢。
+    ///
+    /// 打字模式（.type）下完全關閉落筆繪圖手勢，從根源杜絕點擊畫布進行「即點即書」或選取物件時
+    /// 留下小墨點；手繪模式（.draw）才開放繪圖。
+    static func drawingGestureEnabled(effectiveMode: EditorMode) -> Bool {
+        effectiveMode == .draw
+    }
 
     /// 手指能不能畫。打字模式下手指負責點選、捲動與物件操作，**絕對不畫**；
     /// 手繪模式交給掌拒協調器決定（`nil` 代表沿用協調器的判斷）。
@@ -59,13 +62,9 @@ enum EditorCanvasInputPolicy {
     }
 
     /// 打字模式下 Pencil 的意圖要不要延後判定。
-    ///
-    /// 打字模式中，Pencil 輕點一下的意思是「放游標／開文字框」，畫下去才是「寫」。
-    /// 落筆當下還分不出來，所以先讓墨水照常收，等筆離開時再決定：
-    /// 是輕點就收回那顆墨點並照打字模式處理；是筆畫就把情境切到手繪。
-    /// 切換一律在**筆畫結束後**才做 —— 筆畫進行中改畫布設定會讓這一筆被取消。
+    /// 當打字模式直接停用落筆繪圖手勢後，不再需要延後判定與事後收回墨點。
     static func defersPencilIntent(effectiveMode: EditorMode) -> Bool {
-        effectiveMode == .type
+        false
     }
 
     enum PencilGesture: Equatable { case tap, stroke, holdToSnap }

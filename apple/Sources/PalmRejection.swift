@@ -172,14 +172,14 @@ final class PalmRejectionCoordinator {
 /// 與**這一筆何時結束**（點擊在抬起時成立，墨點也在那一刻結束）：
 /// 稍早寫下的句號、i 上的點結束得早，不會被當成這一下的墨點。
 enum TapDotRetraction {
-    /// 取樣點的分布範圍上限（點）。點擊手勢容許的移動約 10pt。
-    static let maxSpread: CGFloat = 12
+    /// 取樣點的分布範圍上限（點）。點擊手勢容許的移動約 10~25pt（包含手指按壓擴散、滑鼠微幅抖動）。
+    static let maxSpread: CGFloat = 32
     /// 墨點中心離點擊位置的上限（點）。
-    static let maxDistance: CGFloat = 24
+    static let maxDistance: CGFloat = 48
     /// 墨點結束時間要落在點擊成立前這段時間內（雙擊的第一下約早 0.35 秒）。
     static let endWindow: TimeInterval = 0.6
     /// 時鐘誤差的容許（墨點的結束時間可能比點擊成立稍晚記到）。
-    static let endTolerance: TimeInterval = 0.15
+    static let endTolerance: TimeInterval = 0.20
 
     static func isTapDot(_ stroke: PKStroke, near location: CGPoint, tappedAt: Date) -> Bool {
         let path = stroke.path

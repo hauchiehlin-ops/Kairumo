@@ -226,8 +226,10 @@ extension NotebookEditorView {
     }
 
     func handleCanvasTapInTypeMode(at location: CGPoint, page: Int? = nil) {
-        endTextFormatSession()
         let targetPage = page ?? currentPageIndex
+        // 防禦性清理：收回可能殘留的微小墨點（雙重防護）
+        removeTapDotStroke(near: location, page: targetPage)
+        endTextFormatSession()
         switchToPage(targetPage)
 
         // 0. 特殊頁面智慧引導線元件（核取方塊 Checkbox 等）點擊判定

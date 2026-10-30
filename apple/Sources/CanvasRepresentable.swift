@@ -257,6 +257,8 @@ final class AdaptiveCanvasView: PKCanvasView {
     }
     override var canBecomeFirstResponder: Bool { true }
     var initialLoadedStrokeCount: Int = 0
+    weak var directSingleTap: UITapGestureRecognizer?
+    weak var directDoubleTap: UITapGestureRecognizer?
 
     // MARK: - Hold-to-Snap 筆尖停留成形監測（第二階段：幾何停頓轉正）
     private var pencilDwellWorkItem: DispatchWorkItem?
@@ -785,6 +787,11 @@ final class AdaptiveCanvasView: PKCanvasView {
         forwardLasso(touches, .began)
         activeTouchesCount += touches.count
         CanvasTouchState.activeDirectTouches = activeTouchesCount
+        // 多指同時著地（例如雙指縮放或平移）時，第一指著地初期可能已向畫布起筆；
+        // 偵測到 >= 2 指時立即取消進行中的單指起筆，杜絕雙指手勢結束後留下一點小墨點。
+        if activeTouchesCount >= 2 {
+            cancelInFlightStrokesForNavigation()
+        }
         for touch in touches {
             if touch.type == .pencil {
                 lastPencilLocation = touch.location(in: self)
@@ -965,7 +972,7 @@ final class AdaptiveCanvasView: PKCanvasView {
         near location: CGPoint, tappedAt: Date = Date(), maxCount: Int = 1,
         onRetracted: @escaping (PKDrawing) -> Void
     ) {
-        attemptTapDotRetraction(location, tappedAt, maxCount, retriesLeft: 2, onRetracted)
+        attemptTapDotRetraction(location, tappedAt, maxCount, retriesLeft: 4, onRetracted)
     }
 
     private func attemptTapDotRetraction(
@@ -980,7 +987,7 @@ final class AdaptiveCanvasView: PKCanvasView {
             let removed = before.strokes.count - cleaned.strokes.count
             guard removed > 0 else {
                 guard retriesLeft > 0 else { return }
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) { [weak self] in
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.06) { [weak self] in
                     self?.attemptTapDotRetraction(
                         location, tappedAt, maxCount, retriesLeft: retriesLeft - 1, onRetracted)
                 }
@@ -1393,13 +1400,18 @@ struct CanvasRepresentable: UIViewRepresentable {
             _ = onDrawingChanged?(cleaned)
         }
 
-        // 🌟 方案 A+B：手指／游標單擊與雙擊手勢（限定 direct / indirectPointer，完全不阻礙 Apple Pencil 筆跡）
+        // 🌟 方案 A+B：手指／游標／Pencil 單擊與雙擊手勢（支援 direct / indirectPointer / pencil 全輸入型態）
+        // 點擊事件由 handleCanvasDirectTap 依落點判斷：若落在物件上則選取物件並收回可能落下的墨點；
+        // 若手寫模式下落在空白處則正常視為筆跡（不收回），雙擊則就地開文字框。
+        let initialTapTypes: [NSNumber] = [
+            NSNumber(value: UITouch.TouchType.direct.rawValue),
+            NSNumber(value: UITouch.TouchType.indirectPointer.rawValue),
+            NSNumber(value: UITouch.TouchType.pencil.rawValue)
+        ]
+
         let directSingleTap = UITapGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.handleDirectSingleTap(_:)))
         directSingleTap.numberOfTapsRequired = 1
-        directSingleTap.allowedTouchTypes = [
-            NSNumber(value: UITouch.TouchType.direct.rawValue),
-            NSNumber(value: UITouch.TouchType.indirectPointer.rawValue)
-        ]
+        directSingleTap.allowedTouchTypes = initialTapTypes
         directSingleTap.cancelsTouchesInView = false
         directSingleTap.delaysTouchesBegan = false
         directSingleTap.delaysTouchesEnded = false
@@ -1408,10 +1420,7 @@ struct CanvasRepresentable: UIViewRepresentable {
 
         let directDoubleTap = UITapGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.handleDirectDoubleTap(_:)))
         directDoubleTap.numberOfTapsRequired = 2
-        directDoubleTap.allowedTouchTypes = [
-            NSNumber(value: UITouch.TouchType.direct.rawValue),
-            NSNumber(value: UITouch.TouchType.indirectPointer.rawValue)
-        ]
+        directDoubleTap.allowedTouchTypes = initialTapTypes
         directDoubleTap.cancelsTouchesInView = false
         directDoubleTap.delaysTouchesBegan = false
         directDoubleTap.delaysTouchesEnded = false
@@ -1421,6 +1430,8 @@ struct CanvasRepresentable: UIViewRepresentable {
 
         canvas.addGestureRecognizer(directDoubleTap)
         canvas.addGestureRecognizer(directSingleTap)
+        canvas.directSingleTap = directSingleTap
+        canvas.directDoubleTap = directDoubleTap
 
         let lassoPan = UIPanGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.handleLassoPan(_:)))
         lassoPan.maximumNumberOfTouches = 1
@@ -1465,8 +1476,8 @@ struct CanvasRepresentable: UIViewRepresentable {
             uiView.alwaysBounceVertical = wantsScroll
             uiView.showsVerticalScrollIndicator = wantsScroll
         }
-        // 打字模式不再關掉落筆手勢：靠 `.pencilOnly` 擋手指，Pencil 第一筆就收得到。
-        // 套索與遮蔽膠帶模式下關閉繪圖手勢，確保所有碰觸皆由自定義物件層全權接收。
+        // 打字模式關閉落筆手勢（從根源杜絕留下墨點），手繪模式才開放。
+        // 套索與遮蔽膠帶模式下亦關閉繪圖手勢，確保所有碰觸皆由自定義物件層全權接收。
         let gestureOn = EditorCanvasInputPolicy.drawingGestureEnabled(effectiveMode: editorMode) && (selectedTool != .lasso) && (selectedTool != .maskingTape)
         if uiView.drawingGestureRecognizer.isEnabled != gestureOn {
             uiView.drawingGestureRecognizer.isEnabled = gestureOn
@@ -1474,6 +1485,15 @@ struct CanvasRepresentable: UIViewRepresentable {
         let targetPolicy = resolvedPolicy()
         if uiView.drawingPolicy != targetPolicy {
             uiView.drawingPolicy = targetPolicy
+        }
+        if let adaptive = uiView as? AdaptiveCanvasView {
+            let tapTypes: [NSNumber] = [
+                NSNumber(value: UITouch.TouchType.direct.rawValue),
+                NSNumber(value: UITouch.TouchType.indirectPointer.rawValue),
+                NSNumber(value: UITouch.TouchType.pencil.rawValue)
+            ]
+            adaptive.directSingleTap?.allowedTouchTypes = tapTypes
+            adaptive.directDoubleTap?.allowedTouchTypes = tapTypes
         }
         // 連續模式（畫布自己不捲）且手指會畫圖時，兩指捲動由我們自己接管；
         // `.pencilOnly` 時手指不畫，外層捲動單指就能動，不必（也不該）再轉發。
