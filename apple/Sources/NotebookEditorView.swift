@@ -812,7 +812,10 @@ public struct NotebookEditorView: View {
             }
             loadCurrentPage()
             objectHistory.reset(to: notebook)
-            if isCollaborating { ensureCollabPageIds() }
+            if isCollaborating {
+                ensureCollabPageIds()
+                CollabImportHold.hold(notebook.id)
+            }
             collabSync.reset(to: notebook)
             // 製圖用的紙（三視圖、等角、作圖步驟…）一打開就選好「圖學」筆組。
             if paperUsesDrafting(paperId: notebook.paperId(forPage: currentPageIndex)) {
@@ -835,6 +838,7 @@ public struct NotebookEditorView: View {
             // （文件庫在 iCloud 資料夾、筆跡多）主執行緒整個卡住（卡頓記錄：停在 flushPendingCoreInk 之後）。
             // 改成排在寫入佇列後面：前面的寫入一定先做完，焦點通道才放掉這一本（它接著會把套件推上雲端）。
             let leavingId = notebook.id
+            endCollabImportHold()
             afterCoreInkWrites {
                 if store.activeNotebookId == leavingId {
                     store.activeNotebookId = nil
@@ -1310,12 +1314,23 @@ public struct NotebookEditorView: View {
     private func handleNotebookPackageChanged(_ note: Notification) {
         let changedId = note.object as? String
         guard changedId == nil || changedId?.caseInsensitiveCompare(notebook.id) == .orderedSame else { return }
+        // 協同中不重讀：換掉 `notebook`、重設協同影子之後，這台與房間分歧，差異也不會再送出。
+        // 同步那邊這時本來就不匯入這一本（`CollabImportHold`），離開房間再補一次匯入與重讀。
+        guard !isCollaborating else { return }
         // 排好但還沒開始的寫入先停下：它手上的是同步之前的筆跡，現在寫出去會把剛匯入的合併結果蓋掉
         // （別台的筆畫還會被當成「這台擦掉的」記進帳本）。等已經在背景佇列裡跑的寫入做完、
         // 磁碟定下來，再合併重讀。
         coreInkWork?.cancel()
         coreInkWork = nil
         afterCoreInkWrites { reloadAfterExternalChange() }
+    }
+
+    /// 離開房間（或關掉編輯器）：檔案同步恢復匯入這一本；協同期間欠的那一次現在補上
+    /// （匯入完會再發 `notebookPackageChanged`，那時已經不在協同中，照常合併重讀）。
+    func endCollabImportHold() {
+        if CollabImportHold.release(notebook.id) {
+            FocusSyncController.shared.importAfterCollaboration(notebook.id)
+        }
     }
 
     /// 別台同步進來之後重讀，**但不丟掉這台還沒寫出去的筆跡**。

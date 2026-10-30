@@ -294,6 +294,43 @@ class InkEngineTest {
     }
 
     @Test
+    fun aCollabStrokeKeepsTheSendersIdInThePackage() {
+        // 即時協同收到的筆畫用送出者的 id 寫進核心：送出者的筆畫檔經檔案同步過來時，
+        // 核心看到的是同一個 id（`materialize` 去重），套件裡不會多一份。
+        val path = File(workDir, "collab-id.padnote").absolutePath
+        val session = PadnoteSession.create(path, "協同", 1_757_635_200_000uL, 0xA3u)
+        val pageId = session.firstPageId()!!
+        val engine = InkEngine(session, pageId)
+        val senderId = "3c1f6a0e-7d2b-4e8f-9a1c-5b6d7e8f9a0b"
+        val stroke = InkEngine.CompletedStroke(
+            pointerId = 7uL, coreStrokeId = null,
+            points = listOf(
+                uniffi.padnote_core.StrokePoint(10f, 10f, 0.5f, 0f, 0f, 0u, 0f),
+                uniffi.padnote_core.StrokePoint(40f, 30f, 0.5f, 0f, 0f, 8000u, 0f)
+            ),
+            tool = uniffi.padnote_core.ToolKind.FOUNTAIN_PEN, startedAtMs = 0L
+        )
+        val added = engine.applyRemoteStrokes(listOf(stroke), listOf(senderId))
+        assertEquals(senderId, added.single().coreStrokeId)
+        // 同一筆又收到一次（整份狀態、重送）：不重複加。
+        engine.applyRemoteStrokes(listOf(stroke), listOf(senderId))
+        assertEquals(1, engine.strokes.size)
+        assertTrue(InkPackageWriter.awaitIdleBlocking())
+
+        // 送出者那台的筆畫檔同步進同一個套件：同一個 id，看得到的還是一筆。
+        val sender = PadnoteSession.openExisting(path, 0xB3u)
+        sender.addStrokeDraftedWithId(
+            pageId, senderId, stroke.tool, stroke.colorRgba, stroke.baseWidth, stroke.points, 0u, 0u
+        )
+        val reopened = PadnoteSession.openExisting(path, 0xC3u)
+        assertEquals(listOf(senderId), reopened.visibleStrokeDetails(pageId).map { it.id.lowercase() })
+
+        // 沒有可用的 id（舊版 Apple）：照舊發新的。
+        val fresh = engine.applyRemoteStrokes(listOf(stroke.copy(pointerId = 8uL)), listOf(null))
+        assertTrue(fresh.single().coreStrokeId != null && fresh.single().coreStrokeId != senderId)
+    }
+
+    @Test
     fun aRetractedStrokeIsAlsoRemovedFromThePackage() {
         // 收回若只改記憶體、沒動檔案，重開之後手掌畫的那一筆會回來。
         val path = File(workDir, "retract.padnote").absolutePath

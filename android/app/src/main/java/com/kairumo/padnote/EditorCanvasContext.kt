@@ -862,16 +862,9 @@ internal fun rememberEditorCanvasContext(
     // **等這一筆畫完再換。** 重開 session 會換掉引擎，落筆到一半換的話那一筆會消失。
     // 落筆完成的筆畫都已經寫進套件（每一筆畫完就是一個 oplog 檔），所以換 session
     // 不會丟掉任何已經畫完的東西。
+    //
+    // 協同中不重開（見 `CollabReloadGate`），離開房間再補 —— 處理在下面 `collabActive` 算出來之後。
     val remoteChange by com.kairumo.padnote.sync.FocusSync.remoteChange.collectAsState()
-    LaunchedEffect(remoteChange.serial) {
-        if (remoteChange.serial > 0L &&
-            notebookId != null &&
-            remoteChange.notebookId.equals(notebookId, ignoreCase = true)
-        ) {
-            while (engine.isDrawing || InkEngine.anyDrawing) kotlinx.coroutines.delay(50)
-            sessionRevision++
-        }
-    }
     // 套索選取。換頁就換一個 —— 選取的是「這一頁的筆畫 id」，
     // 留著會指到另一頁不相干的東西。
     val lasso = remember(notebook, pageId) { LassoSelection() }
@@ -2704,6 +2697,26 @@ internal fun rememberEditorCanvasContext(
     val collabTextRevisionState = remember { mutableIntStateOf(0) }
     var collabTextRevision by collabTextRevisionState
     val collabActive = collabRoom != null && collabBaseRoom == collabRoom
+    // 別台改了正開著的這一本（見上面 `remoteChange`）：協同中先不重開，離開房間時補一次。
+    val collabReloadGate = remember(notebookId) { CollabReloadGate() }
+    // 斷線重連中也算在房間裡（與 Apple 的 `isCollaborating` 一致）：重連回來還要送出這段期間的修改。
+    val inRoom = collaboration.status !is CollaborationManager.Status.Disconnected
+    LaunchedEffect(remoteChange.serial) {
+        if (remoteChange.serial > 0L &&
+            notebookId != null &&
+            remoteChange.notebookId.equals(notebookId, ignoreCase = true) &&
+            collabReloadGate.onRemoteChange(inRoom)
+        ) {
+            while (engine.isDrawing || InkEngine.anyDrawing) kotlinx.coroutines.delay(50)
+            sessionRevision++
+        }
+    }
+    LaunchedEffect(inRoom) {
+        if (collabReloadGate.onCollaborationChanged(inRoom)) {
+            while (engine.isDrawing || InkEngine.anyDrawing) kotlinx.coroutines.delay(50)
+            sessionRevision++
+        }
+    }
     fun collabCanvas(): AndroidCollabCanvas? {
         val session = notebook?.first ?: return null
         return if (pageDisplayMode == PageDisplayMode.CONTINUOUS) {

@@ -229,3 +229,85 @@ enum ErasedInkLedger {
         return kept.count == drawing.strokes.count ? drawing : PKDrawing(strokes: kept)
     }
 }
+
+/// 協同收到的筆畫在套件裡要用的 id，每頁一份（內容指紋 → 核心 id）。
+///
+/// # 為什麼需要
+///
+/// 這台寫進套件的 PencilKit 筆畫，id 一律由內容算出來（`PKStrokeId.make`）。別台送來的筆畫
+/// 在**送出者**的套件裡已經有一個 id（Android 是核心發的 UUID），這台照內容另算一個的話，
+/// 同一條線在套件裡有兩份不同 id 的 `Add`，兩份都畫得出來（核心的 `materialize` 只對同 id 去重）。
+/// 收到時把送出者的 id 記在這裡，增量寫入與完整匯出都優先用它 —— 同一筆在每一台的套件裡都是同一個 id。
+enum CollabInkIds {
+    private nonisolated static func url(_ directory: URL, _ notebookId: String, _ page: Int) -> URL {
+        directory.appending(path: "\(notebookId)_p\(page).collab-ink-ids.json")
+    }
+
+    nonisolated static func load(in directory: URL, notebookId: String, page: Int) -> [String: String] {
+        guard let data = try? Data(contentsOf: url(directory, notebookId, page)),
+              let map = try? JSONDecoder().decode([String: String].self, from: data)
+        else { return [:] }
+        return map
+    }
+
+    nonisolated static func save(_ map: [String: String], in directory: URL, notebookId: String, page: Int) {
+        let file = url(directory, notebookId, page)
+        if map.isEmpty {
+            try? FileManager.default.removeItem(at: file)
+            return
+        }
+        guard let data = try? JSONEncoder().encode(map) else { return }
+        try? data.write(to: file, options: .atomic)
+    }
+
+    /// 一頁 PencilKit 筆畫在套件裡的 id：記過的用記著的，其他照內容算（與 `PKInkSync.plan` 同一套）。
+    nonisolated static func coreIds(of strokes: [PKStroke], pinned: [String: String]) -> [String] {
+        var seen: [String: Int] = [:]
+        return strokes.map { stroke in
+            let key = StrokeDelta.Identity(stroke).key
+            let n = seen[key, default: 0]
+            seen[key] = n + 1
+            if n == 0, let id = pinned[key] { return id }
+            return PKStrokeId.make(key: key, n: n, gen: 0)
+        }
+    }
+
+    /// 合法的核心筆畫 id（UUID）才能直接寫進套件；不是的（舊版 Apple 送的內容雜湊）回 `nil`。
+    nonisolated static func usable(_ id: String?) -> String? {
+        guard let id, UUID(uuidString: id) != nil else { return nil }
+        return id.lowercased()
+    }
+}
+
+/// 協同套用別人的筆畫增刪之後，要跟著更新的本機同步帳本（不送出任何東西）。
+enum CollabInkPersistence {
+    /// 別人加的筆畫：記下送出者的 id，並從「已擦除」名單拿掉（擦掉又被別人畫回來）。
+    nonisolated static func remoteAdded(
+        _ strokes: [(stroke: PKStroke, coreId: String?)], in directory: URL, notebookId: String, page: Int
+    ) {
+        guard !strokes.isEmpty else { return }
+        var pinned = CollabInkIds.load(in: directory, notebookId: notebookId, page: page)
+        let before = pinned
+        for item in strokes {
+            guard let id = CollabInkIds.usable(item.coreId) else { continue }
+            pinned[StrokeDelta.Identity(item.stroke).key] = id
+        }
+        if pinned != before { CollabInkIds.save(pinned, in: directory, notebookId: notebookId, page: page) }
+        ErasedInkLedger.record(removed: [], added: strokes.map(\.stroke),
+                               in: directory, notebookId: notebookId, page: page)
+    }
+
+    /// 別人擦掉的筆畫：記進「已擦除」名單。
+    ///
+    /// 協同擦掉的筆畫畫面上沒了，但它可能還在別台（不在房間裡、或還沒匯出）的筆畫檔裡 ——
+    /// 檔案同步把那份帶回來時要濾掉，不然它會復活，還被當成這台新加的再廣播給房間。
+    /// `CoreInkFlush` 只在有編輯器基準時才記擦除，不能靠它。
+    nonisolated static func remoteRemoved(_ strokes: [PKStroke], in directory: URL, notebookId: String, page: Int) {
+        guard !strokes.isEmpty else { return }
+        ErasedInkLedger.record(removed: strokes, added: [], in: directory, notebookId: notebookId, page: page)
+        var pinned = CollabInkIds.load(in: directory, notebookId: notebookId, page: page)
+        let before = pinned
+        for stroke in strokes { pinned.removeValue(forKey: StrokeDelta.Identity(stroke).key) }
+        if pinned != before { CollabInkIds.save(pinned, in: directory, notebookId: notebookId, page: page) }
+    }
+}

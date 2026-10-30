@@ -63,6 +63,7 @@ enum PKInkSync {
     ///   - current: 工作副本整份。
     ///   - others: 別台的基準線（上次匯入時 合併 − 自己）。
     ///   - addedIds: 套件裡這一頁所有出現過 `Add` 的筆畫 id；`nil` = 讀不到，不清理。
+    ///   - pinned: 協同收到的筆畫要沿用的送出者 id（內容指紋 → id，見 `CollabInkIds`）。
     ///   - resolveForeign: 在套件裡依內容指紋找別台筆畫的核心 id：(指紋, 需要幾個, 要排除的 id) → id 們。
     static func plan(
         ledger: ProInkLedger,
@@ -71,6 +72,7 @@ enum PKInkSync {
         current: PKDrawing,
         others: PKDrawing,
         addedIds: Set<String>? = nil,
+        pinned: [String: String] = [:],
         resolveForeign: (_ key: String, _ count: Int, _ excluding: Set<String>) -> [String]
     ) -> PKInkPlan {
         // ① 自己擦掉了東西嗎：上次匯出有、現在沒有。
@@ -84,7 +86,7 @@ enum PKInkSync {
             let key = StrokeDelta.Identity(stroke).key
             let n = seen[key, default: 0]
             seen[key] = n + 1
-            ids.append(PKStrokeId.make(key: key, n: n, gen: 0))
+            ids.append((n == 0 ? pinned[key] : nil) ?? PKStrokeId.make(key: key, n: n, gen: 0))
         }
 
         // ③ 清掉不必要的墓碑：它指向的 id 在套件裡已經沒有任何 Add 了，沒有東西可擦。

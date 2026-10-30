@@ -43,6 +43,18 @@ class CollabStrokeTest {
         assertEquals(listOf(-1, 0, 0, -128).map { it.toByte() }, s.colorRgba.toList())
     }
 
+    @Test fun carriesThePackageIdSoEveryDeviceWritesTheSameOne() {
+        // Android 的線上 id 就是核心 id；Apple 的是內容雜湊，另外附 `cid`。收到的人照它寫進自己的套件。
+        val core = "0f8e3c3a-2b1d-4c5e-9a7b-6d5c4b3a2f10"
+        val android = CollabStroke.encode(stroke.copy(coreStrokeId = core), core)
+        assertEquals(core, CollabStroke.coreId(JSONObject(android.toString())))
+        val apple = JSONObject("""{"id":"ab12cd34ef56ab12cd34ef56","cid":"${core.uppercase()}","tool":"pencil","rgba":"#000000FF","width":1,"points":[0,0,0,0,0,0,0]}""")
+        assertEquals(core, CollabStroke.coreId(apple))
+        // 舊版 Apple：只有內容雜湊，沒有能寫進核心的 id → 由這台發新的。
+        val old = JSONObject("""{"id":"ab12cd34ef56ab12cd34ef56","tool":"pencil","rgba":"#000000FF","width":1,"points":[0,0,0,0,0,0,0]}""")
+        assertNull(CollabStroke.coreId(old))
+    }
+
     @Test fun rejectsAnUnknownTool() {
         assertNull(CollabStroke.decode(JSONObject("""{"id":"x","tool":"laser","rgba":"#000000FF","width":1,"points":[0,0,0,0,0,0,0]}"""), 0L))
     }

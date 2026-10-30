@@ -373,9 +373,13 @@ class AndroidCollabCanvas(
 object CollabStroke {
 
     fun encode(stroke: InkEngine.CompletedStroke, id: String): JSONObject =
-        encode(id, stroke.tool, stroke.colorRgba, stroke.baseWidth, stroke.points)
+        encode(id, stroke.tool, stroke.colorRgba, stroke.baseWidth, stroke.points, stroke.coreStrokeId)
 
-    fun encode(id: String, tool: ToolKind, colorRgba: ByteArray, baseWidth: Float, strokePoints: List<StrokePoint>): JSONObject {
+    /** @param coreId 這一筆在這台套件裡的 id（`cid`）。收到的人照它寫進自己的套件，同一筆在每一台都是同一個 id。 */
+    fun encode(
+        id: String, tool: ToolKind, colorRgba: ByteArray, baseWidth: Float, strokePoints: List<StrokePoint>,
+        coreId: String? = null,
+    ): JSONObject {
         val points = JSONArray()
         for (p in strokePoints) {
             points.put(p.x.toDouble()); points.put(p.y.toDouble()); points.put(p.pressure.toDouble())
@@ -388,7 +392,19 @@ object CollabStroke {
             .put("rgba", "#" + colorRgba.joinToString("") { "%02X".format(it.toInt() and 0xFF) })
             .put("width", baseWidth.toDouble())
             .put("points", points)
+            .apply { if (coreId != null) put("cid", coreId) }
     }
+
+    /**
+     * 收到的筆畫在套件裡要用的 id：送出者附的核心 id（`cid`），沒有的話線上 id 本身是 UUID 就用它
+     * （Android 的線上 id 就是核心 id）。都不是（舊版 Apple 的內容雜湊）回 `null`，由這台發新的。
+     */
+    fun coreId(json: JSONObject): String? =
+        usable(json.optString("cid")) ?: usable(json.optString("id"))
+
+    private fun usable(id: String): String? =
+        id.takeIf { it.isNotEmpty() && runCatching { java.util.UUID.fromString(it) }.isSuccess && it.length == 36 }
+            ?.lowercase()
 
     /** 回傳 `(線上 id, 筆畫)`；格式不對的回 `null`。 */
     fun decode(json: JSONObject, startedAtMs: Long): Pair<String, InkEngine.CompletedStroke>? {

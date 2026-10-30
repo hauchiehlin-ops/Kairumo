@@ -342,6 +342,13 @@ public final class FocusSyncController: ObservableObject {
         }
     }
 
+    /// 離開即時協同的房間：補上協同期間略過的匯入（見 `CollabImportHold`）。
+    ///
+    /// 與區網收到新檔同一條路 —— 先匯出（房間裡寫的東西進套件）、再匯入合併，拿得到鎖才做。
+    func importAfterCollaboration(_ notebookId: String) {
+        lanReceived(notebookId)
+    }
+
     /// 區網對端把新檔案寫進了套件。
     fileprivate func lanReceived(_ notebookId: String) {
         let id = notebookId.lowercased()
