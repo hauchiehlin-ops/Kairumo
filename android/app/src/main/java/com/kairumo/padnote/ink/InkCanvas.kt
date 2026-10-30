@@ -25,6 +25,9 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.translate
+import androidx.compose.ui.graphics.layer.drawLayer
+import androidx.compose.ui.graphics.layer.GraphicsLayer
+import androidx.compose.ui.platform.LocalGraphicsContext
 import androidx.compose.ui.input.pointer.pointerInteropFilter
 import androidx.compose.ui.platform.LocalDensity
 import uniffi.padnote_core.StrokePoint
@@ -112,6 +115,11 @@ fun InkCanvas(
     // 不知道筆尖會落在哪，使用者只能先點一下看看 —— 而一筆下去才發現位置
     // 不對，那一筆已經在紙上了。
     var hoverPoint by remember { mutableStateOf<Offset?>(null) }
+
+    // 已完成的筆畫一筆一個圖層，錄一次之後只重播（見 `StrokeLayerCache`）。
+    val graphicsContext = LocalGraphicsContext.current
+    val strokeLayers = remember(graphicsContext) { StrokeLayerCache(graphicsContext) }
+    DisposableEffect(strokeLayers) { onDispose { strokeLayers.releaseAll() } }
 
     Canvas(
         modifier = modifier
@@ -201,7 +209,8 @@ fun InkCanvas(
         @Suppress("UNUSED_EXPRESSION") DraftingState.version
         // 未分層 → 底 → 中 → 頂；隱藏的圖層不畫。
         val drag = lassoDrag()
-        for (stroke in DraftingState.drawOrder(engine.strokes) { it.layer }) {
+        val committed = engine.strokes
+        for (stroke in DraftingState.drawOrder(committed) { it.layer }) {
             val strokeColor = if (stroke.colorRgba.size >= 4) {
                 Color(
                     (stroke.colorRgba[0].toInt() and 0xFF) / 255f,
@@ -211,13 +220,21 @@ fun InkCanvas(
                 )
             } else inkColor
             if (drag != null && stroke.coreStrokeId in drag.ids) {
+                // 拖曳中的筆畫每一幀位置都不同，直接畫。
                 translate(drag.offset.x * density, drag.offset.y * density) {
                     drawInkStroke(stroke.points, stroke.tool, stroke.baseWidth, strokeColor, density, stroke.lineType)
                 }
-            } else {
-                drawInkStroke(stroke.points, stroke.tool, stroke.baseWidth, strokeColor, density, stroke.lineType)
+                continue
             }
+            val cached = strokeLayers.get(stroke, strokeColor, density, size)
+            val layer = cached ?: strokeLayers.create(stroke, strokeColor, density, size).also {
+                it.record {
+                    drawInkStroke(stroke.points, stroke.tool, stroke.baseWidth, strokeColor, density, stroke.lineType)
+                }
+            }
+            drawLayer(layer)
         }
+        strokeLayers.retainOnly(committed)
         // 尚未抬筆的那一段也要即時畫出來，否則寫字時要等抬筆才看得到。
         val snapped = engine.snapPreview ?: engine.draftPreview
         for (live in engine.liveSamples()) {
@@ -249,6 +266,69 @@ fun InkCanvas(
         hoverPoint?.let { point ->
             drawHoverPreview(point, engine.baseWidth, engine.isErasing, inkColor, density)
         }
+    }
+}
+
+/**
+ * 已完成的筆畫一筆一個圖層。
+ *
+ * 畫布每收到一個觸控點就重畫一次（`revision`／`liveVersion`），原本每一次都把**整頁所有筆畫**
+ * 從頭畫過。炭筆、蠟筆這類筆刷一筆是成千上萬個筆點，頁面上塗多了，一次重畫就超過 5 秒 ——
+ * 實機上是「Kairumo 沒有回應」（ANR，主執行緒卡在 `InkBrushRenderer.drawDabsOnDrawScope`）。
+ * 整頁錄成一個圖層也不夠：每多一筆就得整頁重錄，成本一樣。所以每一筆錄進自己的圖層，
+ * 畫完那一刻只錄這一筆，其餘只是重播錄好的內容。
+ *
+ * 筆畫是不可變的資料（改動一律 `copy()` 換新物件），以**物件本身**為鍵就知道是不是同一筆；
+ * 不在引擎清單裡的筆畫（擦掉、復原、重讀）它的圖層會被釋放。
+ */
+private class StrokeLayerCache(private val graphicsContext: androidx.compose.ui.graphics.GraphicsContext) {
+    private class Entry(
+        val layer: GraphicsLayer,
+        val color: Color,
+        val density: Float,
+        val size: androidx.compose.ui.geometry.Size
+    )
+
+    private val entries = java.util.IdentityHashMap<InkEngine.CompletedStroke, Entry>()
+
+    fun get(
+        stroke: InkEngine.CompletedStroke, color: Color, density: Float,
+        size: androidx.compose.ui.geometry.Size
+    ): GraphicsLayer? {
+        val entry = entries[stroke] ?: return null
+        if (entry.color == color && entry.density == density && entry.size == size) return entry.layer
+        graphicsContext.releaseGraphicsLayer(entry.layer)
+        entries.remove(stroke)
+        return null
+    }
+
+    fun create(
+        stroke: InkEngine.CompletedStroke, color: Color, density: Float,
+        size: androidx.compose.ui.geometry.Size
+    ): GraphicsLayer {
+        val layer = graphicsContext.createGraphicsLayer()
+        entries[stroke] = Entry(layer, color, density, size)
+        return layer
+    }
+
+    /** 引擎清單裡已經沒有的筆畫，釋放它的圖層。 */
+    fun retainOnly(current: List<InkEngine.CompletedStroke>) {
+        if (entries.isEmpty()) return
+        val alive = java.util.Collections.newSetFromMap(java.util.IdentityHashMap<InkEngine.CompletedStroke, Boolean>())
+        alive.addAll(current)
+        val iterator = entries.entries.iterator()
+        while (iterator.hasNext()) {
+            val (stroke, entry) = iterator.next()
+            if (stroke !in alive) {
+                graphicsContext.releaseGraphicsLayer(entry.layer)
+                iterator.remove()
+            }
+        }
+    }
+
+    fun releaseAll() {
+        for (entry in entries.values) graphicsContext.releaseGraphicsLayer(entry.layer)
+        entries.clear()
     }
 }
 
