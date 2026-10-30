@@ -14487,6 +14487,14 @@ extension LocalizationManager {
             .ko: "잉크 쓰기가 아직 완료되지 않아 이번 동기화를 연기합니다",
             .th: "กำลังรอบันทึกหมึก จึงเลื่อนการซิงก์รอบนี้"
         ],
+        "log_msg_088": [
+            .zhHant: "筆記本 %1@… 協同中，先不匯入",
+            .en: "Notebook %1@… is in a live collaboration; import deferred",
+            .zhHans: "笔记本 %1@… 协作中，先不导入",
+            .ja: "ノート %1@… は共同編集中のため、取り込みを保留します",
+            .ko: "노트 %1@… 공동 작업 중이므로 가져오기를 보류합니다",
+            .th: "สมุดโน้ต %1@… กำลังทำงานร่วมกันอยู่ จึงยังไม่นำเข้า"
+        ],
         "log_recorder_message": [
             .zhHant: "[AudioRecorderManager] %1@",
             .en: "[AudioRecorderManager] %1@",

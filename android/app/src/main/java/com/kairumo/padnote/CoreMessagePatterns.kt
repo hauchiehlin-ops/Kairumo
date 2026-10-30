@@ -121,6 +121,7 @@ object CoreMessagePatterns {
         "log_msg_056" to listOf("【回收桶】確認檔沒發布成功：", ""),
         "log_msg_062" to listOf("【回收】完成，刪除 ", " 個檔案"),
         "log_msg_079" to listOf("【區網直連】已連上 ", " 台裝置"),
+        "log_msg_088" to listOf("筆記本 ", "… 協同中，先不匯入"),
         "core_msg_024" to listOf("blob id 無法解析：", ""),
         "core_msg_025" to listOf("變換矩陣必須是 6 個數字"),
         "core_msg_095" to listOf("詞表必須是 ", " 個詞，實得 ", ""),
