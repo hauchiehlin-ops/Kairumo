@@ -34,6 +34,28 @@ internal object InkPackageWriter {
     private val pendingAdds: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()
     private val pendingErases: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()
 
+    /** 排進佇列、還沒寫進套件的一筆（側欄縮圖先把它疊上去，見 [pendingStrokes]）。 */
+    class PendingStroke(
+        val pageId: String,
+        val tool: ToolKind,
+        val colorRgba: ByteArray,
+        val baseWidth: Float,
+        val points: List<StrokePoint>
+    )
+
+    // 還在路上的筆畫內容。縮圖是從套件算繪的：同步正拿著套件鎖時（上傳、整庫同步），剛畫完的筆畫
+    // 要等鎖放開才寫得進去，縮圖跟著晚好幾秒。把還沒寫進去的筆畫疊在縮圖上，縮圖就不必等同步。
+    private val pending = java.util.concurrent.ConcurrentHashMap<String, PendingStroke>()
+
+    /** 有筆畫排進佇列就加一（主執行緒）。縮圖以它為鍵重畫；寫完之後由 `onContentCommitted` 再重畫一次。 */
+    val pendingVersion = androidx.compose.runtime.mutableIntStateOf(0)
+
+    /** 這一頁還沒寫進套件的筆畫，依排入順序。 */
+    fun pendingStrokes(pageId: String): List<PendingStroke> =
+        pendingOrder.mapNotNull { id -> pending[id]?.takeIf { it.pageId == pageId } }
+
+    private val pendingOrder = java.util.concurrent.CopyOnWriteArrayList<String>()
+
     /** 這一筆的新增還沒寫進套件。 */
     fun isAddPending(strokeId: String): Boolean = strokeId in pendingAdds
 
@@ -54,6 +76,9 @@ internal object InkPackageWriter {
         val color = colorRgba.copyOf()
         val snapshot = points.toList()
         pendingAdds += strokeId
+        pending[strokeId] = PendingStroke(pageId, tool, color, baseWidth, snapshot)
+        pendingOrder += strokeId
+        pendingVersion.intValue++
         enqueueMutation {
             packageGate.readLock().lock()
             try {
@@ -64,6 +89,8 @@ internal object InkPackageWriter {
                 packageGate.readLock().unlock()
             }
             pendingAdds -= strokeId
+            pending.remove(strokeId)
+            pendingOrder.remove(strokeId)
         }
     }
 

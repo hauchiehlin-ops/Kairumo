@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.DropdownMenu
@@ -59,6 +60,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.zIndex
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
@@ -193,12 +195,14 @@ private fun TextActionButton(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(4.dp)
     ) {
-        Text(icon, fontSize = 11.sp, color = Color.White)
+        Text(icon, fontSize = 11.sp, color = Color.White, maxLines = 1, softWrap = false)
         Text(
             title,
             fontSize = 11.sp,
             fontWeight = FontWeight.SemiBold,
-            color = Color.White
+            color = Color.White,
+            maxLines = 1,
+            softWrap = false
         )
     }
 }
@@ -535,9 +539,23 @@ private fun TextBoxView(
             }
 
             // 🌟 選取時的動作列：編輯、圖層順序、剪下、複製、刪除（完全對齊 iPad）
+            //
+            // **寬度不受方塊外框限制**（`unbounded`）。外框只比方塊寬一點，窄的方塊（即點即書的單行）
+            // 放不下五顆鈕：後面幾顆被擠窄、字一個一個往下排，整列變得很高，又是垂直置中 ——
+            // 看得到的那幾顆被推到方塊上，蓋住正在打的字（實機回報）。
             Row(
                 modifier = Modifier
-                    .offset(x = (horizontalPadding + 6f).dp, y = (topPadding - 54f).dp)
+                    .wrapContentSize(Alignment.TopStart, unbounded = true)
+                    // 方塊靠右時整列往左挪，最後幾顆（複製、刪除）才不會超出頁面右緣被裁掉。
+                    .layout { measurable, constraints ->
+                        val placeable = measurable.measure(constraints)
+                        val preferred = (horizontalPadding + 6f).dp.roundToPx()
+                        val pageRight = (com.kairumo.padnote.ink.PageGeometry.width - liveX + horizontalPadding).dp.roundToPx()
+                        val x = minOf(preferred, pageRight - placeable.width).coerceAtLeast(-(liveX - horizontalPadding).dp.roundToPx())
+                        layout(placeable.width, placeable.height) {
+                            placeable.place(x, (topPadding - 54f).dp.roundToPx())
+                        }
+                    }
                     .shadow(5.dp, RoundedCornerShape(10.dp))
                     .clip(RoundedCornerShape(10.dp))
                     .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.95f))
@@ -566,7 +584,9 @@ private fun TextBoxView(
                                 LocalizationStrings.localized("layer_bring_above_ink", language),
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.SemiBold,
-                                color = Color.White
+                                color = Color.White,
+                                maxLines = 1,
+                                softWrap = false
                             )
                             Text("▾", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color.White)
                         }
