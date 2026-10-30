@@ -534,8 +534,8 @@ class InkEngine(
                 x = x1 + (x2 - x1) * t,
                 y = midY,
                 pressure = 0.65f,
-                tiltX = 0f,
-                tiltY = 0f,
+                tilt = 0f,
+                azimuth = 0f,
                 dtUs = if (idx == 0) 0u else 8_000u
             )
         }
