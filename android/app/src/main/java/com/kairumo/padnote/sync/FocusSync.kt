@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import uniffi.padnote_core.FfiFocusLane
+import uniffi.padnote_core.FfiFocusRoundResult
 import uniffi.padnote_core.FfiFocusOutcome
 import uniffi.padnote_core.FfiFocusRun
 import uniffi.padnote_core.FfiSyncTrigger
@@ -169,12 +170,10 @@ object FocusSync {
         if (!lock.granted) return false
         try {
             val pkg = LanLink.findPackage(context, id) ?: return true
-            if (!com.kairumo.padnote.ink.InkPackageWriter.awaitIdleBlocking()) return false
             val started = SystemClock.elapsedRealtime()
-            val round = com.kairumo.padnote.ink.InkPackageWriter.withSyncLock {
+            val round = narrowFocusRound(session, pkg.absolutePath, id, deviceId) {
                 link?.announce(id)
-                session.focusRound(pkg.absolutePath, id, deviceId)
-            }
+            } ?: return false
             val elapsed = SystemClock.elapsedRealtime() - started
             if (!round.ok) {
                 SyncLogger.log("【立即推送】${id.take(8)}… 失敗：${round.error}", SyncSource.GOOGLE_DRIVE)
@@ -188,6 +187,55 @@ object FocusSync {
             return true
         } finally {
             notebookLockLeave(id, lock.ticket)
+        }
+    }
+
+    /**
+     * 與核心 `focusRound` 同一套三步（問雲端 → 本機比對 → 傳差異），但**只在碰套件的那兩步拿寫入鎖**。
+     *
+     * 原本整個 `focusRound` 包在 `withSyncLock` 裡：第一步是 `changes.list` 的 HTTP，焦點通道每秒問一次，
+     * 鎖幾乎一直被拿著。這段期間剛畫完的筆畫寫不進套件（`InkPackageWriter` 要讀鎖），側欄縮圖要等它寫完
+     * 才重畫 —— 實機上看到的就是「畫布有了、縮圖晚好幾秒」。問雲端只更新雲端快照、不讀寫套件，
+     * 放在鎖外面不影響「同步時不能有寫入搶進來」的保證。Apple 端的 `focusRound` 本來就不拿這把鎖。
+     *
+     * 回傳 null 代表還有筆跡在寫入佇列裡、這一輪先不做（與原本的 `awaitIdleBlocking` 判斷相同）。
+     */
+    private fun narrowFocusRound(
+        session: uniffi.padnote_core.FfiSyncSession,
+        packagePath: String,
+        id: String,
+        deviceId: UInt,
+        beforeSync: () -> Unit
+    ): FfiFocusRoundResult? {
+        // 區網對端的通知照舊在問雲端**之前**送：它不必等 Drive 那一趟。送之前先等寫入佇列清空，
+        // 對端拉到的套件才有剛畫完的筆畫。
+        if (!com.kairumo.padnote.ink.InkPackageWriter.awaitIdleBlocking()) return null
+        beforeSync()
+        val refreshed = session.refresh()
+        if (!refreshed.ok) {
+            return FfiFocusRoundResult(
+                ok = false, remoteChanges = 0u, hadWork = false, uploaded = 0u, downloaded = 0u,
+                error = refreshed.error, needsReauth = refreshed.needsReauth, warnings = emptyList()
+            )
+        }
+        // 與核心相同：全量重建的數字是快照裡的檔案總數，不是變動；用 `effective` 排除自己剛傳的。
+        val remoteChanges = if (refreshed.fullRebuild) 0u else refreshed.effective
+        // 問雲端的這段期間又有筆畫排進來的話，先讓它寫完再比對。
+        if (!com.kairumo.padnote.ink.InkPackageWriter.awaitIdleBlocking()) return null
+        return com.kairumo.padnote.ink.InkPackageWriter.withSyncLock {
+            if (!session.notebookNeedsSync(packagePath, id)) {
+                FfiFocusRoundResult(
+                    ok = true, remoteChanges = remoteChanges, hadWork = false, uploaded = 0u,
+                    downloaded = 0u, error = "", needsReauth = false, warnings = emptyList()
+                )
+            } else {
+                val result = session.syncNotebook(packagePath, id, deviceId)
+                FfiFocusRoundResult(
+                    ok = result.ok, remoteChanges = remoteChanges, hadWork = true,
+                    uploaded = result.uploaded, downloaded = result.downloaded,
+                    error = result.error, needsReauth = result.needsReauth, warnings = result.warnings
+                )
+            }
         }
     }
 
@@ -258,14 +306,10 @@ object FocusSync {
         try {
             val pkg = LanLink.findPackage(context, id) ?: return FfiFocusOutcome.SUCCESS
             // 有寫入就先通知區網對端 —— 不必等 Drive 那一趟。
-            if (!com.kairumo.padnote.ink.InkPackageWriter.awaitIdleBlocking()) {
-                return FfiFocusOutcome.TRANSIENT
-            }
             val started = SystemClock.elapsedRealtime()
-            val round = com.kairumo.padnote.ink.InkPackageWriter.withSyncLock {
+            val round = narrowFocusRound(session, pkg.absolutePath, id, deviceId) {
                 if (run.push) link?.announce(id)
-                session.focusRound(pkg.absolutePath, id, deviceId)
-            }
+            } ?: return FfiFocusOutcome.TRANSIENT
             val elapsed = SystemClock.elapsedRealtime() - started
 
             if (!round.ok) {
