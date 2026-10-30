@@ -93,6 +93,21 @@ class InkInputTest {
     }
 
     @Test
+    fun contactRadiusIgnoresCanvasZoom() {
+        // 頁面縮放改的是座標，不是手指的粗細。除了倍率的話，縮小頁面時一般指頭被算成手掌，
+        // 整頁模式用手指完全畫不出來（實機回報）。
+        val e = event(MotionEvent.ACTION_DOWN, MotionEvent.TOOL_TYPE_FINGER, touchMajor = 60f)
+        val atFull = InkInput.samples(e, density = 1f, zoom = 1f).first().event.contactRadius
+        val zoomedOut = InkInput.samples(e, density = 1f, zoom = 0.6f).first().event.contactRadius
+        val zoomedIn = InkInput.samples(e, density = 1f, zoom = 2f).first().event.contactRadius
+        e.recycle()
+
+        assertEquals(30f, atFull, 0.001f)
+        assertEquals(atFull, zoomedOut, 0.001f)
+        assertEquals(atFull, zoomedIn, 0.001f)
+    }
+
+    @Test
     fun coordinatesAreAlsoConvertedToDensityIndependentUnits() {
         val e = event(MotionEvent.ACTION_DOWN, MotionEvent.TOOL_TYPE_STYLUS, x = 300f, y = 600f)
         val s = InkInput.samples(e, density = 3f).first()
