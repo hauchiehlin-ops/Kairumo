@@ -131,9 +131,10 @@ pub fn translation_pen_languages() -> Vec<FfiTranslationLangInfo> {
 #[uniffi::export]
 pub fn translation_pen_default_config(ui_language: String) -> FfiTranslationPenConfig {
     let trimmed = ui_language.trim();
-    let normalized_ui = if trimmed.is_empty() {
-        "zh-Hant"
-    } else if trimmed.eq_ignore_ascii_case("zh-tw") || trimmed.eq_ignore_ascii_case("zh-hk") {
+    let normalized_ui = if trimmed.is_empty()
+        || trimmed.eq_ignore_ascii_case("zh-tw")
+        || trimmed.eq_ignore_ascii_case("zh-hk")
+    {
         "zh-Hant"
     } else if trimmed.eq_ignore_ascii_case("zh-cn") || trimmed.eq_ignore_ascii_case("zh-sg") {
         "zh-Hans"
