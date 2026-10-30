@@ -1976,23 +1976,51 @@ internal fun TabletopControlDeck(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = "⧉ ${l10n("posture_tabletop_mode")}",
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.primary
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Icon(
+                        imageVector = com.kairumo.padnote.ui.KairumoIcons.TabletopLaptop,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Text(
+                        text = l10n("posture_tabletop_mode"),
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     IconButton(onClick = onUndo, modifier = Modifier.size(32.dp)) {
-                        Text("↶", fontSize = 16.sp)
+                        Icon(
+                            imageVector = com.kairumo.padnote.ui.KairumoIcons.Undo,
+                            contentDescription = l10n("undo"),
+                            modifier = Modifier.size(16.dp)
+                        )
                     }
                     IconButton(onClick = onRedo, modifier = Modifier.size(32.dp)) {
-                        Text("↷", fontSize = 16.sp)
+                        Icon(
+                            imageVector = com.kairumo.padnote.ui.KairumoIcons.Redo,
+                            contentDescription = l10n("redo"),
+                            modifier = Modifier.size(16.dp)
+                        )
                     }
                     IconButton(onClick = onAddPage, modifier = Modifier.size(32.dp)) {
-                        Text("+", fontSize = 18.sp, color = MaterialTheme.colorScheme.primary)
+                        Icon(
+                            imageVector = com.kairumo.padnote.ui.KairumoIcons.Plus,
+                            contentDescription = l10n("add_page"),
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(16.dp)
+                        )
                     }
                     IconButton(onClick = onExitTabletop, modifier = Modifier.size(32.dp)) {
-                        Text("✕", fontSize = 13.sp)
+                        Icon(
+                            imageVector = Icons.Filled.Close,
+                            contentDescription = l10n("cancel"),
+                            modifier = Modifier.size(16.dp)
+                        )
                     }
                 }
             }
@@ -2005,24 +2033,52 @@ internal fun TabletopControlDeck(
                 FilterChip(
                     selected = currentTool == InkTool.FOUNTAIN_PEN,
                     onClick = { onPickTool(InkTool.FOUNTAIN_PEN) },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = com.kairumo.padnote.ui.KairumoIcons.PencilTip,
+                            contentDescription = null,
+                            modifier = Modifier.size(14.dp)
+                        )
+                    },
                     label = { Text(l10n("tool_pen"), maxLines = 1) },
                     modifier = Modifier.weight(1f)
                 )
                 FilterChip(
                     selected = currentTool == InkTool.HIGHLIGHTER,
                     onClick = { onPickTool(InkTool.HIGHLIGHTER) },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = com.kairumo.padnote.ui.KairumoIcons.PencilTip,
+                            contentDescription = null,
+                            modifier = Modifier.size(14.dp)
+                        )
+                    },
                     label = { Text(l10n("tool_highlighter"), maxLines = 1) },
                     modifier = Modifier.weight(1f)
                 )
                 FilterChip(
                     selected = currentTool == InkTool.ERASER,
                     onClick = { onPickTool(InkTool.ERASER) },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = com.kairumo.padnote.ui.KairumoIcons.Eraser,
+                            contentDescription = null,
+                            modifier = Modifier.size(14.dp)
+                        )
+                    },
                     label = { Text(l10n("tool_eraser"), maxLines = 1) },
                     modifier = Modifier.weight(1f)
                 )
                 FilterChip(
                     selected = currentTool == InkTool.LASSO,
                     onClick = { onPickTool(InkTool.LASSO) },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = com.kairumo.padnote.ui.KairumoIcons.Lasso,
+                            contentDescription = null,
+                            modifier = Modifier.size(14.dp)
+                        )
+                    },
                     label = { Text(l10n("tool_lasso"), maxLines = 1) },
                     modifier = Modifier.weight(1f)
                 )
@@ -2038,7 +2094,17 @@ internal fun TabletopControlDeck(
                     modifier = Modifier.weight(1f),
                     contentPadding = PaddingValues(horizontal = 4.dp, vertical = 2.dp)
                 ) {
-                    Text("◎ ${l10n("tool_radial_short")}", fontSize = 11.sp, maxLines = 1)
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Icon(
+                            imageVector = com.kairumo.padnote.ui.KairumoIcons.RadialMenu,
+                            contentDescription = null,
+                            modifier = Modifier.size(13.dp)
+                        )
+                        Text(l10n("tool_radial_short"), fontSize = 11.sp, maxLines = 1)
+                    }
                 }
 
                 OutlinedButton(
@@ -2046,12 +2112,23 @@ internal fun TabletopControlDeck(
                     modifier = Modifier.weight(1.2f),
                     contentPadding = PaddingValues(horizontal = 4.dp, vertical = 2.dp)
                 ) {
-                    Text(
-                        text = if (isMagneticSnapActive) "🧲 Snap ON" else "🧲 Snap",
-                        fontSize = 11.sp,
-                        color = if (isMagneticSnapActive) MaterialTheme.colorScheme.primary else Color.Unspecified,
-                        maxLines = 1
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Icon(
+                            imageVector = com.kairumo.padnote.ui.KairumoIcons.Magnet,
+                            contentDescription = null,
+                            tint = if (isMagneticSnapActive) MaterialTheme.colorScheme.primary else Color.Unspecified,
+                            modifier = Modifier.size(13.dp)
+                        )
+                        Text(
+                            text = if (isMagneticSnapActive) "Snap ON" else "Snap",
+                            fontSize = 11.sp,
+                            color = if (isMagneticSnapActive) MaterialTheme.colorScheme.primary else Color.Unspecified,
+                            maxLines = 1
+                        )
+                    }
                 }
 
                 OutlinedButton(
@@ -2059,7 +2136,17 @@ internal fun TabletopControlDeck(
                     modifier = Modifier.weight(1f),
                     contentPadding = PaddingValues(horizontal = 4.dp, vertical = 2.dp)
                 ) {
-                    Text("🔗 ${l10n("tool_anchor_short")}", fontSize = 11.sp, maxLines = 1)
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Icon(
+                            imageVector = com.kairumo.padnote.ui.KairumoIcons.Anchor,
+                            contentDescription = null,
+                            modifier = Modifier.size(13.dp)
+                        )
+                        Text(l10n("tool_anchor_short"), fontSize = 11.sp, maxLines = 1)
+                    }
                 }
             }
 

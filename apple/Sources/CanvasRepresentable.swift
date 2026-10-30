@@ -1332,12 +1332,20 @@ struct CanvasRepresentable: UIViewRepresentable {
         canvas.installPencilInteractionIfNeeded(delegate: context.coordinator.pencilTaps)
         context.coordinator.penHover.currentPath = { [weak coordinator = context.coordinator] in
             guard let coordinator else { return nil }
+            let tool = coordinator.parent.selectedTool
+            let width = (tool == .eraser)
+                ? (coordinator.parent.eraserMode == .pixel ? coordinator.parent.pixelEraserWidth : 24.0)
+                : coordinator.parent.strokeWidth
             return BrushCursor.path(
-                for: coordinator.parent.selectedTool,
-                strokeWidth: coordinator.parent.strokeWidth)
+                for: tool,
+                strokeWidth: width)
         }
         context.coordinator.penHover.currentColor = { [weak coordinator = context.coordinator] in
-            UIColor(coordinator?.parent.selectedColor ?? .primary)
+            guard let coordinator else { return .label }
+            if coordinator.parent.selectedTool == .eraser {
+                return UIColor.secondaryLabel
+            }
+            return UIColor(coordinator.parent.selectedColor)
         }
         context.coordinator.penHover.isPreviewEnabled = { [weak coordinator = context.coordinator] in
             coordinator?.parent.editorMode == .draw
@@ -1350,7 +1358,10 @@ struct CanvasRepresentable: UIViewRepresentable {
             return snap.didSnap ? snap.snappedPoint : nil
         }
         canvas.installHoverPreviewIfNeeded(coordinator: context.coordinator.penHover)
-        canvas.refreshPointer(for: selectedTool, strokeWidth: strokeWidth)
+        let initialPointerWidth = (selectedTool == .eraser)
+            ? (eraserMode == .pixel ? pixelEraserWidth : 24.0)
+            : strokeWidth
+        canvas.refreshPointer(for: selectedTool, strokeWidth: initialPointerWidth)
         canvas.pageContentHeight = PageGeometry.height
         canvas.contentSize = CGSize(width: max(canvas.bounds.width, 1), height: canvas.pageContentHeight)
 
@@ -1525,7 +1536,10 @@ struct CanvasRepresentable: UIViewRepresentable {
             adaptive.hitPassThroughCheck = hitPassThroughCheck
             adaptive.onPencilTouchBegan = onPencilTouchBegan
             adaptive.installPointerInteractionIfNeeded(delegate: context.coordinator)
-            adaptive.refreshPointer(for: selectedTool, strokeWidth: strokeWidth)
+            let effectivePointerWidth = (selectedTool == .eraser)
+                ? (eraserMode == .pixel ? pixelEraserWidth : 24.0)
+                : strokeWidth
+            adaptive.refreshPointer(for: selectedTool, strokeWidth: effectivePointerWidth)
         }
 
         // 綁定被外面換過（換頁、讀檔、同步、套索、復原……）才動畫布；見 `lastSyncedDrawing`。

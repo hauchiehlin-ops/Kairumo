@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -32,6 +33,7 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.ui.input.pointer.PointerEventPass
@@ -55,9 +57,10 @@ import kotlin.math.sin
  */
 data class RadialMenuItem(
     val id: String,
-    val icon: String,
+    val icon: String = "",
     val label: String,
     val color: Color = Color.Unspecified,
+    val imageVector: ImageVector? = null,
     val action: () -> Unit
 )
 
@@ -154,10 +157,19 @@ fun RadialMarkMenu(
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
-                            Text(
-                                text = item.icon,
-                                fontSize = 15.sp
-                            )
+                            if (item.imageVector != null) {
+                                Icon(
+                                    imageVector = item.imageVector,
+                                    contentDescription = null,
+                                    tint = if (item.color != Color.Unspecified) item.color else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            } else {
+                                Text(
+                                    text = item.icon,
+                                    fontSize = 15.sp
+                                )
+                            }
                             Text(
                                 text = item.label,
                                 style = MaterialTheme.typography.labelSmall.copy(
@@ -265,8 +277,11 @@ fun EditorRadialMenu(
         items = slots.map { action ->
             val id = RadialSlots.identifier(action)
             RadialMenuItem(
-                id = id, icon = RadialSlots.icon(action), label = l(RadialSlots.labelKey(action)),
-                color = RadialSlots.color(action) ?: MaterialTheme.colorScheme.primary
+                id = id,
+                icon = RadialSlots.icon(action),
+                label = l(RadialSlots.labelKey(action)),
+                color = RadialSlots.color(action) ?: MaterialTheme.colorScheme.primary,
+                imageVector = RadialSlots.vector(action)
             ) { onAction(id) }
         },
         onDismiss = { onAction(RADIAL_DISMISS) }
@@ -335,6 +350,25 @@ object RadialSlots {
         FfiRadialAction.STABILIZER -> "stab_title"
         FfiRadialAction.TOGGLE_MODE -> "radial_toggle_mode"
         else -> inkTool(a)?.labelKey ?: "tool_pen"
+    }
+
+    fun vector(a: FfiRadialAction): ImageVector = when (a) {
+        FfiRadialAction.PEN, FfiRadialAction.BALL_POINT, FfiRadialAction.FINELINER,
+        FfiRadialAction.BRUSH, FfiRadialAction.CALLIGRAPHY, FfiRadialAction.PENCIL,
+        FfiRadialAction.CHARCOAL, FfiRadialAction.CRAYON, FfiRadialAction.WATERCOLOR,
+        FfiRadialAction.MARKER, FfiRadialAction.HIGHLIGHTER -> KairumoIcons.PencilTip
+        FfiRadialAction.AIRBRUSH -> KairumoIcons.Waveform
+        FfiRadialAction.OIL_PAINT -> KairumoIcons.Palette
+        FfiRadialAction.ERASER -> KairumoIcons.Eraser
+        FfiRadialAction.LASSO -> KairumoIcons.Lasso
+        FfiRadialAction.MASKING_TAPE -> KairumoIcons.Bandage
+        FfiRadialAction.TRANSLATION_PEN -> KairumoIcons.Translate
+        FfiRadialAction.DRAFTING -> KairumoIcons.Ruler
+        FfiRadialAction.UNDO -> KairumoIcons.Undo
+        FfiRadialAction.REDO -> KairumoIcons.Redo
+        FfiRadialAction.COLOR -> KairumoIcons.Palette
+        FfiRadialAction.STABILIZER -> KairumoIcons.Waveform
+        FfiRadialAction.TOGGLE_MODE -> KairumoIcons.Keyboard
     }
 
     fun icon(a: FfiRadialAction): String = when (a) {

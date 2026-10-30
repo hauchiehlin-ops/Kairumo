@@ -115,6 +115,7 @@ fun InkCanvas(
     // 不知道筆尖會落在哪，使用者只能先點一下看看 —— 而一筆下去才發現位置
     // 不對，那一筆已經在紙上了。
     var hoverPoint by remember { mutableStateOf<Offset?>(null) }
+    var activeEraserPoint by remember { mutableStateOf<Offset?>(null) }
 
     // 已完成的筆畫一筆一個圖層，錄一次之後只重播（見 `StrokeLayerCache`）。
     val graphicsContext = LocalGraphicsContext.current
@@ -131,13 +132,11 @@ fun InkCanvas(
                         val change = event.changes.firstOrNull()
                         hoverPoint = when {
                             !acceptsInk -> null
-                            // 只有筆才預覽。手指懸停在 Android 上是存在的事件
-                            // （某些裝置支援），但手指沒有「還沒碰到」的概念
-                            // —— 畫一個筆頭只會讓人以為畫布壞了。
-                            change?.type != PointerType.Stylus -> null
+                            // 支援觸控筆與滑鼠游標懸停預覽
+                            change?.type != PointerType.Stylus && change?.type != PointerType.Mouse -> null
                             event.type == PointerEventType.Exit -> null
                             // 已經碰到螢幕了就不是懸停。此時預覽會疊在真正的
-                            // 筆跡上，變成一個跟著筆尖跑的灰圈。
+                            // 筆跡上，若是橡皮擦則由下方 pointerInteropFilter 處理 activeEraserPoint
                             change.pressed -> null
                             event.type == PointerEventType.Enter ||
                                 event.type == PointerEventType.Move -> change.position
@@ -150,6 +149,18 @@ fun InkCanvas(
                 // 打字模式等不收筆畫的狀態下，完全不攔截、不繪墨，將觸控原樣放行給文字、物件與即點即書手勢
                 if (!acceptsInk) return@pointerInteropFilter false
                 hoverPoint = null
+                if (engine.isErasing) {
+                    when (event.actionMasked) {
+                        MotionEvent.ACTION_DOWN, MotionEvent.ACTION_MOVE -> {
+                            activeEraserPoint = Offset(event.x, event.y)
+                        }
+                        MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                            activeEraserPoint = null
+                        }
+                    }
+                } else {
+                    activeEraserPoint = null
+                }
                 predictor?.record(event)
                 val outcome = engine.onMotionEvent(event, density)
                 predictedPoints = if (event.actionMasked == MotionEvent.ACTION_MOVE && !engine.isErasing) {
@@ -255,9 +266,10 @@ fun InkCanvas(
                 style = androidx.compose.ui.graphics.drawscope.Stroke(width = 1.6f * density))
         }
 
-        // 懸停預覽畫在最上層：被墨跡蓋住就失去意義了。
-        hoverPoint?.let { point ->
-            drawHoverPreview(point, engine.baseWidth, engine.isErasing, inkColor, density)
+        // 懸停預覽或橡皮擦擦除時的指示圓圈畫在最上層：被墨跡蓋住就失去意義了。
+        val indicatorPoint = if (engine.isErasing) (activeEraserPoint ?: hoverPoint) else hoverPoint
+        indicatorPoint?.let { point ->
+            drawIndicatorPreview(point, engine.baseWidth, engine.isErasing, inkColor, density)
         }
     }
 }
@@ -326,35 +338,65 @@ private class StrokeLayerCache(private val graphicsContext: androidx.compose.ui.
 }
 
 /**
- * 懸停時的筆頭預覽。
+ * 懸停時的筆頭預覽或橡皮擦擦除時的指示圓圈。
  *
- * **只描邊、不填滿**：填滿的預覽會把它自己要對齊的那個字蓋住，而對齊正是
- * 使用者需要它的唯一原因。
- *
- * 橡皮擦畫得比筆粗：擦除半徑本來就比畫出來的粗細大（`baseWidth * 1.5`，
- * 見 `InkEngine.eraseAt`），預覽照筆的粗細畫的話，使用者會擦掉比他預期
- * 更多的東西。
- *
- * **沒有畫傾角。** Apple 那一側會照筆桿角度把筆頭壓扁，這裡沒有 ——
- * Compose 的懸停事件拿不到 tilt，要拿得繞進內部 API。差別只在扁頭筆的
- * 預覽是圓的而不是橢圓的，落點本身是一樣的。
+ * 橡皮擦圓圈半徑嚴格對齊核心擦除半徑（`baseWidth * 1.5f * density`），
+ * 並以高對比同心雙環圈及半透明底色呈現，讓使用者能清楚判讀橡皮擦實際涵蓋範圍。
  */
-private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawHoverPreview(
+private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawIndicatorPreview(
     point: Offset,
     baseWidth: Float,
     erasing: Boolean,
     inkColor: Color,
     density: Float
 ) {
-    // 太小的筆頭在螢幕上看不見，太大的會擋住正要對齊的地方。
-    val radius = (if (erasing) baseWidth * 1.5f else baseWidth)
-        .coerceIn(4f, 40f) * density / 2f
-    drawCircle(
-        color = if (erasing) Color(0x88000000) else inkColor.copy(alpha = 0.55f),
-        radius = radius,
-        center = point,
-        style = androidx.compose.ui.graphics.drawscope.Stroke(width = 1.5f * density)
-    )
+    if (erasing) {
+        // 橡皮擦半徑依選定比例計算（與 InkEngine.eraseAt 一致）
+        val radius = (baseWidth * 1.5f).coerceAtLeast(6f) * density
+        // 輕微半透明淺藍色底，清楚標示擦除覆蓋區域
+        drawCircle(
+            color = Color(0x18007AFF),
+            radius = radius,
+            center = point
+        )
+        // 外層高對比亮白圈（在深色背景或黑筆跡上清晰分明）
+        drawCircle(
+            color = Color(0xEEFFFFFF),
+            radius = radius,
+            center = point,
+            style = androidx.compose.ui.graphics.drawscope.Stroke(width = 2.4f * density)
+        )
+        // 內層深色圈（在淺色或白底紙張上清晰分明）
+        drawCircle(
+            color = Color(0xD01E293B),
+            radius = radius,
+            center = point,
+            style = androidx.compose.ui.graphics.drawscope.Stroke(width = 1.2f * density)
+        )
+        // 中心微小十字準心（3.5dp），輔助精確擦除細小筆跡
+        val tick = 3.5f * density
+        drawLine(
+            color = Color(0xD01E293B),
+            start = Offset(point.x - tick, point.y),
+            end = Offset(point.x + tick, point.y),
+            strokeWidth = 1.2f * density
+        )
+        drawLine(
+            color = Color(0xD01E293B),
+            start = Offset(point.x, point.y - tick),
+            end = Offset(point.x, point.y + tick),
+            strokeWidth = 1.2f * density
+        )
+    } else {
+        // 一般筆刷懸停預覽：只描邊、不填滿
+        val radius = baseWidth.coerceIn(2f, 32f) * density / 2f
+        drawCircle(
+            color = inkColor.copy(alpha = 0.55f),
+            radius = radius,
+            center = point,
+            style = androidx.compose.ui.graphics.drawscope.Stroke(width = 1.5f * density)
+        )
+    }
 }
 
 /**
