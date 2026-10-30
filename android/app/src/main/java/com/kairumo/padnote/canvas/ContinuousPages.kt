@@ -980,6 +980,13 @@ private fun ContinuousPage(
     engine.colorRgba = ink.colorRgba
     engine.baseWidth = ink.baseWidth
     engine.isErasing = ink.isErasing
+    // 這一頁被 `scaledPage` 以 graphicsLayer 縮放。`pointerInteropFilter` 交給畫布的 MotionEvent
+    // 只扣掉頁面左上角的位置、**不除倍率**（整頁模式同一件事，見 EditorCanvasContainer 的 `engine.zoom`）。
+    // 原本這裡沒設、引擎一直以 1 倍換算：落筆與橡皮擦離頁面左上角越遠偏得越多，
+    // 側欄打開、頁面縮小時偏到約一公分（實機回報）。
+    engine.zoom = pageScale
+    engine.offsetX = 0f
+    engine.offsetY = 0f
     // 遵循使用者的 pen-only 設定（預設為 false，支援手指與筆；若使用者開啟僅限觸控筆則為 true）。
     LaunchedEffect(engine, ink.penOnly) {
         engine.setPenOnly(ink.penOnly)
