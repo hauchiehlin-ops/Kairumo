@@ -786,10 +786,18 @@ fn ink_transfer(name: &str, device: Option<u32>, local: u64, remote: Option<u64>
     }
     let Some(author) = crate::ffi_focus::ink_device_of_name(name) else {
         // 舊版檔名：純追加，較大的是超集。
-        return if local > remote_size { InkTransfer::Upload } else { InkTransfer::Download };
+        return if local > remote_size {
+            InkTransfer::Upload
+        } else {
+            InkTransfer::Download
+        };
     };
     if device == Some(author) {
-        if local == 0 { InkTransfer::Download } else { InkTransfer::Upload }
+        if local == 0 {
+            InkTransfer::Download
+        } else {
+            InkTransfer::Upload
+        }
     } else if remote.is_none() {
         InkTransfer::Upload
     } else {
@@ -4235,17 +4243,37 @@ mod tests {
         // 自己的檔：重寫變小也要傳上去，不能被雲端的舊版蓋回來。
         assert_eq!(ink_transfer(own, me, 60, Some(100)), InkTransfer::Upload);
         assert_eq!(ink_transfer(own, me, 160, Some(100)), InkTransfer::Upload);
-        assert_eq!(ink_transfer(own, me, 0, Some(100)), InkTransfer::Download, "重裝之後拿回來");
+        assert_eq!(
+            ink_transfer(own, me, 0, Some(100)),
+            InkTransfer::Download,
+            "重裝之後拿回來"
+        );
         assert_eq!(ink_transfer(own, me, 100, Some(100)), InkTransfer::Nothing);
         // 別台的檔：作者重寫變小，這台要跟上，不能把舊的大檔推回去。
-        assert_eq!(ink_transfer(foreign, me, 100, Some(60)), InkTransfer::Download);
-        assert_eq!(ink_transfer(foreign, me, 60, Some(100)), InkTransfer::Download);
-        assert_eq!(ink_transfer(foreign, me, 60, None), InkTransfer::Upload, "雲端沒有才轉送");
+        assert_eq!(
+            ink_transfer(foreign, me, 100, Some(60)),
+            InkTransfer::Download
+        );
+        assert_eq!(
+            ink_transfer(foreign, me, 60, Some(100)),
+            InkTransfer::Download
+        );
+        assert_eq!(
+            ink_transfer(foreign, me, 60, None),
+            InkTransfer::Upload,
+            "雲端沒有才轉送"
+        );
         // 整本複製：沒有自己的檔。
-        assert_eq!(ink_transfer(own, None, 100, Some(60)), InkTransfer::Download);
+        assert_eq!(
+            ink_transfer(own, None, 100, Some(60)),
+            InkTransfer::Download
+        );
         // 舊版檔名維持較大的贏。
         assert_eq!(ink_transfer(legacy, me, 100, Some(60)), InkTransfer::Upload);
-        assert_eq!(ink_transfer(legacy, me, 60, Some(100)), InkTransfer::Download);
+        assert_eq!(
+            ink_transfer(legacy, me, 60, Some(100)),
+            InkTransfer::Download
+        );
     }
 
     #[test]
@@ -4260,7 +4288,8 @@ mod tests {
         let a = padnote_storage::NotebookPackage::open(&a_root).unwrap();
         a.write_ink_file(name, &[1u8; 100]).unwrap();
         let a_path: String = a_root.to_string_lossy().into();
-        let first = gdrive_sync_notebook_as(cloud.clone(), a_path.clone(), "nb1".into(), Some(0xAA));
+        let first =
+            gdrive_sync_notebook_as(cloud.clone(), a_path.clone(), "nb1".into(), Some(0xAA));
         assert!(first.ok, "{}", first.error);
 
         let b_root = tmp_package("ink-rewrite-b", 0xBB);
@@ -4272,7 +4301,8 @@ mod tests {
 
         // A 重寫成較小的新內容。
         a.write_ink_file(name, &[2u8; 60]).unwrap();
-        let pushed = gdrive_sync_notebook_as(cloud.clone(), a_path.clone(), "nb1".into(), Some(0xAA));
+        let pushed =
+            gdrive_sync_notebook_as(cloud.clone(), a_path.clone(), "nb1".into(), Some(0xAA));
         assert!(pushed.ok, "{}", pushed.error);
         assert_eq!(pushed.uploaded, 1, "變小的重寫也要上傳");
         let again = gdrive_sync_notebook_as(cloud.clone(), a_path, "nb1".into(), Some(0xAA));
