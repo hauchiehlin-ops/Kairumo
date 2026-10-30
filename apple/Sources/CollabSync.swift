@@ -984,7 +984,9 @@ final class CollabStateSync {
 /// 檔案同步帶來的（不在房間裡的裝置寫的）等離開房間再匯入、合併一次。
 enum CollabImportHold {
     private nonisolated static let lock = NSLock()
+    // profile-scope: device 只記開著、正在協同的那一本；切換設定檔會先關掉編輯器（onDisappear 放掉）
     private nonisolated(unsafe) static var held: Set<String> = []
+    // profile-scope: device 與 held 同生同滅：放掉時一併清掉
     private nonisolated(unsafe) static var deferred: Set<String> = []
 
     nonisolated static func hold(_ notebookId: String) {
