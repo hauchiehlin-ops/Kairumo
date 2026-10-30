@@ -876,6 +876,13 @@ class InkEngine(
                 FfiVerdict.DRAW -> {
                     drawn++
                     if (isErasing) {
+                        // 畫到一半按下側鍵切成橡皮擦：已經畫的那一段先收下。留著的話，放開側鍵之後的取樣
+                        // 會接在它後面，中間擦過的那一段變成一條直線。
+                        inFlight.remove(sample.event.id)?.let { partial ->
+                            clearDraftPreview()
+                            endHold()
+                            commit(sample.event.id, partial)?.let { completedNow += it }
+                        }
                         // 擦除半徑與畫出來的粗細用同一組推算，
                         // 否則使用者會覺得「橡皮擦比看起來的小」。
                         eraseAt(sample.event.x, sample.event.y, baseWidth * 1.5f)
@@ -936,6 +943,17 @@ class InkEngine(
             }
             FfiPhase.ENDED -> {
                 val collected = inFlight.remove(id) ?: return null
+                // 只有落筆與抬筆、中間一個移動都沒收到，兩點卻隔得很遠：那不是畫出來的線。
+                // 真的移動一定會有 ACTION_MOVE；沒有的話是筆按著時頁面被捲走、或中間的取樣被別人吃掉，
+                // 照收會在兩點之間拉出一條使用者沒畫過的直線（實機回報，套件裡是一筆只有兩點的筆畫）。
+                val began = collected.singleOrNull()?.event
+                if (began != null &&
+                    kotlin.math.hypot(sample.event.x - began.x, sample.event.y - began.y) > TAP_SLOP
+                ) {
+                    clearDraftPreview()
+                    endHold()
+                    return null
+                }
                 collected.add(sample)
                 clearDraftPreview()
                 // 預覽已經亮著就一定要吸附（所見即所得），不再另外用時間戳判斷。
@@ -1466,6 +1484,8 @@ class InkEngine(
         private const val SNAP_DWELL_MS = 550L
         /** 停留期間允許的抖動（頁面單位）。 */
         private const val SNAP_SLOP = 4f
+        /** 點一下時落筆與抬筆之間允許的位移（頁面單位）。超過又沒有任何移動取樣的不是點，也不是線。 */
+        private const val TAP_SLOP = 8f
 
         /** 目前活著的引擎（連續模式每一頁一個）。弱參照：引擎被丟掉就自己消失。 */
         private val live = java.util.WeakHashMap<InkEngine, Unit>()

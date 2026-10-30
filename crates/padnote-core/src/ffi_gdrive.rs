@@ -675,12 +675,26 @@ fn sync_notebook_ops(
 /// 同步一本筆記本的**手繪筆跡檔**（ink/*.strokes）。
 ///
 /// 筆畫是獨立於 doc/ops 之外的二進位向量資料，也是筆記內容的核心。
-/// 每一頁每台裝置各存一個檔，同 oplog 依大小增量同步。
+/// 每一頁每台裝置各存一個檔。
+///
+/// # 為什麼不是「較大的贏」
+///
+/// 筆畫檔**不是**純追加：平台端會整檔重寫自己的那一份（Apple 每次完整匯出、核心的壓實與
+/// 插入空白）。重寫後變小或同大，「較大的贏」就讓它永遠傳不出去 —— 別台留著舊版，
+/// 寫這一份的裝置下一輪反而被雲端的舊版蓋回去。四台裝置看到四種筆跡（使用者回報）就是這樣來的。
+///
+/// 每個檔只有一個作者（檔名裡的裝置 id），所以規則是**作者說了算**：
+/// - 自己的檔：大小與雲端不同就上傳；本機沒有才下載（重裝之後）。
+/// - 別台的檔：大小與雲端不同就下載；雲端沒有才上傳（轉送）。
+/// - 舊版沒有裝置欄位的 `<頁>.strokes`：維持較大的贏（它真的是純追加，作者也不止一個）。
+///
+/// `device` 為 `None`（整本複製）時沒有自己的檔。
 fn sync_notebook_ink(
     drive: &GDriveProvider<ForeignHttp>,
     index: &mut RemoteIndex,
     package_path: &str,
     notebook_id: &str,
+    device: Option<u32>,
 ) -> FfiNotebookSyncResult {
     let package = match padnote_storage::NotebookPackage::open(std::path::Path::new(package_path)) {
         Ok(p) => p,
@@ -701,7 +715,7 @@ fn sync_notebook_ink(
     for (name, size) in &local {
         let key = padnote_sync::paths::canonical_name(name);
         let existing = remote.get(&key);
-        if *size <= existing.map_or(0, |f| f.size) {
+        if ink_transfer(name, device, *size, existing.map(|f| f.size)) != InkTransfer::Upload {
             continue;
         }
         let bytes = match package.read_ink_file(name) {
@@ -733,7 +747,7 @@ fn sync_notebook_ink(
     let mut downloaded = 0u32;
     for (name, file) in &remote {
         let local_size = local_by_key.get(name).copied().unwrap_or(0);
-        if file.size <= local_size {
+        if ink_transfer(name, device, local_size, Some(file.size)) != InkTransfer::Download {
             continue;
         }
         let bytes = match download_file(drive, file) {
@@ -757,6 +771,32 @@ fn sync_notebook_ink(
     }
 }
 
+#[derive(Debug, PartialEq, Eq)]
+enum InkTransfer {
+    Upload,
+    Download,
+    Nothing,
+}
+
+/// 一個筆跡檔該往哪個方向傳。規則見 [`sync_notebook_ink`]。
+fn ink_transfer(name: &str, device: Option<u32>, local: u64, remote: Option<u64>) -> InkTransfer {
+    let remote_size = remote.unwrap_or(0);
+    if local == remote_size {
+        return InkTransfer::Nothing;
+    }
+    let Some(author) = crate::ffi_focus::ink_device_of_name(name) else {
+        // 舊版檔名：純追加，較大的是超集。
+        return if local > remote_size { InkTransfer::Upload } else { InkTransfer::Download };
+    };
+    if device == Some(author) {
+        if local == 0 { InkTransfer::Download } else { InkTransfer::Upload }
+    } else if remote.is_none() {
+        InkTransfer::Upload
+    } else {
+        InkTransfer::Download
+    }
+}
+
 /// 同步一本筆記本的內容。
 ///
 /// **只有測試在用。** 正式路徑走 [`FfiSyncSession::sync_notebook`]。
@@ -766,13 +806,24 @@ fn gdrive_sync_notebook(
     package_path: String,
     notebook_id: String,
 ) -> FfiNotebookSyncResult {
+    gdrive_sync_notebook_as(http, package_path, notebook_id, None)
+}
+
+/// 同上，但以某台裝置的身分同步（它自己的筆跡檔以本機為準）。
+#[cfg(test)]
+fn gdrive_sync_notebook_as(
+    http: Arc<dyn FfiDriveHttp>,
+    package_path: String,
+    notebook_id: String,
+    device: Option<u32>,
+) -> FfiNotebookSyncResult {
     let drive = GDriveProvider::new(ForeignHttp(http));
     let mut index = RemoteIndex::default();
     let ops = sync_notebook_ops(&drive, &mut index, &package_path, &notebook_id, 0);
     if !ops.ok {
         return ops;
     }
-    let ink = sync_notebook_ink(&drive, &mut index, &package_path, &notebook_id);
+    let ink = sync_notebook_ink(&drive, &mut index, &package_path, &notebook_id, device);
     if !ink.ok {
         return ink;
     }
@@ -1531,7 +1582,7 @@ fn gdrive_clone_notebook(
         return notebook_failed("雲端尚無此筆記本之操作記錄，已清理暫存等待來源端上傳".to_string());
     }
 
-    let ink = sync_notebook_ink(&drive, &mut index, &package_path, &notebook_id);
+    let ink = sync_notebook_ink(&drive, &mut index, &package_path, &notebook_id, None);
     if !ink.ok {
         let _ = std::fs::remove_dir_all(root);
         return ink;
@@ -2342,7 +2393,13 @@ impl FfiSyncSession {
         if !ops.ok {
             return ops;
         }
-        let ink = sync_notebook_ink(&self.drive, &mut index, &package_path, &notebook_id);
+        let ink = sync_notebook_ink(
+            &self.drive,
+            &mut index,
+            &package_path,
+            &notebook_id,
+            Some(device_id),
+        );
         if !ink.ok {
             return ink;
         }
@@ -2420,7 +2477,7 @@ impl FfiSyncSession {
         }
         let ink = {
             let mut index = self.index.lock().unwrap();
-            sync_notebook_ink(&self.drive, &mut index, &package_path, &notebook_id)
+            sync_notebook_ink(&self.drive, &mut index, &package_path, &notebook_id, None)
         };
         if !ink.ok {
             let _ = std::fs::remove_dir_all(root);
@@ -2744,7 +2801,9 @@ fn notebook_differs(index: &RemoteIndex, package_path: &str, notebook_id: &str) 
     ) {
         return true;
     }
-    if differs(
+    // 筆跡檔會被作者整檔重寫（可能變小），所以只要大小不同就有事做 —— 方向由
+    // `ink_transfer` 決定。只比「誰比較大」的話，變小的重寫永遠不會觸發同步。
+    if sizes_differ(
         &package.ink_files().unwrap_or_default(),
         &index.entries_under(&padnote_sync::paths::notebook_ink_prefix(notebook_id)),
     ) {
@@ -2875,6 +2934,23 @@ fn differs(
         }
     }
     false
+}
+
+/// 本機與雲端有沒有任何一個檔案大小不同（一邊沒有算 0）。
+fn sizes_differ(
+    local: &[(String, u64)],
+    remote: &std::collections::BTreeMap<String, RemoteFile>,
+) -> bool {
+    let local_map: std::collections::BTreeMap<String, u64> = local
+        .iter()
+        .map(|(n, s)| (padnote_sync::paths::canonical_name(n), *s))
+        .collect();
+    local_map
+        .iter()
+        .any(|(name, size)| *size != remote.get(name).map_or(0, |f| f.size))
+        || remote
+            .iter()
+            .any(|(name, file)| file.size != local_map.get(name).copied().unwrap_or(0))
 }
 
 fn notebook_failed(error: String) -> FfiNotebookSyncResult {
@@ -4148,6 +4224,69 @@ mod tests {
         );
         assert!(!cloned.ok, "雲端沒有任何 ops 時不應成功");
         assert!(!root.exists(), "失敗時必須清理建立的臨時套件目錄");
+    }
+
+    #[test]
+    fn ink_files_follow_their_author_not_the_bigger_size() {
+        let own = "0e0b8bd2-3f2a-4b9e-9c11-aabbccddeeff-000000aa.strokes";
+        let foreign = "0e0b8bd2-3f2a-4b9e-9c11-aabbccddeeff-000000bb.strokes";
+        let legacy = "0e0b8bd2-3f2a-4b9e-9c11-aabbccddeeff.strokes";
+        let me = Some(0xAA);
+        // 自己的檔：重寫變小也要傳上去，不能被雲端的舊版蓋回來。
+        assert_eq!(ink_transfer(own, me, 60, Some(100)), InkTransfer::Upload);
+        assert_eq!(ink_transfer(own, me, 160, Some(100)), InkTransfer::Upload);
+        assert_eq!(ink_transfer(own, me, 0, Some(100)), InkTransfer::Download, "重裝之後拿回來");
+        assert_eq!(ink_transfer(own, me, 100, Some(100)), InkTransfer::Nothing);
+        // 別台的檔：作者重寫變小，這台要跟上，不能把舊的大檔推回去。
+        assert_eq!(ink_transfer(foreign, me, 100, Some(60)), InkTransfer::Download);
+        assert_eq!(ink_transfer(foreign, me, 60, Some(100)), InkTransfer::Download);
+        assert_eq!(ink_transfer(foreign, me, 60, None), InkTransfer::Upload, "雲端沒有才轉送");
+        // 整本複製：沒有自己的檔。
+        assert_eq!(ink_transfer(own, None, 100, Some(60)), InkTransfer::Download);
+        // 舊版檔名維持較大的贏。
+        assert_eq!(ink_transfer(legacy, me, 100, Some(60)), InkTransfer::Upload);
+        assert_eq!(ink_transfer(legacy, me, 60, Some(100)), InkTransfer::Download);
+    }
+
+    #[test]
+    fn a_rewritten_smaller_ink_file_reaches_the_other_device() {
+        // 使用者回報：同一本筆記在 Mac、iPad、iPhone、Android 上筆跡各不相同。
+        // 作者把自己的筆畫檔整檔重寫（擦掉、換筆畫身分）之後檔案變小，
+        // 「較大的贏」讓新版永遠傳不出去，作者自己下一輪還被雲端的舊版蓋回去。
+        let cloud: Arc<dyn FfiDriveHttp> = Arc::new(FakeDrive::default());
+        let name = "0e0b8bd2-3f2a-4b9e-9c11-aabbccddeeff-000000aa.strokes";
+
+        let a_root = tmp_package("ink-rewrite-a", 0xAA);
+        let a = padnote_storage::NotebookPackage::open(&a_root).unwrap();
+        a.write_ink_file(name, &[1u8; 100]).unwrap();
+        let a_path: String = a_root.to_string_lossy().into();
+        let first = gdrive_sync_notebook_as(cloud.clone(), a_path.clone(), "nb1".into(), Some(0xAA));
+        assert!(first.ok, "{}", first.error);
+
+        let b_root = tmp_package("ink-rewrite-b", 0xBB);
+        let b_path: String = b_root.to_string_lossy().into();
+        let got = gdrive_sync_notebook_as(cloud.clone(), b_path.clone(), "nb1".into(), Some(0xBB));
+        assert!(got.ok, "{}", got.error);
+        let b = padnote_storage::NotebookPackage::open(&b_root).unwrap();
+        assert_eq!(b.read_ink_file(name).unwrap(), vec![1u8; 100]);
+
+        // A 重寫成較小的新內容。
+        a.write_ink_file(name, &[2u8; 60]).unwrap();
+        let pushed = gdrive_sync_notebook_as(cloud.clone(), a_path.clone(), "nb1".into(), Some(0xAA));
+        assert!(pushed.ok, "{}", pushed.error);
+        assert_eq!(pushed.uploaded, 1, "變小的重寫也要上傳");
+        let again = gdrive_sync_notebook_as(cloud.clone(), a_path, "nb1".into(), Some(0xAA));
+        assert_eq!(again.downloaded, 0, "作者不能被雲端的舊版蓋回去");
+        assert_eq!(a.read_ink_file(name).unwrap(), vec![2u8; 60]);
+
+        // B 跟上新版，而且不會把自己手上的舊大檔推回雲端。
+        let pulled = gdrive_sync_notebook_as(cloud.clone(), b_path, "nb1".into(), Some(0xBB));
+        assert!(pulled.ok, "{}", pulled.error);
+        assert_eq!(pulled.uploaded, 0);
+        assert_eq!(b.read_ink_file(name).unwrap(), vec![2u8; 60]);
+
+        let _ = std::fs::remove_dir_all(&a_root);
+        let _ = std::fs::remove_dir_all(&b_root);
     }
 
     #[test]

@@ -178,6 +178,26 @@ class InkEngineTest {
     }
 
     @Test
+    fun aDownAndAFarAwayUpWithNoMovesDoNotDrawAStraightLine() {
+        // 實機回報：手繪時多出一條直線。套件裡那一筆只有兩點（落筆、抬筆），中間沒有任何移動取樣。
+        val engine = InkEngine()
+        feed(
+            engine,
+            touch(MotionEvent.ACTION_DOWN, MotionEvent.TOOL_TYPE_STYLUS, 10f, 4f, 1_000L),
+            touch(MotionEvent.ACTION_UP, MotionEvent.TOOL_TYPE_STYLUS, 300f, 4f, 1_200L)
+        )
+        assertEquals(0, engine.strokes.size)
+        // 正常書寫照收。
+        feed(
+            engine,
+            touch(MotionEvent.ACTION_DOWN, MotionEvent.TOOL_TYPE_STYLUS, 10f, 4f, 2_000L),
+            touch(MotionEvent.ACTION_MOVE, MotionEvent.TOOL_TYPE_STYLUS, 150f, 4f, 2_100L),
+            touch(MotionEvent.ACTION_UP, MotionEvent.TOOL_TYPE_STYLUS, 300f, 4f, 2_200L)
+        )
+        assertEquals(1, engine.strokes.size)
+    }
+
+    @Test
     fun cancelledStrokesAreDiscarded() {
         // 來電或系統手勢接管時，畫到一半的筆畫不該被當成完成。
         val engine = InkEngine()
