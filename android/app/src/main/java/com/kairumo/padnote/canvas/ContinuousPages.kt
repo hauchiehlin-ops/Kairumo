@@ -815,7 +815,8 @@ fun ContinuousPagesView(
                             onTapToPaste = { point ->
                                 pasteObjectsToPage(objectClipboard, index, point)
                                 onPlacingPasteObjectChange(false)
-                            }
+                            },
+                            onMetaObjectsChanged = onMetaObjectsChanged
                         )
                     }
                 }
@@ -974,6 +975,7 @@ private fun ContinuousPage(
     objectClipboardActions: ObjectClipboardActions? = null,
     isPlacingPasteObject: Boolean = false,
     onTapToPaste: (Offset) -> Unit = {},
+    onMetaObjectsChanged: () -> Unit = {},
     snapToGrid: Boolean = true
 ) {
     val pageId = runtime.pageId
