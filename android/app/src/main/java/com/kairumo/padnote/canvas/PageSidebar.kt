@@ -37,6 +37,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.layout.ContentScale
@@ -286,7 +287,9 @@ private fun PageSidebarRow(
     var thumb by remember(index, session) { mutableStateOf<ImageBitmap?>(null) }
     var ratio by remember(index, session) { mutableFloatStateOf(800f / 1132f) }
 
-    LaunchedEffect(index, revision, session, appLanguage) {
+    // 剛畫完、還在寫入佇列裡的筆畫也要算進來（見 `withPendingInk`）。
+    val pendingInk = com.kairumo.padnote.ink.InkPackageWriter.pendingVersion.intValue
+    LaunchedEffect(index, revision, session, appLanguage, pendingInk) {
         val s = session ?: return@LaunchedEffect
         val pageId = s.pageIdAt(index.toUInt()) ?: return@LaunchedEffect
         s.pageSize(pageId)?.let { size ->
@@ -297,7 +300,7 @@ private fun PageSidebarRow(
         val cacheKey = "$pageId-$revision-$appLanguage"
         val cached = pageThumbnailCache.get(cacheKey)
         if (cached != null) {
-            thumb = cached
+            thumb = withPendingInk(cached, pageId, 0.22f)
             return@LaunchedEffect
         }
         // 已有舊縮圖時先保留畫面並去抖動 120ms，避免連續捲動或拖曳物件期間每一幀都在主執行緒同步重繪縮圖造成卡頓
@@ -311,7 +314,7 @@ private fun PageSidebarRow(
             if (bmp != null) {
                 val imageBitmap = bmp.asImageBitmap()
                 pageThumbnailCache.put(cacheKey, imageBitmap)
-                thumb = imageBitmap
+                thumb = withPendingInk(imageBitmap, pageId, 0.22f)
                 return@LaunchedEffect
             }
         }
@@ -327,7 +330,7 @@ private fun PageSidebarRow(
         }
         if (cachedBmp != null) {
             pageThumbnailCache.put(cacheKey, cachedBmp)
-            thumb = cachedBmp
+            thumb = withPendingInk(cachedBmp, pageId, 0.22f)
             return@LaunchedEffect
         }
     }
@@ -499,3 +502,33 @@ private fun PageSidebarRow(
         }
     }
 }
+
+/**
+ * 把這一頁還沒寫進套件的筆畫疊到縮圖上。
+ *
+ * 縮圖從套件算繪，而筆畫寫進套件要等同步放開套件鎖（上傳、整庫同步時可能好幾秒）。
+ * 不疊的話，畫布上已經有的字，縮圖要晚好幾秒才出現。寫完之後縮圖會從套件重畫一次，
+ * 這一層疊加就自然消失 —— 只影響畫面，不碰資料。
+ */
+private fun withPendingInk(base: ImageBitmap, pageId: String, scale: Float): ImageBitmap {
+    val strokes = com.kairumo.padnote.ink.InkPackageWriter.pendingStrokes(pageId)
+    if (strokes.isEmpty()) return base
+    val bitmap = base.asAndroidBitmap().copy(android.graphics.Bitmap.Config.ARGB_8888, true) ?: return base
+    val canvas = android.graphics.Canvas(bitmap)
+    val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+        style = android.graphics.Paint.Style.STROKE
+        strokeCap = android.graphics.Paint.Cap.ROUND
+        strokeJoin = android.graphics.Paint.Join.ROUND
+    }
+    for (stroke in strokes) {
+        val c = stroke.colorRgba
+        paint.color = if (c.size >= 4) {
+            android.graphics.Color.argb(
+                c[3].toInt() and 0xFF, c[0].toInt() and 0xFF, c[1].toInt() and 0xFF, c[2].toInt() and 0xFF)
+        } else android.graphics.Color.BLACK
+        com.kairumo.padnote.ink.InkBrushRenderer.drawStrokeOnCanvas(
+            canvas, paint, stroke.points, stroke.tool, stroke.baseWidth, scale)
+    }
+    return bitmap.asImageBitmap()
+}
+
