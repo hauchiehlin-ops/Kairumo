@@ -127,7 +127,12 @@ object InkInput {
                 // 沒有壓感的裝置回傳 1.0；核心約定「沒有壓感時填 0.5」。
                 pressure = pressure.coerceIn(0f, 1f),
                 // touchMajor 是**直徑**，核心要的是長半徑；而且要換成 dp。
-                contactRadius = (touchMajor / 2f) / scale / z,
+                //
+                // **不除畫布倍率。** 這是手指在螢幕上的實際粗細，用來判斷「是不是手掌」，
+                // 與頁面縮放無關（Apple 的 `majorRadius` 也不換算）。原本也除了 `z`：
+                // 頁面縮小到 0.6 倍時，一般指頭（約 31dp）被算成 50dp 以上，超過手掌門檻，
+                // 整頁模式用手指完全畫不出來（Pixel 10 Pro Fold 實機日誌）。
+                contactRadius = (touchMajor / 2f) / scale,
                 timestampUs = (timeMs * 1_000L).toULong()
             ),
             tilt = tiltRad.coerceIn(0f, (PI / 2).toFloat()),
