@@ -77,7 +77,7 @@ public struct ProColorPickerSheet: View {
                 .padding(.horizontal)
 
                 // 3. 各模式對應的調色面板
-                ScrollView {
+                ScrollView(.vertical) {
                     VStack(spacing: 16) {
                         switch colorModeIndex {
                         case 0:
@@ -100,8 +100,7 @@ public struct ProColorPickerSheet: View {
                     }
                     .padding(.horizontal)
                 }
-
-                Spacer()
+                .scrollIndicators(.visible)
             }
             .navigationTitle(localizationManager.localized("pro_color"))
             .navigationBarTitleDisplayMode(.inline)
@@ -117,6 +116,9 @@ public struct ProColorPickerSheet: View {
             .onAppear {
                 initFromCurrentColor()
             }
+            #if targetEnvironment(macCatalyst)
+            .frame(minWidth: 460, idealWidth: 500, minHeight: 520, idealHeight: 600)
+            #endif
         }
     }
 
@@ -237,25 +239,27 @@ public struct ProColorPickerSheet: View {
                 .fontWeight(.bold)
                 .foregroundColor(.secondary)
 
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 8) {
-                    ForEach(list, id: \.0) { hex, name in
-                        Button {
-                            applyHex(hex)
-                        } label: {
-                            VStack(spacing: 3) {
-                                Circle()
-                                    .fill(Color(hex: hex) ?? .gray)
-                                    .frame(width: 28, height: 28)
-                                    .overlay(Circle().stroke(Color.secondary.opacity(0.3), lineWidth: 1))
+            // 使用 LazyVGrid 整齊排列 8 個色票，移除巢狀 ScrollView(.horizontal)，
+            // 徹底解決 Mac Catalyst 下內層水平捲軸攔截滑鼠滾輪／觸控板而導致外層垂直捲動失效的問題。
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 6), count: 8)) {
+                ForEach(list, id: \.0) { hex, name in
+                    Button {
+                        applyHex(hex)
+                    } label: {
+                        VStack(spacing: 3) {
+                            Circle()
+                                .fill(Color(hex: hex) ?? .gray)
+                                .frame(width: 28, height: 28)
+                                .overlay(Circle().stroke(Color.secondary.opacity(0.3), lineWidth: 1))
 
-                                Text(name)
-                                    .font(.system(size: 9))
-                                    .foregroundColor(.secondary)
-                            }
+                            Text(name)
+                                .font(.system(size: 9))
+                                .foregroundColor(.secondary)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.75)
                         }
-                        .buttonStyle(.plain)
                     }
+                    .buttonStyle(.plain)
                 }
             }
         }
