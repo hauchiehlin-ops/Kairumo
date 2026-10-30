@@ -1104,7 +1104,14 @@ class InkEngine(
         }
         // 製圖線要的是等寬、不收尖、不圓角：不做平滑。
         if (finalPoints.size >= 3 && !drafting) {
-            finalPoints = uniffi.padnote_core.streamlineSmoothPoints(finalPoints, 0.35f, 1.0f, 0.20f, 0.30f)
+            val f = pressureFloor.coerceIn(0f, 0.5f)
+            val g = pressureGamma.coerceIn(0.4f, 2.2f)
+            val curvedPts = finalPoints.map { pt ->
+                val p = pt.pressure.coerceIn(0f, 1f)
+                val mapped = (f * 0.4f + (1f - f * 0.4f) * Math.pow(p.toDouble(), g.toDouble()).toFloat()).coerceIn(0.02f, 1f)
+                pt.copy(pressure = mapped)
+            }
+            finalPoints = uniffi.padnote_core.streamlineSmoothPoints(curvedPts, 0.35f, g, 0.22f, 0.38f)
         }
         snappedKind?.let { onSnapped?.invoke(it) }
 
@@ -1516,7 +1523,12 @@ class InkEngine(
         applyPalmThresholds(lastPenOnly ?: false)
     }
     
+    private var pressureFloor: Float = 0.15f
+    private var pressureGamma: Float = 1.0f
+
     fun setPressureCurve(floor: Float, gamma: Float) {
+        pressureFloor = floor.coerceIn(0f, 0.5f)
+        pressureGamma = gamma.coerceIn(0.4f, 2.2f)
         arbiter.setPressureCurve(floor, gamma)
     }
 

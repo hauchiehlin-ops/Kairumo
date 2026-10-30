@@ -148,6 +148,7 @@ extension Notification.Name {
 enum ProInk {
     static func kind(named name: String) -> ToolKind? {
         switch name {
+        case "brush": return .brush
         case "fineliner": return .fineliner
         case "charcoal": return .charcoal
         case "crayon": return .crayon
@@ -160,6 +161,7 @@ enum ProInk {
 
     static func name(of kind: ToolKind) -> String? {
         switch kind {
+        case .brush: return "brush"
         case .fineliner: return "fineliner"
         case .charcoal: return "charcoal"
         case .crayon: return "crayon"
@@ -1136,7 +1138,12 @@ final class ProInkLayerView: UIView {
             let pts = stroke.points.map {
                 StrokePoint(x: $0.x, y: $0.y, pressure: $0.pressure, tilt: $0.tilt, azimuth: $0.azimuth, dtUs: $0.dtUs, roll: $0.roll)
             }
-            let smoothed = streamlineSmoothPoints(points: pts, amount: 0.35, gamma: 1.0, taper: 0.20, tension: 0.30)
+            let prefs = ProfileDefaults.current
+            let rawGamma = prefs.object(forKey: "kairumo.pen.pressureGamma") != nil
+                ? Double(prefs.float(forKey: "kairumo.pen.pressureGamma"))
+                : 1.0
+            let gamma = Float(max(0.4, min(2.2, rawGamma)))
+            let smoothed = streamlineSmoothPoints(points: pts, amount: 0.35, gamma: gamma, taper: 0.22, tension: 0.38)
             stroke.points = smoothed.map {
                 ProPoint(x: $0.x, y: $0.y, pressure: $0.pressure, tilt: $0.tilt, azimuth: $0.azimuth, dtUs: $0.dtUs, roll: $0.roll)
             }
@@ -1815,6 +1822,11 @@ final class ProStrokeGestureRecognizer: UIGestureRecognizer {
     private var tracked: UITouch?
     private var lastTimestamp: TimeInterval = 0
     private var erasePath: [CGPoint] = []
+    /// 手指智慧力道模擬（Smart Finger Dynamics）狀態：初始觸控半徑、前一點位置、平滑壓感與點序。
+    private var initialTouchRadius: CGFloat = 0
+    private var lastSampleLocation: CGPoint?
+    private var smoothedFingerPressure: Float = 0.56
+    private var strokeSampleIndex: Int = 0
 
     /// 為真時（打字模式）：筆要真的移動超過門檻才開始落墨。輕點不留墨點。
     var deferUntilMoved = false
@@ -1839,6 +1851,10 @@ final class ProStrokeGestureRecognizer: UIGestureRecognizer {
 
         tracked = touch
         lastTimestamp = touch.timestamp
+        initialTouchRadius = max(touch.majorRadius, 4.0)
+        lastSampleLocation = nil
+        smoothedFingerPressure = 0.54
+        strokeSampleIndex = 0
         let point = makePoint(touch, in: layerView, dt: 0)
         if mode == .draw, let model = DraftingState.shared.instrument {
             let here = CGPoint(x: CGFloat(point.x), y: CGFloat(point.y))
@@ -1928,7 +1944,7 @@ final class ProStrokeGestureRecognizer: UIGestureRecognizer {
                 for pTouch in predicted.prefix(3) {
                     let dt = UInt32(max(0, (pTouch.timestamp - predTime) * 1_000_000))
                     predTime = max(predTime, pTouch.timestamp)
-                    predictedPoints.append(makePoint(pTouch, in: layerView, dt: dt))
+                    predictedPoints.append(makePoint(pTouch, in: layerView, dt: dt, isPrediction: true))
                 }
             }
             layerView.extendStroke(with: points, predicted: predictedPoints)
@@ -2035,14 +2051,55 @@ final class ProStrokeGestureRecognizer: UIGestureRecognizer {
         }
     }
 
-    private func makePoint(_ touch: UITouch, in view: UIView, dt: UInt32) -> ProPoint {
+    private func makePoint(_ touch: UITouch, in view: UIView, dt: UInt32, isPrediction: Bool = false) -> ProPoint {
         let location = touch.preciseLocation(in: view)
+        let prefs = ProfileDefaults.current
+        let rawFloor = prefs.object(forKey: "kairumo.pen.pressureFloor") != nil
+            ? Double(prefs.float(forKey: "kairumo.pen.pressureFloor"))
+            : 0.15
+        let rawGamma = prefs.object(forKey: "kairumo.pen.pressureGamma") != nil
+            ? Double(prefs.float(forKey: "kairumo.pen.pressureGamma"))
+            : 1.0
+        let floorVal = Float(max(0.0, min(0.5, rawFloor)))
+        let gammaVal = Float(max(0.4, min(2.2, rawGamma)))
+
         let pressure: Float
         if touch.type == .pencil || touch.maximumPossibleForce > 0, touch.force > 0 {
-            pressure = Float(min(1, max(0, touch.force / max(touch.maximumPossibleForce, 0.0001))))
+            let raw = Float(min(1, max(0, touch.force / max(touch.maximumPossibleForce, 0.0001))))
+            let curved = powf(raw, gammaVal)
+            pressure = min(1, max(0.02, floorVal * 0.45 + (1 - floorVal * 0.45) * curved))
         } else {
-            // 手指與滑鼠沒有壓力：給一個中段值，筆畫才不會細到看不見。
-            pressure = 0.6
+            // 方案二：手指書寫「智慧力道模擬引擎（Smart Finger Dynamics）」
+            // 結合 (1) 指腹接觸面積變化 (majorRadius)、(2) 行筆速度（疾細徐粗 / 駐筆頓挫）、(3) 起筆入鋒包絡線
+            let radiusRatio = Float(max(0.65, min(1.55, touch.majorRadius / max(initialTouchRadius, 4.0))))
+            let areaDelta = (radiusRatio - 1.0) * 0.48
+            let velAdjust: Float
+            if let prev = lastSampleLocation, dt > 0 {
+                let dist = Float(hypot(location.x - prev.x, location.y - prev.y))
+                let dtMs = max(1.0, Float(dt) / 1000.0)
+                let speed = dist / dtMs // pt/ms
+                if speed < 0.45 {
+                    // 慢速駐筆／轉折頓挫：自動加粗蓄墨
+                    velAdjust = (0.45 - speed) * 0.42
+                } else {
+                    // 快速疾掠／撇捺出鋒：自動收細勁瘦
+                    velAdjust = -min(0.32, (speed - 0.45) * 0.15)
+                }
+            } else {
+                velAdjust = 0.06 // 落筆第一點微頓
+            }
+            let entryRamp = min(1.0, 0.78 + Float(strokeSampleIndex) * 0.08)
+            let target = min(0.96, max(0.16, (0.58 + areaDelta + velAdjust) * entryRamp))
+            let blended = smoothedFingerPressure * 0.42 + target * 0.58
+            if !isPrediction {
+                smoothedFingerPressure = blended
+            }
+            let curved = powf(blended, gammaVal)
+            pressure = min(0.98, max(0.12, floorVal * 0.35 + (1 - floorVal * 0.35) * curved))
+        }
+        if !isPrediction {
+            lastSampleLocation = location
+            strokeSampleIndex += 1
         }
         let tilt = touch.type == .pencil ? Float(.pi / 2 - touch.altitudeAngle) : 0
         let azimuth = touch.type == .pencil ? Float(touch.azimuthAngle(in: view)) : 0

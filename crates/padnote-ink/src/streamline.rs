@@ -246,10 +246,12 @@ pub fn apply_taper(points: &mut [InkPoint], taper_ratio: f32) {
     }
 }
 
-/// 墨水表面張力調製（Ink Tension Modulation）：
+/// 墨水表面張力與智慧力道模擬調製（Ink Tension & Smart Dynamics Modulation）：
 ///
 /// 根據行進速度（速度快收縮、速度慢飽滿）與局部曲率（急轉折蓄墨膨脹），
-/// 對每個取樣點的壓感進行平滑調製，重現頂級鋼筆／書法筆自然優美的水墨張力手感。
+/// 對每個取樣點的壓感進行平滑調製，重現頂級鋼筆／書法毛筆自然優美的水墨張力手感。
+/// 若偵測到輸入點群為無壓感變化之平坦壓力（例如手指書寫或一般電容筆），
+/// 會自動放大速度與轉折頓挫的動態調變幅度，讓手指也能寫出「疾細徐粗、轉折頓筆」的書法韻味。
 ///
 /// `amount`: 0.0 ~ 1.0 調製深度（建議 0.25~0.50）。
 pub fn apply_ink_tension(points: &mut [InkPoint], amount: f32) {
@@ -258,7 +260,15 @@ pub fn apply_ink_tension(points: &mut [InkPoint], amount: f32) {
         return;
     }
 
-    let amt = amount.clamp(0.0, 1.0);
+    let (min_p, max_p) = points.iter().fold((1.0f32, 0.0f32), |(lo, hi), p| {
+        (lo.min(p.pressure), hi.max(p.pressure))
+    });
+    let is_flat_pressure = (max_p - min_p) < 0.035;
+    let amt = if is_flat_pressure {
+        (amount * 1.45).clamp(0.35, 1.0)
+    } else {
+        amount.clamp(0.0, 1.0)
+    };
 
     // 計算每段局部速度 (px/ms)
     let mut speeds = vec![1.0f32; n];
@@ -267,7 +277,7 @@ pub fn apply_ink_tension(points: &mut [InkPoint], amount: f32) {
         let dy = points[i].y - points[i - 1].y;
         let dist = (dx * dx + dy * dy).sqrt();
         let dt_ms = (points[i].dt_us as f32 / 1000.0).max(1.0);
-        speeds[i] = (dist / dt_ms).clamp(0.05, 5.0);
+        speeds[i] = (dist / dt_ms).clamp(0.05, 6.0);
     }
     speeds[0] = speeds[1];
 
@@ -292,15 +302,15 @@ pub fn apply_ink_tension(points: &mut [InkPoint], amount: f32) {
         let spd = speeds[i];
         let curv = curvatures[i];
 
-        // 速度因子：慢速 +15%，快速 -20%
+        // 速度因子：慢速駐筆頓挫 +28%，快速疾掠收鋒至 0.62x
         let spd_factor = if spd < 0.8 {
-            1.0 + (0.8 - spd) * 0.18
+            1.0 + (0.8 - spd) * 0.32
         } else {
-            (1.0 - (spd - 0.8) * 0.08).max(0.75)
+            (1.0 - (spd - 0.8) * 0.11).max(0.62)
         };
 
-        // 曲率因子：轉角蓄墨 +20%
-        let curv_factor = 1.0 + curv * 0.20;
+        // 曲率因子：轉角折釵股蓄墨 +28%
+        let curv_factor = 1.0 + curv * 0.28;
 
         let combined_factor = 1.0 + (spd_factor * curv_factor - 1.0) * amt;
         points[i].pressure = (points[i].pressure * combined_factor).clamp(0.01, 1.0);

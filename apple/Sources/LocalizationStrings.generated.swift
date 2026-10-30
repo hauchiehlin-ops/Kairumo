@@ -20111,6 +20111,46 @@ extension LocalizationManager {
             .ko: "설정",
             .th: "การตั้งค่า"
         ],
+        "settings_pen_preset_calligraphy": [
+            .zhHant: "書法大師",
+            .en: "Calligraphy",
+            .zhHans: "书法大师",
+            .ja: "書道・毛筆",
+            .ko: "서예·모필",
+            .th: "พู่กันวิจิตร"
+        ],
+        "settings_pen_preset_light": [
+            .zhHant: "輕手靈敏",
+            .en: "Light Touch",
+            .zhHans: "轻手灵敏",
+            .ja: "軽いタッチ",
+            .ko: "가벼운 필압",
+            .th: "สัมผัสบางเบา"
+        ],
+        "settings_pen_preset_standard": [
+            .zhHant: "標準手感",
+            .en: "Standard",
+            .zhHans: "标准手感",
+            .ja: "標準",
+            .ko: "표준",
+            .th: "มาตรฐาน"
+        ],
+        "settings_pen_preset_steady": [
+            .zhHant: "穩健筆記",
+            .en: "Steady Note",
+            .zhHans: "稳健笔记",
+            .ja: "安定ノート",
+            .ko: "안정 필기",
+            .th: "จดโน้ตสม่ำเสมอ"
+        ],
+        "settings_pen_preset_title": [
+            .zhHant: "筆感模式快速切換",
+            .en: "Quick Pressure Presets",
+            .zhHans: "笔感模式快速切换",
+            .ja: "筆圧プリセット（ワンタップ切替）",
+            .ko: "필압 프리셋 빠른 전환",
+            .th: "พรีเซ็ตแรงกดปากกา"
+        ],
         "shape_change_kind": [
             .zhHant: "形狀種類",
             .en: "Shape type",

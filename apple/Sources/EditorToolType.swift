@@ -69,6 +69,7 @@ public enum EditorToolType: String, CaseIterable, Identifiable {
     /// 由自繪引擎算繪的筆刷（見 ProInk.swift）。其餘走 PencilKit。
     public var proToolKind: ToolKind? {
         switch self {
+        case .brush: return .brush
         case .fineliner: return .fineliner
         case .charcoal: return .charcoal
         case .crayon: return .crayon

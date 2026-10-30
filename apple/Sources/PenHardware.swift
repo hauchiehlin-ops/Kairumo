@@ -181,6 +181,24 @@ struct AdvancedPenSettingsSheet: View {
         (.ruler, "pen_action_ruler")
     ]
 
+    private let presets: [(id: String, labelKey: String, floor: Double, gamma: Double)] = [
+        ("standard", "settings_pen_preset_standard", 0.15, 1.00),
+        ("light", "settings_pen_preset_light", 0.22, 0.65),
+        ("calligraphy", "settings_pen_preset_calligraphy", 0.04, 1.25),
+        ("steady", "settings_pen_preset_steady", 0.35, 1.45),
+    ]
+
+    private func isPresetSelected(floor: Double, gamma: Double) -> Bool {
+        abs(pressureFloor - floor) < 0.03 && abs(pressureGamma - gamma) < 0.08
+    }
+
+    private func applyPreset(floor: Double, gamma: Double) {
+        pressureFloor = floor
+        pressureGamma = gamma
+        ProfileDefaults.current.set(Float(floor), forKey: "kairumo.pen.pressureFloor")
+        ProfileDefaults.current.set(Float(gamma), forKey: "kairumo.pen.pressureGamma")
+    }
+
     var body: some View {
         NavigationStack {
             Form {
@@ -190,8 +208,38 @@ struct AdvancedPenSettingsSheet: View {
                         .foregroundColor(.secondary)
                 }
 
-                // MARK: 壓感曲線 Section
-                Section(header: Text(loc.localized("pressure_floor"))) {
+                // MARK: 筆感模式一鍵預設 + 壓感曲線 Section
+                Section(header: Text(loc.localized("settings_pen_preset_title"))) {
+                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
+                        ForEach(presets, id: \.id) { preset in
+                            let selected = isPresetSelected(floor: preset.floor, gamma: preset.gamma)
+                            Button {
+                                applyPreset(floor: preset.floor, gamma: preset.gamma)
+                            } label: {
+                                HStack(spacing: 6) {
+                                    Image(systemName: selected ? "checkmark.circle.fill" : "circle")
+                                        .font(.caption)
+                                    Text(loc.localized(preset.labelKey))
+                                        .font(.subheadline.weight(selected ? .semibold : .regular))
+                                        .lineLimit(1)
+                                }
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 8)
+                                .padding(.horizontal, 10)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .fill(selected ? Color.accentColor.opacity(0.16) : Color.secondary.opacity(0.10))
+                                )
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .stroke(selected ? Color.accentColor : Color.clear, lineWidth: 1.2)
+                                )
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                    .padding(.vertical, 4)
+
                     VStack(alignment: .leading, spacing: 4) {
                         HStack {
                             Text(loc.localized("pressure_floor"))

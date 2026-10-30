@@ -100,12 +100,13 @@ impl Tool {
 
     /// 是否由自繪引擎（`brush.rs` 的筆點陣）算繪。
     ///
-    /// PencilKit 與 Android 的既有筆刷各有自己的算繪；這幾支在兩端**沒有原生對應**，
-    /// 所以由核心算出同一份筆點陣，兩端只負責把橢圓畫出來 —— 同一筆在兩台裝置上長得一樣。
+    /// PencilKit 與 Android 的既有筆刷各有自己的算繪；這幾支（含傳統書法毛筆 `Brush`）
+    /// 由核心算出同一份物理筆點陣，兩端只負責把橢圓畫出來 —— 同一筆在兩台裝置上長得一樣。
     pub fn is_custom_engine(self) -> bool {
         matches!(
             self,
-            Self::Fineliner
+            Self::Brush
+                | Self::Fineliner
                 | Self::Charcoal
                 | Self::Crayon
                 | Self::Airbrush

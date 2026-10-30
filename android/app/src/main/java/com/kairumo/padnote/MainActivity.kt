@@ -881,8 +881,8 @@ internal fun openNotebook(
  * 兩邊的編輯互相覆蓋，而且在單機測試時完全不會發生。存下來這一步不能省：
  * 每次啟動換一個 id，同一台裝置在檔案裡會看起來像很多台。
  */
-internal fun deviceId(activity: ComponentActivity): UInt {
-    val prefs = ProfileContext.prefs(activity, "kairumo")
+internal fun deviceId(context: android.content.Context): UInt {
+    val prefs = ProfileContext.prefs(context, "kairumo")
     val saved = prefs.getInt("deviceId", 0)
     if (saved != 0) return saved.toUInt()
     var hash = 2_166_136_261u // FNV-1a

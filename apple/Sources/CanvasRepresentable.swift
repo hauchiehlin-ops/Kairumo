@@ -1641,7 +1641,8 @@ struct CanvasRepresentable: UIViewRepresentable {
         } else {
             adaptive.proTool = selectedTool.proToolKind
             adaptive.proColor = InkInterop.rgba(from: UIColor(selectedColor)).map { $0 }
-            adaptive.proWidth = Float(max(1.2, strokeWidth * 1.4))
+            let widthFactor: CGFloat = selectedTool == .brush ? 1.65 : 1.4
+            adaptive.proWidth = Float(max(1.2, strokeWidth * widthFactor))
             adaptive.proLayerId = 0
             adaptive.proLineType = 0
             adaptive.proSnapStep = nil
@@ -2165,15 +2166,16 @@ struct CanvasRepresentable: UIViewRepresentable {
 
         func applyTool(to canvas: PKCanvasView) {
             let uiColor = UIColor(parent.selectedColor)
+            let curveMultiplier = pressureFeelWidthScale()
             switch parent.selectedTool {
-            case .fineliner, .calligraphy, .charcoal, .crayon, .airbrush, .oilpaint:
-                // 專業筆刷由自繪引擎收筆（ProInk.swift），PencilKit 的落筆手勢在這時是關著的。
+            case .brush, .fineliner, .calligraphy, .charcoal, .crayon, .airbrush, .oilpaint:
+                // 專業筆刷（含永字八法軟毫毛筆）由自繪引擎收筆（ProInk.swift），PencilKit 的落筆手勢在這時是關著的。
                 // 這裡只放一支不會被用到的筆，讓畫布手上永遠有個合法的工具。
                 canvas.tool = PKInkingTool(.pen, color: uiColor, width: max(1, parent.strokeWidth))
 
             case .pen:
                 // 鋼筆：墨水充沛飽滿、帶有自然流暢的下筆壓力與速度過渡
-                canvas.tool = PKInkingTool(.pen, color: uiColor, width: max(2.5, parent.strokeWidth * 1.1))
+                canvas.tool = PKInkingTool(.pen, color: uiColor, width: max(2.0, parent.strokeWidth * 1.1 * curveMultiplier))
 
             case .ballpoint:
                 // 原子筆：恆定寬度、均勻工整、俐落乾脆之機械單線
@@ -2183,17 +2185,9 @@ struct CanvasRepresentable: UIViewRepresentable {
                     canvas.tool = PKInkingTool(.pen, color: uiColor, width: max(1.2, parent.strokeWidth * 0.65))
                 }
 
-            case .brush:
-                // 毛筆：45° 書法扁鋒、提按起伏頓挫有致、筆鋒鮮明、粗細對比強烈
-                if #available(iOS 17.0, *) {
-                    canvas.tool = PKInkingTool(.fountainPen, color: uiColor, width: max(5.0, parent.strokeWidth * 2.2))
-                } else {
-                    canvas.tool = PKInkingTool(.pen, color: uiColor, width: max(5.0, parent.strokeWidth * 2.0))
-                }
-
             case .marker:
                 // 麥克筆：厚實方形斜切筆觸、高飽和厚重墨水（Alpha 0.85）、設計草圖與手繪上色
-                canvas.tool = PKInkingTool(.marker, color: uiColor.withAlphaComponent(0.85), width: max(8.0, parent.strokeWidth * 2.8))
+                canvas.tool = PKInkingTool(.marker, color: uiColor.withAlphaComponent(0.85), width: max(8.0, parent.strokeWidth * 2.8 * curveMultiplier))
 
             case .highlighter:
                 // 螢光筆：半透明寬扁筆刷（Alpha 0.35），重點標記不遮蔽底層筆跡
@@ -2201,14 +2195,14 @@ struct CanvasRepresentable: UIViewRepresentable {
 
             case .pencil:
                 // 鉛筆：石墨微顆粒磨砂質感、側鋒陰影素描
-                canvas.tool = PKInkingTool(.pencil, color: uiColor.withAlphaComponent(0.85), width: max(2.0, parent.strokeWidth * 1.3))
+                canvas.tool = PKInkingTool(.pencil, color: uiColor.withAlphaComponent(0.85), width: max(2.0, parent.strokeWidth * 1.3 * curveMultiplier))
 
             case .watercolor:
                 // 水彩筆：濕潤水墨層疊擴散與暈染效果
                 if #available(iOS 17.0, *) {
-                    canvas.tool = PKInkingTool(.watercolor, color: uiColor.withAlphaComponent(0.55), width: max(8.0, parent.strokeWidth * 2.4))
+                    canvas.tool = PKInkingTool(.watercolor, color: uiColor.withAlphaComponent(0.55), width: max(8.0, parent.strokeWidth * 2.4 * curveMultiplier))
                 } else {
-                    canvas.tool = PKInkingTool(.marker, color: uiColor.withAlphaComponent(0.5), width: max(8.0, parent.strokeWidth * 2.0))
+                    canvas.tool = PKInkingTool(.marker, color: uiColor.withAlphaComponent(0.5), width: max(8.0, parent.strokeWidth * 2.0 * curveMultiplier))
                 }
 
             case .eraser:
@@ -2238,25 +2232,32 @@ struct CanvasRepresentable: UIViewRepresentable {
             }
         }
 
-        /// 從 UserDefaults 讀取使用者設定的壓感曲線並套用。
-        ///
-        /// Apple 的 PencilKit 不直接暴露壓感曲線 API，以下手法透過
-        /// 縮小 PKInkingTool 的最小有效寬度來模擬 `pressureFloor`。
-        /// `pressureGamma` 存於 UserDefaults，供後續接入核心 `inkWidthScale`
-        /// 反向查表時使用（兩個平台讀同一組 key）。
+        /// 依據使用者設定的壓感曲線（`pressureFloor` 與 `pressureGamma`）計算 PencilKit 筆刷的等效筆寬倍率。
+        private func pressureFeelWidthScale() -> CGFloat {
+            let prefs = ProfileDefaults.current
+            let floor = prefs.object(forKey: "kairumo.pen.pressureFloor") != nil
+                ? Double(prefs.float(forKey: "kairumo.pen.pressureFloor"))
+                : 0.15
+            let gamma = prefs.object(forKey: "kairumo.pen.pressureGamma") != nil
+                ? Double(prefs.float(forKey: "kairumo.pen.pressureGamma"))
+                : 1.0
+            let clampedFloor = max(0.0, min(0.5, floor))
+            let clampedGamma = max(0.5, min(2.2, gamma))
+            let midResponse = pow(0.65, clampedGamma - 1.0) * (0.92 + 0.55 * clampedFloor)
+            return CGFloat(max(0.75, min(1.35, midResponse)))
+        }
+
+        /// 從 ProfileDefaults 讀取使用者設定的壓感曲線並確認範圍合法。
         func applyPressureCurve() {
-            // 讀取使用者設定，未設定時退回預設
-            // 這裡只做輕量的持久化確認，真正的壓感曲線邏輯在核心 `ink_width_scale`。
-            let floor = max(0.01, min(1.0, Double(ProfileDefaults.current.float(forKey: "kairumo.pen.pressureFloor"))))
-            let gamma = max(0.5, min(2.5, Double(ProfileDefaults.current.float(forKey: "kairumo.pen.pressureGamma"))))
-            // 只在有使用者明確設定值的情況下套用（避免 UserDefaults 回傳 0 的未設狀態）
-            let floorSet = ProfileDefaults.current.object(forKey: "kairumo.pen.pressureFloor") != nil
-            let gammaSet = ProfileDefaults.current.object(forKey: "kairumo.pen.pressureGamma") != nil
-            guard floorSet || gammaSet else { return }
-            // 記錄到核心側（Android 的 InkEngine.setPressureCurve 對應實作在 JNI；
-            // Apple 這裡以 UserDefaults 為橋，核心 ink_width_scale 在畫線時讀取）
-            _ = floor  // pressureFloor 與 pressureGamma 透過 ink_width_scale FFI 影響筆寬
-            _ = gamma
+            let prefs = ProfileDefaults.current
+            if prefs.object(forKey: "kairumo.pen.pressureFloor") != nil {
+                let floor = Double(prefs.float(forKey: "kairumo.pen.pressureFloor"))
+                prefs.set(Float(max(0.0, min(0.5, floor))), forKey: "kairumo.pen.pressureFloor")
+            }
+            if prefs.object(forKey: "kairumo.pen.pressureGamma") != nil {
+                let gamma = Double(prefs.float(forKey: "kairumo.pen.pressureGamma"))
+                prefs.set(Float(max(0.5, min(2.2, gamma))), forKey: "kairumo.pen.pressureGamma")
+            }
         }
     }
 
