@@ -926,6 +926,7 @@ extension NotebookEditorView {
             // 中繼資料改動，把時戳往前推會讓這台裝置永遠贏過另一台對同一本
             // 筆記的改名，而那次改名其實比較晚。
             commitNotebook()
+            thumbnailRevision += 1
         }
         inkTouchWork = work
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.2, execute: work)

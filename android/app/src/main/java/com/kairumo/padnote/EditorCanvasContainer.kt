@@ -867,7 +867,7 @@ internal fun ColumnScope.EditorCanvasContainer(ctx: EditorCanvasContext) = with(
                         .testTag("editor.canvas")
                         .semantics { contentDescription = strokeReadout },
                     onInkChanged = {
-                        revision++
+                        scheduleInkRevisionDebounced()
                         if (engine.consumeOutsidePrintableArea()) {
                             message = l10n("outside_printable_rejected")
                         }
@@ -898,7 +898,7 @@ internal fun ColumnScope.EditorCanvasContainer(ctx: EditorCanvasContext) = with(
                         Color(android.graphics.Color.parseColor(inkColorHex))
                     }.getOrDefault(Color.Black),
                     onInkChanged = {
-                        revision++
+                        scheduleInkRevisionDebounced()
                         // 整筆畫在框線外會被引擎收回（S-85）。使用者要知道
                         // 那一筆去哪裡了 —— 沒有提示的話它就只是「消失了」。
                         if (engine.consumeOutsidePrintableArea()) {

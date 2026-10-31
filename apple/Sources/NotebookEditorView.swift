@@ -1314,7 +1314,8 @@ public struct NotebookEditorView: View {
         guard (note.object as? String) == notebook.id.lowercased() else { return }
         objectHistory.breakCoalescing()
         proInkDirty = true
-        thumbnailRevision += 1
+        // 連續書寫時不在此同步遞增 thumbnailRevision，避免每次抬筆觸發整頁 SwiftUI 重新求值；
+        // 由 noteInkEdited() 的 1.2 秒去抖動工作項目統一在停筆後更新縮圖。
         noteInkEdited()
     }
 

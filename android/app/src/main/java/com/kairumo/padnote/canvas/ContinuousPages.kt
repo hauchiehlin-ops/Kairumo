@@ -1130,6 +1130,8 @@ private fun ContinuousPage(
     val chartStore = runtime.chartStore
     val imageStore = runtime.imageStore
     var revision by runtime.revision
+    val pageScope = rememberCoroutineScope()
+    var inkDebounceJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
 
     // reloadToken 讓外層插入物件之後這一頁看得到新東西 ——
     // 不重讀的話，從選單插進去的文字方塊要等切換頁面才會出現。
@@ -1414,7 +1416,13 @@ private fun ContinuousPage(
             localizeGuide = { key -> com.kairumo.padnote.LocalizationStrings.localized(key, com.kairumo.padnote.currentLanguageTag()) },
             guideMeasurer = guideMeasurer,
             inkColor = currentInkColor,
-            onInkChanged = { revision++ },
+            onInkChanged = {
+                inkDebounceJob?.cancel()
+                inkDebounceJob = pageScope.launch {
+                    kotlinx.coroutines.delay(1000L)
+                    revision++
+                }
+            },
             onStylusDetected = {
                 // 全自動意圖感知：偵測到 Stylus 觸控筆下筆時，自動平滑切換回 DRAW 手繪模式
                 if (editorMode != EditorMode.DRAW) {
