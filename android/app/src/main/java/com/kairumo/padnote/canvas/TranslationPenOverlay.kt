@@ -72,11 +72,13 @@ import com.kairumo.padnote.comment.CommentMessage
 import com.kairumo.padnote.comment.CommentPin
 import com.kairumo.padnote.currentLanguageTag
 import com.kairumo.padnote.deviceId
+import com.kairumo.padnote.image.ImageStore
 import com.kairumo.padnote.image.LinkObject
 import com.kairumo.padnote.ink.InkEngine
 import com.kairumo.padnote.library.NotebookMeta
 import com.kairumo.padnote.library.TranslationPenConfig
 import com.kairumo.padnote.platform.Handwriting
+import com.kairumo.padnote.platform.ImageOcr
 import com.kairumo.padnote.shape.ShapeStore
 import com.kairumo.padnote.sync.AutoSync
 import com.kairumo.padnote.table.TableStore
@@ -173,11 +175,12 @@ fun TranslationPenOverlay(
     textStore: TextBoxStore,
     tableStore: TableStore,
     shapeStore: ShapeStore,
+    imageStore: ImageStore? = null,
     links: List<LinkObject>,
     maskingTapes: MutableList<NoteTape>,
     pins: MutableList<CommentPin>,
     onChanged: () -> Unit,
-    onShowMessage: (String) -> Unit,
+    onShowMessage: (String) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     if (!isActive) return
@@ -351,8 +354,56 @@ fun TranslationPenOverlay(
             statusError = null
 
             var extracted = extractStructuredText(scanRectPage)
-            var hadHandwritingStrokes = false
-            var handwritingFailed = false
+            var hadVisualTarget = false
+            var visualFailed = false
+
+            // 1. 若未命中文字方塊/表格/形狀，檢查是否框選到圖片或匯入之 PDF 頁面附件，執行裝置端 ML Kit OCR
+            if (extracted.isNullOrBlank() && imageStore != null) {
+                val expanded = scanRectPage.inflate(6f)
+                val pieces = mutableListOf<String>()
+                for (image in imageStore.all) {
+                    val imageRect = Rect(image.x, image.y, image.x + image.width, image.y + image.height)
+                    if (imageRect.overlaps(expanded)) {
+                        val intLeft = max(imageRect.left, expanded.left)
+                        val intTop = max(imageRect.top, expanded.top)
+                        val intRight = min(imageRect.right, expanded.right)
+                        val intBottom = min(imageRect.bottom, expanded.bottom)
+                        val intW = intRight - intLeft
+                        val intH = intBottom - intTop
+                        if (intW >= 6f && intH >= 6f) {
+                            hadVisualTarget = true
+                            val bmp = imageStore.rawBitmap(image)
+                            if (bmp != null && bmp.width > 0 && bmp.height > 0) {
+                                val scaleX = bmp.width.toFloat() / max(1f, image.width)
+                                val scaleY = bmp.height.toFloat() / max(1f, image.height)
+                                val cropX = ((intLeft - image.x) * scaleX).toInt().coerceIn(0, bmp.width - 1)
+                                val cropY = ((intTop - image.y) * scaleY).toInt().coerceIn(0, bmp.height - 1)
+                                val cropW = (intW * scaleX).toInt().coerceIn(1, bmp.width - cropX)
+                                val cropH = (intH * scaleY).toInt().coerceIn(1, bmp.height - cropY)
+                                if (cropW > 4 && cropH > 4) {
+                                    val cropped = android.graphics.Bitmap.createBitmap(bmp, cropX, cropY, cropW, cropH)
+                                    val ocrRes = withContext(Dispatchers.IO) {
+                                        ImageOcr.recognizeText(cropped, config.sourceLang)
+                                    }
+                                    if (ocrRes.isFailure) {
+                                        visualFailed = true
+                                    } else {
+                                        val ocrText = ocrRes.getOrNull()?.trim().orEmpty()
+                                        if (ocrText.isNotEmpty()) {
+                                            pieces.add(ocrText)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                if (pieces.isNotEmpty()) {
+                    extracted = pieces.joinToString(" ")
+                }
+            }
+
+            // 2. 若仍無文字，檢查是否框選到手寫筆劃，執行手寫辨識
             if (extracted.isNullOrBlank()) {
                 val expanded = scanRectPage.inflate(10f)
                 val matchingStrokes = engine.strokes.filter { stroke ->
@@ -360,12 +411,12 @@ fun TranslationPenOverlay(
                 }.map { it.points }
 
                 if (matchingStrokes.isNotEmpty()) {
-                    hadHandwritingStrokes = true
+                    hadVisualTarget = true
                     val hwrRes = withContext(Dispatchers.IO) {
                         Handwriting.recognize(matchingStrokes, config.sourceLang)
                     }
                     if (hwrRes.isFailure) {
-                        handwritingFailed = true
+                        visualFailed = true
                     }
                     extracted = hwrRes.getOrNull()?.trim()
                 }
@@ -374,7 +425,7 @@ fun TranslationPenOverlay(
             isScanning = false
             val finalPiece = extracted?.trim().orEmpty()
             if (finalPiece.isEmpty()) {
-                val warningMsg = if (hadHandwritingStrokes || handwritingFailed) {
+                val warningMsg = if (hadVisualTarget && visualFailed) {
                     l10n("trans_pen_blurry_warning")
                 } else {
                     l10n("trans_pen_empty_scan")

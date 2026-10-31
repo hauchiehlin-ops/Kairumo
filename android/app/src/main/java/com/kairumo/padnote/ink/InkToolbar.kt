@@ -199,6 +199,7 @@ fun InkToolbar(
     onColorChange: (String) -> Unit,
     onWidthChange: (Float) -> Unit,
     modifier: Modifier = Modifier,
+    onOpenProColors: (() -> Unit)? = null,
     onOpenColorWheel: (() -> Unit)? = null,
     onAddTextBox: (() -> Unit)? = null
 ) {
@@ -323,6 +324,31 @@ fun InkToolbar(
                         }
                 )
             }
+            if (onOpenProColors != null) {
+                Box(
+                    modifier = Modifier
+                        .size(26.dp)
+                        .clip(CircleShape)
+                        .background(INK_SWATCH_PAPER)
+                        .padding(2.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                        .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
+                        .clickable(enabled = !paletteHidden) { onOpenProColors() }
+                        .semantics {
+                            contentDescription =
+                                LocalizationStrings.localized("pro_color", languageTag)
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = KairumoIcons.Palette,
+                        contentDescription = null,
+                        modifier = Modifier.size(14.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
             if (onOpenColorWheel != null) {
                 Box(
                     modifier = Modifier
@@ -334,8 +360,6 @@ fun InkToolbar(
                         .background(MaterialTheme.colorScheme.surfaceVariant)
                         .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
                         .clickable(enabled = !paletteHidden) { onOpenColorWheel() }
-                        // 只有一個 🎨 emoji，TalkBack 念不出功能（對應 Apple 端
-                        // 的 ink_pro_wheel 標籤）。
                         .semantics {
                             contentDescription =
                                 LocalizationStrings.localized("ink_pro_wheel", languageTag)
@@ -343,7 +367,7 @@ fun InkToolbar(
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        imageVector = KairumoIcons.Palette,
+                        imageVector = KairumoIcons.ColorWheel,
                         contentDescription = null,
                         modifier = Modifier.size(14.dp),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant

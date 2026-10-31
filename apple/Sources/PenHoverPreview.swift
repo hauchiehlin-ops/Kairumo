@@ -36,6 +36,10 @@ final class PenHoverPreviewView: UIView {
 
     private let shape = CAShapeLayer()
     private let reticleLayer = CAShapeLayer()
+    /// 橡皮擦範圍：淡底色＋外白內深雙環，深色筆跡與白紙上都看得清楚。
+    private let eraserFill = CAShapeLayer()
+    private let eraserOuter = CAShapeLayer()
+    private let eraserInner = CAShapeLayer()
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -53,6 +57,19 @@ final class PenHoverPreviewView: UIView {
         reticleLayer.strokeColor = UIColor.systemTeal.withAlphaComponent(0.85).cgColor
         layer.addSublayer(reticleLayer)
         reticleLayer.isHidden = true
+
+        eraserFill.fillColor = UIColor.systemBlue.withAlphaComponent(0.10).cgColor
+        eraserFill.strokeColor = nil
+        eraserOuter.fillColor = UIColor.clear.cgColor
+        eraserOuter.strokeColor = UIColor.white.withAlphaComponent(0.95).cgColor
+        eraserOuter.lineWidth = 2.6
+        eraserInner.fillColor = UIColor.clear.cgColor
+        eraserInner.strokeColor = UIColor(red: 0.12, green: 0.16, blue: 0.23, alpha: 0.85).cgColor
+        eraserInner.lineWidth = 1.2
+        for l in [eraserFill, eraserOuter, eraserInner] {
+            l.isHidden = true
+            layer.addSublayer(l)
+        }
 
         isHidden = true
     }
@@ -97,6 +114,8 @@ final class PenHoverPreviewView: UIView {
         CATransaction.setDisableActions(true)
         defer { CATransaction.commit() }
 
+        setEraserHidden(true)
+        shape.isHidden = false
         shape.path = transformed.cgPath
         // 只描邊、不填滿：填滿的預覽會把它自己要對齊的那個字蓋住。
         shape.strokeColor = color.withAlphaComponent(0.55).cgColor
@@ -122,6 +141,45 @@ final class PenHoverPreviewView: UIView {
         isHidden = false
     }
 
+    /// 橡皮擦範圍圓圈。
+    ///
+    /// 與筆頭預覽分開畫：筆頭會依筆桿傾角壓扁、用墨色淡描邊 —— 套在橡皮擦上，
+    /// 圓變成斜的橢圓、淺色時幾乎看不見，使用者讀不出實際擦除範圍。
+    /// - Parameters:
+    ///   - point: 中心（這個視圖的座標系）。
+    ///   - diameter: 螢幕上的直徑（已乘上畫布縮放倍率），與實際擦除寬度一比一。
+    func showEraser(at point: CGPoint, diameter: CGFloat) {
+        let d = max(diameter, 6)
+        let rect = CGRect(x: point.x - d / 2, y: point.y - d / 2, width: d, height: d)
+        let ring = UIBezierPath(ovalIn: rect).cgPath
+        // 中心微型十字：擦細小筆跡時對準用，長度隨圓縮小。
+        let tick = min(3.5, d / 5)
+        let cross = UIBezierPath(ovalIn: rect)
+        cross.move(to: CGPoint(x: point.x - tick, y: point.y))
+        cross.addLine(to: CGPoint(x: point.x + tick, y: point.y))
+        cross.move(to: CGPoint(x: point.x, y: point.y - tick))
+        cross.addLine(to: CGPoint(x: point.x, y: point.y + tick))
+
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        defer { CATransaction.commit() }
+        // 畫布上後來加入的子視圖（專業筆畫層）會疊在預覽上面；每次顯示都拉回最上層。
+        superview?.bringSubviewToFront(self)
+        shape.isHidden = true
+        reticleLayer.isHidden = true
+        eraserFill.path = ring
+        eraserOuter.path = ring
+        eraserInner.path = cross.cgPath
+        setEraserHidden(false)
+        isHidden = false
+    }
+
+    private func setEraserHidden(_ hidden: Bool) {
+        eraserFill.isHidden = hidden
+        eraserOuter.isHidden = hidden
+        eraserInner.isHidden = hidden
+    }
+
     func hide() {
         guard !isHidden || !reticleLayer.isHidden else { return }
         CATransaction.begin()
@@ -142,6 +200,8 @@ final class PenHoverCoordinator: NSObject {
     var isPreviewEnabled: (() -> Bool)?
     /// 專業圖學與幾何磁吸點查詢（若命中格線或錨點，回傳吸附座標）。
     var snapQuery: ((CGPoint) -> CGPoint?)?
+    /// 選了橡皮擦時回傳螢幕上的擦除直徑（已含縮放），其餘工具回傳 `nil`。
+    var eraserDiameter: (() -> CGFloat?)?
 
     private weak var preview: PenHoverPreviewView?
 
@@ -176,6 +236,10 @@ final class PenHoverCoordinator: NSObject {
             var tilt: CGFloat = 0
             var azimuth: CGFloat = 0
             let location = gesture.location(in: view)
+            if let diameter = eraserDiameter?() {
+                preview.showEraser(at: location, diameter: diameter)
+                return
+            }
             if #available(iOS 16.4, *) {
                 // `altitudeAngle` 是與螢幕平面的夾角（π/2 為垂直握筆），
                 // 我們要的是偏離垂直的角度。兩者是互補角，不是同一個東西

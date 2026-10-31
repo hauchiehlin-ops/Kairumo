@@ -422,6 +422,25 @@ final class AdaptiveCanvasView: PKCanvasView {
     /// 懸停預覽（工作項 S-69）。筆尖靠近但還沒碰到時，先畫出會落在哪裡。
     private var hoverPreview: PenHoverPreviewView?
 
+    /// 橡皮擦寬度（頁面座標，與 PencilKit 橡皮擦、專業筆畫擦除半徑同一個值）。
+    var eraserWidth: CGFloat = 20
+    /// 螢幕上的橡皮擦直徑：頁面寬度 × 縮放倍率。畫布放大時擦掉的頁面範圍不變，螢幕上的圓要跟著變大。
+    var eraserScreenDiameter: CGFloat { eraserWidth * max(zoomScale, 0.01) }
+    /// 正在用橡皮擦擦（手指或筆尖貼在螢幕上）。
+    private var isEraserTracking = false
+
+    /// 擦除中把範圍圓圈畫在觸控點底下；`nil` 收起。
+    func trackEraser(_ point: CGPoint?) {
+        guard let preview = hoverPreview else { return }
+        if let point {
+            isEraserTracking = true
+            preview.showEraser(at: point, diameter: eraserScreenDiameter)
+        } else {
+            isEraserTracking = false
+            preview.hide()
+        }
+    }
+
     func installHoverPreviewIfNeeded(coordinator: PenHoverCoordinator) {
         guard hoverPreview == nil else { return }
         let preview = PenHoverPreviewView(frame: bounds)
@@ -636,6 +655,7 @@ final class AdaptiveCanvasView: PKCanvasView {
         gesture.color = { [weak self] in self?.proColor ?? [0, 0, 0, 255] }
         gesture.width = { [weak self] in self?.proWidth ?? 4 }
         gesture.eraserRadius = { [weak self] in self?.proEraserRadius ?? 10 }
+        gesture.onEraserTrack = { [weak self] point in self?.trackEraser(point) }
         gesture.drawLayer = { [weak self] in self?.proLayerId ?? 0 }
         gesture.drawLineType = { [weak self] in self?.proLineType ?? 0 }
         gesture.snapStep = { [weak self] in self?.proSnapStep }
@@ -774,7 +794,8 @@ final class AdaptiveCanvasView: PKCanvasView {
     }
 
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
-        hoverPreview?.hide()
+        // 手勢辨識器比 view 先收到 touchesBegan：擦除中的範圍圓圈這時已經畫上去了，不能在這裡收掉。
+        if !isEraserTracking { hoverPreview?.hide() }
         if lassoTouchHandler != nil {
             if let sv = enclosingScrollView(), sv.panGestureRecognizer.minimumNumberOfTouches < 2 {
                 if savedEnclosingPanTouchesForLasso == nil {
@@ -1333,9 +1354,7 @@ struct CanvasRepresentable: UIViewRepresentable {
         context.coordinator.penHover.currentPath = { [weak coordinator = context.coordinator] in
             guard let coordinator else { return nil }
             let tool = coordinator.parent.selectedTool
-            let width = (tool == .eraser)
-                ? (coordinator.parent.eraserMode == .pixel ? coordinator.parent.pixelEraserWidth : 24.0)
-                : coordinator.parent.strokeWidth
+            let width = (tool == .eraser) ? coordinator.parent.pixelEraserWidth : coordinator.parent.strokeWidth
             return BrushCursor.path(
                 for: tool,
                 strokeWidth: width)
@@ -1346,6 +1365,10 @@ struct CanvasRepresentable: UIViewRepresentable {
                 return UIColor.secondaryLabel
             }
             return UIColor(coordinator.parent.selectedColor)
+        }
+        context.coordinator.penHover.eraserDiameter = { [weak coordinator = context.coordinator, weak canvas] in
+            guard let coordinator, coordinator.parent.selectedTool == .eraser else { return nil }
+            return coordinator.parent.pixelEraserWidth * max(canvas?.zoomScale ?? 1, 0.01)
         }
         context.coordinator.penHover.isPreviewEnabled = { [weak coordinator = context.coordinator] in
             coordinator?.parent.editorMode == .draw
@@ -1358,10 +1381,8 @@ struct CanvasRepresentable: UIViewRepresentable {
             return snap.didSnap ? snap.snappedPoint : nil
         }
         canvas.installHoverPreviewIfNeeded(coordinator: context.coordinator.penHover)
-        let initialPointerWidth = (selectedTool == .eraser)
-            ? (eraserMode == .pixel ? pixelEraserWidth : 24.0)
-            : strokeWidth
-        canvas.refreshPointer(for: selectedTool, strokeWidth: initialPointerWidth)
+        canvas.eraserWidth = pixelEraserWidth
+        canvas.refreshPointer(for: selectedTool, strokeWidth: pointerWidth(zoom: canvas.zoomScale))
         canvas.pageContentHeight = PageGeometry.height
         canvas.contentSize = CGSize(width: max(canvas.bounds.width, 1), height: canvas.pageContentHeight)
 
@@ -1536,10 +1557,8 @@ struct CanvasRepresentable: UIViewRepresentable {
             adaptive.hitPassThroughCheck = hitPassThroughCheck
             adaptive.onPencilTouchBegan = onPencilTouchBegan
             adaptive.installPointerInteractionIfNeeded(delegate: context.coordinator)
-            let effectivePointerWidth = (selectedTool == .eraser)
-                ? (eraserMode == .pixel ? pixelEraserWidth : 24.0)
-                : strokeWidth
-            adaptive.refreshPointer(for: selectedTool, strokeWidth: effectivePointerWidth)
+            adaptive.eraserWidth = pixelEraserWidth
+            adaptive.refreshPointer(for: selectedTool, strokeWidth: pointerWidth(zoom: adaptive.zoomScale))
         }
 
         // 綁定被外面換過（換頁、讀檔、同步、套索、復原……）才動畫布；見 `lastSyncedDrawing`。
@@ -1600,6 +1619,14 @@ struct CanvasRepresentable: UIViewRepresentable {
         canvasRef?(uiView)
     }
 
+    /// 游標要用的寬度（螢幕點）。
+    ///
+    /// 橡皮擦：兩種模式都用使用者在工具列選的擦除寬度（原本筆劃模式寫死 24，拉滑桿游標完全不變），
+    /// 並乘上縮放倍率 —— 畫布放大兩倍時，同一塊擦除範圍在螢幕上也是兩倍大。
+    func pointerWidth(zoom: CGFloat) -> CGFloat {
+        selectedTool == .eraser ? pixelEraserWidth * max(zoom, 0.01) : strokeWidth
+    }
+
     /// 專業筆刷：設好層、手勢與目前的筆色／筆寬。
     private func applyProInk(to canvas: PKCanvasView) {
         guard let adaptive = canvas as? AdaptiveCanvasView else { return }
@@ -1647,7 +1674,8 @@ struct CanvasRepresentable: UIViewRepresentable {
             adaptive.proLineType = 0
             adaptive.proSnapStep = nil
         }
-        adaptive.proEraserRadius = eraserMode == .pixel ? max(8, pixelEraserWidth / 2) : 8
+        // 與 PencilKit 橡皮擦同一個寬度（兩種模式皆是），螢幕上的圓圈才與實際擦除範圍一比一。
+        adaptive.proEraserRadius = max(4, pixelEraserWidth / 2)
         adaptive.proAllowsFinger = { [palmRejection] in
             if fingerRule == false { return false }
             return (palmRejection?.drawingPolicy(now: Date()) ?? .anyInput) == .anyInput
@@ -1813,7 +1841,11 @@ struct CanvasRepresentable: UIViewRepresentable {
         }
 
         func scrollViewDidZoom(_ scrollView: UIScrollView) {
-            (scrollView as? AdaptiveCanvasView)?.syncProLayerGeometry()
+            if let adaptive = scrollView as? AdaptiveCanvasView {
+                adaptive.syncProLayerGeometry()
+                // 橡皮擦游標要跟著縮放變大變小，否則放大後游標比實際擦除範圍小。
+                adaptive.refreshPointer(for: parent.selectedTool, strokeWidth: parent.pointerWidth(zoom: scrollView.zoomScale))
+            }
             publishZoomForTests(scrollView)
             parent.onTransformChanged?(scrollView.zoomScale, scrollView.contentOffset)
         }
@@ -2208,7 +2240,12 @@ struct CanvasRepresentable: UIViewRepresentable {
             case .eraser:
                 switch parent.eraserMode {
                 case .stroke:
-                    canvas.tool = PKEraserTool(.vector)
+                    // 筆劃橡皮擦也吃寬度（iOS 16.4+）：碰到圓圈範圍內的整條筆劃就擦掉，與畫面上的圓一致。
+                    if #available(iOS 16.4, *) {
+                        canvas.tool = PKEraserTool(.vector, width: parent.pixelEraserWidth)
+                    } else {
+                        canvas.tool = PKEraserTool(.vector)
+                    }
                 case .pixel:
                     if #available(iOS 16.4, *) {
                         canvas.tool = PKEraserTool(.bitmap, width: parent.pixelEraserWidth)

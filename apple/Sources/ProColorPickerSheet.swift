@@ -99,12 +99,18 @@ public struct ProColorPickerSheet: View {
                         recentAndFavoriteSwatches
                     }
                     .padding(.horizontal)
+                    .padding(.bottom, 24)
                 }
                 .scrollIndicators(.visible)
             }
             .navigationTitle(localizationManager.localized("pro_color"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(localizationManager.localized("cancel")) {
+                        dismiss()
+                    }
+                }
                 ToolbarItem(placement: .confirmationAction) {
                     Button(localizationManager.localized("confirm")) {
                         commitColor()
@@ -116,9 +122,6 @@ public struct ProColorPickerSheet: View {
             .onAppear {
                 initFromCurrentColor()
             }
-            #if targetEnvironment(macCatalyst)
-            .frame(minWidth: 460, idealWidth: 500, minHeight: 520, idealHeight: 600)
-            #endif
         }
     }
 

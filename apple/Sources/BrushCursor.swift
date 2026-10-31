@@ -27,6 +27,10 @@ enum BrushCursor {
     /// 正要擦掉的東西。
     static let maxSide: CGFloat = 44
 
+    /// 橡皮擦游標的直徑上限。橡皮擦要「多大就畫多大」（含畫布放大後），
+    /// 只留一個防呆上限，免得放到最大倍率時游標蓋住半個螢幕。
+    static let eraserMaxSide: CGFloat = 240
+
     /// 產生某個工具在某個筆寬下的筆頭形狀。
     ///
     /// 回傳 `UIBezierPath` 而不是圖：`UIPointerStyle` 吃的就是路徑，而且路徑是
@@ -40,21 +44,20 @@ enum BrushCursor {
 
         // 筆寬直接決定筆頭大小，但要有上下限：1pt 的筆頭在螢幕上小到看不見；
         // 橡皮擦依選取直徑顯示（最高可至 72pt），一般筆刷維持 44pt 避免遮蔽視線。
-        let maxLimit = tool == .eraser ? 72.0 : maxSide
-        let tip = min(max(strokeWidth * tipScale(for: tool), 8), maxLimit)
+        let tip = tipDiameter(for: tool, strokeWidth: strokeWidth)
 
         switch tool {
         case .highlighter, .marker, .calligraphy:
             return chiselPath(width: tip)
         case .eraser:
-            // 橡皮擦以對應大小之圓圈呈現，並在圓心加入微型準心，兼顧精準定位與大小視覺反饋
+            // 橡皮擦：空心圓環（外圈順時針、內圈逆時針，非零填色規則下中間是空的）。
+            // 系統會把游標形狀**填滿**，實心圓會把正要擦的筆跡整個蓋住。
+            let ring: CGFloat = 2
             let path = UIBezierPath(ovalIn: CGRect(
                 x: -tip / 2, y: -tip / 2, width: tip, height: tip))
-            let crossLen: CGFloat = min(3.5, tip / 4)
-            path.move(to: CGPoint(x: -crossLen, y: 0))
-            path.addLine(to: CGPoint(x: crossLen, y: 0))
-            path.move(to: CGPoint(x: 0, y: -crossLen))
-            path.addLine(to: CGPoint(x: 0, y: crossLen))
+            let inner = max(tip / 2 - ring, 1)
+            path.append(UIBezierPath(
+                arcCenter: .zero, radius: inner, startAngle: 0, endAngle: -2 * .pi, clockwise: false))
             return path
         default:
             // 圓筆頭使用圓形
@@ -89,7 +92,7 @@ enum BrushCursor {
         case .brush, .watercolor: return 2.2
         case .marker: return 2.8
         case .highlighter: return 3.8
-        case .eraser: return 1.0 // 橡皮擦直徑直接對應選擇的擦除寬度 (pixelEraserWidth)
+        case .eraser: return 1.0 // 橡皮擦直徑直接對應擦除寬度（pixelEraserWidth × 縮放倍率）
         case .lasso, .maskingTape, .translationPen: return 1
         case .drafting: return 0.6
         }
@@ -102,7 +105,7 @@ enum BrushCursor {
     /// 抽出來是為了讓測試能直接檢查「游標大小有沒有跟著筆寬變」，
     /// 而不必去量一條貝茲曲線的外框。
     static func tipDiameter(for tool: EditorToolType, strokeWidth: CGFloat) -> CGFloat {
-        let maxLimit = tool == .eraser ? 72.0 : maxSide
+        let maxLimit = tool == .eraser ? eraserMaxSide : maxSide
         return min(max(strokeWidth * tipScale(for: tool), 8), maxLimit)
     }
 }

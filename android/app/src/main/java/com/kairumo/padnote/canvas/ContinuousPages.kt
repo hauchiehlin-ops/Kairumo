@@ -1566,6 +1566,7 @@ private fun ContinuousPage(
                 textStore = textStore,
                 tableStore = tableStore,
                 shapeStore = shapeStore,
+                imageStore = imageStore,
                 links = pageLinks,
                 maskingTapes = pageTapes,
                 pins = pagePins,
@@ -1776,6 +1777,7 @@ internal class PageRuntime(session: PadnoteSession?, val pageId: String?, contex
         connections = shapeStore.allConnections.map { it.copy() },
         tables = tableStore.all.map { it.copyTable() },
         charts = chartStore.all.map { it.copy() },
+        tapes = meta.tapes().filter { it.pageIndex == pageIndex }.map { it.clone() },
         order = meta.objectOrder(pageIndex)
     )
 
@@ -1786,6 +1788,15 @@ internal class PageRuntime(session: PadnoteSession?, val pageId: String?, contex
         shapeStore.restoreTo(snapshot.shapes, snapshot.connections)
         tableStore.restoreTo(snapshot.tables)
         chartStore.restoreTo(snapshot.charts)
+        if (pageIndex != null) {
+            val otherPages = meta.tapes().filter { it.pageIndex != pageIndex }
+            meta.setTapes(session, otherPages + snapshot.tapes)
+            if (session != null && pageId != null) {
+                com.kairumo.padnote.canvas.NoteTapeCodec.writeEnvelopes(
+                    session, pageId, snapshot.tapes
+                )
+            }
+        }
         if (pageIndex != null && meta.objectOrder(pageIndex) != snapshot.order) {
             meta.setObjectOrder(session, pageIndex, snapshot.order)
         }

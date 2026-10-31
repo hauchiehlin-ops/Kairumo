@@ -707,6 +707,48 @@ object KairumoIcons {
         }.build()
     }
 
+    /** 專業色相環（對齊 Apple circle.hexagongrid.fill / HSV 色相環）。 */
+    val ColorWheel: ImageVector by lazy {
+        ImageVector.Builder(
+            name = "KairumoColorWheel",
+            defaultWidth = 24.dp, defaultHeight = 24.dp,
+            viewportWidth = 24f, viewportHeight = 24f
+        ).apply {
+            path(
+                stroke = SolidColor(Color.Black),
+                strokeLineWidth = 1.6f,
+                strokeLineCap = StrokeCap.Round,
+                strokeLineJoin = StrokeJoin.Round
+            ) {
+                moveTo(12f, 2.5f)
+                arcToRelative(9.5f, 9.5f, 0f, true, true, -0.01f, 0f)
+                close()
+            }
+            path(
+                stroke = SolidColor(Color.Black),
+                strokeLineWidth = 1.4f,
+                strokeLineCap = StrokeCap.Round,
+                strokeLineJoin = StrokeJoin.Round
+            ) {
+                moveTo(12f, 8.5f)
+                arcToRelative(3.5f, 3.5f, 0f, true, true, -0.01f, 0f)
+                close()
+            }
+            path(
+                stroke = SolidColor(Color.Black),
+                strokeLineWidth = 1.4f,
+                strokeLineCap = StrokeCap.Round
+            ) {
+                moveTo(12f, 2.5f); lineTo(12f, 8.5f)
+                moveTo(12f, 15.5f); lineTo(12f, 21.5f)
+                moveTo(3.77f, 7.25f); lineTo(8.97f, 10.25f)
+                moveTo(15.03f, 13.75f); lineTo(20.23f, 16.75f)
+                moveTo(3.77f, 16.75f); lineTo(8.97f, 13.75f)
+                moveTo(15.03f, 10.25f); lineTo(20.23f, 7.25f)
+            }
+        }.build()
+    }
+
     /** 紙張規格比例（對齊 Apple 規格與格點）。 */
     val AspectRatio: ImageVector by lazy {
         ImageVector.Builder(

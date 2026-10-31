@@ -58,7 +58,43 @@ data class NoteTape(
     var isRevealed: Boolean = false,
     var colorHex: String = "#FCEEAC",
     val unknown: org.json.JSONObject = org.json.JSONObject()
-)
+) {
+    fun clone(): NoteTape = NoteTape(
+        id = id,
+        pageIndex = pageIndex,
+        x = x,
+        y = y,
+        width = width,
+        height = height,
+        isRevealed = isRevealed,
+        colorHex = colorHex
+    )
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is NoteTape) return false
+        return id == other.id &&
+            pageIndex == other.pageIndex &&
+            x == other.x &&
+            y == other.y &&
+            width == other.width &&
+            height == other.height &&
+            isRevealed == other.isRevealed &&
+            colorHex.equals(other.colorHex, ignoreCase = true)
+    }
+
+    override fun hashCode(): Int {
+        var result = id.hashCode()
+        result = 31 * result + pageIndex
+        result = 31 * result + x.hashCode()
+        result = 31 * result + y.hashCode()
+        result = 31 * result + width.hashCode()
+        result = 31 * result + height.hashCode()
+        result = 31 * result + isRevealed.hashCode()
+        result = 31 * result + colorHex.lowercase().hashCode()
+        return result
+    }
+}
 
 object NoteTapeCodec {
     private val KNOWN = setOf("id", "pageIndex", "rect", "x", "y", "width", "height", "isRevealed", "colorHex")

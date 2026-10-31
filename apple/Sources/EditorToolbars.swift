@@ -1222,7 +1222,11 @@ extension NotebookEditorView {
             HStack(spacing: 4) {
                 Button {
                     eraserMode = .stroke
-                    canvasView?.tool = PKEraserTool(.vector)
+                    if #available(iOS 16.4, *) {
+                        canvasView?.tool = PKEraserTool(.vector, width: pixelEraserWidth)
+                    } else {
+                        canvasView?.tool = PKEraserTool(.vector)
+                    }
                 } label: {
                     Image(systemName: "eraser.line.dashed")
                         .font(.system(size: 16, weight: eraserMode == .stroke ? .bold : .regular))
@@ -1252,15 +1256,24 @@ extension NotebookEditorView {
                 }
                 .buttonStyle(.plain)
                 
-                if eraserMode == .pixel {
-                    Slider(value: $pixelEraserWidth, in: 10...60, step: 1) { _ in
-                        if #available(iOS 16.4, *) {
-                            canvasView?.tool = PKEraserTool(.bitmap, width: pixelEraserWidth)
-                        }
+                // 兩種模式都能調大小（原本只有像素模式有滑桿，而預設是筆劃模式 ——
+                // 使用者拉的是筆寬滑桿，橡皮擦與游標完全沒變）。
+                Slider(value: $pixelEraserWidth, in: 10...60, step: 1) { _ in
+                    if #available(iOS 16.4, *) {
+                        canvasView?.tool = PKEraserTool(eraserMode == .pixel ? .bitmap : .vector, width: pixelEraserWidth)
                     }
-                    .frame(width: 80)
-                    .tint(.accentColor)
                 }
+                .frame(width: 80)
+                .tint(.accentColor)
+                .accessibilityIdentifier("editor.ink.eraserWidth")
+
+                // 目前擦除範圍的預覽圓（與畫布上的圓圈同一個寬度，工具列放不下時夾在 28pt）。
+                Circle()
+                    .stroke(Color.secondary, lineWidth: 1.5)
+                    .background(Circle().fill(Color.accentColor.opacity(0.10)))
+                    .frame(width: min(pixelEraserWidth, 28), height: min(pixelEraserWidth, 28))
+                    .frame(width: 28, height: 28)
+                    .accessibilityHidden(true)
             }
         }
     }

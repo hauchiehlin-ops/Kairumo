@@ -2,6 +2,7 @@ package com.kairumo.padnote.canvas
 
 import com.kairumo.padnote.audio.AudioObject
 import com.kairumo.padnote.chart.ChartObject
+import com.kairumo.padnote.comment.CommentPin
 import com.kairumo.padnote.image.LinkObject
 import com.kairumo.padnote.image.NoteImage
 import com.kairumo.padnote.model3d.Model3DObject
@@ -26,6 +27,8 @@ data class CanvasSnapshot(
     val links: List<LinkObject> = emptyList(),
     val models3D: List<Model3DObject> = emptyList(),
     val audio: List<AudioObject> = emptyList(),
+    val tapes: List<NoteTape> = emptyList(),
+    val pins: List<CommentPin> = emptyList(),
     val order: List<String> = emptyList()
 ) {
     /** 這一次動到了哪些物件。用來判斷「同一個東西的連續小變動」要不要合併成一步。 */
@@ -46,6 +49,8 @@ data class CanvasSnapshot(
         diff(links, other.links) { it.id }
         diff(models3D, other.models3D) { it.id }
         diff(audio, other.audio) { it.id }
+        diff(tapes, other.tapes) { it.id }
+        diff(pins, other.pins) { it.id }
         if (order != other.order) keys += "#order"
         return keys
     }

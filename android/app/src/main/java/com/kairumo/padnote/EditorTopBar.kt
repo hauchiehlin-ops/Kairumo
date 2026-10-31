@@ -37,6 +37,7 @@ internal class InkBarState(
     val onToolChange: (InkTool) -> Unit,
     val onColorChange: (String) -> Unit,
     val onWidthChange: (Float) -> Unit,
+    val onOpenProColors: () -> Unit = {},
     val onOpenColorWheel: () -> Unit,
     val onAddTextBox: () -> Unit
 )
@@ -51,6 +52,7 @@ internal fun RenderInkBar(state: InkBarState, modifier: Modifier = Modifier) {
         onToolChange = state.onToolChange,
         onColorChange = state.onColorChange,
         onWidthChange = state.onWidthChange,
+        onOpenProColors = state.onOpenProColors,
         onOpenColorWheel = state.onOpenColorWheel,
         onAddTextBox = state.onAddTextBox,
         modifier = modifier
@@ -432,7 +434,7 @@ internal fun EditorTopBar(
         }
 
         // 復原／重做／重設群組膠囊
-        if (toolShown("editor.ink.undo") || toolShown("editor.ink.redo")) {
+        if (toolShown("editor.ink.undo") || toolShown("editor.ink.redo") || toolShown("editor.revert_initial_state")) {
             Surface(
                 shape = RoundedCornerShape(8.dp),
                 color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
@@ -477,19 +479,20 @@ internal fun EditorTopBar(
                             }
                         }
                     }
-                    if (state.hasOpenMark) {
+                    if (toolShown("editor.revert_initial_state")) {
                         InstantTooltip(
                             text = l10n("revert_to_initial_state"),
                             modifier = Modifier.testTag("editor.revert_initial_state")
                         ) {
                             IconButton(
                                 onClick = actions.onRevertInitial,
+                                enabled = state.hasOpenMark,
                                 modifier = Modifier.size(36.dp)
                             ) {
                                 Icon(
                                     imageVector = KairumoIcons.Revert,
                                     contentDescription = l10n("revert_to_initial_state"),
-                                    tint = MaterialTheme.colorScheme.onSurface,
+                                    tint = if (state.hasOpenMark) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
                                     modifier = Modifier.size(18.dp)
                                 )
                             }

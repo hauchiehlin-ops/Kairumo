@@ -138,6 +138,35 @@ class CanvasHistoryTest {
         assertFalse(paged.canUndo)
     }
 
+    @Test fun tapeOperationsAreUndoableAndRedoable() {
+        val tape1 = NoteTape(id = "tape-1", pageIndex = 0, x = 10f, y = 20f, width = 120f, height = 30f)
+        now += 5000
+        change { s -> s.copy(tapes = listOf(tape1)) }
+        assertEquals(1, page.tapes.size)
+
+        // 揭開膠帶（reveal）
+        now += 5000
+        change { s -> s.copy(tapes = listOf(tape1.copy(isRevealed = true))) }
+        assertTrue(page.tapes[0].isRevealed)
+
+        // 復原翻開狀態
+        assertTrue(undo())
+        assertFalse(page.tapes[0].isRevealed)
+
+        // 復原新增膠帶
+        assertTrue(undo())
+        assertTrue(page.tapes.isEmpty())
+
+        // 重做新增膠帶
+        assertTrue(redo())
+        assertEquals(1, page.tapes.size)
+        assertFalse(page.tapes[0].isRevealed)
+
+        // 重做揭開膠帶
+        assertTrue(redo())
+        assertTrue(page.tapes[0].isRevealed)
+    }
+
     @Test fun changesOnDifferentPagesAreNeverMerged() {
         val paged = CanvasHistory { now }
         paged.reset(CanvasSnapshot(texts = listOf(TextBox(id = "x"))), "a")
