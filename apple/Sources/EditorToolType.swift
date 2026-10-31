@@ -66,7 +66,7 @@ public enum EditorToolType: String, CaseIterable, Identifiable {
         }
     }
 
-    /// 由自繪引擎算繪的筆刷（見 ProInk.swift）。其餘走 PencilKit。
+    /// 由自繪引擎算繪的筆刷（見 ProInk.swift）。所有筆刷都是；不是筆刷的工具為 `nil`。
     public var proToolKind: ToolKind? {
         switch self {
         case .brush: return .brush
@@ -76,7 +76,14 @@ public enum EditorToolType: String, CaseIterable, Identifiable {
         case .airbrush: return .airbrush
         case .oilpaint: return .oilPaint
         case .calligraphy: return .calligraphy
-        default: return nil
+        // ADR-0015 階段 5：全部筆刷都由自繪引擎算繪，PencilKit 只剩輸入。
+        case .pen: return .fountainPen
+        case .ballpoint: return .ballPoint
+        case .pencil: return .pencil
+        case .marker: return .marker
+        case .highlighter: return .highlighter
+        case .watercolor: return .watercolor
+        case .eraser, .lasso, .maskingTape, .translationPen, .drafting: return nil
         }
     }
 

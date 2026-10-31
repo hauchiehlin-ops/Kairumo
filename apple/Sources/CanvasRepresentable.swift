@@ -1768,8 +1768,7 @@ struct CanvasRepresentable: UIViewRepresentable {
         } else {
             adaptive.proTool = selectedTool.proToolKind
             adaptive.proColor = InkInterop.rgba(from: UIColor(selectedColor)).map { $0 }
-            let widthFactor: CGFloat = selectedTool == .brush ? 1.65 : 1.4
-            adaptive.proWidth = Float(max(1.2, strokeWidth * widthFactor))
+            adaptive.proWidth = Float(ProInk.baseWidth(for: selectedTool, strokeWidth: strokeWidth))
             adaptive.proLayerId = 0
             adaptive.proLineType = 0
             adaptive.proSnapStep = nil
@@ -2333,42 +2332,11 @@ struct CanvasRepresentable: UIViewRepresentable {
             let uiColor = UIColor(parent.selectedColor)
             let curveMultiplier = pressureFeelWidthScale()
             switch parent.selectedTool {
-            case .brush, .fineliner, .calligraphy, .charcoal, .crayon, .airbrush, .oilpaint:
-                // 專業筆刷（含永字八法軟毫毛筆）由自繪引擎收筆（ProInk.swift），PencilKit 的落筆手勢在這時是關著的。
+            case .brush, .fineliner, .calligraphy, .charcoal, .crayon, .airbrush, .oilpaint,
+                 .pen, .ballpoint, .marker, .highlighter, .pencil, .watercolor:
+                // 所有筆刷（含永字八法軟毫毛筆；ADR-0015 階段 5 起連鋼筆、原子筆等也是）由自繪引擎收筆（ProInk.swift），PencilKit 的落筆手勢在這時是關著的。
                 // 這裡只放一支不會被用到的筆，讓畫布手上永遠有個合法的工具。
                 canvas.tool = PKInkingTool(.pen, color: uiColor, width: max(1, parent.strokeWidth))
-
-            case .pen:
-                // 鋼筆：墨水充沛飽滿、帶有自然流暢的下筆壓力與速度過渡
-                canvas.tool = PKInkingTool(.pen, color: uiColor, width: max(2.0, parent.strokeWidth * 1.1 * curveMultiplier))
-
-            case .ballpoint:
-                // 原子筆：恆定寬度、均勻工整、俐落乾脆之機械單線
-                if #available(iOS 17.0, *) {
-                    canvas.tool = PKInkingTool(.monoline, color: uiColor, width: max(1.2, parent.strokeWidth * 0.65))
-                } else {
-                    canvas.tool = PKInkingTool(.pen, color: uiColor, width: max(1.2, parent.strokeWidth * 0.65))
-                }
-
-            case .marker:
-                // 麥克筆：厚實方形斜切筆觸、高飽和厚重墨水（Alpha 0.85）、設計草圖與手繪上色
-                canvas.tool = PKInkingTool(.marker, color: uiColor.withAlphaComponent(0.85), width: max(8.0, parent.strokeWidth * 2.8 * curveMultiplier))
-
-            case .highlighter:
-                // 螢光筆：半透明寬扁筆刷（Alpha 0.35），重點標記不遮蔽底層筆跡
-                canvas.tool = PKInkingTool(.marker, color: uiColor.withAlphaComponent(0.35), width: max(18.0, parent.strokeWidth * 3.8))
-
-            case .pencil:
-                // 鉛筆：石墨微顆粒磨砂質感、側鋒陰影素描
-                canvas.tool = PKInkingTool(.pencil, color: uiColor.withAlphaComponent(0.85), width: max(2.0, parent.strokeWidth * 1.3 * curveMultiplier))
-
-            case .watercolor:
-                // 水彩筆：濕潤水墨層疊擴散與暈染效果
-                if #available(iOS 17.0, *) {
-                    canvas.tool = PKInkingTool(.watercolor, color: uiColor.withAlphaComponent(0.55), width: max(8.0, parent.strokeWidth * 2.4 * curveMultiplier))
-                } else {
-                    canvas.tool = PKInkingTool(.marker, color: uiColor.withAlphaComponent(0.5), width: max(8.0, parent.strokeWidth * 2.0 * curveMultiplier))
-                }
 
             case .eraser:
                 switch parent.eraserMode {

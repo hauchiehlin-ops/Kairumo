@@ -103,7 +103,20 @@ pub fn brush_is_custom(tool: ToolKind) -> bool {
     Tool::from(tool).is_custom_engine()
 }
 
-/// 把一筆畫展開成筆點陣。原生筆刷回傳空陣列。
+/// 筆點陣算得出這支筆嗎（`brush_is_custom` 加上書寫與標記類，ADR-0015 階段 5）。
+/// iPad 以此決定要不要走自繪引擎；Android 仍用 `brush_is_custom`。
+#[uniffi::export]
+pub fn brush_is_dab_engine(tool: ToolKind) -> bool {
+    Tool::from(tool).is_dab_engine()
+}
+
+/// 整筆畫完後再疊上的不透明度（麥克筆、螢光筆是同一層墨，重疊處不該變深）。其他筆為 1。
+#[uniffi::export]
+pub fn brush_group_alpha(tool: ToolKind) -> f32 {
+    padnote_ink::brush::group_alpha(Tool::from(tool))
+}
+
+/// 把一筆畫展開成筆點陣。不是筆點陣能算的筆刷回傳空陣列。
 #[uniffi::export]
 pub fn brush_dabs(tool: ToolKind, base_width: f32, points: Vec<StrokePoint>) -> Vec<FfiDab> {
     let pts: Vec<InkPoint> = points.iter().map(to_ink).collect();

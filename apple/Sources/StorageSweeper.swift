@@ -145,7 +145,12 @@ enum StorageSweeper {
         report.trashPurged = store.purgeExpiredTrash()
         // 同步帳本：丟掉舊版留下的、不再需要的資料（見 `InkLedgerJanitor`）。
         let drawings = store.syncDrawingsDirectory
-        _ = await Task.detached(priority: .background) { InkLedgerJanitor.compact(drawingsDirectory: drawings) }.value
+        let baseline = store.syncBaselineDirectory
+        _ = await Task.detached(priority: .background) {
+            // ADR-0015 階段 4：舊帳本一次性清掉（見 `LegacyInkCleanup`），之後 compact 只是保險。
+            LegacyInkCleanup.runOnce(drawingsDirectory: drawings, baselineDirectory: baseline)
+            return InkLedgerJanitor.compact(drawingsDirectory: drawings)
+        }.value
         if report.totalBytes > 0 || report.trashPurged > 0 {
             let mb = String(format: "%.1f", Double(report.totalBytes) / 1_048_576)
             StartupLogger.logKey(
