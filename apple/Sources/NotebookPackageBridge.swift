@@ -1319,7 +1319,7 @@ enum NotebookPackageBridge {
             // 新增：PencilKit
             if index < drawings.count, !drawings[index].strokes.isEmpty {
                 var visible: [String: Int] = [:]
-                for full in try session.visibleStrokeDetails(pageId: pageId) where !brushIsDabEngine(tool: full.tool) {
+                for full in try session.visibleStrokeDetails(pageId: pageId) where !brushIsCustom(tool: full.tool) {
                     visible[StrokeDelta.Identity(InkInterop.stroke(from: full)).key, default: 0] += 1
                 }
                 let planned = index < pkStrokeIds.count ? pkStrokeIds[index] : []
@@ -1380,7 +1380,7 @@ enum NotebookPackageBridge {
         var wanted: [String: Int] = [:]
         for stroke in strokes { wanted[StrokeDelta.Identity(stroke).key, default: 0] += 1 }
         var ids: [String] = []
-        for full in try session.visibleStrokeDetails(pageId: pageId) where !brushIsDabEngine(tool: full.tool) {
+        for full in try session.visibleStrokeDetails(pageId: pageId) where !brushIsCustom(tool: full.tool) {
             let key = StrokeDelta.Identity(InkInterop.stroke(from: full)).key
             guard let left = wanted[key], left > 0 else { continue }
             wanted[key] = left - 1
@@ -1415,7 +1415,7 @@ enum NotebookPackageBridge {
         }
         guard !tombstoned.isEmpty else { return }
         var visible: [String: Int] = [:]
-        for full in try session.visibleStrokeDetails(pageId: pageId) where !brushIsDabEngine(tool: full.tool) {
+        for full in try session.visibleStrokeDetails(pageId: pageId) where !brushIsCustom(tool: full.tool) {
             visible[StrokeDelta.Identity(InkInterop.stroke(from: full)).key, default: 0] += 1
         }
         for stroke in tombstoned {
@@ -1718,8 +1718,8 @@ enum NotebookPackageBridge {
             // 專業筆刷（自繪引擎）的筆畫不能變成 PKStroke —— PencilKit 畫不出來，
             // 轉了也只會變成一條普通的線。另外收起來，由專業筆畫層自己畫。
             let details = try session.visibleStrokeDetails(pageId: pageId)
-            drawings.append(InkInterop.drawing(from: details.filter { !brushIsDabEngine(tool: $0.tool) }))
-            proStrokes.append(details.filter { brushIsDabEngine(tool: $0.tool) }.compactMap(ProStroke.init(from:)))
+            drawings.append(InkInterop.drawing(from: details.filter { !brushIsCustom(tool: $0.tool) }))
+            proStrokes.append(details.filter { brushIsCustom(tool: $0.tool) }.compactMap(ProStroke.init(from:)))
             removedProStrokeIds.append(Set(try session.removedStrokeIds(pageId: pageId).map { $0.lowercased() }))
 
             for blockId in try session.textBlockIds(pageId: pageId) {

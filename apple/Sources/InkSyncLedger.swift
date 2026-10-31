@@ -205,7 +205,7 @@ final class PackageInkResolver {
     /// PencilKit 筆畫：內容指紋 == `key` 的、可見的核心筆畫 id（排除 `excluding`），最多 `count` 個。
     func pencilKitIds(page: Int, key: String, count: Int, excluding: Set<String>) -> [String] {
         var out: [String] = []
-        for full in details(page: page) where !brushIsDabEngine(tool: full.tool) {
+        for full in details(page: page) where !brushIsCustom(tool: full.tool) {
             let id = full.id.lowercased()
             guard !excluding.contains(id) else { continue }
             if StrokeDelta.Identity(InkInterop.stroke(from: full)).key == key {
@@ -219,7 +219,7 @@ final class PackageInkResolver {
     /// 專業筆畫：核心 id 是否還在、以及依內容指紋找到的 id。
     func proIds(page: Int, contentKey: String, excluding: Set<String>) -> [String] {
         details(page: page).compactMap { full -> String? in
-            guard brushIsDabEngine(tool: full.tool), let pro = ProStroke(from: full) else { return nil }
+            guard brushIsCustom(tool: full.tool), let pro = ProStroke(from: full) else { return nil }
             let id = full.id.lowercased()
             return pro.contentKey == contentKey && !excluding.contains(id) ? id : nil
         }
