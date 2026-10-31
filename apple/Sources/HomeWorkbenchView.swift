@@ -4647,7 +4647,14 @@ extension AppDiagnosticsSheet {
             }
             .font(.footnote)
 
-            Text(localizationManager.localized("hw_asr_explainer"))
+            let explainerKey: String = {
+                switch transcriber.enginePreference {
+                case .auto: return "hw_asr_explainer_auto"
+                case .appleSpeech: return "hw_asr_explainer_ane"
+                case .whisper: return "hw_asr_explainer_whisper"
+                }
+            }()
+            Text(localizationManager.localized(explainerKey))
                 .font(.caption)
                 .foregroundColor(.secondary)
         }

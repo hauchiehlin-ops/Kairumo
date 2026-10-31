@@ -9928,12 +9928,36 @@
     "zhHant": "Whisper 端側神經模型（多語精確）"
   },
   "hw_asr_explainer": {
-    "en": "Prefers the on-device Whisper model (99 languages detected automatically, punctuation restored, fully offline). Falls back to system dictation when no model is present.",
-    "ja": "端末内の Whisper モデルを優先します（99 言語を自動判定、句読点を自動付与、完全オフライン）。モデルが無い場合はシステムの音声入力に切り替わります。",
-    "ko": "기기 내 Whisper 모델을 우선 사용합니다(99개 언어 자동 감지, 문장 부호 자동 복원, 완전 오프라인). 모델이 없으면 시스템 받아쓰기로 전환됩니다.",
-    "th": "ใช้โมเดล Whisper ในเครื่องเป็นหลัก (ตรวจ 99 ภาษาอัตโนมัติ เติมวรรคตอน ทำงานออฟไลน์ทั้งหมด) หากไม่มีโมเดลจะสลับไปใช้การพิมพ์ด้วยเสียงของระบบ",
-    "zhHans": "优先使用端侧 Whisper 模型（自动检测 99 种语言、自动标点，全程离线）。没有模型时会自动改用系统听写。",
-    "zhHant": "優先使用端側 Whisper 模型（自動偵測 99 種語言、自動標點，全程離線）。沒有模型時會自動改用系統聽寫。"
+    "en": "Prefers the on-device Neural Engine for instant transcription, with automatic fallback or switch to Whisper (99 languages, punctuation, fully offline).",
+    "ja": "端末内の Neural Engine による瞬時書き起こしを優先します。Whisper モデル（99言語自動認識・句読点付与・完全オフライン）への切替も可能です。",
+    "ko": "기기 내 Neural Engine을 우선 사용하여 초고속 변환하며, Whisper 모델(99개 언어 자동 감지, 문장 부호 복원, 완전 오프라인)로 전환할 수도 있습니다.",
+    "th": "ใช้ Neural Engine ในเครื่องเพื่อถอดเสียงทันทีเป็นหลัก หรือสลับไปใช้โมเดล Whisper (ตรวจ 99 ภาษาอัตโนมัติ เติมวรรคตอน ทำงานออฟไลน์ทั้งหมด)",
+    "zhHans": "优先使用端侧神经引擎进行极速转录；亦可切换为 Whisper 端侧神经模型（自动检测 99 种语言、自动标点，全程离线）。",
+    "zhHant": "優先使用端側神經引擎進行極速轉錄；亦可切換為 Whisper 端側神經模型（自動偵測 99 種語言、自動標點，全程離線）。"
+  },
+  "hw_asr_explainer_ane": {
+    "en": "Apple Neural Engine: Leverages Apple chip hardware acceleration for ultra-fast, power-efficient transcription. Requires enabling 'Dictation' and downloading offline language packs in System Settings.",
+    "ja": "Apple Neural Engine: Apple チップのニューラル加速を活用し、超高速かつ低消費電力で書き起こします。システム設定で「音声入力」を有効にしオフライン言語パックをダウンロードしてください。",
+    "ko": "Apple Neural Engine: Apple 칩 신경망 가속 하드웨어를 활용하여 초고속 및 저전력 변환을 제공합니다. 시스템 설정에서 '받아쓰기'를 켜고 오프라인 언어 팩을 다운로드해야 합니다.",
+    "th": "Apple Neural Engine: ใช้ฮาร์ดแวร์เร่งความเร็วประสาทของชิป Apple เพื่อถอดเสียงอย่างรวดเร็วและประหยัดพลังงาน โปรดเปิดการพิมพ์ด้วยเสียงและดาวน์โหลดแพ็กภาษาในเครื่อง",
+    "zhHans": "Apple Neural Engine (ANE)：调用 Apple 芯片神经加速硬件，转录速度比常规模型快数十倍且极度省电。请至系统设置开启“听写”并下载离线语言包。",
+    "zhHant": "Apple Neural Engine (ANE)：調用 Apple 晶片神經加速硬體，轉錄速度比常規模型快數十倍且極度省電。需於系統設定開啟「聽寫」並下載離線語言包。"
+  },
+  "hw_asr_explainer_auto": {
+    "en": "Smart Recommendation: Prefers Apple Neural Engine (ANE) for instant on-device transcription (low power & cool); seamlessly falls back to Whisper (99 languages, punctuation) when unsupported.",
+    "ja": "おすすめ：Apple Neural Engine (ANE) による瞬時書き起こしを優先（省電力・低発熱）。非対応時や音声入力オフ時は Whisper モデル（99言語自動認識）へ自動で切り替えます。",
+    "ko": "스마트 추천: Apple Neural Engine (ANE)을 우선 사용하여 초고속 변환(저발열·절전); 미지원 언어이거나 시스템 받아쓰기가 꺼져 있을 때 Whisper 모델(99개 언어 자동 감지)로 자동 전환됩니다.",
+    "th": "แนะนำอัตโนมัติ: ใช้ Apple Neural Engine (ANE) ถอดเสียงความเร็วสูงเป็นหลัก (ประหยัดพลังงาน เครื่องไม่ร้อน) หากไม่รองรับจะสลับไปใช้ Whisper (ตรวจจับ 99 ภาษา) อัตโนมัติ",
+    "zhHans": "智慧推荐：优先使用 Apple Neural Engine (ANE) 神经引擎极速秒级转录（低发烫、省电）；若该语系未支持离线听写，自动切换至 Whisper 端侧神经模型（99 语自动检测、精准标点）。",
+    "zhHant": "智慧推薦：優先使用 Apple Neural Engine (ANE) 神經引擎極速秒級轉錄（低發燙、省電）；若該語系未支援離線聽寫，自動切換至 Whisper 端側神經模型（99 語自動偵測、精準標點）。"
+  },
+  "hw_asr_explainer_whisper": {
+    "en": "Whisper On-Device Model: Automatically detects 99 languages with punctuation, independent of system dictation, fully offline. Requires downloading local model (~574 MB).",
+    "ja": "Whisper 端末内モデル: 99 言語の自動判別と正確な句読点付与に対応。システムの音声入力設定に依存せず完全オフラインで動作します。モデル（約 574 MB）のダウンロードが必要です。",
+    "ko": "Whisper 온디바이스 모델: 99개 언어 자동 감지와 정확한 문장 부호 복원 지원. 시스템 받아쓰기 설정에 의존하지 않고 완전 오프라인으로 작동합니다. 모델(약 574 MB) 다운로드가 필요합니다.",
+    "th": "โมเดล Whisper ในเครื่อง: ตรวจจับ 99 ภาษาอัตโนมัติพร้อมเติมวรรคตอนแม่นยำ ทำงานออฟไลน์ทั้งหมดโดยไม่ต้องพึ่งการพิมพ์ด้วยเสียงของระบบ ต้องดาวน์โหลดโมเดล (~574 MB)",
+    "zhHans": "Whisper 端侧神经模型：自动检测 99 种语言与精确标点，完全不依赖系统听写设置，全程离线转录。需预先下载本机神经模型（约 574 MB）。",
+    "zhHant": "Whisper 端側神經模型：自動偵測 99 種語言與精確標點，完全不依賴系統聽寫設定，全程離線轉錄。需預先下載本機神經模型（約 574 MB）。"
   },
   "hw_asr_import_file": {
     "en": "Import an offline model (.bin) from Files",

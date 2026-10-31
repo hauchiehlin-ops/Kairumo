@@ -148,6 +148,12 @@ fun InkCanvas(
             .pointerInteropFilter { event ->
                 // 打字模式等不收筆畫的狀態下，完全不攔截、不繪墨，將觸控原樣放行給文字、物件與即點即書手勢
                 if (!acceptsInk) return@pointerInteropFilter false
+                // pointerInteropFilter 傳入之 MotionEvent 座標未經外部 graphicsLayer 縮放除倍率；
+                // 畫布內部繪製（DrawScope）隨後會再受 graphicsLayer 縮放，故指示圓圈中心座標需嚴格轉換至
+                // 畫布內部本地座標（/ engine.zoom），確保指示圓圈與螢幕真實下筆/擦除軌跡 1:1 精確咬合。
+                val z = if (engine.zoom > 0.01f) engine.zoom else 1f
+                val localCanvasPoint = Offset(event.x / z, event.y / z)
+
                 // 懸停事件（筆尖靠近、滑鼠移動）也會進到這裡。原本一律清掉 hoverPoint，
                 // 上面 pointerInput 剛設好的懸停位置馬上被抹掉 —— 懸停圓圈閃一下就不見。
                 when (event.actionMasked) {
@@ -156,7 +162,7 @@ fun InkCanvas(
                         hoverPoint = if (toolType == MotionEvent.TOOL_TYPE_STYLUS ||
                             toolType == MotionEvent.TOOL_TYPE_ERASER ||
                             toolType == MotionEvent.TOOL_TYPE_MOUSE
-                        ) Offset(event.x, event.y) else null
+                        ) localCanvasPoint else null
                     }
                     MotionEvent.ACTION_HOVER_EXIT -> hoverPoint = null
                     else -> hoverPoint = null
@@ -164,7 +170,7 @@ fun InkCanvas(
                 if (engine.isErasing) {
                     when (event.actionMasked) {
                         MotionEvent.ACTION_DOWN, MotionEvent.ACTION_MOVE -> {
-                            activeEraserPoint = Offset(event.x, event.y)
+                            activeEraserPoint = localCanvasPoint
                         }
                         MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                             activeEraserPoint = null

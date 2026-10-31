@@ -1124,11 +1124,8 @@ extension NotebookEditorView {
                 showExtendedBanner = false
             }
         }
-
-        if let canvas = canvasView {
-            let targetY = max(0, canvas.contentSize.height - canvas.bounds.height)
-            canvas.setContentOffset(CGPoint(x: 0, y: targetY), animated: true)
-        }
+        // 刻意不在這裡呼叫 canvas.setContentOffset：
+        // 避免在使用者正於頁面底部連續運筆書寫時，畫布視角突然發生位移跳動。
     }
 
     /// 套索以畫布上**看得到的那一份**為準。`currentDrawing` 是經 delegate 回寫的副本，

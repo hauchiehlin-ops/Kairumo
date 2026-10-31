@@ -141,6 +141,9 @@ final class PenHoverPreviewView: UIView {
         isHidden = false
     }
 
+    /// 正在觸控擦除中（筆尖/手指觸控螢幕進行擦除）。
+    private(set) var isEraserTracking: Bool = false
+
     /// 橡皮擦範圍圓圈。
     ///
     /// 與筆頭預覽分開畫：筆頭會依筆桿傾角壓扁、用墨色淡描邊 —— 套在橡皮擦上，
@@ -149,6 +152,7 @@ final class PenHoverPreviewView: UIView {
     ///   - point: 中心（這個視圖的座標系）。
     ///   - diameter: 螢幕上的直徑（已乘上畫布縮放倍率），與實際擦除寬度一比一。
     func showEraser(at point: CGPoint, diameter: CGFloat) {
+        isEraserTracking = true
         let d = max(diameter, 6)
         let rect = CGRect(x: point.x - d / 2, y: point.y - d / 2, width: d, height: d)
         let ring = UIBezierPath(ovalIn: rect).cgPath
@@ -180,7 +184,15 @@ final class PenHoverPreviewView: UIView {
         eraserInner.isHidden = hidden
     }
 
+    /// 觸控擦除結束時明確呼叫。
+    func hideEraser() {
+        isEraserTracking = false
+        hide()
+    }
+
     func hide() {
+        // 若正在擦除中（筆尖/手指觸控螢幕進行擦除），懸停結束事件絕不可強制隱藏擦除指示圓圈！
+        guard !isEraserTracking else { return }
         guard !isHidden || !reticleLayer.isHidden else { return }
         CATransaction.begin()
         CATransaction.setDisableActions(true)
@@ -235,7 +247,7 @@ final class PenHoverCoordinator: NSObject {
         case .began, .changed:
             var tilt: CGFloat = 0
             var azimuth: CGFloat = 0
-            let location = gesture.location(in: view)
+            let location = gesture.location(in: preview)
             if let diameter = eraserDiameter?() {
                 preview.showEraser(at: location, diameter: diameter)
                 return

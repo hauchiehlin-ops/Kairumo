@@ -752,21 +752,50 @@ class InkEngine(
         // 中層（輔助線與步驟編號）不算：步驟編號是一個個小圓圈，會被當成最小的封閉圖形。
         _strokes.filter { it.layer != 2 }.map { s -> s.points.map { uniffi.padnote_core.FfiPoint(it.x, it.y) } }
 
+    private fun distanceSqToSegment(px: Float, py: Float, x1: Float, y1: Float, x2: Float, y2: Float): Float {
+        val dx = x2 - x1
+        val dy = y2 - y1
+        val l2 = dx * dx + dy * dy
+        if (l2 < 1e-6f) {
+            val dpx = px - x1
+            val dpy = py - y1
+            return dpx * dpx + dpy * dpy
+        }
+        val t = (((px - x1) * dx + (py - y1) * dy) / l2).coerceIn(0f, 1f)
+        val projX = x1 + t * dx
+        val projY = y1 + t * dy
+        val dpx = px - projX
+        val dpy = py - projY
+        return dpx * dpx + dpy * dpy
+    }
+
     /**
      * 擦掉碰到的筆畫。
      *
      * 用「碰到就整筆擦掉」而不是切斷筆畫：切斷需要把一筆拆成兩筆並改寫取樣點，
      * 那會破壞「存原始取樣點」的不變式（ADR-0002）。整筆擦除是 append-only
      * 的墓碑，與同步、回溯都相容。
+     *
+     * 判定嚴格使用「擦除圓圈與筆畫線段（含筆寬）」之連續最短距離，杜絕僅判定離散採樣點
+     * 導致線條中間擦不到、落點錯位的落差感。
      */
     private fun eraseAt(x: Float, y: Float, radius: Float): List<CompletedStroke> {
         val hit = _strokes.filter { stroke ->
-            // 隱藏或鎖定的圖層擦不到：看不見的線被擦掉會讓人找不到它去了哪。
-            DraftingState.canEdit(stroke.layer) && stroke.points.any { p ->
-                val dx = p.x - x
-                val dy = p.y - y
-                dx * dx + dy * dy <= radius * radius
+            if (!DraftingState.canEdit(stroke.layer)) return@filter false
+            val pts = stroke.points
+            if (pts.isEmpty()) return@filter false
+            val effectiveRadius = radius + stroke.baseWidth * 0.5f
+            val rSq = effectiveRadius * effectiveRadius
+            if (pts.size == 1) {
+                val dx = pts[0].x - x
+                val dy = pts[0].y - y
+                return@filter (dx * dx + dy * dy) <= rSq
             }
+            for (i in 0 until pts.size - 1) {
+                val dSq = distanceSqToSegment(x, y, pts[i].x, pts[i].y, pts[i + 1].x, pts[i + 1].y)
+                if (dSq <= rSq) return@filter true
+            }
+            false
         }
         val target = session
         val page = pageId
