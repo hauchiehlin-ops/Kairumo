@@ -112,6 +112,36 @@ extension NotebookEditorView {
             return
         }
 
+        if isPlacingCommentPin {
+            removeTapDotStroke(near: location, page: targetPage)
+            let newPin = NoteCommentPin(
+                pageIndex: targetPage,
+                x: location.x,
+                y: location.y,
+                authorId: collaborationManager.currentUserId,
+                authorName: AccountManager.shared.profile.displayName,
+                authorColor: collaborationManager.myColorHex,
+                messages: [
+                    NoteCommentMessage(
+                        authorId: collaborationManager.currentUserId,
+                        authorName: AccountManager.shared.profile.displayName,
+                        authorColor: collaborationManager.myColorHex,
+                        text: localizationManager.localized("add_comment_pin")
+                    )
+                ]
+            )
+            if notebook.commentPins == nil {
+                notebook.commentPins = []
+            }
+            notebook.commentPins?.append(newPin)
+            commitNotebook()
+            selectedCommentPinId = newPin.id
+            isPlacingCommentPin = false
+            broadcastCommentPinUpsert(newPin)
+            collaborationManager.broadcastSelection(selectedId: newPin.id)
+            return
+        }
+
         // 🌟 優先檢查是否點擊在特殊樣板引導線互動元件上（例如核取方塊 Checkbox）
         if let (_, key) = hitTestGuideCheckbox(at: location, page: targetPage) {
             removeTapDotStroke(near: location, page: targetPage)
@@ -154,6 +184,10 @@ extension NotebookEditorView {
             // 手寫模式下手指點中物件，精準選中物件並顯示把手，同時維持手繪工具列就緒，不強迫進入打字模式。
             if let (hitId, hitKind) = findObjectAt(location: location, page: targetPage) {
                 removeTapDotStroke(near: location, page: targetPage)
+                if hitKind == "pin" {
+                    selectedCommentPinId = (selectedCommentPinId == hitId) ? nil : hitId
+                    return
+                }
                 withAnimation(.easeInOut(duration: 0.15)) {
                     inlineEditingTextId = nil
                     if hitKind == "shape" {
@@ -283,6 +317,10 @@ extension NotebookEditorView {
         // 例外：底稿（見 `isLockedBackdrop`）點它是要在上面打字，不是選取那張整頁的圖。
         if let (hitId, hitKind) = findObjectAt(location: location, page: targetPage),
            !(hitKind == "image" && isLockedBackdrop(hitId, page: targetPage)) {
+            if hitKind == "pin" {
+                selectedCommentPinId = (selectedCommentPinId == hitId) ? nil : hitId
+                return
+            }
             inlineEditingTextId = nil
             if hitKind == "shape" {
                 selectedShapeIds = [hitId]

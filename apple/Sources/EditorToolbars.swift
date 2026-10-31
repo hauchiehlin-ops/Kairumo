@@ -1169,6 +1169,8 @@ extension NotebookEditorView {
         if editorMode != .draw && !isInlineInkEditing {
             transitionToMode(.draw)
         }
+        // 若畫布當前有在途未結算的自繪筆畫，立即結束並落盤，不阻塞換筆
+        (canvasView as? AdaptiveCanvasView)?.proLayer?.endStroke()
         selectedTool = tool // state-entry: 換工具的唯一正門
     }
 

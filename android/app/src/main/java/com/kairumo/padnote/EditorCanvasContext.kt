@@ -455,6 +455,18 @@ internal class EditorCanvasContext {
     var revision: Int
         get() = revisionState.intValue
         set(v) { revisionState.intValue = v }
+    var inkRevisionJob: kotlinx.coroutines.Job? = null
+    /**
+     * 連續手繪書寫時避免每筆抬筆同步觸發整頁 Compose 重組。
+     * 去抖動延遲（預設 1000ms）無新筆劃後才在背景協程中更新 revision。
+     */
+    fun scheduleInkRevisionDebounced(delayMs: Long = 1000L) {
+        inkRevisionJob?.cancel()
+        inkRevisionJob = scope.launch {
+            kotlinx.coroutines.delay(delayMs)
+            revision++
+        }
+    }
     lateinit var continuousContentRevisionState: MutableIntState
     var continuousContentRevision: Int
         get() = continuousContentRevisionState.intValue
@@ -2370,6 +2382,8 @@ internal fun rememberEditorCanvasContext(
     // 橡皮擦時 `engine.isErasing` 會忘了跟著改，症狀是「側鍵選到橡皮擦了，
     // 但畫下去還是墨跡」。
     fun applyInkTool(picked: InkTool) {
+        // 若引擎當前仍有在途未結束的筆畫，立即取消以乾淨狀態切換新工具，不卡死換筆
+        engine.cancelInFlight()
         inkTool = picked // state-entry: 換工具的唯一正門
         engine.isErasing = picked.isEraser
         com.kairumo.padnote.platform.MainThreadStallMonitor.breadcrumb("select tool ${picked.kind}")
