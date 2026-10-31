@@ -148,6 +148,15 @@ object TranslationPenSpeech {
 }
 
 /**
+ * 翻譯筆「這次啟動問過語系了沒」。每次開啟 App 後第一次用翻譯筆（不論哪一本）先問一次語系，
+ * 之後到 App 重新啟動前都不再自動跳出。與 Apple 的 `TranslationPenLaunchGate` 一致。
+ */
+// profile-scope: device 只活在這一次啟動（行程），重新啟動 App 就重問；與設定檔無關
+internal object TranslationPenLaunchGate {
+    var hasPromptedThisLaunch = false
+}
+
+/**
  * 掃描翻譯筆覆蓋層（Android）。
  *
  * 對應 Apple 端的 `TranslationPenOverlayView`：
@@ -210,6 +219,9 @@ fun TranslationPenOverlay(
     }
 
     var showSetupDialog by remember { mutableStateOf(false) }
+    // 這次的設定視窗是不是「啟動後第一次使用」自動跳出的：關掉後接著顯示「之後去哪裡改語系」的提示。
+    var setupIsLaunchPrompt by remember { mutableStateOf(false) }
+    var showLanguageHint by remember { mutableStateOf(false) }
     var dragStartPx by remember { mutableStateOf<Offset?>(null) }
     var dragCurrentPx by remember { mutableStateOf<Offset?>(null) }
     var lastScanRectPage by remember { mutableStateOf<Rect?>(null) }
@@ -453,9 +465,20 @@ fun TranslationPenOverlay(
         }
     }
 
-    LaunchedEffect(isActive, config.configured) {
-        if (isActive && !config.configured) {
+    // 每次啟動 App 後第一次用翻譯筆就問一次（帶入這本目前的設定），不論這本以前有沒有設定過；
+    // 之後到重新啟動前都不再自動跳出 —— 要改就點上方的語系膠囊。
+    LaunchedEffect(isActive) {
+        if (isActive && !TranslationPenLaunchGate.hasPromptedThisLaunch) {
+            TranslationPenLaunchGate.hasPromptedThisLaunch = true
+            setupIsLaunchPrompt = true
             showSetupDialog = true
+        }
+    }
+    fun closeSetup() {
+        showSetupDialog = false
+        if (setupIsLaunchPrompt) {
+            setupIsLaunchPrompt = false
+            showLanguageHint = true
         }
     }
 
@@ -1102,7 +1125,7 @@ fun TranslationPenOverlay(
         AlertDialog(
             onDismissRequest = {
                 saveConfig(config.copy(configured = true))
-                showSetupDialog = false
+                closeSetup()
             },
             title = { Text(l10n("trans_pen_setup_title")) },
             text = {
@@ -1218,7 +1241,7 @@ fun TranslationPenOverlay(
                             configured = true
                         )
                         saveConfig(updated)
-                        showSetupDialog = false
+                        closeSetup()
                         if (showPopover && sourceText.isNotBlank()) {
                             scope.launch {
                                 translateNow(sourceText, updated.sourceLang, updated.targetLang)
@@ -1230,6 +1253,17 @@ fun TranslationPenOverlay(
                 ) {
                     Text(l10n("trans_pen_start"))
                 }
+            }
+        )
+    }
+
+    if (showLanguageHint) {
+        AlertDialog(
+            onDismissRequest = { showLanguageHint = false },
+            title = { Text(l10n("trans_pen_lang_hint_title")) },
+            text = { Text(l10n("trans_pen_lang_hint_body")) },
+            confirmButton = {
+                Button(onClick = { showLanguageHint = false }) { Text(l10n("done")) }
             }
         )
     }

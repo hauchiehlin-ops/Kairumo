@@ -68,6 +68,13 @@ final class TranslationPenSpeechPlayer: ObservableObject {
 }
 
 /// 畫布上的掃描翻譯筆覆蓋層。
+/// 翻譯筆「這次啟動問過語系了沒」。每次開啟 App 後第一次用翻譯筆（不論哪一本）先問一次語系，
+/// 之後到 App 重新啟動前都不再自動跳出。
+enum TranslationPenLaunchGate {
+    // profile-scope: device 只活在這一次啟動（行程），重新啟動 App 就重問；與設定檔無關
+    static var hasPromptedThisLaunch = false
+}
+
 public struct TranslationPenOverlayView: View {
     @ObservedObject var localizationManager = LocalizationManager.shared
     @Binding public var notebook: NotebookDocument
@@ -81,7 +88,9 @@ public struct TranslationPenOverlayView: View {
     @State private var dragCurrent: CGPoint? = nil
     @State private var activeCard: TranslationPenCardState? = nil
     @State private var isShowingSetupSheet: Bool = false
-    @State private var hasCheckedFirstActivation: Bool = false
+    /// 這次的設定視窗是不是「啟動後第一次使用」自動跳出的（關掉後要接著顯示修改語系的提示）。
+    @State private var setupSheetIsLaunchPrompt: Bool = false
+    @State private var isShowingLanguageHint: Bool = false
     @State private var translationTaskId: Int = 0
 
     private let supportedLanguages: [FfiTranslationLangInfo] = translationPenLanguages()
@@ -239,7 +248,13 @@ public struct TranslationPenOverlayView: View {
                 ensureFirstTimeLanguageSetupIfNeeded()
             }
         }
-        .sheet(isPresented: $isShowingSetupSheet) {
+        .sheet(isPresented: $isShowingSetupSheet, onDismiss: {
+            // 啟動後第一次的語系設定（確認或取消）關掉之後，告訴使用者之後去哪裡改。
+            if setupSheetIsLaunchPrompt {
+                setupSheetIsLaunchPrompt = false
+                isShowingLanguageHint = true
+            }
+        }) {
             TranslationPenSetupSheet(
                 config: currentConfig,
                 languages: supportedLanguages,
@@ -254,6 +269,11 @@ public struct TranslationPenOverlayView: View {
                 }
             )
             .presentationDetents([.medium, .large])
+        }
+        .alert(localizationManager.localized("trans_pen_lang_hint_title"), isPresented: $isShowingLanguageHint) {
+            Button(localizationManager.localized("done"), role: .cancel) {}
+        } message: {
+            Text(localizationManager.localized("trans_pen_lang_hint_body"))
         }
     }
 
@@ -366,8 +386,11 @@ public struct TranslationPenOverlayView: View {
                 configured: false
             )
         }
-        if notebook.translationPenConfig?.configured != true && !hasCheckedFirstActivation {
-            hasCheckedFirstActivation = true
+        // 每次啟動 App 後第一次用翻譯筆就問一次（帶入這本目前的設定），不論這本以前有沒有設定過；
+        // 之後到重新啟動前都不再自動跳出 —— 要改就點上方的語系膠囊。
+        if !TranslationPenLaunchGate.hasPromptedThisLaunch {
+            TranslationPenLaunchGate.hasPromptedThisLaunch = true
+            setupSheetIsLaunchPrompt = true
             isShowingSetupSheet = true
         }
     }

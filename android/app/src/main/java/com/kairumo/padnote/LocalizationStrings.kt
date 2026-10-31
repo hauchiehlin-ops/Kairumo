@@ -25107,6 +25107,22 @@ object LocalizationStrings {
             "ko" to "단어 카드",
             "th" to "การ์ดคำศัพท์"
         ),
+        "trans_pen_lang_hint_body" to mapOf(
+            "zh-Hant" to "之後若要更改掃描語系或輸出語系，請點翻譯筆上方的語系按鈕（例如「EN → 中」）。在應用程式重新啟動前，不會再出現此設定視窗。",
+            "en" to "To change the scan or output language later, tap the language pill at the top of the Translation Pen (for example “EN → FR”). You won’t be asked again until the app is restarted.",
+            "zh-Hans" to "之后若要更改扫描语系或输出语系，请点翻译笔上方的语系按钮（例如「EN → 中」）。在应用程序重新启动前，不会再出现此设定窗口。",
+            "ja" to "あとでスキャン言語や出力言語を変更するには、翻訳ペン上部の言語ボタン（例：「EN → 中」）をタップしてください。アプリを再起動するまで、この確認は表示されません。",
+            "ko" to "나중에 스캔 언어나 출력 언어를 바꾸려면 번역 펜 상단의 언어 버튼(예: “EN → 한국어”)을 누르세요. 앱을 다시 시작하기 전까지는 다시 묻지 않습니다.",
+            "th" to "หากต้องการเปลี่ยนภาษาที่สแกนหรือภาษาที่แปลภายหลัง ให้แตะปุ่มภาษาที่ด้านบนของปากกาแปล (เช่น “EN → ไทย”) ระบบจะไม่ถามอีกจนกว่าจะเปิดแอปใหม่"
+        ),
+        "trans_pen_lang_hint_title" to mapOf(
+            "zh-Hant" to "翻譯語系已設定",
+            "en" to "Translation language set",
+            "zh-Hans" to "翻译语系已设定",
+            "ja" to "翻訳言語を設定しました",
+            "ko" to "번역 언어가 설정되었습니다",
+            "th" to "ตั้งค่าภาษาแปลแล้ว"
+        ),
         "trans_pen_lookup_dict" to mapOf(
             "zh-Hant" to "系統字典",
             "en" to "Dictionary",
@@ -25114,7 +25130,10 @@ object LocalizationStrings {
             "ja" to "辞書を引く",
             "ko" to "사전 찾기",
             "th" to "พจนานุกรม"
-        ),
+        )
+    )
+
+    private fun part39(): Map<String, Map<String, String>> = mapOf(
         "trans_pen_multiline_desc" to mapOf(
             "zh-Hant" to "開啟後，在快顯視窗保持開啟時繼續掃下一行，會自動修復行尾連字號並拼接成完整句子翻譯。",
             "en" to "When enabled, scanning the next line while a translation card is open automatically joins broken words and sentences.",
@@ -25130,10 +25149,7 @@ object LocalizationStrings {
             "ja" to "複数行の連続スキャン結合",
             "ko" to "다중 행 연속 스캔 이어붙이기",
             "th" to "สแกนต่อเนื่องหลายบรรทัด"
-        )
-    )
-
-    private fun part39(): Map<String, Map<String, String>> = mapOf(
+        ),
         "trans_pen_normal_tts" to mapOf(
             "zh-Hant" to "1.0× 正常語速",
             "en" to "1.0× Speed",
@@ -25757,7 +25773,10 @@ object LocalizationStrings {
             "ja" to "このノートはロックされています",
             "ko" to "이 노트는 잠겨 있습니다",
             "th" to "สมุดบันทึกนี้ถูกล็อกอยู่"
-        ),
+        )
+    )
+
+    private fun part40(): Map<String, Map<String, String>> = mapOf(
         "unlock_use_passphrase" to mapOf(
             "zh-Hant" to "改用密碼",
             "en" to "Use the passphrase instead",
@@ -25773,10 +25792,7 @@ object LocalizationStrings {
             "ja" to "忘れた場合は復元コードを使う",
             "ko" to "잊으셨나요? 복구 코드 사용",
             "th" to "ลืมรหัสผ่าน? ใช้รหัสกู้คืน"
-        )
-    )
-
-    private fun part40(): Map<String, Map<String, String>> = mapOf(
+        ),
         "unlock_working" to mapOf(
             "zh-Hant" to "解鎖中…",
             "en" to "Unlocking…",
@@ -26400,7 +26416,10 @@ object LocalizationStrings {
             "ja" to "ボトムタブバー（5 タブ）",
             "ko" to "하단 탭 바 (5개 탭)",
             "th" to "แถบแท็บด้านล่าง (5 แท็บ)"
-        ),
+        )
+    )
+
+    private fun part41(): Map<String, Map<String, String>> = mapOf(
         "word_studio" to mapOf(
             "zh-Hant" to "Word文字編修",
             "en" to "Word Text Studio",
@@ -26416,10 +26435,7 @@ object LocalizationStrings {
             "ja" to "テキスト書式・タイポグラフィ編集パネルを開く",
             "ko" to "텍스트 서식 및 서체 편집 스튜디오 열기",
             "th" to "เปิดแผงจัดรูปแบบข้อความและการจัดพิมพ์"
-        )
-    )
-
-    private fun part41(): Map<String, Map<String, String>> = mapOf(
+        ),
         "word_style_body" to mapOf(
             "zh-Hant" to "本文",
             "en" to "Body",

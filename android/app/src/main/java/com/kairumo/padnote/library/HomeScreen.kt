@@ -177,7 +177,8 @@ fun HomeScreen(
     // 隱藏的筆記本（只在這次開啟期間，與 Apple 的 `hiddenNoteIds` 相同）：「繼續編輯」與「全部筆記」都不列。
     var hiddenNotes by remember { mutableStateOf(setOf<String>()) }
     val hideNotebook: (NotebookLibrary.Entry) -> Unit = { hiddenNotes = hiddenNotes + it.id }
-    var isGridView by remember { mutableStateOf(true) }
+    // 資料夾展開後預設以**檔名清單**列出（與 Apple 的 hierarchy 模式相同），要看卡片再切成格狀。
+    var isGridView by remember { mutableStateOf(false) }
     // Ctrl+F 把游標送進搜尋框（見 ui/AppCommands.kt）。
     val searchFocus = remember { FocusRequester() }
     LaunchedEffect(Unit) {
@@ -214,12 +215,22 @@ fun HomeScreen(
     // ── 資料夾樹的資料 ──
     val treeContext = LocalContext.current
     val treeVer = FolderTree.treeVersion
-    var collapsed by remember { mutableStateOf(setOf<String>()) }
+    // 「全部筆記」的資料夾與未分類：每次開 App **預設全部收合**，使用者點開哪個才展開哪個（與 Apple 相同）。
+    // 記的是「展開了哪些」，不是「收合了哪些」—— 之後新增或同步進來的資料夾也是收合的。
+    // UI 測試要直接點資料夾裡的範例筆記（`home.notebooks.card.*`），測試行程裡樹一開始是展開的。
+    val treeStartsExpanded = com.kairumo.padnote.ui.FeatureHintStore.isRunningInTest
+    var expandedKeys by remember { mutableStateOf(setOf<String>()) }
+    var treeTouched by remember { mutableStateOf(false) }
     val allFolders = remember(treeVer, folders, allEntries) { FolderTree.all(treeContext) }
     val allFolderKeys = remember(allFolders) { allFolders.map { it.id }.toSet() + UNFILED_KEY }
+    val collapsed = if (treeStartsExpanded && !treeTouched) emptySet() else allFolderKeys - expandedKeys
     val allCollapsed = allFolderKeys.isNotEmpty() && collapsed.containsAll(allFolderKeys)
     fun toggleFolder(key: String) {
-        collapsed = if (key in collapsed) collapsed - key else collapsed + key
+        if (!treeTouched) {
+            expandedKeys = if (treeStartsExpanded) allFolderKeys else emptySet()
+            treeTouched = true
+        }
+        expandedKeys = if (key in expandedKeys) expandedKeys - key else expandedKeys + key
     }
     val treeRows = remember(treeVer, allFolders, allEntries, collapsed, sort, hiddenNotes) {
         buildTreeRows(treeContext, allFolders, sortedForTree(allEntries.filter { it.id !in hiddenNotes }, sort), collapsed)
@@ -696,7 +707,8 @@ fun HomeScreen(
                     // 全部收合／展開，與 Apple 相同。
                     TextButton(
                         onClick = {
-                            collapsed = if (allCollapsed) emptySet() else allFolderKeys
+                            treeTouched = true
+                            expandedKeys = if (allCollapsed) allFolderKeys else emptySet()
                         },
                         modifier = Modifier.testTag("home.notebooks.collapse_all")
                     ) { Text(l(if (allCollapsed) "expand_all" else "collapse_all")) }

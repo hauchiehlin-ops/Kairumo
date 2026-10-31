@@ -121,7 +121,10 @@ public struct HomeWorkbenchView: View {
     @AppStorage(ProfileContext.scopedKey("home_notebook_display_mode")) private var notebookDisplayModeRaw: String = "hierarchy"
     @State private var expandedFolderIds: Set<String> = []
     @State private var hasExpandedFoldersInit: Bool = false
-    @State private var isRootUnfiledExpanded: Bool = true
+    /// 「全部筆記」的資料夾與未分類：每次開 App **預設全部收合**，使用者點開哪個才展開哪個。
+    @State private var isRootUnfiledExpanded: Bool = Self.treeStartsExpanded
+    /// UI 測試要直接點資料夾裡的範例筆記（`home.notebooks.card.*`），樹要一開始就展開；一般使用一律收合。
+    private static let treeStartsExpanded = ProcessInfo.processInfo.environment["KAIRUMO_UITEST"] == "1"
 
     public enum SortOption: String, CaseIterable, Identifiable {
         case byDate = "date"
@@ -518,11 +521,11 @@ public struct HomeWorkbenchView: View {
                 }
                 Button(localizationManager.localized("confirm")) {
                     let created = notebookStore.createFolder(name: newFolderNameText, parentId: newFolderParentId)
-                    if hasExpandedFoldersInit {
-                        expandedFolderIds.insert(created.id.lowercased())
-                        if let p = newFolderParentId {
-                            expandedFolderIds.insert(p.lowercased())
-                        }
+                    // 新建的資料夾（與它的上層）展開，使用者才看得到剛建好的東西。
+                    hasExpandedFoldersInit = true
+                    expandedFolderIds.insert(created.id.lowercased())
+                    if let p = newFolderParentId {
+                        expandedFolderIds.insert(p.lowercased())
                     }
                     newFolderNameText = ""
                     newFolderParentId = nil
@@ -1879,21 +1882,21 @@ public struct HomeWorkbenchView: View {
     }
 
     private var areAllFoldersExpanded: Bool {
-        if !hasExpandedFoldersInit { return true }
+        if !hasExpandedFoldersInit { return Self.treeStartsExpanded }
         let allIds = Set(notebookStore.folders.map { $0.id.lowercased() })
         let expandedLower = Set(expandedFolderIds.map { $0.lowercased() })
         return allIds.isSubset(of: expandedLower) && isRootUnfiledExpanded
     }
 
     private func isFolderExpanded(_ folderId: String) -> Bool {
-        if !hasExpandedFoldersInit { return true }
+        if !hasExpandedFoldersInit { return Self.treeStartsExpanded }
         let lower = folderId.lowercased()
         return expandedFolderIds.contains { $0.lowercased() == lower }
     }
 
     private func toggleFolderExpanded(_ folderId: String) {
         if !hasExpandedFoldersInit {
-            expandedFolderIds = Set(notebookStore.folders.map { $0.id.lowercased() })
+            expandedFolderIds = Self.treeStartsExpanded ? Set(notebookStore.folders.map { $0.id.lowercased() }) : []
             hasExpandedFoldersInit = true
         }
         let lower = folderId.lowercased()
