@@ -30,7 +30,10 @@ import androidx.compose.ui.graphics.layer.GraphicsLayer
 import androidx.compose.ui.platform.LocalGraphicsContext
 import androidx.compose.ui.input.pointer.pointerInteropFilter
 import androidx.compose.ui.platform.LocalDensity
+import uniffi.padnote_core.FfiDab
+import uniffi.padnote_core.LiveBrushStroke
 import uniffi.padnote_core.StrokePoint
+import uniffi.padnote_core.brushIsCustom
 import uniffi.padnote_core.ToolKind
 
 /**
@@ -121,6 +124,9 @@ fun InkCanvas(
     val graphicsContext = LocalGraphicsContext.current
     val strokeLayers = remember(graphicsContext) { StrokeLayerCache(graphicsContext) }
     DisposableEffect(strokeLayers) { onDispose { strokeLayers.releaseAll() } }
+    // 正在畫的那一筆（自繪引擎筆刷）邊畫邊算，見 `LiveBrushLayers`。
+    val liveLayers = remember(graphicsContext) { LiveBrushLayers(graphicsContext) }
+    DisposableEffect(liveLayers) { onDispose { liveLayers.releaseAll() } }
 
     Canvas(
         modifier = modifier
@@ -184,7 +190,12 @@ fun InkCanvas(
                 predictedPoints = if (event.actionMasked == MotionEvent.ACTION_MOVE && !engine.isErasing) {
                     val predEvent = predictor?.predict()
                     if (predEvent != null) {
-                        val pts = InkInput.strokePoints(InkInput.samples(predEvent, density)).take(3)
+                        // 預測點要換算到**與真實取樣點相同**的頁面座標（倍率與位移）。原本少了這一步：
+                        // 預測點落在另一個座標系，即時筆畫的尾端每一幀都多出一條從筆尖拉出去的直線，
+                        // 抬筆才消失（預測點不進資料，所以留不下來）。也只取正在畫的那根指標。
+                        val samples = InkInput.samples(predEvent, density, engine.zoom, engine.offsetX, engine.offsetY)
+                            .filter { engine.isDrawing(it.event.id) }
+                        val pts = InkInput.strokePoints(samples).take(3)
                         predEvent.recycle()
                         pts
                     } else {
@@ -259,12 +270,22 @@ fun InkCanvas(
         strokeLayers.retainOnly(committed)
         // 尚未抬筆的那一段也要即時畫出來，否則寫字時要等抬筆才看得到。
         val snapped = engine.snapPreview ?: engine.draftPreview
-        for (live in engine.liveSamples()) {
+        val liveById = engine.liveSamplesById()
+        liveLayers.retainOnly(if (snapped == null) liveById.keys else emptySet())
+        for ((pointerId, live) in liveById) {
+            if (snapped == null && brushIsCustom(engine.tool)) {
+                // 自繪引擎的筆刷：只算新來的取樣點，已定案的筆點錄進圖層只重播。
+                // 原本每一幀把整筆重算、重畫一次 —— 筆畫越長越慢，寫得快時筆跡越追越遠。
+                liveLayers.draw(
+                    this, pointerId, InkInput.strokePoints(live), predictedPoints,
+                    engine.tool, engine.baseWidth, engine.lineType, inkColor, density)
+                continue
+            }
             // 長按吸附的預覽：按住不動時直接畫出吸附後的圖形；製圖線則畫出靠邊／對齊之後的樣子。
             val livePts = snapped ?: (InkInput.strokePoints(live) + predictedPoints)
-            drawInkStroke(
-                livePts, engine.tool, engine.baseWidth, inkColor, density,
-                engine.lineType)
+            InkBrushRenderer.drawStrokeOnDrawScope(
+                this, livePts, engine.tool, engine.baseWidth, inkColor, density,
+                engine.lineType, useCache = false)
         }
         drawDraftingAids(engine, density, false)
 
@@ -352,6 +373,100 @@ private class StrokeLayerCache(private val graphicsContext: androidx.compose.ui.
     fun releaseAll() {
         for (entry in entries.values) graphicsContext.releaseGraphicsLayer(entry.layer)
         entries.clear()
+    }
+}
+
+/**
+ * 正在畫的筆畫（自繪引擎筆刷），一根指標一份，**邊畫邊算**。
+ *
+ * 核心的 [LiveBrushStroke] 每次只算新來的取樣點，回傳的筆點定案後不再變動；
+ * 這裡把它們每滿 [CHUNK] 個錄成一個圖層，之後每一幀只重播圖層、再補上未滿的那一段與
+ * 筆尖附近的預覽。每一幀的成本因此跟著「新寫的那一小段」走，不隨筆畫長度增加。
+ */
+private class LiveBrushLayers(private val graphicsContext: androidx.compose.ui.graphics.GraphicsContext) {
+    private class Entry(
+        val first: StrokePoint,
+        val tool: ToolKind,
+        val baseWidth: Float,
+        val lineType: Int,
+        val color: Color,
+        val density: Float,
+        val brush: LiveBrushStroke
+    ) {
+        /** 已經餵給核心的取樣點數。 */
+        var fed = 0
+        val chunks = ArrayList<GraphicsLayer>()
+        val pending = ArrayList<FfiDab>()
+
+        fun matches(points: List<StrokePoint>, tool: ToolKind, baseWidth: Float, lineType: Int, color: Color, density: Float) =
+            points.size >= fed && points[0].x == first.x && points[0].y == first.y &&
+                tool == this.tool && baseWidth == this.baseWidth && lineType == this.lineType &&
+                color == this.color && density == this.density
+    }
+
+    private val entries = HashMap<ULong, Entry>()
+
+    fun draw(
+        scope: androidx.compose.ui.graphics.drawscope.DrawScope,
+        pointerId: ULong,
+        points: List<StrokePoint>,
+        predicted: List<StrokePoint>,
+        tool: ToolKind,
+        baseWidth: Float,
+        lineType: Int,
+        color: Color,
+        density: Float
+    ) {
+        if (points.isEmpty()) return
+        var entry = entries[pointerId]
+        if (entry == null || !entry.matches(points, tool, baseWidth, lineType, color, density)) {
+            entry?.let { release(it) }
+            entry = Entry(points[0], tool, baseWidth, lineType, color, density,
+                LiveBrushStroke(tool, baseWidth, lineType.toUByte()))
+            entries[pointerId] = entry
+        }
+        if (points.size > entry.fed) {
+            entry.pending += entry.brush.append(points.subList(entry.fed, points.size))
+            entry.fed = points.size
+        }
+        if (entry.pending.size >= CHUNK) {
+            val dabs = ArrayList(entry.pending)
+            val layer = graphicsContext.createGraphicsLayer()
+            with(scope) { layer.record { InkBrushRenderer.drawDabs(this, dabs, color, density) } }
+            entry.chunks += layer
+            entry.pending.clear()
+        }
+        for (layer in entry.chunks) scope.drawLayer(layer)
+        InkBrushRenderer.drawDabs(scope, entry.pending, color, density)
+        InkBrushRenderer.drawDabs(scope, entry.brush.preview(predicted), color, density)
+    }
+
+    /** 已經不在畫的指標（抬筆、取消）放掉它的圖層與核心狀態。 */
+    fun retainOnly(alive: Set<ULong>) {
+        val iterator = entries.entries.iterator()
+        while (iterator.hasNext()) {
+            val (id, entry) = iterator.next()
+            if (id !in alive) {
+                release(entry)
+                iterator.remove()
+            }
+        }
+    }
+
+    fun releaseAll() {
+        for (entry in entries.values) release(entry)
+        entries.clear()
+    }
+
+    private fun release(entry: Entry) {
+        for (layer in entry.chunks) graphicsContext.releaseGraphicsLayer(layer)
+        entry.chunks.clear()
+        entry.brush.close()
+    }
+
+    private companion object {
+        /** 一個圖層錄多少個筆點：太小圖層太多，太大則未錄進圖層、每幀重畫的那一段太長。 */
+        const val CHUNK = 256
     }
 }
 

@@ -15,7 +15,7 @@ pub mod refine;
 pub mod streamline;
 
 pub use align::{SnapResult, snap};
-pub use brush::{Dab, apply_line_type, dabs, dabs_styled};
+pub use brush::{Dab, LiveDabs, apply_line_type, dabs, dabs_styled};
 pub use codec::{StrokeReader, StrokeWriter};
 pub use draft::{SnapKind, Snapped, dash_runs, snap_direction, snap_stroke};
 pub use fill::{FillOptions, FillResult, smart_fill};

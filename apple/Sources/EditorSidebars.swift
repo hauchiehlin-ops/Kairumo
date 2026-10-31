@@ -20,6 +20,8 @@ struct PageThumbnailCardView: View {
     let effectiveWidth: CGFloat
     let sidebarScale: CGFloat
     let pageDrawing: PKDrawing
+    /// 這一頁手繪的版本號（`PageInkStore.revision`）。內容換了它就變，縮圖才會重畫。
+    let inkRevision: Int
     let notebook: NotebookDocument
     let store: NotebookStore
     let canvasWidth: CGFloat
@@ -37,6 +39,7 @@ struct PageThumbnailCardView: View {
                 drawing: pageDrawing,
                 store: store,
                 canvasWidth: canvasWidth,
+                inkRevision: inkRevision,
                 deferRecomputation: CanvasTouchState.isCanvasNavigating
             )
             Image(uiImage: img)
@@ -520,6 +523,7 @@ extension NotebookEditorView {
             effectiveWidth: effectiveThumbnailWidth,
             sidebarScale: sidebarScale,
             pageDrawing: drawingForPage(idx),
+            inkRevision: inkRevisionForPage(idx),
             notebook: notebook,
             store: store,
             canvasWidth: canvasContentWidth,

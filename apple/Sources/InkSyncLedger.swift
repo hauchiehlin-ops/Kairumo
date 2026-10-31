@@ -39,6 +39,68 @@ enum PKStrokeId {
                                b[8], b[9], b[10], b[11], b[12], b[13], b[14], b[15]))
         return uuid.uuidString.lowercased()
     }
+
+    /// 上一次匯出之後，這台**新加的**自己的 PencilKit 筆畫：內容指紋 → 筆數。
+    static func addedOwn(previous: PKDrawing, now: PKDrawing) -> [String: Int] {
+        var out: [String: Int] = [:]
+        for stroke in StrokeDelta.added(in: now, since: previous) {
+            out[StrokeDelta.Identity(stroke).key, default: 0] += 1
+        }
+        return out
+    }
+
+    /// 上一次匯出之後，這台擦掉的自己的 PencilKit 筆畫：(內容指紋, 它在上次匯出裡是第幾筆)。
+    ///
+    /// 同一個指紋有好幾筆、只擦了其中幾筆時，取編號最後的那幾個 —— 剩下的筆畫重新編號後正好是前面幾個，
+    /// 擦的數量對、留下的身分也對。
+    static func erasedOwn(previous: PKDrawing, now: PKDrawing) -> [(key: String, n: Int)] {
+        var removed: [String: Int] = [:]
+        for stroke in StrokeDelta.removed(in: now, since: previous) {
+            removed[StrokeDelta.Identity(stroke).key, default: 0] += 1
+        }
+        guard !removed.isEmpty else { return [] }
+        var totals: [String: Int] = [:]
+        for stroke in previous.strokes { totals[StrokeDelta.Identity(stroke).key, default: 0] += 1 }
+        var out: [(key: String, n: Int)] = []
+        for (key, count) in removed {
+            let total = totals[key] ?? count
+            for n in max(0, total - count) ..< total { out.append((key, n)) }
+        }
+        return out
+    }
+
+    /// 這一筆（內容指紋 `key`）**可能用過的**所有套件身分：送出者 id、各個「第幾筆」與世代的內容 id。
+    static func candidates(key: String, pinned: [String: String]) -> [String] {
+        var out: [String] = pinned[key].map { [$0.lowercased()] } ?? []
+        for n in 0 ..< 4 {
+            for gen in 0 ..< 16 { out.append(make(key: key, n: n, gen: gen)) }
+        }
+        return out
+    }
+
+    /// 這一筆寫進過套件嗎（不論後來有沒有被擦掉）。
+    ///
+    /// **寫過就不能只憑「工作副本裡有它」再寫一次。** 套件裡它有墓碑，可能是別台擦的、這台還沒匯入；
+    /// 這時再以新身分加回去，就是把別台擦掉的筆畫救活。只有確定是使用者重新加回來的（畫布上剛出現、
+    /// 或上次匯出之後才出現）才用新身分寫。
+    static func wasWritten(key: String, pinned: [String: String], added: Set<String>) -> Bool {
+        candidates(key: key, pinned: pinned).contains { added.contains($0) }
+    }
+
+    /// 寫進套件時用的身分：協同收到的筆畫沿用送出者的 id；其餘依內容算，**跳過已有墓碑的**。
+    ///
+    /// 擦掉一筆再復原（或重畫出逐點相同的一筆）時，內容算出來的 id 與被擦掉的那一筆相同 ——
+    /// 墓碑永遠優先（ADR-0015 I3），沿用舊 id 的話它在每一台（包括重新載入後的這一台）都看不見。
+    /// 依序試 `gen` 0、1、2…，取第一個沒有墓碑的；同一份輸入每次算出同一個結果。
+    static func resolve(key: String, n: Int, pinned: [String: String], removed: Set<String>) -> String {
+        if n == 0, let id = pinned[key], !removed.contains(id.lowercased()) { return id }
+        var gen = 0
+        while true {
+            let id = make(key: key, n: n, gen: gen)
+            if !removed.contains(id) { return id }
+            gen += 1
+        }
+    }
 }
 
 /// 一頁 PencilKit 筆畫的匯出計畫。
@@ -188,6 +250,9 @@ enum PKInkSnapshotStore {
     }
 
     nonisolated static func save(_ drawing: PKDrawing, in directory: URL, notebookId: String, page: Int) {
+        // 資料夾不在時要先建：寫不進去的話「上次匯出寫出了什麼」就沒有記錄，
+        // 之後擦掉的自己的筆畫永遠推論不出來、不會寫墓碑（而 `try?` 讓這件事完全無聲）。
+        try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         try? drawing.dataRepresentation().write(to: url(directory, notebookId, page), options: .atomic)
     }
 }
@@ -288,3 +353,92 @@ enum InkLedgerJanitor {
         return report
     }
 }
+
+// MARK: - 編輯當下的筆跡事件（ADR-0015 第 2 階段）
+
+/// 使用者對筆跡的動作，**在發生的當下**寫成核心事件（擦除＝墓碑、專業筆刷＝新增／擦除）。
+///
+/// 原本擦除只在匯出時拿快照比對才推論得出，比對基準一錯套件裡就沒有墓碑，下一次匯入把筆畫帶回來。
+/// 這裡每一個編輯器一份（以筆記本 id 登記），畫布與專業筆畫層都把動作交給它；寫入在核心寫入佇列上做
+/// （與 `CoreInkFlush` 同一條序列，順序就是動作的順序），主執行緒不等。
+@MainActor
+final class InkEventSink {
+    // profile-scope: device 只在編輯器開著時存在（開啟時登記、關閉時移除）；切換設定檔前編輯器一定已關閉
+    private static var sinks: [String: InkEventSink] = [:]
+
+    private let document: () -> NotebookDocument
+    private let package: URL
+    private let baselineDirectory: URL
+    private let deviceId: UInt32
+    private let queue: DispatchQueue
+
+    private init(document: @escaping () -> NotebookDocument, package: URL, baselineDirectory: URL,
+                 deviceId: UInt32, queue: DispatchQueue) {
+        self.document = document
+        self.package = package
+        self.baselineDirectory = baselineDirectory
+        self.deviceId = deviceId
+        self.queue = queue
+    }
+
+    static func register(
+        notebookId: String, document: @escaping () -> NotebookDocument, package: URL,
+        baselineDirectory: URL, deviceId: UInt32, queue: DispatchQueue
+    ) {
+        sinks[notebookId.lowercased()] = InkEventSink(
+            document: document, package: package, baselineDirectory: baselineDirectory,
+            deviceId: deviceId, queue: queue)
+    }
+
+    static func unregister(notebookId: String) {
+        sinks.removeValue(forKey: notebookId.lowercased())
+    }
+
+    static func sink(for notebookId: String) -> InkEventSink? {
+        sinks[notebookId.lowercased()]
+    }
+
+    /// 畫布上的一次編輯。
+    ///
+    /// `before` **必須是畫布上一刻真正顯示的那一份**（`lastSyncedDrawing`），不是編輯器的記憶體副本：
+    /// 同步進來的別台筆畫在落筆中會先進記憶體、抬筆後才換上畫布，拿記憶體副本比對的話，
+    /// 那些使用者根本還沒看到的筆畫會被當成「這台擦掉的」寫出墓碑 —— 別台也跟著消失。
+    func canvasEdited(page: Int, before: PKDrawing, after: PKDrawing) {
+        guard before != after else { return }
+        let doc = document()
+        let (package, directory, deviceId) = (self.package, baselineDirectory, self.deviceId)
+        nonisolated(unsafe) let old = before
+        nonisolated(unsafe) let new = after
+        queue.async {
+            let removed = StrokeDelta.removed(in: new, since: old)
+            let added = StrokeDelta.added(in: new, since: old)
+            ErasedInkLedger.record(removed: removed, added: added, in: directory, notebookId: doc.id, page: page)
+            do {
+                try NotebookPackageBridge.eraseInk(
+                    document: doc, pageIndex: page, strokes: removed, at: package, deviceId: deviceId)
+                // 加回來的（復原擦除）：套件裡它已經有墓碑，要以新身分寫才看得見。
+                try NotebookPackageBridge.reviveInk(
+                    document: doc, pageIndex: page, strokes: added, at: package, deviceId: deviceId)
+            } catch {
+                SyncLogger.logAsync("擦除寫入套件失敗（第 \(page + 1) 頁）：\(error)", source: .general)
+            }
+        }
+    }
+
+    /// 專業筆刷的一次動作：擦掉 `removedIds`、加入 `added`。
+    func proEdited(page: Int, removedIds: [String], added: [ProStroke]) {
+        guard !removedIds.isEmpty || !added.isEmpty else { return }
+        let doc = document()
+        let (package, deviceId) = (self.package, self.deviceId)
+        queue.async {
+            do {
+                try NotebookPackageBridge.applyProInkEvents(
+                    document: doc, pageIndex: page, removedIds: removedIds, added: added,
+                    at: package, deviceId: deviceId)
+            } catch {
+                SyncLogger.logAsync("專業筆畫寫入套件失敗（第 \(page + 1) 頁）：\(error)", source: .general)
+            }
+        }
+    }
+}
+

@@ -595,43 +595,29 @@ impl NotebookPackage {
         self.append_ink(page, &records)
     }
 
-    /// 重寫某一頁的完整筆畫（用於整體垂直空白推開、幾何形狀變換或頁面筆跡整理）。
+    /// 這一頁筆跡的**版本號**：所有裝置的筆畫檔（檔名＋大小）的指紋。
     ///
-    /// 透過先寫入暫存檔再原子替換本裝置筆畫檔，並安全清理該頁其餘舊檔案。
-    pub fn rewrite_ink_page(&self, page: Uuid, records: &[InkRecord]) -> Result<(), StorageError> {
-        let dir = self.root.join("ink");
-        fs::create_dir_all(&dir)?;
-
-        let mut writer = StrokeWriter::new(page);
-        for r in records {
-            writer.push(r);
-        }
-        let bytes = writer.into_bytes();
-
-        let target_path = self.ink_write_path(page);
-        crate::atomic::write_atomic(&target_path, &bytes)?;
-
-        // 移除其他舊有的該頁 strokes 檔（避免重疊），但保留剛寫入的 target_path
-        let prefix = format!("{page}");
-        if let Ok(entries) = fs::read_dir(&dir) {
-            for entry in entries.flatten() {
-                let p = entry.path();
-                if p == target_path {
-                    continue;
-                }
-                let name = entry.file_name().to_string_lossy().into_owned();
-                if is_ignored_entry_name(&name) {
-                    continue;
-                }
-                if name == format!("{prefix}.strokes")
-                    || (name.starts_with(&prefix) && name.ends_with(".strokes"))
-                {
-                    let _ = fs::remove_file(&p);
-                }
+    /// 筆畫檔只會追加（ADR-0002），任何一筆新增或擦除、任何一台裝置的檔案同步進來，
+    /// 版本號都會變。畫布、縮圖與匯出以它判斷「這一頁的筆跡換了沒有」（ADR-0015 I4）——
+    /// 不讀內容、不看修改時間。
+    pub fn ink_version(&self, page: Uuid) -> u64 {
+        let mut h: u64 = 0xcbf2_9ce4_8422_2325;
+        let mut eat = |bytes: &[u8]| {
+            for &b in bytes {
+                h ^= u64::from(b);
+                h = h.wrapping_mul(0x0100_0000_01b3);
             }
+        };
+        for path in self.ink_read_paths(page) {
+            let name = path
+                .file_name()
+                .map(|n| n.to_string_lossy().into_owned())
+                .unwrap_or_default();
+            let len = fs::metadata(&path).map(|m| m.len()).unwrap_or(0);
+            eat(name.as_bytes());
+            eat(&len.to_le_bytes());
         }
-
-        Ok(())
+        h
     }
 
     /// 這一頁的全部筆畫記錄 —— **所有裝置的檔案串起來**。
@@ -1240,36 +1226,17 @@ impl NotebookPackage {
         report.blobs_removed = blob_res.removed_count as u32;
         report.blob_bytes_reclaimed = blob_res.reclaimed_bytes;
 
-        // 3. 筆跡壓實（排除已被擦除的筆畫與填充墓碑）
-        let resolved = self.resolve_milestones()?;
-        if resolved.milestones.is_empty() {
-            for page in self.ink_pages().unwrap_or_default() {
-                let paths = self.ink_read_paths(page);
-                let old_bytes_len: u64 = paths
-                    .iter()
-                    .filter_map(|p| fs::metadata(p).ok().map(|m| m.len()))
-                    .sum();
-                if let Ok(records) = self.read_ink_with(page, &resolved) {
-                    let materialized = padnote_ink::materialize(&records);
-                    if materialized.len() < records.len() {
-                        let new_records: Vec<InkRecord> =
-                            materialized.into_iter().map(InkRecord::Add).collect();
-                        if self.rewrite_ink_page(page, &new_records).is_ok() {
-                            let new_paths = self.ink_read_paths(page);
-                            let new_bytes_len: u64 = new_paths
-                                .iter()
-                                .filter_map(|p| fs::metadata(p).ok().map(|m| m.len()))
-                                .sum();
-                            if old_bytes_len > new_bytes_len {
-                                report.ink_bytes_reclaimed += old_bytes_len - new_bytes_len;
-                            }
-                            report.ink_pages_compacted += 1;
-                        }
-                    }
-                }
-            }
-        }
-
+        // 3. 筆跡**不壓實**（ADR-0015）。
+        //
+        // 原本這裡把一頁所有裝置的記錄 materialize 後寫回「本裝置」的檔案，並刪掉其他裝置的檔案。
+        // 那同時做錯了三件事，每一件都會讓擦掉的筆跡復活：
+        // - **丟掉墓碑**：壓實結果只剩可見的 `Add`。別台檔案（或雲端較大的舊檔）一同步回來，
+        //   被擦掉的那一筆就沒有任何墓碑擋著；
+        // - **刪掉別台的檔案**：違反「每台裝置只寫自己的檔案」，同步一定會把它們再帶回來；
+        // - **讓自己的檔案變小**：同步以「較大的那份」為準，雲端的舊檔會蓋回來，壓實之後才追加的
+        //   擦除（較小的檔案裡）就此遺失。
+        // 定期維護（StorageJanitor）每天自動跑這裡，所以「擦掉的筆跡過一陣子又出現」會在兩個平台反覆發生。
+        // 筆跡的回收要等到同步改為事件區塊、有各裝置的游標之後才能安全地做（ADR-0015 第 3 階段）。
         Ok(report)
     }
 
@@ -2791,17 +2758,16 @@ mod tests {
             .unwrap();
         assert_eq!(report_safe.oplog_files_merged, 2); // 2 個舊碎檔被吸收合併
         assert_eq!(report_safe.blobs_removed, 0); // 剛建立未滿 24 小時安全保留
-        assert_eq!(report_safe.ink_pages_compacted, 1);
-        assert!(report_safe.ink_bytes_reclaimed > 0);
-
-        // 筆跡已壓實為只剩 1 筆 Add(stroke1)
+        // 筆跡**不壓實**（ADR-0015）：墓碑要留著，別台的舊檔同步回來時才擋得住被擦掉的筆畫。
+        assert_eq!(report_safe.ink_pages_compacted, 0);
+        assert_eq!(report_safe.ink_bytes_reclaimed, 0);
         let ink_after = pkg.read_ink(page_id).unwrap();
-        assert_eq!(ink_after.len(), 1);
-        if let InkRecord::Add(s) = &ink_after[0] {
-            assert_eq!(s.id, stroke1.id);
-        } else {
-            panic!("Expected InkRecord::Add");
-        }
+        assert_eq!(ink_after.len(), ink_before.len(), "維護不能改動筆跡記錄");
+        let visible: Vec<_> = padnote_ink::materialize(&ink_after)
+            .into_iter()
+            .map(|s| s.id)
+            .collect();
+        assert_eq!(visible, vec![stroke1.id]);
 
         // 驗證 compaction.tombstones 有紀錄被吃掉的 oplog
         let tombstones_path = root.join("doc/ops/compaction.tombstones");
@@ -2818,5 +2784,206 @@ mod tests {
         assert_eq!(gc_report.removed_count, 1);
         assert!(pkg.blobs().contains(keep_blob));
         assert!(!pkg.blobs().contains(orphan_blob));
+    }
+}
+
+/// ADR-0015 的筆跡不變式：多台裝置、各寫各的檔案、以任意順序同步，結果一致；擦掉的不復活。
+#[cfg(test)]
+mod ink_invariants {
+    use super::*;
+    use padnote_doc::NotebookTime;
+    use padnote_ink::{InkPoint, Stroke, Tool, materialize};
+    use std::collections::BTreeSet;
+
+    fn tmp(name: &str) -> PathBuf {
+        let d = std::env::temp_dir().join(format!("padnote-inv-{name}-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&d);
+        d
+    }
+
+    fn uid(hi: u64, lo: u64) -> Uuid {
+        let mut b = [0u8; 16];
+        b[..8].copy_from_slice(&hi.to_be_bytes());
+        b[8..].copy_from_slice(&lo.to_be_bytes());
+        Uuid::from_bytes(b)
+    }
+
+    fn stroke(id: Uuid) -> Stroke {
+        Stroke {
+            id,
+            started_at: NotebookTime::from_micros(1),
+            tool: Tool::FountainPen,
+            color_rgba8: [0, 0, 0, 255],
+            base_width: 2.0,
+            points: vec![
+                InkPoint::new(0.0, 0.0, 0.5, 0),
+                InkPoint::new(5.0, 5.0, 0.5, 8_000),
+            ],
+            layer: 0,
+            line_type: 0,
+        }
+    }
+
+    /// 同一本筆記在 n 台裝置上的副本（各自一個資料夾，裝置 id 1…n）。
+    fn devices(name: &str, n: u32) -> Vec<NotebookPackage> {
+        (1..=n)
+            .map(|d| {
+                NotebookPackage::create(tmp(&format!("{name}-{d}")), "inv", 1)
+                    .unwrap()
+                    .with_device(d)
+            })
+            .collect()
+    }
+
+    /// 「同步」：把 `from` 這台自己的筆畫檔整份複製到 `to`（同步只搬檔案，每台只寫自己的檔）。
+    fn sync(from: &NotebookPackage, to: &NotebookPackage, page: Uuid) {
+        if from.root == to.root {
+            return;
+        }
+        let src = from.ink_write_path(page);
+        if src.exists() {
+            let dst = to.root.join("ink").join(src.file_name().unwrap());
+            fs::create_dir_all(dst.parent().unwrap()).unwrap();
+            fs::copy(&src, &dst).unwrap();
+        }
+    }
+
+    fn visible(pkg: &NotebookPackage, page: Uuid) -> BTreeSet<Uuid> {
+        materialize(&pkg.read_ink(page).unwrap())
+            .into_iter()
+            .map(|s| s.id)
+            .collect()
+    }
+
+    /// 決定性亂數（測試可重現）。
+    struct Lcg(u64);
+    impl Lcg {
+        fn next(&mut self) -> u64 {
+            self.0 = self
+                .0
+                .wrapping_mul(6_364_136_223_846_793_005)
+                .wrapping_add(1_442_695_040_888_963_407);
+            self.0 >> 33
+        }
+        fn below(&mut self, n: u64) -> u64 {
+            self.next() % n.max(1)
+        }
+    }
+
+    /// **收斂**：3 台裝置隨機寫、擦（擦的可能是別台的筆畫）、以隨機順序互相同步；
+    /// 最後全部互相同步一輪，每台看到的筆跡一模一樣，而且被擦過的一筆都不在。
+    #[test]
+    fn devices_converge_and_erased_strokes_stay_erased() {
+        for seed in 1..=20u64 {
+            let devs = devices(&format!("converge-{seed}"), 3);
+            let page = Uuid::from_bytes([7; 16]);
+            let mut rng = Lcg(seed);
+            let mut erased = BTreeSet::new();
+            for step in 0..120u64 {
+                let d = rng.below(3) as usize;
+                match rng.below(3) {
+                    0 | 1 => {
+                        let id = uid(seed, step);
+                        devs[d]
+                            .append_ink(page, &[InkRecord::Add(stroke(id))])
+                            .unwrap();
+                    }
+                    _ => {
+                        let seen: Vec<Uuid> = visible(&devs[d], page).into_iter().collect();
+                        if !seen.is_empty() {
+                            let id = seen[rng.below(seen.len() as u64) as usize];
+                            devs[d].append_ink(page, &[InkRecord::Remove(id)]).unwrap();
+                            erased.insert(id);
+                        }
+                    }
+                }
+                if rng.below(4) == 0 {
+                    let (a, b) = (rng.below(3) as usize, rng.below(3) as usize);
+                    sync(&devs[a], &devs[b], page);
+                }
+            }
+            for a in 0..3 {
+                for b in 0..3 {
+                    sync(&devs[a], &devs[b], page);
+                }
+            }
+            let first = visible(&devs[0], page);
+            for dev in &devs[1..] {
+                assert_eq!(
+                    visible(dev, page),
+                    first,
+                    "seed {seed}：裝置之間的筆跡不一致"
+                );
+            }
+            assert!(
+                first.is_disjoint(&erased),
+                "seed {seed}：被擦掉的筆畫復活了"
+            );
+        }
+    }
+
+    /// **定期維護不能讓擦掉的筆跡復活。**
+    ///
+    /// 原本的筆跡壓實把所有裝置的記錄併進本裝置的檔案、丟掉墓碑、刪掉別台的檔案。
+    /// 之後別台的檔案一同步回來，被這台擦掉的別台筆畫就沒有墓碑擋著了。
+    #[test]
+    fn storage_maintenance_never_resurrects_erased_strokes() {
+        let devs = devices("maintenance", 2);
+        let (a, b) = (&devs[0], &devs[1]);
+        let page = Uuid::from_bytes([9; 16]);
+        let s1 = uid(1, 1);
+        let s2 = uid(1, 2);
+        a.append_ink(
+            page,
+            &[InkRecord::Add(stroke(s1)), InkRecord::Add(stroke(s2))],
+        )
+        .unwrap();
+        sync(a, b, page);
+        // B 擦掉 A 寫的 s1，墓碑在 B 自己的檔案裡。
+        b.append_ink(page, &[InkRecord::Remove(s1)]).unwrap();
+        assert_eq!(visible(b, page), BTreeSet::from([s2]));
+
+        // B 跑一次定期維護。
+        b.optimize_storage(2, &[], true).unwrap();
+        assert_eq!(visible(b, page), BTreeSet::from([s2]), "維護之後內容不能變");
+        assert!(
+            b.root
+                .join("ink")
+                .join(a.ink_write_path(page).file_name().unwrap())
+                .exists(),
+            "維護不能刪掉別台裝置的筆畫檔"
+        );
+
+        // A 的檔案（含 s1 的 Add）再同步進來一次。
+        sync(a, b, page);
+        assert_eq!(
+            visible(b, page),
+            BTreeSet::from([s2]),
+            "別台的檔案同步回來後，擦掉的 s1 復活了"
+        );
+        // 反方向：A 收到 B 的檔案後也看不到 s1。
+        sync(b, a, page);
+        assert_eq!(visible(a, page), BTreeSet::from([s2]));
+    }
+
+    /// **版本號**：自己新增、擦除，或別台的檔案同步進來，版本號都要變；什麼都沒發生則不變。
+    #[test]
+    fn ink_version_changes_on_every_change_and_only_then() {
+        let devs = devices("version", 2);
+        let (a, b) = (&devs[0], &devs[1]);
+        let page = Uuid::from_bytes([3; 16]);
+        let v0 = a.ink_version(page);
+        assert_eq!(a.ink_version(page), v0);
+        let s1 = uid(2, 1);
+        a.append_ink(page, &[InkRecord::Add(stroke(s1))]).unwrap();
+        let v1 = a.ink_version(page);
+        assert_ne!(v1, v0, "新增之後版本號沒變");
+        a.append_ink(page, &[InkRecord::Remove(s1)]).unwrap();
+        let v2 = a.ink_version(page);
+        assert_ne!(v2, v1, "擦除之後版本號沒變");
+        b.append_ink(page, &[InkRecord::Add(stroke(uid(2, 2)))])
+            .unwrap();
+        sync(b, a, page);
+        assert_ne!(a.ink_version(page), v2, "別台的筆畫同步進來，版本號沒變");
     }
 }

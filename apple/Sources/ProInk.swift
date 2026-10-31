@@ -333,6 +333,13 @@ enum ProInkStore {
     nonisolated static func load(in directory: URL, notebookId: String, page: Int, foreign: Bool = false) -> [ProStroke] {
         let file = url(directory, notebookId, page, foreign: foreign)
         let key = file.path
+        // 還在排隊寫檔的那一份才是最新的（磁碟上可能是舊的，甚至還沒有檔案）。
+        ledgerLock.lock()
+        if let pending = pendingWrites[key] {
+            ledgerLock.unlock()
+            return pending.strokes
+        }
+        ledgerLock.unlock()
         let modDate = (try? file.resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate
         ledgerLock.lock()
         if modDate == nil {
@@ -356,6 +363,80 @@ enum ProInkStore {
 
     nonisolated static func save(_ strokes: [ProStroke], in directory: URL, notebookId: String, page: Int, foreign: Bool = false) {
         let file = url(directory, notebookId, page, foreign: foreign)
+        // 與排隊中的背景寫入走同一條佇列：否則較舊的那一份可能晚一步寫完、蓋掉這一份。
+        writeQueue.sync {
+            ledgerLock.lock()
+            pendingWrites.removeValue(forKey: file.path)
+            ledgerLock.unlock()
+            write(strokes, to: file, directory: directory, notebookId: notebookId, page: page)
+        }
+        bumpRevision(directory, notebookId, page)
+    }
+
+    /// 畫完一筆就要存，但**不能在主執行緒上等**：整頁筆畫編成 JSON 的成本隨頁面上的筆畫數增加，
+    /// 寫得越多、每一次抬筆卡得越久 —— 下一筆的開頭就跟著延遲（實機回報「後面的字出現得越來越慢」）。
+    ///
+    /// 這裡只把最新的一份記在記憶體（`load` 立刻讀得到），編碼與寫檔交給背景序列佇列；
+    /// 連續幾筆排在一起時只寫最後一份。
+    nonisolated static func saveDeferred(_ strokes: [ProStroke], in directory: URL, notebookId: String, page: Int) {
+        let file = url(directory, notebookId, page, foreign: false)
+        let key = file.path
+        ledgerLock.lock()
+        pendingGeneration &+= 1
+        let generation = pendingGeneration
+        pendingWrites[key] = (generation, strokes)
+        modifiedCache.removeValue(forKey: pageCacheKey(directory, notebookId, page))
+        revisions[pageCacheKey(directory, notebookId, page), default: 0] += 1
+        ledgerLock.unlock()
+        writeQueue.async {
+            ledgerLock.lock()
+            guard let latest = pendingWrites[key] else {
+                ledgerLock.unlock()
+                return   // 已經被後面那一次（或同步存檔）寫掉了
+            }
+            ledgerLock.unlock()
+            write(latest.strokes, to: file, directory: directory, notebookId: notebookId, page: page)
+            ledgerLock.lock()
+            if pendingWrites[key]?.generation == latest.generation {
+                pendingWrites.removeValue(forKey: key)
+            }
+            ledgerLock.unlock()
+        }
+    }
+
+    /// 等排隊中的寫入做完（進背景、要讀磁碟上的檔案之前）。不可在寫入佇列上呼叫。
+    nonisolated static func flushPendingWrites() {
+        writeQueue.sync {}
+    }
+
+    private nonisolated static func hasPendingWrite(_ directory: URL, _ notebookId: String, _ page: Int) -> Bool {
+        let key = url(directory, notebookId, page, foreign: false).path
+        ledgerLock.lock(); defer { ledgerLock.unlock() }
+        return pendingWrites[key] != nil
+    }
+
+    private nonisolated static let writeQueue = DispatchQueue(label: "kairumo.proink.writer", qos: .userInitiated)
+    // profile-scope: profile 以完整檔案路徑為鍵，不同設定檔不會共用同一項目
+    private nonisolated(unsafe) static var pendingWrites: [String: (generation: UInt64, strokes: [ProStroke])] = [:]
+    private nonisolated(unsafe) static var pendingGeneration: UInt64 = 0
+    // profile-scope: profile 以完整檔案路徑前綴為鍵
+    private nonisolated(unsafe) static var revisions: [String: Int] = [:]
+
+    /// 這一頁專業筆畫（自己的、別台的、已擦除名單）的版本號：任何一份存檔就 +1。
+    /// 縮圖的快取鍵要有它 —— 原本只看 PencilKit 的筆畫，畫或擦專業筆刷時縮圖完全不換。
+    nonisolated static func revision(in directory: URL, notebookId: String, page: Int) -> Int {
+        ledgerLock.lock(); defer { ledgerLock.unlock() }
+        return revisions[pageCacheKey(directory, notebookId, page)] ?? 0
+    }
+
+    private nonisolated static func bumpRevision(_ directory: URL, _ notebookId: String, _ page: Int) {
+        ledgerLock.lock()
+        revisions[pageCacheKey(directory, notebookId, page), default: 0] += 1
+        ledgerLock.unlock()
+    }
+
+    /// 只在寫入佇列上呼叫。
+    private nonisolated static func write(_ strokes: [ProStroke], to file: URL, directory: URL, notebookId: String, page: Int) {
         let key = file.path
         if strokes.isEmpty {
             try? FileManager.default.removeItem(at: file)
@@ -398,6 +479,8 @@ enum ProInkStore {
 
     /// 檔案時間，同步用來判斷「工作副本是不是比套件新」。
     nonisolated static func modified(in directory: URL, notebookId: String, page: Int) -> Date? {
+        // 檔案時間要反映剛畫的那一筆：還在排隊的話先等它寫完。
+        if hasPendingWrite(directory, notebookId, page) { flushPendingWrites() }
         let pKey = pageCacheKey(directory, notebookId, page)
         ledgerLock.lock()
         if let hit = modifiedCache[pKey] {
@@ -582,7 +665,13 @@ enum ProInkRenderer {
 /// 並以同步呈現（`drawsAsynchronously = false`）達到零延遲跟手性。
 private final class LiveProStrokeOverlayView: UIView {
     var liveStroke: ProStroke?
+    /// 整筆重算的那一份（製圖線、吸附後的圖形）。
     var liveCache: ProInkRenderer.Cached?
+    /// 邊畫邊算（`LiveBrushStroke`）：已定案的筆點只會往後接，不再重算；
+    /// 預覽是筆尖附近尚未定案的一小段，每一幀整份換掉。兩者有值時取代 `liveCache`。
+    var settledDabs: [FfiDab] = []
+    var previewDabs: [FfiDab] = []
+    var isStreaming = false
     var alignGuides: [[CGPoint]] = []
 
     override init(frame: CGRect) {
@@ -610,7 +699,7 @@ private final class LiveProStrokeOverlayView: UIView {
             }
             ctx.restoreGState()
         }
-        if let live = liveStroke, let liveCache {
+        if let live = liveStroke, isStreaming || liveCache != nil {
             ctx.saveGState()
             if live.blendMode == "multiply" {
                 ctx.setBlendMode(.multiply)
@@ -623,7 +712,13 @@ private final class LiveProStrokeOverlayView: UIView {
                 live.colorRGBA,
                 dark: traitCollection.userInterfaceStyle == .dark
             )
-            ProInkRenderer.draw(liveCache, toolName: live.tool, color: rgba, in: ctx, clip: rect)
+            if isStreaming {
+                // 只畫碰到髒矩形的筆點（`draw` 內會先用邊界剔除），每一幀的成本跟著新寫的那一小段走。
+                ProInkRenderer.draw(.init(dabs: settledDabs, bounds: .null), toolName: live.tool, color: rgba, in: ctx, clip: rect)
+                ProInkRenderer.draw(.init(dabs: previewDabs, bounds: .null), toolName: live.tool, color: rgba, in: ctx, clip: rect)
+            } else if let liveCache {
+                ProInkRenderer.draw(liveCache, toolName: live.tool, color: rgba, in: ctx, clip: rect)
+            }
             ctx.restoreGState()
         }
     }
@@ -646,8 +741,8 @@ final class ProInkLayerView: UIView {
     /// 正在畫的那一筆。
     private var live: ProStroke?
     private var liveCache: ProInkRenderer.Cached?
-    private var liveCommittedPointsCount: Int = 0
-    private var liveCommittedDabs: [FfiDab] = []
+    /// 邊畫邊算的筆點陣（一般筆畫）。製圖線（會靠邊、對齊、吸附而改寫點列）不用它，照舊整筆重算。
+    private var liveBrush: LiveBrushStroke?
     private var lastPredictedArea: CGRect = .null
     private let liveOverlayView = LiveProStrokeOverlayView()
 
@@ -778,13 +873,58 @@ final class ProInkLayerView: UIView {
         }
     }
 
+    /// 這一輪（從開啟到關閉）已經寫成墓碑的套件 id。復原把同一筆加回來時要換新 id ——
+    /// 墓碑永遠優先（ADR-0015 I3），沿用舊 id 的話加回來的那一筆在每一台都看不見。
+    /// 復原只能撤銷這一輪的動作，所以記在記憶體裡就夠了。
+    private var tombstonedIds: Set<String> = []
+
     private func persist() {
         invalidateAlignAnchors()
         guard let directory else { return }
+        let before = strokeSnapshot
         reconcileLedger()
-        ProInkStore.save(ownStrokes, in: directory, notebookId: notebookId, page: pageIndex)
+        let events = takeEvents(since: before)
+        if let sink = InkEventSink.sink(for: notebookId) {
+            sink.proEdited(page: pageIndex, removedIds: events.removed, added: events.added)
+            // 墓碑確實寫出去了才記：之後把同一筆加回來要換新 id。
+            tombstonedIds.formUnion(events.removed)
+        }
+        ProInkStore.saveDeferred(ownStrokes, in: directory, notebookId: notebookId, page: pageIndex)
         onChanged?()
         NotificationCenter.default.post(name: AppCommand.proInkDidChange, object: notebookId.lowercased())
+    }
+
+    /// 與上一次存檔相比，這一次的事件（ADR-0015 I2）：消失的 → 擦掉；新出現的 → 加入；
+    /// **內容變了的（搬動、改圖層…）→ 擦掉舊 id、以新 id 加入**，不改寫既有記錄。
+    private func takeEvents(since before: [String: ProStroke]) -> (removed: [String], added: [ProStroke]) {
+        var removed: [String] = []
+        var added: [ProStroke] = []
+        var present = Set<String>()
+        for i in ownStrokes.indices {
+            let stroke = ownStrokes[i]
+            present.insert(stroke.id)
+            if let old = before[stroke.id] {
+                guard old != stroke else { continue }
+                removed.append(old.packageId)
+                if stroke.packageId == old.packageId || tombstonedIds.contains(stroke.packageId) {
+                    ownStrokes[i].coreId = UUID().uuidString.lowercased()
+                }
+                added.append(ownStrokes[i])
+            } else {
+                if tombstonedIds.contains(stroke.packageId) {
+                    ownStrokes[i].coreId = UUID().uuidString.lowercased()
+                }
+                added.append(ownStrokes[i])
+            }
+        }
+        for (id, old) in before where !present.contains(id) {
+            removed.append(old.packageId)
+        }
+        if !added.isEmpty {
+            // 換了套件身分的筆畫：快照跟著換，下一次比對才不會再當成改動。
+            strokeSnapshot = Dictionary(ownStrokes.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
+        }
+        return (removed, added)
     }
 
     // MARK: 繪製
@@ -845,6 +985,7 @@ final class ProInkLayerView: UIView {
     private func syncLiveOverlay(invalidating rect: CGRect? = nil) {
         liveOverlayView.liveStroke = live
         liveOverlayView.liveCache = liveCache
+        liveOverlayView.isStreaming = live != nil && liveBrush != nil
         liveOverlayView.alignGuides = alignGuides
         if let rect, !rect.isNull {
             liveOverlayView.setNeedsDisplay(rect)
@@ -1033,8 +1174,10 @@ final class ProInkLayerView: UIView {
         live = ProStroke(tool: name, colorRGBA: color, baseWidth: width, points: [point],
                          layer: layer == 0 ? nil : layer, lineType: lineType == 0 ? nil : lineType)
         snapState = nil
-        liveCommittedPointsCount = 0
-        liveCommittedDabs.removeAll()
+        resetLiveBrush()
+        if layer == 0, let kind = ProInk.kind(named: name) {
+            liveBrush = LiveBrushStroke(tool: kind, baseWidth: width, lineType: lineType)
+        }
         lastPredictedArea = .null
         refreshLive(dirtyAround: [point])
     }
@@ -1105,6 +1248,7 @@ final class ProInkLayerView: UIView {
         live = stroke
         snapState = SnapState(kind: result.kind, origin: stroke.points[0], angleStep: angleStep,
                               count: stroke.points.count)
+        resetLiveBrush()   // 點列被改寫了：之後整筆重算
         liveCache = ProInkRenderer.cache(for: stroke)
         syncLiveOverlay(invalidating: area.union(stroke.bounds))
         return result.kind
@@ -1137,8 +1281,7 @@ final class ProInkLayerView: UIView {
         lastPredictedArea = .null
         live = nil
         liveCache = nil
-        liveCommittedPointsCount = 0
-        liveCommittedDabs.removeAll()
+        resetLiveBrush()
         // 製圖線要的是等寬、不收尖、不圓角：不做平滑。
         if stroke.points.count >= 3, stroke.layerId == 0, stroke.lineTypeId == 0 {
             let pts = stroke.points.map {
@@ -1174,42 +1317,31 @@ final class ProInkLayerView: UIView {
         setGuides([])
         live = nil
         liveCache = nil
-        liveCommittedPointsCount = 0
-        liveCommittedDabs.removeAll()
+        resetLiveBrush()
         syncLiveOverlay(invalidating: area)
+    }
+
+    private func resetLiveBrush() {
+        liveBrush = nil
+        liveOverlayView.settledDabs.removeAll(keepingCapacity: true)
+        liveOverlayView.previewDabs.removeAll()
+    }
+
+    private static func strokePoint(_ p: ProPoint) -> StrokePoint {
+        StrokePoint(x: p.x, y: p.y, pressure: p.pressure, tilt: p.tilt, azimuth: p.azimuth, dtUs: p.dtUs, roll: p.roll)
     }
 
     private func refreshLive(dirtyAround points: [ProPoint], predicted: [ProPoint] = []) {
         guard let stroke = live else { return }
-        var displayStroke = stroke
-        if !predicted.isEmpty {
-            displayStroke.points.append(contentsOf: predicted)
-        }
-
-        // 增量快取筆點：長筆劃與高速運筆時僅計算尾端點列，杜絕 O(N^2) 耗時導致筆跡延遲
-        if stroke.lineTypeId == 0 && stroke.points.count > 24 && liveCommittedPointsCount > 0 {
-            if stroke.points.count - liveCommittedPointsCount >= 16 {
-                let settleCount = stroke.points.count - 4
-                let prefixStroke = ProStroke(tool: stroke.tool, colorRGBA: stroke.colorRGBA, baseWidth: stroke.baseWidth, points: Array(stroke.points.prefix(settleCount)))
-                if let prefixCache = ProInkRenderer.cache(for: prefixStroke) {
-                    liveCommittedPointsCount = settleCount
-                    liveCommittedDabs = prefixCache.dabs
-                }
-            }
-            let tailStartIndex = max(0, liveCommittedPointsCount - 2)
-            let tailPoints = Array(displayStroke.points[tailStartIndex...])
-            let tailStroke = ProStroke(tool: stroke.tool, colorRGBA: stroke.colorRGBA, baseWidth: stroke.baseWidth, points: tailPoints)
-            if let tailCache = ProInkRenderer.cache(for: tailStroke) {
-                liveCache = ProInkRenderer.Cached(dabs: liveCommittedDabs + tailCache.dabs, bounds: displayStroke.bounds)
-            } else {
-                liveCache = ProInkRenderer.cache(for: displayStroke)
-            }
+        if let brush = liveBrush {
+            // 只算新來的這幾點：已定案的筆點直接接在後面，不必每一幀整筆重算（筆畫越長越慢的根源）。
+            liveOverlayView.settledDabs.append(contentsOf: brush.append(points: points.map(Self.strokePoint)))
+            liveOverlayView.previewDabs = brush.preview(predicted: predicted.map(Self.strokePoint))
+            liveCache = nil
         } else {
+            var displayStroke = stroke
+            displayStroke.points.append(contentsOf: predicted)
             liveCache = ProInkRenderer.cache(for: displayStroke)
-            if let cached = liveCache, stroke.points.count >= 16 && stroke.lineTypeId == 0 {
-                liveCommittedPointsCount = stroke.points.count
-                liveCommittedDabs = cached.dabs
-            }
         }
         // 噴槍與油畫筆的筆點比基準寬度大，髒矩形要外擴；新舊點與預測點都要涵蓋，
         // 否則新筆點蓋住的舊筆點邊緣或上一幀預測尾端會留下殘影。
@@ -1277,6 +1409,12 @@ final class ProInkLayerView: UIView {
             }
         }
         ProInkStore.save(foreignStrokes, in: directory, notebookId: notebookId, page: pageIndex, foreign: true)
+        // 別台的筆畫：擦的當下就寫墓碑（ADR-0015 I2），不等匯出。
+        if let sink = InkEventSink.sink(for: notebookId) {
+            let packageIds = strokes.map(\.packageId)
+            sink.proEdited(page: pageIndex, removedIds: packageIds, added: [])
+            tombstonedIds.formUnion(packageIds)
+        }
         onChanged?()
         NotificationCenter.default.post(name: AppCommand.proInkDidChange, object: notebookId.lowercased())
         if registersUndo { registerForeignUndo(restoring: strokes) }
@@ -1294,7 +1432,9 @@ final class ProInkLayerView: UIView {
         ProInkStore.updateLedger(in: directory, notebookId: notebookId, page: pageIndex) { ledger in
             for stroke in strokes {
                 let cid = stroke.id.lowercased()
-                if let at = ledger.retired.firstIndex(where: { $0.coreId == cid }), ledger.retired[at].exported {
+                // 墓碑已經寫進套件（匯出過，或擦的當下就寫了）：撤不掉，改在自己名下放一筆新的。
+                if tombstonedIds.contains(cid)
+                    || ledger.retired.firstIndex(where: { $0.coreId == cid }).map({ ledger.retired[$0].exported }) == true {
                     var copy = stroke
                     copy.id = UUID().uuidString
                     copies.append(copy)
@@ -1892,6 +2032,9 @@ final class ProStrokeGestureRecognizer: UIGestureRecognizer {
 
     private var tracked: UITouch?
     private var lastTimestamp: TimeInterval = 0
+    /// 壓感下限與曲線：落筆時讀一次。每個取樣點（Pencil 每秒 240 個）都去讀偏好設定是白花的主執行緒時間。
+    private var pressureFloor: Float = 0.15
+    private var pressureGamma: Float = 1.0
     private var erasePath: [CGPoint] = []
     /// 手指智慧力道模擬（Smart Finger Dynamics）狀態：初始觸控半徑、前一點位置、平滑壓感與點序。
     private var initialTouchRadius: CGFloat = 0
@@ -1922,6 +2065,15 @@ final class ProStrokeGestureRecognizer: UIGestureRecognizer {
 
         tracked = touch
         lastTimestamp = touch.timestamp
+        let prefs = ProfileDefaults.current
+        let rawFloor = prefs.object(forKey: "kairumo.pen.pressureFloor") != nil
+            ? Double(prefs.float(forKey: "kairumo.pen.pressureFloor"))
+            : 0.15
+        let rawGamma = prefs.object(forKey: "kairumo.pen.pressureGamma") != nil
+            ? Double(prefs.float(forKey: "kairumo.pen.pressureGamma"))
+            : 1.0
+        pressureFloor = Float(max(0.0, min(0.5, rawFloor)))
+        pressureGamma = Float(max(0.4, min(2.2, rawGamma)))
         initialTouchRadius = max(touch.majorRadius, 4.0)
         lastSampleLocation = nil
         smoothedFingerPressure = 0.54
@@ -2129,15 +2281,8 @@ final class ProStrokeGestureRecognizer: UIGestureRecognizer {
 
     private func makePoint(_ touch: UITouch, in view: UIView, dt: UInt32, isPrediction: Bool = false) -> ProPoint {
         let location = touch.preciseLocation(in: view)
-        let prefs = ProfileDefaults.current
-        let rawFloor = prefs.object(forKey: "kairumo.pen.pressureFloor") != nil
-            ? Double(prefs.float(forKey: "kairumo.pen.pressureFloor"))
-            : 0.15
-        let rawGamma = prefs.object(forKey: "kairumo.pen.pressureGamma") != nil
-            ? Double(prefs.float(forKey: "kairumo.pen.pressureGamma"))
-            : 1.0
-        let floorVal = Float(max(0.0, min(0.5, rawFloor)))
-        let gammaVal = Float(max(0.4, min(2.2, rawGamma)))
+        let floorVal = pressureFloor
+        let gammaVal = pressureGamma
 
         let pressure: Float
         if touch.type == .pencil || touch.maximumPossibleForce > 0, touch.force > 0 {

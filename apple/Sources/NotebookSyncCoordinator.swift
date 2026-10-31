@@ -1618,9 +1618,16 @@ enum NotebookSyncCoordinator {
         var proExtra: [[String: [String]]] = Array(repeating: [:], count: pageCount)
         var prunedForeign: [Set<String>] = Array(repeating: [], count: pageCount)
         var grow: [Bool] = Array(repeating: false, count: pageCount)
+        var reconcile = Array(repeating: NotebookPackageBridge.InkReconcile(), count: pageCount)
         for page in 0 ..< pageCount {
             let snapshot = snapshots[page]
             let ledger = ledgers[page]
+            let pinned = CollabInkIds.load(in: inputs.baselineDirectory, notebookId: document.id, page: page)
+            reconcile[page].pinned = pinned
+            if let previous = PKInkSnapshotStore.load(in: inputs.drawingsDirectory, notebookId: document.id, page: page) {
+                reconcile[page].erasedOwn = PKStrokeId.erasedOwn(previous: previous, now: snapshot.own)
+                reconcile[page].addedOwn = PKStrokeId.addedOwn(previous: previous, now: snapshot.own)
+            }
             let hasInk = !snapshot.current.strokes.isEmpty || !pro[page].isEmpty || !ledger.isEmpty
             let added = resolver.addedIds(page: page)
             let plan = PKInkSync.plan(
@@ -1668,7 +1675,7 @@ enum NotebookSyncCoordinator {
         try NotebookPackageBridge.exportPreservingOtherDevices(
             document: document, drawings: drawings, imageData: images,
             to: inputs.package, deviceId: inputs.deviceId, proStrokes: pro, proLedgers: exportLedgers,
-            pkStrokeIds: plans.map(\.ids), growInkFiles: grow,
+            pkStrokeIds: plans.map(\.ids), growInkFiles: grow, inkReconcile: reconcile,
             recordingTitles: titles
         )
         for page in 0 ..< pageCount {
@@ -1944,10 +1951,17 @@ enum NotebookSyncCoordinator {
             let own = Set(ownStrokesNow.map(\.contentKey))
             // 使用者在這台擦掉的別台筆畫：雲端那份還在，不能再帶回來。
             let erased = ProInkStore.loadSuppressed(in: drawingsDir, notebookId: documentId, page: index)
+            // 這台擦掉、但墓碑還沒寫進套件的**自己的**筆畫（帳本裡的 `retired`）。
+            // 它們已不在自己的筆畫檔裡，上面兩個條件攔不住；雲端套件還留著它們 ——
+            // 少了這一條，擦掉之後只要在下一次匯出前遇到一次匯入，它們就被當成「別台的筆畫」寫回來（擦掉又復活）。
+            let retired = ProInkStore.loadLedger(in: drawingsDir, notebookId: documentId, page: index).retired
+            let retiredIds = Set(retired.flatMap { [$0.coreId] + ($0.extraIds ?? []) }.map { $0.lowercased() })
+            let retiredKeys = Set(retired.compactMap { $0.stroke?.contentKey ?? $0.contentKey })
             ProInkStore.save(
                 merged.filter {
                     !ownIds.contains($0.id.lowercased()) && !own.contains($0.contentKey)
                         && !erased.contains($0.contentKey)
+                        && !retiredIds.contains($0.id.lowercased()) && !retiredKeys.contains($0.contentKey)
                 },
                 in: drawingsDir, notebookId: documentId, page: index, foreign: true)
         }

@@ -105,12 +105,16 @@ extension NotebookEditorView {
     /// 落盤與畫面是兩件事：先無條件落盤，畫布有沒有在都不影響資料。
     func applyRemoteDrawing(page: Int, remote: PKDrawing, replace: Bool) {
         let isCurrent = (page == currentPageIndex)
+        let pid = (notebook.pageIds != nil && page < (notebook.pageIds?.count ?? 0)) ? notebook.pageIds?[page] : nil
+        // 不在畫布上的頁以記憶體副本為底（它才含這台還沒落盤的筆畫），不是磁碟。
         let base: PKDrawing = isCurrent
             ? (canvasView?.drawing ?? currentDrawing)
-            : store.loadDrawing(notebookId: notebook.id, pageIndex: page)
+            : activeInkStore.drawing(for: page, pageId: pid)
         let merged = replace ? remote : base.appending(remote)
 
         store.saveDrawing(notebookId: notebook.id, pageIndex: page, drawing: merged)
+        // 記憶體副本（縮圖、換頁、連續模式讀的那一份）也要換，否則它停在對方畫之前的樣子。
+        activeInkStore.adoptSavedDrawing(merged, for: page, pageId: pid)
         guard isCurrent else { return }
 
         isApplyingRemoteUpdate = true
@@ -937,6 +941,11 @@ extension NotebookEditorView {
         return activeInkStore.drawing(for: page, pageId: pid)
     }
 
+    func inkRevisionForPage(_ page: Int) -> Int {
+        let pid = (notebook.pageIds != nil && page < (notebook.pageIds?.count ?? 0)) ? notebook.pageIds?[page] : nil
+        return activeInkStore.revision(for: page, pageId: pid)
+    }
+
     func recordDrawingEdit(page: Int, drawing: PKDrawing) {
         if notebook.isReadOnlySample && !hasWarnedSampleReadOnly {
             hasWarnedSampleReadOnly = true
@@ -981,7 +990,7 @@ extension NotebookEditorView {
     }
 
     /// 把筆跡增量寫進核心套件的**背景序列佇列**。同一個套件的寫入必須排隊（順序就是筆畫的順序）。
-    private static let coreInkQueue = DispatchQueue(label: "kairumo.editor.core-ink", qos: .utility)
+    static let coreInkQueue = DispatchQueue(label: "kairumo.editor.core-ink", qos: .utility)
 
     /// 等背景佇列把已排進去的寫入做完，再在主執行緒上做 `work`。**不阻塞主執行緒。**
     /// 佇列是序列的，所以排在它後面就保證前面的寫入都完成了。
@@ -1003,6 +1012,8 @@ extension NotebookEditorView {
         }
         box.id = UIApplication.shared.beginBackgroundTask(withName: "kairumo.core-ink") { end() }
         Self.coreInkQueue.async {
+            // 專業筆畫的存檔也在背景排隊（見 `ProInkStore.saveDeferred`）：一併等它寫完。
+            ProInkStore.flushPendingWrites()
             Task { @MainActor in end() }
         }
         #endif

@@ -516,7 +516,7 @@ final class AdaptiveCanvasView: PKCanvasView {
         if let point {
             isEraserTracking = true
             let previewPoint = convert(point, to: preview)
-            preview.showEraser(at: previewPoint, diameter: eraserScreenDiameter)
+            preview.showEraser(at: previewPoint, diameter: eraserScreenDiameter, tracking: true)
         } else {
             isEraserTracking = false
             preview.hideEraser()
@@ -2194,6 +2194,8 @@ struct CanvasRepresentable: UIViewRepresentable {
 
         func canvasViewDrawingDidChange(_ canvasView: PKCanvasView) {
             guard !isProgrammaticUpdate else { return }
+            // 這一次編輯之前，畫布上真正顯示的那一份（擦除事件以它為準，見 `InkEventSink.canvasEdited`）。
+            let shownBefore = lastSyncedDrawing
             var effective = canvasView.drawing
             // 磁吸要在存檔之前套用：先存再改的話，磁碟上那份是歪的，下次開啟才「彈回來」。
             var magneticGuide: (CGPoint, CGPoint)?
@@ -2232,6 +2234,10 @@ struct CanvasRepresentable: UIViewRepresentable {
                 effective = corrected
             }
             publish(effective)
+            if let pro = parent.proInk, let shownBefore {
+                InkEventSink.sink(for: pro.notebookId)?.canvasEdited(
+                    page: pro.pageIndex, before: shownBefore, after: effective)
+            }
 
             // 筆畫數也要跟著更新 —— 只在建立時寫一次的話，測試讀到的
             // 永遠是 0，而「畫了沒存」與「根本沒畫進去」看起來一模一樣。

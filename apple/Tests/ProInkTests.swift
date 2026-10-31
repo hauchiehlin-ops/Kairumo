@@ -301,7 +301,7 @@ final class ProInkTests: XCTestCase {
     }
 
     func testErasingAnOwnStrokeStillMakesTheStrokeFileGrow() throws {
-        // 同步只傳「變大」的筆畫檔。自己擦掉的筆畫不寫墓碑（整個檔案被換掉），但檔案必須比舊的大。
+        // ADR-0015：自己擦掉的筆畫＝追加墓碑（帳本的退休記錄），筆畫檔不重寫、只會變大。
         let doc = NotebookDocument(title: "G", pageCount: 1)
         let device = deviceA
         let mine = stroke("fineliner"), other = stroke("fineliner", x: 220)
@@ -309,10 +309,12 @@ final class ProInkTests: XCTestCase {
         try NotebookPackageBridge.export(
             document: doc, drawings: [PKDrawing()], to: package, deviceId: device, proStrokes: [[mine, other]])
         let before = inkBytes(package)
-        // 擦掉 mine，這一頁要求變大。
+        // 擦掉 mine（編輯器會把它記進帳本的退休記錄）。
+        var ledger = ProInkLedger()
+        ledger.retired = [.init(coreId: mine.packageId, stroke: mine, exported: false)]
         try NotebookPackageBridge.exportPreservingOtherDevices(
             document: doc, drawings: [PKDrawing()], to: package, deviceId: device,
-            proStrokes: [[other]], growInkFiles: [true])
+            proStrokes: [[other]], proLedgers: [ledger])
         XCTAssertGreaterThan(inkBytes(package), before)
         let imported = try NotebookPackageBridge.importDocument(fromPackageAt: package, deviceId: deviceB)
         XCTAssertEqual(imported.proStrokes.first?.map(\.packageId), [other.packageId], "擦掉的那一筆不能還在")

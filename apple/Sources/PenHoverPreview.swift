@@ -151,8 +151,11 @@ final class PenHoverPreviewView: UIView {
     /// - Parameters:
     ///   - point: 中心（這個視圖的座標系）。
     ///   - diameter: 螢幕上的直徑（已乘上畫布縮放倍率），與實際擦除寬度一比一。
-    func showEraser(at point: CGPoint, diameter: CGFloat) {
-        isEraserTracking = true
+    ///   - tracking: 筆尖／手指**貼在螢幕上**擦除中（`true`）或只是懸停（`false`）。
+    ///     只有前者要擋住懸停結束時的 `hide()`。原本懸停也標成「擦除中」：筆一離開，
+    ///     懸停結束的 `hide()` 被擋掉，圓圈就一直留在畫面上（實機截圖裡那個不會消失的 ⊕）。
+    func showEraser(at point: CGPoint, diameter: CGFloat, tracking: Bool = false) {
+        if tracking { isEraserTracking = true }
         let d = max(diameter, 6)
         let rect = CGRect(x: point.x - d / 2, y: point.y - d / 2, width: d, height: d)
         let ring = UIBezierPath(ovalIn: rect).cgPath
