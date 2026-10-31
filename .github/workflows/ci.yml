@@ -62,6 +62,16 @@ jobs:
         # 留 ubuntu 的理由不同：Android 的核心就是在 Linux 上交叉編出來的。
         os: [macos-latest, ubuntu-latest]
     steps:
+      - name: 清理磁碟空間（Linux）
+        if: runner.os == 'Linux'
+        run: |
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /opt/hostedtoolcache/CodeQL
+          sudo rm -rf /usr/local/share/boost
+          sudo docker image prune --all --force 2>/dev/null || true
+          df -h
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
         with:
@@ -210,6 +220,14 @@ jobs:
     if: needs.changes.outputs.core == 'true' || needs.changes.outputs.android == 'true'
     runs-on: ubuntu-latest
     steps:
+      - name: 清理磁碟空間（Linux）
+        run: |
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /opt/hostedtoolcache/CodeQL
+          sudo rm -rf /usr/local/share/boost
+          sudo docker image prune --all --force 2>/dev/null || true
+          df -h
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
         with:
@@ -456,6 +474,14 @@ jobs:
     name: Multi-device model check
     runs-on: ubuntu-latest
     steps:
+      - name: 清理磁碟空間（Linux）
+        run: |
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /opt/hostedtoolcache/CodeQL
+          sudo rm -rf /usr/local/share/boost
+          sudo docker image prune --all --force 2>/dev/null || true
+          df -h
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
@@ -475,6 +501,14 @@ jobs:
     name: License audit
     runs-on: ubuntu-latest
     steps:
+      - name: 清理磁碟空間（Linux）
+        run: |
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /opt/hostedtoolcache/CodeQL
+          sudo rm -rf /usr/local/share/boost
+          sudo docker image prune --all --force 2>/dev/null || true
+          df -h
       - uses: actions/checkout@v4
       - uses: EmbarkStudios/cargo-deny-action@v2
         with:
@@ -485,6 +519,14 @@ jobs:
     name: Format compatibility
     runs-on: ubuntu-latest
     steps:
+      - name: 清理磁碟空間（Linux）
+        run: |
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /opt/hostedtoolcache/CodeQL
+          sudo rm -rf /usr/local/share/boost
+          sudo docker image prune --all --force 2>/dev/null || true
+          df -h
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
@@ -577,6 +619,14 @@ jobs:
     name: Screen parity
     runs-on: ubuntu-latest
     steps:
+      - name: 清理磁碟空間（Linux）
+        run: |
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /opt/hostedtoolcache/CodeQL
+          sudo rm -rf /usr/local/share/boost
+          sudo docker image prune --all --force 2>/dev/null || true
+          df -h
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2

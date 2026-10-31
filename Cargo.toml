@@ -55,3 +55,11 @@ missing_debug_implementations = "warn"
 
 [workspace.lints.clippy]
 all = { level = "warn", priority = -1 }
+
+# 降低 debug 符號層級至 1（line tables only），可將 target/ 產物體積縮減 70%~80%，
+# 徹底避免在 CI（如 GitHub Actions ubuntu-latest）上編譯大型 monorepo 時遭遇 "No space left on device"。
+[profile.dev]
+debug = 1
+
+[profile.test]
+debug = 1
