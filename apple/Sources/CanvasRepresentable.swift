@@ -1872,6 +1872,7 @@ struct CanvasRepresentable: UIViewRepresentable {
             return true
         }
 
+        // orphan-ok: UIGestureRecognizerDelegate 系統回呼（書寫中阻擋雙指/三指點擊與滑動防跳頁）
         func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
             guard let canvas = gestureRecognizer.view as? AdaptiveCanvasView else { return true }
             if gestureRecognizer is UISwipeGestureRecognizer || (gestureRecognizer as? UITapGestureRecognizer)?.numberOfTouchesRequired ?? 1 >= 2 {

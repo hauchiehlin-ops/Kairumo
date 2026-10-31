@@ -85,7 +85,7 @@ FRAMEWORK_CALLBACKS = {
     "scrollViewWillBeginZooming", "scrollViewDidEndZooming",
     "scrollViewWillBeginDragging", "scrollViewDidEndDragging",
     "scrollViewDidEndDecelerating",
-    "viewForZooming", "gestureRecognizer", "documentPicker", "connection",
+    "viewForZooming", "gestureRecognizer", "gestureRecognizerShouldBegin", "documentPicker", "connection",
     # PencilKit
     "canvasViewDrawingDidChange", "canvasViewSelectionDidChange",
     "canvasViewDidBeginUsingTool", "canvasViewDidEndUsingTool",
