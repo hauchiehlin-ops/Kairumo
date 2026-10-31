@@ -105,12 +105,16 @@ extension NotebookEditorView {
     /// 落盤與畫面是兩件事：先無條件落盤，畫布有沒有在都不影響資料。
     func applyRemoteDrawing(page: Int, remote: PKDrawing, replace: Bool) {
         let isCurrent = (page == currentPageIndex)
+        let pid = (notebook.pageIds != nil && page < (notebook.pageIds?.count ?? 0)) ? notebook.pageIds?[page] : nil
+        // 不在畫布上的頁以記憶體副本為底（它才含這台還沒落盤的筆畫），不是磁碟。
         let base: PKDrawing = isCurrent
             ? (canvasView?.drawing ?? currentDrawing)
-            : store.loadDrawing(notebookId: notebook.id, pageIndex: page)
+            : activeInkStore.drawing(for: page, pageId: pid)
         let merged = replace ? remote : base.appending(remote)
 
         store.saveDrawing(notebookId: notebook.id, pageIndex: page, drawing: merged)
+        // 記憶體副本（縮圖、換頁、連續模式讀的那一份）也要換，否則它停在對方畫之前的樣子。
+        activeInkStore.adoptSavedDrawing(merged, for: page, pageId: pid)
         guard isCurrent else { return }
 
         isApplyingRemoteUpdate = true
@@ -937,6 +941,11 @@ extension NotebookEditorView {
         return activeInkStore.drawing(for: page, pageId: pid)
     }
 
+    func inkRevisionForPage(_ page: Int) -> Int {
+        let pid = (notebook.pageIds != nil && page < (notebook.pageIds?.count ?? 0)) ? notebook.pageIds?[page] : nil
+        return activeInkStore.revision(for: page, pageId: pid)
+    }
+
     func recordDrawingEdit(page: Int, drawing: PKDrawing) {
         if notebook.isReadOnlySample && !hasWarnedSampleReadOnly {
             hasWarnedSampleReadOnly = true
@@ -946,11 +955,33 @@ extension NotebookEditorView {
             currentDrawing = drawing
         }
         let pid = (notebook.pageIds != nil && page < (notebook.pageIds?.count ?? 0)) ? notebook.pageIds?[page] : nil
+        recordErasures(page: page, from: activeInkStore.drawing(for: page, pageId: pid), to: drawing)
         activeInkStore.updateDrawing(drawing, for: page, pageId: pid)
         activeInkStore.markPendingCoreFlush(for: page, pageId: pid)
         continuousCanvases.setCachedDrawing(drawing, forPage: page)
         scheduleCoreInkFlush()
         noteInkEdited()
+    }
+
+    /// 使用者擦掉（或復原加回）的筆畫，**在編輯的當下**記進「已擦除」名單。
+    ///
+    /// 原本只在寫進套件時（`CoreInkFlush`）才比對，而且要有「套件基準線」才比 —— 那條基準線在每次
+    /// 同步匯入、切換模式時都被清掉。清掉之後擦的筆畫永遠不會進名單，套件裡也沒有它的墓碑：
+    /// 下一次匯入（自己或別台的套件）就把它帶回來，這是「擦掉後筆跡又出現」最主要的來源。
+    /// 這裡用編輯前後的記憶體副本比對：那正是使用者眼前畫面的變化，與基準線、同步時機都無關。
+    /// 比對在寫入佇列上做（與後續的套件寫入同一條序列），不佔主執行緒。
+    func recordErasures(page: Int, from before: PKDrawing, to after: PKDrawing) {
+        guard before != after else { return }
+        let directory = store.syncBaselineDirectory
+        let notebookId = notebook.id
+        nonisolated(unsafe) let old = before
+        nonisolated(unsafe) let new = after
+        Self.coreInkQueue.async {
+            ErasedInkLedger.record(
+                removed: StrokeDelta.removed(in: new, since: old),
+                added: StrokeDelta.added(in: new, since: old),
+                in: directory, notebookId: notebookId, page: page)
+        }
     }
 
     /// 落筆之後多久把增量寫進套件。

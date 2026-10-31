@@ -2641,8 +2641,10 @@ internal fun rememberEditorCanvasContext(
         val paper = com.kairumo.padnote.library.NotebookMeta.load(session).paperId(0)
         if (uniffi.padnote_core.paperUsesDrafting(paper)) applyInkTool(InkTool.DRAFTING)
     }
+    // 粗細與顏色也要是鍵：原本只看工具，工具列拉粗細滑桿只改了 `inkWidth`，引擎的 `baseWidth`
+    // 要等換工具才跟上 —— 橡皮擦的擦除半徑與畫布上的範圍圓圈都由它算，於是「調大了，圓圈還是那麼小」。
     LaunchedEffect(
-        inkTool, DraftingState.activePenId, DraftingState.layerOverride,
+        inkTool, inkWidth, inkColorHex, DraftingState.activePenId, DraftingState.layerOverride,
         DraftingState.snapEnabled, DraftingState.angleStep, DraftingState.reassignMode
     ) {
         if (inkTool.isDrafting) {

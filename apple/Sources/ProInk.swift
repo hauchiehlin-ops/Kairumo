@@ -370,6 +370,7 @@ enum ProInkStore {
             ledgerLock.unlock()
             write(strokes, to: file, directory: directory, notebookId: notebookId, page: page)
         }
+        bumpRevision(directory, notebookId, page)
     }
 
     /// 畫完一筆就要存，但**不能在主執行緒上等**：整頁筆畫編成 JSON 的成本隨頁面上的筆畫數增加，
@@ -385,6 +386,7 @@ enum ProInkStore {
         let generation = pendingGeneration
         pendingWrites[key] = (generation, strokes)
         modifiedCache.removeValue(forKey: pageCacheKey(directory, notebookId, page))
+        revisions[pageCacheKey(directory, notebookId, page), default: 0] += 1
         ledgerLock.unlock()
         writeQueue.async {
             ledgerLock.lock()
@@ -417,6 +419,21 @@ enum ProInkStore {
     // profile-scope: profile 以完整檔案路徑為鍵，不同設定檔不會共用同一項目
     private nonisolated(unsafe) static var pendingWrites: [String: (generation: UInt64, strokes: [ProStroke])] = [:]
     private nonisolated(unsafe) static var pendingGeneration: UInt64 = 0
+    // profile-scope: profile 以完整檔案路徑前綴為鍵
+    private nonisolated(unsafe) static var revisions: [String: Int] = [:]
+
+    /// 這一頁專業筆畫（自己的、別台的、已擦除名單）的版本號：任何一份存檔就 +1。
+    /// 縮圖的快取鍵要有它 —— 原本只看 PencilKit 的筆畫，畫或擦專業筆刷時縮圖完全不換。
+    nonisolated static func revision(in directory: URL, notebookId: String, page: Int) -> Int {
+        ledgerLock.lock(); defer { ledgerLock.unlock() }
+        return revisions[pageCacheKey(directory, notebookId, page)] ?? 0
+    }
+
+    private nonisolated static func bumpRevision(_ directory: URL, _ notebookId: String, _ page: Int) {
+        ledgerLock.lock()
+        revisions[pageCacheKey(directory, notebookId, page), default: 0] += 1
+        ledgerLock.unlock()
+    }
 
     /// 只在寫入佇列上呼叫。
     private nonisolated static func write(_ strokes: [ProStroke], to file: URL, directory: URL, notebookId: String, page: Int) {

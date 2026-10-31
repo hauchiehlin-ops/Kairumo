@@ -1260,26 +1260,53 @@ extension NotebookEditorView {
                         .cornerRadius(DS.Radius.s)
                 }
                 .buttonStyle(.plain)
-                
-                // 兩種模式都能調大小（原本只有像素模式有滑桿，而預設是筆劃模式 ——
-                // 使用者拉的是筆寬滑桿，橡皮擦與游標完全沒變）。
-                Slider(value: $pixelEraserWidth, in: 10...60, step: 1) { _ in
-                    if #available(iOS 16.4, *) {
-                        canvasView?.tool = PKEraserTool(eraserMode == .pixel ? .bitmap : .vector, width: pixelEraserWidth)
-                    }
+                // 大小由主工具列的粗細控制項調整（見 `eraserSizeControls`），這裡只切模式 ——
+                // 兩條滑桿各管一件事、使用者分不出哪一條才有用。
+            }
+        }
+    }
+
+    /// 選了橡皮擦時，主工具列「粗細」位置換成橡皮擦大小：預設點、滑桿與目前範圍的預覽圓。
+    /// 與畫布上的範圍圓圈、PencilKit 橡皮擦、專業筆畫擦除半徑是同一個值（`pixelEraserWidth`）。
+    var eraserSizeControls: some View {
+        HStack(spacing: 6) {
+            ForEach([12.0, 24.0, 40.0, 60.0], id: \.self) { w in
+                Button {
+                    setEraserWidth(CGFloat(w))
+                } label: {
+                    Circle()
+                        .stroke(abs(pixelEraserWidth - CGFloat(w)) < 0.5 ? Color.accentColor : Color.secondary.opacity(0.6), lineWidth: 1.5)
+                        .frame(width: max(6, CGFloat(w) / 3), height: max(6, CGFloat(w) / 3))
+                        .padding(4)
+                        .background(abs(pixelEraserWidth - CGFloat(w)) < 0.5 ? Color.accentColor.opacity(0.15) : Color.clear)
+                        .clipShape(Circle())
                 }
-                .frame(width: 80)
+                .buttonStyle(.plain)
+                .help("\(localizationManager.localized("stroke_width")) \(Int(w))pt")
+            }
+            Slider(value: Binding(get: { pixelEraserWidth }, set: { setEraserWidth($0) }), in: 10...60, step: 1)
+                .frame(width: 120)
                 .tint(.accentColor)
                 .accessibilityIdentifier("editor.ink.eraserWidth")
+            Text("\(Int(pixelEraserWidth))")
+                .font(.system(size: 12, design: .rounded))
+                .foregroundColor(.secondary)
+                .monospacedDigit()
+                .frame(minWidth: 20)
+            // 目前擦除範圍的預覽圓（與畫布上的圓圈同一個寬度，工具列放不下時夾在 28pt）。
+            Circle()
+                .stroke(Color.secondary, lineWidth: 1.5)
+                .background(Circle().fill(Color.accentColor.opacity(0.10)))
+                .frame(width: min(pixelEraserWidth, 28), height: min(pixelEraserWidth, 28))
+                .frame(width: 28, height: 28)
+                .accessibilityHidden(true)
+        }
+    }
 
-                // 目前擦除範圍的預覽圓（與畫布上的圓圈同一個寬度，工具列放不下時夾在 28pt）。
-                Circle()
-                    .stroke(Color.secondary, lineWidth: 1.5)
-                    .background(Circle().fill(Color.accentColor.opacity(0.10)))
-                    .frame(width: min(pixelEraserWidth, 28), height: min(pixelEraserWidth, 28))
-                    .frame(width: 28, height: 28)
-                    .accessibilityHidden(true)
-            }
+    func setEraserWidth(_ width: CGFloat) {
+        pixelEraserWidth = width
+        if #available(iOS 16.4, *) {
+            canvasView?.tool = PKEraserTool(eraserMode == .pixel ? .bitmap : .vector, width: width)
         }
     }
 
@@ -1693,7 +1720,13 @@ extension NotebookEditorView {
                 ToolbarSeparator()
                     .frame(height: 24)
 
-                // 筆刷粗細：四個預設點 + 可拖曳的滑桿
+                // 筆刷粗細：四個預設點 + 可拖曳的滑桿。
+                // **選了橡皮擦時，這一組就是橡皮擦的大小。** 原本這裡永遠調筆寬、橡皮擦另有一條小滑桿：
+                // 使用者拉的是最顯眼的這一條（顯示「30」），橡皮擦與畫布上的範圍圓圈完全沒變 ——
+                // 看起來就是「調大了，圓圈還是沒出現」。
+                if selectedTool == .eraser {
+                    eraserSizeControls
+                } else {
                 HStack(spacing: 6) {
                     ForEach([2.0, 4.0, 8.0, 14.0], id: \.self) { w in
                         Button {
@@ -1716,6 +1749,7 @@ extension NotebookEditorView {
                         color: selectedColor
                     )
                     .accessibilityIdentifier("editor.ink.width")
+                }
                 }
 
                 ToolbarSeparator()

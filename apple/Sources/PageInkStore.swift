@@ -39,6 +39,9 @@ public final class PageInkStore: ObservableObject {
 
     /// 待寫入核心套件的頁面 Key 集合
     private var pendingCoreFlushKeys: Set<String> = []
+    /// 各頁內容的版本號：記憶體副本每換一次就 +1。縮圖以它為快取鍵 ——
+    /// 原本用「筆畫數＋外框」推測有沒有變，擦掉一筆又補一筆、改顏色、搬動後外框不變時，縮圖就停在舊的樣子。
+    private var revisions: [String: Int] = [:]
 
     // profile-scope: profile 記憶體中開啟過的筆記本筆跡快取；切換時由 purgeAll 清空
     private static var activeStores: [String: PageInkStore] = [:]
@@ -94,7 +97,43 @@ public final class PageInkStore: ObservableObject {
     public func updateDrawing(_ newDrawing: PKDrawing, for pageIndex: Int, pageId: String? = nil) {
         let k = key(for: pageIndex, pageId: pageId)
         inMemoryDrawings[k] = newDrawing
+        revisions[k, default: 0] += 1
         dirtyPages.insert(k)
+    }
+
+    /// 這一頁內容的版本號（見 `revisions`）。
+    public func revision(for pageIndex: Int, pageId: String? = nil) -> Int {
+        revisions[key(for: pageIndex, pageId: pageId)] ?? 0
+    }
+
+    /// 磁碟上的內容換了（別台同步匯入、協同對方的筆畫已落盤）：記憶體副本跟著換。
+    ///
+    /// **這一步原本不存在。** 記憶體副本一旦載入就不再讀磁碟，同步把新內容寫進 `.drawing` 之後，
+    /// 縮圖、換頁、連續模式讀到的仍是舊的那份；接著這台任何一筆編輯都以舊副本為底寫回去 ——
+    /// 別台擦掉的筆畫在這台「復活」、別台新寫的筆畫被蓋掉，畫布與預覽也各顯示一個版本。
+    /// 還沒寫出去的頁（`pendingCoreFlush`）不動：它們由呼叫端與磁碟合併。
+    public func reloadFromDisk(notebook: NotebookDocument) {
+        let count = max(1, notebook.pageCount)
+        for idx in 0..<count {
+            let pid = (notebook.pageIds != nil && idx < (notebook.pageIds?.count ?? 0)) ? notebook.pageIds?[idx] : nil
+            let k = key(for: idx, pageId: pid)
+            guard !pendingCoreFlushKeys.contains(k), !dirtyPages.contains(k) else { continue }
+            let disk = store.loadDrawing(notebookId: notebookId, pageIndex: idx)
+            if inMemoryDrawings[k] != disk {
+                inMemoryDrawings[k] = disk
+                revisions[k, default: 0] += 1
+            }
+            knownDiskStrokeCounts[k] = disk.strokes.count
+        }
+    }
+
+    /// 已經落盤的內容（例如協同對方的筆畫）換上記憶體副本，不標成待寫。
+    public func adoptSavedDrawing(_ drawing: PKDrawing, for pageIndex: Int, pageId: String? = nil) {
+        let k = key(for: pageIndex, pageId: pageId)
+        guard inMemoryDrawings[k] != drawing else { return }
+        inMemoryDrawings[k] = drawing
+        revisions[k, default: 0] += 1
+        knownDiskStrokeCounts[k] = drawing.strokes.count
     }
 
     /// 強制覆蓋某一頁（明確的清空或全選刪除）。

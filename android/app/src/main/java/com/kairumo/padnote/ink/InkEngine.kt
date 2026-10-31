@@ -965,7 +965,8 @@ class InkEngine(
                         }
                         // 擦除半徑與畫出來的粗細用同一組推算，
                         // 否則使用者會覺得「橡皮擦比看起來的小」。
-                        eraseAt(sample.event.x, sample.event.y, baseWidth * 1.5f)
+                        // 下限與畫布上的範圍圓圈（`drawIndicatorPreview`）相同：圓圈有多大，就擦多大。
+                        eraseAt(sample.event.x, sample.event.y, (baseWidth * 1.5f).coerceAtLeast(6f))
                     } else {
                         accumulate(sample)?.let { completedNow += it }
                     }

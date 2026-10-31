@@ -1944,10 +1944,17 @@ enum NotebookSyncCoordinator {
             let own = Set(ownStrokesNow.map(\.contentKey))
             // 使用者在這台擦掉的別台筆畫：雲端那份還在，不能再帶回來。
             let erased = ProInkStore.loadSuppressed(in: drawingsDir, notebookId: documentId, page: index)
+            // 這台擦掉、但墓碑還沒寫進套件的**自己的**筆畫（帳本裡的 `retired`）。
+            // 它們已不在自己的筆畫檔裡，上面兩個條件攔不住；雲端套件還留著它們 ——
+            // 少了這一條，擦掉之後只要在下一次匯出前遇到一次匯入，它們就被當成「別台的筆畫」寫回來（擦掉又復活）。
+            let retired = ProInkStore.loadLedger(in: drawingsDir, notebookId: documentId, page: index).retired
+            let retiredIds = Set(retired.flatMap { [$0.coreId] + ($0.extraIds ?? []) }.map { $0.lowercased() })
+            let retiredKeys = Set(retired.compactMap { $0.stroke?.contentKey ?? $0.contentKey })
             ProInkStore.save(
                 merged.filter {
                     !ownIds.contains($0.id.lowercased()) && !own.contains($0.contentKey)
                         && !erased.contains($0.contentKey)
+                        && !retiredIds.contains($0.id.lowercased()) && !retiredKeys.contains($0.contentKey)
                 },
                 in: drawingsDir, notebookId: documentId, page: index, foreign: true)
         }

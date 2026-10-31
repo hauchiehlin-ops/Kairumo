@@ -1342,12 +1342,17 @@ public struct NotebookEditorView: View {
     /// 每一頁的畫布整個重建，整片空白一下、寫到一半的那一筆直接不見。
     private func reloadAfterExternalChange() {
         activeInkStore.clearAllCoreBaselines()
-        inkDiskBaselines.removeAll()
+        // **合併基準不清掉。** 還沒寫出去的頁要靠它算出「這台擦了哪些」；原本在合併之前先清空，
+        // 合併時沒有基準 —— 這台剛擦掉、還沒寫出去的筆畫全部被磁碟上的舊內容帶回來。
+        // 基準在每一頁合併（`mergedWithDisk(updateBaseline: true)`）或寫出時更新，不會一直停在舊的。
         continuousCanvases.invalidateCachedDrawings()
         if let updated = store.notebooks.first(where: { $0.id == notebook.id }) {
             self.notebook = updated
         }
         PageGeometry.use(format: notebook.pageFormatId)
+        // 沒有待寫內容的頁：記憶體副本直接換成磁碟上（已含別台內容）的那份。
+        // 少了這一步，縮圖與換頁讀到的是匯入前的舊副本，下一筆編輯還會把舊內容寫回去。
+        activeInkStore.reloadFromDisk(notebook: notebook)
         // 還沒寫出去的頁：以磁碟（已含別台的內容）為底，補回這台寫的、拿掉這台擦的。
         for item in activeInkStore.pendingCoreFlushJobs(notebook: notebook) {
             if pageDisplayMode == .single && item.pageIndex == currentPageIndex { continue }

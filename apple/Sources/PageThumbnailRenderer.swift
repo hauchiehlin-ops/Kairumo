@@ -85,12 +85,15 @@ public enum PageThumbnailRenderer {
     }
 
     /// 快取鍵必須涵蓋所有會改變畫面的東西：
-    /// 該頁物件簽章反映該頁附件變動，`strokes.count` 反映手繪變動。
+    /// 該頁物件簽章反映該頁附件變動；手繪以**版本號**為準（`inkRevision`：PencilKit 記憶體副本
+    /// 與專業筆畫存檔各自的版本）。只用「筆畫數＋外框」推測的話，專業筆刷畫了、擦了，
+    /// 或擦一筆補一筆、改顏色時，縮圖都停在舊的樣子 —— 畫布與預覽頁各顯示一個版本。
     private static func cacheKey(
         notebook: NotebookDocument,
         pageIndex: Int,
         drawing: PKDrawing,
-        canvasWidth: CGFloat
+        canvasWidth: CGFloat,
+        inkRevision: String
     ) -> NSString {
         // 紙張與配色也要進快取鍵：改的是「這一頁用哪張紙」時，筆跡沒動、
         // 物件沒動，只有版面變了 —— 沒有這兩個欄位的話側欄縮圖不會更新。
@@ -98,7 +101,7 @@ public enum PageThumbnailRenderer {
         let tapesCount = notebook.tapeAttachments?.filter({ $0.pageIndex == pageIndex }).count ?? 0
         let db = drawing.bounds
         let boundsSig = db.isNull ? 0 : (Int(db.minX) &* 31 &+ Int(db.minY) &* 17 &+ Int(db.width) &* 13 &+ Int(db.height))
-        return "\(notebook.id)|\(pageIndex)|\(sig)|\(drawing.strokes.count)|\(boundsSig)|\(tapesCount)|\(Int(canvasWidth))|\(notebook.paperId(forPage: pageIndex))|\(notebook.guidePaletteId ?? "-")" as NSString
+        return "\(notebook.id)|\(pageIndex)|\(sig)|\(inkRevision)|\(drawing.strokes.count)|\(boundsSig)|\(tapesCount)|\(Int(canvasWidth))|\(notebook.paperId(forPage: pageIndex))|\(notebook.guidePaletteId ?? "-")" as NSString
     }
 
     /// 這一頁要畫的專業筆畫（自己的＋別台同步來的），已依圖層排好、隱藏的圖層已濾掉。
@@ -126,6 +129,7 @@ public enum PageThumbnailRenderer {
         drawing: PKDrawing,
         store: NotebookStore,
         canvasWidth: CGFloat,
+        inkRevision: Int,
         scale: CGFloat = 0.4,
         deferRecomputation: Bool = false
     ) -> UIImage {
@@ -133,8 +137,10 @@ public enum PageThumbnailRenderer {
            let latest = latestPageCache.object(forKey: "\(notebook.id)|\(pageIndex)" as NSString) {
             return latest
         }
+        let revision = "\(inkRevision).\(ProInkStore.revision(in: store.drawingsDirectory, notebookId: notebook.id, page: pageIndex))"
         return compose(notebook: notebook, pageIndex: pageIndex, drawing: drawing, store: store,
-                       canvasWidth: canvasWidth, scale: scale, cropToPreviewRatio: true, useCache: true)
+                       canvasWidth: canvasWidth, scale: scale, cropToPreviewRatio: true, useCache: true,
+                       inkRevision: revision)
     }
 
     /// 整頁算繪（不裁切、不取快取），給匯出 PDF / 圖片與列印用。
@@ -179,7 +185,8 @@ public enum PageThumbnailRenderer {
         scale: CGFloat,
         cropToPreviewRatio: Bool,
         useCache: Bool,
-        quality: Quality = .preview
+        quality: Quality = .preview,
+        inkRevision: String = ""
     ) -> UIImage {
         // 匯出與縮圖一律以**頁面**為準，不是以當下的畫布寬度為準。
         // 以畫布寬度取圖的話，同一則筆記在 Mac 與 iPhone 上匯出的結果不一樣 ——
@@ -187,12 +194,13 @@ public enum PageThumbnailRenderer {
         _ = canvasWidth
         let width = PageGeometry.width
         // 專業筆刷（含全部製圖線）存在自己的檔案裡，不在 PKDrawing：匯出、縮圖都要另外畫。
-        // 檔案時間進快取鍵，畫了新的線縮圖才會更新。
+        // 兩者的版本號都在 `inkRevision` 裡（見 `cacheKey`）。原本用專業筆畫檔的修改時間：
+        // 存檔改到背景寫之後，剛畫完那一刻檔案時間還沒變；而且時間解析度粗的檔案系統上，
+        // 一秒內畫兩筆只認得到一次 —— 縮圖停在少一筆的樣子。
         // 先查快取，命中時直接回傳，避免每次 SwiftUI body 重算都讀寫與解碼全部頁面的 .proink JSON。
-        let proStamp = ProInkStore.modified(in: store.drawingsDirectory, notebookId: notebook.id, page: pageIndex)?
-            .timeIntervalSince1970 ?? 0
-        let key = (cacheKey(notebook: notebook, pageIndex: pageIndex, drawing: drawing, canvasWidth: width) as String
-            + "|\(proStamp)|\(DraftingState.shared.hiddenStamp(notebookId: notebook.id))"
+        let key = (cacheKey(notebook: notebook, pageIndex: pageIndex, drawing: drawing, canvasWidth: width,
+                            inkRevision: inkRevision) as String
+            + "|\(DraftingState.shared.hiddenStamp(notebookId: notebook.id))"
             + "|\(notebook.underInkObjectIds(forPage: pageIndex).sorted().joined(separator: ",").hashValue)|\(notebook.objectOrder(forPage: pageIndex)?.joined(separator: ",").hashValue ?? 0)") as NSString
         if useCache, let cached = cache.object(forKey: key) { return cached }
         let pro = proStrokes(notebook: notebook, pageIndex: pageIndex, store: store)

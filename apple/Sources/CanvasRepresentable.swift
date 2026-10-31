@@ -516,7 +516,7 @@ final class AdaptiveCanvasView: PKCanvasView {
         if let point {
             isEraserTracking = true
             let previewPoint = convert(point, to: preview)
-            preview.showEraser(at: previewPoint, diameter: eraserScreenDiameter)
+            preview.showEraser(at: previewPoint, diameter: eraserScreenDiameter, tracking: true)
         } else {
             isEraserTracking = false
             preview.hideEraser()
