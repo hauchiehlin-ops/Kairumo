@@ -129,7 +129,8 @@ impl PenEmitter {
                     r *= 0.35 + 0.65 * smooth(rem);
                 }
                 if let Some(prev) = self.last_r {
-                    r = prev * PenTuning::FOUNTAIN_SMOOTHING + r * (1.0 - PenTuning::FOUNTAIN_SMOOTHING);
+                    r = prev * PenTuning::FOUNTAIN_SMOOTHING
+                        + r * (1.0 - PenTuning::FOUNTAIN_SMOOTHING);
                 }
                 self.last_r = Some(r);
                 out.push(round(s.x, s.y, r.max(0.2), 1.0, 0.0));
