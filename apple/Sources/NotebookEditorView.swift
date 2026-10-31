@@ -1120,9 +1120,9 @@ public struct NotebookEditorView: View {
                 }
             }
         } }
-        .sheet(isPresented: $showProColorPicker) { resizableSheet {
+        .sheet(isPresented: $showProColorPicker) {
             ProColorPickerSheet(selectedColor: $selectedColor)
-        } }
+        }
         .sheet(isPresented: $show3DStudio) { resizableSheet {
             Model3DStudioView { new3DAttachment in
                 if notebook.model3DAttachments == nil {
