@@ -558,12 +558,22 @@ extension NotebookEditorView {
             } else {
                 Button {
                     Task {
-                        _ = await audioManager.startRecording(
-                            notebookId: notebook.id,
-                            notebookTitle: notebook.displayTitle(),
-                            title: NotebookStore.defaultRecordingTitle(),
-                            pageIndex: currentPageIndex,
-                            languageTag: AudioTranscriber.shared.sourceLanguageTag)
+                        let forcedFailure = ProcessInfo.processInfo
+                            .environment["KAIRUMO_UITEST_FAIL_RECORDING"] == "1"
+                        if forcedFailure {
+                            audioManager.showPermissionAlert = false
+                            showCanvasNotice(localizationManager.localized("recording_failed"))
+                        } else {
+                            let started = await audioManager.startRecording(
+                                notebookId: notebook.id,
+                                notebookTitle: notebook.displayTitle(),
+                                title: NotebookStore.defaultRecordingTitle(),
+                                pageIndex: currentPageIndex,
+                                languageTag: AudioTranscriber.shared.sourceLanguageTag)
+                            if !started && !audioManager.showPermissionAlert {
+                                showCanvasNotice(localizationManager.localized("recording_failed"))
+                            }
+                        }
                     }
                 } label: {
                     HStack(spacing: 4) {
