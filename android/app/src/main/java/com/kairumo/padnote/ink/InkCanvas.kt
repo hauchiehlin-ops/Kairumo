@@ -148,7 +148,19 @@ fun InkCanvas(
             .pointerInteropFilter { event ->
                 // 打字模式等不收筆畫的狀態下，完全不攔截、不繪墨，將觸控原樣放行給文字、物件與即點即書手勢
                 if (!acceptsInk) return@pointerInteropFilter false
-                hoverPoint = null
+                // 懸停事件（筆尖靠近、滑鼠移動）也會進到這裡。原本一律清掉 hoverPoint，
+                // 上面 pointerInput 剛設好的懸停位置馬上被抹掉 —— 懸停圓圈閃一下就不見。
+                when (event.actionMasked) {
+                    MotionEvent.ACTION_HOVER_ENTER, MotionEvent.ACTION_HOVER_MOVE -> {
+                        val toolType = event.getToolType(0)
+                        hoverPoint = if (toolType == MotionEvent.TOOL_TYPE_STYLUS ||
+                            toolType == MotionEvent.TOOL_TYPE_ERASER ||
+                            toolType == MotionEvent.TOOL_TYPE_MOUSE
+                        ) Offset(event.x, event.y) else null
+                    }
+                    MotionEvent.ACTION_HOVER_EXIT -> hoverPoint = null
+                    else -> hoverPoint = null
+                }
                 if (engine.isErasing) {
                     when (event.actionMasked) {
                         MotionEvent.ACTION_DOWN, MotionEvent.ACTION_MOVE -> {

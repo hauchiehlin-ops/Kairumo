@@ -1794,6 +1794,12 @@ final class ProStrokeGestureRecognizer: UIGestureRecognizer {
     var color: () -> [UInt8] = { [0, 0, 0, 255] }
     var width: () -> Float = { 4 }
     var eraserRadius: () -> CGFloat = { 10 }
+    /// 橡皮擦軌跡：落筆與拖曳時回報觸控點（畫布座標），抬筆／取消時回報 `nil`。
+    ///
+    /// 畫布用它把「橡皮擦實際涵蓋範圍」的圓圈畫在手指／筆尖底下。只靠懸停的話，
+    /// 一碰到螢幕圓圈就消失（而且沒有懸停硬體的 iPad 與手指從來看不到）——
+    /// 使用者看到的只剩系統的十字，判斷不了自己正在擦多大一塊。
+    var onEraserTrack: ((CGPoint?) -> Void)?
     /// 製圖：這一筆要寫進的圖層與線型。一般筆刷都是 0。
     var drawLayer: () -> UInt8 = { 0 }
     var drawLineType: () -> UInt8 = { 0 }
@@ -1885,6 +1891,7 @@ final class ProStrokeGestureRecognizer: UIGestureRecognizer {
         case .erase:
             erasePath = [CGPoint(x: CGFloat(point.x), y: CGFloat(point.y))]
             layerView.erase(along: erasePath, radius: eraserRadius())
+            if let view { onEraserTrack?(touch.location(in: view)) }
         case .reassign:
             let target = reassignTarget()
             let done = layerView.reassignLayer(
@@ -1953,6 +1960,7 @@ final class ProStrokeGestureRecognizer: UIGestureRecognizer {
             let path = points.map { CGPoint(x: CGFloat($0.x), y: CGFloat($0.y)) }
             erasePath.append(contentsOf: path)
             layerView.erase(along: path, radius: eraserRadius())
+            if let view { onEraserTrack?(touch.location(in: view)) }
         case .reassign, .marker:
             break
         case .tool:
@@ -1983,6 +1991,7 @@ final class ProStrokeGestureRecognizer: UIGestureRecognizer {
         holdTimer?.invalidate()
         if mode == .draw { layerView?.endStroke() }
         if mode == .tool { onToolTouch?(.ended, lastToolPoint) }
+        if mode == .erase { onEraserTrack?(nil) }
         tracked = nil
         erasePath = []
         state = .ended
@@ -2001,6 +2010,7 @@ final class ProStrokeGestureRecognizer: UIGestureRecognizer {
     }
 
     override func reset() {
+        if mode == .erase, tracked != nil { onEraserTrack?(nil) }
         draggingInstrument = false
         readingInstrument = false
         holdTimer?.invalidate()
@@ -2015,6 +2025,7 @@ final class ProStrokeGestureRecognizer: UIGestureRecognizer {
         holdTimer?.invalidate()
         if mode == .tool { onToolTouch?(.cancelled, lastToolPoint) }
         if mode == .draw { layerView?.cancelStroke() }
+        if mode == .erase { onEraserTrack?(nil) }
         tracked = nil
         erasePath = []
     }

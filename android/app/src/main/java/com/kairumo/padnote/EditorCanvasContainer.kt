@@ -786,7 +786,10 @@ internal fun ColumnScope.EditorCanvasContainer(ctx: EditorCanvasContext) = with(
             //
             // 圖學筆畫也不能走低延遲路徑：它要依線型挖虛線、依圖層疊放與隱藏，
             // 前緩衝的簡化繪製做不到。
+            //
+            // 橡皮擦同樣不走低延遲路徑：前緩衝表面不畫擦除範圍的圓圈，使用者會只看到手指底下什麼都沒有。
             val draftingInk = inkTool.isDrafting || inkTool.isLasso || inkTool.isMaskingTape || inkTool.isTranslationPen ||
+                inkTool.isEraser ||
                 engine.strokes.any { it.layer != 0 || it.lineType != 0 }
             val acceptsCanvasInk = editorMode == EditorMode.DRAW && !inkTool.isLasso &&
                 !inkTool.isMaskingTape && !inkTool.isTranslationPen
