@@ -95,6 +95,7 @@ public struct NotebookEditorView: View {
         PageInkStore.store(for: notebook, store: store)
     }
     @State var coreInkWork: DispatchWorkItem? = nil
+    @State var autoAnchorWork: DispatchWorkItem? = nil
     /// 這一批待寫筆畫最早的那一筆的時間。見 `scheduleCoreInkFlush` 的上限說明。
     @State var coreInkFirstPendingAt: Date? = nil
     @State var canvasView: PKCanvasView? = nil

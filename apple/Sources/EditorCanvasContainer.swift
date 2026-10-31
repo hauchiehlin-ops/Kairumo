@@ -1690,9 +1690,9 @@ extension NotebookEditorView {
                         lastStrokeCount = newDrawing.strokes.count
                     }
                     
-                    // 🌟 自動流式錨定：若落筆於既有文字方塊上方（圈註、畫底線、旁註），自動建立關聯錨定
+                    // 🌟 自動流式錨定：去抖動排程錨定，提筆停頓後才檢查，保證極速連筆零卡頓
                     if !isApplyingRemoteUpdate && newDrawing.strokes.count > 0 {
-                        autoAnchorNewStrokesToOverlappingText(drawing: newDrawing)
+                        scheduleAutoAnchor(drawing: newDrawing)
                     }
                     
                     return newDrawing.strokes.count == rawDrawing.strokes.count

@@ -155,6 +155,85 @@ final class ProGestureDelegate: NSObject, UIGestureRecognizerDelegate {
     }
 }
 
+/// 橡皮擦專用觸控追蹤器：專門在選用橡皮擦時，跟隨 Apple Pencil 或手指在螢幕上即時繪製 1:1 擦除範圍指示圓圈。
+///
+/// 特色：
+/// 1. 永遠不攔截、不取消任何其他手勢（cancelsTouchesInView = false），完全不干擾 PencilKit 與專業筆畫的擦除運作。
+/// 2. `canBePrevented(by:)` 回傳 false：不論 PencilKit 內部 drawingGestureRecognizer 如何判定，都不會被取消。
+/// 3. `canPrevent(_:)` 回傳 false：不阻擋任何手勢。
+/// 4. `shouldRecognizeSimultaneouslyWith` 回傳 true：與一切手勢（含 PencilKit）完全並存。
+final class EraserTrackingGestureRecognizer: UIGestureRecognizer, UIGestureRecognizerDelegate {
+    var onTrack: ((CGPoint?) -> Void)?
+    var allowsFinger: () -> Bool = { true }
+
+    override init(target: Any?, action: Selector?) {
+        super.init(target: target, action: action)
+        cancelsTouchesInView = false
+        delaysTouchesBegan = false
+        delaysTouchesEnded = false
+        delegate = self
+    }
+
+    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent) {
+        guard let touch = touches.first(where: { $0.type == .pencil || allowsFinger() }) else {
+            state = .failed
+            return
+        }
+        state = .began
+        onTrack?(touch.location(in: view))
+    }
+
+    override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent) {
+        guard let touch = touches.first(where: { $0.type == .pencil || allowsFinger() }) else { return }
+        state = .changed
+        onTrack?(touch.location(in: view))
+    }
+
+    override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent) {
+        onTrack?(nil)
+        state = .ended
+    }
+
+    override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent) {
+        onTrack?(nil)
+        state = .cancelled
+    }
+
+    override func reset() {
+        super.reset()
+        onTrack?(nil)
+    }
+
+    override func canPrevent(_ preventedGestureRecognizer: UIGestureRecognizer) -> Bool {
+        false
+    }
+
+    override func canBePrevented(by preventingGestureRecognizer: UIGestureRecognizer) -> Bool {
+        false
+    }
+
+    func gestureRecognizer(
+        _ gestureRecognizer: UIGestureRecognizer,
+        shouldRecognizeSimultaneouslyWith other: UIGestureRecognizer
+    ) -> Bool {
+        true
+    }
+
+    func gestureRecognizer(
+        _ gestureRecognizer: UIGestureRecognizer,
+        shouldRequireFailureOf other: UIGestureRecognizer
+    ) -> Bool {
+        false
+    }
+
+    func gestureRecognizer(
+        _ gestureRecognizer: UIGestureRecognizer,
+        shouldBeRequiredToFailBy other: UIGestureRecognizer
+    ) -> Bool {
+        false
+    }
+}
+
 /// 打字模式下判定 Pencil 這一下是「輕點」還是「筆畫」（工作項 F1）。
 ///
 /// 只觀察、不攔截：永遠停在 `.possible`、`cancelsTouchesInView = false`、
@@ -266,6 +345,7 @@ final class AdaptiveCanvasView: PKCanvasView {
     private var lastPencilMoveUptime: TimeInterval = 0
     var lastStrokeHadHoldDwell: Bool = false
     var onHoldDwellTriggered: (() -> Void)?
+    private(set) var activePencilIsDown: Bool = false
 
     private func schedulePencilDwellTimer(after delay: TimeInterval = EditorCanvasInputPolicy.holdToSnapMinDuration) {
         pencilDwellWorkItem?.cancel()
@@ -421,6 +501,7 @@ final class AdaptiveCanvasView: PKCanvasView {
 
     /// 懸停預覽（工作項 S-69）。筆尖靠近但還沒碰到時，先畫出會落在哪裡。
     private var hoverPreview: PenHoverPreviewView?
+    private var eraserTracker: EraserTrackingGestureRecognizer?
 
     /// 橡皮擦寬度（頁面座標，與 PencilKit 橡皮擦、專業筆畫擦除半徑同一個值）。
     var eraserWidth: CGFloat = 20
@@ -434,10 +515,11 @@ final class AdaptiveCanvasView: PKCanvasView {
         guard let preview = hoverPreview else { return }
         if let point {
             isEraserTracking = true
-            preview.showEraser(at: point, diameter: eraserScreenDiameter)
+            let previewPoint = convert(point, to: preview)
+            preview.showEraser(at: previewPoint, diameter: eraserScreenDiameter)
         } else {
             isEraserTracking = false
-            preview.hide()
+            preview.hideEraser()
         }
     }
 
@@ -450,6 +532,13 @@ final class AdaptiveCanvasView: PKCanvasView {
         addSubview(preview)
         hoverPreview = preview
         coordinator.attach(to: self, preview: preview)
+
+        let tracker = EraserTrackingGestureRecognizer()
+        tracker.onTrack = { [weak self] point in self?.trackEraser(point) }
+        tracker.allowsFinger = { [weak self] in self?.proAllowsFinger() ?? true }
+        tracker.isEnabled = false
+        addGestureRecognizer(tracker)
+        eraserTracker = tracker
     }
 
     /// 掛上 Apple Pencil 的筆身互動（工作項 S-40 / S-67）。
@@ -513,11 +602,13 @@ final class AdaptiveCanvasView: PKCanvasView {
         guard let gesture = proGesture else { return }
         switch mode {
         case .off:
+            eraserTracker?.isEnabled = false
             gesture.isEnabled = false
             gesture.deferUntilMoved = false
             drawingGestureRecognizer.isEnabled = allowsPencilKitDrawing
             if claimsSingleTouch { overridePan() } else { restorePan() }
         case .draw:
+            eraserTracker?.isEnabled = false
             gesture.mode = .draw
             gesture.cancelsTouchesInView = true
             // 打字模式：只收 Pencil，而且要真的動了才落墨 —— 輕點是「放游標」，不該留墨點。
@@ -527,6 +618,7 @@ final class AdaptiveCanvasView: PKCanvasView {
             // 打字模式下單指要能捲動，不能把捲動改成兩指。
             if pencilOnly { restorePan() } else { overridePan() }
         case .erase:
+            eraserTracker?.isEnabled = true
             gesture.mode = .erase
             gesture.cancelsTouchesInView = false
             gesture.deferUntilMoved = false
@@ -534,6 +626,7 @@ final class AdaptiveCanvasView: PKCanvasView {
             drawingGestureRecognizer.isEnabled = allowsPencilKitDrawing
             if claimsSingleTouch { overridePan() } else { restorePan() }
         case .reassign, .marker, .tool:
+            eraserTracker?.isEnabled = false
             // 點一下筆畫改圖層／點一下放步驟編號／圖學工具（標註…）：PencilKit 的筆畫不管，單指拿來點。
             gesture.mode = mode == .marker ? .marker : (mode == .tool ? .tool : .reassign)
             gesture.cancelsTouchesInView = true
@@ -719,7 +812,16 @@ final class AdaptiveCanvasView: PKCanvasView {
 
     func inkingEnded() {
         isInkingActive = false
+        activePencilIsDown = false
         runInkIdleWork()
+        checkPageBottomAfterInking()
+    }
+
+    private func checkPageBottomAfterInking() {
+        let maxY = self.drawing.bounds.maxY
+        if maxY > 0 && maxY + 200 > PageGeometry.height {
+            (self.delegate as? CanvasRepresentable.Coordinator)?.parent.onReachedPageBottom?()
+        }
     }
 
     /// 不在落筆就馬上做；在落筆就等這一筆抬起來。
@@ -806,11 +908,16 @@ final class AdaptiveCanvasView: PKCanvasView {
             }
         }
         forwardLasso(touches, .began)
+        if touches.contains(where: { $0.type == .pencil }) {
+            activePencilIsDown = true
+        }
         activeTouchesCount += touches.count
         CanvasTouchState.activeDirectTouches = activeTouchesCount
         // 多指同時著地（例如雙指縮放或平移）時，第一指著地初期可能已向畫布起筆；
         // 偵測到 >= 2 指時立即取消進行中的單指起筆，杜絕雙指手勢結束後留下一點小墨點。
-        if activeTouchesCount >= 2 {
+        // 但若為 Apple Pencil 運筆（或手掌側貼於螢幕），絕不可取消進行中的 Apple Pencil 筆跡！
+        let hasPencilTouch = touches.contains(where: { $0.type == .pencil }) || activePencilIsDown || isInking
+        if activeTouchesCount >= 2 && !hasPencilTouch {
             cancelInFlightStrokesForNavigation()
         }
         for touch in touches {
@@ -856,6 +963,7 @@ final class AdaptiveCanvasView: PKCanvasView {
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
         forwardLasso(touches, .ended)
         if touches.contains(where: { $0.type == .pencil }) {
+            activePencilIsDown = false
             pencilDwellWorkItem?.cancel()
             pencilDwellWorkItem = nil
         }
@@ -874,6 +982,7 @@ final class AdaptiveCanvasView: PKCanvasView {
     override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
         forwardLasso(touches, .cancelled)
         if touches.contains(where: { $0.type == .pencil }) {
+            activePencilIsDown = false
             pencilDwellWorkItem?.cancel()
             pencilDwellWorkItem = nil
             lastStrokeHadHoldDwell = false
@@ -952,6 +1061,10 @@ final class AdaptiveCanvasView: PKCanvasView {
         super.layoutSubviews()
         syncContentSize()
         refreshInitialRenderIfNeeded()
+        hoverPreview?.frame = bounds
+        if let preview = hoverPreview {
+            bringSubviewToFront(preview)
+        }
     }
 
     /// 重開舊筆記本時，載入的筆跡要使用者點一下畫布才會出現。
@@ -1049,33 +1162,16 @@ final class AdaptiveCanvasView: PKCanvasView {
         let coordinator = delegate as? CanvasRepresentable.Coordinator
         let target = newDrawing ?? self.drawing
         guard target.strokes.count > 0 else { return }
-        coordinator?.isProgrammaticUpdate = true
-        self.drawing = PKDrawing()
-        self.drawing = target
-        coordinator?.isProgrammaticUpdate = false
-        coordinator?.noteCanvasShows(target)
+        if self.drawing != target {
+            coordinator?.isProgrammaticUpdate = true
+            self.drawing = target
+            coordinator?.isProgrammaticUpdate = false
+            coordinator?.noteCanvasShows(target)
+        }
         if ProcessInfo.processInfo.environment["KAIRUMO_UITEST"] == "1" {
             self.accessibilityValue = CanvasRepresentable.testReadout(self)
         }
-        self.setNeedsDisplay()
-        for subview in self.subviews {
-            subview.setNeedsDisplay()
-        }
-        DispatchQueue.main.async { [weak self] in
-            guard let self, self.window != nil, !self.isInking else { return }
-            let coord = self.delegate as? CanvasRepresentable.Coordinator
-            coord?.isProgrammaticUpdate = true
-            self.drawing = PKDrawing()
-            self.drawing = target
-            coord?.isProgrammaticUpdate = false
-            self.setNeedsDisplay()
-            for subview in self.subviews {
-                subview.setNeedsDisplay()
-            }
-            if ProcessInfo.processInfo.environment["KAIRUMO_UITEST"] == "1" {
-                self.accessibilityValue = CanvasRepresentable.testReadout(self)
-            }
-        }
+        Self.invalidateCanvasTiles(in: self)
     }
 
     /// 程式替換／收回筆畫之後，把 PencilKit 登記的「已經失效」的復原項消耗掉。
@@ -1394,6 +1490,7 @@ struct CanvasRepresentable: UIViewRepresentable {
         twoFingerTap.delaysTouchesBegan = false
         twoFingerTap.delaysTouchesEnded = false
         twoFingerTap.cancelsTouchesInView = false
+        twoFingerTap.delegate = context.coordinator
         canvas.addGestureRecognizer(twoFingerTap)
         
         let threeFingerTap = UITapGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.handleThreeFingerTap(_:)))
@@ -1401,6 +1498,7 @@ struct CanvasRepresentable: UIViewRepresentable {
         threeFingerTap.delaysTouchesBegan = false
         threeFingerTap.delaysTouchesEnded = false
         threeFingerTap.cancelsTouchesInView = false
+        threeFingerTap.delegate = context.coordinator
         canvas.addGestureRecognizer(threeFingerTap)
         
         let swipeUp = UISwipeGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.handleThreeFingerSwipeUp(_:)))
@@ -1409,6 +1507,7 @@ struct CanvasRepresentable: UIViewRepresentable {
         swipeUp.delaysTouchesBegan = false
         swipeUp.delaysTouchesEnded = false
         swipeUp.cancelsTouchesInView = false
+        swipeUp.delegate = context.coordinator
         canvas.addGestureRecognizer(swipeUp)
         
         let swipeDown = UISwipeGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.handleThreeFingerSwipeDown(_:)))
@@ -1417,6 +1516,7 @@ struct CanvasRepresentable: UIViewRepresentable {
         swipeDown.delaysTouchesBegan = false
         swipeDown.delaysTouchesEnded = false
         swipeDown.cancelsTouchesInView = false
+        swipeDown.delegate = context.coordinator
         canvas.addGestureRecognizer(swipeDown)
 
         canvas.onPendingRetractNeeded = { [weak canvas] landedAt in
@@ -1755,6 +1855,31 @@ struct CanvasRepresentable: UIViewRepresentable {
         ) -> Bool {
             gestureRecognizer.name == Self.directTapName
                 || other.name == Self.directTapName
+        }
+
+        func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldReceive touch: UITouch) -> Bool {
+            guard let canvas = gestureRecognizer.view as? AdaptiveCanvasView else { return true }
+            if gestureRecognizer is UISwipeGestureRecognizer || (gestureRecognizer as? UITapGestureRecognizer)?.numberOfTouchesRequired ?? 1 >= 2 {
+                // Apple Pencil 正在落筆或畫布處於手繪中，多指手勢嚴格拒絕接收觸控
+                if touch.type == .pencil || canvas.isInking || canvas.activePencilIsDown {
+                    return false
+                }
+                // 手掌側貼於螢幕之接觸面半徑（majorRadius 通常 > 20-30pt），過大視為掌心誤觸
+                if touch.majorRadius > 24.0 {
+                    return false
+                }
+            }
+            return true
+        }
+
+        func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+            guard let canvas = gestureRecognizer.view as? AdaptiveCanvasView else { return true }
+            if gestureRecognizer is UISwipeGestureRecognizer || (gestureRecognizer as? UITapGestureRecognizer)?.numberOfTouchesRequired ?? 1 >= 2 {
+                if canvas.isInking || canvas.activePencilIsDown {
+                    return false
+                }
+            }
+            return true
         }
 
         weak var lassoPan: UIPanGestureRecognizer?
@@ -2149,7 +2274,8 @@ struct CanvasRepresentable: UIViewRepresentable {
             // 刻意**不自動翻頁**：使用者可能只是把最後一行寫到很下面，
             // 畫面自己跳走比繼續留在原地更糟。準備好下一頁、讓他自己翻。
             let maxY = canvasView.drawing.bounds.maxY
-            if maxY > 0 && maxY + 200 > PageGeometry.height {
+            let isCurrentlyInking = (canvasView as? AdaptiveCanvasView)?.isInking ?? false
+            if !isCurrentlyInking && maxY > 0 && maxY + 200 > PageGeometry.height {
                 parent.onReachedPageBottom?()
             }
         }

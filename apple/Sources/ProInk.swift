@@ -646,6 +646,8 @@ final class ProInkLayerView: UIView {
     /// 正在畫的那一筆。
     private var live: ProStroke?
     private var liveCache: ProInkRenderer.Cached?
+    private var liveCommittedPointsCount: Int = 0
+    private var liveCommittedDabs: [FfiDab] = []
     private var lastPredictedArea: CGRect = .null
     private let liveOverlayView = LiveProStrokeOverlayView()
 
@@ -1031,6 +1033,8 @@ final class ProInkLayerView: UIView {
         live = ProStroke(tool: name, colorRGBA: color, baseWidth: width, points: [point],
                          layer: layer == 0 ? nil : layer, lineType: lineType == 0 ? nil : lineType)
         snapState = nil
+        liveCommittedPointsCount = 0
+        liveCommittedDabs.removeAll()
         lastPredictedArea = .null
         refreshLive(dirtyAround: [point])
     }
@@ -1133,6 +1137,8 @@ final class ProInkLayerView: UIView {
         lastPredictedArea = .null
         live = nil
         liveCache = nil
+        liveCommittedPointsCount = 0
+        liveCommittedDabs.removeAll()
         // 製圖線要的是等寬、不收尖、不圓角：不做平滑。
         if stroke.points.count >= 3, stroke.layerId == 0, stroke.lineTypeId == 0 {
             let pts = stroke.points.map {
@@ -1168,6 +1174,8 @@ final class ProInkLayerView: UIView {
         setGuides([])
         live = nil
         liveCache = nil
+        liveCommittedPointsCount = 0
+        liveCommittedDabs.removeAll()
         syncLiveOverlay(invalidating: area)
     }
 
@@ -1177,7 +1185,32 @@ final class ProInkLayerView: UIView {
         if !predicted.isEmpty {
             displayStroke.points.append(contentsOf: predicted)
         }
-        liveCache = ProInkRenderer.cache(for: displayStroke)
+
+        // 增量快取筆點：長筆劃與高速運筆時僅計算尾端點列，杜絕 O(N^2) 耗時導致筆跡延遲
+        if stroke.lineTypeId == 0 && stroke.points.count > 24 && liveCommittedPointsCount > 0 {
+            if stroke.points.count - liveCommittedPointsCount >= 16 {
+                let settleCount = stroke.points.count - 4
+                let prefixStroke = ProStroke(tool: stroke.tool, colorRGBA: stroke.colorRGBA, baseWidth: stroke.baseWidth, points: Array(stroke.points.prefix(settleCount)))
+                if let prefixCache = ProInkRenderer.cache(for: prefixStroke) {
+                    liveCommittedPointsCount = settleCount
+                    liveCommittedDabs = prefixCache.dabs
+                }
+            }
+            let tailStartIndex = max(0, liveCommittedPointsCount - 2)
+            let tailPoints = Array(displayStroke.points[tailStartIndex...])
+            let tailStroke = ProStroke(tool: stroke.tool, colorRGBA: stroke.colorRGBA, baseWidth: stroke.baseWidth, points: tailPoints)
+            if let tailCache = ProInkRenderer.cache(for: tailStroke) {
+                liveCache = ProInkRenderer.Cached(dabs: liveCommittedDabs + tailCache.dabs, bounds: displayStroke.bounds)
+            } else {
+                liveCache = ProInkRenderer.cache(for: displayStroke)
+            }
+        } else {
+            liveCache = ProInkRenderer.cache(for: displayStroke)
+            if let cached = liveCache, stroke.points.count >= 16 && stroke.lineTypeId == 0 {
+                liveCommittedPointsCount = stroke.points.count
+                liveCommittedDabs = cached.dabs
+            }
+        }
         // 噴槍與油畫筆的筆點比基準寬度大，髒矩形要外擴；新舊點與預測點都要涵蓋，
         // 否則新筆點蓋住的舊筆點邊緣或上一幀預測尾端會留下殘影。
         let tail = Array(stroke.points.suffix(points.count + 2)) + predicted
@@ -1318,9 +1351,41 @@ final class ProInkLayerView: UIView {
 
     private func touches(_ stroke: ProStroke, path: [CGPoint], radius: CGFloat) -> Bool {
         let reach = radius + CGFloat(stroke.baseWidth) * 0.5
-        guard stroke.bounds.insetBy(dx: -radius, dy: -radius).contains(where: path) else { return false }
-        for p in stroke.points {
-            for q in path where hypot(CGFloat(p.x) - q.x, CGFloat(p.y) - q.y) <= reach { return true }
+        guard stroke.bounds.insetBy(dx: -reach, dy: -reach).contains(where: path) else { return false }
+        let reachSq = reach * reach
+        let pts = stroke.points
+        if pts.isEmpty { return false }
+        if pts.count == 1 {
+            let p = pts[0]
+            for q in path {
+                let dx = CGFloat(p.x) - q.x
+                let dy = CGFloat(p.y) - q.y
+                if dx * dx + dy * dy <= reachSq { return true }
+            }
+            return false
+        }
+        for q in path {
+            for i in 0..<(pts.count - 1) {
+                let p1 = pts[i]
+                let p2 = pts[i + 1]
+                let dx = CGFloat(p2.x - p1.x)
+                let dy = CGFloat(p2.y - p1.y)
+                let l2 = dx * dx + dy * dy
+                let distSq: CGFloat
+                if l2 < 1e-6 {
+                    let dpx = q.x - CGFloat(p1.x)
+                    let dpy = q.y - CGFloat(p1.y)
+                    distSq = dpx * dpx + dpy * dpy
+                } else {
+                    let t = max(0, min(1, ((q.x - CGFloat(p1.x)) * dx + (q.y - CGFloat(p1.y)) * dy) / l2))
+                    let projX = CGFloat(p1.x) + t * dx
+                    let projY = CGFloat(p1.y) + t * dy
+                    let dpx = q.x - projX
+                    let dpy = q.y - projY
+                    distSq = dpx * dpx + dpy * dpy
+                }
+                if distSq <= reachSq { return true }
+            }
         }
         return false
     }

@@ -1172,20 +1172,15 @@ extension NotebookEditorView {
         selectedTool = tool // state-entry: 換工具的唯一正門
     }
 
-    /// 點擊筆刷或繪圖工具時，在工具列緊鄰處顯示微型快顯提示，提示該工具名稱。
+    /// 點擊筆刷或繪圖工具、懸停或長按時，在工具列緊鄰處顯示快顯提示，提示該工具名稱。
     func flashToolToast(for tool: EditorToolType) {
-        // 若工具列已有文字標籤，使用者已能清楚辨識工具名稱，不重複彈出快顯遮罩以保證極致流暢
-        guard !toolbarSettings.showLabels else {
-            if activeToolToast != nil { activeToolToast = nil }
-            return
-        }
         let localizedName = localizationManager.localized(tool.localizationKey)
         toolToastToken += 1
         let token = toolToastToken
         withAnimation(.spring(response: 0.24, dampingFraction: 0.82)) {
             activeToolToast = (name: localizedName, icon: tool.iconName)
         }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
             guard toolToastToken == token else { return }
             withAnimation(.easeInOut(duration: 0.2)) {
                 activeToolToast = nil
@@ -1626,6 +1621,16 @@ extension NotebookEditorView {
         .accessibilityAddTraits(selectedTool == tool ? [.isSelected] : [])
         .accessibilityIdentifier(tool.parityIdentifier)
         .help(localizationManager.localized(tool.localizationKey))
+        .onHover { isHovered in
+            if isHovered {
+                flashToolToast(for: tool)
+            }
+        }
+        .simultaneousGesture(
+            LongPressGesture(minimumDuration: 0.35).onEnded { _ in
+                flashToolToast(for: tool)
+            }
+        )
     }
 
     func drawingToolbarRow(showToolLabels: Bool) -> some View {

@@ -130,6 +130,20 @@ extension NotebookEditorView {
         #endif
     }
 
+    /// 去抖動排程自動錨定：在使用者連續書寫期間絕不每筆同步觸發 commitNotebook()，
+    /// 待提筆停頓 0.6 秒後才進行幾何重疊判斷與錨定，徹底杜絕快速運筆延遲。
+    func scheduleAutoAnchor(drawing: PKDrawing) {
+        guard (notebook.textAttachments ?? []).contains(where: { $0.pageIndex == currentPageIndex }) else { return }
+        autoAnchorWork?.cancel()
+        let page = currentPageIndex
+        let work = DispatchWorkItem {
+            guard self.currentPageIndex == page else { return }
+            self.autoAnchorNewStrokesToOverlappingText(drawing: drawing)
+        }
+        autoAnchorWork = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6, execute: work)
+    }
+
     /// 自動判定新落筆跡是否與既有文字方塊高度重疊（> 40%），若是則自動關聯錨定（工作項 F4 v1）
     func autoAnchorNewStrokesToOverlappingText(drawing: PKDrawing) {
         let pageTexts = (notebook.textAttachments ?? []).filter { $0.pageIndex == currentPageIndex }
