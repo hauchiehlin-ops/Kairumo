@@ -184,6 +184,8 @@ data class EditorTopBarActions(
     val onAiSummary: () -> Unit = {},
     val onThemeTools: () -> Unit = {},
     val onCustomizeToolbar: () -> Unit = {},
+    val onPenSettings: () -> Unit = {},
+    val onPalmSettings: () -> Unit = {},
     val onInsertModel3D: () -> Unit = {},
     val onInsertStickers: () -> Unit = {},
     val onInsertImage: () -> Unit = {},
@@ -1029,6 +1031,16 @@ internal fun EditorTopBar(
                 HorizontalDivider()
 
                 // ── 3. 設定與檢視 ───────────────────────────────────
+                DropdownMenuItem(
+                    text = { Text(l10n("advanced_pen_settings")) },
+                    modifier = Modifier.testTag("editor.insert.advanced_pen_settings"),
+                    onClick = { showMenu = false; actions.onPenSettings() }
+                )
+                DropdownMenuItem(
+                    text = { Text(l10n("palm_rejection_settings")) },
+                    modifier = Modifier.testTag("editor.insert.palm_thresholds"),
+                    onClick = { showMenu = false; actions.onPalmSettings() }
+                )
                 DropdownMenuItem(
                     text = { Text(l10n("customize_toolbar")) },
                     modifier = Modifier.testTag("editor.customize_toolbar"),
