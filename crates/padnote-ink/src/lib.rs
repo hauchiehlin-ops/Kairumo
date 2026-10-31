@@ -98,6 +98,14 @@ impl Tool {
         )
     }
 
+    /// 筆點陣（`brush.rs`）能算的筆：[`Tool::is_custom_engine`] 加上書寫與標記類
+    /// （鋼筆、原子筆、鉛筆、麥克筆、螢光筆、水彩筆，ADR-0015 階段 5）。
+    ///
+    /// iPad 以此判斷；Android 的這六支筆目前仍走原生算繪，所以 `is_custom_engine` 不變。
+    pub fn is_dab_engine(self) -> bool {
+        self.is_custom_engine() || brush::is_pen_dab_tool(self)
+    }
+
     /// 是否由自繪引擎（`brush.rs` 的筆點陣）算繪。
     ///
     /// PencilKit 與 Android 的既有筆刷各有自己的算繪；這幾支（含傳統書法毛筆 `Brush`）

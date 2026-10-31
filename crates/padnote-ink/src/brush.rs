@@ -14,6 +14,14 @@
 
 use crate::{InkPoint, LineType, Tool};
 
+mod pens;
+pub use pens::{PenTuning, group_alpha};
+
+/// 書寫與標記類筆刷（見 `pens.rs`）。
+pub fn is_pen_dab_tool(tool: Tool) -> bool {
+    pens::handles(tool)
+}
+
 /// 一個筆點。座標為頁面座標。
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Dab {
@@ -267,7 +275,7 @@ fn side_of_stick(tilt: f32, amount: f32) -> f32 {
 /// `base_width` 是筆畫的基準寬度（頁面單位）。非自繪引擎的筆刷回傳空陣列 ——
 /// 它們由各平台的原生算繪處理。
 pub fn dabs(tool: Tool, points: &[InkPoint], base_width: f32) -> Vec<Dab> {
-    if !tool.is_custom_engine() || points.is_empty() || base_width <= 0.0 {
+    if !tool.is_dab_engine() || points.is_empty() || base_width <= 0.0 {
         return Vec::new();
     }
     let mut rng = Rng::new(seed_of(points));
@@ -335,7 +343,7 @@ impl LiveDabs {
 
     /// 自繪引擎畫得出這支筆嗎？畫不出來的話 [`push`](Self::push) 與 [`preview`](Self::preview) 永遠是空的。
     fn active(&self) -> bool {
-        self.tool.is_custom_engine() && self.base_width > 0.0
+        self.tool.is_dab_engine() && self.base_width > 0.0
     }
 
     /// 餵入真實的取樣點，回傳**新定案**的筆點（之前回傳過的不會再出現、也不會再變）。
@@ -497,6 +505,8 @@ enum EmitterKind {
         rng: Rng,
     },
     OilPaint(OilPaint),
+    /// 書寫與標記類（鋼筆、原子筆、鉛筆、麥克筆、螢光筆、水彩筆），見 `pens.rs`。
+    Pen(pens::PenEmitter),
     /// 不是自繪引擎的筆：什麼都不畫。
     None,
 }
@@ -540,6 +550,7 @@ impl Emitter {
                 }
             }
             Tool::OilPaint => EmitterKind::OilPaint(OilPaint::new(width, rng)),
+            t if pens::handles(t) => EmitterKind::Pen(pens::PenEmitter::new(t, width, rng.clone())),
             _ => EmitterKind::None,
         };
         let first_dab_pending = matches!(
@@ -564,6 +575,7 @@ impl Emitter {
             | EmitterKind::Crayon { spacing, .. }
             | EmitterKind::Airbrush { spacing, .. } => *spacing,
             EmitterKind::OilPaint(o) => (o.bristle_r * 0.55).max(0.5),
+            EmitterKind::Pen(p) => p.spacing(),
             EmitterKind::None => 1.0,
         }
     }
@@ -614,6 +626,7 @@ impl Emitter {
             } => crayon(s, *base, *spacing, *seed, rng, out),
             EmitterKind::Airbrush { radius, rng, .. } => airbrush(s, *radius, rng, out),
             EmitterKind::OilPaint(o) => o.emit(s, out),
+            EmitterKind::Pen(p) => p.emit(s, out),
             EmitterKind::None => {}
         }
         if self.first_dab_pending && out.len() > start {
@@ -1154,10 +1167,13 @@ mod tests {
             Tool::Highlighter,
             Tool::Watercolor,
         ] {
+            // `is_custom_engine` 是 Android 與舊路徑的判斷，維持不變；
+            // iPad 已改走筆點陣（`is_dab_engine`），見 `pens.rs`。
             assert!(!t.is_custom_engine());
+            assert!(t.is_dab_engine());
             assert!(
-                dabs(t, &line(10, 0.5), 6.0).is_empty(),
-                "{t:?} 不該由自繪引擎處理"
+                !dabs(t, &line(10, 0.5), 6.0).is_empty(),
+                "{t:?} 應由筆點陣算繪"
             );
         }
     }
@@ -1721,11 +1737,40 @@ mod streaming_tests {
         }
     }
 
-    /// 原生筆刷（PencilKit／平台自己畫的）不產生自繪筆點。
+    /// 書寫與標記類筆刷（ADR-0015 階段 5）：邊畫邊算與整筆算的筆點落在同一條線上，
+    /// 且每支筆都畫得出東西、決定性（同一筆畫算兩次逐位元相同）。
     #[test]
-    fn native_tools_stream_nothing() {
-        let mut live = LiveDabs::new(Tool::FountainPen, 7.0, LineType::Solid);
-        assert!(live.push(&golden_strokes()[3]).is_empty());
-        assert!(live.preview(&[]).is_empty());
+    fn pen_tools_stream_and_are_deterministic() {
+        let pens = [
+            Tool::FountainPen,
+            Tool::BallPoint,
+            Tool::Pencil,
+            Tool::Marker,
+            Tool::Highlighter,
+            Tool::Watercolor,
+        ];
+        let stroke = golden_strokes()[3].clone();
+        for tool in pens {
+            let a = dabs(tool, &stroke, 7.0);
+            let b = dabs(tool, &stroke, 7.0);
+            assert!(!a.is_empty(), "{tool:?} 沒有筆點");
+            assert_eq!(a, b, "{tool:?} 不是決定性的");
+            let mut live = LiveDabs::new(tool, 7.0, LineType::Solid);
+            let mut n = live.push(&stroke).len();
+            n += live.preview(&[]).len();
+            assert!(n > 0, "{tool:?} 邊畫邊算沒有筆點");
+        }
+    }
+
+    /// 麥克筆與螢光筆的筆點本身不透明（重疊不變深），透明度整筆一次疊。
+    #[test]
+    fn marking_pens_use_group_alpha() {
+        for tool in [Tool::Marker, Tool::Highlighter] {
+            assert!(group_alpha(tool) < 1.0);
+            for d in dabs(tool, &golden_strokes()[3], 8.0) {
+                assert_eq!(d.alpha, 1.0);
+            }
+        }
+        assert_eq!(group_alpha(Tool::FountainPen), 1.0);
     }
 }

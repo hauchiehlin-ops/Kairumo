@@ -155,6 +155,13 @@ enum ProInk {
         case "airbrush": return .airbrush
         case "oilpaint": return .oilPaint
         case "calligraphy": return .calligraphy
+        // ADR-0015 階段 5：原本由 PencilKit 畫的六支筆，改由核心筆點陣（`pens.rs`）算繪。
+        case "pen": return .fountainPen
+        case "ballpoint": return .ballPoint
+        case "pencil": return .pencil
+        case "marker": return .marker
+        case "highlighter": return .highlighter
+        case "watercolor": return .watercolor
         default: return nil
         }
     }
@@ -168,7 +175,29 @@ enum ProInk {
         case .airbrush: return "airbrush"
         case .oilPaint: return "oilpaint"
         case .calligraphy: return "calligraphy"
-        default: return nil
+        case .fountainPen: return "pen"
+        case .ballPoint: return "ballpoint"
+        case .pencil: return "pencil"
+        case .marker: return "marker"
+        case .highlighter: return "highlighter"
+        case .watercolor: return "watercolor"
+        }
+    }
+
+    /// 工具列的「粗細」換成這支筆的基準寬度。
+    ///
+    /// 原本 PencilKit 的各支筆各有倍率與下限（鋼筆 ×1.1、原子筆 ×0.65、麥克筆 ×2.8……），
+    /// 換成自繪引擎之後沿用，使用者換版本後同一個粗細看起來差不多。
+    static func baseWidth(for tool: EditorToolType, strokeWidth: CGFloat) -> CGFloat {
+        switch tool {
+        case .brush: return max(1.2, strokeWidth * 1.65)
+        case .pen: return max(2.0, strokeWidth * 1.1)
+        case .ballpoint: return max(1.2, strokeWidth * 0.65)
+        case .marker: return max(8.0, strokeWidth * 2.8)
+        case .highlighter: return max(18.0, strokeWidth * 3.8)
+        case .pencil: return max(2.0, strokeWidth * 1.3)
+        case .watercolor: return max(8.0, strokeWidth * 2.4)
+        default: return max(1.2, strokeWidth * 1.4)
         }
     }
 
@@ -587,6 +616,23 @@ enum ProInkRenderer {
         let needsGrain = (toolName == "charcoal" || toolName == "crayon") && grainCGImage != nil
         var lastGradientKey: UInt32 = .max
         var lastGradient: CGGradient?
+
+        // 麥克筆、螢光筆：整筆是同一層墨，自己重疊的地方不該變深 ——
+        // 筆點一律不透明，畫進透明圖層，整層再以核心給的群組不透明度疊上去（乘法混色）。
+        let groupAlpha = ProInk.kind(named: toolName).map { CGFloat(brushGroupAlpha(tool: $0)) } ?? 1
+        let isGroup = groupAlpha < 1
+        if isGroup {
+            ctx.saveGState()
+            ctx.setBlendMode(.multiply)
+            ctx.setAlpha(groupAlpha)
+            ctx.beginTransparencyLayer(auxiliaryInfo: nil)
+        }
+        defer {
+            if isGroup {
+                ctx.endTransparencyLayer()
+                ctx.restoreGState()
+            }
+        }
 
         for dab in cached.dabs {
             let rx = CGFloat(dab.rx), ry = CGFloat(dab.ry)

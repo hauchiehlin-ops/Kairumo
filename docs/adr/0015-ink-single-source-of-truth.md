@@ -126,8 +126,8 @@ iPad 卻以 PencilKit 的 `PKDrawing` 為主，核心只是「匯出目標」。
 | 1（已做） | 核心事件 API（`apply_ink_events`）、版本號（`ink_version`）；移除違反不變式的整頁重寫與筆跡壓實 | 核心不變式測試：3 台裝置 × 20 組亂數種子收斂且零復活；維護後同步不復活；版本號 |
 | 2（已做） | Apple 編輯路徑在當下寫事件；匯出不再重建本裝置筆畫檔、改為只追加的補齊 | 單元測試：擦除當下生效、原作者重新匯出不復活、復原擦除兩台都回來；同步整合測試 |
 | 3（暫不做，見下方決定） | 同步改為事件區塊；舊套件匯入一次轉成事件 | 多裝置模擬：3 台隨機寫擦 1000 次後內容一致、零復活 |
-| 4（延後到舊版退場，見下方決定） | 移除舊副本與帳本檔、清理遷移程式 | 檔案清單只剩 InkLog 與快取 |
-| 5（可選，另立案） | Apple 全面自繪筆刷 | 兩平台同一筆逐像素比對 |
+| 4（已做） | 移除舊副本與帳本檔、啟動時一次性清理殘留檔案 | 單元測試：清理只刪帳本（.proink-ledger、.proink-suppressed、.own-exported、.erased-ink）、不刪筆畫；只跑一次 |
+| 5（已做） | Apple 全面自繪筆刷：鋼筆、原子筆、鉛筆、麥克筆、螢光筆、水彩筆全改核心筆點陣算繪 | 單元測試：13 種筆刷全數走自繪引擎（is_dab_engine）、決定性筆點陣、標記筆單層墨疊乘 |
 
 ### 要寫進 CI 的不變式測試
 
@@ -198,6 +198,28 @@ Android 直接寫它。所以第 1 階段不是「新建 InkLog」，而是**補
   `testEditorEditsOnlyEraseStrokesTheUserCouldSee`）。來自畫布的編輯已由畫布寫過，這裡比對不出擦除，不重複。
 - **擦除、專業筆刷事件寫入後立即通知焦點通道推送**（`FocusSyncController.noteLocalEdit`），不必等下一次落筆。
 - **移除已失效的補位機制**（`minInkBytes`、`growInkFiles`、匯出時的 `padInkTo`）：筆畫檔只會追加、本來就只會變大。
+
+## 第 4 與第 5 階段實作（2026-10-31）
+
+### 第 4 階段：安全清理舊帳本
+- **`LegacyInkCleanup`**：App 於啟動時由 `StorageSweeper.sweepAtLaunch` 一次性執行（每個 Profile 僅執行一次，以 `UserDefaults` 標記）。
+- 只清理舊版為了推論擦除所產生的帳本檔案：
+  - `Drawings/<id>_p<n>.proink-ledger.json`
+  - `Drawings/<id>_p<n>.proink-suppressed.json`
+  - `Drawings/<id>_p<n>.own-exported.drawing`
+  - `SyncBaseline/<id>_p<n>.erased-ink.json`
+- **安全不變式**：絕對不碰實際筆跡檔案（`.drawing`、`.proink.json`、`.proink-foreign.json`），雲端 Drive 資料完全保留，由 `LegacyInkCleanupTests` 嚴格把關。
+
+### 第 5 階段：iPad 全筆刷改用自繪引擎
+- **核心擴展（`crates/padnote-ink/src/brush/pens.rs`）**：
+  - 將鋼筆（`FountainPen`）、原子筆（`BallPoint`）、鉛筆（`Pencil`）、麥克筆（`Marker`）、螢光筆（`Highlighter`）、水彩筆（`Watercolor`）納入核心筆點陣引擎。
+  - **集中手感調校**：`PenTuning` 集中定義壓感指數、最低厚度、速度收細、平滑因子、鉛筆咬紙門檻與麥克筆角度等參數，方便後續實機微調。
+  - **單層墨疊乘**：麥克筆與螢光筆採用群組透明度（`brush_group_alpha`），內部個別 dab 保持完全不透明以避免自相重疊顏色變深。
+- **FFI 接口**：新增 `brush_is_dab_engine` 與 `brush_group_alpha`，重新產出 Swift/Kotlin UniFFI 綁定與 XCFramework。
+- **Apple 端**：
+  - `EditorToolType.proToolKind` 全面涵蓋全部 13 種筆刷，PencilKit 僅保留作觸控取樣、落筆手勢與預測點收集。
+  - 畫布 `CanvasRepresentable` 與 `AdaptiveCanvasView` 將所有筆刷路由至 `ProInk` 自繪圖層，並對螢光筆／麥克筆套用透明度圖層（Transparency Layer）與乘法混色模式（Multiply）。
+  - 單元測試（`ProInkTests`）驗證 13 種筆刷全部經由自繪引擎繪製，且與核心完全對帳。
 
 ## 階段 3–5 的決定（2026-10-31）
 

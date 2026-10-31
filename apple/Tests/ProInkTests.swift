@@ -68,13 +68,21 @@ final class ProInkTests: XCTestCase {
             "⌘1…⌘0 是肌肉記憶，不能跟著工具列重排")
     }
 
-    func testProBrushesAreExactlyTheCoreCustomEngineOnes() {
+    func testEveryBrushIsDrawnByTheDabEngine() {
         for tool in EditorToolType.allCases {
             if let kind = tool.proToolKind {
-                XCTAssertTrue(brushIsCustom(tool: kind), "\(tool) 不是自繪引擎筆刷")
+                XCTAssertTrue(brushIsDabEngine(tool: kind), "\(tool) 核心筆點陣算不出來")
             }
+            // 是筆刷（有族）就一定走自繪引擎：PencilKit 只剩輸入（ADR-0015 階段 5）。
+            XCTAssertEqual(tool.family != nil, tool.proToolKind != nil, "\(tool)")
         }
-        XCTAssertEqual(EditorToolType.allCases.filter { $0.proToolKind != nil }.count, 7)
+        XCTAssertEqual(EditorToolType.allCases.filter { $0.proToolKind != nil }.count, 13)
+    }
+
+    func testMarkingPensAreOneLayerOfInk() {
+        XCTAssertLessThan(brushGroupAlpha(tool: .highlighter), 1)
+        XCTAssertLessThan(brushGroupAlpha(tool: .marker), 1)
+        XCTAssertEqual(brushGroupAlpha(tool: .fountainPen), 1)
     }
 
     // MARK: 儲存
