@@ -223,9 +223,17 @@ object InkBrushRenderer {
         points: List<StrokePoint>,
         tool: ToolKind,
         baseWidth: Float,
-        lineType: Int
+        lineType: Int,
+        useCache: Boolean = true
     ): List<FfiDab> {
         if (points.isEmpty()) return emptyList()
+        if (!useCache) {
+            return if (lineType != 0) {
+                uniffi.padnote_core.brushDabsStyled(tool, baseWidth, points, lineType.toUByte())
+            } else {
+                brushDabs(tool, baseWidth, points)
+            }
+        }
         val key = DabCacheKey(
             pointsIdentity = System.identityHashCode(points),
             size = points.size,
@@ -254,9 +262,11 @@ object InkBrushRenderer {
         points: List<StrokePoint>,
         tool: ToolKind,
         baseWidth: Float,
-        density: Float
+        density: Float,
+        useCache: Boolean = true
     ): List<SegmentSpec> {
         if (points.size < 2) return emptyList()
+        if (!useCache) return computeSegments(points, tool, baseWidth, density)
         val key = SegmentCacheKey(
             pointsIdentity = System.identityHashCode(points),
             size = points.size,
@@ -287,15 +297,20 @@ object InkBrushRenderer {
         baseWidth: Float,
         baseColor: Color,
         density: Float,
-        lineType: Int = 0
+        lineType: Int = 0,
+        /**
+         * 正在畫的那一筆傳 `false`：它每一幀都是一份新的點列，放進快取只會把已完成筆畫的
+         * 快取擠掉、堆出一大串用不到的筆點陣（記憶體與 GC 跟著寫得越久越重）。
+         */
+        useCache: Boolean = true
     ) {
         if (brushIsCustom(tool)) {
             // 虛線／點線：核心依線型把間隔挖掉，兩個平台畫出同樣的線。
-            val dabs = cachedDabs(points, tool, baseWidth, lineType)
+            val dabs = cachedDabs(points, tool, baseWidth, lineType, useCache)
             drawDabsOnDrawScope(drawScope, dabs, baseColor, density)
             return
         }
-        val segments = cachedSegments(points, tool, baseWidth, density)
+        val segments = cachedSegments(points, tool, baseWidth, density, useCache)
         if (segments.isEmpty()) return
 
         val isHighlighter = tool == ToolKind.HIGHLIGHTER
@@ -452,6 +467,10 @@ object InkBrushRenderer {
 
     /** 柔邊筆點由外向內疊四層漸縮的橢圓，每層只補一點不透明度。 */
     private const val SOFT_LAYERS = 4
+
+    /** 把核心算好的筆點畫出來（即時筆畫一段一段畫，見 `LiveBrushLayers`）。 */
+    fun drawDabs(drawScope: DrawScope, dabs: List<FfiDab>, baseColor: Color, density: Float) =
+        drawDabsOnDrawScope(drawScope, dabs, baseColor, density)
 
     private fun drawDabsOnDrawScope(
         drawScope: DrawScope,

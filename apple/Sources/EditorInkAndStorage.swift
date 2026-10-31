@@ -1003,6 +1003,8 @@ extension NotebookEditorView {
         }
         box.id = UIApplication.shared.beginBackgroundTask(withName: "kairumo.core-ink") { end() }
         Self.coreInkQueue.async {
+            // 專業筆畫的存檔也在背景排隊（見 `ProInkStore.saveDeferred`）：一併等它寫完。
+            ProInkStore.flushPendingWrites()
             Task { @MainActor in end() }
         }
         #endif

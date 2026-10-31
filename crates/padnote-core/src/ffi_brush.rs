@@ -16,6 +16,7 @@
 use crate::ffi::{StrokePoint, ToolKind};
 use crate::ffi_ui::FfiTool;
 use padnote_ink::{Dab, InkPoint, Tool};
+use std::sync::Mutex;
 
 #[derive(Clone, Copy, Debug, PartialEq, uniffi::Record)]
 pub struct FfiDab {
@@ -110,6 +111,56 @@ pub fn brush_dabs(tool: ToolKind, base_width: f32, points: Vec<StrokePoint>) -> 
         .into_iter()
         .map(Into::into)
         .collect()
+}
+
+/// 正在畫的一筆，邊畫邊算筆點陣（見 `padnote_ink::LiveDabs`）。
+///
+/// 每來一批觸控點呼叫 `append`，拿到的是**新定案**的筆點：之前給過的不會重複、也不會再變，
+/// 平台端直接接在已畫好的筆點後面即可。`preview` 給筆尖附近（含預測點）尚未定案的那一小段，
+/// 每一幀整份換掉。整筆重算的成本隨筆畫變長而增加 —— 長筆畫、寫得快時筆跡追不上筆尖 ——
+/// 這裡每次只算新的段落。抬筆後照舊用 `brush_dabs` 整筆算出最終筆跡（含收筆出鋒）。
+#[derive(Debug, uniffi::Object)]
+pub struct LiveBrushStroke {
+    inner: Mutex<padnote_ink::LiveDabs>,
+}
+
+#[uniffi::export]
+impl LiveBrushStroke {
+    #[uniffi::constructor]
+    pub fn new(tool: ToolKind, base_width: f32, line_type: u8) -> Self {
+        Self {
+            inner: Mutex::new(padnote_ink::LiveDabs::new(
+                Tool::from(tool),
+                base_width,
+                padnote_ink::LineType::from_id(line_type),
+            )),
+        }
+    }
+
+    /// 餵入真實的取樣點，回傳新定案的筆點。
+    pub fn append(&self, points: Vec<StrokePoint>) -> Vec<FfiDab> {
+        let pts: Vec<InkPoint> = points.iter().map(to_ink).collect();
+        self.lock().push(&pts).into_iter().map(Into::into).collect()
+    }
+
+    /// 尚未定案的尾巴（最後一個定案樣本到筆尖，含預測點）。不改變狀態。
+    pub fn preview(&self, predicted: Vec<StrokePoint>) -> Vec<FfiDab> {
+        let pts: Vec<InkPoint> = predicted.iter().map(to_ink).collect();
+        self.lock()
+            .preview(&pts)
+            .into_iter()
+            .map(Into::into)
+            .collect()
+    }
+}
+
+impl LiveBrushStroke {
+    fn lock(&self) -> std::sync::MutexGuard<'_, padnote_ink::LiveDabs> {
+        // 中毒只代表別的執行緒在算筆點時 panic 過；狀態仍是一致的（每次 push 都整批完成才寫回）。
+        self.inner
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+    }
 }
 
 /// 工具 → 筆刷種類。不是筆刷的回 `None`。

@@ -199,21 +199,9 @@ class InkSurfaceView(
             lastPoint[id] = x to y
         }
 
-        // 預測只在筆還按著時有意義。
-        if (event.actionMasked != MotionEvent.ACTION_MOVE) return
-        val predicted = predictor?.predict() ?: return
-        for (sample in InkInput.samples(predicted, pxPerDp)) {
-            if (!engine.isDrawing(sample.event.id)) continue
-            val previous = lastPoint[sample.event.id] ?: continue
-            active.renderFrontBufferedLayer(
-                Segment(previous.first, previous.second,
-                    sample.event.x * pxPerDp, sample.event.y * pxPerDp,
-                    widthFor(sample.event.pressure), predicted = true)
-            )
-            // 刻意不更新 lastPoint：下一個真實點要從**真實**的位置接續，
-            // 否則預測誤差會一路累積下去。
-        }
-        predicted.recycle()
+        // **預測線不畫進前緩衝。** 前緩衝畫上去就擦不掉（要等抬筆整層重畫），預測猜錯的那一段
+        // 會變成一條條從筆尖拉出去的直線，一路跟著筆跡留在畫面上、抬筆才消失。
+        // 預測只餵給預測器（上面的 `record`），讓它的狀態跟著真實軌跡走。
     }
 
     private fun widthFor(pressure: Float): Float {

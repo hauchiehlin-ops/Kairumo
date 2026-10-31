@@ -902,7 +902,8 @@ class InkEngine(
         val retractedAll = mutableListOf<ULong>()
         val completedNow = mutableListOf<CompletedStroke>()
 
-        for (sample in InkInput.samples(event, density, zoom, offsetX, offsetY)) {
+        val samples = InkInput.samples(event, density, zoom, offsetX, offsetY)
+        for (sample in samples) {
             // 改圖層模式：點一下就把最近的一筆改到目標圖層，不落筆。
             // 繞過仲裁器 —— 它要看到移動才肯判定，一個點擊永遠等不到判定。
             val toolTouch = onToolTouch
@@ -942,8 +943,9 @@ class InkEngine(
                 drawn++
                 continue
             }
+            // 這裡每個取樣點都會走到（觸控筆每秒數百個）：不要在這裡逐點寫 log —— 字串組裝與 logcat
+            // 都在主執行緒上，寫得越快、筆跡越追不上筆尖。
             val decision = arbiter.handle(sample.event)
-            android.util.Log.d("ARBITER_DEBUG", "sample.event: id=${sample.event.id} kind=${sample.event.kind} phase=${sample.event.phase} x=${sample.event.x} y=${sample.event.y} r=${sample.event.contactRadius} p=${sample.event.pressure} verdict=${decision.verdict} retract=${decision.retract}")
 
             // 先處理收回：被收回的筆畫不該再因為後續事件而復活。
             for (id in decision.retract) {
@@ -981,7 +983,7 @@ class InkEngine(
             }
         }
 
-        val first = InkInput.samples(event, density, zoom, offsetX, offsetY).firstOrNull()
+        val first = samples.firstOrNull()
         lastEventDebug = if (first == null) {
             "action=${event.actionMasked} 無取樣點"
         } else {
@@ -1521,6 +1523,9 @@ class InkEngine(
 
     /** 目前正在畫、尚未結束的取樣點（供即時預覽）。 */
     fun liveSamples(): List<List<InkInput.Sample>> = inFlight.values.map { it.toList() }
+
+    /** 同 [liveSamples]，以指標為鍵：即時算繪要分辨「還是同一筆」才能只算新增的那一段。 */
+    fun liveSamplesById(): Map<ULong, List<InkInput.Sample>> = inFlight.mapValues { it.value.toList() }
 
     fun setPenOnly(penOnly: Boolean) {
         if (lastPenOnly == penOnly) return
