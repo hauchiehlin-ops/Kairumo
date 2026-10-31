@@ -1618,9 +1618,16 @@ enum NotebookSyncCoordinator {
         var proExtra: [[String: [String]]] = Array(repeating: [:], count: pageCount)
         var prunedForeign: [Set<String>] = Array(repeating: [], count: pageCount)
         var grow: [Bool] = Array(repeating: false, count: pageCount)
+        var reconcile = Array(repeating: NotebookPackageBridge.InkReconcile(), count: pageCount)
         for page in 0 ..< pageCount {
             let snapshot = snapshots[page]
             let ledger = ledgers[page]
+            let pinned = CollabInkIds.load(in: inputs.baselineDirectory, notebookId: document.id, page: page)
+            reconcile[page].pinned = pinned
+            if let previous = PKInkSnapshotStore.load(in: inputs.drawingsDirectory, notebookId: document.id, page: page) {
+                reconcile[page].erasedOwn = PKStrokeId.erasedOwn(previous: previous, now: snapshot.own)
+                reconcile[page].addedOwn = PKStrokeId.addedOwn(previous: previous, now: snapshot.own)
+            }
             let hasInk = !snapshot.current.strokes.isEmpty || !pro[page].isEmpty || !ledger.isEmpty
             let added = resolver.addedIds(page: page)
             let plan = PKInkSync.plan(
@@ -1668,7 +1675,7 @@ enum NotebookSyncCoordinator {
         try NotebookPackageBridge.exportPreservingOtherDevices(
             document: document, drawings: drawings, imageData: images,
             to: inputs.package, deviceId: inputs.deviceId, proStrokes: pro, proLedgers: exportLedgers,
-            pkStrokeIds: plans.map(\.ids), growInkFiles: grow,
+            pkStrokeIds: plans.map(\.ids), growInkFiles: grow, inkReconcile: reconcile,
             recordingTitles: titles
         )
         for page in 0 ..< pageCount {

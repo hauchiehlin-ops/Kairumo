@@ -812,6 +812,11 @@ public struct NotebookEditorView: View {
                 currentPageIndex = targetPage // state-entry: 模式切換保持頁碼 // state-entry: 外部跳頁初始化正門
             }
             loadCurrentPage()
+            // 畫布與專業筆畫層的動作在當下寫成核心事件（ADR-0015）。
+            InkEventSink.register(
+                notebookId: notebook.id, document: { notebook }, package: corePackageURL(),
+                baselineDirectory: store.syncBaselineDirectory, deviceId: NotebookMigration.deviceId,
+                queue: Self.coreInkQueue)
             objectHistory.reset(to: notebook)
             if isCollaborating {
                 ensureCollabPageIds()
@@ -839,6 +844,7 @@ public struct NotebookEditorView: View {
             // （文件庫在 iCloud 資料夾、筆跡多）主執行緒整個卡住（卡頓記錄：停在 flushPendingCoreInk 之後）。
             // 改成排在寫入佇列後面：前面的寫入一定先做完，焦點通道才放掉這一本（它接著會把套件推上雲端）。
             let leavingId = notebook.id
+            InkEventSink.unregister(notebookId: leavingId)
             endCollabImportHold()
             afterCoreInkWrites {
                 if store.activeNotebookId == leavingId {

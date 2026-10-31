@@ -120,8 +120,9 @@ final class InkSyncLedgerTests: XCTestCase {
         XCTAssertTrue(ledger.pkRetiredOwn.isEmpty)
     }
 
-    func testPaddingKeepsARewrittenStrokeFileFromShrinking() throws {
-        // 同步只傳「變大」的檔案：重寫之後的筆畫檔不能比重寫前小，否則擦掉的東西永遠傳不出去。
+    func testErasingOwnStrokesAppendsTombstonesAndNeverShrinksTheStrokeFile() throws {
+        // ADR-0015：筆畫檔是只追加的事件串流。擦掉自己的筆畫＝追加墓碑，不重寫檔案 ——
+        // 檔案只會變大（同步只傳變大的檔案），之前寫下的墓碑一筆都不會丟。
         let dir = FileManager.default.temporaryDirectory
             .appendingPathComponent("kairumo-pad-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
@@ -130,7 +131,10 @@ final class InkSyncLedgerTests: XCTestCase {
         let doc = NotebookDocument(title: "P", pageCount: 1)
         let device: UInt32 = 0x0A0A
         let big = PKDrawing(strokes: (0 ..< 8).map { stroke(at: CGFloat($0) * 40) })
-        try NotebookPackageBridge.export(document: doc, drawings: [big], to: package, deviceId: device)
+        // 與同步匯出相同：每一筆用由內容算出的穩定身分寫進去。
+        let ids = big.strokes.map { PKStrokeId.make(key: StrokeDelta.Identity($0).key, n: 0, gen: 0) }
+        try NotebookPackageBridge.export(
+            document: doc, drawings: [big], to: package, deviceId: device, pkStrokeIds: [ids])
 
         func inkBytes() -> UInt64 {
             let files = (try? FileManager.default.contentsOfDirectory(
@@ -138,18 +142,74 @@ final class InkSyncLedgerTests: XCTestCase {
             return files.reduce(0) { $0 + UInt64((try? $1.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0) }
         }
         let before = inkBytes()
-        // 擦掉大部分：不補位的話檔案會小很多。
+        // 擦掉大部分。
         let small = PKDrawing(strokes: [big.strokes[0]])
+        let erased = [NotebookPackageBridge.InkReconcile(erasedOwn: PKStrokeId.erasedOwn(previous: big, now: small))]
         try NotebookPackageBridge.exportPreservingOtherDevices(
-            document: doc, drawings: [small], to: package, deviceId: device)
-        XCTAssertGreaterThanOrEqual(inkBytes(), before, "重寫之後的筆畫檔不能比重寫前小")
-        // 升級後第一次匯出：內容身分整批換了，大小要「至少多一點」才會被傳出去。
+            document: doc, drawings: [small], to: package, deviceId: device, inkReconcile: erased)
+        XCTAssertGreaterThan(inkBytes(), before, "擦除要以墓碑追加，檔案只會變大")
+        // 再匯出一次同樣的內容：墓碑已經在了，不重複寫。
         let sizeNow = inkBytes()
         try NotebookPackageBridge.exportPreservingOtherDevices(
-            document: doc, drawings: [small], to: package, deviceId: device, growInkFiles: [true])
-        XCTAssertGreaterThan(inkBytes(), sizeNow)
+            document: doc, drawings: [small], to: package, deviceId: device, inkReconcile: erased)
+        XCTAssertEqual(inkBytes(), sizeNow, "沒有新的改動，筆畫檔不該再變")
         let imported = try NotebookPackageBridge.importDocument(fromPackageAt: package, deviceId: 0x0B0B)
-        XCTAssertEqual(imported.drawings.first?.strokes.count, 1, "補位不能影響內容")
+        XCTAssertEqual(imported.drawings.first?.strokes.count, 1, "擦掉的 7 筆在別台也要不見")
+    }
+
+    func testAnEraseIsWrittenToThePackageTheMomentItHappens() throws {
+        // ADR-0015 I2：擦除在當下寫成墓碑，不等匯出。之後任何一次匯入（含別台較大的舊檔）都看不到它。
+        let dir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("kairumo-now-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let package = dir.appendingPathComponent("p.padnote")
+        let doc = NotebookDocument(title: "N", pageCount: 1)
+        let device: UInt32 = 0x0C0C
+        let a = stroke(at: 20), b = stroke(at: 220)
+        let ids = [a, b].map { PKStrokeId.make(key: StrokeDelta.Identity($0).key, n: 0, gen: 0) }
+        try NotebookPackageBridge.export(
+            document: doc, drawings: [PKDrawing(strokes: [a, b])], to: package, deviceId: device,
+            pkStrokeIds: [ids])
+
+        // 另一台擦掉 b（它是 a、b 的作者以外的裝置）。
+        try NotebookPackageBridge.eraseInk(document: doc, pageIndex: 0, strokes: [b], at: package, deviceId: 0x0D0D)
+        let imported = try NotebookPackageBridge.importDocument(fromPackageAt: package, deviceId: 0x0E0E)
+        XCTAssertEqual(imported.drawings.first?.strokes.count, 1, "擦除在寫入的那一刻就該生效")
+
+        // 原作者之後再匯出同樣的內容（它還不知道 b 被擦了）：b 不能因此復活。
+        try NotebookPackageBridge.exportPreservingOtherDevices(
+            document: doc, drawings: [PKDrawing(strokes: [a, b])], to: package, deviceId: device,
+            pkStrokeIds: [ids])
+        let again = try NotebookPackageBridge.importDocument(fromPackageAt: package, deviceId: 0x0E0E)
+        XCTAssertEqual(again.drawings.first?.strokes.count, 1, "原作者的匯出把別台擦掉的筆畫帶回來了")
+    }
+
+    func testUndoingAnEraseOnTheCanvasBringsTheStrokeBackEverywhere() throws {
+        // 擦的當下已經寫了墓碑（撤不掉）；復原把它加回畫布時，要以新身分寫入，每一台才都看得到。
+        let dir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("kairumo-revive-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let package = dir.appendingPathComponent("p.padnote")
+        let doc = NotebookDocument(title: "U", pageCount: 1)
+        let device: UInt32 = 0x0F0F
+        let a = stroke(at: 20), b = stroke(at: 220)
+        let ids = [a, b].map { PKStrokeId.make(key: StrokeDelta.Identity($0).key, n: 0, gen: 0) }
+        try NotebookPackageBridge.export(
+            document: doc, drawings: [PKDrawing(strokes: [a, b])], to: package, deviceId: device,
+            pkStrokeIds: [ids])
+
+        try NotebookPackageBridge.eraseInk(document: doc, pageIndex: 0, strokes: [b], at: package, deviceId: device)
+        XCTAssertEqual(try NotebookPackageBridge.importDocument(fromPackageAt: package, deviceId: 0x0E0E)
+            .drawings.first?.strokes.count, 1)
+        try NotebookPackageBridge.reviveInk(document: doc, pageIndex: 0, strokes: [b], at: package, deviceId: device)
+        XCTAssertEqual(try NotebookPackageBridge.importDocument(fromPackageAt: package, deviceId: 0x0E0E)
+            .drawings.first?.strokes.count, 2, "復原擦除之後，別台看不到那一筆")
+        // 已經看得見就不再加（不會變兩份）。
+        try NotebookPackageBridge.reviveInk(document: doc, pageIndex: 0, strokes: [b], at: package, deviceId: device)
+        XCTAssertEqual(try NotebookPackageBridge.importDocument(fromPackageAt: package, deviceId: 0x0E0E)
+            .drawings.first?.strokes.count, 2, "同一筆被加了兩份")
     }
 
     // MARK: 清理

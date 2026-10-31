@@ -955,33 +955,11 @@ extension NotebookEditorView {
             currentDrawing = drawing
         }
         let pid = (notebook.pageIds != nil && page < (notebook.pageIds?.count ?? 0)) ? notebook.pageIds?[page] : nil
-        recordErasures(page: page, from: activeInkStore.drawing(for: page, pageId: pid), to: drawing)
         activeInkStore.updateDrawing(drawing, for: page, pageId: pid)
         activeInkStore.markPendingCoreFlush(for: page, pageId: pid)
         continuousCanvases.setCachedDrawing(drawing, forPage: page)
         scheduleCoreInkFlush()
         noteInkEdited()
-    }
-
-    /// 使用者擦掉（或復原加回）的筆畫，**在編輯的當下**記進「已擦除」名單。
-    ///
-    /// 原本只在寫進套件時（`CoreInkFlush`）才比對，而且要有「套件基準線」才比 —— 那條基準線在每次
-    /// 同步匯入、切換模式時都被清掉。清掉之後擦的筆畫永遠不會進名單，套件裡也沒有它的墓碑：
-    /// 下一次匯入（自己或別台的套件）就把它帶回來，這是「擦掉後筆跡又出現」最主要的來源。
-    /// 這裡用編輯前後的記憶體副本比對：那正是使用者眼前畫面的變化，與基準線、同步時機都無關。
-    /// 比對在寫入佇列上做（與後續的套件寫入同一條序列），不佔主執行緒。
-    func recordErasures(page: Int, from before: PKDrawing, to after: PKDrawing) {
-        guard before != after else { return }
-        let directory = store.syncBaselineDirectory
-        let notebookId = notebook.id
-        nonisolated(unsafe) let old = before
-        nonisolated(unsafe) let new = after
-        Self.coreInkQueue.async {
-            ErasedInkLedger.record(
-                removed: StrokeDelta.removed(in: new, since: old),
-                added: StrokeDelta.added(in: new, since: old),
-                in: directory, notebookId: notebookId, page: page)
-        }
     }
 
     /// 落筆之後多久把增量寫進套件。
@@ -1012,7 +990,7 @@ extension NotebookEditorView {
     }
 
     /// 把筆跡增量寫進核心套件的**背景序列佇列**。同一個套件的寫入必須排隊（順序就是筆畫的順序）。
-    private static let coreInkQueue = DispatchQueue(label: "kairumo.editor.core-ink", qos: .utility)
+    static let coreInkQueue = DispatchQueue(label: "kairumo.editor.core-ink", qos: .utility)
 
     /// 等背景佇列把已排進去的寫入做完，再在主執行緒上做 `work`。**不阻塞主執行緒。**
     /// 佇列是序列的，所以排在它後面就保證前面的寫入都完成了。

@@ -873,13 +873,58 @@ final class ProInkLayerView: UIView {
         }
     }
 
+    /// 這一輪（從開啟到關閉）已經寫成墓碑的套件 id。復原把同一筆加回來時要換新 id ——
+    /// 墓碑永遠優先（ADR-0015 I3），沿用舊 id 的話加回來的那一筆在每一台都看不見。
+    /// 復原只能撤銷這一輪的動作，所以記在記憶體裡就夠了。
+    private var tombstonedIds: Set<String> = []
+
     private func persist() {
         invalidateAlignAnchors()
         guard let directory else { return }
+        let before = strokeSnapshot
         reconcileLedger()
+        let events = takeEvents(since: before)
+        if let sink = InkEventSink.sink(for: notebookId) {
+            sink.proEdited(page: pageIndex, removedIds: events.removed, added: events.added)
+            // 墓碑確實寫出去了才記：之後把同一筆加回來要換新 id。
+            tombstonedIds.formUnion(events.removed)
+        }
         ProInkStore.saveDeferred(ownStrokes, in: directory, notebookId: notebookId, page: pageIndex)
         onChanged?()
         NotificationCenter.default.post(name: AppCommand.proInkDidChange, object: notebookId.lowercased())
+    }
+
+    /// 與上一次存檔相比，這一次的事件（ADR-0015 I2）：消失的 → 擦掉；新出現的 → 加入；
+    /// **內容變了的（搬動、改圖層…）→ 擦掉舊 id、以新 id 加入**，不改寫既有記錄。
+    private func takeEvents(since before: [String: ProStroke]) -> (removed: [String], added: [ProStroke]) {
+        var removed: [String] = []
+        var added: [ProStroke] = []
+        var present = Set<String>()
+        for i in ownStrokes.indices {
+            let stroke = ownStrokes[i]
+            present.insert(stroke.id)
+            if let old = before[stroke.id] {
+                guard old != stroke else { continue }
+                removed.append(old.packageId)
+                if stroke.packageId == old.packageId || tombstonedIds.contains(stroke.packageId) {
+                    ownStrokes[i].coreId = UUID().uuidString.lowercased()
+                }
+                added.append(ownStrokes[i])
+            } else {
+                if tombstonedIds.contains(stroke.packageId) {
+                    ownStrokes[i].coreId = UUID().uuidString.lowercased()
+                }
+                added.append(ownStrokes[i])
+            }
+        }
+        for (id, old) in before where !present.contains(id) {
+            removed.append(old.packageId)
+        }
+        if !added.isEmpty {
+            // 換了套件身分的筆畫：快照跟著換，下一次比對才不會再當成改動。
+            strokeSnapshot = Dictionary(ownStrokes.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
+        }
+        return (removed, added)
     }
 
     // MARK: 繪製
@@ -1364,6 +1409,12 @@ final class ProInkLayerView: UIView {
             }
         }
         ProInkStore.save(foreignStrokes, in: directory, notebookId: notebookId, page: pageIndex, foreign: true)
+        // 別台的筆畫：擦的當下就寫墓碑（ADR-0015 I2），不等匯出。
+        if let sink = InkEventSink.sink(for: notebookId) {
+            let packageIds = strokes.map(\.packageId)
+            sink.proEdited(page: pageIndex, removedIds: packageIds, added: [])
+            tombstonedIds.formUnion(packageIds)
+        }
         onChanged?()
         NotificationCenter.default.post(name: AppCommand.proInkDidChange, object: notebookId.lowercased())
         if registersUndo { registerForeignUndo(restoring: strokes) }
@@ -1381,7 +1432,9 @@ final class ProInkLayerView: UIView {
         ProInkStore.updateLedger(in: directory, notebookId: notebookId, page: pageIndex) { ledger in
             for stroke in strokes {
                 let cid = stroke.id.lowercased()
-                if let at = ledger.retired.firstIndex(where: { $0.coreId == cid }), ledger.retired[at].exported {
+                // 墓碑已經寫進套件（匯出過，或擦的當下就寫了）：撤不掉，改在自己名下放一筆新的。
+                if tombstonedIds.contains(cid)
+                    || ledger.retired.firstIndex(where: { $0.coreId == cid }).map({ ledger.retired[$0].exported }) == true {
                     var copy = stroke
                     copy.id = UUID().uuidString
                     copies.append(copy)

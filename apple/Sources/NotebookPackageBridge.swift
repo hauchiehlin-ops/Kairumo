@@ -662,6 +662,7 @@ enum NotebookPackageBridge {
         proLedgers: [ProInkLedger] = [],
         pkStrokeIds: [[String]] = [],
         growInkFiles: [Bool] = [],
+        inkReconcile: [InkReconcile] = [],
         recordingTitles: [String: String] = [:]
     ) throws -> ExportSummary {
         let fm = FileManager.default
@@ -732,7 +733,10 @@ enum NotebookPackageBridge {
         try bumpOwnOplogNamesIfChanged(old: destination, fresh: fresh, suffix: suffix)
         var deletedDocOps = [String]()
         // 1. 先清掉這台裝置舊的 oplog 與筆畫檔 —— 不清的話新舊會疊加。
-        for relative in relativeFiles(in: destination) where relative.contains(suffix) {
+        // **筆畫檔不動**（ADR-0015）：它是只追加的事件串流，編輯當下就寫進去了。原本這裡連它一起刪掉、
+        // 以目前的快照重建 —— 之前寫下的墓碑全部丟失，別台舊檔一同步回來，擦掉的筆畫就復活。
+        for relative in relativeFiles(in: destination)
+        where relative.contains(suffix) && !relative.hasPrefix("ink/") {
             if relative.hasPrefix("doc/ops/") {
                 deletedDocOps.append(URL(fileURLWithPath: relative).lastPathComponent)
             }
@@ -745,7 +749,7 @@ enum NotebookPackageBridge {
             try? (existing + newLines).write(to: tombstonePath, atomically: true, encoding: .utf8)
         }
         // 2. 再把新的搬過去。blob 與 manifest 缺的才補，不覆蓋既有的。
-        for relative in relativeFiles(in: fresh) {
+        for relative in relativeFiles(in: fresh) where !relative.hasPrefix("ink/") {
             let src = fresh.appending(path: relative)
             let dst = destination.appending(path: relative)
             let isOwn = relative.contains(suffix) || relative == "manifest.json"
@@ -758,6 +762,11 @@ enum NotebookPackageBridge {
             let bytes = try Data(contentsOf: src)
             try bytes.write(to: dst, options: .atomic)
         }
+        // 2b. 筆跡：不重建，只**補上**還沒寫進去的（新增與墓碑），既有記錄一筆都不動。
+        try reconcileOwnInk(
+            at: destination, deviceId: deviceId, pageIds: pageIds ?? [],
+            drawings: drawings, pkStrokeIds: pkStrokeIds, proStrokes: proStrokes,
+            proLedgers: proLedgers, reconcile: inkReconcile)
         // 3. 墓碑只該記「舊的、而且沒有被重新寫出來」的名字。
         //
         // 上面第 1 步把這台舊的 oplog 全刪了、記成墓碑；第 2 步又寫出新的 ——
@@ -1245,7 +1254,243 @@ enum NotebookPackageBridge {
         pinnedIds: [String: String] = [:]
     ) throws {
         guard !strokes.isEmpty else { return }
+        let (session, pageId) = try openForInk(
+            document: document, pageIndex: pageIndex, at: destination, deviceId: deviceId)
 
+        // 用與完整匯出相同的穩定身分。讓核心每次發新 id 的話，同一條線在增量寫入與
+        // 下一次匯出各有一個 id：別台看到的是「舊的不見、新的出現」，對舊 id 寫的墓碑落空，
+        // 而合併回來的筆畫又被當成新寫的再追加一次 —— 套件裡同一組字留下好幾份不同 id 的副本。
+        // 協同收到的筆畫用送出者的 id（`pinnedIds`，見 `CollabInkIds`）。
+        // 已有墓碑的 id 跳過（擦掉後又復原同一筆：同一個 id 會被墓碑蓋住，見 `PKStrokeId.resolve`）。
+        // 寫進過套件的不再寫（見 `PKStrokeId.wasWritten`）：它若有墓碑，可能是別台擦的、這台還沒匯入。
+        // 使用者真的把它加回來（復原擦除）時，由畫布事件以新身分寫入（`reviveInk`）。
+        let added = Set(((try? session.addedStrokeIds(pageId: pageId)) ?? []).map { $0.lowercased() })
+        var seen: [String: Int] = [:]
+        for stroke in strokes {
+            let draft = InkInterop.draft(from: stroke)
+            let key = StrokeDelta.Identity(stroke).key
+            let n = seen[key, default: 0]
+            seen[key] = n + 1
+            if PKStrokeId.wasWritten(key: key, pinned: pinnedIds, added: added) { continue }
+            try session.addStrokeDraftedWithId(
+                pageId: pageId, strokeId: (n == 0 ? pinnedIds[key] : nil) ?? PKStrokeId.make(key: key, n: n, gen: 0),
+                tool: draft.tool,
+                colorRgba: draft.colorRgba, baseWidth: draft.baseWidth,
+                points: draft.points, layer: 0, lineType: 0)
+        }
+    }
+
+    /// 匯出時每一頁要補的筆跡資訊（見 `reconcileOwnInk`）。
+    struct InkReconcile {
+        /// 上一次匯出之後，這台自己擦掉的 PencilKit 筆畫：(內容指紋, 第幾筆)。
+        var erasedOwn: [(key: String, n: Int)] = []
+        /// 協同收到的筆畫要沿用的送出者 id（內容指紋 → id）。
+        var pinned: [String: String] = [:]
+        /// 上一次匯出之後，這台新加的 PencilKit 筆畫（內容指紋 → 筆數）。`nil` = 沒有上次的記錄。
+        var addedOwn: [String: Int]? = nil
+    }
+
+    /// 匯出時把這台的筆跡**補齊**到套件（ADR-0015）：只追加，不重寫、不刪除。
+    ///
+    /// - 墓碑：專業筆畫帳本的退休記錄、別台筆畫的墓碑、上次匯出之後擦掉的自己的 PencilKit 筆畫 ——
+    ///   已經有墓碑的不重寫。編輯當下的事件通常已經寫過了，這裡是保險（套索刪除等不經畫布的動作）。
+    /// - 新增：工作副本裡有、套件裡還看不到的自己的筆畫（內容相同的已經可見就不再加，避免重複）。
+    ///   編輯器的增量寫入失敗、或升級前從沒寫進去的筆畫，在這裡補上。
+    private static func reconcileOwnInk(
+        at destination: URL, deviceId: UInt32, pageIds: [String],
+        drawings: [PKDrawing], pkStrokeIds: [[String]], proStrokes: [[ProStroke]],
+        proLedgers: [ProInkLedger], reconcile: [InkReconcile]
+    ) throws {
+        guard !pageIds.isEmpty else { return }
+        let session = try PadnoteSession.openExisting(path: destination.path, deviceId: deviceId)
+        let present = Set(try Self.pageIds(of: session).map { $0.lowercased() })
+        for (index, pageId) in pageIds.enumerated() where present.contains(pageId.lowercased()) {
+            let added = Set(try session.addedStrokeIds(pageId: pageId).map { $0.lowercased() })
+            var removed = Set(try session.removedStrokeIds(pageId: pageId).map { $0.lowercased() })
+            let plan = index < reconcile.count ? reconcile[index] : InkReconcile()
+
+            // 墓碑
+            var tombstones: [String] = []
+            func tomb(_ id: String) {
+                let id = id.lowercased()
+                guard UUID(uuidString: id) != nil, !removed.contains(id) else { return }
+                removed.insert(id)
+                tombstones.append(id)
+            }
+            if index < proLedgers.count {
+                for retired in proLedgers[index].retired {
+                    tomb(retired.coreId)
+                    retired.extraIds?.forEach(tomb)
+                }
+                proLedgers[index].foreignTombstones.forEach(tomb)
+            }
+            for (key, n) in plan.erasedOwn {
+                // 那一筆寫出去時可能用過的身分：送出者 id、各世代的內容 id。只擦套件裡確實有的。
+                var candidates = (0 ..< 16).map { PKStrokeId.make(key: key, n: n, gen: $0) }
+                if n == 0, let pinned = plan.pinned[key] { candidates.append(pinned) }
+                for id in candidates where added.contains(id.lowercased()) { tomb(id) }
+            }
+            if !tombstones.isEmpty {
+                try session.applyInkEvents(pageId: pageId, removedIds: tombstones, added: [])
+            }
+
+            // 新增：PencilKit
+            if index < drawings.count, !drawings[index].strokes.isEmpty {
+                var visible: [String: Int] = [:]
+                for full in try session.visibleStrokeDetails(pageId: pageId) where !brushIsCustom(tool: full.tool) {
+                    visible[StrokeDelta.Identity(InkInterop.stroke(from: full)).key, default: 0] += 1
+                }
+                let planned = index < pkStrokeIds.count ? pkStrokeIds[index] : []
+                var fresh = plan.addedOwn ?? [:]
+                var written = added
+                var seen: [String: Int] = [:]
+                for (i, stroke) in drawings[index].strokes.enumerated() {
+                    let key = StrokeDelta.Identity(stroke).key
+                    let n = seen[key, default: 0]
+                    seen[key] = n + 1
+                    if let left = visible[key], left > 0 {
+                        visible[key] = left - 1
+                        continue
+                    }
+                    var pinned = plan.pinned
+                    if i < planned.count, n == 0, pinned[key] == nil { pinned[key] = planned[i] }
+                    // 寫過（現在看不見＝有墓碑）：只有確定是上次匯出之後才加回來的，才以新身分再寫一次；
+                    // 否則可能是別台擦掉、這台還沒匯入的 —— 再寫就是把它救活。
+                    if PKStrokeId.wasWritten(key: key, pinned: pinned, added: written) {
+                        guard let left = fresh[key], left > 0 else { continue }
+                        fresh[key] = left - 1
+                    }
+                    let id = PKStrokeId.resolve(key: key, n: n, pinned: pinned, removed: written)
+                    written.insert(id)
+                    let draft = InkInterop.draft(from: stroke)
+                    try session.addStrokeDraftedWithId(
+                        pageId: pageId, strokeId: id, tool: draft.tool,
+                        colorRgba: draft.colorRgba, baseWidth: draft.baseWidth,
+                        points: draft.points, layer: 0, lineType: 0)
+                }
+            }
+            // 新增：專業筆刷（套件 id 由筆畫自己帶著）
+            if index < proStrokes.count {
+                for pro in proStrokes[index] where !added.contains(pro.packageId) {
+                    guard let kind = ProInk.kind(named: pro.tool) else { continue }
+                    try addPro(pro, kind: kind, to: session, page: pageId)
+                }
+            }
+        }
+    }
+
+    /// 使用者擦掉的 PencilKit 筆畫，**擦的當下**寫成墓碑（ADR-0015 I2）。
+    ///
+    /// 以內容指紋到套件裡找它現在的 id（自己的、別台的都一樣），每一筆只擦一個。原本擦除要等匯出時
+    /// 拿快照比對才推論得出 —— 比對基準一錯，套件裡就永遠沒有墓碑，下一次匯入把它帶回來。
+    /// 套件還不存在（從沒寫過）就沒有東西可擦。
+    static func eraseInk(
+        document: NotebookDocument,
+        pageIndex: Int,
+        strokes: [PKStroke],
+        at destination: URL,
+        deviceId: UInt32
+    ) throws {
+        guard !strokes.isEmpty, FileManager.default.fileExists(atPath: destination.path) else { return }
+        let (session, pageId) = try openForInk(
+            document: document, pageIndex: pageIndex, at: destination, deviceId: deviceId,
+            ensureLayout: false)
+        var wanted: [String: Int] = [:]
+        for stroke in strokes { wanted[StrokeDelta.Identity(stroke).key, default: 0] += 1 }
+        var ids: [String] = []
+        for full in try session.visibleStrokeDetails(pageId: pageId) where !brushIsCustom(tool: full.tool) {
+            let key = StrokeDelta.Identity(InkInterop.stroke(from: full)).key
+            guard let left = wanted[key], left > 0 else { continue }
+            wanted[key] = left - 1
+            ids.append(full.id.lowercased())
+        }
+        guard !ids.isEmpty else { return }
+        try session.applyInkEvents(pageId: pageId, removedIds: ids, added: [])
+    }
+
+    /// 使用者在畫布上**加回**的 PencilKit 筆畫（復原擦除、重畫出逐點相同的一筆）。
+    ///
+    /// 套件裡它的身分都已經有墓碑（墓碑永遠優先），要以**新的世代**寫入才看得見。仍然可見的、
+    /// 或從沒寫過的（交給一般的增量寫入）不在這裡處理。只有畫布事件會呼叫這裡 —— 畫布「上一刻沒有、
+    /// 這一刻有」是使用者動作的鐵證；匯出時只憑工作副本推論的話，會把別台擦掉的筆畫救活。
+    static func reviveInk(
+        document: NotebookDocument,
+        pageIndex: Int,
+        strokes: [PKStroke],
+        at destination: URL,
+        deviceId: UInt32
+    ) throws {
+        guard !strokes.isEmpty, FileManager.default.fileExists(atPath: destination.path) else { return }
+        let (session, pageId) = try openForInk(
+            document: document, pageIndex: pageIndex, at: destination, deviceId: deviceId,
+            ensureLayout: false)
+        var added = Set(try session.addedStrokeIds(pageId: pageId).map { $0.lowercased() })
+        let removed = Set(try session.removedStrokeIds(pageId: pageId).map { $0.lowercased() })
+        // 先挑出「身分有墓碑」的（一般落筆都不是，直接結束，不讀整頁筆畫）。
+        let tombstoned = strokes.filter { stroke in
+            PKStrokeId.candidates(key: StrokeDelta.Identity(stroke).key, pinned: [:])
+                .contains { removed.contains($0) }
+        }
+        guard !tombstoned.isEmpty else { return }
+        var visible: [String: Int] = [:]
+        for full in try session.visibleStrokeDetails(pageId: pageId) where !brushIsCustom(tool: full.tool) {
+            visible[StrokeDelta.Identity(InkInterop.stroke(from: full)).key, default: 0] += 1
+        }
+        for stroke in tombstoned {
+            let key = StrokeDelta.Identity(stroke).key
+            if let left = visible[key], left > 0 {
+                visible[key] = left - 1
+                continue
+            }
+            let id = PKStrokeId.resolve(key: key, n: 0, pinned: [:], removed: added)
+            added.insert(id)
+            let draft = InkInterop.draft(from: stroke)
+            try session.addStrokeDraftedWithId(
+                pageId: pageId, strokeId: id, tool: draft.tool,
+                colorRgba: draft.colorRgba, baseWidth: draft.baseWidth,
+                points: draft.points, layer: 0, lineType: 0)
+        }
+    }
+
+    /// 專業筆刷的事件：擦掉 `removedIds`、加入 `added`（各帶自己的套件 id），一次寫進套件（ADR-0015 I2）。
+    /// 搬動、改圖層由呼叫端表達成「舊 id 擦掉＋新 id 加入」。
+    static func applyProInkEvents(
+        document: NotebookDocument,
+        pageIndex: Int,
+        removedIds: [String],
+        added: [ProStroke],
+        at destination: URL,
+        deviceId: UInt32
+    ) throws {
+        guard !removedIds.isEmpty || !added.isEmpty else { return }
+        // 只有擦除、而套件還不存在：沒有東西可擦。
+        if added.isEmpty, !FileManager.default.fileExists(atPath: destination.path) { return }
+        let (session, pageId) = try openForInk(
+            document: document, pageIndex: pageIndex, at: destination, deviceId: deviceId,
+            ensureLayout: !added.isEmpty)
+        if !removedIds.isEmpty {
+            try session.applyInkEvents(pageId: pageId, removedIds: removedIds.map { $0.lowercased() }, added: [])
+        }
+        for pro in added {
+            guard let kind = ProInk.kind(named: pro.tool) else { continue }
+            try addPro(pro, kind: kind, to: session, page: pageId)
+        }
+    }
+
+    /// 打開（必要時建立）套件，回傳這一頁在套件裡的 id。頁面不夠就補、頁序照筆記自己的。
+    ///
+    /// `ensureLayout` 為 false 時（只擦除）不補頁、不寫頁面尺寸與筆記資訊 —— 那些都是文件操作，
+    /// 每擦一下就追加一次的話 oplog 會白白變長。這一頁在套件裡還不存在就回 `noPages`。
+    private static func openForInk(
+        document: NotebookDocument, pageIndex: Int, at destination: URL, deviceId: UInt32,
+        ensureLayout: Bool = true
+    ) throws -> (PadnoteSession, String) {
+        if !ensureLayout {
+            let session = try PadnoteSession.openExisting(path: destination.path, deviceId: deviceId)
+            let ids = Self.orderedLikeDocument(try pageIds(of: session), document: document)
+            guard pageIndex < ids.count else { throw BridgeError.noPages }
+            return (session, ids[pageIndex])
+        }
         let session: PadnoteSession
         if FileManager.default.fileExists(atPath: destination.path) {
             session = try PadnoteSession.openExisting(path: destination.path, deviceId: deviceId)
@@ -1282,23 +1527,7 @@ enum NotebookPackageBridge {
         var meta = NotebookMeta(from: document)
         meta.pageIds = ids
         try session.setNotebookMeta(json: meta.encodedJSON())
-
-        // 用與完整匯出相同的穩定身分（`PKInkSync.plan`）。讓核心每次發新 id 的話，同一條線在增量寫入與
-        // 下一次完整匯出各有一個 id：別台看到的是「舊的不見、新的出現」，對舊 id 寫的墓碑落空，
-        // 而合併回來的筆畫又被當成新寫的再追加一次 —— 套件裡同一組字留下好幾份不同 id 的副本。
-        // 協同收到的筆畫用送出者的 id（`pinnedIds`，見 `CollabInkIds`）。
-        var seen: [String: Int] = [:]
-        for stroke in strokes {
-            let draft = InkInterop.draft(from: stroke)
-            let key = StrokeDelta.Identity(stroke).key
-            let n = seen[key, default: 0]
-            seen[key] = n + 1
-            try session.addStrokeDraftedWithId(
-                pageId: pageId, strokeId: (n == 0 ? pinnedIds[key] : nil) ?? PKStrokeId.make(key: key, n: n, gen: 0),
-                tool: draft.tool,
-                colorRgba: draft.colorRgba, baseWidth: draft.baseWidth,
-                points: draft.points, layer: 0, lineType: 0)
-        }
+        return (session, pageId)
     }
 
     /// 套件的頁面 id 改照筆記自己的頁序排。
