@@ -1314,6 +1314,61 @@ extension NotebookEditorView {
             .transition(.scale(scale: 0.95).combined(with: .opacity))
         }
 
+        // 🌟 展開的討論圖釘詳細對話框（跨單頁與連續模式全域顯示）
+        if let pinId = selectedCommentPinId,
+           let pin = (notebook.commentPins ?? []).first(where: { $0.id == pinId }) {
+            CommentThreadDialog(
+                pin: pin,
+                currentUserId: collaborationManager.currentUserId,
+                currentUserName: AccountManager.shared.profile.displayName,
+                currentUserColor: collaborationManager.myColorHex,
+                onReply: { pId, text in
+                    addCommentReply(pinId: pId, text: text)
+                },
+                onToggleResolve: { pId in
+                    toggleCommentResolve(pinId: pId)
+                },
+                onDelete: { pId in
+                    deleteCommentPin(pinId: pId)
+                },
+                onDeleteMessage: { pId, mId in
+                    deleteCommentMessage(pinId: pId, messageId: mId)
+                },
+                onClose: {
+                    withAnimation {
+                        selectedCommentPinId = nil
+                        collaborationManager.broadcastSelection(selectedId: nil)
+                    }
+                }
+            )
+            .padding(.top, 40)
+            .padding(.trailing, 24)
+            .transition(.scale(scale: 0.95).combined(with: .opacity))
+        }
+
+        // 🌟 放置討論圖釘模式頂部提示條（跨單頁與連續模式全域顯示）
+        if isPlacingCommentPin {
+            HStack(spacing: 8) {
+                Image(systemName: "pin.fill")
+                    .foregroundColor(.orange)
+                Text(localizationManager.localized("tap_to_place_pin"))
+                    .font(.caption)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.primary)
+                Button(action: { isPlacingCommentPin = false }) {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundColor(.secondary)
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 7)
+            .background(.ultraThinMaterial)
+            .cornerRadius(20)
+            .shadow(color: Color.black.opacity(0.12), radius: 5, y: 2)
+            .padding(.top, 14)
+            .frame(maxWidth: .infinity, alignment: .top)
+        }
 
         }
         .environment(\.objectReorder, { id, op in reorderObject(id, op) })

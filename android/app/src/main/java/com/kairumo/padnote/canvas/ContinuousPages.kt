@@ -58,6 +58,24 @@ import com.kairumo.padnote.shape.ShapeLayer
 import com.kairumo.padnote.shape.ShapeStore
 import com.kairumo.padnote.table.TableLayer
 import com.kairumo.padnote.table.TableStore
+import com.kairumo.padnote.audio.AudioLayer
+import com.kairumo.padnote.audio.AudioObject
+import com.kairumo.padnote.comment.CommentLayer
+import com.kairumo.padnote.comment.CommentPin
+import com.kairumo.padnote.model3d.Model3DLayer
+import com.kairumo.padnote.model3d.Model3DObject
+import com.kairumo.padnote.image.LinkLayer
+import com.kairumo.padnote.image.LinkObject
+import com.kairumo.padnote.ui.KairumoIcons
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Surface
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
 import com.kairumo.padnote.chart.ChartObject
 import com.kairumo.padnote.chart.ChartStudio
 import com.kairumo.padnote.image.ImageEditor
@@ -206,7 +224,24 @@ fun ContinuousPagesView(
     /** 貼上卡片型物件（連結卡、3D、錄音卡）時通知外層同步更新。 */
     onMetaObjectsChanged: () -> Unit = {},
     /** 吸附格線：即點即書時文字坐在橫線紙的格線上（對齊 Apple）。 */
-    snapToGrid: Boolean = true
+    snapToGrid: Boolean = true,
+    pins: List<com.kairumo.padnote.comment.CommentPin> = emptyList(),
+    onOpenPin: (com.kairumo.padnote.comment.CommentPin) -> Unit = {},
+    onPinMoved: (com.kairumo.padnote.comment.CommentPin) -> Unit = {},
+    isPlacingCommentPin: Boolean = false,
+    onPlacingCommentPinChange: (Boolean) -> Unit = {},
+    onPlaceCommentPin: (pageIndex: Int, pageOffset: Offset) -> Unit = { _, _ -> },
+    links: List<LinkObject> = emptyList(),
+    models3D: List<com.kairumo.padnote.model3d.Model3DObject> = emptyList(),
+    audioCards: List<AudioObject> = emptyList(),
+    tapes: List<com.kairumo.padnote.canvas.NoteTape> = emptyList(),
+    audioDirectory: java.io.File? = null,
+    onEditModel3D: (com.kairumo.padnote.model3d.Model3DObject) -> Unit = {},
+    onEditLink: (LinkObject) -> Unit = {},
+    playingAudioId: String? = null,
+    onAudioPlayToggle: (AudioObject) -> Unit = {},
+    onRenameAudio: (AudioObject) -> Unit = {},
+    onDeleteAudio: (AudioObject) -> Unit = {}
 ) {
     val listState = rememberLazyListState()
     /** 套索選取屬於哪一頁。只有那一頁畫圈、選取框與工具列，動作也只作用在那一頁的引擎。 */
@@ -816,12 +851,69 @@ fun ContinuousPagesView(
                                 pasteObjectsToPage(objectClipboard, index, point)
                                 onPlacingPasteObjectChange(false)
                             },
-                            onMetaObjectsChanged = onMetaObjectsChanged
+                            onMetaObjectsChanged = onMetaObjectsChanged,
+                            pins = pins,
+                            onOpenPin = onOpenPin,
+                            onPinMoved = onPinMoved,
+                            isPlacingCommentPin = isPlacingCommentPin,
+                            onPlaceCommentPin = onPlaceCommentPin,
+                            links = links,
+                            models3D = models3D,
+                            audioCards = audioCards,
+                            tapes = tapes,
+                            audioDirectory = audioDirectory,
+                            onEditModel3D = onEditModel3D,
+                            onEditLink = onEditLink,
+                            playingAudioId = playingAudioId,
+                            onAudioPlayToggle = onAudioPlayToggle,
+                            onRenameAudio = onRenameAudio,
+                            onDeleteAudio = onDeleteAudio
                         )
                     }
                 }
             }
         }
+        }
+
+        // 放置圖釘模式頂部提示條
+        if (isPlacingCommentPin) {
+            Surface(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = 16.dp)
+                    .zIndex(10_001f),
+                shape = RoundedCornerShape(20.dp),
+                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f),
+                shadowElevation = 6.dp
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        KairumoIcons.PushPin,
+                        contentDescription = null,
+                        tint = Color(0xFFFF9500),
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Text(
+                        com.kairumo.padnote.LocalizationStrings.localized("tap_to_place_pin", com.kairumo.padnote.currentLanguageTag()),
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                    IconButton(
+                        onClick = { onPlacingCommentPinChange(false) },
+                        modifier = Modifier.size(24.dp)
+                    ) {
+                        Icon(
+                            Icons.Filled.Close,
+                            contentDescription = com.kairumo.padnote.LocalizationStrings.localized("cancel", com.kairumo.padnote.currentLanguageTag()),
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                }
+            }
         }
 
         // 畫布物件剪下／複製／貼上浮動工具丸（在手繪與打字模式下皆可使用）。
@@ -976,7 +1068,23 @@ private fun ContinuousPage(
     isPlacingPasteObject: Boolean = false,
     onTapToPaste: (Offset) -> Unit = {},
     onMetaObjectsChanged: () -> Unit = {},
-    snapToGrid: Boolean = true
+    snapToGrid: Boolean = true,
+    pins: List<com.kairumo.padnote.comment.CommentPin> = emptyList(),
+    onOpenPin: (com.kairumo.padnote.comment.CommentPin) -> Unit = {},
+    onPinMoved: (com.kairumo.padnote.comment.CommentPin) -> Unit = {},
+    isPlacingCommentPin: Boolean = false,
+    onPlaceCommentPin: (pageIndex: Int, pageOffset: Offset) -> Unit = { _, _ -> },
+    links: List<LinkObject> = emptyList(),
+    models3D: List<com.kairumo.padnote.model3d.Model3DObject> = emptyList(),
+    audioCards: List<AudioObject> = emptyList(),
+    tapes: List<com.kairumo.padnote.canvas.NoteTape> = emptyList(),
+    audioDirectory: java.io.File? = null,
+    onEditModel3D: (com.kairumo.padnote.model3d.Model3DObject) -> Unit = {},
+    onEditLink: (LinkObject) -> Unit = {},
+    playingAudioId: String? = null,
+    onAudioPlayToggle: (AudioObject) -> Unit = {},
+    onRenameAudio: (AudioObject) -> Unit = {},
+    onDeleteAudio: (AudioObject) -> Unit = {}
 ) {
     val pageId = runtime.pageId
     val historyKey = pageId ?: ""
@@ -1079,6 +1187,12 @@ private fun ContinuousPage(
             selectedId = externalSelectedId
         }
     }
+    val pageContext = androidx.compose.ui.platform.LocalContext.current
+    val pagePins = remember(pins, pageIndex, reloadToken) { pins.filter { it.pageIndex == pageIndex } }
+    val pageLinks = remember(links, pageIndex, reloadToken) { links.filter { it.pageIndex == pageIndex } }
+    val pageModels = remember(models3D, pageIndex, reloadToken) { models3D.filter { it.pageIndex == pageIndex } }
+    val pageAudios = remember(audioCards, pageIndex, reloadToken) { audioCards.filter { it.pageIndex == pageIndex } }
+    val pageTapes = remember(tapes, pageIndex, reloadToken) { tapes.filter { it.pageIndex == pageIndex }.toMutableList() }
     val interactive = editorMode == EditorMode.TYPE || selectedId != null
     var selectedConnectionId by remember(pageId) { mutableStateOf<String?>(null) }
     var connectionDraft by remember(pageId) { mutableStateOf<ConnectionDraft?>(null) }
@@ -1091,13 +1205,16 @@ private fun ContinuousPage(
     /** 正在顯示「解除鎖定」鈕的鎖定物件。 */
     var lockPromptId by remember(pageId) { mutableStateOf<String?>(null) }
     /** 這一頁物件的位置與大小（鎖頭、解除鎖定鈕、點擊判定用），由下到上排。 */
-    val lockFrames = remember(revision, order) {
+    val lockFrames = remember(revision, order, reloadToken) {
         buildList {
             imageStore.all.forEach { add(MarqueeHit(it.id, it.x, it.y, it.width, it.height)) }
             shapeStore.all.forEach { add(MarqueeHit(it.id, it.x, it.y, it.width, it.height)) }
             tableStore.all.forEach { add(MarqueeHit(it.id, it.x, it.y, it.width, it.layout().height.toFloat())) }
             chartStore.all.forEach { add(MarqueeHit(it.id, it.x, it.y, it.width, it.height)) }
             textStore.all.forEach { add(MarqueeHit(it.id, it.x, it.y, it.width, it.height)) }
+            pageModels.forEach { add(MarqueeHit(it.id, it.x, it.y, it.width, it.height)) }
+            pageLinks.forEach { add(MarqueeHit(it.id, it.x, it.y, it.width, it.height)) }
+            pageAudios.forEach { add(MarqueeHit(it.id, it.x, it.y, it.width, it.height)) }
         }.sortedBy { order.indexOf(it.id) }
     }
     val lockFramesLatest by androidx.compose.runtime.rememberUpdatedState(lockFrames)
@@ -1126,6 +1243,10 @@ private fun ContinuousPage(
         tableStore.all.forEach { add(ObjectStacking.Item(it.id, ObjectStacking.Kind.TABLE, "")) }
         chartStore.all.forEach { add(ObjectStacking.Item(it.id, ObjectStacking.Kind.CHART, "")) }
         textStore.all.forEach { add(ObjectStacking.Item(it.id, ObjectStacking.Kind.TEXT, "")) }
+        pageModels.forEach { add(ObjectStacking.Item(it.id, ObjectStacking.Kind.MODEL3D, "")) }
+        pageLinks.forEach { add(ObjectStacking.Item(it.id, ObjectStacking.Kind.LINK, "")) }
+        pageAudios.forEach { add(ObjectStacking.Item(it.id, ObjectStacking.Kind.AUDIO, "")) }
+        pagePins.forEach { add(ObjectStacking.Item(it.id, ObjectStacking.Kind.PIN, "")) }
     }
     val latestItems by androidx.compose.runtime.rememberUpdatedState(currentItems)
     LaunchedEffect(pageId) {
@@ -1243,6 +1364,14 @@ private fun ContinuousPage(
                                 return@detectTapGestures
                             }
                             lockPromptId = null
+                            val hitPin = pagePins.firstOrNull { pin ->
+                                tapX >= (pin.x - 8f) && tapX <= (pin.x + 36f) &&
+                                tapY >= (pin.y - 8f) && tapY <= (pin.y + 36f)
+                            }
+                            if (hitPin != null) {
+                                onOpenPin(hitPin)
+                                return@detectTapGestures
+                            }
                             val hitExisting = textStore.all.firstOrNull { box ->
                                 tapX >= (box.x - 10f) && tapX <= (box.x + box.width + 10f) &&
                                 tapY >= (box.y - 10f) && tapY <= (box.y + box.height + 10f)
@@ -1251,9 +1380,16 @@ private fun ContinuousPage(
                                 updateSelectedId(hitExisting.id)
                                 com.kairumo.padnote.text.InlineTextEditing.activeId = hitExisting.id
                             } else {
-                                // 即點即書（對齊 Apple `insertTextBox(tapToWrite: true)`）：
-                                // 透明、無框、單行高，文字從點下去的地方開始，立刻可以打字。
-                                writeAt(tapX, tapY)
+                                val hitOther = lockFramesLatest.firstOrNull { hit ->
+                                    hit.rect.contains(Offset(tapX, tapY))
+                                }
+                                if (hitOther != null) {
+                                    updateSelectedId(hitOther.id)
+                                } else {
+                                    // 即點即書（對齊 Apple `insertTextBox(tapToWrite: true)`）：
+                                    // 透明、無框、單行高，文字從點下去的地方開始，立刻可以打字。
+                                    writeAt(tapX, tapY)
+                                }
                             }
                         }
                     }
@@ -1479,6 +1615,112 @@ private fun ContinuousPage(
                     }
                 }
             )
+
+            // 遮蔽膠帶覆蓋層
+            com.kairumo.padnote.canvas.MaskingTapeOverlay(
+                pageIndex = pageIndex,
+                isActive = ink.isMaskingTape && editorMode == EditorMode.DRAW,
+                tapeColor = currentInkColor,
+                currentInkHex = String.format("#%02X%02X%02X", (currentInkColor.red * 255).toInt(), (currentInkColor.green * 255).toInt(), (currentInkColor.blue * 255).toInt()),
+                tapes = pageTapes,
+                onTapesChanged = {
+                    val otherPages = meta.tapes().filter { it.pageIndex != pageIndex }
+                    meta.setTapes(session, otherPages + pageTapes)
+                    if (session != null && pageId != null) {
+                        com.kairumo.padnote.canvas.NoteTapeCodec.writeEnvelopes(
+                            session,
+                            pageId,
+                            pageTapes
+                        )
+                    }
+                    onMetaObjectsChanged()
+                    revision++
+                },
+                modifier = Modifier.fillMaxSize().zIndex(260f)
+            )
+
+            // 連結卡片
+            LinkLayer(
+                interactive = interactive,
+                links = pageLinks,
+                density = density,
+                selectedId = if (selectedId != null && pageLinks.any { it.id == selectedId }) selectedId else null,
+                onSelect = { updateSelectedId(it); selectedConnectionId = null },
+                onOpen = { url ->
+                    runCatching {
+                        pageContext.startActivity(
+                            android.content.Intent(
+                                android.content.Intent.ACTION_VIEW,
+                                android.net.Uri.parse(url)
+                            ).apply { addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK) }
+                        )
+                    }
+                },
+                onEdit = onEditLink,
+                onDelete = { target ->
+                    val updated = meta.links().filter { it.id != target.id }
+                    meta.setLinks(session, updated)
+                    onMetaObjectsChanged()
+                    updateSelectedId(null)
+                    revision++
+                },
+                onChanged = { updatedItem ->
+                    val updated = meta.links().map { if (it.id == updatedItem.id) updatedItem else it }
+                    meta.setLinks(session, updated)
+                    onMetaObjectsChanged()
+                    revision++
+                },
+                zIndexOf = zIndexOf
+            )
+
+            // 錄音卡片
+            AudioLayer(
+                interactive = true,
+                items = pageAudios,
+                density = density,
+                audioDirectory = audioDirectory,
+                selectedId = if (selectedId != null && pageAudios.any { it.id == selectedId }) selectedId else null,
+                playingId = playingAudioId,
+                l = { key -> com.kairumo.padnote.LocalizationStrings.localized(key, com.kairumo.padnote.currentLanguageTag()) },
+                onSelect = { updateSelectedId(it); selectedConnectionId = null },
+                onTogglePlay = onAudioPlayToggle,
+                onRename = onRenameAudio,
+                onDelete = onDeleteAudio,
+                onChanged = { updatedCard ->
+                    val updated = meta.audioCards().map { if (it.id == updatedCard.id) updatedCard else it }
+                    meta.setAudioCards(session, updated)
+                    onMetaObjectsChanged()
+                    revision++
+                },
+                zIndexOf = zIndexOf
+            )
+
+            // 3D 模型
+            Model3DLayer(
+                interactive = interactive,
+                models = pageModels,
+                density = density,
+                selectedId = if (selectedId != null && pageModels.any { it.id == selectedId }) selectedId else null,
+                onSelect = { updateSelectedId(it); selectedConnectionId = null },
+                onEdit = onEditModel3D,
+                onChanged = { updatedModel ->
+                    val updated = meta.models3D().map { if (it.id == updatedModel.id) updatedModel else it }
+                    meta.setModels3D(session, updated)
+                    onMetaObjectsChanged()
+                    revision++
+                },
+                zIndexOf = zIndexOf
+            )
+
+            // 討論圖釘
+            CommentLayer(
+                pins = pagePins,
+                pageIndex = pageIndex,
+                interactive = !ink.isMaskingTape && !ink.isTranslationPen && !isPlacingCommentPin && !isPlacingPasteObject,
+                onOpen = onOpenPin,
+                onMoved = onPinMoved,
+                density = density
+            )
         }
 
         // 點選位置貼上：全頁透明攔截層（支援手繪與打字兩種模式，點哪裡就貼在哪一頁的哪個位置）。
@@ -1490,6 +1732,20 @@ private fun ContinuousPage(
                     .pointerInput(pageIndex) {
                         detectTapGestures { offset ->
                             onTapToPaste(Offset(offset.x / density, offset.y / density))
+                        }
+                    }
+            )
+        }
+
+        // 點選位置放置圖釘：全頁透明攔截層
+        if (isPlacingCommentPin) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .zIndex(10_000f)
+                    .pointerInput(pageIndex) {
+                        detectTapGestures { offset ->
+                            onPlaceCommentPin(pageIndex, Offset(offset.x / density, offset.y / density))
                         }
                     }
             )

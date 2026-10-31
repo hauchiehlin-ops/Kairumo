@@ -196,7 +196,8 @@ internal fun ColumnScope.EditorCanvasContainer(ctx: EditorCanvasContext) = with(
                         // 任何一種物件有變動就讓連續模式重讀。逐項接 callback 的話，
                         // 之後新增一種物件很容易忘記接上，而症狀是「插進去看不到」。
                         reloadToken = textRevision + shapeRevision + tableRevision +
-                            chartRevision + imageRevision + model3DRevision + linkRevision + audioRevision,
+                            chartRevision + imageRevision + model3DRevision + linkRevision + audioRevision +
+                            pinRevision + tapeRevision,
                         scrollRequest = continuousScrollRequest,
                         // 套索不限焦點頁：在哪一頁圈就圈哪一頁（與 Apple 連續模式一致）。
                         lasso = if (inkTool.isLasso) continuousLasso else null,
@@ -207,9 +208,59 @@ internal fun ColumnScope.EditorCanvasContainer(ctx: EditorCanvasContext) = with(
                         isPlacingPasteObject = isPlacingPasteObject,
                         snapToGrid = snapToGrid,
                         onPlacingPasteObjectChange = { isPlacingPasteObject = it },
+                        pins = pins,
+                        onOpenPin = { openPin = it },
+                        onPinMoved = { meta.setCommentPins(notebook?.first, pins); pinRevision++ },
+                        isPlacingCommentPin = isPlacingCommentPin,
+                        onPlacingCommentPinChange = { isPlacingCommentPin = it },
+                        onPlaceCommentPin = { targetPageIndex, pageOffset ->
+                            val profile = AccountManager.load(activity, l10n("default_user_name"))
+                            val pin = CommentPin(
+                                id = java.util.UUID.randomUUID().toString(),
+                                pageIndex = targetPageIndex,
+                                x = pageOffset.x,
+                                y = pageOffset.y,
+                                authorId = deviceId(activity).toString(),
+                                authorName = profile.displayName,
+                                authorColor = profile.colorHex,
+                                createdAt = java.util.Date(),
+                                isResolved = false,
+                                messages = mutableListOf()
+                            )
+                            pins = (pins + pin).toMutableList()
+                            meta.setCommentPins(notebook?.first, pins)
+                            pinRevision++
+                            openPin = pin
+                            isPlacingCommentPin = false
+                            editorMode = EditorMode.TYPE
+                        },
+                        links = links,
+                        models3D = models3D,
+                        audioCards = audioCards,
+                        tapes = maskingTapes,
+                        audioDirectory = audioDirectory,
+                        onEditModel3D = { editingModel3D = it },
+                        onEditLink = { editingLink = it },
+                        playingAudioId = playingAudioId,
+                        onAudioPlayToggle = { card ->
+                            val file = audioDirectory?.let { File(it, card.fileName) }
+                            playingAudioId = if (file == null) null else {
+                                AudioPlayback.toggle(card.id, file) { playingAudioId = null }
+                            }
+                        },
+                        onRenameAudio = { renamingAudio = it },
+                        onDeleteAudio = { card ->
+                            if (playingAudioId == card.id) { AudioPlayback.stop(); playingAudioId = null }
+                            audioCards = audioCards.filter { it.id != card.id }.toMutableList()
+                            meta.setAudioCards(notebook?.first, audioCards)
+                            audioRevision++
+                        },
                         onMetaObjectsChanged = {
                             links = meta.links(); models3D = meta.models3D(); audioCards = meta.audioCards()
-                            linkRevision++; model3DRevision++; audioRevision++
+                            pins = meta.commentPins()
+                            maskingTapes.clear()
+                            maskingTapes.addAll(meta.tapes())
+                            linkRevision++; model3DRevision++; audioRevision++; pinRevision++; tapeRevision++
                         },
                         // 長按叫出飛梭工具盤：與整頁模式同一個手勢與條件（見整頁模式的畫布區）。
                         // 原本連續模式完全沒接 —— 長按只會在頁面上留下一個墨點。
@@ -717,6 +768,15 @@ internal fun ColumnScope.EditorCanvasContainer(ctx: EditorCanvasContext) = with(
                                     return@detectTapGestures
                                 }
                                 lockPromptId = null
+                                val hitPin = pins.firstOrNull { pin ->
+                                    pin.pageIndex == pageIndex &&
+                                    tapX >= (pin.x - 8f) && tapX <= (pin.x + 36f) &&
+                                    tapY >= (pin.y - 8f) && tapY <= (pin.y + 36f)
+                                }
+                                if (hitPin != null) {
+                                    openPin = hitPin
+                                    return@detectTapGestures
+                                }
                                 val hitExisting = textStore.all.firstOrNull { box ->
                                     tapX >= (box.x - 10f) && tapX <= (box.x + box.width + 10f) &&
                                     tapY >= (box.y - 10f) && tapY <= (box.y + box.height + 10f)
@@ -1414,7 +1474,7 @@ internal fun ColumnScope.EditorCanvasContainer(ctx: EditorCanvasContext) = with(
                 CommentLayer(
                     pins = pins,
                     pageIndex = pageIndex,
-                    interactive = editorMode == EditorMode.TYPE,
+                    interactive = !inkTool.isLasso && !inkTool.isMaskingTape && !inkTool.isTranslationPen && !isPlacingCommentPin && !isPlacingPasteObject,
                     onOpen = { openPin = it },
                     onMoved = { meta.setCommentPins(notebook?.first, pins); pinRevision++ },
                     density = canvasDensity
@@ -1755,6 +1815,7 @@ internal fun ColumnScope.EditorCanvasContainer(ctx: EditorCanvasContext) = with(
                 Box(
                     modifier = Modifier
                         .matchParentSize()
+                        .zIndex(10_000f)
                         .testTag("editor.comment_pin.placing")
                         .pointerInput(pageIndex) {
                             detectTapGestures { offset ->
@@ -1781,6 +1842,44 @@ internal fun ColumnScope.EditorCanvasContainer(ctx: EditorCanvasContext) = with(
                             }
                         }
                 )
+                // 放置圖釘模式頂部提示條
+                Surface(
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .padding(top = 16.dp)
+                        .zIndex(10_001f),
+                    shape = RoundedCornerShape(20.dp),
+                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f),
+                    shadowElevation = 6.dp
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(
+                            com.kairumo.padnote.ui.KairumoIcons.PushPin,
+                            contentDescription = null,
+                            tint = Color(0xFFFF9500),
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Text(
+                            l10n("tap_to_place_pin"),
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                        IconButton(
+                            onClick = { isPlacingCommentPin = false },
+                            modifier = Modifier.size(24.dp)
+                        ) {
+                            Icon(
+                                Icons.Filled.Close,
+                                contentDescription = l10n("cancel"),
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                    }
+                }
             }
 
         }

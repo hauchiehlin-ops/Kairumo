@@ -6,7 +6,11 @@ import com.kairumo.padnote.ui.rememberDialogHeight
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -82,18 +86,36 @@ fun CommentLayer(
                 .border(2.dp, Color.White, CircleShape)
                 .gesturesIf(interactive) {
                     pointerInput(pin.id) {
-                        detectDragGestures(
-                            onDrag = { change, drag ->
-                                change.consume()
-                                pin.x += drag.x / density
-                                pin.y += drag.y / density
-                            },
-                            onDragEnd = { onMoved(pin) }
-                        )
+                        awaitEachGesture {
+                            val down = awaitFirstDown(requireUnconsumed = false)
+                            var totalDrag = Offset.Zero
+                            val touchSlop = viewConfiguration.touchSlop
+                            var isDragging = false
+                            while (true) {
+                                val event = awaitPointerEvent()
+                                val change = event.changes.firstOrNull { it.id == down.id } ?: break
+                                if (!change.pressed) {
+                                    if (!isDragging) {
+                                        change.consume()
+                                        onOpen(pin)
+                                    } else {
+                                        onMoved(pin)
+                                    }
+                                    break
+                                }
+                                val pan = change.positionChange()
+                                totalDrag += pan
+                                if (!isDragging && totalDrag.getDistance() >= touchSlop) {
+                                    isDragging = true
+                                }
+                                if (isDragging) {
+                                    change.consume()
+                                    pin.x += pan.x / density
+                                    pin.y += pan.y / density
+                                }
+                            }
+                        }
                     }
-                }
-                .gesturesIf(interactive) {
-                    clickable { onOpen(pin) }
                 },
             contentAlignment = Alignment.Center
         ) {

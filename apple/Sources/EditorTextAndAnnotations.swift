@@ -1504,6 +1504,12 @@ extension NotebookEditorView {
                 candidates.append((item.id, "3d", stacking.zIndex(for: item.id, kind: .model3D), rect))
             }
         }
+        if let items = notebook.commentPins {
+            for item in items where item.pageIndex == page {
+                let rect = CGRect(x: item.x - 17, y: item.y - 17, width: 34, height: 34).insetBy(dx: -8, dy: -8)
+                candidates.append((item.id, "pin", stacking.zIndex(for: item.id, kind: .pin), rect))
+            }
+        }
         let hit = candidates.filter { $0.rect.contains(location) }.sorted(by: { $0.z > $1.z })
         if let first = hit.first {
             return (first.id, first.kind)

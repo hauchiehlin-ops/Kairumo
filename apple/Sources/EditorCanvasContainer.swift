@@ -1999,113 +1999,18 @@ extension NotebookEditorView {
                     .zIndex(4)
             }
 
-            // 展開的討論圖釘詳細對話框
-            if let pinId = selectedCommentPinId,
-               let pin = (notebook.commentPins ?? []).first(where: { $0.id == pinId }),
-               pin.pageIndex == currentPageIndex {
-                CommentThreadDialog(
-                    pin: pin,
-                    currentUserId: collaborationManager.currentUserId,
-                    currentUserName: AccountManager.shared.profile.displayName,
-                    currentUserColor: collaborationManager.myColorHex,
-                    onReply: { pId, text in
-                        addCommentReply(pinId: pId, text: text)
-                    },
-                    onToggleResolve: { pId in
-                        toggleCommentResolve(pinId: pId)
-                    },
-                    onDelete: { pId in
-                        deleteCommentPin(pinId: pId)
-                    },
-                    onDeleteMessage: { pId, mId in
-                        deleteCommentMessage(pinId: pId, messageId: mId)
-                    },
-                    onClose: {
-                        withAnimation {
-                            selectedCommentPinId = nil
-                            collaborationManager.broadcastSelection(selectedId: nil)
-                        }
-                    }
-                )
-                .position(
-                    x: min(max(170, pin.x), 650),
-                    y: min(max(150, pin.y - 120), currentPageHeight - 120)
-                )
-                // **與圖釘的點擊層同一個問題**：沒有 zIndex 就預設為 0，
-                // 整個討論串面板都被壓在畫布（1）與物件層（2）底下。
-                // 面板畫得出來，但只要它的按鈕和頁面上的物件重疊，
-                // 點下去就會打到物件 —— 症狀是「收合」與「關閉」按了沒反應，
-                // 而使用者只會覺得這個對話框關不掉。
-                //
-                // 4 在圖釘放置層（3）之上：它是面板，本來就該蓋住一切。
-                .zIndex(4)
-            }
-
-            // 放置討論圖釘模式互動層。
-            //
-            // **`zIndex` 不能省。** 這一層原本沒有設，於是預設為 0 ——
-            // 而畫布是 `.zIndex(1)`、物件層是 `.zIndex(2)`，它就被壓在最底下，
-            // 點擊永遠到不了它。症狀是「加入討論圖釘」按下去之後，橫幅叫你
-            // 點畫布，點下去卻是在畫線（手繪模式）或插入文字游標（打字模式），
-            // 圖釘**一個都放不上去**。這個功能等於完全不能用。
-            //
-            // 2026-09-22 拍操作手冊截圖時發現：橫幅出現了，圖釘卻怎麼點都不出現。
+            // 放置討論圖釘模式互動層（覆蓋單頁畫布攔截點擊，避免手繪留下墨點）
+            // 討論串詳細對話框與頂部提示條已移至 objectEditPanels 支援單頁與連續雙模式。
             if isPlacingCommentPin {
                 GeometryReader { geo in
                     Color.blue.opacity(0.001)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                         .contentShape(Rectangle())
                         .onTapGesture { location in
-                            let newPin = NoteCommentPin(
-                                pageIndex: currentPageIndex,
-                                x: location.x,
-                                y: location.y,
-                                authorId: collaborationManager.currentUserId,
-                                authorName: AccountManager.shared.profile.displayName,
-                                authorColor: collaborationManager.myColorHex,
-                                messages: [
-                                    NoteCommentMessage(
-                                        authorId: collaborationManager.currentUserId,
-                                        authorName: AccountManager.shared.profile.displayName,
-                                        authorColor: collaborationManager.myColorHex,
-                                        text: localizationManager.localized("add_comment_pin")
-                                    )
-                                ]
-                            )
-                            if notebook.commentPins == nil {
-                                notebook.commentPins = []
-                            }
-                            notebook.commentPins?.append(newPin)
-                            commitNotebook()
-                            selectedCommentPinId = newPin.id
-                            isPlacingCommentPin = false
-                            broadcastCommentPinUpsert(newPin)
-                            collaborationManager.broadcastSelection(selectedId: newPin.id)
+                            handleCanvasDirectTap(at: location, page: currentPageIndex)
                         }
                 }
-                .zIndex(3)
-
-                // 放置圖釘模式頂部提示條
-                HStack(spacing: 8) {
-                    Image(systemName: "pin.fill")
-                        .foregroundColor(.orange)
-                    Text(localizationManager.localized("tap_to_place_pin"))
-                        .font(.caption)
-                        .fontWeight(.semibold)
-                        .foregroundColor(.primary)
-                    Button(action: { isPlacingCommentPin = false }) {
-                        Image(systemName: "xmark.circle.fill")
-                            .foregroundColor(.secondary)
-                    }
-                    .buttonStyle(.plain)
-                }
-                .padding(.horizontal, 14)
-                .padding(.vertical, 7)
-                .background(.ultraThinMaterial)
-                .cornerRadius(20)
-                .shadow(color: Color.black.opacity(0.12), radius: 5, y: 2)
-                .padding(.top, 14)
-                .padding(.leading, 20)
+                .zIndex(4)
             }
 
             // 🌟 美學構圖輔助 HUD 疊層（黃金螺旋與三分構圖）

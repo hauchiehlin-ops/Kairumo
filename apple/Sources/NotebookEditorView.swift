@@ -1618,6 +1618,8 @@ public struct NotebookEditorView: View {
             || !selectedObjectIds.isEmpty
             || !selectedShapeIds.isEmpty
             || isPlacingPasteObject
+            || isPlacingCommentPin
+            || selectedCommentPinId != nil
             || lockPromptId != nil
     }
 
