@@ -115,7 +115,6 @@ enum NotebookPackageBridge {
         proStrokes: [[ProStroke]] = [],
         proLedgers: [ProInkLedger] = [],
         pkStrokeIds: [[String]] = [],
-        minInkBytes: [UInt64] = [],
         recordingTitles: [String: String] = [:]
     ) throws -> ExportSummary {
         var pageCount = max(document.pageCount, drawings.count)
@@ -249,10 +248,6 @@ enum NotebookPackageBridge {
                     for id in ledger.foreignTombstones {
                         try session.eraseStroke(pageId: pageId, strokeId: id)
                     }
-                }
-                // 重寫之後的筆畫檔不能比重寫前小：同步只傳「變大」的檔案。
-                if index < minInkBytes.count, minInkBytes[index] > 0 {
-                    try session.padInkTo(pageId: pageId, minBytes: minInkBytes[index])
                 }
 
                 for text in document.textAttachments?.filter({ $0.pageIndex == index }) ?? [] {
@@ -661,7 +656,6 @@ enum NotebookPackageBridge {
         proStrokes: [[ProStroke]] = [],
         proLedgers: [ProInkLedger] = [],
         pkStrokeIds: [[String]] = [],
-        growInkFiles: [Bool] = [],
         inkReconcile: [InkReconcile] = [],
         recordingTitles: [String: String] = [:]
     ) throws -> ExportSummary {
@@ -699,23 +693,11 @@ enum NotebookPackageBridge {
             throw BridgeError.coreRejected(L10n.t("bridge_err_read_other"))
         }
 
-        // 這台每一頁現有的筆畫檔大小。重寫之後不能比它小 —— 同步只傳「變大」的檔案，變小或不變的改動
-        // （擦掉、換身分）別台永遠收不到。`growInkFiles`（每頁一個）：這一頁有改動（擦掉、搬動、換身分、新墓碑）而大小可能一樣，
-        // 要至少多一點才會被傳出去、把雲端舊的檔案換掉。
-        let ownSuffix = deviceSuffix(deviceId)
-        let minInkBytes: [UInt64] = (pageIds ?? []).enumerated().map { (index: Int, pageId: String) -> UInt64 in
-            let path = destination.appending(path: "ink/\(pageId)\(ownSuffix).strokes").path
-            let attributes = try? fm.attributesOfItem(atPath: path)
-            let size = (attributes?[.size] as? NSNumber)?.uint64Value ?? 0
-            guard size > 0 else { return 0 }
-            return size + (index < growInkFiles.count && growInkFiles[index] ? 1 : 0)
-        }
-
         let summary = try export(
             document: document, drawings: drawings, imageData: imageData,
             to: fresh, deviceId: deviceId, pageIds: pageIds,
             skipBlockIds: foreign.ids, proStrokes: proStrokes, proLedgers: proLedgers,
-            pkStrokeIds: pkStrokeIds, minInkBytes: minInkBytes,
+            pkStrokeIds: pkStrokeIds,
             recordingTitles: recordingTitles
         )
 

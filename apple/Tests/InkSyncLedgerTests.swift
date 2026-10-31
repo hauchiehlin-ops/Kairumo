@@ -212,6 +212,39 @@ final class InkSyncLedgerTests: XCTestCase {
             .drawings.first?.strokes.count, 2, "同一筆被加了兩份")
     }
 
+    @MainActor
+    func testEditorEditsOnlyEraseStrokesTheUserCouldSee() throws {
+        // 編輯器的副本可能已經含有別台剛同步進來、畫布還沒顯示的筆畫。套索刪掉選取範圍時，
+        // 只有畫布上看得到的那幾筆可以寫成墓碑 —— 否則別台的筆畫會被這台「擦掉」。
+        let dir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("kairumo-sink-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let package = dir.appendingPathComponent("p.padnote")
+        let doc = NotebookDocument(title: "S", pageCount: 1)
+        let device: UInt32 = 0x1A1A
+        let seen = stroke(at: 20), unseen = stroke(at: 220)
+        let ids = [seen, unseen].map { PKStrokeId.make(key: StrokeDelta.Identity($0).key, n: 0, gen: 0) }
+        try NotebookPackageBridge.export(
+            document: doc, drawings: [PKDrawing(strokes: [seen, unseen])], to: package, deviceId: device,
+            pkStrokeIds: [ids])
+
+        InkEventSink.register(
+            notebookId: doc.id, document: { doc }, package: package, baselineDirectory: dir,
+            deviceId: device, queue: NotebookEditorView.coreInkQueue)
+        defer { InkEventSink.unregister(notebookId: doc.id) }
+        InkEventSink.sink(for: doc.id)?.editorEdited(
+            page: 0, before: PKDrawing(strokes: [seen, unseen]), after: PKDrawing(),
+            shown: PKDrawing(strokes: [seen]))
+        NotebookEditorView.coreInkQueue.sync {}
+
+        let imported = try NotebookPackageBridge.importDocument(fromPackageAt: package, deviceId: 0x1B1B)
+        XCTAssertEqual(imported.drawings.first?.strokes.count, 1, "使用者沒看到的筆畫被寫了墓碑")
+        XCTAssertEqual(
+            imported.drawings.first.map { StrokeDelta.Identity($0.strokes[0]).key },
+            StrokeDelta.Identity(unseen).key)
+    }
+
     // MARK: 清理
 
     func testCompactDropsLegacyRetiredStrokeDataAndKeepsForeignTombstones() throws {
