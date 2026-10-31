@@ -19,15 +19,23 @@ class ImageStore(
     private val images = LinkedHashMap<String, NoteImage>()
     /** 解碼後的點陣圖快取。每次重繪都解一次的話，捲動會卡到不能用。 */
     private val bitmaps = HashMap<String, ImageBitmap>()
+    private val rawBitmaps = HashMap<String, android.graphics.Bitmap>()
 
     val all: List<NoteImage> get() = images.values.toList()
 
-    fun bitmap(image: NoteImage): ImageBitmap? {
-        bitmaps[image.blobId]?.let { return it }
+    fun rawBitmap(image: NoteImage): android.graphics.Bitmap? {
+        rawBitmaps[image.blobId]?.let { return it }
         val s = session ?: return null
         val bytes = runCatching { s.blobBytes(image.blobId) }.getOrNull() ?: return null
         val bmp = runCatching { BitmapFactory.decodeByteArray(bytes, 0, bytes.size) }
             .getOrNull() ?: return null
+        rawBitmaps[image.blobId] = bmp
+        return bmp
+    }
+
+    fun bitmap(image: NoteImage): ImageBitmap? {
+        bitmaps[image.blobId]?.let { return it }
+        val bmp = rawBitmap(image) ?: return null
         val out = bmp.asImageBitmap()
         bitmaps[image.blobId] = out
         return out

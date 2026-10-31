@@ -585,6 +585,7 @@ private fun InkScreen(
         onToolChange = { t -> ctx.applyInkTool(t) },
         onColorChange = { c -> ctx.inkColorHex = c },
         onWidthChange = { w -> ctx.inkWidth = w },
+        onOpenProColors = { ctx.showProColors = true },
         onOpenColorWheel = { ctx.showProColorWheel = true },
         onAddTextBox = {
             val box = ctx.textStore.createBoxed(200f, 200f, ctx.textStore.pageRules(ctx.meta.paperId(ctx.pageIndex)), ctx.snapToGrid)
@@ -612,6 +613,7 @@ private fun InkScreen(
             hiddenTools = com.kairumo.padnote.ui.ToolbarSettings.hiddenIdentifiers,
             canUndo = true,
             canRedo = true,
+            hasOpenMark = openMarkId != null,
             isPlacingCommentPin = isPlacingCommentPin,
             pageIndex = pageIndex,
             pageCount = pageCount,

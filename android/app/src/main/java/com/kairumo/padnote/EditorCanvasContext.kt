@@ -271,6 +271,10 @@ internal class EditorCanvasContext {
     var pinRevision: Int
         get() = pinRevisionState.intValue
         set(v) { pinRevisionState.intValue = v }
+    lateinit var tapeRevisionState: MutableIntState
+    var tapeRevision: Int
+        get() = tapeRevisionState.intValue
+        set(v) { tapeRevisionState.intValue = v }
     lateinit var openPinState: MutableState<CommentPin?>
     var openPin: CommentPin?
         get() = openPinState.value
@@ -952,6 +956,8 @@ internal fun rememberEditorCanvasContext(
     val insertingTableState = remember { mutableStateOf(false) }
     var insertingTable by insertingTableState
     val maskingTapes = remember { mutableStateListOf<com.kairumo.padnote.canvas.NoteTape>() }
+    val tapeRevisionState = remember { mutableIntStateOf(0) }
+    var tapeRevision by tapeRevisionState
     LaunchedEffect(notebook, pageId, pageDisplayMode) {
         if (pageDisplayMode == PageDisplayMode.CONTINUOUS) return@LaunchedEffect
         tableStore.load(); tableRevision++
@@ -2205,6 +2211,8 @@ internal fun rememberEditorCanvasContext(
         links = links.map { it.copy() },
         models3D = models3D.map { it.copy() },
         audio = audioCards.map { it.copy() },
+        tapes = maskingTapes.map { it.clone() },
+        pins = pins.map { it.copy(messages = it.messages.toMutableList()) },
         order = meta.objectOrder(pageIndex)
     )
     val isRestoringHistoryState = remember { mutableStateOf(false) }
@@ -2229,13 +2237,39 @@ internal fun rememberEditorCanvasContext(
                 audioCards = snapshot.audio.map { it.copy() }.toMutableList()
                 meta.setAudioCards(notebook?.first, audioCards)
             }
+            if (maskingTapes != snapshot.tapes) {
+                maskingTapes.clear()
+                maskingTapes.addAll(snapshot.tapes.map { it.clone() })
+                val session = notebook?.first
+                if (session != null) {
+                    val metaObj = com.kairumo.padnote.library.NotebookMeta.load(session)
+                    val otherPages = metaObj.tapes().filter { it.pageIndex != pageIndex }
+                    metaObj.setTapes(session, otherPages + maskingTapes)
+                    pageId?.let {
+                        com.kairumo.padnote.canvas.NoteTapeCodec.writeEnvelopes(
+                            session, it, maskingTapes.filter { t -> t.pageIndex == pageIndex }
+                        )
+                    }
+                }
+                tapeRevision++
+            }
+            if (pins != snapshot.pins) {
+                pins.clear()
+                pins.addAll(snapshot.pins.map { it.copy(messages = it.messages.toMutableList()) })
+                val session = notebook?.first
+                if (session != null) {
+                    com.kairumo.padnote.library.NotebookMeta.load(session).setCommentPins(session, pins)
+                }
+                pinRevision++
+            }
             if (meta.objectOrder(pageIndex) != snapshot.order) {
                 meta.setObjectOrder(notebook?.first, pageIndex, snapshot.order)
             }
             // 指向已經不存在的物件的選取要清掉，否則工具列與把手對著一個空殼。
             val alive = (snapshot.texts.map { it.id } + snapshot.images.map { it.id } + snapshot.shapes.map { it.id } +
                 snapshot.connections.map { it.id } + snapshot.tables.map { it.id } + snapshot.charts.map { it.id } +
-                snapshot.links.map { it.id } + snapshot.models3D.map { it.id } + snapshot.audio.map { it.id }).toSet()
+                snapshot.links.map { it.id } + snapshot.models3D.map { it.id } + snapshot.audio.map { it.id } +
+                snapshot.tapes.map { it.id } + snapshot.pins.map { it.id }).toSet()
             if (selectedTextId != null && selectedTextId !in alive) selectText(null)
             if (editingText != null && editingText?.id !in alive) editingText = null
             if (selectedImageId != null && selectedImageId !in alive) selectImage(null)
@@ -2248,7 +2282,7 @@ internal fun rememberEditorCanvasContext(
             selectedShapeIds = selectedShapeIds.filter { it in alive }.toSet()
             marqueeSelection = marqueeSelection.filter { it in alive }.toSet()
             textRevision++; imageRevision++; shapeRevision++; tableRevision++; chartRevision++
-            linkRevision++; model3DRevision++; audioRevision++; stackRevision++
+            linkRevision++; model3DRevision++; audioRevision++; tapeRevision++; pinRevision++; stackRevision++
         }
     }
     fun globalUndo() {
@@ -2282,7 +2316,8 @@ internal fun rememberEditorCanvasContext(
     // 物件有動就比對一次（各型別寫回之後都會遞增自己的 revision）。
     LaunchedEffect(
         canvasHistory, textRevision, imageRevision, shapeRevision, tableRevision, chartRevision,
-        stackRevision, linkRevision, model3DRevision, audioRevision, links, models3D, audioCards
+        stackRevision, linkRevision, model3DRevision, audioRevision, tapeRevision, pinRevision,
+        links, models3D, audioCards, maskingTapes, pins
     ) {
         if (isRestoringHistory || canvasHistory.isSuppressing) {
             isRestoringHistory = false
@@ -3099,6 +3134,7 @@ internal fun rememberEditorCanvasContext(
     ctx.chartStore = chartStore
     ctx.tableStore = tableStore
     ctx.maskingTapes = maskingTapes
+    ctx.tapeRevisionState = tapeRevisionState
     ctx.contextualState = contextualState
     ctx.effectiveToolbarMode = effectiveToolbarMode
     ctx.meta = meta

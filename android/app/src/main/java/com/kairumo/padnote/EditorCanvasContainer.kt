@@ -952,6 +952,7 @@ internal fun ColumnScope.EditorCanvasContainer(ctx: EditorCanvasContext) = with(
                         }
                         AutoSync.noteLocalEdit(activity)
                     }
+                    tapeRevision++
                     revision++
                 },
                 modifier = Modifier.fillMaxSize().zIndex(150f)
@@ -968,6 +969,7 @@ internal fun ColumnScope.EditorCanvasContainer(ctx: EditorCanvasContext) = with(
                 textStore = textStore,
                 tableStore = tableStore,
                 shapeStore = shapeStore,
+                imageStore = imageStore,
                 links = links,
                 maskingTapes = maskingTapes,
                 pins = pins,
@@ -1568,6 +1570,7 @@ internal fun ColumnScope.EditorCanvasContainer(ctx: EditorCanvasContext) = with(
                                 inkWidth = value
                                 engine.baseWidth = value
                             },
+                            onOpenProColors = { showProColors = true },
                             onOpenColorWheel = { showProColorWheel = true }
                         )
                     }
