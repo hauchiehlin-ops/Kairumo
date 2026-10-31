@@ -727,6 +727,8 @@ private fun InkScreen(
             onAiSummary = { showNoteIntelligence = true },
             onThemeTools = { showThemeTools = true },
             onCustomizeToolbar = { showToolbarCustomization = true },
+            onPenSettings = { showPenSettings = true },
+            onPalmSettings = { showPalmThresholds = true },
             onInsertStickers = { showStickerLibrary = true },
             onInsertImage = {
                 photoPicker.launch(androidx.activity.result.PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
