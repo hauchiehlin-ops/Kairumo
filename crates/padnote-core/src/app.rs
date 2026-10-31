@@ -1481,6 +1481,34 @@ impl NotebookSession {
         Ok(materialize(&self.package.read_ink(page)?))
     }
 
+    /// 一個使用者動作產生的筆跡事件，**一次追加**（ADR-0015 I2）：先擦、再加。
+    ///
+    /// 搬動、改顏色、改圖層、套索刪除都是「擦掉舊 id、以新 id 加入」—— 不改寫既有記錄。
+    /// 新增的筆畫保留呼叫端給的 id（平台端在落筆當下就發好，撤銷刪除時也要用新 id）；
+    /// 時間戳由核心填入。
+    pub fn apply_ink_events(
+        &mut self,
+        page: Uuid,
+        removed: &[Uuid],
+        added: Vec<Stroke>,
+    ) -> Result<(), AppError> {
+        if self.notebook.page(page).is_none() {
+            return Err(AppError::PageNotFound(page));
+        }
+        let mut records: Vec<InkRecord> = removed.iter().map(|id| InkRecord::Remove(*id)).collect();
+        for mut stroke in added {
+            stroke.started_at = self.now;
+            records.push(InkRecord::Add(stroke));
+        }
+        self.package.append_ink(page, &records)?;
+        Ok(())
+    }
+
+    /// 這一頁筆跡的版本號（見 `NotebookPackage::ink_version`）。
+    pub fn ink_version(&self, page: Uuid) -> u64 {
+        self.package.ink_version(page)
+    }
+
     /// 這一頁**所有裝置的筆畫檔裡出現過 `Add` 的**筆畫 id（包含已被擦掉的）。
     ///
     /// 平台端清理自己寫的墓碑用：某個 id 在任何檔案裡都沒有 `Add` 了（原作者重寫了檔案、
@@ -1541,8 +1569,13 @@ impl NotebookSession {
         let mut shifted_count = 0u32;
 
         // 1. 處理手寫筆畫（Strokes）
+        //
+        // 搬動＝**擦掉舊的、以新 id 加入新的**，追加在本裝置自己的檔案（ADR-0015 I2／I3）。
+        // 原本整頁重寫成本裝置的檔案、刪掉別台的檔案，而且搬過的筆畫沿用舊 id：別台的檔案一同步回來，
+        // 同一個 id 有兩個 `Add`，`materialize` 取到哪一個看檔名排序 —— 有時是搬之前的位置，
+        // 而且被擦掉的筆畫也一起復活（重寫時墓碑全丟了）。
         let strokes = self.visible_strokes(page)?;
-        let mut new_records = Vec::with_capacity(strokes.len());
+        let mut records = Vec::new();
         for mut stroke in strokes {
             // 判斷筆畫是否有任一點或中心落在 at_y 之下
             let min_y = stroke
@@ -1551,14 +1584,16 @@ impl NotebookSession {
                 .map(|p| p.y)
                 .fold(f32::INFINITY, f32::min);
             if min_y >= at_y {
+                records.push(InkRecord::Remove(stroke.id));
                 for pt in &mut stroke.points {
                     pt.y += amount_y;
                 }
+                stroke.id = Uuid::now_v7();
+                records.push(InkRecord::Add(stroke));
                 shifted_count += 1;
             }
-            new_records.push(InkRecord::Add(stroke));
         }
-        self.package.rewrite_ink_page(page, &new_records)?;
+        self.package.append_ink(page, &records)?;
 
         // 2. 處理頁面上定位區塊（文字方塊、圖片等）
         let blocks_to_shift: Vec<(Uuid, f32, f32)> = self

@@ -123,7 +123,7 @@ iPad 卻以 PencilKit 的 `PKDrawing` 為主，核心只是「匯出目標」。
 | 階段 | 內容 | 驗收 |
 |---|---|---|
 | 0（本輪已做） | 止血：刪除在編輯當下記錄、合併不清基準線、匯入濾掉未匯出的墓碑、縮圖以版本號為鍵、匯入後重讀記憶體副本 | 下方「本輪修正」 |
-| 1 | 核心 `InkLog` API：事件、materialize、revision、訂閱；兩平台呼叫同一組 FFI | 核心單元測試：任意事件順序收斂、墓碑優先、冪等 |
+| 1（已做） | 核心事件 API（`apply_ink_events`）、版本號（`ink_version`）；移除違反不變式的整頁重寫與筆跡壓實 | 核心不變式測試：3 台裝置 × 20 組亂數種子收斂且零復活；維護後同步不復活；版本號 |
 | 2 | Apple 編輯路徑改寫事件（PencilKit 側表 id、專業筆刷），畫布與縮圖讀 revision | UI 測試：寫／擦／復原後畫布＝縮圖＝重開後內容 |
 | 3 | 同步改為事件區塊；舊套件匯入一次轉成事件 | 多裝置模擬：3 台隨機寫擦 1000 次後內容一致、零復活 |
 | 4 | 移除舊副本與帳本檔、清理遷移程式 | 檔案清單只剩 InkLog 與快取 |
@@ -145,6 +145,34 @@ iPad 卻以 PencilKit 的 `PKDrawing` 為主，核心只是「匯出目標」。
   遷移期間需要相容層（新版同時寫舊格式一個版本週期）。
 - 風險：PencilKit 側表 id 在極端情況（系統改寫筆畫、複製貼上）可能對不上 —— 對不上時視為
   「刪除舊 id＋新增新 id」，結果仍正確，只是事件多一筆；第 5 階段後此風險消失。
+
+## 第 1 階段的發現與實作（2026-10-31）
+
+盤點後確認：核心早已是 ADR-0002 的事件串流 —— 每頁每台裝置一個 append-only 檔
+（`ink/<page>-<device>.strokes`），`Add`／`Remove`，`materialize` 墓碑優先、與順序無關；
+Android 直接寫它。所以第 1 階段不是「新建 InkLog」，而是**補齊 API、拿掉核心裡違反不變式的兩處**：
+
+- **筆跡壓實會讓擦掉的筆跡復活（兩個平台）。** `optimize_storage` 把一頁所有裝置的記錄
+  materialize 後寫回本裝置的檔案、**丟掉全部墓碑、刪掉別台的檔案**。iPad 的 `StorageJanitor`
+  每天自動跑、Android 的維護也會呼叫。之後任何一台的檔案同步回來，被擦掉的筆畫就沒有墓碑擋著 ——
+  這是「擦掉過一陣子又出現」在兩個平台都會發生的核心層原因。→ **停用筆跡壓實**；回收要等第 3 階段
+  有各裝置游標之後才能安全地做。
+- **插入垂直空白整頁重寫，並刪除別台的檔案。** 搬過的筆畫沿用舊 id，別台檔案同步回來後同一個 id
+  有兩個 `Add`，取到哪個看檔名排序；被擦掉的筆畫也一起復活。→ 改為「擦掉舊 id＋以新 id 加入」，
+  只追加在自己的檔案。`rewrite_ink_page` 已移除，核心裡不再有任何會刪除別台檔案或丟掉墓碑的路徑。
+- **新 API**：`PadnoteSession.apply_ink_events(page, removedIds, added)`（一個動作的事件一次追加）、
+  `PadnoteSession.ink_version(page)`（所有裝置筆畫檔的指紋；任何新增、擦除、同步進來都會改變）。
+
+### 第 2 階段的具體做法（下一步）
+
+1. Apple 編輯路徑在 `recordDrawingEdit` 當下（本輪已有的 `recordErasures` 位置）算出事件，
+   在寫入佇列上呼叫 `apply_ink_events`：擦掉的 → 其套件 id 的墓碑；新增的 → 以穩定 id 加入。
+   PencilKit 筆畫的套件 id 先沿用現在的內容 id／`CollabInkIds` 對照（`PKStrokeId`），
+   日後換成建立時發的 UUIDv7。
+2. 匯出不再整份重建本裝置的筆畫檔（`exportPreservingOtherDevices` 刪除本裝置舊檔再寫新檔的那段）：
+   筆畫已經在編輯當下寫進去了，匯出只處理文件 oplog 與附件。`PKInkSync.plan`、`ErasedInkLedger`、
+   `PKInkSnapshotStore`、專業筆畫帳本的退休／墓碑邏輯隨之退場。
+3. 畫布與縮圖改讀 `ink_version`，`PageInkStore` 只剩「記憶體快取」角色。
 
 ## 本輪修正（階段 0，已實作）
 

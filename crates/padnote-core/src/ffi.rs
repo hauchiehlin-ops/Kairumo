@@ -1076,6 +1076,47 @@ impl PadnoteSession {
         Ok(())
     }
 
+    /// 一個使用者動作的筆跡事件，一次追加：先擦 `removed_ids`、再加 `added`（ADR-0015 I2）。
+    ///
+    /// 搬動、改色、改圖層一律是「擦掉舊 id＋以新 id 加入」，`added` 的 id 由呼叫端在動作發生時發好
+    /// （UUID，建議 v7）；`started_at_us` 會被核心改成目前時間軸。
+    pub fn apply_ink_events(
+        &self,
+        page_id: String,
+        removed_ids: Vec<String>,
+        added: Vec<FullStroke>,
+    ) -> Result<(), FfiError> {
+        let page = parse_uuid(&page_id)?;
+        let removed = removed_ids
+            .iter()
+            .map(|id| parse_uuid(id))
+            .collect::<Result<Vec<_>, _>>()?;
+        let strokes = added
+            .into_iter()
+            .map(|s| {
+                Ok(Stroke {
+                    id: parse_uuid(&s.id)?,
+                    started_at: NotebookTime::ZERO,
+                    tool: s.tool.into(),
+                    color_rgba8: to_rgba(&s.color_rgba),
+                    base_width: s.base_width,
+                    points: s.points.into_iter().map(to_ink_point).collect(),
+                    layer: s.layer,
+                    line_type: s.line_type,
+                })
+            })
+            .collect::<Result<Vec<_>, FfiError>>()?;
+        self.lock().apply_ink_events(page, &removed, strokes)?;
+        Ok(())
+    }
+
+    /// 這一頁筆跡的版本號：任何一台裝置對這一頁的新增或擦除（含同步進來的）都會讓它改變。
+    /// 畫布、縮圖以它判斷要不要重畫（ADR-0015 I4）。
+    pub fn ink_version(&self, page_id: String) -> Result<u64, FfiError> {
+        let page = parse_uuid(&page_id)?;
+        Ok(self.lock().ink_version(page))
+    }
+
     /// 智慧閉合向量填色（ColorDrop / Smart Fill）：
     /// 在指定的頁面與種子點嘗試偵測封閉輪廓並自動填入填色多邊形筆跡。
     /// 回傳新筆畫的 id（若未封閉或超出範圍則回傳 None）。
@@ -4038,15 +4079,27 @@ mod tests {
         let shifted = s.insert_vertical_space(page.clone(), 150.0, 80.0).unwrap();
         assert_eq!(shifted, 2, "下方筆畫與文字區塊應各被移動 1 次");
 
-        // 檢查筆畫：上方 y 仍為 50，下方 y 變為 280
+        // 檢查筆畫：上方 y 仍為 50（id 不變），下方 y 變為 280。
+        // 搬動是「擦掉舊 id、以新 id 加入」（ADR-0015）：下方那一筆換了身分，舊 id 不再出現。
         let visible = s.visible_strokes(page.clone()).unwrap();
-        for stroke in visible {
-            if stroke.id == stroke_top {
-                assert!((stroke.bounds[1] - 49.0).abs() < 1e-3);
-            } else if stroke.id == stroke_bottom {
-                assert!((stroke.bounds[1] - 279.0).abs() < 1e-3);
-            }
-        }
+        assert_eq!(visible.len(), 2, "搬動不能讓筆畫變多或變少");
+        let top = visible
+            .iter()
+            .find(|v| v.id == stroke_top)
+            .expect("上方筆畫沒動，id 不變");
+        assert!((top.bounds[1] - 49.0).abs() < 1e-3);
+        assert!(
+            visible.iter().all(|v| v.id != stroke_bottom),
+            "搬過的筆畫要換新 id"
+        );
+        let moved = visible.iter().find(|v| v.id != stroke_top).unwrap();
+        assert!((moved.bounds[1] - 279.0).abs() < 1e-3);
+        assert!(
+            s.removed_stroke_ids(page.clone())
+                .unwrap()
+                .contains(&stroke_bottom),
+            "舊 id 要留下墓碑，別台的舊檔同步回來時才不會把搬之前的位置帶回來"
+        );
     }
 }
 
