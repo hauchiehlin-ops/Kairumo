@@ -283,7 +283,6 @@ import uniffi.padnote_core.collabGenerateRoomKey
 import uniffi.padnote_core.coreVersion
 import uniffi.padnote_core.PadnoteSession
 import uniffi.padnote_core.RelayServer
-import java.util.Locale
 import com.kairumo.padnote.profile.ProfileContext
 
 /**
@@ -845,14 +844,9 @@ internal fun deviceLanguageTag(): String {
     // 這台也要跟著變（ADR-0011）。反過來的話，同步過來的設定永遠不生效，
     // 使用者會覺得「同步根本沒在動」。
     syncedLanguageOverride?.let { return it }
-    val locale = Locale.getDefault()
-    return when (locale.language) {
-        "zh" -> if (locale.script == "Hans" || locale.country in setOf("CN", "SG")) "zh-Hans" else "zh-Hant"
-        "ja" -> "ja"
-        "ko" -> "ko"
-        "th" -> "th"
-        else -> "en"
-    }
+    // 使用者沒選過語言（全新安裝）：一律英文，不跟系統語系。與 Apple 端（`LocalizationManager` 的預設 `.en`）一致 ——
+    // 跟系統語系的話，兩個平台全新安裝時的介面語言會不一樣。使用者在首頁「語言」選過之後就照選的。
+    return "en"
 }
 
 /**

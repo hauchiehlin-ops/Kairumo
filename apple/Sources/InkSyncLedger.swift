@@ -404,13 +404,35 @@ final class InkEventSink {
     /// 同步進來的別台筆畫在落筆中會先進記憶體、抬筆後才換上畫布，拿記憶體副本比對的話，
     /// 那些使用者根本還沒看到的筆畫會被當成「這台擦掉的」寫出墓碑 —— 別台也跟著消失。
     func canvasEdited(page: Int, before: PKDrawing, after: PKDrawing) {
+        edited(page: page, before: before, after: after, shown: nil)
+    }
+
+    /// 編輯器自己做的動作（套索刪除、搬動、剪下、跨頁搬移…）：`before` 是編輯器的副本，
+    /// `shown` 是那一頁畫布上一刻顯示的內容。**只有 `shown` 裡有的筆畫才算被擦掉** ——
+    /// 編輯器的副本可能已經含有使用者還沒看到的別台筆畫（理由同 `canvasEdited`）。
+    func editorEdited(page: Int, before: PKDrawing, after: PKDrawing, shown: PKDrawing) {
+        edited(page: page, before: before, after: after, shown: shown)
+    }
+
+    private func edited(page: Int, before: PKDrawing, after: PKDrawing, shown: PKDrawing?) {
         guard before != after else { return }
         let doc = document()
         let (package, directory, deviceId) = (self.package, baselineDirectory, self.deviceId)
         nonisolated(unsafe) let old = before
         nonisolated(unsafe) let new = after
+        nonisolated(unsafe) let visible = shown
         queue.async {
-            let removed = StrokeDelta.removed(in: new, since: old)
+            var removed = StrokeDelta.removed(in: new, since: old)
+            if let visible {
+                var onScreen: [String: Int] = [:]
+                for stroke in visible.strokes { onScreen[StrokeDelta.Identity(stroke).key, default: 0] += 1 }
+                removed = removed.filter { stroke in
+                    let key = StrokeDelta.Identity(stroke).key
+                    guard let left = onScreen[key], left > 0 else { return false }
+                    onScreen[key] = left - 1
+                    return true
+                }
+            }
             let added = StrokeDelta.added(in: new, since: old)
             ErasedInkLedger.record(removed: removed, added: added, in: directory, notebookId: doc.id, page: page)
             do {
@@ -419,10 +441,17 @@ final class InkEventSink {
                 // 加回來的（復原擦除）：套件裡它已經有墓碑，要以新身分寫才看得見。
                 try NotebookPackageBridge.reviveInk(
                     document: doc, pageIndex: page, strokes: added, at: package, deviceId: deviceId)
+                if !removed.isEmpty { Self.announce() }
             } catch {
                 SyncLogger.logAsync("擦除寫入套件失敗（第 \(page + 1) 頁）：\(error)", source: .general)
             }
         }
+    }
+
+    /// 事件寫進套件**之後**才通知焦點通道把它推上雲端（先通知的話可能推到還沒寫完的檔案）。
+    /// 擦除原本要等下一次落筆或整庫同步才被推出去。
+    private nonisolated static func announce() {
+        DispatchQueue.main.async { FocusSyncController.shared.noteLocalEdit() }
     }
 
     /// 專業筆刷的一次動作：擦掉 `removedIds`、加入 `added`。
@@ -435,6 +464,7 @@ final class InkEventSink {
                 try NotebookPackageBridge.applyProInkEvents(
                     document: doc, pageIndex: page, removedIds: removedIds, added: added,
                     at: package, deviceId: deviceId)
+                Self.announce()
             } catch {
                 SyncLogger.logAsync("專業筆畫寫入套件失敗（第 \(page + 1) 頁）：\(error)", source: .general)
             }

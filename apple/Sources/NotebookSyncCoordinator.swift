@@ -1617,7 +1617,6 @@ enum NotebookSyncCoordinator {
         var exportLedgers = ledgers
         var proExtra: [[String: [String]]] = Array(repeating: [:], count: pageCount)
         var prunedForeign: [Set<String>] = Array(repeating: [], count: pageCount)
-        var grow: [Bool] = Array(repeating: false, count: pageCount)
         var reconcile = Array(repeating: NotebookPackageBridge.InkReconcile(), count: pageCount)
         for page in 0 ..< pageCount {
             let snapshot = snapshots[page]
@@ -1628,7 +1627,6 @@ enum NotebookSyncCoordinator {
                 reconcile[page].erasedOwn = PKStrokeId.erasedOwn(previous: previous, now: snapshot.own)
                 reconcile[page].addedOwn = PKStrokeId.addedOwn(previous: previous, now: snapshot.own)
             }
-            let hasInk = !snapshot.current.strokes.isEmpty || !pro[page].isEmpty || !ledger.isEmpty
             let added = resolver.addedIds(page: page)
             let plan = PKInkSync.plan(
                 ledger: ledger, ownNow: snapshot.own,
@@ -1660,10 +1658,6 @@ enum NotebookSyncCoordinator {
                 }
                 exportLedgers[page].retired.removeAll { prunedForeign[page].contains($0.coreId) }
             }
-            // 這一頁的筆畫檔要「變大」才會被傳出去：升級後第一次、自己擦掉／搬動／換身分、有新的墓碑。
-            let newTombstone = plan.foreignTombstones.contains { !ledger.foreignTombstones.contains($0) }
-            grow[page] = (ledger.schema < 2 && hasInk) || plan.grow || newTombstone
-                || ledger.retired.contains { !$0.exported }
         }
         // 錄音的名字要**一起**交給匯出：漏傳的話套件裡永遠沒有 `rectitle` 區塊，
         // 別台只看得到掃描時取的預設名稱（單元測試直接呼叫橋接層、有帶這個參數，所以測不出來）。
@@ -1675,7 +1669,7 @@ enum NotebookSyncCoordinator {
         try NotebookPackageBridge.exportPreservingOtherDevices(
             document: document, drawings: drawings, imageData: images,
             to: inputs.package, deviceId: inputs.deviceId, proStrokes: pro, proLedgers: exportLedgers,
-            pkStrokeIds: plans.map(\.ids), growInkFiles: grow, inkReconcile: reconcile,
+            pkStrokeIds: plans.map(\.ids), inkReconcile: reconcile,
             recordingTitles: titles
         )
         for page in 0 ..< pageCount {

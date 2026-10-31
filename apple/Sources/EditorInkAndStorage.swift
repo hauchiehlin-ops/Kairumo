@@ -941,6 +941,17 @@ extension NotebookEditorView {
         return activeInkStore.drawing(for: page, pageId: pid)
     }
 
+    /// 這一頁的畫布**上一刻真正顯示**的筆跡（畫布與綁定上次講好的那一份）。這一頁沒有畫布就是 `nil`。
+    func shownDrawing(page: Int) -> PKDrawing? {
+        let canvas: PKCanvasView?
+        if pageDisplayMode == .single {
+            canvas = page == currentPageIndex && canvasShowsCurrentPage ? canvasView : nil
+        } else {
+            canvas = continuousCanvases[page]
+        }
+        return (canvas?.delegate as? CanvasRepresentable.Coordinator)?.lastSyncedDrawing
+    }
+
     func inkRevisionForPage(_ page: Int) -> Int {
         let pid = (notebook.pageIds != nil && page < (notebook.pageIds?.count ?? 0)) ? notebook.pageIds?[page] : nil
         return activeInkStore.revision(for: page, pageId: pid)
@@ -955,6 +966,12 @@ extension NotebookEditorView {
             currentDrawing = drawing
         }
         let pid = (notebook.pageIds != nil && page < (notebook.pageIds?.count ?? 0)) ? notebook.pageIds?[page] : nil
+        // 編輯器自己的動作（套索、跨頁搬移…）也在當下寫成事件（ADR-0015 I2）。來自畫布的編輯已經由畫布寫過
+        // （那時畫布的「上一刻顯示」已更新成這一份，這裡比對不出擦除，不會重複）。
+        if let shown = shownDrawing(page: page), let sink = InkEventSink.sink(for: notebook.id) {
+            sink.editorEdited(
+                page: page, before: activeInkStore.drawing(for: page, pageId: pid), after: drawing, shown: shown)
+        }
         activeInkStore.updateDrawing(drawing, for: page, pageId: pid)
         activeInkStore.markPendingCoreFlush(for: page, pageId: pid)
         continuousCanvases.setCachedDrawing(drawing, forPage: page)

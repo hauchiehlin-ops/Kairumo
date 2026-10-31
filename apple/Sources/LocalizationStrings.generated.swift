@@ -24951,6 +24951,22 @@ extension LocalizationManager {
             .ko: "단어 카드",
             .th: "การ์ดคำศัพท์"
         ],
+        "trans_pen_lang_hint_body": [
+            .zhHant: "之後若要更改掃描語系或輸出語系，請點翻譯筆上方的語系按鈕（例如「EN → 中」）。在應用程式重新啟動前，不會再出現此設定視窗。",
+            .en: "To change the scan or output language later, tap the language pill at the top of the Translation Pen (for example “EN → FR”). You won’t be asked again until the app is restarted.",
+            .zhHans: "之后若要更改扫描语系或输出语系，请点翻译笔上方的语系按钮（例如「EN → 中」）。在应用程序重新启动前，不会再出现此设定窗口。",
+            .ja: "あとでスキャン言語や出力言語を変更するには、翻訳ペン上部の言語ボタン（例：「EN → 中」）をタップしてください。アプリを再起動するまで、この確認は表示されません。",
+            .ko: "나중에 스캔 언어나 출력 언어를 바꾸려면 번역 펜 상단의 언어 버튼(예: “EN → 한국어”)을 누르세요. 앱을 다시 시작하기 전까지는 다시 묻지 않습니다.",
+            .th: "หากต้องการเปลี่ยนภาษาที่สแกนหรือภาษาที่แปลภายหลัง ให้แตะปุ่มภาษาที่ด้านบนของปากกาแปล (เช่น “EN → ไทย”) ระบบจะไม่ถามอีกจนกว่าจะเปิดแอปใหม่"
+        ],
+        "trans_pen_lang_hint_title": [
+            .zhHant: "翻譯語系已設定",
+            .en: "Translation language set",
+            .zhHans: "翻译语系已设定",
+            .ja: "翻訳言語を設定しました",
+            .ko: "번역 언어가 설정되었습니다",
+            .th: "ตั้งค่าภาษาแปลแล้ว"
+        ],
         "trans_pen_lookup_dict": [
             .zhHant: "系統字典",
             .en: "Dictionary",
