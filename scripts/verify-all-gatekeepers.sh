@@ -42,6 +42,7 @@ run_check "狀態唯一正門（換工具、切模式、切頁面嚴禁繞過）
 echo ""
 echo "── [Layer 2] 筆跡單一真相與不變式矩陣（ADR-0015）──"
 run_check "Rust 核心與筆跡引擎單元測試（740+ 項不變式）" cargo test -p padnote-core -p padnote-ink
+run_check "彈性邊界守門（性質不變式與可調手感參數分離）" python3 "${REPO_ROOT}/scripts/check-tunable-invariants.py"
 run_check "介面字串產生檔與 catalog 一致性" python3 "${REPO_ROOT}/scripts/i18n_tool.py" verify
 run_check "名詞規範與詞彙表一致性" python3 "${REPO_ROOT}/scripts/check-glossary.py"
 
