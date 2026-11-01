@@ -1042,6 +1042,7 @@ enum ProInkDabCache {
         }
     }
 
+    // orphan-ok: ProInkDabCache 背景預熱輔助函式，提供大量專業筆畫在進入視口前非同步載入記憶體
     static func prewarm(strokes: [ProStroke], onComplete: (() -> Void)? = nil) {
         guard !strokes.isEmpty else { return }
         DispatchQueue.global(qos: .userInitiated).async {
