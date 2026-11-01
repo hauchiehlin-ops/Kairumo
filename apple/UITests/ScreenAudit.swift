@@ -562,8 +562,7 @@ func openSeedNotebook(
     file: StaticString = #filePath, line: UInt = #line
 ) -> Bool {
     let seedCardId = "home.notebooks.card.seed-welcome-notebook-v1"
-    let editorMore = app.descendants(matching: .any)
-        .matching(identifier: "editor.more").firstMatch
+    let editorMore = app.buttons["editor.more"]
     if editorMore.exists {
         if editorMore.isHittable {
             return true
@@ -576,11 +575,9 @@ func openSeedNotebook(
 
     let homeAction = app.buttons["home.action.new_note"]
     let homeTitle = app.staticTexts["home.title"]
-    let homeMarker = app.descendants(matching: .any)
-        .matching(NSPredicate(format: "identifier IN {'home.action.new_note', 'home.diagnostics', 'home.title', 'home.docs.manual', 'home.notebooks.card.seed-welcome-notebook-v1'}"))
-        .firstMatch
+    let seedCard = app.buttons[seedCardId]
 
-    let homeLoaded = homeAction.waitForExistence(timeout: 2) || homeTitle.waitForExistence(timeout: 2) || homeMarker.waitForExistence(timeout: 45)
+    let homeLoaded = homeAction.waitForExistence(timeout: 25) || homeTitle.waitForExistence(timeout: 5) || seedCard.waitForExistence(timeout: 5) || editorMore.waitForExistence(timeout: 5)
     guard homeLoaded else {
         // 若編輯器在等待期間已直接呈現（例如自動開啟或重連）
         if editorMore.exists && editorMore.isHittable {
@@ -590,11 +587,14 @@ func openSeedNotebook(
         return false
     }
 
+    if editorMore.exists && editorMore.isHittable {
+        return true
+    }
+
     // 每次捲動後重建 query：LazyVGrid 會回收畫面外的節點，保留舊 snapshot
     // 可能讓 exists/isHittable 一直停在捲動前的值。
     for attempt in 0..<12 {
-        let card = app.descendants(matching: .any)
-            .matching(identifier: seedCardId).firstMatch
+        let card = app.buttons[seedCardId].exists ? app.buttons[seedCardId] : app.descendants(matching: .any).matching(identifier: seedCardId).firstMatch
         if card.exists && card.isHittable {
             card.tap()
             let entered = NSPredicate(format: "exists == true AND isHittable == true")

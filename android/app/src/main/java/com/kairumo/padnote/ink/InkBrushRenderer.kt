@@ -9,7 +9,9 @@ import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.drawscope.rotate
+import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.geometry.Size
 import uniffi.padnote_core.FfiDab
 import uniffi.padnote_core.StrokePoint
@@ -472,79 +474,85 @@ object InkBrushRenderer {
     fun drawDabs(drawScope: DrawScope, dabs: List<FfiDab>, baseColor: Color, density: Float) =
         drawDabsOnDrawScope(drawScope, dabs, baseColor, density)
 
+    private val dabPaint = Paint().apply {
+        isAntiAlias = true
+        style = Paint.Style.FILL
+    }
+    private val dabOval = android.graphics.RectF()
+
     private fun drawDabsOnDrawScope(
         drawScope: DrawScope,
         dabs: List<FfiDab>,
         baseColor: Color,
         density: Float
     ) {
+        if (dabs.isEmpty()) return
+        drawScope.drawIntoCanvas { canvas ->
+            drawDabsOnNativeCanvas(canvas.nativeCanvas, dabs, baseColor, density)
+        }
+    }
+
+    private fun drawDabsOnNativeCanvas(
+        canvas: Canvas,
+        dabs: List<FfiDab>,
+        baseColor: Color,
+        pxPerDp: Float
+    ) {
+        val baseR = baseColor.red
+        val baseG = baseColor.green
+        val baseB = baseColor.blue
+        val baseAlpha = baseColor.alpha
+        val oval = dabOval
+        val paint = dabPaint
+
         for (dab in dabs) {
-            val color = Color(
-                red = shade(baseColor.red, dab.shade),
-                green = shade(baseColor.green, dab.shade),
-                blue = shade(baseColor.blue, dab.shade)
-            )
-            val cx = dab.x * density
-            val cy = dab.y * density
-            val rx = dab.rx * density
-            val ry = dab.ry * density
-            val alpha = dab.alpha * baseColor.alpha
-            drawScope.rotate(Math.toDegrees(dab.angle.toDouble()).toFloat(), Offset(cx, cy)) {
-                if (dab.softness > 0.5f) {
-                    for (step in 0 until SOFT_LAYERS) {
-                        val f = 1f - step * 0.22f
-                        drawOval(
-                            color = color.copy(alpha = alpha * 0.34f),
-                            topLeft = Offset(cx - rx * f, cy - ry * f),
-                            size = Size(rx * f * 2f, ry * f * 2f)
-                        )
-                    }
-                } else {
-                    drawOval(
-                        color = color.copy(alpha = alpha),
-                        topLeft = Offset(cx - rx, cy - ry),
-                        size = Size(rx * 2f, ry * 2f)
-                    )
-                }
+            val r = (shade(baseR, dab.shade) * 255f + 0.5f).toInt().coerceIn(0, 255)
+            val g = (shade(baseG, dab.shade) * 255f + 0.5f).toInt().coerceIn(0, 255)
+            val b = (shade(baseB, dab.shade) * 255f + 0.5f).toInt().coerceIn(0, 255)
+            val cx = dab.x * pxPerDp
+            val cy = dab.y * pxPerDp
+            val rx = dab.rx * pxPerDp
+            val ry = dab.ry * pxPerDp
+            val isRotated = abs(dab.angle) > 0.05f && abs(rx - ry) > 0.2f
+            if (isRotated) {
+                canvas.save()
+                canvas.rotate(Math.toDegrees(dab.angle.toDouble()).toFloat(), cx, cy)
+            }
+            if (dab.softness > 0.5f) {
+                val alpha = (dab.alpha * baseAlpha * 255f).toInt().coerceIn(0, 255)
+                paint.color = android.graphics.Color.argb((alpha * 0.45f).toInt(), r, g, b)
+                oval.set(cx - rx, cy - ry, cx + rx, cy + ry)
+                canvas.drawOval(oval, paint)
+                val f = 0.65f
+                paint.color = android.graphics.Color.argb((alpha * 0.55f).toInt(), r, g, b)
+                oval.set(cx - rx * f, cy - ry * f, cx + rx * f, cy + ry * f)
+                canvas.drawOval(oval, paint)
+            } else {
+                paint.color = android.graphics.Color.argb(
+                    (dab.alpha * baseAlpha * 255f + 0.5f).toInt().coerceIn(0, 255),
+                    r, g, b
+                )
+                oval.set(cx - rx, cy - ry, cx + rx, cy + ry)
+                canvas.drawOval(oval, paint)
+            }
+            if (isRotated) {
+                canvas.restore()
             }
         }
     }
 
     private fun drawDabsOnCanvas(canvas: Canvas, paint: Paint, dabs: List<FfiDab>, pxPerDp: Float) {
+        if (dabs.isEmpty()) return
         val origColor = paint.color
         val origAlpha = paint.alpha
         val origStyle = paint.style
-        paint.style = Paint.Style.FILL
-        val baseR = android.graphics.Color.red(origColor) / 255f
-        val baseG = android.graphics.Color.green(origColor) / 255f
-        val baseB = android.graphics.Color.blue(origColor) / 255f
-        val oval = android.graphics.RectF()
-        for (dab in dabs) {
-            paint.color = android.graphics.Color.rgb(
-                (shade(baseR, dab.shade) * 255f + 0.5f).toInt().coerceIn(0, 255),
-                (shade(baseG, dab.shade) * 255f + 0.5f).toInt().coerceIn(0, 255),
-                (shade(baseB, dab.shade) * 255f + 0.5f).toInt().coerceIn(0, 255)
-            )
-            val cx = dab.x * pxPerDp
-            val cy = dab.y * pxPerDp
-            val rx = dab.rx * pxPerDp
-            val ry = dab.ry * pxPerDp
-            canvas.save()
-            canvas.rotate(Math.toDegrees(dab.angle.toDouble()).toFloat(), cx, cy)
-            if (dab.softness > 0.5f) {
-                for (step in 0 until SOFT_LAYERS) {
-                    val f = 1f - step * 0.22f
-                    paint.alpha = (origAlpha * dab.alpha * 0.34f).toInt().coerceIn(0, 255)
-                    oval.set(cx - rx * f, cy - ry * f, cx + rx * f, cy + ry * f)
-                    canvas.drawOval(oval, paint)
-                }
-            } else {
-                paint.alpha = (origAlpha * dab.alpha).toInt().coerceIn(0, 255)
-                oval.set(cx - rx, cy - ry, cx + rx, cy + ry)
-                canvas.drawOval(oval, paint)
-            }
-            canvas.restore()
-        }
+        val color = Color(
+            red = android.graphics.Color.red(origColor) / 255f,
+            green = android.graphics.Color.green(origColor) / 255f,
+            blue = android.graphics.Color.blue(origColor) / 255f,
+            alpha = origAlpha / 255f
+        )
+        drawDabsOnNativeCanvas(canvas, dabs, color, pxPerDp)
         paint.color = origColor
         paint.alpha = origAlpha
         paint.style = origStyle

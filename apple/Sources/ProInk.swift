@@ -663,56 +663,46 @@ enum ProInkRenderer {
             let b = base.b + (target - base.b) * k
             let alpha = CGFloat(dab.alpha) * strokeAlpha
 
-            ctx.saveGState()
-            ctx.translateBy(x: CGFloat(dab.x), y: CGFloat(dab.y))
-            ctx.rotate(by: CGFloat(dab.angle))
+            let angle = CGFloat(dab.angle)
+            let isRotated = abs(angle) > 0.05 && abs(rx - ry) > 0.2
 
-            if needsGrain, let grain = grainCGImage {
-                // 炭筆／蠟筆：套用底層紙張孔隙遮罩
-                ctx.clip(to: CGRect(x: -rx, y: -ry, width: rx * 2, height: ry * 2), mask: grain)
-            }
+            if isRotated {
+                ctx.saveGState()
+                ctx.translateBy(x: CGFloat(dab.x), y: CGFloat(dab.y))
+                ctx.rotate(by: angle)
 
-            if dab.softness > 0.3 {
-                // Stamp 筆刷紋理引擎：高斯漸層柔邊印章（Gaussian Stamp）
-                // 快取相同 RGBA 的 CGGradient，避免在 120Hz/240Hz 筆點迴圈內重複配置 CGColorSpace 與 CGGradient。
-                let qr = UInt32(max(0, min(255, (r * 255).rounded())))
-                let qg = UInt32(max(0, min(255, (g * 255).rounded())))
-                let qb = UInt32(max(0, min(255, (b * 255).rounded())))
-                let qa = UInt32(max(0, min(255, (alpha * 255).rounded())))
-                let gradKey = (qr << 24) | (qg << 16) | (qb << 8) | qa
-                let gradient: CGGradient?
-                if gradKey == lastGradientKey, let existing = lastGradient {
-                    gradient = existing
-                } else {
-                    let colors = [
-                        UIColor(red: r, green: g, blue: b, alpha: alpha).cgColor,
-                        UIColor(red: r, green: g, blue: b, alpha: alpha * 0.55).cgColor,
-                        UIColor(red: r, green: g, blue: b, alpha: 0.0).cgColor,
-                    ] as CFArray
-                    let created = CGGradient(colorsSpace: sRGBSpace, colors: colors, locations: softGradientLocations)
-                    lastGradientKey = gradKey
-                    lastGradient = created
-                    gradient = created
+                if needsGrain, let grain = grainCGImage {
+                    ctx.clip(to: CGRect(x: -rx, y: -ry, width: rx * 2, height: ry * 2), mask: grain)
                 }
-                if let gradient {
-                    ctx.scaleBy(x: 1.0, y: ry / max(rx, 0.001))
-                    ctx.drawRadialGradient(
-                        gradient,
-                        startCenter: .zero,
-                        startRadius: 0,
-                        endCenter: .zero,
-                        endRadius: rx,
-                        options: .drawsAfterEndLocation
-                    )
+
+                if dab.softness > 0.3 {
+                    ctx.setFillColor(red: r, green: g, blue: b, alpha: alpha * 0.45)
+                    ctx.fillEllipse(in: CGRect(x: -rx, y: -ry, width: rx * 2, height: ry * 2))
+                    ctx.setFillColor(red: r, green: g, blue: b, alpha: alpha * 0.55)
+                    ctx.fillEllipse(in: CGRect(x: -rx * 0.65, y: -ry * 0.65, width: rx * 1.3, height: ry * 1.3))
                 } else {
                     ctx.setFillColor(red: r, green: g, blue: b, alpha: alpha)
                     ctx.fillEllipse(in: CGRect(x: -rx, y: -ry, width: rx * 2, height: ry * 2))
                 }
+                ctx.restoreGState()
             } else {
-                ctx.setFillColor(red: r, green: g, blue: b, alpha: alpha)
-                ctx.fillEllipse(in: CGRect(x: -rx, y: -ry, width: rx * 2, height: ry * 2))
+                let rect = CGRect(x: CGFloat(dab.x) - rx, y: CGFloat(dab.y) - ry, width: rx * 2, height: ry * 2)
+                if needsGrain, let grain = grainCGImage {
+                    ctx.saveGState()
+                    ctx.clip(to: rect, mask: grain)
+                    ctx.setFillColor(red: r, green: g, blue: b, alpha: alpha)
+                    ctx.fillEllipse(in: rect)
+                    ctx.restoreGState()
+                } else if dab.softness > 0.3 {
+                    ctx.setFillColor(red: r, green: g, blue: b, alpha: alpha * 0.45)
+                    ctx.fillEllipse(in: rect)
+                    ctx.setFillColor(red: r, green: g, blue: b, alpha: alpha * 0.55)
+                    ctx.fillEllipse(in: CGRect(x: CGFloat(dab.x) - rx * 0.65, y: CGFloat(dab.y) - ry * 0.65, width: rx * 1.3, height: ry * 1.3))
+                } else {
+                    ctx.setFillColor(red: r, green: g, blue: b, alpha: alpha)
+                    ctx.fillEllipse(in: rect)
+                }
             }
-            ctx.restoreGState()
         }
     }
 }
@@ -823,10 +813,11 @@ final class ProInkLayerView: UIView {
         isOpaque = false
         backgroundColor = .clear
         isUserInteractionEnabled = false
-        // 必須保持非同步繪製（drawsAsynchronously = true）：
-        // 自繪圖層包含頁面上所有筆劃（含柔邊高斯印章與紋理），當筆跡較多或 App 切換至背景進行 scene-update 縮圖快照時，
-        // 若在主執行緒同步光柵化會耗時數秒乃至超過 10 秒，觸發 iOS Watchdog 0x8BADF00D (scene-update timeout) 強殺。
-        layer.drawsAsynchronously = true
+        // 禁用非同步繪製（drawsAsynchronously = false）：
+        // drawsAsynchronously 會導致 CoreAnimation 在主執行緒 CATransaction::commit 中
+        // 透過 dispatch_sync 同步等待 CA::CG::Queue，而 PencilKit 背景佇列（draw-previews）
+        // 同時向主執行緒 dispatch_sync，造成兩端互鎖並引發 Watchdog 0x8BADF00D 強殺。
+        layer.drawsAsynchronously = false
         liveOverlayView.frame = bounds
         liveOverlayView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
         addSubview(liveOverlayView)
