@@ -303,6 +303,8 @@ class MainActivity : FragmentActivity() {
         // 使用者會看到介面閃一下才變過去。
         applySyncedLanguage(this)
         com.kairumo.padnote.platform.StartupLogger.logKey("log_language_applied", deviceLanguageTag())
+        // profile-scope: profile 綁定目前設定檔快取目錄至筆刷印章點陣快取
+        com.kairumo.padnote.ink.InkBrushRenderer.initDiskCache(ProfileContext.cacheDir(applicationContext))
         // 自動清理暫存、過期殘檔與期滿的回收桶（背景執行緒，不拖慢第一幀）。
         Thread {
             runCatching { com.kairumo.padnote.platform.StorageSweeper.sweepAtLaunch(applicationContext) }

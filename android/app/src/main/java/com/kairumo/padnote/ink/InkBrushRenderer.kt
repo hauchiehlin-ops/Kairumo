@@ -9,7 +9,9 @@ import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.drawscope.rotate
+import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.geometry.Size
 import uniffi.padnote_core.FfiDab
 import uniffi.padnote_core.StrokePoint
@@ -194,8 +196,26 @@ object InkBrushRenderer {
     private fun avgWidth(segments: List<SegmentSpec>) = segments.sumOf { it.width.toDouble() }.toFloat() / segments.size
     private fun avgAlpha(segments: List<SegmentSpec>) = segments.sumOf { it.alpha.toDouble() }.toFloat() / segments.size
 
+    private fun computePointsHash(points: List<StrokePoint>): Long {
+        if (points.isEmpty()) return 0L
+        var h = 0xcbf29ce484222325uL
+        val size = points.size
+        h = (h xor size.toULong()) * 0x100000001b3uL
+        val step = maxOf(1, size / 16)
+        for (i in 0 until size step step) {
+            val p = points[i]
+            h = (h xor p.x.toBits().toULong()) * 0x100000001b3uL
+            h = (h xor p.y.toBits().toULong()) * 0x100000001b3uL
+            h = (h xor p.pressure.toBits().toULong()) * 0x100000001b3uL
+        }
+        val last = points.last()
+        h = (h xor last.x.toBits().toULong()) * 0x100000001b3uL
+        h = (h xor last.y.toBits().toULong()) * 0x100000001b3uL
+        return h.toLong()
+    }
+
     private data class DabCacheKey(
-        val pointsIdentity: Int,
+        val contentHash: Long,
         val size: Int,
         val firstX: Float,
         val lastX: Float,
@@ -206,7 +226,7 @@ object InkBrushRenderer {
     )
 
     private data class SegmentCacheKey(
-        val pointsIdentity: Int,
+        val contentHash: Long,
         val size: Int,
         val firstX: Float,
         val lastX: Float,
@@ -216,8 +236,85 @@ object InkBrushRenderer {
         val density: Float
     )
 
-    private val dabsCache = android.util.LruCache<DabCacheKey, List<FfiDab>>(512)
-    private val segmentsCache = android.util.LruCache<SegmentCacheKey, List<SegmentSpec>>(512)
+    private val dabsCache = android.util.LruCache<DabCacheKey, List<FfiDab>>(2048)
+    private val segmentsCache = android.util.LruCache<SegmentCacheKey, List<SegmentSpec>>(2048)
+    @Volatile
+    private var diskCacheDir: java.io.File? = null
+
+    // profile-scope: profile 綁定目前使用中設定檔的快取目錄
+    fun initDiskCache(baseCacheDir: java.io.File) {
+        val dir = java.io.File(baseCacheDir, "dab_cache")
+        if (!dir.exists()) {
+            dir.mkdirs()
+        }
+        diskCacheDir = dir
+    }
+
+    private fun diskFileName(key: DabCacheKey): String =
+        "%016x_%s_%.2f_%d.dab".format(key.contentHash, key.tool.name, key.baseWidth, key.lineType)
+
+    private fun readDiskDabs(fileName: String): List<FfiDab>? {
+        val dir = diskCacheDir ?: return null
+        val file = java.io.File(dir, fileName)
+        if (!file.exists() || file.length() < 8) return null
+        return runCatching {
+            val bytes = file.readBytes()
+            val buf = java.nio.ByteBuffer.wrap(bytes).order(java.nio.ByteOrder.LITTLE_ENDIAN)
+            if (buf.int != 0x31424144) return null // "DAB1"
+            val count = buf.int
+            if (bytes.size != 8 + count * 32) return null
+            val dabs = ArrayList<FfiDab>(count)
+            for (i in 0 until count) {
+                dabs.add(
+                    FfiDab(
+                        x = buf.float,
+                        y = buf.float,
+                        rx = buf.float,
+                        ry = buf.float,
+                        angle = buf.float,
+                        alpha = buf.float,
+                        softness = buf.float,
+                        shade = buf.float
+                    )
+                )
+            }
+            dabs
+        }.getOrNull()
+    }
+
+    private fun writeDiskDabsAsync(fileName: String, dabs: List<FfiDab>) {
+        val dir = diskCacheDir ?: return
+        java.util.concurrent.ForkJoinPool.commonPool().execute {
+            runCatching {
+                val file = java.io.File(dir, fileName)
+                val buf = java.nio.ByteBuffer.allocate(8 + dabs.size * 32).order(java.nio.ByteOrder.LITTLE_ENDIAN)
+                buf.putInt(0x31424144) // "DAB1"
+                buf.putInt(dabs.size)
+                for (d in dabs) {
+                    buf.putFloat(d.x)
+                    buf.putFloat(d.y)
+                    buf.putFloat(d.rx)
+                    buf.putFloat(d.ry)
+                    buf.putFloat(d.angle)
+                    buf.putFloat(d.alpha)
+                    buf.putFloat(d.softness)
+                    buf.putFloat(d.shade)
+                }
+                val tmp = java.io.File(dir, "$fileName.tmp")
+                tmp.writeBytes(buf.array())
+                tmp.renameTo(file)
+            }
+        }
+    }
+
+    fun prewarmDabs(
+        points: List<StrokePoint>,
+        tool: ToolKind,
+        baseWidth: Float,
+        lineType: Int
+    ) {
+        cachedDabs(points, tool, baseWidth, lineType, useCache = true)
+    }
 
     private fun cachedDabs(
         points: List<StrokePoint>,
@@ -234,8 +331,9 @@ object InkBrushRenderer {
                 brushDabs(tool, baseWidth, points)
             }
         }
+        val hash = computePointsHash(points)
         val key = DabCacheKey(
-            pointsIdentity = System.identityHashCode(points),
+            contentHash = hash,
             size = points.size,
             firstX = points.first().x,
             lastX = points.last().x,
@@ -247,6 +345,14 @@ object InkBrushRenderer {
         synchronized(dabsCache) {
             dabsCache.get(key)?.let { return it }
         }
+        val fileName = diskFileName(key)
+        val diskHit = readDiskDabs(fileName)
+        if (diskHit != null) {
+            synchronized(dabsCache) {
+                dabsCache.put(key, diskHit)
+            }
+            return diskHit
+        }
         val computed = if (lineType != 0) {
             uniffi.padnote_core.brushDabsStyled(tool, baseWidth, points, lineType.toUByte())
         } else {
@@ -255,6 +361,7 @@ object InkBrushRenderer {
         synchronized(dabsCache) {
             dabsCache.put(key, computed)
         }
+        writeDiskDabsAsync(fileName, computed)
         return computed
     }
 
@@ -267,8 +374,9 @@ object InkBrushRenderer {
     ): List<SegmentSpec> {
         if (points.size < 2) return emptyList()
         if (!useCache) return computeSegments(points, tool, baseWidth, density)
+        val hash = computePointsHash(points)
         val key = SegmentCacheKey(
-            pointsIdentity = System.identityHashCode(points),
+            contentHash = hash,
             size = points.size,
             firstX = points.first().x,
             lastX = points.last().x,
@@ -472,79 +580,85 @@ object InkBrushRenderer {
     fun drawDabs(drawScope: DrawScope, dabs: List<FfiDab>, baseColor: Color, density: Float) =
         drawDabsOnDrawScope(drawScope, dabs, baseColor, density)
 
+    private val dabPaint = Paint().apply {
+        isAntiAlias = true
+        style = Paint.Style.FILL
+    }
+    private val dabOval = android.graphics.RectF()
+
     private fun drawDabsOnDrawScope(
         drawScope: DrawScope,
         dabs: List<FfiDab>,
         baseColor: Color,
         density: Float
     ) {
+        if (dabs.isEmpty()) return
+        drawScope.drawIntoCanvas { canvas ->
+            drawDabsOnNativeCanvas(canvas.nativeCanvas, dabs, baseColor, density)
+        }
+    }
+
+    private fun drawDabsOnNativeCanvas(
+        canvas: Canvas,
+        dabs: List<FfiDab>,
+        baseColor: Color,
+        pxPerDp: Float
+    ) {
+        val baseR = baseColor.red
+        val baseG = baseColor.green
+        val baseB = baseColor.blue
+        val baseAlpha = baseColor.alpha
+        val oval = dabOval
+        val paint = dabPaint
+
         for (dab in dabs) {
-            val color = Color(
-                red = shade(baseColor.red, dab.shade),
-                green = shade(baseColor.green, dab.shade),
-                blue = shade(baseColor.blue, dab.shade)
-            )
-            val cx = dab.x * density
-            val cy = dab.y * density
-            val rx = dab.rx * density
-            val ry = dab.ry * density
-            val alpha = dab.alpha * baseColor.alpha
-            drawScope.rotate(Math.toDegrees(dab.angle.toDouble()).toFloat(), Offset(cx, cy)) {
-                if (dab.softness > 0.5f) {
-                    for (step in 0 until SOFT_LAYERS) {
-                        val f = 1f - step * 0.22f
-                        drawOval(
-                            color = color.copy(alpha = alpha * 0.34f),
-                            topLeft = Offset(cx - rx * f, cy - ry * f),
-                            size = Size(rx * f * 2f, ry * f * 2f)
-                        )
-                    }
-                } else {
-                    drawOval(
-                        color = color.copy(alpha = alpha),
-                        topLeft = Offset(cx - rx, cy - ry),
-                        size = Size(rx * 2f, ry * 2f)
-                    )
-                }
+            val r = (shade(baseR, dab.shade) * 255f + 0.5f).toInt().coerceIn(0, 255)
+            val g = (shade(baseG, dab.shade) * 255f + 0.5f).toInt().coerceIn(0, 255)
+            val b = (shade(baseB, dab.shade) * 255f + 0.5f).toInt().coerceIn(0, 255)
+            val cx = dab.x * pxPerDp
+            val cy = dab.y * pxPerDp
+            val rx = dab.rx * pxPerDp
+            val ry = dab.ry * pxPerDp
+            val isRotated = abs(dab.angle) > 0.05f && abs(rx - ry) > 0.2f
+            if (isRotated) {
+                canvas.save()
+                canvas.rotate(Math.toDegrees(dab.angle.toDouble()).toFloat(), cx, cy)
+            }
+            if (dab.softness > 0.5f) {
+                val alpha = (dab.alpha * baseAlpha * 255f).toInt().coerceIn(0, 255)
+                paint.color = android.graphics.Color.argb((alpha * 0.45f).toInt(), r, g, b)
+                oval.set(cx - rx, cy - ry, cx + rx, cy + ry)
+                canvas.drawOval(oval, paint)
+                val f = 0.65f
+                paint.color = android.graphics.Color.argb((alpha * 0.55f).toInt(), r, g, b)
+                oval.set(cx - rx * f, cy - ry * f, cx + rx * f, cy + ry * f)
+                canvas.drawOval(oval, paint)
+            } else {
+                paint.color = android.graphics.Color.argb(
+                    (dab.alpha * baseAlpha * 255f + 0.5f).toInt().coerceIn(0, 255),
+                    r, g, b
+                )
+                oval.set(cx - rx, cy - ry, cx + rx, cy + ry)
+                canvas.drawOval(oval, paint)
+            }
+            if (isRotated) {
+                canvas.restore()
             }
         }
     }
 
     private fun drawDabsOnCanvas(canvas: Canvas, paint: Paint, dabs: List<FfiDab>, pxPerDp: Float) {
+        if (dabs.isEmpty()) return
         val origColor = paint.color
         val origAlpha = paint.alpha
         val origStyle = paint.style
-        paint.style = Paint.Style.FILL
-        val baseR = android.graphics.Color.red(origColor) / 255f
-        val baseG = android.graphics.Color.green(origColor) / 255f
-        val baseB = android.graphics.Color.blue(origColor) / 255f
-        val oval = android.graphics.RectF()
-        for (dab in dabs) {
-            paint.color = android.graphics.Color.rgb(
-                (shade(baseR, dab.shade) * 255f + 0.5f).toInt().coerceIn(0, 255),
-                (shade(baseG, dab.shade) * 255f + 0.5f).toInt().coerceIn(0, 255),
-                (shade(baseB, dab.shade) * 255f + 0.5f).toInt().coerceIn(0, 255)
-            )
-            val cx = dab.x * pxPerDp
-            val cy = dab.y * pxPerDp
-            val rx = dab.rx * pxPerDp
-            val ry = dab.ry * pxPerDp
-            canvas.save()
-            canvas.rotate(Math.toDegrees(dab.angle.toDouble()).toFloat(), cx, cy)
-            if (dab.softness > 0.5f) {
-                for (step in 0 until SOFT_LAYERS) {
-                    val f = 1f - step * 0.22f
-                    paint.alpha = (origAlpha * dab.alpha * 0.34f).toInt().coerceIn(0, 255)
-                    oval.set(cx - rx * f, cy - ry * f, cx + rx * f, cy + ry * f)
-                    canvas.drawOval(oval, paint)
-                }
-            } else {
-                paint.alpha = (origAlpha * dab.alpha).toInt().coerceIn(0, 255)
-                oval.set(cx - rx, cy - ry, cx + rx, cy + ry)
-                canvas.drawOval(oval, paint)
-            }
-            canvas.restore()
-        }
+        val color = Color(
+            red = android.graphics.Color.red(origColor) / 255f,
+            green = android.graphics.Color.green(origColor) / 255f,
+            blue = android.graphics.Color.blue(origColor) / 255f,
+            alpha = origAlpha / 255f
+        )
+        drawDabsOnNativeCanvas(canvas, dabs, color, pxPerDp)
         paint.color = origColor
         paint.alpha = origAlpha
         paint.style = origStyle
