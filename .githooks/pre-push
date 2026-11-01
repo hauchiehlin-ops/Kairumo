@@ -12,6 +12,15 @@ REPO_ROOT="$(git rev-parse --show-toplevel)"
 # push 前用 `--git-only` 快速清理 .git 關鍵目錄，避免在 exFAT 外接碟上全庫 find 卡住。
 "${REPO_ROOT}/scripts/clean-appledouble.sh" --git-only || true
 
+# 執行全維度 CI 預防性檢查與四大守門機制（任何一項不通過即阻擋推送）
+if [[ -x "${REPO_ROOT}/scripts/check-ci-preflight.sh" ]]; then
+    if ! "${REPO_ROOT}/scripts/check-ci-preflight.sh"; then
+        echo "❌ [Pre-Push 阻擋] CI 預防性檢查與守門機制未全數通過，推送被阻擋！" >&2
+        echo "💡 請依上述提示修正問題後再行推送。" >&2
+        exit 1
+    fi
+fi
+
 # 取得本次推送涉及的變更檔案清單（若無 upstream 則取最近一次 commit，空清單時才退回全庫檢查）
 CHANGED_FILES="$(git diff --name-only --diff-filter=ACMR @{upstream}..HEAD 2>/dev/null || git diff --name-only --diff-filter=ACMR HEAD~1..HEAD 2>/dev/null || true)"
 CHANGED_UI_FILES=()

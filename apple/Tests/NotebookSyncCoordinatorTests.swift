@@ -40,7 +40,7 @@ final class FakeStore: SyncableNotebookStore {
 
     init(root: URL) {
         self.root = root
-        for sub in ["Packages", "Attachments", "SyncBaseline"] {
+        for sub in ["Packages", "Attachments", "SyncBaseline", "Drawings"] {
             try? FileManager.default.createDirectory(
                 at: root.appendingPathComponent(sub), withIntermediateDirectories: true)
         }
@@ -76,6 +76,11 @@ final class FakeStore: SyncableNotebookStore {
 
     func syncSaveDrawing(notebookId: String, pageIndex: Int, drawing: PKDrawing) {
         drawings["\(notebookId)_\(pageIndex)"] = drawing
+        let file = syncDrawingsDirectory.appendingPathComponent("\(notebookId)_p\(pageIndex).drawing")
+        try? drawing.dataRepresentation().write(to: file)
+        if let idx = documents.firstIndex(where: { $0.id.caseInsensitiveCompare(notebookId) == .orderedSame }) {
+            documents[idx].lastModifiedDate = Date()
+        }
     }
 
     /// 正在即時協同的筆記（測試直接設；正式版走 `CollabImportHold`）。
