@@ -778,7 +778,7 @@ final class ProInkLayerView: UIView {
     /// 這一頁的識別。換頁時由外面重設並重新載入。
     private(set) var notebookId = ""
     private(set) var pageIndex = 0
-    private var directory: URL?
+    private(set) var directory: URL?
 
     private(set) var ownStrokes: [ProStroke] = []
     private var foreignStrokes: [ProStroke] = []
@@ -827,7 +827,6 @@ final class ProInkLayerView: UIView {
     /// 圖層顯示／鎖定改了：整層重畫（只是不畫某些筆畫，筆點快取不必清）。
     @objc private func draftingChanged() {
         invalidateAlignAnchors()
-        invalidateBacking()
         setNeedsDisplay()
         onDraftingChanged?()
     }
@@ -863,7 +862,6 @@ final class ProInkLayerView: UIView {
         foreignStrokes = ProInkStore.load(in: directory, notebookId: notebookId, page: pageIndex, foreign: true)
         strokeSnapshot = Dictionary(ownStrokes.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
         cache.removeAll()
-        invalidateBacking()
         setNeedsDisplay()
     }
 
@@ -977,20 +975,6 @@ final class ProInkLayerView: UIView {
 
     // MARK: 繪製
 
-    // MARK: - 點陣底圖快取（消除連續書寫時幾十萬顆印章重複渲染）
-    private var backingImage: CGImage?
-    private var backingContext: CGContext?
-    private var backingBounds: CGRect = .zero
-    private var bakedStrokeIds: [String] = []
-    private var bakedUserInterfaceStyle: UIUserInterfaceStyle = .unspecified
-
-    func invalidateBacking() {
-        backingImage = nil
-        backingContext = nil
-        backingBounds = .zero
-        bakedStrokeIds.removeAll()
-    }
-
     /// 深色模式下頁面是深色的：近黑的墨水（製圖的「頂」「底」層）會看不見，
     /// 就像 PencilKit 會把深色墨水在深色模式反相，這裡也把近黑的色提亮。
     /// 只影響畫面與縮圖；存檔與匯出仍是原色（匯出的紙是白的）。
@@ -1002,98 +986,18 @@ final class ProInkLayerView: UIView {
         guard let ctx = UIGraphicsGetCurrentContext() else { return }
         let drafting = DraftingState.shared
         let ordered = drafting.drawOrder(allStrokes, notebookId: notebookId)
-
-        // 增量點陣底圖快取維護：
-        // 解決歷史筆畫隨連續書寫累積導致 CoreGraphics 重繪幾萬次高斯印章的嚴重延遲
-        let currentStyle = traitCollection.userInterfaceStyle
-        let targetSize = bounds.size
-        let targetBounds = CGRect(origin: .zero, size: targetSize)
-        let orderedIds = ordered.map(\.id)
-
-        let isContextCompatible = backingContext != nil &&
-            backingBounds.size == targetBounds.size &&
-            bakedUserInterfaceStyle == currentStyle
-
-        let isPureAppend = isContextCompatible &&
-            bakedStrokeIds.count < ordered.count &&
-            Array(orderedIds.prefix(bakedStrokeIds.count)) == bakedStrokeIds
-
-        if !isContextCompatible || (!isPureAppend && bakedStrokeIds != orderedIds) {
-            // 需要全量重建 backing context
-            let w = max(1, Int(ceil(targetSize.width)))
-            let h = max(1, Int(ceil(targetSize.height)))
-            let colorSpace = CGColorSpace(name: CGColorSpace.sRGB) ?? CGColorSpaceCreateDeviceRGB()
-            let newCtx = CGContext(
-                data: nil,
-                width: w,
-                height: h,
-                bitsPerComponent: 8,
-                bytesPerRow: w * 4,
-                space: colorSpace,
-                bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
-            )
-            if let newCtx {
-                for stroke in ordered {
-                    guard let cached = cachedDabs(for: stroke) else { continue }
-                    newCtx.saveGState()
-                    if stroke.blendMode == "multiply" {
-                        newCtx.setBlendMode(.multiply)
-                    } else if stroke.blendMode == "screen" {
-                        newCtx.setBlendMode(.screen)
-                    } else {
-                        newCtx.setBlendMode(.normal)
-                    }
-                    ProInkRenderer.draw(cached, toolName: stroke.tool, color: displayColor(stroke.colorRGBA), in: newCtx, clip: stroke.bounds)
-                    newCtx.restoreGState()
-                }
-                backingContext = newCtx
-                backingImage = newCtx.makeImage()
-                backingBounds = targetBounds
-                bakedStrokeIds = orderedIds
-                bakedUserInterfaceStyle = currentStyle
-            }
-        } else if isPureAppend, let bCtx = backingContext {
-            // 純追加模式：只把新多出來的筆劃增量畫進 backingContext，歷史筆劃零開銷
-            let newStrokes = ordered.suffix(ordered.count - bakedStrokeIds.count)
-            for stroke in newStrokes {
-                guard let cached = cachedDabs(for: stroke) else { continue }
-                bCtx.saveGState()
-                if stroke.blendMode == "multiply" {
-                    bCtx.setBlendMode(.multiply)
-                } else if stroke.blendMode == "screen" {
-                    bCtx.setBlendMode(.screen)
-                } else {
-                    bCtx.setBlendMode(.normal)
-                }
-                ProInkRenderer.draw(cached, toolName: stroke.tool, color: displayColor(stroke.colorRGBA), in: bCtx, clip: stroke.bounds)
-                bCtx.restoreGState()
-            }
-            backingImage = bCtx.makeImage()
-            bakedStrokeIds = orderedIds
-        }
-
-        // 極速繪製已烘焙底圖點陣快取（0.1ms）
-        if let image = backingImage {
+        for stroke in ordered where stroke.bounds.intersects(rect) {
+            guard let cached = cachedDabs(for: stroke) else { continue }
             ctx.saveGState()
-            ctx.translateBy(x: 0, y: targetSize.height)
-            ctx.scaleBy(x: 1.0, y: -1.0)
-            ctx.draw(image, in: targetBounds)
-            ctx.restoreGState()
-        } else {
-            // 降級全量直接繪製（防禦保險）
-            for stroke in ordered where stroke.bounds.intersects(rect) {
-                guard let cached = cachedDabs(for: stroke) else { continue }
-                ctx.saveGState()
-                if stroke.blendMode == "multiply" {
-                    ctx.setBlendMode(.multiply)
-                } else if stroke.blendMode == "screen" {
-                    ctx.setBlendMode(.screen)
-                } else {
-                    ctx.setBlendMode(.normal)
-                }
-                ProInkRenderer.draw(cached, toolName: stroke.tool, color: displayColor(stroke.colorRGBA), in: ctx, clip: rect)
-                ctx.restoreGState()
+            if stroke.blendMode == "multiply" {
+                ctx.setBlendMode(.multiply)
+            } else if stroke.blendMode == "screen" {
+                ctx.setBlendMode(.screen)
+            } else {
+                ctx.setBlendMode(.normal)
             }
+            ProInkRenderer.draw(cached, toolName: stroke.tool, color: displayColor(stroke.colorRGBA), in: ctx, clip: rect)
+            ctx.restoreGState()
         }
         for stroke in overlayStrokes where stroke.bounds.intersects(rect) {
             guard let cached = ProInkRenderer.cache(for: stroke) else { continue }
@@ -1424,6 +1328,10 @@ final class ProInkLayerView: UIView {
         live = nil
         liveCache = nil
         resetLiveBrush()
+        guard !stroke.points.isEmpty else {
+            syncLiveOverlay(invalidating: liveArea)
+            return
+        }
         // 製圖線要的是等寬、不收尖、不圓角：不做平滑。
         if stroke.points.count >= 3, stroke.layerId == 0, stroke.lineTypeId == 0 {
             let pts = stroke.points.map {
@@ -1524,7 +1432,6 @@ final class ProInkLayerView: UIView {
         if !hit.isEmpty {
             let ids = Set(hit.map(\.id))
             ownStrokes.removeAll { ids.contains($0.id) }
-            invalidateBacking()
             for stroke in hit { setNeedsDisplay(stroke.bounds) }
             persist()
             registerUndo(restoring: hit)
@@ -1539,7 +1446,6 @@ final class ProInkLayerView: UIView {
         guard let directory else { return }
         let ids = Set(strokes.map(\.id))
         foreignStrokes.removeAll { ids.contains($0.id) }
-        invalidateBacking()
         for stroke in strokes { setNeedsDisplay(stroke.bounds) }
         var keys = ProInkStore.loadSuppressed(in: directory, notebookId: notebookId, page: pageIndex)
         keys.formUnion(strokes.map(\.contentKey))

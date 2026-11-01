@@ -467,6 +467,15 @@ internal class EditorCanvasContext {
             revision++
         }
     }
+    fun flushDebouncedInkRevision() {
+        if (inkRevisionJob?.isActive == true) {
+            inkRevisionJob?.cancel()
+            inkRevisionJob = null
+            if (this::revisionState.isInitialized) {
+                revision++
+            }
+        }
+    }
     lateinit var continuousContentRevisionState: MutableIntState
     var continuousContentRevision: Int
         get() = continuousContentRevisionState.intValue
@@ -902,6 +911,7 @@ internal fun rememberEditorCanvasContext(
     val docsAssetState = remember { mutableStateOf<String?>(null) }
     var docsAsset by docsAssetState
     val scope = rememberCoroutineScope()
+    val ctx = remember { EditorCanvasContext() }
 
     LaunchedEffect(recording, recordingPaused) {
         if (recording && !recordingPaused) {
@@ -1225,6 +1235,7 @@ internal fun rememberEditorCanvasContext(
             continuousScrollRequest++
             return
         }
+        ctx.flushDebouncedInkRevision()
         pageIndex = bounded // state-entry: 頁面切換的唯一正門
         continuousScrollRequest++
     }
@@ -2382,6 +2393,7 @@ internal fun rememberEditorCanvasContext(
     // 橡皮擦時 `engine.isErasing` 會忘了跟著改，症狀是「側鍵選到橡皮擦了，
     // 但畫下去還是墨跡」。
     fun applyInkTool(picked: InkTool) {
+        ctx.flushDebouncedInkRevision()
         // 若引擎當前仍有在途未結束的筆畫，立即取消以乾淨狀態切換新工具，不卡死換筆
         engine.cancelInFlight()
         inkTool = picked // state-entry: 換工具的唯一正門
@@ -3002,7 +3014,6 @@ internal fun rememberEditorCanvasContext(
     val posture = rememberFoldPosture(activity)
     val isTabletopActive = posture.separatingHorizontally || isTabletopManual
 
-    val ctx = remember { EditorCanvasContext() }
     ctx.sessionRevisionState = sessionRevisionState
     ctx.openMarkIdState = openMarkIdState
     ctx.showRevertConfirmState = showRevertConfirmState

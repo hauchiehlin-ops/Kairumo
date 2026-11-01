@@ -88,7 +88,35 @@ class InkEngine(
          * 復原／重做把同一組當成**一個動作**。
          */
         val group: Int = 0
-    )
+    ) {
+        override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (other !is CompletedStroke) return false
+            return pointerId == other.pointerId &&
+                coreStrokeId == other.coreStrokeId &&
+                tool == other.tool &&
+                startedAtMs == other.startedAtMs &&
+                baseWidth == other.baseWidth &&
+                layer == other.layer &&
+                lineType == other.lineType &&
+                group == other.group &&
+                colorRgba.contentEquals(other.colorRgba) &&
+                points == other.points
+        }
+
+        override fun hashCode(): Int {
+            var result = pointerId.hashCode()
+            result = 31 * result + (coreStrokeId?.hashCode() ?: 0)
+            result = 31 * result + tool.hashCode()
+            result = 31 * result + startedAtMs.hashCode()
+            result = 31 * result + colorRgba.contentHashCode()
+            result = 31 * result + baseWidth.hashCode()
+            result = 31 * result + layer
+            result = 31 * result + lineType
+            result = 31 * result + group
+            return result
+        }
+    }
 
     /** 一次事件處理的結果，供 UI 決定要不要重繪。 */
     data class Outcome(

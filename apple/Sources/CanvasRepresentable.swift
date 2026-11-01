@@ -597,7 +597,9 @@ final class AdaptiveCanvasView: PKCanvasView {
     ) {
         let layer = installProLayerIfNeeded()
         if let directory {
-            layer.load(directory: directory, notebookId: notebookId, pageIndex: pageIndex)
+            if layer.directory != directory || layer.notebookId != notebookId || layer.pageIndex != pageIndex {
+                layer.load(directory: directory, notebookId: notebookId, pageIndex: pageIndex)
+            }
         }
         guard let gesture = proGesture else { return }
         switch mode {
