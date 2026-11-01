@@ -1617,10 +1617,12 @@ enum NotebookSyncCoordinator {
         var exportLedgers = ledgers
         var proExtra: [[String: [String]]] = Array(repeating: [:], count: pageCount)
         var prunedForeign: [Set<String>] = Array(repeating: [], count: pageCount)
+        var grow: [Bool] = Array(repeating: false, count: pageCount)
         var reconcile = Array(repeating: NotebookPackageBridge.InkReconcile(), count: pageCount)
         for page in 0 ..< pageCount {
             let snapshot = snapshots[page]
             let ledger = ledgers[page]
+            let hasInk = !snapshot.current.strokes.isEmpty || !pro[page].isEmpty || !ledger.isEmpty
             let pinned = CollabInkIds.load(in: inputs.baselineDirectory, notebookId: document.id, page: page)
             reconcile[page].pinned = pinned
             if let previous = PKInkSnapshotStore.load(in: inputs.drawingsDirectory, notebookId: document.id, page: page) {
@@ -1638,6 +1640,10 @@ enum NotebookSyncCoordinator {
                 })
             plans.append(plan)
             exportLedgers[page].foreignTombstones = plan.foreignTombstones
+            // 這一頁的筆畫檔要「變大」才會被傳出去：升級後第一次、自己擦掉／搬動／換身分、有新的墓碑。
+            let newTombstone = plan.foreignTombstones.contains { !ledger.foreignTombstones.contains($0) }
+            grow[page] = (ledger.schema < 2 && hasInk) || plan.grow || newTombstone
+                || ledger.retired.contains { !$0.exported }
             // 升級前匯入的別台專業筆畫：本機認得的 id 不是核心的 id，依內容指紋到套件裡找。
             let ownProIds = Set(pro[page].map(\.packageId))
             for i in exportLedgers[page].retired.indices {
@@ -1669,7 +1675,7 @@ enum NotebookSyncCoordinator {
         try NotebookPackageBridge.exportPreservingOtherDevices(
             document: document, drawings: drawings, imageData: images,
             to: inputs.package, deviceId: inputs.deviceId, proStrokes: pro, proLedgers: exportLedgers,
-            pkStrokeIds: plans.map(\.ids), inkReconcile: reconcile,
+            pkStrokeIds: plans.map(\.ids), growInkFiles: grow, inkReconcile: reconcile,
             recordingTitles: titles
         )
         for page in 0 ..< pageCount {
