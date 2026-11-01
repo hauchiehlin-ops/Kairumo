@@ -1415,6 +1415,7 @@ public struct HomeWorkbenchView: View {
                                     .contentShape(Rectangle())
                                 }
                                 .buttonStyle(.plain)
+                                .accessibilityIdentifier("home.notebooks.card.\(note.id)")
 
                                 // 個別檔案功能選項（隱藏、重新命名、副本、刪除）
                                 notebookMenuButton(note: note)
