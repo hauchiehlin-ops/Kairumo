@@ -93,7 +93,7 @@ object StorageSweeper {
         // `profiles/` 是其他設定檔的快取根目錄：不能被當成「一小時前的暫存」整個清掉。
         delete(
             // profile-scope: device
-            stale(context.cacheDir, TEMP_MIN_AGE_MS, now, skip = { it == "thumbnails" || it == "profiles" }),
+            stale(context.cacheDir, TEMP_MIN_AGE_MS, now, skip = { it == "thumbnails" || it == "profiles" || it == "dab_cache" }),
             report
         )
         delete(overBudgetThumbnails(File(ProfileContext.cacheDir(context), "thumbnails"), now), report)

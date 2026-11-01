@@ -304,6 +304,7 @@ public final class ProfileManager: ObservableObject {
             { PageGeometry.use(format: nil) },
             { CollabCanonical.resetForProfileSwitch() },
             { PageInkStore.purgeAll() },
+            { ProInkDabCache.resetForProfileSwitch() },
         ]
     }
 

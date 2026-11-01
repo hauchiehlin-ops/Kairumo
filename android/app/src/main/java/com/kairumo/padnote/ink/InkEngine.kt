@@ -1305,7 +1305,16 @@ class InkEngine(
         val target = session ?: return
         val page = pageId ?: return
         val loaded = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-            runCatching { target.visibleStrokeDetails(page) }.getOrNull()
+            val list = runCatching { target.visibleStrokeDetails(page) }.getOrNull()
+            if (list != null) {
+                // 背景預熱自繪筆刷印章點陣，使切回主執行緒渲染時達到 100% 記憶體快取命中
+                for (s in list) {
+                    if (uniffi.padnote_core.brushIsCustom(s.tool)) {
+                        InkBrushRenderer.prewarmDabs(s.points, s.tool, s.baseWidth, s.lineType.toInt())
+                    }
+                }
+            }
+            list
         } ?: return
         applyLoaded(loaded)
     }

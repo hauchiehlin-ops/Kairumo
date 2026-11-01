@@ -707,6 +707,131 @@ enum ProInkRenderer {
     }
 }
 
+// MARK: - 磁碟與記憶體雙層印章點陣快取（Disk & Memory Dab Cache）
+
+// profile-scope: profile 筆劃印章快取（隨使用中設定檔切換清空）
+enum ProInkDabCache {
+    private static let lock = NSLock()
+    private static var memoryCache: [String: ProInkRenderer.Cached] = [:]
+    private static let maxMemoryEntries = 2048
+
+    static func resetForProfileSwitch() {
+        lock.lock()
+        memoryCache.removeAll()
+        lock.unlock()
+    }
+
+    private static var diskCacheDirectory: URL {
+        let base: URL
+        if let root = ProfileContext.activeCachesRoot {
+            base = root
+        } else {
+            base = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
+                .appending(path: "Kairumo", directoryHint: .isDirectory)
+        }
+        let dir = base.appending(path: "ProInkDabs", directoryHint: .isDirectory)
+        if !FileManager.default.fileExists(atPath: dir.path) {
+            try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        }
+        return dir
+    }
+
+    static func cacheKey(for stroke: ProStroke) -> String {
+        var hasher = Hasher()
+        hasher.combine(stroke.tool)
+        hasher.combine(stroke.baseWidth)
+        hasher.combine(stroke.lineTypeId)
+        hasher.combine(stroke.points.count)
+        let step = max(1, stroke.points.count / 16)
+        for i in stride(from: 0, to: stroke.points.count, by: step) {
+            let p = stroke.points[i]
+            hasher.combine(p.x)
+            hasher.combine(p.y)
+            hasher.combine(p.pressure)
+        }
+        if let last = stroke.points.last {
+            hasher.combine(last.x)
+            hasher.combine(last.y)
+        }
+        return String(format: "%016lx", UInt64(bitPattern: Int64(hasher.finalize())))
+    }
+
+    static func get(for stroke: ProStroke) -> ProInkRenderer.Cached? {
+        let key = cacheKey(for: stroke)
+        lock.lock()
+        if let hit = memoryCache[key] {
+            lock.unlock()
+            return hit
+        }
+        lock.unlock()
+
+        let file = diskCacheDirectory.appending(path: "\(key).dab")
+        guard let data = try? Data(contentsOf: file), data.count >= 24 else { return nil }
+        guard data.prefix(4).elementsEqual([0x44, 0x41, 0x42, 0x31]) else { return nil }
+        let count = data.subdata(in: 20..<24).withUnsafeBytes { $0.load(as: UInt32.self) }
+        guard data.count == 24 + Int(count) * 32 else { return nil }
+
+        let boundsRect = data.subdata(in: 4..<20).withUnsafeBytes { ptr -> CGRect in
+            let f = ptr.bindMemory(to: Float.self)
+            return CGRect(x: CGFloat(f[0]), y: CGFloat(f[1]), width: CGFloat(f[2] - f[0]), height: CGFloat(f[3] - f[1]))
+        }
+        let dabs = data.subdata(in: 24..<data.count).withUnsafeBytes { ptr in
+            Array(ptr.bindMemory(to: FfiDab.self))
+        }
+        let cached = ProInkRenderer.Cached(dabs: dabs, bounds: boundsRect)
+        lock.lock()
+        if memoryCache.count >= maxMemoryEntries {
+            memoryCache.removeAll()
+        }
+        memoryCache[key] = cached
+        lock.unlock()
+        return cached
+    }
+
+    static func set(_ cached: ProInkRenderer.Cached, for stroke: ProStroke) {
+        let key = cacheKey(for: stroke)
+        lock.lock()
+        if memoryCache.count >= maxMemoryEntries {
+            memoryCache.removeAll()
+        }
+        memoryCache[key] = cached
+        lock.unlock()
+
+        DispatchQueue.global(qos: .utility).async {
+            var data = Data(capacity: 24 + cached.dabs.count * 32)
+            data.append(contentsOf: [0x44, 0x41, 0x42, 0x31]) // "DAB1"
+            let bounds = cached.bounds
+            var bFloats: [Float] = [Float(bounds.minX), Float(bounds.minY), Float(bounds.maxX), Float(bounds.maxY)]
+            data.append(Data(bytes: &bFloats, count: 16))
+            var count = UInt32(cached.dabs.count)
+            data.append(Data(bytes: &count, count: 4))
+            var dabs = cached.dabs
+            data.append(Data(bytes: &dabs, count: dabs.count * 32))
+
+            let dir = diskCacheDirectory
+            let file = dir.appending(path: "\(key).dab")
+            let tmp = dir.appending(path: "\(key).tmp")
+            try? data.write(to: tmp, options: .atomic)
+            _ = try? FileManager.default.replaceItemAt(file, withItemAt: tmp)
+        }
+    }
+
+    static func prewarm(strokes: [ProStroke], onComplete: (() -> Void)? = nil) {
+        DispatchQueue.global(qos: .userInitiated).async {
+            for stroke in strokes {
+                if get(for: stroke) == nil {
+                    if let computed = ProInkRenderer.cache(for: stroke) {
+                        set(computed, for: stroke)
+                    }
+                }
+            }
+            if let onComplete {
+                DispatchQueue.main.async(execute: onComplete)
+            }
+        }
+    }
+}
+
 // MARK: - 畫布上的一層
 
 /// 專責即時繪製當前這一筆（含預測觸控點與對齊導引線）的輕量頂層視圖。
@@ -785,7 +910,6 @@ final class ProInkLayerView: UIView {
 
     private(set) var ownStrokes: [ProStroke] = []
     private var foreignStrokes: [ProStroke] = []
-    private var cache: [String: ProInkRenderer.Cached] = [:]
 
     /// 正在畫的那一筆。
     private var live: ProStroke?
@@ -865,7 +989,10 @@ final class ProInkLayerView: UIView {
         ownStrokes = ProInkStore.load(in: directory, notebookId: notebookId, page: pageIndex)
         foreignStrokes = ProInkStore.load(in: directory, notebookId: notebookId, page: pageIndex, foreign: true)
         strokeSnapshot = Dictionary(ownStrokes.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
-        cache.removeAll()
+        // 背景預熱，若有新載入的筆畫未在快取中，完成後自動更新畫面
+        ProInkDabCache.prewarm(strokes: allStrokes) { [weak self] in
+            self?.setNeedsDisplay()
+        }
         setNeedsDisplay()
     }
 
@@ -1195,9 +1322,9 @@ final class ProInkLayerView: UIView {
     }
 
     private func cachedDabs(for stroke: ProStroke) -> ProInkRenderer.Cached? {
-        if let hit = cache[stroke.id] { return hit }
+        if let hit = ProInkDabCache.get(for: stroke) { return hit }
         guard let made = ProInkRenderer.cache(for: stroke) else { return nil }
-        cache[stroke.id] = made
+        ProInkDabCache.set(made, for: stroke)
         return made
     }
 
@@ -1359,7 +1486,7 @@ final class ProInkLayerView: UIView {
         ownStrokes.append(stroke)
         // 預先計算並放入快取，避免進入 draw(rect) 時臨時執行 Rust FFI 運算
         if let cached = ProInkRenderer.cache(for: stroke) {
-            cache[stroke.id] = cached
+            ProInkDabCache.set(cached, for: stroke)
         }
         setNeedsDisplay(stroke.bounds)
         persist()
@@ -1727,8 +1854,8 @@ final class ProInkLayerView: UIView {
                 ownStrokes[i].points[k].x += Float(delta.width)
                 ownStrokes[i].points[k].y += Float(delta.height)
             }
-            if let existing = cache[strokeId] {
-                cache[strokeId] = existing.translated(by: delta)
+            if let existing = ProInkDabCache.get(for: ownStrokes[i]) {
+                ProInkDabCache.set(existing.translated(by: delta), for: ownStrokes[i])
             }
             dirtyRect = dirtyRect.union(ownStrokes[i].bounds)
         }
