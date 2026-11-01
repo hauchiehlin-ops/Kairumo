@@ -56,8 +56,12 @@ import com.kairumo.padnote.ui.KairumoTheme
 import com.kairumo.padnote.ui.LocalAppLanguage
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import uniffi.padnote_core.PadnoteSession
 import java.io.File
 import kotlin.math.ceil
@@ -84,6 +88,9 @@ object PageSnapshot {
     /** 等待畫面穩定與錄製完成的上限。逾時回 `null`，呼叫端退回核心的匯出器。 */
     private const val TIMEOUT_MS = 20_000L
 
+    /** 確保同一時間只有一個離屏快照進行 Compose 算繪，杜絕根視圖節點並發搶占與生命週期釋放競爭。 */
+    private val renderMutex = Mutex()
+
     suspend fun render(
         activity: ComponentActivity,
         session: PadnoteSession,
@@ -92,64 +99,83 @@ object PageSnapshot {
         languageTag: String,
         audioDirectory: File? = null
     ): Bitmap? = withContext(Dispatchers.Main) {
-        val meta = NotebookMeta.load(session)
-        PageGeometry.use(meta.pageFormatId())
-        val widthDp = PageGeometry.width
-        val heightDp = PageGeometry.height
-        val widthPx = ceil(widthDp * scale).toInt()
-        val heightPx = ceil(heightDp * scale).toInt()
+        if (activity.isFinishing || activity.isDestroyed) return@withContext null
+        val root = activity.findViewById<ViewGroup>(android.R.id.content) ?: return@withContext null
 
-        val result = CompletableDeferred<Bitmap?>()
-        val host = FrameLayout(activity).apply {
-            alpha = 0f
-        }
-        // 視窗的根視圖通常已經有生命週期與狀態擁有者（`setContent` 設的）；沒有時（例如測試用的空白
-        // Activity）ComposeView 會拋「No lifecycle owner exists」，所以掛在這個宿主上補齊。
-        host.setViewTreeLifecycleOwner(activity)
-        host.setViewTreeSavedStateRegistryOwner(activity)
-        host.setViewTreeViewModelStoreOwner(activity)
-        val view = ComposeView(activity).apply {
-            setContent {
-                CompositionLocalProvider(
-                    LocalDensity provides Density(scale, 1f),
-                    LocalAppLanguage provides languageTag
-                ) {
-                    val layer = rememberGraphicsLayer()
-                    KairumoTheme {
-                        Box(
-                            Modifier
-                                .size(widthDp.dp, heightDp.dp)
-                                .drawWithContent {
-                                    layer.record { this@drawWithContent.drawContent() }
-                                    drawLayer(layer)
-                                }
-                        ) {
-                            ExportPageContent(session, meta, pageIndex, scale, languageTag, audioDirectory)
-                        }
-                    }
-                    LaunchedEffect(Unit) {
-                        repeat(3) { androidx.compose.runtime.withFrameNanos { } }
-                        result.complete(
-                            runCatching {
-                                val hardware = layer.toImageBitmap().asAndroidBitmap()
-                                hardware.copy(Bitmap.Config.ARGB_8888, false).also { hardware.recycle() }
+        renderMutex.withLock {
+            if (activity.isFinishing || activity.isDestroyed) return@withContext null
+
+            val meta = NotebookMeta.load(session)
+            PageGeometry.use(meta.pageFormatId())
+            val widthDp = PageGeometry.width
+            val heightDp = PageGeometry.height
+            val widthPx = ceil(widthDp * scale).toInt()
+            val heightPx = ceil(heightDp * scale).toInt()
+
+            val result = CompletableDeferred<Bitmap?>()
+            val host = FrameLayout(activity).apply {
+                alpha = 0f
+            }
+            // 視窗的根視圖通常已經有生命週期與狀態擁有者（`setContent` 設的）；沒有時（例如測試用的空白
+            // Activity）ComposeView 會拋「No lifecycle owner exists」，所以掛在這個宿主上補齊。
+            host.setViewTreeLifecycleOwner(activity)
+            host.setViewTreeSavedStateRegistryOwner(activity)
+            host.setViewTreeViewModelStoreOwner(activity)
+
+            // 監聽 Activity 銷毀事件，若在錄製等待期間 Activity 被銷毀，即刻結束等待以利及時釋放 Composition
+            val destroyObserver = LifecycleEventObserver { _, event ->
+                if (event == Lifecycle.Event.ON_DESTROY) {
+                    result.complete(null)
+                }
+            }
+            activity.lifecycle.addObserver(destroyObserver)
+
+            val view = ComposeView(activity).apply {
+                setContent {
+                    CompositionLocalProvider(
+                        LocalDensity provides Density(scale, 1f),
+                        LocalAppLanguage provides languageTag
+                    ) {
+                        val layer = rememberGraphicsLayer()
+                        KairumoTheme {
+                            Box(
+                                Modifier
+                                    .size(widthDp.dp, heightDp.dp)
+                                    .drawWithContent {
+                                        layer.record { this@drawWithContent.drawContent() }
+                                        drawLayer(layer)
+                                    }
+                            ) {
+                                ExportPageContent(session, meta, pageIndex, scale, languageTag, audioDirectory)
                             }
-                                .onFailure { android.util.Log.e("PageSnapshot", "toImageBitmap failed", it) }
-                                .getOrNull()
-                        )
+                        }
+                        LaunchedEffect(Unit) {
+                            repeat(3) { androidx.compose.runtime.withFrameNanos { } }
+                            result.complete(
+                                runCatching {
+                                    val hardware = layer.toImageBitmap().asAndroidBitmap()
+                                    hardware.copy(Bitmap.Config.ARGB_8888, false).also { hardware.recycle() }
+                                }
+                                    .onFailure { android.util.Log.e("PageSnapshot", "toImageBitmap failed", it) }
+                                    .getOrNull()
+                            )
+                        }
                     }
                 }
             }
-        }
-        host.addView(view, FrameLayout.LayoutParams(widthPx, heightPx))
-        val root = activity.findViewById<ViewGroup>(android.R.id.content)
-        // 放在視窗外面：使用者看不到，但仍然會被量測、排版、繪製。
-        host.translationX = -(widthPx + 64).toFloat()
-        root.addView(host, FrameLayout.LayoutParams(widthPx, heightPx))
-        try {
-            withTimeoutOrNull(TIMEOUT_MS) { result.await() }
-        } finally {
-            root.removeView(host)
+            host.addView(view, FrameLayout.LayoutParams(widthPx, heightPx))
+            // 放在視窗外面：使用者看不到，但仍然會被量測、排版、繪製。
+            host.translationX = -(widthPx + 64).toFloat()
+            root.addView(host, FrameLayout.LayoutParams(widthPx, heightPx))
+            try {
+                withTimeoutOrNull(TIMEOUT_MS) { result.await() }
+            } finally {
+                activity.lifecycle.removeObserver(destroyObserver)
+                // 明確銷毀離屏 Composition，將 observer 從 LifecycleRegistry 解除，防止 Activity onDestroy 觸發 SlotTable 遺孤釋放例外
+                runCatching { view.disposeComposition() }
+                runCatching { host.removeView(view) }
+                runCatching { root.removeView(host) }
+            }
         }
     }
 
