@@ -1132,6 +1132,12 @@ private fun ContinuousPage(
     var revision by runtime.revision
     val pageScope = rememberCoroutineScope()
     var inkDebounceJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
+    LaunchedEffect(editorMode) {
+        if (editorMode != EditorMode.DRAW && inkDebounceJob?.isActive == true) {
+            inkDebounceJob?.cancel()
+            revision++
+        }
+    }
     DisposableEffect(Unit) {
         onDispose {
             if (inkDebounceJob?.isActive == true) {
@@ -1426,7 +1432,7 @@ private fun ContinuousPage(
             inkColor = currentInkColor,
             onInkChanged = {
                 inkDebounceJob?.cancel()
-                inkDebounceJob = pageScope.launch {
+                inkDebounceJob = pageScope.launch(kotlinx.coroutines.Dispatchers.Main.immediate) {
                     kotlinx.coroutines.delay(1000L)
                     revision++
                 }

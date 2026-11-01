@@ -458,11 +458,11 @@ internal class EditorCanvasContext {
     var inkRevisionJob: kotlinx.coroutines.Job? = null
     /**
      * 連續手繪書寫時避免每筆抬筆同步觸發整頁 Compose 重組。
-     * 去抖動延遲（預設 1000ms）無新筆劃後才在背景協程中更新 revision。
+     * 去抖動延遲（預設 1000ms）無新筆劃後才在主執行緒中更新 revision。
      */
     fun scheduleInkRevisionDebounced(delayMs: Long = 1000L) {
         inkRevisionJob?.cancel()
-        inkRevisionJob = scope.launch {
+        inkRevisionJob = scope.launch(kotlinx.coroutines.Dispatchers.Main.immediate) {
             kotlinx.coroutines.delay(delayMs)
             revision++
         }
