@@ -65,7 +65,13 @@
 ## 驗證流程標準作業規範（SOP）
 
 任何程式碼修改在提交與推送前，必須完成以下三道防線驗證：
-1. **一鍵守門檢驗**：執行 `./scripts/verify-all-gatekeepers.sh`，確保四大閘門全數綠燈通過。
+1. **CI 預防性檢查與四大守門驗證（CI Preflight & Auto-Remediation）**：
+   - 執行 `./scripts/check-ci-preflight.sh`（或 `./scripts/verify-all-gatekeepers.sh`），針對開發歷程中 GitHub Actions 常見崩潰與卡控點進行預防性檢查與自動矯正：
+     - 自動清除 macOS 在外接磁碟（exFAT）衍生的 `._*` 與 `.DS_Store`，防止 non-monotonic index 與 Gradle/codesign 污染。
+     - 自動驗證並同步衍生平台手冊、隱私權政策與範本產物（`build-platform-docs.py`、`build-privacy-docs.py`、`doc_templates_tool.py`）。
+     - 自動防護 Android CI 測試組態（`leaveApksInstalledAfterRun=true` 與 `uninstallInstrumentsAfterTesting=false`），杜絕 UTP teardown 反安裝崩潰。
+     - 驗證 UniFFI 跨端綁定同步性與可用磁碟空間健康度。
+     - 全維度通過 Layer 1 至 Layer 4 四大守門機制（正門管制、筆跡不變式矩陣、非阻塞 UI、跨平台規範）。
 2. **雙平台單元測試**：
    - Android: `cd android && ./gradlew testDebugUnitTest`
    - Apple: `cd apple && xcodebuild -scheme Kairumo build`
