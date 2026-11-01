@@ -562,7 +562,7 @@ func openSeedNotebook(
     file: StaticString = #filePath, line: UInt = #line
 ) -> Bool {
     let seedCardId = "home.notebooks.card.seed-welcome-notebook-v1"
-    let editorMore = app.buttons["editor.more"]
+    let editorMore = app.buttons["editor.more"].firstMatch
     if editorMore.exists {
         if editorMore.isHittable {
             return true
@@ -587,7 +587,7 @@ func openSeedNotebook(
         if editorMore.exists && editorMore.isHittable {
             return true
         }
-        if homeAction.exists || homeTitle.exists || seedCard.exists || app.buttons.matching(cardPredicate).count > 0 {
+        if homeAction.exists || homeTitle.exists || seedCard.exists || app.buttons.matching(cardPredicate).firstMatch.exists {
             homeLoaded = true
             break
         }
