@@ -21,10 +21,24 @@ final class ObjectLockUITests: XCTestCase {
     }
 
     private func find(_ app: XCUIApplication, _ id: String) -> XCUIElement {
-        let button = app.buttons[id]
-        if button.exists { return button }
-        let other = app.otherElements[id]
-        if other.exists { return other }
+        let buttons = app.buttons.matching(identifier: id)
+        let buttonCount = buttons.count
+        if buttonCount > 0 {
+            for i in 0..<buttonCount {
+                let el = buttons.element(boundBy: i)
+                if el.exists && el.isHittable { return el }
+            }
+            return buttons.firstMatch
+        }
+        let others = app.otherElements.matching(identifier: id)
+        let otherCount = others.count
+        if otherCount > 0 {
+            for i in 0..<otherCount {
+                let el = others.element(boundBy: i)
+                if el.exists && el.isHittable { return el }
+            }
+            return others.firstMatch
+        }
         return app.descendants(matching: .any).matching(identifier: id).firstMatch
     }
 
