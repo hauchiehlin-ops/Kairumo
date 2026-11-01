@@ -68,6 +68,13 @@ import com.kairumo.padnote.profile.ProfileContext
 private val pageThumbnailCache = LruCache<String, ImageBitmap>(40)
 
 /**
+ * 清除所有側欄縮圖記憶體快取。在圖釘、遮蔽膠帶或多媒體物件刪除／變更時呼叫，確保預覽縮圖即時更新。
+ */
+fun clearPageThumbnailCache() {
+    pageThumbnailCache.evictAll()
+}
+
+/**
  * 編輯器左側的頁面結構欄。
  *
  * # 為什麼要有它
