@@ -92,12 +92,10 @@ class InkInvariantMatrixAuditTest {
                 runCatching {
                     compose.onNodeWithTag("home.scroll")
                         .performScrollToNode(listMatcher)
-                    compose.waitForIdle()
                 }
                 runCatching {
                     compose.onNodeWithTag("home.scroll")
                         .performScrollToNode(matcher)
-                    compose.waitForIdle()
                 }
             }
             compose.onAllNodes(matcher).fetchSemanticsNodes().isNotEmpty()
@@ -220,10 +218,8 @@ class InkInvariantMatrixAuditTest {
             if (!hasPage1) {
                 if (compose.onAllNodesWithTag("editor.page.add").fetchSemanticsNodes().isNotEmpty()) {
                     tap("editor.page.add", "找不到新增頁面按鈕")
-                    compose.waitUntil(timeoutMillis = 10_000) {
-                        scrollToSidebarNode("sidebar.page.1")
-                        compose.onAllNodesWithTag("sidebar.page.1").fetchSemanticsNodes().isNotEmpty()
-                    }
+                    compose.waitForIdle()
+                    scrollToSidebarNode("sidebar.page.1")
                 }
             }
 

@@ -354,8 +354,10 @@ private fun PageSidebarRow(
         }
 
         val act = context as? ComponentActivity
-        if (act != null) {
-            val bmp = PageSnapshot.render(act, s, index, 0.22f, appLanguage)
+        if (act != null && !act.isFinishing && !act.isDestroyed) {
+            val bmp = runCatching {
+                PageSnapshot.render(act, s, index, 0.22f, appLanguage)
+            }.getOrNull()
             if (bmp != null) {
                 val imageBitmap = bmp.asImageBitmap()
                 pageThumbnailCache.put(cacheKey, imageBitmap)
