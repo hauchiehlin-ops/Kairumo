@@ -1492,9 +1492,11 @@ enum NotebookPackageBridge {
             return (session, ids[pageIndex])
         }
         let session: PadnoteSession
+        var createdNew = false
         if FileManager.default.fileExists(atPath: destination.path) {
             session = try PadnoteSession.openExisting(path: destination.path, deviceId: deviceId)
         } else {
+            createdNew = true
             try FileManager.default.createDirectory(
                 at: destination.deletingLastPathComponent(), withIntermediateDirectories: true
             )
@@ -1511,8 +1513,10 @@ enum NotebookPackageBridge {
         let known = (try? pageIds(of: session)) ?? []
         let wanted = alignedPageIds(document.pageIds, count: targetPageCount, package: known,
                                     notebookId: document.id)
+        var addedPages = false
         for id in wanted where !known.contains(id) && Int(session.pageCount()) < targetPageCount {
             try session.addPageWithId(pageId: id, style: style)
+            addedPages = true
         }
 
         let ids = Self.orderedLikeDocument(try pageIds(of: session), document: document)
@@ -1529,11 +1533,13 @@ enum NotebookPackageBridge {
             )
         }
 
-        var meta = NotebookMeta(from: document)
-        meta.pageIds = ids
-        let encodedMeta = meta.encodedJSON()
-        if session.notebookMeta() != encodedMeta {
-            try session.setNotebookMeta(json: encodedMeta)
+        if createdNew || addedPages || session.notebookMeta() == nil {
+            var meta = NotebookMeta(from: document)
+            meta.pageIds = ids
+            let encodedMeta = meta.encodedJSON()
+            if session.notebookMeta() != encodedMeta {
+                try session.setNotebookMeta(json: encodedMeta)
+            }
         }
         return (session, pageId)
     }

@@ -236,8 +236,8 @@ object InkBrushRenderer {
         val density: Float
     )
 
-    private val dabsCache = android.util.LruCache<DabCacheKey, List<FfiDab>>(2048)
-    private val segmentsCache = android.util.LruCache<SegmentCacheKey, List<SegmentSpec>>(2048)
+    private val dabsCache = android.util.LruCache<DabCacheKey, List<FfiDab>>(8192)
+    private val segmentsCache = android.util.LruCache<SegmentCacheKey, List<SegmentSpec>>(8192)
     @Volatile
     private var diskCacheDir: java.io.File? = null
 

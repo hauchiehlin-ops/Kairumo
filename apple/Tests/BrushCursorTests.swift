@@ -34,8 +34,20 @@ final class BrushCursorTests: XCTestCase {
     }
 
     func testTheTipNeverDisappearsAtTinyWidths() {
-        // 1pt 的筆頭在螢幕上小到看不見，使用者會以為游標壞了。
-        XCTAssertGreaterThanOrEqual(BrushCursor.tipDiameter(for: .ballpoint, strokeWidth: 1), 8)
+        // 1pt 的筆頭仍須保持清晰可見（>= 2.5pt），且 1..5 每一格都要有明顯對應差異。
+        XCTAssertGreaterThanOrEqual(BrushCursor.tipDiameter(for: .ballpoint, strokeWidth: 1), 2.5)
+        for tool in [EditorToolType.pen, .ballpoint, .fineliner, .pencil, .brush, .marker, .highlighter] {
+            var prevTip = BrushCursor.tipDiameter(for: tool, strokeWidth: 1)
+            var prevBase = ProInk.baseWidth(for: tool, strokeWidth: 1)
+            for w in 2...5 {
+                let currTip = BrushCursor.tipDiameter(for: tool, strokeWidth: CGFloat(w))
+                let currBase = ProInk.baseWidth(for: tool, strokeWidth: CGFloat(w))
+                XCTAssertGreaterThan(currTip, prevTip, "\(tool.rawValue) 在筆寬 \(w) 的筆頭直徑未大於 \(w - 1)")
+                XCTAssertGreaterThan(currBase, prevBase, "\(tool.rawValue) 在筆寬 \(w) 的實際筆畫寬度未大於 \(w - 1)")
+                prevTip = currTip
+                prevBase = currBase
+            }
+        }
     }
 
     func testTheTipNeverCoversWhatYouAreAboutToDraw() {

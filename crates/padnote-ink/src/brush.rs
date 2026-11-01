@@ -515,12 +515,12 @@ impl Emitter {
     fn new(tool: Tool, width: f32, rng: &mut Rng) -> Self {
         let kind = match tool {
             Tool::Fineliner => EmitterKind::Fineliner {
-                r: (width * 0.5 * 0.6).max(0.4),
+                r: (width * 0.5 * 0.6).max(0.2),
             },
             Tool::Brush => EmitterKind::ChineseBrush(ChineseBrush::new(width, rng.clone())),
             Tool::Calligraphy => EmitterKind::Calligraphy {
                 long: width * 0.5 * 1.4,
-                short: (width * 0.5 * 0.16).max(0.3),
+                short: (width * 0.5 * 0.16).max(0.16),
                 default_nib: 40.0f32.to_radians(),
             },
             Tool::Charcoal => {

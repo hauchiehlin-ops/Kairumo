@@ -51,7 +51,6 @@ public final class PageInkStore: ObservableObject {
             return existing
         }
         let created = PageInkStore(notebookId: notebook.id, store: store)
-        created.primeAllPages(notebook: notebook)
         activeStores[notebook.id] = created
         return created
     }
@@ -96,9 +95,24 @@ public final class PageInkStore: ObservableObject {
     /// 更新某一頁的筆跡（落筆、擦除、套索搬移等）。
     public func updateDrawing(_ newDrawing: PKDrawing, for pageIndex: Int, pageId: String? = nil) {
         let k = key(for: pageIndex, pageId: pageId)
+        if initialSnapshots[k] == nil {
+            initialSnapshots[k] = inMemoryDrawings[k] ?? store.loadDrawing(notebookId: notebookId, pageIndex: pageIndex)
+        }
         inMemoryDrawings[k] = newDrawing
         revisions[k, default: 0] += 1
         dirtyPages.insert(k)
+    }
+
+    /// 記錄單頁的初始狀態快照（按需惰性建立，避免開啟百頁大筆記本時同步讀取全本磁碟檔案）。
+    public func recordInitialSnapshot(_ drawing: PKDrawing, for pageIndex: Int, pageId: String? = nil) {
+        let k = key(for: pageIndex, pageId: pageId)
+        if inMemoryDrawings[k] == nil {
+            inMemoryDrawings[k] = drawing
+            knownDiskStrokeCounts[k] = drawing.strokes.count
+        }
+        if initialSnapshots[k] == nil {
+            initialSnapshots[k] = drawing
+        }
     }
 
     /// 這一頁內容的版本號（見 `revisions`）。
@@ -118,6 +132,11 @@ public final class PageInkStore: ObservableObject {
             let pid = (notebook.pageIds != nil && idx < (notebook.pageIds?.count ?? 0)) ? notebook.pageIds?[idx] : nil
             let k = key(for: idx, pageId: pid)
             guard !pendingCoreFlushKeys.contains(k), !dirtyPages.contains(k) else { continue }
+            // 僅重新載入已在記憶體中建立副本的頁面；尚未載入的頁面維持惰性按需讀取，並遞增版本號通知縮圖重繪。
+            guard inMemoryDrawings[k] != nil else {
+                revisions[k, default: 0] += 1
+                continue
+            }
             let disk = store.loadDrawing(notebookId: notebookId, pageIndex: idx)
             if inMemoryDrawings[k] != disk {
                 inMemoryDrawings[k] = disk

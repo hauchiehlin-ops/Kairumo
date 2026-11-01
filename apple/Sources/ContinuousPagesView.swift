@@ -417,7 +417,29 @@ public final class CanvasTouchState {
     public static var isCanvasNavigating: Bool = false
 
     // profile-scope: device 畫面上活躍的直接觸控數量
-    public static var activeDirectTouches: Int = 0
+    public static var activeDirectTouches: Int = 0 {
+        didSet {
+            if activeDirectTouches > 0 || oldValue > 0 {
+                lastInkTouchTime = CACurrentMediaTime()
+            }
+        }
+    }
+
+    // profile-scope: device 最近一次畫布觸控或手寫落筆的單調時間戳（秒）
+    public static var lastInkTouchTime: CFTimeInterval = 0
+
+    /// 記錄一次手寫落筆／運筆活動，延長背景同步讓路冷卻視窗。
+    public static func noteInkActivity() {
+        lastInkTouchTime = CACurrentMediaTime()
+    }
+
+    /// 使用者是否正在畫布上連續書寫或剛停筆未滿冷卻時間（預設 1.8 秒）。
+    /// 背景同步於此期間全面讓路，避免同步匯出與連續手寫爭搶磁碟與 CPU 導致筆跡延滯。
+    public static func isActivelyInking(cooldownSeconds: CFTimeInterval = 1.8) -> Bool {
+        if activeDirectTouches > 0 { return true }
+        let elapsed = CACurrentMediaTime() - lastInkTouchTime
+        return lastInkTouchTime > 0 && elapsed >= 0 && elapsed < cooldownSeconds
+    }
 
     /// 是否允許物件拖曳（當導航進行中或多指同時按住時嚴格禁止拖動物件）
     public static var canDragObject: Bool {

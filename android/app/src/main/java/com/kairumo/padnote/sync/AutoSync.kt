@@ -215,6 +215,11 @@ object AutoSync {
 
     private fun pump(context: Context) {
         scope.launch {
+            if (com.kairumo.padnote.ink.InkEngine.isActivelyInking()) {
+                delay(1800L)
+                pump(context)
+                return@launch
+            }
             // 同一時間只跑一輪。排程器本身也擋，這道鎖是為了擋住
             // 「兩個協程同時通過 shouldStart」那個窗口。
             runLock.withLock {

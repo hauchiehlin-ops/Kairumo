@@ -70,7 +70,7 @@ enum BrushCursor {
     ///
     /// 斜角是它辨識度的來源 —— 正的矩形跟圓筆頭在小尺寸下分不出來。
     private static func chiselPath(width: CGFloat) -> UIBezierPath {
-        let height = max(4, width / 2.4)
+        let height = max(2.2, width / 2.4)
         let rect = CGRect(x: -width / 2, y: -height / 2, width: width, height: height)
         let path = UIBezierPath(roundedRect: rect, cornerRadius: height / 2)
         path.apply(CGAffineTransform(rotationAngle: -.pi / 6))
@@ -83,13 +83,15 @@ enum BrushCursor {
     /// 畫出來的不一樣，這個功能就變成誤導。
     static func tipScale(for tool: EditorToolType) -> CGFloat {
         switch tool {
-        case .ballpoint, .pencil: return 0.65
+        case .ballpoint: return 0.65
+        case .pencil: return 1.3
         case .fineliner: return 0.6
         case .calligraphy: return 1.4
         case .charcoal, .crayon, .oilpaint: return 1.8
         case .airbrush: return 2.6
         case .pen: return 1.1
-        case .brush, .watercolor: return 2.2
+        case .brush: return 2.2
+        case .watercolor: return 2.4
         case .marker: return 2.8
         case .highlighter: return 3.8
         case .eraser: return 1.0 // 橡皮擦直徑直接對應擦除寬度（pixelEraserWidth × 縮放倍率）
@@ -106,6 +108,10 @@ enum BrushCursor {
     /// 而不必去量一條貝茲曲線的外框。
     static func tipDiameter(for tool: EditorToolType, strokeWidth: CGFloat) -> CGFloat {
         let maxLimit = tool == .eraser ? eraserMaxSide : maxSide
-        return min(max(strokeWidth * tipScale(for: tool), 8), maxLimit)
+        if tool == .eraser {
+            return min(max(strokeWidth * tipScale(for: tool), 8), maxLimit)
+        }
+        let w = max(1, strokeWidth)
+        return min(max(2.0 + w * tipScale(for: tool), 2.5), maxLimit)
     }
 }

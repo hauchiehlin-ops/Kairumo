@@ -189,15 +189,20 @@ enum ProInk {
     /// 原本 PencilKit 的各支筆各有倍率與下限（鋼筆 ×1.1、原子筆 ×0.65、麥克筆 ×2.8……），
     /// 換成自繪引擎之後沿用，使用者換版本後同一個粗細看起來差不多。
     static func baseWidth(for tool: EditorToolType, strokeWidth: CGFloat) -> CGFloat {
+        let w = max(1.0, strokeWidth)
         switch tool {
-        case .brush: return max(1.2, strokeWidth * 1.65)
-        case .pen: return max(2.0, strokeWidth * 1.1)
-        case .ballpoint: return max(1.2, strokeWidth * 0.65)
-        case .marker: return max(8.0, strokeWidth * 2.8)
-        case .highlighter: return max(18.0, strokeWidth * 3.8)
-        case .pencil: return max(2.0, strokeWidth * 1.3)
-        case .watercolor: return max(8.0, strokeWidth * 2.4)
-        default: return max(1.2, strokeWidth * 1.4)
+        case .pen: return w * 1.1
+        case .ballpoint: return w * 0.65
+        case .fineliner: return w * 0.85
+        case .pencil: return w * 1.3
+        case .calligraphy: return w * 1.4
+        case .charcoal, .crayon, .oilpaint: return w * 1.6
+        case .brush: return w * 2.0
+        case .watercolor: return w * 2.4
+        case .airbrush: return w * 2.5
+        case .marker: return w * 2.8
+        case .highlighter: return w * 3.8
+        default: return w * 1.2
         }
     }
 
@@ -372,6 +377,168 @@ enum ProInkStore {
         directory.appending(path: "\(notebookId)_p\(page).\(foreign ? "proink-foreign" : "proink").json")
     }
 
+    private nonisolated static func binURL(for jsonURL: URL) -> URL {
+        jsonURL.appendingPathExtension("bin")
+    }
+
+    /// 緊湊二進位格式序列化（KPB1），避免數萬筆畫開啟時解析數十 MB JSON 文字造成秒級阻塞。
+    private nonisolated static func encodeBinary(_ strokes: [ProStroke], jsonByteSize: UInt64) -> Data {
+        var data = Data()
+        data.reserveCapacity(16 + strokes.count * 128)
+        let magic: UInt32 = 0x3142504B // "KPB1"
+        var leMagic = magic.littleEndian
+        var leJsonSize = jsonByteSize.littleEndian
+        var leCount = UInt32(strokes.count).littleEndian
+        withUnsafeBytes(of: &leMagic) { data.append(contentsOf: $0) }
+        withUnsafeBytes(of: &leJsonSize) { data.append(contentsOf: $0) }
+        withUnsafeBytes(of: &leCount) { data.append(contentsOf: $0) }
+
+        func appendString(_ s: String) {
+            let utf8 = Array(s.utf8)
+            var len = UInt16(min(utf8.count, Int(UInt16.max))).littleEndian
+            withUnsafeBytes(of: &len) { data.append(contentsOf: $0) }
+            data.append(contentsOf: utf8.prefix(Int(UInt16.max)))
+        }
+
+        for s in strokes {
+            appendString(s.id)
+            appendString(s.coreId ?? "")
+            appendString(s.tool)
+            appendString(s.blendMode)
+            let c0 = s.colorRGBA.count > 0 ? s.colorRGBA[0] : 0
+            let c1 = s.colorRGBA.count > 1 ? s.colorRGBA[1] : 0
+            let c2 = s.colorRGBA.count > 2 ? s.colorRGBA[2] : 0
+            let c3 = s.colorRGBA.count > 3 ? s.colorRGBA[3] : 255
+            data.append(contentsOf: [c0, c1, c2, c3])
+            var bw = s.baseWidth.bitPattern.littleEndian
+            withUnsafeBytes(of: &bw) { data.append(contentsOf: $0) }
+            if let l = s.layer {
+                data.append(contentsOf: [1, l])
+            } else {
+                data.append(contentsOf: [0, 0])
+            }
+            if let lt = s.lineType {
+                data.append(contentsOf: [1, lt])
+            } else {
+                data.append(contentsOf: [0, 0])
+            }
+            var ptCount = UInt32(s.points.count).littleEndian
+            withUnsafeBytes(of: &ptCount) { data.append(contentsOf: $0) }
+            for p in s.points {
+                var x = p.x.bitPattern.littleEndian
+                var y = p.y.bitPattern.littleEndian
+                var pr = p.pressure.bitPattern.littleEndian
+                var ti = p.tilt.bitPattern.littleEndian
+                var az = p.azimuth.bitPattern.littleEndian
+                var dt = p.dtUs.littleEndian
+                var ro = p.roll.bitPattern.littleEndian
+                withUnsafeBytes(of: &x) { data.append(contentsOf: $0) }
+                withUnsafeBytes(of: &y) { data.append(contentsOf: $0) }
+                withUnsafeBytes(of: &pr) { data.append(contentsOf: $0) }
+                withUnsafeBytes(of: &ti) { data.append(contentsOf: $0) }
+                withUnsafeBytes(of: &az) { data.append(contentsOf: $0) }
+                withUnsafeBytes(of: &dt) { data.append(contentsOf: $0) }
+                withUnsafeBytes(of: &ro) { data.append(contentsOf: $0) }
+            }
+        }
+        return data
+    }
+
+    private nonisolated static func decodeBinary(_ data: Data, expectedJsonByteSize: UInt64) -> [ProStroke]? {
+        guard data.count >= 16 else { return nil }
+        return data.withUnsafeBytes { (raw: UnsafeRawBufferPointer) -> [ProStroke]? in
+            guard let base = raw.baseAddress else { return nil }
+            var offset = 0
+            func readU32() -> UInt32? {
+                guard offset + 4 <= raw.count else { return nil }
+                let v = base.advanced(by: offset).assumingMemoryBound(to: UInt32.self).pointee
+                offset += 4
+                return UInt32(littleEndian: v)
+            }
+            func readU64() -> UInt64? {
+                guard offset + 8 <= raw.count else { return nil }
+                var v: UInt64 = 0
+                memcpy(&v, base.advanced(by: offset), 8)
+                offset += 8
+                return UInt64(littleEndian: v)
+            }
+            func readU16() -> UInt16? {
+                guard offset + 2 <= raw.count else { return nil }
+                var v: UInt16 = 0
+                memcpy(&v, base.advanced(by: offset), 2)
+                offset += 2
+                return UInt16(littleEndian: v)
+            }
+            func readString() -> String? {
+                guard let len = readU16() else { return nil }
+                let count = Int(len)
+                guard offset + count <= raw.count else { return nil }
+                let str = String(
+                    decoding: UnsafeBufferPointer(
+                        start: base.advanced(by: offset).assumingMemoryBound(to: UInt8.self),
+                        count: count
+                    ),
+                    as: UTF8.self
+                )
+                offset += count
+                return str
+            }
+            guard let magic = readU32(), magic == 0x3142504B,
+                  let jsonSize = readU64(), jsonSize == expectedJsonByteSize,
+                  let strokeCount = readU32()
+            else { return nil }
+
+            var strokes: [ProStroke] = []
+            strokes.reserveCapacity(Int(strokeCount))
+            for _ in 0..<strokeCount {
+                guard let id = readString(),
+                      let coreIdRaw = readString(),
+                      let tool = readString(),
+                      let blendMode = readString(),
+                      offset + 12 <= raw.count
+                else { return nil }
+                let ptr = base.advanced(by: offset).assumingMemoryBound(to: UInt8.self)
+                let rgba: [UInt8] = [ptr[0], ptr[1], ptr[2], ptr[3]]
+                offset += 4
+                guard let bwBits = readU32() else { return nil }
+                let baseWidth = Float(bitPattern: bwBits)
+                let p2 = base.advanced(by: offset).assumingMemoryBound(to: UInt8.self)
+                let hasLayer = p2[0] != 0
+                let layerVal = p2[1]
+                let hasLineType = p2[2] != 0
+                let lineTypeVal = p2[3]
+                offset += 4
+                guard let ptCount = readU32() else { return nil }
+                let nPts = Int(ptCount)
+                guard offset + nPts * 28 <= raw.count else { return nil }
+                var points: [ProPoint] = []
+                points.reserveCapacity(nPts)
+                for _ in 0..<nPts {
+                    let x = Float(bitPattern: readU32()!)
+                    let y = Float(bitPattern: readU32()!)
+                    let pr = Float(bitPattern: readU32()!)
+                    let ti = Float(bitPattern: readU32()!)
+                    let az = Float(bitPattern: readU32()!)
+                    let dt = readU32()!
+                    let ro = Float(bitPattern: readU32()!)
+                    points.append(ProPoint(x: x, y: y, pressure: pr, tilt: ti, azimuth: az, dtUs: dt, roll: ro))
+                }
+                strokes.append(ProStroke(
+                    id: id,
+                    tool: tool,
+                    colorRGBA: rgba,
+                    baseWidth: baseWidth,
+                    blendMode: blendMode,
+                    points: points,
+                    layer: hasLayer ? layerVal : nil,
+                    lineType: hasLineType ? lineTypeVal : nil,
+                    coreId: coreIdRaw.isEmpty ? nil : coreIdRaw
+                ))
+            }
+            return strokes
+        }
+    }
+
     nonisolated static func load(in directory: URL, notebookId: String, page: Int, foreign: Bool = false) -> [ProStroke] {
         let file = url(directory, notebookId, page, foreign: foreign)
         let key = file.path
@@ -382,7 +549,9 @@ enum ProInkStore {
             return pending.strokes
         }
         ledgerLock.unlock()
-        let modDate = (try? file.resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate
+        let resValues = try? file.resourceValues(forKeys: [.contentModificationDateKey, .fileSizeKey])
+        let modDate = resValues?.contentModificationDate
+        let fileSize = UInt64(resValues?.fileSize ?? 0)
         ledgerLock.lock()
         if modDate == nil {
             strokesCache.removeValue(forKey: key)
@@ -394,12 +563,28 @@ enum ProInkStore {
             return cached.strokes
         }
         ledgerLock.unlock()
+        let binFile = binURL(for: file)
+        if fileSize > 0,
+           let binData = try? Data(contentsOf: binFile, options: .mappedIfSafe),
+           let fastStrokes = decodeBinary(binData, expectedJsonByteSize: fileSize) {
+            ledgerLock.lock()
+            strokesCache[key] = (modDate, fastStrokes)
+            ledgerLock.unlock()
+            return fastStrokes
+        }
         guard let data = try? Data(contentsOf: file),
               let strokes = try? JSONDecoder().decode([ProStroke].self, from: data)
         else { return [] }
+        let actualSize = UInt64(data.count)
         ledgerLock.lock()
         strokesCache[key] = (modDate, strokes)
         ledgerLock.unlock()
+        if strokes.count > 16 {
+            writeQueue.async {
+                let binData = encodeBinary(strokes, jsonByteSize: actualSize)
+                try? binData.write(to: binFile, options: .atomic)
+            }
+        }
         return strokes
     }
 
@@ -408,6 +593,8 @@ enum ProInkStore {
         // 與排隊中的背景寫入走同一條佇列：否則較舊的那一份可能晚一步寫完、蓋掉這一份。
         writeQueue.sync {
             ledgerLock.lock()
+            pendingWorkItems[file.path]?.cancel()
+            pendingWorkItems.removeValue(forKey: file.path)
             pendingWrites.removeValue(forKey: file.path)
             ledgerLock.unlock()
             write(strokes, to: file, directory: directory, notebookId: notebookId, page: page)
@@ -418,37 +605,56 @@ enum ProInkStore {
     /// 畫完一筆就要存，但**不能在主執行緒上等**：整頁筆畫編成 JSON 的成本隨頁面上的筆畫數增加，
     /// 寫得越多、每一次抬筆卡得越久 —— 下一筆的開頭就跟著延遲（實機回報「後面的字出現得越來越慢」）。
     ///
-    /// 這裡只把最新的一份記在記憶體（`load` 立刻讀得到），編碼與寫檔交給背景序列佇列；
-    /// 連續幾筆排在一起時只寫最後一份。
+    /// 這裡只把最新的一份記在記憶體（`load` 立刻讀得到），編碼與寫檔交給背景序列佇列並去抖動 1.2 秒；
+    /// 連續運筆期間完全不執行整頁 JSON 序列化與磁碟 I/O，停筆或換頁／退背景時只寫最後一份。
     nonisolated static func saveDeferred(_ strokes: [ProStroke], in directory: URL, notebookId: String, page: Int) {
         let file = url(directory, notebookId, page, foreign: false)
         let key = file.path
+        let pKey = pageCacheKey(directory, notebookId, page)
+        let now = Date()
         ledgerLock.lock()
         pendingGeneration &+= 1
         let generation = pendingGeneration
-        pendingWrites[key] = (generation, strokes)
-        modifiedCache.removeValue(forKey: pageCacheKey(directory, notebookId, page))
-        revisions[pageCacheKey(directory, notebookId, page), default: 0] += 1
-        ledgerLock.unlock()
-        writeQueue.async {
+        pendingWrites[key] = (generation, strokes, file, directory, notebookId, page)
+        pendingModifiedDates[pKey] = now
+        modifiedCache[pKey] = now
+        revisions[pKey, default: 0] += 1
+        pendingWorkItems[key]?.cancel()
+        let work = DispatchWorkItem {
             ledgerLock.lock()
+            pendingWorkItems.removeValue(forKey: key)
             guard let latest = pendingWrites[key] else {
                 ledgerLock.unlock()
                 return   // 已經被後面那一次（或同步存檔）寫掉了
             }
             ledgerLock.unlock()
-            write(latest.strokes, to: file, directory: directory, notebookId: notebookId, page: page)
+            write(latest.strokes, to: latest.file, directory: latest.directory, notebookId: latest.notebookId, page: latest.page)
             ledgerLock.lock()
             if pendingWrites[key]?.generation == latest.generation {
                 pendingWrites.removeValue(forKey: key)
+                pendingModifiedDates.removeValue(forKey: pKey)
             }
             ledgerLock.unlock()
         }
+        pendingWorkItems[key] = work
+        ledgerLock.unlock()
+        writeQueue.asyncAfter(deadline: .now() + 1.2, execute: work)
     }
 
     /// 等排隊中的寫入做完（進背景、要讀磁碟上的檔案之前）。不可在寫入佇列上呼叫。
     nonisolated static func flushPendingWrites() {
-        writeQueue.sync {}
+        writeQueue.sync {
+            ledgerLock.lock()
+            let allPending = Array(pendingWrites.values)
+            for item in pendingWorkItems.values { item.cancel() }
+            pendingWorkItems.removeAll()
+            pendingWrites.removeAll()
+            pendingModifiedDates.removeAll()
+            ledgerLock.unlock()
+            for item in allPending {
+                write(item.strokes, to: item.file, directory: item.directory, notebookId: item.notebookId, page: item.page)
+            }
+        }
     }
 
     private nonisolated static func hasPendingWrite(_ directory: URL, _ notebookId: String, _ page: Int) -> Bool {
@@ -457,9 +663,13 @@ enum ProInkStore {
         return pendingWrites[key] != nil
     }
 
-    private nonisolated static let writeQueue = DispatchQueue(label: "kairumo.proink.writer", qos: .userInitiated)
+    private nonisolated static let writeQueue = DispatchQueue(label: "kairumo.proink.writer", qos: .utility)
     // profile-scope: profile 以完整檔案路徑為鍵，不同設定檔不會共用同一項目
-    private nonisolated(unsafe) static var pendingWrites: [String: (generation: UInt64, strokes: [ProStroke])] = [:]
+    private nonisolated(unsafe) static var pendingWrites: [String: (generation: UInt64, strokes: [ProStroke], file: URL, directory: URL, notebookId: String, page: Int)] = [:]
+    // profile-scope: profile 以完整檔案路徑為鍵，管理去抖動延遲寫入工作項目
+    private nonisolated(unsafe) static var pendingWorkItems: [String: DispatchWorkItem] = [:]
+    // profile-scope: profile 以完整檔案路徑前綴為鍵，記錄待寫入筆畫的記憶體修改時間
+    private nonisolated(unsafe) static var pendingModifiedDates: [String: Date] = [:]
     private nonisolated(unsafe) static var pendingGeneration: UInt64 = 0
     // profile-scope: profile 以完整檔案路徑前綴為鍵
     private nonisolated(unsafe) static var revisions: [String: Int] = [:]
@@ -480,8 +690,10 @@ enum ProInkStore {
     /// 只在寫入佇列上呼叫。
     private nonisolated static func write(_ strokes: [ProStroke], to file: URL, directory: URL, notebookId: String, page: Int) {
         let key = file.path
+        let binFile = binURL(for: file)
         if strokes.isEmpty {
             try? FileManager.default.removeItem(at: file)
+            try? FileManager.default.removeItem(at: binFile)
             ledgerLock.lock()
             strokesCache.removeValue(forKey: key)
             modifiedCache.removeValue(forKey: pageCacheKey(directory, notebookId, page))
@@ -490,6 +702,8 @@ enum ProInkStore {
         }
         guard let data = try? JSONEncoder().encode(strokes) else { return }
         try? data.write(to: file, options: .atomic)
+        let binData = encodeBinary(strokes, jsonByteSize: UInt64(data.count))
+        try? binData.write(to: binFile, options: .atomic)
         let modDate = (try? file.resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate
         ledgerLock.lock()
         strokesCache[key] = (modDate, strokes)
@@ -862,17 +1076,79 @@ enum ProInkPageImageCache {
     private static var entries: [String: Entry] = [:]
     // profile-scope: profile 頁面烘焙點陣圖 LRU 順序（隨設定檔切換由 resetForProfileSwitch 清空）
     private static var order: [String] = []
-    private static let maxEntries = 16
+    private static let maxEntries = 24
+    // profile-scope: profile 已確認建立的磁碟頁面烘焙圖快取目錄路徑
+    private static var ensuredDiskDirPath: String?
+    // profile-scope: profile 延遲寫入磁碟頁面烘焙圖的去抖動工作項目
+    private static var pendingDiskWork: [String: DispatchWorkItem] = [:]
+    private static let diskQueue = DispatchQueue(label: "kairumo.proink.pagebitmap", qos: .utility)
 
     static func resetForProfileSwitch() {
         lock.lock()
         entries.removeAll()
         order.removeAll()
+        for (_, work) in pendingDiskWork { work.cancel() }
+        pendingDiskWork.removeAll()
+        ensuredDiskDirPath = nil
         lock.unlock()
+    }
+
+    private static var diskCacheDirectory: URL {
+        let base: URL
+        if let root = ProfileContext.activeCachesRoot {
+            base = root
+        } else {
+            base = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
+                .appending(path: "Kairumo", directoryHint: .isDirectory)
+        }
+        let dir = base.appending(path: "ProInkPageBitmaps", directoryHint: .isDirectory)
+        let dirPath = dir.path
+        lock.lock()
+        let alreadyEnsured = (ensuredDiskDirPath == dirPath)
+        lock.unlock()
+        if !alreadyEnsured {
+            try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+            lock.lock()
+            ensuredDiskDirPath = dirPath
+            lock.unlock()
+        }
+        return dir
     }
 
     private static func key(notebookId: String, pageIndex: Int, isDark: Bool) -> String {
         "\(notebookId.lowercased())|\(pageIndex)|\(isDark ? 1 : 0)"
+    }
+
+    private static func diskFilePrefix(notebookId: String, pageIndex: Int, isDark: Bool) -> String {
+        let safeId = notebookId.lowercased().replacingOccurrences(of: "/", with: "_")
+        return "\(safeId)_p\(pageIndex)_\(isDark ? 1 : 0)_"
+    }
+
+    private static func fingerprint(
+        isDark: Bool,
+        size: CGSize,
+        hiddenStamp: String,
+        strokes: [ProStroke]
+    ) -> String {
+        var h: UInt64 = 0xcbf29ce484222325
+        func mix(_ v: UInt64) {
+            h ^= v
+            h = h &* 0x100000001b3
+        }
+        func mixString(_ s: String) {
+            for b in s.utf8 { mix(UInt64(b)) }
+        }
+        mix(isDark ? 1 : 0)
+        mix(UInt64(Int(size.width.rounded())))
+        mix(UInt64(Int(size.height.rounded())))
+        mixString(hiddenStamp)
+        mix(UInt64(strokes.count))
+        for s in strokes {
+            mixString(s.id)
+            mix(UInt64(s.points.count))
+            mix(UInt64(s.baseWidth.bitPattern))
+        }
+        return String(format: "%016llx", h)
     }
 
     static func get(
@@ -886,21 +1162,47 @@ enum ProInkPageImageCache {
         guard !strokes.isEmpty, size.width > 0, size.height > 0 else { return nil }
         let k = key(notebookId: notebookId, pageIndex: pageIndex, isDark: isDark)
         lock.lock()
-        guard let entry = entries[k] else {
-            lock.unlock()
-            return nil
+        let memEntry = entries[k]
+        lock.unlock()
+        if let entry = memEntry,
+           entry.isDark == isDark,
+           entry.hiddenStamp == hiddenStamp,
+           abs(entry.size.width - size.width) < 1.0,
+           abs(entry.size.height - size.height) < 1.0,
+           entry.strokeIds.count == strokes.count {
+            var allMatch = true
+            for (i, s) in strokes.enumerated() where entry.strokeIds[i] != s.id {
+                allMatch = false
+                break
+            }
+            if allMatch { return entry.image }
+        }
+        guard strokes.count > 16 else { return nil }
+        let fp = fingerprint(isDark: isDark, size: size, hiddenStamp: hiddenStamp, strokes: strokes)
+        let prefix = diskFilePrefix(notebookId: notebookId, pageIndex: pageIndex, isDark: isDark)
+        let file = diskCacheDirectory.appending(path: "\(prefix)\(fp).png")
+        guard let data = try? Data(contentsOf: file),
+              let rawImg = UIImage(data: data)
+        else { return nil }
+        let scale = max(1.0, rawImg.size.width / size.width)
+        let diskImg = UIImage(cgImage: rawImg.cgImage!, scale: scale, orientation: .up)
+        let loadedEntry = Entry(
+            image: diskImg,
+            strokeIds: strokes.map(\.id),
+            size: size,
+            isDark: isDark,
+            hiddenStamp: hiddenStamp
+        )
+        lock.lock()
+        entries[k] = loadedEntry
+        order.removeAll { $0 == k }
+        order.append(k)
+        while order.count > maxEntries {
+            let evicted = order.removeFirst()
+            entries.removeValue(forKey: evicted)
         }
         lock.unlock()
-        guard entry.isDark == isDark,
-              entry.hiddenStamp == hiddenStamp,
-              abs(entry.size.width - size.width) < 1.0,
-              abs(entry.size.height - size.height) < 1.0,
-              entry.strokeIds.count == strokes.count
-        else { return nil }
-        for (i, s) in strokes.enumerated() where entry.strokeIds[i] != s.id {
-            return nil
-        }
-        return entry.image
+        return diskImg
     }
 
     static func set(
@@ -930,17 +1232,55 @@ enum ProInkPageImageCache {
             entries.removeValue(forKey: evicted)
         }
         lock.unlock()
+
+        if strokes.count > 16 {
+            let fp = fingerprint(isDark: isDark, size: size, hiddenStamp: hiddenStamp, strokes: strokes)
+            let prefix = diskFilePrefix(notebookId: notebookId, pageIndex: pageIndex, isDark: isDark)
+            let work = DispatchWorkItem {
+                lock.lock()
+                pendingDiskWork.removeValue(forKey: prefix)
+                lock.unlock()
+                guard let png = image.pngData() else { return }
+                let dir = diskCacheDirectory
+                if let existing = try? FileManager.default.contentsOfDirectory(at: dir, includingPropertiesForKeys: nil) {
+                    for url in existing where url.lastPathComponent.hasPrefix(prefix) && url.lastPathComponent != "\(prefix)\(fp).png" {
+                        try? FileManager.default.removeItem(at: url)
+                    }
+                }
+                let target = dir.appending(path: "\(prefix)\(fp).png")
+                if !FileManager.default.fileExists(atPath: target.path) {
+                    try? png.write(to: target, options: .atomic)
+                }
+            }
+            lock.lock()
+            pendingDiskWork[prefix]?.cancel()
+            pendingDiskWork[prefix] = work
+            lock.unlock()
+            diskQueue.asyncAfter(deadline: .now() + 1.2, execute: work)
+        }
     }
 
     static func invalidate(notebookId: String, pageIndex: Int) {
         let prefix = "\(notebookId.lowercased())|\(pageIndex)|"
+        let p0 = diskFilePrefix(notebookId: notebookId, pageIndex: pageIndex, isDark: false)
+        let p1 = diskFilePrefix(notebookId: notebookId, pageIndex: pageIndex, isDark: true)
         lock.lock()
         let toRemove = entries.keys.filter { $0.hasPrefix(prefix) }
         for k in toRemove {
             entries.removeValue(forKey: k)
             order.removeAll { $0 == k }
         }
+        pendingDiskWork.removeValue(forKey: p0)?.cancel()
+        pendingDiskWork.removeValue(forKey: p1)?.cancel()
         lock.unlock()
+        diskQueue.async {
+            let dir = diskCacheDirectory
+            if let existing = try? FileManager.default.contentsOfDirectory(at: dir, includingPropertiesForKeys: nil) {
+                for url in existing where url.lastPathComponent.hasPrefix(p0) || url.lastPathComponent.hasPrefix(p1) {
+                    try? FileManager.default.removeItem(at: url)
+                }
+            }
+        }
     }
 }
 
@@ -1139,11 +1479,14 @@ final class ProInkLayerView: UIView {
         let ordered = DraftingState.shared.drawOrder(allStrokes, notebookId: notebookId)
         let isDark = traitCollection.userInterfaceStyle == .dark
         let hiddenStamp = DraftingState.shared.hiddenStamp(notebookId: notebookId)
+        let effectiveSize = bounds.size.width > 0
+            ? bounds.size
+            : CGSize(width: PageGeometry.width, height: PageGeometry.height)
         if let cachedImg = ProInkPageImageCache.get(
             notebookId: notebookId,
             pageIndex: pageIndex,
             isDark: isDark,
-            size: bounds.size,
+            size: effectiveSize,
             hiddenStamp: hiddenStamp,
             matching: ordered
         ) {
@@ -1155,10 +1498,6 @@ final class ProInkLayerView: UIView {
             return
         }
         invalidateBacking()
-        // 背景預熱，若有新載入的筆畫未在快取中，完成後自動更新畫面
-        ProInkDabCache.prewarm(strokes: allStrokes) { [weak self] in
-            self?.invalidateBacking()
-        }
     }
 
     /// 上一次存檔時自己的筆畫（以本機 `id` 為鍵）。存檔時與現在比對，找出被拿掉／加回來的筆畫，
@@ -1706,6 +2045,7 @@ final class ProInkLayerView: UIView {
     func beginStroke(tool: ToolKind, color: [UInt8], width: Float, at point: ProPoint,
                      layer: UInt8 = 0, lineType: UInt8 = 0) {
         guard let name = ProInk.name(of: tool) else { return }
+        CanvasTouchState.noteInkActivity()
         var point = point
         edgeLock = nil
         tailSnapped = false
@@ -1734,6 +2074,7 @@ final class ProInkLayerView: UIView {
 
     func extendStroke(with points: [ProPoint], predicted: [ProPoint] = []) {
         guard var stroke = live, !points.isEmpty else { return }
+        CanvasTouchState.noteInkActivity()
         // 吸附之後：直線跟著手指的終點走（角度鎖定照樣生效）；其他圖形定型，不再變。
         if let snap = snapState {
             guard snap.kind == .line, let end = points.last else { return }

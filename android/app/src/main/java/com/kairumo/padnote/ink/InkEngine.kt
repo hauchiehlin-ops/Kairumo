@@ -1052,11 +1052,13 @@ class InkEngine(
         val id = sample.event.id
         when (sample.event.phase) {
             FfiPhase.BEGAN -> {
+                noteInkTouch()
                 inFlight[id] = mutableListOf(sample)
                 resetHold(sample.event.x, sample.event.y)
                 updateDraftPreview()
             }
             FfiPhase.MOVED -> {
+                noteInkTouch()
                 // 沒有 BEGAN 就收到 MOVED（例如前一筆被收回後又有事件進來）
                 // 不該無中生有一筆畫。
                 inFlight[id]?.add(sample)
@@ -1067,6 +1069,7 @@ class InkEngine(
                 updateDraftPreview()
             }
             FfiPhase.ENDED -> {
+                noteInkTouch()
                 val collected = inFlight.remove(id) ?: return null
                 // 只有落筆與抬筆、中間一個移動都沒收到，兩點卻隔得很遠：那不是畫出來的線。
                 // 真的移動一定會有 ACTION_MOVE；沒有的話是筆按著時頁面被捲走、或中間的取樣被別人吃掉，
@@ -1329,10 +1332,21 @@ class InkEngine(
         val loaded = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
             val list = runCatching { target.visibleStrokeDetails(page) }.getOrNull()
             if (list != null) {
-                // 背景預熱自繪筆刷印章點陣，使切回主執行緒渲染時達到 100% 記憶體快取命中
-                for (s in list) {
+                // 大量筆畫頁面（>120 筆）先同步預熱最後 120 筆即刻上屏，其餘在背景非阻塞預熱，確保萬筆大頁即點即開
+                val syncSlice = if (list.size > 120) list.takeLast(120) else list
+                for (s in syncSlice) {
                     if (uniffi.padnote_core.brushIsCustom(s.tool)) {
                         InkBrushRenderer.prewarmDabs(s.points, s.tool, s.baseWidth, s.lineType.toInt())
+                    }
+                }
+                if (list.size > 120) {
+                    val headSlice = list.subList(0, list.size - 120).toList()
+                    java.util.concurrent.ForkJoinPool.commonPool().execute {
+                        for (s in headSlice) {
+                            if (uniffi.padnote_core.brushIsCustom(s.tool)) {
+                                InkBrushRenderer.prewarmDabs(s.points, s.tool, s.baseWidth, s.lineType.toInt())
+                            }
+                        }
                     }
                 }
             }
@@ -1679,6 +1693,26 @@ class InkEngine(
          * 只看單頁模式那一個引擎的話，在連續模式寫到一半的那一筆照樣被換掉。主執行緒專用。
          */
         val anyDrawing: Boolean get() = live.keys.any { it.isDrawing }
+
+        // profile-scope: device 最近一次畫布手寫觸控的單調時間戳（毫秒）
+        @Volatile
+        private var lastInkTouchTimeMs: Long = 0L
+
+        fun noteInkTouch() {
+            lastInkTouchTimeMs = android.os.SystemClock.elapsedRealtime()
+        }
+
+        /**
+         * 使用者是否正在畫布上連續書寫或剛停筆未滿冷卻時間（預設 1.8 秒）。
+         * 背景同步於此期間全面讓路，避免同步與連續手寫爭搶核心鎖與 CPU 導致筆跡延滯。
+         */
+        fun isActivelyInking(cooldownMs: Long = 1800L): Boolean {
+            if (anyDrawing) return true
+            val last = lastInkTouchTimeMs
+            if (last <= 0L) return false
+            val elapsed = android.os.SystemClock.elapsedRealtime() - last
+            return elapsed in 0L until cooldownMs
+        }
 
         // profile-scope: profile 頁面筆畫記憶體快取（以 session 實例與 pageId 為鍵，加速換頁與預覽載入）
         private val pageStrokesCache = android.util.LruCache<String, List<CompletedStroke>>(32)
