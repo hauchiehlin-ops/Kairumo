@@ -1518,15 +1518,23 @@ enum NotebookPackageBridge {
         let ids = Self.orderedLikeDocument(try pageIds(of: session), document: document)
         guard pageIndex < ids.count else { throw BridgeError.noPages }
         let pageId = ids[pageIndex]
-        try session.setPageSize(
-            pageId: pageId,
-            width: Float(document.pageSize.width),
-            height: Float(document.height(forPage: pageIndex))
-        )
+        let targetW = Float(document.pageSize.width)
+        let targetH = Float(document.height(forPage: pageIndex))
+        let existingSize = try? session.pageSize(pageId: pageId)
+        if existingSize == nil || existingSize!.count < 2 || abs(existingSize![0] - targetW) > 0.5 || abs(existingSize![1] - targetH) > 0.5 {
+            try session.setPageSize(
+                pageId: pageId,
+                width: targetW,
+                height: targetH
+            )
+        }
 
         var meta = NotebookMeta(from: document)
         meta.pageIds = ids
-        try session.setNotebookMeta(json: meta.encodedJSON())
+        let encodedMeta = meta.encodedJSON()
+        if session.notebookMeta() != encodedMeta {
+            try session.setNotebookMeta(json: encodedMeta)
+        }
         return (session, pageId)
     }
 

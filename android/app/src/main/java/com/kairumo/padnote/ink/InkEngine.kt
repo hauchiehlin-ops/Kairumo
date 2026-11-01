@@ -454,6 +454,7 @@ class InkEngine(
             }
         }
         redoStack += removed.asReversed()
+        syncPageStrokesCache()
         if (removed.any { it.coreStrokeId != null }) notifyContentCommittedAfterWrites()
         return true
     }
@@ -495,6 +496,7 @@ class InkEngine(
             }
             _strokes += stroke.copy(coreStrokeId = newId)
         }
+        syncPageStrokesCache()
         if (batch.any { it.coreStrokeId != null }) notifyContentCommittedAfterWrites()
         return true
     }
@@ -544,6 +546,7 @@ class InkEngine(
         }
         lastInsertedCoreIds = inserted
         if (count > 0) {
+            syncPageStrokesCache()
             redoStack.clear()
             redoActs.clear()
             acts += AddAct
@@ -580,6 +583,7 @@ class InkEngine(
             )
         )
         _strokes += stroke
+        syncPageStrokesCache()
         redoStack.clear()
         redoActs.clear()
         acts += AddAct
@@ -636,7 +640,10 @@ class InkEngine(
                 a.coreStrokeId?.let { present[it.lowercase()] = a }
             }
         }
-        if (fresh > 0) notifyContentCommittedAfterWrites()
+        if (fresh > 0) {
+            syncPageStrokesCache()
+            notifyContentCommittedAfterWrites()
+        }
         return added
     }
 
@@ -647,7 +654,10 @@ class InkEngine(
             _strokes.remove(s)
             coreErase(s)
         }
-        if (gone.isNotEmpty()) notifyContentCommittedAfterWrites()
+        if (gone.isNotEmpty()) {
+            syncPageStrokesCache()
+            notifyContentCommittedAfterWrites()
+        }
         return gone.size
     }
 
@@ -665,6 +675,7 @@ class InkEngine(
             for (s in remove) _strokes.removeAll { it === s }
             _strokes += added
         }
+        syncPageStrokesCache()
         notifyContentCommittedAfterWrites()
         return added
     }
@@ -767,6 +778,7 @@ class InkEngine(
         if (copies.isEmpty()) return 0
         val group = nextGroup++
         for (c in copies) _strokes += coreAdd(c.copy(group = group))
+        syncPageStrokesCache()
         redoStack.clear()
         redoActs.clear()
         acts += AddAct
@@ -833,7 +845,10 @@ class InkEngine(
                 if (target != null && page != null) queueCoreErase(target, page, id)
             }
         }
-        if (hit.isNotEmpty()) notifyContentCommittedAfterWrites()
+        if (hit.isNotEmpty()) {
+            syncPageStrokesCache()
+            notifyContentCommittedAfterWrites()
+        }
         return hit
     }
 
@@ -882,6 +897,7 @@ class InkEngine(
                 layer.toUByte(), old.lineType.toUByte())
         }
         _strokes[index] = old.copy(coreStrokeId = newId, layer = layer)
+        syncPageStrokesCache()
         if (newId != null) notifyContentCommittedAfterWrites()
         return true
     }
@@ -1197,7 +1213,12 @@ class InkEngine(
             layer = layer,
             lineType = lineType
         )
+        // 落筆平滑後立即預熱自繪筆刷印章點陣快取，避免下一幀 UI 繪製時落入磁碟或 FFI 重算
+        if (uniffi.padnote_core.brushIsCustom(tool)) {
+            InkBrushRenderer.prewarmDabs(finalPoints, tool, baseWidth, lineType)
+        }
         _strokes += stroke
+        syncPageStrokesCache()
         // 畫了新的東西就沒有「重做」可言了 —— 留著的話，按下重做會把
         // 一筆與現在的畫面毫無關係的筆畫放回來。
         redoStack.clear()
@@ -1262,6 +1283,7 @@ class InkEngine(
         if (index >= 0) {
             _strokes.removeAt(index)
             removed = true
+            syncPageStrokesCache()
         }
         val target = session
         val page = pageId
@@ -1356,8 +1378,33 @@ class InkEngine(
             syntheticId -= 1uL
         }
         _strokes += unsaved
+        syncPageStrokesCache()
         // 讀回來的筆畫不在「可收回時間窗」內 —— 它們是上次寫的，
         // 掌拒不該把它們收回去。所以刻意不填 committed。
+    }
+
+    /**
+     * 換頁時立即從記憶體快取預填該頁已載入過的筆畫，避免換頁首幀白畫面閃爍與等待 IO。
+     */
+    fun seedDisplayFromCache() {
+        if (_strokes.isNotEmpty()) return
+        val key = cacheKeyForPage() ?: return
+        val cached = pageStrokesCache.get(key) ?: return
+        if (cached.isNotEmpty()) {
+            _strokes += cached
+        }
+    }
+
+    private fun cacheKeyForPage(): String? {
+        val s = session ?: return null
+        val p = pageId ?: return null
+        if (p.isEmpty()) return null
+        return "${System.identityHashCode(s)}|$p"
+    }
+
+    private fun syncPageStrokesCache() {
+        val key = cacheKeyForPage() ?: return
+        pageStrokesCache.put(key, _strokes.toList())
     }
 
     /**
@@ -1473,6 +1520,7 @@ class InkEngine(
         }
         _strokes.clear()
         _strokes += written
+        syncPageStrokesCache()
         // 換過筆畫之後，舊的 pointerId → coreStrokeId 對應已經沒有意義。
         committed.clear()
         return written
@@ -1485,6 +1533,7 @@ class InkEngine(
         inFlight.clear()
         committed.clear()
         _strokes.clear()
+        syncPageStrokesCache()
         sketchBackup = null
         refinedCache = null
         arbiter.reset()
@@ -1630,6 +1679,42 @@ class InkEngine(
          * 只看單頁模式那一個引擎的話，在連續模式寫到一半的那一筆照樣被換掉。主執行緒專用。
          */
         val anyDrawing: Boolean get() = live.keys.any { it.isDrawing }
+
+        // profile-scope: profile 頁面筆畫記憶體快取（以 session 實例與 pageId 為鍵，加速換頁與預覽載入）
+        private val pageStrokesCache = android.util.LruCache<String, List<CompletedStroke>>(32)
+
+        /**
+         * 背景預熱指定頁面的筆畫與筆刷印章點陣，使側欄快速點擊換頁時在首幀即可 0ms 命中記憶體快取。
+         */
+        fun prewarmPage(session: PadnoteSession?, pageId: String?) {
+            if (session == null || pageId.isNullOrEmpty()) return
+            val key = "${System.identityHashCode(session)}|$pageId"
+            if (pageStrokesCache.get(key) != null) return
+            val list = runCatching { session.visibleStrokeDetails(pageId) }.getOrNull() ?: return
+            val strokes = ArrayList<CompletedStroke>(list.size)
+            var syntheticId = ULong.MAX_VALUE
+            for (stroke in list) {
+                if (InkPackageWriter.isErasePending(stroke.id)) continue
+                if (uniffi.padnote_core.brushIsCustom(stroke.tool)) {
+                    InkBrushRenderer.prewarmDabs(stroke.points, stroke.tool, stroke.baseWidth, stroke.lineType.toInt())
+                }
+                strokes += CompletedStroke(
+                    pointerId = syntheticId,
+                    coreStrokeId = stroke.id,
+                    points = stroke.points,
+                    tool = stroke.tool,
+                    startedAtMs = (stroke.startedAtUs / 1_000uL).toLong(),
+                    colorRgba = stroke.colorRgba.copyOf(),
+                    baseWidth = stroke.baseWidth,
+                    layer = stroke.layer.toInt(),
+                    lineType = stroke.lineType.toInt()
+                )
+                syntheticId -= 1uL
+            }
+            if (pageStrokesCache.get(key) == null) {
+                pageStrokesCache.put(key, strokes)
+            }
+        }
     }
 }
 

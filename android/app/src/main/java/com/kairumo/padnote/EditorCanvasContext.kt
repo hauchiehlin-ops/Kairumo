@@ -458,12 +458,15 @@ internal class EditorCanvasContext {
     var inkRevisionJob: kotlinx.coroutines.Job? = null
     /**
      * 連續手繪書寫時避免每筆抬筆同步觸發整頁 Compose 重組。
-     * 去抖動延遲（預設 1000ms）無新筆劃後才在主執行緒中更新 revision。
+     * 去抖動延遲（預設 1500ms）且確認無進行中筆劃後才在主執行緒中更新 revision。
      */
-    fun scheduleInkRevisionDebounced(delayMs: Long = 1000L) {
+    fun scheduleInkRevisionDebounced(delayMs: Long = 1500L) {
         inkRevisionJob?.cancel()
         inkRevisionJob = scope.launch(kotlinx.coroutines.Dispatchers.Main.immediate) {
             kotlinx.coroutines.delay(delayMs)
+            while (com.kairumo.padnote.ink.InkEngine.anyDrawing) {
+                kotlinx.coroutines.delay(400L)
+            }
             revision++
         }
     }
@@ -855,6 +858,7 @@ internal fun rememberEditorCanvasContext(
     val engine = remember(notebook, pageId) {
         InkEngine(session = notebook?.first, pageId = pageId).apply {
             previousEngine[0]?.takeIf { it.pageKey == (pageId ?: "") }?.let { seedDisplayFrom(it) }
+            seedDisplayFromCache()
             previousEngine[0] = this
             // 一筆畫完就通知同步。**會去抖動** —— 使用者還在寫字時
             // 每一筆都推只是浪費電，而且會拖慢正在編輯的這一本。
@@ -2212,6 +2216,20 @@ internal fun rememberEditorCanvasContext(
         engine.loadAsync()
         revision++
         clearToken++   // 低延遲路徑的前緩衝也要重畫，否則讀回來的筆畫不會出現
+        val sess = notebook?.first
+        val curIdx = pageIndex
+        if (sess != null) {
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                val total = sess.pageCount().toInt()
+                for (delta in intArrayOf(1, -1, 2, -2)) {
+                    val adj = curIdx + delta
+                    if (adj in 0 until total) {
+                        val adjPageId = runCatching { sess.pageIdAt(adj.toUInt()) }.getOrNull()
+                        InkEngine.prewarmPage(sess, adjPageId)
+                    }
+                }
+            }
+        }
     }
 
     // ── 全域復原／重做（CanvasHistory）─────────────────────────────
@@ -2393,8 +2411,8 @@ internal fun rememberEditorCanvasContext(
     // 橡皮擦時 `engine.isErasing` 會忘了跟著改，症狀是「側鍵選到橡皮擦了，
     // 但畫下去還是墨跡」。
     fun applyInkTool(picked: InkTool) {
-        ctx.flushDebouncedInkRevision()
-        // 若引擎當前仍有在途未結束的筆畫，立即取消以乾淨狀態切換新工具，不卡死換筆
+        // 若引擎當前仍有在途未結束的筆畫，立即取消以乾淨狀態切換新工具，不卡死換筆；
+        // 且不在此處強制 flushDebouncedInkRevision()，避免換筆瞬間觸發全畫面與側欄同步重組凍結。
         engine.cancelInFlight()
         inkTool = picked // state-entry: 換工具的唯一正門
         engine.isErasing = picked.isEraser

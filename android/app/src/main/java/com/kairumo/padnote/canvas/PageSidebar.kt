@@ -66,12 +66,15 @@ import uniffi.padnote_core.PadnoteSession
 import com.kairumo.padnote.profile.ProfileContext
 
 private val pageThumbnailCache = LruCache<String, ImageBitmap>(40)
+// profile-scope: profile 各頁最新基底縮圖快取（跨 revision 保留未變動頁面的基底縮圖，隨設定檔與物件變更清空）
+private val pageBaseThumbnailCache = LruCache<String, ImageBitmap>(40)
 
 /**
  * 清除所有側欄縮圖記憶體快取。在圖釘、遮蔽膠帶或多媒體物件刪除／變更時呼叫，確保預覽縮圖即時更新。
  */
 fun clearPageThumbnailCache() {
     pageThumbnailCache.evictAll()
+    pageBaseThumbnailCache.evictAll()
 }
 
 /**
@@ -338,10 +341,11 @@ private fun PageSidebarRow(
     val appLanguage = LocalAppLanguage.current
     var thumb by remember(index, session) { mutableStateOf<ImageBitmap?>(null) }
     var ratio by remember(index, session) { mutableFloatStateOf(800f / 1132f) }
+    var lastRenderedRevision by remember(index, session) { androidx.compose.runtime.mutableIntStateOf(-1) }
 
-    // 剛畫完、還在寫入佇列裡的筆畫也要算進來（見 `withPendingInk`）。
-    val pendingInk = com.kairumo.padnote.ink.InkPackageWriter.pendingVersion.intValue
-    LaunchedEffect(index, revision, session, appLanguage, pendingInk) {
+    // 剛畫完、還在寫入佇列裡的筆畫也要算進來（見 `withPendingInk`）；僅當前頁需要即時追蹤寫入佇列。
+    val pendingInk = if (isCurrent) com.kairumo.padnote.ink.InkPackageWriter.pendingVersion.intValue else 0
+    LaunchedEffect(index, isCurrent, revision, session, appLanguage, pendingInk) {
         val s = session ?: return@LaunchedEffect
         val pageId = s.pageIdAt(index.toUInt()) ?: return@LaunchedEffect
         s.pageSize(pageId)?.let { size ->
@@ -349,15 +353,33 @@ private fun PageSidebarRow(
                 ratio = size[0] / size[1]
             }
         }
+        val baseKey = "$pageId-$appLanguage"
         val cacheKey = "$pageId-$revision-$appLanguage"
         val cached = pageThumbnailCache.get(cacheKey)
         if (cached != null) {
             thumb = withPendingInk(cached, pageId, 0.22f)
+            lastRenderedRevision = revision
             return@LaunchedEffect
         }
-        // 已有舊縮圖時先保留畫面並去抖動 120ms，避免連續捲動或拖曳物件期間每一幀都在主執行緒同步重繪縮圖造成卡頓
+        val baseCached = pageBaseThumbnailCache.get(baseKey)
+        if (baseCached != null && (!isCurrent || lastRenderedRevision == revision)) {
+            pageThumbnailCache.put(cacheKey, baseCached)
+            thumb = withPendingInk(baseCached, pageId, 0.22f)
+            lastRenderedRevision = revision
+            return@LaunchedEffect
+        }
+        // 已有舊縮圖時先保留畫面並去抖動，且在使用者連續書寫期間絕不在主執行緒啟動離屏 ComposeView 重繪
         if (thumb != null) {
-            kotlinx.coroutines.delay(120)
+            if (baseCached != null) {
+                thumb = withPendingInk(baseCached, pageId, 0.22f)
+            }
+            kotlinx.coroutines.delay(180)
+            while (com.kairumo.padnote.ink.InkEngine.anyDrawing) {
+                if (baseCached != null) {
+                    thumb = withPendingInk(baseCached, pageId, 0.22f)
+                }
+                kotlinx.coroutines.delay(350)
+            }
         }
 
         val act = context as? ComponentActivity
@@ -368,6 +390,8 @@ private fun PageSidebarRow(
             if (bmp != null) {
                 val imageBitmap = bmp.asImageBitmap()
                 pageThumbnailCache.put(cacheKey, imageBitmap)
+                pageBaseThumbnailCache.put(baseKey, imageBitmap)
+                lastRenderedRevision = revision
                 thumb = withPendingInk(imageBitmap, pageId, 0.22f)
                 return@LaunchedEffect
             }
@@ -384,7 +408,9 @@ private fun PageSidebarRow(
         }
         if (cachedBmp != null) {
             pageThumbnailCache.put(cacheKey, cachedBmp)
+            pageBaseThumbnailCache.put(baseKey, cachedBmp)
             withContext(Dispatchers.Main.immediate) {
+                lastRenderedRevision = revision
                 thumb = withPendingInk(cachedBmp, pageId, 0.22f)
             }
             return@LaunchedEffect

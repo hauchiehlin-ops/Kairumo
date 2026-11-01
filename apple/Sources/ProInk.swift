@@ -712,13 +712,18 @@ enum ProInkRenderer {
 // profile-scope: profile 筆劃印章快取（隨使用中設定檔切換清空）
 enum ProInkDabCache {
     private static let lock = NSLock()
+    // profile-scope: profile 筆劃印章記憶體快取（隨設定檔切換由 resetForProfileSwitch 清空）
     private static var memoryCache: [String: ProInkRenderer.Cached] = [:]
-    private static let maxMemoryEntries = 2048
+    private static let maxMemoryEntries = 4096
+    // profile-scope: profile 已確認建立的磁碟快取目錄路徑（隨設定檔切換由 resetForProfileSwitch 清空）
+    private static var ensuredDiskDirPath: String?
 
     static func resetForProfileSwitch() {
         lock.lock()
         memoryCache.removeAll()
+        ensuredDiskDirPath = nil
         lock.unlock()
+        ProInkPageImageCache.resetForProfileSwitch()
     }
 
     private static var diskCacheDirectory: URL {
@@ -730,8 +735,15 @@ enum ProInkDabCache {
                 .appending(path: "Kairumo", directoryHint: .isDirectory)
         }
         let dir = base.appending(path: "ProInkDabs", directoryHint: .isDirectory)
-        if !FileManager.default.fileExists(atPath: dir.path) {
+        let dirPath = dir.path
+        lock.lock()
+        let alreadyEnsured = (ensuredDiskDirPath == dirPath)
+        lock.unlock()
+        if !alreadyEnsured {
             try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+            lock.lock()
+            ensuredDiskDirPath = dirPath
+            lock.unlock()
         }
         return dir
     }
@@ -817,18 +829,118 @@ enum ProInkDabCache {
     }
 
     static func prewarm(strokes: [ProStroke], onComplete: (() -> Void)? = nil) {
+        guard !strokes.isEmpty else { return }
         DispatchQueue.global(qos: .userInitiated).async {
+            var didCompute = false
             for stroke in strokes {
                 if get(for: stroke) == nil {
                     if let computed = ProInkRenderer.cache(for: stroke) {
                         set(computed, for: stroke)
+                        didCompute = true
                     }
                 }
             }
-            if let onComplete {
+            if didCompute, let onComplete {
                 DispatchQueue.main.async(execute: onComplete)
             }
         }
+    }
+}
+
+// profile-scope: profile 頁面烘焙點陣快取（以筆記本與頁面為鍵，隨設定檔切換清空）
+enum ProInkPageImageCache {
+    struct Entry {
+        let image: UIImage
+        let strokeIds: [String]
+        let size: CGSize
+        let isDark: Bool
+        let hiddenStamp: String
+    }
+
+    private static let lock = NSLock()
+    // profile-scope: profile 頁面烘焙點陣圖快取（隨設定檔切換由 resetForProfileSwitch 清空）
+    private static var entries: [String: Entry] = [:]
+    // profile-scope: profile 頁面烘焙點陣圖 LRU 順序（隨設定檔切換由 resetForProfileSwitch 清空）
+    private static var order: [String] = []
+    private static let maxEntries = 16
+
+    static func resetForProfileSwitch() {
+        lock.lock()
+        entries.removeAll()
+        order.removeAll()
+        lock.unlock()
+    }
+
+    private static func key(notebookId: String, pageIndex: Int, isDark: Bool) -> String {
+        "\(notebookId.lowercased())|\(pageIndex)|\(isDark ? 1 : 0)"
+    }
+
+    static func get(
+        notebookId: String,
+        pageIndex: Int,
+        isDark: Bool,
+        size: CGSize,
+        hiddenStamp: String,
+        matching strokes: [ProStroke]
+    ) -> UIImage? {
+        guard !strokes.isEmpty, size.width > 0, size.height > 0 else { return nil }
+        let k = key(notebookId: notebookId, pageIndex: pageIndex, isDark: isDark)
+        lock.lock()
+        guard let entry = entries[k] else {
+            lock.unlock()
+            return nil
+        }
+        lock.unlock()
+        guard entry.isDark == isDark,
+              entry.hiddenStamp == hiddenStamp,
+              abs(entry.size.width - size.width) < 1.0,
+              abs(entry.size.height - size.height) < 1.0,
+              entry.strokeIds.count == strokes.count
+        else { return nil }
+        for (i, s) in strokes.enumerated() where entry.strokeIds[i] != s.id {
+            return nil
+        }
+        return entry.image
+    }
+
+    static func set(
+        _ image: UIImage,
+        notebookId: String,
+        pageIndex: Int,
+        isDark: Bool,
+        size: CGSize,
+        hiddenStamp: String,
+        strokes: [ProStroke]
+    ) {
+        guard !strokes.isEmpty, size.width > 0, size.height > 0 else { return }
+        let k = key(notebookId: notebookId, pageIndex: pageIndex, isDark: isDark)
+        let entry = Entry(
+            image: image,
+            strokeIds: strokes.map(\.id),
+            size: size,
+            isDark: isDark,
+            hiddenStamp: hiddenStamp
+        )
+        lock.lock()
+        entries[k] = entry
+        order.removeAll { $0 == k }
+        order.append(k)
+        while order.count > maxEntries {
+            let evicted = order.removeFirst()
+            entries.removeValue(forKey: evicted)
+        }
+        lock.unlock()
+    }
+
+    static func invalidate(notebookId: String, pageIndex: Int) {
+        let prefix = "\(notebookId.lowercased())|\(pageIndex)|"
+        lock.lock()
+        let toRemove = entries.keys.filter { $0.hasPrefix(prefix) }
+        for k in toRemove {
+            entries.removeValue(forKey: k)
+            order.removeAll { $0 == k }
+        }
+        lock.unlock()
     }
 }
 
@@ -847,6 +959,14 @@ private final class LiveProStrokeOverlayView: UIView {
     var previewDabs: [FfiDab] = []
     var isStreaming = false
     var alignGuides: [[CGPoint]] = []
+    /// 超長連續筆畫增量烘焙快取：每累積 48 個已定案筆點即烘焙進點陣圖，避免單筆極長時每幀重複繪製數千個筆點。
+    private var settledImage: UIImage?
+    private var settledBakedCount: Int = 0
+
+    func resetSettledBaking() {
+        settledImage = nil
+        settledBakedCount = 0
+    }
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -887,8 +1007,28 @@ private final class LiveProStrokeOverlayView: UIView {
                 dark: traitCollection.userInterfaceStyle == .dark
             )
             if isStreaming {
-                // 只畫碰到髒矩形的筆點（`draw` 內會先用邊界剔除），每一幀的成本跟著新寫的那一小段走。
-                ProInkRenderer.draw(.init(dabs: settledDabs, bounds: .null), toolName: live.tool, color: rgba, in: ctx, clip: rect)
+                let isGroupTool = ProInk.kind(named: live.tool).map { brushGroupAlpha(tool: $0) < 1 } ?? false
+                if !isGroupTool, bounds.width > 0, bounds.height > 0, settledDabs.count - settledBakedCount >= 64 {
+                    let slice = Array(settledDabs[settledBakedCount..<settledDabs.count])
+                    let prevImg = settledImage
+                    let fullBounds = bounds
+                    let renderer = UIGraphicsImageRenderer(bounds: fullBounds)
+                    settledImage = renderer.image { rCtx in
+                        prevImg?.draw(in: fullBounds)
+                        ProInkRenderer.draw(.init(dabs: slice, bounds: .null), toolName: live.tool, color: rgba, in: rCtx.cgContext, clip: fullBounds)
+                    }
+                    settledBakedCount = settledDabs.count
+                }
+                if let settledImage, settledBakedCount > 0 {
+                    settledImage.draw(in: bounds)
+                    if settledBakedCount < settledDabs.count {
+                        let tail = Array(settledDabs[settledBakedCount..<settledDabs.count])
+                        ProInkRenderer.draw(.init(dabs: tail, bounds: .null), toolName: live.tool, color: rgba, in: ctx, clip: rect)
+                    }
+                } else {
+                    // 只畫碰到髒矩形的筆點（`draw` 內會先用邊界剔除），每一幀的成本跟著新寫的那一小段走。
+                    ProInkRenderer.draw(.init(dabs: settledDabs, bounds: .null), toolName: live.tool, color: rgba, in: ctx, clip: rect)
+                }
                 ProInkRenderer.draw(.init(dabs: previewDabs, bounds: .null), toolName: live.tool, color: rgba, in: ctx, clip: rect)
             } else if let liveCache {
                 ProInkRenderer.draw(liveCache, toolName: live.tool, color: rgba, in: ctx, clip: rect)
@@ -996,6 +1136,24 @@ final class ProInkLayerView: UIView {
         ownStrokes = ProInkStore.load(in: directory, notebookId: notebookId, page: pageIndex)
         foreignStrokes = ProInkStore.load(in: directory, notebookId: notebookId, page: pageIndex, foreign: true)
         strokeSnapshot = Dictionary(ownStrokes.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
+        let ordered = DraftingState.shared.drawOrder(allStrokes, notebookId: notebookId)
+        let isDark = traitCollection.userInterfaceStyle == .dark
+        let hiddenStamp = DraftingState.shared.hiddenStamp(notebookId: notebookId)
+        if let cachedImg = ProInkPageImageCache.get(
+            notebookId: notebookId,
+            pageIndex: pageIndex,
+            isDark: isDark,
+            size: bounds.size,
+            hiddenStamp: hiddenStamp,
+            matching: ordered
+        ) {
+            bakeWorkItem?.cancel()
+            bakeWorkItem = nil
+            backingImage = cachedImg
+            bakedStrokeCount = ordered.count
+            setNeedsDisplay()
+            return
+        }
         invalidateBacking()
         // 背景預熱，若有新載入的筆畫未在快取中，完成後自動更新畫面
         ProInkDabCache.prewarm(strokes: allStrokes) { [weak self] in
@@ -1074,7 +1232,29 @@ final class ProInkLayerView: UIView {
             tombstonedIds.formUnion(events.removed)
         }
         if !events.removed.isEmpty {
+            ProInkPageImageCache.invalidate(notebookId: notebookId, pageIndex: pageIndex)
             invalidateBacking()
+        }
+        ProInkStore.saveDeferred(ownStrokes, in: directory, notebookId: notebookId, page: pageIndex)
+        onChanged?()
+        NotificationCenter.default.post(name: AppCommand.proInkDidChange, object: notebookId.lowercased())
+    }
+
+    /// 單筆新增專用 O(1) 持久化快徑（`endStroke` 專用）：
+    /// 免除每次抬筆對整頁數百筆歷史筆畫執行 `reconcileLedger` 與 `takeEvents` 的 O(N × M) 逐點比對，
+    /// 徹底消除連續書寫時隨筆畫數量增加而累積的抬筆延遲。
+    private func persistAppendedStroke(_ stroke: ProStroke) {
+        invalidateAlignAnchors()
+        guard let directory else { return }
+        var addedStroke = stroke
+        if tombstonedIds.contains(addedStroke.packageId), !ownStrokes.isEmpty {
+            let newCoreId = UUID().uuidString.lowercased()
+            ownStrokes[ownStrokes.count - 1].coreId = newCoreId
+            addedStroke = ownStrokes[ownStrokes.count - 1]
+        }
+        strokeSnapshot[addedStroke.id] = addedStroke
+        if let sink = InkEventSink.sink(for: notebookId) {
+            sink.proEdited(page: pageIndex, removedIds: [], added: [addedStroke])
         }
         ProInkStore.saveDeferred(ownStrokes, in: directory, notebookId: notebookId, page: pageIndex)
         onChanged?()
@@ -1154,11 +1334,29 @@ final class ProInkLayerView: UIView {
         let currentCount = strokes.count
         let currentBounds = bounds
         let isDark = traitCollection.userInterfaceStyle == .dark
+        let nbId = notebookId
+        let pIdx = pageIndex
+        let hiddenStamp = DraftingState.shared.hiddenStamp(notebookId: nbId)
+
+        if let cachedImg = ProInkPageImageCache.get(
+            notebookId: nbId,
+            pageIndex: pIdx,
+            isDark: isDark,
+            size: currentBounds.size,
+            hiddenStamp: hiddenStamp,
+            matching: strokes
+        ) {
+            backingImage = cachedImg
+            bakedStrokeCount = currentCount
+            setNeedsDisplay()
+            return
+        }
+
         let format = UIGraphicsImageRendererFormat.default()
 
-        if strokes.count <= 8 {
+        if strokes.count <= 24 {
             let renderer = UIGraphicsImageRenderer(bounds: currentBounds, format: format)
-            backingImage = renderer.image { rendererCtx in
+            let img = renderer.image { rendererCtx in
                 let ctx = rendererCtx.cgContext
                 for s in strokes {
                     guard let cached = cachedDabs(for: s) else { continue }
@@ -1170,7 +1368,17 @@ final class ProInkLayerView: UIView {
                     ctx.restoreGState()
                 }
             }
+            backingImage = img
             bakedStrokeCount = currentCount
+            ProInkPageImageCache.set(
+                img,
+                notebookId: nbId,
+                pageIndex: pIdx,
+                isDark: isDark,
+                size: currentBounds.size,
+                hiddenStamp: hiddenStamp,
+                strokes: strokes
+            )
             setNeedsDisplay()
             return
         }
@@ -1180,7 +1388,12 @@ final class ProInkLayerView: UIView {
             let img = renderer.image { rendererCtx in
                 let ctx = rendererCtx.cgContext
                 for s in strokes {
-                    guard let cached = ProInkRenderer.cache(for: s) else { continue }
+                    let cached = ProInkDabCache.get(for: s) ?? {
+                        let c = ProInkRenderer.cache(for: s)
+                        if let c { ProInkDabCache.set(c, for: s) }
+                        return c
+                    }()
+                    guard let cached else { continue }
                     ctx.saveGState()
                     if s.blendMode == "multiply" { ctx.setBlendMode(.multiply) }
                     else if s.blendMode == "screen" { ctx.setBlendMode(.screen) }
@@ -1189,8 +1402,18 @@ final class ProInkLayerView: UIView {
                     ctx.restoreGState()
                 }
             }
+            ProInkPageImageCache.set(
+                img,
+                notebookId: nbId,
+                pageIndex: pIdx,
+                isDark: isDark,
+                size: currentBounds.size,
+                hiddenStamp: hiddenStamp,
+                strokes: strokes
+            )
             DispatchQueue.main.async {
-                guard let self = self, self.allStrokes.count == currentCount else { return }
+                guard let self = self, self.notebookId == nbId, self.pageIndex == pIdx, self.allStrokes.count == currentCount else { return }
+                self.bakeWorkItem = nil
                 self.backingImage = img
                 self.bakedStrokeCount = currentCount
                 self.setNeedsDisplay()
@@ -1207,15 +1430,14 @@ final class ProInkLayerView: UIView {
         let color = displayColor(stroke.colorRGBA)
         let prevBacking = backingImage
         let format = UIGraphicsImageRendererFormat.default()
+        let ordered = DraftingState.shared.drawOrder(allStrokes, notebookId: notebookId)
 
         let renderer = UIGraphicsImageRenderer(bounds: currentBounds, format: format)
-        backingImage = renderer.image { rendererCtx in
+        let img = renderer.image { rendererCtx in
             let ctx = rendererCtx.cgContext
             if let prevBacking {
                 prevBacking.draw(in: currentBounds)
             } else {
-                let drafting = DraftingState.shared
-                let ordered = drafting.drawOrder(allStrokes, notebookId: notebookId)
                 for s in ordered where s.id != stroke.id {
                     guard let sCached = cachedDabs(for: s) else { continue }
                     ctx.saveGState()
@@ -1235,7 +1457,17 @@ final class ProInkLayerView: UIView {
                 ctx.restoreGState()
             }
         }
-        bakedStrokeCount = allStrokes.count
+        backingImage = img
+        bakedStrokeCount = ordered.count
+        ProInkPageImageCache.set(
+            img,
+            notebookId: notebookId,
+            pageIndex: pageIndex,
+            isDark: isDark,
+            size: currentBounds.size,
+            hiddenStamp: DraftingState.shared.hiddenStamp(notebookId: notebookId),
+            strokes: ordered
+        )
     }
 
     override func draw(_ rect: CGRect) {
@@ -1259,8 +1491,9 @@ final class ProInkLayerView: UIView {
                 }
             }
         } else {
-            // 降級退回：烘焙圖尚未產生時直接繪製
-            for stroke in ordered where stroke.bounds.intersects(rect) {
+            // 降級退回：背景正在整頁烘焙大量筆畫時，主執行緒僅繪製最後 24 筆避免同步阻塞 UI，待數毫秒後背景烘焙完成即自動補齊整頁
+            let slice = (bakeWorkItem != nil && ordered.count > 24) ? Array(ordered.suffix(24)) : ordered
+            for stroke in slice where stroke.bounds.intersects(rect) {
                 guard let cached = cachedDabs(for: stroke) else { continue }
                 ctx.saveGState()
                 if stroke.blendMode == "multiply" { ctx.setBlendMode(.multiply) }
@@ -1641,7 +1874,7 @@ final class ProInkLayerView: UIView {
         resetLiveBrush()
         syncLiveOverlay(invalidating: liveArea)
 
-        persist()
+        persistAppendedStroke(stroke)
         registerUndo(removing: stroke.id)
     }
 
@@ -1662,6 +1895,7 @@ final class ProInkLayerView: UIView {
         liveBrush = nil
         liveOverlayView.settledDabs.removeAll(keepingCapacity: true)
         liveOverlayView.previewDabs.removeAll()
+        liveOverlayView.resetSettledBaking()
     }
 
     private static func strokePoint(_ p: ProPoint) -> StrokePoint {
