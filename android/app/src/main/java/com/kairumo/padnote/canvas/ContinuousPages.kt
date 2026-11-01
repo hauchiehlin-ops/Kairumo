@@ -1132,6 +1132,14 @@ private fun ContinuousPage(
     var revision by runtime.revision
     val pageScope = rememberCoroutineScope()
     var inkDebounceJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
+    DisposableEffect(Unit) {
+        onDispose {
+            if (inkDebounceJob?.isActive == true) {
+                inkDebounceJob?.cancel()
+                revision++
+            }
+        }
+    }
 
     // reloadToken 讓外層插入物件之後這一頁看得到新東西 ——
     // 不重讀的話，從選單插進去的文字方塊要等切換頁面才會出現。

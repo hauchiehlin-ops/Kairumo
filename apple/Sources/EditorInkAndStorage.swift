@@ -1106,9 +1106,13 @@ extension NotebookEditorView {
             // 點縮圖跳頁，同步就匯出重建一次套件、下載、再觸發編輯器重載 ——
             // 同步日誌裡那串首尾相接、每一輪都「匯出 1 本、下載 4」的迴圈就是這樣來的。
             if !hadPendingInk && !proInkDirty && store.notebookMatchesStored(notebook) { return }
+            let hadInkChange = hadPendingInk || proInkDirty
             proInkDirty = false
             notebook.lastModifiedDate = Date()
             commitNotebook()
+            if hadInkChange {
+                thumbnailRevision += 1
+            }
             return
         }
         // 模式切換會立即觸發 SwiftUI 更新；`@Binding` 的最後一次回寫有可能還
@@ -1131,9 +1135,13 @@ extension NotebookEditorView {
         }
         // 同上：筆跡沒變、文件也與 store 一致就不碰。
         if unchanged && !proInkDirty && store.notebookMatchesStored(notebook) { return }
+        let hadInkChange = !unchanged || proInkDirty
         proInkDirty = false
         notebook.lastModifiedDate = Date()
         commitNotebook()
+        if hadInkChange {
+            thumbnailRevision += 1
+        }
     }
 
     /// 內容寫到頁尾時，確保後面有一頁可以接下去。
