@@ -298,6 +298,8 @@ enum ProInkStore {
     private nonisolated(unsafe) static var strokesCache: [String: (modDate: Date?, strokes: [ProStroke])] = [:]
     // profile-scope: profile 以完整檔案路徑前綴為鍵，快取修改時間避免每次 SwiftUI body 重算都觸發磁碟 stat 系統呼叫
     private nonisolated(unsafe) static var modifiedCache: [String: Date?] = [:]
+    // 記憶體帳本快取，避免每筆抬筆同步從磁碟讀取與解碼 JSON
+    private nonisolated(unsafe) static var ledgerCache: [String: ProInkLedger] = [:]
 
     private nonisolated static func pageCacheKey(_ directory: URL, _ notebookId: String, _ page: Int) -> String {
         "\(directory.path)/\(notebookId.lowercased())_p\(page)"
@@ -307,8 +309,10 @@ enum ProInkStore {
         ledgerLock.lock()
         if let id = notebookId?.lowercased() {
             modifiedCache = modifiedCache.filter { !$0.key.contains("/\(id)_p") }
+            ledgerCache = ledgerCache.filter { !$0.key.contains("/\(id)_p") }
         } else {
             modifiedCache.removeAll()
+            ledgerCache.removeAll()
         }
         ledgerLock.unlock()
     }
@@ -323,9 +327,16 @@ enum ProInkStore {
     }
 
     private nonisolated static func readLedger(_ directory: URL, _ notebookId: String, _ page: Int) -> ProInkLedger {
+        let key = pageCacheKey(directory, notebookId, page)
+        if let hit = ledgerCache[key] { return hit }
         guard let data = try? Data(contentsOf: ledgerURL(directory, notebookId, page)),
               let ledger = try? JSONDecoder().decode(ProInkLedger.self, from: data)
-        else { return ProInkLedger() }
+        else {
+            let empty = ProInkLedger()
+            ledgerCache[key] = empty
+            return empty
+        }
+        ledgerCache[key] = ledger
         return ledger
     }
 
@@ -335,17 +346,19 @@ enum ProInkStore {
         in directory: URL, notebookId: String, page: Int, _ body: (inout ProInkLedger) -> T
     ) -> T {
         ledgerLock.lock(); defer { ledgerLock.unlock() }
+        let key = pageCacheKey(directory, notebookId, page)
         var ledger = readLedger(directory, notebookId, page)
         let before = ledger
         let result = body(&ledger)
         if ledger != before {
+            ledgerCache[key] = ledger
             let file = ledgerURL(directory, notebookId, page)
             if ledger.isEmpty {
                 try? FileManager.default.removeItem(at: file)
             } else if let data = try? JSONEncoder().encode(ledger) {
                 try? data.write(to: file, options: .atomic)
             }
-            modifiedCache.removeValue(forKey: pageCacheKey(directory, notebookId, page))
+            modifiedCache.removeValue(forKey: key)
         }
         return result
     }
@@ -1353,6 +1366,10 @@ final class ProInkLayerView: UIView {
         setGuides([])
         syncLiveOverlay(invalidating: liveArea)
         ownStrokes.append(stroke)
+        // 預先計算並放入快取，避免進入 draw(rect) 時臨時執行 Rust FFI 運算
+        if let cached = ProInkRenderer.cache(for: stroke) {
+            cache[stroke.id] = cached
+        }
         setNeedsDisplay(stroke.bounds)
         persist()
         registerUndo(removing: stroke.id)
