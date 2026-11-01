@@ -64,6 +64,12 @@
 
 ## 驗證流程標準作業規範（SOP）
 
+> **唯一執行入口（Antigravity / Claude Code / 人類通用）**：`./scripts/sop-verify.sh`
+> - 完整三道防線：`./scripts/sop-verify.sh`（commit / push 前必跑，任一失敗即禁止提交）
+> - 改碼中途快檢（僅第 1 道）：`./scripts/sop-verify.sh --fast`
+> - 無法跑某平台時須明確 `--skip-android` / `--skip-apple`，並在回報中註明「未驗證」，不得視為通過。
+> - 本節只定義規範；實際指令以腳本為準，`GEMINI.md` 為指向 `AGENTS.md` 的符號連結，兩邊讀到的是同一份規範。
+
 任何程式碼修改在提交與推送前，必須完成以下三道防線驗證：
 1. **CI 預防性檢查與四大守門驗證（CI Preflight & Auto-Remediation）**：
    - 執行 `./scripts/check-ci-preflight.sh`（或 `./scripts/verify-all-gatekeepers.sh`），針對開發歷程中 GitHub Actions 常見崩潰與卡控點進行預防性檢查與自動矯正：
@@ -73,6 +79,6 @@
      - 驗證 UniFFI 跨端綁定同步性與可用磁碟空間健康度。
      - 全維度通過 Layer 1 至 Layer 4 四大守門機制（正門管制、筆跡不變式矩陣、非阻塞 UI、跨平台規範）。
 2. **雙平台單元測試**：
-   - Android: `cd android && ./gradlew testDebugUnitTest`
+   - Android: `./scripts/gradle.sh testDebugUnitTest`（等同 `cd android && ./gradlew testDebugUnitTest`，另處理 exFAT 清理）
    - Apple: `cd apple && xcodebuild -scheme Kairumo build`
 3. **Git Pre-Push 門禁**：推送時自動觸發 `.githooks/pre-push`，任何一項失敗立即阻擋。
