@@ -96,7 +96,8 @@ internal fun EditorFloatingPanels(ctx: EditorCanvasContext) = with(ctx) {
                     pageCount = pageCount,
                     pageIndex = pageIndex,
                     revision = revision + textRevision + shapeRevision + tableRevision +
-                        chartRevision + imageRevision + model3DRevision + continuousContentRevision,
+                        chartRevision + imageRevision + model3DRevision + continuousContentRevision +
+                        pinRevision + linkRevision + audioRevision + tapeRevision,
                     l = { key -> l10n(key) },
                     onSelectPage = { switchToPage(it); showPageSidebar = false },
                     onAddPage = {
@@ -180,11 +181,18 @@ internal fun EditorFloatingPanels(ctx: EditorCanvasContext) = with(ctx) {
             currentUserId = deviceId(activity).toString(),
             currentUserName = profile.displayName,
             currentUserColor = profile.colorHex,
-            onChanged = { meta.setCommentPins(notebook?.first, pins); pinRevision++ },
+            onChanged = {
+                meta.setCommentPins(notebook?.first, pins)
+                pinRevision++
+                clearPageThumbnailCache()
+                AutoSync.noteLocalEdit(activity)
+            },
             onDelete = {
                 pins = pins.filterNot { it.id == pin.id }.toMutableList()
                 meta.setCommentPins(notebook?.first, pins)
                 pinRevision++
+                clearPageThumbnailCache()
+                AutoSync.noteLocalEdit(activity)
             },
             onDismiss = { openPin = null }
         )

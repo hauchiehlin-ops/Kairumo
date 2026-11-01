@@ -137,7 +137,8 @@ internal fun ColumnScope.EditorCanvasContainer(ctx: EditorCanvasContext) = with(
                         pageCount = pageCount,
                         pageIndex = pageIndex,
                         revision = revision + textRevision + shapeRevision + tableRevision +
-                            chartRevision + imageRevision + model3DRevision + continuousContentRevision,
+                            chartRevision + imageRevision + model3DRevision + continuousContentRevision +
+                            pinRevision + linkRevision + audioRevision + tapeRevision,
                         l = { key -> l10n(key) },
                         onSelectPage = { switchToPage(it) },
                         onAddPage = {
@@ -210,7 +211,12 @@ internal fun ColumnScope.EditorCanvasContainer(ctx: EditorCanvasContext) = with(
                         onPlacingPasteObjectChange = { isPlacingPasteObject = it },
                         pins = pins,
                         onOpenPin = { openPin = it },
-                        onPinMoved = { meta.setCommentPins(notebook?.first, pins); pinRevision++ },
+                        onPinMoved = {
+                            meta.setCommentPins(notebook?.first, pins)
+                            pinRevision++
+                            clearPageThumbnailCache()
+                            AutoSync.noteLocalEdit(activity)
+                        },
                         isPlacingCommentPin = isPlacingCommentPin,
                         onPlacingCommentPinChange = { isPlacingCommentPin = it },
                         onPlaceCommentPin = { targetPageIndex, pageOffset ->
@@ -230,6 +236,8 @@ internal fun ColumnScope.EditorCanvasContainer(ctx: EditorCanvasContext) = with(
                             pins = (pins + pin).toMutableList()
                             meta.setCommentPins(notebook?.first, pins)
                             pinRevision++
+                            clearPageThumbnailCache()
+                            AutoSync.noteLocalEdit(activity)
                             openPin = pin
                             isPlacingCommentPin = false
                             editorMode = EditorMode.TYPE
@@ -375,7 +383,8 @@ internal fun ColumnScope.EditorCanvasContainer(ctx: EditorCanvasContext) = with(
                     pageCount = pageCount,
                     pageIndex = pageIndex,
                     revision = revision + textRevision + shapeRevision + tableRevision +
-                        chartRevision + imageRevision + model3DRevision + continuousContentRevision,
+                        chartRevision + imageRevision + model3DRevision + continuousContentRevision +
+                        pinRevision + linkRevision + audioRevision + tapeRevision,
                     l = { key -> l10n(key) },
                     onSelectPage = { switchToPage(it) },
                     onAddPage = {
@@ -1186,6 +1195,8 @@ internal fun ColumnScope.EditorCanvasContainer(ctx: EditorCanvasContext) = with(
                     selectedShapeIds = selectedShapeIds - shape.id
                     if (editingShape?.id == shape.id) editingShape = null
                     shapeRevision++
+                    clearPageThumbnailCache()
+                    AutoSync.noteLocalEdit(activity)
                 },
                 onChanged = { updated ->
                     // 拖曳一個形狀時，同一組的其他成員要跟著走 ——
@@ -1203,6 +1214,8 @@ internal fun ColumnScope.EditorCanvasContainer(ctx: EditorCanvasContext) = with(
                         }
                     }
                     shapeRevision++
+                    clearPageThumbnailCache()
+                    AutoSync.noteLocalEdit(activity)
                 },
                 onSelectConnection = { id ->
                     selectedConnectionId = id
@@ -1219,6 +1232,8 @@ internal fun ColumnScope.EditorCanvasContainer(ctx: EditorCanvasContext) = with(
                     shapeStore.remove(link)
                     selectedConnectionId = null
                     shapeRevision++
+                    clearPageThumbnailCache()
+                    AutoSync.noteLocalEdit(activity)
                 },
                 onConnectDrag = { from, anchor, start, current, finished ->
                     if (!finished) {
@@ -1230,6 +1245,8 @@ internal fun ColumnScope.EditorCanvasContainer(ctx: EditorCanvasContext) = with(
                             selectedShapeIds = emptySet()
                             selectedConnectionId = created.id
                             shapeRevision++
+                            clearPageThumbnailCache()
+                            AutoSync.noteLocalEdit(activity)
                         }
                     }
                 },
@@ -1476,7 +1493,12 @@ internal fun ColumnScope.EditorCanvasContainer(ctx: EditorCanvasContext) = with(
                     pageIndex = pageIndex,
                     interactive = !inkTool.isLasso && !inkTool.isMaskingTape && !inkTool.isTranslationPen && !isPlacingCommentPin && !isPlacingPasteObject,
                     onOpen = { openPin = it },
-                    onMoved = { meta.setCommentPins(notebook?.first, pins); pinRevision++ },
+                    onMoved = {
+                        meta.setCommentPins(notebook?.first, pins)
+                        pinRevision++
+                        clearPageThumbnailCache()
+                        AutoSync.noteLocalEdit(activity)
+                    },
                     density = canvasDensity
                 )
             }
@@ -1836,6 +1858,8 @@ internal fun ColumnScope.EditorCanvasContainer(ctx: EditorCanvasContext) = with(
                                 pins = (pins + pin).toMutableList()
                                 meta.setCommentPins(notebook?.first, pins)
                                 pinRevision++
+                                clearPageThumbnailCache()
+                                AutoSync.noteLocalEdit(activity)
                                 openPin = pin
                                 isPlacingCommentPin = false
                                 editorMode = EditorMode.TYPE
