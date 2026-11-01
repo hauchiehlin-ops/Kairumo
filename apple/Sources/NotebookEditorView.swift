@@ -18,6 +18,11 @@ import PadnoteCore
 #endif
 
 
+private final class BoolBox {
+    var value: Bool
+    init(_ value: Bool) { self.value = value }
+}
+
 /// 筆記編輯器全螢幕視圖
 public struct NotebookEditorView: View {
     @Binding var notebook: NotebookDocument
@@ -86,7 +91,11 @@ public struct NotebookEditorView: View {
     @State var continuousViewportHeight: CGFloat = 800
     @State var continuousReportedPage: Int = -1
     @State var continuousCanvases = ContinuousCanvasRegistry()
-    @State var proInkDirty = false
+    @State private var proInkDirtyBox = BoolBox(false)
+    var proInkDirty: Bool {
+        get { proInkDirtyBox.value }
+        nonmutating set { proInkDirtyBox.value = newValue }
+    }
     @State var continuousReloadGeneration = 0
     @State var thumbnailRevision = 0
     @State var continuousProgrammaticScrollUntil: Date = .distantPast
