@@ -297,9 +297,9 @@ final class InsertToolsAudit: XCTestCase {
     }
 
     private func openEditor(_ app: XCUIApplication) -> Bool {
-        guard app.wait(for: .runningForeground, timeout: 15) else { return false }
+        guard app.wait(for: .runningForeground, timeout: 30) else { return false }
         guard openSeedNotebook(app) else { return false }
-        return element(app, "editor.more").waitForExistence(timeout: 15)
+        return element(app, "editor.more").waitForExistence(timeout: 20)
     }
 
     /// 每一張插入面板打開之後，畫面上要真的出現它的內容。

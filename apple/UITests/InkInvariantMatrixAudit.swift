@@ -20,8 +20,15 @@ import XCTest
 
 final class InkInvariantMatrixAudit: XCTestCase {
 
+    private var app: XCUIApplication?
+
     override func setUpWithError() throws {
         continueAfterFailure = false
+    }
+
+    override func tearDownWithError() throws {
+        app?.terminate()
+        app = nil
     }
 
     private func launch() -> XCUIApplication {
@@ -29,6 +36,7 @@ final class InkInvariantMatrixAudit: XCTestCase {
         app.launchEnvironment["KAIRUMO_UITEST"] = "1"
         app.launchEnvironment["KAIRUMO_UITEST_SEED_INK"] = "1"
         app.launch()
+        self.app = app
         return app
     }
 

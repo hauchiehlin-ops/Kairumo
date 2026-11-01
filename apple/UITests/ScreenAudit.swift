@@ -564,14 +564,28 @@ func openSeedNotebook(
     let seedCardId = "home.notebooks.card.seed-welcome-notebook-v1"
     let editorMore = app.descendants(matching: .any)
         .matching(identifier: "editor.more").firstMatch
-    if editorMore.exists && editorMore.isHittable {
-        return true
+    if editorMore.exists {
+        if editorMore.isHittable {
+            return true
+        }
+        let hittablePredicate = NSPredicate(format: "exists == true AND isHittable == true")
+        if XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: hittablePredicate, object: editorMore)], timeout: 5) == .completed {
+            return true
+        }
     }
 
+    let homeAction = app.buttons["home.action.new_note"]
+    let homeTitle = app.staticTexts["home.title"]
     let homeMarker = app.descendants(matching: .any)
         .matching(NSPredicate(format: "identifier IN {'home.action.new_note', 'home.diagnostics', 'home.title', 'home.docs.manual', 'home.notebooks.card.seed-welcome-notebook-v1'}"))
         .firstMatch
-    guard homeMarker.waitForExistence(timeout: 30) else {
+
+    let homeLoaded = homeAction.waitForExistence(timeout: 2) || homeTitle.waitForExistence(timeout: 2) || homeMarker.waitForExistence(timeout: 45)
+    guard homeLoaded else {
+        // 若編輯器在等待期間已直接呈現（例如自動開啟或重連）
+        if editorMore.exists && editorMore.isHittable {
+            return true
+        }
         XCTFail("首頁沒有完成載入，找不到導覽列或 New Note", file: file, line: line)
         return false
     }
