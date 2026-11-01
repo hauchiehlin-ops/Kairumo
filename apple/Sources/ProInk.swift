@@ -937,7 +937,6 @@ enum ProInkDabCache {
         memoryCache.removeAll()
         ensuredDiskDirPath = nil
         lock.unlock()
-        ProInkPageImageCache.resetForProfileSwitch()
     }
 
     private static var diskCacheDirectory: URL {
@@ -1062,228 +1061,7 @@ enum ProInkDabCache {
     }
 }
 
-// profile-scope: profile 頁面烘焙點陣快取（以筆記本與頁面為鍵，隨設定檔切換清空）
-enum ProInkPageImageCache {
-    struct Entry {
-        let image: UIImage
-        let strokeIds: [String]
-        let size: CGSize
-        let isDark: Bool
-        let hiddenStamp: String
-    }
 
-    private static let lock = NSLock()
-    // profile-scope: profile 頁面烘焙點陣圖快取（隨設定檔切換由 resetForProfileSwitch 清空）
-    private static var entries: [String: Entry] = [:]
-    // profile-scope: profile 頁面烘焙點陣圖 LRU 順序（隨設定檔切換由 resetForProfileSwitch 清空）
-    private static var order: [String] = []
-    private static let maxEntries = 24
-    // profile-scope: profile 已確認建立的磁碟頁面烘焙圖快取目錄路徑
-    private static var ensuredDiskDirPath: String?
-    // profile-scope: profile 延遲寫入磁碟頁面烘焙圖的去抖動工作項目
-    private static var pendingDiskWork: [String: DispatchWorkItem] = [:]
-    private static let diskQueue = DispatchQueue(label: "kairumo.proink.pagebitmap", qos: .utility)
-
-    static func resetForProfileSwitch() {
-        lock.lock()
-        entries.removeAll()
-        order.removeAll()
-        for (_, work) in pendingDiskWork { work.cancel() }
-        pendingDiskWork.removeAll()
-        ensuredDiskDirPath = nil
-        lock.unlock()
-    }
-
-    private static var diskCacheDirectory: URL {
-        let base: URL
-        if let root = ProfileContext.activeCachesRoot {
-            base = root
-        } else {
-            base = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
-                .appending(path: "Kairumo", directoryHint: .isDirectory)
-        }
-        let dir = base.appending(path: "ProInkPageBitmaps", directoryHint: .isDirectory)
-        let dirPath = dir.path
-        lock.lock()
-        let alreadyEnsured = (ensuredDiskDirPath == dirPath)
-        lock.unlock()
-        if !alreadyEnsured {
-            try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-            lock.lock()
-            ensuredDiskDirPath = dirPath
-            lock.unlock()
-        }
-        return dir
-    }
-
-    private static func key(notebookId: String, pageIndex: Int, isDark: Bool) -> String {
-        "\(notebookId.lowercased())|\(pageIndex)|\(isDark ? 1 : 0)"
-    }
-
-    private static func diskFilePrefix(notebookId: String, pageIndex: Int, isDark: Bool) -> String {
-        let safeId = notebookId.lowercased().replacingOccurrences(of: "/", with: "_")
-        return "\(safeId)_p\(pageIndex)_\(isDark ? 1 : 0)_"
-    }
-
-    private static func fingerprint(
-        isDark: Bool,
-        size: CGSize,
-        hiddenStamp: String,
-        strokes: [ProStroke]
-    ) -> String {
-        var h: UInt64 = 0xcbf29ce484222325
-        func mix(_ v: UInt64) {
-            h ^= v
-            h = h &* 0x100000001b3
-        }
-        func mixString(_ s: String) {
-            for b in s.utf8 { mix(UInt64(b)) }
-        }
-        mix(isDark ? 1 : 0)
-        mix(UInt64(Int(size.width.rounded())))
-        mix(UInt64(Int(size.height.rounded())))
-        mixString(hiddenStamp)
-        mix(UInt64(strokes.count))
-        for s in strokes {
-            mixString(s.id)
-            mix(UInt64(s.points.count))
-            mix(UInt64(s.baseWidth.bitPattern))
-        }
-        return String(format: "%016llx", h)
-    }
-
-    static func get(
-        notebookId: String,
-        pageIndex: Int,
-        isDark: Bool,
-        size: CGSize,
-        hiddenStamp: String,
-        matching strokes: [ProStroke]
-    ) -> UIImage? {
-        guard !strokes.isEmpty, size.width > 0, size.height > 0 else { return nil }
-        let k = key(notebookId: notebookId, pageIndex: pageIndex, isDark: isDark)
-        lock.lock()
-        let memEntry = entries[k]
-        lock.unlock()
-        if let entry = memEntry,
-           entry.isDark == isDark,
-           entry.hiddenStamp == hiddenStamp,
-           abs(entry.size.width - size.width) < 1.0,
-           abs(entry.size.height - size.height) < 1.0,
-           entry.strokeIds.count == strokes.count {
-            var allMatch = true
-            for (i, s) in strokes.enumerated() where entry.strokeIds[i] != s.id {
-                allMatch = false
-                break
-            }
-            if allMatch { return entry.image }
-        }
-        guard strokes.count > 16 else { return nil }
-        let fp = fingerprint(isDark: isDark, size: size, hiddenStamp: hiddenStamp, strokes: strokes)
-        let prefix = diskFilePrefix(notebookId: notebookId, pageIndex: pageIndex, isDark: isDark)
-        let file = diskCacheDirectory.appending(path: "\(prefix)\(fp).png")
-        guard let data = try? Data(contentsOf: file),
-              let rawImg = UIImage(data: data)
-        else { return nil }
-        let scale = max(1.0, rawImg.size.width / size.width)
-        let diskImg = UIImage(cgImage: rawImg.cgImage!, scale: scale, orientation: .up)
-        let loadedEntry = Entry(
-            image: diskImg,
-            strokeIds: strokes.map(\.id),
-            size: size,
-            isDark: isDark,
-            hiddenStamp: hiddenStamp
-        )
-        lock.lock()
-        entries[k] = loadedEntry
-        order.removeAll { $0 == k }
-        order.append(k)
-        while order.count > maxEntries {
-            let evicted = order.removeFirst()
-            entries.removeValue(forKey: evicted)
-        }
-        lock.unlock()
-        return diskImg
-    }
-
-    static func set(
-        _ image: UIImage,
-        notebookId: String,
-        pageIndex: Int,
-        isDark: Bool,
-        size: CGSize,
-        hiddenStamp: String,
-        strokes: [ProStroke]
-    ) {
-        guard !strokes.isEmpty, size.width > 0, size.height > 0 else { return }
-        let k = key(notebookId: notebookId, pageIndex: pageIndex, isDark: isDark)
-        let entry = Entry(
-            image: image,
-            strokeIds: strokes.map(\.id),
-            size: size,
-            isDark: isDark,
-            hiddenStamp: hiddenStamp
-        )
-        lock.lock()
-        entries[k] = entry
-        order.removeAll { $0 == k }
-        order.append(k)
-        while order.count > maxEntries {
-            let evicted = order.removeFirst()
-            entries.removeValue(forKey: evicted)
-        }
-        lock.unlock()
-
-        if strokes.count > 16 {
-            let fp = fingerprint(isDark: isDark, size: size, hiddenStamp: hiddenStamp, strokes: strokes)
-            let prefix = diskFilePrefix(notebookId: notebookId, pageIndex: pageIndex, isDark: isDark)
-            let work = DispatchWorkItem {
-                lock.lock()
-                pendingDiskWork.removeValue(forKey: prefix)
-                lock.unlock()
-                guard let png = image.pngData() else { return }
-                let dir = diskCacheDirectory
-                if let existing = try? FileManager.default.contentsOfDirectory(at: dir, includingPropertiesForKeys: nil) {
-                    for url in existing where url.lastPathComponent.hasPrefix(prefix) && url.lastPathComponent != "\(prefix)\(fp).png" {
-                        try? FileManager.default.removeItem(at: url)
-                    }
-                }
-                let target = dir.appending(path: "\(prefix)\(fp).png")
-                if !FileManager.default.fileExists(atPath: target.path) {
-                    try? png.write(to: target, options: .atomic)
-                }
-            }
-            lock.lock()
-            pendingDiskWork[prefix]?.cancel()
-            pendingDiskWork[prefix] = work
-            lock.unlock()
-            diskQueue.asyncAfter(deadline: .now() + 1.2, execute: work)
-        }
-    }
-
-    static func invalidate(notebookId: String, pageIndex: Int) {
-        let prefix = "\(notebookId.lowercased())|\(pageIndex)|"
-        let p0 = diskFilePrefix(notebookId: notebookId, pageIndex: pageIndex, isDark: false)
-        let p1 = diskFilePrefix(notebookId: notebookId, pageIndex: pageIndex, isDark: true)
-        lock.lock()
-        let toRemove = entries.keys.filter { $0.hasPrefix(prefix) }
-        for k in toRemove {
-            entries.removeValue(forKey: k)
-            order.removeAll { $0 == k }
-        }
-        pendingDiskWork.removeValue(forKey: p0)?.cancel()
-        pendingDiskWork.removeValue(forKey: p1)?.cancel()
-        lock.unlock()
-        diskQueue.async {
-            let dir = diskCacheDirectory
-            if let existing = try? FileManager.default.contentsOfDirectory(at: dir, includingPropertiesForKeys: nil) {
-                for url in existing where url.lastPathComponent.hasPrefix(p0) || url.lastPathComponent.hasPrefix(p1) {
-                    try? FileManager.default.removeItem(at: url)
-                }
-            }
-        }
-    }
-}
 
 // MARK: - 畫布上的一層
 
@@ -1392,12 +1170,6 @@ final class ProInkLayerView: UIView {
     private(set) var ownStrokes: [ProStroke] = []
     private var foreignStrokes: [ProStroke] = []
 
-    /// 歷史定案筆劃之增量烘焙點陣圖（與 Android 端 backingBitmap 完全對齊）。
-    /// 徹底杜絕每次 draw(rect) 重新呼叫數萬次 fillEllipse 造成 GPU command queue 塞爆、
-    /// CoreAnimation 死結與 Watchdog 0x8BADF00D 強殺。
-    private var backingImage: UIImage?
-    private var bakedStrokeCount = 0
-    private var bakeWorkItem: DispatchWorkItem?
 
     /// 正在畫的那一筆。
     private var live: ProStroke?
@@ -1443,7 +1215,7 @@ final class ProInkLayerView: UIView {
     /// 圖層顯示／鎖定改了：整層重畫（只是不畫某些筆畫，筆點快取不必清）。
     @objc private func draftingChanged() {
         invalidateAlignAnchors()
-        invalidateBacking()
+        setNeedsDisplay()
         onDraftingChanged?()
     }
 
@@ -1477,28 +1249,7 @@ final class ProInkLayerView: UIView {
         ownStrokes = ProInkStore.load(in: directory, notebookId: notebookId, page: pageIndex)
         foreignStrokes = ProInkStore.load(in: directory, notebookId: notebookId, page: pageIndex, foreign: true)
         strokeSnapshot = Dictionary(ownStrokes.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
-        let ordered = DraftingState.shared.drawOrder(allStrokes, notebookId: notebookId)
-        let isDark = traitCollection.userInterfaceStyle == .dark
-        let hiddenStamp = DraftingState.shared.hiddenStamp(notebookId: notebookId)
-        let effectiveSize = bounds.size.width > 0
-            ? bounds.size
-            : CGSize(width: PageGeometry.width, height: PageGeometry.height)
-        if let cachedImg = ProInkPageImageCache.get(
-            notebookId: notebookId,
-            pageIndex: pageIndex,
-            isDark: isDark,
-            size: effectiveSize,
-            hiddenStamp: hiddenStamp,
-            matching: ordered
-        ) {
-            bakeWorkItem?.cancel()
-            bakeWorkItem = nil
-            backingImage = cachedImg
-            bakedStrokeCount = ordered.count
-            setNeedsDisplay()
-            return
-        }
-        invalidateBacking()
+        setNeedsDisplay()
     }
 
     /// 上一次存檔時自己的筆畫（以本機 `id` 為鍵）。存檔時與現在比對，找出被拿掉／加回來的筆畫，
@@ -1572,8 +1323,7 @@ final class ProInkLayerView: UIView {
             tombstonedIds.formUnion(events.removed)
         }
         if !events.removed.isEmpty {
-            ProInkPageImageCache.invalidate(notebookId: notebookId, pageIndex: pageIndex)
-            invalidateBacking()
+            setNeedsDisplay()
         }
         ProInkStore.saveDeferred(ownStrokes, in: directory, notebookId: notebookId, page: pageIndex)
         onChanged?()
@@ -1643,205 +1393,29 @@ final class ProInkLayerView: UIView {
         ProInkRenderer.displayColor(rgba, dark: traitCollection.userInterfaceStyle == .dark)
     }
 
-    override func layoutSubviews() {
-        super.layoutSubviews()
-        if bounds.width > 0 && bounds.height > 0 && backingImage == nil && !allStrokes.isEmpty {
-            rebakeAllStrokes()
-        }
-    }
-
     override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
         super.traitCollectionDidChange(previousTraitCollection)
         if traitCollection.userInterfaceStyle != previousTraitCollection?.userInterfaceStyle {
-            invalidateBacking()
-        }
-    }
-
-    func invalidateBacking(andRebake rebake: Bool = true) {
-        bakeWorkItem?.cancel()
-        bakeWorkItem = nil
-        backingImage = nil
-        bakedStrokeCount = 0
-        if rebake && !allStrokes.isEmpty && bounds.width > 0 && bounds.height > 0 {
-            rebakeAllStrokes()
-        }
-        setNeedsDisplay()
-    }
-
-    private func rebakeAllStrokes() {
-        let strokes = DraftingState.shared.drawOrder(allStrokes, notebookId: notebookId)
-        guard !strokes.isEmpty, bounds.width > 0, bounds.height > 0 else { return }
-        let currentCount = strokes.count
-        let currentBounds = bounds
-        let isDark = traitCollection.userInterfaceStyle == .dark
-        let nbId = notebookId
-        let pIdx = pageIndex
-        let hiddenStamp = DraftingState.shared.hiddenStamp(notebookId: nbId)
-
-        if let cachedImg = ProInkPageImageCache.get(
-            notebookId: nbId,
-            pageIndex: pIdx,
-            isDark: isDark,
-            size: currentBounds.size,
-            hiddenStamp: hiddenStamp,
-            matching: strokes
-        ) {
-            backingImage = cachedImg
-            bakedStrokeCount = currentCount
             setNeedsDisplay()
-            return
         }
-
-        let format = UIGraphicsImageRendererFormat.default()
-
-        if strokes.count <= 24 {
-            let renderer = UIGraphicsImageRenderer(bounds: currentBounds, format: format)
-            let img = renderer.image { rendererCtx in
-                let ctx = rendererCtx.cgContext
-                for s in strokes {
-                    guard let cached = cachedDabs(for: s) else { continue }
-                    ctx.saveGState()
-                    if s.blendMode == "multiply" { ctx.setBlendMode(.multiply) }
-                    else if s.blendMode == "screen" { ctx.setBlendMode(.screen) }
-                    else { ctx.setBlendMode(.normal) }
-                    ProInkRenderer.draw(cached, toolName: s.tool, color: ProInkRenderer.displayColor(s.colorRGBA, dark: isDark), in: ctx, clip: currentBounds)
-                    ctx.restoreGState()
-                }
-            }
-            backingImage = img
-            bakedStrokeCount = currentCount
-            ProInkPageImageCache.set(
-                img,
-                notebookId: nbId,
-                pageIndex: pIdx,
-                isDark: isDark,
-                size: currentBounds.size,
-                hiddenStamp: hiddenStamp,
-                strokes: strokes
-            )
-            setNeedsDisplay()
-            return
-        }
-
-        let work = DispatchWorkItem { [weak self] in
-            let renderer = UIGraphicsImageRenderer(bounds: currentBounds, format: format)
-            let img = renderer.image { rendererCtx in
-                let ctx = rendererCtx.cgContext
-                for s in strokes {
-                    let cached = ProInkDabCache.get(for: s) ?? {
-                        let c = ProInkRenderer.cache(for: s)
-                        if let c { ProInkDabCache.set(c, for: s) }
-                        return c
-                    }()
-                    guard let cached else { continue }
-                    ctx.saveGState()
-                    if s.blendMode == "multiply" { ctx.setBlendMode(.multiply) }
-                    else if s.blendMode == "screen" { ctx.setBlendMode(.screen) }
-                    else { ctx.setBlendMode(.normal) }
-                    ProInkRenderer.draw(cached, toolName: s.tool, color: ProInkRenderer.displayColor(s.colorRGBA, dark: isDark), in: ctx, clip: currentBounds)
-                    ctx.restoreGState()
-                }
-            }
-            ProInkPageImageCache.set(
-                img,
-                notebookId: nbId,
-                pageIndex: pIdx,
-                isDark: isDark,
-                size: currentBounds.size,
-                hiddenStamp: hiddenStamp,
-                strokes: strokes
-            )
-            DispatchQueue.main.async {
-                guard let self = self, self.notebookId == nbId, self.pageIndex == pIdx, self.allStrokes.count == currentCount else { return }
-                self.bakeWorkItem = nil
-                self.backingImage = img
-                self.bakedStrokeCount = currentCount
-                self.setNeedsDisplay()
-            }
-        }
-        bakeWorkItem = work
-        DispatchQueue.global(qos: .userInitiated).async(execute: work)
-    }
-
-    private func bakeSingleStrokeIncrementally(_ stroke: ProStroke, cached: ProInkRenderer.Cached?) {
-        guard bounds.width > 0, bounds.height > 0 else { return }
-        let currentBounds = bounds
-        let isDark = traitCollection.userInterfaceStyle == .dark
-        let color = displayColor(stroke.colorRGBA)
-        let prevBacking = backingImage
-        let format = UIGraphicsImageRendererFormat.default()
-        let ordered = DraftingState.shared.drawOrder(allStrokes, notebookId: notebookId)
-
-        let renderer = UIGraphicsImageRenderer(bounds: currentBounds, format: format)
-        let img = renderer.image { rendererCtx in
-            let ctx = rendererCtx.cgContext
-            if let prevBacking {
-                prevBacking.draw(in: currentBounds)
-            } else {
-                for s in ordered where s.id != stroke.id {
-                    guard let sCached = cachedDabs(for: s) else { continue }
-                    ctx.saveGState()
-                    if s.blendMode == "multiply" { ctx.setBlendMode(.multiply) }
-                    else if s.blendMode == "screen" { ctx.setBlendMode(.screen) }
-                    else { ctx.setBlendMode(.normal) }
-                    ProInkRenderer.draw(sCached, toolName: s.tool, color: displayColor(s.colorRGBA), in: ctx, clip: currentBounds)
-                    ctx.restoreGState()
-                }
-            }
-            if let cached {
-                ctx.saveGState()
-                if stroke.blendMode == "multiply" { ctx.setBlendMode(.multiply) }
-                else if stroke.blendMode == "screen" { ctx.setBlendMode(.screen) }
-                else { ctx.setBlendMode(.normal) }
-                ProInkRenderer.draw(cached, toolName: stroke.tool, color: color, in: ctx, clip: stroke.bounds)
-                ctx.restoreGState()
-            }
-        }
-        backingImage = img
-        bakedStrokeCount = ordered.count
-        ProInkPageImageCache.set(
-            img,
-            notebookId: notebookId,
-            pageIndex: pageIndex,
-            isDark: isDark,
-            size: currentBounds.size,
-            hiddenStamp: DraftingState.shared.hiddenStamp(notebookId: notebookId),
-            strokes: ordered
-        )
     }
 
     override func draw(_ rect: CGRect) {
         guard let ctx = UIGraphicsGetCurrentContext() else { return }
         let drafting = DraftingState.shared
         let ordered = drafting.drawOrder(allStrokes, notebookId: notebookId)
-
-        // 1. 若烘焙點陣圖存在，O(1) 貼上烘焙圖（<0.2ms）
-        if let backing = backingImage {
-            backing.draw(in: bounds)
-            if bakedStrokeCount < ordered.count {
-                for i in bakedStrokeCount..<ordered.count {
-                    let stroke = ordered[i]
-                    guard stroke.bounds.intersects(rect), let cached = cachedDabs(for: stroke) else { continue }
-                    ctx.saveGState()
-                    if stroke.blendMode == "multiply" { ctx.setBlendMode(.multiply) }
-                    else if stroke.blendMode == "screen" { ctx.setBlendMode(.screen) }
-                    else { ctx.setBlendMode(.normal) }
-                    ProInkRenderer.draw(cached, toolName: stroke.tool, color: displayColor(stroke.colorRGBA), in: ctx, clip: rect)
-                    ctx.restoreGState()
-                }
+        for stroke in ordered where stroke.bounds.intersects(rect) {
+            guard let cached = cachedDabs(for: stroke) else { continue }
+            ctx.saveGState()
+            if stroke.blendMode == "multiply" {
+                ctx.setBlendMode(.multiply)
+            } else if stroke.blendMode == "screen" {
+                ctx.setBlendMode(.screen)
+            } else {
+                ctx.setBlendMode(.normal)
             }
-        } else {
-            // 降級退回：背景正在整頁烘焙大量筆畫時，主執行緒僅繪製最後 24 筆避免同步阻塞 UI，待數毫秒後背景烘焙完成即自動補齊整頁
-            let slice = (bakeWorkItem != nil && ordered.count > 24) ? Array(ordered.suffix(24)) : ordered
-            for stroke in slice where stroke.bounds.intersects(rect) {
-                guard let cached = cachedDabs(for: stroke) else { continue }
-                ctx.saveGState()
-                if stroke.blendMode == "multiply" { ctx.setBlendMode(.multiply) }
-                else if stroke.blendMode == "screen" { ctx.setBlendMode(.screen) }
-                else { ctx.setBlendMode(.normal) }
-                ProInkRenderer.draw(cached, toolName: stroke.tool, color: displayColor(stroke.colorRGBA), in: ctx, clip: rect)
-                ctx.restoreGState()
-            }
+            ProInkRenderer.draw(cached, toolName: stroke.tool, color: displayColor(stroke.colorRGBA), in: ctx, clip: rect)
+            ctx.restoreGState()
         }
         for stroke in overlayStrokes where stroke.bounds.intersects(rect) {
             guard let cached = ProInkRenderer.cache(for: stroke) else { continue }
@@ -2203,9 +1777,6 @@ final class ProInkLayerView: UIView {
         if let cached {
             ProInkDabCache.set(cached, for: stroke)
         }
-
-        // 增量烘焙這 1 筆到 backingImage (O(1) 增量成本，~1.5ms)
-        bakeSingleStrokeIncrementally(stroke, cached: cached)
 
         // 觸發底層視圖重繪
         setNeedsDisplay(stroke.bounds)
