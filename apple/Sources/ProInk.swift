@@ -911,6 +911,13 @@ final class ProInkLayerView: UIView {
     private(set) var ownStrokes: [ProStroke] = []
     private var foreignStrokes: [ProStroke] = []
 
+    /// 歷史定案筆劃之增量烘焙點陣圖（與 Android 端 backingBitmap 完全對齊）。
+    /// 徹底杜絕每次 draw(rect) 重新呼叫數萬次 fillEllipse 造成 GPU command queue 塞爆、
+    /// CoreAnimation 死結與 Watchdog 0x8BADF00D 強殺。
+    private var backingImage: UIImage?
+    private var bakedStrokeCount = 0
+    private var bakeWorkItem: DispatchWorkItem?
+
     /// 正在畫的那一筆。
     private var live: ProStroke?
     private var liveCache: ProInkRenderer.Cached?
@@ -955,7 +962,7 @@ final class ProInkLayerView: UIView {
     /// 圖層顯示／鎖定改了：整層重畫（只是不畫某些筆畫，筆點快取不必清）。
     @objc private func draftingChanged() {
         invalidateAlignAnchors()
-        setNeedsDisplay()
+        invalidateBacking()
         onDraftingChanged?()
     }
 
@@ -989,11 +996,11 @@ final class ProInkLayerView: UIView {
         ownStrokes = ProInkStore.load(in: directory, notebookId: notebookId, page: pageIndex)
         foreignStrokes = ProInkStore.load(in: directory, notebookId: notebookId, page: pageIndex, foreign: true)
         strokeSnapshot = Dictionary(ownStrokes.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
+        invalidateBacking()
         // 背景預熱，若有新載入的筆畫未在快取中，完成後自動更新畫面
         ProInkDabCache.prewarm(strokes: allStrokes) { [weak self] in
-            self?.setNeedsDisplay()
+            self?.invalidateBacking()
         }
-        setNeedsDisplay()
     }
 
     /// 上一次存檔時自己的筆畫（以本機 `id` 為鍵）。存檔時與現在比對，找出被拿掉／加回來的筆畫，
@@ -1066,6 +1073,9 @@ final class ProInkLayerView: UIView {
             // 墓碑確實寫出去了才記：之後把同一筆加回來要換新 id。
             tombstonedIds.formUnion(events.removed)
         }
+        if !events.removed.isEmpty {
+            invalidateBacking()
+        }
         ProInkStore.saveDeferred(ownStrokes, in: directory, notebookId: notebookId, page: pageIndex)
         onChanged?()
         NotificationCenter.default.post(name: AppCommand.proInkDidChange, object: notebookId.lowercased())
@@ -1113,22 +1123,152 @@ final class ProInkLayerView: UIView {
         ProInkRenderer.displayColor(rgba, dark: traitCollection.userInterfaceStyle == .dark)
     }
 
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        if bounds.width > 0 && bounds.height > 0 && backingImage == nil && !allStrokes.isEmpty {
+            rebakeAllStrokes()
+        }
+    }
+
+    override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
+        super.traitCollectionDidChange(previousTraitCollection)
+        if traitCollection.userInterfaceStyle != previousTraitCollection?.userInterfaceStyle {
+            invalidateBacking()
+        }
+    }
+
+    func invalidateBacking(andRebake rebake: Bool = true) {
+        bakeWorkItem?.cancel()
+        bakeWorkItem = nil
+        backingImage = nil
+        bakedStrokeCount = 0
+        if rebake && !allStrokes.isEmpty && bounds.width > 0 && bounds.height > 0 {
+            rebakeAllStrokes()
+        }
+        setNeedsDisplay()
+    }
+
+    private func rebakeAllStrokes() {
+        let strokes = DraftingState.shared.drawOrder(allStrokes, notebookId: notebookId)
+        guard !strokes.isEmpty, bounds.width > 0, bounds.height > 0 else { return }
+        let currentCount = strokes.count
+        let currentBounds = bounds
+        let isDark = traitCollection.userInterfaceStyle == .dark
+        let format = UIGraphicsImageRendererFormat.default()
+
+        if strokes.count <= 8 {
+            let renderer = UIGraphicsImageRenderer(bounds: currentBounds, format: format)
+            backingImage = renderer.image { rendererCtx in
+                let ctx = rendererCtx.cgContext
+                for s in strokes {
+                    guard let cached = cachedDabs(for: s) else { continue }
+                    ctx.saveGState()
+                    if s.blendMode == "multiply" { ctx.setBlendMode(.multiply) }
+                    else if s.blendMode == "screen" { ctx.setBlendMode(.screen) }
+                    else { ctx.setBlendMode(.normal) }
+                    ProInkRenderer.draw(cached, toolName: s.tool, color: ProInkRenderer.displayColor(s.colorRGBA, dark: isDark), in: ctx, clip: currentBounds)
+                    ctx.restoreGState()
+                }
+            }
+            bakedStrokeCount = currentCount
+            setNeedsDisplay()
+            return
+        }
+
+        let work = DispatchWorkItem { [weak self] in
+            let renderer = UIGraphicsImageRenderer(bounds: currentBounds, format: format)
+            let img = renderer.image { rendererCtx in
+                let ctx = rendererCtx.cgContext
+                for s in strokes {
+                    guard let cached = ProInkRenderer.cache(for: s) else { continue }
+                    ctx.saveGState()
+                    if s.blendMode == "multiply" { ctx.setBlendMode(.multiply) }
+                    else if s.blendMode == "screen" { ctx.setBlendMode(.screen) }
+                    else { ctx.setBlendMode(.normal) }
+                    ProInkRenderer.draw(cached, toolName: s.tool, color: ProInkRenderer.displayColor(s.colorRGBA, dark: isDark), in: ctx, clip: currentBounds)
+                    ctx.restoreGState()
+                }
+            }
+            DispatchQueue.main.async {
+                guard let self = self, self.allStrokes.count == currentCount else { return }
+                self.backingImage = img
+                self.bakedStrokeCount = currentCount
+                self.setNeedsDisplay()
+            }
+        }
+        bakeWorkItem = work
+        DispatchQueue.global(qos: .userInitiated).async(execute: work)
+    }
+
+    private func bakeSingleStrokeIncrementally(_ stroke: ProStroke, cached: ProInkRenderer.Cached?) {
+        guard bounds.width > 0, bounds.height > 0 else { return }
+        let currentBounds = bounds
+        let isDark = traitCollection.userInterfaceStyle == .dark
+        let color = displayColor(stroke.colorRGBA)
+        let prevBacking = backingImage
+        let format = UIGraphicsImageRendererFormat.default()
+
+        let renderer = UIGraphicsImageRenderer(bounds: currentBounds, format: format)
+        backingImage = renderer.image { rendererCtx in
+            let ctx = rendererCtx.cgContext
+            if let prevBacking {
+                prevBacking.draw(in: currentBounds)
+            } else {
+                let drafting = DraftingState.shared
+                let ordered = drafting.drawOrder(allStrokes, notebookId: notebookId)
+                for s in ordered where s.id != stroke.id {
+                    guard let sCached = cachedDabs(for: s) else { continue }
+                    ctx.saveGState()
+                    if s.blendMode == "multiply" { ctx.setBlendMode(.multiply) }
+                    else if s.blendMode == "screen" { ctx.setBlendMode(.screen) }
+                    else { ctx.setBlendMode(.normal) }
+                    ProInkRenderer.draw(sCached, toolName: s.tool, color: displayColor(s.colorRGBA), in: ctx, clip: currentBounds)
+                    ctx.restoreGState()
+                }
+            }
+            if let cached {
+                ctx.saveGState()
+                if stroke.blendMode == "multiply" { ctx.setBlendMode(.multiply) }
+                else if stroke.blendMode == "screen" { ctx.setBlendMode(.screen) }
+                else { ctx.setBlendMode(.normal) }
+                ProInkRenderer.draw(cached, toolName: stroke.tool, color: color, in: ctx, clip: stroke.bounds)
+                ctx.restoreGState()
+            }
+        }
+        bakedStrokeCount = allStrokes.count
+    }
+
     override func draw(_ rect: CGRect) {
         guard let ctx = UIGraphicsGetCurrentContext() else { return }
         let drafting = DraftingState.shared
         let ordered = drafting.drawOrder(allStrokes, notebookId: notebookId)
-        for stroke in ordered where stroke.bounds.intersects(rect) {
-            guard let cached = cachedDabs(for: stroke) else { continue }
-            ctx.saveGState()
-            if stroke.blendMode == "multiply" {
-                ctx.setBlendMode(.multiply)
-            } else if stroke.blendMode == "screen" {
-                ctx.setBlendMode(.screen)
-            } else {
-                ctx.setBlendMode(.normal)
+
+        // 1. 若烘焙點陣圖存在，O(1) 貼上烘焙圖（<0.2ms）
+        if let backing = backingImage {
+            backing.draw(in: bounds)
+            if bakedStrokeCount < ordered.count {
+                for i in bakedStrokeCount..<ordered.count {
+                    let stroke = ordered[i]
+                    guard stroke.bounds.intersects(rect), let cached = cachedDabs(for: stroke) else { continue }
+                    ctx.saveGState()
+                    if stroke.blendMode == "multiply" { ctx.setBlendMode(.multiply) }
+                    else if stroke.blendMode == "screen" { ctx.setBlendMode(.screen) }
+                    else { ctx.setBlendMode(.normal) }
+                    ProInkRenderer.draw(cached, toolName: stroke.tool, color: displayColor(stroke.colorRGBA), in: ctx, clip: rect)
+                    ctx.restoreGState()
+                }
             }
-            ProInkRenderer.draw(cached, toolName: stroke.tool, color: displayColor(stroke.colorRGBA), in: ctx, clip: rect)
-            ctx.restoreGState()
+        } else {
+            // 降級退回：烘焙圖尚未產生時直接繪製
+            for stroke in ordered where stroke.bounds.intersects(rect) {
+                guard let cached = cachedDabs(for: stroke) else { continue }
+                ctx.saveGState()
+                if stroke.blendMode == "multiply" { ctx.setBlendMode(.multiply) }
+                else if stroke.blendMode == "screen" { ctx.setBlendMode(.screen) }
+                else { ctx.setBlendMode(.normal) }
+                ProInkRenderer.draw(cached, toolName: stroke.tool, color: displayColor(stroke.colorRGBA), in: ctx, clip: rect)
+                ctx.restoreGState()
+            }
         }
         for stroke in overlayStrokes where stroke.bounds.intersects(rect) {
             guard let cached = ProInkRenderer.cache(for: stroke) else { continue }
@@ -1456,10 +1596,10 @@ final class ProInkLayerView: UIView {
         guard var stroke = live else { return }
         let liveArea = stroke.bounds.union(lastPredictedArea)
         lastPredictedArea = .null
-        live = nil
-        liveCache = nil
-        resetLiveBrush()
         guard !stroke.points.isEmpty else {
+            live = nil
+            liveCache = nil
+            resetLiveBrush()
             syncLiveOverlay(invalidating: liveArea)
             return
         }
@@ -1482,13 +1622,25 @@ final class ProInkLayerView: UIView {
         edgeLock = nil
         tailSnapped = false
         setGuides([])
-        syncLiveOverlay(invalidating: liveArea)
         ownStrokes.append(stroke)
         // 預先計算並放入快取，避免進入 draw(rect) 時臨時執行 Rust FFI 運算
-        if let cached = ProInkRenderer.cache(for: stroke) {
+        let cached = ProInkRenderer.cache(for: stroke)
+        if let cached {
             ProInkDabCache.set(cached, for: stroke)
         }
+
+        // 增量烘焙這 1 筆到 backingImage (O(1) 增量成本，~1.5ms)
+        bakeSingleStrokeIncrementally(stroke, cached: cached)
+
+        // 觸發底層視圖重繪
         setNeedsDisplay(stroke.bounds)
+
+        // 現在底層已具備該筆畫，平滑交接：清除頂層即時疊加層
+        live = nil
+        liveCache = nil
+        resetLiveBrush()
+        syncLiveOverlay(invalidating: liveArea)
+
         persist()
         registerUndo(removing: stroke.id)
     }

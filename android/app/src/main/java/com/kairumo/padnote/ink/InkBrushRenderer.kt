@@ -496,10 +496,11 @@ object InkBrushRenderer {
         points: List<StrokePoint>,
         tool: ToolKind,
         baseWidth: Float,
-        pxPerDp: Float
+        pxPerDp: Float,
+        lineType: Int = 0
     ) {
         if (brushIsCustom(tool)) {
-            drawDabsOnCanvas(canvas, paint, cachedDabs(points, tool, baseWidth, 0), pxPerDp)
+            drawDabsOnCanvas(canvas, paint, cachedDabs(points, tool, baseWidth, lineType), pxPerDp)
             return
         }
         val segments = cachedSegments(points, tool, baseWidth, pxPerDp)
@@ -622,7 +623,7 @@ object InkBrushRenderer {
             val isRotated = abs(dab.angle) > 0.05f && abs(rx - ry) > 0.2f
             if (isRotated) {
                 canvas.save()
-                canvas.rotate(Math.toDegrees(dab.angle.toDouble()).toFloat(), cx, cy)
+                canvas.rotate(dab.angle * 57.29578f, cx, cy)
             }
             if (dab.softness > 0.5f) {
                 val alpha = (dab.alpha * baseAlpha * 255f).toInt().coerceIn(0, 255)

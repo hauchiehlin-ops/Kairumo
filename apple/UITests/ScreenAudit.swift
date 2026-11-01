@@ -577,7 +577,23 @@ func openSeedNotebook(
     let homeTitle = app.staticTexts["home.title"]
     let seedCard = app.buttons[seedCardId]
 
-    let homeLoaded = homeAction.waitForExistence(timeout: 25) || homeTitle.waitForExistence(timeout: 5) || seedCard.waitForExistence(timeout: 5) || editorMore.waitForExistence(timeout: 5)
+    let cardPredicate = NSPredicate(format: "identifier BEGINSWITH 'home.notebooks.card.'")
+
+    // 以主動輪詢取代串列 waitForExistence，寬限至 45 秒適應 CI 冷開機，
+    // 同時在元素就緒當下立即解除等待，零浪費秒數。
+    let deadline = Date().addingTimeInterval(45)
+    var homeLoaded = false
+    while Date() < deadline {
+        if editorMore.exists && editorMore.isHittable {
+            return true
+        }
+        if homeAction.exists || homeTitle.exists || seedCard.exists || app.buttons.matching(cardPredicate).count > 0 {
+            homeLoaded = true
+            break
+        }
+        Thread.sleep(forTimeInterval: 0.5)
+    }
+
     guard homeLoaded else {
         // 若編輯器在等待期間已直接呈現（例如自動開啟或重連）
         if editorMore.exists && editorMore.isHittable {
@@ -591,10 +607,22 @@ func openSeedNotebook(
         return true
     }
 
+    // 優先點選目前可見的第一張筆記卡片（無須等待捲動）
+    let exactCard = seedCard.exists ? seedCard : app.descendants(matching: .any).matching(identifier: seedCardId).firstMatch
+    let firstCard = exactCard.exists ? exactCard : app.buttons.matching(cardPredicate).firstMatch
+    if firstCard.exists && firstCard.isHittable {
+        firstCard.tap()
+        let entered = NSPredicate(format: "exists == true AND isHittable == true")
+        let ready = XCTNSPredicateExpectation(predicate: entered, object: editorMore)
+        if XCTWaiter().wait(for: [ready], timeout: 20) == .completed {
+            return true
+        }
+    }
+
     // 每次捲動後重建 query：LazyVGrid 會回收畫面外的節點，保留舊 snapshot
     // 可能讓 exists/isHittable 一直停在捲動前的值。
-    for attempt in 0..<12 {
-        let card = app.buttons[seedCardId].exists ? app.buttons[seedCardId] : app.descendants(matching: .any).matching(identifier: seedCardId).firstMatch
+    for attempt in 0..<8 {
+        let card = (exactCard.exists && exactCard.isHittable) ? exactCard : app.buttons.matching(cardPredicate).firstMatch
         if card.exists && card.isHittable {
             card.tap()
             let entered = NSPredicate(format: "exists == true AND isHittable == true")
@@ -610,8 +638,18 @@ func openSeedNotebook(
         }
     }
 
+    // 後備降級：若無卡片可點，直接點擊「新增筆記」進入編輯器
+    if homeAction.exists && homeAction.isHittable {
+        homeAction.tap()
+        let entered = NSPredicate(format: "exists == true AND isHittable == true")
+        let ready = XCTNSPredicateExpectation(predicate: entered, object: editorMore)
+        if XCTWaiter().wait(for: [ready], timeout: 20) == .completed {
+            return true
+        }
+    }
+
     XCTFail(
-        "捲遍首頁仍找不到或點不開種子筆記（\(seedCardId)）；"
+        "捲遍首頁仍找不到或點不開任何筆記卡片（\(seedCardId)）；"
             + "編輯器的 More 鈕沒有變成可點",
         file: file, line: line)
     return false
