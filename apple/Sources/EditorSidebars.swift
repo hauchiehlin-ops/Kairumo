@@ -40,7 +40,7 @@ struct PageThumbnailCardView: View {
                 store: store,
                 canvasWidth: canvasWidth,
                 inkRevision: inkRevision,
-                deferRecomputation: CanvasTouchState.isCanvasNavigating
+                deferRecomputation: CanvasTouchState.isCanvasNavigating || CanvasTouchState.activeDirectTouches > 0
             )
             Image(uiImage: img)
                 .resizable()

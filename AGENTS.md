@@ -20,10 +20,12 @@
     - **Apple 端**：`applyEditorTool`、`selectEditorTool`、`transitionToMode`、`switchToPage`、`focusContinuousPage`
     - **Android 端**：`applyInkTool`、`switchToPage`、`selectText`、`selectImage`、`clearSelection`
   - **嚴禁繞過正門直接指派全域狀態變數**。繞過正門會直接導致副作用斷裂（例如橡皮擦旗標遺漏、選取框殘留、筆刷快取未清空、未完成筆跡丟失等連鎖災難）。
+  - **彈性邊界自省機制（Live Entrypoint Contract）**：`check-state-entrypoints.py` 自動雙向檢查：(1) 任何 `// state-entry:` 標記必須附帶具體正門理由（禁止空白標記敷衍繞過）；(2) `RULES` 清單中宣告的正門函式必須真實存在於原始碼中，當未來架構演進重構或擴充正門名稱時，腳本會自動提示同步更新 `RULES`，防止守門規則僵化或成為死碼。
 
 ### 🖋️ Layer 2：筆跡單一真相與不變式矩陣（Ink Single Source of Truth: ADR-0015）
 - **約束工具**：
   - 核心測試：`cargo test -p padnote-core -p padnote-ink`（740+ 項不變式）
+  - 彈性邊界與性質不變式守門：`python3 scripts/check-tunable-invariants.py`
   - Apple 矩陣測試：`InkInvariantMatrixAudit.swift`
   - Android 矩陣測試：`InkInvariantMatrixAuditTest.kt`
 - **六大不變式（I1–I6）**：
@@ -33,9 +35,10 @@
   - **I4 畫面同源**：畫布與側欄縮圖讀取同一個版本號（`revision`）。畫布有筆跡，縮圖必須有；預覽頁有筆跡，畫布切換後絕不可消失。
   - **I5 事件同步**：同步傳輸裝置事件區塊，無全量檔案覆蓋。
   - **I6 跨端對齊**：Apple 與 Android 底層資料模型與行為完全同構。
-- **快取一致性硬指標**：
+- **快取一致性與彈性邊界硬指標**：
   - Android `InkSurfaceView` 的增量烘焙底圖必須具備 `bakedStrokes` 內容檢驗（`baked !== curr && baked != curr`）與 `pageKey` 換頁追蹤，嚴防換頁殘影或非末端筆畫變動時烘焙層未更新。
   - Apple `ProInk` 必須以穩定 `stroke.id` 鍵入快取，禁止裸寫座標反轉的 `backingImage`。
+  - **性質不變式 vs. 可調手感參數分離（`check-tunable-invariants.py`）**：嚴格保護數學性質與跨端結構同構（如筆刷 1–5 號嚴格單調遞增且禁止 `max(5, ...)` 壓平、書寫中背景同步雙端讓路 `isActivelyInking`），同時允許未來自由調校斜率、端點粗細或冷卻秒數等產品手感參數，不以死板魔術數字綁死演進空間。
 
 ### ⚡ Layer 3：主執行緒非阻塞與執行緒安全（Non-blocking UI & Thread Safety）
 - **約束工具**：

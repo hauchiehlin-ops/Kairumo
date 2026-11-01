@@ -437,5 +437,5 @@ internal fun previewDiameter(tool: InkTool, width: Float): Float {
         InkTool.TRANSLATION_PEN -> 2.8f
         InkTool.DRAFTING -> 1.0f
     }
-    return (width * scale).coerceIn(6f, 22f)
+    return (2f + width.coerceAtLeast(1f) * scale).coerceIn(2.5f, 22f)
 }

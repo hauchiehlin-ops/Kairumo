@@ -80,14 +80,28 @@ final class InteractionMatrixAudit: XCTestCase {
     /// 連續幾十次之後 XCTest 自己的 log 量（"Automation type mismatch…"）超過系統上限，
     /// 受測的 App 會被系統隔離而崩潰 —— 測試手法造成的假紅燈。
     private func find(_ app: XCUIApplication, _ id: String) -> XCUIElement {
-        let other = app.otherElements[id]
-        if other.exists { return other }
-        let button = app.buttons[id]
-        if button.exists { return button }
-        if id.hasPrefix("object.") {
-            return other
+        let others = app.otherElements.matching(identifier: id)
+        let otherCount = others.count
+        if otherCount > 0 {
+            for i in 0..<otherCount {
+                let el = others.element(boundBy: i)
+                if el.exists && el.isHittable { return el }
+            }
+            return others.firstMatch
         }
-        return button
+        let buttons = app.buttons.matching(identifier: id)
+        let buttonCount = buttons.count
+        if buttonCount > 0 {
+            for i in 0..<buttonCount {
+                let el = buttons.element(boundBy: i)
+                if el.exists && el.isHittable { return el }
+            }
+            return buttons.firstMatch
+        }
+        if id.hasPrefix("object.") {
+            return others.firstMatch
+        }
+        return buttons.firstMatch
     }
 
     private func object(_ app: XCUIApplication, _ kind: String) -> XCUIElement {

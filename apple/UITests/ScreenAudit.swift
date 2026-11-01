@@ -573,9 +573,9 @@ func openSeedNotebook(
         }
     }
 
-    let homeAction = app.buttons["home.action.new_note"]
-    let homeTitle = app.staticTexts["home.title"]
-    let seedCard = app.buttons[seedCardId]
+    let homeAction = app.buttons["home.action.new_note"].firstMatch
+    let homeTitle = app.staticTexts["home.title"].firstMatch
+    let seedCard = app.buttons[seedCardId].firstMatch
 
     let cardPredicate = NSPredicate(format: "identifier BEGINSWITH 'home.notebooks.card.'")
 

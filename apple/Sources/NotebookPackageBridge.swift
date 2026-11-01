@@ -1492,9 +1492,11 @@ enum NotebookPackageBridge {
             return (session, ids[pageIndex])
         }
         let session: PadnoteSession
+        var createdNew = false
         if FileManager.default.fileExists(atPath: destination.path) {
             session = try PadnoteSession.openExisting(path: destination.path, deviceId: deviceId)
         } else {
+            createdNew = true
             try FileManager.default.createDirectory(
                 at: destination.deletingLastPathComponent(), withIntermediateDirectories: true
             )
@@ -1511,22 +1513,34 @@ enum NotebookPackageBridge {
         let known = (try? pageIds(of: session)) ?? []
         let wanted = alignedPageIds(document.pageIds, count: targetPageCount, package: known,
                                     notebookId: document.id)
+        var addedPages = false
         for id in wanted where !known.contains(id) && Int(session.pageCount()) < targetPageCount {
             try session.addPageWithId(pageId: id, style: style)
+            addedPages = true
         }
 
         let ids = Self.orderedLikeDocument(try pageIds(of: session), document: document)
         guard pageIndex < ids.count else { throw BridgeError.noPages }
         let pageId = ids[pageIndex]
-        try session.setPageSize(
-            pageId: pageId,
-            width: Float(document.pageSize.width),
-            height: Float(document.height(forPage: pageIndex))
-        )
+        let targetW = Float(document.pageSize.width)
+        let targetH = Float(document.height(forPage: pageIndex))
+        let existingSize = try? session.pageSize(pageId: pageId)
+        if existingSize == nil || existingSize!.count < 2 || abs(existingSize![0] - targetW) > 0.5 || abs(existingSize![1] - targetH) > 0.5 {
+            try session.setPageSize(
+                pageId: pageId,
+                width: targetW,
+                height: targetH
+            )
+        }
 
-        var meta = NotebookMeta(from: document)
-        meta.pageIds = ids
-        try session.setNotebookMeta(json: meta.encodedJSON())
+        if createdNew || addedPages || session.notebookMeta() == nil {
+            var meta = NotebookMeta(from: document)
+            meta.pageIds = ids
+            let encodedMeta = meta.encodedJSON()
+            if session.notebookMeta() != encodedMeta {
+                try session.setNotebookMeta(json: encodedMeta)
+            }
+        }
         return (session, pageId)
     }
 

@@ -2693,8 +2693,14 @@ public final class NotebookStore: ObservableObject {
         attachmentsDirectory.appending(path: fileName)
     }
 
-    /// 記憶體層級圖片快取，徹底消除物件拖曳時每秒 60-120 次磁碟讀取解碼產生的殘影與掉幀
-    private let imageCache = NSCache<NSString, UIImage>()
+    /// 記憶體層級圖片快取，徹底消除物件拖曳時每秒 60-120 次磁碟讀取解碼產生的殘影與掉幀；
+    /// 設定明確的數量與位元組上限（最多 64 張或 128MB），防止數百 MB～GB 級多圖大筆記本耗盡記憶體。
+    private let imageCache: NSCache<NSString, UIImage> = {
+        let cache = NSCache<NSString, UIImage>()
+        cache.countLimit = 64
+        cache.totalCostLimit = 128 * 1024 * 1024
+        return cache
+    }()
 
     /// 儲存圖片附件至本地磁碟，回傳儲存後的檔名
     public func saveAttachmentImage(_ image: UIImage) -> String? {
@@ -2703,7 +2709,8 @@ public final class NotebookStore: ObservableObject {
         guard let data = image.pngData() else { return nil }
         do {
             try data.write(to: fileUrl, options: .atomic)
-            imageCache.setObject(image, forKey: fileName as NSString)
+            let cost = Int(image.size.width * image.scale * image.size.height * image.scale * 4)
+            imageCache.setObject(image, forKey: fileName as NSString, cost: max(cost, data.count))
             return fileName
         } catch {
             return nil
@@ -2718,7 +2725,8 @@ public final class NotebookStore: ObservableObject {
         }
         let fileUrl = attachmentsDirectory.appending(path: fileName)
         guard let data = try? Data(contentsOf: fileUrl), let img = UIImage(data: data) else { return nil }
-        imageCache.setObject(img, forKey: key)
+        let cost = Int(img.size.width * img.scale * img.size.height * img.scale * 4)
+        imageCache.setObject(img, forKey: key, cost: max(cost, data.count))
         return img
     }
 

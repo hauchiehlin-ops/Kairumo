@@ -31,11 +31,41 @@ RULES = [
 ]
 
 MARKER = "state-entry:"
+MARKER_WITH_REASON = re.compile(r"//\s*state-entry:\s*\S+")
 
 
 def violations():
     out = []
+    # 彈性邊界 2 自省機制：驗證 RULES 中宣告的正門函式皆真實存在於原始碼中，
+    # 當未來架構演進重構正門名稱時，自動提醒同步更新 RULES，避免守門規則與架構脫節。
+    platform_texts = {}
+    for platform, src, ext, _, _ in RULES:
+        if (platform, src, ext) not in platform_texts:
+            files = [
+                p for p in sorted((ROOT / src).rglob("*" + ext))
+                if not p.name.startswith("._")
+            ]
+            platform_texts[(platform, src, ext)] = "\n".join(
+                p.read_text(encoding="utf-8", errors="ignore") for p in files
+            )
+            # 檢查所有 state-entry: 標記是否皆附帶具體理由（禁止空白 // state-entry: 敷衍繞過）
+            for p in files:
+                for no, line in enumerate(p.read_text(encoding="utf-8", errors="ignore").splitlines(), 1):
+                    if MARKER in line and not MARKER_WITH_REASON.search(line):
+                        rel = p.relative_to(ROOT)
+                        out.append(
+                            f"{platform}  {rel}:{no}  `// state-entry:` 必須附帶具體正門理由（例如 `// state-entry: 換工具的唯一正門`）\n    {line.strip()}"
+                        )
+
     for platform, src, ext, name, entry in RULES:
+        joined = platform_texts[(platform, src, ext)]
+        fn_kw = "func" if ext == ".swift" else "fun"
+        for fn_name in [e.strip() for e in entry.split("/")]:
+            if not re.search(rf"\b{fn_kw}\s+{re.escape(fn_name)}\b", joined):
+                out.append(
+                    f"{platform}  RULES 正門函式 `{fn_name}` 在 `{src}` 中找不到定義；"
+                    f"若架構演進已重構正門名稱，請同步更新 scripts/check-state-entrypoints.py 的 RULES"
+                )
         # 寫入：`name =`、`x.name =`（不含 `==`、`+=`）；`self.name =` 是別的型別在初始化自己的屬性。
         write = re.compile(r"(?<![\w$])((?:\w+\.)?)" + name + r"\s*=(?![=])")
         decl = re.compile(r"\b(var|val|let)\s+" + name + r"\b")

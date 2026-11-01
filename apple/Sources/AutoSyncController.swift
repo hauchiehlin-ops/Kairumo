@@ -211,6 +211,13 @@ public final class AutoSyncController: ObservableObject {
         // 切換設定檔期間不起新的一輪（見 `FocusSyncController.pump`）。
         guard !ProfileManager.shared.isSwitching else { return }
         guard let store else { return }
+        if CanvasTouchState.isActivelyInking() {
+            Task { @MainActor [weak self] in
+                try? await Task.sleep(nanoseconds: 1_800_000_000)
+                self?.pump()
+            }
+            return
+        }
         guard scheduler.shouldStart(nowMs: nowMs) else { return }
         isSyncing = true
         Task { @MainActor in

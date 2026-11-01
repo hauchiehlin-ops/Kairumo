@@ -208,6 +208,16 @@ public final class FocusSyncController: ObservableObject {
     private func pump() {
         // 切換設定檔期間不起新的一輪：路徑是執行時才算的，跑到一半設定檔變了就寫進別人的目錄。
         guard !ProfileManager.shared.isSwitching else { return }
+        // 使用者正在畫布上連續書寫時全面讓路，避免同步匯出與磁碟 I/O 干擾手寫即時性。
+        if CanvasTouchState.isActivelyInking() {
+            wake?.cancel()
+            wake = Task { @MainActor [weak self] in
+                try? await Task.sleep(nanoseconds: 1_500_000_000)
+                guard !Task.isCancelled else { return }
+                self?.pump()
+            }
+            return
+        }
         guard let store, let run = lane.poll(nowMs: nowMs) else {
             reschedule()
             return

@@ -1477,12 +1477,13 @@ extension NotebookEditorView {
                 // 筆刷粗細預設點
                 HStack(spacing: 5) {
                     ForEach([2.0, 4.0, 8.0, 14.0], id: \.self) { w in
+                        let dotDiameter = CGFloat(2.0 + w * 0.85)
                         Button {
                             strokeWidth = CGFloat(w)
                         } label: {
                             Circle()
                                 .fill(abs(strokeWidth - CGFloat(w)) < 0.01 ? Color.accentColor : Color.secondary.opacity(0.5))
-                                .frame(width: max(6, CGFloat(w)), height: max(6, CGFloat(w)))
+                                .frame(width: dotDiameter, height: dotDiameter)
                                 .padding(3)
                                 .background(abs(strokeWidth - CGFloat(w)) < 0.01 ? Color.accentColor.opacity(0.15) : Color.clear)
                                 .clipShape(Circle())
@@ -1731,12 +1732,13 @@ extension NotebookEditorView {
                 } else {
                 HStack(spacing: 6) {
                     ForEach([2.0, 4.0, 8.0, 14.0], id: \.self) { w in
+                        let dotDiameter = CGFloat(2.0 + w * 0.85)
                         Button {
                             strokeWidth = CGFloat(w)
                         } label: {
                             Circle()
                                 .fill(abs(strokeWidth - CGFloat(w)) < 0.01 ? Color.accentColor : Color.secondary.opacity(0.5))
-                                .frame(width: max(6, CGFloat(w)), height: max(6, CGFloat(w)))
+                                .frame(width: dotDiameter, height: dotDiameter)
                                 .padding(4)
                                 .background(abs(strokeWidth - CGFloat(w)) < 0.01 ? Color.accentColor.opacity(0.15) : Color.clear)
                                 .clipShape(Circle())

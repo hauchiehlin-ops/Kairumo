@@ -246,7 +246,7 @@ fun InkCanvas(
         val drag = lassoDrag()
         val committed = engine.strokes
         val orderedStrokes = DraftingState.drawOrder(committed) { it.layer }
-        strokeLayers.draw(this, orderedStrokes, drag, inkColor, density, size)
+        strokeLayers.draw(this, engine.pageKey, orderedStrokes, drag, inkColor, density, size)
         // 尚未抬筆的那一段也要即時畫出來，否則寫字時要等抬筆才看得到。
         val snapped = engine.snapPreview ?: engine.draftPreview
         val liveById = engine.liveSamplesById()
@@ -302,6 +302,16 @@ fun InkCanvas(
  * 3. 具備嚴密的一致性檢驗（比對已烘焙筆劃，擦除／換頁時自動整頁重建）。
  */
 private class BatchStrokeLayerCache(private val graphicsContext: androidx.compose.ui.graphics.GraphicsContext? = null) {
+    private class PageBakedState(
+        val bitmap: android.graphics.Bitmap,
+        val canvas: android.graphics.Canvas,
+        val bakedStrokes: ArrayList<InkEngine.CompletedStroke> = ArrayList(),
+        var bakedStrokeCount: Int = 0,
+        val width: Int,
+        val height: Int,
+        val density: Float
+    )
+
     private var backingBitmap: android.graphics.Bitmap? = null
     private var backingCanvas: android.graphics.Canvas? = null
     private val bakedStrokes = ArrayList<InkEngine.CompletedStroke>()
@@ -309,6 +319,12 @@ private class BatchStrokeLayerCache(private val graphicsContext: androidx.compos
     private var lastDensity = 0f
     private var lastWidth = 0
     private var lastHeight = 0
+    private var lastPageKey: String = ""
+    private val pageCache = object : java.util.LinkedHashMap<String, PageBakedState>(8, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, PageBakedState>?): Boolean {
+            return size > 8
+        }
+    }
     private val paint = android.graphics.Paint().apply {
         isAntiAlias = true
         style = android.graphics.Paint.Style.STROKE
@@ -317,17 +333,19 @@ private class BatchStrokeLayerCache(private val graphicsContext: androidx.compos
     }
 
     fun releaseAll() {
-        backingBitmap?.recycle()
         backingBitmap = null
         backingCanvas = null
         bakedStrokes.clear()
         bakedStrokeCount = 0
         lastWidth = 0
         lastHeight = 0
+        lastPageKey = ""
+        pageCache.clear()
     }
 
     fun draw(
         drawScope: androidx.compose.ui.graphics.drawscope.DrawScope,
+        pageKey: String,
         orderedStrokes: List<InkEngine.CompletedStroke>,
         drag: com.kairumo.padnote.canvas.LassoDragPreview?,
         defaultInkColor: Color,
@@ -335,24 +353,56 @@ private class BatchStrokeLayerCache(private val graphicsContext: androidx.compos
         size: androidx.compose.ui.geometry.Size
     ) {
         if (orderedStrokes.isEmpty()) {
-            releaseAll()
+            if (pageKey.isNotEmpty()) {
+                pageCache.remove(pageKey)
+            }
+            backingBitmap = null
+            backingCanvas = null
+            bakedStrokes.clear()
+            bakedStrokeCount = 0
+            lastPageKey = pageKey
             return
         }
 
         val width = size.width.toInt().coerceAtLeast(1)
         val height = size.height.toInt().coerceAtLeast(1)
 
+        // 換頁時優先從多頁烘焙快取恢復該頁點陣圖（O(1) < 0.1ms，避免快速換頁重繪上千筆畫）
+        if (pageKey.isNotEmpty() && pageKey != lastPageKey) {
+            val cachedState = pageCache[pageKey]
+            if (cachedState != null && !cachedState.bitmap.isRecycled &&
+                cachedState.width == width && cachedState.height == height && cachedState.density == density
+            ) {
+                backingBitmap = cachedState.bitmap
+                backingCanvas = cachedState.canvas
+                bakedStrokes.clear()
+                bakedStrokes.addAll(cachedState.bakedStrokes)
+                bakedStrokeCount = cachedState.bakedStrokeCount
+                lastWidth = width
+                lastHeight = height
+                lastDensity = density
+                lastPageKey = pageKey
+            } else {
+                backingBitmap = null
+                backingCanvas = null
+                bakedStrokes.clear()
+                bakedStrokeCount = 0
+                lastPageKey = pageKey
+            }
+        }
+
         // 確保烘焙點陣圖存在且尺寸一致
-        if (backingBitmap == null || lastWidth != width || lastHeight != height || lastDensity != density) {
-            backingBitmap?.recycle()
+        if (backingBitmap == null || backingBitmap?.isRecycled == true || lastWidth != width || lastHeight != height || lastDensity != density) {
             val bmp = android.graphics.Bitmap.createBitmap(width, height, android.graphics.Bitmap.Config.ARGB_8888)
+            val cvs = android.graphics.Canvas(bmp)
             backingBitmap = bmp
-            backingCanvas = android.graphics.Canvas(bmp)
+            backingCanvas = cvs
             bakedStrokes.clear()
             bakedStrokeCount = 0
             lastWidth = width
             lastHeight = height
             lastDensity = density
+            lastPageKey = pageKey
         }
 
         val bCanvas = backingCanvas ?: return
@@ -386,6 +436,18 @@ private class BatchStrokeLayerCache(private val graphicsContext: androidx.compos
             InkBrushRenderer.drawStrokeOnCanvas(bCanvas, paint, stroke.points, stroke.tool, stroke.baseWidth, density, stroke.lineType)
             bakedStrokes.add(stroke)
             bakedStrokeCount++
+        }
+
+        if (pageKey.isNotEmpty() && backingBitmap != null) {
+            pageCache[pageKey] = PageBakedState(
+                bitmap = backingBitmap!!,
+                canvas = bCanvas,
+                bakedStrokes = ArrayList(bakedStrokes),
+                bakedStrokeCount = bakedStrokeCount,
+                width = width,
+                height = height,
+                density = density
+            )
         }
 
         // 繪製烘焙完成的點陣圖 (O(1) 貼圖，<0.1ms)

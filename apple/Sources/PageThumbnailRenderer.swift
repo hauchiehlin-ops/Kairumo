@@ -238,17 +238,38 @@ public enum PageThumbnailRenderer {
             )
 
             // 墨跡：PencilKit 手繪，再疊專業筆刷與製圖線（依圖層由下往上，隱藏的圖層不畫）。
+            let isDark = UITraitCollection.current.userInterfaceStyle == .dark
+            let hiddenStamp = DraftingState.shared.hiddenStamp(notebookId: notebook.id)
             let drawInk = {
                 drawing.image(from: fullPageRect, scale: scale)
                     .draw(in: fullPageRect)
-                for stroke in pro {
-                    guard let cached = ProInkRenderer.cache(for: stroke) else { continue }
-                    ctx.cgContext.saveGState()
-                    ProInkRenderer.draw(cached, toolName: stroke.tool,
-                        color: ProInkRenderer.displayColor(
-                            stroke.colorRGBA, dark: UITraitCollection.current.userInterfaceStyle == .dark),
-                                        in: ctx.cgContext, clip: fullPageRect)
-                    ctx.cgContext.restoreGState()
+                if let bakedPage = ProInkPageImageCache.get(
+                    notebookId: notebook.id,
+                    pageIndex: pageIndex,
+                    isDark: isDark,
+                    size: fullPageRect.size,
+                    hiddenStamp: hiddenStamp,
+                    matching: pro
+                ) {
+                    bakedPage.draw(in: fullPageRect)
+                } else {
+                    for stroke in pro {
+                        let cached = ProInkDabCache.get(for: stroke) ?? {
+                            let c = ProInkRenderer.cache(for: stroke)
+                            if let c { ProInkDabCache.set(c, for: stroke) }
+                            return c
+                        }()
+                        guard let cached else { continue }
+                        ctx.cgContext.saveGState()
+                        if stroke.blendMode == "multiply" { ctx.cgContext.setBlendMode(.multiply) }
+                        else if stroke.blendMode == "screen" { ctx.cgContext.setBlendMode(.screen) }
+                        else { ctx.cgContext.setBlendMode(.normal) }
+                        ProInkRenderer.draw(cached, toolName: stroke.tool,
+                            color: ProInkRenderer.displayColor(
+                                stroke.colorRGBA, dark: isDark),
+                                            in: ctx.cgContext, clip: fullPageRect)
+                        ctx.cgContext.restoreGState()
+                    }
                 }
             }
             let drawTapes = {

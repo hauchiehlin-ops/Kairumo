@@ -148,7 +148,8 @@ impl PenEmitter {
                 let reach = base * (1.0 + 1.4 * s.tilt.sin().clamp(0.0, 1.0)) * (0.6 + 0.4 * p);
                 let tooth = PenTuning::PENCIL_TOOTH_MIN
                     + (PenTuning::PENCIL_TOOTH_MAX - PenTuning::PENCIL_TOOTH_MIN) * p;
-                let count = ((reach * 2.0).ceil() as usize).clamp(2, 14);
+                let count = ((reach * 2.0).ceil() as usize).clamp(1, 14);
+                let grain_scale = (base / 1.8).clamp(0.45, 1.45);
                 for _ in 0..count {
                     let ang = self.rng.unit() * std::f32::consts::TAU;
                     let rr = reach * self.rng.unit().sqrt();
@@ -158,7 +159,7 @@ impl PenEmitter {
                         continue;
                     }
                     let depth = 1.0 - g / tooth;
-                    let size = 0.35 + 0.3 * self.rng.unit();
+                    let size = (0.32 + 0.28 * self.rng.unit()) * grain_scale;
                     out.push(Dab {
                         x: px,
                         y: py,

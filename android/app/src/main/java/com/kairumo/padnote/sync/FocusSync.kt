@@ -278,6 +278,16 @@ object FocusSync {
 
     private fun pump() {
         val context = appContext ?: return
+        if (com.kairumo.padnote.ink.InkEngine.isActivelyInking()) {
+            synchronized(this) {
+                wake?.cancel()
+                wake = scope.launch {
+                    delay(1500L)
+                    pump()
+                }
+            }
+            return
+        }
         val run = lane.poll(nowMs())
         if (run == null) {
             reschedule()
