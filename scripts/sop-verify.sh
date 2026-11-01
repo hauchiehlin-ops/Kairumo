@@ -32,7 +32,7 @@ for arg in "$@"; do
         --skip-android) RUN_ANDROID=0 ;;
         --skip-apple)   RUN_APPLE=0 ;;
         -h|--help)      sed -n '2,22p' "${BASH_SOURCE[0]}"; exit 0 ;;
-        *) echo "未知參數：$arg（見 --help）" >&2; exit 2 ;;
+        *) echo "未知參數：${arg}（見 --help）" >&2; exit 2 ;;
     esac
 done
 
@@ -53,7 +53,7 @@ run_step() {
     if "$@" >"$log" 2>&1; then
         pass "$name"
     else
-        fail "$name（記錄：$log）"
+        fail "${name}（記錄：${log}）"
         echo "---- 最後 40 行 ----"
         tail -n 40 "$log"
         echo "--------------------"
