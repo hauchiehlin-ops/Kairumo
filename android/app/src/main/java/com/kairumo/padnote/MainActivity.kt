@@ -649,6 +649,7 @@ private fun InkScreen(
             onExitMinimalist = { minimalistCanvasMode = false },
             onRenameTitle = { renamingCurrent = true },
             onModeChange = { newMode ->
+                flushDebouncedInkRevision()
                 editorMode = newMode
                 if (newMode == EditorMode.DRAW) {
                     clearSelection()

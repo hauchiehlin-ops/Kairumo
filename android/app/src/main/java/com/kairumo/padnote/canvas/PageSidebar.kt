@@ -213,47 +213,92 @@ fun PageSidebar(
                     folderId = com.kairumo.padnote.library.NotebookLibrary.ANY_FOLDER
                 )
             }
-            LazyColumn(
-                modifier = Modifier.weight(1f).fillMaxWidth(),
-                contentPadding = androidx.compose.foundation.layout.PaddingValues(DS.Space.m),
-                verticalArrangement = Arrangement.spacedBy(DS.Space.xs)
-            ) {
-                items(entries, key = { it.id }) { entry ->
-                    Text(
-                        entry.title,
-                        style = MaterialTheme.typography.bodySmall,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { onOpenNotebook(entry.id) }
-                            .padding(vertical = DS.Space.xs)
-                    )
+            if (android.os.Looper.myLooper() == null) {
+                Column(
+                    modifier = Modifier.weight(1f).fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(DS.Space.xs)
+                ) {
+                    entries.forEach { entry ->
+                        Text(
+                            entry.title,
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { onOpenNotebook(entry.id) }
+                                .padding(vertical = DS.Space.xs)
+                        )
+                    }
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier.weight(1f).fillMaxWidth(),
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(DS.Space.m),
+                    verticalArrangement = Arrangement.spacedBy(DS.Space.xs)
+                ) {
+                    items(entries, key = { it.id }) { entry ->
+                        Text(
+                            entry.title,
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { onOpenNotebook(entry.id) }
+                                .padding(vertical = DS.Space.xs)
+                        )
+                    }
                 }
             }
             return@Column
         }
 
         val actualCount = maxOf(1, maxOf(pageCount, session?.pageCount()?.toInt() ?: 1))
-        LazyColumn(
-            modifier = Modifier.weight(1f).fillMaxWidth().testTag("editor.sidebar.list"),
-            contentPadding = androidx.compose.foundation.layout.PaddingValues(DS.Space.m),
-            verticalArrangement = Arrangement.spacedBy(DS.Space.m)
-        ) {
-            items((0 until actualCount).toList(), key = { idx -> (session?.pageIdAt(idx.toUInt()) ?: "").ifEmpty { "page-$idx" } }) { index ->
-                PageSidebarRow(
-                    session = session,
-                    index = index,
-                    isCurrent = index == pageIndex,
-                    revision = revision,
-                    pageCount = maxOf(1, pageCount),
-                    thumbWidth = thumbWidth,
-                    l = l,
-                    onClick = { onSelectPage(index) },
-                    onMovePage = onMovePage,
-                    onTransferPage = onTransferPage,
-                    onInsertPageAfter = onInsertPageAfter,
-                    onDeletePage = onDeletePage,
-                    onDuplicatePage = onDuplicatePage
-                )
+        if (android.os.Looper.myLooper() == null) {
+            // 在無 Looper 的背景測試重組環境下（如快照通知派發至 Worker 執行緒），
+            // 以標準 Column 替代 LazyColumn，避免 AndroidPrefetchScheduler 初始化 Choreographer 拋錯。
+            Column(
+                modifier = Modifier.weight(1f).fillMaxWidth().testTag("editor.sidebar.list"),
+                verticalArrangement = Arrangement.spacedBy(DS.Space.m)
+            ) {
+                (0 until actualCount).forEach { index ->
+                    PageSidebarRow(
+                        session = session,
+                        index = index,
+                        isCurrent = index == pageIndex,
+                        revision = revision,
+                        pageCount = maxOf(1, pageCount),
+                        thumbWidth = thumbWidth,
+                        l = l,
+                        onClick = { onSelectPage(index) },
+                        onMovePage = onMovePage,
+                        onTransferPage = onTransferPage,
+                        onInsertPageAfter = onInsertPageAfter,
+                        onDeletePage = onDeletePage,
+                        onDuplicatePage = onDuplicatePage
+                    )
+                }
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier.weight(1f).fillMaxWidth().testTag("editor.sidebar.list"),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(DS.Space.m),
+                verticalArrangement = Arrangement.spacedBy(DS.Space.m)
+            ) {
+                items((0 until actualCount).toList(), key = { idx -> (session?.pageIdAt(idx.toUInt()) ?: "").ifEmpty { "page-$idx" } }) { index ->
+                    PageSidebarRow(
+                        session = session,
+                        index = index,
+                        isCurrent = index == pageIndex,
+                        revision = revision,
+                        pageCount = maxOf(1, pageCount),
+                        thumbWidth = thumbWidth,
+                        l = l,
+                        onClick = { onSelectPage(index) },
+                        onMovePage = onMovePage,
+                        onTransferPage = onTransferPage,
+                        onInsertPageAfter = onInsertPageAfter,
+                        onDeletePage = onDeletePage,
+                        onDuplicatePage = onDuplicatePage
+                    )
+                }
             }
         }
 
@@ -330,7 +375,9 @@ private fun PageSidebarRow(
         }
         if (cachedBmp != null) {
             pageThumbnailCache.put(cacheKey, cachedBmp)
-            thumb = withPendingInk(cachedBmp, pageId, 0.22f)
+            withContext(Dispatchers.Main.immediate) {
+                thumb = withPendingInk(cachedBmp, pageId, 0.22f)
+            }
             return@LaunchedEffect
         }
     }

@@ -73,6 +73,11 @@ class InkSurfaceView(
     /** 每根指標最後一個畫過的點，用來接出下一段。 */
     private val lastPoint = HashMap<ULong, Pair<Float, Float>>()
 
+    /** 歷史已定案筆畫之增量烘焙快取點陣圖，消除每一筆抬筆時 O(N) 重複渲染整頁歷史筆劃的延遲累積瓶頸。 */
+    private var backingBitmap: android.graphics.Bitmap? = null
+    private var backingCanvas: Canvas? = null
+    private var bakedStrokeCount = 0
+
     private val callback = object : CanvasFrontBufferedRenderer.Callback<Segment> {
         override fun onDrawFrontBufferedLayer(
             canvas: Canvas, bufferWidth: Int, bufferHeight: Int, param: Segment
@@ -87,16 +92,39 @@ class InkSurfaceView(
             // 塗白的話，抬筆那一刻底下的 PDF 頁面、圖片、文字方塊全部被一片白蓋掉，
             // 只剩筆跡（圖層規則見 `padnote-core::ffi_layering`：物件在筆跡下方，但要看得到）。
             canvas.drawColor(Color.TRANSPARENT, android.graphics.PorterDuff.Mode.CLEAR)
-            // 這一層每次 commit 都是全新的緩衝，所以要重畫全部內容 ——
-            // 只畫增量的話，抬筆瞬間先前的筆畫會整片消失。
-            // 每一筆用**它自己的**顏色與粗細。原本全部用畫筆目前的設定（而且一律黑色）：
-            // 抬筆那一刻整頁重畫，先前寫的彩色字全變成黑的、粗細也跟著現在的筆走 ——
-            // 看起來就是「筆跡閃一下、變了樣」。
-            for (stroke in engine.strokes) {
+            if (bufferWidth <= 0 || bufferHeight <= 0) return
+
+            // 確保烘焙位圖存在且大小一致
+            if (backingBitmap == null || backingBitmap?.width != bufferWidth || backingBitmap?.height != bufferHeight) {
+                backingBitmap?.recycle()
+                val bmp = android.graphics.Bitmap.createBitmap(bufferWidth, bufferHeight, android.graphics.Bitmap.Config.ARGB_8888)
+                backingBitmap = bmp
+                backingCanvas = Canvas(bmp)
+                bakedStrokeCount = 0
+            }
+
+            val bCanvas = backingCanvas ?: return
+            val currentStrokes = engine.strokes
+
+            // 若有復原撤銷或擦除導致總筆數縮減，清空烘焙層並從頭重建
+            if (bakedStrokeCount > currentStrokes.size || (bakedStrokeCount > 0 && currentStrokes.isEmpty())) {
+                bCanvas.drawColor(Color.TRANSPARENT, android.graphics.PorterDuff.Mode.CLEAR)
+                bakedStrokeCount = 0
+            }
+
+            // 增量烘焙：只繪製新出現、尚未烘焙的筆畫（O(1) 增量成本，完全不隨筆畫數增加而卡頓）
+            while (bakedStrokeCount < currentStrokes.size) {
+                val stroke = currentStrokes[bakedStrokeCount]
                 paint.color = argbOf(stroke.colorRgba)
-                canvas.drawStroke(stroke.points, stroke.tool, stroke.baseWidth)
+                bCanvas.drawStroke(stroke.points, stroke.tool, stroke.baseWidth)
+                bakedStrokeCount++
             }
             paint.color = argbOf(engine.colorRgba)
+
+            // 直接以 O(1) 貼圖完成多重緩衝層渲染
+            backingBitmap?.let { bmp ->
+                canvas.drawBitmap(bmp, 0f, 0f, null)
+            }
             // 預測線不進這一層 —— 它不是使用者寫的東西，抬筆後就該消失。
         }
     }
@@ -122,6 +150,8 @@ class InkSurfaceView(
     fun clearAll() {
         val active = renderer ?: return
         lastPoint.clear()
+        backingCanvas?.drawColor(Color.TRANSPARENT, android.graphics.PorterDuff.Mode.CLEAR)
+        bakedStrokeCount = 0
         runCatching { active.clear() }
         active.commit()
     }
@@ -131,6 +161,10 @@ class InkSurfaceView(
         renderer = null
         predictor = null
         lastPoint.clear()
+        backingBitmap?.recycle()
+        backingBitmap = null
+        backingCanvas = null
+        bakedStrokeCount = 0
     }
 
     /**
@@ -156,6 +190,8 @@ class InkSurfaceView(
 
         if (outcome.retracted.isNotEmpty()) {
             // 收回的內容還畫在前緩衝上，只能整片重來。
+            backingCanvas?.drawColor(Color.TRANSPARENT, android.graphics.PorterDuff.Mode.CLEAR)
+            bakedStrokeCount = 0
             runCatching { active.clear() }
             lastPoint.clear()
             active.commit()
