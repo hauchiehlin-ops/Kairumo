@@ -77,6 +77,8 @@ class InkSurfaceView(
     private var backingBitmap: android.graphics.Bitmap? = null
     private var backingCanvas: Canvas? = null
     private var bakedStrokeCount = 0
+    private var lastPageKey: String? = null
+    private val bakedStrokes = ArrayList<InkEngine.CompletedStroke>()
 
     private val callback = object : CanvasFrontBufferedRenderer.Callback<Segment> {
         override fun onDrawFrontBufferedLayer(
@@ -105,11 +107,28 @@ class InkSurfaceView(
 
             val bCanvas = backingCanvas ?: return
             val currentStrokes = engine.strokes
+            val currentPageKey = engine.pageKey
 
-            // 若有復原撤銷或擦除導致總筆數縮減，清空烘焙層並從頭重建
-            if (bakedStrokeCount > currentStrokes.size || (bakedStrokeCount > 0 && currentStrokes.isEmpty())) {
+            var needsFullRebuild = false
+            if (currentPageKey != lastPageKey || bakedStrokes.size > currentStrokes.size || (bakedStrokeCount > 0 && currentStrokes.isEmpty())) {
+                needsFullRebuild = true
+            } else {
+                // 檢查既有烘焙筆畫是否與歷史完全一致（防止中間擦除、換頁或屬性變更）
+                for (i in 0 until bakedStrokes.size) {
+                    val baked = bakedStrokes[i]
+                    val curr = currentStrokes[i]
+                    if (baked !== curr && baked != curr) {
+                        needsFullRebuild = true
+                        break
+                    }
+                }
+            }
+
+            if (needsFullRebuild) {
                 bCanvas.drawColor(Color.TRANSPARENT, android.graphics.PorterDuff.Mode.CLEAR)
+                bakedStrokes.clear()
                 bakedStrokeCount = 0
+                lastPageKey = currentPageKey
             }
 
             // 增量烘焙：只繪製新出現、尚未烘焙的筆畫（O(1) 增量成本，完全不隨筆畫數增加而卡頓）
@@ -117,6 +136,7 @@ class InkSurfaceView(
                 val stroke = currentStrokes[bakedStrokeCount]
                 paint.color = argbOf(stroke.colorRgba)
                 bCanvas.drawStroke(stroke.points, stroke.tool, stroke.baseWidth)
+                bakedStrokes.add(stroke)
                 bakedStrokeCount++
             }
             paint.color = argbOf(engine.colorRgba)
@@ -151,6 +171,7 @@ class InkSurfaceView(
         val active = renderer ?: return
         lastPoint.clear()
         backingCanvas?.drawColor(Color.TRANSPARENT, android.graphics.PorterDuff.Mode.CLEAR)
+        bakedStrokes.clear()
         bakedStrokeCount = 0
         runCatching { active.clear() }
         active.commit()
@@ -164,7 +185,9 @@ class InkSurfaceView(
         backingBitmap?.recycle()
         backingBitmap = null
         backingCanvas = null
+        bakedStrokes.clear()
         bakedStrokeCount = 0
+        lastPageKey = null
     }
 
     /**
@@ -191,6 +214,7 @@ class InkSurfaceView(
         if (outcome.retracted.isNotEmpty()) {
             // 收回的內容還畫在前緩衝上，只能整片重來。
             backingCanvas?.drawColor(Color.TRANSPARENT, android.graphics.PorterDuff.Mode.CLEAR)
+            bakedStrokes.clear()
             bakedStrokeCount = 0
             runCatching { active.clear() }
             lastPoint.clear()
