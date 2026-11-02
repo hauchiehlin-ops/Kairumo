@@ -1535,9 +1535,9 @@ public final class NotebookStore: ObservableObject {
         loadAndSeed()
         StartupLogger.logKey("log_store_init_done")
 
-        // 錄音檔案掃描與時長校正非關鍵啟動路徑，改為真正非同步於背景佇列執行，
-        // 避免在主執行緒上開啟所有套件及讀取龐大音檔，徹底消除 App 啟動凍結 (卡頓數秒)。
-        DispatchQueue.global(qos: .utility).async { [weak self] in
+        // 錄音檔案掃描與時長校正非關鍵啟動路徑，改為在主執行緒非同步排程（refreshRecordings 內部會將耗時 I/O 派發至背景佇列），
+        // 避免在背景佇列直接讀取 @Published 屬性引發資料競爭與 os_unfair_lock_lock 崩潰。
+        DispatchQueue.main.async { [weak self] in
             self?.refreshRecordings()
         }
     }
@@ -5789,7 +5789,7 @@ extension NotebookStore: ProfileScoped {
         lastIndexJSONForHidden = ""
         unmatchedIncomingTitles.removeAll()
         loadAndSeed()
-        DispatchQueue.global(qos: .utility).async { [weak self] in
+        DispatchQueue.main.async { [weak self] in
             self?.refreshRecordings()
         }
     }
