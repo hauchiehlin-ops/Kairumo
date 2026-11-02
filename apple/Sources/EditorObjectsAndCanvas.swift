@@ -1854,9 +1854,9 @@ extension NotebookEditorView {
 
         // 2. 專業製圖筆畫（ProInk）
         if page == currentPageIndex, let proLayer = (canvasView as? AdaptiveCanvasView)?.proLayer {
-            let layout = table.layout()
-            let tableWidth = max(table.width, CGFloat(layout.width))
-            let tableHeight = max(table.height, CGFloat(layout.height))
+            let layout = table.resolvedLayout()
+            let tableWidth = max(table.width, layout.width)
+            let tableHeight = max(table.height, layout.height)
             let tableRect = CGRect(x: table.x, y: table.y, width: tableWidth, height: tableHeight)
             let hitRect = tableRect.insetBy(dx: -4, dy: -4)
 

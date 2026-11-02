@@ -619,11 +619,8 @@ public enum PageThumbnailRenderer {
     // 使用者說不出哪裡怪、只覺得怪的那種 bug。
 
     private static func drawTable(_ item: NoteTableAttachment, ctx: UIGraphicsImageRendererContext) {
-        let layout = item.layout()
-        let rect = CGRect(
-            x: item.x, y: item.y,
-            width: CGFloat(layout.width), height: CGFloat(layout.height)
-        )
+        let layout = item.resolvedLayout()
+        let rect = CGRect(x: item.x, y: item.y, width: layout.width, height: layout.height)
         let cg = ctx.cgContext
         let rotated = abs(item.canvasRotation.truncatingRemainder(dividingBy: 360)) > 0.01
         // 一律存／還原圖形狀態：不透明度與虛線設定不能漏到下一個物件。
@@ -635,16 +632,22 @@ public enum PageThumbnailRenderer {
         }
         defer { cg.restoreGState() }
 
-        // 表頭底色先畫，才會在格線與文字下面。
+        // 底色先畫，才會在格線與文字下面：表頭底色 → 逐格底色。
         let headerFill: UIColor = {
             guard let hex = item.headerBackgroundHex else { return UIColor.label.withAlphaComponent(0.06) }
             if hex == "clear" { return .clear }
             return UIColor(hexString: hex) ?? UIColor.label.withAlphaComponent(0.06)
         }()
-        headerFill.setFill()
-        for cell in layout.cells where cell.isHeader {
-            cg.fill(CGRect(x: rect.minX + CGFloat(cell.x), y: rect.minY + CGFloat(cell.y),
-                           width: CGFloat(cell.width), height: CGFloat(cell.height)))
+        for cell in layout.cells {
+            let fill: UIColor?
+            if let hex = cell.style.fillHex {
+                fill = hex == "clear" ? UIColor.clear : UIColor(hexString: hex)
+            } else {
+                fill = cell.isHeader ? headerFill : nil
+            }
+            guard let fill else { continue }
+            fill.setFill()
+            cg.fill(CGRect(x: rect.minX + cell.x, y: rect.minY + cell.y, width: cell.width, height: cell.height))
         }
 
         let ruleColor = item.ruleColorHex.flatMap { UIColor(hexString: $0) }
@@ -652,30 +655,14 @@ public enum PageThumbnailRenderer {
         ruleColor.setStroke()
         let path = UIBezierPath()
         for rule in layout.rules {
-            path.move(to: CGPoint(x: rect.minX + CGFloat(rule.x1), y: rect.minY + CGFloat(rule.y1)))
-            path.addLine(to: CGPoint(x: rect.minX + CGFloat(rule.x2), y: rect.minY + CGFloat(rule.y2)))
+            path.move(to: CGPoint(x: rect.minX + rule.0.x, y: rect.minY + rule.0.y))
+            path.addLine(to: CGPoint(x: rect.minX + rule.1.x, y: rect.minY + rule.1.y))
         }
         path.lineWidth = 1
         path.stroke()
 
         for cell in layout.cells {
-            let text = cell.lines.joined(separator: "\n")
-            guard !text.isEmpty else { continue }
-            NSAttributedString(
-                string: text,
-                attributes: [
-                    .font: UIFont.systemFont(
-                        ofSize: item.fontSize,
-                        weight: cell.isHeader ? .semibold : .regular),
-                    .foregroundColor: UIColor.label
-                ]
-            ).draw(
-                with: CGRect(
-                    x: rect.minX + CGFloat(cell.x) + 6, y: rect.minY + CGFloat(cell.y) + 4,
-                    width: max(1, CGFloat(cell.width) - 12), height: max(1, CGFloat(cell.height) - 8)),
-                options: [.usesLineFragmentOrigin, .usesFontLeading],
-                context: nil
-            )
+            NoteTableAttachment.drawCellText(cell, origin: rect.origin, in: cg)
         }
     }
 

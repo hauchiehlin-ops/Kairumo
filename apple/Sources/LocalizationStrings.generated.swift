@@ -23543,6 +23543,134 @@ extension LocalizationManager {
             .ko: "행 추가",
             .th: "เพิ่มแถว"
         ],
+        "table_align_bottom": [
+            .zhHant: "靠下",
+            .en: "Bottom",
+            .zhHans: "靠下",
+            .ja: "下",
+            .ko: "아래",
+            .th: "ล่าง"
+        ],
+        "table_align_center": [
+            .zhHant: "置中",
+            .en: "Center",
+            .zhHans: "居中",
+            .ja: "中央",
+            .ko: "가운데",
+            .th: "กึ่งกลาง"
+        ],
+        "table_align_h": [
+            .zhHant: "水平對齊",
+            .en: "Horizontal alignment",
+            .zhHans: "水平对齐",
+            .ja: "水平方向の配置",
+            .ko: "가로 맞춤",
+            .th: "จัดแนวนอน"
+        ],
+        "table_align_left": [
+            .zhHant: "靠左",
+            .en: "Left",
+            .zhHans: "靠左",
+            .ja: "左",
+            .ko: "왼쪽",
+            .th: "ซ้าย"
+        ],
+        "table_align_middle": [
+            .zhHant: "置中",
+            .en: "Middle",
+            .zhHans: "居中",
+            .ja: "中央",
+            .ko: "가운데",
+            .th: "กลาง"
+        ],
+        "table_align_right": [
+            .zhHant: "靠右",
+            .en: "Right",
+            .zhHans: "靠右",
+            .ja: "右",
+            .ko: "오른쪽",
+            .th: "ขวา"
+        ],
+        "table_align_top": [
+            .zhHant: "靠上",
+            .en: "Top",
+            .zhHans: "靠上",
+            .ja: "上",
+            .ko: "위",
+            .th: "บน"
+        ],
+        "table_align_v": [
+            .zhHant: "垂直對齊（內文位置）",
+            .en: "Vertical alignment",
+            .zhHans: "垂直对齐（内文位置）",
+            .ja: "垂直方向の配置",
+            .ko: "세로 맞춤",
+            .th: "จัดแนวตั้ง"
+        ],
+        "table_auto": [
+            .zhHant: "自動",
+            .en: "Auto",
+            .zhHans: "自动",
+            .ja: "自動",
+            .ko: "자동",
+            .th: "อัตโนมัติ"
+        ],
+        "table_autofit": [
+            .zhHant: "全部還原自動",
+            .en: "Reset all sizes",
+            .zhHans: "全部还原自动",
+            .ja: "すべて自動に戻す",
+            .ko: "모두 자동으로",
+            .th: "รีเซ็ตขนาดทั้งหมด"
+        ],
+        "table_border_all": [
+            .zhHant: "全部",
+            .en: "All",
+            .zhHans: "全部",
+            .ja: "すべて",
+            .ko: "모두",
+            .th: "ทั้งหมด"
+        ],
+        "table_border_horizontal": [
+            .zhHant: "僅橫線",
+            .en: "Horizontal",
+            .zhHans: "仅横线",
+            .ja: "横線のみ",
+            .ko: "가로선",
+            .th: "เส้นนอน"
+        ],
+        "table_border_inner": [
+            .zhHant: "內框",
+            .en: "Inner",
+            .zhHans: "内框",
+            .ja: "内側",
+            .ko: "안쪽",
+            .th: "ขอบใน"
+        ],
+        "table_border_none": [
+            .zhHant: "無",
+            .en: "None",
+            .zhHans: "无",
+            .ja: "なし",
+            .ko: "없음",
+            .th: "ไม่มี"
+        ],
+        "table_border_outer": [
+            .zhHant: "外框",
+            .en: "Outer",
+            .zhHans: "外框",
+            .ja: "外枠",
+            .ko: "바깥쪽",
+            .th: "ขอบนอก"
+        ],
+        "table_borders": [
+            .zhHant: "框線",
+            .en: "Borders",
+            .zhHans: "边框",
+            .ja: "罫線",
+            .ko: "테두리",
+            .th: "เส้นขอบ"
+        ],
         "table_cell_content": [
             .zhHant: "儲存格內容",
             .en: "Cell Content",
@@ -23550,6 +23678,30 @@ extension LocalizationManager {
             .ja: "セル内容",
             .ko: "셀 내용",
             .th: "เนื้อหาของเซลล์"
+        ],
+        "table_cell_font_size": [
+            .zhHant: "字級",
+            .en: "Font size",
+            .zhHans: "字号",
+            .ja: "文字サイズ",
+            .ko: "글자 크기",
+            .th: "ขนาดอักษร"
+        ],
+        "table_clear_format": [
+            .zhHant: "清除格式",
+            .en: "Clear formatting",
+            .zhHans: "清除格式",
+            .ja: "書式をクリア",
+            .ko: "서식 지우기",
+            .th: "ล้างรูปแบบ"
+        ],
+        "table_col_width": [
+            .zhHant: "欄寬",
+            .en: "Column width",
+            .zhHans: "列宽",
+            .ja: "列の幅",
+            .ko: "열 너비",
+            .th: "ความกว้างคอลัมน์"
         ],
         "table_col_width_compact": [
             .zhHant: "緊湊欄寬",
@@ -23583,6 +23735,46 @@ extension LocalizationManager {
             .ko: "행 삭제",
             .th: "ลบแถว"
         ],
+        "table_dir_horizontal": [
+            .zhHant: "橫向",
+            .en: "Horizontal",
+            .zhHans: "横向",
+            .ja: "横",
+            .ko: "가로",
+            .th: "แนวนอน"
+        ],
+        "table_dir_rotate_ccw": [
+            .zhHant: "左轉 90°",
+            .en: "Rotate left 90°",
+            .zhHans: "左转 90°",
+            .ja: "左へ 90°",
+            .ko: "왼쪽 90°",
+            .th: "หมุนซ้าย 90°"
+        ],
+        "table_dir_rotate_cw": [
+            .zhHant: "右轉 90°",
+            .en: "Rotate right 90°",
+            .zhHans: "右转 90°",
+            .ja: "右へ 90°",
+            .ko: "오른쪽 90°",
+            .th: "หมุนขวา 90°"
+        ],
+        "table_distribute_cols": [
+            .zhHant: "平均分配欄寬",
+            .en: "Distribute columns",
+            .zhHans: "平均分配列宽",
+            .ja: "列の幅を揃える",
+            .ko: "열 너비 균등",
+            .th: "กระจายคอลัมน์"
+        ],
+        "table_distribute_rows": [
+            .zhHant: "平均分配列高",
+            .en: "Distribute rows",
+            .zhHans: "平均分配行高",
+            .ja: "行の高さを揃える",
+            .ko: "행 높이 균등",
+            .th: "กระจายแถว"
+        ],
         "table_edit": [
             .zhHant: "編修表格",
             .en: "Edit Table",
@@ -23591,6 +23783,14 @@ extension LocalizationManager {
             .ko: "표 편집",
             .th: "แก้ไขตาราง"
         ],
+        "table_fill_color": [
+            .zhHant: "儲存格填色",
+            .en: "Cell fill",
+            .zhHans: "单元格填充",
+            .ja: "セルの塗りつぶし",
+            .ko: "셀 채우기",
+            .th: "สีพื้นเซลล์"
+        ],
         "table_font_size": [
             .zhHant: "文字大小",
             .en: "Font Size",
@@ -23598,6 +23798,14 @@ extension LocalizationManager {
             .ja: "文字サイズ",
             .ko: "글자 크기",
             .th: "ขนาดตัวอักษร"
+        ],
+        "table_header_fill": [
+            .zhHant: "表頭底色",
+            .en: "Header fill",
+            .zhHans: "表头底色",
+            .ja: "見出しの塗りつぶし",
+            .ko: "머리글 채우기",
+            .th: "สีพื้นหัวตาราง"
         ],
         "table_header_row": [
             .zhHant: "第一列為表頭",
@@ -23623,6 +23831,38 @@ extension LocalizationManager {
             .ko: "표 삽입",
             .th: "แทรกตาราง"
         ],
+        "table_insert_col_left": [
+            .zhHant: "左側插入欄",
+            .en: "Insert column left",
+            .zhHans: "在左侧插入列",
+            .ja: "左に列を挿入",
+            .ko: "왼쪽에 열 삽입",
+            .th: "แทรกคอลัมน์ด้านซ้าย"
+        ],
+        "table_insert_col_right": [
+            .zhHant: "右側插入欄",
+            .en: "Insert column right",
+            .zhHans: "在右侧插入列",
+            .ja: "右に列を挿入",
+            .ko: "오른쪽에 열 삽입",
+            .th: "แทรกคอลัมน์ด้านขวา"
+        ],
+        "table_insert_row_above": [
+            .zhHant: "上方插入列",
+            .en: "Insert row above",
+            .zhHans: "在上方插入行",
+            .ja: "上に行を挿入",
+            .ko: "위에 행 삽입",
+            .th: "แทรกแถวด้านบน"
+        ],
+        "table_insert_row_below": [
+            .zhHant: "下方插入列",
+            .en: "Insert row below",
+            .zhHans: "在下方插入行",
+            .ja: "下に行を挿入",
+            .ko: "아래에 행 삽입",
+            .th: "แทรกแถวด้านล่าง"
+        ],
         "table_merge_down": [
             .zhHant: "向下合併",
             .en: "Merge Down",
@@ -23639,6 +23879,14 @@ extension LocalizationManager {
             .ko: "오른쪽 병합",
             .th: "ผสานไปทางขวา"
         ],
+        "table_merge_selection": [
+            .zhHant: "合併選取儲存格",
+            .en: "Merge selected cells",
+            .zhHans: "合并所选单元格",
+            .ja: "選択したセルを結合",
+            .ko: "선택한 셀 병합",
+            .th: "รวมเซลล์ที่เลือก"
+        ],
         "table_preview": [
             .zhHant: "預覽",
             .en: "Preview",
@@ -23646,6 +23894,22 @@ extension LocalizationManager {
             .ja: "プレビュー",
             .ko: "미리보기",
             .th: "ตัวอย่าง"
+        ],
+        "table_reset_color": [
+            .zhHant: "還原",
+            .en: "Reset",
+            .zhHans: "还原",
+            .ja: "リセット",
+            .ko: "초기화",
+            .th: "รีเซ็ต"
+        ],
+        "table_row_height": [
+            .zhHant: "列高",
+            .en: "Row height",
+            .zhHans: "行高",
+            .ja: "行の高さ",
+            .ko: "행 높이",
+            .th: "ความสูงแถว"
         ],
         "table_rows_cols": [
             .zhHant: "%@ 列 × %@ 欄",
@@ -23655,6 +23919,86 @@ extension LocalizationManager {
             .ko: "%@행 × %@열",
             .th: "%@ แถว × %@ คอลัมน์"
         ],
+        "table_rule_color": [
+            .zhHant: "框線顏色",
+            .en: "Border color",
+            .zhHans: "边框颜色",
+            .ja: "罫線の色",
+            .ko: "테두리 색",
+            .th: "สีเส้นขอบ"
+        ],
+        "table_section_align": [
+            .zhHant: "對齊與方向",
+            .en: "Alignment & Direction",
+            .zhHans: "对齐与方向",
+            .ja: "配置と方向",
+            .ko: "맞춤 및 방향",
+            .th: "การจัดตำแหน่งและทิศทาง"
+        ],
+        "table_section_font": [
+            .zhHant: "字體",
+            .en: "Font",
+            .zhHans: "字体",
+            .ja: "フォント",
+            .ko: "글꼴",
+            .th: "แบบอักษร"
+        ],
+        "table_section_size": [
+            .zhHant: "大小",
+            .en: "Size",
+            .zhHans: "大小",
+            .ja: "サイズ",
+            .ko: "크기",
+            .th: "ขนาด"
+        ],
+        "table_section_structure": [
+            .zhHant: "列與欄",
+            .en: "Rows & Columns",
+            .zhHans: "行与列",
+            .ja: "行と列",
+            .ko: "행과 열",
+            .th: "แถวและคอลัมน์"
+        ],
+        "table_select_all": [
+            .zhHant: "全選",
+            .en: "All",
+            .zhHans: "全选",
+            .ja: "すべて",
+            .ko: "전체",
+            .th: "ทั้งหมด"
+        ],
+        "table_select_col": [
+            .zhHant: "整欄",
+            .en: "Column",
+            .zhHans: "整列",
+            .ja: "列",
+            .ko: "열",
+            .th: "คอลัมน์"
+        ],
+        "table_select_row": [
+            .zhHant: "整列",
+            .en: "Row",
+            .zhHans: "整行",
+            .ja: "行",
+            .ko: "행",
+            .th: "แถว"
+        ],
+        "table_selection": [
+            .zhHant: "選取",
+            .en: "Selection",
+            .zhHans: "选取",
+            .ja: "選択",
+            .ko: "선택",
+            .th: "เลือก"
+        ],
+        "table_size_auto": [
+            .zhHant: "選取範圍自動大小",
+            .en: "Auto-size selection",
+            .zhHans: "所选范围自动大小",
+            .ja: "選択範囲を自動サイズ",
+            .ko: "선택 영역 자동 크기",
+            .th: "ปรับขนาดอัตโนมัติ"
+        ],
         "table_studio": [
             .zhHant: "表格",
             .en: "Table",
@@ -23662,6 +24006,78 @@ extension LocalizationManager {
             .ja: "表",
             .ko: "표",
             .th: "ตาราง"
+        ],
+        "table_tab_content": [
+            .zhHant: "內容",
+            .en: "Content",
+            .zhHans: "内容",
+            .ja: "内容",
+            .ko: "내용",
+            .th: "เนื้อหา"
+        ],
+        "table_tab_format": [
+            .zhHant: "格式",
+            .en: "Format",
+            .zhHans: "格式",
+            .ja: "書式",
+            .ko: "서식",
+            .th: "รูปแบบ"
+        ],
+        "table_tab_table": [
+            .zhHant: "表格",
+            .en: "Table",
+            .zhHans: "表格",
+            .ja: "表",
+            .ko: "표",
+            .th: "ตาราง"
+        ],
+        "table_text_bold": [
+            .zhHant: "粗體",
+            .en: "Bold",
+            .zhHans: "粗体",
+            .ja: "太字",
+            .ko: "굵게",
+            .th: "ตัวหนา"
+        ],
+        "table_text_color": [
+            .zhHant: "文字顏色",
+            .en: "Text color",
+            .zhHans: "文字颜色",
+            .ja: "文字色",
+            .ko: "글자 색",
+            .th: "สีตัวอักษร"
+        ],
+        "table_text_direction": [
+            .zhHant: "文字方向",
+            .en: "Text direction",
+            .zhHans: "文字方向",
+            .ja: "文字の方向",
+            .ko: "텍스트 방향",
+            .th: "ทิศทางข้อความ"
+        ],
+        "table_text_italic": [
+            .zhHant: "斜體",
+            .en: "Italic",
+            .zhHans: "斜体",
+            .ja: "斜体",
+            .ko: "기울임",
+            .th: "ตัวเอียง"
+        ],
+        "table_text_strike": [
+            .zhHant: "刪除線",
+            .en: "Strikethrough",
+            .zhHans: "删除线",
+            .ja: "取り消し線",
+            .ko: "취소선",
+            .th: "ขีดทับ"
+        ],
+        "table_text_underline": [
+            .zhHant: "底線",
+            .en: "Underline",
+            .zhHans: "下划线",
+            .ja: "下線",
+            .ko: "밑줄",
+            .th: "ขีดเส้นใต้"
         ],
         "table_unmerge": [
             .zhHant: "取消合併",
@@ -23686,6 +24102,14 @@ extension LocalizationManager {
             .ja: "表の幅",
             .ko: "표 너비",
             .th: "ความกว้างตาราง"
+        ],
+        "table_wrap": [
+            .zhHant: "自動換行",
+            .en: "Wrap text",
+            .zhHans: "自动换行",
+            .ja: "折り返して全体を表示",
+            .ko: "자동 줄 바꿈",
+            .th: "ตัดข้อความอัตโนมัติ"
         ],
         "tailscale_not_connected": [
             .zhHant: "Tailscale 未連線",

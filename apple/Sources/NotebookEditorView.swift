@@ -1026,7 +1026,9 @@ public struct NotebookEditorView: View {
                 PageThumbnailRenderer.invalidateAll()
             }
         } }
-        .sheet(isPresented: $showTableStudio) { resizableSheet {
+        // 表格編修用整個視窗而不是 sheet：sheet 在 Mac 上大小固定、不能拉，
+        // 而這個面板要同時看到整張表與格式控制項。全螢幕覆蓋會跟著視窗大小走。
+        .fullScreenCover(isPresented: $showTableStudio) {
             TableStudioView { created in
                 var table = created
                 table.pageIndex = currentPageIndex
@@ -1046,9 +1048,8 @@ public struct NotebookEditorView: View {
                     collaborationManager.broadcastAttachmentUpsert(type: "table", itemDict: dict)
                 }
             }
-            .frame(minWidth: 540)
-        } }
-        .sheet(item: $editingTable) { target in resizableSheet {
+        }
+        .fullScreenCover(item: $editingTable) { target in
             TableStudioView(editing: target) { updated in
                 guard let index = notebook.tableAttachments?
                     .firstIndex(where: { $0.id == updated.id }) else { return }
@@ -1064,8 +1065,7 @@ public struct NotebookEditorView: View {
                     collaborationManager.broadcastAttachmentUpsert(type: "table", itemDict: dict)
                 }
             }
-            .frame(minWidth: 540)
-        } }
+        }
         .sheet(isPresented: $showChartStudio) { resizableSheet {
             ChartStudioView { chartSpec, chartImage in
                 insertImageAttachment(chartImage, chartSpecJSON: chartSpec.encodedJSON())

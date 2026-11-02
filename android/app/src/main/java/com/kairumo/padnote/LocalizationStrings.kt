@@ -23693,6 +23693,134 @@ object LocalizationStrings {
             "ko" to "행 추가",
             "th" to "เพิ่มแถว"
         ),
+        "table_align_bottom" to mapOf(
+            "zh-Hant" to "靠下",
+            "en" to "Bottom",
+            "zh-Hans" to "靠下",
+            "ja" to "下",
+            "ko" to "아래",
+            "th" to "ล่าง"
+        ),
+        "table_align_center" to mapOf(
+            "zh-Hant" to "置中",
+            "en" to "Center",
+            "zh-Hans" to "居中",
+            "ja" to "中央",
+            "ko" to "가운데",
+            "th" to "กึ่งกลาง"
+        ),
+        "table_align_h" to mapOf(
+            "zh-Hant" to "水平對齊",
+            "en" to "Horizontal alignment",
+            "zh-Hans" to "水平对齐",
+            "ja" to "水平方向の配置",
+            "ko" to "가로 맞춤",
+            "th" to "จัดแนวนอน"
+        ),
+        "table_align_left" to mapOf(
+            "zh-Hant" to "靠左",
+            "en" to "Left",
+            "zh-Hans" to "靠左",
+            "ja" to "左",
+            "ko" to "왼쪽",
+            "th" to "ซ้าย"
+        ),
+        "table_align_middle" to mapOf(
+            "zh-Hant" to "置中",
+            "en" to "Middle",
+            "zh-Hans" to "居中",
+            "ja" to "中央",
+            "ko" to "가운데",
+            "th" to "กลาง"
+        ),
+        "table_align_right" to mapOf(
+            "zh-Hant" to "靠右",
+            "en" to "Right",
+            "zh-Hans" to "靠右",
+            "ja" to "右",
+            "ko" to "오른쪽",
+            "th" to "ขวา"
+        ),
+        "table_align_top" to mapOf(
+            "zh-Hant" to "靠上",
+            "en" to "Top",
+            "zh-Hans" to "靠上",
+            "ja" to "上",
+            "ko" to "위",
+            "th" to "บน"
+        ),
+        "table_align_v" to mapOf(
+            "zh-Hant" to "垂直對齊（內文位置）",
+            "en" to "Vertical alignment",
+            "zh-Hans" to "垂直对齐（内文位置）",
+            "ja" to "垂直方向の配置",
+            "ko" to "세로 맞춤",
+            "th" to "จัดแนวตั้ง"
+        ),
+        "table_auto" to mapOf(
+            "zh-Hant" to "自動",
+            "en" to "Auto",
+            "zh-Hans" to "自动",
+            "ja" to "自動",
+            "ko" to "자동",
+            "th" to "อัตโนมัติ"
+        ),
+        "table_autofit" to mapOf(
+            "zh-Hant" to "全部還原自動",
+            "en" to "Reset all sizes",
+            "zh-Hans" to "全部还原自动",
+            "ja" to "すべて自動に戻す",
+            "ko" to "모두 자동으로",
+            "th" to "รีเซ็ตขนาดทั้งหมด"
+        ),
+        "table_border_all" to mapOf(
+            "zh-Hant" to "全部",
+            "en" to "All",
+            "zh-Hans" to "全部",
+            "ja" to "すべて",
+            "ko" to "모두",
+            "th" to "ทั้งหมด"
+        ),
+        "table_border_horizontal" to mapOf(
+            "zh-Hant" to "僅橫線",
+            "en" to "Horizontal",
+            "zh-Hans" to "仅横线",
+            "ja" to "横線のみ",
+            "ko" to "가로선",
+            "th" to "เส้นนอน"
+        ),
+        "table_border_inner" to mapOf(
+            "zh-Hant" to "內框",
+            "en" to "Inner",
+            "zh-Hans" to "内框",
+            "ja" to "内側",
+            "ko" to "안쪽",
+            "th" to "ขอบใน"
+        ),
+        "table_border_none" to mapOf(
+            "zh-Hant" to "無",
+            "en" to "None",
+            "zh-Hans" to "无",
+            "ja" to "なし",
+            "ko" to "없음",
+            "th" to "ไม่มี"
+        ),
+        "table_border_outer" to mapOf(
+            "zh-Hant" to "外框",
+            "en" to "Outer",
+            "zh-Hans" to "外框",
+            "ja" to "外枠",
+            "ko" to "바깥쪽",
+            "th" to "ขอบนอก"
+        ),
+        "table_borders" to mapOf(
+            "zh-Hant" to "框線",
+            "en" to "Borders",
+            "zh-Hans" to "边框",
+            "ja" to "罫線",
+            "ko" to "테두리",
+            "th" to "เส้นขอบ"
+        ),
         "table_cell_content" to mapOf(
             "zh-Hant" to "儲存格內容",
             "en" to "Cell Content",
@@ -23700,6 +23828,33 @@ object LocalizationStrings {
             "ja" to "セル内容",
             "ko" to "셀 내용",
             "th" to "เนื้อหาของเซลล์"
+        ),
+        "table_cell_font_size" to mapOf(
+            "zh-Hant" to "字級",
+            "en" to "Font size",
+            "zh-Hans" to "字号",
+            "ja" to "文字サイズ",
+            "ko" to "글자 크기",
+            "th" to "ขนาดอักษร"
+        ),
+        "table_clear_format" to mapOf(
+            "zh-Hant" to "清除格式",
+            "en" to "Clear formatting",
+            "zh-Hans" to "清除格式",
+            "ja" to "書式をクリア",
+            "ko" to "서식 지우기",
+            "th" to "ล้างรูปแบบ"
+        )
+    )
+
+    private fun part37(): Map<String, Map<String, String>> = mapOf(
+        "table_col_width" to mapOf(
+            "zh-Hant" to "欄寬",
+            "en" to "Column width",
+            "zh-Hans" to "列宽",
+            "ja" to "列の幅",
+            "ko" to "열 너비",
+            "th" to "ความกว้างคอลัมน์"
         ),
         "table_col_width_compact" to mapOf(
             "zh-Hant" to "緊湊欄寬",
@@ -23733,6 +23888,46 @@ object LocalizationStrings {
             "ko" to "행 삭제",
             "th" to "ลบแถว"
         ),
+        "table_dir_horizontal" to mapOf(
+            "zh-Hant" to "橫向",
+            "en" to "Horizontal",
+            "zh-Hans" to "横向",
+            "ja" to "横",
+            "ko" to "가로",
+            "th" to "แนวนอน"
+        ),
+        "table_dir_rotate_ccw" to mapOf(
+            "zh-Hant" to "左轉 90°",
+            "en" to "Rotate left 90°",
+            "zh-Hans" to "左转 90°",
+            "ja" to "左へ 90°",
+            "ko" to "왼쪽 90°",
+            "th" to "หมุนซ้าย 90°"
+        ),
+        "table_dir_rotate_cw" to mapOf(
+            "zh-Hant" to "右轉 90°",
+            "en" to "Rotate right 90°",
+            "zh-Hans" to "右转 90°",
+            "ja" to "右へ 90°",
+            "ko" to "오른쪽 90°",
+            "th" to "หมุนขวา 90°"
+        ),
+        "table_distribute_cols" to mapOf(
+            "zh-Hant" to "平均分配欄寬",
+            "en" to "Distribute columns",
+            "zh-Hans" to "平均分配列宽",
+            "ja" to "列の幅を揃える",
+            "ko" to "열 너비 균등",
+            "th" to "กระจายคอลัมน์"
+        ),
+        "table_distribute_rows" to mapOf(
+            "zh-Hant" to "平均分配列高",
+            "en" to "Distribute rows",
+            "zh-Hans" to "平均分配行高",
+            "ja" to "行の高さを揃える",
+            "ko" to "행 높이 균등",
+            "th" to "กระจายแถว"
+        ),
         "table_edit" to mapOf(
             "zh-Hant" to "編修表格",
             "en" to "Edit Table",
@@ -23741,6 +23936,14 @@ object LocalizationStrings {
             "ko" to "표 편집",
             "th" to "แก้ไขตาราง"
         ),
+        "table_fill_color" to mapOf(
+            "zh-Hant" to "儲存格填色",
+            "en" to "Cell fill",
+            "zh-Hans" to "单元格填充",
+            "ja" to "セルの塗りつぶし",
+            "ko" to "셀 채우기",
+            "th" to "สีพื้นเซลล์"
+        ),
         "table_font_size" to mapOf(
             "zh-Hant" to "文字大小",
             "en" to "Font Size",
@@ -23748,6 +23951,14 @@ object LocalizationStrings {
             "ja" to "文字サイズ",
             "ko" to "글자 크기",
             "th" to "ขนาดตัวอักษร"
+        ),
+        "table_header_fill" to mapOf(
+            "zh-Hant" to "表頭底色",
+            "en" to "Header fill",
+            "zh-Hans" to "表头底色",
+            "ja" to "見出しの塗りつぶし",
+            "ko" to "머리글 채우기",
+            "th" to "สีพื้นหัวตาราง"
         ),
         "table_header_row" to mapOf(
             "zh-Hant" to "第一列為表頭",
@@ -23773,6 +23984,38 @@ object LocalizationStrings {
             "ko" to "표 삽입",
             "th" to "แทรกตาราง"
         ),
+        "table_insert_col_left" to mapOf(
+            "zh-Hant" to "左側插入欄",
+            "en" to "Insert column left",
+            "zh-Hans" to "在左侧插入列",
+            "ja" to "左に列を挿入",
+            "ko" to "왼쪽에 열 삽입",
+            "th" to "แทรกคอลัมน์ด้านซ้าย"
+        ),
+        "table_insert_col_right" to mapOf(
+            "zh-Hant" to "右側插入欄",
+            "en" to "Insert column right",
+            "zh-Hans" to "在右侧插入列",
+            "ja" to "右に列を挿入",
+            "ko" to "오른쪽에 열 삽입",
+            "th" to "แทรกคอลัมน์ด้านขวา"
+        ),
+        "table_insert_row_above" to mapOf(
+            "zh-Hant" to "上方插入列",
+            "en" to "Insert row above",
+            "zh-Hans" to "在上方插入行",
+            "ja" to "上に行を挿入",
+            "ko" to "위에 행 삽입",
+            "th" to "แทรกแถวด้านบน"
+        ),
+        "table_insert_row_below" to mapOf(
+            "zh-Hant" to "下方插入列",
+            "en" to "Insert row below",
+            "zh-Hans" to "在下方插入行",
+            "ja" to "下に行を挿入",
+            "ko" to "아래에 행 삽입",
+            "th" to "แทรกแถวด้านล่าง"
+        ),
         "table_merge_down" to mapOf(
             "zh-Hant" to "向下合併",
             "en" to "Merge Down",
@@ -23789,6 +24032,14 @@ object LocalizationStrings {
             "ko" to "오른쪽 병합",
             "th" to "ผสานไปทางขวา"
         ),
+        "table_merge_selection" to mapOf(
+            "zh-Hant" to "合併選取儲存格",
+            "en" to "Merge selected cells",
+            "zh-Hans" to "合并所选单元格",
+            "ja" to "選択したセルを結合",
+            "ko" to "선택한 셀 병합",
+            "th" to "รวมเซลล์ที่เลือก"
+        ),
         "table_preview" to mapOf(
             "zh-Hant" to "預覽",
             "en" to "Preview",
@@ -23796,6 +24047,22 @@ object LocalizationStrings {
             "ja" to "プレビュー",
             "ko" to "미리보기",
             "th" to "ตัวอย่าง"
+        ),
+        "table_reset_color" to mapOf(
+            "zh-Hant" to "還原",
+            "en" to "Reset",
+            "zh-Hans" to "还原",
+            "ja" to "リセット",
+            "ko" to "초기화",
+            "th" to "รีเซ็ต"
+        ),
+        "table_row_height" to mapOf(
+            "zh-Hant" to "列高",
+            "en" to "Row height",
+            "zh-Hans" to "行高",
+            "ja" to "行の高さ",
+            "ko" to "행 높이",
+            "th" to "ความสูงแถว"
         ),
         "table_rows_cols" to mapOf(
             "zh-Hant" to "%@ 列 × %@ 欄",
@@ -23805,6 +24072,86 @@ object LocalizationStrings {
             "ko" to "%@행 × %@열",
             "th" to "%@ แถว × %@ คอลัมน์"
         ),
+        "table_rule_color" to mapOf(
+            "zh-Hant" to "框線顏色",
+            "en" to "Border color",
+            "zh-Hans" to "边框颜色",
+            "ja" to "罫線の色",
+            "ko" to "테두리 색",
+            "th" to "สีเส้นขอบ"
+        ),
+        "table_section_align" to mapOf(
+            "zh-Hant" to "對齊與方向",
+            "en" to "Alignment & Direction",
+            "zh-Hans" to "对齐与方向",
+            "ja" to "配置と方向",
+            "ko" to "맞춤 및 방향",
+            "th" to "การจัดตำแหน่งและทิศทาง"
+        ),
+        "table_section_font" to mapOf(
+            "zh-Hant" to "字體",
+            "en" to "Font",
+            "zh-Hans" to "字体",
+            "ja" to "フォント",
+            "ko" to "글꼴",
+            "th" to "แบบอักษร"
+        ),
+        "table_section_size" to mapOf(
+            "zh-Hant" to "大小",
+            "en" to "Size",
+            "zh-Hans" to "大小",
+            "ja" to "サイズ",
+            "ko" to "크기",
+            "th" to "ขนาด"
+        ),
+        "table_section_structure" to mapOf(
+            "zh-Hant" to "列與欄",
+            "en" to "Rows & Columns",
+            "zh-Hans" to "行与列",
+            "ja" to "行と列",
+            "ko" to "행과 열",
+            "th" to "แถวและคอลัมน์"
+        ),
+        "table_select_all" to mapOf(
+            "zh-Hant" to "全選",
+            "en" to "All",
+            "zh-Hans" to "全选",
+            "ja" to "すべて",
+            "ko" to "전체",
+            "th" to "ทั้งหมด"
+        ),
+        "table_select_col" to mapOf(
+            "zh-Hant" to "整欄",
+            "en" to "Column",
+            "zh-Hans" to "整列",
+            "ja" to "列",
+            "ko" to "열",
+            "th" to "คอลัมน์"
+        ),
+        "table_select_row" to mapOf(
+            "zh-Hant" to "整列",
+            "en" to "Row",
+            "zh-Hans" to "整行",
+            "ja" to "行",
+            "ko" to "행",
+            "th" to "แถว"
+        ),
+        "table_selection" to mapOf(
+            "zh-Hant" to "選取",
+            "en" to "Selection",
+            "zh-Hans" to "选取",
+            "ja" to "選択",
+            "ko" to "선택",
+            "th" to "เลือก"
+        ),
+        "table_size_auto" to mapOf(
+            "zh-Hant" to "選取範圍自動大小",
+            "en" to "Auto-size selection",
+            "zh-Hans" to "所选范围自动大小",
+            "ja" to "選択範囲を自動サイズ",
+            "ko" to "선택 영역 자동 크기",
+            "th" to "ปรับขนาดอัตโนมัติ"
+        ),
         "table_studio" to mapOf(
             "zh-Hant" to "表格",
             "en" to "Table",
@@ -23812,6 +24159,78 @@ object LocalizationStrings {
             "ja" to "表",
             "ko" to "표",
             "th" to "ตาราง"
+        ),
+        "table_tab_content" to mapOf(
+            "zh-Hant" to "內容",
+            "en" to "Content",
+            "zh-Hans" to "内容",
+            "ja" to "内容",
+            "ko" to "내용",
+            "th" to "เนื้อหา"
+        ),
+        "table_tab_format" to mapOf(
+            "zh-Hant" to "格式",
+            "en" to "Format",
+            "zh-Hans" to "格式",
+            "ja" to "書式",
+            "ko" to "서식",
+            "th" to "รูปแบบ"
+        ),
+        "table_tab_table" to mapOf(
+            "zh-Hant" to "表格",
+            "en" to "Table",
+            "zh-Hans" to "表格",
+            "ja" to "表",
+            "ko" to "표",
+            "th" to "ตาราง"
+        ),
+        "table_text_bold" to mapOf(
+            "zh-Hant" to "粗體",
+            "en" to "Bold",
+            "zh-Hans" to "粗体",
+            "ja" to "太字",
+            "ko" to "굵게",
+            "th" to "ตัวหนา"
+        ),
+        "table_text_color" to mapOf(
+            "zh-Hant" to "文字顏色",
+            "en" to "Text color",
+            "zh-Hans" to "文字颜色",
+            "ja" to "文字色",
+            "ko" to "글자 색",
+            "th" to "สีตัวอักษร"
+        ),
+        "table_text_direction" to mapOf(
+            "zh-Hant" to "文字方向",
+            "en" to "Text direction",
+            "zh-Hans" to "文字方向",
+            "ja" to "文字の方向",
+            "ko" to "텍스트 방향",
+            "th" to "ทิศทางข้อความ"
+        ),
+        "table_text_italic" to mapOf(
+            "zh-Hant" to "斜體",
+            "en" to "Italic",
+            "zh-Hans" to "斜体",
+            "ja" to "斜体",
+            "ko" to "기울임",
+            "th" to "ตัวเอียง"
+        ),
+        "table_text_strike" to mapOf(
+            "zh-Hant" to "刪除線",
+            "en" to "Strikethrough",
+            "zh-Hans" to "删除线",
+            "ja" to "取り消し線",
+            "ko" to "취소선",
+            "th" to "ขีดทับ"
+        ),
+        "table_text_underline" to mapOf(
+            "zh-Hant" to "底線",
+            "en" to "Underline",
+            "zh-Hans" to "下划线",
+            "ja" to "下線",
+            "ko" to "밑줄",
+            "th" to "ขีดเส้นใต้"
         ),
         "table_unmerge" to mapOf(
             "zh-Hant" to "取消合併",
@@ -23837,6 +24256,14 @@ object LocalizationStrings {
             "ko" to "표 너비",
             "th" to "ความกว้างตาราง"
         ),
+        "table_wrap" to mapOf(
+            "zh-Hant" to "自動換行",
+            "en" to "Wrap text",
+            "zh-Hans" to "自动换行",
+            "ja" to "折り返して全体を表示",
+            "ko" to "자동 줄 바꿈",
+            "th" to "ตัดข้อความอัตโนมัติ"
+        ),
         "tailscale_not_connected" to mapOf(
             "zh-Hant" to "Tailscale 未連線",
             "en" to "Tailscale Not Connected",
@@ -23844,10 +24271,7 @@ object LocalizationStrings {
             "ja" to "Tailscale 未接続",
             "ko" to "Tailscale 연결 안 됨",
             "th" to "ไม่ได้เชื่อมต่อ Tailscale"
-        )
-    )
-
-    private fun part37(): Map<String, Map<String, String>> = mapOf(
+        ),
         "tailscale_p2p_ready" to mapOf(
             "zh-Hant" to "Tailscale 直連就緒 (%@)",
             "en" to "Tailscale P2P Ready (%@)",
@@ -24063,7 +24487,10 @@ object LocalizationStrings {
             "ja" to "工学・製造設計",
             "ko" to "엔지니어링 및 공정",
             "th" to "วิศวกรรมและกระบวนการผลิต"
-        ),
+        )
+    )
+
+    private fun part38(): Map<String, Map<String, String>> = mapOf(
         "theme_general" to mapOf(
             "zh-Hant" to "通用基礎",
             "en" to "General",
@@ -24487,10 +24914,7 @@ object LocalizationStrings {
             "ja" to "三面図と断面図テンプレート",
             "ko" to "3면도 및 단면도 템플릿",
             "th" to "แม่แบบภาพฉายสามด้าน"
-        )
-    )
-
-    private fun part38(): Map<String, Map<String, String>> = mapOf(
+        ),
         "tmpl_orthographic_desc" to mapOf(
             "zh-Hant" to "正視、俯視、側視與立體軸測四象限分區引導",
             "en" to "Front, Top, Side views & isometric quadrant guides",
@@ -24706,7 +25130,10 @@ object LocalizationStrings {
             "ja" to "アンカー",
             "ko" to "앵커",
             "th" to "ยึดตำแหน่ง"
-        ),
+        )
+    )
+
+    private fun part39(): Map<String, Map<String, String>> = mapOf(
         "tool_ballpoint" to mapOf(
             "zh-Hant" to "原子筆",
             "en" to "Ballpoint",
@@ -25130,10 +25557,7 @@ object LocalizationStrings {
             "ja" to "辞書を引く",
             "ko" to "사전 찾기",
             "th" to "พจนานุกรม"
-        )
-    )
-
-    private fun part39(): Map<String, Map<String, String>> = mapOf(
+        ),
         "trans_pen_multiline_desc" to mapOf(
             "zh-Hant" to "開啟後，在快顯視窗保持開啟時繼續掃下一行，會自動修復行尾連字號並拼接成完整句子翻譯。",
             "en" to "When enabled, scanning the next line while a translation card is open automatically joins broken words and sentences.",
@@ -25349,7 +25773,10 @@ object LocalizationStrings {
             "ja" to "韓国語 (ko)",
             "ko" to "한국어 (ko)",
             "th" to "ภาษาเกาหลี (ko)"
-        ),
+        )
+    )
+
+    private fun part40(): Map<String, Map<String, String>> = mapOf(
         "transcribe_lang_th" to mapOf(
             "zh-Hant" to "泰語 (th)",
             "en" to "Thai (th)",
@@ -25773,10 +26200,7 @@ object LocalizationStrings {
             "ja" to "このノートはロックされています",
             "ko" to "이 노트는 잠겨 있습니다",
             "th" to "สมุดบันทึกนี้ถูกล็อกอยู่"
-        )
-    )
-
-    private fun part40(): Map<String, Map<String, String>> = mapOf(
+        ),
         "unlock_use_passphrase" to mapOf(
             "zh-Hant" to "改用密碼",
             "en" to "Use the passphrase instead",
@@ -25992,7 +26416,10 @@ object LocalizationStrings {
             "ja" to "灰色 25%",
             "ko" to "회색 25%",
             "th" to "เทา 25%"
-        ),
+        )
+    )
+
+    private fun part41(): Map<String, Map<String, String>> = mapOf(
         "wd_c_gray_50" to mapOf(
             "zh-Hant" to "灰色 50%",
             "en" to "Gray 50%",
@@ -26416,10 +26843,7 @@ object LocalizationStrings {
             "ja" to "ボトムタブバー（5 タブ）",
             "ko" to "하단 탭 바 (5개 탭)",
             "th" to "แถบแท็บด้านล่าง (5 แท็บ)"
-        )
-    )
-
-    private fun part41(): Map<String, Map<String, String>> = mapOf(
+        ),
         "word_studio" to mapOf(
             "zh-Hant" to "Word文字編修",
             "en" to "Word Text Studio",

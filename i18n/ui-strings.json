@@ -26302,5 +26302,429 @@
     "th": "หากต้องการเปลี่ยนภาษาที่สแกนหรือภาษาที่แปลภายหลัง ให้แตะปุ่มภาษาที่ด้านบนของปากกาแปล (เช่น “EN → ไทย”) ระบบจะไม่ถามอีกจนกว่าจะเปิดแอปใหม่",
     "zhHans": "之后若要更改扫描语系或输出语系，请点翻译笔上方的语系按钮（例如「EN → 中」）。在应用程序重新启动前，不会再出现此设定窗口。",
     "zhHant": "之後若要更改掃描語系或輸出語系，請點翻譯筆上方的語系按鈕（例如「EN → 中」）。在應用程式重新啟動前，不會再出現此設定視窗。"
+  },
+  "table_tab_content": {
+    "en": "Content",
+    "ja": "内容",
+    "ko": "내용",
+    "th": "เนื้อหา",
+    "zhHans": "内容",
+    "zhHant": "內容"
+  },
+  "table_tab_format": {
+    "en": "Format",
+    "ja": "書式",
+    "ko": "서식",
+    "th": "รูปแบบ",
+    "zhHans": "格式",
+    "zhHant": "格式"
+  },
+  "table_tab_table": {
+    "en": "Table",
+    "ja": "表",
+    "ko": "표",
+    "th": "ตาราง",
+    "zhHans": "表格",
+    "zhHant": "表格"
+  },
+  "table_section_font": {
+    "en": "Font",
+    "ja": "フォント",
+    "ko": "글꼴",
+    "th": "แบบอักษร",
+    "zhHans": "字体",
+    "zhHant": "字體"
+  },
+  "table_section_align": {
+    "en": "Alignment & Direction",
+    "ja": "配置と方向",
+    "ko": "맞춤 및 방향",
+    "th": "การจัดตำแหน่งและทิศทาง",
+    "zhHans": "对齐与方向",
+    "zhHant": "對齊與方向"
+  },
+  "table_section_structure": {
+    "en": "Rows & Columns",
+    "ja": "行と列",
+    "ko": "행과 열",
+    "th": "แถวและคอลัมน์",
+    "zhHans": "行与列",
+    "zhHant": "列與欄"
+  },
+  "table_section_size": {
+    "en": "Size",
+    "ja": "サイズ",
+    "ko": "크기",
+    "th": "ขนาด",
+    "zhHans": "大小",
+    "zhHant": "大小"
+  },
+  "table_text_bold": {
+    "en": "Bold",
+    "ja": "太字",
+    "ko": "굵게",
+    "th": "ตัวหนา",
+    "zhHans": "粗体",
+    "zhHant": "粗體"
+  },
+  "table_text_italic": {
+    "en": "Italic",
+    "ja": "斜体",
+    "ko": "기울임",
+    "th": "ตัวเอียง",
+    "zhHans": "斜体",
+    "zhHant": "斜體"
+  },
+  "table_text_underline": {
+    "en": "Underline",
+    "ja": "下線",
+    "ko": "밑줄",
+    "th": "ขีดเส้นใต้",
+    "zhHans": "下划线",
+    "zhHant": "底線"
+  },
+  "table_text_strike": {
+    "en": "Strikethrough",
+    "ja": "取り消し線",
+    "ko": "취소선",
+    "th": "ขีดทับ",
+    "zhHans": "删除线",
+    "zhHant": "刪除線"
+  },
+  "table_cell_font_size": {
+    "en": "Font size",
+    "ja": "文字サイズ",
+    "ko": "글자 크기",
+    "th": "ขนาดอักษร",
+    "zhHans": "字号",
+    "zhHant": "字級"
+  },
+  "table_text_color": {
+    "en": "Text color",
+    "ja": "文字色",
+    "ko": "글자 색",
+    "th": "สีตัวอักษร",
+    "zhHans": "文字颜色",
+    "zhHant": "文字顏色"
+  },
+  "table_fill_color": {
+    "en": "Cell fill",
+    "ja": "セルの塗りつぶし",
+    "ko": "셀 채우기",
+    "th": "สีพื้นเซลล์",
+    "zhHans": "单元格填充",
+    "zhHant": "儲存格填色"
+  },
+  "table_align_h": {
+    "en": "Horizontal alignment",
+    "ja": "水平方向の配置",
+    "ko": "가로 맞춤",
+    "th": "จัดแนวนอน",
+    "zhHans": "水平对齐",
+    "zhHant": "水平對齊"
+  },
+  "table_align_v": {
+    "en": "Vertical alignment",
+    "ja": "垂直方向の配置",
+    "ko": "세로 맞춤",
+    "th": "จัดแนวตั้ง",
+    "zhHans": "垂直对齐（内文位置）",
+    "zhHant": "垂直對齊（內文位置）"
+  },
+  "table_align_left": {
+    "en": "Left",
+    "ja": "左",
+    "ko": "왼쪽",
+    "th": "ซ้าย",
+    "zhHans": "靠左",
+    "zhHant": "靠左"
+  },
+  "table_align_center": {
+    "en": "Center",
+    "ja": "中央",
+    "ko": "가운데",
+    "th": "กึ่งกลาง",
+    "zhHans": "居中",
+    "zhHant": "置中"
+  },
+  "table_align_right": {
+    "en": "Right",
+    "ja": "右",
+    "ko": "오른쪽",
+    "th": "ขวา",
+    "zhHans": "靠右",
+    "zhHant": "靠右"
+  },
+  "table_align_top": {
+    "en": "Top",
+    "ja": "上",
+    "ko": "위",
+    "th": "บน",
+    "zhHans": "靠上",
+    "zhHant": "靠上"
+  },
+  "table_align_middle": {
+    "en": "Middle",
+    "ja": "中央",
+    "ko": "가운데",
+    "th": "กลาง",
+    "zhHans": "居中",
+    "zhHant": "置中"
+  },
+  "table_align_bottom": {
+    "en": "Bottom",
+    "ja": "下",
+    "ko": "아래",
+    "th": "ล่าง",
+    "zhHans": "靠下",
+    "zhHant": "靠下"
+  },
+  "table_text_direction": {
+    "en": "Text direction",
+    "ja": "文字の方向",
+    "ko": "텍스트 방향",
+    "th": "ทิศทางข้อความ",
+    "zhHans": "文字方向",
+    "zhHant": "文字方向"
+  },
+  "table_dir_horizontal": {
+    "en": "Horizontal",
+    "ja": "横",
+    "ko": "가로",
+    "th": "แนวนอน",
+    "zhHans": "横向",
+    "zhHant": "橫向"
+  },
+  "table_dir_rotate_cw": {
+    "en": "Rotate right 90°",
+    "ja": "右へ 90°",
+    "ko": "오른쪽 90°",
+    "th": "หมุนขวา 90°",
+    "zhHans": "右转 90°",
+    "zhHant": "右轉 90°"
+  },
+  "table_dir_rotate_ccw": {
+    "en": "Rotate left 90°",
+    "ja": "左へ 90°",
+    "ko": "왼쪽 90°",
+    "th": "หมุนซ้าย 90°",
+    "zhHans": "左转 90°",
+    "zhHant": "左轉 90°"
+  },
+  "table_wrap": {
+    "en": "Wrap text",
+    "ja": "折り返して全体を表示",
+    "ko": "자동 줄 바꿈",
+    "th": "ตัดข้อความอัตโนมัติ",
+    "zhHans": "自动换行",
+    "zhHant": "自動換行"
+  },
+  "table_clear_format": {
+    "en": "Clear formatting",
+    "ja": "書式をクリア",
+    "ko": "서식 지우기",
+    "th": "ล้างรูปแบบ",
+    "zhHans": "清除格式",
+    "zhHant": "清除格式"
+  },
+  "table_insert_row_above": {
+    "en": "Insert row above",
+    "ja": "上に行を挿入",
+    "ko": "위에 행 삽입",
+    "th": "แทรกแถวด้านบน",
+    "zhHans": "在上方插入行",
+    "zhHant": "上方插入列"
+  },
+  "table_insert_row_below": {
+    "en": "Insert row below",
+    "ja": "下に行を挿入",
+    "ko": "아래에 행 삽입",
+    "th": "แทรกแถวด้านล่าง",
+    "zhHans": "在下方插入行",
+    "zhHant": "下方插入列"
+  },
+  "table_insert_col_left": {
+    "en": "Insert column left",
+    "ja": "左に列を挿入",
+    "ko": "왼쪽에 열 삽입",
+    "th": "แทรกคอลัมน์ด้านซ้าย",
+    "zhHans": "在左侧插入列",
+    "zhHant": "左側插入欄"
+  },
+  "table_insert_col_right": {
+    "en": "Insert column right",
+    "ja": "右に列を挿入",
+    "ko": "오른쪽에 열 삽입",
+    "th": "แทรกคอลัมน์ด้านขวา",
+    "zhHans": "在右侧插入列",
+    "zhHant": "右側插入欄"
+  },
+  "table_merge_selection": {
+    "en": "Merge selected cells",
+    "ja": "選択したセルを結合",
+    "ko": "선택한 셀 병합",
+    "th": "รวมเซลล์ที่เลือก",
+    "zhHans": "合并所选单元格",
+    "zhHant": "合併選取儲存格"
+  },
+  "table_col_width": {
+    "en": "Column width",
+    "ja": "列の幅",
+    "ko": "열 너비",
+    "th": "ความกว้างคอลัมน์",
+    "zhHans": "列宽",
+    "zhHant": "欄寬"
+  },
+  "table_row_height": {
+    "en": "Row height",
+    "ja": "行の高さ",
+    "ko": "행 높이",
+    "th": "ความสูงแถว",
+    "zhHans": "行高",
+    "zhHant": "列高"
+  },
+  "table_auto": {
+    "en": "Auto",
+    "ja": "自動",
+    "ko": "자동",
+    "th": "อัตโนมัติ",
+    "zhHans": "自动",
+    "zhHant": "自動"
+  },
+  "table_size_auto": {
+    "en": "Auto-size selection",
+    "ja": "選択範囲を自動サイズ",
+    "ko": "선택 영역 자동 크기",
+    "th": "ปรับขนาดอัตโนมัติ",
+    "zhHans": "所选范围自动大小",
+    "zhHant": "選取範圍自動大小"
+  },
+  "table_distribute_cols": {
+    "en": "Distribute columns",
+    "ja": "列の幅を揃える",
+    "ko": "열 너비 균등",
+    "th": "กระจายคอลัมน์",
+    "zhHans": "平均分配列宽",
+    "zhHant": "平均分配欄寬"
+  },
+  "table_distribute_rows": {
+    "en": "Distribute rows",
+    "ja": "行の高さを揃える",
+    "ko": "행 높이 균등",
+    "th": "กระจายแถว",
+    "zhHans": "平均分配行高",
+    "zhHant": "平均分配列高"
+  },
+  "table_autofit": {
+    "en": "Reset all sizes",
+    "ja": "すべて自動に戻す",
+    "ko": "모두 자동으로",
+    "th": "รีเซ็ตขนาดทั้งหมด",
+    "zhHans": "全部还原自动",
+    "zhHant": "全部還原自動"
+  },
+  "table_borders": {
+    "en": "Borders",
+    "ja": "罫線",
+    "ko": "테두리",
+    "th": "เส้นขอบ",
+    "zhHans": "边框",
+    "zhHant": "框線"
+  },
+  "table_border_all": {
+    "en": "All",
+    "ja": "すべて",
+    "ko": "모두",
+    "th": "ทั้งหมด",
+    "zhHans": "全部",
+    "zhHant": "全部"
+  },
+  "table_border_outer": {
+    "en": "Outer",
+    "ja": "外枠",
+    "ko": "바깥쪽",
+    "th": "ขอบนอก",
+    "zhHans": "外框",
+    "zhHant": "外框"
+  },
+  "table_border_inner": {
+    "en": "Inner",
+    "ja": "内側",
+    "ko": "안쪽",
+    "th": "ขอบใน",
+    "zhHans": "内框",
+    "zhHant": "內框"
+  },
+  "table_border_horizontal": {
+    "en": "Horizontal",
+    "ja": "横線のみ",
+    "ko": "가로선",
+    "th": "เส้นนอน",
+    "zhHans": "仅横线",
+    "zhHant": "僅橫線"
+  },
+  "table_border_none": {
+    "en": "None",
+    "ja": "なし",
+    "ko": "없음",
+    "th": "ไม่มี",
+    "zhHans": "无",
+    "zhHant": "無"
+  },
+  "table_rule_color": {
+    "en": "Border color",
+    "ja": "罫線の色",
+    "ko": "테두리 색",
+    "th": "สีเส้นขอบ",
+    "zhHans": "边框颜色",
+    "zhHant": "框線顏色"
+  },
+  "table_header_fill": {
+    "en": "Header fill",
+    "ja": "見出しの塗りつぶし",
+    "ko": "머리글 채우기",
+    "th": "สีพื้นหัวตาราง",
+    "zhHans": "表头底色",
+    "zhHant": "表頭底色"
+  },
+  "table_selection": {
+    "en": "Selection",
+    "ja": "選択",
+    "ko": "선택",
+    "th": "เลือก",
+    "zhHans": "选取",
+    "zhHant": "選取"
+  },
+  "table_select_row": {
+    "en": "Row",
+    "ja": "行",
+    "ko": "행",
+    "th": "แถว",
+    "zhHans": "整行",
+    "zhHant": "整列"
+  },
+  "table_select_col": {
+    "en": "Column",
+    "ja": "列",
+    "ko": "열",
+    "th": "คอลัมน์",
+    "zhHans": "整列",
+    "zhHant": "整欄"
+  },
+  "table_select_all": {
+    "en": "All",
+    "ja": "すべて",
+    "ko": "전체",
+    "th": "ทั้งหมด",
+    "zhHans": "全选",
+    "zhHant": "全選"
+  },
+  "table_reset_color": {
+    "en": "Reset",
+    "ja": "リセット",
+    "ko": "초기화",
+    "th": "รีเซ็ต",
+    "zhHans": "还原",
+    "zhHant": "還原"
   }
 }
