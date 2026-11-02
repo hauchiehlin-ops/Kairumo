@@ -86,11 +86,15 @@ run_check "介面無硬寫死字串" python3 "${REPO_ROOT}/scripts/check-hardcod
 run_check "全平台版本號一致性" "${REPO_ROOT}/scripts/check-version-consistency.sh"
 
 echo ""
+echo "── [Layer 5] 畫布核心純度與重型次系統隔離（Canvas Isolation）──"
+run_check "手寫關鍵路徑與畫布次系統解耦守門" python3 "${REPO_ROOT}/scripts/check-canvas-isolation.py"
+
+echo ""
 echo "════════════════════════════════════════════════════════════════════════"
 if [ "$FAILURES" -eq 0 ]; then
     mkdir -p "${REPO_ROOT}/.git"
     calc_fingerprint > "$CACHE_FILE" 2>/dev/null || true
-    echo "  🎉 四大守門機制全數通過！符合「穩定」、「即時」、「正確」標準。"
+    echo "  🎉 五大守門機制全數通過！符合「穩定」、「即時」、「正確」標準。"
     echo "════════════════════════════════════════════════════════════════════════"
     exit 0
 else

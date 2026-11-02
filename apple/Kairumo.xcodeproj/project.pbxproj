@@ -132,6 +132,7 @@
 		76EF37A06B04F6D7A9744A1A /* SyncHistory.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4288BEA56B9807F516BC7541 /* SyncHistory.swift */; };
 		778281F00A39E42DC02254A7 /* TableStudioView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 61C6C10FAD15645C91E246C0 /* TableStudioView.swift */; };
 		2588A7DF1DF84F5AB89F6AF8 /* TablePropertiesSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 076F50BAEA8C46E099E4F375 /* TablePropertiesSheet.swift */; };
+		2588A7DF1DF84F5AB89F6AF9 /* EditorSubsystemCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 076F50BAEA8C46E099E4F376 /* EditorSubsystemCoordinator.swift */; };
 		A186AD47B393462696F14913 /* TableRibbonToolbar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33271EE24248491F947A564F /* TableRibbonToolbar.swift */; };
 		7AA41DDC5C57280F07723205 /* LassoSelectionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E0F86CD46E859261EC01994 /* LassoSelectionTests.swift */; };
 		7B6B71CF69CE9F1C2CB2E953 /* DocumentViewerSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59E46CD750DA486212251DC0 /* DocumentViewerSheet.swift */; };
@@ -425,6 +426,7 @@
 		61043E910A35DABA29547058 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		61C6C10FAD15645C91E246C0 /* TableStudioView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TableStudioView.swift; sourceTree = "<group>"; };
 		076F50BAEA8C46E099E4F375 /* TablePropertiesSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TablePropertiesSheet.swift; sourceTree = "<group>"; };
+		076F50BAEA8C46E099E4F376 /* EditorSubsystemCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditorSubsystemCoordinator.swift; sourceTree = "<group>"; };
 		33271EE24248491F947A564F /* TableRibbonToolbar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TableRibbonToolbar.swift; sourceTree = "<group>"; };
 		61D0BC500318C879D185099E /* Model3DStudioView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Model3DStudioView.swift; sourceTree = "<group>"; };
 		621C052FCB25E32FBB633BE3 /* MacReleaseConfigTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacReleaseConfigTests.swift; sourceTree = "<group>"; };
@@ -974,6 +976,7 @@
 				65505EE06222AF88C81DC4C4 /* TableLayoutResolver.swift */,
 				61C6C10FAD15645C91E246C0 /* TableStudioView.swift */,
 				076F50BAEA8C46E099E4F375 /* TablePropertiesSheet.swift */,
+				076F50BAEA8C46E099E4F376 /* EditorSubsystemCoordinator.swift */,
 				33271EE24248491F947A564F /* TableRibbonToolbar.swift */,
 				32D00743AB6B587D7885AC40 /* TailscaleDetector.swift */,
 				7418A9EE9E549FC11AB793EF /* TextBoxAppearance.swift */,
@@ -1405,6 +1408,7 @@
 				3BFF66F5ED55FE9847AC925C /* TableLayoutResolver.swift in Sources */,
 				778281F00A39E42DC02254A7 /* TableStudioView.swift in Sources */,
 				2588A7DF1DF84F5AB89F6AF8 /* TablePropertiesSheet.swift in Sources */,
+				2588A7DF1DF84F5AB89F6AF9 /* EditorSubsystemCoordinator.swift in Sources */,
 				A186AD47B393462696F14913 /* TableRibbonToolbar.swift in Sources */,
 				F312AD32B369C2F9E1CB8F99 /* TailscaleDetector.swift in Sources */,
 				8677E2062758DE5EA2EEE87F /* TextBoxAppearance.swift in Sources */,
