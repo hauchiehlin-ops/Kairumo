@@ -1538,7 +1538,11 @@ private fun ContinuousPage(
                 interactive = interactive,
                 onSelect = { updateSelectedId(it); selectedConnectionId = null },
                 onEditStyle = { editingImage = it },
-                onChanged = { imageStore.persist(it); revision++ },
+                onChanged = {
+                    imageStore.persist(it)
+                    revision++
+                    clearPageThumbnailCache()
+                },
                 zIndexOf = zIndexOf,
                 modifier = Modifier.fillMaxSize()
             )
@@ -1549,7 +1553,11 @@ private fun ContinuousPage(
                 selectedId = selectedId,
                 onSelect = { updateSelectedId(it); selectedConnectionId = null },
                 onEdit = { editingTable = it },
-                onChanged = { tableStore.persist(it); revision++ },
+                onChanged = {
+                    tableStore.persist(it)
+                    revision++
+                    clearPageThumbnailCache()
+                },
                 zIndexOf = zIndexOf,
                 modifier = Modifier.fillMaxSize()
             )
@@ -1560,7 +1568,11 @@ private fun ContinuousPage(
                 selectedId = selectedId,
                 onSelect = { updateSelectedId(it); selectedConnectionId = null },
                 onEdit = { editingChart = it },
-                onChanged = { chartStore.persist(it); revision++ },
+                onChanged = {
+                    chartStore.persist(it)
+                    revision++
+                    clearPageThumbnailCache()
+                },
                 zIndexOf = zIndexOf,
                 modifier = Modifier.fillMaxSize()
             )

@@ -663,12 +663,15 @@ extension NotebookEditorView {
     }
 
     /// 編輯器寫回筆記本的唯一入口：先讓物件復原紀錄比對這一次的變更，再存檔。
+    /// 同步刷新側邊欄與頁面縮圖快取，確保 ADR-0015 / I4 畫面同源。
     func commitNotebook() {
         objectHistory.record(notebook, manager: historyUndoManager) { state in
             applyHistoryState(state)
         }
         store.updateNotebook(notebook)
         publishCollabChanges()
+        PageThumbnailRenderer.invalidateAll()
+        thumbnailRevision += 1
     }
 
     /// 本機的物件修改即時送給協同的每一個人（設計 §2.1）。

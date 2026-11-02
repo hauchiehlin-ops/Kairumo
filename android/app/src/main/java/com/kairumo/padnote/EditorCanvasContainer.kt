@@ -1266,7 +1266,11 @@ internal fun ColumnScope.EditorCanvasContainer(ctx: EditorCanvasContext) = with(
                     if (id != null && editorMode != EditorMode.TYPE) editorMode = EditorMode.TYPE
                 },
                 onEdit = { editingTable = it },
-                onChanged = { table -> tableStore.persist(table); tableRevision++ },
+                onChanged = { table ->
+                    tableStore.persist(table)
+                    tableRevision++
+                    clearPageThumbnailCache()
+                },
                 modifier = Modifier.fillMaxSize()
             )
 
@@ -1283,7 +1287,11 @@ internal fun ColumnScope.EditorCanvasContainer(ctx: EditorCanvasContext) = with(
                     if (id != null && editorMode != EditorMode.TYPE) editorMode = EditorMode.TYPE
                 },
                 onEdit = { editingChart = it },
-                onChanged = { chart -> chartStore.persist(chart); chartRevision++ },
+                onChanged = { chart ->
+                    chartStore.persist(chart)
+                    chartRevision++
+                    clearPageThumbnailCache()
+                },
                 modifier = Modifier.fillMaxSize()
             )
 
@@ -1313,12 +1321,14 @@ internal fun ColumnScope.EditorCanvasContainer(ctx: EditorCanvasContext) = with(
                         meta.setLinks(notebook?.first, links)
                         selectedLinkId = null
                         linkRevision++
+                        clearPageThumbnailCache()
                     },
                     onChanged = { updated ->
                         links = links.map { if (it.id == updated.id) updated else it }
                             .toMutableList()
                         meta.setLinks(notebook?.first, links)
                         linkRevision++
+                        clearPageThumbnailCache()
                     },
                     zIndexOf = zIndexOf
                 )
@@ -1348,12 +1358,14 @@ internal fun ColumnScope.EditorCanvasContainer(ctx: EditorCanvasContext) = with(
                         meta.setAudioCards(notebook?.first, audioCards)
                         selectedAudioId = null
                         audioRevision++
+                        clearPageThumbnailCache()
                     },
                     onChanged = { updated ->
                         audioCards = audioCards.map { if (it.id == updated.id) updated else it }
                             .toMutableList()
                         meta.setAudioCards(notebook?.first, audioCards)
                         audioRevision++
+                        clearPageThumbnailCache()
                     },
                     onTranscribe = { card, language ->
                         scope.launch {
@@ -1481,6 +1493,7 @@ internal fun ColumnScope.EditorCanvasContainer(ctx: EditorCanvasContext) = with(
                             .toMutableList()
                         meta.setModels3D(notebook?.first, models3D)
                         model3DRevision++
+                        clearPageThumbnailCache()
                     },
                     zIndexOf = zIndexOf
                 )

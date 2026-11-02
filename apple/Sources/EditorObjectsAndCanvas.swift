@@ -1790,8 +1790,7 @@ extension NotebookEditorView {
         notebook.tableAttachments = all
         commitNotebook()
         finishPageCrossing(ids: [], to: nil)
-
-        moveStrokesInsideTable(previous, by: applied)
+        // 專案 ADR-0015 筆跡單一真相：移動表格絕不私自搬動畫布筆畫，避免使用者既有筆跡被吸附拖走。
     }
 
     func tableBinding(for id: String) -> Binding<NoteTableAttachment> {
@@ -1804,80 +1803,16 @@ extension NotebookEditorView {
             set: { updated in
                 guard let index = notebook.tableAttachments?
                     .firstIndex(where: { $0.id.lowercased() == normId }) else { return }
-                let previous = notebook.tableAttachments![index]
                 notebook.tableAttachments?[index] = updated
                 commitNotebook()
-
-                let dx = updated.x - previous.x
-                let dy = updated.y - previous.y
-                if hypot(dx, dy) >= 1 {
-                    moveStrokesInsideTable(previous, by: CGSize(width: dx, height: dy))
-                }
             }
         )
     }
 
+    /// 專案 ADR-0015 筆跡單一真相：移動表格不干涉畫布筆畫。
+    /// 保留簽名以相容內部調用，內部不執行筆劃平移。
     func moveStrokesInsideTable(_ table: NoteTableAttachment, by delta: CGSize) {
-        guard hypot(delta.width, delta.height) >= 0.5 else { return }
-        let page = table.pageIndex
-
-        // 1. 標準 PencilKit 筆跡（PKDrawing）
-        let drawing = (pageDisplayMode == .single && page == currentPageIndex && canvasView != nil)
-            ? (canvasView?.drawing ?? currentDrawing)
-            : drawingForPage(page)
-
-        let result = table.offsetContainedStrokes(in: drawing, by: delta)
-        if result.movedCount > 0 {
-            let updatedDrawing = result.drawing
-            if page == currentPageIndex {
-                currentDrawing = updatedDrawing
-                if let canvas = canvasView {
-                    canvas.drawing = updatedDrawing
-                    if let adaptive = canvas as? AdaptiveCanvasView {
-                        adaptive.initialLoadedStrokeCount = updatedDrawing.strokes.count
-                        adaptive.forceDisplayRefresh(with: updatedDrawing)
-                    }
-                }
-            }
-            store.saveDrawing(notebookId: notebook.id, pageIndex: page, drawing: updatedDrawing)
-            recordDrawingEdit(page: page, drawing: updatedDrawing)
-            broadcastDrawingChange(page: page, drawing: updatedDrawing)
-            PageThumbnailRenderer.invalidateAll()
-            if pageDisplayMode == .continuous {
-                // 筆跡已經寫進磁碟：讓那一頁合併重讀，不重建畫布。基準設成搬動前的那一份 ——
-                // 畫面上的就是它，合併結果才會整份換成搬過的，不會把舊位置當成「這台剛寫的」留下來。
-                inkDiskBaselines[page] = drawing
-                continuousInkReloadGeneration += 1
-                continuousObjectGeneration += 1
-            }
-        }
-
-        // 2. 專業製圖筆畫（ProInk）
-        if page == currentPageIndex, let proLayer = (canvasView as? AdaptiveCanvasView)?.proLayer {
-            let layout = table.resolvedLayout()
-            let tableWidth = max(table.width, layout.width)
-            let tableHeight = max(table.height, layout.height)
-            let tableRect = CGRect(x: table.x, y: table.y, width: tableWidth, height: tableHeight)
-            let hitRect = tableRect.insetBy(dx: -4, dy: -4)
-
-            var proIdsToMove = Set<String>()
-            for s in proLayer.ownStrokes {
-                let b = s.bounds
-                let mid = CGPoint(x: b.midX, y: b.midY)
-                let intersection = tableRect.intersection(b)
-                let isInside = tableRect.contains(b)
-                    || hitRect.contains(mid)
-                    || (!intersection.isNull && (intersection.width * intersection.height) >= (b.width * b.height * 0.4))
-                    || (hitRect.contains(b.origin) && !intersection.isNull && intersection.width > 2 && intersection.height > 2)
-                if isInside {
-                    proIdsToMove.insert(s.id)
-                }
-            }
-            if !proIdsToMove.isEmpty {
-                proLayer.move(ids: proIdsToMove, by: delta)
-                proLayer.endMove()
-            }
-        }
+        // ADR-0015：畫布手寫筆跡為獨立圖層真相，嚴禁附件移動時劫持筆跡。
     }
 
     func binding(for id: String) -> Binding<NoteImageAttachment> {
