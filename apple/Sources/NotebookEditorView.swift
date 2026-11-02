@@ -409,8 +409,10 @@ public struct NotebookEditorView: View {
     }
 
     // 筆記結構欄（側邊頁面縮圖大綱目錄欄）
-    // 平板與桌機開啟筆記時預設展開，且預設顯示「頁面結構」。
-    @State var showStructureSidebar: Bool = NotebookEditorView.isTabletOrDesktopDevice
+    // 平板與桌機開啟筆記時預設展開（由 autoOpenSidebarIfWideEnough 在量到實際寬度後才打開）。
+    // 初始值必須是 false：寬度還沒量到前若為 true，會被當成窄螢幕而直接彈出 sheet，
+    // 在 fullScreenCover 轉場／首次排版中呈現 sheet 會讓 SwiftUI 型別解析遞迴爆堆疊。
+    @State var showStructureSidebar: Bool = false
     /// 畫布目前的實際內容寬度。縮圖要用同一個寬度算，物件位置與比例才會對得上。
     @State var canvasContentWidth: CGFloat = PageThumbnailRenderer.minPageWidth
     // 自訂捲軸狀態：iOS 原生捲動指示器不接受互動，Mac 上使用者會想用游標拖它
@@ -697,9 +699,13 @@ public struct NotebookEditorView: View {
             // 原本看 horizontalSizeClass，但在 fullScreenCover 剛推上來的那一瞬間
             // 它可能還回報 compact，於是 iPad 上時開時不開。
             GeometryReader { geo in
-                Color.clear.onAppear {
-                    DispatchQueue.main.async { autoOpenSidebarIfWideEnough(width: geo.size.width) }
-                }
+                Color.clear
+                    .onAppear {
+                        DispatchQueue.main.async { autoOpenSidebarIfWideEnough(width: geo.size.width) }
+                    }
+                    .onChange(of: geo.size.width) { newWidth in
+                        DispatchQueue.main.async { autoOpenSidebarIfWideEnough(width: newWidth) }
+                    }
             }
         )
         .onAppear(perform: handleOnAppear)
@@ -1171,8 +1177,11 @@ public struct NotebookEditorView: View {
     /// iPhone 這種窄寬度維持收合 —— 280pt 的側欄會把畫布擠到不能用。
     private func autoOpenSidebarIfWideEnough(width: CGFloat) {
         guard !didAutoOpenSidebar else { return }
+        // 寬度尚未量到（0）就先不消耗這一次機會，等下一次排版再決定。
+        guard width > 0 else { return }
         didAutoOpenSidebar = true
-        if width >= 700 || Self.isTabletOrDesktopDevice {
+        // 只在「放得下並排」時自動展開；放不下就維持收合，絕不自動彈出 sheet 蓋住畫布。
+        if layoutMetrics(width: Float(width)).sidebarIsInline {
             showStructureSidebar = true
         }
     }
@@ -1503,7 +1512,7 @@ public struct NotebookEditorView: View {
             DispatchQueue.main.async { editorAvailableWidth = newValue }
         }
         .sheet(isPresented: Binding(
-            get: { showStructureSidebar && !sidebarIsInline },
+            get: { showStructureSidebar && !sidebarIsInline && geo.size.width > 0 },
             set: { if !$0 { showStructureSidebar = false } }
         )) {
             resizableSheet { notebookStructureSidebar }

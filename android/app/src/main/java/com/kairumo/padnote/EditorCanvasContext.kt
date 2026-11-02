@@ -2984,8 +2984,15 @@ internal fun rememberEditorCanvasContext(
     }
     val showMenuState = remember { mutableStateOf(false) }
     var showMenu by showMenuState
-    // 頁面結構欄。平板預設展開，手機預設收起。
-    val showPageSidebarState = remember { mutableStateOf(isTablet) }
+    // 頁面結構欄。平板預設展開，手機預設收起；但窄視窗（分割畫面等）放不下並排時也收起，
+    // 否則一開筆記就自動彈出對話框蓋住畫布（與 Apple 端 autoOpenSidebarIfWideEnough 對齊）。
+    val showPageSidebarState = remember {
+        mutableStateOf(
+            isTablet && uniffi.padnote_core.layoutMetrics(
+                activity.resources.configuration.screenWidthDp.toFloat()
+            ).sidebarIsInline
+        )
+    }
     var showPageSidebar by showPageSidebarState
     // 畫布的縮放與平移。預設適應頁寬（響應式縮放，上限 200%）。換頁時歸位。
     val canvasScaleState = remember(pageId) { mutableFloatStateOf(1f) }
