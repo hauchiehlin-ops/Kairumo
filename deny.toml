@@ -116,16 +116,17 @@ ignore = [
     "RUSTSEC-2026-0398",
     "RUSTSEC-2026-0403",
 
-    # zip < 9 的三筆解壓縮漏洞（SUID/SGID 位元、指到目的地外的符號連結、透過符號連結套用權限）。
+    # zip < 9 的四筆解壓縮漏洞（SUID/SGID 位元、指到目的地外的符號連結、透過符號連結套用權限、超大符號連結導致中止 RUSTSEC-2026-0429）。
     # 這個專案自己的解壓縮（padnote-storage）已經升到 zip 9。剩下的 zip 8.6 來自 calamine 0.36
     # （讀 xlsx）與 docx-rs 0.4（寫 docx），兩者都要求 zip ^8.6、尚無支援 zip 9 的版本。
-    # 這個專案不受影響：三筆都只發生在 `ZipArchive::extract()` / `ZipStreamReader::extract()`
+    # 這個專案不受影響：四筆都只發生在 `ZipArchive::extract()` / `ZipStreamReader::extract()`
     # 把封存檔解到磁碟上時；calamine 只在記憶體裡逐項讀 xlsx 的 XML，docx-rs 只負責寫出 docx，
     # 都不會把任何檔案解到磁碟、不建符號連結、也不套用權限位元。
-    # 待辦：calamine / docx-rs 放行 zip >= 9 後就回來移除這三條。
+    # 待辦：calamine / docx-rs 放行 zip >= 9 後就回來移除這四條。
     "RUSTSEC-2026-0367",
     "RUSTSEC-2026-0368",
     "RUSTSEC-2026-0369",
+    "RUSTSEC-2026-0429",
 ]
 
 [sources]
