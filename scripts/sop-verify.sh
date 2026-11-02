@@ -118,6 +118,10 @@ echo "════════════════════════�
 printf '  %s\n' "${RESULTS[@]}"
 echo "════════════════════════════════════════════════════════════════════════"
 if [ "$FAILURES" -eq 0 ]; then
+    head_sha="$(git rev-parse HEAD 2>/dev/null || echo "no-head")"
+    dirty_state="$(git status --porcelain 2>/dev/null || echo "no-status")"
+    mkdir -p "${REPO_ROOT}/.git"
+    printf "%s\n%s" "$head_sha" "$dirty_state" | shasum -a 256 | awk '{print $1}' > "${REPO_ROOT}/.git/gatekeepers.passed" 2>/dev/null || true
     echo "  🎉 SOP 全數通過，可提交與推送。"
     exit 0
 fi

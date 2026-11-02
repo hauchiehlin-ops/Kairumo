@@ -241,6 +241,8 @@ public struct NotebookEditorView: View {
     @State var connectionDraft: (page: Int, start: CGPoint, current: CGPoint)? = nil
     /// 正在重新編修的表格。
     @State var editingTable: NoteTableAttachment? = nil
+    /// 仿 Word「表格內容」對話框目標。
+    @State var tablePropertiesTarget: NoteTableAttachment? = nil
     @State var editingAttachmentId: String? = nil
     /// 正在重新編修的圖表。帶著規格一起，`sheet(item:)` 才有東西可以開。
     @State var editingChartAttachmentId: ChartEditTarget? = nil
@@ -776,7 +778,8 @@ public struct NotebookEditorView: View {
                 currentPageIndex = 0 // state-entry: 初始開啟筆記正門
                 // 換到的這一本若是範例，同樣先備份到暫存區。
                 store.beginSampleSession(notebook.id)
-                MainThreadStallMonitor.shared.breadcrumb("open notebook \(notebook.id.prefix(8))")
+                let nbPrefix = String(notebook.id.prefix(8))
+                MainThreadStallMonitor.shared.breadcrumb("open notebook \(nbPrefix)")
                 FocusSyncController.shared.setFocus(notebook.id)
                 activeInkStore.clearAllCoreBaselines()
                 activeInkStore.clearAllPendingCoreFlush()
@@ -1050,21 +1053,10 @@ public struct NotebookEditorView: View {
             }
         }
         .fullScreenCover(item: $editingTable) { target in
-            TableStudioView(editing: target) { updated in
-                guard let index = notebook.tableAttachments?
-                    .firstIndex(where: { $0.id == updated.id }) else { return }
-                // 位置原地保留：使用者只是改了裡面的內容。
-                var table = updated
-                table.x = notebook.tableAttachments?[index].x ?? table.x
-                table.y = notebook.tableAttachments?[index].y ?? table.y
-                notebook.tableAttachments?[index] = table
-                commitNotebook()
-                PageThumbnailRenderer.invalidateAll()
-                if let data = try? JSONEncoder().encode(table),
-                   let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
-                    collaborationManager.broadcastAttachmentUpsert(type: "table", itemDict: dict)
-                }
-            }
+            TableStudioView(editing: target, onCommit: updateTableInNotebook)
+        }
+        .sheet(item: $tablePropertiesTarget) { target in
+            tablePropertiesSheet(for: target)
         }
         .sheet(isPresented: $showChartStudio) { resizableSheet {
             ChartStudioView { chartSpec, chartImage in
@@ -1670,6 +1662,31 @@ public struct NotebookEditorView: View {
         loadCurrentPage()
         if paperUsesDrafting(paperId: notebook.paperId(forPage: bounded)) {
             applyEditorTool(.drafting)
+        }
+    }
+
+    @ViewBuilder
+    func tablePropertiesSheet(for target: NoteTableAttachment) -> some View {
+        TablePropertiesSheet(
+            table: Binding(
+                get: { notebook.tableAttachments?.first(where: { $0.id == target.id }) ?? target },
+                set: { updateTableInNotebook($0) }
+            ),
+            onCommit: { updateTableInNotebook($0) }
+        )
+    }
+
+    func updateTableInNotebook(_ updated: NoteTableAttachment) {
+        guard let index = notebook.tableAttachments?.firstIndex(where: { $0.id == updated.id }) else { return }
+        var table = updated
+        table.x = notebook.tableAttachments?[index].x ?? table.x
+        table.y = notebook.tableAttachments?[index].y ?? table.y
+        notebook.tableAttachments?[index] = table
+        commitNotebook()
+        PageThumbnailRenderer.invalidateAll()
+        if let data = try? JSONEncoder().encode(table),
+           let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+            collaborationManager.broadcastAttachmentUpsert(type: "table", itemDict: dict)
         }
     }
 

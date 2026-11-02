@@ -66,7 +66,7 @@ public struct NoteTableView: View {
                     path.move(to: rule.0)
                     path.addLine(to: rule.1)
                 }
-                context.stroke(path, with: .color(ruleColor), lineWidth: 1)
+                context.stroke(path, with: .color(ruleColor), lineWidth: table.borderWidth ?? 1)
             }
             .frame(width: layout.width, height: layout.height)
 
@@ -83,6 +83,7 @@ public struct NoteTableView: View {
                         ),
                         font: cell.style.resolvedFont(baseSize: table.fontSize, isHeader: cell.isHeader),
                         alignment: cell.style.hAlign ?? .left,
+                        vAlign: cell.style.vAlign ?? .bottom,
                         width: cell.width,
                         height: cell.height,
                         x: cell.x,
@@ -124,7 +125,14 @@ public struct NoteTableView: View {
 
     private func cellFill(_ cell: ResolvedTableCell) -> Color? {
         if let own = cell.style.resolvedFill { return own }
-        return cell.isHeader ? headerBackground : nil
+        if cell.isHeader { return headerBackground }
+        if table.bandedRows == true && cell.row % 2 == 1 {
+            return Color.primary.opacity(0.04)
+        }
+        if table.bandedCols == true && cell.col % 2 == 1 {
+            return Color.primary.opacity(0.025)
+        }
+        return nil
     }
 
     private var ruleColor: Color {
@@ -192,6 +200,7 @@ private struct NoteTableInlineEditor: View {
     @Binding var text: String
     let font: UIFont
     let alignment: TableHAlign
+    var vAlign: TableVAlign = .bottom
     let width: CGFloat
     let height: CGFloat
     let x: CGFloat
@@ -201,7 +210,13 @@ private struct NoteTableInlineEditor: View {
     @FocusState private var isFieldFocused: Bool
 
     var body: some View {
-        TextField("", text: $text)
+        let fieldH = min(height - 4, font.lineHeight + 6)
+        let offsetY: CGFloat = switch vAlign {
+        case .top: y + 2
+        case .middle: y + max(2, (height - fieldH) / 2)
+        case .bottom: y + max(2, height - fieldH - 2)
+        }
+        return TextField("", text: $text)
             .focused($isFieldFocused)
             .textFieldStyle(.plain)
             .font(Font(font as CTFont))
@@ -214,8 +229,8 @@ private struct NoteTableInlineEditor: View {
                 RoundedRectangle(cornerRadius: 4)
                     .stroke(Color.accentColor, lineWidth: 2)
             )
-            .frame(width: max(20, width - 6), height: max(20, height - 6), alignment: .leading)
-            .offset(x: x + 3, y: y + 3)
+            .frame(width: max(20, width - 6), height: fieldH, alignment: .leading)
+            .offset(x: x + 3, y: offsetY)
             .onSubmit(onSubmit)
             .onAppear {
                 isFieldFocused = true
@@ -928,6 +943,7 @@ struct TableAttachmentItemView: View {
     var onSelect: (() -> Void)? = nil
     var onMove: ((CGSize) -> Void)? = nil
     let onEdit: () -> Void
+    var onProperties: (() -> Void)? = nil
     let onDelete: () -> Void
 
     @ObservedObject private var localizationManager = LocalizationManager.shared
@@ -947,7 +963,7 @@ struct TableAttachmentItemView: View {
         NoteTableView(
             table: $table,
             isSelected: isSelected,
-            onEdit: onEdit,
+            onEdit: { (onProperties ?? onEdit)() },
             isInlineEditable: isSelected,
             editingCell: Binding(
                 get: { editingCell },
@@ -1109,7 +1125,7 @@ struct TableAttachmentItemView: View {
             .overlay(alignment: .topTrailing) {
                 if isSelected {
                     HStack(spacing: 6) {
-                        Button(action: onEdit) {
+                        Button(action: { (onProperties ?? onEdit)() }) {
                             Image(systemName: "slider.horizontal.3")
                                 .font(.system(size: 11, weight: .bold))
                                 .foregroundColor(.white)

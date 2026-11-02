@@ -4,7 +4,7 @@
 # Kairumo 四大自動化守門機制（Gatekeepers）一鍵完整檢驗腳本。
 # 遵循專案最高原則：「不要改了這個、壞了那個」，嚴格卡控「穩定」、「即時」、「正確」。
 #
-# 用法：./scripts/verify-all-gatekeepers.sh [--fast]
+# 用法：./scripts/verify-all-gatekeepers.sh [--fast] [--force]
 #
 
 set -euo pipefail
@@ -12,6 +12,32 @@ export PYTHONIOENCODING=utf-8
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO_ROOT"
+
+FORCE=0
+for arg in "$@"; do
+    case "$arg" in
+        --force) FORCE=1 ;;
+    esac
+done
+
+calc_fingerprint() {
+    local head_sha dirty_state
+    head_sha="$(git rev-parse HEAD 2>/dev/null || echo "no-head")"
+    dirty_state="$(git status --porcelain 2>/dev/null || echo "no-status")"
+    printf "%s\n%s" "$head_sha" "$dirty_state" | shasum -a 256 | awk '{print $1}'
+}
+
+CACHE_FILE="${REPO_ROOT}/.git/gatekeepers.passed"
+if [ "$FORCE" -eq 0 ] && [ -f "$CACHE_FILE" ]; then
+    CACHED_FP="$(cat "$CACHE_FILE" 2>/dev/null || true)"
+    CURRENT_FP="$(calc_fingerprint)"
+    if [ -n "$CACHED_FP" ] && [ "$CACHED_FP" = "$CURRENT_FP" ]; then
+        echo "════════════════════════════════════════════════════════════════════════"
+        echo "  ℹ️  四大守門機制先前已全數通過驗證（程式碼狀態未變更），略過重複執行。"
+        echo "════════════════════════════════════════════════════════════════════════"
+        exit 0
+    fi
+fi
 
 # exFAT 磁碟環境下先清理 macOS 衍生的 ._* 與 .DS_Store
 "${REPO_ROOT}/scripts/clean-appledouble.sh" --git-only >/dev/null 2>&1 || true
@@ -62,6 +88,8 @@ run_check "全平台版本號一致性" "${REPO_ROOT}/scripts/check-version-cons
 echo ""
 echo "════════════════════════════════════════════════════════════════════════"
 if [ "$FAILURES" -eq 0 ]; then
+    mkdir -p "${REPO_ROOT}/.git"
+    calc_fingerprint > "$CACHE_FILE" 2>/dev/null || true
     echo "  🎉 四大守門機制全數通過！符合「穩定」、「即時」、「正確」標準。"
     echo "════════════════════════════════════════════════════════════════════════"
     exit 0

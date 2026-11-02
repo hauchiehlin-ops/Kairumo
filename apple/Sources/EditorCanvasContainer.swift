@@ -1399,6 +1399,7 @@ extension NotebookEditorView {
                             },
                             onMove: { delta in moveTable(item.id, by: delta) },
                             onEdit: { editingTable = item },
+                            onProperties: { tablePropertiesTarget = item },
                             onDelete: {
                                 let id = item.id
                                 notebook.tableAttachments?.removeAll { $0.id == id }

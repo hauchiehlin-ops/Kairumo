@@ -111,6 +111,34 @@ public struct NoteTableAttachment: Identifiable, Codable, Hashable {
     /// 手動列高（點）。語意同上。
     public var rowHeightOverrides: [Double]?
     public var borderMode: TableBorderMode?
+    /// 表格整體對齊 ("left", "center", "right")
+    public var alignmentRaw: String?
+    /// 從左邊縮排 (點)
+    public var indentLeft: CGFloat?
+    /// 文繞圖 ("none", "around")
+    public var textWrappingRaw: String?
+    /// 帶狀列（斑馬紋）
+    public var bandedRows: Bool?
+    /// 帶狀欄
+    public var bandedCols: Bool?
+    /// 首欄強調
+    public var firstCol: Bool?
+    /// 末欄強調
+    public var lastCol: Bool?
+    /// 合計列強調
+    public var totalRow: Bool?
+    /// 替代文字標題
+    public var altTitle: String?
+    /// 替代文字描述
+    public var altDescription: String?
+    /// 框線粗細 (pt)
+    public var borderWidth: CGFloat?
+    /// 框線樣式 ("solid", "dashed", "double")
+    public var borderStyleRaw: String?
+
+    public static func defaultRowHeight(fontSize: CGFloat) -> CGFloat {
+        max(24, (fontSize * 1.35).rounded() + 12)
+    }
 
     public init(
         id: String = UUID().uuidString.lowercased(),

@@ -26726,5 +26726,397 @@
     "th": "รีเซ็ต",
     "zhHans": "还原",
     "zhHant": "還原"
+  },
+  "table_properties": {
+    "en": "Table Properties",
+    "ja": "Table Properties",
+    "ko": "Table Properties",
+    "th": "Table Properties",
+    "zhHans": "表格內容",
+    "zhHant": "表格內容"
+  },
+  "table_tab_row": {
+    "en": "Row",
+    "ja": "Row",
+    "ko": "Row",
+    "th": "Row",
+    "zhHans": "列",
+    "zhHant": "列"
+  },
+  "table_tab_column": {
+    "en": "Column",
+    "ja": "Column",
+    "ko": "Column",
+    "th": "Column",
+    "zhHans": "欄",
+    "zhHant": "欄"
+  },
+  "table_tab_cell": {
+    "en": "Cell",
+    "ja": "Cell",
+    "ko": "Cell",
+    "th": "Cell",
+    "zhHans": "儲存格",
+    "zhHant": "儲存格"
+  },
+  "table_tab_alt_text": {
+    "en": "Alt Text",
+    "ja": "Alt Text",
+    "ko": "Alt Text",
+    "th": "Alt Text",
+    "zhHans": "替代文字",
+    "zhHant": "替代文字"
+  },
+  "table_preferred_width": {
+    "en": "Preferred Width",
+    "ja": "Preferred Width",
+    "ko": "Preferred Width",
+    "th": "Preferred Width",
+    "zhHans": "慣用寬度",
+    "zhHant": "慣用寬度"
+  },
+  "table_measure_unit": {
+    "en": "Measure In",
+    "ja": "Measure In",
+    "ko": "Measure In",
+    "th": "Measure In",
+    "zhHans": "度量單位",
+    "zhHant": "度量單位"
+  },
+  "table_unit_cm": {
+    "en": "cm",
+    "ja": "cm",
+    "ko": "cm",
+    "th": "cm",
+    "zhHans": "公分",
+    "zhHant": "公分"
+  },
+  "table_unit_pt": {
+    "en": "pt",
+    "ja": "pt",
+    "ko": "pt",
+    "th": "pt",
+    "zhHans": "點",
+    "zhHant": "點"
+  },
+  "table_indent_left": {
+    "en": "Indent from left",
+    "ja": "Indent from left",
+    "ko": "Indent from left",
+    "th": "Indent from left",
+    "zhHans": "從左邊縮排",
+    "zhHant": "從左邊縮排"
+  },
+  "table_text_wrapping": {
+    "en": "Text Wrapping",
+    "ja": "Text Wrapping",
+    "ko": "Text Wrapping",
+    "th": "Text Wrapping",
+    "zhHans": "文繞圖",
+    "zhHant": "文繞圖"
+  },
+  "table_wrap_none": {
+    "en": "None",
+    "ja": "None",
+    "ko": "None",
+    "th": "None",
+    "zhHans": "無",
+    "zhHant": "無"
+  },
+  "table_wrap_around": {
+    "en": "Around",
+    "ja": "Around",
+    "ko": "Around",
+    "th": "Around",
+    "zhHans": "文繞圖",
+    "zhHant": "文繞圖"
+  },
+  "table_borders_and_shading": {
+    "en": "Borders and Shading...",
+    "ja": "Borders and Shading...",
+    "ko": "Borders and Shading...",
+    "th": "Borders and Shading...",
+    "zhHans": "框線及網底...",
+    "zhHant": "框線及網底..."
+  },
+  "table_options": {
+    "en": "Options...",
+    "ja": "Options...",
+    "ko": "Options...",
+    "th": "Options...",
+    "zhHans": "選項...",
+    "zhHant": "選項..."
+  },
+  "table_design": {
+    "en": "Table Design",
+    "ja": "Table Design",
+    "ko": "Table Design",
+    "th": "Table Design",
+    "zhHans": "表格設計",
+    "zhHant": "表格設計"
+  },
+  "table_layout": {
+    "en": "Table Layout",
+    "ja": "Table Layout",
+    "ko": "Table Layout",
+    "th": "Table Layout",
+    "zhHans": "表格版面配置",
+    "zhHant": "表格版面配置"
+  },
+  "table_styles_gallery": {
+    "en": "Table Styles",
+    "ja": "Table Styles",
+    "ko": "Table Styles",
+    "th": "Table Styles",
+    "zhHans": "表格樣式",
+    "zhHant": "表格樣式"
+  },
+  "table_banded_rows": {
+    "en": "Banded Rows",
+    "ja": "Banded Rows",
+    "ko": "Banded Rows",
+    "th": "Banded Rows",
+    "zhHans": "帶狀列",
+    "zhHant": "帶狀列"
+  },
+  "table_banded_cols": {
+    "en": "Banded Columns",
+    "ja": "Banded Columns",
+    "ko": "Banded Columns",
+    "th": "Banded Columns",
+    "zhHans": "帶狀欄",
+    "zhHant": "帶狀欄"
+  },
+  "table_first_col": {
+    "en": "First Column",
+    "ja": "First Column",
+    "ko": "First Column",
+    "th": "First Column",
+    "zhHans": "首欄",
+    "zhHant": "首欄"
+  },
+  "table_last_col": {
+    "en": "Last Column",
+    "ja": "Last Column",
+    "ko": "Last Column",
+    "th": "Last Column",
+    "zhHans": "末欄",
+    "zhHant": "末欄"
+  },
+  "table_total_row": {
+    "en": "Total Row",
+    "ja": "Total Row",
+    "ko": "Total Row",
+    "th": "Total Row",
+    "zhHans": "合計列",
+    "zhHant": "合計列"
+  },
+  "table_shading": {
+    "en": "Shading",
+    "ja": "Shading",
+    "ko": "Shading",
+    "th": "Shading",
+    "zhHans": "網底",
+    "zhHant": "網底"
+  },
+  "table_border_style": {
+    "en": "Border Style",
+    "ja": "Border Style",
+    "ko": "Border Style",
+    "th": "Border Style",
+    "zhHans": "框線樣式",
+    "zhHant": "框線樣式"
+  },
+  "table_border_width": {
+    "en": "Border Weight",
+    "ja": "Border Weight",
+    "ko": "Border Weight",
+    "th": "Border Weight",
+    "zhHans": "框線粗細",
+    "zhHant": "框線粗細"
+  },
+  "table_border_color": {
+    "en": "Border Color",
+    "ja": "Border Color",
+    "ko": "Border Color",
+    "th": "Border Color",
+    "zhHans": "畫筆色彩",
+    "zhHant": "畫筆色彩"
+  },
+  "table_align_9_top_left": {
+    "en": "Top Left",
+    "ja": "Top Left",
+    "ko": "Top Left",
+    "th": "Top Left",
+    "zhHans": "靠上靠左",
+    "zhHant": "靠上靠左"
+  },
+  "table_align_9_top_center": {
+    "en": "Top Center",
+    "ja": "Top Center",
+    "ko": "Top Center",
+    "th": "Top Center",
+    "zhHans": "靠上置中",
+    "zhHant": "靠上置中"
+  },
+  "table_align_9_top_right": {
+    "en": "Top Right",
+    "ja": "Top Right",
+    "ko": "Top Right",
+    "th": "Top Right",
+    "zhHans": "靠上靠右",
+    "zhHant": "靠上靠右"
+  },
+  "table_align_9_middle_left": {
+    "en": "Middle Left",
+    "ja": "Middle Left",
+    "ko": "Middle Left",
+    "th": "Middle Left",
+    "zhHans": "置中靠左",
+    "zhHant": "置中靠左"
+  },
+  "table_align_9_middle_center": {
+    "en": "Center",
+    "ja": "Center",
+    "ko": "Center",
+    "th": "Center",
+    "zhHans": "正中",
+    "zhHant": "正中"
+  },
+  "table_align_9_middle_right": {
+    "en": "Middle Right",
+    "ja": "Middle Right",
+    "ko": "Middle Right",
+    "th": "Middle Right",
+    "zhHans": "置中靠右",
+    "zhHant": "置中靠右"
+  },
+  "table_align_9_bottom_left": {
+    "en": "Bottom Left",
+    "ja": "Bottom Left",
+    "ko": "Bottom Left",
+    "th": "Bottom Left",
+    "zhHans": "靠下靠左",
+    "zhHant": "靠下靠左"
+  },
+  "table_align_9_bottom_center": {
+    "en": "Bottom Center",
+    "ja": "Bottom Center",
+    "ko": "Bottom Center",
+    "th": "Bottom Center",
+    "zhHans": "靠下置中",
+    "zhHant": "靠下置中"
+  },
+  "table_align_9_bottom_right": {
+    "en": "Bottom Right",
+    "ja": "Bottom Right",
+    "ko": "Bottom Right",
+    "th": "Bottom Right",
+    "zhHans": "靠下靠右",
+    "zhHant": "靠下靠右"
+  },
+  "table_cell_margins": {
+    "en": "Cell Margins",
+    "ja": "Cell Margins",
+    "ko": "Cell Margins",
+    "th": "Cell Margins",
+    "zhHans": "儲存格邊界",
+    "zhHant": "儲存格邊界"
+  },
+  "table_row_height_mode": {
+    "en": "Row Height Mode",
+    "ja": "Row Height Mode",
+    "ko": "Row Height Mode",
+    "th": "Row Height Mode",
+    "zhHans": "列高模式",
+    "zhHant": "列高模式"
+  },
+  "table_row_height_at_least": {
+    "en": "At Least",
+    "ja": "At Least",
+    "ko": "At Least",
+    "th": "At Least",
+    "zhHans": "至少",
+    "zhHant": "至少"
+  },
+  "table_row_height_exactly": {
+    "en": "Exactly",
+    "ja": "Exactly",
+    "ko": "Exactly",
+    "th": "Exactly",
+    "zhHans": "設定",
+    "zhHant": "設定"
+  },
+  "table_row_height_auto": {
+    "en": "Auto",
+    "ja": "Auto",
+    "ko": "Auto",
+    "th": "Auto",
+    "zhHans": "自動",
+    "zhHant": "自動"
+  },
+  "table_title_text": {
+    "en": "Title",
+    "ja": "Title",
+    "ko": "Title",
+    "th": "Title",
+    "zhHans": "標題",
+    "zhHant": "標題"
+  },
+  "table_description_text": {
+    "en": "Description",
+    "ja": "Description",
+    "ko": "Description",
+    "th": "Description",
+    "zhHans": "描述",
+    "zhHant": "描述"
+  },
+  "table_position_btn": {
+    "en": "Position...",
+    "ja": "Position...",
+    "ko": "Position...",
+    "th": "Position...",
+    "zhHans": "位置...",
+    "zhHant": "位置..."
+  },
+  "table_style_simple": {
+    "en": "Simple",
+    "ja": "Simple",
+    "ko": "Simple",
+    "th": "Simple",
+    "zhHans": "簡約",
+    "zhHant": "簡約"
+  },
+  "table_style_business_blue": {
+    "en": "Business Blue",
+    "ja": "Business Blue",
+    "ko": "Business Blue",
+    "th": "Business Blue",
+    "zhHans": "商務藍",
+    "zhHant": "商務藍"
+  },
+  "table_style_slate_gray": {
+    "en": "Slate Gray",
+    "ja": "Slate Gray",
+    "ko": "Slate Gray",
+    "th": "Slate Gray",
+    "zhHans": "沉穩灰",
+    "zhHant": "沉穩灰"
+  },
+  "table_style_fresh_green": {
+    "en": "Fresh Green",
+    "ja": "Fresh Green",
+    "ko": "Fresh Green",
+    "th": "Fresh Green",
+    "zhHans": "清新綠",
+    "zhHant": "清新綠"
+  },
+  "table_style_warm_orange": {
+    "en": "Warm Orange",
+    "ja": "Warm Orange",
+    "ko": "Warm Orange",
+    "th": "Warm Orange",
+    "zhHans": "暖陽橘",
+    "zhHant": "暖陽橘"
   }
 }

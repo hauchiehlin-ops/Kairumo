@@ -1082,35 +1082,90 @@ extension NotebookEditorView {
             // 原始碼裡有沒有那個字串），而使用者在 iPad 上**根本點不到**
             // 這些功能，Android 卻有。
             //
-            WordToolbarView(
-                activeText: Binding(
-                    get: { toolbarDisplayedText() },
-                    set: { updated in applyToolbarTextChange(updated) }
-                ),
-                hasTarget: activeTextAttachment != nil,
-                selection: textSelectionTracker,
-                currentHighlightHex: { toolbarHighlightHex() },
-                onHighlight: { applyToolbarHighlight($0) },
-                onClearFormatting: { clearToolbarFormatting() },
-                canUndo: historyUndoManager.canUndo,
-                canRedo: historyUndoManager.canRedo,
-                onUndo: { performUndo() },
-                onRedo: { performRedo() },
-                onInsertTable: { rows, cols in
-                    let targetX = max(PageGeometry.printableInset, (PageGeometry.width - 440) / 2)
-                    let baseOffsetY = max(PageGeometry.printableInset, canvasContentOffset.y + 120)
-                    let existingCount = notebook.tableAttachments?.filter { $0.pageIndex == currentPageIndex }.count ?? 0
-                    let targetY = min(PageGeometry.height - 200, baseOffsetY + CGFloat(existingCount * 40))
-                    let table = NoteTableAttachment(pageIndex: currentPageIndex, x: targetX, y: targetY, rows: rows, cols: cols)
-                    if notebook.tableAttachments == nil { notebook.tableAttachments = [] }
-                    notebook.tableAttachments?.append(table)
-                    activeSelectedObjectId = table.id
-                    selectedObjectIds = [table.id]
-                    commitNotebook()
-                    PageThumbnailRenderer.invalidateAll()
-                    showCanvasNotice(String(format: localizationManager.localized("table_rows_cols"), "\(rows)", "\(cols)"))
-                },
-                onInsertImage: { showPhotoPicker = true },
+            if let tIdx = notebook.tableAttachments?.firstIndex(where: { $0.id == activeSelectedObjectId }) {
+                TableRibbonToolbar(
+                    table: Binding(
+                        get: { notebook.tableAttachments?[tIdx] ?? NoteTableAttachment() },
+                        set: { updated in
+                            if let idx = notebook.tableAttachments?.firstIndex(where: { $0.id == updated.id }) {
+                                notebook.tableAttachments?[idx] = updated
+                                commitNotebook()
+                                PageThumbnailRenderer.invalidateAll()
+                            }
+                        }
+                    ),
+                    showProperties: Binding(
+                        get: { tablePropertiesTarget != nil },
+                        set: { if $0 { tablePropertiesTarget = notebook.tableAttachments?[tIdx] } else { tablePropertiesTarget = nil } }
+                    ),
+                    onDelete: {
+                        if let id = activeSelectedObjectId {
+                            notebook.tableAttachments?.removeAll { $0.id == id }
+                            activeSelectedObjectId = nil
+                            selectedObjectIds = []
+                            commitNotebook()
+                            PageThumbnailRenderer.invalidateAll()
+                        }
+                    },
+                    onCommit: {
+                        commitNotebook()
+                        PageThumbnailRenderer.invalidateAll()
+                    }
+                )
+                .padding(.horizontal, 16)
+            } else {
+                WordToolbarView(
+                    activeText: Binding(
+                        get: { toolbarDisplayedText() },
+                        set: { updated in applyToolbarTextChange(updated) }
+                    ),
+                    hasTarget: activeTextAttachment != nil,
+                    selection: textSelectionTracker,
+                    currentHighlightHex: { toolbarHighlightHex() },
+                    onHighlight: { applyToolbarHighlight($0) },
+                    onClearFormatting: { clearToolbarFormatting() },
+                    canUndo: historyUndoManager.canUndo,
+                    canRedo: historyUndoManager.canRedo,
+                    onUndo: { performUndo() },
+                    onRedo: { performRedo() },
+                    onInsertTable: { rows, cols in
+                        let targetX = max(PageGeometry.printableInset, (PageGeometry.width - 440) / 2)
+                        let baseOffsetY = max(PageGeometry.printableInset, canvasContentOffset.y + 120)
+                        let existingCount = notebook.tableAttachments?.filter { $0.pageIndex == currentPageIndex }.count ?? 0
+                        var targetY = min(PageGeometry.height - 200, baseOffsetY + CGFloat(existingCount * 40))
+
+                        let rules = pageHorizontalRules(page: currentPageIndex)
+                        let step = RuledWriting.step(of: rules)
+
+                        var table = NoteTableAttachment(pageIndex: currentPageIndex, x: targetX, y: targetY, rows: rows, cols: cols)
+
+                        if let s = step, !rules.isEmpty {
+                            // 1. 表格頂端吸附在最近的隔線上
+                            if let nearestRule = rules.min(by: { abs($0 - targetY) < abs($1 - targetY) }) {
+                                targetY = nearestRule
+                            }
+                            table.y = targetY
+
+                            // 2. 自動調整儲存格大小以適配隔線上下空間：列高為 step 整數倍
+                            let naturalH = NoteTableAttachment.defaultRowHeight(fontSize: table.fontSize)
+                            let fittedHeight = max(1, (naturalH / s).rounded(.up)) * s
+                            table.rowHeightOverrides = Array(repeating: Double(fittedHeight), count: rows)
+
+                            // 3. 儲存格游標與文字預設在隔線上方（靠底對齊）
+                            table.updateStyle(rows: 0...(rows - 1), cols: 0...(cols - 1)) {
+                                $0.vAlign = .bottom
+                            }
+                        }
+
+                        if notebook.tableAttachments == nil { notebook.tableAttachments = [] }
+                        notebook.tableAttachments?.append(table)
+                        activeSelectedObjectId = table.id
+                        selectedObjectIds = [table.id]
+                        commitNotebook()
+                        PageThumbnailRenderer.invalidateAll()
+                        showCanvasNotice(String(format: localizationManager.localized("table_rows_cols"), "\(rows)", "\(cols)"))
+                    },
+                    onInsertImage: { showPhotoPicker = true },
                 onInsertImageFile: { triggerFileImport(.image) },
                 onPasteClipboardImage: { pasteScreenshotOrClipboardImage() },
                 onInsertDrawingBlock: {
@@ -1140,6 +1195,7 @@ extension NotebookEditorView {
             .padding(.horizontal, 16)
             .padding(.vertical, 8)
             .background(Color(uiColor: .tertiarySystemGroupedBackground))
+            }
 
             if isMarqueeActive {
                 Divider()
