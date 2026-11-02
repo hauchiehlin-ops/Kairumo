@@ -805,27 +805,7 @@ enum ProInkRenderer {
     }
 
     // MARK: - 紋理快取（由 padnote-core FFI 提供）
-    private static let grainSize: Int = 128
     private static let sRGBSpace: CGColorSpace = CGColorSpace(name: CGColorSpace.sRGB) ?? CGColorSpaceCreateDeviceRGB()
-    private static let softGradientLocations: [CGFloat] = [0.0, 0.45, 1.0]
-    private static let grainCGImage: CGImage? = {
-        let bytes = brushPaperGrainTexture(width: UInt32(grainSize), height: UInt32(grainSize), scale: 4.0)
-        guard bytes.count == grainSize * grainSize else { return nil }
-        guard let provider = CGDataProvider(data: bytes as CFData) else { return nil }
-        return CGImage(
-            width: grainSize,
-            height: grainSize,
-            bitsPerComponent: 8,
-            bitsPerPixel: 8,
-            bytesPerRow: grainSize,
-            space: CGColorSpaceCreateDeviceGray(),
-            bitmapInfo: CGBitmapInfo(rawValue: CGImageAlphaInfo.none.rawValue),
-            provider: provider,
-            decode: nil,
-            shouldInterpolate: true,
-            intent: .defaultIntent
-        )
-    }()
 
     /// 深色底上把近黑的墨水提亮（反相）。
     static func displayColor(_ rgba: [UInt8], dark: Bool) -> [UInt8] {
@@ -840,9 +820,6 @@ enum ProInkRenderer {
         guard rgba.count == 4 else { return }
         let base = (r: CGFloat(rgba[0]) / 255, g: CGFloat(rgba[1]) / 255, b: CGFloat(rgba[2]) / 255)
         let strokeAlpha = CGFloat(rgba[3]) / 255
-        let needsGrain = (toolName == "charcoal" || toolName == "crayon") && grainCGImage != nil
-        var lastGradientKey: UInt32 = .max
-        var lastGradient: CGGradient?
 
         // 麥克筆、螢光筆：整筆是同一層墨，自己重疊的地方不該變深 ——
         // 筆點一律不透明，畫進透明圖層，整層再以核心給的群組不透明度疊上去（乘法混色）。
@@ -885,10 +862,6 @@ enum ProInkRenderer {
                 ctx.translateBy(x: CGFloat(dab.x), y: CGFloat(dab.y))
                 ctx.rotate(by: angle)
 
-                if needsGrain, let grain = grainCGImage {
-                    ctx.clip(to: CGRect(x: -rx, y: -ry, width: rx * 2, height: ry * 2), mask: grain)
-                }
-
                 if dab.softness > 0.3 {
                     ctx.setFillColor(red: r, green: g, blue: b, alpha: alpha * 0.45)
                     ctx.fillEllipse(in: CGRect(x: -rx, y: -ry, width: rx * 2, height: ry * 2))
@@ -901,13 +874,7 @@ enum ProInkRenderer {
                 ctx.restoreGState()
             } else {
                 let rect = CGRect(x: CGFloat(dab.x) - rx, y: CGFloat(dab.y) - ry, width: rx * 2, height: ry * 2)
-                if needsGrain, let grain = grainCGImage {
-                    ctx.saveGState()
-                    ctx.clip(to: rect, mask: grain)
-                    ctx.setFillColor(red: r, green: g, blue: b, alpha: alpha)
-                    ctx.fillEllipse(in: rect)
-                    ctx.restoreGState()
-                } else if dab.softness > 0.3 {
+                if dab.softness > 0.3 {
                     ctx.setFillColor(red: r, green: g, blue: b, alpha: alpha * 0.45)
                     ctx.fillEllipse(in: rect)
                     ctx.setFillColor(red: r, green: g, blue: b, alpha: alpha * 0.55)
@@ -1078,14 +1045,6 @@ private final class LiveProStrokeOverlayView: UIView {
     var previewDabs: [FfiDab] = []
     var isStreaming = false
     var alignGuides: [[CGPoint]] = []
-    /// 超長連續筆畫增量烘焙快取：每累積 48 個已定案筆點即烘焙進點陣圖，避免單筆極長時每幀重複繪製數千個筆點。
-    private var settledImage: UIImage?
-    private var settledBakedCount: Int = 0
-
-    func resetSettledBaking() {
-        settledImage = nil
-        settledBakedCount = 0
-    }
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -1126,28 +1085,7 @@ private final class LiveProStrokeOverlayView: UIView {
                 dark: traitCollection.userInterfaceStyle == .dark
             )
             if isStreaming {
-                let isGroupTool = ProInk.kind(named: live.tool).map { brushGroupAlpha(tool: $0) < 1 } ?? false
-                if !isGroupTool, bounds.width > 0, bounds.height > 0, settledDabs.count - settledBakedCount >= 64 {
-                    let slice = Array(settledDabs[settledBakedCount..<settledDabs.count])
-                    let prevImg = settledImage
-                    let fullBounds = bounds
-                    let renderer = UIGraphicsImageRenderer(bounds: fullBounds)
-                    settledImage = renderer.image { rCtx in
-                        prevImg?.draw(in: fullBounds)
-                        ProInkRenderer.draw(.init(dabs: slice, bounds: .null), toolName: live.tool, color: rgba, in: rCtx.cgContext, clip: fullBounds)
-                    }
-                    settledBakedCount = settledDabs.count
-                }
-                if let settledImage, settledBakedCount > 0 {
-                    settledImage.draw(in: bounds)
-                    if settledBakedCount < settledDabs.count {
-                        let tail = Array(settledDabs[settledBakedCount..<settledDabs.count])
-                        ProInkRenderer.draw(.init(dabs: tail, bounds: .null), toolName: live.tool, color: rgba, in: ctx, clip: rect)
-                    }
-                } else {
-                    // 只畫碰到髒矩形的筆點（`draw` 內會先用邊界剔除），每一幀的成本跟著新寫的那一小段走。
-                    ProInkRenderer.draw(.init(dabs: settledDabs, bounds: .null), toolName: live.tool, color: rgba, in: ctx, clip: rect)
-                }
+                ProInkRenderer.draw(.init(dabs: settledDabs, bounds: .null), toolName: live.tool, color: rgba, in: ctx, clip: rect)
                 ProInkRenderer.draw(.init(dabs: previewDabs, bounds: .null), toolName: live.tool, color: rgba, in: ctx, clip: rect)
             } else if let liveCache {
                 ProInkRenderer.draw(liveCache, toolName: live.tool, color: rgba, in: ctx, clip: rect)
@@ -1214,6 +1152,7 @@ final class ProInkLayerView: UIView {
 
     /// 圖層顯示／鎖定改了：整層重畫（只是不畫某些筆畫，筆點快取不必清）。
     @objc private func draftingChanged() {
+        invalidateBackingStore()
         invalidateAlignAnchors()
         setNeedsDisplay()
         onDraftingChanged?()
@@ -1245,6 +1184,7 @@ final class ProInkLayerView: UIView {
     /// 從磁碟重讀（換頁、同步匯入、清除頁面之後）。
     func reload() {
         guard let directory else { return }
+        invalidateBackingStore()
         ProInkStore.invalidateModifiedCache(notebookId: notebookId)
         ownStrokes = ProInkStore.load(in: directory, notebookId: notebookId, page: pageIndex)
         foreignStrokes = ProInkStore.load(in: directory, notebookId: notebookId, page: pageIndex, foreign: true)
@@ -1396,7 +1336,111 @@ final class ProInkLayerView: UIView {
     override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
         super.traitCollectionDidChange(previousTraitCollection)
         if traitCollection.userInterfaceStyle != previousTraitCollection?.userInterfaceStyle {
+            invalidateBackingStore()
             setNeedsDisplay()
+        }
+    }
+
+    // MARK: - 增量烘焙底圖（Incremental Backing Store）
+    private var backingImage: UIImage?
+    private var backingContext: CGContext?
+    private var bakedStrokeCount: Int = 0
+    private var bakedStrokeIds: [String] = []
+    private var lastPageKey: String = ""
+    private var lastDarkMode: Bool = false
+    private var lastBackingBounds: CGSize = .zero
+
+    private func invalidateBackingStore() {
+        backingImage = nil
+        backingContext = nil
+        bakedStrokeCount = 0
+        bakedStrokeIds.removeAll()
+        lastPageKey = ""
+        lastBackingBounds = .zero
+    }
+
+    private func ensureBackingContext(size: CGSize, scale: CGFloat) -> CGContext? {
+        let pixelWidth = Int(ceil(size.width * scale))
+        let pixelHeight = Int(ceil(size.height * scale))
+        guard pixelWidth > 0, pixelHeight > 0 else { return nil }
+        if let existing = backingContext,
+           existing.width == pixelWidth,
+           existing.height == pixelHeight {
+            return existing
+        }
+        let cs = CGColorSpaceCreateDeviceRGB()
+        guard let ctx = CGContext(
+            data: nil,
+            width: pixelWidth,
+            height: pixelHeight,
+            bitsPerComponent: 8,
+            bytesPerRow: pixelWidth * 4,
+            space: cs,
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        ) else { return nil }
+        // 設定標準 UIKit 頂端對齊座標系（Y 軸向下，點為單位）
+        ctx.translateBy(x: 0, y: CGFloat(pixelHeight))
+        ctx.scaleBy(x: scale, y: -scale)
+        backingContext = ctx
+        bakedStrokeCount = 0
+        bakedStrokeIds.removeAll()
+        backingImage = nil
+        return ctx
+    }
+
+    private func updateBackingStore(with ordered: [ProStroke], fullBounds: CGRect) {
+        guard fullBounds.width > 0, fullBounds.height > 0 else { return }
+        let scale = window?.screen.scale ?? UIScreen.main.scale
+        guard let bCtx = ensureBackingContext(size: fullBounds.size, scale: scale) else { return }
+
+        let isDark = traitCollection.userInterfaceStyle == .dark
+        let pageKey = "\(notebookId)_\(pageIndex)"
+        var needsFullRebuild = false
+
+        if pageKey != lastPageKey || isDark != lastDarkMode || fullBounds.size != lastBackingBounds || bakedStrokeCount > ordered.count || (bakedStrokeCount > 0 && ordered.isEmpty) {
+            needsFullRebuild = true
+        } else {
+            // 檢查已烘焙筆劃是否與當前筆劃序列完全吻合（防止中間筆畫被擦除、搬動或圖層屬性變更）
+            for i in 0..<bakedStrokeIds.count {
+                if bakedStrokeIds[i] != ordered[i].id {
+                    needsFullRebuild = true
+                    break
+                }
+            }
+        }
+
+        if needsFullRebuild {
+            bCtx.saveGState()
+            bCtx.clear(CGRect(origin: .zero, size: fullBounds.size))
+            bCtx.restoreGState()
+            bakedStrokeCount = 0
+            bakedStrokeIds.removeAll()
+            lastPageKey = pageKey
+            lastDarkMode = isDark
+            lastBackingBounds = fullBounds.size
+        }
+
+        // 增量烘焙：只繪製新加入的筆劃（O(1) 增量成本，絕不隨筆劃數增多而累積延遲）
+        while bakedStrokeCount < ordered.count {
+            let stroke = ordered[bakedStrokeCount]
+            if let cached = cachedDabs(for: stroke) {
+                bCtx.saveGState()
+                if stroke.blendMode == "multiply" {
+                    bCtx.setBlendMode(.multiply)
+                } else if stroke.blendMode == "screen" {
+                    bCtx.setBlendMode(.screen)
+                } else {
+                    bCtx.setBlendMode(.normal)
+                }
+                ProInkRenderer.draw(cached, toolName: stroke.tool, color: displayColor(stroke.colorRGBA), in: bCtx, clip: fullBounds)
+                bCtx.restoreGState()
+            }
+            bakedStrokeIds.append(stroke.id)
+            bakedStrokeCount += 1
+        }
+
+        if let cgImg = bCtx.makeImage() {
+            backingImage = UIImage(cgImage: cgImg, scale: scale, orientation: .up)
         }
     }
 
@@ -1404,19 +1448,10 @@ final class ProInkLayerView: UIView {
         guard let ctx = UIGraphicsGetCurrentContext() else { return }
         let drafting = DraftingState.shared
         let ordered = drafting.drawOrder(allStrokes, notebookId: notebookId)
-        for stroke in ordered where stroke.bounds.intersects(rect) {
-            guard let cached = cachedDabs(for: stroke) else { continue }
-            ctx.saveGState()
-            if stroke.blendMode == "multiply" {
-                ctx.setBlendMode(.multiply)
-            } else if stroke.blendMode == "screen" {
-                ctx.setBlendMode(.screen)
-            } else {
-                ctx.setBlendMode(.normal)
-            }
-            ProInkRenderer.draw(cached, toolName: stroke.tool, color: displayColor(stroke.colorRGBA), in: ctx, clip: rect)
-            ctx.restoreGState()
-        }
+
+        updateBackingStore(with: ordered, fullBounds: bounds)
+        backingImage?.draw(in: bounds)
+
         for stroke in overlayStrokes where stroke.bounds.intersects(rect) {
             guard let cached = ProInkRenderer.cache(for: stroke) else { continue }
             ProInkRenderer.draw(cached, toolName: stroke.tool, color: displayColor(stroke.colorRGBA), in: ctx, clip: rect)
@@ -1808,7 +1843,6 @@ final class ProInkLayerView: UIView {
         liveBrush = nil
         liveOverlayView.settledDabs.removeAll(keepingCapacity: true)
         liveOverlayView.previewDabs.removeAll()
-        liveOverlayView.resetSettledBaking()
     }
 
     private static func strokePoint(_ p: ProPoint) -> StrokePoint {

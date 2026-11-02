@@ -123,7 +123,10 @@ impl PenEmitter {
         match self.tool {
             Tool::FountainPen => {
                 let thin = 1.0 - PenTuning::FOUNTAIN_SPEED_THIN * (s.speed - 1.0).clamp(-1.0, 6.0);
-                let mut r = base * curve(s.pressure) * thin.clamp(0.55, 1.1);
+                let p = curve(s.pressure);
+                // 鋼筆金屬筆尖彈性割角：縱向運筆下壓厚實，橫向運筆收細（橫細豎粗）
+                let angle_mod = 0.74 + 0.48 * s.heading.sin().abs();
+                let mut r = base * p * thin.clamp(0.55, 1.1) * angle_mod;
                 if s.progress > 1.0 - PenTuning::FOUNTAIN_TAPER {
                     let rem = ((1.0 - s.progress) / PenTuning::FOUNTAIN_TAPER).clamp(0.0, 1.0);
                     r *= 0.35 + 0.65 * smooth(rem);
@@ -133,42 +136,68 @@ impl PenEmitter {
                         + r * (1.0 - PenTuning::FOUNTAIN_SMOOTHING);
                 }
                 self.last_r = Some(r);
-                out.push(round(s.x, s.y, r.max(0.2), 1.0, 0.0));
+                // 鋼筆墨韻蓄墨（Ink Shading）：慢速或筆劃末梢墨水微沉暈染
+                let shade = if s.speed < 0.6 || s.progress > 0.93 { -0.14 } else { -0.04 * s.pressure };
+                out.push(Dab {
+                    x: s.x,
+                    y: s.y,
+                    rx: r.max(0.25),
+                    ry: (r * 0.92).max(0.22),
+                    angle: s.heading,
+                    alpha: 1.0,
+                    softness: 0.0,
+                    shade,
+                });
             }
             Tool::BallPoint => {
+                let p = s.pressure.clamp(0.0, 1.0);
                 let k = 1.0 - PenTuning::BALLPOINT_PRESSURE_AMOUNT
-                    + PenTuning::BALLPOINT_PRESSURE_AMOUNT * s.pressure.clamp(0.0, 1.0);
-                // 輕壓時墨出得少：邊緣略淡，但筆畫不斷。
-                let alpha = 0.82 + 0.18 * s.pressure.clamp(0.0, 1.0);
-                out.push(round(s.x, s.y, (base * 0.8 * k).max(0.2), alpha, 0.0));
+                    + PenTuning::BALLPOINT_PRESSURE_AMOUNT * p;
+                let r = (base * 0.75 * k).max(0.2);
+                // 鎢鋼滾珠油性墨膏：輕壓帶半透明油光灰潤（0.62），重壓飽和深邃（0.98）
+                let alpha = 0.62 + 0.36 * p.powf(0.85);
+                out.push(round(s.x, s.y, r, alpha, 0.0));
             }
             Tool::Pencil => {
                 let p = s.pressure.clamp(0.0, 1.0);
-                // 側著畫（傾角大）石墨鋪得寬。
-                let reach = base * (1.0 + 1.4 * s.tilt.sin().clamp(0.0, 1.0)) * (0.6 + 0.4 * p);
+                let tilt_factor = 1.0 + 1.5 * s.tilt.sin().clamp(0.0, 1.0);
+                // 1. 實心連續石墨筆脊（Solid Graphite Spine）：保證筆跡連貫實體、結構清晰
+                let core_r = (base * 0.40 * (0.68 + 0.32 * p) * tilt_factor).max(0.26);
+                let core_alpha = ((0.75 + 0.23 * p) / (0.85 + 0.15 * tilt_factor)).clamp(0.35, 0.98);
+                out.push(Dab {
+                    x: s.x,
+                    y: s.y,
+                    rx: core_r,
+                    ry: core_r * if s.tilt > 0.35 { 0.75 } else { 1.0 },
+                    angle: s.azimuth,
+                    alpha: core_alpha,
+                    softness: if s.tilt > 0.35 { 0.22 } else { 0.04 },
+                    shade: 0.20, // 石墨特有的深鉛灰色微反光色階
+                });
+                // 2. 邊緣微觀石墨顆粒（Graphite Tooth）：在筆脊兩側紙紋凸起處留下自然摩擦碎屑
+                let reach = core_r * 1.45;
                 let tooth = PenTuning::PENCIL_TOOTH_MIN
                     + (PenTuning::PENCIL_TOOTH_MAX - PenTuning::PENCIL_TOOTH_MIN) * p;
-                let count = ((reach * 2.0).ceil() as usize).clamp(1, 14);
-                let grain_scale = (base / 1.8).clamp(0.45, 1.45);
+                let count = ((reach * 2.0).ceil() as usize).clamp(2, 6);
                 for _ in 0..count {
                     let ang = self.rng.unit() * std::f32::consts::TAU;
-                    let rr = reach * self.rng.unit().sqrt();
+                    let rr = core_r * 0.75 + (reach - core_r * 0.75) * self.rng.unit().sqrt();
                     let (px, py) = (s.x + ang.cos() * rr, s.y + ang.sin() * rr);
                     let g = paper_grain(px, py);
                     if g > tooth {
                         continue;
                     }
                     let depth = 1.0 - g / tooth;
-                    let size = (0.32 + 0.28 * self.rng.unit()) * grain_scale;
+                    let size = (0.32 + 0.28 * self.rng.unit()) * (base / 2.0).clamp(0.4, 1.2);
                     out.push(Dab {
                         x: px,
                         y: py,
                         rx: size,
                         ry: size,
                         angle: 0.0,
-                        alpha: (0.25 + 0.6 * depth) * (0.4 + 0.6 * p),
-                        softness: 0.05,
-                        shade: 0.0,
+                        alpha: (0.28 + 0.52 * depth) * (0.35 + 0.65 * p),
+                        softness: 0.08,
+                        shade: 0.16,
                     });
                 }
             }
@@ -196,13 +225,26 @@ impl PenEmitter {
                 let p = s.pressure.clamp(0.0, 1.0);
                 // 走得慢水分聚得多：暈得開、顏色深。
                 let wet = (1.3 - 0.25 * s.speed).clamp(0.6, 1.3);
+                let r = base * (0.92 + 0.52 * p) * wet;
+                // 1. 中心水潤擴散層
                 out.push(round(
                     s.x,
                     s.y,
-                    base * (0.9 + 0.5 * p) * wet,
-                    (0.10 + 0.16 * p) * wet,
-                    0.85,
+                    r,
+                    (0.08 + 0.14 * p) * wet,
+                    0.82,
                 ));
+                // 2. 咖啡環邊緣效應（Coffee-Ring Effect）：水分蒸發時外緣色素沉積深色水漬圈
+                out.push(Dab {
+                    x: s.x,
+                    y: s.y,
+                    rx: r * 0.96,
+                    ry: r * 0.96,
+                    angle: 0.0,
+                    alpha: (0.14 + 0.16 * p) * wet,
+                    softness: 0.35,
+                    shade: -0.12,
+                });
             }
             _ => {}
         }

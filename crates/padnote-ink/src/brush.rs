@@ -837,22 +837,28 @@ impl ChineseBrush {
 
 /// 炭筆：顆粒**沿著紙的紋理**積下來。
 ///
-/// - 紙纖維的凹谷才吃得到炭 —— 輕壓只有最深的谷有顆粒，重壓才連成一片；
-/// - 筆觸邊緣是毛的（越靠邊越稀）；
-/// - 側著拿（傾角大）是整支炭條的側面在畫，筆觸變得很寬；
-/// - 周圍飄一圈極淡的炭粉。
+/// 炭筆（Charcoal）：鬆脆乾燥的碳化柳木條或壓縮炭精
+/// - 接觸面寬幅粗獷，完全吸光的極致啞光碳黑（Velvety Carbon Black, shade: -0.32）；
+/// - 筆觸呈現粗糙纖維碎裂毛邊，重壓深邃密實，輕壓紙紋谷底吃色；
+/// - 外圍伴隨自然飄散的浮塵炭粉微粒；
+/// - 側著拿（傾角大）是整支炭條的側面在畫，筆觸變得很寬。
 fn charcoal(s: Sample, base: f32, spacing: f32, rng: &mut Rng, out: &mut Vec<Dab>) {
     let p = pressure_scale(s.pressure);
-    let reach = base * side_of_stick(s.tilt, 1.8) * (0.55 + 0.45 * p);
-    let count = ((2.0 * reach * spacing) * 0.95 * (0.5 + 0.8 * p))
+    let reach = base * side_of_stick(s.tilt, 1.8) * (0.68 + 0.45 * p);
+    let count = ((2.2 * reach * spacing) * 1.05 * (0.55 + 0.85 * p))
         .ceil()
-        .clamp(1.0, 60.0) as usize;
+        .clamp(2.0, 65.0) as usize;
     let tooth = 0.18 + 0.78 * p;
+    let contact_angle = if s.tilt > 0.25 {
+        s.azimuth
+    } else {
+        s.heading + std::f32::consts::FRAC_PI_2
+    };
     for _ in 0..count {
         let angle = rng.unit() * std::f32::consts::TAU;
         let rr = reach * rng.unit().sqrt();
         // 毛邊：越靠外越容易被丟掉。
-        if rng.unit() < (rr / reach).powf(2.6) * 0.92 {
+        if rng.unit() < (rr / reach).powf(2.4) * 0.88 {
             continue;
         }
         let (px, py) = (s.x + angle.cos() * rr, s.y + angle.sin() * rr);
@@ -861,29 +867,31 @@ fn charcoal(s: Sample, base: f32, spacing: f32, rng: &mut Rng, out: &mut Vec<Dab
             continue;
         }
         let depth = 1.0 - g / tooth; // 谷越深、顏料越多
-        let size = (0.55 + 0.55 * rng.unit()) * (0.85 + 0.15 * side_of_stick(s.tilt, 1.0));
+        let size = (0.75 + 0.65 * rng.unit()) * (0.85 + 0.20 * side_of_stick(s.tilt, 1.0));
         out.push(Dab {
             x: px,
             y: py,
-            rx: size,
-            ry: size * (0.6 + 0.4 * rng.unit()),
-            angle: rng.unit() * std::f32::consts::PI,
-            alpha: ((0.3 + 0.55 * depth) * (0.55 + 0.45 * p)).min(1.0),
-            softness: 0.1,
-            shade: -0.12 - 0.22 * depth,
+            rx: size * 1.25,
+            ry: size * (0.65 + 0.35 * rng.unit()),
+            angle: contact_angle + rng.signed() * 0.25,
+            alpha: ((0.42 + 0.58 * depth) * (0.55 + 0.45 * p)).min(1.0),
+            softness: 0.12,
+            shade: -0.30 - 0.20 * depth, // 啞光深邃碳黑（Velvety Carbon Black）
         });
     }
-    // 飄散的炭粉。
-    if rng.unit() < 0.22 {
+    // 飄散的微細炭粉浮塵
+    if rng.unit() < 0.35 {
+        let ang = rng.unit() * std::f32::consts::TAU;
+        let dist = reach * (0.85 + 0.65 * rng.unit());
         out.push(Dab {
-            x: s.x + rng.signed() * reach * 0.6,
-            y: s.y + rng.signed() * reach * 0.6,
-            rx: reach * 0.9,
-            ry: reach * 0.9,
+            x: s.x + ang.cos() * dist,
+            y: s.y + ang.sin() * dist,
+            rx: 0.48,
+            ry: 0.48,
             angle: 0.0,
-            alpha: 0.022 * p,
-            softness: 1.0,
-            shade: 0.0,
+            alpha: 0.24 * (0.5 + 0.5 * p),
+            softness: 0.85,
+            shade: -0.35,
         });
     }
 }
