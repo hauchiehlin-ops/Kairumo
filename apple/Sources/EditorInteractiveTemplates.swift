@@ -167,15 +167,22 @@ extension NotebookEditorView {
                 item.pageIndex == targetPage &&
                 CGRect(x: item.x, y: item.y, width: item.width, height: item.height).insetBy(dx: -12, dy: -12).contains(location)
             }) {
+                // 若內容為空的幽靈文字方塊，直接清理不攔截
+                if existing.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    notebook.textAttachments?.removeAll { $0.id == existing.id }
+                    commitNotebook()
+                    PageThumbnailRenderer.invalidateAll()
+                    return
+                }
                 // 單擊與 PencilKit 的繪圖手勢同時辨識（見 `Coordinator.gestureRecognizer`），
                 // 手指輕點會被畫成一個小點。這一下是「點文字方塊」，不是落筆 ——
                 // 把那個點拿掉，否則每次點方塊紙上都多一顆墨點。
                 removeTapDotStroke(near: location, page: targetPage)
                 withAnimation(.easeInOut(duration: 0.15)) {
-                    // 全自動意圖感知：手指點擊文字方塊，立即進入行內聚焦編輯並展開 Word 級文字工具列
-                    inlineEditingTextId = existing.id
-                    editingTextId = nil
+                    // 手寫模式下手指點擊文字方塊，僅選取該方塊，不自動彈出 Word 工具列打擾手寫
                     activeSelectedObjectId = existing.id
+                    inlineEditingTextId = nil
+                    editingTextId = nil
                 }
                 return
             }
@@ -229,8 +236,11 @@ extension NotebookEditorView {
         }
     }
 
-    /// 🌟 方案 A+B：手指或游標在畫布上的雙擊事件（手繪或打字模式下皆可直接建立並聚焦文字方塊）
+    /// 🌟 方案 A+B：手指或游標在畫布上的雙擊事件（僅在打字模式下允許直接建立並聚焦文字方塊）
     func handleCanvasDirectDoubleTap(at location: CGPoint, page: Int? = nil) {
+        // 守護：手繪模式（.draw）下雙擊空白處絕對不建立文字方塊也不切到打字模式！
+        // 手寫模式的核心職責是手繪書寫，杜絕任何雙擊誤觸中斷書寫流程
+        guard editorMode == .type else { return }
         endTextFormatSession()
         let targetPage = page ?? currentPageIndex
         switchToPage(targetPage)

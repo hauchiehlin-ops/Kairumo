@@ -740,9 +740,9 @@ internal fun ColumnScope.EditorCanvasContainer(ctx: EditorCanvasContext) = with(
                         }
                     }
                 )
-                // 手繪模式下手指雙擊空白處：建立文字方塊並切到打字模式（對齊 Apple）。
+                // 僅在打字模式下允許雙擊空白處隨點即書；手繪模式下停用，避免手寫或手掌誤觸切換模式（對齊 Apple）。
                 .doubleTapToWrite(
-                    enabled = editorMode == EditorMode.DRAW && !inkTool.isLasso && !inkTool.isMaskingTape && !inkTool.isTranslationPen &&
+                    enabled = editorMode == EditorMode.TYPE && !inkTool.isLasso && !inkTool.isMaskingTape && !inkTool.isTranslationPen &&
                         !isPlacingCommentPin && !isPlacingPasteObject,
                     density = canvasDensity,
                     engine = engine,

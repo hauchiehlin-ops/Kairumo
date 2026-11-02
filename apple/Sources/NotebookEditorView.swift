@@ -1642,6 +1642,7 @@ public struct NotebookEditorView: View {
         } else {
             // 切換回手繪模式時，自動收合打字與物件焦點（對齊 Android EditorStateManager 零回退守衛）
             inlineEditingTextId = nil
+            suspendedInlineTextId = nil
             activeInlineInkBlockId = nil
             editingTextId = nil
             activeSelectedObjectId = nil

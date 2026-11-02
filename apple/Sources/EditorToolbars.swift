@@ -1041,8 +1041,16 @@ extension NotebookEditorView {
                     Spacer()
                     Button {
                         withAnimation(.easeInOut(duration: 0.18)) {
+                            if let activeId = inlineEditingTextId,
+                               let item = notebook.textAttachments?.first(where: { $0.id == activeId }),
+                               item.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                                notebook.textAttachments?.removeAll { $0.id == activeId }
+                                commitNotebook()
+                                PageThumbnailRenderer.invalidateAll()
+                            }
                             inlineEditingTextId = nil
                             suspendedInlineTextId = nil
+                            activeSelectedObjectId = nil
                         }
                     } label: {
                         HStack(spacing: 4) {

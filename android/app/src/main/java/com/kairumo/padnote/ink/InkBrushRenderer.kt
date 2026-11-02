@@ -422,7 +422,8 @@ object InkBrushRenderer {
         if (segments.isEmpty()) return
 
         val isHighlighter = tool == ToolKind.HIGHLIGHTER
-        val blend = if (isHighlighter) BlendMode.Multiply else BlendMode.SrcOver
+        // 螢光筆具有 0.38 半透明度，在透明底圖上嚴禁使用 Multiply 混色（否則與透明背景 alpha=0 相乘會使筆跡整筆消失）
+        val blend = BlendMode.SrcOver
 
         if (isSinglePass(tool)) {
             val path = androidx.compose.ui.graphics.Path().apply {
@@ -510,9 +511,7 @@ object InkBrushRenderer {
         val origCap = paint.strokeCap
         val origXfer = paint.xfermode
 
-        if (tool == ToolKind.HIGHLIGHTER) {
-            paint.xfermode = PorterDuffXfermode(PorterDuff.Mode.MULTIPLY)
-        }
+        // 螢光筆具有 0.38 半透明度，在透明底圖上嚴禁使用 PorterDuff.Mode.MULTIPLY（否則與透明背景相乘導致 alpha=0 消失）
 
         if (isSinglePass(tool)) {
             val path = android.graphics.Path().apply {
