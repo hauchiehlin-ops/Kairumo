@@ -137,7 +137,11 @@ impl PenEmitter {
                 }
                 self.last_r = Some(r);
                 // 鋼筆墨韻蓄墨（Ink Shading）：慢速或筆劃末梢墨水微沉暈染
-                let shade = if s.speed < 0.6 || s.progress > 0.93 { -0.14 } else { -0.04 * s.pressure };
+                let shade = if s.speed < 0.6 || s.progress > 0.93 {
+                    -0.14
+                } else {
+                    -0.04 * s.pressure
+                };
                 out.push(Dab {
                     x: s.x,
                     y: s.y,
@@ -163,7 +167,8 @@ impl PenEmitter {
                 let tilt_factor = 1.0 + 1.5 * s.tilt.sin().clamp(0.0, 1.0);
                 // 1. 實心連續石墨筆脊（Solid Graphite Spine）：保證筆跡連貫實體、結構清晰
                 let core_r = (base * 0.40 * (0.68 + 0.32 * p) * tilt_factor).max(0.26);
-                let core_alpha = ((0.75 + 0.23 * p) / (0.85 + 0.15 * tilt_factor)).clamp(0.35, 0.98);
+                let core_alpha =
+                    ((0.75 + 0.23 * p) / (0.85 + 0.15 * tilt_factor)).clamp(0.35, 0.98);
                 out.push(Dab {
                     x: s.x,
                     y: s.y,
@@ -227,13 +232,7 @@ impl PenEmitter {
                 let wet = (1.3 - 0.25 * s.speed).clamp(0.6, 1.3);
                 let r = base * (0.92 + 0.52 * p) * wet;
                 // 1. 中心水潤擴散層
-                out.push(round(
-                    s.x,
-                    s.y,
-                    r,
-                    (0.08 + 0.14 * p) * wet,
-                    0.82,
-                ));
+                out.push(round(s.x, s.y, r, (0.08 + 0.14 * p) * wet, 0.82));
                 // 2. 咖啡環邊緣效應（Coffee-Ring Effect）：水分蒸發時外緣色素沉積深色水漬圈
                 out.push(Dab {
                     x: s.x,
