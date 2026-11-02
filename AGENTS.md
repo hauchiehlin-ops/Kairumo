@@ -1,4 +1,4 @@
-# Kairumo 專案核心開發原則與四大自動化守門機制（Gatekeepers）
+# Kairumo 專案核心開發原則與五大自動化守門機制（Gatekeepers）
 
 > **最高指導原則**：
 > 1. **「不要改了這個、壞了那個」**：任何功能的擴充、重構、修正或效能調優，嚴禁以破壞既有機制或引發附帶損害為代價。任何修改都必須全面審視對關聯系統的影響。
@@ -9,9 +9,9 @@
 
 ---
 
-## 四大自動化守門機制（Gatekeepers）—— 任何程式改動必須受其約束
+## 五大自動化守門機制（Gatekeepers）—— 任何程式改動必須受其約束
 
-在進行任何功能修改、問題修復或效能優化時，AI 助理與開發者必須將下列四大守門機制列為**最高優先原則**：
+在進行任何功能修改、問題修復或效能優化時，AI 助理與開發者必須將下列五大守門機制列為**最高優先原則**：
 
 ### 🚪 Layer 1：狀態正門管制（Entry Points Gatekeeper）
 - **約束工具**：`python3 scripts/check-state-entrypoints.py`
@@ -62,6 +62,13 @@
   - 所有使用者資料、快取、設定檔操作，必須嚴格收納於 active profile，嚴防跨設定檔污染。
   - 介面所有文字一律走 `L10n` / `localized()`，禁止硬編碼。
   - 變更提交前必須保證各平台產物（manual, privacy, templates, bindings）自動同步。
+
+### 🧩 Layer 5：畫布核心純度與次系統解耦（Canvas Isolation & Subsystem Decoupling）
+- **約束工具**：
+  - `python3 scripts/check-canvas-isolation.py`
+- **卡控邏輯**：
+  - **手寫渲染純度**：`ProInk.swift`、`CanvasRepresentable.swift`、`InkSurfaceView.kt` 嚴禁依賴或嵌入任何重型次系統視圖（如表格、圖表、算式、3D 面板）。
+  - **主畫布 View Hierarchy 瘦身**：`NotebookEditorView.swift` 嚴禁在主 View 階層直接內聯構建重型次系統對話框或 Studio 視圖，一律必須透過 `EditorSubsystemCoordinator` 或解耦 Coordinator 隨需調度，防範 SwiftUI 視圖樹型別爆炸（Type Explosion）與狀態 Diffing 侵蝕 120Hz 筆跡幀預算。
 
 ---
 

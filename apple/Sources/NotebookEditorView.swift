@@ -241,6 +241,8 @@ public struct NotebookEditorView: View {
     @State var connectionDraft: (page: Int, start: CGPoint, current: CGPoint)? = nil
     /// 正在重新編修的表格。
     @State var editingTable: NoteTableAttachment? = nil
+    /// 仿 Word「表格內容」對話框目標。
+    @State var tablePropertiesTarget: NoteTableAttachment? = nil
     @State var editingAttachmentId: String? = nil
     /// 正在重新編修的圖表。帶著規格一起，`sheet(item:)` 才有東西可以開。
     @State var editingChartAttachmentId: ChartEditTarget? = nil
@@ -590,82 +592,7 @@ public struct NotebookEditorView: View {
 
             // 6. 核心編輯工作區（包含左側筆記結構欄與右側畫布區）
             GeometryReader { geo in
-                let metrics = layoutMetrics(width: Float(geo.size.width))
-                if isTabletopMode {
-                    // 立起雙屏模式：上方顯示主要畫布／預覽區，下方為沉浸式觸控工具盤
-                    VStack(spacing: 0) {
-                        ZStack(alignment: .topLeading) {
-                            canvasWorkArea
-
-                            HStack(spacing: 6) {
-                                Image(systemName: "laptopcomputer.and.ipad")
-                                    .font(.system(size: 11, weight: .bold))
-                                Text(L("posture_tabletop_mode"))
-                                    .font(.system(size: 11, weight: .bold))
-                            }
-                            .foregroundColor(.accentColor)
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 5)
-                            .background(Color(uiColor: .systemBackground).opacity(0.85))
-                            .cornerRadius(12)
-                            .padding(8)
-                        }
-                        .frame(height: max(geo.size.height * 0.55, 180))
-
-                        Divider()
-
-                        tabletopControlDeck
-                            .frame(maxWidth: .infinity, maxHeight: .infinity)
-                            .background(Color(uiColor: .secondarySystemBackground))
-                    }
-                } else {
-                    HStack(spacing: 0) {
-                        if showStructureSidebar && metrics.sidebarIsInline {
-                            let width = resolvedSidebarWidth(total: geo.size.width)
-                            notebookStructureSidebar
-                                .frame(width: width)
-                                .transition(.move(edge: .leading).combined(with: .opacity))
-                            sidebarResizeHandle(total: geo.size.width, current: width)
-                        }
-
-                        // 手寫與打字**共用同一塊畫布**：紙張樣板、置中、可用區域框線、
-                        // 文字方塊與其他物件都在這裡。
-                        //
-                        // **打字模式不可以換成 `WordDocumentEditorView`。** 那條路換掉的
-                        // 是整塊工作區，結果：
-                        //   1. 樣板消失 —— 選了「橫線筆記」，切到文字卻是全白頁
-                        //   2. 頁面不置中（固定 760pt 寬、可橫向捲動），可用區域框線也沒了
-                        //   3. 畫布上的文字方塊物件層不在樹裡，切回手繪後那些方塊
-                        //      點不動、拖不動
-                        // 這三個問題在 22fbc58 修過一次（撤掉 Word 模式），e479503 又把它
-                        // 「恢復」回來，同樣的症狀原封不動地回來。
-                        //
-                        // 文書排版的工具（`WordToolbarView`）仍在工具列上，操作的是
-                        // 這塊畫布上的文字方塊。
-                        //
-                        // 寬度要**釘在剩下的空間**：A3 橫式這類大頁面的畫布理想寬度比螢幕大，
-                        // 不釘的話整塊工作區（連同工具列）被撐寬、右邊的工具被切到螢幕外。
-                        canvasWorkArea
-                            .frame(minWidth: 0, maxWidth: .infinity)
-                            .clipped()
-                            // 「頁面置中」指的是置中在**這一塊**（側欄右邊剩下的空間），
-                            // 不是整個視窗 —— 介面測試要量得到它。
-                            .accessibilityElement(children: .contain)
-                            .accessibilityIdentifier("editor.workspace")
-                    }
-                    .onAppear {
-                        DispatchQueue.main.async { editorAvailableWidth = geo.size.width }
-                    }
-                    .onChange(of: geo.size.width) { newValue in
-                        DispatchQueue.main.async { editorAvailableWidth = newValue }
-                    }
-                    .sheet(isPresented: Binding(
-                        get: { showStructureSidebar && !metrics.sidebarIsInline },
-                        set: { if !$0 { showStructureSidebar = false } }
-                    )) {
-                        resizableSheet { notebookStructureSidebar }
-                    }
-                }
+                mainWorkspaceContent(geo: geo)
             }
             .background { editorKeyboardShortcuts }
             // 實體鍵盤快捷鍵（見 AppCommands.swift）。
@@ -747,15 +674,7 @@ public struct NotebookEditorView: View {
         .navigationBarBackButtonHidden(true)
         // Apple Pencil 雙擊要切回「最後用過的筆刷」（工作項 S-67），
         // 所以每次換工具都要把筆刷記下來。橡皮擦與套索不算筆刷。
-        .onChange(of: selectedTool) { tool in
-            DispatchQueue.main.async {
-                if tool == .lasso, lastObservedTool != .lasso {
-                    previousTool = lastObservedTool
-                }
-                if tool.isBrush { lastBrushTool = tool }
-                lastObservedTool = tool
-            }
-        }
+        .onChange(of: selectedTool, perform: handleSelectedToolChange)
         .onReceive(NotificationCenter.default.publisher(for: AppCommand.proInkDidChange), perform: handleProInkDidChange)
         .onReceive(NotificationCenter.default.publisher(for: AppCommand.notebookPackageChanged), perform: handleNotebookPackageChanged)
         // 範例有改動、使用者要離開（見 `requestLeave`）。
@@ -771,26 +690,7 @@ public struct NotebookEditorView: View {
             Text(localizationManager.localized("sample_leave_message"))
         }
         .onChange(of: notebook.id) { _ in
-            DispatchQueue.main.async {
-                // 外層換綁之後才會走到這裡，這時 notebook 已經是新的那一則。
-                currentPageIndex = 0 // state-entry: 初始開啟筆記正門
-                // 換到的這一本若是範例，同樣先備份到暫存區。
-                store.beginSampleSession(notebook.id)
-                MainThreadStallMonitor.shared.breadcrumb("open notebook \(notebook.id.prefix(8))")
-                FocusSyncController.shared.setFocus(notebook.id)
-                activeInkStore.clearAllCoreBaselines()
-                activeInkStore.clearAllPendingCoreFlush()
-                continuousCanvases.invalidateCachedDrawings()
-                coreInkWork?.cancel()
-                coreInkWork = nil
-                loadCurrentPage()
-                sanitizeUnderInkObjects()
-                initialNotebookSnapshot = notebook
-                initialPageInk.removeAll()
-                pageOrigins = nil
-                captureInitialPageState(page: 0, drawing: currentDrawing)
-                PageThumbnailRenderer.invalidateAll()
-            }
+            handleNotebookIdChange()
         }
         .background(
             // 用實際量到的寬度決定要不要展開結構欄。
@@ -802,81 +702,9 @@ public struct NotebookEditorView: View {
                 }
             }
         )
-        .onAppear {
-            configureLassoCallbacks(forPage: currentPageIndex)
-            sanitizeTextAttachments()
-            sanitizeUnderInkObjects()
-            // 舊版同步留下的錯位名單（堆疊順序、鎖定記在別頁的頁碼下）就地修好；
-            // 放置貼紙時跨頁拖曳未換頁留下的超出邊界幽靈物件自動歸入實際頁面。
-            let realigned = notebook.realignPageKeyedObjectLists()
-            let repaired = notebook.repairOutOfBoundsObjects()
-            if realigned || repaired { commitNotebook() }
-            // 範例：打開時的內容先備份到暫存區，改動等離開時再決定（見 `requestLeave`）。
-            // 在上面的整理之後（整理不算使用者的改動）、設焦點之前（暫存期間不走焦點通道）。
-            store.beginSampleSession(notebook.id)
-            // 開著的這一本走焦點通道（秒同步）與區網直連。
-            store.activeNotebookId = notebook.id
-            if let targetPageStr = ProcessInfo.processInfo.environment["KAIRUMO_AUTO_OPEN_PAGE"],
-               let targetPage = Int(targetPageStr), targetPage >= 0 && targetPage < notebook.pageCount {
-                currentPageIndex = targetPage // state-entry: 模式切換保持頁碼 // state-entry: 外部跳頁初始化正門
-            }
-            loadCurrentPage()
-            // 畫布與專業筆畫層的動作在當下寫成核心事件（ADR-0015）。
-            InkEventSink.register(
-                notebookId: notebook.id, document: { notebook }, package: corePackageURL(),
-                baselineDirectory: store.syncBaselineDirectory, deviceId: NotebookMigration.deviceId,
-                queue: Self.coreInkQueue)
-            objectHistory.reset(to: notebook)
-            if isCollaborating {
-                ensureCollabPageIds()
-                CollabImportHold.hold(notebook.id)
-            }
-            collabSync.reset(to: notebook)
-            // 製圖用的紙（三視圖、等角、作圖步驟…）一打開就選好「圖學」筆組。
-            if paperUsesDrafting(paperId: notebook.paperId(forPage: currentPageIndex)) {
-                applyEditorTool(.drafting)
-            }
-            MacWindowTitle.apply()
-            // 擷取剛打開筆記本時的初始狀態（提供一鍵恢復初始狀態功能）
-            if initialNotebookSnapshot == nil {
-                initialNotebookSnapshot = notebook
-                captureInitialPageState(page: currentPageIndex, drawing: currentDrawing)
-            }
-            // 進到編輯器時也亮一次：第一次開的人要知道自己在哪個模式。
-            flashModeBadge()
-        }
-        .onDisappear {
-            // **先存檔、再放掉焦點。** 顛倒的話，存檔通知到達時已經沒有焦點筆記本，
-            // 離開前最後一筆編輯不會被焦點通道推出去。
-            saveCurrentPageDrawing()
-            // **不在主執行緒上等寫入做完。** 原本這裡 `coreInkQueue.sync {}` —— 套件寫入慢的時候
-            // （文件庫在 iCloud 資料夾、筆跡多）主執行緒整個卡住（卡頓記錄：停在 flushPendingCoreInk 之後）。
-            // 改成排在寫入佇列後面：前面的寫入一定先做完，焦點通道才放掉這一本（它接著會把套件推上雲端）。
-            let leavingId = notebook.id
-            InkEventSink.unregister(notebookId: leavingId)
-            endCollabImportHold()
-            afterCoreInkWrites {
-                if store.activeNotebookId == leavingId {
-                    store.activeNotebookId = nil
-                    FocusSyncController.shared.setFocus(nil)
-                }
-                // 寫完了就放掉這本的筆跡快取：關著的時候同步、還原範例都可能換掉磁碟上的檔案，
-                // 下次打開要從磁碟讀，而不是沿用上一次開著時記憶體裡的樣子。
-                PageInkStore.purge(notebookId: leavingId)
-            }
-        }
-        .onChange(of: scenePhase) { phase in
-            if phase == .background || phase == .inactive {
-                saveCurrentPageDrawing()
-                // 進背景：向系統要一點時間讓寫入佇列做完，而不是在主執行緒上等（同上）。
-                finishCoreInkInBackground()
-            } else if phase == .active {
-                // 從背景切回前景時，檢查同步是否已更新這本筆記
-                activeInkStore.clearAllCoreBaselines()
-                loadCurrentPage()
-                PageThumbnailRenderer.invalidateAll()
-            }
-        }
+        .onAppear(perform: handleOnAppear)
+        .onDisappear(perform: handleOnDisappear)
+        .onChange(of: scenePhase, perform: handleScenePhaseChange)
         .sheet(isPresented: $showShareSheet) { erasedView {
             if let data = exportPdfData {
                 ShareActivityView(
@@ -979,192 +807,24 @@ public struct NotebookEditorView: View {
             }
         }
         .onChange(of: selectedPhotoItem) { newItem in
-            Task {
-                if let item = newItem,
-                   let data = try? await item.loadTransferable(type: Data.self),
-                   let img = UIImage(data: data) {
-                    await MainActor.run {
-                        insertImageAttachment(img)
-                        selectedPhotoItem = nil
-                    }
-                }
-            }
+            handleSelectedPhotoItemChange(newItem)
         }
-        .sheet(isPresented: $showMathCalculator) { resizableSheet {
-            MathCalculatorSheet(
-                onInsertFormula: { exprText, cardImage in
-                    insertImageAttachment(cardImage, mathFormula: exprText)
-                },
-                onInsertEditableText: { formulaText in
-                    insertFormulaText(formulaText)
-                }
-            )
-        } }
-        .sheet(isPresented: $showShapeStudio) { resizableSheet {
-            ShapeStudioView { shapes, connections in
-                if notebook.shapeAttachments == nil { notebook.shapeAttachments = [] }
-                if notebook.connectionAttachments == nil { notebook.connectionAttachments = [] }
-                for shape in shapes {
-                    var placed = shape
-                    placed.pageIndex = currentPageIndex
-                    notebook.shapeAttachments?.append(placed)
-                    if let data = try? JSONEncoder().encode(placed),
-                       let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
-                        collaborationManager.broadcastAttachmentUpsert(type: "shape", itemDict: dict)
-                    }
-                }
-                for connection in connections {
-                    var placed = connection
-                    placed.pageIndex = currentPageIndex
-                    notebook.connectionAttachments?.append(placed)
-                    if let data = try? JSONEncoder().encode(placed),
-                       let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
-                        collaborationManager.broadcastAttachmentUpsert(type: "connection", itemDict: dict)
-                    }
-                }
-                commitNotebook()
-                PageThumbnailRenderer.invalidateAll()
-            }
-        } }
-        .sheet(isPresented: $showTableStudio) { resizableSheet {
-            TableStudioView { created in
-                var table = created
-                table.pageIndex = currentPageIndex
-                let targetX = max(PageGeometry.printableInset, (PageGeometry.width - table.width) / 2)
-                let baseOffsetY = max(PageGeometry.printableInset, canvasContentOffset.y + 120)
-                let existingCount = notebook.tableAttachments?.filter { $0.pageIndex == currentPageIndex }.count ?? 0
-                table.x = targetX
-                table.y = min(PageGeometry.height - 200, baseOffsetY + CGFloat(existingCount * 40))
-                if notebook.tableAttachments == nil { notebook.tableAttachments = [] }
-                notebook.tableAttachments?.append(table)
-                activeSelectedObjectId = table.id
-                selectedObjectIds = [table.id]
-                commitNotebook()
-                PageThumbnailRenderer.invalidateAll()
-                if let data = try? JSONEncoder().encode(table),
-                   let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
-                    collaborationManager.broadcastAttachmentUpsert(type: "table", itemDict: dict)
-                }
-            }
-            .frame(minWidth: 540)
-        } }
-        .sheet(item: $editingTable) { target in resizableSheet {
-            TableStudioView(editing: target) { updated in
-                guard let index = notebook.tableAttachments?
-                    .firstIndex(where: { $0.id == updated.id }) else { return }
-                // 位置原地保留：使用者只是改了裡面的內容。
-                var table = updated
-                table.x = notebook.tableAttachments?[index].x ?? table.x
-                table.y = notebook.tableAttachments?[index].y ?? table.y
-                notebook.tableAttachments?[index] = table
-                commitNotebook()
-                PageThumbnailRenderer.invalidateAll()
-                if let data = try? JSONEncoder().encode(table),
-                   let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
-                    collaborationManager.broadcastAttachmentUpsert(type: "table", itemDict: dict)
-                }
-            }
-            .frame(minWidth: 540)
-        } }
-        .sheet(isPresented: $showChartStudio) { resizableSheet {
-            ChartStudioView { chartSpec, chartImage in
-                insertImageAttachment(chartImage, chartSpecJSON: chartSpec.encodedJSON())
-            }
-        } }
-        // 重新編修既有的圖表。帶著原本的規格進去，使用者看到的是自己當初
-        // 輸入的數字 —— 而不是一張只能刪掉重做的圖。
-        .sheet(item: $editingChartAttachmentId) { identifier in resizableSheet {
-            ChartStudioView(editing: identifier.spec) { updatedSpec, updatedImage in
-                replaceChartAttachment(id: identifier.id, spec: updatedSpec, image: updatedImage)
-            }
-        } }
-        // 重新編修算式卡片：回到原生的計算視窗，帶入原始輸入的算式
-        .sheet(item: $editingMathAttachmentId) { target in resizableSheet {
-            MathCalculatorSheet(
-                initialFormula: target.formula,
-                onInsertFormula: { exprText, cardImage in
-                    replaceMathAttachment(id: target.id, formula: exprText, image: cardImage)
-                },
-                onInsertEditableText: { formulaText in
-                    replaceMathAttachment(id: target.id, formula: formulaText, image: nil)
-                    insertFormulaText(formulaText)
-                }
-            )
-        } }
-        .sheet(isPresented: $showNoteIntelligence) { resizableSheet {
-            NoteIntelligenceSheet(
-                // 走核心的 markdown 匯出：打字內容、表格、轉錄文字都在裡面，
-                // 而且與匯出看到的是同一份文字 —— 另外湊一份「給模型看的」
-                // 文字的話，摘要會講到使用者匯出時看不到的東西。
-                text: notebook.plainText(),
-                onInsert: { text in insertQuickTextSnippet(text) }
-            )
-        } }
-        .sheet(isPresented: $showWordStudio) { resizableSheet {
-            WordTextStudioView(attachment: $newTextDraft) { created in
-                if notebook.textAttachments == nil {
-                    notebook.textAttachments = []
-                }
-                if let idx = notebook.textAttachments?.firstIndex(where: { $0.id == created.id }) {
-                    notebook.textAttachments?[idx] = created
-                } else {
-                    notebook.textAttachments?.append(created)
-                }
-                commitNotebook()
-                PageThumbnailRenderer.invalidateAll()
-                if let data = try? JSONEncoder().encode(created),
-                   let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
-                    collaborationManager.broadcastAttachmentUpsert(type: "text", itemDict: dict)
-                }
-            }
-        } }
-        .sheet(isPresented: $showLinkPreviewSheet) { resizableSheet {
-            LinkPreviewSheet { linkItem in
-                if notebook.linkAttachments == nil {
-                    notebook.linkAttachments = []
-                }
-                // 頁次要在這裡補。少了它，連結卡片一律落在第 1 頁 ——
-                // 在第 5 頁按「插入連結」，畫面上什麼也不會出現。
-                // 其他插入路徑（圖片、表格、形狀、3D）都有這一行，只有連結漏了。
-                var placed = linkItem
-                placed.pageIndex = currentPageIndex
-                notebook.linkAttachments?.append(placed)
-                commitNotebook()
-                if let data = try? JSONEncoder().encode(placed),
-                   let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
-                    collaborationManager.broadcastAttachmentUpsert(type: "link", itemDict: dict)
-                }
-            }
-        } }
+        // 外掛創意次系統：透過 EditorSubsystemCoordinator 隨需喚醒，
+        // 包含 Math, Shape, Chart, Word, 3D, Link, Intelligence, Media Studios
+        .modifier(CreativeStudiosPresenterModifier(parent: self))
+        // 表格次系統：透過 EditorSubsystemCoordinator 隨需喚醒，
+        // 避免重型表格視窗與對話框常態掛載在主畫布 View Hierarchy 上。
+        .tableSubsystem(
+            showTableStudio: $showTableStudio,
+            editingTable: $editingTable,
+            tablePropertiesTarget: $tablePropertiesTarget,
+            getTable: { id in notebook.tableAttachments?.first(where: { $0.id == id }) },
+            onInsertTable: insertNewTable,
+            onUpdateTable: updateTableInNotebook
+        )
         .sheet(isPresented: $showProColorPicker) {
             ProColorPickerSheet(selectedColor: $selectedColor)
         }
-        .sheet(isPresented: $show3DStudio) { resizableSheet {
-            Model3DStudioView { new3DAttachment in
-                if notebook.model3DAttachments == nil {
-                    notebook.model3DAttachments = []
-                }
-                var att = new3DAttachment
-                att.pageIndex = currentPageIndex
-                notebook.model3DAttachments?.append(att)
-                commitNotebook()
-                PageThumbnailRenderer.invalidateAll()
-                if let data = try? JSONEncoder().encode(att),
-                   let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
-                    collaborationManager.broadcastAttachmentUpsert(type: "3d", itemDict: dict)
-                }
-            }
-        } }
-        .sheet(isPresented: $showAssetLibrarySheet) { resizableSheet {
-            AssetLibraryView { image, _ in
-                insertImageAttachment(image)
-            }
-        } }
-        .sheet(isPresented: $showAudioPicker) { resizableSheet {
-            AudioInsertPickerSheet { recording in
-                insertAudioAttachment(recording)
-            }
-        } }
         .sheet(isPresented: $showCollaborationSheet) { resizableSheet {
             CollaborationSheet(notebookId: notebook.id)
         } }
@@ -1670,6 +1330,230 @@ public struct NotebookEditorView: View {
         loadCurrentPage()
         if paperUsesDrafting(paperId: notebook.paperId(forPage: bounded)) {
             applyEditorTool(.drafting)
+        }
+    }
+
+    private func handleSelectedToolChange(_ tool: EditorToolType) {
+        DispatchQueue.main.async {
+            if tool == .lasso, self.lastObservedTool != .lasso {
+                self.previousTool = self.lastObservedTool
+            }
+            if tool.isBrush { self.lastBrushTool = tool }
+            self.lastObservedTool = tool
+        }
+    }
+
+    private func handleScenePhaseChange(_ phase: ScenePhase) {
+        if phase == .background || phase == .inactive {
+            saveCurrentPageDrawing()
+            // 進背景：向系統要一點時間讓寫入佇列做完，而不是在主執行緒上等。
+            finishCoreInkInBackground()
+        } else if phase == .active {
+            // 從背景切回前景時，檢查同步是否已更新這本筆記
+            activeInkStore.clearAllCoreBaselines()
+            loadCurrentPage()
+            PageThumbnailRenderer.invalidateAll()
+        }
+    }
+
+    private func handleNotebookIdChange() {
+        DispatchQueue.main.async {
+            // 外層換綁之後才會走到這裡，這時 notebook 已經是新的那一則。
+            currentPageIndex = 0 // state-entry: 初始開啟筆記正門
+            // 換到的這一本若是範例，同樣先備份到暫存區。
+            store.beginSampleSession(notebook.id)
+            let nbPrefix = String(notebook.id.prefix(8))
+            MainThreadStallMonitor.shared.breadcrumb("open notebook \(nbPrefix)")
+            FocusSyncController.shared.setFocus(notebook.id)
+            activeInkStore.clearAllCoreBaselines()
+            activeInkStore.clearAllPendingCoreFlush()
+            continuousCanvases.invalidateCachedDrawings()
+            coreInkWork?.cancel()
+            coreInkWork = nil
+            loadCurrentPage()
+            sanitizeUnderInkObjects()
+            initialNotebookSnapshot = notebook
+            initialPageInk.removeAll()
+            pageOrigins = nil
+            captureInitialPageState(page: 0, drawing: currentDrawing)
+            PageThumbnailRenderer.invalidateAll()
+        }
+    }
+
+    private func handleOnAppear() {
+        configureLassoCallbacks(forPage: currentPageIndex)
+        sanitizeTextAttachments()
+        sanitizeUnderInkObjects()
+        // 舊版同步留下的錯位名單（堆疊順序、鎖定記在別頁的頁碼下）就地修好；
+        // 放置貼紙時跨頁拖曳未換頁留下的超出邊界幽靈物件自動歸入實際頁面。
+        let realigned = notebook.realignPageKeyedObjectLists()
+        let repaired = notebook.repairOutOfBoundsObjects()
+        if realigned || repaired { commitNotebook() }
+        // 範例：打開時的內容先備份到暫存區，改動等離開時再決定（見 `requestLeave`）。
+        // 在上面的整理之後（整理不算使用者的改動）、設焦點之前（暫存期間不走焦點通道）。
+        store.beginSampleSession(notebook.id)
+        // 開著的這一本走焦點通道（秒同步）與區網直連。
+        store.activeNotebookId = notebook.id
+        if let targetPageStr = ProcessInfo.processInfo.environment["KAIRUMO_AUTO_OPEN_PAGE"],
+           let targetPage = Int(targetPageStr), targetPage >= 0 && targetPage < notebook.pageCount {
+            currentPageIndex = targetPage // state-entry: 模式切換保持頁碼 // state-entry: 外部跳頁初始化正門
+        }
+        loadCurrentPage()
+        // 畫布與專業筆畫層的動作在當下寫成核心事件（ADR-0015）。
+        InkEventSink.register(
+            notebookId: notebook.id, document: { notebook }, package: corePackageURL(),
+            baselineDirectory: store.syncBaselineDirectory, deviceId: NotebookMigration.deviceId,
+            queue: Self.coreInkQueue)
+        objectHistory.reset(to: notebook)
+        if isCollaborating {
+            ensureCollabPageIds()
+            CollabImportHold.hold(notebook.id)
+        }
+        collabSync.reset(to: notebook)
+        // 製圖用的紙（三視圖、等角、作圖步驟…）一打開就選好「圖學」筆組。
+        if paperUsesDrafting(paperId: notebook.paperId(forPage: currentPageIndex)) {
+            applyEditorTool(.drafting)
+        }
+        MacWindowTitle.apply()
+        // 擷取剛打開筆記本時的初始狀態（提供一鍵恢復初始狀態功能）
+        if initialNotebookSnapshot == nil {
+            initialNotebookSnapshot = notebook
+            captureInitialPageState(page: currentPageIndex, drawing: currentDrawing)
+        }
+        // 進到編輯器時也亮一次：第一次開的人要知道自己在哪個模式。
+        flashModeBadge()
+    }
+
+    private func handleOnDisappear() {
+        // 先存檔、再放掉焦點。
+        saveCurrentPageDrawing()
+        let leavingId = notebook.id
+        InkEventSink.unregister(notebookId: leavingId)
+        endCollabImportHold()
+        afterCoreInkWrites {
+            if store.activeNotebookId == leavingId {
+                store.activeNotebookId = nil
+                FocusSyncController.shared.setFocus(nil)
+            }
+            // 寫完了就放掉這本的筆跡快取
+            PageInkStore.purge(notebookId: leavingId)
+        }
+    }
+
+    @ViewBuilder
+    private func mainWorkspaceContent(geo: GeometryProxy) -> some View {
+        let metrics = layoutMetrics(width: Float(geo.size.width))
+        if isTabletopMode {
+            tabletopWorkspaceView(geo: geo)
+        } else {
+            standardWorkspaceView(geo: geo, sidebarIsInline: metrics.sidebarIsInline)
+        }
+    }
+
+    @ViewBuilder
+    private func tabletopWorkspaceView(geo: GeometryProxy) -> some View {
+        VStack(spacing: 0) {
+            ZStack(alignment: .topLeading) {
+                canvasWorkArea
+
+                HStack(spacing: 6) {
+                    Image(systemName: "laptopcomputer.and.ipad")
+                        .font(.system(size: 11, weight: .bold))
+                    Text(L("posture_tabletop_mode"))
+                        .font(.system(size: 11, weight: .bold))
+                }
+                .foregroundColor(.accentColor)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 5)
+                .background(Color(uiColor: .systemBackground).opacity(0.85))
+                .cornerRadius(12)
+                .padding(8)
+            }
+            .frame(height: max(geo.size.height * 0.55, 180))
+
+            Divider()
+
+            tabletopControlDeck
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(Color(uiColor: .secondarySystemBackground))
+        }
+    }
+
+    @ViewBuilder
+    private func standardWorkspaceView(geo: GeometryProxy, sidebarIsInline: Bool) -> some View {
+        HStack(spacing: 0) {
+            if showStructureSidebar && sidebarIsInline {
+                let width = resolvedSidebarWidth(total: geo.size.width)
+                notebookStructureSidebar
+                    .frame(width: width)
+                    .transition(.move(edge: .leading).combined(with: .opacity))
+                sidebarResizeHandle(total: geo.size.width, current: width)
+            }
+
+            canvasWorkArea
+                .frame(minWidth: 0, maxWidth: .infinity)
+                .clipped()
+                .accessibilityElement(children: .contain)
+                .accessibilityIdentifier("editor.workspace")
+        }
+        .onAppear {
+            DispatchQueue.main.async { editorAvailableWidth = geo.size.width }
+        }
+        .onChange(of: geo.size.width) { newValue in
+            DispatchQueue.main.async { editorAvailableWidth = newValue }
+        }
+        .sheet(isPresented: Binding(
+            get: { showStructureSidebar && !sidebarIsInline },
+            set: { if !$0 { showStructureSidebar = false } }
+        )) {
+            resizableSheet { notebookStructureSidebar }
+        }
+    }
+
+    private func handleSelectedPhotoItemChange(_ newItem: PhotosPickerItem?) {
+        Task {
+            if let item = newItem,
+               let data = try? await item.loadTransferable(type: Data.self),
+               let img = UIImage(data: data) {
+                await MainActor.run {
+                    insertImageAttachment(img)
+                    selectedPhotoItem = nil
+                }
+            }
+        }
+    }
+
+    func insertNewTable(_ created: NoteTableAttachment) {
+        var table = created
+        table.pageIndex = currentPageIndex
+        let targetX = max(PageGeometry.printableInset, (PageGeometry.width - table.width) / 2)
+        let baseOffsetY = max(PageGeometry.printableInset, canvasContentOffset.y + 120)
+        let existingCount = notebook.tableAttachments?.filter { $0.pageIndex == currentPageIndex }.count ?? 0
+        table.x = targetX
+        table.y = min(PageGeometry.height - 200, baseOffsetY + CGFloat(existingCount * 40))
+        if notebook.tableAttachments == nil { notebook.tableAttachments = [] }
+        notebook.tableAttachments?.append(table)
+        activeSelectedObjectId = table.id
+        selectedObjectIds = [table.id]
+        commitNotebook()
+        PageThumbnailRenderer.invalidateAll()
+        if let data = try? JSONEncoder().encode(table),
+           let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+            collaborationManager.broadcastAttachmentUpsert(type: "table", itemDict: dict)
+        }
+    }
+
+    func updateTableInNotebook(_ updated: NoteTableAttachment) {
+        guard let index = notebook.tableAttachments?.firstIndex(where: { $0.id == updated.id }) else { return }
+        var table = updated
+        table.x = notebook.tableAttachments?[index].x ?? table.x
+        table.y = notebook.tableAttachments?[index].y ?? table.y
+        notebook.tableAttachments?[index] = table
+        commitNotebook()
+        PageThumbnailRenderer.invalidateAll()
+        if let data = try? JSONEncoder().encode(table),
+           let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+            collaborationManager.broadcastAttachmentUpsert(type: "table", itemDict: dict)
         }
     }
 

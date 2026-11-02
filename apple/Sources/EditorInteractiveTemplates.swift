@@ -420,10 +420,10 @@ extension NotebookEditorView {
         if tapToWrite {
             let baseSize: CGFloat = inheritedStyle.fontSize
             let minTop = PageGeometry.printableRect.minY
-            if snapToGrid,
-               let ruled = RuledWriting.placement(
-                   tapY: location.y, rules: pageHorizontalRules(page: targetPage),
-                   fontSize: baseSize, minTop: minTop) {
+            let rules = pageHorizontalRules(page: targetPage)
+            if let ruled = RuledWriting.placement(
+                tapY: location.y, rules: rules,
+                fontSize: baseSize, minTop: minTop) {
                 tapPlacement = ruled
             } else {
                 tapPlacement = RuledWriting.freePlacement(tapY: location.y, fontSize: baseSize, minTop: minTop)
@@ -431,10 +431,20 @@ extension NotebookEditorView {
             targetY = tapPlacement?.top ?? targetY
             // 文字從點的地方開始：方塊左緣 = 點 − 內距。
             targetX = location.x - RuledWriting.padding
-        } else if snapToGrid {
-            let step: CGFloat = 20.0
-            targetX = round(targetX / step) * step
-            targetY = snapYToGuideLine(at: location.y)
+        } else {
+            let rules = pageHorizontalRules(page: targetPage)
+            let baseSize: CGFloat = inheritedStyle.fontSize
+            let minTop = PageGeometry.printableRect.minY
+            if let ruled = RuledWriting.placement(
+                tapY: location.y, rules: rules,
+                fontSize: baseSize, minTop: minTop) {
+                targetY = ruled.top
+                targetX = location.x
+            } else if snapToGrid {
+                let step: CGFloat = 20.0
+                targetX = round(targetX / step) * step
+                targetY = snapYToGuideLine(at: location.y)
+            }
         }
         let printable = PageGeometry.printableRect
         var startX = max(printable.minX, targetX)

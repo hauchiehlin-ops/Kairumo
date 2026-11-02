@@ -1481,8 +1481,8 @@ extension NotebookEditorView {
         }
         if let items = notebook.tableAttachments {
             for item in items where item.pageIndex == page {
-                let layout = item.layout()
-                let rect = CGRect(x: item.x, y: item.y, width: CGFloat(layout.width), height: CGFloat(layout.height)).insetBy(dx: -4, dy: -4)
+                let layout = item.resolvedLayout()
+                let rect = CGRect(x: item.x, y: item.y, width: layout.width, height: layout.height).insetBy(dx: -4, dy: -4)
                 candidates.append((item.id, "table", stacking.zIndex(for: item.id, kind: .table), rect))
             }
         }
@@ -1590,8 +1590,8 @@ extension NotebookEditorView {
         if let items = notebook.tableAttachments {
             for item in items where item.pageIndex == page && underInkSet.contains(item.id) {
                 let isSel = (activeSelectedObjectId == item.id || selectedObjectIds.contains(item.id))
-                let layout = item.layout()
-                checkHit(CGRect(x: item.x, y: item.y, width: CGFloat(layout.width), height: CGFloat(layout.height)), 0, isSel)
+                let layout = item.resolvedLayout()
+                checkHit(CGRect(x: item.x, y: item.y, width: layout.width, height: layout.height), 0, isSel)
             }
         }
         if let items = notebook.linkAttachments {

@@ -12,6 +12,24 @@ REPO_ROOT="$(git rev-parse --show-toplevel)"
 # commit 前用 `--git-only` 快速清理 .git 關鍵目錄，避免在 exFAT 外接碟上全庫 find 卡住。
 "${REPO_ROOT}/scripts/clean-appledouble.sh" --git-only || true
 
+# 檢查四大守門機制快取：若稍早已驗證通過且當前狀態未變更，無需重複執行
+calc_fingerprint() {
+    local head_sha dirty_state
+    head_sha="$(git rev-parse HEAD 2>/dev/null || echo "no-head")"
+    dirty_state="$(git status --porcelain 2>/dev/null || echo "no-status")"
+    printf "%s\n%s" "$head_sha" "$dirty_state" | shasum -a 256 | awk '{print $1}'
+}
+
+CACHE_FILE="${REPO_ROOT}/.git/gatekeepers.passed"
+if [[ -z "${FORCE_GATEKEEPERS:-}" && -f "$CACHE_FILE" ]]; then
+    CACHED_FP="$(cat "$CACHE_FILE" 2>/dev/null || true)"
+    CURRENT_FP="$(calc_fingerprint)"
+    if [[ -n "$CACHED_FP" && "$CACHED_FP" == "$CURRENT_FP" ]]; then
+        echo "✅ [Pre-Commit] 四大守門機制已完成驗證且程式碼未變更，略過重複檢查。"
+        exit 0
+    fi
+fi
+
 # 檢查暫存區中是否包含來源手冊、法規、範本或版本檔案
 STAGED_SOURCES=$(git diff --cached --name-only | grep -E '^(docs/manual/manual\.js|docs/legal/privacy\.html|Cargo\.toml|templates/src/)' || true)
 

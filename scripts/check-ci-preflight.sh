@@ -125,7 +125,7 @@ fi
 # 5. [預防檢驗] 四大守門機制（Gatekeepers）驗證
 # -----------------------------------------------------------------------------
 echo ""
-echo "── [步驟 5/6] 執行四大自動化守門機制（Layer 1 - Layer 4）──"
+echo "── [步驟 5/6] 執行五大自動化守門機制（Layer 1 - Layer 5）──"
 if [ -x "${REPO_ROOT}/scripts/verify-all-gatekeepers.sh" ]; then
     if "${REPO_ROOT}/scripts/verify-all-gatekeepers.sh"; then
         report_pass "四大守門機制全維度檢驗通過（正門管制、不變式矩陣、非阻塞 UI、跨平台規範）"

@@ -52,6 +52,16 @@ enum TableAppearance {
         if let value = item.rotationDegrees { table["rotationDegrees"] = value }
         if let value = item.ruleColorHex { table["ruleColorHex"] = value }
         if let value = item.headerBackgroundHex { table["headerBackgroundHex"] = value }
+        // 以下四個是 Office 式表格編修加的**選用**鍵：沒設定就不寫，舊版（含 Android）讀到
+        // 沒有這些鍵的資料與以前完全相同；讀到有的資料，不認得的鍵會被忽略。
+        if let value = item.borderMode { table["borderMode"] = value.rawValue }
+        if let value = item.columnWidthOverrides { table["columnWidths"] = value }
+        if let value = item.rowHeightOverrides { table["rowHeights"] = value }
+        if let styles = item.cellStyles,
+           let data = try? JSONEncoder().encode(styles),
+           let array = try? JSONSerialization.jsonObject(with: data) {
+            table["cellStyles"] = array
+        }
 
         let wrapper: [String: Any] = [objectKey: objectValue, tableKey: table]
         guard let data = try? JSONSerialization.data(withJSONObject: wrapper, options: [.sortedKeys]),
@@ -79,6 +89,15 @@ enum TableAppearance {
         if let value = map["rotationDegrees"] as? Double { item.rotationDegrees = value }
         if let value = map["ruleColorHex"] as? String { item.ruleColorHex = value }
         if let value = map["headerBackgroundHex"] as? String { item.headerBackgroundHex = value }
+        if let value = map["borderMode"] as? String { item.borderMode = TableBorderMode(rawValue: value) }
+        if let value = map["columnWidths"] as? [Double] { item.columnWidthOverrides = value }
+        if let value = map["rowHeights"] as? [Double] { item.rowHeightOverrides = value }
+        if let array = map["cellStyles"],
+           let raw = try? JSONSerialization.data(withJSONObject: array),
+           let styles = try? JSONDecoder().decode([NoteTableCellStyle].self, from: raw),
+           styles.count == item.rows * item.cols {
+            item.cellStyles = styles
+        }
         if let spans = map["mergedCells"] as? [[String: Any]] {
             item.mergedCells = spans.compactMap { span in
                 guard let row = span["row"] as? Int, let col = span["col"] as? Int,
