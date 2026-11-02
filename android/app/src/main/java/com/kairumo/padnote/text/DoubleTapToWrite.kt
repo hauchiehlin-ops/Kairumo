@@ -14,7 +14,7 @@ import com.kairumo.padnote.library.NotebookMeta
 import uniffi.padnote_core.PadnoteSession
 
 /**
- * 單頁模式：手寫模式下手指雙擊空白處 → 建立文字方塊並進入就地編輯
+ * 單頁模式：打字模式下手指雙擊空白處 → 建立文字方塊並進入就地編輯
  * （對齊 Apple `handleCanvasDirectDoubleTap`；連續模式見 `ContinuousPages`）。
  *
  * 邏輯全收在這裡、不寫進 `MainActivity.InkScreen`：那個函式已在 ART 驗證器的上限邊緣，

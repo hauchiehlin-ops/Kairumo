@@ -1353,11 +1353,11 @@ private fun ContinuousPage(
                     }
                 }
             )
-            // 手繪模式下手指雙擊空白處：建立文字方塊並切到打字模式（對齊 Apple `handleCanvasDirectDoubleTap`）。
+            // 僅在打字模式下允許雙擊空白處隨點即書；手繪模式下停用，避免手寫或手掌誤觸切換模式（對齊 Apple `handleCanvasDirectDoubleTap`）。
             .fingerDoubleTap(
                 listOf(editorMode, lasso != null, ink.isMaskingTape, ink.isTranslationPen, isPlacingPasteObject, snapToGrid),
                 hitAt = { p ->
-                    if (editorMode != EditorMode.DRAW || lasso != null || ink.isMaskingTape || ink.isTranslationPen || isPlacingPasteObject) false
+                    if (editorMode != EditorMode.TYPE || lasso != null || ink.isMaskingTape || ink.isTranslationPen || isPlacingPasteObject) false
                     else ObjectMarquee.topmostHit(Offset(p.x / density, p.y / density), lockFramesLatest) == null
                 },
                 onCancelInk = { engine.cancelInFlight(); revision++ },

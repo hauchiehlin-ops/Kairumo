@@ -1537,15 +1537,20 @@ struct CanvasRepresentable: UIViewRepresentable {
         // 🌟 方案 A+B：手指／游標／Pencil 單擊與雙擊手勢（支援 direct / indirectPointer / pencil 全輸入型態）
         // 點擊事件由 handleCanvasDirectTap 依落點判斷：若落在物件上則選取物件並收回可能落下的墨點；
         // 若手寫模式下落在空白處則正常視為筆跡（不收回），雙擊則就地開文字框。
-        let initialTapTypes: [NSNumber] = [
-            NSNumber(value: UITouch.TouchType.direct.rawValue),
-            NSNumber(value: UITouch.TouchType.indirectPointer.rawValue),
-            NSNumber(value: UITouch.TouchType.pencil.rawValue)
-        ]
+        let directTapAllowedTypes: [NSNumber] = (editorMode == .type)
+            ? [
+                NSNumber(value: UITouch.TouchType.direct.rawValue),
+                NSNumber(value: UITouch.TouchType.indirectPointer.rawValue),
+                NSNumber(value: UITouch.TouchType.pencil.rawValue)
+            ]
+            : [
+                NSNumber(value: UITouch.TouchType.direct.rawValue),
+                NSNumber(value: UITouch.TouchType.indirectPointer.rawValue)
+            ]
 
         let directSingleTap = UITapGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.handleDirectSingleTap(_:)))
         directSingleTap.numberOfTapsRequired = 1
-        directSingleTap.allowedTouchTypes = initialTapTypes
+        directSingleTap.allowedTouchTypes = directTapAllowedTypes
         directSingleTap.cancelsTouchesInView = false
         directSingleTap.delaysTouchesBegan = false
         directSingleTap.delaysTouchesEnded = false
@@ -1554,7 +1559,11 @@ struct CanvasRepresentable: UIViewRepresentable {
 
         let directDoubleTap = UITapGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.handleDirectDoubleTap(_:)))
         directDoubleTap.numberOfTapsRequired = 2
-        directDoubleTap.allowedTouchTypes = initialTapTypes
+        directDoubleTap.allowedTouchTypes = [
+            NSNumber(value: UITouch.TouchType.direct.rawValue),
+            NSNumber(value: UITouch.TouchType.indirectPointer.rawValue)
+        ]
+        directDoubleTap.isEnabled = (editorMode == .type)
         directDoubleTap.cancelsTouchesInView = false
         directDoubleTap.delaysTouchesBegan = false
         directDoubleTap.delaysTouchesEnded = false
@@ -1623,11 +1632,15 @@ struct CanvasRepresentable: UIViewRepresentable {
         if let adaptive = uiView as? AdaptiveCanvasView {
             let tapTypes: [NSNumber] = [
                 NSNumber(value: UITouch.TouchType.direct.rawValue),
-                NSNumber(value: UITouch.TouchType.indirectPointer.rawValue),
-                NSNumber(value: UITouch.TouchType.pencil.rawValue)
+                NSNumber(value: UITouch.TouchType.indirectPointer.rawValue)
             ]
-            adaptive.directSingleTap?.allowedTouchTypes = tapTypes
+            // 手寫模式下 Apple Pencil 專責繪圖，嚴禁接收單擊/雙擊文字點選；打字模式下才接收 Pencil 點擊放游標
+            adaptive.directSingleTap?.allowedTouchTypes = editorMode == .type
+                ? tapTypes + [NSNumber(value: UITouch.TouchType.pencil.rawValue)]
+                : tapTypes
             adaptive.directDoubleTap?.allowedTouchTypes = tapTypes
+            // 雙擊開文字框僅在打字模式下啟用，手繪模式下停用以杜絕快速書寫與手掌誤觸切換模式
+            adaptive.directDoubleTap?.isEnabled = (editorMode == .type)
         }
         // 連續模式（畫布自己不捲）且手指會畫圖時，兩指捲動由我們自己接管；
         // `.pencilOnly` 時手指不畫，外層捲動單指就能動，不必（也不該）再轉發。
@@ -1860,13 +1873,23 @@ struct CanvasRepresentable: UIViewRepresentable {
 
         func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldReceive touch: UITouch) -> Bool {
             guard let canvas = gestureRecognizer.view as? AdaptiveCanvasView else { return true }
-            if gestureRecognizer is UISwipeGestureRecognizer || (gestureRecognizer as? UITapGestureRecognizer)?.numberOfTouchesRequired ?? 1 >= 2 {
-                // Apple Pencil 正在落筆或畫布處於手繪中，多指手勢嚴格拒絕接收觸控
-                if touch.type == .pencil || canvas.isInking || canvas.activePencilIsDown {
+            // 掌拒防護：手掌側貼於螢幕之接觸面半徑（majorRadius 通常 > 20-30pt），過大一律視為掌心誤觸，禁止接收任何點擊/手勢
+            if touch.majorRadius > 20.0 {
+                return false
+            }
+            // 畫布正在筆墨書寫中，嚴禁觸發點擊或多指手勢
+            if canvas.isInking || canvas.activePencilIsDown {
+                return false
+            }
+            if gestureRecognizer.name == Self.directTapName {
+                // 手繪模式下，Apple Pencil 唯一職責為落墨繪圖，絕不接收單擊或雙擊點選／建立文字方塊
+                if parent.editorMode == .draw && touch.type == .pencil {
                     return false
                 }
-                // 手掌側貼於螢幕之接觸面半徑（majorRadius 通常 > 20-30pt），過大視為掌心誤觸
-                if touch.majorRadius > 24.0 {
+            }
+            if gestureRecognizer is UISwipeGestureRecognizer || (gestureRecognizer as? UITapGestureRecognizer)?.numberOfTouchesRequired ?? 1 >= 2 {
+                // 多指手勢嚴格拒絕接收觸控筆
+                if touch.type == .pencil {
                     return false
                 }
             }
@@ -1876,6 +1899,15 @@ struct CanvasRepresentable: UIViewRepresentable {
         // orphan-ok: UIGestureRecognizerDelegate 系統回呼（書寫中阻擋雙指/三指點擊與滑動防跳頁）
         func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
             guard let canvas = gestureRecognizer.view as? AdaptiveCanvasView else { return true }
+            if canvas.isInking || canvas.activePencilIsDown {
+                return false
+            }
+            if gestureRecognizer.name == Self.directTapName {
+                // 手繪模式下阻擋雙擊手勢，杜絕任何雙擊誤觸中斷繪圖流程
+                if parent.editorMode == .draw && (gestureRecognizer as? UITapGestureRecognizer)?.numberOfTapsRequired ?? 1 >= 2 {
+                    return false
+                }
+            }
             if gestureRecognizer is UISwipeGestureRecognizer || (gestureRecognizer as? UITapGestureRecognizer)?.numberOfTouchesRequired ?? 1 >= 2 {
                 if canvas.isInking || canvas.activePencilIsDown {
                     return false
