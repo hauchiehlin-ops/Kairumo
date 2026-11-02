@@ -1809,12 +1809,6 @@ extension NotebookEditorView {
         )
     }
 
-    /// 專案 ADR-0015 筆跡單一真相：移動表格不干涉畫布筆畫。
-    /// 保留簽名以相容內部調用，內部不執行筆劃平移。
-    func moveStrokesInsideTable(_ table: NoteTableAttachment, by delta: CGSize) {
-        // ADR-0015：畫布手寫筆跡為獨立圖層真相，嚴禁附件移動時劫持筆跡。
-    }
-
     func binding(for id: String) -> Binding<NoteImageAttachment> {
         let norm = id.lowercased()
         return Binding(
