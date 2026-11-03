@@ -154,7 +154,8 @@ public enum PageThumbnailRenderer {
         canvasWidth: CGFloat,
         inkRevision: Int,
         scale: CGFloat = 0.4,
-        deferRecomputation: Bool = false
+        deferRecomputation: Bool = false,
+        inkLayer: UIImage? = nil
     ) -> UIImage {
         if deferRecomputation,
            let latest = latestPageCache.object(forKey: "\(notebook.id)|\(pageIndex)" as NSString) {
@@ -163,7 +164,59 @@ public enum PageThumbnailRenderer {
         let revision = "\(inkRevision).\(ProInkStore.revision(in: store.drawingsDirectory, notebookId: notebook.id, page: pageIndex))"
         return PerfProbe.shared.measure(.thumbnailRender) { compose(notebook: notebook, pageIndex: pageIndex, drawing: drawing, store: store,
                        canvasWidth: canvasWidth, scale: scale, cropToPreviewRatio: true, useCache: true,
-                       inkRevision: revision) }
+                       inkRevision: revision, inkLayer: inkLayer) }
+    }
+
+    /// 縮圖可見範圍（頁寬 × 裁切後高度），與 `compose(cropToPreviewRatio: true)` 相同。
+    static var previewSize: CGSize {
+        CGSize(width: PageGeometry.width, height: min(PageGeometry.height, PageGeometry.width * maxHeightRatio))
+    }
+
+    /// 只畫墨跡（PencilKit ＋專業筆刷）的透明圖層。**可在背景執行緒呼叫** ——
+    /// 這是一張縮圖裡最貴的部分（整頁 PencilKit 點陣化＋逐筆筆點），放在主執行緒做的話，
+    /// 剛開啟筆記本、一排縮圖排隊時主執行緒會被連續佔住，點縮圖換頁要等它們做完。
+    ///
+    /// 專業筆刷畫在自己的圖層上（與畫布上 `ProInk` 疊在 PencilKit 上方的圖層一致），
+    /// 呼叫端在主執行緒疊上紙張與物件（`render(inkLayer:)`）。
+    ///
+    /// `pageSize` 由呼叫端在主執行緒取（`PageGeometry` 跟著目前筆記本變，不在背景讀）。
+    static func rasterizeInk(
+        drawing: PKDrawing, pro: [ProStroke], pageSize: CGSize, size: CGSize, scale: CGFloat, dark: Bool
+    ) -> UIImage {
+        let fullPageRect = CGRect(origin: .zero, size: pageSize)
+        let format = UIGraphicsImageRendererFormat.default()
+        format.scale = scale
+        format.opaque = false
+        let traits = UITraitCollection(userInterfaceStyle: dark ? .dark : .light)
+        return UIGraphicsImageRenderer(size: size, format: format).image { ctx in
+            traits.performAsCurrent {
+                drawInkStrokes(drawing: drawing, pro: pro, scale: scale, dark: dark,
+                               rect: fullPageRect, in: ctx.cgContext)
+            }
+        }
+    }
+
+    /// 縮圖與匯出共用的墨跡畫法：PencilKit 手繪，再依圖層疊專業筆刷與製圖線。
+    private static func drawInkStrokes(
+        drawing: PKDrawing, pro: [ProStroke], scale: CGFloat, dark: Bool, rect: CGRect, in cg: CGContext
+    ) {
+        drawing.image(from: rect, scale: scale).draw(in: rect)
+        for stroke in pro {
+            let cached = ProInkDabCache.get(for: stroke) ?? {
+                let c = ProInkRenderer.cache(for: stroke)
+                if let c { ProInkDabCache.set(c, for: stroke) }
+                return c
+            }()
+            guard let cached else { continue }
+            cg.saveGState()
+            if stroke.blendMode == "multiply" { cg.setBlendMode(.multiply) }
+            else if stroke.blendMode == "screen" { cg.setBlendMode(.screen) }
+            else { cg.setBlendMode(.normal) }
+            ProInkRenderer.draw(cached, toolName: stroke.tool,
+                                color: ProInkRenderer.displayColor(stroke.colorRGBA, dark: dark),
+                                in: cg, clip: rect)
+            cg.restoreGState()
+        }
     }
 
     /// 整頁算繪（不裁切、不取快取），給匯出 PDF / 圖片與列印用。
@@ -209,7 +262,8 @@ public enum PageThumbnailRenderer {
         cropToPreviewRatio: Bool,
         useCache: Bool,
         quality: Quality = .preview,
-        inkRevision: String = ""
+        inkRevision: String = "",
+        inkLayer: UIImage? = nil
     ) -> UIImage {
         // 匯出與縮圖一律以**頁面**為準，不是以當下的畫布寬度為準。
         // 以畫布寬度取圖的話，同一則筆記在 Mac 與 iPhone 上匯出的結果不一樣 ——
@@ -227,7 +281,8 @@ public enum PageThumbnailRenderer {
             + "|\(notebook.underInkObjectIds(forPage: pageIndex).sorted().joined(separator: ",").hashValue)|\(notebook.objectOrder(forPage: pageIndex)?.joined(separator: ",").hashValue ?? 0)") as NSString
         if useCache, let cached = cache.object(forKey: key) { return cached }
         PerfProbe.shared.count(.thumbnailComposeOnMain)
-        let pro = proStrokes(notebook: notebook, pageIndex: pageIndex, store: store)
+        // 背景已經畫好墨跡圖層時不必再讀專業筆畫。
+        let pro = inkLayer == nil ? proStrokes(notebook: notebook, pageIndex: pageIndex, store: store) : []
 
         let pageHeight = PageGeometry.height
         let visibleHeight = cropToPreviewRatio ? min(pageHeight, width * maxHeightRatio) : pageHeight
@@ -264,24 +319,11 @@ public enum PageThumbnailRenderer {
             // 墨跡：PencilKit 手繪，再疊專業筆刷與製圖線（依圖層由下往上，隱藏的圖層不畫）。
             let isDark = UITraitCollection.current.userInterfaceStyle == .dark
             let drawInk = {
-                drawing.image(from: fullPageRect, scale: scale)
-                    .draw(in: fullPageRect)
-                for stroke in pro {
-                    let cached = ProInkDabCache.get(for: stroke) ?? {
-                        let c = ProInkRenderer.cache(for: stroke)
-                        if let c { ProInkDabCache.set(c, for: stroke) }
-                        return c
-                    }()
-                    guard let cached else { continue }
-                    ctx.cgContext.saveGState()
-                    if stroke.blendMode == "multiply" { ctx.cgContext.setBlendMode(.multiply) }
-                    else if stroke.blendMode == "screen" { ctx.cgContext.setBlendMode(.screen) }
-                    else { ctx.cgContext.setBlendMode(.normal) }
-                    ProInkRenderer.draw(cached, toolName: stroke.tool,
-                        color: ProInkRenderer.displayColor(
-                            stroke.colorRGBA, dark: isDark),
-                                        in: ctx.cgContext, clip: fullPageRect)
-                    ctx.cgContext.restoreGState()
+                if let inkLayer {
+                    inkLayer.draw(in: CGRect(origin: .zero, size: inkLayer.size))
+                } else {
+                    drawInkStrokes(drawing: drawing, pro: pro, scale: scale, dark: isDark,
+                                   rect: fullPageRect, in: ctx.cgContext)
                 }
             }
             let drawTapes = {
