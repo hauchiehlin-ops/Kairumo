@@ -19,7 +19,10 @@ struct PageThumbnailCardView: View {
     let isDropTarget: Bool
     let effectiveWidth: CGFloat
     let sidebarScale: CGFloat
-    let pageDrawing: PKDrawing
+    /// 要算繪時才取：沒載入過的頁會讀檔解碼，不能在 `body` 裡做。
+    let pageDrawing: () -> PKDrawing
+    let priority: Int
+    @ObservedObject var slot: ThumbnailSlot
     /// 這一頁手繪的版本號（`PageInkStore.revision`）。內容換了它就變，縮圖才會重畫。
     let inkRevision: Int
     let notebook: NotebookDocument
@@ -33,15 +36,16 @@ struct PageThumbnailCardView: View {
     var body: some View {
         Button(action: onTap) {
             let pageRatio = PageGeometry.width / max(1, PageGeometry.height)
-            let img = PageThumbnailRenderer.render(
+            let _ = slot.version // 這一頁的新縮圖算好時才重算本卡片
+            let img = ThumbnailPipeline.shared.image(for: ThumbnailPipeline.Request(
                 notebook: notebook,
                 pageIndex: pageIndex,
-                drawing: pageDrawing,
                 store: store,
                 canvasWidth: canvasWidth,
                 inkRevision: inkRevision,
-                deferRecomputation: CanvasTouchState.isCanvasNavigating || CanvasTouchState.activeDirectTouches > 0
-            )
+                drawing: pageDrawing,
+                priority: priority
+            ))
             Image(uiImage: img)
                 .resizable()
                 .aspectRatio(pageRatio, contentMode: .fit)
@@ -522,7 +526,9 @@ extension NotebookEditorView {
             isDropTarget: isDropTarget,
             effectiveWidth: effectiveThumbnailWidth,
             sidebarScale: sidebarScale,
-            pageDrawing: drawingForPage(idx),
+            pageDrawing: pageDrawingProvider(idx),
+            priority: abs(idx - currentPageIndex),
+            slot: ThumbnailPipeline.shared.slot(notebookId: notebook.id, pageIndex: idx),
             inkRevision: inkRevisionForPage(idx),
             notebook: notebook,
             store: store,

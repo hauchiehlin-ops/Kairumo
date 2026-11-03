@@ -937,6 +937,13 @@ extension NotebookEditorView {
     }
 
     /// 取得指定頁面的手寫筆跡（統一自 PageInkStore 讀取，單一真相）
+    /// 縮圖要算繪時才取筆跡的閉包。沒載入過的頁取筆跡要讀檔解碼，不能在 `body` 裡做。
+    func pageDrawingProvider(_ page: Int) -> () -> PKDrawing {
+        let ink = activeInkStore
+        let pid = (notebook.pageIds != nil && page < (notebook.pageIds?.count ?? 0)) ? notebook.pageIds?[page] : nil
+        return { ink.drawing(for: page, pageId: pid) }
+    }
+
     func drawingForPage(_ page: Int) -> PKDrawing {
         let pid = (notebook.pageIds != nil && page < (notebook.pageIds?.count ?? 0)) ? notebook.pageIds?[page] : nil
         return activeInkStore.drawing(for: page, pageId: pid)

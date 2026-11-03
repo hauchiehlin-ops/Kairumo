@@ -1336,11 +1336,13 @@ public struct NotebookEditorView: View {
     func switchToPage(_ targetPage: Int) {
         let bounded = min(max(0, targetPage), max(0, notebook.pageCount - 1))
         guard bounded != currentPageIndex else { return }
-        saveCurrentPageDrawing()
-        currentPageIndex = bounded // state-entry: 切換頁面的唯一正門
-        loadCurrentPage()
-        if paperUsesDrafting(paperId: notebook.paperId(forPage: bounded)) {
-            applyEditorTool(.drafting)
+        PerfProbe.shared.measure(.pageSwitch) {
+            PerfProbe.shared.measure(.pageSave) { saveCurrentPageDrawing() }
+            currentPageIndex = bounded // state-entry: 切換頁面的唯一正門
+            PerfProbe.shared.measure(.pageLoad) { loadCurrentPage() }
+            if paperUsesDrafting(paperId: notebook.paperId(forPage: bounded)) {
+                applyEditorTool(.drafting)
+            }
         }
     }
 

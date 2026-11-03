@@ -1777,6 +1777,10 @@ final class ProInkLayerView: UIView {
     }
 
     func endStroke() {
+        PerfProbe.shared.measure(.strokeEnd) { endStrokeBody() }
+    }
+
+    private func endStrokeBody() {
         guard var stroke = live else { return }
         let liveArea = stroke.bounds.union(lastPredictedArea)
         lastPredictedArea = .null
