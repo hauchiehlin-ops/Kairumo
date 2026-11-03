@@ -1670,7 +1670,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = "Kairumo-Mac.entitlements";
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 160;
+				CURRENT_PROJECT_VERSION = 161;
 				DEVELOPMENT_TEAM = 6UJ8GS752W;
 				ENABLE_BITCODE = NO;
 				FRAMEWORK_SEARCH_PATHS = (
@@ -1681,8 +1681,8 @@
 				INFOPLIST_FILE = Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Kairumo;
 				INFOPLIST_KEY_CFBundleIconName = AppIcon;
-				INFOPLIST_KEY_CFBundleShortVersionString = 6.4.3;
-				INFOPLIST_KEY_CFBundleVersion = 160;
+				INFOPLIST_KEY_CFBundleShortVersionString = 6.4.4;
+				INFOPLIST_KEY_CFBundleVersion = 161;
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				INFOPLIST_KEY_NSFaceIDUsageDescription = "Kairumo uses Face ID to unlock your profile, so other people using this device cannot open your notes.";
@@ -1698,7 +1698,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 6.4.3;
+				MARKETING_VERSION = 6.4.4;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-lc++",
@@ -1761,7 +1761,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = "Kairumo-Mac.entitlements";
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 160;
+				CURRENT_PROJECT_VERSION = 161;
 				DEVELOPMENT_TEAM = 6UJ8GS752W;
 				ENABLE_BITCODE = NO;
 				FRAMEWORK_SEARCH_PATHS = (
@@ -1772,8 +1772,8 @@
 				INFOPLIST_FILE = Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Kairumo;
 				INFOPLIST_KEY_CFBundleIconName = AppIcon;
-				INFOPLIST_KEY_CFBundleShortVersionString = 6.4.3;
-				INFOPLIST_KEY_CFBundleVersion = 160;
+				INFOPLIST_KEY_CFBundleShortVersionString = 6.4.4;
+				INFOPLIST_KEY_CFBundleVersion = 161;
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				INFOPLIST_KEY_NSFaceIDUsageDescription = "Kairumo uses Face ID to unlock your profile, so other people using this device cannot open your notes.";
@@ -1789,7 +1789,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 6.4.3;
+				MARKETING_VERSION = 6.4.4;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-lc++",
