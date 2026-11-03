@@ -403,10 +403,14 @@ private fun PageSidebarRow(
                     thumb = withPendingInk(hit, pageId, 0.22f)
                     return@LaunchedEffect
                 }
-                val rendered = runCatching {
-                    PageSnapshot.render(act, s, index, 0.22f, appLanguage)
-                }.getOrNull()
-                kotlinx.coroutines.delay(16)
+                com.kairumo.padnote.perf.PerfProbe.shared.count(com.kairumo.padnote.perf.CostCounter.ThumbnailComposeOnMain)
+                val rendered = com.kairumo.padnote.perf.PerfProbe.shared.measure(com.kairumo.padnote.perf.PerfPoint.ThumbnailRender) {
+                    runCatching {
+                        PageSnapshot.render(act, s, index, 0.22f, appLanguage)
+                    }.getOrNull()
+                }
+                // 張與張之間讓出一幀；掉幀時（FrameGovernor）拉長間隔。
+                kotlinx.coroutines.delay(16 + com.kairumo.padnote.perf.FrameGovernor.shared.thumbnailGapMs)
                 rendered
             }
             if (bmp != null) {
