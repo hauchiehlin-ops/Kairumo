@@ -21,10 +21,11 @@ for arg in "$@"; do
 done
 
 calc_fingerprint() {
-    local head_sha dirty_state
+    local head_sha diff_head untracked
     head_sha="$(git rev-parse HEAD 2>/dev/null || echo "no-head")"
-    dirty_state="$(git status --porcelain 2>/dev/null || echo "no-status")"
-    printf "%s\n%s" "$head_sha" "$dirty_state" | shasum -a 256 | awk '{print $1}'
+    diff_head="$(git diff HEAD 2>/dev/null || echo "no-diff")"
+    untracked="$(git status --porcelain 2>/dev/null | grep '^\?\?' || true)"
+    printf "%s\n%s\n%s" "$head_sha" "$diff_head" "$untracked" | shasum -a 256 | awk '{print $1}'
 }
 
 CACHE_FILE="${REPO_ROOT}/.git/gatekeepers.passed"

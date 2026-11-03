@@ -677,6 +677,8 @@ public struct NotebookEditorView: View {
         // Apple Pencil 雙擊要切回「最後用過的筆刷」（工作項 S-67），
         // 所以每次換工具都要把筆刷記下來。橡皮擦與套索不算筆刷。
         .onChange(of: selectedTool, perform: handleSelectedToolChange)
+        .onChange(of: selectedColor) { _ in syncToolDirectlyToCanvas(tool: selectedTool) }
+        .onChange(of: strokeWidth) { _ in syncToolDirectlyToCanvas(tool: selectedTool) }
         .onReceive(NotificationCenter.default.publisher(for: AppCommand.proInkDidChange), perform: handleProInkDidChange)
         .onReceive(NotificationCenter.default.publisher(for: AppCommand.notebookPackageChanged), perform: handleNotebookPackageChanged)
         // 範例有改動、使用者要離開（見 `requestLeave`）。
