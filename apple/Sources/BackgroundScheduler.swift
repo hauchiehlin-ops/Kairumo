@@ -31,8 +31,10 @@ enum BackgroundPriority: Int, Comparable, Sendable {
     var qos: DispatchQoS.QoSClass {
         switch self {
         case .interactive: return .userInitiated
-        case .visible: return .utility
-        case .prefetch, .maintenance: return .background
+        // 預取不能用 `.background`：那一級系統可以延後數分鐘（低耗電模式、CI 虛擬機上實際就排不到），
+        // 而相鄰頁要在換頁前就解碼好才有意義。讓路給筆跡靠的是 `inkBusy` 閘門，不是 QoS。
+        case .visible, .prefetch: return .utility
+        case .maintenance: return .background
         }
     }
 }
