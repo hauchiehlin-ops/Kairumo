@@ -92,7 +92,8 @@ class TableStore(
                 rows = copy.rows, cols = copy.cols, cells = copy.cells,
                 headerRow = copy.headerRow, mergedCells = copy.mergedCells,
                 fontSize = copy.fontSize, ruleColorHex = copy.ruleColorHex,
-                headerBackgroundHex = copy.headerBackgroundHex
+                headerBackgroundHex = copy.headerBackgroundHex,
+                rowHeightOverrides = copy.rowHeightOverrides
             )
         }
         tables[created.id] = created

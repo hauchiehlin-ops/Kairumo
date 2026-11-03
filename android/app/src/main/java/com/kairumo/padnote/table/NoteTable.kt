@@ -42,7 +42,14 @@ data class NoteTable(
      */
     var rotationDegrees: Float? = null,
     /** `"clear"` 為透明。 */
-    var headerBackgroundHex: String? = null
+    var headerBackgroundHex: String? = null,
+    /**
+     * 手動列高（點），逐列一個。`0` 或小於 [MIN_ROW_OVERRIDE] 的項目為自動，`null` 為全部自動。
+     *
+     * 與 Apple 端 `NoteTableAttachment.rowHeightOverrides` 同一個語意；存在外觀裡的鍵是
+     * `rowHeights`（Apple `TableAppearance` 同一個鍵），兩端看到同一張表的列高一樣。
+     */
+    var rowHeightOverrides: MutableList<Double>? = null
 ) {
     init {
         rows = maxOf(1, rows)
@@ -78,6 +85,9 @@ data class NoteTable(
                 }
             }
         }
+        rowHeightOverrides?.let { heights ->
+            rowHeightOverrides = MutableList(targetRows) { heights.getOrElse(it) { 0.0 } }
+        }
         rows = targetRows
         cols = targetCols
         cells = newCells
@@ -89,6 +99,12 @@ data class NoteTable(
     fun insertRow(at: Int) {
         val position = at.coerceIn(0, rows)
         cells.addAll(position * cols, List(cols) { "" })
+        rowHeightOverrides?.let { heights ->
+            // 新列沿用相鄰列的手動列高（與 Apple 相同）。插入 0（自動）會讓貼齊格線的表格
+            // 從新列開始與紙上的線錯開。
+            val at = minOf(position, heights.size)
+            heights.add(at, heights.getOrElse(at) { heights.lastOrNull() ?: 0.0 })
+        }
         rows += 1
         mergedCells.forEach { if (it.row >= position) it.row += 1 }
     }
@@ -97,6 +113,7 @@ data class NoteTable(
         // 最後一列不能刪：沒有列的表格畫不出來，畫面上會忽然變空白。
         if (rows <= 1 || at !in 0 until rows) return
         repeat(cols) { cells.removeAt(at * cols) }
+        rowHeightOverrides?.let { if (at in it.indices) it.removeAt(at) }
         rows -= 1
         mergedCells.removeAll { it.row == at }
         mergedCells.forEach { if (it.row > at) it.row -= 1 }
@@ -147,7 +164,56 @@ data class NoteTable(
      * 欄寬、列高、斷行都在那裡決定 —— 這一層自己再算一次的話，同一張表在
      * iPad 與 Android 上的高度會不一樣，而表格的高度會影響它底下的東西。
      */
-    fun layout(): FfiTableLayout = tableLayout(
+    /**
+     * 畫面上的版面：核心的結果再套上手動列高。
+     *
+     * 沒有列高覆寫時與核心**逐點相同**。有的話只移動列的邊界 —— 格子、格線的 y 跟著
+     * 邊界重映射（與 Apple `TableLayoutResolver` 同一套做法），合併區上不會多出格線。
+     */
+    fun layout(): FfiTableLayout {
+        val core = coreLayout()
+        val overrides = rowHeightOverrides ?: return core
+        if (overrides.none { it >= MIN_ROW_OVERRIDE } || core.rowHeights.size != rows) return core
+        val newHeights = core.rowHeights.mapIndexed { r, h ->
+            overrides.getOrNull(r)?.takeIf { it >= MIN_ROW_OVERRIDE } ?: h
+        }
+        val oldEdges = cumulative(core.rowHeights)
+        val newEdges = cumulative(newHeights)
+        fun remap(y: Double): Double {
+            oldEdges.indexOfFirst { kotlin.math.abs(it - y) < 0.5 }.takeIf { it >= 0 }?.let { return newEdges[it] }
+            val upper = oldEdges.indexOfFirst { it > y }
+            if (upper <= 0) return if (y >= oldEdges.last()) newEdges.last() else y
+            val span = oldEdges[upper] - oldEdges[upper - 1]
+            val t = if (span > 0) (y - oldEdges[upper - 1]) / span else 0.0
+            return newEdges[upper - 1] + t * (newEdges[upper] - newEdges[upper - 1])
+        }
+        return core.copy(
+            height = newEdges.last(),
+            rowHeights = newHeights,
+            cells = core.cells.map { cell ->
+                val r = cell.row.toInt()
+                val r2 = minOf(rows, r + maxOf(1, cell.rowSpan.toInt()))
+                cell.copy(y = newEdges[r], height = newEdges[r2] - newEdges[r])
+            },
+            rules = core.rules.map { it.copy(y1 = remap(it.y1), y2 = remap(it.y2)) }
+        )
+    }
+
+    /**
+     * 新插入的表格貼齊這一頁的橫格線：頂邊落在最近的線上，每一列高度取格線間距的整數倍，
+     * 表格的每一條橫線都與紙上的線重合。與 Apple `fitTableToPageRules` 同一條規則。
+     * 沒有規則格線的紙張（空白、點陣）原樣不動。
+     */
+    fun fitToRules(rules: List<Float>) {
+        val step = com.kairumo.padnote.text.RuledWriting.step(rules) ?: return
+        rules.minByOrNull { kotlin.math.abs(it - y) }?.let { y = it }
+        val s = step.toDouble()
+        rowHeightOverrides = layout().rowHeights.map {
+            maxOf(1.0, kotlin.math.ceil(it / s - 0.01)) * s
+        }.toMutableList()
+    }
+
+    private fun coreLayout(): FfiTableLayout = tableLayout(
         FfiTable(
             blockId = id,
             rows = rows.toUInt(),
@@ -190,9 +256,22 @@ data class NoteTable(
         rotationDegrees?.let { put("rotationDegrees", it.toDouble()) }
         ruleColorHex?.let { put("ruleColorHex", it) }
         headerBackgroundHex?.let { put("headerBackgroundHex", it) }
+        rowHeightOverrides?.let { heights ->
+            put("rowHeights", JSONArray().also { array -> heights.forEach { array.put(it) } })
+        }
     }.toString()
 
     companion object {
+        /** 小於這個值的手動列高視為自動（與 Apple `TableLayoutResolver` 相同）。 */
+        const val MIN_ROW_OVERRIDE = 16.0
+
+        private fun cumulative(values: List<Double>): List<Double> {
+            val out = ArrayList<Double>(values.size + 1)
+            out.add(0.0)
+            for (v in values) out.add(out.last() + v)
+            return out
+        }
+
         fun decode(json: String): NoteTable? {
             val obj = runCatching { JSONObject(json) }.getOrNull() ?: return null
             val cellArray = obj.optJSONArray("cells")
@@ -218,7 +297,10 @@ data class NoteTable(
                     obj.optDouble("rotationDegrees").toFloat() else null,
                 ruleColorHex = if (obj.has("ruleColorHex")) obj.optString("ruleColorHex") else null,
                 headerBackgroundHex =
-                    if (obj.has("headerBackgroundHex")) obj.optString("headerBackgroundHex") else null
+                    if (obj.has("headerBackgroundHex")) obj.optString("headerBackgroundHex") else null,
+                // `rowHeights` 是外觀裡的鍵（兩端共用）；`rowHeightOverrides` 是 Apple 套件檔的欄位名，一併認得。
+                rowHeightOverrides = (obj.optJSONArray("rowHeights") ?: obj.optJSONArray("rowHeightOverrides"))
+                    ?.let { array -> MutableList(array.length()) { array.optDouble(it, 0.0) } }
             )
         }
     }
