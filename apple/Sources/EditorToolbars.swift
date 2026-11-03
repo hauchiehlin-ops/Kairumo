@@ -207,6 +207,7 @@ extension NotebookEditorView {
     var expandedEditorTopBar: some View {
         HStack(spacing: 10) {
             // 回到首頁按鈕（明顯、易見、帶底色）
+            erasedView {
             Button {
                 requestLeave { dismiss() }
             } label: {
@@ -229,8 +230,10 @@ extension NotebookEditorView {
             .accessibilityLabel(localizationManager.localized("home"))
             .help(localizationManager.localized("home"))
             .accessibilityIdentifier("editor.home")
+            }
 
             // 筆記結構側邊欄切換鈕
+            erasedView {
             Button {
                 withAnimation(.easeInOut(duration: 0.25)) {
                     showStructureSidebar.toggle()
@@ -252,14 +255,18 @@ extension NotebookEditorView {
             .accessibilityLabel(localizationManager.localized("structure_sidebar"))
             .help(localizationManager.localized("structure_sidebar_desc"))
             .accessibilityIdentifier("editor.sidebar_toggle")
+            }
 
             Spacer()
 
             // 手繪與打字模式切換器
+            erasedView {
             editorModeSwitcher()
                 .accessibilityIdentifier("editor.mode")
+            }
 
             // 🌟 畫布極簡模式恢復按鈕（讓使用者一秒找到退出鍵）
+            erasedView {
             if isMinimalistCanvasActive {
                 Button {
                     withAnimation(.spring(response: 0.32, dampingFraction: 0.75)) {
@@ -282,8 +289,10 @@ extension NotebookEditorView {
                 .help(localizationManager.localized("exit_canvas_minimal_mode"))
                 .accessibilityLabel(localizationManager.localized("exit_canvas_minimal_mode"))
             }
+            }
 
             // 筆記標題（點擊可修改）
+            erasedView {
             Button {
                 renameText = notebook.displayTitle()
                 showRenameAlert = true
@@ -300,10 +309,12 @@ extension NotebookEditorView {
             }
             .buttonStyle(.plain)
             .accessibilityIdentifier("editor.title")
+            }
 
             Spacer()
 
             // 頁碼切換器
+            erasedView {
             HStack(spacing: 6) {
                 Button {
                     switchToPage(currentPageIndex - 1)
@@ -338,11 +349,15 @@ extension NotebookEditorView {
                 .help(localizationManager.localized("add_page_desc"))
                 .accessibilityIdentifier("editor.page.add")
             }
+            }
 
+            erasedView {
             Divider()
                 .frame(height: 18)
+            }
 
             // 尺規切換開關
+            erasedView {
             Button {
                 isRulerActive.toggle()
             } label: {
@@ -354,8 +369,10 @@ extension NotebookEditorView {
             }
             .accessibilityLabel(localizationManager.localized("ruler"))
             .help(localizationManager.localized("ruler_desc"))
+            }
 
             // 次世代 UI/UX Phase 5: 立起雙屏模式 (Tabletop Mode)
+            erasedView {
             Button {
                 withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
                     isTabletopMode.toggle()
@@ -369,8 +386,10 @@ extension NotebookEditorView {
             }
             .accessibilityLabel(L("posture_tabletop_mode"))
             .help(L("posture_tabletop_mode_desc"))
+            }
 
             // 復原與重做 (Undo / Redo)
+            erasedView {
             HStack(spacing: 10) {
                 Button {
                     performUndo()
@@ -422,8 +441,10 @@ extension NotebookEditorView {
                 .help(localizationManager.localized("revert_to_initial_state"))
                 .accessibilityIdentifier("editor.compact.revert")
             }
+            }
 
             // 📦 素材圖庫快捷按鈕（與 iOS 首頁一致）
+            erasedView {
             Button {
                 showAssetLibrarySheet = true
             } label: {
@@ -442,8 +463,10 @@ extension NotebookEditorView {
             .buttonStyle(.plain)
             .accessibilityLabel(localizationManager.localized("asset_library"))
             .help(localizationManager.localized("asset_library"))
+            }
 
             // ➕ 插入物件下拉選單（整合圖片、算式、圖表、3D、主題工具）
+            erasedView {
             Menu {
                 insertMenuContent
             } label: {
@@ -468,8 +491,10 @@ extension NotebookEditorView {
             .accessibilityLabel(localizationManager.localized("insert_object"))
             .help(localizationManager.localized("insert_object"))
             .accessibilityIdentifier("editor.more")
+            }
 
             // 💬 畫布討論圖釘快捷按鈕
+            erasedView {
             Button {
                 withAnimation {
                     isPlacingCommentPin.toggle()
@@ -503,8 +528,10 @@ extension NotebookEditorView {
             .buttonStyle(.plain)
             .accessibilityLabel(localizationManager.localized("comment_pin"))
             .help(localizationManager.localized("comment_pin_desc"))
+            }
 
             // 👥 線上多人即時協同按鈕
+            erasedView {
             Button {
                 showCollaborationSheet = true
             } label: {
@@ -535,8 +562,10 @@ extension NotebookEditorView {
             .buttonStyle(.plain)
             .accessibilityLabel(localizationManager.localized("collaborate"))
             .help(localizationManager.localized("collaborate_desc"))
+            }
 
             // 錄音按鈕
+            erasedView {
             if audioManager.status == .recording || audioManager.status == .paused {
                 Button {
                     stopAndSaveRecording()
@@ -591,8 +620,10 @@ extension NotebookEditorView {
                 }
                 .accessibilityIdentifier("editor.record")
             }
+            }
 
             // 匯出與列印選單（解決「看不到匯出相關工具列」問題）
+            erasedView {
             Menu {
                 Button {
                     presentFromMenu {
@@ -647,6 +678,7 @@ extension NotebookEditorView {
             .accessibilityLabel(localizationManager.localized("export_print"))
             .help(localizationManager.localized("export_print"))
             .accessibilityIdentifier("editor.share")
+            }
         }
     }
 
@@ -655,6 +687,7 @@ extension NotebookEditorView {
     @ViewBuilder
     var compactEditorTopBarItems: some View {
         // 回到首頁按鈕（緊湊模式）
+        erasedView {
         Button {
             requestLeave { dismiss() }
         } label: {
@@ -674,8 +707,10 @@ extension NotebookEditorView {
         .accessibilityLabel(localizationManager.localized("home"))
         .help(localizationManager.localized("home"))
         .accessibilityIdentifier("editor.home")
+        }
 
         // 筆記結構側邊欄切換
+        erasedView {
         Button {
             withAnimation(.easeInOut(duration: 0.25)) {
                 showStructureSidebar.toggle()
@@ -690,11 +725,15 @@ extension NotebookEditorView {
         }
         .buttonStyle(.plain)
         .accessibilityIdentifier("editor.sidebar_toggle")
+        }
 
         // 模式切換（緊湊圖標）
+        erasedView {
         editorModeSwitcher()
             .accessibilityIdentifier("editor.mode")
+        }
 
+        erasedView {
         if isMinimalistCanvasActive {
             Button {
                 withAnimation(.spring(response: 0.32, dampingFraction: 0.75)) {
@@ -712,8 +751,10 @@ extension NotebookEditorView {
             .help(localizationManager.localized("exit_canvas_minimal_mode"))
             .accessibilityLabel(localizationManager.localized("exit_canvas_minimal_mode"))
         }
+        }
 
         // 筆記標題（彈性縮寫）
+        erasedView {
         Button {
             renameText = notebook.displayTitle()
             showRenameAlert = true
@@ -724,8 +765,10 @@ extension NotebookEditorView {
         }
         .buttonStyle(.plain)
         .accessibilityIdentifier("editor.title")
+        }
 
         // 復原、重做與恢復初始狀態（膠囊群組，支援連續無限制復原）
+        erasedView {
         HStack(spacing: 2) {
             Button {
                 performUndo()
@@ -772,10 +815,12 @@ extension NotebookEditorView {
         .padding(.vertical, 2)
         .background(Color(uiColor: .tertiarySystemGroupedBackground))
         .cornerRadius(EditorToolbarMetrics.corner)
+        }
 
         Spacer(minLength: 2)
 
         // 頁面導覽群組膠囊 (上一頁、頁碼指示、下一頁、新增頁面、連續/整頁切換)
+        erasedView {
         HStack(spacing: 2) {
             Button {
                 switchToPage(currentPageIndex - 1)
@@ -844,8 +889,10 @@ extension NotebookEditorView {
         .padding(.vertical, 2)
         .background(Color(uiColor: .tertiarySystemGroupedBackground))
         .cornerRadius(EditorToolbarMetrics.corner)
+        }
 
         // 紙張規格與版面調色膠囊（整合為一體化功能膠囊）
+        erasedView {
         HStack(spacing: 2) {
             pageFormatMenu
                 .accessibilityIdentifier("editor.page_format")
@@ -857,8 +904,10 @@ extension NotebookEditorView {
         .padding(.vertical, 2)
         .background(Color(uiColor: .tertiarySystemGroupedBackground))
         .cornerRadius(EditorToolbarMetrics.corner)
+        }
 
         // 👥 線上多人即時協同按鈕（常駐於頂部列，與 Mac 對齊；iPad 顯示圖示+文字，iPhone 顯示精簡圖示）
+        erasedView {
         Button {
             showCollaborationSheet = true
         } label: {
@@ -886,8 +935,10 @@ extension NotebookEditorView {
         .accessibilityLabel(localizationManager.localized("collaborate"))
         .help(localizationManager.localized("collaborate_desc"))
         .accessibilityIdentifier("editor.compact.collaborate")
+        }
 
         // ➕ 插入物件選單（藍色品牌主按鈕，在 iPad 上以醒目膠囊呈現，對齊 Mac 體驗）
+        erasedView {
         Menu {
             insertMenuContent
         } label: {
@@ -912,8 +963,10 @@ extension NotebookEditorView {
         .accessibilityLabel(localizationManager.localized("insert_object"))
         .help(localizationManager.localized("insert_object"))
         .accessibilityIdentifier("editor.more")
+        }
 
         // 錄音
+        erasedView {
         if audioManager.status == .recording || audioManager.status == .paused {
             Button {
                 stopAndSaveRecording()
@@ -970,8 +1023,10 @@ extension NotebookEditorView {
             }
             .accessibilityIdentifier("editor.record")
         }
+        }
 
         // 匯出功能選單
+        erasedView {
         Menu {
             Button {
                 presentFromMenu {
@@ -1020,6 +1075,7 @@ extension NotebookEditorView {
         }
         .buttonStyle(.plain)
         .accessibilityIdentifier("editor.share")
+        }
     }
 
 
