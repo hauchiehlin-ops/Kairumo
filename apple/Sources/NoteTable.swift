@@ -136,10 +136,6 @@ public struct NoteTableAttachment: Identifiable, Codable, Hashable {
     /// 框線樣式 ("solid", "dashed", "double")
     public var borderStyleRaw: String?
 
-    public static func defaultRowHeight(fontSize: CGFloat) -> CGFloat {
-        max(24, (fontSize * 1.35).rounded() + 12)
-    }
-
     public init(
         id: String = UUID().uuidString.lowercased(),
         pageIndex: Int = 0,
@@ -319,9 +315,12 @@ public struct NoteTableAttachment: Identifiable, Codable, Hashable {
             cellStyles?.insert(
                 contentsOf: Array(repeating: NoteTableCellStyle(), count: cols), at: position * cols)
         }
-        if rowHeightOverrides != nil {
-            let count = rowHeightOverrides?.count ?? 0
-            rowHeightOverrides?.insert(0, at: min(position, count))
+        if let heights = rowHeightOverrides {
+            // 新列沿用相鄰列的手動列高（Office 也是這樣）。插入 0（自動）會讓貼齊格線的表格
+            // 從新列開始與紙上的線錯開。
+            let at = min(position, heights.count)
+            let neighbour = heights.indices.contains(at) ? heights[at] : (heights.last ?? 0)
+            rowHeightOverrides?.insert(neighbour, at: at)
         }
         rows += 1
         shiftSpans(afterRow: position, by: 1)
