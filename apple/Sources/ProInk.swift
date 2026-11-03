@@ -1134,6 +1134,85 @@ final class ProInkLayerView: UIView {
     /// 收筆時筆點陣還沒算好的那一筆：算好之前即時疊加層繼續顯示它，算好才交接給底層。
     private var pendingHandoff: ProStroke?
 
+    /// 每筆的外框（`ProStroke.bounds` 要掃過全部筆點，擦除與局部重畫每次都問會變成 O(筆畫數 × 筆點數)）。
+    /// 以 id 為鍵，並用「筆點數＋頭尾點＋筆寬」當簽章：搬動、改寫之後簽章會變，快取自動失效。
+    private var boundsCache: [String: (sig: Int, rect: CGRect)] = [:]
+
+    private func cachedBounds(_ stroke: ProStroke) -> CGRect {
+        var h = Hasher()
+        h.combine(stroke.points.count)
+        h.combine(stroke.baseWidth)
+        if let f = stroke.points.first { h.combine(f.x); h.combine(f.y) }
+        if let l = stroke.points.last { h.combine(l.x); h.combine(l.y) }
+        let sig = h.finalize()
+        if let hit = boundsCache[stroke.id], hit.sig == sig { return hit.rect }
+        let rect = stroke.bounds
+        boundsCache[stroke.id] = (sig, rect)
+        return rect
+    }
+
+    /// 已烘焙的序列與目前序列只差「被拿掉／插進來」的幾筆（其餘相對順序不變）時，回傳要局部重畫的範圍；
+    /// 否則 `nil`（整頁重建）。擦掉一筆因此只重畫那一筆的範圍，不必把整頁幾百筆重貼一遍。
+    private func patchRegion(baked: [String], ordered: [ProStroke]) -> CGRect? {
+        let ids = ordered.map(\.id)
+        guard ids.count != baked.count else { return nil }
+        let removal = ids.count < baked.count
+        let longer = removal ? baked : ids
+        let shorter = removal ? ids : baked
+        var j = 0
+        var differing: [Int] = []
+        for (i, id) in longer.enumerated() {
+            if j < shorter.count, shorter[j] == id { j += 1 } else { differing.append(i) }
+        }
+        guard j == shorter.count, !differing.isEmpty, differing.count <= 8 else { return nil }
+        var region = CGRect.null
+        for i in differing {
+            if removal {
+                guard let known = boundsCache[longer[i]] else { return nil }
+                region = region.union(known.rect)
+            } else {
+                region = region.union(cachedBounds(ordered[i]))
+            }
+        }
+        return region.isNull ? nil : region
+    }
+
+    /// 局部重畫：清掉 `region`，把與它相交的筆畫依序重貼進去。範圍對齊到整數像素（否則邊緣會留半透明殘影）。
+    private func patchBacking(_ ctx: CGContext, ordered: [ProStroke], region: CGRect, scale: CGFloat, isDark: Bool, fullBounds: CGRect) {
+        let inflated = region.insetBy(dx: -1, dy: -1)
+        let x0 = floor(inflated.minX * scale) / scale, y0 = floor(inflated.minY * scale) / scale
+        let x1 = ceil(inflated.maxX * scale) / scale, y1 = ceil(inflated.maxY * scale) / scale
+        let r = CGRect(x: x0, y: y0, width: x1 - x0, height: y1 - y0).intersection(fullBounds)
+        guard !r.isNull else { return }
+        ctx.saveGState()
+        ctx.clip(to: r)
+        ctx.clear(r)
+        for stroke in ordered where cachedBounds(stroke).intersects(r) {
+            guard let cached = cachedDabs(for: stroke) else { continue }
+            ctx.saveGState()
+            ctx.setBlendMode(stroke.blendMode == "multiply" ? .multiply : (stroke.blendMode == "screen" ? .screen : .normal))
+            ProInkRenderer.draw(cached, toolName: stroke.tool, color: ProInkRenderer.displayColor(stroke.colorRGBA, dark: isDark), in: ctx, clip: r)
+            ctx.restoreGState()
+        }
+        ctx.restoreGState()
+        bakedStrokeIds = ordered.map(\.id)
+        bakedStrokeCount = ordered.count
+    }
+
+    /// 捲出畫面的頁：丟掉純快取性質的算繪資源（整頁烘焙點陣、視圖自己的點陣），回來時自動在背景重烘。
+    /// 連續模式的頁面一旦建立就不會被系統回收，不丟的話每捲過一頁就多留十幾 MB。
+    func releaseRenderResources() {
+        guard pendingHandoff == nil, live == nil else { return }
+        invalidateBackingStore()
+        boundsCache.removeAll()
+        layer.contents = nil
+    }
+
+    /// 回到畫面：重畫一次（烘焙點陣已被丟掉時會在背景重建）。
+    func resumeRendering() {
+        setNeedsDisplay()
+    }
+
     /// 工具的預覽（標註畫到一半的樣子）與已選的點。不存檔、不進復原；每次更新整組換掉。
     private var overlayStrokes: [ProStroke] = []
     private var overlayMarks: [CGPoint] = []
@@ -1512,6 +1591,15 @@ final class ProInkLayerView: UIView {
             }
         }
 
+        // 只差幾筆被擦掉／放回來：局部重畫就好。
+        if needsFullRebuild, inFlightBake == nil, bakedStrokeCount > 0,
+           pageKey == lastPageKey, isDark == lastDarkMode, fullBounds.size == lastBackingBounds,
+           let region = patchRegion(baked: bakedStrokeIds, ordered: ordered) {
+            PerfProbe.shared.count(.backingPatch)
+            patchBacking(bCtx, ordered: ordered, region: region, scale: scale, isDark: isDark, fullBounds: fullBounds)
+            needsFullRebuild = false
+        }
+
         if needsFullRebuild {
             // 同一份已經在背景烘焙：等它完成（尾端新筆畫由 `draw` 直接補畫）。內容已經不是當初那份就作廢重來。
             if let flight = inFlightBake {
@@ -1523,6 +1611,7 @@ final class ProInkLayerView: UIView {
                 bakeToken.cancel()
                 inFlightBake = nil
             }
+            PerfProbe.shared.count(.backingFullRebuild)
             // 換頁（或第一次建立）且筆畫多：整頁烘焙放到背景，主執行緒不等。
             if pageKey != lastPageKey, ordered.count > Self.asyncBakeThreshold {
                 startAsyncBake(ordered: ordered, size: fullBounds.size, scale: scale, isDark: isDark, pageKey: pageKey)
@@ -2155,7 +2244,7 @@ final class ProInkLayerView: UIView {
 
     private func touches(_ stroke: ProStroke, path: [CGPoint], radius: CGFloat) -> Bool {
         let reach = radius + CGFloat(stroke.baseWidth) * 0.5
-        guard stroke.bounds.insetBy(dx: -reach, dy: -reach).contains(where: path) else { return false }
+        guard cachedBounds(stroke).insetBy(dx: -reach, dy: -reach).contains(where: path) else { return false }
         let reachSq = reach * reach
         let pts = stroke.points
         if pts.isEmpty { return false }

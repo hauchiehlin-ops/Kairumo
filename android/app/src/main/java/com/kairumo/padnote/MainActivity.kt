@@ -293,10 +293,21 @@ import com.kairumo.padnote.profile.ProfileContext
  */
 @OptIn(androidx.compose.ui.ExperimentalComposeUiApi::class)
 class MainActivity : FragmentActivity() {
+    override fun onResume() {
+        super.onResume()
+        com.kairumo.padnote.perf.FrameGovernor.shared.start()
+    }
+
+    override fun onPause() {
+        com.kairumo.padnote.perf.FrameGovernor.shared.stop()
+        super.onPause()
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         com.kairumo.padnote.platform.CrashLogger.install(applicationContext)
         com.kairumo.padnote.platform.MainThreadStallMonitor.start()
+        com.kairumo.padnote.perf.FieldTelemetry.start(this)
         com.kairumo.padnote.platform.ExitReasonLogger.logRecent(applicationContext)
         com.kairumo.padnote.platform.StartupLogger.logKey("log_main_activity_create")
         // 跨裝置語言要在畫出任何東西**之前**讀進來，不然第一幀會是舊語言，

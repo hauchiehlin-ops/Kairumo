@@ -194,6 +194,9 @@ struct ContinuousPageView<ObjectLayer: View>: View {
         self._loaded = State(initialValue: true)
     }
 
+    /// 這一頁的畫布（弱參照），離開畫面時用來釋放算繪快取。
+    @State private var canvasBox = CanvasBox()
+
     var body: some View {
         ZStack(alignment: .topLeading) {
             PageBackgroundRepresentable(
@@ -248,7 +251,7 @@ struct ContinuousPageView<ObjectLayer: View>: View {
                 onLassoBegan: { pt in onLassoBegan?(pt) },
                 onLassoMoved: { pt in onLassoMoved?(pt) },
                 onLassoEnded: { onLassoEnded?() },
-                canvasRef: { canvas in canvasRef(canvas) },
+                canvasRef: { canvas in canvasBox.canvas = canvas; canvasRef(canvas) },
                 palmRejection: palmRejection,
                 onPenControl: { control, pressed in
                     if isFocused { onPenControl?(control, pressed) }
@@ -362,9 +365,15 @@ struct ContinuousPageView<ObjectLayer: View>: View {
                 .padding(6)
         }
         .onAppear {
+            (canvasBox.canvas as? AdaptiveCanvasView)?.proLayer?.resumeRendering()
             if loaded {
                 onInitialLoaded?(pageIndex, drawing)
             }
+        }
+        .onDisappear {
+            // 捲出畫面且不是焦點頁：丟掉專業筆畫層的算繪快取（回來時背景重烘）。
+            guard !isFocused else { return }
+            (canvasBox.canvas as? AdaptiveCanvasView)?.proLayer?.releaseRenderResources()
         }
         .task(id: loaded) {
             // 只載一次。每次重繪都載的話，正在寫的那一頁會被硬碟上的舊版覆蓋。
@@ -580,4 +589,10 @@ final class TwoFingerScrollForwarder: NSObject, UIGestureRecognizerDelegate {
         }
         return false
     }
+}
+
+
+/// 弱持有畫布的小盒子（`@State` 裡放參照型別，SwiftUI 重建視圖時不會換掉它）。
+final class CanvasBox {
+    weak var canvas: PKCanvasView?
 }

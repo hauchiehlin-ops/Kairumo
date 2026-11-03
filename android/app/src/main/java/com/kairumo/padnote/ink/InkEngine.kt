@@ -1123,7 +1123,12 @@ class InkEngine(
 
     private var forceSnap = false
 
-    private fun commit(id: ULong, samples: List<InkInput.Sample>): CompletedStroke? {
+    private fun commit(id: ULong, samples: List<InkInput.Sample>): CompletedStroke? =
+        com.kairumo.padnote.perf.PerfProbe.shared.measure(com.kairumo.padnote.perf.PerfPoint.StrokeEnd) {
+            commitImpl(id, samples)
+        }
+
+    private fun commitImpl(id: ULong, samples: List<InkInput.Sample>): CompletedStroke? {
         if (layer != 0) {
             // 鎖住的圖層不收筆畫；畫在隱藏的圖層上就把它顯示出來，不然畫了卻什麼都沒有。
             if (DraftingState.isLocked(layer)) return null
@@ -1216,9 +1221,16 @@ class InkEngine(
             layer = layer,
             lineType = lineType
         )
-        // 落筆平滑後立即預熱自繪筆刷印章點陣快取，避免下一幀 UI 繪製時落入磁碟或 FFI 重算
+        // 自繪筆刷印章點陣放到背景預熱：主執行緒收筆只做記帳。
+        // 渲染緒畫這一筆時若還沒算好，會自己按需計算（不在主執行緒），所以不需要等。
         if (uniffi.padnote_core.brushIsCustom(tool)) {
-            InkBrushRenderer.prewarmDabs(finalPoints, tool, baseWidth, lineType)
+            val warmPoints = finalPoints
+            val warmTool = tool
+            val warmWidth = baseWidth
+            val warmLine = lineType
+            com.kairumo.padnote.perf.BackgroundScheduler.shared.submit(com.kairumo.padnote.perf.BackgroundPriority.Interactive) {
+                InkBrushRenderer.prewarmDabs(warmPoints, warmTool, warmWidth, warmLine)
+            }
         }
         _strokes += stroke
         syncPageStrokesCache()
@@ -1327,6 +1339,16 @@ class InkEngine(
      * 讀的期間使用者已經畫下的筆畫保留（核心還沒寫完的那幾筆不在讀回來的結果裡）。
      */
     suspend fun loadAsync() {
+        val started = System.nanoTime()
+        try {
+            loadAsyncImpl()
+        } finally {
+            com.kairumo.padnote.perf.PerfProbe.shared.record(
+                com.kairumo.padnote.perf.PerfPoint.PageLoad, (System.nanoTime() - started) / 1_000_000.0)
+        }
+    }
+
+    private suspend fun loadAsyncImpl() {
         val target = session ?: return
         val page = pageId ?: return
         val loaded = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
@@ -1724,6 +1746,7 @@ class InkEngine(
             if (session == null || pageId.isNullOrEmpty()) return
             val key = "${System.identityHashCode(session)}|$pageId"
             if (pageStrokesCache.get(key) != null) return
+            com.kairumo.padnote.perf.PerfProbe.shared.count(com.kairumo.padnote.perf.CostCounter.PrefetchScheduled)
             val list = runCatching { session.visibleStrokeDetails(pageId) }.getOrNull() ?: return
             val strokes = ArrayList<CompletedStroke>(list.size)
             var syntheticId = ULong.MAX_VALUE

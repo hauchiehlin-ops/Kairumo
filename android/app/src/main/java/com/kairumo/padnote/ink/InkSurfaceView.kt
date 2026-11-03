@@ -80,6 +80,23 @@ class InkSurfaceView(
     private var lastPageKey: String? = null
     private val bakedStrokes = ArrayList<InkEngine.CompletedStroke>()
 
+    /** 每筆在烘焙點陣上的外框（像素）。算一次記著：擦除／放回的局部重畫要問「哪些筆畫碰到這個範圍」。 */
+    private val boundsCache = java.util.IdentityHashMap<InkEngine.CompletedStroke, android.graphics.RectF>()
+
+    private fun boundsPx(stroke: InkEngine.CompletedStroke): android.graphics.RectF =
+        boundsCache.getOrPut(stroke) {
+            var minX = Float.MAX_VALUE; var minY = Float.MAX_VALUE
+            var maxX = -Float.MAX_VALUE; var maxY = -Float.MAX_VALUE
+            for (p in stroke.points) {
+                val x = p.x * pxPerDp; val y = p.y * pxPerDp
+                if (x < minX) minX = x; if (x > maxX) maxX = x
+                if (y < minY) minY = y; if (y > maxY) maxY = y
+            }
+            // 外擴：筆寬、噴槍與油畫筆的筆點比基準寬度大。
+            val pad = stroke.baseWidth * pxPerDp * 4f + 4f
+            if (minX > maxX) android.graphics.RectF() else android.graphics.RectF(minX - pad, minY - pad, maxX + pad, maxY + pad)
+        }
+
     private val callback = object : CanvasFrontBufferedRenderer.Callback<Segment> {
         override fun onDrawFrontBufferedLayer(
             canvas: Canvas, bufferWidth: Int, bufferHeight: Int, param: Segment
@@ -124,10 +141,42 @@ class InkSurfaceView(
                 }
             }
 
+            // 只差幾筆被擦掉／放回來：局部重畫那個範圍就好（對應 Apple 的局部重畫）。
+            if (needsFullRebuild && currentPageKey == lastPageKey && bakedStrokeCount > 0) {
+                val d = BackingDiff.diff(bakedStrokes, currentStrokes) { a, b -> a === b || a == b }
+                if (d != null) {
+                    val region = android.graphics.RectF()
+                    var first = true
+                    for (s in d.removed + d.inserted) {
+                        val r = boundsPx(s)
+                        if (first) { region.set(r); first = false } else region.union(r)
+                    }
+                    region.intersect(0f, 0f, bufferWidth.toFloat(), bufferHeight.toFloat())
+                    if (!region.isEmpty) {
+                        com.kairumo.padnote.perf.PerfProbe.shared.count(com.kairumo.padnote.perf.CostCounter.BackingPatch)
+                        bCanvas.save()
+                        bCanvas.clipRect(region)
+                        bCanvas.drawColor(Color.TRANSPARENT, android.graphics.PorterDuff.Mode.CLEAR)
+                        for (s in currentStrokes) {
+                            if (!android.graphics.RectF.intersects(region, boundsPx(s))) continue
+                            paint.color = argbOf(s.colorRgba)
+                            bCanvas.drawStroke(s.points, s.tool, s.baseWidth)
+                        }
+                        bCanvas.restore()
+                        bakedStrokes.clear()
+                        bakedStrokes.addAll(currentStrokes)
+                        bakedStrokeCount = currentStrokes.size
+                        needsFullRebuild = false
+                    }
+                }
+            }
+
             if (needsFullRebuild) {
+                com.kairumo.padnote.perf.PerfProbe.shared.count(com.kairumo.padnote.perf.CostCounter.BackingFullRebuild)
                 bCanvas.drawColor(Color.TRANSPARENT, android.graphics.PorterDuff.Mode.CLEAR)
                 bakedStrokes.clear()
                 bakedStrokeCount = 0
+                boundsCache.clear()
                 lastPageKey = currentPageKey
             }
 

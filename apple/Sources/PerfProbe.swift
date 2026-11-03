@@ -53,6 +53,9 @@ enum CostCounter: String, CaseIterable, Sendable {
     case prefetchScheduled
     case mainThreadDrawingLoad
     case thumbnailComposeOnMain
+    /// 專業筆畫層：整頁重建（含背景烘焙）與局部重畫的次數。
+    case backingFullRebuild
+    case backingPatch
 }
 
 final class PerfProbe: @unchecked Sendable {

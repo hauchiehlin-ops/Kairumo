@@ -1239,9 +1239,13 @@ internal fun rememberEditorCanvasContext(
             continuousScrollRequest++
             return
         }
-        ctx.flushDebouncedInkRevision()
-        pageIndex = bounded // state-entry: 頁面切換的唯一正門
-        continuousScrollRequest++
+        com.kairumo.padnote.perf.PerfProbe.shared.measure(com.kairumo.padnote.perf.PerfPoint.PageSwitch) {
+            com.kairumo.padnote.perf.PerfProbe.shared.measure(com.kairumo.padnote.perf.PerfPoint.PageSave) {
+                ctx.flushDebouncedInkRevision()
+            }
+            pageIndex = bounded // state-entry: 頁面切換的唯一正門
+            continuousScrollRequest++
+        }
     }
 
     fun selectText(id: String?) {
@@ -2219,11 +2223,16 @@ internal fun rememberEditorCanvasContext(
         val sess = notebook?.first
         val curIdx = pageIndex
         if (sess != null) {
-            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                val total = sess.pageCount().toInt()
-                for (delta in intArrayOf(1, -1, 2, -2)) {
-                    val adj = curIdx + delta
-                    if (adj in 0 until total) {
+            // 相鄰頁的預取交給集中排程器：書寫中暫停、同一頁不重複排。
+            for (delta in intArrayOf(1, -1, 2, -2)) {
+                val adj = curIdx + delta
+                if (adj < 0) continue
+                com.kairumo.padnote.perf.BackgroundScheduler.shared.submit(
+                    com.kairumo.padnote.perf.BackgroundPriority.Prefetch,
+                    key = "prewarm|${System.identityHashCode(sess)}|$adj"
+                ) {
+                    val total = runCatching { sess.pageCount().toInt() }.getOrDefault(0)
+                    if (adj < total) {
                         val adjPageId = runCatching { sess.pageIdAt(adj.toUInt()) }.getOrNull()
                         InkEngine.prewarmPage(sess, adjPageId)
                     }
@@ -2410,7 +2419,7 @@ internal fun rememberEditorCanvasContext(
     // 換工具。工具列與筆身控制項走同一條路 —— 各寫一份的話，用側鍵切到
     // 橡皮擦時 `engine.isErasing` 會忘了跟著改，症狀是「側鍵選到橡皮擦了，
     // 但畫下去還是墨跡」。
-    fun applyInkTool(picked: InkTool) {
+    fun applyInkTool(picked: InkTool) = com.kairumo.padnote.perf.PerfProbe.shared.measure(com.kairumo.padnote.perf.PerfPoint.ToolSwitch) {
         // 若引擎當前仍有在途未結束的筆畫，立即取消以乾淨狀態切換新工具，不卡死換筆；
         // 且不在此處強制 flushDebouncedInkRevision()，避免換筆瞬間觸發全畫面與側欄同步重組凍結。
         engine.cancelInFlight()
