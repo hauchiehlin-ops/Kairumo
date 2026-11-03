@@ -793,6 +793,8 @@ internal fun EditorFloatingPanels(ctx: EditorCanvasContext) = with(ctx) {
             languageTag = deviceLanguageTag(),
             isNew = true,
             onCommit = { table ->
+                // 橫線紙上貼齊格線（與 Apple 所有插入表格的入口一致）。
+                table.fitToRules(textStore.pageRules(meta.paperId(pageIndex)))
                 tableStore.create(table)
                 tableRevision++
                 insertingTable = false

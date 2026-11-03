@@ -278,4 +278,48 @@ class TableTest {
         assertNull(TableAppearance.decode("{}"))
         assertNull(TableAppearance.decode("not json"))
     }
+
+    // MARK: - 手動列高（與 Apple `TableCellFormatTests` 對照）
+
+    @Test
+    fun withoutRowOverridesTheLayoutEqualsTheCore() {
+        val t = table()
+        val before = t.layout()
+        t.rowHeightOverrides = mutableListOf(0.0, 0.0)
+        assertEquals(before, t.layout())
+    }
+
+    @Test
+    fun aRowHeightOverrideMovesTheRowAndTheRulesBelowIt() {
+        val t = table()
+        t.rowHeightOverrides = mutableListOf(60.0, 0.0)
+        val l = t.layout()
+        assertEquals(60.0, l.rowHeights[0], 0.001)
+        assertEquals(60.0, l.cells.first { it.row == 1u }.y, 0.001)
+        assertEquals(60.0 + l.rowHeights[1], l.height, 0.001)
+        // 每一條橫格線都落在新的列邊界上。
+        val edges = setOf(0.0, 60.0, l.height)
+        l.rules.filter { kotlin.math.abs(it.y1 - it.y2) < 0.5 }
+            .forEach { rule -> assertTrue(edges.any { kotlin.math.abs(it - rule.y1) < 0.01 }) }
+    }
+
+    @Test
+    fun fittingToRulesSnapsTheTopAndEveryRowEdgeToTheRulePitch() {
+        val t = table().apply { y = 131f }
+        val rules = (0 until 30).map { 100f + it * 25.5f }
+        t.fitToRules(rules)
+        assertEquals(125.5f, t.y, 0.001f)
+        t.layout().rowHeights.forEach {
+            val lines = it / 25.5
+            assertEquals(kotlin.math.round(lines), lines, 0.001)
+        }
+    }
+
+    @Test
+    fun fittingToABlankPageLeavesTheTableAlone() {
+        val t = table().apply { y = 131f }
+        t.fitToRules(emptyList())
+        assertEquals(131f, t.y, 0.001f)
+        assertNull(t.rowHeightOverrides)
+    }
 }
