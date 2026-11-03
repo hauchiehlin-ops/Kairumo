@@ -948,6 +948,13 @@ enum ProInkDabCache {
         return String(format: "%016lx", UInt64(bitPattern: Int64(hasher.finalize())))
     }
 
+    /// 只看記憶體（不讀磁碟）。主執行緒上要判斷「現成有沒有」時用這個。
+    static func peek(for stroke: ProStroke) -> ProInkRenderer.Cached? {
+        let key = cacheKey(for: stroke)
+        lock.lock(); defer { lock.unlock() }
+        return memoryCache[key]
+    }
+
     static func get(for stroke: ProStroke) -> ProInkRenderer.Cached? {
         let key = cacheKey(for: stroke)
         lock.lock()
@@ -1117,6 +1124,16 @@ final class ProInkLayerView: UIView {
     private var lastPredictedArea: CGRect = .null
     private let liveOverlayView = LiveProStrokeOverlayView()
 
+    // MARK: 非同步烘焙與收筆交接（即時響應：主執行緒不做整頁筆畫運算）
+
+    /// 超過這個筆畫數的整頁重建（換頁、第一次畫）改在背景烘焙；少的同步做完，沒有視覺延遲。
+    private static let asyncBakeThreshold = 12
+    private static let bakeQueue = DispatchQueue(label: "kairumo.proink.bake", qos: .userInitiated)
+    private var bakeToken = BakeToken()
+    private var inFlightBake: (ids: [String], pageKey: String, dark: Bool, size: CGSize)?
+    /// 收筆時筆點陣還沒算好的那一筆：算好之前即時疊加層繼續顯示它，算好才交接給底層。
+    private var pendingHandoff: ProStroke?
+
     /// 工具的預覽（標註畫到一半的樣子）與已選的點。不存檔、不進復原；每次更新整組換掉。
     private var overlayStrokes: [ProStroke] = []
     private var overlayMarks: [CGPoint] = []
@@ -1184,6 +1201,7 @@ final class ProInkLayerView: UIView {
     /// 從磁碟重讀（換頁、同步匯入、清除頁面之後）。
     func reload() {
         guard let directory else { return }
+        flushPendingHandoff()
         invalidateBackingStore()
         ProInkStore.invalidateModifiedCache(notebookId: notebookId)
         ownStrokes = ProInkStore.load(in: directory, notebookId: notebookId, page: pageIndex)
@@ -1351,12 +1369,97 @@ final class ProInkLayerView: UIView {
     private var lastBackingBounds: CGSize = .zero
 
     private func invalidateBackingStore() {
+        bakeToken.cancel()
+        inFlightBake = nil
         backingImage = nil
         backingContext = nil
         bakedStrokeCount = 0
         bakedStrokeIds.removeAll()
         lastPageKey = ""
         lastBackingBounds = .zero
+    }
+
+    private func startAsyncBake(ordered: [ProStroke], size: CGSize, scale: CGFloat, isDark: Bool, pageKey: String) {
+        bakeToken.cancel()
+        let token = BakeToken()
+        bakeToken = token
+        let ids = ordered.map(\.id)
+        inFlightBake = (ids, pageKey, isDark, size)
+        nonisolated(unsafe) let strokes = ordered
+        Self.bakeQueue.async { [weak self] in
+            let baked = Self.bake(strokes, size: size, scale: scale, isDark: isDark, token: token)
+            nonisolated(unsafe) let result = baked
+            DispatchQueue.main.async {
+                guard let self, !token.isCancelled else { return }
+                self.inFlightBake = nil
+                guard let (ctx, image) = result else {
+                    // 背景建不出來（記憶體不足等）：退回同步路徑，下一次繪製會自己重建。
+                    self.lastPageKey = pageKey
+                    self.setNeedsDisplay()
+                    return
+                }
+                self.backingContext = ctx
+                self.backingImage = UIImage(cgImage: image, scale: scale, orientation: .up)
+                self.bakedStrokeIds = ids
+                self.bakedStrokeCount = ids.count
+                self.lastPageKey = pageKey
+                self.lastDarkMode = isDark
+                self.lastBackingBounds = size
+                self.setNeedsDisplay()
+            }
+        }
+    }
+
+    /// 整頁烘焙（背景執行緒）：與 `ensureBackingContext` / `updateBackingStore` 的同步路徑畫法一致。
+    nonisolated private static func bake(_ strokes: [ProStroke], size: CGSize, scale: CGFloat, isDark: Bool, token: BakeToken) -> (CGContext, CGImage)? {
+        let pixelWidth = Int(ceil(size.width * scale))
+        let pixelHeight = Int(ceil(size.height * scale))
+        guard pixelWidth > 0, pixelHeight > 0,
+              let ctx = CGContext(data: nil, width: pixelWidth, height: pixelHeight, bitsPerComponent: 8,
+                                  bytesPerRow: pixelWidth * 4, space: CGColorSpaceCreateDeviceRGB(),
+                                  bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
+        else { return nil }
+        ctx.translateBy(x: 0, y: CGFloat(pixelHeight))
+        ctx.scaleBy(x: scale, y: -scale)
+        let full = CGRect(origin: .zero, size: size)
+        for (i, stroke) in strokes.enumerated() {
+            if i % 32 == 0, token.isCancelled { return nil }
+            let cached = ProInkDabCache.get(for: stroke) ?? {
+                guard let made = ProInkRenderer.cache(for: stroke) else { return nil }
+                ProInkDabCache.set(made, for: stroke)
+                return made
+            }()
+            guard let cached else { continue }
+            ctx.saveGState()
+            ctx.setBlendMode(stroke.blendMode == "multiply" ? .multiply : (stroke.blendMode == "screen" ? .screen : .normal))
+            ProInkRenderer.draw(cached, toolName: stroke.tool, color: ProInkRenderer.displayColor(stroke.colorRGBA, dark: isDark), in: ctx, clip: full)
+            ctx.restoreGState()
+        }
+        guard !token.isCancelled, let image = ctx.makeImage() else { return nil }
+        return (ctx, image)
+    }
+
+    /// 收筆交接完成：底層畫上這一筆，疊加層清掉（同一個 CA 交易，不會閃）。
+    private func completeHandoff(_ id: String) {
+        guard let p = pendingHandoff, p.id == id else { return }
+        pendingHandoff = nil
+        let area = p.bounds.insetBy(dx: -24, dy: -24)
+        setNeedsDisplay(p.bounds)
+        liveOverlayView.liveStroke = nil
+        liveOverlayView.liveCache = nil
+        liveOverlayView.isStreaming = false
+        liveOverlayView.settledDabs.removeAll(keepingCapacity: true)
+        liveOverlayView.previewDabs.removeAll()
+        liveOverlayView.setNeedsDisplay(area)
+    }
+
+    /// 還有一筆在等交接就現在做完（下一筆開始、換頁、重載之前）。極少需要同步補算。
+    private func flushPendingHandoff() {
+        guard let p = pendingHandoff else { return }
+        if ProInkDabCache.peek(for: p) == nil, let made = ProInkRenderer.cache(for: p) {
+            ProInkDabCache.set(made, for: p)
+        }
+        completeHandoff(p.id)
     }
 
     private func ensureBackingContext(size: CGSize, scale: CGFloat) -> CGContext? {
@@ -1410,6 +1513,21 @@ final class ProInkLayerView: UIView {
         }
 
         if needsFullRebuild {
+            // 同一份已經在背景烘焙：等它完成（尾端新筆畫由 `draw` 直接補畫）。內容已經不是當初那份就作廢重來。
+            if let flight = inFlightBake {
+                let sameInputs = flight.pageKey == pageKey && flight.dark == isDark && flight.size == fullBounds.size
+                if sameInputs, ordered.count >= flight.ids.count,
+                   !zip(ordered, flight.ids).contains(where: { $0.id != $1 }) {
+                    return
+                }
+                bakeToken.cancel()
+                inFlightBake = nil
+            }
+            // 換頁（或第一次建立）且筆畫多：整頁烘焙放到背景，主執行緒不等。
+            if pageKey != lastPageKey, ordered.count > Self.asyncBakeThreshold {
+                startAsyncBake(ordered: ordered, size: fullBounds.size, scale: scale, isDark: isDark, pageKey: pageKey)
+                return
+            }
             bCtx.saveGState()
             bCtx.clear(CGRect(origin: .zero, size: fullBounds.size))
             bCtx.restoreGState()
@@ -1451,6 +1569,17 @@ final class ProInkLayerView: UIView {
 
         updateBackingStore(with: ordered, fullBounds: bounds)
         backingImage?.draw(in: bounds)
+        // 背景烘焙進行中：烘焙開始之後才加入的筆畫直接畫上去，剛畫完的字不會等烘焙。
+        if let flight = inFlightBake {
+            let dark = traitCollection.userInterfaceStyle == .dark
+            for stroke in ordered.dropFirst(flight.ids.count) where stroke.bounds.intersects(rect) {
+                guard let cached = cachedDabs(for: stroke) else { continue }
+                ctx.saveGState()
+                ctx.setBlendMode(stroke.blendMode == "multiply" ? .multiply : (stroke.blendMode == "screen" ? .screen : .normal))
+                ProInkRenderer.draw(cached, toolName: stroke.tool, color: ProInkRenderer.displayColor(stroke.colorRGBA, dark: dark), in: ctx, clip: rect)
+                ctx.restoreGState()
+            }
+        }
 
         for stroke in overlayStrokes where stroke.bounds.intersects(rect) {
             guard let cached = ProInkRenderer.cache(for: stroke) else { continue }
@@ -1655,6 +1784,7 @@ final class ProInkLayerView: UIView {
     func beginStroke(tool: ToolKind, color: [UInt8], width: Float, at point: ProPoint,
                      layer: UInt8 = 0, lineType: UInt8 = 0) {
         guard let name = ProInk.name(of: tool) else { return }
+        flushPendingHandoff()
         CanvasTouchState.noteInkActivity()
         var point = point
         edgeLock = nil
@@ -1811,20 +1941,32 @@ final class ProInkLayerView: UIView {
         tailSnapped = false
         setGuides([])
         ownStrokes.append(stroke)
-        // 預先計算並放入快取，避免進入 draw(rect) 時臨時執行 Rust FFI 運算
-        let cached = ProInkRenderer.cache(for: stroke)
-        if let cached {
-            ProInkDabCache.set(cached, for: stroke)
+        if ProInkDabCache.peek(for: stroke) != nil {
+            // 筆點陣現成：立刻交接。
+            setNeedsDisplay(stroke.bounds)
+            live = nil
+            liveCache = nil
+            resetLiveBrush()
+            syncLiveOverlay(invalidating: liveArea)
+        } else {
+            // 筆點陣（Rust FFI）放到背景算，主執行緒收筆只做 O(1) 的記帳。
+            // 算好之前，即時疊加層繼續顯示這一筆（尾端的預測預覽先清掉），算好才交接給底層 ——
+            // 畫面上筆畫不會消失，也不會在 `draw(rect)` 裡臨時同步運算。
+            pendingHandoff = stroke
+            live = nil
+            liveCache = nil
+            liveBrush = nil
+            liveOverlayView.previewDabs.removeAll()
+            liveOverlayView.setNeedsDisplay(liveArea.isNull ? stroke.bounds : liveArea)
+            let id = stroke.id
+            nonisolated(unsafe) let s = stroke
+            BackgroundScheduler.shared.submit(.interactive) {
+                if ProInkDabCache.peek(for: s) == nil, let made = ProInkRenderer.cache(for: s) {
+                    ProInkDabCache.set(made, for: s)
+                }
+                DispatchQueue.main.async { [weak self] in self?.completeHandoff(id) }
+            }
         }
-
-        // 觸發底層視圖重繪
-        setNeedsDisplay(stroke.bounds)
-
-        // 現在底層已具備該筆畫，平滑交接：清除頂層即時疊加層
-        live = nil
-        liveCache = nil
-        resetLiveBrush()
-        syncLiveOverlay(invalidating: liveArea)
 
         persistAppendedStroke(stroke)
         registerUndo(removing: stroke.id)
@@ -2853,4 +2995,13 @@ final class ProStrokeGestureRecognizer: UIGestureRecognizer {
         return ProPoint(x: Float(location.x), y: Float(location.y), pressure: pressure,
                         tilt: tilt, azimuth: azimuth < 0 ? azimuth + 2 * .pi : azimuth, dtUs: dt, roll: roll)
     }
+}
+
+
+/// 背景烘焙的取消旗標（可跨執行緒）。
+final class BakeToken: @unchecked Sendable {
+    private let lock = NSLock()
+    private var cancelled = false
+    var isCancelled: Bool { lock.lock(); defer { lock.unlock() }; return cancelled }
+    func cancel() { lock.lock(); cancelled = true; lock.unlock() }
 }

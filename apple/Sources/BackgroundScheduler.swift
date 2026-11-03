@@ -100,6 +100,14 @@ enum PagePrefetcher {
             BackgroundScheduler.shared.submit(priority, key: url.path) {
                 NotebookStore.prefetchDrawing(at: url)
             }
+            // 專業筆畫：載入並預先算好筆點陣。換頁後第一次繪製只剩貼圖，不必在主執行緒逐筆運算。
+            BackgroundScheduler.shared.submit(priority, key: "pro|" + url.path) {
+                let strokes = ProInkStore.load(in: dir, notebookId: notebookId, page: page)
+                    + ProInkStore.load(in: dir, notebookId: notebookId, page: page, foreign: true)
+                for stroke in strokes.prefix(400) where ProInkDabCache.peek(for: stroke) == nil {
+                    if let made = ProInkRenderer.cache(for: stroke) { ProInkDabCache.set(made, for: stroke) }
+                }
+            }
         }
     }
 
