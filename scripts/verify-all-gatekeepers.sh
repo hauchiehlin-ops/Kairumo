@@ -90,6 +90,7 @@ run_check "無未被引用的孤兒實作" python3 "${REPO_ROOT}/scripts/check-o
 echo ""
 echo "── [Layer 5] 畫布核心純度與重型次系統隔離（Canvas Isolation）──"
 run_check "手寫關鍵路徑與畫布次系統解耦守門" python3 "${REPO_ROOT}/scripts/check-canvas-isolation.py"
+run_check "延遲預算量測點守門" python3 "${REPO_ROOT}/scripts/check-latency-budget.py"
 
 echo ""
 echo "════════════════════════════════════════════════════════════════════════"

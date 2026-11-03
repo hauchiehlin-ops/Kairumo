@@ -104,6 +104,19 @@ public enum PageThumbnailRenderer {
         return "\(notebook.id)|\(pageIndex)|\(sig)|\(inkRevision)|\(drawing.strokes.count)|\(boundsSig)|\(tapesCount)|\(Int(canvasWidth))|\(notebook.paperId(forPage: pageIndex))|\(notebook.guidePaletteId ?? "-")" as NSString
     }
 
+    /// 不需要 `PKDrawing` 就能算出的快取鍵（只用各種版本號與簽章）。
+    ///
+    /// 側欄卡片在 SwiftUI `body` 裡要先判斷「這張縮圖是不是最新」。原本的鍵要先拿到整頁 `PKDrawing`
+    /// （沒載入過的頁會同步讀檔解碼），而且命中不了就當場算繪 —— 這是切到預覽頁時卡住的主因。
+    /// 手繪內容以 `inkRevision` 為準（內容一變版本號就 +1，見 `PageInkStore.adoptSavedDrawing`）。
+    @MainActor
+    static func lightweightKey(notebook: NotebookDocument, pageIndex: Int, store: NotebookStore, inkRevision: Int) -> String {
+        let sig = pageObjectsSignature(notebook: notebook, pageIndex: pageIndex)
+        let tapesCount = notebook.tapeAttachments?.filter({ $0.pageIndex == pageIndex }).count ?? 0
+        let proRev = ProInkStore.revision(in: store.drawingsDirectory, notebookId: notebook.id, page: pageIndex)
+        return "\(notebook.id)|\(pageIndex)|\(sig)|\(inkRevision).\(proRev)|\(tapesCount)|\(Int(PageGeometry.width))|\(notebook.paperId(forPage: pageIndex))|\(notebook.guidePaletteId ?? "-")|\(DraftingState.shared.hiddenStamp(notebookId: notebook.id))|\(notebook.underInkObjectIds(forPage: pageIndex).sorted().joined(separator: ",").hashValue)|\(notebook.objectOrder(forPage: pageIndex)?.joined(separator: ",").hashValue ?? 0)|g\(currentGeneration)"
+    }
+
     /// 這一頁要畫的專業筆畫（自己的＋別台同步來的），已依圖層排好、隱藏的圖層已濾掉。
     @MainActor
     static func proStrokes(notebook: NotebookDocument, pageIndex: Int, store: NotebookStore) -> [ProStroke] {
@@ -116,6 +129,16 @@ public enum PageThumbnailRenderer {
     /// 清空快取（例如切換筆記本時）。
     public static func invalidateAll() {
         cache.removeAllObjects()
+        generationLock.lock(); generation &+= 1; generationLock.unlock()
+    }
+
+    private static let generationLock = NSLock()
+    // profile-scope: device 縮圖失效世代，只做快取鍵，不含使用者資料
+    nonisolated(unsafe) private static var generation = 0
+    /// 每次 `invalidateAll` 加一。非同步管線的快取鍵帶著它，讓全面失效仍然有效（舊圖留著當過渡，但會重畫）。
+    static var currentGeneration: Int {
+        generationLock.lock(); defer { generationLock.unlock() }
+        return generation
     }
 
     /// 合成單頁縮圖。`scale` 越小越省記憶體，縮圖只需要看得出輪廓。
@@ -138,9 +161,9 @@ public enum PageThumbnailRenderer {
             return latest
         }
         let revision = "\(inkRevision).\(ProInkStore.revision(in: store.drawingsDirectory, notebookId: notebook.id, page: pageIndex))"
-        return compose(notebook: notebook, pageIndex: pageIndex, drawing: drawing, store: store,
+        return PerfProbe.shared.measure(.thumbnailRender) { compose(notebook: notebook, pageIndex: pageIndex, drawing: drawing, store: store,
                        canvasWidth: canvasWidth, scale: scale, cropToPreviewRatio: true, useCache: true,
-                       inkRevision: revision)
+                       inkRevision: revision) }
     }
 
     /// 整頁算繪（不裁切、不取快取），給匯出 PDF / 圖片與列印用。
@@ -203,6 +226,7 @@ public enum PageThumbnailRenderer {
             + "|\(DraftingState.shared.hiddenStamp(notebookId: notebook.id))"
             + "|\(notebook.underInkObjectIds(forPage: pageIndex).sorted().joined(separator: ",").hashValue)|\(notebook.objectOrder(forPage: pageIndex)?.joined(separator: ",").hashValue ?? 0)") as NSString
         if useCache, let cached = cache.object(forKey: key) { return cached }
+        PerfProbe.shared.count(.thumbnailComposeOnMain)
         let pro = proStrokes(notebook: notebook, pageIndex: pageIndex, store: store)
 
         let pageHeight = PageGeometry.height

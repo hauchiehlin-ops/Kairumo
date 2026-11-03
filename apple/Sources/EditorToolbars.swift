@@ -1284,6 +1284,10 @@ extension NotebookEditorView {
     /// 不在手寫模式時先切回手寫 —— 直接改 `selectedTool` 的話，打字模式下換成套索或製圖筆，
     /// 工具列亮了、畫布卻不收筆。`scripts/check-state-entrypoints.py` 擋住其他地方直接改它。
     func applyEditorTool(_ tool: EditorToolType) {
+        PerfProbe.shared.measure(.toolSwitch) { applyEditorToolBody(tool) }
+    }
+
+    private func applyEditorToolBody(_ tool: EditorToolType) {
         // 在文件內的手繪區塊換筆，只換工具；不可順手把整份文件的主模式
         // 改成手繪，否則「完成、回到文件」的情境會被拆掉。
         if editorMode != .draw && !isInlineInkEditing {

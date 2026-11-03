@@ -1336,11 +1336,13 @@ public struct NotebookEditorView: View {
     func switchToPage(_ targetPage: Int) {
         let bounded = min(max(0, targetPage), max(0, notebook.pageCount - 1))
         guard bounded != currentPageIndex else { return }
-        saveCurrentPageDrawing()
-        currentPageIndex = bounded // state-entry: 切換頁面的唯一正門
-        loadCurrentPage()
-        if paperUsesDrafting(paperId: notebook.paperId(forPage: bounded)) {
-            applyEditorTool(.drafting)
+        PerfProbe.shared.measure(.pageSwitch) {
+            PerfProbe.shared.measure(.pageSave) { saveCurrentPageDrawing() }
+            currentPageIndex = bounded // state-entry: 切換頁面的唯一正門
+            PerfProbe.shared.measure(.pageLoad) { loadCurrentPage() }
+            if paperUsesDrafting(paperId: notebook.paperId(forPage: bounded)) {
+                applyEditorTool(.drafting)
+            }
         }
     }
 
@@ -1392,6 +1394,8 @@ public struct NotebookEditorView: View {
     }
 
     private func handleOnAppear() {
+        FrameGovernor.shared.start()
+        FieldTelemetry.shared.start()
         configureLassoCallbacks(forPage: currentPageIndex)
         sanitizeTextAttachments()
         sanitizeUnderInkObjects()
@@ -1436,6 +1440,7 @@ public struct NotebookEditorView: View {
     }
 
     private func handleOnDisappear() {
+        FrameGovernor.shared.stop()
         // 先存檔、再放掉焦點。
         saveCurrentPageDrawing()
         let leavingId = notebook.id

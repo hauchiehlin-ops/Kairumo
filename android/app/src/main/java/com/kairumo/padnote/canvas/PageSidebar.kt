@@ -61,6 +61,7 @@ import com.kairumo.padnote.ui.LocalAppLanguage
 import com.kairumo.padnote.ui.dsCard
 import com.kairumo.padnote.ui.dsHairline
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import uniffi.padnote_core.PadnoteSession
 import com.kairumo.padnote.profile.ProfileContext
@@ -68,6 +69,9 @@ import com.kairumo.padnote.profile.ProfileContext
 private val pageThumbnailCache = LruCache<String, ImageBitmap>(40)
 // profile-scope: profile 各頁最新基底縮圖快取（跨 revision 保留未變動頁面的基底縮圖，隨設定檔與物件變更清空）
 private val pageBaseThumbnailCache = LruCache<String, ImageBitmap>(40)
+
+/** 離屏縮圖算繪的全域序列化鎖：一次只算一張（算繪發生在主執行緒）。 */
+private val thumbnailRenderMutex = kotlinx.coroutines.sync.Mutex()
 
 /**
  * 清除所有側欄縮圖記憶體快取。在圖釘、遮蔽膠帶或多媒體物件刪除／變更時呼叫，確保預覽縮圖即時更新。
@@ -382,11 +386,29 @@ private fun PageSidebarRow(
             }
         }
 
+        // 書寫中任何時候都不啟動離屏算繪（第一次出現的縮圖也一樣），停手後才開始。
+        while (com.kairumo.padnote.ink.InkEngine.anyDrawing) {
+            kotlinx.coroutines.delay(350)
+        }
+
         val act = context as? ComponentActivity
         if (act != null && !act.isFinishing && !act.isDestroyed) {
-            val bmp = runCatching {
-                PageSnapshot.render(act, s, index, 0.22f, appLanguage)
-            }.getOrNull()
+            // 離屏 ComposeView 算繪在主執行緒上：所有卡片排隊，一次只算一張，
+            // 張與張之間讓出一幀，輸入與繪製才不會被一整排縮圖同時占滿。
+            val bmp = thumbnailRenderMutex.withLock {
+                // 等鎖期間別張卡片可能已經算好同一版。
+                val hit = pageThumbnailCache.get(cacheKey)
+                if (hit != null) {
+                    lastRenderedRevision = revision
+                    thumb = withPendingInk(hit, pageId, 0.22f)
+                    return@LaunchedEffect
+                }
+                val rendered = runCatching {
+                    PageSnapshot.render(act, s, index, 0.22f, appLanguage)
+                }.getOrNull()
+                kotlinx.coroutines.delay(16)
+                rendered
+            }
             if (bmp != null) {
                 val imageBitmap = bmp.asImageBitmap()
                 pageThumbnailCache.put(cacheKey, imageBitmap)
