@@ -4132,6 +4132,8 @@ public final class NotebookStore: ObservableObject {
                 try? fm.moveItem(at: item.temp, to: item.target)
             }
         }
+        // 檔案換了頁碼，以頁碼為鍵的專業筆畫快取（帳本、檔案時間、版本號）跟著作廢。
+        ProInkStore.invalidatePageCaches(notebookId: notebookId)
     }
 
     /// 把逐頁檔案排回原本的頁碼（「還原到初始狀態」）。`origins[目前頁碼]` = 原本的頁碼；
@@ -4161,6 +4163,7 @@ public final class NotebookStore: ObservableObject {
                 try? fm.removeItem(at: dir.appending(path: name))
             }
         }
+        ProInkStore.invalidatePageCaches(notebookId: notebookId)
     }
 
     /// 把 `pages` 這幾頁的逐頁檔案往後挪 `by` 頁（插入、複製頁時讓出位置）。由後往前挪不會互相覆蓋，

@@ -6,6 +6,7 @@
 //
 
 import XCTest
+import PencilKit
 @testable import Kairumo
 
 /// # 為什麼要有這一組測試
@@ -340,6 +341,46 @@ final class PageOrderTests: XCTestCase {
         let updated = store.notebooks.first { $0.id == doc.id }
         XCTAssertEqual(updated?.lockedObjectIdsByPage, ["2": ["locked-on-0"]])
         XCTAssertEqual(updated?.tapeAttachments?.first?.pageIndex, 2)
+    }
+
+    /// 搬頁之後擦除帳本（墓碑）要跟著頁走。帳本有以頁碼為鍵的記憶體快取：原本檔案改名了、
+    /// 快取沒作廢，搬到第 1 頁的那一頁套上原本第 1 頁的墓碑，被擦掉的筆畫在別頁「復活」或誤刪。
+    func testMovingAPageCarriesTheErasureLedgerPastTheCache() {
+        let store = Self.isolatedStore()
+        let doc = makeNotebook(pages: 3)
+        store.notebooks.insert(doc, at: 0)
+        let dir = store.drawingsDirectory
+        ProInkStore.updateLedger(in: dir, notebookId: doc.id, page: 2) { $0.foreignTombstones = ["erased-on-2"] }
+        // 先讀一次，讓每一頁的帳本都進記憶體快取。
+        for page in 0..<3 { _ = ProInkStore.loadLedger(in: dir, notebookId: doc.id, page: page) }
+
+        store.movePage(notebookId: doc.id, from: 2, to: 0)
+
+        XCTAssertEqual(ProInkStore.loadLedger(in: dir, notebookId: doc.id, page: 0).foreignTombstones, ["erased-on-2"])
+        XCTAssertEqual(ProInkStore.loadLedger(in: dir, notebookId: doc.id, page: 2).foreignTombstones, [])
+    }
+
+    /// 沒有頁面 id 的筆記，記憶體筆跡以頁碼為鍵：搬頁時要跟著換頁碼，否則畫布顯示的不是那一頁。
+    func testIndexKeyedInkMemoryFollowsAPageMove() {
+        let store = Self.isolatedStore()
+        let doc = makeNotebook(pages: 3)
+        store.notebooks.insert(doc, at: 0)
+        let ink = PageInkStore(notebookId: doc.id, store: store)
+        var marked = PKDrawing()
+        marked.strokes.append(PKStroke(ink: PKInk(.pen, color: .black),
+                                       path: PKStrokePath(controlPoints: [
+                                           PKStrokePoint(location: .zero, timeOffset: 0, size: CGSize(width: 2, height: 2),
+                                                         opacity: 1, force: 1, azimuth: 0, altitude: 0)],
+                                                          creationDate: Date())))
+        for page in 0..<3 { _ = ink.drawing(for: page) }
+        ink.updateDrawing(marked, for: 2)
+
+        // 搬 2 → 0：0→1、1→2、2→0。
+        ink.remapIndexKeyedPages { Int(pageIndexAfterMove(index: UInt32($0), from: 2, to: 0)) }
+
+        XCTAssertEqual(ink.drawing(for: 0).strokes.count, 1, "畫過的那一頁搬到第 1 頁")
+        XCTAssertEqual(ink.drawing(for: 2).strokes.count, 0)
+        XCTAssertEqual(ink.revision(for: 0), 1)
     }
 
     /// 刪頁：那一頁的專業筆畫一起刪掉，後面的往前補；原本留在磁碟上，跑到下一頁或被新頁撿回來。
