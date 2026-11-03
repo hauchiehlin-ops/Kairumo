@@ -300,7 +300,7 @@ public struct HomeWorkbenchView: View {
             .background(Color(uiColor: .systemGroupedBackground))
             // 實體鍵盤快捷鍵（見 AppCommands.swift）。
             .onReceive(NotificationCenter.default.publisher(for: AppCommand.newNotebook)) { _ in
-                newNoteTitle = "\(localizationManager.localized("untitled_note")) \(notebookStore.notebooks.count + 1)"
+                newNoteTitle = NotebookStore.newNotebookTitle()
                 selectedTemplate = .blank
                 selectedDocTemplateId = nil
                 expandedDocTheme = nil
@@ -785,7 +785,7 @@ public struct HomeWorkbenchView: View {
                 tint: nil,
                 prominent: true
             ) {
-                newNoteTitle = "\(localizationManager.localized("untitled_note")) \(notebookStore.notebooks.count + 1)"
+                newNoteTitle = NotebookStore.newNotebookTitle()
                 selectedTemplate = .blank
                 selectedDocTemplateId = nil
                 expandedDocTheme = nil
@@ -3393,7 +3393,7 @@ public struct HomeWorkbenchView: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button(localizationManager.localized("confirm")) {
-                        let defaultTitle = newNoteTitle.isEmpty ? localizationManager.localized("new_notebook") : newNoteTitle
+                        let defaultTitle = newNoteTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? NotebookStore.newNotebookTitle() : newNoteTitle
                         var created = notebookStore.createNotebook(
                             title: defaultTitle, template: selectedTemplate
                         )

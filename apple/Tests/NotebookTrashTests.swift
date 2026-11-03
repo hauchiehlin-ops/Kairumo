@@ -234,3 +234,23 @@ final class NotebookTrashTests: XCTestCase {
         XCTAssertTrue(reopened.restoreLocally(id: doc.id), "重開之後還原得回來")
     }
 }
+
+/// 新筆記本預設名稱「時-分-秒-New」（與 Android `NotebookNamingTest` 同一組案例）。
+final class NotebookNamingTests: XCTestCase {
+    private func date(_ h: Int, _ m: Int, _ s: Int) -> Date {
+        Calendar(identifier: .gregorian).date(from: DateComponents(year: 2026, month: 11, day: 3, hour: h, minute: m, second: s))!
+    }
+
+    func testUsesTwentyFourHourClockWithHyphens() {
+        XCTAssertEqual(NotebookStore.newNotebookTitle(at: date(23, 30, 15)), "23-30-15-New")
+    }
+
+    func testPadsSingleDigits() {
+        XCTAssertEqual(NotebookStore.newNotebookTitle(at: date(9, 5, 7)), "09-05-07-New")
+    }
+
+    /// 冒號在 exFAT／Windows 不能當檔名。
+    func testContainsNoColon() {
+        XCTAssertFalse(NotebookStore.newNotebookTitle().contains(":"))
+    }
+}

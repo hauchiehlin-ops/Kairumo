@@ -101,7 +101,7 @@ fun NewNotebookDialog(
         paletteId: String
     ) -> Unit
 ) {
-    var title by remember { mutableStateOf("") }
+    var title by remember { mutableStateOf(NotebookNaming.newTitle()) }
     // 版面配色。預設是核心清單的第一組（石墨），與 Apple 的預設一致。
     var paletteId by remember { mutableStateOf(uniffi.padnote_core.guidePalettes().first().id) }
     var selectedId by remember { mutableStateOf<String?>(null) }

@@ -1045,7 +1045,7 @@ internal fun NotebookHome(
                 // 套件已經由核心建好了（含加密），這裡只補上索引那一筆。
                 com.kairumo.padnote.library.AccountSyncStore.record(
                     activity, id = id,
-                    title = title.ifBlank { l("new_note") }, parentId = null
+                    title = title.ifBlank { com.kairumo.padnote.library.NotebookNaming.newTitle() }, parentId = null
                 )
                 revision++
             }
@@ -1105,7 +1105,7 @@ internal fun NotebookHome(
                 creatingNotebook = false
                 // 建在使用者當下看著的那一層 —— 一律建在最上層的話，
                 // 人在某個資料夾裡按「新增」，東西卻出現在別的地方。
-                val name = title.ifBlank { l("new_note") }
+                val name = title.ifBlank { com.kairumo.padnote.library.NotebookNaming.newTitle() }
                 // 紙張跟著文件範本走。各選各的話，公文「簽」會鋪在行動端
                 // 線框紙上 —— 本文底下壓著兩個手機外框。
                 val tmpl = templateId?.let { DocumentTemplateCatalog.template(activity, it) }
