@@ -16,6 +16,9 @@
 //  - `body` 只做便宜的事：算輕量快取鍵、查表。命中就用；沒命中就先給「上一張舊圖」（沒有就給純色底），
 //    並把這一頁排進佇列。**body 永遠不會算繪、不會讀檔。**
 //  - 佇列一次只處理一張，每張之間讓出 run loop；選取的那一頁與離它近的頁優先。
+//  - 最貴的墨跡點陣化（整頁 PencilKit 取圖＋專業筆刷筆點）在背景做，主執行緒只疊紙張與物件。
+//    剛開啟筆記本時一整排縮圖同時排隊 —— 墨跡也在主執行緒畫的話，主執行緒被連續佔住，
+//    點縮圖換頁要等到全部畫完才順。
 //  - 使用者正在書寫或兩指導覽時整個暫停，停手後才繼續（筆跡永遠優先於縮圖）。
 //  - 算完只通知那一頁的卡片（`ThumbnailSlot`），不會讓整排卡片一起重算。
 //
@@ -57,6 +60,8 @@ final class ThumbnailPipeline {
     private var slots: [String: ThumbnailSlot] = [:]
     private var pending: [String: Job] = [:]
     private var pumping = false
+    /// 每次全面失效或搬頁加一。背景畫到一半時頁碼可能已經對不上，回來時世代不同就丟掉。
+    private var epoch = 0
     private var placeholders: [UIUserInterfaceStyle: UIImage] = [:]
 
     private func pageKey(_ notebookId: String, _ page: Int) -> String { "\(notebookId)|\(page)" }
@@ -74,6 +79,7 @@ final class ThumbnailPipeline {
         done.removeAllObjects()
         stale.removeAllObjects()
         pending.removeAll()
+        epoch += 1
         PageThumbnailRenderer.invalidateAll()
     }
 
@@ -94,6 +100,7 @@ final class ThumbnailPipeline {
             stale.setObject(image, forKey: pageKey(notebookId, page) as NSString)
         }
         done.removeAllObjects()
+        epoch += 1
         PageThumbnailRenderer.invalidateAll()
         for (key, slot) in slots where key.hasPrefix("\(notebookId)|") { slot.version += 1 }
     }
@@ -148,15 +155,56 @@ final class ThumbnailPipeline {
         }
         pending[pk] = nil
         let r = job.request
-        let governor = FrameGovernor.shared
-        let image = PageThumbnailRenderer.render(
-            notebook: r.notebook, pageIndex: r.pageIndex, drawing: r.drawing(), store: r.store,
-            canvasWidth: r.canvasWidth, inkRevision: r.inkRevision,
-            scale: 0.4 * governor.thumbnailScaleFactor, deferRecomputation: false)
-        done.setObject(image, forKey: job.key as NSString)
-        stale.setObject(image, forKey: pk as NSString)
-        slots[pk]?.version += 1
-        pumping = false
-        if !pending.isEmpty { pump(after: governor.thumbnailGap) }
+        let scale = 0.4 * FrameGovernor.shared.thumbnailScaleFactor
+        // 主執行緒只取輸入（記憶體裡的筆跡、已排序的專業筆畫），點陣化交給背景。
+        let input = InkInput(
+            drawing: r.drawing(),
+            pro: PageThumbnailRenderer.proStrokes(notebook: r.notebook, pageIndex: r.pageIndex, store: r.store),
+            pageSize: CGSize(width: PageGeometry.width, height: PageGeometry.height),
+            size: PageThumbnailRenderer.previewSize,
+            scale: scale,
+            dark: UITraitCollection.current.userInterfaceStyle == .dark)
+        let startedEpoch = epoch
+        BackgroundScheduler.shared.submit(.visible) {
+            let ink = UncheckedBox(PageThumbnailRenderer.rasterizeInk(
+                drawing: input.drawing, pro: input.pro, pageSize: input.pageSize,
+                size: input.size, scale: input.scale, dark: input.dark))
+            DispatchQueue.main.async { [weak self] in
+                self?.finish(job: job, pk: pk, drawing: input.drawing, scale: scale,
+                             ink: ink.value, startedEpoch: startedEpoch)
+            }
+        }
     }
+
+    private func finish(job: Job, pk: String, drawing: PKDrawing, scale: CGFloat, ink: UIImage, startedEpoch: Int) {
+        // 背景畫的期間搬了頁或全面失效：這張圖可能屬於別的頁碼，丟掉，佇列裡已經有新的工作。
+        if startedEpoch == epoch {
+            let r = job.request
+            let image = PageThumbnailRenderer.render(
+                notebook: r.notebook, pageIndex: r.pageIndex, drawing: drawing, store: r.store,
+                canvasWidth: r.canvasWidth, inkRevision: r.inkRevision,
+                scale: scale, deferRecomputation: false, inkLayer: ink)
+            done.setObject(image, forKey: job.key as NSString)
+            stale.setObject(image, forKey: pk as NSString)
+            slots[pk]?.version += 1
+        }
+        pumping = false
+        if !pending.isEmpty { pump(after: FrameGovernor.shared.thumbnailGap) }
+    }
+}
+
+/// 送到背景點陣化的輸入。都是值型別，送出後主執行緒不再改動。
+private struct InkInput: @unchecked Sendable {
+    let drawing: PKDrawing
+    let pro: [ProStroke]
+    let pageSize: CGSize
+    let size: CGSize
+    let scale: CGFloat
+    let dark: Bool
+}
+
+/// 背景畫好的圖帶回主執行緒。`UIImage` 建好後不可變。
+private struct UncheckedBox<T>: @unchecked Sendable {
+    let value: T
+    init(_ value: T) { self.value = value }
 }

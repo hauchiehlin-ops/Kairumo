@@ -40,7 +40,8 @@ extension NotebookEditorView {
                 PageThumbnailRenderer.invalidateAll()
             },
             onInsertTable: {
-                let table = NoteTableAttachment(pageIndex: currentPageIndex, x: 40, y: 120, rows: 3, cols: 3)
+                var table = NoteTableAttachment(pageIndex: currentPageIndex, x: 40, y: 120, rows: 3, cols: 3)
+                fitTableToPageRules(&table)
                 if notebook.tableAttachments == nil { notebook.tableAttachments = [] }
                 notebook.tableAttachments?.append(table)
                 activeSelectedObjectId = table.id

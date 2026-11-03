@@ -40,6 +40,17 @@ final class TableCellFormatTests: XCTestCase {
         XCTAssertNil(item.style(row: 1, col: 1).bold)
     }
 
+    /// 貼齊格線的表格（每列都是格線間距的整數倍）插入新列後，新列必須沿用相鄰列高，
+    /// 否則新列回到自動高度，之後的每一條橫線都與紙上的線錯開。
+    func testInsertedRowInheritsNeighbourHeightOverride() {
+        var item = table()
+        item.rowHeightOverrides = Array(repeating: 25.5, count: item.rows)
+        item.insertRow(at: 1)
+        XCTAssertEqual(item.rowHeightOverrides, Array(repeating: 25.5, count: item.rows))
+        item.insertRow(at: item.rows)
+        XCTAssertEqual(item.rowHeightOverrides?.last, 25.5)
+    }
+
     func testStyleStaysOnItsCellWhenAColumnIsDeletedBefore() {
         var item = table()
         item.updateStyle(rows: 0...0, cols: 2...2) { $0.italic = true }

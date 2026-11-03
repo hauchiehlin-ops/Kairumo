@@ -997,7 +997,7 @@ extension NotebookEditorView {
 
                         Button {
                             let created = store.createNotebook(
-                                title: localizationManager.localized("new_notebook"),
+                                title: NotebookStore.newNotebookTitle(),
                                 template: notebook.template,
                                 folderId: folder.id
                             )
@@ -1124,7 +1124,7 @@ extension NotebookEditorView {
                         if let first = store.notebooks.first {
                             switchToNotebook(first)
                         } else {
-                            let created = store.createNotebook(title: localizationManager.localized("untitled_note"), template: .blank)
+                            let created = store.createNotebook(title: NotebookStore.newNotebookTitle(), template: .blank)
                             switchToNotebook(created)
                         }
                     }

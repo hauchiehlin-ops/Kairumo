@@ -1547,6 +1547,7 @@ public struct NotebookEditorView: View {
         let existingCount = notebook.tableAttachments?.filter { $0.pageIndex == currentPageIndex }.count ?? 0
         table.x = targetX
         table.y = min(PageGeometry.height - 200, baseOffsetY + CGFloat(existingCount * 40))
+        fitTableToPageRules(&table)
         if notebook.tableAttachments == nil { notebook.tableAttachments = [] }
         notebook.tableAttachments?.append(table)
         activeSelectedObjectId = table.id

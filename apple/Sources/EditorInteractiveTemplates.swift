@@ -390,6 +390,27 @@ extension NotebookEditorView {
         return RuledWriting.horizontalRules(guides: guides, bands: bands)
     }
 
+    /// 新插入的表格貼齊這一頁的橫格線：頂邊落在最近的線上，每一列高度取格線間距的整數倍，
+    /// 所以表格的每一條橫線都與紙上的線重合。與套用文件範本（`DocumentTemplateApply.snapToRules`）同一套規則。
+    ///
+    /// 所有插入表格的入口都要走這裡 —— 之前只有工具列矩陣那一條有貼齊，從表格設計室插入的表格
+    /// 列高是自動值，與格線間距差一點點，往下幾列就明顯錯開。沒有規則格線的紙張（空白、點陣）原樣返回。
+    func fitTableToPageRules(_ table: inout NoteTableAttachment) {
+        let rules = pageHorizontalRules(page: table.pageIndex)
+        guard let step = RuledWriting.step(of: rules) else { return }
+        if let nearest = rules.min(by: { abs($0 - table.y) < abs($1 - table.y) }) {
+            table.y = nearest
+        }
+        // 以實際排版的列高（含內容與使用者在設計室設的列高）為準，再取格線間距的整數倍。
+        table.rowHeightOverrides = table.resolvedLayout().rowHeights.map {
+            Double(max(1, ($0 / step - 0.01).rounded(.up)) * step)
+        }
+        // 字坐在下面那條線上，與橫線紙上寫字的感覺一致。
+        table.updateStyle(rows: 0...(table.rows - 1), cols: 0...(table.cols - 1)) { style in
+            if style.vAlign == nil { style.vAlign = .bottom }
+        }
+    }
+
     /// 拖曳文字方塊時的吸附：讓第一行底部坐在最近的格線上（文字貼著格線上方、格線為底，絕不穿透重疊）。
     func snapYToGuideLine(at y: CGFloat, page: Int? = nil) -> CGFloat {
         let rules = pageHorizontalRules(page: page)

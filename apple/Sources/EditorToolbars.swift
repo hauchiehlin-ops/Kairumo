@@ -1188,30 +1188,9 @@ extension NotebookEditorView {
                         let targetX = max(PageGeometry.printableInset, (PageGeometry.width - 440) / 2)
                         let baseOffsetY = max(PageGeometry.printableInset, canvasContentOffset.y + 120)
                         let existingCount = notebook.tableAttachments?.filter { $0.pageIndex == currentPageIndex }.count ?? 0
-                        var targetY = min(PageGeometry.height - 200, baseOffsetY + CGFloat(existingCount * 40))
-
-                        let rules = pageHorizontalRules(page: currentPageIndex)
-                        let step = RuledWriting.step(of: rules)
-
+                        let targetY = min(PageGeometry.height - 200, baseOffsetY + CGFloat(existingCount * 40))
                         var table = NoteTableAttachment(pageIndex: currentPageIndex, x: targetX, y: targetY, rows: rows, cols: cols)
-
-                        if let s = step, !rules.isEmpty {
-                            // 1. 表格頂端吸附在最近的隔線上
-                            if let nearestRule = rules.min(by: { abs($0 - targetY) < abs($1 - targetY) }) {
-                                targetY = nearestRule
-                            }
-                            table.y = targetY
-
-                            // 2. 自動調整儲存格大小以適配隔線上下空間：列高為 step 整數倍
-                            let naturalH = NoteTableAttachment.defaultRowHeight(fontSize: table.fontSize)
-                            let fittedHeight = max(1, (naturalH / s).rounded(.up)) * s
-                            table.rowHeightOverrides = Array(repeating: Double(fittedHeight), count: rows)
-
-                            // 3. 儲存格游標與文字預設在隔線上方（靠底對齊）
-                            table.updateStyle(rows: 0...(rows - 1), cols: 0...(cols - 1)) {
-                                $0.vAlign = .bottom
-                            }
-                        }
+                        fitTableToPageRules(&table)
 
                         if notebook.tableAttachments == nil { notebook.tableAttachments = [] }
                         notebook.tableAttachments?.append(table)

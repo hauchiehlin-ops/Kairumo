@@ -3043,10 +3043,20 @@ public final class NotebookStore: ObservableObject {
 
     // MARK: - 筆記操作 CRUD
 
+    /// 新筆記本的預設名稱：建立時刻的「時-分-秒-New」，例如 `23-30-15-New`。
+    ///
+    /// 24 小時制、補零、以連字號分隔 —— 冒號在 exFAT／Windows／Finder 不能當檔名，
+    /// 匯出與同步時會出錯。「New」不翻譯：各語系同一個格式，跨裝置看到的名稱一致。
+    /// Android 端 `NotebookNaming.newTitle` 是同一條規則。
+    nonisolated public static func newNotebookTitle(at date: Date = Date()) -> String {
+        let c = Calendar(identifier: .gregorian).dateComponents([.hour, .minute, .second], from: date)
+        return String(format: "%02d-%02d-%02d-New", c.hour ?? 0, c.minute ?? 0, c.second ?? 0)
+    }
+
     @discardableResult
     public func createNotebook(title: String, template: NoteTemplate, folderId: String? = nil) -> NotebookDocument {
         let safeTitle = title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-            ? LocalizationManager.shared.localized("untitled_note") : title
+            ? Self.newNotebookTitle() : title
         let newDoc = NotebookDocument(
             title: safeTitle,
             createdAt: Date(),

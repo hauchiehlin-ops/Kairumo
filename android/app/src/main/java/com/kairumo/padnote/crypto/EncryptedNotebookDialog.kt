@@ -62,7 +62,7 @@ fun EncryptedNotebookDialog(
     val clipboard = LocalClipboardManager.current
 
     var step by remember { mutableStateOf(0) } // 0 設密碼 / 1 抄下 / 2 輸回來
-    var title by remember { mutableStateOf("") }
+    var title by remember { mutableStateOf(com.kairumo.padnote.library.NotebookNaming.newTitle()) }
     var passphrase by remember { mutableStateOf("") }
     var passphraseAgain by remember { mutableStateOf("") }
     var recovery by remember { mutableStateOf("") }
@@ -199,7 +199,7 @@ fun EncryptedNotebookDialog(
                                 }
                                 working = true
                                 scope.launch {
-                                    val name = title.ifBlank { l("new_note") }
+                                    val name = title.ifBlank { com.kairumo.padnote.library.NotebookNaming.newTitle() }
                                     val id = java.util.UUID.randomUUID().toString().lowercase()
                                     val path = File(
                                         NotebookLibrary.directory(context),
