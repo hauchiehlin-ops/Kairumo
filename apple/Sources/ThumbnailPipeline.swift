@@ -86,6 +86,8 @@ final class ThumbnailPipeline {
         let pk = pageKey(request.notebook.id, request.pageIndex)
         if pending[pk]?.key != key {
             pending[pk] = Job(key: key, request: request)
+            PagePrefetcher.prefetch(pages: [request.pageIndex], notebookId: request.notebook.id,
+                                    store: request.store, priority: .visible)
             pump()
         }
         return stale.object(forKey: pk as NSString) ?? placeholder()
@@ -125,13 +127,15 @@ final class ThumbnailPipeline {
         }
         pending[pk] = nil
         let r = job.request
+        let governor = FrameGovernor.shared
         let image = PageThumbnailRenderer.render(
             notebook: r.notebook, pageIndex: r.pageIndex, drawing: r.drawing(), store: r.store,
-            canvasWidth: r.canvasWidth, inkRevision: r.inkRevision, deferRecomputation: false)
+            canvasWidth: r.canvasWidth, inkRevision: r.inkRevision,
+            scale: 0.4 * governor.thumbnailScaleFactor, deferRecomputation: false)
         done.setObject(image, forKey: job.key as NSString)
         stale.setObject(image, forKey: pk as NSString)
         slots[pk]?.version += 1
         pumping = false
-        if !pending.isEmpty { pump() }
+        if !pending.isEmpty { pump(after: governor.thumbnailGap) }
     }
 }

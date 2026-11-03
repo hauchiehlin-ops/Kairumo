@@ -89,6 +89,10 @@ extension NotebookEditorView {
         sanitizeUnderInkObjects()
         self.originalSketchBackup = nil
         self.refinedSketchCache = nil
+        // 相鄰頁的筆跡先在背景解碼好：下一次換頁不必在主執行緒讀檔。
+        PagePrefetcher.prefetch(
+            pages: PagePrefetcher.neighbors(of: currentPageIndex, pageCount: notebook.pageCount),
+            notebookId: notebook.id, store: store)
     }
 
     /// 把對方傳來的筆跡落到本機。

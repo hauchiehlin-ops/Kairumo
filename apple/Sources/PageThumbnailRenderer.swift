@@ -226,6 +226,7 @@ public enum PageThumbnailRenderer {
             + "|\(DraftingState.shared.hiddenStamp(notebookId: notebook.id))"
             + "|\(notebook.underInkObjectIds(forPage: pageIndex).sorted().joined(separator: ",").hashValue)|\(notebook.objectOrder(forPage: pageIndex)?.joined(separator: ",").hashValue ?? 0)") as NSString
         if useCache, let cached = cache.object(forKey: key) { return cached }
+        PerfProbe.shared.count(.thumbnailComposeOnMain)
         let pro = proStrokes(notebook: notebook, pageIndex: pageIndex, store: store)
 
         let pageHeight = PageGeometry.height

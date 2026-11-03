@@ -2514,6 +2514,28 @@ public final class NotebookStore: ObservableObject {
         drawingCacheLock.unlock()
     }
 
+    /// 背景預取：把某一頁的 `.drawing` 讀出、解碼、放進共用快取。
+    ///
+    /// 之後主執行緒的 `loadDrawing` 只剩一次 stat 就命中，不必在換頁／開側欄的當下讀檔解碼。
+    /// 只讀不寫；檔案不存在或損毀就什麼都不做（自癒仍留給 `loadDrawing`）。可在任何執行緒呼叫。
+    nonisolated static func prefetchDrawing(at fileURL: URL) {
+        guard let modDate = (try? fileURL.resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate else { return }
+        let key = fileURL.path
+        drawingCacheLock.lock()
+        if let cached = drawingCache[key], cached.isPendingWrite || cached.modDate == modDate {
+            drawingCacheLock.unlock()
+            return
+        }
+        drawingCacheLock.unlock()
+        guard let data = try? Data(contentsOf: fileURL), let d = try? PKDrawing(data: data) else { return }
+        drawingCacheLock.lock()
+        // 解碼期間若有人寫入了更新的內容（待寫入），不要蓋掉。
+        if drawingCache[key]?.isPendingWrite != true {
+            drawingCache[key] = CachedDrawing(modDate: modDate, drawing: d, isPendingWrite: false)
+        }
+        drawingCacheLock.unlock()
+    }
+
     /// 讀取單頁手繪內容（具記憶體快取，檔案修改時間未變時直接回傳已解碼的 PKDrawing）
     public func loadDrawing(notebookId: String, pageIndex: Int) -> PKDrawing {
         let fileUrl = drawingsDirectory.appending(path: "\(notebookId)_p\(pageIndex).drawing")

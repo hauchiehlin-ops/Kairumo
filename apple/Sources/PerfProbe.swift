@@ -47,6 +47,14 @@ enum PerfPoint: String, CaseIterable, Sendable {
     }
 }
 
+/// 與裝置速度無關的「次數型」成本計數。測試用它斷言：某個互動在主執行緒上
+/// 不該發生的事（讀檔、同步算繪…）一次都沒有發生，且不隨筆記大小成長。
+enum CostCounter: String, CaseIterable, Sendable {
+    case prefetchScheduled
+    case mainThreadDrawingLoad
+    case thumbnailComposeOnMain
+}
+
 final class PerfProbe: @unchecked Sendable {
     // profile-scope: device 效能診斷，整台裝置共用
     static let shared = PerfProbe()
@@ -77,6 +85,17 @@ final class PerfProbe: @unchecked Sendable {
             record(point, ms: ms)
         }
         return try body()
+    }
+
+    private var counters: [CostCounter: Int] = [:]
+
+    func count(_ c: CostCounter, by n: Int = 1) {
+        lock.lock(); counters[c, default: 0] += n; lock.unlock()
+    }
+
+    func counter(_ c: CostCounter) -> Int {
+        lock.lock(); defer { lock.unlock() }
+        return counters[c] ?? 0
     }
 
     func record(_ point: PerfPoint, ms: Double) {
@@ -115,6 +134,6 @@ final class PerfProbe: @unchecked Sendable {
     }
 
     func reset() {
-        lock.lock(); samples.removeAll(); over.removeAll(); lock.unlock()
+        lock.lock(); samples.removeAll(); over.removeAll(); counters.removeAll(); lock.unlock()
     }
 }

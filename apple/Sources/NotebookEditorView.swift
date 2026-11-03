@@ -1394,6 +1394,8 @@ public struct NotebookEditorView: View {
     }
 
     private func handleOnAppear() {
+        FrameGovernor.shared.start()
+        FieldTelemetry.shared.start()
         configureLassoCallbacks(forPage: currentPageIndex)
         sanitizeTextAttachments()
         sanitizeUnderInkObjects()
@@ -1438,6 +1440,7 @@ public struct NotebookEditorView: View {
     }
 
     private func handleOnDisappear() {
+        FrameGovernor.shared.stop()
         // 先存檔、再放掉焦點。
         saveCurrentPageDrawing()
         let leavingId = notebook.id

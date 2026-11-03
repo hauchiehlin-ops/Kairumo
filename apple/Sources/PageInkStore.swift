@@ -83,6 +83,7 @@ public final class PageInkStore: ObservableObject {
         if let cached = inMemoryDrawings[k] {
             return cached
         }
+        PerfProbe.shared.count(.mainThreadDrawingLoad)
         let diskDrawing = store.loadDrawing(notebookId: notebookId, pageIndex: pageIndex)
         inMemoryDrawings[k] = diskDrawing
         knownDiskStrokeCounts[k] = diskDrawing.strokes.count
