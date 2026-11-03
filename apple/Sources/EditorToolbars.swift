@@ -1289,9 +1289,83 @@ extension NotebookEditorView {
         if editorMode != .draw && !isInlineInkEditing {
             transitionToMode(.draw)
         }
-        // 若畫布當前有在途未結算的自繪筆畫，立即結束並落盤，不阻塞換筆
-        (canvasView as? AdaptiveCanvasView)?.proLayer?.endStroke()
         selectedTool = tool // state-entry: 換工具的唯一正門
+        syncToolDirectlyToCanvas(tool: tool)
+    }
+
+    /// 直接且同步地將工具設定推送到當前活躍畫布，繞過 SwiftUI 聲明式求值延遲，
+    /// 確保在 Apple Pencil 落筆的 0 毫秒內底層手勢與筆刷已經 100% 同步就緒。
+    func syncToolDirectlyToCanvas(tool: EditorToolType) {
+        let activeCanvas = (pageDisplayMode == .continuous ? continuousCanvases[currentPageIndex] : nil)
+            ?? continuousCanvases.activeCanvas
+            ?? canvasView
+
+        guard let canvas = activeCanvas else { return }
+
+        if let adaptive = canvas as? AdaptiveCanvasView {
+            adaptive.proLayer?.endStroke()
+            let mode: AdaptiveCanvasView.ProMode
+            let isDrafting = tool == .drafting
+            let drafting = DraftingState.shared
+            if isDrafting {
+                mode = drafting.tool != .none ? .tool
+                    : (drafting.markerMode ? .marker : (drafting.reassignMode ? .reassign : .draw))
+            } else if tool.proToolKind != nil {
+                mode = .draw
+            } else if tool == .eraser {
+                mode = .erase
+            } else {
+                mode = .off
+            }
+            let fingerRule = EditorCanvasInputPolicy.fingerMayDraw(effectiveMode: editorMode)
+            if isDrafting {
+                adaptive.proTool = .fineliner
+                adaptive.proColor = drafting.activeColorRGBA
+                adaptive.proWidth = drafting.activePen.width
+                adaptive.proLayerId = drafting.activeLayerId
+                adaptive.proLineType = drafting.activeLineType
+                adaptive.proSnapStep = drafting.snapEnabled ? Float(drafting.angleStep) : nil
+                adaptive.proReassignTarget = drafting.activeLayerId
+            } else {
+                adaptive.proTool = tool.proToolKind
+                adaptive.proColor = InkInterop.rgba(from: UIColor(selectedColor)).map { $0 }
+                adaptive.proWidth = Float(ProInk.baseWidth(for: tool, strokeWidth: strokeWidth))
+                adaptive.proLayerId = 0
+                adaptive.proLineType = 0
+                adaptive.proSnapStep = nil
+            }
+            adaptive.proEraserRadius = max(4, pixelEraserWidth / 2)
+            let allowsPencilKitDrawing = EditorCanvasInputPolicy.drawingGestureEnabled(effectiveMode: editorMode)
+                && (tool != .lasso)
+                && (tool != .maskingTape)
+                && (tool != .translationPen)
+            adaptive.configurePro(
+                mode: mode,
+                directory: store.drawingsDirectory,
+                notebookId: notebook.id,
+                pageIndex: currentPageIndex,
+                pencilOnly: fingerRule == false,
+                allowsPencilKitDrawing: allowsPencilKitDrawing,
+                claimsSingleTouch: tool == .lasso && editorMode == .draw
+            )
+            let pointerW = tool == .eraser ? pixelEraserWidth * max(adaptive.zoomScale, 0.01) : strokeWidth
+            adaptive.refreshPointer(for: tool, strokeWidth: pointerW)
+        }
+
+        let uiColor = UIColor(selectedColor)
+        switch tool {
+        case .brush, .fineliner, .calligraphy, .charcoal, .crayon, .airbrush, .oilpaint,
+             .pen, .ballpoint, .marker, .highlighter, .pencil, .watercolor:
+            canvas.tool = PKInkingTool(.pen, color: uiColor, width: max(1, strokeWidth))
+        case .eraser:
+            if #available(iOS 16.4, *) {
+                canvas.tool = PKEraserTool(eraserMode == .stroke ? .vector : .bitmap, width: pixelEraserWidth)
+            } else {
+                canvas.tool = PKEraserTool(eraserMode == .stroke ? .vector : .bitmap)
+            }
+        case .lasso, .drafting, .maskingTape, .translationPen:
+            canvas.tool = PKInkingTool(.pen, color: .clear, width: 1)
+        }
     }
 
     /// 點擊筆刷或繪圖工具、懸停或長按時，在工具列緊鄰處顯示快顯提示，提示該工具名稱。
@@ -1299,14 +1373,10 @@ extension NotebookEditorView {
         let localizedName = localizationManager.localized(tool.localizationKey)
         toolToastToken += 1
         let token = toolToastToken
-        withAnimation(.spring(response: 0.24, dampingFraction: 0.82)) {
-            activeToolToast = (name: localizedName, icon: tool.iconName)
-        }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+        activeToolToast = (name: localizedName, icon: tool.iconName)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
             guard toolToastToken == token else { return }
-            withAnimation(.easeInOut(duration: 0.2)) {
-                activeToolToast = nil
-            }
+            activeToolToast = nil
         }
     }
 
@@ -1333,6 +1403,7 @@ extension NotebookEditorView {
             .allowsHitTesting(false)
             .padding(.horizontal, 16)
             .padding(.vertical, 4)
+            .animation(.spring(response: 0.22, dampingFraction: 0.8), value: activeToolToast?.name)
         }
     }
 
