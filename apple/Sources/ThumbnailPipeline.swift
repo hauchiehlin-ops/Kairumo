@@ -77,6 +77,27 @@ final class ThumbnailPipeline {
         PageThumbnailRenderer.invalidateAll()
     }
 
+    /// 頁面結構變了（搬頁、插入、複製、刪除）：`map(舊頁碼)` = 新頁碼，`nil` 是刪掉的頁。
+    ///
+    /// 快取鍵是頁碼加上版本號，而沒動過的頁版本號都是 0 —— 不處理的話，搬頁之後同一個頁碼
+    /// 算出同一個鍵，側欄沿用搬動前那一頁的圖，與畫布整個錯開。這裡讓全部重算（世代 +1），
+    /// 過渡用的舊圖跟著搬到新頁碼，重算完成前顯示的也是對的那一頁。
+    func pagesRemapped(notebookId: String, countBefore: Int, _ map: (Int) -> Int?) {
+        var moved: [(Int, UIImage)] = []
+        for page in 0..<max(0, countBefore) {
+            let pk = pageKey(notebookId, page)
+            if let image = stale.object(forKey: pk as NSString), let to = map(page) { moved.append((to, image)) }
+            stale.removeObject(forKey: pk as NSString)
+            pending[pk] = nil
+        }
+        for (page, image) in moved {
+            stale.setObject(image, forKey: pageKey(notebookId, page) as NSString)
+        }
+        done.removeAllObjects()
+        PageThumbnailRenderer.invalidateAll()
+        for (key, slot) in slots where key.hasPrefix("\(notebookId)|") { slot.version += 1 }
+    }
+
     /// 取這一頁現在該顯示的縮圖。**立即回傳**；需要重畫的會排進佇列。
     func image(for request: Request) -> UIImage {
         let key = PageThumbnailRenderer.lightweightKey(

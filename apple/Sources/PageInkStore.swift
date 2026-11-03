@@ -76,6 +76,45 @@ public final class PageInkStore: ObservableObject {
         return "\(notebookId)_p\(pageIndex)"
     }
 
+    /// 頁面結構變了：以頁碼為鍵的項目（沒有頁面 id 的筆記）跟著換到新頁碼，`map` 回傳 `nil` 的頁丟掉。
+    ///
+    /// 以頁面 id 為鍵的項目本來就跟著頁走，不必動。以頁碼為鍵的不搬的話，搬頁之後
+    /// 第 1 頁拿到的是搬動前第 1 頁的記憶體筆跡 —— 畫布顯示的與磁碟、縮圖不是同一頁。
+    public func remapIndexKeyedPages(_ map: (Int) -> Int?) {
+        let prefix = "\(notebookId)_p"
+        func remapKey(_ k: String) -> String?? {
+            guard k.hasPrefix(prefix), let page = Int(k.dropFirst(prefix.count)) else { return .none }
+            return .some(map(page).map { "\(prefix)\($0)" })
+        }
+        func remap<V>(_ dict: [String: V]) -> [String: V] {
+            var out: [String: V] = [:]
+            for (k, v) in dict {
+                switch remapKey(k) {
+                case .none: out[k] = v
+                case .some(let moved?): out[moved] = v
+                case .some(.none): break
+                }
+            }
+            return out
+        }
+        func remap(_ set: Set<String>) -> Set<String> {
+            Set(set.compactMap { k -> String? in
+                switch remapKey(k) {
+                case .none: return k
+                case .some(let moved): return moved
+                }
+            })
+        }
+        // `initialSnapshots` 不搬：「還原到初始狀態」先把逐頁檔案排回原本的頁碼（`restorePageFiles`），
+        // 再照頁碼套初始快照 —— 它要的正是原本的頁碼。
+        inMemoryDrawings = remap(inMemoryDrawings)
+        dirtyPages = remap(dirtyPages)
+        knownDiskStrokeCounts = remap(knownDiskStrokeCounts)
+        coreBaselines = remap(coreBaselines)
+        pendingCoreFlushKeys = remap(pendingCoreFlushKeys)
+        revisions = remap(revisions)
+    }
+
     /// 取得某一頁的筆跡。
     /// 若記憶體中已有快取，直接回傳；若無則自磁碟讀取並載入快取。
     public func drawing(for pageIndex: Int, pageId: String? = nil) -> PKDrawing {

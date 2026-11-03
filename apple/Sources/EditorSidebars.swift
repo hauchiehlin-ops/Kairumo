@@ -743,7 +743,7 @@ extension NotebookEditorView {
     /// 頁面結構變動（新增、插入、複製、刪除、搬動）的共用流程。
     func changePageStructure(pageMap explicitMap: ((Int) -> Int?)? = nil, _ change: @escaping () -> Int?) {
         saveCurrentPageDrawing()
-        afterCoreInkWrites {
+        afterAllInkWrites {
             activeInkStore.flushDirtyPages(notebook: notebook)
             if pageOrigins == nil, let snapshot = initialNotebookSnapshot {
                 for page in 0..<min(notebook.pageCount, snapshot.pageCount) {
@@ -762,6 +762,10 @@ extension NotebookEditorView {
             }
 
             continuousCanvases.invalidateCachedDrawings()
+            // 以頁碼為鍵的快取跟著換頁碼：沒有頁面 id 的筆記，記憶體筆跡以頁碼為鍵；
+            // 縮圖的快取鍵也是頁碼 —— 不跟著搬的話，搬頁之後縮圖停在搬動前那一頁的樣子（與畫布對不起來）。
+            activeInkStore.remapIndexKeyedPages(pageMap)
+            ThumbnailPipeline.shared.pagesRemapped(notebookId: notebook.id, countBefore: countBefore, pageMap)
             if let origins = pageOrigins {
                 let countAfter = store.notebooks.first(where: { $0.id == notebook.id })?.pageCount ?? countBefore
                 var next = [Int?](repeating: nil, count: countAfter)

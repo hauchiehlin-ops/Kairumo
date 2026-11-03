@@ -1029,6 +1029,17 @@ extension NotebookEditorView {
         }
     }
 
+    /// 同上，另外先等專業筆畫排隊中的寫入落盤（`ProInkStore.saveDeferred` 去抖動 1.2 秒）。
+    ///
+    /// 頁面結構變動（搬頁、插入、刪除）要用這一支：排隊中的寫入記的是**舊頁碼的檔名**，
+    /// 逐頁檔案改名之後才寫下去的話，剛畫的那幾筆會蓋到換到那個頁碼上的另一頁。
+    func afterAllInkWrites(_ work: @escaping @MainActor () -> Void) {
+        Self.coreInkQueue.async {
+            ProInkStore.flushPendingWrites()
+            Task { @MainActor in work() }
+        }
+    }
+
     /// 進背景時讓寫入佇列做完：向系統要背景時間，佇列空了就交還。主執行緒不等。
     func finishCoreInkInBackground() {
         #if os(iOS)

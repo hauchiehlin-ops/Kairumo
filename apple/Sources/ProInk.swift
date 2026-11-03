@@ -322,6 +322,22 @@ enum ProInkStore {
         ledgerLock.unlock()
     }
 
+    /// 這本筆記的逐頁檔案換了頁碼（搬頁、插入、刪除頁）：以頁碼為鍵的記憶體快取全部作廢。
+    ///
+    /// 帳本、檔案時間與版本號都以「頁碼」為鍵，檔案改名之後它們還指著舊頁碼的內容 ——
+    /// 搬到第 1 頁的那一頁會套上原本第 1 頁的擦除帳本。筆畫快取以路徑＋修改時間比對，
+    /// 而改名保留修改時間，時間解析度粗的檔案系統上可能誤判命中，一併清掉。
+    /// 版本號不歸零而是 +1：歸零會讓縮圖快取鍵退回某個舊值。
+    nonisolated static func invalidatePageCaches(notebookId: String) {
+        let marker = "/\(notebookId.lowercased())_p"
+        ledgerLock.lock()
+        modifiedCache = modifiedCache.filter { !$0.key.contains(marker) }
+        ledgerCache = ledgerCache.filter { !$0.key.contains(marker) }
+        strokesCache = strokesCache.filter { !$0.key.lowercased().contains(marker) }
+        for key in revisions.keys where key.contains(marker) { revisions[key, default: 0] += 1 }
+        ledgerLock.unlock()
+    }
+
     private nonisolated static func ledgerURL(_ directory: URL, _ notebookId: String, _ page: Int) -> URL {
         directory.appending(path: "\(notebookId)_p\(page).proink-ledger.json")
     }

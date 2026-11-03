@@ -840,7 +840,13 @@ internal fun rememberEditorCanvasContext(
     var pageDisplayMode by pageDisplayModeState
 
 
-    val pageId = remember(notebook, pageIndex, pageCount) {
+    /**
+     * 頁面順序變了就遞增（搬頁）。`pageId` 的 remember 要以它為鍵：搬頁不改頁數，
+     * 目前頁碼又剛好等於搬過去的位置時（例如停在第 4 頁、把第 5 頁上移一頁），
+     * 頁碼與頁數都沒變 —— 畫布留在舊的那一頁，側欄標的卻是搬過來的那一頁。
+     */
+    val pageOrderRevisionState = remember { mutableIntStateOf(0) }
+    val pageId = remember(notebook, pageIndex, pageCount, pageOrderRevisionState.intValue) {
         // 退回第一頁只在**本來就是第一頁**時才對。別頁查不到 id（頁數剛變、session 正在換）時
         // 退回第一頁的話，這一頁新增的物件與筆畫全寫進第 1 頁 —— 寧可這一瞬間寫不進去。
         runCatching { notebook?.first?.pageIdAt(pageIndex.toUInt()) }.getOrNull()
@@ -1977,6 +1983,7 @@ internal fun rememberEditorCanvasContext(
                 // 都是用頁碼當鍵的 —— 少了這一行，症狀是
                 // 「我搬了一頁，它的版面留在原地」。
                 meta.movePageData(session, from, to, pageCount)
+                pageOrderRevisionState.intValue++
                 // 跟著搬過去 —— 停在原本的索引會變成「我搬了一頁，
                 // 畫面卻跳到別頁」。
                 switchToPage(to)
