@@ -75,17 +75,15 @@ pub fn escape_drive_literal(value: &str) -> String {
 /// 垃圾桶裡，Drive 預設還是查得到；不濾掉的話，已經刪除的 chunk 會被
 /// 當成還在，同步引擎就會重新拉回已經刪掉的內容。
 pub fn list_query(prefix: &str) -> String {
-    list_query_in(APPDATA, prefix)
+    list_query_in(APP_DATA_FOLDER, prefix)
 }
 
 /// 找特定路徑（= 完整檔名）時用的 `q`。
 pub fn exact_query(path: &str) -> String {
-    exact_query_in(APPDATA, path)
+    exact_query_in(APP_DATA_FOLDER, path)
 }
 
-const APPDATA: &str = "appDataFolder";
-
-/// [`list_query`]，但在任意父資料夾底下（共享協作資料夾）。
+/// 與 [`list_query`] 相同，但父資料夾可指定（共享協作資料夾用它的 file id）。
 pub fn list_query_in(parent: &str, prefix: &str) -> String {
     let parent = escape_drive_literal(parent);
     if prefix.is_empty() {
@@ -98,7 +96,7 @@ pub fn list_query_in(parent: &str, prefix: &str) -> String {
     }
 }
 
-/// [`exact_query`]，但在任意父資料夾底下。
+/// 與 [`exact_query`] 相同，但父資料夾可指定。
 pub fn exact_query_in(parent: &str, path: &str) -> String {
     format!(
         "'{}' in parents and trashed = false and name = '{}'",
@@ -107,34 +105,41 @@ pub fn exact_query_in(parent: &str, path: &str) -> String {
     )
 }
 
-/// 檔案放在哪裡。
+/// Drive 的應用程式專屬隱藏資料夾（每個帳號自己的同步區）。
+pub const APP_DATA_FOLDER: &str = "appDataFolder";
+
+/// 這個 provider 讀寫哪裡。
 ///
-/// - `AppData`：使用者自己的隱藏區（`appDataFolder`），一個人的多台裝置同步。
-/// - `Folder`：房主雲端硬碟裡的一個一般資料夾，分享給協作者（雲端協作模式）。
-///   路徑一樣整條當檔名（不建子資料夾），所以兩種空間的同步邏輯完全相同；
-///   差別只在查詢的父資料夾、`spaces` 參數，以及變更清單要濾掉別的資料夾。
+/// - [`DriveRoot::AppData`]：使用者自己的 `appDataFolder`（隱藏、不能分享）—— 一般同步。
+/// - [`DriveRoot::Folder`]：「我的雲端硬碟」裡的一個一般資料夾（以 file id 指定）——
+///   **雲端共享協作**：房主建立、分享給協作者（編輯者），每個人都把自己的事件檔寫進來。
+///   檔名照舊是整條路徑（`notebooks/<id>/doc/ops/...`），檔名裡有裝置 id，多人寫入不會互蓋。
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub enum DriveSpace {
+pub enum DriveRoot {
     AppData,
     Folder(String),
 }
 
-impl DriveSpace {
+impl DriveRoot {
+    /// 新檔案的父資料夾。
     pub fn parent(&self) -> &str {
         match self {
-            Self::AppData => APPDATA,
-            Self::Folder(id) => id,
+            DriveRoot::AppData => APP_DATA_FOLDER,
+            DriveRoot::Folder(id) => id,
         }
     }
 
     /// `files.list`／`changes.list` 的 `spaces` 參數。
-    pub fn spaces(&self) -> &'static str {
+    pub fn space(&self) -> &'static str {
         match self {
-            Self::AppData => APPDATA,
-            Self::Folder(_) => "drive",
+            DriveRoot::AppData => APP_DATA_FOLDER,
+            DriveRoot::Folder(_) => "drive",
         }
     }
 }
+
+/// 向下相容別名。
+pub type DriveSpace = DriveRoot;
 
 /// Drive 的 `files.list` 回應 → `RemoteEntry`。
 ///
@@ -244,24 +249,38 @@ pub fn is_cursor_expired(error: &SyncError) -> bool {
 #[derive(Debug)]
 pub struct GDriveProvider<H: DriveHttp> {
     http: H,
-    space: DriveSpace,
+    root: DriveRoot,
     id_cache: Mutex<HashMap<String, String>>,
     deleted_paths: Mutex<HashSet<String>>,
 }
 
 impl<H: DriveHttp> GDriveProvider<H> {
     pub fn new(http: H) -> Self {
-        Self::in_space(http, DriveSpace::AppData)
+        Self::with_root(http, DriveRoot::AppData)
     }
 
-    /// 指定空間的 provider（共享協作資料夾用 [`DriveSpace::Folder`]）。
-    pub fn in_space(http: H, space: DriveSpace) -> Self {
+    /// 指定讀寫的位置（見 [`DriveRoot`]）。
+    pub fn with_root(http: H, root: DriveRoot) -> Self {
         Self {
             http,
-            space,
+            root,
             id_cache: Mutex::new(HashMap::new()),
             deleted_paths: Mutex::new(HashSet::new()),
         }
+    }
+
+    /// 向下相容舊名稱。
+    pub fn in_space(http: H, space: DriveRoot) -> Self {
+        Self::with_root(http, space)
+    }
+
+    pub fn root(&self) -> &DriveRoot {
+        &self.root
+    }
+
+    /// 平台 HTTP（資料夾管理等不經檔名映射的呼叫用）。
+    pub fn http(&self) -> &H {
+        &self.http
     }
 
     /// 逐頁把某個查詢的所有結果收齊。
@@ -274,7 +293,7 @@ impl<H: DriveHttp> GDriveProvider<H> {
         let mut page_token: Option<String> = None;
         loop {
             let mut query = vec![
-                ("spaces".to_string(), self.space.spaces().to_string()),
+                ("spaces".to_string(), self.root.space().to_string()),
                 ("q".to_string(), q.to_string()),
                 ("pageSize".to_string(), "1000".to_string()),
                 (
@@ -309,7 +328,10 @@ impl<H: DriveHttp> GDriveProvider<H> {
                 return Ok(id.clone());
             }
         }
-        let pages = self.list_all(&exact_query_in(self.space.parent(), path), "id, modifiedTime")?;
+        let pages = self.list_all(
+            &exact_query_in(self.root.parent(), path),
+            "id, modifiedTime",
+        )?;
         let mut best: Option<(String, String)> = None;
         for page in pages {
             for f in page
@@ -411,7 +433,7 @@ impl<H: DriveHttp> GDriveProvider<H> {
     pub fn start_page_token(&self) -> Result<String, SyncError> {
         let page = self.http.get_json(
             CHANGES_START_TOKEN_URL,
-            &[("spaces".to_string(), self.space.spaces().to_string())],
+            &[("spaces".to_string(), self.root.space().to_string())],
         )?;
         page.get("startPageToken")
             .and_then(Value::as_str)
@@ -422,7 +444,7 @@ impl<H: DriveHttp> GDriveProvider<H> {
     /// 全量列出 `appDataFolder` 底下的所有檔案。**只在重建基準時用。**
     pub fn list_all_remote(&self) -> Result<Vec<crate::remote_index::RemoteFile>, SyncError> {
         let pages = self.list_all(
-            &list_query_in(self.space.parent(), ""),
+            &list_query_in(self.root.parent(), ""),
             "id, name, size, modifiedTime",
         )?;
         let mut out = Vec::new();
@@ -481,7 +503,7 @@ impl<H: DriveHttp> GDriveProvider<H> {
         loop {
             let query = vec![
                 ("pageToken".to_string(), cursor.clone()),
-                ("spaces".to_string(), self.space.spaces().to_string()),
+                ("spaces".to_string(), self.root.space().to_string()),
                 ("includeRemoved".to_string(), "true".to_string()),
                 ("pageSize".to_string(), "1000".to_string()),
                 (
@@ -513,7 +535,7 @@ impl<H: DriveHttp> GDriveProvider<H> {
                 // 共享資料夾：`spaces=drive` 的變更清單是整個雲端硬碟的，別的資料夾
                 // （另一本共享筆記、使用者自己的檔案）要濾掉。刪除的變更沒有 `file`，
                 // 交給快照判斷（快照只認得自己這個資料夾的 id，不認得的會被忽略）。
-                if let DriveSpace::Folder(folder) = &self.space
+                if let DriveRoot::Folder(folder) = &self.root
                     && let Some(parents) = file.and_then(|f| f.get("parents")).and_then(Value::as_array)
                     && !parents.iter().any(|p| p.as_str() == Some(folder.as_str()))
                 {
@@ -534,10 +556,34 @@ impl<H: DriveHttp> GDriveProvider<H> {
                     .map(parse_rfc3339_secs)
                     .unwrap_or(0);
                 // 垃圾桶要當成刪除，理由與 `list_query` 加 `trashed = false` 相同。
-                let trashed = file
+                let mut trashed = file
                     .and_then(|f| f.get("trashed"))
                     .and_then(Value::as_bool)
                     .unwrap_or(false);
+                // 共享資料夾模式：`changes.list` 看的是整個雲端硬碟（App 看得到的部分）。
+                // 不在這個資料夾裡的檔案不是我們的 —— 已知的話（被移出資料夾）當成刪除，
+                // 未知的話快照本來就不會收。
+                if let (DriveRoot::Folder(folder), Some(f)) = (&self.root, file) {
+                    let inside = f
+                        .get("parents")
+                        .and_then(Value::as_array)
+                        .is_some_and(|ps| ps.iter().any(|p| p.as_str() == Some(folder.as_str())));
+                    if !inside {
+                        if removed {
+                            // 已經標成移除，照舊處理。
+                        } else if self
+                            .id_cache
+                            .lock()
+                            .unwrap()
+                            .values()
+                            .any(|v| v == &file_id)
+                        {
+                            trashed = true;
+                        } else {
+                            continue;
+                        }
+                    }
+                }
                 if let (Some(name), false) = (name.as_deref(), removed || trashed) {
                     let mut cache = self.id_cache.lock().unwrap();
                     cache.insert(name.to_string(), file_id.clone());
@@ -622,7 +668,7 @@ impl<H: DriveHttp> GDriveProvider<H> {
     pub fn create_and_upload(&self, path: &str, data: &[u8]) -> Result<String, SyncError> {
         let created = self.http.post_json(
             FILES_URL,
-            &json!({ "name": path, "parents": [self.space.parent()] }),
+            &json!({ "name": path, "parents": [self.root.parent()] }),
         )?;
         let file_id = created
             .get("id")
@@ -639,7 +685,7 @@ impl<H: DriveHttp> GDriveProvider<H> {
         let lower = path.to_lowercase();
         let created = self.http.post_json(
             FILES_URL,
-            &json!({ "name": path, "parents": [self.space.parent()] }),
+            &json!({ "name": path, "parents": [self.root.parent()] }),
         )?;
         let file_id = created
             .get("id")
@@ -673,7 +719,7 @@ impl<H: DriveHttp> CloudProvider for GDriveProvider<H> {
         GDriveProvider::delete(self, path)
     }
     fn list(&self, prefix: &str) -> Result<Vec<RemoteEntry>, SyncError> {
-        let pages = self.list_all(&list_query_in(self.space.parent(), prefix), "id, name, size")?;
+        let pages = self.list_all(&list_query_in(self.root.parent(), prefix), "id, name, size")?;
 
         // Populate cache
         let mut cache = self.id_cache.lock().unwrap();
@@ -720,7 +766,7 @@ impl<H: DriveHttp> CloudProvider for GDriveProvider<H> {
             Err(SyncError::NotFound(_)) => {
                 let created = self.http.post_json(
                     FILES_URL,
-                    &json!({ "name": path, "parents": [self.space.parent()] }),
+                    &json!({ "name": path, "parents": [self.root.parent()] }),
                 )?;
                 let id = created
                     .get("id")
@@ -820,7 +866,7 @@ pub struct DriveFolderProbe {
 
 const FOLDER_MIME: &str = "application/vnd.google-apps.folder";
 
-/// 協作資料夾的管理（雲端協作模式）。只在 [`DriveSpace::Folder`] 有意義，
+/// 協作資料夾的管理（雲端協作模式）。只在 [`DriveRoot::Folder`] 有意義，
 /// 但建立資料夾本身與空間無關，所以放在 provider 上、由呼叫端決定。
 impl<H: DriveHttp> GDriveProvider<H> {
     /// 在使用者的雲端硬碟根目錄建立一個資料夾，回傳 id。
@@ -945,6 +991,70 @@ impl<H: DriveHttp> GDriveProvider<H> {
             visible_files,
         })
     }
+}
+
+// ---- 雲端共享協作：資料夾 -----------------------------------------------------
+
+/// 協作者的權限。共享協作一律給「編輯者」（使用者要的「編輯者最大權限」）。
+pub const SHARE_ROLE_WRITER: &str = "writer";
+
+/// 在「我的雲端硬碟」根目錄建立一個資料夾，回傳 file id。
+///
+/// 只需要 `drive.file` 權限：App 自己建立的檔案與資料夾，App 一直存取得到；
+/// 被分享到這個資料夾的協作者，用同一個 App 也存取得到（同一個 OAuth 專案建立的檔案）。
+pub fn create_folder<H: DriveHttp>(http: &H, name: &str) -> Result<String, SyncError> {
+    let created = http.post_json(
+        FILES_URL,
+        &json!({ "name": name, "mimeType": "application/vnd.google-apps.folder" }),
+    )?;
+    created
+        .get("id")
+        .and_then(Value::as_str)
+        .map(str::to_string)
+        .ok_or_else(|| SyncError::Backend(format!("建立 {name} 之後 Drive 沒有回傳 id")))
+}
+
+/// 把資料夾分享給一個 Google 帳號（編輯者）。Drive 會寄通知信給對方。
+pub fn share_folder_with<H: DriveHttp>(
+    http: &H,
+    folder_id: &str,
+    email: &str,
+) -> Result<(), SyncError> {
+    let url = format!("{FILES_URL}/{folder_id}/permissions?sendNotificationEmail=true");
+    http.post_json(
+        &url,
+        &json!({ "type": "user", "role": SHARE_ROLE_WRITER, "emailAddress": email.trim() }),
+    )?;
+    Ok(())
+}
+
+/// 讓「知道連結的人」都能編輯這個資料夾 —— 一鍵邀請連結／QR Code 用。
+///
+/// 連結本身就是鑰匙：拿到的人都能讀寫。呼叫端要讓使用者明確選擇（預設不開）。
+pub fn share_folder_with_link<H: DriveHttp>(http: &H, folder_id: &str) -> Result<(), SyncError> {
+    let url = format!("{FILES_URL}/{folder_id}/permissions");
+    http.post_json(
+        &url,
+        &json!({ "type": "anyone", "role": SHARE_ROLE_WRITER }),
+    )?;
+    Ok(())
+}
+
+/// 讀一個資料夾的名稱。協作者確認「真的拿得到這個資料夾」用（沒權限時 Drive 回 404／403）。
+pub fn folder_name<H: DriveHttp>(http: &H, folder_id: &str) -> Result<String, SyncError> {
+    let url = format!("{FILES_URL}/{folder_id}");
+    let meta = http.get_json(
+        &url,
+        &[("fields".to_string(), "id, name, trashed".to_string())],
+    )?;
+    if meta.get("trashed").and_then(Value::as_bool) == Some(true) {
+        return Err(SyncError::NotFound(folder_id.to_string()));
+    }
+    Ok(meta
+        .get("name")
+        .and_then(Value::as_str)
+        .unwrap_or_default()
+        .to_string())
 }
 
 /// HTTP 狀態與回應內容 → `SyncError`。
@@ -1565,7 +1675,7 @@ mod tests {
     }
 
     #[test]
-    fn folder_space_scopes_queries_and_filters_changes() {
+    fn folder_root_scopes_queries_and_filters_changes() {
         let fake = FakeDrive::with(&[("notebooks/nb1/manifest.json", b"{}")], 10);
         *fake.changes_response.lock().unwrap() = Some(json!({
             "changes": [
@@ -1591,7 +1701,7 @@ mod tests {
             "newStartPageToken": "token-next"
         }));
 
-        let drive = GDriveProvider::in_space(fake, DriveSpace::Folder("collab-42".into()));
+        let drive = GDriveProvider::with_root(fake, DriveRoot::Folder("collab-42".into()));
 
         // 1. list 查詢驗證 spaces 與 parents
         let entries = drive.list("notebooks/nb1").unwrap();
@@ -1617,5 +1727,26 @@ mod tests {
         assert_eq!(batch.changes[0].file_id, "id-in-folder");
         assert_eq!(batch.changes[0].name.as_deref(), Some("notebooks/nb1/op.bin"));
         assert_eq!(batch.new_token, "token-next");
+    }
+
+    #[test]
+    fn folder_root_scopes_queries_and_new_files() {
+        assert_eq!(DriveRoot::AppData.space(), "appDataFolder");
+        let root = DriveRoot::Folder("FOLDER1".into());
+        assert_eq!(root.space(), "drive");
+        assert_eq!(root.parent(), "FOLDER1");
+        assert_eq!(
+            list_query_in("FOLDER1", ""),
+            "'FOLDER1' in parents and trashed = false"
+        );
+        assert!(
+            exact_query_in("FOLDER1", "notebooks/a/manifest.json")
+                .starts_with("'FOLDER1' in parents")
+        );
+        // 一般同步的查詢不變。
+        assert_eq!(
+            list_query(""),
+            "'appDataFolder' in parents and trashed = false"
+        );
     }
 }

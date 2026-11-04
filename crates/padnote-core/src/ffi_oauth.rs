@@ -34,6 +34,11 @@ use sha2::{Digest, Sha256};
 /// `appdata` 是 Drive 裡專給 App 用的隱藏空間 —— 使用者在自己的雲端硬碟裡
 /// **看不到**這些檔案，其他 App 也讀不到。這正是放同步狀態的地方（ADR-0011）。
 pub const DRIVE_APPDATA_SCOPE: &str = "https://www.googleapis.com/auth/drive.appdata";
+/// 雲端共享協作：建立並分享「我的雲端硬碟」裡的共享資料夾，以及讀寫別人分享給我的那一個。
+///
+/// `drive.file` 只碰 **App 自己建立（或使用者用 App 打開）的檔案**，看不到使用者其他的雲端硬碟內容，
+/// 屬於 Google 的「非敏感」範圍，不需要安全審查。Google Cloud 主控台的 OAuth 同意畫面要把它加進範圍清單。
+pub const DRIVE_FILE_SCOPE: &str = "https://www.googleapis.com/auth/drive.file";
 
 const AUTH_ENDPOINT: &str = "https://accounts.google.com/o/oauth2/v2/auth";
 const TOKEN_ENDPOINT: &str = "https://oauth2.googleapis.com/token";
@@ -145,7 +150,10 @@ pub fn oauth_authorize_url(
         ("client_id", oauth_client_id(platform)),
         ("redirect_uri", oauth_redirect_uri(platform)),
         ("response_type", "code".to_string()),
-        ("scope", DRIVE_APPDATA_SCOPE.to_string()),
+        // 兩個範圍一起要：一般同步（appdata）＋雲端共享協作（file）。舊版只授權過 appdata 的使用者，
+        // 第一次分享時 Drive 回 403（`needs_reauth`），重新登入一次就補上。
+        ("scope", format!("{DRIVE_APPDATA_SCOPE} {DRIVE_FILE_SCOPE}")),
+        ("include_granted_scopes", "true".to_string()),
         ("code_challenge", code_challenge),
         ("code_challenge_method", "S256".to_string()),
         ("state", state),

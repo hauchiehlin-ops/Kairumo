@@ -29,7 +29,7 @@
 
 use std::sync::Arc;
 
-use padnote_sync::gdrive::{DriveSpace, GDriveProvider};
+use padnote_sync::gdrive::{DriveRoot, GDriveProvider};
 use padnote_sync::provider::SyncError;
 
 use crate::ffi_gdrive::{FfiDriveHttp, ForeignHttp};
@@ -64,12 +64,12 @@ fn share_err(e: SyncError) -> FfiDriveShareResult {
 }
 
 fn provider(http: Arc<dyn FfiDriveHttp>, folder_id: &str) -> GDriveProvider<ForeignHttp> {
-    let space = if folder_id.is_empty() {
-        DriveSpace::AppData
+    let root = if folder_id.is_empty() {
+        DriveRoot::AppData
     } else {
-        DriveSpace::Folder(folder_id.to_string())
+        DriveRoot::Folder(folder_id.to_string())
     };
-    GDriveProvider::in_space(ForeignHttp(http), space)
+    GDriveProvider::with_root(ForeignHttp(http), root)
 }
 
 // ---- 資料夾與成員 --------------------------------------------------------------
@@ -472,14 +472,6 @@ pub fn collab_order_servers(servers: Vec<String>, my_ipv4: Vec<String>) -> Vec<S
     out
 }
 
-/// 每個中繼位址最多等多久（毫秒）。區網通常 0.1 秒內就握手完成；
-/// 太長的話，第一個位址連不上時使用者要乾等。
-pub const COLLAB_CONNECT_TIMEOUT_MS: u32 = 2500;
-
-#[uniffi::export]
-pub fn collab_connect_timeout_ms() -> u32 {
-    COLLAB_CONNECT_TIMEOUT_MS
-}
 
 // ---- 自適應輪詢與合併送出 ------------------------------------------------------
 

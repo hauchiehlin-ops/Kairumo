@@ -1956,11 +1956,15 @@ impl FfiSyncSession {
     /// `remote_index_json` 是上次存下來的快照；空字串表示還沒有。
     #[uniffi::constructor]
     pub fn create(http: Arc<dyn FfiDriveHttp>, remote_index_json: String) -> Arc<Self> {
-        Self::in_space(http, padnote_sync::gdrive::DriveSpace::AppData, remote_index_json)
+        Self::with_root(
+            http,
+            padnote_sync::gdrive::DriveRoot::AppData,
+            remote_index_json,
+        )
     }
 
-    /// **雲端協作**的工作階段：讀寫房主雲端硬碟裡那個共享資料夾，而不是自己的
-    /// `appDataFolder`。其餘（快照、焦點通道、整本下載）與一般同步完全相同 ——
+    /// **雲端共享協作**的工作階段：讀寫房主「我的雲端硬碟」裡那個共享資料夾，
+    /// 而不是自己的 `appDataFolder`。其餘（快照、焦點通道、整本下載）與一般同步完全相同 ——
     /// 事件檔名裡有裝置 id，房主與協作者各寫各的檔，不會互蓋（I5）。
     ///
     /// `remote_index_json` 要**每個資料夾各存一份**，不能與一般同步的快照混用。
@@ -1970,7 +1974,11 @@ impl FfiSyncSession {
         folder_id: String,
         remote_index_json: String,
     ) -> Arc<Self> {
-        Self::in_space(http, padnote_sync::gdrive::DriveSpace::Folder(folder_id), remote_index_json)
+        Self::with_root(
+            http,
+            padnote_sync::gdrive::DriveRoot::Folder(folder_id),
+            remote_index_json,
+        )
     }
 
     /// 寫入一個不屬於筆記同步的小檔（在場檔）。**同步等待 HTTP，不要在主執行緒呼叫。**
@@ -2004,13 +2012,13 @@ pub struct FfiAuxFile {
 }
 
 impl FfiSyncSession {
-    fn in_space(
+    fn with_root(
         http: Arc<dyn FfiDriveHttp>,
-        space: padnote_sync::gdrive::DriveSpace,
+        root: padnote_sync::gdrive::DriveRoot,
         remote_index_json: String,
     ) -> Arc<Self> {
         Arc::new(Self {
-            drive: GDriveProvider::in_space(ForeignHttp(http), space),
+            drive: GDriveProvider::with_root(ForeignHttp(http), root),
             index: std::sync::Mutex::new(RemoteIndex::from_json(&remote_index_json)),
             seen_sizes: std::sync::Mutex::new(SeenSizes::new()),
             own_ack: std::sync::Mutex::new(None),
@@ -2961,6 +2969,76 @@ fn notebook_differs(index: &RemoteIndex, package_path: &str, notebook_id: &str) 
         .into_keys()
         .collect();
     local_blobs != remote_blobs
+}
+
+/// 共享資料夾操作的結果。
+#[derive(Clone, Debug, uniffi::Record)]
+pub struct FfiDriveFolderResult {
+    pub ok: bool,
+    /// 建立時是新資料夾的 id；檢查時是傳入的 id。
+    pub folder_id: String,
+    /// 資料夾名稱（檢查時回傳，給介面顯示「加入〈某某〉的共享筆記」）。
+    pub name: String,
+    pub error: String,
+    /// 權杖沒有 `drive.file` 權限（舊版登入只有 `drive.appdata`）或已失效 —— 要重新登入。
+    pub needs_reauth: bool,
+}
+
+fn folder_result(r: Result<(String, String), SyncError>) -> FfiDriveFolderResult {
+    match r {
+        Ok((folder_id, name)) => FfiDriveFolderResult {
+            ok: true,
+            folder_id,
+            name,
+            error: String::new(),
+            needs_reauth: false,
+        },
+        Err(e) => FfiDriveFolderResult {
+            ok: false,
+            folder_id: String::new(),
+            name: String::new(),
+            needs_reauth: matches!(e, SyncError::PermissionDenied(_)),
+            error: e.to_string(),
+        },
+    }
+}
+
+/// 雲端共享協作：在房主的「我的雲端硬碟」建立共享資料夾。
+///
+/// **這個方法會同步地等平台的 HTTP 回來，不要在主執行緒呼叫。**
+#[uniffi::export]
+pub fn drive_create_shared_folder(
+    http: Arc<dyn FfiDriveHttp>,
+    name: String,
+) -> FfiDriveFolderResult {
+    let http = ForeignHttp(http);
+    folder_result(padnote_sync::gdrive::create_folder(&http, &name).map(|id| (id, name)))
+}
+
+/// 雲端共享協作：把資料夾分享給一個 Google 帳號（編輯者，Drive 會寄通知信）。
+/// `email` 為空字串時改成「知道連結的人都能編輯」（一鍵邀請連結用，介面要讓使用者明確選擇）。
+#[uniffi::export]
+pub fn drive_share_folder(
+    http: Arc<dyn FfiDriveHttp>,
+    folder_id: String,
+    email: String,
+) -> FfiDriveFolderResult {
+    let http = ForeignHttp(http);
+    let shared = if email.trim().is_empty() {
+        padnote_sync::gdrive::share_folder_with_link(&http, &folder_id)
+    } else {
+        padnote_sync::gdrive::share_folder_with(&http, &folder_id, &email)
+    };
+    folder_result(shared.map(|_| (folder_id, String::new())))
+}
+
+/// 雲端共享協作：協作者確認拿得到這個資料夾，並取得名稱。
+#[uniffi::export]
+pub fn drive_check_folder(http: Arc<dyn FfiDriveHttp>, folder_id: String) -> FfiDriveFolderResult {
+    let http = ForeignHttp(http);
+    folder_result(
+        padnote_sync::gdrive::folder_name(&http, &folder_id).map(|name| (folder_id, name)),
+    )
 }
 
 fn refresh_failed(error: SyncError) -> FfiRefreshResult {

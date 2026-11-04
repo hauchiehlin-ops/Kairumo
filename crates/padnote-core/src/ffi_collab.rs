@@ -119,6 +119,132 @@ pub fn collab_invite_link(room_id: String, key_base64: String) -> String {
     }
 }
 
+/// 一鍵協作的完整邀請（新版連結）。
+///
+/// 一個連結涵蓋所有連法：
+/// - `servers`：依序嘗試的中繼位址（區網 → Tailscale → 遠端）。客端逐一試，連上就停
+///   （每個最多 [`collab_connect_timeout_ms`]），使用者不必知道自己在哪個網路。
+/// - `drive_folder`：房主分享的雲端資料夾 —— **跨網路的共同底稿**。有它就先把整本筆記
+///   從雲端抓下來（頁面 id 與房主完全一致），中繼連不上也照樣能透過雲端協作。
+/// - `notebook_id`：共享的是哪一本。
+#[derive(Clone, Debug, PartialEq, Eq, uniffi::Record)]
+pub struct FfiCollabInviteFull {
+    pub room_id: String,
+    pub key_base64: String,
+    pub servers: Vec<String>,
+    pub drive_folder: String,
+    pub notebook_id: String,
+}
+
+/// 每個中繼位址最多等多久（毫秒）。區網或 Tailscale 連得到的話通常幾十毫秒就握手完成；
+/// 等太久的話，第一個位址不通時使用者會以為整個壞了。
+#[uniffi::export]
+pub fn collab_connect_timeout_ms() -> u32 {
+    2500
+}
+
+fn encode_query_value(v: &str) -> String {
+    let mut out = String::with_capacity(v.len());
+    for b in v.bytes() {
+        match b {
+            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' | b':' | b'/' => {
+                out.push(b as char)
+            }
+            _ => out.push_str(&format!("%{b:02X}")),
+        }
+    }
+    out
+}
+
+fn decode_query_value(v: &str) -> String {
+    let bytes = v.as_bytes();
+    let mut out = Vec::with_capacity(bytes.len());
+    let mut i = 0;
+    while i < bytes.len() {
+        // 以位元組切片解碼：`%` 後面若是多位元組字元，用字串切片會切在字元中間而 panic。
+        if bytes[i] == b'%'
+            && i + 2 < bytes.len()
+            && let Some(b) = std::str::from_utf8(&bytes[i + 1..i + 3])
+                .ok()
+                .and_then(|h| u8::from_str_radix(h, 16).ok())
+        {
+            out.push(b);
+            i += 3;
+            continue;
+        }
+        out.push(if bytes[i] == b'+' { b' ' } else { bytes[i] });
+        i += 1;
+    }
+    String::from_utf8_lossy(&out).into_owned()
+}
+
+/// 產生完整邀請連結：`kairumo://collab?room=…&server=…&server=…&drive=…&nb=…#key=…`。
+/// 舊版 App 只認 `room` 與第一個 `server`，仍然連得上（向下相容）。
+#[uniffi::export]
+pub fn collab_invite_link_full(
+    room_id: String,
+    key_base64: String,
+    servers: Vec<String>,
+    drive_folder: String,
+    notebook_id: String,
+) -> String {
+    if room_id.is_empty() {
+        return String::new();
+    }
+    let mut link = format!("kairumo://collab?room={}", encode_query_value(&room_id));
+    let mut seen = std::collections::HashSet::new();
+    for server in servers.iter().map(|s| s.trim()).filter(|s| !s.is_empty()) {
+        if seen.insert(server.to_string()) {
+            link.push_str("&server=");
+            link.push_str(&encode_query_value(server));
+        }
+    }
+    if !drive_folder.trim().is_empty() {
+        link.push_str("&drive=");
+        link.push_str(&encode_query_value(drive_folder.trim()));
+    }
+    if !notebook_id.trim().is_empty() {
+        link.push_str("&nb=");
+        link.push_str(&encode_query_value(notebook_id.trim()));
+    }
+    if !key_base64.is_empty() {
+        link.push_str("#key=");
+        link.push_str(&key_base64);
+    }
+    link
+}
+
+/// 解析完整邀請連結（也吃舊版連結與純房號）。
+#[uniffi::export]
+pub fn collab_parse_invite_full(text: String) -> FfiCollabInviteFull {
+    let basic = collab_parse_invite(text.clone());
+    let cleaned = text.trim();
+    let before_hash = cleaned.split('#').next().unwrap_or("");
+    let query = before_hash.split_once('?').map(|(_, q)| q).unwrap_or("");
+    let mut servers = Vec::new();
+    let mut drive_folder = String::new();
+    let mut notebook_id = String::new();
+    for pair in query.split('&') {
+        let Some((k, v)) = pair.split_once('=') else {
+            continue;
+        };
+        let v = decode_query_value(v);
+        match k {
+            "server" if !v.is_empty() && !servers.contains(&v) => servers.push(v),
+            "drive" => drive_folder = v,
+            "nb" => notebook_id = v,
+            _ => {}
+        }
+    }
+    FfiCollabInviteFull {
+        room_id: decode_query_value(&basic.room_id),
+        key_base64: basic.key_base64,
+        servers,
+        drive_folder,
+        notebook_id,
+    }
+}
+
 /// 邀請連結的 QR Code：`size × size` 個模組，逐列由上而下、由左而右（`true` 是黑）。
 ///
 /// 兩端畫同一份矩陣（I6）—— 各自用平台的產生器的話，版本、遮罩不同，
@@ -141,9 +267,15 @@ pub fn collab_qr_code(text: String) -> FfiQrCode {
                     modules.push(qr.get_module(x, y));
                 }
             }
-            FfiQrCode { size: n as u32, modules }
+            FfiQrCode {
+                size: n as u32,
+                modules,
+            }
         }
-        Err(_) => FfiQrCode { size: 0, modules: Vec::new() },
+        Err(_) => FfiQrCode {
+            size: 0,
+            modules: Vec::new(),
+        },
     }
 }
 
@@ -596,5 +728,43 @@ mod tests {
         // 左上角的定位圖樣：外圈全黑。
         assert!(qr.modules[0] && qr.modules[6] && qr.modules[(6 * qr.size) as usize]);
         assert_eq!(collab_qr_code("x".repeat(8000)).size, 0);
+    }
+
+    #[test]
+    fn full_invite_round_trips_every_route() {
+        let key = "a2V5a2V5a2V5a2V5a2V5a2V5a2V5a2V5a2V5a2V5a2U=".to_string();
+        let link = collab_invite_link_full(
+            "kairumo-db5a57".into(),
+            key.clone(),
+            vec![
+                "ws://192.168.68.55:9002".into(),
+                "ws://100.73.43.39:9002".into(),
+                "ws://192.168.68.55:9002".into(),
+            ],
+            "1AbC_folder-Id".into(),
+            "nb-123".into(),
+        );
+        assert!(
+            link.starts_with("kairumo://collab?room=kairumo-db5a57&server=ws://192.168.68.55:9002")
+        );
+        let parsed = collab_parse_invite_full(link);
+        assert_eq!(parsed.room_id, "kairumo-db5a57");
+        assert_eq!(
+            parsed.servers,
+            vec!["ws://192.168.68.55:9002", "ws://100.73.43.39:9002"]
+        );
+        assert_eq!(parsed.drive_folder, "1AbC_folder-Id");
+        assert_eq!(parsed.notebook_id, "nb-123");
+        assert_eq!(
+            parsed.key_base64,
+            collab_parse_invite("x#key=".to_string() + &key).key_base64
+        );
+        // 舊版連結照樣讀得懂。
+        let old = collab_parse_invite_full(
+            "kairumo://collab?room=r1&server=ws%3A%2F%2F10.0.0.2%3A9002".into(),
+        );
+        assert_eq!(old.room_id, "r1");
+        assert_eq!(old.servers, vec!["ws://10.0.0.2:9002"]);
+        assert!(old.drive_folder.is_empty());
     }
 }
