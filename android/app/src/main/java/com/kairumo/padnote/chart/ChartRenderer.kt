@@ -32,6 +32,14 @@ object ChartRenderer {
     fun layout(spec: ChartSpec, width: Float, height: Float): FfiChartLayout? =
         runCatching { chartLayout(spec.encodedJson(), width.toDouble(), height.toDouble()) }.getOrNull()
 
+    /**
+     * 畫布像素與頁面點的比例。版面在頁面點裡算，畫的時候整張乘上這個值 ——
+     * 編輯器、側欄縮圖、匯出因此是同一張圖的不同倍率（I4 畫面同源）。
+     * 密度異常（0、負數、NaN）時退回 1，不讓版面變成無限大或除以零。
+     */
+    fun pointScale(density: Float): Float =
+        if (density.isFinite() && density > 0f) density else 1f
+
     /** 算不出來的原因，可以直接顯示給使用者。 */
     fun failureReason(spec: ChartSpec, width: Float, height: Float): String? =
         runCatching {

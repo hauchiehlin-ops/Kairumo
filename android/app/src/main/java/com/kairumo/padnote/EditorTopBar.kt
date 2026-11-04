@@ -127,6 +127,8 @@ data class EditorTopBarState(
     val marqueeSelectionCount: Int = 0,
     val hasClipboardContent: Boolean = false,
     val snapToGrid: Boolean = false,
+    /** 有選取可調層級的物件：「上移／下移一層」才啟用，不留按了沒反應的按鈕。 */
+    val hasSelectedObject: Boolean = false,
     val strokeCount: Int = 0,
     val eventDebug: String = "",
     val showInkDebug: Boolean = false,
@@ -244,6 +246,7 @@ internal fun EditorTopBar(
     var paletteMenu by remember { mutableStateOf(false) }
     var showShareMenu by remember { mutableStateOf(false) }
     var showMenu by remember { mutableStateOf(false) }
+    var clearPageConfirm by remember { mutableStateOf(false) }
 
     fun toolShown(id: String) =
         state.editorMode != EditorMode.DRAW || id !in state.hiddenTools
@@ -397,16 +400,18 @@ internal fun EditorTopBar(
             else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
             modifier = Modifier.padding(vertical = 2.dp)
         ) {
-            IconButton(
-                onClick = actions.onToggleRadialMenu,
-                modifier = Modifier.size(36.dp).testTag("editor.radial_toggle")
-            ) {
-                Icon(
-                    imageVector = KairumoIcons.RadialMenu,
-                    contentDescription = l10n("tool_radial_short"),
-                    tint = if (state.showRadialMenu) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.size(18.dp)
-                )
+            InstantTooltip(text = l10n("tool_radial_short")) {
+                IconButton(
+                    onClick = actions.onToggleRadialMenu,
+                    modifier = Modifier.size(36.dp).testTag("editor.radial_toggle")
+                ) {
+                    Icon(
+                        imageVector = KairumoIcons.RadialMenu,
+                        contentDescription = l10n("tool_radial_short"),
+                        tint = if (state.showRadialMenu) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
             }
         }
 
@@ -510,16 +515,18 @@ internal fun EditorTopBar(
             color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
             modifier = Modifier.padding(vertical = 2.dp)
         ) {
-            IconButton(
-                onClick = actions.onOpenAssetLibrary,
-                modifier = Modifier.size(36.dp).testTag("editor.insert.assets")
-            ) {
-                Icon(
-                    imageVector = KairumoIcons.Cube,
-                    contentDescription = l10n("asset_library"),
-                    tint = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.size(18.dp)
-                )
+            InstantTooltip(text = l10n("asset_library")) {
+                IconButton(
+                    onClick = actions.onOpenAssetLibrary,
+                    modifier = Modifier.size(36.dp).testTag("editor.insert.assets")
+                ) {
+                    Icon(
+                        imageVector = KairumoIcons.Cube,
+                        contentDescription = l10n("asset_library"),
+                        tint = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
             }
         }
 
@@ -754,16 +761,18 @@ internal fun EditorTopBar(
             color = if (state.isCollabConnected) Color(0xFFE8F5E9) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
             modifier = Modifier.padding(vertical = 2.dp)
         ) {
-            IconButton(
-                onClick = actions.onOpenCollaboration,
-                modifier = Modifier.size(36.dp).testTag("editor.collaborate")
-            ) {
-                Icon(
-                    imageVector = KairumoIcons.Group,
-                    contentDescription = l10n("collaborate"),
-                    tint = if (state.isCollabConnected) Color(0xFF2E7D32) else MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.size(19.dp)
-                )
+            InstantTooltip(text = l10n("collaborate")) {
+                IconButton(
+                    onClick = actions.onOpenCollaboration,
+                    modifier = Modifier.size(36.dp).testTag("editor.collaborate")
+                ) {
+                    Icon(
+                        imageVector = KairumoIcons.Group,
+                        contentDescription = l10n("collaborate"),
+                        tint = if (state.isCollabConnected) Color(0xFF2E7D32) else MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.size(19.dp)
+                    )
+                }
             }
         }
 
@@ -773,16 +782,20 @@ internal fun EditorTopBar(
             color = if (state.recording) Color(0xFFFFEBEE) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
             modifier = Modifier.padding(vertical = 2.dp)
         ) {
-            IconButton(
-                onClick = actions.onToggleRecord,
-                modifier = Modifier.size(36.dp).testTag("editor.record")
-            ) {
-                Icon(
-                    imageVector = if (state.recording) KairumoIcons.Stop else KairumoIcons.Mic,
-                    contentDescription = l10n("record"),
-                    tint = if (state.recording) Color.Red else MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.size(19.dp)
-                )
+            // 原本 onToggleRecord 沒接上（預設 `{}`）：麥克風圖示點了沒有任何反應（實機回報圈選的那一顆）。
+            val recordLabel = l10n(if (state.recording) "stop_recording" else "record")
+            InstantTooltip(text = recordLabel) {
+                IconButton(
+                    onClick = actions.onToggleRecord,
+                    modifier = Modifier.size(36.dp).testTag("editor.record")
+                ) {
+                    Icon(
+                        imageVector = if (state.recording) KairumoIcons.Stop else KairumoIcons.Mic,
+                        contentDescription = recordLabel,
+                        tint = if (state.recording) Color.Red else MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.size(19.dp)
+                    )
+                }
             }
         }
 
@@ -823,16 +836,18 @@ internal fun EditorTopBar(
 
         // 更多選項選單
         Box {
-            IconButton(
-                onClick = { showMenu = true },
-                modifier = Modifier.testTag("editor.more")
-            ) {
-                Icon(
-                    imageVector = KairumoIcons.MoreVert,
-                    contentDescription = l10n("more_tools"),
-                    tint = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.size(20.dp)
-                )
+            InstantTooltip(text = l10n("more_tools")) {
+                IconButton(
+                    onClick = { showMenu = true },
+                    modifier = Modifier.testTag("editor.more")
+                ) {
+                    Icon(
+                        imageVector = KairumoIcons.MoreVert,
+                        contentDescription = l10n("more_tools"),
+                        tint = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
             }
 
             DropdownMenu(expanded = showShareMenu, onDismissRequest = { showShareMenu = false }) {
@@ -1018,9 +1033,15 @@ internal fun EditorTopBar(
                     modifier = Modifier.testTag("editor.insert.comment_pin"),
                     onClick = { showMenu = false; actions.onToggleCommentPin() }
                 )
+                // 圖層面板（堆疊順序）與群組是兩個不同的面板（與拆檔前、Apple 一致）。
                 DropdownMenuItem(
                     text = { Text(l10n("layers_panel")) },
                     modifier = Modifier.testTag("editor.insert.layers"),
+                    onClick = { showMenu = false; actions.onOpenLayers() }
+                )
+                DropdownMenuItem(
+                    text = { Text(l10n("layer_group")) },
+                    modifier = Modifier.testTag("editor.insert.layer_group"),
                     onClick = { showMenu = false; actions.onManageGroups() }
                 )
                 DropdownMenuItem(
@@ -1120,7 +1141,8 @@ internal fun EditorTopBar(
                     DropdownMenuItem(
                         text = { Text(l10n("ink_clear"), color = MaterialTheme.colorScheme.error) },
                         modifier = Modifier.testTag("editor.ink.clear"),
-                        onClick = { showMenu = false; actions.onClearInk() }
+                        // 破壞性動作先確認（與 Apple `showClearConfirmAlert` 一致）。
+                        onClick = { showMenu = false; clearPageConfirm = true }
                     )
                 }
                 DropdownMenuItem(
@@ -1132,6 +1154,22 @@ internal fun EditorTopBar(
                     },
                     enabled = state.pageCount > 1,
                     onClick = { showMenu = false; actions.onDeletePage() }
+                )
+            }
+            if (clearPageConfirm) {
+                AlertDialog(
+                    onDismissRequest = { clearPageConfirm = false },
+                    title = { Text(l10n("clear_page")) },
+                    text = { Text(l10n("clear_page_confirm")) },
+                    confirmButton = {
+                        TextButton(
+                            onClick = { clearPageConfirm = false; actions.onClearInk() },
+                            modifier = Modifier.testTag("editor.ink.clear.confirm")
+                        ) { Text(l10n("clear_confirm"), color = MaterialTheme.colorScheme.error) }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { clearPageConfirm = false }) { Text(l10n("cancel")) }
+                    }
                 )
             }
         }
@@ -1254,11 +1292,13 @@ internal fun EditorTopBar(
                 // 6. 圖層層級調整
                 TextButton(
                     onClick = actions.onBringForward,
+                    enabled = state.hasSelectedObject,
                     modifier = Modifier.testTag("editor.text.layer_forward")
                 ) { Text(l10n("layer_bring_forward")) }
 
                 TextButton(
                     onClick = actions.onSendBackward,
+                    enabled = state.hasSelectedObject,
                     modifier = Modifier.testTag("editor.text.layer_backward")
                 ) { Text(l10n("layer_send_backward")) }
 

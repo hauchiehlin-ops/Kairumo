@@ -325,6 +325,8 @@ fun InkToolbar(
                 )
             }
             if (onOpenProColors != null) {
+                // 純圖示色票：長按／懸停顯示說明。調色盤隱藏時（橡皮擦、套索）不提示。
+                com.kairumo.padnote.ui.InstantTooltip(text = if (paletteHidden) null else LocalizationStrings.localized("pro_color", languageTag)) {
                 Box(
                     modifier = Modifier
                         .size(26.dp)
@@ -348,8 +350,11 @@ fun InkToolbar(
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
+                }
             }
             if (onOpenColorWheel != null) {
+                // 純圖示色票：長按／懸停顯示說明。調色盤隱藏時（橡皮擦、套索）不提示。
+                com.kairumo.padnote.ui.InstantTooltip(text = if (paletteHidden) null else LocalizationStrings.localized("ink_pro_wheel", languageTag)) {
                 Box(
                     modifier = Modifier
                         .size(26.dp)
@@ -372,6 +377,7 @@ fun InkToolbar(
                         modifier = Modifier.size(14.dp),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                }
                 }
             }
             }

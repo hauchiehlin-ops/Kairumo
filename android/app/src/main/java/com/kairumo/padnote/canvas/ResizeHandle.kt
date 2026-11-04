@@ -45,6 +45,10 @@ fun ResizeHandle(
     modifier: Modifier = Modifier
 ) {
     val handleLabel = LocalizationStrings.localized("resize_handle", LocalAppLanguage.current)
+    // 手勢以 Unit 為鍵、不隨重組重建：一定要讀**最新**的回呼。直接抓第一次組合的
+    // lambda 的話，它寫的是已經被 remember 換掉的舊 live 狀態，縮放會飄、放開時存錯尺寸。
+    val latestResize by androidx.compose.runtime.rememberUpdatedState(onResize)
+    val latestCommit by androidx.compose.runtime.rememberUpdatedState(onCommit)
     Box(
         modifier = modifier.size((widthDp + HANDLE_DP).dp, (heightDp + HANDLE_DP).dp)
     ) {
@@ -58,9 +62,11 @@ fun ResizeHandle(
                         onDrag = { change, drag ->
                             change.consume()
                             // 位移要換回 dp：尺寸存的是與螢幕密度無關的頁面座標。
-                            onResize(drag.x / density, drag.y / density)
+                            latestResize(drag.x / density, drag.y / density)
                         },
-                        onDragEnd = { onCommit() }
+                        onDragEnd = { latestCommit() },
+                        // 被系統取消（換頁、來電、另一指搶走）也要落地，否則畫面尺寸與存檔不一致。
+                        onDragCancel = { latestCommit() }
                     )
                 }
                 // 標籤放在**可拖曳的容器**上，不是裡面那顆圖示 —— 圖示是
@@ -101,6 +107,7 @@ fun StyleHandle(
     if (objectId != null) {
         OrderHandle(objectId = objectId, widthDp = widthDp, heightDp = heightDp)
     }
+    val editLabel = LocalizationStrings.localized("edit", LocalAppLanguage.current)
     Box(
         modifier = modifier.size((widthDp + HANDLE_DP).dp, (heightDp + HANDLE_DP).dp)
     ) {
@@ -110,6 +117,8 @@ fun StyleHandle(
                 .size(HANDLE_DP.dp)
                 .background(MaterialTheme.colorScheme.primary, CircleShape)
                 .clickable { onTap() }
+                // 鉛筆圖示沒有文字：讀屏要念得出這是「編輯」。
+                .semantics { contentDescription = editLabel }
         ) {
             Icon(
                 imageVector = Icons.Filled.Edit,

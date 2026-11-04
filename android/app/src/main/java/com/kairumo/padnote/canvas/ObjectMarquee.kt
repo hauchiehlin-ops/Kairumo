@@ -29,6 +29,8 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
@@ -524,12 +526,16 @@ fun ObjectPastePill(
                     color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.padding(horizontal = 6.dp)
                 )
-                TextButton(
-                    onClick = onCancelPlacePaste,
-                    contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp),
-                    modifier = Modifier.testTag("editor.object.paste.cancel_place")
-                ) {
-                    Text("✕", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                // 「✕」只是符號：要有讀屏標籤與長按提示。
+                com.kairumo.padnote.ui.InstantTooltip(text = l("cancel")) {
+                    TextButton(
+                        onClick = onCancelPlacePaste,
+                        contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp),
+                        modifier = Modifier.testTag("editor.object.paste.cancel_place")
+                            .semantics { contentDescription = l("cancel") }
+                    ) {
+                        Text("✕", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
                 }
             } else {
                 if (hasSelection) {
@@ -583,12 +589,15 @@ fun ObjectPastePill(
                             color = MaterialTheme.colorScheme.primary
                         )
                     }
-                    TextButton(
-                        onClick = onClearClipboard,
-                        contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp),
-                        modifier = Modifier.testTag("editor.object.paste.clear")
-                    ) {
-                        Text("✕", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    com.kairumo.padnote.ui.InstantTooltip(text = l("close")) {
+                        TextButton(
+                            onClick = onClearClipboard,
+                            contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp),
+                            modifier = Modifier.testTag("editor.object.paste.clear")
+                                .semantics { contentDescription = l("close") }
+                        ) {
+                            Text("✕", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
                     }
                 }
             }

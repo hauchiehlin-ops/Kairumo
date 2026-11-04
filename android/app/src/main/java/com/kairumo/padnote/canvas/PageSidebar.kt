@@ -79,6 +79,7 @@ private val thumbnailRenderMutex = kotlinx.coroutines.sync.Mutex()
 fun clearPageThumbnailCache() {
     pageThumbnailCache.evictAll()
     pageBaseThumbnailCache.evictAll()
+    ThumbnailFreshness.reset()
 }
 
 /**
@@ -359,14 +360,27 @@ private fun PageSidebarRow(
         }
         val baseKey = "$pageId-$appLanguage"
         val cacheKey = "$pageId-$revision-$appLanguage"
+        // 目前頁的 revision 前進＝這一頁內容可能變了（貼紙、縮放、圖表……）：標髒，
+        // 之後就算切走成為非目前頁，也不准拿舊基底頂替（見 ThumbnailFreshness）。
+        if (ThumbnailFreshness.currentPageChanged(isCurrent, lastRenderedRevision, revision)) {
+            ThumbnailFreshness.markDirty(pageId)
+        }
+        val renderGeneration = ThumbnailFreshness.generation(pageId)
         val cached = pageThumbnailCache.get(cacheKey)
-        if (cached != null) {
+        if (cached != null && !ThumbnailFreshness.isDirty(pageId)) {
             thumb = withPendingInk(cached, pageId, 0.22f)
             lastRenderedRevision = revision
             return@LaunchedEffect
         }
         val baseCached = pageBaseThumbnailCache.get(baseKey)
-        if (baseCached != null && (!isCurrent || lastRenderedRevision == revision)) {
+        if (ThumbnailFreshness.canReuseBase(
+                hasBase = baseCached != null,
+                isCurrent = isCurrent,
+                lastRenderedRevision = lastRenderedRevision,
+                revision = revision,
+                isDirty = ThumbnailFreshness.isDirty(pageId)
+            ) && baseCached != null
+        ) {
             pageThumbnailCache.put(cacheKey, baseCached)
             thumb = withPendingInk(baseCached, pageId, 0.22f)
             lastRenderedRevision = revision
@@ -398,7 +412,7 @@ private fun PageSidebarRow(
             val bmp = thumbnailRenderMutex.withLock {
                 // 等鎖期間別張卡片可能已經算好同一版。
                 val hit = pageThumbnailCache.get(cacheKey)
-                if (hit != null) {
+                if (hit != null && !ThumbnailFreshness.isDirty(pageId)) {
                     lastRenderedRevision = revision
                     thumb = withPendingInk(hit, pageId, 0.22f)
                     return@LaunchedEffect
@@ -417,6 +431,7 @@ private fun PageSidebarRow(
                 val imageBitmap = bmp.asImageBitmap()
                 pageThumbnailCache.put(cacheKey, imageBitmap)
                 pageBaseThumbnailCache.put(baseKey, imageBitmap)
+                ThumbnailFreshness.markRendered(pageId, renderGeneration)
                 lastRenderedRevision = revision
                 thumb = withPendingInk(imageBitmap, pageId, 0.22f)
                 return@LaunchedEffect
@@ -436,6 +451,7 @@ private fun PageSidebarRow(
             pageThumbnailCache.put(cacheKey, cachedBmp)
             pageBaseThumbnailCache.put(baseKey, cachedBmp)
             withContext(Dispatchers.Main.immediate) {
+                ThumbnailFreshness.markRendered(pageId, renderGeneration)
                 lastRenderedRevision = revision
                 thumb = withPendingInk(cachedBmp, pageId, 0.22f)
             }
