@@ -137,7 +137,11 @@ internal fun EditorCanvasContext.withRestoredTopBarWiring(base: EditorTopBarActi
         if (objectClipboard.isNotEmpty() || !lasso.canPaste) pasteSinglePageClipboard(null)
         if (lasso.paste(engine)) revision++
     },
-    onPasteAtLocation = { isPlacingPasteObject = true },
+    onPasteAtLocation = {
+        // 框選開始的放置：剪貼簿有筆跡就一起放（見 placeClipboardAt）。
+        lasso.inkPlacementArmed = lasso.canPaste
+        isPlacingPasteObject = objectClipboard.isNotEmpty() || lasso.inkPlacementArmed
+    },
     onDuplicateMarquee = {
         if (marqueeSelection.isNotEmpty()) duplicateMarqueeSelection()
         if (lasso.duplicate(engine)) revision++
@@ -272,3 +276,30 @@ private fun EditorCanvasContext.reorderSelected(forward: Boolean) {
     meta.setObjectOrder(notebook?.first, pageIndex, updated)
     stackRevision++
 }
+
+/** 放置模式下有東西可放：物件，或框選開始的放置帶著的筆跡。 */
+internal val EditorCanvasContext.hasPlaceableClipboard: Boolean
+    get() = objectClipboard.isNotEmpty() || (lasso.inkPlacementArmed && lasso.canPaste)
+
+/**
+ * 放置模式下點了頁面某處：物件與（框選帶來的）筆跡以**整組**聯集外框的中心對齊點下去的位置，
+ * 彼此相對位置不變。筆跡走核心的套索貼上（當下寫事件，I2）。與 Apple `placeClipboard(at:onPage:)` 一致。
+ */
+internal fun EditorCanvasContext.placeClipboardAt(target: androidx.compose.ui.geometry.Offset) {
+    val frames = objectClipboard.map { it.frame }
+    val objectUnion = frames.reduceOrNull { a, b ->
+        androidx.compose.ui.geometry.Rect(minOf(a.left, b.left), minOf(a.top, b.top), maxOf(a.right, b.right), maxOf(a.bottom, b.bottom))
+    }
+    val ink = if (lasso.inkPlacementArmed && lasso.canPaste) lasso.clipboardBounds else null
+    val union = listOfNotNull(objectUnion, ink).reduceOrNull { a, b ->
+        androidx.compose.ui.geometry.Rect(minOf(a.left, b.left), minOf(a.top, b.top), maxOf(a.right, b.right), maxOf(a.bottom, b.bottom))
+    }
+    if (union != null) {
+        val delta = target - union.center
+        if (objectUnion != null) pasteSinglePageClipboard(objectUnion.center + delta)
+        if (ink != null && lasso.paste(engine, delta)) revision++
+    }
+    isPlacingPasteObject = false
+    lasso.inkPlacementArmed = false
+}
+

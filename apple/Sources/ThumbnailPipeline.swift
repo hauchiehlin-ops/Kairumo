@@ -157,9 +157,14 @@ final class ThumbnailPipeline {
         let r = job.request
         let scale = 0.4 * FrameGovernor.shared.thumbnailScaleFactor
         // 主執行緒只取輸入（記憶體裡的筆跡、已排序的專業筆畫），點陣化交給背景。
+        // 專業筆畫在背景讀檔解碼（原本在主執行緒 `ProInkStore.load`：大筆記本一開啟，每張縮圖都在主執行緒讀一次檔）。
+        // 主執行緒只取「隱藏了哪些圖層」。
+        let proSource = ProSource(
+            directory: r.store.drawingsDirectory, notebookId: r.notebook.id, page: r.pageIndex,
+            hidden: DraftingState.shared.hiddenLayers(notebookId: r.notebook.id))
         let input = InkInput(
             drawing: r.drawing(),
-            pro: PageThumbnailRenderer.proStrokes(notebook: r.notebook, pageIndex: r.pageIndex, store: r.store),
+            pro: [],
             pageSize: CGSize(width: PageGeometry.width, height: PageGeometry.height),
             size: PageThumbnailRenderer.previewSize,
             scale: scale,
@@ -180,8 +185,12 @@ final class ThumbnailPipeline {
                     _ = ImageEffects.makeFiltered(base, filter: item.filter, key: key)
                 }
             }
+            let pro = DraftingState.ordered(
+                ProInkStore.load(in: proSource.directory, notebookId: proSource.notebookId, page: proSource.page, foreign: true)
+                    + ProInkStore.load(in: proSource.directory, notebookId: proSource.notebookId, page: proSource.page),
+                hidden: proSource.hidden)
             let ink = UncheckedBox(PageThumbnailRenderer.rasterizeInk(
-                drawing: input.drawing, pro: input.pro, pageSize: input.pageSize,
+                drawing: input.drawing, pro: pro, pageSize: input.pageSize,
                 size: input.size, scale: input.scale, dark: input.dark))
             DispatchQueue.main.async { [weak self] in
                 self?.finish(job: job, pk: pk, drawing: input.drawing, scale: scale,
@@ -205,6 +214,14 @@ final class ThumbnailPipeline {
         pumping = false
         if !pending.isEmpty { pump(after: FrameGovernor.shared.thumbnailGap) }
     }
+}
+
+/// 縮圖背景工作要讀的專業筆畫檔位置與隱藏圖層。
+private struct ProSource: Sendable {
+    let directory: URL
+    let notebookId: String
+    let page: Int
+    let hidden: Set<UInt8>
 }
 
 /// 縮圖背景工作要預載的一張圖。

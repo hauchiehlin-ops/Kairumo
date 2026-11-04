@@ -1597,7 +1597,7 @@ extension NotebookEditorView {
                             marqueeLayer(forPage: page)
                                 .zIndex(1000)
                         }
-                        if isPlacingPasteObject && !objectClipboard.isEmpty {
+                        if isPlacingPasteObject && hasPlaceableClipboard {
                             pasteTargetLayer(forPage: page)
                                 .zIndex(1001)
                         }
@@ -1941,7 +1941,7 @@ extension NotebookEditorView {
                     .zIndex(4)
             }
 
-            if isPlacingPasteObject && !objectClipboard.isEmpty {
+            if isPlacingPasteObject && hasPlaceableClipboard {
                 pasteTargetLayer(forPage: currentPageIndex)
                     .frame(width: PageGeometry.width, height: currentPageHeight, alignment: .topLeading)
                     .scaleEffect(canvasZoomScale, anchor: .topLeading)

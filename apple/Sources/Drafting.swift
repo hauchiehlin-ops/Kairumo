@@ -298,8 +298,17 @@ final class DraftingState: ObservableObject {
 
     /// 繪製順序：未分層 → 底 → 中 → 頂，隱藏的圖層略過。同層維持原本的先後。
     func drawOrder(_ strokes: [ProStroke], notebookId nb: String) -> [ProStroke] {
+        Self.ordered(strokes, hidden: hiddenLayers(notebookId: nb))
+    }
+
+    /// 這一本隱藏了哪些圖層（主執行緒取一次，交給背景工作用 `ordered`）。
+    func hiddenLayers(notebookId nb: String) -> Set<UInt8> {
         load(nb)
-        let hiddenSet = hidden[nb.lowercased()] ?? []
+        return hidden[nb.lowercased()] ?? []
+    }
+
+    /// `drawOrder` 的純函式部分，可在背景執行緒呼叫（側欄縮圖的點陣化工作）。
+    nonisolated static func ordered(_ strokes: [ProStroke], hidden hiddenSet: Set<UInt8>) -> [ProStroke] {
         if strokes.allSatisfy({ $0.layerId == 0 }) { return strokes }
         let visible = strokes.filter { $0.layerId == 0 || !hiddenSet.contains($0.layerId) }
         return visible.enumerated()

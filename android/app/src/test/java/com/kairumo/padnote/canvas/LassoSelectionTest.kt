@@ -265,4 +265,25 @@ class LassoSelectionTest {
         lasso.copy(backend)
         assertFalse(lasso.canPaste)
     }
+
+    @Test fun marqueePasteAtLocationUsesForcedOffsetAndClipboardBounds() {
+        val backend = sample()
+        val lasso = LassoSelection()
+        lasso.selectStrokesInRect(Rect(80f, 80f, 220f, 120f), backend, additive = false)
+        lasso.copy(backend)
+        assertEquals(Rect(100f, 100f, 200f, 100f), lasso.clipboardBounds)
+        assertTrue(lasso.paste(backend, Offset(300f, 50f)))
+        val pasted = backend.strokes[lasso.selected.single()]!!
+        assertEquals(Rect(400f, 150f, 500f, 150f), pasted.bounds)
+    }
+
+    @Test fun marqueeDragPreviewFollowsOffsetAndClearsOnCommit() {
+        val backend = sample()
+        val lasso = LassoSelection()
+        lasso.selectStrokesInRect(Rect(80f, 80f, 220f, 120f), backend, additive = false)
+        lasso.marqueeDragOffset = Offset(10f, 20f)
+        assertEquals(Offset(10f, 20f), lasso.dragPreview()?.offset)
+        assertTrue(lasso.translateStrokes(10f, 20f, backend))
+        assertEquals("搬完就不再預覽（否則新筆畫會再位移一次）", null, lasso.dragPreview())
+    }
 }

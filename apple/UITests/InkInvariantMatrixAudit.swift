@@ -197,4 +197,48 @@ final class InkInvariantMatrixAudit: XCTestCase {
         let singleStrokes = parseStrokeCount(app)
         XCTAssertEqual(singleStrokes, 3, "切回單頁模式後第 0 頁筆畫數應為 3")
     }
+
+    // MARK: - 即點即開：大筆記本開啟延遲（端到端，模擬器）
+
+    /// 量兩個使用者感覺得到的時間（印出 `OPEN-E2E` 行，改善前後各跑一次對照）：
+    /// 1. 點筆記本卡片 → 編輯器出現（`editor.more` 可見）；
+    /// 2. 一開啟立刻按「下一頁」→ 頁碼變成 2（主執行緒若還被縮圖／圖片載入佔住，這一下會等）。
+    /// 筆記本：24 頁、每頁 120 筆畫、2 張 1200×900 照片級圖片（一張套復古濾鏡）、4 個文字方塊。
+    func testLargeNotebookOpenLatency() throws {
+        let app = XCUIApplication()
+        app.launchEnvironment["KAIRUMO_UITEST"] = "1"
+        app.launchEnvironment["KAIRUMO_UITEST_SEED_LARGE"] = "1"
+        app.launch()
+        // 第一次啟動只負責建立筆記本（要幾秒），量的是第二次啟動後的冷開啟：記憶體裡沒有任何快取。
+        XCTAssertTrue(find(app, "home.action.new_note").waitForExistence(timeout: 180), "首頁沒有載入")
+        app.terminate()
+        app.launch()
+        self.app = app
+        let cardId = "home.notebooks.card.uitest-large-notebook"
+        XCTAssertTrue(find(app, "home.action.new_note").waitForExistence(timeout: 120), "首頁沒有載入")
+        var card = find(app, cardId)
+        for _ in 0..<12 where !(card.exists && card.isHittable) {
+            app.swipeUp()
+            card = find(app, cardId)
+        }
+        XCTAssertTrue(card.exists && card.isHittable, "找不到效能量測筆記")
+        let t0 = Date()
+        card.tap()
+        XCTAssertTrue(find(app, "editor.more").waitForExistence(timeout: 60))
+        let openMs = Date().timeIntervalSince(t0) * 1000
+        let next = find(app, "editor.page.next")
+        XCTAssertTrue(next.waitForExistence(timeout: 30))
+        let t1 = Date()
+        next.tap()
+        // 兩種工具列的頁碼格式不同（「P.2/24」或「2/24」）；任一個顯示第 2 頁就算翻到了。
+        let indicator = app.staticTexts.matching(
+            NSPredicate(format: "identifier == %@ AND (label BEGINSWITH %@ OR label BEGINSWITH %@)",
+                        "editor.page.indicator", "P.2/", "2/")).firstMatch
+        let moved = NSPredicate(format: "exists == true")
+        let exp = expectation(for: moved, evaluatedWith: indicator)
+        wait(for: [exp], timeout: 60)
+        let flipMs = Date().timeIntervalSince(t1) * 1000
+        print(String(format: "OPEN-E2E large notebook: tap→editor %.0f ms, first next-page %.0f ms", openMs, flipMs))
+    }
 }
+

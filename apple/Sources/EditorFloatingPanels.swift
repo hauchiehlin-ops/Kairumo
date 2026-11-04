@@ -306,7 +306,7 @@ extension NotebookEditorView {
     var objectPastePill: some View {
         let hasSelection = !clipboardSelectableIds.isEmpty && inlineEditingTextId == nil && !isMarqueeActive
         let hasClipboard = !objectClipboard.isEmpty
-        if isPlacingPasteObject && hasClipboard {
+        if isPlacingPasteObject && hasPlaceableClipboard {
             HStack(spacing: 8) {
                 Image(systemName: "scope")
                     .foregroundColor(.accentColor)
@@ -414,6 +414,8 @@ extension NotebookEditorView {
                     Divider().frame(height: 16)
 
                     Button {
+                        // 物件工具丸的放置只放物件（套索留下的舊筆跡不跟著出來）。
+                        placingIncludesInk = false
                         isPlacingPasteObject = true
                     } label: {
                         HStack(spacing: 5) {
@@ -467,8 +469,7 @@ extension NotebookEditorView {
                         } else {
                             switchToPage(page)
                         }
-                        paste(objectClipboard, onPage: page, at: value.location)
-                        isPlacingPasteObject = false
+                        placeClipboard(at: value.location, onPage: page)
                     }
             )
     }

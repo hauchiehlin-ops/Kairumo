@@ -411,7 +411,9 @@ fun MarqueeLayer(
     /** 拉完一個框（頁面點）＋是否連續框選。呼叫端用它選筆跡（[LassoSelection.selectStrokesInRect]）。 */
     onMarqueeRect: (Rect, Boolean) -> Unit = { _, _ -> },
     /** 點到空白處（非連續框選）：筆跡選取一起取消。 */
-    onTapEmpty: () -> Unit = {}
+    onTapEmpty: () -> Unit = {},
+    /** 整組拖曳中的累計位移（頁面點），讓筆跡即時跟著走；放手後回報 `Offset.Zero`。 */
+    onGroupDrag: (Offset) -> Unit = {}
 ) {
     var start by remember { mutableStateOf<Offset?>(null) }
     var current by remember { mutableStateOf<Offset?>(null) }
@@ -449,6 +451,7 @@ fun MarqueeLayer(
                         start = null
                         current = null
                         groupDrag = Offset.Zero
+                        onGroupDrag(Offset.Zero)
                     }
                     detectDragGestures(
                         onDragStart = { offset ->
@@ -467,6 +470,7 @@ fun MarqueeLayer(
                             val d = Offset(drag.x / density, drag.y / density)
                             if (start == null) {
                                 groupDrag += d
+                                onGroupDrag(groupDrag)
                             } else {
                                 current = (current ?: start!!) + d
                             }
