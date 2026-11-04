@@ -4703,6 +4703,14 @@
     "zhHans": "云端暂无这本笔记本的内容，等待来源设备上传",
     "zhHant": "雲端尚無此筆記本之操作記錄，已清理暫存等待來源端上傳"
   },
+  "core_msg_224": {
+    "en": "Drive did not return a permission id after authorization",
+    "ja": "アクセス権の付与後に Drive が permission id を返しませんでした",
+    "ko": "권한을 부여한 뒤 Drive가 permission id를 반환하지 않았습니다",
+    "th": "หลังให้สิทธิ์ Drive ไม่ส่ง permission id กลับมา",
+    "zhHans": "授权之后 Drive 没有回传 permission id",
+    "zhHant": "授權之後 Drive 沒有回傳 permission id"
+  },
   "corner_style": {
     "en": "Corners",
     "ja": "角丸",

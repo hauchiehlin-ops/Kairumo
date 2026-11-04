@@ -832,7 +832,7 @@ impl<H: DriveHttp> GDriveProvider<H> {
             .get("id")
             .and_then(Value::as_str)
             .map(str::to_string)
-            .ok_or_else(|| SyncError::Backend(format!("建立資料夾 {name} 之後 Drive 沒有回傳 id")))
+            .ok_or_else(|| SyncError::Backend(format!("建立 {name} 之後 Drive 沒有回傳 id")))
     }
 
     /// 授予某個 Email 權限（`writer` 為編輯者），Google 會寄通知信。回傳 permission id。

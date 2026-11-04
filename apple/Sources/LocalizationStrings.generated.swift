@@ -7047,6 +7047,14 @@ extension LocalizationManager {
             .ko: "클라우드에 이 노트북의 내용이 아직 없습니다. 원본 기기의 업로드를 기다리는 중입니다",
             .th: "คลาวด์ยังไม่มีเนื้อหาของสมุดบันทึกนี้ กำลังรอให้อุปกรณ์ต้นทางอัปโหลด"
         ],
+        "core_msg_224": [
+            .zhHant: "授權之後 Drive 沒有回傳 permission id",
+            .en: "Drive did not return a permission id after authorization",
+            .zhHans: "授权之后 Drive 没有回传 permission id",
+            .ja: "アクセス権の付与後に Drive が permission id を返しませんでした",
+            .ko: "권한을 부여한 뒤 Drive가 permission id를 반환하지 않았습니다",
+            .th: "หลังให้สิทธิ์ Drive ไม่ส่ง permission id กลับมา"
+        ],
         "corner_style": [
             .zhHant: "圓角",
             .en: "Corners",

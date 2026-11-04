@@ -79,7 +79,7 @@ fn provider(http: Arc<dyn FfiDriveHttp>, folder_id: &str) -> GDriveProvider<Fore
 pub fn collab_drive_folder_name(title: String) -> String {
     let clean: String = title.trim().chars().filter(|c| !c.is_control()).take(80).collect();
     if clean.is_empty() {
-        "Kairumo 共享筆記".to_string()
+        "Kairumo · Shared".to_string()
     } else {
         format!("Kairumo · {clean}")
     }

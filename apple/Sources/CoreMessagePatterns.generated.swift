@@ -21,6 +21,7 @@ enum CoreMessagePatterns {
         ("log_msg_003", ["Google 授權失敗：缺少 Code 或 Verifier"]),
         ("log_msg_027", ["步驟 2 完成。上傳: ", ", 下載: ", ", 新增: ", ", 失敗: ", ""]),
         ("log_msg_036", ["【背景佇列】筆記本 (", "...) 完成（上傳: ", ", 下載: ", "）"]),
+        ("core_msg_224", ["授權之後 Drive 沒有回傳 permission id"]),
         ("core_msg_100", ["房間金鑰格式錯誤（需要 base64 的 32 位元組）"]),
         ("core_msg_200", ["oplog 操作筆數超過上限，已終止載入以防止記憶體溢出"]),
         ("log_msg_026", ["步驟 2：更新雲端快照（changes.list）..."]),
