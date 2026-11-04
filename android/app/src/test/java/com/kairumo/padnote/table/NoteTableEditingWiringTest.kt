@@ -74,18 +74,20 @@ class NoteTableEditingWiringTest {
     }
 
     @Test
-    fun gridIndexedExtrasAreDroppedWhenTheGridChanges() {
-        val apple = """{"rows":1,"cols":2,"cellStyles":[{},{}],"columnWidths":[50,60],"borderMode":"inner"}"""
+    fun gridIndexedAppearanceFollowsTheGridInsteadOfBeingDropped() {
+        val apple = """{"rows":1,"cols":2,"cellStyles":[{"bold":true},{}],"columnWidths":[50,60],"borderMode":"inner"}"""
         val rowEdit = NoteTable.decode(apple)!!.apply { insertRow(1) }
         val afterRow = JSONObject(rowEdit.encodedJson())
-        assertFalse("逐格格式對不上新格子，要丟掉", afterRow.has("cellStyles"))
-        assertTrue("欄沒變，欄寬保留", afterRow.has("columnWidths"))
+        assertEquals("逐格格式跟著新增的列一起長", 4, afterRow.getJSONArray("cellStyles").length())
+        assertTrue(afterRow.getJSONArray("cellStyles").getJSONObject(0).getBoolean("bold"))
+        assertEquals(2, afterRow.getJSONArray("columnWidths").length())
         assertEquals("inner", afterRow.getString("borderMode"))
 
         val colEdit = NoteTable.decode(apple)!!.apply { insertColumn(1) }
         val afterCol = JSONObject(colEdit.encodedJson())
-        assertFalse(afterCol.has("columnWidths"))
-        assertFalse(afterCol.has("cellStyles"))
+        assertEquals(3, afterCol.getJSONArray("columnWidths").length())
+        assertEquals(3, afterCol.getJSONArray("cellStyles").length())
+        assertFalse(afterCol.getJSONArray("cellStyles").getJSONObject(1).has("bold"))
     }
 
     @Test

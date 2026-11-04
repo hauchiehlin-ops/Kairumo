@@ -54,6 +54,9 @@ class TableStore(
                         )
                     }
                     .toMutableList()
+                // 外觀裡的逐格格式是照外觀那份的格數排的；核心的格數不同（別台裝置增刪了列欄、
+                // 外觀還沒跟上）時套上去會錯位 —— 寧可不套（與 Apple 讀到長度不符時相同）。
+                if (cellStyles?.size != rows * cols) cellStyles = null
             }
             runCatching { s.blockPosition(blockId) }.getOrNull()
                 ?.takeIf { it.size >= 2 }
@@ -85,17 +88,8 @@ class TableStore(
             null
         }
 
-        val created = table.copyTable().let { copy ->
-            NoteTable(
-                id = id ?: copy.id,
-                x = copy.x, y = copy.y, width = copy.width,
-                rows = copy.rows, cols = copy.cols, cells = copy.cells,
-                headerRow = copy.headerRow, mergedCells = copy.mergedCells,
-                fontSize = copy.fontSize, ruleColorHex = copy.ruleColorHex,
-                headerBackgroundHex = copy.headerBackgroundHex,
-                rowHeightOverrides = copy.rowHeightOverrides
-            )
-        }
+        // 整份外觀一起帶過去（框線、網底、欄寬、逐格格式…），只換 id。
+        val created = table.copyTable().let { copy -> copy.copy(id = id ?: copy.id) }
         tables[created.id] = created
         if (id != null) persist(created)
         return created
