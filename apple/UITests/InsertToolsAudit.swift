@@ -49,7 +49,7 @@ final class InsertToolsAudit: XCTestCase {
         ("Asset Library", "assets.close", "assets.close"),
         ("Sticker Library", "stickers.cancel", "stickers.cancel"),
         ("Insert Image", "", ""),          // 系統相片選擇器，不是我們的畫面
-        ("Choose from Files", "", ""),     // 系統檔案挑選器，同上
+        ("Image from Files (PNG/JPG/HEIC/GIF…)", "", ""),     // 系統檔案挑選器，同上
         ("Import an audio file", "", ""),  // 系統檔案挑選器，同上
         ("Math Calculator", "math.close", "math.close"),
         ("Chart Studio", "chart.close", "chart.close"),
@@ -406,7 +406,7 @@ final class InsertToolsAudit: XCTestCase {
         }
 
         var missing: [String] = []
-        for label in ["Choose from Files", "Import an audio file", "Insert 3D Model"] {
+        for label in ["Image from Files (PNG/JPG/HEIC/GIF…)", "Import an audio file", "Insert 3D Model"] {
             // **一定要捲。** 這張選單在手機上放不下所有項目。
             if ScreenAudit.visibleMenuItem(app, label: label) == nil { missing.append(label) }
         }
