@@ -958,7 +958,13 @@ internal fun NotebookHome(
                     val res = withContext(Dispatchers.IO) {
                         runFolderSync(activity, null)
                     }
-                    if (res.contains(l("sync_result")) || res == l("sync_up_to_date")) {
+                    // `sync_result` 是「%1@ 上傳、%2@ 下載」的模板：拿模板本身去 contains，
+                    // 佔位符已被數字取代，永遠比對不到 —— 同步成功卻從不記錄時間。改以數字比對。
+                    val syncedPattern = Regex(
+                        Regex.escape(l("sync_result"))
+                            .replace("%1@", "\\E\\d+\\Q")
+                            .replace("%2@", "\\E\\d+\\Q"))
+                    if (syncedPattern.matches(res) || res == l("sync_up_to_date")) {
                         com.kairumo.padnote.library.SyncHistory.markFolderSynced(activity)
                     }
                     folderSyncMsg = res

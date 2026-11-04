@@ -276,3 +276,161 @@ final class NoteTableTests: XCTestCase {
     }
     #endif
 }
+
+// MARK: - 表格編修工具列與「表格內容」面板的接線（畫布縮放、合併、對齊、框線及網底、分頁標籤）
+
+final class TableToolbarWiringTests: XCTestCase {
+
+    private func table(rows: Int = 3, cols: Int = 3) -> NoteTableAttachment {
+        NoteTableAttachment(width: 300, rows: rows, cols: cols, headerRow: true)
+    }
+
+    // MARK: - 畫布縮放
+
+    func testScalingResizesEveryColumnAndRowProportionally() {
+        var t = table()
+        let before = t.resolvedLayout()
+        t.scale(to: CGSize(width: before.width * 2, height: before.height * 1.5))
+        let after = t.resolvedLayout()
+        XCTAssertEqual(after.width, before.width * 2, accuracy: 1)
+        XCTAssertEqual(after.height, before.height * 1.5, accuracy: 1)
+        for (a, b) in zip(after.columnWidths, before.columnWidths) {
+            XCTAssertEqual(a, b * 2, accuracy: 0.5)
+        }
+        for (a, b) in zip(after.rowHeights, before.rowHeights) {
+            XCTAssertEqual(a, b * 1.5, accuracy: 0.5)
+        }
+    }
+
+    func testScalingKeepsManualColumnRatios() {
+        var t = table()
+        t.setColumnWidth(60, at: 0)
+        t.setColumnWidth(120, at: 1)
+        t.setColumnWidth(120, at: 2)
+        t.scale(to: CGSize(width: 600, height: t.resolvedLayout().height))
+        let widths = t.resolvedLayout().columnWidths
+        XCTAssertEqual(widths[0], 120, accuracy: 0.5)
+        XCTAssertEqual(widths[1], 240, accuracy: 0.5)
+        XCTAssertEqual(widths[2], 240, accuracy: 0.5)
+    }
+
+    func testScalingNeverShrinksBelowTheMinimumCellSize() {
+        var t = table()
+        t.scale(to: CGSize(width: 1, height: 1))
+        let layout = t.resolvedLayout()
+        XCTAssertTrue(layout.columnWidths.allSatisfy { $0 >= NoteTableAttachment.minimumColumnWidth - 0.01 })
+        XCTAssertTrue(layout.rowHeights.allSatisfy { $0 >= NoteTableAttachment.minimumRowHeight - 0.01 })
+    }
+
+    func testPreferredWidthAlsoAppliesToManualColumns() {
+        var t = table()
+        t.distributeColumns()
+        t.setPreferredWidth(450)
+        XCTAssertEqual(t.resolvedLayout().width, 450, accuracy: 1)
+    }
+
+    // MARK: - 分頁標籤
+
+    func testTableTabLabelSubstitutesRowsAndColumns() {
+        let label = TablePropertiesSheet.tableTabLabel("表格（%1@ × %2@）", rows: 4, cols: 5)
+        XCTAssertEqual(label, "表格（4 × 5）")
+        XCTAssertFalse(label.contains("%"))
+    }
+
+    // MARK: - 合併／分割
+
+    func testMergeRightThenDownGrowsTheSpanFromTheFocusedCell() {
+        var t = table()
+        t.mergeRight(row: 1, col: 1)
+        XCTAssertEqual(t.span(containing: 1, col: 2), NoteTableSpan(row: 1, col: 1, rowSpan: 1, colSpan: 2))
+        t.mergeDown(row: 1, col: 2)
+        XCTAssertEqual(t.span(containing: 2, col: 2), NoteTableSpan(row: 1, col: 1, rowSpan: 2, colSpan: 2))
+        XCTAssertEqual(t.mergedCells.count, 1)
+    }
+
+    func testMergeAtTheEdgeIsRefused() {
+        var t = table()
+        t.mergeRight(row: 0, col: 2)
+        t.mergeDown(row: 2, col: 0)
+        XCTAssertTrue(t.mergedCells.isEmpty)
+    }
+
+    func testSplitFromAnyCoveredCellRemovesTheWholeSpan() {
+        var t = table()
+        t.mergeRange(rows: 0...1, cols: 0...1)
+        t.splitCell(row: 1, col: 1)
+        XCTAssertTrue(t.mergedCells.isEmpty)
+    }
+
+    func testCellRangeCoversTheMergedArea() {
+        var t = table()
+        t.mergeRange(rows: 1...2, cols: 0...1)
+        let range = t.cellRange(row: 2, col: 1)
+        XCTAssertEqual(range.rows, 1...2)
+        XCTAssertEqual(range.cols, 0...1)
+    }
+
+    // MARK: - 對齊
+
+    func testAlignmentResolvesToALeftEdge() {
+        var t = table()
+        let w = t.resolvedLayout().width
+        XCTAssertNil(t.alignedX(pageWidth: 600, inset: 24), "沒設定對齊不移動表格")
+        t.alignmentRaw = "left"
+        t.indentLeft = 10
+        XCTAssertEqual(t.alignedX(pageWidth: 600, inset: 24)!, 34, accuracy: 0.01)
+        t.alignmentRaw = "center"
+        XCTAssertEqual(t.alignedX(pageWidth: 600, inset: 24)!, (600 - w) / 2, accuracy: 0.01)
+        t.alignmentRaw = "right"
+        XCTAssertEqual(t.alignedX(pageWidth: 600, inset: 24)!, 600 - 24 - w, accuracy: 0.01)
+    }
+
+    // MARK: - 框線及網底
+
+    func testBorderStylesProduceDistinctDashPatterns() {
+        XCTAssertTrue(TableBorderStyle.solid.dashPattern(lineWidth: 1).isEmpty)
+        XCTAssertFalse(TableBorderStyle.dashed.dashPattern(lineWidth: 1).isEmpty)
+        XCTAssertNotEqual(
+            TableBorderStyle.dashed.dashPattern(lineWidth: 1),
+            TableBorderStyle.dotted.dashPattern(lineWidth: 1))
+    }
+
+    func testFillRoleMatchesCanvasRules() {
+        var t = table()
+        t.bandedRows = true
+        XCTAssertEqual(t.fillRole(row: 0, col: 0, isHeader: true), .header)
+        XCTAssertEqual(t.fillRole(row: 1, col: 0, isHeader: false), .bandedRow)
+        XCTAssertNil(t.fillRole(row: 2, col: 0, isHeader: false))
+        t.updateStyle(rows: 2...2, cols: 0...0) { $0.fillHex = "#FF0000" }
+        XCTAssertEqual(t.fillRole(row: 2, col: 0, isHeader: false), .own("#FF0000"))
+    }
+
+    func testNewAppearanceFieldsSurviveThePackageBridge() {
+        var t = table()
+        t.borderWidth = 2.5
+        t.borderStyleRaw = "dashed"
+        t.bandedRows = true
+        t.bandedCols = true
+        t.alignmentRaw = "center"
+        t.indentLeft = 12
+        t.altTitle = "成績表"
+        t.altDescription = "第一學期"
+        var restored = NoteTableAttachment(id: t.id, rows: 3, cols: 3)
+        TableAppearance.apply(TableAppearance.encode(t), to: &restored)
+        XCTAssertEqual(restored.borderWidth, 2.5)
+        XCTAssertEqual(restored.borderStyleRaw, "dashed")
+        XCTAssertEqual(restored.bandedRows, true)
+        XCTAssertEqual(restored.bandedCols, true)
+        XCTAssertEqual(restored.alignmentRaw, "center")
+        XCTAssertEqual(restored.indentLeft, 12)
+        XCTAssertEqual(restored.altTitle, "成績表")
+        XCTAssertEqual(restored.altDescription, "第一學期")
+    }
+
+    func testLocalDeltaUndoesTheTableRotation() {
+        let d = TableAttachmentItemView.localDelta(CGSize(width: 0, height: 10), rotation: 90)
+        // 轉了 90° 的表格，畫面上往下拉 = 表格自己的「往右」被拉長。
+        XCTAssertEqual(d.width, 10, accuracy: 0.001)
+        XCTAssertEqual(d.height, 0, accuracy: 0.001)
+    }
+}

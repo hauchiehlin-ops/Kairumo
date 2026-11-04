@@ -40,15 +40,13 @@ struct TableSubsystemCoordinatorModifier: ViewModifier {
                 }
             }
             // 獨立 Sheet 呈現 Word 級「表格內容」五大分頁面板
-            .sheet(item: $tablePropertiesTarget) { target in
+            // 可拖曳調整高度（與其他次系統面板同一套 `resizableSheet`）。
+            .sheet(item: $tablePropertiesTarget) { target in resizableSheet {
                 TablePropertiesSheet(
-                    table: Binding(
-                        get: { getTable(target.id) ?? target },
-                        set: { onUpdateTable($0) }
-                    ),
+                    table: getTable(target.id) ?? target,
                     onCommit: { onUpdateTable($0) }
                 )
-            }
+            } }
     }
 }
 

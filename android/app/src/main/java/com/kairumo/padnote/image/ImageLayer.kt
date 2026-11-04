@@ -28,8 +28,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.kairumo.padnote.canvas.CanvasRotation
-import com.kairumo.padnote.canvas.MIN_OBJECT_HEIGHT_DP
-import com.kairumo.padnote.canvas.MIN_OBJECT_WIDTH_DP
 import com.kairumo.padnote.canvas.ResizeHandle
 import com.kairumo.padnote.canvas.RotationHandle
 import com.kairumo.padnote.canvas.StyleHandle
@@ -110,6 +108,9 @@ private fun ImageObjectView(
     var liveWidth by remember(image.id, image.width) { mutableFloatStateOf(image.width) }
     var liveHeight by remember(image.id, image.height) { mutableFloatStateOf(image.height) }
     var liveRotation by remember(image.id, image.rotationDegrees) { mutableFloatStateOf(image.rotationDegrees) }
+    // 縮放手勢的基準尺寸與累計位移。不放進 state：只在手勢回呼裡讀寫，不驅動重組。
+    // 以 id 為鍵：live 尺寸的 remember 會隨 width 變動重建，基準不能跟著被洗掉。
+    val resizeGesture = remember(image.id) { ResizeGestureState() }
     val rotation = CanvasRotation.normalized(liveRotation)
     val shape = RoundedCornerShape(image.cornerRadius.dp)
     // 連續模式：拖到哪一頁就歸哪一頁（單頁模式為 null，照舊夾在本頁）。
@@ -236,12 +237,23 @@ private fun ImageObjectView(
                 heightDp = liveHeight,
                 density = density,
                 onResize = { dw, dh ->
-                    liveWidth = maxOf(MIN_OBJECT_WIDTH_DP, liveWidth + dw)
-                    liveHeight = maxOf(MIN_OBJECT_HEIGHT_DP, liveHeight + dh)
+                    // 等比、以開始拖曳時的尺寸為基準累計（見 ImageResize：與 Apple 同一套下限）。
+                    val g = resizeGesture
+                    val base = g.base ?: (liveWidth to liveHeight).also {
+                        g.base = it
+                        g.accX = 0f
+                        g.accY = 0f
+                    }
+                    g.accX += dw
+                    g.accY += dh
+                    val (w, h) = ImageResize.resized(base.first, base.second, g.accX, g.accY)
+                    liveWidth = w
+                    liveHeight = h
                     currentImage.width = liveWidth
                     currentImage.height = liveHeight
                 },
                 onCommit = {
+                    resizeGesture.base = null
                     currentImage.width = liveWidth
                     currentImage.height = liveHeight
                     onChanged(currentImage)
@@ -263,6 +275,13 @@ private fun ImageObjectView(
             )
         }
     }
+}
+
+/** 一次縮放手勢的基準尺寸與累計位移（頁面點）。 */
+private class ResizeGestureState {
+    var base: Pair<Float, Float>? = null
+    var accX = 0f
+    var accY = 0f
 }
 
 /**

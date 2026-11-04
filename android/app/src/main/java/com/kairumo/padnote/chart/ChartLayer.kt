@@ -162,13 +162,23 @@ private fun ChartObjectView(
                 } }
         ) {
             Canvas(Modifier.size(liveWidth.dp, liveHeight.dp)) {
-                val layout = ChartRenderer.layout(chart.spec, size.width, size.height) ?: return@Canvas
+                // 版面一律在**頁面點**裡算、再乘上密度畫出（與 `ChartRenderer.bitmap` 和 Apple 同一做法）。
+                // 直接拿像素算的話，字級與邊距是固定像素：縮圖（0.22 倍）裡整張圖只剩 90 像素寬，
+                // 軸標與邊距吃光繪圖區，側欄只看到一個空框；而不同密度的平板上字的相對大小也不同。
+                val pointScale = ChartRenderer.pointScale(this.density)
+                val layout = ChartRenderer.layout(
+                    chart.spec, size.width / pointScale, size.height / pointScale
+                ) ?: return@Canvas
                 drawIntoCanvas { canvas ->
+                    val native = canvas.nativeCanvas
+                    val saved = native.save()
+                    native.scale(pointScale, pointScale)
                     ChartRenderer.draw(
-                        layout, canvas.nativeCanvas,
+                        layout, native,
                         foreground = foreground.toArgb(),
                         gridColor = grid.toArgb()
                     )
+                    native.restoreToCount(saved)
                 }
             }
         }

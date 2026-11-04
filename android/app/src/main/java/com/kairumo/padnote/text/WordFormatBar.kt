@@ -299,15 +299,20 @@ fun WordFormatControls(
     }
 
     // 字級：縮小 / 下拉 / 放大（與 Word 相同，逐級跳動）
-    TextButton(
-        onClick = { char(TextCharStyle(fontSize = wordShrinkFontSize(style.fontSize))) },
-        modifier = Modifier.testTag(tag("editor.text.shrink_font")).semantics { contentDescription = l("wd_shrink_font") }
-    ) { Text("A↓") }
-    Box {
+    // 純符號按鈕（A↓、⇠、↕…）只看字形猜不出功能：長按／懸停顯示說明（文字走 L10n）。
+    com.kairumo.padnote.ui.InstantTooltip(text = l("wd_shrink_font")) {
         TextButton(
-            onClick = { sizeMenu = true },
-            modifier = Modifier.testTag(tag("editor.text.font_size")).semantics { contentDescription = l("font_size") }
-        ) { Text("${formatSize(style.fontSize)} ▾") }
+            onClick = { char(TextCharStyle(fontSize = wordShrinkFontSize(style.fontSize))) },
+            modifier = Modifier.testTag(tag("editor.text.shrink_font")).semantics { contentDescription = l("wd_shrink_font") }
+        ) { Text("A↓") }
+    }
+    Box {
+        com.kairumo.padnote.ui.InstantTooltip(text = l("font_size")) {
+            TextButton(
+                onClick = { sizeMenu = true },
+                modifier = Modifier.testTag(tag("editor.text.font_size")).semantics { contentDescription = l("font_size") }
+            ) { Text("${formatSize(style.fontSize)} ▾") }
+        }
         DropdownMenu(expanded = sizeMenu, onDismissRequest = { sizeMenu = false }) {
             for (size in WORD_FONT_SIZES) {
                 DropdownMenuItem(
@@ -317,10 +322,12 @@ fun WordFormatControls(
             }
         }
     }
-    TextButton(
-        onClick = { char(TextCharStyle(fontSize = wordGrowFontSize(style.fontSize))) },
-        modifier = Modifier.testTag(tag("editor.text.grow_font")).semantics { contentDescription = l("wd_grow_font") }
-    ) { Text("A↑") }
+    com.kairumo.padnote.ui.InstantTooltip(text = l("wd_grow_font")) {
+        TextButton(
+            onClick = { char(TextCharStyle(fontSize = wordGrowFontSize(style.fontSize))) },
+            modifier = Modifier.testTag(tag("editor.text.grow_font")).semantics { contentDescription = l("wd_grow_font") }
+        ) { Text("A↑") }
+    }
 
     // B / I / U / S
     ToggleGlyph("B", style.bold, l("font_bold"), tag("editor.text.bold"), fontWeight = FontWeight.Bold) {
@@ -412,20 +419,26 @@ fun WordFormatControls(
     ToggleGlyph("⇥", state.alignment == "right", l("align_right"), tag("editor.text.align_right")) { onAction(WordFormatAction.Align("right")) }
 
     // 縮排、行距
-    TextButton(
-        onClick = { onAction(WordFormatAction.Indent(-INDENT_STEP)) },
-        enabled = state.paragraphIndent > 0f,
-        modifier = Modifier.testTag(tag("editor.text.decrease_indent")).semantics { contentDescription = l("wd_decrease_indent") }
-    ) { Text("⇠") }
-    TextButton(
-        onClick = { onAction(WordFormatAction.Indent(INDENT_STEP)) },
-        modifier = Modifier.testTag(tag("editor.text.increase_indent")).semantics { contentDescription = l("wd_increase_indent") }
-    ) { Text("⇢") }
-    Box {
+    com.kairumo.padnote.ui.InstantTooltip(text = l("wd_decrease_indent")) {
         TextButton(
-            onClick = { spacingMenu = true },
-            modifier = Modifier.testTag(tag("editor.text.line_spacing")).semantics { contentDescription = l("wd_line_spacing") }
-        ) { Text("↕ ▾") }
+            onClick = { onAction(WordFormatAction.Indent(-INDENT_STEP)) },
+            enabled = state.paragraphIndent > 0f,
+            modifier = Modifier.testTag(tag("editor.text.decrease_indent")).semantics { contentDescription = l("wd_decrease_indent") }
+        ) { Text("⇠") }
+    }
+    com.kairumo.padnote.ui.InstantTooltip(text = l("wd_increase_indent")) {
+        TextButton(
+            onClick = { onAction(WordFormatAction.Indent(INDENT_STEP)) },
+            modifier = Modifier.testTag(tag("editor.text.increase_indent")).semantics { contentDescription = l("wd_increase_indent") }
+        ) { Text("⇢") }
+    }
+    Box {
+        com.kairumo.padnote.ui.InstantTooltip(text = l("wd_line_spacing")) {
+            TextButton(
+                onClick = { spacingMenu = true },
+                modifier = Modifier.testTag(tag("editor.text.line_spacing")).semantics { contentDescription = l("wd_line_spacing") }
+            ) { Text("↕ ▾") }
+        }
         DropdownMenu(expanded = spacingMenu, onDismissRequest = { spacingMenu = false }) {
             for (multiple in listOf(1f, 1.15f, 1.5f, 2f, 2.5f, 3f)) {
                 DropdownMenuItem(
@@ -472,6 +485,7 @@ private fun ToggleGlyph(
     onClick: () -> Unit
 ) {
     val shape = RoundedCornerShape(6.dp)
+    com.kairumo.padnote.ui.InstantTooltip(text = description) {
     Box(
         contentAlignment = Alignment.Center,
         modifier = Modifier
@@ -491,6 +505,7 @@ private fun ToggleGlyph(
             fontSize = 15.sp
         )
     }
+    }
 }
 
 @Composable
@@ -502,6 +517,7 @@ private fun SplitColorButton(
     onApplyLast: () -> Unit,
     onOpen: () -> Unit
 ) {
+    com.kairumo.padnote.ui.InstantTooltip(text = description) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -524,6 +540,7 @@ private fun SplitColorButton(
                 .semantics { contentDescription = description }
                 .testTag("$tag.menu")
         ) { Text("▾", fontSize = 11.sp) }
+    }
     }
 }
 

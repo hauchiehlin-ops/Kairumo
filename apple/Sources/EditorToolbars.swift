@@ -1142,13 +1142,9 @@ extension NotebookEditorView {
                 TableRibbonToolbar(
                     table: Binding(
                         get: { notebook.tableAttachments?[tIdx] ?? NoteTableAttachment() },
-                        set: { updated in
-                            if let idx = notebook.tableAttachments?.firstIndex(where: { $0.id == updated.id }) {
-                                notebook.tableAttachments?[idx] = updated
-                                commitNotebook()
-                                PageThumbnailRenderer.invalidateAll()
-                            }
-                        }
+                        // 與「表格內容」同一條提交路徑：存檔、縮圖失效、協作廣播一次到位。
+                        // 原本只存檔不廣播，工具列改的東西協作對方看不到。
+                        set: { updated in updateTableInNotebook(updated) }
                     ),
                     showProperties: Binding(
                         get: { tablePropertiesTarget != nil },
@@ -1161,11 +1157,8 @@ extension NotebookEditorView {
                             selectedObjectIds = []
                             commitNotebook()
                             PageThumbnailRenderer.invalidateAll()
+                            collaborationManager.broadcastAttachmentDelete(id: id, type: "table")
                         }
-                    },
-                    onCommit: {
-                        commitNotebook()
-                        PageThumbnailRenderer.invalidateAll()
                     }
                 )
                 .padding(.horizontal, 16)

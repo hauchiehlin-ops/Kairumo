@@ -30,6 +30,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.kairumo.padnote.LocalizationStrings
@@ -128,7 +129,12 @@ fun TableEditor(
                                             onValueChange = { text -> mutate { setCell(text, r, c) } },
                                             modifier = Modifier
                                                 .width(110.dp)
-                                                .padding(2.dp),
+                                                .padding(2.dp)
+                                                // 點進哪一格，下面的增刪列欄、合併就以哪一格為準。
+                                                // 原本 row/col 沒有任何地方會改：永遠在第 1 列第 1 欄動手。
+                                                .onFocusChanged { state ->
+                                                    if (state.isFocused) { row = r; col = c }
+                                                },
                                             singleLine = true,
                                             textStyle = MaterialTheme.typography.bodySmall,
                                             label = if (r == row && c == col) {
@@ -163,15 +169,19 @@ fun TableEditor(
                         ) { Text(l("table_delete_column")) }
                     }
                     Row(Modifier.horizontalScroll(rememberScrollState())) {
+                        val span = draft.spanContaining(row, col)
                         TextButton(
-                            onClick = { mutate { merge(row, col, 1, 2) } },
-                            enabled = col + 1 < draft.cols
+                            onClick = { mutate { mergeRight(row, col) } },
+                            enabled = (span?.let { it.col + it.colSpan } ?: (col + 1)) < draft.cols
                         ) { Text(l("table_merge_right")) }
                         TextButton(
-                            onClick = { mutate { merge(row, col, 2, 1) } },
-                            enabled = row + 1 < draft.rows
+                            onClick = { mutate { mergeDown(row, col) } },
+                            enabled = (span?.let { it.row + it.rowSpan } ?: (row + 1)) < draft.rows
                         ) { Text(l("table_merge_down")) }
-                        TextButton(onClick = { mutate { unmerge(row, col) } }) { Text(l("table_unmerge")) }
+                        TextButton(
+                            onClick = { mutate { splitCell(row, col) } },
+                            enabled = span != null
+                        ) { Text(l("table_unmerge")) }
                     }
 
                     HorizontalDivider()

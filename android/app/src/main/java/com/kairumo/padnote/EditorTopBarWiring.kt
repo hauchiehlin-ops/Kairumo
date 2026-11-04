@@ -1,0 +1,250 @@
+package com.kairumo.padnote
+
+import com.kairumo.padnote.canvas.EditorMode
+import com.kairumo.padnote.canvas.ObjectStacking
+import com.kairumo.padnote.platform.AudioCapture
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+
+/**
+ * 編輯器工具列上「拆檔時掉了接線」的那些動作。
+ *
+ * `EditorTopBarActions` 每個欄位都有空的預設值 `{}`，而 MainActivity 拆檔（1189891e）時
+ * 有三十幾個沒有傳進去：錄音、紙張規格、版面色彩、框選、縮放比例、刪除頁面、備份、
+ * 使用手冊……全部點了沒反應（實機回報：「部分工具點擊後沒有反應」）。
+ * 這裡逐一接回拆檔前的實作（行為與 Apple 對齊）。
+ *
+ * 獨立成**非 Composable** 的頂層函式，不寫進 `InkScreen`：那個 Composable 曾經大到
+ * ART 驗證器的上限，多幾個 lambda 就 `VerifyError` 閃退（見 MainActivity 的註解）。
+ *
+ * 狀態變更一律走正門：選取用 `selectText`／`clearSelection`，換工具用 `applyInkTool`。
+ */
+internal fun EditorCanvasContext.withRestoredTopBarWiring(base: EditorTopBarActions): EditorTopBarActions = base.copy(
+    // 立起工作盤：`isTabletopActive` 是每次重組依姿態算出來的唯讀結果，改它不會留下任何東西；
+    // 手動開關存在 `isTabletopManual`（與拆檔前一致）。
+    onToggleTabletop = { isTabletopManual = !isTabletopManual },
+
+    // ── 紙張規格與版面色彩 ─────────────────────────────────
+    onSelectPageFormat = { id -> applyPageFormat(id) },
+    onApplyCustomFormat = { w, h ->
+        applyPageFormat(uniffi.padnote_core.customPageFormatId(w.toUInt(), h.toUInt()))
+    },
+    onSelectPalette = { id ->
+        meta.setPaletteId(notebook?.first, id)
+        revision++
+    },
+
+    // ── 錄音 ─────────────────────────────────────────────
+    onToggleRecord = { toggleRecording() },
+    onTogglePauseRecord = {
+        if (recordingPaused) {
+            audio.resume()
+            recordingPaused = false
+        } else {
+            audio.pause()
+            recordingPaused = true
+        }
+    },
+    onFinishRecord = { finishRecording() },
+
+    // ── 同步、備份、文件 ─────────────────────────────────
+    onCloudSync = { runEditorCloudSync() },
+    onFolderSync = { folderPicker.launch(null) },
+    onOpenDoc = { asset -> docsAsset = asset },
+    onBackupCreate = {
+        val stamp = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH-mm-ss", java.util.Locale.US)
+            .format(java.util.Date())
+        val unique = java.util.UUID.randomUUID().toString().take(6)
+        editorBackupCreatePicker.launch("Kairumo-$stamp-$unique.kairumobackup")
+    },
+    onBackupRestore = { backupPicker.launch(arrayOf("*/*")) },
+
+    // ── 筆跡與頁面 ───────────────────────────────────────
+    onClearInk = { clearPageInk() },
+    onDeletePage = { deletingPage = true },
+    onRefineSketch = { showRefineBar = true },
+    onRecognizeHandwriting = { startHandwritingRecognition() },
+    onZoomFit = { mode -> fitCanvas(mode) },
+
+    // ── 圖層 ─────────────────────────────────────────────
+    onOpenLayers = { showStackPanel = true },
+    onManageGroups = { showLayerPanel = true },
+    onBringForward = { reorderSelected(forward = true) },
+    onSendBackward = { reorderSelected(forward = false) },
+
+    // ── 插入 ─────────────────────────────────────────────
+    onInsertAudioFile = { audioImportPicker.launch(audioMimeTypes) },
+    onPasteScreenshot = { pasteClipboardImageOrScreenshot() },
+    onOpenTextStudio = {
+        val box = selectedTextId?.let { textStore.find(it) } ?: textStore.create(x = 60f, y = 80f)
+        textRevision++
+        selectText(box.id)
+        editingText = box
+    },
+    onToggleSnapToGrid = {
+        snapToGrid = !snapToGrid
+        message = l10n(if (snapToGrid) "snap_to_grid_on_notice" else "snap_to_grid_off_notice")
+    },
+
+    // ── 偵錯 ─────────────────────────────────────────────
+    onToggleInkDebug = { showInkDebug = !showInkDebug },
+    onToggleLowLatency = { lowLatency = !lowLatency; latency.clear() },
+    onTogglePenOnly = {
+        penOnly = !penOnly
+        engine.setPenOnly(penOnly)
+    },
+
+    // ── 框選 ─────────────────────────────────────────────
+    onToggleMarquee = {
+        marqueeActive = !marqueeActive
+        if (!marqueeActive) {
+            marqueeSelection = emptySet()
+            marqueeAdditive = false
+        } else {
+            // 框選只在打字模式有作用（手繪模式下物件不吃觸控）。
+            editorMode = EditorMode.TYPE
+            message = l10n("marquee_hint")
+        }
+    },
+    onToggleMarqueeAdditive = {
+        marqueeAdditive = !marqueeAdditive
+        if (marqueeAdditive) message = l10n("marquee_continuous_hint")
+    },
+    onSelectAllMarquee = {
+        val locked = lockedIdsLatest
+        marqueeSelection = marqueeCandidatesLatest.filter { it.id !in locked }.map { it.id }.toSet()
+    },
+    onDeselectAllMarquee = { marqueeSelection = emptySet() },
+    onCutMarquee = { marqueeSelection.firstOrNull()?.let { objectClipboardActions.cut(it) } },
+    onCopyMarquee = { marqueeSelection.firstOrNull()?.let { objectClipboardActions.copy(it) } },
+    onPasteMarquee = { pasteSinglePageClipboard(null) },
+    onPasteAtLocation = { isPlacingPasteObject = true },
+    onDuplicateMarquee = { duplicateMarqueeSelection() },
+    onDeleteMarquee = { deleteMarqueeSelection() }
+)
+
+private fun EditorCanvasContext.applyPageFormat(id: String) {
+    meta.setPageFormatId(notebook?.first, id)
+    com.kairumo.padnote.ink.PageGeometry.use(id)
+    revision++
+    continuousContentRevision++
+}
+
+private fun EditorCanvasContext.toggleRecording() {
+    val session = notebook?.first ?: run {
+        message = l10n("err_core_not_ready")
+        return
+    }
+    if (recording) {
+        finishRecording()
+    } else if (AudioCapture.hasPermission(activity)) {
+        recordSeconds = 0
+        recordingPaused = false
+        message = audio.start(pageId ?: "", session, deviceLanguageTag()) { message = it }
+        recording = audio.isRecording
+    } else {
+        micPermission.launch(android.Manifest.permission.RECORD_AUDIO)
+    }
+}
+
+private fun EditorCanvasContext.finishRecording() {
+    val session = notebook?.first ?: return
+    val us = audio.stop(session)
+    recording = false
+    recordingPaused = false
+    message = l10n("recorded_duration").replace("%@", "${us / 1_000_000uL}")
+    audio.showAdviceOnce(deviceLanguageTag())
+}
+
+private fun EditorCanvasContext.runEditorCloudSync() {
+    val act = activity
+    if (!com.kairumo.padnote.oauth.GoogleAuth.isSignedIn(act)) {
+        com.kairumo.padnote.oauth.GoogleAuth.startSignIn(act)
+        return
+    }
+    message = l10n("syncing")
+    val openId = notebookId
+    scope.launch {
+        // 同步會讀寫磁碟與網路：一律在 IO 執行緒；回主執行緒才推進 UI 狀態（Layer 3）。
+        val result = withContext(Dispatchers.IO) {
+            com.kairumo.padnote.library.CloudSync.runFull(act, deviceId(act), openId)
+        }
+        withContext(Dispatchers.Main.immediate) {
+            val meta = result.meta
+            message = when {
+                result.skipped -> l10n("sync_already_running")
+                meta == null -> l10n("not_signed_in")
+                meta.needsReauth -> l10n("sync_needs_reauth")
+                !meta.ok -> l10n("sync_failed").replace("%@", meta.error)
+                else -> l10n("sync_result")
+                    .replace("%1@", "${result.uploaded}")
+                    .replace("%2@", "${result.downloaded}")
+            }
+            if (openId != null && result.changed.contains(openId)) {
+                sessionRevision++
+            }
+        }
+    }
+}
+
+private fun EditorCanvasContext.startHandwritingRecognition() {
+    val session = notebook?.first
+    val page = pageId
+    if (session == null || page == null) {
+        message = l10n("err_core_not_ready")
+        return
+    }
+    isRecognisingHandwriting = true
+    message = l10n("recognizing")
+    scope.launch {
+        val result = recognizeHandwriting(session, page, engine)
+        withContext(Dispatchers.Main.immediate) {
+            message = result
+            isRecognisingHandwriting = false
+        }
+    }
+}
+
+/**
+ * 清空本頁筆跡。**走核心的擦除（`lassoDelete` → `erase_stroke`）**，每一筆都留下 `Remove`
+ * 墓碑（ADR-0015 I2／I3），同步與重開都不會復活。只清記憶體的 `engine.reset()` 不能用：
+ * 下次 `load()` 筆跡就全部回來了。
+ *
+ * 呼叫端（工具列）已經先跳過確認對話框，與 Apple 的 `showClearConfirmAlert` 一致。
+ */
+private fun EditorCanvasContext.clearPageInk() {
+    val handles = engine.coreHandles() ?: return
+    val (session, page) = handles
+    val known = engine.strokes.mapNotNull { it.coreStrokeId }
+    // 再用一個蓋住整頁的套索把核心裡所有看得見的筆畫撈出來（含別台同步來、還沒進記憶體的）。
+    val big = 1_000_000f
+    val everything = runCatching {
+        session.lassoSelect(page, listOf(-big, -big, big, -big, big, big, -big, big))
+    }.getOrDefault(emptyList())
+    val ids = (known + everything).distinct()
+    if (ids.isEmpty()) return
+    runCatching { session.lassoDelete(page, ids) }
+    engine.load()
+    latency.clear()
+    revision++
+    clearToken++ // 低延遲路徑的前緩衝也要清，否則舊筆畫還留在畫面上
+}
+
+/** 目前有沒有可調層級的選取物件（工具列「上移／下移一層」據此啟用）。 */
+internal fun EditorCanvasContext.hasReorderableSelection(): Boolean =
+    selectedTextId != null || selectedShapeIds.isNotEmpty() || selectedImageId != null ||
+        selectedTableId != null || selectedChartId != null
+
+/** 選取中的物件（文字 → 形狀 → 圖片 → 表格 → 圖表）上移／下移一層。 */
+private fun EditorCanvasContext.reorderSelected(forward: Boolean) {
+    val targetId = selectedTextId ?: selectedShapeIds.firstOrNull() ?: selectedImageId
+        ?: selectedTableId ?: selectedChartId
+    // 沒有選取時工具列上的按鈕是停用的（`hasSelectedObject`），這裡只是保險。
+    if (targetId == null) return
+    val order = stackOrderLatest
+    val updated = if (forward) ObjectStacking.bringForward(setOf(targetId), order)
+    else ObjectStacking.sendBackward(setOf(targetId), order)
+    meta.setObjectOrder(notebook?.first, pageIndex, updated)
+    stackRevision++
+}

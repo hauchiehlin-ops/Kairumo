@@ -126,18 +126,26 @@ fun ChartPreview(spec: ChartSpec, modifier: Modifier = Modifier) {
 
     Box(modifier.background(MaterialTheme.colorScheme.surfaceVariant), Alignment.Center) {
         Canvas(Modifier.fillMaxSize().padding(12.dp)) {
-            val layout = ChartRenderer.layout(spec, size.width, size.height)
+            // 與畫布上的 ChartLayer 同一套：版面在頁面點裡算、再乘密度畫，預覽才等於放進去的樣子。
+            val pointScale = ChartRenderer.pointScale(this.density)
+            val w = size.width / pointScale
+            val h = size.height / pointScale
+            val layout = ChartRenderer.layout(spec, w, h)
             if (layout == null) {
-                reason = ChartRenderer.failureReason(spec, size.width, size.height)
+                reason = ChartRenderer.failureReason(spec, w, h)
                 return@Canvas
             }
             reason = null
             drawIntoCanvas { canvas ->
+                val native = canvas.nativeCanvas
+                val saved = native.save()
+                native.scale(pointScale, pointScale)
                 ChartRenderer.draw(
-                    layout, canvas.nativeCanvas,
+                    layout, native,
                     foreground = foreground.toArgb(),
                     gridColor = grid.toArgb()
                 )
+                native.restoreToCount(saved)
             }
         }
         // 空白畫布看起來像壞掉了 —— 要講出是哪裡不對。

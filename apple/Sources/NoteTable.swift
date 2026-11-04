@@ -492,3 +492,136 @@ extension NoteTableAttachment {
     }
 }
 #endif
+
+// MARK: - 畫布縮放、對齊、以儲存格為準的合併（表格編修工具列與「表格內容」面板共用）
+
+/// 框線樣式。`NoteTableAttachment.borderStyleRaw` 的值；`nil` 為實線。
+public enum TableBorderStyle: String, CaseIterable, Hashable {
+    case solid, dashed, dotted
+
+    /// 給 `StrokeStyle` / `UIBezierPath.setLineDash` 用的虛線樣式（與線寬成比例）。
+    public func dashPattern(lineWidth: CGFloat) -> [CGFloat] {
+        let w = max(0.5, lineWidth)
+        switch self {
+        case .solid: return []
+        case .dashed: return [w * 4, w * 2]
+        case .dotted: return [w, w * 1.5]
+        }
+    }
+}
+
+/// 一格的底色來源。畫布（`NoteTableView`）與縮圖（`PageThumbnailRenderer`）走同一個判斷，
+/// 兩邊才不會一邊有斑馬紋、一邊沒有（I4）。
+public enum TableCellFillRole: Equatable {
+    case own(String)
+    case header
+    case bandedRow
+    case bandedColumn
+}
+
+extension NoteTableAttachment {
+
+    /// 畫格線用的線寬（點）。
+    public var resolvedBorderWidth: CGFloat { max(0.5, borderWidth ?? 1) }
+
+    public var resolvedBorderStyle: TableBorderStyle {
+        borderStyleRaw.flatMap(TableBorderStyle.init(rawValue:)) ?? .solid
+    }
+
+    public func fillRole(row: Int, col: Int, isHeader: Bool) -> TableCellFillRole? {
+        if let own = style(row: row, col: col).fillHex { return .own(own) }
+        if isHeader { return .header }
+        if bandedRows == true && row % 2 == 1 { return .bandedRow }
+        if bandedCols == true && col % 2 == 1 { return .bandedColumn }
+        return nil
+    }
+
+    /// 在畫布上拖曳縮放把手：表格外框變成 `newSize`，**每一欄、每一列等比例**跟著縮放。
+    ///
+    /// 只改 `width` 的話，有手動欄寬的表格寬度根本不會變（版面以覆寫為準），
+    /// 列高也不會動 —— 那就是「拉了把手但儲存格沒跟著縮」。
+    public mutating func scale(to newSize: CGSize) {
+        let layout = resolvedLayout()
+        guard layout.width > 0, layout.height > 0, newSize.width > 0, newSize.height > 0 else { return }
+        let minWidth = CGFloat(cols) * Self.minimumColumnWidth
+        let minHeight = CGFloat(rows) * Self.minimumRowHeight
+        let targetW = max(minWidth, newSize.width)
+        let targetH = max(minHeight, newSize.height)
+        let sx = targetW / layout.width
+        let sy = targetH / layout.height
+        columnWidthOverrides = layout.columnWidths.map { max(Double(Self.minimumColumnWidth), Double($0 * sx)) }
+        rowHeightOverrides = layout.rowHeights.map { max(Double(Self.minimumRowHeight), Double($0 * sy)) }
+        width = CGFloat(columnWidthOverrides?.reduce(0, +) ?? Double(targetW))
+    }
+
+    /// 版面解析器認得的最小欄寬／列高（低於它會被當成「自動」）。
+    public static let minimumColumnWidth: CGFloat = 24
+    public static let minimumRowHeight: CGFloat = 16
+
+    /// 「表格內容 › 對齊」落地：依頁寬算出表格左緣該在哪裡。`alignmentRaw == nil` 回 `nil`（不動）。
+    public func alignedX(pageWidth: CGFloat, inset: CGFloat) -> CGFloat? {
+        guard let raw = alignmentRaw else { return nil }
+        let w = resolvedLayout().width
+        switch raw {
+        case "center": return max(inset, (pageWidth - w) / 2)
+        case "right": return max(inset, pageWidth - inset - w)
+        default: return inset + max(0, indentLeft ?? 0)
+        }
+    }
+
+    /// 含有 (row, col) 的合併區（沒有就是 `nil`）。
+    public func span(containing row: Int, col: Int) -> NoteTableSpan? {
+        mergedCells.first { span in
+            row >= span.row && row < span.row + max(1, span.rowSpan)
+                && col >= span.col && col < span.col + max(1, span.colSpan)
+        }
+    }
+
+    /// 把 (row, col) 所在的格子（或合併區）與右邊一欄合併。
+    public mutating func mergeRight(row: Int, col: Int) {
+        let s = span(containing: row, col: col) ?? NoteTableSpan(row: row, col: col, rowSpan: 1, colSpan: 1)
+        let lastCol = s.col + max(1, s.colSpan)
+        guard lastCol < cols else { return }
+        mergeRange(rows: s.row...(s.row + max(1, s.rowSpan) - 1), cols: s.col...lastCol)
+    }
+
+    /// 把 (row, col) 所在的格子（或合併區）與下面一列合併。
+    public mutating func mergeDown(row: Int, col: Int) {
+        let s = span(containing: row, col: col) ?? NoteTableSpan(row: row, col: col, rowSpan: 1, colSpan: 1)
+        let lastRow = s.row + max(1, s.rowSpan)
+        guard lastRow < rows else { return }
+        mergeRange(rows: s.row...lastRow, cols: s.col...(s.col + max(1, s.colSpan) - 1))
+    }
+
+    /// 分割 (row, col) 所在的合併區。
+    public mutating func splitCell(row: Int, col: Int) {
+        guard let s = span(containing: row, col: col) else { return }
+        unmerge(row: s.row, col: s.col)
+    }
+
+    /// (row, col) 所在的矩形範圍（合併區則為整片）。
+    public func cellRange(row: Int, col: Int) -> (rows: ClosedRange<Int>, cols: ClosedRange<Int>) {
+        let r = min(max(0, row), rows - 1)
+        let c = min(max(0, col), cols - 1)
+        guard let s = span(containing: r, col: c) else { return (r...r, c...c) }
+        return (s.row...(s.row + max(1, s.rowSpan) - 1), s.col...(s.col + max(1, s.colSpan) - 1))
+    }
+}
+
+extension NoteTableAttachment {
+    /// 「表格內容 › 慣用寬度」：有手動欄寬時各欄等比例縮放，否則直接改寬度。
+    ///
+    /// 只改 `width` 的話，有手動欄寬的表格完全不會變（版面以覆寫為準）——輸入框改了沒反應。
+    public mutating func setPreferredWidth(_ newWidth: CGFloat) {
+        let target = max(CGFloat(cols) * Self.minimumColumnWidth, newWidth)
+        guard let overrides = columnWidthOverrides, overrides.contains(where: { $0 > 0 }) else {
+            width = target
+            return
+        }
+        let layout = resolvedLayout()
+        let s = target / max(1, layout.width)
+        let scaled = layout.columnWidths.map { max(Double(Self.minimumColumnWidth), Double($0 * s)) }
+        columnWidthOverrides = scaled
+        width = CGFloat(scaled.reduce(0, +))
+    }
+}

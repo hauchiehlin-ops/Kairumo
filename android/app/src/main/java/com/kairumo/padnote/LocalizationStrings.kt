@@ -23830,6 +23830,33 @@ object LocalizationStrings {
             "ko" to "세로 맞춤",
             "th" to "จัดแนวตั้ง"
         ),
+        "table_apply_cell" to mapOf(
+            "zh-Hant" to "儲存格",
+            "en" to "Cell",
+            "zh-Hans" to "单元格",
+            "ja" to "セル",
+            "ko" to "셀",
+            "th" to "เซลล์"
+        ),
+        "table_apply_table" to mapOf(
+            "zh-Hant" to "表格",
+            "en" to "Table",
+            "zh-Hans" to "表格",
+            "ja" to "表",
+            "ko" to "표",
+            "th" to "ตาราง"
+        )
+    )
+
+    private fun part37(): Map<String, Map<String, String>> = mapOf(
+        "table_apply_to" to mapOf(
+            "zh-Hant" to "套用至",
+            "en" to "Apply to",
+            "zh-Hans" to "应用于",
+            "ja" to "適用先",
+            "ko" to "적용 대상",
+            "th" to "นำไปใช้กับ"
+        ),
         "table_auto" to mapOf(
             "zh-Hant" to "自動",
             "en" to "Auto",
@@ -23845,10 +23872,7 @@ object LocalizationStrings {
             "ja" to "すべて自動に戻す",
             "ko" to "모두 자동으로",
             "th" to "รีเซ็ตขนาดทั้งหมด"
-        )
-    )
-
-    private fun part37(): Map<String, Map<String, String>> = mapOf(
+        ),
         "table_banded_cols" to mapOf(
             "zh-Hant" to "帶狀欄",
             "en" to "Banded Columns",
@@ -23881,6 +23905,22 @@ object LocalizationStrings {
             "ko" to "Border Color",
             "th" to "Border Color"
         ),
+        "table_border_dashed" to mapOf(
+            "zh-Hant" to "虛線",
+            "en" to "Dashed",
+            "zh-Hans" to "虚线",
+            "ja" to "破線",
+            "ko" to "파선",
+            "th" to "เส้นประ"
+        ),
+        "table_border_dotted" to mapOf(
+            "zh-Hant" to "點線",
+            "en" to "Dotted",
+            "zh-Hans" to "点线",
+            "ja" to "点線",
+            "ko" to "점선",
+            "th" to "เส้นจุด"
+        ),
         "table_border_horizontal" to mapOf(
             "zh-Hant" to "僅橫線",
             "en" to "Horizontal",
@@ -23912,6 +23952,14 @@ object LocalizationStrings {
             "ja" to "外枠",
             "ko" to "바깥쪽",
             "th" to "ขอบนอก"
+        ),
+        "table_border_solid" to mapOf(
+            "zh-Hant" to "實線",
+            "en" to "Solid",
+            "zh-Hans" to "实线",
+            "ja" to "実線",
+            "ko" to "실선",
+            "th" to "เส้นทึบ"
         ),
         "table_border_style" to mapOf(
             "zh-Hant" to "框線樣式",
@@ -23968,6 +24016,14 @@ object LocalizationStrings {
             "ja" to "Cell Margins",
             "ko" to "Cell Margins",
             "th" to "Cell Margins"
+        ),
+        "table_cell_position" to mapOf(
+            "zh-Hant" to "第 %1@ 列，第 %2@ 欄",
+            "en" to "Row %1@, Column %2@",
+            "zh-Hans" to "第 %1@ 行，第 %2@ 列",
+            "ja" to "%1@ 行目、%2@ 列目",
+            "ko" to "%1@행, %2@열",
+            "th" to "แถว %1@ คอลัมน์ %2@"
         ),
         "table_clear_format" to mapOf(
             "zh-Hant" to "清除格式",
@@ -24225,6 +24281,14 @@ object LocalizationStrings {
             "ko" to "선택한 셀 병합",
             "th" to "รวมเซลล์ที่เลือก"
         ),
+        "table_no_color" to mapOf(
+            "zh-Hant" to "無色彩",
+            "en" to "No Color",
+            "zh-Hans" to "无颜色",
+            "ja" to "色なし",
+            "ko" to "색 없음",
+            "th" to "ไม่มีสี"
+        ),
         "table_options" to mapOf(
             "zh-Hant" to "選項...",
             "en" to "Options...",
@@ -24232,6 +24296,14 @@ object LocalizationStrings {
             "ja" to "Options...",
             "ko" to "Options...",
             "th" to "Options..."
+        ),
+        "table_options_title" to mapOf(
+            "zh-Hant" to "表格選項",
+            "en" to "Table Options",
+            "zh-Hans" to "表格选项",
+            "ja" to "表のオプション",
+            "ko" to "표 옵션",
+            "th" to "ตัวเลือกตาราง"
         ),
         "table_position_btn" to mapOf(
             "zh-Hant" to "位置...",
@@ -24272,6 +24344,14 @@ object LocalizationStrings {
             "ja" to "リセット",
             "ko" to "초기화",
             "th" to "รีเซ็ต"
+        ),
+        "table_resize_handle" to mapOf(
+            "zh-Hant" to "調整表格大小",
+            "en" to "Resize table",
+            "zh-Hans" to "调整表格大小",
+            "ja" to "表のサイズを変更",
+            "ko" to "표 크기 조정",
+            "th" to "ปรับขนาดตาราง"
         ),
         "table_row_height" to mapOf(
             "zh-Hant" to "列高",
@@ -24408,6 +24488,17 @@ object LocalizationStrings {
             "ja" to "選択範囲を自動サイズ",
             "ko" to "선택 영역 자동 크기",
             "th" to "ปรับขนาดอัตโนมัติ"
+        )
+    )
+
+    private fun part38(): Map<String, Map<String, String>> = mapOf(
+        "table_split_cell" to mapOf(
+            "zh-Hant" to "分割儲存格",
+            "en" to "Split Cell",
+            "zh-Hans" to "拆分单元格",
+            "ja" to "セルの分割",
+            "ko" to "셀 분할",
+            "th" to "แยกเซลล์"
         ),
         "table_studio" to mapOf(
             "zh-Hant" to "表格",
@@ -24488,10 +24579,7 @@ object LocalizationStrings {
             "ja" to "Column",
             "ko" to "Column",
             "th" to "Column"
-        )
-    )
-
-    private fun part38(): Map<String, Map<String, String>> = mapOf(
+        ),
         "table_tab_content" to mapOf(
             "zh-Hant" to "內容",
             "en" to "Content",
@@ -25043,7 +25131,10 @@ object LocalizationStrings {
             "ja" to "番号つき22マス。ひとつの習慣を3週間",
             "ko" to "번호 22칸. 한 가지 습관, 3주",
             "th" to "ยี่สิบสองช่องมีเลขกำกับ"
-        ),
+        )
+    )
+
+    private fun part39(): Map<String, Map<String, String>> = mapOf(
         "tmpl_checklist_two" to mapOf(
             "zh-Hant" to "雙欄勾選清單",
             "en" to "Two-Column Checklist",
@@ -25131,10 +25222,7 @@ object LocalizationStrings {
             "ja" to "極細ドット方眼 (5mm)",
             "ko" to "극세 도트 방안 (5mm)",
             "th" to "ดอทกริดละเอียด (5 มม.)"
-        )
-    )
-
-    private fun part39(): Map<String, Map<String, String>> = mapOf(
+        ),
         "tmpl_dot_grid_fine_desc" to mapOf(
             "zh-Hant" to "視覺藝術與版面設計師專用暖灰精密點陣",
             "en" to "Warm gray precision dots for visual & layout designers",
@@ -25686,7 +25774,10 @@ object LocalizationStrings {
             "ja" to "すべてのツールが非表示です。キャンバスは最後に使ったツールのままです。",
             "ko" to "모든 도구가 숨겨졌습니다. 캔버스는 마지막에 쓰던 도구를 그대로 사용합니다.",
             "th" to "เครื่องมือทั้งหมดถูกซ่อนไว้ ผืนผ้าใบจะยังคงใช้เครื่องมือที่คุณใช้ล่าสุด"
-        ),
+        )
+    )
+
+    private fun part40(): Map<String, Map<String, String>> = mapOf(
         "toolbar_collapsed_hint" to mapOf(
             "zh-Hant" to "收合會把整列藏起來，只留下浮動的工具丸。",
             "en" to "Collapsed hides the bar entirely — only the floating tool bubble stays.",
@@ -25774,10 +25865,7 @@ object LocalizationStrings {
             "ja" to "ツールバーを初期設定に戻す",
             "ko" to "기본 도구 모음으로 되돌리기",
             "th" to "คืนค่าแถบเครื่องมือเริ่มต้น"
-        )
-    )
-
-    private fun part40(): Map<String, Map<String, String>> = mapOf(
+        ),
         "toolbar_show_labels" to mapOf(
             "zh-Hant" to "顯示文字標籤",
             "en" to "Show text labels",
@@ -26329,7 +26417,10 @@ object LocalizationStrings {
             "ja" to "カウントダウンは次回の同期後に始まります",
             "ko" to "다음 동기화 후 카운트다운이 시작됩니다",
             "th" to "การนับถอยหลังจะเริ่มหลังการซิงค์ครั้งถัดไป"
-        ),
+        )
+    )
+
+    private fun part41(): Map<String, Map<String, String>> = mapOf(
         "trash_days_left" to mapOf(
             "zh-Hant" to "還剩 %@ 天",
             "en" to "%@ days left",
@@ -26417,10 +26508,7 @@ object LocalizationStrings {
             "ja" to "手動で削除するまで保持されます",
             "ko" to "직접 삭제할 때까지 보관됩니다",
             "th" to "เก็บไว้จนกว่าคุณจะลบเอง"
-        )
-    )
-
-    private fun part41(): Map<String, Map<String, String>> = mapOf(
+        ),
         "trash_restore" to mapOf(
             "zh-Hant" to "還原",
             "en" to "Restore",
@@ -26972,7 +27060,10 @@ object LocalizationStrings {
             "ja" to "編集中（ツールバーは手書きに切り替わっています）",
             "ko" to "편집 중(도구 막대가 필기로 전환됨)",
             "th" to "กำลังแก้ไข (แถบเครื่องมือสลับเป็นลายมือแล้ว)"
-        ),
+        )
+    )
+
+    private fun part42(): Map<String, Map<String, String>> = mapOf(
         "wd_font_color" to mapOf(
             "zh-Hant" to "字型色彩",
             "en" to "Font Color",
@@ -27060,10 +27151,7 @@ object LocalizationStrings {
             "ja" to "行間",
             "ko" to "줄 간격",
             "th" to "ระยะห่างบรรทัด"
-        )
-    )
-
-    private fun part42(): Map<String, Map<String, String>> = mapOf(
+        ),
         "wd_more_colors" to mapOf(
             "zh-Hant" to "其他色彩…",
             "en" to "More Colors…",

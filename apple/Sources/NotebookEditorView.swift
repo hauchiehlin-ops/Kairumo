@@ -1565,6 +1565,12 @@ public struct NotebookEditorView: View {
         var table = updated
         table.x = notebook.tableAttachments?[index].x ?? table.x
         table.y = notebook.tableAttachments?[index].y ?? table.y
+        // 「表格內容 › 對齊與方向」落地：靠左（含從左邊縮排）／置中／靠右以頁寬換算成左緣位置。
+        // 手動拖曳過的表格 `alignmentRaw` 已被清掉（見 `moveTable`），這裡不會把它拉回去。
+        if let alignedX = table.alignedX(
+            pageWidth: PageGeometry.size.width, inset: PageGeometry.printableInset) {
+            table.x = alignedX
+        }
         notebook.tableAttachments?[index] = table
         commitNotebook()
         PageThumbnailRenderer.invalidateAll()

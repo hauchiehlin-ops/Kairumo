@@ -110,6 +110,10 @@ private fun TableObjectView(
     var liveX by remember(table.id, table.x) { mutableFloatStateOf(table.x) }
     var liveY by remember(table.id, table.y) { mutableFloatStateOf(table.y) }
     var liveRotation by remember(table.id, table.rotationDegrees) { mutableFloatStateOf(table.rotationDegrees ?: 0f) }
+    // 右下角縮放把手拖曳中的外框（頁面點）。放手才重算版面（`scaleTo`），拖曳中只畫外框預覽。
+    var liveWidth by remember(table.id, layout.width) { mutableFloatStateOf(layout.width.toFloat()) }
+    var liveHeight by remember(table.id, layout.height) { mutableFloatStateOf(layout.height.toFloat()) }
+    var isResizing by remember(table.id) { androidx.compose.runtime.mutableStateOf(false) }
     val foreground = MaterialTheme.colorScheme.onSurface
     val ruleColor = table.ruleColorHex
         ?.let { hex -> ChartColorOrNull(hex) }
@@ -238,7 +242,41 @@ private fun TableObjectView(
         }
     }
 
+        if (isSelected && isResizing) {
+            // 縮放預覽：新外框。
+            Box(
+                Modifier
+                    .size(liveWidth.dp, liveHeight.dp)
+                    .border(1.5.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.7f))
+            )
+        }
+
         if (isSelected) {
+            // 畫布上的表格可以拖右下角縮放，欄寬與列高等比例跟著縮放（與 Apple 端一致）。
+            if (!moveLocked) com.kairumo.padnote.canvas.ResizeHandle(
+                widthDp = liveWidth,
+                heightDp = liveHeight,
+                density = density,
+                onResize = { dw, dh ->
+                    isResizing = true
+                    editingCell = null
+                    // 旋轉過的表格：位移換回表格自己的座標系（往「它的右下」拉才是放大）。
+                    val rad = -(currentTable.rotationDegrees ?: 0f) * kotlin.math.PI / 180.0
+                    val c = kotlin.math.cos(rad).toFloat()
+                    val s = kotlin.math.sin(rad).toFloat()
+                    liveWidth = maxOf(currentTable.cols * NoteTable.MIN_COLUMN_WIDTH.toFloat(), liveWidth + dw * c - dh * s)
+                    liveHeight = maxOf(currentTable.rows * NoteTable.MIN_ROW_OVERRIDE.toFloat(), liveHeight + dw * s + dh * c)
+                },
+                onCommit = {
+                    if (isResizing) {
+                        isResizing = false
+                        val t = currentTable
+                        t.scaleTo(liveWidth, liveHeight)
+                        onChanged(t)
+                    }
+                }
+            )
+
             StyleHandle(
                 widthDp = layout.width.toFloat(),
                 heightDp = layout.height.toFloat(),
@@ -288,16 +326,28 @@ fun TablePreview(
         else -> ChartColorOrNull(hex) ?: foreground.copy(alpha = 0.06f)
     }
 
+    // 底色：與 Apple `NoteTableView.cellFill` 同一個判斷（`fillRole`），畫布、縮圖、匯出同源（I4）。
+    val fills = layout.cells.mapNotNull { cell ->
+        val color = when (val role = table.fillRole(cell.row.toInt(), cell.col.toInt(), cell.isHeader)) {
+            is TableCellFillRole.Own ->
+                if (role.hex == "clear") Color.Transparent else ChartColorOrNull(role.hex)
+            TableCellFillRole.Header -> headerFill
+            TableCellFillRole.BandedRow -> foreground.copy(alpha = 0.04f)
+            TableCellFillRole.BandedColumn -> foreground.copy(alpha = 0.025f)
+            null -> null
+        }
+        color?.let { cell to it }
+    }
+
     Canvas(
         modifier.size(layout.width.toFloat().dp, layout.height.toFloat().dp)
     ) {
         // Canvas 內部是像素，版面是頁面點 —— 乘上 density。
         val scale = density
-        // 表頭底色先畫，才會在格線與文字下面。
-        for (cell in layout.cells) {
-            if (!cell.isHeader) continue
+        // 底色先畫，才會在格線與文字下面。
+        for ((cell, color) in fills) {
             drawRect(
-                color = headerFill,
+                color = color,
                 topLeft = Offset((cell.x * scale).toFloat(), (cell.y * scale).toFloat()),
                 size = Size((cell.width * scale).toFloat(), (cell.height * scale).toFloat())
             )
@@ -305,44 +355,77 @@ fun TablePreview(
 
         drawIntoCanvas { canvas ->
             val native = canvas.nativeCanvas
+            // 線寬與虛線樣式與 Apple 一致（「框線及網底」改的就是這兩個）。線寬單位是點。
+            val lineWidth = table.resolvedBorderWidth
+            val dash = table.resolvedBorderStyle.dashPattern(lineWidth)
             val stroke = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
                 style = android.graphics.Paint.Style.STROKE
-                strokeWidth = 1f
+                strokeWidth = lineWidth * scale
                 color = ruleColor.toArgb()
+                if (dash.isNotEmpty()) {
+                    pathEffect = android.graphics.DashPathEffect(FloatArray(dash.size) { dash[it] * scale }, 0f)
+                }
             }
-            for (rule in layout.rules) {
-                native.drawLine(
-                    (rule.x1 * scale).toFloat(), (rule.y1 * scale).toFloat(),
-                    (rule.x2 * scale).toFloat(), (rule.y2 * scale).toFloat(), stroke
-                )
+            // 一條路徑畫完（與 Apple 同一個 path）：硬體加速下 drawLine 不一定套得上虛線。
+            if (layout.rules.isNotEmpty()) {
+                val path = android.graphics.Path()
+                for (rule in layout.rules) {
+                    path.moveTo((rule.x1 * scale).toFloat(), (rule.y1 * scale).toFloat())
+                    path.lineTo((rule.x2 * scale).toFloat(), (rule.y2 * scale).toFloat())
+                }
+                native.drawPath(path, stroke)
             }
 
-            val text = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
-                color = foreground.toArgb()
-                textSize = table.fontSize * scale
-            }
-            val lineHeight = table.fontSize * 1.35f * scale
+            val text = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
+            val inset = TABLE_CELL_INSET * scale
             for (cell in layout.cells) {
-                text.isFakeBoldText = cell.isHeader
-                var baseline = (cell.y * scale).toFloat() + lineHeight
+                if (cell.lines.isEmpty()) continue
+                val style = table.style(cell.row.toInt(), cell.col.toInt())
+                val size = (style.fontSize?.toFloat() ?: table.fontSize) * scale
+                text.textSize = size
+                text.color = style.textColorHex?.let { ChartColorOrNull(it) }?.toArgb() ?: foreground.toArgb()
+                // 表頭預設粗體；使用者明確設定（或取消）粗體時以設定為準（與 Apple `resolvedFont` 相同）。
+                text.isFakeBoldText = style.bold ?: cell.isHeader
+                text.textSkewX = if (style.italic == true) -0.25f else 0f
+                text.isUnderlineText = style.underline == true
+                text.isStrikeThruText = style.strikethrough == true
+                val lineHeight = size * 1.35f
+                val left = (cell.x * scale).toFloat()
+                val top = (cell.y * scale).toFloat()
+                val w = (cell.width * scale).toFloat()
+                val h = (cell.height * scale).toFloat()
+                val blockHeight = lineHeight * cell.lines.size
+                val yOffset = when (style.vAlign) {
+                    "middle" -> maxOf(0f, (h - blockHeight) / 2f)
+                    "bottom" -> maxOf(0f, h - blockHeight - (lineHeight - size))
+                    else -> 0f
+                }
+                native.save()
+                native.clipRect(left, top, left + w, top + h)
+                var baseline = top + yOffset + lineHeight
                 for (line in cell.lines) {
                     val displayText = if (line.trim().startsWith("=")) {
                         TableFormulaEvaluator.evaluateCell(line, table.cells, table.rows, table.cols)
                     } else {
                         line
                     }
-                    native.drawText(
-                        displayText,
-                        (cell.x * scale).toFloat() + 6f * scale,
-                        baseline,
-                        text
-                    )
+                    val textWidth = text.measureText(displayText)
+                    val x = when (style.hAlign) {
+                        "center" -> left + (w - textWidth) / 2f
+                        "right" -> left + w - inset - textWidth
+                        else -> left + inset
+                    }
+                    native.drawText(displayText, x, baseline, text)
                     baseline += lineHeight
                 }
+                native.restore()
             }
         }
     }
 }
+
+/** 格子左右內距（點）。與 Apple `NoteTableAttachment.cellInset` 相同。 */
+private const val TABLE_CELL_INSET = 6f
 
 /** 解析 `#RRGGBB`，失敗時回 `null`（讓呼叫端自己挑 fallback）。 */
 private fun ChartColorOrNull(hex: String): Color? =

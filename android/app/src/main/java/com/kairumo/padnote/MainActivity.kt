@@ -630,6 +630,10 @@ private fun InkScreen(
             pageIndex = pageIndex,
             pageCount = pageCount,
             pageDisplayMode = pageDisplayMode,
+            // 原本沒傳：工具列永遠顯示預設的「A4」與退回字樣，選了別的規格／色彩也看不出來。
+            currentFormat = meta.pageFormatId().ifEmpty { uniffi.padnote_core.defaultPageFormatId() },
+            currentPalette = meta.paletteId().ifEmpty { uniffi.padnote_core.guidePalettes().first().id },
+            hasSelectedObject = hasReorderableSelection(),
             isCollabConnected = collabActive,
             recording = recording,
             recordingPaused = recordingPaused,
@@ -655,7 +659,9 @@ private fun InkScreen(
             hasFolderSyncUri = FolderSync.folderUri(activity) != null
         )
 
-        val topBarActions = EditorTopBarActions(
+        // 其餘工具列動作（錄音、紙張規格、框選、縮放……）接在 EditorTopBarWiring.kt：
+        // 留在這裡會讓 InkScreen 再次逼近 ART 驗證器上限。
+        val topBarActions = withRestoredTopBarWiring(EditorTopBarActions(
             onBack = onBack,
             onToggleSidebar = { showPageSidebar = !showPageSidebar },
             onEnterMinimalist = { minimalistCanvasMode = true },
@@ -678,7 +684,6 @@ private fun InkScreen(
                 )
                 showRadialMenu = !showRadialMenu
             },
-            onToggleTabletop = { isTabletopActive = !isTabletopActive },
             onUndo = { globalUndo() },
             onRedo = { globalRedo() },
             onRevertInitial = { showRevertConfirm = true },
@@ -774,10 +779,11 @@ private fun InkScreen(
                 stackRevision++
             },
             onInsertSymbol = { showSymbolPicker = true },
-            onFormatAction = { action -> applyFormatToSelectedText(action) },
+            // 沒有選中的文字方塊時格式鈕不會改到任何東西：說明要先點一個方塊，不要安靜地失效。
+            onFormatAction = { action -> if (!applyFormatToSelectedText(action)) message = l10n("mode_type_hint") },
             onInsertLink = { insertingLink = true },
             onInsertModel3D = { insertingModel3D = true }
-        )
+        ))
 
         val formatTarget = selectedTextId?.let { textStore.find(it) }
 

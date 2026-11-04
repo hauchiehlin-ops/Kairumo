@@ -1787,10 +1787,27 @@ extension NotebookEditorView {
             all[index].y += landed.y - moved.minY
             applied = CGSize(width: all[index].x - previous.x, height: all[index].y - previous.y)
         }
+        // 手動拖過就不再是「置中／靠右」：留著的話，下次開「表格內容」按確認會被拉回去。
+        all[index].alignmentRaw = nil
         notebook.tableAttachments = all
         commitNotebook()
         finishPageCrossing(ids: [], to: nil)
         // 專案 ADR-0015 筆跡單一真相：移動表格絕不私自搬動畫布筆畫，避免使用者既有筆跡被吸附拖走。
+    }
+
+    /// 畫布上拖右下角把手縮放表格：外框變成 `size`，欄寬與列高等比例跟著縮放。
+    func resizeTable(_ id: String, to size: CGSize) {
+        let normId = id.lowercased()
+        guard let index = notebook.tableAttachments?.firstIndex(where: { $0.id.lowercased() == normId }),
+              var table = notebook.tableAttachments?[index] else { return }
+        table.scale(to: size)
+        notebook.tableAttachments?[index] = table
+        commitNotebook()
+        PageThumbnailRenderer.invalidateAll()
+        if let data = try? JSONEncoder().encode(table),
+           let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+            collaborationManager.broadcastAttachmentUpsert(type: "table", itemDict: dict)
+        }
     }
 
     func tableBinding(for id: String) -> Binding<NoteTableAttachment> {
