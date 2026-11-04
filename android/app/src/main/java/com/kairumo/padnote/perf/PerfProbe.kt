@@ -26,7 +26,8 @@ enum class PerfPoint(val budgetMs: Double) {
 }
 
 /** 與裝置速度無關的「次數型」成本計數。測試用它斷言某件事沒有發生、且不隨筆記大小成長。 */
-enum class CostCounter { PrefetchScheduled, ThumbnailComposeOnMain, BackingFullRebuild, BackingPatch }
+/** [MainThreadAttachmentLoad]：主執行緒上同步讀圖片 blob＋解碼（與 Apple `mainThreadAttachmentLoad` 同義）。 */
+enum class CostCounter { PrefetchScheduled, ThumbnailComposeOnMain, BackingFullRebuild, BackingPatch, MainThreadAttachmentLoad }
 
 class PerfProbe(private val tracer: Tracer = Tracer.Android) {
 

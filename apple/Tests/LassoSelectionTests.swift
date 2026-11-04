@@ -143,8 +143,52 @@ final class LassoSelectionTests: XCTestCase {
         let mergedNew = InkMerge.merged(disk: drawing, local: drawingWithNew, base: nil)
         XCTAssertEqual(mergedNew.strokes.count, 3, "本地新寫的筆畫絕不可被舊 disk 吞噬")
     }
+
+    // MARK: - 框選（插入 › 框選）也選筆跡
+
+    func testMarqueeRectSelectsStrokesOnlyNoObjects() {
+        let lasso = LassoSelection()
+        lasso.objectCandidates = { [(id: "obj", frame: CGRect(x: 90, y: 90, width: 20, height: 20))] }
+        let drawing = sampleDrawing()
+        lasso.selectStrokes(in: CGRect(x: 80, y: 80, width: 140, height: 40), drawing: drawing, additive: false)
+        XCTAssertEqual(lasso.selected, IndexSet([0]))
+        XCTAssertEqual(lasso.strokeSelectionCount, 1)
+        XCTAssertTrue(lasso.objectIds.isEmpty, "物件由框選自己管，不能被套索再選一次（會搬兩次）")
+        XCTAssertNotNil(lasso.strokeBounds)
+    }
+
+    func testMarqueeAdditiveAccumulatesAndEmptyRectClears() {
+        let lasso = LassoSelection()
+        let drawing = sampleDrawing()
+        lasso.selectStrokes(in: CGRect(x: 80, y: 80, width: 140, height: 40), drawing: drawing, additive: false)
+        lasso.selectStrokes(in: CGRect(x: 480, y: 480, width: 140, height: 40), drawing: drawing, additive: true)
+        XCTAssertEqual(lasso.selected, IndexSet([0, 1]))
+        lasso.selectStrokes(in: CGRect(x: 900, y: 900, width: 40, height: 40), drawing: drawing, additive: false)
+        XCTAssertTrue(lasso.selected.isEmpty)
+        XCTAssertNil(lasso.strokeBounds)
+    }
+
+    func testMarqueeSelectAllThenDeleteRemovesEveryStroke() throws {
+        let lasso = LassoSelection()
+        let drawing = sampleDrawing()
+        lasso.selectAllStrokes(in: drawing)
+        XCTAssertEqual(lasso.strokeSelectionCount, 2)
+        let after = try XCTUnwrap(lasso.deleteSelected(from: drawing))
+        XCTAssertTrue(after.strokes.isEmpty)
+        XCTAssertFalse(lasso.hasSelection)
+    }
+
+    func testMarqueeMoveTranslatesSelectedStrokesOnly() throws {
+        let lasso = LassoSelection()
+        let drawing = sampleDrawing()
+        lasso.selectStrokes(in: CGRect(x: 80, y: 80, width: 140, height: 40), drawing: drawing, additive: false)
+        let moved = try XCTUnwrap(lasso.moveStrokesForMarquee(in: drawing, by: CGSize(width: 30, height: 40)))
+        XCTAssertEqual(moved.strokes[0].renderBounds.midY, drawing.strokes[0].renderBounds.midY + 40, accuracy: 0.5)
+        XCTAssertEqual(moved.strokes[1].renderBounds, drawing.strokes[1].renderBounds, "沒選到的筆畫不動")
+    }
 }
 
 private extension CGRect {
     var center: CGPoint { CGPoint(x: midX, y: midY) }
 }
+

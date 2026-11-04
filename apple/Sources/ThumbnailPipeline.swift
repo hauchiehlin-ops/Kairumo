@@ -165,7 +165,21 @@ final class ThumbnailPipeline {
             scale: scale,
             dark: UITraitCollection.current.userInterfaceStyle == .dark)
         let startedEpoch = epoch
+        // 這一頁的圖片（含圖表）與風格濾鏡也在背景先解好：原本 `finish` 在主執行緒合成時逐張
+        // 讀檔＋解碼＋逐像素套濾鏡，圖多的大筆記本一開啟，側欄一整排縮圖就把主執行緒佔滿。
+        let images = (r.notebook.attachments ?? [])
+            .filter { $0.pageIndex == r.pageIndex }
+            .map { ImagePrefetch(fileName: $0.fileName, filter: $0.filterStyle) }
+        let memory = r.store.imageMemory
+        let directory = r.store.attachmentsDirectory
         BackgroundScheduler.shared.submit(.visible) {
+            memory.prefetch(images.map(\.fileName), directory: directory)
+            for item in images where item.filter != .original {
+                let key = ImageEffects.filteredCacheKey(fileName: item.fileName, filter: item.filter)
+                if ImageEffects.cachedFiltered(key: key) == nil, let base = memory.image(for: item.fileName) {
+                    _ = ImageEffects.makeFiltered(base, filter: item.filter, key: key)
+                }
+            }
             let ink = UncheckedBox(PageThumbnailRenderer.rasterizeInk(
                 drawing: input.drawing, pro: input.pro, pageSize: input.pageSize,
                 size: input.size, scale: input.scale, dark: input.dark))
@@ -191,6 +205,12 @@ final class ThumbnailPipeline {
         pumping = false
         if !pending.isEmpty { pump(after: FrameGovernor.shared.thumbnailGap) }
     }
+}
+
+/// 縮圖背景工作要預載的一張圖。
+private struct ImagePrefetch: @unchecked Sendable {
+    let fileName: String
+    let filter: ImageFilterStyle
 }
 
 /// 送到背景點陣化的輸入。都是值型別，送出後主執行緒不再改動。

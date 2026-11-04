@@ -1376,6 +1376,95 @@ extension NotebookEditorView {
         applyLassoResult(updated)
     }
 
+    // MARK: - 框選的筆跡（插入 › 框選）
+    //
+    // 框選原本只選物件；筆跡（套索才選得到）在打字模式下完全碰不到 —— 工具列顯示「已選 3 個」，
+    // 卻只有物件被搬走、筆跡留在原地。這裡把筆跡併進框選：選取與動作都走套索既有的端口
+    // （`LassoSelection` ＋ `applyLassoResult`），筆畫變動當下寫成 InkLog 事件（I2）、刪除寫墓碑（I3），
+    // 不另開一條寫入路徑。
+
+    /// 框選目前選到的總數（物件＋筆跡）。
+    var marqueeSelectionCount: Int { selectedObjectIds.count + lasso.strokeSelectionCount }
+
+    func marqueeSelectStrokes(in rect: CGRect, additive: Bool) {
+        syncDrawingFromCanvas()
+        lasso.selectStrokes(in: rect, drawing: currentDrawing, additive: additive)
+    }
+
+    func marqueeSelectAll() {
+        selectedObjectIds = Set(marqueeCandidates.map(\.id))
+        syncDrawingFromCanvas()
+        lasso.selectAllStrokes(in: currentDrawing)
+    }
+
+    func marqueeDeselectAll() {
+        selectedObjectIds = []
+        lasso.clear()
+    }
+
+    /// 整組拖曳放手：物件與筆跡一起位移。
+    func marqueeMoveSelection(by delta: CGSize) {
+        moveSelection(by: delta)
+        guard lasso.strokeSelectionCount > 0, delta != .zero else { return }
+        syncDrawingFromCanvas()
+        if let updated = lasso.moveStrokesForMarquee(in: currentDrawing, by: delta) {
+            applyLassoResult(updated)
+        }
+    }
+
+    func marqueeCopy() {
+        if selectedObjectIds.isEmpty {
+            // 只複製了筆跡：上一次留下的物件剪貼簿不能跟著貼出來。
+            objectClipboard = []
+        } else {
+            copySelection()
+        }
+        syncDrawingFromCanvas()
+        // 沒選筆跡時這一步會把筆跡剪貼簿清空 —— 同理，只複製物件就不要貼出舊筆跡。
+        lasso.copySelected(from: currentDrawing)
+        if selectedObjectIds.isEmpty && lasso.strokeSelectionCount > 0 {
+            showCanvasNotice(localizationManager.localized("copy_selected_hint"))
+        }
+    }
+
+    func marqueeCut() {
+        if selectedObjectIds.isEmpty { objectClipboard = [] } else { cutSelection() }
+        syncDrawingFromCanvas()
+        if lasso.strokeSelectionCount > 0, let updated = lasso.cutSelected(from: currentDrawing) {
+            applyLassoResult(updated)
+        } else {
+            lasso.copySelected(from: currentDrawing)   // 清掉舊的筆跡剪貼簿
+        }
+    }
+
+    var marqueeCanPaste: Bool {
+        !objectClipboard.isEmpty || lasso.canPaste || getClipboardImage() != nil
+    }
+
+    func marqueePaste() {
+        let strokesOnly = objectClipboard.isEmpty && lasso.canPaste
+        // 只有筆跡時不走 `pasteClipboard()`：它在物件剪貼簿為空時會改貼系統剪貼簿的圖片。
+        if !strokesOnly { pasteClipboard() }
+        if lasso.canPaste {
+            syncDrawingFromCanvas()
+            if let updated = lasso.paste(into: currentDrawing) { applyLassoResult(updated) }
+        }
+    }
+
+    func marqueeDuplicate() {
+        if !selectedObjectIds.isEmpty { duplicateSelection() }
+        guard lasso.strokeSelectionCount > 0 else { return }
+        syncDrawingFromCanvas()
+        if let updated = lasso.duplicateSelected(in: currentDrawing) { applyLassoResult(updated) }
+    }
+
+    func marqueeDelete() {
+        if !selectedObjectIds.isEmpty { deleteSelection() }
+        guard lasso.strokeSelectionCount > 0 else { return }
+        syncDrawingFromCanvas()
+        if let updated = lasso.deleteSelected(from: currentDrawing) { applyLassoResult(updated) }
+    }
+
     // MARK: - 🌟 次世代專業筆刷與手寫轉換 (CSP 防抖、對稱尺規、套索 OCR 轉文字)
     func recognizeHandwritingToTextBox() {
         // 與刪除／剪下一樣先以畫布上看得到的那一份為準：選取索引是對著它算的。

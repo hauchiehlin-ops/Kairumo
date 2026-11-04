@@ -44,6 +44,19 @@ object FileImport {
      * 東西，核心的 `importCheck` 會在挑完之後擋下不對的格式。把挑選器
      * 縮到只剩一半格式的話，他會以為自己的檔案壞了。
      */
+    /**
+     * 選單項目後面標示的格式（例如「PNG/JPG/HEIC/GIF…」）。清單來自核心（`importExtensions`），
+     * 核心多收一種格式，選單自動跟上，不會寫死一份會過期的字串。與 Apple `FileImport.formatSummary` 同一個規則。
+     */
+    fun formatSummary(slot: FfiImportSlot, limit: Int = 4): String = summarize(importExtensions(slot), limit)
+
+    /** 純函式部分（JVM 測試用）：大寫、JPEG 併入 JPG、去重，超過 [limit] 個加「…」。 */
+    fun summarize(extensions: List<String>, limit: Int = 4): String {
+        val names = extensions.map { if (it.equals("jpeg", true)) "JPG" else it.uppercase() }.distinct()
+        val shown = names.take(limit).joinToString("/")
+        return if (names.size > limit) "$shown…" else shown
+    }
+
     fun mimeTypes(slot: FfiImportSlot): Array<String> {
         val map = MimeTypeMap.getSingleton()
         // 文件槽：pptx 核心只能存成「預覽用的嵌入區塊」（只知道張數），平台沒有原生元件

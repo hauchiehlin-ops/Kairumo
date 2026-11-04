@@ -1473,7 +1473,15 @@ internal fun ColumnScope.EditorCanvasContainer(ctx: EditorCanvasContext) = with(
                     selectedIds = marqueeSelection,
                     additive = marqueeAdditive,
                     onSelectionChange = { marqueeSelection = it },
-                    onCommitMove = { dx, dy -> moveMarqueeSelection(dx, dy) }
+                    onCommitMove = { dx, dy ->
+                        moveMarqueeSelection(dx, dy)
+                        // 筆跡一起搬：核心平移，當下寫成事件（I2）。
+                        if (lasso.translateStrokes(dx, dy, engine)) revision++
+                    },
+                    // 框選也選筆跡（與 Apple 一致）：同一個框交給核心的 lassoSelect。
+                    strokeBounds = lasso.strokeBounds,
+                    onMarqueeRect = { box, add -> lasso.selectStrokesInRect(box, engine, add) },
+                    onTapEmpty = { lasso.clear() }
                 )
             }
 

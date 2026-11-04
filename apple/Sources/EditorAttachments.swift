@@ -115,6 +115,17 @@ struct AttachmentItemView: View {
     /// 手勢開始時的原始尺寸。translation 是「從起點累計」的量，
     /// 若每幀都加到已更新的寬度上，尺寸會以平方成長。
     @State private var resizeBaseSize: CGSize? = nil
+    /// 已套風格濾鏡的圖（背景算好後放這裡）。鍵對不上目前的檔名＋濾鏡就不用。
+    @State private var filtered: (key: String, image: UIImage)? = nil
+    /// 背景載入完成的原圖（記憶體快取被擠掉時仍有一份可畫）。
+    @State private var loadedImage: (fileName: String, image: UIImage)? = nil
+
+    /// 只查記憶體，不讀檔（Layer 3）。沒命中時顯示佔位，`.task` 在背景讀檔解碼。
+    private var baseImage: UIImage? {
+        if let hit = store.cachedAttachmentImage(fileName: attachment.fileName) { return hit }
+        if let loadedImage, loadedImage.fileName == attachment.fileName { return loadedImage.image }
+        return nil
+    }
 
     private var lockedByPeer: CollaboratorPeer? {
         // 租約有效（5 秒內有續約）而且對方勝出才算鎖住 —— 對方當機時物件不會永遠鎖住。
@@ -124,18 +135,41 @@ struct AttachmentItemView: View {
     private var displayWidth: CGFloat { liveSize?.width ?? attachment.width }
     private var displayHeight: CGFloat { liveSize?.height ?? attachment.height }
 
+    private var filterKey: String {
+        ImageEffects.filteredCacheKey(fileName: attachment.fileName, filter: attachment.filterStyle)
+    }
+
+    /// 風格濾鏡：與側欄縮圖、匯出同一個 `ImageEffects.apply`（I4）。還沒算好時先顯示原圖，不在主執行緒逐像素運算。
+    private func filteredImage(_ base: UIImage) -> UIImage {
+        guard attachment.filterStyle != .original else { return base }
+        if let hit = ImageEffects.cachedFiltered(key: filterKey) { return hit }
+        if let filtered, filtered.key == filterKey { return filtered.image }
+        return base
+    }
+
+    private func prepareFiltered(_ base: UIImage) async {
+        let style = attachment.filterStyle, key = filterKey
+        guard style != .original, ImageEffects.cachedFiltered(key: key) == nil else { return }
+        let box = UncheckedImageBox(image: base)
+        let out = await Task.detached(priority: .userInitiated) {
+            UncheckedImageBox(image: ImageEffects.makeFiltered(box.image, filter: style, key: key))
+        }.value
+        guard !Task.isCancelled else { return }
+        filtered = (key, out.image)
+    }
+
     var body: some View {
         let currentX = attachment.x + dragOffset.width
         let currentY = attachment.y + dragOffset.height
 
         ZStack(alignment: .topTrailing) {
             Group {
-                if let uiImage = store.loadAttachmentImage(fileName: attachment.fileName) {
-                    Image(uiImage: uiImage)
+                if let uiImage = baseImage {
+                    Image(uiImage: filteredImage(uiImage))
                         .resizable()
                         .aspectRatio(contentMode: .fit)
                         .frame(width: displayWidth, height: displayHeight)
-                        .modifier(ImageFilterModifier(filter: attachment.filterStyle))
+                        .task(id: filterKey) { await prepareFiltered(uiImage) }
                         .objectMaterial(attachment.materialType)
                         .background(
                             RoundedRectangle(cornerRadius: attachment.cornerRadius)
@@ -177,6 +211,14 @@ struct AttachmentItemView: View {
                         .overlay(
                             ProgressView()
                         )
+                }
+            }
+            // 開啟圖多的大筆記本時，原本每張圖第一次畫都在主執行緒讀檔＋解碼。改成背景預載。
+            .task(id: attachment.fileName) {
+                guard baseImage == nil else { return }
+                let name = attachment.fileName
+                if let img = await store.loadAttachmentImageAsync(fileName: name), !Task.isCancelled {
+                    loadedImage = (name, img)
                 }
             }
             .contentShape(Rectangle())
@@ -363,35 +405,6 @@ struct AttachmentItemView: View {
         .padding(20)
         .position(x: currentX + displayWidth / 2, y: currentY + displayHeight / 2)
         .animation(nil, value: dragOffset)
-    }
-}
-
-/// 圖片濾鏡 ViewModifier
-struct ImageFilterModifier: ViewModifier {
-    let filter: ImageFilterStyle
-
-    func body(content: Content) -> some View {
-        switch filter {
-        case .original:
-            content
-        case .vintage:
-            content
-                .colorMultiply(Color(red: 0.95, green: 0.88, blue: 0.75))
-                .contrast(1.1)
-                .saturation(0.8)
-        case .mono:
-            content
-                .grayscale(1.0)
-                .contrast(1.2)
-        case .contrast:
-            content
-                .contrast(1.3)
-                .saturation(1.2)
-        case .warm:
-            content
-                .colorMultiply(Color(red: 1.0, green: 0.93, blue: 0.85))
-                .brightness(0.04)
-        }
     }
 }
 
@@ -1789,4 +1802,9 @@ struct RemoteCursorsOverlay: View {
         }
         .allowsHitTesting(false)
     }
+}
+
+/// `UIImage` 跨執行緒傳遞用。圖片建好後不再改動，只讀。
+private struct UncheckedImageBox: @unchecked Sendable {
+    let image: UIImage
 }

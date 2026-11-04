@@ -4,7 +4,8 @@
 //
 //  圖片的濾鏡與材質，給縮圖與匯出用。
 //
-//  畫布上這些是 SwiftUI 修飾詞（`ImageFilterModifier`、`ObjectMaterialModifier`）；匯出走 UIKit/CoreGraphics，
+//  風格濾鏡：畫布、縮圖、匯出都走這裡的 `apply`（同一組色彩矩陣，見 `filterMatrix`）。
+//  材質：畫布上是 SwiftUI 修飾詞（`ObjectMaterialModifier`）；匯出走 UIKit/CoreGraphics，
 //  原本**完全沒有畫它們** —— 使用者套了「復古」或「黃金」的圖，匯出來是原圖。這裡把同一組數字用逐像素運算
 //  重做一遍，順序也照畫布（先濾鏡、再材質、最後蓋上漸層）。數字改了要兩邊一起改。
 //
@@ -21,6 +22,8 @@ enum ImageEffects {
         /// SwiftUI `grayscale(amount)`：以飽和度 `1 - amount` 近似。
         case grayscale(CGFloat)
         case brightness(CGFloat)
+        /// 3×4 色彩矩陣（列優先，偏移量以 0…1 計）。風格濾鏡一律用這個。
+        case matrix([Float])
     }
 
     struct Overlay {
@@ -29,14 +32,66 @@ enum ImageEffects {
         var end: CGPoint
     }
 
-    private static func steps(for filter: ImageFilterStyle) -> [Step] {
+    /// 風格濾鏡的色彩矩陣（3×4，列優先：`r' = m0·r + m1·g + m2·b + m3`，偏移量以 0…1 計，alpha 不動）。
+    ///
+    /// **這是兩端唯一的定義（I4／I6）**：畫布（`AttachmentItemView`）、側欄縮圖與匯出（`PageThumbnailRenderer`）
+    /// 都經 `apply` 套同一組數字；Android `ImageFilterStyle.matrix` 必須逐字相同
+    /// （`ImageFilterParityTest` 會讀這個檔案比對）。
+    ///
+    /// 原本是 SwiftUI 的 `colorMultiply`／`contrast` 疊加：乘法對透明底、深色線條的素材圖（素材圖庫大多是這種）
+    /// 幾乎沒有可見差異 —— 深藍線條乘上 0.95/0.88/0.75 還是深藍，使用者看起來就是「點了沒作用」；
+    /// Android 則各自寫了一組不同的矩陣，同一張圖兩端長得不一樣。改成每一種都會讓線條與底色明顯變化的矩陣。
+    static func filterMatrix(_ filter: ImageFilterStyle) -> [Float]? {
         switch filter {
-        case .original: return []
-        case .vintage: return [.multiply(0.95, 0.88, 0.75), .contrast(1.1), .saturation(0.8)]
-        case .mono: return [.grayscale(1.0), .contrast(1.2)]
-        case .contrast: return [.contrast(1.3), .saturation(1.2)]
-        case .warm: return [.multiply(1.0, 0.93, 0.85), .brightness(0.04)]
+        case .original: return nil
+        // 復古：標準棕褐（sepia）。深藍線條變深棕，白底變米色。
+        case .vintage: return [0.393, 0.769, 0.189, 0,
+                               0.349, 0.686, 0.168, 0,
+                               0.272, 0.534, 0.131, 0]
+        // 黑白：Rec.709 亮度 ×1.25，以 0.5 為中心拉對比。
+        case .mono: return [0.2658, 0.8940, 0.0903, -0.125,
+                            0.2658, 0.8940, 0.0903, -0.125,
+                            0.2658, 0.8940, 0.0903, -0.125]
+        // 清晰：飽和 1.25 後對比 1.3。
+        case .contrast: return [1.5559, -0.2324, -0.0235, -0.15,
+                                -0.0691, 1.3926, -0.0235, -0.15,
+                                -0.0691, -0.2324, 1.6015, -0.15]
+        // 柔光：壓低對比、提亮並偏暖。深色線條變柔和，白底帶一點奶油色。
+        case .warm: return [0.90, 0, 0, 0.12,
+                            0, 0.88, 0, 0.08,
+                            0, 0, 0.78, 0.05]
         }
+    }
+
+    private static func steps(for filter: ImageFilterStyle) -> [Step] {
+        filterMatrix(filter).map { [.matrix($0)] } ?? []
+    }
+
+    // MARK: 畫布用的濾鏡結果快取
+
+    /// 已套濾鏡的圖（只含濾鏡，材質仍由畫布的 `ObjectMaterialModifier` 疊）。
+    /// 以「檔名＋濾鏡」為鍵：同一張圖換濾鏡、切頁回來都不必重算。
+    // profile-scope: device 只是解碼後的像素快取，以附件檔名（全域唯一）為鍵，不含任何設定檔狀態
+    private static let filteredCache: NSCache<NSString, UIImage> = {
+        let c = NSCache<NSString, UIImage>()
+        c.totalCostLimit = 96 * 1024 * 1024
+        return c
+    }()
+
+    static func filteredCacheKey(fileName: String, filter: ImageFilterStyle) -> String {
+        "\(fileName)|\(filter.rawValue)"
+    }
+
+    static func cachedFiltered(key: String) -> UIImage? {
+        filteredCache.object(forKey: key as NSString)
+    }
+
+    /// 算出並快取濾鏡結果。逐像素運算，**呼叫端要在背景執行**。
+    static func makeFiltered(_ image: UIImage, filter: ImageFilterStyle, key: String) -> UIImage {
+        let out = apply(filter: filter, material: nil, to: image)
+        let cost = (out.cgImage.map { $0.bytesPerRow * $0.height }) ?? 1
+        filteredCache.setObject(out, forKey: key as NSString, cost: cost)
+        return out
     }
 
     private static let diagonal = (start: CGPoint(x: 0, y: 0), end: CGPoint(x: 1, y: 1))
@@ -132,6 +187,11 @@ enum ImageEffects {
                 case let .brightness(d):
                     let k = Float(d)
                     r += k; g += k; b += k
+                case let .matrix(m):
+                    let (r0, g0, b0) = (r, g, b)
+                    r = m[0] * r0 + m[1] * g0 + m[2] * b0 + m[3]
+                    g = m[4] * r0 + m[5] * g0 + m[6] * b0 + m[7]
+                    b = m[8] * r0 + m[9] * g0 + m[10] * b0 + m[11]
                 }
             }
             func out(_ v: Float) -> UInt8 { UInt8(max(0, min(1, v)) * alpha * 255 + 0.5) }

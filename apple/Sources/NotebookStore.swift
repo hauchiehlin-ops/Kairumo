@@ -2715,14 +2715,9 @@ public final class NotebookStore: ObservableObject {
         attachmentsDirectory.appending(path: fileName)
     }
 
-    /// 記憶體層級圖片快取，徹底消除物件拖曳時每秒 60-120 次磁碟讀取解碼產生的殘影與掉幀；
-    /// 設定明確的數量與位元組上限（最多 64 張或 128MB），防止數百 MB～GB 級多圖大筆記本耗盡記憶體。
-    private let imageCache: NSCache<NSString, UIImage> = {
-        let cache = NSCache<NSString, UIImage>()
-        cache.countLimit = 64
-        cache.totalCostLimit = 128 * 1024 * 1024
-        return cache
-    }()
+    /// 記憶體層級圖片快取，徹底消除物件拖曳時每秒 60-120 次磁碟讀取解碼產生的殘影與掉幀。
+    /// 執行緒安全（見 `AttachmentImageCache`）：背景預載直接寫進來，主執行緒只查不讀檔。
+    let imageMemory = AttachmentImageCache()
 
     /// 儲存圖片附件至本地磁碟，回傳儲存後的檔名
     public func saveAttachmentImage(_ image: UIImage) -> String? {
@@ -2732,23 +2727,42 @@ public final class NotebookStore: ObservableObject {
         do {
             try data.write(to: fileUrl, options: .atomic)
             let cost = Int(image.size.width * image.scale * image.size.height * image.scale * 4)
-            imageCache.setObject(image, forKey: fileName as NSString, cost: max(cost, data.count))
+            imageMemory.insert(image, for: fileName, cost: max(cost, data.count))
             return fileName
         } catch {
             return nil
         }
     }
 
-    /// 讀取圖片附件（優先自記憶體快取命中，未命中則自磁碟讀取並寫入快取）
+    /// 只查記憶體快取，**不碰磁碟**。畫布與側欄縮圖在主執行緒上一律用這個，沒命中就走
+    /// `loadAttachmentImageAsync`／`imageMemory.prefetch`（Layer 3：主執行緒不做磁碟 I/O）。
+    public func cachedAttachmentImage(fileName: String) -> UIImage? {
+        imageMemory.image(for: fileName)
+    }
+
+    /// 背景讀一張圖（畫布用）。已在快取就直接回傳。
+    public func loadAttachmentImageAsync(fileName: String) async -> UIImage? {
+        if let hit = imageMemory.image(for: fileName) { return hit }
+        let memory = imageMemory, directory = attachmentsDirectory
+        await Task.detached(priority: .userInitiated) {
+            memory.prefetch([fileName], directory: directory)
+        }.value
+        return imageMemory.image(for: fileName)
+    }
+
+    /// 讀取圖片附件（優先自記憶體快取命中，未命中則自磁碟讀取並寫入快取）。
+    ///
+    /// 同步讀檔，只給匯出、列印這類「使用者按了才做、本來就要等」的路徑。畫布與縮圖改用
+    /// `cachedAttachmentImage` ＋背景預載；主執行緒上的未命中會記在 `mainThreadAttachmentLoad`。
     public func loadAttachmentImage(fileName: String) -> UIImage? {
-        let key = fileName as NSString
-        if let cached = imageCache.object(forKey: key) {
+        if let cached = imageMemory.image(for: fileName) {
             return cached
         }
+        if Thread.isMainThread { PerfProbe.shared.count(.mainThreadAttachmentLoad) }
         let fileUrl = attachmentsDirectory.appending(path: fileName)
         guard let data = try? Data(contentsOf: fileUrl), let img = UIImage(data: data) else { return nil }
         let cost = Int(img.size.width * img.scale * img.size.height * img.scale * 4)
-        imageCache.setObject(img, forKey: key, cost: max(cost, data.count))
+        imageMemory.insert(img, for: fileName, cost: max(cost, data.count))
         return img
     }
 
@@ -5819,7 +5833,7 @@ extension NotebookStore: ProfileScoped {
         pendingWrite = false
         needsAnotherWrite = false
         signalAfterWrite = false
-        imageCache.removeAllObjects()
+        imageMemory.removeAll()
         isHiddenCache.removeAll()
         lastIndexJSONForHidden = ""
         unmatchedIncomingTitles.removeAll()
@@ -6323,3 +6337,48 @@ extension NotebookStore {
     }
 }
 
+/// 圖片附件的記憶體快取＋背景預載。**執行緒安全**：`NSCache` 本身可跨執行緒，預載名單加鎖。
+///
+/// 從 `NotebookStore`（`@MainActor`）拆出來，背景工作才能直接持有它：側欄縮圖的點陣化工作順手把
+/// 這一頁要畫的圖解好，主執行緒合成時只剩貼圖（見 `ThumbnailPipeline`）。
+final class AttachmentImageCache: @unchecked Sendable {
+    private let cache: NSCache<NSString, UIImage> = {
+        let cache = NSCache<NSString, UIImage>()
+        // 張數上限原本是 64：圖表、圖片多的大筆記本光是側欄縮圖就超過 64 張，快取互相擠掉，
+        // 每張縮圖都回頭讀檔解碼。記憶體由位元組上限（128MB）把關，張數放寬到 256。
+        cache.countLimit = 256
+        cache.totalCostLimit = 128 * 1024 * 1024
+        return cache
+    }()
+    private let lock = NSLock()
+    private var inFlight: Set<String> = []
+
+    func image(for fileName: String) -> UIImage? { cache.object(forKey: fileName as NSString) }
+
+    func insert(_ image: UIImage, for fileName: String, cost: Int) {
+        cache.setObject(image, forKey: fileName as NSString, cost: max(cost, 1))
+    }
+
+    func removeAll() { cache.removeAllObjects() }
+
+    /// 在背景讀檔並**先解碼好**（`preparingForDisplay`）。`UIImage(data:)` 是惰性解碼：只把讀檔搬到
+    /// 背景還不夠，第一次畫的時候主執行緒仍要解一張幾 MB 的 PNG。
+    static func decode(at url: URL) -> UIImage? {
+        guard let data = try? Data(contentsOf: url), let img = UIImage(data: data) else { return nil }
+        return img.preparingForDisplay() ?? img
+    }
+
+    /// 預載一批圖片。已在快取、或別的工作正在解的略過。**同步執行，呼叫端要在背景佇列。**
+    func prefetch(_ fileNames: [String], directory: URL) {
+        for name in fileNames where !name.isEmpty && image(for: name) == nil {
+            lock.lock()
+            let claimed = inFlight.insert(name).inserted
+            lock.unlock()
+            guard claimed else { continue }
+            if let img = Self.decode(at: directory.appending(path: name)) {
+                insert(img, for: name, cost: Int(img.size.width * img.scale * img.size.height * img.scale * 4))
+            }
+            lock.lock(); inFlight.remove(name); lock.unlock()
+        }
+    }
+}

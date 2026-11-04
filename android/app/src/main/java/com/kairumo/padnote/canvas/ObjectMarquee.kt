@@ -384,29 +384,44 @@ fun MarqueeLayer(
     additive: Boolean = false,
     onSelectionChange: (Set<String>) -> Unit,
     onCommitMove: (Float, Float) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    /** 框到的筆跡外框（頁面點）。筆跡也在框選範圍內：整組搬的命中區是「物件 ∪ 筆跡」。 */
+    strokeBounds: Rect? = null,
+    /** 拉完一個框（頁面點）＋是否連續框選。呼叫端用它選筆跡（[LassoSelection.selectStrokesInRect]）。 */
+    onMarqueeRect: (Rect, Boolean) -> Unit = { _, _ -> },
+    /** 點到空白處（非連續框選）：筆跡選取一起取消。 */
+    onTapEmpty: () -> Unit = {}
 ) {
     var start by remember { mutableStateOf<Offset?>(null) }
     var current by remember { mutableStateOf<Offset?>(null) }
     var groupDrag by remember { mutableStateOf(Offset.Zero) }
-    val selectionBounds = ObjectMarquee.bounds(selectedIds, candidates)
+    val objectBounds = ObjectMarquee.bounds(selectedIds, candidates)
+    val selectionBounds = when {
+        objectBounds != null && strokeBounds != null -> Rect(
+            minOf(objectBounds.left, strokeBounds.left), minOf(objectBounds.top, strokeBounds.top),
+            maxOf(objectBounds.right, strokeBounds.right), maxOf(objectBounds.bottom, strokeBounds.bottom)
+        )
+        else -> objectBounds ?: strokeBounds
+    }
 
     Box(modifier.fillMaxSize().zIndex(9_000f)) {
         Box(
             Modifier
                 .fillMaxSize()
-                .pointerInput(candidates, selectedIds, additive) {
+                .pointerInput(candidates, selectedIds, additive, strokeBounds) {
                     val finishDrag: () -> Unit = {
                         val s = start
                         val c = current
                         if (s != null && c != null) {
+                            val box = ObjectMarquee.rect(s, c)
                             onSelectionChange(
                                 ObjectMarquee.combined(
                                     selectedIds,
-                                    ObjectMarquee.hits(ObjectMarquee.rect(s, c), candidates),
+                                    ObjectMarquee.hits(box, candidates),
                                     additive
                                 )
                             )
+                            onMarqueeRect(box, additive)
                         } else if (groupDrag != Offset.Zero) {
                             onCommitMove(groupDrag.x, groupDrag.y)
                         }
@@ -443,9 +458,9 @@ fun MarqueeLayer(
                     // 點物件＝選它（連續框選時切換加入／移除）；點空白＝取消選取（連續框選時保留）。
                     detectTapGestures { offset ->
                         val page = Offset(offset.x / density, offset.y / density)
-                        onSelectionChange(
-                            ObjectMarquee.tapped(ObjectMarquee.topmostHit(page, candidates), selectedIds, additive)
-                        )
+                        val hit = ObjectMarquee.topmostHit(page, candidates)
+                        onSelectionChange(ObjectMarquee.tapped(hit, selectedIds, additive))
+                        if (hit == null && !additive) onTapEmpty()
                     }
                 }
         )
@@ -464,6 +479,21 @@ fun MarqueeLayer(
                     }
                     .size(hit.width.dp, hit.height.dp)
                     .border(1.5.dp, MaterialTheme.colorScheme.primary)
+            )
+        }
+
+        // 框到的筆跡：一個外框（筆跡沒有物件那樣的方框，用聯集外框表示）。與 Apple 一致。
+        if (strokeBounds != null) {
+            Box(
+                Modifier
+                    .offset {
+                        IntOffset(
+                            ((strokeBounds.left - 4f + groupDrag.x) * density).toInt(),
+                            ((strokeBounds.top - 4f + groupDrag.y) * density).toInt()
+                        )
+                    }
+                    .size((strokeBounds.width + 8f).dp, (strokeBounds.height + 8f).dp)
+                    .border(1.5.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.7f))
             )
         }
 

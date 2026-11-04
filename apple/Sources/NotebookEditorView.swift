@@ -163,9 +163,6 @@ public struct NotebookEditorView: View {
     @State var strokeWidth: CGFloat = 3.5
     @State var isRulerActive: Bool = false
     @State private var rulerAngleGuide: Double = 0.0
-    @State var isInsertSpaceActive: Bool = false
-    @State var insertSpaceDividerY: CGFloat = 300.0
-    @State var insertSpaceDragAccum: CGFloat = 0.0
     
     @State var eraserMode: EraserMode = .stroke
     @State var pixelEraserWidth: CGFloat = 20.0

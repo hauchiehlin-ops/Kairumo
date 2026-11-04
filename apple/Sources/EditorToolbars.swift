@@ -81,7 +81,12 @@ extension NotebookEditorView {
                 .accessibilityIdentifier("editor.insert.image")
             Button {
                 triggerFileImport(.image)
-            } label: { Label(localizationManager.localized("import_from_files"), systemImage: "folder.badge.plus") }
+            } label: {
+                // 只收圖片（核心的圖片槽）。原本只寫「從檔案選擇」，看不出能選什麼。
+                Label(localizationManager.localized("import_image_from_files")
+                        .replacingOccurrences(of: "%@", with: FileImport.formatSummary(for: .image)),
+                      systemImage: "folder.badge.plus")
+            }
                 .accessibilityIdentifier("editor.insert.image_file")
             Button {
                 pasteScreenshotOrClipboardImage()
@@ -128,13 +133,6 @@ extension NotebookEditorView {
         }
 
         Section {
-            Button {
-                withAnimation {
-                    insertSpaceDividerY = min(currentPageHeight - 100, max(150, canvasContentOffset.y + 300))
-                    isInsertSpaceActive.toggle()
-                }
-            } label: { Label(localizationManager.localized("insert_vertical_space"), systemImage: "arrow.up.and.down.square") }
-                .accessibilityIdentifier("editor.insert.space")
             Button { withAnimation { showSketchRefineBar.toggle() } } label: { Label(localizationManager.localized("refine_sketch"), systemImage: "wand.and.stars") }
                 .accessibilityIdentifier("editor.insert.refine_sketch")
             Button {
@@ -1529,69 +1527,6 @@ extension NotebookEditorView {
         #if os(iOS)
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
         #endif
-    }
-
-    /// 在指定 Y 軸座標插入或調整垂直空間（GoodNotes 風格插入空間工具）
-    /// 將落在 splitY 以下的所有手寫筆畫與附件往下推移 deltaY，並相應增加頁面高度。
-    func applyVerticalSpaceInsertion(splitY: CGFloat, deltaY: CGFloat) {
-        guard abs(deltaY) > 0.5 else { return }
-
-        // 1. 移動 PKDrawing 中落在 splitY 以下的筆畫
-        if let canvas = canvasView {
-            let currentStrokes = canvas.drawing.strokes
-            let shiftedStrokes = currentStrokes.map { stroke -> PKStroke in
-                let bounds = stroke.renderBounds
-                if bounds.minY >= splitY {
-                    var transform = stroke.transform
-                    transform = transform.translatedBy(x: 0, y: deltaY)
-                    return PKStroke(ink: stroke.ink, path: stroke.path, transform: transform, mask: stroke.mask)
-                }
-                return stroke
-            }
-            canvas.drawing = PKDrawing(strokes: shiftedStrokes)
-            self.currentDrawing = canvas.drawing
-            self.saveCurrentPageDrawing()
-        }
-
-        // 2. 移動落在 splitY 以下的文字附件方塊
-        if var attachments = notebook.textAttachments {
-            var changed = false
-            for i in 0..<attachments.count where attachments[i].pageIndex == currentPageIndex {
-                if attachments[i].y >= splitY {
-                    attachments[i].y = max(0, attachments[i].y + deltaY)
-                    changed = true
-                }
-            }
-            if changed {
-                notebook.textAttachments = attachments
-                commitNotebook()
-            }
-        }
-
-        // 3. 移動落在 splitY 以下的圖片物件
-        if var images = notebook.attachments {
-            var changed = false
-            for i in 0..<images.count where images[i].pageIndex == currentPageIndex {
-                if images[i].y >= splitY {
-                    images[i].y = max(0, images[i].y + deltaY)
-                    changed = true
-                }
-            }
-            if changed {
-                notebook.attachments = images
-                commitNotebook()
-            }
-        }
-
-        // 4. 動態調整該頁高度，確保下推內容完整容納
-        let newHeight = max(PageGeometry.height, currentPageHeight + deltaY)
-        if newHeight != currentPageHeight {
-            currentPageHeight = newHeight
-        }
-
-        // 觸覺回饋
-        let generator = UIImpactFeedbackGenerator(style: .light)
-        generator.impactOccurred()
     }
 
     /// 🌟 響應式極簡畫布懸浮工作丸專屬內容

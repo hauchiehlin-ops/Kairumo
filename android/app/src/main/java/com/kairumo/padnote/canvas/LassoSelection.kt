@@ -244,6 +244,60 @@ class LassoSelection {
         objectBounds = null
     }
 
+    // ── 框選（矩形）選筆跡 ──────────────────────────────────
+    //
+    // 「插入 › 框選」原本只選物件，筆跡在打字模式下完全碰不到。框選拉完框時也用核心的
+    // `lassoSelect`（多邊形換成矩形）選筆畫；之後的搬移、剪下、複製、貼上、刪除都走上面同一組
+    // 動作 —— 核心當下寫成 `Add`／`Remove` 事件（I2），刪除留下墓碑（I3）。物件仍由框選自己管，
+    // 這裡的 `selectedObjectIds` 保持空的，同一個物件才不會被搬兩次。與 Apple `selectStrokes(in:)` 一致。
+
+    /** 框選選到的筆畫數。 */
+    val strokeSelectionCount: Int get() = selected.size
+
+    fun selectStrokesInRect(rect: Rect, backend: LassoBackend, additive: Boolean) {
+        val picked = if (rect.width >= 1f && rect.height >= 1f) {
+            runCatching {
+                backend.select(listOf(rect.left, rect.top, rect.right, rect.top, rect.right, rect.bottom, rect.left, rect.bottom))
+            }.getOrDefault(emptyList())
+        } else emptyList()
+        setStrokeSelection(if (additive) (selected + picked).distinct() else picked, backend)
+    }
+
+    /** 框選的「全選」：這一頁所有筆跡。 */
+    fun selectAllStrokes(backend: LassoBackend) {
+        val big = 1_000_000f
+        val all = runCatching { backend.select(listOf(-big, -big, big, -big, big, big, -big, big)) }
+            .getOrDefault(emptyList())
+        setStrokeSelection(all, backend)
+    }
+
+    private fun setStrokeSelection(ids: List<String>, backend: LassoBackend) {
+        cancelGesture()
+        selected = ids
+        selectedObjectIds = emptySet()
+        objectBounds = null
+        strokeBounds = if (ids.isEmpty()) null else backend.bounds(ids)
+        committed = strokeBounds?.let { listOf(it.topLeft, it.topRight, it.bottomRight, it.bottomLeft) } ?: emptyList()
+    }
+
+    /** 框選整組拖曳放手：選到的筆跡一次平移（核心 `lassoTranslate`，舊 id 成墓碑、新 id 加入）。 */
+    fun translateStrokes(dx: Float, dy: Float, backend: LassoBackend): Boolean {
+        if (selected.isEmpty() || (dx == 0f && dy == 0f)) return false
+        val moved = runCatching { backend.translate(selected, dx, dy) }.getOrNull() ?: return false
+        backend.reload()
+        val delta = Offset(dx, dy)
+        selected = moved
+        strokeBounds = backend.bounds(moved) ?: strokeBounds?.translate(delta)
+        committed = committed.map { it + delta }
+        return true
+    }
+
+    fun selectStrokesInRect(rect: Rect, engine: InkEngine, additive: Boolean) =
+        selectStrokesInRect(rect, EngineLassoBackend(engine), additive)
+    fun selectAllStrokes(engine: InkEngine) = selectAllStrokes(EngineLassoBackend(engine))
+    fun translateStrokes(dx: Float, dy: Float, engine: InkEngine): Boolean =
+        translateStrokes(dx, dy, EngineLassoBackend(engine))
+
     fun clear() {
         cancelGesture()
         selected = emptyList()
