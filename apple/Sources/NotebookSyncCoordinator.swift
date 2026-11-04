@@ -1441,6 +1441,29 @@ enum NotebookSyncCoordinator {
         return report
     }
 
+    /// 雲端協作：協作者剛從共享資料夾整本抓下來的套件 → 本機的一本新筆記。
+    ///
+    /// 與整庫同步匯入別台裝置建立的筆記本是同一條路（`importPackages`），只限這一本。
+    /// 回傳匯入後這本是否已在書庫裡。
+    @MainActor
+    static func importSharedClone(
+        store: SyncableNotebookStore, deviceId: UInt32, notebookId: String
+    ) async -> Bool {
+        let id = notebookId.lowercased()
+        var report = Report()
+        await importPackages(
+            from: store.syncPackagesDirectory,
+            into: store,
+            deviceId: deviceId,
+            ownStrokes: [:],
+            activeLocalIds: Set(store.syncNotebooks.map { $0.id.lowercased() }),
+            deletedNotebookIds: [],
+            onlyNotebookIds: [id],
+            report: &report
+        )
+        return store.syncNotebooks.contains { $0.id.lowercased() == id }
+    }
+
     /// 區網對端把新的檔案寫進了套件 —— 把它匯入畫面。
     ///
     /// **順序是匯出、再匯入**，與 Drive 那條路一致：匯入會用套件的合併結果

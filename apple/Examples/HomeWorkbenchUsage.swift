@@ -127,6 +127,8 @@ struct KairumoApp: App {
         WindowGroup(appVersionTitle) {
             RootView()
                 .appLocale()
+                // 雲端共享筆記的邀請（掃 QR Code、點連結）：一鍵加入的確認畫面。
+                .modifier(CloudCollabInviteHost())
                 .task {
                     StartupLogger.logKey("log_app_task")
                     try? await Task.sleep(nanoseconds: 1_000_000_000)
@@ -166,7 +168,9 @@ struct KairumoApp: App {
                 }
                 .onOpenURL { url in
                     let ext = url.pathExtension.lowercased()
-                    if CollaborationManager.shared.offerInvite(url.absoluteString) {
+                    if CloudCollabManager.shared.offer(url.absoluteString) {
+                        // 雲端共享筆記的邀請：跳出「加入共享筆記」確認畫面（一鍵加入）。
+                    } else if CollaborationManager.shared.offerInvite(url.absoluteString) {
                         // 相機掃了協同 QR Code／點了邀請連結：開著的編輯器會打開協同面板並帶入連結。
                     } else if ext == "padnote" || ext == "zip" {
                         _ = try? NotebookStore.shared.importNotebookArchive(from: url)

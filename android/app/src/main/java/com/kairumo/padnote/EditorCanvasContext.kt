@@ -2812,6 +2812,18 @@ internal fun rememberEditorCanvasContext(
         }.orEmpty()
     }
     val collaboration = remember { CollaborationManager(activity) }
+    // 雲端共享筆記：剛加入時依自己的網路自動接上即時中繼；中繼連上時雲端放慢輪詢。
+    val cloudRelayInvite by com.kairumo.padnote.collab.CloudCollab.relayInvite.collectAsState()
+    LaunchedEffect(cloudRelayInvite, notebookId) {
+        val invite = cloudRelayInvite ?: return@LaunchedEffect
+        if (!invite.notebookId.equals(notebookId, ignoreCase = true)) return@LaunchedEffect
+        com.kairumo.padnote.collab.CloudCollab.relayInvite.value = null
+        com.kairumo.padnote.collab.CloudCollab.connectRelay(collaboration, invite)
+    }
+    androidx.compose.runtime.SideEffect {
+        com.kairumo.padnote.collab.CloudCollab.relayConnected =
+            { collaboration.status is CollaborationManager.Status.Connected }
+    }
 
     // ── 即時協同（設計 §8，協定 3）─────────────────────────────
     //

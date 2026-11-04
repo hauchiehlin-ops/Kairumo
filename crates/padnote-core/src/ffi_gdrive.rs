@@ -133,7 +133,7 @@ impl From<FfiDriveError> for SyncError {
 }
 
 /// 把平台的 HTTP 接成核心 `DriveHttp` 的樣子。
-struct ForeignHttp(Arc<dyn FfiDriveHttp>);
+pub(crate) struct ForeignHttp(pub(crate) Arc<dyn FfiDriveHttp>);
 
 impl std::fmt::Debug for ForeignHttp {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -1956,15 +1956,71 @@ impl FfiSyncSession {
     /// `remote_index_json` 是上次存下來的快照；空字串表示還沒有。
     #[uniffi::constructor]
     pub fn create(http: Arc<dyn FfiDriveHttp>, remote_index_json: String) -> Arc<Self> {
+        Self::in_space(http, padnote_sync::gdrive::DriveSpace::AppData, remote_index_json)
+    }
+
+    /// **雲端協作**的工作階段：讀寫房主雲端硬碟裡那個共享資料夾，而不是自己的
+    /// `appDataFolder`。其餘（快照、焦點通道、整本下載）與一般同步完全相同 ——
+    /// 事件檔名裡有裝置 id，房主與協作者各寫各的檔，不會互蓋（I5）。
+    ///
+    /// `remote_index_json` 要**每個資料夾各存一份**，不能與一般同步的快照混用。
+    #[uniffi::constructor]
+    pub fn create_shared(
+        http: Arc<dyn FfiDriveHttp>,
+        folder_id: String,
+        remote_index_json: String,
+    ) -> Arc<Self> {
+        Self::in_space(http, padnote_sync::gdrive::DriveSpace::Folder(folder_id), remote_index_json)
+    }
+
+    /// 寫入一個不屬於筆記同步的小檔（在場檔）。**同步等待 HTTP，不要在主執行緒呼叫。**
+    pub fn put_aux(&self, path: String, data: Vec<u8>) -> bool {
+        use padnote_sync::provider::CloudProvider;
+        self.drive.put(&path, &data).is_ok()
+    }
+
+    /// 讀出某個前綴底下的所有小檔（在場檔）。路徑 → 內容。
+    pub fn read_aux(&self, prefix: String) -> Vec<FfiAuxFile> {
+        use padnote_sync::provider::CloudProvider;
+        let Ok(entries) = self.drive.list(&prefix) else {
+            return Vec::new();
+        };
+        entries
+            .into_iter()
+            .filter(|e| e.size <= 64 * 1024)
+            .filter_map(|e| {
+                let data = self.drive.get_all(&e.path).ok()?;
+                Some(FfiAuxFile { path: e.path, data })
+            })
+            .collect()
+    }
+}
+
+/// 不屬於筆記同步的小檔（在場檔）。
+#[derive(Clone, Debug, uniffi::Record)]
+pub struct FfiAuxFile {
+    pub path: String,
+    pub data: Vec<u8>,
+}
+
+impl FfiSyncSession {
+    fn in_space(
+        http: Arc<dyn FfiDriveHttp>,
+        space: padnote_sync::gdrive::DriveSpace,
+        remote_index_json: String,
+    ) -> Arc<Self> {
         Arc::new(Self {
-            drive: GDriveProvider::new(ForeignHttp(http)),
+            drive: GDriveProvider::in_space(ForeignHttp(http), space),
             index: std::sync::Mutex::new(RemoteIndex::from_json(&remote_index_json)),
             seen_sizes: std::sync::Mutex::new(SeenSizes::new()),
             own_ack: std::sync::Mutex::new(None),
             settled: std::sync::Mutex::new(std::collections::HashMap::new()),
         })
     }
+}
 
+#[uniffi::export]
+impl FfiSyncSession {
     /// **把這個帳號在雲端的同步資料整個刪掉。**
     ///
     /// # 這是不可逆的

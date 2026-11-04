@@ -75,22 +75,65 @@ pub fn escape_drive_literal(value: &str) -> String {
 /// 垃圾桶裡，Drive 預設還是查得到；不濾掉的話，已經刪除的 chunk 會被
 /// 當成還在，同步引擎就會重新拉回已經刪掉的內容。
 pub fn list_query(prefix: &str) -> String {
+    list_query_in(APPDATA, prefix)
+}
+
+/// 找特定路徑（= 完整檔名）時用的 `q`。
+pub fn exact_query(path: &str) -> String {
+    exact_query_in(APPDATA, path)
+}
+
+const APPDATA: &str = "appDataFolder";
+
+/// [`list_query`]，但在任意父資料夾底下（共享協作資料夾）。
+pub fn list_query_in(parent: &str, prefix: &str) -> String {
+    let parent = escape_drive_literal(parent);
     if prefix.is_empty() {
-        "'appDataFolder' in parents and trashed = false".to_string()
+        format!("'{parent}' in parents and trashed = false")
     } else {
         format!(
-            "'appDataFolder' in parents and trashed = false and name contains '{}'",
+            "'{parent}' in parents and trashed = false and name contains '{}'",
             escape_drive_literal(prefix)
         )
     }
 }
 
-/// 找特定路徑（= 完整檔名）時用的 `q`。
-pub fn exact_query(path: &str) -> String {
+/// [`exact_query`]，但在任意父資料夾底下。
+pub fn exact_query_in(parent: &str, path: &str) -> String {
     format!(
-        "'appDataFolder' in parents and trashed = false and name = '{}'",
+        "'{}' in parents and trashed = false and name = '{}'",
+        escape_drive_literal(parent),
         escape_drive_literal(path)
     )
+}
+
+/// 檔案放在哪裡。
+///
+/// - `AppData`：使用者自己的隱藏區（`appDataFolder`），一個人的多台裝置同步。
+/// - `Folder`：房主雲端硬碟裡的一個一般資料夾，分享給協作者（雲端協作模式）。
+///   路徑一樣整條當檔名（不建子資料夾），所以兩種空間的同步邏輯完全相同；
+///   差別只在查詢的父資料夾、`spaces` 參數，以及變更清單要濾掉別的資料夾。
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum DriveSpace {
+    AppData,
+    Folder(String),
+}
+
+impl DriveSpace {
+    pub fn parent(&self) -> &str {
+        match self {
+            Self::AppData => APPDATA,
+            Self::Folder(id) => id,
+        }
+    }
+
+    /// `files.list`／`changes.list` 的 `spaces` 參數。
+    pub fn spaces(&self) -> &'static str {
+        match self {
+            Self::AppData => APPDATA,
+            Self::Folder(_) => "drive",
+        }
+    }
 }
 
 /// Drive 的 `files.list` 回應 → `RemoteEntry`。
@@ -201,14 +244,21 @@ pub fn is_cursor_expired(error: &SyncError) -> bool {
 #[derive(Debug)]
 pub struct GDriveProvider<H: DriveHttp> {
     http: H,
+    space: DriveSpace,
     id_cache: Mutex<HashMap<String, String>>,
     deleted_paths: Mutex<HashSet<String>>,
 }
 
 impl<H: DriveHttp> GDriveProvider<H> {
     pub fn new(http: H) -> Self {
+        Self::in_space(http, DriveSpace::AppData)
+    }
+
+    /// 指定空間的 provider（共享協作資料夾用 [`DriveSpace::Folder`]）。
+    pub fn in_space(http: H, space: DriveSpace) -> Self {
         Self {
             http,
+            space,
             id_cache: Mutex::new(HashMap::new()),
             deleted_paths: Mutex::new(HashSet::new()),
         }
@@ -224,7 +274,7 @@ impl<H: DriveHttp> GDriveProvider<H> {
         let mut page_token: Option<String> = None;
         loop {
             let mut query = vec![
-                ("spaces".to_string(), "appDataFolder".to_string()),
+                ("spaces".to_string(), self.space.spaces().to_string()),
                 ("q".to_string(), q.to_string()),
                 ("pageSize".to_string(), "1000".to_string()),
                 (
@@ -259,7 +309,7 @@ impl<H: DriveHttp> GDriveProvider<H> {
                 return Ok(id.clone());
             }
         }
-        let pages = self.list_all(&exact_query(path), "id, modifiedTime")?;
+        let pages = self.list_all(&exact_query_in(self.space.parent(), path), "id, modifiedTime")?;
         let mut best: Option<(String, String)> = None;
         for page in pages {
             for f in page
@@ -361,7 +411,7 @@ impl<H: DriveHttp> GDriveProvider<H> {
     pub fn start_page_token(&self) -> Result<String, SyncError> {
         let page = self.http.get_json(
             CHANGES_START_TOKEN_URL,
-            &[("spaces".to_string(), "appDataFolder".to_string())],
+            &[("spaces".to_string(), self.space.spaces().to_string())],
         )?;
         page.get("startPageToken")
             .and_then(Value::as_str)
@@ -372,7 +422,7 @@ impl<H: DriveHttp> GDriveProvider<H> {
     /// 全量列出 `appDataFolder` 底下的所有檔案。**只在重建基準時用。**
     pub fn list_all_remote(&self) -> Result<Vec<crate::remote_index::RemoteFile>, SyncError> {
         let pages = self.list_all(
-            "'appDataFolder' in parents and trashed = false",
+            &list_query_in(self.space.parent(), ""),
             "id, name, size, modifiedTime",
         )?;
         let mut out = Vec::new();
@@ -431,12 +481,12 @@ impl<H: DriveHttp> GDriveProvider<H> {
         loop {
             let query = vec![
                 ("pageToken".to_string(), cursor.clone()),
-                ("spaces".to_string(), "appDataFolder".to_string()),
+                ("spaces".to_string(), self.space.spaces().to_string()),
                 ("includeRemoved".to_string(), "true".to_string()),
                 ("pageSize".to_string(), "1000".to_string()),
                 (
                     "fields".to_string(),
-                    "nextPageToken, newStartPageToken, changes(fileId, removed, file(id, name, size, modifiedTime, trashed))"
+                    "nextPageToken, newStartPageToken, changes(fileId, removed, file(id, name, size, modifiedTime, trashed, parents))"
                         .to_string(),
                 ),
             ];
@@ -460,6 +510,15 @@ impl<H: DriveHttp> GDriveProvider<H> {
                     .and_then(Value::as_bool)
                     .unwrap_or(false);
                 let file = change.get("file");
+                // 共享資料夾：`spaces=drive` 的變更清單是整個雲端硬碟的，別的資料夾
+                // （另一本共享筆記、使用者自己的檔案）要濾掉。刪除的變更沒有 `file`，
+                // 交給快照判斷（快照只認得自己這個資料夾的 id，不認得的會被忽略）。
+                if let DriveSpace::Folder(folder) = &self.space
+                    && let Some(parents) = file.and_then(|f| f.get("parents")).and_then(Value::as_array)
+                    && !parents.iter().any(|p| p.as_str() == Some(folder.as_str()))
+                {
+                    continue;
+                }
                 let name = file
                     .and_then(|f| f.get("name"))
                     .and_then(Value::as_str)
@@ -563,7 +622,7 @@ impl<H: DriveHttp> GDriveProvider<H> {
     pub fn create_and_upload(&self, path: &str, data: &[u8]) -> Result<String, SyncError> {
         let created = self.http.post_json(
             FILES_URL,
-            &json!({ "name": path, "parents": ["appDataFolder"] }),
+            &json!({ "name": path, "parents": [self.space.parent()] }),
         )?;
         let file_id = created
             .get("id")
@@ -580,7 +639,7 @@ impl<H: DriveHttp> GDriveProvider<H> {
         let lower = path.to_lowercase();
         let created = self.http.post_json(
             FILES_URL,
-            &json!({ "name": path, "parents": ["appDataFolder"] }),
+            &json!({ "name": path, "parents": [self.space.parent()] }),
         )?;
         let file_id = created
             .get("id")
@@ -614,7 +673,7 @@ impl<H: DriveHttp> CloudProvider for GDriveProvider<H> {
         GDriveProvider::delete(self, path)
     }
     fn list(&self, prefix: &str) -> Result<Vec<RemoteEntry>, SyncError> {
-        let pages = self.list_all(&list_query(prefix), "id, name, size")?;
+        let pages = self.list_all(&list_query_in(self.space.parent(), prefix), "id, name, size")?;
 
         // Populate cache
         let mut cache = self.id_cache.lock().unwrap();
@@ -661,7 +720,7 @@ impl<H: DriveHttp> CloudProvider for GDriveProvider<H> {
             Err(SyncError::NotFound(_)) => {
                 let created = self.http.post_json(
                     FILES_URL,
-                    &json!({ "name": path, "parents": ["appDataFolder"] }),
+                    &json!({ "name": path, "parents": [self.space.parent()] }),
                 )?;
                 let id = created
                     .get("id")
@@ -738,6 +797,155 @@ const DRIVE_RATE_LIMIT_REASONS: [&str; 6] = [
     "dailyLimitExceeded",
     "storageQuotaExceeded",
 ];
+
+/// 共享協作資料夾的一位成員（Drive 的 permission）。
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct DriveMember {
+    pub permission_id: String,
+    pub email: String,
+    pub name: String,
+    /// `owner`／`writer`／`commenter`／`reader`。
+    pub role: String,
+}
+
+/// 打開一個共享資料夾時看到的樣子（權限探測）。
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct DriveFolderProbe {
+    pub name: String,
+    /// 能不能在裡面建檔（＝編輯者以上）。
+    pub can_add_children: bool,
+    /// 這個帳號、這個 App 看得到的子檔案數。
+    pub visible_files: u32,
+}
+
+const FOLDER_MIME: &str = "application/vnd.google-apps.folder";
+
+/// 協作資料夾的管理（雲端協作模式）。只在 [`DriveSpace::Folder`] 有意義，
+/// 但建立資料夾本身與空間無關，所以放在 provider 上、由呼叫端決定。
+impl<H: DriveHttp> GDriveProvider<H> {
+    /// 在使用者的雲端硬碟根目錄建立一個資料夾，回傳 id。
+    pub fn create_folder(&self, name: &str) -> Result<String, SyncError> {
+        let created = self
+            .http
+            .post_json(FILES_URL, &json!({ "name": name, "mimeType": FOLDER_MIME }))?;
+        created
+            .get("id")
+            .and_then(Value::as_str)
+            .map(str::to_string)
+            .ok_or_else(|| SyncError::Backend(format!("建立資料夾 {name} 之後 Drive 沒有回傳 id")))
+    }
+
+    /// 授予某個 Email 權限（`writer` 為編輯者），Google 會寄通知信。回傳 permission id。
+    pub fn grant(&self, folder_id: &str, email: &str, role: &str) -> Result<String, SyncError> {
+        let url = format!(
+            "{FILES_URL}/{}/permissions?sendNotificationEmail=true&fields=id",
+            folder_id
+        );
+        let created = self.http.post_json(
+            &url,
+            &json!({ "type": "user", "role": role, "emailAddress": email.trim() }),
+        )?;
+        created
+            .get("id")
+            .and_then(Value::as_str)
+            .map(str::to_string)
+            .ok_or_else(|| SyncError::Backend("授權之後 Drive 沒有回傳 permission id".into()))
+    }
+
+    /// 「知道連結的人都能編輯」。一鍵邀請（不必輸入 Email）用；介面要讓房主明確選擇，
+    /// 因為拿到連結的任何人都能編輯（內容仍以房間金鑰加密）。
+    pub fn grant_anyone_with_link(&self, folder_id: &str) -> Result<String, SyncError> {
+        let url = format!("{FILES_URL}/{folder_id}/permissions?fields=id");
+        let created = self
+            .http
+            .post_json(&url, &json!({ "type": "anyone", "role": "writer" }))?;
+        created
+            .get("id")
+            .and_then(Value::as_str)
+            .map(str::to_string)
+            .ok_or_else(|| SyncError::Backend("授權之後 Drive 沒有回傳 permission id".into()))
+    }
+
+    /// 列出資料夾的成員。
+    pub fn members(&self, folder_id: &str) -> Result<Vec<DriveMember>, SyncError> {
+        let page = self.http.get_json(
+            &format!("{FILES_URL}/{folder_id}/permissions"),
+            &[(
+                "fields".to_string(),
+                "permissions(id, emailAddress, displayName, role, type)".to_string(),
+            )],
+        )?;
+        Ok(page
+            .get("permissions")
+            .and_then(Value::as_array)
+            .map(|list| {
+                list.iter()
+                    .filter_map(|p| {
+                        Some(DriveMember {
+                            permission_id: p.get("id")?.as_str()?.to_string(),
+                            email: p
+                                .get("emailAddress")
+                                .and_then(Value::as_str)
+                                .unwrap_or_default()
+                                .to_string(),
+                            name: p
+                                .get("displayName")
+                                .and_then(Value::as_str)
+                                .unwrap_or_default()
+                                .to_string(),
+                            role: p.get("role")?.as_str()?.to_string(),
+                        })
+                    })
+                    .collect()
+            })
+            .unwrap_or_default())
+    }
+
+    /// 撤銷一位成員。
+    pub fn revoke(&self, folder_id: &str, permission_id: &str) -> Result<(), SyncError> {
+        self.http
+            .delete(&format!("{FILES_URL}/{folder_id}/permissions/{permission_id}"))
+    }
+
+    /// 權限探測：資料夾的名字、能不能寫、看得到幾個子檔案。
+    ///
+    /// **為什麼要算子檔案。** `drive.file` 權限下，App 看得到的是「這個使用者用這個
+    /// App 打開或建立過的檔案」。協作者在挑選器裡選了資料夾之後，資料夾裡別人建立的
+    /// 檔案是否也看得到，Google 文件沒有寫清楚。房主說有 N 個檔案、這裡卻是 0，
+    /// 就是看不到 —— 平台據此給出明確的錯誤，而不是一本空白的筆記。
+    pub fn probe_folder(&self, folder_id: &str) -> Result<DriveFolderProbe, SyncError> {
+        let meta = self.http.get_json(
+            &format!("{FILES_URL}/{folder_id}"),
+            &[(
+                "fields".to_string(),
+                "id, name, trashed, capabilities(canAddChildren)".to_string(),
+            )],
+        )?;
+        if meta.get("trashed").and_then(Value::as_bool) == Some(true) {
+            return Err(SyncError::NotFound(folder_id.to_string()));
+        }
+        let name = meta
+            .get("name")
+            .and_then(Value::as_str)
+            .unwrap_or_default()
+            .to_string();
+        let can_add_children = meta
+            .get("capabilities")
+            .and_then(|c| c.get("canAddChildren"))
+            .and_then(Value::as_bool)
+            .unwrap_or(false);
+        let pages = self.list_all(&list_query_in(folder_id, ""), "id")?;
+        let visible_files = pages
+            .iter()
+            .map(|p| p.get("files").and_then(Value::as_array).map_or(0, Vec::len))
+            .sum::<usize>() as u32;
+        Ok(DriveFolderProbe {
+            name,
+            can_add_children,
+            visible_files,
+        })
+    }
+}
 
 /// HTTP 狀態與回應內容 → `SyncError`。
 ///

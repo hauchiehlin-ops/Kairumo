@@ -61,7 +61,7 @@ echo "==> 產生 Android App 用的 Kotlin 綁定（Android feature 組合）"
 # 讀到的是預設 feature 的符號，產出一份看起來正常、但少了東西的綁定。
 cargo build -q -p padnote-core --bin uniffi-bindgen
 BINDGEN="${TARGET_DIR}/debug/uniffi-bindgen"
-cargo build -p padnote-core --no-default-features --features relay >/dev/null 2>&1
+cargo build -p padnote-core --no-default-features --features relay,p2p >/dev/null 2>&1
 ANDROID_LIB="${TARGET_DIR}/debug/libpadnote_core.dylib"
 [[ -f "$ANDROID_LIB" ]] || ANDROID_LIB="${TARGET_DIR}/debug/libpadnote_core.so"
 if [[ -f "$ANDROID_LIB" && -x "$BINDGEN" ]]; then
@@ -72,7 +72,7 @@ if [[ -f "$ANDROID_LIB" && -x "$BINDGEN" ]]; then
 else
     echo "   ⚠️ 找不到 Android feature 組合的函式庫，這一份綁定沒有更新"
     echo "      Kotlin 端會出現 Unresolved reference —— 手動跑："
-    echo "      cargo build -p padnote-core --no-default-features --features relay"
+    echo "      cargo build -p padnote-core --no-default-features --features relay,p2p"
 fi
 
 # --- XCFramework 同步檢查 -------------------------------------------------

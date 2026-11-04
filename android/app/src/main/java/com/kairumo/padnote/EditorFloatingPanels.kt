@@ -83,6 +83,19 @@ import java.io.File
 // 文字方塊拖不動、飛梭工具盤點不了）。拆檔之前這些都在同一個函式裡，沒有這個問題。
 @androidx.compose.runtime.NonSkippableComposable
 internal fun EditorFloatingPanels(ctx: EditorCanvasContext) = with(ctx) {
+    // 雲端共享筆記：其他參與者在哪一頁（點一下跳過去）。不攔觸控：外框沒有任何手勢。
+    androidx.compose.foundation.layout.Box(
+        androidx.compose.ui.Modifier.fillMaxSize().padding(12.dp),
+        contentAlignment = androidx.compose.ui.Alignment.BottomStart
+    ) {
+        com.kairumo.padnote.collab.CloudPresenceBar(
+            currentPage = pageIndex, languageTag = deviceLanguageTag()
+        ) { switchToPage(it) }
+    }
+    androidx.compose.runtime.LaunchedEffect(pageIndex, selectedImageId, selectedTableId, selectedShapeIds) {
+        com.kairumo.padnote.collab.CloudCollab.notePresence(
+            pageIndex, selectedImageId ?: selectedTableId ?: selectedShapeIds.firstOrNull())
+    }
     if (showPageSidebar && !layout.sidebarIsInline) {
         androidx.compose.ui.window.Dialog(
             onDismissRequest = { showPageSidebar = false },
@@ -550,6 +563,7 @@ internal fun EditorFloatingPanels(ctx: EditorCanvasContext) = with(ctx) {
             manager = collaboration,
             languageTag = deviceLanguageTag(),
             notebookId = notebookId,
+            notebookTitle = noteTitle,
             deviceId = deviceId(activity),
             creatorName = AccountManager.load(activity, l10n("default_user_name")).displayName,
             // 還原改的是磁碟上的套件，記憶體裡那份還是還原前的 ——

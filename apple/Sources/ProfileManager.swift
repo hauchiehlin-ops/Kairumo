@@ -270,6 +270,8 @@ public final class ProfileManager: ObservableObject {
             AutoSyncController.shared,
             AudioRecorderManager.shared,
             CollaborationManager.shared,
+            CloudCollabManager.shared,
+            CollabDriveAuth.shared,
             LocalRelayServer.shared,
             LocalSyncDiscovery.shared,
             GoogleAuth.shared,
