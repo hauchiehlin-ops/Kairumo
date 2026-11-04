@@ -1364,7 +1364,9 @@ private fun ContinuousPage(
         }.getOrNull() ?: uniffi.padnote_core.PageStyle.BLANK
     }
     val paperId = remember(meta, pageIndex, revision) { meta.paperId(pageIndex) }
-    val guidePaletteId = remember(meta) { meta.paletteId() }
+    // 不能只以 `meta` 當鍵：換配色是就地改同一個 meta 物件，記住的值永遠是舊的 ——
+    // 連續頁面模式下切換色彩調性完全沒有反應。讀一個 JSON 欄位很便宜，每次重組直接讀。
+    val guidePaletteId = meta.paletteId()
     val guideMeasurer = androidx.compose.ui.text.rememberTextMeasurer()
 
     // 即點即書：在頁面座標 (tapX, tapY) 建立文字方塊並立即進入就地編輯（打字模式點空白、手繪模式雙擊共用）。
@@ -1711,6 +1713,13 @@ private fun ContinuousPage(
                             revision++
                         }
                     }
+                },
+                onConnectTap = { from, anchor ->
+                    shapeStore.extendFrom(from, anchor, PageGeometry.width, PageGeometry.height)?.let { (created, _) ->
+                        selectedConnectionId = null
+                        updateSelectedId(created.id)
+                        revision++
+                    }
                 }
             )
 
@@ -1966,11 +1975,13 @@ private fun ContinuousPage(
             languageTag = languageTag,
             onChanged = { imageStore.persist(it); revision++ },
             onDelete = { imageStore.remove(image); updateSelectedId(null); revision++ },
-            onDismiss = { editingImage = null }
+            onDismiss = { editingImage = null },
+            asFloatingPanel = false
         )
     }
     editingShape?.let { shape ->
         ShapeEditDialog(
+            asFloatingPanel = false,
             shape = shape,
             languageTag = languageTag,
             onApply = { shapeStore.persist(it); revision++ },

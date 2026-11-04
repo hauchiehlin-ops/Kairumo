@@ -166,7 +166,9 @@ struct KairumoApp: App {
                 }
                 .onOpenURL { url in
                     let ext = url.pathExtension.lowercased()
-                    if ext == "padnote" || ext == "zip" {
+                    if CollaborationManager.shared.offerInvite(url.absoluteString) {
+                        // 相機掃了協同 QR Code／點了邀請連結：開著的編輯器會打開協同面板並帶入連結。
+                    } else if ext == "padnote" || ext == "zip" {
                         _ = try? NotebookStore.shared.importNotebookArchive(from: url)
                     } else if ext == "pdf" {
                         if let created = NotebookStore.shared.createNotebookFromPdf(fileURL: url) {

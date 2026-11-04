@@ -4471,6 +4471,14 @@ extension LocalizationManager {
             .ko: "기록 재생",
             .th: "เล่นประวัติ"
         ],
+        "collab_invite_received": [
+            .zhHant: "已收到協同邀請：按「加入」即可連線。",
+            .en: "Collaboration invite received — tap Join to connect.",
+            .zhHans: "已收到协同邀请：按「加入」即可连线。",
+            .ja: "共同編集の招待を受け取りました。「参加」をタップして接続します。",
+            .ko: "협업 초대를 받았습니다. 참여를 눌러 연결하세요.",
+            .th: "ได้รับคำเชิญทำงานร่วมกันแล้ว แตะเข้าร่วมเพื่อเชื่อมต่อ"
+        ],
         "collab_key_missing": [
             .zhHant: "你只用房號加入。少了邀請連結裡的金鑰，別人寫的內容在這裡一個字都解不開。請向房主要完整的邀請連結再加入一次。",
             .en: "You joined with the room code only. Without the key in the invite link, everything the others write stays unreadable here. Ask the host for the full invite link and join again.",
@@ -4534,6 +4542,46 @@ extension LocalizationManager {
             .ja: "%@ が入力中",
             .ko: "%@ 님이 입력 중",
             .th: "%@ กำลังพิมพ์ที่นี่"
+        ],
+        "collab_qr_hint": [
+            .zhHant: "其他參與者用手機或平板的相機掃描即可加入，房號、金鑰與連線位址會自動帶入；Mac 請改用「複製連結」再貼上。",
+            .en: "Others scan this with their phone or tablet camera to join — room, key and address are filled in automatically. On a Mac, use Copy link and paste it instead.",
+            .zhHans: "其他参与者用手机或平板的相机扫描即可加入，房号、密钥与连线地址会自动带入；Mac 请改用「复制链接」再粘贴。",
+            .ja: "ほかの参加者はスマホやタブレットのカメラで読み取るだけで参加できます（ルーム・鍵・接続先は自動入力）。Mac では「リンクをコピー」して貼り付けてください。",
+            .ko: "다른 참여자는 휴대폰이나 태블릿 카메라로 스캔하면 바로 참여합니다(방·키·주소 자동 입력). Mac에서는 링크를 복사해 붙여 넣으세요.",
+            .th: "ผู้เข้าร่วมคนอื่นสแกนด้วยกล้องโทรศัพท์หรือแท็บเล็ตเพื่อเข้าร่วม ห้อง คีย์ และที่อยู่จะกรอกให้อัตโนมัติ บน Mac ให้คัดลอกลิงก์แล้ววาง"
+        ],
+        "collab_qr_mode_lan": [
+            .zhHant: "同一 Wi‑Fi",
+            .en: "Same Wi‑Fi",
+            .zhHans: "同一 Wi‑Fi",
+            .ja: "同じ Wi‑Fi",
+            .ko: "같은 Wi‑Fi",
+            .th: "Wi‑Fi เดียวกัน"
+        ],
+        "collab_qr_mode_remote": [
+            .zhHant: "遠端中繼",
+            .en: "Remote relay",
+            .zhHans: "远端中继",
+            .ja: "リモート中継",
+            .ko: "원격 릴레이",
+            .th: "รีเลย์ระยะไกล"
+        ],
+        "collab_qr_mode_tailscale": [
+            .zhHant: "Tailscale 跨網",
+            .en: "Tailscale (any network)",
+            .zhHans: "Tailscale 跨网",
+            .ja: "Tailscale（別ネットワーク）",
+            .ko: "Tailscale(다른 네트워크)",
+            .th: "Tailscale (ข้ามเครือข่าย)"
+        ],
+        "collab_qr_title": [
+            .zhHant: "掃描 QR Code 加入",
+            .en: "Scan to join",
+            .zhHans: "扫描 QR Code 加入",
+            .ja: "QR コードで参加",
+            .ko: "QR 코드로 참여",
+            .th: "สแกนเพื่อเข้าร่วม"
         ],
         "collab_snapshot": [
             .zhHant: "協同快照",
@@ -11254,6 +11302,14 @@ extension LocalizationManager {
             .ja: "罫線の色",
             .ko: "안내선 색",
             .th: "สีเส้นนำ"
+        ],
+        "guide_palette_blank_hint": [
+            .zhHant: "已套用「%@」。目前頁面是空白紙，色彩調性會呈現在格線、點陣、橫線等底紋上（可從「紙張」更換）。",
+            .en: "Applied “%@”. This page is blank paper — the color theme shows on grid, dot and lined backgrounds (change it under Paper).",
+            .zhHans: "已套用「%@」。当前页面是空白纸，色彩调性会呈现在格线、点阵、横线等底纹上（可从「纸张」更换）。",
+            .ja: "「%@」を適用しました。このページは無地のため、配色は方眼・ドット・罫線などの地紋に表示されます（「用紙」で変更できます）。",
+            .ko: "“%@”을(를) 적용했습니다. 이 페이지는 무지라서 색상 테마는 격자·점·줄 배경에 표시됩니다(용지에서 변경).",
+            .th: "ใช้ “%@” แล้ว หน้านี้เป็นกระดาษเปล่า โทนสีจะแสดงบนพื้นหลังแบบตาราง จุด และเส้น (เปลี่ยนได้ที่กระดาษ)"
         ],
         "guide_palette_desc": [
             .zhHant: "切換全文件紙張底紋格線與點陣色彩調性",
@@ -21168,28 +21224,28 @@ extension LocalizationManager {
             .th: "จัดชิดเส้นตาราง"
         ],
         "snap_to_grid_desc": [
-            .zhHant: "隨點隨寫時自動對齊頁面行線或方格",
-            .en: "Snap click-to-type text to page grid or lines",
-            .zhHans: "随点随写时自动对齐页面行线或方格",
-            .ja: "随時入力をページの罫線や方眼に自動吸着します",
-            .ko: "페이지의 격자나 줄에 맞춰 텍스트를 정렬합니다",
-            .th: "จัดตำแหน่งข้อความให้ชิดเส้นหรือตารางในหน้ากระดาษโดยอัตโนมัติ"
+            .zhHant: "拖放形狀、圖片、表格與文字時自動對齊頁面方格、點陣或行線",
+            .en: "Align dropped shapes, images, tables and text to the page grid or lines",
+            .zhHans: "拖放形状、图片、表格与文字时自动对齐页面方格、点阵或行线",
+            .ja: "図形・画像・表・テキストをページの方眼や罫線に自動で揃えます",
+            .ko: "도형·이미지·표·텍스트를 페이지 격자나 줄에 자동 정렬합니다",
+            .th: "จัดรูปทรง รูปภาพ ตาราง และข้อความให้ชิดตารางหรือเส้นของหน้าโดยอัตโนมัติ"
         ],
         "snap_to_grid_off_notice": [
-            .zhHant: "吸附格線已關閉：文字會放在你點的位置。",
-            .en: "Snap to grid off: text is placed exactly where you tap.",
-            .zhHans: "吸附格线已关闭：文字会放在你点的位置。",
-            .ja: "グリッド吸着オフ：テキストはタップした位置にそのまま置かれます。",
-            .ko: "격자 맞춤 꺼짐: 텍스트가 탭한 위치에 그대로 놓입니다.",
-            .th: "ปิดจัดชิดเส้นตาราง: ข้อความจะวางตรงตำแหน่งที่แตะ"
+            .zhHant: "吸附格線已關閉：物件與文字會停在你放開的位置。",
+            .en: "Snap to grid off: objects and text stay exactly where you drop them.",
+            .zhHans: "吸附格线已关闭：对象与文字会停在你放开的位置。",
+            .ja: "グリッド吸着オフ：オブジェクトとテキストは離した位置にそのまま置かれます。",
+            .ko: "격자 맞춤 꺼짐: 개체와 텍스트가 놓은 위치에 그대로 남습니다.",
+            .th: "ปิดจัดชิดเส้นตาราง: วัตถุและข้อความจะอยู่ตรงตำแหน่งที่ปล่อย"
         ],
         "snap_to_grid_on_notice": [
-            .zhHant: "吸附格線已開啟：隨點隨寫的文字會對齊頁面行線或方格。",
-            .en: "Snap to grid on: tap-to-write text aligns to the page's lines or grid.",
-            .zhHans: "吸附格线已开启：随点随写的文字会对齐页面行线或方格。",
-            .ja: "グリッド吸着オン：タップで書くテキストがページの罫線や方眼に揃います。",
-            .ko: "격자 맞춤 켜짐: 탭해서 쓰는 텍스트가 페이지의 줄이나 격자에 맞춰집니다.",
-            .th: "เปิดจัดชิดเส้นตาราง: ข้อความที่แตะเพื่อเขียนจะชิดเส้นหรือตารางของหน้า"
+            .zhHant: "吸附格線已開啟：形狀、圖片、表格與文字放開時會對齊頁面的方格、點陣或行線。",
+            .en: "Snap to grid on: shapes, images, tables and text land on the page's grid, dots or lines.",
+            .zhHans: "吸附格线已开启：形状、图片、表格与文字放开时会对齐页面的方格、点阵或行线。",
+            .ja: "グリッド吸着オン：図形・画像・表・テキストを離すとページの方眼・ドット・罫線に揃います。",
+            .ko: "격자 맞춤 켜짐: 도형·이미지·표·텍스트를 놓으면 페이지의 격자·점·줄에 맞춰집니다.",
+            .th: "เปิดจัดชิดเส้นตาราง: รูปทรง รูปภาพ ตาราง และข้อความจะชิดตาราง จุด หรือเส้นของหน้าเมื่อปล่อย"
         ],
         "snapshot_created": [
             .zhHant: "快照已成功建立",

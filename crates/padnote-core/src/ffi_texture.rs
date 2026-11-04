@@ -247,6 +247,70 @@ fn push_isometric(out: &mut Vec<FfiTextureBand>, w: f32, h: f32) {
     });
 }
 
+// ---- 吸附格線 -------------------------------------------------------------
+
+/// 物件吸附用的格子：兩軸各一個間距與起點（頁面座標）。
+///
+/// 從**這張紙真正畫出來的底紋**推出來 —— 方格紙吸到方格線、點陣紙吸到點、
+/// 橫線紙只吸行線（x 軸退回預設步距）。以前兩端各寫死 20pt，與紙上的格子
+/// 對不起來：「吸附格線」開著，物件卻停在格子中間。
+#[derive(Clone, Copy, Debug, PartialEq, uniffi::Record)]
+pub struct FfiSnapGrid {
+    pub step_x: f32,
+    pub step_y: f32,
+    pub origin_x: f32,
+    pub origin_y: f32,
+}
+
+/// 紙上沒有可用的格子時的步距（空白紙、等角軸測）。與舊版文字方塊的 20pt 相同。
+pub const DEFAULT_SNAP_STEP: f32 = 20.0;
+/// 比這個還密的線（五線譜的 9pt 線距）不拿來吸 —— 每移一點就跳一格，等於沒吸。
+const MIN_SNAP_STEP: f32 = 12.0;
+
+#[uniffi::export]
+pub fn page_snap_grid(paper_id: String, style: PageStyle, width: f32, height: f32) -> FfiSnapGrid {
+    let mut x: Option<(f32, f32)> = None;
+    let mut y: Option<(f32, f32)> = None;
+    let take = |slot: &mut Option<(f32, f32)>, step: f32, origin: f32| {
+        if step < MIN_SNAP_STEP {
+            return;
+        }
+        if slot.is_none_or(|(s, _)| step < s) {
+            *slot = Some((step, origin));
+        }
+    };
+    for b in page_texture(paper_id, style, width, height) {
+        for (sx, sy, n) in [(b.step_x, b.step_y, b.count), (b.step2_x, b.step2_y, b.count2)] {
+            if n < 2 {
+                continue;
+            }
+            if sx.abs() > 0.0 && sy == 0.0 {
+                take(&mut x, sx.abs(), b.x);
+            } else if sy.abs() > 0.0 && sx == 0.0 {
+                take(&mut y, sy.abs(), b.y);
+            }
+        }
+    }
+    let (step_x, origin_x) = x.unwrap_or((DEFAULT_SNAP_STEP, 0.0));
+    let (step_y, origin_y) = y.unwrap_or((DEFAULT_SNAP_STEP, 0.0));
+    FfiSnapGrid { step_x, step_y, origin_x, origin_y }
+}
+
+/// 把物件的左上角吸到最近的格點。步距 ≤ 0 的軸不動。
+#[uniffi::export]
+pub fn snap_origin_to_grid(x: f32, y: f32, grid: FfiSnapGrid) -> crate::ffi_shapes::FfiPoint {
+    fn snap(v: f32, step: f32, origin: f32) -> f32 {
+        if step <= 0.0 || !v.is_finite() {
+            return v;
+        }
+        origin + ((v - origin) / step).round() * step
+    }
+    crate::ffi_shapes::FfiPoint {
+        x: snap(x, grid.step_x, grid.origin_x),
+        y: snap(y, grid.step_y, grid.origin_y),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -307,5 +371,26 @@ mod tests {
         assert!(plain.is_empty());
         assert_eq!(iso.len(), 3);
         assert!(iso.iter().all(|b| b.count > 0));
+    }
+
+    #[test]
+    fn snap_grid_follows_the_paper() {
+        let grid = page_snap_grid("grid".into(), PageStyle::Grid, 600.0, 800.0);
+        assert_eq!((grid.step_x, grid.step_y), (28.0, 28.0));
+        let p = snap_origin_to_grid(40.0, 71.0, grid);
+        assert_eq!((p.x, p.y), (28.0, 84.0));
+
+        let dots = page_snap_grid("dot".into(), PageStyle::Dotted, 600.0, 800.0);
+        assert_eq!((dots.step_x, dots.step_y), (20.0, 20.0));
+
+        // 橫線紙：y 吸到行線（起點 60、行高 32），x 退回預設步距。
+        let lined = page_snap_grid("lined".into(), PageStyle::Lined, 600.0, 800.0);
+        assert_eq!((lined.step_y, lined.origin_y), (32.0, 60.0));
+        assert_eq!(lined.step_x, DEFAULT_SNAP_STEP);
+        let p = snap_origin_to_grid(13.0, 100.0, lined);
+        assert_eq!((p.x, p.y), (20.0, 92.0));
+
+        let blank = page_snap_grid("blank".into(), PageStyle::Blank, 600.0, 800.0);
+        assert_eq!((blank.step_x, blank.step_y), (DEFAULT_SNAP_STEP, DEFAULT_SNAP_STEP));
     }
 }

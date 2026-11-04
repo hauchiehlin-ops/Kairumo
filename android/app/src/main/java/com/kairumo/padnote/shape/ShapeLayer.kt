@@ -32,6 +32,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
@@ -114,7 +116,9 @@ fun ShapeLayer(
     onDeleteConnection: (NoteConnection) -> Unit = {},
     connectionDraft: ConnectionDraft? = null,
     /** 從連接點拉線：座標是頁面座標；`finished == true` 是放開。 */
-    onConnectDrag: (NoteShape, ShapeAnchor, FfiPoint, FfiPoint, Boolean) -> Unit = { _, _, _, _, _ -> }
+    onConnectDrag: (NoteShape, ShapeAnchor, FfiPoint, FfiPoint, Boolean) -> Unit = { _, _, _, _, _ -> },
+    /** 單點連接點「＋」：往那個方向長出一個相連的同款形狀（與 Apple `onConnectTap` 相同）。 */
+    onConnectTap: (NoteShape, ShapeAnchor) -> Unit = { _, _ -> }
 ) {
     val foreground = MaterialTheme.colorScheme.onSurface
     val background = MaterialTheme.colorScheme.surface
@@ -187,6 +191,7 @@ fun ShapeLayer(
                 isSoleSelection = selectedIds.size <= 1,
                 onSelect = onSelect, onEdit = onEdit, onDelete = onDelete,
                 onChanged = onChanged, onConnectDrag = onConnectDrag,
+                onConnectTap = onConnectTap,
                 interactive = interactive
             )
         }
@@ -342,6 +347,7 @@ private fun ShapeObjectView(
     onDelete: (NoteShape) -> Unit,
     onChanged: (NoteShape) -> Unit,
     onConnectDrag: (NoteShape, ShapeAnchor, FfiPoint, FfiPoint, Boolean) -> Unit,
+    onConnectTap: (NoteShape, ShapeAnchor) -> Unit = { _, _ -> },
     /** 見同檔案公開版本的說明。 */
     interactive: Boolean = true
 ) {
@@ -394,6 +400,14 @@ private fun ShapeObjectView(
             Modifier
                 .offset(m.dp, m.dp)
                 .size(shape.width.dp, frameH.dp)
+                // 選取中回報螢幕上的框：編修面板據此避開它（見 ui/FloatingPanel.kt）。
+                // 離屏截圖（interactive = false）不回報：那條路可能不在主執行緒。
+                .then(
+                    if (!interactive) Modifier
+                    else Modifier.onGloballyPositioned {
+                        com.kairumo.padnote.ui.EditingObjectBounds.report(shape.id, isSelected && isSoleSelection, it.boundsInRoot())
+                    }
+                )
                 // 整個視圖一起轉（輪廓 + 標籤）。核心的 outline 刻意不轉：
                 // 只轉輪廓的話標籤會留在正的，而且轉過的輪廓會超出畫布被裁掉。
                 .graphicsLayer {
@@ -536,7 +550,7 @@ private fun ShapeObjectView(
             } else {
                 if (isSoleSelection && !moveLocked) ResizeHandles(shape, m, density, onChanged)
                 if (!moveLocked) RotateHandle(shape, m, density, onChanged)
-                if (isSoleSelection) ConnectHandles(shape, m, density, onConnectDrag)
+                if (isSoleSelection) ConnectHandles(shape, m, density, onConnectDrag, onConnectTap)
             }
             ActionHandles(shape, m, onEdit, onDelete)
         }
@@ -817,7 +831,8 @@ private fun EndpointHandles(
 @Composable
 private fun ConnectHandles(
     shape: NoteShape, m: Float, density: Float,
-    onConnectDrag: (NoteShape, ShapeAnchor, FfiPoint, FfiPoint, Boolean) -> Unit
+    onConnectDrag: (NoteShape, ShapeAnchor, FfiPoint, FfiPoint, Boolean) -> Unit,
+    onConnectTap: (NoteShape, ShapeAnchor) -> Unit
 ) {
     val language = LocalAppLanguage.current
     val current by androidx.compose.runtime.rememberUpdatedState(shape)
@@ -843,6 +858,10 @@ private fun ConnectHandles(
                 .offset((hx - HANDLE_SIZE / 2f).dp, (hy - HANDLE_SIZE / 2f).dp)
                 .size(HANDLE_SIZE.dp)
                 .semantics { contentDescription = label }
+                // 單點：快速延伸（新增相連形狀）。拖曳：拉線連到既有形狀（下一個 pointerInput）。
+                .pointerInput(shape.id, anchor, "tap") {
+                    detectTapGestures(onTap = { onConnectTap(current, anchor) })
+                }
                 .pointerInput(shape.id, anchor) {
                     var start = FfiPoint(0f, 0f)
                     var finger = FfiPoint(0f, 0f)

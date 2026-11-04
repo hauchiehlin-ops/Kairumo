@@ -136,6 +136,20 @@ public class CollaborationManager: ObservableObject {
 
     // MARK: - 離線暫存佇列與自動斷線重連
     @Published public var queuedOplogCount: Int = 0
+    /// 從外面進來的協同邀請（相機掃 QR Code、點 `kairumo://collab?...`）。
+    ///
+    /// 不直接加入：使用者可能正開著別本筆記，要讓他看見是哪個房間、按「加入」才連。
+    /// 編輯器看到它有值就打開協同面板，面板把連結帶進「加入房間」欄位。與 Android `CollabInvites` 同一套。
+    @Published public var pendingInviteLink: String? = nil
+
+    /// 是協同邀請就收下（回 true）。只認 `kairumo://collab`。
+    @discardableResult
+    public func offerInvite(_ link: String) -> Bool {
+        let text = link.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard text.lowercased().hasPrefix("kairumo://collab") else { return false }
+        pendingInviteLink = text
+        return true
+    }
     private var offlineOplogQueue: [[String: Any]] = []
     private var reconnectAttempt: Int = 0
     // 節流、心跳與重連次數都取自核心 —— 兩邊數字不同會讓同一間房裡的

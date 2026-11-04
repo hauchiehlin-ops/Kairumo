@@ -314,6 +314,56 @@ class ShapeStore(
     }
 
     /**
+     * 點一下連接點「＋」：往 [anchor] 方向長出一個同款形狀並自動連線（流程圖的「快速延伸」）。
+     *
+     * 拖曳「＋」仍是拉線到既有形狀（[connectByDrag]）；以前單點沒有反應，使用者回報「＋無作用」。
+     * 位置規則與 Apple `addConnectedShape` 相同：沿旋轉後的方向、間隔 48pt、夾在頁面內。
+     */
+    fun extendFrom(
+        from: NoteShape, anchor: ShapeAnchor, pageWidth: Float, pageHeight: Float
+    ): Pair<NoteShape, NoteConnection?>? {
+        if (from.isLinear) return null
+        val gap = 48f
+        val (nx, ny) = when (anchor) {
+            ShapeAnchor.TOP -> 0f to -1f
+            ShapeAnchor.RIGHT -> 1f to 0f
+            ShapeAnchor.BOTTOM -> 0f to 1f
+            ShapeAnchor.LEFT -> -1f to 0f
+        }
+        val rad = (from.rotationDegrees ?: 0f) * PI / 180.0
+        val c = kotlin.math.cos(rad).toFloat()
+        val sn = kotlin.math.sin(rad).toFloat()
+        val sx = nx * (from.width + gap)
+        val sy = ny * (from.height + gap)
+        val dx = sx * c - sy * sn
+        val dy = sx * sn + sy * c
+        val template = NoteShape.decode(
+            JSONObject(from.encodedJson())
+                .put("id", java.util.UUID.randomUUID().toString())
+                .put("label", "")
+                .toString()
+        ) ?: return null
+        template.groupId = null
+        template.x = (from.x + dx).coerceIn(0f, maxOf(0f, pageWidth - from.width))
+        template.y = (from.y + dy).coerceIn(0f, maxOf(0f, pageHeight - from.height))
+        val created = create(template)
+        val opposite = when (anchor) {
+            ShapeAnchor.TOP -> ShapeAnchor.BOTTOM
+            ShapeAnchor.RIGHT -> ShapeAnchor.LEFT
+            ShapeAnchor.BOTTOM -> ShapeAnchor.TOP
+            ShapeAnchor.LEFT -> ShapeAnchor.RIGHT
+        }
+        val link = connect(
+            NoteConnection(
+                fromShapeId = from.id, toShapeId = created.id,
+                fromAnchor = anchor.raw, toAnchor = opposite.raw
+            ),
+            from, created
+        )
+        return created to link
+    }
+
+    /**
      * 改一條連接線。核心的連接線物件建立之後不能改，所以改動整包記在中繼資料裡，
      * 載入時以它為準（Apple 端匯入時同樣）。
      */

@@ -390,6 +390,65 @@ extension NotebookEditorView {
         editingShapeId = fresh.id
     }
 
+    /// 點一下連接點「＋」：往那個方向長出一個同款形狀，並自動連線（流程圖的「快速延伸」）。
+    ///
+    /// 拖曳「＋」仍是拉線連到既有形狀（`handleConnectDrag`）；以前單點沒有任何反應，
+    /// 使用者回報「＋無作用」。新形狀的位置：沿旋轉後的方向，間隔 `gap`，並夾在頁面內。
+    /// 規則與 Android `ShapeQuickExtend` 相同。
+    func addConnectedShape(from sourceId: String, anchor: ShapeAnchorName) {
+        guard let source = notebook.shapeAttachments?.first(where: { $0.id == sourceId }),
+              !source.isLinear else { return }
+        let gap: CGFloat = 48
+        let (nx, ny): (CGFloat, CGFloat) = {
+            switch anchor {
+            case .top: return (0, -1)
+            case .right: return (1, 0)
+            case .bottom: return (0, 1)
+            case .left: return (-1, 0)
+            }
+        }()
+        let step = CGPoint(x: nx * (source.width + gap), y: ny * (source.height + gap))
+        let r = ShapeFrameMath.rotate(step, about: .zero, degrees: source.canvasRotation)
+        let maxX = max(0, PageGeometry.width - source.width)
+        let maxY = max(0, notebook.height(forPage: source.pageIndex) - source.height)
+        var fresh = NoteShapeAttachment(
+            pageIndex: source.pageIndex, kindName: source.kindName,
+            x: min(max(0, source.x + r.x), maxX), y: min(max(0, source.y + r.y), maxY),
+            width: source.width, height: source.height,
+            cornerRadius: source.cornerRadius, label: "",
+            strokeColorHex: source.strokeColorHex, fillColorHex: source.fillColorHex,
+            lineWidth: source.lineWidth)
+        fresh.rotationDegrees = source.rotationDegrees
+        fresh.dashStyle = source.dashStyle; fresh.fontSize = source.fontSize
+        fresh.textColorHex = source.textColorHex; fresh.isBold = source.isBold
+        fresh.isItalic = source.isItalic; fresh.opacity = source.opacity
+        let opposite: ShapeAnchorName = {
+            switch anchor {
+            case .top: return .bottom
+            case .right: return .left
+            case .bottom: return .top
+            case .left: return .right
+            }
+        }()
+        var connection = NoteConnectionAttachment(
+            pageIndex: source.pageIndex, fromShapeId: source.id, toShapeId: fresh.id)
+        connection.fromAnchor = anchor.rawValue
+        connection.toAnchor = opposite.rawValue
+        notebook.shapeAttachments = (notebook.shapeAttachments ?? []) + [fresh]
+        notebook.connectionAttachments = (notebook.connectionAttachments ?? []) + [connection]
+        commitNotebook()
+        PageThumbnailRenderer.invalidateAll()
+        selectedConnectionId = nil
+        selectedShapeIds = [fresh.id]
+        for (type, item) in [("shape", try? JSONEncoder().encode(fresh)),
+                             ("connection", try? JSONEncoder().encode(connection))] {
+            if let data = item,
+               let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                collaborationManager.broadcastAttachmentUpsert(type: type, itemDict: dict)
+            }
+        }
+    }
+
     func connectionBinding(for id: String) -> Binding<NoteConnectionAttachment> {
         let normId = id.lowercased()
         return Binding(
@@ -1780,8 +1839,10 @@ extension NotebookEditorView {
         } else if let union = frames.dropFirst().reduce(frames.first, { $0?.union($1) }) {
             // 留在本頁：與其他物件一樣推回可列印範圍（S-85）。原本形狀拖出頁外就留在頁外，
             // 畫面與縮圖上都看不到、也點不到。
+            // 「吸附格線」：以整組外框的左上角吸到紙上的格子，再夾回可列印範圍。
+            let snapped = ObjectGridSnap.snap(CGPoint(x: union.minX, y: union.minY), page: page)
             let landed = PrintableArea.clampOrigin(
-                x: union.minX, y: union.minY, width: union.width, height: union.height)
+                x: snapped.x, y: snapped.y, width: union.width, height: union.height)
             for index in all.indices where mates.contains(all[index].id) {
                 all[index].x += landed.x - union.minX
                 all[index].y += landed.y - union.minY
@@ -1837,8 +1898,9 @@ extension NotebookEditorView {
         var applied = delta
         if let frame = frameOfObject(id: id) {
             let moved = frame.offsetBy(dx: delta.width, dy: delta.height)
+            let snapped = ObjectGridSnap.snap(CGPoint(x: moved.minX, y: moved.minY), page: previous.pageIndex)
             let landed = PrintableArea.clampOrigin(
-                x: moved.minX, y: moved.minY, width: moved.width, height: moved.height)
+                x: snapped.x, y: snapped.y, width: moved.width, height: moved.height)
             all[index].x += landed.x - moved.minX
             all[index].y += landed.y - moved.minY
             applied = CGSize(width: all[index].x - previous.x, height: all[index].y - previous.y)

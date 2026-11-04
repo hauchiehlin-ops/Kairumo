@@ -1019,8 +1019,12 @@ final class AdaptiveCanvasView: PKCanvasView {
     weak var templateBackgroundView: UIView?
 
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
-        if let check = hitPassThroughCheck, check(point, event) {
-            return nil
+        // `point` 是捲動視圖的座標（已含捲動位移、**未除以縮放倍率**），物件存的是頁面座標。
+        // 以前直接拿去比對：畫布一縮放（例如「符合頁寬」），判定範圍就整個錯位 ——
+        // 選取中形狀的「＋」連接點、旋轉把手落在判定外，點下去被畫布吃掉，看起來「無作用」。
+        if let check = hitPassThroughCheck {
+            let scale = max(zoomScale, 0.01)
+            if check(CGPoint(x: point.x / scale, y: point.y / scale), event) { return nil }
         }
         return super.hitTest(point, with: event)
     }

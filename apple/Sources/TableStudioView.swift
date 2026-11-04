@@ -1236,7 +1236,7 @@ struct TableAttachmentItemView: View {
                     .offset(x: 10, y: -10)
                 }
             }
-            .objectProbe("table")
+            .objectProbe("table", id: table.id)
             .position(
                 x: currentX + layout.width / 2,
                 y: currentY + layout.height / 2

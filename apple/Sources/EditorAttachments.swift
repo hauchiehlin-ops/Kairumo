@@ -401,7 +401,7 @@ struct AttachmentItemView: View {
                 }
             }
         }
-        .objectProbe("image")
+        .objectProbe("image", id: attachment.id)
         .padding(20)
         .position(x: currentX + displayWidth / 2, y: currentY + displayHeight / 2)
         .animation(nil, value: dragOffset)
@@ -1020,7 +1020,7 @@ struct TextAttachmentItemView: View {
                 .offset(y: (isSelected && !isEditingInline) ? -42 : -24)
             }
         }
-        .objectProbe("text")
+        .objectProbe("text", id: textItem.id)
         .padding(20)
         .position(x: currentX + displayWidth / 2, y: currentY + calculatedContentHeight / 2)
         .animation(nil, value: dragOffset)
@@ -1280,7 +1280,7 @@ struct LinkAttachmentItemView: View {
                     .help(localizationManager.localized("link_edit"))
                 }
             }
-            .objectProbe("link")
+            .objectProbe("link", id: linkItem.id)
             .padding(20)
             .position(x: currentX + displayWidth / 2, y: currentY + displayHeight / 2)
             .animation(nil, value: dragOffset)
@@ -1684,7 +1684,7 @@ struct Model3DCanvasItemView: View {
             }
         }
         .frame(width: max(200, item.width))
-        .objectProbe("model3d")
+        .objectProbe("model3d", id: item.id)
         .padding(20)
         .position(x: currentX + item.width / 2, y: currentY + item.height / 2)
         .animation(nil, value: dragOffset)

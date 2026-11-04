@@ -202,8 +202,10 @@ public enum PageGuideRenderer {
 
         func color(_ tone: FfiGuideTone) -> UIColor {
             switch tone {
-            case .hairline: return line.withAlphaComponent(0.30)
-            case .light: return line.withAlphaComponent(0.55)
+            // 底紋（方格、點陣、橫線）用的是這兩階。0.30／0.55 時六種色調幾乎都是同一個淺灰，
+            // 切換配色看不出差別；調深一點讓色相看得出來，仍是淡淡的輔助線。與 Android 同值。
+            case .hairline: return line.withAlphaComponent(0.42)
+            case .light: return line.withAlphaComponent(0.65)
             case .accent: return accent.withAlphaComponent(0.75)
             case .muted: return text.withAlphaComponent(0.85)
             }

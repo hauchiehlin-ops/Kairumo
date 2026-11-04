@@ -1297,6 +1297,15 @@ public struct NotebookEditorView: View {
     }
 
     /// 物件層當前是否處於可互動或活躍狀態（對齊 Android EditorStateManager 之統一職責守衛）。
+    /// 讓所有物件的拖放落點（`PrintableArea.land`）知道「吸附格線」開關與每頁的紙。
+    func syncObjectGridSnap() {
+        ObjectGridSnap.isEnabled = snapToGrid
+        let editor = self
+        ObjectGridSnap.paperForPage = { page in
+            editor.notebook.paperId(forPage: page ?? editor.currentPageIndex)
+        }
+    }
+
     var isObjectInteractionActive: Bool {
         guard !isInlineInkEditing else { return false }
         if editorMode == .type { return true }
@@ -1523,6 +1532,12 @@ public struct NotebookEditorView: View {
         }
         .onAppear {
             DispatchQueue.main.async { editorAvailableWidth = geo.size.width }
+            syncObjectGridSnap()
+        }
+        .onChange(of: snapToGrid) { _ in syncObjectGridSnap() }
+        // 相機掃了協同 QR Code：打開協同面板（面板會把連結帶入「加入房間」）。
+        .onReceive(collaborationManager.$pendingInviteLink) { link in
+            if link != nil { showCollaborationSheet = true }
         }
         .onChange(of: geo.size.width) { newValue in
             DispatchQueue.main.async { editorAvailableWidth = newValue }

@@ -217,7 +217,10 @@ extension View {
     /// 或第一個子元素的框（形狀量出來只有 96×29），UI 測試就點不到真正的位置。覆蓋層的框
     /// 就是物件自己的框，而且不改變 VoiceOver 看到的任何東西（它是獨立、無標籤的節點）。
     /// 互動矩陣（`InteractionMatrixAudit`）靠它找物件。
-    func objectProbe(_ kind: String) -> some View {
+    ///
+    /// 帶 `id` 時順便回報「正在編修的物件」在畫面上的框（`EditingObjectBoundsKey`），
+    /// 編修面板據此擺到物件的另一側，不再蓋住物件（見 `FloatingPanel.avoiding`）。
+    func objectProbe(_ kind: String, id: String? = nil) -> some View {
         overlay {
             Color.clear
                 .allowsHitTesting(false)
@@ -225,5 +228,37 @@ extension View {
                 .accessibilityIdentifier("object.\(kind)")
                 .accessibilityHidden(false)
         }
+        .modifier(EditingBoundsReporter(id: id))
+    }
+}
+
+/// 正在開編修面板的物件 id（由編輯器注入物件層）。
+private struct EditingPanelObjectIdKey: EnvironmentKey {
+    static let defaultValue: String? = nil
+}
+
+extension EnvironmentValues {
+    var editingPanelObjectId: String? {
+        get { self[EditingPanelObjectIdKey.self] }
+        set { self[EditingPanelObjectIdKey.self] = newValue }
+    }
+}
+
+/// 正在編修的物件在畫面上的框。錨點會穿過縮放、捲動與連續頁面的轉換，
+/// 面板那一層用 `GeometryProxy` 解開就是它自己座標系裡的框。
+struct EditingObjectBoundsKey: PreferenceKey {
+    static let defaultValue: Anchor<CGRect>? = nil
+    static func reduce(value: inout Anchor<CGRect>?, nextValue: () -> Anchor<CGRect>?) {
+        value = value ?? nextValue()
+    }
+}
+
+private struct EditingBoundsReporter: ViewModifier {
+    let id: String?
+    @Environment(\.editingPanelObjectId) private var editingId
+
+    func body(content: Content) -> some View {
+        let active = id != nil && id?.lowercased() == editingId?.lowercased()
+        content.anchorPreference(key: EditingObjectBoundsKey.self, value: .bounds) { active ? $0 : nil }
     }
 }

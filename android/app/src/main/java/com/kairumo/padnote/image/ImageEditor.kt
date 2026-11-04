@@ -12,6 +12,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -47,9 +50,10 @@ fun ImageEditor(
     onReorder: ((com.kairumo.padnote.canvas.ObjectStacking.Reorder) -> Unit)? = null,
     onChanged: (NoteImage) -> Unit,
     onDelete: () -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    /** 見 `ShapeEditDialog` 的同名參數：連續頁模式傳 false，照舊用對話框。 */
+    asFloatingPanel: Boolean = true
 ) {
-    val height = rememberDialogHeight("imageEditor", 420.dp)
 
     fun l(key: String) = LocalizationStrings.localized(key, languageTag)
 
@@ -62,16 +66,26 @@ fun ImageEditor(
     var borderHex by remember(image.id) { mutableStateOf(image.borderColorHex) }
     var rotation by remember(image.id) { mutableStateOf(image.rotationDegrees) }
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(l("image_style")) },
-        text = {
-            // 內容與把手包進同一個 Column：AlertDialog 的 text 槽是 Box，
-            // 兩個兄弟會疊在一起，把手蓋住內容最上面 24dp（那一排點不到）。
+    fun applyAndClose() {
+        onChanged(
+            image.copy(
+                filterStyle = filter,
+                cornerRadius = corner,
+                hasShadow = shadow,
+                hasBorder = border,
+                borderColorHex = borderHex,
+                rotationDegrees = rotation
+            )
+        )
+        onDismiss()
+    }
+
+    // 浮動面板（與 Apple 圖片美化面板同一套）：不再是置中的對話框蓋住圖片，
+    // 面板自動擺到圖片的另一側（見 `FloatingPanel` 的避讓）。關閉鈕等同「完成」。
+    val panelContent: @Composable () -> Unit = {
             Column {
                 Column(
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
-                    modifier = Modifier.height(height.value).verticalScroll(rememberScrollState())
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     if (onReorder != null) {
                         FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -158,32 +172,32 @@ fun ImageEditor(
                         modifier = Modifier.fillMaxWidth()
                     ) { Text(l("delete"), color = MaterialTheme.colorScheme.error) }
                 }
-                // 底部的拖曳把手：往下拖變高（S-72）。
-                DialogResizeHandle(height, "imageEditor")
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                    TextButton(onClick = {
+                        if (filter != original.filterStyle) onChanged(original)
+                        onDismiss()
+                    }) { Text(l("cancel")) }
+                    Spacer(Modifier.weight(1f))
+                    TextButton(onClick = { applyAndClose() }) { Text(l("done")) }
+                }
             }
-        },
-        confirmButton = {
-            TextButton(onClick = {
-                onChanged(
-                    image.copy(
-                        filterStyle = filter,
-                        cornerRadius = corner,
-                        hasShadow = shadow,
-                        hasBorder = border,
-                        borderColorHex = borderHex,
-                        rotationDegrees = rotation
-                    )
-                )
-                onDismiss()
-            }) { Text(l("done")) }
-        },
-        dismissButton = {
-            TextButton(onClick = {
-                if (filter != original.filterStyle) onChanged(original)
-                onDismiss()
-            }) { Text(l("cancel")) }
-        }
-    )
+    }
+    if (asFloatingPanel) {
+        com.kairumo.padnote.ui.FloatingPanel(title = l("image_style"), onClose = { applyAndClose() }) { panelContent() }
+    } else {
+        AlertDialog(
+            onDismissRequest = { applyAndClose() },
+            title = { Text(l("image_style")) },
+            text = {
+                Column(
+                    Modifier
+                        .heightIn(max = 520.dp)
+                        .verticalScroll(rememberScrollState())
+                ) { panelContent() }
+            },
+            confirmButton = {}
+        )
+    }
 }
 
 private fun parse(hex: String): Color? =

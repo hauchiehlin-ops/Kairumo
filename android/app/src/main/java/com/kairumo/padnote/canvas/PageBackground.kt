@@ -210,8 +210,9 @@ private fun guideColor(tone: FfiGuideTone, palette: FfiGuidePalette?): Color {
         }
     }
     return when (tone) {
-        FfiGuideTone.HAIRLINE -> hexColor(palette.lineHex, 0.30f)
-        FfiGuideTone.LIGHT -> hexColor(palette.lineHex, 0.55f)
+        // 與 Apple `PageGuideRenderer.Palette` 同值：太淡的話六種色調看起來都一樣。
+        FfiGuideTone.HAIRLINE -> hexColor(palette.lineHex, 0.42f)
+        FfiGuideTone.LIGHT -> hexColor(palette.lineHex, 0.65f)
         FfiGuideTone.ACCENT -> hexColor(palette.accentHex, 0.75f)
         FfiGuideTone.MUTED -> hexColor(palette.textHex, 0.85f)
     }

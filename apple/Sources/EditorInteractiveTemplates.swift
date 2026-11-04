@@ -420,9 +420,9 @@ extension NotebookEditorView {
         if let nearest = rules.min(by: { abs($0 - targetBottom) < abs($1 - targetBottom) }), abs(nearest - targetBottom) < 50 {
             return max(PageGeometry.printableInset, nearest - offset)
         }
-        // 沒有格線或離得遠：吸附至 20pt 步進網格。
-        let step: CGFloat = 20.0
-        return round(y / step) * step
+        // 沒有行線或離得遠：吸到紙上的格子（方格、點陣）；空白紙退回 20pt 步距（核心 `pageSnapGrid`）。
+        let grid = ObjectGridSnap.grid(page: page)
+        return CGFloat(snapOriginToGrid(x: 0, y: Float(y), grid: grid).y)
     }
 
     /// - Parameter tapToWrite: 文字模式「隨點即書」。文字從點的地方開始；橫線紙上基準線坐在格線上，
@@ -461,9 +461,9 @@ extension NotebookEditorView {
                 targetY = ruled.top
                 targetX = location.x
             } else if snapToGrid {
-                let step: CGFloat = 20.0
-                targetX = round(targetX / step) * step
-                targetY = snapYToGuideLine(at: location.y)
+                let grid = ObjectGridSnap.grid(page: targetPage)
+                targetX = CGFloat(snapOriginToGrid(x: Float(targetX), y: 0, grid: grid).x)
+                targetY = snapYToGuideLine(at: location.y, page: targetPage)
             }
         }
         let printable = PageGeometry.printableRect
