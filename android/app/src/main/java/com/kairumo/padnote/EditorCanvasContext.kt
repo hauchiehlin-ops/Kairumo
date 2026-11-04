@@ -1071,6 +1071,11 @@ internal fun rememberEditorCanvasContext(
     // 筆記本中繼資料。Android 在此之前**完全沒有讀過它** —— Apple 放在這裡的
     // 樣板、資料夾、圖釘、連結卡片、3D 與物件堆疊順序，同步過來就像不存在。
     val meta = remember(notebook) { NotebookMeta.load(notebook?.first) }
+    // 「吸附格線」：讓所有物件的拖放落點（`landObject`）知道開關與每頁的紙（與 Apple `syncObjectGridSnap` 相同）。
+    androidx.compose.runtime.SideEffect {
+        com.kairumo.padnote.canvas.ObjectGridSnap.isEnabled = snapToGrid
+        com.kairumo.padnote.canvas.ObjectGridSnap.paperForPage = { p -> meta.paperId(p ?: pageIndex) }
+    }
     val stackRevisionState = remember { mutableIntStateOf(0) }
     var stackRevision by stackRevisionState
     val showStackPanelState = remember { mutableStateOf(false) }
@@ -2784,6 +2789,11 @@ internal fun rememberEditorCanvasContext(
     /// 協同編輯。與 Apple 端講同一套協定（房號、邀請連結、端對端加密都在核心）。
     val showCollaborationState = remember { mutableStateOf(false) }
     var showCollaboration by showCollaborationState
+    // 收到協同邀請（相機掃 QR Code）：打開協同面板，連結已帶入「加入房間」。
+    val pendingInvite = com.kairumo.padnote.collab.CollabInvites.pending
+    androidx.compose.runtime.LaunchedEffect(pendingInvite) {
+        if (pendingInvite != null) showCollaboration = true
+    }
     /// 語言選擇。Apple 端一直有，Android 原本只能跟著系統語系走 ——
     /// 而語言是跨裝置設定（G-04），在這台改了也要傳到別台。
     val showLanguagePickerState = remember { mutableStateOf(false) }

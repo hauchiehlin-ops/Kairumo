@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -68,12 +69,16 @@ fun ShapeEditDialog(
     onDuplicate: (NoteShape) -> Unit,
     onDelete: (NoteShape) -> Unit,
     onReorder: (ObjectStacking.Reorder) -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    /**
+     * 單頁模式：浮動面板（自動避開物件）。連續頁模式傳 false —— 那裡每一頁是縮放過的容器，
+     * 浮動面板放進去會跟著縮小、被裁在頁面裡，所以照舊用對話框。
+     */
+    asFloatingPanel: Boolean = true
 ) {
     fun l(key: String) = LocalizationStrings.localized(key, languageTag)
 
     var draft by remember(shape.id) { mutableStateOf(shape.copyShape()) }
-    val dialogHeight = rememberDialogHeight("shapeEditor", 460.dp)
 
     /** 離散的改動：立刻套用。 */
     fun commit(change: NoteShape.() -> Unit) {
@@ -92,16 +97,12 @@ fun ShapeEditDialog(
     val hasCorner = draft.kindName.lowercase().replace("_", "") in
         setOf("roundedrectangle", "terminator", "alternateprocess")
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(l("shape_edit")) },
-        text = {
-            // 內容與把手包進同一個 Column：AlertDialog 的 text 槽是 Box，
-            // 兩個兄弟會疊在一起，把手蓋住內容最上面 24dp（那一排點不到）。
+    // 浮動面板（與 Apple `FloatingPanel` 同一套）：不再是置中的對話框蓋住形狀，
+    // 面板自動擺到形狀的另一側（見 `FloatingPanel` 的避讓），改動即時看得到。
+    val panelContent: @Composable () -> Unit = {
             Column {
                 Column(
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
-                    modifier = Modifier.height(dialogHeight.value).verticalScroll(rememberScrollState())
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     // 層級：移到最上層／上移／下移／移到最下層。
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -240,12 +241,25 @@ fun ShapeEditDialog(
                         }
                     }
                 }
-                // 底部的拖曳把手：往下拖變高（S-72）。
-                DialogResizeHandle(dialogHeight, "shapeEditor")
+                TextButton(onClick = onDismiss, modifier = Modifier.fillMaxWidth()) { Text(l("done")) }
             }
-        },
-        confirmButton = { TextButton(onClick = onDismiss) { Text(l("done")) } }
-    )
+    }
+    if (asFloatingPanel) {
+        com.kairumo.padnote.ui.FloatingPanel(title = l("shape_edit"), onClose = onDismiss) { panelContent() }
+    } else {
+        AlertDialog(
+            onDismissRequest = onDismiss,
+            title = { Text(l("shape_edit")) },
+            text = {
+                Column(
+                    androidx.compose.ui.Modifier
+                        .heightIn(max = 520.dp)
+                        .verticalScroll(rememberScrollState())
+                ) { panelContent() }
+            },
+            confirmButton = {}
+        )
+    }
 }
 
 /** 連接線編修面板（對應 Apple 的 `ConnectionEditPanel`）。 */

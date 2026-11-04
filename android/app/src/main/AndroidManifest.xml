@@ -104,6 +104,14 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:mimeType="application/pdf" />
             </intent-filter>
+            <!-- 協同邀請：相機掃描 QR Code 或點邀請連結（kairumo://collab?room=…#key=…）。
+                 只帶入「加入房間」欄位，使用者按加入才連線（見 collab/CollabInvites.kt）。 -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="kairumo" android:host="collab" />
+            </intent-filter>
         </activity>
 
         <!--

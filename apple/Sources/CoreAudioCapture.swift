@@ -148,6 +148,15 @@ final class CoreAudioCapture {
     /// 麥克風，取樣率掉到 8／16 kHz 窄頻、還經過耳機自己的通話降噪 —— 對「把
     /// 裝置放在桌上錄整堂課」是最差的來源，講者的聲音幾乎收不到。
     /// `.allowBluetoothA2DP` 只讓**輸出**走藍牙（高品質播放），輸入留在內建麥克風。
+    /// 跑在 Mac 上（Mac Catalyst 或 iPad App on Mac）。與 `AudioRecorderManager.isRunningOnMac` 同一條規則。
+    nonisolated static var isRunningOnMac: Bool {
+        #if targetEnvironment(macCatalyst) || os(macOS)
+        return true
+        #else
+        return ProcessInfo.processInfo.isiOSAppOnMac
+        #endif
+    }
+
     nonisolated static let recordingCategoryOptions: AVAudioSession.CategoryOptions = [
         .defaultToSpeaker, .allowBluetoothA2DP,
     ]
@@ -208,7 +217,10 @@ final class CoreAudioCapture {
         #if os(iOS) || targetEnvironment(macCatalyst)
         let audioSession = AVAudioSession.sharedInstance()
         do {
-            if ProcessInfo.processInfo.isiOSAppOnMac {
+            // **Mac Catalyst 的 `isiOSAppOnMac` 是 false**（它只認「iPad App 跑在 Mac 上」）。
+            // 以前只看它，Catalyst 版就帶著 `.defaultToSpeaker` 去設類別 —— Mac 沒有聽筒，
+            // 直接拋錯，工作階段沒啟用、輸入聲道讀成 0，按錄音只得到「錄音失敗」。
+            if Self.isRunningOnMac {
                 try audioSession.setCategory(.playAndRecord, mode: .default)
             } else {
                 try audioSession.setCategory(.playAndRecord, mode: .default, options: CoreAudioCapture.recordingCategoryOptions)
@@ -229,7 +241,9 @@ final class CoreAudioCapture {
         let input = newEngine.inputNode
 
         #if os(iOS) || targetEnvironment(macCatalyst)
-        if !AVAudioSession.sharedInstance().isInputAvailable || AVAudioSession.sharedInstance().inputNumberOfChannels == 0 {
+        // Mac 上 `AVAudioSession` 的輸入資訊不可靠（常回報 0 聲道），以下面引擎的輸入格式為準。
+        if !Self.isRunningOnMac,
+           !AVAudioSession.sharedInstance().isInputAvailable || AVAudioSession.sharedInstance().inputNumberOfChannels == 0 {
             onError?(L10n.t("rec_err_no_mic"))
             stop()
             return nil

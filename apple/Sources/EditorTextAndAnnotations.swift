@@ -911,7 +911,13 @@ extension NotebookEditorView {
         commitNotebook()
         // 縮圖的快取鍵含配色，所以側欄會跟著換 —— 但畫布要自己重畫一次。
         PageThumbnailRenderer.invalidateAll()
-        showCanvasNotice(localizationManager.localized(guidePalette(id: id).nameKey))
+        let name = localizationManager.localized(guidePalette(id: id).nameKey)
+        // 色彩調性只染底紋（格線、點陣、橫線、版面框線）。整本都是空白紙（匯入的 PDF／Word
+        // 通常如此）時畫面上沒有任何東西會變色 —— 使用者回報「切換似乎無作用」。要講出來。
+        let hasTexture = (0..<max(1, notebook.pageCount)).contains { notebook.paperId(forPage: $0) != "blank" }
+        showCanvasNotice(hasTexture
+            ? name
+            : String(format: localizationManager.localized("guide_palette_blank_hint"), name))
     }
 
     /// 換一種紙。
@@ -1533,6 +1539,16 @@ extension NotebookEditorView {
         return touchRect.contains(unrotated)
     }
 
+    /// 旋轉把手（`ObjectRotationHandle`）的判定區：它畫在物件正上方 `max(h, 40)/2 + 52` 處，
+    /// 超出選取物件 48pt 的穿透範圍 —— 不另外判的話把手點下去會被畫布吃掉。
+    func rotationHandleContainsPoint(_ baseRect: CGRect, rotation: Double, point: CGPoint) -> Bool {
+        let radius = max(baseRect.height, 40) / 2 + 52
+        let rad = CanvasRotation.normalized(rotation) * .pi / 180
+        let hx = baseRect.midX + CGFloat(sin(rad)) * radius
+        let hy = baseRect.midY - CGFloat(cos(rad)) * radius
+        return hypot(point.x - hx, point.y - hy) <= 30
+    }
+
     /// 智慧穿透判定：當觸控點落在筆跡下方的物件時，決定是否讓畫布返回 nil 使得觸控能直達下層物件
     // unused-param-ok: 依 UIKit hitTest(_:with:) 簽章保留 event 參數供擴充使用，穿透邏輯以座標與物件狀態裁決
     func isUnderInkPointPassThrough(point: CGPoint, page: Int, event: UIEvent? = nil) -> Bool {
@@ -1560,7 +1576,8 @@ extension NotebookEditorView {
 
         let checkHit: (CGRect, Double, Bool) -> Void = { baseRect, rot, isSel in
             let padding: CGFloat = isSel ? 48 : 8
-            if rectContainsPoint(baseRect, rotation: rot, touchPadding: padding, point: point) {
+            if rectContainsPoint(baseRect, rotation: rot, touchPadding: padding, point: point)
+                || (isSel && rotationHandleContainsPoint(baseRect, rotation: rot, point: point)) {
                 if isSel {
                     hitSelected = true
                 } else {

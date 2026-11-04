@@ -1298,6 +1298,18 @@ internal fun ColumnScope.EditorCanvasContainer(ctx: EditorCanvasContext) = with(
                         }
                     }
                 },
+                onConnectTap = { from, anchor ->
+                    shapeStore.extendFrom(
+                        from, anchor,
+                        com.kairumo.padnote.ink.PageGeometry.width, com.kairumo.padnote.ink.PageGeometry.height
+                    )?.let { (created, _) ->
+                        selectedConnectionId = null
+                        selectedShapeIds = setOf(created.id)
+                        shapeRevision++
+                        clearPageThumbnailCache()
+                        AutoSync.noteLocalEdit(activity)
+                    }
+                },
                 modifier = Modifier.fillMaxSize()
             )
 

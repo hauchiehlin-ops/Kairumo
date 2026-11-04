@@ -21,6 +21,15 @@ struct FloatingPanel<Content: View>: View {
     @State private var offset: CGSize = .zero
     @State private var dragStart: CGSize = .zero
     @State private var isCollapsed: Bool = false
+    /// 正在編修的物件在螢幕上的框（全域座標）。面板的**初始落點**避開它：
+    /// 預設右上角；物件在右半邊就改放左邊，左右都會壓到就放到物件上方或下方。
+    /// 使用者拖過面板之後以使用者的位置為準。
+    @Environment(\.floatingPanelAvoidRect) private var avoidRect
+    @State private var userMoved = false
+    /// 最近一次自動落點換算成的 `offset`。用類別盒子存：在 body 裡寫入不會觸發重繪。
+    @State private var autoBase = AutoPlacement()
+
+    private final class AutoPlacement { var offset: CGSize = .zero }
 
 
     var body: some View {
@@ -50,7 +59,9 @@ struct FloatingPanel<Content: View>: View {
             }
             .frame(width: width)
             .modifier(FloatingPanelChrome())
-            .offset(clampedOffset(in: geo.size, panelWidth: width))
+            .offset(userMoved || avoidRect == nil
+                    ? clampedOffset(in: geo.size, panelWidth: width)
+                    : avoidingOffset(in: geo, panelWidth: width))
         }
         .allowsHitTesting(true)
     }
@@ -59,6 +70,37 @@ struct FloatingPanel<Content: View>: View {
     ///
     /// 沒有這一步，使用者可以把面板拖出視窗外再也拉不回來 ——
     /// 位置是存在 `offset` 裡的，關掉重開還是在外面。
+    /// 避開物件的落點。候選：右上（預設）、左上、物件下方、物件上方 —— 取與物件重疊最少的那個。
+    private func avoidingOffset(in geo: GeometryProxy, panelWidth: CGFloat) -> CGSize {
+        let size = geo.size
+        guard let global = avoidRect else { return clampedOffset(in: size, panelWidth: panelWidth) }
+        let origin = geo.frame(in: .global).origin
+        let target = global.offsetBy(dx: -origin.x, dy: -origin.y).insetBy(dx: -12, dy: -12)
+        let panelHeight = isCollapsed ? 52 : min(size.height, min(420, max(160, size.height - 120)) + 52)
+        let maxX = max(0, size.width - panelWidth)
+        let maxY = max(0, size.height - panelHeight)
+        let clampY: (CGFloat) -> CGFloat = { min(max($0, 0), maxY) }
+        let candidates: [CGPoint] = [
+            CGPoint(x: maxX, y: 0),
+            CGPoint(x: 0, y: 0),
+            CGPoint(x: maxX, y: clampY(target.maxY)),
+            CGPoint(x: maxX, y: clampY(target.minY - panelHeight)),
+            CGPoint(x: 0, y: clampY(target.maxY)),
+            CGPoint(x: 0, y: clampY(target.minY - panelHeight)),
+        ]
+        let best = candidates.min { a, b in
+            overlap(CGRect(origin: a, size: CGSize(width: panelWidth, height: panelHeight)), target)
+                < overlap(CGRect(origin: b, size: CGSize(width: panelWidth, height: panelHeight)), target)
+        } ?? candidates[0]
+        autoBase.offset = CGSize(width: best.x - maxX, height: best.y)
+        return CGSize(width: best.x, height: best.y)
+    }
+
+    private func overlap(_ a: CGRect, _ b: CGRect) -> CGFloat {
+        let i = a.intersection(b)
+        return i.isNull ? 0 : i.width * i.height
+    }
+
     private func clampedOffset(in size: CGSize, panelWidth: CGFloat) -> CGSize {
         // 初始落點在右上角（面板一向從畫布右側浮出來）：基準 x 是最右邊，
         // `offset.width` 是從那裡往左的位移，所以合法範圍是 [-(maxX + 半個面板), 0]。
@@ -89,6 +131,11 @@ struct FloatingPanel<Content: View>: View {
             .gesture(
                 DragGesture(coordinateSpace: .global)
                     .onChanged { value in
+                        if !userMoved {
+                            // 從自動避讓的位置接手：換算成 `offset` 的基準（以右上角為原點的位移）。
+                            userMoved = true
+                            dragStart = autoBase.offset
+                        }
                         var transaction = Transaction()
                         transaction.animation = nil
                         withTransaction(transaction) {
@@ -128,6 +175,18 @@ struct FloatingPanel<Content: View>: View {
         .padding(.leading, 12)
         .padding(.trailing, 6)
         .padding(.vertical, 6)
+    }
+}
+
+private struct FloatingPanelAvoidRectKey: EnvironmentKey {
+    static let defaultValue: CGRect? = nil
+}
+
+extension EnvironmentValues {
+    /// 編修面板要避開的物件框（全域座標）。見 `FloatingPanel`。
+    var floatingPanelAvoidRect: CGRect? {
+        get { self[FloatingPanelAvoidRectKey.self] }
+        set { self[FloatingPanelAvoidRectKey.self] = newValue }
     }
 }
 

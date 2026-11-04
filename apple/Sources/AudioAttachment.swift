@@ -205,7 +205,7 @@ struct AudioAttachmentItemView: View {
                     .help(localizationManager.localized("rename_audio_card"))
                 }
             }
-            .objectProbe("audio")
+            .objectProbe("audio", id: item.id)
             .padding(20)
             .position(x: currentX + displayWidth / 2, y: currentY + displayHeight / 2)
             .animation(nil, value: dragOffset)

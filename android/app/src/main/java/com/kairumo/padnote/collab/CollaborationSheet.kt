@@ -39,6 +39,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.platform.testTag
 import com.kairumo.padnote.LocalizationStrings
 import com.kairumo.padnote.milestone.MilestoneSection
 
@@ -69,7 +72,9 @@ fun CollaborationSheet(
     fun l(key: String) = LocalizationStrings.localized(key, languageTag)
     val context = LocalContext.current
 
-    var joinInput by remember { mutableStateOf("") }
+    // 從 QR Code／邀請連結進來的話，直接帶入（見 CollabInvites）。
+    val invited = remember { CollabInvites.pending.also { CollabInvites.pending = null } }
+    var joinInput by remember { mutableStateOf(invited ?: "") }
     var serverInput by remember { mutableStateOf(manager.serverAddress) }
     var editingServer by remember { mutableStateOf(false) }
 
@@ -150,6 +155,9 @@ fun CollaborationSheet(
                                 }
                             }
 
+                            // 掃描加入：每種連線方式一張 QR Code（與 Apple `CollabInviteQRSection` 同一套）。
+                            CollabInviteQr(manager, ::l)
+
                             // 只貼房號、沒帶金鑰就加入的話，連得上、也看得到成員，
                             // **但對方寫的每一個字都解不開** —— 畫面上什麼都不會
                             // 發生，而使用者會以為是同步壞了。連上之後就講明白。
@@ -202,6 +210,13 @@ fun CollaborationSheet(
                             HorizontalDivider()
                             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 Button(onClick = { manager.createRoom() }) { Text(l("start_collaboration")) }
+                            }
+                            if (invited != null) {
+                                Text(
+                                    l("collab_invite_received"),
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
                             }
                             OutlinedTextField(
                                 value = joinInput,
@@ -312,3 +327,69 @@ private fun copy(context: Context, text: String) {
 
 private fun parseColor(hex: String): Color =
     runCatching { Color(android.graphics.Color.parseColor(hex)) }.getOrDefault(Color.Gray)
+
+/**
+ * 邀請連結的 QR Code。依可用的連線方式各一張：同一 Wi‑Fi、Tailscale、遠端中繼。
+ * 對方用相機掃描就開啟 `kairumo://collab?...`，房號、金鑰、位址自動帶入。
+ * 矩陣由核心產生（`collabQrCode`），Apple 畫的是同一份（I6）。
+ */
+@Composable
+private fun CollabInviteQr(manager: CollaborationManager, l: (String) -> String) {
+    data class Mode(val id: String, val titleKey: String, val link: String)
+    val modes = buildList {
+        if (manager.isHostingLocalRelay) {
+            if (manager.lanRelayAddress != null) add(Mode("lan", "collab_qr_mode_lan", manager.inviteLink))
+            manager.tailscaleInviteLink?.let { add(Mode("tailscale", "collab_qr_mode_tailscale", it)) }
+        } else {
+            add(Mode("remote", "collab_qr_mode_remote", manager.inviteLink))
+        }
+    }.filter { it.link.isNotEmpty() }.distinctBy { it.link }
+    if (modes.isEmpty()) return
+    var selected by remember { mutableStateOf<String?>(null) }
+    val current = modes.firstOrNull { it.id == selected } ?: modes.first()
+
+    HorizontalDivider()
+    Text(l("collab_qr_title"), style = MaterialTheme.typography.labelMedium)
+    if (modes.size > 1) {
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            for (mode in modes) {
+                androidx.compose.material3.FilterChip(
+                    selected = mode.id == current.id,
+                    onClick = { selected = mode.id },
+                    label = { Text(l(mode.titleKey)) }
+                )
+            }
+        }
+    }
+    // 矩陣依連結快取：捲動重組時不重算。
+    val qr = remember(current.link) { runCatching { uniffi.padnote_core.collabQrCode(current.link) }.getOrNull() }
+    if (qr != null && qr.size > 0u) {
+        val n = qr.size.toInt()
+        androidx.compose.foundation.Canvas(
+            Modifier
+                .size(176.dp)
+                .background(Color.White)
+                .semantics { contentDescription = l("collab_qr_title") }
+                .testTag("collaboration.qr")
+        ) {
+            val quiet = 4
+            val cell = size.minDimension / (n + quiet * 2)
+            for (y in 0 until n) {
+                for (x in 0 until n) {
+                    if (qr.modules[y * n + x]) {
+                        drawRect(
+                            Color.Black,
+                            topLeft = androidx.compose.ui.geometry.Offset((x + quiet) * cell, (y + quiet) * cell),
+                            size = androidx.compose.ui.geometry.Size(cell + 0.5f, cell + 0.5f)
+                        )
+                    }
+                }
+            }
+        }
+    }
+    Text(
+        l("collab_qr_hint"),
+        style = MaterialTheme.typography.labelSmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant
+    )
+}

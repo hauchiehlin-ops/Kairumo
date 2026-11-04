@@ -186,6 +186,8 @@ struct ShapeAttachmentItemView: View {
     /// 從連接點拉線。`finished == false` 是拖曳中（畫預覽線），
     /// `true` 是放開（由呼叫端決定連到誰）。座標是畫布座標。
     var onConnectDrag: (ShapeAnchorName, CGPoint, CGPoint, Bool) -> Void = { _, _, _, _ in }
+    /// 單點連接點「＋」：往那個方向長出一個相連的同款形狀。
+    var onConnectTap: (ShapeAnchorName) -> Void = { _ in }
 
     @ObservedObject private var localizationManager = LocalizationManager.shared
     @Environment(\.pageCrossing) private var pageCrossing
@@ -235,7 +237,7 @@ struct ShapeAttachmentItemView: View {
             }
         }
         .frame(width: frame.width, height: frame.height)
-        .objectProbe("shape")
+        .objectProbe("shape", id: shape.id)
         .position(x: currentX + frame.width / 2, y: currentY + frame.height / 2)
         .animation(nil, value: dragOffset)
         .alert(
@@ -460,6 +462,8 @@ struct ShapeAttachmentItemView: View {
             .frame(width: 34, height: 34)
             .contentShape(Rectangle())
             .position(x: spot.x, y: spot.y)
+            // 單點：快速延伸（新增相連形狀）。拖曳：拉線連到既有形狀。
+            .onTapGesture { onConnectTap(anchor) }
             .highPriorityGesture(
                 DragGesture(minimumDistance: 2, coordinateSpace: .named(CanvasCoordinateSpace.name))
                     .onChanged { value in

@@ -85,6 +85,9 @@ enum PrintableArea {
     static func land(
         x: CGFloat, y: CGFloat, width: CGFloat, height: CGFloat, crossing: PageCrossing?
     ) -> (page: Int?, origin: CGPoint) {
+        // 「吸附格線」開著：先吸到紙上的格子，再夾回可列印範圍。所有物件拖放都經過這裡。
+        let snapped = ObjectGridSnap.snap(CGPoint(x: x, y: y), page: crossing?.page)
+        let x = snapped.x, y = snapped.y
         guard let crossing else {
             return (nil, clampOrigin(x: x, y: y, width: width, height: height))
         }
@@ -100,6 +103,55 @@ enum PrintableArea {
         let target = Int(landing.pageIndex)
         return (target == crossing.page ? nil : target,
                 CGPoint(x: CGFloat(landing.minX), y: CGFloat(landing.minY)))
+    }
+}
+
+/// 物件拖放的格線吸附（工具列「吸附格線」）。
+///
+/// 格距來自核心（`pageSnapGrid`）：從這張紙**真正畫出來的底紋**推出 —— 方格紙吸方格線、
+/// 點陣紙吸點、橫線紙吸行線；空白紙退回 20pt 的隱形格。與 Android `ObjectGridSnap` 同一條規則。
+/// 編輯器在開關切換、換紙時更新 `isEnabled` 與 `paperForPage`。
+/// 只在主執行緒讀寫（拖曳手勢結束、工具列切換）。
+enum ObjectGridSnap {
+    // profile-scope: device 工具列開關的鏡像，編輯器每次出現都重設
+    nonisolated(unsafe) static var isEnabled = false
+    /// 頁碼 → 紙張 id。`nil` 頁碼代表目前頁。
+    // profile-scope: device 指向目前開著的編輯器，編輯器每次出現都重設
+    nonisolated(unsafe) static var paperForPage: (Int?) -> String = { _ in "blank" }
+    // profile-scope: device 紙張 id → 格距，純幾何快取
+    private nonisolated(unsafe) static var cache: [String: FfiSnapGrid] = [:]
+
+    static func grid(page: Int?) -> FfiSnapGrid {
+        let paper = paperForPage(page)
+        let size = PageGeometry.size
+        let key = "\(paper)|\(Int(size.width))x\(Int(size.height))"
+        if let hit = cache[key] { return hit }
+        let style = NoteTemplate(paperId: paper)?.pageStyle ?? .blank
+        let grid = pageSnapGrid(
+            paperId: paper, style: style, width: Float(size.width), height: Float(size.height))
+        cache[key] = grid
+        return grid
+    }
+
+    // profile-scope: device 紙張 id → 有沒有底紋，純幾何快取
+    private nonisolated(unsafe) static var textured: [String: Bool] = [:]
+
+    /// 這張紙畫得出格子／點／行線嗎。空白紙（匯入的 PDF 頁面多半如此）上的物件不吸 ——
+    /// 看不到的格子吸起來只會讓人對不準底下 PDF 的內容。文字方塊另有自己的行線吸附。
+    static func hasVisibleGrid(page: Int?) -> Bool {
+        let paper = paperForPage(page)
+        if let hit = textured[paper] { return hit }
+        let style = NoteTemplate(paperId: paper)?.pageStyle ?? .blank
+        let size = PageGeometry.size
+        let has = !pageTexture(paperId: paper, style: style, width: Float(size.width), height: Float(size.height)).isEmpty
+        textured[paper] = has
+        return has
+    }
+
+    static func snap(_ origin: CGPoint, page: Int?) -> CGPoint {
+        guard isEnabled, hasVisibleGrid(page: page) else { return origin }
+        let p = snapOriginToGrid(x: Float(origin.x), y: Float(origin.y), grid: grid(page: page))
+        return CGPoint(x: CGFloat(p.x), y: CGFloat(p.y))
     }
 }
 

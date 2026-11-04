@@ -34,9 +34,52 @@ data class PageLanding(val page: Int?, val x: Float, val y: Float)
  * 物件 `id` 的外框 `(x, y, width, height)`（相對於它目前那一頁）放開後落在哪裡。
  * 沒有 `crossing`（單頁模式）或物件不能換頁時，等同 [PageGeometry.clampOrigin]。
  */
+/**
+ * 物件拖放的格線吸附（工具列「吸附格線」）。與 Apple `ObjectGridSnap` 同一條規則：
+ * 格距來自核心 `pageSnapGrid`（從紙上真正畫出來的底紋推出）；空白紙上的物件不吸
+ * （看不到的格子只會讓人對不準底下的 PDF），文字方塊另有自己的行線吸附。
+ * 編輯器在開關切換、換紙時更新 [isEnabled] 與 [paperForPage]（主執行緒）。
+ */
+// profile-scope: device 工具列開關的鏡像與紙張格距快取，編輯器每次組合都重設
+object ObjectGridSnap {
+    @Volatile var isEnabled: Boolean = false
+    /** 頁碼 → 紙張 id。`null` 是目前頁。 */
+    @Volatile var paperForPage: (Int?) -> String = { "blank" }
+    private val gridCache = java.util.concurrent.ConcurrentHashMap<String, uniffi.padnote_core.FfiSnapGrid>()
+    private val texturedCache = java.util.concurrent.ConcurrentHashMap<String, Boolean>()
+
+    private fun style(paper: String): uniffi.padnote_core.PageStyle =
+        uniffi.padnote_core.paperTemplates().firstOrNull { it.id == paper }?.pageStyle
+            ?: uniffi.padnote_core.PageStyle.BLANK
+
+    fun grid(page: Int?): uniffi.padnote_core.FfiSnapGrid {
+        val paper = paperForPage(page)
+        val key = "$paper|${PageGeometry.width.toInt()}x${PageGeometry.height.toInt()}"
+        return gridCache.getOrPut(key) {
+            uniffi.padnote_core.pageSnapGrid(paper, style(paper), PageGeometry.width, PageGeometry.height)
+        }
+    }
+
+    fun hasVisibleGrid(page: Int?): Boolean {
+        val paper = paperForPage(page)
+        return texturedCache.getOrPut(paper) {
+            uniffi.padnote_core.pageTexture(paper, style(paper), PageGeometry.width, PageGeometry.height).isNotEmpty()
+        }
+    }
+
+    fun snap(x: Float, y: Float, page: Int?): Pair<Float, Float> {
+        if (!isEnabled || !runCatching { hasVisibleGrid(page) }.getOrDefault(false)) return x to y
+        val p = runCatching { uniffi.padnote_core.snapOriginToGrid(x, y, grid(page)) }.getOrNull()
+            ?: return x to y
+        return p.x to p.y
+    }
+}
+
 fun landObject(
-    id: String, x: Float, y: Float, width: Float, height: Float, crossing: PageCrossing?
+    id: String, x0: Float, y0: Float, width: Float, height: Float, crossing: PageCrossing?
 ): PageLanding {
+    // 「吸附格線」開著：先吸到紙上的格子，再夾回可列印範圍。所有物件拖放都經過這裡。
+    val (x, y) = ObjectGridSnap.snap(x0, y0, crossing?.page)
     if (crossing != null) {
         val landing = runCatching {
             uniffi.padnote_core.landOnPage(

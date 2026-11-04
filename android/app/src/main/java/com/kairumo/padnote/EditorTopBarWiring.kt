@@ -33,6 +33,10 @@ internal fun EditorCanvasContext.withRestoredTopBarWiring(base: EditorTopBarActi
     onSelectPalette = { id ->
         meta.setPaletteId(notebook?.first, id)
         revision++
+        // 色彩調性只染底紋。整本都是空白紙時畫面上沒有東西會變色，要講出來（與 Apple 相同）。
+        val name = l10n(uniffi.padnote_core.guidePalette(id).nameKey)
+        val hasTexture = (0 until maxOf(1, pageCount)).any { meta.paperId(it) != "blank" }
+        message = if (hasTexture) name else l10n("guide_palette_blank_hint").replace("%@", name)
     },
 
     // ── 錄音 ─────────────────────────────────────────────

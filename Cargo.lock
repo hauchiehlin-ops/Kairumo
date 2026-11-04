@@ -2270,14 +2270,14 @@ dependencies = [
 
 [[package]]
 name = "padnote-asr"
-version = "6.4.7"
+version = "6.4.8"
 dependencies = [
  "padnote-doc",
 ]
 
 [[package]]
 name = "padnote-asr-paraformer"
-version = "6.4.7"
+version = "6.4.8"
 dependencies = [
  "ort",
  "padnote-asr",
@@ -2289,7 +2289,7 @@ dependencies = [
 
 [[package]]
 name = "padnote-asr-whisper"
-version = "6.4.7"
+version = "6.4.8"
 dependencies = [
  "padnote-asr",
  "whisper-rs",
@@ -2297,7 +2297,7 @@ dependencies = [
 
 [[package]]
 name = "padnote-audio"
-version = "6.4.7"
+version = "6.4.8"
 dependencies = [
  "audiopus",
  "audiopus_sys",
@@ -2306,11 +2306,11 @@ dependencies = [
 
 [[package]]
 name = "padnote-bench"
-version = "6.4.7"
+version = "6.4.8"
 
 [[package]]
 name = "padnote-chart"
-version = "6.4.7"
+version = "6.4.8"
 dependencies = [
  "serde",
  "serde_json",
@@ -2318,7 +2318,7 @@ dependencies = [
 
 [[package]]
 name = "padnote-core"
-version = "6.4.7"
+version = "6.4.8"
 dependencies = [
  "aes-gcm",
  "base64 0.22.1",
@@ -2355,6 +2355,7 @@ dependencies = [
  "padnote-text",
  "padnote-toolbar",
  "padnote-vad-silero",
+ "qrcodegen",
  "serde",
  "serde_json",
  "sha2",
@@ -2366,7 +2367,7 @@ dependencies = [
 
 [[package]]
 name = "padnote-crypto"
-version = "6.4.7"
+version = "6.4.8"
 dependencies = [
  "aes-gcm",
  "argon2",
@@ -2378,18 +2379,18 @@ dependencies = [
 
 [[package]]
 name = "padnote-denoise"
-version = "6.4.7"
+version = "6.4.8"
 dependencies = [
  "nnnoiseless",
 ]
 
 [[package]]
 name = "padnote-doc"
-version = "6.4.7"
+version = "6.4.8"
 
 [[package]]
 name = "padnote-drafting"
-version = "6.4.7"
+version = "6.4.8"
 dependencies = [
  "padnote-ink",
  "padnote-solid",
@@ -2397,7 +2398,7 @@ dependencies = [
 
 [[package]]
 name = "padnote-embed"
-version = "6.4.7"
+version = "6.4.8"
 dependencies = [
  "calamine",
  "docx-rs",
@@ -2407,7 +2408,7 @@ dependencies = [
 
 [[package]]
 name = "padnote-export"
-version = "6.4.7"
+version = "6.4.8"
 dependencies = [
  "miniz_oxide 0.8.9",
  "padnote-doc",
@@ -2422,26 +2423,26 @@ dependencies = [
 
 [[package]]
 name = "padnote-i18n"
-version = "6.4.7"
+version = "6.4.8"
 
 [[package]]
 name = "padnote-ink"
-version = "6.4.7"
+version = "6.4.8"
 dependencies = [
  "padnote-doc",
 ]
 
 [[package]]
 name = "padnote-input"
-version = "6.4.7"
+version = "6.4.8"
 
 [[package]]
 name = "padnote-llm"
-version = "6.4.7"
+version = "6.4.8"
 
 [[package]]
 name = "padnote-llm-llama"
-version = "6.4.7"
+version = "6.4.8"
 dependencies = [
  "encoding_rs",
  "llama-cpp-2",
@@ -2450,7 +2451,7 @@ dependencies = [
 
 [[package]]
 name = "padnote-models"
-version = "6.4.7"
+version = "6.4.8"
 dependencies = [
  "serde",
  "serde_json",
@@ -2459,7 +2460,7 @@ dependencies = [
 
 [[package]]
 name = "padnote-pdf"
-version = "6.4.7"
+version = "6.4.8"
 dependencies = [
  "padnote-doc",
  "padnote-ink",
@@ -2467,7 +2468,7 @@ dependencies = [
 
 [[package]]
 name = "padnote-pdf-pdfium"
-version = "6.4.7"
+version = "6.4.8"
 dependencies = [
  "padnote-pdf",
  "pdfium-render",
@@ -2475,7 +2476,7 @@ dependencies = [
 
 [[package]]
 name = "padnote-punct-ct"
-version = "6.4.7"
+version = "6.4.8"
 dependencies = [
  "ort",
  "padnote-asr",
@@ -2485,11 +2486,11 @@ dependencies = [
 
 [[package]]
 name = "padnote-recognize"
-version = "6.4.7"
+version = "6.4.8"
 
 [[package]]
 name = "padnote-recorder"
-version = "6.4.7"
+version = "6.4.8"
 dependencies = [
  "cpal",
  "padnote-asr",
@@ -2499,7 +2500,7 @@ dependencies = [
 
 [[package]]
 name = "padnote-relay"
-version = "6.4.7"
+version = "6.4.8"
 dependencies = [
  "futures-util",
  "serde",
@@ -2510,7 +2511,7 @@ dependencies = [
 
 [[package]]
 name = "padnote-render"
-version = "6.4.7"
+version = "6.4.8"
 dependencies = [
  "bytemuck",
  "padnote-ink",
@@ -2519,14 +2520,14 @@ dependencies = [
 
 [[package]]
 name = "padnote-search"
-version = "6.4.7"
+version = "6.4.8"
 dependencies = [
  "zhconv",
 ]
 
 [[package]]
 name = "padnote-shapes"
-version = "6.4.7"
+version = "6.4.8"
 dependencies = [
  "padnote-doc",
  "padnote-ink",
@@ -2534,14 +2535,14 @@ dependencies = [
 
 [[package]]
 name = "padnote-solid"
-version = "6.4.7"
+version = "6.4.8"
 dependencies = [
  "padnote-ink",
 ]
 
 [[package]]
 name = "padnote-storage"
-version = "6.4.7"
+version = "6.4.8"
 dependencies = [
  "base64 0.22.1",
  "padnote-crypto",
@@ -2555,7 +2556,7 @@ dependencies = [
 
 [[package]]
 name = "padnote-sync"
-version = "6.4.7"
+version = "6.4.8"
 dependencies = [
  "getrandom 0.2.17",
  "padnote-crypto",
@@ -2568,21 +2569,21 @@ dependencies = [
 
 [[package]]
 name = "padnote-table"
-version = "6.4.7"
+version = "6.4.8"
 dependencies = [
  "padnote-chart",
 ]
 
 [[package]]
 name = "padnote-text"
-version = "6.4.7"
+version = "6.4.8"
 dependencies = [
  "zhconv",
 ]
 
 [[package]]
 name = "padnote-toolbar"
-version = "6.4.7"
+version = "6.4.8"
 dependencies = [
  "padnote-i18n",
  "serde",
@@ -2591,7 +2592,7 @@ dependencies = [
 
 [[package]]
 name = "padnote-vad-silero"
-version = "6.4.7"
+version = "6.4.8"
 dependencies = [
  "ort",
  "padnote-asr",
@@ -2831,6 +2832,12 @@ name = "pxfm"
 version = "0.1.30"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d55d956fa96f5ec02be2e13af0e20391a5aa83d6a074e3ad368959d0fab299ea"
+
+[[package]]
+name = "qrcodegen"
+version = "1.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4339fc7a1021c9c1621d87f5e3505f2805c8c105420ba2f2a4df86814590c142"
 
 [[package]]
 name = "quick-error"

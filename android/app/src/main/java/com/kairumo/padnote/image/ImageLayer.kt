@@ -17,6 +17,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
@@ -148,6 +150,14 @@ private fun ImageObjectView(
         Box(
             modifier = Modifier
                 .size(liveWidth.dp, liveHeight.dp)
+                // 選取中回報螢幕上的框：編修面板據此避開它（見 ui/FloatingPanel.kt）。
+                // 離屏截圖（interactive = false）不回報：那條路可能不在主執行緒。
+                .then(
+                    if (!interactive) Modifier
+                    else Modifier.onGloballyPositioned {
+                        com.kairumo.padnote.ui.EditingObjectBounds.report(image.id, isSelected, it.boundsInRoot())
+                    }
+                )
                 .graphicsLayer { rotationZ = rotation }
                 .then(
                     if (image.hasShadow) Modifier.shadow(4.dp, shape) else Modifier

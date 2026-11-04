@@ -157,7 +157,15 @@ extension NotebookEditorView {
                     canvasNoticeBanner(notice)
                 }
             }
-            .overlay { objectEditPanels }
+            // 編修面板避開正在編修的物件：物件框由物件層以錨點回報（`EditingObjectBoundsKey`）。
+            .overlayPreferenceValue(EditingObjectBoundsKey.self) { anchor in
+                GeometryReader { proxy in
+                    objectEditPanels
+                        .environment(\.floatingPanelAvoidRect, anchor.map {
+                            proxy[$0].offsetBy(dx: proxy.frame(in: .global).minX, dy: proxy.frame(in: .global).minY)
+                        })
+                }
+            }
             .overlay(alignment: .top) {
                 // 🌟 草圖智慧修飾浮動控制面板（兩種頁面模式共用）
                 if showSketchRefineBar {
@@ -1333,11 +1341,15 @@ extension NotebookEditorView {
                                 handleConnectDrag(
                                     from: item.id, anchor: anchor, start: start,
                                     current: current, finished: finished)
-                            }
+                            },
+                            onConnectTap: { anchor in addConnectedShape(from: item.id, anchor: anchor) }
                         )
                         .canvasLocked(lockedSet.contains(item.id.lowercased()))
                         .allowsHitTesting(!yieldsToSelectedChrome(item.id, chrome: chrome))
-                        .zIndex(activeSelectedObjectId == item.id ? 999 : stacking.zIndex(for: item.id, kind: .shape))
+                        // 選取中的形狀浮到最上層：連接點「＋」與旋轉把手畫在框外，
+                        // 不浮上來的話會被疊在上面的圖片、文字方塊蓋住而點不到。
+                        .zIndex((activeSelectedObjectId == item.id || selectedShapeIds.contains(item.id))
+                                ? 999 : stacking.zIndex(for: item.id, kind: .shape))
                     }
                 }
 
@@ -1605,6 +1617,7 @@ extension NotebookEditorView {
                 }
 
         }
+        .environment(\.editingPanelObjectId, editingShapeId ?? editingAttachmentId ?? editingTextId)
         .environment(\.objectReorder, { id, op in reorderObject(id, op) })
         .environment(\.objectLock, objectLockActions)
         .environment(\.objectClipboard, objectClipboardActions)

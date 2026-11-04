@@ -71,6 +71,19 @@
 				<string>com.googleusercontent.apps.155748821200-elecovdu3l4m1t17dpf6q1snb3coctld</string>
 			</array>
 		</dict>
+		<dict>
+			<!--
+			  協同邀請（kairumo://collab?room=…#key=…）。相機掃描協同面板上的 QR Code
+			  會開啟這個連結；App 只把它帶入「加入房間」欄位，使用者按加入才連線。
+			  格式由核心 `collab_invite_link` 產生，與 Android 的 intent-filter 同一個 scheme。
+			-->
+			<key>CFBundleURLName</key>
+			<string>com.kairumo.padnote.collab</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>kairumo</string>
+			</array>
+		</dict>
 	</array>
 	<key>CFBundleDocumentTypes</key>
 	<array>

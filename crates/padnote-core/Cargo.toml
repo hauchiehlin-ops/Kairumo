@@ -96,6 +96,8 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 sha2 = { workspace = true }
 thiserror = "2"
+# 協同邀請的 QR Code（純 Rust、MIT、無相依）。兩端畫同一份矩陣，掃起來一樣。
+qrcodegen = "1.8"
 # 協同編輯的端對端加密。**必須是 AES-256-GCM** —— Apple 端用 CryptoKit
 # 的 AES.GCM，換成別的演算法就不相容（見 ffi_collab.rs）。
 aes-gcm = "0.10"

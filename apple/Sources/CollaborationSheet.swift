@@ -12,11 +12,15 @@ public struct CollaborationSheet: View {
     @ObservedObject var collaborationManager = CollaborationManager.shared
     @ObservedObject var localizationManager = LocalizationManager.shared
     @ObservedObject var localSyncDiscovery = LocalSyncDiscovery.shared
-    @ObservedObject var store = NotebookStore.shared
+    /// **不觀察**（`@ObservedObject`）：這裡只在開啟／建立／還原快照時呼叫它的方法。
+    /// 觀察的話，筆記每存一次檔（自動存檔、縮圖、協同套用）整張面板就重算一次 ——
+    /// 捲動時一卡一卡（使用者回報「捲動遲頓嚴重」）。
+    private let store = NotebookStore.shared
 
     public let notebookId: String?
 
     @State private var inputRoomId: String = ""
+    @State private var inviteReceived: Bool = false
     @State private var showCopiedAlert: Bool = false
     @State private var showEndSessionAlert: Bool = false
     @State private var isEditingServerUrl: Bool = false
@@ -84,6 +88,12 @@ public struct CollaborationSheet: View {
                 .padding(20)
             }
             .onAppear {
+                // 從 QR Code／邀請連結進來的話，直接帶入「加入房間」。
+                if let invite = collaborationManager.pendingInviteLink {
+                    inputRoomId = invite
+                    inviteReceived = true
+                    collaborationManager.pendingInviteLink = nil
+                }
                 loadSnapshots()
                 localSyncDiscovery.startBrowsing()
             }
@@ -481,6 +491,9 @@ public struct CollaborationSheet: View {
                 }
             }
 
+            // 掃描加入：每種連線方式一張 QR Code（同一 Wi‑Fi／Tailscale／遠端中繼）。
+            CollabInviteQRSection()
+
             // 在線成員名單
             VStack(alignment: .leading, spacing: 10) {
                 HStack {
@@ -721,6 +734,11 @@ public struct CollaborationSheet: View {
 
             // 輸入房間代碼加入既有房間
             VStack(alignment: .leading, spacing: 8) {
+                if inviteReceived {
+                    Label(localizationManager.localized("collab_invite_received"), systemImage: "qrcode.viewfinder")
+                        .font(.caption)
+                        .foregroundColor(.accentColor)
+                }
                 Text(localizationManager.localized("join_room"))
                     .font(.caption)
                     .fontWeight(.semibold)
@@ -849,9 +867,6 @@ public struct CollaborationSheet: View {
                 }
                 .buttonStyle(.plain)
             }
-
-            CollabAdvancedFeaturesPanel()
-                .padding(.horizontal)
 
             if snapshots.isEmpty {
                 HStack {
@@ -989,5 +1004,139 @@ public struct CollaborationSheet: View {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy/MM/dd HH:mm"
         return formatter.string(from: date)
+    }
+}
+
+// MARK: - 掃描加入
+
+/// 邀請連結的 QR Code。依目前可用的連線方式各給一張：同一 Wi‑Fi（區網中繼位址）、
+/// Tailscale（跨網段）、遠端中繼（自架的 `wss://`）。對方用相機一掃就開啟
+/// `kairumo://collab?...` 邀請連結，房號、金鑰、位址全部自動帶入。
+///
+/// 矩陣由核心產生（`collabQrCode`），Android 畫的是同一份（I6）。
+struct CollabInviteQRSection: View {
+    @ObservedObject private var collaborationManager = CollaborationManager.shared
+    @ObservedObject private var localizationManager = LocalizationManager.shared
+    @State private var selected: String? = nil
+
+    private struct Mode: Identifiable, Equatable {
+        let id: String
+        let titleKey: String
+        let icon: String
+        let link: String
+    }
+
+    private var modes: [Mode] {
+        var out: [Mode] = []
+        let m = collaborationManager
+        if m.isHostingLocalRelay {
+            if m.lanRelayAddress != nil {
+                out.append(Mode(id: "lan", titleKey: "collab_qr_mode_lan", icon: "wifi", link: m.inviteLink(forTailscale: false)))
+            }
+            if let ts = m.tailscaleInviteLink {
+                out.append(Mode(id: "tailscale", titleKey: "collab_qr_mode_tailscale", icon: "network", link: ts))
+            }
+        } else {
+            out.append(Mode(id: "remote", titleKey: "collab_qr_mode_remote", icon: "globe", link: m.encryptedInviteLink))
+        }
+        // 同一個連結不重複列（例如沒有區網位址時 Tailscale 也是預設連結）。
+        var seen = Set<String>()
+        return out.filter { !$0.link.isEmpty && seen.insert($0.link).inserted }
+    }
+
+    var body: some View {
+        let modes = self.modes
+        if let current = modes.first(where: { $0.id == selected }) ?? modes.first {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(spacing: 6) {
+                    Image(systemName: "qrcode")
+                        .foregroundColor(.accentColor)
+                    Text(localizationManager.localized("collab_qr_title"))
+                        .font(.caption)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.secondary)
+                    Spacer()
+                }
+                if modes.count > 1 {
+                    Picker("", selection: Binding(
+                        get: { current.id },
+                        set: { selected = $0 })
+                    ) {
+                        ForEach(modes) { mode in
+                            Label(localizationManager.localized(mode.titleKey), systemImage: mode.icon)
+                                .tag(mode.id)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .labelsHidden()
+                }
+                HStack(alignment: .center, spacing: 14) {
+                    QRCodeImage(text: current.link)
+                        .frame(width: 168, height: 168)
+                        .accessibilityLabel(localizationManager.localized("collab_qr_title"))
+                        .accessibilityIdentifier("collaboration.qr")
+                    VStack(alignment: .leading, spacing: 8) {
+                        Label(localizationManager.localized(current.titleKey), systemImage: current.icon)
+                            .font(.subheadline.weight(.semibold))
+                        Text(localizationManager.localized("collab_qr_hint"))
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+            }
+            .padding(14)
+            .background(Color(uiColor: .secondarySystemGroupedBackground))
+            .cornerRadius(12)
+        }
+    }
+}
+
+/// 把核心給的 QR 矩陣畫成點陣圖。四周留 4 格靜區（規格要求，掃描器靠它找邊界）。
+/// 結果依文字快取在 `@State`：捲動時不重算矩陣。
+struct QRCodeImage: View {
+    let text: String
+    @State private var rendered: (text: String, image: UIImage)? = nil
+
+    var body: some View {
+        Group {
+            if let rendered, rendered.text == text {
+                Image(uiImage: rendered.image)
+                    .interpolation(.none)
+                    .resizable()
+                    .scaledToFit()
+            } else {
+                Color.white
+            }
+        }
+        .background(Color.white)
+        .cornerRadius(8)
+        .task(id: text) {
+            let value = text
+            let image = await Task.detached(priority: .userInitiated) { Self.render(value) }.value
+            if let image { rendered = (value, image) }
+        }
+    }
+
+    nonisolated static func render(_ text: String) -> UIImage? {
+        let qr = collabQrCode(text: text)
+        let n = Int(qr.size)
+        guard n > 0, qr.modules.count == n * n else { return nil }
+        let quiet = 4
+        let scale = 8
+        let side = (n + quiet * 2) * scale
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1
+        format.opaque = true
+        return UIGraphicsImageRenderer(size: CGSize(width: side, height: side), format: format).image { ctx in
+            UIColor.white.setFill()
+            ctx.fill(CGRect(x: 0, y: 0, width: side, height: side))
+            UIColor.black.setFill()
+            for y in 0..<n {
+                for x in 0..<n where qr.modules[y * n + x] {
+                    ctx.fill(CGRect(x: (x + quiet) * scale, y: (y + quiet) * scale, width: scale, height: scale))
+                }
+            }
+        }
     }
 }

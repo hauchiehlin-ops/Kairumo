@@ -119,6 +119,34 @@ pub fn collab_invite_link(room_id: String, key_base64: String) -> String {
     }
 }
 
+/// 邀請連結的 QR Code：`size × size` 個模組，逐列由上而下、由左而右（`true` 是黑）。
+///
+/// 兩端畫同一份矩陣（I6）—— 各自用平台的產生器的話，版本、遮罩不同，
+/// 一端掃得到、另一端掃不到時沒有辦法對照。文字太長編不進去時回 `size = 0`。
+#[derive(Clone, Debug, PartialEq, Eq, uniffi::Record)]
+pub struct FfiQrCode {
+    pub size: u32,
+    pub modules: Vec<bool>,
+}
+
+#[uniffi::export]
+pub fn collab_qr_code(text: String) -> FfiQrCode {
+    use qrcodegen::{QrCode, QrCodeEcc};
+    match QrCode::encode_text(&text, QrCodeEcc::Medium) {
+        Ok(qr) => {
+            let n = qr.size();
+            let mut modules = Vec::with_capacity((n * n) as usize);
+            for y in 0..n {
+                for x in 0..n {
+                    modules.push(qr.get_module(x, y));
+                }
+            }
+            FfiQrCode { size: n as u32, modules }
+        }
+        Err(_) => FfiQrCode { size: 0, modules: Vec::new() },
+    }
+}
+
 /// 從使用者貼上的字串解析出房號與金鑰。
 #[derive(Clone, Debug, PartialEq, Eq, uniffi::Record)]
 pub struct FfiCollabInvite {
@@ -558,5 +586,15 @@ mod tests {
         assert!(t.ping_interval_s > 0);
         assert!(t.max_reconnect_attempts > 0);
         assert!(t.default_server.starts_with("ws://"));
+    }
+
+    #[test]
+    fn qr_code_encodes_an_invite() {
+        let qr = collab_qr_code(collab_invite_link("ABC123".into(), "a2V5".into()));
+        assert!(qr.size >= 21);
+        assert_eq!(qr.modules.len(), (qr.size * qr.size) as usize);
+        // 左上角的定位圖樣：外圈全黑。
+        assert!(qr.modules[0] && qr.modules[6] && qr.modules[(6 * qr.size) as usize]);
+        assert_eq!(collab_qr_code("x".repeat(8000)).size, 0);
     }
 }

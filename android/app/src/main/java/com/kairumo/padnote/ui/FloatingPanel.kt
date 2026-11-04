@@ -37,6 +37,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
@@ -53,6 +55,23 @@ import kotlin.math.roundToInt
  * - 標題列可拖曳移動、可收合、有關閉鈕。
  * - 非模態：畫布不會被遮蔽變暗，改動即時生效。
  */
+/**
+ * 正在編修的物件在螢幕上的框（根座標、像素）。物件被選取時由物件層回報
+ * （形狀、圖片），編修面板據此把初始位置擺到物件的另一側 —— 與 Apple
+ * `EditingObjectBoundsKey` + `FloatingPanel.avoidingOffset` 同一套規則。
+ */
+// profile-scope: device 螢幕上選取物件的框，純畫面狀態，不含使用者資料
+object EditingObjectBounds {
+    var rect by mutableStateOf<androidx.compose.ui.geometry.Rect?>(null)
+
+    /** 物件層呼叫：選取中就回報，取消選取時清掉（只清自己回報的那一份）。 */
+    fun report(id: String, selected: Boolean, bounds: androidx.compose.ui.geometry.Rect) {
+        if (selected) { owner = id; rect = bounds } else if (owner == id) { owner = null; rect = null }
+    }
+
+    private var owner: String? = null
+}
+
 @Composable
 fun FloatingPanel(
     title: String,
@@ -65,11 +84,15 @@ fun FloatingPanel(
     var offsetX by remember { mutableFloatStateOf(initialOffsetX) }
     var offsetY by remember { mutableFloatStateOf(initialOffsetY) }
     var isCollapsed by remember { mutableStateOf(false) }
+    // 使用者拖過面板之後以使用者的位置為準，不再自動避讓。
+    var userMoved by remember { mutableStateOf(false) }
+    var containerOrigin by remember { mutableStateOf(androidx.compose.ui.geometry.Offset.Zero) }
 
     BoxWithConstraints(
         modifier = modifier
             .fillMaxSize()
             .zIndex(900f)
+            .onGloballyPositioned { containerOrigin = it.positionInRoot() }
     ) {
         val density = androidx.compose.ui.platform.LocalDensity.current.density
         val availableWidthDp = maxWidth.value
@@ -79,8 +102,37 @@ fun FloatingPanel(
 
         // 預設靠右上角（留 24dp 邊距）
         val baseRightX = (availableWidthDp - panelWidth - 24f).coerceAtLeast(0f)
-        val currentX = (baseRightX + offsetX).coerceIn(0f, (availableWidthDp - panelWidth).coerceAtLeast(0f))
-        val currentY = (offsetY).coerceIn(0f, (maxHeight.value - 100f).coerceAtLeast(0f))
+        var currentX = (baseRightX + offsetX).coerceIn(0f, (availableWidthDp - panelWidth).coerceAtLeast(0f))
+        var currentY = (offsetY).coerceIn(0f, (maxHeight.value - 100f).coerceAtLeast(0f))
+        val avoid = EditingObjectBounds.rect
+        if (!userMoved && avoid != null) {
+            // 候選：右上（預設）、左上、物件下方、物件上方 —— 取與物件重疊最少的。
+            val t = androidx.compose.ui.geometry.Rect(
+                (avoid.left - containerOrigin.x) / density - 12f, (avoid.top - containerOrigin.y) / density - 12f,
+                (avoid.right - containerOrigin.x) / density + 12f, (avoid.bottom - containerOrigin.y) / density + 12f)
+            val panelH = if (isCollapsed) 52f else minOf(maxHeight.value, maxPanelHeight + 52f)
+            val maxX = (availableWidthDp - panelWidth).coerceAtLeast(0f)
+            val maxY = (maxHeight.value - panelH).coerceAtLeast(0f)
+            val leftX = minOf(24f, maxX)
+            fun y(v: Float) = v.coerceIn(0f, maxY)
+            val candidates = listOf(
+                currentX to currentY, leftX to currentY,
+                currentX to y(t.bottom), currentX to y(t.top - panelH),
+                leftX to y(t.bottom), leftX to y(t.top - panelH)
+            )
+            fun overlap(x: Float, yy: Float): Float {
+                val r = androidx.compose.ui.geometry.Rect(x, yy, x + panelWidth, yy + panelH)
+                val i = r.intersect(t)
+                return if (i.width <= 0f || i.height <= 0f) 0f else i.width * i.height
+            }
+            val best = candidates.minByOrNull { (x, yy) -> overlap(x, yy) } ?: candidates[0]
+            currentX = best.first
+            currentY = best.second
+        }
+        // 拖曳區塊只在 key 變了才重啟：讀最新的落點要經過 rememberUpdatedState。
+        val currentXState by androidx.compose.runtime.rememberUpdatedState(currentX)
+        val currentYState by androidx.compose.runtime.rememberUpdatedState(currentY)
+        val baseRightXState by androidx.compose.runtime.rememberUpdatedState(baseRightX)
 
         Surface(
             modifier = Modifier
@@ -101,6 +153,12 @@ fun FloatingPanel(
                         .pointerInput(Unit) {
                             detectDragGestures { change, dragAmount ->
                                 change.consume()
+                                if (!userMoved) {
+                                    // 從自動避讓的位置接手。
+                                    userMoved = true
+                                    offsetX = currentXState - baseRightXState
+                                    offsetY = currentYState
+                                }
                                 offsetX += dragAmount.x / density
                                 offsetY += dragAmount.y / density
                             }
