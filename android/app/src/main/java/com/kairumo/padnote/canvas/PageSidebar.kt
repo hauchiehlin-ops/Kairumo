@@ -358,8 +358,12 @@ private fun PageSidebarRow(
                 ratio = size[0] / size[1]
             }
         }
-        val baseKey = "$pageId-$appLanguage"
-        val cacheKey = "$pageId-$revision-$appLanguage"
+        // 鍵要帶「這一次開啟」的身分：`revision` 每次開啟筆記都從頭數，而快取是整個行程共用的 ——
+        // 只用 pageId＋revision 的話，重新打開時會撿到上一次開啟、同一個 revision 數字的舊縮圖
+        // （實測：刪掉的表格又出現在縮圖上、新畫的筆跡不見，畫布卻是對的，違反 I4）。
+        val sessionTag = System.identityHashCode(s)
+        val baseKey = "$pageId-$sessionTag-$appLanguage"
+        val cacheKey = "$pageId-$sessionTag-$revision-$appLanguage"
         // 目前頁的 revision 前進＝這一頁內容可能變了（貼紙、縮放、圖表……）：標髒，
         // 之後就算切走成為非目前頁，也不准拿舊基底頂替（見 ThumbnailFreshness）。
         if (ThumbnailFreshness.currentPageChanged(isCurrent, lastRenderedRevision, revision)) {

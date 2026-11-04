@@ -105,6 +105,11 @@ internal fun EditorCanvasContext.withRestoredTopBarWiring(base: EditorTopBarActi
         } else {
             // 框選只在打字模式有作用（手繪模式下物件不吃觸控）。
             editorMode = EditorMode.TYPE
+            // Android 的連續頁面還沒有框選層（只有單頁畫布有）：原本在連續模式按「框選」什麼都不會發生。
+            // 先切到單頁（只限這一次，不改使用者的偏好設定），框選才真的能用。
+            if (pageDisplayMode == com.kairumo.padnote.canvas.PageDisplayMode.CONTINUOUS) {
+                pageDisplayMode = com.kairumo.padnote.canvas.PageDisplayMode.SINGLE
+            }
             lasso.clear()   // 套索留下的物件選取不能混進框選，否則同一個物件會被搬兩次
             message = l10n("marquee_hint")
         }
