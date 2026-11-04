@@ -151,6 +151,7 @@
 		80118379CDC3846ADD3D6872 /* TablePropertiesSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000B98B70D26ACC2E61076E4 /* TablePropertiesSheet.swift */; };
 		82A7F6304A56BA20DEBD0D5F /* BackgroundScheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 376DC7233284795647B0D05F /* BackgroundScheduler.swift */; };
 		854BFB7D7055767D6F518055 /* EditorToolbars.swift in Sources */ = {isa = PBXBuildFile; fileRef = DFCA52E20CC208FAFEEBE9CF /* EditorToolbars.swift */; };
+		8598E12F0533E336957EBA41 /* CloudCollab.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6137884866A4EA54A591733C /* CloudCollab.swift */; };
 		8677E2062758DE5EA2EEE87F /* TextBoxAppearance.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7418A9EE9E549FC11AB793EF /* TextBoxAppearance.swift */; };
 		879124F0C755B79F15C42FE5 /* ProColorWheelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74F41D2B41DD153EEA524BBC /* ProColorWheelView.swift */; };
 		880DCFF8C76BF936EADB63DF /* NotebookEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E0D4938AD7ED09F531105A2 /* NotebookEditorView.swift */; };
@@ -298,6 +299,7 @@
 		F76FDF83828E35E26345DCF5 /* AssetLibraryManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA24513DE1A6A5996FB190AC /* AssetLibraryManager.swift */; };
 		F91E0C4A0E48E4695D0337C6 /* PdfAnnotationInteropTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A1525CF56EBBE47CE94BDBD /* PdfAnnotationInteropTests.swift */; };
 		F94293BCC5D971D49F94BE8C /* ResizableSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 16799A63AE107AAA8CCA34B4 /* ResizableSheet.swift */; };
+		F95F3F9E7388026D4CF3117C /* CloudCollabViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCCDECBFBF6A4E696A774F6F /* CloudCollabViews.swift */; };
 		FA976687FEFDD2EA21B626A4 /* StorageJanitorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74EC0F8E33F17C8282C745BE /* StorageJanitorTests.swift */; };
 		FB2B4A98DE6E5CCFF3FF16ED /* DraftingTools.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1A6427DEAFB401E418FE2B8 /* DraftingTools.swift */; };
 		FB8410FC89F4FDB4429963C6 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22CA9AD55E8EDA76ABA92C78 /* OnboardingView.swift */; };
@@ -445,6 +447,7 @@
 		5E24F92E6302316407360361 /* zh-Hant */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hant"; path = "zh-Hant.lproj/InfoPlist.strings"; sourceTree = "<group>"; };
 		60FA2606B2D7C6822A64931D /* EditorSubsystemCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditorSubsystemCoordinator.swift; sourceTree = "<group>"; };
 		61043E910A35DABA29547058 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
+		6137884866A4EA54A591733C /* CloudCollab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudCollab.swift; sourceTree = "<group>"; };
 		61C6C10FAD15645C91E246C0 /* TableStudioView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TableStudioView.swift; sourceTree = "<group>"; };
 		61D0BC500318C879D185099E /* Model3DStudioView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Model3DStudioView.swift; sourceTree = "<group>"; };
 		621C052FCB25E32FBB633BE3 /* MacReleaseConfigTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacReleaseConfigTests.swift; sourceTree = "<group>"; };
@@ -580,6 +583,7 @@
 		CB1466C3AB0C78C44ED34AB8 /* NotebookSearchIndex.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotebookSearchIndex.swift; sourceTree = "<group>"; };
 		CC38A8D206CF6F7CDF0CEEDE /* AutoSyncController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutoSyncController.swift; sourceTree = "<group>"; };
 		CCBD6EB2E871A9532370A15B /* GoogleAuth.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoogleAuth.swift; sourceTree = "<group>"; };
+		CCCDECBFBF6A4E696A774F6F /* CloudCollabViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudCollabViews.swift; sourceTree = "<group>"; };
 		CF7B511C0C84D09A563E93B5 /* CollabProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CollabProtocol.swift; sourceTree = "<group>"; };
 		D059ACC4F96D906F5A18970D /* AppVersion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppVersion.swift; sourceTree = "<group>"; };
 		D2E4B63FC00CBE41E1C67031 /* DeadControlSurvey.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeadControlSurvey.swift; sourceTree = "<group>"; };
@@ -858,6 +862,8 @@
 				20B46B97CCF8127EEE4BD4ED /* ChartRenderer.swift */,
 				8CDA20E9C287F58F4315EA3C /* ChartSpec.swift */,
 				86EC0F8038D34C787D2A729D /* ChartStudioView.swift */,
+				6137884866A4EA54A591733C /* CloudCollab.swift */,
+				CCCDECBFBF6A4E696A774F6F /* CloudCollabViews.swift */,
 				6D92ABBF09268BEEA4DD694D /* CloudSyncFolder.swift */,
 				44D061C8E2977FB257C12E81 /* CollaborationManager.swift */,
 				0FF2EC412BA37683FBBE2FC1 /* CollaborationSheet.swift */,
@@ -1302,6 +1308,8 @@
 				5D1C65B2E7840C00F8861C94 /* ChartRenderer.swift in Sources */,
 				AFE9F37C2A119458E52BA13C /* ChartSpec.swift in Sources */,
 				C54CB75E7D13D0F98B966CC0 /* ChartStudioView.swift in Sources */,
+				8598E12F0533E336957EBA41 /* CloudCollab.swift in Sources */,
+				F95F3F9E7388026D4CF3117C /* CloudCollabViews.swift in Sources */,
 				5E462BD80D8FEADB96FA1CAE /* CloudSyncFolder.swift in Sources */,
 				EBC28FA124F13539D86D713F /* CollabProtocol.swift in Sources */,
 				083FB8C04871B623CD4F5CA0 /* CollabSync.swift in Sources */,

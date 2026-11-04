@@ -65,6 +65,8 @@ fun CollaborationSheet(
     creatorName: String = "",
     /** 還原完成後呼叫，呼叫端要重新開啟筆記本。 */
     onRestored: () -> Unit = {},
+    /** 筆記本名稱（雲端共享資料夾的名字用）。 */
+    notebookTitle: String = "",
     onDismiss: () -> Unit
 ) {
     val height = rememberDialogHeight("collaboration", 520.dp)
@@ -277,6 +279,9 @@ fun CollaborationSheet(
                             TextButton(onClick = { editingServer = true }) { Text(l("reset")) }
                         }
                     }
+
+                    // 雲端共享（跨網路）：房主分享到雲端資料夾、協作者一鍵加入。
+                    if (notebookId != null) CloudShareSection(manager, notebookId, notebookTitle, languageTag)
 
                     // 里程碑快照（S-99）。位置與 Apple 的協同面板一致 ——
                     // 另開一個入口只會讓兩個平台的操作路徑分家。

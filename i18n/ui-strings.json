@@ -4703,6 +4703,14 @@
     "zhHans": "云端暂无这本笔记本的内容，等待来源设备上传",
     "zhHant": "雲端尚無此筆記本之操作記錄，已清理暫存等待來源端上傳"
   },
+  "core_msg_224": {
+    "en": "Drive did not return a permission id after authorization",
+    "ja": "アクセス権の付与後に Drive が permission id を返しませんでした",
+    "ko": "권한을 부여한 뒤 Drive가 permission id를 반환하지 않았습니다",
+    "th": "หลังให้สิทธิ์ Drive ไม่ส่ง permission id กลับมา",
+    "zhHans": "授权之后 Drive 没有回传 permission id",
+    "zhHant": "授權之後 Drive 沒有回傳 permission id"
+  },
   "corner_style": {
     "en": "Corners",
     "ja": "角丸",
@@ -27262,5 +27270,245 @@
     "th": "ได้รับคำเชิญทำงานร่วมกันแล้ว แตะเข้าร่วมเพื่อเชื่อมต่อ",
     "zhHans": "已收到协同邀请：按「加入」即可连线。",
     "zhHant": "已收到協同邀請：按「加入」即可連線。"
+  },
+  "cloud_collab_title": {
+    "en": "Cloud sharing (any network)",
+    "ja": "クラウド共有（別ネットワーク可）",
+    "ko": "클라우드 공유(다른 네트워크)",
+    "th": "แชร์ผ่านคลาวด์ (ข้ามเครือข่าย)",
+    "zhHans": "云端共享（跨网络）",
+    "zhHant": "雲端共享（跨網路）"
+  },
+  "cloud_collab_desc": {
+    "en": "Put this notebook in a shared folder in your Google Drive so collaborators can edit from any network; on the same network it switches to live editing automatically.",
+    "ja": "このノートを Google ドライブの共有フォルダに置くと、別のネットワークからでも一緒に編集できます。同じネットワークでは自動でリアルタイム接続になります。",
+    "ko": "이 노트를 Google 드라이브 공유 폴더에 두면 다른 네트워크에서도 함께 편집할 수 있습니다. 같은 네트워크에서는 자동으로 실시간 연결됩니다.",
+    "th": "วางสมุดนี้ในโฟลเดอร์แชร์บน Google Drive เพื่อให้ผู้ร่วมงานแก้ไขได้จากทุกเครือข่าย หากอยู่เครือข่ายเดียวกันจะสลับเป็นแบบเรียลไทม์อัตโนมัติ",
+    "zhHans": "把这本笔记放进你 Google 云端硬盘的共享文件夹，协作者不必在同一个网络也能一起编辑；在同一网络时自动改用实时连线。",
+    "zhHant": "把這本筆記放進你 Google 雲端硬碟的共享資料夾，協作者不必在同一個網路也能一起編輯；在同一個網路時自動改用即時連線。"
+  },
+  "cloud_collab_email_placeholder": {
+    "en": "Collaborator's Google email",
+    "ja": "共同編集者の Google メール",
+    "ko": "협업자의 Google 이메일",
+    "th": "อีเมล Google ของผู้ร่วมงาน",
+    "zhHans": "协作者的 Google 账号 Email",
+    "zhHant": "協作者的 Google 帳號 Email"
+  },
+  "cloud_collab_share": {
+    "en": "Share",
+    "ja": "共有",
+    "ko": "공유",
+    "th": "แชร์",
+    "zhHans": "分享",
+    "zhHant": "分享"
+  },
+  "cloud_collab_share_link": {
+    "en": "Share by link (anyone with the link can edit)",
+    "ja": "リンクで共有（リンクを知っている人は編集可）",
+    "ko": "링크로 공유(링크가 있는 사람은 편집 가능)",
+    "th": "แชร์ด้วยลิงก์ (ผู้มีลิงก์แก้ไขได้)",
+    "zhHans": "改用链接分享（知道链接的人可编辑）",
+    "zhHant": "改用連結分享（知道連結的人可編輯）"
+  },
+  "cloud_collab_share_link_hint": {
+    "en": "Anyone who gets the link can join and edit — send it only to people you trust.",
+    "ja": "リンクを受け取った人は誰でも参加・編集できます。信頼できる相手にだけ送ってください。",
+    "ko": "링크를 받은 누구나 참여하고 편집할 수 있습니다. 신뢰하는 사람에게만 보내세요.",
+    "th": "ใครได้ลิงก์ก็เข้าร่วมและแก้ไขได้ ส่งให้เฉพาะคนที่ไว้ใจ",
+    "zhHans": "拿到链接的任何人都能加入并编辑，只发给你信任的人。",
+    "zhHant": "拿到連結的任何人都能加入並編輯，只傳給你信任的人。"
+  },
+  "cloud_collab_invite_hint": {
+    "en": "They scan this or tap the invite link and press Join; Google shows a one-time confirmation the first time.",
+    "ja": "相手はこれをスキャンするか招待リンクをタップして「参加」を押すだけです。初回は Google の確認画面が表示されます。",
+    "ko": "상대방은 스캔하거나 초대 링크를 눌러 참여를 누르면 됩니다. 처음에는 Google 확인 화면이 나타납니다.",
+    "th": "อีกฝ่ายสแกนหรือแตะลิงก์เชิญแล้วกดเข้าร่วม ครั้งแรกจะมีหน้ายืนยันของ Google",
+    "zhHans": "对方用相机扫描或点邀请链接，按一下「加入」即可；第一次会出现 Google 的确认画面。",
+    "zhHant": "對方用相機掃描或點邀請連結，按一下「加入」即可；第一次會出現 Google 的確認畫面。"
+  },
+  "cloud_collab_copy_invite": {
+    "en": "Copy invite link",
+    "ja": "招待リンクをコピー",
+    "ko": "초대 링크 복사",
+    "th": "คัดลอกลิงก์เชิญ",
+    "zhHans": "复制邀请链接",
+    "zhHant": "複製邀請連結"
+  },
+  "cloud_collab_send_invite": {
+    "en": "Send invite",
+    "ja": "招待を送信",
+    "ko": "초대 보내기",
+    "th": "ส่งคำเชิญ",
+    "zhHans": "发送邀请",
+    "zhHant": "傳送邀請"
+  },
+  "cloud_collab_add_member": {
+    "en": "Add",
+    "ja": "追加",
+    "ko": "추가",
+    "th": "เพิ่ม",
+    "zhHans": "添加成员",
+    "zhHant": "加入成員"
+  },
+  "cloud_collab_anyone": {
+    "en": "Anyone with the link",
+    "ja": "リンクを知っている全員",
+    "ko": "링크가 있는 모든 사용자",
+    "th": "ทุกคนที่มีลิงก์",
+    "zhHans": "知道链接的任何人",
+    "zhHant": "知道連結的任何人"
+  },
+  "cloud_collab_role_owner": {
+    "en": "Owner",
+    "ja": "オーナー",
+    "ko": "소유자",
+    "th": "เจ้าของ",
+    "zhHans": "房主",
+    "zhHant": "房主"
+  },
+  "cloud_collab_role_writer": {
+    "en": "Can edit",
+    "ja": "編集可",
+    "ko": "편집 가능",
+    "th": "แก้ไขได้",
+    "zhHans": "可编辑",
+    "zhHant": "可編輯"
+  },
+  "cloud_collab_role_commenter": {
+    "en": "Can comment",
+    "ja": "コメント可",
+    "ko": "댓글 가능",
+    "th": "แสดงความคิดเห็นได้",
+    "zhHans": "可评论",
+    "zhHant": "可留言"
+  },
+  "cloud_collab_role_reader": {
+    "en": "Can view",
+    "ja": "閲覧のみ",
+    "ko": "보기 가능",
+    "th": "ดูได้",
+    "zhHans": "可查看",
+    "zhHant": "可檢視"
+  },
+  "cloud_collab_revoke": {
+    "en": "Remove member",
+    "ja": "メンバーを削除",
+    "ko": "멤버 제거",
+    "th": "นำสมาชิกออก",
+    "zhHans": "移除这位成员",
+    "zhHant": "移除這位成員"
+  },
+  "cloud_collab_stop": {
+    "en": "Stop syncing this shared notebook on this device",
+    "ja": "この端末でこの共有ノートの同期を停止",
+    "ko": "이 기기에서 이 공유 노트 동기화 중지",
+    "th": "หยุดซิงค์สมุดที่แชร์นี้บนอุปกรณ์นี้",
+    "zhHans": "这台设备不再同步这本共享笔记",
+    "zhHant": "這台裝置不再同步這本共享筆記"
+  },
+  "cloud_collab_direct": {
+    "en": "Direct",
+    "ja": "直接接続中",
+    "ko": "직접 연결",
+    "th": "เชื่อมต่อตรง",
+    "zhHans": "直连中",
+    "zhHant": "直連中"
+  },
+  "cloud_collab_sharing": {
+    "en": "Creating the shared folder and uploading this notebook…",
+    "ja": "共有フォルダを作成してノートをアップロード中…",
+    "ko": "공유 폴더를 만들고 노트를 업로드하는 중…",
+    "th": "กำลังสร้างโฟลเดอร์แชร์และอัปโหลดสมุด…",
+    "zhHans": "正在创建共享文件夹并上传这本笔记…",
+    "zhHant": "正在建立共享資料夾並上傳這本筆記…"
+  },
+  "cloud_collab_joining": {
+    "en": "Downloading the shared notebook…",
+    "ja": "共有ノートをダウンロード中…",
+    "ko": "공유 노트를 다운로드하는 중…",
+    "th": "กำลังดาวน์โหลดสมุดที่แชร์…",
+    "zhHans": "正在下载共享笔记…",
+    "zhHant": "正在下載共享筆記…"
+  },
+  "cloud_collab_join_title": {
+    "en": "Join shared notebook",
+    "ja": "共有ノートに参加",
+    "ko": "공유 노트 참여",
+    "th": "เข้าร่วมสมุดที่แชร์",
+    "zhHans": "加入共享笔记",
+    "zhHant": "加入共享筆記"
+  },
+  "cloud_collab_join_desc": {
+    "en": "After you tap Join, Google asks you to sign in and confirm this shared folder; the notebook then downloads and opens automatically.",
+    "ja": "「参加」を押すと Google でログインと共有フォルダの確認を求められ、その後ノートがダウンロードされて自動で開きます。",
+    "ko": "참여를 누르면 Google 로그인과 공유 폴더 확인 후 노트가 다운로드되어 자동으로 열립니다.",
+    "th": "เมื่อแตะเข้าร่วม Google จะให้ลงชื่อเข้าใช้และยืนยันโฟลเดอร์ จากนั้นสมุดจะดาวน์โหลดและเปิดอัตโนมัติ",
+    "zhHans": "按「加入」后 Google 会请你登录并确认这个共享文件夹，接着整本笔记会下载到这台设备并自动打开。",
+    "zhHant": "按「加入」後 Google 會請你登入並確認這個共享資料夾，接著整本筆記會下載到這台裝置並自動打開。"
+  },
+  "cloud_collab_join": {
+    "en": "Join",
+    "ja": "参加",
+    "ko": "참여",
+    "th": "เข้าร่วม",
+    "zhHans": "加入",
+    "zhHant": "加入"
+  },
+  "cloud_collab_on_page": {
+    "en": "%@ · page %d",
+    "ja": "%@ · %d ページ",
+    "ko": "%@ · %d쪽",
+    "th": "%@ · หน้า %d",
+    "zhHans": "%@ · 第 %d 页",
+    "zhHant": "%@ · 第 %d 頁"
+  },
+  "cloud_collab_err_reauth": {
+    "en": "Google Drive access for shared folders needs to be granted again.",
+    "ja": "共有フォルダの Google ドライブ権限を再度許可してください。",
+    "ko": "공유 폴더용 Google 드라이브 권한을 다시 허용해야 합니다.",
+    "th": "ต้องอนุญาตสิทธิ์ Google Drive (โฟลเดอร์แชร์) อีกครั้ง",
+    "zhHans": "需要重新授权 Google 云端硬盘（共享文件夹）。",
+    "zhHant": "需要重新授權 Google 雲端硬碟（共享資料夾）。"
+  },
+  "cloud_collab_err_email": {
+    "en": "That doesn't look like an email address.",
+    "ja": "メールアドレスではないようです。",
+    "ko": "이메일 주소가 아닌 것 같습니다.",
+    "th": "ดูเหมือนไม่ใช่อีเมล",
+    "zhHans": "这不像是一个 Email。",
+    "zhHant": "這不像是一個 Email。"
+  },
+  "cloud_collab_err_not_shared": {
+    "en": "This shared folder can't be found, or it isn't shared with the Google account you signed in with. Ask the owner to check who it's shared with.",
+    "ja": "共有フォルダが見つからないか、ログイン中の Google アカウントに共有されていません。オーナーに共有先を確認してください。",
+    "ko": "공유 폴더를 찾을 수 없거나 로그인한 Google 계정에 공유되지 않았습니다. 소유자에게 공유 대상을 확인해 달라고 하세요.",
+    "th": "ไม่พบโฟลเดอร์แชร์ หรือไม่ได้แชร์กับบัญชี Google ที่คุณลงชื่อเข้าใช้ โปรดให้เจ้าของตรวจสอบ",
+    "zhHans": "找不到这个共享文件夹，或它没有分享给你目前登录的 Google 账号。请房主确认分享对象。",
+    "zhHant": "找不到這個共享資料夾，或它沒有分享給你目前登入的 Google 帳號。請房主確認分享對象。"
+  },
+  "cloud_collab_err_read_only": {
+    "en": "You only have view access to this shared folder. Ask the owner to make you an editor.",
+    "ja": "この共有フォルダは閲覧のみです。オーナーに編集者にしてもらってください。",
+    "ko": "이 공유 폴더에 보기 권한만 있습니다. 소유자에게 편집자로 바꿔 달라고 하세요.",
+    "th": "คุณดูได้อย่างเดียว โปรดให้เจ้าของตั้งเป็นผู้แก้ไข",
+    "zhHans": "你对这个共享文件夹只有查看权限。请房主改成「可编辑」。",
+    "zhHant": "你對這個共享資料夾只有檢視權限。請房主改成「可編輯」。"
+  },
+  "cloud_collab_err_contents_hidden": {
+    "en": "The shared folder is visible, but Google isn't letting Kairumo read the owner's files inside it (permission scope limit). Please report this to us.",
+    "ja": "共有フォルダは見えますが、Google がオーナーのファイルの読み取りを許可していません（権限範囲の制限）。この内容を報告してください。",
+    "ko": "공유 폴더는 보이지만 Google이 소유자의 파일 읽기를 허용하지 않습니다(권한 범위 제한). 이 내용을 알려 주세요.",
+    "th": "มองเห็นโฟลเดอร์แต่ Google ไม่อนุญาตให้อ่านไฟล์ของเจ้าของ (ข้อจำกัดสิทธิ์) โปรดแจ้งเรา",
+    "zhHans": "看得到共享文件夹，但 Google 没有让 Kairumo 读取里面房主的文件（权限范围限制）。请把这个信息反馈给我们。",
+    "zhHant": "看得到共享資料夾，但 Google 沒有讓 Kairumo 讀取裡面房主的檔案（權限範圍限制）。請把這個訊息回報給我們。"
+  },
+  "cloud_collab_err_retry": {
+    "en": "Couldn't reach Google Drive right now. Try again shortly.",
+    "ja": "Google ドライブに接続できません。しばらくしてからお試しください。",
+    "ko": "지금 Google 드라이브에 연결할 수 없습니다. 잠시 후 다시 시도하세요.",
+    "th": "เชื่อมต่อ Google Drive ไม่ได้ในขณะนี้ ลองใหม่อีกครั้ง",
+    "zhHans": "暂时连不上 Google 云端硬盘，请稍后再试。",
+    "zhHant": "暫時連不上 Google 雲端硬碟，請稍後再試。"
   }
 }

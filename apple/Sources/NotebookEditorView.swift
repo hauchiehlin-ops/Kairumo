@@ -1535,6 +1535,14 @@ public struct NotebookEditorView: View {
             syncObjectGridSnap()
         }
         .onChange(of: snapToGrid) { _ in syncObjectGridSnap() }
+        // 雲端共享筆記：讓其他參與者看得到我在第幾頁、正在改哪個物件。
+        .onChange(of: currentPageIndex) { page in
+            CloudCollabManager.shared.notePresence(
+                page: page, selectedId: activeSelectedObjectId ?? selectedShapeIds.first)
+        }
+        .onChange(of: activeSelectedObjectId) { id in
+            CloudCollabManager.shared.notePresence(page: currentPageIndex, selectedId: id ?? selectedShapeIds.first)
+        }
         // 相機掃了協同 QR Code：打開協同面板（面板會把連結帶入「加入房間」）。
         .onReceive(collaborationManager.$pendingInviteLink) { link in
             if link != nil { showCollaborationSheet = true }

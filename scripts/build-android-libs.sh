@@ -44,7 +44,7 @@ OUT_DIR="android/app/src/main/jniLibs"
 # 完全不碰 ONNX。兩者原本綁在同一個 `asr` feature 裡，代價是 Android 為了
 # 一個用不到的相依失去整個語音轉錄 —— 而那一側就長出了一個會回報成功的
 # 假轉錄（見 docs/DEVLOG.md 2026-09-22）。
-EXTRA_FEATURES="${KAIRUMO_ANDROID_FEATURES:-relay,asr-whisper}"
+EXTRA_FEATURES="${KAIRUMO_ANDROID_FEATURES:-relay,asr-whisper,p2p}"
 
 # --- NDK 位置 ------------------------------------------------------------
 #

@@ -133,7 +133,7 @@ impl From<FfiDriveError> for SyncError {
 }
 
 /// 把平台的 HTTP 接成核心 `DriveHttp` 的樣子。
-struct ForeignHttp(Arc<dyn FfiDriveHttp>);
+pub(crate) struct ForeignHttp(pub(crate) Arc<dyn FfiDriveHttp>);
 
 impl std::fmt::Debug for ForeignHttp {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -1980,6 +1980,35 @@ impl FfiSyncSession {
             remote_index_json,
         )
     }
+
+    /// 寫入一個不屬於筆記同步的小檔（在場檔）。**同步等待 HTTP，不要在主執行緒呼叫。**
+    pub fn put_aux(&self, path: String, data: Vec<u8>) -> bool {
+        use padnote_sync::provider::CloudProvider;
+        self.drive.put(&path, &data).is_ok()
+    }
+
+    /// 讀出某個前綴底下的所有小檔（在場檔）。路徑 → 內容。
+    pub fn read_aux(&self, prefix: String) -> Vec<FfiAuxFile> {
+        use padnote_sync::provider::CloudProvider;
+        let Ok(entries) = self.drive.list(&prefix) else {
+            return Vec::new();
+        };
+        entries
+            .into_iter()
+            .filter(|e| e.size <= 64 * 1024)
+            .filter_map(|e| {
+                let data = self.drive.get_all(&e.path).ok()?;
+                Some(FfiAuxFile { path: e.path, data })
+            })
+            .collect()
+    }
+}
+
+/// 不屬於筆記同步的小檔（在場檔）。
+#[derive(Clone, Debug, uniffi::Record)]
+pub struct FfiAuxFile {
+    pub path: String,
+    pub data: Vec<u8>,
 }
 
 impl FfiSyncSession {

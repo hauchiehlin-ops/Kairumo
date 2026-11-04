@@ -77,6 +77,15 @@ public struct CollaborationSheet: View {
                         .accessibilityIdentifier("collaboration.relay_failed")
                     }
 
+                    // ☁️ 雲端共享（跨網路）：房主分享到雲端資料夾、協作者一鍵加入。
+                    if let notebookId {
+                        CloudShareSection(
+                            notebookId: notebookId,
+                            title: store.syncNotebooks.first {
+                                $0.id.caseInsensitiveCompare(notebookId) == .orderedSame
+                            }?.displayTitle() ?? "")
+                    }
+
                     // 📸 里程碑快照時光機區塊
                     if notebookId != nil {
                         milestonesSection

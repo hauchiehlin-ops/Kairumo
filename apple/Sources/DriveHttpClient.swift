@@ -103,7 +103,16 @@ final class DriveHttpClient: FfiDriveHttp {
     private let session: URLSession
     private let ownsSession: Bool
 
-    init(accessToken: String, session: URLSession? = nil) {
+    /// 收到 401 時怎麼換證。`nil` = 主帳號（`GoogleAuth`，同步用的 `drive.appdata`）；
+    /// 雲端協作用另一組憑證（`drive.file`），由 `CollabDriveAuth` 提供。
+    /// 自訂換證時，換證失敗**不會**把主帳號登出。
+    private let refresher: (@Sendable () -> GoogleAuth.RefreshOutcome)?
+
+    init(
+        accessToken: String, session: URLSession? = nil,
+        refresher: (@Sendable () -> GoogleAuth.RefreshOutcome)? = nil
+    ) {
+        self.refresher = refresher
         self.storedToken = accessToken
         if let s = session {
             self.session = s
@@ -322,10 +331,10 @@ final class DriveHttpClient: FfiDriveHttp {
         // Google 暫時回不出東西，都只是這一輪失敗、下一輪再試。以前這裡一律當成「憑證失效」，
         // 而 `PermissionDenied` 會讓平台登出並撤銷授權 —— 使用者只是剛好離線一下，就被踢出帳號。
         if response.statusCode == 401 {
-            let outcome = GoogleAuth.shared.refreshTokenOutcomeSync()
+            let outcome = refresher?() ?? GoogleAuth.shared.refreshTokenOutcomeSync()
             guard let newToken = outcome.token else {
                 if outcome.fatal {
-                    GoogleAuth.shared.markNeedsReauthSync()
+                    if refresher == nil { GoogleAuth.shared.markNeedsReauthSync() }
                     throw FfiDriveError.PermissionDenied(detail: L10n.t("drive_auth_expired"))
                 }
                 throw FfiDriveError.Backend(detail: L10n.t("drive_cred_refresh_failed"))
@@ -338,7 +347,7 @@ final class DriveHttpClient: FfiDriveHttp {
                 return (retryPayload, retryResp.allHeaderFields)
             }
             // 換了新權杖還是 401 才是真的失效；其他狀態（403 速率限制、5xx…）照一般錯誤處理。
-            if retryResp.statusCode == 401 {
+            if retryResp.statusCode == 401, refresher == nil {
                 GoogleAuth.shared.markNeedsReauthSync()
             }
             throw Self.classify(

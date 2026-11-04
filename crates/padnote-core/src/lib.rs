@@ -20,6 +20,10 @@ mod ffi_brush;
 pub mod ffi_carry;
 pub mod ffi_chart;
 pub mod ffi_collab;
+pub mod ffi_cloud_collab;
+pub mod ffi_p2p_frames;
+#[cfg(feature = "p2p")]
+pub mod ffi_p2p;
 pub mod ffi_crypto;
 mod ffi_draft;
 mod ffi_draft_example;

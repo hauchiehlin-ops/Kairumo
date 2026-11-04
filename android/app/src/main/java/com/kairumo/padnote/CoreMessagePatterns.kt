@@ -18,6 +18,7 @@ object CoreMessagePatterns {
         "log_msg_003" to listOf("Google 授權失敗：缺少 Code 或 Verifier"),
         "log_msg_027" to listOf("步驟 2 完成。上傳: ", ", 下載: ", ", 新增: ", ", 失敗: ", ""),
         "log_msg_036" to listOf("【背景佇列】筆記本 (", "...) 完成（上傳: ", ", 下載: ", "）"),
+        "core_msg_224" to listOf("授權之後 Drive 沒有回傳 permission id"),
         "core_msg_100" to listOf("房間金鑰格式錯誤（需要 base64 的 32 位元組）"),
         "core_msg_200" to listOf("oplog 操作筆數超過上限，已終止載入以防止記憶體溢出"),
         "log_msg_026" to listOf("步驟 2：更新雲端快照（changes.list）..."),

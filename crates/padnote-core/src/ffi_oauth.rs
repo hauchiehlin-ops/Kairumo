@@ -307,7 +307,7 @@ pub fn oauth_needs_reauth(error: String) -> bool {
 
 // ── 編碼小工具 ──────────────────────────────────────────────────────
 
-fn encode_form(params: &[(&str, String)]) -> String {
+pub(crate) fn encode_form(params: &[(&str, String)]) -> String {
     params
         .iter()
         .map(|(k, v)| format!("{}={}", percent_encode(k), percent_encode(v)))
@@ -333,7 +333,7 @@ fn percent_encode(value: &str) -> String {
     out
 }
 
-fn percent_decode(value: &str) -> String {
+pub(crate) fn percent_decode(value: &str) -> String {
     let bytes = value.as_bytes();
     let mut out: Vec<u8> = Vec::with_capacity(bytes.len());
     let mut i = 0;

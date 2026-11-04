@@ -28,7 +28,7 @@ doctest = false
 
 [features]
 # 預設全開：Apple 版（iOS / iPadOS / macOS）的行為與相依完全不變。
-default = ["asr", "pdf"]
+default = ["asr", "pdf", "p2p"]
 
 # 語音相關（Silero VAD + 中文標點還原）。依賴 ONNX Runtime，
 # 而 ort 目前沒有 aarch64-linux-android 的預編譯二進位 ——
@@ -55,6 +55,11 @@ pdf = ["dep:padnote-pdf-pdfium"]
 # 不需要也不應該把 tokio 拉進 iOS 的二進位。Android 建置時開啟即可，
 # 兩邊仍然共用 padnote-relay 的同一份 JSON 協定。
 relay = ["dep:padnote-relay", "dep:tokio"]
+
+# 雲端協作的點對點直連（WebRTC 資料通道，雲端資料夾交換連線資訊）。
+# Apple 與 Android 都開：跨網路時把事件檔直接推給對方，延遲從秒級降到百毫秒級；
+# 打不通（對稱型 NAT）就退回雲端輪詢，資料正確性不受影響。
+p2p = ["dep:webrtc", "dep:tokio", "dep:bytes"]
 
 [dependencies]
 uniffi = { workspace = true }
@@ -98,6 +103,8 @@ sha2 = { workspace = true }
 thiserror = "2"
 # 協同邀請的 QR Code（純 Rust、MIT、無相依）。兩端畫同一份矩陣，掃起來一樣。
 qrcodegen = "1.8"
+webrtc = { version = "0.10", optional = true }
+bytes = { version = "1", optional = true }
 # 協同編輯的端對端加密。**必須是 AES-256-GCM** —— Apple 端用 CryptoKit
 # 的 AES.GCM，換成別的演算法就不相容（見 ffi_collab.rs）。
 aes-gcm = "0.10"

@@ -138,6 +138,9 @@ impl DriveRoot {
     }
 }
 
+/// 向下相容別名。
+pub type DriveSpace = DriveRoot;
+
 /// Drive 的 `files.list` 回應 → `RemoteEntry`。
 ///
 /// `name contains` 是**子字串**比對，不是前綴：查 `sync` 也會撈到
@@ -264,6 +267,11 @@ impl<H: DriveHttp> GDriveProvider<H> {
             id_cache: Mutex::new(HashMap::new()),
             deleted_paths: Mutex::new(HashSet::new()),
         }
+    }
+
+    /// 向下相容舊名稱。
+    pub fn in_space(http: H, space: DriveRoot) -> Self {
+        Self::with_root(http, space)
     }
 
     pub fn root(&self) -> &DriveRoot {
@@ -524,6 +532,15 @@ impl<H: DriveHttp> GDriveProvider<H> {
                     .and_then(Value::as_bool)
                     .unwrap_or(false);
                 let file = change.get("file");
+                // 共享資料夾：`spaces=drive` 的變更清單是整個雲端硬碟的，別的資料夾
+                // （另一本共享筆記、使用者自己的檔案）要濾掉。刪除的變更沒有 `file`，
+                // 交給快照判斷（快照只認得自己這個資料夾的 id，不認得的會被忽略）。
+                if let DriveRoot::Folder(folder) = &self.root
+                    && let Some(parents) = file.and_then(|f| f.get("parents")).and_then(Value::as_array)
+                    && !parents.iter().any(|p| p.as_str() == Some(folder.as_str()))
+                {
+                    continue;
+                }
                 let name = file
                     .and_then(|f| f.get("name"))
                     .and_then(Value::as_str)
@@ -827,6 +844,155 @@ const DRIVE_RATE_LIMIT_REASONS: [&str; 6] = [
     "storageQuotaExceeded",
 ];
 
+/// 共享協作資料夾的一位成員（Drive 的 permission）。
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct DriveMember {
+    pub permission_id: String,
+    pub email: String,
+    pub name: String,
+    /// `owner`／`writer`／`commenter`／`reader`。
+    pub role: String,
+}
+
+/// 打開一個共享資料夾時看到的樣子（權限探測）。
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct DriveFolderProbe {
+    pub name: String,
+    /// 能不能在裡面建檔（＝編輯者以上）。
+    pub can_add_children: bool,
+    /// 這個帳號、這個 App 看得到的子檔案數。
+    pub visible_files: u32,
+}
+
+const FOLDER_MIME: &str = "application/vnd.google-apps.folder";
+
+/// 協作資料夾的管理（雲端協作模式）。只在 [`DriveRoot::Folder`] 有意義，
+/// 但建立資料夾本身與空間無關，所以放在 provider 上、由呼叫端決定。
+impl<H: DriveHttp> GDriveProvider<H> {
+    /// 在使用者的雲端硬碟根目錄建立一個資料夾，回傳 id。
+    pub fn create_folder(&self, name: &str) -> Result<String, SyncError> {
+        let created = self
+            .http
+            .post_json(FILES_URL, &json!({ "name": name, "mimeType": FOLDER_MIME }))?;
+        created
+            .get("id")
+            .and_then(Value::as_str)
+            .map(str::to_string)
+            .ok_or_else(|| SyncError::Backend(format!("建立 {name} 之後 Drive 沒有回傳 id")))
+    }
+
+    /// 授予某個 Email 權限（`writer` 為編輯者），Google 會寄通知信。回傳 permission id。
+    pub fn grant(&self, folder_id: &str, email: &str, role: &str) -> Result<String, SyncError> {
+        let url = format!(
+            "{FILES_URL}/{}/permissions?sendNotificationEmail=true&fields=id",
+            folder_id
+        );
+        let created = self.http.post_json(
+            &url,
+            &json!({ "type": "user", "role": role, "emailAddress": email.trim() }),
+        )?;
+        created
+            .get("id")
+            .and_then(Value::as_str)
+            .map(str::to_string)
+            .ok_or_else(|| SyncError::Backend("授權之後 Drive 沒有回傳 permission id".into()))
+    }
+
+    /// 「知道連結的人都能編輯」。一鍵邀請（不必輸入 Email）用；介面要讓房主明確選擇，
+    /// 因為拿到連結的任何人都能編輯（內容仍以房間金鑰加密）。
+    pub fn grant_anyone_with_link(&self, folder_id: &str) -> Result<String, SyncError> {
+        let url = format!("{FILES_URL}/{folder_id}/permissions?fields=id");
+        let created = self
+            .http
+            .post_json(&url, &json!({ "type": "anyone", "role": "writer" }))?;
+        created
+            .get("id")
+            .and_then(Value::as_str)
+            .map(str::to_string)
+            .ok_or_else(|| SyncError::Backend("授權之後 Drive 沒有回傳 permission id".into()))
+    }
+
+    /// 列出資料夾的成員。
+    pub fn members(&self, folder_id: &str) -> Result<Vec<DriveMember>, SyncError> {
+        let page = self.http.get_json(
+            &format!("{FILES_URL}/{folder_id}/permissions"),
+            &[(
+                "fields".to_string(),
+                "permissions(id, emailAddress, displayName, role, type)".to_string(),
+            )],
+        )?;
+        Ok(page
+            .get("permissions")
+            .and_then(Value::as_array)
+            .map(|list| {
+                list.iter()
+                    .filter_map(|p| {
+                        Some(DriveMember {
+                            permission_id: p.get("id")?.as_str()?.to_string(),
+                            email: p
+                                .get("emailAddress")
+                                .and_then(Value::as_str)
+                                .unwrap_or_default()
+                                .to_string(),
+                            name: p
+                                .get("displayName")
+                                .and_then(Value::as_str)
+                                .unwrap_or_default()
+                                .to_string(),
+                            role: p.get("role")?.as_str()?.to_string(),
+                        })
+                    })
+                    .collect()
+            })
+            .unwrap_or_default())
+    }
+
+    /// 撤銷一位成員。
+    pub fn revoke(&self, folder_id: &str, permission_id: &str) -> Result<(), SyncError> {
+        self.http
+            .delete(&format!("{FILES_URL}/{folder_id}/permissions/{permission_id}"))
+    }
+
+    /// 權限探測：資料夾的名字、能不能寫、看得到幾個子檔案。
+    ///
+    /// **為什麼要算子檔案。** `drive.file` 權限下，App 看得到的是「這個使用者用這個
+    /// App 打開或建立過的檔案」。協作者在挑選器裡選了資料夾之後，資料夾裡別人建立的
+    /// 檔案是否也看得到，Google 文件沒有寫清楚。房主說有 N 個檔案、這裡卻是 0，
+    /// 就是看不到 —— 平台據此給出明確的錯誤，而不是一本空白的筆記。
+    pub fn probe_folder(&self, folder_id: &str) -> Result<DriveFolderProbe, SyncError> {
+        let meta = self.http.get_json(
+            &format!("{FILES_URL}/{folder_id}"),
+            &[(
+                "fields".to_string(),
+                "id, name, trashed, capabilities(canAddChildren)".to_string(),
+            )],
+        )?;
+        if meta.get("trashed").and_then(Value::as_bool) == Some(true) {
+            return Err(SyncError::NotFound(folder_id.to_string()));
+        }
+        let name = meta
+            .get("name")
+            .and_then(Value::as_str)
+            .unwrap_or_default()
+            .to_string();
+        let can_add_children = meta
+            .get("capabilities")
+            .and_then(|c| c.get("canAddChildren"))
+            .and_then(Value::as_bool)
+            .unwrap_or(false);
+        let pages = self.list_all(&list_query_in(folder_id, ""), "id")?;
+        let visible_files = pages
+            .iter()
+            .map(|p| p.get("files").and_then(Value::as_array).map_or(0, Vec::len))
+            .sum::<usize>() as u32;
+        Ok(DriveFolderProbe {
+            name,
+            can_add_children,
+            visible_files,
+        })
+    }
+}
+
 // ---- 雲端共享協作：資料夾 -----------------------------------------------------
 
 /// 協作者的權限。共享協作一律給「編輯者」（使用者要的「編輯者最大權限」）。
@@ -1116,6 +1282,7 @@ mod tests {
         /// 走可續傳上傳的那些：(工作階段 URI, 位元組數)。
         put_large: Mutex<Vec<(String, usize)>>,
         created: Mutex<Vec<String>>,
+        changes_response: Mutex<Option<Value>>,
     }
 
     impl FakeDrive {
@@ -1152,8 +1319,14 @@ mod tests {
     }
 
     impl DriveHttp for FakeDrive {
-        fn get_json(&self, _url: &str, query: &[(String, String)]) -> Result<Value, SyncError> {
+        fn get_json(&self, url: &str, query: &[(String, String)]) -> Result<Value, SyncError> {
             self.queries.lock().unwrap().push(query.to_vec());
+            if url.contains("changes") {
+                if let Some(resp) = self.changes_response.lock().unwrap().clone() {
+                    return Ok(resp);
+                }
+                return Ok(json!({ "changes": [], "newStartPageToken": "tok-end" }));
+            }
             let get = |k: &str| {
                 query
                     .iter()
@@ -1499,6 +1672,61 @@ mod tests {
         ] {
             assert_eq!(parse_rfc3339_secs(bad), 0, "{bad:?}");
         }
+    }
+
+    #[test]
+    fn folder_root_scopes_queries_and_filters_changes() {
+        let fake = FakeDrive::with(&[("notebooks/nb1/manifest.json", b"{}")], 10);
+        *fake.changes_response.lock().unwrap() = Some(json!({
+            "changes": [
+                {
+                    "fileId": "id-in-folder",
+                    "file": {
+                        "name": "notebooks/nb1/op.bin",
+                        "size": "100",
+                        "parents": ["collab-42"],
+                        "trashed": false
+                    }
+                },
+                {
+                    "fileId": "id-in-other",
+                    "file": {
+                        "name": "other/file.bin",
+                        "size": "200",
+                        "parents": ["other-folder"],
+                        "trashed": false
+                    }
+                }
+            ],
+            "newStartPageToken": "token-next"
+        }));
+
+        let drive = GDriveProvider::with_root(fake, DriveRoot::Folder("collab-42".into()));
+
+        // 1. list 查詢驗證 spaces 與 parents
+        let entries = drive.list("notebooks/nb1").unwrap();
+        assert_eq!(entries.len(), 1);
+        {
+            let queries = drive.http.queries.lock().unwrap();
+            let last_q = queries.last().unwrap();
+            let spaces = last_q
+                .iter()
+                .find(|(k, _)| k == "spaces")
+                .map(|(_, v)| v.as_str());
+            let q = last_q
+                .iter()
+                .find(|(k, _)| k == "q")
+                .map(|(_, v)| v.as_str());
+            assert_eq!(spaces, Some("drive"));
+            assert!(q.unwrap().contains("'collab-42' in parents"));
+        }
+
+        // 2. fetch_changes 濾掉非本資料夾的變更
+        let batch = drive.fetch_changes("start-token").unwrap();
+        assert_eq!(batch.changes.len(), 1);
+        assert_eq!(batch.changes[0].file_id, "id-in-folder");
+        assert_eq!(batch.changes[0].name.as_deref(), Some("notebooks/nb1/op.bin"));
+        assert_eq!(batch.new_token, "token-next");
     }
 
     #[test]

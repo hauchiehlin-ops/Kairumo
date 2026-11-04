@@ -118,11 +118,12 @@ echo "════════════════════════�
 printf '  %s\n' "${RESULTS[@]}"
 echo "════════════════════════════════════════════════════════════════════════"
 if [ "$FAILURES" -eq 0 ]; then
+    GIT_DIR="$(git rev-parse --git-dir 2>/dev/null || echo "${REPO_ROOT}/.git")"
     head_sha="$(git rev-parse HEAD 2>/dev/null || echo "no-head")"
     diff_head="$(git diff HEAD 2>/dev/null || echo "no-diff")"
     untracked="$(git status --porcelain 2>/dev/null | grep '^\?\?' || true)"
-    mkdir -p "${REPO_ROOT}/.git"
-    printf "%s\n%s\n%s" "$head_sha" "$diff_head" "$untracked" | shasum -a 256 | awk '{print $1}' > "${REPO_ROOT}/.git/gatekeepers.passed" 2>/dev/null || true
+    mkdir -p "${GIT_DIR}"
+    printf "%s\n%s\n%s" "$head_sha" "$diff_head" "$untracked" | shasum -a 256 | awk '{print $1}' > "${GIT_DIR}/gatekeepers.passed" 2>/dev/null || true
     echo "  🎉 SOP 全數通過，可提交與推送。"
     exit 0
 fi

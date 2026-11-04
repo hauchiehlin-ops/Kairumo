@@ -22,6 +22,7 @@ allow = [
     # webpki-root-certs：只是一份 CA 根憑證資料，不是程式碼。
     # CDLA-Permissive-2.0 是資料用的寬鬆授權，無 copyleft 義務。
     "CDLA-Permissive-2.0",
+    "OpenSSL",
 ]
 confidence-threshold = 0.9
 
@@ -51,6 +52,14 @@ confidence-threshold = 0.9
 [[licenses.exceptions]]
 name = "zhconv"
 allow = ["GPL-2.0-or-later"]
+
+[[licenses.clarify]]
+name = "ring"
+version = "0.16.20"
+expression = "ISC AND MIT AND OpenSSL"
+license-files = [
+    { path = "LICENSE", hash = 0xbd0eed23 }
+]
 
 [bans]
 multiple-versions = "warn"
@@ -127,6 +136,34 @@ ignore = [
     "RUSTSEC-2026-0368",
     "RUSTSEC-2026-0369",
     "RUSTSEC-2026-0429",
+
+    # rustls-webpki 0.101.7（RUSTSEC-2026-0098, RUSTSEC-2026-0099, RUSTSEC-2026-0104, RUSTSEC-2026-0382）：
+    # 來源為 webrtc 0.10 -> webrtc-dtls -> rustls 0.21。
+    # 專案不受影響：WebRTC DTLS 僅用於點對點資料通道，證書為本機記憶體即時產生的自簽憑證（rcgen），
+    # 驗證依賴 SDP 信令中交換的 SHA-256 指紋比對，不走公有 CA 憑證鏈、不驗證萬用字元網域名稱限制，
+    # 亦不使用 CRL（憑證撤銷清單）。
+    "RUSTSEC-2026-0098",
+    "RUSTSEC-2026-0099",
+    "RUSTSEC-2026-0104",
+    "RUSTSEC-2026-0382",
+
+    # rustls 0.21.12（RUSTSEC-2025-0009, RUSTSEC-2025-0010, RUSTSEC-2026-0346, RUSTSEC-2026-0349）：
+    # 來源為 webrtc 0.10 -> webrtc-dtls。
+    # 專案不受影響：WebRTC DTLS 兩端直連不走一般 TLS 伺服器握手，不受伺服器證書 CPU/記憶體放大與
+    # Post-Quantum 降級影響；專案程式碼亦不在日誌中 Debug 印出金鑰材料。
+    "RUSTSEC-2025-0009",
+    "RUSTSEC-2025-0010",
+    "RUSTSEC-2026-0346",
+    "RUSTSEC-2026-0349",
+
+    # bincode 1.3.3（RUSTSEC-2025-0141）：
+    # 原作者團隊宣告 1.3.3 功能已完整並停止維護，非安全性漏洞。
+    "RUSTSEC-2025-0141",
+
+    # crypto-bigint 0.5.5（RUSTSEC-2026-0387）：
+    # 特定 CPU 架構下部分運算非常數時間（timing leak）。
+    # 本專案於端對端協同連線環境下無旁路計時攻擊面。
+    "RUSTSEC-2026-0387",
 ]
 
 [sources]
