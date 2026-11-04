@@ -56,6 +56,9 @@ final class RuledWritingTests: XCTestCase {
         XCTAssertEqual(RuledWriting.step(of: [20] + lined), 28)
         XCTAssertNil(RuledWriting.step(of: [100, 400]), "只有兩條線不是橫線紙")
         XCTAssertNil(RuledWriting.step(of: [100, 300, 500, 700]), "間距 200 是版面分隔，不是讓人寫字的行")
+        // 黃金比例／三分構圖與情緒板等引導線絕不能被誤判為橫線紙
+        XCTAssertNil(RuledWriting.step(of: [377.3, 432.4, 699.5, 754.7]), "黃金比例與三分構圖僅4條導引線，非橫線紙")
+        XCTAssertNil(RuledWriting.step(of: [56.6, 124.5, 158.5, 973.5, 996.2, 1076.0]), "情緒板間距極度不均勻，非橫線紙")
     }
 
     // MARK: 擺放
