@@ -106,7 +106,10 @@ public struct TableRibbonToolbar: View {
                 .padding(.vertical, 4)
             }
         }
-        .frame(height: 78)
+        // 不給固定高度：分頁列 + 九宮格對齊 + 群組標籤約 92pt，原本 `frame(height: 78)`
+        // 讓內容上下溢出，頂端的「表格版面配置／表格設計」與底端的「對齊與方向」各被切掉一截。
+        .padding(.vertical, 4)
+        .fixedSize(horizontal: false, vertical: true)
         .background(Color(uiColor: .secondarySystemBackground).opacity(0.96))
         .cornerRadius(8)
         .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color(uiColor: .separator), lineWidth: 0.5))
