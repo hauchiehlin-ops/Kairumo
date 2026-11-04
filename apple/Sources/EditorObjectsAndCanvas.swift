@@ -907,8 +907,16 @@ extension NotebookEditorView {
         continuousObjectGeneration += 1
     }
 
+    /// 選取中**確實還在筆記裡、可放進剪貼簿**的物件。
+    ///
+    /// 選取 id 可能已失效（物件被協作者刪除、同步移走、就地編輯殘留），
+    /// 照單全收的話剪下／複製工具丸會一直掛著、點了沒作用，剪下還會把剪貼簿清空。
+    var clipboardSelectableIds: Set<String> {
+        effectiveSelectedObjectIds.filter { clipboardObject(forId: $0) != nil }
+    }
+
     func copySelection() {
-        let ids = effectiveSelectedObjectIds
+        let ids = clipboardSelectableIds
         guard !ids.isEmpty else { return }
         objectClipboard = ids.compactMap(clipboardObject(forId:))
         isPlacingPasteObject = false
@@ -916,12 +924,26 @@ extension NotebookEditorView {
     }
 
     func cutSelection() {
-        let ids = effectiveSelectedObjectIds
+        // 只剪真的放得進剪貼簿的：放不進去的物件刪掉就再也貼不回來。
+        let ids = clipboardSelectableIds
         guard !ids.isEmpty else { return }
         objectClipboard = ids.compactMap(clipboardObject(forId:))
         isPlacingPasteObject = false
         deleteObjects(ids: ids)
         showCanvasNotice(localizationManager.localized("object_cut_hint"))
+    }
+
+    /// 收起所有物件選取（工具丸的「完成」）。手寫模式下點空白處會畫線，沒有這條路就關不掉。
+    func deselectAllObjects() {
+        activeSelectedObjectId = nil
+        selectedShapeIds = []
+        selectedConnectionId = nil
+        selectedObjectIds = []
+        editingShapeId = nil
+        editingAttachmentId = nil
+        editingTextId = nil
+        editingTable = nil
+        collaborationManager.broadcastSelection(selectedId: nil)
     }
 
     func copyObject(id: String) {

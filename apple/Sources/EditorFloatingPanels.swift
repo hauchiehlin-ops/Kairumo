@@ -304,7 +304,7 @@ extension NotebookEditorView {
     /// - 物件剪貼簿有內容時：顯示「貼上」（貼到目前焦點頁）與「點選位置貼上」（點擊任意頁面任意座標貼上）。
     @ViewBuilder
     var objectPastePill: some View {
-        let hasSelection = !effectiveSelectedObjectIds.isEmpty && inlineEditingTextId == nil && !isMarqueeActive
+        let hasSelection = !clipboardSelectableIds.isEmpty && inlineEditingTextId == nil && !isMarqueeActive
         let hasClipboard = !objectClipboard.isEmpty
         if isPlacingPasteObject && hasClipboard {
             HStack(spacing: 8) {
@@ -362,6 +362,35 @@ extension NotebookEditorView {
                     .buttonStyle(.plain)
                     .foregroundColor(.accentColor)
                     .accessibilityIdentifier("editor.object.copy")
+
+                    Divider().frame(height: 16)
+
+                    Button(role: .destructive) {
+                        deleteObjects(ids: clipboardSelectableIds)
+                    } label: {
+                        HStack(spacing: 5) {
+                            Image(systemName: "trash")
+                            Text(localizationManager.localized("delete"))
+                                .fontWeight(.semibold)
+                        }
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundColor(.red)
+                    .accessibilityIdentifier("editor.object.delete")
+
+                    if !hasClipboard {
+                        Divider().frame(height: 16)
+
+                        Button {
+                            deselectAllObjects()
+                        } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .foregroundColor(.secondary)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel(localizationManager.localized("done"))
+                        .accessibilityIdentifier("editor.object.deselect")
+                    }
                 }
 
                 if hasSelection && hasClipboard {

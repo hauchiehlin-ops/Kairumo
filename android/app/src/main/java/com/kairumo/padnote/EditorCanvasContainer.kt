@@ -489,6 +489,44 @@ internal fun ColumnScope.EditorCanvasContainer(ctx: EditorCanvasContext) = with(
                 modifier = Modifier.padding(top = 8.dp, bottom = 2.dp, start = 8.dp, end = 8.dp)
             )
         }
+        // 表格功能區（與 Apple `TableRibbonToolbar` 對齊）：打字模式下選取表格時出現在畫布上方。
+        // 當成工具列的一列放在畫布**上方**（與 Apple 放在工具列區相同）：不蓋住表格、不跟頁面縮放。
+        @Suppress("UNUSED_VARIABLE") val tableRevisionForRibbon = tableRevision
+        val ribbonTable = selectedTableId?.takeIf { editorMode == EditorMode.TYPE && !marqueeActive }
+            ?.let { id -> tableStore.find(id) }
+        var tablePropertiesOpen by remember { mutableStateOf(false) }
+        val commitRibbonTable: (com.kairumo.padnote.table.NoteTable) -> Unit = { updated ->
+            tableStore.persist(updated)
+            tableRevision++
+            clearPageThumbnailCache()
+            AutoSync.noteLocalEdit(activity)
+        }
+        if (ribbonTable != null) {
+            com.kairumo.padnote.table.TableRibbon(
+                table = ribbonTable,
+                languageTag = deviceLanguageTag(),
+                onChange = commitRibbonTable,
+                onDelete = { deleteObjectsOnPage(setOf(ribbonTable.id)) },
+                onProperties = { tablePropertiesOpen = true },
+                modifier = Modifier.fillMaxWidth().padding(start = 8.dp, end = 8.dp, top = 4.dp)
+            )
+        }
+        if (tablePropertiesOpen && ribbonTable != null) {
+            com.kairumo.padnote.table.TablePropertiesDialog(
+                table = ribbonTable,
+                languageTag = deviceLanguageTag(),
+                onCommit = { updated ->
+                    // 「對齊／縮排」落地成表格左緣（與 Apple `updateTableInNotebook` 的 alignedX 相同）。
+                    updated.alignedX(
+                        com.kairumo.padnote.ink.PageGeometry.width,
+                        com.kairumo.padnote.ink.PageGeometry.PRINTABLE_INSET
+                    )?.let { updated.x = it }
+                    commitRibbonTable(updated)
+                    tablePropertiesOpen = false
+                },
+                onDismiss = { tablePropertiesOpen = false }
+            )
+        }
         var isCanvasNavigating by remember { mutableStateOf(false) }
         Box(
             modifier = Modifier.weight(1f).fillMaxWidth().padding(8.dp)
@@ -554,6 +592,12 @@ internal fun ColumnScope.EditorCanvasContainer(ctx: EditorCanvasContext) = with(
                                         (down.position.y - canvasOffset.y) / canvasScale / canvasDensity)
                                     val sorted = marqueeCandidatesLatest.sortedBy { stackOrderLatest.indexOf(it.id) }
                                     if (com.kairumo.padnote.canvas.ObjectMarquee.topmostHit(pagePoint, sorted) != null) continue
+                                    // 選取中物件的把手（旋轉、縮放、樣式鈕）在物件框外面：也交給物件，不平移畫布。
+                                    val selectedIds = currentSelectedObjectIds()
+                                    if (selectedIds.isNotEmpty() && sorted.any {
+                                            it.id in selectedIds &&
+                                                com.kairumo.padnote.canvas.ObjectMarquee.withinSelectionChrome(pagePoint, it)
+                                        }) continue
                                 }
                                 // 移動超過觸控門檻才算平移。原本一按下就整段攔走，點一下也被吃掉：
                                 // 打字模式「即點即書」、點選文字方塊全都失效（頁面比畫布高時一定發生）。
@@ -1839,9 +1883,12 @@ internal fun ColumnScope.EditorCanvasContainer(ctx: EditorCanvasContext) = with(
                     onStartPlacePaste = { isPlacingPasteObject = true },
                     onCancelPlacePaste = { isPlacingPasteObject = false },
                     onClearClipboard = { objectClipboard = emptyList(); isPlacingPasteObject = false },
+                    onDelete = { deleteObjectsOnPage(activeSingleObjectIds) },
+                    onDeselect = { clearSelection() },
                     modifier = Modifier
                         .zIndex(9_100f)
                         .align(Alignment.TopCenter)
+                        // 表格功能區佔住上緣時讓到它下面，兩者才不會疊在一起。
                         .padding(top = if (inkTool.isLasso && lasso.canPaste) 56.dp else 12.dp)
                 )
             }

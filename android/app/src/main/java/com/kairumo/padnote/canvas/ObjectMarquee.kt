@@ -161,6 +161,27 @@ object ObjectMarquee {
     fun topmostHit(point: Offset, candidates: List<MarqueeHit>): String? =
         candidates.lastOrNull { it.rect.contains(point) }?.id
 
+    /**
+     * 點是否落在**選取中物件的把手範圍**裡（旋轉把手繞中心的軌道、四角的縮放把手、右上角的樣式鈕）。
+     *
+     * 這些把手畫在物件框**外面**；畫布的單指平移只避開物件框的話，拖把手時整頁會跟著跑、
+     * 物件轉不動（Android 實測：打字模式頁面比視窗大時，旋轉把手完全拖不動）。
+     * 半徑取旋轉把手的軌道（`max(高, 40)/2 + 52`）與對角線一半的較大者，再加把手本身與手指的寬容。
+     */
+    fun withinSelectionChrome(point: Offset, frame: MarqueeHit): Boolean {
+        val cx = frame.x + frame.width / 2f
+        val cy = frame.y + frame.height / 2f
+        val orbit = maxOf(frame.height, 40f) / 2f + 52f
+        val corner = kotlin.math.hypot(frame.width, frame.height) / 2f
+        val reach = maxOf(orbit, corner) + CHROME_SLOP
+        val dx = point.x - cx
+        val dy = point.y - cy
+        return dx * dx + dy * dy <= reach * reach
+    }
+
+    /** 把手本身（26）與手指的寬容（點）。 */
+    const val CHROME_SLOP = 30f
+
     /** 貼上／建立副本的位移。貼在原位的話使用者會以為沒成功。 */
     const val PASTE_OFFSET = 24f
 
@@ -532,7 +553,11 @@ fun ObjectPastePill(
     onStartPlacePaste: () -> Unit,
     onCancelPlacePaste: () -> Unit,
     onClearClipboard: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    /** 刪除選取的物件。沒有它的話工具丸只有剪下／複製，使用者找不到刪除。 */
+    onDelete: (() -> Unit)? = null,
+    /** 取消選取：收起工具丸。手寫模式下點空白處會變成畫線，沒有這顆就關不掉。 */
+    onDeselect: (() -> Unit)? = null
 ) {
     if (!hasSelection && !hasClipboard) return
     Card(
@@ -592,6 +617,32 @@ fun ObjectPastePill(
                             fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.primary
                         )
+                    }
+                    if (onDelete != null) {
+                        TextButton(
+                            onClick = onDelete,
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                            modifier = Modifier.testTag("editor.object.delete")
+                        ) {
+                            Text(
+                                "🗑 " + l("delete"),
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.error
+                            )
+                        }
+                    }
+                    if (onDeselect != null && !hasClipboard) {
+                        com.kairumo.padnote.ui.InstantTooltip(text = l("done")) {
+                            TextButton(
+                                onClick = onDeselect,
+                                contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp),
+                                modifier = Modifier.testTag("editor.object.deselect")
+                                    .semantics { contentDescription = l("done") }
+                            ) {
+                                Text("✕", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
                     }
                 }
                 if (hasClipboard) {

@@ -378,7 +378,20 @@ fun ContinuousPagesView(
             rt.bump()
             collabBridge?.onLocalChange?.invoke()
         }
+        // 找不到 = 選取早已失效（物件被刪或移走）：收掉選取，別讓工具丸掛著點了沒反應。
+        if (result == null && activeObjectSelection == pageIdx to id) activeObjectSelection = null
         return result
+    }
+
+    /** 刪除單一選取物件（工具丸的「刪除」）。 */
+    fun deletePageObject(pageIdx: Int, id: String) {
+        val pid = pageIdAt(pageIdx)
+        val rt = runtimes.getOrPut(pid) { PageRuntime(session, pid.ifEmpty { null }, runtimeContext) }
+        if (rt.deleteObjects(setOf(id))) {
+            rt.bump()
+            collabBridge?.onLocalChange?.invoke()
+        }
+        if (activeObjectSelection?.second == id) activeObjectSelection = null
     }
 
     /** 將一組剪貼簿物件貼到第 [targetPage] 頁的指定位置（null 為預設右下偏移 24pt）。 */
@@ -916,6 +929,51 @@ fun ContinuousPagesView(
             }
         }
 
+        // 表格功能區（與單頁模式、Apple `TableRibbonToolbar` 相同）：選取表格時出現在上方。
+        val ribbonSelection = activeObjectSelection?.takeIf { editorMode == EditorMode.TYPE }
+        val ribbonRuntime = ribbonSelection?.let { sel ->
+            val pid = pageIdAt(sel.first)
+            runtimes.getOrPut(pid) { PageRuntime(session, pid.ifEmpty { null }, runtimeContext) }
+        }
+        @Suppress("UNUSED_VARIABLE") val ribbonRevision = ribbonRuntime?.revision?.intValue
+        val ribbonTable = ribbonSelection?.let { sel -> ribbonRuntime?.tableStore?.find(sel.second) }
+        var tablePropertiesOpen by remember { mutableStateOf(false) }
+        val commitRibbonTable: (NoteTable) -> Unit = { updated ->
+            ribbonRuntime?.let { rt ->
+                rt.tableStore.persist(updated)
+                rt.bump()
+                collabBridge?.onLocalChange?.invoke()
+            }
+        }
+        if (ribbonTable != null && ribbonSelection != null) {
+            com.kairumo.padnote.table.TableRibbon(
+                table = ribbonTable,
+                languageTag = com.kairumo.padnote.currentLanguageTag(),
+                onChange = commitRibbonTable,
+                onDelete = { deletePageObject(ribbonSelection.first, ribbonSelection.second) },
+                onProperties = { tablePropertiesOpen = true },
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(horizontal = 12.dp, vertical = 8.dp)
+                    .zIndex(12.5f)
+            )
+            if (tablePropertiesOpen) {
+                com.kairumo.padnote.table.TablePropertiesDialog(
+                    table = ribbonTable,
+                    languageTag = com.kairumo.padnote.currentLanguageTag(),
+                    onCommit = { updated ->
+                        updated.alignedX(
+                            com.kairumo.padnote.ink.PageGeometry.width,
+                            com.kairumo.padnote.ink.PageGeometry.PRINTABLE_INSET
+                        )?.let { updated.x = it }
+                        commitRibbonTable(updated)
+                        tablePropertiesOpen = false
+                    },
+                    onDismiss = { tablePropertiesOpen = false }
+                )
+            }
+        }
+
         // 畫布物件剪下／複製／貼上浮動工具丸（在手繪與打字模式下皆可使用）。
         // 文字方塊自帶 Apple 對齊動作列（內含剪下/複製/刪除），單選文字方塊時不重複顯示通用膠囊。
         val isSingleTextSelected = editorMode == EditorMode.TYPE && activeObjectSelection != null
@@ -950,9 +1008,15 @@ fun ContinuousPagesView(
                     onObjectClipboardChange(emptyList())
                     onPlacingPasteObjectChange(false)
                 },
+                onDelete = {
+                    val sel = activeObjectSelection ?: return@ObjectPastePill
+                    deletePageObject(sel.first, sel.second)
+                },
+                onDeselect = { activeObjectSelection = null },
                 modifier = Modifier
                     .align(Alignment.TopCenter)
-                    .padding(top = if (lasso != null && editorMode == EditorMode.DRAW && lasso.canPaste) 58.dp else 12.dp)
+                    .padding(top = if (ribbonTable != null) 150.dp
+                        else if (lasso != null && editorMode == EditorMode.DRAW && lasso.canPaste) 58.dp else 12.dp)
                     .zIndex(12f)
             )
         }

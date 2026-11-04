@@ -41,10 +41,10 @@ class NoteTableAppearanceTest {
         assertEquals("center", t.style(1, 0).hAlign)
         assertEquals("middle", t.style(1, 0).vAlign)
         assertEquals(true, t.style(1, 1).italic)
-        // 不認得的鍵仍原樣保留在 extras，已解析的鍵不再重複放在那裡。
-        val extras = JSONObject(t.appearanceExtras!!)
-        assertEquals("成績表", extras.getString("altTitle"))
-        assertTrue(!extras.has("borderMode") && !extras.has("cellStyles") && !extras.has("columnWidths"))
+        // 替代文字現在也是具型別欄位（表格內容 › 替代文字可編）；已解析的鍵不再重複放在 extras。
+        assertEquals("成績表", t.altTitle)
+        val extras = t.appearanceExtras?.let { JSONObject(it) } ?: JSONObject()
+        assertTrue(!extras.has("altTitle") && !extras.has("borderMode") && !extras.has("cellStyles") && !extras.has("columnWidths"))
     }
 
     @Test
