@@ -210,7 +210,7 @@ class ShapeLayerUiTest {
         // 拖曳把手若是內容的兄弟就會蓋住內容最上面 24dp（這一條就是為它寫的）。
         rule.onNodeWithText(l("font_bold")).performScrollTo().performClick()
         assertEquals("applied=${applied.map { it.dashStyle to it.isBold }}", true, applied.last().isBold)
-        rule.onNodeWithText(l("done")).performClick()
+        rule.onNodeWithText(l("done")).performScrollTo().performClick()
         assertTrue("完成要關得掉", dismissed)
     }
 
