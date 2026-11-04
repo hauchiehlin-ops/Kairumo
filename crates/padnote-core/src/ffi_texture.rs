@@ -280,7 +280,10 @@ pub fn page_snap_grid(paper_id: String, style: PageStyle, width: f32, height: f3
         }
     };
     for b in page_texture(paper_id, style, width, height) {
-        for (sx, sy, n) in [(b.step_x, b.step_y, b.count), (b.step2_x, b.step2_y, b.count2)] {
+        for (sx, sy, n) in [
+            (b.step_x, b.step_y, b.count),
+            (b.step2_x, b.step2_y, b.count2),
+        ] {
             if n < 2 {
                 continue;
             }
@@ -293,7 +296,12 @@ pub fn page_snap_grid(paper_id: String, style: PageStyle, width: f32, height: f3
     }
     let (step_x, origin_x) = x.unwrap_or((DEFAULT_SNAP_STEP, 0.0));
     let (step_y, origin_y) = y.unwrap_or((DEFAULT_SNAP_STEP, 0.0));
-    FfiSnapGrid { step_x, step_y, origin_x, origin_y }
+    FfiSnapGrid {
+        step_x,
+        step_y,
+        origin_x,
+        origin_y,
+    }
 }
 
 /// 把物件的左上角吸到最近的格點。步距 ≤ 0 的軸不動。
@@ -391,6 +399,9 @@ mod tests {
         assert_eq!((p.x, p.y), (20.0, 92.0));
 
         let blank = page_snap_grid("blank".into(), PageStyle::Blank, 600.0, 800.0);
-        assert_eq!((blank.step_x, blank.step_y), (DEFAULT_SNAP_STEP, DEFAULT_SNAP_STEP));
+        assert_eq!(
+            (blank.step_x, blank.step_y),
+            (DEFAULT_SNAP_STEP, DEFAULT_SNAP_STEP)
+        );
     }
 }
