@@ -23679,6 +23679,30 @@ extension LocalizationManager {
             .ko: "세로 맞춤",
             .th: "จัดแนวตั้ง"
         ],
+        "table_apply_cell": [
+            .zhHant: "儲存格",
+            .en: "Cell",
+            .zhHans: "单元格",
+            .ja: "セル",
+            .ko: "셀",
+            .th: "เซลล์"
+        ],
+        "table_apply_table": [
+            .zhHant: "表格",
+            .en: "Table",
+            .zhHans: "表格",
+            .ja: "表",
+            .ko: "표",
+            .th: "ตาราง"
+        ],
+        "table_apply_to": [
+            .zhHant: "套用至",
+            .en: "Apply to",
+            .zhHans: "应用于",
+            .ja: "適用先",
+            .ko: "적용 대상",
+            .th: "นำไปใช้กับ"
+        ],
         "table_auto": [
             .zhHant: "自動",
             .en: "Auto",
@@ -23727,6 +23751,22 @@ extension LocalizationManager {
             .ko: "Border Color",
             .th: "Border Color"
         ],
+        "table_border_dashed": [
+            .zhHant: "虛線",
+            .en: "Dashed",
+            .zhHans: "虚线",
+            .ja: "破線",
+            .ko: "파선",
+            .th: "เส้นประ"
+        ],
+        "table_border_dotted": [
+            .zhHant: "點線",
+            .en: "Dotted",
+            .zhHans: "点线",
+            .ja: "点線",
+            .ko: "점선",
+            .th: "เส้นจุด"
+        ],
         "table_border_horizontal": [
             .zhHant: "僅橫線",
             .en: "Horizontal",
@@ -23758,6 +23798,14 @@ extension LocalizationManager {
             .ja: "外枠",
             .ko: "바깥쪽",
             .th: "ขอบนอก"
+        ],
+        "table_border_solid": [
+            .zhHant: "實線",
+            .en: "Solid",
+            .zhHans: "实线",
+            .ja: "実線",
+            .ko: "실선",
+            .th: "เส้นทึบ"
         ],
         "table_border_style": [
             .zhHant: "框線樣式",
@@ -23814,6 +23862,14 @@ extension LocalizationManager {
             .ja: "Cell Margins",
             .ko: "Cell Margins",
             .th: "Cell Margins"
+        ],
+        "table_cell_position": [
+            .zhHant: "第 %1@ 列，第 %2@ 欄",
+            .en: "Row %1@, Column %2@",
+            .zhHans: "第 %1@ 行，第 %2@ 列",
+            .ja: "%1@ 行目、%2@ 列目",
+            .ko: "%1@행, %2@열",
+            .th: "แถว %1@ คอลัมน์ %2@"
         ],
         "table_clear_format": [
             .zhHant: "清除格式",
@@ -24071,6 +24127,14 @@ extension LocalizationManager {
             .ko: "선택한 셀 병합",
             .th: "รวมเซลล์ที่เลือก"
         ],
+        "table_no_color": [
+            .zhHant: "無色彩",
+            .en: "No Color",
+            .zhHans: "无颜色",
+            .ja: "色なし",
+            .ko: "색 없음",
+            .th: "ไม่มีสี"
+        ],
         "table_options": [
             .zhHant: "選項...",
             .en: "Options...",
@@ -24078,6 +24142,14 @@ extension LocalizationManager {
             .ja: "Options...",
             .ko: "Options...",
             .th: "Options..."
+        ],
+        "table_options_title": [
+            .zhHant: "表格選項",
+            .en: "Table Options",
+            .zhHans: "表格选项",
+            .ja: "表のオプション",
+            .ko: "표 옵션",
+            .th: "ตัวเลือกตาราง"
         ],
         "table_position_btn": [
             .zhHant: "位置...",
@@ -24118,6 +24190,14 @@ extension LocalizationManager {
             .ja: "リセット",
             .ko: "초기화",
             .th: "รีเซ็ต"
+        ],
+        "table_resize_handle": [
+            .zhHant: "調整表格大小",
+            .en: "Resize table",
+            .zhHans: "调整表格大小",
+            .ja: "表のサイズを変更",
+            .ko: "표 크기 조정",
+            .th: "ปรับขนาดตาราง"
         ],
         "table_row_height": [
             .zhHant: "列高",
@@ -24254,6 +24334,14 @@ extension LocalizationManager {
             .ja: "選択範囲を自動サイズ",
             .ko: "선택 영역 자동 크기",
             .th: "ปรับขนาดอัตโนมัติ"
+        ],
+        "table_split_cell": [
+            .zhHant: "分割儲存格",
+            .en: "Split Cell",
+            .zhHans: "拆分单元格",
+            .ja: "セルの分割",
+            .ko: "셀 분할",
+            .th: "แยกเซลล์"
         ],
         "table_studio": [
             .zhHant: "表格",

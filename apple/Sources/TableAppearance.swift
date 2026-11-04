@@ -57,6 +57,15 @@ enum TableAppearance {
         if let value = item.borderMode { table["borderMode"] = value.rawValue }
         if let value = item.columnWidthOverrides { table["columnWidths"] = value }
         if let value = item.rowHeightOverrides { table["rowHeights"] = value }
+        // 「框線及網底」「選項」「對齊」「替代文字」落地的欄位。同樣是選用鍵：沒設定就不寫。
+        if let value = item.borderWidth { table["borderWidth"] = Double(value) }
+        if let value = item.borderStyleRaw { table["borderStyle"] = value }
+        if let value = item.bandedRows { table["bandedRows"] = value }
+        if let value = item.bandedCols { table["bandedCols"] = value }
+        if let value = item.alignmentRaw { table["alignment"] = value }
+        if let value = item.indentLeft { table["indentLeft"] = Double(value) }
+        if let value = item.altTitle { table["altTitle"] = value }
+        if let value = item.altDescription { table["altDescription"] = value }
         if let styles = item.cellStyles,
            let data = try? JSONEncoder().encode(styles),
            let array = try? JSONSerialization.jsonObject(with: data) {
@@ -92,6 +101,14 @@ enum TableAppearance {
         if let value = map["borderMode"] as? String { item.borderMode = TableBorderMode(rawValue: value) }
         if let value = map["columnWidths"] as? [Double] { item.columnWidthOverrides = value }
         if let value = map["rowHeights"] as? [Double] { item.rowHeightOverrides = value }
+        if let value = map["borderWidth"] as? Double { item.borderWidth = CGFloat(value) }
+        if let value = map["borderStyle"] as? String { item.borderStyleRaw = value }
+        if let value = map["bandedRows"] as? Bool { item.bandedRows = value }
+        if let value = map["bandedCols"] as? Bool { item.bandedCols = value }
+        if let value = map["alignment"] as? String { item.alignmentRaw = value }
+        if let value = map["indentLeft"] as? Double { item.indentLeft = CGFloat(value) }
+        if let value = map["altTitle"] as? String { item.altTitle = value }
+        if let value = map["altDescription"] as? String { item.altDescription = value }
         if let array = map["cellStyles"],
            let raw = try? JSONSerialization.data(withJSONObject: array),
            let styles = try? JSONDecoder().decode([NoteTableCellStyle].self, from: raw),

@@ -110,6 +110,10 @@ private fun TableObjectView(
     var liveX by remember(table.id, table.x) { mutableFloatStateOf(table.x) }
     var liveY by remember(table.id, table.y) { mutableFloatStateOf(table.y) }
     var liveRotation by remember(table.id, table.rotationDegrees) { mutableFloatStateOf(table.rotationDegrees ?: 0f) }
+    // 右下角縮放把手拖曳中的外框（頁面點）。放手才重算版面（`scaleTo`），拖曳中只畫外框預覽。
+    var liveWidth by remember(table.id, layout.width) { mutableFloatStateOf(layout.width.toFloat()) }
+    var liveHeight by remember(table.id, layout.height) { mutableFloatStateOf(layout.height.toFloat()) }
+    var isResizing by remember(table.id) { androidx.compose.runtime.mutableStateOf(false) }
     val foreground = MaterialTheme.colorScheme.onSurface
     val ruleColor = table.ruleColorHex
         ?.let { hex -> ChartColorOrNull(hex) }
@@ -238,7 +242,41 @@ private fun TableObjectView(
         }
     }
 
+        if (isSelected && isResizing) {
+            // 縮放預覽：新外框。
+            Box(
+                Modifier
+                    .size(liveWidth.dp, liveHeight.dp)
+                    .border(1.5.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.7f))
+            )
+        }
+
         if (isSelected) {
+            // 畫布上的表格可以拖右下角縮放，欄寬與列高等比例跟著縮放（與 Apple 端一致）。
+            if (!moveLocked) com.kairumo.padnote.canvas.ResizeHandle(
+                widthDp = liveWidth,
+                heightDp = liveHeight,
+                density = density,
+                onResize = { dw, dh ->
+                    isResizing = true
+                    editingCell = null
+                    // 旋轉過的表格：位移換回表格自己的座標系（往「它的右下」拉才是放大）。
+                    val rad = -(currentTable.rotationDegrees ?: 0f) * kotlin.math.PI / 180.0
+                    val c = kotlin.math.cos(rad).toFloat()
+                    val s = kotlin.math.sin(rad).toFloat()
+                    liveWidth = maxOf(currentTable.cols * NoteTable.MIN_COLUMN_WIDTH.toFloat(), liveWidth + dw * c - dh * s)
+                    liveHeight = maxOf(currentTable.rows * NoteTable.MIN_ROW_OVERRIDE.toFloat(), liveHeight + dw * s + dh * c)
+                },
+                onCommit = {
+                    if (isResizing) {
+                        isResizing = false
+                        val t = currentTable
+                        t.scaleTo(liveWidth, liveHeight)
+                        onChanged(t)
+                    }
+                }
+            )
+
             StyleHandle(
                 widthDp = layout.width.toFloat(),
                 heightDp = layout.height.toFloat(),

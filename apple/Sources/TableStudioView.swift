@@ -24,6 +24,36 @@ public struct TableCellCoordinate: Equatable, Hashable, Sendable {
     }
 }
 
+/// 畫布上「目前的儲存格」。
+///
+/// 表格編修工具列（`TableRibbonToolbar`）與「表格內容」面板的插入列欄、刪除、合併／分割、
+/// 九宮格對齊都以它為準。沒有它的時候，工具列只能對第 0 列或最後一列動手 ——
+/// 「上方插入列」永遠插在表格最上面、「合併」永遠合併左上角四格。
+///
+/// 只記最後一次**點進去**的儲存格；離開編輯（換到下一格以外）不清掉，
+/// 使用者點完儲存格再去按工具列時，焦點還在。
+@MainActor
+final class TableCellFocus: ObservableObject {
+    // profile-scope: device 只記當下畫面上點中的儲存格座標（表格 id 比對不到就無效），不含使用者資料
+    static let shared = TableCellFocus()
+
+    @Published private(set) var tableId: String?
+    @Published private(set) var cell: TableCellCoordinate?
+
+    func focus(tableId: String, cell: TableCellCoordinate) {
+        if self.tableId != tableId { self.tableId = tableId }
+        if self.cell != cell { self.cell = cell }
+    }
+
+    /// 這張表目前的儲存格，夾回表格範圍內（刪列欄之後不會指到不存在的格子）。
+    func cell(in table: NoteTableAttachment) -> TableCellCoordinate? {
+        guard tableId == table.id, let cell else { return nil }
+        return TableCellCoordinate(
+            row: min(max(0, cell.row), table.rows - 1),
+            col: min(max(0, cell.col), table.cols - 1))
+    }
+}
+
 public struct NoteTableView: View {
     @Binding var table: NoteTableAttachment
     var isSelected: Bool
@@ -66,7 +96,12 @@ public struct NoteTableView: View {
                     path.move(to: rule.0)
                     path.addLine(to: rule.1)
                 }
-                context.stroke(path, with: .color(ruleColor), lineWidth: table.borderWidth ?? 1)
+                let lineWidth = table.resolvedBorderWidth
+                context.stroke(
+                    path, with: .color(ruleColor),
+                    style: StrokeStyle(
+                        lineWidth: lineWidth,
+                        dash: table.resolvedBorderStyle.dashPattern(lineWidth: lineWidth)))
             }
             .frame(width: layout.width, height: layout.height)
 
@@ -83,7 +118,7 @@ public struct NoteTableView: View {
                         ),
                         font: cell.style.resolvedFont(baseSize: table.fontSize, isHeader: cell.isHeader),
                         alignment: cell.style.hAlign ?? .left,
-                        vAlign: cell.style.vAlign ?? .bottom,
+                        vAlign: cell.style.vAlign ?? .top,
                         width: cell.width,
                         height: cell.height,
                         x: cell.x,
@@ -121,18 +156,21 @@ public struct NoteTableView: View {
         )
         .contentShape(Rectangle())
         .onTapGesture(count: 2, perform: onEdit)
+        // 「表格內容 › 替代文字」落地：VoiceOver 念的是使用者寫的標題與描述。
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(table.altTitle ?? "")
+        .accessibilityHint(table.altDescription ?? "")
     }
 
+    /// 與縮圖同一個判斷（`fillRole`），畫布與預覽才同源（I4）。
     private func cellFill(_ cell: ResolvedTableCell) -> Color? {
-        if let own = cell.style.resolvedFill { return own }
-        if cell.isHeader { return headerBackground }
-        if table.bandedRows == true && cell.row % 2 == 1 {
-            return Color.primary.opacity(0.04)
+        switch table.fillRole(row: cell.row, col: cell.col, isHeader: cell.isHeader) {
+        case .own: return cell.style.resolvedFill
+        case .header: return headerBackground
+        case .bandedRow: return Color.primary.opacity(0.04)
+        case .bandedColumn: return Color.primary.opacity(0.025)
+        case nil: return nil
         }
-        if table.bandedCols == true && cell.col % 2 == 1 {
-            return Color.primary.opacity(0.025)
-        }
-        return nil
     }
 
     private var ruleColor: Color {
@@ -942,6 +980,8 @@ struct TableAttachmentItemView: View {
     var isSelected: Bool = false
     var onSelect: (() -> Void)? = nil
     var onMove: ((CGSize) -> Void)? = nil
+    /// 拖右下角把手縮放到新外框（欄寬、列高等比例跟著縮放）。
+    var onResize: ((CGSize) -> Void)? = nil
     let onEdit: () -> Void
     var onProperties: (() -> Void)? = nil
     let onDelete: () -> Void
@@ -954,9 +994,13 @@ struct TableAttachmentItemView: View {
     @State private var dragOffset: CGSize = .zero
     @State private var isDragging: Bool = false
     @State private var editingCell: TableCellCoordinate? = nil
+    /// 縮放把手拖曳中的位移（表格本地座標，已扣掉旋轉）。
+    @State private var resizeDelta: CGSize = .zero
 
     var body: some View {
         let layout = table.resolvedLayout()
+        let resizeScaleX = layout.width > 0 ? max(0.2, (layout.width + resizeDelta.width) / layout.width) : 1
+        let resizeScaleY = layout.height > 0 ? max(0.2, (layout.height + resizeDelta.height) / layout.height) : 1
         let currentX = table.x + dragOffset.width
         let currentY = table.y + dragOffset.height
 
@@ -968,13 +1012,25 @@ struct TableAttachmentItemView: View {
             editingCell: Binding(
                 get: { editingCell },
                 set: { newValue in
-                    if newValue != nil { onSelect?() }
+                    if let newValue {
+                        onSelect?()
+                        TableCellFocus.shared.focus(tableId: table.id, cell: newValue)
+                    }
                     editingCell = newValue
                 })
         )
+            // 縮放把手拖曳中：先用便宜的縮放效果預覽，放手才重算版面（不在每一格都跑核心排版）。
+            .scaleEffect(x: resizeScaleX, y: resizeScaleY, anchor: .topLeading)
             .onChange(of: isSelected) { selected in
                 // 失去焦點就退出儲存格編輯。
                 if !selected { editingCell = nil }
+            }
+            // 工具列插入列欄會把焦點儲存格往後推：正在編輯的格子跟著走，
+            // 否則游標留在新插入的空白格裡，使用者接著打的字落到錯的格子。
+            .onReceive(TableCellFocus.shared.$cell) { focused in
+                guard editingCell != nil, TableCellFocus.shared.tableId == table.id,
+                      let focused, focused != editingCell else { return }
+                editingCell = focused
             }
             .shadow(color: isDragging ? .clear : Color.black.opacity(0.08), radius: 6, y: 3)
             .highPriorityGesture(
@@ -1103,6 +1159,35 @@ struct TableAttachmentItemView: View {
                     .offset(y: -38)
                 }
             }
+            // 右下角縮放把手：跟著表格一起轉（放在 rotationEffect 之前），
+            // 拖曳位移再反轉回表格本地座標，旋轉過的表格往「它自己的右下」拉才對。
+            .overlay(alignment: .bottomTrailing) {
+                if isSelected && !isCanvasLocked && onResize != nil {
+                    Image(systemName: "arrow.up.left.and.arrow.down.right")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundColor(.white)
+                        .frame(width: 22, height: 22)
+                        .background(Circle().fill(Color.accentColor))
+                        .overlay(Circle().stroke(Color.white, lineWidth: 1.5))
+                        .contentShape(Rectangle().inset(by: -10))
+                        .offset(x: 11 + resizeDelta.width, y: 11 + resizeDelta.height)
+                        .highPriorityGesture(
+                            DragGesture(minimumDistance: 1, coordinateSpace: .named(CanvasCoordinateSpace.name))
+                                .onChanged { value in
+                                    editingCell = nil
+                                    resizeDelta = Self.localDelta(value.translation, rotation: table.canvasRotation)
+                                }
+                                .onEnded { value in
+                                    let d = Self.localDelta(value.translation, rotation: table.canvasRotation)
+                                    resizeDelta = .zero
+                                    guard hypot(d.width, d.height) >= 2 else { return }
+                                    onResize?(CGSize(width: layout.width + d.width, height: layout.height + d.height))
+                                }
+                        )
+                        .accessibilityLabel(localizationManager.localized("table_resize_handle"))
+                        .accessibilityIdentifier("table.resize")
+                }
+            }
             // 表格本體跟著轉；把手掛在旋轉**外面**的 overlay ——
             // 包進去的話拖曳算出的角度會疊加自身旋轉，表格會失控加速。
             .rotationEffect(.degrees(table.canvasRotation))
@@ -1157,5 +1242,15 @@ struct TableAttachmentItemView: View {
                 y: currentY + layout.height / 2
             )
             .animation(nil, value: dragOffset)
+            .animation(nil, value: resizeDelta)
+    }
+
+    /// 畫布座標的拖曳位移 → 表格本地座標（扣掉表格自身的旋轉）。
+    static func localDelta(_ translation: CGSize, rotation degrees: Double) -> CGSize {
+        let rad = -degrees * .pi / 180
+        let c = CGFloat(cos(rad)), s = CGFloat(sin(rad))
+        return CGSize(
+            width: translation.width * c - translation.height * s,
+            height: translation.width * s + translation.height * c)
     }
 }

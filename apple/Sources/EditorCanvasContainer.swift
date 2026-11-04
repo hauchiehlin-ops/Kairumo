@@ -1399,6 +1399,7 @@ extension NotebookEditorView {
                                 }
                             },
                             onMove: { delta in moveTable(item.id, by: delta) },
+                            onResize: { size in resizeTable(item.id, to: size) },
                             onEdit: { editingTable = item },
                             onProperties: { tablePropertiesTarget = item },
                             onDelete: {

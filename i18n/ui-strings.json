@@ -27118,5 +27118,93 @@
     "th": "Warm Orange",
     "zhHans": "暖陽橘",
     "zhHant": "暖陽橘"
+  },
+  "table_border_solid": {
+    "en": "Solid",
+    "ja": "実線",
+    "ko": "실선",
+    "th": "เส้นทึบ",
+    "zhHans": "实线",
+    "zhHant": "實線"
+  },
+  "table_border_dashed": {
+    "en": "Dashed",
+    "ja": "破線",
+    "ko": "파선",
+    "th": "เส้นประ",
+    "zhHans": "虚线",
+    "zhHant": "虛線"
+  },
+  "table_border_dotted": {
+    "en": "Dotted",
+    "ja": "点線",
+    "ko": "점선",
+    "th": "เส้นจุด",
+    "zhHans": "点线",
+    "zhHant": "點線"
+  },
+  "table_apply_to": {
+    "en": "Apply to",
+    "ja": "適用先",
+    "ko": "적용 대상",
+    "th": "นำไปใช้กับ",
+    "zhHans": "应用于",
+    "zhHant": "套用至"
+  },
+  "table_apply_cell": {
+    "en": "Cell",
+    "ja": "セル",
+    "ko": "셀",
+    "th": "เซลล์",
+    "zhHans": "单元格",
+    "zhHant": "儲存格"
+  },
+  "table_apply_table": {
+    "en": "Table",
+    "ja": "表",
+    "ko": "표",
+    "th": "ตาราง",
+    "zhHans": "表格",
+    "zhHant": "表格"
+  },
+  "table_no_color": {
+    "en": "No Color",
+    "ja": "色なし",
+    "ko": "색 없음",
+    "th": "ไม่มีสี",
+    "zhHans": "无颜色",
+    "zhHant": "無色彩"
+  },
+  "table_split_cell": {
+    "en": "Split Cell",
+    "ja": "セルの分割",
+    "ko": "셀 분할",
+    "th": "แยกเซลล์",
+    "zhHans": "拆分单元格",
+    "zhHant": "分割儲存格"
+  },
+  "table_cell_position": {
+    "en": "Row %1@, Column %2@",
+    "ja": "%1@ 行目、%2@ 列目",
+    "ko": "%1@행, %2@열",
+    "th": "แถว %1@ คอลัมน์ %2@",
+    "zhHans": "第 %1@ 行，第 %2@ 列",
+    "zhHant": "第 %1@ 列，第 %2@ 欄"
+  },
+  "table_resize_handle": {
+    "en": "Resize table",
+    "ja": "表のサイズを変更",
+    "ko": "표 크기 조정",
+    "th": "ปรับขนาดตาราง",
+    "zhHans": "调整表格大小",
+    "zhHant": "調整表格大小"
+  },
+  "table_options_title": {
+    "en": "Table Options",
+    "ja": "表のオプション",
+    "ko": "표 옵션",
+    "th": "ตัวเลือกตาราง",
+    "zhHans": "表格选项",
+    "zhHant": "表格選項"
   }
 }

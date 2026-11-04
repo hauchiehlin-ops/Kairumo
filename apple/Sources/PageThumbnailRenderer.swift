@@ -705,11 +705,14 @@ public enum PageThumbnailRenderer {
             return UIColor(hexString: hex) ?? UIColor.label.withAlphaComponent(0.06)
         }()
         for cell in layout.cells {
+            // 與畫布 `NoteTableView.cellFill` 同一個判斷（含帶狀列／欄），縮圖才不會少一層底色（I4）。
             let fill: UIColor?
-            if let hex = cell.style.fillHex {
-                fill = hex == "clear" ? UIColor.clear : UIColor(hexString: hex)
-            } else {
-                fill = cell.isHeader ? headerFill : nil
+            switch item.fillRole(row: cell.row, col: cell.col, isHeader: cell.isHeader) {
+            case .own(let hex): fill = hex == "clear" ? UIColor.clear : UIColor(hexString: hex)
+            case .header: fill = headerFill
+            case .bandedRow: fill = UIColor.label.withAlphaComponent(0.04)
+            case .bandedColumn: fill = UIColor.label.withAlphaComponent(0.025)
+            case nil: fill = nil
             }
             guard let fill else { continue }
             fill.setFill()
@@ -724,7 +727,10 @@ public enum PageThumbnailRenderer {
             path.move(to: CGPoint(x: rect.minX + rule.0.x, y: rect.minY + rule.0.y))
             path.addLine(to: CGPoint(x: rect.minX + rule.1.x, y: rect.minY + rule.1.y))
         }
-        path.lineWidth = 1
+        // 線寬與虛線樣式與畫布一致（「框線及網底」改的就是這兩個）。
+        path.lineWidth = item.resolvedBorderWidth
+        let dash = item.resolvedBorderStyle.dashPattern(lineWidth: item.resolvedBorderWidth)
+        if !dash.isEmpty { path.setLineDash(dash, count: dash.count, phase: 0) }
         path.stroke()
 
         for cell in layout.cells {
