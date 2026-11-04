@@ -169,7 +169,7 @@ impl FfiPeerLink {
         runtime().block_on(async move { dc.send(&bytes::Bytes::from(frame)).await.is_ok() })
     }
 
-    pub fn close(&self) {
+    pub fn disconnect(&self) {
         let pc = self.pc.clone();
         runtime().block_on(async move {
             let _ = pc.close().await;
@@ -291,8 +291,8 @@ mod tests {
         let frame = crate::ffi_p2p_frames::p2p_encode_presence("{\"x\":1}".into());
         assert!(a.send(frame.clone()));
         assert_eq!(fb.recv_timeout(Duration::from_secs(5)).unwrap(), frame);
-        a.close();
-        b.close();
+        a.disconnect();
+        b.disconnect();
     }
 
     #[test]

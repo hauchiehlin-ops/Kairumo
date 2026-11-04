@@ -28,7 +28,8 @@ calc_fingerprint() {
     printf "%s\n%s\n%s" "$head_sha" "$diff_head" "$untracked" | shasum -a 256 | awk '{print $1}'
 }
 
-CACHE_FILE="${REPO_ROOT}/.git/gatekeepers.passed"
+GIT_DIR="$(git rev-parse --git-dir 2>/dev/null || echo "${REPO_ROOT}/.git")"
+CACHE_FILE="${GIT_DIR}/gatekeepers.passed"
 if [ "$FORCE" -eq 0 ] && [ -f "$CACHE_FILE" ]; then
     CACHED_FP="$(cat "$CACHE_FILE" 2>/dev/null || true)"
     CURRENT_FP="$(calc_fingerprint)"
@@ -95,7 +96,7 @@ run_check "延遲預算量測點守門" python3 "${REPO_ROOT}/scripts/check-late
 echo ""
 echo "════════════════════════════════════════════════════════════════════════"
 if [ "$FAILURES" -eq 0 ]; then
-    mkdir -p "${REPO_ROOT}/.git"
+    mkdir -p "${GIT_DIR}"
     calc_fingerprint > "$CACHE_FILE" 2>/dev/null || true
     echo "  🎉 五大守門機制全數通過！符合「穩定」、「即時」、「正確」標準。"
     echo "════════════════════════════════════════════════════════════════════════"

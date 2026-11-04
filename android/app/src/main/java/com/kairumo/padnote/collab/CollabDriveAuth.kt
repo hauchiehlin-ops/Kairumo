@@ -56,7 +56,10 @@ object CollabDriveAuth {
                 EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
                 EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
             )
-        }.getOrElse { context.getSharedPreferences(name, Context.MODE_PRIVATE) }
+        }.getOrElse {
+            // profile-scope: profile 依設定檔分檔名稱 name 的偏好儲存（降級安全備援）
+            context.getSharedPreferences(name, Context.MODE_PRIVATE)
+        }
     }
 
     private fun tokens(context: Context): FfiTokenSet {

@@ -82,11 +82,8 @@ object CloudCollab {
         _registry.value = uniffi.padnote_core.sharedRegistryList(registryJson(context))
     }
 
-    private fun prefs(context: Context) = context.getSharedPreferences(
-        com.kairumo.padnote.profile.ProfileContext.prefsName(
-            PREFS, com.kairumo.padnote.profile.ProfileContext.activeId(context)),
-        Context.MODE_PRIVATE
-    )
+    private fun prefs(context: Context) =
+        com.kairumo.padnote.profile.ProfileContext.prefs(context, PREFS)
 
     private fun registryJson(context: Context): String = prefs(context).getString(KEY_REGISTRY, "") ?: ""
 
@@ -334,7 +331,7 @@ object CloudCollab {
                     FocusSync.publishRemote(entry.notebookId)
                 }
                 presenceTick(context, s)
-                if (!relayUp) p2pTick(context, s)
+                if (!relayUp) p2pTick(s)
             }
             delay(if (interval > 0u) interval.toLong() else 5_000L)
         }
@@ -410,7 +407,7 @@ object CloudCollab {
     private fun signalBytes(sdp: String): ByteArray =
         JSONObject().put("t", System.currentTimeMillis() / 1000.0).put("sdp", sdp).toString().toByteArray()
 
-    private suspend fun p2pTick(context: Context, s: FfiSyncSession) {
+    private suspend fun p2pTick(s: FfiSyncSession) {
         val me = deviceId()
         val files = withContext(Dispatchers.IO) { s.readAux("signal/") }
         for (peer in _presences.value.map { it.deviceId }) {
@@ -517,7 +514,7 @@ object CloudCollab {
     }
 
     private fun dropLink(peer: UInt, failed: Boolean) {
-        links.remove(peer)?.let { link -> scope.launch(Dispatchers.IO) { link.close() } }
+        links.remove(peer)?.let { link -> scope.launch(Dispatchers.IO) { link.disconnect() } }
         connected.remove(peer)
         if (failed) failedAt[peer] = System.currentTimeMillis()
         _directPeers.value = connected.size

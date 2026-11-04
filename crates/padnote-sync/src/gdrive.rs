@@ -1172,6 +1172,7 @@ mod tests {
         /// 走可續傳上傳的那些：(工作階段 URI, 位元組數)。
         put_large: Mutex<Vec<(String, usize)>>,
         created: Mutex<Vec<String>>,
+        changes_response: Mutex<Option<Value>>,
     }
 
     impl FakeDrive {
@@ -1208,8 +1209,14 @@ mod tests {
     }
 
     impl DriveHttp for FakeDrive {
-        fn get_json(&self, _url: &str, query: &[(String, String)]) -> Result<Value, SyncError> {
+        fn get_json(&self, url: &str, query: &[(String, String)]) -> Result<Value, SyncError> {
             self.queries.lock().unwrap().push(query.to_vec());
+            if url.contains("changes") {
+                if let Some(resp) = self.changes_response.lock().unwrap().clone() {
+                    return Ok(resp);
+                }
+                return Ok(json!({ "changes": [], "newStartPageToken": "tok-end" }));
+            }
             let get = |k: &str| {
                 query
                     .iter()
@@ -1555,5 +1562,60 @@ mod tests {
         ] {
             assert_eq!(parse_rfc3339_secs(bad), 0, "{bad:?}");
         }
+    }
+
+    #[test]
+    fn folder_space_scopes_queries_and_filters_changes() {
+        let fake = FakeDrive::with(&[("notebooks/nb1/manifest.json", b"{}")], 10);
+        *fake.changes_response.lock().unwrap() = Some(json!({
+            "changes": [
+                {
+                    "fileId": "id-in-folder",
+                    "file": {
+                        "name": "notebooks/nb1/op.bin",
+                        "size": "100",
+                        "parents": ["collab-42"],
+                        "trashed": false
+                    }
+                },
+                {
+                    "fileId": "id-in-other",
+                    "file": {
+                        "name": "other/file.bin",
+                        "size": "200",
+                        "parents": ["other-folder"],
+                        "trashed": false
+                    }
+                }
+            ],
+            "newStartPageToken": "token-next"
+        }));
+
+        let drive = GDriveProvider::in_space(fake, DriveSpace::Folder("collab-42".into()));
+
+        // 1. list 查詢驗證 spaces 與 parents
+        let entries = drive.list("notebooks/nb1").unwrap();
+        assert_eq!(entries.len(), 1);
+        {
+            let queries = drive.http.queries.lock().unwrap();
+            let last_q = queries.last().unwrap();
+            let spaces = last_q
+                .iter()
+                .find(|(k, _)| k == "spaces")
+                .map(|(_, v)| v.as_str());
+            let q = last_q
+                .iter()
+                .find(|(k, _)| k == "q")
+                .map(|(_, v)| v.as_str());
+            assert_eq!(spaces, Some("drive"));
+            assert!(q.unwrap().contains("'collab-42' in parents"));
+        }
+
+        // 2. fetch_changes 濾掉非本資料夾的變更
+        let batch = drive.fetch_changes("start-token").unwrap();
+        assert_eq!(batch.changes.len(), 1);
+        assert_eq!(batch.changes[0].file_id, "id-in-folder");
+        assert_eq!(batch.changes[0].name.as_deref(), Some("notebooks/nb1/op.bin"));
+        assert_eq!(batch.new_token, "token-next");
     }
 }

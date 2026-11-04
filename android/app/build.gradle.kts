@@ -116,6 +116,12 @@ android {
     }
 }
 
+tasks.withType<Test> {
+    val cargoTarget = System.getenv("CARGO_TARGET_DIR")
+        ?: (System.getProperty("user.home") + "/.cargo-target/kairumo")
+    systemProperty("jna.library.path", "$cargoTarget/debug:$rootDir/../target/debug")
+}
+
 /** 只把要給使用者看的文件複製進 assets。 */
 val copyUserDocs by tasks.registering(Copy::class) {
     from("$rootDir/../docs/manual") {
@@ -237,6 +243,7 @@ dependencies {
 
     debugImplementation("androidx.compose.ui:ui-tooling")
     testImplementation("junit:junit:4.13.2")
+    testImplementation("net.java.dev.jna:jna:5.15.0")
     // 本機 JVM 單元測試裡的 android.jar 是空殼（isReturnDefaultValues），org.json 全部回預設值。
     // 設定檔名單用 org.json 存檔，要測得到往返就得有真的實作。
     testImplementation("org.json:json:20240303")

@@ -236,8 +236,7 @@ private final class PeerListener: FfiPeerListener, @unchecked Sendable {
         self.owner = owner
     }
     func onFrame(frame: Data) {
-        let peer = self.peer
-        Task { @MainActor [weak owner] in owner?.p2pReceived(frame, from: peer) }
+        Task { @MainActor [weak owner] in owner?.p2pReceived(frame) }
     }
     func onState(state: FfiPeerState) {
         let peer = self.peer
@@ -556,8 +555,8 @@ final class CloudCollabManager: ObservableObject {
                 let report = await pushRound(entry: entry, session: s)
                 if report.downloaded > 0 { lastRemoteChange = Date() }
                 if report.needsReauth { lastError = L10n.t("cloud_collab_err_reauth") }
-                await presenceTick(entry: entry, session: s)
-                if !relayUp { await p2pTick(entry: entry, session: s) }
+                await presenceTick(session: s)
+                if !relayUp { await p2pTick(session: s) }
             }
             let wait = interval > 0 ? UInt64(interval) : 5_000
             try? await Task.sleep(nanoseconds: wait * 1_000_000)
@@ -578,7 +577,7 @@ final class CloudCollabManager: ObservableObject {
 
     // MARK: 在場
 
-    private func presenceTick(entry: FfiSharedNotebook, session s: FfiSyncSession) async {
+    private func presenceTick(session s: FfiSyncSession) async {
         let now = UInt64(Date().timeIntervalSince1970 * 1000)
         if Date().timeIntervalSince(lastPresenceAt) * 1000 >= Double(collabPresenceIntervalMs()) {
             lastPresenceAt = Date()
@@ -613,7 +612,7 @@ final class CloudCollabManager: ObservableObject {
         let sdp: String
     }
 
-    private func p2pTick(entry: FfiSharedNotebook, session s: FfiSyncSession) async {
+    private func p2pTick(session s: FfiSyncSession) async {
         let me = deviceId
         let files = await Task.detached { s.readAux(prefix: "signal/") }.value
         func signal(_ path: String) -> String? {
@@ -671,7 +670,7 @@ final class CloudCollabManager: ObservableObject {
         directPeers = connectedPeers.count
     }
 
-    fileprivate func p2pReceived(_ frame: Data, from peer: UInt32) {
+    fileprivate func p2pReceived(_ frame: Data) {
         guard let id = focusedId else { return }
         switch p2pDecodeFrame(frame: frame) {
         case .opFile(let notebookId, let name, let data):
@@ -731,7 +730,7 @@ final class CloudCollabManager: ObservableObject {
     }
 
     private func dropLink(_ peer: UInt32, failed: Bool) {
-        if let link = links.removeValue(forKey: peer) { Task.detached { link.close() } }
+        if let link = links.removeValue(forKey: peer) { Task.detached { link.disconnect() } }
         connectedPeers.remove(peer)
         if failed { failedAt[peer] = Date() }
         directPeers = connectedPeers.count
