@@ -64,12 +64,18 @@ enum RuledWriting {
 
     /// 格線的間距：相鄰間距的中位數。太少或太不規則（不像橫線紙）回 `nil`。
     static func step(of rules: [CGFloat]) -> CGFloat? {
-        guard rules.count >= 3 else { return nil }
-        let gaps = zip(rules.dropFirst(), rules).map { $0 - $1 }.filter { $0 > 6 }.sorted()
-        guard !gaps.isEmpty else { return nil }
-        let median = gaps[gaps.count / 2]
+        guard rules.count >= 6 else { return nil }
+        let gaps = zip(rules.dropFirst(), rules).map { $0 - $1 }.filter { $0 > 6 }
+        guard gaps.count >= 5 else { return nil }
+        let sortedGaps = gaps.sorted()
+        let median = sortedGaps[sortedGaps.count / 2]
         // 橫線紙的間距在 14–80 點之間。超出這個範圍的多半是版面分隔線，不是讓人寫字的行。
-        return (14 ... 80).contains(median) ? median : nil
+        guard (14 ... 80).contains(median) else { return nil }
+        // 規則性檢驗：橫線紙各行間距必須大致規律，若超過 30% 間距嚴重偏離中位數則屬版面參考線，非橫線紙。
+        let tol = max(2.5, median * 0.15)
+        let matching = gaps.filter { abs($0 - median) <= tol }
+        guard Double(matching.count) / Double(gaps.count) >= 0.7 else { return nil }
+        return median
     }
 
     // MARK: 擺放

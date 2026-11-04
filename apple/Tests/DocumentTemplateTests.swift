@@ -98,6 +98,64 @@ final class DocumentTemplateTests: XCTestCase {
         XCTAssertGreaterThanOrEqual(doc.pagesData.count, doc.pageCount)
     }
 
+    func testApplyingPaperTemplateNeverOverlapsTextBlocks() throws {
+        // 紙張樣板（黃金比例、情緒板、工程藍圖等）套用完整案例時，
+        // 絕對不得因為 snapToRules 重算而發生文字區塊相互疊合的現象。
+        for paperId in ["golden_ratio", "moodboard", "blueprint", "cornell", "mobile_wireframe"] {
+            guard let paper = DocumentTemplateCatalog.paperTemplate(paperId: paperId) else { continue }
+            for kind in DocumentTemplateCatalog.Variantkind.allCases {
+                var doc = NotebookDocument(title: "測試-\(paperId)", pageCount: 1)
+                doc.template = NoteTemplate(paperId: paperId) ?? .blank
+                DocumentTemplateCatalog.apply(paper, kind: kind, language: "zhHant", to: &doc)
+
+                let texts = doc.textAttachments ?? []
+                let tables = doc.tableAttachments ?? []
+                var items: [(page: Int, y: CGFloat, height: CGFloat, name: String)] = []
+                for t in texts { items.append((t.pageIndex, t.y, t.height, t.text)) }
+                for t in tables { items.append((t.pageIndex, t.y, t.resolvedLayout().height, "table")) }
+
+                let byPage = Dictionary(grouping: items, by: \.page)
+                for (page, pageItems) in byPage {
+                    let sorted = pageItems.sorted { $0.y < $1.y }
+                    for i in 0 ..< sorted.count - 1 {
+                        let current = sorted[i]
+                        let next = sorted[i + 1]
+                        XCTAssertLessThanOrEqual(
+                            current.y + current.height, next.y + 0.5,
+                            "\(paperId) 的 \(kind.rawValue) 版本在第 \(page) 頁文字重疊：'\(current.name.prefix(10))' (bottom: \(current.y + current.height)) 壓到 '\(next.name.prefix(10))' (top: \(next.y))"
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    func testApplyingDocumentTemplateOnLinedPaperNeverOverlaps() throws {
+        let tmpl = try XCTUnwrap(DocumentTemplateCatalog.template(id: "meeting_minutes"))
+        var doc = NotebookDocument(title: "會議紀錄", pageCount: 1)
+        doc.template = .lined
+        DocumentTemplateCatalog.apply(tmpl, kind: .example, language: "zhHant", to: &doc)
+
+        let texts = doc.textAttachments ?? []
+        let tables = doc.tableAttachments ?? []
+        var items: [(page: Int, y: CGFloat, height: CGFloat, name: String)] = []
+        for t in texts { items.append((t.pageIndex, t.y, t.height, t.text)) }
+        for t in tables { items.append((t.pageIndex, t.y, t.resolvedLayout().height, "table")) }
+
+        let byPage = Dictionary(grouping: items, by: \.page)
+        for (page, pageItems) in byPage {
+            let sorted = pageItems.sorted { $0.y < $1.y }
+            for i in 0 ..< sorted.count - 1 {
+                let current = sorted[i]
+                let next = sorted[i + 1]
+                XCTAssertLessThanOrEqual(
+                    current.y + current.height, next.y + 0.5,
+                    "會議紀錄在第 \(page) 頁文字重疊：'\(current.name.prefix(10))' 壓到 '\(next.name.prefix(10))'"
+                )
+            }
+        }
+    }
+
     func testTableCellCountMatchesItsShape() {
         // cells 的長度必須剛好是 rows × cols —— 少一格的話核心的版面計算
         // 會讀到越界的索引。

@@ -71,11 +71,16 @@ object RuledWriting {
 
     /** 格線間距：相鄰間距的中位數。太少或太不規則（不像橫線紙）回 null。 */
     fun step(rules: List<Float>): Float? {
-        if (rules.size < 3) return null
-        val gaps = rules.zipWithNext { a, b -> b - a }.filter { it > 6f }.sorted()
-        if (gaps.isEmpty()) return null
-        val median = gaps[gaps.size / 2]
-        return if (median in 14f..80f) median else null
+        if (rules.size < 6) return null
+        val gaps = rules.zipWithNext { a, b -> b - a }.filter { it > 6f }
+        if (gaps.size < 5) return null
+        val sortedGaps = gaps.sorted()
+        val median = sortedGaps[sortedGaps.size / 2]
+        if (median !in 14f..80f) return null
+        val tol = max(2.5f, median * 0.15f)
+        val matching = gaps.count { abs(it - median) <= tol }
+        if (matching.toFloat() / gaps.size.toFloat() < 0.7f) return null
+        return median
     }
 
     fun lineHeight(fontSize: Float): Float = fontSize * 1.2f

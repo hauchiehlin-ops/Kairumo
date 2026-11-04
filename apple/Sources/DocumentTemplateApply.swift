@@ -62,7 +62,11 @@ extension DocumentTemplateCatalog {
 
         // 橫線紙／方格紙：文字與表格貼齊格線。座標是範本算好的「理想位置」，
         // 但範本不知道底下是哪一種紙 —— 不貼齊的話字會卡在兩條線中間、表格的列線與紙上的線錯開。
-        snapToRules(texts: &newTexts, tables: &newTables, doc: doc)
+        // 注意：如果是「紙張樣板自己的示範內容」（paperTemplate != nil），版面是針對該紙張特定引導線
+        // 與網格專門設計的，絕對不能再做 snapToRules，否則會破壞精心設計的專屬座標。
+        if paperTemplate(paperId: template.id) == nil {
+            snapToRules(texts: &newTexts, tables: &newTables, doc: doc)
+        }
 
         doc.textAttachments = (doc.textAttachments ?? []) + newTexts
         doc.tableAttachments = (doc.tableAttachments ?? []) + newTables
@@ -122,11 +126,15 @@ extension DocumentTemplateCatalog {
                 let target = y + offset
                 var rule = g.rules.min { abs($0 - target) < abs($1 - target) } ?? target
                 var top = rule - offset
-                if top < floor - 0.5,
-                   let next = g.rules.first(where: { $0 - offset >= floor - 0.5 }),
-                   next - offset + height <= limit {
-                    rule = next
-                    top = rule - offset
+                if top < floor - 0.5 {
+                    if let next = g.rules.first(where: { $0 - offset >= floor - 0.5 }),
+                       next - offset + height <= limit {
+                        rule = next
+                        top = rule - offset
+                    } else {
+                        // 往下已無合適格線，維持在上一區塊底部之下，嚴禁回傳小於 floor 的 top 導致重疊
+                        top = max(y, floor)
+                    }
                 }
                 return max(0, top)
             }
