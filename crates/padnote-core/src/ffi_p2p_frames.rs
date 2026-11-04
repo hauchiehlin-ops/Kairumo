@@ -19,8 +19,14 @@ pub const P2P_MAX_FRAME: usize = 60 * 1024;
 
 #[derive(Clone, Debug, PartialEq, Eq, uniffi::Enum)]
 pub enum FfiP2pFrame {
-    OpFile { notebook_id: String, name: String, data: Vec<u8> },
-    Presence { json: String },
+    OpFile {
+        notebook_id: String,
+        name: String,
+        data: Vec<u8>,
+    },
+    Presence {
+        json: String,
+    },
     Unknown,
 }
 
@@ -33,7 +39,9 @@ fn put_str(out: &mut Vec<u8>, s: &str) {
 fn take_str(buf: &[u8], at: &mut usize) -> Option<String> {
     let len = u16::from_be_bytes(buf.get(*at..*at + 2)?.try_into().ok()?) as usize;
     *at += 2;
-    let s = std::str::from_utf8(buf.get(*at..*at + len)?).ok()?.to_string();
+    let s = std::str::from_utf8(buf.get(*at..*at + len)?)
+        .ok()?
+        .to_string();
     *at += len;
     Some(s)
 }
@@ -46,7 +54,11 @@ pub fn p2p_encode_op_file(notebook_id: String, name: String, data: Vec<u8>) -> V
     put_str(&mut out, &notebook_id);
     put_str(&mut out, &name);
     out.extend_from_slice(&data);
-    if out.len() > P2P_MAX_FRAME { Vec::new() } else { out }
+    if out.len() > P2P_MAX_FRAME {
+        Vec::new()
+    } else {
+        out
+    }
 }
 
 #[uniffi::export]
@@ -60,10 +72,16 @@ pub fn p2p_encode_presence(json: String) -> Vec<u8> {
 pub fn p2p_decode_frame(frame: Vec<u8>) -> FfiP2pFrame {
     if frame.len() >= 4 && &frame[..4] == OP_MAGIC {
         let mut at = 4;
-        let (Some(notebook_id), Some(name)) = (take_str(&frame, &mut at), take_str(&frame, &mut at)) else {
+        let (Some(notebook_id), Some(name)) =
+            (take_str(&frame, &mut at), take_str(&frame, &mut at))
+        else {
             return FfiP2pFrame::Unknown;
         };
-        return FfiP2pFrame::OpFile { notebook_id, name, data: frame[at..].to_vec() };
+        return FfiP2pFrame::OpFile {
+            notebook_id,
+            name,
+            data: frame[at..].to_vec(),
+        };
     }
     if frame.len() >= 4 && &frame[..4] == PRESENCE_MAGIC {
         return match String::from_utf8(frame[4..].to_vec()) {
@@ -85,7 +103,12 @@ pub struct FfiOpFileSize {
 pub fn package_op_file_sizes(package_path: String) -> Vec<FfiOpFileSize> {
     padnote_storage::NotebookPackage::open(std::path::Path::new(&package_path))
         .and_then(|p| p.doc_op_files())
-        .map(|files| files.into_iter().map(|(name, size)| FfiOpFileSize { name, size }).collect())
+        .map(|files| {
+            files
+                .into_iter()
+                .map(|(name, size)| FfiOpFileSize { name, size })
+                .collect()
+        })
         .unwrap_or_default()
 }
 
@@ -101,7 +124,8 @@ pub fn package_read_op_file(package_path: String, name: String) -> Vec<u8> {
 /// 檔名是不可信輸入，交給套件檢查（擋 `../` 等）。回傳有沒有寫入 —— 有的話平台要重新載入筆記。
 #[uniffi::export]
 pub fn package_ingest_op_file(package_path: String, name: String, data: Vec<u8>) -> bool {
-    let Ok(package) = padnote_storage::NotebookPackage::open(std::path::Path::new(&package_path)) else {
+    let Ok(package) = padnote_storage::NotebookPackage::open(std::path::Path::new(&package_path))
+    else {
         return false;
     };
     let local = package
@@ -121,7 +145,11 @@ mod tests {
 
     #[test]
     fn frames_round_trip() {
-        let f = p2p_encode_op_file("NB".into(), "0000000000000001-0000abcd.oplog".into(), vec![1, 2, 3]);
+        let f = p2p_encode_op_file(
+            "NB".into(),
+            "0000000000000001-0000abcd.oplog".into(),
+            vec![1, 2, 3],
+        );
         assert_eq!(
             p2p_decode_frame(f),
             FfiP2pFrame::OpFile {
@@ -135,7 +163,9 @@ mod tests {
             FfiP2pFrame::Presence { json: "{}".into() }
         );
         assert_eq!(p2p_decode_frame(vec![0, 1]), FfiP2pFrame::Unknown);
-        assert!(p2p_encode_op_file("N".into(), "x.oplog".into(), vec![0; P2P_MAX_FRAME]).is_empty());
+        assert!(
+            p2p_encode_op_file("N".into(), "x.oplog".into(), vec![0; P2P_MAX_FRAME]).is_empty()
+        );
     }
 
     #[test]
@@ -145,11 +175,30 @@ mod tests {
         padnote_storage::NotebookPackage::create(&dir, "t", 0).unwrap();
         let path = dir.to_string_lossy().to_string();
         let name = "0000000000000001-0000abcd.oplog".to_string();
-        assert!(package_ingest_op_file(path.clone(), name.clone(), vec![1, 2, 3]));
-        assert!(!package_ingest_op_file(path.clone(), name.clone(), vec![9, 9]));
-        assert_eq!(package_read_op_file(path.clone(), name.clone()), vec![1, 2, 3]);
-        assert!(!package_ingest_op_file(path.clone(), "../evil.oplog".into(), vec![1; 9]));
-        assert!(package_op_file_sizes(path).iter().any(|f| f.name == name && f.size == 3));
+        assert!(package_ingest_op_file(
+            path.clone(),
+            name.clone(),
+            vec![1, 2, 3]
+        ));
+        assert!(!package_ingest_op_file(
+            path.clone(),
+            name.clone(),
+            vec![9, 9]
+        ));
+        assert_eq!(
+            package_read_op_file(path.clone(), name.clone()),
+            vec![1, 2, 3]
+        );
+        assert!(!package_ingest_op_file(
+            path.clone(),
+            "../evil.oplog".into(),
+            vec![1; 9]
+        ));
+        assert!(
+            package_op_file_sizes(path)
+                .iter()
+                .any(|f| f.name == name && f.size == 3)
+        );
         let _ = std::fs::remove_dir_all(&dir);
     }
 }

@@ -28,7 +28,10 @@ use webrtc::peer_connection::peer_connection_state::RTCPeerConnectionState;
 use webrtc::peer_connection::sdp::session_description::RTCSessionDescription;
 
 /// 預設的公共 STUN。
-pub const DEFAULT_STUN: &[&str] = &["stun:stun.l.google.com:19302", "stun:stun1.l.google.com:19302"];
+pub const DEFAULT_STUN: &[&str] = &[
+    "stun:stun.l.google.com:19302",
+    "stun:stun1.l.google.com:19302",
+];
 
 fn runtime() -> &'static tokio::runtime::Runtime {
     static RT: OnceLock<tokio::runtime::Runtime> = OnceLock::new();
@@ -123,7 +126,8 @@ impl FfiPeerLink {
             if pc.set_local_description(offer).await.is_err() {
                 return String::new();
             }
-            let _ = tokio::time::timeout(Duration::from_millis(timeout_ms as u64), gathered.recv()).await;
+            let _ = tokio::time::timeout(Duration::from_millis(timeout_ms as u64), gathered.recv())
+                .await;
             local_sdp(&pc).await
         })
     }
@@ -145,7 +149,8 @@ impl FfiPeerLink {
             if pc.set_local_description(answer).await.is_err() {
                 return String::new();
             }
-            let _ = tokio::time::timeout(Duration::from_millis(timeout_ms as u64), gathered.recv()).await;
+            let _ = tokio::time::timeout(Duration::from_millis(timeout_ms as u64), gathered.recv())
+                .await;
             local_sdp(&pc).await
         })
     }
@@ -188,7 +193,10 @@ impl FfiPeerLink {
         runtime().block_on(async move {
             let api = APIBuilder::new().build();
             let config = RTCConfiguration {
-                ice_servers: vec![RTCIceServer { urls, ..Default::default() }],
+                ice_servers: vec![RTCIceServer {
+                    urls,
+                    ..Default::default()
+                }],
                 ..Default::default()
             };
             let pc = Arc::new(api.new_peer_connection(config).await.ok()?);
@@ -216,16 +224,22 @@ impl FfiPeerLink {
                 wire_channel(&dc, &slot, &l);
                 Box::pin(async {})
             }));
-            Some(Arc::new(Self { pc, channel, listener }))
+            Some(Arc::new(Self {
+                pc,
+                channel,
+                listener,
+            }))
         })
     }
-
 }
 
 /// 建立一條（還沒連上的）連線。`stun_urls` 為空時用 [`DEFAULT_STUN`]。
 /// 建不起來（極少見）回 `None`，平台照常走雲端。
 #[uniffi::export]
-pub fn p2p_new_link(stun_urls: Vec<String>, listener: Arc<dyn FfiPeerListener>) -> Option<Arc<FfiPeerLink>> {
+pub fn p2p_new_link(
+    stun_urls: Vec<String>,
+    listener: Arc<dyn FfiPeerListener>,
+) -> Option<Arc<FfiPeerLink>> {
     FfiPeerLink::new(stun_urls, listener)
 }
 
@@ -254,10 +268,21 @@ mod tests {
         }
     }
 
-    fn probe() -> (Arc<Probe>, mpsc::Receiver<Vec<u8>>, mpsc::Receiver<FfiPeerState>) {
+    fn probe() -> (
+        Arc<Probe>,
+        mpsc::Receiver<Vec<u8>>,
+        mpsc::Receiver<FfiPeerState>,
+    ) {
         let (ft, fr) = mpsc::channel();
         let (st, sr) = mpsc::channel();
-        (Arc::new(Probe { frames: Mutex::new(ft), states: Mutex::new(st) }), fr, sr)
+        (
+            Arc::new(Probe {
+                frames: Mutex::new(ft),
+                states: Mutex::new(st),
+            }),
+            fr,
+            sr,
+        )
     }
 
     fn wait_connected(rx: &mpsc::Receiver<FfiPeerState>) -> bool {
@@ -299,6 +324,9 @@ mod tests {
     fn signalling_is_deterministic() {
         assert!(p2p_should_offer(1, 2));
         assert!(!p2p_should_offer(2, 1));
-        assert_eq!(p2p_signal_path(1, 0xab, false), "signal/00000001-000000ab.offer");
+        assert_eq!(
+            p2p_signal_path(1, 0xab, false),
+            "signal/00000001-000000ab.offer"
+        );
     }
 }
