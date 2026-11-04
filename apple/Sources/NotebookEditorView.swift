@@ -865,7 +865,11 @@ public struct NotebookEditorView: View {
         .featureHint("hint.refine_sketch", trigger: showSketchRefineBar)
         .featureHint("hint.tabletop", trigger: isTabletopMode)
         .featureHint("hint.recognize", trigger: isRecognisingHandwriting)
-        .featureHint("hint.pdf_underlay", trigger: !(notebook.attachments?.filter { $0.fileName.hasSuffix(".png") }.isEmpty ?? true))
+        // 只有真的有「PDF 底稿」（鎖定、在筆跡下方、撐滿頁面的圖，見 `isLockedBackdrop`）才提示。
+        // 原本是「有任何 .png 附件」—— 插入的圖片一律存成 .png，插一張素材圖就跳出「PDF 底稿」說明。
+        .featureHint("hint.pdf_underlay", trigger: (notebook.attachments ?? []).contains {
+            $0.pageIndex == currentPageIndex && isLockedBackdrop($0.id, page: currentPageIndex)
+        })
         .featureHint("hint.object_lock", trigger: !(notebook.lockedObjectIds(forPage: currentPageIndex).isEmpty))
         .featureHint("hint.lasso", trigger: selectedTool == .lasso)
         .featureHint("hint.radial_menu", trigger: showRadialMenu)

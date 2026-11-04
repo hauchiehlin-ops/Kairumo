@@ -576,7 +576,10 @@ internal fun ColumnScope.EditorCanvasContainer(ctx: EditorCanvasContext) = with(
                             // 單指平移只在「手指本來就不能畫」時才有（打字模式、只限觸控筆）。
                             // 套索、膠帶、放圖釘／貼上、飛梭工具盤開著時，手指本身就是在操作它們，不能拿去平移
                             // （實機回報：套索一框畫布就跟著跑、飛梭工具盤點不了）。
+                            // 框選模式：手指是在拉框／搬整組（與 Apple 一致：框選時畫布不捲）。原本漏了這一項，
+                            // 頁面比視窗大時單指平移在 Initial 階段先把拖曳搶走，框選一拖畫布就跑、什麼都選不到。
                             val fingerOwnsGesture = showRadialMenu || isPlacingCommentPin || isPlacingPasteObject ||
+                                (marqueeActive && editorMode == EditorMode.TYPE) ||
                                 (editorMode == EditorMode.DRAW && (inkTool.isLasso || inkTool.isMaskingTape || inkTool.isTranslationPen))
                             val oneFingerPan = pointers == 1 && onePanFinger && !stylus &&
                                 contentExceedsViewport && !fingerOwnsGesture
@@ -2004,7 +2007,15 @@ internal fun ColumnScope.EditorCanvasContainer(ctx: EditorCanvasContext) = with(
         com.kairumo.padnote.ui.FeatureHintHost(
             activity, "hint.recognize", isRecognisingHandwriting, deviceLanguageTag())
         com.kairumo.padnote.ui.FeatureHintHost(
-            activity, "hint.pdf_underlay", imageStore.all.isNotEmpty(), deviceLanguageTag())
+            activity, "hint.pdf_underlay",
+            // 只有真的有「PDF 底稿」才提示：鎖定、在筆跡下方、撐滿頁寬或頁高的圖（與 ImageLayer 的 isBackdrop、
+            // Apple `isLockedBackdrop` 同一條規則）。原本是「頁上有任何圖片」，插一張素材圖就跳「PDF 底稿」說明。
+            imageStore.all.any {
+                it.id in lockedIds && it.id in underInkIds &&
+                    (it.width >= com.kairumo.padnote.ink.PageGeometry.width * 0.9f ||
+                        it.height >= com.kairumo.padnote.ink.PageGeometry.height * 0.9f)
+            },
+            deviceLanguageTag())
         com.kairumo.padnote.ui.FeatureHintHost(
             activity, "hint.object_lock", lockedIds.isNotEmpty(), deviceLanguageTag())
         com.kairumo.padnote.ui.FeatureHintHost(
