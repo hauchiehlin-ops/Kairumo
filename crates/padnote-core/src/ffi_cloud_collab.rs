@@ -33,7 +33,9 @@ use padnote_sync::gdrive::{DriveRoot, GDriveProvider};
 use padnote_sync::provider::SyncError;
 
 use crate::ffi_gdrive::{FfiDriveHttp, ForeignHttp};
-use crate::ffi_oauth::{FfiOAuthPlatform, encode_form, oauth_client_id, oauth_redirect_uri, percent_decode};
+use crate::ffi_oauth::{
+    FfiOAuthPlatform, encode_form, oauth_client_id, oauth_redirect_uri, percent_decode,
+};
 
 /// 協作憑證的權限範圍。與主帳號同步用的 `drive.appdata` 分開存放、分開換證。
 pub const DRIVE_FILE_SCOPE: &str = "https://www.googleapis.com/auth/drive.file";
@@ -51,7 +53,12 @@ pub struct FfiDriveShareResult {
 }
 
 fn share_ok(id: String) -> FfiDriveShareResult {
-    FfiDriveShareResult { ok: true, id, error: String::new(), needs_reauth: false }
+    FfiDriveShareResult {
+        ok: true,
+        id,
+        error: String::new(),
+        needs_reauth: false,
+    }
 }
 
 fn share_err(e: SyncError) -> FfiDriveShareResult {
@@ -77,7 +84,12 @@ fn provider(http: Arc<dyn FfiDriveHttp>, folder_id: &str) -> GDriveProvider<Fore
 /// 協作資料夾在房主雲端硬碟裡的名字。看得出是哪本筆記，也看得出是 Kairumo 建的。
 #[uniffi::export]
 pub fn collab_drive_folder_name(title: String) -> String {
-    let clean: String = title.trim().chars().filter(|c| !c.is_control()).take(80).collect();
+    let clean: String = title
+        .trim()
+        .chars()
+        .filter(|c| !c.is_control())
+        .take(80)
+        .collect();
     if clean.is_empty() {
         "Kairumo · Shared".to_string()
     } else {
@@ -87,7 +99,10 @@ pub fn collab_drive_folder_name(title: String) -> String {
 
 /// 建立協作資料夾。**同步等待 HTTP，不要在主執行緒呼叫。**
 #[uniffi::export]
-pub fn collab_drive_create_folder(http: Arc<dyn FfiDriveHttp>, title: String) -> FfiDriveShareResult {
+pub fn collab_drive_create_folder(
+    http: Arc<dyn FfiDriveHttp>,
+    title: String,
+) -> FfiDriveShareResult {
     match provider(http, "").create_folder(&collab_drive_folder_name(title)) {
         Ok(id) => share_ok(id),
         Err(e) => share_err(e),
@@ -117,7 +132,10 @@ pub fn collab_drive_grant(
 
 /// 「知道連結的人都能編輯」（一鍵邀請，不必輸入 Email）。
 #[uniffi::export]
-pub fn collab_drive_grant_link(http: Arc<dyn FfiDriveHttp>, folder_id: String) -> FfiDriveShareResult {
+pub fn collab_drive_grant_link(
+    http: Arc<dyn FfiDriveHttp>,
+    folder_id: String,
+) -> FfiDriveShareResult {
     match provider(http, &folder_id).grant_anyone_with_link(&folder_id) {
         Ok(id) => share_ok(id),
         Err(e) => share_err(e),
@@ -307,7 +325,10 @@ pub fn oauth_collab_authorize_url(
     if !login_hint.is_empty() {
         params.push(("login_hint", login_hint));
     }
-    format!("https://accounts.google.com/o/oauth2/v2/auth?{}", encode_form(&params))
+    format!(
+        "https://accounts.google.com/o/oauth2/v2/auth?{}",
+        encode_form(&params)
+    )
 }
 
 /// 回呼網址裡挑選器選中的檔案 id（逗號分隔）。沒有就是空陣列。
@@ -435,7 +456,10 @@ pub fn collab_order_servers(servers: Vec<String>, my_ipv4: Vec<String>) -> Vec<S
     fn host_of(url: &str) -> String {
         let rest = url.split("://").nth(1).unwrap_or(url);
         let host = rest.split(['/', '?', '#']).next().unwrap_or("");
-        host.rsplit_once(':').map(|(h, _)| h).unwrap_or(host).to_string()
+        host.rsplit_once(':')
+            .map(|(h, _)| h)
+            .unwrap_or(host)
+            .to_string()
     }
     fn prefix24(ip: &str) -> Option<String> {
         let parts: Vec<&str> = ip.split('.').collect();
@@ -471,7 +495,6 @@ pub fn collab_order_servers(servers: Vec<String>, my_ipv4: Vec<String>) -> Vec<S
     out.sort_by_key(|s| rank(s));
     out
 }
-
 
 // ---- 自適應輪詢與合併送出 ------------------------------------------------------
 
@@ -558,10 +581,22 @@ pub fn collab_presence_decode(json: String, now_ms: u64) -> Option<FfiCloudPrese
     let v: serde_json::Value = serde_json::from_str(&json).ok()?;
     let p = FfiCloudPresence {
         device_id: v.get("device")?.as_u64()? as u32,
-        user_name: v.get("name").and_then(|x| x.as_str()).unwrap_or_default().to_string(),
-        color_hex: v.get("color").and_then(|x| x.as_str()).unwrap_or("#3478F6").to_string(),
+        user_name: v
+            .get("name")
+            .and_then(|x| x.as_str())
+            .unwrap_or_default()
+            .to_string(),
+        color_hex: v
+            .get("color")
+            .and_then(|x| x.as_str())
+            .unwrap_or("#3478F6")
+            .to_string(),
         page_index: v.get("page").and_then(|x| x.as_u64()).unwrap_or(0) as u32,
-        selected_id: v.get("sel").and_then(|x| x.as_str()).unwrap_or_default().to_string(),
+        selected_id: v
+            .get("sel")
+            .and_then(|x| x.as_str())
+            .unwrap_or_default()
+            .to_string(),
         updated_ms: v.get("t")?.as_u64()?,
     };
     (now_ms.saturating_sub(p.updated_ms) <= PRESENCE_STALE_MS).then_some(p)
@@ -587,7 +622,12 @@ fn registry_from(json: &str) -> Vec<FfiSharedNotebook> {
         .map(|list| {
             list.iter()
                 .filter_map(|e| {
-                    let s = |k: &str| e.get(k).and_then(|x| x.as_str()).unwrap_or_default().to_string();
+                    let s = |k: &str| {
+                        e.get(k)
+                            .and_then(|x| x.as_str())
+                            .unwrap_or_default()
+                            .to_string()
+                    };
                     let nb = s("nb");
                     (!nb.is_empty()).then(|| FfiSharedNotebook {
                         notebook_id: nb,
@@ -643,7 +683,9 @@ pub fn shared_registry_remove(json: String, notebook_id: String) -> String {
 #[uniffi::export]
 pub fn shared_registry_find(json: String, notebook_id: String) -> Option<FfiSharedNotebook> {
     let key = notebook_id.to_lowercase();
-    registry_from(&json).into_iter().find(|e| e.notebook_id.to_lowercase() == key)
+    registry_from(&json)
+        .into_iter()
+        .find(|e| e.notebook_id.to_lowercase() == key)
 }
 
 #[cfg(test)]
@@ -654,7 +696,10 @@ mod tests {
         FfiCollabInviteV2 {
             room_id: "kairumo-db5a57".into(),
             key_base64: "a2V5a2V5a2V5a2V5a2V5a2V5a2V5a2V5a2V5a2V5a2U=".into(),
-            servers: vec!["ws://100.73.43.39:9002".into(), "ws://192.168.68.55:9002".into()],
+            servers: vec![
+                "ws://100.73.43.39:9002".into(),
+                "ws://192.168.68.55:9002".into(),
+            ],
             notebook_id: "NB-1".into(),
             drive_folder_id: "1AbC_d-E".into(),
             title: "111 年度 員工 & 認股".into(),
@@ -723,7 +768,10 @@ mod tests {
         };
         let json = collab_presence_encode(p.clone());
         assert_eq!(collab_presence_decode(json.clone(), 1_005_000), Some(p));
-        assert_eq!(collab_presence_decode(json, 1_000_000 + PRESENCE_STALE_MS + 1), None);
+        assert_eq!(
+            collab_presence_decode(json, 1_000_000 + PRESENCE_STALE_MS + 1),
+            None
+        );
         assert_eq!(collab_presence_path(0xabc), "presence/00000abc.json");
     }
 
@@ -741,14 +789,25 @@ mod tests {
         let j = shared_registry_upsert(j, e("a", "editor"));
         let j = shared_registry_upsert(j, e("B", "owner"));
         assert_eq!(shared_registry_list(j.clone()).len(), 2);
-        assert_eq!(shared_registry_find(j.clone(), "A".into()).unwrap().role, "editor");
-        assert_eq!(shared_registry_list(shared_registry_remove(j, "b".into())).len(), 1);
+        assert_eq!(
+            shared_registry_find(j.clone(), "A".into()).unwrap().role,
+            "editor"
+        );
+        assert_eq!(
+            shared_registry_list(shared_registry_remove(j, "b".into())).len(),
+            1
+        );
     }
 
     #[test]
     fn picker_url_and_callback() {
         let url = oauth_collab_authorize_url(
-            FfiOAuthPlatform::Apple, "ch".into(), "st".into(), String::new(), "FOLDER1".into());
+            FfiOAuthPlatform::Apple,
+            "ch".into(),
+            "st".into(),
+            String::new(),
+            "FOLDER1".into(),
+        );
         assert!(url.contains("trigger_onepick=true"));
         assert!(url.contains("file_ids=FOLDER1"));
         assert!(url.contains("drive.file"));

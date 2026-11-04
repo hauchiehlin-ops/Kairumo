@@ -536,7 +536,9 @@ impl<H: DriveHttp> GDriveProvider<H> {
                 // （另一本共享筆記、使用者自己的檔案）要濾掉。刪除的變更沒有 `file`，
                 // 交給快照判斷（快照只認得自己這個資料夾的 id，不認得的會被忽略）。
                 if let DriveRoot::Folder(folder) = &self.root
-                    && let Some(parents) = file.and_then(|f| f.get("parents")).and_then(Value::as_array)
+                    && let Some(parents) = file
+                        .and_then(|f| f.get("parents"))
+                        .and_then(Value::as_array)
                     && !parents.iter().any(|p| p.as_str() == Some(folder.as_str()))
                 {
                     continue;
@@ -949,8 +951,9 @@ impl<H: DriveHttp> GDriveProvider<H> {
 
     /// 撤銷一位成員。
     pub fn revoke(&self, folder_id: &str, permission_id: &str) -> Result<(), SyncError> {
-        self.http
-            .delete(&format!("{FILES_URL}/{folder_id}/permissions/{permission_id}"))
+        self.http.delete(&format!(
+            "{FILES_URL}/{folder_id}/permissions/{permission_id}"
+        ))
     }
 
     /// 權限探測：資料夾的名字、能不能寫、看得到幾個子檔案。
@@ -1725,7 +1728,10 @@ mod tests {
         let batch = drive.fetch_changes("start-token").unwrap();
         assert_eq!(batch.changes.len(), 1);
         assert_eq!(batch.changes[0].file_id, "id-in-folder");
-        assert_eq!(batch.changes[0].name.as_deref(), Some("notebooks/nb1/op.bin"));
+        assert_eq!(
+            batch.changes[0].name.as_deref(),
+            Some("notebooks/nb1/op.bin")
+        );
         assert_eq!(batch.new_token, "token-next");
     }
 

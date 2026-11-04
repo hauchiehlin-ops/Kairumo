@@ -19,11 +19,8 @@ pub mod ffi_backup;
 mod ffi_brush;
 pub mod ffi_carry;
 pub mod ffi_chart;
-pub mod ffi_collab;
 pub mod ffi_cloud_collab;
-pub mod ffi_p2p_frames;
-#[cfg(feature = "p2p")]
-pub mod ffi_p2p;
+pub mod ffi_collab;
 pub mod ffi_crypto;
 mod ffi_draft;
 mod ffi_draft_example;
@@ -47,6 +44,9 @@ pub mod ffi_math;
 pub mod ffi_model3d;
 pub mod ffi_models;
 pub mod ffi_oauth;
+#[cfg(feature = "p2p")]
+pub mod ffi_p2p;
+pub mod ffi_p2p_frames;
 pub mod ffi_pages;
 pub mod ffi_paper;
 pub mod ffi_pdf_import;
