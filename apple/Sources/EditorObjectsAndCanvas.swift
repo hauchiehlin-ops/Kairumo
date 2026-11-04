@@ -579,7 +579,17 @@ extension NotebookEditorView {
     /// 框選層：拉框、顯示選取外框、整組拖曳（支援單頁模式與連續頁面模式）。
     func marqueeLayer(forPage page: Int) -> some View {
         let candidates = marqueeCandidates(forPage: page)
-        let selectionBounds = ObjectMarquee.bounds(of: selectedObjectIds, among: candidates)
+        let objectBounds = ObjectMarquee.bounds(of: selectedObjectIds, among: candidates)
+        // 筆跡也在框選範圍內（見 `marqueeSelectStrokes`）：搬整組的命中區是「物件 ∪ 筆跡」。
+        let strokeBounds = page == currentPageIndex ? lasso.strokeBounds : nil
+        let selectionBounds: CGRect? = {
+            switch (objectBounds, strokeBounds) {
+            case let (a?, b?): return a.union(b)
+            case let (a?, nil): return a
+            case let (nil, b?): return b
+            default: return nil
+            }
+        }()
         return ZStack(alignment: .topLeading) {
             // 這一層要吃掉觸控 —— 框選模式下畫布不捲、物件不動，
             // 只剩框選這一件事（見 ObjectMarquee 開頭的說明）。
@@ -602,7 +612,7 @@ extension NotebookEditorView {
                         }
                         .onEnded { value in
                             if groupDragOffset != .zero {
-                                moveSelection(by: groupDragOffset)
+                                marqueeMoveSelection(by: groupDragOffset)
                                 groupDragOffset = .zero
                             } else if let start = marqueeStart {
                                 let rect = ObjectMarquee.rect(from: start, to: value.location)
@@ -610,6 +620,7 @@ extension NotebookEditorView {
                                     selectedObjectIds,
                                     with: ObjectMarquee.hits(in: rect, among: candidates),
                                     additive: marqueeAdditive)
+                                marqueeSelectStrokes(in: rect, additive: marqueeAdditive)
                             }
                             marqueeStart = nil
                             marqueeCurrent = nil
@@ -620,10 +631,13 @@ extension NotebookEditorView {
                     SpatialTapGesture(coordinateSpace: .named(CanvasCoordinateSpace.name))
                         .onEnded { value in
                             if pageDisplayMode == .continuous { focusContinuousPage(page) }
+                            let tappedId = ObjectMarquee.topmostHit(at: value.location, among: candidates)
                             selectedObjectIds = ObjectMarquee.tapped(
-                                ObjectMarquee.topmostHit(at: value.location, among: candidates),
+                                tappedId,
                                 existing: selectedObjectIds,
                                 additive: marqueeAdditive)
+                            // 點空白＝取消選取，筆跡一起取消（連續框選時保留）。
+                            if tappedId == nil && !marqueeAdditive { lasso.clear() }
                         }
                 )
 
@@ -635,6 +649,16 @@ extension NotebookEditorView {
                     .frame(width: hit.frame.width, height: hit.frame.height)
                     .offset(x: hit.frame.minX + groupDragOffset.width,
                             y: hit.frame.minY + groupDragOffset.height)
+                    .allowsHitTesting(false)
+            }
+
+            // 框到的筆跡：一個虛線框（筆跡沒有物件那樣的方框，用聯集外框表示）。
+            if let sb = strokeBounds {
+                Rectangle()
+                    .stroke(Color.accentColor, style: StrokeStyle(lineWidth: 1.5, dash: [5, 3]))
+                    .frame(width: sb.width + 8, height: sb.height + 8)
+                    .offset(x: sb.minX - 4 + groupDragOffset.width,
+                            y: sb.minY - 4 + groupDragOffset.height)
                     .allowsHitTesting(false)
             }
 
@@ -654,11 +678,11 @@ extension NotebookEditorView {
 
     /// 進入／離開框選。
     ///
-    /// # 框選選的是「物件」，不是筆跡
+    /// # 框選選物件，也選筆跡
     ///
-    /// 圖片、貼紙、文字方塊、表格、圖形、錄音卡片…這些是物件，框選一次可以整組
-    /// 搬、複製、刪除。手寫的筆跡不是物件，要選它們用**套索**（手寫模式的筆具列）。
-    /// 兩者分工：物件用框選、筆跡用套索。
+    /// 圖片、貼紙、文字方塊、表格、圖形、錄音卡片…與框內的手寫筆跡一起選，
+    /// 一次整組搬、複製、貼上、刪除。筆跡走套索既有的動作端口（見 `marqueeSelectStrokes`），
+    /// 變動當下寫成 InkLog 事件、刪除寫墓碑。
     ///
     /// 手寫模式下物件本來就不吃觸控，框了也動不了，所以進入時自動切到打字模式
     /// （Android 一直是這樣做）。進入時說明怎麼操作，否則使用者面對一個空的選取列，
@@ -670,6 +694,7 @@ extension NotebookEditorView {
             showCanvasNotice(localizationManager.localized("marquee_hint"))
         } else {
             selectedObjectIds = []
+            lasso.clear()
             marqueeAdditive = false
         }
     }
@@ -680,10 +705,10 @@ extension NotebookEditorView {
         HStack(spacing: 10) {
             Image(systemName: "square.dashed.inset.filled")
                 .foregroundColor(.accentColor)
-            if selectedObjectIds.isEmpty && isCompactEditorWidth {
+            if marqueeSelectionCount == 0 && isCompactEditorWidth {
                 // 手機寬度不放說明句：它會把整排按鈕擠到畫面外（進入框選時已用浮動提示說過一次）。
                 EmptyView()
-            } else if selectedObjectIds.isEmpty {
+            } else if marqueeSelectionCount == 0 {
                 // 還沒選到東西時，顯示「怎麼選」而不是「已選 0 個」。
                 Text(localizationManager.localized("marquee_hint"))
                     .font(.caption)
@@ -691,7 +716,7 @@ extension NotebookEditorView {
                     .lineLimit(1)
             } else {
                 Text(localizationManager.localized("marquee_selected")
-                    .replacingOccurrences(of: "%@", with: "\(selectedObjectIds.count)"))
+                    .replacingOccurrences(of: "%@", with: "\(marqueeSelectionCount)"))
                     .font(.caption)
                     .monospacedDigit()
             }
@@ -714,44 +739,43 @@ extension NotebookEditorView {
 
             // 全選：這一頁所有物件一次選起來。
             Button {
-                selectedObjectIds = Set(marqueeCandidates.map(\.id))
+                marqueeSelectAll()
             } label: {
                 Label(localizationManager.localized("select_all"), systemImage: "checkmark.square")
             }
-            .disabled(marqueeCandidates.isEmpty)
             .accessibilityIdentifier("editor.marquee.select_all")
 
             Button {
-                selectedObjectIds = []
+                marqueeDeselectAll()
             } label: {
                 Label(localizationManager.localized("deselect_all"), systemImage: "square")
             }
-            .disabled(selectedObjectIds.isEmpty)
+            .disabled(marqueeSelectionCount == 0)
             .accessibilityIdentifier("editor.marquee.deselect_all")
 
             Divider().frame(height: 18)
 
             Button {
-                cutSelection()
+                marqueeCut()
             } label: {
                 Label(localizationManager.localized("action_cut"), systemImage: "scissors")
             }
-            .disabled(selectedObjectIds.isEmpty)
+            .disabled(marqueeSelectionCount == 0)
             .accessibilityIdentifier("editor.marquee.cut")
 
             Button {
-                copySelection()
+                marqueeCopy()
             } label: {
                 Label(localizationManager.localized("action_copy"), systemImage: "doc.on.doc")
             }
-            .disabled(selectedObjectIds.isEmpty)
+            .disabled(marqueeSelectionCount == 0)
 
             Button {
-                pasteClipboard()
+                marqueePaste()
             } label: {
                 Label(localizationManager.localized("action_paste"), systemImage: "doc.on.clipboard")
             }
-            .disabled(objectClipboard.isEmpty && getClipboardImage() == nil)
+            .disabled(!marqueeCanPaste)
 
             Button {
                 isPlacingPasteObject = true
@@ -762,18 +786,18 @@ extension NotebookEditorView {
             .accessibilityIdentifier("editor.marquee.paste_at_location")
 
             Button {
-                duplicateSelection()
+                marqueeDuplicate()
             } label: {
                 Label(localizationManager.localized("action_duplicate"), systemImage: "plus.square.on.square")
             }
-            .disabled(selectedObjectIds.isEmpty)
+            .disabled(marqueeSelectionCount == 0)
 
             Button(role: .destructive) {
-                deleteSelection()
+                marqueeDelete()
             } label: {
                 Label(localizationManager.localized("action_delete"), systemImage: "trash")
             }
-            .disabled(selectedObjectIds.isEmpty)
+            .disabled(marqueeSelectionCount == 0)
 
             Divider().frame(height: 18)
 
@@ -797,7 +821,9 @@ extension NotebookEditorView {
     var editorKeyboardShortcuts: some View {
         Group {
             Button("") {
-                if !effectiveSelectedObjectIds.isEmpty && inlineEditingTextId == nil {
+                if isMarqueeActive && inlineEditingTextId == nil {
+                    marqueeDelete()
+                } else if !effectiveSelectedObjectIds.isEmpty && inlineEditingTextId == nil {
                     deleteSelection()
                 } else {
                     deleteSelectedStrokes()
@@ -806,7 +832,9 @@ extension NotebookEditorView {
             .keyboardShortcut(.delete, modifiers: [])
 
             Button("") {
-                if !effectiveSelectedObjectIds.isEmpty && inlineEditingTextId == nil {
+                if isMarqueeActive && inlineEditingTextId == nil {
+                    marqueeDelete()
+                } else if !effectiveSelectedObjectIds.isEmpty && inlineEditingTextId == nil {
                     deleteSelection()
                 } else {
                     deleteSelectedStrokes()
@@ -816,7 +844,9 @@ extension NotebookEditorView {
 
             Button("") {
                 guard inlineEditingTextId == nil else { return }
-                if selectedTool == .lasso && lasso.hasSelection {
+                if isMarqueeActive {
+                    marqueeCut()
+                } else if selectedTool == .lasso && lasso.hasSelection {
                     cutSelectedStrokes()
                 } else if !effectiveSelectedObjectIds.isEmpty {
                     cutSelection()
@@ -826,7 +856,9 @@ extension NotebookEditorView {
 
             Button("") {
                 guard inlineEditingTextId == nil else { return }
-                if selectedTool == .lasso && lasso.hasSelection {
+                if isMarqueeActive {
+                    marqueeCopy()
+                } else if selectedTool == .lasso && lasso.hasSelection {
                     copySelectedStrokes()
                 } else if !effectiveSelectedObjectIds.isEmpty {
                     copySelection()
@@ -835,7 +867,7 @@ extension NotebookEditorView {
             .keyboardShortcut("c", modifiers: .command)
 
             Button("") {
-                pasteClipboard()
+                if isMarqueeActive { marqueePaste() } else { pasteClipboard() }
             }
             .keyboardShortcut("v", modifiers: .command)
         }
@@ -875,8 +907,16 @@ extension NotebookEditorView {
         continuousObjectGeneration += 1
     }
 
+    /// 選取中**確實還在筆記裡、可放進剪貼簿**的物件。
+    ///
+    /// 選取 id 可能已失效（物件被協作者刪除、同步移走、就地編輯殘留），
+    /// 照單全收的話剪下／複製工具丸會一直掛著、點了沒作用，剪下還會把剪貼簿清空。
+    var clipboardSelectableIds: Set<String> {
+        effectiveSelectedObjectIds.filter { clipboardObject(forId: $0) != nil }
+    }
+
     func copySelection() {
-        let ids = effectiveSelectedObjectIds
+        let ids = clipboardSelectableIds
         guard !ids.isEmpty else { return }
         objectClipboard = ids.compactMap(clipboardObject(forId:))
         isPlacingPasteObject = false
@@ -884,12 +924,26 @@ extension NotebookEditorView {
     }
 
     func cutSelection() {
-        let ids = effectiveSelectedObjectIds
+        // 只剪真的放得進剪貼簿的：放不進去的物件刪掉就再也貼不回來。
+        let ids = clipboardSelectableIds
         guard !ids.isEmpty else { return }
         objectClipboard = ids.compactMap(clipboardObject(forId:))
         isPlacingPasteObject = false
         deleteObjects(ids: ids)
         showCanvasNotice(localizationManager.localized("object_cut_hint"))
+    }
+
+    /// 收起所有物件選取（工具丸的「完成」）。手寫模式下點空白處會畫線，沒有這條路就關不掉。
+    func deselectAllObjects() {
+        activeSelectedObjectId = nil
+        selectedShapeIds = []
+        selectedConnectionId = nil
+        selectedObjectIds = []
+        editingShapeId = nil
+        editingAttachmentId = nil
+        editingTextId = nil
+        editingTable = nil
+        collaborationManager.broadcastSelection(selectedId: nil)
     }
 
     func copyObject(id: String) {

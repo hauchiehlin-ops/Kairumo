@@ -53,8 +53,27 @@ fun ImageLayer(
      * 這個物件的堆疊 z 值。跨型別共用同一份順序（見 ObjectStacking）。
      */
     zIndexOf: (String) -> Float,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    /**
+     * 圖片在背景解碼（畫布用，預設）。開啟圖多的大筆記本時，原本每張圖第一次組合就在主執行緒讀 blob＋解碼。
+     * 離屏縮圖（`PageSnapshot`）必須當下畫完，傳 `false` 走同步。與 Apple 畫布的背景預載一致。
+     */
+    decodeOffMain: Boolean = true
 ) {
+    var decodedTick by remember { androidx.compose.runtime.mutableIntStateOf(0) }
+    if (decodeOffMain) {
+        val blobIds = images.map { it.blobId }.distinct()
+        androidx.compose.runtime.LaunchedEffect(store, blobIds) {
+            val missing = images.filter { store.cachedBitmap(it) == null }.map { it.blobId }.distinct()
+            if (missing.isEmpty()) return@LaunchedEffect
+            val decoded = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                missing.mapNotNull { id -> store.decodeOffMain(id)?.let { id to it } }
+            }
+            // LaunchedEffect 跑在主執行緒（Compose 的 Main dispatcher）：在這裡收進快取、推進重組。
+            decoded.forEach { (id, bmp) -> store.adopt(id, bmp) }
+            if (decoded.isNotEmpty()) decodedTick++
+        }
+    }
     // **不包一層自己的 Box。**
     //
     // Compose 的 zIndex 只在**同一個父容器的兄弟之間**生效。每一層各包一個 Box
@@ -66,7 +85,9 @@ fun ImageLayer(
                 ImageObjectView(
                     zIndex = zIndexOf(image.id),
                     image = image,
-                    bitmapProvider = { store.bitmap(image) },
+                    bitmapProvider = {
+                        if (decodeOffMain) { decodedTick; store.cachedBitmap(image) } else store.bitmap(image)
+                    },
                     density = density,
                     isSelected = image.id == selectedId,
                     interactive = interactive,
@@ -285,46 +306,11 @@ private class ResizeGestureState {
 }
 
 /**
- * 濾鏡。
- *
- * **視覺結果要與 Apple 端的 `ImageFilterStyle` 相近** —— 同一張照片在兩個
- * 平台差太多的話，使用者會以為圖片被改過。用 ColorMatrix 而不是逐像素處理：
- * 那是 GPU 上的一次變換，捲動時不會掉幀。
+ * 濾鏡。矩陣定義在 [ImageFilterStyle.matrix]，與 Apple `ImageEffects.filterMatrix` 同一組數字（I6）。
+ * 用 ColorMatrix 而不是逐像素處理：那是 GPU 上的一次變換，捲動時不會掉幀。
  */
-private fun filterFor(style: ImageFilterStyle): ColorFilter? = when (style) {
-    ImageFilterStyle.ORIGINAL -> null
-    ImageFilterStyle.MONO -> ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) })
-    ImageFilterStyle.VINTAGE -> ColorFilter.colorMatrix(
-        ColorMatrix(
-            floatArrayOf(
-                0.393f, 0.769f, 0.189f, 0f, 0f,
-                0.349f, 0.686f, 0.168f, 0f, 0f,
-                0.272f, 0.534f, 0.131f, 0f, 0f,
-                0f, 0f, 0f, 1f, 0f
-            )
-        )
-    )
-    ImageFilterStyle.CONTRAST -> ColorFilter.colorMatrix(
-        ColorMatrix(
-            floatArrayOf(
-                1.35f, 0f, 0f, 0f, -35f,
-                0f, 1.35f, 0f, 0f, -35f,
-                0f, 0f, 1.35f, 0f, -35f,
-                0f, 0f, 0f, 1f, 0f
-            )
-        )
-    )
-    ImageFilterStyle.WARM -> ColorFilter.colorMatrix(
-        ColorMatrix(
-            floatArrayOf(
-                1.10f, 0f, 0f, 0f, 12f,
-                0f, 1.02f, 0f, 0f, 6f,
-                0f, 0f, 0.92f, 0f, 0f,
-                0f, 0f, 0f, 1f, 0f
-            )
-        )
-    )
-}
+private fun filterFor(style: ImageFilterStyle): ColorFilter? =
+    style.androidColorMatrix()?.let { ColorFilter.colorMatrix(ColorMatrix(it)) }
 
 /** `"clear"` 是哨符不是顏色 —— 不能走 hex 轉換，那會丟掉 alpha 變成黑色。 */
 private fun resolveBackground(image: NoteImage): Color = when {

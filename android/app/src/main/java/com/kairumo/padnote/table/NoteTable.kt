@@ -70,6 +70,14 @@ data class NoteTable(
     var bandedRows: Boolean? = null,
     /** 帶狀欄。 */
     var bandedCols: Boolean? = null,
+    /** 表格整體對齊（`left`/`center`/`right`）。null 為不自動定位（與 Apple `alignmentRaw` 相同）。 */
+    var alignment: String? = null,
+    /** 從左邊縮排（點），只對靠左有意義。 */
+    var indentLeft: Float? = null,
+    /** 替代文字標題（讀屏標籤）。 */
+    var altTitle: String? = null,
+    /** 替代文字描述（讀屏提示）。 */
+    var altDescription: String? = null,
     /**
      * Android 不認得、但 Apple 會寫的其他外觀鍵（`altTitle`、`alignment`、`indentLeft`…），
      * 原樣保留的 JSON 物件文字。
@@ -115,6 +123,97 @@ data class NoteTable(
         if (bandedRows == true && row % 2 == 1) return TableCellFillRole.BandedRow
         if (bandedCols == true && col % 2 == 1) return TableCellFillRole.BandedColumn
         return null
+    }
+
+    // MARK: - 逐格格式與尺寸（與 Apple `NoteTableAttachment` 同名同義，I6）
+
+    /**
+     * 對矩形範圍內每一格套用同一個修改。被合併蓋住的格子也一併改，取消合併後整片格式一致。
+     * 全部回到預設就收回成 null，檔案裡不留空陣列（與 Apple `updateStyle` 相同）。
+     */
+    fun updateStyle(rowRange: IntRange, colRange: IntRange, change: (NoteTableCellStyle) -> NoteTableCellStyle) {
+        val styles = cellStyles?.takeIf { it.size == rows * cols }?.toMutableList()
+            ?: MutableList(rows * cols) { NoteTableCellStyle.DEFAULT }
+        for (r in rowRange) {
+            if (r !in 0 until rows) continue
+            for (c in colRange) {
+                if (c !in 0 until cols) continue
+                styles[r * cols + c] = change(styles[r * cols + c])
+            }
+        }
+        cellStyles = if (styles.all { it.isDefault }) null else styles
+    }
+
+    /** (row, col) 所在的矩形範圍（合併區則為整片）。與 Apple `cellRange(row:col:)` 相同。 */
+    fun cellRange(row: Int, col: Int): Pair<IntRange, IntRange> {
+        val r = row.coerceIn(0, rows - 1)
+        val c = col.coerceIn(0, cols - 1)
+        val s = spanContaining(r, c) ?: return (r..r) to (c..c)
+        return (s.row until s.row + maxOf(1, s.rowSpan)) to (s.col until s.col + maxOf(1, s.colSpan))
+    }
+
+    /** 第 [index] 欄的手動欄寬。null 或 ≤ 0 為自動（與 Apple `setColumnWidth` 相同）。 */
+    fun setColumnWidth(value: Double?, index: Int) {
+        if (index !in 0 until cols) return
+        val widths = columnWidthOverrides?.takeIf { it.size == cols }?.toMutableList() ?: MutableList(cols) { 0.0 }
+        widths[index] = maxOf(0.0, value ?: 0.0)
+        columnWidthOverrides = if (widths.all { it <= 0 }) null else widths
+    }
+
+    /** 第 [index] 列的手動列高。語意同 [setColumnWidth]。 */
+    fun setRowHeight(value: Double?, index: Int) {
+        if (index !in 0 until rows) return
+        val heights = rowHeightOverrides?.takeIf { it.size == rows }?.toMutableList() ?: MutableList(rows) { 0.0 }
+        heights[index] = maxOf(0.0, value ?: 0.0)
+        rowHeightOverrides = if (heights.all { it <= 0 }) null else heights
+    }
+
+    /** 所有欄平均分配（填滿 [width]）。 */
+    fun distributeColumns() {
+        columnWidthOverrides = MutableList(cols) { width.toDouble() / cols }
+    }
+
+    /** 所有列取同一個高度（以目前最高的那一列為準）。[heights] 預設取目前版面。 */
+    fun distributeRows(heights: List<Double> = layout().rowHeights) {
+        val tallest = heights.maxOrNull() ?: 30.0
+        rowHeightOverrides = MutableList(rows) { tallest }
+    }
+
+    /** 還原成自動欄寬與列高。 */
+    fun autoFitSizes() {
+        columnWidthOverrides = null
+        rowHeightOverrides = null
+    }
+
+    /**
+     * 「表格內容 › 慣用寬度」：有手動欄寬時各欄等比例縮放，否則直接改寬度。
+     * 只改 width 的話，有手動欄寬的表格完全不會變（與 Apple `setPreferredWidth` 相同）。
+     */
+    fun setPreferredWidth(newWidth: Float, currentColumnWidths: () -> List<Double> = { layout().columnWidths }) {
+        val target = maxOf(cols * MIN_COLUMN_WIDTH, newWidth.toDouble())
+        val overrides = columnWidthOverrides
+        if (overrides == null || overrides.none { it > 0 }) {
+            width = target.toFloat()
+            return
+        }
+        val current = currentColumnWidths()
+        val total = maxOf(1.0, current.sum())
+        val scaled = current.map { maxOf(MIN_COLUMN_WIDTH, it * target / total) }
+        columnWidthOverrides = scaled.toMutableList()
+        width = scaled.sum().toFloat()
+    }
+
+    /**
+     * 「表格內容 › 對齊」落地：依頁寬算出表格左緣。[alignment] 為 null 時回 null（不動）。
+     * 與 Apple `alignedX(pageWidth:inset:)` 相同。
+     */
+    fun alignedX(pageWidth: Float, inset: Float, tableWidth: Float = layout().width.toFloat()): Float? {
+        val raw = alignment ?: return null
+        return when (raw) {
+            "center" -> maxOf(inset, (pageWidth - tableWidth) / 2f)
+            "right" -> maxOf(inset, pageWidth - inset - tableWidth)
+            else -> inset + maxOf(0f, indentLeft ?: 0f)
+        }
     }
 
     // MARK: - 增刪
@@ -520,6 +619,10 @@ data class NoteTable(
         borderStyle?.let { put("borderStyle", it) }
         bandedRows?.let { put("bandedRows", it) }
         bandedCols?.let { put("bandedCols", it) }
+        alignment?.let { put("alignment", it) }
+        indentLeft?.let { put("indentLeft", it.toDouble()) }
+        altTitle?.let { put("altTitle", it) }
+        altDescription?.let { put("altDescription", it) }
     }.toString()
 
     companion object {
@@ -535,7 +638,7 @@ data class NoteTable(
             "fontSize", "rotationDegrees", "ruleColorHex", "headerBackgroundHex",
             "rowHeights", "rowHeightOverrides",
             "columnWidths", "cellStyles", "borderMode", "borderWidth", "borderStyle",
-            "bandedRows", "bandedCols"
+            "bandedRows", "bandedCols", "alignment", "indentLeft", "altTitle", "altDescription"
         )
 
         /** `wrap == false` 的格子量測時用的寬度：夠寬，核心就不會斷行。 */
@@ -588,6 +691,10 @@ data class NoteTable(
                 borderStyle = if (obj.has("borderStyle")) obj.optString("borderStyle") else null,
                 bandedRows = if (obj.has("bandedRows")) obj.optBoolean("bandedRows") else null,
                 bandedCols = if (obj.has("bandedCols")) obj.optBoolean("bandedCols") else null,
+                alignment = if (obj.has("alignment") && !obj.isNull("alignment")) obj.optString("alignment") else null,
+                indentLeft = if (obj.has("indentLeft") && !obj.isNull("indentLeft")) obj.optDouble("indentLeft").toFloat() else null,
+                altTitle = if (obj.has("altTitle") && !obj.isNull("altTitle")) obj.optString("altTitle") else null,
+                altDescription = if (obj.has("altDescription") && !obj.isNull("altDescription")) obj.optString("altDescription") else null,
                 appearanceExtras = JSONObject().also { extras ->
                     obj.keys().forEach { key -> if (key !in KNOWN_KEYS) extras.put(key, obj.get(key)) }
                 }.takeIf { it.length() > 0 }?.toString()

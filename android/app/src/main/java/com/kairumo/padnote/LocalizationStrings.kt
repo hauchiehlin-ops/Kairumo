@@ -12891,6 +12891,14 @@ object LocalizationStrings {
             "ko" to "사진에서 선택",
             "th" to "เลือกจากรูปภาพ"
         ),
+        "import_image_from_files" to mapOf(
+            "zh-Hant" to "從檔案選擇圖片（%@）",
+            "en" to "Image from Files (%@)",
+            "zh-Hans" to "从文件选择图片（%@）",
+            "ja" to "ファイルから画像を選択（%@）",
+            "ko" to "파일에서 이미지 선택 (%@)",
+            "th" to "เลือกรูปภาพจากไฟล์ (%@)"
+        ),
         "import_limit_note" to mapOf(
             "zh-Hant" to "上限 %@ MB —— 插入的東西都會跟著筆記本同步",
             "en" to "Up to %@ MB — everything you insert syncs with the notebook",
@@ -12906,7 +12914,10 @@ object LocalizationStrings {
             "ja" to "読み込んだモデルはノートと共に保存・同期されますが、この端末ではまだ描画できません —— ファイル名を表示しています。",
             "ko" to "가져온 모델은 노트와 함께 저장·동기화되지만 이 기기에서는 아직 그릴 수 없습니다 —— 파일 이름을 표시합니다.",
             "th" to "โมเดลที่นำเข้าจะถูกเก็บและซิงก์ไปกับสมุดบันทึก แต่อุปกรณ์นี้ยังแสดงผลไม่ได้ —— จะแสดงชื่อไฟล์แทน"
-        ),
+        )
+    )
+
+    private fun part20(): Map<String, Map<String, String>> = mapOf(
         "import_my_files" to mapOf(
             "zh-Hant" to "我的檔案",
             "en" to "My files",
@@ -12914,10 +12925,7 @@ object LocalizationStrings {
             "ja" to "マイファイル",
             "ko" to "내 파일",
             "th" to "ไฟล์ของฉัน"
-        )
-    )
-
-    private fun part20(): Map<String, Map<String, String>> = mapOf(
+        ),
         "import_note" to mapOf(
             "zh-Hant" to "匯入筆記本",
             "en" to "Import Notebook",
@@ -13205,14 +13213,6 @@ object LocalizationStrings {
             "ja" to "ノートに挿入",
             "ko" to "노트에 삽입",
             "th" to "แทรกลงในสมุดบันทึก"
-        ),
-        "insert_vertical_space" to mapOf(
-            "zh-Hant" to "插入空白區域",
-            "en" to "Insert Space",
-            "zh-Hans" to "插入空白区域",
-            "ja" to "スペースを挿入",
-            "ko" to "공백 삽입",
-            "th" to "แทรกช่องว่าง"
         ),
         "interaction_arrow" to mapOf(
             "zh-Hant" to "手勢流程跳轉",
@@ -14821,12 +14821,12 @@ object LocalizationStrings {
             "th" to "ลากแต่ละครั้งจะเพิ่มในส่วนที่เลือก แตะวัตถุเพื่อเพิ่มหรือเอาออก"
         ),
         "marquee_hint" to mapOf(
-            "zh-Hant" to "拖曳拉框選取物件；在選取範圍內拖曳＝整組搬移",
-            "en" to "Drag to select objects. Drag inside the selection to move them together.",
-            "zh-Hans" to "拖曳拉框选取物件；在选取范围内拖曳＝整组搬移",
-            "ja" to "ドラッグで範囲選択。選択範囲の中をドラッグするとまとめて移動できます。",
-            "ko" to "끌어서 범위를 선택하세요. 선택 영역 안을 끌면 함께 이동합니다.",
-            "th" to "ลากเพื่อเลือกวัตถุ ลากภายในพื้นที่ที่เลือกเพื่อย้ายพร้อมกัน"
+            "zh-Hant" to "拖曳拉框選取物件與筆跡；在選取範圍內拖曳＝整組搬移",
+            "en" to "Drag to select objects and ink. Drag inside the selection to move them together.",
+            "zh-Hans" to "拖曳拉框选取物件与笔迹；在选取范围内拖曳＝整组搬移",
+            "ja" to "ドラッグで範囲選択（オブジェクトと手書き）。選択範囲の中をドラッグするとまとめて移動できます。",
+            "ko" to "끌어서 개체와 필기를 함께 선택하세요. 선택 영역 안을 끌면 함께 이동합니다.",
+            "th" to "ลากเพื่อเลือกวัตถุและลายมือ ลากภายในพื้นที่ที่เลือกเพื่อย้ายพร้อมกัน"
         ),
         "marquee_select" to mapOf(
             "zh-Hant" to "框選",

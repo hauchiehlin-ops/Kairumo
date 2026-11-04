@@ -100,10 +100,12 @@ internal fun EditorCanvasContext.withRestoredTopBarWiring(base: EditorTopBarActi
         marqueeActive = !marqueeActive
         if (!marqueeActive) {
             marqueeSelection = emptySet()
+            lasso.clear()
             marqueeAdditive = false
         } else {
             // 框選只在打字模式有作用（手繪模式下物件不吃觸控）。
             editorMode = EditorMode.TYPE
+            lasso.clear()   // 套索留下的物件選取不能混進框選，否則同一個物件會被搬兩次
             message = l10n("marquee_hint")
         }
     },
@@ -111,17 +113,39 @@ internal fun EditorCanvasContext.withRestoredTopBarWiring(base: EditorTopBarActi
         marqueeAdditive = !marqueeAdditive
         if (marqueeAdditive) message = l10n("marquee_continuous_hint")
     },
+    // 框選的每一個動作都同時作用在物件與筆跡上（筆跡走 `lasso`：核心當下寫事件、刪除留墓碑）。
     onSelectAllMarquee = {
         val locked = lockedIdsLatest
         marqueeSelection = marqueeCandidatesLatest.filter { it.id !in locked }.map { it.id }.toSet()
+        lasso.selectAllStrokes(engine)
     },
-    onDeselectAllMarquee = { marqueeSelection = emptySet() },
-    onCutMarquee = { marqueeSelection.firstOrNull()?.let { objectClipboardActions.cut(it) } },
-    onCopyMarquee = { marqueeSelection.firstOrNull()?.let { objectClipboardActions.copy(it) } },
-    onPasteMarquee = { pasteSinglePageClipboard(null) },
+    onDeselectAllMarquee = { marqueeSelection = emptySet(); lasso.clear() },
+    onCutMarquee = {
+        val firstObject = marqueeSelection.firstOrNull()
+        if (firstObject != null) objectClipboardActions.cut(firstObject) else objectClipboard = emptyList()
+        // 沒選筆跡時 cut 會把筆跡剪貼簿清空 —— 只剪物件就不要貼出上一次的筆跡。
+        if (lasso.cut(engine)) revision++
+    },
+    onCopyMarquee = {
+        val firstObject = marqueeSelection.firstOrNull()
+        if (firstObject != null) objectClipboardActions.copy(firstObject) else objectClipboard = emptyList()
+        lasso.copy(engine)
+        if (firstObject == null && lasso.strokeSelectionCount > 0) message = l10n("copy_selected_hint")
+    },
+    onPasteMarquee = {
+        // 只有筆跡時不走物件貼上（它在物件剪貼簿為空時另有退路）。
+        if (objectClipboard.isNotEmpty() || !lasso.canPaste) pasteSinglePageClipboard(null)
+        if (lasso.paste(engine)) revision++
+    },
     onPasteAtLocation = { isPlacingPasteObject = true },
-    onDuplicateMarquee = { duplicateMarqueeSelection() },
-    onDeleteMarquee = { deleteMarqueeSelection() }
+    onDuplicateMarquee = {
+        if (marqueeSelection.isNotEmpty()) duplicateMarqueeSelection()
+        if (lasso.duplicate(engine)) revision++
+    },
+    onDeleteMarquee = {
+        if (marqueeSelection.isNotEmpty()) deleteMarqueeSelection()
+        if (lasso.delete(engine)) revision++
+    }
 )
 
 private fun EditorCanvasContext.applyPageFormat(id: String) {

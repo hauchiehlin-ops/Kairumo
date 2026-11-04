@@ -54,6 +54,8 @@ fun ImageEditor(
     fun l(key: String) = LocalizationStrings.localized(key, languageTag)
 
     var filter by remember(image.id) { mutableStateOf(image.filterStyle) }
+    // 開啟時的樣子：濾鏡改為即時套用（與 Apple 浮動面板一致，I6），按「取消」要能還原。
+    val original = remember(image.id) { image }
     var corner by remember(image.id) { mutableStateOf(image.cornerRadius) }
     var shadow by remember(image.id) { mutableStateOf(image.hasShadow) }
     var border by remember(image.id) { mutableStateOf(image.hasBorder) }
@@ -87,7 +89,11 @@ fun ImageEditor(
                         for (option in ImageFilterStyle.entries) {
                             FilterChip(
                                 selected = filter == option,
-                                onClick = { filter = option },
+                                onClick = {
+                                    filter = option
+                                    // 即時寫入：畫布與側欄縮圖馬上看得到（Apple 也是點了就套）。
+                                    onChanged(image.copy(filterStyle = option))
+                                },
                                 label = { Text(l(option.labelKey)) }
                             )
                         }
@@ -171,7 +177,12 @@ fun ImageEditor(
                 onDismiss()
             }) { Text(l("done")) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text(l("cancel")) } }
+        dismissButton = {
+            TextButton(onClick = {
+                if (filter != original.filterStyle) onChanged(original)
+                onDismiss()
+            }) { Text(l("cancel")) }
+        }
     )
 }
 

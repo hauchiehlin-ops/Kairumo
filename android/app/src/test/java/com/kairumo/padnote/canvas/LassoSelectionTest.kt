@@ -208,4 +208,61 @@ class LassoSelectionTest {
         assertTrue(lasso.hasSelection)
         assertEquals(Line(100f, 100f, 200f, 100f), backend.strokes.values.first())
     }
+
+    // ── 框選（插入 › 框選）也選筆跡 ──────────────────────────
+
+    @Test fun marqueeRectSelectsStrokesButNoObjects() {
+        val backend = sample()
+        val lasso = LassoSelection()
+        lasso.objectCandidates = { listOf(MarqueeHit("obj", 90f, 90f, 20f, 20f)) }
+        lasso.selectStrokesInRect(Rect(80f, 80f, 220f, 120f), backend, additive = false)
+        assertEquals(listOf("s0"), lasso.selected)
+        assertEquals(1, lasso.strokeSelectionCount)
+        assertTrue("物件由框選自己管，不能被套索再選一次", lasso.selectedObjectIds.isEmpty())
+        assertEquals(Rect(100f, 100f, 200f, 100f), lasso.strokeBounds)
+    }
+
+    @Test fun marqueeAdditiveAccumulatesAndEmptyRectClears() {
+        val backend = sample()
+        val lasso = LassoSelection()
+        lasso.selectStrokesInRect(Rect(80f, 80f, 220f, 120f), backend, additive = false)
+        lasso.selectStrokesInRect(Rect(480f, 480f, 620f, 520f), backend, additive = true)
+        assertEquals(listOf("s0", "s1"), lasso.selected)
+        lasso.selectStrokesInRect(Rect(900f, 900f, 950f, 950f), backend, additive = false)
+        assertTrue(lasso.selected.isEmpty())
+        assertEquals(null, lasso.strokeBounds)
+    }
+
+    @Test fun marqueeSelectAllThenDeleteRemovesEveryStroke() {
+        val backend = sample()
+        val lasso = LassoSelection()
+        lasso.selectAllStrokes(backend)
+        assertEquals(2, lasso.strokeSelectionCount)
+        assertTrue(lasso.delete(backend))
+        assertTrue(backend.strokes.isEmpty())
+        assertFalse(lasso.hasSelection)
+    }
+
+    @Test fun marqueeMoveTranslatesStrokesAndKeepsThemSelected() {
+        val backend = sample()
+        val lasso = LassoSelection()
+        lasso.selectStrokesInRect(Rect(80f, 80f, 220f, 120f), backend, additive = false)
+        assertTrue(lasso.translateStrokes(30f, 40f, backend))
+        val moved = lasso.selected.single()
+        assertEquals(Rect(130f, 140f, 230f, 140f), backend.strokes[moved]!!.bounds)
+        assertEquals(Rect(130f, 140f, 230f, 140f), lasso.strokeBounds)
+        assertFalse("沒有位移不寫事件", lasso.translateStrokes(0f, 0f, backend))
+    }
+
+    @Test fun marqueeCopyWithoutStrokesClearsStaleStrokeClipboard() {
+        val backend = sample()
+        val lasso = LassoSelection()
+        lasso.selectStrokesInRect(Rect(80f, 80f, 220f, 120f), backend, additive = false)
+        lasso.copy(backend)
+        assertTrue(lasso.canPaste)
+        // 下一次框選只選到物件（筆跡選取為空）再複製：不能貼出上一次的筆跡。
+        lasso.clear()
+        lasso.copy(backend)
+        assertFalse(lasso.canPaste)
+    }
 }

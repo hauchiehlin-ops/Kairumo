@@ -61,6 +61,16 @@ public enum PageThumbnailRenderer {
                 hasher.combine(Int(m.y))
                 hasher.combine(Int(m.width))
                 hasher.combine(Int(m.height))
+                // 外觀也要進簽章（I4）：原本只有位置，換了風格濾鏡、材質、圓角、邊框、陰影或旋轉，
+                // 畫布變了、側欄縮圖卻命中舊快取，兩邊各顯示一個版本。
+                hasher.combine(m.filterStyle)
+                hasher.combine(m.materialType)
+                hasher.combine(Int(m.cornerRadius))
+                hasher.combine(m.hasBorder)
+                hasher.combine(m.hasShadow)
+                hasher.combine(Int(m.rotationDegrees))
+                hasher.combine(m.borderColorHex)
+                hasher.combine(m.backgroundColorHex)
             }
         }
         if let tables = notebook.tableAttachments {
@@ -341,7 +351,7 @@ public enum PageThumbnailRenderer {
             }
             let pageShapes = (notebook.shapeAttachments ?? []).filter { $0.pageIndex == pageIndex }
             for item in notebook.attachments ?? [] where item.pageIndex == pageIndex {
-                add(item.id, .image) { drawImage(item, store: store, ctx: ctx) }
+                add(item.id, .image) { drawImage(item, store: store, quality: quality, ctx: ctx) }
             }
             // 連接線畫在它連著的兩個形狀的下面（與畫布一致）。
             for item in notebook.connectionAttachments ?? [] where item.pageIndex == pageIndex {
@@ -550,11 +560,17 @@ public enum PageThumbnailRenderer {
     private static func drawImage(
         _ item: NoteImageAttachment,
         store: NotebookStore,
+        quality: Quality,
         ctx: UIGraphicsImageRendererContext
     ) {
         let rect = CGRect(x: item.x, y: item.y, width: item.width, height: item.height)
         fillFrame(item, in: rect, defaults: .image)
-        guard let image = store.loadAttachmentImage(fileName: item.fileName) else {
+        // 縮圖（`.preview`）只用記憶體裡已解碼好的圖：`ThumbnailPipeline` 的背景工作會先把這一頁的圖
+        // 預載好，主執行緒合成時不讀檔。匯出（`.export`）照舊同步讀 —— 那是使用者按了才做、本來就要等的。
+        let loaded = quality == .preview
+            ? store.cachedAttachmentImage(fileName: item.fileName)
+            : store.loadAttachmentImage(fileName: item.fileName)
+        guard let image = loaded else {
             // 圖檔還沒載入完也要佔位，否則縮圖會與畫布對不起來。
             UIColor.secondarySystemFill.setFill()
             UIBezierPath(roundedRect: rect, cornerRadius: item.cornerRadius).fill()
@@ -563,7 +579,13 @@ public enum PageThumbnailRenderer {
 
         let cg = ctx.cgContext
         // 畫布上的濾鏡、材質與陰影（見 `ImageEffects`）。原本匯出一律畫原圖。
-        let shown = ImageEffects.apply(filter: item.filterStyle, material: item.materialType, to: image)
+        // 風格濾鏡與畫布共用同一份快取結果（I4）；材質另外疊（逐像素，只有用了材質的圖才付這個代價）。
+        let filterKey = ImageEffects.filteredCacheKey(fileName: item.fileName, filter: item.filterStyle)
+        let filtered = item.filterStyle == .original ? image
+            : (ImageEffects.cachedFiltered(key: filterKey)
+               ?? ImageEffects.makeFiltered(image, filter: item.filterStyle, key: filterKey))
+        let shown = item.materialType == nil ? filtered
+            : ImageEffects.apply(filter: .original, material: item.materialType, to: filtered)
         withRotation(item, in: rect) {
             if item.hasShadow {
                 // 陰影要畫在裁切之外，不然會被一起裁掉。

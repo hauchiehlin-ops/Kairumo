@@ -33,6 +33,8 @@ import androidx.compose.ui.input.pointer.pointerInput
 import com.kairumo.padnote.canvas.StyleHandle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 
 /**
  * 畫布上的表格圖層（Android）。
@@ -131,6 +133,12 @@ private fun TableObjectView(
     // `NoteTableView` 同一個行為；不必再點兩下開編修面板才改得了一個字。
     var editingCell by remember(table.id) { androidx.compose.runtime.mutableStateOf<Pair<Int, Int>?>(null) }
     androidx.compose.runtime.LaunchedEffect(isSelected) { if (!isSelected) editingCell = null }
+    // 功能區在上方插入列／左方插入欄時會把焦點往後推：就地編輯框跟著原本那一格走，
+    // 不然它會留在新插入的空列上（與 Apple `onReceive(TableCellFocus.shared.$cell)` 相同）。
+    val focusedCell = TableCellFocus.cell(table)
+    androidx.compose.runtime.LaunchedEffect(focusedCell) {
+        if (editingCell != null && focusedCell != null && focusedCell != editingCell) editingCell = focusedCell
+    }
 
     // 外層只定位、不旋轉 —— 旋轉把手掛在這一層。
         // 座標的單位是**頁面點**（＝dp），與 Apple 端和 format-spec 一致。
@@ -148,6 +156,12 @@ private fun TableObjectView(
                 MaterialTheme.colorScheme.primary,
                 RoundedCornerShape(4.dp)
             )
+            // 替代文字（「表格內容 › 替代文字」）：TalkBack 的標籤與描述（與 Apple VoiceOver 相同）。
+            .then(
+                if (table.altTitle != null || table.altDescription != null) Modifier.semantics {
+                    contentDescription = listOfNotNull(table.altTitle, table.altDescription).joinToString("\n")
+                } else Modifier
+            )
             .gesturesIf(interactive) { pointerInput(table.id) {
                 detectTapGestures(
                     onTap = { pos ->
@@ -158,6 +172,8 @@ private fun TableObjectView(
                         editingCell = currentTable.layout().cells.firstOrNull { c ->
                             px >= c.x && px < c.x + c.width && py >= c.y && py < c.y + c.height
                         }?.let { it.row.toInt() to it.col.toInt() }
+                        // 功能區與「表格內容」以這一格為準。
+                        editingCell?.let { TableCellFocus.focus(currentTable.id, it.first, it.second) }
                     },
                     // 點兩下進編輯面板 —— 與 Apple 端一致。
                     onDoubleTap = { onEdit(currentTable) }
@@ -236,6 +252,7 @@ private fun TableObjectView(
                                 editing.first + 1 < t.rows -> editing.first + 1 to 0
                                 else -> null
                             }
+                            editingCell?.let { TableCellFocus.focus(t.id, it.first, it.second) }
                         }
                     )
                 }

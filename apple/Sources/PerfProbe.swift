@@ -52,6 +52,9 @@ enum PerfPoint: String, CaseIterable, Sendable {
 enum CostCounter: String, CaseIterable, Sendable {
     case prefetchScheduled
     case mainThreadDrawingLoad
+    /// 主執行緒上同步讀檔＋解碼圖片附件（畫布或縮圖第一次畫到它、記憶體快取沒命中）。
+    /// 開啟圖多的大筆記本時這是主執行緒被卡住的主因之一；應該一律走背景預載。
+    case mainThreadAttachmentLoad
     case thumbnailComposeOnMain
     /// 專業筆畫層：整頁重建（含背景烘焙）與局部重畫的次數。
     case backingFullRebuild

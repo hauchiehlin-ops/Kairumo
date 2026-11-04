@@ -161,6 +161,27 @@ object ObjectMarquee {
     fun topmostHit(point: Offset, candidates: List<MarqueeHit>): String? =
         candidates.lastOrNull { it.rect.contains(point) }?.id
 
+    /**
+     * 點是否落在**選取中物件的把手範圍**裡（旋轉把手繞中心的軌道、四角的縮放把手、右上角的樣式鈕）。
+     *
+     * 這些把手畫在物件框**外面**；畫布的單指平移只避開物件框的話，拖把手時整頁會跟著跑、
+     * 物件轉不動（Android 實測：打字模式頁面比視窗大時，旋轉把手完全拖不動）。
+     * 半徑取旋轉把手的軌道（`max(高, 40)/2 + 52`）與對角線一半的較大者，再加把手本身與手指的寬容。
+     */
+    fun withinSelectionChrome(point: Offset, frame: MarqueeHit): Boolean {
+        val cx = frame.x + frame.width / 2f
+        val cy = frame.y + frame.height / 2f
+        val orbit = maxOf(frame.height, 40f) / 2f + 52f
+        val corner = kotlin.math.hypot(frame.width, frame.height) / 2f
+        val reach = maxOf(orbit, corner) + CHROME_SLOP
+        val dx = point.x - cx
+        val dy = point.y - cy
+        return dx * dx + dy * dy <= reach * reach
+    }
+
+    /** 把手本身（26）與手指的寬容（點）。 */
+    const val CHROME_SLOP = 30f
+
     /** 貼上／建立副本的位移。貼在原位的話使用者會以為沒成功。 */
     const val PASTE_OFFSET = 24f
 
@@ -384,29 +405,44 @@ fun MarqueeLayer(
     additive: Boolean = false,
     onSelectionChange: (Set<String>) -> Unit,
     onCommitMove: (Float, Float) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    /** 框到的筆跡外框（頁面點）。筆跡也在框選範圍內：整組搬的命中區是「物件 ∪ 筆跡」。 */
+    strokeBounds: Rect? = null,
+    /** 拉完一個框（頁面點）＋是否連續框選。呼叫端用它選筆跡（[LassoSelection.selectStrokesInRect]）。 */
+    onMarqueeRect: (Rect, Boolean) -> Unit = { _, _ -> },
+    /** 點到空白處（非連續框選）：筆跡選取一起取消。 */
+    onTapEmpty: () -> Unit = {}
 ) {
     var start by remember { mutableStateOf<Offset?>(null) }
     var current by remember { mutableStateOf<Offset?>(null) }
     var groupDrag by remember { mutableStateOf(Offset.Zero) }
-    val selectionBounds = ObjectMarquee.bounds(selectedIds, candidates)
+    val objectBounds = ObjectMarquee.bounds(selectedIds, candidates)
+    val selectionBounds = when {
+        objectBounds != null && strokeBounds != null -> Rect(
+            minOf(objectBounds.left, strokeBounds.left), minOf(objectBounds.top, strokeBounds.top),
+            maxOf(objectBounds.right, strokeBounds.right), maxOf(objectBounds.bottom, strokeBounds.bottom)
+        )
+        else -> objectBounds ?: strokeBounds
+    }
 
     Box(modifier.fillMaxSize().zIndex(9_000f)) {
         Box(
             Modifier
                 .fillMaxSize()
-                .pointerInput(candidates, selectedIds, additive) {
+                .pointerInput(candidates, selectedIds, additive, strokeBounds) {
                     val finishDrag: () -> Unit = {
                         val s = start
                         val c = current
                         if (s != null && c != null) {
+                            val box = ObjectMarquee.rect(s, c)
                             onSelectionChange(
                                 ObjectMarquee.combined(
                                     selectedIds,
-                                    ObjectMarquee.hits(ObjectMarquee.rect(s, c), candidates),
+                                    ObjectMarquee.hits(box, candidates),
                                     additive
                                 )
                             )
+                            onMarqueeRect(box, additive)
                         } else if (groupDrag != Offset.Zero) {
                             onCommitMove(groupDrag.x, groupDrag.y)
                         }
@@ -443,9 +479,9 @@ fun MarqueeLayer(
                     // 點物件＝選它（連續框選時切換加入／移除）；點空白＝取消選取（連續框選時保留）。
                     detectTapGestures { offset ->
                         val page = Offset(offset.x / density, offset.y / density)
-                        onSelectionChange(
-                            ObjectMarquee.tapped(ObjectMarquee.topmostHit(page, candidates), selectedIds, additive)
-                        )
+                        val hit = ObjectMarquee.topmostHit(page, candidates)
+                        onSelectionChange(ObjectMarquee.tapped(hit, selectedIds, additive))
+                        if (hit == null && !additive) onTapEmpty()
                     }
                 }
         )
@@ -464,6 +500,21 @@ fun MarqueeLayer(
                     }
                     .size(hit.width.dp, hit.height.dp)
                     .border(1.5.dp, MaterialTheme.colorScheme.primary)
+            )
+        }
+
+        // 框到的筆跡：一個外框（筆跡沒有物件那樣的方框，用聯集外框表示）。與 Apple 一致。
+        if (strokeBounds != null) {
+            Box(
+                Modifier
+                    .offset {
+                        IntOffset(
+                            ((strokeBounds.left - 4f + groupDrag.x) * density).toInt(),
+                            ((strokeBounds.top - 4f + groupDrag.y) * density).toInt()
+                        )
+                    }
+                    .size((strokeBounds.width + 8f).dp, (strokeBounds.height + 8f).dp)
+                    .border(1.5.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.7f))
             )
         }
 
@@ -502,7 +553,11 @@ fun ObjectPastePill(
     onStartPlacePaste: () -> Unit,
     onCancelPlacePaste: () -> Unit,
     onClearClipboard: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    /** 刪除選取的物件。沒有它的話工具丸只有剪下／複製，使用者找不到刪除。 */
+    onDelete: (() -> Unit)? = null,
+    /** 取消選取：收起工具丸。手寫模式下點空白處會變成畫線，沒有這顆就關不掉。 */
+    onDeselect: (() -> Unit)? = null
 ) {
     if (!hasSelection && !hasClipboard) return
     Card(
@@ -562,6 +617,32 @@ fun ObjectPastePill(
                             fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.primary
                         )
+                    }
+                    if (onDelete != null) {
+                        TextButton(
+                            onClick = onDelete,
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                            modifier = Modifier.testTag("editor.object.delete")
+                        ) {
+                            Text(
+                                "🗑 " + l("delete"),
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.error
+                            )
+                        }
+                    }
+                    if (onDeselect != null && !hasClipboard) {
+                        com.kairumo.padnote.ui.InstantTooltip(text = l("done")) {
+                            TextButton(
+                                onClick = onDeselect,
+                                contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp),
+                                modifier = Modifier.testTag("editor.object.deselect")
+                                    .semantics { contentDescription = l("done") }
+                            ) {
+                                Text("✕", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
                     }
                 }
                 if (hasClipboard) {

@@ -25,6 +25,9 @@ class ImageStore(
 
     fun rawBitmap(image: NoteImage): android.graphics.Bitmap? {
         rawBitmaps[image.blobId]?.let { return it }
+        if (android.os.Looper.myLooper() == android.os.Looper.getMainLooper()) {
+            com.kairumo.padnote.perf.PerfProbe.shared.count(com.kairumo.padnote.perf.CostCounter.MainThreadAttachmentLoad)
+        }
         val s = session ?: return null
         val bytes = runCatching { s.blobBytes(image.blobId) }.getOrNull() ?: return null
         val bmp = runCatching { BitmapFactory.decodeByteArray(bytes, 0, bytes.size) }
@@ -33,6 +36,27 @@ class ImageStore(
         return bmp
     }
 
+    /**
+     * 只查記憶體，不讀 blob、不解碼。畫布在組合（主執行緒）時用這個；沒命中就由 [ImageLayer]
+     * 在 IO 執行緒 [decodeOffMain] 後 [adopt]（Layer 3：主執行緒不做磁碟 I/O）。
+     */
+    fun cachedBitmap(image: NoteImage): ImageBitmap? = bitmaps[image.blobId]
+
+    /** 背景讀 blob＋解碼。**只讀核心、不碰快取**，可在 IO 執行緒呼叫；結果交回主執行緒 [adopt]。 */
+    fun decodeOffMain(blobId: String): android.graphics.Bitmap? {
+        val s = session ?: return null
+        val bytes = runCatching { s.blobBytes(blobId) }.getOrNull() ?: return null
+        return runCatching { BitmapFactory.decodeByteArray(bytes, 0, bytes.size) }.getOrNull()
+    }
+
+    /** 背景解好的點陣圖放進快取（主執行緒）。 */
+    fun adopt(blobId: String, bmp: android.graphics.Bitmap) {
+        if (rawBitmaps.containsKey(blobId)) return
+        rawBitmaps[blobId] = bmp
+        bitmaps[blobId] = bmp.asImageBitmap()
+    }
+
+    /** 同步取圖（沒有就當場讀 blob＋解碼）。只給離屏縮圖／匯出這種必須當下畫完的路徑。 */
     fun bitmap(image: NoteImage): ImageBitmap? {
         bitmaps[image.blobId]?.let { return it }
         val bmp = rawBitmap(image) ?: return null

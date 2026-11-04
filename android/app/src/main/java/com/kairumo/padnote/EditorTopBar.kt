@@ -951,7 +951,11 @@ internal fun EditorTopBar(
                     onClick = { showMenu = false; actions.onInsertImage() }
                 )
                 DropdownMenuItem(
-                    text = { Text(l10n("import_from_files")) },
+                    // 只收圖片（核心的圖片槽）。原本只寫「從檔案選擇」，看不出能選什麼。
+                    text = {
+                        Text(l10n("import_image_from_files").replace("%@",
+                            com.kairumo.padnote.platform.FileImport.formatSummary(uniffi.padnote_core.FfiImportSlot.IMAGE)))
+                    },
                     modifier = Modifier.testTag("editor.insert.image_file"),
                     onClick = { showMenu = false; actions.onImportImageFile() }
                 )

@@ -716,6 +716,7 @@ internal class EditorCanvasContext {
     lateinit var clearSelection: () -> Unit
     lateinit var moveMarqueeSelection: (Float, Float) -> Unit
     lateinit var deleteMarqueeSelection: () -> Unit
+    lateinit var deleteObjectsOnPage: (Set<String>) -> Unit
     lateinit var duplicateMarqueeSelection: () -> Unit
     lateinit var movePage: (Int, Int) -> Unit
     lateinit var duplicatePage: (Int) -> Unit
@@ -1571,22 +1572,36 @@ internal fun rememberEditorCanvasContext(
 
     /** 刪掉選取的物件。形狀連同它的連接線一起刪 —— 只刪形狀的話，
      *  線會留在畫布上，兩端各指著一個不存在的東西。 */
+    /** 刪掉這一頁上指定 id 的物件（框選與單選共用），並清掉選取。 */
+    fun deleteObjectsOnPage(ids: Set<String>) {
+        if (ids.isEmpty()) return
+        imageStore.all.filter { it.id in ids }.forEach { imageStore.remove(it) }
+        shapeStore.all.filter { it.id in ids }.forEach { shapeStore.remove(it) }
+        tableStore.all.filter { it.id in ids }.forEach { tableStore.remove(it) }
+        chartStore.all.filter { it.id in ids }.forEach { chartStore.remove(it) }
+        textStore.all.filter { it.id in ids }.forEach { textStore.remove(it) }
+        if (links.any { it.id in ids }) {
+            links = links.filter { it.id !in ids }.toMutableList()
+            meta.setLinks(notebook?.first, links)
+        }
+        if (models3D.any { it.id in ids }) {
+            models3D = models3D.filter { it.id !in ids }.toMutableList()
+            meta.setModels3D(notebook?.first, models3D)
+        }
+        if (audioCards.any { it.id in ids }) {
+            audioCards = audioCards.filter { it.id !in ids }.toMutableList()
+            meta.setAudioCards(notebook?.first, audioCards)
+        }
+        clearSelection()
+        if (editingText?.id in ids) editingText = null
+        imageRevision++; shapeRevision++; tableRevision++; chartRevision++
+        textRevision++; linkRevision++; model3DRevision++; audioRevision++; stackRevision++
+        AutoSync.noteLocalEdit(activity)
+    }
+
     fun deleteMarqueeSelection() {
         if (marqueeSelection.isEmpty()) return
-        imageStore.all.filter { it.id in marqueeSelection }.forEach { imageStore.remove(it) }
-        shapeStore.all.filter { it.id in marqueeSelection }.forEach { shapeStore.remove(it) }
-        tableStore.all.filter { it.id in marqueeSelection }.forEach { tableStore.remove(it) }
-        chartStore.all.filter { it.id in marqueeSelection }.forEach { chartStore.remove(it) }
-        textStore.all.filter { it.id in marqueeSelection }.forEach { textStore.remove(it) }
-        links = links.filter { it.id !in marqueeSelection }.toMutableList()
-        meta.setLinks(notebook?.first, links)
-        models3D = models3D.filter { it.id !in marqueeSelection }.toMutableList()
-        meta.setModels3D(notebook?.first, models3D)
-        audioCards = audioCards.filter { it.id !in marqueeSelection }.toMutableList()
-        meta.setAudioCards(notebook?.first, audioCards)
-        marqueeSelection = emptySet()
-        imageRevision++; shapeRevision++; tableRevision++; chartRevision++
-        textRevision++; linkRevision++; model3DRevision++; audioRevision++
+        deleteObjectsOnPage(marqueeSelection)
     }
 
     /** 建立副本。位移一段距離，貼在原位的話使用者會以為沒成功。 */
@@ -1725,12 +1740,20 @@ internal fun rememberEditorCanvasContext(
         }
     }
 
+    // 只回報**這一頁確實存在**的物件。選取 id 可能已經失效（物件被別處刪掉、同步移走），
+    // 照單全收的話「剪下／複製」工具丸會一直掛著、點了沒作用，也關不掉。
     val currentSelectedObjectIds: () -> Set<String> = {
-        if (marqueeActive && marqueeSelection.isNotEmpty()) marqueeSelection
+        val raw = if (marqueeActive && marqueeSelection.isNotEmpty()) marqueeSelection
         else setOfNotNull(
             selectedTextId, selectedImageId, selectedTableId, selectedChartId,
             selectedLinkId, selectedAudioId, selectedModel3DId
         ) + selectedShapeIds
+        if (raw.isEmpty()) raw else raw.filterTo(mutableSetOf()) { id ->
+            textStore.find(id) != null || imageStore.all.any { it.id == id } ||
+                tableStore.all.any { it.id == id } || chartStore.all.any { it.id == id } ||
+                shapeStore.all.any { it.id == id } || links.any { it.id == id } ||
+                models3D.any { it.id == id } || audioCards.any { it.id == id }
+        }
     }
     val applySinglePageClipboardSelection: (Set<String>) -> Unit = { created ->
         if (marqueeActive && created.size > 1) {
@@ -1764,7 +1787,10 @@ internal fun rememberEditorCanvasContext(
             true
         } else false
     }
-    val objectClipboardActions = remember(pageIndex, pageId) {
+    // key 必須包含 notebook／meta／各 store：筆記重新載入（同步完成、sessionRevision 變動）
+    // 後它們都會換新實例。只以頁碼為 key 的話，剪下／複製一直在舊 store 裡找物件，
+    // 找不到就靜靜什麼都不做（使用者看到「剪下／複製點了沒反應」）。
+    val objectClipboardActions = remember(pageIndex, pageId, notebook, meta, imageStore, textStore, tableStore, chartStore, shapeStore) {
         com.kairumo.padnote.canvas.ObjectClipboardActions(
             cut = { id ->
                 val ids = if (marqueeActive && id in marqueeSelection) marqueeSelection else setOf(id)
@@ -3264,6 +3290,7 @@ internal fun rememberEditorCanvasContext(
     ctx.clearSelection = { clearSelection() }
     ctx.moveMarqueeSelection = { dx, dy -> moveMarqueeSelection(dx, dy) }
     ctx.deleteMarqueeSelection = { deleteMarqueeSelection() }
+    ctx.deleteObjectsOnPage = { ids -> deleteObjectsOnPage(ids) }
     ctx.duplicateMarqueeSelection = { duplicateMarqueeSelection() }
     ctx.movePage = { from, to -> movePage(from, to) }
     ctx.duplicatePage = { index -> duplicatePage(index) }

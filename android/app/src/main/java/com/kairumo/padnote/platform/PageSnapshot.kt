@@ -260,7 +260,9 @@ object PageSnapshot {
             ImageLayer(
                 zIndexOf = zIndexOf, images = imageStore.all, store = imageStore, density = density,
                 selectedId = null, interactive = false, onSelect = {}, onEditStyle = {}, onChanged = {},
-                modifier = Modifier.fillMaxSize()
+                modifier = Modifier.fillMaxSize(),
+                // 離屏截圖當下就要畫完，不能等背景解碼。
+                decodeOffMain = false
             )
             TextBoxLayer(
                 zIndexOf = zIndexOf, interactive = false, boxes = textStore.all, density = density,

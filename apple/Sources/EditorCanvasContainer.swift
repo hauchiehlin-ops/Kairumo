@@ -1930,58 +1930,6 @@ extension NotebookEditorView {
                     .allowsHitTesting(false)
             }
 
-            // 🌟 插入垂直空間分隔導引器（GoodNotes 風格空間插入條）
-            if isInsertSpaceActive {
-                ZStack(alignment: .leading) {
-                    Rectangle()
-                        .fill(Color.accentColor)
-                        .frame(height: 2)
-                    HStack(spacing: 8) {
-                        Image(systemName: "arrow.up.and.down.circle.fill")
-                            .font(.system(size: 20))
-                            .foregroundColor(.white)
-                        Text(localizationManager.localized("insert_vertical_space"))
-                            .font(.system(size: 12, weight: .bold))
-                            .foregroundColor(.white)
-                        Spacer()
-                        Button {
-                            withAnimation(.easeInOut(duration: 0.18)) {
-                                isInsertSpaceActive = false
-                            }
-                        } label: {
-                            Image(systemName: "xmark.circle.fill")
-                                .font(.system(size: 16))
-                                .foregroundColor(.white.opacity(0.8))
-                        }
-                    }
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 6)
-                    .background(Capsule().fill(Color.accentColor.opacity(0.95)).shadow(color: .black.opacity(0.2), radius: 4, y: 2))
-                    .offset(x: 20)
-                }
-                .frame(width: PageGeometry.width, height: 32)
-                .position(x: PageGeometry.width / 2, y: insertSpaceDividerY)
-                .scaleEffect(canvasZoomScale, anchor: .topLeading)
-                .offset(x: -canvasContentOffset.x, y: -canvasContentOffset.y)
-                .zIndex(5)
-                .gesture(
-                    DragGesture()
-                        .onChanged { val in
-                            let delta = val.translation.height - insertSpaceDragAccum
-                            insertSpaceDragAccum = val.translation.height
-                            let targetY = max(50, min(currentPageHeight + 200, insertSpaceDividerY + delta))
-                            insertSpaceDividerY = targetY
-                            if abs(delta) > 0.5 {
-                                applyVerticalSpaceInsertion(splitY: insertSpaceDividerY, deltaY: delta)
-                            }
-                        }
-                        .onEnded { _ in
-                            insertSpaceDragAccum = 0.0
-                        }
-                )
-            }
-
-
             // 框選層。只有在框選模式下才存在 —— 平常掛一層可命中的
             // 透明視圖，底下的物件就全部點不到了。
             if isMarqueeActive && editorMode == .type {

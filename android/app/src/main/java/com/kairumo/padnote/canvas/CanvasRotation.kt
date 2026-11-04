@@ -11,6 +11,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
@@ -57,6 +59,13 @@ object CanvasRotation {
         val nearest = round(value / SNAP_STEP) * SNAP_STEP
         return if (abs(value - nearest) <= SNAP_TOLERANCE) normalized(nearest) else value
     }
+
+    /**
+     * 手指位置 (px, py) 相對中心 (cx, cy) 的把手角度（度）。
+     * atan2 的 0 在 +x 方向，把手的 0 在正上方，差 90°。
+     */
+    fun angleOf(px: Float, py: Float, cx: Float, cy: Float): Float =
+        normalized(Math.toDegrees(atan2(py - cy, px - cx).toDouble()).toFloat() + 90f)
 
     /**
      * 點是否落在一個**旋轉過**的矩形內。
@@ -116,26 +125,41 @@ fun RotationHandle(
         val cy = margin + heightDp / 2f
         val hx = cx + sin(radians) * radius
         val hy = cy - cos(radians) * radius
+        val geometry by rememberUpdatedState(HandleGeometry(cx, cy, hx, hy))
+        // 回呼也要取「最新」的：手勢跨整段拖曳不重啟，閉包裡的 onRotate 是第一次組合那一份。
+        // 呼叫端的角度狀態以 `remember(id, rotationDegrees)` 為 key，轉第一下之後就換了一個新狀態 ——
+        // 舊回呼繼續寫進沒人讀的舊狀態，畫面停在第一格、放手才跳到終點（實測：這才是「把手很鈍」的主因）。
+        val latestOnRotate by rememberUpdatedState(onRotate)
+        val latestOnCommit by rememberUpdatedState(onCommit)
 
         Box(
             modifier = Modifier
                 .offset(x = (hx - HANDLE_DP / 2f).dp, y = (hy - HANDLE_DP / 2f).dp)
                 .size(HANDLE_DP.dp)
                 .background(MaterialTheme.colorScheme.primary, CircleShape)
+                // key 用 Unit：手勢要跨越整段拖曳，不能因角度變動被重啟。
+                // **不能**拿 change.position 加上「當下的」把手位置換算 —— 把手每轉一點
+                // 就搬家，change.position 是相對新位置、手勢閉包卻抓著舊位置，
+                // 算出來的角度一直被拉回，使用者感覺把手「很鈍、轉不動」。
+                // 改成：起點取拖曳開始時的把手中心，之後累加手指位移（與 ShapeLayer 相同）。
                 .pointerInput(Unit) {
+                    var px = 0f
+                    var py = 0f
                     detectDragGestures(
-                        onDrag = { change, _ ->
-                            change.consume()
-                            // change.position 相對於把手自己，換算回物件中心。
-                            val px = change.position.x / density + (hx - HANDLE_DP / 2f)
-                            val py = change.position.y / density + (hy - HANDLE_DP / 2f)
-                            // atan2 的 0 在 +x 方向，把手的 0 在正上方，差 90°。
-                            val raw = Math.toDegrees(
-                                atan2(py - cy, px - cx).toDouble()
-                            ).toFloat() + 90f
-                            onRotate(CanvasRotation.snapped(raw))
+                        onDragStart = { offset ->
+                            val g = geometry
+                            px = g.hx - HANDLE_DP / 2f + offset.x / density
+                            py = g.hy - HANDLE_DP / 2f + offset.y / density
                         },
-                        onDragEnd = { onCommit() }
+                        onDrag = { change, drag ->
+                            change.consume()
+                            px += drag.x / density
+                            py += drag.y / density
+                            val g = geometry
+                            latestOnRotate(CanvasRotation.snapped(CanvasRotation.angleOf(px, py, g.cx, g.cy)))
+                        },
+                        onDragEnd = { latestOnCommit() },
+                        onDragCancel = { latestOnCommit() }
                     )
                 }
                 // 標籤放在**可拖曳的容器**上，不是裡面那顆圖示 —— 圖示是
@@ -154,3 +178,5 @@ fun RotationHandle(
 }
 
 private const val HANDLE_DP = 26f
+
+private data class HandleGeometry(val cx: Float, val cy: Float, val hx: Float, val hy: Float)

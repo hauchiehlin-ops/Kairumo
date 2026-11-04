@@ -322,6 +322,64 @@ final class LassoSelection: ObservableObject {
         ]
     }
 
+    // MARK: - 框選（矩形）選筆跡
+
+    /// 框選選到的筆畫數（PencilKit 筆畫＋專業筆畫）。物件由框選自己的 `selectedObjectIds` 管。
+    var strokeSelectionCount: Int { selected.count + proIds.count }
+
+    /// 框選（打字模式的「插入 › 框選」）也要選得到筆跡。用與套索**同一套**判定
+    /// （核心 `lassoEncloses` ＋寬容度），只是多邊形換成矩形；物件不在這裡選（`objectIds` 保持空），
+    /// 之後的搬移／剪下／複製／貼上／刪除都走套索既有的動作端口 —— 那條路已經在當下寫成
+    /// `InkLog` 事件（I2）、刪除寫墓碑（I3）。
+    func selectStrokes(in rect: CGRect, drawing: PKDrawing, additive: Bool) {
+        let poly = [CGPoint(x: rect.minX, y: rect.minY), CGPoint(x: rect.maxX, y: rect.minY),
+                    CGPoint(x: rect.maxX, y: rect.maxY), CGPoint(x: rect.minX, y: rect.maxY)]
+        let polygon = poly.flatMap { [Float($0.x), Float($0.y)] }
+        var picked = additive ? selected : IndexSet()
+        if rect.width >= 1, rect.height >= 1 {
+            for (index, stroke) in drawing.strokes.enumerated() where !picked.contains(index) {
+                guard stroke.renderBounds.intersects(rect) else { continue }
+                if lassoEncloses(polygon: polygon, points: Self.samplePoints(of: stroke))
+                    || Self.isStrokeEnclosedTolerant(stroke: stroke, in: poly) {
+                    picked.insert(index)
+                }
+            }
+        }
+        let pro = (additive ? proIds : []).union(
+            rect.width >= 1 && rect.height >= 1 ? (proHost()?.strokeIds(enclosedBy: polygon) ?? []) : [])
+        setStrokeSelection(picked, pro: pro, in: drawing)
+    }
+
+    /// 框選的「全選」：這一頁所有筆跡。
+    func selectAllStrokes(in drawing: PKDrawing) {
+        // 走 `strokeIds(enclosedBy:)` 而不是直接列出全部：它會略過鎖定圖層的製圖線（與套索一致）。
+        let huge: Float = 1_000_000
+        let pro = proHost()?.strokeIds(enclosedBy: [-huge, -huge, huge, -huge, huge, huge, -huge, huge]) ?? []
+        setStrokeSelection(IndexSet(drawing.strokes.indices), pro: pro, in: drawing)
+    }
+
+    private func setStrokeSelection(_ picked: IndexSet, pro: Set<String>, in drawing: PKDrawing) {
+        path = []
+        selected = picked
+        proIds = pro
+        objectIds = []
+        strokeBounds = Self.bounds(of: picked, in: drawing.strokes, pro: proHost()?.strokes(ids: pro) ?? [])
+        if let r = strokeBounds {
+            committed = [CGPoint(x: r.minX, y: r.minY), CGPoint(x: r.maxX, y: r.minY),
+                         CGPoint(x: r.maxX, y: r.maxY), CGPoint(x: r.minX, y: r.maxY)]
+        } else {
+            committed = []
+        }
+    }
+
+    /// 框選整組拖曳放手：筆跡一次位移（一個事件批次），專業筆畫收尾寫回。
+    func moveStrokesForMarquee(in drawing: PKDrawing, by delta: CGSize) -> PKDrawing? {
+        guard strokeSelectionCount > 0 else { return nil }
+        let moved = moveSelected(in: drawing, by: delta)
+        proHost()?.endMove()
+        return moved
+    }
+
     func clear() {
         path = []
         selected = []

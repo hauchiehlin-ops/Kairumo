@@ -16,6 +16,47 @@ enum class ImageFilterStyle(val raw: String, val labelKey: String) {
     CONTRAST("清晰", "filter_contrast"),
     WARM("柔光", "filter_warm");
 
+    /**
+     * 3×4 色彩矩陣（列優先，偏移量以 0…1 計，alpha 不動）。`null` = 原圖。
+     *
+     * **必須與 Apple `ImageEffects.filterMatrix` 逐字相同（I6）**，`ImageFilterParityTest` 會讀 Swift 原始碼比對。
+     * 畫布與側欄縮圖（離屏 `PageSnapshot` 用同一個 `ImageLayer`）都套這一組（I4）。
+     */
+    val matrix: FloatArray?
+        get() = when (this) {
+            ORIGINAL -> null
+            VINTAGE -> floatArrayOf(
+                0.393f, 0.769f, 0.189f, 0f,
+                0.349f, 0.686f, 0.168f, 0f,
+                0.272f, 0.534f, 0.131f, 0f
+            )
+            MONO -> floatArrayOf(
+                0.2658f, 0.8940f, 0.0903f, -0.125f,
+                0.2658f, 0.8940f, 0.0903f, -0.125f,
+                0.2658f, 0.8940f, 0.0903f, -0.125f
+            )
+            CONTRAST -> floatArrayOf(
+                1.5559f, -0.2324f, -0.0235f, -0.15f,
+                -0.0691f, 1.3926f, -0.0235f, -0.15f,
+                -0.0691f, -0.2324f, 1.6015f, -0.15f
+            )
+            WARM -> floatArrayOf(
+                0.90f, 0f, 0f, 0.12f,
+                0f, 0.88f, 0f, 0.08f,
+                0f, 0f, 0.78f, 0.05f
+            )
+        }
+
+    /** 換成 Android `ColorMatrix` 的 4×5（偏移量以 0…255 計）。 */
+    fun androidColorMatrix(): FloatArray? = matrix?.let { m ->
+        floatArrayOf(
+            m[0], m[1], m[2], 0f, m[3] * 255f,
+            m[4], m[5], m[6], 0f, m[7] * 255f,
+            m[8], m[9], m[10], 0f, m[11] * 255f,
+            0f, 0f, 0f, 1f, 0f
+        )
+    }
+
     companion object {
         fun from(raw: String?): ImageFilterStyle =
             entries.firstOrNull { it.raw == raw } ?: ORIGINAL

@@ -68,6 +68,23 @@ enum FileImport {
         return types.isEmpty ? [.data] : types
     }
 
+    /// 選單項目後面標示的格式（例如「PNG/JPG/HEIC/GIF…」）。清單來自核心（`importExtensions`），
+    /// 核心多收一種格式，選單自動跟上。與 Android `FileImport.formatSummary` 同一個規則。
+    static func formatSummary(for slot: FfiImportSlot, limit: Int = 4) -> String {
+        summarize(importExtensions(slot: slot), limit: limit)
+    }
+
+    /// 純函式部分：大寫、JPEG 併入 JPG、去重，超過 `limit` 個加「…」。
+    nonisolated static func summarize(_ extensions: [String], limit: Int = 4) -> String {
+        var names: [String] = []
+        for ext in extensions {
+            let name = ext.lowercased() == "jpeg" ? "JPG" : ext.uppercased()
+            if !names.contains(name) { names.append(name) }
+        }
+        let shown = names.prefix(limit).joined(separator: "/")
+        return names.count > limit ? shown + "…" : shown
+    }
+
     /// 檔案要收到哪裡。
     ///
     /// 匯入的音訊**不能**跟其他附件一起放進 `Attachments/` —— 播放與

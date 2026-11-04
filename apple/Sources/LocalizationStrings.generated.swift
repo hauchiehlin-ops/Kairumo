@@ -12791,6 +12791,14 @@ extension LocalizationManager {
             .ko: "사진에서 선택",
             .th: "เลือกจากรูปภาพ"
         ],
+        "import_image_from_files": [
+            .zhHant: "從檔案選擇圖片（%@）",
+            .en: "Image from Files (%@)",
+            .zhHans: "从文件选择图片（%@）",
+            .ja: "ファイルから画像を選択（%@）",
+            .ko: "파일에서 이미지 선택 (%@)",
+            .th: "เลือกรูปภาพจากไฟล์ (%@)"
+        ],
         "import_limit_note": [
             .zhHant: "上限 %@ MB —— 插入的東西都會跟著筆記本同步",
             .en: "Up to %@ MB — everything you insert syncs with the notebook",
@@ -13102,14 +13110,6 @@ extension LocalizationManager {
             .ja: "ノートに挿入",
             .ko: "노트에 삽입",
             .th: "แทรกลงในสมุดบันทึก"
-        ],
-        "insert_vertical_space": [
-            .zhHant: "插入空白區域",
-            .en: "Insert Space",
-            .zhHans: "插入空白区域",
-            .ja: "スペースを挿入",
-            .ko: "공백 삽입",
-            .th: "แทรกช่องว่าง"
         ],
         "interaction_arrow": [
             .zhHant: "手勢流程跳轉",
@@ -14712,12 +14712,12 @@ extension LocalizationManager {
             .th: "ลากแต่ละครั้งจะเพิ่มในส่วนที่เลือก แตะวัตถุเพื่อเพิ่มหรือเอาออก"
         ],
         "marquee_hint": [
-            .zhHant: "拖曳拉框選取物件；在選取範圍內拖曳＝整組搬移",
-            .en: "Drag to select objects. Drag inside the selection to move them together.",
-            .zhHans: "拖曳拉框选取物件；在选取范围内拖曳＝整组搬移",
-            .ja: "ドラッグで範囲選択。選択範囲の中をドラッグするとまとめて移動できます。",
-            .ko: "끌어서 범위를 선택하세요. 선택 영역 안을 끌면 함께 이동합니다.",
-            .th: "ลากเพื่อเลือกวัตถุ ลากภายในพื้นที่ที่เลือกเพื่อย้ายพร้อมกัน"
+            .zhHant: "拖曳拉框選取物件與筆跡；在選取範圍內拖曳＝整組搬移",
+            .en: "Drag to select objects and ink. Drag inside the selection to move them together.",
+            .zhHans: "拖曳拉框选取物件与笔迹；在选取范围内拖曳＝整组搬移",
+            .ja: "ドラッグで範囲選択（オブジェクトと手書き）。選択範囲の中をドラッグするとまとめて移動できます。",
+            .ko: "끌어서 개체와 필기를 함께 선택하세요. 선택 영역 안을 끌면 함께 이동합니다.",
+            .th: "ลากเพื่อเลือกวัตถุและลายมือ ลากภายในพื้นที่ที่เลือกเพื่อย้ายพร้อมกัน"
         ],
         "marquee_select": [
             .zhHant: "框選",
