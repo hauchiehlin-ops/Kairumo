@@ -3988,7 +3988,6 @@ mod tests {
         assert_eq!(listed, vec![id.clone()]);
         assert_eq!(s.block_appearance(id).unwrap(), Some(spec));
     }
-
 }
 
 #[cfg(test)]
