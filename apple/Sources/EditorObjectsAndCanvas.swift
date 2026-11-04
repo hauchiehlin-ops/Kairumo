@@ -601,17 +601,19 @@ extension NotebookEditorView {
                                 coordinateSpace: .named(CanvasCoordinateSpace.name))
                         .onChanged { value in
                             if pageDisplayMode == .continuous { focusContinuousPage(page) }
-                            if let bounds = selectionBounds,
-                               bounds.contains(value.startLocation) {
-                                // 從選取範圍裡面開始拖＝搬整組。
+                            // 已經在搬整組就繼續搬：筆跡即時跟著走，選取外框會離開起點。
+                            if groupDragOffset != .zero || marqueeInkDragBase != nil
+                                || (marqueeStart == nil && selectionBounds?.contains(value.startLocation) == true) {
+                                // 從選取範圍裡面開始拖＝搬整組。筆跡即時跟著走。
                                 groupDragOffset = value.translation
+                                marqueeDragInk(to: value.translation)
                             } else {
                                 if marqueeStart == nil { marqueeStart = value.startLocation }
                                 marqueeCurrent = value.location
                             }
                         }
                         .onEnded { value in
-                            if groupDragOffset != .zero {
+                            if groupDragOffset != .zero || marqueeInkDragBase != nil {
                                 marqueeMoveSelection(by: groupDragOffset)
                                 groupDragOffset = .zero
                             } else if let start = marqueeStart {
@@ -657,8 +659,8 @@ extension NotebookEditorView {
                 Rectangle()
                     .stroke(Color.accentColor, style: StrokeStyle(lineWidth: 1.5, dash: [5, 3]))
                     .frame(width: sb.width + 8, height: sb.height + 8)
-                    .offset(x: sb.minX - 4 + groupDragOffset.width,
-                            y: sb.minY - 4 + groupDragOffset.height)
+                    // 拖曳中筆跡即時搬動，`lasso.strokeBounds` 已跟著位移，不再加 groupDragOffset。
+                    .offset(x: sb.minX - 4, y: sb.minY - 4)
                     .allowsHitTesting(false)
             }
 
@@ -778,11 +780,11 @@ extension NotebookEditorView {
             .disabled(!marqueeCanPaste)
 
             Button {
-                isPlacingPasteObject = true
+                beginMarqueePlacement()
             } label: {
                 Label(localizationManager.localized("paste_at_location"), systemImage: "hand.point.up.left.fill")
             }
-            .disabled(objectClipboard.isEmpty)
+            .disabled(objectClipboard.isEmpty && !lasso.canPaste)
             .accessibilityIdentifier("editor.marquee.paste_at_location")
 
             Button {

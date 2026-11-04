@@ -350,6 +350,12 @@ public struct NotebookEditorView: View {
     @State var objectClipboard: [ClipboardObject] = []
     /// 點選位置貼上模式：開啟後，在任一模式（手繪／打字）、任一頁面型態（單頁／連續）點一下任意頁面的任意位置，即把 `objectClipboard` 貼到該處。
     @State var isPlacingPasteObject: Bool = false
+    /// 這次「點選位置貼上」是從框選工具列開始的，而且剪貼簿裡有筆跡：放下時筆跡一起貼（見 `placeClipboard`）。
+    /// 只在框選開始的放置才帶筆跡 —— 一般物件工具丸的放置不能貼出上一次套索留下的舊筆跡。
+    @State var placingIncludesInk: Bool = false
+    /// 框選整組拖曳中：拖曳開始前的筆跡（放手時寫一次事件與一個復原步驟）與已即時套用的位移。
+    @State var marqueeInkDragBase: PKDrawing? = nil
+    @State var marqueeInkApplied: CGSize = .zero
     /// 剛透過 `pasteTargetLayer` 完成點選貼上的時間戳，避免底層 `directSingleTap` 在同一拍重複觸發。
     @State var lastPastePlacementAt: Date = .distantPast
     /// 手寫辨識的結果或錯誤，顯示在浮動提示上。
@@ -1421,7 +1427,9 @@ public struct NotebookEditorView: View {
             ensureCollabPageIds()
             CollabImportHold.hold(notebook.id)
         }
-        collabSync.reset(to: notebook)
+        // 協同的物件影子（整本每個物件攤平成欄位字典）只在協同中才用得到；進房間時
+        // `onChange(currentRoomId)` 會重建一次。不在協同中就不在開啟時付這筆主執行緒成本。
+        if isCollaborating { collabSync.reset(to: notebook) }
         // 製圖用的紙（三視圖、等角、作圖步驟…）一打開就選好「圖學」筆組。
         if paperUsesDrafting(paperId: notebook.paperId(forPage: currentPageIndex)) {
             applyEditorTool(.drafting)

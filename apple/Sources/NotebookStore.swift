@@ -1564,6 +1564,7 @@ public final class NotebookStore: ObservableObject {
         }
         injectInteractionFixturesIfRequested()
         injectInkInvariantFixtureIfRequested()
+        injectLargeFixtureIfRequested()
     }
 
     /// 筆跡不變式矩陣專用筆記本的 id（`InkInvariantMatrix` 靠它從首頁找到這本）。
@@ -1605,6 +1606,62 @@ public final class NotebookStore: ObservableObject {
             }
             saveDrawing(notebookId: nbId, pageIndex: page, drawing: PKDrawing(strokes: strokes))
         }
+        notebooks.append(doc)
+        persistData(signalsLocalEdit: false)
+    }
+
+    /// 效能量測專用筆記本（`KAIRUMO_UITEST_SEED_LARGE=1`）：多頁、每頁有筆跡、照片級圖片（一半套濾鏡）與文字方塊。
+    static let largeFixtureNotebookId = "uitest-large-notebook"
+
+    /// UI 測試專用：量「點開大筆記本 → 畫布出現」與「剛開啟就翻頁」的延遲（`InkInvariantMatrixAudit.testLargeNotebookOpenLatency`）。
+    /// 已建過就不再建（圖片生成要幾秒，量的是開啟，不是建立）。
+    private func injectLargeFixtureIfRequested() {
+        let env = ProcessInfo.processInfo.environment
+        guard env["KAIRUMO_UITEST"] == "1", env["KAIRUMO_UITEST_SEED_LARGE"] == "1" else { return }
+        let nbId = Self.largeFixtureNotebookId
+        if notebooks.contains(where: { $0.id == nbId }) { return }
+        let pages = 24
+        var doc = NotebookDocument(id: nbId, title: "Large Perf", pageCount: pages)
+        var images: [NoteImageAttachment] = []
+        var texts: [NoteTextAttachment] = []
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1
+        for page in 0..<pages {
+            let ink = PKInk(.pen, color: .black)
+            let strokes: [PKStroke] = (0..<120).map { k in
+                let y = CGFloat(80 + (k % 40) * 28), x0 = CGFloat(60 + (k / 40) * 220)
+                let pts = (0..<24).map { i in
+                    PKStrokePoint(location: CGPoint(x: x0 + CGFloat(i) * 8, y: y + CGFloat(i % 3) * 4),
+                                  timeOffset: TimeInterval(i) * 0.01, size: CGSize(width: 3, height: 3),
+                                  opacity: 1, force: 1, azimuth: 0, altitude: .pi / 2)
+                }
+                return PKStroke(ink: ink, path: PKStrokePath(controlPoints: pts, creationDate: Date()))
+            }
+            saveDrawing(notebookId: nbId, pageIndex: page, drawing: PKDrawing(strokes: strokes))
+            for j in 0..<2 {
+                let img = UIGraphicsImageRenderer(size: CGSize(width: 1200, height: 900), format: format).image { ctx in
+                    var rng = SystemRandomNumberGenerator()
+                    for y in stride(from: 0, to: 900, by: 10) {
+                        for x in stride(from: 0, to: 1200, by: 10) {
+                            UIColor(red: .random(in: 0...1, using: &rng), green: .random(in: 0...1, using: &rng),
+                                    blue: .random(in: 0...1, using: &rng), alpha: 1).setFill()
+                            ctx.fill(CGRect(x: x, y: y, width: 10, height: 10))
+                        }
+                    }
+                }
+                if let name = saveAttachmentImage(img) {
+                    images.append(NoteImageAttachment(fileName: name, pageIndex: page, x: 80 + CGFloat(j) * 330,
+                                                      y: 700, width: 300, height: 225,
+                                                      filterStyle: j == 0 ? .vintage : .original))
+                }
+            }
+            for t in 0..<4 {
+                texts.append(NoteTextAttachment(id: "large-\(page)-\(t)", pageIndex: page, text: "Page \(page + 1) paragraph \(t + 1)",
+                                                x: 60, y: 1000 + CGFloat(t) * 50, width: 400, height: 40))
+            }
+        }
+        doc.attachments = images
+        doc.textAttachments = texts
         notebooks.append(doc)
         persistData(signalsLocalEdit: false)
     }

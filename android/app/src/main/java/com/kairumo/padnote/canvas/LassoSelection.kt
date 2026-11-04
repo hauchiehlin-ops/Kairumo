@@ -91,6 +91,16 @@ class LassoSelection {
     /** 剪貼簿是剪下來的（原位貼回）還是複製的（錯開一點貼，看得出是新的一份）。 */
     private var clipboardFromCut = false
 
+    /** 剪貼簿筆跡的聯集外框（頁面點），複製／剪下當下記下。框選「點選位置貼上」用它算位移。 */
+    var clipboardBounds: Rect? = null
+        private set
+
+    /**
+     * 這次「點選位置貼上」是從框選工具列開始的，放下時筆跡一起貼。物件工具丸開始的放置不帶筆跡 ——
+     * 否則會貼出上一次套索留下的舊筆跡。與 Apple `placingIncludesInk` 一致。
+     */
+    var inkPlacementArmed by mutableStateOf(false)
+
     val hasSelection: Boolean get() = selected.isNotEmpty() || selectedObjectIds.isNotEmpty()
 
     /**
@@ -100,8 +110,17 @@ class LassoSelection {
      * （見 [dragOffset]），所以拖曳中畫面靠這個；放開之後核心已經搬好，這裡回 null，
      * 不會畫兩次位移。
      */
+    /**
+     * 框選整組拖曳中的位移（頁面點）。框選的拖曳不走 [begin]／[extend]，畫面一樣靠 [dragPreview]
+     * 讓筆跡即時跟著走；放手時 [translateStrokes] 才真的搬（核心寫一次事件）。與 Apple 一致。
+     */
+    var marqueeDragOffset by mutableStateOf(Offset.Zero)
+
     fun dragPreview(): LassoDragPreview? {
-        if (!isDragging) return null
+        if (!isDragging) {
+            val m = marqueeDragOffset
+            return if (m != Offset.Zero && selected.isNotEmpty()) LassoDragPreview(selected.toSet(), m) else null
+        }
         val offset = dragOffset
         if (offset == Offset.Zero || selected.isEmpty()) return null
         return LassoDragPreview(selected.toSet(), offset)
@@ -282,6 +301,8 @@ class LassoSelection {
 
     /** 框選整組拖曳放手：選到的筆跡一次平移（核心 `lassoTranslate`，舊 id 成墓碑、新 id 加入）。 */
     fun translateStrokes(dx: Float, dy: Float, backend: LassoBackend): Boolean {
+        // 先收掉拖曳預覽：核心搬完後選取換成新 id，預覽若還在會把新筆畫再位移一次。
+        marqueeDragOffset = Offset.Zero
         if (selected.isEmpty() || (dx == 0f && dy == 0f)) return false
         val moved = runCatching { backend.translate(selected, dx, dy) }.getOrNull() ?: return false
         backend.reload()
@@ -333,6 +354,7 @@ class LassoSelection {
         clipboard = if (selected.isNotEmpty()) {
             runCatching { backend.copy(selected) }.getOrDefault(emptyList())
         } else emptyList()
+        clipboardBounds = if (clipboard.isEmpty()) null else backend.bounds(selected)
         if (selectedObjectIds.isNotEmpty()) {
             onCopyObjects(selectedObjectIds)
         }
@@ -346,6 +368,7 @@ class LassoSelection {
         clipboard = if (selected.isNotEmpty()) {
             runCatching { backend.copy(selected) }.getOrDefault(emptyList())
         } else emptyList()
+        clipboardBounds = if (clipboard.isEmpty()) null else backend.bounds(selected)
         clipboardFromCut = true
         val strokeChanged = if (selected.isNotEmpty()) {
             runCatching { backend.delete(selected) }.getOrDefault(false).also {
@@ -379,10 +402,13 @@ class LassoSelection {
     }
 
     /** 貼上：剪下的原位貼回；複製的錯開一點。貼完選著貼上的那一份。 */
-    fun paste(backend: LassoBackend): Boolean {
+    /** @param forcedOffset 指定位移（框選「點選位置貼上」）；`null` 時剪下的原位貼回、複製的錯開一點。 */
+    fun paste(backend: LassoBackend, forcedOffset: Offset? = null): Boolean {
         if (clipboard.isEmpty()) return false
-        val offset = if (clipboardFromCut) 0f else OFFSET
-        val created = runCatching { backend.paste(clipboard, offset, offset) }
+        val auto = if (clipboardFromCut) 0f else OFFSET
+        val dx = forcedOffset?.x ?: auto
+        val dy = forcedOffset?.y ?: auto
+        val created = runCatching { backend.paste(clipboard, dx, dy) }
             .getOrDefault(emptyList())
         if (created.isEmpty()) return false
         backend.reload()
@@ -467,7 +493,8 @@ class LassoSelection {
     fun copy(engine: InkEngine): Boolean = copy(EngineLassoBackend(engine))
     fun cut(engine: InkEngine): Boolean = cut(EngineLassoBackend(engine))
     fun duplicate(engine: InkEngine): Boolean = duplicate(EngineLassoBackend(engine))
-    fun paste(engine: InkEngine): Boolean = paste(EngineLassoBackend(engine))
+    fun paste(engine: InkEngine, forcedOffset: Offset? = null): Boolean =
+        paste(EngineLassoBackend(engine), forcedOffset)
 
     /** 綁定單頁模式的畫布物件，讓套索圈選與拖曳能同時作用於未鎖定的頁面物件。 */
     fun bindPageObjects(

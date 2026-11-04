@@ -162,5 +162,23 @@ final class ThumbnailPipelineTests: XCTestCase {
                      count, filters.filter { $0 != .original }.count, beforeMs, afterMs, bgMs))
         XCTAssertLessThan(afterMs, beforeMs, "主執行緒成本必須下降")
     }
+
+    /// 量測：開啟時原本無條件執行的 `collabSync.reset`（整本物件攤平成協同欄位）。
+    /// 現在只在協同中才執行，不在協同中時這段時間從開啟的主執行緒路徑上拿掉。
+    func testCollabResetCostOnObjectHeavyNotebook() {
+        var doc = NotebookDocument(title: "big", pageCount: 40)
+        doc.pageIds = (0..<40).map { _ in UUID().uuidString.lowercased() }
+        doc.textAttachments = (0..<600).map { i in
+            NoteTextAttachment(id: "t\(i)", pageIndex: i % 40, text: "段落 \(i) 的內容", x: 40, y: CGFloat(i % 20) * 30)
+        }
+        doc.attachments = (0..<400).map { i in NoteImageAttachment(fileName: "f\(i).png", pageIndex: i % 40) }
+        let sync = CollabObjectSync()
+        let start = Date()
+        sync.reset(to: doc)
+        let ms = Date().timeIntervalSince(start) * 1000
+        print(String(format: "OPEN-PERF collabSync.reset on 40 pages / 1000 objects: %.1f ms (now skipped at open when not collaborating)", ms))
+        XCTAssertGreaterThan(ms, 0)
+    }
 }
+
 

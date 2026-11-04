@@ -1402,9 +1402,41 @@ extension NotebookEditorView {
         lasso.clear()
     }
 
+    /// 整組拖曳中：筆跡**即時**跟著手指走（與套索拖曳一樣只更新畫面，不寫事件）；
+    /// 放手時 `marqueeMoveSelection` 才寫一次 InkLog 事件與一個復原步驟。
+    func marqueeDragInk(to total: CGSize) {
+        guard lasso.strokeSelectionCount > 0 else { return }
+        if marqueeInkDragBase == nil {
+            syncDrawingFromCanvas()
+            marqueeInkDragBase = currentDrawing
+            marqueeInkApplied = .zero
+        }
+        let step = CGSize(width: total.width - marqueeInkApplied.width,
+                          height: total.height - marqueeInkApplied.height)
+        guard step != .zero else { return }
+        if let updated = lasso.moveSelected(in: currentDrawing, by: step) {
+            showLassoEdit(updated)
+        }
+        marqueeInkApplied = total
+    }
+
     /// 整組拖曳放手：物件與筆跡一起位移。
     func marqueeMoveSelection(by delta: CGSize) {
         moveSelection(by: delta)
+        if let before = marqueeInkDragBase {
+            // 拖曳中已即時搬好畫面；這裡把「拖曳前 → 現在」寫成一次編輯（I2）、一個復原步驟。
+            marqueeInkDragBase = nil
+            marqueeInkApplied = .zero
+            lasso.proHost()?.endMove()
+            let page = currentPageIndex
+            recordDrawingEdit(page: page, drawing: currentDrawing)
+            broadcastDrawingChange(page: page, drawing: currentDrawing)
+            saveCurrentPageDrawing()
+            if currentDrawing != before {
+                registerLassoSamePageUndo(page: page, before: before, after: currentDrawing)
+            }
+            return
+        }
         guard lasso.strokeSelectionCount > 0, delta != .zero else { return }
         syncDrawingFromCanvas()
         if let updated = lasso.moveStrokesForMarquee(in: currentDrawing, by: delta) {
@@ -1448,6 +1480,41 @@ extension NotebookEditorView {
         if lasso.canPaste {
             syncDrawingFromCanvas()
             if let updated = lasso.paste(into: currentDrawing) { applyLassoResult(updated) }
+        }
+    }
+
+    /// 放置模式下有東西可放（物件，或框選開始的放置帶著的筆跡）。
+    var hasPlaceableClipboard: Bool {
+        !objectClipboard.isEmpty || (placingIncludesInk && lasso.canPaste)
+    }
+
+    /// 框選工具列的「點選位置貼上」：物件與筆跡都在剪貼簿時一起放。
+    func beginMarqueePlacement() {
+        placingIncludesInk = lasso.canPaste
+        isPlacingPasteObject = hasPlaceableClipboard
+    }
+
+    /// 放置模式下點了某頁某處：物件與（框選帶來的）筆跡以**整組**的聯集外框中心對齊點下去的位置，
+    /// 彼此的相對位置不變。筆跡走套索的貼上端口（當下寫 InkLog 事件，I2）。
+    func placeClipboard(at target: CGPoint, onPage page: Int) {
+        let objectFrames = objectClipboard.map(\.frame)
+        var union: CGRect? = objectFrames.first.map { first in objectFrames.dropFirst().reduce(first) { $0.union($1) } }
+        let objectUnion = union
+        let ink = placingIncludesInk && lasso.canPaste ? lasso.clipboardBounds : nil
+        if let ink { union = union.map { $0.union(ink) } ?? ink }
+        defer {
+            isPlacingPasteObject = false
+            placingIncludesInk = false
+        }
+        guard let union else { return }
+        let delta = CGSize(width: target.x - union.midX, height: target.y - union.midY)
+        if let objectUnion {
+            paste(objectClipboard, onPage: page,
+                  at: CGPoint(x: objectUnion.midX + delta.width, y: objectUnion.midY + delta.height))
+        }
+        if ink != nil {
+            syncDrawingFromCanvas()
+            if let updated = lasso.paste(into: currentDrawing, offset: delta) { applyLassoResult(updated) }
         }
     }
 

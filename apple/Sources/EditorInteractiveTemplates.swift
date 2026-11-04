@@ -104,11 +104,10 @@ extension NotebookEditorView {
         let targetPage = page ?? currentPageIndex
         switchToPage(targetPage)
 
-        if isPlacingPasteObject && !objectClipboard.isEmpty {
+        if isPlacingPasteObject && hasPlaceableClipboard {
             lastPastePlacementAt = Date()
             removeTapDotStroke(near: location, page: targetPage)
-            paste(objectClipboard, onPage: targetPage, at: location)
-            isPlacingPasteObject = false
+            placeClipboard(at: location, onPage: targetPage)
             return
         }
 

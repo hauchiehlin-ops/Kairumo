@@ -971,7 +971,8 @@ internal fun ColumnScope.EditorCanvasContainer(ctx: EditorCanvasContext) = with(
                         }
                     },
                     contentVersion = revision,
-                    lassoDrag = { if (inkTool.isLasso) lasso.dragPreview() else null },
+                    // 框選整組拖曳時筆跡也即時跟著走（見 LassoSelection.marqueeDragOffset）。
+                    lassoDrag = { if (inkTool.isLasso || marqueeActive) lasso.dragPreview() else null },
                     // 底紋要畫在**畫布自己的白底之上、筆跡之下**。
                     // 疊一層 Composable 在外面是不行的：`InkCanvas` 會用
                     // `Color.White` 把整塊塗掉，底紋就消失了（實機看過）。
@@ -1525,7 +1526,8 @@ internal fun ColumnScope.EditorCanvasContainer(ctx: EditorCanvasContext) = with(
                     // 框選也選筆跡（與 Apple 一致）：同一個框交給核心的 lassoSelect。
                     strokeBounds = lasso.strokeBounds,
                     onMarqueeRect = { box, add -> lasso.selectStrokesInRect(box, engine, add) },
-                    onTapEmpty = { lasso.clear() }
+                    onTapEmpty = { lasso.clear() },
+                    onGroupDrag = { lasso.marqueeDragOffset = it }
                 )
             }
 
@@ -1642,17 +1644,17 @@ internal fun ColumnScope.EditorCanvasContainer(ctx: EditorCanvasContext) = with(
             }
 
             // 點選位置貼上物件：不論手繪或打字模式，點一下頁面任意座標就將剪貼簿物件中心對齊貼在該處。
-            if (isPlacingPasteObject && objectClipboard.isNotEmpty()) {
+            if (isPlacingPasteObject && hasPlaceableClipboard) {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
                         .zIndex(9_500f)
                         .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.04f))
                         .testTag("editor.object.paste.target_layer")
-                        .pointerInput(pageIndex, objectClipboard) {
+                        .pointerInput(pageIndex, objectClipboard, lasso.inkPlacementArmed) {
                             detectTapGestures { offset ->
                                 val target = Offset(offset.x / canvasDensity, offset.y / canvasDensity)
-                                pasteSinglePageClipboard(target)
+                                placeClipboardAt(target)
                             }
                         }
                 )
@@ -1871,17 +1873,20 @@ internal fun ColumnScope.EditorCanvasContainer(ctx: EditorCanvasContext) = with(
             }
             // 物件剪貼簿與選取的浮動工具丸（支援手繪／打字兩種模式與跨頁貼上／點選位置貼上）。
             val activeSingleObjectIds = currentSelectedObjectIds()
-            if (activeSingleObjectIds.isNotEmpty() || objectClipboard.isNotEmpty()) {
+            // 只放筆跡（框選帶來的）的放置模式也要顯示「點一下貼上／取消」那條提示。
+            val placingInkOnly = isPlacingPasteObject && hasPlaceableClipboard
+            if (activeSingleObjectIds.isNotEmpty() || objectClipboard.isNotEmpty() || placingInkOnly) {
                 com.kairumo.padnote.canvas.ObjectPastePill(
                     hasSelection = activeSingleObjectIds.isNotEmpty(),
-                    hasClipboard = objectClipboard.isNotEmpty(),
+                    hasClipboard = objectClipboard.isNotEmpty() || placingInkOnly,
                     isPlacingPaste = isPlacingPasteObject,
                     l = { key -> l10n(key) },
                     onCut = { activeSingleObjectIds.firstOrNull()?.let { objectClipboardActions.cut(it) } },
                     onCopy = { activeSingleObjectIds.firstOrNull()?.let { objectClipboardActions.copy(it) } },
                     onPasteDefault = { pasteSinglePageClipboard(null) },
-                    onStartPlacePaste = { isPlacingPasteObject = true },
-                    onCancelPlacePaste = { isPlacingPasteObject = false },
+                    // 物件工具丸的放置只放物件（不帶上一次套索留下的筆跡）。
+                    onStartPlacePaste = { lasso.inkPlacementArmed = false; isPlacingPasteObject = true },
+                    onCancelPlacePaste = { isPlacingPasteObject = false; lasso.inkPlacementArmed = false },
                     onClearClipboard = { objectClipboard = emptyList(); isPlacingPasteObject = false },
                     onDelete = { deleteObjectsOnPage(activeSingleObjectIds) },
                     onDeselect = { clearSelection() },

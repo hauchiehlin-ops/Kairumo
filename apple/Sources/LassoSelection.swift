@@ -497,10 +497,19 @@ final class LassoSelection: ObservableObject {
         return PKDrawing(strokes: strokes)
     }
 
-    func paste(into drawing: PKDrawing) -> PKDrawing? {
+    /// 剪貼簿裡筆跡（含專業筆畫）的聯集外框。框選「點選位置貼上」用它算位移。
+    var clipboardBounds: CGRect? {
+        var rect: CGRect? = nil
+        for s in clipboard { rect = rect.map { $0.union(s.renderBounds) } ?? s.renderBounds }
+        for s in proClipboard { rect = rect.map { $0.union(s.bounds) } ?? s.bounds }
+        return rect
+    }
+
+    /// - Parameter forcedOffset: 指定位移（框選「點選位置貼上」）；`nil` 時剪下的原位貼回、複製的錯開一點。
+    func paste(into drawing: PKDrawing, offset forcedOffset: CGSize? = nil) -> PKDrawing? {
         guard canPaste else { return nil }
         // 剪下的原位貼回；複製的錯開一點，看得出是新的一份。
-        let offset = clipboardFromCut ? .zero : Self.duplicateOffset
+        let offset = forcedOffset ?? (clipboardFromCut ? .zero : Self.duplicateOffset)
         var newPro: Set<String> = []
         if !proClipboard.isEmpty, let host = proHost() {
             newPro = host.add(copies: proClipboard, offset: offset)

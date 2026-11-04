@@ -178,6 +178,19 @@ final class LassoSelectionTests: XCTestCase {
         XCTAssertFalse(lasso.hasSelection)
     }
 
+    func testMarqueePasteAtLocationUsesForcedOffsetAndClipboardBounds() throws {
+        let lasso = LassoSelection()
+        let drawing = sampleDrawing()
+        lasso.selectStrokes(in: CGRect(x: 80, y: 80, width: 140, height: 40), drawing: drawing, additive: false)
+        lasso.copySelected(from: drawing)
+        let bounds = try XCTUnwrap(lasso.clipboardBounds)
+        XCTAssertEqual(bounds.midX, drawing.strokes[0].renderBounds.midX, accuracy: 0.5)
+        let after = try XCTUnwrap(lasso.paste(into: drawing, offset: CGSize(width: 300, height: 50)))
+        XCTAssertEqual(after.strokes.count, 3)
+        XCTAssertEqual(after.strokes[2].renderBounds.midX, bounds.midX + 300, accuracy: 0.5)
+        XCTAssertEqual(after.strokes[2].renderBounds.midY, bounds.midY + 50, accuracy: 0.5)
+    }
+
     func testMarqueeMoveTranslatesSelectedStrokesOnly() throws {
         let lasso = LassoSelection()
         let drawing = sampleDrawing()
