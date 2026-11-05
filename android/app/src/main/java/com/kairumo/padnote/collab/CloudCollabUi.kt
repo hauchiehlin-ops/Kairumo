@@ -138,14 +138,6 @@ fun CloudShareSection(
                 }
             }
         }
-        TextButton(onClick = {
-            scope.launch {
-                CloudCollab.endCollaboration(context, notebookId)
-                link = ""
-            }
-        }) {
-            Text(l("cloud_collab_stop"), color = MaterialTheme.colorScheme.error)
-        }
     }
     busy?.let {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {

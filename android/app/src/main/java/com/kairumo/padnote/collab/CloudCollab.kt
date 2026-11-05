@@ -227,11 +227,22 @@ object CloudCollab {
         return true
     }
 
-    /** 一鍵加入：挑選器確認資料夾 → 權限探測 → 整本下載 → 打開 → 自動接上即時中繼。 */
+    /** 一鍵加入：優先使用現有 Google 憑證 probe（免重複選帳號）→ 若無或未授權才開啟挑選器 → 整本下載 → 打開 → 自動接上即時中繼。 */
     suspend fun join(activity: Activity, invite: FfiCollabInviteV2): Boolean {
         lastError.value = null
         _busy.value = L10n.t("cloud_collab_joining")
         try {
+            // 1. 若本機已有有效之 Google 憑證，先直接測試讀取（免彈出視窗重複選帳號）
+            val existingHttp = withContext(Dispatchers.IO) { CollabDriveAuth.makeHttp(activity) }
+            if (existingHttp != null) {
+                val probe = withContext(Dispatchers.IO) {
+                    uniffi.padnote_core.collabDriveProbe(existingHttp, invite.driveFolderId, invite.minFiles)
+                }
+                if (probe.access == FfiDriveAccess.READY) {
+                    return finishJoin(activity, invite, probe.folderName)
+                }
+            }
+
             val auth = CollabDriveAuth.authorize(activity, pickFolderId = invite.driveFolderId)
             if (!auth.ok) {
                 if (auth.error != "cancelled") lastError.value = L10n.t("cloud_collab_err_reauth")
@@ -246,32 +257,36 @@ object CloudCollab {
                 lastError.value = L10n.t(probe.messageKey)
                 return false
             }
-            val entry = FfiSharedNotebook(
-                invite.notebookId, invite.driveFolderId, invite.roomId, invite.keyBase64, "editor",
-                invite.title.ifEmpty { probe.folderName }
-            )
-            saveRegistry(activity, uniffi.padnote_core.sharedRegistryUpsert(registryJson(activity), entry))
-            val s = withContext(Dispatchers.IO) { session(activity, entry) } ?: return false
-            val id = invite.notebookId
-            val existing = com.kairumo.padnote.sync.LanLink.findPackage(activity, id)
-            if (existing == null) {
-                val path = File(NotebookLibrary.directory(activity), "$id.padnote")
-                val cloned = withContext(Dispatchers.IO) {
-                    s.cloneNotebook(path.absolutePath, id.lowercase(), entry.title, System.currentTimeMillis().toULong())
-                }
-                if (!cloned.ok) {
-                    path.deleteRecursively()
-                    lastError.value = cloned.error
-                    return false
-                }
-                NotebookLibrary.invalidateCache(id)
-            }
-            relayInvite.value = invite
-            openRequest.value = id
-            return true
+            return finishJoin(activity, invite, probe.folderName)
         } finally {
             _busy.value = null
         }
+    }
+
+    private suspend fun finishJoin(activity: Activity, invite: FfiCollabInviteV2, folderName: String): Boolean {
+        val entry = FfiSharedNotebook(
+            invite.notebookId, invite.driveFolderId, invite.roomId, invite.keyBase64, "editor",
+            invite.title.ifEmpty { folderName }
+        )
+        saveRegistry(activity, uniffi.padnote_core.sharedRegistryUpsert(registryJson(activity), entry))
+        val s = withContext(Dispatchers.IO) { session(activity, entry) } ?: return false
+        val id = invite.notebookId
+        val existing = com.kairumo.padnote.sync.LanLink.findPackage(activity, id)
+        if (existing == null) {
+            val path = File(NotebookLibrary.directory(activity), "$id.padnote")
+            val cloned = withContext(Dispatchers.IO) {
+                s.cloneNotebook(path.absolutePath, id.lowercase(), entry.title, System.currentTimeMillis().toULong())
+            }
+            if (!cloned.ok) {
+                path.deleteRecursively()
+                lastError.value = cloned.error
+                return false
+            }
+            NotebookLibrary.invalidateCache(id)
+        }
+        relayInvite.value = invite
+        openRequest.value = id
+        return true
     }
 
     /** 編輯器：依自己的網路排序中繼位址，逐一試，連上就停。 */

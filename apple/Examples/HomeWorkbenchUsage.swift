@@ -171,7 +171,21 @@ struct KairumoApp: App {
                     if CloudCollabManager.shared.offer(url.absoluteString) {
                         // 雲端共享筆記的邀請：跳出「加入共享筆記」確認畫面（一鍵加入）。
                     } else if CollaborationManager.shared.offerInvite(url.absoluteString) {
-                        // 相機掃了協同 QR Code／點了邀請連結：開著的編輯器會打開協同面板並帶入連結。
+                        // 相機掃了同一 Wi-Fi／Tailscale 協同 QR Code：自動打開該筆記本（或建立筆記本）進入協同
+                        let invite = collabParseInviteV2(text: url.absoluteString)
+                        let targetId = invite.notebookId.trimmingCharacters(in: .whitespacesAndNewlines)
+                        let rawTitle = invite.title.trimmingCharacters(in: .whitespacesAndNewlines)
+                        let defaultTitle = LocalizationManager.shared.localized("collaborate")
+                        let finalTitle = rawTitle.isEmpty ? defaultTitle : rawTitle
+                        if !targetId.isEmpty {
+                            let exists = NotebookStore.shared.syncNotebooks.contains { $0.id.caseInsensitiveCompare(targetId) == .orderedSame }
+                            if exists {
+                                NotificationCenter.default.post(name: AppCommand.openNotebook, object: targetId)
+                            } else {
+                                let created = NotebookStore.shared.createNotebook(title: finalTitle, template: .blank)
+                                NotificationCenter.default.post(name: AppCommand.openNotebook, object: created.id)
+                            }
+                        }
                     } else if ext == "padnote" || ext == "zip" {
                         _ = try? NotebookStore.shared.importNotebookArchive(from: url)
                     } else if ext == "pdf" {

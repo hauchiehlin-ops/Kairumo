@@ -373,6 +373,7 @@ final class CloudCollabManager: ObservableObject {
         registryJson = sharedRegistryUpsert(json: registryJson, entry: entry)
         // 4. 把整本推上共享資料夾。
         guard let s = await session(for: entry) else { return nil }
+        localDirty = true
         let report = await pushRound(entry: entry, session: s)
         guard report.ok else {
             lastError = report.error
@@ -450,12 +451,25 @@ final class CloudCollabManager: ObservableObject {
         return true
     }
 
-    /// 一鍵加入：Google 挑選器確認資料夾 → 權限探測 → 整本下載 → 匯入 → 打開 → 自動接上即時中繼。
+    /// 一鍵加入：優先使用現有 Google 憑證 probe（免重複選帳號）→ 若無或未授權才開啟授權畫面 → 整本下載 → 匯入 → 打開 → 自動接上即時中繼。
     func join(_ invite: FfiCollabInviteV2) async -> Bool {
         lastError = nil
         busyMessage = L10n.t("cloud_collab_joining")
         defer { busyMessage = nil }
-        let auth = await CollabDriveAuth.shared.authorize(pickFolderId: invite.driveFolderId)
+
+        // 1. 若本機已有有效之 Google 憑證，先直接測試讀取（免彈出視窗重複選帳號）
+        if CollabDriveAuth.shared.isAuthorized, let http = await CollabDriveAuth.shared.makeHttp() {
+            let probe = await Task.detached {
+                collabDriveProbe(http: http, folderId: invite.driveFolderId, expectedMinFiles: invite.minFiles)
+            }.value
+            if probe.access == .ready {
+                return await finishJoin(invite: invite, folderName: probe.folderName)
+            }
+        }
+
+        // 2. 若無憑證或現有憑證無權限，才開啟 Google 授權畫面（帶入已知的 Google 帳號 loginHint）
+        let hint = GoogleAuth.shared.accountEmail ?? ""
+        let auth = await CollabDriveAuth.shared.authorize(pickFolderId: invite.driveFolderId, loginHint: hint)
         guard auth.ok else {
             if auth.error != "cancelled" { lastError = L10n.t("cloud_collab_err_reauth") }
             return false
@@ -473,10 +487,15 @@ final class CloudCollabManager: ObservableObject {
             lastError = L10n.t(probe.messageKey)
             return false
         }
+        return await finishJoin(invite: invite, folderName: probe.folderName)
+    }
+
+    private func finishJoin(invite: FfiCollabInviteV2, folderName: String) async -> Bool {
+        let folder = invite.driveFolderId
         let entry = FfiSharedNotebook(
             notebookId: invite.notebookId, folderId: folder, roomId: invite.roomId,
             keyBase64: invite.keyBase64, role: "editor",
-            title: invite.title.isEmpty ? probe.folderName : invite.title)
+            title: invite.title.isEmpty ? folderName : invite.title)
         registryJson = sharedRegistryUpsert(json: registryJson, entry: entry)
         guard let s = await session(for: entry) else { return false }
         let id = invite.notebookId
@@ -501,7 +520,6 @@ final class CloudCollabManager: ObservableObject {
             }
         }
         NotificationCenter.default.post(name: AppCommand.openNotebook, object: id)
-        // 即時中繼：依自己的網路排序，逐一試，連上就停。
         Task { @MainActor in await self.connectRelay(invite) }
         return true
     }

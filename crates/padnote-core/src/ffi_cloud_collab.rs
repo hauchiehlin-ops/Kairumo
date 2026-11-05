@@ -72,12 +72,14 @@ fn share_err(e: SyncError) -> FfiDriveShareResult {
 
 fn provider(http: Arc<dyn FfiDriveHttp>, folder_id: &str) -> GDriveProvider<ForeignHttp> {
     let root = if folder_id.is_empty() {
-        DriveRoot::AppData
+        DriveRoot::Folder("root".to_string())
     } else {
         DriveRoot::Folder(folder_id.to_string())
     };
     GDriveProvider::with_root(ForeignHttp(http), root)
 }
+
+static COLLAB_ROOT_ID: std::sync::Mutex<Option<String>> = std::sync::Mutex::new(None);
 
 // ---- 資料夾與成員 --------------------------------------------------------------
 
@@ -104,7 +106,16 @@ pub fn collab_drive_create_folder(
     http: Arc<dyn FfiDriveHttp>,
     title: String,
 ) -> FfiDriveShareResult {
-    match provider(http, "").create_notebook_collab_folder(&title) {
+    let p = provider(http, "");
+    let mut cached = COLLAB_ROOT_ID.lock().unwrap();
+    let root_id = match p.get_or_create_collab_root(cached.as_deref()) {
+        Ok(id) => {
+            *cached = Some(id.clone());
+            id
+        }
+        Err(e) => return share_err(e),
+    };
+    match p.create_notebook_subfolder(&root_id, &title) {
         Ok(id) => share_ok(id),
         Err(e) => share_err(e),
     }

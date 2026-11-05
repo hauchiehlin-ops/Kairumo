@@ -96,6 +96,7 @@ public struct CollaborationSheet: View {
                 }
                 .padding(20)
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
             .adaptiveCollabScrollBehaviors()
             .onAppear {
                 // 從 QR Code／邀請連結進來的話，直接帶入「加入房間」。
@@ -1119,14 +1120,20 @@ struct CollabInviteQRSection: View {
 fileprivate extension View {
     @ViewBuilder
     func adaptiveCollabScrollBehaviors() -> some View {
-        if #available(iOS 16.4, macOS 13.3, *) {
+        #if targetEnvironment(macCatalyst) || os(macOS)
+        // Mac Catalyst 下嚴禁使用 .basedOnSize，否則滑鼠滾輪與觸控板會被鎖在頂部無法滾動
+        self
+            .scrollIndicators(.visible)
+        #else
+        if #available(iOS 16.4, *) {
             self.scrollBounceBehavior(.basedOnSize)
                 .scrollIndicators(.visible)
-        } else if #available(iOS 16.0, macOS 13.0, *) {
+        } else if #available(iOS 16.0, *) {
             self.scrollIndicators(.visible)
         } else {
             self
         }
+        #endif
     }
 }
 

@@ -932,19 +932,44 @@ impl<H: DriveHttp> GDriveProvider<H> {
         Ok(None)
     }
 
+    /// 檢查某個資料夾 id 是否有效存在且未被丟進垃圾桶。
+    pub fn is_folder_valid(&self, folder_id: &str) -> bool {
+        if folder_id.is_empty() {
+            return false;
+        }
+        let url = format!("{FILES_URL}/{folder_id}");
+        match self
+            .http
+            .get_json(&url, &[("fields".to_string(), "id, trashed".to_string())])
+        {
+            Ok(meta) => meta.get("trashed").and_then(Value::as_bool) != Some(true),
+            Err(_) => false,
+        }
+    }
+
     /// 取得或建立「Kairumo Co.」主協同資料夾（位於雲端硬碟根目錄）。
-    pub fn get_or_create_collab_root(&self) -> Result<String, SyncError> {
+    /// 遵守 `drive.file` 權限範圍：優先確認已存在之 ID 是否有效，避免在使用者根目錄發送全局 query，
+    /// 杜絕 403 Permission Denied 與授權錯誤。
+    pub fn get_or_create_collab_root(
+        &self,
+        cached_root_id: Option<&str>,
+    ) -> Result<String, SyncError> {
         const ROOT_NAME: &str = "Kairumo Co.";
-        if let Some(id) = self.find_folder_in("root", ROOT_NAME)? {
-            return Ok(id);
+        if let Some(id) = cached_root_id {
+            if self.is_folder_valid(id) {
+                return Ok(id.to_string());
+            }
         }
         self.create_subfolder("root", ROOT_NAME)
     }
 
-    /// 在「Kairumo Co.」主資料夾內建立（或尋找）該次筆記本作業的專屬子資料夾。
+    /// 在「Kairumo Co.」主資料夾內建立該次筆記本作業的專屬子資料夾。
     /// 讓雲端硬碟根目錄保持乾淨，所有協同筆記一律收納於「Kairumo Co.」底下。
-    pub fn create_notebook_collab_folder(&self, notebook_title: &str) -> Result<String, SyncError> {
-        let root_id = self.get_or_create_collab_root()?;
+    pub fn create_notebook_subfolder(
+        &self,
+        root_id: &str,
+        notebook_title: &str,
+    ) -> Result<String, SyncError> {
         let clean = notebook_title
             .trim()
             .chars()
@@ -956,10 +981,7 @@ impl<H: DriveHttp> GDriveProvider<H> {
         } else {
             clean
         };
-        if let Some(id) = self.find_folder_in(&root_id, &folder_name)? {
-            return Ok(id);
-        }
-        self.create_subfolder(&root_id, &folder_name)
+        self.create_subfolder(root_id, &folder_name)
     }
 
     /// 授予某個 Email 權限（`writer` 為編輯者），Google 會寄通知信。回傳 permission id。

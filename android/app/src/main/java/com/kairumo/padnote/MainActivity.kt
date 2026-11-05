@@ -545,6 +545,18 @@ private fun KairumoApp() {
     // 雲端共享筆記的邀請（掃 QR Code、點連結）：一鍵加入，完成後直接打開。
     com.kairumo.padnote.collab.CloudJoinHost(deviceLanguageTag()) { openNotebook(it) }
 
+    // 同一 Wi-Fi／Tailscale 協同邀請：若人在首頁，自動打開對應筆記本進入協同
+    LaunchedEffect(com.kairumo.padnote.collab.CollabInvites.pending) {
+        val inviteText = com.kairumo.padnote.collab.CollabInvites.pending ?: return@LaunchedEffect
+        if (openedId == null) {
+            val parsed = uniffi.padnote_core.collabParseInviteV2(inviteText)
+            val target = parsed.notebookId.ifEmpty { parsed.roomId }
+            if (target.isNotEmpty()) {
+                openNotebook(target)
+            }
+        }
+    }
+
     val id = openedId
     if (id == null) {
         NotebookHome(

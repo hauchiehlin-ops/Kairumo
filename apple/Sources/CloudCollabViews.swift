@@ -140,17 +140,6 @@ struct CloudShareSection: View {
                 }
             }
         }
-        Button(role: .destructive) {
-            let nid = entry.notebookId
-            Task {
-                await manager.endCollaboration(notebookId: nid)
-                link = ""
-            }
-        } label: {
-            Label(localizationManager.localized("cloud_collab_stop"), systemImage: "icloud.slash")
-                .font(.caption)
-        }
-        .buttonStyle(.borderless)
     }
 
     private func share(email: String) async {
