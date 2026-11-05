@@ -45,6 +45,15 @@ public struct CollaborationSheet: View {
                     // 頂部狀態橫幅卡片
                     statusHeaderCard
 
+                    // ☁️ 雲端共享（跨網路）：最高優先跨網協同入口（無論連線狀態，一律置頂展示）
+                    if let notebookId {
+                        CloudShareSection(
+                            notebookId: notebookId,
+                            title: store.syncNotebooks.first {
+                                $0.id.caseInsensitiveCompare(notebookId) == .orderedSame
+                            }?.displayTitle() ?? "")
+                    }
+
                     // 依據連線狀態呈現不同介面
                     switch collaborationManager.status {
                     case .connected(let roomId):
@@ -77,15 +86,6 @@ public struct CollaborationSheet: View {
                         .accessibilityIdentifier("collaboration.relay_failed")
                     }
 
-                    // ☁️ 雲端共享（跨網路）：未連線狀態下也提供一鍵開啟雲端共享。
-                    if let notebookId, case .disconnected = collaborationManager.status {
-                        CloudShareSection(
-                            notebookId: notebookId,
-                            title: store.syncNotebooks.first {
-                                $0.id.caseInsensitiveCompare(notebookId) == .orderedSame
-                            }?.displayTitle() ?? "")
-                    }
-
                     // 📸 里程碑快照時光機區塊
                     if notebookId != nil {
                         milestonesSection
@@ -96,6 +96,7 @@ public struct CollaborationSheet: View {
                 }
                 .padding(20)
             }
+            .adaptiveCollabScrollBehaviors()
             .onAppear {
                 // 從 QR Code／邀請連結進來的話，直接帶入「加入房間」。
                 if let invite = collaborationManager.pendingInviteLink {
@@ -500,17 +501,8 @@ public struct CollaborationSheet: View {
                 }
             }
 
-            // ☁️ 雲端共享（跨網路）：房主分享到雲端資料夾、協作者一鍵加入。
-            if let notebookId {
-                CloudShareSection(
-                    notebookId: notebookId,
-                    title: store.syncNotebooks.first {
-                        $0.id.caseInsensitiveCompare(notebookId) == .orderedSame
-                    }?.displayTitle() ?? "")
-            }
-
-            // 掃描加入：每種連線方式一張 QR Code（雲端共享／同一 Wi‑Fi／Tailscale／遠端中繼）。
-            CollabInviteQRSection(notebookId: notebookId)
+            // 掃描加入：每種連線方式一張 QR Code（同一 Wi‑Fi／Tailscale／遠端中繼）。
+            CollabInviteQRSection()
 
             // 在線成員名單
             VStack(alignment: .leading, spacing: 10) {
@@ -1033,9 +1025,7 @@ public struct CollaborationSheet: View {
 ///
 /// 矩陣由核心產生（`collabQrCode`），Android 畫的是同一份（I6）。
 struct CollabInviteQRSection: View {
-    var notebookId: String? = nil
     @ObservedObject private var collaborationManager = CollaborationManager.shared
-    @ObservedObject private var cloudManager = CloudCollabManager.shared
     @ObservedObject private var localizationManager = LocalizationManager.shared
     @State private var selected: String? = nil
 
@@ -1050,22 +1040,6 @@ struct CollabInviteQRSection: View {
     private var modes: [Mode] {
         var out: [Mode] = []
         let m = collaborationManager
-
-        // ☁️ 雲端共享模式（若此筆記已在雲端共享，優先排第一）
-        if let nbId = notebookId,
-           let entry = cloudManager.registry.first(where: { $0.notebookId.caseInsensitiveCompare(nbId) == .orderedSame }),
-           !entry.folderId.isEmpty {
-            let cloudLink = cloudManager.inviteLink(for: entry)
-            if !cloudLink.isEmpty {
-                out.append(Mode(
-                    id: "cloud",
-                    titleKey: "collab_qr_mode_cloud",
-                    icon: "icloud.fill",
-                    link: cloudLink,
-                    hintKey: "collab_qr_cloud_hint"
-                ))
-            }
-        }
 
         if m.isHostingLocalRelay {
             if m.lanRelayAddress != nil {
@@ -1126,6 +1100,20 @@ struct CollabInviteQRSection: View {
             .padding(14)
             .background(Color(uiColor: .secondarySystemGroupedBackground))
             .cornerRadius(12)
+        }
+    }
+}
+
+fileprivate extension View {
+    @ViewBuilder
+    func adaptiveCollabScrollBehaviors() -> some View {
+        if #available(iOS 16.4, macOS 13.3, *) {
+            self.scrollBounceBehavior(.basedOnSize)
+                .scrollIndicators(.visible)
+        } else if #available(iOS 16.0, macOS 13.0, *) {
+            self.scrollIndicators(.visible)
+        } else {
+            self
         }
     }
 }

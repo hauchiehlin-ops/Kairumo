@@ -105,14 +105,7 @@ fun CloudShareSection(
     Text(l("cloud_collab_desc"), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
 
     if (entry == null) {
-        OutlinedTextField(
-            value = email, onValueChange = { email = it }, singleLine = true,
-            label = { Text(l("cloud_collab_email_placeholder")) }, modifier = Modifier.fillMaxWidth()
-        )
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Button(onClick = { share(email) }, enabled = busy == null && email.isNotBlank()) { Text(l("cloud_collab_share")) }
-            OutlinedButton(onClick = { share("") }, enabled = busy == null) { Text(l("cloud_collab_share_link")) }
-        }
+        Button(onClick = { share("") }, enabled = busy == null) { Text(l("cloud_collab_share_link")) }
         Text(l("cloud_collab_share_link_hint"), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     } else {
         val invite = link.ifEmpty { CloudCollab.inviteLink(entry, collab) }
@@ -131,15 +124,6 @@ fun CloudShareSection(
             }
         }
         if (entry.role == "owner") {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(
-                    value = email, onValueChange = { email = it }, singleLine = true,
-                    label = { Text(l("cloud_collab_email_placeholder")) }, modifier = Modifier.weight(1f)
-                )
-                TextButton(onClick = { share(email) }, enabled = busy == null && email.isNotBlank()) {
-                    Text(l("cloud_collab_add_member"))
-                }
-            }
             for (m in members) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {

@@ -95,6 +95,11 @@ fun CollaborationSheet(
                 ) {
                     StatusLine(manager, ::l)
 
+                    // ☁️ 雲端共享（跨網路）：最高優先跨網協同入口（無論連線狀態，一律置頂展示）
+                    if (notebookId != null) {
+                        CloudShareSection(manager, notebookId, notebookTitle, languageTag)
+                    }
+
                     when (val status = manager.status) {
                         is CollaborationManager.Status.Connected -> {
                             HorizontalDivider()
@@ -157,13 +162,8 @@ fun CollaborationSheet(
                                 }
                             }
 
-                            // ☁️ 雲端共享（跨網路）：房主分享到雲端資料夾、協作者一鍵加入。
-                            if (notebookId != null) {
-                                CloudShareSection(manager, notebookId, notebookTitle, languageTag)
-                            }
-
-                            // 掃描加入：每種連線方式一張 QR Code（雲端共享／同一 Wi‑Fi／Tailscale／遠端中繼）。
-                            CollabInviteQr(manager, notebookId, ::l)
+                            // 掃描加入：每種連線方式一張 QR Code（同一 Wi‑Fi／Tailscale／遠端中繼）。
+                            CollabInviteQr(manager, ::l)
 
                             // 只貼房號、沒帶金鑰就加入的話，連得上、也看得到成員，
                             // **但對方寫的每一個字都解不開** —— 畫面上什麼都不會
@@ -346,19 +346,9 @@ private fun parseColor(hex: String): Color =
  * 矩陣由核心產生（`collabQrCode`），Apple 畫的是同一份（I6）。
  */
 @Composable
-private fun CollabInviteQr(manager: CollaborationManager, notebookId: String? = null, l: (String) -> String) {
+private fun CollabInviteQr(manager: CollaborationManager, l: (String) -> String) {
     data class Mode(val id: String, val titleKey: String, val link: String, val hintKey: String)
     val modes = buildList {
-        // ☁️ 雲端共享模式（若此筆記已在雲端共享，優先排第一）
-        if (notebookId != null) {
-            val entry = CloudCollab.registry.value.firstOrNull { it.notebookId.equals(notebookId, ignoreCase = true) }
-            if (entry != null && entry.folderId.isNotEmpty()) {
-                val cloudLink = CloudCollab.inviteLink(entry, manager)
-                if (cloudLink.isNotEmpty()) {
-                    add(Mode("cloud", "collab_qr_mode_cloud", cloudLink, "collab_qr_cloud_hint"))
-                }
-            }
-        }
         if (manager.isHostingLocalRelay) {
             if (manager.lanRelayAddress != null) add(Mode("lan", "collab_qr_mode_lan", manager.inviteLink, "collab_qr_hint"))
             manager.tailscaleInviteLink?.let { add(Mode("tailscale", "collab_qr_mode_tailscale", it, "collab_qr_hint")) }

@@ -40,8 +40,13 @@ struct ResizableSheetChrome: ViewModifier {
     @State private var detent: PresentationDetent = .large
 
     func body(content: Content) -> some View {
+        #if targetEnvironment(macCatalyst) || os(macOS)
+        content
+            .frame(minWidth: 540, idealWidth: 650, maxWidth: 960, minHeight: 560, idealHeight: 720, maxHeight: 1000)
+        #else
         content
             .presentationDetents([.medium, .large], selection: $detent)
             .presentationDragIndicator(.visible)
+        #endif
     }
 }

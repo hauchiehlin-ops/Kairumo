@@ -721,7 +721,16 @@ impl<H: DriveHttp> CloudProvider for GDriveProvider<H> {
         GDriveProvider::delete(self, path)
     }
     fn list(&self, prefix: &str) -> Result<Vec<RemoteEntry>, SyncError> {
-        let pages = self.list_all(&list_query_in(self.root.parent(), prefix), "id, name, size")?;
+        // 在共享資料夾（DriveRoot::Folder）中，整個資料夾僅供該筆記使用。
+        // 絕不能在 Drive API 查詢中使用 `name contains prefix`，因為 Drive 搜尋語法將斜線 '/'
+        // 視為分詞符號，帶有路徑的前綴（如 "notebooks/.../doc/ops"）會導致 Drive API 匹配失敗
+        // 返回空集合，進而導致協作者端「雲端尚無此筆記本之操作記錄」。
+        // 共享資料夾一律查詢該資料夾下的所有檔案，再由 entries_from 在本地端精準過濾前綴。
+        let query = match &self.root {
+            DriveRoot::Folder(folder_id) => list_query_in(folder_id, ""),
+            DriveRoot::AppData => list_query_in(APP_DATA_FOLDER, prefix),
+        };
+        let pages = self.list_all(&query, "id, name, size")?;
 
         // Populate cache
         let mut cache = self.id_cache.lock().unwrap();

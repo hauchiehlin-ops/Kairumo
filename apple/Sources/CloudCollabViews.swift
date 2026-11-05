@@ -18,7 +18,6 @@ struct CloudShareSection: View {
 
     @ObservedObject private var manager = CloudCollabManager.shared
     @ObservedObject private var localizationManager = LocalizationManager.shared
-    @State private var email = ""
     @State private var link = ""
     @State private var members: [FfiDriveMember] = []
     @State private var copied = false
@@ -73,25 +72,14 @@ struct CloudShareSection: View {
 
     private var shareForm: some View {
         VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 8) {
-                TextField(localizationManager.localized("cloud_collab_email_placeholder"), text: $email)
-                    .textFieldStyle(.roundedBorder)
-                    .keyboardType(.emailAddress)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-                Button(localizationManager.localized("cloud_collab_share")) {
-                    Task { await share(email: email) }
-                }
-                .buttonStyle(.borderedProminent)
-                .disabled(manager.busyMessage != nil || email.trimmingCharacters(in: .whitespaces).isEmpty)
-            }
             Button {
                 Task { await share(email: "") }
             } label: {
                 Label(localizationManager.localized("cloud_collab_share_link"), systemImage: "link")
-                    .font(.caption)
+                    .font(.subheadline)
+                    .fontWeight(.medium)
             }
-            .buttonStyle(.bordered)
+            .buttonStyle(.borderedProminent)
             .disabled(manager.busyMessage != nil)
             Text(localizationManager.localized("cloud_collab_share_link_hint"))
                 .font(.caption2)
@@ -128,17 +116,6 @@ struct CloudShareSection: View {
             }
         }
         if entry.role == "owner" {
-            HStack(spacing: 8) {
-                TextField(localizationManager.localized("cloud_collab_email_placeholder"), text: $email)
-                    .textFieldStyle(.roundedBorder)
-                    .keyboardType(.emailAddress)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-                Button(localizationManager.localized("cloud_collab_add_member")) {
-                    Task { await share(email: email) }
-                }
-                .disabled(manager.busyMessage != nil || email.trimmingCharacters(in: .whitespaces).isEmpty)
-            }
             ForEach(members, id: \.permissionId) { member in
                 HStack {
                     VStack(alignment: .leading, spacing: 1) {
@@ -176,7 +153,6 @@ struct CloudShareSection: View {
     private func share(email: String) async {
         if let result = await manager.share(notebookId: notebookId, title: title, email: email) {
             link = result
-            self.email = ""
             await refreshMembers()
         }
     }

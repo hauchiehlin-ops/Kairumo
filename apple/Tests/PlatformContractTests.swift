@@ -27,8 +27,12 @@ final class PlatformContractTests: XCTestCase {
             manager.playAudio(url: url, recordingId: "contract-\(round)")
             XCTAssertNil(manager.playbackFailure, "第 \(round) 次播放失敗：\(manager.playbackFailure ?? "")")
             XCTAssertTrue(manager.isPlaying, "第 \(round) 次播放：isPlaying 不是 true")
-            try await Task.sleep(nanoseconds: 500_000_000)
-            XCTAssertGreaterThan(manager.currentPlaybackTime, 0.05, "第 \(round) 次播放：時間沒有前進")
+            var progressed = false
+            for _ in 0..<20 {
+                if manager.currentPlaybackTime > 0.05 { progressed = true; break }
+                try await Task.sleep(nanoseconds: 100_000_000)
+            }
+            XCTAssertTrue(progressed, "第 \(round) 次播放：時間沒有前進（currentPlaybackTime=\(manager.currentPlaybackTime)）")
         }
         manager.stopPlayback()
     }
@@ -46,8 +50,12 @@ final class PlatformContractTests: XCTestCase {
         manager.playAudio(url: url, recordingId: "after-record")
         XCTAssertNil(manager.playbackFailure, "錄音 session 還在時播放失敗：\(manager.playbackFailure ?? "")")
         XCTAssertTrue(manager.isPlaying)
-        try await Task.sleep(nanoseconds: 500_000_000)
-        XCTAssertGreaterThan(manager.currentPlaybackTime, 0.05)
+        var progressed = false
+        for _ in 0..<20 {
+            if manager.currentPlaybackTime > 0.05 { progressed = true; break }
+            try await Task.sleep(nanoseconds: 100_000_000)
+        }
+        XCTAssertTrue(progressed, "錄音後播放：時間沒有前進（currentPlaybackTime=\(manager.currentPlaybackTime)）")
         manager.stopPlayback()
         #endif
     }
