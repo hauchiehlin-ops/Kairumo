@@ -113,7 +113,7 @@ public struct CollaborationSheet: View {
                     // 關掉面板只剩空白畫布。開著的是別本筆記時照舊只帶入、等使用者自己按。
                     if Self.invite(invite, targets: notebookId) {
                         autoJoinedFromInvite = true
-                        collaborationManager.joinRoom(roomId: invite)
+                        collaborationManager.joinRoom(roomId: invite, notebookId: notebookId)
                     }
                 }
                 loadSnapshots()
@@ -683,7 +683,7 @@ public struct CollaborationSheet: View {
         VStack(spacing: 16) {
             // 一鍵開啟多人協同
             Button {
-                collaborationManager.createRoom()
+                collaborationManager.createRoom(notebookId: notebookId)
             } label: {
                 HStack(spacing: 8) {
                     Image(systemName: "sparkles")
@@ -733,7 +733,7 @@ public struct CollaborationSheet: View {
 
                             Button {
                                 collaborationManager.serverAddress = room.serverUrl
-                                collaborationManager.joinRoom(roomId: room.roomId)
+                                collaborationManager.joinRoom(roomId: room.roomId, notebookId: notebookId)
                             } label: {
                                 HStack(spacing: 4) {
                                     Image(systemName: "arrow.right.circle.fill")
@@ -780,7 +780,7 @@ public struct CollaborationSheet: View {
                         #endif
 
                     Button {
-                        collaborationManager.joinRoom(roomId: inputRoomId)
+                        collaborationManager.joinRoom(roomId: inputRoomId, notebookId: notebookId)
                     } label: {
                         Text(localizationManager.localized("join_room"))
                             .fontWeight(.semibold)

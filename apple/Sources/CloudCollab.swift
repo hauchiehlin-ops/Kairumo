@@ -369,7 +369,7 @@ final class CloudCollabManager: ObservableObject {
         }
         // 3. 即時房間（同一個網路時自動升級）：沒有就開一間。
         let collab = CollaborationManager.shared
-        if case .disconnected = collab.status { collab.createRoom() }
+        if case .disconnected = collab.status { collab.createRoom(notebookId: notebookId) }
         for _ in 0..<30 where collab.roomKeyBase64 == nil || collab.currentRoomId.isEmpty {
             try? await Task.sleep(nanoseconds: 100_000_000)
         }
@@ -552,7 +552,7 @@ final class CloudCollabManager: ObservableObject {
             let link = collabInviteLinkV2(invite: FfiCollabInviteV2(
                 roomId: invite.roomId, keyBase64: invite.keyBase64, servers: [server],
                 notebookId: "", driveFolderId: "", title: "", minFiles: 0))
-            collab.joinRoom(roomId: link)
+            collab.joinRoom(roomId: link, notebookId: invite.notebookId)
             var waited: UInt64 = 0
             while waited < timeout {
                 if case .connected = collab.status { return }
