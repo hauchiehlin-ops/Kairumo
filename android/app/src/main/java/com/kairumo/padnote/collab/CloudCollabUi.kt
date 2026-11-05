@@ -138,7 +138,12 @@ fun CloudShareSection(
                 }
             }
         }
-        TextButton(onClick = { CloudCollab.stopSharing(context, notebookId); link = "" }) {
+        TextButton(onClick = {
+            scope.launch {
+                CloudCollab.endCollaboration(context, notebookId)
+                link = ""
+            }
+        }) {
             Text(l("cloud_collab_stop"), color = MaterialTheme.colorScheme.error)
         }
     }

@@ -929,7 +929,10 @@ public class CollaborationManager: ObservableObject {
             if (json["truncated"] as? Bool) == true { stateSyncNeeded.send(()) }
 
         case "room_closed":
-            disconnect()
+            disconnect(userInitiated: false)
+            if let nid = CloudCollabManager.shared.focusedId {
+                CloudCollabManager.shared.stopSharing(nid)
+            }
 
         case "pong":
             // 心跳回覆正常

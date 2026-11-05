@@ -31,7 +31,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -73,6 +75,7 @@ fun CollaborationSheet(
 
     fun l(key: String) = LocalizationStrings.localized(key, languageTag)
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
 
     // 從 QR Code／邀請連結進來的話，直接帶入（見 CollabInvites）。
     val invited = remember { CollabInvites.pending.also { CollabInvites.pending = null } }
@@ -157,7 +160,15 @@ fun CollaborationSheet(
                                 OutlinedButton(onClick = { copy(context, manager.inviteLink) }) {
                                     Text(if (manager.tailscaleRelayAddress != null) l("copy_lan_link") else l("copy_encrypted_link"))
                                 }
-                                OutlinedButton(onClick = { manager.disconnect() }) {
+                                OutlinedButton(onClick = {
+                                    scope.launch {
+                                        if (!notebookId.isNullOrEmpty()) {
+                                            CloudCollab.endCollaboration(context, notebookId, manager)
+                                        } else {
+                                            manager.disconnect()
+                                        }
+                                    }
+                                }) {
                                     Text(l("end_collaboration"))
                                 }
                             }

@@ -141,8 +141,11 @@ struct CloudShareSection: View {
             }
         }
         Button(role: .destructive) {
-            manager.stopSharing(entry.notebookId)
-            link = ""
+            let nid = entry.notebookId
+            Task {
+                await manager.endCollaboration(notebookId: nid)
+                link = ""
+            }
         } label: {
             Label(localizationManager.localized("cloud_collab_stop"), systemImage: "icloud.slash")
                 .font(.caption)

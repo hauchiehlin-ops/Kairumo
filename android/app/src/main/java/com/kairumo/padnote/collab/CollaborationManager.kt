@@ -541,7 +541,12 @@ class CollaborationManager(private val context: Context) {
                 }
                 if (json.optBoolean("truncated", false)) onStateSyncNeeded?.invoke()
             }
-            "room_closed" -> disconnect()
+            "room_closed" -> {
+                disconnect()
+                CloudCollab.focusedId?.let { nid ->
+                    CloudCollab.stopSharing(context, nid)
+                }
+            }
             "pong" -> Unit
         }
     }

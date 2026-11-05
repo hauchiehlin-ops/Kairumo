@@ -61,7 +61,8 @@ object CloudCollab {
 
     private var appContext: Context? = null
     private val sessions = HashMap<String, FfiSyncSession>()
-    private var focusedId: String? = null
+    var focusedId: String? = null
+        private set
     private var loop: Job? = null
     private var lastRemoteChange = 0L
     private var lastLocalEdit = 0L
@@ -190,6 +191,30 @@ object CloudCollab {
     fun stopSharing(context: Context, notebookId: String) {
         if (focusedId.equals(notebookId, ignoreCase = true)) setFocus(null)
         saveRegistry(context, uniffi.padnote_core.sharedRegistryRemove(registryJson(context), notebookId))
+    }
+
+    /**
+     * 結束線上協同作業：
+     * 1. 若為原發起者（房主），自動在背景刪除雲端硬碟中該次作業的子資料夾（保留「Kairumo Co.」主資料夾）
+     * 2. 結束即時中繼連線
+     * 3. 本機解除雲端同步登記（stopSharing），筆記本檔案與所有內容各自立即留存於參與者本機。
+     */
+    suspend fun endCollaboration(context: Context, notebookId: String, collab: CollaborationManager? = null) {
+        val entry = shared(context, notebookId)
+        val isOwner = entry?.role == "owner"
+        val folderId = entry?.folderId.orEmpty()
+
+        if (isOwner && folderId.isNotEmpty()) {
+            val http = withContext(Dispatchers.IO) { CollabDriveAuth.makeHttp(context) }
+            if (http != null) {
+                withContext(Dispatchers.IO) {
+                    uniffi.padnote_core.collabDriveDeleteFolder(http, folderId)
+                }
+            }
+        }
+
+        collab?.disconnect()
+        stopSharing(context, notebookId)
     }
 
     // ── 協作者：加入 ───────────────────────────────────────

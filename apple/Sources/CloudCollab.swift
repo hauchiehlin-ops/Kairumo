@@ -266,7 +266,7 @@ final class CloudCollabManager: ObservableObject {
 
     private let registryKey = "kairumo.cloudCollab.registry"
     private var sessions: [String: FfiSyncSession] = [:]
-    private var focusedId: String?
+    private(set) var focusedId: String?
     private var loop: Task<Void, Never>?
     private var lastRemoteChange = Date.distantPast
     private var lastLocalEdit = Date.distantPast
@@ -411,6 +411,32 @@ final class CloudCollabManager: ObservableObject {
     func stopSharing(_ notebookId: String) {
         if focusedId?.lowercased() == notebookId.lowercased() { setFocus(nil) }
         registryJson = sharedRegistryRemove(json: registryJson, notebookId: notebookId)
+    }
+
+    /// 結束線上協同作業：
+    /// 1. 若為原發起者（房主），在背景將 Google Drive 上的該次筆記本子資料夾刪除（保留「Kairumo Co.」主資料夾）
+    /// 2. 結束即時中繼連線（closeRoom / disconnect）
+    /// 3. 本機解除雲端同步登記（stopSharing），筆記本檔案與所有內容各自立即留存於參與者本機。
+    func endCollaboration(notebookId: String) async {
+        let entry = shared(notebookId)
+        let isOwner = entry?.role == "owner"
+        let folderId = entry?.folderId ?? ""
+
+        if isOwner && !folderId.isEmpty {
+            if let http = await CollabDriveAuth.shared.makeHttp() {
+                _ = await Task.detached {
+                    collabDriveDeleteFolder(http: http, folderId: folderId)
+                }.value
+            }
+        }
+
+        if CollaborationManager.shared.isHost {
+            CollaborationManager.shared.closeRoom()
+        } else {
+            CollaborationManager.shared.disconnect()
+        }
+
+        stopSharing(notebookId)
     }
 
     // MARK: 協作者：加入

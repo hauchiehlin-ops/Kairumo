@@ -124,11 +124,7 @@ public struct CollaborationSheet: View {
             .alert(localizationManager.localized("end_collaboration"), isPresented: $showEndSessionAlert) {
                 Button(localizationManager.localized("cancel"), role: .cancel) {}
                 Button(localizationManager.localized("confirm"), role: .destructive) {
-                    if collaborationManager.isHost {
-                        collaborationManager.closeRoom()
-                    } else {
-                        collaborationManager.disconnect()
-                    }
+                    performEndSession()
                 }
             } message: {
                 Text(localizationManager.localized("end_session_confirm"))
@@ -973,6 +969,22 @@ public struct CollaborationSheet: View {
     private func loadSnapshots() {
         guard let nId = notebookId else { return }
         snapshots = store.listMilestoneSnapshots(notebookId: nId)
+    }
+
+    private func performEndSession() {
+        guard let nid = notebookId else {
+            collaborationManager.disconnect()
+            return
+        }
+        let isHost = collaborationManager.isHost
+        Task { @MainActor in
+            if isHost {
+                await CloudCollabManager.shared.endCollaboration(notebookId: nid)
+            } else {
+                collaborationManager.disconnect()
+                CloudCollabManager.shared.stopSharing(nid)
+            }
+        }
     }
 
     private func createSnapshot() {

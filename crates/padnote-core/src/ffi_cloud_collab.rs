@@ -110,6 +110,19 @@ pub fn collab_drive_create_folder(
     }
 }
 
+/// 刪除協作筆記本的專屬資料夾（協同作業結束時自動清除雲端檔案，但保留父目錄「Kairumo Co.」）。
+/// **同步等待 HTTP，不要在主執行緒呼叫。**
+#[uniffi::export]
+pub fn collab_drive_delete_folder(
+    http: Arc<dyn FfiDriveHttp>,
+    folder_id: String,
+) -> FfiDriveShareResult {
+    match provider(http, &folder_id).delete_by_id(&folder_id) {
+        Ok(()) => share_ok(folder_id),
+        Err(e) => share_err(e),
+    }
+}
+
 /// 把資料夾分享給一個 Email（編輯者）。Google 會寄通知信給對方。
 #[uniffi::export]
 pub fn collab_drive_grant(
