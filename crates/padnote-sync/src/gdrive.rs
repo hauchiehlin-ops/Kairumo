@@ -958,6 +958,12 @@ impl<H: DriveHttp> GDriveProvider<H> {
         if let Some(id) = cached_root_id.filter(|id| self.is_folder_valid(id)) {
             return Ok(id.to_string());
         }
+        // 快取只活在記憶體裡：App 重開之後沒有它，若直接建立，使用者的雲端硬碟會
+        // 冒出一個又一個同名的「Kairumo Co.」。`drive.file` 下的查詢只會列出這個 App
+        // 建立過的檔案（不會 403），所以先找；查詢本身失敗才退回建立，不擋住分享。
+        if let Ok(Some(id)) = self.find_folder_in("root", ROOT_NAME) {
+            return Ok(id);
+        }
         self.create_subfolder("root", ROOT_NAME)
     }
 
@@ -1404,6 +1410,8 @@ mod tests {
         /// 極簡的 `q` 解析：只認得這個模組自己會產生的兩種形式。
         fn matches(&self, q: &str, name: &str) -> bool {
             if let Some(rest) = q.split("name = '").nth(1) {
+                // 名字後面還可能接著 `and trashed = false` 之類的條件。
+                let rest = rest.split("' and ").next().unwrap_or(rest);
                 let wanted = rest.trim_end_matches('\'');
                 return name == wanted.replace("\\'", "'").replace("\\\\", "\\");
             }
@@ -1527,6 +1535,29 @@ mod tests {
                 .push((url.to_string(), data.len()));
             Ok(())
         }
+    }
+
+    #[test]
+    fn collab_root_is_reused_after_a_restart_not_recreated() {
+        // App 重開後記憶體快取是空的；舊版直接建立，使用者的雲端硬碟裡
+        // 會出現一排同名的「Kairumo Co.」，協同筆記散落在不同的那一個底下。
+        let drive = GDriveProvider::with_root(
+            FakeDrive::with(&[("Kairumo Co.", b"")], 100),
+            DriveRoot::Folder("root".into()),
+        );
+        let id = drive.get_or_create_collab_root(None).unwrap();
+        assert_eq!(id, "id-0");
+        assert!(drive.http.created.lock().unwrap().is_empty());
+    }
+
+    #[test]
+    fn collab_root_is_created_when_none_exists() {
+        let drive = GDriveProvider::with_root(
+            FakeDrive::with(&[("other", b"")], 100),
+            DriveRoot::Folder("root".into()),
+        );
+        drive.get_or_create_collab_root(None).unwrap();
+        assert_eq!(*drive.http.created.lock().unwrap(), vec!["Kairumo Co.".to_string()]);
     }
 
     #[test]

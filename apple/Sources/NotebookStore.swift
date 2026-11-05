@@ -3125,10 +3125,12 @@ public final class NotebookStore: ObservableObject {
     }
 
     @discardableResult
-    public func createNotebook(title: String, template: NoteTemplate, folderId: String? = nil) -> NotebookDocument {
+    /// `id`：預先決定的跨裝置 id（例如協作者收到房主那本的 id）。一般筆記不傳，用隨機 UUID。
+    public func createNotebook(title: String, template: NoteTemplate, folderId: String? = nil, id: String? = nil) -> NotebookDocument {
         let safeTitle = title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             ? Self.newNotebookTitle() : title
         let newDoc = NotebookDocument(
+            id: id?.lowercased() ?? UUID().uuidString.lowercased(),
             title: safeTitle,
             createdAt: Date(),
             lastModifiedDate: Date(),

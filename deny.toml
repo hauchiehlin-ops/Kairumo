@@ -98,6 +98,14 @@ ignore = [
     # 標記為 unmaintained，並非已知漏洞。
     "RUSTSEC-2024-0436",
 
+    # pin-utils（RUSTSEC-2026-0441）：上游倉庫 2026-10 封存，標記為 unmaintained，並非已知漏洞。
+    # 來源是 webrtc 0.10 → webrtc-util → nix 0.26（nix 開了預設功能，順帶拉進 pin-utils）。
+    # 查過 crates.io：webrtc-util 一路到最新的 0.17.2 都還依賴 nix ^0.26，升 webrtc（0.10 → 0.21
+    # 是整套 API 改版）也拿不掉它，公告本身也寫「No safe upgrade is available」。
+    # pin-utils 只有 `pin_mut!` 之類的巨集，沒有執行期邏輯，不處理任何輸入。
+    # 待辦：webrtc-util 改用 nix 新版（或關掉 nix 預設功能）後就回來移除這一條。
+    "RUSTSEC-2026-0441",
+
     # audiopus_sys：Opus 的 C 綁定，標記為 unmaintained，並非已知漏洞。
     # Opus 本身（BSD-3）仍在維護，缺的是 Rust 綁定層的維護者。
     "RUSTSEC-2026-0150",

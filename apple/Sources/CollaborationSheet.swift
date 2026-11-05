@@ -95,6 +95,8 @@ public struct CollaborationSheet: View {
                     serverConfigSection
                 }
                 .padding(20)
+                // Mac：Catalyst 的捲動指示器拖不動，補一條真的捲軸（見 `macDraggableScrollBar`）。
+                .macDraggableScrollBar()
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .adaptiveCollabScrollBehaviors()
@@ -499,7 +501,11 @@ public struct CollaborationSheet: View {
             }
 
             // 掃描加入：每種連線方式一張 QR Code（同一 Wi‑Fi／Tailscale／遠端中繼）。
-            CollabInviteQRSection()
+            CollabInviteQRSection(
+                notebookId: notebookId,
+                title: notebookId.flatMap { id in
+                    store.syncNotebooks.first { $0.id.caseInsensitiveCompare(id) == .orderedSame }?.displayTitle()
+                } ?? "")
 
             // 在線成員名單
             VStack(alignment: .leading, spacing: 10) {
@@ -1038,6 +1044,9 @@ public struct CollaborationSheet: View {
 ///
 /// 矩陣由核心產生（`collabQrCode`），Android 畫的是同一份（I6）。
 struct CollabInviteQRSection: View {
+    /// 這間房在協同的是哪一本筆記。放進連結裡，對方掃了才知道要打開哪一本。
+    var notebookId: String? = nil
+    var title: String = ""
     @ObservedObject private var collaborationManager = CollaborationManager.shared
     @ObservedObject private var localizationManager = LocalizationManager.shared
     @State private var selected: String? = nil
@@ -1067,6 +1076,9 @@ struct CollabInviteQRSection: View {
         // 同一個連結不重複列（例如沒有區網位址時 Tailscale 也是預設連結）。
         var seen = Set<String>()
         return out.filter { !$0.link.isEmpty && seen.insert($0.link).inserted }
+            .map { Mode(id: $0.id, titleKey: $0.titleKey, icon: $0.icon,
+                        link: m.notebookInviteLink($0.link, notebookId: notebookId, title: title),
+                        hintKey: $0.hintKey) }
     }
 
     var body: some View {

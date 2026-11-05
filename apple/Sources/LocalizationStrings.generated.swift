@@ -4479,6 +4479,14 @@ extension LocalizationManager {
             .ko: "이메일 주소가 아닌 것 같습니다.",
             .th: "ดูเหมือนไม่ใช่อีเมล"
         ],
+        "cloud_collab_err_not_picked": [
+            .zhHant: "剛才在 Google 畫面裡沒有選取共享資料夾。請再按一次「加入」，點一下資料夾（不要點進去，裡面只有同步用的小檔案），再按「選取」。",
+            .en: "The shared folder wasn't selected in Google's screen. Tap Join again, tap the folder once (don't open it — inside are only sync files), then tap Select.",
+            .zhHans: "刚才在 Google 画面里没有选中共享文件夹。请再按一次「加入」，点一下文件夹（不要点进去，里面只有同步用的小文件），再按「选择」。",
+            .ja: "Google の画面で共有フォルダが選択されませんでした。もう一度「参加」を押し、フォルダを開かずに一度タップしてから「選択」を押してください（中身は同期用の小さなファイルだけです）。",
+            .ko: "Google 화면에서 공유 폴더가 선택되지 않았습니다. 다시 참여를 누르고 폴더를 열지 말고 한 번 누른 뒤 “선택”을 누르세요(안에는 동기화용 작은 파일만 있습니다).",
+            .th: "ยังไม่ได้เลือกโฟลเดอร์ที่แชร์ในหน้าจอของ Google แตะเข้าร่วมอีกครั้ง แตะโฟลเดอร์หนึ่งครั้ง (อย่าเปิดเข้าไป ข้างในมีแต่ไฟล์ซิงค์) แล้วแตะ เลือก"
+        ],
         "cloud_collab_err_not_shared": [
             .zhHant: "找不到這個共享資料夾，或它沒有分享給你目前登入的 Google 帳號。請房主確認分享對象。",
             .en: "This shared folder can't be found, or it isn't shared with the Google account you signed in with. Ask the owner to check who it's shared with.",
@@ -4528,12 +4536,12 @@ extension LocalizationManager {
             .th: "เข้าร่วม"
         ],
         "cloud_collab_join_desc": [
-            .zhHant: "按「加入」後 Google 會請你登入並確認這個共享資料夾，接著整本筆記會下載到這台裝置並自動打開。",
-            .en: "After you tap Join, Google asks you to sign in and confirm this shared folder; the notebook then downloads and opens automatically.",
-            .zhHans: "按「加入」后 Google 会请你登录并确认这个共享文件夹，接着整本笔记会下载到这台设备并自动打开。",
-            .ja: "「参加」を押すと Google でログインと共有フォルダの確認を求められ、その後ノートがダウンロードされて自動で開きます。",
-            .ko: "참여를 누르면 Google 로그인과 공유 폴더 확인 후 노트가 다운로드되어 자동으로 열립니다.",
-            .th: "เมื่อแตะเข้าร่วม Google จะให้ลงชื่อเข้าใช้และยืนยันโฟลเดอร์ จากนั้นสมุดจะดาวน์โหลดและเปิดอัตโนมัติ"
+            .zhHant: "按「加入」後，Google 會顯示這個共享資料夾：請點一下資料夾把它選取（不要點進去），再按「選取」。接著整本筆記會下載到這台裝置並自動打開。",
+            .en: "After you tap Join, Google shows the shared folder. Tap the folder once to select it (don't open it), then tap Select. The notebook then downloads and opens automatically.",
+            .zhHans: "按「加入」后，Google 会显示这个共享文件夹：请点一下文件夹把它选中（不要点进去），再按「选择」。接着整本笔记会下载到这台设备并自动打开。",
+            .ja: "「参加」を押すと Google に共有フォルダが表示されます。フォルダを開かずに一度タップして選び、「選択」を押してください。ノートがダウンロードされて自動で開きます。",
+            .ko: "참여를 누르면 Google에 공유 폴더가 표시됩니다. 폴더를 열지 말고 한 번 눌러 선택한 뒤 “선택”을 누르세요. 노트가 다운로드되어 자동으로 열립니다.",
+            .th: "เมื่อแตะเข้าร่วม Google จะแสดงโฟลเดอร์ที่แชร์ แตะโฟลเดอร์หนึ่งครั้งเพื่อเลือก (อย่าเปิดเข้าไป) แล้วแตะ เลือก จากนั้นสมุดจะดาวน์โหลดและเปิดอัตโนมัติ"
         ],
         "cloud_collab_join_title": [
             .zhHant: "加入共享筆記",

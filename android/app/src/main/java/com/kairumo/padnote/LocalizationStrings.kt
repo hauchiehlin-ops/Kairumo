@@ -4541,6 +4541,14 @@ object LocalizationStrings {
             "ko" to "이메일 주소가 아닌 것 같습니다.",
             "th" to "ดูเหมือนไม่ใช่อีเมล"
         ),
+        "cloud_collab_err_not_picked" to mapOf(
+            "zh-Hant" to "剛才在 Google 畫面裡沒有選取共享資料夾。請再按一次「加入」，點一下資料夾（不要點進去，裡面只有同步用的小檔案），再按「選取」。",
+            "en" to "The shared folder wasn't selected in Google's screen. Tap Join again, tap the folder once (don't open it — inside are only sync files), then tap Select.",
+            "zh-Hans" to "刚才在 Google 画面里没有选中共享文件夹。请再按一次「加入」，点一下文件夹（不要点进去，里面只有同步用的小文件），再按「选择」。",
+            "ja" to "Google の画面で共有フォルダが選択されませんでした。もう一度「参加」を押し、フォルダを開かずに一度タップしてから「選択」を押してください（中身は同期用の小さなファイルだけです）。",
+            "ko" to "Google 화면에서 공유 폴더가 선택되지 않았습니다. 다시 참여를 누르고 폴더를 열지 말고 한 번 누른 뒤 “선택”을 누르세요(안에는 동기화용 작은 파일만 있습니다).",
+            "th" to "ยังไม่ได้เลือกโฟลเดอร์ที่แชร์ในหน้าจอของ Google แตะเข้าร่วมอีกครั้ง แตะโฟลเดอร์หนึ่งครั้ง (อย่าเปิดเข้าไป ข้างในมีแต่ไฟล์ซิงค์) แล้วแตะ เลือก"
+        ),
         "cloud_collab_err_not_shared" to mapOf(
             "zh-Hant" to "找不到這個共享資料夾，或它沒有分享給你目前登入的 Google 帳號。請房主確認分享對象。",
             "en" to "This shared folder can't be found, or it isn't shared with the Google account you signed in with. Ask the owner to check who it's shared with.",
@@ -4548,7 +4556,10 @@ object LocalizationStrings {
             "ja" to "共有フォルダが見つからないか、ログイン中の Google アカウントに共有されていません。オーナーに共有先を確認してください。",
             "ko" to "공유 폴더를 찾을 수 없거나 로그인한 Google 계정에 공유되지 않았습니다. 소유자에게 공유 대상을 확인해 달라고 하세요.",
             "th" to "ไม่พบโฟลเดอร์แชร์ หรือไม่ได้แชร์กับบัญชี Google ที่คุณลงชื่อเข้าใช้ โปรดให้เจ้าของตรวจสอบ"
-        ),
+        )
+    )
+
+    private fun part7(): Map<String, Map<String, String>> = mapOf(
         "cloud_collab_err_read_only" to mapOf(
             "zh-Hant" to "你對這個共享資料夾只有檢視權限。請房主改成「可編輯」。",
             "en" to "You only have view access to this shared folder. Ask the owner to make you an editor.",
@@ -4556,10 +4567,7 @@ object LocalizationStrings {
             "ja" to "この共有フォルダは閲覧のみです。オーナーに編集者にしてもらってください。",
             "ko" to "이 공유 폴더에 보기 권한만 있습니다. 소유자에게 편집자로 바꿔 달라고 하세요.",
             "th" to "คุณดูได้อย่างเดียว โปรดให้เจ้าของตั้งเป็นผู้แก้ไข"
-        )
-    )
-
-    private fun part7(): Map<String, Map<String, String>> = mapOf(
+        ),
         "cloud_collab_err_reauth" to mapOf(
             "zh-Hant" to "需要重新授權 Google 雲端硬碟（共享資料夾）。",
             "en" to "Google Drive access for shared folders needs to be granted again.",
@@ -4593,12 +4601,12 @@ object LocalizationStrings {
             "th" to "เข้าร่วม"
         ),
         "cloud_collab_join_desc" to mapOf(
-            "zh-Hant" to "按「加入」後 Google 會請你登入並確認這個共享資料夾，接著整本筆記會下載到這台裝置並自動打開。",
-            "en" to "After you tap Join, Google asks you to sign in and confirm this shared folder; the notebook then downloads and opens automatically.",
-            "zh-Hans" to "按「加入」后 Google 会请你登录并确认这个共享文件夹，接着整本笔记会下载到这台设备并自动打开。",
-            "ja" to "「参加」を押すと Google でログインと共有フォルダの確認を求められ、その後ノートがダウンロードされて自動で開きます。",
-            "ko" to "참여를 누르면 Google 로그인과 공유 폴더 확인 후 노트가 다운로드되어 자동으로 열립니다.",
-            "th" to "เมื่อแตะเข้าร่วม Google จะให้ลงชื่อเข้าใช้และยืนยันโฟลเดอร์ จากนั้นสมุดจะดาวน์โหลดและเปิดอัตโนมัติ"
+            "zh-Hant" to "按「加入」後，Google 會顯示這個共享資料夾：請點一下資料夾把它選取（不要點進去），再按「選取」。接著整本筆記會下載到這台裝置並自動打開。",
+            "en" to "After you tap Join, Google shows the shared folder. Tap the folder once to select it (don't open it), then tap Select. The notebook then downloads and opens automatically.",
+            "zh-Hans" to "按「加入」后，Google 会显示这个共享文件夹：请点一下文件夹把它选中（不要点进去），再按「选择」。接着整本笔记会下载到这台设备并自动打开。",
+            "ja" to "「参加」を押すと Google に共有フォルダが表示されます。フォルダを開かずに一度タップして選び、「選択」を押してください。ノートがダウンロードされて自動で開きます。",
+            "ko" to "참여를 누르면 Google에 공유 폴더가 표시됩니다. 폴더를 열지 말고 한 번 눌러 선택한 뒤 “선택”을 누르세요. 노트가 다운로드되어 자동으로 열립니다.",
+            "th" to "เมื่อแตะเข้าร่วม Google จะแสดงโฟลเดอร์ที่แชร์ แตะโฟลเดอร์หนึ่งครั้งเพื่อเลือก (อย่าเปิดเข้าไป) แล้วแตะ เลือก จากนั้นสมุดจะดาวน์โหลดและเปิดอัตโนมัติ"
         ),
         "cloud_collab_join_title" to mapOf(
             "zh-Hant" to "加入共享筆記",
@@ -5191,7 +5199,10 @@ object LocalizationStrings {
             "ja" to "出発点",
             "ko" to "시작 위치",
             "th" to "จุดออก"
-        ),
+        )
+    )
+
+    private fun part8(): Map<String, Map<String, String>> = mapOf(
         "connection_handle" to mapOf(
             "zh-Hant" to "拖曳到另一個形狀以連接",
             "en" to "Drag to another shape to connect",
@@ -5199,10 +5210,7 @@ object LocalizationStrings {
             "ja" to "別の図形へドラッグして接続",
             "ko" to "다른 도형으로 드래그하여 연결",
             "th" to "ลากไปยังรูปร่างอื่นเพื่อเชื่อมต่อ"
-        )
-    )
-
-    private fun part8(): Map<String, Map<String, String>> = mapOf(
+        ),
         "connection_reverse" to mapOf(
             "zh-Hant" to "反轉方向",
             "en" to "Reverse direction",
@@ -5834,7 +5842,10 @@ object LocalizationStrings {
             "ja" to "白紙",
             "ko" to "백지",
             "th" to "กระดาษเปล่า"
-        ),
+        )
+    )
+
+    private fun part9(): Map<String, Map<String, String>> = mapOf(
         "core_msg_062" to mapOf(
             "zh-Hant" to "方格點陣",
             "en" to "Dot grid",
@@ -5842,10 +5853,7 @@ object LocalizationStrings {
             "ja" to "ドット方眼",
             "ko" to "점 격자",
             "th" to "ตารางจุด"
-        )
-    )
-
-    private fun part9(): Map<String, Map<String, String>> = mapOf(
+        ),
         "core_msg_063" to mapOf(
             "zh-Hant" to "橫線筆記",
             "en" to "Lined notes",
@@ -6477,7 +6485,10 @@ object LocalizationStrings {
             "ja" to "%1@ 番目のブロックに content がありません",
             "ko" to "%1@번째 블록에 content가 없습니다",
             "th" to "บล็อกที่ %1@ ไม่มี content"
-        ),
+        )
+    )
+
+    private fun part10(): Map<String, Map<String, String>> = mapOf(
         "core_msg_142" to mapOf(
             "zh-Hant" to "第 %1@ 個區塊的類型未知：%2@",
             "en" to "Block %1@ has an unknown type: %2@",
@@ -6485,10 +6496,7 @@ object LocalizationStrings {
             "ja" to "%1@ 番目のブロックの種類が不明です: %2@",
             "ko" to "%1@번째 블록의 유형을 알 수 없습니다: %2@",
             "th" to "บล็อกที่ %1@ มีประเภทที่ไม่รู้จัก: %2@"
-        )
-    )
-
-    private fun part10(): Map<String, Map<String, String>> = mapOf(
+        ),
         "core_msg_143" to mapOf(
             "zh-Hant" to "筆記本內無任何頁面可匯出",
             "en" to "The notebook has no pages to export",
@@ -7120,7 +7128,10 @@ object LocalizationStrings {
             "ja" to "停止のしきい値は開始のしきい値より低くする必要があります。そうでないとヒステリシスが機能しません",
             "ko" to "중지 임계값은 시작 임계값보다 낮아야 합니다. 그렇지 않으면 히스테리시스가 작동하지 않습니다",
             "th" to "เกณฑ์หยุดต้องต่ำกว่าเกณฑ์เริ่ม ไม่เช่นนั้นฮิสเทอรีซิสจะไม่ทำงาน"
-        ),
+        )
+    )
+
+    private fun part11(): Map<String, Map<String, String>> = mapOf(
         "core_msg_222" to mapOf(
             "zh-Hant" to "找不到 VAD 模型：%1@",
             "en" to "VAD model not found: %1@",
@@ -7128,10 +7139,7 @@ object LocalizationStrings {
             "ja" to "VAD モデルが見つかりません: %1@",
             "ko" to "VAD 모델을 찾을 수 없습니다: %1@",
             "th" to "ไม่พบโมเดล VAD: %1@"
-        )
-    )
-
-    private fun part11(): Map<String, Map<String, String>> = mapOf(
+        ),
         "core_msg_223" to mapOf(
             "zh-Hant" to "雲端尚無此筆記本之操作記錄，已清理暫存等待來源端上傳",
             "en" to "The cloud has no content for this notebook yet; waiting for the source device to upload it",
@@ -7763,7 +7771,10 @@ object LocalizationStrings {
             "ja" to "サンプル数（筆圧あり／全体）",
             "ko" to "샘플(필압 있음/전체)",
             "th" to "จุดตัวอย่าง (มีแรงกด / ทั้งหมด)"
-        ),
+        )
+    )
+
+    private fun part12(): Map<String, Map<String, String>> = mapOf(
         "diag_probe_title" to mapOf(
             "zh-Hant" to "手寫板壓力測試",
             "en" to "Pen tablet pressure test",
@@ -7771,10 +7782,7 @@ object LocalizationStrings {
             "ja" to "ペンタブレットの筆圧テスト",
             "ko" to "펜 태블릿 필압 테스트",
             "th" to "ทดสอบแรงกดแท็บเล็ตปากกา"
-        )
-    )
-
-    private fun part12(): Map<String, Map<String, String>> = mapOf(
+        ),
         "diag_probe_waiting" to mapOf(
             "zh-Hant" to "在上方區塊寫字開始測試",
             "en" to "Write in the area above to start",
@@ -8406,7 +8414,10 @@ object LocalizationStrings {
             "ja" to "半径 R %1@ mm　指を離すと円弧を描きます",
             "ko" to "반지름 R %1@ mm — 놓으면 호가 그려집니다",
             "th" to "รัศมี R %1@ มม. — ปล่อยเพื่อวาดส่วนโค้ง"
-        ),
+        )
+    )
+
+    private fun part13(): Map<String, Map<String, String>> = mapOf(
         "draft_convention_footer" to mapOf(
             "zh-Hant" to "投影法會影響圖框裡的符號，也決定 45° 傳遞的方向。",
             "en" to "The projection method sets the symbol in the frame and the direction of the 45° transfer.",
@@ -8414,10 +8425,7 @@ object LocalizationStrings {
             "ja" to "投影法は図枠の記号と、45° の転送の向きに影響します。",
             "ko" to "투상법은 도곽 안의 기호와 45° 전달 방향을 정합니다.",
             "th" to "วิธีการฉายภาพมีผลต่อสัญลักษณ์ในกรอบและทิศทางการส่งผ่าน 45°"
-        )
-    )
-
-    private fun part13(): Map<String, Map<String, String>> = mapOf(
+        ),
         "draft_draw_on_layer" to mapOf(
             "zh-Hant" to "畫在此圖層",
             "en" to "Draw on this layer",
@@ -9049,7 +9057,10 @@ object LocalizationStrings {
             "ja" to "正解です！",
             "ko" to "정답입니다!",
             "th" to "ถูกต้อง!"
-        ),
+        )
+    )
+
+    private fun part14(): Map<String, Map<String, String>> = mapOf(
         "draft_prob_choice_wrong" to mapOf(
             "zh-Hant" to "不是這個，再想想。",
             "en" to "Not that one — think again.",
@@ -9057,10 +9068,7 @@ object LocalizationStrings {
             "ja" to "違います。もう一度考えてみましょう。",
             "ko" to "아니에요. 다시 생각해 보세요.",
             "th" to "ไม่ใช่ ลองคิดอีกครั้ง"
-        )
-    )
-
-    private fun part14(): Map<String, Map<String, String>> = mapOf(
+        ),
         "draft_prob_clear" to mapOf(
             "zh-Hant" to "清除標記",
             "en" to "Clear the marks",
@@ -9692,7 +9700,10 @@ object LocalizationStrings {
             "ja" to "反対側",
             "ko" to "반대쪽",
             "th" to "อีกด้านหนึ่ง"
-        ),
+        )
+    )
+
+    private fun part15(): Map<String, Map<String, String>> = mapOf(
         "draft_sym_place" to mapOf(
             "zh-Hant" to "放進頁面",
             "en" to "Place on page",
@@ -9700,10 +9711,7 @@ object LocalizationStrings {
             "ja" to "ページに配置",
             "ko" to "페이지에 넣기",
             "th" to "วางลงในหน้า"
-        )
-    )
-
-    private fun part15(): Map<String, Map<String, String>> = mapOf(
+        ),
         "draft_sym_rotation" to mapOf(
             "zh-Hant" to "旋轉",
             "en" to "Rotation",
@@ -10335,7 +10343,10 @@ object LocalizationStrings {
             "ja" to "Google アカウントに権限がありません（HTTP 403）",
             "ko" to "Google 계정에 권한이 없습니다 (HTTP 403).",
             "th" to "บัญชี Google ไม่มีสิทธิ์เพียงพอ (HTTP 403)"
-        ),
+        )
+    )
+
+    private fun part16(): Map<String, Map<String, String>> = mapOf(
         "drive_rate_limited" to mapOf(
             "zh-Hant" to "Drive 速率限制（HTTP 403），稍後重試",
             "en" to "Drive rate limit reached (HTTP 403). Try again later.",
@@ -10343,10 +10354,7 @@ object LocalizationStrings {
             "ja" to "Drive のレート制限に達しました（HTTP 403）。後でもう一度お試しください。",
             "ko" to "Drive 속도 제한에 도달했습니다 (HTTP 403). 나중에 다시 시도하세요.",
             "th" to "ถึงขีดจำกัดอัตราของ Drive (HTTP 403) โปรดลองใหม่ภายหลัง"
-        )
-    )
-
-    private fun part16(): Map<String, Map<String, String>> = mapOf(
+        ),
         "drive_resume_no_location" to mapOf(
             "zh-Hant" to "可續傳上傳沒有回傳 Location",
             "en" to "The resumable upload returned no Location header",
@@ -10978,7 +10986,10 @@ object LocalizationStrings {
             "ja" to "PDF を書き出す",
             "ko" to "PDF 내보내기",
             "th" to "ส่งออก PDF"
-        ),
+        )
+    )
+
+    private fun part17(): Map<String, Map<String, String>> = mapOf(
         "export_preview" to mapOf(
             "zh-Hant" to "匯出預覽",
             "en" to "Export preview",
@@ -10986,10 +10997,7 @@ object LocalizationStrings {
             "ja" to "書き出しプレビュー",
             "ko" to "내보내기 미리보기",
             "th" to "ตัวอย่างการส่งออก"
-        )
-    )
-
-    private fun part17(): Map<String, Map<String, String>> = mapOf(
+        ),
         "export_preview_hint" to mapOf(
             "zh-Hant" to "這就是匯出後的樣子。左右滑動看其他頁。",
             "en" to "This is what the export will look like. Swipe to see other pages.",
@@ -11621,7 +11629,10 @@ object LocalizationStrings {
             "ja" to "月",
             "ko" to "월",
             "th" to "จ."
-        ),
+        )
+    )
+
+    private fun part18(): Map<String, Map<String, String>> = mapOf(
         "guide_month" to mapOf(
             "zh-Hant" to "月份",
             "en" to "Month",
@@ -11629,10 +11640,7 @@ object LocalizationStrings {
             "ja" to "月",
             "ko" to "월",
             "th" to "เดือน"
-        )
-    )
-
-    private fun part18(): Map<String, Map<String, String>> = mapOf(
+        ),
         "guide_my_notes" to mapOf(
             "zh-Hant" to "我的筆記",
             "en" to "My Notes",
@@ -12264,7 +12272,10 @@ object LocalizationStrings {
             "ja" to "卓上／フレックスモード",
             "ko" to "탁상 / 플렉스 모드",
             "th" to "โหมดตั้งโต๊ะ / เฟล็กซ์"
-        ),
+        )
+    )
+
+    private fun part19(): Map<String, Map<String, String>> = mapOf(
         "hint_tag_callout_auto" to mapOf(
             "zh-Hant" to "已切換為緊湊透明註釋標籤，不遮擋周圍手繪內容。",
             "en" to "Switched to a compact transparent callout so surrounding ink strokes remain visible.",
@@ -12272,10 +12283,7 @@ object LocalizationStrings {
             "ja" to "周囲の手書きを隠さないよう、コンパクトな透明ラベルに切り替えました。",
             "ko" to "주변 손글씨를 가리지 않도록 컴팩트하고 투명한 라벨로 전환되었습니다.",
             "th" to "เปลี่ยนเป็นป้ายข้อความโปร่งใสขนาดกะทัดรัดแล้ว เพื่อไม่ให้บดบังลายมือโดยรอบ"
-        )
-    )
-
-    private fun part19(): Map<String, Map<String, String>> = mapOf(
+        ),
         "home" to mapOf(
             "zh-Hant" to "首頁",
             "en" to "Home",
@@ -12907,7 +12915,10 @@ object LocalizationStrings {
             "ja" to "Google アカウントは現在もサインインしています：",
             "ko" to "Google 계정이 아직 로그인되어 있습니다:",
             "th" to "บัญชี Google ยังลงชื่อเข้าใช้อยู่:"
-        ),
+        )
+    )
+
+    private fun part20(): Map<String, Map<String, String>> = mapOf(
         "hw_local_only_explainer" to mapOf(
             "zh-Hant" to "在這個模式下，你的筆記、手寫與錄音只存在這台裝置的沙盒裡，不會有任何網路或雲端傳輸。",
             "en" to "In this mode your notes, handwriting and recordings stay in this device's sandbox. Nothing is sent over the network or to any cloud.",
@@ -12915,10 +12926,7 @@ object LocalizationStrings {
             "ja" to "このモードでは、ノート・手書き・録音はこの端末のサンドボックス内にのみ保存され、ネットワークやクラウドへの送信は一切行われません。",
             "ko" to "이 모드에서는 노트·필기·녹음이 이 기기의 샌드박스에만 저장되며 네트워크나 클라우드로 전송되지 않습니다.",
             "th" to "ในโหมดนี้ โน้ต ลายมือ และการบันทึกเสียงจะอยู่ในแซนด์บ็อกซ์ของอุปกรณ์นี้เท่านั้น ไม่มีการส่งผ่านเครือข่ายหรือคลาวด์"
-        )
-    )
-
-    private fun part20(): Map<String, Map<String, String>> = mapOf(
+        ),
         "hw_local_only_mode" to mapOf(
             "zh-Hant" to "僅本機",
             "en" to "On this device only",
@@ -13550,7 +13558,10 @@ object LocalizationStrings {
             "ja" to "タップやスワイプの操作フローを指示",
             "ko" to "사용자 탭 및 인터랙션 흐름 표시",
             "th" to "ระบุทิศทางการแตะและการโต้ตอบของผู้ใช้"
-        ),
+        )
+    )
+
+    private fun part21(): Map<String, Map<String, String>> = mapOf(
         "invalid_folder_padnote" to mapOf(
             "zh-Hant" to "請選擇同步目錄的根資料夾，不可選擇單本 .padnote 筆記包。",
             "en" to "Please choose a root folder, not a .padnote file.",
@@ -13558,10 +13569,7 @@ object LocalizationStrings {
             "ja" to "ルートフォルダを選択してください。.padnote ファイルではありません。",
             "ko" to ".padnote 파일이 아닌 루트 폴더를 선택하십시오.",
             "th" to "โปรดเลือกโฟลเดอร์หลัก ไม่ใช่ไฟล์ .padnote"
-        )
-    )
-
-    private fun part21(): Map<String, Map<String, String>> = mapOf(
+        ),
         "invalid_server" to mapOf(
             "zh-Hant" to "這個中繼位址無法使用。",
             "en" to "That relay address can't be used.",
@@ -14193,7 +14201,10 @@ object LocalizationStrings {
             "ja" to "言語の適用が完了: %1@",
             "ko" to "언어 적용 완료: %1@",
             "th" to "ใช้ภาษาเรียบร้อย: %1@"
-        ),
+        )
+    )
+
+    private fun part22(): Map<String, Map<String, String>> = mapOf(
         "log_library_migrate_fail" to mapOf(
             "zh-Hant" to "文件庫預設位置遷移失敗：%1@",
             "en" to "Moving the library to the default location failed: %1@",
@@ -14201,10 +14212,7 @@ object LocalizationStrings {
             "ja" to "ライブラリを既定の場所へ移行できませんでした: %1@",
             "ko" to "라이브러리를 기본 위치로 옮기지 못했습니다: %1@",
             "th" to "ย้ายคลังไปยังตำแหน่งเริ่มต้นไม่สำเร็จ: %1@"
-        )
-    )
-
-    private fun part22(): Map<String, Map<String, String>> = mapOf(
+        ),
         "log_library_switched" to mapOf(
             "zh-Hant" to "主要文件庫已切換至：%1@",
             "en" to "Main library switched to: %1@",
@@ -14836,7 +14844,10 @@ object LocalizationStrings {
             "ja" to "【フォーカス同期】%1@… %2@",
             "ko" to "[집중 동기화] %1@… %2@",
             "th" to "[ซิงก์โฟกัส] %1@… %2@"
-        ),
+        )
+    )
+
+    private fun part23(): Map<String, Map<String, String>> = mapOf(
         "log_msg_075" to mapOf(
             "zh-Hant" to "【區網直連】%1@… 忙碌中，稍後再匯入",
             "en" to "[Local link] %1@… is busy; will import it later",
@@ -14844,10 +14855,7 @@ object LocalizationStrings {
             "ja" to "【ローカル直接接続】%1@… は処理中のため、後で取り込みます",
             "ko" to "[로컬 직접 연결] %1@…은(는) 사용 중이라 나중에 가져옵니다",
             "th" to "[เชื่อมต่อตรงในเครือข่ายภายใน] %1@… กำลังไม่ว่าง จะนำเข้าภายหลัง"
-        )
-    )
-
-    private fun part23(): Map<String, Map<String, String>> = mapOf(
+        ),
         "log_msg_076" to mapOf(
             "zh-Hant" to "【區網直連】%1@… 收到並匯入（%2@ms）",
             "en" to "[Local link] %1@… received and imported (%2@ ms)",
@@ -15479,7 +15487,10 @@ object LocalizationStrings {
             "ja" to "カードの枠線を維持",
             "ko" to "카드 테두리 유지",
             "th" to "เก็บเส้นขอบการ์ด"
-        ),
+        )
+    )
+
+    private fun part24(): Map<String, Map<String, String>> = mapOf(
         "math_clear" to mapOf(
             "zh-Hant" to "清除",
             "en" to "Clear",
@@ -15487,10 +15498,7 @@ object LocalizationStrings {
             "ja" to "クリア",
             "ko" to "지우기",
             "th" to "ล้าง"
-        )
-    )
-
-    private fun part24(): Map<String, Map<String, String>> = mapOf(
+        ),
         "math_const_01" to mapOf(
             "zh-Hant" to "圓周率 π",
             "en" to "Pi π",
@@ -16122,7 +16130,10 @@ object LocalizationStrings {
             "ja" to "回転",
             "ko" to "회전",
             "th" to "หมุน"
-        ),
+        )
+    )
+
+    private fun part25(): Map<String, Map<String, String>> = mapOf(
         "model3d_studio" to mapOf(
             "zh-Hant" to "3D 模型工作室",
             "en" to "3D Model Studio",
@@ -16130,10 +16141,7 @@ object LocalizationStrings {
             "ja" to "3D モデルスタジオ",
             "ko" to "3D 모델 스튜디오",
             "th" to "สตูดิโอโมเดล 3D"
-        )
-    )
-
-    private fun part25(): Map<String, Map<String, String>> = mapOf(
+        ),
         "model3d_title" to mapOf(
             "zh-Hant" to "3D 幾何模型",
             "en" to "3D Model",
@@ -16765,7 +16773,10 @@ object LocalizationStrings {
             "ja" to "次へ",
             "ko" to "다음",
             "th" to "ถัดไป"
-        ),
+        )
+    )
+
+    private fun part26(): Map<String, Map<String, String>> = mapOf(
         "onboarding_permission_body" to mapOf(
             "zh-Hant" to "錄音需要麥克風。不錄音就用不到 —— 現在允許或之後再說都可以，其餘功能不受影響。",
             "en" to "Recording needs the microphone. Nothing else does — allow it now or later; everything else works either way.",
@@ -16773,10 +16784,7 @@ object LocalizationStrings {
             "ja" to "録音にはマイクが必要です。それ以外では使いません。今許可しても後でもかまいません。他の機能には影響しません。",
             "ko" to "녹음에는 마이크가 필요합니다. 그 외에는 쓰지 않습니다. 지금 허용하든 나중에 하든 다른 기능은 그대로 작동합니다.",
             "th" to "การบันทึกเสียงต้องใช้ไมโครโฟน นอกจากนี้ไม่ใช้เลย จะอนุญาตตอนนี้หรือภายหลังก็ได้ ฟังก์ชันอื่นไม่ได้รับผลกระทบ"
-        )
-    )
-
-    private fun part26(): Map<String, Map<String, String>> = mapOf(
+        ),
         "onboarding_permission_title" to mapOf(
             "zh-Hant" to "只有一項權限",
             "en" to "Just one permission",
@@ -17408,7 +17416,10 @@ object LocalizationStrings {
             "ja" to "手のひらはペンより先に触れがちです。この時間内に描かれた手のひらの線は、ペンが触れた時点で取り消されます。",
             "ko" to "보통 펜보다 손바닥이 먼저 닿습니다. 이 시간 안에 그려진 손바닥 자국은 펜이 닿을 때 되돌립니다.",
             "th" to "ฝ่ามือมักแตะก่อนปากกา รอยที่เกิดในช่วงเวลานี้จะถูกย้อนกลับเมื่อปากกาแตะ"
-        ),
+        )
+    )
+
+    private fun part27(): Map<String, Map<String, String>> = mapOf(
         "paper_content" to mapOf(
             "zh-Hant" to "這張紙的內容",
             "en" to "Content on this paper",
@@ -17416,10 +17427,7 @@ object LocalizationStrings {
             "ja" to "この用紙の内容",
             "ko" to "이 용지의 내용",
             "th" to "เนื้อหาบนกระดาษนี้"
-        )
-    )
-
-    private fun part27(): Map<String, Map<String, String>> = mapOf(
+        ),
         "paper_content_none" to mapOf(
             "zh-Hant" to "不套用，只要空白頁",
             "en" to "Empty page",
@@ -18051,7 +18059,10 @@ object LocalizationStrings {
             "ja" to "名前は空にできません。最大 24 文字です。",
             "ko" to "이름은 비워 둘 수 없으며 최대 24자입니다.",
             "th" to "ชื่อต้องไม่ว่างและยาวไม่เกิน 24 ตัวอักษร"
-        ),
+        )
+    )
+
+    private fun part28(): Map<String, Map<String, String>> = mapOf(
         "profile_error_pin_storage" to mapOf(
             "zh-Hant" to "無法安全地儲存 PIN，所以沒有上鎖。請再試一次。",
             "en" to "The PIN could not be stored securely, so nothing was locked. Please try again.",
@@ -18059,10 +18070,7 @@ object LocalizationStrings {
             "ja" to "PIN を安全に保存できなかったため、ロックされていません。もう一度お試しください。",
             "ko" to "PIN을 안전하게 저장하지 못해 잠금이 설정되지 않았습니다. 다시 시도하세요.",
             "th" to "บันทึก PIN อย่างปลอดภัยไม่ได้ จึงไม่ได้ล็อก โปรดลองอีกครั้ง"
-        )
-    )
-
-    private fun part28(): Map<String, Map<String, String>> = mapOf(
+        ),
         "profile_google_account" to mapOf(
             "zh-Hant" to "Google 帳號",
             "en" to "Google account",
@@ -18694,7 +18702,10 @@ object LocalizationStrings {
             "ja" to "音声録音",
             "ko" to "음성 녹음",
             "th" to "บันทึกเสียง"
-        ),
+        )
+    )
+
+    private fun part29(): Map<String, Map<String, String>> = mapOf(
         "recording_failed" to mapOf(
             "zh-Hant" to "錄音啟動失敗",
             "en" to "Recording could not start",
@@ -18702,10 +18713,7 @@ object LocalizationStrings {
             "ja" to "録音を開始できませんでした",
             "ko" to "녹음을 시작할 수 없습니다",
             "th" to "เริ่มบันทึกเสียงไม่ได้"
-        )
-    )
-
-    private fun part29(): Map<String, Map<String, String>> = mapOf(
+        ),
         "recording_inbox" to mapOf(
             "zh-Hant" to "錄音收件匣",
             "en" to "Recording Inbox",
@@ -19337,7 +19345,10 @@ object LocalizationStrings {
             "ja" to "サンプルが変更されています",
             "ko" to "샘플이 변경되었습니다",
             "th" to "ตัวอย่างนี้มีการแก้ไข"
-        ),
+        )
+    )
+
+    private fun part30(): Map<String, Map<String, String>> = mapOf(
         "sample_lectures" to mapOf(
             "zh-Hant" to "課堂與會議記錄",
             "en" to "Lectures & Meetings",
@@ -19345,10 +19356,7 @@ object LocalizationStrings {
             "ja" to "講義と会議のノート",
             "ko" to "강의 및 회의",
             "th" to "การบรรยายและการประชุม"
-        )
-    )
-
-    private fun part30(): Map<String, Map<String, String>> = mapOf(
+        ),
         "sample_mark" to mapOf(
             "zh-Hant" to "設為範例",
             "en" to "Mark as Sample",
@@ -19980,7 +19988,10 @@ object LocalizationStrings {
             "ja" to "暗記ポイント：[ Kairumo は UniFFI + Rust コアを採用し、遅延ゼロの60FPS描画を実現！ ]",
             "ko" to "핵심 암기 정답: [ Kairumo는 UniFFI + Rust 코어를 채택하여 제로 레이턴시 60FPS의 극강 유연성을 제공합니다! ]",
             "th" to "คำตอบสำคัญ: [ Kairumo ใช้ UniFFI + Rust core เพื่อความลื่นไหลระดับ 60FPS แบบไร้ความหน่วง! ]"
-        ),
+        )
+    )
+
+    private fun part31(): Map<String, Map<String, String>> = mapOf(
         "sample_showcase_tool_10_oilpaint" to mapOf(
             "zh-Hant" to "10. Oil Paint (油畫):",
             "en" to "10. Oil Paint:",
@@ -19988,10 +19999,7 @@ object LocalizationStrings {
             "ja" to "10. Oil Paint (油絵):",
             "ko" to "10. Oil Paint (유화):",
             "th" to "10. Oil Paint (สีน้ำมัน):"
-        )
-    )
-
-    private fun part31(): Map<String, Map<String, String>> = mapOf(
+        ),
         "sample_showcase_tool_11_watercolor" to mapOf(
             "zh-Hant" to "11. Watercolor (水彩):",
             "en" to "11. Watercolor:",
@@ -20623,7 +20631,10 @@ object LocalizationStrings {
             "ja" to "安定ノート",
             "ko" to "안정 필기",
             "th" to "จดโน้ตสม่ำเสมอ"
-        ),
+        )
+    )
+
+    private fun part32(): Map<String, Map<String, String>> = mapOf(
         "settings_pen_preset_title" to mapOf(
             "zh-Hant" to "筆感模式快速切換",
             "en" to "Quick Pressure Presets",
@@ -20631,10 +20642,7 @@ object LocalizationStrings {
             "ja" to "筆圧プリセット（ワンタップ切替）",
             "ko" to "필압 프리셋 빠른 전환",
             "th" to "พรีเซ็ตแรงกดปากกา"
-        )
-    )
-
-    private fun part32(): Map<String, Map<String, String>> = mapOf(
+        ),
         "shape_change_kind" to mapOf(
             "zh-Hant" to "形狀種類",
             "en" to "Shape type",
@@ -21266,7 +21274,10 @@ object LocalizationStrings {
             "ja" to "保存データ",
             "ko" to "저장된 데이터",
             "th" to "ข้อมูลที่เก็บไว้"
-        ),
+        )
+    )
+
+    private fun part33(): Map<String, Map<String, String>> = mapOf(
         "shape_kind_summingjunction" to mapOf(
             "zh-Hant" to "加總接點",
             "en" to "Summing junction",
@@ -21274,10 +21285,7 @@ object LocalizationStrings {
             "ja" to "和接合",
             "ko" to "합산 접합",
             "th" to "จุดรวมผลรวม"
-        )
-    )
-
-    private fun part33(): Map<String, Map<String, String>> = mapOf(
+        ),
         "shape_kind_sun" to mapOf(
             "zh-Hant" to "太陽",
             "en" to "Sun",
@@ -21909,7 +21917,10 @@ object LocalizationStrings {
             "ja" to "挿入しました。ドラッグで移動、空白をタップで完了。",
             "ko" to "삽입됨 — 끌어서 이동하고 빈 곳을 눌러 완료합니다.",
             "th" to "แทรกแล้ว — ลากเพื่อย้าย แตะที่ว่างเมื่อเสร็จ"
-        ),
+        )
+    )
+
+    private fun part34(): Map<String, Map<String, String>> = mapOf(
         "solid_preset_circle" to mapOf(
             "zh-Hant" to "圓形",
             "en" to "Circle",
@@ -21917,10 +21928,7 @@ object LocalizationStrings {
             "ja" to "円",
             "ko" to "원",
             "th" to "วงกลม"
-        )
-    )
-
-    private fun part34(): Map<String, Map<String, String>> = mapOf(
+        ),
         "solid_preset_hexagon" to mapOf(
             "zh-Hant" to "六邊形",
             "en" to "Hexagon",
@@ -22552,7 +22560,10 @@ object LocalizationStrings {
             "ja" to "完了",
             "ko" to "완료",
             "th" to "เสร็จแล้ว"
-        ),
+        )
+    )
+
+    private fun part35(): Map<String, Map<String, String>> = mapOf(
         "sticker_circle_mark" to mapOf(
             "zh-Hant" to "圈選",
             "en" to "Circle",
@@ -22560,10 +22571,7 @@ object LocalizationStrings {
             "ja" to "丸で囲む",
             "ko" to "동그라미",
             "th" to "วงกลม"
-        )
-    )
-
-    private fun part35(): Map<String, Map<String, String>> = mapOf(
+        ),
         "sticker_clock" to mapOf(
             "zh-Hant" to "時間",
             "en" to "Time",
@@ -23195,7 +23203,10 @@ object LocalizationStrings {
             "ja" to "ローカルデータをリセット",
             "ko" to "로컬 데이터 초기화",
             "th" to "รีเซ็ตข้อมูลในเครื่อง"
-        ),
+        )
+    )
+
+    private fun part36(): Map<String, Map<String, String>> = mapOf(
         "storage_sync_explainer" to mapOf(
             "zh-Hant" to "此位置僅屬於本裝置。跨設備更新會使用穩定的筆記本 ID，以及您設定的 Google Drive 或資料夾同步，因此 Mac、iPhone、iPad 與 Android 都不依賴其他裝置的本機路徑。",
             "en" to "This location is local to this device. Cross-device updates use stable notebook IDs and your configured Google Drive or folder sync, so Mac, iPhone, iPad, and Android never depend on another device’s local path.",
@@ -23203,10 +23214,7 @@ object LocalizationStrings {
             "ja" to "この場所はこの端末専用です。端末間の更新には安定したノート ID と、設定済みの Google Drive またはフォルダ同期を使用するため、Mac、iPhone、iPad、Android が別端末のローカルパスに依存することはありません。",
             "ko" to "이 위치는 이 기기에만 적용됩니다. 기기 간 업데이트는 안정적인 노트 ID와 설정된 Google Drive 또는 폴더 동기화를 사용하므로 Mac, iPhone, iPad 및 Android는 다른 기기의 로컬 경로에 의존하지 않습니다.",
             "th" to "ตำแหน่งนี้ใช้เฉพาะอุปกรณ์เครื่องนี้ การอัปเดตข้ามอุปกรณ์ใช้รหัสสมุดบันทึกที่คงที่และ Google Drive หรือการซิงค์โฟลเดอร์ที่คุณตั้งค่าไว้ ดังนั้น Mac, iPhone, iPad และ Android จะไม่พึ่งพาพาธภายในของอุปกรณ์อื่น"
-        )
-    )
-
-    private fun part36(): Map<String, Map<String, String>> = mapOf(
+        ),
         "storage_sync_running" to mapOf(
             "zh-Hant" to "同步仍在進行中，請等它結束後再試一次。",
             "en" to "A sync operation is still running. Please try again after it finishes.",
@@ -23838,7 +23846,10 @@ object LocalizationStrings {
             "ja" to "同期の実行中です。終わってからもう一度お試しください。",
             "ko" to "동기화가 실행 중입니다. 끝난 뒤 다시 시도하세요.",
             "th" to "กำลังซิงค์อยู่ โปรดรอให้เสร็จแล้วลองใหม่"
-        ),
+        )
+    )
+
+    private fun part37(): Map<String, Map<String, String>> = mapOf(
         "sync_reset_cloud_confirm_body" to mapOf(
             "zh-Hant" to "這會永久刪除本 App 存放在你 Drive 裡的所有資料。本機的筆記不會被動到，下一輪同步會重新上傳。只存在雲端的內容（某台你之後沒再打開過的裝置上的修改）會消失。",
             "en" to "This permanently deletes everything this app stores in your Drive. Notes on this device are not touched and will be re-uploaded on the next sync. Anything that exists only in the cloud — edits from a device you have not opened since — will be lost.",
@@ -23846,10 +23857,7 @@ object LocalizationStrings {
             "ja" to "このアプリが Drive に保存したデータをすべて完全に削除します。この端末のノートは変更されず、次回の同期で再アップロードされます。クラウドにしかない内容（その後開いていない端末での編集）は失われます。",
             "ko" to "이 앱이 Drive에 저장한 모든 데이터를 영구 삭제합니다. 이 기기의 노트는 그대로이며 다음 동기화에서 다시 업로드됩니다. 클라우드에만 있는 내용은 사라집니다.",
             "th" to "การดำเนินการนี้จะลบข้อมูลทั้งหมดที่แอปเก็บไว้ใน Drive อย่างถาวร บันทึกในเครื่องนี้จะไม่ถูกแตะต้องและจะอัปโหลดใหม่ในการซิงค์ครั้งถัดไป สิ่งที่มีอยู่เฉพาะบนคลาวด์จะสูญหาย"
-        )
-    )
-
-    private fun part37(): Map<String, Map<String, String>> = mapOf(
+        ),
         "sync_reset_cloud_confirm_title" to mapOf(
             "zh-Hant" to "要重置雲端同步嗎？",
             "en" to "Reset cloud sync?",
@@ -24481,7 +24489,10 @@ object LocalizationStrings {
             "ja" to "文字サイズ",
             "ko" to "글자 크기",
             "th" to "ขนาดตัวอักษร"
-        ),
+        )
+    )
+
+    private fun part38(): Map<String, Map<String, String>> = mapOf(
         "table_header_fill" to mapOf(
             "zh-Hant" to "表頭底色",
             "en" to "Header fill",
@@ -24489,10 +24500,7 @@ object LocalizationStrings {
             "ja" to "見出しの塗りつぶし",
             "ko" to "머리글 채우기",
             "th" to "สีพื้นหัวตาราง"
-        )
-    )
-
-    private fun part38(): Map<String, Map<String, String>> = mapOf(
+        ),
         "table_header_row" to mapOf(
             "zh-Hant" to "第一列為表頭",
             "en" to "Header Row",
@@ -25124,7 +25132,10 @@ object LocalizationStrings {
             "ja" to "めくる／隠す",
             "ko" to "열기/가리기",
             "th" to "เปิดหรือปิดคลุม"
-        ),
+        )
+    )
+
+    private fun part39(): Map<String, Map<String, String>> = mapOf(
         "text_bold" to mapOf(
             "zh-Hant" to "粗體",
             "en" to "Bold",
@@ -25132,10 +25143,7 @@ object LocalizationStrings {
             "ja" to "太字",
             "ko" to "굵게",
             "th" to "ตัวหนา"
-        )
-    )
-
-    private fun part39(): Map<String, Map<String, String>> = mapOf(
+        ),
         "text_color" to mapOf(
             "zh-Hant" to "文字顏色",
             "en" to "Text color",
@@ -25767,7 +25775,10 @@ object LocalizationStrings {
             "ja" to "一問一答",
             "ko" to "질문과 답",
             "th" to "ถาม–ตอบ"
-        ),
+        )
+    )
+
+    private fun part40(): Map<String, Map<String, String>> = mapOf(
         "tmpl_qa_desc" to mapOf(
             "zh-Hant" to "六組問答：先寫問題，事後回想作答",
             "en" to "Six Q&A blocks — write the question first, answer from memory later",
@@ -25775,10 +25786,7 @@ object LocalizationStrings {
             "ja" to "6組の問答。先に問い、あとで思い出して答える",
             "ko" to "6개 문답 블록. 질문 먼저, 답은 나중에",
             "th" to "หกบล็อกถามตอบ"
-        )
-    )
-
-    private fun part40(): Map<String, Map<String, String>> = mapOf(
+        ),
         "tmpl_quadrant" to mapOf(
             "zh-Hant" to "四象限筆記",
             "en" to "Quadrant Method",
@@ -26410,7 +26418,10 @@ object LocalizationStrings {
             "ja" to "再翻訳",
             "ko" to "다시 번역",
             "th" to "แปลใหม่"
-        ),
+        )
+    )
+
+    private fun part41(): Map<String, Map<String, String>> = mapOf(
         "trans_pen_scanning" to mapOf(
             "zh-Hant" to "正在辨識與翻譯…",
             "en" to "Recognizing & translating…",
@@ -26418,10 +26429,7 @@ object LocalizationStrings {
             "ja" to "文字認識・翻訳中…",
             "ko" to "텍스트 인식 및 번역 중…",
             "th" to "กำลังรู้จำข้อความและแปล…"
-        )
-    )
-
-    private fun part41(): Map<String, Map<String, String>> = mapOf(
+        ),
         "trans_pen_setup_desc" to mapOf(
             "zh-Hant" to "請選擇本筆記本要掃描的目標語系與翻譯輸出語系。在頁面上拖曳掃過單字或句子即可立即快顯翻譯。",
             "en" to "Choose the target scan language and output translation language for this notebook. Drag across any word or sentence on the page to translate immediately.",
@@ -27053,7 +27061,10 @@ object LocalizationStrings {
             "ja" to "操作マニュアル",
             "ko" to "사용 설명서",
             "th" to "คู่มือการใช้งาน"
-        ),
+        )
+    )
+
+    private fun part42(): Map<String, Map<String, String>> = mapOf(
         "user_manual_desc" to mapOf(
             "zh-Hant" to "逐步教學，每一章都配實機截圖",
             "en" to "Step-by-step chapters, each with real screenshots",
@@ -27061,10 +27072,7 @@ object LocalizationStrings {
             "ja" to "手順ごとの各章に実機のスクリーンショット付き",
             "ko" to "단계별 각 장마다 실제 화면 스크린샷 제공",
             "th" to "บทเรียนทีละขั้น พร้อมภาพหน้าจอจริงในทุกบท"
-        )
-    )
-
-    private fun part42(): Map<String, Map<String, String>> = mapOf(
+        ),
         "user_profile" to mapOf(
             "zh-Hant" to "個人基本資訊",
             "en" to "Profile Information",
@@ -27696,7 +27704,10 @@ object LocalizationStrings {
             "ja" to "ページ全体を表示",
             "ko" to "페이지 전체 보기",
             "th" to "แสดงทั้งหน้า"
-        ),
+        )
+    )
+
+    private fun part43(): Map<String, Map<String, String>> = mapOf(
         "zoom_fit_width" to mapOf(
             "zh-Hant" to "符合頁寬",
             "en" to "Fit page width",
@@ -27704,10 +27715,7 @@ object LocalizationStrings {
             "ja" to "ページの幅に合わせる",
             "ko" to "페이지 너비에 맞춤",
             "th" to "พอดีความกว้างหน้า"
-        )
-    )
-
-    private fun part43(): Map<String, Map<String, String>> = mapOf(
+        ),
         "zoom_menu" to mapOf(
             "zh-Hant" to "畫布縮放",
             "en" to "Canvas zoom",

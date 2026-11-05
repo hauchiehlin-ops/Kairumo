@@ -345,6 +345,11 @@ pub fn oauth_collab_authorize_url(
     if !pick_folder_id.is_empty() {
         params.push(("trigger_onepick", "true".to_string()));
         params.push(("allow_folder_selection", "true".to_string()));
+        // `file_ids` 只是**搜尋篩選**（Google 文件原文：filter the search results），
+        // 不是預選。沒有再限定類型的話，使用者一點進資料夾就只看到滿滿的事件小檔，
+        // 而「選取」只對被點選的項目有效 —— 進了資料夾就再也選不到資料夾本身，
+        // 卡在挑選器裡出不來。只列資料夾：畫面上只有那一個可選的東西。
+        params.push(("mimetypes", "application/vnd.google-apps.folder".to_string()));
         params.push(("file_ids", pick_folder_id));
     }
     if !login_hint.is_empty() {
@@ -835,6 +840,8 @@ mod tests {
         );
         assert!(url.contains("trigger_onepick=true"));
         assert!(url.contains("file_ids=FOLDER1"));
+        assert!(url.contains("allow_folder_selection=true"));
+        assert!(url.contains("mimetypes=application%2Fvnd.google-apps.folder"));
         assert!(url.contains("drive.file"));
         assert!(!url.contains("drive.appdata"));
         let ids = oauth_parse_picked_ids("app:/cb?code=x&picked_file_ids=a%2Cb&state=s".into());

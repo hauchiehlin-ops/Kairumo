@@ -325,14 +325,19 @@ final class CloudCollabManager: ObservableObject {
         lastError = nil
         busyMessage = L10n.t("cloud_collab_sharing")
         defer { busyMessage = nil }
-        if !CollabDriveAuth.shared.isAuthorized {
+        // 憑證：沒有、或有但已失效（refresh token 被撤銷）都**在這一次點擊裡**開授權畫面。
+        // 舊版只看 `isAuthorized`：憑證失效時第一次點只換到一句錯誤（同時把旗標清掉），
+        // 要再點一次才會出現授權畫面 —— 使用者看到的是「按了沒用，要按兩次」。
+        var http = CollabDriveAuth.shared.isAuthorized ? await CollabDriveAuth.shared.makeHttp() : nil
+        if http == nil {
             let auth = await CollabDriveAuth.shared.authorize(loginHint: GoogleAuth.shared.accountEmail ?? "")
             guard auth.ok else {
                 if auth.error != "cancelled" { lastError = L10n.t("cloud_collab_err_reauth") }
                 return nil
             }
+            http = await CollabDriveAuth.shared.makeHttp()
         }
-        guard let http = await CollabDriveAuth.shared.makeHttp() else {
+        guard let http else {
             lastError = L10n.t("cloud_collab_err_reauth")
             return nil
         }
@@ -370,13 +375,21 @@ final class CloudCollabManager: ObservableObject {
         }
         entry.roomId = collab.currentRoomId
         entry.keyBase64 = collab.roomKeyBase64 ?? ""
+        // 登記要在**整本推上去之後**才算數。舊版先登記再推：推失敗時這本筆記已經被當成
+        // 「已分享」，面板直接切到已分享畫面（QR Code、成員、停止同步），而雲端其實是空的。
+        let registryBefore = registryJson
         registryJson = sharedRegistryUpsert(json: registryJson, entry: entry)
         // 4. 把整本推上共享資料夾。
-        guard let s = await session(for: entry) else { return nil }
+        guard let s = await session(for: entry) else {
+            registryJson = registryBefore
+            lastError = L10n.t("cloud_collab_err_reauth")
+            return nil
+        }
         localDirty = true
         let report = await pushRound(entry: entry, session: s)
         guard report.ok else {
-            lastError = report.error
+            registryJson = registryBefore
+            lastError = report.error.isEmpty ? L10n.t("cloud_collab_err_retry") : L10n.coreText(report.error)
             return nil
         }
         let files = UInt32(packageOpFileSizes(packagePath: packagePath(notebookId)).count)
@@ -471,7 +484,9 @@ final class CloudCollabManager: ObservableObject {
         let hint = GoogleAuth.shared.accountEmail ?? ""
         let auth = await CollabDriveAuth.shared.authorize(pickFolderId: invite.driveFolderId, loginHint: hint)
         guard auth.ok else {
-            if auth.error != "cancelled" { lastError = L10n.t("cloud_collab_err_reauth") }
+            // 關掉挑選器多半是「點進資料夾後找不到選取鈕」—— 安靜地失敗的話，使用者
+            // 只會看到又回到同一個畫面。告訴他下一次該怎麼點。
+            lastError = L10n.t(auth.error == "cancelled" ? "cloud_collab_err_not_picked" : "cloud_collab_err_reauth")
             return false
         }
         guard let http = await CollabDriveAuth.shared.makeHttp() else {
@@ -484,7 +499,10 @@ final class CloudCollabManager: ObservableObject {
             collabDriveProbe(http: http, folderId: folder, expectedMinFiles: minFiles)
         }.value
         guard probe.access == .ready else {
-            lastError = L10n.t(probe.messageKey)
+            // 沒選到那個資料夾（選了別的、或什麼都沒選）時，權限探測的結果只是後果；
+            // 真正要講的是「回去選資料夾」。
+            let pickedFolder = auth.picked.contains { $0 == folder }
+            lastError = L10n.t(pickedFolder ? probe.messageKey : "cloud_collab_err_not_picked")
             return false
         }
         return await finishJoin(invite: invite, folderName: probe.folderName)
