@@ -1557,7 +1557,10 @@ mod tests {
             DriveRoot::Folder("root".into()),
         );
         drive.get_or_create_collab_root(None).unwrap();
-        assert_eq!(*drive.http.created.lock().unwrap(), vec!["Kairumo Co.".to_string()]);
+        assert_eq!(
+            *drive.http.created.lock().unwrap(),
+            vec!["Kairumo Co.".to_string()]
+        );
     }
 
     #[test]

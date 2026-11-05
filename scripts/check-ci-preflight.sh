@@ -133,6 +133,21 @@ if command -v cargo-deny >/dev/null 2>&1; then
 fi
 
 # -----------------------------------------------------------------------------
+# 4.6. [預防檢驗] Rust 排版（防止 CI 的 `cargo fmt --all --check` 失敗）
+# -----------------------------------------------------------------------------
+# CI 的 Test (macos-latest／ubuntu-latest) 第一步就是 `cargo fmt --all --check`，
+# 排版不對整條測試直接紅。本機 SOP 原本沒查這一項，於是排版問題要推上去才看得到。
+# **只檢查、不自動改**：這支腳本也跑在 pre-push 裡，那時改的是工作目錄，
+# 被推上去的仍是沒排好的那個 commit —— 自動改只會讓人以為過了。
+if command -v cargo >/dev/null 2>&1 && cargo fmt --version >/dev/null 2>&1; then
+    if (cd "${REPO_ROOT}" && cargo fmt --all --check >/dev/null 2>&1); then
+        report_pass "Rust 排版符合 cargo fmt"
+    else
+        report_fail "Rust 排版不符合 cargo fmt（CI 的 cargo fmt --all --check 會失敗）" "執行 cargo fmt --all 後重新提交（cargo fmt --all --check 可看差異）"
+    fi
+fi
+
+# -----------------------------------------------------------------------------
 # 5. [預防檢驗] 四大守門機制（Gatekeepers）驗證
 # -----------------------------------------------------------------------------
 echo ""
