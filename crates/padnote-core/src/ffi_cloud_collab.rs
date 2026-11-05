@@ -97,13 +97,14 @@ pub fn collab_drive_folder_name(title: String) -> String {
     }
 }
 
-/// 建立協作資料夾。**同步等待 HTTP，不要在主執行緒呼叫。**
+/// 建立協作筆記本的專屬資料夾：一律收納於「Kairumo Co.」主資料夾底下。
+/// **同步等待 HTTP，不要在主執行緒呼叫。**
 #[uniffi::export]
 pub fn collab_drive_create_folder(
     http: Arc<dyn FfiDriveHttp>,
     title: String,
 ) -> FfiDriveShareResult {
-    match provider(http, "").create_folder(&collab_drive_folder_name(title)) {
+    match provider(http, "").create_notebook_collab_folder(&title) {
         Ok(id) => share_ok(id),
         Err(e) => share_err(e),
     }

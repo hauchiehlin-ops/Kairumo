@@ -882,14 +882,76 @@ const FOLDER_MIME: &str = "application/vnd.google-apps.folder";
 impl<H: DriveHttp> GDriveProvider<H> {
     /// 在使用者的雲端硬碟根目錄建立一個資料夾，回傳 id。
     pub fn create_folder(&self, name: &str) -> Result<String, SyncError> {
-        let created = self
-            .http
-            .post_json(FILES_URL, &json!({ "name": name, "mimeType": FOLDER_MIME }))?;
+        self.create_subfolder("root", name)
+    }
+
+    /// 在指定父資料夾底下建立子資料夾（`parents: [parent_id]`）。
+    pub fn create_subfolder(&self, parent_id: &str, name: &str) -> Result<String, SyncError> {
+        let parent = if parent_id.is_empty() { "root" } else { parent_id };
+        let created = self.http.post_json(
+            FILES_URL,
+            &json!({
+                "name": name,
+                "mimeType": FOLDER_MIME,
+                "parents": [parent],
+            }),
+        )?;
         created
             .get("id")
             .and_then(Value::as_str)
             .map(str::to_string)
             .ok_or_else(|| SyncError::Backend(format!("建立 {name} 之後 Drive 沒有回傳 id")))
+    }
+
+    /// 在指定父資料夾底下尋找指定名稱的資料夾（未丟進垃圾桶者）。
+    pub fn find_folder_in(&self, parent_id: &str, name: &str) -> Result<Option<String>, SyncError> {
+        let parent = if parent_id.is_empty() { "root" } else { parent_id };
+        let query = format!(
+            "'{}' in parents and mimeType = '{FOLDER_MIME}' and name = '{}' and trashed = false",
+            escape_drive_literal(parent),
+            escape_drive_literal(name),
+        );
+        let pages = self.list_all(&query, "id, name")?;
+        for page in pages {
+            if let Some(files) = page.get("files").and_then(Value::as_array) {
+                for f in files {
+                    if let Some(id) = f.get("id").and_then(Value::as_str) {
+                        return Ok(Some(id.to_string()));
+                    }
+                }
+            }
+        }
+        Ok(None)
+    }
+
+    /// 取得或建立「Kairumo Co.」主協同資料夾（位於雲端硬碟根目錄）。
+    pub fn get_or_create_collab_root(&self) -> Result<String, SyncError> {
+        const ROOT_NAME: &str = "Kairumo Co.";
+        if let Some(id) = self.find_folder_in("root", ROOT_NAME)? {
+            return Ok(id);
+        }
+        self.create_subfolder("root", ROOT_NAME)
+    }
+
+    /// 在「Kairumo Co.」主資料夾內建立（或尋找）該次筆記本作業的專屬子資料夾。
+    /// 讓雲端硬碟根目錄保持乾淨，所有協同筆記一律收納於「Kairumo Co.」底下。
+    pub fn create_notebook_collab_folder(&self, notebook_title: &str) -> Result<String, SyncError> {
+        let root_id = self.get_or_create_collab_root()?;
+        let clean = notebook_title
+            .trim()
+            .chars()
+            .filter(|c| !c.is_control())
+            .take(80)
+            .collect::<String>();
+        let folder_name = if clean.is_empty() {
+            "Untitled".to_string()
+        } else {
+            clean
+        };
+        if let Some(id) = self.find_folder_in(&root_id, &folder_name)? {
+            return Ok(id);
+        }
+        self.create_subfolder(&root_id, &folder_name)
     }
 
     /// 授予某個 Email 權限（`writer` 為編輯者），Google 會寄通知信。回傳 permission id。
