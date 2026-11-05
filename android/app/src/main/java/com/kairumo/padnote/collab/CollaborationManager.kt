@@ -250,6 +250,18 @@ class CollaborationManager(private val context: Context) {
     val tailscaleInviteLink: String?
         get() = if (tailscaleRelayAddress != null) getInviteLink(useTailscale = true) else null
 
+    /**
+     * 帶上「是哪一本筆記」的邀請連結（QR Code 用）。舊版只有房號、金鑰、位址：對方一掃，
+     * App 起來之後不知道要打開哪一本，只好停在首頁。補上 `nb`／`title`（與雲端共享同一個
+     * v2 格式，由核心組字串，與 Apple 相同，I6）。
+     */
+    fun notebookInviteLink(link: String, notebookId: String?, title: String): String {
+        if (notebookId.isNullOrEmpty() || link.isEmpty()) return link
+        val invite = uniffi.padnote_core.collabParseInviteV2(link)
+        if (invite.roomId.isEmpty()) return link
+        return uniffi.padnote_core.collabInviteLinkV2(invite.copy(notebookId = notebookId, title = title))
+    }
+
     private fun connect(room: String, asHost: Boolean, isReconnecting: Boolean = false) {
         // 新的房間從頭來；斷線重連回同一個房間則從看過的序號接著補。
         if (!isReconnecting) lastSeq = 0L

@@ -309,6 +309,16 @@ public struct HomeWorkbenchView: View {
             .onReceive(NotificationCenter.default.publisher(for: AppCommand.focusSearch)) { _ in
                 searchFieldFocused = true
             }
+            // 同一 Wi‑Fi／Tailscale 協同邀請（相機掃 QR Code）：人在首頁時打開那本筆記。
+            // 用 `@Published` 而不是通知：冷啟動（App 沒在跑、掃了才被叫起來）時首頁一訂閱
+            // 就會收到目前的值，不會掉。連結**留著**給編輯器 —— 它會打開協同面板並加入房間。
+            .onReceive(CollaborationManager.shared.$pendingInviteLink) { link in
+                guard let link, selectedNotebookForEditing == nil,
+                      let id = Self.notebookForCollabInvite(link, store: notebookStore),
+                      let found = notebookStore.notebooks.first(where: { $0.id.lowercased() == id.lowercased() })
+                else { return }
+                selectedNotebookForEditing = found
+            }
             .onReceive(NotificationCenter.default.publisher(for: AppCommand.openNotebook)) { note in
                 if let id = note.object as? String,
                    let found = notebookStore.notebooks.first(where: { $0.id.lowercased() == id.lowercased() }) {
@@ -867,6 +877,23 @@ public struct HomeWorkbenchView: View {
     }
 
     // MARK: - Menu Actions Safe Dispatchers (iPadOS / iOS popover dismissal lifecycle)
+
+    /// 協同邀請要打開哪一本：連結裡的 `nb`（房主那本的 id）；這台沒有就以同一個 id 建一本空白的
+    /// （書庫看得到、之後同步也對得上）。舊版房主的 QR Code 沒有 `nb`，退回用房號當 id ——
+    /// 同一間房再掃一次會打開同一本，不會每掃一次多一本。
+    static func notebookForCollabInvite(_ link: String, store: NotebookStore) -> String? {
+        let invite = collabParseInviteV2(text: link)
+        let nb = invite.notebookId.trimmingCharacters(in: .whitespacesAndNewlines)
+        let target = (nb.isEmpty ? invite.roomId : nb)
+            .trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard !target.isEmpty else { return nil }
+        if let existing = store.notebooks.first(where: { $0.id.lowercased() == target }) {
+            return existing.id
+        }
+        let rawTitle = invite.title.trimmingCharacters(in: .whitespacesAndNewlines)
+        let title = rawTitle.isEmpty ? L10n.t("collaborate") : rawTitle
+        return store.createNotebook(title: title, template: .blank, id: target).id
+    }
 
     private func openNotebookFromMenu(_ note: NotebookDocument) {
         selectedNotebookForEditing = nil

@@ -171,21 +171,10 @@ struct KairumoApp: App {
                     if CloudCollabManager.shared.offer(url.absoluteString) {
                         // 雲端共享筆記的邀請：跳出「加入共享筆記」確認畫面（一鍵加入）。
                     } else if CollaborationManager.shared.offerInvite(url.absoluteString) {
-                        // 相機掃了同一 Wi-Fi／Tailscale 協同 QR Code：自動打開該筆記本（或建立筆記本）進入協同
-                        let invite = collabParseInviteV2(text: url.absoluteString)
-                        let targetId = invite.notebookId.trimmingCharacters(in: .whitespacesAndNewlines)
-                        let rawTitle = invite.title.trimmingCharacters(in: .whitespacesAndNewlines)
-                        let defaultTitle = LocalizationManager.shared.localized("collaborate")
-                        let finalTitle = rawTitle.isEmpty ? defaultTitle : rawTitle
-                        if !targetId.isEmpty {
-                            let exists = NotebookStore.shared.syncNotebooks.contains { $0.id.caseInsensitiveCompare(targetId) == .orderedSame }
-                            if exists {
-                                NotificationCenter.default.post(name: AppCommand.openNotebook, object: targetId)
-                            } else {
-                                let created = NotebookStore.shared.createNotebook(title: finalTitle, template: .blank)
-                                NotificationCenter.default.post(name: AppCommand.openNotebook, object: created.id)
-                            }
-                        }
+                        // 相機掃了同一 Wi-Fi／Tailscale 協同 QR Code：首頁（`HomeWorkbenchView`）會打開
+                        // 那本筆記，編輯器再打開協同面板並加入房間。不在這裡發 openNotebook ——
+                        // 冷啟動時首頁還沒開始聽，通知會掉在地上；`pendingInviteLink` 是持久狀態，
+                        // 首頁一訂閱就拿得到。
                     } else if ext == "padnote" || ext == "zip" {
                         _ = try? NotebookStore.shared.importNotebookArchive(from: url)
                     } else if ext == "pdf" {

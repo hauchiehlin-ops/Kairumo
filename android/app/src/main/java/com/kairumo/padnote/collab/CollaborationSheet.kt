@@ -174,7 +174,7 @@ fun CollaborationSheet(
                             }
 
                             // 掃描加入：每種連線方式一張 QR Code（同一 Wi‑Fi／Tailscale／遠端中繼）。
-                            CollabInviteQr(manager, ::l)
+                            CollabInviteQr(manager, notebookId, notebookTitle, ::l)
 
                             // 只貼房號、沒帶金鑰就加入的話，連得上、也看得到成員，
                             // **但對方寫的每一個字都解不開** —— 畫面上什麼都不會
@@ -357,7 +357,7 @@ private fun parseColor(hex: String): Color =
  * 矩陣由核心產生（`collabQrCode`），Apple 畫的是同一份（I6）。
  */
 @Composable
-private fun CollabInviteQr(manager: CollaborationManager, l: (String) -> String) {
+private fun CollabInviteQr(manager: CollaborationManager, notebookId: String?, notebookTitle: String, l: (String) -> String) {
     data class Mode(val id: String, val titleKey: String, val link: String, val hintKey: String)
     val modes = buildList {
         if (manager.isHostingLocalRelay) {
@@ -367,6 +367,8 @@ private fun CollabInviteQr(manager: CollaborationManager, l: (String) -> String)
             add(Mode("remote", "collab_qr_mode_remote", manager.inviteLink, "collab_qr_hint"))
         }
     }.filter { it.link.isNotEmpty() }.distinctBy { it.link }
+        // 連結帶上筆記本 id：對方掃了才知道要打開哪一本（與 Apple 相同）。
+        .map { it.copy(link = manager.notebookInviteLink(it.link, notebookId, notebookTitle)) }
     if (modes.isEmpty()) return
     var selected by remember { mutableStateOf<String?>(null) }
     val current = modes.firstOrNull { it.id == selected } ?: modes.first()

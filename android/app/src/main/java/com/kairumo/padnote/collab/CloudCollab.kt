@@ -115,15 +115,19 @@ object CloudCollab {
         lastError.value = null
         _busy.value = L10n.t("cloud_collab_sharing")
         try {
-            if (!CollabDriveAuth.isAuthorized(activity)) {
+            // 憑證沒有、或有但已失效，都在這一次點擊裡開授權畫面（舊版要按兩次，與 Apple 相同）。
+            var maybeHttp = if (CollabDriveAuth.isAuthorized(activity)) {
+                withContext(Dispatchers.IO) { CollabDriveAuth.makeHttp(activity) }
+            } else null
+            if (maybeHttp == null) {
                 val auth = CollabDriveAuth.authorize(activity)
                 if (!auth.ok) {
                     if (auth.error != "cancelled") lastError.value = L10n.t("cloud_collab_err_reauth")
                     return null
                 }
+                maybeHttp = withContext(Dispatchers.IO) { CollabDriveAuth.makeHttp(activity) }
             }
-            val http = withContext(Dispatchers.IO) { CollabDriveAuth.makeHttp(activity) }
-                ?: run { lastError.value = L10n.t("cloud_collab_err_reauth"); return null }
+            val http = maybeHttp ?: run { lastError.value = L10n.t("cloud_collab_err_reauth"); return null }
             var entry = shared(activity, notebookId)
             if (entry == null) {
                 val created = withContext(Dispatchers.IO) { uniffi.padnote_core.collabDriveCreateFolder(http, title) }
@@ -146,8 +150,14 @@ object CloudCollab {
             if (collab.status is CollaborationManager.Status.Disconnected) collab.createRoom()
             repeat(30) { if (collab.roomKeyBase64 == null || collab.roomId.isEmpty()) delay(100) }
             entry = entry.copy(roomId = collab.roomId, keyBase64 = collab.roomKeyBase64 ?: "")
-            saveRegistry(activity, uniffi.padnote_core.sharedRegistryUpsert(registryJson(activity), entry))
-            val s = withContext(Dispatchers.IO) { session(activity, entry) } ?: return null
+            // 登記要在整本推上去之後才算數：推失敗就還原，面板不會誤切到「已分享」（與 Apple 相同）。
+            val registryBefore = registryJson(activity)
+            saveRegistry(activity, uniffi.padnote_core.sharedRegistryUpsert(registryBefore, entry))
+            val s = withContext(Dispatchers.IO) { session(activity, entry) } ?: run {
+                saveRegistry(activity, registryBefore)
+                lastError.value = L10n.t("cloud_collab_err_reauth")
+                return null
+            }
             val pkg = packageDir(activity, notebookId)
             val result = withContext(Dispatchers.IO) {
                 com.kairumo.padnote.ink.InkPackageWriter.withSyncLock {
@@ -155,7 +165,8 @@ object CloudCollab {
                 }
             }
             if (!result.ok) {
-                lastError.value = result.error
+                saveRegistry(activity, registryBefore)
+                lastError.value = result.error.ifEmpty { L10n.t("cloud_collab_err_retry") }
                 return null
             }
             val files = uniffi.padnote_core.packageOpFileSizes(pkg.absolutePath).size.toUInt()
@@ -245,7 +256,8 @@ object CloudCollab {
 
             val auth = CollabDriveAuth.authorize(activity, pickFolderId = invite.driveFolderId)
             if (!auth.ok) {
-                if (auth.error != "cancelled") lastError.value = L10n.t("cloud_collab_err_reauth")
+                // 關掉挑選器多半是「點進資料夾後找不到選取鈕」：告訴使用者下一次該怎麼點（與 Apple 相同）。
+                lastError.value = L10n.t(if (auth.error == "cancelled") "cloud_collab_err_not_picked" else "cloud_collab_err_reauth")
                 return false
             }
             val http = withContext(Dispatchers.IO) { CollabDriveAuth.makeHttp(activity) }
@@ -254,7 +266,8 @@ object CloudCollab {
                 uniffi.padnote_core.collabDriveProbe(http, invite.driveFolderId, invite.minFiles)
             }
             if (probe.access != FfiDriveAccess.READY) {
-                lastError.value = L10n.t(probe.messageKey)
+                val pickedFolder = auth.picked.any { it == invite.driveFolderId }
+                lastError.value = L10n.t(if (pickedFolder) probe.messageKey else "cloud_collab_err_not_picked")
                 return false
             }
             return finishJoin(activity, invite, probe.folderName)

@@ -337,6 +337,21 @@ public class CollaborationManager: ObservableObject {
         tailscaleRelayAddress != nil ? inviteLink(forTailscale: true) : nil
     }
 
+    /// 帶上「是哪一本筆記」的邀請連結（同一 Wi‑Fi／Tailscale／遠端中繼的 QR Code 用）。
+    ///
+    /// 舊版的連結只有房號、金鑰、位址：協作者用相機一掃，App 被叫起來之後不知道要打開
+    /// 哪一本，只好停在首頁 —— 使用者看到的是「掃了沒反應」。補上 `nb`／`title`
+    /// （與雲端共享同一個 v2 格式，由核心組字串，Android 相同，I6），收到的一端才能
+    /// 直接打開（或建立）那本筆記並接上房間。
+    public func notebookInviteLink(_ link: String, notebookId: String?, title: String) -> String {
+        guard let notebookId, !notebookId.isEmpty, !link.isEmpty else { return link }
+        var invite = collabParseInviteV2(text: link)
+        guard !invite.roomId.isEmpty else { return link }
+        invite.notebookId = notebookId
+        invite.title = title
+        return collabInviteLinkV2(invite: invite)
+    }
+
     /// 從輸入字串中解析伺服器位址（若有提供）
     public static func extractServerUrl(from text: String) -> String? {
         let cleaned = text.trimmingCharacters(in: .whitespacesAndNewlines)

@@ -550,8 +550,22 @@ private fun KairumoApp() {
         val inviteText = com.kairumo.padnote.collab.CollabInvites.pending ?: return@LaunchedEffect
         if (openedId == null) {
             val parsed = uniffi.padnote_core.collabParseInviteV2(inviteText)
-            val target = parsed.notebookId.ifEmpty { parsed.roomId }
+            // 舊版房主的 QR Code 沒有 `nb`：退回用房號當這本的 id（同一間房再掃一次會打開同一本）。
+            val target = parsed.notebookId.ifEmpty { parsed.roomId }.trim()
             if (target.isNotEmpty()) {
+                // 這台還沒有這本：先以房主那本的 id 建一本空白的（出現在書庫、之後同步也對得上），
+                // 再打開 —— 編輯器會接手 `CollabInvites.pending`，打開協同面板並加入房間。
+                // 舊版直接 openNotebook 一個不存在的 id，打開的是一本書庫裡看不到的空殼。
+                val exists = withContext(Dispatchers.IO) {
+                    com.kairumo.padnote.sync.LanLink.findPackage(activity, target) != null
+                }
+                if (!exists) {
+                    val title = parsed.title.trim().ifEmpty { com.kairumo.padnote.L10n.t("collaborate") }
+                    withContext(Dispatchers.IO) {
+                        com.kairumo.padnote.library.NotebookLibrary.create(
+                            activity, title, deviceId(activity), id = target)
+                    }
+                }
                 openNotebook(target)
             }
         }
