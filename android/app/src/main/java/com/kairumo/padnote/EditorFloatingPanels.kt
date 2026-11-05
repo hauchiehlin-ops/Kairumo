@@ -574,6 +574,25 @@ internal fun EditorFloatingPanels(ctx: EditorCanvasContext) = with(ctx) {
         )
     }
 
+    hostLeavePending?.let { leave ->
+        AlertDialog(
+            onDismissRequest = { hostLeavePending = null },
+            title = { Text(l10n("collab_host_leave_title")) },
+            text = { Text(l10n("collab_host_leave_message")) },
+            confirmButton = {
+                TextButton(onClick = { hostLeavePending = null; leave() }) { Text(l10n("collab_host_leave_anyway")) }
+            },
+            dismissButton = {
+                Row {
+                    TextButton(onClick = { hostLeavePending = null }) { Text(l10n("cancel")) }
+                    TextButton(onClick = { hostLeavePending = null; showCollaboration = true }) {
+                        Text(l10n("collab_host_leave_open_panel"))
+                    }
+                }
+            }
+        )
+    }
+
     if (showAssetLibrary) {
         AssetLibrarySheet(
             languageTag = deviceLanguageTag(),

@@ -4719,6 +4719,38 @@ extension LocalizationManager {
             .ko: "기록 재생",
             .th: "เล่นประวัติ"
         ],
+        "collab_host_leave_anyway": [
+            .zhHant: "仍要離開",
+            .en: "Leave Anyway",
+            .zhHans: "仍要离开",
+            .ja: "このまま離れる",
+            .ko: "그래도 나가기",
+            .th: "ออกต่อไป"
+        ],
+        "collab_host_leave_message": [
+            .zhHant: "你是這場協同的房主。離開筆記本只會讓你離開房間；真正結束整場協同，請回面板點擊「結束協同會議」。",
+            .en: "You're hosting this session. Leaving the notebook only takes you out of the room. To truly end the whole session, go back to the panel and tap End Collaboration.",
+            .zhHans: "你是这场协同的房主。离开笔记本只会让你离开房间；真正结束整场协同，请回面板点击「结束协同会议」。",
+            .ja: "あなたはこのセッションのホストです。ノートを閉じてもルームから抜けるだけです。共同編集を完全に終了するには、パネルに戻って「共同編集を終了」を押してください。",
+            .ko: "이 세션의 호스트입니다. 노트를 나가면 방에서만 나가게 됩니다. 공동 작업 전체를 끝내려면 패널로 돌아가 “공동 편집 종료”를 누르세요.",
+            .th: "คุณเป็นเจ้าของเซสชันนี้ การออกจากสมุดจะเพียงพาคุณออกจากห้อง หากต้องการจบการทำงานร่วมกันทั้งหมดจริง ๆ ให้กลับไปที่แผงแล้วแตะ สิ้นสุดการทำงานร่วมกัน"
+        ],
+        "collab_host_leave_open_panel": [
+            .zhHant: "前往面板",
+            .en: "Open Panel",
+            .zhHans: "前往面板",
+            .ja: "パネルを開く",
+            .ko: "패널 열기",
+            .th: "เปิดแผง"
+        ],
+        "collab_host_leave_title": [
+            .zhHant: "協同仍在進行",
+            .en: "Collaboration is still on",
+            .zhHans: "协同仍在进行",
+            .ja: "共同編集はまだ続いています",
+            .ko: "공동 작업이 아직 진행 중입니다",
+            .th: "การทำงานร่วมกันยังดำเนินอยู่"
+        ],
         "collab_invite_received": [
             .zhHant: "已收到協同邀請：按「加入」即可連線。",
             .en: "Collaboration invite received — tap Join to connect.",
