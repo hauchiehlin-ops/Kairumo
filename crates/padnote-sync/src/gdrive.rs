@@ -955,10 +955,8 @@ impl<H: DriveHttp> GDriveProvider<H> {
         cached_root_id: Option<&str>,
     ) -> Result<String, SyncError> {
         const ROOT_NAME: &str = "Kairumo Co.";
-        if let Some(id) = cached_root_id {
-            if self.is_folder_valid(id) {
-                return Ok(id.to_string());
-            }
+        if let Some(id) = cached_root_id.filter(|id| self.is_folder_valid(id)) {
+            return Ok(id.to_string());
         }
         self.create_subfolder("root", ROOT_NAME)
     }
