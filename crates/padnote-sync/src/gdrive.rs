@@ -887,7 +887,11 @@ impl<H: DriveHttp> GDriveProvider<H> {
 
     /// 在指定父資料夾底下建立子資料夾（`parents: [parent_id]`）。
     pub fn create_subfolder(&self, parent_id: &str, name: &str) -> Result<String, SyncError> {
-        let parent = if parent_id.is_empty() { "root" } else { parent_id };
+        let parent = if parent_id.is_empty() {
+            "root"
+        } else {
+            parent_id
+        };
         let created = self.http.post_json(
             FILES_URL,
             &json!({
@@ -905,7 +909,11 @@ impl<H: DriveHttp> GDriveProvider<H> {
 
     /// 在指定父資料夾底下尋找指定名稱的資料夾（未丟進垃圾桶者）。
     pub fn find_folder_in(&self, parent_id: &str, name: &str) -> Result<Option<String>, SyncError> {
-        let parent = if parent_id.is_empty() { "root" } else { parent_id };
+        let parent = if parent_id.is_empty() {
+            "root"
+        } else {
+            parent_id
+        };
         let query = format!(
             "'{}' in parents and mimeType = '{FOLDER_MIME}' and name = '{}' and trashed = false",
             escape_drive_literal(parent),
