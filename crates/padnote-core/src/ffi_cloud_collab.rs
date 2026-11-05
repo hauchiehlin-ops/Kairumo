@@ -349,7 +349,10 @@ pub fn oauth_collab_authorize_url(
         // 不是預選。沒有再限定類型的話，使用者一點進資料夾就只看到滿滿的事件小檔，
         // 而「選取」只對被點選的項目有效 —— 進了資料夾就再也選不到資料夾本身，
         // 卡在挑選器裡出不來。只列資料夾：畫面上只有那一個可選的東西。
-        params.push(("mimetypes", "application/vnd.google-apps.folder".to_string()));
+        params.push((
+            "mimetypes",
+            "application/vnd.google-apps.folder".to_string(),
+        ));
         params.push(("file_ids", pick_folder_id));
     }
     if !login_hint.is_empty() {
