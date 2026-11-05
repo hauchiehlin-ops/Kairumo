@@ -142,17 +142,23 @@ final class InkInvariantMatrixAudit: XCTestCase {
         let app = launch()
         guard openInkNotebook(app) else { return }
 
-        // 打開側邊欄（若尚未展開）
-        let page1 = find(app, "sidebar.page.1")
-        if !page1.waitForExistence(timeout: 2) {
+        // 打開側邊欄（若尚未展開）。
+        // ⚠️ 不能只等 2 秒就判定「側欄沒開」去按切換鈕：CI 機器慢時側欄其實已開、只是縮圖還沒畫出來，
+        // 這時按下去反而把側欄關掉，之後永遠等不到縮圖（曾在 main 上偶發紅燈，同一份程式碼在分支上是綠的）。
+        // 所以按完切換鈕若仍等不到，就代表剛剛判斷反了，再按一次切回來。
+        let page1 = app.buttons.matching(identifier: "sidebar.page.1").firstMatch
+        if !page1.waitForExistence(timeout: 6) {
             let sidebarToggle = find(app, "editor.sidebar_toggle")
             XCTAssertTrue(sidebarToggle.waitForExistence(timeout: 5), "找不到側欄切換按鈕（editor.sidebar_toggle）")
             sidebarToggle.tap()
+            if !page1.waitForExistence(timeout: 8) {
+                sidebarToggle.tap()
+            }
         }
 
         // 點第 1 頁縮圖（預期 5 筆）
-        XCTAssertTrue(page1.waitForExistence(timeout: 8), "找不到第 1 頁縮圖（sidebar.page.1）")
-        page1.tap()
+        XCTAssertTrue(page1.waitForExistence(timeout: 12), "找不到第 1 頁縮圖（sidebar.page.1）")
+        find(app, "sidebar.page.1").tap()
         Thread.sleep(forTimeInterval: 0.6)
         let p1Strokes = parseStrokeCount(app)
         XCTAssertEqual(p1Strokes, 5, "切換到第 1 頁後筆畫數應為 5")
