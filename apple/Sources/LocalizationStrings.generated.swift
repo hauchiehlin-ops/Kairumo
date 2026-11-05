@@ -4783,6 +4783,14 @@ extension LocalizationManager {
             .ko: "%@ 님이 입력 중",
             .th: "%@ กำลังพิมพ์ที่นี่"
         ],
+        "collab_qr_cloud_hint": [
+            .zhHant: "其他參與者用相機掃描即可加入，跨網路自動下載筆記並開啟共筆，免同 Wi-Fi、免裝 Tailscale。",
+            .en: "Teammates scan with their camera to join from any network, downloading the note automatically without Tailscale or local Wi-Fi.",
+            .zhHans: "其他参与者用相机扫描即可加入，跨网络自动下载笔记并开启共笔，免同 Wi-Fi、免装 Tailscale。",
+            .ja: "カメラでスキャンするだけでどこからでも参加可能。ノートを自動ダウンロードし、同一 Wi-Fi や Tailscale なしで共同編集を開始できます。",
+            .ko: "카메라로 스캔하여 어느 네트워크에서나 참가할 수 있습니다. Tailscale이나 동일 Wi-Fi 없이도 노트를 자동 다운로드하여 공동 작업을 시작합니다.",
+            .th: "ผู้เข้าร่วมสแกนด้วยกล้องเพื่อเข้าร่วมได้จากทุกเครือข่าย ดาวน์โหลดโน้ตอัตโนมัติโดยไม่ต้องใช้ Wi-Fi เดียวกันหรือติดตั้ง Tailscale"
+        ],
         "collab_qr_hint": [
             .zhHant: "其他參與者用手機或平板的相機掃描即可加入，房號、金鑰與連線位址會自動帶入；Mac 請改用「複製連結」再貼上。",
             .en: "Others scan this with their phone or tablet camera to join — room, key and address are filled in automatically. On a Mac, use Copy link and paste it instead.",
@@ -4790,6 +4798,14 @@ extension LocalizationManager {
             .ja: "ほかの参加者はスマホやタブレットのカメラで読み取るだけで参加できます（ルーム・鍵・接続先は自動入力）。Mac では「リンクをコピー」して貼り付けてください。",
             .ko: "다른 참여자는 휴대폰이나 태블릿 카메라로 스캔하면 바로 참여합니다(방·키·주소 자동 입력). Mac에서는 링크를 복사해 붙여 넣으세요.",
             .th: "ผู้เข้าร่วมคนอื่นสแกนด้วยกล้องโทรศัพท์หรือแท็บเล็ตเพื่อเข้าร่วม ห้อง คีย์ และที่อยู่จะกรอกให้อัตโนมัติ บน Mac ให้คัดลอกลิงก์แล้ววาง"
+        ],
+        "collab_qr_mode_cloud": [
+            .zhHant: "雲端共享 (免設定)",
+            .en: "Cloud Share (Zero Setup)",
+            .zhHans: "云端共享 (免设定)",
+            .ja: "クラウド共有 (設定不要)",
+            .ko: "클라우드 공유 (설정 불필요)",
+            .th: "แชร์ผ่านคลาวด์ (ไม่ต้องตั้งค่า)"
         ],
         "collab_qr_mode_lan": [
             .zhHant: "同一 Wi‑Fi",

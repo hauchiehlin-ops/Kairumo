@@ -77,8 +77,8 @@ public struct CollaborationSheet: View {
                         .accessibilityIdentifier("collaboration.relay_failed")
                     }
 
-                    // ☁️ 雲端共享（跨網路）：房主分享到雲端資料夾、協作者一鍵加入。
-                    if let notebookId {
+                    // ☁️ 雲端共享（跨網路）：未連線狀態下也提供一鍵開啟雲端共享。
+                    if let notebookId, case .disconnected = collaborationManager.status {
                         CloudShareSection(
                             notebookId: notebookId,
                             title: store.syncNotebooks.first {
@@ -500,8 +500,17 @@ public struct CollaborationSheet: View {
                 }
             }
 
-            // 掃描加入：每種連線方式一張 QR Code（同一 Wi‑Fi／Tailscale／遠端中繼）。
-            CollabInviteQRSection()
+            // ☁️ 雲端共享（跨網路）：房主分享到雲端資料夾、協作者一鍵加入。
+            if let notebookId {
+                CloudShareSection(
+                    notebookId: notebookId,
+                    title: store.syncNotebooks.first {
+                        $0.id.caseInsensitiveCompare(notebookId) == .orderedSame
+                    }?.displayTitle() ?? "")
+            }
+
+            // 掃描加入：每種連線方式一張 QR Code（雲端共享／同一 Wi‑Fi／Tailscale／遠端中繼）。
+            CollabInviteQRSection(notebookId: notebookId)
 
             // 在線成員名單
             VStack(alignment: .leading, spacing: 10) {
@@ -1024,7 +1033,9 @@ public struct CollaborationSheet: View {
 ///
 /// 矩陣由核心產生（`collabQrCode`），Android 畫的是同一份（I6）。
 struct CollabInviteQRSection: View {
+    var notebookId: String? = nil
     @ObservedObject private var collaborationManager = CollaborationManager.shared
+    @ObservedObject private var cloudManager = CloudCollabManager.shared
     @ObservedObject private var localizationManager = LocalizationManager.shared
     @State private var selected: String? = nil
 
@@ -1033,20 +1044,38 @@ struct CollabInviteQRSection: View {
         let titleKey: String
         let icon: String
         let link: String
+        let hintKey: String
     }
 
     private var modes: [Mode] {
         var out: [Mode] = []
         let m = collaborationManager
+
+        // ☁️ 雲端共享模式（若此筆記已在雲端共享，優先排第一）
+        if let nbId = notebookId,
+           let entry = cloudManager.registry.first(where: { $0.notebookId.caseInsensitiveCompare(nbId) == .orderedSame }),
+           !entry.folderId.isEmpty {
+            let cloudLink = cloudManager.inviteLink(for: entry)
+            if !cloudLink.isEmpty {
+                out.append(Mode(
+                    id: "cloud",
+                    titleKey: "collab_qr_mode_cloud",
+                    icon: "icloud.fill",
+                    link: cloudLink,
+                    hintKey: "collab_qr_cloud_hint"
+                ))
+            }
+        }
+
         if m.isHostingLocalRelay {
             if m.lanRelayAddress != nil {
-                out.append(Mode(id: "lan", titleKey: "collab_qr_mode_lan", icon: "wifi", link: m.inviteLink(forTailscale: false)))
+                out.append(Mode(id: "lan", titleKey: "collab_qr_mode_lan", icon: "wifi", link: m.inviteLink(forTailscale: false), hintKey: "collab_qr_hint"))
             }
             if let ts = m.tailscaleInviteLink {
-                out.append(Mode(id: "tailscale", titleKey: "collab_qr_mode_tailscale", icon: "network", link: ts))
+                out.append(Mode(id: "tailscale", titleKey: "collab_qr_mode_tailscale", icon: "network", link: ts, hintKey: "collab_qr_hint"))
             }
         } else {
-            out.append(Mode(id: "remote", titleKey: "collab_qr_mode_remote", icon: "globe", link: m.encryptedInviteLink))
+            out.append(Mode(id: "remote", titleKey: "collab_qr_mode_remote", icon: "globe", link: m.encryptedInviteLink, hintKey: "collab_qr_hint"))
         }
         // 同一個連結不重複列（例如沒有區網位址時 Tailscale 也是預設連結）。
         var seen = Set<String>()
@@ -1087,7 +1116,7 @@ struct CollabInviteQRSection: View {
                     VStack(alignment: .leading, spacing: 8) {
                         Label(localizationManager.localized(current.titleKey), systemImage: current.icon)
                             .font(.subheadline.weight(.semibold))
-                        Text(localizationManager.localized("collab_qr_hint"))
+                        Text(localizationManager.localized(current.hintKey))
                             .font(.caption2)
                             .foregroundColor(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
