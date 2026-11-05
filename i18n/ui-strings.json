@@ -27510,5 +27510,21 @@
     "th": "เชื่อมต่อ Google Drive ไม่ได้ในขณะนี้ ลองใหม่อีกครั้ง",
     "zhHans": "暂时连不上 Google 云端硬盘，请稍后再试。",
     "zhHant": "暫時連不上 Google 雲端硬碟，請稍後再試。"
+  },
+  "collab_qr_mode_cloud": {
+    "en": "Cloud Share (Zero Setup)",
+    "ja": "クラウド共有 (設定不要)",
+    "ko": "클라우드 공유 (설정 불필요)",
+    "th": "แชร์ผ่านคลาวด์ (ไม่ต้องตั้งค่า)",
+    "zhHans": "云端共享 (免设定)",
+    "zhHant": "雲端共享 (免設定)"
+  },
+  "collab_qr_cloud_hint": {
+    "en": "Teammates scan with their camera to join from any network, downloading the note automatically without Tailscale or local Wi-Fi.",
+    "ja": "カメラでスキャンするだけでどこからでも参加可能。ノートを自動ダウンロードし、同一 Wi-Fi や Tailscale なしで共同編集を開始できます。",
+    "ko": "카메라로 스캔하여 어느 네트워크에서나 참가할 수 있습니다. Tailscale이나 동일 Wi-Fi 없이도 노트를 자동 다운로드하여 공동 작업을 시작합니다.",
+    "th": "ผู้เข้าร่วมสแกนด้วยกล้องเพื่อเข้าร่วมได้จากทุกเครือข่าย ดาวน์โหลดโน้ตอัตโนมัติโดยไม่ต้องใช้ Wi-Fi เดียวกันหรือติดตั้ง Tailscale",
+    "zhHans": "其他参与者用相机扫描即可加入，跨网络自动下载笔记并开启共笔，免同 Wi-Fi、免装 Tailscale。",
+    "zhHant": "其他參與者用相機掃描即可加入，跨網路自動下載筆記並開啟共筆，免同 Wi-Fi、免裝 Tailscale。"
   }
 }
