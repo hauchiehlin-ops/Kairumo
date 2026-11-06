@@ -304,6 +304,7 @@
 		FB2B4A98DE6E5CCFF3FF16ED /* DraftingTools.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1A6427DEAFB401E418FE2B8 /* DraftingTools.swift */; };
 		FB8410FC89F4FDB4429963C6 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22CA9AD55E8EDA76ABA92C78 /* OnboardingView.swift */; };
 		FC1A97633808D861B89FE967 /* MathEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E642D648CC5479DA382CE35 /* MathEngine.swift */; };
+		FCE275A4225BB80526441A70 /* CollabLiveInk.swift in Sources */ = {isa = PBXBuildFile; fileRef = C37A88630FFE8DEF52E3A43B /* CollabLiveInk.swift */; };
 		FDBFCB97F11915C9DA8EA7A9 /* FloatingPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A94975999121E1FFF8139B6A /* FloatingPanel.swift */; };
 		FE7819F27B65DF1C258ED52E /* WrapLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6EA2D926C0FD0991AE0BC01D /* WrapLayout.swift */; };
 		FE9BE01D870836EE7426D078 /* PlatformContractTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D36DA9A7FD1451AA75A8161B /* PlatformContractTests.swift */; };
@@ -578,6 +579,7 @@
 		BFC2EC4F24CB728264AB91A5 /* ObjectRotationControls.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ObjectRotationControls.swift; sourceTree = "<group>"; };
 		C0957AAFF21A2EF4C121E63E /* ExportPreviewSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExportPreviewSheet.swift; sourceTree = "<group>"; };
 		C1C81A31EBC2D3D1F020B0BF /* NoteTable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NoteTable.swift; sourceTree = "<group>"; };
+		C37A88630FFE8DEF52E3A43B /* CollabLiveInk.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CollabLiveInk.swift; sourceTree = "<group>"; };
 		C72410287ED6D6BF9B550D5B /* NotebookStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotebookStore.swift; sourceTree = "<group>"; };
 		C96BD5C5FA419645BA3866FE /* RecordingRenameSyncRoundTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingRenameSyncRoundTests.swift; sourceTree = "<group>"; };
 		CB1466C3AB0C78C44ED34AB8 /* NotebookSearchIndex.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotebookSearchIndex.swift; sourceTree = "<group>"; };
@@ -865,6 +867,7 @@
 				6137884866A4EA54A591733C /* CloudCollab.swift */,
 				CCCDECBFBF6A4E696A774F6F /* CloudCollabViews.swift */,
 				6D92ABBF09268BEEA4DD694D /* CloudSyncFolder.swift */,
+				C37A88630FFE8DEF52E3A43B /* CollabLiveInk.swift */,
 				44D061C8E2977FB257C12E81 /* CollaborationManager.swift */,
 				0FF2EC412BA37683FBBE2FC1 /* CollaborationSheet.swift */,
 				CF7B511C0C84D09A563E93B5 /* CollabProtocol.swift */,
@@ -1311,6 +1314,7 @@
 				8598E12F0533E336957EBA41 /* CloudCollab.swift in Sources */,
 				F95F3F9E7388026D4CF3117C /* CloudCollabViews.swift in Sources */,
 				5E462BD80D8FEADB96FA1CAE /* CloudSyncFolder.swift in Sources */,
+				FCE275A4225BB80526441A70 /* CollabLiveInk.swift in Sources */,
 				EBC28FA124F13539D86D713F /* CollabProtocol.swift in Sources */,
 				083FB8C04871B623CD4F5CA0 /* CollabSync.swift in Sources */,
 				EBB0282BC8BEC636B952FE2C /* CollaborationManager.swift in Sources */,
@@ -1678,7 +1682,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = "Kairumo-Mac.entitlements";
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 168;
+				CURRENT_PROJECT_VERSION = 169;
 				DEVELOPMENT_TEAM = 6UJ8GS752W;
 				ENABLE_BITCODE = NO;
 				FRAMEWORK_SEARCH_PATHS = (
@@ -1689,8 +1693,8 @@
 				INFOPLIST_FILE = Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Kairumo;
 				INFOPLIST_KEY_CFBundleIconName = AppIcon;
-				INFOPLIST_KEY_CFBundleShortVersionString = 6.4.14;
-				INFOPLIST_KEY_CFBundleVersion = 168;
+				INFOPLIST_KEY_CFBundleShortVersionString = 6.5.1;
+				INFOPLIST_KEY_CFBundleVersion = 169;
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				INFOPLIST_KEY_NSFaceIDUsageDescription = "Kairumo uses Face ID to unlock your profile, so other people using this device cannot open your notes.";
@@ -1706,7 +1710,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 6.4.14;
+				MARKETING_VERSION = 6.5.1;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-lc++",
@@ -1769,7 +1773,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = "Kairumo-Mac.entitlements";
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 168;
+				CURRENT_PROJECT_VERSION = 169;
 				DEVELOPMENT_TEAM = 6UJ8GS752W;
 				ENABLE_BITCODE = NO;
 				FRAMEWORK_SEARCH_PATHS = (
@@ -1780,8 +1784,8 @@
 				INFOPLIST_FILE = Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Kairumo;
 				INFOPLIST_KEY_CFBundleIconName = AppIcon;
-				INFOPLIST_KEY_CFBundleShortVersionString = 6.4.14;
-				INFOPLIST_KEY_CFBundleVersion = 168;
+				INFOPLIST_KEY_CFBundleShortVersionString = 6.5.1;
+				INFOPLIST_KEY_CFBundleVersion = 169;
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				INFOPLIST_KEY_NSFaceIDUsageDescription = "Kairumo uses Face ID to unlock your profile, so other people using this device cannot open your notes.";
@@ -1797,7 +1801,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 6.4.14;
+				MARKETING_VERSION = 6.5.1;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-lc++",

@@ -66,6 +66,9 @@ async fn handle_connection(
     _addr: SocketAddr,
     hub: Arc<RoomHub>,
 ) -> Result<(), Box<dyn std::error::Error>> {
+    // 關掉 Nagle：協同送的是一則則很小的訊息（一筆筆畫、一個游標位置），
+    // 開著的話下一則要等上一則的 ACK，碰上對方的延遲 ACK 每則可多卡 40–200 ms。
+    let _ = stream.set_nodelay(true);
     let ws_stream = tokio_tungstenite::accept_async(stream).await?;
     let (mut ws_sender, mut ws_receiver) = ws_stream.split();
 

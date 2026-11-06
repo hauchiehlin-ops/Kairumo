@@ -37,7 +37,8 @@ pub const RECENT_MAX_BYTES: usize = 32 * 1024 * 1024;
 /// 只轉送、不暫存的操作種類：整份狀態的請求與回覆（設計 §7）—— 它們只對當下在線的人有意義，
 /// 而且一份快照可能比整個暫存還大。
 pub fn is_transient_kind(kind: &str) -> bool {
-    kind.starts_with("state_")
+    // `live_`：書寫中的預覽點（`live_ink`），提筆後由正式筆畫取代；補發過時的預覽沒有意義。
+    kind.starts_with("state_") || kind.starts_with("live_")
 }
 
 impl Room {
@@ -435,5 +436,18 @@ impl RoomHub {
             }
             ClientMessage::Ping => Some(ServerMessage::Pong),
         }
+    }
+}
+
+#[cfg(test)]
+mod transient_tests {
+    use super::is_transient_kind;
+
+    #[test]
+    fn live_and_state_kinds_are_not_replayed() {
+        assert!(is_transient_kind("state_request"));
+        assert!(is_transient_kind("live_ink"));
+        assert!(!is_transient_kind("ink_add"));
+        assert!(!is_transient_kind("obj_patch"));
     }
 }

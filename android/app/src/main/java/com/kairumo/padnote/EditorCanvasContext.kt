@@ -2824,7 +2824,11 @@ internal fun rememberEditorCanvasContext(
     // 關掉筆記後連線與中繼還在背景跑。與 Apple `leaveRoom(ifBoundTo:)` 同一套。
     val collaboration = remember(notebookId) { CollaborationManager(activity) }
     androidx.compose.runtime.DisposableEffect(collaboration) {
-        onDispose { collaboration.disconnect() }
+        onDispose {
+            collaboration.disconnect()
+            // 不再把雲端直連收到的訊息交給已經關掉的這一份（新的一份由下面的 SideEffect 再接上）。
+            com.kairumo.padnote.collab.CloudCollab.realtimeSink = null
+        }
     }
     // 房主還開著房間就要離開這本：提醒「關筆記只是離開房間，真正結束要回面板按『結束協同會議』」。與 Apple 同一套。
     val hostLeavePendingState = remember { mutableStateOf<(() -> Unit)?>(null) }
@@ -2846,8 +2850,11 @@ internal fun rememberEditorCanvasContext(
         com.kairumo.padnote.collab.CloudCollab.connectRelay(collaboration, invite)
     }
     androidx.compose.runtime.SideEffect {
+        // 「中繼通了」要算**中繼上有別人**：房主連的是自己的本機中繼，一定連得上，
+        // 只看連線狀態的話房主永遠不做直連交握，跨網路的協作者就只能等雲端輪詢。
         com.kairumo.padnote.collab.CloudCollab.relayConnected =
-            { collaboration.status is CollaborationManager.Status.Connected }
+            { collaboration.status is CollaborationManager.Status.Connected && collaboration.peers.isNotEmpty() }
+        com.kairumo.padnote.collab.CloudCollab.realtimeSink = { json -> collaboration.receiveRealtime(json) }
     }
 
     // ── 即時協同（設計 §8，協定 3）─────────────────────────────
@@ -2933,6 +2940,13 @@ internal fun rememberEditorCanvasContext(
         val previous = engine.onContentCommitted
         engine.onContentCommitted = { previous?.invoke(); latestPublishCollab() }
         onDispose { engine.onContentCommitted = previous }
+    }
+    // 協同：書寫中把點串流給房間（collab/LiveInk.kt）。頁面與是否在協同都取最新的值。
+    val latestLivePage by rememberUpdatedState(if (collabActive) pageId else null)
+    DisposableEffect(engine, collaboration) {
+        val sender = com.kairumo.padnote.collab.LiveInkSender(collaboration) { latestLivePage }
+        sender.attach(engine)
+        onDispose { sender.detach(engine) }
     }
     DisposableEffect(continuousCollab) {
         continuousCollab.onLocalChange = {

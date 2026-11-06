@@ -243,15 +243,36 @@ enum CollabInkIds {
         directory.appending(path: "\(notebookId)_p\(page).collab-ink-ids.json")
     }
 
+    /// 讀過、寫過的內容留在記憶體：協同時每畫完一筆都要查一次（`collabCoreIds`，在主執行緒），
+    /// 不能每筆都讀檔。這個檔只有 `save` 會寫，所以快取不會過期。
+    // profile-scope: device 以完整檔案路徑為鍵，路徑本身含設定檔目錄，不同設定檔互不相讀
+    private nonisolated(unsafe) static var cache: [String: [String: String]] = [:]
+    private static let cacheLock = NSLock()
+
     nonisolated static func load(in directory: URL, notebookId: String, page: Int) -> [String: String] {
-        guard let data = try? Data(contentsOf: url(directory, notebookId, page)),
-              let map = try? JSONDecoder().decode([String: String].self, from: data)
-        else { return [:] }
+        let file = url(directory, notebookId, page)
+        cacheLock.lock()
+        let hit = cache[file.path]
+        cacheLock.unlock()
+        if let hit { return hit }
+        let map: [String: String]
+        if let data = try? Data(contentsOf: file),
+           let decoded = try? JSONDecoder().decode([String: String].self, from: data) {
+            map = decoded
+        } else {
+            map = [:]
+        }
+        cacheLock.lock()
+        cache[file.path] = map
+        cacheLock.unlock()
         return map
     }
 
     nonisolated static func save(_ map: [String: String], in directory: URL, notebookId: String, page: Int) {
         let file = url(directory, notebookId, page)
+        cacheLock.lock()
+        cache[file.path] = map
+        cacheLock.unlock()
         if map.isEmpty {
             try? FileManager.default.removeItem(at: file)
             return

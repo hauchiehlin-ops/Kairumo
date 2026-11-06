@@ -115,7 +115,12 @@ extension NotebookEditorView {
             : activeInkStore.drawing(for: page, pageId: pid)
         let merged = replace ? remote : base.appending(remote)
 
-        store.saveDrawing(notebookId: notebook.id, pageIndex: page, drawing: merged)
+        // 落盤交給背景的筆跡佇列（與 `flushPendingCoreInk` 同一條、同一個順序）：
+        // 協同時每收到一筆就在主執行緒序列化＋寫檔，頁面筆畫一多，對方的每一筆都要多卡幾十毫秒才出現。
+        let drawingURL = store.drawingsDirectory.appending(path: "\(notebook.id)_p\(page).drawing")
+        NotebookStore.primeDrawingCache(merged, for: drawingURL)
+        nonisolated(unsafe) let toWrite = merged
+        Self.coreInkQueue.async { NotebookStore.writeDrawing(toWrite, to: drawingURL) }
         // 記憶體副本（縮圖、換頁、連續模式讀的那一份）也要換，否則它停在對方畫之前的樣子。
         activeInkStore.adoptSavedDrawing(merged, for: page, pageId: pid)
         guard isCurrent else { return }
@@ -338,8 +343,12 @@ extension NotebookEditorView {
         guard !decoded.isEmpty else { return }
         for item in decoded { collabInkLedger.remember(wire: item.id, local: CollabInk.strokeId(item.stroke)) }
         // 先記下送出者的 id 再落盤：寫進套件時用它，同一筆在每一台的套件裡才是同一個 id。
-        CollabInkPersistence.remoteAdded(decoded.map { ($0.stroke, $0.core) }, in: store.syncBaselineDirectory,
-                                         notebookId: notebook.id, page: pageIdx)
+        // 在背景筆跡佇列上寫：它排在之後的 `flushPendingCoreInk` 前面，寫進套件時讀得到這些 id。
+        nonisolated(unsafe) let added = decoded.map { ($0.stroke, $0.core) }
+        let directory = store.syncBaselineDirectory, nid = notebook.id
+        Self.coreInkQueue.async {
+            CollabInkPersistence.remoteAdded(added, in: directory, notebookId: nid, page: pageIdx)
+        }
         let base = drawingForCollab(page: pageIdx)
         let merged = CollabInk.adding(decoded.map(\.stroke), to: base)
         collabInkLedger.known[pageId, default: []].formUnion(decoded.map(\.id))
@@ -357,8 +366,11 @@ extension NotebookEditorView {
         let merged = CollabInk.removing(locals, from: base)
         collabInkLedger.known[pageId, default: []].subtract(wires)
         collabInkLedger.removed(page: pageId, wires: wires)
-        CollabInkPersistence.remoteRemoved(base.strokes.filter { locals.contains(CollabInk.strokeId($0)) },
-                                           in: store.syncBaselineDirectory, notebookId: notebook.id, page: pageIdx)
+        nonisolated(unsafe) let gone = base.strokes.filter { locals.contains(CollabInk.strokeId($0)) }
+        let directory = store.syncBaselineDirectory, nid = notebook.id
+        Self.coreInkQueue.async {
+            CollabInkPersistence.remoteRemoved(gone, in: directory, notebookId: nid, page: pageIdx)
+        }
         if merged.strokes.count != base.strokes.count {
             applyRemoteDrawing(page: pageIdx, remote: merged, replace: true)
         }
