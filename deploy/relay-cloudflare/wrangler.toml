@@ -1,0 +1,19 @@
+# Kairumo 協同中繼（公開版）。部署：在這個資料夾執行 `npx wrangler login`（第一次），再 `npx wrangler deploy`。
+name = "kairumo-relay"
+main = "src/index.ts"
+compatibility_date = "2025-09-01"
+
+[[durable_objects.bindings]]
+name = "ROOMS"
+class_name = "RelayRoom"
+
+# 免費方案只能用 SQLite 後端的 Durable Objects。
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["RelayRoom"]
+
+[vars]
+# 每間房的人數上限。
+MAX_PEERS = "16"
+# 房間物件建立的區域（Durable Objects location hint），預設不指定（建在第一位使用者的機房附近）。
+# 例：LOCATION_HINT = "apac"

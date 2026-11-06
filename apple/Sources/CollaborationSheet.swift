@@ -257,12 +257,12 @@ public struct CollaborationSheet: View {
         case .connected(let rid):
             return "\(localizationManager.localized("room_id")): \(rid)"
         case .connecting:
-            return collaborationManager.serverAddress
+            return collaborationManager.activeServerAddress
         case .reconnecting:
             if collaborationManager.queuedOplogCount > 0 {
                 return String(format: localizationManager.localized("offline_queue_hint"), collaborationManager.queuedOplogCount)
             } else {
-                return collaborationManager.serverAddress
+                return collaborationManager.activeServerAddress
             }
         case .disconnected:
             return localizationManager.localized("start_collaboration")

@@ -222,7 +222,7 @@ public class CollaborationManager: ObservableObject {
         AccountManager.shared.profile.colorHex
     }
 
-    private var webSocketTask: URLSessionWebSocketTask?
+    private var webSocketTask: CollabRelaySocket?
     private var pingTimer: Timer?
     private var lastPresenceSentTime: TimeInterval = 0
     private let presenceThrottleInterval: TimeInterval =
@@ -312,7 +312,7 @@ public class CollaborationManager: ObservableObject {
                 targetServer = lanRelayAddress ?? tailscaleRelayAddress
             }
         } else {
-            targetServer = Self.isLoopbackHost(URL(string: serverAddress)?.host) ? nil : serverAddress
+            targetServer = Self.isLoopbackHost(URL(string: activeServerAddress)?.host) ? nil : activeServerAddress
         }
         if let s = targetServer, !s.isEmpty {
             if let hashIdx = baseLink.firstIndex(of: "#") {
@@ -397,10 +397,42 @@ public class CollaborationManager: ObservableObject {
     /// 建立新協同房間（作為房主 Owner）
     // 原本收一個 `noteId`，而主體從沒讀過它、呼叫端也從沒傳過。
     // 房間與筆記本的關聯目前不存在 —— 拿掉參數讓這件事看得見。
-    public func createRoom(notebookId: String? = nil) {
+    public func createRoom(notebookId: String? = nil, server: String? = nil) {
         generateRoomKey()
+        // 指定伺服器（雲端共享的房間開在公開中繼上）只用於這一場，不改使用者存的預設位址。
+        serverOverride = server
         connect(roomId: collabNewRoomId(), asHost: true)
         roomNotebookId = notebookId?.lowercased()
+    }
+
+    /// 以既有的房號與金鑰當房主開房（雲端共享的房間：重開 App 之後沿用同一間，之前發出去的邀請照樣有效）。
+    public func hostRoom(roomId: String, keyBase64: String, notebookId: String, server: String) {
+        setRoomKey(base64: keyBase64)
+        serverOverride = server
+        connect(roomId: roomId, asHost: true)
+        roomNotebookId = notebookId.lowercased()
+    }
+
+    // MARK: 公開中繼（跨網路）
+
+    /// Kairumo 的公開中繼（Cloudflare Workers，見 `deploy/relay-cloudflare`）。與 Android
+    /// `CollaborationManager.PUBLIC_RELAY_URL` 相同。空字串＝還沒部署：雲端共享照舊只用區網／Tailscale。
+    public static let publicRelayURL = "wss://kairumo-relay.kairumo-relay.workers.dev"
+
+    /// 這一場用的伺服器（加入邀請、或雲端共享開在公開中繼上）。`nil` = 用使用者存的 `serverAddress`。
+    /// 不寫回 `serverAddress`：以前加入別人的房間會把對方的位址存成這台的預設，之後自己開房就連到別人那裡。
+    private var serverOverride: String?
+
+    /// 目前連線用的位址。
+    public var activeServerAddress: String { serverOverride ?? serverAddress }
+
+    /// 連線網址加上 `room=<房號>`：公開中繼（Cloudflare）以它決定房間；Rust 中繼不看網址，加了也無妨。
+    static func relayURL(_ address: String, roomId: String) -> URL? {
+        guard var parts = URLComponents(string: address) else { return nil }
+        var items = (parts.queryItems ?? []).filter { $0.name != "room" }
+        items.append(URLQueryItem(name: "room", value: roomId))
+        parts.queryItems = items
+        return parts.url
     }
 
     /// 關掉（或換掉）筆記本時呼叫：這間房是那本的就離開。
@@ -419,16 +451,19 @@ public class CollaborationManager: ObservableObject {
         defer { if !currentRoomId.isEmpty { roomNotebookId = notebookId?.lowercased() } }
 
         // 1. 若輸入包含 server 參數，立即套用該伺服器位址
+        //    （只用於這一場，見 `serverOverride`）
         if let serverParam = Self.extractServerUrl(from: trimmed) {
-            self.serverAddress = serverParam
+            self.serverOverride = serverParam
         } else if Self.isLoopbackHost(URL(string: self.serverAddress)?.host) {
             // 2. 若本地仍為 127.0.0.1，檢查是否有局域網掃描到的房間
             let targetRoomId = Self.extractRoomId(from: trimmed)
             if let matched = LocalSyncDiscovery.shared.discoveredRooms.first(where: { $0.roomId == targetRoomId }) {
-                self.serverAddress = matched.serverUrl
+                self.serverOverride = matched.serverUrl
             } else if let firstDiscovered = LocalSyncDiscovery.shared.discoveredRooms.first {
-                self.serverAddress = firstDiscovered.serverUrl
+                self.serverOverride = firstDiscovered.serverUrl
             }
+        } else {
+            self.serverOverride = nil
         }
 
         let cleanedRoomId = Self.extractRoomId(from: trimmed)
@@ -460,16 +495,17 @@ public class CollaborationManager: ObservableObject {
         // 但房號、成員與流量樣態全是明文，而且明文 WebSocket 可以被中間人
         // 直接改寫或重導。判斷在核心，兩邊同一份 —— 各寫一次的話，同一個
         // 位址會在 iPad 上連得上、在 Android 上連不上。
-        let check = collabCheckServer(url: serverAddress)
+        let address = activeServerAddress
+        let check = collabCheckServer(url: address)
         if !check.ok {
             self.lastErrorMessage = LocalizationManager.shared.localized(check.reasonKey)
             self.status = .disconnected
             return
         }
 
-        guard let url = URL(string: serverAddress) else {
-            print("❌ 無效的 WebSocket 伺服器網址: \(serverAddress)")
-            self.lastErrorMessage = L10n.f("collab_err_bad_address", serverAddress)
+        guard let url = URL(string: address), let socketURL = Self.relayURL(address, roomId: roomId) else {
+            print("❌ 無效的 WebSocket 伺服器網址: \(address)")
+            self.lastErrorMessage = L10n.f("collab_err_bad_address", address)
             self.status = .disconnected
             return
         }
@@ -492,12 +528,9 @@ public class CollaborationManager: ObservableObject {
         }
         lastErrorMessage = nil
 
-        let session = URLSession(configuration: .default)
-        let task = session.webSocketTask(with: url)
-        // 預設上限 1 MB：一張照片（base64 後）就超過，整條連線會被斷掉。與中繼的 64 MB 一致。
-        task.maximumMessageSize = 64 * 1024 * 1024
-        self.webSocketTask = task
-        task.resume()
+        // 明文 ws:// 走 Network.framework（不受 ATS 限制，Tailscale 的 100.x 位址才連得上），
+        // wss:// 走 URLSession。見 CollabRelaySocket.swift。
+        self.webSocketTask = CollabRelaySockets.open(socketURL)
 
         startListening()
         startPingTimer()
@@ -590,6 +623,7 @@ public class CollaborationManager: ObservableObject {
             self.offlineOplogQueue.removeAll()
             self.queuedOplogCount = 0
             self.roomKeyBase64 = nil
+            self.serverOverride = nil
         }
 
         if case .connected(let rid) = status {
@@ -603,7 +637,7 @@ public class CollaborationManager: ObservableObject {
 
         pingTimer?.invalidate()
         pingTimer = nil
-        webSocketTask?.cancel(with: .normalClosure, reason: nil)
+        webSocketTask?.close()
         webSocketTask = nil
 
         self.status = .disconnected
@@ -880,44 +914,28 @@ public class CollaborationManager: ObservableObject {
     private func sendJson(_ dict: [String: Any]) {
         guard let data = try? JSONSerialization.data(withJSONObject: dict),
               let jsonStr = String(data: data, encoding: .utf8) else { return }
-
-        let message = URLSessionWebSocketTask.Message.string(jsonStr)
-        webSocketTask?.send(message) { error in
-            if let error = error {
-                print("⚠️ WebSocket 傳送失敗: \(error.localizedDescription)")
-            }
-        }
+        webSocketTask?.send(jsonStr)
     }
 
     private func startListening() {
-        webSocketTask?.receive { [weak self] result in
-            Task { @MainActor [weak self] in
-                guard let self = self else { return }
-
-                switch result {
-                case .success(let message):
-                    switch message {
-                    case .string(let text):
-                        self.handleIncomingMessage(text)
-                    case .data(let data):
-                        if let text = String(data: data, encoding: .utf8) {
-                            self.handleIncomingMessage(text)
-                        }
-                    @unknown default:
-                        break
-                    }
-                    // 繼續持續監聽下一則訊息
-                    self.startListening()
-
-                case .failure(let error):
-                    print("⚠️ WebSocket 接收中斷: \(error.localizedDescription)")
-                    self.lastErrorMessage = L10n.errorText(error)
-                    if !self.userInitiatedDisconnect {
-                        self.scheduleReconnect()
-                    } else {
-                        self.status = .disconnected
-                    }
-                }
+        guard let socket = webSocketTask else { return }
+        socket.receive { [weak self] text, error in
+            guard let self else { return }
+            // 舊連線（已經換成新的一條）的回報不要再處理：會多排一次重連、或把新連線的狀態改掉。
+            guard socket === self.webSocketTask else { return }
+            if let text {
+                if !text.isEmpty { self.handleIncomingMessage(text) }
+                // 繼續持續監聽下一則訊息
+                self.startListening()
+                return
+            }
+            let failure = error ?? URLError(.networkConnectionLost)
+            print("⚠️ WebSocket 接收中斷: \(failure.localizedDescription)")
+            self.lastErrorMessage = L10n.errorText(failure)
+            if !self.userInitiatedDisconnect {
+                self.scheduleReconnect()
+            } else {
+                self.status = .disconnected
             }
         }
     }

@@ -4,7 +4,7 @@ pub mod hub;
 pub mod protocol;
 pub mod server;
 
-pub use hub::RoomHub;
+pub use hub::{RelayLimits, RoomHub};
 pub use protocol::{ClientMessage, CursorState, PeerInfo, ServerMessage};
 pub use server::{bind, run_server, serve};
 

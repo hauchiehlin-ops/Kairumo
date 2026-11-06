@@ -108,6 +108,8 @@ fun CloudShareSection(
         Button(onClick = { share("") }, enabled = busy == null) { Text(l("cloud_collab_share_link")) }
         Text(l("cloud_collab_share_link_hint"), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     } else {
+        // 房主打開面板時確定房間開在公開中繼上（QR Code 指向的就是那一間）。
+        androidx.compose.runtime.LaunchedEffect(entry.notebookId) { CloudCollab.ensurePublicRoom(entry, collab) }
         val invite = link.ifEmpty { CloudCollab.inviteLink(entry, collab) }
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             CloudQrCode(invite, Modifier.size(140.dp).testTag("cloudcollab.qr"))

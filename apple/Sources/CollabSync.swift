@@ -158,7 +158,11 @@ final class CollabObjectSync {
     // MARK: 基準
 
     /// 以這份內容為「大家都有的」起點（開啟筆記本、加入房間時）。不送出任何東西。
+    /// 本機要丟掉的佔位物件（見 `markDeleted`）：頁面真的刪掉之前，送出時也不要把它當成新的。
+    private(set) var droppedKeys: Set<String> = []
+
     func reset(to doc: NotebookDocument) {
+        droppedKeys = []
         shadow = [:]
         stamps = [:]
         deferredKeys = []
@@ -188,7 +192,7 @@ final class CollabObjectSync {
         var result = CollabOutgoing()
         let current = CollabCanonical.maps(of: doc, pagePositions: pagePositions, zPositions: zPositions)
         learnLocalKeys(current)
-        for (key, entry) in current {
+        for (key, entry) in current where !droppedKeys.contains(key) {
             let known = shadow[key] ?? [:]
             let isNew = (known[ObjectPatch.deletedField] as? Bool) != false
             var changed: [String: Any] = [:]
@@ -339,6 +343,16 @@ final class CollabObjectSync {
     /// 合併狀態裡還在的物件（`type:id`）。
     var liveKeys: Set<String> {
         Set(shadow.filter { ($0.value[ObjectPatch.deletedField] as? Bool) == false }.keys)
+    }
+
+    /// 這些物件在本機視為已刪除（不送出刪除，只是不再要它們）。用於加入房間時的空白佔位頁。
+    func markDeleted(_ keys: some Collection<String>) {
+        droppedKeys.formUnion(keys)
+        for key in keys {
+            shadow[key] = [ObjectPatch.deletedField: true]
+            stamps.removeValue(forKey: key)
+            deferredKeys.remove(key)
+        }
     }
 
     /// 忘掉這些物件：下一次送出會把它們當成新的整個送出去。

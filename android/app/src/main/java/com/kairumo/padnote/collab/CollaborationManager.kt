@@ -190,9 +190,21 @@ class CollaborationManager(private val context: Context) {
 
     // ── 房間 ────────────────────────────────────────────────────
 
-    fun createRoom() {
+    /**
+     * @param server 指定這一場用的伺服器（雲端共享的房間開在公開中繼上）。這個管理器屬於一個編輯器，
+     *   位址只活在這一場，不寫回設定（`saveServer` 才會）。
+     */
+    fun createRoom(server: String? = null) {
         roomKeyBase64 = collabGenerateRoomKey().takeIf { it.isNotEmpty() }
+        server?.let { serverAddress = it }
         connect(collabNewRoomId(), asHost = true)
+    }
+
+    /** 以既有的房號與金鑰當房主開房（雲端共享：重開之後沿用同一間，發出去的邀請照樣有效）。與 Apple `hostRoom` 相同。 */
+    fun hostRoom(room: String, keyBase64: String, server: String) {
+        if (collabIsValidRoomKey(keyBase64)) roomKeyBase64 = keyBase64
+        serverAddress = server
+        connect(room, asHost = true)
     }
 
     /** 房號、邀請連結、連結帶金鑰三種都吃得下（解析在核心）。 */
@@ -304,7 +316,17 @@ class CollaborationManager(private val context: Context) {
         }
         lastError = null
 
-        val request = runCatching { Request.Builder().url(url.toHttpish()).build() }.getOrNull()
+        // 網址加上 `room=<房號>`：公開中繼（Cloudflare）以它決定房間；Rust 中繼不看網址，加了也無妨（與 Apple 相同）。
+        val socketUrl = runCatching {
+            val uri = android.net.Uri.parse(url)
+            val builder = uri.buildUpon().clearQuery()
+            for (name in uri.queryParameterNames) {
+                if (name == "room") continue
+                for (value in uri.getQueryParameters(name)) builder.appendQueryParameter(name, value)
+            }
+            builder.appendQueryParameter("room", room).build().toString()
+        }.getOrDefault(url)
+        val request = runCatching { Request.Builder().url(socketUrl.toHttpish()).build() }.getOrNull()
         if (request == null) {
             lastError = "invalid_server"
             status = Status.Disconnected
@@ -682,6 +704,11 @@ class CollaborationManager(private val context: Context) {
     }
 
     companion object {
+        /**
+         * Kairumo 的公開中繼（Cloudflare Workers，見 `deploy/relay-cloudflare`）。與 Apple
+         * `CollaborationManager.publicRelayURL` 相同。空字串＝還沒部署：雲端共享照舊只用區網／Tailscale。
+         */
+        const val PUBLIC_RELAY_URL = "wss://kairumo-relay.kairumo-relay.workers.dev"
         private const val PREFS = "kairumo_collab"
         private const val KEY_SERVER = "relay_server_url"
         /** 編輯租約多久沒續約就失效（與 Apple 端相同）。 */

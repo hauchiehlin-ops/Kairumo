@@ -330,6 +330,13 @@ class AndroidCollabController(private val manager: CollaborationManager) {
     }
 
     /** 依合併後的頁序調整本機的頁面：補上缺的、刪掉被刪的、搬到對的位置（設計 §8.4）。 */
+    /** 這一頁沒有任何筆畫、也沒有任何物件。 */
+    private fun isEmptyPage(pageId: String, session: PadnoteSession): Boolean {
+        val strokes = runCatching { session.visibleStrokeDetails(pageId) }.getOrDefault(emptyList())
+        if (strokes.isNotEmpty()) return false
+        return sync.shadow.values.none { it["page"] == pageId && it[ObjectPatch.DELETED] == false }
+    }
+
     private fun reconcilePages(session: PadnoteSession, meta: NotebookMeta): Boolean {
         val desired = sync.desiredPageOrder()
         if (desired.isEmpty()) return false
@@ -434,23 +441,26 @@ class AndroidCollabController(private val manager: CollaborationManager) {
             }
             items += "objects" to json
         }
-        // 筆跡：只帶這次協同期間加入與擦掉的 —— 之前就有的兩邊都有（設計 §8.1）。
-        val pages = ink.sessionAdded.keys + ink.sessionRemoved.keys
+        // 筆跡：**每一頁的全部筆畫**都帶上（加上這次協同期間擦掉的）。
+        //
+        // 以前只帶「這次協同期間加入的」，假設之前就有的兩邊都有 —— 但剛加入的人往往還沒同步到
+        // 房主最近寫的東西，只能等檔案同步（跨網路時要好幾秒、甚至整輪同步），看起來就是
+        // 「開啟房主的筆記同步很慢」。收到的一方以筆畫 id 去重，已經有的不會多出一份。
+        val pageIds = (0 until runCatching { session.pageCount().toInt() }.getOrDefault(0))
+            .mapNotNull { runCatching { session.pageIdAt(it.toUInt()) }.getOrNull() }
+        val pages = (pageIds + ink.sessionRemoved.keys).distinct()
         for (page in pages) {
-            val wanted = ink.sessionAdded[page] ?: emptySet<String>()
             val strokes = JSONArray()
-            if (wanted.isNotEmpty()) {
-                val engine = engineFor(page)
-                if (engine != null) {
-                    for (s in engine.strokes) {
-                        val wire = s.coreStrokeId?.let { ink.wireId(it) } ?: continue
-                        if (wire in wanted) strokes.put(CollabStroke.encode(s, wire))
-                    }
-                } else {
-                    for (s in runCatching { session.visibleStrokeDetails(page) }.getOrDefault(emptyList())) {
-                        val wire = ink.wireId(s.id)
-                        if (wire in wanted) strokes.put(CollabStroke.encode(wire, s.tool, s.colorRgba, s.baseWidth, s.points, s.id))
-                    }
+            val engine = engineFor(page)
+            if (engine != null) {
+                for (s in engine.strokes) {
+                    val wire = s.coreStrokeId?.let { ink.wireId(it) } ?: continue
+                    strokes.put(CollabStroke.encode(s, wire))
+                }
+            } else {
+                for (s in runCatching { session.visibleStrokeDetails(page) }.getOrDefault(emptyList())) {
+                    val wire = ink.wireId(s.id)
+                    strokes.put(CollabStroke.encode(wire, s.tool, s.colorRgba, s.baseWidth, s.points, s.id))
                 }
             }
             items += "ink" to JSONObject().put("page", page).put("strokes", strokes)
@@ -525,9 +535,17 @@ class AndroidCollabController(private val manager: CollaborationManager) {
         if (receivedParts.size >= parts) {
             pendingRequest = null
             // 只有自己有的物件（例如離線時新增的）：忘掉它們，下一次送出就會當成新的補給房間。
+            //
+            // **空白頁例外**：掃碼加入時本機沒有這本，會先建一本只有一頁空白頁的筆記（頁面 id 是本機算的，
+            // 與房主的不同）。以前它也被當成「只有自己有」補給房間 —— 每個人那邊都多出一頁空白頁。
+            // 沒有任何筆畫與物件的頁：本機刪掉、不送出。有內容的照舊補給房間。
             val localOnly = sync.liveKeys.filter { it !in snapshotKeys && !it.startsWith("meta:") }
-            sync.forget(localOnly)
-            needsPublish = localOnly.isNotEmpty()
+            val emptyPages = localOnly.filter { it.startsWith("page:") && isEmptyPage(it.removePrefix("page:"), session) }
+            for (key in emptyPages) sync.shadow[key] = mutableMapOf(ObjectPatch.DELETED to true)
+            if (emptyPages.isNotEmpty() && reconcilePages(session, meta)) pagesChanged = true
+            val keep = localOnly - emptyPages.toSet()
+            sync.forget(keep)
+            needsPublish = keep.isNotEmpty()
         }
         return Applied(objects = true, pages = pagesChanged, ink = inkChanged, needsPublish = needsPublish)
     }
