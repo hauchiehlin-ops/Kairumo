@@ -166,11 +166,6 @@ extension NotebookEditorView {
                         })
                 }
             }
-            // 雲端共享筆記：其他參與者在哪一頁（點一下跳過去）。
-            .overlay(alignment: .bottomLeading) {
-                CloudPresenceBar(currentPage: currentPageIndex) { switchToPage($0) }
-                    .padding(12)
-            }
             .overlay(alignment: .top) {
                 // 🌟 草圖智慧修飾浮動控制面板（兩種頁面模式共用）
                 if showSketchRefineBar {

@@ -2796,11 +2796,6 @@ internal fun rememberEditorCanvasContext(
     /// 協同編輯。與 Apple 端講同一套協定（房號、邀請連結、端對端加密都在核心）。
     val showCollaborationState = remember { mutableStateOf(false) }
     var showCollaboration by showCollaborationState
-    // 收到協同邀請（相機掃 QR Code）：打開協同面板，連結已帶入「加入房間」。
-    val pendingInvite = com.kairumo.padnote.collab.CollabInvites.pending
-    androidx.compose.runtime.LaunchedEffect(pendingInvite) {
-        if (pendingInvite != null) showCollaboration = true
-    }
     /// 語言選擇。Apple 端一直有，Android 原本只能跟著系統語系走 ——
     /// 而語言是跨裝置設定（G-04），在這台改了也要傳到別台。
     val showLanguagePickerState = remember { mutableStateOf(false) }
@@ -2825,9 +2820,9 @@ internal fun rememberEditorCanvasContext(
     val collaboration = remember(notebookId) { CollaborationManager(activity) }
     androidx.compose.runtime.DisposableEffect(collaboration) {
         onDispose {
+            collaboration.stateDepositor = null
+            collaboration.onRoomClosed = null
             collaboration.disconnect()
-            // 不再把雲端直連收到的訊息交給已經關掉的這一份（新的一份由下面的 SideEffect 再接上）。
-            com.kairumo.padnote.collab.CloudCollab.realtimeSink = null
         }
     }
     // 房主還開著房間就要離開這本：提醒「關筆記只是離開房間，真正結束要回面板按『結束協同會議』」。與 Apple 同一套。
@@ -2841,20 +2836,24 @@ internal fun rememberEditorCanvasContext(
             }
         }
     }
-    // 雲端共享筆記：剛加入時依自己的網路自動接上即時中繼；中繼連上時雲端放慢輪詢。
-    val cloudRelayInvite by com.kairumo.padnote.collab.CloudCollab.relayInvite.collectAsState()
-    LaunchedEffect(cloudRelayInvite, notebookId) {
-        val invite = cloudRelayInvite ?: return@LaunchedEffect
-        if (!invite.notebookId.equals(notebookId, ignoreCase = true)) return@LaunchedEffect
-        com.kairumo.padnote.collab.CloudCollab.relayInvite.value = null
-        com.kairumo.padnote.collab.CloudCollab.connectRelay(collaboration, invite)
+    // 收到協同邀請（相機掃 QR Code）：邀請的是這本（或沒指定哪一本）就打開協同面板（面板自動加入）；
+    // 是**別本**就先離開這本（照常走房主離開提醒），首頁再打開邀請的那一本 —— 不能在這本的面板裡加入
+    // 別本的房間，否則房主的內容會套進這本。與 Apple `handleIncomingCollabInvite` 相同。
+    val pendingInvite = com.kairumo.padnote.collab.CollabInvites.pending
+    androidx.compose.runtime.LaunchedEffect(pendingInvite) {
+        val link = pendingInvite ?: return@LaunchedEffect
+        val target = uniffi.padnote_core.collabParseInviteV2(link).notebookId.trim()
+        val leave = guardedOnBack
+        if (target.isEmpty() || target.equals(notebookId, ignoreCase = true) || leave == null) {
+            showCollaboration = true
+        } else {
+            leave()
+        }
     }
+    // 房主結束了協同（`room_closed`）：這台不再記這本的雲端共享房間。
     androidx.compose.runtime.SideEffect {
-        // 「中繼通了」要算**中繼上有別人**：房主連的是自己的本機中繼，一定連得上，
-        // 只看連線狀態的話房主永遠不做直連交握，跨網路的協作者就只能等雲端輪詢。
-        com.kairumo.padnote.collab.CloudCollab.relayConnected =
-            { collaboration.status is CollaborationManager.Status.Connected && collaboration.peers.isNotEmpty() }
-        com.kairumo.padnote.collab.CloudCollab.realtimeSink = { json -> collaboration.receiveRealtime(json) }
+        val id = notebookId
+        collaboration.onRoomClosed = { if (id != null) com.kairumo.padnote.collab.CloudCollab.stopSharing(activity, id) }
     }
 
     // ── 即時協同（設計 §8，協定 3）─────────────────────────────
@@ -2905,7 +2904,8 @@ internal fun rememberEditorCanvasContext(
     }
     fun collabEngineFor(page: String): InkEngine? =
         if (pageDisplayMode == PageDisplayMode.CONTINUOUS) continuousCollab.engineFor(page)
-        else engine.takeIf { page == pageId }
+        // 與連續模式（`inkLoaded`）一致：還沒從套件讀完的引擎不交出去，別人的筆畫直接寫進核心。
+        else engine.takeIf { page == pageId && it.hasLoaded }
     fun publishCollab() {
         if (!collabActive || collab.isApplyingRemote) return
         val session = notebook?.first ?: return
@@ -2927,6 +2927,19 @@ internal fun rememberEditorCanvasContext(
         if (collaboration.peers.isNotEmpty()) {
             collab.requestState()
             collabLastStateRequest = System.currentTimeMillis()
+        }
+    }
+    // 雲端中繼：定期把整份狀態寄存在房間裡（房主不在線也能加入、離線的人回來補得到）。
+    // 房間裡只由一個人寄存（`shouldDepositState`），省中繼的寫入額度。書寫中不做。與 Apple 相同。
+    val latestDeposit by rememberUpdatedState<suspend () -> Unit> {
+        val session = notebook?.first
+        if (collabActive && session != null) collab.depositState(session, ::collabEngineFor)
+    }
+    androidx.compose.runtime.SideEffect { collaboration.stateDepositor = { latestDeposit() } }
+    LaunchedEffect(collaboration) {
+        while (true) {
+            kotlinx.coroutines.delay(CollaborationManager.DEPOSIT_CHECK_INTERVAL_MS)
+            if (collaboration.shouldDepositState && !engine.isDrawing && !InkEngine.anyDrawing) latestDeposit()
         }
     }
     // 本機的修改（各型別寫回之後都會遞增自己的 revision；頁面增刪搬會動 pageCount／revision）。

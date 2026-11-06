@@ -37,15 +37,32 @@ class AndroidCollabController(private val manager: CollaborationManager) {
     private var pendingRequest: String? = null
     private var receivedParts = HashSet<Int>()
     private var snapshotKeys = HashSet<String>()
+    // 中繼寄存的整份狀態（`state_store`）的計段，與自己發出的請求分開。
+    private var storedSnap: String? = null
+    private var storedParts = HashSet<Int>()
+    private var storedKeys = HashSet<String>()
     /** 已經有人回覆的請求：排在後面的人就不必再回（同一份狀態送好幾份只是浪費頻寬）。 */
     private val answered = LinkedHashSet<String>()
+
+    /**
+     * 每一頁「上一次比對時，這個引擎上確實有的筆畫」（線上 id）。
+     *
+     * 擦除只認這裡面有、現在沒了的筆畫 —— 不是「已知的筆畫裡引擎上沒有的」。後者在換頁、
+     * 整份狀態套用後頁面重排、引擎還沒從套件讀完的那一瞬間全部成立，結果是把整頁筆畫當成
+     * 「被擦掉」廣播出去，房主那邊的筆跡跟著被擦光（墓碑不會復活，I3）。
+     */
+    private val engineSeen = HashMap<String, Pair<InkEngine, MutableSet<String>>>()
 
     /** 進入（或換）房間：以目前的內容為大家共同的起點，不送出任何東西。 */
     fun reset(canvas: AndroidCollabCanvas, session: PadnoteSession) {
         sync.reset(canvas)
         textHub.reset()
         ink.reset()
+        engineSeen.clear()
         pendingRequest = null
+        storedSnap = null
+        storedParts = HashSet()
+        storedKeys = HashSet()
         // 已有的筆畫算「大家都有」—— 否則第一次在某一頁下筆，整頁舊筆畫會被當成新的再送一次。
         for (page in canvas.pageIds) {
             val ids = runCatching { session.visibleStrokeDetails(page) }.getOrDefault(emptyList()).map { it.id }
@@ -139,12 +156,16 @@ class AndroidCollabController(private val manager: CollaborationManager) {
 
     /** 這一頁的筆跡有變：送出加了哪幾筆、擦了哪幾筆（設計 §4.3）。 */
     fun publishInk(page: String, engine: InkEngine) {
+        // 還沒從套件讀完的引擎（剛換頁、剛加頁）：手上的筆畫不代表這一頁的內容，先不比。
+        if (!engine.hasLoaded || engine.pageKey != page) return
         val current = engine.strokes.mapNotNull { s -> s.coreStrokeId?.let { ink.wireId(it) to s } }
         val ids = current.map { it.first }.toHashSet()
         val known = ink.known[page] ?: HashSet()
         val added = current.filter { it.first !in known }
-        val removed = known - ids
-        ink.known[page] = ids
+        val previous = engineSeen[page]?.takeIf { it.first === engine }?.second
+        val removed = CollabInkDiff.removed(known, ids, previous)
+        ink.known[page] = CollabInkDiff.nextKnown(known, ids, removed)
+        engineSeen[page] = engine to ids.toHashSet()
         if (added.isNotEmpty()) {
             val list = JSONArray()
             added.forEach { (wire, stroke) -> list.put(CollabStroke.encode(stroke, wire)) }
@@ -213,6 +234,11 @@ class AndroidCollabController(private val manager: CollaborationManager) {
                 if (req != pendingRequest || payload.optString("to") != manager.currentUserId) return null
                 applySnapshotPart(payload, session, meta, canvas, engineFor)
             }
+            // 中繼寄存的整份狀態（只在補發時給剛進房的人；中繼不轉送）。以它自己的 `snap` 計段。
+            "state_store" -> {
+                val snap = payload.optString("snap").ifEmpty { return null }
+                applySnapshotPart(payload, session, meta, canvas, engineFor, storedSnap = snap)
+            }
             else -> null
         }
     }
@@ -238,6 +264,8 @@ class AndroidCollabController(private val manager: CollaborationManager) {
         if (engine != null) {
             val added = engine.applyRemoteStrokes(decoded.map { it.second }, decoded.map { it.third })
             decoded.zip(added).forEach { (d, s) -> s.coreStrokeId?.let { ink.remember(d.first, it) } }
+            // 進了這個引擎的筆畫，之後被這台擦掉才送得出擦除。
+            engineSeen[page]?.takeIf { it.first === engine }?.second?.addAll(decoded.map { it.first })
         } else {
             val existing = runCatching { session.visibleStrokeDetails(page) }.getOrDefault(emptyList())
                 .map { it.id.lowercase() }.toHashSet()
@@ -451,7 +479,8 @@ class AndroidCollabController(private val manager: CollaborationManager) {
         val pages = (pageIds + ink.sessionRemoved.keys).distinct()
         for (page in pages) {
             val strokes = JSONArray()
-            val engine = engineFor(page)
+            // 引擎還沒讀完時它手上的不是整頁：改讀套件。
+            val engine = engineFor(page)?.takeIf { it.hasLoaded }
             if (engine != null) {
                 for (s in engine.strokes) {
                     val wire = s.coreStrokeId?.let { ink.wireId(it) } ?: continue
@@ -488,14 +517,97 @@ class AndroidCollabController(private val manager: CollaborationManager) {
         }
     }
 
-    /** 收到整份狀態的一段。全部收齊後，把「只有自己有」的物件交給下一次送出補給房間。 */
+    /**
+     * 把這本目前的整份狀態寄存到雲端中繼（`state_store`，中繼不轉送，新加入的人補發時先拿到它）。
+     * 內容與回覆 `state_request` 同一個格式、同樣端對端加密；信封上帶明文的 `snap`／`part`／`parts`／`seq`。
+     * 不在畫面上的頁在背景讀核心（定期執行，不能卡主執行緒）。與 Apple `depositCollabState` 相同。
+     */
+    suspend fun depositState(session: PadnoteSession, engineFor: (String) -> InkEngine?) {
+        if (!manager.isOnCloudRelay) return
+        manager.noteStateDeposited()
+        val objects = mutableListOf<JSONObject>()
+        for (entry in sync.snapshot()) {
+            val json = entry.toJson()
+            // 圖片連位元組一起寄存：新加入的人手上沒有任何圖檔。
+            if (entry.type == "image") {
+                entry.groups.values.firstNotNullOfOrNull { it["blob"] as? String }?.let { hash ->
+                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                        runCatching { session.blobBytes(hash) }.getOrNull()
+                    }?.let { json.put("b64", Base64.encodeToString(it, Base64.NO_WRAP)) }
+                }
+            }
+            objects += json
+        }
+        val pageIds = (0 until runCatching { session.pageCount().toInt() }.getOrDefault(0))
+            .mapNotNull { runCatching { session.pageIdAt(it.toUInt()) }.getOrNull() }
+        val pages = (pageIds + ink.sessionRemoved.keys).distinct()
+        val inkItems = mutableListOf<JSONObject>()
+        for (page in pages) {
+            val strokes = JSONArray()
+            val engine = engineFor(page)?.takeIf { it.hasLoaded }
+            if (engine != null) {
+                for (s in engine.strokes) {
+                    val wire = s.coreStrokeId?.let { ink.wireId(it) } ?: continue
+                    strokes.put(CollabStroke.encode(s, wire))
+                }
+            } else {
+                val details = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    runCatching { session.visibleStrokeDetails(page) }.getOrDefault(emptyList())
+                }
+                for (s in details) {
+                    strokes.put(CollabStroke.encode(ink.wireId(s.id), s.tool, s.colorRgba, s.baseWidth, s.points, s.id))
+                }
+            }
+            val removed = ink.sessionRemoved[page] ?: emptySet<String>()
+            if (strokes.length() == 0 && removed.isEmpty()) continue
+            inkItems += JSONObject().put("page", page).put("strokes", strokes).put("removed", JSONArray(removed.toList()))
+        }
+        if (manager.status !is CollaborationManager.Status.Connected) return
+        val parts = mutableListOf<Pair<JSONArray, JSONArray>>()
+        var objPart = JSONArray()
+        var inkPart = JSONArray()
+        var size = 0
+        for ((isInk, json) in objects.map { false to it } + inkItems.map { true to it }) {
+            val length = json.toString().length
+            if (size > 0 && size + length > PART_BYTES) {
+                parts += objPart to inkPart
+                objPart = JSONArray(); inkPart = JSONArray(); size = 0
+            }
+            if (isInk) inkPart.put(json) else objPart.put(json)
+            size += length
+        }
+        parts += objPart to inkPart
+        val snap = UUID.randomUUID().toString().lowercase()
+        val seq = manager.relaySeq
+        for ((index, part) in parts.withIndex()) {
+            manager.broadcastOplog(
+                "state_store",
+                JSONObject().put("proto", PROTO).put("req", "store").put("to", "*").put("snap", snap)
+                    .put("part", index).put("parts", parts.size)
+                    .put("objects", part.first).put("ink", part.second),
+                envelope = mapOf("snap" to snap, "part" to index, "parts" to parts.size, "seq" to seq)
+            )
+        }
+    }
+
+    /**
+     * 收到整份狀態的一段。全部收齊後，把「只有自己有」的物件交給下一次送出補給房間。
+     * @param storedSnap 中繼寄存的那一份（`state_store`）的 id：與自己發出的請求分開計段。
+     */
     private fun applySnapshotPart(
         payload: JSONObject, session: PadnoteSession, meta: NotebookMeta,
-        canvas: () -> AndroidCollabCanvas, engineFor: (String) -> InkEngine?
+        canvas: () -> AndroidCollabCanvas, engineFor: (String) -> InkEngine?, storedSnap: String? = null
     ): Applied? {
         val part = payload.optInt("part", -1)
         val parts = payload.optInt("parts", 1)
-        if (part < 0 || !receivedParts.add(part)) return null
+        if (storedSnap != null && storedSnap != this.storedSnap) {
+            this.storedSnap = storedSnap
+            storedParts = HashSet()
+            storedKeys = HashSet()
+        }
+        val received = if (storedSnap != null) storedParts else receivedParts
+        val keys = if (storedSnap != null) storedKeys else snapshotKeys
+        if (part < 0 || !received.add(part)) return null
         val list = payload.optJSONArray("objects") ?: JSONArray()
         val entries = (0 until list.length()).mapNotNull { i ->
             val json = list.optJSONObject(i) ?: return@mapNotNull null
@@ -504,7 +616,7 @@ class AndroidCollabController(private val manager: CollaborationManager) {
             }
             SnapshotEntry.fromJson(json)
         }
-        snapshotKeys += entries.map { "${it.type}:${it.id}" }
+        keys += entries.map { "${it.type}:${it.id}" }
         var view = canvas()
         var pagesChanged = false
         var inkChanged = false
@@ -532,14 +644,14 @@ class AndroidCollabController(private val manager: CollaborationManager) {
             sync.isApplyingRemote = false
         }
         var needsPublish = false
-        if (receivedParts.size >= parts) {
-            pendingRequest = null
+        if (received.size >= parts) {
+            if (storedSnap == null) pendingRequest = null
             // 只有自己有的物件（例如離線時新增的）：忘掉它們，下一次送出就會當成新的補給房間。
             //
             // **空白頁例外**：掃碼加入時本機沒有這本，會先建一本只有一頁空白頁的筆記（頁面 id 是本機算的，
             // 與房主的不同）。以前它也被當成「只有自己有」補給房間 —— 每個人那邊都多出一頁空白頁。
             // 沒有任何筆畫與物件的頁：本機刪掉、不送出。有內容的照舊補給房間。
-            val localOnly = sync.liveKeys.filter { it !in snapshotKeys && !it.startsWith("meta:") }
+            val localOnly = sync.liveKeys.filter { it !in keys && !it.startsWith("meta:") }
             val emptyPages = localOnly.filter { it.startsWith("page:") && isEmptyPage(it.removePrefix("page:"), session) }
             for (key in emptyPages) sync.shadow[key] = mutableMapOf(ObjectPatch.DELETED to true)
             if (emptyPages.isNotEmpty() && reconcilePages(session, meta)) pagesChanged = true

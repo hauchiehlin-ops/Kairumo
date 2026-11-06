@@ -128,7 +128,6 @@ struct KairumoApp: App {
             RootView()
                 .appLocale()
                 // 雲端共享筆記的邀請（掃 QR Code、點連結）：一鍵加入的確認畫面。
-                .modifier(CloudCollabInviteHost())
                 .task {
                     StartupLogger.logKey("log_app_task")
                     try? await Task.sleep(nanoseconds: 1_000_000_000)
@@ -168,10 +167,8 @@ struct KairumoApp: App {
                 }
                 .onOpenURL { url in
                     let ext = url.pathExtension.lowercased()
-                    if CloudCollabManager.shared.offer(url.absoluteString) {
-                        // 雲端共享筆記的邀請：跳出「加入共享筆記」確認畫面（一鍵加入）。
-                    } else if CollaborationManager.shared.offerInvite(url.absoluteString) {
-                        // 相機掃了同一 Wi-Fi／Tailscale 協同 QR Code：首頁（`HomeWorkbenchView`）會打開
+                    if CollaborationManager.shared.offerInvite(url.absoluteString) {
+                        // 相機掃了協同 QR Code（同一 Wi‑Fi、Tailscale、雲端共享都是同一種邀請）：首頁（`HomeWorkbenchView`）會打開
                         // 那本筆記，編輯器再打開協同面板並加入房間。不在這裡發 openNotebook ——
                         // 冷啟動時首頁還沒開始聽，通知會掉在地上；`pendingInviteLink` 是持久狀態，
                         // 首頁一訂閱就拿得到。

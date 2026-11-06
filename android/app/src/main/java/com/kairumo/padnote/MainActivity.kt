@@ -311,9 +311,7 @@ class MainActivity : FragmentActivity() {
         com.kairumo.padnote.platform.ExitReasonLogger.logRecent(applicationContext)
         com.kairumo.padnote.platform.StartupLogger.logKey("log_main_activity_create")
         // 相機掃描協同 QR Code／點邀請連結啟動（見 collab/CollabInvites.kt）。
-        if (!com.kairumo.padnote.collab.CloudCollab.offer(intent?.dataString)) {
-            com.kairumo.padnote.collab.CollabInvites.offer(intent?.dataString)
-        }
+        com.kairumo.padnote.collab.CollabInvites.offer(intent?.dataString)
         // 跨裝置語言要在畫出任何東西**之前**讀進來，不然第一幀會是舊語言，
         // 使用者會看到介面閃一下才變過去。
         applySyncedLanguage(this)
@@ -406,9 +404,7 @@ class MainActivity : FragmentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        if (!com.kairumo.padnote.collab.CloudCollab.offer(intent.dataString)) {
-            com.kairumo.padnote.collab.CollabInvites.offer(intent.dataString)
-        }
+        com.kairumo.padnote.collab.CollabInvites.offer(intent.dataString)
     }
 }
 
@@ -542,11 +538,9 @@ private fun KairumoApp() {
         )
     }
 
-    // 雲端共享筆記的邀請（掃 QR Code、點連結）：一鍵加入，完成後直接打開。
-    com.kairumo.padnote.collab.CloudJoinHost(deviceLanguageTag()) { openNotebook(it) }
-
     // 同一 Wi-Fi／Tailscale 協同邀請：若人在首頁，自動打開對應筆記本進入協同
-    LaunchedEffect(com.kairumo.padnote.collab.CollabInvites.pending) {
+    // 以 `openedId` 為鍵：編輯器為了別本的邀請先關掉這本時，回到首頁要再處理一次。
+    LaunchedEffect(com.kairumo.padnote.collab.CollabInvites.pending, openedId) {
         val inviteText = com.kairumo.padnote.collab.CollabInvites.pending ?: return@LaunchedEffect
         if (openedId == null) {
             val parsed = uniffi.padnote_core.collabParseInviteV2(inviteText)

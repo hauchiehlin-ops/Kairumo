@@ -65,10 +65,15 @@ class ImageStore(
         return out
     }
 
+    /** 已經從核心讀過這一頁（[load] 跑過）。協同比對要看它：還沒讀的儲存是空的，不代表這一頁沒有物件。 */
+    var isLoaded: Boolean = false
+        private set
+
     /** 從核心讀回這一頁的圖片。 */
     fun load() {
         val s = session ?: return
         val page = pageId ?: return
+        isLoaded = true
         images.clear()
         for (blockId in runCatching { s.imageBlockIds(page) }.getOrDefault(emptyList())) {
             val appearance = runCatching { s.blockAppearance(blockId) }.getOrNull()

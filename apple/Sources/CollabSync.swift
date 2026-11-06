@@ -982,10 +982,28 @@ final class CollabStateSync {
 
     func wasAnswered(_ req: String) -> Bool { answered.contains(req) }
 
+    // 中繼寄存的整份狀態（`state_store`）：以它自己的 `snap` 計段，與自己發出的請求分開。
+    private(set) var storedSnap: String?
+    private(set) var storedParts: Set<Int> = []
+    var storedKeys: Set<String> = []
+
+    /// 收下寄存的一段（同一段重複收到回 `false`）。換了一份就從頭計。
+    func acceptStored(snap: String, part: Int) -> Bool {
+        if storedSnap != snap {
+            storedSnap = snap
+            storedParts = []
+            storedKeys = []
+        }
+        return storedParts.insert(part).inserted
+    }
+
     func reset() {
         pendingRequest = nil
         receivedParts = []
         snapshotKeys = []
+        storedSnap = nil
+        storedParts = []
+        storedKeys = []
     }
 }
 

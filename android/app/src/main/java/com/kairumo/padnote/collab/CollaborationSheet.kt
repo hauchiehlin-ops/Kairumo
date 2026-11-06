@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -114,6 +115,9 @@ fun CollaborationSheet(
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     StatusLine(manager, ::l)
+
+                    // 三種連線方式的使用時機與限制（與 Apple `CollabModesGuide` 相同）。
+                    CollabModesGuide(::l)
 
                     // ☁️ 雲端共享（跨網路）：最高優先跨網協同入口（無論連線狀態，一律置頂展示）
                     if (notebookId != null) {
@@ -379,12 +383,17 @@ private fun parseColor(hex: String): Color =
 @Composable
 private fun CollabInviteQr(manager: CollaborationManager, notebookId: String?, notebookTitle: String, l: (String) -> String) {
     data class Mode(val id: String, val titleKey: String, val link: String, val hintKey: String)
+    val context = LocalContext.current
+    // 這本已經雲端共享、房間開在雲端共享的中繼上：上方「雲端共享」那張 QR Code 就是這間房
+    // （同一個中繼、同一把金鑰），再給一張「遠端中繼」只會讓人以為是另一種連法（與 Apple 相同）。
+    val cloudShared = notebookId != null && CloudCollab.shared(context, notebookId) != null &&
+        uniffi.padnote_core.collabParseInviteV2(manager.inviteLink).servers.contains(manager.cloudRelayUrl)
     val modes = buildList {
         if (manager.isHostingLocalRelay) {
-            if (manager.lanRelayAddress != null) add(Mode("lan", "collab_qr_mode_lan", manager.inviteLink, "collab_qr_hint"))
-            manager.tailscaleInviteLink?.let { add(Mode("tailscale", "collab_qr_mode_tailscale", it, "collab_qr_hint")) }
-        } else {
-            add(Mode("remote", "collab_qr_mode_remote", manager.inviteLink, "collab_qr_hint"))
+            if (manager.lanRelayAddress != null) add(Mode("lan", "collab_qr_mode_lan", manager.inviteLink, "collab_qr_hint_lan"))
+            manager.tailscaleInviteLink?.let { add(Mode("tailscale", "collab_qr_mode_tailscale", it, "collab_qr_hint_tailscale")) }
+        } else if (!cloudShared) {
+            add(Mode("remote", "collab_qr_mode_remote", manager.inviteLink, "collab_qr_hint_remote"))
         }
     }.filter { it.link.isNotEmpty() }.distinctBy { it.link }
         // 連結帶上筆記本 id：對方掃了才知道要打開哪一本（與 Apple 相同）。
@@ -437,6 +446,33 @@ private fun CollabInviteQr(manager: CollaborationManager, notebookId: String?, n
         style = MaterialTheme.typography.labelSmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant
     )
+}
+
+/**
+ * 協同面板頂端的說明：三種連線方式各在什麼時候用、有什麼限制；「改用連結分享」會讓 QR Code 換掉的原因；
+ * 端對端加密不是一種連線方式。預設收合。與 Apple `CollabModesGuide` 相同。
+ */
+@Composable
+private fun CollabModesGuide(l: (String) -> String) {
+    var expanded by remember { mutableStateOf(false) }
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .background(MaterialTheme.colorScheme.surfaceVariant, androidx.compose.foundation.shape.RoundedCornerShape(12.dp))
+            .testTag("collaboration.modes_guide")
+    ) {
+        TextButton(onClick = { expanded = !expanded }) {
+            Text((if (expanded) "▾ " else "▸ ") + l("collab_modes_title"), style = MaterialTheme.typography.labelLarge)
+        }
+        if (expanded) {
+            Text(
+                l("collab_modes_body"),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(start = 12.dp, end = 12.dp, bottom = 12.dp)
+            )
+        }
+    }
 }
 
 /** 邀請連結指定的筆記本（`nb`，沒有就是房間 id）是不是 [notebookId] 這本。 */

@@ -118,8 +118,6 @@ object FocusSync {
         lane.setFocus(notebookId, nowMs())
         link?.setFocused(notebookId)
         reschedule()
-        // 共享筆記：另外跑雲端協作（共享資料夾、點對點直連）。不是共享的什麼都不做。
-        com.kairumo.padnote.collab.CloudCollab.setFocus(notebookId)
         if (notebookId != null) ensureLan()
     }
 
@@ -138,7 +136,6 @@ object FocusSync {
         }
         lane.noteLocalEdit(nowMs())
         reschedule()
-        com.kairumo.padnote.collab.CloudCollab.noteLocalEdit()
     }
 
     /** 還有沒推上雲端的筆記本。進背景時據此決定要不要排背景工作。 */
@@ -251,7 +248,6 @@ object FocusSync {
 
     /** 回到前景：立刻問一次，並確保區網節點在。 */
     fun onForeground() {
-        com.kairumo.padnote.collab.CloudCollab.foreground = true
         lane.noteRemoteHint(nowMs())
         reschedule()
         ensureLan()
@@ -259,7 +255,6 @@ object FocusSync {
 
     /** 進背景：收掉區網節點（系統會限制背景的 socket 與 mDNS，留著只是耗電）。 */
     fun onBackground() {
-        com.kairumo.padnote.collab.CloudCollab.foreground = false
         stopLan()
     }
 

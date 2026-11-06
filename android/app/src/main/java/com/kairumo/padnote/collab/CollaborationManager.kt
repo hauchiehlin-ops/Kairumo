@@ -278,7 +278,11 @@ class CollaborationManager(private val context: Context) {
 
     private fun connect(room: String, asHost: Boolean, isReconnecting: Boolean = false) {
         // 新的房間從頭來；斷線重連回同一個房間則從看過的序號接著補。
-        if (!isReconnecting) lastSeq = 0L
+        if (!isReconnecting) {
+            lastSeq = 0L
+            stateDirty = true
+            lastDepositAtMs = 0L
+        }
         userInitiatedDisconnect = false
         if (!isReconnecting) {
             disconnect(userInitiated = false)
@@ -441,11 +445,12 @@ class CollaborationManager(private val context: Context) {
      * 持久化操作。連線中斷時進離線佇列，重連後補送 ——
      * 丟掉的話使用者畫的東西不會出現在對方畫面上，而且沒有人會發現。
      */
-    fun broadcastOplog(kind: String, payload: JSONObject, lamport: Long? = null): Long {
+    fun broadcastOplog(kind: String, payload: JSONObject, lamport: Long? = null, envelope: Map<String, Any> = emptyMap()): Long {
         val key = roomKeyBase64
         // 時鐘由這裡配發（或由呼叫端事先以 nextLamport() 取得）；操作 id 放在 payload 裡 ——
         // 三份中繼都原樣轉送 payload，但不見得保留外層的其他欄位。
         val stamp = lamport ?: nextLamport()
+        noteStateChanged(kind)
         payload.put("op_id", UUID.randomUUID().toString())
         val msg = JSONObject()
             .put("type", "oplog")
@@ -464,26 +469,71 @@ class CollaborationManager(private val context: Context) {
             msg.put("payload", payload)
         }
 
-        // 跨網路時的直連通道（見 `CloudCollab.sendRealtime`）。送到了就不必排離線佇列 ——
-        // 持久化另有雲端資料夾負責。
-        val viaDirect = CloudCollab.sendRealtime(msg.toString())
+        // 信封上的明文欄位（寄存整份狀態的 `snap`／`part`／`parts`／`seq`，中繼要看）。內容仍在加密的 payload 裡。
+        for ((k, v) in envelope) if (!msg.has(k)) msg.put(k, v)
         if (status is Status.Connected) {
             send(msg)
-        } else if (!viaDirect) {
+        } else {
             offlineQueue += msg
             queuedOplogCount = offlineQueue.size
         }
         return stamp
     }
 
-    /** 從雲端直連收到的即時協同訊息（與中繼上的 `oplog` 同一份 JSON）。 */
-    fun receiveRealtime(json: String) {
-        val msg = runCatching { JSONObject(json) }.getOrNull() ?: return
-        if (msg.optString("type") != "oplog") return
-        // 只收這個房間的：直連是以筆記本配對的，房號不同代表是另一場協同的殘留。
-        if (roomId.isNotEmpty() && msg.optString("room_id") != roomId) return
-        deliverOplog(msg, live = true)
+    // ── 寄存整份狀態（雲端中繼，見 `deploy/relay-cloudflare`）──與 Apple 同一套 ──
+
+    /** 已收到的最大中繼序號（寄存時寫在信封上，中繼以它判斷新舊）。 */
+    val relaySeq: Long get() = lastSeq
+
+    /** 這場協同開在雲端中繼上（`wss://`）。區網／Tailscale 的本機中繼不收寄存（它會照常轉送給每個人）。 */
+    val isOnCloudRelay: Boolean get() = serverAddress.lowercase().startsWith("wss://")
+
+    /** 編輯器在協同中掛上：把這本目前的整份狀態寄存到中繼。 */
+    var stateDepositor: (suspend () -> Unit)? = null
+
+    /** 上次寄存之後房間內容有沒有變（送出或收到正式操作）。進新房間時算「有變」：先寄存一份底稿。 */
+    @Volatile private var stateDirty = true
+    @Volatile private var lastDepositAtMs = 0L
+
+    /**
+     * 現在該由這台寄存：在雲端中繼上、有變動、離上次夠久，而且房間裡（含自己）使用者 id 最小的是我 ——
+     * 每個人都寄存只是把同一份內容多寫幾遍。
+     */
+    val shouldDepositState: Boolean
+        get() {
+            if (!isOnCloudRelay || status !is Status.Connected || !stateDirty) return false
+            if (lastDepositAtMs != 0L && System.currentTimeMillis() - lastDepositAtMs < DEPOSIT_MIN_INTERVAL_MS) return false
+            return peers.none { it.userId < currentUserId }
+        }
+
+    fun noteStateDeposited() {
+        stateDirty = false
+        lastDepositAtMs = System.currentTimeMillis()
     }
+
+    private fun noteStateChanged(kind: String) {
+        if (!kind.startsWith("state_") && !kind.startsWith("live_")) stateDirty = true
+    }
+
+    /** 寄存一次（例如結束協同之前，讓不在線的協作者之後還拿得到最終版本）。 */
+    suspend fun depositState() {
+        if (!isOnCloudRelay || status !is Status.Connected) return
+        val depositor = stateDepositor ?: return
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) { depositor() }
+        // 送出排在連線的送出佇列裡；關房前給它一點時間送完。
+        kotlinx.coroutines.delay(500)
+    }
+
+    /** 房主結束這場協同：通知房裡每個人，然後離開。中繼保留房間資料到保存期限（見 `deploy/relay-cloudflare`）。與 Apple `closeRoom` 相同。 */
+    fun closeRoom() {
+        if (status is Status.Connected && isHost) {
+            send(JSONObject().put("type", "close_room").put("room_id", roomId).put("user_id", currentUserId))
+        }
+        disconnect()
+    }
+
+    /** 房主結束了協同（`room_closed`）：編輯器據此解除這本的雲端共享登記。 */
+    var onRoomClosed: (() -> Unit)? = null
 
     // ── 書寫中即時串流（`live_ink`，見 LiveInk.kt）──
 
@@ -492,7 +542,7 @@ class CollaborationManager(private val context: Context) {
 
     /** 連上房間、而且房間裡有別人：才值得記點送出。 */
     val isLiveInkReady: Boolean
-        get() = (status is Status.Connected && peers.isNotEmpty()) || CloudCollab.directPeers.value > 0
+        get() = status is Status.Connected && peers.isNotEmpty()
 
     /**
      * 送一段書寫中的點。**不配發時鐘、不排離線佇列**：它是暫態的，漏了就漏了，
@@ -509,7 +559,6 @@ class CollaborationManager(private val context: Context) {
         } else {
             msg.put("payload", payload)
         }
-        CloudCollab.sendRealtime(msg.toString())
         if (status is Status.Connected) send(msg)
     }
 
@@ -621,9 +670,7 @@ class CollaborationManager(private val context: Context) {
             }
             "room_closed" -> {
                 disconnect()
-                CloudCollab.focusedId?.let { nid ->
-                    CloudCollab.stopSharing(context, nid)
-                }
+                onRoomClosed?.invoke()
             }
             "pong" -> Unit
         }
@@ -659,6 +706,9 @@ class CollaborationManager(private val context: Context) {
             if (live && kind == "live_ink") decryptPayload(item, raw)?.let { liveInk.receive(uid, it) }
             return
         }
+        // 寄存的整份狀態只該在補發裡出現：Cloudflare 中繼不轉送它，但自架的 Rust 中繼會把 `state_` 當暫態照轉
+        // —— 即時收到就忽略，免得每兩分鐘套一次整份狀態（打字中會被重建基準）。與 Apple 相同。
+        if (live && kind == "state_store") return
         if (item.has("seq")) lastSeq = maxOf(lastSeq, item.optLong("seq"))
         if (kind == "ink_add") liveInk.settle(uid)
         val lamport = item.optLong("lamport", 0L).toULong()
@@ -674,6 +724,7 @@ class CollaborationManager(private val context: Context) {
         } else {
             raw
         }
+        noteStateChanged(kind)
         payload.optString("op_id").takeIf { it.isNotEmpty() }?.let { opId ->
             synchronized(seenOpIds) {
                 if (!seenOpIds.add(opId)) return
@@ -707,6 +758,11 @@ class CollaborationManager(private val context: Context) {
     }
 
     companion object {
+        /** 多久檢查一次要不要寄存。與 Apple `depositCheckInterval` 相同。 */
+        const val DEPOSIT_CHECK_INTERVAL_MS = 30_000L
+        /** 兩次寄存的最短間隔。與 Apple `depositMinInterval` 相同。 */
+        const val DEPOSIT_MIN_INTERVAL_MS = 120_000L
+
         /**
          * Kairumo 的公開中繼（Cloudflare Workers，見 `deploy/relay-cloudflare`）。與 Apple
          * `CollaborationManager.publicRelayURL` 相同。空字串＝還沒部署：雲端共享照舊只用區網／Tailscale。

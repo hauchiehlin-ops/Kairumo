@@ -121,8 +121,6 @@ public final class FocusSyncController: ObservableObject {
         }
         lane.setFocus(notebookId: next, nowMs: nowMs)
         link?.setFocused(next)
-        // 共享筆記：另外跑雲端協作（共享資料夾、點對點直連）。不是共享的什麼都不做。
-        CloudCollabManager.shared.setFocus(next)
         reschedule()
         if notebookId != nil { ensureLan() }
     }
@@ -141,7 +139,6 @@ public final class FocusSyncController: ObservableObject {
         }
         lane.noteLocalEdit(nowMs: nowMs)
         reschedule()
-        CloudCollabManager.shared.noteLocalEdit()
     }
 
     /// 把還沒推的筆記本**現在**推上雲端：只匯出、上傳這幾本，不跑整庫。
