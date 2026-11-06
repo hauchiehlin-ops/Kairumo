@@ -1048,12 +1048,21 @@ class InkEngine(
      */
     var onReachedPageBottom: (() -> Unit)? = null
 
+    /**
+     * 協同：書寫中的點（頁面座標）。`phase` 0＝落筆、1＝移動、2＝結束（含取消）。
+     *
+     * 給「書寫中即時串流」用（`collab/LiveInk.kt`）：對方在提筆前就看得到預覽線。
+     * 沒有人在聽時是 `null`，不多花任何成本；在聽時也只是把座標交出去，不做運算。
+     */
+    var onLiveSample: ((phase: Int, pointer: ULong, x: Float, y: Float) -> Unit)? = null
+
     private fun accumulate(sample: InkInput.Sample): CompletedStroke? {
         val id = sample.event.id
         when (sample.event.phase) {
             FfiPhase.BEGAN -> {
                 noteInkTouch()
                 inFlight[id] = mutableListOf(sample)
+                onLiveSample?.invoke(0, id, sample.event.x, sample.event.y)
                 resetHold(sample.event.x, sample.event.y)
                 updateDraftPreview()
             }
@@ -1061,7 +1070,10 @@ class InkEngine(
                 noteInkTouch()
                 // 沒有 BEGAN 就收到 MOVED（例如前一筆被收回後又有事件進來）
                 // 不該無中生有一筆畫。
-                inFlight[id]?.add(sample)
+                inFlight[id]?.let {
+                    it.add(sample)
+                    onLiveSample?.invoke(1, id, sample.event.x, sample.event.y)
+                }
                 if (kotlin.math.hypot(sample.event.x - holdAnchorX, sample.event.y - holdAnchorY) > SNAP_SLOP) {
                     resetHold(sample.event.x, sample.event.y)
                 }
@@ -1071,6 +1083,7 @@ class InkEngine(
             FfiPhase.ENDED -> {
                 noteInkTouch()
                 val collected = inFlight.remove(id) ?: return null
+                onLiveSample?.invoke(2, id, sample.event.x, sample.event.y)
                 // 只有落筆與抬筆、中間一個移動都沒收到，兩點卻隔得很遠：那不是畫出來的線。
                 // 真的移動一定會有 ACTION_MOVE；沒有的話是筆按著時頁面被捲走、或中間的取樣被別人吃掉，
                 // 照收會在兩點之間拉出一條使用者沒畫過的直線（實機回報，套件裡是一筆只有兩點的筆畫）。
@@ -1096,7 +1109,7 @@ class InkEngine(
             }
             FfiPhase.CANCELLED -> {
                 endHold()
-                inFlight.remove(id)
+                if (inFlight.remove(id) != null) onLiveSample?.invoke(2, id, sample.event.x, sample.event.y)
                 clearDraftPreview()
             }
             FfiPhase.HOVER, FfiPhase.HOVER_ENDED -> Unit

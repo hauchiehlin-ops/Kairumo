@@ -1548,6 +1548,11 @@ internal fun ColumnScope.EditorCanvasContainer(ctx: EditorCanvasContext) = with(
 
             // 協同：別人正在編輯、打字的物件標上對方的顏色與名字（設計 §5）。
             if (collabActive) PeerSelectionLayer(marqueeCandidates, collaboration, deviceLanguageTag())
+            // 協同：別人書寫中的預覽線（提筆後由正式筆畫取代）。疊在畫布（zIndex 100）上面。
+            if (collabActive) {
+                com.kairumo.padnote.collab.RemoteLiveInkOverlay(
+                    collaboration.liveInk, pageId, Modifier.fillMaxSize().zIndex(101f))
+            }
 
             key(model3DRevision) {
                 Model3DLayer(

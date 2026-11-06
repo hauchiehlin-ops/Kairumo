@@ -607,6 +607,7 @@ public class CollaborationManager: ObservableObject {
         webSocketTask = nil
 
         self.status = .disconnected
+        LiveInkStore.shared.clear()
         if userInitiated {
             self.currentRoomId = ""
             self.roomNotebookId = nil
@@ -793,13 +794,61 @@ public class CollaborationManager: ObservableObject {
             msg["encrypted"] = true
         }
 
+        // 跨網路時的直連通道（見 `CloudCollabManager.sendRealtime`）。送到了就不必排離線佇列 ——
+        // 持久化另有雲端資料夾負責。
+        let viaDirect = jsonString(msg).map { CloudCollabManager.shared.sendRealtime($0) } ?? false
         if case .connected = status {
             sendJson(msg)
-        } else {
+        } else if !viaDirect {
             offlineOplogQueue.append(msg)
             queuedOplogCount = offlineOplogQueue.count
         }
         return lamport
+    }
+
+    /// 從雲端直連收到的即時協同訊息（與中繼上的 `oplog` 同一份 JSON），交給與中繼相同的處理。
+    func receiveRealtime(_ json: String) {
+        guard let data = json.data(using: .utf8),
+              var dict = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
+              (dict["type"] as? String) == "oplog" else { return }
+        // 只收這個房間的：直連是以筆記本配對的，房號不同代表是另一場協同的殘留。
+        if !currentRoomId.isEmpty, (dict["room_id"] as? String) != currentRoomId { return }
+        dict["type"] = "peer_oplog"
+        dict.removeValue(forKey: "seq") // 中繼的序號只屬於中繼
+        if let text = jsonString(dict) { handleIncomingMessage(text) }
+    }
+
+    private func jsonString(_ dict: [String: Any]) -> String? {
+        guard let data = try? JSONSerialization.data(withJSONObject: dict) else { return nil }
+        return String(data: data, encoding: .utf8)
+    }
+
+    // MARK: - 書寫中即時串流（`live_ink`，見 CollabLiveInk.swift）
+
+    /// 送出間隔：30 Hz。比這密對方畫不出差別，只是多耗電與頻寬。
+    nonisolated static let liveInkInterval: CFTimeInterval = 1.0 / 30.0
+
+    /// 連上房間、而且房間裡有別人：才值得記點送出。
+    var isLiveInkReady: Bool {
+        if case .connected = status, !peers.isEmpty { return true }
+        return CloudCollabManager.shared.directPeers > 0
+    }
+
+    /// 送一段書寫中的點。**不配發時鐘、不排離線佇列**：它是暫態的，漏了就漏了，
+    /// 正式筆畫（`ink_add`）提筆後照常送。種類以 `live_` 開頭，中繼不放進補發暫存。
+    func sendLiveInk(_ payload: [String: Any]) {
+        let (finalPayload, isEncrypted) = encryptPayload(payload)
+        var msg: [String: Any] = [
+            "type": "oplog",
+            "room_id": currentRoomId,
+            "user_id": currentUserId,
+            "lamport": 0,
+            "kind": "live_ink",
+            "payload": finalPayload,
+        ]
+        if isEncrypted { msg["encrypted"] = true }
+        if let text = jsonString(msg) { CloudCollabManager.shared.sendRealtime(text) }
+        if case .connected = status { sendJson(msg) }
     }
 
     // MARK: - 舊協定（已停用）
@@ -931,6 +980,7 @@ public class CollaborationManager: ObservableObject {
         case "peer_left":
             if let uid = json["user_id"] as? String {
                 peers.removeAll(where: { $0.userId == uid })
+                LiveInkStore.shared.settle(userId: uid)
             }
 
         case "peer_oplog":
@@ -939,6 +989,14 @@ public class CollaborationManager: ObservableObject {
                   let rawPayload = json["payload"] as? [String: Any] else { return }
             let lamport = (json["lamport"] as? NSNumber)?.uint64Value ?? 0
             let isEncrypted = (json["encrypted"] as? Bool) ?? false
+            if kind.hasPrefix("live_") {
+                // 暫態：直接交給預覽層，不推進時鐘、不記 op id、不進編輯器的合併流程。
+                if kind == "live_ink", let payload = decryptPayload(rawPayload, isEncrypted: isEncrypted) {
+                    LiveInkStore.shared.receive(userId: uid, payload: payload)
+                }
+                return
+            }
+            if kind == "ink_add" { LiveInkStore.shared.settle(userId: uid) }
             if let seq = (json["seq"] as? NSNumber)?.uint64Value { lastSeq = max(lastSeq, seq) }
             deliver(userId: uid, kind: kind, rawPayload: rawPayload, lamport: lamport, isEncrypted: isEncrypted)
 
@@ -953,6 +1011,8 @@ public class CollaborationManager: ObservableObject {
                         let isEncrypted = (item["encrypted"] as? Bool) ?? false
                         // 補發會包含自己送過的：自己的修改本機早就套用了。
                         guard uid != currentUserId else { continue }
+                        // 舊版中繼會把書寫中的預覽也存起來補發：早就過時了，不畫。
+                        if kind.hasPrefix("live_") { continue }
                         deliver(userId: uid, kind: kind, rawPayload: rawPayload, lamport: lamport, isEncrypted: isEncrypted)
                     }
                 }

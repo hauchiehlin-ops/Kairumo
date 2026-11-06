@@ -353,6 +353,8 @@ pub fn oauth_collab_authorize_url(
             "mimetypes",
             "application/vnd.google-apps.folder".to_string(),
         ));
+        // 手機上（觸控）點一下資料夾是「打開」、不是選取；要**長按**才會選取並出現「插入」（真機實測）。
+        // 沒有參數能改這個行為，只能在 App 的說明裡講（`cloud_collab_join_desc`）。
         params.push(("file_ids", pick_folder_id));
     }
     if !login_hint.is_empty() {
@@ -535,7 +537,8 @@ pub fn collab_order_servers(servers: Vec<String>, my_ipv4: Vec<String>) -> Vec<S
 ///
 /// - App 在背景：暫停（省電、省配額）。
 /// - 區網中繼已連上：雲端只負責持久化，15 秒一次就夠。
-/// - 最近 60 秒有人改過（遠端或本機）：2 秒。
+/// - 最近 15 秒有人改過（遠端或本機）：1 秒 —— 兩人正在一來一往，等 2 秒就不像在協作。
+/// - 最近 60 秒：2 秒。
 /// - 5 分鐘內：5 秒。更久：20 秒。
 #[uniffi::export]
 pub fn collab_cloud_poll_ms(
@@ -552,7 +555,8 @@ pub fn collab_cloud_poll_ms(
     }
     let recent = secs_since_remote_change.min(secs_since_local_edit);
     match recent {
-        0..=60 => 2_000,
+        0..=15 => 1_000,
+        16..=60 => 2_000,
         61..=300 => 5_000,
         _ => 20_000,
     }
@@ -562,7 +566,7 @@ pub fn collab_cloud_poll_ms(
 /// 停頓一下再送，一段落只要一兩個檔，對方也不會等太久。
 #[uniffi::export]
 pub fn collab_cloud_flush_delay_ms() -> u32 {
-    600
+    300
 }
 
 // ---- 在場檔 --------------------------------------------------------------------
@@ -784,7 +788,9 @@ mod tests {
     fn polling_adapts_to_activity() {
         assert_eq!(collab_cloud_poll_ms(false, false, 0, 0), 0);
         assert_eq!(collab_cloud_poll_ms(true, true, 0, 0), 15_000);
-        assert_eq!(collab_cloud_poll_ms(true, false, 10, 999), 2_000);
+        assert_eq!(collab_cloud_poll_ms(true, false, 10, 999), 1_000);
+        assert_eq!(collab_cloud_poll_ms(true, false, 999, 15), 1_000);
+        assert_eq!(collab_cloud_poll_ms(true, false, 30, 999), 2_000);
         assert_eq!(collab_cloud_poll_ms(true, false, 999, 120), 5_000);
         assert_eq!(collab_cloud_poll_ms(true, false, 999, 999), 20_000);
     }

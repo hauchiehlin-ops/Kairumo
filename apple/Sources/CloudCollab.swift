@@ -271,6 +271,8 @@ final class CloudCollabManager: ObservableObject {
     private var lastRemoteChange = Date.distantPast
     private var lastLocalEdit = Date.distantPast
     private var localDirty = false
+    /// 有本機修改要送：輪詢迴圈提早結束這一次等待。
+    private var wakeLoop = false
     private var lastPresenceAt = Date.distantPast
     private var myPage: UInt32 = 0
     private var mySelection = ""
@@ -590,6 +592,8 @@ final class CloudCollabManager: ObservableObject {
         Task { @MainActor [weak self] in
             try? await Task.sleep(nanoseconds: delay * 1_000_000)
             self?.pushP2P()
+            // 叫醒輪詢迴圈馬上上傳：不叫的話要等到下一輪（最久一整個輪詢間隔）對方才拿得到。
+            self?.wakeLoop = true
         }
     }
 
@@ -608,7 +612,12 @@ final class CloudCollabManager: ObservableObject {
                 lastError = L10n.t("cloud_collab_err_reauth")
                 return
             }
-            let relayUp: Bool = { if case .connected = CollaborationManager.shared.status { return true }; return false }()
+            // 「中繼通了」要算**中繼上有別人**：房主連的是自己的本機中繼，一定連得上，
+            // 只看連線狀態的話房主永遠不做直連交握，跨網路的協作者就只能等雲端輪詢。
+            let relayUp: Bool = {
+                if case .connected = CollaborationManager.shared.status { return !CollaborationManager.shared.peers.isEmpty }
+                return false
+            }()
             let interval = collabCloudPollMs(
                 foreground: isForeground, relayConnected: relayUp || !connectedPeers.isEmpty,
                 secsSinceRemoteChange: UInt32(min(Date().timeIntervalSince(lastRemoteChange), 1e6)),
@@ -621,7 +630,13 @@ final class CloudCollabManager: ObservableObject {
                 if !relayUp { await p2pTick(session: s) }
             }
             let wait = interval > 0 ? UInt64(interval) : 5_000
-            try? await Task.sleep(nanoseconds: wait * 1_000_000)
+            // 分段睡：本機一有修改（`noteLocalEdit`）就提早醒來上傳。
+            var slept: UInt64 = 0
+            while slept < wait, !wakeLoop, !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: 100_000_000)
+                slept += 100
+            }
+            wakeLoop = false
         }
     }
 
@@ -742,6 +757,12 @@ final class CloudCollabManager: ObservableObject {
                 scheduleImport(id)
             }
         case .presence(let json):
+            // 即時協同訊息（外包在在場訊框裡，見 `sendRealtime`）。
+            if json.hasPrefix(Self.rtPrefix), json.hasSuffix("}") {
+                let inner = String(json.dropFirst(Self.rtPrefix.count).dropLast())
+                CollaborationManager.shared.receiveRealtime(inner)
+                return
+            }
             let now = UInt64(Date().timeIntervalSince1970 * 1000)
             if let p = collabPresenceDecode(json: json, nowMs: now), p.deviceId != deviceId {
                 presences = (presences.filter { $0.deviceId != p.deviceId } + [p]).sorted { $0.userName < $1.userName }
@@ -783,6 +804,30 @@ final class CloudCollabManager: ObservableObject {
             let result = sent
             await MainActor.run { CloudCollabManager.shared.sentSizes = result }
         }
+    }
+
+    // MARK: 即時協同走直連（跨網路、連不到房主的中繼時）
+    //
+    // 直連原本只搬事件檔：對方要等事件檔寫好、推過去、匯入、重開，一筆要將近一秒。
+    // 這裡讓即時協同的訊息（`ink_add`、`obj_patch`、書寫中預覽 `live_ink`……，與中繼上的同一份 JSON）
+    // 也走同一條資料通道，對方收到後與從中繼收到的走同一段處理 —— 跨網路也是即時的。
+    // 同一則可能從中繼與直連各來一次：操作有 op id 去重、預覽有序號，重複無害。
+    //
+    // 訊框沿用「在場」格式外包一層 `{"rt":…}`：不必改核心的訊框種類（不用重建原生函式庫），
+    // 舊版收到時在場解析失敗、直接忽略。與 Android 的 `CloudCollab.sendRealtime` 同一個格式。
+
+    private static let rtPrefix = "{\"rt\":"
+    /// 資料通道單一訊息的安全上限（與核心的 `P2P_MAX_FRAME` 相同）。
+    private static let realtimeMax = 60 * 1024
+
+    /// 有直連中的對端就送出並回 `true`；沒有（或太大，交給中繼與雲端）回 `false`。
+    @discardableResult
+    func sendRealtime(_ json: String) -> Bool {
+        guard !connectedPeers.isEmpty else { return false }
+        let frame = p2pEncodePresence(json: Self.rtPrefix + json + "}")
+        guard frame.count <= Self.realtimeMax else { return false }
+        sendToPeers(frame)
+        return true
     }
 
     private func sendToPeers(_ frame: Data) {

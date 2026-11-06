@@ -788,6 +788,7 @@ extension NotebookEditorView {
                                 // LazyVStack 會建立多頁畫布；不能讓最後建立的頁面覆蓋
                                 // `canvasView`，否則貼紙可能蓋到別頁且存檔頁碼也錯。
                                 canvasRef: { ref in
+                                    attachLiveInk(to: ref, page: index)
                                     continuousCanvases[index] = ref
                                     if index == currentPageIndex {
                                         continuousCanvases.activeCanvas = ref
@@ -970,6 +971,8 @@ extension NotebookEditorView {
                                 }
                             )
                             .frame(width: PageGeometry.width, height: PageGeometry.height)
+                            // 別人書寫中的預覽線（頁面座標，跟著頁面一起縮放）
+                            .overlay(alignment: .topLeading) { continuousLiveInk(page: index) }
                             .clipped()
                             .scaleEffect(scale, anchor: .topLeading)
                             // 連續模式的物件可以拖到相鄰的頁（單頁模式照舊夾在本頁）。
@@ -1129,6 +1132,27 @@ extension NotebookEditorView {
         }
     }
 
+
+    @ViewBuilder
+    func continuousLiveInk(page: Int) -> some View {
+        if isCollaborating {
+            RemoteLiveInkOverlay(pageId: liveInkPageId(page))
+        }
+    }
+
+    /// 這一頁在協同裡的 id（預覽線以它對應頁面）。
+    func liveInkPageId(_ page: Int) -> String? {
+        guard let ids = notebook.pageIds, page >= 0, page < ids.count else { return nil }
+        return ids[page]
+    }
+
+    /// 讓這個畫布在書寫途中把點串流給房間（見 CollabLiveInk.swift）。外觀每次都取最新的工具狀態。
+    func attachLiveInk(to canvas: PKCanvasView, page: Int) {
+        LiveInkSender.attach(to: canvas) {
+            guard isCollaborating, selectedTool.isBrush, let pid = liveInkPageId(page) else { return nil }
+            return LiveInkContext(pageId: pid, rgbaHex: LiveInkSender.hex(selectedColor), width: strokeWidth)
+        }
+    }
 
     /// 把某一頁的筆跡變動廣播出去（協同）。
     ///
@@ -1765,6 +1789,7 @@ extension NotebookEditorView {
                     }
                 },
                 canvasRef: { ref in
+                    attachLiveInk(to: ref, page: currentPageIndex)
                     continuousCanvases.activeCanvas = ref
                     // `updateUIView` 每次更新都會叫到這裡；直接寫 @State 就是在畫面更新途中改狀態
                     // （SwiftUI 的 runtime issue「Modifying state during view update」，每個工作階段
@@ -2046,6 +2071,11 @@ extension NotebookEditorView {
                     // 寫到頁尾會自動準備下一頁。
                 }
                 .padding(14)
+            }
+
+            // 別人書寫中的預覽線（提筆後由正式筆畫取代）
+            if isCollaborating {
+                RemoteLiveInkOverlay(pageId: liveInkPageId(currentPageIndex))
             }
 
             // 🌟 線上多人即時彩色游標與筆尖浮層

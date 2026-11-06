@@ -177,6 +177,8 @@ class CollaborationManager(private val context: Context) {
     private val client = OkHttpClient.Builder()
         // OkHttp 預設會在閒置時關掉連線；協同是長連線，交給自己的心跳管。
         .pingInterval(java.time.Duration.ofSeconds(tuning.pingIntervalS.toLong()))
+        // 關掉 Nagle：協同送的是一則則很小的訊息，開著的話下一則要等上一則的 ACK（延遲 ACK 可達 200 ms）。
+        .socketFactory(NoDelaySocketFactory)
         .build()
     private var socket: WebSocket? = null
     private var relay: RelayServer? = null
@@ -379,6 +381,7 @@ class CollaborationManager(private val context: Context) {
         socket?.close(1000, null)
         socket = null
         peers.clear()
+        liveInk.clear()
         if (userInitiated) {
             runCatching { relay?.stop() }
             isHostingLocalRelay = false
@@ -439,13 +442,53 @@ class CollaborationManager(private val context: Context) {
             msg.put("payload", payload)
         }
 
+        // 跨網路時的直連通道（見 `CloudCollab.sendRealtime`）。送到了就不必排離線佇列 ——
+        // 持久化另有雲端資料夾負責。
+        val viaDirect = CloudCollab.sendRealtime(msg.toString())
         if (status is Status.Connected) {
             send(msg)
-        } else {
+        } else if (!viaDirect) {
             offlineQueue += msg
             queuedOplogCount = offlineQueue.size
         }
         return stamp
+    }
+
+    /** 從雲端直連收到的即時協同訊息（與中繼上的 `oplog` 同一份 JSON）。 */
+    fun receiveRealtime(json: String) {
+        val msg = runCatching { JSONObject(json) }.getOrNull() ?: return
+        if (msg.optString("type") != "oplog") return
+        // 只收這個房間的：直連是以筆記本配對的，房號不同代表是另一場協同的殘留。
+        if (roomId.isNotEmpty() && msg.optString("room_id") != roomId) return
+        deliverOplog(msg, live = true)
+    }
+
+    // ── 書寫中即時串流（`live_ink`，見 LiveInk.kt）──
+
+    /** 別人書寫中的預覽線。 */
+    val liveInk = LiveInkStore()
+
+    /** 連上房間、而且房間裡有別人：才值得記點送出。 */
+    val isLiveInkReady: Boolean
+        get() = (status is Status.Connected && peers.isNotEmpty()) || CloudCollab.directPeers.value > 0
+
+    /**
+     * 送一段書寫中的點。**不配發時鐘、不排離線佇列**：它是暫態的，漏了就漏了，
+     * 正式筆畫（`ink_add`）提筆後照常送。種類以 `live_` 開頭，中繼不放進補發暫存。
+     */
+    fun sendLiveInk(payload: JSONObject) {
+        val key = roomKeyBase64
+        val msg = JSONObject()
+            .put("type", "oplog").put("room_id", roomId).put("user_id", currentUserId)
+            .put("lamport", 0).put("kind", "live_ink")
+        val cipher = if (key != null) collabEncrypt(key, payload.toString()) else ""
+        if (cipher.isNotEmpty()) {
+            msg.put("payload", JSONObject().put("ciphertext", cipher)).put("encrypted", true)
+        } else {
+            msg.put("payload", payload)
+        }
+        CloudCollab.sendRealtime(msg.toString())
+        if (status is Status.Connected) send(msg)
     }
 
     private fun send(msg: JSONObject) {
@@ -544,12 +587,13 @@ class CollaborationManager(private val context: Context) {
             "peer_left" -> {
                 val uid = json.optString("user_id")
                 peers.removeAll { it.userId == uid }
+                liveInk.settle(uid)
             }
-            "peer_oplog" -> deliverOplog(json)
+            "peer_oplog" -> deliverOplog(json, live = true)
             "oplog_batch" -> {
                 val batch = json.optJSONArray("oplogs") ?: return
                 for (i in 0 until batch.length()) {
-                    batch.optJSONObject(i)?.let { deliverOplog(it) }
+                    batch.optJSONObject(i)?.let { deliverOplog(it, live = false) }
                 }
                 if (json.optBoolean("truncated", false)) onStateSyncNeeded?.invoke()
             }
@@ -581,13 +625,20 @@ class CollaborationManager(private val context: Context) {
         )
     }
 
-    private fun deliverOplog(item: JSONObject) {
-        if (item.has("seq")) lastSeq = maxOf(lastSeq, item.optLong("seq"))
+    /** @param live 即時送達（不是補發）。補發裡的書寫中預覽早就過時了，不畫。 */
+    private fun deliverOplog(item: JSONObject, live: Boolean) {
         val uid = item.optString("user_id").ifEmpty { return }
         // 補發會包含自己送過的：自己的修改本機早就套用了。
         if (uid == currentUserId) return
         val kind = item.optString("kind").ifEmpty { return }
         val raw = item.optJSONObject("payload") ?: return
+        if (kind.startsWith("live_")) {
+            // 暫態：直接交給預覽層，不推進時鐘、不記 op id、不進編輯器的合併流程。
+            if (live && kind == "live_ink") decryptPayload(item, raw)?.let { liveInk.receive(uid, it) }
+            return
+        }
+        if (item.has("seq")) lastSeq = maxOf(lastSeq, item.optLong("seq"))
+        if (kind == "ink_add") liveInk.settle(uid)
         val lamport = item.optLong("lamport", 0L).toULong()
         synchronized(this) { lamportClock = maxOf(lamportClock, lamport.toLong()) }
 
@@ -608,6 +659,14 @@ class CollaborationManager(private val context: Context) {
             }
         }
         onOplog?.invoke(RemoteOplog(uid, kind, payload, lamport))
+    }
+
+    private fun decryptPayload(item: JSONObject, raw: JSONObject): JSONObject? {
+        if (!item.optBoolean("encrypted", false)) return raw
+        val key = roomKeyBase64 ?: return null
+        val plain = collabDecrypt(key, raw.optString("ciphertext"))
+        if (plain.isEmpty()) return null
+        return runCatching { JSONObject(plain) }.getOrNull()
     }
 
     // ── 設定 ────────────────────────────────────────────────────
@@ -638,4 +697,17 @@ class CollaborationManager(private val context: Context) {
 
         const val TYPING_PREFIX = "text:"
     }
+}
+
+/** 每條連線都設 `TCP_NODELAY` 的 socket 工廠（給協同的 WebSocket 用）。 */
+private object NoDelaySocketFactory : javax.net.SocketFactory() {
+    private val base = javax.net.SocketFactory.getDefault()
+    private fun tuned(s: java.net.Socket) = s.apply { tcpNoDelay = true }
+    override fun createSocket(): java.net.Socket = tuned(base.createSocket())
+    override fun createSocket(host: String?, port: Int): java.net.Socket = tuned(base.createSocket(host, port))
+    override fun createSocket(host: String?, port: Int, localHost: java.net.InetAddress?, localPort: Int): java.net.Socket =
+        tuned(base.createSocket(host, port, localHost, localPort))
+    override fun createSocket(host: java.net.InetAddress?, port: Int): java.net.Socket = tuned(base.createSocket(host, port))
+    override fun createSocket(address: java.net.InetAddress?, port: Int, localAddress: java.net.InetAddress?, localPort: Int): java.net.Socket =
+        tuned(base.createSocket(address, port, localAddress, localPort))
 }
