@@ -88,8 +88,21 @@ async fn handle_connection(
     let mut current_room: Option<String> = None;
     let mut current_user: Option<String> = None;
 
-    // 讀取客戶端 WebSocket 訊息
-    while let Some(Ok(ws_msg)) = ws_receiver.next().await {
+    // 讀取客戶端 WebSocket 訊息。公開中繼設了閒置上限：太久沒有任何訊息（客戶端每 20 秒一次心跳）
+    // 就當成斷線，不讓殭屍連線佔著房間與記憶體。
+    let idle = match hub.limits().idle_timeout_secs {
+        0 => None,
+        secs => Some(std::time::Duration::from_secs(secs)),
+    };
+    loop {
+        let next = match idle {
+            Some(limit) => match tokio::time::timeout(limit, ws_receiver.next()).await {
+                Ok(next) => next,
+                Err(_) => break,
+            },
+            None => ws_receiver.next().await,
+        };
+        let Some(Ok(ws_msg)) = next else { break };
         match ws_msg {
             Message::Text(text) => {
                 if let Ok(client_msg) = serde_json::from_str::<ClientMessage>(text.as_str()) {

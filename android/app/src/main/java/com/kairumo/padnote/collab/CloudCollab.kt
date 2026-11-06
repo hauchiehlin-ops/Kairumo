@@ -146,8 +146,12 @@ object CloudCollab {
                 lastError.value = if (granted.error == "invalid_email") L10n.t("cloud_collab_err_email") else granted.error
                 return null
             }
-            // 即時房間（同一個網路時自動升級）。
-            if (collab.status is CollaborationManager.Status.Disconnected) collab.createRoom()
+            // 即時房間：有公開中繼就開在公開中繼上（跨網路也即時）；沒有的話照舊開在本機（同一個網路才連得到）。
+            if (CollaborationManager.PUBLIC_RELAY_URL.isNotEmpty()) {
+                ensurePublicRoom(entry, collab)
+            } else if (collab.status is CollaborationManager.Status.Disconnected) {
+                collab.createRoom()
+            }
             repeat(30) { if (collab.roomKeyBase64 == null || collab.roomId.isEmpty()) delay(100) }
             entry = entry.copy(roomId = collab.roomId, keyBase64 = collab.roomKeyBase64 ?: "")
             // 登記要在整本推上去之後才算數：推失敗就還原，面板不會誤切到「已分享」（與 Apple 相同）。
@@ -176,12 +180,29 @@ object CloudCollab {
         }
     }
 
+    /**
+     * 房主：這本雲端共享筆記的即時房間開在公開中繼上。已經在那裡就不動；記過房號與金鑰就沿用
+     * （重開之後，之前發出去的邀請照樣有效）。與 Apple `ensurePublicRoom` 相同。
+     */
+    fun ensurePublicRoom(entry: FfiSharedNotebook, collab: CollaborationManager) {
+        val relay = CollaborationManager.PUBLIC_RELAY_URL
+        if (relay.isEmpty() || entry.role != "owner") return
+        if (collab.serverAddress == relay && collab.status !is CollaborationManager.Status.Disconnected) return
+        if (entry.roomId.isNotEmpty() && entry.keyBase64.isNotEmpty()) {
+            collab.hostRoom(entry.roomId, entry.keyBase64, relay)
+        } else {
+            collab.createRoom(server = relay)
+        }
+    }
+
     fun inviteLink(entry: FfiSharedNotebook, collab: CollaborationManager?, minFiles: UInt = 0u): String =
         uniffi.padnote_core.collabInviteLinkV2(
             FfiCollabInviteV2(
                 roomId = entry.roomId.ifEmpty { collab?.roomId.orEmpty() },
                 keyBase64 = entry.keyBase64.ifEmpty { collab?.roomKeyBase64.orEmpty() },
-                servers = listOfNotNull(collab?.lanRelayAddress, collab?.tailscaleRelayAddress),
+                // 有公開中繼：邀請只帶它（大家連同一台）。沒有：照舊帶區網／Tailscale 位址。
+                servers = if (CollaborationManager.PUBLIC_RELAY_URL.isNotEmpty()) listOf(CollaborationManager.PUBLIC_RELAY_URL)
+                    else listOfNotNull(collab?.lanRelayAddress, collab?.tailscaleRelayAddress),
                 notebookId = entry.notebookId, driveFolderId = entry.folderId,
                 title = entry.title, minFiles = minFiles
             )
@@ -234,6 +255,9 @@ object CloudCollab {
     fun offer(link: String?): Boolean {
         val invite = uniffi.padnote_core.collabParseInviteV2(link ?: return false)
         if (invite.driveFolderId.isEmpty() || invite.notebookId.isEmpty()) return false
+        // 邀請帶著公開中繼（`wss://`）：直接走即時房間加入（與掃同一 Wi-Fi 的 QR Code 同一條路），
+        // 不必授權 Google、也不必從雲端硬碟下載 —— 加入後由房主的整份狀態補齊內容（與 Apple 相同）。
+        if (invite.servers.any { it.lowercase().startsWith("wss://") }) return false
         pendingInvite.value = invite
         return true
     }

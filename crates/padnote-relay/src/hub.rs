@@ -86,17 +86,39 @@ impl Room {
     }
 }
 
+/// 公開中繼的防護設定。App 內建的本機中繼用 [`RelayLimits::default`]（不設上限，行為與以前相同）；
+/// 放在公開網路上的中繼由 `main.rs` 依環境變數設定。
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct RelayLimits {
+    /// 同時存在的房間數上限。0 = 不限。
+    pub max_rooms: usize,
+    /// 每間房的人數上限。0 = 不限。
+    pub max_peers_per_room: usize,
+    /// 多久沒收到任何訊息就斷開（秒）。0 = 不限。客戶端每 20 秒送一次心跳。
+    pub idle_timeout_secs: u64,
+}
+
 /// 集中式房間中繼集線器。
 #[derive(Clone, Debug, Default)]
 pub struct RoomHub {
     rooms: Arc<RwLock<HashMap<String, Room>>>,
+    limits: RelayLimits,
 }
 
 impl RoomHub {
     pub fn new() -> Self {
+        Self::with_limits(RelayLimits::default())
+    }
+
+    pub fn with_limits(limits: RelayLimits) -> Self {
         Self {
             rooms: Arc::new(RwLock::new(HashMap::new())),
+            limits,
         }
+    }
+
+    pub fn limits(&self) -> RelayLimits {
+        self.limits
     }
 
     /// 成員申請加入房間。若房間不存在，則第一位加入者自動成為房主 (Owner)。
@@ -114,9 +136,21 @@ impl RoomHub {
         tx: mpsc::UnboundedSender<ServerMessage>,
     ) -> Result<ServerMessage, String> {
         let mut rooms = self.rooms.write().await;
+        if self.limits.max_rooms > 0
+            && !rooms.contains_key(&room_id)
+            && rooms.len() >= self.limits.max_rooms
+        {
+            return Err("中繼的房間數已達上限，請稍後再試".to_string());
+        }
         let room = rooms
             .entry(room_id.clone())
             .or_insert_with(|| Room::new(room_id.clone(), user_id.clone(), passcode.clone()));
+        if self.limits.max_peers_per_room > 0
+            && !room.peers.contains_key(&user_id)
+            && room.peers.len() >= self.limits.max_peers_per_room
+        {
+            return Err("這個房間的人數已達上限".to_string());
+        }
 
         // 密碼檢查（若有設置）
         if let Some(ref required_passcode) = room.passcode
@@ -342,6 +376,30 @@ impl RoomHub {
         current_user: &mut Option<String>,
         tx: &mpsc::UnboundedSender<ServerMessage>,
     ) -> Option<ServerMessage> {
+        // 加入之後的每一則訊息都只能作用在**這條連線加入的那個房間、以那個身分**。
+        // 以前直接信任訊息裡寫的房號與使用者 id：任何連線都能把訊息送進別的房間、冒用別人離開。
+        // 內建在 App 裡的本機中繼只有區網的人連得到，公開中繼就不行。
+        let bound = |room_id: &str, user_id: &str| {
+            current_room.as_deref() == Some(room_id) && current_user.as_deref() == Some(user_id)
+        };
+        match &msg {
+            ClientMessage::Presence {
+                room_id, user_id, ..
+            }
+            | ClientMessage::Oplog {
+                room_id, user_id, ..
+            }
+            | ClientMessage::Leave { room_id, user_id }
+            | ClientMessage::CloseRoom { room_id, user_id }
+                if !bound(room_id, user_id) =>
+            {
+                return None;
+            }
+            ClientMessage::Catchup { room_id, .. } if current_room.as_deref() != Some(room_id) => {
+                return None;
+            }
+            _ => {}
+        }
         match msg {
             ClientMessage::Join {
                 room_id,
@@ -351,6 +409,13 @@ impl RoomHub {
                 role,
                 passcode,
             } => {
+                // 換房間：先離開原本那一間（同一條連線不會同時在兩個房間）。
+                if let (Some(old_room), Some(old_user)) =
+                    (current_room.clone(), current_user.clone())
+                    && (old_room != room_id || old_user != user_id)
+                {
+                    self.leave(&old_room, &old_user).await;
+                }
                 *current_room = Some(room_id.clone());
                 *current_user = Some(user_id.clone());
                 match self
@@ -366,10 +431,15 @@ impl RoomHub {
                     .await
                 {
                     Ok(resp) => Some(resp),
-                    Err(err) => Some(ServerMessage::Error {
-                        code: "JOIN_FAILED".to_string(),
-                        message: err,
-                    }),
+                    Err(err) => {
+                        // 沒加入成功：這條連線不屬於任何房間。
+                        *current_room = None;
+                        *current_user = None;
+                        Some(ServerMessage::Error {
+                            code: "JOIN_FAILED".to_string(),
+                            message: err,
+                        })
+                    }
                 }
             }
             ClientMessage::Presence {
@@ -441,7 +511,7 @@ impl RoomHub {
 
 #[cfg(test)]
 mod transient_tests {
-    use super::is_transient_kind;
+    use super::*;
 
     #[test]
     fn live_and_state_kinds_are_not_replayed() {
@@ -449,5 +519,75 @@ mod transient_tests {
         assert!(is_transient_kind("live_ink"));
         assert!(!is_transient_kind("ink_add"));
         assert!(!is_transient_kind("obj_patch"));
+    }
+
+    fn join_msg(room: &str, user: &str) -> ClientMessage {
+        ClientMessage::Join {
+            room_id: room.into(),
+            user_id: user.into(),
+            user_name: user.into(),
+            user_color: "#000".into(),
+            role: "editor".into(),
+            passcode: None,
+        }
+    }
+
+    #[tokio::test]
+    async fn messages_only_act_on_the_joined_room() {
+        let hub = RoomHub::new();
+        let (tx_a, _rx_a) = mpsc::unbounded_channel();
+        let (tx_b, mut rx_b) = mpsc::unbounded_channel();
+        let (mut room_a, mut user_a) = (None, None);
+        let (mut room_b, mut user_b) = (None, None);
+        hub.handle_message(join_msg("secret", "b"), &mut room_b, &mut user_b, &tx_b)
+            .await;
+        hub.handle_message(join_msg("other", "a"), &mut room_a, &mut user_a, &tx_a)
+            .await;
+        // a 沒加入 "secret"，送不進去。
+        let forged = ClientMessage::Oplog {
+            room_id: "secret".into(),
+            user_id: "a".into(),
+            lamport: 1,
+            kind: "obj_patch".into(),
+            encrypted: None,
+            payload: serde_json::json!({}),
+        };
+        hub.handle_message(forged, &mut room_a, &mut user_a, &tx_a)
+            .await;
+        assert!(rx_b.try_recv().is_err(), "別的房間的連線送不進來");
+        // 冒用 b 離開也不行。
+        let leave = ClientMessage::Leave {
+            room_id: "secret".into(),
+            user_id: "b".into(),
+        };
+        hub.handle_message(leave, &mut room_a, &mut user_a, &tx_a)
+            .await;
+        assert_eq!(hub.peer_count("secret").await, 1);
+    }
+
+    #[tokio::test]
+    async fn limits_cap_rooms_and_peers() {
+        let hub = RoomHub::with_limits(RelayLimits {
+            max_rooms: 1,
+            max_peers_per_room: 2,
+            idle_timeout_secs: 0,
+        });
+        let tx = || mpsc::unbounded_channel::<ServerMessage>().0;
+        let join = |room: &str, user: &str| {
+            hub.join(
+                room.into(),
+                user.into(),
+                user.into(),
+                "#000".into(),
+                "editor".into(),
+                None,
+                tx(),
+            )
+        };
+        assert!(join("r1", "u1").await.is_ok());
+        assert!(join("r1", "u2").await.is_ok());
+        assert!(join("r1", "u3").await.is_err(), "第三人超過每房上限");
+        assert!(join("r1", "u2").await.is_ok(), "同一人重連不算新增");
+        assert!(join("r2", "u4").await.is_err(), "房間數已達上限");
     }
 }

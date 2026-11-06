@@ -92,6 +92,9 @@ struct CloudShareSection: View {
     private func sharedBody(_ entry: FfiSharedNotebook) -> some View {
         let invite = link.isEmpty ? manager.inviteLink(for: entry) : link
         HStack(alignment: .top, spacing: 12) {
+            // 房主打開面板時確定房間開在公開中繼上（QR Code 指向的就是那一間）。
+            Color.clear.frame(width: 0, height: 0)
+                .onAppear { manager.ensurePublicRoom(for: entry) }
             QRCodeImage(text: invite)
                 .frame(width: 132, height: 132)
                 .accessibilityIdentifier("cloudcollab.qr")

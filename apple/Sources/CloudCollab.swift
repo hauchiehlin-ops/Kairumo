@@ -369,9 +369,13 @@ final class CloudCollabManager: ObservableObject {
                 ? L10n.t("cloud_collab_err_email") : L10n.coreText(granted.error)
             return nil
         }
-        // 3. 即時房間（同一個網路時自動升級）：沒有就開一間。
+        // 3. 即時房間：有公開中繼就開在公開中繼上（跨網路也即時）；沒有的話照舊開在本機（同一個網路才連得到）。
         let collab = CollaborationManager.shared
-        if case .disconnected = collab.status { collab.createRoom(notebookId: notebookId) }
+        if !CollaborationManager.publicRelayURL.isEmpty {
+            ensurePublicRoom(for: entry)
+        } else if case .disconnected = collab.status {
+            collab.createRoom(notebookId: notebookId)
+        }
         for _ in 0..<30 where collab.roomKeyBase64 == nil || collab.currentRoomId.isEmpty {
             try? await Task.sleep(nanoseconds: 100_000_000)
         }
@@ -399,9 +403,29 @@ final class CloudCollabManager: ObservableObject {
     }
 
     /// 這本共享筆記的邀請連結（含所有可用的即時中繼位址）。
+    /// 房主：這本雲端共享筆記的即時房間開在公開中繼上。已經在那裡就不動；
+    /// 記過房號與金鑰就沿用（重開 App 之後，之前發出去的邀請照樣有效）。
+    func ensurePublicRoom(for entry: FfiSharedNotebook) {
+        let relay = CollaborationManager.publicRelayURL
+        guard !relay.isEmpty, entry.role == "owner" else { return }
+        let collab = CollaborationManager.shared
+        let bound = collab.roomNotebookId == entry.notebookId.lowercased()
+        if bound, collab.activeServerAddress == relay, collab.status != .disconnected { return }
+        if !entry.roomId.isEmpty, !entry.keyBase64.isEmpty {
+            collab.hostRoom(roomId: entry.roomId, keyBase64: entry.keyBase64,
+                            notebookId: entry.notebookId, server: relay)
+        } else {
+            collab.createRoom(notebookId: entry.notebookId, server: relay)
+        }
+    }
+
     func inviteLink(for entry: FfiSharedNotebook, minFiles: UInt32 = 0) -> String {
         let collab = CollaborationManager.shared
-        let servers = [collab.lanRelayAddress, collab.tailscaleRelayAddress].compactMap { $0 }
+        // 有公開中繼：邀請只帶它（大家連同一台，跨網路也即時）。沒有：照舊帶區網／Tailscale 位址。
+        let relay = CollaborationManager.publicRelayURL
+        let servers = relay.isEmpty
+            ? [collab.lanRelayAddress, collab.tailscaleRelayAddress].compactMap { $0 }
+            : [relay]
         return collabInviteLinkV2(invite: FfiCollabInviteV2(
             roomId: entry.roomId.isEmpty ? collab.currentRoomId : entry.roomId,
             keyBase64: entry.keyBase64.isEmpty ? (collab.roomKeyBase64 ?? "") : entry.keyBase64,
@@ -462,6 +486,10 @@ final class CloudCollabManager: ObservableObject {
     func offer(_ link: String) -> Bool {
         let invite = collabParseInviteV2(text: link)
         guard !invite.driveFolderId.isEmpty, !invite.notebookId.isEmpty else { return false }
+        // 邀請帶著公開中繼（`wss://`）：直接走即時房間加入（與掃同一 Wi-Fi 的 QR Code 同一條路），
+        // 不必授權 Google、也不必從雲端硬碟下載 —— 加入後由房主的整份狀態補齊內容。
+        // `drive.file` 權限下協作者本來就讀不到房主建立的檔案（Google 的逐檔授權）。
+        if invite.servers.contains(where: { $0.lowercased().hasPrefix("wss://") }) { return false }
         pendingInvite = invite
         return true
     }

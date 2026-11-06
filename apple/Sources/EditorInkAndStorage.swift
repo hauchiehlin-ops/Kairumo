@@ -295,6 +295,18 @@ extension NotebookEditorView {
         doc.textAttachments?[index] = item
     }
 
+    /// 這一頁（協同頁面 id）沒有任何筆畫、也沒有任何物件。
+    func isEmptyCollabPage(_ pageId: String) -> Bool {
+        guard let index = notebook.pageIds?.firstIndex(of: pageId) else { return false }
+        let dir = store.drawingsDirectory
+        if !ProInkStore.load(in: dir, notebookId: notebook.id, page: index).isEmpty { return false }
+        if !ProInkStore.load(in: dir, notebookId: notebook.id, page: index, foreign: true).isEmpty { return false }
+        if !drawingForCollab(page: index).strokes.isEmpty { return false }
+        return !collabSync.shadow.values.contains {
+            ($0["page"] as? String) == pageId && ($0[ObjectPatch.deletedField] as? Bool) == false
+        }
+    }
+
     /// 依合併後的頁序調整本機的頁面：補上缺的、刪掉被刪的、搬到對的位置（設計 §8.4）。
     func reconcilePagesWithCollab() {
         let desired = collabSync.desiredPageOrder()
@@ -370,31 +382,6 @@ extension NotebookEditorView {
         doc.textAttachments?[index] = item
     }
 
-    /// 別人加的筆畫：已經有的（同 id）不重複加。
-    func applyRemoteInkAdd(pageId: String, strokes list: [[String: Any]]) {
-        guard let pageIdx = notebook.pageIds?.firstIndex(of: pageId) else { return }
-        let known = collabInkLedger.known[pageId] ?? []
-        let decoded = list.compactMap { json in
-            CollabStroke.decode(json).map { (id: $0.id, stroke: $0.stroke, core: CollabStroke.coreId(json)) }
-        }.filter { !known.contains($0.id) }
-        guard !decoded.isEmpty else { return }
-        for item in decoded { collabInkLedger.remember(wire: item.id, local: CollabInk.strokeId(item.stroke)) }
-        // 先記下送出者的 id 再落盤：寫進套件時用它，同一筆在每一台的套件裡才是同一個 id。
-        // 在背景筆跡佇列上寫：它排在之後的 `flushPendingCoreInk` 前面，寫進套件時讀得到這些 id。
-        nonisolated(unsafe) let added = decoded.map { ($0.stroke, $0.core) }
-        let directory = store.syncBaselineDirectory, nid = notebook.id
-        Self.coreInkQueue.async {
-            CollabInkPersistence.remoteAdded(added, in: directory, notebookId: nid, page: pageIdx)
-        }
-        let base = drawingForCollab(page: pageIdx)
-        let merged = CollabInk.adding(decoded.map(\.stroke), to: base)
-        collabInkLedger.known[pageId, default: []].formUnion(decoded.map(\.id))
-        collabInkLedger.added(page: pageId, wires: decoded.map(\.id))
-        if merged.strokes.count != base.strokes.count {
-            applyRemoteDrawing(page: pageIdx, remote: merged, replace: true)
-        }
-    }
-
     /// 別人擦掉的筆畫：只移除這幾筆，別人同時畫的不受影響。
     func applyRemoteInkRemove(pageId: String, wires: [String]) {
         guard let pageIdx = notebook.pageIds?.firstIndex(of: pageId), !wires.isEmpty else { return }
@@ -429,7 +416,6 @@ extension NotebookEditorView {
     /// 回覆一份整份狀態給 `to`，分段送。
     func answerCollabState(req: String, to: String, blobs: Set<String>) {
         collabStateSync.remember(req)
-        func size(_ json: [String: Any]) -> Int { (try? JSONSerialization.data(withJSONObject: json))?.count ?? 0 }
         var items: [(ink: Bool, json: [String: Any])] = []
         for entry in collabSync.snapshot() {
             var json = entry.json
@@ -441,22 +427,34 @@ extension NotebookEditorView {
             }
             items.append((false, json))
         }
-        // 筆跡：只帶這次協同期間加入與擦掉的 —— 之前就有的兩邊都有（設計 §8.1）。
-        let pages = Set(collabInkLedger.sessionAdded.keys).union(collabInkLedger.sessionRemoved.keys)
-        for page in pages {
-            let wanted = collabInkLedger.sessionAdded[page] ?? []
-            var strokes: [[String: Any]] = []
-            if !wanted.isEmpty, let index = notebook.pageIds?.firstIndex(of: page) {
-                let drawing = drawingForCollab(page: index)
-                let cores = collabCoreIds(page: index, drawing: drawing)
-                for (i, stroke) in drawing.strokes.enumerated() {
-                    let wire = collabInkLedger.wireId(for: stroke)
-                    if wanted.contains(wire) { strokes.append(CollabStroke.encode(stroke, id: wire, coreId: cores[i])) }
-                }
+        // 筆跡：**每一頁的全部自繪筆畫**（自己的與別台的）都帶上，加上這次協同期間擦掉的。
+        //
+        // 以前只帶這次協同期間 PencilKit 圖層加入的筆畫 —— 但所有筆刷早就由自繪引擎收筆，
+        // 房主的筆跡完全不在整份狀態裡，剛加入的人只能等檔案同步，看起來就是「開啟房主的筆記很慢」。
+        // 收到的一方以筆畫 id 去重，已經有的不會多出一份。逐頁讀檔在背景做。
+        let pageIds = notebook.pageIds ?? []
+        let removedByPage = collabInkLedger.sessionRemoved
+        let directory = store.drawingsDirectory, nid = notebook.id
+        nonisolated(unsafe) let objectItems = items
+        Task.detached(priority: .userInitiated) {
+            var all = objectItems
+            for (index, page) in pageIds.enumerated() {
+                let strokes = ProInkStore.load(in: directory, notebookId: nid, page: index)
+                    + ProInkStore.load(in: directory, notebookId: nid, page: index, foreign: true)
+                let removed = Array(removedByPage[page] ?? [])
+                guard !strokes.isEmpty || !removed.isEmpty else { continue }
+                all.append((true, ["page": page, "strokes": strokes.map(CollabStroke.encode(pro:)),
+                                   "removed": removed]))
             }
-            items.append((true, ["page": page, "strokes": strokes,
-                                 "removed": Array(collabInkLedger.sessionRemoved[page] ?? [])]))
+            nonisolated(unsafe) let ready = all
+            await MainActor.run { sendCollabStateParts(ready, req: req, to: to) }
         }
+    }
+
+    /// 把整份狀態切段送出（每段約 `CollabStateSync.partBytes`）。
+    private func sendCollabStateParts(_ items: [(ink: Bool, json: [String: Any])], req: String, to: String) {
+        guard isCollaborating else { return }
+        func size(_ json: [String: Any]) -> Int { (try? JSONSerialization.data(withJSONObject: json))?.count ?? 0 }
         var parts: [(objects: [[String: Any]], ink: [[String: Any]])] = [([], [])]
         var bytes = 0
         for item in items {
@@ -522,16 +520,34 @@ extension NotebookEditorView {
         collabSync.isApplyingRemote = false
         for pageInk in (payload["ink"] as? [[String: Any]]) ?? [] {
             guard let page = pageInk["page"] as? String else { continue }
-            if let strokes = pageInk["strokes"] as? [[String: Any]] { applyRemoteInkAdd(pageId: page, strokes: strokes) }
-            if let removed = pageInk["removed"] as? [String] { applyRemoteInkRemove(pageId: page, wires: removed) }
+            // 筆畫放進自繪引擎（與即時的 `ink_add` 同一條路，見 `applyRemoteOplog`）。
+            let pageIdx = notebook.pageIds?.firstIndex(of: page)
+            let strokes = ((pageInk["strokes"] as? [[String: Any]]) ?? []).compactMap(CollabStroke.decodePro)
+            let removed = (pageInk["removed"] as? [String]) ?? []
+            if let pageIdx, !strokes.isEmpty || !removed.isEmpty {
+                ProInkCollab.applyRemote(directory: store.drawingsDirectory, notebookId: notebook.id, page: pageIdx,
+                                         added: strokes, removedIds: Set(removed.map { $0.lowercased() }))
+            }
+            if !removed.isEmpty { applyRemoteInkRemove(pageId: page, wires: removed) }
         }
         PageThumbnailRenderer.invalidateAll()
         guard collabStateSync.receivedParts.count >= parts else { return }
         collabStateSync.finish()
         // 只有自己有的物件（例如離線時新增的）：忘掉它們，下一次送出就會當成新的補給房間。
+        //
+        // **空白頁例外**：掃碼加入時本機沒有這本，會先建一本只有一頁空白頁的筆記（頁面 id 是本機算的，
+        // 與房主的不同）。以前它也被當成「只有自己有」補給房間 —— 每個人那邊都多出一頁空白頁。
+        // 沒有任何筆畫與物件的頁：本機刪掉、不送出。有內容的照舊補給房間。與 Android 相同。
         let localOnly = collabSync.liveKeys.subtracting(collabStateSync.snapshotKeys).filter { !$0.hasPrefix("meta:") }
         guard !localOnly.isEmpty else { return }
-        collabSync.forget(localOnly)
+        let emptyPages = localOnly.filter { $0.hasPrefix("page:") && isEmptyCollabPage(String($0.dropFirst(5))) }
+        if !emptyPages.isEmpty {
+            collabSync.markDeleted(emptyPages)
+            reconcilePagesWithCollab()
+        }
+        let keep = localOnly.subtracting(emptyPages)
+        guard !keep.isEmpty else { return }
+        collabSync.forget(keep)
         publishCollabChanges()
     }
 
