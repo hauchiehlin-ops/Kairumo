@@ -104,6 +104,9 @@ public class CollaborationManager: ObservableObject {
 
     @Published public var status: CollaborationStatus = .disconnected
     @Published public var currentRoomId: String = ""
+    /// 這間房屬於哪一本筆記。房間跟著筆記走：關掉那本（或在編輯器裡換到別本）就離開房間，
+    /// 不然打開 B 時面板還掛著 A 的房間，QR Code 卻帶 B 的 id —— 對方掃了會把 A 的修改寫進 B。
+    @Published public private(set) var roomNotebookId: String? = nil
     @Published public var isHost: Bool = false
     @Published public var peers: [CollaboratorPeer] = []
     @Published public var latencyMs: Int = 18
@@ -394,14 +397,26 @@ public class CollaborationManager: ObservableObject {
     /// 建立新協同房間（作為房主 Owner）
     // 原本收一個 `noteId`，而主體從沒讀過它、呼叫端也從沒傳過。
     // 房間與筆記本的關聯目前不存在 —— 拿掉參數讓這件事看得見。
-    public func createRoom() {
+    public func createRoom(notebookId: String? = nil) {
         generateRoomKey()
         connect(roomId: collabNewRoomId(), asHost: true)
+        roomNotebookId = notebookId?.lowercased()
+    }
+
+    /// 關掉（或換掉）筆記本時呼叫：這間房是那本的就離開。
+    ///
+    /// 用 `disconnect` 而不是 `closeRoom`：房主只是關了筆記，不是要解散房間 ——
+    /// `room_closed` 會讓雲端共享的協作者連同共享資料夾一起停掉（見 `handleIncomingMessage`）。
+    /// 要結束整場協同請在面板按「結束協同」。
+    public func leaveRoom(ifBoundTo notebookId: String) {
+        guard let bound = roomNotebookId, bound == notebookId.lowercased() else { return }
+        disconnect()
     }
 
     /// 加入既有協同房間
-    public func joinRoom(roomId: String) {
+    public func joinRoom(roomId: String, notebookId: String? = nil) {
         let trimmed = roomId.trimmingCharacters(in: .whitespacesAndNewlines)
+        defer { if !currentRoomId.isEmpty { roomNotebookId = notebookId?.lowercased() } }
 
         // 1. 若輸入包含 server 參數，立即套用該伺服器位址
         if let serverParam = Self.extractServerUrl(from: trimmed) {
@@ -594,6 +609,7 @@ public class CollaborationManager: ObservableObject {
         self.status = .disconnected
         if userInitiated {
             self.currentRoomId = ""
+            self.roomNotebookId = nil
             self.isHost = false
             self.peers.removeAll()
             if isHostingLocalRelay {
@@ -1024,6 +1040,7 @@ extension CollaborationManager: ProfileScoped {
     func resetForProfileSwitch() {
         status = .disconnected
         currentRoomId = ""
+        roomNotebookId = nil
         isHost = false
         peers = []
         roomKeyBase64 = nil

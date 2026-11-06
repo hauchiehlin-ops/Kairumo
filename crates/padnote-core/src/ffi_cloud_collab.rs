@@ -347,7 +347,7 @@ pub fn oauth_collab_authorize_url(
         params.push(("allow_folder_selection", "true".to_string()));
         // `file_ids` 只是**搜尋篩選**（Google 文件原文：filter the search results），
         // 不是預選。沒有再限定類型的話，使用者一點進資料夾就只看到滿滿的事件小檔，
-        // 而「選取」只對被點選的項目有效 —— 進了資料夾就再也選不到資料夾本身，
+        // 而底部的「插入」（Google 挑選器的確認鈕，不叫「選取」）只對被點選的項目有效 —— 進了資料夾就再也選不到資料夾本身，
         // 卡在挑選器裡出不來。只列資料夾：畫面上只有那一個可選的東西。
         params.push((
             "mimetypes",

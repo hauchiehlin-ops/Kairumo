@@ -5105,6 +5105,8 @@ struct NotebookEditorHost: View {
                 NotebookEditorView(
                     notebook: binding(fallback: current),
                     onRequestSwitch: { target in
+                        // 在編輯器裡換到別本：舊那本的即時協同房間不能跟過來（見 `roomNotebookId`）。
+                        CollaborationManager.shared.leaveRoom(ifBoundTo: currentNotebookId)
                         currentNotebookId = target.id
                     }
                 )
@@ -5114,6 +5116,9 @@ struct NotebookEditorHost: View {
                 Color.clear.onAppear { DispatchQueue.main.async { dismiss() } }
             }
         }
+        // 關掉這本筆記回首頁：沒自己按「結束協同」的話，房間也一起離開，
+        // 免得下一本打開時面板還是上一本的房間。
+        .onDisappear { CollaborationManager.shared.leaveRoom(ifBoundTo: currentNotebookId) }
     }
 
     /// 以 id 在**存取當下**查索引的綁定。

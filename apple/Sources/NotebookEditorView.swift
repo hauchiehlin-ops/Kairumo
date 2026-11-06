@@ -208,6 +208,9 @@ public struct NotebookEditorView: View {
     @State var initialNotebookSnapshot: NotebookDocument? = nil
     /// 範例有改動、使用者要離開時：問要存檔、另存還是放棄（見 `requestLeave`）。
     @State var showSampleLeaveDialog = false
+    /// 房主開著協同房間時按返回：先提醒「真正結束協同要回面板按『結束協同會議』」。
+    @State var showHostLeaveReminder = false
+    @State var afterHostLeave: (() -> Void)? = nil
     /// 使用者選完之後要做的事（回首頁或切換到另一本）。
     @State var afterSampleLeave: (() -> Void)?
     /// 範例的改動已經放棄或另存（檔案已還原）：這本不可再從畫布或記憶體寫回，
@@ -695,6 +698,19 @@ public struct NotebookEditorView: View {
             Button(localizationManager.localized("cancel"), role: .cancel) { afterSampleLeave = nil }
         } message: {
             Text(localizationManager.localized("sample_leave_message"))
+        }
+        .alert(
+            localizationManager.localized("collab_host_leave_title"),
+            isPresented: $showHostLeaveReminder
+        ) {
+            Button(localizationManager.localized("collab_host_leave_open_panel")) {
+                afterHostLeave = nil
+                showCollaborationSheet = true
+            }
+            Button(localizationManager.localized("collab_host_leave_anyway")) { confirmHostLeave() }
+            Button(localizationManager.localized("cancel"), role: .cancel) { afterHostLeave = nil }
+        } message: {
+            Text(localizationManager.localized("collab_host_leave_message"))
         }
         .onChange(of: notebook.id) { _ in
             handleNotebookIdChange()

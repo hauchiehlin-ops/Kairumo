@@ -594,6 +594,26 @@ extension NotebookEditorView {
     /// 範例且內容真的有改：先問使用者要存檔（保留在此範例）、另存可編輯副本，還是放棄修改；
     /// 沒改或不是範例：直接離開（範例的暫存跟著收掉）。
     func requestLeave(_ leave: @escaping () -> Void) {
+        // 房主還開著這本的即時協同房間：離開前提醒「關筆記不等於結束協同」（離開時會自動退出房間，
+        // 見 `leaveRoom(ifBoundTo:)`）。使用者選「仍要離開」才往下走。
+        let collab = CollaborationManager.shared
+        if collab.isHost, collab.roomNotebookId == notebook.id.lowercased(),
+           case .connected = collab.status {
+            afterHostLeave = leave
+            showHostLeaveReminder = true
+            return
+        }
+        proceedLeave(leave)
+    }
+
+    /// 房主離開提醒選了「仍要離開」：照原本的離開流程（範例改動確認等）走下去。
+    func confirmHostLeave() {
+        guard let leave = afterHostLeave else { return }
+        afterHostLeave = nil
+        proceedLeave(leave)
+    }
+
+    private func proceedLeave(_ leave: @escaping () -> Void) {
         saveCurrentPageDrawing()
         let id = notebook.id
         guard store.hasSampleSession(id) else { leave(); return }

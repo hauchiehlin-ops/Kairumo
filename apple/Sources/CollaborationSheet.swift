@@ -21,6 +21,8 @@ public struct CollaborationSheet: View {
 
     @State private var inputRoomId: String = ""
     @State private var inviteReceived: Bool = false
+    /// 這次是掃 QR Code 自動加入的：連上就把面板收起來，讓使用者直接看到對方的筆記。
+    @State private var autoJoinedFromInvite: Bool = false
     @State private var showCopiedAlert: Bool = false
     @State private var showEndSessionAlert: Bool = false
     @State private var isEditingServerUrl: Bool = false
@@ -106,12 +108,24 @@ public struct CollaborationSheet: View {
                     inputRoomId = invite
                     inviteReceived = true
                     collaborationManager.pendingInviteLink = nil
+                    // 開著的就是邀請指定的那本（首頁剛為這張 QR Code 打開／建立的）：直接加入。
+                    // 掃碼就是要加入，再要使用者按一次「加入」，看起來像編輯器一閃又跳回面板、
+                    // 關掉面板只剩空白畫布。開著的是別本筆記時照舊只帶入、等使用者自己按。
+                    if Self.invite(invite, targets: notebookId) {
+                        autoJoinedFromInvite = true
+                        collaborationManager.joinRoom(roomId: invite, notebookId: notebookId)
+                    }
                 }
                 loadSnapshots()
                 localSyncDiscovery.startBrowsing()
             }
             .onDisappear {
                 localSyncDiscovery.stopBrowsing()
+            }
+            .onChange(of: collaborationManager.status) { status in
+                guard autoJoinedFromInvite, case .connected = status else { return }
+                autoJoinedFromInvite = false
+                dismiss()
             }
             .navigationTitle(localizationManager.localized("collaborate"))
             #if os(iOS) || targetEnvironment(macCatalyst)
@@ -669,7 +683,7 @@ public struct CollaborationSheet: View {
         VStack(spacing: 16) {
             // 一鍵開啟多人協同
             Button {
-                collaborationManager.createRoom()
+                collaborationManager.createRoom(notebookId: notebookId)
             } label: {
                 HStack(spacing: 8) {
                     Image(systemName: "sparkles")
@@ -719,7 +733,7 @@ public struct CollaborationSheet: View {
 
                             Button {
                                 collaborationManager.serverAddress = room.serverUrl
-                                collaborationManager.joinRoom(roomId: room.roomId)
+                                collaborationManager.joinRoom(roomId: room.roomId, notebookId: notebookId)
                             } label: {
                                 HStack(spacing: 4) {
                                     Image(systemName: "arrow.right.circle.fill")
@@ -766,7 +780,7 @@ public struct CollaborationSheet: View {
                         #endif
 
                     Button {
-                        collaborationManager.joinRoom(roomId: inputRoomId)
+                        collaborationManager.joinRoom(roomId: inputRoomId, notebookId: notebookId)
                     } label: {
                         Text(localizationManager.localized("join_room"))
                             .fontWeight(.semibold)
@@ -784,6 +798,15 @@ public struct CollaborationSheet: View {
             .background(Color(uiColor: .secondarySystemGroupedBackground))
             .cornerRadius(12)
         }
+    }
+
+    /// 邀請連結指定的筆記本（`nb`，沒有就是房間 id）是不是 `notebookId` 這本。
+    static func invite(_ link: String, targets notebookId: String?) -> Bool {
+        guard let notebookId, !notebookId.isEmpty else { return false }
+        let invite = collabParseInviteV2(text: link)
+        let nb = invite.notebookId.trimmingCharacters(in: .whitespacesAndNewlines)
+        let target = (nb.isEmpty ? invite.roomId : nb).trimmingCharacters(in: .whitespacesAndNewlines)
+        return !target.isEmpty && target.lowercased() == notebookId.lowercased()
     }
 
     // MARK: - 伺服器進階位址設定

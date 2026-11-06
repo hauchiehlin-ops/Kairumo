@@ -699,7 +699,7 @@ private fun InkScreen(
         // 其餘工具列動作（錄音、紙張規格、框選、縮放……）接在 EditorTopBarWiring.kt：
         // 留在這裡會讓 InkScreen 再次逼近 ART 驗證器上限。
         val topBarActions = withRestoredTopBarWiring(EditorTopBarActions(
-            onBack = onBack,
+            onBack = ctx.guardedOnBack ?: onBack,
             onToggleSidebar = { showPageSidebar = !showPageSidebar },
             onEnterMinimalist = { minimalistCanvasMode = true },
             onExitMinimalist = { minimalistCanvasMode = false },

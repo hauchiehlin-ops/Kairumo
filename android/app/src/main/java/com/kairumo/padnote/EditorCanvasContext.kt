@@ -579,6 +579,13 @@ internal class EditorCanvasContext {
     var showCollaboration: Boolean
         get() = showCollaborationState.value
         set(v) { showCollaborationState.value = v }
+    /** 房主開著協同房間時按返回：先提醒（見 [guardedOnBack]）。非 null＝要顯示，值是「仍要離開」時要做的事。 */
+    lateinit var hostLeavePendingState: MutableState<(() -> Unit)?>
+    var hostLeavePending: (() -> Unit)?
+        get() = hostLeavePendingState.value
+        set(v) { hostLeavePendingState.value = v }
+    /** 返回首頁一律走這個：房主還開著這本的房間時先跳提醒，其餘照舊呼叫 onBack。 */
+    var guardedOnBack: (() -> Unit)? = null
     lateinit var showSampleReadOnlyAlertState: MutableState<Boolean>
     var showSampleReadOnlyAlert: Boolean
         get() = showSampleReadOnlyAlertState.value
@@ -2811,7 +2818,25 @@ internal fun rememberEditorCanvasContext(
                 ?: id
         }.orEmpty()
     }
-    val collaboration = remember { CollaborationManager(activity) }
+    // 即時協同房間跟著筆記本走：換到別本（`notebookId` 變了）就是新的管理器，
+    // 離開這本（關掉或換本）時離開房間、關掉自己開的中繼。舊版沒有鍵也沒有收尾，
+    // 換本時 A 的房間跟著進了 B（QR Code 卻帶 B 的 id，對方會把 A 的修改寫進 B），
+    // 關掉筆記後連線與中繼還在背景跑。與 Apple `leaveRoom(ifBoundTo:)` 同一套。
+    val collaboration = remember(notebookId) { CollaborationManager(activity) }
+    androidx.compose.runtime.DisposableEffect(collaboration) {
+        onDispose { collaboration.disconnect() }
+    }
+    // 房主還開著房間就要離開這本：提醒「關筆記只是離開房間，真正結束要回面板按『結束協同會議』」。與 Apple 同一套。
+    val hostLeavePendingState = remember { mutableStateOf<(() -> Unit)?>(null) }
+    val guardedOnBack: (() -> Unit)? = onBack?.let { back ->
+        {
+            if (collaboration.isHost && collaboration.status is CollaborationManager.Status.Connected) {
+                hostLeavePendingState.value = back
+            } else {
+                back()
+            }
+        }
+    }
     // 雲端共享筆記：剛加入時依自己的網路自動接上即時中繼；中繼連上時雲端放慢輪詢。
     val cloudRelayInvite by com.kairumo.padnote.collab.CloudCollab.relayInvite.collectAsState()
     LaunchedEffect(cloudRelayInvite, notebookId) {
@@ -3044,7 +3069,7 @@ internal fun rememberEditorCanvasContext(
         // 系統返回鍵。Android 專有（規格裡標成 AndroidOnly）——
         // 沒有它的話，使用者按下返回鍵會直接離開 App 而不是回到首頁。
         // parity: editor.system_back
-        androidx.activity.compose.BackHandler { onBack() }
+        androidx.activity.compose.BackHandler { guardedOnBack?.invoke() ?: onBack() }
     }
     val showMenuState = remember { mutableStateOf(false) }
     var showMenu by showMenuState
@@ -3221,6 +3246,8 @@ internal fun rememberEditorCanvasContext(
     ctx.showToolbarCustomizationState = showToolbarCustomizationState
     ctx.showAssetLibraryState = showAssetLibraryState
     ctx.showCollaborationState = showCollaborationState
+    ctx.hostLeavePendingState = hostLeavePendingState
+    ctx.guardedOnBack = guardedOnBack
     ctx.showSampleReadOnlyAlertState = showSampleReadOnlyAlertState
     ctx.showLanguagePickerState = showLanguagePickerState
     ctx.showNoteIntelligenceState = showNoteIntelligenceState

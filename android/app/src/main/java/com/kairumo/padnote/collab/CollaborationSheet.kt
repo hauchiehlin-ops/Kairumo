@@ -28,6 +28,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -80,6 +81,22 @@ fun CollaborationSheet(
     // 從 QR Code／邀請連結進來的話，直接帶入（見 CollabInvites）。
     val invited = remember { CollabInvites.pending.also { CollabInvites.pending = null } }
     var joinInput by remember { mutableStateOf(invited ?: "") }
+    // 開著的就是邀請指定的那本（首頁剛為這張 QR Code 打開／建立的）：直接加入、連上就收起面板。
+    // 掃碼就是要加入，再要使用者按一次「加入」，看起來像編輯器一閃又跳回面板、
+    // 關掉面板只剩空白畫布。開著的是別本筆記時照舊只帶入、等使用者自己按。與 Apple 同一套。
+    var autoJoined by remember { mutableStateOf(false) }
+    LaunchedEffect(invited) {
+        if (invited != null && inviteTargets(invited, notebookId)) {
+            autoJoined = true
+            manager.joinRoom(invited)
+        }
+    }
+    LaunchedEffect(manager.status) {
+        if (autoJoined && manager.status is CollaborationManager.Status.Connected) {
+            autoJoined = false
+            onDismiss()
+        }
+    }
     var serverInput by remember { mutableStateOf(manager.serverAddress) }
     var editingServer by remember { mutableStateOf(false) }
 
@@ -417,4 +434,12 @@ private fun CollabInviteQr(manager: CollaborationManager, notebookId: String?, n
         style = MaterialTheme.typography.labelSmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant
     )
+}
+
+/** 邀請連結指定的筆記本（`nb`，沒有就是房間 id）是不是 [notebookId] 這本。 */
+internal fun inviteTargets(link: String, notebookId: String?): Boolean {
+    if (notebookId.isNullOrBlank()) return false
+    val invite = uniffi.padnote_core.collabParseInviteV2(link)
+    val target = invite.notebookId.trim().ifEmpty { invite.roomId.trim() }
+    return target.isNotEmpty() && target.equals(notebookId, ignoreCase = true)
 }
