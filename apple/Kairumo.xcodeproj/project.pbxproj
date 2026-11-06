@@ -277,6 +277,7 @@
 		E6E7DCCE9578207C33630A63 /* RichText.swift in Sources */ = {isa = PBXBuildFile; fileRef = 75A0122212C2DD239EF4BC0F /* RichText.swift */; };
 		E753EC91F799EF9E12F41138 /* PaperTemplateCoverageTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70C131DA3FD4378868485464 /* PaperTemplateCoverageTests.swift */; };
 		E77C6702EE266A8D0B24EA19 /* PageRepagination.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74C26B5B3A37A7FBDAABA8A7 /* PageRepagination.swift */; };
+		E7F0FEBF6D9EC579D3F9A8F5 /* CloudRelaySettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 884D24D49D69A04AF9300558 /* CloudRelaySettings.swift */; };
 		E8F3A38363417DE23F896842 /* PageGuideRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9DFE7E365BA2170726481B9 /* PageGuideRenderer.swift */; };
 		E9221BA20E33E8501513541A /* InkLatencyMeterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3CF52FA26FE1FF9A388527D6 /* InkLatencyMeterTests.swift */; };
 		EA5494E606E6326E6BAEB42C /* HandwritingRecognizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6923436682B5101DB7AF5FAA /* HandwritingRecognizer.swift */; };
@@ -519,6 +520,7 @@
 		8625F68301CAC1F1E46C7425 /* ObjectLockUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ObjectLockUITests.swift; sourceTree = "<group>"; };
 		86EC0F8038D34C787D2A729D /* ChartStudioView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChartStudioView.swift; sourceTree = "<group>"; };
 		87A1E70214F4C90C7386F684 /* DraftingShare.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DraftingShare.swift; sourceTree = "<group>"; };
+		884D24D49D69A04AF9300558 /* CloudRelaySettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudRelaySettings.swift; sourceTree = "<group>"; };
 		892A096B9AFA17B2035E1239 /* RuledWritingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RuledWritingTests.swift; sourceTree = "<group>"; };
 		893FBBAA69ABDE7B5D03BDA9 /* InkInterop.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InkInterop.swift; sourceTree = "<group>"; };
 		8B26672440D33436E89CFF78 /* DraftingPracticeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DraftingPracticeTests.swift; sourceTree = "<group>"; };
@@ -868,6 +870,7 @@
 				86EC0F8038D34C787D2A729D /* ChartStudioView.swift */,
 				6137884866A4EA54A591733C /* CloudCollab.swift */,
 				CCCDECBFBF6A4E696A774F6F /* CloudCollabViews.swift */,
+				884D24D49D69A04AF9300558 /* CloudRelaySettings.swift */,
 				6D92ABBF09268BEEA4DD694D /* CloudSyncFolder.swift */,
 				C37A88630FFE8DEF52E3A43B /* CollabLiveInk.swift */,
 				44D061C8E2977FB257C12E81 /* CollaborationManager.swift */,
@@ -1316,6 +1319,7 @@
 				C54CB75E7D13D0F98B966CC0 /* ChartStudioView.swift in Sources */,
 				8598E12F0533E336957EBA41 /* CloudCollab.swift in Sources */,
 				F95F3F9E7388026D4CF3117C /* CloudCollabViews.swift in Sources */,
+				E7F0FEBF6D9EC579D3F9A8F5 /* CloudRelaySettings.swift in Sources */,
 				5E462BD80D8FEADB96FA1CAE /* CloudSyncFolder.swift in Sources */,
 				FCE275A4225BB80526441A70 /* CollabLiveInk.swift in Sources */,
 				EBC28FA124F13539D86D713F /* CollabProtocol.swift in Sources */,

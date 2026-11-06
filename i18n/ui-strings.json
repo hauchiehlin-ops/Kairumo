@@ -27582,5 +27582,149 @@
     "th": "ห้องนี้มีผู้เข้าร่วมครบจำนวนแล้ว",
     "zhHans": "这个房间的人数已达上限",
     "zhHant": "這個房間的人數已達上限"
+  },
+  "cloud_relay_title": {
+    "en": "Cloud sharing relay (across networks)",
+    "ja": "クラウド共有の中継（ネットワークをまたぐ）",
+    "ko": "클라우드 공유 중계(다른 네트워크 간)",
+    "th": "รีเลย์สำหรับแชร์ผ่านคลาวด์ (ข้ามเครือข่าย)",
+    "zhHans": "云端共享中继（跨网络）",
+    "zhHant": "雲端共享中繼（跨網路）"
+  },
+  "cloud_relay_hint": {
+    "en": "Cloud-shared live rooms run on this relay. Only the host's setting matters: invites carry this address, so collaborators don't need to set anything. Leave empty to use Kairumo's built-in relay (its free daily quota is shared by all users).",
+    "ja": "クラウド共有のリアルタイムルームはこの中継サーバー上に作られます。有効なのはホストの設定だけです。招待にこのアドレスが含まれるので、共同編集者は設定不要です。空欄の場合は Kairumo 内蔵の中継を使います（1 日の無料枠は全ユーザーで共有）。",
+    "ko": "클라우드 공유 실시간 방은 이 중계 서버에서 열립니다. 호스트의 설정만 적용됩니다. 초대에 이 주소가 포함되므로 공동 작업자는 설정할 필요가 없습니다. 비워 두면 Kairumo 내장 중계를 사용합니다(하루 무료 한도를 모든 사용자가 공유).",
+    "th": "ห้องเรียลไทม์ที่แชร์ผ่านคลาวด์จะเปิดบนรีเลย์นี้ ใช้เฉพาะการตั้งค่าของเจ้าของห้อง: คำเชิญจะแนบที่อยู่นี้ไปด้วย ผู้ร่วมงานไม่ต้องตั้งค่า เว้นว่างไว้เพื่อใช้รีเลย์ในตัวของ Kairumo (โควตาฟรีรายวันใช้ร่วมกันทุกคน)",
+    "zhHans": "云端共享的实时房间开在这台中继上。只有房主的设置有作用：邀请会带上这个地址，协作者不必设置。留空＝使用 Kairumo 内建的中继（所有用户共用每日免费额度）。",
+    "zhHant": "雲端共享的即時房間開在這台中繼上。只有房主的設定有作用：邀請會帶上這個位址，協作者不必設定。留空＝使用 Kairumo 內建的中繼（所有使用者共用每日免費額度）。"
+  },
+  "cloud_relay_save": {
+    "en": "Save",
+    "ja": "保存",
+    "ko": "저장",
+    "th": "บันทึก",
+    "zhHans": "保存",
+    "zhHant": "儲存"
+  },
+  "cloud_relay_saved": {
+    "en": "Saved. Takes effect the next time you open a cloud-shared room.",
+    "ja": "保存しました。次にクラウド共有のルームを開いたときから有効になります。",
+    "ko": "저장했습니다. 다음에 클라우드 공유 방을 열 때부터 적용됩니다.",
+    "th": "บันทึกแล้ว จะมีผลเมื่อเปิดห้องที่แชร์ผ่านคลาวด์ครั้งถัดไป",
+    "zhHans": "已保存。下一次开启云端共享的房间时生效。",
+    "zhHant": "已儲存。下一次開啟雲端共享的房間時生效。"
+  },
+  "cloud_relay_invalid": {
+    "en": "The relay address must start with wss:// (encrypted), e.g. wss://kairumo-relay.your-name.workers.dev",
+    "ja": "中継アドレスは wss://（暗号化接続）で始まる必要があります。例：wss://kairumo-relay.あなたの名前.workers.dev",
+    "ko": "중계 주소는 wss://(암호화 연결)로 시작해야 합니다. 예: wss://kairumo-relay.내이름.workers.dev",
+    "th": "ที่อยู่รีเลย์ต้องขึ้นต้นด้วย wss:// (การเชื่อมต่อแบบเข้ารหัส) เช่น wss://kairumo-relay.ชื่อของคุณ.workers.dev",
+    "zhHans": "中继地址必须以 wss:// 开头（加密连接），例如 wss://kairumo-relay.你的名称.workers.dev",
+    "zhHant": "中繼位址必須以 wss:// 開頭（加密連線），例如 wss://kairumo-relay.你的名稱.workers.dev"
+  },
+  "cloud_relay_guide": {
+    "en": "How do I get my own relay address?",
+    "ja": "自分の中継アドレスを取得するには？",
+    "ko": "내 중계 주소를 받으려면?",
+    "th": "จะรับที่อยู่รีเลย์ของตัวเองได้อย่างไร?",
+    "zhHans": "如何获取自己的中继地址？",
+    "zhHant": "如何取得自己的中繼位址？"
+  },
+  "cloud_relay_guide_title": {
+    "en": "Get your own relay address (free, no coding)",
+    "ja": "自分の中継アドレスを取得（無料・プログラミング不要）",
+    "ko": "내 중계 주소 받기(무료, 코딩 불필요)",
+    "th": "รับที่อยู่รีเลย์ของคุณเอง (ฟรี ไม่ต้องเขียนโปรแกรม)",
+    "zhHans": "获取自己的中继地址（免费、不用写程序）",
+    "zhHant": "取得自己的中繼位址（免費、不用寫程式）"
+  },
+  "cloud_relay_guide_intro": {
+    "en": "Your own relay has its own free daily quota, not shared with other Kairumo users. Everything happens in your web browser, takes about 10 minutes, and needs no software installed.",
+    "ja": "自分の中継には専用の 1 日無料枠があり、ほかの Kairumo ユーザーと共有しません。すべてブラウザーで完結し、約 10 分、ソフトのインストールは不要です。",
+    "ko": "내 중계에는 다른 Kairumo 사용자와 공유하지 않는 하루 무료 한도가 따로 있습니다. 모든 과정은 웹 브라우저에서 약 10분이면 끝나며 소프트웨어 설치가 필요 없습니다.",
+    "th": "รีเลย์ของคุณเองมีโควตาฟรีรายวันแยกต่างหาก ไม่ใช้ร่วมกับผู้ใช้ Kairumo คนอื่น ทำได้ทั้งหมดในเว็บเบราว์เซอร์ ใช้เวลาประมาณ 10 นาที ไม่ต้องติดตั้งซอฟต์แวร์",
+    "zhHans": "自己的中继有自己的每日免费额度，不和其他 Kairumo 用户共用。全程在浏览器里完成，约 10 分钟，不必安装任何软件。",
+    "zhHant": "自己的中繼有自己的每日免費額度，不和其他 Kairumo 使用者共用。全程在瀏覽器裡完成，約 10 分鐘，不必安裝任何軟體。"
+  },
+  "cloud_relay_step1": {
+    "en": "1. Create two free accounts: Cloudflare (where the relay runs) and GitHub (which keeps a copy of the relay's code). Skip any you already have.",
+    "ja": "1. 無料アカウントを 2 つ作成します：Cloudflare（中継を動かす場所）と GitHub（中継プログラムのコピーを保管）。すでにあれば飛ばしてください。",
+    "ko": "1. 무료 계정 두 개를 만듭니다: Cloudflare(중계가 실행되는 곳)와 GitHub(중계 프로그램 사본 보관). 이미 있으면 건너뛰세요.",
+    "th": "1. สมัครบัญชีฟรีสองบัญชี: Cloudflare (ที่รันรีเลย์) และ GitHub (เก็บสำเนาโค้ดรีเลย์) ถ้ามีอยู่แล้วให้ข้ามได้",
+    "zhHans": "1. 注册两个免费账号：Cloudflare（中继放在这里）与 GitHub（存放中继程序的副本）。已经有的话直接跳过。",
+    "zhHant": "1. 註冊兩個免費帳號：Cloudflare（中繼放在這裡）與 GitHub（存放中繼程式的副本）。已經有的話直接跳過。"
+  },
+  "cloud_relay_step2": {
+    "en": "2. Tap \"Open Cloudflare one-click deploy\" below. Sign in with your Cloudflare account; the first time, it asks to connect your GitHub account — allow it (Cloudflare creates a copy of the relay's code in your GitHub).",
+    "ja": "2. 下の「Cloudflare ワンクリックデプロイを開く」を押します。Cloudflare アカウントでサインインし、初回は GitHub アカウントの連携を求められるので許可してください（あなたの GitHub に中継プログラムのコピーが作られます）。",
+    "ko": "2. 아래의 'Cloudflare 원클릭 배포 열기'를 누릅니다. Cloudflare 계정으로 로그인하고, 처음에는 GitHub 계정 연결을 요청하니 허용하세요(내 GitHub에 중계 프로그램 사본이 만들어집니다).",
+    "th": "2. แตะ \"เปิดการติดตั้งในคลิกเดียวของ Cloudflare\" ด้านล่าง ลงชื่อเข้าใช้ด้วยบัญชี Cloudflare ครั้งแรกจะขอเชื่อมบัญชี GitHub ให้กดอนุญาต (Cloudflare จะสร้างสำเนาโค้ดรีเลย์ไว้ใน GitHub ของคุณ)",
+    "zhHans": "2. 按下方「打开 Cloudflare 一键部署」。用 Cloudflare 账号登录；第一次会请你关联 GitHub 账号，请按同意（Cloudflare 会在你的 GitHub 创建一份中继程序的副本）。",
+    "zhHant": "2. 按下方「開啟 Cloudflare 一鍵部署」。用 Cloudflare 帳號登入；第一次會請你連結 GitHub 帳號，請按同意（Cloudflare 會在你的 GitHub 建立一份中繼程式的副本）。"
+  },
+  "cloud_relay_step3": {
+    "en": "3. Keep the name kairumo-relay and press the deploy button on the page (Create and deploy / Deploy). Wait 1–2 minutes. If it's your first time using Cloudflare Workers, you may be asked to pick a workers.dev subdomain (lowercase letters, e.g. your name).",
+    "ja": "3. 名前は kairumo-relay のままで、ページのデプロイボタン（Create and deploy／Deploy）を押し、1～2 分待ちます。Cloudflare Workers を初めて使う場合、workers.dev のサブドメイン名（英小文字、例：あなたの名前）を決めるよう求められることがあります。",
+    "ko": "3. 이름은 kairumo-relay 그대로 두고 페이지의 배포 버튼(Create and deploy / Deploy)을 누른 뒤 1~2분 기다립니다. Cloudflare Workers를 처음 쓰면 workers.dev 하위 도메인 이름(영문 소문자, 예: 내 이름)을 정하라고 할 수 있습니다.",
+    "th": "3. ใช้ชื่อ kairumo-relay ตามเดิม แล้วกดปุ่ม Deploy บนหน้า (Create and deploy / Deploy) รอ 1–2 นาที ถ้าใช้ Cloudflare Workers ครั้งแรก อาจถูกขอให้ตั้งชื่อซับโดเมน workers.dev (ตัวพิมพ์เล็กภาษาอังกฤษ เช่น ชื่อของคุณ)",
+    "zhHans": "3. 名称保留 kairumo-relay 即可，按页面上的部署按钮（Create and deploy／Deploy），等 1～2 分钟。第一次使用 Cloudflare Workers 时，可能会请你取一个 workers.dev 子域名名称（英文小写，例如你的名字）。",
+    "zhHant": "3. 名稱保留 kairumo-relay 即可，按頁面上的部署按鈕（Create and deploy／Deploy），等 1～2 分鐘。第一次使用 Cloudflare Workers 時，可能會請你取一個 workers.dev 子網域名稱（英文小寫，例如你的名字）。"
+  },
+  "cloud_relay_step4": {
+    "en": "4. When it's done, in the Cloudflare dashboard choose \"Workers & Pages\" on the left → click kairumo-relay. You'll see an address like https://kairumo-relay.your-name.workers.dev.",
+    "ja": "4. 完了したら、Cloudflare ダッシュボード左側の「Workers & Pages」→ kairumo-relay を開くと、https://kairumo-relay.あなたの名前.workers.dev のようなアドレスが表示されます。",
+    "ko": "4. 완료되면 Cloudflare 대시보드 왼쪽의 'Workers & Pages' → kairumo-relay를 누르면 https://kairumo-relay.내이름.workers.dev 같은 주소가 보입니다.",
+    "th": "4. เมื่อเสร็จแล้ว ในแดชบอร์ด Cloudflare เลือก \"Workers & Pages\" ทางซ้าย → คลิก kairumo-relay จะเห็นที่อยู่แบบ https://kairumo-relay.ชื่อของคุณ.workers.dev",
+    "zhHans": "4. 完成后，在 Cloudflare 控制台左侧选「Workers & Pages」→ 点 kairumo-relay，就会看到网址，长得像 https://kairumo-relay.你的名称.workers.dev。",
+    "zhHant": "4. 完成後，在 Cloudflare 主控台左側選「Workers & Pages」→ 點 kairumo-relay，就會看到網址，長得像 https://kairumo-relay.你的名稱.workers.dev。"
+  },
+  "cloud_relay_step5": {
+    "en": "5. Change the https:// at the start to wss://, paste it into the field above and tap Save. For example: wss://kairumo-relay.your-name.workers.dev",
+    "ja": "5. 先頭の https:// を wss:// に変えて上の欄に貼り付け、「保存」を押します。例：wss://kairumo-relay.あなたの名前.workers.dev",
+    "ko": "5. 앞부분의 https://를 wss://로 바꿔 위 칸에 붙여 넣고 '저장'을 누릅니다. 예: wss://kairumo-relay.내이름.workers.dev",
+    "th": "5. เปลี่ยน https:// ข้างหน้าเป็น wss:// วางลงในช่องด้านบน แล้วแตะ บันทึก ตัวอย่าง: wss://kairumo-relay.ชื่อของคุณ.workers.dev",
+    "zhHans": "5. 把网址开头的 https:// 改成 wss://，粘贴到上面的栏位，按「保存」。例如：wss://kairumo-relay.你的名称.workers.dev",
+    "zhHant": "5. 把網址開頭的 https:// 改成 wss://，貼到上面的欄位，按「儲存」。例如：wss://kairumo-relay.你的名稱.workers.dev"
+  },
+  "cloud_relay_step6": {
+    "en": "6. Done! From now on, cloud sharing opens rooms on your own relay. Collaborators who scan your QR code connect to it automatically — no setup on their side.",
+    "ja": "6. 完了！以降、クラウド共有のルームは自分の中継上に作られます。共同編集者はあなたの QR コードを読み取るだけで自動的に接続され、設定は不要です。",
+    "ko": "6. 완료! 이제 클라우드 공유 방은 내 중계에서 열립니다. 공동 작업자는 내 QR 코드를 스캔하면 자동으로 연결되며 따로 설정할 필요가 없습니다.",
+    "th": "6. เสร็จแล้ว! จากนี้การแชร์ผ่านคลาวด์จะเปิดห้องบนรีเลย์ของคุณเอง ผู้ร่วมงานที่สแกน QR Code ของคุณจะเชื่อมต่อโดยอัตโนมัติ ไม่ต้องตั้งค่าใดๆ",
+    "zhHans": "6. 完成！之后开启云端共享，房间就开在你自己的中继上；协作者扫你的二维码会自动连过来，不必做任何设置。",
+    "zhHant": "6. 完成！之後開啟雲端共享，房間就開在你自己的中繼上；協作者掃你的 QR Code 會自動連過來，不必做任何設定。"
+  },
+  "cloud_relay_guide_note": {
+    "en": "Cost: Cloudflare's free plan has a fixed daily quota, plenty for personal or small-team use. If you go over, connections fail for the rest of that day — you are never charged automatically. The quota resets daily at 00:00 UTC.",
+    "ja": "費用：Cloudflare の無料プランには 1 日の固定枠があり、個人や少人数なら十分です。超えるとその日は接続できなくなりますが、自動で課金されることはありません。毎日 UTC 0 時（日本時間 9 時）にリセットされます。",
+    "ko": "비용: Cloudflare 무료 플랜은 하루 정해진 한도가 있으며 개인이나 소규모 팀에는 충분합니다. 한도를 넘으면 그날은 연결되지 않지만 자동으로 요금이 청구되지는 않습니다. 매일 UTC 0시(한국 시간 오전 9시)에 초기화됩니다.",
+    "th": "ค่าใช้จ่าย: แผนฟรีของ Cloudflare มีโควตารายวันคงที่ เพียงพอสำหรับใช้ส่วนตัวหรือทีมเล็ก ถ้าใช้เกิน วันนั้นจะเชื่อมต่อไม่ได้ แต่จะไม่ถูกเรียกเก็บเงินอัตโนมัติ โควตารีเซ็ตทุกวันเวลา 00:00 UTC (07:00 น. เวลาไทย)",
+    "zhHans": "费用：Cloudflare 免费方案每天有固定额度，一般个人或小组使用绰绰有余；超过当天额度时当天会连不上，但不会自动收费，每天 UTC 0 点（北京时间早上 8 点）重置。",
+    "zhHant": "費用：Cloudflare 免費方案每天有固定額度，一般個人或小組使用綽綽有餘；超過當天額度時當天會連不上，但不會自動收費，台灣時間每天早上 8 點重置。"
+  },
+  "cloud_relay_open_deploy": {
+    "en": "Open Cloudflare one-click deploy",
+    "ja": "Cloudflare ワンクリックデプロイを開く",
+    "ko": "Cloudflare 원클릭 배포 열기",
+    "th": "เปิดการติดตั้งในคลิกเดียวของ Cloudflare",
+    "zhHans": "打开 Cloudflare 一键部署",
+    "zhHant": "開啟 Cloudflare 一鍵部署"
+  },
+  "cloud_relay_signup_cloudflare": {
+    "en": "Sign up for Cloudflare",
+    "ja": "Cloudflare に登録",
+    "ko": "Cloudflare 가입",
+    "th": "สมัคร Cloudflare",
+    "zhHans": "注册 Cloudflare",
+    "zhHant": "註冊 Cloudflare"
+  },
+  "cloud_relay_signup_github": {
+    "en": "Sign up for GitHub",
+    "ja": "GitHub に登録",
+    "ko": "GitHub 가입",
+    "th": "สมัคร GitHub",
+    "zhHans": "注册 GitHub",
+    "zhHant": "註冊 GitHub"
   }
 }

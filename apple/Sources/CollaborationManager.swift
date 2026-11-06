@@ -116,6 +116,13 @@ public class CollaborationManager: ObservableObject {
         }
     }
 
+    /// 使用者自訂的雲端共享中繼（例如自己部署的 Cloudflare 中繼）。空字串＝用內建的 `publicRelayURL`。
+    /// 只有房主的設定有作用：邀請連結會帶上房主用的位址，協作者不必設定。
+    @Published public var customCloudRelay: String {
+        didSet { ProfileDefaults.current.set(customCloudRelay, forKey: Self.customCloudRelayKey) }
+    }
+    static let customCloudRelayKey = "kairumo_cloud_relay_url"
+
     // MARK: - 端對端加密 (Zero-Knowledge E2EE)
     @Published public var roomKeyBase64: String? = nil
 
@@ -231,6 +238,7 @@ public class CollaborationManager: ObservableObject {
     public init() {
         let savedServer = ProfileDefaults.current.string(forKey: "kairumo_relay_server_url")
         self.serverAddress = savedServer ?? collabTuning().defaultServer
+        self.customCloudRelay = ProfileDefaults.current.string(forKey: Self.customCloudRelayKey) ?? ""
 
     }
 
@@ -418,6 +426,19 @@ public class CollaborationManager: ObservableObject {
     /// Kairumo 的公開中繼（Cloudflare Workers，見 `deploy/relay-cloudflare`）。與 Android
     /// `CollaborationManager.PUBLIC_RELAY_URL` 相同。空字串＝還沒部署：雲端共享照舊只用區網／Tailscale。
     public static let publicRelayURL = "wss://kairumo-relay.kairumo-relay.workers.dev"
+
+    /// 雲端共享實際用的中繼：使用者自訂的（有效的話）優先，否則內建的 `publicRelayURL`。
+    public var cloudRelayURL: String {
+        let custom = customCloudRelay.trimmingCharacters(in: .whitespacesAndNewlines)
+        return Self.isValidCloudRelay(custom) ? custom : Self.publicRelayURL
+    }
+
+    /// 雲端共享中繼必須是加密的 `wss://`（跨網路的流量不能走明文）。
+    public static func isValidCloudRelay(_ address: String) -> Bool {
+        let text = address.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard text.lowercased().hasPrefix("wss://"), let url = URL(string: text), url.host != nil else { return false }
+        return collabCheckServer(url: text).ok
+    }
 
     /// 這一場用的伺服器（加入邀請、或雲端共享開在公開中繼上）。`nil` = 用使用者存的 `serverAddress`。
     /// 不寫回 `serverAddress`：以前加入別人的房間會把對方的位址存成這台的預設，之後自己開房就連到別人那裡。
@@ -859,8 +880,9 @@ public class CollaborationManager: ObservableObject {
 
     // MARK: - 書寫中即時串流（`live_ink`，見 CollabLiveInk.swift）
 
-    /// 送出間隔：30 Hz。比這密對方畫不出差別，只是多耗電與頻寬。
-    nonisolated static let liveInkInterval: CFTimeInterval = 1.0 / 30.0
+    /// 送出間隔：20 Hz（每 50 ms 一批點）。對方的預覽線照樣連續；公開中繼按收到的訊息數計額度，
+    /// 30 Hz 多花一半額度卻看不出差別。與 Android `LiveInkSender.INTERVAL_MS` 相同。
+    nonisolated static let liveInkInterval: CFTimeInterval = 1.0 / 20.0
 
     /// 連上房間、而且房間裡有別人：才值得記點送出。
     var isLiveInkReady: Bool {
@@ -1138,5 +1160,6 @@ extension CollaborationManager: ProfileScoped {
         leaseRenewTimer = nil
         serverAddress = ProfileDefaults.current.string(forKey: "kairumo_relay_server_url")
             ?? collabTuning().defaultServer
+        customCloudRelay = ProfileDefaults.current.string(forKey: Self.customCloudRelayKey) ?? ""
     }
 }

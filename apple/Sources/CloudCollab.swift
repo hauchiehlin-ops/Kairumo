@@ -371,7 +371,7 @@ final class CloudCollabManager: ObservableObject {
         }
         // 3. 即時房間：有公開中繼就開在公開中繼上（跨網路也即時）；沒有的話照舊開在本機（同一個網路才連得到）。
         let collab = CollaborationManager.shared
-        if !CollaborationManager.publicRelayURL.isEmpty {
+        if !CollaborationManager.shared.cloudRelayURL.isEmpty {
             ensurePublicRoom(for: entry)
         } else if case .disconnected = collab.status {
             collab.createRoom(notebookId: notebookId)
@@ -406,7 +406,7 @@ final class CloudCollabManager: ObservableObject {
     /// 房主：這本雲端共享筆記的即時房間開在公開中繼上。已經在那裡就不動；
     /// 記過房號與金鑰就沿用（重開 App 之後，之前發出去的邀請照樣有效）。
     func ensurePublicRoom(for entry: FfiSharedNotebook) {
-        let relay = CollaborationManager.publicRelayURL
+        let relay = CollaborationManager.shared.cloudRelayURL
         guard !relay.isEmpty, entry.role == "owner" else { return }
         let collab = CollaborationManager.shared
         let bound = collab.roomNotebookId == entry.notebookId.lowercased()
@@ -422,7 +422,7 @@ final class CloudCollabManager: ObservableObject {
     func inviteLink(for entry: FfiSharedNotebook, minFiles: UInt32 = 0) -> String {
         let collab = CollaborationManager.shared
         // 有公開中繼：邀請只帶它（大家連同一台，跨網路也即時）。沒有：照舊帶區網／Tailscale 位址。
-        let relay = CollaborationManager.publicRelayURL
+        let relay = CollaborationManager.shared.cloudRelayURL
         let servers = relay.isEmpty
             ? [collab.lanRelayAddress, collab.tailscaleRelayAddress].compactMap { $0 }
             : [relay]

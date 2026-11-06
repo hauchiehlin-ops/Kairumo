@@ -693,6 +693,9 @@ class CollaborationManager(private val context: Context) {
 
     // ── 設定 ────────────────────────────────────────────────────
 
+    /** 雲端共享實際用的中繼（見 [cloudRelayUrl]）。 */
+    val cloudRelayUrl: String get() = cloudRelayUrl(context)
+
     private fun loadServer(): String =
         ProfileContext.prefs(context, PREFS)
             .getString(KEY_SERVER, null) ?: tuning.defaultServer
@@ -709,6 +712,28 @@ class CollaborationManager(private val context: Context) {
          * `CollaborationManager.publicRelayURL` 相同。空字串＝還沒部署：雲端共享照舊只用區網／Tailscale。
          */
         const val PUBLIC_RELAY_URL = "wss://kairumo-relay.kairumo-relay.workers.dev"
+        private const val KEY_CLOUD_RELAY = "cloud_relay_url"
+
+        /** 使用者自訂的雲端共享中繼（空字串＝用內建的）。與 Apple `customCloudRelay` 相同。 */
+        fun customCloudRelay(context: Context): String =
+            ProfileContext.prefs(context, PREFS).getString(KEY_CLOUD_RELAY, "") ?: ""
+
+        fun setCustomCloudRelay(context: Context, address: String) {
+            ProfileContext.prefs(context, PREFS).edit().putString(KEY_CLOUD_RELAY, address).apply()
+        }
+
+        /** 雲端共享實際用的中繼：自訂的（有效的話）優先，否則內建的。只有房主的設定有作用，邀請會帶上它。 */
+        fun cloudRelayUrl(context: Context): String =
+            customCloudRelay(context).trim().takeIf { isValidCloudRelay(it) } ?: PUBLIC_RELAY_URL
+
+        /** 雲端共享中繼必須是加密的 `wss://`（跨網路的流量不能走明文）。與 Apple 相同。 */
+        fun isValidCloudRelay(address: String): Boolean {
+            val text = address.trim()
+            if (!text.lowercase().startsWith("wss://")) return false
+            val host = runCatching { java.net.URI(text).host }.getOrNull()
+            if (host.isNullOrEmpty()) return false
+            return uniffi.padnote_core.collabCheckServer(text).ok
+        }
         private const val PREFS = "kairumo_collab"
         private const val KEY_SERVER = "relay_server_url"
         /** 編輯租約多久沒續約就失效（與 Apple 端相同）。 */
