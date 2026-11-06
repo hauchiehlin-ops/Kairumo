@@ -1,5 +1,7 @@
 package com.kairumo.padnote.collab
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import com.kairumo.padnote.ink.InkEngine
 
 /**
@@ -20,4 +22,6 @@ class ContinuousCollabBridge {
     var remoteApplied: () -> Unit = {}
     /** 本機在連續模式裡改了東西（物件或筆跡）：編輯器據此送出。 */
     var onLocalChange: (() -> Unit)? = null
+    /** 協同中的房間連線（書寫中即時串流用）；不在協同時是 `null`。由編輯器填上。 */
+    var liveCollaboration by androidx.compose.runtime.mutableStateOf<CollaborationManager?>(null)
 }

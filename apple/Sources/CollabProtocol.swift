@@ -404,6 +404,56 @@ enum CollabStroke {
         return (id, InkInterop.stroke(from: full))
     }
 
+    // MARK: 自繪筆畫（ADR-0015 階段 5 起所有筆刷都是）
+
+    /// 自繪筆畫 → 線上格式（與 PencilKit 筆畫、Android 同一個格式）。線上 id 就是套件 id。
+    static func encode(pro stroke: ProStroke) -> [String: Any] {
+        var points: [Double] = []
+        points.reserveCapacity(stroke.points.count * 7)
+        for p in stroke.points {
+            points += [Double(p.x), Double(p.y), Double(p.pressure), Double(p.tilt),
+                       Double(p.azimuth), Double(p.dtUs), Double(p.roll)]
+        }
+        let kind = ProInk.kind(named: stroke.tool) ?? .fountainPen
+        var json: [String: Any] = [
+            "id": stroke.packageId,
+            "cid": stroke.packageId,
+            "tool": toolName(kind),
+            "rgba": "#" + stroke.colorRGBA.prefix(4).map { String(format: "%02X", $0) }.joined(),
+            "width": Double(stroke.baseWidth),
+            "points": points,
+        ]
+        if stroke.layerId != 0 { json["layer"] = Int(stroke.layerId) }
+        if stroke.lineTypeId != 0 { json["line"] = Int(stroke.lineTypeId) }
+        return json
+    }
+
+    /// 線上格式 → 自繪筆畫。id 用送出者的套件 id：同一筆在每一台都是同一個 id（I1、I3）。
+    static func decodePro(_ json: [String: Any]) -> ProStroke? {
+        guard let id = coreId(json) ?? (json["id"] as? String),
+              let toolRaw = json["tool"] as? String, let kind = tool(named: toolRaw),
+              let name = ProInk.name(of: kind),
+              let rgbaHex = json["rgba"] as? String,
+              let width = (json["width"] as? NSNumber)?.floatValue,
+              let flat = json["points"] as? [NSNumber], flat.count >= 7 else { return nil }
+        var points: [ProPoint] = []
+        points.reserveCapacity(flat.count / 7)
+        var i = 0
+        while i + 6 < flat.count {
+            points.append(ProPoint(
+                x: flat[i].floatValue, y: flat[i + 1].floatValue, pressure: flat[i + 2].floatValue,
+                tilt: flat[i + 3].floatValue, azimuth: flat[i + 4].floatValue,
+                dtUs: UInt32(max(0, flat[i + 5].doubleValue)), roll: flat[i + 6].floatValue))
+            i += 7
+        }
+        let layer = (json["layer"] as? NSNumber)?.uint8Value ?? 0
+        let line = (json["line"] as? NSNumber)?.uint8Value ?? 0
+        var stroke = ProStroke(tool: name, colorRGBA: Array(rgba(rgbaHex)), baseWidth: width, points: points,
+                               layer: layer == 0 ? nil : layer, lineType: line == 0 ? nil : line)
+        stroke.id = id.lowercased()
+        return stroke
+    }
+
     private static func rgba(_ hex: String) -> Data {
         let clean = hex.hasPrefix("#") ? String(hex.dropFirst()) : hex
         var bytes: [UInt8] = []

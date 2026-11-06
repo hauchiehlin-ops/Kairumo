@@ -137,9 +137,46 @@ extension NotebookEditorView {
         }
     }
 
+    /// 自繪筆畫的動作即時送給房間（`InkEventSink.proObservers`）。
+    func broadcastProInk(page: Int, removedIds: [String], added: [ProStroke]) {
+        guard isCollaborating else { return }
+        ensureCollabPageIds()
+        guard let pageId = liveInkPageId(page) else { return }
+        if !added.isEmpty {
+            collaborationManager.broadcastOplog(kind: "ink_add", payload: [
+                "proto": Self.collabProto, "page": pageId,
+                "strokes": added.map(CollabStroke.encode(pro:)),
+            ])
+        }
+        if !removedIds.isEmpty {
+            collaborationManager.broadcastOplog(kind: "ink_remove", payload: [
+                "proto": Self.collabProto, "page": pageId, "ids": removedIds.map { $0.lowercased() },
+            ])
+        }
+    }
+
+    /// 掛上（或拿掉）自繪筆畫與書寫中預覽的協同出口。
+    func installProInkCollab(_ on: Bool) {
+        let key = notebook.id.lowercased()
+        if on {
+            InkEventSink.proObservers[key] = { page, removed, added in
+                broadcastProInk(page: page, removedIds: removed, added: added)
+            }
+            LiveInkSender.shared.install { notebookId, page in
+                guard notebookId.lowercased() == notebook.id.lowercased(), isCollaborating else { return nil }
+                return liveInkPageId(page)
+            }
+        } else {
+            InkEventSink.proObservers.removeValue(forKey: key)
+            LiveInkSender.shared.uninstall()
+        }
+    }
+
     /// 協同事件：租約搶輸、換房間、舊版參與者。
     var collabEventSink: AnyView {
         AnyView(Color.clear
+            .onAppear { installProInkCollab(true) }
+            .onDisappear { installProInkCollab(false) }
             .onReceive(collaborationManager.leaseLost) { lost in
                 // 兩人同時選了同一個物件、對方勝出：本機放手（設計 §5.3）。
                 if activeSelectedObjectId == lost.id { activeSelectedObjectId = nil }
@@ -519,13 +556,25 @@ extension NotebookEditorView {
                                stamp: LamportStamp(lamport: event.lamport, user: event.userId))
 
         case "ink_add":
+            // 所有筆刷都由自繪引擎畫（ADR-0015 階段 5）：別人的筆畫也放進自繪引擎的「別台筆畫」，
+            // 與自己的筆畫同一套算繪。以前放進 PencilKit 圖層，同一筆在這台看起來又細又淡、
+            // 與送出那台不一樣。
             guard let pageId = event.payload["page"] as? String,
-                  let list = event.payload["strokes"] as? [[String: Any]] else { return }
-            applyRemoteInkAdd(pageId: pageId, strokes: list)
+                  let list = event.payload["strokes"] as? [[String: Any]],
+                  let pageIdx = notebook.pageIds?.firstIndex(of: pageId) else { return }
+            let strokes = list.compactMap(CollabStroke.decodePro)
+            guard !strokes.isEmpty else { return }
+            ProInkCollab.applyRemote(directory: store.drawingsDirectory, notebookId: notebook.id, page: pageIdx,
+                                     added: strokes, removedIds: [])
 
         case "ink_remove":
             guard let pageId = event.payload["page"] as? String,
                   let ids = event.payload["ids"] as? [String] else { return }
+            if let pageIdx = notebook.pageIds?.firstIndex(of: pageId) {
+                ProInkCollab.applyRemote(directory: store.drawingsDirectory, notebookId: notebook.id, page: pageIdx,
+                                         added: [], removedIds: Set(ids.map { $0.lowercased() }))
+            }
+            // 舊版留在 PencilKit 圖層裡的筆畫照舊處理。
             applyRemoteInkRemove(pageId: pageId, wires: ids)
 
         case "state_request":

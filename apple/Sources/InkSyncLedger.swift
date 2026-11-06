@@ -454,9 +454,15 @@ final class InkEventSink {
         DispatchQueue.main.async { FocusSyncController.shared.noteLocalEdit() }
     }
 
+    /// 協同：自繪筆畫的每一次動作也即時送給房間（編輯器在協同時掛上，離開時拿掉）。
+    /// 以筆記本 id（小寫）為鍵；參數：頁碼、擦掉的套件 id、新增的筆畫。
+    // profile-scope: device 只在協同房間開著時由編輯器掛上，離開即清空
+    static var proObservers: [String: (_ page: Int, _ removedIds: [String], _ added: [ProStroke]) -> Void] = [:]
+
     /// 專業筆刷的一次動作：擦掉 `removedIds`、加入 `added`。
     func proEdited(page: Int, removedIds: [String], added: [ProStroke]) {
         guard !removedIds.isEmpty || !added.isEmpty else { return }
+        Self.proObservers[document().id.lowercased()]?(page, removedIds, added)
         let doc = document()
         let (package, deviceId) = (self.package, self.deviceId)
         queue.async {

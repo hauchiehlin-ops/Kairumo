@@ -1481,6 +1481,20 @@ private fun ContinuousPage(
             )
     ) {
         val strokeReadout = remember(revision, engine) { "strokes:${engine.strokes.size}" }
+        // 協同：這一頁書寫中的點串流給房間，並顯示別人在這一頁書寫中的預覽線（與單頁模式、Apple 同一套）。
+        val liveCollab = collabBridge?.liveCollaboration
+        val livePage = runtime.pageId
+        DisposableEffect(engine, liveCollab, livePage) {
+            val sender = liveCollab?.let { m ->
+                com.kairumo.padnote.collab.LiveInkSender(m) { livePage?.takeIf { collabBridge?.liveCollaboration != null } }
+            }
+            sender?.attach(engine)
+            onDispose { sender?.detach(engine) }
+        }
+        if (liveCollab != null) {
+            com.kairumo.padnote.collab.RemoteLiveInkOverlay(
+                liveCollab.liveInk, livePage, Modifier.fillMaxSize().zIndex(101f))
+        }
         InkCanvas(
             engine = engine,
             // 焦點頁掛 `editor.canvas` 與 `strokes:N`（與單頁模式、Apple 同一組讀數）。以前連續模式完全沒有，
