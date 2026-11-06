@@ -7111,6 +7111,22 @@ extension LocalizationManager {
             .ko: "권한을 부여한 뒤 Drive가 permission id를 반환하지 않았습니다",
             .th: "หลังให้สิทธิ์ Drive ไม่ส่ง permission id กลับมา"
         ],
+        "core_msg_225": [
+            .zhHant: "中繼的房間數已達上限，請稍後再試",
+            .en: "The relay has reached its room limit; please try again later",
+            .zhHans: "中继的房间数已达上限，请稍后再试",
+            .ja: "中継サーバーのルーム数が上限に達しました。しばらくしてからもう一度お試しください",
+            .ko: "중계 서버의 방 수가 한도에 도달했습니다. 잠시 후 다시 시도하세요",
+            .th: "เซิร์ฟเวอร์รีเลย์มีจำนวนห้องถึงขีดจำกัดแล้ว โปรดลองอีกครั้งภายหลัง"
+        ],
+        "core_msg_226": [
+            .zhHant: "這個房間的人數已達上限",
+            .en: "This room is full",
+            .zhHans: "这个房间的人数已达上限",
+            .ja: "このルームは参加人数の上限に達しています",
+            .ko: "이 방은 인원이 가득 찼습니다",
+            .th: "ห้องนี้มีผู้เข้าร่วมครบจำนวนแล้ว"
+        ],
         "corner_style": [
             .zhHant: "圓角",
             .en: "Corners",
