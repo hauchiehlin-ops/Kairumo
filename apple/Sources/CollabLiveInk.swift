@@ -22,99 +22,89 @@
 //  只在 PencilKit 的手勢回呼裡記點（陣列追加），送出節流在 30 Hz、在主執行緒以
 //  一次 WebSocket 傳送完成，不做任何磁碟 I/O 或筆跡運算。
 
-import PencilKit
 import SwiftUI
 import UIKit
 
-/// 這一筆的外觀與所在頁（由編輯器提供；回 `nil` 表示現在不串流）。
-struct LiveInkContext {
-    let pageId: String
-    let rgbaHex: String
-    let width: CGFloat
-}
-
-/// 掛在一個畫布的繪圖手勢上，把書寫中的點送出去。
+/// 把自繪引擎書寫中的點送出去（掛在 `ProInkCollab.liveHandler` 上）。
+///
+/// 所有筆刷都由自繪引擎收筆（ADR-0015 階段 5），PencilKit 的落筆手勢是關著的 ——
+/// 點要從自繪引擎拿，不能掛在 PencilKit 的手勢上。
 @MainActor
-final class LiveInkSender: NSObject {
-    // profile-scope: device 只當 objc 關聯物件的位址鍵用，不存任何資料
-    private static var key: UInt8 = 0
-    private weak var canvas: PKCanvasView?
-    private var context: () -> LiveInkContext? = { nil }
+final class LiveInkSender {
+    // profile-scope: device 只在協同房間開著時有作用，離開房間即 uninstall
+    static let shared = LiveInkSender()
+
+    /// 頁碼 → 協同頁面 id；回 `nil` 表示現在不串流（不在協同、或那一頁還沒有 id）。
+    private var pageIdFor: (_ notebookId: String, _ page: Int) -> String? = { _, _ in nil }
 
     private var strokeId: String?
-    private var current: LiveInkContext?
+    private var pageId: String?
+    private var rgbaHex = "#000000FF"
+    private var width: Double = 3
     private var pending: [Double] = []
     private var lastSentAt: CFTimeInterval = 0
     private var seq = 0
 
-    /// 每次 `canvasRef` 回呼都叫：第一次掛上手勢，之後只更新外觀來源（SwiftUI 的狀態是值，要拿最新的）。
-    static func attach(to canvas: PKCanvasView, context: @escaping () -> LiveInkContext?) {
-        if let existing = objc_getAssociatedObject(canvas, &key) as? LiveInkSender {
-            existing.context = context
-            return
+    /// 進入協同時由編輯器呼叫；`pageIdFor` 每次都取最新的頁面清單。
+    func install(pageIdFor: @escaping (_ notebookId: String, _ page: Int) -> String?) {
+        self.pageIdFor = pageIdFor
+        ProInkCollab.liveHandler = { notebookId, page, phase, stroke, points in
+            LiveInkSender.shared.handle(notebookId: notebookId, page: page, phase: phase,
+                                        stroke: stroke, points: points)
         }
-        let sender = LiveInkSender()
-        sender.canvas = canvas
-        sender.context = context
-        canvas.drawingGestureRecognizer.addTarget(sender, action: #selector(handle(_:)))
-        objc_setAssociatedObject(canvas, &key, sender, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
     }
 
-    @objc private func handle(_ gr: UIGestureRecognizer) {
-        guard let canvas else { return }
-        switch gr.state {
-        case .began:
-            guard let ctx = context(), CollaborationManager.shared.isLiveInkReady else {
+    func uninstall() {
+        ProInkCollab.liveHandler = nil
+        pageIdFor = { _, _ in nil }
+        strokeId = nil
+    }
+
+    private func handle(notebookId: String, page: Int, phase: Int, stroke: ProStroke?, points: [ProPoint]) {
+        switch phase {
+        case 0:
+            guard let stroke, CollaborationManager.shared.isLiveInkReady,
+                  let pid = pageIdFor(notebookId, page) else {
                 strokeId = nil
                 return
             }
             strokeId = UUID().uuidString
-            current = ctx
+            pageId = pid
+            rgbaHex = "#" + stroke.colorRGBA.prefix(4).map { String(format: "%02X", $0) }.joined()
+            width = Double(stroke.baseWidth)
             pending = []
             seq = 0
             lastSentAt = 0
-            append(gr, in: canvas)
-        case .changed:
+            append(points)
+        case 1:
             guard strokeId != nil else { return }
-            append(gr, in: canvas)
-            let now = CACurrentMediaTime()
-            if now - lastSentAt >= CollaborationManager.liveInkInterval { flush(end: false) }
-        case .ended, .cancelled, .failed:
+            append(points)
+            if CACurrentMediaTime() - lastSentAt >= CollaborationManager.liveInkInterval { flush(end: false) }
+        default:
             guard strokeId != nil else { return }
             flush(end: true)
             strokeId = nil
-            current = nil
-        default:
-            break
         }
     }
 
-    private func append(_ gr: UIGestureRecognizer, in canvas: PKCanvasView) {
-        // 手勢位置在捲動視圖的內容座標（含縮放）；筆畫座標是未縮放的頁面座標。
-        let p = gr.location(in: canvas)
-        let zoom = max(canvas.zoomScale, 0.0001)
-        pending.append(Double(p.x / zoom))
-        pending.append(Double(p.y / zoom))
+    private func append(_ points: [ProPoint]) {
+        for p in points {
+            pending.append(Double(p.x))
+            pending.append(Double(p.y))
+        }
     }
 
     private func flush(end: Bool) {
-        guard let sid = strokeId, let ctx = current else { return }
+        guard let sid = strokeId, let pid = pageId else { return }
         lastSentAt = CACurrentMediaTime()
         guard !pending.isEmpty || end else { return }
         CollaborationManager.shared.sendLiveInk([
-            "page": ctx.pageId, "sid": sid, "seq": seq,
-            "rgba": ctx.rgbaHex, "w": Double(ctx.width),
+            "page": pid, "sid": sid, "seq": seq,
+            "rgba": rgbaHex, "w": width,
             "p": pending, "end": end,
         ])
         seq += 1
         pending = []
-    }
-
-    static func hex(_ color: Color) -> String {
-        var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
-        UIColor(color).resolvedColor(with: .current).getRed(&r, green: &g, blue: &b, alpha: &a)
-        func byte(_ v: CGFloat) -> String { String(format: "%02X", Int((min(max(v, 0), 1) * 255).rounded())) }
-        return "#" + byte(r) + byte(g) + byte(b) + byte(a)
     }
 }
 

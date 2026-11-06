@@ -2943,6 +2943,8 @@ internal fun rememberEditorCanvasContext(
     }
     // 協同：書寫中把點串流給房間（collab/LiveInk.kt）。頁面與是否在協同都取最新的值。
     val latestLivePage by rememberUpdatedState(if (collabActive) pageId else null)
+    // 連續模式的每一頁自己掛串流與預覽（見 ContinuousPages.kt）。
+    SideEffect { continuousCollab.liveCollaboration = if (collabActive) collaboration else null }
     DisposableEffect(engine, collaboration) {
         val sender = com.kairumo.padnote.collab.LiveInkSender(collaboration) { latestLivePage }
         sender.attach(engine)

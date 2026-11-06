@@ -752,6 +752,12 @@ extension NotebookEditorView {
                 }
                 pageOrigins = (0..<notebook.pageCount).map { $0 < snapshot.pageCount ? $0 : nil }
             }
+            // 等待的這段時間裡又寫完了一筆（排隊的存檔是照舊頁碼排的）：先讓它寫出去再搬，
+            // 否則搬完檔案它才落盤，原本那一頁的筆畫會被寫進搬到這個頁碼的另一頁。
+            if ProInkStore.hasPendingWrites(notebookId: notebook.id) {
+                changePageStructure(pageMap: explicitMap, change)
+                return
+            }
             let idsBefore = notebook.pageIds
             let countBefore = notebook.pageCount
             guard let landing = change() else { return }
@@ -782,7 +788,9 @@ extension NotebookEditorView {
             currentPageIndex = min(max(0, landing), max(0, notebook.pageCount - 1)) // state-entry: 頁面結構變更 landing 頁碼
             objectHistory.pageStructureChanged(notebook, manager: historyUndoManager)
             loadCurrentPage()
-            (canvasView as? AdaptiveCanvasView)?.proLayer?.reload()
+            // 畫面上所有自繪圖層都重讀（不只目前這頁）：它們以頁碼認自己是哪一頁，
+            // 頁碼換了還拿著舊頁的筆畫的話，下一次存檔會寫進別頁。
+            ProInkCollab.reloadLayers(notebookId: notebook.id)
             continuousReloadGeneration += 1
             thumbnailRevision += 1
             if pageDisplayMode == .continuous {

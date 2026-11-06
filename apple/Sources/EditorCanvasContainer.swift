@@ -788,7 +788,6 @@ extension NotebookEditorView {
                                 // LazyVStack 會建立多頁畫布；不能讓最後建立的頁面覆蓋
                                 // `canvasView`，否則貼紙可能蓋到別頁且存檔頁碼也錯。
                                 canvasRef: { ref in
-                                    attachLiveInk(to: ref, page: index)
                                     continuousCanvases[index] = ref
                                     if index == currentPageIndex {
                                         continuousCanvases.activeCanvas = ref
@@ -1144,14 +1143,6 @@ extension NotebookEditorView {
     func liveInkPageId(_ page: Int) -> String? {
         guard let ids = notebook.pageIds, page >= 0, page < ids.count else { return nil }
         return ids[page]
-    }
-
-    /// 讓這個畫布在書寫途中把點串流給房間（見 CollabLiveInk.swift）。外觀每次都取最新的工具狀態。
-    func attachLiveInk(to canvas: PKCanvasView, page: Int) {
-        LiveInkSender.attach(to: canvas) {
-            guard isCollaborating, selectedTool.isBrush, let pid = liveInkPageId(page) else { return nil }
-            return LiveInkContext(pageId: pid, rgbaHex: LiveInkSender.hex(selectedColor), width: strokeWidth)
-        }
     }
 
     /// 把某一頁的筆跡變動廣播出去（協同）。
@@ -1789,7 +1780,6 @@ extension NotebookEditorView {
                     }
                 },
                 canvasRef: { ref in
-                    attachLiveInk(to: ref, page: currentPageIndex)
                     continuousCanvases.activeCanvas = ref
                     // `updateUIView` 每次更新都會叫到這裡；直接寫 @State 就是在畫面更新途中改狀態
                     // （SwiftUI 的 runtime issue「Modifying state during view update」，每個工作階段

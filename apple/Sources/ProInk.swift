@@ -673,6 +673,17 @@ enum ProInkStore {
         }
     }
 
+    /// 這本筆記還有沒有排隊中、尚未寫出的自繪筆畫存檔（只查記憶體，不碰磁碟）。
+    ///
+    /// 頁面結構變動（插入、刪除、搬頁）會改逐頁檔案的頁碼：排隊中的存檔是照**舊頁碼**排的，
+    /// 搬完檔案才寫出去，就會把原本那一頁的筆畫寫進新插進來的那一頁（協同時實際發生過：
+    /// 對方新增一頁的同時這台剛寫完一筆，多出一頁「只有筆跡、沒有文字方塊」的複本）。
+    nonisolated static func hasPendingWrites(notebookId: String) -> Bool {
+        let id = notebookId.lowercased()
+        ledgerLock.lock(); defer { ledgerLock.unlock() }
+        return pendingWrites.values.contains { $0.notebookId.lowercased() == id }
+    }
+
     private nonisolated static func hasPendingWrite(_ directory: URL, _ notebookId: String, _ page: Int) -> Bool {
         let key = url(directory, notebookId, page, foreign: false).path
         ledgerLock.lock(); defer { ledgerLock.unlock() }
@@ -1122,6 +1133,77 @@ private final class LiveProStrokeOverlayView: UIView {
 ///
 /// 座標系與 PencilKit 的筆畫相同（頁面座標）。縮放由 `AdaptiveCanvasView` 設 `transform`，
 /// 所以這裡一律用自己的座標，不必管目前縮放幾倍。
+/// 協同的掛點（見 CollabLiveInk.swift 與 `NotebookEditorView+Collab`）。
+///
+/// 自繪引擎本身不認識協同：這裡只把「書寫中的點」交出去，以及讓外面把別台的筆畫放進來。
+/// 沒有人在聽時 `liveHandler` 是 `nil`，書寫路徑上不多做任何事。
+enum ProInkCollab {
+    /// 書寫中的點。`phase` 0＝落筆（附這一筆的外觀）、1＝新增的點、2＝結束（含取消）。
+    // profile-scope: device 只在協同房間開著時由編輯器掛上，離開即清空
+    nonisolated(unsafe) static var liveHandler: (@MainActor (_ notebookId: String, _ page: Int, _ phase: Int,
+                                                            _ stroke: ProStroke?, _ points: [ProPoint]) -> Void)?
+
+    /// 畫面上正在顯示的頁（別台的筆畫進來時，畫面上那一頁直接更新，不必整頁重讀）。
+    // profile-scope: device 弱參照，只記目前存活的畫布圖層
+    nonisolated(unsafe) static var liveLayers = NSHashTable<ProInkLayerView>.weakObjects()
+
+    /// 別台即時送來的筆畫：加入 `added`、移除 `removedIds`（套件 id）。
+    ///
+    /// 畫面上有這一頁就交給那個圖層（只重畫變動的範圍）；沒有就直接改「別台筆畫」檔。
+    /// 已經擦掉（墓碑、已擦除名單）的筆畫**不會被加回來**（I3）。
+    /// 頁面結構變了：畫面上這本筆記的每一個自繪圖層都從磁碟重讀（它們以頁碼認自己是哪一頁）。
+    @MainActor
+    static func reloadLayers(notebookId: String) {
+        for view in liveLayers.allObjects
+        where view.notebookId.caseInsensitiveCompare(notebookId) == .orderedSame {
+            view.reload()
+        }
+    }
+
+    @MainActor
+    static func applyRemote(directory: URL, notebookId: String, page: Int,
+                            added: [ProStroke], removedIds: Set<String>) {
+        if let view = liveLayers.allObjects.first(where: {
+            $0.notebookId.caseInsensitiveCompare(notebookId) == .orderedSame && $0.pageIndex == page
+                && $0.directory == directory
+        }) {
+            view.applyRemote(added: added, removedIds: removedIds)
+            return
+        }
+        var foreign = ProInkStore.load(in: directory, notebookId: notebookId, page: page, foreign: true)
+        let own = ProInkStore.load(in: directory, notebookId: notebookId, page: page)
+        let blocked = ProInkCollab.blockedIds(directory: directory, notebookId: notebookId, page: page)
+        let suppressed = ProInkStore.loadSuppressed(in: directory, notebookId: notebookId, page: page)
+        var known = Set((foreign + own).map(\.packageId))
+        var changed = false
+        if !removedIds.isEmpty {
+            let before = foreign.count
+            let gone = foreign.filter { removedIds.contains($0.packageId) }
+            foreign.removeAll { removedIds.contains($0.packageId) }
+            if !gone.isEmpty {
+                ProInkStore.saveSuppressed(suppressed.union(gone.map(\.contentKey)),
+                                           in: directory, notebookId: notebookId, page: page)
+            }
+            changed = changed || foreign.count != before
+        }
+        for stroke in added where !known.contains(stroke.packageId) && !blocked.contains(stroke.packageId)
+            && !suppressed.contains(stroke.contentKey) {
+            foreign.append(stroke)
+            known.insert(stroke.packageId)
+            changed = true
+        }
+        guard changed else { return }
+        ProInkStore.save(foreign, in: directory, notebookId: notebookId, page: page, foreign: true)
+        NotificationCenter.default.post(name: AppCommand.proInkDidChange, object: notebookId.lowercased())
+    }
+
+    /// 這一頁已經擦掉、不能再出現的套件 id（帳本裡的墓碑）。
+    nonisolated static func blockedIds(directory: URL, notebookId: String, page: Int) -> Set<String> {
+        let ledger = ProInkStore.loadLedger(in: directory, notebookId: notebookId, page: page)
+        return Set(ledger.retired.map(\.coreId) + ledger.foreignTombstones.map { $0.lowercased() })
+    }
+}
+
 final class ProInkLayerView: UIView {
     /// 這一頁的識別。換頁時由外面重設並重新載入。
     private(set) var notebookId = ""
@@ -1290,7 +1372,60 @@ final class ProInkLayerView: UIView {
         self.directory = directory
         self.notebookId = notebookId
         self.pageIndex = pageIndex
+        ProInkCollab.liveLayers.add(self)
         reload()
+    }
+
+    /// 別台即時送來的筆畫（見 `ProInkCollab.applyRemote`）。只重畫變動的範圍。
+    func applyRemote(added: [ProStroke], removedIds: Set<String>) {
+        guard let directory else { return }
+        var dirty: [CGRect] = []
+        var foreignChanged = false
+        if !removedIds.isEmpty {
+            let gone = foreignStrokes.filter { removedIds.contains($0.packageId) }
+            if !gone.isEmpty {
+                foreignStrokes.removeAll { removedIds.contains($0.packageId) }
+                dirty += gone.map(\.bounds)
+                foreignChanged = true
+                var keys = ProInkStore.loadSuppressed(in: directory, notebookId: notebookId, page: pageIndex)
+                keys.formUnion(gone.map(\.contentKey))
+                ProInkStore.saveSuppressed(keys, in: directory, notebookId: notebookId, page: pageIndex)
+            }
+            // 別人擦掉的是**我的**筆畫：從我這裡拿掉。墓碑由擦掉的那台寫，這裡不再寫一次。
+            let mine = ownStrokes.filter { removedIds.contains($0.packageId) }
+            if !mine.isEmpty {
+                ownStrokes.removeAll { removedIds.contains($0.packageId) }
+                for stroke in mine { strokeSnapshot.removeValue(forKey: stroke.id) }
+                tombstonedIds.formUnion(mine.map(\.packageId))
+                dirty += mine.map(\.bounds)
+                ProInkStore.saveDeferred(ownStrokes, in: directory, notebookId: notebookId, page: pageIndex)
+            }
+        }
+        let known = Set(allStrokes.map(\.packageId))
+        let blocked = ProInkCollab.blockedIds(directory: directory, notebookId: notebookId, page: pageIndex)
+            .union(tombstonedIds)
+        let suppressed = ProInkStore.loadSuppressed(in: directory, notebookId: notebookId, page: pageIndex)
+        let fresh = added.filter {
+            !known.contains($0.packageId) && !blocked.contains($0.packageId) && !suppressed.contains($0.contentKey)
+        }
+        if !fresh.isEmpty {
+            foreignStrokes.append(contentsOf: fresh)
+            foreignChanged = true
+        }
+        guard foreignChanged || !dirty.isEmpty else { return }
+        if foreignChanged {
+            ProInkStore.save(foreignStrokes, in: directory, notebookId: notebookId, page: pageIndex, foreign: true)
+        }
+        for rect in dirty { setNeedsDisplay(rect) }
+        if !fresh.isEmpty {
+            // 筆點陣在背景算好再畫（`draw(rect)` 裡不做同步運算）。
+            ProInkDabCache.prewarm(strokes: fresh) { [weak self] in
+                guard let self else { return }
+                for stroke in fresh { self.setNeedsDisplay(stroke.bounds) }
+            }
+        }
+        onChanged?()
+        NotificationCenter.default.post(name: AppCommand.proInkDidChange, object: notebookId.lowercased())
     }
 
     /// 從磁碟重讀（換頁、同步匯入、清除頁面之後）。
@@ -1908,6 +2043,7 @@ final class ProInkLayerView: UIView {
         }
         live = ProStroke(tool: name, colorRGBA: color, baseWidth: width, points: [point],
                          layer: layer == 0 ? nil : layer, lineType: lineType == 0 ? nil : lineType)
+        ProInkCollab.liveHandler?(notebookId, pageIndex, 0, live, [point])
         snapState = nil
         resetLiveBrush()
         if layer == 0, let kind = ProInk.kind(named: name) {
@@ -1920,6 +2056,7 @@ final class ProInkLayerView: UIView {
     func extendStroke(with points: [ProPoint], predicted: [ProPoint] = []) {
         guard var stroke = live, !points.isEmpty else { return }
         CanvasTouchState.noteInkActivity()
+        ProInkCollab.liveHandler?(notebookId, pageIndex, 1, nil, points)
         // 吸附之後：直線跟著手指的終點走（角度鎖定照樣生效）；其他圖形定型，不再變。
         if let snap = snapState {
             guard snap.kind == .line, let end = points.last else { return }
@@ -2017,6 +2154,7 @@ final class ProInkLayerView: UIView {
 
     private func endStrokeBody() {
         guard var stroke = live else { return }
+        ProInkCollab.liveHandler?(notebookId, pageIndex, 2, nil, [])
         let liveArea = stroke.bounds.union(lastPredictedArea)
         lastPredictedArea = .null
         guard !stroke.points.isEmpty else {
@@ -2078,6 +2216,7 @@ final class ProInkLayerView: UIView {
     }
 
     func cancelStroke() {
+        if live != nil { ProInkCollab.liveHandler?(notebookId, pageIndex, 2, nil, []) }
         let area = live?.bounds.union(lastPredictedArea)
         lastPredictedArea = .null
         snapState = nil
