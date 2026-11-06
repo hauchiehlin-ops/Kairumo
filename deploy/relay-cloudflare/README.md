@@ -19,7 +19,20 @@
 - 網址：`wss://kairumo-relay.kairumo-relay.workers.dev`（專案擁有者的 Cloudflare 帳號）
 - 實測（台灣 HiNet → 聖荷西 SJC 機房）：訊息單向延遲中位數約 150 ms。
 
-## 第一次部署
+## 一鍵部署到你自己的 Cloudflare 帳號（不用寫程式）
+
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/hauchiehlin-ops/Kairumo/tree/main/deploy/relay-cloudflare)
+
+需要免費的 Cloudflare 與 GitHub 帳號；Cloudflare 會把這個資料夾複製到你的 GitHub 並部署。
+完成後把網址的 `https://` 改成 `wss://`，貼到 App「線上協同 → 中繼伺服器位址 → 雲端共享中繼」並儲存
+（App 裡的「如何取得自己的中繼位址？」有完整步驟）。只有房主需要設定，邀請會帶上這個位址。
+
+## 額度的用法（免費方案）
+
+- 每筆存進補發暫存的操作只寫 1 列；筆數、容量、序號放在記憶體，物件醒來時才從資料表重算一次。
+- 書寫中預覽每秒送 20 次（App 端設定），每 20 則訊息才算 1 次請求。
+
+## 用命令列部署（開發者）
 
 ```bash
 cd deploy/relay-cloudflare

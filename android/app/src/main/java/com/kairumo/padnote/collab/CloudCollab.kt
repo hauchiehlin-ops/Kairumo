@@ -147,7 +147,7 @@ object CloudCollab {
                 return null
             }
             // 即時房間：有公開中繼就開在公開中繼上（跨網路也即時）；沒有的話照舊開在本機（同一個網路才連得到）。
-            if (CollaborationManager.PUBLIC_RELAY_URL.isNotEmpty()) {
+            if (collab.cloudRelayUrl.isNotEmpty()) {
                 ensurePublicRoom(entry, collab)
             } else if (collab.status is CollaborationManager.Status.Disconnected) {
                 collab.createRoom()
@@ -185,7 +185,7 @@ object CloudCollab {
      * （重開之後，之前發出去的邀請照樣有效）。與 Apple `ensurePublicRoom` 相同。
      */
     fun ensurePublicRoom(entry: FfiSharedNotebook, collab: CollaborationManager) {
-        val relay = CollaborationManager.PUBLIC_RELAY_URL
+        val relay = collab.cloudRelayUrl
         if (relay.isEmpty() || entry.role != "owner") return
         if (collab.serverAddress == relay && collab.status !is CollaborationManager.Status.Disconnected) return
         if (entry.roomId.isNotEmpty() && entry.keyBase64.isNotEmpty()) {
@@ -201,8 +201,10 @@ object CloudCollab {
                 roomId = entry.roomId.ifEmpty { collab?.roomId.orEmpty() },
                 keyBase64 = entry.keyBase64.ifEmpty { collab?.roomKeyBase64.orEmpty() },
                 // 有公開中繼：邀請只帶它（大家連同一台）。沒有：照舊帶區網／Tailscale 位址。
-                servers = if (CollaborationManager.PUBLIC_RELAY_URL.isNotEmpty()) listOf(CollaborationManager.PUBLIC_RELAY_URL)
-                    else listOfNotNull(collab?.lanRelayAddress, collab?.tailscaleRelayAddress),
+                servers = (collab?.cloudRelayUrl ?: CollaborationManager.PUBLIC_RELAY_URL).let { relay ->
+                    if (relay.isNotEmpty()) listOf(relay)
+                    else listOfNotNull(collab?.lanRelayAddress, collab?.tailscaleRelayAddress)
+                },
                 notebookId = entry.notebookId, driveFolderId = entry.folderId,
                 title = entry.title, minFiles = minFiles
             )

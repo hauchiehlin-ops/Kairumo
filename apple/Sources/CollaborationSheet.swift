@@ -853,6 +853,11 @@ public struct CollaborationSheet: View {
                         .foregroundColor(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
+
+                Divider()
+
+                // 雲端共享（跨網路）用的中繼：可改成自己部署的（旁邊附零基礎步驟）。
+                CloudRelaySettingView()
             }
             .padding(.top, 8)
         } label: {

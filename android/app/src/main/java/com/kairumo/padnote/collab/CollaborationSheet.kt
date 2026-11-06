@@ -299,6 +299,9 @@ fun CollaborationSheet(
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
+                        HorizontalDivider()
+                        // 雲端共享（跨網路）用的中繼：可改成自己部署的（旁邊附零基礎步驟）。
+                        CloudRelaySetting(::l)
                     } else {
                         Row(
                             Modifier.fillMaxWidth(),

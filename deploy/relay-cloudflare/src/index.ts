@@ -67,6 +67,15 @@ export default {
 export class RelayRoom implements DurableObject {
   private readonly sql: SqlStorage;
 
+  // 補發暫存的筆數、總位元組與下一個序號放在記憶體，不在每一筆都讀寫資料庫：
+  // Cloudflare 免費方案按「讀到的列數／寫入的列數」計額度，`COUNT(*)` 會把整張表讀一遍
+  // （最多 2000 列），每筆再寫兩列計數器，額度很快就用完。物件休眠醒來後記憶體是空的，
+  // 第一次用到時從資料表重算一次（`loadCounters`）。
+  private counted = false;
+  private count = 0;
+  private bytes = 0;
+  private nextSeq = 1;
+
   constructor(private readonly ctx: DurableObjectState, private readonly env: Env) {
     this.sql = ctx.storage.sql;
     this.sql.exec(
@@ -218,8 +227,9 @@ export class RelayRoom implements DurableObject {
       payload: msg.payload ?? null,
     };
     if (!isTransientKind(kind)) {
-      const seq = Number(this.meta("next_seq") ?? "1");
-      this.setMeta("next_seq", String(seq + 1));
+      this.loadCounters();
+      const seq = this.nextSeq;
+      this.nextSeq += 1;
       out.seq = seq;
       const text = JSON.stringify(out);
       this.remember(seq, lamport, text);
@@ -229,27 +239,41 @@ export class RelayRoom implements DurableObject {
     this.broadcast(me.peer!.user_id, out);
   }
 
-  /** 存進補發暫存，超過上限時從最舊的丟起（與 Rust `Room::remember` 相同）。 */
+  /** 從資料表重算計數（物件剛醒來時）。 */
+  private loadCounters(): void {
+    if (this.counted) return;
+    const row = this.sql.exec(
+      "SELECT COUNT(*) AS n, COALESCE(SUM(size), 0) AS b, MAX(seq) AS m FROM ops",
+    ).one();
+    this.count = Number(row.n);
+    this.bytes = Number(row.b);
+    this.nextSeq = row.m === null ? 1 : Number(row.m) + 1;
+    this.counted = true;
+  }
+
+  /** 存進補發暫存，超過上限時從最舊的丟起（與 Rust `Room::remember` 相同）。每筆只寫一列。 */
   private remember(seq: number, lamport: number, text: string): void {
+    this.loadCounters();
     const size = text.length;
     this.sql.exec("INSERT INTO ops (seq, lamport, size, msg) VALUES (?, ?, ?, ?)", seq, lamport, size, text);
-    let bytes = Number(this.meta("bytes") ?? "0") + size;
-    let count = Number(this.sql.exec("SELECT COUNT(*) AS n FROM ops").one().n);
-    while (count > RECENT_MAX_COUNT || (bytes > RECENT_MAX_BYTES && count > 1)) {
+    this.count += 1;
+    this.bytes += size;
+    while (this.count > RECENT_MAX_COUNT || (this.bytes > RECENT_MAX_BYTES && this.count > 1)) {
+      // 主鍵排序取最舊的一列：只讀一列（不是整表掃描）。
       const oldest = this.sql.exec("SELECT seq, size FROM ops ORDER BY seq ASC LIMIT 1").one();
       this.sql.exec("DELETE FROM ops WHERE seq = ?", oldest.seq);
-      bytes -= Number(oldest.size);
-      count -= 1;
+      this.bytes -= Number(oldest.size);
+      this.count -= 1;
     }
-    this.setMeta("bytes", String(bytes));
   }
 
   private catchup(ws: WebSocket, roomId: string, msg: any): void {
     const lastSeq = msg.last_seq;
     if (typeof lastSeq === "number") {
       const rows = this.sql.exec("SELECT msg FROM ops WHERE seq > ? ORDER BY seq ASC", lastSeq).toArray();
-      const oldestRow = this.sql.exec("SELECT MIN(seq) AS s FROM ops").one();
-      const oldest = oldestRow.s === null ? Number(this.meta("next_seq") ?? "1") : Number(oldestRow.s);
+      this.loadCounters();
+      const oldestRow = this.sql.exec("SELECT seq FROM ops ORDER BY seq ASC LIMIT 1").toArray()[0];
+      const oldest = oldestRow ? Number(oldestRow.seq) : this.nextSeq;
       const truncated = oldest > lastSeq + 1;
       this.sendRaw(ws, `{"type":"oplog_batch","room_id":${JSON.stringify(roomId)},"oplogs":[${rows.map((r) => r.msg).join(",")}],"truncated":${truncated}}`);
       return;
@@ -300,6 +324,10 @@ export class RelayRoom implements DurableObject {
   private clearRoom(): void {
     this.sql.exec("DELETE FROM ops");
     this.sql.exec("DELETE FROM meta");
+    this.counted = true;
+    this.count = 0;
+    this.bytes = 0;
+    this.nextSeq = 1;
   }
 
   // ---- 小工具 ----
