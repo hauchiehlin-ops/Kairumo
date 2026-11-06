@@ -38,11 +38,8 @@ class OAuthRedirectActivity : Activity() {
     private fun handle(intent: Intent) {
         val context = applicationContext
         // 換權杖是網路請求，在背景進行並即時發送狀態通知。
-        // 雲端協作的授權（`drive.file`、挑選器）與主帳號登入共用同一個重導向位址，以 state 分辨。
-        val collab = com.kairumo.padnote.collab.CollabDriveAuth.ownsState(context, intent)
         CoroutineScope(Dispatchers.IO).launch {
-            if (collab) com.kairumo.padnote.collab.CollabDriveAuth.handleRedirect(context, intent)
-            else GoogleAuth.handleRedirect(context, intent)
+            GoogleAuth.handleRedirect(context, intent)
         }
         // 將 MainActivity 喚回最上層並清空上方的 Custom Tab 任務堆疊，
         // 避免瀏覽器以子母畫面（PiP overlay）形式殘留在畫面上。

@@ -507,6 +507,8 @@ public class CollaborationManager: ObservableObject {
             self.currentRoomId = roomId
             // 新的房間從頭來；斷線重連回同一個房間則從看過的序號接著補。
             self.lastSeq = 0
+            self.stateDirty = true
+            self.lastDepositAt = nil
             self.isHost = asHost
             self.peers.removeAll()
             self.status = .connecting
@@ -827,11 +829,14 @@ public class CollaborationManager: ObservableObject {
     /// **時鐘由這裡統一配發**（設計 §3）。以前呼叫端可以自己帶、預設值是 1，結果每一筆都是 1。
     /// 操作 id 放在 payload 裡：三份中繼都原樣轉送 payload，但不見得保留外層的其他欄位。
     @discardableResult
-    public func broadcastOplog(kind: String, payload: [String: Any], lamport explicit: UInt64? = nil) -> UInt64 {
+    public func broadcastOplog(
+        kind: String, payload: [String: Any], lamport explicit: UInt64? = nil, envelope: [String: Any] = [:]
+    ) -> UInt64 {
         // 呼叫端需要事先知道時鐘值時（物件合併要用同一個時戳記錄本機的欄位），
         // 先以 `nextLamport()` 取得再傳進來；其餘一律由這裡配發。
         let lamport = explicit ?? nextLamport()
         maxKnownLamport = max(maxKnownLamport, lamport)
+        noteStateChanged(kind: kind)
         var stamped = payload
         stamped["op_id"] = UUID().uuidString
 
@@ -848,34 +853,62 @@ public class CollaborationManager: ObservableObject {
         if isEncrypted {
             msg["encrypted"] = true
         }
+        // 信封上的明文欄位（寄存整份狀態的 `snap`／`part`／`parts`／`seq`，中繼要看）。內容仍在加密的 payload 裡。
+        for (key, value) in envelope where msg[key] == nil { msg[key] = value }
 
-        // 跨網路時的直連通道（見 `CloudCollabManager.sendRealtime`）。送到了就不必排離線佇列 ——
-        // 持久化另有雲端資料夾負責。
-        let viaDirect = jsonString(msg).map { CloudCollabManager.shared.sendRealtime($0) } ?? false
         if case .connected = status {
             sendJson(msg)
-        } else if !viaDirect {
+        } else {
             offlineOplogQueue.append(msg)
             queuedOplogCount = offlineOplogQueue.count
         }
         return lamport
     }
 
-    /// 從雲端直連收到的即時協同訊息（與中繼上的 `oplog` 同一份 JSON），交給與中繼相同的處理。
-    func receiveRealtime(_ json: String) {
-        guard let data = json.data(using: .utf8),
-              var dict = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
-              (dict["type"] as? String) == "oplog" else { return }
-        // 只收這個房間的：直連是以筆記本配對的，房號不同代表是另一場協同的殘留。
-        if !currentRoomId.isEmpty, (dict["room_id"] as? String) != currentRoomId { return }
-        dict["type"] = "peer_oplog"
-        dict.removeValue(forKey: "seq") // 中繼的序號只屬於中繼
-        if let text = jsonString(dict) { handleIncomingMessage(text) }
+    // MARK: - 寄存整份狀態（雲端中繼，見 `deploy/relay-cloudflare`）
+
+    /// 已收到的最大中繼序號（寄存時寫在信封上，中繼以它判斷新舊）。
+    public var relaySeq: UInt64 { lastSeq }
+
+    /// 這場協同開在雲端中繼上（`wss://`）。區網／Tailscale 的本機中繼不收寄存（它會照常轉送給每個人）。
+    public var isOnCloudRelay: Bool {
+        activeServerAddress.lowercased().hasPrefix("wss://")
     }
 
-    private func jsonString(_ dict: [String: Any]) -> String? {
-        guard let data = try? JSONSerialization.data(withJSONObject: dict) else { return nil }
-        return String(data: data, encoding: .utf8)
+    /// 編輯器在協同中掛上：把這本目前的整份狀態寄存到中繼，送完才回來（見 `EditorInkAndStorage.depositCollabState`）。
+    public var stateDepositor: (() async -> Void)?
+
+    /// 多久檢查一次要不要寄存（秒）。
+    nonisolated static let depositCheckInterval: TimeInterval = 30
+    /// 兩次寄存的最短間隔（秒）。寄存一次寫入中繼的列數＝段數；免費方案每天 10 萬列，這個間隔下
+    /// 一間持續編輯的房間一天最多約 720 次。
+    nonisolated static let depositMinInterval: TimeInterval = 120
+
+    /// 上次寄存之後房間內容有沒有變（送出或收到正式操作）。進新房間時算「有變」：先寄存一份底稿。
+    private var stateDirty = true
+    private var lastDepositAt: Date?
+
+    /// 現在該由這台寄存：在雲端中繼上、有變動、離上次夠久，而且房間裡（含自己）使用者 id 最小的是我 ——
+    /// 每個人都寄存只是把同一份內容多寫幾遍。
+    public var shouldDepositState: Bool {
+        guard isOnCloudRelay, case .connected = status, stateDirty else { return false }
+        if let last = lastDepositAt, Date().timeIntervalSince(last) < Self.depositMinInterval { return false }
+        return !peers.contains { $0.userId < currentUserId }
+    }
+
+    public func noteStateDeposited() {
+        stateDirty = false
+        lastDepositAt = Date()
+    }
+
+    private func noteStateChanged(kind: String) {
+        if !kind.hasPrefix("state_"), !kind.hasPrefix("live_") { stateDirty = true }
+    }
+
+    /// 寄存一次（例如結束協同之前，讓不在線的協作者之後還拿得到最終版本）。
+    public func depositState() async {
+        guard isOnCloudRelay, case .connected = status, let depositor = stateDepositor else { return }
+        await depositor()
     }
 
     // MARK: - 書寫中即時串流（`live_ink`，見 CollabLiveInk.swift）
@@ -887,7 +920,7 @@ public class CollaborationManager: ObservableObject {
     /// 連上房間、而且房間裡有別人：才值得記點送出。
     var isLiveInkReady: Bool {
         if case .connected = status, !peers.isEmpty { return true }
-        return CloudCollabManager.shared.directPeers > 0
+        return false
     }
 
     /// 送一段書寫中的點。**不配發時鐘、不排離線佇列**：它是暫態的，漏了就漏了，
@@ -903,7 +936,6 @@ public class CollaborationManager: ObservableObject {
             "payload": finalPayload,
         ]
         if isEncrypted { msg["encrypted"] = true }
-        if let text = jsonString(msg) { CloudCollabManager.shared.sendRealtime(text) }
         if case .connected = status { sendJson(msg) }
     }
 
@@ -1036,6 +1068,9 @@ public class CollaborationManager: ObservableObject {
                 }
                 return
             }
+            // 寄存的整份狀態只該在補發（`oplog_batch`）裡出現：Cloudflare 中繼不轉送它，但自架的 Rust 中繼
+            // 會把 `state_` 當暫態照轉 —— 即時收到就忽略，免得每兩分鐘套一次整份狀態（打字中會被重建基準）。
+            if kind == "state_store" { return }
             if kind == "ink_add" { LiveInkStore.shared.settle(userId: uid) }
             if let seq = (json["seq"] as? NSNumber)?.uint64Value { lastSeq = max(lastSeq, seq) }
             deliver(userId: uid, kind: kind, rawPayload: rawPayload, lamport: lamport, isEncrypted: isEncrypted)
@@ -1060,10 +1095,10 @@ public class CollaborationManager: ObservableObject {
             if (json["truncated"] as? Bool) == true { stateSyncNeeded.send(()) }
 
         case "room_closed":
+            // 先記下是哪一本：斷線之後房間與筆記本的關聯就不在了。
+            let nid = roomNotebookId
             disconnect(userInitiated: false)
-            if let nid = CloudCollabManager.shared.focusedId {
-                CloudCollabManager.shared.stopSharing(nid)
-            }
+            if let nid { CloudCollabManager.shared.stopSharing(nid) }
 
         case "pong":
             // 心跳回覆正常
@@ -1079,6 +1114,7 @@ public class CollaborationManager: ObservableObject {
         lamportClock = max(lamportClock, lamport)
         maxKnownLamport = max(maxKnownLamport, lamport)
         guard let payload = decryptPayload(rawPayload, isEncrypted: isEncrypted) else { return }
+        noteStateChanged(kind: kind)
         if let opId = payload["op_id"] as? String {
             guard !seenOpIds.contains(opId) else { return }
             seenOpIds.insert(opId)

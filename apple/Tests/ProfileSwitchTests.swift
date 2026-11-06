@@ -187,7 +187,7 @@ final class ProfileSwitchEngineTests: XCTestCase {
             "AutoSyncController", "FocusSyncController", "AudioRecorderManager", "CollaborationManager",
             "ToolbarSettings", "NotebookSearchIndex", "StickerManager", "PenHardwareSettings",
             "GuidanceSuppressionManager", "DraftingState", "SyncLogger", "CloudSyncFolderMonitor",
-            "CloudCollabManager", "CollabDriveAuth",
+            "CloudCollabManager",
         ] {
             XCTAssertTrue(names.contains(expected), "\(expected) 沒有在切換清單裡")
         }

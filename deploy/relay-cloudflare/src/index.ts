@@ -11,6 +11,12 @@
 //   每條連線的身分存在連線本身（`serializeAttachment`），休眠醒來還在。
 // - 補發暫存（斷線重連用）存在物件的 SQLite 裡，上限與 Rust 版相同（2000 筆／32 MB）。
 //   書寫中預覽（`live_`）與整份狀態（`state_`）只轉送、不暫存。
+// - **寄存的整份狀態**（`state_store`，只有這個中繼有；Rust 版不需要）：參與者定期把整本的狀態
+//   （與回覆 `state_request` 同一個格式、同樣端對端加密）寄放在房間裡，不轉送給任何人。
+//   新加入的人補發時先拿到它、再補它之後的操作 —— 房主不在線也拿得到完整內容。
+// - **保存期限**：房間沒人了（大家都離開、斷線，或房主按「結束協同」）就排一個鬧鐘，
+//   `RETENTION_HOURS`（預設 7 天）內沒有人再進來，整個房間（暫存、寄存、房主設定）刪除。
+//   這段期間任何協作者都還能回來拿到最終版本；有人進來就取消鬧鐘。
 // - 心跳 `{"type":"ping"}` 由平台自動回 `{"type":"pong"}`，不喚醒物件。
 // - 內容是端對端加密的（房間金鑰只在參與者手上），中繼看不到筆跡與物件。
 
@@ -18,7 +24,15 @@ export interface Env {
   ROOMS: DurableObjectNamespace;
   MAX_PEERS?: string;
   LOCATION_HINT?: string;
+  /** 房間沒人之後保留多久（小時）。預設 168（7 天）。 */
+  RETENTION_HOURS?: string;
 }
+
+const DEFAULT_RETENTION_HOURS = 168;
+/** 寄存的整份狀態一段的上限（字元）。SQLite 一列最多 2 MB；App 端每段約 400 KB。 */
+const STORE_PART_MAX = 1_800_000;
+/** 寄存的整份狀態最多幾段（≈ 64 × 400 KB）。 */
+const STORE_PARTS_MAX = 64;
 
 const RECENT_MAX_COUNT = 2000;
 const RECENT_MAX_BYTES = 32 * 1024 * 1024;
@@ -78,12 +92,21 @@ export class RelayRoom implements DurableObject {
 
   constructor(private readonly ctx: DurableObjectState, private readonly env: Env) {
     this.sql = ctx.storage.sql;
+    this.ensureTables();
+    ctx.setWebSocketAutoResponse(
+      new WebSocketRequestResponsePair('{"type":"ping"}', '{"type":"pong"}'),
+    );
+  }
+
+  /** 建表（冪等）。`deleteAll()` 連資料表一起刪，刪完要再建一次。 */
+  private ensureTables(): void {
     this.sql.exec(
       "CREATE TABLE IF NOT EXISTS ops (seq INTEGER PRIMARY KEY, lamport INTEGER NOT NULL, size INTEGER NOT NULL, msg TEXT NOT NULL)",
     );
     this.sql.exec("CREATE TABLE IF NOT EXISTS meta (k TEXT PRIMARY KEY, v TEXT NOT NULL)");
-    ctx.setWebSocketAutoResponse(
-      new WebSocketRequestResponsePair('{"type":"ping"}', '{"type":"pong"}'),
+    // 寄存的整份狀態：同一個 `snap` 的各段收齊才算數，收齊後舊的那一份刪掉。
+    this.sql.exec(
+      "CREATE TABLE IF NOT EXISTS snap (snap TEXT NOT NULL, part INTEGER NOT NULL, parts INTEGER NOT NULL, seq INTEGER NOT NULL, msg TEXT NOT NULL, PRIMARY KEY (snap, part))",
     );
   }
 
@@ -181,7 +204,14 @@ export class RelayRoom implements DurableObject {
       owner = userId;
       this.setMeta("owner", owner);
       if (typeof msg.passcode === "string" && msg.passcode) this.setMeta("passcode", msg.passcode);
+    } else if (msg.role === "owner" && owner !== userId && !others.some((s) => this.attachment(s).peer?.user_id === owner)) {
+      // 房主重開 App 之後使用者 id 會換新（每次啟動隨機）。房間現在會保留好幾天，
+      // 不接回來的話重開後的房主按不了「結束協同」。原房主還在線時不讓別人頂替。
+      owner = userId;
+      this.setMeta("owner", owner);
     }
+    // 房主回來（例如重開 App 後沿用同一間房）：這場協同又開始了。
+    if (owner === userId) this.sql.exec("DELETE FROM meta WHERE k = 'closed'");
     const passcode = this.meta("passcode");
     if (passcode !== null && msg.passcode !== passcode && owner !== userId) {
       this.send(ws, { type: "error", code: "JOIN_FAILED", message: "密碼錯誤，無法加入房間" });
@@ -211,11 +241,21 @@ export class RelayRoom implements DurableObject {
       this.broadcast(userId, { type: "peer_joined", room_id: roomId, peer });
     }
     ws.serializeAttachment({ joined: true, room: roomId, peer } satisfies Attachment);
-    this.send(ws, { type: "joined", room_id: roomId, user_id: userId, role, peers: existing });
+    // 有人回來了：取消「沒人之後刪除」的鬧鐘。
+    void this.ctx.storage.deleteAlarm();
+    this.send(ws, {
+      type: "joined", room_id: roomId, user_id: userId, role, peers: existing,
+      // 房主已經結束過這場協同（資料在保存期限內還在）：App 可據此提示「這是最終版本」。
+      closed: this.meta("closed") !== null,
+    });
   }
 
   private oplog(me: Attachment, msg: any): void {
     const kind = String(msg.kind ?? "");
+    if (kind === "state_store") {
+      this.storeState(me, msg);
+      return;
+    }
     const lamport = Number(msg.lamport ?? 0) || 0;
     const out: any = {
       type: "peer_oplog",
@@ -237,6 +277,46 @@ export class RelayRoom implements DurableObject {
       return;
     }
     this.broadcast(me.peer!.user_id, out);
+  }
+
+  /**
+   * 寄存一段整份狀態（不轉送）。信封上的 `snap`（這一份的 id）、`part`／`parts`、`seq`
+   * （寄存者已收到的最大序號）是明文；內容（`payload`）是端對端加密的，中繼看不到。
+   * 收齊一份之後，序號不比現有的舊才換上，舊的刪掉。
+   */
+  private storeState(me: Attachment, msg: any): void {
+    const snap = String(msg.snap ?? "");
+    const part = Number(msg.part);
+    const parts = Number(msg.parts);
+    const seq = Number(msg.seq ?? 0) || 0;
+    if (!/^[A-Za-z0-9-]{8,64}$/.test(snap) || !Number.isInteger(part) || !Number.isInteger(parts)) return;
+    if (parts < 1 || parts > STORE_PARTS_MAX || part < 0 || part >= parts) return;
+    const text = JSON.stringify({
+      type: "peer_oplog",
+      room_id: me.room,
+      user_id: me.peer!.user_id,
+      lamport: Number(msg.lamport ?? 0) || 0,
+      kind: "state_store",
+      encrypted: msg.encrypted ?? null,
+      payload: msg.payload ?? null,
+    });
+    if (text.length > STORE_PART_MAX) return;
+    this.sql.exec(
+      "INSERT INTO snap (snap, part, parts, seq, msg) VALUES (?, ?, ?, ?, ?) ON CONFLICT(snap, part) DO UPDATE SET msg = excluded.msg",
+      snap, part, parts, seq, text,
+    );
+    const got = Number(this.sql.exec("SELECT COUNT(*) AS n FROM snap WHERE snap = ?", snap).one().n);
+    if (got < parts) return;
+    const current = this.meta("snap");
+    const currentSeq = Number(this.meta("snap_seq") ?? "-1");
+    if (current !== null && current !== snap && seq < currentSeq) {
+      // 比現有的舊（寄存者斷線很久才送出）：不換。
+      this.sql.exec("DELETE FROM snap WHERE snap = ?", snap);
+      return;
+    }
+    this.sql.exec("DELETE FROM snap WHERE snap != ?", snap);
+    this.setMeta("snap", snap);
+    this.setMeta("snap_seq", String(seq));
   }
 
   /** 從資料表重算計數（物件剛醒來時）。 */
@@ -269,6 +349,16 @@ export class RelayRoom implements DurableObject {
 
   private catchup(ws: WebSocket, roomId: string, msg: any): void {
     const lastSeq = msg.last_seq;
+    // 第一次進房（序號 0）而且有寄存的整份狀態：先給它，再補它之後的操作。
+    // 寄存之前的操作也照補（暫存上限內）：合併規則冪等，重複套用無害，少一筆才是問題。
+    const snap = lastSeq === 0 ? this.meta("snap") : null;
+    if (snap !== null) {
+      const parts = this.sql.exec("SELECT msg FROM snap WHERE snap = ? ORDER BY part ASC", snap).toArray();
+      const ops = this.sql.exec("SELECT msg FROM ops ORDER BY seq ASC").toArray();
+      const all = [...parts, ...ops].map((r) => r.msg).join(",");
+      this.sendRaw(ws, `{"type":"oplog_batch","room_id":${JSON.stringify(roomId)},"oplogs":[${all}],"truncated":false,"stored_state":true}`);
+      return;
+    }
     if (typeof lastSeq === "number") {
       const rows = this.sql.exec("SELECT msg FROM ops WHERE seq > ? ORDER BY seq ASC", lastSeq).toArray();
       this.loadCounters();
@@ -303,7 +393,9 @@ export class RelayRoom implements DurableObject {
       if (s !== ws) this.sendRaw(s, notice);
       s.serializeAttachment({ joined: false, room: me.room } satisfies Attachment);
     }
-    this.clearRoom();
+    // 不立刻刪：離線中的協作者在保存期限內回來，還能補到最終版本（見 `scheduleExpiry`）。
+    this.setMeta("closed", String(Date.now()));
+    this.scheduleExpiry();
   }
 
   private disconnected(ws: WebSocket): void {
@@ -315,15 +407,29 @@ export class RelayRoom implements DurableObject {
     this.cleanupIfEmpty(ws);
   }
 
-  /** 房間沒有人了：清掉暫存與房主設定（與 Rust 版「最後一人離開即回收房間」相同）。 */
+  /**
+   * 房間沒有人了：排「保存期限到了就刪除」的鬧鐘。不再立刻清空 —— Rust 版（區網）是
+   * 最後一人離開即回收，這裡要讓不在線的協作者回來時還拿得到最終版本。
+   */
   private cleanupIfEmpty(closing?: WebSocket): void {
     const left = this.joinedSockets().filter((s) => s !== closing);
-    if (left.length === 0) this.clearRoom();
+    if (left.length === 0) this.scheduleExpiry();
   }
 
-  private clearRoom(): void {
-    this.sql.exec("DELETE FROM ops");
-    this.sql.exec("DELETE FROM meta");
+  private retentionMs(): number {
+    const hours = Number(this.env.RETENTION_HOURS ?? DEFAULT_RETENTION_HOURS);
+    return (Number.isFinite(hours) && hours > 0 ? hours : DEFAULT_RETENTION_HOURS) * 3_600_000;
+  }
+
+  private scheduleExpiry(): void {
+    void this.ctx.storage.setAlarm(Date.now() + this.retentionMs());
+  }
+
+  /** 保存期限到了：還是沒人的話，整個房間的資料刪掉（暫存、寄存、房主、密碼）。 */
+  async alarm(): Promise<void> {
+    if (this.joinedSockets().length > 0) return;
+    await this.ctx.storage.deleteAll();
+    this.ensureTables();
     this.counted = true;
     this.count = 0;
     this.bytes = 0;

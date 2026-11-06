@@ -15,5 +15,7 @@ new_sqlite_classes = ["RelayRoom"]
 [vars]
 # 每間房的人數上限。
 MAX_PEERS = "16"
+# 房間沒人之後（含房主結束協同）保留多久再整個刪除（小時）。App 介面寫的是 7 天。
+RETENTION_HOURS = "168"
 # 房間物件建立的區域（Durable Objects location hint），預設不指定（建在第一位使用者的機房附近）。
 # 例：LOCATION_HINT = "apac"

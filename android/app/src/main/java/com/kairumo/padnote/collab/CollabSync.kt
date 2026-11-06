@@ -338,6 +338,23 @@ class CollabTextHub {
     fun reset() = replicas.clear()
 }
 
+/**
+ * 一頁的筆跡比對：哪些筆畫算「這台擦掉了」。
+ *
+ * 只有**同一個引擎上一次比對時還在、現在沒了**的才是擦除 —— 不是「已知的裡面引擎上沒有的」。
+ * 後者在換頁、整份狀態套用後頁面重排、引擎還沒從套件讀完的那一瞬間全部成立，結果是整頁筆畫被當成
+ * 「被擦掉」廣播出去，房主那邊的筆跡跟著被擦光（墓碑不會復活，I3）。
+ */
+object CollabInkDiff {
+    /** @param previous 同一個引擎上一次比對時的筆畫；`null` = 這個引擎第一次比對（不會有擦除）。 */
+    fun removed(known: Set<String>, current: Set<String>, previous: Set<String>?): Set<String> =
+        if (previous == null) emptySet() else known.filterTo(HashSet()) { it in previous && it !in current }
+
+    /** 比對後的「已知」：擦掉的拿掉、新的加進來；已知但引擎上沒有的（不是這台擦的）留著，不重送也不當成擦除。 */
+    fun nextKnown(known: Set<String>, current: Set<String>, removed: Set<String>): HashSet<String> =
+        HashSet<String>(known.size + current.size).apply { addAll(known); removeAll(removed); addAll(current) }
+}
+
 /** 每一頁已經同步過的筆畫，以及線上 id ↔ 本機筆畫 id 的對應。 */
 class CollabInkLedger {
     val known = HashMap<String, MutableSet<String>>()

@@ -47,6 +47,10 @@ public struct CollaborationSheet: View {
                     // 頂部狀態橫幅卡片
                     statusHeaderCard
 
+                    // 三種連線方式的使用時機與限制（使用者回報「被搞混了」：雲端共享、同一 Wi‑Fi、
+                    // Tailscale、遠端中繼、端對端加密各是什麼、為什麼按了連結分享 QR Code 就換掉）。
+                    CollabModesGuide()
+
                     // ☁️ 雲端共享（跨網路）：最高優先跨網協同入口（無論連線狀態，一律置頂展示）
                     if let notebookId {
                         CloudShareSection(
@@ -1087,19 +1091,27 @@ struct CollabInviteQRSection: View {
         let hintKey: String
     }
 
+    /// 這本已經雲端共享、房間開在雲端共享的中繼上。
+    private var isCloudShared: Bool {
+        guard let notebookId, CloudCollabManager.shared.shared(notebookId) != nil else { return false }
+        return collaborationManager.activeServerAddress == collaborationManager.cloudRelayURL
+    }
+
     private var modes: [Mode] {
         var out: [Mode] = []
         let m = collaborationManager
 
         if m.isHostingLocalRelay {
             if m.lanRelayAddress != nil {
-                out.append(Mode(id: "lan", titleKey: "collab_qr_mode_lan", icon: "wifi", link: m.inviteLink(forTailscale: false), hintKey: "collab_qr_hint"))
+                out.append(Mode(id: "lan", titleKey: "collab_qr_mode_lan", icon: "wifi", link: m.inviteLink(forTailscale: false), hintKey: "collab_qr_hint_lan"))
             }
             if let ts = m.tailscaleInviteLink {
-                out.append(Mode(id: "tailscale", titleKey: "collab_qr_mode_tailscale", icon: "network", link: ts, hintKey: "collab_qr_hint"))
+                out.append(Mode(id: "tailscale", titleKey: "collab_qr_mode_tailscale", icon: "network", link: ts, hintKey: "collab_qr_hint_tailscale"))
             }
-        } else {
-            out.append(Mode(id: "remote", titleKey: "collab_qr_mode_remote", icon: "globe", link: m.encryptedInviteLink, hintKey: "collab_qr_hint"))
+        } else if !isCloudShared {
+            // 雲端共享的房間：上方「雲端共享」那張 QR Code 就是這間房（同一個中繼、同一把金鑰），
+            // 再給一張「遠端中繼」只會讓人以為是另一種連法。
+            out.append(Mode(id: "remote", titleKey: "collab_qr_mode_remote", icon: "globe", link: m.encryptedInviteLink, hintKey: "collab_qr_hint_remote"))
         }
         // 同一個連結不重複列（例如沒有區網位址時 Tailscale 也是預設連結）。
         var seen = Set<String>()
@@ -1154,6 +1166,33 @@ struct CollabInviteQRSection: View {
             .background(Color(uiColor: .secondarySystemGroupedBackground))
             .cornerRadius(12)
         }
+    }
+}
+
+// MARK: - 連線方式怎麼選
+
+/// 協同面板頂端的說明：三種連線方式各在什麼時候用、有什麼限制；「改用連結分享」會讓 QR Code
+/// 換掉的原因；端對端加密不是一種連線方式。預設收合，不佔版面。與 Android `CollabModesGuide` 相同。
+struct CollabModesGuide: View {
+    @ObservedObject private var localizationManager = LocalizationManager.shared
+    @State private var expanded = false
+
+    var body: some View {
+        DisclosureGroup(isExpanded: $expanded) {
+            Text(localizationManager.localized("collab_modes_body"))
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.top, 6)
+        } label: {
+            Label(localizationManager.localized("collab_modes_title"), systemImage: "questionmark.circle")
+                .font(.subheadline.weight(.semibold))
+        }
+        .padding(12)
+        .background(Color(uiColor: .secondarySystemGroupedBackground))
+        .cornerRadius(12)
+        .accessibilityIdentifier("collaboration.modes_guide")
     }
 }
 

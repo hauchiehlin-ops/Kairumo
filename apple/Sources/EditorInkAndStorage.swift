@@ -175,8 +175,20 @@ extension NotebookEditorView {
     /// 協同事件：租約搶輸、換房間、舊版參與者。
     var collabEventSink: AnyView {
         AnyView(Color.clear
-            .onAppear { installProInkCollab(true) }
-            .onDisappear { installProInkCollab(false) }
+            .onAppear {
+                installProInkCollab(true)
+                collaborationManager.stateDepositor = { await depositCollabState() }
+            }
+            .onDisappear {
+                installProInkCollab(false)
+                collaborationManager.stateDepositor = nil
+            }
+            // 雲端中繼：定期把整份狀態寄存在房間裡（房主不在線也能加入、離線的人回來補得到）。
+            // 房間裡只由一個人寄存（`shouldDepositState`），省中繼的寫入額度。
+            .onReceive(Timer.publish(every: CollaborationManager.depositCheckInterval, on: .main, in: .common).autoconnect()) { _ in
+                guard isCollaborating, collaborationManager.shouldDepositState else { return }
+                Task { @MainActor in await depositCollabState() }
+            }
             .onReceive(collaborationManager.leaseLost) { lost in
                 // 兩人同時選了同一個物件、對方勝出：本機放手（設計 §5.3）。
                 if activeSelectedObjectId == lost.id { activeSelectedObjectId = nil }
@@ -416,6 +428,28 @@ extension NotebookEditorView {
     /// 回覆一份整份狀態給 `to`，分段送。
     func answerCollabState(req: String, to: String, blobs: Set<String>) {
         collabStateSync.remember(req)
+        Task { @MainActor in
+            let items = await collectCollabState(blobs: blobs)
+            sendCollabStateParts(items, req: req, to: to)
+        }
+    }
+
+    /// 把這本目前的整份狀態寄存到雲端中繼（`state_store`，中繼不轉送，新加入的人補發時先拿到它）。
+    /// 內容與回覆 `state_request` 同一個格式、同樣端對端加密；信封上帶明文的 `snap`／`part`／`parts`／`seq`。
+    func depositCollabState() async {
+        guard isCollaborating, collaborationManager.isOnCloudRelay else { return }
+        collaborationManager.noteStateDeposited()
+        let items = await collectCollabState(blobs: [])
+        guard isCollaborating else { return }
+        let snap = UUID().uuidString.lowercased()
+        let seq = collaborationManager.relaySeq
+        sendCollabStateParts(items, req: "store", to: "*", kind: "state_store") { index, count in
+            ["snap": snap, "part": index, "parts": count, "seq": seq]
+        }
+    }
+
+    /// 整份狀態的內容：物件（含我方要補給對方的圖檔）與每一頁的全部筆畫。逐頁讀檔在背景做。
+    private func collectCollabState(blobs: Set<String>) async -> [(ink: Bool, json: [String: Any])] {
         var items: [(ink: Bool, json: [String: Any])] = []
         for entry in collabSync.snapshot() {
             var json = entry.json
@@ -436,7 +470,7 @@ extension NotebookEditorView {
         let removedByPage = collabInkLedger.sessionRemoved
         let directory = store.drawingsDirectory, nid = notebook.id
         nonisolated(unsafe) let objectItems = items
-        Task.detached(priority: .userInitiated) {
+        let task = Task.detached(priority: .userInitiated) { () -> [(ink: Bool, json: [String: Any])] in
             var all = objectItems
             for (index, page) in pageIds.enumerated() {
                 let strokes = ProInkStore.load(in: directory, notebookId: nid, page: index)
@@ -446,13 +480,17 @@ extension NotebookEditorView {
                 all.append((true, ["page": page, "strokes": strokes.map(CollabStroke.encode(pro:)),
                                    "removed": removed]))
             }
-            nonisolated(unsafe) let ready = all
-            await MainActor.run { sendCollabStateParts(ready, req: req, to: to) }
+            return all
         }
+        nonisolated(unsafe) let ready = await task.value
+        return ready
     }
 
     /// 把整份狀態切段送出（每段約 `CollabStateSync.partBytes`）。
-    private func sendCollabStateParts(_ items: [(ink: Bool, json: [String: Any])], req: String, to: String) {
+    private func sendCollabStateParts(
+        _ items: [(ink: Bool, json: [String: Any])], req: String, to: String, kind: String = "state_snapshot",
+        envelope: (Int, Int) -> [String: Any] = { _, _ in [:] }
+    ) {
         guard isCollaborating else { return }
         func size(_ json: [String: Any]) -> Int { (try? JSONSerialization.data(withJSONObject: json))?.count ?? 0 }
         var parts: [(objects: [[String: Any]], ink: [[String: Any]])] = [([], [])]
@@ -467,21 +505,32 @@ extension NotebookEditorView {
             bytes += length
         }
         for (index, part) in parts.enumerated() {
-            collaborationManager.broadcastOplog(kind: "state_snapshot", payload: [
+            let extra = envelope(index, parts.count)
+            var payload: [String: Any] = [
                 "proto": Self.collabProto, "req": req, "to": to, "part": index, "parts": parts.count,
                 "objects": part.objects, "ink": part.ink
-            ])
+            ]
+            if let snap = extra["snap"] { payload["snap"] = snap }
+            collaborationManager.broadcastOplog(kind: kind, payload: payload, envelope: extra)
         }
     }
 
     /// 收到整份狀態的一段。全部收齊後，「只有自己有」的物件補給房間。
-    func applyCollabStateSnapshot(_ payload: [String: Any]) {
-        let req = (payload["req"] as? String) ?? ""
-        collabStateSync.remember(req)
-        guard req == collabStateSync.pendingRequest,
-              payload["to"] as? String == collaborationManager.currentUserId,
-              let part = (payload["part"] as? NSNumber)?.intValue,
-              collabStateSync.receivedParts.insert(part).inserted else { return }
+    ///
+    /// `stored`：中繼寄存的那一份（`state_store`，補發時給剛進房的人）。不是回覆我的請求，
+    /// 以它自己的 `snap` 計段；套用規則相同（房間的內容優先於自己可能過期的起點）。
+    func applyCollabStateSnapshot(_ payload: [String: Any], stored: Bool = false) {
+        guard let part = (payload["part"] as? NSNumber)?.intValue else { return }
+        if stored {
+            guard let snap = payload["snap"] as? String,
+                  collabStateSync.acceptStored(snap: snap, part: part) else { return }
+        } else {
+            let req = (payload["req"] as? String) ?? ""
+            collabStateSync.remember(req)
+            guard req == collabStateSync.pendingRequest,
+                  payload["to"] as? String == collaborationManager.currentUserId,
+                  collabStateSync.receivedParts.insert(part).inserted else { return }
+        }
         let parts = (payload["parts"] as? NSNumber)?.intValue ?? 1
         ensureCollabPageIds()
         var entries: [SnapshotEntry] = []
@@ -494,7 +543,11 @@ extension NotebookEditorView {
             }
             entries.append(entry)
         }
-        collabStateSync.snapshotKeys.formUnion(entries.map(\.key))
+        if stored {
+            collabStateSync.storedKeys.formUnion(entries.map(\.key))
+        } else {
+            collabStateSync.snapshotKeys.formUnion(entries.map(\.key))
+        }
         let me = collaborationManager.currentUserId
         collabSync.isApplyingRemote = true
         var doc = notebook
@@ -531,14 +584,21 @@ extension NotebookEditorView {
             if !removed.isEmpty { applyRemoteInkRemove(pageId: page, wires: removed) }
         }
         PageThumbnailRenderer.invalidateAll()
-        guard collabStateSync.receivedParts.count >= parts else { return }
-        collabStateSync.finish()
+        let snapshotKeys: Set<String>
+        if stored {
+            guard collabStateSync.storedParts.count >= parts else { return }
+            snapshotKeys = collabStateSync.storedKeys
+        } else {
+            guard collabStateSync.receivedParts.count >= parts else { return }
+            collabStateSync.finish()
+            snapshotKeys = collabStateSync.snapshotKeys
+        }
         // 只有自己有的物件（例如離線時新增的）：忘掉它們，下一次送出就會當成新的補給房間。
         //
         // **空白頁例外**：掃碼加入時本機沒有這本，會先建一本只有一頁空白頁的筆記（頁面 id 是本機算的，
         // 與房主的不同）。以前它也被當成「只有自己有」補給房間 —— 每個人那邊都多出一頁空白頁。
         // 沒有任何筆畫與物件的頁：本機刪掉、不送出。有內容的照舊補給房間。與 Android 相同。
-        let localOnly = collabSync.liveKeys.subtracting(collabStateSync.snapshotKeys).filter { !$0.hasPrefix("meta:") }
+        let localOnly = collabSync.liveKeys.subtracting(snapshotKeys).filter { !$0.hasPrefix("meta:") }
         guard !localOnly.isEmpty else { return }
         let emptyPages = localOnly.filter { $0.hasPrefix("page:") && isEmptyCollabPage(String($0.dropFirst(5))) }
         if !emptyPages.isEmpty {
@@ -608,6 +668,10 @@ extension NotebookEditorView {
 
         case "state_snapshot":
             applyCollabStateSnapshot(event.payload)
+
+        case "state_store":
+            // 中繼寄存的整份狀態（只在補發時給剛進房的人；中繼不轉送）。
+            applyCollabStateSnapshot(event.payload, stored: true)
 
         case "text_ops":
             applyRemoteTextOps(event.payload)

@@ -589,6 +589,26 @@ extension NotebookEditorView {
         requestLeave { onRequestSwitch?(target) }
     }
 
+    /// 相機掃了協同 QR Code、而編輯器正開著（`pendingInviteLink`）。
+    ///
+    /// 邀請的是**別本**筆記時不能在這裡開面板：面板的「加入」會把房間綁在目前這本上，
+    /// 房主的整份狀態就套進這本 —— 實機上是開著唯讀範例時掃碼，房主的內容被併進範例，
+    /// 離開時才跳出「範例筆記本有修改」。所以先換到邀請的那一本（走 `switchToNotebook`，
+    /// 範例改動照常先問），換過去之後 `handleNotebookIdChange` 再打開面板、自動加入。
+    func handleIncomingCollabInvite(_ link: String) {
+        let invite = collabParseInviteV2(text: link)
+        let nb = invite.notebookId.trimmingCharacters(in: .whitespacesAndNewlines)
+        // 沒指定哪一本（舊版連結、手打的房號）、就是這本、或沒辦法換本：照舊在這裡開面板（只帶入房號）。
+        guard !nb.isEmpty, nb.lowercased() != notebook.id.lowercased(), onRequestSwitch != nil,
+              let id = HomeWorkbenchView.notebookForCollabInvite(link, store: store),
+              let target = store.notebooks.first(where: { $0.id.lowercased() == id.lowercased() })
+        else {
+            showCollaborationSheet = true
+            return
+        }
+        switchToNotebook(target)
+    }
+
     /// 離開這本筆記（回首頁或切換到另一本）。
     ///
     /// 範例且內容真的有改：先問使用者要存檔（保留在此範例）、另存可編輯副本，還是放棄修改；

@@ -53,10 +53,15 @@ class ShapeStore(
     val all: List<NoteShape> get() = shapes.values.toList()
     val allConnections: List<NoteConnection> get() = connections.values.toList()
 
+    /** 已經從核心讀過這一頁（[load] 跑過）。協同比對要看它：還沒讀的儲存是空的，不代表這一頁沒有物件。 */
+    var isLoaded: Boolean = false
+        private set
+
     /** 從核心讀回這一頁的形狀與連接線，依堆疊順序。 */
     fun load() {
         val s = session ?: return
         val page = pageId ?: return
+        isLoaded = true
         shapes.clear()
         connections.clear()
         base.clear()

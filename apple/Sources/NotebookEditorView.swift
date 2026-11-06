@@ -1422,6 +1422,11 @@ public struct NotebookEditorView: View {
             pageOrigins = nil
             captureInitialPageState(page: 0, drawing: currentDrawing)
             PageThumbnailRenderer.invalidateAll()
+            // 為了協同邀請換過來的：到了邀請的那一本，打開面板（面板會自動加入房間）。
+            if let link = collaborationManager.pendingInviteLink,
+               CollaborationSheet.invite(link, targets: notebook.id) {
+                showCollaborationSheet = true
+            }
         }
     }
 
@@ -1551,17 +1556,10 @@ public struct NotebookEditorView: View {
             syncObjectGridSnap()
         }
         .onChange(of: snapToGrid) { _ in syncObjectGridSnap() }
-        // 雲端共享筆記：讓其他參與者看得到我在第幾頁、正在改哪個物件。
-        .onChange(of: currentPageIndex) { page in
-            CloudCollabManager.shared.notePresence(
-                page: page, selectedId: activeSelectedObjectId ?? selectedShapeIds.first)
-        }
-        .onChange(of: activeSelectedObjectId) { id in
-            CloudCollabManager.shared.notePresence(page: currentPageIndex, selectedId: id ?? selectedShapeIds.first)
-        }
-        // 相機掃了協同 QR Code：打開協同面板（面板會把連結帶入「加入房間」）。
+        // 相機掃了協同 QR Code：邀請的是這本就打開協同面板（面板自動加入）；是別本就先換過去（見
+        // `handleIncomingCollabInvite`）—— 不能在這本的面板裡加入別本的房間。
         .onReceive(collaborationManager.$pendingInviteLink) { link in
-            if link != nil { showCollaborationSheet = true }
+            if let link { handleIncomingCollabInvite(link) }
         }
         .onChange(of: geo.size.width) { newValue in
             DispatchQueue.main.async { editorAvailableWidth = newValue }

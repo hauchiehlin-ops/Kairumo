@@ -54,6 +54,16 @@ class InkEngine(
     val strokes: List<CompletedStroke> get() = _strokes
 
     /**
+     * 這一頁的筆畫已經從套件讀回來過（[load] / [loadAsync] 完成）。
+     *
+     * 在這之前 [strokes] 只有快取預填或空的 —— **不代表這一頁沒有筆畫**。協同比對
+     * （`AndroidCollabController.publishInk`）要看它：拿一個還沒讀完的新引擎去比，
+     * 整頁已知的筆畫會被當成「被擦掉」廣播出去，房主那邊的筆跡跟著被擦光。
+     */
+    var hasLoaded: Boolean = false
+        private set
+
+    /**
      * 使用者自訂的掌拒門檻。`null` 表示沒有自訂，跟著模式走預設值。
      *
      * 自訂之後**兩種模式都用同一個數字** —— 「我設了門檻，那就是門檻」
@@ -1427,6 +1437,7 @@ class InkEngine(
             syntheticId -= 1uL
         }
         _strokes += unsaved
+        hasLoaded = true
         syncPageStrokesCache()
         // 讀回來的筆畫不在「可收回時間窗」內 —— 它們是上次寫的，
         // 掌拒不該把它們收回去。所以刻意不填 committed。

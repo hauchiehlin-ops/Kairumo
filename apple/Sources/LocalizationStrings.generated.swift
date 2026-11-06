@@ -4440,12 +4440,12 @@ extension LocalizationManager {
             .th: "คัดลอกลิงก์เชิญ"
         ],
         "cloud_collab_desc": [
-            .zhHant: "把這本筆記放進你 Google 雲端硬碟的共享資料夾，協作者不必在同一個網路也能一起編輯；在同一個網路時自動改用即時連線。",
-            .en: "Put this notebook in a shared folder in your Google Drive so collaborators can edit from any network; on the same network it switches to live editing automatically.",
-            .zhHans: "把这本笔记放进你 Google 云端硬盘的共享文件夹，协作者不必在同一个网络也能一起编辑；在同一网络时自动改用实时连线。",
-            .ja: "このノートを Google ドライブの共有フォルダに置くと、別のネットワークからでも一緒に編集できます。同じネットワークでは自動でリアルタイム接続になります。",
-            .ko: "이 노트를 Google 드라이브 공유 폴더에 두면 다른 네트워크에서도 함께 편집할 수 있습니다. 같은 네트워크에서는 자동으로 실시간 연결됩니다.",
-            .th: "วางสมุดนี้ในโฟลเดอร์แชร์บน Google Drive เพื่อให้ผู้ร่วมงานแก้ไขได้จากทุกเครือข่าย หากอยู่เครือข่ายเดียวกันจะสลับเป็นแบบเรียลไทม์อัตโนมัติ"
+            .zhHant: "協作者在不同地點、不同網路（例如用行動網路）時用這個：產生一個邀請連結／QR Code，透過網際網路上的加密中繼即時同步。不需要任何帳號，也不經過 Google 雲端硬碟。",
+            .en: "Use this when collaborators are somewhere else or on a different network (for example mobile data): it creates an invite link / QR code that syncs live through an encrypted relay on the internet. No account needed, and nothing goes through Google Drive.",
+            .zhHans: "协作者在不同地点、不同网络（例如用移动网络）时用这个：生成一个邀请链接／二维码，通过互联网上的加密中继实时同步。不需要任何账号，也不经过 Google 云端硬盘。",
+            .ja: "共同編集者が別の場所・別のネットワーク（モバイル通信など）にいるときに使います。招待リンク／QR コードを作成し、インターネット上の暗号化リレーでリアルタイムに同期します。アカウントは不要で、Google ドライブも経由しません。",
+            .ko: "협업자가 다른 장소나 다른 네트워크(예: 모바일 데이터)에 있을 때 사용하세요. 초대 링크/QR 코드를 만들어 인터넷의 암호화 릴레이로 실시간 동기화합니다. 계정이 필요 없고 Google 드라이브를 거치지 않습니다.",
+            .th: "ใช้เมื่อผู้ร่วมงานอยู่คนละที่หรือคนละเครือข่าย (เช่น ใช้เน็ตมือถือ): สร้างลิงก์เชิญ/QR Code ที่ซิงก์แบบสดผ่านรีเลย์เข้ารหัสบนอินเทอร์เน็ต ไม่ต้องมีบัญชี และไม่ผ่าน Google Drive"
         ],
         "cloud_collab_direct": [
             .zhHant: "直連中",
@@ -4520,12 +4520,12 @@ extension LocalizationManager {
             .th: "เชื่อมต่อ Google Drive ไม่ได้ในขณะนี้ ลองใหม่อีกครั้ง"
         ],
         "cloud_collab_invite_hint": [
-            .zhHant: "對方用相機掃描或點邀請連結，按一下「加入」即可；第一次會出現 Google 的確認畫面。",
-            .en: "They scan this or tap the invite link and press Join; Google shows a one-time confirmation the first time.",
-            .zhHans: "对方用相机扫描或点邀请链接，按一下「加入」即可；第一次会出现 Google 的确认画面。",
-            .ja: "相手はこれをスキャンするか招待リンクをタップして「参加」を押すだけです。初回は Google の確認画面が表示されます。",
-            .ko: "상대방은 스캔하거나 초대 링크를 눌러 참여를 누르면 됩니다. 처음에는 Google 확인 화면이 나타납니다.",
-            .th: "อีกฝ่ายสแกนหรือแตะลิงก์เชิญแล้วกดเข้าร่วม ครั้งแรกจะมีหน้ายืนยันของ Google"
+            .zhHant: "對方用相機掃描，或點邀請連結即可加入，任何網路都連得到。拿到連結的人都能編輯，只傳給你信任的人。",
+            .en: "They scan this with their camera or tap the invite link to join — it works from any network. Anyone with the link can edit, so send it only to people you trust.",
+            .zhHans: "对方用相机扫描，或点邀请链接即可加入，任何网络都连得上。拿到链接的人都能编辑，只发给你信任的人。",
+            .ja: "相手はカメラでスキャンするか招待リンクをタップすれば参加できます（どのネットワークからでも可）。リンクを持つ人は誰でも編集できるので、信頼できる人にだけ送ってください。",
+            .ko: "상대방이 카메라로 스캔하거나 초대 링크를 탭하면 참여할 수 있으며, 어떤 네트워크에서든 연결됩니다. 링크를 가진 사람은 누구나 편집할 수 있으니 신뢰하는 사람에게만 보내세요.",
+            .th: "อีกฝ่ายสแกนด้วยกล้องหรือแตะลิงก์เชิญเพื่อเข้าร่วม ใช้ได้จากทุกเครือข่าย ใครมีลิงก์ก็แก้ไขได้ ส่งให้เฉพาะคนที่ไว้ใจ"
         ],
         "cloud_collab_join": [
             .zhHant: "加入",
@@ -4566,6 +4566,14 @@ extension LocalizationManager {
             .ja: "%@ · %d ページ",
             .ko: "%@ · %d쪽",
             .th: "%@ · หน้า %d"
+        ],
+        "cloud_collab_retention_hint": [
+            .zhHant: "房主不在線也能加入：內容會加密寄存在中繼上。大家都離開（或房主按「結束協同會議」）之後，中繼再保留 7 天，讓還沒同步的人回來拿最終版本，之後自動刪除。每個人的筆記都留在自己的裝置上。",
+            .en: "People can join even when the host is offline: the content is stored on the relay, encrypted. After everyone leaves (or the host taps End Collaboration), the relay keeps it for 7 more days so anyone who hasn't synced can come back for the final version, then deletes it automatically. Everyone keeps their own copy on their device.",
+            .zhHans: "房主不在线也能加入：内容会加密寄存在中继上。大家都离开（或房主按「结束协同会议」）之后，中继再保留 7 天，让还没同步的人回来拿最终版本，之后自动删除。每个人的笔记都留在自己的设备上。",
+            .ja: "ホストがオフラインでも参加できます。内容は暗号化されてリレーに保管されます。全員が退出した後（またはホストが「共同編集を終了」した後）もリレーは 7 日間保持し、まだ同期していない人が最終版を取りに戻れるようにしてから自動で削除します。各自のノートは自分の端末に残ります。",
+            .ko: "호스트가 오프라인이어도 참여할 수 있습니다. 내용은 암호화되어 릴레이에 보관됩니다. 모두 나간 뒤(또는 호스트가 '공동 작업 종료'를 누른 뒤)에도 릴레이는 7일 동안 보관해 아직 동기화하지 못한 사람이 최종본을 받아 갈 수 있게 한 다음 자동으로 삭제합니다. 각자의 노트는 자기 기기에 남습니다.",
+            .th: "เข้าร่วมได้แม้เจ้าของห้องออฟไลน์: เนื้อหาถูกเข้ารหัสและฝากไว้บนรีเลย์ หลังทุกคนออก (หรือเจ้าของห้องแตะ “สิ้นสุดการทำงานร่วมกัน”) รีเลย์จะเก็บไว้อีก 7 วันเพื่อให้คนที่ยังไม่ได้ซิงก์กลับมารับฉบับสุดท้าย แล้วลบอัตโนมัติ สมุดโน้ตของแต่ละคนยังอยู่บนอุปกรณ์ของตัวเอง"
         ],
         "cloud_collab_revoke": [
             .zhHant: "移除這位成員",
@@ -4624,12 +4632,12 @@ extension LocalizationManager {
             .th: "แชร์"
         ],
         "cloud_collab_share_link": [
-            .zhHant: "改用連結分享（知道連結的人可編輯）",
-            .en: "Share by link (anyone with the link can edit)",
-            .zhHans: "改用链接分享（知道链接的人可编辑）",
-            .ja: "リンクで共有（リンクを知っている人は編集可）",
-            .ko: "링크로 공유(링크가 있는 사람은 편집 가능)",
-            .th: "แชร์ด้วยลิงก์ (ผู้มีลิงก์แก้ไขได้)"
+            .zhHant: "開啟跨網路協同（知道連結的人可編輯）",
+            .en: "Start cross-network collaboration (anyone with the link can edit)",
+            .zhHans: "开启跨网络协同（知道链接的人可编辑）",
+            .ja: "ネットワークを越えた共同編集を開始（リンクを知る人は編集可）",
+            .ko: "네트워크 간 공동 작업 시작(링크가 있는 사람은 편집 가능)",
+            .th: "เริ่มทำงานร่วมกันข้ามเครือข่าย (ทุกคนที่มีลิงก์แก้ไขได้)"
         ],
         "cloud_collab_share_link_hint": [
             .zhHant: "拿到連結的任何人都能加入並編輯，只傳給你信任的人。",
@@ -4640,12 +4648,12 @@ extension LocalizationManager {
             .th: "ใครได้ลิงก์ก็เข้าร่วมและแก้ไขได้ ส่งให้เฉพาะคนที่ไว้ใจ"
         ],
         "cloud_collab_sharing": [
-            .zhHant: "正在建立共享資料夾並上傳這本筆記…",
-            .en: "Creating the shared folder and uploading this notebook…",
-            .zhHans: "正在创建共享文件夹并上传这本笔记…",
-            .ja: "共有フォルダを作成してノートをアップロード中…",
-            .ko: "공유 폴더를 만들고 노트를 업로드하는 중…",
-            .th: "กำลังสร้างโฟลเดอร์แชร์และอัปโหลดสมุด…"
+            .zhHant: "正在雲端中繼上開啟房間…",
+            .en: "Opening the room on the cloud relay…",
+            .zhHans: "正在云端中继上开启房间…",
+            .ja: "クラウドリレーでルームを開いています…",
+            .ko: "클라우드 릴레이에서 방을 여는 중…",
+            .th: "กำลังเปิดห้องบนรีเลย์คลาวด์…"
         ],
         "cloud_collab_stop": [
             .zhHant: "這台裝置不再同步這本共享筆記",
@@ -4911,6 +4919,22 @@ extension LocalizationManager {
             .ko: "방 코드만으로 참여했습니다. 초대 링크에 들어 있는 키가 없으면 다른 사람이 쓴 내용을 여기서 읽을 수 없습니다. 호스트에게 전체 초대 링크를 받아 다시 참여하세요。",
             .th: "คุณเข้าร่วมด้วยรหัสห้องเท่านั้น หากไม่มีกุญแจในลิงก์เชิญ สิ่งที่คนอื่นเขียนจะอ่านไม่ได้ที่นี่ ขอลิงก์เชิญฉบับเต็มจากผู้เปิดห้องแล้วเข้าร่วมใหม่"
         ],
+        "collab_modes_body": [
+            .zhHant: "• 同一 Wi‑Fi：大家在同一個地方、連同一個 Wi‑Fi。最快，不需要任何帳號。\n• Tailscale 跨網：大家都裝了 Tailscale、登入同一個網路。不同地點也行。\n• 雲端共享（跨網路）：其他情況都用這個（不同地點、行動網路）。不需要任何帳號，掃 QR Code 即可；房主不在線也能加入。\n\n按下「開啟跨網路協同」後，房間會從這台裝置搬到網際網路上的加密中繼：下方的同一 Wi‑Fi／Tailscale QR Code 會換成雲端邀請，已經用 Wi‑Fi QR Code 加入的人要重新掃新的 QR Code。\n\n「端對端加密保護」三種方式都有，是安全保證，不是另一種連線方式。",
+            .en: "• Same Wi‑Fi: everyone is in one place on the same Wi‑Fi. Fastest, no account needed.\n• Tailscale: everyone has Tailscale installed and is on the same tailnet. Works from different places.\n• Cloud sharing (any network): use this in every other case (different places, mobile data). No account needed — just scan the QR code; people can join even when the host is offline.\n\nAfter you tap Start cross-network collaboration, the room moves from this device to an encrypted relay on the internet: the Same Wi‑Fi / Tailscale QR codes below are replaced by the cloud invite, and anyone who joined with the Wi‑Fi QR code needs to scan the new one.\n\nEnd-to-end encryption applies to all three — it is a guarantee, not another way to connect.",
+            .zhHans: "• 同一 Wi‑Fi：大家在同一个地方、连同一个 Wi‑Fi。最快，不需要任何账号。\n• Tailscale 跨网：大家都装了 Tailscale、登录同一个网络。不同地点也行。\n• 云端共享（跨网络）：其他情况都用这个（不同地点、移动网络）。不需要任何账号，扫二维码即可；房主不在线也能加入。\n\n按下「开启跨网络协同」后，房间会从这台设备搬到互联网上的加密中继：下方的同一 Wi‑Fi／Tailscale 二维码会换成云端邀请，已经用 Wi‑Fi 二维码加入的人要重新扫新的二维码。\n\n「端对端加密保护」三种方式都有，是安全保证，不是另一种连接方式。",
+            .ja: "• 同じ Wi‑Fi：全員が同じ場所で同じ Wi‑Fi に接続。最速でアカウント不要。\n• Tailscale：全員が Tailscale をインストールし同じ tailnet に参加。離れた場所でも可。\n• クラウド共有：それ以外はすべてこれ（別の場所、モバイル通信）。アカウント不要、QR コードをスキャンするだけ。ホストがオフラインでも参加できます。\n\n「ネットワークを越えた共同編集を開始」をタップすると、ルームはこの端末からインターネット上の暗号化リレーへ移ります。下の同じ Wi‑Fi／Tailscale の QR コードはクラウド招待に置き換わり、Wi‑Fi の QR コードで参加した人は新しいコードを読み直す必要があります。\n\nエンドツーエンド暗号化は 3 つすべてに適用される保証で、別の接続方法ではありません。",
+            .ko: "• 같은 Wi‑Fi: 모두 한 장소에서 같은 Wi‑Fi에 연결. 가장 빠르고 계정이 필요 없습니다.\n• Tailscale: 모두 Tailscale을 설치하고 같은 tailnet에 있음. 다른 장소에서도 됩니다.\n• 클라우드 공유: 그 밖의 모든 경우(다른 장소, 모바일 데이터). 계정 없이 QR 코드만 스캔하면 되며, 호스트가 오프라인이어도 참여할 수 있습니다.\n\n'네트워크 간 공동 작업 시작'을 누르면 방이 이 기기에서 인터넷의 암호화 릴레이로 옮겨집니다. 아래의 같은 Wi‑Fi/Tailscale QR 코드는 클라우드 초대로 바뀌며, Wi‑Fi QR 코드로 참여한 사람은 새 코드를 다시 스캔해야 합니다.\n\n종단 간 암호화는 세 가지 모두에 적용되는 보장이며, 별도의 연결 방법이 아닙니다.",
+            .th: "• Wi‑Fi เดียวกัน: ทุกคนอยู่ที่เดียวกันและต่อ Wi‑Fi เดียวกัน เร็วที่สุด ไม่ต้องมีบัญชี\n• Tailscale: ทุกคนติดตั้ง Tailscale และอยู่ใน tailnet เดียวกัน ใช้ได้แม้อยู่คนละที่\n• แชร์ผ่านคลาวด์: กรณีอื่นทั้งหมดใช้แบบนี้ (คนละที่ เน็ตมือถือ) ไม่ต้องมีบัญชี แค่สแกน QR Code และเข้าร่วมได้แม้เจ้าของห้องออฟไลน์\n\nเมื่อแตะ “เริ่มทำงานร่วมกันข้ามเครือข่าย” ห้องจะย้ายจากเครื่องนี้ไปยังรีเลย์เข้ารหัสบนอินเทอร์เน็ต QR Code แบบ Wi‑Fi เดียวกัน/Tailscale ด้านล่างจะถูกแทนด้วยคำเชิญคลาวด์ และคนที่เข้าด้วย QR Code แบบ Wi‑Fi ต้องสแกนอันใหม่\n\nการเข้ารหัสต้นทางถึงปลายทางใช้กับทั้งสามแบบ เป็นการรับประกัน ไม่ใช่อีกวิธีในการเชื่อมต่อ"
+        ],
+        "collab_modes_title": [
+            .zhHant: "連線方式怎麼選？",
+            .en: "Which way should I connect?",
+            .zhHans: "连接方式怎么选？",
+            .ja: "どの接続方法を選ぶ？",
+            .ko: "어떤 연결 방법을 선택하나요?",
+            .th: "ควรเชื่อมต่อแบบไหน?"
+        ],
         "collab_notification_title": [
             .zhHant: "Kairumo 協同訊息",
             .en: "Kairumo collaboration",
@@ -4982,6 +5006,30 @@ extension LocalizationManager {
             .ja: "ほかの参加者はスマホやタブレットのカメラで読み取るだけで参加できます（ルーム・鍵・接続先は自動入力）。Mac では「リンクをコピー」して貼り付けてください。",
             .ko: "다른 참여자는 휴대폰이나 태블릿 카메라로 스캔하면 바로 참여합니다(방·키·주소 자동 입력). Mac에서는 링크를 복사해 붙여 넣으세요.",
             .th: "ผู้เข้าร่วมคนอื่นสแกนด้วยกล้องโทรศัพท์หรือแท็บเล็ตเพื่อเข้าร่วม ห้อง คีย์ และที่อยู่จะกรอกให้อัตโนมัติ บน Mac ให้คัดลอกลิงก์แล้ววาง"
+        ],
+        "collab_qr_hint_lan": [
+            .zhHant: "同一 Wi‑Fi：對方和這台連在同一個 Wi‑Fi 時用，最快、不經網際網路；任一方離開這個 Wi‑Fi 就會斷線。Mac 請用「複製連結」再貼上。",
+            .en: "Same Wi‑Fi: use when they are on the same Wi‑Fi as this device. Fastest, never leaves your network — but it disconnects as soon as either side leaves that Wi‑Fi. On a Mac, use Copy link and paste it.",
+            .zhHans: "同一 Wi‑Fi：对方和这台连在同一个 Wi‑Fi 时用，最快、不经互联网；任一方离开这个 Wi‑Fi 就会断线。Mac 请用「复制链接」再粘贴。",
+            .ja: "同じ Wi‑Fi：相手がこの端末と同じ Wi‑Fi にいるときに使います。最速でインターネットを経由しませんが、どちらかがその Wi‑Fi を離れると切断されます。Mac では「リンクをコピー」して貼り付けてください。",
+            .ko: "같은 Wi‑Fi: 상대방이 이 기기와 같은 Wi‑Fi에 있을 때 사용하세요. 가장 빠르고 인터넷을 거치지 않지만, 어느 한쪽이 그 Wi‑Fi를 벗어나면 연결이 끊깁니다. Mac에서는 '링크 복사' 후 붙여 넣으세요.",
+            .th: "Wi‑Fi เดียวกัน: ใช้เมื่ออีกฝ่ายต่อ Wi‑Fi เดียวกับเครื่องนี้ เร็วที่สุดและไม่ผ่านอินเทอร์เน็ต แต่จะหลุดทันทีที่ฝ่ายใดออกจาก Wi‑Fi นั้น บน Mac ให้ใช้ “คัดลอกลิงก์” แล้ววาง"
+        ],
+        "collab_qr_hint_remote": [
+            .zhHant: "遠端中繼：這間房開在網際網路上的加密中繼，任何網路都連得到。Mac 請用「複製連結」再貼上。",
+            .en: "Remote relay: this room runs on an encrypted relay on the internet, reachable from any network. On a Mac, use Copy link and paste it.",
+            .zhHans: "远端中继：这间房开在互联网上的加密中继，任何网络都连得上。Mac 请用「复制链接」再粘贴。",
+            .ja: "リモートリレー：このルームはインターネット上の暗号化リレーで動いており、どのネットワークからでもつながります。Mac では「リンクをコピー」して貼り付けてください。",
+            .ko: "원격 릴레이: 이 방은 인터넷의 암호화 릴레이에서 열려 있어 어떤 네트워크에서든 연결됩니다. Mac에서는 '링크 복사' 후 붙여 넣으세요.",
+            .th: "รีเลย์ระยะไกล: ห้องนี้เปิดบนรีเลย์เข้ารหัสบนอินเทอร์เน็ต เชื่อมต่อได้จากทุกเครือข่าย บน Mac ให้ใช้ “คัดลอกลิงก์” แล้ววาง"
+        ],
+        "collab_qr_hint_tailscale": [
+            .zhHant: "Tailscale 跨網：雙方都已安裝並登入同一個 Tailscale 網路時用，不同地點也連得到。沒用 Tailscale 的人請改用上方「雲端共享（跨網路）」。",
+            .en: "Tailscale: use when both sides have Tailscale installed and signed in to the same tailnet — works from different places. If they don't use Tailscale, use Cloud sharing (any network) above instead.",
+            .zhHans: "Tailscale 跨网：双方都已安装并登录同一个 Tailscale 网络时用，不同地点也连得上。没用 Tailscale 的人请改用上方「云端共享（跨网络）」。",
+            .ja: "Tailscale：双方が Tailscale をインストールし同じ tailnet にサインインしているときに使います。離れた場所からでもつながります。Tailscale を使っていない人は、上の「クラウド共有」を使ってください。",
+            .ko: "Tailscale: 양쪽 모두 Tailscale을 설치하고 같은 tailnet에 로그인했을 때 사용하세요. 다른 장소에서도 연결됩니다. Tailscale을 쓰지 않는다면 위의 '클라우드 공유'를 사용하세요.",
+            .th: "Tailscale: ใช้เมื่อทั้งสองฝ่ายติดตั้งและลงชื่อเข้า tailnet เดียวกัน เชื่อมต่อได้แม้อยู่คนละที่ ถ้าไม่ได้ใช้ Tailscale ให้ใช้ “แชร์ผ่านคลาวด์” ด้านบนแทน"
         ],
         "collab_qr_mode_cloud": [
             .zhHant: "雲端共享 (免設定)",
@@ -10560,12 +10608,12 @@ extension LocalizationManager {
             .th: "การเข้ารหัสจากต้นทางถึงปลายทาง"
         ],
         "e2ee_protected_desc": [
-            .zhHant: "筆劃、附件與討論皆在本地完成硬體加密，中繼伺服器無法窺探。",
-            .en: "Strokes, attachments, and comments are encrypted locally. Relay server cannot inspect contents.",
-            .zhHans: "笔划、附件与讨论均在本地完成硬件加密，中继服务器无法窥探。",
-            .ja: "ストローク、添付ファイル、コメントはローカルで暗号化され、リレーサーバーは内容を閲覧できません。",
-            .ko: "획, 첨부 파일 및 댓글은 로컬에서 암호화되며 릴레이 서버는 내용을 볼 수 없습니다.",
-            .th: "เส้นวาด ไฟล์แนบ และความคิดเห็นได้รับการเข้ารหัสบนเครื่อง เซิร์ฟเวอร์รีเลย์ไม่สามารถตรวจสอบเนื้อหาได้"
+            .zhHant: "這是安全狀態，不是連線方式（不用點）：不論用哪一種方式加入，筆劃、附件與討論都在裝置上加密，中繼伺服器只轉送、看不到內容。",
+            .en: "This is a security status, not a way to connect (nothing to tap): whichever way people join, strokes, attachments and comments are encrypted on the device — the relay only forwards them and cannot read them.",
+            .zhHans: "这是安全状态，不是连接方式（不用点）：不论用哪一种方式加入，笔划、附件与讨论都在设备上加密，中继服务器只转发、看不到内容。",
+            .ja: "これは接続方法ではなくセキュリティの状態です（タップ不要）。どの方法で参加しても、ストローク・添付・コメントは端末上で暗号化され、リレーは転送するだけで内容を読めません。",
+            .ko: "연결 방법이 아니라 보안 상태입니다(탭할 필요 없음). 어떤 방식으로 참여하든 획, 첨부 파일, 댓글은 기기에서 암호화되며 릴레이는 전달만 할 뿐 내용을 볼 수 없습니다.",
+            .th: "นี่คือสถานะความปลอดภัย ไม่ใช่วิธีเชื่อมต่อ (ไม่ต้องแตะ): ไม่ว่าจะเข้าร่วมด้วยวิธีใด ลายเส้น ไฟล์แนบ และความคิดเห็นจะถูกเข้ารหัสบนอุปกรณ์ รีเลย์ทำหน้าที่ส่งต่อเท่านั้นและอ่านเนื้อหาไม่ได้"
         ],
         "ed_cancel_selection": [
             .zhHant: "取消框選",
@@ -10808,12 +10856,12 @@ extension LocalizationManager {
             .th: "สิ้นสุดการทำงานร่วมกัน"
         ],
         "end_session_confirm": [
-            .zhHant: "確認結束多人協同會議？所有在線成員將被中斷連線。",
-            .en: "End collaborative session? All online participants will be disconnected.",
-            .zhHans: "确认结束多人协同会议？所有在线成员将被断开连接。",
-            .ja: "共同編集を終了しますか？全メンバーの接続が切断されます。",
-            .ko: "공동 편집 세션을 종료하시겠습니까? 모든 참여자의 연결이 끊어집니다.",
-            .th: "สิ้นสุดเซสชันหรือไม่? ผู้เข้าร่วมทั้งหมดจะถูกตัดการเชื่อมต่อ"
+            .zhHant: "確認結束多人協同會議？所有在線成員將被中斷連線。雲端共享的房間會在中繼上再保留 7 天，讓不在線的人回來拿最終版本，之後自動刪除。",
+            .en: "End collaborative session? All online participants will be disconnected. A cloud-shared room stays on the relay for 7 more days so offline people can fetch the final version, then it is deleted automatically.",
+            .zhHans: "确认结束多人协同会议？所有在线成员将被中断连接。云端共享的房间会在中继上再保留 7 天，让不在线的人回来拿最终版本，之后自动删除。",
+            .ja: "共同編集を終了しますか？オンラインの参加者はすべて切断されます。クラウド共有のルームはリレー上にさらに 7 日間残り、オフラインの人が最終版を取得できるようにしてから自動で削除されます。",
+            .ko: "공동 작업을 종료할까요? 온라인 참여자는 모두 연결이 끊깁니다. 클라우드 공유 방은 릴레이에 7일 더 남아 오프라인이던 사람이 최종본을 받을 수 있게 한 뒤 자동으로 삭제됩니다.",
+            .th: "สิ้นสุดการทำงานร่วมกันหรือไม่? ผู้เข้าร่วมที่ออนไลน์ทั้งหมดจะถูกตัดการเชื่อมต่อ ห้องที่แชร์ผ่านคลาวด์จะอยู่บนรีเลย์อีก 7 วันเพื่อให้คนที่ออฟไลน์กลับมารับฉบับสุดท้าย แล้วจะถูกลบอัตโนมัติ"
         ],
         "engineering_dim_tip": [
             .zhHant: "點擊一鍵貼入畫布零件旁",

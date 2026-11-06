@@ -4502,12 +4502,12 @@ object LocalizationStrings {
             "th" to "คัดลอกลิงก์เชิญ"
         ),
         "cloud_collab_desc" to mapOf(
-            "zh-Hant" to "把這本筆記放進你 Google 雲端硬碟的共享資料夾，協作者不必在同一個網路也能一起編輯；在同一個網路時自動改用即時連線。",
-            "en" to "Put this notebook in a shared folder in your Google Drive so collaborators can edit from any network; on the same network it switches to live editing automatically.",
-            "zh-Hans" to "把这本笔记放进你 Google 云端硬盘的共享文件夹，协作者不必在同一个网络也能一起编辑；在同一网络时自动改用实时连线。",
-            "ja" to "このノートを Google ドライブの共有フォルダに置くと、別のネットワークからでも一緒に編集できます。同じネットワークでは自動でリアルタイム接続になります。",
-            "ko" to "이 노트를 Google 드라이브 공유 폴더에 두면 다른 네트워크에서도 함께 편집할 수 있습니다. 같은 네트워크에서는 자동으로 실시간 연결됩니다.",
-            "th" to "วางสมุดนี้ในโฟลเดอร์แชร์บน Google Drive เพื่อให้ผู้ร่วมงานแก้ไขได้จากทุกเครือข่าย หากอยู่เครือข่ายเดียวกันจะสลับเป็นแบบเรียลไทม์อัตโนมัติ"
+            "zh-Hant" to "協作者在不同地點、不同網路（例如用行動網路）時用這個：產生一個邀請連結／QR Code，透過網際網路上的加密中繼即時同步。不需要任何帳號，也不經過 Google 雲端硬碟。",
+            "en" to "Use this when collaborators are somewhere else or on a different network (for example mobile data): it creates an invite link / QR code that syncs live through an encrypted relay on the internet. No account needed, and nothing goes through Google Drive.",
+            "zh-Hans" to "协作者在不同地点、不同网络（例如用移动网络）时用这个：生成一个邀请链接／二维码，通过互联网上的加密中继实时同步。不需要任何账号，也不经过 Google 云端硬盘。",
+            "ja" to "共同編集者が別の場所・別のネットワーク（モバイル通信など）にいるときに使います。招待リンク／QR コードを作成し、インターネット上の暗号化リレーでリアルタイムに同期します。アカウントは不要で、Google ドライブも経由しません。",
+            "ko" to "협업자가 다른 장소나 다른 네트워크(예: 모바일 데이터)에 있을 때 사용하세요. 초대 링크/QR 코드를 만들어 인터넷의 암호화 릴레이로 실시간 동기화합니다. 계정이 필요 없고 Google 드라이브를 거치지 않습니다.",
+            "th" to "ใช้เมื่อผู้ร่วมงานอยู่คนละที่หรือคนละเครือข่าย (เช่น ใช้เน็ตมือถือ): สร้างลิงก์เชิญ/QR Code ที่ซิงก์แบบสดผ่านรีเลย์เข้ารหัสบนอินเทอร์เน็ต ไม่ต้องมีบัญชี และไม่ผ่าน Google Drive"
         ),
         "cloud_collab_direct" to mapOf(
             "zh-Hant" to "直連中",
@@ -4585,12 +4585,12 @@ object LocalizationStrings {
             "th" to "เชื่อมต่อ Google Drive ไม่ได้ในขณะนี้ ลองใหม่อีกครั้ง"
         ),
         "cloud_collab_invite_hint" to mapOf(
-            "zh-Hant" to "對方用相機掃描或點邀請連結，按一下「加入」即可；第一次會出現 Google 的確認畫面。",
-            "en" to "They scan this or tap the invite link and press Join; Google shows a one-time confirmation the first time.",
-            "zh-Hans" to "对方用相机扫描或点邀请链接，按一下「加入」即可；第一次会出现 Google 的确认画面。",
-            "ja" to "相手はこれをスキャンするか招待リンクをタップして「参加」を押すだけです。初回は Google の確認画面が表示されます。",
-            "ko" to "상대방은 스캔하거나 초대 링크를 눌러 참여를 누르면 됩니다. 처음에는 Google 확인 화면이 나타납니다.",
-            "th" to "อีกฝ่ายสแกนหรือแตะลิงก์เชิญแล้วกดเข้าร่วม ครั้งแรกจะมีหน้ายืนยันของ Google"
+            "zh-Hant" to "對方用相機掃描，或點邀請連結即可加入，任何網路都連得到。拿到連結的人都能編輯，只傳給你信任的人。",
+            "en" to "They scan this with their camera or tap the invite link to join — it works from any network. Anyone with the link can edit, so send it only to people you trust.",
+            "zh-Hans" to "对方用相机扫描，或点邀请链接即可加入，任何网络都连得上。拿到链接的人都能编辑，只发给你信任的人。",
+            "ja" to "相手はカメラでスキャンするか招待リンクをタップすれば参加できます（どのネットワークからでも可）。リンクを持つ人は誰でも編集できるので、信頼できる人にだけ送ってください。",
+            "ko" to "상대방이 카메라로 스캔하거나 초대 링크를 탭하면 참여할 수 있으며, 어떤 네트워크에서든 연결됩니다. 링크를 가진 사람은 누구나 편집할 수 있으니 신뢰하는 사람에게만 보내세요.",
+            "th" to "อีกฝ่ายสแกนด้วยกล้องหรือแตะลิงก์เชิญเพื่อเข้าร่วม ใช้ได้จากทุกเครือข่าย ใครมีลิงก์ก็แก้ไขได้ ส่งให้เฉพาะคนที่ไว้ใจ"
         ),
         "cloud_collab_join" to mapOf(
             "zh-Hant" to "加入",
@@ -4631,6 +4631,14 @@ object LocalizationStrings {
             "ja" to "%@ · %d ページ",
             "ko" to "%@ · %d쪽",
             "th" to "%@ · หน้า %d"
+        ),
+        "cloud_collab_retention_hint" to mapOf(
+            "zh-Hant" to "房主不在線也能加入：內容會加密寄存在中繼上。大家都離開（或房主按「結束協同會議」）之後，中繼再保留 7 天，讓還沒同步的人回來拿最終版本，之後自動刪除。每個人的筆記都留在自己的裝置上。",
+            "en" to "People can join even when the host is offline: the content is stored on the relay, encrypted. After everyone leaves (or the host taps End Collaboration), the relay keeps it for 7 more days so anyone who hasn't synced can come back for the final version, then deletes it automatically. Everyone keeps their own copy on their device.",
+            "zh-Hans" to "房主不在线也能加入：内容会加密寄存在中继上。大家都离开（或房主按「结束协同会议」）之后，中继再保留 7 天，让还没同步的人回来拿最终版本，之后自动删除。每个人的笔记都留在自己的设备上。",
+            "ja" to "ホストがオフラインでも参加できます。内容は暗号化されてリレーに保管されます。全員が退出した後（またはホストが「共同編集を終了」した後）もリレーは 7 日間保持し、まだ同期していない人が最終版を取りに戻れるようにしてから自動で削除します。各自のノートは自分の端末に残ります。",
+            "ko" to "호스트가 오프라인이어도 참여할 수 있습니다. 내용은 암호화되어 릴레이에 보관됩니다. 모두 나간 뒤(또는 호스트가 '공동 작업 종료'를 누른 뒤)에도 릴레이는 7일 동안 보관해 아직 동기화하지 못한 사람이 최종본을 받아 갈 수 있게 한 다음 자동으로 삭제합니다. 각자의 노트는 자기 기기에 남습니다.",
+            "th" to "เข้าร่วมได้แม้เจ้าของห้องออฟไลน์: เนื้อหาถูกเข้ารหัสและฝากไว้บนรีเลย์ หลังทุกคนออก (หรือเจ้าของห้องแตะ “สิ้นสุดการทำงานร่วมกัน”) รีเลย์จะเก็บไว้อีก 7 วันเพื่อให้คนที่ยังไม่ได้ซิงก์กลับมารับฉบับสุดท้าย แล้วลบอัตโนมัติ สมุดโน้ตของแต่ละคนยังอยู่บนอุปกรณ์ของตัวเอง"
         ),
         "cloud_collab_revoke" to mapOf(
             "zh-Hant" to "移除這位成員",
@@ -4689,12 +4697,12 @@ object LocalizationStrings {
             "th" to "แชร์"
         ),
         "cloud_collab_share_link" to mapOf(
-            "zh-Hant" to "改用連結分享（知道連結的人可編輯）",
-            "en" to "Share by link (anyone with the link can edit)",
-            "zh-Hans" to "改用链接分享（知道链接的人可编辑）",
-            "ja" to "リンクで共有（リンクを知っている人は編集可）",
-            "ko" to "링크로 공유(링크가 있는 사람은 편집 가능)",
-            "th" to "แชร์ด้วยลิงก์ (ผู้มีลิงก์แก้ไขได้)"
+            "zh-Hant" to "開啟跨網路協同（知道連結的人可編輯）",
+            "en" to "Start cross-network collaboration (anyone with the link can edit)",
+            "zh-Hans" to "开启跨网络协同（知道链接的人可编辑）",
+            "ja" to "ネットワークを越えた共同編集を開始（リンクを知る人は編集可）",
+            "ko" to "네트워크 간 공동 작업 시작(링크가 있는 사람은 편집 가능)",
+            "th" to "เริ่มทำงานร่วมกันข้ามเครือข่าย (ทุกคนที่มีลิงก์แก้ไขได้)"
         ),
         "cloud_collab_share_link_hint" to mapOf(
             "zh-Hant" to "拿到連結的任何人都能加入並編輯，只傳給你信任的人。",
@@ -4705,12 +4713,12 @@ object LocalizationStrings {
             "th" to "ใครได้ลิงก์ก็เข้าร่วมและแก้ไขได้ ส่งให้เฉพาะคนที่ไว้ใจ"
         ),
         "cloud_collab_sharing" to mapOf(
-            "zh-Hant" to "正在建立共享資料夾並上傳這本筆記…",
-            "en" to "Creating the shared folder and uploading this notebook…",
-            "zh-Hans" to "正在创建共享文件夹并上传这本笔记…",
-            "ja" to "共有フォルダを作成してノートをアップロード中…",
-            "ko" to "공유 폴더를 만들고 노트를 업로드하는 중…",
-            "th" to "กำลังสร้างโฟลเดอร์แชร์และอัปโหลดสมุด…"
+            "zh-Hant" to "正在雲端中繼上開啟房間…",
+            "en" to "Opening the room on the cloud relay…",
+            "zh-Hans" to "正在云端中继上开启房间…",
+            "ja" to "クラウドリレーでルームを開いています…",
+            "ko" to "클라우드 릴레이에서 방을 여는 중…",
+            "th" to "กำลังเปิดห้องบนรีเลย์คลาวด์…"
         ),
         "cloud_collab_stop" to mapOf(
             "zh-Hant" to "這台裝置不再同步這本共享筆記",
@@ -4976,6 +4984,22 @@ object LocalizationStrings {
             "ko" to "방 코드만으로 참여했습니다. 초대 링크에 들어 있는 키가 없으면 다른 사람이 쓴 내용을 여기서 읽을 수 없습니다. 호스트에게 전체 초대 링크를 받아 다시 참여하세요。",
             "th" to "คุณเข้าร่วมด้วยรหัสห้องเท่านั้น หากไม่มีกุญแจในลิงก์เชิญ สิ่งที่คนอื่นเขียนจะอ่านไม่ได้ที่นี่ ขอลิงก์เชิญฉบับเต็มจากผู้เปิดห้องแล้วเข้าร่วมใหม่"
         ),
+        "collab_modes_body" to mapOf(
+            "zh-Hant" to "• 同一 Wi‑Fi：大家在同一個地方、連同一個 Wi‑Fi。最快，不需要任何帳號。\n• Tailscale 跨網：大家都裝了 Tailscale、登入同一個網路。不同地點也行。\n• 雲端共享（跨網路）：其他情況都用這個（不同地點、行動網路）。不需要任何帳號，掃 QR Code 即可；房主不在線也能加入。\n\n按下「開啟跨網路協同」後，房間會從這台裝置搬到網際網路上的加密中繼：下方的同一 Wi‑Fi／Tailscale QR Code 會換成雲端邀請，已經用 Wi‑Fi QR Code 加入的人要重新掃新的 QR Code。\n\n「端對端加密保護」三種方式都有，是安全保證，不是另一種連線方式。",
+            "en" to "• Same Wi‑Fi: everyone is in one place on the same Wi‑Fi. Fastest, no account needed.\n• Tailscale: everyone has Tailscale installed and is on the same tailnet. Works from different places.\n• Cloud sharing (any network): use this in every other case (different places, mobile data). No account needed — just scan the QR code; people can join even when the host is offline.\n\nAfter you tap Start cross-network collaboration, the room moves from this device to an encrypted relay on the internet: the Same Wi‑Fi / Tailscale QR codes below are replaced by the cloud invite, and anyone who joined with the Wi‑Fi QR code needs to scan the new one.\n\nEnd-to-end encryption applies to all three — it is a guarantee, not another way to connect.",
+            "zh-Hans" to "• 同一 Wi‑Fi：大家在同一个地方、连同一个 Wi‑Fi。最快，不需要任何账号。\n• Tailscale 跨网：大家都装了 Tailscale、登录同一个网络。不同地点也行。\n• 云端共享（跨网络）：其他情况都用这个（不同地点、移动网络）。不需要任何账号，扫二维码即可；房主不在线也能加入。\n\n按下「开启跨网络协同」后，房间会从这台设备搬到互联网上的加密中继：下方的同一 Wi‑Fi／Tailscale 二维码会换成云端邀请，已经用 Wi‑Fi 二维码加入的人要重新扫新的二维码。\n\n「端对端加密保护」三种方式都有，是安全保证，不是另一种连接方式。",
+            "ja" to "• 同じ Wi‑Fi：全員が同じ場所で同じ Wi‑Fi に接続。最速でアカウント不要。\n• Tailscale：全員が Tailscale をインストールし同じ tailnet に参加。離れた場所でも可。\n• クラウド共有：それ以外はすべてこれ（別の場所、モバイル通信）。アカウント不要、QR コードをスキャンするだけ。ホストがオフラインでも参加できます。\n\n「ネットワークを越えた共同編集を開始」をタップすると、ルームはこの端末からインターネット上の暗号化リレーへ移ります。下の同じ Wi‑Fi／Tailscale の QR コードはクラウド招待に置き換わり、Wi‑Fi の QR コードで参加した人は新しいコードを読み直す必要があります。\n\nエンドツーエンド暗号化は 3 つすべてに適用される保証で、別の接続方法ではありません。",
+            "ko" to "• 같은 Wi‑Fi: 모두 한 장소에서 같은 Wi‑Fi에 연결. 가장 빠르고 계정이 필요 없습니다.\n• Tailscale: 모두 Tailscale을 설치하고 같은 tailnet에 있음. 다른 장소에서도 됩니다.\n• 클라우드 공유: 그 밖의 모든 경우(다른 장소, 모바일 데이터). 계정 없이 QR 코드만 스캔하면 되며, 호스트가 오프라인이어도 참여할 수 있습니다.\n\n'네트워크 간 공동 작업 시작'을 누르면 방이 이 기기에서 인터넷의 암호화 릴레이로 옮겨집니다. 아래의 같은 Wi‑Fi/Tailscale QR 코드는 클라우드 초대로 바뀌며, Wi‑Fi QR 코드로 참여한 사람은 새 코드를 다시 스캔해야 합니다.\n\n종단 간 암호화는 세 가지 모두에 적용되는 보장이며, 별도의 연결 방법이 아닙니다.",
+            "th" to "• Wi‑Fi เดียวกัน: ทุกคนอยู่ที่เดียวกันและต่อ Wi‑Fi เดียวกัน เร็วที่สุด ไม่ต้องมีบัญชี\n• Tailscale: ทุกคนติดตั้ง Tailscale และอยู่ใน tailnet เดียวกัน ใช้ได้แม้อยู่คนละที่\n• แชร์ผ่านคลาวด์: กรณีอื่นทั้งหมดใช้แบบนี้ (คนละที่ เน็ตมือถือ) ไม่ต้องมีบัญชี แค่สแกน QR Code และเข้าร่วมได้แม้เจ้าของห้องออฟไลน์\n\nเมื่อแตะ “เริ่มทำงานร่วมกันข้ามเครือข่าย” ห้องจะย้ายจากเครื่องนี้ไปยังรีเลย์เข้ารหัสบนอินเทอร์เน็ต QR Code แบบ Wi‑Fi เดียวกัน/Tailscale ด้านล่างจะถูกแทนด้วยคำเชิญคลาวด์ และคนที่เข้าด้วย QR Code แบบ Wi‑Fi ต้องสแกนอันใหม่\n\nการเข้ารหัสต้นทางถึงปลายทางใช้กับทั้งสามแบบ เป็นการรับประกัน ไม่ใช่อีกวิธีในการเชื่อมต่อ"
+        ),
+        "collab_modes_title" to mapOf(
+            "zh-Hant" to "連線方式怎麼選？",
+            "en" to "Which way should I connect?",
+            "zh-Hans" to "连接方式怎么选？",
+            "ja" to "どの接続方法を選ぶ？",
+            "ko" to "어떤 연결 방법을 선택하나요?",
+            "th" to "ควรเชื่อมต่อแบบไหน?"
+        ),
         "collab_notification_title" to mapOf(
             "zh-Hant" to "Kairumo 協同訊息",
             "en" to "Kairumo collaboration",
@@ -5047,6 +5071,30 @@ object LocalizationStrings {
             "ja" to "ほかの参加者はスマホやタブレットのカメラで読み取るだけで参加できます（ルーム・鍵・接続先は自動入力）。Mac では「リンクをコピー」して貼り付けてください。",
             "ko" to "다른 참여자는 휴대폰이나 태블릿 카메라로 스캔하면 바로 참여합니다(방·키·주소 자동 입력). Mac에서는 링크를 복사해 붙여 넣으세요.",
             "th" to "ผู้เข้าร่วมคนอื่นสแกนด้วยกล้องโทรศัพท์หรือแท็บเล็ตเพื่อเข้าร่วม ห้อง คีย์ และที่อยู่จะกรอกให้อัตโนมัติ บน Mac ให้คัดลอกลิงก์แล้ววาง"
+        ),
+        "collab_qr_hint_lan" to mapOf(
+            "zh-Hant" to "同一 Wi‑Fi：對方和這台連在同一個 Wi‑Fi 時用，最快、不經網際網路；任一方離開這個 Wi‑Fi 就會斷線。Mac 請用「複製連結」再貼上。",
+            "en" to "Same Wi‑Fi: use when they are on the same Wi‑Fi as this device. Fastest, never leaves your network — but it disconnects as soon as either side leaves that Wi‑Fi. On a Mac, use Copy link and paste it.",
+            "zh-Hans" to "同一 Wi‑Fi：对方和这台连在同一个 Wi‑Fi 时用，最快、不经互联网；任一方离开这个 Wi‑Fi 就会断线。Mac 请用「复制链接」再粘贴。",
+            "ja" to "同じ Wi‑Fi：相手がこの端末と同じ Wi‑Fi にいるときに使います。最速でインターネットを経由しませんが、どちらかがその Wi‑Fi を離れると切断されます。Mac では「リンクをコピー」して貼り付けてください。",
+            "ko" to "같은 Wi‑Fi: 상대방이 이 기기와 같은 Wi‑Fi에 있을 때 사용하세요. 가장 빠르고 인터넷을 거치지 않지만, 어느 한쪽이 그 Wi‑Fi를 벗어나면 연결이 끊깁니다. Mac에서는 '링크 복사' 후 붙여 넣으세요.",
+            "th" to "Wi‑Fi เดียวกัน: ใช้เมื่ออีกฝ่ายต่อ Wi‑Fi เดียวกับเครื่องนี้ เร็วที่สุดและไม่ผ่านอินเทอร์เน็ต แต่จะหลุดทันทีที่ฝ่ายใดออกจาก Wi‑Fi นั้น บน Mac ให้ใช้ “คัดลอกลิงก์” แล้ววาง"
+        ),
+        "collab_qr_hint_remote" to mapOf(
+            "zh-Hant" to "遠端中繼：這間房開在網際網路上的加密中繼，任何網路都連得到。Mac 請用「複製連結」再貼上。",
+            "en" to "Remote relay: this room runs on an encrypted relay on the internet, reachable from any network. On a Mac, use Copy link and paste it.",
+            "zh-Hans" to "远端中继：这间房开在互联网上的加密中继，任何网络都连得上。Mac 请用「复制链接」再粘贴。",
+            "ja" to "リモートリレー：このルームはインターネット上の暗号化リレーで動いており、どのネットワークからでもつながります。Mac では「リンクをコピー」して貼り付けてください。",
+            "ko" to "원격 릴레이: 이 방은 인터넷의 암호화 릴레이에서 열려 있어 어떤 네트워크에서든 연결됩니다. Mac에서는 '링크 복사' 후 붙여 넣으세요.",
+            "th" to "รีเลย์ระยะไกล: ห้องนี้เปิดบนรีเลย์เข้ารหัสบนอินเทอร์เน็ต เชื่อมต่อได้จากทุกเครือข่าย บน Mac ให้ใช้ “คัดลอกลิงก์” แล้ววาง"
+        ),
+        "collab_qr_hint_tailscale" to mapOf(
+            "zh-Hant" to "Tailscale 跨網：雙方都已安裝並登入同一個 Tailscale 網路時用，不同地點也連得到。沒用 Tailscale 的人請改用上方「雲端共享（跨網路）」。",
+            "en" to "Tailscale: use when both sides have Tailscale installed and signed in to the same tailnet — works from different places. If they don't use Tailscale, use Cloud sharing (any network) above instead.",
+            "zh-Hans" to "Tailscale 跨网：双方都已安装并登录同一个 Tailscale 网络时用，不同地点也连得上。没用 Tailscale 的人请改用上方「云端共享（跨网络）」。",
+            "ja" to "Tailscale：双方が Tailscale をインストールし同じ tailnet にサインインしているときに使います。離れた場所からでもつながります。Tailscale を使っていない人は、上の「クラウド共有」を使ってください。",
+            "ko" to "Tailscale: 양쪽 모두 Tailscale을 설치하고 같은 tailnet에 로그인했을 때 사용하세요. 다른 장소에서도 연결됩니다. Tailscale을 쓰지 않는다면 위의 '클라우드 공유'를 사용하세요.",
+            "th" to "Tailscale: ใช้เมื่อทั้งสองฝ่ายติดตั้งและลงชื่อเข้า tailnet เดียวกัน เชื่อมต่อได้แม้อยู่คนละที่ ถ้าไม่ได้ใช้ Tailscale ให้ใช้ “แชร์ผ่านคลาวด์” ด้านบนแทน"
         ),
         "collab_qr_mode_cloud" to mapOf(
             "zh-Hant" to "雲端共享 (免設定)",
@@ -5151,7 +5199,10 @@ object LocalizationStrings {
             "ja" to "すべて折りたたむ",
             "ko" to "모두 접기",
             "th" to "ยุบทั้งหมด"
-        ),
+        )
+    )
+
+    private fun part8(): Map<String, Map<String, String>> = mapOf(
         "collapse_minimal_toolbox" to mapOf(
             "zh-Hant" to "收合迷你工具列",
             "en" to "Collapse mini toolbar",
@@ -5199,10 +5250,7 @@ object LocalizationStrings {
             "ja" to "インクブラック",
             "ko" to "먹색",
             "th" to "ดำหมึก"
-        )
-    )
-
-    private fun part8(): Map<String, Map<String, String>> = mapOf(
+        ),
         "color_ink_blue" to mapOf(
             "zh-Hant" to "鋼筆藍",
             "en" to "Pen Blue",
@@ -5794,7 +5842,10 @@ object LocalizationStrings {
             "ja" to "このビルドでは Whisper 音声エンジンが有効になっていません",
             "ko" to "이 버전에서는 Whisper 음성 엔진을 사용할 수 없습니다",
             "th" to "เวอร์ชันนี้ไม่ได้เปิดใช้เอนจินเสียง Whisper"
-        ),
+        )
+    )
+
+    private fun part9(): Map<String, Map<String, String>> = mapOf(
         "core_msg_034" to mapOf(
             "zh-Hant" to "不是 Kairumo 備份檔",
             "en" to "This is not a Kairumo backup file",
@@ -5842,10 +5893,7 @@ object LocalizationStrings {
             "ja" to "インデックスの解析に失敗しました: %1@",
             "ko" to "인덱스 해석에 실패했습니다: %1@",
             "th" to "แยกวิเคราะห์ดัชนีไม่สำเร็จ: %1@"
-        )
-    )
-
-    private fun part9(): Map<String, Map<String, String>> = mapOf(
+        ),
         "core_msg_040" to mapOf(
             "zh-Hant" to "開不了舊套件：%1@",
             "en" to "Cannot open the old package: %1@",
@@ -6437,7 +6485,10 @@ object LocalizationStrings {
             "ja" to "不明な図形の種類: %1@",
             "ko" to "알 수 없는 도형 유형: %1@",
             "th" to "ไม่รู้จักประเภทรูปทรง: %1@"
-        ),
+        )
+    )
+
+    private fun part10(): Map<String, Map<String, String>> = mapOf(
         "core_msg_114" to mapOf(
             "zh-Hant" to "未知的連接點：%1@",
             "en" to "Unknown connection point: %1@",
@@ -6485,10 +6536,7 @@ object LocalizationStrings {
             "ja" to "段組み",
             "ko" to "단 나누기",
             "th" to "คอลัมน์"
-        )
-    )
-
-    private fun part10(): Map<String, Map<String, String>> = mapOf(
+        ),
         "core_msg_120" to mapOf(
             "zh-Hant" to "浮動圖文",
             "en" to "Floating text and images",
@@ -7080,7 +7128,10 @@ object LocalizationStrings {
             "ja" to "このパッケージは暗号化されていません",
             "ko" to "이 패키지는 암호화되어 있지 않습니다",
             "th" to "แพ็กเกจนี้ไม่ได้เข้ารหัส"
-        ),
+        )
+    )
+
+    private fun part11(): Map<String, Map<String, String>> = mapOf(
         "core_msg_194" to mapOf(
             "zh-Hant" to "salt 不是合法 base64：%1@",
             "en" to "salt is not valid base64: %1@",
@@ -7128,10 +7179,7 @@ object LocalizationStrings {
             "ja" to "このパッケージは暗号化されています。内容を読むには先にロックを解除してください",
             "ko" to "이 패키지는 암호화되어 있습니다. 내용을 읽으려면 먼저 잠금을 해제하세요",
             "th" to "แพ็กเกจนี้เข้ารหัสอยู่ ต้องปลดล็อกก่อนจึงจะอ่านเนื้อหาได้"
-        )
-    )
-
-    private fun part11(): Map<String, Map<String, String>> = mapOf(
+        ),
         "core_msg_200" to mapOf(
             "zh-Hant" to "oplog 操作筆數超過上限，已終止載入以防止記憶體溢出",
             "en" to "The number of oplog operations exceeds the limit; loading was stopped to prevent running out of memory",
@@ -7723,7 +7771,10 @@ object LocalizationStrings {
             "ja" to "選択ストロークを削除",
             "ko" to "선택된 획 삭제",
             "th" to "ลบลายเส้นที่เลือก"
-        ),
+        )
+    )
+
+    private fun part12(): Map<String, Map<String, String>> = mapOf(
         "deselect_all" to mapOf(
             "zh-Hant" to "取消全選",
             "en" to "Deselect All",
@@ -7771,10 +7822,7 @@ object LocalizationStrings {
             "ja" to "共同編集の中継",
             "ko" to "공동 편집 릴레이",
             "th" to "รีเลย์การแก้ไขร่วมกัน"
-        )
-    )
-
-    private fun part12(): Map<String, Map<String, String>> = mapOf(
+        ),
         "diag_core_load_failed" to mapOf(
             "zh-Hant" to "核心載入失敗",
             "en" to "Core failed to load",
@@ -8366,7 +8414,10 @@ object LocalizationStrings {
             "ja" to "作成済み（%@ 件のファイルを追跡）",
             "ko" to "생성됨 (파일 %@개 추적 중)",
             "th" to "สร้างแล้ว (ติดตาม %@ ไฟล์)"
-        ),
+        )
+    )
+
+    private fun part13(): Map<String, Map<String, String>> = mapOf(
         "doctor_snapshot_missing" to mapOf(
             "zh-Hant" to "尚未建立，下次同步會重新盤點一次",
             "en" to "Not built yet; the next sync will take inventory again",
@@ -8414,10 +8465,7 @@ object LocalizationStrings {
             "ja" to "ダウンロードが中断されました：%@",
             "ko" to "다운로드가 중단되었습니다: %@",
             "th" to "การดาวน์โหลดหยุดชะงัก: %@"
-        )
-    )
-
-    private fun part13(): Map<String, Map<String, String>> = mapOf(
+        ),
         "download_item" to mapOf(
             "zh-Hant" to "下載",
             "en" to "Download",
@@ -9009,7 +9057,10 @@ object LocalizationStrings {
             "ja" to "分度器の読み取り %1@",
             "ko" to "각도기 눈금 %1@",
             "th" to "ค่าที่อ่านจากไม้โปรแทรกเตอร์ %1@"
-        ),
+        )
+    )
+
+    private fun part14(): Map<String, Map<String, String>> = mapOf(
         "draft_inst_remove" to mapOf(
             "zh-Hant" to "收起尺規",
             "en" to "Put the instrument away",
@@ -9057,10 +9108,7 @@ object LocalizationStrings {
             "ja" to "定規",
             "ko" to "자",
             "th" to "ไม้บรรทัด"
-        )
-    )
-
-    private fun part14(): Map<String, Map<String, String>> = mapOf(
+        ),
         "draft_inst_set_square_30" to mapOf(
             "zh-Hant" to "30°-60° 三角板",
             "en" to "30°-60° set square",
@@ -9652,7 +9700,10 @@ object LocalizationStrings {
             "ja" to "部品番号",
             "ko" to "부품 번호",
             "th" to "หมายเลขชิ้นส่วน"
-        ),
+        )
+    )
+
+    private fun part15(): Map<String, Map<String, String>> = mapOf(
         "draft_sym_bolt_hex" to mapOf(
             "zh-Hant" to "六角螺栓",
             "en" to "Hex bolt",
@@ -9700,10 +9751,7 @@ object LocalizationStrings {
             "ja" to "現場溶接",
             "ko" to "현장 용접",
             "th" to "เชื่อมหน้างาน"
-        )
-    )
-
-    private fun part15(): Map<String, Map<String, String>> = mapOf(
+        ),
         "draft_sym_gdt_angularity" to mapOf(
             "zh-Hant" to "傾斜度",
             "en" to "Angularity",
@@ -10295,7 +10343,10 @@ object LocalizationStrings {
             "ja" to "トリム",
             "ko" to "자르기",
             "th" to "ตัด"
-        ),
+        )
+    )
+
+    private fun part16(): Map<String, Map<String, String>> = mapOf(
         "draft_toolbox_aids" to mapOf(
             "zh-Hant" to "對齊與尺規",
             "en" to "Alignment and instruments",
@@ -10343,10 +10394,7 @@ object LocalizationStrings {
             "ja" to "練習問題",
             "ko" to "연습 문제",
             "th" to "โจทย์ฝึกหัด"
-        )
-    )
-
-    private fun part16(): Map<String, Map<String, String>> = mapOf(
+        ),
         "draft_toolbox_symbols" to mapOf(
             "zh-Hant" to "符號",
             "en" to "Symbols",
@@ -10652,12 +10700,12 @@ object LocalizationStrings {
             "th" to "การเข้ารหัสจากต้นทางถึงปลายทาง"
         ),
         "e2ee_protected_desc" to mapOf(
-            "zh-Hant" to "筆劃、附件與討論皆在本地完成硬體加密，中繼伺服器無法窺探。",
-            "en" to "Strokes, attachments, and comments are encrypted locally. Relay server cannot inspect contents.",
-            "zh-Hans" to "笔划、附件与讨论均在本地完成硬件加密，中继服务器无法窥探。",
-            "ja" to "ストローク、添付ファイル、コメントはローカルで暗号化され、リレーサーバーは内容を閲覧できません。",
-            "ko" to "획, 첨부 파일 및 댓글은 로컬에서 암호화되며 릴레이 서버는 내용을 볼 수 없습니다.",
-            "th" to "เส้นวาด ไฟล์แนบ และความคิดเห็นได้รับการเข้ารหัสบนเครื่อง เซิร์ฟเวอร์รีเลย์ไม่สามารถตรวจสอบเนื้อหาได้"
+            "zh-Hant" to "這是安全狀態，不是連線方式（不用點）：不論用哪一種方式加入，筆劃、附件與討論都在裝置上加密，中繼伺服器只轉送、看不到內容。",
+            "en" to "This is a security status, not a way to connect (nothing to tap): whichever way people join, strokes, attachments and comments are encrypted on the device — the relay only forwards them and cannot read them.",
+            "zh-Hans" to "这是安全状态，不是连接方式（不用点）：不论用哪一种方式加入，笔划、附件与讨论都在设备上加密，中继服务器只转发、看不到内容。",
+            "ja" to "これは接続方法ではなくセキュリティの状態です（タップ不要）。どの方法で参加しても、ストローク・添付・コメントは端末上で暗号化され、リレーは転送するだけで内容を読めません。",
+            "ko" to "연결 방법이 아니라 보안 상태입니다(탭할 필요 없음). 어떤 방식으로 참여하든 획, 첨부 파일, 댓글은 기기에서 암호화되며 릴레이는 전달만 할 뿐 내용을 볼 수 없습니다.",
+            "th" to "นี่คือสถานะความปลอดภัย ไม่ใช่วิธีเชื่อมต่อ (ไม่ต้องแตะ): ไม่ว่าจะเข้าร่วมด้วยวิธีใด ลายเส้น ไฟล์แนบ และความคิดเห็นจะถูกเข้ารหัสบนอุปกรณ์ รีเลย์ทำหน้าที่ส่งต่อเท่านั้นและอ่านเนื้อหาไม่ได้"
         ),
         "ed_cancel_selection" to mapOf(
             "zh-Hant" to "取消框選",
@@ -10900,12 +10948,12 @@ object LocalizationStrings {
             "th" to "สิ้นสุดการทำงานร่วมกัน"
         ),
         "end_session_confirm" to mapOf(
-            "zh-Hant" to "確認結束多人協同會議？所有在線成員將被中斷連線。",
-            "en" to "End collaborative session? All online participants will be disconnected.",
-            "zh-Hans" to "确认结束多人协同会议？所有在线成员将被断开连接。",
-            "ja" to "共同編集を終了しますか？全メンバーの接続が切断されます。",
-            "ko" to "공동 편집 세션을 종료하시겠습니까? 모든 참여자의 연결이 끊어집니다.",
-            "th" to "สิ้นสุดเซสชันหรือไม่? ผู้เข้าร่วมทั้งหมดจะถูกตัดการเชื่อมต่อ"
+            "zh-Hant" to "確認結束多人協同會議？所有在線成員將被中斷連線。雲端共享的房間會在中繼上再保留 7 天，讓不在線的人回來拿最終版本，之後自動刪除。",
+            "en" to "End collaborative session? All online participants will be disconnected. A cloud-shared room stays on the relay for 7 more days so offline people can fetch the final version, then it is deleted automatically.",
+            "zh-Hans" to "确认结束多人协同会议？所有在线成员将被中断连接。云端共享的房间会在中继上再保留 7 天，让不在线的人回来拿最终版本，之后自动删除。",
+            "ja" to "共同編集を終了しますか？オンラインの参加者はすべて切断されます。クラウド共有のルームはリレー上にさらに 7 日間残り、オフラインの人が最終版を取得できるようにしてから自動で削除されます。",
+            "ko" to "공동 작업을 종료할까요? 온라인 참여자는 모두 연결이 끊깁니다. 클라우드 공유 방은 릴레이에 7일 더 남아 오프라인이던 사람이 최종본을 받을 수 있게 한 뒤 자동으로 삭제됩니다.",
+            "th" to "สิ้นสุดการทำงานร่วมกันหรือไม่? ผู้เข้าร่วมที่ออนไลน์ทั้งหมดจะถูกตัดการเชื่อมต่อ ห้องที่แชร์ผ่านคลาวด์จะอยู่บนรีเลย์อีก 7 วันเพื่อให้คนที่ออฟไลน์กลับมารับฉบับสุดท้าย แล้วจะถูกลบอัตโนมัติ"
         ),
         "engineering_dim_tip" to mapOf(
             "zh-Hant" to "點擊一鍵貼入畫布零件旁",
@@ -10938,7 +10986,10 @@ object LocalizationStrings {
             "ja" to "招待リンク（またはルームコード）を貼り付け",
             "ko" to "초대 링크(또는 방 코드)를 붙여넣기",
             "th" to "วางลิงก์เชิญ (หรือรหัสห้อง)"
-        ),
+        )
+    )
+
+    private fun part17(): Map<String, Map<String, String>> = mapOf(
         "enter_title" to mapOf(
             "zh-Hant" to "輸入新標題",
             "en" to "Enter New Title",
@@ -10986,10 +11037,7 @@ object LocalizationStrings {
             "ja" to "手書きモデルのダウンロードに失敗しました（Wi-Fi に接続してください）：%@",
             "ko" to "손글씨 모델 다운로드에 실패했습니다(Wi-Fi에 연결해 주세요): %@",
             "th" to "ดาวน์โหลดโมเดลลายมือไม่สำเร็จ (โปรดเชื่อมต่อ Wi-Fi): %@"
-        )
-    )
-
-    private fun part17(): Map<String, Map<String, String>> = mapOf(
+        ),
         "err_hwr_failed" to mapOf(
             "zh-Hant" to "辨識失敗：%@",
             "en" to "Recognition failed: %@",
@@ -11581,7 +11629,10 @@ object LocalizationStrings {
             "ja" to "確認",
             "ko" to "확인",
             "th" to "ยืนยัน"
-        ),
+        )
+    )
+
+    private fun part18(): Map<String, Map<String, String>> = mapOf(
         "guidance_dismiss" to mapOf(
             "zh-Hant" to "關閉",
             "en" to "Dismiss",
@@ -11629,10 +11680,7 @@ object LocalizationStrings {
             "ja" to "午前",
             "ko" to "오전",
             "th" to "ช่วงเช้า"
-        )
-    )
-
-    private fun part18(): Map<String, Map<String, String>> = mapOf(
+        ),
         "guide_answer" to mapOf(
             "zh-Hant" to "答",
             "en" to "A",
@@ -12224,7 +12272,10 @@ object LocalizationStrings {
             "ja" to "非表示",
             "ko" to "숨기기",
             "th" to "ซ่อนรายการนี้"
-        ),
+        )
+    )
+
+    private fun part19(): Map<String, Map<String, String>> = mapOf(
         "highlight_color" to mapOf(
             "zh-Hant" to "螢光筆顏色",
             "en" to "Highlight color",
@@ -12272,10 +12323,7 @@ object LocalizationStrings {
             "ja" to "今後このヒントを表示しない",
             "ko" to "이 안내를 다시 표시하지 않기",
             "th" to "ไม่ต้องแสดงคำแนะนำนี้อีก"
-        )
-    )
-
-    private fun part19(): Map<String, Map<String, String>> = mapOf(
+        ),
         "hint_eraser_action_delete" to mapOf(
             "zh-Hant" to "刪除選取物件",
             "en" to "Delete Object",
@@ -12867,7 +12915,10 @@ object LocalizationStrings {
             "ja" to "音声認識エンジン設定",
             "ko" to "음성 인식 엔진 환경설정",
             "th" to "การตั้งค่าเครื่องมือแปลงเสียง"
-        ),
+        )
+    )
+
+    private fun part20(): Map<String, Map<String, String>> = mapOf(
         "hw_asr_engine_whisper" to mapOf(
             "zh-Hant" to "Whisper 端側神經模型（多語精確）",
             "en" to "Whisper On-Device Neural Model (Multilingual)",
@@ -12915,10 +12966,7 @@ object LocalizationStrings {
             "ja" to "「ファイル」からオフラインモデル（.bin）を読み込む",
             "ko" to "“파일”에서 오프라인 모델(.bin) 가져오기",
             "th" to "นำเข้าโมเดลออฟไลน์ (.bin) จาก “ไฟล์”"
-        )
-    )
-
-    private fun part20(): Map<String, Map<String, String>> = mapOf(
+        ),
         "hw_asr_model_ready_size" to mapOf(
             "zh-Hant" to "本機神經模型已就緒（574 MB）",
             "en" to "On-device neural model ready (574 MB)",
@@ -13510,7 +13558,10 @@ object LocalizationStrings {
             "ja" to "色を変更",
             "ko" to "색 변경",
             "th" to "เปลี่ยนสี"
-        ),
+        )
+    )
+
+    private fun part21(): Map<String, Map<String, String>> = mapOf(
         "ink_clear" to mapOf(
             "zh-Hant" to "清除",
             "en" to "Clear",
@@ -13558,10 +13609,7 @@ object LocalizationStrings {
             "ja" to "スタイラスのみ",
             "ko" to "스타일러스 전용",
             "th" to "ปากกาสไตลัสเท่านั้น"
-        )
-    )
-
-    private fun part21(): Map<String, Map<String, String>> = mapOf(
+        ),
         "ink_pro_wheel" to mapOf(
             "zh-Hant" to "專業 HSV 色環與和諧配色",
             "en" to "Pro HSV wheel and colour harmonies",
@@ -14153,7 +14201,10 @@ object LocalizationStrings {
             "ja" to "リンクカードをノートに挿入",
             "ko" to "링크 카드를 노트에 삽입",
             "th" to "แทรกการ์ดลิงก์ลงในบันทึก"
-        ),
+        )
+    )
+
+    private fun part22(): Map<String, Map<String, String>> = mapOf(
         "link_site_name" to mapOf(
             "zh-Hant" to "站台名稱",
             "en" to "Site name",
@@ -14201,10 +14252,7 @@ object LocalizationStrings {
             "ja" to "127.0.0.1 を指している間はこの端末が中継を担当します。同じネットワークの参加者はホスト画面に表示されたローカルアドレスを入力してください。",
             "ko" to "127.0.0.1 을 가리키는 동안에는 이 기기가 중계를 맡습니다. 같은 네트워크의 참여자는 호스트 화면에 표시된 로컬 주소를 입력하세요.",
             "th" to "เมื่อชี้ไปที่ 127.0.0.1 เครื่องนี้จะทำหน้าที่รีเลย์เอง ผู้ร่วมงานในเครือข่ายเดียวกันให้กรอกที่อยู่ในเครือข่ายที่แสดงบนหน้าจอผู้เปิดห้อง"
-        )
-    )
-
-    private fun part22(): Map<String, Map<String, String>> = mapOf(
+        ),
         "log_advice_no_view" to mapOf(
             "zh-Hant" to "[RecordingAdvice] 找不到可呈現提示的畫面：%1@",
             "en" to "[RecordingAdvice] no screen found to present the tip: %1@",
@@ -14796,7 +14844,10 @@ object LocalizationStrings {
             "ja" to "メタデータの同期に失敗しました: %1@",
             "ko" to "메타데이터 동기화 실패: %1@",
             "th" to "ซิงก์เมทาดาทาไม่สำเร็จ: %1@"
-        ),
+        )
+    )
+
+    private fun part23(): Map<String, Map<String, String>> = mapOf(
         "log_msg_045" to mapOf(
             "zh-Hant" to "筆記本 %1@… 完成（上傳 %2@、下載 %3@）",
             "en" to "Notebook %1@… done (uploaded %2@, downloaded %3@)",
@@ -14844,10 +14895,7 @@ object LocalizationStrings {
             "ja" to "ノート %1@ の同期に失敗しました: %2@",
             "ko" to "노트 %1@ 동기화 실패: %2@",
             "th" to "ซิงก์สมุดบันทึก %1@ ไม่สำเร็จ: %2@"
-        )
-    )
-
-    private fun part23(): Map<String, Map<String, String>> = mapOf(
+        ),
         "log_msg_051" to mapOf(
             "zh-Hant" to "筆記本 %1@ %2@",
             "en" to "Notebook %1@ %2@",
@@ -15439,7 +15487,10 @@ object LocalizationStrings {
             "ja" to "シルバー",
             "ko" to "실버 (은)",
             "th" to "เงิน"
-        ),
+        )
+    )
+
+    private fun part24(): Map<String, Map<String, String>> = mapOf(
         "mat_wood" to mapOf(
             "zh-Hant" to "原木",
             "en" to "Wood",
@@ -15487,10 +15538,7 @@ object LocalizationStrings {
             "ja" to "特性",
             "ko" to "특성",
             "th" to "คุณสมบัติ"
-        )
-    )
-
-    private fun part24(): Map<String, Map<String, String>> = mapOf(
+        ),
         "material_desc_copper" to mapOf(
             "zh-Hant" to "偏紅的金屬光澤，高光柔和。",
             "en" to "Warm reddish metallic sheen with soft specular tone.",
@@ -16082,7 +16130,10 @@ object LocalizationStrings {
             "ja" to "Kairumo は授業や会議の録音と筆跡を同期させるためにマイクへのアクセス権が必要です。「設定を開く」をタップして許可してください。",
             "ko" to "Kairumo 는 수업 및 회의 녹음을 손글씨와 동기화하기 위해 마이크 권한이 필요합니다. '설정 열기'를 눌러 권한을 허용해주세요.",
             "th" to "Kairumo ต้องการสิทธิ์เข้าถึงไมโครโฟนเพื่อบันทึกเสียงและจัดตำแหน่งให้ตรงกับการเขียนของคุณ แตะ 'เปิดการตั้งค่า' เพื่ออนุญาต"
-        ),
+        )
+    )
+
+    private fun part25(): Map<String, Map<String, String>> = mapOf(
         "mic_permission_title" to mapOf(
             "zh-Hant" to "需要麥克風使用權限",
             "en" to "Microphone Access Required",
@@ -16130,10 +16181,7 @@ object LocalizationStrings {
             "ja" to "バックアップを復元",
             "ko" to "백업 복원",
             "th" to "กู้คืนข้อมูลสำรอง"
-        )
-    )
-
-    private fun part25(): Map<String, Map<String, String>> = mapOf(
+        ),
         "migration_rollback_done" to mapOf(
             "zh-Hant" to "已從備份還原",
             "en" to "Restored from backup",
@@ -16725,7 +16773,10 @@ object LocalizationStrings {
             "ja" to "録音がありません。「録音開始」で音声を録音します",
             "ko" to "녹음 파일이 없습니다. \"녹음 시작\"을 탭하여 녹음하세요.",
             "th" to "ยังไม่มีเสียงบันทึก แตะ \"เริ่มบันทึก\" เพื่อบันทึกเสียง"
-        ),
+        )
+    )
+
+    private fun part26(): Map<String, Map<String, String>> = mapOf(
         "no_search_results" to mapOf(
             "zh-Hant" to "找不到符合「%@」的筆記",
             "en" to "No notes matching \"%@\"",
@@ -16773,10 +16824,7 @@ object LocalizationStrings {
             "ja" to "未DL",
             "ko" to "필요 시 다운",
             "th" to "ตามต้องการ"
-        )
-    )
-
-    private fun part26(): Map<String, Map<String, String>> = mapOf(
+        ),
         "not_signed_in" to mapOf(
             "zh-Hant" to "未登入",
             "en" to "Not signed in",
@@ -17368,7 +17416,10 @@ object LocalizationStrings {
             "ja" to "%@ 冊を再分割しました",
             "ko" to "%@권을 다시 나눴습니다",
             "th" to "แบ่งหน้าใหม่แล้ว %@ เล่ม"
-        ),
+        )
+    )
+
+    private fun part27(): Map<String, Map<String, String>> = mapOf(
         "page_model_explainer" to mapOf(
             "zh-Hant" to "每一頁改成固定高度，畫布上會畫出頁面與可列印區界線。內容寫到頁尾會自動準備下一頁。原始資料已備份。",
             "en" to "Every page becomes a fixed height, and the canvas shows the page and printable-area boundaries. Writing to the bottom prepares the next page. Your original data is backed up.",
@@ -17416,10 +17467,7 @@ object LocalizationStrings {
             "ja" to "ページ",
             "ko" to "페이지",
             "th" to "หน้า"
-        )
-    )
-
-    private fun part27(): Map<String, Map<String, String>> = mapOf(
+        ),
         "pages_copied" to mapOf(
             "zh-Hant" to "已複製 %@ 頁到「%@」",
             "en" to "Copied %@ pages to “%@”",
@@ -18011,7 +18059,10 @@ object LocalizationStrings {
             "ja" to "ステッカーを配置",
             "ko" to "스티커 배치",
             "th" to "วางสติกเกอร์"
-        ),
+        )
+    )
+
+    private fun part28(): Map<String, Map<String, String>> = mapOf(
         "platform_desc" to mapOf(
             "zh-Hant" to "執行平台",
             "en" to "Platform",
@@ -18059,10 +18110,7 @@ object LocalizationStrings {
             "ja" to "筆圧感度カーブ",
             "ko" to "필압 감도 곡선",
             "th" to "เส้นโค้งความไวต่อแรงกด"
-        )
-    )
-
-    private fun part28(): Map<String, Map<String, String>> = mapOf(
+        ),
         "preview_chart" to mapOf(
             "zh-Hant" to "圖表即時預覽",
             "en" to "Live Chart Preview",
@@ -18654,7 +18702,10 @@ object LocalizationStrings {
             "ja" to "後ろへ",
             "ko" to "뒤로",
             "th" to "เลื่อนลง"
-        ),
+        )
+    )
+
+    private fun part29(): Map<String, Map<String, String>> = mapOf(
         "radial_move_up" to mapOf(
             "zh-Hant" to "往前移",
             "en" to "Move earlier",
@@ -18702,10 +18753,7 @@ object LocalizationStrings {
             "ja" to "音声の変換に失敗しました：%@",
             "ko" to "오디오 변환 실패: %@",
             "th" to "แปลงเสียงไม่สำเร็จ: %@"
-        )
-    )
-
-    private fun part29(): Map<String, Map<String, String>> = mapOf(
+        ),
         "rec_err_core_start" to mapOf(
             "zh-Hant" to "無法開始錄音：%@",
             "en" to "Could not start recording: %@",
@@ -19297,7 +19345,10 @@ object LocalizationStrings {
             "ja" to "破棄して復元",
             "ko" to "버리고 복원",
             "th" to "ละทิ้งและย้อนกลับ"
-        ),
+        )
+    )
+
+    private fun part30(): Map<String, Map<String, String>> = mapOf(
         "revert_done" to mapOf(
             "zh-Hant" to "已恢復到初始狀態",
             "en" to "Reverted to the initial state",
@@ -19345,10 +19396,7 @@ object LocalizationStrings {
             "ja" to "ホスト (所有者)",
             "ko" to "방장 (소유자)",
             "th" to "เจ้าของห้อง"
-        )
-    )
-
-    private fun part30(): Map<String, Map<String, String>> = mapOf(
+        ),
         "role_viewer" to mapOf(
             "zh-Hant" to "檢視者",
             "en" to "Viewer",
@@ -19940,7 +19988,10 @@ object LocalizationStrings {
             "ja" to "第2グループ：芸術表現ツール（木炭、クレヨン、エアブラシ、油絵、水彩）",
             "ko" to "제2계열: 예술 표현 도구 (목탄, 크레용, 에어브러시, 유채, 수채화)",
             "th" to "กลุ่มที่ 2: เครื่องมือระบายศิลปะ (ชาร์โคล, เครยอน, แอร์บรัช, สีน้ำมัน, สีน้ำ)"
-        ),
+        )
+    )
+
+    private fun part31(): Map<String, Map<String, String>> = mapOf(
         "sample_showcase_p2_family_write" to mapOf(
             "zh-Hant" to "第一家族：精密書寫族（鋼筆、針筆、原子筆、毛筆、書法筆、鉛筆）",
             "en" to "Family I: Precision Writing Tools (Pen, Fineliner, Ballpoint, Brush, Calligraphy, Pencil)",
@@ -19988,10 +20039,7 @@ object LocalizationStrings {
             "ja" to "ノート完成",
             "ko" to "노트 발행 완료",
             "th" to "บันทึกเสร็จสมบูรณ์"
-        )
-    )
-
-    private fun part31(): Map<String, Map<String, String>> = mapOf(
+        ),
         "sample_showcase_p3_flow_process" to mapOf(
             "zh-Hant" to "核心向量解算",
             "en" to "Vector Engine",
@@ -20583,7 +20631,10 @@ object LocalizationStrings {
             "ja" to "次世代の思考スタイル",
             "ko" to "차세대 사고 구조",
             "th" to "แนวคิดยุคใหม่หลายมิติ"
-        ),
+        )
+    )
+
+    private fun part32(): Map<String, Map<String, String>> = mapOf(
         "seed_pill_04" to mapOf(
             "zh-Hant" to "原生高效向量核心",
             "en" to "Fast native vector core",
@@ -20631,10 +20682,7 @@ object LocalizationStrings {
             "ja" to "デスクトップ級のレイアウト",
             "ko" to "데스크톱급 편집",
             "th" to "จัดหน้าระดับมืออาชีพ"
-        )
-    )
-
-    private fun part32(): Map<String, Map<String, String>> = mapOf(
+        ),
         "seed_pill_10" to mapOf(
             "zh-Hant" to "原生高格自適應表",
             "en" to "Adaptive native tables",
@@ -21226,7 +21274,10 @@ object LocalizationStrings {
             "ja" to "手作業",
             "ko" to "수동 작업",
             "th" to "งานที่ทำด้วยมือ"
-        ),
+        )
+    )
+
+    private fun part33(): Map<String, Map<String, String>> = mapOf(
         "shape_kind_merge" to mapOf(
             "zh-Hant" to "彙整",
             "en" to "Merge",
@@ -21274,10 +21325,7 @@ object LocalizationStrings {
             "ja" to "他ページ結合子",
             "ko" to "페이지 간 연결",
             "th" to "เชื่อมข้ามหน้า"
-        )
-    )
-
-    private fun part33(): Map<String, Map<String, String>> = mapOf(
+        ),
         "shape_kind_orjunction" to mapOf(
             "zh-Hant" to "或（OR）接點",
             "en" to "OR junction",
@@ -21869,7 +21917,10 @@ object LocalizationStrings {
             "ja" to "スナップショット名",
             "ko" to "스냅샷 이름",
             "th" to "ชื่อสแนปช็อต"
-        ),
+        )
+    )
+
+    private fun part34(): Map<String, Map<String, String>> = mapOf(
         "solid_angle" to mapOf(
             "zh-Hant" to "切線方向",
             "en" to "Cut direction",
@@ -21917,10 +21968,7 @@ object LocalizationStrings {
             "ja" to "寸法を記入",
             "ko" to "치수 기입",
             "th" to "ใส่ขนาด"
-        )
-    )
-
-    private fun part34(): Map<String, Map<String, String>> = mapOf(
+        ),
         "solid_export_ar" to mapOf(
             "zh-Hant" to "用 AR 看",
             "en" to "View in AR",
@@ -22512,7 +22560,10 @@ object LocalizationStrings {
             "ja" to "共同編集を開始",
             "ko" to "공동 편집 시작",
             "th" to "เริ่มการทำงานร่วมกัน"
-        ),
+        )
+    )
+
+    private fun part35(): Map<String, Map<String, String>> = mapOf(
         "start_recording" to mapOf(
             "zh-Hant" to "開始錄音",
             "en" to "Start Recording",
@@ -22560,10 +22611,7 @@ object LocalizationStrings {
             "ja" to "未接続",
             "ko" to "연결 끊김",
             "th" to "ไม่ได้เชื่อมต่อ"
-        )
-    )
-
-    private fun part35(): Map<String, Map<String, String>> = mapOf(
+        ),
         "sticker_arrow_curve" to mapOf(
             "zh-Hant" to "曲線箭頭",
             "en" to "Curved arrow",
@@ -23155,7 +23203,10 @@ object LocalizationStrings {
             "ja" to "同期の記録を整理",
             "ko" to "동기화 기록 정리",
             "th" to "จัดระเบียบบันทึกการซิงก์"
-        ),
+        )
+    )
+
+    private fun part36(): Map<String, Map<String, String>> = mapOf(
         "storage_ink_compacted" to mapOf(
             "zh-Hant" to "已整理，釋出 %@",
             "en" to "Tidied up, freed %@",
@@ -23203,10 +23254,7 @@ object LocalizationStrings {
             "ja" to "メイン書類ライブラリ",
             "ko" to "기본 문서 라이브러리",
             "th" to "คลังเอกสารหลัก"
-        )
-    )
-
-    private fun part36(): Map<String, Map<String, String>> = mapOf(
+        ),
         "storage_location" to mapOf(
             "zh-Hant" to "資料儲存位置",
             "en" to "Data Storage Location",
@@ -23798,7 +23846,10 @@ object LocalizationStrings {
             "ja" to "フォルダ設定済み（同期待ち）",
             "ko" to "폴더 설정됨 (동기화 대기)",
             "th" to "ตั้งค่าโฟลเดอร์แล้ว (รอซิงก์)"
-        ),
+        )
+    )
+
+    private fun part37(): Map<String, Map<String, String>> = mapOf(
         "sync_folder_placeholder" to mapOf(
             "zh-Hant" to "<資料夾>",
             "en" to "<folder>",
@@ -23846,10 +23897,7 @@ object LocalizationStrings {
             "ja" to "Google アカウントを承認しました。同期中…",
             "ko" to "Google 계정 인증 완료. 동기화 중…",
             "th" to "อนุญาตบัญชี Google แล้ว กำลังซิงก์…"
-        )
-    )
-
-    private fun part37(): Map<String, Map<String, String>> = mapOf(
+        ),
         "sync_interrupted" to mapOf(
             "zh-Hant" to "已中斷同步",
             "en" to "Sync interrupted",
@@ -24441,7 +24489,10 @@ object LocalizationStrings {
             "ja" to "点線",
             "ko" to "점선",
             "th" to "เส้นจุด"
-        ),
+        )
+    )
+
+    private fun part38(): Map<String, Map<String, String>> = mapOf(
         "table_border_horizontal" to mapOf(
             "zh-Hant" to "僅橫線",
             "en" to "Horizontal",
@@ -24489,10 +24540,7 @@ object LocalizationStrings {
             "ja" to "Border Style",
             "ko" to "Border Style",
             "th" to "Border Style"
-        )
-    )
-
-    private fun part38(): Map<String, Map<String, String>> = mapOf(
+        ),
         "table_border_width" to mapOf(
             "zh-Hant" to "框線粗細",
             "en" to "Border Weight",
@@ -25084,7 +25132,10 @@ object LocalizationStrings {
             "ja" to "Alt Text",
             "ko" to "Alt Text",
             "th" to "Alt Text"
-        ),
+        )
+    )
+
+    private fun part39(): Map<String, Map<String, String>> = mapOf(
         "table_tab_cell" to mapOf(
             "zh-Hant" to "儲存格",
             "en" to "Cell",
@@ -25132,10 +25183,7 @@ object LocalizationStrings {
             "ja" to "表",
             "ko" to "표",
             "th" to "ตาราง"
-        )
-    )
-
-    private fun part39(): Map<String, Map<String, String>> = mapOf(
+        ),
         "table_text_bold" to mapOf(
             "zh-Hant" to "粗體",
             "en" to "Bold",
@@ -25727,7 +25775,10 @@ object LocalizationStrings {
             "ja" to "1日のスケジュール",
             "ko" to "하루 일정",
             "th" to "ตารางรายวัน"
-        ),
+        )
+    )
+
+    private fun part40(): Map<String, Map<String, String>> = mapOf(
         "tmpl_daily_schedule_desc" to mapOf(
             "zh-Hant" to "早到晚每半小時一列，另有事項欄",
             "en" to "Half-hour rows from morning to night, with a task column",
@@ -25775,10 +25826,7 @@ object LocalizationStrings {
             "ja" to "グリッド・ドット",
             "ko" to "모눈 점선",
             "th" to "ตารางจุด"
-        )
-    )
-
-    private fun part40(): Map<String, Map<String, String>> = mapOf(
+        ),
         "tmpl_grid_desc" to mapOf(
             "zh-Hant" to "幾何繪圖、公式推導與圖表繪製",
             "en" to "Geometry, formulas & precise diagrams",
@@ -26370,7 +26418,10 @@ object LocalizationStrings {
             "ja" to "ツールバーの位置",
             "ko" to "도구 모음 위치",
             "th" to "ตำแหน่งแถบเครื่องมือ"
-        ),
+        )
+    )
+
+    private fun part41(): Map<String, Map<String, String>> = mapOf(
         "toolbar_placement_hint" to mapOf(
             "zh-Hant" to "擺在左側或右側，工具列就不會擋到你寫字的那隻手。",
             "en" to "Left or right keeps the toolbar out of your writing hand's way.",
@@ -26418,10 +26469,7 @@ object LocalizationStrings {
             "ja" to "ピン留め",
             "ko" to "핀 고정",
             "th" to "ปักหมุด"
-        )
-    )
-
-    private fun part41(): Map<String, Map<String, String>> = mapOf(
+        ),
         "trans_pen_action_tape" to mapOf(
             "zh-Hant" to "遮蔽膠帶",
             "en" to "Masking Tape",
@@ -27013,7 +27061,10 @@ object LocalizationStrings {
             "ja" to "ゴミ箱を空にしますか？",
             "ko" to "휴지통을 비울까요?",
             "th" to "ล้างถังขยะหรือไม่?"
-        ),
+        )
+    )
+
+    private fun part42(): Map<String, Map<String, String>> = mapOf(
         "trash_expired" to mapOf(
             "zh-Hant" to "已到期 — 即將永久刪除",
             "en" to "Expired — will be removed soon",
@@ -27061,10 +27112,7 @@ object LocalizationStrings {
             "ja" to "この期間を過ぎると、削除したノートはこのデバイスから完全に削除され、すべてのデバイスが確認した後にクラウドからも削除されます。",
             "ko" to "이 기간이 지나면 삭제한 노트가 이 기기에서 영구 삭제되며, 모든 기기에서 확인한 후 클라우드에서도 삭제됩니다.",
             "th" to "เมื่อพ้นช่วงเวลานี้ สมุดบันทึกที่ลบจะถูกลบถาวรจากอุปกรณ์นี้ และจากคลาวด์หลังจากอุปกรณ์ทั้งหมดของคุณยืนยันแล้ว"
-        )
-    )
-
-    private fun part42(): Map<String, Map<String, String>> = mapOf(
+        ),
         "trash_retention_forever" to mapOf(
             "zh-Hant" to "直到我手動刪除",
             "en" to "Until I delete them",
@@ -27656,7 +27704,10 @@ object LocalizationStrings {
             "ja" to "テキストドキュメントに水平区切り線を挿入",
             "ko" to "문서에 수평 구분선 삽입",
             "th" to "แทรกเส้นคั่นแนวนอนในเอกสาร"
-        ),
+        )
+    )
+
+    private fun part43(): Map<String, Map<String, String>> = mapOf(
         "wd_insert_inline_canvas" to mapOf(
             "zh-Hant" to "插入文件內手繪畫布",
             "en" to "Insert a handwriting canvas",
@@ -27704,10 +27755,7 @@ object LocalizationStrings {
             "ja" to "フォント サイズの縮小",
             "ko" to "글꼴 크기 작게",
             "th" to "ลดขนาดฟอนต์"
-        )
-    )
-
-    private fun part43(): Map<String, Map<String, String>> = mapOf(
+        ),
         "wd_standard_colors" to mapOf(
             "zh-Hant" to "標準色彩",
             "en" to "Standard Colors",

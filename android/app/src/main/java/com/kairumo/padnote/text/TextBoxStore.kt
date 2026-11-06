@@ -24,10 +24,15 @@ class TextBoxStore(
 
     fun find(id: String): TextBox? = boxes[id]?.copy()
 
+    /** 已經從核心讀過這一頁（[load] 跑過）。協同比對要看它：還沒讀的儲存是空的，不代表這一頁沒有物件。 */
+    var isLoaded: Boolean = false
+        private set
+
     /** 從核心讀回這一頁的文字方塊。 */
     fun load() {
         val s = session ?: return
         val page = pageId ?: return
+        isLoaded = true
         boxes.clear()
         for (blockId in runCatching { s.textBlockIds(page) }.getOrDefault(emptyList())) {
             val text = runCatching { s.blockText(blockId) }.getOrNull() ?: continue

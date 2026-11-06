@@ -33,6 +33,9 @@ class CollabPageStores(
     val chart: ChartStore,
     val shape: ShapeStore
 ) {
+    /** 五種物件都已經從核心讀過。還沒讀的儲存是空的 —— 拿它比對，整頁物件會被當成「被刪除」送出去。 */
+    val isLoaded: Boolean get() = text.isLoaded && image.isLoaded && table.isLoaded && chart.isLoaded && shape.isLoaded
+
     companion object {
         fun load(session: PadnoteSession, pageId: String) = CollabPageStores(
             TextBoxStore(session, pageId), ImageStore(session, pageId), TableStore(session, pageId),
@@ -67,7 +70,10 @@ class AndroidCollabCanvas(
 
     /** 某一頁的物件儲存（目前這一頁是編輯器手上那一組）。 */
     fun stores(pageId: String): CollabPageStores =
-        live(pageId) ?: others.getOrPut(pageId) { CollabPageStores.load(session, pageId) }
+        // 畫面上那一組還沒從核心讀過（剛換頁、剛加頁、整份狀態套用後頁面重排的那一瞬間）就不能用：
+        // 它是空的，拿它比對，這一頁的物件全被當成「被刪除」送給房間 —— 房主的文字方塊被清空。
+        // 改從核心臨時讀一份；寫回照樣進核心，編輯器稍後讀到的就是最新的。
+        live(pageId)?.takeIf { it.isLoaded } ?: others.getOrPut(pageId) { CollabPageStores.load(session, pageId) }
 
     // ── 編碼 ──
 
