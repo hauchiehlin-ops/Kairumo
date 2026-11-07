@@ -179,19 +179,28 @@ class ScreenAuditTest {
     ) {
         skipOnboarding()
         ActivityScenario.launch(MainActivity::class.java).use {
-            compose.waitForIdle()
-            navigate()
-            compose.waitForIdle()
+            try {
+                compose.waitForIdle()
+                navigate()
+                compose.waitForIdle()
 
-            val missing = findMissingWhileScrolling(wanted = ids, scrollTag = scrollTag)
-            assertTrue(
-                buildString {
-                    append("選單打開之後仍然找不到這些控制項：\n")
-                    append(missing.joinToString("\n"))
-                    append("\n\n現場實際有的 testTag（最多 20 個）：\n")
-                    append(presentTags().take(20).joinToString("\n"))
-                },
-                missing.isEmpty())
+                val missing = findMissingWhileScrolling(wanted = ids, scrollTag = scrollTag)
+                assertTrue(
+                    buildString {
+                        append("選單打開之後仍然找不到這些控制項：\n")
+                        append(missing.joinToString("\n"))
+                        append("\n\n現場實際有的 testTag（最多 20 個）：\n")
+                        append(presentTags().take(20).joinToString("\n"))
+                    },
+                    missing.isEmpty())
+            } finally {
+                runCatching {
+                    if (compose.onAllNodesWithTag("toolbar.done").fetchSemanticsNodes().isNotEmpty()) {
+                        compose.onNodeWithTag("toolbar.done").performClick()
+                        compose.waitForIdle()
+                    }
+                }
+            }
         }
     }
 
@@ -283,67 +292,79 @@ class ScreenAuditTest {
     ) {
         skipOnboarding()
         ActivityScenario.launch(MainActivity::class.java).use {
-            compose.waitForIdle()
-            if (screen == "home") {
-                // Seeds are created on Dispatchers.IO after the first composition;
-                // waitForIdle only waits for Compose work, not that package creation.
-                // 捲動等待 LazyColumn 的項目組合完成。
-                val listMatcher = hasTestTag("home.notebooks.list")
-                val deadline = SystemClock.uptimeMillis() + 60_000
-                var found = false
-                while (SystemClock.uptimeMillis() < deadline) {
-                    compose.waitForIdle()
-                    if (compose.onAllNodes(listMatcher, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()) {
-                        found = true
-                        break
-                    }
-                    runCatching {
-                        compose.onNodeWithTag("home.scroll").performScrollToNode(listMatcher)
-                    }
-                    compose.waitForIdle()
-                    if (compose.onAllNodes(listMatcher, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()) {
-                        found = true
-                        break
-                    }
-                    Thread.sleep(500)
-                }
-                assertTrue("首頁找不到筆記清單 (home.notebooks.list)", found)
+            try {
                 compose.waitForIdle()
-                // 捲回頂端，讓 findMissingWhileScrolling 能從頭逐一向下比對控制項
-                runCatching {
-                    compose.onNodeWithTag("home.scroll")
-                        .performScrollToNode(hasTestTag("home.title"))
+                if (screen == "home") {
+                    // Seeds are created on Dispatchers.IO after the first composition;
+                    // waitForIdle only waits for Compose work, not that package creation.
+                    // 捲動等待 LazyColumn 的項目組合完成。
+                    val listMatcher = hasTestTag("home.notebooks.list")
+                    val deadline = SystemClock.uptimeMillis() + 60_000
+                    var found = false
+                    while (SystemClock.uptimeMillis() < deadline) {
+                        compose.waitForIdle()
+                        if (compose.onAllNodes(listMatcher, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()) {
+                            found = true
+                            break
+                        }
+                        runCatching {
+                            compose.onNodeWithTag("home.scroll").performScrollToNode(listMatcher)
+                        }
+                        compose.waitForIdle()
+                        if (compose.onAllNodes(listMatcher, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()) {
+                            found = true
+                            break
+                        }
+                        Thread.sleep(500)
+                    }
+                    assertTrue("首頁找不到筆記清單 (home.notebooks.list)", found)
                     compose.waitForIdle()
+                    // 捲回頂端，讓 findMissingWhileScrolling 能從頭逐一向下比對控制項
+                    runCatching {
+                        compose.onNodeWithTag("home.scroll")
+                            .performScrollToNode(hasTestTag("home.title"))
+                        compose.waitForIdle()
+                    }
+                }
+                navigate()
+                compose.waitForIdle()
+
+                val required = requiredControlIds(screen)
+                assertTrue(
+                    "核心對畫面「$screen」沒有任何必要控制項的規格 —— 畫面 id 打錯了？",
+                    required.isNotEmpty())
+
+                // **一定要捲過整份清單。**
+                //
+                // Compose 的 LazyColumn 只組合看得見的項目 —— 沒捲到的控制項
+                // 根本不在語意樹裡，不是「缺 testTag」。第一次跑只缺 1 項、
+                // 第二次跑缺 13 項，同一份程式碼、同一台模擬器，差別只在捲動
+                // 位置。**結果不確定的閘門會被關掉**，所以這一段不是優化。
+                val missing = findMissingWhileScrolling(
+                    wanted = required.filterNot { it in allowMissing },
+                    scrollTag = scrollTag)
+
+                assertTrue(
+                    buildString {
+                        append("畫面「$screen」少了規格要求的控制項：\n")
+                        append(missing.joinToString("\n"))
+                        append("\n\n現場實際有的 testTag（最多 20 個）：\n")
+                        append(presentTags().take(20).joinToString("\n"))
+                        append("\n\n一個都對不上的話，多半不是缺 testTag，")
+                        append("是**根本沒到這個畫面**（例如卡在首次啟動流程）。")
+                    },
+                    missing.isEmpty())
+            } finally {
+                // 若當前畫面開著對話框（例如自訂工具列的 AlertDialog），在銷毀 Activity 前先正常關閉對話框，
+                // 確保 Compose 的子組合 (subcomposition) 正常反掛載，避免在 Activity 銷毀時
+                // 殘留的視窗子樹觸發 SlotTableGap 越界例外 (ArrayIndexOutOfBoundsException in moveSlotGapTo)。
+                runCatching {
+                    if (compose.onAllNodesWithTag("toolbar.done").fetchSemanticsNodes().isNotEmpty()) {
+                        compose.onNodeWithTag("toolbar.done").performClick()
+                        compose.waitForIdle()
+                    }
                 }
             }
-            navigate()
-            compose.waitForIdle()
-
-            val required = requiredControlIds(screen)
-            assertTrue(
-                "核心對畫面「$screen」沒有任何必要控制項的規格 —— 畫面 id 打錯了？",
-                required.isNotEmpty())
-
-            // **一定要捲過整份清單。**
-            //
-            // Compose 的 LazyColumn 只組合看得見的項目 —— 沒捲到的控制項
-            // 根本不在語意樹裡，不是「缺 testTag」。第一次跑只缺 1 項、
-            // 第二次跑缺 13 項，同一份程式碼、同一台模擬器，差別只在捲動
-            // 位置。**結果不確定的閘門會被關掉**，所以這一段不是優化。
-            val missing = findMissingWhileScrolling(
-                wanted = required.filterNot { it in allowMissing },
-                scrollTag = scrollTag)
-
-            assertTrue(
-                buildString {
-                    append("畫面「$screen」少了規格要求的控制項：\n")
-                    append(missing.joinToString("\n"))
-                    append("\n\n現場實際有的 testTag（最多 20 個）：\n")
-                    append(presentTags().take(20).joinToString("\n"))
-                    append("\n\n一個都對不上的話，多半不是缺 testTag，")
-                    append("是**根本沒到這個畫面**（例如卡在首次啟動流程）。")
-                },
-                missing.isEmpty())
         }
     }
 
