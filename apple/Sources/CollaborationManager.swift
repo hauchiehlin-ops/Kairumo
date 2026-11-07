@@ -736,6 +736,7 @@ public class CollaborationManager: ObservableObject {
         self.status = .disconnected
         LiveInkStore.shared.clear()
         resetPageEditLeaseState()
+        CollabVoiceManager.shared.reset()
         if userInitiated {
             self.currentRoomId = ""
             self.roomNotebookId = nil
@@ -1025,6 +1026,29 @@ public class CollaborationManager: ObservableObject {
             "user_id": currentUserId,
             "lamport": 0,
             "kind": "live_ink",
+            "payload": finalPayload,
+        ]
+        if isEncrypted { msg["encrypted"] = true }
+        if case .connected = status { sendJson(msg) }
+    }
+
+    // MARK: - 即時語音通話（`live_voice`，見 CollabVoiceManager.swift）
+
+    /// 廣播按住說話（PTT）微音框或狀態事件。種類以 `live_` 開頭，中繼不放進補發暫存。
+    public func sendLiveVoice(phase: String, seq: UInt32, audioBase64: String) {
+        let raw: [String: Any] = [
+            "phase": phase,
+            "seq": seq,
+            "audio": audioBase64,
+            "user_name": myDisplayName,
+        ]
+        let (finalPayload, isEncrypted) = encryptPayload(raw)
+        var msg: [String: Any] = [
+            "type": "oplog",
+            "room_id": currentRoomId,
+            "user_id": currentUserId,
+            "lamport": 0,
+            "kind": "live_voice",
             "payload": finalPayload,
         ]
         if isEncrypted { msg["encrypted"] = true }
@@ -1445,6 +1469,8 @@ public class CollaborationManager: ObservableObject {
                 // 暫態：直接交給預覽層與跨頁編輯仲裁器，不記 op id、不進編輯器的合併流程。
                 if kind == "live_page_edit", let payload = decryptPayload(rawPayload, isEncrypted: isEncrypted) {
                     receiveRemotePageEdit(userId: uid, payload: payload, lamport: lamport)
+                } else if kind == "live_voice", let payload = decryptPayload(rawPayload, isEncrypted: isEncrypted) {
+                    CollabVoiceManager.shared.receiveRemoteVoice(userId: uid, payload: payload)
                 } else if kind == "live_ink", let payload = decryptPayload(rawPayload, isEncrypted: isEncrypted) {
                     LiveInkStore.shared.receive(userId: uid, payload: payload)
                     if let page = payload["page"] as? String, !page.isEmpty {

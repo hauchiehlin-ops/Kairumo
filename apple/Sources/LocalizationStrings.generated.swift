@@ -5151,6 +5151,38 @@ extension LocalizationManager {
             .ko: "이후 다른 사람이 변경한 부분은 유지했습니다",
             .th: "ส่วนที่ผู้อื่นแก้ไขภายหลังยังคงไว้"
         ],
+        "collab_voice_mute_all": [
+            .zhHant: "靜音語音",
+            .en: "Mute Voice",
+            .zhHans: "静音语音",
+            .ja: "音声をミュート",
+            .ko: "음성 음소거",
+            .th: "ปิดเสียงพูด"
+        ],
+        "collab_voice_peer_talking": [
+            .zhHant: "%@ 正在說話...",
+            .en: "%@ is speaking...",
+            .zhHans: "%@ 正在说话...",
+            .ja: "%@ が話しています...",
+            .ko: "%@ 님이 말하는 중...",
+            .th: "%@ กำลังพูด..."
+        ],
+        "collab_voice_ptt_hold": [
+            .zhHant: "按住說話",
+            .en: "Hold to Speak",
+            .zhHans: "按住说话",
+            .ja: "押して通話",
+            .ko: "누르고 말하기",
+            .th: "กดค้างเพื่อพูด"
+        ],
+        "collab_voice_ptt_talking": [
+            .zhHant: "正在通話中...",
+            .en: "Speaking...",
+            .zhHans: "正在通话中...",
+            .ja: "通話中...",
+            .ko: "통화 중...",
+            .th: "กำลังพูด..."
+        ],
         "collab_voice_room": [
             .zhHant: "協作語音房間",
             .en: "Voice Room",
@@ -5158,6 +5190,14 @@ extension LocalizationManager {
             .ja: "ボイスルーム",
             .ko: "음성 룸",
             .th: "ห้องเสียง"
+        ],
+        "collab_voice_unmute_all": [
+            .zhHant: "開啟語音",
+            .en: "Unmute Voice",
+            .zhHans: "开启语音",
+            .ja: "音声ミュート解除",
+            .ko: "음성 음소거 해제",
+            .th: "เปิดเสียงพูด"
         ],
         "collaborate": [
             .zhHant: "線上協同",

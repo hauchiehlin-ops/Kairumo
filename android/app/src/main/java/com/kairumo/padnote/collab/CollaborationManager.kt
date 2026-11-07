@@ -114,6 +114,9 @@ class CollaborationManager(private val context: Context) {
 
     val peers = mutableStateListOf<Peer>()
 
+    /** 即時語音管理器（掛在協同連線上） */
+    var voice: CollabVoiceManager? = null
+
     /** 這台裝置的身分。每次啟動換一個 —— 它只用來在房間裡區分人。 */
     val currentUserId: String = UUID.randomUUID().toString()
 
@@ -456,6 +459,7 @@ class CollaborationManager(private val context: Context) {
         peers.clear()
         liveInk.clear()
         resetPageEditLeaseState()
+        voice?.reset()
         if (userInitiated) {
             runCatching { relay?.stop() }
             isHostingLocalRelay = false
@@ -606,6 +610,30 @@ class CollaborationManager(private val context: Context) {
             msg.put("payload", JSONObject().put("ciphertext", cipher)).put("encrypted", true)
         } else {
             msg.put("payload", payload)
+        }
+        if (status is Status.Connected) send(msg)
+    }
+
+    // ── 即時語音通話（`live_voice`，見 CollabVoiceManager.kt）──
+
+    /** 廣播按住說話（PTT）微音框或狀態事件。種類以 `live_` 開頭，中繼不放進補發暫存。 */
+    fun sendLiveVoice(phase: String, seq: Long, audioBase64: String) {
+        val key = roomKeyBase64
+        val raw = JSONObject()
+            .put("phase", phase)
+            .put("seq", seq)
+            .put("audio", audioBase64)
+            .put("user_name", myDisplayName)
+
+        val msg = JSONObject()
+            .put("type", "oplog").put("room_id", roomId).put("user_id", currentUserId)
+            .put("lamport", 0).put("kind", "live_voice")
+
+        val cipher = if (key != null) collabEncrypt(key, raw.toString()) else ""
+        if (cipher.isNotEmpty()) {
+            msg.put("payload", JSONObject().put("ciphertext", cipher)).put("encrypted", true)
+        } else {
+            msg.put("payload", raw)
         }
         if (status is Status.Connected) send(msg)
     }
@@ -1016,6 +1044,8 @@ class CollaborationManager(private val context: Context) {
             if (kind == "live_page_edit") {
                 val lamport = item.optLong("lamport", 0L)
                 decryptPayload(item, raw)?.let { receiveRemotePageEdit(uid, it, lamport) }
+            } else if (kind == "live_voice") {
+                decryptPayload(item, raw)?.let { voice?.receiveRemoteVoice(uid, it) }
             } else if (kind == "live_ink") {
                 decryptPayload(item, raw)?.let { payload ->
                     liveInk.receive(uid, payload)
