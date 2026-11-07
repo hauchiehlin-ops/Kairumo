@@ -27830,5 +27830,45 @@
     "th": "ขณะนี้%@กำลังแก้ไขอยู่ โปรดรอสักครู่แล้วจึงค่อยแก้ไข",
     "zhHans": "目前由%@正在进行编辑中，请稍后再进行编辑",
     "zhHant": "目前由%@正在進行編輯中，請稍後再進行編輯"
+  },
+  "collab_voice_ptt_hold": {
+    "en": "Hold to Speak",
+    "ja": "押して通話",
+    "ko": "누르고 말하기",
+    "th": "กดค้างเพื่อพูด",
+    "zhHans": "按住说话",
+    "zhHant": "按住說話"
+  },
+  "collab_voice_ptt_talking": {
+    "en": "Speaking...",
+    "ja": "通話中...",
+    "ko": "통화 중...",
+    "th": "กำลังพูด...",
+    "zhHans": "正在通话中...",
+    "zhHant": "正在通話中..."
+  },
+  "collab_voice_peer_talking": {
+    "en": "%@ is speaking...",
+    "ja": "%@ が話しています...",
+    "ko": "%@ 님이 말하는 중...",
+    "th": "%@ กำลังพูด...",
+    "zhHans": "%@ 正在说话...",
+    "zhHant": "%@ 正在說話..."
+  },
+  "collab_voice_mute_all": {
+    "en": "Mute Voice",
+    "ja": "音声をミュート",
+    "ko": "음성 음소거",
+    "th": "ปิดเสียงพูด",
+    "zhHans": "静音语音",
+    "zhHant": "靜音語音"
+  },
+  "collab_voice_unmute_all": {
+    "en": "Unmute Voice",
+    "ja": "音声ミュート解除",
+    "ko": "음성 음소거 해제",
+    "th": "เปิดเสียงพูด",
+    "zhHans": "开启语音",
+    "zhHant": "開啟語音"
   }
 }

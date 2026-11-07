@@ -818,16 +818,25 @@ private fun InkScreen(
 
         val formatTarget = selectedTextId?.let { textStore.find(it) }
 
-        Column(modifier = Modifier.fillMaxSize().statusBarsPadding()) {
-            EditorTopBar(
-                state = topBarState,
-                actions = topBarActions,
-                inkBarState = inkBarState,
-                formatTarget = formatTarget,
-                contextualState = contextualState,
-                l10n = l10n
-            )
-            EditorCanvasContainer(ctx)
+        Box(modifier = Modifier.fillMaxSize()) {
+            Column(modifier = Modifier.fillMaxSize().statusBarsPadding()) {
+                EditorTopBar(
+                    state = topBarState,
+                    actions = topBarActions,
+                    inkBarState = inkBarState,
+                    formatTarget = formatTarget,
+                    contextualState = contextualState,
+                    l10n = l10n
+                )
+                EditorCanvasContainer(ctx)
+            }
+            if (collabActive) {
+                com.kairumo.padnote.collab.CollabVoiceFloatingCapsule(
+                    voice = collabVoice,
+                    languageTag = deviceLanguageTag(),
+                    modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 24.dp)
+                )
+            }
         }
     }
     EditorFloatingPanels(ctx)

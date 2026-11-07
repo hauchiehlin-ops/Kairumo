@@ -156,6 +156,10 @@ extension NotebookEditorView {
                 if let notice = canvasNotice {
                     canvasNoticeBanner(notice)
                 }
+                if isCollaborating {
+                    CollabVoiceFloatingCapsule()
+                        .padding(.bottom, 20)
+                }
             }
             // 編修面板避開正在編修的物件：物件框由物件層以錨點回報（`EditingObjectBoundsKey`）。
             .overlayPreferenceValue(EditingObjectBoundsKey.self) { anchor in

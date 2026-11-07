@@ -88,11 +88,14 @@ final class NoteIntelligenceTests: XCTestCase {
         }
     }
 
-    func testTheAvailabilityMatchesWhatTheBackendActuallyDoes() {
+    func testTheAvailabilityMatchesWhatTheBackendActuallyDoes() async {
         // 兩者不一致的話，畫面會給一顆按下去必定失敗的按鈕。
         let backend = SystemLanguageBackend()
         let claimsAvailable = SystemLanguageBackend.availability == .available
-        let actuallyWorks = (try? backend.generate(prompt: "hi", maxTokens: 8)) != nil
+        // 在背景執行緒執行，避免在 @MainActor 測試執行緒同步 semaphore.wait 觸發 Thread Performance Checker 反轉警告。
+        let actuallyWorks = await Task.detached {
+            (try? backend.generate(prompt: "hi", maxTokens: 8)) != nil
+        }.value
         // 只在「宣稱不可用」時斷言 —— 宣稱可用時真的去跑一次模型，
         // 會讓這條測試變成一個要等好幾秒、而且靠外部狀態的東西。
         if !claimsAvailable {
@@ -100,18 +103,29 @@ final class NoteIntelligenceTests: XCTestCase {
         }
     }
 
-    func testWithoutAModelTheErrorSaysSoInsteadOfLookingTransient() throws {
+    func testWithoutAModelTheErrorSaysSoInsteadOfLookingTransient() async throws {
         // 回一個看起來像暫時性失敗的錯誤，使用者會一直按。
         try XCTSkipIf(
             SystemLanguageBackend.availability == .available,
             "這台機器上系統模型可用，這條驗不到沒有模型的路徑")
 
         let backend = SystemLanguageBackend()
-        XCTAssertThrowsError(try backend.generate(prompt: "hi", maxTokens: 8)) { error in
+        let thrownError = await Task.detached { () -> Error? in
+            do {
+                _ = try backend.generate(prompt: "hi", maxTokens: 8)
+                return nil
+            } catch {
+                return error
+            }
+        }.value
+
+        if let error = thrownError {
             guard case FfiLlmError.ModelNotLoaded = error else {
                 XCTFail("丟的是 \(error)，不是 ModelNotLoaded —— 核心用它區分「要引導」與「請重試」")
                 return
             }
+        } else {
+            XCTFail("預期應丟出 ModelNotLoaded 錯誤，卻未拋出任何錯誤")
         }
     }
 }

@@ -1804,6 +1804,81 @@ struct RemoteCursorsOverlay: View {
     }
 }
 
+/// 協同即時語音 PTT 浮動膠囊（按住說話與廣播狀態指示）
+struct CollabVoiceFloatingCapsule: View {
+    @ObservedObject var voice = CollabVoiceManager.shared
+    @ObservedObject var collab = CollaborationManager.shared
+    private let localizationManager = LocalizationManager.shared
+
+    var body: some View {
+        HStack(spacing: 8) {
+            // 發話者狀態呼吸燈標籤
+            if let speaker = voice.activeSpeakerName {
+                HStack(spacing: 5) {
+                    Circle()
+                        .fill(Color.green)
+                        .frame(width: 8, height: 8)
+                    Text(String(format: localizationManager.localized("collab_voice_peer_talking"), speaker))
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundColor(.primary)
+                        .lineLimit(1)
+                }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(Color.green.opacity(0.15))
+                .cornerRadius(12)
+            }
+
+            // 靜音切換鈕
+            Button {
+                voice.isMuted.toggle()
+            } label: {
+                Image(systemName: voice.isMuted ? "speaker.slash.fill" : "speaker.wave.2.fill")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(voice.isMuted ? .secondary : .primary)
+                    .frame(width: 28, height: 28)
+                    .background(Color(uiColor: .systemBackground).opacity(0.8))
+                    .clipShape(Circle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(localizationManager.localized(voice.isMuted ? "collab_voice_unmute_all" : "collab_voice_mute_all"))
+
+            // 按住說話（PTT）按鈕
+            HStack(spacing: 6) {
+                Image(systemName: voice.isTalking ? "waveform.and.mic" : "mic.fill")
+                    .font(.system(size: 14, weight: .bold))
+                Text(localizationManager.localized(voice.isTalking ? "collab_voice_ptt_talking" : "collab_voice_ptt_hold"))
+                    .font(.system(size: 12, weight: .bold))
+            }
+            .foregroundColor(.white)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 8)
+            .background(voice.isTalking ? Color.green : Color.accentColor)
+            .cornerRadius(20)
+            .shadow(color: (voice.isTalking ? Color.green : Color.black).opacity(0.25), radius: 4, y: 2)
+            .scaleEffect(voice.isTalking ? 1.05 : 1.0)
+            .animation(.spring(response: 0.2, dampingFraction: 0.6), value: voice.isTalking)
+            .gesture(
+                DragGesture(minimumDistance: 0)
+                    .onChanged { _ in
+                        if !voice.isTalking {
+                            voice.startTalking()
+                        }
+                    }
+                    .onEnded { _ in
+                        voice.stopTalking()
+                    }
+            )
+        }
+        .padding(6)
+        .background(
+            Capsule()
+                .fill(Material.regular)
+                .shadow(color: Color.black.opacity(0.15), radius: 6, y: 3)
+        )
+    }
+}
+
 /// `UIImage` 跨執行緒傳遞用。圖片建好後不再改動，只讀。
 private struct UncheckedImageBox: @unchecked Sendable {
     let image: UIImage

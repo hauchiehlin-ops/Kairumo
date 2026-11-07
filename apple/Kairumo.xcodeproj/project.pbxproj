@@ -83,6 +83,7 @@
 		44F395EF97582BCF2480ECDD /* BackupManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 473B5EDC9DF95F4358F83CFB /* BackupManagerTests.swift */; };
 		4514902261D4A927D6FBC105 /* Templates in Resources */ = {isa = PBXBuildFile; fileRef = 2A2253FE74C35178B0F901C8 /* Templates */; };
 		45B7CCE5C45C3092EBED34B2 /* CoreMessagePatterns.generated.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B0C58CFD4F7C93753B145CA /* CoreMessagePatterns.generated.swift */; };
+		46CC5D1BCEAE690D4CD41030 /* CollabVoiceManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6CF78A69899C81F8F5AE7BDB /* CollabVoiceManager.swift */; };
 		4739A382D63316D061431753 /* BrushCursorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B36AD7F19677B4F27E94262B /* BrushCursorTests.swift */; };
 		476A452C0006DB556DE70790 /* ShapeStudioView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A90E6661A2C0079EE609AFA /* ShapeStudioView.swift */; };
 		4778715DC0B3FB2B8CAB004B /* padnote_core.swift in Sources */ = {isa = PBXBuildFile; fileRef = 28A8E33C21E81EED174CEBA3 /* padnote_core.swift */; };
@@ -475,6 +476,7 @@
 		6C5E7D8CE394BD3B16FD57B5 /* DocumentTemplateApply.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentTemplateApply.swift; sourceTree = "<group>"; };
 		6CD7D666B9E3F01C95ACB051 /* CollabFileSyncTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CollabFileSyncTests.swift; sourceTree = "<group>"; };
 		6CEFD1F0AF714DC269A5E144 /* AccountSyncStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountSyncStore.swift; sourceTree = "<group>"; };
+		6CF78A69899C81F8F5AE7BDB /* CollabVoiceManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CollabVoiceManager.swift; sourceTree = "<group>"; };
 		6D92ABBF09268BEEA4DD694D /* CloudSyncFolder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudSyncFolder.swift; sourceTree = "<group>"; };
 		6E69D62954A410C548C81F3A /* ScreenAudit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenAudit.swift; sourceTree = "<group>"; };
 		6EA2D926C0FD0991AE0BC01D /* WrapLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WrapLayout.swift; sourceTree = "<group>"; };
@@ -878,6 +880,7 @@
 				CF7B511C0C84D09A563E93B5 /* CollabProtocol.swift */,
 				8C9EA0A08B643B3DE08E40DA /* CollabRelaySocket.swift */,
 				79FBA9A8EEEFDEABEA31DA34 /* CollabSync.swift */,
+				6CF78A69899C81F8F5AE7BDB /* CollabVoiceManager.swift */,
 				205572122F598A01BD07BC2A /* CommentThreadView.swift */,
 				DA433D8C879AB448C248E561 /* ContextGuidanceHUD.swift */,
 				6A0C24F3FD1D464196490E2D /* ContinuousPagesView.swift */,
@@ -1325,6 +1328,7 @@
 				EBC28FA124F13539D86D713F /* CollabProtocol.swift in Sources */,
 				682EB339708EB99A20BEDDA6 /* CollabRelaySocket.swift in Sources */,
 				083FB8C04871B623CD4F5CA0 /* CollabSync.swift in Sources */,
+				46CC5D1BCEAE690D4CD41030 /* CollabVoiceManager.swift in Sources */,
 				EBB0282BC8BEC636B952FE2C /* CollaborationManager.swift in Sources */,
 				6142C12FB584E6D8D7B38221 /* CollaborationSheet.swift in Sources */,
 				95A26994BC9D5BCCF7291E2F /* CommentThreadView.swift in Sources */,

@@ -703,6 +703,7 @@ internal class EditorCanvasContext {
     lateinit var continuousUndo: ContinuousUndoController
     lateinit var noteTitle: String
     lateinit var collaboration: CollaborationManager
+    lateinit var collabVoice: CollabVoiceManager
     lateinit var collab: AndroidCollabController
     lateinit var continuousCollab: ContinuousCollabBridge
     var collabActive: Boolean = false
@@ -2818,10 +2819,17 @@ internal fun rememberEditorCanvasContext(
     // 換本時 A 的房間跟著進了 B（QR Code 卻帶 B 的 id，對方會把 A 的修改寫進 B），
     // 關掉筆記後連線與中繼還在背景跑。與 Apple `leaveRoom(ifBoundTo:)` 同一套。
     val collaboration = remember(notebookId) { CollaborationManager(activity) }
+    val collabVoice = remember(collaboration) {
+        CollabVoiceManager(activity, collaboration).also {
+            collaboration.voice = it
+        }
+    }
     androidx.compose.runtime.DisposableEffect(collaboration) {
         onDispose {
             collaboration.stateDepositor = null
             collaboration.onRoomClosed = null
+            collaboration.voice = null
+            collabVoice.reset()
             collaboration.disconnect()
         }
     }
@@ -3420,6 +3428,7 @@ internal fun rememberEditorCanvasContext(
     ctx.continuousUndo = continuousUndo
     ctx.noteTitle = noteTitle
     ctx.collaboration = collaboration
+    ctx.collabVoice = collabVoice
     ctx.collab = collab
     ctx.continuousCollab = continuousCollab
     ctx.collabActive = collabActive
