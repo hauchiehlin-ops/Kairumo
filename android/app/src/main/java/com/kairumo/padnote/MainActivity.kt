@@ -318,6 +318,8 @@ class MainActivity : FragmentActivity() {
         com.kairumo.padnote.platform.StartupLogger.logKey("log_language_applied", deviceLanguageTag())
         // profile-scope: profile 綁定目前設定檔快取目錄至筆刷印章點陣快取
         com.kairumo.padnote.ink.InkBrushRenderer.initDiskCache(ProfileContext.cacheDir(applicationContext))
+        // 預先載入工具列配置，避免在首次組合期間觸發 MutableState 寫入與 SlotTable 重組競爭。
+        com.kairumo.padnote.ui.ToolbarSettings.preload(applicationContext, deviceLanguageTag())
         // 自動清理暫存、過期殘檔與期滿的回收桶（背景執行緒，不拖慢第一幀）。
         Thread {
             runCatching { com.kairumo.padnote.platform.StorageSweeper.sweepAtLaunch(applicationContext) }

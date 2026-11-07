@@ -76,6 +76,11 @@ object ToolbarSettings {
         return fresh
     }
 
+    /** 預先載入工具列狀態，避免在 Composition 期間觸發初次狀態變更。 */
+    fun preload(context: Context, languageTag: String) {
+        core(context, languageTag)
+    }
+
     /** 全部工具，依分組排列 —— 設定畫面要的就是這份。 */
     fun groups(context: Context, languageTag: String): List<FfiToolGroupInfo> =
         core(context, languageTag).allGroups()
@@ -182,14 +187,18 @@ object ToolbarSettings {
     }
 
     private fun refresh(c: FfiToolbar) {
-        placement = c.placement()
-        showLabels = c.showLabels()
-        radialActions = c.radialActions()
-        hiddenIdentifiers = c.allGroups()
+        val nextPlacement = c.placement()
+        if (placement != nextPlacement) placement = nextPlacement
+        val nextShowLabels = c.showLabels()
+        if (showLabels != nextShowLabels) showLabels = nextShowLabels
+        val nextRadialActions = c.radialActions()
+        if (radialActions != nextRadialActions) radialActions = nextRadialActions
+        val nextHidden = c.allGroups()
             .flatMap { it.tools }
             .filter { !it.visible }
             .map { it.identifier }
             .toSet()
+        if (hiddenIdentifiers != nextHidden) hiddenIdentifiers = nextHidden
     }
 
     /**
