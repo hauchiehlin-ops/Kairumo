@@ -247,6 +247,7 @@ extension NotebookEditorView {
         removeTapDotStroke(near: location, page: targetPage, maxCount: 2)
         if hitTestGuideCheckbox(at: location, page: targetPage) != nil { return }
         if isLocationInsideAnyObject(at: location, page: targetPage) { return }
+        guard requestCollabPageEditPermission(forPage: targetPage) else { return }
         // 若先前有空白文字方塊先清理
         if let activeId = inlineEditingTextId,
            let activeItem = notebook.textAttachments?.first(where: { $0.id == activeId }),
@@ -310,6 +311,7 @@ extension NotebookEditorView {
             item.pageIndex == targetPage &&
             CGRect(x: item.x, y: item.y, width: item.width, height: item.height).insetBy(dx: -12, dy: -12).contains(location)
         }) {
+            guard requestCollabPageEditPermission(forPage: targetPage) else { return }
             // 直接就地聚焦編輯既有文字，退出其他物件選取
             activeSelectedObjectId = existing.id
             inlineEditingTextId = existing.id
@@ -345,6 +347,7 @@ extension NotebookEditorView {
         }
 
         // 4. 點擊空白處：在打字模式下，點擊空白處即為「隨點即書」
+        guard requestCollabPageEditPermission(forPage: targetPage) else { return }
         // 先清理所有先前的物件選取與就地編輯焦點
         activeSelectedObjectId = nil
         selectedShapeIds = []

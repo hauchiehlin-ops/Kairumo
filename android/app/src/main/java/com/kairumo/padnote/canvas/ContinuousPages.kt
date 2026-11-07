@@ -1370,7 +1370,8 @@ private fun ContinuousPage(
     val guideMeasurer = androidx.compose.ui.text.rememberTextMeasurer()
 
     // 即點即書：在頁面座標 (tapX, tapY) 建立文字方塊並立即進入就地編輯（打字模式點空白、手繪模式雙擊共用）。
-    val writeAt: (Float, Float) -> Unit = { tapX, tapY ->
+    val writeAt: (Float, Float) -> Unit = writeAt@{ tapX, tapY ->
+        if (engine.canBeginEdit?.invoke() == false) return@writeAt
         val newBox = textStore.createTapToWrite(tapX, tapY, textStore.pageRules(paperId), snapToGrid)
         val currentOrder = meta.objectOrder(pageIndex)
         val updatedOrder = com.kairumo.padnote.canvas.ObjectStacking.bringToFront(setOf(newBox.id), currentOrder)
@@ -1459,6 +1460,7 @@ private fun ContinuousPage(
                                 tapY >= (box.y - 10f) && tapY <= (box.y + box.height + 10f)
                             }
                             if (hitExisting != null) {
+                                if (engine.canBeginEdit?.invoke() == false) return@detectTapGestures
                                 updateSelectedId(hitExisting.id)
                                 com.kairumo.padnote.text.InlineTextEditing.activeId = hitExisting.id
                             } else {
@@ -1665,7 +1667,11 @@ private fun ContinuousPage(
                 onSelect = { updateSelectedId(it); selectedConnectionId = null },
                 onEditStyle = { editingText = it },
                 inlineEditingId = com.kairumo.padnote.text.InlineTextEditing.activeId,
-                onInlineEditStart = { id -> com.kairumo.padnote.text.InlineTextEditing.activeId = id },
+                onInlineEditStart = { id ->
+                    if (engine.canBeginEdit?.invoke() != false) {
+                        com.kairumo.padnote.text.InlineTextEditing.activeId = id
+                    }
+                },
                 onInlineEditEnd = { box ->
                     // 失焦：空白方塊直接移除（對齊 Apple），其餘結束編輯。
                     if (com.kairumo.padnote.text.InlineTextEditing.activeId == box.id) com.kairumo.padnote.text.InlineTextEditing.activeId = null
@@ -1675,7 +1681,11 @@ private fun ContinuousPage(
                         revision++
                     }
                 },
-                onChanged = { textStore.persist(it); revision++ },
+                onChanged = {
+                    livePage?.let { pid -> liveCollab?.renewLocalPageEdit(pid) }
+                    textStore.persist(it)
+                    revision++
+                },
                 onDelete = { box ->
                     textStore.remove(box)
                     if (selectedId == box.id) selectedId = null

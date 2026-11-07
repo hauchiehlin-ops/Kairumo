@@ -194,6 +194,12 @@ fun CollaborationSheet(
                                 }
                             }
 
+                            if (!manager.isHostingLocalRelay) {
+                                Button(onClick = { manager.createRoom(manager.localRoomServer) }) {
+                                    Text(l(if (manager.savedCustomRemoteRelay) "start_collaboration" else "collab_start_local"))
+                                }
+                            }
+
                             // 掃描加入：每種連線方式一張 QR Code（同一 Wi‑Fi／Tailscale／遠端中繼）。
                             CollabInviteQr(manager, notebookId, notebookTitle, ::l)
 

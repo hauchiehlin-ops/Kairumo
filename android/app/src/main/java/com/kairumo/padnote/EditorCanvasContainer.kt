@@ -838,9 +838,11 @@ internal fun ColumnScope.EditorCanvasContainer(ctx: EditorCanvasContext) = with(
                                     tapY >= (box.y - 10f) && tapY <= (box.y + box.height + 10f)
                                 }
                                 if (hitExisting != null) {
+                                    if (engine.canBeginEdit?.invoke() == false) return@detectTapGestures
                                     selectText(hitExisting.id)
                                     com.kairumo.padnote.text.InlineTextEditing.activeId = hitExisting.id
                                 } else {
+                                    if (engine.canBeginEdit?.invoke() == false) return@detectTapGestures
                                     val newBox = textStore.createTapToWrite(tapX, tapY, textStore.pageRules(meta.paperId(pageIndex)), snapToGrid)
                                     val updatedOrder = com.kairumo.padnote.canvas.ObjectStacking.bringToFront(
                                         setOf(newBox.id),
@@ -1135,7 +1137,11 @@ internal fun ColumnScope.EditorCanvasContainer(ctx: EditorCanvasContext) = with(
                 },
                 onEditStyle = { editingText = it },
                 inlineEditingId = com.kairumo.padnote.text.InlineTextEditing.activeId,
-                onInlineEditStart = { id -> com.kairumo.padnote.text.InlineTextEditing.activeId = id },
+                onInlineEditStart = { id ->
+                    if (engine.canBeginEdit?.invoke() != false) {
+                        com.kairumo.padnote.text.InlineTextEditing.activeId = id
+                    }
+                },
                 onInlineEditEnd = { box ->
                     if (com.kairumo.padnote.text.InlineTextEditing.activeId == box.id) com.kairumo.padnote.text.InlineTextEditing.activeId = null
                     if (box.text.isBlank() && editingText?.id != box.id) {
@@ -1144,7 +1150,11 @@ internal fun ColumnScope.EditorCanvasContainer(ctx: EditorCanvasContext) = with(
                         textRevision++
                     }
                 },
-                onChanged = { box -> textStore.persist(box); textRevision++ },
+                onChanged = { box ->
+                    if (collabActive) pageId?.let { collaboration.renewLocalPageEdit(it) }
+                    textStore.persist(box)
+                    textRevision++
+                },
                 onDelete = { box ->
                     textStore.remove(box)
                     if (selectedTextId == box.id) selectText(null)

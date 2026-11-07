@@ -101,6 +101,7 @@ public final class LocalRelayServer {
     private var connections: [ObjectIdentifier: PeerConnection] = [:]
 
     private var runningPort: UInt16?
+    private var runningBonjour: Bool = false
 
     /// 目前是否已在本機提供中繼服務
     public var isRunning: Bool {
@@ -116,13 +117,16 @@ public final class LocalRelayServer {
 
     // MARK: - 生命週期
 
-    /// 啟動本機中繼服務。已在相同埠號執行時直接回傳成功。
+    /// 啟動本機中繼服務。已在相同埠號執行時直接回傳成功，並重送目前狀態通知上層。
     @discardableResult
     public func start(port: UInt16, roomId: String? = nil, hostName: String? = nil) -> Result<UInt16, Error> {
         var outcome: Result<UInt16, Error> = .success(port)
         queue.sync {
-            if listener != nil, runningPort == port {
+            if let existing = listener, runningPort == port {
                 outcome = .success(port)
+                if case .ready = existing.state {
+                    report(.ready(port: port, isBonjourActive: runningBonjour))
+                }
                 return
             }
             if listener != nil {
@@ -197,6 +201,7 @@ public final class LocalRelayServer {
                     self.stopLocked()
                     self.report(.failed(error.localizedDescription))
                 case .ready:
+                    self.runningBonjour = enableBonjour
                     self.report(.ready(port: port, isBonjourActive: enableBonjour))
                 default:
                     break
@@ -205,6 +210,7 @@ public final class LocalRelayServer {
             newListener.start(queue: queue)
             self.listener = newListener
             self.runningPort = port
+            self.runningBonjour = enableBonjour
         } catch {
             outcome = .failure(error)
         }
@@ -224,6 +230,7 @@ public final class LocalRelayServer {
         listener?.cancel()
         listener = nil
         runningPort = nil
+        runningBonjour = false
     }
 
     // MARK: - 連線處理

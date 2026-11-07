@@ -47,6 +47,7 @@ fun Modifier.doubleTapToWrite(
         },
         onCancelInk = { engine.cancelInFlight() },
         onDoubleTap = { p ->
+            if (engine.canBeginEdit?.invoke() == false) return@fingerDoubleTap
             val box = textStore.createTapToWrite(
                 p.x / density, p.y / density,
                 textStore.pageRules(meta.paperId(pageIndex)), snapLatest

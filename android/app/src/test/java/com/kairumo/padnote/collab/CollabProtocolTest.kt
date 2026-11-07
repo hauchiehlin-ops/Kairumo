@@ -373,4 +373,32 @@ class CollabSyncTest {
         assertEquals(entries.map { it.type to it.id }, back.map { it.type to it.id })
         assertEquals(entries.first { it.id == "i1" }.groups.keys, back.first { it.id == "i1" }.groups.keys)
     }
+
+    @Test fun pageEditLeaseFirstStrokePriorityOrdering() {
+        val early = CollaborationManager.PageEditLease(
+            userId = "user-b",
+            userName = "Bob",
+            isHost = false,
+            pageId = "page-1",
+            startedLamport = 3L,
+        )
+        val later = CollaborationManager.PageEditLease(
+            userId = "user-a",
+            userName = "Alice",
+            isHost = true,
+            pageId = "page-2",
+            startedLamport = 5L,
+        )
+        val tieBreakerA = CollaborationManager.PageEditLease(
+            userId = "user-a",
+            userName = "Alice",
+            isHost = true,
+            pageId = "page-2",
+            startedLamport = 3L,
+        )
+        assertTrue(early.hasPriority(over = later))
+        assertFalse(later.hasPriority(over = early))
+        assertTrue(tieBreakerA.hasPriority(over = early))
+        assertFalse(early.hasPriority(over = tieBreakerA))
+    }
 }
