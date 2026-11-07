@@ -41,7 +41,11 @@ if [[ -n "$STAGED_SOURCES" ]]; then
     python3 "${REPO_ROOT}/scripts/build-platform-docs.py" >/dev/null
     python3 "${REPO_ROOT}/scripts/build-privacy-docs.py" >/dev/null
     python3 "${REPO_ROOT}/scripts/doc_templates_tool.py" build >/dev/null
-    
+    # App 內附的手冊是 docs/manual 的複本（見 scripts/sync-docs.sh）。以前這裡只重新產生、沒有複製，
+    # 改了手冊 App 裡看到的還是舊的，Apple 的手冊測試也是拿舊的那份在驗。
+    cp "${REPO_ROOT}/docs/manual/manual-apple.js" "${REPO_ROOT}/apple/Resources/Docs/manual-apple.js"
+    cp "${REPO_ROOT}/docs/manual/index-apple.html" "${REPO_ROOT}/apple/Resources/Docs/manual.html"
+
     # 自動將產物加入本次 commit，徹底杜絕手動遺漏造成的 CI 失敗
     git add "${REPO_ROOT}/docs/manual/manual-apple.js" \
             "${REPO_ROOT}/docs/manual/manual-android.js" \
@@ -49,6 +53,7 @@ if [[ -n "$STAGED_SOURCES" ]]; then
             "${REPO_ROOT}/docs/legal/privacy-android.html" \
             "${REPO_ROOT}/templates/document-templates.json" \
             "${REPO_ROOT}/apple/Resources/Docs/manual-apple.js" \
+            "${REPO_ROOT}/apple/Resources/Docs/manual.html" \
             "${REPO_ROOT}/apple/Resources/Docs/privacy.html" 2>/dev/null || true
     echo "✅ 衍生平台檔案已自動同步並納入暫存區。"
 fi
