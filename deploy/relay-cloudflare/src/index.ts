@@ -34,6 +34,9 @@ const STORE_PART_MAX = 1_800_000;
 /** 寄存的整份狀態最多幾段（≈ 64 × 400 KB）。 */
 const STORE_PARTS_MAX = 64;
 
+/** 補發時一則 `oplog_batch` 的大約上限（字元）。WebSocket 一則訊息的上限遠大於此，留足餘裕。 */
+const BATCH_MAX = 900_000;
+
 const RECENT_MAX_COUNT = 2000;
 const RECENT_MAX_BYTES = 32 * 1024 * 1024;
 
@@ -353,10 +356,12 @@ export class RelayRoom implements DurableObject {
     // 寄存之前的操作也照補（暫存上限內）：合併規則冪等，重複套用無害，少一筆才是問題。
     const snap = lastSeq === 0 ? this.meta("snap") : null;
     if (snap !== null) {
+      // 分成好幾則送：寄存的整份狀態（每段約 400 KB，加密後更大）加上暫存的操作塞進同一則，
+      // 很容易超過 WebSocket 一則訊息的上限 —— 送不出去就整個沒到，剛加入的人什麼都拿不到。
       const parts = this.sql.exec("SELECT msg FROM snap WHERE snap = ? ORDER BY part ASC", snap).toArray();
+      for (const row of parts) this.sendBatch(ws, roomId, [String(row.msg)], false, true);
       const ops = this.sql.exec("SELECT msg FROM ops ORDER BY seq ASC").toArray();
-      const all = [...parts, ...ops].map((r) => r.msg).join(",");
-      this.sendRaw(ws, `{"type":"oplog_batch","room_id":${JSON.stringify(roomId)},"oplogs":[${all}],"truncated":false,"stored_state":true}`);
+      this.sendBatches(ws, roomId, ops.map((r) => String(r.msg)), false);
       return;
     }
     if (typeof lastSeq === "number") {
@@ -365,12 +370,35 @@ export class RelayRoom implements DurableObject {
       const oldestRow = this.sql.exec("SELECT seq FROM ops ORDER BY seq ASC LIMIT 1").toArray()[0];
       const oldest = oldestRow ? Number(oldestRow.seq) : this.nextSeq;
       const truncated = oldest > lastSeq + 1;
-      this.sendRaw(ws, `{"type":"oplog_batch","room_id":${JSON.stringify(roomId)},"oplogs":[${rows.map((r) => r.msg).join(",")}],"truncated":${truncated}}`);
+      this.sendBatches(ws, roomId, rows.map((r) => String(r.msg)), truncated);
       return;
     }
     const lastLamport = Number(msg.last_lamport ?? 0) || 0;
     const rows = this.sql.exec("SELECT msg FROM ops WHERE lamport > ? ORDER BY seq ASC", lastLamport).toArray();
     this.sendRaw(ws, `{"type":"oplog_batch","room_id":${JSON.stringify(roomId)},"oplogs":[${rows.map((r) => r.msg).join(",")}]}`);
+  }
+
+  /** 補發的操作依大小切成好幾則 `oplog_batch`（每則不超過 `BATCH_MAX`）。沒有操作也送一則空的（客戶端以它確認補發完成）。 */
+  private sendBatches(ws: WebSocket, roomId: string, msgs: string[], truncated: boolean): void {
+    let chunk: string[] = [];
+    let size = 0;
+    let sent = false;
+    for (const m of msgs) {
+      if (chunk.length > 0 && size + m.length > BATCH_MAX) {
+        this.sendBatch(ws, roomId, chunk, truncated, false);
+        sent = true;
+        chunk = [];
+        size = 0;
+      }
+      chunk.push(m);
+      size += m.length + 1;
+    }
+    if (chunk.length > 0 || !sent) this.sendBatch(ws, roomId, chunk, truncated, false);
+  }
+
+  private sendBatch(ws: WebSocket, roomId: string, msgs: string[], truncated: boolean, storedState: boolean): void {
+    const extra = storedState ? `,"stored_state":true` : "";
+    this.sendRaw(ws, `{"type":"oplog_batch","room_id":${JSON.stringify(roomId)},"oplogs":[${msgs.join(",")}],"truncated":${truncated}${extra}}`);
   }
 
   private leave(ws: WebSocket, me: Attachment): void {

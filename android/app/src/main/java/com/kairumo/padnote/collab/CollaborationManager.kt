@@ -200,6 +200,23 @@ class CollaborationManager(private val context: Context) {
         connect(collabNewRoomId(), asHost = true)
     }
 
+    /**
+     * 「Wi‑Fi / Tailscale」開房用的中繼：這台裝置內建的本機中繼。與 Apple `localRoomServer` 相同。
+     *
+     * 使用者**存的**位址是 `wss://`（刻意設定的自架遠端中繼）才沿用它；其餘一律用本機中繼。
+     * 以前用的是記憶體裡的 [serverAddress] —— 加入別人的房間、開過雲端共享之後它會變成對方的區網位址
+     * 或雲端中繼，再按「開始多人協同」就連到別處（對方沒開房時：Connection refused，一直重連）。
+     */
+    val localRoomServer: String get() {
+        val saved = loadServer()
+        return if (usesCustomRemoteRelay(saved)) saved else tuning.defaultServer
+    }
+
+    /** 存的位址是不是自架的遠端中繼（`wss://`）。是的話開房按鈕照舊叫「開始多人協同」。 */
+    val savedCustomRemoteRelay: Boolean get() = usesCustomRemoteRelay(loadServer())
+
+    private fun usesCustomRemoteRelay(address: String) = address.trim().lowercase().startsWith("wss://")
+
     /** 以既有的房號與金鑰當房主開房（雲端共享：重開之後沿用同一間，發出去的邀請照樣有效）。與 Apple `hostRoom` 相同。 */
     fun hostRoom(room: String, keyBase64: String, server: String) {
         if (collabIsValidRoomKey(keyBase64)) roomKeyBase64 = keyBase64

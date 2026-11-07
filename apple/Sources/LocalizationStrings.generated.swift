@@ -4719,6 +4719,14 @@ extension LocalizationManager {
             .ko: "중계 주소는 wss://(암호화 연결)로 시작해야 합니다. 예: wss://kairumo-relay.내이름.workers.dev",
             .th: "ที่อยู่รีเลย์ต้องขึ้นต้นด้วย wss:// (การเชื่อมต่อแบบเข้ารหัส) เช่น wss://kairumo-relay.ชื่อของคุณ.workers.dev"
         ],
+        "cloud_relay_one_click": [
+            .zhHant: "一鍵申請自己的中繼",
+            .en: "Get my own relay",
+            .zhHans: "一键申请自己的中继",
+            .ja: "自分の中継をワンクリックで作成",
+            .ko: "내 중계 원클릭 만들기",
+            .th: "สร้างรีเลย์ของฉันในคลิกเดียว"
+        ],
         "cloud_relay_open_deploy": [
             .zhHant: "開啟 Cloudflare 一鍵部署",
             .en: "Open Cloudflare one-click deploy",
@@ -4726,6 +4734,22 @@ extension LocalizationManager {
             .ja: "Cloudflare ワンクリックデプロイを開く",
             .ko: "Cloudflare 원클릭 배포 열기",
             .th: "เปิดการติดตั้งในคลิกเดียวของ Cloudflare"
+        ],
+        "cloud_relay_own_title": [
+            .zhHant: "使用自己的中繼（選用）",
+            .en: "Use your own relay (optional)",
+            .zhHans: "使用自己的中继（可选）",
+            .ja: "自分の中継を使う（任意）",
+            .ko: "내 중계 사용(선택)",
+            .th: "ใช้รีเลย์ของตัวเอง (ไม่บังคับ)"
+        ],
+        "cloud_relay_own_usage": [
+            .zhHant: "內建中繼由所有 Kairumo 使用者共用每日免費額度。常用雲端共享的話，可以免費架一台自己的：① 按「一鍵申請自己的中繼」，在 Cloudflare 完成部署（約 10 分鐘，全程在瀏覽器）；② 複製部署好的網址；③ 貼到下方欄位，按「儲存」。只有房主需要設定。看不懂就按「如何取得自己的中繼位址？」查看詳細步驟。",
+            .en: "The built-in relay shares its daily free quota with every Kairumo user. If you use cloud sharing often, set up your own for free: ① tap \"Get my own relay\" and deploy it on Cloudflare (about 10 minutes, all in the browser); ② copy the address you get; ③ paste it below and tap Save. Only the host needs to do this. Stuck? Tap \"How do I get my own relay address?\" for step-by-step help.",
+            .zhHans: "内置中继由所有 Kairumo 用户共用每日免费额度。常用云端共享的话，可以免费架一台自己的：① 按「一键申请自己的中继」，在 Cloudflare 完成部署（约 10 分钟，全程在浏览器）；② 复制部署好的网址；③ 贴到下方栏位，按「保存」。只有房主需要设置。看不懂就按「如何获取自己的中继地址？」查看详细步骤。",
+            .ja: "内蔵の中継は Kairumo の全ユーザーで 1 日の無料枠を共有しています。クラウド共有をよく使うなら、自分の中継を無料で用意できます：①「自分の中継をワンクリックで作成」を押して Cloudflare にデプロイ（約 10 分、ブラウザだけで完了）②できたアドレスをコピー ③下の欄に貼り付けて「保存」。設定が必要なのはホストだけです。わからないときは「自分の中継アドレスを取得するには？」で詳しい手順を確認できます。",
+            .ko: "내장 중계는 모든 Kairumo 사용자가 하루 무료 사용량을 함께 씁니다. 클라우드 공유를 자주 쓴다면 내 중계를 무료로 만들 수 있습니다: ① '내 중계 원클릭 만들기'를 눌러 Cloudflare에 배포(약 10분, 브라우저에서 완료) ② 받은 주소 복사 ③ 아래 칸에 붙여 넣고 '저장'. 호스트만 설정하면 됩니다. 어렵다면 '내 중계 주소를 받으려면?'에서 자세한 단계를 확인하세요.",
+            .th: "รีเลย์ในตัวใช้โควตาฟรีรายวันร่วมกับผู้ใช้ Kairumo ทุกคน หากใช้การแชร์ผ่านคลาวด์บ่อย ตั้งรีเลย์ของตัวเองได้ฟรี: ① แตะ \"สร้างรีเลย์ของฉันในคลิกเดียว\" แล้วติดตั้งบน Cloudflare (ประมาณ 10 นาที ทำในเบราว์เซอร์ทั้งหมด) ② คัดลอกที่อยู่ที่ได้ ③ วางในช่องด้านล่างแล้วแตะบันทึก เฉพาะเจ้าของห้องเท่านั้นที่ต้องตั้งค่า หากไม่แน่ใจ แตะ \"จะรับที่อยู่รีเลย์ของตัวเองได้อย่างไร?\" เพื่อดูขั้นตอนโดยละเอียด"
         ],
         "cloud_relay_save": [
             .zhHant: "儲存",
@@ -5078,6 +5102,14 @@ extension LocalizationManager {
             .ja: "共同スナップショット",
             .ko: "협업 스냅샷",
             .th: "สแนปช็อตร่วม"
+        ],
+        "collab_start_local": [
+            .zhHant: "Wi‑Fi / Tailscale",
+            .en: "Wi‑Fi / Tailscale",
+            .zhHans: "Wi‑Fi / Tailscale",
+            .ja: "Wi‑Fi / Tailscale",
+            .ko: "Wi‑Fi / Tailscale",
+            .th: "Wi‑Fi / Tailscale"
         ],
         "collab_time_machine": [
             .zhHant: "時光機回溯",

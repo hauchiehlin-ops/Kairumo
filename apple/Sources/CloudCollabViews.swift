@@ -56,6 +56,10 @@ struct CloudShareSection: View {
                     .foregroundColor(.orange)
                     .fixedSize(horizontal: false, vertical: true)
             }
+
+            // 使用自己的中繼：放在這張卡片上（以前藏在收合的「協同伺服器位址」裡，使用者找不到）。
+            Divider()
+            CloudRelaySettingView()
         }
         .padding(14)
         .background(Color(uiColor: .secondarySystemGroupedBackground))

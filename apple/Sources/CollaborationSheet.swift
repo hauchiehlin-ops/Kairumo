@@ -686,13 +686,16 @@ public struct CollaborationSheet: View {
     private var disconnectedActionSection: some View {
         VStack(spacing: 16) {
             // 一鍵開啟多人協同
+            // 「Wi‑Fi / Tailscale」：房間開在這台內建的本機中繼上（同一 Wi‑Fi 與 Tailscale 的 QR Code）。
+            // 只有存了自架的 wss:// 中繼時才連到那台，按鈕也照舊叫「開啟多人協同」。
+            let customRemote = CollaborationManager.usesCustomRemoteRelay(collaborationManager.serverAddress)
             Button {
-                collaborationManager.createRoom(notebookId: notebookId)
+                collaborationManager.createRoom(notebookId: notebookId, server: collaborationManager.localRoomServer)
             } label: {
                 HStack(spacing: 8) {
-                    Image(systemName: "sparkles")
+                    Image(systemName: customRemote ? "sparkles" : "wifi")
                         .font(.system(size: 16, weight: .bold))
-                    Text(localizationManager.localized("start_collaboration"))
+                    Text(localizationManager.localized(customRemote ? "start_collaboration" : "collab_start_local"))
                         .font(.headline)
                 }
                 .frame(maxWidth: .infinity)
@@ -857,11 +860,6 @@ public struct CollaborationSheet: View {
                         .foregroundColor(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
-
-                Divider()
-
-                // 雲端共享（跨網路）用的中繼：可改成自己部署的（旁邊附零基礎步驟）。
-                CloudRelaySettingView()
             }
             .padding(.top, 8)
         } label: {

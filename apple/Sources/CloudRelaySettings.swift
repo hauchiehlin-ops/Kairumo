@@ -2,7 +2,7 @@
 //  CloudRelaySettings.swift
 //  Kairumo
 //
-//  協同面板裡的「雲端共享中繼」設定：使用者可以改用自己部署的中繼，
+//  協同面板「雲端共享（跨網路）」卡片底部的「使用自己的中繼」：使用說明、一鍵申請按鈕與網址欄位。使用者可以改用自己部署的中繼，
 //  旁邊附零基礎的取得步驟（Cloudflare 一鍵部署，全程在瀏覽器裡）。與 Android `CloudRelaySettings` 相同。
 
 import SwiftUI
@@ -22,12 +22,43 @@ struct CloudRelaySettingView: View {
     @State private var message: String?
     @State private var isError = false
     @State private var showGuide = false
+    @Environment(\.openURL) private var openURL
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(localizationManager.localized("cloud_relay_title"))
+            HStack(spacing: 6) {
+                Image(systemName: "server.rack")
+                    .font(.caption)
+                    .foregroundColor(.accentColor)
+                Text(localizationManager.localized("cloud_relay_own_title"))
+                    .font(.caption)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.secondary)
+            }
+            // 使用說明：為什麼要、怎麼做（三步），看不懂再開詳細步驟。
+            Text(localizationManager.localized("cloud_relay_own_usage"))
                 .font(.caption2)
                 .foregroundColor(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+            HStack(spacing: 8) {
+                Button {
+                    openURL(CloudRelayLinks.deploy)
+                } label: {
+                    Label(localizationManager.localized("cloud_relay_one_click"), systemImage: "bolt.fill")
+                        .font(.caption)
+                        .fontWeight(.medium)
+                }
+                .buttonStyle(.borderedProminent)
+                .accessibilityIdentifier("collab.cloud_relay.one_click")
+                Button {
+                    showGuide = true
+                } label: {
+                    Label(localizationManager.localized("cloud_relay_guide"), systemImage: "questionmark.circle")
+                        .font(.caption)
+                }
+                .buttonStyle(.bordered)
+                .accessibilityIdentifier("collab.cloud_relay.guide")
+            }
             HStack {
                 TextField(CollaborationManager.publicRelayURL, text: $draft)
                     .textFieldStyle(.roundedBorder)
@@ -55,13 +86,6 @@ struct CloudRelaySettingView: View {
                 .font(.caption2)
                 .foregroundColor(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
-            Button {
-                showGuide = true
-            } label: {
-                Label(localizationManager.localized("cloud_relay_guide"), systemImage: "questionmark.circle")
-                    .font(.caption)
-            }
-            .accessibilityIdentifier("collab.cloud_relay.guide")
         }
         .onAppear { draft = collaborationManager.customCloudRelay }
         .sheet(isPresented: $showGuide) { CloudRelayGuideView() }
