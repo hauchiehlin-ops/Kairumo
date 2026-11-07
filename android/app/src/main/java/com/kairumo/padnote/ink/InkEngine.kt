@@ -1463,6 +1463,28 @@ class InkEngine(
             syntheticId -= 1uL
         }
         _strokes += unsaved
+        // 若寫入佇列中還有尚未落盤、也未在當前 _strokes 裡的筆畫（例如剛換頁或遠端協同剛注入佇列）：
+        val curPage = pageId
+        if (curPage != null) {
+            val pendingFromWriter = InkPackageWriter.pendingStrokes(curPage)
+            val currentCoreIds = _strokes.mapNotNull { it.coreStrokeId }.toHashSet()
+            for (p in pendingFromWriter) {
+                if (p.strokeId !in loadedIds && p.strokeId !in currentCoreIds && !InkPackageWriter.isErasePending(p.strokeId)) {
+                    _strokes += CompletedStroke(
+                        pointerId = syntheticId,
+                        coreStrokeId = p.strokeId,
+                        points = p.points,
+                        tool = p.tool,
+                        startedAtMs = System.currentTimeMillis(),
+                        colorRgba = p.colorRgba.copyOf(),
+                        baseWidth = p.baseWidth,
+                        layer = 0,
+                        lineType = 0
+                    )
+                    syntheticId -= 1uL
+                }
+            }
+        }
         hasLoaded = true
         syncPageStrokesCache()
         // 讀回來的筆畫不在「可收回時間窗」內 —— 它們是上次寫的，

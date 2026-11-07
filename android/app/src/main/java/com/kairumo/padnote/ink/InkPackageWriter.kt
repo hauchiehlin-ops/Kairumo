@@ -36,6 +36,7 @@ internal object InkPackageWriter {
 
     /** 排進佇列、還沒寫進套件的一筆（側欄縮圖先把它疊上去，見 [pendingStrokes]）。 */
     class PendingStroke(
+        val strokeId: String,
         val pageId: String,
         val tool: ToolKind,
         val colorRgba: ByteArray,
@@ -76,7 +77,7 @@ internal object InkPackageWriter {
         val color = colorRgba.copyOf()
         val snapshot = points.toList()
         pendingAdds += strokeId
-        pending[strokeId] = PendingStroke(pageId, tool, color, baseWidth, snapshot)
+        pending[strokeId] = PendingStroke(strokeId, pageId, tool, color, baseWidth, snapshot)
         pendingOrder += strokeId
         pendingVersion.intValue++
         enqueueMutation {

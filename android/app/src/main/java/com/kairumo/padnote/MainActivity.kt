@@ -568,6 +568,7 @@ private fun KairumoApp() {
     }
 
     val id = openedId
+    val scope = rememberCoroutineScope()
     if (id == null) {
         NotebookHome(
             folderId = folderId,
@@ -584,7 +585,18 @@ private fun KairumoApp() {
             onBack = { leaveNotebook(id) { openedId = null } },
             onOpenNotebook = { target ->
                 if (!target.equals(uniffi.padnote_core.recordingInboxNotebookId(), ignoreCase = true)) {
-                    leaveNotebook(id) { openNotebook(target) }
+                    scope.launch {
+                        val exists = withContext(Dispatchers.IO) {
+                            com.kairumo.padnote.sync.LanLink.findPackage(activity, target) != null
+                        }
+                        if (!exists) {
+                            withContext(Dispatchers.IO) {
+                                com.kairumo.padnote.library.NotebookLibrary.create(
+                                    activity, com.kairumo.padnote.L10n.t("collaborate"), deviceId(activity), id = target)
+                            }
+                        }
+                        leaveNotebook(id) { openNotebook(target) }
+                    }
                 }
             }
         )

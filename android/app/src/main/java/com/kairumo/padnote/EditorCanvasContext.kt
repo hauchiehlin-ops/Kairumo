@@ -2850,12 +2850,22 @@ internal fun rememberEditorCanvasContext(
     val pendingInvite = com.kairumo.padnote.collab.CollabInvites.pending
     androidx.compose.runtime.LaunchedEffect(pendingInvite) {
         val link = pendingInvite ?: return@LaunchedEffect
-        val target = uniffi.padnote_core.collabParseInviteV2(link).notebookId.trim()
-        val leave = guardedOnBack
-        if (target.isEmpty() || target.equals(notebookId, ignoreCase = true) || leave == null) {
+        val invite = uniffi.padnote_core.collabParseInviteV2(link)
+        val target = invite.notebookId.trim().ifEmpty { invite.roomId.trim() }
+        val current = notebookId?.trim().orEmpty()
+        val isTargetCurrent = target.isEmpty() || current.isEmpty() ||
+            target.equals(current, ignoreCase = true) ||
+            invite.roomId.trim().equals(current, ignoreCase = true)
+        if (isTargetCurrent) {
             showCollaboration = true
         } else {
-            leave()
+            // 切換至邀請指定的筆記本，避免殘留 pendingInvite 導致回首頁循環
+            if (onOpenNotebook != null) {
+                onOpenNotebook.invoke(target)
+            } else {
+                com.kairumo.padnote.collab.CollabInvites.pending = null
+                guardedOnBack?.invoke() ?: onBack?.invoke()
+            }
         }
     }
     // 房主結束了協同（`room_closed`）：這台不再記這本的雲端共享房間。
@@ -2912,8 +2922,7 @@ internal fun rememberEditorCanvasContext(
     }
     fun collabEngineFor(page: String): InkEngine? =
         if (pageDisplayMode == PageDisplayMode.CONTINUOUS) continuousCollab.engineFor(page)
-        // 與連續模式（`inkLoaded`）一致：還沒從套件讀完的引擎不交出去，別人的筆畫直接寫進核心。
-        else engine.takeIf { page == pageId && it.hasLoaded }
+        else engine.takeIf { page == pageId }
     fun publishCollab() {
         if (!collabActive || collab.isApplyingRemote) return
         val session = notebook?.first ?: return
@@ -2924,17 +2933,19 @@ internal fun rememberEditorCanvasContext(
             pageId?.let { collab.publishInk(it, engine) }
         }
     }
-    LaunchedEffect(collab, collabRoom) {
+    LaunchedEffect(collab, collabRoom, collaboration.peers.size) {
         val room = collabRoom ?: return@LaunchedEffect
-        if (room == collabBaseRoom) return@LaunchedEffect
         val session = notebook?.first ?: return@LaunchedEffect
-        // 進入（或換）房間：以目前的內容為大家共同的起點，再向房間裡的人要整份狀態（設計 §7）——
-        // 這台的檔案可能比房間裡的舊。房間裡只有自己就不必要。
-        collabCanvas()?.let { collab.reset(it, session) }
-        collabBaseRoom = room
+        if (room != collabBaseRoom) {
+            collabCanvas()?.let { collab.reset(it, session) }
+            collabBaseRoom = room
+        }
         if (collaboration.peers.isNotEmpty()) {
-            collab.requestState()
-            collabLastStateRequest = System.currentTimeMillis()
+            val now = System.currentTimeMillis()
+            if (now - collabLastStateRequest > 3_000) {
+                collab.requestState()
+                collabLastStateRequest = now
+            }
         }
     }
     // 雲端中繼：定期把整份狀態寄存在房間裡（房主不在線也能加入、離線的人回來補得到）。
@@ -2997,23 +3008,32 @@ internal fun rememberEditorCanvasContext(
     }
 
     fun applyCollabOp(op: CollaborationManager.RemoteOplog) {
-        if (!collabActive) return
+        if (!inRoom) return
         val session = notebook?.first ?: return
+        val room = collabRoom ?: return
+        if (collabBaseRoom != room) {
+            collabCanvas()?.let { collab.reset(it, session) }
+            collabBaseRoom = room
+        }
         // 先把本機還沒送出的修改送出去（送出排在下一格畫面）：否則別人的字套進來時，
         // 這台剛打、還沒進 CRDT 的字會被當成不存在而被蓋掉。
         publishCollab()
         val main = android.os.Handler(android.os.Looper.getMainLooper())
         val result = collab.apply(op, session, meta, { collabCanvas()!! }, ::collabEngineFor) { delay, work ->
-            main.postDelayed({ if (collabActive) work() }, delay)
+            main.postDelayed({ if (inRoom) work() }, delay)
         } ?: return
         if (result.pages) {
+            pageOrderRevisionState.intValue++
             // 留在原本那一頁（它的索引可能變了）；那一頁被刪了才退到最近的一頁。
             val stay = pageId
             pageCount = runCatching { session.pageCount().toInt() }.getOrDefault(pageCount)
             val moved = (0 until pageCount).firstOrNull {
                 runCatching { session.pageIdAt(it.toUInt()) }.getOrNull() == stay
             }
-            pageIndex = moved ?: pageIndex.coerceIn(0, maxOf(0, pageCount - 1)) // state-entry: 協同刪頁重算頁碼
+            val targetPage = moved ?: 0.coerceAtMost(maxOf(0, pageCount - 1))
+            if (pageIndex != targetPage) {
+                switchToPage(targetPage)
+            }
         }
         if (result.objects) {
             meta.refresh(session)
@@ -3046,7 +3066,7 @@ internal fun rememberEditorCanvasContext(
     }
     val latestStateSyncNeeded by rememberUpdatedState<() -> Unit> {
         val now = System.currentTimeMillis()
-        if (collabActive && now - collabLastStateRequest > 5_000) {
+        if (inRoom && now - collabLastStateRequest > 3_000) {
             collab.requestState()
             collabLastStateRequest = now
         }

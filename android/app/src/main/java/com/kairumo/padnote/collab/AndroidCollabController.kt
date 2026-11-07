@@ -59,6 +59,7 @@ class AndroidCollabController(private val manager: CollaborationManager) {
         textHub.reset()
         ink.reset()
         engineSeen.clear()
+        pendingInk.clear()
         pendingRequest = null
         storedSnap = null
         storedParts = HashSet()
@@ -201,13 +202,13 @@ class AndroidCollabController(private val manager: CollaborationManager) {
             "obj_patch" -> {
                 val list = payload.optJSONArray("patches") ?: return null
                 val patches = (0 until list.length()).mapNotNull { list.optJSONObject(it)?.let(ObjectPatch::fromJson) }
-                applyPatches(patches, LamportStamp(op.lamport.toLong(), op.userId), session, meta, canvas)
+                applyPatches(patches, LamportStamp(op.lamport.toLong(), op.userId), session, meta, canvas, engineFor)
             }
             "text_ops" -> if (applyTextOps(payload, canvas())) Applied(objects = true, pages = false, ink = false) else null
             "ink_add" -> {
                 val page = payload.optString("page").ifEmpty { return null }
                 val list = payload.optJSONArray("strokes") ?: return null
-                if (addStrokes(page, list, session, canvas().pageIds, engineFor)) Applied(false, false, true) else null
+                if (addStrokes(page, list, session, engineFor)) Applied(false, false, true) else null
             }
             "ink_remove" -> {
                 val page = payload.optString("page").ifEmpty { return null }
@@ -248,8 +249,33 @@ class AndroidCollabController(private val manager: CollaborationManager) {
         if (answered.size > 64) answered.remove(answered.first())
     }
 
+    private val pendingInk = HashMap<String, Pair<JSONArray, Set<String>>>()
+
+    private fun sessionPageIds(session: PadnoteSession): List<String> {
+        val count = runCatching { session.pageCount().toInt() }.getOrDefault(0)
+        return (0 until count).mapNotNull { runCatching { session.pageIdAt(it.toUInt()) }.getOrNull() }
+    }
+
+    private fun drainPendingInk(session: PadnoteSession, engineFor: (String) -> InkEngine?): Boolean {
+        if (pendingInk.isEmpty()) return false
+        val available = sessionPageIds(session).toSet()
+        val readyPages = pendingInk.keys.filter { it in available }
+        if (readyPages.isEmpty()) return false
+        var changed = false
+        for (page in readyPages) {
+            val pair = pendingInk.remove(page) ?: continue
+            if (pair.first.length() > 0 && addStrokes(page, pair.first, session, engineFor)) {
+                changed = true
+            }
+            if (pair.second.isNotEmpty() && removeStrokes(page, pair.second, session, engineFor)) {
+                changed = true
+            }
+        }
+        return changed
+    }
+
     private fun addStrokes(
-        page: String, list: JSONArray, session: PadnoteSession, pageIds: List<String>, engineFor: (String) -> InkEngine?
+        page: String, list: JSONArray, session: PadnoteSession, engineFor: (String) -> InkEngine?
     ): Boolean {
         val known = ink.known.getOrPut(page) { HashSet() }
         val now = System.currentTimeMillis()
@@ -259,7 +285,22 @@ class AndroidCollabController(private val manager: CollaborationManager) {
             val j = list.optJSONObject(i) ?: return@mapNotNull null
             CollabStroke.decode(j, now)?.let { (wire, s) -> Triple(wire, s, CollabStroke.coreId(j)) }
         }.filter { it.first !in known }
-        if (decoded.isEmpty() || page !in pageIds) return false
+        if (decoded.isEmpty()) return false
+
+        val currentSessionPages = sessionPageIds(session)
+        if (page !in currentSessionPages) {
+            // 頁面尚未補上：若在預期頁序中則先擱著，等頁面建立後立即寫入（與 Apple holdCollabInkIfPending 一致）
+            if (sync.desiredPageOrder().contains(page)) {
+                val existing = pendingInk[page]
+                val merged = JSONArray()
+                existing?.first?.let { for (k in 0 until it.length()) merged.put(it.get(k)) }
+                for (k in 0 until list.length()) merged.put(list.get(k))
+                pendingInk[page] = merged to (existing?.second ?: emptySet())
+                return true
+            }
+            return false
+        }
+
         val engine = engineFor(page)
         if (engine != null) {
             val added = engine.applyRemoteStrokes(decoded.map { it.second }, decoded.map { it.third })
@@ -284,6 +325,16 @@ class AndroidCollabController(private val manager: CollaborationManager) {
     }
 
     private fun removeStrokes(page: String, wires: Set<String>, session: PadnoteSession, engineFor: (String) -> InkEngine?): Boolean {
+        val currentSessionPages = sessionPageIds(session)
+        if (page !in currentSessionPages) {
+            if (sync.desiredPageOrder().contains(page)) {
+                val existing = pendingInk[page]
+                val mergedRemoved = (existing?.second ?: emptySet()) + wires
+                pendingInk[page] = (existing?.first ?: JSONArray()) to mergedRemoved
+                return true
+            }
+            return false
+        }
         val locals = wires.map { ink.localId(it) }.toSet()
         ink.known[page]?.removeAll(wires)
         ink.removed(page, wires)
@@ -295,7 +346,8 @@ class AndroidCollabController(private val manager: CollaborationManager) {
 
     private fun applyPatches(
         patches: List<ObjectPatch>, stamp: LamportStamp, session: PadnoteSession,
-        meta: NotebookMeta, canvas: () -> AndroidCollabCanvas
+        meta: NotebookMeta, canvas: () -> AndroidCollabCanvas,
+        engineFor: ((String) -> InkEngine?)? = null
     ): Applied? {
         if (patches.isEmpty()) return null
         var view = canvas()
@@ -303,6 +355,7 @@ class AndroidCollabController(private val manager: CollaborationManager) {
         var pagesChanged = false
         val anchored = mutableListOf<Pair<String, List<*>>>()
         sync.isApplyingRemote = true
+        var inkChanged = false
         try {
             for (patch in patches) {
                 val blob = patch.fields[BLOB_FIELD] as? String
@@ -316,12 +369,13 @@ class AndroidCollabController(private val manager: CollaborationManager) {
             }
             if (!changed) return null
             view = finishRemote(pagesChanged, session, meta, view, canvas)
+            if (engineFor != null && drainPendingInk(session, engineFor)) inkChanged = true
             for ((id, anchors) in anchored) resolveRunAnchors(id, anchors, view)
             sync.refreshShadow(view)
         } finally {
             sync.isApplyingRemote = false
         }
-        return Applied(objects = true, pages = pagesChanged, ink = false)
+        return Applied(objects = true, pages = pagesChanged, ink = inkChanged)
     }
 
     /** 寫回之後的收尾：頁面、擱著的物件、堆疊順序。回傳（頁面變了的話）新的視角。 */
@@ -634,11 +688,12 @@ class AndroidCollabController(private val manager: CollaborationManager) {
                 val pageInk = inkList.optJSONObject(i) ?: continue
                 val page = pageInk.optString("page")
                 if (page.isEmpty()) continue
-                pageInk.optJSONArray("strokes")?.let { if (addStrokes(page, it, session, view.pageIds, engineFor)) inkChanged = true }
+                pageInk.optJSONArray("strokes")?.let { if (addStrokes(page, it, session, engineFor)) inkChanged = true }
                 val removed = pageInk.optJSONArray("removed")
                 val wires = (0 until (removed?.length() ?: 0)).map { removed!!.optString(it) }.toSet()
                 if (wires.isNotEmpty() && removeStrokes(page, wires, session, engineFor)) inkChanged = true
             }
+            if (drainPendingInk(session, engineFor)) inkChanged = true
             sync.refreshShadow(view)
         } finally {
             sync.isApplyingRemote = false
@@ -661,6 +716,7 @@ class AndroidCollabController(private val manager: CollaborationManager) {
             val keep = localOnly - emptyPages.toSet()
             sync.forget(keep)
             needsPublish = keep.isNotEmpty()
+            if (drainPendingInk(session, engineFor)) inkChanged = true
         }
         return Applied(objects = true, pages = pagesChanged, ink = inkChanged, needsPublish = needsPublish)
     }
