@@ -651,7 +651,10 @@ class AndroidCollabController(private val manager: CollaborationManager) {
             // **空白頁例外**：掃碼加入時本機沒有這本，會先建一本只有一頁空白頁的筆記（頁面 id 是本機算的，
             // 與房主的不同）。以前它也被當成「只有自己有」補給房間 —— 每個人那邊都多出一頁空白頁。
             // 沒有任何筆畫與物件的頁：本機刪掉、不送出。有內容的照舊補給房間。
-            val localOnly = sync.liveKeys.filter { it !in keys && !it.startsWith("meta:") }
+            // 「房間裡有的」以兩份整份狀態的聯集判斷：寄存的那一份可能比較舊，只拿它比，房主之後才加的
+            // 物件與空白頁會被當成「只有自己有」—— 物件以舊值再送一次、空白頁被刪掉。與 Apple 相同。
+            val roomKeys = storedKeys + snapshotKeys
+            val localOnly = sync.liveKeys.filter { it !in roomKeys && !it.startsWith("meta:") }
             val emptyPages = localOnly.filter { it.startsWith("page:") && isEmptyPage(it.removePrefix("page:"), session) }
             for (key in emptyPages) sync.shadow[key] = mutableMapOf(ObjectPatch.DELETED to true)
             if (emptyPages.isNotEmpty() && reconcilePages(session, meta)) pagesChanged = true

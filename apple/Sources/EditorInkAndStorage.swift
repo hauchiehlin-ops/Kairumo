@@ -267,7 +267,8 @@ extension NotebookEditorView {
         for item in anchored { resolveRunAnchors(id: item.id, anchors: item.anchors, in: &withDeferred) }
         notebook = withDeferred
         // 寫回後的編碼要成為新的同步基準，否則下一次本機修改會把這些欄位當成「我改的」再送一次。
-        collabSync.refreshShadow(from: notebook)
+        // 還沒補上的頁不算被刪（頁面結構調整是非同步的）。
+        collabSync.refreshShadow(from: notebook, keepMissingPages: true)
         commitNotebook()
         collabSync.isApplyingRemote = false
         PageThumbnailRenderer.invalidateAll()
@@ -320,14 +321,28 @@ extension NotebookEditorView {
     }
 
     /// 依合併後的頁序調整本機的頁面：補上缺的、刪掉被刪的、搬到對的位置（設計 §8.4）。
+    ///
+    /// **非同步**（`changePageStructure` 先等背景的筆跡寫入落盤）。所以：
+    /// - 頁序在**真正調整時**才算 —— 以前在排定時就算好，兩段整份狀態各排一次，後一次拿的是過時的頁序，
+    ///   把前一次剛補上的頁又刪掉；
+    /// - 調整期間本機的修改先不送（`CollabObjectSync.pageReconcilePending`）：筆記本裡暫時沒有那幾頁，
+    ///   送出的話等於宣告「那幾頁被刪了」，房主的頁會被刪到只剩一頁；
+    /// - 補上頁之後，等著那幾頁的物件與筆畫才寫進去。
     func reconcilePagesWithCollab() {
-        let desired = collabSync.desiredPageOrder()
-        guard !desired.isEmpty else { return }
+        guard !collabSync.desiredPageOrder().isEmpty else { return }
         func reload() {
             if let updated = store.notebooks.first(where: { $0.id == notebook.id }) { notebook = updated }
         }
+        let sync = collabSync
+        sync.pageReconcilePending += 1
+        sync.pageReconcileSince = Date()
         // 與本機的頁面操作同一條路：等背景寫入落盤、頁碼暫存照頁面 id 重新對齊、畫布重載。
         changePageStructure {
+            defer { finishCollabPageReconcile(sync) }
+            // 換了房間（`reset`）：這次調整已經不屬於現在的合併狀態。
+            guard sync === collabSync else { return nil }
+            let desired = collabSync.desiredPageOrder()
+            guard !desired.isEmpty else { return nil }
             var current = notebook.pageIds ?? []
             let wanted = Set(desired)
             let focusedId = currentPageIndex < current.count ? current[currentPageIndex] : nil
@@ -350,9 +365,48 @@ extension NotebookEditorView {
                 reload()
                 current = notebook.pageIds ?? []
             }
+            settleCollabPagesAdded()
             // 停在同一頁的內容上（照頁面 id 找）；那一頁被刪掉了才退回刪除後的頁碼。
             return focusedId.flatMap { current.firstIndex(of: $0) } ?? landing
         }
+    }
+
+    /// 頁面補上之後：等著那幾頁的物件寫回、擱著的筆畫寫進那幾頁的「別台筆畫」檔（畫面上的圖層隨後由
+    /// `changePageStructure` 從磁碟重讀）。都是別人的內容，不送出。
+    private func settleCollabPagesAdded() {
+        ensureCollabPageIds()
+        collabSync.isApplyingRemote = true
+        var doc = notebook
+        collabSync.retryDeferred(into: &doc)
+        let stacking = collabSync.desiredStacking()
+        CollabCanonical.writeStacking(orders: stacking.orders, under: stacking.under, locked: stacking.locked, into: &doc)
+        notebook = doc
+        collabSync.refreshShadow(from: notebook, keepMissingPages: true)
+        store.updateNotebook(notebook)
+        collabSync.isApplyingRemote = false
+        let ids = notebook.pageIds ?? []
+        for (page, ink) in collabSync.pendingInk {
+            guard let index = ids.firstIndex(of: page) else { continue }
+            collabSync.pendingInk.removeValue(forKey: page)
+            // 直接寫檔，不經畫面上的圖層：此刻圖層的頁碼還是調整前的（稍後統一重讀）。
+            ProInkCollab.applyRemoteOnDisk(directory: store.drawingsDirectory, notebookId: notebook.id, page: index,
+                                           added: ink.added, removedIds: ink.removed)
+        }
+        PageThumbnailRenderer.invalidateAll()
+    }
+
+    /// 一次頁面結構調整做完（或放棄）。全部做完時，調整期間擱著的本機修改送出去。
+    private func finishCollabPageReconcile(_ sync: CollabObjectSync) {
+        sync.pageReconcilePending = max(0, sync.pageReconcilePending - 1)
+        guard sync === collabSync, sync.pageReconcilePending == 0, sync.publishAfterReconcile else { return }
+        sync.publishAfterReconcile = false
+        DispatchQueue.main.async { publishCollabChanges() }
+    }
+
+    /// 別人的筆畫落在這台還沒有的頁：那一頁在合併結果裡（等著補上）就先擱著，否則丟掉。
+    func holdCollabInkIfPending(page: String, added: [ProStroke], removed: Set<String>) {
+        guard !added.isEmpty || !removed.isEmpty, collabSync.desiredPageOrder().contains(page) else { return }
+        collabSync.holdInk(page: page, added: added, removed: removed)
     }
 
     /// 套用別人在同一個文字方塊打的字（設計 §8.3）。
@@ -568,7 +622,7 @@ extension NotebookEditorView {
             }
         }
         notebook = withDeferred
-        collabSync.refreshShadow(from: notebook)
+        collabSync.refreshShadow(from: notebook, keepMissingPages: true)
         commitNotebook()
         collabSync.isApplyingRemote = false
         for pageInk in (payload["ink"] as? [[String: Any]]) ?? [] {
@@ -577,22 +631,27 @@ extension NotebookEditorView {
             let pageIdx = notebook.pageIds?.firstIndex(of: page)
             let strokes = ((pageInk["strokes"] as? [[String: Any]]) ?? []).compactMap(CollabStroke.decodePro)
             let removed = (pageInk["removed"] as? [String]) ?? []
-            if let pageIdx, !strokes.isEmpty || !removed.isEmpty {
+            guard let pageIdx else {
+                // 這一頁還在等頁面結構調整補上：筆畫先擱著（以前直接丟掉，第 2、3 頁一片空白）。
+                holdCollabInkIfPending(page: page, added: strokes, removed: Set(removed.map { $0.lowercased() }))
+                continue
+            }
+            if !strokes.isEmpty || !removed.isEmpty {
                 ProInkCollab.applyRemote(directory: store.drawingsDirectory, notebookId: notebook.id, page: pageIdx,
                                          added: strokes, removedIds: Set(removed.map { $0.lowercased() }))
             }
             if !removed.isEmpty { applyRemoteInkRemove(pageId: page, wires: removed) }
         }
         PageThumbnailRenderer.invalidateAll()
-        let snapshotKeys: Set<String>
         if stored {
             guard collabStateSync.storedParts.count >= parts else { return }
-            snapshotKeys = collabStateSync.storedKeys
         } else {
             guard collabStateSync.receivedParts.count >= parts else { return }
             collabStateSync.finish()
-            snapshotKeys = collabStateSync.snapshotKeys
         }
+        // 「房間裡有的」以兩份整份狀態的聯集判斷：寄存的那一份可能比較舊，只拿它比，
+        // 房主之後才加的物件與空白頁會被當成「只有自己有」—— 物件以舊值再送一次、空白頁被刪掉。
+        let snapshotKeys = collabStateSync.storedKeys.union(collabStateSync.snapshotKeys)
         // 只有自己有的物件（例如離線時新增的）：忘掉它們，下一次送出就會當成新的補給房間。
         //
         // **空白頁例外**：掃碼加入時本機沒有這本，會先建一本只有一頁空白頁的筆記（頁面 id 是本機算的，
@@ -636,10 +695,13 @@ extension NotebookEditorView {
             // 與自己的筆畫同一套算繪。以前放進 PencilKit 圖層，同一筆在這台看起來又細又淡、
             // 與送出那台不一樣。
             guard let pageId = event.payload["page"] as? String,
-                  let list = event.payload["strokes"] as? [[String: Any]],
-                  let pageIdx = notebook.pageIds?.firstIndex(of: pageId) else { return }
+                  let list = event.payload["strokes"] as? [[String: Any]] else { return }
             let strokes = list.compactMap(CollabStroke.decodePro)
             guard !strokes.isEmpty else { return }
+            guard let pageIdx = notebook.pageIds?.firstIndex(of: pageId) else {
+                holdCollabInkIfPending(page: pageId, added: strokes, removed: [])
+                return
+            }
             ProInkCollab.applyRemote(directory: store.drawingsDirectory, notebookId: notebook.id, page: pageIdx,
                                      added: strokes, removedIds: [])
 
@@ -823,6 +885,15 @@ extension NotebookEditorView {
     /// 紙張、復原…不會再有「這一種忘了廣播」。一次寫回的所有變動放在同一個操作裡，對方一次套用。
     func publishCollabChanges() {
         guard isCollaborating, !collabSync.isApplyingRemote else { return }
+        // 頁面結構調整中：筆記本暫時少了等著補上的頁，這時比對會送出「那幾頁被刪了」。調整完再送。
+        // 調整卡住（例如筆記被關掉）超過幾秒就不再等，免得之後的修改永遠送不出去。
+        if collabSync.pageReconcilePending > 0 {
+            if Date().timeIntervalSince(collabSync.pageReconcileSince) < CollabObjectSync.reconcileWaitLimit {
+                collabSync.publishAfterReconcile = true
+                return
+            }
+            collabSync.pageReconcilePending = 0
+        }
         ensureCollabPageIds()
         let me = collaborationManager.currentUserId
         let lamport = collaborationManager.nextLamport()

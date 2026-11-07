@@ -49,10 +49,10 @@ targets:
         PRODUCT_NAME: Kairumo
         PRODUCT_BUNDLE_IDENTIFIER: com.kairumo.padnote
         DEVELOPMENT_TEAM: 6UJ8GS752W
-        MARKETING_VERSION: "6.5.3"
-        CURRENT_PROJECT_VERSION: "171"
-        INFOPLIST_KEY_CFBundleShortVersionString: "6.5.3"
-        INFOPLIST_KEY_CFBundleVersion: "171"
+        MARKETING_VERSION: "6.5.4"
+        CURRENT_PROJECT_VERSION: "172"
+        INFOPLIST_KEY_CFBundleShortVersionString: "6.5.4"
+        INFOPLIST_KEY_CFBundleVersion: "172"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         INFOPLIST_KEY_CFBundleIconName: AppIcon
         SUPPORTS_MACCATALYST: YES

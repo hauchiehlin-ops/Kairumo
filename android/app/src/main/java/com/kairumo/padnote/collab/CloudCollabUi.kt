@@ -103,4 +103,8 @@ fun CloudShareSection(
         }
     }
     error?.let { Text(it, style = MaterialTheme.typography.labelSmall, color = Color(0xFFFF9500)) }
+
+    // 使用自己的中繼：放在這張卡片上（以前藏在「協同伺服器位址」的編輯區裡，使用者找不到）。
+    HorizontalDivider()
+    CloudRelaySetting(::l)
 }

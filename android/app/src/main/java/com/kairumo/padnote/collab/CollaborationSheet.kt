@@ -248,7 +248,11 @@ fun CollaborationSheet(
                         else -> {
                             HorizontalDivider()
                             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                Button(onClick = { manager.createRoom() }) { Text(l("start_collaboration")) }
+                                // 「Wi‑Fi / Tailscale」：房間開在這台內建的本機中繼上。只有存了自架的 wss:// 中繼時
+                                // 才連到那台，按鈕也照舊叫「開始多人協同」。與 Apple 相同。
+                                Button(onClick = { manager.createRoom(manager.localRoomServer) }) {
+                                    Text(l(if (manager.savedCustomRemoteRelay) "start_collaboration" else "collab_start_local"))
+                                }
                             }
                             if (invited != null) {
                                 Text(
@@ -303,9 +307,6 @@ fun CollaborationSheet(
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                        HorizontalDivider()
-                        // 雲端共享（跨網路）用的中繼：可改成自己部署的（旁邊附零基礎步驟）。
-                        CloudRelaySetting(::l)
                     } else {
                         Row(
                             Modifier.fillMaxWidth(),

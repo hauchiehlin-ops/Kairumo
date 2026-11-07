@@ -1163,13 +1163,25 @@ enum ProInkCollab {
     @MainActor
     static func applyRemote(directory: URL, notebookId: String, page: Int,
                             added: [ProStroke], removedIds: Set<String>) {
-        if let view = liveLayers.allObjects.first(where: {
+        let matching = liveLayers.allObjects.filter {
             $0.notebookId.caseInsensitiveCompare(notebookId) == .orderedSame && $0.pageIndex == page
                 && $0.directory == directory
-        }) {
+        }
+        // 同一頁可能同時有好幾個圖層（單頁畫布＋連續模式快取著的畫布）。以前交給「第一個」——
+        // 若那是畫面外的那一個，筆畫只進了檔案（縮圖看得到），畫面上的畫布卻沒有。
+        // 交給畫面上的那一個，其餘的從磁碟重讀。
+        if let view = matching.first(where: { $0.window != nil }) ?? matching.first {
             view.applyRemote(added: added, removedIds: removedIds)
+            for other in matching where other !== view { other.reload() }
             return
         }
+        applyRemoteOnDisk(directory: directory, notebookId: notebookId, page: page, added: added, removedIds: removedIds)
+    }
+
+    /// 直接改那一頁的「別台筆畫」檔（不經畫面上的圖層）。頁面結構調整中用：那時圖層的頁碼還是調整前的。
+    @MainActor
+    static func applyRemoteOnDisk(directory: URL, notebookId: String, page: Int,
+                                  added: [ProStroke], removedIds: Set<String>) {
         var foreign = ProInkStore.load(in: directory, notebookId: notebookId, page: page, foreign: true)
         let own = ProInkStore.load(in: directory, notebookId: notebookId, page: page)
         let blocked = ProInkCollab.blockedIds(directory: directory, notebookId: notebookId, page: page)

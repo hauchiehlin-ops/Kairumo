@@ -231,6 +231,10 @@ public class CollaborationManager: ObservableObject {
 
     private var webSocketTask: CollabRelaySocket?
     private var pingTimer: Timer?
+    /// 送出加入之後等「已加入」的計時。區網位址在別的網路上（例如手機用行動網路掃了「同一 Wi-Fi」的
+    /// QR Code）時，連線可能一直停在建立中、既不成功也不失敗 —— 畫面就永遠是「連線中…」。
+    private var joinTimer: Timer?
+    private static let joinTimeout: TimeInterval = 12
     private var lastPresenceSentTime: TimeInterval = 0
     private let presenceThrottleInterval: TimeInterval =
         Double(collabTuning().presenceThrottleMs) / 1000.0
@@ -413,6 +417,20 @@ public class CollaborationManager: ObservableObject {
         roomNotebookId = notebookId?.lowercased()
     }
 
+    /// 「Wi‑Fi / Tailscale」開房用的中繼：這台裝置內建的本機中繼。
+    ///
+    /// 使用者存的位址是 `wss://`（刻意設定的自架遠端中繼）才沿用它；其餘一律用本機中繼。
+    /// 以前直接用存的位址 —— 舊版加入別人的房間時會把對方的區網位址存成這台的預設，
+    /// 之後自己按「開啟多人協同」就連到別人那台（對方沒開房時：Connection refused，一直重連）。
+    public var localRoomServer: String? {
+        Self.usesCustomRemoteRelay(serverAddress) ? nil : collabTuning().defaultServer
+    }
+
+    /// 存的位址是不是自架的遠端中繼（`wss://`）。是的話開房按鈕照舊叫「開啟多人協同」、連到那台。
+    static func usesCustomRemoteRelay(_ address: String) -> Bool {
+        address.trimmingCharacters(in: .whitespacesAndNewlines).lowercased().hasPrefix("wss://")
+    }
+
     /// 以既有的房號與金鑰當房主開房（雲端共享的房間：重開 App 之後沿用同一間，之前發出去的邀請照樣有效）。
     public func hostRoom(roomId: String, keyBase64: String, notebookId: String, server: String) {
         setRoomKey(base64: keyBase64)
@@ -557,6 +575,7 @@ public class CollaborationManager: ObservableObject {
 
         startListening()
         startPingTimer()
+        startJoinTimer()
 
         // 發送 Join 申請（附帶裝置型號後綴，即使登錄同一個 Google 帳號也能清晰辨識）
         #if os(macOS) || targetEnvironment(macCatalyst)
@@ -660,6 +679,8 @@ public class CollaborationManager: ObservableObject {
 
         pingTimer?.invalidate()
         pingTimer = nil
+        joinTimer?.invalidate()
+        joinTimer = nil
         webSocketTask?.close()
         webSocketTask = nil
 
@@ -700,7 +721,7 @@ public class CollaborationManager: ObservableObject {
         guard !userInitiatedDisconnect, !currentRoomId.isEmpty else { return }
         if reconnectAttempt >= maxReconnectAttempts {
             print("❌ 已達到最大重連次數 (\(maxReconnectAttempts))")
-            self.lastErrorMessage = L10n.f("collab_err_unreachable", serverAddress)
+            self.lastErrorMessage = L10n.f("collab_err_unreachable", activeServerAddress)
             self.status = .disconnected
             return
         }
@@ -714,6 +735,27 @@ public class CollaborationManager: ObservableObject {
             Task { @MainActor [weak self] in
                 guard let self = self, !self.userInitiatedDisconnect, !self.currentRoomId.isEmpty else { return }
                 self.connect(roomId: self.currentRoomId, asHost: self.isHost, isReconnecting: true)
+            }
+        }
+    }
+
+    /// 等不到「已加入」：當成連不上（關掉這條、照一般的重連規則重試，次數用完就顯示錯誤）。
+    private func startJoinTimer() {
+        joinTimer?.invalidate()
+        let socket = webSocketTask
+        joinTimer = Timer.scheduledTimer(withTimeInterval: Self.joinTimeout, repeats: false) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                guard let self, let socket, socket === self.webSocketTask else { return }
+                if case .connected = self.status { return }
+                print("⚠️ [Collab] 等不到中繼回應，視為連不上：\(self.activeServerAddress)")
+                socket.close()
+                self.webSocketTask = nil
+                self.lastErrorMessage = L10n.f("collab_err_unreachable", self.activeServerAddress)
+                if self.userInitiatedDisconnect {
+                    self.status = .disconnected
+                } else {
+                    self.scheduleReconnect()
+                }
             }
         }
     }
@@ -1001,6 +1043,8 @@ public class CollaborationManager: ObservableObject {
 
         switch type {
         case "joined":
+            joinTimer?.invalidate()
+            joinTimer = nil
             if let rid = json["room_id"] as? String {
                 self.status = .connected(roomId: rid)
                 // 連上了就沒有問題可報 —— 最常見的「監聽失敗」其實是埠被

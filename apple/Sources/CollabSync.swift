@@ -127,6 +127,30 @@ final class CollabObjectSync {
     private(set) var deferredKeys: Set<String> = []
     /// 正在套用別人的修改：這段期間的寫回不送出（否則會把對方的修改當成自己的再廣播一次）。
     var isApplyingRemote = false
+
+    // MARK: 頁面結構調整中（設計 §8.4）
+    //
+    // 別人新增的頁要等編輯器的頁面結構調整（`reconcilePagesWithCollab`，**非同步**：先等背景的筆跡寫入落盤）
+    // 才真的出現在筆記本裡。在那之前：
+    // - 筆記本裡沒有那幾頁 —— 不能據此推論「頁面被刪了」（送出的話房主的頁會被刪光，只剩一頁）；
+    // - 那幾頁的筆畫找不到頁碼 —— 不能丟掉（以前就是這樣，加入者的第 2、3 頁一片空白），先擱著。
+
+    /// 已排定、還沒做完的頁面結構調整數。大於 0 時本機的修改先不送出（見 `publishAfterReconcile`）。
+    var pageReconcilePending = 0
+    /// 最近一次排定調整的時間。調整等太久（`reconcileWaitLimit`）就不再擋送出。
+    var pageReconcileSince = Date.distantPast
+    static let reconcileWaitLimit: TimeInterval = 5
+    /// 調整期間有本機修改要送：調整做完再送（那時筆記本的頁面才與合併結果一致）。
+    var publishAfterReconcile = false
+    /// 頁面還沒出現的筆畫（頁面 id → 加入的筆畫、擦掉的套件 id）。頁面補上之後寫進那一頁。
+    var pendingInk: [String: (added: [ProStroke], removed: Set<String>)] = [:]
+
+    func holdInk(page: String, added: [ProStroke], removed: Set<String>) {
+        var entry = pendingInk[page] ?? ([], [])
+        entry.added += added
+        entry.removed.formUnion(removed)
+        pendingInk[page] = entry
+    }
     /// 本機的編碼器**產生過**的欄位（依型別）。
     ///
     /// 欄位不見了有兩種意思：使用者清掉了（例如拿掉邊框色），或那是**另一個平台才有**的欄位
@@ -163,6 +187,9 @@ final class CollabObjectSync {
 
     func reset(to doc: NotebookDocument) {
         droppedKeys = []
+        pageReconcilePending = 0
+        publishAfterReconcile = false
+        pendingInk = [:]
         shadow = [:]
         stamps = [:]
         deferredKeys = []
@@ -417,7 +444,11 @@ final class CollabObjectSync {
     ///
     /// 解碼再編碼不保證與收到的欄位逐字相同（例如省略的預設值）；不更新的話，
     /// 下一次本機修改會把這些欄位當成「我改的」，以較新的時戳再送一次，蓋掉別人的值。
-    func refreshShadow(from doc: NotebookDocument) {
+    ///
+    /// `keepMissingPages`：套用別人的修改之後呼叫時為 `true` —— 筆記本裡還沒有的頁是**等著補上**的
+    /// （頁面結構調整是非同步的），不是被刪掉。以前這裡把它們標成已刪除，之後的調整就不補那幾頁，
+    /// 第二次調整（整份狀態的另一段）甚至把已經補上的又刪掉 —— 加入者只剩第一頁。
+    func refreshShadow(from doc: NotebookDocument, keepMissingPages: Bool = false) {
         let current = CollabCanonical.maps(of: doc, pagePositions: pagePositions, zPositions: zPositions)
         for (key, entry) in current {
             var dict = shadow[key] ?? [:]
@@ -431,6 +462,7 @@ final class CollabObjectSync {
         }
         for (key, known) in shadow where current[key] == nil && (known[ObjectPatch.deletedField] as? Bool) == false {
             if key.hasPrefix("meta:") || deferredKeys.contains(key) { continue }
+            if keepMissingPages, key.hasPrefix("page:") { continue }
             if !Self.knownTypes.contains(String(key.prefix { $0 != ":" })) { continue }
             var dict = known
             dict[ObjectPatch.deletedField] = true

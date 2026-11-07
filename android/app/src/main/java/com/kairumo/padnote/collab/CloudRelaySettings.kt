@@ -28,8 +28,8 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 
 /**
- * 協同面板裡的「雲端共享中繼」設定：可改用自己部署的中繼，旁邊附零基礎的取得步驟
- * （Cloudflare 一鍵部署，全程在瀏覽器裡）。與 Apple `CloudRelaySettings.swift` 相同。
+ * 協同面板「雲端共享（跨網路）」卡片底部的「使用自己的中繼」：使用說明、一鍵申請按鈕（Cloudflare 一鍵部署，
+ * 全程在瀏覽器裡）、網址欄位與零基礎的詳細步驟。與 Apple `CloudRelaySettings.swift` 相同。
  */
 object CloudRelayLinks {
     /** Cloudflare「一鍵部署」：把專案裡的 `deploy/relay-cloudflare` 複製到使用者自己的帳號並部署。 */
@@ -59,7 +59,23 @@ fun CloudRelaySetting(l: (String) -> String) {
         message = l("cloud_relay_saved"); isError = false
     }
 
+    fun open(url: String) {
+        runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+    }
+
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Text(l("cloud_relay_own_title"), style = MaterialTheme.typography.labelMedium)
+        // 使用說明：為什麼要、怎麼做（三步），看不懂再開詳細步驟。
+        Text(l("cloud_relay_own_usage"), style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(onClick = { open(CloudRelayLinks.DEPLOY) }, modifier = Modifier.testTag("collab.cloud_relay.one_click")) {
+                Text(l("cloud_relay_one_click"))
+            }
+            OutlinedButton(onClick = { showGuide = true }, modifier = Modifier.testTag("collab.cloud_relay.guide")) {
+                Text(l("cloud_relay_guide"))
+            }
+        }
         OutlinedTextField(
             value = draft,
             onValueChange = { draft = it },
@@ -76,9 +92,6 @@ fun CloudRelaySetting(l: (String) -> String) {
             Text(it, style = MaterialTheme.typography.labelSmall, color = if (isError) Color(0xFFFF9500) else Color(0xFF34C759))
         }
         Text(l("cloud_relay_hint"), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        TextButton(onClick = { showGuide = true }, modifier = Modifier.testTag("collab.cloud_relay.guide")) {
-            Text(l("cloud_relay_guide"))
-        }
     }
 
     if (showGuide) CloudRelayGuideDialog(l) { showGuide = false }
