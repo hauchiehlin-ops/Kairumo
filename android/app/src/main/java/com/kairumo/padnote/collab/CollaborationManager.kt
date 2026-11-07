@@ -969,7 +969,10 @@ class CollaborationManager(private val context: Context) {
                 send(JSONObject().put("type", "catchup").put("room_id", roomId)
                     .put("last_lamport", 0).put("last_seq", lastSeq))
             }
-            "peer_joined" -> json.optJSONObject("peer")?.let { addPeer(it) }
+            "peer_joined" -> {
+                json.optJSONObject("peer")?.let { addPeer(it) }
+                if (lastSeq == 0L) onStateSyncNeeded?.invoke()
+            }
             "peer_presence" -> {
                 val uid = json.optString("user_id")
                 val cursor = json.optJSONObject("cursor") ?: return
