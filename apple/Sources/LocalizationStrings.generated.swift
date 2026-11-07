@@ -4999,6 +4999,14 @@ extension LocalizationManager {
             .ko: "연결 테스트",
             .th: "ทดสอบการเชื่อมต่อ"
         ],
+        "collab_page_editing_wait_notice": [
+            .zhHant: "目前由%@正在進行編輯中，請稍後再進行編輯",
+            .en: "%@ is currently editing. Please wait until they finish before editing.",
+            .zhHans: "目前由%@正在进行编辑中，请稍后再进行编辑",
+            .ja: "現在%@が編集しています。終了するまでしばらくお待ちください。",
+            .ko: "현재 %@ 님이 편집 중입니다. 편집이 끝날 때까지 잠시 기다려 주세요.",
+            .th: "ขณะนี้%@กำลังแก้ไขอยู่ โปรดรอสักครู่แล้วจึงค่อยแก้ไข"
+        ],
         "collab_peer_outdated": [
             .zhHant: "有協作者使用較舊版本的 Kairumo，請對方更新，修改才能雙向同步",
             .en: "A collaborator is using an older version of Kairumo — ask them to update so changes sync both ways",
@@ -5094,6 +5102,22 @@ extension LocalizationManager {
             .ja: "QR コードで参加",
             .ko: "QR 코드로 참여",
             .th: "สแกนเพื่อเข้าร่วม"
+        ],
+        "collab_role_host": [
+            .zhHant: "房主",
+            .en: "Host",
+            .zhHans: "房主",
+            .ja: "ホスト",
+            .ko: "호스트",
+            .th: "โฮสต์"
+        ],
+        "collab_role_peer": [
+            .zhHant: "協作者",
+            .en: "Collaborator",
+            .zhHans: "协作者",
+            .ja: "共同編集者",
+            .ko: "공동 작업자",
+            .th: "ผู้ร่วมแก้ไข"
         ],
         "collab_snapshot": [
             .zhHant: "協同快照",

@@ -39,6 +39,7 @@ final class LiveInkSender {
 
     private var strokeId: String?
     private var pageId: String?
+    private var erasingPageId: String?
     private var rgbaHex = "#000000FF"
     private var width: Double = 3
     private var pending: [Double] = []
@@ -48,6 +49,10 @@ final class LiveInkSender {
     /// 進入協同時由編輯器呼叫；`pageIdFor` 每次都取最新的頁面清單。
     func install(pageIdFor: @escaping (_ notebookId: String, _ page: Int) -> String?) {
         self.pageIdFor = pageIdFor
+        ProInkCollab.canBeginEdit = { notebookId, page in
+            guard let pid = LiveInkSender.shared.pageIdFor(notebookId, page) else { return true }
+            return CollaborationManager.shared.tryBeginLocalPageEdit(pageId: pid) == nil
+        }
         ProInkCollab.liveHandler = { notebookId, page, phase, stroke, points in
             LiveInkSender.shared.handle(notebookId: notebookId, page: page, phase: phase,
                                         stroke: stroke, points: points)
@@ -56,18 +61,27 @@ final class LiveInkSender {
 
     func uninstall() {
         ProInkCollab.liveHandler = nil
+        ProInkCollab.canBeginEdit = nil
         pageIdFor = { _, _ in nil }
         strokeId = nil
+        erasingPageId = nil
     }
 
     private func handle(notebookId: String, page: Int, phase: Int, stroke: ProStroke?, points: [ProPoint]) {
         switch phase {
         case 0:
-            guard let stroke, CollaborationManager.shared.isLiveInkReady,
-                  let pid = pageIdFor(notebookId, page) else {
+            guard let pid = pageIdFor(notebookId, page) else {
                 strokeId = nil
+                erasingPageId = nil
                 return
             }
+            _ = CollaborationManager.shared.tryBeginLocalPageEdit(pageId: pid)
+            guard let stroke, CollaborationManager.shared.isLiveInkReady else {
+                strokeId = nil
+                erasingPageId = (stroke == nil) ? pid : nil
+                return
+            }
+            erasingPageId = nil
             strokeId = UUID().uuidString
             pageId = pid
             rgbaHex = "#" + stroke.colorRGBA.prefix(4).map { String(format: "%02X", $0) }.joined()
@@ -77,10 +91,17 @@ final class LiveInkSender {
             lastSentAt = 0
             append(points)
         case 1:
+            if let pid = pageId ?? erasingPageId {
+                CollaborationManager.shared.renewLocalPageEdit(pageId: pid)
+            }
             guard strokeId != nil else { return }
             append(points)
             if CACurrentMediaTime() - lastSentAt >= CollaborationManager.liveInkInterval { flush(end: false) }
         default:
+            if let pid = pageId ?? erasingPageId {
+                CollaborationManager.shared.endLocalPageEdit(pageId: pid, immediate: false)
+            }
+            erasingPageId = nil
             guard strokeId != nil else { return }
             flush(end: true)
             strokeId = nil

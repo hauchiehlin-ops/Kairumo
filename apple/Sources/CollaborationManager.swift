@@ -80,9 +80,47 @@ public struct RemoteOplogEvent {
 
     public init(userId: String, kind: String, payload: [String: Any], lamport: UInt64 = 0) {
         self.userId = userId
+        self.userName = ""
         self.kind = kind
         self.payload = payload
         self.lamport = lamport
+    }
+
+    public let userName: String
+}
+
+/// 跨頁即時協同編輯租約（「以第一個下筆為主」仲裁與全員自動跟隨跳頁）
+public struct PageEditLease: Equatable {
+    public let userId: String
+    public var userName: String
+    public var isHost: Bool
+    public var pageId: String
+    /// 該輪編輯開始時的 Lamport 時鐘（越小代表越早下筆；平手時以 userId 字典序較小者優先）
+    public let startedLamport: UInt64
+    public var updatedAt: Date
+
+    public init(
+        userId: String,
+        userName: String,
+        isHost: Bool,
+        pageId: String,
+        startedLamport: UInt64,
+        updatedAt: Date = Date()
+    ) {
+        self.userId = userId
+        self.userName = userName
+        self.isHost = isHost
+        self.pageId = NotebookPackageBridge.stableBlockId(pageId)
+        self.startedLamport = startedLamport
+        self.updatedAt = updatedAt
+    }
+
+    /// 優先順序比較：先比較 startedLamport（越小越早下筆），平手時以 userId 字典序決勝。
+    public func hasPriority(over other: PageEditLease) -> Bool {
+        if startedLamport != other.startedLamport {
+            return startedLamport < other.startedLamport
+        }
+        return userId < other.userId
     }
 }
 
@@ -95,6 +133,14 @@ public class CollaborationManager: ObservableObject {
     public let oplogReceived = PassthroughSubject<RemoteOplogEvent, Never>()
     /// 兩人同時選取同一個物件、而對方勝出：本機要放手（設計 §5.3）。值是物件 id 與對方名字。
     public let leaseLost = PassthroughSubject<(id: String, holder: String), Never>()
+    /// 遠端協作者或房主在某頁開始／進行編輯時，通知全員畫布同步跳轉至該頁面。
+    public let pageJumpRequested = PassthroughSubject<(pageId: String, forceScroll: Bool), Never>()
+    /// 本機嘗試在不同頁進行編輯，但已有另一位協作者／房主先下筆持有編輯權：通知畫布顯示等待提示。
+    public let pageEditBlocked = PassthroughSubject<PageEditLease, Never>()
+    /// 兩人幾乎同時在不同頁下筆、對方時鐘較早而勝出：通知本機取消進行中的筆畫／打字並顯示等待提示。
+    public let pageEditPreempted = PassthroughSubject<PageEditLease, Never>()
+    /// 目前有效的頁面編輯租約（可能為本機或遠端持有）。
+    @Published public private(set) var activePageEditLease: PageEditLease? = nil
     /// 中繼的暫存已經補不回漏掉的那一段（設計 §7）：編輯器向其他成員要整份狀態。
     public let stateSyncNeeded = PassthroughSubject<Void, Never>()
     /// 看過的最大中繼序號（同一個房間裡重連時從這裡補發）。
@@ -563,6 +609,9 @@ public class CollaborationManager: ObservableObject {
                 return
             }
         } else {
+            if isHostingLocalRelay || LocalRelayServer.shared.isRunning {
+                LocalRelayServer.shared.stop()
+            }
             isHostingLocalRelay = false
             lanRelayAddress = nil
             tailscaleRelayAddress = nil
@@ -686,12 +735,13 @@ public class CollaborationManager: ObservableObject {
 
         self.status = .disconnected
         LiveInkStore.shared.clear()
+        resetPageEditLeaseState()
         if userInitiated {
             self.currentRoomId = ""
             self.roomNotebookId = nil
             self.isHost = false
             self.peers.removeAll()
-            if isHostingLocalRelay {
+            if isHostingLocalRelay || LocalRelayServer.shared.isRunning {
                 LocalRelayServer.shared.stop()
                 isHostingLocalRelay = false
                 lanRelayAddress = nil
@@ -981,6 +1031,291 @@ public class CollaborationManager: ObservableObject {
         if case .connected = status { sendJson(msg) }
     }
 
+    // MARK: - 跨頁即時協同編輯仲裁與自動跳頁（`live_page_edit`）
+
+    /// 頁面編輯租約逾時秒數（若遠端斷線未收到 `end`，逾時自動釋放防死鎖）。
+    public static let pageEditLeaseTimeout: TimeInterval = 4.0
+    /// 手繪提筆後的短暫保留秒數（防止寫字筆畫間短暫抬筆時被跨頁搶走）。
+    public static let pageEditPostStrokeHold: TimeInterval = 1.2
+    /// 持續書寫／打字期間的租約續約廣播最小間隔。
+    public static let pageEditRenewInterval: TimeInterval = 0.8
+
+    private var lastPageEditBroadcastAt: TimeInterval = 0
+    private var pageEditReleaseTimer: Timer? = nil
+    private var pageEditExpiryTimer: Timer? = nil
+
+    public var myDisplayName: String {
+        #if os(macOS) || targetEnvironment(macCatalyst)
+        let deviceTag = "Mac"
+        #elseif os(iOS)
+        let deviceTag = (UIDevice.current.userInterfaceIdiom == .pad) ? "iPad" : "iPhone"
+        #else
+        let deviceTag = "Device"
+        #endif
+        let rawName = AccountManager.shared.profile.displayName
+        return "\(rawName) (\(deviceTag))"
+    }
+
+    /// 格式化「目前由（房主／協作者）XXX 正在進行編輯中，請稍後再進行編輯」提示文字。
+    public func formatPageEditWaitNotice(for lease: PageEditLease) -> String {
+        let l10n = LocalizationManager.shared
+        let roleLabel = l10n.localized(lease.isHost ? "collab_role_host" : "collab_role_peer")
+        let trimmedName = lease.userName.trimmingCharacters(in: .whitespacesAndNewlines)
+        let actor = trimmedName.isEmpty ? roleLabel : "\(roleLabel) \(trimmedName)"
+        return l10n.localized("collab_page_editing_wait_notice")
+            .replacingOccurrences(of: "%@", with: actor)
+    }
+
+    /// 檢查目前是否有其他人在「不同頁」持有有效編輯租約。
+    public func currentBlockingPageEditLease(forPage pageId: String, now: Date = Date()) -> PageEditLease? {
+        pruneExpiredPageEditLease(now: now)
+        guard let lease = activePageEditLease else { return nil }
+        let canonical = NotebookPackageBridge.stableBlockId(pageId)
+        guard lease.userId != currentUserId, lease.pageId != canonical else { return nil }
+        return lease
+    }
+
+    /// 本機嘗試在 `pageId` 開始編輯（手繪落筆或文字輸入）。
+    /// - 回傳：若被其他協作者／房主在不同頁的既有編輯擋下，回傳對方的 `PageEditLease`（並自動發送提示與跳頁事件）；
+    ///         若獲准編輯，回傳 `nil` 並取得／續約本機租約與廣播 `live_page_edit`。
+    @discardableResult
+    public func tryBeginLocalPageEdit(pageId: String, now: Date = Date()) -> PageEditLease? {
+        guard case .connected = status else { return nil }
+        let canonical = NotebookPackageBridge.stableBlockId(pageId)
+        guard !canonical.isEmpty else { return nil }
+
+        if let blocker = currentBlockingPageEditLease(forPage: canonical, now: now) {
+            pageEditBlocked.send(blocker)
+            pageJumpRequested.send((pageId: blocker.pageId, forceScroll: true))
+            return blocker
+        }
+
+        pageEditReleaseTimer?.invalidate()
+        pageEditReleaseTimer = nil
+
+        if var existing = activePageEditLease,
+           existing.userId == currentUserId,
+           existing.pageId == canonical {
+            existing.updatedAt = now
+            activePageEditLease = existing
+            schedulePageEditExpiryTimer()
+            if now.timeIntervalSince1970 - lastPageEditBroadcastAt >= Self.pageEditRenewInterval {
+                sendLivePageEdit(phase: "renew", lease: existing, now: now)
+            }
+            return nil
+        }
+
+        let stamp = nextLamport()
+        maxKnownLamport = max(maxKnownLamport, stamp)
+        let lease = PageEditLease(
+            userId: currentUserId,
+            userName: myDisplayName,
+            isHost: isHost,
+            pageId: canonical,
+            startedLamport: stamp,
+            updatedAt: now
+        )
+        // 若同頁已有遠端成員先下筆且優先權更高，保留對方的優先租約但仍廣播本機也在該頁編輯讓全員跳轉。
+        if var samePageRemote = activePageEditLease,
+           samePageRemote.pageId == canonical,
+           samePageRemote.hasPriority(over: lease) {
+            samePageRemote.updatedAt = now
+            activePageEditLease = samePageRemote
+        } else {
+            activePageEditLease = lease
+        }
+        schedulePageEditExpiryTimer()
+        sendLivePageEdit(phase: "begin", lease: lease, now: now)
+        return nil
+    }
+
+    /// 持續書寫或打字期間續約本機的頁面編輯租約。
+    public func renewLocalPageEdit(pageId: String, now: Date = Date()) {
+        guard case .connected = status else { return }
+        let canonical = NotebookPackageBridge.stableBlockId(pageId)
+        guard !canonical.isEmpty else { return }
+        if currentBlockingPageEditLease(forPage: canonical, now: now) != nil { return }
+
+        pageEditReleaseTimer?.invalidate()
+        pageEditReleaseTimer = nil
+
+        if var existing = activePageEditLease,
+           existing.userId == currentUserId,
+           existing.pageId == canonical {
+            existing.updatedAt = now
+            activePageEditLease = existing
+            schedulePageEditExpiryTimer()
+            if now.timeIntervalSince1970 - lastPageEditBroadcastAt >= Self.pageEditRenewInterval {
+                sendLivePageEdit(phase: "renew", lease: existing, now: now)
+            }
+        } else {
+            _ = tryBeginLocalPageEdit(pageId: canonical, now: now)
+        }
+    }
+
+    /// 結束本機的頁面編輯租約（`immediate: false` 用於提筆後保留短暫緩衝；`true` 用於結束打字或立即釋放）。
+    public func endLocalPageEdit(pageId: String? = nil, immediate: Bool = false) {
+        pageEditReleaseTimer?.invalidate()
+        pageEditReleaseTimer = nil
+        guard let existing = activePageEditLease, existing.userId == currentUserId else { return }
+        if let pid = pageId, !pid.isEmpty {
+            let canonical = NotebookPackageBridge.stableBlockId(pid)
+            guard existing.pageId == canonical else { return }
+        }
+        if immediate {
+            activePageEditLease = nil
+            pageEditExpiryTimer?.invalidate()
+            pageEditExpiryTimer = nil
+            sendLivePageEdit(phase: "end", lease: existing, now: Date())
+        } else {
+            let targetPage = existing.pageId
+            pageEditReleaseTimer = Timer.scheduledTimer(withTimeInterval: Self.pageEditPostStrokeHold, repeats: false) { [weak self] _ in
+                Task { @MainActor [weak self] in
+                    self?.endLocalPageEdit(pageId: targetPage, immediate: true)
+                }
+            }
+        }
+    }
+
+    /// 接收並仲裁遠端成員的頁面編輯狀態（`live_page_edit`）。
+    public func receiveRemotePageEdit(userId uid: String, payload: [String: Any], lamport: UInt64 = 0, now: Date = Date()) {
+        guard uid != currentUserId,
+              let rawPage = payload["page"] as? String,
+              !rawPage.isEmpty else { return }
+        let pageId = NotebookPackageBridge.stableBlockId(rawPage)
+        let phase = (payload["phase"] as? String) ?? "begin"
+        let started = (payload["started_lamport"] as? NSNumber)?.uint64Value ?? (lamport > 0 ? lamport : 1)
+        lamportClock = max(lamportClock, max(lamport, started))
+        maxKnownLamport = max(maxKnownLamport, lamportClock)
+
+        if phase == "end" {
+            if let existing = activePageEditLease, existing.userId == uid, existing.pageId == pageId {
+                activePageEditLease = nil
+                pageEditExpiryTimer?.invalidate()
+                pageEditExpiryTimer = nil
+            }
+            return
+        }
+
+        pruneExpiredPageEditLease(now: now)
+        let rawName = (payload["user_name"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let resolvedName = rawName.isEmpty
+            ? (peers.first(where: { $0.userId == uid })?.userName ?? String(uid.prefix(6)))
+            : rawName
+        let resolvedIsHost = (payload["is_host"] as? Bool)
+            ?? (peers.first(where: { $0.userId == uid })?.role == .owner)
+
+        let incoming = PageEditLease(
+            userId: uid,
+            userName: resolvedName,
+            isHost: resolvedIsHost,
+            pageId: pageId,
+            startedLamport: started,
+            updatedAt: now
+        )
+
+        if let existing = activePageEditLease {
+            if existing.userId == uid {
+                let pageChanged = existing.pageId != pageId
+                activePageEditLease = incoming
+                schedulePageEditExpiryTimer()
+                pageJumpRequested.send((pageId: pageId, forceScroll: phase == "begin" || pageChanged))
+                return
+            }
+            if existing.pageId != incoming.pageId {
+                // 跨頁同時編輯衝突：以第一個下筆（startedLamport 較小，平手比 userId）為優先。
+                if incoming.hasPriority(over: existing) {
+                    pageEditReleaseTimer?.invalidate()
+                    pageEditReleaseTimer = nil
+                    let wasLocal = (existing.userId == currentUserId)
+                    activePageEditLease = incoming
+                    schedulePageEditExpiryTimer()
+                    if wasLocal {
+                        pageEditPreempted.send(incoming)
+                    }
+                    pageJumpRequested.send((pageId: pageId, forceScroll: true))
+                } else if existing.userId == currentUserId {
+                    // 本機較早下筆勝出：重申本機租約，讓對方也收斂到本機頁面。
+                    sendLivePageEdit(phase: "renew", lease: existing, now: now)
+                }
+                return
+            }
+            // 同一頁協同：保留優先權較高者的租約並更新時戳。
+            if incoming.hasPriority(over: existing) {
+                activePageEditLease = incoming
+            } else {
+                var refreshed = existing
+                refreshed.updatedAt = now
+                activePageEditLease = refreshed
+            }
+            schedulePageEditExpiryTimer()
+            if phase == "begin" {
+                pageJumpRequested.send((pageId: pageId, forceScroll: false))
+            }
+        } else {
+            activePageEditLease = incoming
+            schedulePageEditExpiryTimer()
+            pageJumpRequested.send((pageId: pageId, forceScroll: phase == "begin"))
+        }
+    }
+
+    private func sendLivePageEdit(phase: String, lease: PageEditLease, now: Date) {
+        lastPageEditBroadcastAt = now.timeIntervalSince1970
+        let raw: [String: Any] = [
+            "page": lease.pageId,
+            "phase": phase,
+            "started_lamport": lease.startedLamport,
+            "user_name": lease.userName,
+            "is_host": lease.isHost,
+        ]
+        let (finalPayload, isEncrypted) = encryptPayload(raw)
+        var msg: [String: Any] = [
+            "type": "oplog",
+            "room_id": currentRoomId,
+            "user_id": currentUserId,
+            "lamport": lease.startedLamport,
+            "kind": "live_page_edit",
+            "payload": finalPayload,
+        ]
+        if isEncrypted { msg["encrypted"] = true }
+        if case .connected = status { sendJson(msg) }
+    }
+
+    private func pruneExpiredPageEditLease(now: Date = Date()) {
+        if let existing = activePageEditLease,
+           now.timeIntervalSince(existing.updatedAt) >= Self.pageEditLeaseTimeout {
+            activePageEditLease = nil
+            pageEditExpiryTimer?.invalidate()
+            pageEditExpiryTimer = nil
+        }
+    }
+
+    private func schedulePageEditExpiryTimer() {
+        pageEditExpiryTimer?.invalidate()
+        pageEditExpiryTimer = Timer.scheduledTimer(withTimeInterval: Self.pageEditLeaseTimeout + 0.1, repeats: false) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                self?.pruneExpiredPageEditLease()
+            }
+        }
+    }
+
+    private func clearPageEditLeaseIfHeld(by userId: String) {
+        if activePageEditLease?.userId == userId {
+            activePageEditLease = nil
+            pageEditExpiryTimer?.invalidate()
+            pageEditExpiryTimer = nil
+        }
+    }
+
+    public func resetPageEditLeaseState() {
+        pageEditReleaseTimer?.invalidate()
+        pageEditReleaseTimer = nil
+        pageEditExpiryTimer?.invalidate()
+        pageEditExpiryTimer = nil
+        lastPageEditBroadcastAt = 0
+        activePageEditLease = nil
+    }
+
     // MARK: - 舊協定（已停用）
     //
     // 物件的新增、修改、刪除與討論圖釘改由編輯器的單一入口（`commitNotebook`）比對後以
@@ -1097,6 +1432,7 @@ public class CollaborationManager: ObservableObject {
             if let uid = json["user_id"] as? String {
                 peers.removeAll(where: { $0.userId == uid })
                 LiveInkStore.shared.settle(userId: uid)
+                clearPageEditLeaseIfHeld(by: uid)
             }
 
         case "peer_oplog":
@@ -1106,9 +1442,22 @@ public class CollaborationManager: ObservableObject {
             let lamport = (json["lamport"] as? NSNumber)?.uint64Value ?? 0
             let isEncrypted = (json["encrypted"] as? Bool) ?? false
             if kind.hasPrefix("live_") {
-                // 暫態：直接交給預覽層，不推進時鐘、不記 op id、不進編輯器的合併流程。
-                if kind == "live_ink", let payload = decryptPayload(rawPayload, isEncrypted: isEncrypted) {
+                // 暫態：直接交給預覽層與跨頁編輯仲裁器，不記 op id、不進編輯器的合併流程。
+                if kind == "live_page_edit", let payload = decryptPayload(rawPayload, isEncrypted: isEncrypted) {
+                    receiveRemotePageEdit(userId: uid, payload: payload, lamport: lamport)
+                } else if kind == "live_ink", let payload = decryptPayload(rawPayload, isEncrypted: isEncrypted) {
                     LiveInkStore.shared.receive(userId: uid, payload: payload)
+                    if let page = payload["page"] as? String, !page.isEmpty {
+                        let ended = (payload["end"] as? Bool) ?? false
+                        let seq = (payload["seq"] as? NSNumber)?.intValue ?? 0
+                        if !ended, activePageEditLease == nil || activePageEditLease?.userId == uid {
+                            receiveRemotePageEdit(
+                                userId: uid,
+                                payload: ["page": page, "phase": seq == 0 ? "begin" : "renew"],
+                                lamport: max(lamport, max(1, lamportClock))
+                            )
+                        }
+                    }
                 }
                 return
             }
@@ -1238,6 +1587,7 @@ extension CollaborationManager: ProfileScoped {
         outdatedPeerIds.removeAll()
         leaseRenewTimer?.invalidate()
         leaseRenewTimer = nil
+        resetPageEditLeaseState()
         serverAddress = ProfileDefaults.current.string(forKey: "kairumo_relay_server_url")
             ?? collabTuning().defaultServer
         customCloudRelay = ProfileDefaults.current.string(forKey: Self.customCloudRelayKey) ?? ""

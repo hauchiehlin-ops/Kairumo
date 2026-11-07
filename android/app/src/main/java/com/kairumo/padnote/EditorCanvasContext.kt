@@ -3044,6 +3044,33 @@ internal fun rememberEditorCanvasContext(
         }
     }
     val latestApplyCollabOp by rememberUpdatedState<(CollaborationManager.RemoteOplog) -> Unit> { applyCollabOp(it) }
+    val latestJumpToCollabPage by rememberUpdatedState<(String, Boolean) -> Unit> { targetPageId, forceScroll ->
+        if (!collabActive) return@rememberUpdatedState
+        val session = notebook?.first ?: return@rememberUpdatedState
+        val canonical = AndroidCollabCanvas.canonicalId(targetPageId)
+        val count = runCatching { session.pageCount().toInt() }.getOrDefault(pageCount)
+        val targetIdx = (0 until count).firstOrNull { idx ->
+            val pid = runCatching { session.pageIdAt(idx.toUInt()) }.getOrNull() ?: return@firstOrNull false
+            AndroidCollabCanvas.canonicalId(pid) == canonical
+        } ?: return@rememberUpdatedState
+        if (pageIndex != targetIdx || forceScroll) {
+            switchToPage(targetIdx)
+        }
+    }
+    val latestPageEditBlocked by rememberUpdatedState<(CollaborationManager.PageEditLease) -> Unit> { blocker ->
+        if (!collabActive) return@rememberUpdatedState
+        message = collaboration.formatPageEditWaitNotice(blocker, currentLanguageTag())
+    }
+    val latestPageEditPreempted by rememberUpdatedState<(CollaborationManager.PageEditLease) -> Unit> { winner ->
+        if (!collabActive) return@rememberUpdatedState
+        engine.cancelInFlight()
+        for (p in continuousCollab.loadedPages()) {
+            continuousCollab.engineFor(p)?.cancelInFlight()
+        }
+        com.kairumo.padnote.text.InlineTextEditing.activeId = null
+        editingText = null
+        message = collaboration.formatPageEditWaitNotice(winner, currentLanguageTag())
+    }
     DisposableEffect(collaboration, collab) {
         val main = android.os.Handler(android.os.Looper.getMainLooper())
         collaboration.onOplog = { op -> main.post { latestApplyCollabOp(op) } }
@@ -3057,8 +3084,51 @@ internal fun rememberEditorCanvasContext(
                 message = l10n("collab_object_locked").replace("%@", holder)
             }
         }
+        collaboration.onPageJumpRequested = { pid, force ->
+            main.post { latestJumpToCollabPage(pid, force) }
+        }
+        collaboration.onPageEditBlocked = { blocker ->
+            main.post { latestPageEditBlocked(blocker) }
+        }
+        collaboration.onPageEditPreempted = { winner ->
+            main.post { latestPageEditPreempted(winner) }
+        }
         onDispose {
-            collaboration.onOplog = null; collaboration.onLeaseLost = null; collaboration.onStateSyncNeeded = null
+            collaboration.onOplog = null
+            collaboration.onLeaseLost = null
+            collaboration.onStateSyncNeeded = null
+            collaboration.onPageJumpRequested = null
+            collaboration.onPageEditBlocked = null
+            collaboration.onPageEditPreempted = null
+        }
+    }
+    val activeInlineTextId = com.kairumo.padnote.text.InlineTextEditing.activeId
+    LaunchedEffect(activeInlineTextId, collabActive) {
+        if (!collabActive) return@LaunchedEffect
+        if (activeInlineTextId == null) {
+            if (!engine.isDrawing && !InkEngine.anyDrawing) {
+                collaboration.endLocalPageEdit(immediate = true)
+            }
+            return@LaunchedEffect
+        }
+        val resolveInlinePageId: () -> String? = {
+            if (pageDisplayMode == PageDisplayMode.CONTINUOUS) {
+                continuousCollab.loadedPages().firstOrNull { p ->
+                    continuousCollab.storesFor(p)?.text?.find(activeInlineTextId) != null
+                } ?: pageId
+            } else {
+                pageId
+            }
+        }
+        val initialPid = resolveInlinePageId()
+        if (initialPid != null && collaboration.tryBeginLocalPageEdit(initialPid) != null) {
+            com.kairumo.padnote.text.InlineTextEditing.activeId = null
+            return@LaunchedEffect
+        }
+        while (com.kairumo.padnote.text.InlineTextEditing.activeId == activeInlineTextId) {
+            kotlinx.coroutines.delay(CollaborationManager.PAGE_EDIT_RENEW_INTERVAL_MS)
+            val pid = resolveInlinePageId() ?: break
+            collaboration.renewLocalPageEdit(pid)
         }
     }
     // 選取就是編輯鎖（設計 §5）：選到別人正在編輯的物件時放手並說明；打字（`text:`）不獨佔。

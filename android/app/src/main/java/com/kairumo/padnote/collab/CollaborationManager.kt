@@ -75,6 +75,21 @@ class CollaborationManager(private val context: Context) {
         val lamport: ULong
     )
 
+    /** 跨頁即時協同編輯租約（「以第一個下筆為主」仲裁與全員自動跟隨跳頁，與 Apple `PageEditLease` 對齊）。 */
+    data class PageEditLease(
+        val userId: String,
+        val userName: String,
+        val isHost: Boolean,
+        val pageId: String,
+        /** 該輪編輯開始時的 Lamport 時鐘（越小代表越早下筆；平手時以 userId 字典序較小者優先）。 */
+        val startedLamport: Long,
+        val updatedAtMs: Long = System.currentTimeMillis(),
+    ) {
+        fun hasPriority(over: PageEditLease): Boolean =
+            if (startedLamport != over.startedLamport) startedLamport < over.startedLamport
+            else userId < over.userId
+    }
+
     private val tuning = collabTuning()
 
     var status by mutableStateOf<Status>(Status.Disconnected)
@@ -106,6 +121,18 @@ class CollaborationManager(private val context: Context) {
     var onOplog: ((RemoteOplog) -> Unit)? = null
     /** 兩人同時選了同一個物件、對方勝出：本機要放手（設計 §5.3）。參數是物件 id 與對方名字。 */
     var onLeaseLost: ((String, String) -> Unit)? = null
+    /** 遠端協作者或房主在某頁開始／進行編輯時，通知全員畫布同步跳轉至該頁面。 */
+    var onPageJumpRequested: ((String, Boolean) -> Unit)? = null
+    /** 本機嘗試在不同頁進行編輯，但已有另一位協作者／房主先下筆持有編輯權：通知畫布顯示等待提示。 */
+    var onPageEditBlocked: ((PageEditLease) -> Unit)? = null
+    /** 兩人幾乎同時在不同頁下筆、對方時鐘較早而勝出：通知本機取消進行中的筆畫／打字並顯示等待提示。 */
+    var onPageEditPreempted: ((PageEditLease) -> Unit)? = null
+    /** 目前有效的頁面編輯租約（可能為本機或遠端持有）。 */
+    @Volatile var activePageEditLease: PageEditLease? = null
+        private set
+    private var lastPageEditBroadcastAtMs = 0L
+    private var pageEditReleaseTask: java.util.TimerTask? = null
+    private var pageEditTimer: java.util.Timer? = null
     /**
      * 中繼的暫存已經補不回漏掉的那一段（設計 §7）：要向其他成員要整份狀態。
      * 在連線的執行緒上呼叫，接手的人自己轉到主執行緒。
@@ -333,7 +360,10 @@ class CollaborationManager(private val context: Context) {
                 return
             }
         } else {
+            runCatching { relay?.stop() }
             isHostingLocalRelay = false
+            lanRelayAddress = null
+            tailscaleRelayAddress = null
         }
         lastError = null
 
@@ -425,6 +455,7 @@ class CollaborationManager(private val context: Context) {
         socket = null
         peers.clear()
         liveInk.clear()
+        resetPageEditLeaseState()
         if (userInitiated) {
             runCatching { relay?.stop() }
             isHostingLocalRelay = false
@@ -579,6 +610,266 @@ class CollaborationManager(private val context: Context) {
         if (status is Status.Connected) send(msg)
     }
 
+    // ── 跨頁即時協同編輯仲裁與自動跳頁（`live_page_edit`，與 Apple 對齊）──
+
+    val myDisplayName: String
+        get() {
+            val raw = runCatching { AccountManager.load(context, fallbackName = "Kairumo").displayName }
+                .getOrDefault("Kairumo")
+                .ifEmpty { "Kairumo" }
+            return "$raw (Android)"
+        }
+
+    /** 格式化「目前由（房主／協作者）XXX 正在進行編輯中，請稍後再進行編輯」提示文字。 */
+    fun formatPageEditWaitNotice(lease: PageEditLease, language: String): String {
+        val roleLabel = com.kairumo.padnote.LocalizationStrings.localized(
+            if (lease.isHost) "collab_role_host" else "collab_role_peer",
+            language,
+        )
+        val trimmedName = lease.userName.trim()
+        val actor = if (trimmedName.isEmpty()) roleLabel else "$roleLabel $trimmedName"
+        return com.kairumo.padnote.LocalizationStrings.localized("collab_page_editing_wait_notice", language)
+            .replace("%@", actor)
+    }
+
+    /** 檢查目前是否有其他人在「不同頁」持有有效編輯租約。 */
+    @Synchronized
+    fun currentBlockingPageEditLease(pageId: String, nowMs: Long = System.currentTimeMillis()): PageEditLease? {
+        pruneExpiredPageEditLease(nowMs)
+        val lease = activePageEditLease ?: return null
+        val canonical = AndroidCollabCanvas.canonicalId(pageId)
+        return if (lease.userId != currentUserId && lease.pageId != canonical) lease else null
+    }
+
+    /**
+     * 本機嘗試在 [pageId] 開始編輯（手繪落筆或文字輸入）。
+     * 若被其他協作者／房主在不同頁的既有編輯擋下，回傳對方的 [PageEditLease]（並觸發提示與跳頁回呼）；
+     * 若獲准編輯，回傳 `null` 並取得／續約本機租約與廣播 `live_page_edit`。
+     */
+    @Synchronized
+    fun tryBeginLocalPageEdit(pageId: String, nowMs: Long = System.currentTimeMillis()): PageEditLease? {
+        if (status !is Status.Connected) return null
+        val canonical = AndroidCollabCanvas.canonicalId(pageId)
+        if (canonical.isEmpty()) return null
+
+        val blocker = currentBlockingPageEditLease(canonical, nowMs)
+        if (blocker != null) {
+            onPageEditBlocked?.invoke(blocker)
+            onPageJumpRequested?.invoke(blocker.pageId, true)
+            return blocker
+        }
+
+        pageEditReleaseTask?.cancel()
+        pageEditReleaseTask = null
+
+        val existing = activePageEditLease
+        if (existing != null && existing.userId == currentUserId && existing.pageId == canonical) {
+            val updated = existing.copy(updatedAtMs = nowMs)
+            activePageEditLease = updated
+            if (nowMs - lastPageEditBroadcastAtMs >= PAGE_EDIT_RENEW_INTERVAL_MS) {
+                sendLivePageEdit("renew", updated, nowMs)
+            }
+            return null
+        }
+
+        val stamp = nextLamport()
+        val lease = PageEditLease(
+            userId = currentUserId,
+            userName = myDisplayName,
+            isHost = isHost,
+            pageId = canonical,
+            startedLamport = stamp,
+            updatedAtMs = nowMs,
+        )
+        activePageEditLease = if (existing != null && existing.pageId == canonical && existing.hasPriority(over = lease)) {
+            existing.copy(updatedAtMs = nowMs)
+        } else {
+            lease
+        }
+        sendLivePageEdit("begin", lease, nowMs)
+        return null
+    }
+
+    /** 持續書寫或打字期間續約本機的頁面編輯租約。 */
+    @Synchronized
+    fun renewLocalPageEdit(pageId: String, nowMs: Long = System.currentTimeMillis()) {
+        if (status !is Status.Connected) return
+        val canonical = AndroidCollabCanvas.canonicalId(pageId)
+        if (canonical.isEmpty()) return
+        if (currentBlockingPageEditLease(canonical, nowMs) != null) return
+
+        pageEditReleaseTask?.cancel()
+        pageEditReleaseTask = null
+
+        val existing = activePageEditLease
+        if (existing != null && existing.userId == currentUserId && existing.pageId == canonical) {
+            val updated = existing.copy(updatedAtMs = nowMs)
+            activePageEditLease = updated
+            if (nowMs - lastPageEditBroadcastAtMs >= PAGE_EDIT_RENEW_INTERVAL_MS) {
+                sendLivePageEdit("renew", updated, nowMs)
+            }
+        } else {
+            tryBeginLocalPageEdit(canonical, nowMs)
+        }
+    }
+
+    /** 結束本機的頁面編輯租約（`immediate = false` 用於提筆後保留短暫緩衝；`true` 用於結束打字或立即釋放）。 */
+    @Synchronized
+    fun endLocalPageEdit(pageId: String? = null, immediate: Boolean = false) {
+        pageEditReleaseTask?.cancel()
+        pageEditReleaseTask = null
+        val existing = activePageEditLease ?: return
+        if (existing.userId != currentUserId) return
+        if (!pageId.isNullOrEmpty() && existing.pageId != AndroidCollabCanvas.canonicalId(pageId)) return
+
+        if (immediate) {
+            activePageEditLease = null
+            sendLivePageEdit("end", existing, System.currentTimeMillis())
+        } else {
+            val targetPage = existing.pageId
+            val timer = pageEditTimer ?: java.util.Timer(true).also { pageEditTimer = it }
+            val task = object : java.util.TimerTask() {
+                override fun run() {
+                    endLocalPageEdit(targetPage, immediate = true)
+                }
+            }
+            pageEditReleaseTask = task
+            timer.schedule(task, PAGE_EDIT_POST_STROKE_HOLD_MS)
+        }
+    }
+
+    /** 接收並仲裁遠端成員的頁面編輯狀態（`live_page_edit`）。 */
+    @Synchronized
+    fun receiveRemotePageEdit(
+        userId: String,
+        payload: JSONObject,
+        lamport: Long = 0L,
+        nowMs: Long = System.currentTimeMillis(),
+    ) {
+        if (userId == currentUserId) return
+        val rawPage = payload.optString("page")
+        if (rawPage.isEmpty()) return
+        val pageId = AndroidCollabCanvas.canonicalId(rawPage)
+        val phase = payload.optString("phase", "begin").ifEmpty { "begin" }
+        val started = payload.optLong("started_lamport", if (lamport > 0L) lamport else 1L).coerceAtLeast(1L)
+        lamportClock = maxOf(lamportClock, maxOf(lamport, started))
+
+        if (phase == "end") {
+            val existing = activePageEditLease
+            if (existing != null && existing.userId == userId && existing.pageId == pageId) {
+                activePageEditLease = null
+            }
+            return
+        }
+
+        pruneExpiredPageEditLease(nowMs)
+        val rawName = payload.optString("user_name").trim()
+        val resolvedName = rawName.ifEmpty {
+            peers.firstOrNull { it.userId == userId }?.userName ?: userId.take(6)
+        }
+        val resolvedIsHost = if (payload.has("is_host")) {
+            payload.optBoolean("is_host", false)
+        } else {
+            peers.firstOrNull { it.userId == userId }?.role == "owner"
+        }
+
+        val incoming = PageEditLease(
+            userId = userId,
+            userName = resolvedName,
+            isHost = resolvedIsHost,
+            pageId = pageId,
+            startedLamport = started,
+            updatedAtMs = nowMs,
+        )
+
+        val existing = activePageEditLease
+        if (existing != null) {
+            if (existing.userId == userId) {
+                val pageChanged = existing.pageId != pageId
+                activePageEditLease = incoming
+                onPageJumpRequested?.invoke(pageId, phase == "begin" || pageChanged)
+                return
+            }
+            if (existing.pageId != incoming.pageId) {
+                // 跨頁同時編輯衝突：以第一個下筆（startedLamport 較小，平手比 userId）為優先。
+                if (incoming.hasPriority(over = existing)) {
+                    pageEditReleaseTask?.cancel()
+                    pageEditReleaseTask = null
+                    val wasLocal = (existing.userId == currentUserId)
+                    activePageEditLease = incoming
+                    if (wasLocal) {
+                        onPageEditPreempted?.invoke(incoming)
+                    }
+                    onPageJumpRequested?.invoke(pageId, true)
+                } else if (existing.userId == currentUserId) {
+                    sendLivePageEdit("renew", existing, nowMs)
+                }
+                return
+            }
+            // 同一頁協同：保留優先權較高者的租約並更新時戳。
+            activePageEditLease = if (incoming.hasPriority(over = existing)) {
+                incoming
+            } else {
+                existing.copy(updatedAtMs = nowMs)
+            }
+            if (phase == "begin") {
+                onPageJumpRequested?.invoke(pageId, false)
+            }
+        } else {
+            activePageEditLease = incoming
+            onPageJumpRequested?.invoke(pageId, phase == "begin")
+        }
+    }
+
+    private fun sendLivePageEdit(phase: String, lease: PageEditLease, nowMs: Long) {
+        lastPageEditBroadcastAtMs = nowMs
+        val raw = JSONObject()
+            .put("page", lease.pageId)
+            .put("phase", phase)
+            .put("started_lamport", lease.startedLamport)
+            .put("user_name", lease.userName)
+            .put("is_host", lease.isHost)
+        val key = roomKeyBase64
+        val msg = JSONObject()
+            .put("type", "oplog")
+            .put("room_id", roomId)
+            .put("user_id", currentUserId)
+            .put("lamport", lease.startedLamport)
+            .put("kind", "live_page_edit")
+        val cipher = if (key != null) collabEncrypt(key, raw.toString()) else ""
+        if (cipher.isNotEmpty()) {
+            msg.put("payload", JSONObject().put("ciphertext", cipher)).put("encrypted", true)
+        } else {
+            msg.put("payload", raw)
+        }
+        if (status is Status.Connected) send(msg)
+    }
+
+    @Synchronized
+    private fun pruneExpiredPageEditLease(nowMs: Long = System.currentTimeMillis()) {
+        val existing = activePageEditLease ?: return
+        if (nowMs - existing.updatedAtMs >= PAGE_EDIT_LEASE_TIMEOUT_MS) {
+            activePageEditLease = null
+        }
+    }
+
+    @Synchronized
+    private fun clearPageEditLeaseIfHeldBy(userId: String) {
+        if (activePageEditLease?.userId == userId) {
+            activePageEditLease = null
+        }
+    }
+
+    @Synchronized
+    fun resetPageEditLeaseState() {
+        pageEditReleaseTask?.cancel()
+        pageEditReleaseTask = null
+        pageEditTimer?.cancel()
+        pageEditTimer = null
+        lastPageEditBroadcastAtMs = 0L
+        activePageEditLease = null
+    }
+
     private fun send(msg: JSONObject) {
         socket?.send(msg.toString())
     }
@@ -676,6 +967,7 @@ class CollaborationManager(private val context: Context) {
                 val uid = json.optString("user_id")
                 peers.removeAll { it.userId == uid }
                 liveInk.settle(uid)
+                clearPageEditLeaseIfHeldBy(uid)
             }
             "peer_oplog" -> deliverOplog(json, live = true)
             "oplog_batch" -> {
@@ -719,8 +1011,28 @@ class CollaborationManager(private val context: Context) {
         val kind = item.optString("kind").ifEmpty { return }
         val raw = item.optJSONObject("payload") ?: return
         if (kind.startsWith("live_")) {
-            // 暫態：直接交給預覽層，不推進時鐘、不記 op id、不進編輯器的合併流程。
-            if (live && kind == "live_ink") decryptPayload(item, raw)?.let { liveInk.receive(uid, it) }
+            // 暫態：直接交給預覽層與跨頁編輯仲裁器，不記 op id、不進編輯器的合併流程。
+            if (!live) return
+            if (kind == "live_page_edit") {
+                val lamport = item.optLong("lamport", 0L)
+                decryptPayload(item, raw)?.let { receiveRemotePageEdit(uid, it, lamport) }
+            } else if (kind == "live_ink") {
+                decryptPayload(item, raw)?.let { payload ->
+                    liveInk.receive(uid, payload)
+                    val page = payload.optString("page")
+                    val ended = payload.optBoolean("end", false)
+                    val seq = payload.optInt("seq", 0)
+                    if (page.isNotEmpty() && !ended &&
+                        (activePageEditLease == null || activePageEditLease?.userId == uid)
+                    ) {
+                        receiveRemotePageEdit(
+                            uid,
+                            JSONObject().put("page", page).put("phase", if (seq == 0) "begin" else "renew"),
+                            maxOf(1L, lamportClock),
+                        )
+                    }
+                }
+            }
             return
         }
         // 寄存的整份狀態只該在補發裡出現：Cloudflare 中繼不轉送它，但自架的 Rust 中繼會把 `state_` 當暫態照轉
@@ -811,6 +1123,12 @@ class CollaborationManager(private val context: Context) {
         private const val KEY_SERVER = "relay_server_url"
         /** 編輯租約多久沒續約就失效（與 Apple 端相同）。 */
         const val LEASE_TIMEOUT_MS = 5_000L
+        /** 頁面編輯租約逾時毫秒數（與 Apple `pageEditLeaseTimeout` 相同）。 */
+        const val PAGE_EDIT_LEASE_TIMEOUT_MS = 4_000L
+        /** 手繪提筆後的短暫保留毫秒數（與 Apple `pageEditPostStrokeHold` 相同）。 */
+        const val PAGE_EDIT_POST_STROKE_HOLD_MS = 1_200L
+        /** 持續書寫／打字期間的租約續約廣播最小間隔毫秒數（與 Apple `pageEditRenewInterval` 相同）。 */
+        const val PAGE_EDIT_RENEW_INTERVAL_MS = 800L
         /** 在場資訊裡「正在這個方塊打字」的選取 id 前綴（與 Apple 端相同）。 */
         /**
          * 選取 id 的正規形式（設計 §8.1）：Apple 的附件 id 是大寫 UUID、這裡是核心的小寫 id，

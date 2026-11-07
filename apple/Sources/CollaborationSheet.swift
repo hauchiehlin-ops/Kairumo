@@ -518,6 +518,29 @@ public struct CollaborationSheet: View {
                 }
             }
 
+            // ☁️ 雲端共享（跨網路）：已連上時若本機正在當中繼（Wi‑Fi / Tailscale），也可一鍵切換為雲端共享；
+            // 已在雲端共享時上方 CloudShareSection 已有邀請與 QR Code，這裡顯示「Wi‑Fi / Tailscale」切換按鈕。
+            if !collaborationManager.isHostingLocalRelay {
+                let customRemote = CollaborationManager.usesCustomRemoteRelay(collaborationManager.serverAddress)
+                Button {
+                    collaborationManager.createRoom(notebookId: notebookId, server: collaborationManager.localRoomServer)
+                } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: customRemote ? "sparkles" : "wifi")
+                            .font(.system(size: 16, weight: .bold))
+                        Text(localizationManager.localized(customRemote ? "start_collaboration" : "collab_start_local"))
+                            .font(.headline)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(Color.accentColor)
+                    .foregroundColor(.white)
+                    .cornerRadius(12)
+                    .shadow(color: Color.accentColor.opacity(0.3), radius: 6, y: 3)
+                }
+                .buttonStyle(.plain)
+            }
+
             // 掃描加入：每種連線方式一張 QR Code（同一 Wi‑Fi／Tailscale／遠端中繼）。
             CollabInviteQRSection(
                 notebookId: notebookId,

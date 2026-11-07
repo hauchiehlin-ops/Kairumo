@@ -37,6 +37,8 @@ class LiveInkSender(
 ) {
     private var strokeId: String? = null
     private var page: String? = null
+    private var erasingPage: String? = null
+    private var erasingPointer: ULong? = null
     private var rgba = "#000000FF"
     private var width = 3f
     private var pending = JSONArray()
@@ -45,19 +47,31 @@ class LiveInkSender(
     private var pointer: ULong? = null
 
     fun attach(engine: InkEngine) {
+        engine.canBeginEdit = {
+            val pid = pageId()
+            pid == null || manager.tryBeginLocalPageEdit(pid) == null
+        }
         engine.onLiveSample = { phase, id, x, y -> sample(engine, phase, id, x, y) }
     }
 
     fun detach(engine: InkEngine) {
+        engine.canBeginEdit = null
         engine.onLiveSample = null
     }
 
     private fun sample(engine: InkEngine, phase: Int, id: ULong, x: Float, y: Float) {
         when (phase) {
             0 -> {
-                if (strokeId != null) return // 已經有一筆在送（多指）：只串流第一筆
+                if (strokeId != null || erasingPointer != null) return // 已經有一筆在送（多指）：只串流第一筆
                 val pid = pageId() ?: return
-                if (!manager.isLiveInkReady) return
+                manager.tryBeginLocalPageEdit(pid)
+                if (engine.isErasing || !manager.isLiveInkReady) {
+                    if (engine.isErasing) {
+                        erasingPage = pid
+                        erasingPointer = id
+                    }
+                    return
+                }
                 strokeId = UUID.randomUUID().toString()
                 pointer = id
                 page = pid
@@ -69,13 +83,25 @@ class LiveInkSender(
                 add(x, y)
             }
             1 -> {
+                if (erasingPointer == id) {
+                    erasingPage?.let { manager.renewLocalPageEdit(it) }
+                    return
+                }
                 if (strokeId == null || pointer != id) return
+                page?.let { manager.renewLocalPageEdit(it) }
                 add(x, y)
                 val now = SystemClock.uptimeMillis()
                 if (now - lastSentAt >= INTERVAL_MS) flush(end = false)
             }
             else -> {
+                if (erasingPointer == id) {
+                    erasingPage?.let { manager.endLocalPageEdit(it, immediate = false) }
+                    erasingPage = null
+                    erasingPointer = null
+                    return
+                }
                 if (strokeId == null || pointer != id) return
+                page?.let { manager.endLocalPageEdit(it, immediate = false) }
                 flush(end = true)
                 strokeId = null
                 pointer = null

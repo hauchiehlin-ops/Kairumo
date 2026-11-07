@@ -57,7 +57,7 @@ object CloudCollab {
         _busy.value = L10n.t("cloud_collab_sharing")
         try {
             var entry = shared(context, notebookId) ?: FfiSharedNotebook(notebookId, "", "", "", "owner", title)
-            ensurePublicRoom(entry, collab)
+            ensurePublicRoom(entry, collab, force = true)
             repeat(50) { if (collab.roomKeyBase64 == null || collab.roomId.isEmpty()) delay(100) }
             val key = collab.roomKeyBase64
             if (collab.roomId.isEmpty() || key == null) {
@@ -73,10 +73,13 @@ object CloudCollab {
     }
 
     /** 房主：這本的房間開在雲端中繼上。已經在那裡就不動；記過房號與金鑰就沿用。與 Apple `ensurePublicRoom` 相同。 */
-    fun ensurePublicRoom(entry: FfiSharedNotebook, collab: CollaborationManager) {
+    fun ensurePublicRoom(entry: FfiSharedNotebook, collab: CollaborationManager, force: Boolean = false) {
         val relay = collab.cloudRelayUrl
         if (relay.isEmpty() || entry.role != "owner") return
-        if (collab.serverAddress == relay && collab.status !is CollaborationManager.Status.Disconnected) return
+        if (collab.status !is CollaborationManager.Status.Disconnected) {
+            if (collab.serverAddress == relay) return
+            if (!force && collab.isHostingLocalRelay) return
+        }
         if (entry.roomId.isNotEmpty() && entry.keyBase64.isNotEmpty()) {
             collab.hostRoom(entry.roomId, entry.keyBase64, relay)
         } else {

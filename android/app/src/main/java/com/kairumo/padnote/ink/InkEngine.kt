@@ -1008,6 +1008,23 @@ class InkEngine(
 
             when (decision.verdict) {
                 FfiVerdict.DRAW -> {
+                    val pointerId = sample.event.id
+                    if (sample.event.phase == FfiPhase.BEGAN) {
+                        if (canBeginEdit?.invoke() == false) {
+                            blockedPointers += pointerId
+                            rejected++
+                            inFlight.remove(pointerId)
+                            continue
+                        } else {
+                            blockedPointers -= pointerId
+                        }
+                    } else if (pointerId in blockedPointers) {
+                        if (sample.event.phase == FfiPhase.ENDED || sample.event.phase == FfiPhase.CANCELLED) {
+                            blockedPointers -= pointerId
+                        }
+                        rejected++
+                        continue
+                    }
                     drawn++
                     if (isErasing) {
                         // 畫到一半按下側鍵切成橡皮擦：已經畫的那一段先收下。留著的話，放開側鍵之後的取樣
@@ -1016,6 +1033,12 @@ class InkEngine(
                             clearDraftPreview()
                             endHold()
                             commit(sample.event.id, partial)?.let { completedNow += it }
+                        }
+                        when (sample.event.phase) {
+                            FfiPhase.BEGAN -> onLiveSample?.invoke(0, pointerId, sample.event.x, sample.event.y)
+                            FfiPhase.MOVED -> onLiveSample?.invoke(1, pointerId, sample.event.x, sample.event.y)
+                            FfiPhase.ENDED, FfiPhase.CANCELLED -> onLiveSample?.invoke(2, pointerId, sample.event.x, sample.event.y)
+                            else -> Unit
                         }
                         // 擦除半徑與畫出來的粗細用同一組推算，
                         // 否則使用者會覺得「橡皮擦比看起來的小」。
@@ -1065,6 +1088,9 @@ class InkEngine(
      * 沒有人在聽時是 `null`，不多花任何成本；在聽時也只是把座標交出去，不做運算。
      */
     var onLiveSample: ((phase: Int, pointer: ULong, x: Float, y: Float) -> Unit)? = null
+    /** 線上協同跨頁編輯守門：落筆／擦除／打字前檢查是否允許在該頁編輯（若別頁有人先下筆則回 `false`）。 */
+    var canBeginEdit: (() -> Boolean)? = null
+    private val blockedPointers = HashSet<ULong>()
 
     private fun accumulate(sample: InkInput.Sample): CompletedStroke? {
         val id = sample.event.id
@@ -1601,7 +1627,11 @@ class InkEngine(
 
     /** 取消進行中的未完成筆畫（手勢接管、雙指捲動觸發時使用）。 */
     fun cancelInFlight() {
+        blockedPointers.clear()
         if (inFlight.isNotEmpty()) {
+            for (id in inFlight.keys.toList()) {
+                onLiveSample?.invoke(2, id, 0f, 0f)
+            }
             inFlight.clear()
             arbiter.reset()
             clearDraftPreview()

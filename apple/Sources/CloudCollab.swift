@@ -77,7 +77,7 @@ final class CloudCollabManager: ObservableObject {
         defer { busyMessage = nil }
         var entry = shared(notebookId) ?? FfiSharedNotebook(
             notebookId: notebookId, folderId: "", roomId: "", keyBase64: "", role: "owner", title: title)
-        ensurePublicRoom(for: entry)
+        ensurePublicRoom(for: entry, force: true)
         for _ in 0..<50 where collab.roomKeyBase64 == nil || collab.currentRoomId.isEmpty {
             try? await Task.sleep(nanoseconds: 100_000_000)
         }
@@ -94,12 +94,16 @@ final class CloudCollabManager: ObservableObject {
     }
 
     /// 房主：這本的房間開在雲端中繼上。已經在那裡就不動；記過房號與金鑰就沿用。
-    func ensurePublicRoom(for entry: FfiSharedNotebook) {
+    /// 若目前這本筆記已經開在本機中繼（同一 Wi‑Fi／Tailscale）上，尊重使用者當下的選擇，不強行搬回雲端。
+    func ensurePublicRoom(for entry: FfiSharedNotebook, force: Bool = false) {
         let collab = CollaborationManager.shared
         let relay = collab.cloudRelayURL
         guard !relay.isEmpty, entry.role == "owner" else { return }
         let bound = collab.roomNotebookId == entry.notebookId.lowercased()
-        if bound, collab.activeServerAddress == relay, collab.status != .disconnected { return }
+        if bound, collab.status != .disconnected {
+            if collab.activeServerAddress == relay { return }
+            if !force && collab.isHostingLocalRelay { return }
+        }
         if !entry.roomId.isEmpty, !entry.keyBase64.isEmpty {
             collab.hostRoom(roomId: entry.roomId, keyBase64: entry.keyBase64,
                             notebookId: entry.notebookId, server: relay)

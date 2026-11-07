@@ -172,24 +172,119 @@ extension NotebookEditorView {
         }
     }
 
+    /// 嘗試在指定頁碼開始或續約線上協同編輯。
+    /// 若目前有其他協作者／房主正在「不同頁」進行編輯，則攔截本次編輯、顯示提示並將畫布跳轉至對方所在頁面，回傳 `false`。
+    @discardableResult
+    func requestCollabPageEditPermission(forPage page: Int) -> Bool {
+        guard isCollaborating else { return true }
+        ensureCollabPageIds()
+        guard let pageId = liveInkPageId(page) else { return true }
+        return collaborationManager.tryBeginLocalPageEdit(pageId: pageId) == nil
+    }
+
+    /// 將畫布（無論單頁固定模式或連續頁面模式）同步跳轉至指定的協同頁面 ID。
+    func jumpToCollabPage(pageId: String, forceScroll: Bool = false) {
+        guard isCollaborating else { return }
+        ensureCollabPageIds()
+        let canonical = NotebookPackageBridge.stableBlockId(pageId)
+        guard let targetPage = notebook.pageIds?.firstIndex(where: {
+            NotebookPackageBridge.stableBlockId($0) == canonical
+        }) else { return }
+        if pageDisplayMode == .continuous {
+            let needsPageChange = currentPageIndex != targetPage
+            if needsPageChange {
+                focusContinuousPage(targetPage)
+            }
+            if needsPageChange || forceScroll {
+                continuousScrollRequest += 1
+            }
+        } else if currentPageIndex != targetPage {
+            switchToPage(targetPage)
+        }
+    }
+
+    func renewCollabInlineTextLeaseIfNeeded() {
+        guard isCollaborating,
+              let editingId = inlineEditingTextId ?? suspendedInlineTextId else { return }
+        let pageIdx = notebook.textAttachments?.first(where: { $0.id == editingId })?.pageIndex ?? currentPageIndex
+        if let pid = liveInkPageId(pageIdx) {
+            collaborationManager.renewLocalPageEdit(pageId: pid)
+        }
+    }
+
+    func handleCollabPageEditPreempted(_ winner: PageEditLease) {
+        guard isCollaborating else { return }
+        ProInkCollab.cancelActiveStrokes(notebookId: notebook.id)
+        (canvasView as? AdaptiveCanvasView)?.cancelInFlightStrokesForNavigation()
+        (continuousCanvases.activeCanvas as? AdaptiveCanvasView)?.cancelInFlightStrokesForNavigation()
+        for page in 0..<max(1, notebook.pageCount) {
+            (continuousCanvases[page] as? AdaptiveCanvasView)?.cancelInFlightStrokesForNavigation()
+        }
+        inlineEditingTextId = nil
+        suspendedInlineTextId = nil
+        editingTextId = nil
+        showCanvasNotice(collaborationManager.formatPageEditWaitNotice(for: winner))
+    }
+
+    func handleCollabInlineEditingChanged(_ newId: String?) {
+        guard isCollaborating else { return }
+        if let id = newId {
+            let pageIdx = notebook.textAttachments?.first(where: { $0.id == id })?.pageIndex ?? currentPageIndex
+            if !requestCollabPageEditPermission(forPage: pageIdx) {
+                if let emptyItem = notebook.textAttachments?.first(where: { $0.id == id }),
+                   emptyItem.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    notebook.textAttachments?.removeAll { $0.id == id }
+                    commitNotebook()
+                }
+                inlineEditingTextId = nil
+                suspendedInlineTextId = nil
+            }
+        } else if suspendedInlineTextId == nil {
+            collaborationManager.endLocalPageEdit(immediate: true)
+        }
+    }
+
+    private var collabPageLeaseEventSink: some View {
+        Color.clear
+            .onReceive(Timer.publish(every: CollaborationManager.pageEditRenewInterval, on: .main, in: .common).autoconnect()) { _ in
+                renewCollabInlineTextLeaseIfNeeded()
+            }
+            .onReceive(collaborationManager.pageJumpRequested) { req in
+                guard isCollaborating else { return }
+                jumpToCollabPage(pageId: req.pageId, forceScroll: req.forceScroll)
+            }
+            .onReceive(collaborationManager.pageEditBlocked) { blocker in
+                guard isCollaborating else { return }
+                showCanvasNotice(collaborationManager.formatPageEditWaitNotice(for: blocker))
+            }
+            .onReceive(collaborationManager.pageEditPreempted) { winner in
+                handleCollabPageEditPreempted(winner)
+            }
+            .onChange(of: inlineEditingTextId) { newId in
+                handleCollabInlineEditingChanged(newId)
+            }
+    }
+
     /// 協同事件：租約搶輸、換房間、舊版參與者。
     var collabEventSink: AnyView {
-        AnyView(Color.clear
-            .onAppear {
-                installProInkCollab(true)
-                collaborationManager.stateDepositor = { await depositCollabState() }
-            }
-            .onDisappear {
-                installProInkCollab(false)
-                collaborationManager.stateDepositor = nil
-            }
-            // 雲端中繼：定期把整份狀態寄存在房間裡（房主不在線也能加入、離線的人回來補得到）。
-            // 房間裡只由一個人寄存（`shouldDepositState`），省中繼的寫入額度。
-            .onReceive(Timer.publish(every: CollaborationManager.depositCheckInterval, on: .main, in: .common).autoconnect()) { _ in
-                guard isCollaborating, collaborationManager.shouldDepositState else { return }
-                Task { @MainActor in await depositCollabState() }
-            }
-            .onReceive(collaborationManager.leaseLost) { lost in
+        AnyView(ZStack {
+            collabPageLeaseEventSink
+            Color.clear
+                .onAppear {
+                    installProInkCollab(true)
+                    collaborationManager.stateDepositor = { await depositCollabState() }
+                }
+                .onDisappear {
+                    installProInkCollab(false)
+                    collaborationManager.stateDepositor = nil
+                }
+                // 雲端中繼：定期把整份狀態寄存在房間裡（房主不在線也能加入、離線的人回來補得到）。
+                // 房間裡只由一個人寄存（`shouldDepositState`），省中繼的寫入額度。
+                .onReceive(Timer.publish(every: CollaborationManager.depositCheckInterval, on: .main, in: .common).autoconnect()) { _ in
+                    guard isCollaborating, collaborationManager.shouldDepositState else { return }
+                    Task { @MainActor in await depositCollabState() }
+                }
+                .onReceive(collaborationManager.leaseLost) { lost in
                 // 兩人同時選了同一個物件、對方勝出：本機放手（設計 §5.3）。
                 if activeSelectedObjectId == lost.id { activeSelectedObjectId = nil }
                 if inlineEditingTextId == lost.id { inlineEditingTextId = nil }
@@ -227,7 +322,7 @@ extension NotebookEditorView {
                 guard !ids.isEmpty else { return }
                 showCanvasNotice(localizationManager.localized("collab_peer_outdated"))
             }
-        )
+        })
     }
 
     /// 套用別人的物件修改（欄位層級 LWW，設計 §4.1）。
@@ -905,6 +1000,10 @@ extension NotebookEditorView {
             let replica = collabTextHub.replica(for: edit.id, base: edit.old, site: me)
             let ops = replica.localEdit(from: edit.old, to: edit.new)
             guard !ops.isEmpty else { continue }
+            if let pageIdx = notebook.textAttachments?.first(where: { CollabCanonical.canonicalId($0.id) == edit.id })?.pageIndex,
+               let pid = liveInkPageId(pageIdx) {
+                collaborationManager.renewLocalPageEdit(pageId: pid)
+            }
             collaborationManager.broadcastOplog(kind: "text_ops", payload: [
                 "proto": Self.collabProto, "id": edit.id, "base": replica.baseHash, "text": edit.new,
                 "ops": ops.map(\.json)

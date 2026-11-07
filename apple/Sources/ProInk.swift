@@ -1143,9 +1143,22 @@ enum ProInkCollab {
     nonisolated(unsafe) static var liveHandler: (@MainActor (_ notebookId: String, _ page: Int, _ phase: Int,
                                                             _ stroke: ProStroke?, _ points: [ProPoint]) -> Void)?
 
+    /// 線上協同跨頁編輯守門：落筆或擦除前檢查是否允許在該頁編輯（若別頁有人先下筆則回 `false`）。
+    // profile-scope: device 只在協同房間開著時由編輯器掛上，離開即清空
+    nonisolated(unsafe) static var canBeginEdit: (@MainActor (_ notebookId: String, _ page: Int) -> Bool)?
+
     /// 畫面上正在顯示的頁（別台的筆畫進來時，畫面上那一頁直接更新，不必整頁重讀）。
     // profile-scope: device 弱參照，只記目前存活的畫布圖層
     nonisolated(unsafe) static var liveLayers = NSHashTable<ProInkLayerView>.weakObjects()
+
+    /// 跨頁編輯被更高優先權的遠端成員搶先時，取消本機正在進行中的筆畫。
+    @MainActor
+    static func cancelActiveStrokes(notebookId: String) {
+        for view in liveLayers.allObjects
+        where view.notebookId.caseInsensitiveCompare(notebookId) == .orderedSame {
+            view.cancelStroke()
+        }
+    }
 
     /// 別台即時送來的筆畫：加入 `added`、移除 `removedIds`（套件 id）。
     ///
@@ -3020,12 +3033,19 @@ final class ProStrokeGestureRecognizer: UIGestureRecognizer {
             pendingBegin = (point, touch.location(in: layerView))
             return
         }
+        if (mode == .draw || mode == .erase),
+           ProInkCollab.canBeginEdit?(layerView.notebookId, layerView.pageIndex) == false {
+            tracked = nil
+            state = .failed
+            return
+        }
         state = .began
         switch mode {
         case .draw:
             guard let tool = tool() else { state = .failed; return }
             beginDrawing(tool: tool, at: point, in: layerView)
         case .erase:
+            ProInkCollab.liveHandler?(layerView.notebookId, layerView.pageIndex, 0, nil, [point])
             erasePath = [CGPoint(x: CGFloat(point.x), y: CGFloat(point.y))]
             layerView.erase(along: erasePath, radius: eraserRadius())
             if let view { onEraserTrack?(touch.location(in: view)) }
@@ -3067,7 +3087,13 @@ final class ProStrokeGestureRecognizer: UIGestureRecognizer {
             let here = touch.location(in: layerView)
             let moved = hypot(here.x - pending.location.x, here.y - pending.location.y)
             guard moved >= EditorCanvasInputPolicy.pencilTapMaxDistance / 2 else { return }
-            guard let tool = tool() else { pendingBegin = nil; state = .failed; return }
+            guard let tool = tool(),
+                  ProInkCollab.canBeginEdit?(layerView.notebookId, layerView.pageIndex) != false else {
+                pendingBegin = nil
+                tracked = nil
+                state = .failed
+                return
+            }
             beginDrawing(tool: tool, at: pending.point, in: layerView)
             pendingBegin = nil
             state = .began
@@ -3094,6 +3120,7 @@ final class ProStrokeGestureRecognizer: UIGestureRecognizer {
             layerView.extendStroke(with: points, predicted: predictedPoints)
             if let last = points.last { rearmHold(at: CGPoint(x: CGFloat(last.x), y: CGFloat(last.y))) }
         case .erase:
+            ProInkCollab.liveHandler?(layerView.notebookId, layerView.pageIndex, 1, nil, points)
             let path = points.map { CGPoint(x: CGFloat($0.x), y: CGFloat($0.y)) }
             erasePath.append(contentsOf: path)
             layerView.erase(along: path, radius: eraserRadius())
@@ -3128,7 +3155,10 @@ final class ProStrokeGestureRecognizer: UIGestureRecognizer {
         holdTimer?.invalidate()
         if mode == .draw { layerView?.endStroke() }
         if mode == .tool { onToolTouch?(.ended, lastToolPoint) }
-        if mode == .erase { onEraserTrack?(nil) }
+        if mode == .erase {
+            if let layerView { ProInkCollab.liveHandler?(layerView.notebookId, layerView.pageIndex, 2, nil, []) }
+            onEraserTrack?(nil)
+        }
         tracked = nil
         erasePath = []
         state = .ended
@@ -3141,6 +3171,9 @@ final class ProStrokeGestureRecognizer: UIGestureRecognizer {
             tracked = nil
             state = .failed
             return
+        }
+        if mode == .erase, let layerView {
+            ProInkCollab.liveHandler?(layerView.notebookId, layerView.pageIndex, 2, nil, [])
         }
         cancelCurrent()
         state = .cancelled
