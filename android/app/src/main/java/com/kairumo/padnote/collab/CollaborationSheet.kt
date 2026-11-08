@@ -87,7 +87,7 @@ fun CollaborationSheet(
     // 關掉面板只剩空白畫布。開著的是別本筆記時照舊只帶入、等使用者自己按。與 Apple 同一套。
     var autoJoined by remember { mutableStateOf(false) }
     LaunchedEffect(invited) {
-        if (invited != null && inviteTargets(invited, notebookId)) {
+        if (invited != null && inviteTargets(invited, notebookId) && manager.status !is CollaborationManager.Status.Connected) {
             autoJoined = true
             manager.joinRoom(invited)
         }
