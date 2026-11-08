@@ -54,6 +54,13 @@ class AndroidCollabController(private val manager: CollaborationManager) {
     private val engineSeen = HashMap<String, Pair<InkEngine, MutableSet<String>>>()
     private val sentRequests = HashSet<String>()
 
+    /** 這個房間的整份狀態已經完整收過一次。沒收到之前，編輯器會定時重新要（見 `EditorCanvasContext`）。 */
+    @Volatile var syncedOnce = false
+        private set
+
+    /** 還有一份整份狀態的請求在等回覆。 */
+    val hasPendingRequest: Boolean get() = pendingRequest != null
+
     /** 進入（或換）房間：以目前的內容為大家共同的起點，不送出任何東西。 */
     fun reset(canvas: AndroidCollabCanvas, session: PadnoteSession, preservePendingRequest: Boolean = false) {
         sync.reset(canvas)
@@ -64,6 +71,9 @@ class AndroidCollabController(private val manager: CollaborationManager) {
         if (!preservePendingRequest) {
             pendingRequest = null
             sentRequests.clear()
+            receivedParts = HashSet()
+            snapshotKeys = HashSet()
+            syncedOnce = false
         }
         storedSnap = null
         storedParts = HashSet()
@@ -719,6 +729,7 @@ class AndroidCollabController(private val manager: CollaborationManager) {
         var needsPublish = false
         if (received.size >= parts) {
             if (storedSnap == null) pendingRequest = null
+            syncedOnce = true
             // 只有自己有的物件（例如離線時新增的）：忘掉它們，下一次送出就會當成新的補給房間。
             //
             // **空白頁例外**：掃碼加入時本機沒有這本，會先建一本只有一頁空白頁的筆記（頁面 id 是本機算的，

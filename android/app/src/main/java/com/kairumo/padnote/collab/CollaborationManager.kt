@@ -101,6 +101,10 @@ class CollaborationManager(private val context: Context) {
         private set
     var roomKeyBase64 by mutableStateOf<String?>(null)
         private set
+
+    /** 收到但解不開（沒有金鑰或金鑰不符）而被丟棄的加密操作數。 */
+    @Volatile var undecryptableCount = 0
+        private set
     var lastError by mutableStateOf<String?>(null)
         private set
     var isHostingLocalRelay by mutableStateOf(false)
@@ -275,9 +279,18 @@ class CollaborationManager(private val context: Context) {
             lastError = "invalid_room"
             return
         }
-        val key = inviteV2?.keyBase64?.takeIf { it.isNotEmpty() } ?: collabParseInvite(trimmed).keyBase64
-        if (key.isNotEmpty() && collabIsValidRoomKey(key)) {
-            roomKeyBase64 = key
+        // 金鑰在 `#key=` 之後，是標準 base64（含 `+`、`/`、`=`）。連結被轉貼、經過聊天軟體或系統的網址
+        // 處理後這幾個字元常被百分號編碼，核心的解析不解碼 → 判成「沒有金鑰」→ 以明文加入，
+        // 之後房主送來的每一則加密訊息都解不開、被靜靜丟掉：連得上、成員也對，內容卻永遠不來。
+        // 所以這裡自己再解一次，三種寫法（原樣、百分號編碼、`+` 被當空白）都認。
+        val key = listOf(
+            inviteV2?.keyBase64.orEmpty(),
+            collabParseInvite(trimmed).keyBase64,
+            extractInviteKey(trimmed),
+        ).firstOrNull { it.isNotEmpty() && collabIsValidRoomKey(it) }
+        roomKeyBase64 = key
+        if (key == null && trimmed.contains("#")) {
+            android.util.Log.w("Collab", "邀請連結帶了 # 片段但解不出合法金鑰：會以未加密身分加入，無法讀取加密房間")
         }
         if (inviteV2 != null && inviteV2.servers.isNotEmpty()) {
             val (lan, ts) = getLocalIpAddresses()
@@ -288,6 +301,14 @@ class CollaborationManager(private val context: Context) {
             }
         }
         connect(roomId, asHost = false)
+    }
+
+    /** 從邀請文字的 `#` 片段取出金鑰：容忍百分號編碼與被轉成空白的 `+`。 */
+    private fun extractInviteKey(text: String): String {
+        val fragment = text.substringAfter('#', "").trim()
+        if (fragment.isEmpty()) return ""
+        val raw = fragment.removePrefix("key=").trim().replace("+", "%2B").replace(" ", "%2B")
+        return runCatching { java.net.URLDecoder.decode(raw, "UTF-8") }.getOrDefault(raw).trim()
     }
 
     fun getInviteLink(useTailscale: Boolean = false): String {
@@ -1087,11 +1108,20 @@ class CollaborationManager(private val context: Context) {
         synchronized(this) { lamportClock = maxOf(lamportClock, lamport.toLong()) }
 
         val payload = if (item.optBoolean("encrypted", false)) {
-            val key = roomKeyBase64 ?: return
+            val key = roomKeyBase64
+            if (key == null) {
+                undecryptableCount++
+                android.util.Log.w("Collab", "收到加密的 $kind 但這台沒有房間金鑰：丟棄（共 $undecryptableCount 則）")
+                return
+            }
             val plain = collabDecrypt(key, raw.optString("ciphertext"))
             // 解不開代表對方用的是另一把金鑰。丟掉，不要把密文當內容
             // 寫進筆記 —— 那只會在畫布上留下一串亂碼。
-            if (plain.isEmpty()) return
+            if (plain.isEmpty()) {
+                undecryptableCount++
+                android.util.Log.w("Collab", "收到的 $kind 解不開（金鑰不符）：丟棄（共 $undecryptableCount 則）")
+                return
+            }
             runCatching { JSONObject(plain) }.getOrNull() ?: return
         } else {
             raw

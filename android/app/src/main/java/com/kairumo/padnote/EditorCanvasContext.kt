@@ -2926,6 +2926,16 @@ internal fun rememberEditorCanvasContext(
     fun collabEngineFor(page: String): InkEngine? =
         if (pageDisplayMode == PageDisplayMode.CONTINUOUS) continuousCollab.engineFor(page)
         else engine.takeIf { AndroidCollabCanvas.canonicalPageId(page) == AndroidCollabCanvas.canonicalPageId(pageId ?: "") }
+    /**
+     * 此刻的房間（直接讀連線狀態，不用組合時算好的 `collabRoom`）。
+     *
+     * 加入房間的 `joined` 與緊接著回來的整份狀態都在 OkHttp 執行緒上抵達、再排到主執行緒處理，
+     * 而 `collabRoom` 要等下一格重組才更新：那一格之前到的操作會被 `?: return` 靜靜丟掉，
+     * 而該操作的 id 已記進去重名單、序號也已推進，之後再也補不回 —— 實機症狀就是
+     * 「顯示已進入會議室，筆記本卻停在兩頁空白、房主的內容與新筆跡都不來」。
+     */
+    fun liveCollabRoom(): String? = (collaboration.status as? CollaborationManager.Status.Connected)?.roomId
+
     fun publishCollab() {
         if (!collabActive || collab.isApplyingRemote) return
         val session = notebook?.first ?: return
@@ -2949,6 +2959,26 @@ internal fun rememberEditorCanvasContext(
                 collab.requestState()
                 collabLastStateRequest = now
             }
+        }
+    }
+    // 整份狀態沒收齊就重新要：第一次的請求或回覆可能在連線剛建立、雙方還在整理的那一瞬間掉了
+    // （中繼不暫存 `state_` 類訊息，掉了就沒有人會再補）。收齊一次就停；最多試 8 次。
+    LaunchedEffect(collab, collabRoom) {
+        if (collabRoom == null) return@LaunchedEffect
+        var attempts = 0
+        while (attempts < 8 && !collab.syncedOnce) {
+            kotlinx.coroutines.delay(4_000)
+            if (collab.syncedOnce) break
+            if (collaboration.status !is CollaborationManager.Status.Connected) continue
+            if (collaboration.peers.isEmpty()) continue
+            val session = notebook?.first ?: continue
+            if (liveCollabRoom() != collabBaseRoom) {
+                collabCanvas()?.let { collab.reset(it, session, preservePendingRequest = true) }
+                collabBaseRoom = liveCollabRoom()
+            }
+            collab.requestState()
+            collabLastStateRequest = System.currentTimeMillis()
+            attempts++
         }
     }
     // 雲端中繼：定期把整份狀態寄存在房間裡（房主不在線也能加入、離線的人回來補得到）。
@@ -3011,9 +3041,9 @@ internal fun rememberEditorCanvasContext(
     }
 
     fun applyCollabOp(op: CollaborationManager.RemoteOplog) {
-        if (!inRoom) return
+        if (collaboration.status is CollaborationManager.Status.Disconnected) return
         val session = notebook?.first ?: return
-        val room = collabRoom ?: return
+        val room = liveCollabRoom() ?: return
         if (collabBaseRoom != room) {
             collabCanvas()?.let { collab.reset(it, session, preservePendingRequest = true) }
             collabBaseRoom = room
@@ -3069,13 +3099,13 @@ internal fun rememberEditorCanvasContext(
     }
     val latestStateSyncNeeded by rememberUpdatedState<() -> Unit> {
         val now = System.currentTimeMillis()
-        val room = collabRoom
+        val room = liveCollabRoom()
         val session = notebook?.first
         if (room != null && session != null && room != collabBaseRoom) {
             collabCanvas()?.let { collab.reset(it, session, preservePendingRequest = true) }
             collabBaseRoom = room
         }
-        if (inRoom && now - collabLastStateRequest > 3_000) {
+        if (collaboration.status !is CollaborationManager.Status.Disconnected && now - collabLastStateRequest > 3_000) {
             collab.requestState()
             collabLastStateRequest = now
         }
