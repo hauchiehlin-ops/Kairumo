@@ -1,9 +1,15 @@
 package com.kairumo.padnote.collab
 
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -16,15 +22,20 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import com.kairumo.padnote.LocalizationStrings
 
 /**
@@ -37,6 +48,18 @@ fun CollabVoiceFloatingCapsule(
     modifier: Modifier = Modifier
 ) {
     fun l(key: String) = LocalizationStrings.localized(key, languageTag)
+    val context = LocalContext.current
+
+    var hasMicPermission by remember {
+        mutableStateOf(
+            ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
+        )
+    }
+    val micPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        hasMicPermission = granted
+    }
 
     val isTalking = voice.isTalking
     val scale by animateFloatAsState(targetValue = if (isTalking) 1.05f else 1f, label = "scale")
@@ -102,14 +125,17 @@ fun CollabVoiceFloatingCapsule(
                     .scale(scale)
                     .clip(RoundedCornerShape(20.dp))
                     .background(btnColor)
-                    .pointerInput(voice) {
-                        detectTapGestures(
-                            onPress = {
-                                voice.startTalking()
-                                tryAwaitRelease()
-                                voice.stopTalking()
+                    .pointerInput(voice, hasMicPermission) {
+                        awaitEachGesture {
+                            awaitFirstDown(requireUnconsumed = false)
+                            if (!hasMicPermission) {
+                                micPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                                return@awaitEachGesture
                             }
-                        )
+                            voice.startTalking()
+                            waitForUpOrCancellation()
+                            voice.stopTalking()
+                        }
                     }
                     .padding(horizontal = 14.dp, vertical = 8.dp)
             ) {

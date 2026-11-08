@@ -72,7 +72,14 @@ class CollabVoiceManager(
     @SuppressLint("MissingPermission")
     fun startTalking() {
         if (isTalking) return
-        if (collaboration.status !is CollaborationManager.Status.Connected) return
+        if (collaboration.status !is CollaborationManager.Status.Connected) {
+            android.util.Log.w("CollabVoice", "startTalking: 協同尚未連線")
+            return
+        }
+        if (context.checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            android.util.Log.w("CollabVoice", "startTalking: 缺少 RECORD_AUDIO 權限")
+            return
+        }
 
         isTalking = true
         outgoingSeq = 0
@@ -96,11 +103,13 @@ class CollabVoiceManager(
                 bufSize
             )
         } catch (t: Throwable) {
+            android.util.Log.e("CollabVoice", "startTalking: AudioRecord 建立失敗", t)
             isTalking = false
             return
         }
 
         if (record.state != AudioRecord.STATE_INITIALIZED) {
+            android.util.Log.e("CollabVoice", "startTalking: AudioRecord 初始化失敗 (state != INITIALIZED)")
             record.release()
             isTalking = false
             return
