@@ -529,9 +529,14 @@ fun ContinuousPagesView(
     DisposableEffect(collabBridge, runtimes, history) {
         val bridge = collabBridge
         if (bridge != null) {
-            bridge.engineFor = { id -> runtimes[id]?.takeIf { it.inkLoaded }?.engine }
+            bridge.engineFor = { id ->
+                val canonical = com.kairumo.padnote.collab.AndroidCollabCanvas.canonicalPageId(id)
+                (runtimes[canonical] ?: runtimes.entries.firstOrNull { it.key.equals(canonical, ignoreCase = true) }?.value)
+                    ?.takeIf { it.inkLoaded }?.engine
+            }
             bridge.storesFor = { id ->
-                runtimes[id]?.let {
+                val canonical = com.kairumo.padnote.collab.AndroidCollabCanvas.canonicalPageId(id)
+                (runtimes[canonical] ?: runtimes.entries.firstOrNull { it.key.equals(canonical, ignoreCase = true) }?.value)?.let {
                     com.kairumo.padnote.collab.CollabPageStores(
                         it.textStore, it.imageStore, it.tableStore, it.chartStore, it.shapeStore)
                 }

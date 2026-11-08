@@ -13,6 +13,10 @@ export PYTHONIOENCODING=utf-8
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO_ROOT"
 
+if [[ -z "${CARGO_TARGET_DIR:-}" ]]; then
+    export CARGO_TARGET_DIR="${HOME}/.cargo-target/kairumo"
+fi
+
 FORCE=0
 for arg in "$@"; do
     case "$arg" in

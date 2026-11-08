@@ -253,13 +253,13 @@ class AndroidCollabController(private val manager: CollaborationManager) {
 
     private fun sessionPageIds(session: PadnoteSession): List<String> {
         val count = runCatching { session.pageCount().toInt() }.getOrDefault(0)
-        return (0 until count).mapNotNull { runCatching { session.pageIdAt(it.toUInt()) }.getOrNull() }
+        return (0 until count).mapNotNull { runCatching { session.pageIdAt(it.toUInt()) }.getOrNull()?.let(AndroidCollabCanvas::canonicalPageId) }
     }
 
     private fun drainPendingInk(session: PadnoteSession, engineFor: (String) -> InkEngine?): Boolean {
         if (pendingInk.isEmpty()) return false
         val available = sessionPageIds(session).toSet()
-        val readyPages = pendingInk.keys.filter { it in available }
+        val readyPages = pendingInk.keys.filter { key -> available.any { it.equals(key, ignoreCase = true) } }
         if (readyPages.isEmpty()) return false
         var changed = false
         for (page in readyPages) {
@@ -275,8 +275,9 @@ class AndroidCollabController(private val manager: CollaborationManager) {
     }
 
     private fun addStrokes(
-        page: String, list: JSONArray, session: PadnoteSession, engineFor: (String) -> InkEngine?
+        rawPage: String, list: JSONArray, session: PadnoteSession, engineFor: (String) -> InkEngine?
     ): Boolean {
+        val page = AndroidCollabCanvas.canonicalPageId(rawPage)
         val known = ink.known.getOrPut(page) { HashSet() }
         val now = System.currentTimeMillis()
         // （線上 id, 筆畫, 套件裡要用的 id）。用送出者的 id 寫進核心：同一筆在每一台的套件裡是同一個 id，
@@ -288,9 +289,9 @@ class AndroidCollabController(private val manager: CollaborationManager) {
         if (decoded.isEmpty()) return false
 
         val currentSessionPages = sessionPageIds(session)
-        if (page !in currentSessionPages) {
+        if (currentSessionPages.none { it.equals(page, ignoreCase = true) }) {
             // 頁面尚未補上：若在預期頁序中則先擱著，等頁面建立後立即寫入（與 Apple holdCollabInkIfPending 一致）
-            if (sync.desiredPageOrder().contains(page)) {
+            if (sync.desiredPageOrder().any { it.equals(page, ignoreCase = true) }) {
                 val existing = pendingInk[page]
                 val merged = JSONArray()
                 existing?.first?.let { for (k in 0 until it.length()) merged.put(it.get(k)) }
@@ -324,10 +325,11 @@ class AndroidCollabController(private val manager: CollaborationManager) {
         return true
     }
 
-    private fun removeStrokes(page: String, wires: Set<String>, session: PadnoteSession, engineFor: (String) -> InkEngine?): Boolean {
+    private fun removeStrokes(rawPage: String, wires: Set<String>, session: PadnoteSession, engineFor: (String) -> InkEngine?): Boolean {
+        val page = AndroidCollabCanvas.canonicalPageId(rawPage)
         val currentSessionPages = sessionPageIds(session)
-        if (page !in currentSessionPages) {
-            if (sync.desiredPageOrder().contains(page)) {
+        if (currentSessionPages.none { it.equals(page, ignoreCase = true) }) {
+            if (sync.desiredPageOrder().any { it.equals(page, ignoreCase = true) }) {
                 val existing = pendingInk[page]
                 val mergedRemoved = (existing?.second ?: emptySet()) + wires
                 pendingInk[page] = (existing?.first ?: JSONArray()) to mergedRemoved
@@ -413,34 +415,29 @@ class AndroidCollabController(private val manager: CollaborationManager) {
 
     /** 依合併後的頁序調整本機的頁面：補上缺的、刪掉被刪的、搬到對的位置（設計 §8.4）。 */
     /** 這一頁沒有任何筆畫、也沒有任何物件。 */
-    private fun isEmptyPage(pageId: String, session: PadnoteSession): Boolean {
+    private fun isEmptyPage(rawPageId: String, session: PadnoteSession): Boolean {
+        val pageId = AndroidCollabCanvas.canonicalPageId(rawPageId)
         val strokes = runCatching { session.visibleStrokeDetails(pageId) }.getOrDefault(emptyList())
         if (strokes.isNotEmpty()) return false
-        return sync.shadow.values.none { it["page"] == pageId && it[ObjectPatch.DELETED] == false }
+        return sync.shadow.values.none {
+            val p = (it["page"] as? String)?.let(AndroidCollabCanvas::canonicalPageId)
+            p == pageId && it[ObjectPatch.DELETED] == false
+        }
     }
 
     private fun reconcilePages(session: PadnoteSession, meta: NotebookMeta): Boolean {
-        val desired = sync.desiredPageOrder()
+        val desired = sync.desiredPageOrder().map(AndroidCollabCanvas::canonicalPageId)
         if (desired.isEmpty()) return false
-        fun ids(): List<String> {
-            val count = runCatching { session.pageCount().toInt() }.getOrDefault(0)
-            return (0 until count).mapNotNull { runCatching { session.pageIdAt(it.toUInt()) }.getOrNull() }
-        }
+        fun ids(): List<String> = sessionPageIds(session)
         meta.refresh(session)
         var current = ids()
         var changed = false
         val wanted = desired.toSet()
-        for (id in current.reversed()) {
-            if (id in wanted || current.size <= 1) continue
-            val index = current.indexOf(id)
-            if (runCatching { session.removePage(id) }.isFailure) continue
-            meta.removePageTemplate(session, index, current.size)
-            current = ids()
-            changed = true
-        }
+
+        // Step 1: 先補上缺少的頁面（補齊後 current.size > 1，後續才能安全刪除多餘的初始空白頁）
         for ((target, id) in desired.withIndex()) {
-            if (id in current) continue
-            val paper = sync.shadow["page:$id"]?.get("paper") as? String
+            if (current.any { it.equals(id, ignoreCase = true) }) continue
+            val paper = (sync.shadow["page:$id"] ?: sync.shadow["page:${id.uppercase()}"])?.get("paper") as? String
             val style = paper?.let { p -> uniffi.padnote_core.paperTemplates().firstOrNull { it.id == p }?.pageStyle }
                 ?: PageStyle.BLANK
             if (runCatching { session.addPageWithId(id, style) }.isFailure) continue
@@ -455,8 +452,21 @@ class AndroidCollabController(private val manager: CollaborationManager) {
             current = ids()
             changed = true
         }
+
+        // Step 2: 刪除不在 wanted 名單中的頁面（包括剛進房時預先建立的單頁空白頁）
+        for (id in current.reversed()) {
+            if (wanted.any { it.equals(id, ignoreCase = true) } || current.size <= 1) continue
+            val index = current.indexOfFirst { it.equals(id, ignoreCase = true) }
+            if (index < 0) continue
+            if (runCatching { session.removePage(id) }.isFailure) continue
+            meta.removePageTemplate(session, index, current.size)
+            current = ids()
+            changed = true
+        }
+
+        // Step 3: 依 desired 順序重新排列頁面
         for ((target, id) in desired.withIndex()) {
-            val from = current.indexOf(id)
+            val from = current.indexOfFirst { it.equals(id, ignoreCase = true) }
             if (from < 0 || from == target || target >= current.size) continue
             if (runCatching { session.movePage(id, target.toUInt()) }.isFailure) continue
             meta.movePageData(session, from, target, current.size)
@@ -708,8 +718,13 @@ class AndroidCollabController(private val manager: CollaborationManager) {
             // 沒有任何筆畫與物件的頁：本機刪掉、不送出。有內容的照舊補給房間。
             // 「房間裡有的」以兩份整份狀態的聯集判斷：寄存的那一份可能比較舊，只拿它比，房主之後才加的
             // 物件與空白頁會被當成「只有自己有」—— 物件以舊值再送一次、空白頁被刪掉。與 Apple 相同。
-            val roomKeys = storedKeys + snapshotKeys
-            val localOnly = sync.liveKeys.filter { it !in roomKeys && !it.startsWith("meta:") }
+            val roomKeys = (storedKeys + snapshotKeys).map {
+                if (it.startsWith("page:")) "page:${AndroidCollabCanvas.canonicalPageId(it.removePrefix("page:"))}" else it
+            }.toSet()
+            val localOnly = sync.liveKeys.filter { key ->
+                val canonicalKey = if (key.startsWith("page:")) "page:${AndroidCollabCanvas.canonicalPageId(key.removePrefix("page:"))}" else key
+                canonicalKey !in roomKeys && !key.startsWith("meta:")
+            }
             val emptyPages = localOnly.filter { it.startsWith("page:") && isEmptyPage(it.removePrefix("page:"), session) }
             for (key in emptyPages) sync.shadow[key] = mutableMapOf(ObjectPatch.DELETED to true)
             if (emptyPages.isNotEmpty() && reconcilePages(session, meta)) pagesChanged = true

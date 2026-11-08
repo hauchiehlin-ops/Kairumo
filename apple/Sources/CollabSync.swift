@@ -434,7 +434,7 @@ final class CollabObjectSync {
         shadow.compactMap { key, dict -> (String, String)? in
             guard key.hasPrefix("page:"), (dict[ObjectPatch.deletedField] as? Bool) != true,
                   let pos = dict["pos"] as? String else { return nil }
-            return (String(key.dropFirst(5)), pos)
+            return (CollabCanonical.canonicalPageId(String(key.dropFirst(5))), pos)
         }
         .sorted { $0.1 != $1.1 ? $0.1 < $1.1 : $0.0 < $1.0 }
         .map(\.0)
@@ -546,6 +546,10 @@ enum CollabCanonical {
 
     static func canonicalId(_ localId: String) -> String { NotebookPackageBridge.stableBlockId(localId) }
 
+    static func canonicalPageId(_ raw: String) -> String {
+        raw.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+    }
+
     /// 圖片內容的雜湊（= 核心的 blob id，兩平台相同）。讀檔一次之後記住。
     // profile-scope: profile 檔名 → 雜湊；不同設定檔可能有同名的不同圖檔，切換時清掉（ProfileManager.defaultExtraResets）
     nonisolated(unsafe) private static var blobHashes: [String: String] = [:]
@@ -581,7 +585,7 @@ enum CollabCanonical {
 
     static func maps(of doc: NotebookDocument, pagePositions: [String: String],
                      zPositions: [String: String] = [:]) -> [String: Entry] {
-        let pageIds = doc.pageIds ?? []
+        let pageIds = (doc.pageIds ?? []).map(canonicalPageId)
         func page(_ index: Int) -> String? { index >= 0 && index < pageIds.count ? pageIds[index] : nil }
         var out: [String: Entry] = [:]
         let under = Set((doc.underInkObjectIdsByPage ?? [:]).values.flatMap { $0.map(canonicalId) })
@@ -657,10 +661,11 @@ enum CollabCanonical {
         payload("sticky", doc.stickyAnchors) { $0.id }
 
         for (index, id) in pageIds.enumerated() {
+            let canonical = canonicalPageId(id)
             var dict: [String: Any] = [:]
-            if let pos = pagePositions[id] { dict["pos"] = pos }
+            if let pos = pagePositions[canonical] ?? pagePositions[id] { dict["pos"] = pos }
             dict["paper"] = doc.paperId(forPage: index)
-            out["page:\(id)"] = ("page", id, dict)
+            out["page:\(canonical)"] = ("page", canonical, dict)
         }
 
         // 頁面層級的設定。堆疊順序與「在筆跡下方」已改成每個物件的欄位（協定 4）。
@@ -675,9 +680,11 @@ enum CollabCanonical {
     /// 把一個物件的完整欄位寫回筆記本。回傳 false = 它所在的頁還不存在，晚點再試。
     static func write(type: String, id: String, fields: [String: Any], deleted: Bool,
                       into doc: inout NotebookDocument) -> Bool {
-        let pageIds = doc.pageIds ?? []
+        let pageIds = (doc.pageIds ?? []).map(canonicalPageId)
         if type == "page" {
-            if !deleted, let index = pageIds.firstIndex(of: id), let paper = fields["paper"] as? String {
+            let canonical = canonicalPageId(id)
+            if !deleted, let index = pageIds.firstIndex(where: { $0.caseInsensitiveCompare(canonical) == .orderedSame }),
+               let paper = fields["paper"] as? String {
                 doc.padPagePaperIds(to: max(doc.pageCount, index + 1))
                 if index < (doc.pagePaperIds?.count ?? 0) { doc.pagePaperIds?[index] = paper }
             }
@@ -689,7 +696,9 @@ enum CollabCanonical {
         }
         var pageIndex = 0
         if !deleted {
-            guard let page = fields["page"] as? String, let index = pageIds.firstIndex(of: page) else { return false }
+            guard let rawPage = fields["page"] as? String else { return false }
+            let page = canonicalPageId(rawPage)
+            guard let index = pageIds.firstIndex(where: { $0.caseInsensitiveCompare(page) == .orderedSame }) else { return false }
             pageIndex = index
         }
         func number(_ key: String) -> CGFloat? { (fields[key] as? NSNumber).map { CGFloat($0.doubleValue) } }
@@ -848,7 +857,8 @@ enum CollabCanonical {
         func byIndex(_ lists: [String: [String]]) -> [String: [String]]? {
             var out: [String: [String]] = [:]
             for (page, ids) in lists where !ids.isEmpty {
-                guard let i = pageIds.firstIndex(of: page) else { continue }
+                let canonical = canonicalPageId(page)
+                guard let i = pageIds.firstIndex(where: { $0.caseInsensitiveCompare(canonical) == .orderedSame }) else { continue }
                 out[String(i)] = ids.map { local[$0] ?? $0 }
             }
             return out.isEmpty ? nil : out
