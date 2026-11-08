@@ -95,7 +95,7 @@ class CollabObjectSync {
     /** 以這份內容為「大家都有的」起點。不送出任何東西。 */
     fun reset(canvas: CollabCanvas) {
         shadow.clear(); stamps.clear(); deferredKeys.clear(); pagePositions.clear(); zPositions.clear()
-        val ids = canvas.pageIds
+        val ids = canvas.pageIds.map { it.trim().lowercase() }
         ids.zip(FractionalIndex.initialKeys(ids.size)).forEach { (id, key) -> pagePositions[id] = key }
         // 同樣的順序算出同樣的鍵：兩台以同一份筆記開始時，每個物件的排序鍵也相同。
         for (order in canvas.objectOrders().values) {
@@ -150,7 +150,8 @@ class CollabObjectSync {
     }
 
     /** 本機頁序變了：只替順序對不上的頁換排序鍵（與 Apple 端相同）。 */
-    private fun reconcilePagePositions(order: List<String>) = reconcileKeys(order, pagePositions)
+    private fun reconcilePagePositions(order: List<String>) =
+        reconcileKeys(order.map { it.trim().lowercase() }, pagePositions)
 
     /** 本機的堆疊順序變了：同樣只替順序對不上的物件換鍵；不在任何順序裡的物件拿掉它的鍵。 */
     private fun reconcileZ(orders: Map<String, List<String>>) {
@@ -186,7 +187,10 @@ class CollabObjectSync {
         val exists = shadow[patch.key]?.get(ObjectPatch.DELETED) == false
         val fields = if (exists) patch.fields - (CREATE_ONLY[patch.type] ?: emptySet()) else patch.fields
         if (!merge(ObjectPatch(patch.type, patch.id, fields), stamp)) return false
-        if (patch.type == "page") (shadow[patch.key]?.get("pos") as? String)?.let { pagePositions[patch.id] = it }
+        if (patch.type == "page") {
+            val canonical = patch.id.trim().lowercase()
+            (shadow[patch.key]?.get("pos") as? String)?.let { pagePositions[canonical] = it }
+        }
         if ("z" in fields) {
             val z = shadow[patch.key]?.get("z") as? String
             if (z != null) zPositions[patch.id] = z else zPositions.remove(patch.id)
@@ -272,8 +276,9 @@ class CollabObjectSync {
     fun desiredPageOrder(): List<String> =
         shadow.entries.mapNotNull { (key, dict) ->
             if (!key.startsWith("page:") || dict[ObjectPatch.DELETED] == true) return@mapNotNull null
-            val pos = dict["pos"] as? String ?: return@mapNotNull null
-            key.removePrefix("page:") to pos
+            val id = key.removePrefix("page:").trim().lowercase()
+            val pos = (dict["pos"] as? String) ?: pagePositions[id] ?: "a0"
+            id to pos
         }.sortedWith(compareBy({ it.second }, { it.first })).map { it.first }
 
     /** 寫回之後以實際的編碼更新 shadow（時戳不動）。另一個平台才有的欄位保留。 */

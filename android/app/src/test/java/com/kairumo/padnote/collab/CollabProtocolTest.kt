@@ -144,7 +144,13 @@ private class FakeCanvas(var pages: MutableList<String>) : CollabCanvas {
     override fun maps(pagePositions: Map<String, String>, zPositions: Map<String, String>, allPages: Boolean): Map<String, CollabEntry> {
         val out = LinkedHashMap<String, CollabEntry>()
         for ((k, e) in objects) out[k] = e.copy(dict = e.dict + (zPositions[e.id]?.let { mapOf("z" to it) } ?: emptyMap()))
-        for (p in pages) out["page:$p"] = CollabEntry("page", p, pagePositions[p]?.let { mapOf("pos" to it) } ?: emptyMap())
+        for (p in pages) {
+            val can = p.trim().lowercase()
+            val pos = pagePositions[can] ?: pagePositions[p]
+                ?: FractionalIndex.initialKeys(pages.size).getOrNull(pages.indexOf(p))
+                ?: "a0"
+            out["page:$can"] = CollabEntry("page", can, mapOf("pos" to pos))
+        }
         return out
     }
 
@@ -253,6 +259,20 @@ class CollabSyncTest {
         assertEquals("p1", a.canvas.pages.first())
         assertEquals("p9", a.canvas.pages.last())
         assertEquals(setOf("p1", "pa", "pb", "p9"), a.canvas.pages.toSet())
+    }
+
+    @Test fun uppercaseUUIDPagesPreservePositionsAndDesiredOrder() {
+        val rawIds = listOf("236CDFE3-1F44-4BCF-95C4-AA9704BD1452", "F6E8B6DF-DDE9-4348-A8A2-E355DF61E37A")
+        val r = Replica("A", rawIds, emptyMap())
+        val desired = r.sync.desiredPageOrder()
+        assertEquals(rawIds.map { it.lowercase() }, desired)
+        val snap = r.sync.snapshot()
+        val pageSnaps = snap.filter { it.type == "page" }
+        assertEquals(2, pageSnaps.size)
+        for (ps in pageSnaps) {
+            val pos = ps.groups.values.firstOrNull()?.get("pos") as? String
+            assertTrue("Page snapshot must include pos", !pos.isNullOrEmpty())
+        }
     }
 
     @Test fun movingAPageOnlyChangesThatPage() {

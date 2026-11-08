@@ -163,6 +163,24 @@ final class CollabSyncTests: XCTestCase {
         XCTAssertEqual(b.doc.pageIds, ["p1", "p2"])
     }
 
+    func testUppercaseUUIDPagesPreservePositionsAndDesiredOrder() {
+        var doc = NotebookDocument(title: "upper")
+        let rawIds = ["236CDFE3-1F44-4BCF-95C4-AA9704BD1452", "F6E8B6DF-DDE9-4348-A8A2-E355DF61E37A"]
+        doc.pageIds = rawIds
+        doc.pageCount = 2
+        let sync = CollabObjectSync()
+        sync.reset(to: doc)
+        let desired = sync.desiredPageOrder()
+        XCTAssertEqual(desired, rawIds.map { $0.lowercased() })
+        let snap = sync.snapshot()
+        let pageSnaps = snap.filter { $0.type == "page" }
+        XCTAssertEqual(pageSnaps.count, 2)
+        for ps in pageSnaps {
+            let pos = ps.groups.first?.fields["pos"] as? String
+            XCTAssertNotNil(pos, "Page snapshot must include pos")
+        }
+    }
+
     func testConcurrentInsertsAtTheSameSpotKeepBothInTheSameOrder() {
         var start = base(); start.pageIds = ["p1", "p9"]; start.pageCount = 2
         let a = Replica(start, user: "A"), b = Replica(start, user: "B")

@@ -689,8 +689,10 @@ extension NotebookEditorView {
         } else {
             let req = (payload["req"] as? String) ?? ""
             collabStateSync.remember(req)
-            guard req == collabStateSync.pendingRequest,
-                  payload["to"] as? String == collaborationManager.currentUserId,
+            let to = (payload["to"] as? String) ?? ""
+            let toMe = to.isEmpty || to == "*" || to.caseInsensitiveCompare(collaborationManager.currentUserId) == .orderedSame
+            guard (req == collabStateSync.pendingRequest || collabStateSync.wasRequested(req)),
+                  toMe,
                   collabStateSync.receivedParts.insert(part).inserted else { return }
         }
         let parts = (payload["parts"] as? NSNumber)?.intValue ?? 1
@@ -760,13 +762,13 @@ extension NotebookEditorView {
         }
         // 「房間裡有的」以兩份整份狀態的聯集判斷：寄存的那一份可能比較舊，只拿它比，
         // 房主之後才加的物件與空白頁會被當成「只有自己有」—— 物件以舊值再送一次、空白頁被刪掉。
-        let snapshotKeys = collabStateSync.storedKeys.union(collabStateSync.snapshotKeys)
-        // 只有自己有的物件（例如離線時新增的）：忘掉它們，下一次送出就會當成新的補給房間。
-        //
-        // **空白頁例外**：掃碼加入時本機沒有這本，會先建一本只有一頁空白頁的筆記（頁面 id 是本機算的，
-        // 與房主的不同）。以前它也被當成「只有自己有」補給房間 —— 每個人那邊都多出一頁空白頁。
-        // 沒有任何筆畫與物件的頁：本機刪掉、不送出。有內容的照舊補給房間。與 Android 相同。
-        let localOnly = collabSync.liveKeys.subtracting(snapshotKeys).filter { !$0.hasPrefix("meta:") }
+        let snapshotKeys = Set(collabStateSync.storedKeys.union(collabStateSync.snapshotKeys).map { key -> String in
+            key.hasPrefix("page:") ? "page:\(CollabCanonical.canonicalPageId(String(key.dropFirst(5))))" : key
+        })
+        let localOnly = collabSync.liveKeys.filter { key in
+            let canonicalKey = key.hasPrefix("page:") ? "page:\(CollabCanonical.canonicalPageId(String(key.dropFirst(5))))" : key
+            return !snapshotKeys.contains(canonicalKey) && !key.hasPrefix("meta:")
+        }
         guard !localOnly.isEmpty else { return }
         let emptyPages = localOnly.filter { $0.hasPrefix("page:") && isEmptyCollabPage(String($0.dropFirst(5))) }
         if !emptyPages.isEmpty {

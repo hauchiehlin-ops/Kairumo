@@ -52,15 +52,29 @@ class AndroidCollabController(private val manager: CollaborationManager) {
      * 「被擦掉」廣播出去，房主那邊的筆跡跟著被擦光（墓碑不會復活，I3）。
      */
     private val engineSeen = HashMap<String, Pair<InkEngine, MutableSet<String>>>()
+    private val sentRequests = HashSet<String>()
+
+    /** 這個房間的整份狀態已經完整收過一次。沒收到之前，編輯器會定時重新要（見 `EditorCanvasContext`）。 */
+    @Volatile var syncedOnce = false
+        private set
+
+    /** 還有一份整份狀態的請求在等回覆。 */
+    val hasPendingRequest: Boolean get() = pendingRequest != null
 
     /** 進入（或換）房間：以目前的內容為大家共同的起點，不送出任何東西。 */
-    fun reset(canvas: AndroidCollabCanvas, session: PadnoteSession) {
+    fun reset(canvas: AndroidCollabCanvas, session: PadnoteSession, preservePendingRequest: Boolean = false) {
         sync.reset(canvas)
         textHub.reset()
         ink.reset()
         engineSeen.clear()
         pendingInk.clear()
-        pendingRequest = null
+        if (!preservePendingRequest) {
+            pendingRequest = null
+            sentRequests.clear()
+            receivedParts = HashSet()
+            snapshotKeys = HashSet()
+            syncedOnce = false
+        }
         storedSnap = null
         storedParts = HashSet()
         storedKeys = HashSet()
@@ -78,6 +92,8 @@ class AndroidCollabController(private val manager: CollaborationManager) {
     fun requestState() {
         val req = UUID.randomUUID().toString()
         pendingRequest = req
+        sentRequests += req
+        if (sentRequests.size > 16) sentRequests.remove(sentRequests.first())
         receivedParts = HashSet()
         snapshotKeys = HashSet()
         val blobs = sync.shadow.values.mapNotNull { it["blob"] as? String }.toSet()
@@ -232,7 +248,9 @@ class AndroidCollabController(private val manager: CollaborationManager) {
             "state_snapshot" -> {
                 val req = payload.optString("req")
                 remember(req)
-                if (req != pendingRequest || payload.optString("to") != manager.currentUserId) return null
+                val to = payload.optString("to")
+                val toMe = to.isEmpty() || to == "*" || to.equals(manager.currentUserId, ignoreCase = true)
+                if ((req != pendingRequest && req !in sentRequests) || !toMe) return null
                 applySnapshotPart(payload, session, meta, canvas, engineFor)
             }
             // 中繼寄存的整份狀態（只在補發時給剛進房的人；中繼不轉送）。以它自己的 `snap` 計段。
@@ -711,6 +729,7 @@ class AndroidCollabController(private val manager: CollaborationManager) {
         var needsPublish = false
         if (received.size >= parts) {
             if (storedSnap == null) pendingRequest = null
+            syncedOnce = true
             // 只有自己有的物件（例如離線時新增的）：忘掉它們，下一次送出就會當成新的補給房間。
             //
             // **空白頁例外**：掃碼加入時本機沒有這本，會先建一本只有一頁空白頁的筆記（頁面 id 是本機算的，
