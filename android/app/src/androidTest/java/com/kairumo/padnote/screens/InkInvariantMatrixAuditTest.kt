@@ -87,18 +87,21 @@ class InkInvariantMatrixAuditTest {
             node.config.getOrNull(SemanticsProperties.TestTag)
                 ?.startsWith("home.notebooks.card.") == true
         }
-        compose.waitUntil(timeoutMillis = 60_000) {
-            if (compose.onAllNodes(matcher).fetchSemanticsNodes().isEmpty()) {
-                runCatching {
-                    compose.onNodeWithTag("home.scroll")
-                        .performScrollToNode(listMatcher)
-                }
-                runCatching {
-                    compose.onNodeWithTag("home.scroll")
-                        .performScrollToNode(matcher)
-                }
+        val deadline = android.os.SystemClock.uptimeMillis() + 60_000
+        while (android.os.SystemClock.uptimeMillis() < deadline) {
+            compose.waitForIdle()
+            if (compose.onAllNodes(matcher).fetchSemanticsNodes().isNotEmpty()) break
+            runCatching {
+                compose.onNodeWithTag("home.scroll").performScrollToNode(matcher)
             }
-            compose.onAllNodes(matcher).fetchSemanticsNodes().isNotEmpty()
+            compose.waitForIdle()
+            if (compose.onAllNodes(matcher).fetchSemanticsNodes().isNotEmpty()) break
+            runCatching {
+                compose.onNodeWithTag("home.scroll").performScrollToNode(listMatcher)
+            }
+            compose.waitForIdle()
+            if (compose.onAllNodes(matcher).fetchSemanticsNodes().isNotEmpty()) break
+            Thread.sleep(500)
         }
 
         val cards = compose.onAllNodes(matcher)
