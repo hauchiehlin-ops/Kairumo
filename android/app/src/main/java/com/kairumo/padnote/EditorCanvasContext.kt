@@ -2857,7 +2857,8 @@ internal fun rememberEditorCanvasContext(
             target.equals(current, ignoreCase = true) ||
             invite.roomId.trim().equals(current, ignoreCase = true)
         if (isTargetCurrent) {
-            showCollaboration = true
+            com.kairumo.padnote.collab.CollabInvites.pending = null
+            collaboration.joinRoom(link)
         } else {
             // 切換至邀請指定的筆記本，避免殘留 pendingInvite 導致回首頁循環
             if (onOpenNotebook != null) {

@@ -218,6 +218,7 @@ class CollaborationManager(private val context: Context) {
     private var relay: RelayServer? = null
     private var reconnectAttempt = 0
     private var userInitiatedDisconnect = false
+    private val candidateServers = mutableListOf<String>()
     private val offlineQueue = mutableListOf<JSONObject>()
     private var lastPresenceSentAtMs = 0L
     private var lastCursor = 0f to 0f
@@ -297,7 +298,9 @@ class CollaborationManager(private val context: Context) {
             val myIps = listOfNotNull(lan, ts)
             val ordered = runCatching { uniffi.padnote_core.collabOrderServers(inviteV2.servers, myIps) }.getOrNull()
             if (!ordered.isNullOrEmpty()) {
-                serverAddress = ordered.first()
+                candidateServers.clear()
+                candidateServers.addAll(ordered)
+                serverAddress = candidateServers.removeAt(0)
             }
         }
         connect(roomId, asHost = false)
@@ -961,12 +964,26 @@ class CollaborationManager(private val context: Context) {
         }
 
         override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
-            lastError = t.message
-            if (!userInitiatedDisconnect) scheduleReconnect() else status = Status.Disconnected
+            android.util.Log.w("Collab", "WebSocket failure on $serverAddress: ${t.message}")
+            if (candidateServers.isNotEmpty()) {
+                val nextServer = candidateServers.removeAt(0)
+                android.util.Log.i("Collab", "Fallback to candidate server: $nextServer")
+                android.os.Handler(android.os.Looper.getMainLooper()).post {
+                    serverAddress = nextServer
+                    connect(roomId, isHost, isReconnecting = false)
+                }
+                return
+            }
+            android.os.Handler(android.os.Looper.getMainLooper()).post {
+                lastError = t.message
+                if (!userInitiatedDisconnect) scheduleReconnect() else status = Status.Disconnected
+            }
         }
 
         override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
-            if (!userInitiatedDisconnect) scheduleReconnect() else status = Status.Disconnected
+            android.os.Handler(android.os.Looper.getMainLooper()).post {
+                if (!userInitiatedDisconnect) scheduleReconnect() else status = Status.Disconnected
+            }
         }
     }
 
@@ -988,17 +1005,37 @@ class CollaborationManager(private val context: Context) {
         val json = runCatching { JSONObject(text) }.getOrNull() ?: return
         when (json.optString("type")) {
             "joined" -> {
-                status = Status.Connected(json.optString("room_id", roomId))
-                lastError = null
-                reconnectAttempt = 0
-                drainOfflineQueue()
-                json.optJSONArray("peers")?.let { addPeers(it) }
-                // 第一次進這個房間、而且裡面有人：向他們要整份狀態（這台的檔案可能比較舊，設計 §7）。
-                if (lastSeq == 0L && peers.isNotEmpty()) onStateSyncNeeded?.invoke()
+                candidateServers.clear()
+                val rId = json.optString("room_id", roomId)
+                val peersArray = json.optJSONArray("peers")
+                android.os.Handler(android.os.Looper.getMainLooper()).post {
+                    status = Status.Connected(rId)
+                    lastError = null
+                    reconnectAttempt = 0
+                    drainOfflineQueue()
+                    peersArray?.let { addPeers(it) }
+                    if (lastSeq == 0L && peers.isNotEmpty()) onStateSyncNeeded?.invoke()
+                }
                 // 新版中繼以序號補發（不會漏掉時鐘較小但較晚到的操作）；舊版中繼忽略 last_seq，
                 // 照 last_lamport = 0 從頭補 —— 合併規則冪等，重複收到沒有副作用（設計 §7）。
                 send(JSONObject().put("type", "catchup").put("room_id", roomId)
                     .put("last_lamport", 0).put("last_seq", lastSeq))
+            }
+            "error" -> {
+                val msg = json.optString("message", json.optString("code", "collab_err_connect"))
+                android.util.Log.e("Collab", "Relay returned error: $msg")
+                if (candidateServers.isNotEmpty()) {
+                    val nextServer = candidateServers.removeAt(0)
+                    android.os.Handler(android.os.Looper.getMainLooper()).post {
+                        serverAddress = nextServer
+                        connect(roomId, isHost, isReconnecting = false)
+                    }
+                    return
+                }
+                android.os.Handler(android.os.Looper.getMainLooper()).post {
+                    lastError = msg
+                    status = Status.Disconnected
+                }
             }
             "peer_joined" -> {
                 json.optJSONObject("peer")?.let { addPeer(it) }
