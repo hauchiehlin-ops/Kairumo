@@ -535,13 +535,22 @@ public class CollaborationManager: ObservableObject {
         let trimmed = roomId.trimmingCharacters(in: .whitespacesAndNewlines)
         defer { if !currentRoomId.isEmpty { roomNotebookId = notebookId?.lowercased() } }
 
-        // 1. 若輸入包含 server 參數，立即套用該伺服器位址
-        //    （只用於這一場，見 `serverOverride`）
-        if let serverParam = Self.extractServerUrl(from: trimmed) {
+        let inviteV2 = collabParseInviteV2(text: trimmed)
+
+        // 1. 若邀請連結包含 servers 參數，依本地 IP 優先排序中繼位址
+        if !inviteV2.servers.isEmpty {
+            let addrs = LocalRelayServer.availableIPv4Addresses()
+            let myIpv4 = [addrs.lan, addrs.tailscale].compactMap { $0 }
+            let ordered = collabOrderServers(servers: inviteV2.servers, myIpv4: myIpv4)
+            if let best = ordered.first {
+                self.serverOverride = best
+            }
+        } else if let serverParam = Self.extractServerUrl(from: trimmed) {
+            // 若輸入包含 server 參數，立即套用該伺服器位址（只用於這一場，見 `serverOverride`）
             self.serverOverride = serverParam
         } else if Self.isLoopbackHost(URL(string: self.serverAddress)?.host) {
             // 2. 若本地仍為 127.0.0.1，檢查是否有局域網掃描到的房間
-            let targetRoomId = Self.extractRoomId(from: trimmed)
+            let targetRoomId = !inviteV2.roomId.isEmpty ? inviteV2.roomId : Self.extractRoomId(from: trimmed)
             if let matched = LocalSyncDiscovery.shared.discoveredRooms.first(where: { $0.roomId == targetRoomId }) {
                 self.serverOverride = matched.serverUrl
             } else if let firstDiscovered = LocalSyncDiscovery.shared.discoveredRooms.first {
@@ -551,12 +560,12 @@ public class CollaborationManager: ObservableObject {
             self.serverOverride = nil
         }
 
-        let cleanedRoomId = Self.extractRoomId(from: trimmed)
+        let cleanedRoomId = !inviteV2.roomId.isEmpty ? inviteV2.roomId : Self.extractRoomId(from: trimmed)
         guard !cleanedRoomId.isEmpty else { return }
 
-        let invite = collabParseInvite(text: trimmed)
-        if !invite.keyBase64.isEmpty {
-            setRoomKey(base64: invite.keyBase64)
+        let inviteKey = !inviteV2.keyBase64.isEmpty ? inviteV2.keyBase64 : collabParseInvite(text: trimmed).keyBase64
+        if !inviteKey.isEmpty {
+            setRoomKey(base64: inviteKey)
         }
         connect(roomId: cleanedRoomId, asHost: false)
     }

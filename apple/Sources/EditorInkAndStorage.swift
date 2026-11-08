@@ -436,33 +436,42 @@ extension NotebookEditorView {
             defer { finishCollabPageReconcile(sync) }
             // 換了房間（`reset`）：這次調整已經不屬於現在的合併狀態。
             guard sync === collabSync else { return nil }
-            let desired = collabSync.desiredPageOrder()
+            let desired = collabSync.desiredPageOrder().map(CollabCanonical.canonicalPageId)
             guard !desired.isEmpty else { return nil }
-            var current = notebook.pageIds ?? []
+            var current = (notebook.pageIds ?? []).map(CollabCanonical.canonicalPageId)
             let wanted = Set(desired)
             let focusedId = currentPageIndex < current.count ? current[currentPageIndex] : nil
             var landing = currentPageIndex
-            for (index, id) in current.enumerated().reversed() where !wanted.contains(id) && notebook.pageCount > 1 {
-                landing = store.deletePage(notebookId: notebook.id, pageIndex: index, currentIndex: landing)
-                reload()
-            }
-            current = notebook.pageIds ?? []
-            for (target, id) in desired.enumerated() where !current.contains(id) {
-                let paper = collabSync.shadow["page:\(id)"]?["paper"] as? String
+
+            // Step 1: 先補上缺少的頁面（補齊後 notebook.pageCount > 1，後續才能安全刪除多餘的初始空白頁）
+            for (target, id) in desired.enumerated()
+                where !current.contains(where: { $0.caseInsensitiveCompare(id) == .orderedSame }) {
+                let paper = (collabSync.shadow["page:\(id)"] ?? collabSync.shadow["page:\(id.uppercased())"])?["paper"] as? String
                 _ = store.insertPage(notebookId: notebook.id, afterIndex: min(target, current.count) - 1,
                                      paperId: paper, pageId: id)
                 reload()
-                current = notebook.pageIds ?? []
+                current = (notebook.pageIds ?? []).map(CollabCanonical.canonicalPageId)
             }
+
+            // Step 2: 刪除不在 wanted 名單中的頁面（包括剛進房時預先建立的單頁空白頁）
+            for (index, id) in current.enumerated().reversed()
+                where !wanted.contains(where: { $0.caseInsensitiveCompare(id) == .orderedSame }) && notebook.pageCount > 1 {
+                landing = store.deletePage(notebookId: notebook.id, pageIndex: index, currentIndex: landing)
+                reload()
+                current = (notebook.pageIds ?? []).map(CollabCanonical.canonicalPageId)
+            }
+
+            // Step 3: 依 desired 順序重新排列頁面
             for (target, id) in desired.enumerated() {
-                guard let from = current.firstIndex(of: id), from != target, target < current.count else { continue }
+                guard let from = current.firstIndex(where: { $0.caseInsensitiveCompare(id) == .orderedSame }),
+                      from != target, target < current.count else { continue }
                 _ = store.movePage(notebookId: notebook.id, from: from, to: target)
                 reload()
-                current = notebook.pageIds ?? []
+                current = (notebook.pageIds ?? []).map(CollabCanonical.canonicalPageId)
             }
             settleCollabPagesAdded()
             // 停在同一頁的內容上（照頁面 id 找）；那一頁被刪掉了才退回刪除後的頁碼。
-            return focusedId.flatMap { current.firstIndex(of: $0) } ?? landing
+            return focusedId.flatMap { f in current.firstIndex(where: { $0.caseInsensitiveCompare(f) == .orderedSame }) } ?? landing
         }
     }
 
@@ -479,9 +488,10 @@ extension NotebookEditorView {
         collabSync.refreshShadow(from: notebook, keepMissingPages: true)
         store.updateNotebook(notebook)
         collabSync.isApplyingRemote = false
-        let ids = notebook.pageIds ?? []
+        let ids = (notebook.pageIds ?? []).map(CollabCanonical.canonicalPageId)
         for (page, ink) in collabSync.pendingInk {
-            guard let index = ids.firstIndex(of: page) else { continue }
+            let canonical = CollabCanonical.canonicalPageId(page)
+            guard let index = ids.firstIndex(where: { $0.caseInsensitiveCompare(canonical) == .orderedSame }) else { continue }
             collabSync.pendingInk.removeValue(forKey: page)
             // 直接寫檔，不經畫面上的圖層：此刻圖層的頁碼還是調整前的（稍後統一重讀）。
             ProInkCollab.applyRemoteOnDisk(directory: store.drawingsDirectory, notebookId: notebook.id, page: index,
@@ -500,8 +510,10 @@ extension NotebookEditorView {
 
     /// 別人的筆畫落在這台還沒有的頁：那一頁在合併結果裡（等著補上）就先擱著，否則丟掉。
     func holdCollabInkIfPending(page: String, added: [ProStroke], removed: Set<String>) {
-        guard !added.isEmpty || !removed.isEmpty, collabSync.desiredPageOrder().contains(page) else { return }
-        collabSync.holdInk(page: page, added: added, removed: removed)
+        let canonical = CollabCanonical.canonicalPageId(page)
+        guard !added.isEmpty || !removed.isEmpty,
+              collabSync.desiredPageOrder().contains(where: { $0.caseInsensitiveCompare(canonical) == .orderedSame }) else { return }
+        collabSync.holdInk(page: canonical, added: added, removed: removed)
     }
 
     /// 套用別人在同一個文字方塊打的字（設計 §8.3）。
@@ -622,11 +634,12 @@ extension NotebookEditorView {
         let task = Task.detached(priority: .userInitiated) { () -> [(ink: Bool, json: [String: Any])] in
             var all = objectItems
             for (index, page) in pageIds.enumerated() {
+                let canonicalPage = CollabCanonical.canonicalPageId(page)
                 let strokes = ProInkStore.load(in: directory, notebookId: nid, page: index)
                     + ProInkStore.load(in: directory, notebookId: nid, page: index, foreign: true)
-                let removed = Array(removedByPage[page] ?? [])
+                let removed = Array(removedByPage[canonicalPage] ?? removedByPage[page] ?? [])
                 guard !strokes.isEmpty || !removed.isEmpty else { continue }
-                all.append((true, ["page": page, "strokes": strokes.map(CollabStroke.encode(pro:)),
+                all.append((true, ["page": canonicalPage, "strokes": strokes.map(CollabStroke.encode(pro:)),
                                    "removed": removed]))
             }
             return all
@@ -721,9 +734,10 @@ extension NotebookEditorView {
         commitNotebook()
         collabSync.isApplyingRemote = false
         for pageInk in (payload["ink"] as? [[String: Any]]) ?? [] {
-            guard let page = pageInk["page"] as? String else { continue }
+            guard let rawPage = pageInk["page"] as? String else { continue }
+            let page = CollabCanonical.canonicalPageId(rawPage)
             // 筆畫放進自繪引擎（與即時的 `ink_add` 同一條路，見 `applyRemoteOplog`）。
-            let pageIdx = notebook.pageIds?.firstIndex(of: page)
+            let pageIdx = notebook.pageIds?.firstIndex(where: { $0.caseInsensitiveCompare(page) == .orderedSame })
             let strokes = ((pageInk["strokes"] as? [[String: Any]]) ?? []).compactMap(CollabStroke.decodePro)
             let removed = (pageInk["removed"] as? [String]) ?? []
             guard let pageIdx else {
@@ -789,11 +803,12 @@ extension NotebookEditorView {
             // 所有筆刷都由自繪引擎畫（ADR-0015 階段 5）：別人的筆畫也放進自繪引擎的「別台筆畫」，
             // 與自己的筆畫同一套算繪。以前放進 PencilKit 圖層，同一筆在這台看起來又細又淡、
             // 與送出那台不一樣。
-            guard let pageId = event.payload["page"] as? String,
+            guard let rawPageId = event.payload["page"] as? String,
                   let list = event.payload["strokes"] as? [[String: Any]] else { return }
+            let pageId = CollabCanonical.canonicalPageId(rawPageId)
             let strokes = list.compactMap(CollabStroke.decodePro)
             guard !strokes.isEmpty else { return }
-            guard let pageIdx = notebook.pageIds?.firstIndex(of: pageId) else {
+            guard let pageIdx = notebook.pageIds?.firstIndex(where: { $0.caseInsensitiveCompare(pageId) == .orderedSame }) else {
                 holdCollabInkIfPending(page: pageId, added: strokes, removed: [])
                 return
             }
@@ -801,9 +816,10 @@ extension NotebookEditorView {
                                      added: strokes, removedIds: [])
 
         case "ink_remove":
-            guard let pageId = event.payload["page"] as? String,
+            guard let rawPageId = event.payload["page"] as? String,
                   let ids = event.payload["ids"] as? [String] else { return }
-            if let pageIdx = notebook.pageIds?.firstIndex(of: pageId) {
+            let pageId = CollabCanonical.canonicalPageId(rawPageId)
+            if let pageIdx = notebook.pageIds?.firstIndex(where: { $0.caseInsensitiveCompare(pageId) == .orderedSame }) {
                 ProInkCollab.applyRemote(directory: store.drawingsDirectory, notebookId: notebook.id, page: pageIdx,
                                          added: [], removedIds: Set(ids.map { $0.lowercased() }))
             }

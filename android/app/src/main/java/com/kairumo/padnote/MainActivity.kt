@@ -678,7 +678,7 @@ private fun InkScreen(
             currentFormat = meta.pageFormatId().ifEmpty { uniffi.padnote_core.defaultPageFormatId() },
             currentPalette = meta.paletteId().ifEmpty { uniffi.padnote_core.guidePalettes().first().id },
             hasSelectedObject = hasReorderableSelection(),
-            isCollabConnected = collabActive,
+            isCollabConnected = collabActive || collaboration.status is com.kairumo.padnote.collab.CollaborationManager.Status.Connected,
             recording = recording,
             recordingPaused = recordingPaused,
             recordSeconds = recordSeconds,

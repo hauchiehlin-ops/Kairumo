@@ -269,15 +269,25 @@ class CollaborationManager(private val context: Context) {
             serverAddress = decoded
         }
 
-        val invite = collabParseInvite(trimmed)
-        if (invite.roomId.isEmpty()) {
+        val inviteV2 = runCatching { uniffi.padnote_core.collabParseInviteV2(trimmed) }.getOrNull()
+        val roomId = inviteV2?.roomId?.takeIf { it.isNotEmpty() } ?: collabParseInvite(trimmed).roomId
+        if (roomId.isEmpty()) {
             lastError = "invalid_room"
             return
         }
-        if (invite.keyBase64.isNotEmpty() && collabIsValidRoomKey(invite.keyBase64)) {
-            roomKeyBase64 = invite.keyBase64
+        val key = inviteV2?.keyBase64?.takeIf { it.isNotEmpty() } ?: collabParseInvite(trimmed).keyBase64
+        if (key.isNotEmpty() && collabIsValidRoomKey(key)) {
+            roomKeyBase64 = key
         }
-        connect(invite.roomId, asHost = false)
+        if (inviteV2 != null && inviteV2.servers.isNotEmpty()) {
+            val (lan, ts) = getLocalIpAddresses()
+            val myIps = listOfNotNull(lan, ts)
+            val ordered = runCatching { uniffi.padnote_core.collabOrderServers(inviteV2.servers, myIps) }.getOrNull()
+            if (!ordered.isNullOrEmpty()) {
+                serverAddress = ordered.first()
+            }
+        }
+        connect(roomId, asHost = false)
     }
 
     fun getInviteLink(useTailscale: Boolean = false): String {

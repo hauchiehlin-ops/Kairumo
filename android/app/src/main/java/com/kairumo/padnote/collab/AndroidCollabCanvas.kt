@@ -65,15 +65,14 @@ class AndroidCollabCanvas(
 
     override val pageIds: List<String> by lazy {
         val count = runCatching { session.pageCount().toInt() }.getOrDefault(0)
-        (0 until count).mapNotNull { runCatching { session.pageIdAt(it.toUInt()) }.getOrNull() }
+        (0 until count).mapNotNull { runCatching { session.pageIdAt(it.toUInt()) }.getOrNull()?.let(::canonicalPageId) }
     }
 
     /** 某一頁的物件儲存（目前這一頁是編輯器手上那一組）。 */
-    fun stores(pageId: String): CollabPageStores =
-        // 畫面上那一組還沒從核心讀過（剛換頁、剛加頁、整份狀態套用後頁面重排的那一瞬間）就不能用：
-        // 它是空的，拿它比對，這一頁的物件全被當成「被刪除」送給房間 —— 房主的文字方塊被清空。
-        // 改從核心臨時讀一份；寫回照樣進核心，編輯器稍後讀到的就是最新的。
-        live(pageId)?.takeIf { it.isLoaded } ?: others.getOrPut(pageId) { CollabPageStores.load(session, pageId) }
+    fun stores(pageId: String): CollabPageStores {
+        val canonical = canonicalPageId(pageId)
+        return live(canonical)?.takeIf { it.isLoaded } ?: others.getOrPut(canonical) { CollabPageStores.load(session, canonical) }
+    }
 
     // ── 編碼 ──
 
@@ -157,10 +156,11 @@ class AndroidCollabCanvas(
             }
         }
         for ((index, id) in ids.withIndex()) {
+            val canonical = canonicalPageId(id)
             val dict = HashMap<String, Any>()
-            pagePositions[id]?.let { dict["pos"] = it }
+            (pagePositions[canonical] ?: pagePositions[id])?.let { dict["pos"] = it }
             dict["paper"] = meta.paperId(index)
-            out["page:$id"] = CollabEntry("page", id, dict)
+            out["page:$canonical"] = CollabEntry("page", canonical, dict)
         }
         // 頁面層級的設定（核取方塊等；Android 目前沒有）。堆疊順序已改成每個物件的欄位。
         out["meta:notebook"] = CollabEntry("meta", "notebook", emptyMap())
@@ -205,7 +205,8 @@ class AndroidCollabCanvas(
         fun encode(lists: Map<String, List<String>>, sorted: Boolean = false): JSONObject? {
             val byPage = JSONObject()
             for ((page, list) in lists) {
-                val index = ids.indexOf(page)
+                val canonical = canonicalPageId(page)
+                val index = ids.indexOfFirst { it.equals(canonical, ignoreCase = true) }
                 if (index < 0 || list.isEmpty()) continue
                 val localList = list.map { local[it] ?: it }
                 byPage.put(index.toString(), JSONArray(if (sorted) localList.sorted() else localList))
@@ -225,7 +226,8 @@ class AndroidCollabCanvas(
     override fun inScope(type: String, dict: Map<String, Any>): Boolean {
         if (type == "page") return true
         if (type !in KNOWN_TYPES) return false // 這一版畫不出來的型別：不在畫面上不代表被刪除
-        return dict["page"] in scope
+        val page = (dict["page"] as? String)?.let(::canonicalPageId)
+        return scope.any { it.equals(page, ignoreCase = true) }
     }
 
     // ── 寫回 ──
@@ -233,7 +235,8 @@ class AndroidCollabCanvas(
     override fun write(type: String, id: String, fields: Map<String, Any>, deleted: Boolean): Boolean {
         val ids = pageIds
         if (type == "page") {
-            val index = ids.indexOf(id)
+            val canonical = canonicalPageId(id)
+            val index = ids.indexOfFirst { it.equals(canonical, ignoreCase = true) }
             val paper = fields["paper"] as? String
             if (!deleted && index >= 0 && paper != null && meta.paperId(index) != paper) {
                 meta.setPagePaperId(session, index, paper, ids.size)
@@ -246,13 +249,14 @@ class AndroidCollabCanvas(
 
         if (deleted) {
             // 合併狀態裡通常還記得它在哪一頁；不記得才每一頁找一次（物件 id 全本唯一）。
-            val known = (fields["page"] as? String)?.takeIf { it in ids }
+            val known = (fields["page"] as? String)?.let(::canonicalPageId)?.takeIf { p -> ids.any { it.equals(p, ignoreCase = true) } }
             if (known != null && removeFrom(stores(known), type, id)) return true
-            for (page in ids) if (page != known && removeFrom(stores(page), type, id)) break
+            for (page in ids) if (!page.equals(known, ignoreCase = true) && removeFrom(stores(page), type, id)) break
             return true
         }
-        val page = fields["page"] as? String ?: return false
-        if (page !in ids) return false
+        val rawPage = fields["page"] as? String ?: return false
+        val page = canonicalPageId(rawPage)
+        if (ids.none { it.equals(page, ignoreCase = true) }) return false
         val s = stores(page)
         fun number(key: String): Float? = (fields[key] as? Number)?.toFloat()
         val appearance = CollabJson.unflatten(fields, "a.")
@@ -370,6 +374,8 @@ class AndroidCollabCanvas(
             NotebookMeta.PAYLOAD_KEYS.keys
 
         fun canonicalId(raw: String): String = ShapeStore.stableBlockId(raw)
+
+        fun canonicalPageId(raw: String): String = raw.trim().lowercase()
     }
 }
 

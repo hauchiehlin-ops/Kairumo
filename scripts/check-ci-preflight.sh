@@ -20,6 +20,10 @@ export PYTHONIOENCODING=utf-8
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO_ROOT"
 
+if [[ -z "${CARGO_TARGET_DIR:-}" ]]; then
+    export CARGO_TARGET_DIR="${HOME}/.cargo-target/kairumo"
+fi
+
 echo "========================================================================"
 echo "  🚀 Kairumo CI 預防性檢查與自動矯正（CI Preflight & Auto-Remediation）"
 echo "========================================================================"

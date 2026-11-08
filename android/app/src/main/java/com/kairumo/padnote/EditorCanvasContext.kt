@@ -2914,15 +2914,18 @@ internal fun rememberEditorCanvasContext(
     fun collabCanvas(): AndroidCollabCanvas? {
         val session = notebook?.first ?: return null
         return if (pageDisplayMode == PageDisplayMode.CONTINUOUS) {
-            AndroidCollabCanvas(session, meta, continuousCollab.loadedPages(), continuousCollab.storesFor)
+            AndroidCollabCanvas(session, meta, continuousCollab.loadedPages().map(AndroidCollabCanvas::canonicalPageId), continuousCollab.storesFor)
         } else {
             val live = CollabPageStores(textStore, imageStore, tableStore, chartStore, shapeStore)
-            AndroidCollabCanvas(session, meta, listOfNotNull(pageId)) { if (it == pageId) live else null }
+            val currentCanonical = pageId?.let(AndroidCollabCanvas::canonicalPageId)
+            AndroidCollabCanvas(session, meta, listOfNotNull(currentCanonical)) {
+                if (AndroidCollabCanvas.canonicalPageId(it) == currentCanonical) live else null
+            }
         }
     }
     fun collabEngineFor(page: String): InkEngine? =
         if (pageDisplayMode == PageDisplayMode.CONTINUOUS) continuousCollab.engineFor(page)
-        else engine.takeIf { page == pageId }
+        else engine.takeIf { AndroidCollabCanvas.canonicalPageId(page) == AndroidCollabCanvas.canonicalPageId(pageId ?: "") }
     fun publishCollab() {
         if (!collabActive || collab.isApplyingRemote) return
         val session = notebook?.first ?: return
@@ -3066,6 +3069,12 @@ internal fun rememberEditorCanvasContext(
     }
     val latestStateSyncNeeded by rememberUpdatedState<() -> Unit> {
         val now = System.currentTimeMillis()
+        val room = collabRoom
+        val session = notebook?.first
+        if (room != null && session != null && room != collabBaseRoom) {
+            collabCanvas()?.let { collab.reset(it, session) }
+            collabBaseRoom = room
+        }
         if (inRoom && now - collabLastStateRequest > 3_000) {
             collab.requestState()
             collabLastStateRequest = now
@@ -3075,11 +3084,11 @@ internal fun rememberEditorCanvasContext(
     val latestJumpToCollabPage by rememberUpdatedState<(String, Boolean) -> Unit> { targetPageId, forceScroll ->
         if (!collabActive) return@rememberUpdatedState
         val session = notebook?.first ?: return@rememberUpdatedState
-        val canonical = AndroidCollabCanvas.canonicalId(targetPageId)
+        val canonical = AndroidCollabCanvas.canonicalPageId(targetPageId)
         val count = runCatching { session.pageCount().toInt() }.getOrDefault(pageCount)
         val targetIdx = (0 until count).firstOrNull { idx ->
             val pid = runCatching { session.pageIdAt(idx.toUInt()) }.getOrNull() ?: return@firstOrNull false
-            AndroidCollabCanvas.canonicalId(pid) == canonical
+            AndroidCollabCanvas.canonicalPageId(pid) == canonical
         } ?: return@rememberUpdatedState
         if (pageIndex != targetIdx || forceScroll) {
             switchToPage(targetIdx)
