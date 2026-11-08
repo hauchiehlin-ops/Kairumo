@@ -193,7 +193,7 @@ final class CollabObjectSync {
         shadow = [:]
         stamps = [:]
         deferredKeys = []
-        let ids = doc.pageIds ?? []
+        let ids = (doc.pageIds ?? []).map(CollabCanonical.canonicalPageId)
         pagePositions = Dictionary(uniqueKeysWithValues: zip(ids, FractionalIndex.initialKeys(ids.count)))
         // 同樣的順序算出同樣的鍵：兩台以同一份筆記開始時，每個物件的排序鍵也相同。
         zPositions = [:]
@@ -214,7 +214,7 @@ final class CollabObjectSync {
     /// 本機的內容與上次同步的差異：每個有變的物件一筆修改，只帶變了的欄位。
     /// 呼叫之後這些修改即視為已同步（由呼叫端以 `stamp` 送出）。
     func outgoing(for doc: NotebookDocument, stamp: LamportStamp) -> CollabOutgoing {
-        reconcilePagePositions(order: doc.pageIds ?? [])
+        reconcilePagePositions(order: (doc.pageIds ?? []).map(CollabCanonical.canonicalPageId))
         reconcileZ(CollabCanonical.objectOrders(of: doc))
         var result = CollabOutgoing()
         let current = CollabCanonical.maps(of: doc, pagePositions: pagePositions, zPositions: zPositions)
@@ -259,7 +259,8 @@ final class CollabObjectSync {
     /// 本機的頁序變了（新增、刪除、搬動）：只替**順序對不上**的頁換排序鍵，其他頁不動 ——
     /// 換掉所有頁的鍵等於宣稱「我把每一頁都搬了」，會蓋掉別人同時的搬動。
     private func reconcilePagePositions(order: [String]) {
-        Self.reconcileKeys(order: order, keys: &pagePositions)
+        let canonical = order.map(CollabCanonical.canonicalPageId)
+        Self.reconcileKeys(order: canonical, keys: &pagePositions)
     }
 
     /// 本機的堆疊順序變了：同樣只替順序對不上的物件換鍵；不在任何順序裡的物件拿掉它的鍵。
@@ -319,7 +320,10 @@ final class CollabObjectSync {
             for field in Self.createOnlyFields[patch.type] ?? [] { fields.removeValue(forKey: field) }
         }
         guard merge(ObjectPatch(type: patch.type, id: patch.id, fields: fields), stamp: stamp) else { return false }
-        if patch.type == "page", let pos = shadow[patch.key]?["pos"] as? String { pagePositions[patch.id] = pos }
+        if patch.type == "page" {
+            let canonical = CollabCanonical.canonicalPageId(patch.id)
+            if let pos = shadow[patch.key]?["pos"] as? String { pagePositions[canonical] = pos }
+        }
         if fields.keys.contains("z") {
             if let z = shadow[patch.key]?["z"] as? String { zPositions[patch.id] = z } else { zPositions.removeValue(forKey: patch.id) }
         }
@@ -432,9 +436,10 @@ final class CollabObjectSync {
     /// 依合併結果，頁面應有的順序（未刪除的頁依 `(pos, id)`）。
     func desiredPageOrder() -> [String] {
         shadow.compactMap { key, dict -> (String, String)? in
-            guard key.hasPrefix("page:"), (dict[ObjectPatch.deletedField] as? Bool) != true,
-                  let pos = dict["pos"] as? String else { return nil }
-            return (CollabCanonical.canonicalPageId(String(key.dropFirst(5))), pos)
+            guard key.hasPrefix("page:"), (dict[ObjectPatch.deletedField] as? Bool) != true else { return nil }
+            let id = CollabCanonical.canonicalPageId(String(key.dropFirst(5)))
+            let pos = (dict["pos"] as? String) ?? pagePositions[id] ?? "a0"
+            return (id, pos)
         }
         .sorted { $0.1 != $1.1 ? $0.1 < $1.1 : $0.0 < $1.0 }
         .map(\.0)
@@ -663,7 +668,10 @@ enum CollabCanonical {
         for (index, id) in pageIds.enumerated() {
             let canonical = canonicalPageId(id)
             var dict: [String: Any] = [:]
-            if let pos = pagePositions[canonical] ?? pagePositions[id] { dict["pos"] = pos }
+            let pos = pagePositions[canonical] ?? pagePositions[id]
+                ?? FractionalIndex.initialKeys(pageIds.count).dropFirst(index).first
+                ?? "a\(index)"
+            dict["pos"] = pos
             dict["paper"] = doc.paperId(forPage: index)
             out["page:\(canonical)"] = ("page", canonical, dict)
         }
@@ -993,6 +1001,7 @@ final class CollabTextHub {
 final class CollabStateSync {
     /// 這台正在等的請求。
     private(set) var pendingRequest: String?
+    private var sentRequests: Set<String> = []
     var receivedParts: Set<Int> = []
     var snapshotKeys: Set<String> = []
     /// 上一次要狀態的時間：加入時要過一次，緊接著的「補發不完整」就不必再要。
@@ -1008,13 +1017,22 @@ final class CollabStateSync {
     func begin() -> String {
         let req = UUID().uuidString
         pendingRequest = req
+        sentRequests.insert(req)
         receivedParts = []
         snapshotKeys = []
         lastRequest = Date()
         return req
     }
 
-    func finish() { pendingRequest = nil }
+    func wasRequested(_ req: String) -> Bool {
+        sentRequests.contains(req)
+    }
+
+    func finish() {
+        pendingRequest = nil
+        receivedParts = []
+        snapshotKeys = []
+    }
 
     func remember(_ req: String) {
         guard !answered.contains(req) else { return }

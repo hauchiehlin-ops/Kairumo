@@ -158,7 +158,10 @@ class AndroidCollabCanvas(
         for ((index, id) in ids.withIndex()) {
             val canonical = canonicalPageId(id)
             val dict = HashMap<String, Any>()
-            (pagePositions[canonical] ?: pagePositions[id])?.let { dict["pos"] = it }
+            val pos = pagePositions[canonical] ?: pagePositions[id]
+                ?: FractionalIndex.initialKeys(ids.size).getOrNull(index)
+                ?: "a$index"
+            dict["pos"] = pos
             dict["paper"] = meta.paperId(index)
             out["page:$canonical"] = CollabEntry("page", canonical, dict)
         }

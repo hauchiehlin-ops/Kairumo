@@ -2940,7 +2940,7 @@ internal fun rememberEditorCanvasContext(
         val room = collabRoom ?: return@LaunchedEffect
         val session = notebook?.first ?: return@LaunchedEffect
         if (room != collabBaseRoom) {
-            collabCanvas()?.let { collab.reset(it, session) }
+            collabCanvas()?.let { collab.reset(it, session, preservePendingRequest = true) }
             collabBaseRoom = room
         }
         if (collaboration.peers.isNotEmpty()) {
@@ -3015,7 +3015,7 @@ internal fun rememberEditorCanvasContext(
         val session = notebook?.first ?: return
         val room = collabRoom ?: return
         if (collabBaseRoom != room) {
-            collabCanvas()?.let { collab.reset(it, session) }
+            collabCanvas()?.let { collab.reset(it, session, preservePendingRequest = true) }
             collabBaseRoom = room
         }
         // 先把本機還沒送出的修改送出去（送出排在下一格畫面）：否則別人的字套進來時，
@@ -3031,7 +3031,7 @@ internal fun rememberEditorCanvasContext(
             val stay = pageId
             pageCount = runCatching { session.pageCount().toInt() }.getOrDefault(pageCount)
             val moved = (0 until pageCount).firstOrNull {
-                runCatching { session.pageIdAt(it.toUInt()) }.getOrNull() == stay
+                runCatching { session.pageIdAt(it.toUInt()) }.getOrNull()?.equals(stay, ignoreCase = true) == true
             }
             val targetPage = moved ?: 0.coerceAtMost(maxOf(0, pageCount - 1))
             if (pageIndex != targetPage) {
@@ -3072,7 +3072,7 @@ internal fun rememberEditorCanvasContext(
         val room = collabRoom
         val session = notebook?.first
         if (room != null && session != null && room != collabBaseRoom) {
-            collabCanvas()?.let { collab.reset(it, session) }
+            collabCanvas()?.let { collab.reset(it, session, preservePendingRequest = true) }
             collabBaseRoom = room
         }
         if (inRoom && now - collabLastStateRequest > 3_000) {

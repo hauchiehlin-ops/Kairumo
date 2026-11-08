@@ -52,15 +52,19 @@ class AndroidCollabController(private val manager: CollaborationManager) {
      * 「被擦掉」廣播出去，房主那邊的筆跡跟著被擦光（墓碑不會復活，I3）。
      */
     private val engineSeen = HashMap<String, Pair<InkEngine, MutableSet<String>>>()
+    private val sentRequests = HashSet<String>()
 
     /** 進入（或換）房間：以目前的內容為大家共同的起點，不送出任何東西。 */
-    fun reset(canvas: AndroidCollabCanvas, session: PadnoteSession) {
+    fun reset(canvas: AndroidCollabCanvas, session: PadnoteSession, preservePendingRequest: Boolean = false) {
         sync.reset(canvas)
         textHub.reset()
         ink.reset()
         engineSeen.clear()
         pendingInk.clear()
-        pendingRequest = null
+        if (!preservePendingRequest) {
+            pendingRequest = null
+            sentRequests.clear()
+        }
         storedSnap = null
         storedParts = HashSet()
         storedKeys = HashSet()
@@ -78,6 +82,8 @@ class AndroidCollabController(private val manager: CollaborationManager) {
     fun requestState() {
         val req = UUID.randomUUID().toString()
         pendingRequest = req
+        sentRequests += req
+        if (sentRequests.size > 16) sentRequests.remove(sentRequests.first())
         receivedParts = HashSet()
         snapshotKeys = HashSet()
         val blobs = sync.shadow.values.mapNotNull { it["blob"] as? String }.toSet()
@@ -232,7 +238,9 @@ class AndroidCollabController(private val manager: CollaborationManager) {
             "state_snapshot" -> {
                 val req = payload.optString("req")
                 remember(req)
-                if (req != pendingRequest || payload.optString("to") != manager.currentUserId) return null
+                val to = payload.optString("to")
+                val toMe = to.isEmpty() || to == "*" || to.equals(manager.currentUserId, ignoreCase = true)
+                if ((req != pendingRequest && req !in sentRequests) || !toMe) return null
                 applySnapshotPart(payload, session, meta, canvas, engineFor)
             }
             // 中繼寄存的整份狀態（只在補發時給剛進房的人；中繼不轉送）。以它自己的 `snap` 計段。
