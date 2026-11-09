@@ -589,6 +589,10 @@ extension NotebookEditorView {
     /// 回覆一份整份狀態給 `to`，分段送。
     func answerCollabState(req: String, to: String, blobs: Set<String>) {
         collabStateSync.remember(req)
+        saveCurrentPageDrawing()
+        ensureCollabPageIds()
+        collabSync.refreshShadow(from: notebook, keepMissingPages: true)
+        ProInkStore.flushPendingWrites()
         Task { @MainActor in
             let items = await collectCollabState(blobs: blobs)
             sendCollabStateParts(items, req: req, to: to)
@@ -600,6 +604,10 @@ extension NotebookEditorView {
     func depositCollabState() async {
         guard isCollaborating, collaborationManager.isOnCloudRelay else { return }
         collaborationManager.noteStateDeposited()
+        saveCurrentPageDrawing()
+        ensureCollabPageIds()
+        collabSync.refreshShadow(from: notebook, keepMissingPages: true)
+        ProInkStore.flushPendingWrites()
         let items = await collectCollabState(blobs: [])
         guard isCollaborating else { return }
         let snap = UUID().uuidString.lowercased()
@@ -611,6 +619,8 @@ extension NotebookEditorView {
 
     /// 整份狀態的內容：物件（含我方要補給對方的圖檔）與每一頁的全部筆畫。逐頁讀檔在背景做。
     private func collectCollabState(blobs: Set<String>) async -> [(ink: Bool, json: [String: Any])] {
+        ensureCollabPageIds()
+        collabSync.refreshShadow(from: notebook, keepMissingPages: true)
         var items: [(ink: Bool, json: [String: Any])] = []
         for entry in collabSync.snapshot() {
             var json = entry.json
@@ -623,20 +633,24 @@ extension NotebookEditorView {
             items.append((false, json))
         }
         // 筆跡：**每一頁的全部自繪筆畫**（自己的與別台的）都帶上，加上這次協同期間擦掉的。
-        //
-        // 以前只帶這次協同期間 PencilKit 圖層加入的筆畫 —— 但所有筆刷早就由自繪引擎收筆，
-        // 房主的筆跡完全不在整份狀態裡，剛加入的人只能等檔案同步，看起來就是「開啟房主的筆記很慢」。
         // 收到的一方以筆畫 id 去重，已經有的不會多出一份。逐頁讀檔在背景做。
-        let pageIds = notebook.pageIds ?? []
+        let pageIds = NotebookPackageBridge.resolvedPageIds(for: notebook, packagesDirectory: store.syncPackagesDirectory)
         let removedByPage = collabInkLedger.sessionRemoved
         let directory = store.drawingsDirectory, nid = notebook.id
+        let activePage = currentPageIndex
+        let liveStrokes = (canvasView as? AdaptiveCanvasView)?.proLayer?.ownStrokes ?? []
         nonisolated(unsafe) let objectItems = items
         let task = Task.detached(priority: .userInitiated) { () -> [(ink: Bool, json: [String: Any])] in
             var all = objectItems
             for (index, page) in pageIds.enumerated() {
                 let canonicalPage = CollabCanonical.canonicalPageId(page)
-                let strokes = ProInkStore.load(in: directory, notebookId: nid, page: index)
+                var strokes = ProInkStore.load(in: directory, notebookId: nid, page: index)
                     + ProInkStore.load(in: directory, notebookId: nid, page: index, foreign: true)
+                if index == activePage && !liveStrokes.isEmpty {
+                    let knownIds = Set(strokes.map(\.packageId))
+                    let uncommitted = liveStrokes.filter { !knownIds.contains($0.packageId) }
+                    strokes.append(contentsOf: uncommitted)
+                }
                 let removed = Array(removedByPage[canonicalPage] ?? removedByPage[page] ?? [])
                 guard !strokes.isEmpty || !removed.isEmpty else { continue }
                 all.append((true, ["page": canonicalPage, "strokes": strokes.map(CollabStroke.encode(pro:)),
@@ -1499,21 +1513,9 @@ extension NotebookEditorView {
     ///
     /// 只在目前是最後一頁時才新增 —— 否則在中間的頁面寫到底，會憑空多出
     /// 一堆空白頁。
+    // orphan-ok: 書寫到頁尾不自動長出空白頁，保留定義相容
     func ensureNextPageExists() {
-        guard currentPageIndex == notebook.pageCount - 1 else { return }
-        notebook.pageCount += 1
-        commitNotebook()
-
-        withAnimation {
-            showExtendedBanner = true
-        }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-            withAnimation {
-                showExtendedBanner = false
-            }
-        }
-        // 刻意不在這裡呼叫 canvas.setContentOffset：
-        // 避免在使用者正於頁面底部連續運筆書寫時，畫布視角突然發生位移跳動。
+        // 使用者反映書寫到頁尾不應自動長出空白頁；新增頁面由使用者於工具列或側欄明確點擊「+」新增。
     }
 
     /// 套索以畫布上**看得到的那一份**為準。`currentDrawing` 是經 delegate 回寫的副本，

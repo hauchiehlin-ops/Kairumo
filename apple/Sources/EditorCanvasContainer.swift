@@ -783,7 +783,7 @@ extension NotebookEditorView {
                                     broadcastDrawingChange(page: page, drawing: updated)
                                 },
                                 onSelectionChanged: { if !$0 { lasso.clear() } },
-                                onReachedPageBottom: { ensureNextPageExists() },
+                                onReachedPageBottom: {},
                                 // LazyVStack 會建立多頁畫布；不能讓最後建立的頁面覆蓋
                                 // `canvasView`，否則貼紙可能蓋到別頁且存檔頁碼也錯。
                                 canvasRef: { ref in
@@ -1140,8 +1140,12 @@ extension NotebookEditorView {
 
     /// 這一頁在協同裡的 id（預覽線以它對應頁面）。
     func liveInkPageId(_ page: Int) -> String? {
-        guard let ids = notebook.pageIds, page >= 0, page < ids.count else { return nil }
-        return ids[page]
+        if let ids = notebook.pageIds, page >= 0, page < ids.count {
+            return ids[page]
+        }
+        let fallbackIds = NotebookPackageBridge.resolvedPageIds(for: notebook, packagesDirectory: store.syncPackagesDirectory)
+        guard page >= 0, page < fallbackIds.count else { return nil }
+        return fallbackIds[page]
     }
 
     /// 把某一頁的筆跡變動廣播出去（協同）。
@@ -1734,9 +1738,7 @@ extension NotebookEditorView {
                         ? nil
                         : newDrawing
                 },
-                onReachedPageBottom: {
-                    ensureNextPageExists()
-                },
+                onReachedPageBottom: {},
                 onSelectionChanged: { hasSel in
                     if !hasSel { lasso.clear() }
                 },
