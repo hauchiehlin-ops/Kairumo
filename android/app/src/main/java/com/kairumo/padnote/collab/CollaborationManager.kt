@@ -111,8 +111,6 @@ class CollaborationManager(private val context: Context) {
         private set
     var lanRelayAddress by mutableStateOf<String?>(null)
         private set
-    var tailscaleRelayAddress by mutableStateOf<String?>(null)
-        private set
     var queuedOplogCount by mutableIntStateOf(0)
         private set
 
@@ -236,7 +234,7 @@ class CollaborationManager(private val context: Context) {
     }
 
     /**
-     * 「Wi‑Fi / Tailscale」開房用的中繼：這台裝置內建的本機中繼。與 Apple `localRoomServer` 相同。
+     * 「同一 Wi‑Fi」開房用的中繼：這台裝置內建的本機中繼。與 Apple `localRoomServer` 相同。
      *
      * 使用者**存的**位址是 `wss://`（刻意設定的自架遠端中繼）才沿用它；其餘一律用本機中繼。
      * 以前用的是記憶體裡的 [serverAddress] —— 加入別人的房間、開過雲端共享之後它會變成對方的區網位址
@@ -294,8 +292,7 @@ class CollaborationManager(private val context: Context) {
             android.util.Log.w("Collab", "邀請連結帶了 # 片段但解不出合法金鑰：會以未加密身分加入，無法讀取加密房間")
         }
         if (inviteV2 != null && inviteV2.servers.isNotEmpty()) {
-            val (lan, ts) = getLocalIpAddresses()
-            val myIps = listOfNotNull(lan, ts)
+            val myIps = listOfNotNull(getLanIpAddress())
             val ordered = runCatching { uniffi.padnote_core.collabOrderServers(inviteV2.servers, myIps) }.getOrNull()
             if (!ordered.isNullOrEmpty()) {
                 candidateServers.clear()
@@ -314,14 +311,10 @@ class CollaborationManager(private val context: Context) {
         return runCatching { java.net.URLDecoder.decode(raw, "UTF-8") }.getOrDefault(raw).trim()
     }
 
-    fun getInviteLink(useTailscale: Boolean = false): String {
+    fun buildInviteLink(): String {
         val base = collabInviteLink(roomId, roomKeyBase64 ?: "")
         val target = if (isHostingLocalRelay) {
-            if (useTailscale && tailscaleRelayAddress != null) {
-                tailscaleRelayAddress
-            } else {
-                lanRelayAddress ?: tailscaleRelayAddress
-            }
+            lanRelayAddress
         } else if (!collabIsLoopbackHost(runCatching { java.net.URI(serverAddress).host ?: "" }.getOrDefault(""))) {
             serverAddress
         } else null
@@ -340,10 +333,7 @@ class CollaborationManager(private val context: Context) {
     }
 
     val inviteLink: String
-        get() = getInviteLink(useTailscale = false)
-
-    val tailscaleInviteLink: String?
-        get() = if (tailscaleRelayAddress != null) getInviteLink(useTailscale = true) else null
+        get() = buildInviteLink()
 
     /**
      * 帶上「是哪一本筆記」的邀請連結（QR Code 用）。舊版只有房號、金鑰、位址：對方一掃，
@@ -400,7 +390,6 @@ class CollaborationManager(private val context: Context) {
             runCatching { relay?.stop() }
             isHostingLocalRelay = false
             lanRelayAddress = null
-            tailscaleRelayAddress = null
         }
         lastError = null
 
@@ -434,25 +423,21 @@ class CollaborationManager(private val context: Context) {
         else -> this
     }
 
-    fun getLocalIpAddresses(): Pair<String?, String?> {
+    /**
+     * 本機在區域網路上的 IPv4 位址（給隊友連線）。不收 100.64.0.0/10（電信級 NAT、VPN 覆蓋網路）：
+     * 那種位址對方通常連不到，放進邀請連結只會讓加入者卡在「連線中」。與 Apple `lanIPv4Address` 相同。
+     */
+    fun getLanIpAddress(): String? {
         var lanIp: String? = null
-        var tailscaleIp: String? = null
         try {
-            val interfaces = java.net.NetworkInterface.getNetworkInterfaces() ?: return Pair(null, null)
+            val interfaces = java.net.NetworkInterface.getNetworkInterfaces() ?: return null
             for (intf in interfaces.asSequence()) {
                 if (!intf.isUp || intf.isLoopback) continue
                 for (addr in intf.inetAddresses.asSequence()) {
                     if (addr is java.net.Inet4Address && !addr.isLoopbackAddress) {
                         val hostAddress = addr.hostAddress ?: continue
-                        if (hostAddress.startsWith("100.")) {
-                            val parts = hostAddress.split(".")
-                            if (parts.size == 4) {
-                                val second = parts[1].toIntOrNull() ?: 0
-                                if (second in 64..127) {
-                                    tailscaleIp = hostAddress
-                                }
-                            }
-                        } else if (!hostAddress.startsWith("127.") && !hostAddress.startsWith("169.254.")) {
+                        if (isCarrierGradeNat(hostAddress)) continue
+                        if (!hostAddress.startsWith("127.") && !hostAddress.startsWith("169.254.")) {
                             if (lanIp == null || intf.name.startsWith("wlan") || intf.name.startsWith("eth")) {
                                 lanIp = hostAddress
                             }
@@ -461,7 +446,14 @@ class CollaborationManager(private val context: Context) {
                 }
             }
         } catch (_: Exception) {}
-        return Pair(lanIp, tailscaleIp)
+        return lanIp
+    }
+
+    private fun isCarrierGradeNat(ip: String): Boolean {
+        val parts = ip.split(".")
+        if (parts.size != 4 || parts[0] != "100") return false
+        val second = parts[1].toIntOrNull() ?: return false
+        return second in 64..127
     }
 
     private fun startLocalRelay(port: Int) {
@@ -471,12 +463,9 @@ class CollaborationManager(private val context: Context) {
         val ok = runCatching { server.start(p); server.isRunning() }.getOrDefault(false)
         isHostingLocalRelay = ok
         if (ok) {
-            val (lan, ts) = getLocalIpAddresses()
-            lanRelayAddress = lan?.let { "ws://$it:$p" }
-            tailscaleRelayAddress = ts?.let { "ws://$it:$p" }
+            lanRelayAddress = getLanIpAddress()?.let { "ws://$it:$p" }
         } else {
             lanRelayAddress = null
-            tailscaleRelayAddress = null
         }
     }
 
@@ -511,7 +500,6 @@ class CollaborationManager(private val context: Context) {
             runCatching { relay?.stop() }
             isHostingLocalRelay = false
             lanRelayAddress = null
-            tailscaleRelayAddress = null
             status = Status.Disconnected
         }
     }
@@ -618,7 +606,7 @@ class CollaborationManager(private val context: Context) {
     /** 已收到的最大中繼序號（寄存時寫在信封上，中繼以它判斷新舊）。 */
     val relaySeq: Long get() = lastSeq
 
-    /** 這場協同開在雲端中繼上（`wss://`）。區網／Tailscale 的本機中繼不收寄存（它會照常轉送給每個人）。 */
+    /** 這場協同開在雲端中繼上（`wss://`）。區網的本機中繼不收寄存（它會照常轉送給每個人）。 */
     val isOnCloudRelay: Boolean get() = serverAddress.lowercase().startsWith("wss://")
 
     /** 編輯器在協同中掛上：把這本目前的整份狀態寄存到中繼。 */
@@ -1317,7 +1305,7 @@ class CollaborationManager(private val context: Context) {
 
         /**
          * Kairumo 的公開中繼（Cloudflare Workers，見 `deploy/relay-cloudflare`）。與 Apple
-         * `CollaborationManager.publicRelayURL` 相同。空字串＝還沒部署：雲端共享照舊只用區網／Tailscale。
+         * `CollaborationManager.publicRelayURL` 相同。空字串＝還沒部署：雲端共享照舊只用區網。
          */
         const val PUBLIC_RELAY_URL = "wss://kairumo-relay.kairumo-relay.workers.dev"
         private const val KEY_CLOUD_RELAY = "cloud_relay_url"

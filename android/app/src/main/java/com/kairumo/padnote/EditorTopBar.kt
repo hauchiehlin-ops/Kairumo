@@ -755,24 +755,31 @@ internal fun EditorTopBar(
             }
         }
 
-        // 線上多人即時協同按鈕
-        Surface(
-            shape = RoundedCornerShape(8.dp),
-            color = if (state.isCollabConnected) Color(0xFFE8F5E9) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-            modifier = Modifier.padding(vertical = 2.dp)
-        ) {
-            InstantTooltip(text = l10n("collaborate")) {
-                IconButton(
-                    onClick = actions.onOpenCollaboration,
-                    modifier = Modifier.size(36.dp).testTag("editor.collaborate")
-                ) {
-                    Icon(
-                        imageVector = KairumoIcons.Group,
-                        contentDescription = l10n("collaborate"),
-                        tint = if (state.isCollabConnected) Color(0xFF2E7D32) else MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.size(19.dp)
-                    )
+        // 線上多人即時協同按鈕。
+        // 連線完成時改成實心綠底＋白色圖示＋右上角綠點 —— 舊版只有極淡的 E8F5E9 底色，
+        // 在淺色主題與電子紙螢幕上幾乎看不出差別（實機回報「綠燈不夠明顯」）。
+        Box(modifier = Modifier.padding(vertical = 2.dp)) {
+            Surface(
+                shape = RoundedCornerShape(8.dp),
+                color = if (state.isCollabConnected) CollabConnectedGreen else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                border = if (state.isCollabConnected) androidx.compose.foundation.BorderStroke(1.5.dp, CollabConnectedGreenDark) else null,
+            ) {
+                InstantTooltip(text = l10n("collaborate")) {
+                    IconButton(
+                        onClick = actions.onOpenCollaboration,
+                        modifier = Modifier.size(36.dp).testTag("editor.collaborate")
+                    ) {
+                        Icon(
+                            imageVector = KairumoIcons.Group,
+                            contentDescription = l10n("collaborate"),
+                            tint = if (state.isCollabConnected) Color.White else MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.size(19.dp)
+                        )
+                    }
                 }
+            }
+            if (state.isCollabConnected) {
+                CollabConnectedDot(Modifier.align(Alignment.TopEnd).offset(x = 3.dp, y = (-3).dp))
             }
         }
 
@@ -1430,4 +1437,25 @@ internal fun EditorTopBar(
             }
         }
     }
+}
+
+
+private val CollabConnectedGreen = Color(0xFF22A447)
+private val CollabConnectedGreenDark = Color(0xFF13702E)
+
+/**
+ * 協同連線完成的綠點（白邊，任何底色上都看得到）。
+ * 刻意不做無限呼吸動畫：工具列與畫布同一個視窗，持續重繪會吃掉 120Hz 筆跡的幀預算。
+ */
+@Composable
+private fun CollabConnectedDot(modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier
+            .size(12.dp)
+            .clip(CircleShape)
+            .background(Color.White)
+            .padding(2.dp)
+            .clip(CircleShape)
+            .background(Color(0xFF34C759))
+    )
 }

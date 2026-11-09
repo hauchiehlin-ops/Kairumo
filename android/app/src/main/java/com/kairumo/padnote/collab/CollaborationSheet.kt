@@ -149,14 +149,6 @@ fun CollaborationSheet(
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
-                                manager.tailscaleRelayAddress?.let {
-                                    Text(
-                                        "${l("relay_tailscale_address")}：$it",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        fontFamily = FontFamily.Monospace,
-                                        color = MaterialTheme.colorScheme.primary
-                                    )
-                                }
                             }
 
                             Text(l("copy_encrypted_link"), style = MaterialTheme.typography.labelMedium)
@@ -173,13 +165,8 @@ fun CollaborationSheet(
                                 )
                             }
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                if (manager.tailscaleRelayAddress != null) {
-                                    OutlinedButton(onClick = { copy(context, manager.tailscaleInviteLink ?: manager.inviteLink) }) {
-                                        Text(l("copy_tailscale_link"))
-                                    }
-                                }
                                 OutlinedButton(onClick = { copy(context, manager.inviteLink) }) {
-                                    Text(if (manager.tailscaleRelayAddress != null) l("copy_lan_link") else l("copy_encrypted_link"))
+                                    Text(l("copy_encrypted_link"))
                                 }
                                 OutlinedButton(onClick = {
                                     scope.launch {
@@ -200,7 +187,7 @@ fun CollaborationSheet(
                                 }
                             }
 
-                            // 掃描加入：每種連線方式一張 QR Code（同一 Wi‑Fi／Tailscale／遠端中繼）。
+                            // 掃描加入：每種連線方式一張 QR Code（同一 Wi‑Fi／遠端中繼）。
                             CollabInviteQr(manager, notebookId, notebookTitle, ::l)
 
                             // 只貼房號、沒帶金鑰就加入的話，連得上、也看得到成員，
@@ -254,7 +241,7 @@ fun CollaborationSheet(
                         else -> {
                             HorizontalDivider()
                             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                // 「Wi‑Fi / Tailscale」：房間開在這台內建的本機中繼上。只有存了自架的 wss:// 中繼時
+                                // 「同一 Wi‑Fi」：房間開在這台內建的本機中繼上。只有存了自架的 wss:// 中繼時
                                 // 才連到那台，按鈕也照舊叫「開始多人協同」。與 Apple 相同。
                                 Button(onClick = { manager.createRoom(manager.localRoomServer) }) {
                                     Text(l(if (manager.savedCustomRemoteRelay) "start_collaboration" else "collab_start_local"))
@@ -364,7 +351,36 @@ private fun StatusLine(manager: CollaborationManager, l: (String) -> String) {
             "${l("reconnecting_status")} ${s.attempt}/${s.max}"
         else -> l("status_disconnected")
     }
-    Text(text, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+    // 狀態燈：連線完成＝實心綠燈＋綠字，連線中／重連＝琥珀，未連線＝灰。
+    // 舊版只有一行黑字，連上與沒連上一眼分不出來（實機回報「綠燈不夠明顯」）。
+    val lamp = when (manager.status) {
+        is CollaborationManager.Status.Connected -> androidx.compose.ui.graphics.Color(0xFF22A447)
+        is CollaborationManager.Status.Connecting,
+        is CollaborationManager.Status.Reconnecting -> androidx.compose.ui.graphics.Color(0xFFF5A623)
+        else -> androidx.compose.ui.graphics.Color(0xFF9E9E9E)
+    }
+    val connected = manager.status is CollaborationManager.Status.Connected
+    androidx.compose.foundation.layout.Row(
+        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = Modifier
+            .background(lamp.copy(alpha = 0.14f), androidx.compose.foundation.shape.RoundedCornerShape(12.dp))
+            .padding(horizontal = 10.dp, vertical = 6.dp)
+    ) {
+        androidx.compose.foundation.layout.Box(
+            Modifier
+                .size(14.dp)
+                .background(androidx.compose.ui.graphics.Color.White, androidx.compose.foundation.shape.CircleShape)
+                .padding(2.dp)
+                .background(lamp, androidx.compose.foundation.shape.CircleShape)
+        )
+        Text(
+            text,
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.Bold,
+            color = if (connected) androidx.compose.ui.graphics.Color(0xFF13702E) else MaterialTheme.colorScheme.onSurface
+        )
+    }
     manager.lastError?.let {
         // 只顯示「重連中」而不說原因，使用者無從判斷是位址打錯還是對方離線。
         //
@@ -383,7 +399,7 @@ private fun parseColor(hex: String): Color =
     runCatching { Color(android.graphics.Color.parseColor(hex)) }.getOrDefault(Color.Gray)
 
 /**
- * 邀請連結的 QR Code。依可用的連線方式各一張：同一 Wi‑Fi、Tailscale、遠端中繼。
+ * 邀請連結的 QR Code。依可用的連線方式各一張：同一 Wi‑Fi、遠端中繼（跨網路一律走雲端共享）。
  * 對方用相機掃描就開啟 `kairumo://collab?...`，房號、金鑰、位址自動帶入。
  * 矩陣由核心產生（`collabQrCode`），Apple 畫的是同一份（I6）。
  */
@@ -398,7 +414,6 @@ private fun CollabInviteQr(manager: CollaborationManager, notebookId: String?, n
     val modes = buildList {
         if (manager.isHostingLocalRelay) {
             if (manager.lanRelayAddress != null) add(Mode("lan", "collab_qr_mode_lan", manager.inviteLink, "collab_qr_hint_lan"))
-            manager.tailscaleInviteLink?.let { add(Mode("tailscale", "collab_qr_mode_tailscale", it, "collab_qr_hint_tailscale")) }
         } else if (!cloudShared) {
             add(Mode("remote", "collab_qr_mode_remote", manager.inviteLink, "collab_qr_hint_remote"))
         }

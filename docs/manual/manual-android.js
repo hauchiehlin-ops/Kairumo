@@ -24,7 +24,7 @@ window.KAIRUMO_MANUAL = {
     "ui": {
       "docTitle": "Kairumo 操作手冊",
       "tagline": "手寫、打字、錄音三合一的筆記本。零基礎也能一步一步跟著做。",
-      "version": "適用版本 v6.6.0（build 180）· 2026 年 9 月 26 日",
+      "version": "適用版本 v6.6.1（build 181）· 2026 年 9 月 26 日",
       "tocTitle": "目錄",
       "tocHint": "點任一項目直接跳到該段落",
       "stepsLabel": "操作步驟",
@@ -47,7 +47,7 @@ window.KAIRUMO_MANUAL = {
           "第一次打開不需要註冊帳號，也不需要網路連線。",
           "第一次打開會有兩本範例筆記（「歡迎使用 Kairumo」與「課堂與會議記錄」），裡面是可以直接改的圖、文、表範例。不需要就整本刪掉。",
           "你寫下的每一筆都存在這台裝置裡。要在多台裝置之間同步，就挑一個自己的雲端硬碟資料夾（見「資料備份與同步」）。",
-          "在設定頁面的「關於 Kairumo」可查看版本號（例如 v6.6.0），回報問題時請附上它。"
+          "在設定頁面的「關於 Kairumo」可查看版本號（例如 v6.6.1），回報問題時請附上它。"
         ],
         "tip": "沒有伺服器、沒有帳號，就沒有「忘記密碼」這回事 —— 但也代表裝置遺失時沒有雲端副本，請自己做備份。",
         "fig": null
@@ -544,7 +544,6 @@ window.KAIRUMO_MANUAL = {
         "steps": [
           "首頁的「資料與同步」區塊提供多項備份與同步卡片，點任一張會開啟該功能的專屬說明與操作視窗。",
           "「雲端同步」顯示目前是否登入，點進去可以登入、查看同步位置並立即同步。",
-          "「Tailscale 點對點直連同步」：使用 WebRTC 進行跨網際網路或跨裝置的點對點極速同步。若系統偵測到已安裝並連線 Tailscale，狀態指示燈會顯示綠燈與虛擬 IP，並智慧隱藏下載連結；若未偵測到，則會顯示官方下載指引連結。",
           "「建立備份」把所有筆記、圖片與錄音打包成一個檔案，存到你指定的位置。",
           "「從備份復原」挑一個備份檔還原。復原前會先自動備份目前的資料，選錯檔案也救得回來。",
           "資料夾同步：先在自己的雲端硬碟裡建一個資料夾（例如叫 Kairumo），按「選擇資料夾」指到它。",
@@ -611,13 +610,12 @@ window.KAIRUMO_MANUAL = {
       {
         "id": "collab",
         "title": "線上協同（零基礎教學）",
-        "lead": "多人即時共筆。零知識 AES-256-GCM 端對端加密，任何中繼都看不到內容。三種連線方式：「同一個 Wi‑Fi」（中繼就是你自己的裝置）、「Tailscale 跨網」，以及「雲端共享（跨網路）」——房間開在 Cloudflare 的加密中繼上，任何網路都連得到，不需要任何帳號。",
+        "lead": "多人即時共筆。零知識 AES-256-GCM 端對端加密，任何中繼都看不到內容。兩種連線方式：「同一個 Wi‑Fi」（中繼就是你自己的裝置），以及「雲端共享（跨網路）」——房間開在 Cloudflare 的加密中繼上，任何網路都連得到，不需要任何帳號。",
         "buttons": [
           "線上協同",
-          "Wi‑Fi / Tailscale",
+          "同一 Wi‑Fi",
           "雲端共享（跨網路）",
           "複製加密邀請連結",
-          "複製跨網段連結 (Tailscale)",
           "加入協同房間",
           "發現區域網路協同房間",
           "協同伺服器位址",
@@ -626,14 +624,13 @@ window.KAIRUMO_MANUAL = {
         "steps": [
           "**先確認連線場景：** 大家在同一間房間/同一個 Wi-Fi（走「情況 A」）；或彼此身處不同地點、使用行動網路/不同 Wi-Fi（走「情況 B」）。",
           "── **情況 A：同一個網路（同一 Wi-Fi，最簡單）** ──",
-          "**A1｜房主開啟房間。** 打開要共筆的筆記 → 點頂部工具列「線上協同」→ 按「Wi‑Fi / Tailscale」（以前叫「開始多人協同」；房間開在這台裝置內建的中繼上）。系統會在背景自動啟動中繼，並透過 Bonjour/mDNS 在區網廣播房間。",
+          "**A1｜房主開啟房間。** 打開要共筆的筆記 → 點頂部工具列「線上協同」→ 按「同一 Wi‑Fi」（以前叫「開始多人協同」；房間開在這台裝置內建的中繼上）。系統會在背景自動啟動中繼，並透過 Bonjour/mDNS 在區網廣播房間。",
           "**A2｜方式一：隊友「一鍵自動加入」（最推薦）。** 隊友在同一 Wi-Fi 下打開任一筆記 → 點「線上協同」→ 面板會自動列出「發現區域網路協同房間」（顯示房號與房主名稱）→ 輕點「加入發現房間」，一秒自動連線進入！",
-          "**A3｜方式二：使用邀請連結。** 房主點擊「複製區網連結 (Wi-Fi)」（或「複製加密邀請連結」），連結內已自動包含房主區網 IP 與解密金鑰；隊友只要在「加入協同房間」貼上整串連結並按下加入，即可連線，完全不需手動設定伺服器 IP！",
+          "**A3｜方式二：使用邀請連結。** 房主點擊「複製加密邀請連結」，連結內已自動包含房主區網 IP 與解密金鑰；隊友只要在「加入協同房間」貼上整串連結並按下加入，即可連線，完全不需手動設定伺服器 IP！",
           "── **情況 B：跨網段／不同網路（遠端、異地、行動網路）** ──",
-          "**協同完全支援跨網段！** 遠端協作提供三種彈性且安全的連線方式：",
+          "**協同完全支援跨網段！** 遠端協作提供兩種彈性且安全的連線方式：",
           "**B1｜方式一：雲端共享（跨網路，最推薦，免裝軟體、免帳號）：**\n① 房主在協同面板的「雲端共享（跨網路）」按「開啟跨網路協同」，產生專屬 QR Code 與邀請連結。\n② 隊友用相機掃描 QR Code 或點開連結 → 自動打開這本筆記並加入房間，內容自動帶入。\n③ 房主不在線也能加入：內容會加密寄存在中繼上。大家都離開（或房主按「結束協同會議」）之後再保留 7 天，讓還沒同步的人回來拿最終版本，之後自動刪除。\n④ 想用自己的中繼（不和其他使用者共用每日免費額度）：在同一張卡片底部的「使用自己的中繼（選用）」按「一鍵申請自己的中繼」，在 Cloudflare 部署好之後把網址貼到欄位、按「儲存」。只有房主需要設定；看不懂就按「如何取得自己的中繼位址？」看詳細步驟。",
-          "**B2｜方式二：Tailscale 私有虛擬網（專網直連）：**\n① 雙方裝置（手機、平板或電腦皆可）安裝免費的 Tailscale App 並登入同一個帳號（或同一個 Tailnet 私有網路）。\n② 房主在筆記中點擊「Wi‑Fi / Tailscale」，Kairumo 會自動偵測到系統的 Tailscale 虛擬網位址（100.x.y.z:9002）。\n③ 房主畫面上會出現藍色按鈕「複製跨網段連結 (Tailscale)」；房主點擊複製並透過訊息傳給隊友。\n④ 遠端隊友在「加入協同房間」貼上該連結並按加入，雙方立即透過 Tailscale 建立點對端安全直連，完全不需路由器開 Port 或公網 IP！",
-          "**B3｜方式三：自建或公共安全中繼伺服器（WSS 加密）：**\n① 若團隊架設有 padnote-relay 並綁定 TLS 網域名稱（例如 wss://relay.yourdomain.com），雙方展開面板底部的「協同伺服器位址」並填入該 wss:// 位址。\n② 房主點「開始多人協同」後，複製產生的邀請連結傳給隊友，隊友貼上加入即可。公開網路強制要求 wss://，確保房號與傳輸完全受到 TLS 加密保護。",
+          "**B2｜方式二：自建或公共安全中繼伺服器（WSS 加密）：**\n① 若團隊架設有 padnote-relay 並綁定 TLS 網域名稱（例如 wss://relay.yourdomain.com），雙方展開面板底部的「協同伺服器位址」並填入該 wss:// 位址。\n② 房主點「開始多人協同」後，複製產生的邀請連結傳給隊友，隊友貼上加入即可。公開網路強制要求 wss://，確保房號與傳輸完全受到 TLS 加密保護。",
           "── **連線成功與共筆操作** ──",
           "**步驟 1｜確認在線成員。** 兩台裝置的「在線成員」都會即時列出對方的名字，房主會標記為「房主（擁有者）」。若在多裝置登錄同一個 Google 帳號測試，系統會自動在名稱旁加上裝置後綴（例如「您的名字 (裝置 1)」與「您的名字 (裝置 2)」），彼此各自擁有專屬辨識色與游標，清晰區分互不衝突！",
           "**步驟 2｜即時共筆與多人協同體驗。** 任何一方的手寫筆畫、貼紙、圖片、文字方塊、表格、圖形、連接線、連結預覽、3D 模型與圖釘，都會毫秒級雙向同步並自動儲存留存在雙方的筆記中：\n① **文字方塊多人同時打字**：支援多人同時在同一個文字方塊中輸入，系統以文字 CRDT 即時融合，字元級格式完整保留，並會顯示「協作者正在打字」的提示，絕不互相覆蓋。\n② **即時游標與選取外框**：畫面上能即時看見隊友的游標動態；當隊友選取或編輯某物件時，會以其代表色高亮外框並顯示「正在編輯」提示，避免碰撞。\n③ **頁面增刪與智慧復原**：協作中新增、刪除或調換頁面順序全員即時同步；執行復原（Undo）時，系統會智慧復原您自己的操作，他人後續修改將完整保留。",
@@ -641,9 +638,9 @@ window.KAIRUMO_MANUAL = {
         ],
         "tip": "【安全與隱私保證】協同內容全程以 AES-256-GCM 端對端加密，金鑰只存在邀請連結片段（#key=...）中，中繼點只負責轉發看不懂的密文，任何第三方甚至中繼伺服器都無法解讀。離線期間的操作會自動暫存於本機佇列，網路恢復後自動補齊。頂部工具列採用群組折疊排版，工具收納於「插入」與「更多工具」中，畫面簡潔不擁擠。",
         "fig": "collab",
-        "cap": "尚未連線：Wi‑Fi / Tailscale、發現區域網路房間、加入協同房間、協同伺服器位址",
+        "cap": "尚未連線：同一 Wi‑Fi、發現區域網路房間、加入協同房間、協同伺服器位址",
         "fig2": "collab_on",
-        "cap2": "已連線：房間識別碼、端對端加密保護、本機中繼位址（區網與 Tailscale）、在線成員清單"
+        "cap2": "已連線：房間識別碼、端對端加密保護、本機中繼位址（區網）、在線成員清單"
       },
       {
         "id": "milestone",
@@ -868,7 +865,7 @@ window.KAIRUMO_MANUAL = {
           ],
           [
             "怎麼回報問題？",
-            "請附上版本號（在設定的「關於 Kairumo」查看，例如 Kairumo v6.6.0）與操作步驟。",
+            "請附上版本號（在設定的「關於 Kairumo」查看，例如 Kairumo v6.6.1）與操作步驟。",
             "help"
           ],
           [
@@ -932,7 +929,7 @@ window.KAIRUMO_MANUAL = {
     "ui": {
       "docTitle": "Kairumo User Manual",
       "tagline": "Handwriting, typing and audio in one notebook. Step by step, from zero.",
-      "version": "For version 6.6.0 (build 180) · 26 September 2026",
+      "version": "For version 6.6.1 (build 181) · 26 September 2026",
       "tocTitle": "Contents",
       "tocHint": "Tap any entry to jump straight to it",
       "stepsLabel": "Steps",
@@ -955,7 +952,7 @@ window.KAIRUMO_MANUAL = {
           "No account and no internet connection are needed to start.",
           "On first launch you get two sample notebooks (“Welcome to Kairumo” and “Lectures & Meetings”) with editable text, tables, charts and shapes. Delete them if you do not want them.",
           "Everything you write is stored on this device. To sync across devices, point them at a folder in your own cloud drive (see “Backup and sync”).",
-          "Find the version number in the app's About screen (for example Kairumo v6.6.0) and include it when you report a problem."
+          "Find the version number in the app's About screen (for example Kairumo v6.6.1) and include it when you report a problem."
         ],
         "tip": "No server and no account means there is no password to forget — and no cloud copy if you lose the device, so make your own backup.",
         "fig": null
@@ -1452,7 +1449,6 @@ window.KAIRUMO_MANUAL = {
         "steps": [
           "The “Data & Sync” block on the home screen provides backup and sync cards; tapping one opens that feature’s own detail and action sheet.",
           "“Google Drive” shows whether you are signed in, and opens sign-in, sync location and Sync Now controls.",
-          "“Tailscale Direct P2P Sync”: uses WebRTC for peer-to-peer fast syncing across devices and the internet. If an active Tailscale connection is detected, the status light turns green with your private IP and the download link is automatically hidden; if not detected, the official download link appears.",
           "“Create Backup” packs every note, image and recording into a single file and saves it where you choose.",
           "“Restore from Backup” restores from one of those files. Your current data is backed up first, so picking the wrong file is recoverable.",
           "Folder sync: create a folder in your own cloud drive (call it Kairumo, say) and point “Choose Folder” at it.",
@@ -1519,13 +1515,12 @@ window.KAIRUMO_MANUAL = {
       {
         "id": "collab",
         "title": "Real-time collaboration (beginner tutorial)",
-        "lead": "Write together in real time. Zero-knowledge AES-256-GCM end-to-end encryption — no relay can read your content. Three ways to connect: Same Wi‑Fi (the relay is your own device), Tailscale, and Cloud sharing (any network), where the room runs on an encrypted relay on Cloudflare that works from any network, with no account needed.",
+        "lead": "Write together in real time. Zero-knowledge AES-256-GCM end-to-end encryption — no relay can read your content. Two ways to connect: Same Wi‑Fi (the relay is your own device) and Cloud sharing (any network), where the room runs on an encrypted relay on Cloudflare that works from any network, with no account needed.",
         "buttons": [
           "Collaborate",
           "Start Collaboration",
           "Cloud Share (Cross-Network)",
           "Copy Encrypted Invite Link",
-          "Copy Cross-Network Link (Tailscale)",
           "Join Room",
           "Discovered LAN Rooms",
           "Relay Server Address",
@@ -1534,14 +1529,13 @@ window.KAIRUMO_MANUAL = {
         "steps": [
           "**First, choose your connection scenario:** Everyone in the same room/Wi-Fi (follow Case A); or team members in different locations/on cellular data (follow Case B).",
           "── **Case A: Same local network (same Wi-Fi, simplest)** ──",
-          "**A1 — The host opens the room.** Open the note to work on → tap “Collaborate” in the top bar → tap “Start Collaboration”. The app automatically launches a local relay in the background and broadcasts the room via Bonjour/mDNS.",
+          "**A1 — The host opens the room.** Open the note to work on → tap “Collaborate” in the top bar → tap “Same Wi‑Fi”. The app automatically launches a local relay in the background and broadcasts the room via Bonjour/mDNS.",
           "**A2 — Option 1: Teammate joins with one tap (Recommended).** On the same Wi-Fi, the teammate opens any note → taps “Collaborate” → the panel automatically displays “Discovered LAN Rooms” with the host's room ID and device name → tap “Join Discovered Room” to connect instantly!",
-          "**A3 — Option 2: Join via invite link.** The host taps “Copy Local Link (Wi-Fi)” (or “Copy Encrypted Invite Link”), which automatically embeds the host's local IP and decryption key. The teammate pastes the full link into “Join Room” and taps join — no manual server IP configuration needed!",
+          "**A3 — Option 2: Join via invite link.** The host taps “Copy Encrypted Invite Link”, which automatically embeds the host's local IP and decryption key. The teammate pastes the full link into “Join Room” and taps join — no manual server IP configuration needed!",
           "── **Case B: Cross-network / different subnets (remote, cellular, different Wi-Fi)** ──",
           "**Collaboration works across different networks without limits!** Two secure methods are available:",
           "**B1 — Option 1: Cloud sharing (any network, most recommended, no extra software or account):**\n① The host taps “Start cross-network collaboration” under “Cloud sharing (any network)” in the collaboration panel, which creates a QR code and invite link.\n② Teammates scan the QR code with their camera or open the link → the notebook opens and joins the room, with the content filled in automatically.\n③ People can join even when the host is offline: the content is stored on the relay, encrypted. After everyone leaves (or the host taps End Collaboration) it is kept for 7 more days so anyone who hasn't synced can fetch the final version, then deleted automatically.",
-          "**B2 — Option 2: Tailscale private mesh VPN (Direct mesh, zero hosting):**\n① Install the free Tailscale app on each device (phone, tablet, or computer) and sign into the same account (or same Tailnet).\n② When the host taps “Start Collaboration”, Kairumo automatically detects the device's Tailscale IP (100.x.y.z:9002).\n③ A blue button “Copy Cross-Network Link (Tailscale)” appears on the host's screen; tap to copy and send to teammates.\n④ Remote teammates paste this link into “Join Room” and tap join. Both devices connect directly and securely via Tailscale with no port forwarding or public IP needed!",
-          "**B3 — Option 3: Self-hosted or public secure relay (WSS encrypted):**\n① If your team runs padnote-relay behind a TLS domain (e.g. wss://relay.yourdomain.com), expand “Relay Server Address” at the bottom of the collaboration panel and enter that wss:// address.\n② The host taps “Start Collaboration” and sends the generated invite link. Teammates paste it into “Join Room”. Public relays strictly require wss:// to ensure all transmissions are secured with TLS.",
+          "**B2 — Option 2: Self-hosted or public secure relay (WSS encrypted):**\n① If your team runs padnote-relay behind a TLS domain (e.g. wss://relay.yourdomain.com), expand “Relay Server Address” at the bottom of the collaboration panel and enter that wss:// address.\n② The host taps “Start Collaboration” and sends the generated invite link. Teammates paste it into “Join Room”. Public relays strictly require wss:// to ensure all transmissions are secured with TLS.",
           "── **Connected session & co-authoring** ──",
           "**Step 1 — Verify online members.** Both devices will list each other under “Online Participants”, with the host marked as “Host (Owner)”. If testing multiple devices using the same Google account, devices are automatically distinguished with device tags (e.g. “Your Name (Device 1)” vs “Your Name (Device 2)”) with dedicated cursor colors.",
           "**Step 2 — Real-time co-authoring experience.** Handwritten strokes, stickers, images, text boxes, tables, shapes, connectors, link previews, 3D models and pins sync bidirectionally in milliseconds and persist locally on both devices:\n① **Concurrent typing in a single text box**: Multiple people can type in the same text box simultaneously. Rich-text CRDT merges text seamlessly, preserves individual formatting, and displays a peer typing banner without overwriting.\n② **Live cursors and peer outlines**: You can see teammates' cursors in real time; selecting or editing an object outlines it with their identity colour and shows an “editing” badge to prevent conflicts.\n③ **Live page operations and smart undo**: Adding, removing, or reordering pages syncs instantly to all participants. Pressing Undo rolls back only your own actions while preserving edits made by others afterwards.",
@@ -1549,9 +1543,9 @@ window.KAIRUMO_MANUAL = {
         ],
         "tip": "【Security & Privacy Guarantees】Canvas content is fully end-to-end encrypted with AES-256-GCM. The encryption key travels strictly inside the invite link fragment (#key=...), and the relay only forwards opaque ciphertext. Edits made while offline are queued locally and synchronized automatically upon reconnection. The top toolbar is neatly grouped into “Insert” and “More Tools” to keep your workspace uncluttered.",
         "fig": "collab",
-        "cap": "Not connected: Start Collaboration, Discovered LAN Rooms, Join Room, Relay Server Address",
+        "cap": "Not connected: Same Wi‑Fi, Discovered LAN Rooms, Join Room, Relay Server Address",
         "fig2": "collab_on",
-        "cap2": "Connected: room ID, end-to-end encryption, relay hosted on this device (LAN & Tailscale), participants"
+        "cap2": "Connected: room ID, end-to-end encryption, relay hosted on this device (LAN), participants"
       },
       {
         "id": "milestone",
@@ -1771,7 +1765,7 @@ window.KAIRUMO_MANUAL = {
           ],
           [
             "How do I report a problem?",
-            "Include the version number (found in the app's About screen, for example Kairumo v6.6.0) and the steps you took.",
+            "Include the version number (found in the app's About screen, for example Kairumo v6.6.1) and the steps you took.",
             "help"
           ],
           [
@@ -1835,7 +1829,7 @@ window.KAIRUMO_MANUAL = {
     "ui": {
       "docTitle": "Kairumo 操作手册",
       "tagline": "手写、打字、录音三合一的笔记本。零基础也能一步一步跟着做。",
-      "version": "适用版本 v6.6.0（build 180）· 2026 年 9 月 26 日",
+      "version": "适用版本 v6.6.1（build 181）· 2026 年 9 月 26 日",
       "tocTitle": "目录",
       "tocHint": "点任一项目直接跳到该段落",
       "stepsLabel": "操作步骤",
@@ -1858,7 +1852,7 @@ window.KAIRUMO_MANUAL = {
           "第一次打开不需要注册账号，也不需要联网。",
           "第一次打开会有两本范例笔记（「欢迎使用 Kairumo」与「课堂与会议记录」），里面是可以直接改的图、文、表范例。不需要就整本删掉。",
           "你写下的每一笔都存在这台设备里。要在多台设备之间同步，就挑一个自己的云端硬盘文件夹（见「数据备份与同步」）。",
-          "在设置页面的「关于 Kairumo」可查看版本号（例如 v6.6.0），反馈问题时请附上它。"
+          "在设置页面的「关于 Kairumo」可查看版本号（例如 v6.6.1），反馈问题时请附上它。"
         ],
         "tip": "没有服务器、没有账号，就没有“忘记密码”这回事 —— 但也意味着设备丢失时没有云端副本，请自己做备份。",
         "fig": null
@@ -2355,7 +2349,6 @@ window.KAIRUMO_MANUAL = {
         "steps": [
           "首页的“数据与同步”区块提供多项备份与同步卡片，点任一张会打开该功能的专属说明与操作窗口。",
           "“云端同步”会显示目前是否登录，点进去可以登录、查看同步位置并立即同步。",
-          "“Tailscale 点对点直连同步”：使用 WebRTC 进行跨互联网或跨设备点对点极速同步。若系统检测到已安装并连线 Tailscale，状态指示灯会显示绿灯与虚拟 IP，并智能隐藏下载链接；若未检测到，则会显示官方下载指引链接。",
           "“创建备份”把所有笔记、图片与录音打包成一个文件，存到你指定的位置。",
           "“从备份恢复”挑一个备份文件还原。恢复前会先自动备份当前数据，选错文件也救得回来。",
           "文件夹同步：先在自己的云端硬盘里建一个文件夹（例如叫 Kairumo），按“选择文件夹”指到它。",
@@ -2422,13 +2415,12 @@ window.KAIRUMO_MANUAL = {
       {
         "id": "collab",
         "title": "在线协作（零基础教学）",
-        "lead": "多人实时共笔。零知识 AES-256-GCM 端对端加密，任何中继都看不到内容。三种连接方式：“同一个 Wi‑Fi”（中继就是你自己的设备）、“Tailscale 跨网”，以及“云端共享（跨网络）”——房间开在 Cloudflare 的加密中继上，任何网络都连得上，不需要任何账号。",
+        "lead": "多人实时共笔。零知识 AES-256-GCM 端对端加密，任何中继都看不到内容。两种连接方式：“同一个 Wi‑Fi”（中继就是你自己的设备），以及“云端共享（跨网络）”——房间开在 Cloudflare 的加密中继上，任何网络都连得上，不需要任何账号。",
         "buttons": [
           "在线协作",
           "开始多人协作",
           "云端共享（跨网络）",
           "复制加密邀请链接",
-          "复制跨网段链接 (Tailscale)",
           "加入协作房间",
           "发现局域网协作房间",
           "协作服务器地址",
@@ -2437,14 +2429,13 @@ window.KAIRUMO_MANUAL = {
         "steps": [
           "**先确认连接场景：** 大家在同一个房间/同一个 Wi-Fi（走“情况 A”）；或彼此身处不同地点、使用移动网络/不同 Wi-Fi（走“情况 B”）。",
           "── **情况 A：同一个网络（同一 Wi-Fi，最简单）** ──",
-          "**A1｜房主开启房间。** 打开要共笔的笔记 → 点顶部工具栏“在线协作”→ 按“开始多人协作”。系统会在后台自动启动中继，并通过 Bonjour/mDNS 在局域网广播房间。",
+          "**A1｜房主开启房间。** 打开要共笔的笔记 → 点顶部工具栏“在线协作”→ 按“同一 Wi‑Fi”。系统会在后台自动启动中继，并通过 Bonjour/mDNS 在局域网广播房间。",
           "**A2｜方式一：队友“一键自动加入”（最推荐）。** 队友在同一 Wi-Fi 下打开任一笔记 → 点“在线协作”→ 面板会自动列出“发现局域网协作房间”（显示房号与房主名称）→ 轻点“加入发现房间”，一秒自动连接进入！",
-          "**A3｜方式二：使用邀请链接。** 房主点击“复制局域网链接 (Wi-Fi)”（或“复制加密邀请链接”），链接内已自动包含房主局域网 IP 与解密密钥；队友只要在“加入协作房间”粘贴整串链接并按加入，即可连接，完全不需要手动配置服务器 IP！",
+          "**A3｜方式二：使用邀请链接。** 房主点击“复制加密邀请链接”，链接内已自动包含房主局域网 IP 与解密密钥；队友只要在“加入协作房间”粘贴整串链接并按加入，即可连接，完全不需要手动配置服务器 IP！",
           "── **情况 B：跨网段／不同网络（远程、异地、移动网络）** ──",
           "**协作完全支持跨网段！** 远程协作提供三种弹性且安全的连接方式：",
           "**B1｜方式一：云端共享（跨网络，最推荐，免装软件、免账号）：**\n① 房主在协同面板的“云端共享（跨网络）”按“开启跨网络协同”，生成专属二维码与邀请链接。\n② 队友用相机扫描二维码或点开链接 → 自动打开这本笔记并加入房间，内容自动带入。\n③ 房主不在线也能加入：内容会加密寄存在中继上。大家都离开（或房主按“结束协同会议”）之后再保留 7 天，让还没同步的人回来拿最终版本，之后自动删除。\n④ 想用自己的中继（不和其他用户共用每日免费额度）：在同一张卡片底部的“使用自己的中继（可选）”按“一键申请自己的中继”，在 Cloudflare 部署好之后把网址贴到栏位、按“保存”。只有房主需要设置；看不懂就按“如何获取自己的中继地址？”看详细步骤。",
-          "**B2｜方式二：Tailscale 私有虚拟网（专网直连）：**\n① 双方设备（手机、平板或电脑皆可）安装免费的 Tailscale App 并登录同一个账号（或同一个 Tailnet 私有网络）。\n② 房主在笔记中点击“开始多人协作”，Kairumo 会自动检测到系统的 Tailscale 虚拟网地址（100.x.y.z:9002）。\n③ 房主画面上会出现蓝色按钮“复制跨网段链接 (Tailscale)”；房主点击复制并通过消息发给队友。\n④ 远程队友在“加入协作房间”粘贴该链接并按加入，双方立即通过 Tailscale 建立点对端安全直连，完全不需要路由器端口映射或公网 IP！",
-          "**B3｜方式三：自建或公共安全中继服务器（WSS 加密）：**\n① 若团队架设有 padnote-relay 并绑定 TLS 域名（例如 wss://relay.yourdomain.com），双方展开面板底部的“协作服务器地址”并填入该 wss:// 地址。\n② 房主点“开始多人协作”后，复制生成的邀请链接发给队友，队友粘贴加入即可。公开网络强制要求 wss://，确保房号与传输完全受到 TLS 加密保护。",
+          "**B2｜方式二：自建或公共安全中继服务器（WSS 加密）：**\n① 若团队架设有 padnote-relay 并绑定 TLS 域名（例如 wss://relay.yourdomain.com），双方展开面板底部的“协作服务器地址”并填入该 wss:// 地址。\n② 房主点“开始多人协作”后，复制生成的邀请链接发给队友，队友粘贴加入即可。公开网络强制要求 wss://，确保房号与传输完全受到 TLS 加密保护。",
           "── **连接成功与共笔操作** ──",
           "**步骤 1｜确认在线成员。** 两台设备的“在线成员”都会实时列出对方的名字，房主会标记为“房主（拥有者）”。若在多设备登录同一个 Google 账号测试，系统会自动在名称旁加上设备后缀（例如“您的名字 (设备 1)”与“您的名字 (设备 2)”），彼此各自拥有专属辨识色与光标，清晰区分互不冲突！",
           "**步骤 2｜实时共笔与多人协作体验。** 任何一方的手写笔画、贴纸、图片、文本框、表格、图形、连接线、链接预览、3D 模型与图钉，都会毫秒级双向同步并自动储存留存在双方的笔记中：\n① **文本框多人同时打字**：支持多人同时在同一个文本框中输入，系统以文字 CRDT 实时融合，字符级格式完整保留，并会显示“协作者正在打字”的提示，绝不互相覆盖。\n② **实时光标与选取外框**：画面上能实时看见队友的光标动态；当队友选取或编辑某对象时，会以其代表色高亮外框并显示“正在编辑”提示，避免碰撞。\n③ **页面增删与智能复原**：协作中新增、删除或调换页面顺序全员实时同步；执行复原（Undo）时，系统会智能复原您自己的操作，他人后续修改将完整保留。",
@@ -2452,9 +2443,9 @@ window.KAIRUMO_MANUAL = {
         ],
         "tip": "【安全与隐私保证】协作内容全程以 AES-256-GCM 端对端加密，密钥只存在邀请链接片段（#key=...）中，中继点只负责转发看不懂的密文，任何第三方甚至中继服务器都无法解密。离线期间的操作会自动暂存于本地队列，网络恢复后自动补发。顶部工具栏采用分组折叠排版，工具收纳于“插入”与“更多工具”中，画面简洁不拥挤。",
         "fig": "collab",
-        "cap": "尚未连接：开始多人协作、发现局域网房间、加入协作房间、协作服务器地址",
+        "cap": "尚未连接：同一 Wi‑Fi、发现局域网房间、加入协作房间、协作服务器地址",
         "fig2": "collab_on",
-        "cap2": "已连接：房间标识码、端对端加密保护、本机中继地址（局域网与 Tailscale）、在线成员列表"
+        "cap2": "已连接：房间标识码、端对端加密保护、本机中继地址（局域网）、在线成员列表"
       },
       {
         "id": "milestone",
@@ -2674,7 +2665,7 @@ window.KAIRUMO_MANUAL = {
           ],
           [
             "怎么反馈问题？",
-            "请附上版本号（在设置的「关于 Kairumo」查看，例如 Kairumo v6.6.0）与操作步骤。",
+            "请附上版本号（在设置的「关于 Kairumo」查看，例如 Kairumo v6.6.1）与操作步骤。",
             "help"
           ],
           [
@@ -2738,7 +2729,7 @@ window.KAIRUMO_MANUAL = {
     "ui": {
       "docTitle": "Kairumo 操作マニュアル",
       "tagline": "手書き・タイピング・録音をひとつにしたノート。はじめての方でも順番どおりに進められます。",
-      "version": "対象バージョン v6.6.0（build 180）· 2026年9月26日",
+      "version": "対象バージョン v6.6.1（build 181）· 2026年9月26日",
       "tocTitle": "目次",
       "tocHint": "項目をタップすると該当セクションへ移動します",
       "stepsLabel": "手順",
@@ -2761,7 +2752,7 @@ window.KAIRUMO_MANUAL = {
           "アカウント登録もインターネット接続も不要です。",
           "初回起動時にサンプルノートが2冊（「Kairumo へようこそ」と「授業と会議の記録」）入っています。そのまま編集できる文章・表・グラフ・図形の例です。不要なら削除してください。",
           "書いた内容はこの端末に保存されます。複数の端末で同期するには、ご自身のクラウドのフォルダを指定してください（「バックアップと同期」参照）。",
-          "アプリの「設定」→「Kairumo について」でバージョン番号（例：Kairumo v6.6.0）を確認できます。不具合報告の際は添えてください。"
+          "アプリの「設定」→「Kairumo について」でバージョン番号（例：Kairumo v6.6.1）を確認できます。不具合報告の際は添えてください。"
         ],
         "tip": "サーバーもアカウントもないためパスワードを忘れる心配はありません。その代わりクラウド上の控えもないので、バックアップはご自身で。",
         "fig": null
@@ -3258,7 +3249,6 @@ window.KAIRUMO_MANUAL = {
         "steps": [
           "ホーム画面の「データと同期」にはバックアップと同期のカードが並び、タップするとその機能専用の説明と操作画面が開きます。",
           "「クラウド同期」は現在サインインしているかを表示し、サインイン・同期先・今すぐ同期の操作を開きます。",
-          "「Tailscale による P2P 直結同期」：WebRTC を利用して端末間やインターネット経由での高速 P2P 同期を行います。Tailscale の接続が検出されるとインジケーターが緑色になり仮想 IP が表示され、ダウンロードリンクは自動的に非表示になります。未検出の場合は公式ダウンロードリンクが表示されます。",
           "「バックアップを作成」はノート・画像・録音を 1 つのファイルにまとめ、指定した場所へ保存します。",
           "「バックアップから復元」はバックアップファイルを選んで復元します。復元前に現在のデータを自動でバックアップするため、間違えても戻せます。",
           "フォルダ同期：ご自身のクラウドにフォルダ（例：Kairumo）を作り、「同期フォルダを選択」で指定します。",
@@ -3325,13 +3315,12 @@ window.KAIRUMO_MANUAL = {
       {
         "id": "collab",
         "title": "リアルタイム共同編集（ゼロ基礎チュートリアル）",
-        "lead": "複数人で同時に書けます。ゼロ知識 AES-256-GCM エンドツーエンド暗号化で、どのリレーも内容を読めません。接続方法は 3 つ：「同じ Wi‑Fi」（リレーはあなたの端末）、「Tailscale（別ネットワーク）」、そして「クラウド共有」——ルームは Cloudflare 上の暗号化リレーで動き、どのネットワークからでもアカウントなしでつながります。",
+        "lead": "複数人で同時に書けます。ゼロ知識 AES-256-GCM エンドツーエンド暗号化で、どのリレーも内容を読めません。接続方法は 2 つ：「同じ Wi‑Fi」（リレーはあなたの端末）と「クラウド共有」——ルームは Cloudflare 上の暗号化リレーで動き、どのネットワークからでもアカウントなしでつながります。",
         "buttons": [
           "共同編集",
           "共同編集を開始",
           "クラウド共有（遠隔直連）",
           "暗号化招待リンクをコピー",
-          "Tailscale招待リンクをコピー",
           "ルームに参加",
           "見つかったLANルーム",
           "中継サーバーアドレス",
@@ -3340,12 +3329,12 @@ window.KAIRUMO_MANUAL = {
         "steps": [
           "**接続環境を確認します：** 同じ部屋・同一 Wi-Fi（ケースA）、または遠隔地・モバイル回線・別々の Wi-Fi（ケースB）。",
           "── **ケースA：同じネットワーク（同一 Wi-Fi、最も簡単）** ──",
-          "**A1 — ホストが部屋を開く：** 対象ノートを開き → ツールバーの「共同編集」→「共同編集を開始」を押します。バックグラウンドでローカル中継が立ち上がり、Bonjour/mDNS でブロードキャストされます。",
+          "**A1 — ホストが部屋を開く：** 対象ノートを開き → ツールバーの「共同編集」→「同じ Wi‑Fi」を押します。バックグラウンドでローカル中継が立ち上がり、Bonjour/mDNS でブロードキャストされます。",
           "**A2 — 方法1：参加者がワンタップで自動参加（最も推奨）：** 同一 Wi-Fi 上で任意のノートを開き →「共同編集」を押すと、「見つかったLANルーム」にホストの部屋が表示されます →「発見したルームに参加」をタップするだけで一瞬で接続完了！",
-          "**A3 — 方法2：招待リンクで参加：** ホストが「ローカル招待リンクをコピー」を押すと、ホストのローカルIPと復号キーが自動で含まれます。参加者は「ルームに参加」に貼り付けて参加を押すだけで接続でき、サーバーIPの手動設定は不要です！",
+          "**A3 — 方法2：招待リンクで参加：** ホストが「暗号化招待リンクをコピー」を押すと、ホストのローカルIPと復号キーが自動で含まれます。参加者は「ルームに参加」に貼り付けて参加を押すだけで接続でき、サーバーIPの手動設定は不要です！",
           "── **ケースB：別ネットワーク／遠隔地（モバイル回線・別 Wi-Fi）** ──",
           "**共同編集はネットワークをまたいで安全に接続できます！**",
-          "**B1 — 方法1：Tailscale 仮想プライベート網（推奨・サーバー不要・手順解説）：**\n① 双方の端末（スマートフォン、タブレット、PC など）に無料の Tailscale アプリを入れ、同じアカウントにサインインします。\n② ホストが「共同編集を開始」を押すと、Kairumo が自動で Tailscale IP（100.x.y.z:9002）を検出します。\n③ ホスト画面に青い「Tailscale招待リンクをコピー」ボタンが現れるので、コピーして相手に送ります。\n④ 遠隔の参加者が「ルームに参加」にリンクを貼り付けて参加すると、ポート開放なしで安全な P2P 直連が確立されます！",
+          "**B1 — 方法1：クラウド共有（どのネットワークでも可・最推奨・追加ソフトやアカウント不要）：**\n① ホストが共同編集パネルの「クラウド共有」で「ネットワークを越えた共同編集を開始」を押すと、専用の QR コードと招待リンクが作られます。\n② 参加者はカメラで QR コードを読み取るかリンクを開くだけで、ノートが開いてルームに参加し、内容も自動で取り込まれます。\n③ ホストがオフラインでも参加できます：内容は暗号化されたままリレーに保管され、全員が退出してから 7 日後に自動削除されます。",
           "**B2 — 方法2：自前または公開安全中継サーバー（WSS 暗号化）：**\n① チームで TLS ドメイン付きの padnote-relay（例: wss://relay.yourdomain.com）を運用している場合、パネル下部の「中継サーバーアドレス」に wss:// を入力します。\n② ホストが「共同編集を開始」し、生成されたリンクを相手に共有して参加します。公開網では通信保護のため wss:// が必須です。",
           "── **接続成功と共同編集の操作** ──",
           "**手順1 — 参加者を確認：** 両端末の「参加者」に互いの名前が表示されます。同一 Google アカウントで複数端末をテストする場合も、端末タグ（例:「お名前 (端末 1)」と「お名前 (端末 2)」）が自動付与され、色分けされたカーソルで混同なく操作できます！",
@@ -3354,9 +3343,9 @@ window.KAIRUMO_MANUAL = {
         ],
         "tip": "【セキュリティとプライバシー保証】キャンバスの内容はすべて AES-256-GCM でエンドツーエンド暗号化されます。暗号鍵は招待リンクのフラグメント（#key=...）内にのみ存在し、中継地点は読めない暗号文を転送するだけです。オフライン中の編集はローカルに蓄積され、再接続時に自動送信されます。上部ツールバーは「挿入」と「詳細ツール」にすっきりグループ化されています。",
         "fig": "collab",
-        "cap": "未接続：共同編集を開始、見つかったLANルーム、ルームに参加、中継サーバーアドレス",
+        "cap": "未接続：同じ Wi‑Fi、見つかったLANルーム、ルームに参加、中継サーバーアドレス",
         "fig2": "collab_on",
-        "cap2": "接続中：ルームID、エンドツーエンド暗号化、中継アドレス（LAN & Tailscale）、参加者一覧"
+        "cap2": "接続中：ルームID、エンドツーエンド暗号化、中継アドレス（LAN）、参加者一覧"
       },
       {
         "id": "milestone",
@@ -3576,7 +3565,7 @@ window.KAIRUMO_MANUAL = {
           ],
           [
             "不具合はどう報告しますか？",
-            "アプリの「設定」→「Kairumo について」で確認できるバージョン（例：Kairumo v6.6.0）と、操作手順を添えてください。",
+            "アプリの「設定」→「Kairumo について」で確認できるバージョン（例：Kairumo v6.6.1）と、操作手順を添えてください。",
             "help"
           ],
           [
@@ -3640,7 +3629,7 @@ window.KAIRUMO_MANUAL = {
     "ui": {
       "docTitle": "Kairumo 사용 설명서",
       "tagline": "손글씨·타이핑·녹음을 하나로 묶은 노트. 처음이어도 순서대로 따라 하면 됩니다.",
-      "version": "대상 버전 v6.6.0 (build 180) · 2026년 9월 26일",
+      "version": "대상 버전 v6.6.1 (build 181) · 2026년 9월 26일",
       "tocTitle": "목차",
       "tocHint": "항목을 누르면 해당 섹션으로 이동합니다",
       "stepsLabel": "따라 하기",
@@ -3663,7 +3652,7 @@ window.KAIRUMO_MANUAL = {
           "계정 가입도, 인터넷 연결도 필요 없습니다.",
           "처음 실행하면 샘플 노트 두 권(“Kairumo에 오신 것을 환영합니다”, “수업·회의 기록”)이 들어 있습니다. 바로 고칠 수 있는 글·표·차트·도형 예시입니다. 필요 없으면 지우세요.",
           "작성한 내용은 이 기기에 저장됩니다. 여러 기기에서 동기화하려면 본인 클라우드의 폴더를 지정하세요(「백업 및 동기화」 참고).",
-          "앱 내 정보 화면에서 버전(예: Kairumo v6.6.0)을 확인할 수 있습니다. 문제를 알릴 때 함께 적어 주세요."
+          "앱 내 정보 화면에서 버전(예: Kairumo v6.6.1)을 확인할 수 있습니다. 문제를 알릴 때 함께 적어 주세요."
         ],
         "tip": "서버도 계정도 없으므로 비밀번호를 잊을 일이 없습니다. 대신 클라우드 사본도 없으니 백업은 직접 해 두세요.",
         "fig": null
@@ -4160,7 +4149,6 @@ window.KAIRUMO_MANUAL = {
         "steps": [
           "홈 화면의 “데이터 및 동기화”에는 백업 및 동기화 카드들이 제공되며, 카드를 누르면 해당 기능의 설명과 작업 화면이 열립니다.",
           "“클라우드 동기화”는 로그인 상태를 보여 주며 로그인, 동기화 위치, 지금 동기화 동작을 엽니다.",
-          "“Tailscale P2P 직접 동기화”: WebRTC를 사용하여 기기간 및 인터넷을 통한 빠른 P2P 동기화를 수행합니다. Tailscale 연결이 감지되면 상태 표시등이 초록색으로 켜지고 가상 IP가 표시되며 다운로드 링크가 자동으로 숨겨집니다. 미감지 시에는 공식 다운로드 링크가 표시됩니다.",
           "“백업 만들기”는 노트·이미지·녹음을 파일 하나로 묶어 원하는 위치에 저장합니다.",
           "“백업에서 복원”은 백업 파일을 골라 복원합니다. 복원 전 현재 데이터를 자동으로 백업하므로 잘못 골라도 되돌릴 수 있습니다.",
           "폴더 동기화: 본인 클라우드에 폴더(예: Kairumo)를 만들고 “동기화 폴더 선택”로 지정합니다.",
@@ -4227,13 +4215,12 @@ window.KAIRUMO_MANUAL = {
       {
         "id": "collab",
         "title": "실시간 협업 (초보자 튜토리얼)",
-        "lead": "여러 사람이 동시에 필기합니다. 영지식 AES-256-GCM 종단 간 암호화로 어떤 릴레이도 내용을 볼 수 없습니다. 연결 방법은 세 가지: '같은 Wi‑Fi'(릴레이는 내 기기), 'Tailscale', 그리고 '클라우드 공유' —— 방이 Cloudflare의 암호화 릴레이에서 열려 어떤 네트워크에서든 계정 없이 연결됩니다.",
+        "lead": "여러 사람이 동시에 필기합니다. 영지식 AES-256-GCM 종단 간 암호화로 어떤 릴레이도 내용을 볼 수 없습니다. 연결 방법은 두 가지: '같은 Wi‑Fi'(릴레이는 내 기기)와 '클라우드 공유' —— 방이 Cloudflare의 암호화 릴레이에서 열려 어떤 네트워크에서든 계정 없이 연결됩니다.",
         "buttons": [
           "공동 편집",
           "공동 편집 시작",
           "클라우드 공유 (원격)",
           "암호화된 초대 링크 복사",
-          "Tailscale 초대 링크 복사",
           "방 참가",
           "발견된 LAN 방",
           "중계 서버 주소",
@@ -4242,12 +4229,12 @@ window.KAIRUMO_MANUAL = {
         "steps": [
           "**먼저 연결 환경을 확인하세요:** 같은 공간/동일 Wi-Fi(사례 A), 또는 원격지/모바일 데이터/서로 다른 Wi-Fi(사례 B).",
           "── **사례 A: 같은 네트워크 (동일 Wi-Fi, 가장 간단)** ──",
-          "**A1 — 호스트가 방 열기:** 함께 작업할 노트를 열고 → 상단 툴바의 “공동 편집” → “공동 편집 시작”을 누릅니다. 백그라운드에서 로컬 중계가 시작되고 Bonjour/mDNS로 방이 브로드캐스트됩니다.",
+          "**A1 — 호스트가 방 열기:** 함께 작업할 노트를 열고 → 상단 툴바의 “공동 편집” → “같은 Wi‑Fi”를 누릅니다. 백그라운드에서 로컬 중계가 시작되고 Bonjour/mDNS로 방이 브로드캐스트됩니다.",
           "**A2 — 방법 1: 참여자 원탭 자동 참가 (가장 추천):** 동일 Wi-Fi에서 임의의 노트를 열고 → “공동 편집”을 누르면 “발견된 LAN 방”에 호스트의 방이 나타납니다 → “발견된 방 참가”를 누르면 즉시 연결 완료!",
-          "**A3 — 방법 2: 초대 링크로 참가:** 호스트가 “로컬 초대 링크 복사”를 누르면 호스트의 로컬 IP와 복호화 키가 자동으로 포함됩니다. 참여자는 “방 참가”에 링크를 붙여넣고 참가를 누르기만 하면 되며, 수동 서버 설정이 전혀 필요 없습니다!",
+          "**A3 — 방법 2: 초대 링크로 참가:** 호스트가 “암호화된 초대 링크 복사”를 누르면 호스트의 로컬 IP와 복호화 키가 자동으로 포함됩니다. 참여자는 “방 참가”에 링크를 붙여넣고 참가를 누르기만 하면 되며, 수동 서버 설정이 전혀 필요 없습니다!",
           "── **사례 B: 서로 다른 네트워크 / 원격지 (모바일 데이터, 다른 Wi-Fi)** ──",
           "**협업은 네트워크를 넘어 안전하게 작동합니다!**",
-          "**B1 — 방법 1: Tailscale 가상 사설망 (권장, 서버 구축 불필요, 단계별 안내):**\n① 양쪽 기기(스마트폰, 태블릿, PC 등)에 무료 Tailscale 앱을 설치하고 같은 계정으로 로그인합니다.\n② 호스트가 “공동 편집 시작”을 누르면 Kairumo가 자동으로 기기의 Tailscale IP(100.x.y.z:9002)를 감지합니다.\n③ 호스트 화면에 파란색 “Tailscale 초대 링크 복사” 버튼이 나타나면 이를 복사하여 상대방에게 전송합니다.\n④ 원격 참여자가 “방 참가”에 링크를 붙여넣고 참가를 누르면 포트 포워딩 없이 안전한 P2P 직접 연결이 설정됩니다!",
+          "**B1 — 방법 1: 클라우드 공유 (어느 네트워크든 가능, 가장 추천, 추가 앱·계정 불필요):**\n① 호스트가 공동 편집 패널의 “클라우드 공유”에서 “네트워크 간 공동 작업 시작”을 누르면 전용 QR 코드와 초대 링크가 만들어집니다.\n② 참여자는 카메라로 QR 코드를 스캔하거나 링크를 열면 노트가 열리고 방에 참가하며, 내용도 자동으로 가져옵니다.\n③ 호스트가 오프라인이어도 참가할 수 있습니다: 내용은 암호화된 채 릴레이에 보관되며, 모두 나간 뒤 7일 후 자동 삭제됩니다.",
           "**B2 — 방법 2: 자체 구축 또는 공용 보안 중계 서버 (WSS 암호화):**\n① 팀에서 TLS 도메인이 연결된 padnote-relay(예: wss://relay.yourdomain.com)를 운영하는 경우, 패널 하단 “중계 서버 주소”에 해당 wss:// 주소를 입력합니다.\n② 호스트가 “공동 편집 시작” 후 생성된 초대 링크를 공유하여 참여합니다. 공개망에서는 전송 보호를 위해 wss://가 필수입니다.",
           "── **연결 성공 및 협업 작업** ──",
           "**1단계 — 참여자 확인:** 양쪽 기기의 “참여자” 목록에 서로의 이름이 실시간으로 표시됩니다. 동일한 Google 계정으로 여러 기기를 테스트할 때도 기기 태그(예: “이름 (기기 1)” 및 “이름 (기기 2)”)가 자동으로 붙어 색상별 커서로 혼동 없이 구분됩니다!",
@@ -4256,9 +4243,9 @@ window.KAIRUMO_MANUAL = {
         ],
         "tip": "【보안 및 개인정보 보호】캔버스 내용은 전 구간 AES-256-GCM 종단 간 암호화됩니다. 암호화 키는 초대 링크의 프래그먼트(#key=...)에만 존재하며, 중계기는 해독 불가능한 암호문만 전달합니다. 오프라인 중 작업은 로컬 큐에 보관되었다가 재연결 시 자동으로 전송됩니다. 상단 툴바는 “삽입” 및 “더보기”로 깔끔하게 그룹화되어 있습니다.",
         "fig": "collab",
-        "cap": "연결 전: 공동 편집 시작, 발견된 LAN 방, 방 참가, 중계 서버 주소",
+        "cap": "연결 전: 같은 Wi‑Fi, 발견된 LAN 방, 방 참가, 중계 서버 주소",
         "fig2": "collab_on",
-        "cap2": "연결됨: 룸 ID, 종단 간 암호화, 중계 주소(LAN & Tailscale), 참여자 목록"
+        "cap2": "연결됨: 룸 ID, 종단 간 암호화, 중계 주소(LAN), 참여자 목록"
       },
       {
         "id": "milestone",
@@ -4478,7 +4465,7 @@ window.KAIRUMO_MANUAL = {
           ],
           [
             "문제는 어떻게 알리나요?",
-            "앱 내 정보 화면에서 확인한 버전(예: Kairumo v6.6.0)과 진행한 단계를 함께 알려 주세요.",
+            "앱 내 정보 화면에서 확인한 버전(예: Kairumo v6.6.1)과 진행한 단계를 함께 알려 주세요.",
             "help"
           ],
           [
@@ -4542,7 +4529,7 @@ window.KAIRUMO_MANUAL = {
     "ui": {
       "docTitle": "คู่มือการใช้งาน Kairumo",
       "tagline": "สมุดจดที่รวมลายมือ การพิมพ์ และการอัดเสียงไว้ด้วยกัน ทำตามทีละขั้นได้แม้เพิ่งเริ่มใช้",
-      "version": "สำหรับเวอร์ชัน v6.6.0 (build 180) · 26 กันยายน 2026",
+      "version": "สำหรับเวอร์ชัน v6.6.1 (build 181) · 26 กันยายน 2026",
       "tocTitle": "สารบัญ",
       "tocHint": "แตะหัวข้อเพื่อไปยังส่วนนั้นทันที",
       "stepsLabel": "ขั้นตอน",
@@ -4565,7 +4552,7 @@ window.KAIRUMO_MANUAL = {
           "ไม่ต้องสมัครบัญชีและไม่ต้องต่ออินเทอร์เน็ต",
           "เมื่อเปิดครั้งแรกจะมีสมุดตัวอย่างสองเล่ม (“ยินดีต้อนรับสู่ Kairumo” และ “บันทึกการเรียนและการประชุม”) ซึ่งมีข้อความ ตาราง แผนภูมิ และรูปทรงที่แก้ไขได้ทันที ลบทิ้งได้ถ้าไม่ต้องการ",
           "ทุกอย่างที่คุณเขียนถูกเก็บไว้ในเครื่องนี้ หากต้องการซิงค์ระหว่างหลายเครื่อง ให้ชี้ไปที่โฟลเดอร์บนคลาวด์ของคุณเอง (ดู “สำรองข้อมูลและซิงค์”)",
-          "ดูหมายเลขเวอร์ชัน (เช่น Kairumo v6.6.0) ได้ในหน้า 'เกี่ยวกับ Kairumo' ในการตั้งค่า โปรดแจ้งมาด้วยเมื่อรายงานปัญหา"
+          "ดูหมายเลขเวอร์ชัน (เช่น Kairumo v6.6.1) ได้ในหน้า 'เกี่ยวกับ Kairumo' ในการตั้งค่า โปรดแจ้งมาด้วยเมื่อรายงานปัญหา"
         ],
         "tip": "เมื่อไม่มีเซิร์ฟเวอร์และไม่มีบัญชี ก็ไม่มีรหัสผ่านให้ลืม แต่ก็ไม่มีสำเนาบนคลาวด์เช่นกัน จึงควรสำรองข้อมูลเอง",
         "fig": null
@@ -5057,7 +5044,6 @@ window.KAIRUMO_MANUAL = {
         "steps": [
           "บล็อก “ข้อมูลและการซิงค์” บนหน้าแรกมีการ์ดสำรองข้อมูลและการซิงค์ แตะการ์ดเพื่อเปิดหน้ารายละเอียดและปุ่มของฟังก์ชันนั้น",
           "“ซิงก์คลาวด์” แสดงสถานะการลงชื่อเข้าใช้ และเปิดการลงชื่อเข้าใช้ ตำแหน่งซิงก์ และปุ่มซิงก์เดี๋ยวนี้",
-          "“การซิงก์ P2P โดยตรงด้วย Tailscale”: ใช้ WebRTC สำหรับการซิงก์ความเร็วสูงแบบ peer-to-peer ข้ามอุปกรณ์หรือผ่านอินเทอร์เน็ต หากระบบตรวจพบการเชื่อมต่อ Tailscale ไฟสถานะจะแสดงสีเขียวพร้อม IP เสมือน และซ่อนลิงก์ดาวน์โหลดโดยอัตโนมัติ หากยังไม่ตรวจพบ จะแสดงลิงก์ดาวน์โหลดอย่างเป็นทางการ",
           "“สร้างไฟล์สำรอง” รวมโน้ต รูปภาพ และเสียงไว้ในไฟล์เดียว แล้วบันทึกไปยังตำแหน่งที่เลือก",
           "“กู้คืนจากไฟล์สำรอง” เลือกไฟล์สำรองเพื่อกู้คืน โดยจะสำรองข้อมูลปัจจุบันก่อนเสมอ",
           "ซิงค์โฟลเดอร์: สร้างโฟลเดอร์บนคลาวด์ของคุณ เช่น Kairumo แล้วกด “เลือกโฟลเดอร์ซิงก์” เพื่อชี้ไปที่โฟลเดอร์นั้น",
@@ -5124,13 +5110,12 @@ window.KAIRUMO_MANUAL = {
       {
         "id": "collab",
         "title": "ทำงานร่วมกันแบบเรียลไทม์ (บทเรียนสำหรับผู้เริ่มต้น)",
-        "lead": "เขียนพร้อมกันหลายคนแบบเรียลไทม์ เข้ารหัส Zero-Knowledge AES-256-GCM แบบต้นทางถึงปลายทาง ไม่มีรีเลย์ใดอ่านเนื้อหาได้ เชื่อมต่อได้ 3 แบบ: “Wi‑Fi เดียวกัน” (รีเลย์คือเครื่องของคุณ), “Tailscale (ข้ามเครือข่าย)” และ “แชร์ผ่านคลาวด์” —— ห้องเปิดบนรีเลย์เข้ารหัสของ Cloudflare เชื่อมต่อได้จากทุกเครือข่ายโดยไม่ต้องมีบัญชี",
+        "lead": "เขียนพร้อมกันหลายคนแบบเรียลไทม์ เข้ารหัส Zero-Knowledge AES-256-GCM แบบต้นทางถึงปลายทาง ไม่มีรีเลย์ใดอ่านเนื้อหาได้ เชื่อมต่อได้ 2 แบบ: “Wi‑Fi เดียวกัน” (รีเลย์คือเครื่องของคุณ) และ “แชร์ผ่านคลาวด์” —— ห้องเปิดบนรีเลย์เข้ารหัสของ Cloudflare เชื่อมต่อได้จากทุกเครือข่ายโดยไม่ต้องมีบัญชี",
         "buttons": [
           "การทำงานร่วมกัน",
           "เริ่มการทำงานร่วมกัน",
           "แชร์ผ่านคลาวด์ (ข้ามเครือข่าย)",
           "คัดลอกลิงก์คำเชิญที่เข้ารหัส",
-          "คัดลอกลิงก์ Tailscale",
           "เข้าร่วมห้อง",
           "ห้อง LAN ที่ค้นพบ",
           "ที่อยู่เซิร์ฟเวอร์รีเลย์",
@@ -5139,12 +5124,12 @@ window.KAIRUMO_MANUAL = {
         "steps": [
           "**ตรวจสอบสภาพแวดล้อมการเชื่อมต่อก่อน:** ทุกคนอยู่ในห้องเดียวกัน/Wi-Fi เดียวกัน (เลือกกรณี A) หรืออยู่ต่างสถานที่/ใช้เน็ตมือถือ/คนละ Wi-Fi (เลือกกรณี B)",
           "── **กรณี A: เครือข่ายเดียวกัน (Wi-Fi เดียวกัน ง่ายที่สุด)** ──",
-          "**A1 — ผู้เปิดห้องสร้างห้อง:** เปิดโน้ตที่จะทำงานร่วมกัน → แตะแถบเครื่องมือด้านบน “การทำงานร่วมกัน” → แตะ “เริ่มการทำงานร่วมกัน” ระบบจะเริ่มรีเลย์ในเครื่องและประกาศห้องผ่าน Bonjour/mDNS อัตโนมัติ",
+          "**A1 — ผู้เปิดห้องสร้างห้อง:** เปิดโน้ตที่จะทำงานร่วมกัน → แตะแถบเครื่องมือด้านบน “การทำงานร่วมกัน” → แตะ “Wi‑Fi เดียวกัน” ระบบจะเริ่มรีเลย์ในเครื่องและประกาศห้องผ่าน Bonjour/mDNS อัตโนมัติ",
           "**A2 — วิธีที่ 1: ผู้เข้าร่วมแตะเข้าร่วมอัตโนมัติ (แนะนำที่สุด):** ใน Wi-Fi เดียวกัน ให้เปิดโน้ตใดก็ได้ → แตะ “การทำงานร่วมกัน” → แผงจะแสดง “ห้อง LAN ที่ค้นพบ” พร้อมชื่อผู้เปิดห้อง → แตะ “เข้าร่วมห้องที่ค้นพบ” เพื่อเชื่อมต่อทันทีใน 1 วินาที!",
-          "**A3 — วิธีที่ 2: เข้าร่วมด้วยลิงก์คำเชิญ:** ผู้เปิดห้องแตะ “คัดลอกลิงก์ภายในเครือข่าย” ลิงก์จะมี IP และกุญแจถอดรหัสในตัว ผู้เข้าร่วมเพียงวางในช่อง “เข้าร่วมห้อง” แล้วแตะเข้าร่วม ไม่ต้องตั้งค่า IP เองเลย!",
+          "**A3 — วิธีที่ 2: เข้าร่วมด้วยลิงก์คำเชิญ:** ผู้เปิดห้องแตะ “คัดลอกลิงก์คำเชิญที่เข้ารหัส” ลิงก์จะมี IP และกุญแจถอดรหัสในตัว ผู้เข้าร่วมเพียงวางในช่อง “เข้าร่วมห้อง” แล้วแตะเข้าร่วม ไม่ต้องตั้งค่า IP เองเลย!",
           "── **กรณี B: ข้ามเครือข่าย / ต่างสถานที่ (เน็ตมือถือ, คนละ Wi-Fi)** ──",
           "**ระบบรองรับการทำงานข้ามเครือข่ายได้อย่างปลอดภัยเต็มรูปแบบ!**",
-          "**B1 — วิธีที่ 1: เครือข่ายเสมือนส่วนตัว Tailscale (แนะนำที่สุด ไม่ต้องมีเซิร์ฟเวอร์ ทำตามขั้นตอนง่ายๆ):**\n① ติดตั้งแอป Tailscale ฟรีบนทุกเครื่อง (มือถือ แท็บเล็ต หรือคอมพิวเตอร์) และลงชื่อเข้าใช้ด้วยบัญชีเดียวกัน\n② เมื่อผู้เปิดห้องแตะ “เริ่มการทำงานร่วมกัน” Kairumo จะตรวจพบ IP ของ Tailscale (100.x.y.z:9002) อัตโนมัติ\n③ ปุ่มสีฟ้า “คัดลอกลิงก์ Tailscale” จะปรากฏขึ้น แตะคัดลอกแล้วส่งให้เพื่อนร่วมทีม\n④ เพื่อนร่วมทีมวางลิงก์ในช่อง “เข้าร่วมห้อง” แล้วกดเข้าร่วม ทั้งสองเครื่องจะเชื่อมต่อตรงแบบ P2P ผ่าน Tailscale โดยไม่ต้องเปิดพอร์ตเราเตอร์หรือใช้ Public IP เลย!",
+          "**B1 — วิธีที่ 1: แชร์ผ่านคลาวด์ (ใช้ได้ทุกเครือข่าย แนะนำที่สุด ไม่ต้องติดตั้งแอปหรือมีบัญชีเพิ่ม):**\n① ผู้เปิดห้องแตะ “เริ่มทำงานร่วมกันข้ามเครือข่าย” ในส่วน “แชร์ผ่านคลาวด์” ของแผงการทำงานร่วมกัน ระบบจะสร้าง QR Code และลิงก์คำเชิญ\n② ผู้เข้าร่วมสแกน QR Code ด้วยกล้องหรือเปิดลิงก์ โน้ตจะเปิดและเข้าห้องให้อัตโนมัติพร้อมดึงเนื้อหามาให้\n③ เข้าร่วมได้แม้ผู้เปิดห้องออฟไลน์: เนื้อหาถูกเก็บบนรีเลย์แบบเข้ารหัส และจะถูกลบอัตโนมัติ 7 วันหลังทุกคนออกจากห้อง",
           "**B2 — วิธีที่ 2: เซิร์ฟเวอร์รีเลย์ที่ปลอดภัยส่วนตัวหรือสาธารณะ (เข้ารหัส WSS):**\n① หากทีมมีเซิร์ฟเวอร์ padnote-relay พร้อมโดเมน TLS (เช่น wss://relay.yourdomain.com) ให้กาง “ที่อยู่เซิร์ฟเวอร์รีเลย์” ด้านล่างแล้วกรอกที่อยู่ wss://\n② ผู้เปิดห้องแตะ “เริ่มการทำงานร่วมกัน” และส่งลิงก์คำเชิญที่สร้างขึ้นให้เพื่อนร่วมทีมวางเข้าร่วม เครือข่ายสาธารณะบังคับใช้ wss:// เพื่อความปลอดภัยสูงสุด",
           "── **การเชื่อมต่อสำเร็จและการทำงานร่วมกัน** ──",
           "**ขั้นที่ 1 — ยืนยันผู้เข้าร่วม:** ทั้งสองเครื่องจะแสดงชื่อกันใน “ผู้เข้าร่วม” โดยผู้เปิดห้องจะระบุเป็น “เจ้าของห้อง” หากล็อกอินบัญชี Google เดียวกันบนหลายเครื่อง ระบบจะเติมแท็กชื่ออุปกรณ์ให้ (เช่น “ชื่อของคุณ (เครื่อง 1)” กับ “ชื่อของคุณ (เครื่อง 2)”) พร้อมเคอร์เซอร์แยกสีชัดเจนไม่สับสน!",
@@ -5153,9 +5138,9 @@ window.KAIRUMO_MANUAL = {
         ],
         "tip": "【การรับประกันความปลอดภัยและความเป็นส่วนตัว】เนื้อหาทั้งหมดเข้ารหัสแบบ End-to-End ด้วย AES-256-GCM กุญแจอยู่ในส่วนท้ายของลิงก์ (#key=...) เท่านั้น รีเลย์เพียงส่งผ่านข้อมูลที่อ่านไม่ออก ข้อมูลช่วงออฟไลน์จะถูกพักไว้และส่งอัตโนมัติเมื่อกลับมาออนไลน์ แถบเครื่องมือด้านบนจัดกลุ่มเป็น “แทรก” และ “เครื่องมือเพิ่มเติม” สบายตาไม่แออัด",
         "fig": "collab",
-        "cap": "ยังไม่เชื่อมต่อ: เริ่มทำงานร่วมกัน ห้อง LAN ที่ค้นพบ เข้าร่วมห้อง ที่อยู่เซิร์ฟเวอร์รีเลย์",
+        "cap": "ยังไม่เชื่อมต่อ: Wi‑Fi เดียวกัน ห้อง LAN ที่ค้นพบ เข้าร่วมห้อง ที่อยู่เซิร์ฟเวอร์รีเลย์",
         "fig2": "collab_on",
-        "cap2": "เชื่อมต่อแล้ว: Room ID การเข้ารหัส E2EE ที่อยู่รีเลย์ (LAN & Tailscale) และรายชื่อผู้เข้าร่วม"
+        "cap2": "เชื่อมต่อแล้ว: Room ID การเข้ารหัส E2EE ที่อยู่รีเลย์ (LAN) และรายชื่อผู้เข้าร่วม"
       },
       {
         "id": "milestone",
@@ -5375,7 +5360,7 @@ window.KAIRUMO_MANUAL = {
           ],
           [
             "รายงานปัญหาอย่างไร",
-            "โปรดแจ้งเวอร์ชัน (ดูได้ที่หน้า 'เกี่ยวกับ Kairumo' ในการตั้งค่า เช่น Kairumo v6.6.0) พร้อมขั้นตอนที่ทำ",
+            "โปรดแจ้งเวอร์ชัน (ดูได้ที่หน้า 'เกี่ยวกับ Kairumo' ในการตั้งค่า เช่น Kairumo v6.6.1) พร้อมขั้นตอนที่ทำ",
             "help"
           ],
           [

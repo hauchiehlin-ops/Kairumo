@@ -28,7 +28,7 @@ public final class CollabVoiceManager: ObservableObject {
     /// 是否將房間內其他人聲音全域靜音
     @Published public var isMuted: Bool = false {
         didSet {
-            playerNode?.volume = isMuted ? 0.0 : 1.0
+            player.setMuted(isMuted)
         }
     }
 
@@ -44,9 +44,8 @@ public final class CollabVoiceManager: ObservableObject {
     private var pendingOutgoingPcm: [Int16] = []
     private var voiceSendTimer: Timer?
 
-    // MARK: - 播放引擎
-    private var playEngine: AVAudioEngine?
-    private var playerNode: AVAudioPlayerNode?
+    // MARK: - 播放引擎（獨立序列佇列，見 `CollabVoicePlayer`）
+    private let player = CollabVoicePlayer()
     private let audioFormat: AVAudioFormat
 
     // 遠端發話逾時監視器（若對方斷線未送 end，自動恢復無人發話）
@@ -114,7 +113,7 @@ public final class CollabVoiceManager: ObservableObject {
             currentSpeakerUserId = userId
             activeSpeakerName = userName
             resetSpeakerTimeoutTimer()
-            ensurePlaybackEngineReady()
+            player.prepare()
 
         case "end":
             if currentSpeakerUserId == userId {
@@ -131,7 +130,7 @@ public final class CollabVoiceManager: ObservableObject {
                 resetSpeakerTimeoutTimer()
             }
             if !isMuted, !audioBase64.isEmpty, let pcmData = Data(base64Encoded: audioBase64) {
-                playPcmChunk(pcmData)
+                player.play(pcm16: pcmData)
             }
         }
     }
@@ -149,15 +148,7 @@ public final class CollabVoiceManager: ObservableObject {
     // MARK: - 底層音訊擷取（Apple VoiceProcessingIO）
 
     private func startAudioCapture() {
-        #if os(iOS) || targetEnvironment(macCatalyst)
-        let session = AVAudioSession.sharedInstance()
-        do {
-            try session.setCategory(.playAndRecord, mode: .voiceChat, options: [.defaultToSpeaker, .allowBluetooth])
-            try session.setActive(true)
-        } catch {
-            print("⚠️ [CollabVoice] AVAudioSession 設置失敗: \(error)")
-        }
-        #endif
+        CollabVoicePlayer.activateVoiceSession()
 
         let engine = AVAudioEngine()
         self.recordEngine = engine
@@ -247,50 +238,9 @@ public final class CollabVoiceManager: ObservableObject {
             }
         }
         recordEngine = nil
-
-        #if os(iOS) || targetEnvironment(macCatalyst)
-        // 釋放錄音獨佔
-        try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
-        #endif
-    }
-
-    // MARK: - 底層音訊播放（AVAudioPlayerNode）
-
-    private func ensurePlaybackEngineReady() {
-        if playEngine != nil && playEngine?.isRunning == true { return }
-
-        let engine = AVAudioEngine()
-        let node = AVAudioPlayerNode()
-        engine.attach(node)
-        engine.connect(node, to: engine.mainMixerNode, format: audioFormat)
-
-        do {
-            try engine.start()
-            node.play()
-            self.playEngine = engine
-            self.playerNode = node
-            node.volume = isMuted ? 0.0 : 1.0
-        } catch {
-            print("⚠️ [CollabVoice] 播放引擎啟動失敗: \(error)")
-        }
-    }
-
-    private func playPcmChunk(_ pcmData: Data) {
-        ensurePlaybackEngineReady()
-        guard let node = playerNode, node.isPlaying else { return }
-
-        let sampleCount = pcmData.count / 2
-        guard sampleCount > 0 else { return }
-        guard let pcmBuffer = AVAudioPCMBuffer(pcmFormat: audioFormat, frameCapacity: AVAudioFrameCount(sampleCount)) else { return }
-        pcmBuffer.frameLength = AVAudioFrameCount(sampleCount)
-
-        pcmData.withUnsafeBytes { raw in
-            if let base = raw.baseAddress, let channel = pcmBuffer.int16ChannelData?[0] {
-                channel.assign(from: base.assumingMemoryBound(to: Int16.self), count: sampleCount)
-            }
-        }
-
-        node.scheduleBuffer(pcmBuffer, completionHandler: nil)
+        // 不在這裡停用 AVAudioSession：舊版放開 PTT 就 `setActive(false)`，
+        // 把同一個 session 上的播放引擎一起關掉 —— 房主說過一次話之後就再也聽不到別人。
+        // session 只在離開房間（`reset()`）時才釋放。
     }
 
     /// 離開房間或斷線時完全釋放
@@ -301,10 +251,125 @@ public final class CollabVoiceManager: ObservableObject {
         currentSpeakerUserId = nil
         activeSpeakerName = nil
 
-        playerNode?.stop()
-        playEngine?.stop()
-        playerNode = nil
-        playEngine = nil
+        player.shutdown()
+    }
+}
+
+// MARK: - 遠端語音播放器
+
+/// 遠端語音播放（AVAudioEngine + AVAudioPlayerNode），所有操作在自己的序列佇列上執行。
+///
+/// 為什麼要獨立出來（實機回報「Android 協作者按麥克風，iPad 房主沒有聲音」）：
+/// 1. **格式**：舊版把 16-bit 整數（Int16）格式直接接到 `AVAudioPlayerNode → mainMixerNode`，
+///    再排入 Int16 緩衝。播放節點只吃標準的 Float32 非交錯格式，Int16 緩衝排進去不是被丟掉就是無聲。
+///    這裡一律把收到的 PCM16 轉成 Float32 再排入，取樣率轉換交給混音器。
+/// 2. **音訊工作階段**：只聽不講的一方（典型就是房主）從沒設定過 AVAudioSession，
+///    停在系統預設的 `soloAmbient`，會被靜音鍵／控制中心靜音吃掉；而講過話的一方放開 PTT
+///    時舊版會 `setActive(false)`，把播放引擎一起關掉。現在收到第一個語音事件就把 session
+///    設成 `playAndRecord + voiceChat + defaultToSpeaker`，離開房間才釋放。
+/// 3. **主執行緒**：`setActive`／`engine.start()` 可能阻塞數十毫秒，放在主執行緒會吃掉筆跡幀預算；
+///    改在專用序列佇列上做（Layer 3 主執行緒非阻塞）。
+/// 4. **自癒**：音訊路由變更（插拔耳機、錄音引擎開啟語音處理）會讓播放引擎停下，
+///    下一個音框到達時偵測到 `!isRunning` 就重建。
+final class CollabVoicePlayer: @unchecked Sendable {
+    private let queue = DispatchQueue(label: "com.kairumo.collab.voice.player", qos: .userInteractive)
+    private var engine: AVAudioEngine?
+    private var node: AVAudioPlayerNode?
+    private var muted = false
+    /// 播放用標準格式：16kHz、單聲道、Float32 非交錯。
+    private let floatFormat = AVAudioFormat(
+        standardFormatWithSampleRate: 16_000, // 與 `CollabVoiceManager.sampleRate` 相同（live_voice 協定固定 16kHz）
+        channels: 1
+    )!
+
+    /// 設定協同語音用的音訊工作階段（錄音與播放共用）。可重複呼叫。
+    static func activateVoiceSession() {
+        #if os(iOS) || targetEnvironment(macCatalyst)
+        let session = AVAudioSession.sharedInstance()
+        do {
+            if session.category != .playAndRecord || session.mode != .voiceChat {
+                try session.setCategory(
+                    .playAndRecord,
+                    mode: .voiceChat,
+                    options: [.defaultToSpeaker, .allowBluetooth, .mixWithOthers]
+                )
+            }
+            try session.setActive(true)
+        } catch {
+            print("⚠️ [CollabVoice] AVAudioSession 設置失敗: \(error)")
+        }
+        #endif
+    }
+
+    func setMuted(_ value: Bool) {
+        queue.async { [self] in
+            muted = value
+            node?.volume = value ? 0 : 1
+        }
+    }
+
+    /// 預熱播放引擎（收到對方 `begin` 時呼叫），讓第一個音框不必等引擎啟動。
+    func prepare() {
+        queue.async { [self] in _ = ensureRunning() }
+    }
+
+    /// 播放一個 16kHz 單聲道 16-bit little-endian PCM 音框。
+    func play(pcm16 data: Data) {
+        queue.async { [self] in
+            guard let node = ensureRunning() else { return }
+            let count = data.count / 2
+            guard count > 0,
+                  let buffer = AVAudioPCMBuffer(pcmFormat: floatFormat, frameCapacity: AVAudioFrameCount(count)),
+                  let out = buffer.floatChannelData?[0] else { return }
+            buffer.frameLength = AVAudioFrameCount(count)
+            data.withUnsafeBytes { raw in
+                for i in 0..<count {
+                    let sample = Int16(littleEndian: raw.loadUnaligned(fromByteOffset: i * 2, as: Int16.self))
+                    out[i] = Float(sample) / 32768.0
+                }
+            }
+            node.scheduleBuffer(buffer, completionHandler: nil)
+            if !node.isPlaying { node.play() }
+        }
+    }
+
+    /// 離開房間：停掉引擎並釋放音訊工作階段。
+    func shutdown() {
+        queue.async { [self] in
+            node?.stop()
+            engine?.stop()
+            node = nil
+            engine = nil
+            #if os(iOS) || targetEnvironment(macCatalyst)
+            try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+            #endif
+        }
+    }
+
+    /// 只在 `queue` 上呼叫。引擎沒在跑（第一次、或被路由變更停掉）就重建。
+    private func ensureRunning() -> AVAudioPlayerNode? {
+        if let engine, let node, engine.isRunning { return node }
+        node?.stop()
+        engine?.stop()
+        Self.activateVoiceSession()
+        let newEngine = AVAudioEngine()
+        let newNode = AVAudioPlayerNode()
+        newEngine.attach(newNode)
+        newEngine.connect(newNode, to: newEngine.mainMixerNode, format: floatFormat)
+        do {
+            newEngine.prepare()
+            try newEngine.start()
+            newNode.volume = muted ? 0 : 1
+            newNode.play()
+            engine = newEngine
+            node = newNode
+            return newNode
+        } catch {
+            print("⚠️ [CollabVoice] 播放引擎啟動失敗: \(error)")
+            engine = nil
+            node = nil
+            return nil
+        }
     }
 }
 

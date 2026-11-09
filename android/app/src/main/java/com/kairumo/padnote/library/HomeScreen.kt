@@ -39,7 +39,9 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -67,6 +69,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.kairumo.padnote.ui.DS
@@ -758,20 +761,27 @@ fun HomeScreen(
                         ) {
                             if (!isGridView) {
                                 for (entry in row.entries) {
-                                    NotebookListCard(
-                        entry, l, onOpen, onRename, onDelete, onMove, onCreateSnapshot,
-                        onHide = hideNotebook, onDuplicate = onDuplicateNotebook, onToggleSample = onToggleSample
-                    )
+                                    // 以 id 為鍵：同步途中修改時間變動會重排這一列，沒有鍵的話
+                                    // 卡片的「⋯」選單狀態跟著位置走 —— 選單會在使用者點下
+                                    // 「刪除項目」前一刻被拆掉重建，點了等於沒點。
+                                    androidx.compose.runtime.key(entry.id) {
+                                        NotebookListCard(
+                                            entry, l, onOpen, onRename, onDelete, onMove, onCreateSnapshot,
+                                            onHide = hideNotebook, onDuplicate = onDuplicateNotebook, onToggleSample = onToggleSample
+                                        )
+                                    }
                                 }
                             } else {
                                 for (chunk in row.entries.chunked(gridColumns)) {
                                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                                         for (entry in chunk) {
-                                            NotebookGridCard(
-                                                entry, l, onOpen, onRename, onDelete, onMove, onCreateSnapshot,
-                                                modifier = Modifier.weight(1f),
-                                                onHide = hideNotebook, onDuplicate = onDuplicateNotebook, onToggleSample = onToggleSample
-                                            )
+                                            androidx.compose.runtime.key(entry.id) {
+                                                NotebookGridCard(
+                                                    entry, l, onOpen, onRename, onDelete, onMove, onCreateSnapshot,
+                                                    modifier = Modifier.weight(1f),
+                                                    onHide = hideNotebook, onDuplicate = onDuplicateNotebook, onToggleSample = onToggleSample
+                                                )
+                                            }
                                         }
                                         repeat(gridColumns - chunk.size) { Box(Modifier.weight(1f)) }
                                     }
@@ -1915,131 +1925,6 @@ data class CloudSyncUiState(
  * 「這台可以登出、那台不行」。
  */
 @Composable
-private fun P2PSyncSection(l: (String) -> String) {
-    val context = LocalContext.current
-    val tailscaleStatus = remember {
-        try {
-            var found = false
-            var ip: String? = null
-            val interfaces = java.net.NetworkInterface.getNetworkInterfaces()
-            if (interfaces != null) {
-                for (iface in interfaces.asSequence()) {
-                    if (!iface.isUp) continue
-                    for (addr in iface.inetAddresses.asSequence()) {
-                        if (addr is java.net.Inet4Address) {
-                            val host = addr.hostAddress ?: ""
-                            val parts = host.split(".")
-                            if (parts.size == 4) {
-                                val first = parts[0].toIntOrNull() ?: 0
-                                val second = parts[1].toIntOrNull() ?: 0
-                                if (first == 100 && second in 64..127) {
-                                    found = true
-                                    ip = host
-                                    break
-                                }
-                            }
-                        }
-                    }
-                    if (found) break
-                }
-            }
-            Pair(found, ip)
-        } catch (_: Throwable) {
-            Pair(false, null)
-        }
-    }
-
-    val isConnected = tailscaleStatus.first
-
-    Column(
-        modifier = Modifier.fillMaxWidth().testTag("home.p2p.card").padding(top = 4.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = l("p2p_sync_tailscale_title"),
-                fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.weight(1f)
-            )
-            val statusText = if (isConnected) {
-                val tmpl = l("tailscale_p2p_ready")
-                if (tmpl.contains("%@")) tmpl.replace("%@", tailscaleStatus.second ?: "")
-                else "${l("status_connected")} (${tailscaleStatus.second ?: ""})"
-            } else {
-                l("tailscale_not_connected")
-            }
-            Box(
-                modifier = Modifier
-                    .background(
-                        if (isConnected) Color(0xFFE8F5E9) else MaterialTheme.colorScheme.surface,
-                        shape = RoundedCornerShape(12.dp)
-                    )
-                    .padding(horizontal = 8.dp, vertical = 4.dp)
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(8.dp)
-                            .background(
-                                if (isConnected) Color(0xFF4CAF50) else Color.Gray.copy(alpha = 0.5f),
-                                shape = CircleShape
-                            )
-                    )
-                    Text(
-                        text = statusText,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = if (isConnected) Color(0xFF2E7D32) else MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-        }
-
-        Text(
-            text = l("p2p_sync_tailscale_explainer"),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-
-        if (!isConnected) {
-            Row(
-                modifier = Modifier
-                    .clickable {
-                        runCatching {
-                            context.startActivity(
-                                android.content.Intent(
-                                    android.content.Intent.ACTION_VIEW,
-                                    android.net.Uri.parse("https://tailscale.com/download")
-                                )
-                            )
-                        }
-                    }
-                    .padding(vertical = 4.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                Text(
-                    text = "↗",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.primary
-                )
-                Text(
-                    text = l("download_tailscale_link"),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.Medium
-                )
-            }
-        }
-    }
-}
-
-@Composable
 private fun CloudSyncCard(state: CloudSyncUiState, l: (String) -> String) {
     Card(
         modifier = Modifier.fillMaxWidth().testTag("home.cloud.card"),
@@ -2100,15 +1985,23 @@ private fun CloudSyncCard(state: CloudSyncUiState, l: (String) -> String) {
             if (state.signedIn) {
                 val context = androidx.compose.ui.platform.LocalContext.current
                 var pending by remember { mutableStateOf<Pair<String, String>?>(null) }
+                // 外觀與 Apple 相同：整列寬的框線按鈕＋垃圾桶圖示（Apple `.bordered` + `trash`），
+                // 不是一行紅字 —— 看起來像警告訊息，使用者不知道那是可以按的動作。
                 CloudSync.emptyCloudNotebooks.forEach { item ->
-                    TextButton(
+                    OutlinedButton(
                         onClick = { pending = item },
-                        modifier = Modifier.testTag("home.cloud.remove_empty")
-                    ) {
-                        Text(
-                            l("sync_orphan_remove").replace("%@", item.second),
-                            color = MaterialTheme.colorScheme.error
+                        modifier = Modifier.fillMaxWidth().testTag("home.cloud.remove_empty"),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = MaterialTheme.colorScheme.error
                         )
+                    ) {
+                        Icon(
+                            Icons.Filled.Delete,
+                            contentDescription = null,
+                            modifier = Modifier.size(DS.Icon.small)
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Text(l("sync_orphan_remove").replace("%@", item.second))
                     }
                 }
                 pending?.let { item ->
@@ -2188,8 +2081,6 @@ private fun CloudSyncCard(state: CloudSyncUiState, l: (String) -> String) {
                 state.folderLastSync?.let { SyncDetailRow(l("sync_last_at"), it) }
             }
 
-            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-            P2PSyncSection(l)
         }
     }
 }

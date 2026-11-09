@@ -17,7 +17,7 @@ import uniffi.padnote_core.FfiSharedNotebook
  * - 房主不在線也能加入：參與者定期把整份狀態（端對端加密）寄存在房間裡（`state_store`）。
  * - 保存期限：房間沒人之後（含結束協同）中繼保留一段時間再整個刪除（見 `deploy/relay-cloudflare`）。
  *
- * 同一 Wi‑Fi／Tailscale（本機中繼）照舊，與這裡無關。
+ * 同一 Wi‑Fi（本機中繼）照舊，與這裡無關。
  */
 // profile-scope: device 共享清單存在依設定檔命名的偏好檔；切換設定檔會重啟行程，記憶體狀態不跨設定檔
 object CloudCollab {

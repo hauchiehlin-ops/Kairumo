@@ -585,6 +585,12 @@ object CloudSync {
             // 動同一個套件目錄。同步是冪等的，這一本下一輪再看沒有任何代價。
             val lock = notebookLockTryEnter(id, "full-sync", android.os.SystemClock.elapsedRealtime().toULong())
             if (!lock.granted) continue
+            // 待同步清單是這一輪開頭列的。使用者在這期間刪掉的那一本已經搬進回收桶：
+            // 照舊對原路徑同步的話，核心會把下載的內容寫回 `notebooks/`，筆記本自己復活。
+            if (!pkg.exists() || AccountSyncStore.isDeleted(context, id)) {
+                notebookLockLeave(id, lock.ticket)
+                continue
+            }
             // 進原生層之前先落一筆：原生層崩潰（OOM、堆疊溢位、abort）不會留下 Kotlin 例外，
             // 日誌停在哪一本，就是哪一本。
             val startedAt = android.os.SystemClock.elapsedRealtime()
@@ -699,6 +705,10 @@ object CloudSync {
                 }
             }
             if (path.exists()) continue
+            // 名單是這一輪開頭算的；整批下載可能跑上好幾分鐘，使用者在這期間刪掉的
+            // 那一本（已進回收桶、墓碑已寫）不能被重新抓回來 —— 那就是「刪除沒反應」。
+            // 與 Apple 一樣以**現在的**索引為準。
+            if (AccountSyncStore.isDeleted(context, item.id) || NotebookTrash.isTrashed(context, item.id)) continue
             // 權杖每一本都重新取一次：整批抓下來可能跨過存取權杖的有效期，
             // 用同一個舊的會在中途開始 401。
             SyncLogger.log("發現新筆記「${item.title}」(${item.id})，開始自雲端下載...", SyncSource.GOOGLE_DRIVE)
@@ -721,7 +731,10 @@ object CloudSync {
             }
         }
         } finally {
-            emptyCloudNotebooks = emptyOnCloud
+            // 這裡在同步的背景執行緒上；Compose 狀態一律回主執行緒更新
+            // （與 Apple `Task { @MainActor in setEmptyCloudNotebooks(found) }` 相同）。
+            val found = emptyOnCloud.toList()
+            android.os.Handler(android.os.Looper.getMainLooper()).post { emptyCloudNotebooks = found }
         }
         return pulled
     }

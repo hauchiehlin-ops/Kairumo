@@ -540,7 +540,7 @@ private fun KairumoApp() {
         )
     }
 
-    // 同一 Wi-Fi／Tailscale 協同邀請：若人在首頁，自動打開對應筆記本進入協同
+    // 同一 Wi-Fi 協同邀請：若人在首頁，自動打開對應筆記本進入協同
     // 以 `openedId` 為鍵：編輯器為了別本的邀請先關掉這本時，回到首頁要再處理一次。
     LaunchedEffect(com.kairumo.padnote.collab.CollabInvites.pending, openedId) {
         val inviteText = com.kairumo.padnote.collab.CollabInvites.pending ?: return@LaunchedEffect

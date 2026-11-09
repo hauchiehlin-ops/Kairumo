@@ -43,6 +43,9 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import com.kairumo.padnote.LocalizationStrings
 
+/** 短於此毫秒數的按壓視為「點一下」：鎖定發話，再點一下才結束（與 Apple 相同）。 */
+private const val TAP_LATCH_MS = 350L
+
 /**
  * 協同即時語音 PTT 浮動膠囊（按住說話與發話狀態指示）。
  */
@@ -78,13 +81,6 @@ fun CollabVoiceFloatingCapsule(
         shadowElevation = 6.dp,
         modifier = modifier
             .offset { IntOffset(offsetX.roundToInt(), offsetY.roundToInt()) }
-            .pointerInput(Unit) {
-                detectDragGestures { change, dragAmount ->
-                    change.consume()
-                    offsetX += dragAmount.x
-                    offsetY += dragAmount.y
-                }
-            }
             .padding(8.dp)
     ) {
         Row(
@@ -92,14 +88,27 @@ fun CollabVoiceFloatingCapsule(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
         ) {
-            // 拖曳把手
-            Text(
-                text = "≡",
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                modifier = Modifier.padding(horizontal = 2.dp)
-            )
+            // 拖曳把手。拖曳只綁在把手上 —— 舊版綁在整顆膠囊，按住說話時手指一滑超過觸控斜率，
+            // 外層拖曳就把手勢吃掉，PTT 按鈕收到取消、立刻送出 `end`，對方只聽到一片空白。
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier
+                    .size(width = 22.dp, height = 32.dp)
+                    .pointerInput(Unit) {
+                        detectDragGestures { change, dragAmount ->
+                            change.consume()
+                            offsetX += dragAmount.x
+                            offsetY += dragAmount.y
+                        }
+                    }
+            ) {
+                Text(
+                    text = "≡",
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                )
+            }
 
             // 發話者狀態指示標籤
             voice.activeSpeakerName?.let { speaker ->
@@ -151,15 +160,27 @@ fun CollabVoiceFloatingCapsule(
                     .clip(RoundedCornerShape(20.dp))
                     .background(btnColor)
                     .pointerInput(voice, hasMicPermission) {
+                        // 兩種用法都要能說話（實機回報「點擊麥克風膠囊，房主那沒有聲音」）：
+                        // - 按住說話：按下開始、放開結束（原本的 PTT）。
+                        // - 點一下：短按（< TAP_LATCH_MS）不結束，維持發話；再點一下才結束。
+                        //   舊版短按只送出 begin／end，100ms 一個的音框一個都還沒湊滿，對方當然沒聲音。
                         awaitEachGesture {
                             awaitFirstDown(requireUnconsumed = false)
                             if (!hasMicPermission) {
                                 micPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
                                 return@awaitEachGesture
                             }
+                            if (voice.isTalking) {
+                                // 已經在（點一下鎖定的）發話中：這一下是結束。
+                                waitForUpOrCancellation()
+                                voice.stopTalking()
+                                return@awaitEachGesture
+                            }
+                            val downAt = System.currentTimeMillis()
                             voice.startTalking()
-                            waitForUpOrCancellation()
-                            voice.stopTalking()
+                            val up = waitForUpOrCancellation()
+                            val heldMs = System.currentTimeMillis() - downAt
+                            if (up == null || heldMs >= TAP_LATCH_MS) voice.stopTalking()
                         }
                     }
                     .padding(horizontal = 14.dp, vertical = 8.dp)

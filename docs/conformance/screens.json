@@ -729,7 +729,6 @@
       "home.notebooks.new_folder",
       "home.notebooks.list",
       "home.cloud.card",
-      "home.p2p.card",
       "home.cloud.signin",
       "home.data.snapshot",
       "home.data.backup",
@@ -759,7 +758,6 @@
       "home.notebooks.new_folder",
       "home.notebooks.list",
       "home.cloud.card",
-      "home.p2p.card",
       "home.cloud.signin",
       "home.data.snapshot",
       "home.data.backup",
@@ -895,12 +893,6 @@
         "id": "home.cloud.card",
         "label_en": "Sign in once and your notebooks, folders and settings stay in sync on every device. Data goes to a private app folder in your Google Drive — you won't see it among your files, and neither will we.",
         "label_key": "cloud_sync_explainer",
-        "reveal": "always"
-      },
-      {
-        "id": "home.p2p.card",
-        "label_en": "Cross-device Direct Sync: Kairumo uses WebRTC for peer-to-peer fast syncing across the internet. For the most stable connection without public relays, we highly recommend installing Tailscale on your devices.",
-        "label_key": "p2p_sync_tailscale_explainer",
         "reveal": "always"
       },
       {

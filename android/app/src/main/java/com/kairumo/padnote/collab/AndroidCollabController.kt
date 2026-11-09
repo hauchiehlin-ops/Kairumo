@@ -35,12 +35,19 @@ class AndroidCollabController(private val manager: CollaborationManager) {
 
     // 整份狀態（設計 §7）
     private var pendingRequest: String? = null
-    private var receivedParts = HashSet<Int>()
-    private var snapshotKeys = HashSet<String>()
+    /**
+     * 每一次請求各自收到的段號（與 Apple `CollabStateSync.partsByRequest` 相同）。
+     *
+     * 以前全部共用一個集合，而且每次 `requestState()` 都清空：重試迴圈發出第二次請求時第一次的回覆
+     * 還在路上，兩份回覆的段落混著計數 ——「收齊」與「房間裡有哪些物件」都只剩其中幾段，
+     * 房主還在等筆畫補上的頁被當成「只有自己有的空白頁」刪掉，加入者只剩第一頁。
+     */
+    private val partsByRequest = HashMap<String, HashSet<Int>>()
+    /** 這個房間收過的**任何一份**整份狀態（寄存的、每一次回覆的）裡出現過的鍵。換房間才清。 */
+    private var roomKeys = HashSet<String>()
     // 中繼寄存的整份狀態（`state_store`）的計段，與自己發出的請求分開。
     private var storedSnap: String? = null
     private var storedParts = HashSet<Int>()
-    private var storedKeys = HashSet<String>()
     /** 已經有人回覆的請求：排在後面的人就不必再回（同一份狀態送好幾份只是浪費頻寬）。 */
     private val answered = LinkedHashSet<String>()
 
@@ -71,13 +78,12 @@ class AndroidCollabController(private val manager: CollaborationManager) {
         if (!preservePendingRequest) {
             pendingRequest = null
             sentRequests.clear()
-            receivedParts = HashSet()
-            snapshotKeys = HashSet()
+            partsByRequest.clear()
+            roomKeys = HashSet()
             syncedOnce = false
         }
         storedSnap = null
         storedParts = HashSet()
-        storedKeys = HashSet()
         // 已有的筆畫算「大家都有」—— 否則第一次在某一頁下筆，整頁舊筆畫會被當成新的再送一次。
         for (page in canvas.pageIds) {
             val ids = runCatching { session.visibleStrokeDetails(page) }.getOrDefault(emptyList()).map { it.id }
@@ -94,8 +100,7 @@ class AndroidCollabController(private val manager: CollaborationManager) {
         pendingRequest = req
         sentRequests += req
         if (sentRequests.size > 16) sentRequests.remove(sentRequests.first())
-        receivedParts = HashSet()
-        snapshotKeys = HashSet()
+        // 不清掉之前請求的段落：那幾份回覆可能還在路上，各自計段（見 `partsByRequest`）。
         val blobs = sync.shadow.values.mapNotNull { it["blob"] as? String }.toSet()
         manager.broadcastOplog("state_request", JSONObject()
             .put("proto", PROTO).put("req", req).put("blobs", JSONArray(blobs.toList())))
@@ -257,7 +262,7 @@ class AndroidCollabController(private val manager: CollaborationManager) {
                 val to = payload.optString("to")
                 val toMe = to.isEmpty() || to == "*" || to.equals(manager.currentUserId, ignoreCase = true)
                 if ((req != pendingRequest && req !in sentRequests) || !toMe) return null
-                applySnapshotPart(payload, session, meta, canvas, engineFor)
+                applySnapshotPart(payload, session, meta, canvas, engineFor, req = req)
             }
             // 中繼寄存的整份狀態（只在補發時給剛進房的人；中繼不轉送）。以它自己的 `snap` 計段。
             "state_store" -> {
@@ -695,17 +700,16 @@ class AndroidCollabController(private val manager: CollaborationManager) {
      */
     private fun applySnapshotPart(
         payload: JSONObject, session: PadnoteSession, meta: NotebookMeta,
-        canvas: () -> AndroidCollabCanvas, engineFor: (String) -> InkEngine?, storedSnap: String? = null
+        canvas: () -> AndroidCollabCanvas, engineFor: (String) -> InkEngine?, storedSnap: String? = null,
+        req: String = ""
     ): Applied? {
         val part = payload.optInt("part", -1)
         val parts = payload.optInt("parts", 1)
         if (storedSnap != null && storedSnap != this.storedSnap) {
             this.storedSnap = storedSnap
             storedParts = HashSet()
-            storedKeys = HashSet()
         }
-        val received = if (storedSnap != null) storedParts else receivedParts
-        val keys = if (storedSnap != null) storedKeys else snapshotKeys
+        val received = if (storedSnap != null) storedParts else partsByRequest.getOrPut(req) { HashSet() }
         if (part < 0 || !received.add(part)) return null
         val list = payload.optJSONArray("objects") ?: JSONArray()
         val entries = (0 until list.length()).mapNotNull { i ->
@@ -715,7 +719,7 @@ class AndroidCollabController(private val manager: CollaborationManager) {
             }
             SnapshotEntry.fromJson(json)
         }
-        keys += entries.map { "${it.type}:${it.id}" }
+        roomKeys.addAll(entries.map { "${it.type}:${it.id}" })
         var view = canvas()
         var pagesChanged = false
         var inkChanged = false
@@ -753,8 +757,12 @@ class AndroidCollabController(private val manager: CollaborationManager) {
         }
         var needsPublish = false
         if (received.size >= parts) {
-            if (storedSnap == null) pendingRequest = null
-            syncedOnce = true
+            if (storedSnap == null) {
+                partsByRequest.remove(req)
+                if (pendingRequest == req) pendingRequest = null
+                // 只有回覆這台請求的那一份算「完整同步過」：寄存的那一份可能比較舊。與 Apple 相同。
+                syncedOnce = true
+            }
             // 只有自己有的物件（例如離線時新增的）：忘掉它們，下一次送出就會當成新的補給房間。
             //
             // **空白頁例外**：掃碼加入時本機沒有這本，會先建一本只有一頁空白頁的筆記（頁面 id 是本機算的，
@@ -762,14 +770,20 @@ class AndroidCollabController(private val manager: CollaborationManager) {
             // 沒有任何筆畫與物件的頁：本機刪掉、不送出。有內容的照舊補給房間。
             // 「房間裡有的」以兩份整份狀態的聯集判斷：寄存的那一份可能比較舊，只拿它比，房主之後才加的
             // 物件與空白頁會被當成「只有自己有」—— 物件以舊值再送一次、空白頁被刪掉。與 Apple 相同。
-            val roomKeys = (storedKeys + snapshotKeys).map {
+            val roomKeys = this.roomKeys.map {
                 if (it.startsWith("page:")) "page:${AndroidCollabCanvas.canonicalPageId(it.removePrefix("page:"))}" else it
             }.toSet()
             val localOnly = sync.liveKeys.filter { key ->
                 val canonicalKey = if (key.startsWith("page:")) "page:${AndroidCollabCanvas.canonicalPageId(key.removePrefix("page:"))}" else key
                 canonicalKey !in roomKeys && !key.startsWith("meta:")
             }
-            val emptyPages = localOnly.filter { it.startsWith("page:") && isEmptyPage(it.removePrefix("page:"), session) }
+            // 還有擱著的筆畫等著寫進去的頁不是空白頁（那是房間的頁，只是筆畫還沒落地）。
+            val emptyPages = localOnly.filter { key ->
+                if (!key.startsWith("page:")) return@filter false
+                val pageId = key.removePrefix("page:")
+                if (pendingInk.keys.any { it.equals(pageId, ignoreCase = true) }) return@filter false
+                isEmptyPage(pageId, session)
+            }
             for (key in emptyPages) sync.shadow[key] = mutableMapOf(ObjectPatch.DELETED to true)
             if (emptyPages.isNotEmpty() && reconcilePages(session, meta)) pagesChanged = true
             val keep = localOnly - emptyPages.toSet()
