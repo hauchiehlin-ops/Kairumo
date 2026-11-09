@@ -598,12 +598,13 @@ extension NotebookEditorView {
     func handleIncomingCollabInvite(_ link: String) {
         let invite = collabParseInviteV2(text: link)
         let nb = invite.notebookId.trimmingCharacters(in: .whitespacesAndNewlines)
-        // 沒指定哪一本（舊版連結、手打的房號）、就是這本、或沒辦法換本：照舊在這裡開面板（只帶入房號）。
+        // 沒指定哪一本（舊版連結、手打的房號）、就是這本、或沒辦法換本：直接在此本加入房間。
         guard !nb.isEmpty, nb.lowercased() != notebook.id.lowercased(), onRequestSwitch != nil,
               let id = HomeWorkbenchView.notebookForCollabInvite(link, store: store),
               let target = store.notebooks.first(where: { $0.id.lowercased() == id.lowercased() })
         else {
-            showCollaborationSheet = true
+            collaborationManager.pendingInviteLink = nil
+            collaborationManager.joinRoom(roomId: link, notebookId: notebook.id)
             return
         }
         switchToNotebook(target)
@@ -636,6 +637,7 @@ extension NotebookEditorView {
     private func proceedLeave(_ leave: @escaping () -> Void) {
         saveCurrentPageDrawing()
         let id = notebook.id
+        CollaborationManager.shared.leaveRoom(ifBoundTo: id)
         guard store.hasSampleSession(id) else { leave(); return }
         // 筆跡在背景佇列寫入：等寫完再比對，最後一筆才算得進去。
         afterCoreInkWrites {

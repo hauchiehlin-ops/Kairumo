@@ -3053,9 +3053,14 @@ internal fun rememberEditorCanvasContext(
         // 這台剛打、還沒進 CRDT 的字會被當成不存在而被蓋掉。
         publishCollab()
         val main = android.os.Handler(android.os.Looper.getMainLooper())
-        val result = collab.apply(op, session, meta, { collabCanvas()!! }, ::collabEngineFor) { delay, work ->
-            main.postDelayed({ if (inRoom) work() }, delay)
-        } ?: return
+        val canvasProvider = {
+            collabCanvas() ?: AndroidCollabCanvas(session, meta, emptyList()) { null }
+        }
+        val result = runCatching {
+            collab.apply(op, session, meta, canvasProvider, ::collabEngineFor) { delay, work ->
+                main.postDelayed({ if (inRoom) work() }, delay)
+            }
+        }.getOrNull() ?: return
         if (result.pages) {
             pageOrderRevisionState.intValue++
             // 留在原本那一頁（它的索引可能變了）；那一頁被刪了才退到最近的一頁。

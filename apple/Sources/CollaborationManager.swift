@@ -526,7 +526,9 @@ public class CollaborationManager: ObservableObject {
     /// `room_closed` 會讓雲端共享的協作者連同共享資料夾一起停掉（見 `handleIncomingMessage`）。
     /// 要結束整場協同請在面板按「結束協同」。
     public func leaveRoom(ifBoundTo notebookId: String) {
-        guard let bound = roomNotebookId, bound == notebookId.lowercased() else { return }
+        if let bound = roomNotebookId {
+            guard bound == notebookId.lowercased() else { return }
+        }
         disconnect()
     }
 
@@ -726,6 +728,7 @@ public class CollaborationManager: ObservableObject {
             self.serverOverride = nil
         }
 
+        let taskToClose = webSocketTask
         if case .connected(let rid) = status {
             let leavePayload: [String: Any] = [
                 "type": "leave",
@@ -739,8 +742,11 @@ public class CollaborationManager: ObservableObject {
         pingTimer = nil
         joinTimer?.invalidate()
         joinTimer = nil
-        webSocketTask?.close()
         webSocketTask = nil
+        // 給 leave 封包 150ms 抵達底層 socket 緩衝區後才關閉連線
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+            taskToClose?.close()
+        }
 
         self.status = .disconnected
         LiveInkStore.shared.clear()
@@ -1472,6 +1478,9 @@ public class CollaborationManager: ObservableObject {
             guard let uid = json["user_id"] as? String,
                   let kind = json["kind"] as? String,
                   let rawPayload = json["payload"] as? [String: Any] else { return }
+            if let idx = peers.firstIndex(where: { $0.userId == uid }) {
+                peers[idx].lastActive = Date()
+            }
             let lamport = (json["lamport"] as? NSNumber)?.uint64Value ?? 0
             let isEncrypted = (json["encrypted"] as? Bool) ?? false
             if kind.hasPrefix("live_") {
@@ -1583,9 +1592,24 @@ public class CollaborationManager: ObservableObject {
             repeats: true
         ) { [weak self] _ in
             Task { @MainActor [weak self] in
-                self?.sendJson(["type": "ping"])
+                guard let self else { return }
+                self.sendJson(["type": "ping"])
+                self.pruneStalePeers()
             }
         }
+    }
+
+    /// 定期清理失聯成員（防止離線未收到通知時殘留幽靈在線燈）
+    private func pruneStalePeers() {
+        let now = Date()
+        let timeout: TimeInterval = 18.0
+        let stale = peers.filter { now.timeIntervalSince($0.lastActive) > timeout }
+        guard !stale.isEmpty else { return }
+        for s in stale {
+            LiveInkStore.shared.settle(userId: s.userId)
+            clearPageEditLeaseIfHeld(by: s.userId)
+        }
+        peers.removeAll { now.timeIntervalSince($0.lastActive) > timeout }
     }
 }
 

@@ -816,14 +816,6 @@ final class AdaptiveCanvasView: PKCanvasView {
         isInkingActive = false
         activePencilIsDown = false
         runInkIdleWork()
-        checkPageBottomAfterInking()
-    }
-
-    private func checkPageBottomAfterInking() {
-        let maxY = self.drawing.bounds.maxY
-        if maxY > 0 && maxY + 200 > PageGeometry.height {
-            (self.delegate as? CanvasRepresentable.Coordinator)?.parent.onReachedPageBottom?()
-        }
     }
 
     /// 不在落筆就馬上做；在落筆就等這一筆抬起來。
@@ -2312,16 +2304,6 @@ struct CanvasRepresentable: UIViewRepresentable {
                 parent.onMagneticSnap?(start, end)
             }
             self.lastStrokeCountBeforeRefine = count
-
-            // 寫到接近頁尾就先把下一頁準備好。
-            //
-            // 刻意**不自動翻頁**：使用者可能只是把最後一行寫到很下面，
-            // 畫面自己跳走比繼續留在原地更糟。準備好下一頁、讓他自己翻。
-            let maxY = canvasView.drawing.bounds.maxY
-            let isCurrentlyInking = (canvasView as? AdaptiveCanvasView)?.isInking ?? false
-            if !isCurrentlyInking && maxY > 0 && maxY + 200 > PageGeometry.height {
-                parent.onReachedPageBottom?()
-            }
         }
 
         /// 把最後一筆（若是刻意畫的直線）的終點扶正。不是直線、或本來就貼齊，回 nil。

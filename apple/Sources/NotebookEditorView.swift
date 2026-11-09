@@ -853,7 +853,7 @@ public struct NotebookEditorView: View {
             ProColorPickerSheet(selectedColor: $selectedColor)
         }
         .sheet(isPresented: $showCollaborationSheet) { resizableSheet {
-            CollaborationSheet(notebookId: notebook.id)
+            CollaborationSheet(isPresented: $showCollaborationSheet, notebookId: notebook.id)
         } }
         // 分享面板要等預覽**收乾淨之後**再開。
         //
@@ -1422,10 +1422,11 @@ public struct NotebookEditorView: View {
             pageOrigins = nil
             captureInitialPageState(page: 0, drawing: currentDrawing)
             PageThumbnailRenderer.invalidateAll()
-            // 為了協同邀請換過來的：到了邀請的那一本，打開面板（面板會自動加入房間）。
+            // 為了協同邀請換過來的：到了邀請的那一本，直接加入房間進入協同畫布。
             if let link = collaborationManager.pendingInviteLink,
                CollaborationSheet.invite(link, targets: notebook.id) {
-                showCollaborationSheet = true
+                collaborationManager.pendingInviteLink = nil
+                collaborationManager.joinRoom(roomId: link, notebookId: notebook.id)
             }
         }
     }
@@ -1480,9 +1481,10 @@ public struct NotebookEditorView: View {
 
     private func handleOnDisappear() {
         FrameGovernor.shared.stop()
-        // 先存檔、再放掉焦點。
+        // 先存檔、再放掉焦點與離開協同房間。
         saveCurrentPageDrawing()
         let leavingId = notebook.id
+        CollaborationManager.shared.leaveRoom(ifBoundTo: leavingId)
         InkEventSink.unregister(notebookId: leavingId)
         endCollabImportHold()
         afterCoreInkWrites {

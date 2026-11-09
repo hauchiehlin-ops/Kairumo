@@ -8,6 +8,7 @@
 import SwiftUI
 
 public struct CollaborationSheet: View {
+    var isPresented: Binding<Bool>?
     @Environment(\.dismiss) private var dismiss
     @ObservedObject var collaborationManager = CollaborationManager.shared
     @ObservedObject var localizationManager = LocalizationManager.shared
@@ -36,8 +37,14 @@ public struct CollaborationSheet: View {
     @State private var restoreMessage: String? = nil
     @State private var showRestoreConfirmAlert: Bool = false
 
-    public init(notebookId: String? = nil) {
+    public init(isPresented: Binding<Bool>? = nil, notebookId: String? = nil) {
+        self.isPresented = isPresented
         self.notebookId = notebookId
+    }
+
+    private func dismissSheet() {
+        isPresented?.wrappedValue = false
+        dismiss()
     }
 
     public var body: some View {
@@ -129,7 +136,7 @@ public struct CollaborationSheet: View {
             .onChange(of: collaborationManager.status) { status in
                 guard autoJoinedFromInvite, case .connected = status else { return }
                 autoJoinedFromInvite = false
-                dismiss()
+                dismissSheet()
             }
             .navigationTitle(localizationManager.localized("collaborate"))
             #if os(iOS) || targetEnvironment(macCatalyst)
@@ -138,7 +145,7 @@ public struct CollaborationSheet: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button(localizationManager.localized("done")) {
-                        dismiss()
+                        dismissSheet()
                     }
                 }
             }

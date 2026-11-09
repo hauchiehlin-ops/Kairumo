@@ -488,9 +488,21 @@ class CollaborationManager(private val context: Context) {
             queuedOplogCount = 0
             roomKeyBase64 = null
         }
+        val s = socket
+        if (s != null && status is Status.Connected) {
+            runCatching {
+                val leavePayload = JSONObject()
+                    .put("type", "leave")
+                    .put("room_id", (status as Status.Connected).roomId)
+                    .put("user_id", currentUserId)
+                s.send(leavePayload.toString())
+            }
+        }
         socket?.close(1000, null)
         socket = null
-        peers.clear()
+        android.os.Handler(android.os.Looper.getMainLooper()).post {
+            peers.clear()
+        }
         liveInk.clear()
         resetPageEditLeaseState()
         voice?.reset()
@@ -1038,35 +1050,42 @@ class CollaborationManager(private val context: Context) {
                 }
             }
             "peer_joined" -> {
-                json.optJSONObject("peer")?.let { addPeer(it) }
-                if (lastSeq == 0L) onStateSyncNeeded?.invoke()
+                val peerObj = json.optJSONObject("peer")
+                android.os.Handler(android.os.Looper.getMainLooper()).post {
+                    peerObj?.let { addPeer(it) }
+                    if (lastSeq == 0L) onStateSyncNeeded?.invoke()
+                }
             }
             "peer_presence" -> {
                 val uid = json.optString("user_id")
                 val cursor = json.optJSONObject("cursor") ?: return
-                peers.indexOfFirst { it.userId == uid }.takeIf { it >= 0 }?.let { idx ->
-                    val p = peers[idx]
-                    val selected = json.optString("selected_id").takeIf { it.isNotEmpty() }?.let(::canonicalSelection)
-                    peers[idx] = p.copy(
-                        cursorX = cursor.optDouble("x", 0.0).toFloat(),
-                        cursorY = cursor.optDouble("y", 0.0).toFloat(),
-                        isDrawing = cursor.optBoolean("is_drawing", false),
-                        selectedId = selected,
-                        lastActiveMs = System.currentTimeMillis()
-                    )
-                    // 兩人同時選了同一個物件：使用者 id 較小者勝（每一台算出同一個答案）。打字不搶。
-                    val mine = mySelectedId
-                    if (selected != null && mine != null && selected == canonicalSelection(mine) &&
-                        !selected.startsWith(TYPING_PREFIX) && uid < currentUserId) {
-                        onLeaseLost?.invoke(mine, p.userName)
+                val selected = json.optString("selected_id").takeIf { it.isNotEmpty() }?.let(::canonicalSelection)
+                android.os.Handler(android.os.Looper.getMainLooper()).post {
+                    peers.indexOfFirst { it.userId == uid }.takeIf { it >= 0 }?.let { idx ->
+                        val p = peers[idx]
+                        peers[idx] = p.copy(
+                            cursorX = cursor.optDouble("x", 0.0).toFloat(),
+                            cursorY = cursor.optDouble("y", 0.0).toFloat(),
+                            isDrawing = cursor.optBoolean("is_drawing", false),
+                            selectedId = selected,
+                            lastActiveMs = System.currentTimeMillis()
+                        )
+                        // 兩人同時選了同一個物件：使用者 id 較小者勝（每一台算出同一個答案）。打字不搶。
+                        val mine = mySelectedId
+                        if (selected != null && mine != null && selected == canonicalSelection(mine) &&
+                            !selected.startsWith(TYPING_PREFIX) && uid < currentUserId) {
+                            onLeaseLost?.invoke(mine, p.userName)
+                        }
                     }
                 }
             }
             "peer_left" -> {
                 val uid = json.optString("user_id")
-                peers.removeAll { it.userId == uid }
-                liveInk.settle(uid)
-                clearPageEditLeaseIfHeldBy(uid)
+                android.os.Handler(android.os.Looper.getMainLooper()).post {
+                    peers.removeAll { it.userId == uid }
+                    liveInk.settle(uid)
+                    clearPageEditLeaseIfHeldBy(uid)
+                }
             }
             "peer_oplog" -> deliverOplog(json, live = true)
             "oplog_batch" -> {
@@ -1170,7 +1189,26 @@ class CollaborationManager(private val context: Context) {
                 if (seenOpIds.size > 4000) seenOpIds.remove(seenOpIds.first())
             }
         }
+        android.os.Handler(android.os.Looper.getMainLooper()).post {
+            peers.indexOfFirst { it.userId == uid }.takeIf { it >= 0 }?.let { idx ->
+                peers[idx] = peers[idx].copy(lastActiveMs = System.currentTimeMillis())
+            }
+            pruneStalePeers()
+        }
         onOplog?.invoke(RemoteOplog(uid, kind, payload, lamport))
+    }
+
+    private fun pruneStalePeers() {
+        val now = System.currentTimeMillis()
+        val timeoutMs = 18_000L
+        val stale = peers.filter { now - it.lastActiveMs > timeoutMs }
+        if (stale.isNotEmpty()) {
+            for (s in stale) {
+                liveInk.settle(s.userId)
+                clearPageEditLeaseIfHeldBy(s.userId)
+            }
+            peers.removeAll { now - it.lastActiveMs > timeoutMs }
+        }
     }
 
     private fun decryptPayload(item: JSONObject, raw: JSONObject): JSONObject? {
