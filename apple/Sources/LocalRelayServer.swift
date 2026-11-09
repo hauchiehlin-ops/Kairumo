@@ -451,14 +451,13 @@ public final class LocalRelayServer {
     }
 
     /// 取得本機在區域網路上的 IPv4 位址，供隊友輸入連線（沒有則回 nil）。
-    /// 取得本機所有可連線之 IPv4 位址（區網 LAN 與 Tailscale 虛擬私有網路）
-    public static func availableIPv4Addresses() -> (lan: String?, tailscale: String?) {
+    ///
+    /// 只認實體區網介面（en*／bridge*／ap*），不收 100.64.0.0/10（電信級 NAT、VPN 覆蓋網路）：
+    /// 那種位址對方通常連不到，放進邀請連結只會讓加入者卡在「連線中」。
+    public static func lanIPv4Address() -> String? {
         var lan: String?
-        var tailscale: String?
         var ifaddrPtr: UnsafeMutablePointer<ifaddrs>?
-        guard getifaddrs(&ifaddrPtr) == 0, let first = ifaddrPtr else {
-            return (nil, TailscaleDetector.check().ipAddress)
-        }
+        guard getifaddrs(&ifaddrPtr) == 0, let first = ifaddrPtr else { return nil }
         defer { freeifaddrs(ifaddrPtr) }
 
         var pointer: UnsafeMutablePointer<ifaddrs>? = first
@@ -479,18 +478,10 @@ public final class LocalRelayServer {
                                    0,
                                    NI_NUMERICHOST) == 0 {
                         let ip = String(cString: hostBuffer)
-                        // 1. 檢查 Tailscale (100.64.0.0/10)
-                        if ip.hasPrefix("100.") {
-                            let parts = ip.split(separator: ".")
-                            if parts.count == 4, let second = Int(parts[1]), second >= 64, second <= 127 {
-                                tailscale = ip
-                            }
-                        } else if !ip.hasPrefix("127.") && !ip.hasPrefix("169.254.") {
-                            // 2. 檢查 LAN（en0, en1, en4, en5, bridge*, ap* 等）
-                            if name.hasPrefix("en") || name.hasPrefix("bridge") || name.hasPrefix("ap") {
-                                if lan == nil || name == "en0" {
-                                    lan = ip
-                                }
+                        if !ip.hasPrefix("127.") && !ip.hasPrefix("169.254.") && !isCarrierGradeNAT(ip),
+                           name.hasPrefix("en") || name.hasPrefix("bridge") || name.hasPrefix("ap") {
+                            if lan == nil || name == "en0" {
+                                lan = ip
                             }
                         }
                     }
@@ -498,23 +489,14 @@ public final class LocalRelayServer {
             }
             pointer = interface.ifa_next
         }
-        if tailscale == nil {
-            tailscale = TailscaleDetector.check().ipAddress
-        }
-        return (lan, tailscale)
-    }
-
-    /// 取得最合適的局域網 IPv4 位址
-    public static func lanIPv4Address() -> String? {
-        let (lan, _) = availableIPv4Addresses()
         return lan
     }
 
-    /// 取得 Tailscale 虛擬網 IPv4 位址
-    // orphan-ok: Tailscale 虛擬網 IPv4 查詢輔助函式，與 lanIPv4Address 對稱供診斷與外部調用
-    public static func tailscaleIPv4Address() -> String? {
-        let (_, ts) = availableIPv4Addresses()
-        return ts
+    /// 100.64.0.0/10（電信級 NAT／VPN 覆蓋網路）。
+    private static func isCarrierGradeNAT(_ ip: String) -> Bool {
+        let parts = ip.split(separator: ".")
+        guard parts.count == 4, parts[0] == "100", let second = Int(parts[1]) else { return false }
+        return second >= 64 && second <= 127
     }
 }
 import Foundation

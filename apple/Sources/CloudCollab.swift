@@ -16,7 +16,7 @@
 //  - 保存期限：房間沒人之後（含房主按「結束協同」）中繼保留一段時間再整個刪除，讓不在線的協作者
 //    回來時還拿得到最終版本。
 //
-//  同一 Wi‑Fi／Tailscale（本機中繼）照舊，與這裡無關。
+//  同一 Wi‑Fi（本機中繼）照舊，與這裡無關。
 //
 
 import Combine
@@ -94,7 +94,7 @@ final class CloudCollabManager: ObservableObject {
     }
 
     /// 房主：這本的房間開在雲端中繼上。已經在那裡就不動；記過房號與金鑰就沿用。
-    /// 若目前這本筆記已經開在本機中繼（同一 Wi‑Fi／Tailscale）上，尊重使用者當下的選擇，不強行搬回雲端。
+    /// 若目前這本筆記已經開在本機中繼（同一 Wi‑Fi）上，尊重使用者當下的選擇，不強行搬回雲端。
     func ensurePublicRoom(for entry: FfiSharedNotebook, force: Bool = false) {
         let collab = CollaborationManager.shared
         let relay = collab.cloudRelayURL

@@ -263,10 +263,10 @@ object NotebookLibrary {
     fun delete(context: Context, id: String): Boolean =
         runCatching {
             val moved = NotebookTrash.moveToTrash(context, id)
-            if (moved) {
-                invalidateCache(id)
-                AccountSyncStore.recordDeletion(context, id)
-            }
+            invalidateCache(id)
+            // 墓碑一律寫（與 Apple `deleteNotebook` 相同）：本機沒搬成功時，下一輪同步的
+            // 回收桶對帳會依墓碑把它收進回收桶；不寫的話，這次刪除在任何裝置上都不存在。
+            AccountSyncStore.recordDeletion(context, id)
             moved
         }.getOrDefault(false)
 
@@ -581,6 +581,10 @@ object NotebookLibrary {
             if (SeedNotebooks.isDeviceLocal(name.removeSuffix(".$EXTENSION"))) continue
             val local = File(dir, name)
             if (local.exists()) continue
+            // 這台刪掉的（有墓碑、或還在回收桶）不要從同步資料夾裡的舊副本抓回來，
+            // 否則刪除過一輪資料夾同步就自己復活。
+            val id = name.removeSuffix(".$EXTENSION")
+            if (AccountSyncStore.isDeleted(context, id) || NotebookTrash.isTrashed(context, id)) continue
             val result = FolderSync.sync(context, local, remoteRoot, languageTag)
             if (result.downloaded.isNotEmpty()) pulled++
         }

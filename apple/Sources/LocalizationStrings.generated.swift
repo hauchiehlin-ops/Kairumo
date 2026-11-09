@@ -4872,12 +4872,12 @@ extension LocalizationManager {
             .th: "ที่อยู่เซิร์ฟเวอร์การทำงานร่วมกันไม่ถูกต้อง: %@"
         ],
         "collab_err_guest_loopback": [
-            .zhHant: "無法連線至本機迴環位址 (127.0.0.1)。請使用房主的區域網路或 Tailscale IP 位址。",
-            .en: "Cannot connect to loopback address (127.0.0.1). Please use the host's LAN or Tailscale IP address.",
-            .zhHans: "无法连接至本设备回送地址 (127.0.0.1)。请使用房主的局域网或 Tailscale IP 地址。",
-            .ja: "ループバックアドレス (127.0.0.1) には接続できません。ホストの LAN または Tailscale IP アドレスを使用してください。",
-            .ko: "루프백 주소(127.0.0.1)로는 연결할 수 없습니다. 호스트의 LAN 또는 Tailscale IP 주소를 사용하세요.",
-            .th: "ไม่สามารถเชื่อมต่อไปยังที่อยู่ย้อนกลับ (127.0.0.1) ได้ โปรดใช้ที่อยู่ LAN หรือ Tailscale IP ของผู้เปิดห้อง"
+            .zhHant: "無法連線至本機迴環位址 (127.0.0.1)。請使用房主的區域網路 IP 位址或雲端邀請。",
+            .en: "Cannot connect to loopback address (127.0.0.1). Please use the host's LAN IP address or the cloud invite.",
+            .zhHans: "无法连接至本设备回送地址 (127.0.0.1)。请使用房主的局域网 IP 地址或云端邀请。",
+            .ja: "ループバックアドレス (127.0.0.1) には接続できません。ホストの LAN IP アドレスかクラウド招待を使用してください。",
+            .ko: "루프백 주소(127.0.0.1)로는 연결할 수 없습니다. 호스트의 LAN IP 주소나 클라우드 초대를 사용하세요.",
+            .th: "ไม่สามารถเชื่อมต่อไปยังที่อยู่ย้อนกลับ (127.0.0.1) ได้ โปรดใช้ที่อยู่ LAN IP ของผู้เปิดห้องหรือคำเชิญผ่านคลาวด์"
         ],
         "collab_err_unreachable": [
             .zhHant: "無法連上協同伺服器 %@，已停止重試。",
@@ -4944,12 +4944,12 @@ extension LocalizationManager {
             .th: "คุณเข้าร่วมด้วยรหัสห้องเท่านั้น หากไม่มีกุญแจในลิงก์เชิญ สิ่งที่คนอื่นเขียนจะอ่านไม่ได้ที่นี่ ขอลิงก์เชิญฉบับเต็มจากผู้เปิดห้องแล้วเข้าร่วมใหม่"
         ],
         "collab_modes_body": [
-            .zhHant: "• 同一 Wi‑Fi：大家在同一個地方、連同一個 Wi‑Fi。最快，不需要任何帳號。\n• Tailscale 跨網：大家都裝了 Tailscale、登入同一個網路。不同地點也行。\n• 雲端共享（跨網路）：其他情況都用這個（不同地點、行動網路）。不需要任何帳號，掃 QR Code 即可；房主不在線也能加入。\n\n按下「開啟跨網路協同」後，房間會從這台裝置搬到網際網路上的加密中繼：下方的同一 Wi‑Fi／Tailscale QR Code 會換成雲端邀請，已經用 Wi‑Fi QR Code 加入的人要重新掃新的 QR Code。\n\n「端對端加密保護」三種方式都有，是安全保證，不是另一種連線方式。",
-            .en: "• Same Wi‑Fi: everyone is in one place on the same Wi‑Fi. Fastest, no account needed.\n• Tailscale: everyone has Tailscale installed and is on the same tailnet. Works from different places.\n• Cloud sharing (any network): use this in every other case (different places, mobile data). No account needed — just scan the QR code; people can join even when the host is offline.\n\nAfter you tap Start cross-network collaboration, the room moves from this device to an encrypted relay on the internet: the Same Wi‑Fi / Tailscale QR codes below are replaced by the cloud invite, and anyone who joined with the Wi‑Fi QR code needs to scan the new one.\n\nEnd-to-end encryption applies to all three — it is a guarantee, not another way to connect.",
-            .zhHans: "• 同一 Wi‑Fi：大家在同一个地方、连同一个 Wi‑Fi。最快，不需要任何账号。\n• Tailscale 跨网：大家都装了 Tailscale、登录同一个网络。不同地点也行。\n• 云端共享（跨网络）：其他情况都用这个（不同地点、移动网络）。不需要任何账号，扫二维码即可；房主不在线也能加入。\n\n按下「开启跨网络协同」后，房间会从这台设备搬到互联网上的加密中继：下方的同一 Wi‑Fi／Tailscale 二维码会换成云端邀请，已经用 Wi‑Fi 二维码加入的人要重新扫新的二维码。\n\n「端对端加密保护」三种方式都有，是安全保证，不是另一种连接方式。",
-            .ja: "• 同じ Wi‑Fi：全員が同じ場所で同じ Wi‑Fi に接続。最速でアカウント不要。\n• Tailscale：全員が Tailscale をインストールし同じ tailnet に参加。離れた場所でも可。\n• クラウド共有：それ以外はすべてこれ（別の場所、モバイル通信）。アカウント不要、QR コードをスキャンするだけ。ホストがオフラインでも参加できます。\n\n「ネットワークを越えた共同編集を開始」をタップすると、ルームはこの端末からインターネット上の暗号化リレーへ移ります。下の同じ Wi‑Fi／Tailscale の QR コードはクラウド招待に置き換わり、Wi‑Fi の QR コードで参加した人は新しいコードを読み直す必要があります。\n\nエンドツーエンド暗号化は 3 つすべてに適用される保証で、別の接続方法ではありません。",
-            .ko: "• 같은 Wi‑Fi: 모두 한 장소에서 같은 Wi‑Fi에 연결. 가장 빠르고 계정이 필요 없습니다.\n• Tailscale: 모두 Tailscale을 설치하고 같은 tailnet에 있음. 다른 장소에서도 됩니다.\n• 클라우드 공유: 그 밖의 모든 경우(다른 장소, 모바일 데이터). 계정 없이 QR 코드만 스캔하면 되며, 호스트가 오프라인이어도 참여할 수 있습니다.\n\n'네트워크 간 공동 작업 시작'을 누르면 방이 이 기기에서 인터넷의 암호화 릴레이로 옮겨집니다. 아래의 같은 Wi‑Fi/Tailscale QR 코드는 클라우드 초대로 바뀌며, Wi‑Fi QR 코드로 참여한 사람은 새 코드를 다시 스캔해야 합니다.\n\n종단 간 암호화는 세 가지 모두에 적용되는 보장이며, 별도의 연결 방법이 아닙니다.",
-            .th: "• Wi‑Fi เดียวกัน: ทุกคนอยู่ที่เดียวกันและต่อ Wi‑Fi เดียวกัน เร็วที่สุด ไม่ต้องมีบัญชี\n• Tailscale: ทุกคนติดตั้ง Tailscale และอยู่ใน tailnet เดียวกัน ใช้ได้แม้อยู่คนละที่\n• แชร์ผ่านคลาวด์: กรณีอื่นทั้งหมดใช้แบบนี้ (คนละที่ เน็ตมือถือ) ไม่ต้องมีบัญชี แค่สแกน QR Code และเข้าร่วมได้แม้เจ้าของห้องออฟไลน์\n\nเมื่อแตะ “เริ่มทำงานร่วมกันข้ามเครือข่าย” ห้องจะย้ายจากเครื่องนี้ไปยังรีเลย์เข้ารหัสบนอินเทอร์เน็ต QR Code แบบ Wi‑Fi เดียวกัน/Tailscale ด้านล่างจะถูกแทนด้วยคำเชิญคลาวด์ และคนที่เข้าด้วย QR Code แบบ Wi‑Fi ต้องสแกนอันใหม่\n\nการเข้ารหัสต้นทางถึงปลายทางใช้กับทั้งสามแบบ เป็นการรับประกัน ไม่ใช่อีกวิธีในการเชื่อมต่อ"
+            .zhHant: "• 同一 Wi‑Fi：大家在同一個地方、連同一個 Wi‑Fi。最快，不需要任何帳號。\n• 雲端共享（跨網路）：其他情況都用這個（不同地點、行動網路）。不需要任何帳號，掃 QR Code 即可；房主不在線也能加入。\n\n按下「開啟跨網路協同」後，房間會從這台裝置搬到網際網路上的加密中繼：下方的同一 Wi‑Fi QR Code 會換成雲端邀請，已經用 Wi‑Fi QR Code 加入的人要重新掃新的 QR Code。\n\n「端對端加密保護」兩種方式都有，是安全保證，不是另一種連線方式。",
+            .en: "• Same Wi‑Fi: everyone is in one place on the same Wi‑Fi. Fastest, no account needed.\n• Cloud sharing (any network): use this in every other case (different places, mobile data). No account needed — just scan the QR code; people can join even when the host is offline.\n\nAfter you tap Start cross-network collaboration, the room moves from this device to an encrypted relay on the internet: the Same Wi‑Fi QR code below is replaced by the cloud invite, and anyone who joined with the Wi‑Fi QR code needs to scan the new one.\n\nEnd-to-end encryption applies to both — it is a guarantee, not another way to connect.",
+            .zhHans: "• 同一 Wi‑Fi：大家在同一个地方、连同一个 Wi‑Fi。最快，不需要任何账号。\n• 云端共享（跨网络）：其他情况都用这个（不同地点、移动网络）。不需要任何账号，扫二维码即可；房主不在线也能加入。\n\n按下「开启跨网络协同」后，房间会从这台设备搬到互联网上的加密中继：下方的同一 Wi‑Fi 二维码会换成云端邀请，已经用 Wi‑Fi 二维码加入的人要重新扫新的二维码。\n\n「端对端加密保护」两种方式都有，是安全保证，不是另一种连接方式。",
+            .ja: "• 同じ Wi‑Fi：全員が同じ場所で同じ Wi‑Fi に接続。最速でアカウント不要。\n• クラウド共有：それ以外はすべてこれ（別の場所、モバイル通信）。アカウント不要、QR コードをスキャンするだけ。ホストがオフラインでも参加できます。\n\n「ネットワークを越えた共同編集を開始」をタップすると、ルームはこの端末からインターネット上の暗号化リレーへ移ります。下の同じ Wi‑Fi の QR コードはクラウド招待に置き換わり、Wi‑Fi の QR コードで参加した人は新しいコードを読み直す必要があります。\n\nエンドツーエンド暗号化は両方に適用される保証で、別の接続方法ではありません。",
+            .ko: "• 같은 Wi‑Fi: 모두 한 장소에서 같은 Wi‑Fi에 연결. 가장 빠르고 계정이 필요 없습니다.\n• 클라우드 공유: 그 밖의 모든 경우(다른 장소, 모바일 데이터). 계정 없이 QR 코드만 스캔하면 되며, 호스트가 오프라인이어도 참여할 수 있습니다.\n\n'네트워크 간 공동 작업 시작'을 누르면 방이 이 기기에서 인터넷의 암호화 릴레이로 옮겨집니다. 아래의 같은 Wi‑Fi QR 코드는 클라우드 초대로 바뀌며, Wi‑Fi QR 코드로 참여한 사람은 새 코드를 다시 스캔해야 합니다.\n\n종단 간 암호화는 두 가지 모두에 적용되는 보장이며, 별도의 연결 방법이 아닙니다.",
+            .th: "• Wi‑Fi เดียวกัน: ทุกคนอยู่ที่เดียวกันและต่อ Wi‑Fi เดียวกัน เร็วที่สุด ไม่ต้องมีบัญชี\n• แชร์ผ่านคลาวด์: กรณีอื่นทั้งหมดใช้แบบนี้ (คนละที่ เน็ตมือถือ) ไม่ต้องมีบัญชี แค่สแกน QR Code และเข้าร่วมได้แม้เจ้าของห้องออฟไลน์\n\nเมื่อแตะ “เริ่มทำงานร่วมกันข้ามเครือข่าย” ห้องจะย้ายจากเครื่องนี้ไปยังรีเลย์เข้ารหัสบนอินเทอร์เน็ต QR Code แบบ Wi‑Fi เดียวกันด้านล่างจะถูกแทนด้วยคำเชิญคลาวด์ และคนที่เข้าด้วย QR Code แบบ Wi‑Fi ต้องสแกนอันใหม่\n\nการเข้ารหัสต้นทางถึงปลายทางใช้กับทั้งสองแบบ เป็นการรับประกัน ไม่ใช่อีกวิธีในการเชื่อมต่อ"
         ],
         "collab_modes_title": [
             .zhHant: "連線方式怎麼選？",
@@ -5024,12 +5024,12 @@ extension LocalizationManager {
             .th: "%@ กำลังพิมพ์ที่นี่"
         ],
         "collab_qr_cloud_hint": [
-            .zhHant: "其他參與者用相機掃描即可加入，跨網路自動下載筆記並開啟共筆，免同 Wi-Fi、免裝 Tailscale。",
-            .en: "Teammates scan with their camera to join from any network, downloading the note automatically without Tailscale or local Wi-Fi.",
-            .zhHans: "其他参与者用相机扫描即可加入，跨网络自动下载笔记并开启共笔，免同 Wi-Fi、免装 Tailscale。",
-            .ja: "カメラでスキャンするだけでどこからでも参加可能。ノートを自動ダウンロードし、同一 Wi-Fi や Tailscale なしで共同編集を開始できます。",
-            .ko: "카메라로 스캔하여 어느 네트워크에서나 참가할 수 있습니다. Tailscale이나 동일 Wi-Fi 없이도 노트를 자동 다운로드하여 공동 작업을 시작합니다.",
-            .th: "ผู้เข้าร่วมสแกนด้วยกล้องเพื่อเข้าร่วมได้จากทุกเครือข่าย ดาวน์โหลดโน้ตอัตโนมัติโดยไม่ต้องใช้ Wi-Fi เดียวกันหรือติดตั้ง Tailscale"
+            .zhHant: "其他參與者用相機掃描即可加入，跨網路自動下載筆記並開啟共筆，免同 Wi-Fi。",
+            .en: "Teammates scan with their camera to join from any network, downloading the note automatically — no shared Wi-Fi needed.",
+            .zhHans: "其他参与者用相机扫描即可加入，跨网络自动下载笔记并开启共笔，免同 Wi-Fi。",
+            .ja: "カメラでスキャンするだけでどこからでも参加可能。ノートを自動ダウンロードし、同一 Wi-Fi なしで共同編集を開始できます。",
+            .ko: "카메라로 스캔하여 어느 네트워크에서나 참가할 수 있습니다. 동일 Wi-Fi 없이도 노트를 자동 다운로드하여 공동 작업을 시작합니다.",
+            .th: "ผู้เข้าร่วมสแกนด้วยกล้องเพื่อเข้าร่วมได้จากทุกเครือข่าย ดาวน์โหลดโน้ตอัตโนมัติโดยไม่ต้องใช้ Wi-Fi เดียวกัน"
         ],
         "collab_qr_hint": [
             .zhHant: "其他參與者用手機或平板的相機掃描即可加入，房號、金鑰與連線位址會自動帶入；Mac 請改用「複製連結」再貼上。",
@@ -5055,14 +5055,6 @@ extension LocalizationManager {
             .ko: "원격 릴레이: 이 방은 인터넷의 암호화 릴레이에서 열려 있어 어떤 네트워크에서든 연결됩니다. Mac에서는 '링크 복사' 후 붙여 넣으세요.",
             .th: "รีเลย์ระยะไกล: ห้องนี้เปิดบนรีเลย์เข้ารหัสบนอินเทอร์เน็ต เชื่อมต่อได้จากทุกเครือข่าย บน Mac ให้ใช้ “คัดลอกลิงก์” แล้ววาง"
         ],
-        "collab_qr_hint_tailscale": [
-            .zhHant: "Tailscale 跨網：雙方都已安裝並登入同一個 Tailscale 網路時用，不同地點也連得到。沒用 Tailscale 的人請改用上方「雲端共享（跨網路）」。",
-            .en: "Tailscale: use when both sides have Tailscale installed and signed in to the same tailnet — works from different places. If they don't use Tailscale, use Cloud sharing (any network) above instead.",
-            .zhHans: "Tailscale 跨网：双方都已安装并登录同一个 Tailscale 网络时用，不同地点也连得上。没用 Tailscale 的人请改用上方「云端共享（跨网络）」。",
-            .ja: "Tailscale：双方が Tailscale をインストールし同じ tailnet にサインインしているときに使います。離れた場所からでもつながります。Tailscale を使っていない人は、上の「クラウド共有」を使ってください。",
-            .ko: "Tailscale: 양쪽 모두 Tailscale을 설치하고 같은 tailnet에 로그인했을 때 사용하세요. 다른 장소에서도 연결됩니다. Tailscale을 쓰지 않는다면 위의 '클라우드 공유'를 사용하세요.",
-            .th: "Tailscale: ใช้เมื่อทั้งสองฝ่ายติดตั้งและลงชื่อเข้า tailnet เดียวกัน เชื่อมต่อได้แม้อยู่คนละที่ ถ้าไม่ได้ใช้ Tailscale ให้ใช้ “แชร์ผ่านคลาวด์” ด้านบนแทน"
-        ],
         "collab_qr_mode_cloud": [
             .zhHant: "雲端共享 (免設定)",
             .en: "Cloud Share (Zero Setup)",
@@ -5086,14 +5078,6 @@ extension LocalizationManager {
             .ja: "リモート中継",
             .ko: "원격 릴레이",
             .th: "รีเลย์ระยะไกล"
-        ],
-        "collab_qr_mode_tailscale": [
-            .zhHant: "Tailscale 跨網",
-            .en: "Tailscale (any network)",
-            .zhHans: "Tailscale 跨网",
-            .ja: "Tailscale（別ネットワーク）",
-            .ko: "Tailscale(다른 네트워크)",
-            .th: "Tailscale (ข้ามเครือข่าย)"
         ],
         "collab_qr_title": [
             .zhHant: "掃描 QR Code 加入",
@@ -5128,12 +5112,12 @@ extension LocalizationManager {
             .th: "สแนปช็อตร่วม"
         ],
         "collab_start_local": [
-            .zhHant: "Wi‑Fi / Tailscale",
-            .en: "Wi‑Fi / Tailscale",
-            .zhHans: "Wi‑Fi / Tailscale",
-            .ja: "Wi‑Fi / Tailscale",
-            .ko: "Wi‑Fi / Tailscale",
-            .th: "Wi‑Fi / Tailscale"
+            .zhHant: "同一 Wi‑Fi",
+            .en: "Same Wi‑Fi",
+            .zhHans: "同一 Wi‑Fi",
+            .ja: "同じ Wi‑Fi",
+            .ko: "같은 Wi‑Fi",
+            .th: "Wi‑Fi เดียวกัน"
         ],
         "collab_time_machine": [
             .zhHant: "時光機回溯",
@@ -5168,12 +5152,12 @@ extension LocalizationManager {
             .th: "%@ กำลังพูด..."
         ],
         "collab_voice_ptt_hold": [
-            .zhHant: "按住說話",
-            .en: "Hold to Speak",
-            .zhHans: "按住说话",
-            .ja: "押して通話",
-            .ko: "누르고 말하기",
-            .th: "กดค้างเพื่อพูด"
+            .zhHant: "按住或點一下說話",
+            .en: "Hold or Tap to Speak",
+            .zhHans: "按住或点一下说话",
+            .ja: "長押し／タップで話す",
+            .ko: "누르거나 탭하여 말하기",
+            .th: "กดค้างหรือแตะเพื่อพูด"
         ],
         "collab_voice_ptt_talking": [
             .zhHant: "正在通話中...",
@@ -5527,14 +5511,6 @@ extension LocalizationManager {
             .ko: "암호화된 초대 링크 복사",
             .th: "คัดลอกลิงก์คำเชิญที่เข้ารหัส"
         ],
-        "copy_lan_link": [
-            .zhHant: "複製區網連結 (Wi-Fi)",
-            .en: "Copy Local Link (Wi-Fi)",
-            .zhHans: "复制局域网链接 (Wi-Fi)",
-            .ja: "ローカル招待リンクをコピー",
-            .ko: "로컬 초대 링크 복사",
-            .th: "คัดลอกลิงก์ภายในเครือข่าย"
-        ],
         "copy_pages_to_title": [
             .zhHant: "把選取的頁面複製到",
             .en: "Copy the selected pages into",
@@ -5574,14 +5550,6 @@ extension LocalizationManager {
             .ja: "%@（コピー）",
             .ko: "%@(사본)",
             .th: "%@ (สำเนา)"
-        ],
-        "copy_tailscale_link": [
-            .zhHant: "複製跨網段連結 (Tailscale)",
-            .en: "Copy Cross-Network Link (Tailscale)",
-            .zhHans: "复制跨网段链接 (Tailscale)",
-            .ja: "Tailscale招待リンクをコピー",
-            .ko: "Tailscale 초대 링크 복사",
-            .th: "คัดลอกลิงก์ Tailscale"
         ],
         "copy_to": [
             .zhHant: "複製到…",
@@ -8494,22 +8462,6 @@ extension LocalizationManager {
             .ja: "モデルをダウンロード",
             .ko: "모델 다운로드",
             .th: "ดาวน์โหลดโมเดล"
-        ],
-        "download_tailscale": [
-            .zhHant: "下載 Tailscale",
-            .en: "Download Tailscale",
-            .zhHans: "下载 Tailscale",
-            .ja: "Tailscale をダウンロード",
-            .ko: "Tailscale 다운로드",
-            .th: "ดาวน์โหลด Tailscale"
-        ],
-        "download_tailscale_link": [
-            .zhHant: "前往下載 Tailscale (tailscale.com/download)",
-            .en: "Download Tailscale (tailscale.com/download)",
-            .zhHans: "前往下载 Tailscale (tailscale.com/download)",
-            .ja: "Tailscale をダウンロード (tailscale.com/download)",
-            .ko: "Tailscale 다운로드 (tailscale.com/download)",
-            .th: "ดาวน์โหลด Tailscale (tailscale.com/download)"
         ],
         "downloaded": [
             .zhHant: "已下載",
@@ -17159,22 +17111,6 @@ extension LocalizationManager {
             .ko: "인쇄 영역 밖에 그려져 취소했습니다. 점선 테두리 바깥은 인쇄와 내보내기에 포함되지 않습니다.",
             .th: "เส้นนี้อยู่นอกพื้นที่พิมพ์จึงถูกลบออก สิ่งที่อยู่นอกกรอบเส้นประจะไม่ถูกพิมพ์หรือส่งออก"
         ],
-        "p2p_sync_tailscale_explainer": [
-            .zhHant: "跨裝置直連同步：Kairumo 使用 WebRTC 進行跨網際網路的點對點極速同步。為達到最穩定的無伺服器穿透效果，強烈建議在您的裝置上安裝 Tailscale。",
-            .en: "Cross-device Direct Sync: Kairumo uses WebRTC for peer-to-peer fast syncing across the internet. For the most stable connection without public relays, we highly recommend installing Tailscale on your devices.",
-            .zhHans: "跨设备直连同步：Kairumo 使用 WebRTC 进行跨互联网的点对点极速同步。为达到最稳定的无服务器穿透效果，强烈建议在您的设备上安装 Tailscale。",
-            .ja: "端末間直接同期：Kairumo は WebRTC を利用してインターネット経由で高速 P2P 同期を行います。最も安定した接続のために、お使いの端末に Tailscale をインストールすることを強く推奨します。",
-            .ko: "기기간 직접 동기화: Kairumo는 WebRTC를 사용하여 인터넷을 통한 빠른 P2P 동기화를 제공합니다. 가장 안정적인 연결을 위해 기기에 Tailscale을 설치하는 것을 권장합니다.",
-            .th: "การซิงก์โดยตรงระหว่างอุปกรณ์: Kairumo ใช้ WebRTC สำหรับการซิงก์ P2P ความเร็วสูง เพื่อการเชื่อมต่อที่เสถียรที่สุด ขอแนะนำให้ติดตั้ง Tailscale บนอุปกรณ์ของคุณ"
-        ],
-        "p2p_sync_tailscale_title": [
-            .zhHant: "Tailscale 點對點直連同步",
-            .en: "Tailscale Direct P2P Sync",
-            .zhHans: "Tailscale 点对点直连同步",
-            .ja: "Tailscale P2P 直接同期",
-            .ko: "Tailscale P2P 직접 동기화",
-            .th: "การซิงก์แบบ P2P โดยตรงด้วย Tailscale"
-        ],
         "page_extended_hint": [
             .zhHant: "已向下延長畫布長度 (+800pt)",
             .en: "Page length extended (+800pt)",
@@ -19086,14 +19022,6 @@ extension LocalizationManager {
             .ja: "中継サーバーアドレス",
             .ko: "중계 서버 주소",
             .th: "ที่อยู่เซิร์ฟเวอร์รีเลย์"
-        ],
-        "relay_tailscale_address": [
-            .zhHant: "跨網段虛擬網 (Tailscale)",
-            .en: "Cross-Network VPN (Tailscale)",
-            .zhHans: "跨网段虚拟网 (Tailscale)",
-            .ja: "仮想プライベート網 (Tailscale)",
-            .ko: "가상 사설망 (Tailscale)",
-            .th: "เครือข่ายเสมือน (Tailscale)"
         ],
         "relay_url_empty": [
             .zhHant: "請先填入中繼位址。",
@@ -25254,22 +25182,6 @@ extension LocalizationManager {
             .ja: "None",
             .ko: "None",
             .th: "None"
-        ],
-        "tailscale_not_connected": [
-            .zhHant: "Tailscale 未連線",
-            .en: "Tailscale Not Connected",
-            .zhHans: "Tailscale 未连接",
-            .ja: "Tailscale 未接続",
-            .ko: "Tailscale 연결 안 됨",
-            .th: "ไม่ได้เชื่อมต่อ Tailscale"
-        ],
-        "tailscale_p2p_ready": [
-            .zhHant: "Tailscale 直連就緒 (%@)",
-            .en: "Tailscale P2P Ready (%@)",
-            .zhHans: "Tailscale 直连就绪 (%@)",
-            .ja: "Tailscale 直結準備完了 (%@)",
-            .ko: "Tailscale P2P 준비됨 (%@)",
-            .th: "Tailscale P2P พร้อมใช้งาน (%@)"
         ],
         "tap_to_paste_object": [
             .zhHant: "請在目標頁面任意位置點一下以貼上物件",

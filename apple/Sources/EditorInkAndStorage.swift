@@ -314,6 +314,10 @@ extension NotebookEditorView {
             .onChange(of: isCollaborating) { collaborating in
                 if collaborating { CollabImportHold.hold(notebook.id) } else { endCollabImportHold() }
             }
+            // 加入者：整份狀態沒到齊就定時重新要（見 `runCollabStateWatchdog`）。換房間時重新開始。
+            .task(id: collaborationManager.currentRoomId) {
+                await runCollabStateWatchdog(room: collaborationManager.currentRoomId)
+            }
             .onReceive(collaborationManager.stateSyncNeeded) { _ in
                 // 中繼補不回漏掉的那一段：向其他成員要整份狀態（剛要過就不重複）。
                 if Date().timeIntervalSince(collabStateSync.lastRequest) > 5 { requestCollabState() }
@@ -540,7 +544,9 @@ extension NotebookEditorView {
         guard newText != current else { return }
         collabSync.isApplyingRemote = true
         replaceCollabText(at: index, with: newText, in: &notebook)
-        collabSync.refreshShadow(from: notebook)
+        // 還沒補上的頁不算被刪（頁面結構調整是非同步的）—— 不帶這個參數的話，加入當下房主一打字，
+        // 等著補上的第 2、3 頁就被標成已刪除，之後的調整不再補，加入者只剩第一頁。
+        collabSync.refreshShadow(from: notebook, keepMissingPages: true)
         commitNotebook()
         collabSync.isApplyingRemote = false
         refreshAllThumbnails()
@@ -585,6 +591,40 @@ extension NotebookEditorView {
         collaborationManager.broadcastOplog(kind: "state_request", payload: [
             "proto": Self.collabProto, "req": req, "blobs": Array(blobs)
         ])
+    }
+
+    /// 加入者的整份狀態看門狗（與 Android `EditorCanvasContext` 的重試迴圈同一套）。
+    ///
+    /// 整份狀態是「要一次、回一次」：中繼不暫存 `state_` 類訊息，請求或回覆在連線剛建立、
+    /// 雙方還在整理的那一瞬間掉了（加入時的事件比編輯器先到、加入逾時重連、回覆分段在路上），
+    /// 就沒有人會再補 —— 實機症狀是「進得了會議室、也能同步編輯，但房主 3 頁只來了第 1 頁；
+    /// 反覆斷線、刪掉協作筆記本重連幾次才偶爾成功」。
+    ///
+    /// 所以加入之後定時檢查：沒完整收過一次就重新要；收過了但合併結果裡的頁本機還沒有，
+    /// 就再調整一次頁面並重新要（筆畫可能在頁面補上前就到、被丟掉了）。全部到齊就停。
+    /// 房主不跑：房主的內容就是房間的起點，向剛加入（還是空白）的人要狀態只會多出空白頁。
+    func runCollabStateWatchdog(room: String) async {
+        guard !room.isEmpty else { return }
+        for _ in 0..<CollabStateSync.watchdogAttempts {
+            try? await Task.sleep(nanoseconds: CollabStateSync.watchdogInterval)
+            guard !Task.isCancelled, collaborationManager.currentRoomId == room else { return }
+            if collaborationManager.isHost { return }
+            guard case .connected = collaborationManager.status, !collaborationManager.peers.isEmpty else { continue }
+            // 頁面結構正在調整：等它做完再判斷（調整期間本機少幾頁是正常的）。
+            if collabSync.pageReconcilePending > 0 { continue }
+            let missing = collabPagesMissingLocally()
+            if collabStateSync.syncedOnce {
+                if missing.isEmpty { return }
+                reconcilePagesWithCollab()
+            }
+            if Date().timeIntervalSince(collabStateSync.lastRequest) > 3.5 { requestCollabState() }
+        }
+    }
+
+    /// 合併結果裡有、本機筆記本卻還沒有的頁（協同頁面 id）。
+    func collabPagesMissingLocally() -> [String] {
+        let have = Set((notebook.pageIds ?? []).map { CollabCanonical.canonicalPageId($0).lowercased() })
+        return collabSync.desiredPageOrder().filter { !have.contains($0.lowercased()) }
     }
 
     /// 回覆一份整份狀態給 `to`，分段送。
@@ -716,7 +756,7 @@ extension NotebookEditorView {
             let toMe = to.isEmpty || to == "*" || to.caseInsensitiveCompare(collaborationManager.currentUserId) == .orderedSame
             guard (req == collabStateSync.pendingRequest || collabStateSync.wasRequested(req)),
                   toMe,
-                  collabStateSync.receivedParts.insert(part).inserted else { return }
+                  collabStateSync.acceptPart(req: req, part: part) else { return }
         }
         let parts = (payload["parts"] as? NSNumber)?.intValue ?? 1
         ensureCollabPageIds()
@@ -730,11 +770,8 @@ extension NotebookEditorView {
             }
             entries.append(entry)
         }
-        if stored {
-            collabStateSync.storedKeys.formUnion(entries.map(\.key))
-        } else {
-            collabStateSync.snapshotKeys.formUnion(entries.map(\.key))
-        }
+        // 房間給過的鍵（寄存的與每一次回覆的聯集，換房間才清）。
+        collabStateSync.roomKeys.formUnion(entries.map(\.key))
         let me = collaborationManager.currentUserId
         collabSync.isApplyingRemote = true
         var doc = notebook
@@ -780,12 +817,13 @@ extension NotebookEditorView {
         if stored {
             guard collabStateSync.storedParts.count >= parts else { return }
         } else {
-            guard collabStateSync.receivedParts.count >= parts else { return }
-            collabStateSync.finish()
+            let req = (payload["req"] as? String) ?? ""
+            guard collabStateSync.completeIfReady(req: req, parts: parts) else { return }
         }
-        // 「房間裡有的」以兩份整份狀態的聯集判斷：寄存的那一份可能比較舊，只拿它比，
-        // 房主之後才加的物件與空白頁會被當成「只有自己有」—— 物件以舊值再送一次、空白頁被刪掉。
-        let snapshotKeys = Set(collabStateSync.storedKeys.union(collabStateSync.snapshotKeys).map { key -> String in
+        // 「房間裡有的」以這個房間收過的**所有**整份狀態的聯集判斷：寄存的那一份可能比較舊、
+        // 要過好幾次時各次回覆的段落交錯抵達 —— 只拿其中一份比，房主之後才加的物件與
+        // 還在等筆畫補上的頁會被當成「只有自己有」—— 物件以舊值再送一次、房主的頁被刪掉。
+        let snapshotKeys = Set(collabStateSync.roomKeys.map { key -> String in
             key.hasPrefix("page:") ? "page:\(CollabCanonical.canonicalPageId(String(key.dropFirst(5))))" : key
         })
         let localOnly = collabSync.liveKeys.filter { key in
@@ -793,7 +831,14 @@ extension NotebookEditorView {
             return !snapshotKeys.contains(canonicalKey) && !key.hasPrefix("meta:")
         }
         guard !localOnly.isEmpty else { return }
-        let emptyPages = localOnly.filter { $0.hasPrefix("page:") && isEmptyCollabPage(String($0.dropFirst(5))) }
+        // 還有擱著的筆畫等著寫進去的頁不是空白頁（那是房間的頁，只是筆畫還沒落地）。
+        let emptyPages = localOnly.filter { key in
+            guard key.hasPrefix("page:") else { return false }
+            let pageId = String(key.dropFirst(5))
+            let canonical = CollabCanonical.canonicalPageId(pageId)
+            guard collabSync.pendingInk[canonical] == nil, collabSync.pendingInk[pageId] == nil else { return false }
+            return isEmptyCollabPage(pageId)
+        }
         if !emptyPages.isEmpty {
             collabSync.markDeleted(emptyPages)
             reconcilePagesWithCollab()

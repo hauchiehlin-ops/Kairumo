@@ -178,8 +178,6 @@ public class CollaborationManager: ObservableObject {
     @Published public var isHostingLocalRelay: Bool = false
     /// 本機中繼服務在區域網路上的位址（給隊友輸入）
     @Published public var lanRelayAddress: String? = nil
-    /// 本機中繼服務在 Tailscale 虛擬私有網路上的位址（給不同網段／遠端隊友連線）
-    @Published public var tailscaleRelayAddress: String? = nil
 
     /// 內建中繼起不來的原因。**要顯示給使用者看**，不要只 print。
     ///
@@ -360,15 +358,11 @@ public class CollaborationManager: ObservableObject {
     }
 
     /// 取得帶有 E2EE 金鑰與伺服器位址的安全邀請連結
-    public func inviteLink(forTailscale: Bool = false) -> String {
+    public func inviteLink() -> String {
         let baseLink = collabInviteLink(roomId: currentRoomId, keyBase64: roomKeyBase64 ?? "")
         let targetServer: String?
         if isHostingLocalRelay {
-            if forTailscale, let ts = tailscaleRelayAddress {
-                targetServer = ts
-            } else {
-                targetServer = lanRelayAddress ?? tailscaleRelayAddress
-            }
+            targetServer = lanRelayAddress
         } else {
             targetServer = Self.isLoopbackHost(URL(string: activeServerAddress)?.host) ? nil : activeServerAddress
         }
@@ -390,15 +384,10 @@ public class CollaborationManager: ObservableObject {
 
     /// 取得帶有 E2EE 金鑰與伺服器位址的安全邀請連結（預設區網）
     public var encryptedInviteLink: String {
-        inviteLink(forTailscale: false)
+        inviteLink()
     }
 
-    /// 取得 Tailscale 跨網段安全邀請連結（若已連線 Tailscale 則提供）
-    public var tailscaleInviteLink: String? {
-        tailscaleRelayAddress != nil ? inviteLink(forTailscale: true) : nil
-    }
-
-    /// 帶上「是哪一本筆記」的邀請連結（同一 Wi‑Fi／Tailscale／遠端中繼的 QR Code 用）。
+    /// 帶上「是哪一本筆記」的邀請連結（同一 Wi‑Fi／遠端中繼的 QR Code 用）。
     ///
     /// 舊版的連結只有房號、金鑰、位址：協作者用相機一掃，App 被叫起來之後不知道要打開
     /// 哪一本，只好停在首頁 —— 使用者看到的是「掃了沒反應」。補上 `nb`／`title`
@@ -463,7 +452,7 @@ public class CollaborationManager: ObservableObject {
         roomNotebookId = notebookId?.lowercased()
     }
 
-    /// 「Wi‑Fi / Tailscale」開房用的中繼：這台裝置內建的本機中繼。
+    /// 「同一 Wi‑Fi」開房用的中繼：這台裝置內建的本機中繼。
     ///
     /// 使用者存的位址是 `wss://`（刻意設定的自架遠端中繼）才沿用它；其餘一律用本機中繼。
     /// 以前直接用存的位址 —— 舊版加入別人的房間時會把對方的區網位址存成這台的預設，
@@ -488,7 +477,7 @@ public class CollaborationManager: ObservableObject {
     // MARK: 公開中繼（跨網路）
 
     /// Kairumo 的公開中繼（Cloudflare Workers，見 `deploy/relay-cloudflare`）。與 Android
-    /// `CollaborationManager.PUBLIC_RELAY_URL` 相同。空字串＝還沒部署：雲端共享照舊只用區網／Tailscale。
+    /// `CollaborationManager.PUBLIC_RELAY_URL` 相同。空字串＝還沒部署：雲端共享照舊只用區網。
     public static let publicRelayURL = "wss://kairumo-relay.kairumo-relay.workers.dev"
 
     /// 雲端共享實際用的中繼：使用者自訂的（有效的話）優先，否則內建的 `publicRelayURL`。
@@ -539,8 +528,7 @@ public class CollaborationManager: ObservableObject {
 
         // 1. 若邀請連結包含 servers 參數，依本地 IP 優先排序中繼位址
         if !inviteV2.servers.isEmpty {
-            let addrs = LocalRelayServer.availableIPv4Addresses()
-            let myIpv4 = [addrs.lan, addrs.tailscale].compactMap { $0 }
+            let myIpv4 = [LocalRelayServer.lanIPv4Address()].compactMap { $0 }
             let ordered = collabOrderServers(servers: inviteV2.servers, myIpv4: myIpv4)
             if let best = ordered.first {
                 self.serverOverride = best
@@ -623,11 +611,10 @@ public class CollaborationManager: ObservableObject {
             }
             isHostingLocalRelay = false
             lanRelayAddress = nil
-            tailscaleRelayAddress = nil
         }
         lastErrorMessage = nil
 
-        // 明文 ws:// 走 Network.framework（不受 ATS 限制，Tailscale 的 100.x 位址才連得上），
+        // 明文 ws:// 走 Network.framework（不受 ATS 限制），
         // wss:// 走 URLSession。見 CollabRelaySocket.swift。
         self.webSocketTask = CollabRelaySockets.open(socketURL)
 
@@ -674,14 +661,11 @@ public class CollaborationManager: ObservableObject {
                 self.isHostingLocalRelay = true
                 self.isBonjourDegraded = !isBonjourActive
                 self.localRelayFailure = nil
-                let addrs = LocalRelayServer.availableIPv4Addresses()
-                self.lanRelayAddress = addrs.lan.map { "ws://\($0):\(boundPort)" }
-                self.tailscaleRelayAddress = addrs.tailscale.map { "ws://\($0):\(boundPort)" }
+                self.lanRelayAddress = LocalRelayServer.lanIPv4Address().map { "ws://\($0):\(boundPort)" }
             case .failed(let why):
                 self.isHostingLocalRelay = false
                 self.isBonjourDegraded = false
                 self.lanRelayAddress = nil
-                self.tailscaleRelayAddress = nil
                 self.localRelayFailure = String(
                     format: LocalizationManager.shared.localized("local_relay_failed"), why)
             }
@@ -703,7 +687,6 @@ public class CollaborationManager: ObservableObject {
         case .failure(let error):
             isHostingLocalRelay = false
             lanRelayAddress = nil
-            tailscaleRelayAddress = nil
             // 埠被佔用通常代表已經有一個中繼（例如 `cargo run -p padnote-relay`）
             // 在聽，那就照常連過去，不是致命錯誤 —— 連上之後這個訊息會自己
             // 清掉。其餘的失敗（例如沙盒擋下監聽）則會一直留在畫面上。
@@ -759,7 +742,6 @@ public class CollaborationManager: ObservableObject {
                 LocalRelayServer.shared.stop()
                 isHostingLocalRelay = false
                 lanRelayAddress = nil
-                tailscaleRelayAddress = nil
             }
         }
     }
@@ -976,7 +958,7 @@ public class CollaborationManager: ObservableObject {
     /// 已收到的最大中繼序號（寄存時寫在信封上，中繼以它判斷新舊）。
     public var relaySeq: UInt64 { lastSeq }
 
-    /// 這場協同開在雲端中繼上（`wss://`）。區網／Tailscale 的本機中繼不收寄存（它會照常轉送給每個人）。
+    /// 這場協同開在雲端中繼上（`wss://`）。區網的本機中繼不收寄存（它會照常轉送給每個人）。
     public var isOnCloudRelay: Bool {
         activeServerAddress.lowercased().hasPrefix("wss://")
     }
@@ -1659,7 +1641,6 @@ extension CollaborationManager: ProfileScoped {
         LocalRelayServer.shared.stop()
         isHostingLocalRelay = false
         lanRelayAddress = nil
-        tailscaleRelayAddress = nil
     }
 
     func resetForProfileSwitch() {

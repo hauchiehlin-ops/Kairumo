@@ -76,8 +76,8 @@ final class CollaborationCryptoTests: XCTestCase {
         XCTAssertNil(manager.decryptPayload(envelope, isEncrypted: isEncrypted))
     }
 
-    /// 曾經開啟本機中繼（Wi‑Fi / Tailscale）後，改切到雲端共享（或結束會議），
-    /// 再重新點選「Wi‑Fi / Tailscale」時，本機中繼必須重新回報 `.ready` 並恢復 `isHostingLocalRelay = true`，
+    /// 曾經開啟本機中繼（同一 Wi‑Fi）後，改切到雲端共享（或結束會議），
+    /// 再重新點選「同一 Wi‑Fi」時，本機中繼必須重新回報 `.ready` 並恢復 `isHostingLocalRelay = true`，
     /// 否則畫面會永遠因為 `isHostingLocalRelay == false` 而退化成只顯示「遠端中繼」單一 QR Code。
     func testSwitchingToCloudRelayAndBackToLocalRestoresLocalRelayState() async throws {
         let port: UInt16 = 19092

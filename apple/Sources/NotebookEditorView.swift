@@ -1082,7 +1082,9 @@ public struct NotebookEditorView: View {
         // 整份從套件重新讀進來（別台同步）：以新內容為復原基準，不登記成這台的一步；
         // 也不是這台的修改，不能當成協同修改送出去。
         objectHistory.reset(to: notebook)
-        collabSync.refreshShadow(from: notebook)
+        // 協同中：筆記本裡還沒有的頁是**等著補上**的（加入房間時頁面結構非同步調整），不是被刪掉。
+        // 不帶這個參數，加入當下剛好遇上一次檔案同步重讀，房主的第 2、3 頁就被標成已刪除、不再補上。
+        collabSync.refreshShadow(from: notebook, keepMissingPages: isCollaborating)
         continuousInkReloadGeneration += 1
         continuousObjectGeneration += 1
         thumbnailRevision += 1

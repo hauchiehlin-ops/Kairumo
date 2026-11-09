@@ -1002,8 +1002,18 @@ final class CollabStateSync {
     /// 這台正在等的請求。
     private(set) var pendingRequest: String?
     private var sentRequests: Set<String> = []
-    var receivedParts: Set<Int> = []
-    var snapshotKeys: Set<String> = []
+    /// 每一次請求各自收到的段號。
+    ///
+    /// 以前全部共用一個集合，而且每次 `begin()` 都清空：第二次請求（加入逾時重連、補發不完整）
+    /// 發出時第一次的回覆還在路上，兩份回覆的段落混著計數 —— 「收齊」的判斷與「房間裡有哪些物件」
+    /// 都只剩其中幾段，房主的第 2、3 頁（筆畫還在等頁面補上，看起來是空白頁）被當成
+    /// 「只有自己有的空白頁」刪掉。實機症狀：加入者只剩第一頁，反覆刪掉重加才偶爾成功。
+    private var partsByRequest: [String: Set<Int>] = [:]
+    /// 這個房間收過的**任何一份**整份狀態（寄存的、回覆任何一次請求的）裡出現過的鍵。
+    /// 只在換房間（`reset()`）時清掉。「只有自己有」以它判斷：房間給過的就不是只有自己有。
+    var roomKeys: Set<String> = []
+    /// 這個房間已經完整收過一次（某一次請求的全部段落都到了）。沒收過之前，看門狗會定時重新要。
+    private(set) var syncedOnce = false
     /// 上一次要狀態的時間：加入時要過一次，緊接著的「補發不完整」就不必再要。
     private(set) var lastRequest = Date.distantPast
     /// 已經有人回覆的請求：排在後面的人就不必再回（同一份狀態送好幾份只是浪費頻寬）。
@@ -1013,13 +1023,14 @@ final class CollabStateSync {
     static let partBytes = 400_000
     /// 回覆時排名每多一位多等的秒數（排在前面的人若是舊版、不會回，後面的人照樣補上）。
     static let answerStagger = 0.7
+    /// 加入者的整份狀態看門狗：每隔幾秒檢查一次、最多幾次（與 Android 的重試迴圈相同：4 秒、8 次以上）。
+    static let watchdogInterval: UInt64 = 4_000_000_000
+    static let watchdogAttempts = 10
 
     func begin() -> String {
         let req = UUID().uuidString
         pendingRequest = req
         sentRequests.insert(req)
-        receivedParts = []
-        snapshotKeys = []
         lastRequest = Date()
         return req
     }
@@ -1028,10 +1039,18 @@ final class CollabStateSync {
         sentRequests.contains(req)
     }
 
-    func finish() {
-        pendingRequest = nil
-        receivedParts = []
-        snapshotKeys = []
+    /// 收下某次請求的一段（同一段重複收到回 `false`）。
+    func acceptPart(req: String, part: Int) -> Bool {
+        partsByRequest[req, default: []].insert(part).inserted
+    }
+
+    /// 這次請求的段落是否收齊。收齊就記成「已完整同步過」。
+    func completeIfReady(req: String, parts: Int) -> Bool {
+        guard (partsByRequest[req]?.count ?? 0) >= parts else { return false }
+        partsByRequest.removeValue(forKey: req)
+        if pendingRequest == req { pendingRequest = nil }
+        syncedOnce = true
+        return true
     }
 
     func remember(_ req: String) {
@@ -1045,25 +1064,24 @@ final class CollabStateSync {
     // 中繼寄存的整份狀態（`state_store`）：以它自己的 `snap` 計段，與自己發出的請求分開。
     private(set) var storedSnap: String?
     private(set) var storedParts: Set<Int> = []
-    var storedKeys: Set<String> = []
 
     /// 收下寄存的一段（同一段重複收到回 `false`）。換了一份就從頭計。
     func acceptStored(snap: String, part: Int) -> Bool {
         if storedSnap != snap {
             storedSnap = snap
             storedParts = []
-            storedKeys = []
         }
         return storedParts.insert(part).inserted
     }
 
+    /// 換房間：從頭來。
     func reset() {
         pendingRequest = nil
-        receivedParts = []
-        snapshotKeys = []
+        partsByRequest = [:]
+        roomKeys = []
+        syncedOnce = false
         storedSnap = nil
         storedParts = []
-        storedKeys = []
     }
 }
 

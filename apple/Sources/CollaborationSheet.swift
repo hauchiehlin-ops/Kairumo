@@ -54,8 +54,8 @@ public struct CollaborationSheet: View {
                     // 頂部狀態橫幅卡片
                     statusHeaderCard
 
-                    // 三種連線方式的使用時機與限制（使用者回報「被搞混了」：雲端共享、同一 Wi‑Fi、
-                    // Tailscale、遠端中繼、端對端加密各是什麼、為什麼按了連結分享 QR Code 就換掉）。
+                    // 連線方式的使用時機與限制（使用者回報「被搞混了」：雲端共享、同一 Wi‑Fi、
+                    // 遠端中繼、端對端加密各是什麼、為什麼按了連結分享 QR Code 就換掉）。
                     CollabModesGuide()
 
                     // ☁️ 雲端共享（跨網路）：最高優先跨網協同入口（無論連線狀態，一律置頂展示）
@@ -341,15 +341,7 @@ public struct CollaborationSheet: View {
                                 .textSelection(.enabled)
                         }
 
-                        if let ts = collaborationManager.tailscaleRelayAddress {
-                            Text("\(localizationManager.localized("relay_tailscale_address")): \(ts)")
-                                .font(.caption2)
-                                .monospaced()
-                                .foregroundColor(.blue)
-                                .textSelection(.enabled)
-                        }
-
-                        if collaborationManager.lanRelayAddress == nil && collaborationManager.tailscaleRelayAddress == nil {
+                        if collaborationManager.lanRelayAddress == nil {
                             Text(localizationManager.localized("local_relay_hint"))
                                 .font(.caption2)
                                 .foregroundColor(.secondary)
@@ -432,27 +424,6 @@ public struct CollaborationSheet: View {
 
                     Spacer()
 
-                    if collaborationManager.tailscaleRelayAddress != nil {
-                        Button {
-                            #if canImport(UIKit)
-                            UIPasteboard.general.string = collaborationManager.tailscaleInviteLink ?? collaborationManager.encryptedInviteLink
-                            #endif
-                            showCopiedAlert = true
-                        } label: {
-                            HStack(spacing: 4) {
-                                Image(systemName: "globe")
-                                Text(localizationManager.localized("copy_tailscale_link"))
-                            }
-                            .font(.caption)
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 6)
-                            .background(Color.blue.opacity(0.15))
-                            .foregroundColor(.blue)
-                            .cornerRadius(8)
-                        }
-                        .buttonStyle(.plain)
-                    }
-
                     Button {
                         #if canImport(UIKit)
                         UIPasteboard.general.string = collaborationManager.encryptedInviteLink
@@ -461,7 +432,7 @@ public struct CollaborationSheet: View {
                     } label: {
                         HStack(spacing: 4) {
                             Image(systemName: showCopiedAlert ? "checkmark" : "link.badge.plus")
-                            Text(showCopiedAlert ? localizationManager.localized("room_id_copied") : (collaborationManager.tailscaleRelayAddress != nil ? localizationManager.localized("copy_lan_link") : localizationManager.localized("copy_encrypted_link")))
+                            Text(showCopiedAlert ? localizationManager.localized("room_id_copied") : localizationManager.localized("copy_encrypted_link"))
                         }
                         .font(.caption)
                         .padding(.horizontal, 10)
@@ -509,24 +480,13 @@ public struct CollaborationSheet: View {
                                     .textSelection(.enabled)
                             }
                         }
-                        if let ts = collaborationManager.tailscaleRelayAddress {
-                            HStack(spacing: 6) {
-                                Image(systemName: "network")
-                                    .font(.caption2)
-                                    .foregroundColor(.blue)
-                                Text("\(localizationManager.localized("relay_tailscale_address")): \(ts)")
-                                    .font(.system(size: 11, design: .monospaced))
-                                    .foregroundColor(.blue)
-                                    .textSelection(.enabled)
-                            }
-                        }
                     }
                     .padding(.horizontal, 4)
                 }
             }
 
-            // ☁️ 雲端共享（跨網路）：已連上時若本機正在當中繼（Wi‑Fi / Tailscale），也可一鍵切換為雲端共享；
-            // 已在雲端共享時上方 CloudShareSection 已有邀請與 QR Code，這裡顯示「Wi‑Fi / Tailscale」切換按鈕。
+            // ☁️ 雲端共享（跨網路）：已連上時若本機正在當中繼（同一 Wi‑Fi），也可一鍵切換為雲端共享；
+            // 已在雲端共享時上方 CloudShareSection 已有邀請與 QR Code，這裡顯示「同一 Wi‑Fi」切換按鈕。
             if !collaborationManager.isHostingLocalRelay {
                 let customRemote = CollaborationManager.usesCustomRemoteRelay(collaborationManager.serverAddress)
                 Button {
@@ -548,7 +508,7 @@ public struct CollaborationSheet: View {
                 .buttonStyle(.plain)
             }
 
-            // 掃描加入：每種連線方式一張 QR Code（同一 Wi‑Fi／Tailscale／遠端中繼）。
+            // 掃描加入：每種連線方式一張 QR Code（同一 Wi‑Fi／遠端中繼）。
             CollabInviteQRSection(
                 notebookId: notebookId,
                 title: notebookId.flatMap { id in
@@ -716,7 +676,7 @@ public struct CollaborationSheet: View {
     private var disconnectedActionSection: some View {
         VStack(spacing: 16) {
             // 一鍵開啟多人協同
-            // 「Wi‑Fi / Tailscale」：房間開在這台內建的本機中繼上（同一 Wi‑Fi 與 Tailscale 的 QR Code）。
+            // 「同一 Wi‑Fi」：房間開在這台內建的本機中繼上（同一 Wi‑Fi 的 QR Code）。
             // 只有存了自架的 wss:// 中繼時才連到那台，按鈕也照舊叫「開啟多人協同」。
             let customRemote = CollaborationManager.usesCustomRemoteRelay(collaborationManager.serverAddress)
             Button {
@@ -1099,7 +1059,7 @@ public struct CollaborationSheet: View {
 // MARK: - 掃描加入
 
 /// 邀請連結的 QR Code。依目前可用的連線方式各給一張：同一 Wi‑Fi（區網中繼位址）、
-/// Tailscale（跨網段）、遠端中繼（自架的 `wss://`）。對方用相機一掃就開啟
+/// 遠端中繼（自架的 `wss://`）。跨網路一律走上方的雲端共享。對方用相機一掃就開啟
 /// `kairumo://collab?...` 邀請連結，房號、金鑰、位址全部自動帶入。
 ///
 /// 矩陣由核心產生（`collabQrCode`），Android 畫的是同一份（I6）。
@@ -1131,17 +1091,14 @@ struct CollabInviteQRSection: View {
 
         if m.isHostingLocalRelay {
             if m.lanRelayAddress != nil {
-                out.append(Mode(id: "lan", titleKey: "collab_qr_mode_lan", icon: "wifi", link: m.inviteLink(forTailscale: false), hintKey: "collab_qr_hint_lan"))
-            }
-            if let ts = m.tailscaleInviteLink {
-                out.append(Mode(id: "tailscale", titleKey: "collab_qr_mode_tailscale", icon: "network", link: ts, hintKey: "collab_qr_hint_tailscale"))
+                out.append(Mode(id: "lan", titleKey: "collab_qr_mode_lan", icon: "wifi", link: m.inviteLink(), hintKey: "collab_qr_hint_lan"))
             }
         } else if !isCloudShared {
             // 雲端共享的房間：上方「雲端共享」那張 QR Code 就是這間房（同一個中繼、同一把金鑰），
             // 再給一張「遠端中繼」只會讓人以為是另一種連法。
             out.append(Mode(id: "remote", titleKey: "collab_qr_mode_remote", icon: "globe", link: m.encryptedInviteLink, hintKey: "collab_qr_hint_remote"))
         }
-        // 同一個連結不重複列（例如沒有區網位址時 Tailscale 也是預設連結）。
+        // 同一個連結不重複列。
         var seen = Set<String>()
         return out.filter { !$0.link.isEmpty && seen.insert($0.link).inserted }
             .map { Mode(id: $0.id, titleKey: $0.titleKey, icon: $0.icon,

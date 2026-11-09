@@ -66,6 +66,9 @@ object NotebookTrash {
         return existed
     }
 
+    /** 這一本是不是在本機回收桶裡（使用者在這台刪掉、還沒期滿）。 */
+    fun isTrashed(context: Context, id: String): Boolean = trashed(context, id).exists()
+
     /** 回收桶裡有哪些筆記本 id。 */
     fun trashedIds(context: Context): List<String> =
         directory(context).listFiles()

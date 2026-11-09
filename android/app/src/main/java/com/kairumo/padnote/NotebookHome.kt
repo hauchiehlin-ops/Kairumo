@@ -1181,7 +1181,11 @@ internal fun NotebookHome(
             l = ::l,
             onDismiss = { deleting = null },
             onConfirm = {
-                NotebookLibrary.delete(activity, entry.id)
+                // 與 Apple `deleteNotebook` 同一條路：移進回收桶＋寫墓碑。
+                // 沒移成功不能悄悄吞掉 —— 使用者只會看到「按了刪除沒反應」。
+                if (!NotebookLibrary.delete(activity, entry.id)) {
+                    message = l("sync_fail_delete").replace("%@", entry.title)
+                }
                 revision++
             }
         )

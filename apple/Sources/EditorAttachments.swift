@@ -1811,6 +1811,12 @@ struct CollabVoiceFloatingCapsule: View {
     private let localizationManager = LocalizationManager.shared
     @State private var dragOffset: CGSize = .zero
     @State private var accumulatedOffset: CGSize = .zero
+    /// 這次按壓的開始時間（nil＝沒有按著）。
+    @State private var pressBeganAt: Date?
+    /// 按下時是否已在（點一下鎖定的）發話中 —— 是的話這一下是「結束」。
+    @State private var pressStartedLatched = false
+    /// 短於此秒數的按壓視為「點一下」（與 Android `TAP_LATCH_MS` 相同）。
+    private static let tapLatch: TimeInterval = 0.35
 
     var body: some View {
         HStack(spacing: 8) {
@@ -1867,15 +1873,27 @@ struct CollabVoiceFloatingCapsule: View {
             .shadow(color: (voice.isTalking ? Color.green : Color.black).opacity(0.25), radius: 4, y: 2)
             .scaleEffect(voice.isTalking ? 1.05 : 1.0)
             .animation(.spring(response: 0.2, dampingFraction: 0.6), value: voice.isTalking)
+            // 按住說話＋點一下鎖定（與 Android 相同）：短按（< tapLatch）不結束、維持發話，
+            // 再點一下才結束；按住超過就是傳統 PTT，放開結束。
+            // 舊版短按只送出 begin／end，100ms 的音框一個都湊不滿，對方聽不到任何聲音。
             .gesture(
                 DragGesture(minimumDistance: 0)
                     .onChanged { _ in
+                        guard pressBeganAt == nil else { return }
+                        pressBeganAt = Date()
+                        pressStartedLatched = voice.isTalking
                         if !voice.isTalking {
                             voice.startTalking()
                         }
                     }
                     .onEnded { _ in
-                        voice.stopTalking()
+                        let held = Date().timeIntervalSince(pressBeganAt ?? Date())
+                        let wasLatched = pressStartedLatched
+                        pressBeganAt = nil
+                        pressStartedLatched = false
+                        if wasLatched || held >= Self.tapLatch {
+                            voice.stopTalking()
+                        }
                     }
             )
         }

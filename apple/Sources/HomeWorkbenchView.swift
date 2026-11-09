@@ -21,7 +21,6 @@ public struct HomeWorkbenchView: View {
     @StateObject private var audioManager = AudioRecorderManager.shared
     @StateObject private var localizationManager = LocalizationManager.shared
     @ObservedObject private var transcriber = AudioTranscriber.shared
-    @ObservedObject private var tailscaleMonitor = TailscaleMonitor.shared
 
     @State private var searchText: String = ""
     /// 核心索引的搜尋結果（轉錄、PDF、OCR）。見 `NotebookSearchIndex`。
@@ -309,7 +308,7 @@ public struct HomeWorkbenchView: View {
             .onReceive(NotificationCenter.default.publisher(for: AppCommand.focusSearch)) { _ in
                 searchFieldFocused = true
             }
-            // 同一 Wi‑Fi／Tailscale 協同邀請（相機掃 QR Code）：人在首頁時打開那本筆記。
+            // 同一 Wi‑Fi 協同邀請（相機掃 QR Code）：人在首頁時打開那本筆記。
             // 用 `@Published` 而不是通知：冷啟動（App 沒在跑、掃了才被叫起來）時首頁一訂閱
             // 就會收到目前的值，不會掉。連結**留著**給編輯器 —— 它會打開協同面板並加入房間。
             .onReceive(CollaborationManager.shared.$pendingInviteLink) { link in
@@ -2886,60 +2885,6 @@ public struct HomeWorkbenchView: View {
         .accessibilityIdentifier(identifier)
     }
 
-    private var p2pDirectSyncSection: some View {
-        let tailscale = tailscaleMonitor.status
-        return VStack(alignment: .leading, spacing: 6) {
-            HStack(alignment: .center) {
-                HStack(spacing: 6) {
-                    Image(systemName: "point.3.connected.trianglepath.dotted")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundColor(.indigo)
-                    Text(localizationManager.localized("p2p_sync_tailscale_title"))
-                        .font(DS.Font.caption)
-                        .fontWeight(.semibold)
-                }
-
-                Spacer()
-
-                // 連線狀態指示燈
-                HStack(spacing: 6) {
-                    Circle()
-                        .fill(tailscale.isConnected ? Color.green : Color.secondary.opacity(0.4))
-                        .frame(width: 8, height: 8)
-                    Text(tailscale.isConnected ? (tailscale.ipAddress ?? localizationManager.localized("status_connected")) : localizationManager.localized("status_disconnected"))
-                        .font(.system(size: 11, weight: .medium, design: .monospaced))
-                        .foregroundColor(tailscale.isConnected ? .green : .secondary)
-                }
-                .padding(.horizontal, 8)
-                .padding(.vertical, 3)
-                .background(tailscale.isConnected ? Color.green.opacity(0.12) : Color.secondary.opacity(0.08))
-                .clipShape(Capsule())
-            }
-
-            Text(localizationManager.localized("p2p_sync_tailscale_explainer"))
-                .font(DS.Font.caption)
-                .foregroundStyle(DS.Color.secondaryText)
-                .lineLimit(4)
-                .multilineTextAlignment(.leading)
-
-            // 只有未偵測到 Tailscale 時才顯示下載連結（連線成功時自動隱藏）
-            if !tailscale.isConnected {
-                Link(destination: URL(string: "https://tailscale.com/download")!) {
-                    HStack(spacing: 4) {
-                        Image(systemName: "arrow.up.right.square")
-                        Text(localizationManager.localized("download_tailscale_link"))
-                    }
-                    .font(DS.Font.caption)
-                    .fontWeight(.medium)
-                    .foregroundColor(.accentColor)
-                }
-            }
-        }
-        .padding(.top, 2)
-        .accessibilityElement(children: .contain)
-        .accessibilityIdentifier("home.p2p.card")
-    }
-
     // 統一雲端同步卡片。結合 Google Drive 與 iCloud / 本機資料夾同步。
 
     private var homeGoogleStatusText: String {
@@ -3096,11 +3041,6 @@ public struct HomeWorkbenchView: View {
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-
-                Divider()
-                    .padding(.vertical, 2)
-
-                p2pDirectSyncSection
             }
         }
         .padding(DS.Space.m)
@@ -5515,7 +5455,6 @@ public struct CloudSyncDetailSheet: View {
     @ObservedObject private var autoSync = AutoSyncController.shared
     @ObservedObject private var notebookStore = NotebookStore.shared
     @ObservedObject private var syncLogger = SyncLogger.shared
-    @ObservedObject private var tailscaleMonitor = TailscaleMonitor.shared
     @ObservedObject private var folderMonitor = CloudSyncFolderMonitor.shared
     @Environment(\.dismiss) private var dismiss
 
@@ -5612,33 +5551,6 @@ public struct CloudSyncDetailSheet: View {
                         .pickerStyle(.segmented)
                     }
                     .padding(.top, DS.Space.xs)
-
-                    // Tailscale 點對點連線狀態指示
-                    HStack(spacing: 8) {
-                        Circle()
-                            .fill(tailscaleMonitor.status.isConnected ? Color.green : Color.secondary.opacity(0.4))
-                            .frame(width: 8, height: 8)
-                        Text(tailscaleMonitor.status.isConnected ? String(format: localizationManager.localized("tailscale_p2p_ready"), tailscaleMonitor.status.ipAddress ?? "") : localizationManager.localized("tailscale_not_connected"))
-                            .font(DS.Font.caption)
-                            .foregroundColor(tailscaleMonitor.status.isConnected ? .green : .secondary)
-
-                        Spacer()
-
-                        if !tailscaleMonitor.status.isConnected {
-                            Link(destination: URL(string: "https://tailscale.com/download")!) {
-                                HStack(spacing: 3) {
-                                    Image(systemName: "arrow.up.right.square")
-                                    Text(localizationManager.localized("download_tailscale"))
-                                }
-                                .font(DS.Font.caption)
-                                .foregroundColor(.accentColor)
-                            }
-                        }
-                    }
-                    .padding(.horizontal, DS.Space.s)
-                    .padding(.vertical, DS.Space.xs)
-                    .background(Color(uiColor: .secondarySystemGroupedBackground))
-                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
 
                     if selectedProvider == .googleDrive {
                         googleDriveSection
