@@ -182,7 +182,8 @@ fun CollaborationSheet(
                             }
 
                             if (!manager.isHostingLocalRelay) {
-                                Button(onClick = { manager.createRoom(manager.localRoomServer) }) {
+                                // 會議室已開在雲端共享時按這裡：同一間房也開放同一 Wi‑Fi（不另開一間，見 `startLocalRoom`）。
+                                Button(onClick = { manager.startLocalRoom() }) {
                                     Text(l(if (manager.savedCustomRemoteRelay) "start_collaboration" else "collab_start_local"))
                                 }
                             }

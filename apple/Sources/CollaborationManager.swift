@@ -151,7 +151,9 @@ public class CollaborationManager: ObservableObject {
     /// 還在用舊協定的參與者（送的是整頁筆跡、整個物件、沒有時鐘）。混用會單向同步，要提示更新。
     @Published public var outdatedPeerIds: Set<String> = []
 
-    @Published public var status: CollaborationStatus = .disconnected
+    @Published public var status: CollaborationStatus = .disconnected {
+        didSet { if status != oldValue { updateRelayBridge() } }
+    }
     @Published public var currentRoomId: String = ""
     /// 這間房屬於哪一本筆記。房間跟著筆記走：關掉那本（或在編輯器裡換到別本）就離開房間，
     /// 不然打開 B 時面板還掛著 A 的房間，QR Code 卻帶 B 的 id —— 對方掃了會把 A 的修改寫進 B。
@@ -178,7 +180,9 @@ public class CollaborationManager: ObservableObject {
     /// 最近一次連線錯誤說明（給 UI 顯示，避免只剩無聲的「重連中」轉圈）
     @Published public var lastErrorMessage: String? = nil
     /// 本機是否正在提供內建中繼服務
-    @Published public var isHostingLocalRelay: Bool = false
+    @Published public var isHostingLocalRelay: Bool = false {
+        didSet { if isHostingLocalRelay != oldValue { updateRelayBridge() } }
+    }
     /// 本機中繼服務在區域網路上的位址（給隊友輸入）
     @Published public var lanRelayAddress: String? = nil
 
@@ -616,6 +620,67 @@ public class CollaborationManager: ObservableObject {
         disconnect()
     }
 
+    /// 打開 `notebookId` 這本時呼叫：會議室綁在**別本**上就先離開（別本的內容不能套進這本）。
+    ///
+    /// 關掉筆記回首頁不離開會議室（只有使用者自己按「離開／結束協同」才離開）——
+    /// 再打開同一本就接回同一條連線。與 Android `CollabSessions.obtain` 同一套。
+    public func leaveRoom(unlessBoundTo notebookId: String) {
+        guard let bound = roomNotebookId, bound != notebookId.lowercased() else { return }
+        disconnect()
+    }
+
+    // MARK: 同時開放雲端（見 CollabRelayBridge.swift）
+
+    /// 會議室開在本機中繼（同一 Wi‑Fi）時，也以同一間房（同房號、同金鑰）開放到這個雲端中繼。
+    /// `nil`＝只開在一個中繼上。
+    @Published public private(set) var cloudBridgeURL: String?
+    private var relayBridge: CollabRelayBridge?
+    /// 上一座橋帶進來的雲端成員（重建橋時不把他們誤當成 Wi‑Fi 這邊的人）。
+    private var bridgedCloudUserIds: Set<String> = []
+
+    /// 這間會議室是不是同時開在雲端（房主正在橋接）。
+    public var isBridgingCloud: Bool { relayBridge != nil }
+
+    /// 房主：同一 Wi‑Fi 的會議室也開放雲端共享（傳 `nil` 關掉）。
+    public func enableCloudBridge(_ url: String?) {
+        cloudBridgeURL = url
+        updateRelayBridge()
+    }
+
+    /// 房主按「同一 Wi‑Fi」：會議室已開在雲端時不另開一間 —— 同一間房改開在本機中繼，雲端那邊用橋接續上，
+    /// 兩種方式加入的人都在同一間會議室。其餘照舊開新房。
+    public func startLocalRoom(notebookId: String?) {
+        if isHost, case .connected = status, !currentRoomId.isEmpty, let key = roomKeyBase64,
+           let local = localRoomServer, activeServerAddress == cloudRelayURL,
+           let nb = notebookId?.lowercased() ?? roomNotebookId {
+            let cloud = activeServerAddress
+            hostRoom(roomId: currentRoomId, keyBase64: key, notebookId: nb, server: local)
+            enableCloudBridge(cloud)
+            return
+        }
+        createRoom(notebookId: notebookId, server: localRoomServer)
+    }
+
+    /// 依目前狀態開或關橋：房主、連在自己的本機中繼上、已連線、而且開放了雲端。
+    private func updateRelayBridge() {
+        var wanted = false
+        if let url = cloudBridgeURL, !url.isEmpty, isHost, isHostingLocalRelay, case .connected = status,
+           Self.isLoopbackHost(URL(string: activeServerAddress)?.host), url != activeServerAddress {
+            wanted = true
+        }
+        if wanted, relayBridge == nil, let cloud = cloudBridgeURL {
+            let me = CollabRelayBridge.Member(userId: currentUserId, name: myJoinName, color: myColorHex)
+            let bridge = CollabRelayBridge(cloudURL: cloud, lanURL: activeServerAddress, roomId: currentRoomId, host: me)
+            let lanPeers = peers.map { CollabRelayBridge.Member(userId: $0.userId, name: $0.userName, color: $0.userColor) }
+            bridge.start(lanPeers: lanPeers, excluding: bridgedCloudUserIds)
+            relayBridge = bridge
+        } else if !wanted, let bridge = relayBridge {
+            bridgedCloudUserIds = bridge.cloudUserIds
+            bridge.stop()
+            relayBridge = nil
+        }
+    }
+
     /// 加入既有協同房間
     public func joinRoom(roomId: String, notebookId: String? = nil) {
         let trimmed = roomId.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -722,15 +787,7 @@ public class CollaborationManager: ObservableObject {
         startJoinTimer()
 
         // 發送 Join 申請（附帶裝置型號後綴，即使登錄同一個 Google 帳號也能清晰辨識）
-        #if os(macOS) || targetEnvironment(macCatalyst)
-        let deviceTag = "Mac"
-        #elseif os(iOS)
-        let deviceTag = (UIDevice.current.userInterfaceIdiom == .pad) ? "iPad" : "iPhone"
-        #else
-        let deviceTag = "Device"
-        #endif
-        let rawName = AccountManager.shared.profile.displayName
-        let myName = "\(rawName) (\(deviceTag))"
+        let myName = myJoinName
         let roleStr = asHost ? "owner" : "editor"
         let joinPayload: [String: Any] = [
             "type": "join",
@@ -741,6 +798,18 @@ public class CollaborationManager: ObservableObject {
             "role": roleStr
         ]
         sendJson(joinPayload)
+    }
+
+    /// 加入房間時用的名字：帳號名稱加裝置型號（同一個 Google 帳號的多台裝置也分得出來）。
+    var myJoinName: String {
+        #if os(macOS) || targetEnvironment(macCatalyst)
+        let deviceTag = "Mac"
+        #elseif os(iOS)
+        let deviceTag = (UIDevice.current.userInterfaceIdiom == .pad) ? "iPad" : "iPhone"
+        #else
+        let deviceTag = "Device"
+        #endif
+        return "\(AccountManager.shared.profile.displayName) (\(deviceTag))"
     }
 
     /// 判斷位址是否指向本機（含未填主機名的情況）
@@ -806,6 +875,8 @@ public class CollaborationManager: ObservableObject {
             self.queuedOplogCount = 0
             self.roomKeyBase64 = nil
             self.serverOverride = nil
+            self.cloudBridgeURL = nil
+            self.bridgedCloudUserIds = []
         }
 
         let taskToClose = webSocketTask
@@ -1063,7 +1134,8 @@ public class CollaborationManager: ObservableObject {
 
     /// 這場協同開在雲端中繼上（`wss://`）。區網的本機中繼不收寄存（它會照常轉送給每個人）。
     public var isOnCloudRelay: Bool {
-        activeServerAddress.lowercased().hasPrefix("wss://")
+        // 同時開放雲端（橋接）時也寄存：橋會把寄存送進雲端，房主不在線時新加入的人才拿得到最新版。
+        activeServerAddress.lowercased().hasPrefix("wss://") || relayBridge != nil
     }
 
     /// 編輯器在協同中掛上：把這本目前的整份狀態寄存到中繼，送完才回來（見 `EditorInkAndStorage.depositCollabState`）。
@@ -1475,6 +1547,7 @@ public class CollaborationManager: ObservableObject {
         guard let data = try? JSONSerialization.data(withJSONObject: dict),
               let jsonStr = String(data: data, encoding: .utf8) else { return }
         webSocketTask?.send(jsonStr)
+        relayBridge?.hostSent(dict)
     }
 
     private func startListening() {
@@ -1505,6 +1578,11 @@ public class CollaborationManager: ObservableObject {
         guard let data = jsonString.data(using: .utf8),
               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               let type = json["type"] as? String else { return }
+        // 同時開放雲端時，本機中繼這邊的成員與操作也轉進雲端（見 CollabRelayBridge）。
+        // 橋在 `joined` 處理當中才建立：那時成員清單要再交給它一次。
+        let hadBridge = relayBridge != nil
+        relayBridge?.lanReceived(json)
+        defer { if !hadBridge, type == "joined" { relayBridge?.lanReceived(json) } }
 
         switch type {
         case "joined":

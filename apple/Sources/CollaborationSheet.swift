@@ -487,10 +487,11 @@ public struct CollaborationSheet: View {
 
             // ☁️ 雲端共享（跨網路）：已連上時若本機正在當中繼（同一 Wi‑Fi），也可一鍵切換為雲端共享；
             // 已在雲端共享時上方 CloudShareSection 已有邀請與 QR Code，這裡顯示「同一 Wi‑Fi」切換按鈕。
+            // 會議室已開在雲端共享時按這裡：同一間房也開放同一 Wi‑Fi（不另開一間，見 `startLocalRoom`）。
             if !collaborationManager.isHostingLocalRelay {
                 let customRemote = CollaborationManager.usesCustomRemoteRelay(collaborationManager.serverAddress)
                 Button {
-                    collaborationManager.createRoom(notebookId: notebookId, server: collaborationManager.localRoomServer)
+                    collaborationManager.startLocalRoom(notebookId: notebookId)
                 } label: {
                     HStack(spacing: 8) {
                         Image(systemName: customRemote ? "sparkles" : "wifi")

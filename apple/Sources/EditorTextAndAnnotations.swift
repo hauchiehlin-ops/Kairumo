@@ -586,7 +586,7 @@ extension NotebookEditorView {
     func switchToNotebook(_ target: NotebookDocument) {
         guard target.id != notebook.id else { return }
         // 由外層換掉 Binding 指向的索引；這裡自己寫會覆蓋掉目前這則筆記。
-        requestLeave { onRequestSwitch?(target) }
+        requestLeave(leavesRoom: true) { onRequestSwitch?(target) }
     }
 
     /// 相機掃了協同 QR Code、而編輯器正開著（`pendingInviteLink`）。
@@ -614,11 +614,11 @@ extension NotebookEditorView {
     ///
     /// 範例且內容真的有改：先問使用者要存檔（保留在此範例）、另存可編輯副本，還是放棄修改；
     /// 沒改或不是範例：直接離開（範例的暫存跟著收掉）。
-    func requestLeave(_ leave: @escaping () -> Void) {
-        // 房主還開著這本的即時協同房間：離開前提醒「關筆記不等於結束協同」（離開時會自動退出房間，
-        // 見 `leaveRoom(ifBoundTo:)`）。使用者選「仍要離開」才往下走。
+    func requestLeave(leavesRoom: Bool = false, _ leave: @escaping () -> Void) {
+        // 換到別本時房主還開著這本的即時協同房間：提醒「換本會離開房間、不等於結束協同」
+        // （見 `leaveRoom(ifBoundTo:)`）。回首頁不離開房間，不必提醒。使用者選「仍要離開」才往下走。
         let collab = CollaborationManager.shared
-        if collab.isHost, collab.roomNotebookId == notebook.id.lowercased(),
+        if leavesRoom, collab.isHost, collab.roomNotebookId == notebook.id.lowercased(),
            case .connected = collab.status {
             afterHostLeave = leave
             showHostLeaveReminder = true
@@ -637,7 +637,7 @@ extension NotebookEditorView {
     private func proceedLeave(_ leave: @escaping () -> Void) {
         saveCurrentPageDrawing()
         let id = notebook.id
-        CollaborationManager.shared.leaveRoom(ifBoundTo: id)
+        // 會議室不在這裡離開：回首頁仍在房裡；換本由 `onRequestSwitch` 離開。
         guard store.hasSampleSession(id) else { leave(); return }
         // 筆跡在背景佇列寫入：等寫完再比對，最後一筆才算得進去。
         afterCoreInkWrites {

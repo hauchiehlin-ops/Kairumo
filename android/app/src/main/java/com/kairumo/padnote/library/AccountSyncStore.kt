@@ -107,7 +107,14 @@ object AccountSyncStore {
         runCatching {
             val file = remoteIndexFile(context, account)
             file.parentFile?.mkdirs()
-            file.writeText(json)
+            // 整份原子寫入：先寫暫存檔再改名。直接 writeText 的話，寫到一半被讀到
+            // （或行程被收掉）就是半份 JSON —— 解析失敗等同「雲端什麼都沒有」，下一輪得全量重建。
+            val tmp = java.io.File(file.parentFile, "${file.name}.tmp")
+            tmp.writeText(json)
+            if (!tmp.renameTo(file)) {
+                file.delete()
+                if (!tmp.renameTo(file)) tmp.delete()
+            }
         }
     }
 
@@ -149,15 +156,15 @@ object AccountSyncStore {
             deletedAt = 0uL,
             purgeAt = 0uL
         )
-        setIndex(context, syncUpsertItem(indexJson(context), item))
+        synchronized(indexLock) { setIndex(context, syncUpsertItem(indexJson(context), item.copy(lamport = nextLamport(context)))) }
     }
 
     fun recordTitle(context: Context, id: String, title: String) {
-        setIndex(context, syncUpdateItemTitle(indexJson(context), id, title, nextLamport(context), deviceId(context)))
+        synchronized(indexLock) { setIndex(context, syncUpdateItemTitle(indexJson(context), id, title, nextLamport(context), deviceId(context))) }
     }
 
     fun recordParent(context: Context, id: String, parentId: String?) {
-        setIndex(context, syncUpdateItemParent(indexJson(context), id, parentId ?: "", nextLamport(context), deviceId(context)))
+        synchronized(indexLock) { setIndex(context, syncUpdateItemParent(indexJson(context), id, parentId ?: "", nextLamport(context), deviceId(context))) }
     }
 
     /**
@@ -166,21 +173,25 @@ object AccountSyncStore {
      * 墓碑帶刪除時間 —— 回收桶的保留期限從這一刻起算。
      */
     fun recordDeletion(context: Context, id: String) {
-        setIndex(
-            context,
-            syncDeleteItem(
-                indexJson(context), id, nextLamport(context), deviceId(context),
-                TrashRetention.nowUnixSeconds()
+        synchronized(indexLock) {
+            setIndex(
+                context,
+                syncDeleteItem(
+                    indexJson(context), id, nextLamport(context), deviceId(context),
+                    TrashRetention.nowUnixSeconds()
+                )
             )
-        )
+        }
     }
 
     /** 從回收桶還原。以更大的時戳寫回沒被刪的同一個項目，與任何時序下的刪除都會收斂。 */
     fun recordRestore(context: Context, id: String) {
-        setIndex(
-            context,
-            syncRestoreItem(indexJson(context), id, nextLamport(context), deviceId(context))
-        )
+        synchronized(indexLock) {
+            setIndex(
+                context,
+                syncRestoreItem(indexJson(context), id, nextLamport(context), deviceId(context))
+            )
+        }
     }
 
     /**
@@ -191,13 +202,15 @@ object AccountSyncStore {
      * 之後每一輪同步都會依它自然完成雲端那一半，所有裝置一致。
      */
     fun recordPurgeRequest(context: Context, id: String) {
-        setIndex(
-            context,
-            syncRequestPurge(
-                indexJson(context), id, nextLamport(context), deviceId(context),
-                TrashRetention.nowUnixSeconds()
+        synchronized(indexLock) {
+            setIndex(
+                context,
+                syncRequestPurge(
+                    indexJson(context), id, nextLamport(context), deviceId(context),
+                    TrashRetention.nowUnixSeconds()
+                )
             )
-        )
+        }
     }
 
     // ── 回收桶 ────────────────────────────────────────────────────
@@ -213,13 +226,15 @@ object AccountSyncStore {
      */
     fun stampLegacyTombstonesIfNeeded(context: Context) {
         if (trashEntries(context).none { it.deletedAt == 0uL }) return
-        setIndex(
-            context,
-            syncStampLegacyTombstones(
-                indexJson(context), TrashRetention.nowUnixSeconds(),
-                nextLamport(context), deviceId(context)
+        synchronized(indexLock) {
+            setIndex(
+                context,
+                syncStampLegacyTombstones(
+                    indexJson(context), TrashRetention.nowUnixSeconds(),
+                    nextLamport(context), deviceId(context)
+                )
             )
-        )
+        }
     }
 
     /**
@@ -292,7 +307,7 @@ object AccountSyncStore {
 
     /** 合併另一台裝置（或雲端）的索引。 */
     fun mergeIndex(context: Context, remoteJson: String) {
-        setIndex(context, syncMergeIndex(indexJson(context), remoteJson))
+        synchronized(indexLock) { setIndex(context, syncMergeIndex(indexJson(context), remoteJson)) }
     }
 
     // ── 跨裝置設定（G-04）──────────────────────────────────────
@@ -302,37 +317,41 @@ object AccountSyncStore {
         syncGetSetting(settingsJson(context), FfiSyncedField.LOCALE).takeIf { it.isNotEmpty() }
 
     fun setSyncedLanguage(context: Context, tag: String) {
-        setSettings(
-            context,
-            syncSetSetting(
-                settingsJson(context),
-                FfiSyncedField.LOCALE,
-                tag,
-                nextLamport(context),
-                deviceId(context)
+        synchronized(indexLock) {
+            setSettings(
+                context,
+                syncSetSetting(
+                    settingsJson(context),
+                    FfiSyncedField.LOCALE,
+                    tag,
+                    nextLamport(context),
+                    deviceId(context)
+                )
             )
-        )
+        }
     }
 
     fun syncedToolbarJson(context: Context): String? =
         syncGetSetting(settingsJson(context), FfiSyncedField.TOOLBAR_JSON).takeIf { it.isNotEmpty() }
 
     fun setSyncedToolbarJson(context: Context, json: String) {
-        setSettings(
-            context,
-            syncSetSetting(
-                settingsJson(context),
-                FfiSyncedField.TOOLBAR_JSON,
-                json,
-                nextLamport(context),
-                deviceId(context)
+        synchronized(indexLock) {
+            setSettings(
+                context,
+                syncSetSetting(
+                    settingsJson(context),
+                    FfiSyncedField.TOOLBAR_JSON,
+                    json,
+                    nextLamport(context),
+                    deviceId(context)
+                )
             )
-        )
+        }
     }
 
     /** 合併另一台裝置（或雲端）的設定。 */
     fun mergeSettings(context: Context, remoteJson: String) {
-        setSettings(context, syncMergeSettings(settingsJson(context), remoteJson))
+        synchronized(indexLock) { setSettings(context, syncMergeSettings(settingsJson(context), remoteJson)) }
     }
 
     // ── 內部 ──────────────────────────────────────────────────
@@ -347,6 +366,13 @@ object AccountSyncStore {
      */
     private fun nextLamport(context: Context): ULong =
         maxOf(syncNextLamport(indexJson(context)), syncNextLamport(settingsJson(context)))
+
+    /**
+     * 索引與設定的「讀 → 改 → 寫」要整段互斥。同步執行緒的合併與主執行緒的刪除／改名
+     * 同時發生時，後寫的那一方會用自己讀到的舊版整份蓋掉前者 —— 最糟的是剛寫下的墓碑
+     * 被吃掉，刪掉的筆記本下一輪同步又回來。
+     */
+    private val indexLock = Any()
 
     private fun setIndex(context: Context, json: String) {
         prefs(context).edit().putString(KEY_INDEX, json).apply()

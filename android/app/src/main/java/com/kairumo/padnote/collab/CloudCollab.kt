@@ -17,7 +17,8 @@ import uniffi.padnote_core.FfiSharedNotebook
  * - 房主不在線也能加入：參與者定期把整份狀態（端對端加密）寄存在房間裡（`state_store`）。
  * - 保存期限：房間沒人之後（含結束協同）中繼保留一段時間再整個刪除（見 `deploy/relay-cloudflare`）。
  *
- * 同一 Wi‑Fi（本機中繼）照舊，與這裡無關。
+ * 同一 Wi‑Fi（本機中繼）與雲端共享可以同時開放同一間會議室：會議室開在房主的本機中繼上，
+ * 雲端那邊由房主橋接（見 [CollabRelayBridge]）。協作者用哪一種方式加入都在同一間。
  */
 // profile-scope: device 共享清單存在依設定檔命名的偏好檔；切換設定檔會重啟行程，記憶體狀態不跨設定檔
 object CloudCollab {
@@ -57,7 +58,7 @@ object CloudCollab {
         _busy.value = L10n.t("cloud_collab_sharing")
         try {
             var entry = shared(context, notebookId) ?: FfiSharedNotebook(notebookId, "", "", "", "owner", title)
-            ensurePublicRoom(entry, collab, force = true)
+            ensurePublicRoom(context, entry, collab)
             repeat(50) { if (collab.roomKeyBase64 == null || collab.roomId.isEmpty()) delay(100) }
             val key = collab.roomKeyBase64
             if (collab.roomId.isEmpty() || key == null) {
@@ -73,12 +74,23 @@ object CloudCollab {
     }
 
     /** 房主：這本的房間開在雲端中繼上。已經在那裡就不動；記過房號與金鑰就沿用。與 Apple `ensurePublicRoom` 相同。 */
-    fun ensurePublicRoom(entry: FfiSharedNotebook, collab: CollaborationManager, force: Boolean = false) {
+    fun ensurePublicRoom(context: Context, entry: FfiSharedNotebook, collab: CollaborationManager) {
         val relay = collab.cloudRelayUrl
         if (relay.isEmpty() || entry.role != "owner") return
         if (collab.status !is CollaborationManager.Status.Disconnected) {
             if (collab.serverAddress == relay) return
-            if (!force && collab.isHostingLocalRelay) return
+            // 會議室開在同一 Wi‑Fi（本機中繼）：不搬家、不另開一間 —— 同一間房也開放到雲端（橋接，
+            // 見 CollabRelayBridge）。雲端邀請要指向這一間，登記的房號與金鑰換成目前的。與 Apple 相同。
+            if (collab.isHostingLocalRelay) {
+                val key = collab.roomKeyBase64
+                if (!collab.isHost || collab.roomId.isEmpty() || key == null) return
+                if (entry.roomId != collab.roomId || entry.keyBase64 != key) {
+                    val updated = entry.copy(roomId = collab.roomId, keyBase64 = key)
+                    saveRegistry(context, uniffi.padnote_core.sharedRegistryUpsert(registryJson(context), updated))
+                }
+                if (collab.cloudBridgeUrl != relay) collab.enableCloudBridge(relay)
+                return
+            }
         }
         if (entry.roomId.isNotEmpty() && entry.keyBase64.isNotEmpty()) {
             collab.hostRoom(entry.roomId, entry.keyBase64, relay)

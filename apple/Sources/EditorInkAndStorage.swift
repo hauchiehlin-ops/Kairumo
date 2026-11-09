@@ -294,22 +294,7 @@ extension NotebookEditorView {
                 showCanvasNotice(String(format: localizationManager.localized("collab_object_locked"), lost.holder))
             }
             .onChange(of: collaborationManager.currentRoomId) { _ in
-                // 進入（或換）房間：以目前的內容為大家共同的起點。斷線重連不算 ——
-                // 那段期間的本機修改還要送出去。
-                ensureCollabPageIds()
-                collabSync.reset(to: notebook)
-                collabInkLedger.reset()
-                collabTextHub.reset()
-                collabStateSync.reset()
-                // 已有的筆畫算「大家都有」—— 否則第一次在某一頁下筆，整頁舊筆畫會被當成新的再送一次，
-                // 而對方（尤其是 Android，筆畫 id 不同）會多出一份。
-                for (index, id) in (notebook.pageIds ?? []).enumerated() {
-                    collabInkLedger.known[id] = Set(CollabInk.ids(of: drawingForCollab(page: index)))
-                }
-                // 這台的檔案可能比房間裡的舊：向房間裡的人要整份狀態（設計 §7）。只有自己就不必。
-                if !collaborationManager.currentRoomId.isEmpty, !collaborationManager.peers.isEmpty {
-                    requestCollabState()
-                }
+                enterCollabRoomBaseline()
             }
             .onChange(of: isCollaborating) { collaborating in
                 if collaborating { CollabImportHold.hold(notebook.id) } else { endCollabImportHold() }
@@ -577,6 +562,26 @@ extension NotebookEditorView {
         }
         if merged.strokes.count != base.strokes.count {
             applyRemoteDrawing(page: pageIdx, remote: merged, replace: true)
+        }
+    }
+
+    /// 進入（或換）房間、或回首頁後重新打開仍在會議室裡的這本：以目前的內容為大家共同的起點，
+    /// 再向房間裡的人要整份狀態（不在畫面時錯過的修改從這裡補回）。斷線重連不算 ——
+    /// 那段期間的本機修改還要送出去。
+    func enterCollabRoomBaseline() {
+        ensureCollabPageIds()
+        collabSync.reset(to: notebook)
+        collabInkLedger.reset()
+        collabTextHub.reset()
+        collabStateSync.reset()
+        // 已有的筆畫算「大家都有」—— 否則第一次在某一頁下筆，整頁舊筆畫會被當成新的再送一次，
+        // 而對方（尤其是 Android，筆畫 id 不同）會多出一份。
+        for (index, id) in (notebook.pageIds ?? []).enumerated() {
+            collabInkLedger.known[id] = Set(CollabInk.ids(of: drawingForCollab(page: index)))
+        }
+        // 這台的檔案可能比房間裡的舊：向房間裡的人要整份狀態（設計 §7）。只有自己就不必。
+        if !collaborationManager.currentRoomId.isEmpty, !collaborationManager.peers.isEmpty {
+            requestCollabState()
         }
     }
 

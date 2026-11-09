@@ -124,6 +124,7 @@
 		67A314D2F3FA0DC4C77135E9 /* ImportedModelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E76A078696B95A56868B4EEA /* ImportedModelView.swift */; };
 		67CF9DE54436AC7DD3FF5065 /* NotebookMigration.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C19329463E6F6E313A0F1DB /* NotebookMigration.swift */; };
 		682EB339708EB99A20BEDDA6 /* CollabRelaySocket.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8C9EA0A08B643B3DE08E40DA /* CollabRelaySocket.swift */; };
+		B7C1D2E3F4A5B6C7D8E9F0A1 /* CollabRelayBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = C8D2E3F4A5B6C7D8E9F0A1B2 /* CollabRelayBridge.swift */; };
 		6849D8D81A0F512DCC4FC8E8 /* InsertToolsAudit.swift in Sources */ = {isa = PBXBuildFile; fileRef = 831C71226B45B48B268CE8F6 /* InsertToolsAudit.swift */; };
 		688302BABBE0B7B3219D48B6 /* PageInkStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B40097B06DD9682C368D48FA /* PageInkStore.swift */; };
 		68A27DB3A24C8DAA379E6E24 /* EditorSidebars.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92CB1D8025BADA92AE19BA59 /* EditorSidebars.swift */; };
@@ -526,6 +527,7 @@
 		8B26672440D33436E89CFF78 /* DraftingPracticeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DraftingPracticeTests.swift; sourceTree = "<group>"; };
 		8C72D6725F62578D0DDD6EFB /* CollaborationCryptoTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CollaborationCryptoTests.swift; sourceTree = "<group>"; };
 		8C9EA0A08B643B3DE08E40DA /* CollabRelaySocket.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CollabRelaySocket.swift; sourceTree = "<group>"; };
+		C8D2E3F4A5B6C7D8E9F0A1B2 /* CollabRelayBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CollabRelayBridge.swift; sourceTree = "<group>"; };
 		8CADC1C412F39A20E555D660 /* EditorObjectsAndCanvas.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditorObjectsAndCanvas.swift; sourceTree = "<group>"; };
 		8CDA20E9C287F58F4315EA3C /* ChartSpec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChartSpec.swift; sourceTree = "<group>"; };
 		8D532C92A0EFAC4B0C55DC71 /* EditorFloatingPanels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditorFloatingPanels.swift; sourceTree = "<group>"; };
@@ -877,6 +879,7 @@
 				0FF2EC412BA37683FBBE2FC1 /* CollaborationSheet.swift */,
 				CF7B511C0C84D09A563E93B5 /* CollabProtocol.swift */,
 				8C9EA0A08B643B3DE08E40DA /* CollabRelaySocket.swift */,
+				C8D2E3F4A5B6C7D8E9F0A1B2 /* CollabRelayBridge.swift */,
 				79FBA9A8EEEFDEABEA31DA34 /* CollabSync.swift */,
 				6CF78A69899C81F8F5AE7BDB /* CollabVoiceManager.swift */,
 				205572122F598A01BD07BC2A /* CommentThreadView.swift */,
@@ -1324,6 +1327,7 @@
 				FCE275A4225BB80526441A70 /* CollabLiveInk.swift in Sources */,
 				EBC28FA124F13539D86D713F /* CollabProtocol.swift in Sources */,
 				682EB339708EB99A20BEDDA6 /* CollabRelaySocket.swift in Sources */,
+				B7C1D2E3F4A5B6C7D8E9F0A1 /* CollabRelayBridge.swift in Sources */,
 				083FB8C04871B623CD4F5CA0 /* CollabSync.swift in Sources */,
 				46CC5D1BCEAE690D4CD41030 /* CollabVoiceManager.swift in Sources */,
 				EBB0282BC8BEC636B952FE2C /* CollaborationManager.swift in Sources */,

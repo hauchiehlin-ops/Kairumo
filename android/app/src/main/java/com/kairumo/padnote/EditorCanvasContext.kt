@@ -2818,25 +2818,14 @@ internal fun rememberEditorCanvasContext(
     // 離開這本（關掉或換本）時離開房間、關掉自己開的中繼。舊版沒有鍵也沒有收尾，
     // 換本時 A 的房間跟著進了 B（QR Code 卻帶 B 的 id，對方會把 A 的修改寫進 B），
     // 關掉筆記後連線與中繼還在背景跑。與 Apple `leaveRoom(ifBoundTo:)` 同一套。
-    val collaboration = remember(notebookId) { CollaborationManager(activity) }
-    val collabVoice = remember(collaboration) {
-        CollabVoiceManager(activity, collaboration).also {
-            collaboration.voice = it
-        }
+    // 會議室活在 App 層級（[com.kairumo.padnote.collab.CollabSessions]）：回首頁再打開同一本拿回同一條連線；
+    // 打開別本才離開原本的房間。只有使用者自己按「離開／結束協同」才真的離開。與 Apple `leaveRoom(unlessBoundTo:)` 同一套。
+    // App 進背景（系統首頁、螢幕關閉）的處理在 `MainActivity.onStart/onStop`，不論目前在哪個畫面。
+    val collaboration = remember(notebookId) {
+        com.kairumo.padnote.collab.CollabSessions.obtain(activity, notebookId)
     }
-    // 常駐連線：App 進背景（回首頁、螢幕關閉）不離開會議室，回前景立刻接回來；在會議室裡時螢幕不自動關閉。
-    // 只有使用者自己按「離開／結束協同」或關掉這本筆記才真的離開。與 Apple `CollaborationManager` 的生命週期處理相同。
-    val collabLifecycleOwner = androidx.compose.ui.platform.LocalLifecycleOwner.current
-    androidx.compose.runtime.DisposableEffect(collaboration, collabLifecycleOwner) {
-        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
-            when (event) {
-                androidx.lifecycle.Lifecycle.Event.ON_STOP -> collaboration.onAppBackground()
-                androidx.lifecycle.Lifecycle.Event.ON_START -> collaboration.onAppForeground()
-                else -> Unit
-            }
-        }
-        collabLifecycleOwner.lifecycle.addObserver(observer)
-        onDispose { collabLifecycleOwner.lifecycle.removeObserver(observer) }
+    val collabVoice = remember(collaboration) {
+        com.kairumo.padnote.collab.CollabSessions.voiceFor(activity, collaboration)
     }
     // 讀可觀察的狀態（房號、連線狀態），離開房間時才會跟著重組、恢復自動關螢幕。
     val keepScreenOnForCollab = collaboration.roomId.isNotEmpty() &&
@@ -2848,24 +2837,16 @@ internal fun rememberEditorCanvasContext(
     }
     androidx.compose.runtime.DisposableEffect(collaboration) {
         onDispose {
+            // 關掉編輯器（回首頁）不離開會議室：只放掉指向這個畫面的回呼、停止自己的發話。
+            // 寄存整份狀態要讀編輯器裡的內容，畫面不在就不寄存（回來時再接著寄）。
             collaboration.stateDepositor = null
-            collaboration.onRoomClosed = null
-            collaboration.voice = null
-            collabVoice.reset()
-            collaboration.disconnect()
+            collabVoice.stopTalking()
         }
     }
-    // 房主還開著房間就要離開這本：提醒「關筆記只是離開房間，真正結束要回面板按『結束協同會議』」。與 Apple 同一套。
+    // 房主開著房間時回首頁不再提醒：回首頁不會離開房間（只有打開別本才會，那時另有處理）。
+    // 對話框保留給之後需要的流程使用。
     val hostLeavePendingState = remember { mutableStateOf<(() -> Unit)?>(null) }
-    val guardedOnBack: (() -> Unit)? = onBack?.let { back ->
-        {
-            if (collaboration.isHost && collaboration.status is CollaborationManager.Status.Connected) {
-                hostLeavePendingState.value = back
-            } else {
-                back()
-            }
-        }
-    }
+    val guardedOnBack: (() -> Unit)? = onBack
     // 收到協同邀請（相機掃 QR Code）：邀請的是這本（或沒指定哪一本）就打開協同面板（面板自動加入）；
     // 是**別本**就先離開這本（照常走房主離開提醒），首頁再打開邀請的那一本 —— 不能在這本的面板裡加入
     // 別本的房間，否則房主的內容會套進這本。與 Apple `handleIncomingCollabInvite` 相同。
@@ -2894,7 +2875,8 @@ internal fun rememberEditorCanvasContext(
     // 房主結束了協同（`room_closed`）：這台不再記這本的雲端共享房間。
     androidx.compose.runtime.SideEffect {
         val id = notebookId
-        collaboration.onRoomClosed = { if (id != null) com.kairumo.padnote.collab.CloudCollab.stopSharing(activity, id) }
+        val appContext = activity.applicationContext
+        collaboration.onRoomClosed = { if (id != null) com.kairumo.padnote.collab.CloudCollab.stopSharing(appContext, id) }
     }
 
     // ── 即時協同（設計 §8，協定 3）─────────────────────────────

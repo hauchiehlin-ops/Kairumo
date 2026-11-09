@@ -87,10 +87,16 @@ object NotebookLibrary {
         indexTitles: Map<String, String> = liveIndexTitles(context)
     ): List<Entry> {
         val inboxId = uniffi.padnote_core.recordingInboxNotebookId()
-        val entries = directory(context).listFiles()
-            ?.filter { it.isDirectory && it.name.endsWith(".$EXTENSION") }
-            ?.filter { !it.nameWithoutExtension.equals(inboxId, ignoreCase = true) }
-            ?.mapNotNull { describe(it, deviceId, indexTitles) }
+        // 列舉失敗（null）不是「0 本」：同步搬動套件、儲存空間暫時不可讀時都可能拿到 null。
+        // 當成空清單的話，首頁整份閃成 0 本、資料夾全是 (0)，過一輪又回來。保留上一份。
+        val listed = directory(context).listFiles()
+            ?: return lastKnownListing(context, sort, folderId) ?: emptyList()
+        // 先清掉「已被還原」的刪除記號；剩下的（含讀取途中才按下刪除的）在最後一步過濾。
+        releaseRestoredDeletes(context)
+        val entries = listed
+            .filter { it.isDirectory && it.name.endsWith(".$EXTENSION") }
+            .filter { !it.nameWithoutExtension.equals(inboxId, ignoreCase = true) }
+            .mapNotNull { describe(it, deviceId, indexTitles) }
             // 另一台裝置刪掉的不要列出來。檔案這時可能還在本機硬碟上
             // （真正的清除是同步引擎的事），但它已經被刪了 ——
             // 還列出來的話，使用者在 A 上刪掉、走到 B 前面又看到它。
@@ -100,8 +106,10 @@ object NotebookLibrary {
             //
             // 同時過濾系統級錄音收件匣（與 Apple 端 visibleNotebooks 完全一致）：
             // 收件匣是快速錄音的系統容器，非實體筆記本，不應出現在全部筆記與繼續清單。
-            ?.filter { !it.id.equals(inboxId, ignoreCase = true) }
-            ?.filter {
+            .filter { !it.id.equals(inboxId, ignoreCase = true) }
+            // 這台剛刪、還在背景搬檔與寫墓碑的那幾本（見 [markDeleting]）：清單立刻不列。
+            .filter { !pendingDeletes.containsKey(it.id.lowercase()) }
+            .filter {
                 if (folderId == ANY_FOLDER) true
                 else {
                     val p = FolderTree.parentOf(context, it.id)
@@ -112,12 +120,83 @@ object NotebookLibrary {
                     }
                 }
             }
-            ?: return emptyList()
-        return when (sort) {
-            // 最近修改排前面 —— 使用者要找的十之八九是剛剛在寫的那本。
-            Sort.MODIFIED -> entries.sortedByDescending { it.modifiedAt }
-            Sort.TITLE -> entries.sortedBy { it.title }
-            Sort.PAGES -> entries.sortedByDescending { it.pageCount }
+        if (folderId == ANY_FOLDER) {
+            lastListing = ProfileContext.activeId(context) to entries
+        }
+        return sorted(entries, sort)
+    }
+
+    private fun sorted(entries: List<Entry>, sort: Sort): List<Entry> = when (sort) {
+        // 最近修改排前面 —— 使用者要找的十之八九是剛剛在寫的那本。
+        Sort.MODIFIED -> entries.sortedByDescending { it.modifiedAt }
+        Sort.TITLE -> entries.sortedBy { it.title }
+        Sort.PAGES -> entries.sortedByDescending { it.pageCount }
+    }
+
+    // ── 上一份清單（記憶體）──────────────────────────────────────
+    //
+    // 首頁每次回來都是新的 Composable，清單狀態從空的開始；真的讀完一輪
+    // （要開每一本的 session，同步剛改過 mtime 時全部要重開）可能要好幾秒。
+    // 這段期間畫面上是「全部筆記 (0)」、每個資料夾 (0)，看起來像筆記全不見了。
+    // 先給上一份，讀完再換掉。只存在記憶體、以設定檔 id 區分，不碰磁碟。
+
+    // profile-scope: 以 ProfileContext.activeId 為鍵，換設定檔時不會拿到別人的清單
+    @Volatile
+    private var lastListing: Pair<String, List<Entry>>? = null
+
+    /**
+     * 上一次完整列出的清單（目前設定檔），沒有就回 null。**不碰磁碟**，主執行緒可呼叫。
+     * 已在 [markDeleting] 裡的會被拿掉。
+     */
+    fun lastKnown(context: Context, sort: Sort = Sort.MODIFIED): List<Entry>? {
+        val (profile, entries) = lastListing ?: return null
+        if (profile != ProfileContext.activeId(context)) return null
+        val inFlight = pendingDeletes.filterValues { it }.keys
+        return sorted(entries.filter { it.id.lowercase() !in inFlight }, sort)
+    }
+
+    private fun lastKnownListing(context: Context, sort: Sort, folderId: String?): List<Entry>? {
+        val cached = lastKnown(context, sort) ?: return null
+        if (folderId == ANY_FOLDER) return cached
+        return cached.filter {
+            val p = FolderTree.parentOf(context, it.id)
+            if (folderId == null) p == null || FolderTree.all(context).none { f -> f.id == p }
+            else p == folderId
+        }
+    }
+
+    // ── 刪除中的筆記本 ──────────────────────────────────────────
+    //
+    // 與 Apple `deleteNotebook` 一樣：按下刪除的當下就從清單拿掉，搬檔、寫墓碑、
+    // 雲端同步都在背景做。拿掉的依據不能只靠「檔案已經搬走」——
+    // 搬檔之前就開始列舉的那一輪讀取，讀完會把它又放回畫面上。
+    //
+    // 值為 true：背景還在刪；false：已刪完（墓碑已寫），之後只要索引仍是墓碑就不列。
+    // 從回收桶還原（或另一台還原、索引不再是墓碑）時自動放行。
+    private val pendingDeletes = java.util.concurrent.ConcurrentHashMap<String, Boolean>()
+
+    /** 使用者按下刪除的那一刻呼叫（主執行緒、不碰磁碟）。 */
+    fun markDeleting(id: String) {
+        pendingDeletes[id.lowercase()] = true
+        lastListing?.let { (profile, entries) ->
+            lastListing = profile to entries.filterNot { it.id.equals(id, ignoreCase = true) }
+        }
+    }
+
+    /** 這一本是不是這台剛刪掉（還在背景處理、或已進回收桶）。不碰磁碟。 */
+    fun isDeleting(id: String): Boolean = pendingDeletes.containsKey(id.lowercase())
+
+    /** 不再隱藏（還原、或刪除失敗）。 */
+    fun forgetDeleting(id: String) {
+        pendingDeletes.remove(id.lowercase())
+    }
+
+    private fun releaseRestoredDeletes(context: Context) {
+        if (pendingDeletes.isEmpty()) return
+        val tombstoned = AccountSyncStore.deletedNotebookIds(context).map { it.lowercase() }.toSet()
+        for ((id, inFlight) in pendingDeletes) {
+            // 已刪完、索引卻不再是墓碑 ⇒ 被還原了（這台或別台），放行。
+            if (!inFlight && id !in tombstoned) pendingDeletes.remove(id, false)
         }
     }
 
@@ -175,8 +254,10 @@ object NotebookLibrary {
             }
         }
 
+        // 開不起來（同步正在寫這個套件、暫時讀不到）時沿用上一份，不要讓它從清單上消失 ——
+        // 讀取失敗不等於這本不存在。
         val session = runCatching { PadnoteSession.openExisting(path.absolutePath, deviceId) }
-            .getOrNull() ?: return null
+            .getOrNull() ?: return cached?.entry
         val entry = Entry(
             id = id,
             // **標題以同步索引為權威**，索引沒有（或是空白）才用套件裡的。
@@ -260,15 +341,23 @@ object NotebookLibrary {
      * 保留期限內（預設 30 天）還原得回來；期滿才永久刪除（[NotebookTrash.purgeExpired]）。
      * 設計見 `docs/plans/expiry-purge.md`。
      */
-    fun delete(context: Context, id: String): Boolean =
-        runCatching {
+    fun delete(context: Context, id: String): Boolean {
+        markDeleting(id)
+        val ok = runCatching {
+            // **先寫墓碑、再搬檔**（與 Apple `deleteNotebook` 相同）。反過來的話，
+            // 背景同步剛好在兩步之間看到「本機沒有、索引仍活著」，會把它從雲端整本抓回來。
+            // 墓碑一律寫：本機沒搬成功時，下一輪同步的回收桶對帳會依墓碑把它收進回收桶；
+            // 不寫的話，這次刪除在任何裝置上都不存在。
+            AccountSyncStore.recordDeletion(context, id)
             val moved = NotebookTrash.moveToTrash(context, id)
             invalidateCache(id)
-            // 墓碑一律寫（與 Apple `deleteNotebook` 相同）：本機沒搬成功時，下一輪同步的
-            // 回收桶對帳會依墓碑把它收進回收桶；不寫的話，這次刪除在任何裝置上都不存在。
-            AccountSyncStore.recordDeletion(context, id)
             moved
         }.getOrDefault(false)
+        // 同步的回收桶對帳可能搶先一步把它搬進回收桶（墓碑已寫）：那也是刪成功。
+        val done = ok || runCatching { NotebookTrash.isTrashed(context, id) }.getOrDefault(false)
+        if (done) pendingDeletes[id.lowercase()] = false else forgetDeleting(id)
+        return done
+    }
 
     /** 開啟（或建立）一本筆記本，回傳 session 與第一頁。 */
     fun open(
